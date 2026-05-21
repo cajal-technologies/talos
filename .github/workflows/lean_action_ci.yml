@@ -29,6 +29,7 @@ jobs:
       - uses: leanprover/lean-action@v1
         with:
           build-args: runner testsuite
+          use-mathlib-cache: true
       - name: Install just
         uses: taiki-e/install-action@just
       - name: Runner smoke test
