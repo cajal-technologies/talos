@@ -20,6 +20,8 @@ jobs:
     needs: build
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
         # lean-action caches .lake keyed by {OS}-{arch}-{toolchain}-{lake-manifest}-{SHA}.
         # The test job runs on the same SHA, so it gets an exact hit from the build job's
         # saved cache — all oleans are already present. build-args limits lake build to
