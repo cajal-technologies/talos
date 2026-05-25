@@ -1,2 +1,2 @@
-lean_project = "../../../lean"
-verification_folder = "Corpus/Simple/IsEven"
+lean_project = "../../.."
+verification_folder = "Programs/Simple/IsEven"

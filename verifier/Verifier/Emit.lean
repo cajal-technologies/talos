@@ -177,22 +177,26 @@ private def emitInstrShort : Wasm.Instruction → String
   | .unreachable    => ".unreachable"
   -- Structured control: should be handled by emitInstr; fall back to a flat
   -- one-line form so this function remains total.
-  | .block body     => ".block " ++ list (body.map emitInstrShort)
-  | .loop body      => ".loop " ++ list (body.map emitInstrShort)
-  | .iff thn els    =>
-      ".iff " ++ list (thn.map emitInstrShort) ++ " " ++ list (els.map emitInstrShort)
+  | .block pa ra body     =>
+      s!".block {emitNat pa} {emitNat ra} " ++ list (body.map emitInstrShort)
+  | .loop pa ra body      =>
+      s!".loop {emitNat pa} {emitNat ra} " ++ list (body.map emitInstrShort)
+  | .iff pa ra thn els    =>
+      s!".iff {emitNat pa} {emitNat ra} " ++
+        list (thn.map emitInstrShort) ++ " " ++ list (els.map emitInstrShort)
 
 mutual
   /-- Render an instruction prefixed with `indent ind`. Structured-control
   bodies are recursively broken across lines; leaf instructions stay on the
   caller's line. -/
   private partial def emitInstr (ind : Nat) : Wasm.Instruction → String
-    | .block body =>
-        indent ind ++ ".block " ++ emitInstrList ind body
-    | .loop body =>
-        indent ind ++ ".loop " ++ emitInstrList ind body
-    | .iff thn els =>
-        indent ind ++ ".iff " ++ emitInstrList ind thn ++ " " ++ emitInstrList ind els
+    | .block pa ra body =>
+        indent ind ++ s!".block {emitNat pa} {emitNat ra} " ++ emitInstrList ind body
+    | .loop pa ra body =>
+        indent ind ++ s!".loop {emitNat pa} {emitNat ra} " ++ emitInstrList ind body
+    | .iff pa ra thn els =>
+        indent ind ++ s!".iff {emitNat pa} {emitNat ra} " ++
+          emitInstrList ind thn ++ " " ++ emitInstrList ind els
     | other =>
         indent ind ++ emitInstrShort other
 
