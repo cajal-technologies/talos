@@ -18,7 +18,7 @@ jobs:
         with:
           lake-package-directory: verifier
           build-args: verifier
-          use-mathlib-cache: false
+          use-mathlib-cache: true
 
       # Rust toolchain + wasm32 target for cargo build inside verifier check.
       - name: Install Rust wasm32 target
