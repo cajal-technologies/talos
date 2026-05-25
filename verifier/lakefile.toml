@@ -1,0 +1,14 @@
+name = "Verifier"
+version = "0.1.0"
+defaultTargets = ["verifier"]
+
+[[require]]
+name = "WasmInterpreterLean"
+path = "../interpreter"
+
+[[lean_lib]]
+name = "Verifier"
+
+[[lean_exe]]
+name = "verifier"
+root = "Verifier.Main"

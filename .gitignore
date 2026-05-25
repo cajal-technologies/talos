@@ -1,6 +1,7 @@
 /.lake
 .lake/
 docbuild/.lake
+verifier/.lake
 Examples/rust/*/build/
 Examples/rust/*/rust/target/
 programs/rust/**/target/
