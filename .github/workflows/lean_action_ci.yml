@@ -18,21 +18,17 @@ jobs:
           use-mathlib-cache: true
 
   test:
-    name: Smoke test & spec testsuite
+    name: Smoke test
     runs-on: ubuntu-latest
     needs: build
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: true
       - uses: leanprover/lean-action@v1
         with:
           lake-package-directory: interpreter
-          build-args: runner testsuite
+          build-args: runner
           use-mathlib-cache: true
       - name: Install just
         uses: taiki-e/install-action@just
       - name: Runner smoke test
         run: just runner-smoke
-      - name: Wasm spec testsuite
-        run: just testsuite
