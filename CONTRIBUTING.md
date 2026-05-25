@@ -49,6 +49,22 @@ Pull requests are welcome. A few guidelines:
 
 **Prefer clarity over cleverness.** The interpreter is intentionally simple so proofs stay tractable. Don't introduce complexity in the interpreter for performance reasons; if you need a faster path, prove it equivalent to the reference interpreter and keep them separate.
 
+## Good starting points
+
+Not sure where to begin? Here are some directions that tend to produce useful contributions:
+
+**Write a missing example.** `interpreter/Interpreter/Wasm/Examples/` contains hand-built modules with Lean proofs. As the interpreter grows, some behaviors don't have a corresponding example yet — a small program that exercises a specific instruction or control-flow pattern, paired with a proof that it does what you expect, is a self-contained contribution. `Factorial.lean` is the reference for what a complete example looks like.
+
+**Find an interpreter bug via an example.** Write a small Wasm program that exercises today's supported features and prove something about it. If the proof fails because the interpreter behaves unexpectedly, that's a real bug. Reporting it with a minimal reproducer is a valuable contribution on its own; fixing it is even better.
+
+**Extend the spec testsuite coverage.** Run `just testsuite`, find a failing test, trace why it fails, implement the missing piece, and verify the test passes. This is the fastest feedback loop for interpreter work.
+
+**Add a Rust crate to `programs/`.** The `programs/` package contains Rust crates compiled to Wasm with Lean proofs of their behavior. Adding a new crate with a spec and at least one proof is welcome. **Open a GitHub issue describing the crate and the property you intend to prove before starting** — this avoids duplicated effort and lets us flag any concerns early.
+
+**Contribute to `codelib/`.** The `codelib/` package holds lifting lemmas and reasoning helpers shared across programs. New lemmas are welcome if they are general enough to be useful in more than one place and are accompanied by at least one use site. A lemma without a consumer will not be accepted.
+
+**Quality-of-life improvements.** Better CI feedback, new `just` recipes, editor setup documentation, improved error messages — anything that makes the repository easier to work with is fair game. When in doubt, open an issue first to check it's worth the effort.
+
 ## Code of conduct
 
 This is a collaborative project in a public space. Treat everyone respectfully — no harassment, no personal attacks, no dismissiveness toward newcomers or non-native speakers. Disagreement about code or design is fine and expected; make it about the ideas, not the people. If something feels off, reach out to a maintainer.
