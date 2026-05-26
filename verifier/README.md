@@ -177,23 +177,34 @@ verifier report [--out <dir>] [--no-build]
 - `verifier new` is the only command that doesn't require an existing
   `verifier.toml` (it creates the first one).
 
-### Codelib discovery (for `new`)
+### CodeLib source (for `new`)
 
-Scaffolding writes a `lakefile.toml` that depends on the in-repo
-`codelib/` package (the wasm interpreter + `wp` tactic that your
-specs build on). If you're running `verifier` from somewhere other
-than a Talos checkout, the binary still needs to know where
-`codelib/` lives. It looks, in order:
+Scaffolding writes a `lakefile.toml` that requires the `CodeLib`
+package (the wasm interpreter + `wp` tactic your specs build on).
+By default the scaffold points at the public GitHub remote so the
+new project is self-contained — no Talos checkout needed on disk:
 
-1. `--codelib <path>` flag.
-2. `TALOS_CODELIB` environment variable.
-3. Walks up from the verifier executable's install location (so a
-   binary built inside a Talos checkout will find its own
-   `codelib/` without configuration, regardless of cwd).
-4. Walks up from the current working directory.
+```toml
+[[require]]
+name = "CodeLib"
+git = "https://github.com/cajal-technologies/talos"
+subDir = "codelib"
+rev = "main"
+```
 
-If none of those find a directory containing `lean-toolchain`, the
-error message lists every path that was tried.
+The matching `lean-toolchain` is fetched live from
+`raw.githubusercontent.com` during `verifier new` (one `curl`).
+
+Overrides:
+
+- `--codelib-rev <rev>` — pin a specific commit/tag instead of `main`
+  for reproducibility.
+- `--codelib <path>` — use a local checkout (writes `path = "..."`
+  in the lakefile). Useful when developing Talos itself.
+- `TALOS_CODELIB` env var — same as `--codelib`.
+
+`--codelib` and `TALOS_CODELIB` both require the path to contain a
+`lean-toolchain` file.
 
 ## Sidecar JSON
 

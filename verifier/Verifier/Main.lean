@@ -61,12 +61,13 @@ private def strCapitalise (s : String) : String :=
 
 private def usage : String :=
   "Usage:\n" ++
-  "  lake exe verifier new        <rust-path> <lean-path> <subfolder> [--codelib <path>]\n" ++
+  "  lake exe verifier new        <rust-path> <lean-path> <subfolder>\n" ++
+  "                               [--codelib <path>] [--codelib-rev <rev>]\n" ++
   "  lake exe verifier check      [path] [--no-build]\n" ++
   "  lake exe verifier report     [--out <dir>] [--no-build]\n\n" ++
-  "Codelib discovery (for `new`, when not given --codelib): override by\n" ++
-  "TALOS_CODELIB env var, then walks up from the verifier executable's\n" ++
-  "install dir, then walks up from cwd."
+  "Scaffolding defaults to CodeLib from github.com/cajal-technologies/talos\n" ++
+  "(subDir=codelib, rev=main). Override with --codelib-rev <rev>, or use a\n" ++
+  "local checkout via --codelib <path> or the TALOS_CODELIB env var."
 
 private def die (msg : String) : IO α := do
   IO.eprintln msg
@@ -193,58 +194,64 @@ def subfolderToModule (sub : String) : String :=
   let parts := (sub.splitOn "/").filter (·.length > 0)
   String.intercalate "." parts
 
-/-- Walk up from `start` looking for a directory containing a
-`codelib/lean-toolchain`. Stops at the filesystem root. -/
-private partial def walkUpFor (marker : FilePath) (start : FilePath) :
-    IO (Option FilePath) := do
-  let mut cur := start
-  for _ in [:64] do
-    if ← System.FilePath.pathExists (cur / marker) then
-      return some cur
-    match cur.parent with
-    | some p => if p = cur then break else cur := p
-    | none   => break
-  pure none
+/-- Where the scaffolded lakefile points to find CodeLib. -/
+inductive CodelibSource
+  /-- A local checkout (absolute path). Lakefile gets `path = "..."`. -/
+  | localDir : FilePath → CodelibSource
+  /-- A git remote. Lakefile gets `git = "..."`, `subDir = "..."`, `rev = "..."`. -/
+  | git : (url subDir rev : String) → CodelibSource
+  deriving Inhabited
 
-/-- Resolve the path to `codelib/`. In order:
+/-- Default git source for CodeLib: the `codelib/` subdirectory of the
+public Talos repo. -/
+def defaultCodelibGit : CodelibSource :=
+  .git "https://github.com/cajal-technologies/talos" "codelib" "main"
 
-1. `override` (CLI flag).
-2. The `TALOS_CODELIB` env var.
-3. Walk up from the verifier executable's install location — this
-   covers the common case of running the binary from anywhere on
-   disk while having Talos checked out somewhere.
-4. Walk up from the current working directory. -/
-private def resolveCodelib (override : Option FilePath) : IO FilePath := do
+/-- Resolve which CodeLib the scaffolded project should depend on.
+
+The default is the public GitHub remote — projects scaffolded by
+`verifier new` are self-contained and don't need a Talos checkout on
+the user's machine. Opt into a local checkout with:
+
+1. `--codelib <path>` CLI flag.
+2. `TALOS_CODELIB` environment variable.
+
+Both require the path to contain a `lean-toolchain`. `--codelib-rev`
+overrides the pinned git rev (default `main`). -/
+private def resolveCodelibSource
+    (override : Option String) (gitRev : Option String) : IO CodelibSource := do
   let tryDir (d : FilePath) : IO (Option FilePath) := do
     if ← System.FilePath.pathExists (d / "lean-toolchain") then
       pure (some (← absNormalize d))
     else pure none
   if let some d := override then
-    match ← tryDir d with
-    | some r => return r
+    match ← tryDir ⟨d⟩ with
+    | some r => return .localDir r
     | none   => die s!"--codelib {d}: no `lean-toolchain` here"
   if let some env ← IO.getEnv "TALOS_CODELIB" then
     match ← tryDir ⟨env⟩ with
-    | some r => return r
+    | some r => return .localDir r
     | none   => die s!"TALOS_CODELIB={env}: no `lean-toolchain` here"
-  let exePath ← IO.appPath
-  if let some exeDir := exePath.parent then
-    if let some root ← walkUpFor "codelib/lean-toolchain" exeDir then
-      return ← absNormalize (root / "codelib")
-  let cwd ← IO.currentDir
-  if let some root ← walkUpFor "codelib/lean-toolchain" cwd then
-    return ← absNormalize (root / "codelib")
-  die <| String.intercalate "\n" [
-    "could not locate `codelib/`. Tried, in order:",
-    "  --codelib <path>",
-    "  TALOS_CODELIB env var",
-    s!"  walking up from {exePath}",
-    s!"  walking up from {cwd}",
-    "Pass `--codelib <path>` to point at your Talos checkout's codelib/."
-  ]
+  match defaultCodelibGit with
+  | .git url sub _   => return .git url sub (gitRev.getD "main")
+  | .localDir _      => unreachable!
 
-private def codelibLeanToolchain (codelibDir : FilePath) : IO String :=
-  IO.FS.readFile (codelibDir / "lean-toolchain")
+/-- Read CodeLib's `lean-toolchain`. For a local source we just read
+the file. For a git source we shell out to `curl` against
+`raw.githubusercontent.com`. -/
+private def codelibLeanToolchain : CodelibSource → IO String
+  | .localDir d => IO.FS.readFile (d / "lean-toolchain")
+  | .git url sub rev => do
+    -- Convert `https://github.com/USER/REPO` into the raw form.
+    let ghPrefix := "https://github.com/"
+    unless url.startsWith ghPrefix do
+      die s!"don't know how to fetch lean-toolchain from non-GitHub URL: {url}"
+    let slug := (url.drop ghPrefix.length).toString
+    let rawUrl := s!"https://raw.githubusercontent.com/{slug}/{rev}/{sub}/lean-toolchain"
+    let out ← IO.Process.output { cmd := "curl", args := #["-sfL", rawUrl] }
+    if out.exitCode ≠ 0 then
+      die s!"curl failed fetching {rawUrl}: {out.stderr}"
+    pure out.stdout
 
 private def resolvePairFromRust (rustDir : FilePath) : IO Pair := do
   let v ← Toml.readVerifier (rustDir / "verifier.toml")
@@ -326,28 +333,32 @@ private def appendImportLine (rootFile : FilePath) (importLine : String) : IO Un
   let trailing := if existing.isEmpty || existing.endsWith "\n" then "" else "\n"
   IO.FS.writeFile rootFile (existing ++ trailing ++ importLine ++ "\n")
 
-private def scaffoldLeanProject (leanDir : FilePath) (codelibDir : FilePath) : IO Unit := do
-  let toolchain ← codelibLeanToolchain codelibDir
+private def scaffoldLeanProject (leanDir : FilePath) (src : CodelibSource) : IO Unit := do
+  let toolchain ← codelibLeanToolchain src
   let pkgName :=
     match leanDir.fileName with
     | some s => if s.isEmpty then "Verification" else strCapitalise s
     | none   => "Verification"
-  let relCodelib := relativeTo leanDir codelibDir
+  let requireBody := match src with
+    | .localDir d   => [s!"path = \"{relativeTo leanDir d}\""]
+    | .git url sub rev =>
+      [ s!"git = \"{url}\"",
+        s!"subDir = \"{sub}\"",
+        s!"rev = \"{rev}\"" ]
   IO.FS.createDirAll leanDir
   writeFile (leanDir / "lean-toolchain") toolchain
-  writeFile (leanDir / "lakefile.toml") <| String.intercalate "\n" [
-    s!"name = \"{pkgName}\"",
-    "version = \"0.1.0\"",
-    s!"defaultTargets = [\"{pkgName}\"]",
-    "",
-    "[[require]]",
-    "name = \"CodeLib\"",
-    s!"path = \"{relCodelib}\"",
-    "",
-    "[[lean_lib]]",
-    s!"name = \"{pkgName}\"",
-    ""
-  ]
+  writeFile (leanDir / "lakefile.toml") <| String.intercalate "\n" <|
+    [ s!"name = \"{pkgName}\"",
+      "version = \"0.1.0\"",
+      s!"defaultTargets = [\"{pkgName}\"]",
+      "",
+      "[[require]]",
+      "name = \"CodeLib\"" ]
+    ++ requireBody
+    ++ [ "",
+         "[[lean_lib]]",
+         s!"name = \"{pkgName}\"",
+         "" ]
   writeFile (leanDir / s!"{pkgName}.lean") s!"import {pkgName}.Basic\n"
   writeFile (leanDir / pkgName / "Basic.lean") "import CodeLib\n"
 
@@ -396,23 +407,27 @@ private def proofsStub (subfolder : String) : String :=
     ""
   ]
 
+private def codelibDescribe : CodelibSource → String
+  | .localDir d => s!"local path {d}"
+  | .git url sub rev => s!"git {url} (subDir={sub}, rev={rev})"
+
 private def cmdNew (rustPathIn leanPathIn subfolder : String)
-    (codelibOverride : Option String) : IO Unit := do
+    (codelibOverride codelibRev : Option String) : IO Unit := do
   let rustDir ← absNormalize rustPathIn
   let leanDir ← absNormalize leanPathIn
   let cargoToml := rustDir / "Cargo.toml"
   unless ← System.FilePath.pathExists cargoToml do
     die s!"{rustDir}: no Cargo.toml here (verifier does not scaffold rust crates)"
   -- 1. Lean project: scaffold if missing.
-  let codelib ← resolveCodelib (codelibOverride.map (⟨·⟩))
+  let codelib ← resolveCodelibSource codelibOverride codelibRev
   if ¬ (← System.FilePath.pathExists (leanDir / "lakefile.toml")) then
-    IO.println s!"==> scaffolding lean project at {leanDir} (using codelib at {codelib})"
+    IO.println s!"==> scaffolding lean project at {leanDir} (codelib: {codelibDescribe codelib})"
     scaffoldLeanProject leanDir codelib
   else
     let expected ← codelibLeanToolchain codelib
     let actual ← IO.FS.readFile (leanDir / "lean-toolchain")
     if strTrim expected ≠ strTrim actual then
-      die s!"{leanDir}/lean-toolchain disagrees with {codelib}/lean-toolchain:\n  expected: {strTrim expected}\n  actual:   {strTrim actual}"
+      die s!"{leanDir}/lean-toolchain disagrees with codelib ({codelibDescribe codelib}):\n  expected: {strTrim expected}\n  actual:   {strTrim actual}"
   -- 2. Subfolder + origin.toml + Spec.lean + Proofs.lean.
   let subDir := leanDir / subfolder
   IO.FS.createDirAll subDir
@@ -723,10 +738,11 @@ private def stripFlagValue (flag : String) :
   | rest => (none, rest)
 
 def main (args : List String) : IO UInt32 := do
-  let (codelib, args) := stripFlagValue "--codelib" args
+  let (codelib,    args) := stripFlagValue "--codelib"     args
+  let (codelibRev, args) := stripFlagValue "--codelib-rev" args
   match args with
   | "new"   :: rust :: lean :: sub :: [] =>
-    cmdNew rust lean sub codelib; pure 0
+    cmdNew rust lean sub codelib codelibRev; pure 0
   | "check" :: rest =>
     let (path, skipBuild) := parseCheckArgs rest
     -- Reject if more than one positional was supplied.
