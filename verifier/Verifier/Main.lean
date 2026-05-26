@@ -428,8 +428,15 @@ private def cmdNew (rustPathIn leanPathIn subfolder : String)
     let actual ← IO.FS.readFile (leanDir / "lean-toolchain")
     if strTrim expected ≠ strTrim actual then
       die s!"{leanDir}/lean-toolchain disagrees with codelib ({codelibDescribe codelib}):\n  expected: {strTrim expected}\n  actual:   {strTrim actual}"
+  -- The verification folder must live under `<libName>/...` so Lake's
+  -- module resolver can find it; if the user passed a bare path (e.g.
+  -- `Foo`), prepend the lib name to give us `<Lib>/Foo`.
+  let lib ← leanLibName leanDir
+  let vFolder :=
+    if subfolder = lib || subfolder.startsWith (lib ++ "/") then subfolder
+    else lib ++ "/" ++ subfolder
   -- 2. Subfolder + origin.toml + Spec.lean + Proofs.lean.
-  let subDir := leanDir / subfolder
+  let subDir := leanDir / vFolder
   IO.FS.createDirAll subDir
   let originPath := subDir / "origin.toml"
   let rustRel := (relativeTo subDir rustDir).toString
@@ -441,24 +448,23 @@ private def cmdNew (rustPathIn leanPathIn subfolder : String)
     writeFile originPath (Toml.renderOrigin { rustProject := rustRel })
   let specPath := subDir / "Spec.lean"
   unless ← System.FilePath.pathExists specPath do
-    writeFile specPath (specStub subfolder)
+    writeFile specPath (specStub vFolder)
   let proofsPath := subDir / "Proofs.lean"
   unless ← System.FilePath.pathExists proofsPath do
-    writeFile proofsPath (proofsStub subfolder)
+    writeFile proofsPath (proofsStub vFolder)
   -- 3. verifier.toml on the rust side.
   let verifierPath := rustDir / "verifier.toml"
   let leanRel := (relativeTo rustDir leanDir).toString
   if ← System.FilePath.pathExists verifierPath then
     let existing ← Toml.readVerifier verifierPath
-    if existing.leanProject ≠ leanRel || existing.verificationFolder ≠ subfolder then
-      die s!"{verifierPath} already exists and points elsewhere (got `{existing.leanProject}` / `{existing.verificationFolder}`, want `{leanRel}` / `{subfolder}`)"
+    if existing.leanProject ≠ leanRel || existing.verificationFolder ≠ vFolder then
+      die s!"{verifierPath} already exists and points elsewhere (got `{existing.leanProject}` / `{existing.verificationFolder}`, want `{leanRel}` / `{vFolder}`)"
   else
     writeFile verifierPath <| Toml.renderVerifier
-      { leanProject := leanRel, verificationFolder := subfolder, build := {} }
+      { leanProject := leanRel, verificationFolder := vFolder, build := {} }
   -- 4. Wire `import {Mod}.Proofs` into the lean library root.
-  let lib ← leanLibName leanDir
   let rootFile := leanDir / s!"{lib}.lean"
-  appendImportLine rootFile s!"import {subfolderToModule subfolder}.Proofs"
+  appendImportLine rootFile s!"import {subfolderToModule vFolder}.Proofs"
   IO.println s!"==> verifier new wrote {verifierPath}, {originPath}, {specPath}, {proofsPath}"
 
 -- ----------------------------------------------------------------------------
