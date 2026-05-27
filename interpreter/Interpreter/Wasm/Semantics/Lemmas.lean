@@ -258,7 +258,7 @@ theorem run_eq
                     (f.toLocals (args.take f.numParams)) f.body with
            | .Fallthrough st s => .Success (s.values ++ args.drop f.numParams) st
            | .Return st vs     => .Success vs st
-           | .Break _ st _     => .Trap st "Unexpected break targeting function"
+           | .Break _ st s     => .Success (s.values ++ args.drop f.numParams) st
            | .Invalid msg      => .Invalid msg
            | .Trap st msg      => .Trap st msg
            | .OutOfFuel        => .OutOfFuel
@@ -268,7 +268,7 @@ theorem run_eq
                     (f.toLocals (args.take f.numParams).reverse) f.body with
            | .Fallthrough st s => .Success (s.values.take rs.length ++ callerRemainder) st
            | .Return st vs     => .Success (vs.take rs.length ++ callerRemainder) st
-           | .Break _ st _     => .Trap st "Unexpected break targeting function"
+           | .Break _ st s     => .Success (s.values.take rs.length ++ callerRemainder) st
            | .Invalid msg      => .Invalid msg
            | .Trap st msg      => .Trap st msg
            | .OutOfFuel        => .OutOfFuel) := by

@@ -695,7 +695,8 @@ def run (fuel : Nat) (m : Module) (id : Nat)
       match exec fuel m initial (f.toLocals (params.take f.numParams).reverse) f.body with
       | Continuation.Fallthrough st s => .Success (s.values.take rs.length ++ callerRemainder) st
       | Continuation.Return st vs     => .Success (vs.take rs.length ++ callerRemainder) st
-      | Continuation.Break _ st _     => .Trap st "Unexpected break targeting function"
+      | Continuation.Break _ st s     =>
+        .Success (s.values.take rs.length ++ callerRemainder) st
       | Continuation.Invalid msg      => .Invalid msg
       | Continuation.OutOfFuel        => .OutOfFuel
       | Continuation.Trap st msg      => .Trap st msg
@@ -704,7 +705,7 @@ def run (fuel : Nat) (m : Module) (id : Nat)
       match exec fuel m initial (f.toLocals (params.take f.numParams)) f.body with
       | Continuation.Fallthrough st s => .Success (s.values ++ params.drop f.numParams) st
       | Continuation.Return st vs     => .Success vs st
-      | Continuation.Break _ st _     => .Trap st "Unexpected break targeting function"
+      | Continuation.Break _ st s     => .Success (s.values ++ params.drop f.numParams) st
       | Continuation.Invalid msg      => .Invalid msg
       | Continuation.OutOfFuel        => .OutOfFuel
       | Continuation.Trap st msg      => .Trap st msg
