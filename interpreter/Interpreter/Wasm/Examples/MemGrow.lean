@@ -44,10 +44,6 @@ private def runValues (fuel : Nat) (m : Module) (idx : Nat)
   | .Success vs _ => vs
   | _ => []
 
-#eval runValues 10 growModule 0 growModule.initialStore []  -- [1]
-#eval runValues 10 growModule 1 growModule.initialStore []  -- [3]
-#eval runValues 10 growModule 2 growModule.initialStore []  -- [1, -1]
-
 theorem memorySize_reads_pagesMin :
     runValues 10 growModule 0 growModule.initialStore [] = [.i32 1] := by
   native_decide

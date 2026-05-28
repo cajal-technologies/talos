@@ -66,6 +66,7 @@ def «module» : Wasm.Module :=
 private def expectedWatHash : UInt64 := 4315268944418168635
 
 -- Compile-time drift check: errors if `module.wat` has changed without a corresponding re-emit.
+#guard_msgs (drop info) in
 #eval show IO Unit from do
   let path : System.FilePath := "Programs/Simple/Memchr/module.wat"
   unless ← path.pathExists do return

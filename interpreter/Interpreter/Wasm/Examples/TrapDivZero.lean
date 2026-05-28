@@ -12,13 +12,6 @@ def TrapDivZero : Program := [
   .localGet 0, .localGet 1, .divU
 ]
 
-#eval
-  let m : Module := { funcs := [{ params := [.i32, .i32], body := TrapDivZero }] }
-  run 10 m 0 m.initialStore [.i32 10, .i32 3]
-#eval
-  let m : Module := { funcs := [{ params := [.i32, .i32], body := TrapDivZero }] }
-  run 10 m 0 m.initialStore [.i32 10, .i32 0]
-
 theorem trapDivZeroSpec (m : Module) (st : Store) (a b : UInt32) :
     wp m TrapDivZero
         (fun c =>

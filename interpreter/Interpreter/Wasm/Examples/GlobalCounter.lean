@@ -22,20 +22,6 @@ def tickModule : Module :=
   { funcs   := [{ params := [], locals := [], body := tickBody }]
     globals := [{ type := .i32, init := .i32 0 }] }
 
--- Sanity: three successive calls increment the global.
-#eval
-  let m := tickModule
-  let st0 := m.initialStore
-  match run 10 m 0 st0 [] with
-  | .Success vs st1 =>
-    match run 10 m 0 st1 [] with
-    | .Success vs2 st2 =>
-      match run 10 m 0 st2 [] with
-      | .Success vs3 _ => (vs, vs2, vs3)
-      | _ => ([], [], [.i32 99])
-    | _ => ([], [], [.i32 99])
-  | _ => ([], [], [.i32 99])
-
 theorem tickModule_initial_global :
     tickModule.initialStore.globals.globals = [.i32 0] := by
   native_decide

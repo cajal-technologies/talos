@@ -22,16 +22,6 @@ def Switch : Program := [
   .const 30, .ret
 ]
 
-#eval
-  let m : Module := { funcs := [{ params := [.i32], body := Switch }] }
-  run 10 m 0 m.initialStore [.i32 0]
-#eval
-  let m : Module := { funcs := [{ params := [.i32], body := Switch }] }
-  run 10 m 0 m.initialStore [.i32 1]
-#eval
-  let m : Module := { funcs := [{ params := [.i32], body := Switch }] }
-  run 10 m 0 m.initialStore [.i32 7]
-
 theorem switchSpec (m : Module) (st : Store) (i : UInt32) :
     wp m Switch
         (fun c => c = .Return st

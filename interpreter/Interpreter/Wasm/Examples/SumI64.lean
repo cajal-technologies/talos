@@ -15,10 +15,6 @@ def SumI64 : Program := [
   .wrapI64
 ]
 
-#eval
-  let m : Module := { funcs := [{ params := [.i32], body := SumI64 }] }
-  run 10 m 0 m.initialStore [.i32 5]
-
 theorem sumI64Spec (m : Module) (st : Store) (x : UInt32) :
     wp m SumI64
         (fun c => c = .Fallthrough st

@@ -17,10 +17,6 @@ def isEven (n : UInt32) : List Value :=
   | .Success rs _ => rs
   | _             => []
 
-#eval isEven 0   -- [.i32 1]
-#eval isEven 1   -- [.i32 0]
-#eval isEven 42  -- [.i32 1]
-
 example : isEven 0 = [.i32 1] := by native_decide
 example : isEven 1 = [.i32 0] := by native_decide
 example : isEven 4 = [.i32 1] := by native_decide

@@ -42,9 +42,6 @@ private def runTrapMsg (fuel : Nat) (m : Module) (idx : Nat)
   | .Trap _ msg => some msg
   | _ => none
 
-#eval runValues 10 fillModule 0 fillModule.initialStore []
-#eval runTrapMsg 10 fillModule 1 fillModule.initialStore []
-
 theorem fill_then_load_returns_repeated_byte :
     runValues 10 fillModule 0 fillModule.initialStore []
       = [.i64 0xABABABABABABABAB] := by

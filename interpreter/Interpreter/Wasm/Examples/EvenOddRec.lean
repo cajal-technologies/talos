@@ -20,12 +20,6 @@ def IsOddRec : Program := [
   .localGet 0
 ]
 
-#eval
-  let m : Module :=
-    { funcs := [{ params := [.i32], body := IsEvenRec },
-                { params := [.i32], body := IsOddRec }] }
-  run 1000 m 1 m.initialStore [.i32 5]
-
 def evenOddModule : Module :=
   { funcs := [{ params := [.i32], body := IsEvenRec },
               { params := [.i32], body := IsOddRec }] }
