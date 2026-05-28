@@ -13,25 +13,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Use the interpreter package (not verifier) so we restore its warm
-      # mathlib cache instead of attempting a cold git clone of mathlib for
-      # a brand-new package entry. All git packages are pinned at the same
-      # revisions in both interpreter/lake-manifest.json and
-      # verifier/lake-manifest.json, so we can reuse the artifacts.
+      # The verifier executable only depends on the AST + WAT decoder
+      # (Mathlib-free). Build it directly without touching Mathlib.
       - uses: leanprover/lean-action@v1
         with:
-          lake-package-directory: interpreter
-          build-args: Interpreter
-          use-mathlib-cache: true
-
-      # Copy interpreter's already-resolved git packages into the verifier's
-      # packages directory so lake finds them without re-cloning.
-      - name: Seed verifier packages from interpreter
-        run: cp -r interpreter/.lake/packages verifier/.lake/
-
-      # Build only the verifier executable; packages are already present.
-      - name: Build verifier
-        run: lake -d verifier build verifier
+          lake-package-directory: verifier
+          build-args: verifier
+          use-mathlib-cache: false
 
       # Rust toolchain + wasm32 target for cargo build inside verifier check.
       - name: Install Rust wasm32 target

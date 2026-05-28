@@ -1,5 +1,6 @@
 import Verifier.Emit
 import Verifier.Path
+import Interpreter.Wasm.Decoder.Wat
 import Cli
 
 /-!
