@@ -41,9 +41,10 @@ private def writeFile (p : FilePath) (content : String) : IO Unit := do
   IO.FS.writeFile p content
 
 private def runOrDie (cmd : String) (args : Array String)
-    (cwd : Option FilePath := none) : IO Unit := do
+    (cwd : Option FilePath := none)
+    (env : Array (String × Option String) := #[]) : IO Unit := do
   let child ← IO.Process.spawn {
-    cmd := cmd, args := args, cwd := cwd,
+    cmd := cmd, args := args, cwd := cwd, env := env,
     stdin := .inherit, stdout := .inherit, stderr := .inherit
   }
   let code ← child.wait
@@ -197,11 +198,50 @@ private def emitProgramFile (c : Crate) (m : Wasm.Module) : IO Unit := do
     ]
   IO.FS.writeFile (c.leanDir / "Program.lean") body
 
+/-- Compute `RUSTFLAGS` with `--remap-path-prefix` entries that strip
+machine-specific absolute paths (rustc sysroot, CARGO_HOME, $HOME) from
+the produced wasm. Without this, panic location strings embedded in the
+binary differ between CI runners and developer machines, even when the
+rustc version is pinned. -/
+private def reproducibleRustflags (rustDir : FilePath) : IO String := do
+  -- rustc's sysroot is resolved from the workspace dir so we pick up
+  -- the `rust-toolchain.toml`-pinned version rather than the global
+  -- default.
+  let sysrootOut ← IO.Process.output
+    { cmd := "rustc", args := #["--print", "sysroot"], cwd := some rustDir }
+  let sysroot :=
+    if sysrootOut.exitCode = 0 then sysrootOut.stdout.trimAscii else ""
+  let cargoHome ← do
+    match ← IO.getEnv "CARGO_HOME" with
+    | some v => pure v
+    | none =>
+      match ← IO.getEnv "HOME" with
+      | some h => pure (h ++ "/.cargo")
+      | none   => pure ""
+  let home := (← IO.getEnv "HOME").getD ""
+  -- Order matters: rustc applies remaps in declaration order and uses
+  -- the **last** matching prefix, so list from least- to most-specific.
+  -- That way `$HOME/.cargo/...` gets `/cargo-home/...` (specific) rather
+  -- than `/home/.cargo/...` (general), and a path inside the sysroot
+  -- gets `/rustc-sysroot/...` rather than `/home/...`.
+  let mut remaps : Array String := #[]
+  if !home.isEmpty then
+    remaps := remaps.push s!"--remap-path-prefix={home}=/home"
+  if !cargoHome.isEmpty then
+    remaps := remaps.push s!"--remap-path-prefix={cargoHome}=/cargo-home"
+  if !sysroot.isEmpty then
+    remaps := remaps.push s!"--remap-path-prefix={sysroot}=/rustc-sysroot"
+  pure (String.intercalate " " remaps.toList)
+
 private def buildAndEmit
     (projectDir : FilePath) (crates : Array Crate) (forceEmit : Bool) : IO Unit := do
   -- Build all crates in one cargo invocation (faster, shares the target/).
   IO.println "==> cargo build-wasm (workspace)"
-  runOrDie "cargo" #["build-wasm"] (cwd := some (projectDir / "rust"))
+  let rustDir := projectDir / "rust"
+  let rustflags ← reproducibleRustflags rustDir
+  runOrDie "cargo" #["build-wasm"]
+    (cwd := some rustDir)
+    (env := #[("RUSTFLAGS", some rustflags)])
   -- Per-crate: copy wasm, dump wat, decode + emit when stale.
   let buildRoot := projectDir / "rust" / "build"
   let cargoTarget := projectDir / "rust" / "target" / "wasm32-unknown-unknown" / "release"
@@ -212,14 +252,24 @@ private def buildAndEmit
     unless ← System.FilePath.pathExists src do
       die s!"expected {src} after cargo build-wasm but it is missing"
     let wasmDst := outDir / "program.wasm"
-    let bytes ← IO.FS.readBinFile src
-    -- Only rewrite when bytes change, so mtime tracks real updates.
+    -- Strip non-essential custom sections (notably `producers` and
+    -- `target_features`) so the committed wasm is reproducible across
+    -- rustc versions. `wasm-tools strip` keeps `name`/`component-type`/
+    -- `dylink.0` by default — adequate for our reasoning needs. We
+    -- strip to a tmp path first so the existing committed wasm is only
+    -- overwritten when the stripped bytes actually changed (this keeps
+    -- mtimes tracking real updates).
+    let tmpWasm := outDir / "program.wasm.tmp"
+    runOrDie "wasm-tools"
+      #["strip", "-o", tmpWasm.toString, src.toString]
+    let bytes ← IO.FS.readBinFile tmpWasm
     let needWrite ← do
       if ← System.FilePath.pathExists wasmDst then
         let cur ← IO.FS.readBinFile wasmDst
         pure (cur.toList != bytes.toList)
       else pure true
     if needWrite then IO.FS.writeBinFile wasmDst bytes
+    IO.FS.removeFile tmpWasm
     let watText ← captureStdout "wasm-tools" #["print", wasmDst.toString]
     let watFile := outDir / "program.wat"
     let writeWat ← do
@@ -250,20 +300,25 @@ private def lakeBuildCount (leanDir : FilePath) : IO (Bool × Nat) := do
   let sorries := (combined.splitOn "declaration uses 'sorry'").length - 1
   pure (out.exitCode = 0, sorries)
 
-private def checkAt (projectDir : FilePath) (forceEmit : Bool) : IO Bool := do
+private def checkAt (projectDir : FilePath) (forceEmit : Bool) (noBuild : Bool) : IO Bool := do
   let crates ← discoverCrates projectDir
   if crates.isEmpty then
     die s!"{projectDir}/rust has no crate subdirectories"
   IO.println s!"==> {crates.size} crate(s): {String.intercalate ", " (crates.toList.map (·.name))}"
   buildAndEmit projectDir crates forceEmit
-  let (ok, sorries) ← lakeBuildCount (projectDir / "lean")
-  IO.println ""
-  IO.println s!"==> {crates.size} crate(s), {if ok then "lake build OK" else "lake build FAILED"}, {sorries} sorry warning(s)"
-  pure ok
+  if noBuild then
+    IO.println ""
+    IO.println s!"==> {crates.size} crate(s) emitted ({String.intercalate ", " (crates.toList.map (·.name))}); skipping `lake build` (--no-build)"
+    pure true
+  else
+    let (ok, sorries) ← lakeBuildCount (projectDir / "lean")
+    IO.println ""
+    IO.println s!"==> {crates.size} crate(s), {if ok then "lake build OK" else "lake build FAILED"}, {sorries} sorry warning(s)"
+    pure ok
 
-private def cmdCheck (forceEmit : Bool) : IO Unit := do
+private def cmdCheck (forceEmit : Bool) (noBuild : Bool) : IO Unit := do
   let projectDir ← absNormalize (← IO.currentDir)
-  unless ← checkAt projectDir forceEmit do IO.Process.exit 1
+  unless ← checkAt projectDir forceEmit noBuild do IO.Process.exit 1
 
 -- ----------------------------------------------------------------------------
 -- `new`
@@ -295,7 +350,7 @@ private def cmdNew (projectPathIn : String) : IO Unit := do
   -- Proof.lean files reference `func0` etc., so we can't skip emit
   -- before building.
   IO.println "==> running initial `verifier check`"
-  unless ← checkAt projectDir false do
+  unless ← checkAt projectDir false false do
     die "initial `verifier check` failed"
   IO.println s!"==> done. Project ready at {projectDir}"
 
@@ -311,7 +366,7 @@ def runNew (p : Parsed) : IO UInt32 := do
   pure 0
 
 def runCheck (p : Parsed) : IO UInt32 := do
-  cmdCheck (p.hasFlag "force-emit")
+  cmdCheck (p.hasFlag "force-emit") (p.hasFlag "no-build")
   pure 0
 
 def runReport (_ : Parsed) : IO UInt32 := do
@@ -332,6 +387,7 @@ def checkCmd : Cmd := `[Cli|
 
   FLAGS:
     "force-emit"; "Re-emit Program.lean even if the wasm hasn't changed."
+    "no-build";   "Build wasm + emit Program.lean only; skip the final `lake build`."
 ]
 
 def reportCmd : Cmd := `[Cli|
