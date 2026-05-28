@@ -22,6 +22,7 @@ import Interpreter.Wasm.Examples.Switch
 import Interpreter.Wasm.Examples.SelectMin
 import Interpreter.Wasm.Examples.EarlyReturn
 import Interpreter.Wasm.Examples.EarlyBr
+import Interpreter.Wasm.Examples.EarlyBrInvalid
 import Interpreter.Wasm.Examples.TrapDivZero
 import Interpreter.Wasm.Examples.MemDataSection
 import Interpreter.Wasm.Examples.MemReplace

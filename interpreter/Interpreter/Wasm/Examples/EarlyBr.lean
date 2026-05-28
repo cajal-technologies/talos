@@ -10,9 +10,7 @@ namespace Wasm
 def EarlyBr : Program := [.localGet 0, .br 0]
 
 def earlyBrModule : Module := {
-  funcs := [{ params := [.i32], results := some [.i32], body := EarlyBr }]
+  funcs := [{ params := [.i32], results := [.i32], body := EarlyBr }]
 }
-
-#eval run 10 earlyBrModule 0 earlyBrModule.initialStore [.i32 42]
 
 end Wasm

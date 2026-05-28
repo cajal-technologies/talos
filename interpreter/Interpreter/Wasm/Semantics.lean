@@ -689,12 +689,12 @@ def run (fuel : Nat) (m : Module) (id : Nat)
     -- Standard Wasm calling convention. Params are reversed so local 0
     -- is the first (deepest) argument; only the top `f.results.length`
     -- values are returned to the caller; remaining caller args pass
-    -- through unchanged.
     let callerRemainder := params.drop f.numParams
     match exec fuel m initial (f.toLocals (params.take f.numParams).reverse) f.body with
     | Continuation.Fallthrough st s => .Success (s.values.take f.results.length ++ callerRemainder) st
     | Continuation.Return st vs     => .Success (vs.take f.results.length ++ callerRemainder) st
-    | Continuation.Break _ st s     => .Success (s.values.take f.results.length ++ callerRemainder) st
+    | Continuation.Break 0 st s     => .Success (s.values.take f.results.length ++ callerRemainder) st
+    | Continuation.Break (_+1) _ _  => .Invalid "Unexpected break targeting scope out of function"
     | Continuation.Invalid msg      => .Invalid msg
     | Continuation.OutOfFuel        => .OutOfFuel
     | Continuation.Trap st msg      => .Trap st msg

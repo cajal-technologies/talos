@@ -250,11 +250,13 @@ theorem run_eq
            .Success (s.values.take f.results.length ++ callerRemainder) st
          | .Return st vs     =>
            .Success (vs.take f.results.length ++ callerRemainder) st
-         | .Break _ st s     =>
+         | .Break 0 st s     =>
            .Success (s.values.take f.results.length ++ callerRemainder) st
+         | .Break (_+1) _ _  =>
+           .Invalid "Unexpected break targeting scope out of function"
          | .Invalid msg      => .Invalid msg
-         | .Trap st msg      => .Trap st msg
-         | .OutOfFuel        => .OutOfFuel) := by
+         | .OutOfFuel        => .OutOfFuel
+         | .Trap st msg      => .Trap st msg) := by
   simp only [run]
   rcases m.funcs[id]? with _ | f
   · rfl
