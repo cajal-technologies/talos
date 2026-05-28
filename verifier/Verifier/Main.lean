@@ -41,9 +41,10 @@ private def writeFile (p : FilePath) (content : String) : IO Unit := do
   IO.FS.writeFile p content
 
 private def runOrDie (cmd : String) (args : Array String)
-    (cwd : Option FilePath := none) : IO Unit := do
+    (cwd : Option FilePath := none)
+    (env : Array (String × Option String) := #[]) : IO Unit := do
   let child ← IO.Process.spawn {
-    cmd := cmd, args := args, cwd := cwd,
+    cmd := cmd, args := args, cwd := cwd, env := env,
     stdin := .inherit, stdout := .inherit, stderr := .inherit
   }
   let code ← child.wait
@@ -197,11 +198,50 @@ private def emitProgramFile (c : Crate) (m : Wasm.Module) : IO Unit := do
     ]
   IO.FS.writeFile (c.leanDir / "Program.lean") body
 
+/-- Compute `RUSTFLAGS` with `--remap-path-prefix` entries that strip
+machine-specific absolute paths (rustc sysroot, CARGO_HOME, $HOME) from
+the produced wasm. Without this, panic location strings embedded in the
+binary differ between CI runners and developer machines, even when the
+rustc version is pinned. -/
+private def reproducibleRustflags (rustDir : FilePath) : IO String := do
+  -- rustc's sysroot is resolved from the workspace dir so we pick up
+  -- the `rust-toolchain.toml`-pinned version rather than the global
+  -- default.
+  let sysrootOut ← IO.Process.output
+    { cmd := "rustc", args := #["--print", "sysroot"], cwd := some rustDir }
+  let sysroot :=
+    if sysrootOut.exitCode = 0 then sysrootOut.stdout.trimAscii else ""
+  let cargoHome ← do
+    match ← IO.getEnv "CARGO_HOME" with
+    | some v => pure v
+    | none =>
+      match ← IO.getEnv "HOME" with
+      | some h => pure (h ++ "/.cargo")
+      | none   => pure ""
+  let home := (← IO.getEnv "HOME").getD ""
+  -- Order matters: rustc applies remaps in declaration order and uses
+  -- the **last** matching prefix, so list from least- to most-specific.
+  -- That way `$HOME/.cargo/...` gets `/cargo-home/...` (specific) rather
+  -- than `/home/.cargo/...` (general), and a path inside the sysroot
+  -- gets `/rustc-sysroot/...` rather than `/home/...`.
+  let mut remaps : Array String := #[]
+  if !home.isEmpty then
+    remaps := remaps.push s!"--remap-path-prefix={home}=/home"
+  if !cargoHome.isEmpty then
+    remaps := remaps.push s!"--remap-path-prefix={cargoHome}=/cargo-home"
+  if !sysroot.isEmpty then
+    remaps := remaps.push s!"--remap-path-prefix={sysroot}=/rustc-sysroot"
+  pure (String.intercalate " " remaps.toList)
+
 private def buildAndEmit
     (projectDir : FilePath) (crates : Array Crate) (forceEmit : Bool) : IO Unit := do
   -- Build all crates in one cargo invocation (faster, shares the target/).
   IO.println "==> cargo build-wasm (workspace)"
-  runOrDie "cargo" #["build-wasm"] (cwd := some (projectDir / "rust"))
+  let rustDir := projectDir / "rust"
+  let rustflags ← reproducibleRustflags rustDir
+  runOrDie "cargo" #["build-wasm"]
+    (cwd := some rustDir)
+    (env := #[("RUSTFLAGS", some rustflags)])
   -- Per-crate: copy wasm, dump wat, decode + emit when stale.
   let buildRoot := projectDir / "rust" / "build"
   let cargoTarget := projectDir / "rust" / "target" / "wasm32-unknown-unknown" / "release"

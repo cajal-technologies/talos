@@ -21,10 +21,12 @@ jobs:
           build-args: verifier
           use-mathlib-cache: false
 
-      # Rust toolchain + wasm32 target for `cargo build-wasm` inside
-      # `verifier check`.
-      - name: Install Rust wasm32 target
-        run: rustup target add wasm32-unknown-unknown
+      # Pre-install the rustc version pinned by programs/rust/rust-toolchain.toml
+      # (with the wasm32 target it declares) so the first cargo invocation
+      # doesn't have to download it mid-build.
+      - name: Install pinned Rust toolchain
+        working-directory: programs/rust
+        run: rustup show active-toolchain || rustup toolchain install
 
       # wasm-tools is needed by `verifier check` (wat printer).
       - name: Install wasm-tools
