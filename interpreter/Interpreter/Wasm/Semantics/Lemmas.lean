@@ -255,13 +255,16 @@ theorem run_eq
          | .Break (_+1) _ _  =>
            .Invalid "Unexpected break targeting scope out of function"
          | .Invalid msg      => .Invalid msg
-         | .OutOfFuel        => .OutOfFuel
-         | .Trap st msg      => .Trap st msg) := by
+         | .Trap st msg      => .Trap st msg
+         | .OutOfFuel        => .OutOfFuel) := by
   simp only [run]
   rcases m.funcs[id]? with _ | f
   · rfl
   · simp only
     rcases exec fuel m initial (f.toLocals (args.take f.numParams).reverse) f.body with
-      _ | _ | _ | _ | _ | _ <;> rfl
+      _ | ⟨n, _, _⟩ | _ | _ | _ | _
+    · rfl
+    · cases n <;> rfl
+    all_goals rfl
 
 end Wasm

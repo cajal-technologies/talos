@@ -697,8 +697,8 @@ def run (fuel : Nat) (m : Module) (id : Nat)
     | Continuation.Break 0 st s     => .Success (s.values.take f.results.length ++ callerRemainder) st
     | Continuation.Break (_+1) _ _  => .Invalid "Unexpected break targeting scope out of function"
     | Continuation.Invalid msg      => .Invalid msg
-    | Continuation.OutOfFuel        => .OutOfFuel
     | Continuation.Trap st msg      => .Trap st msg
+    | Continuation.OutOfFuel        => .OutOfFuel
   | none => .Invalid "Function index out of bounds"
 
 end
