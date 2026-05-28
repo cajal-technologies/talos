@@ -114,12 +114,13 @@ private def buildArtifact
   let program := match findProgramLean sources with
     | some (path, body) => Program.find path body
     | none              => none
-  -- P4/P5/P7 prerequisite gap diagnostic — emitted once per crate.
+  -- P4/P5/P7 prerequisite gap diagnostic — emitted once per crate while
+  -- the attribute infrastructure does not yet exist in codelib.
   diags := diags.push {
     severity := .info,
-    kind     := "missing_docstring",
+    kind     := "prereq_attributes_missing",
     location := { file := info.leanRel, span := { start := ⟨1,1⟩, «end» := ⟨1,1⟩ } },
-    message  := "specs/verifications discovery requires `@[spec_of]` and `@[proves]` attributes (see EXTRACT.md §P4/P5/P7); none recorded"
+    message  := "specs/verifications discovery requires `@[spec_of]` and `@[proves]` (see EXTRACT.md §P4/P5/P7); none recorded"
   }
   -- rustc edition
   let rustc ← readRustcEdition info.rustDir

@@ -43,14 +43,14 @@ private def isFnLine (trimmed : String) : Bool :=
     trimmed.startsWith "pub extern " ∨ trimmed.startsWith "extern "
 
 private def leftTrim (s : String) : String :=
-  s.toList.dropWhile (fun c => c = ' ' ∨ c = '\t') |> String.mk
+  s.toList.dropWhile (fun c => c = ' ' ∨ c = '\t') |> String.ofList
 
 private def isIdent (c : Char) : Bool := c.isAlphanum ∨ c = '_'
 
 private def scanFnName : List Char → Option String
   | 'f' :: 'n' :: ' ' :: rest =>
     let name := rest.takeWhile isIdent
-    if name.isEmpty then none else some (String.mk name)
+    if name.isEmpty then none else some (String.ofList name)
   | _ :: rest => scanFnName rest
   | []        => none
 
@@ -61,8 +61,8 @@ private def parseFnName? (line : String) : Option String :=
 /-- Strip leading `/// ` (one space) or `///` from a doc line. -/
 private def stripDocPrefix (s : String) : String :=
   let t := leftTrim s
-  if t.startsWith "/// " then t.drop 4
-  else if t.startsWith "///" then t.drop 3
+  if t.startsWith "/// " then (t.drop 4).toString
+  else if t.startsWith "///" then (t.drop 3).toString
   else t
 
 /-- Lines that are attribute lines (start with `#[`). -/
@@ -126,9 +126,9 @@ def scan (relPath : String) (body : String) (crate : String) : List ExportedFunc
       match parseFnName? fnLine with
       | none => i := i + 1
       | some name =>
-        let prefix := (fnLine.splitOn "fn ").headD ""
-        let after  := fnLine.drop prefix.length
-        let sig    := (after.splitOn "{").headD after |>.trimAsciiEnd.toString
+        let pre   := (fnLine.splitOn "fn ").headD ""
+        let after := (fnLine.drop pre.length).toString
+        let sig   := (after.splitOn "{").headD after |>.trimAsciiEnd.toString
         let span : Span := {
           start := { line := start + 1, column := 1 },
           «end» := { line := endIdx + 1, column := (lines[endIdx]!.length + 1) }

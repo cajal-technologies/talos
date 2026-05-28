@@ -363,6 +363,7 @@ Diagnostic:
 | `missing_rust_crate_for_lean_dir` | warn     | A `lean/Project/<Crate>/` directory has no matching workspace member.       |
 | `export_outside_exports_rs`       | warn     | A `#[unsafe(no_mangle)] pub extern "C"` fn was found outside `exports.rs`.  |
 | `missing_docstring`               | info     | A `FormalSpec` has no `/-- … -/` block.                                     |
+| `prereq_attributes_missing`       | info     | `@[spec_of]` / `@[proves]` infrastructure not yet in codelib (temporary).   |
 | `missing_informal_spec`           | info     | A `FormalSpec` docstring has no `Informal spec:` block.                     |
 | `unproven_spec`                   | info     | A `FormalSpec` has zero matching `@[proves]` verifications.                 |
 | `unresolved_spec_of_target`       | warn     | A same-crate `rust-exported` target doesn't resolve to any export.          |

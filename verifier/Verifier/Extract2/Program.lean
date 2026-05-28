@@ -13,7 +13,7 @@ namespace Verifier.Extract2.Program
 open System (FilePath)
 
 private def leftTrim (s : String) : String :=
-  s.toList.dropWhile (fun c => c = ' ' ∨ c = '\t') |> String.mk
+  s.toList.dropWhile (fun c => c = ' ' ∨ c = '\t') |> String.ofList
 
 private partial def findNamespace (lines : Array String) (idx : Nat) : String :=
   if h : idx < lines.size then
