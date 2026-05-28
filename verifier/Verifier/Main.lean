@@ -1,5 +1,6 @@
 import Verifier.Emit
 import Verifier.Path
+import Verifier.Extract2
 import Cli
 
 /-!
@@ -317,6 +318,16 @@ def runReport (_ : Parsed) : IO UInt32 := do
   IO.eprintln "verifier report: not implemented"
   pure 1
 
+def runExtract (p : Parsed) : IO UInt32 := do
+  let projectDir ← absNormalize (← IO.currentDir)
+  let outFlag : String := if p.hasFlag "out" then
+    p.flag! "out" |>.as! String
+  else
+    "extracted"
+  let outDir ← absNormalize ⟨outFlag⟩
+  Verifier.Extract2.run projectDir outDir
+  pure 0
+
 def newCmd : Cmd := `[Cli|
   «new» VIA runNew;
   "Scaffold a new verification project from the bundled template."
@@ -338,6 +349,14 @@ def reportCmd : Cmd := `[Cli|
   "(stub) Generate an HTML report."
 ]
 
+def extractCmd : Cmd := `[Cli|
+  «extract» VIA runExtract;
+  "Emit one JSON artifact per crate at <DIR>/<crate>.json (default DIR=./extracted/). Must be run from the project root."
+
+  FLAGS:
+    "out" : String; "Output directory (default: ./extracted)."
+]
+
 def mainCmd : Cmd := `[Cli|
   verifier NOOP; ["0.1.0"]
   "Rust → wasm → Lean verification driver."
@@ -345,6 +364,7 @@ def mainCmd : Cmd := `[Cli|
   SUBCOMMANDS:
     newCmd;
     checkCmd;
+    extractCmd;
     reportCmd
 
   EXTENSIONS:
