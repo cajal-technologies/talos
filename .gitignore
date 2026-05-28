@@ -5,6 +5,7 @@ verifier/.lake
 Examples/rust/*/build/
 Examples/rust/*/rust/target/
 programs/rust/**/target/
+programs/rust/build/
 target/
 
 comment.txt
