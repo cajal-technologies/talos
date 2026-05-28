@@ -1,0 +1,2 @@
+lean_project = "../../lean"
+verification_folder = "Project/ReverseInplace"
