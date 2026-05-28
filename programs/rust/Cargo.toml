@@ -1,0 +1,15 @@
+[workspace]
+resolver = "2"
+members = [
+  "is_even",
+  "itoa",
+  "memchr",
+  "num_integer",
+  "reverse_inplace",
+  "rust_option",
+  "xor_sum",
+]
+
+[profile.release]
+opt-level = "s"
+lto = true

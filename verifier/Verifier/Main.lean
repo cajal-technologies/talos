@@ -250,20 +250,25 @@ private def lakeBuildCount (leanDir : FilePath) : IO (Bool × Nat) := do
   let sorries := (combined.splitOn "declaration uses 'sorry'").length - 1
   pure (out.exitCode = 0, sorries)
 
-private def checkAt (projectDir : FilePath) (forceEmit : Bool) : IO Bool := do
+private def checkAt (projectDir : FilePath) (forceEmit : Bool) (noBuild : Bool) : IO Bool := do
   let crates ← discoverCrates projectDir
   if crates.isEmpty then
     die s!"{projectDir}/rust has no crate subdirectories"
   IO.println s!"==> {crates.size} crate(s): {String.intercalate ", " (crates.toList.map (·.name))}"
   buildAndEmit projectDir crates forceEmit
-  let (ok, sorries) ← lakeBuildCount (projectDir / "lean")
-  IO.println ""
-  IO.println s!"==> {crates.size} crate(s), {if ok then "lake build OK" else "lake build FAILED"}, {sorries} sorry warning(s)"
-  pure ok
+  if noBuild then
+    IO.println ""
+    IO.println s!"==> {crates.size} crate(s) emitted ({String.intercalate ", " (crates.toList.map (·.name))}); skipping `lake build` (--no-build)"
+    pure true
+  else
+    let (ok, sorries) ← lakeBuildCount (projectDir / "lean")
+    IO.println ""
+    IO.println s!"==> {crates.size} crate(s), {if ok then "lake build OK" else "lake build FAILED"}, {sorries} sorry warning(s)"
+    pure ok
 
-private def cmdCheck (forceEmit : Bool) : IO Unit := do
+private def cmdCheck (forceEmit : Bool) (noBuild : Bool) : IO Unit := do
   let projectDir ← absNormalize (← IO.currentDir)
-  unless ← checkAt projectDir forceEmit do IO.Process.exit 1
+  unless ← checkAt projectDir forceEmit noBuild do IO.Process.exit 1
 
 -- ----------------------------------------------------------------------------
 -- `new`
@@ -295,7 +300,7 @@ private def cmdNew (projectPathIn : String) : IO Unit := do
   -- Proof.lean files reference `func0` etc., so we can't skip emit
   -- before building.
   IO.println "==> running initial `verifier check`"
-  unless ← checkAt projectDir false do
+  unless ← checkAt projectDir false false do
     die "initial `verifier check` failed"
   IO.println s!"==> done. Project ready at {projectDir}"
 
@@ -311,7 +316,7 @@ def runNew (p : Parsed) : IO UInt32 := do
   pure 0
 
 def runCheck (p : Parsed) : IO UInt32 := do
-  cmdCheck (p.hasFlag "force-emit")
+  cmdCheck (p.hasFlag "force-emit") (p.hasFlag "no-build")
   pure 0
 
 def runReport (_ : Parsed) : IO UInt32 := do
@@ -332,6 +337,7 @@ def checkCmd : Cmd := `[Cli|
 
   FLAGS:
     "force-emit"; "Re-emit Program.lean even if the wasm hasn't changed."
+    "no-build";   "Build wasm + emit Program.lean only; skip the final `lake build`."
 ]
 
 def reportCmd : Cmd := `[Cli|

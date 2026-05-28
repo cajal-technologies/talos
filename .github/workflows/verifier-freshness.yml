@@ -1,0 +1,48 @@
+name: Verifier Freshness
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  freshness:
+    name: Programs up to date
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The verifier executable doesn't need Mathlib (see PR #12), so we
+      # skip the mathlib cache entirely.
+      - uses: leanprover/lean-action@v1
+        with:
+          lake-package-directory: verifier
+          build-args: verifier
+          use-mathlib-cache: false
+
+      # Rust toolchain + wasm32 target for `cargo build-wasm` inside
+      # `verifier check`.
+      - name: Install Rust wasm32 target
+        run: rustup target add wasm32-unknown-unknown
+
+      # wasm-tools is needed by `verifier check` (wat printer).
+      - name: Install wasm-tools
+        uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-tools
+
+      # Re-emit every Program.lean from the committed wasm sources.
+      # `--no-build` skips the final `lake build` — proof correctness is
+      # covered by the main CI job; here we only check for drift.
+      - name: Regenerate programs
+        working-directory: programs
+        run: lake -d ../verifier exe verifier check --no-build
+
+      # Fail if any generated file changed.
+      - name: Assert no drift
+        run: |
+          git diff --exit-code -- programs/ \
+            || { echo ""; echo "Generated files are out of date. Re-run:"; \
+                 echo "  cd programs && lake -d ../verifier exe verifier check"; \
+                 exit 1; }
