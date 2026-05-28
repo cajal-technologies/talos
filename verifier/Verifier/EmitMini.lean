@@ -279,13 +279,17 @@ def «module» (m : Wasm.Module) : String :=
 /-- Emit the drift-check block: a `UInt64` hash constant pinned to the
 `module.wat` content at emit time, plus a `#eval` that re-reads the sibling
 file at elaboration time and `throw`s if the hash disagrees. The path is
-resolved relative to the lake-project root (lake's elaboration cwd). -/
+resolved relative to the lake-project root (lake's elaboration cwd). The
+`#guard_msgs (drop info) in` wrapper silences the success-case `()` info
+message; if the hash disagrees, `#eval` emits an `error` which still
+surfaces. -/
 def driftCheck (relWatPath : String) (watHash : UInt64) : String :=
   String.intercalate "\n" [
     "/-- Hash of the source `module.wat` captured when `verifier check` last ran. -/",
     s!"private def expectedWatHash : UInt64 := {watHash.toNat}",
     "",
     "-- Compile-time drift check: errors if `module.wat` has changed without a corresponding re-emit.",
+    "#guard_msgs (drop info) in",
     "#eval show IO Unit from do",
     s!"  let path : System.FilePath := {repr relWatPath}",
     "  unless ← path.pathExists do return",

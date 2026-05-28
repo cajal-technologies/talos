@@ -22,10 +22,6 @@ def Factorial : Program := [
   .localGet 1
 ]
 
-#eval
-  let m : Module := { funcs := [{ params := [.i32], locals := [.i32], body := Factorial, results := [.i32] }] }
-  run 1000 m 0 m.initialStore [.i32 4]
-
 theorem factorialSpec (m : Module) (st : Store) (n : UInt32) :
     wp m Factorial
         (fun c => ∃ st' s', c = .Fallthrough st' s' ∧

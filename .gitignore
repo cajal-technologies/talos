@@ -12,6 +12,7 @@ tasks/code-review*.md
 
 .claude/*.lock
 .claude/worktrees
+.claude-worktree-init.log
 
 tasks/
 

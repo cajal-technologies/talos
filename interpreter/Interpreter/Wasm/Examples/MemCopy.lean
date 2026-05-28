@@ -60,10 +60,6 @@ private def runTrapMsg (fuel : Nat) (m : Module) (idx : Nat)
   | .Trap _ msg => some msg
   | _ => none
 
-#eval runValues 10 copyModule 0 copyModule.initialStore []
-#eval runValues 10 copyModule 1 copyModule.initialStore []
-#eval runTrapMsg 10 copyModule 2 copyModule.initialStore []
-
 theorem copy_disjoint_moves_bytes :
     runValues 10 copyModule 0 copyModule.initialStore [] = [.i32 0x44332211] := by
   native_decide

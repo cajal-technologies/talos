@@ -22,10 +22,6 @@ def SimpleLoop : Program := [
     .localGet 1
 ]
 
-#eval
-  let m : Module := { funcs := [{ params := [.i32], locals := [.i32], body := SimpleLoop, results := [.i32] }] }
-  run 100 m 0 m.initialStore [.i32 10]
-
 theorem simpleLoopSpec (m : Module) (st : Store) (n : UInt32) :
     wp m SimpleLoop
         (fun c => ∃ st' s', c = .Fallthrough st' s' ∧ s'.values = [.i32 n])

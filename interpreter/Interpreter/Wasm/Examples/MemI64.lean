@@ -71,18 +71,6 @@ private def runValues (fuel : Nat) (m : Module) (idx : Nat)
   | .Success vs _ => vs
   | _ => []
 
-#eval runValues 10 i64MemModule 0 i64MemModule.initialStore []
-#eval runValues 10 i64MemModule 1 i64MemModule.initialStore []
-#eval runValues 10 i64MemModule 2 i64MemModule.initialStore []
-#eval runValues 10 i64MemModule 3 i64MemModule.initialStore []
-#eval runValues 10 i64MemModule 4 i64MemModule.initialStore []
-#eval runValues 10 i64MemModule 5 i64MemModule.initialStore []
-#eval runValues 10 i64MemModule 6 i64MemModule.initialStore []
-#eval runValues 10 i64MemModule 7 i64MemModule.initialStore []
-#eval runValues 10 i64MemModule 8 i64MemModule.initialStore []
-#eval runValues 10 i64MemModule 9 i64MemModule.initialStore []
-#eval runValues 10 i64MemModule 10 i64MemModule.initialStore []
-
 theorem load64_returns_word :
     runValues 10 i64MemModule 0 i64MemModule.initialStore [] = [.i64 0xFF2233445566FF88] := by
   native_decide

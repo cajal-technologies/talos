@@ -16,13 +16,6 @@ def SelectMin : Program := [
   .const 42, .drop                   -- pad with const 42; drop it again
 ]
 
-#eval
-  let m : Module := { funcs := [{ params := [.i32, .i32], body := SelectMin, results := [.i32] }] }
-  run 10 m 0 m.initialStore [.i32 3, .i32 7]
-#eval
-  let m : Module := { funcs := [{ params := [.i32, .i32], body := SelectMin, results := [.i32] }] }
-  run 10 m 0 m.initialStore [.i32 9, .i32 4]
-
 theorem selectMinSpec (m : Module) (st : Store) (x y : UInt32) :
     wp m SelectMin
         (fun c => c = .Fallthrough st
