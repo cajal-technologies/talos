@@ -25,7 +25,7 @@ def fillTrapBody : Program := [
 ]
 
 def fillModule : Module :=
-  { funcs := [{ body := fillThenReadBody }, { body := fillTrapBody }]
+  { funcs := [{ body := fillThenReadBody, results := [.i64] }, { body := fillTrapBody }]
     memory := some { pagesMin := 1 } }
 
 private def runValues (fuel : Nat) (m : Module) (idx : Nat)
@@ -41,9 +41,6 @@ private def runTrapMsg (fuel : Nat) (m : Module) (idx : Nat)
   match run fuel m idx st args with
   | .Trap _ msg => some msg
   | _ => none
-
-#eval runValues 10 fillModule 0 fillModule.initialStore []
-#eval runTrapMsg 10 fillModule 1 fillModule.initialStore []
 
 theorem fill_then_load_returns_repeated_byte :
     runValues 10 fillModule 0 fillModule.initialStore []

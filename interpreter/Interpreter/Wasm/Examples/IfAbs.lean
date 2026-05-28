@@ -15,13 +15,6 @@ def IfAbs : Program := [
     [.localGet 0]
 ]
 
-#eval
-  let m : Module := { funcs := [{ params := [.i32], body := IfAbs }] }
-  run 10 m 0 m.initialStore [.i32 0xFFFFFFFE]
-#eval
-  let m : Module := { funcs := [{ params := [.i32], body := IfAbs }] }
-  run 10 m 0 m.initialStore [.i32 7]
-
 theorem ifAbsSpec (m : Module) (st : Store) (x : UInt32) :
     wp m IfAbs
         (fun c => c = .Fallthrough st

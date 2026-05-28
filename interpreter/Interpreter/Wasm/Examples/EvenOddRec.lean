@@ -20,15 +20,9 @@ def IsOddRec : Program := [
   .localGet 0
 ]
 
-#eval
-  let m : Module :=
-    { funcs := [{ params := [.i32], body := IsEvenRec },
-                { params := [.i32], body := IsOddRec }] }
-  run 1000 m 1 m.initialStore [.i32 5]
-
 def evenOddModule : Module :=
-  { funcs := [{ params := [.i32], body := IsEvenRec },
-              { params := [.i32], body := IsOddRec }] }
+  { funcs := [{ params := [.i32], body := IsEvenRec, results := [.i32] },
+              { params := [.i32], body := IsOddRec,  results := [.i32] }] }
 
 /-- Joint spec for both functions, proven simultaneously by strong induction
     on `n.toNat` (the unsigned measure). -/
@@ -50,8 +44,7 @@ theorem evenOddSpec : ∀ n : UInt32,
   clear ih
   refine ⟨?_, ?_⟩
   · -- IsEvenRec
-    apply FuncSpec.of_wp_body (f := { params := [.i32], body := IsEvenRec })
-    · rfl
+    apply FuncSpec.of_wp_body (f := { params := [.i32], body := IsEvenRec, results := [.i32] })
     · rfl
     · rintro args rfl initial
       simp [Function.toLocals, Function.numParams]
@@ -86,8 +79,7 @@ theorem evenOddSpec : ∀ n : UInt32,
           rw [hnsub]
           split_ifs <;> simp_all <;> omega
   · -- IsOddRec
-    apply FuncSpec.of_wp_body (f := { params := [.i32], body := IsOddRec })
-    · rfl
+    apply FuncSpec.of_wp_body (f := { params := [.i32], body := IsOddRec, results := [.i32] })
     · rfl
     · rintro args rfl initial
       simp [Function.toLocals, Function.numParams]

@@ -18,7 +18,7 @@ open Wasm
 theorem is_even_correct (initial : Store) (n : UInt32) :
     TerminatesWith «module» 0 initial [.i32 n]
       (fun _ rs => rs = [.i32 (if n.toNat % 2 = 0 then 1 else 0)]) := by
-  apply TerminatesWith.of_wp_entry (f := ⟨[.i32], [], func0, none⟩) rfl rfl
+  apply TerminatesWith.of_wp_entry (f := ⟨[.i32], [], func0, [.i32]⟩) rfl
   intro initial'
   unfold func0
   wp_run

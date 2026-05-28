@@ -1,0 +1,21 @@
+# Build every workspace member to wasm and stage the artifacts under
+# `build/<crate>/program.{wasm,wat}`. Mirrors what `verifier check` does
+# on the rust side, so you can iterate on the rust code without dragging
+# the lean toolchain in.
+
+default: build
+
+build:
+    @mkdir -p build
+    cargo build-wasm
+    @for wasm in target/wasm32-unknown-unknown/release/*.wasm; do \
+        name=$(basename "$wasm" .wasm); \
+        mkdir -p "build/$name"; \
+        cp "$wasm" "build/$name/program.wasm"; \
+        wasm-tools print "build/$name/program.wasm" > "build/$name/program.wat"; \
+        echo "  built build/$name/program.{wasm,wat}"; \
+    done
+
+clean:
+    cargo clean
+    rm -rf build

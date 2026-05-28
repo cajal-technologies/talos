@@ -33,9 +33,11 @@ def growFailBody : Program := [
 
 def growModule : Module :=
   { funcs :=
-      [ { body := sizeBody }
-      , { body := growThenSizeBody }
-      , { body := growFailBody } ]
+      [ { body := sizeBody,          results := [.i32] }
+      , { body := growThenSizeBody,  results := [.i32] }
+      -- growFailBody leaves `[size, -1]` on the stack (top = size), so the
+      -- function returns two i32s under Wasm's standard convention.
+      , { body := growFailBody,      results := [.i32, .i32] } ]
     memory := some { pagesMin := 1 } }
 
 private def runValues (fuel : Nat) (m : Module) (idx : Nat)
@@ -43,10 +45,6 @@ private def runValues (fuel : Nat) (m : Module) (idx : Nat)
   match run fuel m idx st args with
   | .Success vs _ => vs
   | _ => []
-
-#eval runValues 10 growModule 0 growModule.initialStore []  -- [1]
-#eval runValues 10 growModule 1 growModule.initialStore []  -- [3]
-#eval runValues 10 growModule 2 growModule.initialStore []  -- [1, -1]
 
 theorem memorySize_reads_pagesMin :
     runValues 10 growModule 0 growModule.initialStore [] = [.i32 1] := by

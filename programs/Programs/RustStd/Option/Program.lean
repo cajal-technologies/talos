@@ -77,12 +77,12 @@ def func5 : Wasm.Program :=
 def «module» : Wasm.Module :=
 {
   funcs := [
-    { params := [.i64], locals := [], body := func0 },
-    { params := [.i64], locals := [], body := func1 },
-    { params := [.i64, .i64], locals := [], body := func2 },
-    { params := [.i64, .i64], locals := [], body := func3 },
-    { params := [.i64], locals := [], body := func4 },
-    { params := [.i64], locals := [], body := func5 }
+    { params := [.i64], locals := [], body := func0, results := [.i64] },
+    { params := [.i64], locals := [], body := func1, results := [.i32] },
+    { params := [.i64, .i64], locals := [], body := func2, results := [.i64] },
+    { params := [.i64, .i64], locals := [], body := func3, results := [.i64] },
+    { params := [.i64], locals := [], body := func4, results := [.i64] },
+    { params := [.i64], locals := [], body := func5, results := [.i64] }
   ],
   exports := [
     { name := "filter_positive", funcIdx := 0 },
@@ -92,6 +92,12 @@ def «module» : Wasm.Module :=
     { name := "unwrap_or_default", funcIdx := 4 },
     { name := "wrap", funcIdx := 5 },
     { name := "unwrap_or", funcIdx := 3 }
+  ],
+  memory := some { pagesMin := (16 : UInt32), pagesMax := none, data := [] },
+  globals := [
+    { type := .i32, init := .i32 (1048576 : UInt32) },
+    { type := .i32, init := .i32 (1048576 : UInt32) },
+    { type := .i32, init := .i32 (1048576 : UInt32) }
   ]
 }
 
@@ -99,6 +105,7 @@ def «module» : Wasm.Module :=
 private def expectedWatHash : UInt64 := 6850677042129948027
 
 -- Compile-time drift check: errors if `module.wat` has changed without a corresponding re-emit.
+#guard_msgs (drop info) in
 #eval show IO Unit from do
   let path : System.FilePath := "Programs/RustStd/Option/module.wat"
   unless ← path.pathExists do return

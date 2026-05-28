@@ -43,8 +43,8 @@ def copyTrapBody : Program := [
 
 def copyModule : Module :=
   { funcs :=
-      [ { body := copyDisjointBody }
-      , { body := copyOverlapBody }
+      [ { body := copyDisjointBody, results := [.i32] }
+      , { body := copyOverlapBody,  results := [.i64] }
       , { body := copyTrapBody } ]
     memory := some { pagesMin := 1, data := [{ offset := some 0, bytes := initBytes }] } }
 
@@ -59,10 +59,6 @@ private def runTrapMsg (fuel : Nat) (m : Module) (idx : Nat)
   match run fuel m idx st args with
   | .Trap _ msg => some msg
   | _ => none
-
-#eval runValues 10 copyModule 0 copyModule.initialStore []
-#eval runValues 10 copyModule 1 copyModule.initialStore []
-#eval runTrapMsg 10 copyModule 2 copyModule.initialStore []
 
 theorem copy_disjoint_moves_bytes :
     runValues 10 copyModule 0 copyModule.initialStore [] = [.i32 0x44332211] := by

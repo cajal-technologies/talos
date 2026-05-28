@@ -49,10 +49,16 @@ def func0 : Wasm.Program :=
 def «module» : Wasm.Module :=
 {
   funcs := [
-    { params := [.i32, .i32, .i32], locals := [.i32], body := func0 }
+    { params := [.i32, .i32, .i32], locals := [.i32], body := func0, results := [.i32] }
   ],
   exports := [
     { name := "memchr", funcIdx := 0 }
+  ],
+  memory := some { pagesMin := (16 : UInt32), pagesMax := none, data := [] },
+  globals := [
+    { type := .i32, init := .i32 (1048576 : UInt32) },
+    { type := .i32, init := .i32 (1048576 : UInt32) },
+    { type := .i32, init := .i32 (1048576 : UInt32) }
   ]
 }
 
@@ -60,6 +66,7 @@ def «module» : Wasm.Module :=
 private def expectedWatHash : UInt64 := 4315268944418168635
 
 -- Compile-time drift check: errors if `module.wat` has changed without a corresponding re-emit.
+#guard_msgs (drop info) in
 #eval show IO Unit from do
   let path : System.FilePath := "Programs/Simple/Memchr/module.wat"
   unless ← path.pathExists do return

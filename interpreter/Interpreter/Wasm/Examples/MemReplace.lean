@@ -26,10 +26,8 @@ def replaceBody : Program := [
 ]
 
 def replaceModule : Module :=
-  { funcs := [{ params := [.i32], locals := [.i32], body := replaceBody }]
+  { funcs := [{ params := [.i32], locals := [.i32], body := replaceBody, results := [.i32] }]
     memory := some { pagesMin := 1, data := [{ offset := some 0, bytes := [42, 0, 0, 0] }] } }
-
-#eval run 20 replaceModule 0 replaceModule.initialStore [.i32 99]
 
 theorem replaceModule_init_mem :
     replaceModule.initialStore.mem.read32 0 = 42 := by

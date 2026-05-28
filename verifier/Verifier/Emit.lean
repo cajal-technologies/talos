@@ -1,4 +1,4 @@
-import Interpreter.Wasm
+import Interpreter.Wasm.Syntax
 
 /-!
 # Emit Wasm AST as literal Lean source
@@ -177,22 +177,26 @@ private def emitInstrShort : Wasm.Instruction → String
   | .unreachable    => ".unreachable"
   -- Structured control: should be handled by emitInstr; fall back to a flat
   -- one-line form so this function remains total.
-  | .block body     => ".block " ++ list (body.map emitInstrShort)
-  | .loop body      => ".loop " ++ list (body.map emitInstrShort)
-  | .iff thn els    =>
-      ".iff " ++ list (thn.map emitInstrShort) ++ " " ++ list (els.map emitInstrShort)
+  | .block pa ra body     =>
+      s!".block {emitNat pa} {emitNat ra} " ++ list (body.map emitInstrShort)
+  | .loop pa ra body      =>
+      s!".loop {emitNat pa} {emitNat ra} " ++ list (body.map emitInstrShort)
+  | .iff pa ra thn els    =>
+      s!".iff {emitNat pa} {emitNat ra} " ++
+        list (thn.map emitInstrShort) ++ " " ++ list (els.map emitInstrShort)
 
 mutual
   /-- Render an instruction prefixed with `indent ind`. Structured-control
   bodies are recursively broken across lines; leaf instructions stay on the
   caller's line. -/
   private partial def emitInstr (ind : Nat) : Wasm.Instruction → String
-    | .block body =>
-        indent ind ++ ".block " ++ emitInstrList ind body
-    | .loop body =>
-        indent ind ++ ".loop " ++ emitInstrList ind body
-    | .iff thn els =>
-        indent ind ++ ".iff " ++ emitInstrList ind thn ++ " " ++ emitInstrList ind els
+    | .block pa ra body =>
+        indent ind ++ s!".block {emitNat pa} {emitNat ra} " ++ emitInstrList ind body
+    | .loop pa ra body =>
+        indent ind ++ s!".loop {emitNat pa} {emitNat ra} " ++ emitInstrList ind body
+    | .iff pa ra thn els =>
+        indent ind ++ s!".iff {emitNat pa} {emitNat ra} " ++
+          emitInstrList ind thn ++ " " ++ emitInstrList ind els
     | other =>
         indent ind ++ emitInstrShort other
 
@@ -226,13 +230,9 @@ private def emitFuncBodyDef (es : List Wasm.Export) (idx : Nat) (f : Wasm.Functi
   let body := emitInstrList 0 f.body
   s!"{exportDocComment es idx}def {funcBodyName idx} : Wasm.Program :=\n  {body}"
 
-private def emitOptionResults : Option (List Wasm.ValueType) → String
-  | none    => "none"
-  | some rs => s!"some {emitValueTypes rs}"
-
 private def emitFunc (idx : Nat) (f : Wasm.Function) : String :=
   s!"\{ params := {emitValueTypes f.params}, locals := {emitValueTypes f.locals}" ++
-  s!", body := {funcBodyName idx}, results := {emitOptionResults f.results} }"
+  s!", body := {funcBodyName idx}, results := {emitValueTypes f.results} }"
 
 private def emitExport (e : Wasm.Export) : String :=
   s!"\{ name := {repr e.name}, funcIdx := {emitNat e.funcIdx} }"
@@ -283,13 +283,17 @@ def «module» (m : Wasm.Module) : String :=
 /-- Emit the drift-check block: a `UInt64` hash constant pinned to the
 `module.wat` content at emit time, plus a `#eval` that re-reads the sibling
 file at elaboration time and `throw`s if the hash disagrees. The path is
-resolved relative to the lake-project root (lake's elaboration cwd). -/
+resolved relative to the lake-project root (lake's elaboration cwd). The
+`#guard_msgs (drop info) in` wrapper silences the success-case `()` info
+message; if the hash disagrees, `#eval` emits an `error` which still
+surfaces. -/
 def driftCheck (relWatPath : String) (watHash : UInt64) : String :=
   String.intercalate "\n" [
     "/-- Hash of the source `module.wat` captured when `verifier check` last ran. -/",
     s!"private def expectedWatHash : UInt64 := {watHash.toNat}",
     "",
     "-- Compile-time drift check: errors if `module.wat` has changed without a corresponding re-emit.",
+    "#guard_msgs (drop info) in",
     "#eval show IO Unit from do",
     s!"  let path : System.FilePath := {repr relWatPath}",
     "  unless ← path.pathExists do return",

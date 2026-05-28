@@ -8,3 +8,7 @@ path = "../codelib"
 
 [[lean_lib]]
 name = "Programs"
+
+[[lean_exe]]
+name = "_verifier_extract"
+root = "_VerifierExtract"

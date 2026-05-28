@@ -1,5 +1,7 @@
 # Talos
 
+[![Lean](https://img.shields.io/badge/Lean-v4.30.0-blue?logo=lean)](lean-toolchain)
+
 **Talos** is a WebAssembly interpreter written in Lean 4, named after the bronze giant of Greek mythology who guarded Crete — a mechanical guardian, built to enforce rules.
 
 The same definitions that _execute_ a Wasm program are the ones you _reason about_. There is no separate spec interpreter to keep in sync: evaluation and proof share a single codebase.

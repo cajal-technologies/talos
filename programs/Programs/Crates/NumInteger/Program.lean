@@ -96,10 +96,16 @@ def func0 : Wasm.Program :=
 def «module» : Wasm.Module :=
 {
   funcs := [
-    { params := [.i64, .i64], locals := [.i64, .i64], body := func0 }
+    { params := [.i64, .i64], locals := [.i64, .i64], body := func0, results := [.i64] }
   ],
   exports := [
     { name := "gcd_u64", funcIdx := 0 }
+  ],
+  memory := some { pagesMin := (16 : UInt32), pagesMax := none, data := [] },
+  globals := [
+    { type := .i32, init := .i32 (1048576 : UInt32) },
+    { type := .i32, init := .i32 (1048576 : UInt32) },
+    { type := .i32, init := .i32 (1048576 : UInt32) }
   ]
 }
 
@@ -107,6 +113,7 @@ def «module» : Wasm.Module :=
 private def expectedWatHash : UInt64 := 15244946472501003244
 
 -- Compile-time drift check: errors if `module.wat` has changed without a corresponding re-emit.
+#guard_msgs (drop info) in
 #eval show IO Unit from do
   let path : System.FilePath := "Programs/Crates/NumInteger/module.wat"
   unless ← path.pathExists do return

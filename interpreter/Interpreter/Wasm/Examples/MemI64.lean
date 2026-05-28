@@ -50,17 +50,17 @@ def store64RoundtripBody : Program := [
 
 def i64MemModule : Module :=
   { funcs :=
-      [ { body := load64Body }            -- 0
-      , { body := load8UI64Body }         -- 1
-      , { body := load8SI64Body }         -- 2
-      , { body := load16UI64Body }        -- 3
-      , { body := load16SI64Body }        -- 4
-      , { body := load32UI64Body }        -- 5
-      , { body := load32SI64Body }        -- 6
-      , { body := store8I64RoundtripBody }   -- 7
-      , { body := store16I64RoundtripBody }  -- 8
-      , { body := store32I64RoundtripBody }  -- 9
-      , { body := store64RoundtripBody }     -- 10
+      [ { body := load64Body,             results := [.i64] }  -- 0
+      , { body := load8UI64Body,          results := [.i64] }  -- 1
+      , { body := load8SI64Body,          results := [.i64] }  -- 2
+      , { body := load16UI64Body,         results := [.i64] }  -- 3
+      , { body := load16SI64Body,         results := [.i64] }  -- 4
+      , { body := load32UI64Body,         results := [.i64] }  -- 5
+      , { body := load32SI64Body,         results := [.i64] }  -- 6
+      , { body := store8I64RoundtripBody,  results := [.i64] }  -- 7
+      , { body := store16I64RoundtripBody, results := [.i64] }  -- 8
+      , { body := store32I64RoundtripBody, results := [.i64] }  -- 9
+      , { body := store64RoundtripBody,    results := [.i64] }  -- 10
       ]
     memory := some { pagesMin := 1, data := [{ offset := some 0, bytes := initBytes }] } }
 
@@ -70,18 +70,6 @@ private def runValues (fuel : Nat) (m : Module) (idx : Nat)
   match run fuel m idx st args with
   | .Success vs _ => vs
   | _ => []
-
-#eval runValues 10 i64MemModule 0 i64MemModule.initialStore []
-#eval runValues 10 i64MemModule 1 i64MemModule.initialStore []
-#eval runValues 10 i64MemModule 2 i64MemModule.initialStore []
-#eval runValues 10 i64MemModule 3 i64MemModule.initialStore []
-#eval runValues 10 i64MemModule 4 i64MemModule.initialStore []
-#eval runValues 10 i64MemModule 5 i64MemModule.initialStore []
-#eval runValues 10 i64MemModule 6 i64MemModule.initialStore []
-#eval runValues 10 i64MemModule 7 i64MemModule.initialStore []
-#eval runValues 10 i64MemModule 8 i64MemModule.initialStore []
-#eval runValues 10 i64MemModule 9 i64MemModule.initialStore []
-#eval runValues 10 i64MemModule 10 i64MemModule.initialStore []
 
 theorem load64_returns_word :
     runValues 10 i64MemModule 0 i64MemModule.initialStore [] = [.i64 0xFF2233445566FF88] := by

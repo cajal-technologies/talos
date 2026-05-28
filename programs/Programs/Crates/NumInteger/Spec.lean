@@ -25,10 +25,13 @@ private alias uint64_loop_step_y    := UInt64.stein_step_y
 
 /-- `gcd_u64 a b` terminates with `[gcd(a, b)]`. -/
 theorem gcd_u64_correct (initial : Store) (a b : UInt64) :
-    TerminatesWith «module» 0 initial [.i64 a, .i64 b]
+    -- Args are passed in stack order (top first). The Wasm caller pushes
+    -- `a` then `b`, so the operand stack handed to `run` is `[b, a]` —
+    -- which `run` reverses on entry to make local 0 = a, local 1 = b.
+    TerminatesWith «module» 0 initial [.i64 b, .i64 a]
       (fun _ rs => rs = [.i64 (UInt64.ofNat (Nat.gcd a.toNat b.toNat))]) := by
-  refine FuncSpec.to_TerminatesWith (Pre := fun args => args = [.i64 a, .i64 b]) ?spec rfl
-  refine FuncSpec.of_wp_body (f := ⟨[.i64, .i64], [.i64, .i64], func0, none⟩) rfl rfl ?_
+  refine FuncSpec.to_TerminatesWith (Pre := fun args => args = [.i64 b, .i64 a]) ?spec rfl
+  refine FuncSpec.of_wp_body (f := ⟨[.i64, .i64], [.i64, .i64], func0, [.i64]⟩) rfl ?_
   intro args hPre initial'
   subst hPre
   show wp _ func0 _ _ _

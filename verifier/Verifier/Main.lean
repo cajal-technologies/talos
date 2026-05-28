@@ -1,490 +1,359 @@
 import Verifier.Emit
-import Verifier.Toml
+import Verifier.Path
+import Interpreter.Wasm.Decoder.Wat
+import Cli
 
 /-!
-# `verifier` CLI entry point
+# `verifier` CLI
 
-See `tasks/02-verifier.md` for the full spec. Two subcommands:
+```
+verifier new   <project-path>
+verifier check [--force-emit]
+```
 
-* `verifier new <rust-path> <lean-path> <subfolder>` — scaffold metadata
-  files (`verifier.toml`, `origin.toml`), the lean subfolder, an empty
-  `Spec.lean`, and (if missing) a fresh lean project. Idempotent on a
-  matching pair.
-* `verifier check <path>` — given either a rust project (with
-  `verifier.toml`) or a verification subfolder (with `origin.toml`),
-  run the full pipeline: cargo build → wasm-tools print → Wat.decode →
-  emit `Program.lean` → `lake build`.
+`new`   — scaffolds a fixed-shape project at `<project-path>` from the
+          baked-in template (a rust cargo workspace + a lean project).
+`check` — must be run from the project root. Builds every crate in the
+          rust workspace to `rust/build/<crate>/program.{wasm,wat}`,
+          re-emits `lean/Project/<Crate>/Program.lean` when the wasm
+          changed (or `--force-emit`), then runs `lake build`.
+
+The mapping between rust crates and lean modules is by convention:
+crate `foo_bar` ↔ lean module `Project.FooBar` (snake_case →
+PascalCase). No `verifier.toml` or `origin.toml` needed.
 -/
 
 open System (FilePath)
+open Verifier.Path
 
 namespace Verifier
 
-/-- Whitespace predicate used by our `List Char`-flavoured trim. -/
-private def isSpace (c : Char) : Bool :=
-  c = ' ' || c = '\t' || c = '\r' || c = '\n'
-
-/-- `String.trim` returns a `String.Slice` in current Lean and the rest of
-the slice API is in flux; we stay on `List Char` to keep this code stable. -/
-private def strTrim (s : String) : String :=
-  let cs := s.toList.dropWhile isSpace
-  String.ofList (cs.reverse.dropWhile isSpace).reverse
-
-/-- Take chars while `p` holds. -/
-private def strTakeWhile (s : String) (p : Char → Bool) : String :=
-  String.ofList (s.toList.takeWhile p)
-
-/-- Drop chars while `p` holds. -/
-private def strDropWhile (s : String) (p : Char → Bool) : String :=
-  String.ofList (s.toList.dropWhile p)
-
-/-- Drop the first `n` characters. -/
-private def strDrop (s : String) (n : Nat) : String :=
-  String.ofList (s.toList.drop n)
-
-/-- Capitalise the first character. -/
-private def strCapitalise (s : String) : String :=
-  match s.toList with
-  | []      => s
-  | c :: cs => String.ofList (c.toUpper :: cs)
-
-private def usage : String :=
-  "Usage:\n" ++
-  "  lake exe verifier new        <rust-path> <lean-path> <subfolder>\n" ++
-  "  lake exe verifier check      <path>\n" ++
-  "  lake exe verifier check      --no-build <path>   (skip `lake build`)"
+-- ----------------------------------------------------------------------------
+-- Small helpers
+-- ----------------------------------------------------------------------------
 
 private def die (msg : String) : IO α := do
   IO.eprintln msg
   IO.Process.exit 1
 
--- ----------------------------------------------------------------------------
--- Path utilities
--- ----------------------------------------------------------------------------
-
-/-- Normalize a `System.FilePath`: drop `.` components and collapse `a/../`.
-    Does not touch the filesystem. -/
-private def normalize (p : FilePath) : FilePath :=
-  let parts := p.components
-  let rev := parts.foldl (init := ([] : List String)) fun acc c =>
-    match c, acc with
-    | ".", _              => acc
-    | "..", h :: t        => if h ≠ ".." && h ≠ "" then t else c :: acc
-    | _, _                => c :: acc
-  ⟨System.FilePath.pathSeparator.toString.intercalate rev.reverse⟩
-
-/-- Compute a relative path from `from` to `to`, both interpreted as
-    directories. Both inputs should be absolute and already normalised. -/
-private def relativeTo («from» «to» : FilePath) : FilePath :=
-  let f := «from».components.filter (· ≠ "")
-  let t := «to».components.filter (· ≠ "")
-  let rec strip : List String → List String → List String × List String
-    | a :: as, b :: bs => if a = b then strip as bs else (a :: as, b :: bs)
-    | xs,      ys      => (xs, ys)
-  let (upFrom, downTo) := strip f t
-  let parts := upFrom.map (fun _ => "..") ++ downTo
-  if parts.isEmpty then ⟨"."⟩ else ⟨System.FilePath.pathSeparator.toString.intercalate parts⟩
-
-/-- Absolute, normalised form of a user-supplied path. The path may not
-    exist on disk yet; this only canonicalises lexically against `cwd`. -/
-private def absNormalize (p : FilePath) : IO FilePath := do
-  let abs ← if p.isAbsolute then pure p else
-    let cwd ← IO.currentDir
-    pure (cwd / p)
-  pure (normalize abs)
-
 private def writeFile (p : FilePath) (content : String) : IO Unit := do
-  if let some parent := p.parent then
-    IO.FS.createDirAll parent
+  if let some parent := p.parent then IO.FS.createDirAll parent
   IO.FS.writeFile p content
 
--- ----------------------------------------------------------------------------
--- Subprocess helpers
--- ----------------------------------------------------------------------------
-
-private structure RunOpts where
-  cmd     : String
-  args    : Array String
-  cwd     : Option FilePath := none
-  inherit : Bool := true
-
-private def run (o : RunOpts) : IO Unit := do
-  let stdin  : IO.Process.Stdio := if o.inherit then .inherit else .null
-  let stdout : IO.Process.Stdio := if o.inherit then .inherit else .piped
-  let stderr : IO.Process.Stdio := if o.inherit then .inherit else .piped
+private def runOrDie (cmd : String) (args : Array String)
+    (cwd : Option FilePath := none) : IO Unit := do
   let child ← IO.Process.spawn {
-    cmd := o.cmd, args := o.args, cwd := o.cwd,
-    stdin := stdin, stdout := stdout, stderr := stderr
+    cmd := cmd, args := args, cwd := cwd,
+    stdin := .inherit, stdout := .inherit, stderr := .inherit
   }
   let code ← child.wait
   if code ≠ 0 then
-    die s!"`{o.cmd} {String.intercalate " " o.args.toList}` failed with exit code {code}"
+    die s!"`{cmd} {String.intercalate " " args.toList}` failed (exit {code})"
 
-private def captureStdout (cmd : String) (args : Array String) : IO String := do
-  let out ← IO.Process.output { cmd := cmd, args := args }
+private def runChecked (cmd : String) (args : Array String)
+    (cwd : Option FilePath := none) : IO Bool := do
+  let child ← IO.Process.spawn {
+    cmd := cmd, args := args, cwd := cwd,
+    stdin := .inherit, stdout := .inherit, stderr := .inherit
+  }
+  pure ((← child.wait) = 0)
+
+private def captureStdout (cmd : String) (args : Array String)
+    (cwd : Option FilePath := none) : IO String := do
+  let out ← IO.Process.output { cmd := cmd, args := args, cwd := cwd }
   if out.exitCode ≠ 0 then
-    die s!"`{cmd}` failed with exit code {out.exitCode}:\n{out.stderr}"
+    die s!"`{cmd}` failed (exit {out.exitCode}):\n{out.stderr}"
   pure out.stdout
 
--- ----------------------------------------------------------------------------
--- Cargo / wasm-tools
--- ----------------------------------------------------------------------------
+/-- `is_even` → `IsEven`. -/
+private def snakeToPascal (s : String) : String :=
+  String.intercalate "" <| (s.splitOn "_").map fun part =>
+    match part.toList with
+    | []      => ""
+    | c :: cs => String.ofList (c.toUpper :: cs)
 
-/-- Extract the `[package].name` field from a Cargo.toml. -/
-private def cargoCrateName (cargoToml : FilePath) : IO String := do
-  let txt ← IO.FS.readFile cargoToml
-  let lines := txt.splitOn "\n"
-  let mut inPkg := false
-  for raw in lines do
-    let line := strTrim raw
-    if line.startsWith "[" then
-      inPkg := (line = "[package]")
-      continue
-    if inPkg && line.startsWith "name" && line.contains '=' then
-      let after := strTrim (strDrop (strDropWhile line (· ≠ '=')) 1)
-      if after.startsWith "\"" then
-        let body := strDrop after 1
-        return strTakeWhile body (· ≠ '"')
-  die s!"could not parse `[package].name` from {cargoToml}"
+/-- `true` iff `a` is newer than `b`, or `b` does not exist. -/
+private def isNewer (a b : FilePath) : IO Bool := do
+  if ¬ (← System.FilePath.pathExists b) then return true
+  let ma ← a.metadata
+  let mb ← b.metadata
+  return ma.modified > mb.modified
 
 -- ----------------------------------------------------------------------------
--- TOML round-trip helpers for our two schemas
+-- Embedded template
 -- ----------------------------------------------------------------------------
 
-structure VerifierToml where
-  leanProject        : String
-  verificationFolder : String
-
-structure OriginToml where
-  rustProject : String
-
-private def readToml (p : FilePath) : IO Toml.Table := do
-  let txt ← IO.FS.readFile p
-  match Toml.parse txt with
-  | .ok t   => pure t
-  | .error e => die s!"{p}: {e}"
-
-private def readVerifierToml (p : FilePath) : IO VerifierToml := do
-  let t ← readToml p
-  match Toml.require t "lean_project" p.toString,
-        Toml.require t "verification_folder" p.toString with
-  | .ok lp, .ok vf => pure { leanProject := lp, verificationFolder := vf }
-  | .error e, _   => die e
-  | _, .error e   => die e
-
-private def readOriginToml (p : FilePath) : IO OriginToml := do
-  let t ← readToml p
-  match Toml.require t "rust_project" p.toString with
-  | .ok rp => pure { rustProject := rp }
-  | .error e => die e
-
-private def writeVerifierToml (p : FilePath) (v : VerifierToml) : IO Unit :=
-  writeFile p <| Toml.render [
-    ("lean_project", v.leanProject),
-    ("verification_folder", v.verificationFolder)
-  ]
-
-private def writeOriginToml (p : FilePath) (o : OriginToml) : IO Unit :=
-  writeFile p <| Toml.render [("rust_project", o.rustProject)]
-
--- ----------------------------------------------------------------------------
--- Resolved pair view
--- ----------------------------------------------------------------------------
-
-structure Pair where
-  rustDir            : FilePath
-  leanDir            : FilePath
-  verificationFolder : String   -- subfolder *string* (so we can also derive module names)
-  deriving Inhabited
-
-private def subfolderDir (p : Pair) : FilePath := p.leanDir / p.verificationFolder
-
-private def subfolderToModule (sub : String) : String :=
-  let parts := (sub.splitOn "/").filter (·.length > 0)
-  String.intercalate "." parts
-
-private def codelibLeanToolchain : IO String := do
-  -- Look for the lean-toolchain relative to the invocation directory (repo root).
-  let candidates : List FilePath :=
-    [ "codelib/lean-toolchain", "../codelib/lean-toolchain",
-      "interpreter/lean-toolchain", "../interpreter/lean-toolchain" ]
-  for c in candidates do
-    if ← System.FilePath.pathExists c then
-      return (← IO.FS.readFile c)
-  die "could not locate lean-toolchain (looked in codelib/ and interpreter/)"
-
-private def resolvePairFromRust (rustDir : FilePath) : IO Pair := do
-  let v ← readVerifierToml (rustDir / "verifier.toml")
-  let leanDir ← absNormalize (rustDir / v.leanProject)
-  pure {
-    rustDir := rustDir, leanDir := leanDir,
-    verificationFolder := v.verificationFolder
-  }
-
-private def resolvePairFromSubfolder (subDir : FilePath) : IO Pair := do
-  let o ← readOriginToml (subDir / "origin.toml")
-  -- Compute the lean project root: walk up from `subDir` until we hit a
-  -- `lakefile.toml`. (The subfolder path inside the lean project may be
-  -- nested arbitrarily deep.)
-  let mut leanRoot : Option FilePath := none
-  let mut cur : FilePath := subDir
-  for _ in [:32] do
-    if ← System.FilePath.pathExists (cur / "lakefile.toml") then
-      leanRoot := some cur
-      break
-    match cur.parent with
-    | some p => cur := p
-    | none   => break
-  let some leanDir := leanRoot
-    | die s!"{subDir}: could not find an ancestor `lakefile.toml`"
-  let rustDir ← absNormalize (subDir / o.rustProject)
-  let leanDirAbs ← absNormalize leanDir
-  let subAbs ← absNormalize subDir
-  let verificationFolder := (relativeTo leanDirAbs subAbs).toString
-  pure {
-    rustDir := rustDir, leanDir := leanDirAbs,
-    verificationFolder := verificationFolder
-  }
-
-private def resolvePair (path : FilePath) : IO Pair := do
-  let abs ← absNormalize path
-  if ← System.FilePath.pathExists (abs / "verifier.toml") then
-    resolvePairFromRust abs
-  else if ← System.FilePath.pathExists (abs / "origin.toml") then
-    resolvePairFromSubfolder abs
-  else
-    die s!"{path}: no `verifier.toml` or `origin.toml` here — run `verifier new` first"
-
--- ----------------------------------------------------------------------------
--- Lean project scaffolding
--- ----------------------------------------------------------------------------
-
-private def libName (leanDir : FilePath) : IO String := do
-  let lake ← IO.FS.readFile (leanDir / "lakefile.toml")
-  for raw in lake.splitOn "\n" do
-    let line := strTrim raw
-    if line.startsWith "name" && line.contains '=' then
-      let after := strTrim (strDrop (strDropWhile line (· ≠ '=')) 1)
-      if after.startsWith "\"" then
-        return strTakeWhile (strDrop after 1) (· ≠ '"')
-  die s!"{leanDir}/lakefile.toml: missing top-level `name = \"…\"`"
-
-/-- The first `[[lean_lib]] name` field, if any. Falls back to package name. -/
-private def leanLibName (leanDir : FilePath) : IO String := do
-  let lake ← IO.FS.readFile (leanDir / "lakefile.toml")
-  let lines := lake.splitOn "\n"
-  let mut inLib := false
-  for raw in lines do
-    let line := strTrim raw
-    if line = "[[lean_lib]]" then inLib := true; continue
-    if line.startsWith "[" then inLib := false; continue
-    if inLib && line.startsWith "name" && line.contains '=' then
-      let after := strTrim (strDrop (strDropWhile line (· ≠ '=')) 1)
-      if after.startsWith "\"" then
-        return strTakeWhile (strDrop after 1) (· ≠ '"')
-  libName leanDir
-
-private def appendImportLine (rootFile : FilePath) (importLine : String) : IO Unit := do
-  let existing ← if ← System.FilePath.pathExists rootFile then IO.FS.readFile rootFile else pure ""
-  let lines := existing.splitOn "\n"
-  if lines.contains importLine then
-    return ()
-  let trailing := if existing.isEmpty || existing.endsWith "\n" then "" else "\n"
-  IO.FS.writeFile rootFile (existing ++ trailing ++ importLine ++ "\n")
-
-private def scaffoldLeanProject (leanDir : FilePath) (codelibDir : FilePath) : IO Unit := do
-  let toolchain ← codelibLeanToolchain
-  let pkgName :=
-    match leanDir.fileName with
-    | some s => if s.isEmpty then "Verification" else strCapitalise s
-    | none   => "Verification"
-  let relCodelib := relativeTo leanDir codelibDir
-  IO.FS.createDirAll leanDir
-  writeFile (leanDir / "lean-toolchain") toolchain
-  writeFile (leanDir / "lakefile.toml") <| String.intercalate "\n" [
-    s!"name = \"{pkgName}\"",
-    "version = \"0.1.0\"",
-    s!"defaultTargets = [\"{pkgName}\"]",
-    "",
-    "[[require]]",
-    "name = \"CodeLib\"",
-    s!"path = \"{relCodelib}\"",
-    "",
-    "[[lean_lib]]",
-    s!"name = \"{pkgName}\"",
-    ""
-  ]
-  writeFile (leanDir / s!"{pkgName}.lean") s!"import {pkgName}.Basic\n"
-  writeFile (leanDir / pkgName / "Basic.lean") "import CodeLib\n"
-
--- ----------------------------------------------------------------------------
--- `new`
--- ----------------------------------------------------------------------------
-
-private def specStub (subfolder : String) : String :=
-  let mod := subfolderToModule subfolder
-  String.intercalate "\n" [
-    s!"import {mod}.Program",
-    "",
-    "/-! Write your specification here. -/",
-    ""
-  ]
-
-private def codelibSourceDir : IO FilePath := do
-  -- Look for the `codelib/` directory relative to the invocation directory.
-  -- Users invoke from the repo root; the canonical layout is codelib/ next to verifier/.
-  let candidates : List FilePath := ["codelib", "../codelib", "./"]
-  for c in candidates do
-    if ← System.FilePath.pathExists (c / "lean-toolchain") then
-      return (← absNormalize c)
-  die "could not locate `codelib/` next to invocation directory"
-
-private def cmdNew (rustPathIn leanPathIn subfolder : String) : IO Unit := do
-  let rustDir ← absNormalize rustPathIn
-  let leanDir ← absNormalize leanPathIn
-  let cargoToml := rustDir / "Cargo.toml"
-  unless ← System.FilePath.pathExists cargoToml do
-    die s!"{rustDir}: no Cargo.toml here (verifier does not scaffold rust crates)"
-  -- 1. Lean project: scaffold if missing.
-  let codelib ← codelibSourceDir
-  if ¬ (← System.FilePath.pathExists (leanDir / "lakefile.toml")) then
-    IO.println s!"==> scaffolding lean project at {leanDir}"
-    scaffoldLeanProject leanDir codelib
-  else
-    -- Toolchain match check.
-    let expected ← codelibLeanToolchain
-    let actual ← IO.FS.readFile (leanDir / "lean-toolchain")
-    if strTrim expected ≠ strTrim actual then
-      die s!"{leanDir}/lean-toolchain disagrees with {codelib}/lean-toolchain:\n  expected: {strTrim expected}\n  actual:   {strTrim actual}"
-  -- 2. Subfolder + origin.toml + Spec.lean.
-  let subDir := leanDir / subfolder
-  IO.FS.createDirAll subDir
-  let originPath := subDir / "origin.toml"
-  let rustRel := (relativeTo subDir rustDir).toString
-  if ← System.FilePath.pathExists originPath then
-    let existing ← readOriginToml originPath
-    if existing.rustProject ≠ rustRel then
-      die s!"{originPath} already exists and points elsewhere (got `{existing.rustProject}`, want `{rustRel}`)"
-  else
-    writeOriginToml originPath { rustProject := rustRel }
-  let specPath := subDir / "Spec.lean"
-  unless ← System.FilePath.pathExists specPath do
-    writeFile specPath (specStub subfolder)
-  -- 3. verifier.toml on the rust side.
-  let verifierPath := rustDir / "verifier.toml"
-  let leanRel := (relativeTo rustDir leanDir).toString
-  if ← System.FilePath.pathExists verifierPath then
-    let existing ← readVerifierToml verifierPath
-    if existing.leanProject ≠ leanRel || existing.verificationFolder ≠ subfolder then
-      die s!"{verifierPath} already exists and points elsewhere (got `{existing.leanProject}` / `{existing.verificationFolder}`, want `{leanRel}` / `{subfolder}`)"
-  else
-    writeVerifierToml verifierPath
-      { leanProject := leanRel, verificationFolder := subfolder }
-  -- 4. Wire import line into the lean library root.
-  let lib ← leanLibName leanDir
-  let rootFile := leanDir / s!"{lib}.lean"
-  appendImportLine rootFile s!"import {subfolderToModule subfolder}.Spec"
-  IO.println s!"==> verifier new wrote {verifierPath}, {originPath}, {specPath}"
+/-- Files of the bundled template, as `(relative path, contents)` pairs.
+The files themselves live under `verifier/template/` and are inlined at
+compile time via `include_str`. -/
+private def templateFiles : List (String × String) := [
+  ("rust/Cargo.toml",
+    include_str "../template/rust/Cargo.toml"),
+  ("rust/.cargo/config.toml",
+    include_str "../template/rust/.cargo/config.toml"),
+  ("rust/.gitignore",
+    include_str "../template/rust/.gitignore"),
+  ("rust/justfile",
+    include_str "../template/rust/justfile"),
+  ("rust/is_even/Cargo.toml",
+    include_str "../template/rust/is_even/Cargo.toml"),
+  ("rust/is_even/src/lib.rs",
+    include_str "../template/rust/is_even/src/lib.rs"),
+  ("rust/is_even/src/exports.rs",
+    include_str "../template/rust/is_even/src/exports.rs"),
+  ("rust/is_odd/Cargo.toml",
+    include_str "../template/rust/is_odd/Cargo.toml"),
+  ("rust/is_odd/src/lib.rs",
+    include_str "../template/rust/is_odd/src/lib.rs"),
+  ("rust/is_odd/src/exports.rs",
+    include_str "../template/rust/is_odd/src/exports.rs"),
+  ("lean/lean-toolchain",
+    include_str "../template/lean/lean-toolchain"),
+  ("lean/lakefile.toml",
+    include_str "../template/lean/lakefile.toml"),
+  ("lean/.gitignore",
+    include_str "../template/lean/.gitignore"),
+  ("lean/Project.lean",
+    include_str "../template/lean/Project.lean"),
+  ("lean/Project/IsEven/Program.lean",
+    include_str "../template/lean/Project/IsEven/Program.lean"),
+  ("lean/Project/IsEven/Spec.lean",
+    include_str "../template/lean/Project/IsEven/Spec.lean"),
+  ("lean/Project/IsEven/Proof.lean",
+    include_str "../template/lean/Project/IsEven/Proof.lean"),
+  ("lean/Project/IsEven/Run.lean",
+    include_str "../template/lean/Project/IsEven/Run.lean"),
+  ("lean/Project/IsOdd/Program.lean",
+    include_str "../template/lean/Project/IsOdd/Program.lean"),
+  ("lean/Project/IsOdd/Spec.lean",
+    include_str "../template/lean/Project/IsOdd/Spec.lean"),
+  ("lean/Project/IsOdd/Proof.lean",
+    include_str "../template/lean/Project/IsOdd/Proof.lean"),
+  ("lean/Project/IsOdd/Run.lean",
+    include_str "../template/lean/Project/IsOdd/Run.lean")
+]
 
 -- ----------------------------------------------------------------------------
 -- `check`
 -- ----------------------------------------------------------------------------
 
-private def emitProgramFile
-    (pair : Pair) (m : Wasm.Module) (watText : String) : IO Unit := do
-  let sub := subfolderDir pair
-  IO.FS.createDirAll sub
-  let modName := subfolderToModule pair.verificationFolder
-  let bodiesBlock := Emit.funcBodies m
-  let moduleExpr := Emit.module m
-  -- Relative path used by the drift check at elaboration time. `lake build`
-  -- runs with the lake-package root as cwd, so we anchor to that.
-  let watRelPath := pair.verificationFolder ++ "/module.wat"
-  let driftBlock := Emit.driftCheck watRelPath watText.hash
-  let lines := [
-    "/-",
-    "  AUTO-GENERATED by `lake exe verifier check`.",
-    "  Do not edit by hand. Edit Spec.lean (sibling) for proofs.",
-    "  The sibling `module.wat` is the source of truth; the drift check at",
-    "  the bottom of this file errors at elaboration time if it has changed",
-    "  without a corresponding re-emit.",
-    "-/",
-    "",
-    "import CodeLib",
-    "",
-    "set_option maxRecDepth 1048576",
-    "",
-    s!"namespace {modName}",
-    "",
-    "open Wasm",
-    "",
-    bodiesBlock,
-    "",
-    "def «module» : Wasm.Module :=",
-    moduleExpr,
-    "",
-    driftBlock,
-    "",
-    s!"end {modName}",
-    ""
-  ]
-  writeFile (sub / "Program.lean") (String.intercalate "\n" lines)
+/-- One rust crate in the workspace, paired with its lean module dir. -/
+structure Crate where
+  /-- Crate name on disk (snake_case). -/
+  name      : String
+  /-- Absolute path to the crate directory. -/
+  rustDir   : FilePath
+  /-- Absolute path to the matching lean module directory. -/
+  leanDir   : FilePath
 
-private def cmdCheck (path : String) (skipBuild : Bool := false) : IO Unit := do
-  let pair ← resolvePair path
-  let cargoToml := pair.rustDir / "Cargo.toml"
-  unless ← System.FilePath.pathExists cargoToml do
-    die s!"{pair.rustDir}: no Cargo.toml here (origin.toml/verifier.toml is stale)"
-  let crate ← cargoCrateName cargoToml
-  IO.println s!"==> check {pair.rustDir} -> {pair.leanDir}/{pair.verificationFolder} (crate `{crate}`)"
-  -- 1. cargo build to wasm
-  run {
-    cmd := "cargo",
-    args := #["build", "--release", "--target", "wasm32-unknown-unknown",
-              "--manifest-path", cargoToml.toString]
+/-- Discover crates by listing subdirectories of `rust/` that contain a
+`Cargo.toml`. Faster and simpler than parsing `[workspace].members`. -/
+private def discoverCrates (projectDir : FilePath) : IO (Array Crate) := do
+  let rustRoot := projectDir / "rust"
+  let leanRoot := projectDir / "lean" / "Project"
+  unless ← System.FilePath.pathExists rustRoot do
+    die s!"{rustRoot} not found — are you in a verifier project root?"
+  unless ← System.FilePath.pathExists leanRoot do
+    die s!"{leanRoot} not found — are you in a verifier project root?"
+  let entries ← rustRoot.readDir
+  let mut acc : Array Crate := #[]
+  for entry in entries do
+    let p := entry.path
+    if ¬ (← p.isDir) then continue
+    let cargoToml := p / "Cargo.toml"
+    unless ← System.FilePath.pathExists cargoToml do continue
+    let name := entry.fileName
+    let mod := snakeToPascal name
+    let leanDir := leanRoot / mod
+    unless ← System.FilePath.pathExists leanDir do
+      die s!"crate `{name}` has no matching lean module at {leanDir}\n(expected {name} → {mod})"
+    acc := acc.push { name, rustDir := p, leanDir }
+  pure acc
+
+private def emitProgramFile (c : Crate) (m : Wasm.Module) : IO Unit := do
+  IO.FS.createDirAll c.leanDir
+  let modName := s!"Project.{snakeToPascal c.name}"
+  let body :=
+    String.intercalate "\n" [
+      "/-",
+      "  AUTO-GENERATED by `lake exe verifier check`. Do not edit by hand.",
+      "-/",
+      "",
+      "import CodeLib",
+      "",
+      "set_option maxRecDepth 1048576",
+      "",
+      s!"namespace {modName}",
+      "",
+      "open Wasm",
+      "",
+      Emit.funcBodies m,
+      "",
+      "def «module» : Wasm.Module :=",
+      Emit.module m,
+      "",
+      s!"end {modName}",
+      ""
+    ]
+  IO.FS.writeFile (c.leanDir / "Program.lean") body
+
+private def buildAndEmit
+    (projectDir : FilePath) (crates : Array Crate) (forceEmit : Bool) : IO Unit := do
+  -- Build all crates in one cargo invocation (faster, shares the target/).
+  IO.println "==> cargo build-wasm (workspace)"
+  runOrDie "cargo" #["build-wasm"] (cwd := some (projectDir / "rust"))
+  -- Per-crate: copy wasm, dump wat, decode + emit when stale.
+  let buildRoot := projectDir / "rust" / "build"
+  let cargoTarget := projectDir / "rust" / "target" / "wasm32-unknown-unknown" / "release"
+  for c in crates do
+    let outDir := buildRoot / c.name
+    IO.FS.createDirAll outDir
+    let src := cargoTarget / s!"{c.name}.wasm"
+    unless ← System.FilePath.pathExists src do
+      die s!"expected {src} after cargo build-wasm but it is missing"
+    let wasmDst := outDir / "program.wasm"
+    let bytes ← IO.FS.readBinFile src
+    -- Only rewrite when bytes change, so mtime tracks real updates.
+    let needWrite ← do
+      if ← System.FilePath.pathExists wasmDst then
+        let cur ← IO.FS.readBinFile wasmDst
+        pure (cur.toList != bytes.toList)
+      else pure true
+    if needWrite then IO.FS.writeBinFile wasmDst bytes
+    let watText ← captureStdout "wasm-tools" #["print", wasmDst.toString]
+    let watFile := outDir / "program.wat"
+    let writeWat ← do
+      if needWrite then pure true
+      else if ¬ (← System.FilePath.pathExists watFile) then pure true
+      else pure false
+    if writeWat then IO.FS.writeFile watFile watText
+    let programLean := c.leanDir / "Program.lean"
+    let stale := forceEmit ∨ (← isNewer wasmDst programLean)
+    if stale then
+      match Wasm.Decoder.Wat.decode watText with
+      | .error e => die s!"{c.name}: wat decoder rejected the module: {e}"
+      | .ok m    =>
+        emitProgramFile c m
+        IO.println s!"    emitted {programLean}"
+    else
+      IO.println s!"    {programLean} is up to date"
+
+/-- `lake build`, counting `sorry` warnings. -/
+private def lakeBuildCount (leanDir : FilePath) : IO (Bool × Nat) := do
+  IO.println s!"==> lake build ({leanDir})"
+  let out ← IO.Process.output {
+    cmd := "lake", args := #["build"], cwd := some leanDir
   }
-  -- The artifact lives at <rust>/target/wasm32-unknown-unknown/release/<crate>.wasm
-  -- but crate name on disk uses `-` ↔ `_` swap.
-  let crateFs := crate.map (fun c => if c = '-' then '_' else c)
-  let wasmFile := pair.rustDir / "target" / "wasm32-unknown-unknown" / "release" / s!"{crateFs}.wasm"
-  unless ← System.FilePath.pathExists wasmFile do
-    die s!"expected wasm artifact at {wasmFile} but it is missing"
-  -- 2. wasm-tools strip → wasm-tools print. The strip removes custom
-  --    sections like `producers` that the Lean wat decoder does not parse.
-  let sub := subfolderDir pair
-  IO.FS.createDirAll sub
-  let strippedWasm := sub / ".module.stripped.wasm"
-  run {
-    cmd := "wasm-tools",
-    args := #["strip", "--all", wasmFile.toString, "-o", strippedWasm.toString]
-  }
-  let watText ← captureStdout "wasm-tools" #["print", strippedWasm.toString]
-  -- 3. write module.wat
-  writeFile (sub / "module.wat") watText
-  IO.FS.removeFile strippedWasm
-  -- 4. decode in-process
-  match Wasm.Decoder.Wat.decode watText with
-  | .error e => die s!"wat decoder rejected the generated module: {e}"
-  | .ok m =>
-    -- 5. emit Program.lean
-    emitProgramFile pair m watText
-    -- 6. lake build on the lean project (skipped if --no-build)
-    unless skipBuild do
-      IO.println s!"==> lake build ({pair.leanDir})"
-      run { cmd := "lake", args := #["build"], cwd := some pair.leanDir }
+  IO.print out.stdout
+  IO.eprint out.stderr
+  let combined := out.stdout ++ "\n" ++ out.stderr
+  let sorries := (combined.splitOn "declaration uses 'sorry'").length - 1
+  pure (out.exitCode = 0, sorries)
+
+private def checkAt (projectDir : FilePath) (forceEmit : Bool) : IO Bool := do
+  let crates ← discoverCrates projectDir
+  if crates.isEmpty then
+    die s!"{projectDir}/rust has no crate subdirectories"
+  IO.println s!"==> {crates.size} crate(s): {String.intercalate ", " (crates.toList.map (·.name))}"
+  buildAndEmit projectDir crates forceEmit
+  let (ok, sorries) ← lakeBuildCount (projectDir / "lean")
+  IO.println ""
+  IO.println s!"==> {crates.size} crate(s), {if ok then "lake build OK" else "lake build FAILED"}, {sorries} sorry warning(s)"
+  pure ok
+
+private def cmdCheck (forceEmit : Bool) : IO Unit := do
+  let projectDir ← absNormalize (← IO.currentDir)
+  unless ← checkAt projectDir forceEmit do IO.Process.exit 1
 
 -- ----------------------------------------------------------------------------
--- main
+-- `new`
 -- ----------------------------------------------------------------------------
 
-def main (args : List String) : IO UInt32 := do
-  match args with
-  | "new"   :: rust :: lean :: sub :: [] => cmdNew rust lean sub; pure 0
-  | "check" :: "--no-build" :: path :: [] => cmdCheck path (skipBuild := true); pure 0
-  | "check" :: path :: [] => cmdCheck path; pure 0
-  | _ =>
-    IO.eprintln usage
-    pure 1
+private def cmdNew (projectPathIn : String) : IO Unit := do
+  let projectDir ← absNormalize ⟨projectPathIn⟩
+  if ← System.FilePath.pathExists projectDir then
+    let entries ← (projectDir.readDir : IO _)
+    unless entries.isEmpty do
+      die s!"{projectDir} already exists and is not empty"
+  IO.FS.createDirAll projectDir
+  IO.println s!"==> scaffolding template into {projectDir}"
+  for (rel, content) in templateFiles do
+    writeFile (projectDir / rel) content
+  IO.println "==> cargo check"
+  runOrDie "cargo" #["check"] (cwd := some (projectDir / "rust"))
+  -- Fetch lean deps (CodeLib pulls in mathlib) and prime the mathlib
+  -- olean cache before building. Doing this here, instead of relying on
+  -- the implicit fetch inside `lake build`, lets us pick up cached
+  -- mathlib oleans and skip a multi-minute recompile.
+  let leanDir := projectDir / "lean"
+  IO.println "==> lake update"
+  runOrDie "lake" #["update"] (cwd := some leanDir)
+  IO.println "==> lake exe cache get"
+  runOrDie "lake" #["exe", "cache", "get"] (cwd := some leanDir)
+  -- Hand off to the full check pipeline: it builds wasm, emits the real
+  -- Program.lean for every crate, then runs `lake build`. The bundled
+  -- Proof.lean files reference `func0` etc., so we can't skip emit
+  -- before building.
+  IO.println "==> running initial `verifier check`"
+  unless ← checkAt projectDir false do
+    die "initial `verifier check` failed"
+  IO.println s!"==> done. Project ready at {projectDir}"
+
+-- ----------------------------------------------------------------------------
+-- CLI plumbing
+-- ----------------------------------------------------------------------------
+
+open Cli
+
+def runNew (p : Parsed) : IO UInt32 := do
+  let path := p.positionalArg! "projectPath" |>.as! String
+  cmdNew path
+  pure 0
+
+def runCheck (p : Parsed) : IO UInt32 := do
+  cmdCheck (p.hasFlag "force-emit")
+  pure 0
+
+def runReport (_ : Parsed) : IO UInt32 := do
+  IO.eprintln "verifier report: not implemented"
+  pure 1
+
+def newCmd : Cmd := `[Cli|
+  «new» VIA runNew;
+  "Scaffold a new verification project from the bundled template."
+
+  ARGS:
+    projectPath : String; "Directory to create (must not already exist or be empty)."
+]
+
+def checkCmd : Cmd := `[Cli|
+  «check» VIA runCheck;
+  "Build wasm + re-emit Program.lean + run `lake build`. Must be run from the project root."
+
+  FLAGS:
+    "force-emit"; "Re-emit Program.lean even if the wasm hasn't changed."
+]
+
+def reportCmd : Cmd := `[Cli|
+  «report» VIA runReport;
+  "(stub) Generate an HTML report."
+]
+
+def mainCmd : Cmd := `[Cli|
+  verifier NOOP; ["0.1.0"]
+  "Rust → wasm → Lean verification driver."
+
+  SUBCOMMANDS:
+    newCmd;
+    checkCmd;
+    reportCmd
+
+  EXTENSIONS:
+    author "Cajal-Technologies"
+]
+
+def main (args : List String) : IO UInt32 :=
+  mainCmd.validate args
 
 end Verifier
 
