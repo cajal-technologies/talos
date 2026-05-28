@@ -59,9 +59,4 @@
   (func $wrap (;5;) (type 0) (param i64) (result i64)
     local.get 0
   )
-  (@producers
-    (language "Rust" "")
-    (processed-by "rustc" "1.92.0 (ded5c06cf 2025-12-08)")
-  )
-  (@custom "target_features" (after code) "\08+\0bbulk-memory+\0fbulk-memory-opt+\16call-indirect-overlong+\0amultivalue+\0fmutable-globals+\13nontrapping-fptoint+\0freference-types+\08sign-ext")
 )

@@ -212,14 +212,24 @@ private def buildAndEmit
     unless ← System.FilePath.pathExists src do
       die s!"expected {src} after cargo build-wasm but it is missing"
     let wasmDst := outDir / "program.wasm"
-    let bytes ← IO.FS.readBinFile src
-    -- Only rewrite when bytes change, so mtime tracks real updates.
+    -- Strip non-essential custom sections (notably `producers` and
+    -- `target_features`) so the committed wasm is reproducible across
+    -- rustc versions. `wasm-tools strip` keeps `name`/`component-type`/
+    -- `dylink.0` by default — adequate for our reasoning needs. We
+    -- strip to a tmp path first so the existing committed wasm is only
+    -- overwritten when the stripped bytes actually changed (this keeps
+    -- mtimes tracking real updates).
+    let tmpWasm := outDir / "program.wasm.tmp"
+    runOrDie "wasm-tools"
+      #["strip", "-o", tmpWasm.toString, src.toString]
+    let bytes ← IO.FS.readBinFile tmpWasm
     let needWrite ← do
       if ← System.FilePath.pathExists wasmDst then
         let cur ← IO.FS.readBinFile wasmDst
         pure (cur.toList != bytes.toList)
       else pure true
     if needWrite then IO.FS.writeBinFile wasmDst bytes
+    IO.FS.removeFile tmpWasm
     let watText ← captureStdout "wasm-tools" #["print", wasmDst.toString]
     let watFile := outDir / "program.wat"
     let writeWat ← do
