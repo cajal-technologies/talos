@@ -35,9 +35,11 @@ private lemma uint32_sub_toNat_of_nat_le {k : Nat} {len : UInt32}
 
 theorem xor_sum_correct (initial : Store) (ptr len : UInt32)
     (hmem : ∀ k < len.toNat, (ptr.toNat + 4 * k) % 4294967296 + 4 ≤ initial.mem.pages * 65536) :
-    TerminatesWith «module» 0 initial [.i32 ptr, .i32 len]
+    -- Args in stack order (top first); `run` reverses on entry so
+    -- local 0 = ptr, local 1 = len.
+    TerminatesWith «module» 0 initial [.i32 len, .i32 ptr]
       (fun st' rs => rs = [.i32 (xorFold st'.mem ptr len.toNat)]) := by
-  apply TerminatesWith.of_wp_entry_for (f := ⟨[.i32, .i32], [.i32], func0, none⟩) rfl rfl
+  apply TerminatesWith.of_wp_entry_for (f := ⟨[.i32, .i32], [.i32], func0, [.i32]⟩) rfl
   unfold func0
   wp_run
   simp

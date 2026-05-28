@@ -48,8 +48,7 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
         | nil => simp only [exec, hbody]
         | cons inst rest =>
           rw [hbody] at hne
-          cases hres : f.results <;> rw [hres] at hne <;>
-            (cases inst <;> simp only [exec, execOne] at hne <;> exact absurd rfl hne)
+          cases inst <;> simp only [exec, execOne] at hne <;> exact absurd rfl hne
   | succ k ih =>
     obtain ⟨ihOne, ihExec, ihRun⟩ := ih
     -- Step 1: prove execOne at fuel k+1.
@@ -142,19 +141,11 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
     rcases h : m.funcs[id]? with _ | f
     · rfl
     · simp only
-      rcases hresults : f.results with _ | rs
-      · -- Legacy (none) path: old locals, no stripping.
-        have hexec : exec (k+1) m initial (f.toLocals (args.take f.numParams)) f.body ≠ .OutOfFuel := by
-          intro hOOF
-          apply hne
-          simp only [run, h, hresults, hOOF]
-        rw [monoExec _ _ _ _ f₂ hle hexec]
-      · -- Wasm (some rs) path: reversed locals, result stripping.
-        have hexec : exec (k+1) m initial (f.toLocals (args.take f.numParams).reverse) f.body ≠ .OutOfFuel := by
-          intro hOOF
-          apply hne
-          simp only [run, h, hresults, hOOF]
-        rw [monoExec _ _ _ _ f₂ hle hexec]
+      have hexec : exec (k+1) m initial (f.toLocals (args.take f.numParams).reverse) f.body ≠ .OutOfFuel := by
+        intro hOOF
+        apply hne
+        simp only [run, h, hOOF]
+      rw [monoExec _ _ _ _ f₂ hle hexec]
 
 theorem execOne_fuel_mono
     {m : Module} {st : Store} {s : Locals} {inst : Instruction} {f₁ f₂ : Nat}
@@ -252,34 +243,22 @@ theorem run_eq
       (match m.funcs[id]? with
        | none   => .Invalid "Function index out of bounds"
        | some f =>
-         match f.results with
-         | none =>
-           match exec fuel m initial
-                    (f.toLocals (args.take f.numParams)) f.body with
-           | .Fallthrough st s => .Success (s.values ++ args.drop f.numParams) st
-           | .Return st vs     => .Success vs st
-           | .Break _ st _     => .Trap st "Unexpected break targeting function"
-           | .Invalid msg      => .Invalid msg
-           | .Trap st msg      => .Trap st msg
-           | .OutOfFuel        => .OutOfFuel
-         | some rs =>
-           let callerRemainder := args.drop f.numParams
-           match exec fuel m initial
-                    (f.toLocals (args.take f.numParams).reverse) f.body with
-           | .Fallthrough st s => .Success (s.values.take rs.length ++ callerRemainder) st
-           | .Return st vs     => .Success (vs.take rs.length ++ callerRemainder) st
-           | .Break _ st _     => .Trap st "Unexpected break targeting function"
-           | .Invalid msg      => .Invalid msg
-           | .Trap st msg      => .Trap st msg
-           | .OutOfFuel        => .OutOfFuel) := by
+         let callerRemainder := args.drop f.numParams
+         match exec fuel m initial
+                  (f.toLocals (args.take f.numParams).reverse) f.body with
+         | .Fallthrough st s =>
+           .Success (s.values.take f.results.length ++ callerRemainder) st
+         | .Return st vs     =>
+           .Success (vs.take f.results.length ++ callerRemainder) st
+         | .Break _ st _     => .Trap st "Unexpected break targeting function"
+         | .Invalid msg      => .Invalid msg
+         | .Trap st msg      => .Trap st msg
+         | .OutOfFuel        => .OutOfFuel) := by
   simp only [run]
   rcases m.funcs[id]? with _ | f
   · rfl
   · simp only
-    rcases f.results with _ | rs
-    · rcases exec fuel m initial (f.toLocals (args.take f.numParams)) f.body with
-        _ | _ | _ | _ | _ | _ <;> rfl
-    · rcases exec fuel m initial (f.toLocals (args.take f.numParams).reverse) f.body with
-        _ | _ | _ | _ | _ | _ <;> rfl
+    rcases exec fuel m initial (f.toLocals (args.take f.numParams).reverse) f.body with
+      _ | _ | _ | _ | _ | _ <;> rfl
 
 end Wasm

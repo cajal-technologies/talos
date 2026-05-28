@@ -77,12 +77,12 @@ def func5 : Wasm.Program :=
 def «module» : Wasm.Module :=
 {
   funcs := [
-    { params := [.i64], locals := [], body := func0, results := some [.i64] },
-    { params := [.i64], locals := [], body := func1, results := some [.i32] },
-    { params := [.i64, .i64], locals := [], body := func2, results := some [.i64] },
-    { params := [.i64, .i64], locals := [], body := func3, results := some [.i64] },
-    { params := [.i64], locals := [], body := func4, results := some [.i64] },
-    { params := [.i64], locals := [], body := func5, results := some [.i64] }
+    { params := [.i64], locals := [], body := func0, results := [.i64] },
+    { params := [.i64], locals := [], body := func1, results := [.i32] },
+    { params := [.i64, .i64], locals := [], body := func2, results := [.i64] },
+    { params := [.i64, .i64], locals := [], body := func3, results := [.i64] },
+    { params := [.i64], locals := [], body := func4, results := [.i64] },
+    { params := [.i64], locals := [], body := func5, results := [.i64] }
   ],
   exports := [
     { name := "filter_positive", funcIdx := 0 },

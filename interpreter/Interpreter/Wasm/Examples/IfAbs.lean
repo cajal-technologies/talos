@@ -16,10 +16,10 @@ def IfAbs : Program := [
 ]
 
 #eval
-  let m : Module := { funcs := [{ params := [.i32], body := IfAbs }] }
+  let m : Module := { funcs := [{ params := [.i32], body := IfAbs, results := [.i32] }] }
   run 10 m 0 m.initialStore [.i32 0xFFFFFFFE]
 #eval
-  let m : Module := { funcs := [{ params := [.i32], body := IfAbs }] }
+  let m : Module := { funcs := [{ params := [.i32], body := IfAbs, results := [.i32] }] }
   run 10 m 0 m.initialStore [.i32 7]
 
 theorem ifAbsSpec (m : Module) (st : Store) (x : UInt32) :

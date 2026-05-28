@@ -167,13 +167,11 @@ structure Function where
   params  : List ValueType := []
   locals  : List ValueType := []
   body    : Program
-  /-- Result types declared in the WAT source. `none` means this is a
-  hand-written Lean function whose call convention is the legacy one
-  (no param reversal, no result stripping). `some rs` means the function
-  was decoded from WAT and the interpreter applies the standard Wasm
-  calling convention: params reversed on entry, top `rs.length` values
-  returned on exit. -/
-  results : Option (List ValueType) := none
+  /-- Result types declared by the function. The interpreter applies the
+  standard Wasm calling convention: params are reversed on entry so
+  local 0 is the first (deepest) argument, and the top `results.length`
+  values are returned to the caller on exit. -/
+  results : List ValueType := []
 deriving Repr, Inhabited
 
 @[inline] def Function.numParams (f : Function) : Nat := f.params.length

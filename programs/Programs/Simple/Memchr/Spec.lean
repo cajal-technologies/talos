@@ -34,7 +34,7 @@ theorem memchr_correct (initial : Store) (ptr len needle : UInt32)
     (hmem : ∀ k < len.toNat, (k + ptr.toNat) % 4294967296 < initial.mem.pages * 65536) :
     TerminatesWith «module» 0 initial [.i32 ptr, .i32 len, .i32 needle]
       (fun st' rs => rs = [.i32 (memchrAux st'.mem ptr needle len.toNat 0)]) := by
-  apply TerminatesWith.of_wp_entry_for (f := ⟨[.i32, .i32, .i32], [.i32], func0, none⟩) rfl rfl
+  apply TerminatesWith.of_wp_entry_for (f := ⟨[.i32, .i32, .i32], [.i32], func0, [.i32]⟩) rfl
   unfold func0
   wp_run
   simp

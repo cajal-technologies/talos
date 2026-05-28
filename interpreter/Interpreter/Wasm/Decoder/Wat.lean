@@ -1062,7 +1062,7 @@ private def parseFunc (funcIds : Std.HashMap String Nat)
              params  := paramTypes
              locals  := localTypes
              body    := instrs
-             results := some resultTypes
+             results := resultTypes
            } }
 
 private def resolveFuncRef (idOf : Std.HashMap String Nat) (s : String)

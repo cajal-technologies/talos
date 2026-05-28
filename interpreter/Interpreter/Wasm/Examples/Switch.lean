@@ -23,13 +23,13 @@ def Switch : Program := [
 ]
 
 #eval
-  let m : Module := { funcs := [{ params := [.i32], body := Switch }] }
+  let m : Module := { funcs := [{ params := [.i32], body := Switch, results := [.i32] }] }
   run 10 m 0 m.initialStore [.i32 0]
 #eval
-  let m : Module := { funcs := [{ params := [.i32], body := Switch }] }
+  let m : Module := { funcs := [{ params := [.i32], body := Switch, results := [.i32] }] }
   run 10 m 0 m.initialStore [.i32 1]
 #eval
-  let m : Module := { funcs := [{ params := [.i32], body := Switch }] }
+  let m : Module := { funcs := [{ params := [.i32], body := Switch, results := [.i32] }] }
   run 10 m 0 m.initialStore [.i32 7]
 
 theorem switchSpec (m : Module) (st : Store) (i : UInt32) :

@@ -19,7 +19,7 @@ import Interpreter.Wasm.Wp.Tactic
 namespace Wasm
 
 def memModule : Module :=
-  { funcs := [{ body := [.const 7] }]
+  { funcs := [{ body := [.const 7], results := [.i32] }]
     memory := some
       { pagesMin := 1
         data := [{ offset := some 0, bytes := [0x42, 0x43, 0x44, 0x45] }] } }

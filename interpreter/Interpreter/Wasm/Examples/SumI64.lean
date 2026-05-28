@@ -16,7 +16,7 @@ def SumI64 : Program := [
 ]
 
 #eval
-  let m : Module := { funcs := [{ params := [.i32], body := SumI64 }] }
+  let m : Module := { funcs := [{ params := [.i32], body := SumI64, results := [.i32] }] }
   run 10 m 0 m.initialStore [.i32 5]
 
 theorem sumI64Spec (m : Module) (st : Store) (x : UInt32) :

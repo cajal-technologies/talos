@@ -19,7 +19,7 @@ def tickBody : Program := [
 ]
 
 def tickModule : Module :=
-  { funcs   := [{ params := [], locals := [], body := tickBody }]
+  { funcs   := [{ params := [], locals := [], body := tickBody, results := [.i32] }]
     globals := [{ type := .i32, init := .i32 0 }] }
 
 -- Sanity: three successive calls increment the global.

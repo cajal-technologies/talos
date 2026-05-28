@@ -23,7 +23,7 @@ def SimpleLoop : Program := [
 ]
 
 #eval
-  let m : Module := { funcs := [{ params := [.i32], locals := [.i32], body := SimpleLoop }] }
+  let m : Module := { funcs := [{ params := [.i32], locals := [.i32], body := SimpleLoop, results := [.i32] }] }
   run 100 m 0 m.initialStore [.i32 10]
 
 theorem simpleLoopSpec (m : Module) (st : Store) (n : UInt32) :

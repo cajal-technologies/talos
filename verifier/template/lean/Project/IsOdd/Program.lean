@@ -30,8 +30,8 @@ def func1 : Wasm.Program :=
 def «module» : Wasm.Module :=
 {
   funcs := [
-    { params := [.i32], locals := [], body := func0, results := some [.i32] },
-    { params := [.i32], locals := [], body := func1, results := some [.i32] }
+    { params := [.i32], locals := [], body := func0, results := [.i32] },
+    { params := [.i32], locals := [], body := func1, results := [.i32] }
   ],
   exports := [
     { name := "is_odd", funcIdx := 0 },

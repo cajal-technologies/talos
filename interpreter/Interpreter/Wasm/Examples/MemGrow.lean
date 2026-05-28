@@ -33,9 +33,11 @@ def growFailBody : Program := [
 
 def growModule : Module :=
   { funcs :=
-      [ { body := sizeBody }
-      , { body := growThenSizeBody }
-      , { body := growFailBody } ]
+      [ { body := sizeBody,          results := [.i32] }
+      , { body := growThenSizeBody,  results := [.i32] }
+      -- growFailBody leaves `[size, -1]` on the stack (top = size), so the
+      -- function returns two i32s under Wasm's standard convention.
+      , { body := growFailBody,      results := [.i32, .i32] } ]
     memory := some { pagesMin := 1 } }
 
 private def runValues (fuel : Nat) (m : Module) (idx : Nat)

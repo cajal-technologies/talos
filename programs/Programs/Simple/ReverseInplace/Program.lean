@@ -76,7 +76,7 @@ def func0 : Wasm.Program :=
 def «module» : Wasm.Module :=
 {
   funcs := [
-    { params := [.i32, .i32], locals := [.i32, .i32, .i32], body := func0, results := some [] }
+    { params := [.i32, .i32], locals := [.i32, .i32, .i32], body := func0, results := [] }
   ],
   exports := [
     { name := "reverse_inplace", funcIdx := 0 }

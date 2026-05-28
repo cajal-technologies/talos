@@ -43,8 +43,8 @@ def copyTrapBody : Program := [
 
 def copyModule : Module :=
   { funcs :=
-      [ { body := copyDisjointBody }
-      , { body := copyOverlapBody }
+      [ { body := copyDisjointBody, results := [.i32] }
+      , { body := copyOverlapBody,  results := [.i64] }
       , { body := copyTrapBody } ]
     memory := some { pagesMin := 1, data := [{ offset := some 0, bytes := initBytes }] } }
 

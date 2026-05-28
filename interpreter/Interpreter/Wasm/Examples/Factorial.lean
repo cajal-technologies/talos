@@ -23,7 +23,7 @@ def Factorial : Program := [
 ]
 
 #eval
-  let m : Module := { funcs := [{ params := [.i32], locals := [.i32], body := Factorial }] }
+  let m : Module := { funcs := [{ params := [.i32], locals := [.i32], body := Factorial, results := [.i32] }] }
   run 1000 m 0 m.initialStore [.i32 4]
 
 theorem factorialSpec (m : Module) (st : Store) (n : UInt32) :

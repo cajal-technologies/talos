@@ -10,7 +10,7 @@ namespace Wasm
 def IsEven : Program := [.localGet 0, .const 1, .and, .eqz]
 
 #eval
-  let m : Module := { funcs := [{ params := [.i32], body := IsEven }] }
+  let m : Module := { funcs := [{ params := [.i32], body := IsEven, results := [.i32] }] }
   run 10 m 0 m.initialStore [.i32 3]
 
 theorem isEvenSpec (m : Module) (st : Store) (v : UInt32) :

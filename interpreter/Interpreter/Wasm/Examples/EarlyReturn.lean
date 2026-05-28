@@ -20,7 +20,7 @@ def EarlyReturn : Program := [
 ]
 
 #eval
-  let m : Module := { funcs := [{ params := [.i32], body := EarlyReturn }] }
+  let m : Module := { funcs := [{ params := [.i32], body := EarlyReturn, results := [.i32] }] }
   run 10 m 0 m.initialStore [.i32 42]
 
 theorem earlyReturnSpec (m : Module) (st : Store) (x : UInt32) :

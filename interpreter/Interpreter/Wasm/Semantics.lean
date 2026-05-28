@@ -686,28 +686,18 @@ def run (fuel : Nat) (m : Module) (id : Nat)
         (initial : Store) (params : List Value) : Result :=
   match m.funcs[id]? with
   | some f =>
-    match f.results with
-    | some rs =>
-      -- WAT-decoded function: standard Wasm calling convention.
-      -- Params are reversed so local 0 = first (deepest) argument.
-      -- Only the top rs.length values are returned to the caller.
-      let callerRemainder := params.drop f.numParams
-      match exec fuel m initial (f.toLocals (params.take f.numParams).reverse) f.body with
-      | Continuation.Fallthrough st s => .Success (s.values.take rs.length ++ callerRemainder) st
-      | Continuation.Return st vs     => .Success (vs.take rs.length ++ callerRemainder) st
-      | Continuation.Break _ st _     => .Trap st "Unexpected break targeting function"
-      | Continuation.Invalid msg      => .Invalid msg
-      | Continuation.OutOfFuel        => .OutOfFuel
-      | Continuation.Trap st msg      => .Trap st msg
-    | none =>
-      -- Legacy hand-written Lean function: preserve original behaviour.
-      match exec fuel m initial (f.toLocals (params.take f.numParams)) f.body with
-      | Continuation.Fallthrough st s => .Success (s.values ++ params.drop f.numParams) st
-      | Continuation.Return st vs     => .Success vs st
-      | Continuation.Break _ st _     => .Trap st "Unexpected break targeting function"
-      | Continuation.Invalid msg      => .Invalid msg
-      | Continuation.OutOfFuel        => .OutOfFuel
-      | Continuation.Trap st msg      => .Trap st msg
+    -- Standard Wasm calling convention. Params are reversed so local 0
+    -- is the first (deepest) argument; only the top `f.results.length`
+    -- values are returned to the caller; remaining caller args pass
+    -- through unchanged.
+    let callerRemainder := params.drop f.numParams
+    match exec fuel m initial (f.toLocals (params.take f.numParams).reverse) f.body with
+    | Continuation.Fallthrough st s => .Success (s.values.take f.results.length ++ callerRemainder) st
+    | Continuation.Return st vs     => .Success (vs.take f.results.length ++ callerRemainder) st
+    | Continuation.Break _ st _     => .Trap st "Unexpected break targeting function"
+    | Continuation.Invalid msg      => .Invalid msg
+    | Continuation.OutOfFuel        => .OutOfFuel
+    | Continuation.Trap st msg      => .Trap st msg
   | none => .Invalid "Function index out of bounds"
 
 end

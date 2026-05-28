@@ -24,7 +24,7 @@ sentinel `i64::MIN < 0` is never `> 0`, so they share the same answer. -/
 theorem filter_positive_correct (initial : Store) (opt : UInt64) :
     TerminatesWith «module» 0 initial [.i64 opt]
       (fun _ rs => rs = [.i64 (if opt.toInt64 > 0 then opt else sentinel)]) := by
-  apply TerminatesWith.of_wp_entry (f := ⟨[.i64], [], func0, none⟩) rfl rfl
+  apply TerminatesWith.of_wp_entry (f := ⟨[.i64], [], func0, [.i64]⟩) rfl
   intro initial'
   unfold func0
   wp_run
@@ -35,7 +35,7 @@ theorem filter_positive_correct (initial : Store) (opt : UInt64) :
 theorem is_some_correct (initial : Store) (opt : UInt64) :
     TerminatesWith «module» 1 initial [.i64 opt]
       (fun _ rs => rs = [.i32 (if opt = sentinel then 0 else 1)]) := by
-  apply TerminatesWith.of_wp_entry (f := ⟨[.i64], [], func1, none⟩) rfl rfl
+  apply TerminatesWith.of_wp_entry (f := ⟨[.i64], [], func1, [.i32]⟩) rfl
   intro initial'
   unfold func1
   wp_run
@@ -45,9 +45,9 @@ theorem is_some_correct (initial : Store) (opt : UInt64) :
 On the wasm side this is the propagated sentinel + a `UInt64` addition
 (which models `i64::wrapping_add` exactly). -/
 theorem map_add_correct (initial : Store) (opt k : UInt64) :
-    TerminatesWith «module» 2 initial [.i64 opt, .i64 k]
+    TerminatesWith «module» 2 initial [.i64 k, .i64 opt]
       (fun _ rs => rs = [.i64 (if opt = sentinel then sentinel else opt + k)]) := by
-  apply TerminatesWith.of_wp_entry (f := ⟨[.i64, .i64], [], func2, none⟩) rfl rfl
+  apply TerminatesWith.of_wp_entry (f := ⟨[.i64, .i64], [], func2, [.i64]⟩) rfl
   intro initial'
   unfold func2
   wp_run
@@ -56,9 +56,9 @@ theorem map_add_correct (initial : Store) (opt k : UInt64) :
 
 /-- `or(a, b) = unwrap_or(a, b)`: returns `a` when it is `Some`, else `b`. -/
 theorem or_correct (initial : Store) (a b : UInt64) :
-    TerminatesWith «module» 3 initial [.i64 a, .i64 b]
+    TerminatesWith «module» 3 initial [.i64 b, .i64 a]
       (fun _ rs => rs = [.i64 (if a = sentinel then b else a)]) := by
-  apply TerminatesWith.of_wp_entry (f := ⟨[.i64, .i64], [], func3, none⟩) rfl rfl
+  apply TerminatesWith.of_wp_entry (f := ⟨[.i64, .i64], [], func3, [.i64]⟩) rfl
   intro initial'
   unfold func3
   wp_run
@@ -67,7 +67,7 @@ theorem or_correct (initial : Store) (a b : UInt64) :
 
 /-- `unwrap_or` and `or` share `func3` — same proof, different alias. -/
 theorem unwrap_or_correct (initial : Store) (a b : UInt64) :
-    TerminatesWith «module» 3 initial [.i64 a, .i64 b]
+    TerminatesWith «module» 3 initial [.i64 b, .i64 a]
       (fun _ rs => rs = [.i64 (if a = sentinel then b else a)]) :=
   or_correct initial a b
 
@@ -75,7 +75,7 @@ theorem unwrap_or_correct (initial : Store) (a b : UInt64) :
 theorem unwrap_or_default_correct (initial : Store) (opt : UInt64) :
     TerminatesWith «module» 4 initial [.i64 opt]
       (fun _ rs => rs = [.i64 (if opt = sentinel then 0 else opt)]) := by
-  apply TerminatesWith.of_wp_entry (f := ⟨[.i64], [], func4, none⟩) rfl rfl
+  apply TerminatesWith.of_wp_entry (f := ⟨[.i64], [], func4, [.i64]⟩) rfl
   intro initial'
   unfold func4
   wp_run
@@ -87,7 +87,7 @@ is the identity, since `Some(v)` is encoded as `v` itself. -/
 theorem wrap_correct (initial : Store) (v : UInt64) :
     TerminatesWith «module» 5 initial [.i64 v]
       (fun _ rs => rs = [.i64 v]) := by
-  apply TerminatesWith.of_wp_entry (f := ⟨[.i64], [], func5, none⟩) rfl rfl
+  apply TerminatesWith.of_wp_entry (f := ⟨[.i64], [], func5, [.i64]⟩) rfl
   intro initial'
   unfold func5
   wp_run
@@ -115,7 +115,7 @@ theorem is_some_lifted (initial : Store) (o : Option Int64) (h : o ≠ some Int6
 
 theorem unwrap_or_lifted (initial : Store) (o : Option Int64) (d : UInt64)
     (h : o ≠ some Int64.minValue) :
-    TerminatesWith «module» 3 initial [.i64 (encode o), .i64 d]
+    TerminatesWith «module» 3 initial [.i64 d, .i64 (encode o)]
       (fun _ rs => rs = [.i64 (match o with | some x => x.toUInt64 | none => d)]) := by
   refine (or_correct initial (encode o) d).mono ?_
   intro _ rs hrs; rw [hrs]; congr 1

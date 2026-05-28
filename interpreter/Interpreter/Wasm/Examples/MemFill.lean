@@ -25,7 +25,7 @@ def fillTrapBody : Program := [
 ]
 
 def fillModule : Module :=
-  { funcs := [{ body := fillThenReadBody }, { body := fillTrapBody }]
+  { funcs := [{ body := fillThenReadBody, results := [.i64] }, { body := fillTrapBody }]
     memory := some { pagesMin := 1 } }
 
 private def runValues (fuel : Nat) (m : Module) (idx : Nat)

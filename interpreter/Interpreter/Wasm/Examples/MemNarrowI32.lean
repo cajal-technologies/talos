@@ -36,12 +36,12 @@ def store16RoundtripBody : Program := [
 
 def narrowI32Module : Module :=
   { funcs :=
-      [ { body := load8UBody }
-      , { body := load8SBody }
-      , { body := load16UBody }
-      , { body := load16SBody }
-      , { body := store8RoundtripBody }
-      , { body := store16RoundtripBody } ]
+      [ { body := load8UBody,  results := [.i32] }
+      , { body := load8SBody,  results := [.i32] }
+      , { body := load16UBody, results := [.i32] }
+      , { body := load16SBody, results := [.i32] }
+      , { body := store8RoundtripBody,  results := [.i32] }
+      , { body := store16RoundtripBody, results := [.i32] } ]
     memory := some { pagesMin := 1, data := [{ offset := some 0, bytes := initBytes }] } }
 
 #eval run 10 narrowI32Module 0 narrowI32Module.initialStore []  -- load8U  → 0x42

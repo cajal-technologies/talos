@@ -22,7 +22,7 @@ def func0 : Wasm.Program :=
 def «module» : Wasm.Module :=
 {
   funcs := [
-    { params := [.i32], locals := [], body := func0, results := some [.i32] }
+    { params := [.i32], locals := [], body := func0, results := [.i32] }
   ],
   exports := [
     { name := "is_even", funcIdx := 0 }

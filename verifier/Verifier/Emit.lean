@@ -230,13 +230,9 @@ private def emitFuncBodyDef (es : List Wasm.Export) (idx : Nat) (f : Wasm.Functi
   let body := emitInstrList 0 f.body
   s!"{exportDocComment es idx}def {funcBodyName idx} : Wasm.Program :=\n  {body}"
 
-private def emitOptionResults : Option (List Wasm.ValueType) → String
-  | none    => "none"
-  | some rs => s!"some {emitValueTypes rs}"
-
 private def emitFunc (idx : Nat) (f : Wasm.Function) : String :=
   s!"\{ params := {emitValueTypes f.params}, locals := {emitValueTypes f.locals}" ++
-  s!", body := {funcBodyName idx}, results := {emitOptionResults f.results} }"
+  s!", body := {funcBodyName idx}, results := {emitValueTypes f.results} }"
 
 private def emitExport (e : Wasm.Export) : String :=
   s!"\{ name := {repr e.name}, funcIdx := {emitNat e.funcIdx} }"

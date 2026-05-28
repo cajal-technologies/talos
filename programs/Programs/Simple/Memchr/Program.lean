@@ -49,7 +49,7 @@ def func0 : Wasm.Program :=
 def «module» : Wasm.Module :=
 {
   funcs := [
-    { params := [.i32, .i32, .i32], locals := [.i32], body := func0, results := some [.i32] }
+    { params := [.i32, .i32, .i32], locals := [.i32], body := func0, results := [.i32] }
   ],
   exports := [
     { name := "memchr", funcIdx := 0 }
