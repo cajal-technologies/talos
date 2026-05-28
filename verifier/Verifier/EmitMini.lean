@@ -1,4 +1,4 @@
-import Interpreter.Wasm
+import Interpreter.Wasm.Syntax
 
 /-!
 # Emit Wasm AST as literal Lean source

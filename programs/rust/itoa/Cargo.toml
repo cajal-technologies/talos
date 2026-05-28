@@ -1,0 +1,11 @@
+[package]
+name = "itoa"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+itoa_crate = { package = "itoa", version = "1" }
+

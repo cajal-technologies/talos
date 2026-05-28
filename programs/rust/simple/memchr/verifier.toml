@@ -1,2 +1,0 @@
-lean_project = "../../.."
-verification_folder = "Programs/Simple/Memchr"
