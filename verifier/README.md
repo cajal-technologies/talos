@@ -176,7 +176,8 @@ Pipeline:
 
 ### 4. Writing specs and proofs
 
-`Spec.lean` (statements as `def : Prop`):
+`Spec.lean` (statements as `def : Prop`, linked to the Rust export
+via `@[spec_of …]`):
 
 ```lean
 import Project.IsEven.Program
@@ -184,7 +185,12 @@ import Project.IsEven.Program
 namespace Project.IsEven.Spec
 open Wasm
 
-/-- The exported `is_even` returns 1 for even inputs and 0 otherwise. -/
+/-- The exported `is_even` returns 1 for even inputs and 0 otherwise.
+
+Informal spec:
+For any input `n : UInt32`, `is_even` returns `1` when `n` is even
+and `0` otherwise. -/
+@[spec_of rust-exported "is_even::is_even"]
 def IsEvenSpec : Prop :=
   ∀ (initial : Store) (n : UInt32),
     TerminatesWith «module» 0 initial [.i32 n]
@@ -193,7 +199,8 @@ def IsEvenSpec : Prop :=
 end Project.IsEven.Spec
 ```
 
-`Proof.lean` (theorems that close those statements):
+`Proof.lean` (theorems that close those statements, linked via
+`@[proves]`):
 
 ```lean
 import Project.IsEven.Spec
@@ -201,6 +208,7 @@ import Project.IsEven.Spec
 namespace Project.IsEven.Proof
 open Project.IsEven.Spec
 
+@[proves Project.IsEven.Spec.IsEvenSpec]
 theorem is_even_spec : IsEvenSpec := by
   intro initial n
   -- … your proof …
@@ -208,11 +216,18 @@ theorem is_even_spec : IsEvenSpec := by
 end Project.IsEven.Proof
 ```
 
+`@[spec_of]` and `@[proves]` are the load-bearing project conventions
+that downstream tools (notably `verifier extract`) use to discover
+specs and link them to proofs. The `Spec.lean`/`Proof.lean` file split
+is recommended for organization but not required by those tools — see
+[`EXTRACT.md`](EXTRACT.md) for the full rules.
+
 ## Commands
 
 ```
-verifier new   <project-path>
-verifier check [--force-emit]
+verifier new     <project-path>
+verifier check   [--force-emit]
+verifier extract [--out DIR]
 verifier report                  (stub — not implemented)
 ```
 
@@ -220,6 +235,13 @@ verifier report                  (stub — not implemented)
 - `verifier check` must be run from the project root.
 - `--force-emit` re-emits every `Program.lean` even when its
   corresponding `program.wasm` hasn't changed.
+- `verifier extract` must be run from the project root. It produces
+  one JSON artifact per crate at `<DIR>/<crate>.json` (default
+  `DIR = ./extracted/`) capturing source files, exports, the Lean
+  program decl, formal specs, and verifications. See
+  [`EXTRACT.md`](EXTRACT.md) for the full schema and the project
+  conventions it relies on (`@[spec_of]`, `@[proves]`, docstring
+  shape).
 
 ### CodeLib source
 
