@@ -26,6 +26,24 @@ fi
 # Lake packages to seed. Add new package directories here if the repo grows.
 pkgs=(interpreter codelib programs docbuild)
 
+# Whole-directory APFS clone via the clonefile(2) syscall — one call per dir
+# instead of one per file. The kernel still has to allocate an inode per file
+# (data blocks are COW), so this isn't free, but it avoids the userland
+# traversal `cp -cR` does and roughly halves wall-time for large trees.
+clone_dir() {
+    /usr/bin/python3 - "$1" "$2" <<'PY'
+import ctypes, sys
+libc = ctypes.CDLL("/usr/lib/libc.dylib", use_errno=True)
+libc.clonefile.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_uint32]
+libc.clonefile.restype = ctypes.c_int
+rc = libc.clonefile(sys.argv[1].encode(), sys.argv[2].encode(), 0)
+if rc != 0:
+    err = ctypes.get_errno()
+    sys.stderr.write(f"clonefile({sys.argv[1]!r}, {sys.argv[2]!r}) failed: errno={err}\n")
+    sys.exit(1)
+PY
+}
+
 seeded=0
 for pkg in "${pkgs[@]}"; do
     src_lake="$src/$pkg/.lake"
@@ -33,7 +51,20 @@ for pkg in "${pkgs[@]}"; do
     [[ -d "$src_lake" ]] || continue
     [[ -d "$cwd/$pkg" ]] || continue
     [[ -e "$dst_lake" ]] && continue
-    cp -c -R "$src_lake" "$dst_lake"
+
+    mkdir -p "$dst_lake"
+    # packages/ is the bulk (~7-9 GB, hundreds of thousands of files) and is
+    # treated as immutable from the worktree's perspective — clone the whole
+    # subtree in one syscall.
+    if [[ -d "$src_lake/packages" ]]; then
+        clone_dir "$src_lake/packages" "$dst_lake/packages"
+    fi
+    # build/ and config/ are small and may be touched by builds — per-file
+    # COW clone via cp -c is fine here.
+    for sub in build config; do
+        [[ -d "$src_lake/$sub" ]] || continue
+        cp -cR "$src_lake/$sub" "$dst_lake/$sub"
+    done
     seeded=$((seeded + 1))
 done
 
