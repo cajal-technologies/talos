@@ -22,6 +22,7 @@ import Interpreter.Wasm.Examples.MemCopy
 import Interpreter.Wasm.Examples.GlobalCounter
 import Interpreter.Wasm.Examples.HostDispatch
 import Interpreter.Wasm.Examples.Counter
+import Interpreter.Wasm.Examples.DecoderImport
 
 /-! # Wasm.Examples.Basic
 

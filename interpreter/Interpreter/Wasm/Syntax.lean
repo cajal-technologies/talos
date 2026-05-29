@@ -219,7 +219,7 @@ structure ImportDecl where
   name     : String
   params   : List ValueType := []
   results  : List ValueType := []
-deriving Repr, Inhabited
+deriving Repr, Inhabited, DecidableEq
 
 structure Module where
   funcs   : List Function

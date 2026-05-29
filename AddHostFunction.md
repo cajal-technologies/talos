@@ -1,6 +1,3 @@
-<!-- DELETE ME when host functions are fully implemented and merged. This is a
-working design doc, not permanent documentation. -->
-
 # Adding host functions
 
 A project for verifying WebAssembly code using Lean 4. Without imports, no
@@ -114,12 +111,7 @@ Done (post-`Store α` refactor):
 | M6 | `Store α` polymorphism end-to-end. Dropped the concrete `host` slot — it is now `host : α`. `Continuation α`, `Result α`, `HostFn α`, `HostEnv α`, `HostResult α`, `HostContract α`, `HostSpec α` all parameterized. `[Inhabited α]` constraint on `Module.initialStore`. Corpus (interpreter examples + `programs/lean/Project/*`) swept to `Store Unit`. Counter lives at α := `Counter.HostState = List (UInt32 × UInt32)`. |
 | M7 | `TerminatesWith` / `PartiallyMeets` / `FuncSpec` take `env : HostEnv α` explicitly (Option A). All 106+ atomic wp simp lemmas + `wp_block_cons` / `wp_iff_cons` / `wp_loop_cons` / `wp_loop_br0_cons` are env-polymorphic. Every corpus spec now reads `∀ env : HostEnv Unit, TerminatesWith env …` — host-independence is visible at the spec. Bridge lemmas (`of_wp_entry*`, `mono`, `to_TerminatesWith`, `toPartiallyMeets`, `of_run`, `of_run_eq`) all updated. |
 | M8 | This document updated to reflect the polymorphic design as built. |
-
-Pending:
-
-| # | Scope | Done = |
-|---|---|---|
-| M9 (stretch) | WAT decoder support so a `.wat` with `(import "env" "log" …)` round-trips into `Module.imports`. | One program in `programs/lean/Project/` uses an import. |
+| M9 | WAT decoder support for `(import "mod" "name" (func [$id] (param …)* (result …)*))`. Function imports occupy the low end of the unified function index space; in-module `func` indices shift up by `imports.length`. Inline-export `funcIdx` and `(export "name" (func $ref))` resolution use the unified index. Memory/global/table imports are silently dropped (unsupported). Demoed in `Interpreter/Wasm/Examples/DecoderImport.lean`: a hand-written `.wat` with one host import round-trips, and calling the in-module function against a matching `HostEnv` returns the expected value. |
 
 Out of scope on purpose: import-signature validation (today's runtime
 trap on mismatch is fine until a typed validator lands as its own
