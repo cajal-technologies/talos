@@ -23,7 +23,7 @@ macro "wp_atomic" : tactic => `(tactic|
     | split)
    all_goals try grind))
 
-@[simp, wp_simp] theorem wp_nil : wp m [] Q st s ↔ Q (.Fallthrough st s) := by
+@[simp, wp_simp] theorem wp_nil : wp m [] Q st s env ↔ Q (.Fallthrough st s) := by
   wp_atomic
 
 /-! ## Locals / constants -/
@@ -46,8 +46,8 @@ macro "wp_atomic" : tactic => `(tactic|
   wp_atomic
 
 @[simp, wp_simp] theorem wp_const_cons :
-    wp m (.const v :: rest) Q st s ↔
-    wp m rest Q st { s with values := .i32 v :: s.values } := by
+    wp m (.const v :: rest) Q st s env ↔
+    wp m rest Q st { s with values := .i32 v :: s.values } env := by
   wp_atomic
 
 @[simp, wp_simp] theorem wp_constI64_cons :
@@ -58,9 +58,9 @@ macro "wp_atomic" : tactic => `(tactic|
 /-! ## i32 arithmetic -/
 
 @[simp, wp_simp] theorem wp_add_cons :
-    wp m (.add :: rest) Q st s ↔
+    wp m (.add :: rest) Q st s env ↔
     (match s.values with
-     | .i32 a :: .i32 b :: vs => wp m rest Q st { s with values := .i32 (a + b) :: vs }
+     | .i32 a :: .i32 b :: vs => wp m rest Q st { s with values := .i32 (a + b) :: vs } env
      | _ => Q (.Invalid "add: ill-shaped operand stack")) := by
   wp_atomic
 

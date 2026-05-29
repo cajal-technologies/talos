@@ -39,10 +39,17 @@ theorem wp_call_cons {id : Nat} {Pre : List Value → Prop} {Post : Store → Li
     built from `args.take f.numParams` reversed (so local 0 is the first
     argument), and the `Post` is checked on its `Fallthrough`/`Return`
     outcomes after taking the top `f.results.length` values and appending the
-    caller-remainder — matching `run`'s standard Wasm calling convention. -/
+    caller-remainder — matching `run`'s standard Wasm calling convention.
+
+    `hf` indexes `m.funcs` *after* shifting by `m.imports.length` (so a
+    module with one import maps unified index `1` to `funcs[0]`); for the
+    common case `m.imports = []` the shift is zero and existing `rfl`
+    proofs still discharge it. `hImp` confirms the called index isn't a
+    host import; it defaults to `rfl`, which discharges for any module
+    whose `imports` literal is `[]`. -/
 theorem FuncSpec.of_wp_body
     {m : Module} {id : Nat} {f : Function} {Pre : List Value → Prop} {Post : Store → List Value → Prop}
-    (hf : m.funcs[id]? = some f)
+    (hf : m.funcs[id - m.imports.length]? = some f)
     (h : ∀ args, Pre args → ∀ initial : Store,
       wp m f.body
         (fun c => match c with
@@ -51,7 +58,8 @@ theorem FuncSpec.of_wp_body
           | .Return st' vs      =>
               Post st' (vs.take f.results.length ++ args.drop f.numParams)
           | _                   => False)
-        initial (f.toLocals (args.take f.numParams).reverse)) :
+        initial (f.toLocals (args.take f.numParams).reverse))
+    (hImp : m.imports[id]? = none := by rfl) :
     FuncSpec m id Pre Post := by
   intro args hPre initial
   have hwp := h args hPre initial
@@ -59,7 +67,7 @@ theorem FuncSpec.of_wp_body
   obtain ⟨N, hN⟩ := hwp
   refine ⟨N, fun fuel hfuel => ?_⟩
   have hQ := hN fuel hfuel
-  rw [run_eq]
+  rw [run_eq hImp]
   simp only [hf]
   cases hexec : exec fuel m initial (f.toLocals (args.take f.numParams).reverse) f.body with
   | Fallthrough st' s' =>
@@ -72,5 +80,46 @@ theorem FuncSpec.of_wp_body
   | Trap msg => rw [hexec] at hQ; exact hQ.elim
   | Invalid msg => rw [hexec] at hQ; exact hQ.elim
   | OutOfFuel => rw [hexec] at hQ; exact hQ.elim
+
+/-! ### Host calls.
+
+    `wp_call_host_cons` is the WP rule for a `.call id` that resolves to
+    a host import: it lets the user discharge the host invocation by
+    reasoning about the concrete `HostFn.invoke` result, branching on
+    `Return` vs `Trap` exactly as the host can. Compared with
+    `wp_call_cons`, there is no `FuncSpec` indirection: the invoke
+    function is fully concrete, and the user proves the post-condition
+    by case analysis on it. The abstraction layer (per-import contract
+    that hides `invoke` behind a relation) lands in M4. -/
+
+theorem wp_call_host_cons {m : Module} {env : HostEnv}
+    {id : Nat} {imp : ImportDecl} {hf : HostFn}
+    {rest : Program} {Q : Assertion} {st : Store} {s : Locals}
+    (hImp : m.imports[id]? = some imp)
+    (hEnv : env.funcs[id]? = some hf)
+    (hReturn : ∀ vs st',
+      hf.invoke st (s.values.take imp.params.length).reverse = .Return vs st' →
+      wp m rest Q st'
+        { s with values := vs.take imp.results.length
+                       ++ s.values.drop imp.params.length } env)
+    (hTrap : ∀ st' msg,
+      hf.invoke st (s.values.take imp.params.length).reverse = .Trap st' msg →
+      Q (.Trap st' msg)) :
+    wp m (.call id :: rest) Q st s env := by
+  unfold wp
+  cases hInv : hf.invoke st (s.values.take imp.params.length).reverse with
+  | Return vs st' =>
+    have hwp := hReturn vs st' hInv
+    unfold wp at hwp
+    obtain ⟨N, hN⟩ := hwp
+    refine ⟨N + 1, fun fuel hfuel => ?_⟩
+    obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
+    rw [exec_call_host_cons hImp hEnv, hInv]
+    exact hN (f + 1) (by omega)
+  | Trap st' msg =>
+    refine ⟨1, fun fuel hfuel => ?_⟩
+    obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
+    rw [exec_call_host_cons hImp hEnv, hInv]
+    exact hTrap st' msg hInv
 
 end Wasm

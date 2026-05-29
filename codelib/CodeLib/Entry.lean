@@ -19,7 +19,7 @@ post-condition is checked on `Fallthrough`/`Return` after taking the top
 `f.results.length` values and appending the caller-remainder. -/
 theorem TerminatesWith.of_wp_entry {m : Module} {id : Nat} {f : Function}
     {initial : Store} {args : List Value} {P : Store → List Value → Prop}
-    (hf : m.funcs[id]? = some f)
+    (hf : m.funcs[id - m.imports.length]? = some f)
     (h : ∀ initial : Store,
       wp m f.body
         (fun c => match c with
@@ -28,10 +28,11 @@ theorem TerminatesWith.of_wp_entry {m : Module} {id : Nat} {f : Function}
           | .Return st' vs      =>
               P st' (vs.take f.results.length ++ args.drop f.numParams)
           | _                   => False)
-        initial (f.toLocals (args.take f.numParams).reverse)) :
+        initial (f.toLocals (args.take f.numParams).reverse))
+    (hImp : m.imports[id]? = none := by rfl) :
     TerminatesWith m id initial args P := by
   refine FuncSpec.to_TerminatesWith (Pre := (· = args))
-    (FuncSpec.of_wp_body hf ?_) rfl
+    (FuncSpec.of_wp_body hf ?_ hImp) rfl
   rintro _ rfl initial'; exact h initial'
 
 /-- Variant of `of_wp_entry` for a specific store rather than all stores.
@@ -39,7 +40,7 @@ Use when the function body's correctness depends on properties of the
 initial store (e.g., memory bounds). -/
 theorem TerminatesWith.of_wp_entry_for {m : Module} {id : Nat} {f : Function}
     {initial : Store} {args : List Value} {P : Store → List Value → Prop}
-    (hf : m.funcs[id]? = some f)
+    (hf : m.funcs[id - m.imports.length]? = some f)
     (h : wp m f.body
         (fun c => match c with
           | .Fallthrough st' s' =>
@@ -47,14 +48,15 @@ theorem TerminatesWith.of_wp_entry_for {m : Module} {id : Nat} {f : Function}
           | .Return st' vs      =>
               P st' (vs.take f.results.length ++ args.drop f.numParams)
           | _                   => False)
-        initial (f.toLocals (args.take f.numParams).reverse)) :
+        initial (f.toLocals (args.take f.numParams).reverse))
+    (hImp : m.imports[id]? = none := by rfl) :
     TerminatesWith m id initial args P := by
   unfold TerminatesWith
   unfold wp at h
   obtain ⟨N, hN⟩ := h
   refine ⟨N, fun fuel hfuel => ?_⟩
   have hQ := hN fuel hfuel
-  rw [run_eq]; simp only [hf]
+  rw [run_eq hImp]; simp only [hf]
   cases hexec : exec fuel m initial (f.toLocals (args.take f.numParams).reverse) f.body with
   | Fallthrough st' s' =>
     rw [hexec] at hQ

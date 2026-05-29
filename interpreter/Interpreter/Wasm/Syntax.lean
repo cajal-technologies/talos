@@ -208,24 +208,67 @@ structure GlobalDecl where
   init : Value
 deriving Repr, Inhabited
 
+/-- Declaration of a function imported from the host. Imports occupy the
+low indices of the unified function index space: `call i` for
+`i < imports.length` dispatches to the host environment's `i`-th
+function; for `i ≥ imports.length` it dispatches to
+`funcs[i - imports.length]`. The `params`/`results` are the import's
+declared signature; the host environment is expected to honour it. -/
+structure ImportDecl where
+  «module» : String
+  name     : String
+  params   : List ValueType := []
+  results  : List ValueType := []
+deriving Repr, Inhabited
+
 structure Module where
   funcs   : List Function
   exports : List Export := []
   memory  : Option MemDecl := none
   globals : List GlobalDecl := []
+  /-- Imported functions, in declaration order. See `ImportDecl` for the
+  index-space convention. Empty for modules with no imports — the
+  default everywhere until the host-function feature lands. -/
+  imports : List ImportDecl := []
 deriving Repr, Inhabited
 
 /-- The mutable runtime state threaded through execution: module-level
-globals, the (optional) linear memory, and the available bytes per
-data segment (`none` = dropped or active-and-already-consumed; `some bs`
-= still available to `memory.init`). The `dataSegments` list is
-indexed by segment number in source order and has the same length as
-the declaring module's data list. -/
+globals, the (optional) linear memory, the available bytes per data
+segment (`none` = dropped or active-and-already-consumed; `some bs` =
+still available to `memory.init`), and a host-managed KV slot used by
+imports that need to persist state across calls (a blockchain-style
+storage, a logger, etc.). The Wasm core never inspects `host`; only
+host imports do.
+
+The `host` field is intentionally a flat associative list (an "alist"
+over `UInt32` keys) — simple to fold over in proofs, slow but
+adequate for the reasoning-first design of this interpreter. Real
+hosts with byte-sequence keys/values would refine this; today the
+project ships only a counter-style demo. -/
 structure Store where
   globals      : Globals
   mem          : Mem
   dataSegments : List (Option (List UInt8)) := []
+  host         : List (UInt32 × UInt32) := []
 deriving Repr, Inhabited
+
+namespace Store
+
+/-- Look up `key` in the host alist. Returns `0` if the key is absent —
+this matches the convention used by most blockchain storage hosts (an
+unset slot reads as zero). -/
+def hostLookup (st : Store) (key : UInt32) : UInt32 :=
+  match st.host.find? (·.1 = key) with
+  | some (_, v) => v
+  | none        => 0
+
+/-- Insert or overwrite `key → value` in the host alist, returning the
+updated store. -/
+def hostInsert (st : Store) (key value : UInt32) : Store :=
+  let host' := (st.host.filter (·.1 ≠ key)) ++ [(key, value)]
+  { st with host := host' }
+
+end Store
 
 /-- Build the initial store for a module: evaluate each global's `init`
 into `Globals.globals`; allocate a memory with `pagesMin` pages and

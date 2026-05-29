@@ -41,14 +41,19 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
         cases inst <;> simp only [exec, execOne] at hne <;> exact absurd rfl hne
     · intro m id initial args f₂ _ hne
       simp only [run]
-      rcases h : m.funcs[id]? with _ | f
-      · rfl
-      · simp only [run, h] at hne
-        cases hbody : f.body with
-        | nil => simp only [exec, hbody]
-        | cons inst rest =>
-          rw [hbody] at hne
-          cases inst <;> simp only [exec, execOne] at hne <;> exact absurd rfl hne
+      rcases hImp : m.imports[id]? with _ | imp
+      · -- wasm path: the in-module function index space.
+        simp only []
+        rcases h : m.funcs[id - m.imports.length]? with _ | f
+        · rfl
+        · simp only [run, hImp, h] at hne
+          cases hbody : f.body with
+          | nil => simp only [exec, hbody]
+          | cons inst rest =>
+            rw [hbody] at hne
+            cases inst <;> simp only [exec, execOne] at hne <;> exact absurd rfl hne
+      · -- host path: result is fuel-independent, both sides agree by reflexivity.
+        rfl
   | succ k ih =>
     obtain ⟨ihOne, ihExec, ihRun⟩ := ih
     -- Step 1: prove execOne at fuel k+1.
@@ -138,14 +143,19 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
     -- Step 3: run at fuel k+1.
     intro m id initial args f₂ hle hne
     simp only [run]
-    rcases h : m.funcs[id]? with _ | f
-    · rfl
-    · simp only
-      have hexec : exec (k+1) m initial (f.toLocals (args.take f.numParams).reverse) f.body ≠ .OutOfFuel := by
-        intro hOOF
-        apply hne
-        simp only [run, h, hOOF]
-      rw [monoExec _ _ _ _ f₂ hle hexec]
+    rcases hImp : m.imports[id]? with _ | imp
+    · -- wasm path
+      simp only []
+      rcases h : m.funcs[id - m.imports.length]? with _ | f
+      · rfl
+      · simp only
+        have hexec : exec (k+1) m initial (f.toLocals (args.take f.numParams).reverse) f.body ≠ .OutOfFuel := by
+          intro hOOF
+          apply hne
+          simp only [run, hImp, h, hOOF]
+        rw [monoExec _ _ _ _ f₂ hle hexec]
+    · -- host path: result is fuel-independent.
+      rfl
 
 theorem execOne_fuel_mono
     {m : Module} {st : Store} {s : Locals} {inst : Instruction} {f₁ f₂ : Nat}
@@ -235,17 +245,47 @@ theorem exec_call_cons
   simp only [exec, execOne]
   rcases run fuel m id st s.values with _ | _ | _ | _ <;> rfl
 
+/-- Specialised characterisation of `exec` on a `.call id :: rest` whose
+target `id` falls inside the imports range. Exposes the host's `invoke`
+result directly so wp-level reasoning about host calls (see
+`wp_call_host_cons`) can step over the dispatch without going through
+the generic `run` characterisation. -/
+theorem exec_call_host_cons
+    {m : Module} {env : HostEnv} {st : Store} {s : Locals}
+    {id : Nat} {imp : ImportDecl} {hf : HostFn}
+    {rest : Program} {fuel : Nat}
+    (hImp : m.imports[id]? = some imp)
+    (hEnv : env.funcs[id]? = some hf) :
+    exec (fuel + 1) m st s (.call id :: rest) env =
+      (match hf.invoke st (s.values.take imp.params.length).reverse with
+       | .Return vs st' =>
+         exec (fuel + 1) m st'
+           { s with values := vs.take imp.results.length
+                          ++ s.values.drop imp.params.length }
+           rest env
+       | .Trap st' msg => .Trap st' msg) := by
+  simp only [exec, execOne, run, hImp, hEnv]
+  rcases hf.invoke st (s.values.take imp.params.length).reverse with _ | _ <;> rfl
+
 /-! ## `run` characterisation -/
 
+/-- Characterise `run` on the in-module (non-import) path. Holds when the
+called index falls outside the imports range — exposed via the
+`m.imports[id]? = none` hypothesis. For modules with `imports = []`,
+`m.imports[id]?` is `none` for every `id`, and `id - m.imports.length`
+reduces to `id`, so existing proofs `rw [run_eq] ; simp [hf]` keep
+working with `hf : m.funcs[id]? = some f`. -/
 theorem run_eq
-    {m : Module} {id : Nat} {initial : Store} {args : List Value} {fuel : Nat} :
-    run fuel m id initial args =
-      (match m.funcs[id]? with
+    {m : Module} {id : Nat} {initial : Store} {args : List Value} {fuel : Nat}
+    {env : HostEnv}
+    (hImp : m.imports[id]? = none) :
+    run fuel m id initial args env =
+      (match m.funcs[id - m.imports.length]? with
        | none   => .Invalid "Function index out of bounds"
        | some f =>
          let callerRemainder := args.drop f.numParams
          match exec fuel m initial
-                  (f.toLocals (args.take f.numParams).reverse) f.body with
+                  (f.toLocals (args.take f.numParams).reverse) f.body env with
          | .Fallthrough st s =>
            .Success (s.values.take f.results.length ++ callerRemainder) st
          | .Return st vs     =>
@@ -254,11 +294,11 @@ theorem run_eq
          | .Invalid msg      => .Invalid msg
          | .Trap st msg      => .Trap st msg
          | .OutOfFuel        => .OutOfFuel) := by
-  simp only [run]
-  rcases m.funcs[id]? with _ | f
+  simp only [run, hImp]
+  rcases m.funcs[id - m.imports.length]? with _ | f
   · rfl
   · simp only
-    rcases exec fuel m initial (f.toLocals (args.take f.numParams).reverse) f.body with
+    rcases exec fuel m initial (f.toLocals (args.take f.numParams).reverse) f.body env with
       _ | _ | _ | _ | _ | _ <;> rfl
 
 end Wasm

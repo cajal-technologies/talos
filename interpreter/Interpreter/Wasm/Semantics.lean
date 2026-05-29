@@ -1,6 +1,7 @@
 import Interpreter.Wasm.Syntax
 import Interpreter.Wasm.Locals
 import Interpreter.Wasm.Continuation
+import Interpreter.Wasm.Host
 
 namespace Wasm
 
@@ -57,7 +58,8 @@ at runtime. Real Wasm traps (division by zero, signed-divide overflow,
 
 mutual
 
-def execOne (fuel : Nat) (m : Module) (st : Store) (s : Locals) (inst : Instruction) : Continuation :=
+def execOne (fuel : Nat) (m : Module) (st : Store) (s : Locals) (inst : Instruction)
+    (env : HostEnv := {}) : Continuation :=
   match fuel, inst with
     | 0, _ => .OutOfFuel
 
@@ -371,7 +373,7 @@ def execOne (fuel : Nat) (m : Module) (st : Store) (s : Locals) (inst : Instruct
     -- "kept" values on top at every branch and at fall-through.
     | f + 1, .block paramArity resultArity body =>
       let belowStack := s.values.drop paramArity
-      match exec f m st s body with
+      match exec f m st s body env with
       | .Fallthrough r' s' =>
         .Fallthrough r' { s' with values := s'.values.take resultArity ++ belowStack }
       | .Break 0 r' s' =>
@@ -383,14 +385,14 @@ def execOne (fuel : Nat) (m : Module) (st : Store) (s : Locals) (inst : Instruct
       | other => other
     | f + 1, .loop paramArity resultArity body =>
       let belowStack := s.values.drop paramArity
-      match exec f m st s body with
+      match exec f m st s body env with
       | .Fallthrough r' s' =>
         .Fallthrough r' { s' with values := s'.values.take resultArity ++ belowStack }
       | .Break 0 r' s' =>
         -- `br 0` to a loop = restart from the top. Reset the stack to
         -- the kept top values (the loop's next-iteration params) atop
         -- the entry's below-stack, then re-execute the loop.
-        execOne f m r' { s' with values := s'.values.take paramArity ++ belowStack } inst
+        execOne f m r' { s' with values := s'.values.take paramArity ++ belowStack } inst env
       | .Break (k + 1) r' s' => .Break k r' s'
       | other => other
     | f + 1, .iff paramArity resultArity thn els => match s.values with
@@ -398,7 +400,7 @@ def execOne (fuel : Nat) (m : Module) (st : Store) (s : Locals) (inst : Instruct
         let belowStack := vs.drop paramArity
         let s' : Locals := { s with values := vs }
         let body := if c ≠ 0 then thn else els
-        match exec f m st s' body with
+        match exec f m st s' body env with
         | .Fallthrough r' s'' =>
           .Fallthrough r' { s'' with values := s''.values.take resultArity ++ belowStack }
         | .Break 0 r' s'' =>
@@ -421,7 +423,7 @@ def execOne (fuel : Nat) (m : Module) (st : Store) (s : Locals) (inst : Instruct
       | _ => .Invalid "brTable: ill-shaped operand stack"
 
     -- Calls
-    | f + 1, .call id => match run f m id st s.values with
+    | f + 1, .call id => match run f m id st s.values env with
       | .Success vs st' => .Fallthrough st' { s with values := vs }
       | .Trap st' msg   => .Trap st' msg
       | .Invalid msg    => .Invalid msg
@@ -675,30 +677,50 @@ def execOne (fuel : Nat) (m : Module) (st : Store) (s : Locals) (inst : Instruct
     | _, .nop => .Fallthrough st s
     | _, .unreachable => .Trap st "unreachable"
 
-def exec (fuel : Nat) (m : Module) (st : Store) (s : Locals) (p : Program) : Continuation :=
+def exec (fuel : Nat) (m : Module) (st : Store) (s : Locals) (p : Program)
+    (env : HostEnv := {}) : Continuation :=
   match p with
   | [] => .Fallthrough st s
-  | inst :: rest => match execOne fuel m st s inst with
-    | Continuation.Fallthrough st s => exec fuel m st s rest
+  | inst :: rest => match execOne fuel m st s inst env with
+    | Continuation.Fallthrough st s => exec fuel m st s rest env
     | other => other
 
 def run (fuel : Nat) (m : Module) (id : Nat)
-        (initial : Store) (params : List Value) : Result :=
-  match m.funcs[id]? with
-  | some f =>
-    -- Standard Wasm calling convention. Params are reversed so local 0
-    -- is the first (deepest) argument; only the top `f.results.length`
-    -- values are returned to the caller; remaining caller args pass
-    -- through unchanged.
-    let callerRemainder := params.drop f.numParams
-    match exec fuel m initial (f.toLocals (params.take f.numParams).reverse) f.body with
-    | Continuation.Fallthrough st s => .Success (s.values.take f.results.length ++ callerRemainder) st
-    | Continuation.Return st vs     => .Success (vs.take f.results.length ++ callerRemainder) st
-    | Continuation.Break _ st _     => .Trap st "Unexpected break targeting function"
-    | Continuation.Invalid msg      => .Invalid msg
-    | Continuation.OutOfFuel        => .OutOfFuel
-    | Continuation.Trap st msg      => .Trap st msg
-  | none => .Invalid "Function index out of bounds"
+        (initial : Store) (params : List Value) (env : HostEnv := {}) : Result :=
+  -- Unified function index space: indices `< m.imports.length` resolve to
+  -- host imports via `env.funcs`; the remainder map to `m.funcs` after
+  -- shifting down by `m.imports.length`. Matching on `m.imports[id]?`
+  -- (rather than computing the boolean) keeps the lemma surface clean:
+  -- modules with `imports = []` reduce the host arm away by computation.
+  match m.imports[id]? with
+  | some imp =>
+    match env.funcs[id]? with
+    | none    => .Invalid s!"unresolved host function: index {id}"
+    | some hf =>
+      let callerRemainder := params.drop imp.params.length
+      -- Same calling convention as the wasm path: params reversed so the
+      -- host receives the first declared param first.
+      let hostArgs := (params.take imp.params.length).reverse
+      match hf.invoke initial hostArgs with
+      | .Return vs st' =>
+        .Success (vs.take imp.results.length ++ callerRemainder) st'
+      | .Trap st' msg  => .Trap st' msg
+  | none =>
+    match m.funcs[id - m.imports.length]? with
+    | some f =>
+      -- Standard Wasm calling convention. Params are reversed so local 0
+      -- is the first (deepest) argument; only the top `f.results.length`
+      -- values are returned to the caller; remaining caller args pass
+      -- through unchanged.
+      let callerRemainder := params.drop f.numParams
+      match exec fuel m initial (f.toLocals (params.take f.numParams).reverse) f.body env with
+      | Continuation.Fallthrough st s => .Success (s.values.take f.results.length ++ callerRemainder) st
+      | Continuation.Return st vs     => .Success (vs.take f.results.length ++ callerRemainder) st
+      | Continuation.Break _ st _     => .Trap st "Unexpected break targeting function"
+      | Continuation.Invalid msg      => .Invalid msg
+      | Continuation.OutOfFuel        => .OutOfFuel
+      | Continuation.Trap st msg      => .Trap st msg
+    | none => .Invalid "Function index out of bounds"
 
 end
 
