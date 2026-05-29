@@ -28,7 +28,7 @@ The "filtered out" and "already None" cases share the same answer —
 the sentinel `i64::MIN < 0` is never `> 0`. -/
 @[spec_of "rust-exported" "rust_option::filter_positive"]
 def FilterPositiveSpec : Prop :=
-  ∀ (initial : Store) (opt : UInt64),
+  ∀ (initial : Store Unit) (opt : UInt64),
     TerminatesWith «module» 0 initial [.i64 opt]
       (fun _ rs => rs = [.i64 (if opt.toInt64 > 0 then opt else sentinel)])
 
@@ -51,7 +51,7 @@ and leaves a single i64 on the value stack equal to `0` if
 `opt = sentinel` (i.e. encodes `None`) and to `opt` otherwise. -/
 @[spec_of "rust-exported" "rust_option::unwrap_or_default"]
 def UnwrapOrDefaultSpec : Prop :=
-  ∀ (initial : Store) (opt : UInt64),
+  ∀ (initial : Store Unit) (opt : UInt64),
     TerminatesWith «module» 1 initial [.i64 opt]
       (fun _ rs => rs = [.i64 (if opt = sentinel then 0 else opt)])
 
@@ -74,7 +74,7 @@ equal to `b` if `a = sentinel` (i.e. `a` encodes `None`) and to `a`
 otherwise. -/
 @[spec_of "rust-exported" "rust_option::or"]
 def OrSpec : Prop :=
-  ∀ (initial : Store) (a b : UInt64),
+  ∀ (initial : Store Unit) (a b : UInt64),
     TerminatesWith «module» 2 initial [.i64 b, .i64 a]
       (fun _ rs => rs = [.i64 (if a = sentinel then b else a)])
 
@@ -97,7 +97,7 @@ and to `a` otherwise. The behaviour is bit-for-bit identical to
 [`OrSpec`] because the two exports share the same wasm function. -/
 @[spec_of "rust-exported" "rust_option::unwrap_or"]
 def UnwrapOrSpec : Prop :=
-  ∀ (initial : Store) (a b : UInt64),
+  ∀ (initial : Store Unit) (a b : UInt64),
     TerminatesWith «module» 2 initial [.i64 b, .i64 a]
       (fun _ rs => rs = [.i64 (if a = sentinel then b else a)])
 
@@ -113,7 +113,7 @@ For any `v : UInt64`, the wasm export `wrap` terminates and leaves the
 input value on the value stack unchanged. -/
 @[spec_of "rust-exported" "rust_option::wrap"]
 def WrapSpec : Prop :=
-  ∀ (initial : Store) (v : UInt64),
+  ∀ (initial : Store Unit) (v : UInt64),
     TerminatesWith «module» 3 initial [.i64 v]
       (fun _ rs => rs = [.i64 v])
 
@@ -135,7 +135,7 @@ leaves a single i32 on the value stack equal to `0` if `opt = sentinel`
 and to `1` otherwise. -/
 @[spec_of "rust-exported" "rust_option::is_some"]
 def IsSomeSpec : Prop :=
-  ∀ (initial : Store) (opt : UInt64),
+  ∀ (initial : Store Unit) (opt : UInt64),
     TerminatesWith «module» 4 initial [.i64 opt]
       (fun _ rs => rs = [.i32 (if opt = sentinel then 0 else 1)])
 
@@ -158,7 +158,7 @@ leaves a single i64 on the value stack equal to the sentinel if
 models `i64::wrapping_add`). -/
 @[spec_of "rust-exported" "rust_option::map_add"]
 def MapAddSpec : Prop :=
-  ∀ (initial : Store) (opt k : UInt64),
+  ∀ (initial : Store Unit) (opt k : UInt64),
     TerminatesWith «module» 5 initial [.i64 k, .i64 opt]
       (fun _ rs => rs = [.i64 (if opt = sentinel then sentinel else opt + k)])
 
@@ -180,7 +180,7 @@ with the sentinel encoding). -/
 
 open Wasm.RustStd.Option
 
-theorem is_some_lifted (initial : Store) (o : Option Int64) (h : o ≠ some Int64.minValue) :
+theorem is_some_lifted (initial : Store Unit) (o : Option Int64) (h : o ≠ some Int64.minValue) :
     TerminatesWith «module» 4 initial [.i64 (encode o)]
       (fun _ rs => rs = [.i32 (if o.isSome then 1 else 0)]) := by
   refine (is_some_correct initial (encode o)).mono ?_
@@ -192,7 +192,7 @@ theorem is_some_lifted (initial : Store) (o : Option Int64) (h : o ≠ some Int6
       encode_ne_sentinel_of_some (by simpa using h)
     rw [if_neg hne]; simp
 
-theorem unwrap_or_lifted (initial : Store) (o : Option Int64) (d : UInt64)
+theorem unwrap_or_lifted (initial : Store Unit) (o : Option Int64) (d : UInt64)
     (h : o ≠ some Int64.minValue) :
     TerminatesWith «module» 2 initial [.i64 d, .i64 (encode o)]
       (fun _ rs => rs = [.i64 (match o with | some x => x.toUInt64 | none => d)]) := by

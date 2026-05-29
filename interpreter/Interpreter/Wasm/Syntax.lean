@@ -235,40 +235,19 @@ deriving Repr, Inhabited
 /-- The mutable runtime state threaded through execution: module-level
 globals, the (optional) linear memory, the available bytes per data
 segment (`none` = dropped or active-and-already-consumed; `some bs` =
-still available to `memory.init`), and a host-managed KV slot used by
-imports that need to persist state across calls (a blockchain-style
-storage, a logger, etc.). The Wasm core never inspects `host`; only
+still available to `memory.init`), and a host-managed slot whose type
+`α` is supplied by the host. The Wasm core never inspects `host`; only
 host imports do.
 
-The `host` field is intentionally a flat associative list (an "alist"
-over `UInt32` keys) — simple to fold over in proofs, slow but
-adequate for the reasoning-first design of this interpreter. Real
-hosts with byte-sequence keys/values would refine this; today the
-project ships only a counter-style demo. -/
-structure Store where
+`α` is whatever shape a particular host needs — `Unit` for the
+hostless corpus, a KV map for a blockchain demo, a byte-trace for a
+logger, etc. No schema is baked into the Wasm core. -/
+structure Store (α : Type) where
   globals      : Globals
   mem          : Mem
   dataSegments : List (Option (List UInt8)) := []
-  host         : List (UInt32 × UInt32) := []
-deriving Repr, Inhabited
-
-namespace Store
-
-/-- Look up `key` in the host alist. Returns `0` if the key is absent —
-this matches the convention used by most blockchain storage hosts (an
-unset slot reads as zero). -/
-def hostLookup (st : Store) (key : UInt32) : UInt32 :=
-  match st.host.find? (·.1 = key) with
-  | some (_, v) => v
-  | none        => 0
-
-/-- Insert or overwrite `key → value` in the host alist, returning the
-updated store. -/
-def hostInsert (st : Store) (key value : UInt32) : Store :=
-  let host' := (st.host.filter (·.1 ≠ key)) ++ [(key, value)]
-  { st with host := host' }
-
-end Store
+  host         : α
+deriving Repr
 
 /-- Build the initial store for a module: evaluate each global's `init`
 into `Globals.globals`; allocate a memory with `pagesMin` pages and
@@ -277,10 +256,10 @@ segments in `dataSegments` (passive → `some bytes`, active → `none`,
 because active segments are spec-equivalent to "dropped" immediately
 after instantiation). If the module has no memory, the store carries
 an empty 0-page memory and an empty `dataSegments` (never observed). -/
-def Module.initialStore (m : Module) : Store :=
+def Module.initialStore [Inhabited α] (m : Module) : Store α :=
   let globals : Globals := { globals := m.globals.map (·.init) }
   match m.memory with
-  | none      => { globals, mem := Mem.empty 0, dataSegments := [] }
+  | none      => { globals, mem := Mem.empty 0, dataSegments := [], host := default }
   | some decl =>
     let m0 := Mem.empty decl.pagesMin.toNat
     let mem : Mem := decl.data.foldl
@@ -292,7 +271,7 @@ def Module.initialStore (m : Module) : Store :=
       decl.data.map fun seg => match seg.offset with
         | some _ => none           -- active: auto-dropped after init
         | none   => some seg.bytes -- passive: available to memory.init
-    { globals, mem, dataSegments }
+    { globals, mem, dataSegments, host := default }
 
 /-- Maximum number of pages an i32-indexed memory can hold (2^16, or 4 GiB).
 This is the wasm spec hard ceiling; `memory.grow` may not exceed it

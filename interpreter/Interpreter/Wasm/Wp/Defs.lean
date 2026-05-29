@@ -19,18 +19,18 @@ Infinite loops like `[.loop [.br 0]]` are unprovable by construction. -/
 
 namespace Wasm
 
-abbrev Assertion  := Continuation → Prop
-abbrev AssertionF := Store → Locals → Prop
+abbrev Assertion α  := Continuation α → Prop
+abbrev AssertionF α := Store α → Locals → Prop
 
-abbrev ImplyF (P Q : AssertionF) := ∀ st s, P st s → Q st s
-abbrev Imply  (P Q : Assertion)  := ∀ c, P c → Q c
+abbrev ImplyF (P Q : AssertionF α) := ∀ st s, P st s → Q st s
+abbrev Imply  (P Q : Assertion α)  := ∀ c, P c → Q c
 
 notation:50 P:51 " ⇒ " Q:51 => ImplyF P Q
 notation:50 P:51 " ⇛ " Q:51 => Imply P Q
 
 @[irreducible]
-def wp (m : Module) (c : Program) (Q : Assertion) (st : Store) (s : Locals)
-    (env : HostEnv := {}) : Prop :=
+def wp (m : Module) (c : Program) (Q : Assertion α) (st : Store α) (s : Locals)
+    (env : HostEnv α := {}) : Prop :=
   ∃ N, ∀ fuel ≥ N, Q (exec fuel m st s c env)
 
 /-! ### Building blocks -/
@@ -38,7 +38,7 @@ def wp (m : Module) (c : Program) (Q : Assertion) (st : Store) (s : Locals)
 /-- If `exec` is constant in fuel (at every successor fuel) and equals `k`,
     then `wp` reduces to `Q k`. At `fuel = 0` `exec` returns `OutOfFuel`, so the
     `fuel + 1` threshold suffices for every atomic instruction. -/
-theorem wp_of_exec_const_succ {m c Q st s k env}
+theorem wp_of_exec_const_succ {α : Type} {m c} {Q : Assertion α} {st s k env}
     (heq : ∀ fuel, exec (fuel + 1) m st s c env = k) :
     wp m c Q st s env ↔ Q k := by
   unfold wp
@@ -50,7 +50,7 @@ theorem wp_of_exec_const_succ {m c Q st s k env}
 
 /-- If `exec` agrees with another `exec` at every successor fuel, the two `wp`s
     coincide. -/
-theorem wp_of_exec_eq_succ {m c c' Q st st' s s' env env'}
+theorem wp_of_exec_eq_succ {α : Type} {m c c'} {Q : Assertion α} {st st' s s' env env'}
     (heq : ∀ fuel, exec (fuel + 1) m st s c env = exec (fuel + 1) m st' s' c' env') :
     wp m c Q st s env ↔ wp m c' Q st' s' env' := by
   unfold wp
@@ -68,13 +68,13 @@ theorem wp_of_exec_eq_succ {m c c' Q st st' s s' env env'}
 
 /-! ### Consequence -/
 
-theorem wp.conseq {Q Q' : Assertion} (hq : Q ⇛ Q')
+theorem wp.conseq {Q Q' : Assertion α} (hq : Q ⇛ Q')
     (h : wp m c Q st s env) : wp m c Q' st s env := by
   unfold wp at h ⊢
   obtain ⟨N, hN⟩ := h
   exact ⟨N, fun fuel hf => hq _ (hN fuel hf)⟩
 
-theorem wp.imp {Q Q' : Assertion}
+theorem wp.imp {Q Q' : Assertion α}
     (h : wp m c Q st s env) (hq : ∀ c, Q c → Q' c) : wp m c Q' st s env :=
   wp.conseq hq h
 

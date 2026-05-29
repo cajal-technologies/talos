@@ -19,7 +19,7 @@ The loop trims to `paramArity` on a `br 0` re-entry (the loop's
 iteration carries `ps` values) and to `resultArity` on fall-through.
 On a recursive `Break 0`, the inner `execOne` is invoked on the
 trimmed stack and its result is plumbed through directly. -/
-private theorem exec_loop_cons_unfold (fuel : Nat) (m : Module) (st : Store) (s : Locals)
+private theorem exec_loop_cons_unfold (fuel : Nat) (m : Module) (st : Store α) (s : Locals)
     (ps rs : Nat) (body rest : Program) :
     exec (fuel + 1) m st s (.loop ps rs body :: rest) =
       (match exec fuel m st s body with
@@ -44,8 +44,8 @@ private theorem exec_loop_cons_unfold (fuel : Nat) (m : Module) (st : Store) (s 
     · rfl
   all_goals rfl
 
-theorem wp_loop_cons {ps rs : Nat} {body rest : Program} {Q : Assertion}
-    (Inv : AssertionF) (μ : Store → Locals → Nat)
+theorem wp_loop_cons {ps rs : Nat} {body rest : Program} {Q : Assertion α}
+    (Inv : AssertionF α) (μ : Store α → Locals → Nat)
     (hInit : Inv st s)
     (hStep : ∀ st s, Inv st s →
         wp m body
@@ -179,13 +179,13 @@ theorem wp_loop_cons {ps rs : Nat} {body rest : Program} {Q : Assertion}
 
 /-- For any fuel, executing a single `.br 0` is either `OutOfFuel` (when fuel = 0)
     or `Break 0 st s` (when fuel ≥ 1). -/
-private theorem exec_br0 (f : Nat) (m : Module) (st : Store) (s : Locals) :
+private theorem exec_br0 (f : Nat) (m : Module) (st : Store α) (s : Locals) :
     exec f m st s [.br 0] = (match f with | 0 => .OutOfFuel | _ + 1 => .Break 0 st s) := by
   cases f <;> simp [exec, execOne]
 
 /-- A loop with body `[.br 0]` always runs out of fuel: no amount of fuel
     suffices, since each iteration consumes one and returns to the same state. -/
-private theorem execOne_loop_br0 (f : Nat) (m : Module) (st : Store) (s : Locals) :
+private theorem execOne_loop_br0 (f : Nat) (m : Module) (st : Store α) (s : Locals) :
     execOne f m st s (.loop 0 0 [.br 0]) = .OutOfFuel := by
   induction f generalizing st s with
   | zero => simp [execOne]
@@ -197,7 +197,7 @@ private theorem execOne_loop_br0 (f : Nat) (m : Module) (st : Store) (s : Locals
     | succ f'' => simpa using ih st s
 
 /-- Therefore the entire `.loop 0 0 [.br 0] :: rest` program always runs out of fuel. -/
-private theorem exec_loop_br0_cons (f : Nat) (m : Module) (st : Store) (s : Locals)
+private theorem exec_loop_br0_cons (f : Nat) (m : Module) (st : Store α) (s : Locals)
     (rest : Program) :
     exec f m st s (.loop 0 0 [.br 0] :: rest) = .OutOfFuel := by
   cases f with
@@ -209,7 +209,7 @@ private theorem exec_loop_br0_cons (f : Nat) (m : Module) (st : Store) (s : Loca
 /-- A loop whose body is just `.br 0` never terminates: any `wp` for it forces
     `Q .OutOfFuel`. This is the framework-level statement that makes infinite
     loops unprovable for non-trivial posts. -/
-theorem wp_loop_br0_cons (m : Module) (rest : Program) (Q : Assertion) (st : Store) (s : Locals) :
+theorem wp_loop_br0_cons (m : Module) (rest : Program) (Q : Assertion α) (st : Store α) (s : Locals) :
     wp m (.loop 0 0 [.br 0] :: rest) Q st s ↔ Q .OutOfFuel := by
   unfold wp
   constructor

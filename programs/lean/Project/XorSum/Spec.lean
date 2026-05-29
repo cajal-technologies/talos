@@ -44,7 +44,7 @@ order. Returns `0` when `len = 0`. Memory is read but not modified.
 Carries the side condition that every word read is in-bounds. -/
 @[spec_of "rust-exported" "xor_sum::xor_sum"]
 def XorSumSpec : Prop :=
-  ∀ (initial : Store) (ptr len : UInt32)
+  ∀ (initial : Store Unit) (ptr len : UInt32)
     (_hmem : ∀ k < len.toNat, (ptr.toNat + 4 * k) % 4294967296 + 4 ≤ initial.mem.pages * 65536),
     -- Args in stack order (top first); `run` reverses on entry so
     -- local 0 = ptr, local 1 = len.

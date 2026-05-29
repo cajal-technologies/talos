@@ -22,14 +22,14 @@ namespace HostDispatch
     `inc(x)` is a host function that returns `x + 1`. The wasm caller
     just forwards its argument and yields the result. -/
 
-def incHost : HostFn :=
+def incHost : HostFn Unit :=
   { params  := [.i32]
     results := [.i32]
     invoke  := fun st args => match args with
       | [.i32 x] => .Return [.i32 (x + 1)] st
       | _        => .Trap st "inc: bad arity" }
 
-def incEnv : HostEnv := { funcs := [incHost] }
+def incEnv : HostEnv Unit := { funcs := [incHost] }
 
 def incModule : Module :=
   { imports := [{ «module» := "env", name := "inc",
@@ -44,10 +44,10 @@ def incModule : Module :=
     A bare host trap inside `.call` must surface as a `Result.Trap`
     carrying the host's message, with no further wasm execution. -/
 
-def abortHost : HostFn :=
+def abortHost : HostFn Unit :=
   { invoke := fun st _ => .Trap st "host abort" }
 
-def abortEnv : HostEnv := { funcs := [abortHost] }
+def abortEnv : HostEnv Unit := { funcs := [abortHost] }
 
 def abortModule : Module :=
   { imports := [{ «module» := "env", name := "abort" }]
@@ -60,11 +60,11 @@ def abortModule : Module :=
 /-! ### Demo 3 — `memLoad`: host reads caller memory
 
     `memLoad(addr)` reads `st.mem.read32 addr` and returns it. The host
-    only needs the `Store` it's already been handed, so this exercises
+    only needs the `Store Unit` it's already been handed, so this exercises
     the "host inspects caller memory" use case (the read direction of
     eventual blockchain `storage_read`-style imports). -/
 
-def memLoadHost : HostFn :=
+def memLoadHost : HostFn Unit :=
   { params  := [.i32]
     results := [.i32]
     invoke  := fun st args => match args with
@@ -75,7 +75,7 @@ def memLoadHost : HostFn :=
           .Return [.i32 (st.mem.read32 addr)] st
       | _ => .Trap st "memLoad: bad arity" }
 
-def memLoadEnv : HostEnv := { funcs := [memLoadHost] }
+def memLoadEnv : HostEnv Unit := { funcs := [memLoadHost] }
 
 def memLoadModule : Module :=
   { imports := [{ «module» := "env", name := "memLoad",
@@ -89,16 +89,16 @@ def memLoadModule : Module :=
 /-! ### `native_decide` checks
 
     `runVals` / `runTrap` extract the success values or trap message so
-    we don't need `DecidableEq` on `Store`. -/
+    we don't need `DecidableEq` on `Store Unit`. -/
 
-private def runVals (m : Module) (env : HostEnv) (idx : Nat)
-    (st : Store) (args : List Value) : List Value :=
+private def runVals (m : Module) (env : HostEnv Unit) (idx : Nat)
+    (st : Store Unit) (args : List Value) : List Value :=
   match run 10 m idx st args env with
   | .Success vs _ => vs
   | _ => []
 
-private def runTrap (m : Module) (env : HostEnv) (idx : Nat)
-    (st : Store) (args : List Value) : Option String :=
+private def runTrap (m : Module) (env : HostEnv Unit) (idx : Nat)
+    (st : Store Unit) (args : List Value) : Option String :=
   match run 10 m idx st args env with
   | .Trap _ msg => some msg
   | _ => none
@@ -123,7 +123,7 @@ theorem memLoad_reads_caller_memory :
     is just `[.call 0]`; after the host returns, the stack is
     `[.i32 (n + 1)]` and the program is empty so `wp_nil` closes. -/
 
-theorem inc_call_wp (st : Store) (n : UInt32) :
+theorem inc_call_wp (st : Store Unit) (n : UInt32) :
     wp incModule [.call 0]
       (fun c => c = .Fallthrough st ⟨[], [], [.i32 (n + 1)]⟩)
       st ⟨[], [], [.i32 n]⟩ incEnv := by
@@ -142,26 +142,26 @@ theorem inc_call_wp (st : Store) (n : UInt32) :
     -- Goal: wp incModule [] (...) st ⟨[], [], [.i32 (n+1)]⟩ incEnv  -- by wp_nil.
     simp
   · -- Trap case is unreachable: the host always returns on a one-element
-    -- i32 stack, so `hInv` equates two distinct `HostResult` constructors.
+    -- i32 stack, so `hInv` equates two distinct `HostResult Unit` constructors.
     intro st' msg hInv
     simp only [incHost, List.take, List.reverse_cons, List.reverse_nil,
                List.nil_append] at hInv
     cases hInv
 
-/-! ### M4: abstract specification through `HostSpec` + `Satisfies`
+/-! ### M4: abstract specification through `HostSpec Unit` + `Satisfies`
 
-    The same `inc` theorem, but now **parametric over any `HostEnv`** that
+    The same `inc` theorem, but now **parametric over any `HostEnv Unit`** that
     satisfies a contract. The proof never mentions `incHost`; it only
     consumes the relational fact provided by `hSat`. Verified once, the
     theorem holds for every implementation of `inc` that meets the spec. -/
 
 /-- Contract for `inc`: must `.Return` a single i32 equal to `arg + 1`,
 without modifying the store, on every one-element i32 input. -/
-def incContract : HostContract :=
+def incContract : HostContract Unit :=
   fun st args result =>
     ∀ x, args = [.i32 x] → result = .Return [.i32 (x + 1)] st
 
-def incSpec : HostSpec := { contracts := [incContract] }
+def incSpec : HostSpec Unit := { contracts := [incContract] }
 
 /-- The concrete `incHost` defined above satisfies `incSpec`. Used at
 the executor boundary to instantiate the abstract theorem. -/
@@ -182,8 +182,8 @@ the spec. The concrete-host proof above is one specialisation — other
 implementations of `inc` (different language, different runtime) get
 the same theorem for free. -/
 theorem inc_call_wp_abstract
-    (env : HostEnv) (hSat : env.Satisfies incModule incSpec)
-    (st : Store) (n : UInt32) :
+    (env : HostEnv Unit) (hSat : env.Satisfies incModule incSpec)
+    (st : Store Unit) (n : UInt32) :
     wp incModule [.call 0]
       (fun c => c = .Fallthrough st ⟨[], [], [.i32 (n + 1)]⟩)
       st ⟨[], [], [.i32 n]⟩ env := by

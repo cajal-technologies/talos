@@ -10,7 +10,7 @@ import Interpreter.Wasm.Semantics.Lemmas
 
 namespace Wasm
 
-theorem wp_block_cons {ps rs : Nat} {body rest : Program} {Q : Assertion}
+theorem wp_block_cons {ps rs : Nat} {body rest : Program} {Q : Assertion α}
     (h : wp m body
           (fun c => match c with
             | .Fallthrough st' s'   =>
@@ -96,7 +96,7 @@ theorem wp_block_cons {ps rs : Nat} {body rest : Program} {Q : Assertion}
 
 /-- `iff` rule: dispatch on the top-of-stack i32 condition, then reason like
     a block on the chosen branch. Stack precondition: `.i32 c :: vs` on top. -/
-theorem wp_iff_cons {ps rs : Nat} {thn els rest : Program} {Q : Assertion}
+theorem wp_iff_cons {ps rs : Nat} {thn els rest : Program} {Q : Assertion α}
     {c : UInt32} {vs : List Value}
     (hStack : s.values = .i32 c :: vs)
     (hBody : wp m (if c ≠ 0 then thn else els)

@@ -22,7 +22,7 @@ def Factorial : Program := [
   .localGet 1
 ]
 
-theorem factorialSpec (m : Module) (st : Store) (n : UInt32) :
+theorem factorialSpec (m : Module) (st : Store Unit) (n : UInt32) :
     wp m Factorial
         (fun c => ∃ st' s', c = .Fallthrough st' s' ∧
             s'.values = [.i32 (UInt32.ofNat n.toNat.factorial)])

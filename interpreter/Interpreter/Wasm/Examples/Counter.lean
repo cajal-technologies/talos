@@ -1,17 +1,21 @@
 import Interpreter.Wasm.Wp.Tactic
 import Interpreter.Wasm.Wp.Call
 
-/-! ## Example: storage-backed counter (M5)
+/-! ## Example: storage-backed counter (M5 + M6)
 
-    Pulls the full host-function stack together:
+    Pulls the full host-function stack together over a *polymorphic*
+    `Store α`:
 
-    1. Two host imports — `storage_read` and `storage_write` — operate
-       on `Store.host`, the runtime's persistent KV slot.
-    2. A small wasm function `counter` reads slot `0`, adds `1`, writes
-       back.
-    3. A `HostSpec` describes the storage interface *relationally*,
-       without committing to any particular implementation.
-    4. `counter_correct` is proved **parametric over any `HostEnv`**
+    1. The host state is an alist `List (UInt32 × UInt32)`, declared
+       once as `Counter.HostState`. The Wasm interpreter knows
+       nothing of its shape — it just threads `α := Counter.HostState`
+       through.
+    2. Two host imports — `storage_read` and `storage_write` —
+       operate on `st.host` (now of type `Counter.HostState`).
+    3. A small wasm function `counter` reads slot `0`, adds `1`,
+       writes back.
+    4. A `HostSpec` describes the storage interface *relationally*.
+    5. `counter_correct` is proved **parametric over any `HostEnv`**
        that satisfies the spec — the proof reads no host code, only
        the contracts.
 
@@ -22,29 +26,44 @@ import Interpreter.Wasm.Wp.Call
 namespace Wasm
 namespace Counter
 
+/-! ### Host state shape and helpers
+
+    `HostState` is *this host's choice* of `α`. It lives entirely in
+    user code; the interpreter never inspects it. -/
+
+abbrev HostState := List (UInt32 × UInt32)
+
+/-- Look up `key` in the alist; `0` if absent (blockchain convention). -/
+def lookup (kv : HostState) (key : UInt32) : UInt32 :=
+  match kv.find? (·.1 = key) with
+  | some (_, v) => v
+  | none        => 0
+
+/-- Insert or overwrite `key → value`. -/
+def insert (kv : HostState) (key value : UInt32) : HostState :=
+  (kv.filter (·.1 ≠ key)) ++ [(key, value)]
+
 /-! ### Concrete hosts -/
 
-def storageReadHost : HostFn :=
+def storageReadHost : HostFn HostState :=
   { params  := [.i32]
     results := [.i32]
     invoke  := fun st args => match args with
-      | [.i32 key] => .Return [.i32 (st.hostLookup key)] st
+      | [.i32 key] => .Return [.i32 (Counter.lookup st.host key)] st
       | _          => .Trap st "storage_read: bad arity" }
 
-def storageWriteHost : HostFn :=
+def storageWriteHost : HostFn HostState :=
   { params  := [.i32, .i32]
     results := []
     invoke  := fun st args => match args with
-      | [.i32 key, .i32 value] => .Return [] (st.hostInsert key value)
-      | _                      => .Trap st "storage_write: bad arity" }
+      | [.i32 key, .i32 value] =>
+        .Return [] { st with host := Counter.insert st.host key value }
+      | _ => .Trap st "storage_write: bad arity" }
 
-def env : HostEnv := { funcs := [storageReadHost, storageWriteHost] }
+def env : HostEnv HostState :=
+  { funcs := [storageReadHost, storageWriteHost] }
 
-/-! ### Counter module
-
-    Body: push the write-key, read slot 0, increment, write back. The
-    write-key is pushed *first* so it sits below the eventual
-    `counter + 1` for the `storage_write` call. -/
+/-! ### Counter module -/
 
 def counterBody : Program := [
   .const 0,         -- write-key (stays at the bottom until step 6)
@@ -68,17 +87,18 @@ def counterModule : Module :=
 
 /-! ### Relational contracts -/
 
-def storageReadContract : HostContract :=
+def storageReadContract : HostContract HostState :=
   fun st args result =>
     ∀ key, args = [.i32 key] →
-      result = .Return [.i32 (st.hostLookup key)] st
+      result = .Return [.i32 (Counter.lookup st.host key)] st
 
-def storageWriteContract : HostContract :=
+def storageWriteContract : HostContract HostState :=
   fun st args result =>
     ∀ key value, args = [.i32 key, .i32 value] →
-      result = .Return [] (st.hostInsert key value)
+      result = .Return []
+        { st with host := Counter.insert st.host key value }
 
-def counterSpec : HostSpec :=
+def counterSpec : HostSpec HostState :=
   { contracts := [storageReadContract, storageWriteContract] }
 
 /-! ### The concrete hosts satisfy the spec -/
@@ -99,17 +119,19 @@ theorem env_satisfies : Counter.env.Satisfies counterModule counterSpec := by
 
 /-! ### Abstract correctness
 
-    Running the counter from any initial store ends in
-    `st.hostInsert 0 (st.hostLookup 0 + 1)` — i.e. slot 0 has been
-    incremented by 1. The proof never touches the concrete host
-    functions; it only consumes the relational facts from `hSat`. -/
+    Running the counter from any initial store ends in a store whose
+    `host` alist has slot 0 set to `1 + old`. The proof never touches
+    the concrete host functions; it only consumes the relational
+    facts from `hSat`. -/
 
 theorem counter_correct
-    {env : HostEnv} (hSat : env.Satisfies counterModule counterSpec)
-    (st : Store) :
+    {env : HostEnv HostState}
+    (hSat : env.Satisfies counterModule counterSpec)
+    (st : Store HostState) :
     wp counterModule counterBody
       (fun c => c = .Fallthrough
-                      (st.hostInsert 0 (1 + st.hostLookup 0))
+                      { st with host := Counter.insert st.host 0
+                                           (1 + Counter.lookup st.host 0) }
                       ⟨[], [], []⟩)
       st ⟨[], [], []⟩ env := by
   -- Extract resolvers + contracts for both imports.
@@ -120,48 +142,41 @@ theorem counter_correct
   rw [hCRid] at hCR; injection hCR with hCR'; subst hCR'
   have hCWid : counterSpec.contracts[1]? = some storageWriteContract := rfl
   rw [hCWid] at hCW; injection hCW with hCW'; subst hCW'
-  -- Symbolic execution of the straight-line prefix.
   unfold counterBody
   simp only [wp_const_cons]
-  -- Goal: wp counterModule (.call 0 :: …) Q st ⟨[], [], [.i32 0, .i32 0]⟩ env
   refine wp_call_host_cons
     (imp := ⟨"env", "storage_read", [.i32], [.i32]⟩) (hf := hfR)
     rfl hEnvR ?_ ?_
-  · -- storage_read returns; use its contract to nail the result.
-    intro vsR stR hInvR_eq
+  · intro vsR stR hInvR_eq
     simp at hInvR_eq
     have hCR := hInvR st [.i32 0] 0 rfl
-    -- `hCR : hfR.invoke st [.i32 0] = .Return [.i32 (st.hostLookup 0)] st`.
-    -- Combine with `hInvR_eq` to force `vsR` and `stR` to their contract shapes.
     rw [hInvR_eq] at hCR
     injection hCR with hvs hst
     subst vsR
     subst stR
-    -- Stack now: [.i32 (st.hostLookup 0), .i32 0]; next: .const 1 :: .add :: .call 1
     simp only [wp_const_cons, wp_add_cons]
-    -- After +1, stack: [.i32 (st.hostLookup 0 + 1), .i32 0]
     refine wp_call_host_cons
       (imp := ⟨"env", "storage_write", [.i32, .i32], []⟩) (hf := hfW)
       rfl hEnvW ?_ ?_
-    · -- storage_write returns; the resulting store is `hostInsert 0 (1 + counter)`.
-      intro vsW stW hInvW_eq
+    · intro vsW stW hInvW_eq
       simp at hInvW_eq
-      have hCW := hInvW st [.i32 0, .i32 (1 + st.hostLookup 0)] 0 (1 + st.hostLookup 0) rfl
+      have hCW := hInvW st
+                    [.i32 0, .i32 (1 + Counter.lookup st.host 0)]
+                    0 (1 + Counter.lookup st.host 0) rfl
       rw [hInvW_eq] at hCW
       injection hCW with hvs hst
       subst vsW
       subst stW
       simp
-    · -- storage_write cannot trap on a well-shaped call (contract forces .Return).
-      intro stW msg hInvW_eq
+    · intro stW msg hInvW_eq
       simp at hInvW_eq
-      have hCW := hInvW st [.i32 0, .i32 (1 + st.hostLookup 0)] 0 (1 + st.hostLookup 0) rfl
+      have hCW := hInvW st
+                    [.i32 0, .i32 (1 + Counter.lookup st.host 0)]
+                    0 (1 + Counter.lookup st.host 0) rfl
       rw [hInvW_eq] at hCW
       cases hCW
-  · -- storage_read cannot trap (contract forces .Return).
-    intro stR msg hInvR_eq
-    simp only [List.take, List.reverse_cons, List.reverse_nil,
-               List.nil_append] at hInvR_eq
+  · intro stR msg hInvR_eq
+    simp at hInvR_eq
     have hCR := hInvR st [.i32 0] 0 rfl
     rw [hInvR_eq] at hCR
     cases hCR

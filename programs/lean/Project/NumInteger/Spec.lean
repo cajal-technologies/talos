@@ -33,7 +33,7 @@ leaves a single i64 on the value stack equal to `Nat.gcd a.toNat b.toNat`
 is preserved. -/
 @[spec_of "rust-exported" "num_integer::gcd_u64"]
 def GcdU64Spec : Prop :=
-  ∀ (initial : Store) (a b : UInt64),
+  ∀ (initial : Store Unit) (a b : UInt64),
     -- Args are passed in stack order (top first). The Wasm caller pushes
     -- `a` then `b`, so the operand stack handed to `run` is `[b, a]` —
     -- which `run` reverses on entry to make local 0 = a, local 1 = b.

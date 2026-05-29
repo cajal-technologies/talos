@@ -25,7 +25,7 @@ def memModule : Module :=
         data := [{ offset := some 0, bytes := [0x42, 0x43, 0x44, 0x45] }] } }
 
 theorem memDataSection_read32_zero :
-    memModule.initialStore.mem.read32 0 = 0x45444342 := by
+    (memModule.initialStore (α := Unit)).mem.read32 0 = 0x45444342 := by
   native_decide
 
 end Wasm

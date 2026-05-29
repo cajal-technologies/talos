@@ -15,7 +15,7 @@ def IfAbs : Program := [
     [.localGet 0]
 ]
 
-theorem ifAbsSpec (m : Module) (st : Store) (x : UInt32) :
+theorem ifAbsSpec (m : Module) (st : Store Unit) (x : UInt32) :
     wp m IfAbs
         (fun c => c = .Fallthrough st
                     { params := [.i32 x], locals := [],

@@ -42,7 +42,7 @@ Memory remains unchanged. Carries the side condition that every offset
 `0..len` is in-bounds for the initial memory. -/
 @[spec_of "rust-exported" "memchr::memchr"]
 def MemchrSpec : Prop :=
-  ∀ (initial : Store) (ptr len needle : UInt32)
+  ∀ (initial : Store Unit) (ptr len needle : UInt32)
     (hmem : ∀ k < len.toNat, (k + ptr.toNat) % 4294967296 < initial.mem.pages * 65536),
     TerminatesWith «module» 0 initial [.i32 ptr, .i32 len, .i32 needle]
       (fun st' rs => rs = [.i32 (memchrAux st'.mem ptr needle len.toNat 0)])

@@ -58,8 +58,8 @@ at runtime. Real Wasm traps (division by zero, signed-divide overflow,
 
 mutual
 
-def execOne (fuel : Nat) (m : Module) (st : Store) (s : Locals) (inst : Instruction)
-    (env : HostEnv := {}) : Continuation :=
+def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instruction)
+    (env : HostEnv α := {}) : Continuation α :=
   match fuel, inst with
     | 0, _ => .OutOfFuel
 
@@ -677,8 +677,8 @@ def execOne (fuel : Nat) (m : Module) (st : Store) (s : Locals) (inst : Instruct
     | _, .nop => .Fallthrough st s
     | _, .unreachable => .Trap st "unreachable"
 
-def exec (fuel : Nat) (m : Module) (st : Store) (s : Locals) (p : Program)
-    (env : HostEnv := {}) : Continuation :=
+def exec (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (p : Program)
+    (env : HostEnv α := {}) : Continuation α :=
   match p with
   | [] => .Fallthrough st s
   | inst :: rest => match execOne fuel m st s inst env with
@@ -686,7 +686,7 @@ def exec (fuel : Nat) (m : Module) (st : Store) (s : Locals) (p : Program)
     | other => other
 
 def run (fuel : Nat) (m : Module) (id : Nat)
-        (initial : Store) (params : List Value) (env : HostEnv := {}) : Result :=
+        (initial : Store α) (params : List Value) (env : HostEnv α := {}) : Result α :=
   -- Unified function index space: indices `< m.imports.length` resolve to
   -- host imports via `env.funcs`; the remainder map to `m.funcs` after
   -- shifting down by `m.imports.length`. Matching on `m.imports[id]?`

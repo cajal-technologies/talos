@@ -15,10 +15,10 @@ def earlyBrInvalidModule : Module := {
   funcs := [{ params := [.i32], results := [.i32], body := EarlyBrInvalid }]
 }
 
-/-- Project the invalid message (if any) out of a `Result`, so we can
-    `native_decide` against it without needing `DecidableEq Store`. -/
+/-- Project the invalid message (if any) out of a `Result Unit`, so we can
+    `native_decide` against it without needing `DecidableEq Store Unit`. -/
 private def runInvalidMsg (fuel : Nat) (m : Module) (idx : Nat)
-    (st : Store) (args : List Value) : Option String :=
+    (st : Store Unit) (args : List Value) : Option String :=
   match run fuel m idx st args with
   | .Invalid msg => some msg
   | _            => none

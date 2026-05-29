@@ -9,7 +9,7 @@ namespace Wasm
 
 def IsEven : Program := [.localGet 0, .const 1, .and, .eqz]
 
-theorem isEvenSpec (m : Module) (st : Store) (v : UInt32) :
+theorem isEvenSpec (m : Module) (st : Store Unit) (v : UInt32) :
     wp m IsEven
         (fun c => c = .Fallthrough st
                     { params := [.i32 v], locals := [],

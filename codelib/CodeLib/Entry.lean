@@ -18,9 +18,9 @@ the function body (parametric in the initial store). Locals are built from
 post-condition is checked on `Fallthrough`/`Return` after taking the top
 `f.results.length` values and appending the caller-remainder. -/
 theorem TerminatesWith.of_wp_entry {m : Module} {id : Nat} {f : Function}
-    {initial : Store} {args : List Value} {P : Store → List Value → Prop}
+    {initial : Store α} {args : List Value} {P : Store α → List Value → Prop}
     (hf : m.funcs[id - m.imports.length]? = some f)
-    (h : ∀ initial : Store,
+    (h : ∀ initial : Store α,
       wp m f.body
         (fun c => match c with
           | .Fallthrough st' s' =>
@@ -39,7 +39,7 @@ theorem TerminatesWith.of_wp_entry {m : Module} {id : Nat} {f : Function}
 Use when the function body's correctness depends on properties of the
 initial store (e.g., memory bounds). -/
 theorem TerminatesWith.of_wp_entry_for {m : Module} {id : Nat} {f : Function}
-    {initial : Store} {args : List Value} {P : Store → List Value → Prop}
+    {initial : Store α} {args : List Value} {P : Store α → List Value → Prop}
     (hf : m.funcs[id - m.imports.length]? = some f)
     (h : wp m f.body
         (fun c => match c with
@@ -73,8 +73,8 @@ theorem TerminatesWith.of_wp_entry_for {m : Module} {id : Nat} {f : Function}
 proof state the natural raw-value spec, then relift it through an
 abstraction (e.g. an `Option` decoder) without re-running `wp`. -/
 theorem TerminatesWith.mono {m : Module} {id : Nat}
-    {initial : Store} {args : List Value}
-    {P Q : Store → List Value → Prop}
+    {initial : Store α} {args : List Value}
+    {P Q : Store α → List Value → Prop}
     (h : TerminatesWith m id initial args P) (hPQ : ∀ st vs, P st vs → Q st vs) :
     TerminatesWith m id initial args Q := by
   obtain ⟨N, hN⟩ := h

@@ -11,11 +11,11 @@ import Interpreter.Wasm.Semantics.Lemmas
 namespace Wasm
 
 def FuncSpec (m : Module) (id : Nat)
-    (Pre : List Value → Prop) (Post : Store → List Value → Prop) : Prop :=
-  ∀ args, Pre args → ∀ initial : Store,
+    (Pre : List Value → Prop) (Post : Store α → List Value → Prop) : Prop :=
+  ∀ args, Pre args → ∀ initial : Store α,
     ∃ N, ∀ fuel ≥ N, ∃ vs st, run fuel m id initial args = .Success vs st ∧ Post st vs
 
-theorem wp_call_cons {id : Nat} {Pre : List Value → Prop} {Post : Store → List Value → Prop}
+theorem wp_call_cons {id : Nat} {Pre : List Value → Prop} {Post : Store α → List Value → Prop}
     (spec : FuncSpec m id Pre Post)
     (hPre : Pre s.values)
     (hPost : ∀ st' vs, Post st' vs → wp m rest Q st' { s with values := vs }) :
@@ -48,9 +48,9 @@ theorem wp_call_cons {id : Nat} {Pre : List Value → Prop} {Post : Store → Li
     host import; it defaults to `rfl`, which discharges for any module
     whose `imports` literal is `[]`. -/
 theorem FuncSpec.of_wp_body
-    {m : Module} {id : Nat} {f : Function} {Pre : List Value → Prop} {Post : Store → List Value → Prop}
+    {m : Module} {id : Nat} {f : Function} {Pre : List Value → Prop} {Post : Store α → List Value → Prop}
     (hf : m.funcs[id - m.imports.length]? = some f)
-    (h : ∀ args, Pre args → ∀ initial : Store,
+    (h : ∀ args, Pre args → ∀ initial : Store α,
       wp m f.body
         (fun c => match c with
           | .Fallthrough st' s' =>
@@ -92,9 +92,9 @@ theorem FuncSpec.of_wp_body
     by case analysis on it. The abstraction layer (per-import contract
     that hides `invoke` behind a relation) lands in M4. -/
 
-theorem wp_call_host_cons {m : Module} {env : HostEnv}
-    {id : Nat} {imp : ImportDecl} {hf : HostFn}
-    {rest : Program} {Q : Assertion} {st : Store} {s : Locals}
+theorem wp_call_host_cons {m : Module} {env : HostEnv α}
+    {id : Nat} {imp : ImportDecl} {hf : HostFn α}
+    {rest : Program} {Q : Assertion α} {st : Store α} {s : Locals}
     (hImp : m.imports[id]? = some imp)
     (hEnv : env.funcs[id]? = some hf)
     (hReturn : ∀ vs st',

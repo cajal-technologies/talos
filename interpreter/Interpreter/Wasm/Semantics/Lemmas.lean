@@ -19,13 +19,13 @@ existential in `wp` well-behaved. -/
 `run`. Proved by induction on `f₁`; the three public theorems below are
 one-line projections. -/
 theorem fuel_mono_aux : ∀ (f₁ : Nat),
-    (∀ (m : Module) (st : Store) (s : Locals) (inst : Instruction) (f₂ : Nat),
+    (∀ (m : Module) (st : Store α) (s : Locals) (inst : Instruction) (f₂ : Nat),
         f₁ ≤ f₂ → execOne f₁ m st s inst ≠ .OutOfFuel →
         execOne f₂ m st s inst = execOne f₁ m st s inst) ∧
-    (∀ (m : Module) (st : Store) (s : Locals) (p : Program) (f₂ : Nat),
+    (∀ (m : Module) (st : Store α) (s : Locals) (p : Program) (f₂ : Nat),
         f₁ ≤ f₂ → exec f₁ m st s p ≠ .OutOfFuel →
         exec f₂ m st s p = exec f₁ m st s p) ∧
-    (∀ (m : Module) (id : Nat) (initial : Store) (args : List Value) (f₂ : Nat),
+    (∀ (m : Module) (id : Nat) (initial : Store α) (args : List Value) (f₂ : Nat),
         f₁ ≤ f₂ → run f₁ m id initial args ≠ .OutOfFuel →
         run f₂ m id initial args = run f₁ m id initial args) := by
   intro f₁
@@ -58,7 +58,7 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
     obtain ⟨ihOne, ihExec, ihRun⟩ := ih
     -- Step 1: prove execOne at fuel k+1.
     have monoOne :
-        ∀ (m : Module) (st : Store) (s : Locals) (inst : Instruction) (f₂ : Nat),
+        ∀ (m : Module) (st : Store α) (s : Locals) (inst : Instruction) (f₂ : Nat),
           k + 1 ≤ f₂ → execOne (k + 1) m st s inst ≠ .OutOfFuel →
           execOne f₂ m st s inst = execOne (k + 1) m st s inst := by
       intro m st s inst f₂ hle hne
@@ -122,7 +122,7 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
       | _ => simp only [execOne]
     -- Step 2: prove exec at fuel k+1 using monoOne.
     have monoExec :
-        ∀ (m : Module) (st : Store) (s : Locals) (p : Program) (f₂ : Nat),
+        ∀ (m : Module) (st : Store α) (s : Locals) (p : Program) (f₂ : Nat),
           k + 1 ≤ f₂ → exec (k + 1) m st s p ≠ .OutOfFuel →
           exec f₂ m st s p = exec (k + 1) m st s p := by
       intro m st s p f₂ hle hne
@@ -158,19 +158,19 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
       rfl
 
 theorem execOne_fuel_mono
-    {m : Module} {st : Store} {s : Locals} {inst : Instruction} {f₁ f₂ : Nat}
+    {m : Module} {st : Store α} {s : Locals} {inst : Instruction} {f₁ f₂ : Nat}
     (hle : f₁ ≤ f₂) (hne : execOne f₁ m st s inst ≠ .OutOfFuel) :
     execOne f₂ m st s inst = execOne f₁ m st s inst :=
   (fuel_mono_aux f₁).1 m st s inst f₂ hle hne
 
 theorem exec_fuel_mono
-    {m : Module} {st : Store} {s : Locals} {p : Program} {f₁ f₂ : Nat}
+    {m : Module} {st : Store α} {s : Locals} {p : Program} {f₁ f₂ : Nat}
     (hle : f₁ ≤ f₂) (hne : exec f₁ m st s p ≠ .OutOfFuel) :
     exec f₂ m st s p = exec f₁ m st s p :=
   (fuel_mono_aux f₁).2.1 m st s p f₂ hle hne
 
 theorem run_fuel_mono
-    {m : Module} {id : Nat} {initial : Store} {args : List Value} {f₁ f₂ : Nat}
+    {m : Module} {id : Nat} {initial : Store α} {args : List Value} {f₁ f₂ : Nat}
     (hle : f₁ ≤ f₂) (hne : run f₁ m id initial args ≠ .OutOfFuel) :
     run f₂ m id initial args = run f₁ m id initial args :=
   (fuel_mono_aux f₁).2.2 m id initial args f₂ hle hne
@@ -182,7 +182,7 @@ explicitly. These lemmas restate each arm's behaviour in a form that
 exposes the body's `exec` call, which is what the wp framework rules need. -/
 
 theorem exec_block_cons
-    {m : Module} {st : Store} {s : Locals}
+    {m : Module} {st : Store α} {s : Locals}
     {ps rs : Nat} {body rest : Program} {fuel : Nat} :
     exec (fuel + 1) m st s (.block ps rs body :: rest) =
       (match exec fuel m st s body with
@@ -204,7 +204,7 @@ theorem exec_block_cons
   · rfl
 
 theorem exec_iff_cons
-    {m : Module} {st : Store} {s : Locals}
+    {m : Module} {st : Store α} {s : Locals}
     {ps rs : Nat} {thn els rest : Program} {fuel : Nat}
     {c : UInt32} {vs : List Value}
     (hStack : s.values = .i32 c :: vs) :
@@ -234,7 +234,7 @@ theorem exec_iff_cons
        all_goals rfl)
 
 theorem exec_call_cons
-    {m : Module} {st : Store} {s : Locals}
+    {m : Module} {st : Store α} {s : Locals}
     {id : Nat} {rest : Program} {fuel : Nat} :
     exec (fuel + 1) m st s (.call id :: rest) =
       (match run fuel m id st s.values with
@@ -251,8 +251,8 @@ result directly so wp-level reasoning about host calls (see
 `wp_call_host_cons`) can step over the dispatch without going through
 the generic `run` characterisation. -/
 theorem exec_call_host_cons
-    {m : Module} {env : HostEnv} {st : Store} {s : Locals}
-    {id : Nat} {imp : ImportDecl} {hf : HostFn}
+    {m : Module} {env : HostEnv α} {st : Store α} {s : Locals}
+    {id : Nat} {imp : ImportDecl} {hf : HostFn α}
     {rest : Program} {fuel : Nat}
     (hImp : m.imports[id]? = some imp)
     (hEnv : env.funcs[id]? = some hf) :
@@ -276,8 +276,8 @@ called index falls outside the imports range — exposed via the
 reduces to `id`, so existing proofs `rw [run_eq] ; simp [hf]` keep
 working with `hf : m.funcs[id]? = some f`. -/
 theorem run_eq
-    {m : Module} {id : Nat} {initial : Store} {args : List Value} {fuel : Nat}
-    {env : HostEnv}
+    {m : Module} {id : Nat} {initial : Store α} {args : List Value} {fuel : Nat}
+    {env : HostEnv α}
     (hImp : m.imports[id]? = none) :
     run fuel m id initial args env =
       (match m.funcs[id - m.imports.length]? with

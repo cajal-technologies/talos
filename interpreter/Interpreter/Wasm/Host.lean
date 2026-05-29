@@ -22,33 +22,33 @@ without committing to a particular implementation.
 
 namespace Wasm
 
-inductive HostResult where
+inductive HostResult (α : Type) where
   /-- The host call returned successfully with the given result values.
   The store carries every side effect the host committed. -/
-  | Return : List Value → Store → HostResult
+  | Return : List Value → Store α → HostResult α
   /-- The host call trapped. The store carries every side effect
   committed *before* the trap was raised — matches the wasm spec's
   atomicity rule for `unreachable` and out-of-bounds memory. -/
-  | Trap   : Store → String → HostResult
+  | Trap   : Store α → String → HostResult α
 
 /-- A single host-resolved function. `params`/`results` describe the
 declared signature so callers and validators can sanity-check it; the
 interpreter currently trusts these on faith. `invoke` is the actual
 host code, called with the popped arguments in wasm calling-convention
 order (first declared param first, top-of-stack last). -/
-structure HostFn where
+structure HostFn (α : Type) where
   params  : List ValueType := []
   results : List ValueType := []
-  invoke  : Store → List Value → HostResult
+  invoke  : Store α → List Value → HostResult α
 
 /-- A host environment: positional list of resolved host functions,
 indexed identically to the declaring module's `imports` field. -/
-structure HostEnv where
-  funcs : List HostFn := []
+structure HostEnv (α : Type) where
+  funcs : List (HostFn α) := []
 
-@[inline] def HostEnv.empty : HostEnv := {}
+@[inline] def HostEnv.empty : HostEnv α := {}
 
-instance : Inhabited HostEnv := ⟨{}⟩
+instance : Inhabited (HostEnv α) := ⟨{}⟩
 
 /-! ## Contracts and specifications
 
@@ -67,15 +67,15 @@ fixes a concrete implementation. -/
 host function satisfies the contract iff every call it produces is
 related to its inputs. Both `Return` and `Trap` outcomes are subject
 to the relation, so contracts can constrain or forbid trapping. -/
-abbrev HostContract := Store → List Value → HostResult → Prop
+abbrev HostContract (α : Type) := Store α → List Value → HostResult α → Prop
 
 /-- A host specification: positional list of per-import contracts,
 indexed identically to the declaring module's `imports` field.
 The relation to a particular `Module` is established at `Satisfies`
 time so the same `HostSpec` can be reused across modules with
 matching import shapes. -/
-structure HostSpec where
-  contracts : List HostContract := []
+structure HostSpec (α : Type) where
+  contracts : List (HostContract α) := []
 
 /-- A `HostEnv` satisfies a `HostSpec` *for module `m`* when:
 * every declared import index has both a resolver and a contract;
@@ -84,7 +84,7 @@ structure HostSpec where
 Program theorems quantify over such satisfying environments — the
 proof only ever uses the relational facts, never the concrete
 `HostFn.invoke`. -/
-def HostEnv.Satisfies (env : HostEnv) (m : Module) (spec : HostSpec) : Prop :=
+def HostEnv.Satisfies (env : HostEnv α) (m : Module) (spec : HostSpec α) : Prop :=
   ∀ i, i < m.imports.length →
     ∃ hf c, env.funcs[i]? = some hf ∧ spec.contracts[i]? = some c ∧
             ∀ st args, c st args (hf.invoke st args)
