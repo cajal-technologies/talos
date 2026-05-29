@@ -370,9 +370,47 @@ def runCheck (p : Parsed) : IO UInt32 := do
   cmdCheck (p.hasFlag "force-emit") (p.hasFlag "no-build")
   pure 0
 
-def runReport (_ : Parsed) : IO UInt32 := do
-  IO.eprintln "verifier report: not implemented"
-  pure 1
+/-- Locate the bundled `report/` Astro project relative to the verifier
+binary. The binary lives at `<verifier-root>/.lake/build/bin/verifier`,
+and the report project at `<verifier-root>/report/`. -/
+private def locateReportDir : IO FilePath := do
+  let app ← IO.appPath
+  -- app = <verifier-root>/.lake/build/bin/verifier
+  --       parents:        bin/  build/  .lake/  <verifier-root>
+  let some verifierRoot := app.parent >>= (·.parent) >>= (·.parent) >>= (·.parent)
+    | die s!"could not locate verifier root from {app}"
+  let reportDir := verifierRoot / "report"
+  unless ← System.FilePath.pathExists (reportDir / "package.json") do
+    die s!"bundled report project not found at {reportDir} (resolved from {app})"
+  absNormalize reportDir
+
+def runReport (p : Parsed) : IO UInt32 := do
+  let projectDir ← absNormalize (← IO.currentDir)
+  let extractedFlag : String := if p.hasFlag "extracted" then
+    p.flag! "extracted" |>.as! String
+  else
+    "extracted"
+  let outFlag : String := if p.hasFlag "out" then
+    p.flag! "out" |>.as! String
+  else
+    "out"
+  let extractedDir ← absNormalize ⟨extractedFlag⟩
+  let outDir ← absNormalize ⟨outFlag⟩
+  let reportDir ← locateReportDir
+  -- Phase 1: extract.
+  IO.println s!"==> verifier extract → {extractedDir}"
+  Verifier.Extract.run projectDir extractedDir
+  -- Phase 2: build the Astro static site.
+  let nodeModules := reportDir / "node_modules"
+  unless ← System.FilePath.pathExists nodeModules do
+    IO.println s!"==> npm install ({reportDir})"
+    runOrDie "npm" #["install", "--silent"] (cwd := some reportDir)
+  IO.println s!"==> build report ({reportDir}) → {outDir}"
+  runOrDie "npm"
+    #["run", "build-report", "--", extractedDir.toString, outDir.toString]
+    (cwd := some reportDir)
+  IO.println s!"==> report ready at {outDir / "index.html"}"
+  pure 0
 
 def runExtract (p : Parsed) : IO UInt32 := do
   let projectDir ← absNormalize (← IO.currentDir)
@@ -403,7 +441,11 @@ def checkCmd : Cmd := `[Cli|
 
 def reportCmd : Cmd := `[Cli|
   «report» VIA runReport;
-  "(stub) Generate an HTML report."
+  "Run `verifier extract` then build the static HTML report. Must be run from the project root."
+
+  FLAGS:
+    "extracted"  : String; "Directory for `extract` JSON artifacts (default: ./extracted)."
+    "out"        : String; "Directory for the built static site (default: ./out)."
 ]
 
 def extractCmd : Cmd := `[Cli|

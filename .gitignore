@@ -23,3 +23,4 @@ _VerifierExtract.lean
 verifier-report/
 
 extracted/
+out/

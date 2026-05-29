@@ -21,15 +21,7 @@ Sketch of what's needed:
 
 Rust emits `call_indirect` for trait objects, function pointers, and some closure shapes. Without it, anything using `dyn Trait` is off-limits. Implementation involves `funcref`, element segments for table initialization, and the runtime type-check (with trap on mismatch or out-of-bounds).
 
-### Small but pervasive ops: `memory.grow`, `memory.size`, `unreachable`, `select`
-
-All trivially small additions to `Instruction` and the step function, but constantly emitted by rustc. `unreachable` in particular is what panics lower to — without it you can't even state "this path panics", let alone prove a function is panic-free.
-
 ## Tier 2 — common in real codegen
-
-### Bulk memory: `memory.copy`, `memory.fill`, `memory.init`, `data.drop`
-
-LLVM emits these for `memcpy`/`memset`, struct moves, and `Vec` operations. Without them, rustc-compiled code only works with bulk-memory disabled, which is a persistent footgun.
 
 ### Multi-value results
 

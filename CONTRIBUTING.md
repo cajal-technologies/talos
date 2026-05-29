@@ -37,6 +37,21 @@ just testsuite i32
 
 The testsuite is the primary signal for interpreter coverage. **If you want to extend the project, increasing testsuite coverage is the best place to start.** Pick a failing test, trace why it fails, implement the missing feature or fix the bug, and verify the test now passes.
 
+### Updating `testsuite_report.txt`
+
+`testsuite_report.txt` at the repo root is a sorted, committed snapshot of every wast command's outcome (`pass`, `fail`, `interpreter_error`, `skipped:...`, etc.). CI regenerates it on every PR and fails if the working tree drifts.
+
+If your change shifts coverage in any direction — implementing a missing instruction (`interpreter_error` → `pass`), fixing a bug (`fail` → `pass`), tightening a check (`pass` → `fail`), or even adding a new skip bucket — you need to regenerate and commit the report:
+
+```bash
+just testsuite-report
+git add testsuite_report.txt
+```
+
+The recipe requires the pinned `wasm-tools` version (see `WASM_TOOLS_VERSION` in the `justfile`) and will refuse to run otherwise. Different `wasm-tools` versions decode `.wast` slightly differently, so the pin is what keeps your local regeneration byte-identical to CI's. Install the exact version with `cargo install wasm-tools --version <pinned>` if your system one doesn't match.
+
+Bumping `WASM_TOOLS_VERSION` or the `vendor/testsuite` submodule will also change the report — those bumps and the regenerated report belong in the same commit.
+
 ## Contributing code
 
 Pull requests are welcome. A few guidelines:

@@ -3,148 +3,139 @@ working design doc, not permanent documentation. -->
 
 # Adding host functions
 
-A project for verifying WebAssembly code using Lean 4. Today `Module` has no
-`imports` field and `call` only dispatches to in-module functions. Without
-imports, no program that does I/O, allocates via a host allocator, or interacts
-with a runtime is verifiable — which rules out most "real" Wasm. This doc plans
-how to add host functions.
+A project for verifying WebAssembly code using Lean 4. Without imports, no
+program that does I/O, allocates via a host allocator, or interacts with a
+runtime is verifiable — which rules out most "real" Wasm. This doc covers
+how host functions land in the codebase.
 
-## Current status of the interpreter
+## Where we are (M0–M5 done)
 
-What's there, in the order it matters for adding hosts:
+The initial plan went through five milestones (in commit history under PR
+#15). M0–M5 introduced:
 
-- `Module = { funcs, exports, memory, globals }` — no `imports` field at all
-  (`interpreter/Interpreter/Wasm/Syntax.lean:211`).
-- `Store = { globals, mem, dataSegments }` — no slot for host-owned state
-  (`interpreter/Interpreter/Wasm/Syntax.lean:224`).
-- `Instruction.call : Nat → Instruction` dispatches via `m.funcs[id]?`
-  (`interpreter/Interpreter/Wasm/Semantics.lean:424`, `:687`) — a flat index
-  space with no notion of "this index is imported".
-- The fuel-free spec predicates (`TerminatesWith` / `PartiallyMeets`) take `m`,
-  `initial : Store`, `args` — nothing about the host. They'd need to either be
-  reparameterized over a host environment or thread host facts through the
-  post-condition.
-- WP layer is mature for atomic / block / loop / call, so adding a
-  `wp_call_host_cons` lemma will follow the existing pattern, not reinvent it.
+- `Module.imports : List ImportDecl` (the low end of the unified function
+  index space).
+- `HostFn` / `HostEnv` / `HostResult` threaded through
+  `execOne` / `exec` / `run`.
+- `.call id` dispatches to `env.funcs[id]` when `id < m.imports.length`,
+  else `m.funcs[id - m.imports.length]`.
+- WP rule: `wp_call_host_cons` + `exec_call_host_cons` helper.
+- Contract layer: `HostContract` / `HostSpec` / `HostEnv.Satisfies` —
+  abstract-oracle pattern from CompCert / seL4.
+- `Store.host : List (UInt32 × UInt32)` — a *concrete* KV slot baked
+  into the store, used by a `storage_read` / `storage_write` counter demo.
 
-So the surface area to change is small but cross-cutting: AST, semantics,
-Store, the WP layer's call rule, and the fuel-free predicates.
+That last bullet — concrete host state baked into `Store` — is the
+piece we're walking back. Pinning a single representation
+(`List (UInt32 × UInt32)`) into the universal `Store` definition forces
+every future host (a trace, a chain context, a filesystem) to share
+that representation or to encode itself into it, and it lets Wasm-core
+invariants accidentally mention the host's piece. The fix lands in M6.
 
-## Recommended design
+## The shape we're refactoring to: `Store α`
 
-### 1. Two-tier host model: a concrete `HostEnv` for executing, a `HostSpec` for proving
-
-```lean
--- executing side: a host function is a (possibly effectful) Store transformer.
--- Mem/globals are reachable so a host fn can read/write caller memory the way
--- real hosts do (the blockchain `storage_read(key_ptr, key_len, …)` shape).
-inductive HostResult
-  | Return : List Value → Store → HostResult
-  | Trap   : Store → String → HostResult
-
-structure HostFn where
-  signature : List ValueType × List ValueType  -- (params, results), for the validator
-  invoke    : Store → List Value → HostResult
-
-structure HostEnv where
-  funcs : List HostFn   -- positional, matches Module.imports order
-```
-
-### 2. `Module.imports` occupies the low indices of the unified function index space
-
-(As in real Wasm.)
+Make the store polymorphic over the host's state type. Wasm core is
+α-agnostic; concrete hosts pick their own α. Existing programs run
+against `α := Unit`.
 
 ```lean
-structure ImportDecl where
-  module : String       -- e.g. "env"
-  name   : String       -- e.g. "log"
-  params : List ValueType
-  results: List ValueType
-
--- In semantics, `call id` becomes:
---   if id < m.imports.length then call-host (env.funcs[id])
---   else call-wasm (m.funcs[id - m.imports.length])
+structure Store (α : Type) where
+  globals      : Globals
+  mem          : Mem
+  dataSegments : List (Option (List UInt8)) := []
+  host         : α   -- the host's mutable state; no schema baked in
 ```
 
-That's the only change to `call` dispatch. Everything else in the interpreter
-stays put.
-
-### 3. For proofs, abstract the host as a *relation*, not a function
+Knock-on shapes:
 
 ```lean
-/-- Per-import contract. Says nothing about *how* the host works,
-    only what relating-pre-and-post is allowed when this import is called.
-    e.g. `log` could be: `fun st args st' rs => st' = st ∧ rs = []`. -/
-abbrev HostContract := Store → List Value → Store → List Value → Prop
+inductive HostResult (α : Type) where
+  | Return : List Value → Store α → HostResult α
+  | Trap   : Store α → String → HostResult α
 
-structure HostSpec (m : Module) where
-  contracts : List HostContract   -- length = m.imports.length
+structure HostFn (α : Type) where
+  params  : List ValueType := []
+  results : List ValueType := []
+  invoke  : Store α → List Value → HostResult α
 
-/-- A `HostEnv` *satisfies* a `HostSpec` if every concrete invocation
-    is permitted by the corresponding contract. -/
-def HostEnv.Satisfies (env : HostEnv) (spec : HostSpec m) : Prop :=
-  ∀ i st args st' rs,
-    (env.funcs[i]?.map (·.invoke st args)) = some (.Return rs st') →
-    ∃ c, spec.contracts[i]? = some c ∧ c st args st' rs
+structure HostEnv (α : Type) where
+  funcs : List (HostFn α) := []
+
+abbrev HostContract (α : Type) := Store α → List Value → HostResult α → Prop
+structure HostSpec (α : Type) where contracts : List (HostContract α) := []
+
+def HostEnv.Satisfies (env : HostEnv α) (m : Module) (spec : HostSpec α) : Prop :=
+  ∀ i, i < m.imports.length →
+    ∃ hf c, env.funcs[i]? = some hf ∧ spec.contracts[i]? = some c ∧
+            ∀ st args, c st args (hf.invoke st args)
 ```
 
-Program theorems are stated
-`∀ env, env.Satisfies hostSpec → TerminatesWith env m entry args P`. The
-executor side picks any satisfying `env`; the proof side only ever knows the
-contracts. Same pattern as parametric stack frames in CompCert and the
-"abstract oracle" technique in seL4.
+`Module` itself stays α-free (it's just bytecode + import signatures);
+α enters when you pair it with a `Store α` and a `HostEnv α`.
 
-### 4. Threading
+### Design decisions (locked in)
 
-Pass `HostEnv` next to `Module` everywhere (`run`, `execOne`, `exec`, `wp`).
-Do **not** put it in `Store` — it isn't mutable, and it isn't part of the
-program's state, so keeping it on the side mirrors `Module` and avoids `Store`
-invariants growing.
+| # | Question | Choice |
+|---|---|---|
+| 1 | Naming under polymorphism | **No `abbrev Store := Store Unit` alias.** Sweep the corpus to `Store Unit` explicitly so the polymorphic name is consistent everywhere. |
+| 2 | `Module.initialStore` default for `α` | **`[Inhabited α]` constraint** with `host := default`. Existing callers `m.initialStore` keep working under `α := Unit`. |
+| 3 | α-implicit noise across signatures | **Accept.** `Continuation α`, `Result α`, `Assertion α`, etc. flow via auto-bound implicits. |
+| 4 | Vacuous env quantifier on import-free programs | **Explicit** (Option A). Every corpus theorem prefixes `∀ env : HostEnv Unit,` — makes "host-independent" visible at the spec. |
+| 5 | Host reentrancy (host calls back into wasm) | **Out of scope.** No mechanism for `HostFn.invoke` to re-enter `run`. Real reentrant hosts (blockchain trampolines, JS) need a future milestone. |
+| 6 | Simp firing under α-polymorphism | **Accept the low risk.** Auto-bound `{α}` unifies from `st : Store ?α`. If a real proof ever fails, add explicit `(α := X)`. |
 
-## Suggested host examples (progressively harder)
+### What pause-resume buys that this doesn't
 
-1. **`log : i32 i32 → ()`** (NEAR/EVM/WASI-style trace) — pops `(ptr, len)`,
-   host reads `mem[ptr, ptr+len)` and appends to an *output trace*
-   `List (List UInt8)` that lives in the host's piece of `Store`. Contract:
-   trace grows by exactly the read bytes; memory unchanged. Good first
-   example: read-only on caller, write-only on host, easy invariant.
-2. **`abort : i32 i32 → never`** — host trap with caller-provided message.
-   Contract: always returns `.Trap`. Demonstrates that traps from imports
-   compose with the existing `Continuation.Trap` path.
-3. **`get_random : () → i32`** — pure-but-unknown. Contract: returns any
-   `i32`. Forces specs to be written as "for all return values", catching the
-   bug where someone accidentally relies on a specific value.
-4. **`storage_read : i32 i32 i32 → i32`** (blockchain) — reads from a
-   host-managed KV store *into caller memory*. Contract: a relation tying the
-   abstract storage map, the bytes written to caller memory, and the
-   return-value-as-length. First example where the host both *reads* (key
-   from mem) and *writes* (value to mem) the caller's linear memory.
-5. **`storage_write : i32 i32 i32 i32 → ()`** — the mirror. Pair (4) and (5)
-   for the canonical "blockchain smart contract that increments a counter on
-   chain" example — the milestone that proves the design works for the
-   eventual target use case.
+Discussed and rejected. Pause-resume (interpreter yields `Awaiting`,
+executor resumes) gives a "purer" Wasm core but pays for it with a
+CEK-style frame stack, two-level fuel accounting, and `(Store × HostState)`
+threaded through every post-condition. `Store α` gets all three of the
+stated wins — easier host reasoning, arbitrary hosts, clean separation —
+at a fraction of the surgery. Big-step `exec` / `run` survive unchanged;
+proofs stay single-shot.
 
 ## Milestones
 
+Done (PR #15):
+
+| # | Scope |
+|---|---|
+| M0 | `Module.imports` field |
+| M1 | `HostEnv` plumbing through interpreter |
+| M2 | `.call` dispatches to host imports |
+| M3 | `wp_call_host_cons` + WP-level proof |
+| M4 | `HostContract` / `HostSpec` / `HostEnv.Satisfies` |
+| M5 | Storage-backed counter, parametric over satisfying env |
+
+Pending:
+
 | # | Scope | Done = |
 |---|---|---|
-| M0 | `Module.imports` field, decoder ignores it, all existing builds pass | green build with the new field empty |
-| M1 | Threading: add `HostEnv` parameter through `run` / `exec` / `execOne` (default empty for back-compat), add host slot typed by host | examples still compile with `()` host |
-| M2 | `Instruction.call` dispatches to host when `id < imports.length`. `runHost` test using a concrete `log` host that prints to a trace. `native_decide` examples cover return + trap + reading caller mem | runnable end-to-end |
-| M3 | WP layer: `wp_call_host_cons` lemma analogous to `wp_call_cons`, parameterized by the import's contract | factorial-style example using `log` proves a trace-shape postcondition |
-| M4 | `HostSpec` + `HostEnv.Satisfies`. `TerminatesWith` and `PartiallyMeets` reparameterized to take an `env` that's universally bound *outside* the contract assumption | example (1) re-stated parametric over env |
-| M5 | The two halves of a blockchain-style host: `storage_read` + `storage_write`. Proof of a "counter contract" that on entry reads `counter` from storage, increments, writes back, parametric over any satisfying env | demonstrates host fns mutating caller memory and host KV in one example |
-| M6 (stretch) | Decoder support so a hand-written `.wat` with `(import "env" "log" …)` round-trips | one program in `programs/` uses an import |
+| M6 | Promote `Store` → `Store α`. Drop the concrete `host : List (UInt32 × UInt32)` field; it becomes α. Add `[Inhabited α]` where `Module.initialStore` is called. Sweep all non-polymorphic `Store` references in interpreter examples + `programs/lean/Project/*/Spec.lean` to `Store Unit`. Counter's α := `List (UInt32 × UInt32)`. | All three packages build green. `HostDispatch` + `Counter` proofs survive under the polymorphic API. |
+| M7 | Reparametrize `TerminatesWith` / `PartiallyMeets` to take `env : HostEnv α` explicitly. Update bridge lemmas (`of_run`, `of_run_eq`, `of_wp_entry`, `of_wp_entry_for`, `to_TerminatesWith`, `toPartiallyMeets`, `FuncSpec.*`). Migrate every corpus spec file to prefix `∀ env : HostEnv Unit,` (Option A). | Corpus builds green; every `TerminatesWith` statement is host-explicit. |
+| M8 | Update this document to reflect the polymorphic design as built; decide whether to drop the `DELETE ME` marker. | Doc reflects ship state; PR mergeable as permanent reference. |
+| M9 (stretch) | WAT decoder support so a `.wat` with `(import "env" "log" …)` round-trips into `Module.imports`. | One program in `programs/lean/Project/` uses an import. |
 
-Out of scope on purpose: validation of import signatures (M2 traps on
-signature mismatch at runtime; a typed validator is its own project),
-`call_indirect` through host tables, multi-module linking.
+Out of scope on purpose: import-signature validation (today's runtime
+trap on mismatch is fine until a typed validator lands as its own
+project), `call_indirect` through host tables, multi-module linking,
+host reentrancy.
 
-## Things to avoid
+## Suggested host examples (progressively harder)
 
-Don't put host state inside `Store`. It looks tempting because it keeps the
-existing `run : … → Result` shape, but it forces every `Store` invariant to
-mention the host's piece, and it conflates "Wasm-visible state" with "host's
-view of the world". Keep them separate — `HostEnv` alongside `Module`,
-host's mutable view as its own field — and the existing memory/globals lemmas
-don't have to change.
+Same five from the original plan; all still apply post-`Store α`.
+Two have been built (`abort` flavour in `HostDispatch`, storage in
+`Counter`); the rest remain useful exercises:
+
+1. **`log : i32 i32 → ()`** — host reads `mem[ptr, ptr+len)` and appends
+   to an output trace. α := `List (List UInt8)`. Read-only on caller,
+   write-only on host.
+2. **`abort : i32 i32 → never`** — host trap with caller-provided message.
+   Already demonstrated in `HostDispatch.lean` (sans memory arg).
+3. **`get_random : () → i32`** — pure-but-unknown; contract returns any
+   `i32`. Forces specs to be written as "for all return values".
+4. **`storage_read : i32 i32 i32 → i32`** (blockchain) — reads from a
+   host-managed KV store *into caller memory*. α := the KV map. Already
+   demonstrated in `Counter.lean` *with i32 args directly*; the
+   memory-passing variant is the next step.
+5. **`storage_write : i32 i32 i32 i32 → ()`** — the mirror.
