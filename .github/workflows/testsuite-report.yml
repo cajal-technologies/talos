@@ -1,0 +1,48 @@
+name: Testsuite Report Freshness
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: testsuite-report-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check testsuite_report.txt is up to date
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: leanprover/lean-action@v1
+        with:
+          lake-package-directory: interpreter
+          build-args: testsuite
+          use-mathlib-cache: true
+
+      # Pinned to match WASM_TOOLS_VERSION in the justfile. Bumping here
+      # without regenerating testsuite_report.txt will fail this job.
+      - name: Install wasm-tools
+        uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-tools@1.251.0
+
+      - name: Install just
+        uses: taiki-e/install-action@v2
+        with:
+          tool: just
+
+      - name: Regenerate testsuite_report.txt
+        run: just testsuite-report
+
+      - name: Verify testsuite_report.txt is unchanged
+        run: |
+          if ! git diff --exit-code testsuite_report.txt; then
+            echo ""
+            echo "::error::testsuite_report.txt is out of date."
+            echo "Run 'just testsuite-report' locally and commit the result."
+            exit 1
+          fi
