@@ -1,0 +1,165 @@
+---
+import Base from "../layouts/Base.astro";
+import Badge from "../components/Badge.astro";
+import CoverageBar from "../components/CoverageBar.astro";
+import { loadAggregate } from "../lib/load";
+
+const agg = loadAggregate();
+const pct = agg.totals.exportsTotal === 0
+  ? 0
+  : Math.round((agg.totals.exportsProven / agg.totals.exportsTotal) * 100);
+
+function projectStatus(v: typeof agg.views[number]): { kind: "good"|"warn"|"bad"|"muted"; label: string } {
+  const errs = v.artifact.diagnostics.filter(d => d.severity === "error").length;
+  const provenSpecs = v.specs.filter(s => s.status === "proven").length;
+  if (errs > 0) return { kind: "bad", label: `${errs} error${errs===1?"":"s"}` };
+  if (v.specs.length > 0 && provenSpecs === v.specs.length) return { kind: "good", label: "verified" };
+  if (v.specs.length > 0) return { kind: "warn", label: `${provenSpecs}/${v.specs.length} proven` };
+  return { kind: "muted", label: "no specs" };
+}
+---
+<Base title="Talos · verification progress" active="projects">
+  <section class="hero">
+    <h1>Verification progress</h1>
+    <div class="tagline">
+      Wasm modules verified with Lean 4 — informal intent, formal spec, machine-checked proof, side-by-side.
+    </div>
+    <div class="coverage-row">
+      <div>
+        <CoverageBar proven={agg.totals.exportsProven} total={agg.totals.exportsTotal} />
+        <div style="margin-top: 6px; font-size: 12px; color: var(--muted);">
+          Coverage = exports with at least one proven spec.
+        </div>
+      </div>
+      <div class="coverage-figure">
+        <span class="pct">{pct}%</span>
+        <span class="denom">{agg.totals.exportsProven} / {agg.totals.exportsTotal} exports</span>
+      </div>
+    </div>
+    {agg.repoCommit && (
+      <div style="margin-top: 16px; font-size: 12px; color: var(--muted);">
+        repo @ <code>{agg.repoCommit.slice(0, 12)}</code>
+        {agg.rustcEdition && <> · rustc edition <code>{agg.rustcEdition}</code></>}
+        {agg.leanToolchain && <> · {agg.leanToolchain}</>}
+        {agg.extractedAt && <> · extracted {agg.extractedAt}</>}
+      </div>
+    )}
+  </section>
+
+  <section class="summary-grid">
+    <div class="stat"><div class="label">Projects</div><div class="value">{agg.totals.projects}</div></div>
+    <div class="stat"><div class="label">Exports</div><div class="value">{agg.totals.exports}</div></div>
+    <div class="stat"><div class="label">Specs</div><div class="value">{agg.totals.specs}</div></div>
+    <div class="stat"><div class="label">Proven specs</div><div class="value">{agg.totals.provenSpecs}</div></div>
+    <div class="stat"><div class="label">Verifications</div><div class="value">{agg.totals.verifications}</div></div>
+    <div class="stat"><div class="label">Diagnostics</div><div class="value">{agg.totals.diagnostics}</div></div>
+  </section>
+
+  <h2>Projects</h2>
+  <div class="filter-bar">
+    <input id="project-filter" type="search" placeholder="Filter projects… (matches name)" />
+  </div>
+  <table class="projects" id="projects-table">
+    <thead>
+      <tr>
+        <th data-sort="name">Project <span class="indicator"></span></th>
+        <th data-sort="exports" class="num">Exports</th>
+        <th data-sort="specs"   class="num">Specs</th>
+        <th data-sort="verifs"  class="num">Proofs</th>
+        <th data-sort="diags"   class="num">Diagnostics</th>
+        <th data-sort="coverage" class="coverage-cell">Coverage</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {agg.views.map((v) => {
+        const a = v.artifact;
+        const exportsTotal = v.coverage.exportsTotal;
+        const exportsProven = v.coverage.exportsProven;
+        const covPct = exportsTotal === 0 ? 0 : Math.round((exportsProven / exportsTotal) * 100);
+        const st = projectStatus(v);
+        return (
+          <tr
+            data-name={v.displayName}
+            data-exports={a.exported.length}
+            data-specs={a.specs.length}
+            data-verifs={a.verifications.length}
+            data-diags={a.diagnostics.length}
+            data-coverage={covPct}>
+            <td class="slug"><a href={`projects/${v.slug}.html`}>{v.displayName}</a></td>
+            <td class="num">{a.exported.length}</td>
+            <td class="num">{a.specs.length}</td>
+            <td class="num">{a.verifications.length}</td>
+            <td class="num">{a.diagnostics.length}</td>
+            <td class="coverage-cell">
+              <CoverageBar proven={exportsProven} total={exportsTotal} small />
+              <span class="pct">{exportsTotal === 0 ? "—" : `${covPct}%`}</span>
+            </td>
+            <td><Badge kind={st.kind} label={st.label} /></td>
+          </tr>
+        );
+      })}
+    </tbody>
+  </table>
+
+  <script>
+    // Sort + filter the project table. No dependencies; reads `data-*`.
+    (function () {
+      const table = document.getElementById("projects-table") as HTMLTableElement | null;
+      const input = document.getElementById("project-filter") as HTMLInputElement | null;
+      if (!table || !input) return;
+      const tbody = table.tBodies[0];
+      const allRows = Array.from(tbody.rows);
+      let sortKey = "name";
+      let sortDir: 1 | -1 = 1;
+
+      function val(row: HTMLTableRowElement, key: string): string | number {
+        const raw = row.getAttribute("data-" + key) ?? "";
+        if (key === "name") return raw.toLowerCase();
+        return Number(raw);
+      }
+
+      function render() {
+        const q = input.value.trim().toLowerCase();
+        const visible = allRows.filter((r) =>
+          q === "" || (r.getAttribute("data-name") ?? "").toLowerCase().includes(q),
+        );
+        visible.sort((a, b) => {
+          const va = val(a, sortKey);
+          const vb = val(b, sortKey);
+          if (va < vb) return -1 * sortDir;
+          if (va > vb) return  1 * sortDir;
+          return 0;
+        });
+        tbody.replaceChildren(...visible);
+        for (const th of table.tHead!.rows[0].cells) {
+          const ind = th.querySelector(".indicator");
+          if (!ind) continue;
+          if (th.getAttribute("data-sort") === sortKey) {
+            ind.textContent = sortDir === 1 ? "↑" : "↓";
+          } else {
+            ind.textContent = "";
+          }
+        }
+      }
+
+      for (const th of table.tHead!.rows[0].cells) {
+        const key = th.getAttribute("data-sort");
+        if (!key) continue;
+        // Ensure every sortable header has an indicator span.
+        if (!th.querySelector(".indicator")) {
+          const s = document.createElement("span");
+          s.className = "indicator";
+          th.appendChild(s);
+        }
+        th.addEventListener("click", () => {
+          if (sortKey === key) sortDir = (sortDir === 1 ? -1 : 1);
+          else { sortKey = key; sortDir = key === "name" ? 1 : -1; }
+          render();
+        });
+      }
+      input.addEventListener("input", render);
+      render();
+    })();
+  </script>
+</Base>

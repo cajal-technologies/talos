@@ -1,0 +1,97 @@
+---
+import type { SpecView } from "../types";
+import Badge from "./Badge.astro";
+import { renderMarkdown } from "../lib/markdown";
+import { highlightCode } from "../lib/highlight";
+import { anchorId, fileLineIdPrefix } from "../lib/slug";
+
+interface Props {
+  view: SpecView;
+  projectSlug: string;
+}
+const { view, projectSlug } = Astro.props;
+const { spec, proofs, exports, status } = view;
+
+const informalHtml = renderMarkdown(spec.informal ?? spec.docstring.prose);
+const leanHtml = await highlightCode(spec.statement, "lean");
+const exportSigs = await Promise.all(
+  exports.map(async (e) => ({ e, html: await highlightCode(e.signature, "rust") })),
+);
+
+function fileAnchor(file: string, line: number): string {
+  return `#${fileLineIdPrefix(file)}-L${line}`;
+}
+---
+<article class="spec-card" id={`spec-${anchorId(spec.name)}`}>
+  <header>
+    <div>
+      <span class="name">{spec.name}</span>
+      <span style="margin-left: 8px; color: var(--muted); font-size: 12px; font-family: var(--mono);">
+        {spec.location.file}:{spec.location.span.start.line}
+      </span>
+    </div>
+    <div style="display: flex; gap: 6px; align-items: center;">
+      {status === "proven"
+        ? <Badge kind="good" label={`${proofs.length} proof${proofs.length === 1 ? "" : "s"}`} />
+        : <Badge kind="warn" label="unproven" />}
+    </div>
+  </header>
+
+  <div class="cols">
+    <!-- 1. Informal -->
+    <section>
+      <h3>Informal spec</h3>
+      {informalHtml
+        ? <div class="informal" set:html={informalHtml} />
+        : <div class="empty-col">No informal description provided.</div>}
+    </section>
+
+    <!-- 2. Lean (formal) -->
+    <section>
+      <h3>Formal statement</h3>
+      <div set:html={leanHtml} />
+      {proofs.length > 0 && <>
+        <h3 style="margin-top: 14px;">Proofs</h3>
+        {proofs.map((p) => {
+          const line = p.body_span?.start?.line ?? p.location.span.start.line;
+          return (
+            <a class="proof-link"
+               href={fileAnchor(p.location.file, line)}
+               title={`Jump to proof body in ${p.location.file}`}>
+              <span>↗</span>
+              <span>{p.name}</span>
+            </a>
+          );
+        })}
+      </>}
+    </section>
+
+    <!-- 3. Rust binding + refs -->
+    <section>
+      <h3>Rust binding</h3>
+      {exports.length === 0
+        ? <div class="empty-col">No <code>@[spec_of "rust-exported" …]</code> reference. Cannot link to a Rust export.</div>
+        : exportSigs.map(({ e, html }) => (
+            <div style="margin-bottom: 10px;">
+              <a class="proof-link" href={fileAnchor(e.location.file, e.location.span.start.line)}>
+                <span>↗</span><span>{e.name}</span>
+              </a>
+              {e.docstring && <div style="margin-top: 6px; font-size: 13px; color: var(--muted);">{e.docstring}</div>}
+              <div set:html={html} />
+            </div>
+          ))}
+
+      {spec.refs.length > 0 && <>
+        <h3 style="margin-top: 14px;">References</h3>
+        <ul class="refs">
+          {spec.refs.map((r) => (
+            <li>
+              <Badge kind={r.resolved ? "good" : "muted"} label={r.kind} />
+              <span>{r.target}</span>
+            </li>
+          ))}
+        </ul>
+      </>}
+    </section>
+  </div>
+</article>

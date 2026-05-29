@@ -21,8 +21,36 @@ def func0 : Wasm.Program :=
   .select
 ]
 
-/-- export: is_some -/
+/-- export: unwrap_or_default -/
 def func1 : Wasm.Program :=
+  [
+  .constI64 (0 : UInt64),
+  .localGet 0,
+  .localGet 0,
+  .constI64 (9223372036854775808 : UInt64),
+  .eqI64,
+  .select
+]
+
+/-- exports: or, unwrap_or -/
+def func2 : Wasm.Program :=
+  [
+  .localGet 1,
+  .localGet 0,
+  .localGet 0,
+  .constI64 (9223372036854775808 : UInt64),
+  .eqI64,
+  .select
+]
+
+/-- export: wrap -/
+def func3 : Wasm.Program :=
+  [
+  .localGet 0
+]
+
+/-- export: is_some -/
+def func4 : Wasm.Program :=
   [
   .localGet 0,
   .constI64 (9223372036854775808 : UInt64),
@@ -30,7 +58,7 @@ def func1 : Wasm.Program :=
 ]
 
 /-- export: map_add -/
-def func2 : Wasm.Program :=
+def func5 : Wasm.Program :=
   [
   .constI64 (9223372036854775808 : UInt64),
   .localGet 1,
@@ -42,52 +70,24 @@ def func2 : Wasm.Program :=
   .select
 ]
 
-/-- exports: or, unwrap_or -/
-def func3 : Wasm.Program :=
-  [
-  .localGet 1,
-  .localGet 0,
-  .localGet 0,
-  .constI64 (9223372036854775808 : UInt64),
-  .eqI64,
-  .select
-]
-
-/-- export: unwrap_or_default -/
-def func4 : Wasm.Program :=
-  [
-  .constI64 (0 : UInt64),
-  .localGet 0,
-  .localGet 0,
-  .constI64 (9223372036854775808 : UInt64),
-  .eqI64,
-  .select
-]
-
-/-- export: wrap -/
-def func5 : Wasm.Program :=
-  [
-  .localGet 0
-]
-
 def «module» : Wasm.Module :=
 {
   funcs := [
     { params := [.i64], locals := [], body := func0, results := [.i64] },
-    { params := [.i64], locals := [], body := func1, results := [.i32] },
+    { params := [.i64], locals := [], body := func1, results := [.i64] },
     { params := [.i64, .i64], locals := [], body := func2, results := [.i64] },
-    { params := [.i64, .i64], locals := [], body := func3, results := [.i64] },
-    { params := [.i64], locals := [], body := func4, results := [.i64] },
-    { params := [.i64], locals := [], body := func5, results := [.i64] }
+    { params := [.i64], locals := [], body := func3, results := [.i64] },
+    { params := [.i64], locals := [], body := func4, results := [.i32] },
+    { params := [.i64, .i64], locals := [], body := func5, results := [.i64] }
   ],
   exports := [
+    { name := "wrap", funcIdx := 3 },
+    { name := "is_some", funcIdx := 4 },
+    { name := "or", funcIdx := 2 },
+    { name := "unwrap_or", funcIdx := 2 },
+    { name := "map_add", funcIdx := 5 },
     { name := "filter_positive", funcIdx := 0 },
-    { name := "is_some", funcIdx := 1 },
-    { name := "map_add", funcIdx := 2 },
-    { name := "or", funcIdx := 3 },
-    { name := "unwrap_or_default", funcIdx := 4 },
-    { name := "wrap", funcIdx := 5 },
-    { name := "unwrap_or", funcIdx := 3 }
+    { name := "unwrap_or_default", funcIdx := 1 }
   ],
   memory := some { pagesMin := (16 : UInt32), pagesMax := none, data := [] },
   globals := [

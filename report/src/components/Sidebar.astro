@@ -1,0 +1,32 @@
+---
+import type { ProjectView } from "../types";
+import { anchorId } from "../lib/slug";
+interface Props { project: ProjectView; }
+const { project } = Astro.props;
+const exportsList = project.artifact.exported;
+const orphans = project.orphanVerifications;
+const diags = project.artifact.diagnostics;
+---
+<aside class="sidebar">
+  <div class="sec">Specs ({project.specs.length})</div>
+  {project.specs.length === 0 && <div class="muted-text" style="padding: 4px 8px;">— none —</div>}
+  {project.specs.map((sv) => (
+    <a href={`#spec-${anchorId(sv.spec.name)}`}>
+      <span class={"dot " + (sv.status === "proven" ? "good" : "warn")}></span>
+      <span class="name">{sv.spec.name.split(".").pop()}</span>
+    </a>
+  ))}
+
+  {exportsList.length > 0 && <>
+    <div class="sec">Exports ({exportsList.length})</div>
+    {exportsList.map((e) => (
+      <a href={`#export-${anchorId(e.name)}`}><span class="name">{e.name}</span></a>
+    ))}
+  </>}
+
+  <div class="sec">Sections</div>
+  <a href="#program"><span class="name">Program (Lean)</span></a>
+  {orphans.length > 0 && <a href="#orphans"><span class="name">Orphan verifs ({orphans.length})</span></a>}
+  {diags.length > 0 && <a href="#diagnostics"><span class="name">Diagnostics ({diags.length})</span></a>}
+  <a href="#source"><span class="name">Source files</span></a>
+</aside>

@@ -33,12 +33,27 @@ private lemma uint32_sub_toNat_of_nat_le {k : Nat} {len : UInt32}
   rw [UInt32.toNat_sub_of_le len (UInt32.ofNat k) hle,
       UInt32.toNat_ofNat_of_lt' hk32]
 
-theorem xor_sum_correct (initial : Store) (ptr len : UInt32)
-    (hmem : ∀ k < len.toNat, (ptr.toNat + 4 * k) % 4294967296 + 4 ≤ initial.mem.pages * 65536) :
+/-- The exported `xor_sum` returns the XOR-fold of `len` little-endian
+`u32` words starting at byte address `ptr` in linear memory.
+
+Informal spec:
+For any base pointer `ptr` and length `len`, the wasm export `xor_sum`
+terminates and leaves a single i32 on the value stack equal to the
+XOR of every `u32` word read at `ptr + 4*k` for `0 ≤ k < len`, in
+order. Returns `0` when `len = 0`. Memory is read but not modified.
+Carries the side condition that every word read is in-bounds. -/
+@[spec_of "rust-exported" "xor_sum::xor_sum"]
+def XorSumSpec : Prop :=
+  ∀ (initial : Store) (ptr len : UInt32)
+    (_hmem : ∀ k < len.toNat, (ptr.toNat + 4 * k) % 4294967296 + 4 ≤ initial.mem.pages * 65536),
     -- Args in stack order (top first); `run` reverses on entry so
     -- local 0 = ptr, local 1 = len.
     TerminatesWith «module» 0 initial [.i32 len, .i32 ptr]
-      (fun st' rs => rs = [.i32 (xorFold st'.mem ptr len.toNat)]) := by
+      (fun st' rs => rs = [.i32 (xorFold st'.mem ptr len.toNat)])
+
+@[proves Project.XorSum.Spec.XorSumSpec]
+theorem xor_sum_correct : XorSumSpec := by
+  intro initial ptr len hmem
   apply TerminatesWith.of_wp_entry_for (f := ⟨[.i32, .i32], [.i32], func0, [.i32]⟩) rfl
   unfold func0
   wp_run

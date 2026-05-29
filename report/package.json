@@ -1,11 +1,21 @@
 {
   "name": "talos-report",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "Static-site generator that turns `verifier extract` JSON artifacts into a browsable progress report.",
+  "type": "module",
+  "description": "Static-site generator (Astro) that turns `verifier extract` JSON artifacts into a browsable progress report.",
   "scripts": {
-    "build-report": "tsc -p . && node dist/build.js",
-    "clean": "rm -rf dist out"
+    "build-report": "node scripts/build.mjs",
+    "dev": "astro dev",
+    "preview": "astro preview",
+    "clean": "rm -rf dist out .astro"
+  },
+  "dependencies": {
+    "astro": "^4.16.0",
+    "katex": "^0.16.11",
+    "marked": "^14.1.3",
+    "marked-katex-extension": "^5.1.4",
+    "shiki": "^1.22.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

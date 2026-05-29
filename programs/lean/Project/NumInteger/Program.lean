@@ -10,7 +10,6 @@ namespace Project.NumInteger
 
 open Wasm
 
-/-- export: gcd_u64 -/
 def func0 : Wasm.Program :=
   [
   .localGet 1,
@@ -89,13 +88,22 @@ def func0 : Wasm.Program :=
   .localGet 2
 ]
 
+/-- export: gcd_u64 -/
+def func1 : Wasm.Program :=
+  [
+  .localGet 0,
+  .localGet 1,
+  .call 0
+]
+
 def «module» : Wasm.Module :=
 {
   funcs := [
-    { params := [.i64, .i64], locals := [.i64, .i64], body := func0, results := [.i64] }
+    { params := [.i64, .i64], locals := [.i64, .i64], body := func0, results := [.i64] },
+    { params := [.i64, .i64], locals := [], body := func1, results := [.i64] }
   ],
   exports := [
-    { name := "gcd_u64", funcIdx := 0 }
+    { name := "gcd_u64", funcIdx := 1 }
   ],
   memory := some { pagesMin := (16 : UInt32), pagesMax := none, data := [] },
   globals := [

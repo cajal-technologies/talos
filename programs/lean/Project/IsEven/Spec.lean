@@ -2,22 +2,27 @@ import Project.IsEven.Program
 
 /-!
 # Specification for `is_even`
-
-The exported `is_even` function returns `1` if its `i32` argument is even,
-`0` otherwise.
-
-The proof is deferred — this file currently states the spec only. Discharge
-via the `wp` framework (`wp_run`, etc.) on `Wasm.run`.
 -/
 
 namespace Project.IsEven.Spec
 
 open Wasm
 
-/-- `is_even n` terminates with `[1]` when `n` is even, `[0]` otherwise. -/
-theorem is_even_correct (initial : Store) (n : UInt32) :
+/-- The exported `is_even` returns `1` for even inputs and `0` otherwise.
+
+Informal spec:
+For any input `n : UInt32`, the wasm export `is_even` terminates and
+leaves a single i32 on the value stack, equal to `1` when `n` is even
+and `0` otherwise. The result is independent of the initial store. -/
+@[spec_of "rust-exported" "is_even::is_even"]
+def IsEvenSpec : Prop :=
+  ∀ (initial : Store) (n : UInt32),
     TerminatesWith «module» 0 initial [.i32 n]
-      (fun _ rs => rs = [.i32 (if n.toNat % 2 = 0 then 1 else 0)]) := by
+      (fun _ rs => rs = [.i32 (if n.toNat % 2 = 0 then 1 else 0)])
+
+@[proves Project.IsEven.Spec.IsEvenSpec]
+theorem is_even_correct : IsEvenSpec := by
+  intro initial n
   apply TerminatesWith.of_wp_entry (f := ⟨[.i32], [], func0, [.i32]⟩) rfl
   intro initial'
   unfold func0
