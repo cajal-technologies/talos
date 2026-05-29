@@ -23,8 +23,4 @@ import Interpreter.Wasm.Examples.GlobalCounter
 
 /-! # Wasm.Examples.Basic
 
-Umbrella import for the bundled worked examples: IsEven, SimpleLoop,
-Factorial, InfiniteLoop, EvenOddRec, SumI64, IfAbs, Switch, SelectMin,
-EarlyReturn, EarlyBr, EarlyBrInvalid, TrapDivZero, TrapUnreachable,
-MemDataSection, MemReplace, MemNarrowI32, MemI64, MemGrow, MemFill,
-MemCopy, GlobalCounter. -/
+Umbrella import for the bundled worked examples. -/
