@@ -30,40 +30,54 @@ def defaultFuel : Nat := 1_000_000
 def testsuiteDir : String := "vendor/testsuite"
 
 def usage : String :=
-"Usage: lake exe testsuite [--fuel N] [--json] [-h|--help] [PATTERN]
+"Usage: lake exe testsuite [--fuel N] [--json|--report] [-h|--help] [PATTERN]
 
   PATTERN     If given, only run .wast files whose path contains this substring.
               If omitted, run every top-level .wast file under vendor/testsuite/.
   --fuel N    Per-assertion reduction-step cap, default 1_000_000.
   --json      Emit results as a JSON array instead of the human-readable report.
+  --report    Emit the stable text coverage report (one line per command,
+              sorted, outcome tag only — used by CI to detect coverage drift).
+              Always exits 0 (the diff against the committed report is the gate).
   -h, --help  Print this message and exit 0."
+
+structure FlagState where
+  fuel   : Nat
+  help   : Bool := false
+  json   : Bool := false
+  report : Bool := false
 
 structure Args where
   pattern : Option String
   fuel    : Nat
   json    : Bool := false
+  report  : Bool := false
 
 partial def splitFlags
-    (toks : List String) (acc : List String) (fuel : Nat) (help : Bool) (json : Bool)
-    : Except String (List String × Nat × Bool × Bool) :=
+    (toks : List String) (acc : List String) (st : FlagState)
+    : Except String (List String × FlagState) :=
   match toks with
-  | [] => .ok (acc.reverse, fuel, help, json)
+  | [] => .ok (acc.reverse, st)
   | "-h" :: rest | "--help" :: rest =>
-    splitFlags rest acc fuel true json
+    splitFlags rest acc { st with help := true }
   | "--fuel" :: nStr :: rest =>
     match nStr.toNat? with
-    | some n => splitFlags rest acc n help json
+    | some n => splitFlags rest acc { st with fuel := n }
     | none   => .error s!"--fuel expects a non-negative integer, got `{nStr}`"
   | "--fuel" :: [] => .error "--fuel expects an argument"
-  | "--json" :: rest => splitFlags rest acc fuel help true
-  | tok :: rest => splitFlags rest (tok :: acc) fuel help json
+  | "--json" :: rest => splitFlags rest acc { st with json := true }
+  | "--report" :: rest => splitFlags rest acc { st with report := true }
+  | tok :: rest => splitFlags rest (tok :: acc) st
 
 def parseArgs (argv : List String) : Except String (Sum Unit Args) := do
-  let (pos, fuel, help, json) ← splitFlags argv [] defaultFuel false false
-  if help then return .inl ()
+  let (pos, st) ← splitFlags argv [] { fuel := defaultFuel }
+  if st.help then return .inl ()
+  if st.json && st.report then
+    .error "--json and --report are mutually exclusive"
+  else
   match pos with
-  | [] => return .inr { pattern := none, fuel, json }
-  | [p] => return .inr { pattern := some p, fuel, json }
+  | [] => return .inr { pattern := none, fuel := st.fuel, json := st.json, report := st.report }
+  | [p] => return .inr { pattern := some p, fuel := st.fuel, json := st.json, report := st.report }
   | _ => .error "expected at most one PATTERN argument"
 
 /-! ## File discovery -/
@@ -207,6 +221,37 @@ private def fileResultToJson (fr : FileResult) : Array Json :=
 
 end
 
+/-! ## Report output (stable text for CI freshness check) -/
+
+/-- Bucket free-form skipped reasons into a small stable enumeration. The
+report file is byte-compared in CI, so anything emitted here must not depend
+on incidental error wording. Free-form sources are:
+  * `non-integer expected: <parser err>` — collapse to `non-integer-expected`.
+All other reasons are already constant strings (`register`, raw wast command
+names like `assert_invalid`/`assert_malformed`/etc.) and pass through. -/
+private def skippedBucket (r : String) : String :=
+  if r.startsWith "non-integer expected" then "non-integer-expected"
+  else r
+
+private def outcomeReportTag : Outcome → String
+  | .pass               => "pass"
+  | .fail _             => "fail"
+  | .skipped r          => s!"skipped:{skippedBucket r}"
+  | .decodeError _      => "decode_error"
+  | .interpreterError _ => "interpreter_error"
+  | .outOfFuel          => "out_of_fuel"
+  | .moduleUnavailable  => "module_unavailable"
+
+private def cmdResultToReportLine (file : String) (r : CmdResult) : String :=
+  s!"{file}:{r.line} {r.kind} {outcomeReportTag r.outcome}"
+
+private def fileResultToReportLines (fr : FileResult) : Array String :=
+  let file := basename fr.path
+  let rows := fr.results.map (cmdResultToReportLine file)
+  match fr.fileError with
+  | none => rows
+  | some _ => rows.push s!"{file}:0 file_error error"
+
 /-! ## Main loop -/
 
 def EXIT_OK   : UInt32 := 0
@@ -248,12 +293,15 @@ def runAll (a : Args) : IO UInt32 := do
   let mut totals : Counts := {}
   let mut anyFailure := false
   let mut jsonRows : Array Lean.Json := #[]
+  let mut reportLines : Array String := #[]
 
   try
     for path in files do
       let fr ← Wasm.Testsuite.runFile path tmpRoot a.fuel
       if a.json then
         jsonRows := jsonRows.append (fileResultToJson fr)
+      else if a.report then
+        reportLines := reportLines.append (fileResultToReportLines fr)
       else
         IO.print (renderFile fr)
       let c := tally fr.results
@@ -265,10 +313,16 @@ def runAll (a : Args) : IO UInt32 := do
 
   if a.json then
     IO.println (toString (Lean.Json.arr jsonRows))
+  else if a.report then
+    for ln in reportLines do IO.println ln
   else do
     IO.println ""
     IO.println s!"Totals: {totals.pass} pass  {totals.fail} fail  {totals.skipped} skip  {totals.cascade} cascade  {totals.decodeError} decode-err  {totals.interpreterError} interp-err  {totals.outOfFuel} out-of-fuel"
 
+  -- In report mode the byte-for-byte diff against the committed report is
+  -- the CI gate, not the exit code — always succeed so the report still
+  -- regenerates when something regressed.
+  if a.report then return EXIT_OK
   return if anyFailure then EXIT_FAIL else EXIT_OK
 
 end Wasm.Testsuite

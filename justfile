@@ -25,6 +25,30 @@ testsuite pattern="":
         lake -d "{{justfile_directory()}}/interpreter" exe testsuite
     fi
 
+# Pinned wasm-tools version. The testsuite shells out to `wasm-tools
+# json-from-wast` to split .wast files, and different versions can produce
+# different decodes — bumping this needs a regenerated testsuite_report.txt.
+WASM_TOOLS_VERSION := "1.251.0"
+
+# Regenerate testsuite_report.txt at the repo root. CI runs the same
+# command and fails if the working tree drifts, so contributors whose
+# changes shift coverage must commit the updated report.
+testsuite-report:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! command -v wasm-tools >/dev/null 2>&1; then
+        echo "error: wasm-tools not on PATH (need exactly {{WASM_TOOLS_VERSION}})" >&2
+        exit 1
+    fi
+    got=$(wasm-tools --version | awk 'NR==1 {print $2}')
+    if [[ "$got" != "{{WASM_TOOLS_VERSION}}" ]]; then
+        echo "error: wasm-tools {{WASM_TOOLS_VERSION}} required, found $got" >&2
+        echo "       the committed testsuite_report.txt is pinned to that version" >&2
+        exit 1
+    fi
+    lake -d "{{justfile_directory()}}/interpreter" exe testsuite --report \
+        > "{{justfile_directory()}}/testsuite_report.txt"
+
 # Smoke-test the runner executable against samples/.
 runner-smoke:
     #!/usr/bin/env bash
