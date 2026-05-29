@@ -124,6 +124,11 @@ def parseArgForType (t : ValueType) (s : String) : Except String Value :=
     match parseI64 s with
     | .ok v  => .ok (.i64 v)
     | .error _ => .error s!"argument out of range for i64: `{s}`"
+  | .funcref =>
+    -- No CLI surface for funcref args yet — pass `null` if the user
+    -- writes "null", otherwise refuse.
+    if s == "null" then .ok (.funcref none)
+    else .error s!"funcref argument must be 'null', got `{s}`"
 
 def parseArgs?
     (params : List ValueType) (args : List String) : Except String (List Value) :=

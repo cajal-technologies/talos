@@ -35,6 +35,41 @@ theorem wp_call_cons {id : Nat} {Pre : List Value → Prop} {Post : Store → Li
   rw [exec_call_cons, hRun_f]
   exact hNr (f + 1) (by omega)
 
+/-- Indirect-call analogue of `wp_call_cons`. The hypotheses split the
+work of dispatching an indirect call into four steps: locate the
+selector on the stack (`hStack`), look it up through the chosen table
+and slot (`hTbl`, `hSlot`), confirm the resolved function index has the
+expected signature against the declared `(type N)` (`hFn`, `hTy`,
+`hSig`), and supply a `FuncSpec` for the target. -/
+theorem wp_callIndirect_cons {ti tj : Nat}
+    {Pre : List Value → Prop} {Post : Store → List Value → Prop}
+    {i : UInt32} {vs0 : List Value} {tbl : TableInst} {fid : Nat}
+    {fn : Function} {ty : FuncType}
+    (hStack : s.values = .i32 i :: vs0)
+    (hTbl  : st.tables[tj]? = some tbl)
+    (hSlot : tbl[i.toNat]? = some (some fid))
+    (hFn   : m.funcs[fid]? = some fn)
+    (hTy   : m.types[ti]? = some ty)
+    (hSig  : fn.params = ty.params ∧ fn.results = ty.results)
+    (spec  : FuncSpec m fid Pre Post)
+    (hPre  : Pre vs0)
+    (hPost : ∀ st' vs, Post st' vs → wp m rest Q st' { s with values := vs }) :
+    wp m (.callIndirect ti tj :: rest) Q st s := by
+  unfold wp
+  unfold FuncSpec at spec
+  obtain ⟨Ns, hNs⟩ := spec vs0 hPre st
+  obtain ⟨vs, st', hRun, hPost_vs⟩ := hNs Ns le_rfl
+  have hRun_ne : run Ns m fid st vs0 ≠ .OutOfFuel := by rw [hRun]; intro h; cases h
+  have hwp_rest := hPost st' vs hPost_vs
+  unfold wp at hwp_rest
+  obtain ⟨Nr, hNr⟩ := hwp_rest
+  refine ⟨max (Ns + 1) (Nr + 1), fun fuel hfuel => ?_⟩
+  obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
+  have hRun_f : run f m fid st vs0 = .Success vs st' := by
+    rw [run_fuel_mono (by omega : f ≥ Ns) hRun_ne]; exact hRun
+  rw [exec_callIndirect_cons hStack hTbl hSlot hFn hTy hSig, hRun_f]
+  exact hNr (f + 1) (by omega)
+
 /-- Bridge from `wp` of a function body to `FuncSpec`. The body sees locals
     built from `args.take f.numParams` reversed (so local 0 is the first
     argument), and the `Post` is checked on its `Fallthrough`/`Return`
