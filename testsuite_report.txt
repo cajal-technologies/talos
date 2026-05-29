@@ -1,7 +1,3 @@
-✔ [5945/5950] Built Interpreter.Testsuite.Exec (16s)
-✔ [5947/5950] Built Interpreter.Wasm.Decoder.Wat:c.o (19s)
-✔ [5948/5950] Built Interpreter.Testsuite (9.3s)
-✔ [5950/5950] Built testsuite:exe (3.6s)
 address.wast:3 module pass
 address.wast:104 assert_return pass
 address.wast:105 assert_return pass
