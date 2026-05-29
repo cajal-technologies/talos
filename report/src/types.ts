@@ -52,6 +52,7 @@ export interface Verification {
   proves: string;
   resolved: boolean;
   location: Location;
+  body_span: Span | null;
 }
 
 export interface Diagnostic {
@@ -64,8 +65,6 @@ export interface Diagnostic {
 export interface ProjectId {
   rust: string;
   lean: string;
-  // The extract artifact uses `crate` as the slug; `name` per schema docs.
-  // Accept either at parse time and normalize.
   crate?: string;
   name?: string;
 }
@@ -89,4 +88,21 @@ export interface LoadedArtifact {
   slug: string;
   fileName: string;
   data: Artifact;
+}
+
+/** Derived view of a spec: matched proofs + linked Rust exports. */
+export interface SpecView {
+  spec: FormalSpec;
+  proofs: Verification[];
+  exports: ExportedFunction[]; // exports the spec binds via rust-exported refs
+  status: "proven" | "unproven";
+}
+
+export interface ProjectView {
+  slug: string;
+  displayName: string;
+  artifact: Artifact;
+  specs: SpecView[];
+  orphanVerifications: Verification[];
+  coverage: { exportsProven: number; exportsTotal: number };
 }

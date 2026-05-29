@@ -30,10 +30,26 @@ private lemma memchrAux_no_match {m : Mem} {ptr needle : UInt32} {k rem : Nat}
     memchrAux m ptr needle (rem + 1) k = memchrAux m ptr needle rem (k + 1) := by
   simp [memchrAux, h]
 
-theorem memchr_correct (initial : Store) (ptr len needle : UInt32)
-    (hmem : ∀ k < len.toNat, (k + ptr.toNat) % 4294967296 < initial.mem.pages * 65536) :
+/-- The exported `memchr` returns the index of the first occurrence of
+`needle` in `[ptr, ptr+len)`, or `len` if absent.
+
+Informal spec:
+Given a base pointer `ptr`, a length `len`, and a needle byte `needle`,
+the wasm export `memchr` terminates and leaves a single i32 on the value
+stack equal to the (0-based) index of the first byte in
+`[ptr, ptr+len)` equal to `needle`, or `len` if no such byte exists.
+Memory remains unchanged. Carries the side condition that every offset
+`0..len` is in-bounds for the initial memory. -/
+@[spec_of "rust-exported" "memchr::memchr"]
+def MemchrSpec : Prop :=
+  ∀ (initial : Store) (ptr len needle : UInt32)
+    (hmem : ∀ k < len.toNat, (k + ptr.toNat) % 4294967296 < initial.mem.pages * 65536),
     TerminatesWith «module» 0 initial [.i32 ptr, .i32 len, .i32 needle]
-      (fun st' rs => rs = [.i32 (memchrAux st'.mem ptr needle len.toNat 0)]) := by
+      (fun st' rs => rs = [.i32 (memchrAux st'.mem ptr needle len.toNat 0)])
+
+@[proves Project.Memchr.Spec.MemchrSpec]
+theorem memchr_correct : MemchrSpec := by
+  intro initial ptr len needle hmem
   apply TerminatesWith.of_wp_entry_for (f := ⟨[.i32, .i32, .i32], [.i32], func0, [.i32]⟩) rfl
   unfold func0
   wp_run

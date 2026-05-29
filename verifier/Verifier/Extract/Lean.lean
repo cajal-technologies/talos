@@ -421,8 +421,32 @@ def scanFile
         let qname := qualify st.nsStack name
         let startLine := st.attrStart.getD i
         let loc := mkLoc startLine i line.length
+        -- Walk forward to find the end of the proof body. Body ends at the
+        -- last non-blank line before the next declaration boundary
+        -- (`def `, `theorem `, `namespace `, `end `, top-level doc `/--`,
+        -- or top-level attr `@[`). Stops at EOF.
+        let bodyStart : Nat := i
+        let mut j : Nat := i + 1
+        let mut lastNonBlank : Nat := i
+        while hJ : j < lines.size do
+          let ln := lines[j]
+          let tl := leftTrim ln
+          let isBoundary :=
+            tl.startsWith "def " ∨ tl.startsWith "theorem " ∨
+            tl.startsWith "namespace " ∨ tl.startsWith "end " ∨
+            tl.startsWith "/--" ∨ tl.startsWith "@["
+          if isBoundary then
+            break
+          if ¬ tl.isEmpty then
+            lastNonBlank := j
+          j := j + 1
+        let endLen := (lines[lastNonBlank]?).getD "" |>.length
+        let bodySpan : Span :=
+          { start := { line := bodyStart + 1, column := 1 },
+            «end» := { line := lastNonBlank + 1, column := endLen + 1 } }
         verifs := verifs.push {
-          name := qname, proves := target, resolved := false, location := loc
+          name := qname, proves := target, resolved := false,
+          location := loc, bodySpan := some bodySpan
         }
       | none => pure ()
       st := resetAttachables st

@@ -1,9 +1,15 @@
+mod exports;
+
 /// Reverse, in place, the `len` `u32` words starting at `ptr`.
 ///
 /// Exercises both loads and stores to linear memory: the i-th and
 /// (len-1-i)-th words are swapped for `i < len / 2`.
-#[unsafe(no_mangle)]
-pub extern "C" fn reverse_inplace(ptr: *mut u32, len: usize) {
+///
+/// # Safety
+///
+/// `ptr` must be valid for reads and writes of `len` `u32` words and
+/// properly aligned.
+pub unsafe fn reverse_inplace(ptr: *mut u32, len: usize) {
     if len == 0 {
         return;
     }

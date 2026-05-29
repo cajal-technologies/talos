@@ -101,6 +101,10 @@ structure Verification where
   proves   : String
   resolved : Bool
   location : Location
+  /-- Span covering the proof body, used by downstream tooling to deep-link
+  into the source. `none` when the body could not be delimited (e.g. the
+  scanner hit EOF without finding a terminator). -/
+  bodySpan : Option Span
   deriving Inhabited, Repr
 
 inductive Severity
@@ -210,10 +214,11 @@ def FormalSpec.toJson (s : FormalSpec) : Json :=
 
 def Verification.toJson (v : Verification) : Json :=
   .mkObj [
-    ("name",     jStr v.name),
-    ("proves",   jStr v.proves),
-    ("resolved", .bool v.resolved),
-    ("location", v.location.toJson)
+    ("name",      jStr v.name),
+    ("proves",    jStr v.proves),
+    ("resolved",  .bool v.resolved),
+    ("location",  v.location.toJson),
+    ("body_span", v.bodySpan.elim .null Span.toJson)
   ]
 
 def Diagnostic.toJson (d : Diagnostic) : Json :=

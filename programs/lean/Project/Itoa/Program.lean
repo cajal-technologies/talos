@@ -10,7 +10,32 @@ namespace Project.Itoa
 
 open Wasm
 
+/-- export: itoa_i64_len -/
 def func0 : Wasm.Program :=
+  [
+  .globalGet 0,
+  .const (48 : UInt32),
+  .sub,
+  .localSet 1,
+  .localGet 1,
+  .globalSet 0,
+  .localGet 1,
+  .localGet 1,
+  .const (8 : UInt32),
+  .add,
+  .localGet 0,
+  .call 1,
+  .localGet 1,
+  .load32 (4 : UInt32),
+  .localSet 2,
+  .localGet 1,
+  .const (48 : UInt32),
+  .add,
+  .globalSet 0,
+  .localGet 2
+]
+
+def func1 : Wasm.Program :=
   [
   .globalGet 0,
   .const (16 : UInt32),
@@ -28,7 +53,7 @@ def func0 : Wasm.Program :=
   .localGet 4,
   .subI64,
   .localGet 1,
-  .call 8,
+  .call 10,
   .localSet 5,
   .block 0 0 [
     .block 0 0 [
@@ -56,7 +81,7 @@ def func0 : Wasm.Program :=
     .localGet 1,
     .const (20 : UInt32),
     .localGet 5,
-    .call 9,
+    .call 11,
     .localGet 3,
     .load32 (12 : UInt32),
     .localSet 1,
@@ -76,12 +101,11 @@ def func0 : Wasm.Program :=
   .localGet 5,
   .const (20 : UInt32),
   .const (1048940 : UInt32),
-  .call 58,
+  .call 60,
   .unreachable
 ]
 
-/-- export: itoa_i64 -/
-def func1 : Wasm.Program :=
+def func2 : Wasm.Program :=
   [
   .globalGet 0,
   .const (48 : UInt32),
@@ -94,7 +118,7 @@ def func1 : Wasm.Program :=
   .const (8 : UInt32),
   .add,
   .localGet 0,
-  .call 0,
+  .call 1,
   .const (4294967295 : UInt32),
   .localSet 4,
   .block 0 0 [
@@ -111,7 +135,7 @@ def func1 : Wasm.Program :=
     .load32 (0 : UInt32),
     .localGet 5,
     .const (1048956 : UInt32),
-    .call 51,
+    .call 53,
     .localGet 5,
     .localSet 4
   ],
@@ -122,32 +146,6 @@ def func1 : Wasm.Program :=
   .localGet 4
 ]
 
-/-- export: itoa_i64_len -/
-def func2 : Wasm.Program :=
-  [
-  .globalGet 0,
-  .const (48 : UInt32),
-  .sub,
-  .localSet 1,
-  .localGet 1,
-  .globalSet 0,
-  .localGet 1,
-  .localGet 1,
-  .const (8 : UInt32),
-  .add,
-  .localGet 0,
-  .call 0,
-  .localGet 1,
-  .load32 (4 : UInt32),
-  .localSet 2,
-  .localGet 1,
-  .const (48 : UInt32),
-  .add,
-  .globalSet 0,
-  .localGet 2
-]
-
-/-- export: itoa_u64 -/
 def func3 : Wasm.Program :=
   [
   .globalGet 0,
@@ -165,8 +163,8 @@ def func3 : Wasm.Program :=
   .localGet 3,
   .const (8 : UInt32),
   .add,
-  .call 8,
-  .call 9,
+  .call 10,
+  .call 11,
   .const (4294967295 : UInt32),
   .localSet 4,
   .block 0 0 [
@@ -183,7 +181,7 @@ def func3 : Wasm.Program :=
     .load32 (0 : UInt32),
     .localGet 5,
     .const (1048972 : UInt32),
-    .call 51,
+    .call 53,
     .localGet 5,
     .localSet 4
   ],
@@ -194,39 +192,57 @@ def func3 : Wasm.Program :=
   .localGet 4
 ]
 
+/-- export: itoa_i64 -/
 def func4 : Wasm.Program :=
   [
   .localGet 0,
   .localGet 1,
-  .call 23,
-  .ret
+  .localGet 2,
+  .call 2
 ]
 
+/-- export: itoa_u64 -/
 def func5 : Wasm.Program :=
   [
   .localGet 0,
   .localGet 1,
   .localGet 2,
-  .call 27,
-  .ret
+  .call 3
 ]
 
 def func6 : Wasm.Program :=
   [
   .localGet 0,
   .localGet 1,
-  .localGet 2,
-  .localGet 3,
-  .call 29,
+  .call 25,
   .ret
 ]
 
 def func7 : Wasm.Program :=
   [
+  .localGet 0,
+  .localGet 1,
+  .localGet 2,
+  .call 29,
   .ret
 ]
 
 def func8 : Wasm.Program :=
+  [
+  .localGet 0,
+  .localGet 1,
+  .localGet 2,
+  .localGet 3,
+  .call 31,
+  .ret
+]
+
+def func9 : Wasm.Program :=
+  [
+  .ret
+]
+
+def func10 : Wasm.Program :=
   [
   .const (20 : UInt32),
   .localSet 2,
@@ -362,13 +378,13 @@ def func8 : Wasm.Program :=
       .localGet 4,
       .const (20 : UInt32),
       .const (1048988 : UInt32),
-      .call 58,
+      .call 60,
       .unreachable
     ],
     .const (4294967292 : UInt32),
     .const (20 : UInt32),
     .const (1048988 : UInt32),
-    .call 58,
+    .call 60,
     .unreachable
   ],
   .block 0 0 [
@@ -405,11 +421,11 @@ def func8 : Wasm.Program :=
   .const (4294967295 : UInt32),
   .const (20 : UInt32),
   .const (1048988 : UInt32),
-  .call 58,
+  .call 60,
   .unreachable
 ]
 
-def func9 : Wasm.Program :=
+def func11 : Wasm.Program :=
   [
   .localGet 0,
   .localGet 2,
@@ -423,13 +439,13 @@ def func9 : Wasm.Program :=
   .store32 (0 : UInt32)
 ]
 
-def func10 : Wasm.Program :=
+def func12 : Wasm.Program :=
   [
-  .call 26,
+  .call 28,
   .unreachable
 ]
 
-def func11 : Wasm.Program :=
+def func13 : Wasm.Program :=
   [
   .globalGet 0,
   .const (16 : UInt32),
@@ -448,7 +464,7 @@ def func11 : Wasm.Program :=
     .br_if 0,
     .const (0 : UInt32),
     .const (0 : UInt32),
-    .call 52,
+    .call 54,
     .unreachable
   ],
   .localGet 5,
@@ -488,7 +504,7 @@ def func11 : Wasm.Program :=
   .localGet 2,
   .localGet 3,
   .localGet 4,
-  .call 19,
+  .call 21,
   .block 0 0 [
     .localGet 5,
     .load32 (4 : UInt32),
@@ -499,7 +515,7 @@ def func11 : Wasm.Program :=
     .load32 (8 : UInt32),
     .localGet 5,
     .load32 (12 : UInt32),
-    .call 52,
+    .call 54,
     .unreachable
   ],
   .localGet 5,
@@ -517,7 +533,7 @@ def func11 : Wasm.Program :=
   .globalSet 0
 ]
 
-def func12 : Wasm.Program :=
+def func14 : Wasm.Program :=
   [
   .block 0 0 [
     .localGet 0,
@@ -529,11 +545,11 @@ def func12 : Wasm.Program :=
     .localGet 1,
     .localGet 0,
     .const (1 : UInt32),
-    .call 5
+    .call 7
   ]
 ]
 
-def func13 : Wasm.Program :=
+def func15 : Wasm.Program :=
   [
   .block 0 0 [
     .localGet 0,
@@ -546,11 +562,11 @@ def func13 : Wasm.Program :=
     .load32 (4 : UInt32),
     .localGet 1,
     .const (1 : UInt32),
-    .call 5
+    .call 7
   ]
 ]
 
-def func14 : Wasm.Program :=
+def func16 : Wasm.Program :=
   [
   .block 0 0 [
     .localGet 0,
@@ -564,18 +580,18 @@ def func14 : Wasm.Program :=
     .load32 (4 : UInt32),
     .localGet 1,
     .const (1 : UInt32),
-    .call 5
+    .call 7
   ]
 ]
 
-def func15 : Wasm.Program :=
+def func17 : Wasm.Program :=
   [
   .localGet 0,
-  .call 16,
+  .call 18,
   .unreachable
 ]
 
-def func16 : Wasm.Program :=
+def func18 : Wasm.Program :=
   [
   .localGet 0,
   .load32 (0 : UInt32),
@@ -592,14 +608,14 @@ def func16 : Wasm.Program :=
   .unreachable
 ]
 
-def func17 : Wasm.Program :=
+def func19 : Wasm.Program :=
   [
   .localGet 0,
-  .call 18,
+  .call 20,
   .unreachable
 ]
 
-def func18 : Wasm.Program :=
+def func20 : Wasm.Program :=
   [
   .globalGet 0,
   .const (16 : UInt32),
@@ -641,7 +657,7 @@ def func18 : Wasm.Program :=
     .load8U (8 : UInt32),
     .localGet 0,
     .load8U (9 : UInt32),
-    .call 20,
+    .call 22,
     .unreachable
   ],
   .localGet 1,
@@ -661,11 +677,11 @@ def func18 : Wasm.Program :=
   .load8U (8 : UInt32),
   .localGet 0,
   .load8U (9 : UInt32),
-  .call 20,
+  .call 22,
   .unreachable
 ]
 
-def func19 : Wasm.Program :=
+def func21 : Wasm.Program :=
   [
   .const (1 : UInt32),
   .localSet 6,
@@ -716,7 +732,7 @@ def func19 : Wasm.Program :=
             .mul,
             .localGet 4,
             .localGet 3,
-            .call 6,
+            .call 8,
             .localSet 7,
             .br 1
           ],
@@ -727,10 +743,10 @@ def func19 : Wasm.Program :=
             .localSet 7,
             .br 2
           ],
-          .call 7,
+          .call 9,
           .localGet 3,
           .localGet 4,
-          .call 4,
+          .call 6,
           .localSet 7
         ],
         .localGet 7,
@@ -759,7 +775,7 @@ def func19 : Wasm.Program :=
   .store32 (0 : UInt32)
 ]
 
-def func20 : Wasm.Program :=
+def func22 : Wasm.Program :=
   [
   .globalGet 0,
   .const (32 : UInt32),
@@ -773,7 +789,7 @@ def func20 : Wasm.Program :=
         .block 0 0 [
           .block 0 0 [
             .const (1 : UInt32),
-            .call 36,
+            .call 38,
             .const (255 : UInt32),
             .and,
             .brTable [4, 1, 0] 1
@@ -834,7 +850,7 @@ def func20 : Wasm.Program :=
       ],
       .const (2147483648 : UInt32),
       .localGet 5,
-      .call 12
+      .call 14
     ],
     .const (0 : UInt32),
     .const (0 : UInt32),
@@ -850,29 +866,29 @@ def func20 : Wasm.Program :=
     .br_if 0,
     .localGet 0,
     .localGet 1,
-    .call 22,
+    .call 24,
     .unreachable
   ],
   .unreachable
 ]
 
-def func21 : Wasm.Program :=
+def func23 : Wasm.Program :=
   [
   .const (0 : UInt32),
   .const (1 : UInt32),
   .store8 (1050192 : UInt32)
 ]
 
-def func22 : Wasm.Program :=
+def func24 : Wasm.Program :=
   [
   .localGet 0,
   .localGet 1,
-  .call 10,
+  .call 12,
   .drop,
   .unreachable
 ]
 
-def func23 : Wasm.Program :=
+def func25 : Wasm.Program :=
   [
   .block 0 0 [
     .localGet 1,
@@ -881,14 +897,14 @@ def func23 : Wasm.Program :=
     .br_if 0,
     .localGet 1,
     .localGet 0,
-    .call 24,
+    .call 26,
     .ret
   ],
   .localGet 0,
-  .call 25
+  .call 27
 ]
 
-def func24 : Wasm.Program :=
+def func26 : Wasm.Program :=
   [
   .const (0 : UInt32),
   .localSet 2,
@@ -922,7 +938,7 @@ def func24 : Wasm.Program :=
     .add,
     .const (12 : UInt32),
     .add,
-    .call 25,
+    .call 27,
     .localSet 1,
     .localGet 1,
     .eqz,
@@ -1031,7 +1047,7 @@ def func24 : Wasm.Program :=
         .store32 (4 : UInt32),
         .localGet 2,
         .localGet 1,
-        .call 31,
+        .call 33,
         .br 1
       ],
       .localGet 2,
@@ -1099,7 +1115,7 @@ def func24 : Wasm.Program :=
       .store32 (4 : UInt32),
       .localGet 1,
       .localGet 3,
-      .call 31
+      .call 33
     ],
     .localGet 0,
     .const (8 : UInt32),
@@ -1109,7 +1125,7 @@ def func24 : Wasm.Program :=
   .localGet 2
 ]
 
-def func25 : Wasm.Program :=
+def func27 : Wasm.Program :=
   [
   .globalGet 0,
   .const (16 : UInt32),
@@ -2206,7 +2222,7 @@ def func25 : Wasm.Program :=
             .br_if 0,
             .localGet 0,
             .localGet 2,
-            .call 35,
+            .call 37,
             .br 2
           ],
           .block 0 0 [
@@ -2324,7 +2340,7 @@ def func25 : Wasm.Program :=
                   .add,
                   .const (4294901760 : UInt32),
                   .and,
-                  .call 50,
+                  .call 52,
                   .block 0 0 [
                     .localGet 1,
                     .load32 (4 : UInt32),
@@ -2891,7 +2907,7 @@ def func25 : Wasm.Program :=
                       .br_if 0,
                       .localGet 2,
                       .localGet 0,
-                      .call 35,
+                      .call 37,
                       .br 8
                     ],
                     .block 0 0 [
@@ -3016,7 +3032,7 @@ def func25 : Wasm.Program :=
                     .and,
                     .localSet 6,
                     .localGet 6,
-                    .call 30,
+                    .call 32,
                     .localGet 6,
                     .localGet 3,
                     .add,
@@ -3051,7 +3067,7 @@ def func25 : Wasm.Program :=
                     .br_if 0,
                     .localGet 0,
                     .localGet 3,
-                    .call 35,
+                    .call 37,
                     .br 6
                   ],
                   .block 0 0 [
@@ -3359,12 +3375,12 @@ def func25 : Wasm.Program :=
   .localGet 0
 ]
 
-def func26 : Wasm.Program :=
+def func28 : Wasm.Program :=
   [
   .unreachable
 ]
 
-def func27 : Wasm.Program :=
+def func29 : Wasm.Program :=
   [
   .block 0 0 [
     .block 0 0 [
@@ -3402,23 +3418,23 @@ def func27 : Wasm.Program :=
         .br_if 2
       ],
       .localGet 0,
-      .call 28,
+      .call 30,
       .ret
     ],
     .const (1049316 : UInt32),
     .const (46 : UInt32),
     .const (1049364 : UInt32),
-    .call 55,
+    .call 57,
     .unreachable
   ],
   .const (1049380 : UInt32),
   .const (46 : UInt32),
   .const (1049428 : UInt32),
-  .call 55,
+  .call 57,
   .unreachable
 ]
 
-def func28 : Wasm.Program :=
+def func30 : Wasm.Program :=
   [
   .localGet 0,
   .const (4294967288 : UInt32),
@@ -3493,7 +3509,7 @@ def func28 : Wasm.Program :=
       ],
       .localGet 1,
       .localGet 2,
-      .call 30
+      .call 32
     ],
     .block 0 0 [
       .block 0 0 [
@@ -3526,7 +3542,7 @@ def func28 : Wasm.Program :=
                     .and,
                     .localSet 2,
                     .localGet 2,
-                    .call 30,
+                    .call 32,
                     .localGet 1,
                     .localGet 2,
                     .localGet 0,
@@ -3573,7 +3589,7 @@ def func28 : Wasm.Program :=
                 .br_if 4,
                 .localGet 1,
                 .localGet 0,
-                .call 35,
+                .call 37,
                 .const (0 : UInt32),
                 .const (0 : UInt32),
                 .load32 (1050188 : UInt32),
@@ -3819,7 +3835,7 @@ def func28 : Wasm.Program :=
   ]
 ]
 
-def func29 : Wasm.Program :=
+def func31 : Wasm.Program :=
   [
   .block 0 0 [
     .block 0 0 [
@@ -3874,7 +3890,7 @@ def func29 : Wasm.Program :=
                       .br_if 0,
                       .localGet 2,
                       .localGet 3,
-                      .call 24,
+                      .call 26,
                       .localSet 2,
                       .localGet 2,
                       .br_if 1,
@@ -3967,7 +3983,7 @@ def func29 : Wasm.Program :=
                           .br_if 9,
                           .localGet 7,
                           .localGet 9,
-                          .call 30,
+                          .call 32,
                           .block 0 0 [
                             .localGet 5,
                             .localGet 1,
@@ -4008,7 +4024,7 @@ def func29 : Wasm.Program :=
                             .store32 (4 : UInt32),
                             .localGet 1,
                             .localGet 7,
-                            .call 31,
+                            .call 33,
                             .br 9
                           ],
                           .localGet 4,
@@ -4151,7 +4167,7 @@ def func29 : Wasm.Program :=
                       .store32 (4 : UInt32),
                       .localGet 1,
                       .localGet 6,
-                      .call 31,
+                      .call 33,
                       .br 6
                     ],
                     .const (0 : UInt32),
@@ -4211,25 +4227,25 @@ def func29 : Wasm.Program :=
                   .const (1049380 : UInt32),
                   .const (46 : UInt32),
                   .const (1049428 : UInt32),
-                  .call 55,
+                  .call 57,
                   .unreachable
                 ],
                 .const (1049316 : UInt32),
                 .const (46 : UInt32),
                 .const (1049364 : UInt32),
-                .call 55,
+                .call 57,
                 .unreachable
               ],
               .const (1049380 : UInt32),
               .const (46 : UInt32),
               .const (1049428 : UInt32),
-              .call 55,
+              .call 57,
               .unreachable
             ],
             .const (1049316 : UInt32),
             .const (46 : UInt32),
             .const (1049364 : UInt32),
-            .call 55,
+            .call 57,
             .unreachable
           ],
           .localGet 4,
@@ -4268,7 +4284,7 @@ def func29 : Wasm.Program :=
         .ret
       ],
       .localGet 3,
-      .call 25,
+      .call 27,
       .localSet 1,
       .localGet 1,
       .eqz,
@@ -4307,12 +4323,12 @@ def func29 : Wasm.Program :=
       .localSet 2
     ],
     .localGet 0,
-    .call 28
+    .call 30
   ],
   .localGet 2
 ]
 
-def func30 : Wasm.Program :=
+def func32 : Wasm.Program :=
   [
   .localGet 0,
   .load32 (12 : UInt32),
@@ -4520,7 +4536,7 @@ def func30 : Wasm.Program :=
   .store32 (1050152 : UInt32)
 ]
 
-def func31 : Wasm.Program :=
+def func33 : Wasm.Program :=
   [
   .localGet 0,
   .localGet 1,
@@ -4585,7 +4601,7 @@ def func31 : Wasm.Program :=
       ],
       .localGet 0,
       .localGet 3,
-      .call 30
+      .call 32
     ],
     .block 0 0 [
       .block 0 0 [
@@ -4614,7 +4630,7 @@ def func31 : Wasm.Program :=
             .and,
             .localSet 3,
             .localGet 3,
-            .call 30,
+            .call 32,
             .localGet 0,
             .localGet 3,
             .localGet 1,
@@ -4662,7 +4678,7 @@ def func31 : Wasm.Program :=
           .br_if 0,
           .localGet 0,
           .localGet 1,
-          .call 35,
+          .call 37,
           .ret
         ],
         .block 0 0 [
@@ -4777,7 +4793,7 @@ def func31 : Wasm.Program :=
   ]
 ]
 
-def func32 : Wasm.Program :=
+def func34 : Wasm.Program :=
   [
   .globalGet 0,
   .const (16 : UInt32),
@@ -4797,19 +4813,19 @@ def func32 : Wasm.Program :=
   .localGet 1,
   .const (4 : UInt32),
   .add,
-  .call 17,
+  .call 19,
   .unreachable
 ]
 
-def func33 : Wasm.Program :=
+def func35 : Wasm.Program :=
   [
   .localGet 1,
   .localGet 0,
-  .call 34,
+  .call 36,
   .unreachable
 ]
 
-def func34 : Wasm.Program :=
+def func36 : Wasm.Program :=
   [
   .globalGet 0,
   .const (16 : UInt32),
@@ -4826,11 +4842,11 @@ def func34 : Wasm.Program :=
   .localGet 2,
   .const (8 : UInt32),
   .add,
-  .call 15,
+  .call 17,
   .unreachable
 ]
 
-def func35 : Wasm.Program :=
+def func37 : Wasm.Program :=
   [
   .const (0 : UInt32),
   .localSet 2,
@@ -5004,7 +5020,7 @@ def func35 : Wasm.Program :=
   .store32 (8 : UInt32)
 ]
 
-def func36 : Wasm.Program :=
+def func38 : Wasm.Program :=
   [
   .const (0 : UInt32),
   .localSet 1,
@@ -5041,7 +5057,7 @@ def func36 : Wasm.Program :=
   .localGet 1
 ]
 
-def func37 : Wasm.Program :=
+def func39 : Wasm.Program :=
   [
   .localGet 0,
   .const (0 : UInt32),
@@ -5053,7 +5069,7 @@ def func37 : Wasm.Program :=
   .store64 (0 : UInt32)
 ]
 
-def func38 : Wasm.Program :=
+def func40 : Wasm.Program :=
   [
   .localGet 0,
   .const (0 : UInt32),
@@ -5065,7 +5081,7 @@ def func38 : Wasm.Program :=
   .store64 (0 : UInt32)
 ]
 
-def func39 : Wasm.Program :=
+def func41 : Wasm.Program :=
   [
   .block 0 0 [
     .localGet 0,
@@ -5078,7 +5094,7 @@ def func39 : Wasm.Program :=
     .load32 (4 : UInt32),
     .localGet 0,
     .load32 (8 : UInt32),
-    .call 62,
+    .call 64,
     .ret
   ],
   .localGet 1,
@@ -5093,10 +5109,10 @@ def func39 : Wasm.Program :=
   .load32 (0 : UInt32),
   .localGet 0,
   .load32 (4 : UInt32),
-  .call 57
+  .call 59
 ]
 
-def func40 : Wasm.Program :=
+def func42 : Wasm.Program :=
   [
   .localGet 0,
   .const (1049444 : UInt32),
@@ -5106,7 +5122,7 @@ def func40 : Wasm.Program :=
   .store32 (0 : UInt32)
 ]
 
-def func41 : Wasm.Program :=
+def func43 : Wasm.Program :=
   [
   .localGet 0,
   .localGet 1,
@@ -5114,7 +5130,7 @@ def func41 : Wasm.Program :=
   .store64 (0 : UInt32)
 ]
 
-def func42 : Wasm.Program :=
+def func44 : Wasm.Program :=
   [
   .localGet 1,
   .load32 (4 : UInt32),
@@ -5122,17 +5138,17 @@ def func42 : Wasm.Program :=
   .localGet 1,
   .load32 (0 : UInt32),
   .localSet 3,
-  .call 7,
+  .call 9,
   .block 0 0 [
     .const (8 : UInt32),
     .const (4 : UInt32),
-    .call 4,
+    .call 6,
     .localSet 1,
     .localGet 1,
     .br_if 0,
     .const (4 : UInt32),
     .const (8 : UInt32),
-    .call 53,
+    .call 55,
     .unreachable
   ],
   .localGet 1,
@@ -5149,17 +5165,17 @@ def func42 : Wasm.Program :=
   .store32 (0 : UInt32)
 ]
 
-def func43 : Wasm.Program :=
+def func45 : Wasm.Program :=
   [
   .localGet 1,
   .localGet 0,
   .load32 (0 : UInt32),
   .localGet 0,
   .load32 (4 : UInt32),
-  .call 62
+  .call 64
 ]
 
-def func44 : Wasm.Program :=
+def func46 : Wasm.Program :=
   [
   .localGet 0,
   .load32 (8 : UInt32),
@@ -5206,7 +5222,7 @@ def func44 : Wasm.Program :=
     .localGet 3,
     .const (1 : UInt32),
     .const (1 : UInt32),
-    .call 11,
+    .call 13,
     .localGet 0,
     .load32 (8 : UInt32),
     .localSet 4
@@ -5309,7 +5325,7 @@ def func44 : Wasm.Program :=
   .const (0 : UInt32)
 ]
 
-def func45 : Wasm.Program :=
+def func47 : Wasm.Program :=
   [
   .block 0 0 [
     .block 0 0 [
@@ -5329,7 +5345,7 @@ def func45 : Wasm.Program :=
         .localGet 2,
         .const (1 : UInt32),
         .const (1 : UInt32),
-        .call 11,
+        .call 13,
         .localGet 0,
         .load32 (8 : UInt32),
         .localSet 3,
@@ -5358,7 +5374,7 @@ def func45 : Wasm.Program :=
   .const (0 : UInt32)
 ]
 
-def func46 : Wasm.Program :=
+def func48 : Wasm.Program :=
   [
   .globalGet 0,
   .const (32 : UInt32),
@@ -5392,7 +5408,7 @@ def func46 : Wasm.Program :=
     .load32 (0 : UInt32),
     .localGet 3,
     .load32 (4 : UInt32),
-    .call 57,
+    .call 59,
     .drop,
     .localGet 2,
     .localGet 2,
@@ -5425,7 +5441,7 @@ def func46 : Wasm.Program :=
   .globalSet 0
 ]
 
-def func47 : Wasm.Program :=
+def func49 : Wasm.Program :=
   [
   .globalGet 0,
   .const (48 : UInt32),
@@ -5459,7 +5475,7 @@ def func47 : Wasm.Program :=
     .load32 (0 : UInt32),
     .localGet 3,
     .load32 (4 : UInt32),
-    .call 57,
+    .call 59,
     .drop,
     .localGet 2,
     .localGet 2,
@@ -5498,17 +5514,17 @@ def func47 : Wasm.Program :=
   .localGet 2,
   .localGet 4,
   .store64 (8 : UInt32),
-  .call 7,
+  .call 9,
   .block 0 0 [
     .const (12 : UInt32),
     .const (4 : UInt32),
-    .call 4,
+    .call 6,
     .localSet 1,
     .localGet 1,
     .br_if 0,
     .const (4 : UInt32),
     .const (12 : UInt32),
-    .call 53,
+    .call 55,
     .unreachable
   ],
   .localGet 1,
@@ -5531,23 +5547,23 @@ def func47 : Wasm.Program :=
   .globalSet 0
 ]
 
-def func48 : Wasm.Program :=
+def func50 : Wasm.Program :=
   [
   .localGet 0,
   .const (0 : UInt32),
   .store32 (0 : UInt32)
 ]
 
-def func49 : Wasm.Program :=
+def func51 : Wasm.Program :=
   [
   .localGet 0,
   .const (1049204 : UInt32),
   .localGet 1,
   .localGet 2,
-  .call 57
+  .call 59
 ]
 
-def func50 : Wasm.Program :=
+def func52 : Wasm.Program :=
   [
   .block 0 0 [
     .block 0 0 [
@@ -5605,7 +5621,7 @@ def func50 : Wasm.Program :=
   .store32 (0 : UInt32)
 ]
 
-def func51 : Wasm.Program :=
+def func53 : Wasm.Program :=
   [
   .block 0 0 [
     .localGet 1,
@@ -5626,11 +5642,11 @@ def func51 : Wasm.Program :=
   .localGet 1,
   .localGet 3,
   .localGet 4,
-  .call 64,
+  .call 66,
   .unreachable
 ]
 
-def func52 : Wasm.Program :=
+def func54 : Wasm.Program :=
   [
   .block 0 0 [
     .localGet 0,
@@ -5638,31 +5654,31 @@ def func52 : Wasm.Program :=
     .br_if 0,
     .localGet 0,
     .localGet 1,
-    .call 53,
+    .call 55,
     .unreachable
   ],
-  .call 54,
-  .unreachable
-]
-
-def func53 : Wasm.Program :=
-  [
-  .localGet 1,
-  .localGet 0,
-  .call 33,
-  .unreachable
-]
-
-def func54 : Wasm.Program :=
-  [
-  .const (1049476 : UInt32),
-  .const (35 : UInt32),
-  .const (1049496 : UInt32),
   .call 56,
   .unreachable
 ]
 
 def func55 : Wasm.Program :=
+  [
+  .localGet 1,
+  .localGet 0,
+  .call 35,
+  .unreachable
+]
+
+def func56 : Wasm.Program :=
+  [
+  .const (1049476 : UInt32),
+  .const (35 : UInt32),
+  .const (1049496 : UInt32),
+  .call 58,
+  .unreachable
+]
+
+def func57 : Wasm.Program :=
   [
   .localGet 0,
   .localGet 1,
@@ -5671,11 +5687,11 @@ def func55 : Wasm.Program :=
   .const (1 : UInt32),
   .or,
   .localGet 2,
-  .call 56,
+  .call 58,
   .unreachable
 ]
 
-def func56 : Wasm.Program :=
+def func58 : Wasm.Program :=
   [
   .globalGet 0,
   .const (32 : UInt32),
@@ -5703,11 +5719,11 @@ def func56 : Wasm.Program :=
   .localGet 3,
   .const (20 : UInt32),
   .add,
-  .call 32,
+  .call 34,
   .unreachable
 ]
 
-def func57 : Wasm.Program :=
+def func59 : Wasm.Program :=
   [
   .globalGet 0,
   .const (16 : UInt32),
@@ -6015,7 +6031,7 @@ def func57 : Wasm.Program :=
   .localGet 5
 ]
 
-def func58 : Wasm.Program :=
+def func60 : Wasm.Program :=
   [
   .globalGet 0,
   .const (32 : UInt32),
@@ -6055,11 +6071,11 @@ def func58 : Wasm.Program :=
   .const (16 : UInt32),
   .add,
   .localGet 2,
-  .call 56,
+  .call 58,
   .unreachable
 ]
 
-def func59 : Wasm.Program :=
+def func61 : Wasm.Program :=
   [
   .const (43 : UInt32),
   .const (1114112 : UInt32),
@@ -6100,7 +6116,7 @@ def func59 : Wasm.Program :=
         .br_if 0,
         .localGet 2,
         .localGet 3,
-        .call 60,
+        .call 62,
         .localSet 7,
         .br 1
       ],
@@ -6316,7 +6332,7 @@ def func59 : Wasm.Program :=
           .localGet 12,
           .localGet 2,
           .localGet 3,
-          .call 61,
+          .call 63,
           .br_if 3,
           .const (0 : UInt32),
           .localSet 7,
@@ -6356,7 +6372,7 @@ def func59 : Wasm.Program :=
         .localGet 12,
         .localGet 2,
         .localGet 3,
-        .call 61,
+        .call 63,
         .br_if 2,
         .localGet 10,
         .localGet 4,
@@ -6428,7 +6444,7 @@ def func59 : Wasm.Program :=
     .localGet 12,
     .localGet 2,
     .localGet 3,
-    .call 61,
+    .call 63,
     .br_if 0,
     .localGet 7,
     .localGet 4,
@@ -6441,7 +6457,7 @@ def func59 : Wasm.Program :=
   .localGet 13
 ]
 
-def func60 : Wasm.Program :=
+def func62 : Wasm.Program :=
   [
   .block 0 0 [
     .block 0 0 [
@@ -6944,7 +6960,7 @@ def func60 : Wasm.Program :=
   .localGet 8
 ]
 
-def func61 : Wasm.Program :=
+def func63 : Wasm.Program :=
   [
   .block 0 0 [
     .localGet 2,
@@ -6975,7 +6991,7 @@ def func61 : Wasm.Program :=
   .unreachable
 ]
 
-def func62 : Wasm.Program :=
+def func64 : Wasm.Program :=
   [
   .localGet 0,
   .load32 (0 : UInt32),
@@ -6987,7 +7003,7 @@ def func62 : Wasm.Program :=
   .unreachable
 ]
 
-def func63 : Wasm.Program :=
+def func65 : Wasm.Program :=
   [
   .globalGet 0,
   .const (16 : UInt32),
@@ -7141,7 +7157,7 @@ def func63 : Wasm.Program :=
   .const (10 : UInt32),
   .localGet 3,
   .sub,
-  .call 59,
+  .call 61,
   .localSet 3,
   .localGet 2,
   .const (16 : UInt32),
@@ -7150,7 +7166,7 @@ def func63 : Wasm.Program :=
   .localGet 3
 ]
 
-def func64 : Wasm.Program :=
+def func66 : Wasm.Program :=
   [
   .globalGet 0,
   .const (32 : UInt32),
@@ -7190,86 +7206,88 @@ def func64 : Wasm.Program :=
   .const (16 : UInt32),
   .add,
   .localGet 2,
-  .call 56,
+  .call 58,
   .unreachable
 ]
 
 def «module» : Wasm.Module :=
 {
   funcs := [
-    { params := [.i32, .i32, .i64], locals := [.i32, .i64, .i32], body := func0, results := [] },
-    { params := [.i64, .i32, .i32], locals := [.i32, .i32, .i32], body := func1, results := [.i32] },
-    { params := [.i64], locals := [.i32, .i32], body := func2, results := [.i32] },
+    { params := [.i64], locals := [.i32, .i32], body := func0, results := [.i32] },
+    { params := [.i32, .i32, .i64], locals := [.i32, .i64, .i32], body := func1, results := [] },
+    { params := [.i64, .i32, .i32], locals := [.i32, .i32, .i32], body := func2, results := [.i32] },
     { params := [.i64, .i32, .i32], locals := [.i32, .i32, .i32], body := func3, results := [.i32] },
-    { params := [.i32, .i32], locals := [], body := func4, results := [.i32] },
-    { params := [.i32, .i32, .i32], locals := [], body := func5, results := [] },
-    { params := [.i32, .i32, .i32, .i32], locals := [], body := func6, results := [.i32] },
-    { params := [], locals := [], body := func7, results := [] },
-    { params := [.i64, .i32], locals := [.i32, .i64, .i32, .i64, .i32, .i32], body := func8, results := [.i32] },
-    { params := [.i32, .i32, .i32, .i32], locals := [], body := func9, results := [] },
-    { params := [.i32, .i32], locals := [], body := func10, results := [.i32] },
-    { params := [.i32, .i32, .i32, .i32, .i32], locals := [.i32], body := func11, results := [] },
-    { params := [.i32, .i32], locals := [], body := func12, results := [] },
-    { params := [.i32], locals := [.i32], body := func13, results := [] },
-    { params := [.i32], locals := [.i32], body := func14, results := [] },
-    { params := [.i32], locals := [], body := func15, results := [] },
-    { params := [.i32], locals := [], body := func16, results := [] },
+    { params := [.i64, .i32, .i32], locals := [], body := func4, results := [.i32] },
+    { params := [.i64, .i32, .i32], locals := [], body := func5, results := [.i32] },
+    { params := [.i32, .i32], locals := [], body := func6, results := [.i32] },
+    { params := [.i32, .i32, .i32], locals := [], body := func7, results := [] },
+    { params := [.i32, .i32, .i32, .i32], locals := [], body := func8, results := [.i32] },
+    { params := [], locals := [], body := func9, results := [] },
+    { params := [.i64, .i32], locals := [.i32, .i64, .i32, .i64, .i32, .i32], body := func10, results := [.i32] },
+    { params := [.i32, .i32, .i32, .i32], locals := [], body := func11, results := [] },
+    { params := [.i32, .i32], locals := [], body := func12, results := [.i32] },
+    { params := [.i32, .i32, .i32, .i32, .i32], locals := [.i32], body := func13, results := [] },
+    { params := [.i32, .i32], locals := [], body := func14, results := [] },
+    { params := [.i32], locals := [.i32], body := func15, results := [] },
+    { params := [.i32], locals := [.i32], body := func16, results := [] },
     { params := [.i32], locals := [], body := func17, results := [] },
-    { params := [.i32], locals := [.i32, .i32, .i32], body := func18, results := [] },
-    { params := [.i32, .i32, .i32, .i32, .i32, .i32], locals := [.i32, .i32, .i64], body := func19, results := [] },
-    { params := [.i32, .i32, .i32, .i32, .i32], locals := [.i32, .i32], body := func20, results := [] },
-    { params := [.i32, .i32], locals := [], body := func21, results := [] },
-    { params := [.i32, .i32], locals := [], body := func22, results := [] },
-    { params := [.i32, .i32], locals := [], body := func23, results := [.i32] },
-    { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32], body := func24, results := [.i32] },
-    { params := [.i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i64], body := func25, results := [.i32] },
-    { params := [], locals := [], body := func26, results := [] },
-    { params := [.i32, .i32, .i32], locals := [.i32, .i32], body := func27, results := [] },
-    { params := [.i32], locals := [.i32, .i32, .i32, .i32], body := func28, results := [] },
-    { params := [.i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32], body := func29, results := [.i32] },
-    { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32], body := func30, results := [] },
-    { params := [.i32, .i32], locals := [.i32, .i32], body := func31, results := [] },
-    { params := [.i32], locals := [.i32, .i64], body := func32, results := [] },
-    { params := [.i32, .i32], locals := [], body := func33, results := [] },
-    { params := [.i32, .i32], locals := [.i32], body := func34, results := [] },
-    { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32], body := func35, results := [] },
-    { params := [.i32], locals := [.i32, .i32], body := func36, results := [.i32] },
-    { params := [.i32, .i32], locals := [], body := func37, results := [] },
-    { params := [.i32, .i32], locals := [], body := func38, results := [] },
-    { params := [.i32, .i32], locals := [], body := func39, results := [.i32] },
+    { params := [.i32], locals := [], body := func18, results := [] },
+    { params := [.i32], locals := [], body := func19, results := [] },
+    { params := [.i32], locals := [.i32, .i32, .i32], body := func20, results := [] },
+    { params := [.i32, .i32, .i32, .i32, .i32, .i32], locals := [.i32, .i32, .i64], body := func21, results := [] },
+    { params := [.i32, .i32, .i32, .i32, .i32], locals := [.i32, .i32], body := func22, results := [] },
+    { params := [.i32, .i32], locals := [], body := func23, results := [] },
+    { params := [.i32, .i32], locals := [], body := func24, results := [] },
+    { params := [.i32, .i32], locals := [], body := func25, results := [.i32] },
+    { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32], body := func26, results := [.i32] },
+    { params := [.i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i64], body := func27, results := [.i32] },
+    { params := [], locals := [], body := func28, results := [] },
+    { params := [.i32, .i32, .i32], locals := [.i32, .i32], body := func29, results := [] },
+    { params := [.i32], locals := [.i32, .i32, .i32, .i32], body := func30, results := [] },
+    { params := [.i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32], body := func31, results := [.i32] },
+    { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32], body := func32, results := [] },
+    { params := [.i32, .i32], locals := [.i32, .i32], body := func33, results := [] },
+    { params := [.i32], locals := [.i32, .i64], body := func34, results := [] },
+    { params := [.i32, .i32], locals := [], body := func35, results := [] },
+    { params := [.i32, .i32], locals := [.i32], body := func36, results := [] },
+    { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32], body := func37, results := [] },
+    { params := [.i32], locals := [.i32, .i32], body := func38, results := [.i32] },
+    { params := [.i32, .i32], locals := [], body := func39, results := [] },
     { params := [.i32, .i32], locals := [], body := func40, results := [] },
-    { params := [.i32, .i32], locals := [], body := func41, results := [] },
-    { params := [.i32, .i32], locals := [.i32, .i32], body := func42, results := [] },
-    { params := [.i32, .i32], locals := [], body := func43, results := [.i32] },
-    { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32], body := func44, results := [.i32] },
-    { params := [.i32, .i32, .i32], locals := [.i32], body := func45, results := [.i32] },
-    { params := [.i32, .i32], locals := [.i32, .i32, .i64], body := func46, results := [] },
-    { params := [.i32, .i32], locals := [.i32, .i32, .i64], body := func47, results := [] },
-    { params := [.i32, .i32], locals := [], body := func48, results := [] },
-    { params := [.i32, .i32, .i32], locals := [], body := func49, results := [.i32] },
-    { params := [.i32, .i32, .i32], locals := [.i32, .i32], body := func50, results := [] },
-    { params := [.i32, .i32, .i32, .i32, .i32], locals := [], body := func51, results := [] },
-    { params := [.i32, .i32], locals := [], body := func52, results := [] },
-    { params := [.i32, .i32], locals := [], body := func53, results := [] },
-    { params := [], locals := [], body := func54, results := [] },
-    { params := [.i32, .i32, .i32], locals := [], body := func55, results := [] },
-    { params := [.i32, .i32, .i32], locals := [.i32], body := func56, results := [] },
-    { params := [.i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32], body := func57, results := [.i32] },
-    { params := [.i32, .i32, .i32], locals := [.i32, .i64], body := func58, results := [] },
-    { params := [.i32, .i32, .i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i64], body := func59, results := [.i32] },
-    { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32], body := func60, results := [.i32] },
-    { params := [.i32, .i32, .i32, .i32, .i32], locals := [], body := func61, results := [.i32] },
-    { params := [.i32, .i32, .i32], locals := [], body := func62, results := [.i32] },
-    { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32], body := func63, results := [.i32] },
-    { params := [.i32, .i32, .i32], locals := [.i32, .i64], body := func64, results := [] }
+    { params := [.i32, .i32], locals := [], body := func41, results := [.i32] },
+    { params := [.i32, .i32], locals := [], body := func42, results := [] },
+    { params := [.i32, .i32], locals := [], body := func43, results := [] },
+    { params := [.i32, .i32], locals := [.i32, .i32], body := func44, results := [] },
+    { params := [.i32, .i32], locals := [], body := func45, results := [.i32] },
+    { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32], body := func46, results := [.i32] },
+    { params := [.i32, .i32, .i32], locals := [.i32], body := func47, results := [.i32] },
+    { params := [.i32, .i32], locals := [.i32, .i32, .i64], body := func48, results := [] },
+    { params := [.i32, .i32], locals := [.i32, .i32, .i64], body := func49, results := [] },
+    { params := [.i32, .i32], locals := [], body := func50, results := [] },
+    { params := [.i32, .i32, .i32], locals := [], body := func51, results := [.i32] },
+    { params := [.i32, .i32, .i32], locals := [.i32, .i32], body := func52, results := [] },
+    { params := [.i32, .i32, .i32, .i32, .i32], locals := [], body := func53, results := [] },
+    { params := [.i32, .i32], locals := [], body := func54, results := [] },
+    { params := [.i32, .i32], locals := [], body := func55, results := [] },
+    { params := [], locals := [], body := func56, results := [] },
+    { params := [.i32, .i32, .i32], locals := [], body := func57, results := [] },
+    { params := [.i32, .i32, .i32], locals := [.i32], body := func58, results := [] },
+    { params := [.i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32], body := func59, results := [.i32] },
+    { params := [.i32, .i32, .i32], locals := [.i32, .i64], body := func60, results := [] },
+    { params := [.i32, .i32, .i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i64], body := func61, results := [.i32] },
+    { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32], body := func62, results := [.i32] },
+    { params := [.i32, .i32, .i32, .i32, .i32], locals := [], body := func63, results := [.i32] },
+    { params := [.i32, .i32, .i32], locals := [], body := func64, results := [.i32] },
+    { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32], body := func65, results := [.i32] },
+    { params := [.i32, .i32, .i32], locals := [.i32, .i64], body := func66, results := [] }
   ],
   exports := [
-    { name := "itoa_i64", funcIdx := 1 },
-    { name := "itoa_i64_len", funcIdx := 2 },
-    { name := "itoa_u64", funcIdx := 3 }
+    { name := "itoa_i64", funcIdx := 4 },
+    { name := "itoa_u64", funcIdx := 5 },
+    { name := "itoa_i64_len", funcIdx := 0 }
   ],
   memory := some { pagesMin := (17 : UInt32), pagesMax := none, data := [
-    { offset := some (1048576 : UInt32), bytes := [(32 : UInt8), (105 : UInt8), (110 : UInt8), (100 : UInt8), (101 : UInt8), (120 : UInt8), (32 : UInt8), (111 : UInt8), (117 : UInt8), (116 : UInt8), (32 : UInt8), (111 : UInt8), (102 : UInt8), (32 : UInt8), (98 : UInt8), (111 : UInt8), (117 : UInt8), (110 : UInt8), (100 : UInt8), (115 : UInt8), (58 : UInt8), (32 : UInt8), (116 : UInt8), (104 : UInt8), (101 : UInt8), (32 : UInt8), (108 : UInt8), (101 : UInt8), (110 : UInt8), (32 : UInt8), (105 : UInt8), (115 : UInt8), (32 : UInt8), (192 : UInt8), (18 : UInt8), (32 : UInt8), (98 : UInt8), (117 : UInt8), (116 : UInt8), (32 : UInt8), (116 : UInt8), (104 : UInt8), (101 : UInt8), (32 : UInt8), (105 : UInt8), (110 : UInt8), (100 : UInt8), (101 : UInt8), (120 : UInt8), (32 : UInt8), (105 : UInt8), (115 : UInt8), (32 : UInt8), (192 : UInt8), (0 : UInt8), (47 : UInt8), (114 : UInt8), (117 : UInt8), (115 : UInt8), (116 : UInt8), (99 : UInt8), (47 : UInt8), (53 : UInt8), (57 : UInt8), (56 : UInt8), (48 : UInt8), (55 : UInt8), (54 : UInt8), (49 : UInt8), (54 : UInt8), (101 : UInt8), (49 : UInt8), (102 : UInt8), (97 : UInt8), (50 : UInt8), (53 : UInt8), (52 : UInt8), (48 : UInt8), (55 : UInt8), (50 : UInt8), (52 : UInt8), (98 : UInt8), (102 : UInt8), (98 : UInt8), (97 : UInt8), (99 : UInt8), (49 : UInt8), (52 : UInt8), (100 : UInt8), (55 : UInt8), (57 : UInt8), (55 : UInt8), (54 : UInt8), (100 : UInt8), (55 : UInt8), (101 : UInt8), (52 : UInt8), (97 : UInt8), (51 : UInt8), (56 : UInt8), (54 : UInt8), (48 : UInt8), (47 : UInt8), (108 : UInt8), (105 : UInt8), (98 : UInt8), (114 : UInt8), (97 : UInt8), (114 : UInt8), (121 : UInt8), (47 : UInt8), (97 : UInt8), (108 : UInt8), (108 : UInt8), (111 : UInt8), (99 : UInt8), (47 : UInt8), (115 : UInt8), (114 : UInt8), (99 : UInt8), (47 : UInt8), (114 : UInt8), (97 : UInt8), (119 : UInt8), (95 : UInt8), (118 : UInt8), (101 : UInt8), (99 : UInt8), (47 : UInt8), (109 : UInt8), (111 : UInt8), (100 : UInt8), (46 : UInt8), (114 : UInt8), (115 : UInt8), (0 : UInt8), (47 : UInt8), (114 : UInt8), (117 : UInt8), (115 : UInt8), (116 : UInt8), (47 : UInt8), (100 : UInt8), (101 : UInt8), (112 : UInt8), (115 : UInt8), (47 : UInt8), (100 : UInt8), (108 : UInt8), (109 : UInt8), (97 : UInt8), (108 : UInt8), (108 : UInt8), (111 : UInt8), (99 : UInt8), (45 : UInt8), (48 : UInt8), (46 : UInt8), (50 : UInt8), (46 : UInt8), (49 : UInt8), (49 : UInt8), (47 : UInt8), (115 : UInt8), (114 : UInt8), (99 : UInt8), (47 : UInt8), (100 : UInt8), (108 : UInt8), (109 : UInt8), (97 : UInt8), (108 : UInt8), (108 : UInt8), (111 : UInt8), (99 : UInt8), (46 : UInt8), (114 : UInt8), (115 : UInt8), (0 : UInt8), (105 : UInt8), (116 : UInt8), (111 : UInt8), (97 : UInt8), (47 : UInt8), (115 : UInt8), (114 : UInt8), (99 : UInt8), (47 : UInt8), (108 : UInt8), (105 : UInt8), (98 : UInt8), (46 : UInt8), (114 : UInt8), (115 : UInt8), (0 : UInt8), (47 : UInt8), (99 : UInt8), (97 : UInt8), (114 : UInt8), (103 : UInt8), (111 : UInt8), (45 : UInt8), (104 : UInt8), (111 : UInt8), (109 : UInt8), (101 : UInt8), (47 : UInt8), (114 : UInt8), (101 : UInt8), (103 : UInt8), (105 : UInt8), (115 : UInt8), (116 : UInt8), (114 : UInt8), (121 : UInt8), (47 : UInt8), (115 : UInt8), (114 : UInt8), (99 : UInt8), (47 : UInt8), (105 : UInt8), (110 : UInt8), (100 : UInt8), (101 : UInt8), (120 : UInt8), (46 : UInt8), (99 : UInt8), (114 : UInt8), (97 : UInt8), (116 : UInt8), (101 : UInt8), (115 : UInt8), (46 : UInt8), (105 : UInt8), (111 : UInt8), (45 : UInt8), (49 : UInt8), (57 : UInt8), (52 : UInt8), (57 : UInt8), (99 : UInt8), (102 : UInt8), (56 : UInt8), (99 : UInt8), (54 : UInt8), (98 : UInt8), (53 : UInt8), (98 : UInt8), (53 : UInt8), (53 : UInt8), (55 : UInt8), (102 : UInt8), (47 : UInt8), (105 : UInt8), (116 : UInt8), (111 : UInt8), (97 : UInt8), (45 : UInt8), (49 : UInt8), (46 : UInt8), (48 : UInt8), (46 : UInt8), (49 : UInt8), (56 : UInt8), (47 : UInt8), (115 : UInt8), (114 : UInt8), (99 : UInt8), (47 : UInt8), (108 : UInt8), (105 : UInt8), (98 : UInt8), (46 : UInt8), (114 : UInt8), (115 : UInt8), (0 : UInt8), (38 : UInt8), (99 : UInt8), (111 : UInt8), (112 : UInt8), (121 : UInt8), (95 : UInt8), (102 : UInt8), (114 : UInt8), (111 : UInt8), (109 : UInt8), (95 : UInt8), (115 : UInt8), (108 : UInt8), (105 : UInt8), (99 : UInt8), (101 : UInt8), (58 : UInt8), (32 : UInt8), (115 : UInt8), (111 : UInt8), (117 : UInt8), (114 : UInt8), (99 : UInt8), (101 : UInt8), (32 : UInt8), (115 : UInt8), (108 : UInt8), (105 : UInt8), (99 : UInt8), (101 : UInt8), (32 : UInt8), (108 : UInt8), (101 : UInt8), (110 : UInt8), (103 : UInt8), (116 : UInt8), (104 : UInt8), (32 : UInt8), (40 : UInt8), (192 : UInt8), (43 : UInt8), (41 : UInt8), (32 : UInt8), (100 : UInt8), (111 : UInt8), (101 : UInt8), (115 : UInt8), (32 : UInt8), (110 : UInt8), (111 : UInt8), (116 : UInt8), (32 : UInt8), (109 : UInt8), (97 : UInt8), (116 : UInt8), (99 : UInt8), (104 : UInt8), (32 : UInt8), (100 : UInt8), (101 : UInt8), (115 : UInt8), (116 : UInt8), (105 : UInt8), (110 : UInt8), (97 : UInt8), (116 : UInt8), (105 : UInt8), (111 : UInt8), (110 : UInt8), (32 : UInt8), (115 : UInt8), (108 : UInt8), (105 : UInt8), (99 : UInt8), (101 : UInt8), (32 : UInt8), (108 : UInt8), (101 : UInt8), (110 : UInt8), (103 : UInt8), (116 : UInt8), (104 : UInt8), (32 : UInt8), (40 : UInt8), (192 : UInt8), (1 : UInt8), (41 : UInt8), (0 : UInt8), (195 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (80 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (188 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (1 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (179 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (15 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (17 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (49 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (179 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (15 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (30 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (49 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (195 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (80 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (76 : UInt8), (1 : UInt8), (0 : UInt8), (0 : UInt8), (1 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (48 : UInt8), (48 : UInt8), (48 : UInt8), (49 : UInt8), (48 : UInt8), (50 : UInt8), (48 : UInt8), (51 : UInt8), (48 : UInt8), (52 : UInt8), (48 : UInt8), (53 : UInt8), (48 : UInt8), (54 : UInt8), (48 : UInt8), (55 : UInt8), (48 : UInt8), (56 : UInt8), (48 : UInt8), (57 : UInt8), (49 : UInt8), (48 : UInt8), (49 : UInt8), (49 : UInt8), (49 : UInt8), (50 : UInt8), (49 : UInt8), (51 : UInt8), (49 : UInt8), (52 : UInt8), (49 : UInt8), (53 : UInt8), (49 : UInt8), (54 : UInt8), (49 : UInt8), (55 : UInt8), (49 : UInt8), (56 : UInt8), (49 : UInt8), (57 : UInt8), (50 : UInt8), (48 : UInt8), (50 : UInt8), (49 : UInt8), (50 : UInt8), (50 : UInt8), (50 : UInt8), (51 : UInt8), (50 : UInt8), (52 : UInt8), (50 : UInt8), (53 : UInt8), (50 : UInt8), (54 : UInt8), (50 : UInt8), (55 : UInt8), (50 : UInt8), (56 : UInt8), (50 : UInt8), (57 : UInt8), (51 : UInt8), (48 : UInt8), (51 : UInt8), (49 : UInt8), (51 : UInt8), (50 : UInt8), (51 : UInt8), (51 : UInt8), (51 : UInt8), (52 : UInt8), (51 : UInt8), (53 : UInt8), (51 : UInt8), (54 : UInt8), (51 : UInt8), (55 : UInt8), (51 : UInt8), (56 : UInt8), (51 : UInt8), (57 : UInt8), (52 : UInt8), (48 : UInt8), (52 : UInt8), (49 : UInt8), (52 : UInt8), (50 : UInt8), (52 : UInt8), (51 : UInt8), (52 : UInt8), (52 : UInt8), (52 : UInt8), (53 : UInt8), (52 : UInt8), (54 : UInt8), (52 : UInt8), (55 : UInt8), (52 : UInt8), (56 : UInt8), (52 : UInt8), (57 : UInt8), (53 : UInt8), (48 : UInt8), (53 : UInt8), (49 : UInt8), (53 : UInt8), (50 : UInt8), (53 : UInt8), (51 : UInt8), (53 : UInt8), (52 : UInt8), (53 : UInt8), (53 : UInt8), (53 : UInt8), (54 : UInt8), (53 : UInt8), (55 : UInt8), (53 : UInt8), (56 : UInt8), (53 : UInt8), (57 : UInt8), (54 : UInt8), (48 : UInt8), (54 : UInt8), (49 : UInt8), (54 : UInt8), (50 : UInt8), (54 : UInt8), (51 : UInt8), (54 : UInt8), (52 : UInt8), (54 : UInt8), (53 : UInt8), (54 : UInt8), (54 : UInt8), (54 : UInt8), (55 : UInt8), (54 : UInt8), (56 : UInt8), (54 : UInt8), (57 : UInt8), (55 : UInt8), (48 : UInt8), (55 : UInt8), (49 : UInt8), (55 : UInt8), (50 : UInt8), (55 : UInt8), (51 : UInt8), (55 : UInt8), (52 : UInt8), (55 : UInt8), (53 : UInt8), (55 : UInt8), (54 : UInt8), (55 : UInt8), (55 : UInt8), (55 : UInt8), (56 : UInt8), (55 : UInt8), (57 : UInt8), (56 : UInt8), (48 : UInt8), (56 : UInt8), (49 : UInt8), (56 : UInt8), (50 : UInt8), (56 : UInt8), (51 : UInt8), (56 : UInt8), (52 : UInt8), (56 : UInt8), (53 : UInt8), (56 : UInt8), (54 : UInt8), (56 : UInt8), (55 : UInt8), (56 : UInt8), (56 : UInt8), (56 : UInt8), (57 : UInt8), (57 : UInt8), (48 : UInt8), (57 : UInt8), (49 : UInt8), (57 : UInt8), (50 : UInt8), (57 : UInt8), (51 : UInt8), (57 : UInt8), (52 : UInt8), (57 : UInt8), (53 : UInt8), (57 : UInt8), (54 : UInt8), (57 : UInt8), (55 : UInt8), (57 : UInt8), (56 : UInt8), (57 : UInt8), (57 : UInt8), (2 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (12 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (3 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (5 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (8 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (6 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (7 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (8 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (9 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (10 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (11 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (12 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (13 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (14 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (109 : UInt8), (93 : UInt8), (203 : UInt8), (214 : UInt8), (44 : UInt8), (80 : UInt8), (235 : UInt8), (99 : UInt8), (120 : UInt8), (65 : UInt8), (166 : UInt8), (87 : UInt8), (113 : UInt8), (27 : UInt8), (139 : UInt8), (185 : UInt8), (21 : UInt8), (162 : UInt8), (92 : UInt8), (85 : UInt8), (52 : UInt8), (85 : UInt8), (7 : UInt8), (212 : UInt8), (83 : UInt8), (120 : UInt8), (173 : UInt8), (129 : UInt8), (81 : UInt8), (240 : UInt8), (163 : UInt8), (247 : UInt8), (97 : UInt8), (115 : UInt8), (115 : UInt8), (101 : UInt8), (114 : UInt8), (116 : UInt8), (105 : UInt8), (111 : UInt8), (110 : UInt8), (32 : UInt8), (102 : UInt8), (97 : UInt8), (105 : UInt8), (108 : UInt8), (101 : UInt8), (100 : UInt8), (58 : UInt8), (32 : UInt8), (112 : UInt8), (115 : UInt8), (105 : UInt8), (122 : UInt8), (101 : UInt8), (32 : UInt8), (62 : UInt8), (61 : UInt8), (32 : UInt8), (115 : UInt8), (105 : UInt8), (122 : UInt8), (101 : UInt8), (32 : UInt8), (43 : UInt8), (32 : UInt8), (109 : UInt8), (105 : UInt8), (110 : UInt8), (95 : UInt8), (111 : UInt8), (118 : UInt8), (101 : UInt8), (114 : UInt8), (104 : UInt8), (101 : UInt8), (97 : UInt8), (100 : UInt8), (0 : UInt8), (0 : UInt8), (136 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (42 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (177 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (9 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (97 : UInt8), (115 : UInt8), (115 : UInt8), (101 : UInt8), (114 : UInt8), (116 : UInt8), (105 : UInt8), (111 : UInt8), (110 : UInt8), (32 : UInt8), (102 : UInt8), (97 : UInt8), (105 : UInt8), (108 : UInt8), (101 : UInt8), (100 : UInt8), (58 : UInt8), (32 : UInt8), (112 : UInt8), (115 : UInt8), (105 : UInt8), (122 : UInt8), (101 : UInt8), (32 : UInt8), (60 : UInt8), (61 : UInt8), (32 : UInt8), (115 : UInt8), (105 : UInt8), (122 : UInt8), (101 : UInt8), (32 : UInt8), (43 : UInt8), (32 : UInt8), (109 : UInt8), (97 : UInt8), (120 : UInt8), (95 : UInt8), (111 : UInt8), (118 : UInt8), (101 : UInt8), (114 : UInt8), (104 : UInt8), (101 : UInt8), (97 : UInt8), (100 : UInt8), (0 : UInt8), (0 : UInt8), (136 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (42 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (183 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (13 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (8 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (15 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (2 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (12 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (99 : UInt8), (97 : UInt8), (112 : UInt8), (97 : UInt8), (99 : UInt8), (105 : UInt8), (116 : UInt8), (121 : UInt8), (32 : UInt8), (111 : UInt8), (118 : UInt8), (101 : UInt8), (114 : UInt8), (102 : UInt8), (108 : UInt8), (111 : UInt8), (119 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (55 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (80 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (28 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (5 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (48 : UInt8), (48 : UInt8), (48 : UInt8), (49 : UInt8), (48 : UInt8), (50 : UInt8), (48 : UInt8), (51 : UInt8), (48 : UInt8), (52 : UInt8), (48 : UInt8), (53 : UInt8), (48 : UInt8), (54 : UInt8), (48 : UInt8), (55 : UInt8), (48 : UInt8), (56 : UInt8), (48 : UInt8), (57 : UInt8), (49 : UInt8), (48 : UInt8), (49 : UInt8), (49 : UInt8), (49 : UInt8), (50 : UInt8), (49 : UInt8), (51 : UInt8), (49 : UInt8), (52 : UInt8), (49 : UInt8), (53 : UInt8), (49 : UInt8), (54 : UInt8), (49 : UInt8), (55 : UInt8), (49 : UInt8), (56 : UInt8), (49 : UInt8), (57 : UInt8), (50 : UInt8), (48 : UInt8), (50 : UInt8), (49 : UInt8), (50 : UInt8), (50 : UInt8), (50 : UInt8), (51 : UInt8), (50 : UInt8), (52 : UInt8), (50 : UInt8), (53 : UInt8), (50 : UInt8), (54 : UInt8), (50 : UInt8), (55 : UInt8), (50 : UInt8), (56 : UInt8), (50 : UInt8), (57 : UInt8), (51 : UInt8), (48 : UInt8), (51 : UInt8), (49 : UInt8), (51 : UInt8), (50 : UInt8), (51 : UInt8), (51 : UInt8), (51 : UInt8), (52 : UInt8), (51 : UInt8), (53 : UInt8), (51 : UInt8), (54 : UInt8), (51 : UInt8), (55 : UInt8), (51 : UInt8), (56 : UInt8), (51 : UInt8), (57 : UInt8), (52 : UInt8), (48 : UInt8), (52 : UInt8), (49 : UInt8), (52 : UInt8), (50 : UInt8), (52 : UInt8), (51 : UInt8), (52 : UInt8), (52 : UInt8), (52 : UInt8), (53 : UInt8), (52 : UInt8), (54 : UInt8), (52 : UInt8), (55 : UInt8), (52 : UInt8), (56 : UInt8), (52 : UInt8), (57 : UInt8), (53 : UInt8), (48 : UInt8), (53 : UInt8), (49 : UInt8), (53 : UInt8), (50 : UInt8), (53 : UInt8), (51 : UInt8), (53 : UInt8), (52 : UInt8), (53 : UInt8), (53 : UInt8), (53 : UInt8), (54 : UInt8), (53 : UInt8), (55 : UInt8), (53 : UInt8), (56 : UInt8), (53 : UInt8), (57 : UInt8), (54 : UInt8), (48 : UInt8), (54 : UInt8), (49 : UInt8), (54 : UInt8), (50 : UInt8), (54 : UInt8), (51 : UInt8), (54 : UInt8), (52 : UInt8), (54 : UInt8), (53 : UInt8), (54 : UInt8), (54 : UInt8), (54 : UInt8), (55 : UInt8), (54 : UInt8), (56 : UInt8), (54 : UInt8), (57 : UInt8), (55 : UInt8), (48 : UInt8), (55 : UInt8), (49 : UInt8), (55 : UInt8), (50 : UInt8), (55 : UInt8), (51 : UInt8), (55 : UInt8), (52 : UInt8), (55 : UInt8), (53 : UInt8), (55 : UInt8), (54 : UInt8), (55 : UInt8), (55 : UInt8), (55 : UInt8), (56 : UInt8), (55 : UInt8), (57 : UInt8), (56 : UInt8), (48 : UInt8), (56 : UInt8), (49 : UInt8), (56 : UInt8), (50 : UInt8), (56 : UInt8), (51 : UInt8), (56 : UInt8), (52 : UInt8), (56 : UInt8), (53 : UInt8), (56 : UInt8), (54 : UInt8), (56 : UInt8), (55 : UInt8), (56 : UInt8), (56 : UInt8), (56 : UInt8), (57 : UInt8), (57 : UInt8), (48 : UInt8), (57 : UInt8), (49 : UInt8), (57 : UInt8), (50 : UInt8), (57 : UInt8), (51 : UInt8), (57 : UInt8), (52 : UInt8), (57 : UInt8), (53 : UInt8), (57 : UInt8), (54 : UInt8), (57 : UInt8), (55 : UInt8), (57 : UInt8), (56 : UInt8), (57 : UInt8), (57 : UInt8)] }
+    { offset := some (1048576 : UInt32), bytes := [(32 : UInt8), (105 : UInt8), (110 : UInt8), (100 : UInt8), (101 : UInt8), (120 : UInt8), (32 : UInt8), (111 : UInt8), (117 : UInt8), (116 : UInt8), (32 : UInt8), (111 : UInt8), (102 : UInt8), (32 : UInt8), (98 : UInt8), (111 : UInt8), (117 : UInt8), (110 : UInt8), (100 : UInt8), (115 : UInt8), (58 : UInt8), (32 : UInt8), (116 : UInt8), (104 : UInt8), (101 : UInt8), (32 : UInt8), (108 : UInt8), (101 : UInt8), (110 : UInt8), (32 : UInt8), (105 : UInt8), (115 : UInt8), (32 : UInt8), (192 : UInt8), (18 : UInt8), (32 : UInt8), (98 : UInt8), (117 : UInt8), (116 : UInt8), (32 : UInt8), (116 : UInt8), (104 : UInt8), (101 : UInt8), (32 : UInt8), (105 : UInt8), (110 : UInt8), (100 : UInt8), (101 : UInt8), (120 : UInt8), (32 : UInt8), (105 : UInt8), (115 : UInt8), (32 : UInt8), (192 : UInt8), (0 : UInt8), (47 : UInt8), (114 : UInt8), (117 : UInt8), (115 : UInt8), (116 : UInt8), (99 : UInt8), (47 : UInt8), (53 : UInt8), (57 : UInt8), (56 : UInt8), (48 : UInt8), (55 : UInt8), (54 : UInt8), (49 : UInt8), (54 : UInt8), (101 : UInt8), (49 : UInt8), (102 : UInt8), (97 : UInt8), (50 : UInt8), (53 : UInt8), (52 : UInt8), (48 : UInt8), (55 : UInt8), (50 : UInt8), (52 : UInt8), (98 : UInt8), (102 : UInt8), (98 : UInt8), (97 : UInt8), (99 : UInt8), (49 : UInt8), (52 : UInt8), (100 : UInt8), (55 : UInt8), (57 : UInt8), (55 : UInt8), (54 : UInt8), (100 : UInt8), (55 : UInt8), (101 : UInt8), (52 : UInt8), (97 : UInt8), (51 : UInt8), (56 : UInt8), (54 : UInt8), (48 : UInt8), (47 : UInt8), (108 : UInt8), (105 : UInt8), (98 : UInt8), (114 : UInt8), (97 : UInt8), (114 : UInt8), (121 : UInt8), (47 : UInt8), (97 : UInt8), (108 : UInt8), (108 : UInt8), (111 : UInt8), (99 : UInt8), (47 : UInt8), (115 : UInt8), (114 : UInt8), (99 : UInt8), (47 : UInt8), (114 : UInt8), (97 : UInt8), (119 : UInt8), (95 : UInt8), (118 : UInt8), (101 : UInt8), (99 : UInt8), (47 : UInt8), (109 : UInt8), (111 : UInt8), (100 : UInt8), (46 : UInt8), (114 : UInt8), (115 : UInt8), (0 : UInt8), (47 : UInt8), (114 : UInt8), (117 : UInt8), (115 : UInt8), (116 : UInt8), (47 : UInt8), (100 : UInt8), (101 : UInt8), (112 : UInt8), (115 : UInt8), (47 : UInt8), (100 : UInt8), (108 : UInt8), (109 : UInt8), (97 : UInt8), (108 : UInt8), (108 : UInt8), (111 : UInt8), (99 : UInt8), (45 : UInt8), (48 : UInt8), (46 : UInt8), (50 : UInt8), (46 : UInt8), (49 : UInt8), (49 : UInt8), (47 : UInt8), (115 : UInt8), (114 : UInt8), (99 : UInt8), (47 : UInt8), (100 : UInt8), (108 : UInt8), (109 : UInt8), (97 : UInt8), (108 : UInt8), (108 : UInt8), (111 : UInt8), (99 : UInt8), (46 : UInt8), (114 : UInt8), (115 : UInt8), (0 : UInt8), (105 : UInt8), (116 : UInt8), (111 : UInt8), (97 : UInt8), (47 : UInt8), (115 : UInt8), (114 : UInt8), (99 : UInt8), (47 : UInt8), (108 : UInt8), (105 : UInt8), (98 : UInt8), (46 : UInt8), (114 : UInt8), (115 : UInt8), (0 : UInt8), (47 : UInt8), (99 : UInt8), (97 : UInt8), (114 : UInt8), (103 : UInt8), (111 : UInt8), (45 : UInt8), (104 : UInt8), (111 : UInt8), (109 : UInt8), (101 : UInt8), (47 : UInt8), (114 : UInt8), (101 : UInt8), (103 : UInt8), (105 : UInt8), (115 : UInt8), (116 : UInt8), (114 : UInt8), (121 : UInt8), (47 : UInt8), (115 : UInt8), (114 : UInt8), (99 : UInt8), (47 : UInt8), (105 : UInt8), (110 : UInt8), (100 : UInt8), (101 : UInt8), (120 : UInt8), (46 : UInt8), (99 : UInt8), (114 : UInt8), (97 : UInt8), (116 : UInt8), (101 : UInt8), (115 : UInt8), (46 : UInt8), (105 : UInt8), (111 : UInt8), (45 : UInt8), (49 : UInt8), (57 : UInt8), (52 : UInt8), (57 : UInt8), (99 : UInt8), (102 : UInt8), (56 : UInt8), (99 : UInt8), (54 : UInt8), (98 : UInt8), (53 : UInt8), (98 : UInt8), (53 : UInt8), (53 : UInt8), (55 : UInt8), (102 : UInt8), (47 : UInt8), (105 : UInt8), (116 : UInt8), (111 : UInt8), (97 : UInt8), (45 : UInt8), (49 : UInt8), (46 : UInt8), (48 : UInt8), (46 : UInt8), (49 : UInt8), (56 : UInt8), (47 : UInt8), (115 : UInt8), (114 : UInt8), (99 : UInt8), (47 : UInt8), (108 : UInt8), (105 : UInt8), (98 : UInt8), (46 : UInt8), (114 : UInt8), (115 : UInt8), (0 : UInt8), (38 : UInt8), (99 : UInt8), (111 : UInt8), (112 : UInt8), (121 : UInt8), (95 : UInt8), (102 : UInt8), (114 : UInt8), (111 : UInt8), (109 : UInt8), (95 : UInt8), (115 : UInt8), (108 : UInt8), (105 : UInt8), (99 : UInt8), (101 : UInt8), (58 : UInt8), (32 : UInt8), (115 : UInt8), (111 : UInt8), (117 : UInt8), (114 : UInt8), (99 : UInt8), (101 : UInt8), (32 : UInt8), (115 : UInt8), (108 : UInt8), (105 : UInt8), (99 : UInt8), (101 : UInt8), (32 : UInt8), (108 : UInt8), (101 : UInt8), (110 : UInt8), (103 : UInt8), (116 : UInt8), (104 : UInt8), (32 : UInt8), (40 : UInt8), (192 : UInt8), (43 : UInt8), (41 : UInt8), (32 : UInt8), (100 : UInt8), (111 : UInt8), (101 : UInt8), (115 : UInt8), (32 : UInt8), (110 : UInt8), (111 : UInt8), (116 : UInt8), (32 : UInt8), (109 : UInt8), (97 : UInt8), (116 : UInt8), (99 : UInt8), (104 : UInt8), (32 : UInt8), (100 : UInt8), (101 : UInt8), (115 : UInt8), (116 : UInt8), (105 : UInt8), (110 : UInt8), (97 : UInt8), (116 : UInt8), (105 : UInt8), (111 : UInt8), (110 : UInt8), (32 : UInt8), (115 : UInt8), (108 : UInt8), (105 : UInt8), (99 : UInt8), (101 : UInt8), (32 : UInt8), (108 : UInt8), (101 : UInt8), (110 : UInt8), (103 : UInt8), (116 : UInt8), (104 : UInt8), (32 : UInt8), (40 : UInt8), (192 : UInt8), (1 : UInt8), (41 : UInt8), (0 : UInt8), (195 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (80 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (188 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (1 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (179 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (15 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (22 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (49 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (179 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (15 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (39 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (49 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (195 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (80 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (76 : UInt8), (1 : UInt8), (0 : UInt8), (0 : UInt8), (1 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (48 : UInt8), (48 : UInt8), (48 : UInt8), (49 : UInt8), (48 : UInt8), (50 : UInt8), (48 : UInt8), (51 : UInt8), (48 : UInt8), (52 : UInt8), (48 : UInt8), (53 : UInt8), (48 : UInt8), (54 : UInt8), (48 : UInt8), (55 : UInt8), (48 : UInt8), (56 : UInt8), (48 : UInt8), (57 : UInt8), (49 : UInt8), (48 : UInt8), (49 : UInt8), (49 : UInt8), (49 : UInt8), (50 : UInt8), (49 : UInt8), (51 : UInt8), (49 : UInt8), (52 : UInt8), (49 : UInt8), (53 : UInt8), (49 : UInt8), (54 : UInt8), (49 : UInt8), (55 : UInt8), (49 : UInt8), (56 : UInt8), (49 : UInt8), (57 : UInt8), (50 : UInt8), (48 : UInt8), (50 : UInt8), (49 : UInt8), (50 : UInt8), (50 : UInt8), (50 : UInt8), (51 : UInt8), (50 : UInt8), (52 : UInt8), (50 : UInt8), (53 : UInt8), (50 : UInt8), (54 : UInt8), (50 : UInt8), (55 : UInt8), (50 : UInt8), (56 : UInt8), (50 : UInt8), (57 : UInt8), (51 : UInt8), (48 : UInt8), (51 : UInt8), (49 : UInt8), (51 : UInt8), (50 : UInt8), (51 : UInt8), (51 : UInt8), (51 : UInt8), (52 : UInt8), (51 : UInt8), (53 : UInt8), (51 : UInt8), (54 : UInt8), (51 : UInt8), (55 : UInt8), (51 : UInt8), (56 : UInt8), (51 : UInt8), (57 : UInt8), (52 : UInt8), (48 : UInt8), (52 : UInt8), (49 : UInt8), (52 : UInt8), (50 : UInt8), (52 : UInt8), (51 : UInt8), (52 : UInt8), (52 : UInt8), (52 : UInt8), (53 : UInt8), (52 : UInt8), (54 : UInt8), (52 : UInt8), (55 : UInt8), (52 : UInt8), (56 : UInt8), (52 : UInt8), (57 : UInt8), (53 : UInt8), (48 : UInt8), (53 : UInt8), (49 : UInt8), (53 : UInt8), (50 : UInt8), (53 : UInt8), (51 : UInt8), (53 : UInt8), (52 : UInt8), (53 : UInt8), (53 : UInt8), (53 : UInt8), (54 : UInt8), (53 : UInt8), (55 : UInt8), (53 : UInt8), (56 : UInt8), (53 : UInt8), (57 : UInt8), (54 : UInt8), (48 : UInt8), (54 : UInt8), (49 : UInt8), (54 : UInt8), (50 : UInt8), (54 : UInt8), (51 : UInt8), (54 : UInt8), (52 : UInt8), (54 : UInt8), (53 : UInt8), (54 : UInt8), (54 : UInt8), (54 : UInt8), (55 : UInt8), (54 : UInt8), (56 : UInt8), (54 : UInt8), (57 : UInt8), (55 : UInt8), (48 : UInt8), (55 : UInt8), (49 : UInt8), (55 : UInt8), (50 : UInt8), (55 : UInt8), (51 : UInt8), (55 : UInt8), (52 : UInt8), (55 : UInt8), (53 : UInt8), (55 : UInt8), (54 : UInt8), (55 : UInt8), (55 : UInt8), (55 : UInt8), (56 : UInt8), (55 : UInt8), (57 : UInt8), (56 : UInt8), (48 : UInt8), (56 : UInt8), (49 : UInt8), (56 : UInt8), (50 : UInt8), (56 : UInt8), (51 : UInt8), (56 : UInt8), (52 : UInt8), (56 : UInt8), (53 : UInt8), (56 : UInt8), (54 : UInt8), (56 : UInt8), (55 : UInt8), (56 : UInt8), (56 : UInt8), (56 : UInt8), (57 : UInt8), (57 : UInt8), (48 : UInt8), (57 : UInt8), (49 : UInt8), (57 : UInt8), (50 : UInt8), (57 : UInt8), (51 : UInt8), (57 : UInt8), (52 : UInt8), (57 : UInt8), (53 : UInt8), (57 : UInt8), (54 : UInt8), (57 : UInt8), (55 : UInt8), (57 : UInt8), (56 : UInt8), (57 : UInt8), (57 : UInt8), (2 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (12 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (3 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (5 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (8 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (6 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (7 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (8 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (9 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (10 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (11 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (12 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (13 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (14 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (109 : UInt8), (93 : UInt8), (203 : UInt8), (214 : UInt8), (44 : UInt8), (80 : UInt8), (235 : UInt8), (99 : UInt8), (120 : UInt8), (65 : UInt8), (166 : UInt8), (87 : UInt8), (113 : UInt8), (27 : UInt8), (139 : UInt8), (185 : UInt8), (21 : UInt8), (162 : UInt8), (92 : UInt8), (85 : UInt8), (52 : UInt8), (85 : UInt8), (7 : UInt8), (212 : UInt8), (83 : UInt8), (120 : UInt8), (173 : UInt8), (129 : UInt8), (81 : UInt8), (240 : UInt8), (163 : UInt8), (247 : UInt8), (97 : UInt8), (115 : UInt8), (115 : UInt8), (101 : UInt8), (114 : UInt8), (116 : UInt8), (105 : UInt8), (111 : UInt8), (110 : UInt8), (32 : UInt8), (102 : UInt8), (97 : UInt8), (105 : UInt8), (108 : UInt8), (101 : UInt8), (100 : UInt8), (58 : UInt8), (32 : UInt8), (112 : UInt8), (115 : UInt8), (105 : UInt8), (122 : UInt8), (101 : UInt8), (32 : UInt8), (62 : UInt8), (61 : UInt8), (32 : UInt8), (115 : UInt8), (105 : UInt8), (122 : UInt8), (101 : UInt8), (32 : UInt8), (43 : UInt8), (32 : UInt8), (109 : UInt8), (105 : UInt8), (110 : UInt8), (95 : UInt8), (111 : UInt8), (118 : UInt8), (101 : UInt8), (114 : UInt8), (104 : UInt8), (101 : UInt8), (97 : UInt8), (100 : UInt8), (0 : UInt8), (0 : UInt8), (136 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (42 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (177 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (9 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (97 : UInt8), (115 : UInt8), (115 : UInt8), (101 : UInt8), (114 : UInt8), (116 : UInt8), (105 : UInt8), (111 : UInt8), (110 : UInt8), (32 : UInt8), (102 : UInt8), (97 : UInt8), (105 : UInt8), (108 : UInt8), (101 : UInt8), (100 : UInt8), (58 : UInt8), (32 : UInt8), (112 : UInt8), (115 : UInt8), (105 : UInt8), (122 : UInt8), (101 : UInt8), (32 : UInt8), (60 : UInt8), (61 : UInt8), (32 : UInt8), (115 : UInt8), (105 : UInt8), (122 : UInt8), (101 : UInt8), (32 : UInt8), (43 : UInt8), (32 : UInt8), (109 : UInt8), (97 : UInt8), (120 : UInt8), (95 : UInt8), (111 : UInt8), (118 : UInt8), (101 : UInt8), (114 : UInt8), (104 : UInt8), (101 : UInt8), (97 : UInt8), (100 : UInt8), (0 : UInt8), (0 : UInt8), (136 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (42 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (183 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (13 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (8 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (15 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (2 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (12 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (99 : UInt8), (97 : UInt8), (112 : UInt8), (97 : UInt8), (99 : UInt8), (105 : UInt8), (116 : UInt8), (121 : UInt8), (32 : UInt8), (111 : UInt8), (118 : UInt8), (101 : UInt8), (114 : UInt8), (102 : UInt8), (108 : UInt8), (111 : UInt8), (119 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (55 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (80 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (28 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (5 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (48 : UInt8), (48 : UInt8), (48 : UInt8), (49 : UInt8), (48 : UInt8), (50 : UInt8), (48 : UInt8), (51 : UInt8), (48 : UInt8), (52 : UInt8), (48 : UInt8), (53 : UInt8), (48 : UInt8), (54 : UInt8), (48 : UInt8), (55 : UInt8), (48 : UInt8), (56 : UInt8), (48 : UInt8), (57 : UInt8), (49 : UInt8), (48 : UInt8), (49 : UInt8), (49 : UInt8), (49 : UInt8), (50 : UInt8), (49 : UInt8), (51 : UInt8), (49 : UInt8), (52 : UInt8), (49 : UInt8), (53 : UInt8), (49 : UInt8), (54 : UInt8), (49 : UInt8), (55 : UInt8), (49 : UInt8), (56 : UInt8), (49 : UInt8), (57 : UInt8), (50 : UInt8), (48 : UInt8), (50 : UInt8), (49 : UInt8), (50 : UInt8), (50 : UInt8), (50 : UInt8), (51 : UInt8), (50 : UInt8), (52 : UInt8), (50 : UInt8), (53 : UInt8), (50 : UInt8), (54 : UInt8), (50 : UInt8), (55 : UInt8), (50 : UInt8), (56 : UInt8), (50 : UInt8), (57 : UInt8), (51 : UInt8), (48 : UInt8), (51 : UInt8), (49 : UInt8), (51 : UInt8), (50 : UInt8), (51 : UInt8), (51 : UInt8), (51 : UInt8), (52 : UInt8), (51 : UInt8), (53 : UInt8), (51 : UInt8), (54 : UInt8), (51 : UInt8), (55 : UInt8), (51 : UInt8), (56 : UInt8), (51 : UInt8), (57 : UInt8), (52 : UInt8), (48 : UInt8), (52 : UInt8), (49 : UInt8), (52 : UInt8), (50 : UInt8), (52 : UInt8), (51 : UInt8), (52 : UInt8), (52 : UInt8), (52 : UInt8), (53 : UInt8), (52 : UInt8), (54 : UInt8), (52 : UInt8), (55 : UInt8), (52 : UInt8), (56 : UInt8), (52 : UInt8), (57 : UInt8), (53 : UInt8), (48 : UInt8), (53 : UInt8), (49 : UInt8), (53 : UInt8), (50 : UInt8), (53 : UInt8), (51 : UInt8), (53 : UInt8), (52 : UInt8), (53 : UInt8), (53 : UInt8), (53 : UInt8), (54 : UInt8), (53 : UInt8), (55 : UInt8), (53 : UInt8), (56 : UInt8), (53 : UInt8), (57 : UInt8), (54 : UInt8), (48 : UInt8), (54 : UInt8), (49 : UInt8), (54 : UInt8), (50 : UInt8), (54 : UInt8), (51 : UInt8), (54 : UInt8), (52 : UInt8), (54 : UInt8), (53 : UInt8), (54 : UInt8), (54 : UInt8), (54 : UInt8), (55 : UInt8), (54 : UInt8), (56 : UInt8), (54 : UInt8), (57 : UInt8), (55 : UInt8), (48 : UInt8), (55 : UInt8), (49 : UInt8), (55 : UInt8), (50 : UInt8), (55 : UInt8), (51 : UInt8), (55 : UInt8), (52 : UInt8), (55 : UInt8), (53 : UInt8), (55 : UInt8), (54 : UInt8), (55 : UInt8), (55 : UInt8), (55 : UInt8), (56 : UInt8), (55 : UInt8), (57 : UInt8), (56 : UInt8), (48 : UInt8), (56 : UInt8), (49 : UInt8), (56 : UInt8), (50 : UInt8), (56 : UInt8), (51 : UInt8), (56 : UInt8), (52 : UInt8), (56 : UInt8), (53 : UInt8), (56 : UInt8), (54 : UInt8), (56 : UInt8), (55 : UInt8), (56 : UInt8), (56 : UInt8), (56 : UInt8), (57 : UInt8), (57 : UInt8), (48 : UInt8), (57 : UInt8), (49 : UInt8), (57 : UInt8), (50 : UInt8), (57 : UInt8), (51 : UInt8), (57 : UInt8), (52 : UInt8), (57 : UInt8), (53 : UInt8), (57 : UInt8), (54 : UInt8), (57 : UInt8), (55 : UInt8), (57 : UInt8), (56 : UInt8), (57 : UInt8), (57 : UInt8)] }
   ] },
   globals := [
     { type := .i32, init := .i32 (1048576 : UInt32) },

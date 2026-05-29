@@ -1,0 +1,12 @@
+---
+interface Props {
+  proven: number;
+  total: number;
+  small?: boolean;
+}
+const { proven, total, small } = Astro.props;
+const pct = total === 0 ? 0 : Math.round((proven / total) * 100);
+---
+<div class={"coverage-bar" + (small ? " small" : "")} aria-label={`${proven} of ${total} exports proven`}>
+  <div class="fill" style={`width: ${pct}%`}></div>
+</div>

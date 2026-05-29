@@ -1,0 +1,44 @@
+---
+import type { SourceFile } from "../types";
+import { highlightCode } from "../lib/highlight";
+import { fileLineIdPrefix } from "../lib/slug";
+
+interface Props { files: SourceFile[]; }
+const { files } = Astro.props;
+
+// Group by language so the appendix is browsable.
+const groups: { label: string; files: SourceFile[] }[] = [
+  { label: "Lean", files: files.filter(f => f.language === "lean") },
+  { label: "Rust", files: files.filter(f => f.language === "rust") },
+  { label: "Wasm", files: files.filter(f => f.language === "wat") },
+  { label: "Other", files: files.filter(f => !["lean","rust","wat"].includes(f.language)) },
+];
+
+const rendered = await Promise.all(
+  files.map(async (f) => ({
+    f,
+    html: f.body
+      ? await highlightCode(f.body, f.language, fileLineIdPrefix(f.filepath))
+      : null,
+  })),
+);
+const byPath = new Map(rendered.map(r => [r.f.filepath, r.html]));
+---
+<div class="source-section">
+  {groups.filter(g => g.files.length > 0).map((g) => (
+    <>
+      <h3 style="margin-top: 18px;">{g.label} <span style="color: var(--muted); font-weight: 400;">({g.files.length})</span></h3>
+      {g.files.map((f) => (
+        <details>
+          <summary>
+            <span>{f.filepath}</span>
+            <span class="lang">{f.language} · {f.line_count} lines</span>
+          </summary>
+          {f.body
+            ? <div class="code-wrap" set:html={byPath.get(f.filepath) ?? ""} />
+            : <div class="empty" style="padding: 10px 14px;">(binary or empty file — body not captured)</div>}
+        </details>
+      ))}
+    </>
+  ))}
+</div>

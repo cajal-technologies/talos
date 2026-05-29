@@ -1,0 +1,144 @@
+---
+import Base from "../layouts/Base.astro";
+import Badge from "../components/Badge.astro";
+import { allProjectViews } from "../lib/load";
+import { anchorId } from "../lib/slug";
+
+const views = allProjectViews();
+const rows = views.flatMap((v) =>
+  v.specs.map((sv) => ({
+    projectSlug: v.slug,
+    projectName: v.displayName,
+    sv,
+  })),
+);
+const provenCount = rows.filter(r => r.sv.status === "proven").length;
+---
+<Base title="All specs · Talos" active="specs" wide>
+  <header class="page">
+    <h1>All specs</h1>
+    <div class="meta">
+      {rows.length} spec{rows.length === 1 ? "" : "s"} across {views.length} project{views.length === 1 ? "" : "s"}
+      · {provenCount} proven · {rows.length - provenCount} unproven
+    </div>
+  </header>
+
+  <div class="filter-bar">
+    <input id="spec-filter" type="search" placeholder="Filter specs… (matches name, project, or informal text)" />
+    <select id="spec-status">
+      <option value="">All</option>
+      <option value="proven">Proven</option>
+      <option value="unproven">Unproven</option>
+    </select>
+  </div>
+
+  <table class="projects" id="specs-table">
+    <thead>
+      <tr>
+        <th data-sort="project">Project <span class="indicator"></span></th>
+        <th data-sort="name">Spec</th>
+        <th data-sort="exports" class="num">Bound exports</th>
+        <th data-sort="proofs"  class="num">Proofs</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {rows.length === 0 && (
+        <tr><td colspan="5" style="padding: 20px; text-align: center; color: var(--muted); font-style: italic;">
+          No specs discovered. Add <code>@[spec_of …]</code> to your <code>def</code>s in <code>Spec.lean</code>.
+        </td></tr>
+      )}
+      {rows.map((r) => {
+        const informalSnippet = (r.sv.spec.informal ?? r.sv.spec.docstring.prose ?? "")
+          .replace(/\s+/g, " ").slice(0, 200);
+        return (
+          <tr
+            data-name={r.sv.spec.name}
+            data-project={r.projectName}
+            data-status={r.sv.status}
+            data-search={(r.sv.spec.name + " " + r.projectName + " " + informalSnippet).toLowerCase()}
+            data-exports={r.sv.exports.length}
+            data-proofs={r.sv.proofs.length}>
+            <td class="slug"><a href={`projects/${r.projectSlug}.html`}>{r.projectName}</a></td>
+            <td class="slug">
+              <a href={`projects/${r.projectSlug}.html#spec-${anchorId(r.sv.spec.name)}`}>
+                {r.sv.spec.name}
+              </a>
+              {informalSnippet && (
+                <div style="font-size: 12px; color: var(--muted); font-family: -apple-system, sans-serif; margin-top: 2px;">
+                  {informalSnippet}{(r.sv.spec.informal ?? "").length > 200 ? "…" : ""}
+                </div>
+              )}
+            </td>
+            <td class="num">{r.sv.exports.length}</td>
+            <td class="num">{r.sv.proofs.length}</td>
+            <td>{r.sv.status === "proven"
+              ? <Badge kind="good" label={`${r.sv.proofs.length} proof${r.sv.proofs.length===1?"":"s"}`} />
+              : <Badge kind="warn" label="unproven" />}</td>
+          </tr>
+        );
+      })}
+    </tbody>
+  </table>
+
+  <script>
+    (function () {
+      const table = document.getElementById("specs-table") as HTMLTableElement | null;
+      const input = document.getElementById("spec-filter") as HTMLInputElement | null;
+      const status = document.getElementById("spec-status") as HTMLSelectElement | null;
+      if (!table || !input || !status) return;
+      const tbody = table.tBodies[0];
+      const allRows = Array.from(tbody.rows).filter(r => r.hasAttribute("data-search"));
+      let sortKey = "project";
+      let sortDir: 1 | -1 = 1;
+
+      function val(row: HTMLTableRowElement, key: string): string | number {
+        const raw = row.getAttribute("data-" + key) ?? "";
+        if (["exports", "proofs"].includes(key)) return Number(raw);
+        return raw.toLowerCase();
+      }
+
+      function render() {
+        const q = input.value.trim().toLowerCase();
+        const s = status.value;
+        const visible = allRows.filter((r) => {
+          if (q !== "" && !(r.getAttribute("data-search") ?? "").includes(q)) return false;
+          if (s !== "" && r.getAttribute("data-status") !== s) return false;
+          return true;
+        });
+        visible.sort((a, b) => {
+          const va = val(a, sortKey);
+          const vb = val(b, sortKey);
+          if (va < vb) return -1 * sortDir;
+          if (va > vb) return  1 * sortDir;
+          return 0;
+        });
+        tbody.replaceChildren(...visible);
+        for (const th of table.tHead!.rows[0].cells) {
+          const ind = th.querySelector(".indicator");
+          if (!ind) continue;
+          ind.textContent = th.getAttribute("data-sort") === sortKey
+            ? (sortDir === 1 ? "↑" : "↓") : "";
+        }
+      }
+
+      for (const th of table.tHead!.rows[0].cells) {
+        const key = th.getAttribute("data-sort");
+        if (!key) continue;
+        if (!th.querySelector(".indicator")) {
+          const s = document.createElement("span");
+          s.className = "indicator";
+          th.appendChild(s);
+        }
+        th.addEventListener("click", () => {
+          if (sortKey === key) sortDir = (sortDir === 1 ? -1 : 1);
+          else { sortKey = key; sortDir = 1; }
+          render();
+        });
+      }
+      input.addEventListener("input", render);
+      status.addEventListener("change", render);
+      render();
+    })();
+  </script>
+</Base>
