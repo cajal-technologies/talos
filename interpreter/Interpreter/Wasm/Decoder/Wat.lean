@@ -381,7 +381,20 @@ private def parsePlainOp : String → Except Err Wasm.Instruction
        || op == "return_call" || op == "return_call_indirect" || op == "return_call_ref"
        || op == "call_ref" || op == "any.convert_extern"
        || op == "memory.atomic.notify" || op.startsWith "memory.atomic."
-       || op.startsWith "atomic." then
+       || op.startsWith "atomic."
+       -- int-from-float conversions: the operand is a float we don't
+       -- model, so we can't produce a real result; lower to unreachable
+       -- alongside the float-producing ops so mixed-signature modules
+       -- still decode.
+       || op == "i32.trunc_f32_s" || op == "i32.trunc_f32_u"
+       || op == "i32.trunc_f64_s" || op == "i32.trunc_f64_u"
+       || op == "i64.trunc_f32_s" || op == "i64.trunc_f32_u"
+       || op == "i64.trunc_f64_s" || op == "i64.trunc_f64_u"
+       || op == "i32.trunc_sat_f32_s" || op == "i32.trunc_sat_f32_u"
+       || op == "i32.trunc_sat_f64_s" || op == "i32.trunc_sat_f64_u"
+       || op == "i64.trunc_sat_f32_s" || op == "i64.trunc_sat_f32_u"
+       || op == "i64.trunc_sat_f64_s" || op == "i64.trunc_sat_f64_u"
+       || op == "i32.reinterpret_f32" || op == "i64.reinterpret_f64" then
       .ok .unreachable
     else
       .error s!"unsupported instruction: {op}"
@@ -473,20 +486,31 @@ private def stubImmediateCount (op : String) : Option Nat :=
      || op == "table.grow" || op == "table.fill"
      || op == "struct.new" || op == "struct.new_default"
      || op == "array.new" || op == "array.new_default" || op == "array.new_fixed"
+     -- array element accessors take 1 atom (the array type ref) only;
+     -- struct accessors take 2 (type + field), see below.
+     || op == "array.get" || op == "array.get_u" || op == "array.get_s"
+     || op == "array.set" || op == "array.fill"
+     -- SIMD lane-index ops: one lane-index atom.
+     || op.endsWith ".extract_lane" || op.endsWith ".extract_lane_s"
+     || op.endsWith ".extract_lane_u" || op.endsWith ".replace_lane"
   then some 1
-  else if op == "br_on_cast" || op == "br_on_cast_fail" then some 3
+  -- `i8x16.shuffle` has 16 lane-index immediates.
+  else if op == "i8x16.shuffle" then some 16
+  -- `br_on_cast`/`br_on_cast_fail` take label + from_type + to_type,
+  -- where the type immediates can be atoms (`anyref`) or lists
+  -- (`(ref $t)`); they are handled separately by
+  -- `consumeBrOnCastImmediates`.
+  else if op == "br_on_cast" || op == "br_on_cast_fail" then none
   else if op == "struct.get" || op == "struct.get_u" || op == "struct.get_s"
      || op == "struct.set"
-     || op == "array.get" || op == "array.get_u" || op == "array.get_s"
-     || op == "array.set" || op == "array.new_elem" || op == "array.new_data"
-     || op == "array.copy" || op == "array.fill"
+     || op == "array.new_elem" || op == "array.new_data"
+     || op == "array.copy"
+     || op == "array.init_data" || op == "array.init_elem"
   then some 2
-  -- `table.init` and `table.copy` syntactically take 1 *or* 2 immediates
-  -- (the explicit table index defaults to 0). wasm-tools' canonical
-  -- print emits exactly one, so consume one; if a second numeric atom
-  -- follows we let it fall through as a stray atom error rather than
-  -- mis-classifying it as part of this instruction.
-  else if op == "table.copy" || op == "table.init" then some 1
+  -- `table.init` and `table.copy` are handled separately by
+  -- `consumeTableBulkAtoms` (0..2 label-looking atoms — wasm-tools'
+  -- canonical print emits 0/1 when default tables are used and 2
+  -- when both tables are named).
   else none
 
 /-- Drop the first `n` atom tokens from `toks`. Errors if a non-atom is
@@ -544,6 +568,30 @@ private def looksLikeLabel (s : String) : Bool :=
   else
     s.toList.all (fun c => c.isDigit || c = '_')
 
+/-- Consume up to `k` label-looking atoms immediately following
+`table.copy` / `table.init`. wasm-tools' canonical print emits 0 or 2
+atoms for `table.copy` (depending on whether named tables are involved)
+and 1 or 2 atoms for `table.init` (the element segment index is always
+emitted, the destination table index only when non-default), so we stop
+once we've consumed `k` atoms or hit a non-label token. -/
+private partial def consumeTableBulkAtoms : Nat → List Sexpr → List Sexpr
+  | 0, ts => ts
+  | k+1, .atom a :: ts =>
+    if looksLikeLabel a then consumeTableBulkAtoms k ts
+    else .atom a :: ts
+  | _+1, ts => ts
+
+/-- Consume the label immediate and the two type-immediates of a
+`br_on_cast` / `br_on_cast_fail`. The label is a single atom; each type
+is either an atom (e.g. `anyref`) or a `(ref …)` list. -/
+private def consumeBrOnCastImmediates (op : String)
+    : List Sexpr → Except Err (List Sexpr)
+  | .atom _ :: t1 :: t2 :: rest =>
+    match t1, t2 with
+    | .atom _, .atom _ | .atom _, .list _
+    | .list _, .atom _ | .list _, .list _ => .ok rest
+  | _ => .error s!"{op}: expected label + 2 type immediates"
+
 mutual
 
 private partial def parseInstr (ctx : Ctx) (toks : List Sexpr)
@@ -566,7 +614,7 @@ private partial def parseInstr (ctx : Ctx) (toks : List Sexpr)
     | "br_if"     => parseImmediateNat (resolveLabel ctx) .br_if op rest
     | "br_table"  => parseBrTable ctx rest
     | "call"      => parseImmediateNat (resolveNamed ctx.funcIds "function") .call op rest
-    | "call_indirect" => parseCallIndirect rest
+    | "call_indirect" | "return_call_indirect" => parseCallIndirect rest
     | "memory.init" => parseImmediateNat parseNat .memoryInit op rest
     | "data.drop"   => parseImmediateNat parseNat .dataDrop   op rest
     | "select"    =>
@@ -598,6 +646,10 @@ private partial def parseInstr (ctx : Ctx) (toks : List Sexpr)
           -- immediates so the token stream stays aligned.
           let rest' ← if op == "v128.const" then
             consumeV128ConstImmediates rest
+          else if op == "table.copy" || op == "table.init" then
+            .ok (consumeTableBulkAtoms 2 rest)
+          else if op == "br_on_cast" || op == "br_on_cast_fail" then
+            consumeBrOnCastImmediates op rest
           else match stubImmediateCount op with
             | some n => consumeStubAtoms op n rest
             | none   => .ok rest
@@ -640,7 +692,7 @@ private partial def parseFolded (ctx : Ctx) (xs : List Sexpr)
     | "call"  => foldedWithImmediate ctx (resolveNamed ctx.funcIds "function") (fun i => [.call i]) rest
     | "memory.init" => foldedWithImmediate ctx parseNat (fun i => [.memoryInit i]) rest
     | "data.drop"   => foldedWithImmediate ctx parseNat (fun i => [.dataDrop i])   rest
-    | "call_indirect" => do
+    | "call_indirect" | "return_call_indirect" => do
       let (instr, leftover) ← parseCallIndirect rest
       unless leftover.isEmpty do
         .error "folded call_indirect: trailing tokens"
@@ -930,7 +982,10 @@ private def parseTypeField (xs : List Sexpr) : TypeEntry := Id.run do
               else match atomToValueType? a with
                 | some vt => paramTypes := paramTypes ++ [vt]
                 | none    => ok := false
-            | _ => ok := false
+            -- Reference-type forms like `(ref null T)` are lowered to
+            -- the i32 placeholder so the function still type-checks
+            -- against our reduced value type set.
+            | .list _ => paramTypes := paramTypes ++ [.i32]
         | .list (.atom "result" :: tail) =>
           for t in tail do
             match t with
@@ -938,7 +993,7 @@ private def parseTypeField (xs : List Sexpr) : TypeEntry := Id.run do
               match atomToValueType? a with
               | some vt => resultTypes := resultTypes ++ [vt]
               | none    => ok := false
-            | _ => ok := false
+            | .list _ => resultTypes := resultTypes ++ [.i32]
         | _ => ok := false
       if ok then return some (paramTypes, resultTypes) else return none
     | _ => none
@@ -986,7 +1041,8 @@ private def parseFunc (funcIds : Std.HashMap String Nat)
                 else match atomToValueType? a with
                   | some vt => paramTypes := paramTypes ++ [vt]
                   | none    => throw s!"unsupported param type: {a}"
-              | _ => throw "malformed (param ...)"
+              -- Reference-type forms like `(ref null T)` → i32 placeholder.
+              | .list _ => paramTypes := paramTypes ++ [.i32]
           else
             for t in tail do
               match t with
@@ -994,7 +1050,7 @@ private def parseFunc (funcIds : Std.HashMap String Nat)
                 match atomToValueType? a with
                 | some vt => paramTypes := paramTypes ++ [vt]
                 | none    => throw s!"unsupported param type: {a}"
-              | _ => throw "malformed (param ...)"
+              | .list _ => paramTypes := paramTypes ++ [.i32]
         rest := r
       | "local" =>
         let named := tail.any fun
@@ -1010,7 +1066,8 @@ private def parseFunc (funcIds : Std.HashMap String Nat)
               else match atomToValueType? a with
                 | some vt => localTypes := localTypes ++ [vt]
                 | none    => throw s!"unsupported local type: {a}"
-            | _ => throw "malformed (local ...)"
+            -- Reference-type forms like `(ref null T)` → i32 placeholder.
+            | .list _ => localTypes := localTypes ++ [.i32]
         else
           for t in tail do
             match t with
@@ -1018,7 +1075,7 @@ private def parseFunc (funcIds : Std.HashMap String Nat)
               match atomToValueType? a with
               | some vt => localTypes := localTypes ++ [vt]
               | none    => throw s!"unsupported local type: {a}"
-            | _ => throw "malformed (local ...)"
+            | .list _ => localTypes := localTypes ++ [.i32]
         rest := r
       | "result" =>
         -- wasm-tools commonly emits `(type N) (param …) (result …)` where
@@ -1031,7 +1088,8 @@ private def parseFunc (funcIds : Std.HashMap String Nat)
               match atomToValueType? a with
               | some vt => resultTypes := resultTypes ++ [vt]
               | none    => throw s!"unsupported result type: {a}"
-            | _ => throw "malformed (result ...)"
+            -- Reference-type forms like `(ref null T)` → i32 placeholder.
+            | .list _ => resultTypes := resultTypes ++ [.i32]
         rest := r
       | "type" =>
         match tail with
@@ -1148,29 +1206,36 @@ private def parseGlobalDecl (xs : List Sexpr) : Except Err Wasm.GlobalDecl := do
       match atomToValueType? t with
       | some vt => .ok (vt, r)
       | none    => .error s!"unsupported global type: {t}"
+    -- `(mut (ref null T))` and similar reference-type syntaxes from
+    -- proposals we don't model — accept as i32 placeholder.
+    | .list (.atom "mut" :: .list _ :: _) :: r => .ok (.i32, r)
     | .atom t :: r =>
       match atomToValueType? t with
       | some vt => .ok (vt, r)
       | none    => .error s!"unsupported global type: {t}"
+    -- `(ref null T)` form (immutable ref type).
+    | .list (.atom "ref" :: _) :: r => .ok (.i32, r)
     | _ => .error "malformed (global ...): missing type"
-  let init : Wasm.Value ← match xs with
-    | [.list [.atom "i32.const", .atom n]] => .ok (.i32 (← parseI32 n))
-    | [.list [.atom "i64.const", .atom n]] => .ok (.i64 (← parseI64 n))
-    -- wasm-tools print emits bare `i32.const n` without wrapping parens
-    | [.atom "i32.const", .atom n] => .ok (.i32 (← parseI32 n))
-    | [.atom "i64.const", .atom n] => .ok (.i64 (← parseI64 n))
+  -- The init expression is either wrapped in a `(...)` list or — in
+  -- wasm-tools' canonical print — emitted as a bare sequence of atoms
+  -- (for v128.const this is `v128.const <shape> <lanes...>`, six tokens).
+  -- Normalise to "head op atom + tail" for the shape match below.
+  let (head?, tail) : Option String × List Sexpr := match xs with
+    | [.list (.atom h :: rest)] => (some h, rest)
+    | .atom h :: rest           => (some h, rest)
+    | _                         => (none, [])
+  let init : Wasm.Value ← match head?, tail with
+    | some "i32.const", .atom n :: _ => .ok (.i32 (← parseI32 n))
+    | some "i64.const", .atom n :: _ => .ok (.i64 (← parseI64 n))
     -- Init expressions from proposals we don't model are accepted by
     -- the decoder; the *value* is replaced with a zero placeholder
-    -- since none of them feed an `i32`/`i64` computation. The function
+    -- since none of them feed an `i32`/`i64` computation. Function
     -- bodies that would read the global hit `unreachable` anyway.
-    | [.list [.atom "f32.const", .atom _]]
-    | [.list [.atom "f64.const", .atom _]]
-    | [.atom "f32.const", .atom _]
-    | [.atom "f64.const", .atom _] => .ok (.i32 0)
-    | [.list [.atom "ref.null", _]] | [.atom "ref.null", _] => .ok (.i32 0)
-    | [.list [.atom "ref.func", _]] | [.atom "ref.func", _] => .ok (.i32 0)
-    | [.list (.atom "v128.const" :: _)] => .ok (.i32 0)
-    | _ => .error "global init expression must be i32.const or i64.const"
+    | some "f32.const", _ | some "f64.const", _
+    | some "v128.const", _
+    | some "ref.null",  _ | some "ref.func",  _
+    | some "global.get", _ => .ok (.i32 0)
+    | _, _ => .error "global init expression must be i32.const or i64.const"
   .ok { type := vt, init }
 
 private def parseMemDecl (xs : List Sexpr) : Except Err Wasm.MemDecl := do
@@ -1196,11 +1261,18 @@ private def parseDataSegment (xs : List Sexpr) : Except Err Wasm.DataSegment := 
     | .list (.atom "memory" :: _) :: r => r
     | _ => xs
   -- Extract the offset constant; passive segments have no offset form.
+  -- Non-`i32.const` offset expressions (e.g. `(global.get N)` pointing
+  -- at an imported global) are accepted with a 0 placeholder so the
+  -- module still decodes; tests that depend on the actual offset will
+  -- fail at runtime rather than at decode time.
   let parsed ← match xs with
     | .list [.atom "offset", .list [.atom "i32.const", .atom n]] :: r =>
       do .ok ((some (← parseU32 n) : Option UInt32), r)
     | .list [.atom "i32.const", .atom n] :: r =>
       do .ok ((some (← parseU32 n) : Option UInt32), r)
+    | .list [.atom "offset", .list (.atom "global.get" :: _)] :: r
+    | .list (.atom "global.get" :: _) :: r =>
+      .ok ((some (0 : UInt32) : Option UInt32), r)
     | _ => .ok ((none : Option UInt32), xs)
   let (offset, rest) := parsed
   let mut bytes : List UInt8 := []
