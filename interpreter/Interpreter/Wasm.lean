@@ -24,6 +24,7 @@ import Interpreter.Wasm.Examples.EarlyReturn
 import Interpreter.Wasm.Examples.EarlyBr
 import Interpreter.Wasm.Examples.EarlyBrInvalid
 import Interpreter.Wasm.Examples.TrapDivZero
+import Interpreter.Wasm.Examples.TrapUnreachable
 import Interpreter.Wasm.Examples.MemDataSection
 import Interpreter.Wasm.Examples.MemReplace
 import Interpreter.Wasm.Examples.MemNarrowI32
@@ -54,7 +55,7 @@ split into:
 * `Wasm.Examples.*`        — worked examples (IsEven, SimpleLoop,
                                  Factorial, InfiniteLoop, EvenOddRec,
                                  SumI64, IfAbs, Switch, SelectMin,
-                                 EarlyReturn, TrapDivZero,
+                                 EarlyReturn, TrapDivZero, TrapUnreachable,
                                  MemDataSection, MemReplace,
                                  MemNarrowI32, MemI64, MemGrow,
                                  MemFill, MemCopy, GlobalCounter)
