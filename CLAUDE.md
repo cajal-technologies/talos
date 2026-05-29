@@ -30,8 +30,12 @@ imports `CodeLib`, never the interpreter directly.
 
 ```bash
 # from each package directory:
-lake build       # builds the libraries and executables
+lake update
+lake exe cache get
+lake build
 ```
+
+**Never run a bare `lake build` in a fresh checkout, CI job, GitHub Action, README snippet, or shell command** — it will recompile Mathlib from source (tens of minutes to hours). Always precede it with `lake update && lake exe cache get` so Mathlib is pulled from the prebuilt cache. This applies everywhere `lake build` is mentioned: docs, READMEs, CI workflows, scripts, and ad-hoc terminal commands.
 
 There is no separate test runner. Example correctness is encoded as Lean theorems and `native_decide` checks inside the examples; a successful `lake build` means every proof and decidable example check passed. To check a single source file in isolation: `lake env lean <path>`.
 
