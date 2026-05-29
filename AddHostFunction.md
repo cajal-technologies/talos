@@ -96,7 +96,7 @@ proofs stay single-shot.
 
 ## Milestones
 
-Done (PR #15):
+Done (PR #15 — original implementation):
 
 | # | Scope |
 |---|---|
@@ -105,15 +105,20 @@ Done (PR #15):
 | M2 | `.call` dispatches to host imports |
 | M3 | `wp_call_host_cons` + WP-level proof |
 | M4 | `HostContract` / `HostSpec` / `HostEnv.Satisfies` |
-| M5 | Storage-backed counter, parametric over satisfying env |
+| M5 | Storage-backed counter, parametric over satisfying env (concrete `Store.host : List (UInt32 × UInt32)` slot) |
+
+Done (post-`Store α` refactor):
+
+| # | Scope |
+|---|---|
+| M6 | `Store α` polymorphism end-to-end. Dropped the concrete `host` slot — it is now `host : α`. `Continuation α`, `Result α`, `HostFn α`, `HostEnv α`, `HostResult α`, `HostContract α`, `HostSpec α` all parameterized. `[Inhabited α]` constraint on `Module.initialStore`. Corpus (interpreter examples + `programs/lean/Project/*`) swept to `Store Unit`. Counter lives at α := `Counter.HostState = List (UInt32 × UInt32)`. |
+| M7 | `TerminatesWith` / `PartiallyMeets` / `FuncSpec` take `env : HostEnv α` explicitly (Option A). All 106+ atomic wp simp lemmas + `wp_block_cons` / `wp_iff_cons` / `wp_loop_cons` / `wp_loop_br0_cons` are env-polymorphic. Every corpus spec now reads `∀ env : HostEnv Unit, TerminatesWith env …` — host-independence is visible at the spec. Bridge lemmas (`of_wp_entry*`, `mono`, `to_TerminatesWith`, `toPartiallyMeets`, `of_run`, `of_run_eq`) all updated. |
+| M8 | This document updated to reflect the polymorphic design as built. |
 
 Pending:
 
 | # | Scope | Done = |
 |---|---|---|
-| M6 | Promote `Store` → `Store α`. Drop the concrete `host : List (UInt32 × UInt32)` field; it becomes α. Add `[Inhabited α]` where `Module.initialStore` is called. Sweep all non-polymorphic `Store` references in interpreter examples + `programs/lean/Project/*/Spec.lean` to `Store Unit`. Counter's α := `List (UInt32 × UInt32)`. | All three packages build green. `HostDispatch` + `Counter` proofs survive under the polymorphic API. |
-| M7 | Reparametrize `TerminatesWith` / `PartiallyMeets` to take `env : HostEnv α` explicitly. Update bridge lemmas (`of_run`, `of_run_eq`, `of_wp_entry`, `of_wp_entry_for`, `to_TerminatesWith`, `toPartiallyMeets`, `FuncSpec.*`). Migrate every corpus spec file to prefix `∀ env : HostEnv Unit,` (Option A). | Corpus builds green; every `TerminatesWith` statement is host-explicit. |
-| M8 | Update this document to reflect the polymorphic design as built; decide whether to drop the `DELETE ME` marker. | Doc reflects ship state; PR mergeable as permanent reference. |
 | M9 (stretch) | WAT decoder support so a `.wat` with `(import "env" "log" …)` round-trips into `Module.imports`. | One program in `programs/lean/Project/` uses an import. |
 
 Out of scope on purpose: import-signature validation (today's runtime
