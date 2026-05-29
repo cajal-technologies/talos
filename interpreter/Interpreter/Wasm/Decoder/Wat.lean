@@ -212,53 +212,90 @@ private def atomToValueType? : String → Option Wasm.ValueType
   | "nullexternref" => some .i32
   | _     => none
 
+/-- Resolve a `(type N)` reference on a block/loop/if to the signature
+declared in the module's type table. Returns `none` if the index/id is
+unknown or the entry's signature is outside our supported integer
+subset; callers fall back to whatever inline `(param ...)` /
+`(result ...)` annotations follow. Constructed by `parseFunc` and
+threaded through `Ctx` so block/loop/if parsing can see the type table. -/
+abbrev BlockTypeResolver :=
+  String → Option (List Wasm.ValueType × List Wasm.ValueType)
+
 /-- Skip block/loop/if type annotations and collect explicit param/result
-types. The block-type info is discarded by callers (Wasm's block
-constructors carry no signature) but we still parse it to advance the
-token stream. -/
-private partial def skipBlockType :
+types. The block constructors `Wasm.Instruction.block` / `loop` / `iff`
+carry only arities (`paramArity`, `resultArity`), so we throw away the
+element types after counting them — but we *do* honour `(type N)`
+references by consulting the module's type table via `resolveType`, so
+a `block (type $sig)` whose entry declares non-zero arities is parsed
+with the correct arities instead of silently degenerating to `0 0`. -/
+private partial def skipBlockType (resolveType : BlockTypeResolver) :
     List Wasm.ValueType → List Wasm.ValueType → List Sexpr →
     List Wasm.ValueType × List Wasm.ValueType × List Sexpr
   | ps, rs, .list (.atom "result" :: ts) :: r =>
     let extra := ts.filterMap fun
       | .atom a => atomToValueType? a
       | _       => none
-    skipBlockType ps (rs ++ extra) r
+    skipBlockType resolveType ps (rs ++ extra) r
   | ps, rs, .list (.atom "param" :: ts) :: r =>
     let extra := ts.filterMap fun
       | .atom a => atomToValueType? a
       | _       => none
-    skipBlockType (ps ++ extra) rs r
-  | ps, rs, .list (.atom "type" :: _) :: r => skipBlockType ps rs r
+    skipBlockType resolveType (ps ++ extra) rs r
+  | ps, rs, .list (.atom "type" :: .atom ref :: _) :: r =>
+    -- A `(type N)` annotation adopts the type-table entry's signature as
+    -- the block's arity. wasm-tools commonly emits a redundant
+    -- `(type N) (param …) (result …)` triple where the inline forms
+    -- restate the resolved signature, so we also consume any trailing
+    -- `(param …)` / `(result …)` siblings to avoid double-counting.
+    -- If resolution fails, fall through to the inline accumulators.
+    match resolveType ref with
+    | some (resolvedPs, resolvedRs) =>
+      let r' := r.dropWhile fun
+        | .list (.atom "param" :: _)  => true
+        | .list (.atom "result" :: _) => true
+        | _ => false
+      (resolvedPs, resolvedRs, r')
+    | none => skipBlockType resolveType ps rs r
+  | ps, rs, .list (.atom "type" :: _) :: r =>
+    -- Malformed `(type …)` form (no atom reference) — preserve the old
+    -- behaviour of silently advancing the token stream.
+    skipBlockType resolveType ps rs r
   | ps, rs, .atom a :: r =>
     match atomToValueType? a with
     | some t => (ps, rs ++ [t], r)
     | none   => (ps, rs, .atom a :: r)
   | ps, rs, xs => (ps, rs, xs)
 
-/-- Pull an optional `$label` and any `(param T*)`/`(result T*)`
-annotations off the front of a block/loop/if's tokens. Returns the
-label (if any), parameter arity, result arity, and the remaining
-tokens. -/
-private def parseBlockHeader (xs : List Sexpr)
+/-- Pull an optional `$label` and any `(type N)` / `(param T*)` /
+`(result T*)` annotations off the front of a block/loop/if's tokens.
+Returns the label (if any), parameter arity, result arity, and the
+remaining tokens. `resolveType` looks up `(type N)` references against
+the module's type table; pass `fun _ => none` (or `Ctx.empty`'s default)
+when no type table is available. -/
+private def parseBlockHeader (resolveType : BlockTypeResolver) (xs : List Sexpr)
     : Option String × Nat × Nat × List Sexpr :=
   match xs with
   | .atom a :: r =>
     if a.startsWith "$" then
-      let (ps, rs, r') := skipBlockType [] [] r
+      let (ps, rs, r') := skipBlockType resolveType [] [] r
       (some (a.drop 1).toString, ps.length, rs.length, r')
     else
-      let (ps, rs, r') := skipBlockType [] [] xs
+      let (ps, rs, r') := skipBlockType resolveType [] [] xs
       (none, ps.length, rs.length, r')
   | _ =>
-    let (ps, rs, r') := skipBlockType [] [] xs
+    let (ps, rs, r') := skipBlockType resolveType [] [] xs
     (none, ps.length, rs.length, r')
 
 structure Ctx where
-  funcIds    : Std.HashMap String Nat
-  localIds   : Std.HashMap String Nat
-  globalIds  : Std.HashMap String Nat := {}
-  labelNames : List (Option String) := []
+  funcIds          : Std.HashMap String Nat
+  localIds         : Std.HashMap String Nat
+  globalIds        : Std.HashMap String Nat := {}
+  labelNames       : List (Option String) := []
+  /-- Resolves `(type N)` / `(type $sig)` references on `block`/`loop`/`if`
+  to the parsed signature, so multi-value block-types declared via the
+  type table are decoded with their correct arity. Defaults to "always
+  none" — callers without a type table behave exactly as before. -/
+  resolveBlockType : BlockTypeResolver := fun _ => none
 
 def Ctx.empty : Ctx := { funcIds := {}, localIds := {} }
 
@@ -681,13 +718,13 @@ private partial def parseFolded (ctx : Ctx) (xs : List Sexpr)
 private partial def foldedStructured (ctx : Ctx)
     (mk : Nat → Nat → List Wasm.Instruction → Wasm.Instruction)
     (xs : List Sexpr) : Except Err (List Wasm.Instruction) := do
-  let (label, ps, rs, xs') := parseBlockHeader xs
+  let (label, ps, rs, xs') := parseBlockHeader ctx.resolveBlockType xs
   let body ← parseInstrSeq (ctx.pushLabel label) xs'
   .ok [mk ps rs body]
 
 private partial def foldedIf (ctx : Ctx) (xs : List Sexpr)
     : Except Err (List Wasm.Instruction) := do
-  let (label, ps, rs, xs') := parseBlockHeader xs
+  let (label, ps, rs, xs') := parseBlockHeader ctx.resolveBlockType xs
   let bodyCtx := ctx.pushLabel label
   let mut condInstrs : List Wasm.Instruction := []
   let mut cur := xs'
@@ -824,7 +861,7 @@ private partial def parseStructured (ctx : Ctx)
     (mk : Nat → Nat → List Wasm.Instruction → Wasm.Instruction)
     (stops : Array String) (toks : List Sexpr)
     : Except Err (List Wasm.Instruction × List Sexpr) := do
-  let (label, ps, rs, toks') := parseBlockHeader toks
+  let (label, ps, rs, toks') := parseBlockHeader ctx.resolveBlockType toks
   let (body, after) ← parseInstrsUntil (ctx.pushLabel label) toks' stops
   match after with
   | _ :: aft => .ok ([mk ps rs body], dropTrailingLabel aft)
@@ -832,7 +869,7 @@ private partial def parseStructured (ctx : Ctx)
 
 private partial def parseIf (ctx : Ctx) (toks : List Sexpr)
     : Except Err (List Wasm.Instruction × List Sexpr) := do
-  let (label, ps, rs, toks') := parseBlockHeader toks
+  let (label, ps, rs, toks') := parseBlockHeader ctx.resolveBlockType toks
   let bodyCtx := ctx.pushLabel label
   let (thn, after) ← parseInstrsUntil bodyCtx toks' #["else", "end"]
   match after with
@@ -1055,7 +1092,11 @@ private def parseFunc (funcIds : Std.HashMap String Nat)
       | _ =>
         headerDone := true
     | _ => headerDone := true
-  let ctx : Ctx := { funcIds, localIds, globalIds }
+  let resolveBlockType : BlockTypeResolver := fun ref =>
+    match resolveTypeRef types ref with
+    | .ok sig  => some sig
+    | .error _ => none
+  let ctx : Ctx := { funcIds, localIds, globalIds, resolveBlockType }
   let instrs ← parseInstrSeq ctx rest
   return { symId, inlineExports,
            func := {
