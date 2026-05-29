@@ -52,9 +52,10 @@ jobs:
         run: npm install --global vercel@latest
 
       # `vercel deploy <dir>` uploads the directory as a static site and
-      # prints the unique preview URL on stdout. The URL is stable for
-      # this commit but differs across runs — re-deploys produce new URLs.
-      - name: Deploy to Vercel (preview)
+      # prints the unique per-deploy URL on stdout. We then alias it to a
+      # stable URL (per-PR for PRs, "latest" for main) so reviewers can
+      # bookmark/reload one address across re-deploys.
+      - name: Deploy to Vercel
         id: deploy
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
@@ -64,8 +65,24 @@ jobs:
             --token="$VERCEL_TOKEN" \
             --yes \
             --archive=tgz)
-          echo "url=$url" >> "$GITHUB_OUTPUT"
-          echo "Preview URL: $url"
+          echo "deploy-url=$url" >> "$GITHUB_OUTPUT"
+          echo "Deploy URL: $url"
+
+      - name: Alias deploy to a stable URL
+        id: alias
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          DEPLOY_URL: ${{ steps.deploy.outputs.deploy-url }}
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            alias="talos-verifier-report-pr-${{ github.event.pull_request.number }}.vercel.app"
+          else
+            alias="talos-verifier-report-latest.vercel.app"
+          fi
+          vercel alias set "$DEPLOY_URL" "$alias" --token="$VERCEL_TOKEN"
+          echo "alias-url=https://$alias" >> "$GITHUB_OUTPUT"
+          echo "Stable URL: https://$alias"
 
       - name: Sticky-comment preview URL on PR
         if: github.event_name == 'pull_request'
@@ -73,6 +90,6 @@ jobs:
         with:
           header: verifier-report-preview
           message: |
-            **Verifier report preview**: ${{ steps.deploy.outputs.url }}
+            **Verifier report preview**: ${{ steps.alias.outputs.alias-url }}
 
-            Built from ${{ github.event.pull_request.head.sha }}. Updated on each push.
+            (This URL is stable for this PR — it always points to the latest build of ${{ github.event.pull_request.head.sha }}.)
