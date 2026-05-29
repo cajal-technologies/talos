@@ -33,6 +33,7 @@ import Interpreter.Wasm.Examples.MemFill
 import Interpreter.Wasm.Examples.MemCopy
 import Interpreter.Wasm.Examples.GlobalCounter
 import Interpreter.Wasm.Examples.MultiValue
+import Interpreter.Wasm.Examples.Basic
 
 /-! # Wasm
 
@@ -52,11 +53,6 @@ split into:
 * `Wasm.Spec.Termination`  — fuel-free `TerminatesWith` /
                                  `PartiallyMeets` predicates (user-facing
                                  spec API)
-* `Wasm.Examples.*`        — worked examples (IsEven, SimpleLoop,
-                                 Factorial, InfiniteLoop, EvenOddRec,
-                                 SumI64, IfAbs, Switch, SelectMin,
-                                 EarlyReturn, TrapDivZero,
-                                 MemDataSection, MemReplace,
-                                 MemNarrowI32, MemI64, MemGrow,
-                                 MemFill, MemCopy, GlobalCounter)
+* `Wasm.Examples.Basic`    — umbrella import for the bundled worked
+                                 examples
 -/

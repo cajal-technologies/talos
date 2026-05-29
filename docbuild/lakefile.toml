@@ -6,7 +6,7 @@ packagesDir = "../.lake/packages"
 [[require]]
 scope = "leanprover"
 name = "«doc-gen4»"
-rev = "386e1a1a67d9264fef16789c2beaeb7aaa8b88e1"
+rev = "689fdeecf45e08cc048214680d40cfe2491be78b"
 
 [[require]]
 name = "Project"
