@@ -370,6 +370,20 @@ def runCheck (p : Parsed) : IO UInt32 := do
   cmdCheck (p.hasFlag "force-emit") (p.hasFlag "no-build")
   pure 0
 
+/-- Locate the bundled `report/` Astro project relative to the verifier
+binary. The binary lives at `<verifier-root>/.lake/build/bin/verifier`,
+and the report project at `<verifier-root>/report/`. -/
+private def locateReportDir : IO FilePath := do
+  let app ← IO.appPath
+  -- app = <verifier-root>/.lake/build/bin/verifier
+  --       parents:        bin/  build/  .lake/  <verifier-root>
+  let some verifierRoot := app.parent >>= (·.parent) >>= (·.parent) >>= (·.parent)
+    | die s!"could not locate verifier root from {app}"
+  let reportDir := verifierRoot / "report"
+  unless ← System.FilePath.pathExists (reportDir / "package.json") do
+    die s!"bundled report project not found at {reportDir} (resolved from {app})"
+  absNormalize reportDir
+
 def runReport (p : Parsed) : IO UInt32 := do
   let projectDir ← absNormalize (← IO.currentDir)
   let extractedFlag : String := if p.hasFlag "extracted" then
@@ -380,22 +394,13 @@ def runReport (p : Parsed) : IO UInt32 := do
     p.flag! "out" |>.as! String
   else
     "out"
-  let reportFlag : String := if p.hasFlag "report-dir" then
-    p.flag! "report-dir" |>.as! String
-  else
-    "report"
   let extractedDir ← absNormalize ⟨extractedFlag⟩
   let outDir ← absNormalize ⟨outFlag⟩
-  let reportDir ← absNormalize ⟨reportFlag⟩
+  let reportDir ← locateReportDir
   -- Phase 1: extract.
   IO.println s!"==> verifier extract → {extractedDir}"
   Verifier.Extract.run projectDir extractedDir
   -- Phase 2: build the Astro static site.
-  unless ← System.FilePath.pathExists reportDir do
-    die s!"report directory {reportDir} not found (pass --report-dir to override)"
-  let pkgJson := reportDir / "package.json"
-  unless ← System.FilePath.pathExists pkgJson do
-    die s!"{pkgJson} not found — is {reportDir} the report project?"
   let nodeModules := reportDir / "node_modules"
   unless ← System.FilePath.pathExists nodeModules do
     IO.println s!"==> npm install ({reportDir})"
@@ -441,7 +446,6 @@ def reportCmd : Cmd := `[Cli|
   FLAGS:
     "extracted"  : String; "Directory for `extract` JSON artifacts (default: ./extracted)."
     "out"        : String; "Directory for the built static site (default: ./out)."
-    "report-dir" : String; "Path to the Astro report project (default: ./report)."
 ]
 
 def extractCmd : Cmd := `[Cli|

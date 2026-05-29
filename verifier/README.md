@@ -228,7 +228,7 @@ is recommended for organization but not required by those tools — see
 verifier new     <project-path>
 verifier check   [--force-emit]
 verifier extract [--out DIR]
-verifier report  [--extracted DIR] [--out DIR] [--report-dir DIR]
+verifier report  [--extracted DIR] [--out DIR]
 ```
 
 - `verifier new` requires a non-existent or empty target directory.
@@ -244,9 +244,10 @@ verifier report  [--extracted DIR] [--out DIR] [--report-dir DIR]
   shape).
 - `verifier report` must be run from the project root. It runs
   `verifier extract` into `./extracted/` and then builds the Astro
-  static site from `./report/` (override with `--report-dir`) into
-  `./out/`. Requires `npm` on PATH; if `report/node_modules` is
-  missing the command runs `npm install` first.
+  static site bundled at `verifier/report/` (located relative to the
+  verifier binary) into `./out/`. Requires `npm` on PATH; if
+  `verifier/report/node_modules` is missing the command runs
+  `npm install` first.
 
 ### CodeLib source
 
