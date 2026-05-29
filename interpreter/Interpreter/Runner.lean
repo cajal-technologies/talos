@@ -1,4 +1,4 @@
-import Interpreter.Wasm
+import Interpreter.Wasm.Semantics
 import Interpreter.Wasm.Decoder.Wat
 
 /-!
