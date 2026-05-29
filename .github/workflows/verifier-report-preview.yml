@@ -1,0 +1,78 @@
+name: Verifier Report Preview
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Don't pile up deploys for the same PR / branch.
+concurrency:
+  group: verifier-report-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Build and deploy report preview
+    runs-on: ubuntu-latest
+    # Secrets aren't exposed to PRs from forks, so skip the job there
+    # instead of failing. Pushes and same-repo PRs run normally.
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # `verifier extract` records the repo commit; full history isn't
+          # needed but a real .git is.
+          fetch-depth: 1
+
+      # Verifier executable doesn't need Mathlib (matches verifier-freshness.yml).
+      - uses: leanprover/lean-action@v1
+        with:
+          lake-package-directory: verifier
+          build-args: verifier
+          use-mathlib-cache: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build report
+        working-directory: programs
+        run: lake -d ../verifier exe verifier report --out ./out
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      # `vercel deploy <dir>` uploads the directory as a static site and
+      # prints the unique preview URL on stdout. The URL is stable for
+      # this commit but differs across runs — re-deploys produce new URLs.
+      - name: Deploy to Vercel (preview)
+        id: deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          url=$(vercel deploy programs/out \
+            --token="$VERCEL_TOKEN" \
+            --yes \
+            --archive=tgz)
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Preview URL: $url"
+
+      - name: Sticky-comment preview URL on PR
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: verifier-report-preview
+          message: |
+            **Verifier report preview**: ${{ steps.deploy.outputs.url }}
+
+            Built from ${{ github.event.pull_request.head.sha }}. Updated on each push.
