@@ -1,0 +1,10 @@
+[package]
+name = "num_integer"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+num_integer_dep = { package = "num-integer", version = "0.1", default-features = false }

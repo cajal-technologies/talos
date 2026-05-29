@@ -13,50 +13,38 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Use the interpreter package (not verifier) so we restore its warm
-      # mathlib cache instead of attempting a cold git clone of mathlib for
-      # a brand-new package entry. All git packages are pinned at the same
-      # revisions in both interpreter/lake-manifest.json and
-      # verifier/lake-manifest.json, so we can reuse the artifacts.
+      # The verifier executable doesn't need Mathlib (see PR #12), so we
+      # skip the mathlib cache entirely.
       - uses: leanprover/lean-action@v1
         with:
-          lake-package-directory: interpreter
-          build-args: Interpreter
-          use-mathlib-cache: true
+          lake-package-directory: verifier
+          build-args: verifier
+          use-mathlib-cache: false
 
-      # Copy interpreter's already-resolved git packages into the verifier's
-      # packages directory so lake finds them without re-cloning.
-      - name: Seed verifier packages from interpreter
-        run: cp -r interpreter/.lake/packages verifier/.lake/
+      # Pre-install the rustc version pinned by programs/rust/rust-toolchain.toml
+      # (with the wasm32 target it declares) so the first cargo invocation
+      # doesn't have to download it mid-build.
+      - name: Install pinned Rust toolchain
+        working-directory: programs/rust
+        run: rustup show active-toolchain || rustup toolchain install
 
-      # Build only the verifier executable; packages are already present.
-      - name: Build verifier
-        run: lake -d verifier build verifier
-
-      # Rust toolchain + wasm32 target for cargo build inside verifier check.
-      - name: Install Rust wasm32 target
-        run: rustup target add wasm32-unknown-unknown
-
-      # wasm-tools is needed by verifier check (strip + print).
+      # wasm-tools is needed by `verifier check` (wat printer).
       - name: Install wasm-tools
         uses: taiki-e/install-action@v2
         with:
           tool: wasm-tools
 
-      # Regenerate every Program.lean / module.wat without running lake build
-      # (proof correctness is covered by the main CI job).
+      # Re-emit every Program.lean from the committed wasm sources.
+      # `--no-build` skips the final `lake build` — proof correctness is
+      # covered by the main CI job; here we only check for drift.
       - name: Regenerate programs
-        run: |
-          find programs -name "origin.toml" | while read f; do
-            dir=$(dirname "$f")
-            echo "==> verifier check --no-build $dir"
-            lake -d verifier exe verifier check --no-build "$dir"
-          done
+        working-directory: programs
+        run: lake -d ../verifier exe verifier check --no-build
 
       # Fail if any generated file changed.
       - name: Assert no drift
         run: |
           git diff --exit-code -- programs/ \
             || { echo ""; echo "Generated files are out of date. Re-run:"; \
-                 echo "  lake -d verifier exe verifier check <program-path>"; \
+                 echo "  cd programs && lake -d ../verifier exe verifier check"; \
                  exit 1; }

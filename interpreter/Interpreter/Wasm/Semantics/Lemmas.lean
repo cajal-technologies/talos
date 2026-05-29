@@ -290,7 +290,10 @@ theorem run_eq
            .Success (s.values.take f.results.length ++ callerRemainder) st
          | .Return st vs     =>
            .Success (vs.take f.results.length ++ callerRemainder) st
-         | .Break _ st _     => .Trap st "Unexpected break targeting function"
+         | .Break 0 st s     =>
+           .Success (s.values.take f.results.length ++ callerRemainder) st
+         | .Break (_+1) _ _  =>
+           .Invalid "Unexpected break targeting scope out of function"
          | .Invalid msg      => .Invalid msg
          | .Trap st msg      => .Trap st msg
          | .OutOfFuel        => .OutOfFuel) := by
@@ -299,6 +302,9 @@ theorem run_eq
   · rfl
   · simp only
     rcases exec fuel m initial (f.toLocals (args.take f.numParams).reverse) f.body env with
-      _ | _ | _ | _ | _ | _ <;> rfl
+      _ | ⟨n, _, _⟩ | _ | _ | _ | _
+    · rfl
+    · cases n <;> rfl
+    all_goals rfl
 
 end Wasm

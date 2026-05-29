@@ -1,0 +1,144 @@
+---
+import Base from "../../layouts/Base.astro";
+import Badge from "../../components/Badge.astro";
+import CoverageBar from "../../components/CoverageBar.astro";
+import Sidebar from "../../components/Sidebar.astro";
+import SpecCard from "../../components/SpecCard.astro";
+import SourceViewer from "../../components/SourceViewer.astro";
+import { allProjectViews } from "../../lib/load";
+import { highlightCode } from "../../lib/highlight";
+import { anchorId, fileLineIdPrefix } from "../../lib/slug";
+
+export async function getStaticPaths() {
+  return allProjectViews().map((v) => ({ params: { slug: v.slug }, props: { view: v } }));
+}
+
+const { view } = Astro.props;
+const art = view.artifact;
+const programHtml = art.program ? await highlightCode(art.program.body, "lean") : null;
+const provenCount = view.specs.filter(s => s.status === "proven").length;
+const exportCards = await Promise.all(
+  art.exported.map(async (e) => ({ e, html: await highlightCode(e.signature, "rust") })),
+);
+
+function sevKind(s: "info"|"warn"|"error"): "info"|"warn"|"bad" {
+  return s === "error" ? "bad" : s === "warn" ? "warn" : "info";
+}
+---
+<Base title={`${view.displayName} · Talos`} active="projects" wide>
+  <div class="crumbs"><a href="../index.html">← all projects</a></div>
+
+  <header class="page">
+    <h1>
+      {view.displayName}
+      {(() => {
+        const errs = art.diagnostics.filter(d => d.severity === "error").length;
+        if (errs > 0) return <Badge kind="bad" label={`${errs} error${errs===1?"":"s"}`} />;
+        if (view.specs.length > 0 && provenCount === view.specs.length)
+          return <Badge kind="good" label="verified" />;
+        if (view.specs.length > 0)
+          return <Badge kind="warn" label={`${provenCount}/${view.specs.length} proven`} />;
+        return <Badge kind="muted" label="no specs" />;
+      })()}
+    </h1>
+    <div class="meta">
+      rust: <code>{art.project.rust}</code>
+      · lean: <code>{art.project.lean}</code>
+      · repo @ <code>{art.repo_commit.slice(0, 12)}</code>
+      · {art.toolchains.lean}
+    </div>
+    <div style="margin-top: 14px; max-width: 480px;">
+      <CoverageBar proven={view.coverage.exportsProven} total={view.coverage.exportsTotal} />
+      <div style="font-size: 12px; color: var(--muted); margin-top: 4px;">
+        {view.coverage.exportsProven} / {view.coverage.exportsTotal} exports have a proven spec
+      </div>
+    </div>
+  </header>
+
+  <div class="project-layout">
+    <Sidebar project={view} />
+
+    <div>
+      <section class="summary-grid" style="margin-top: 0;">
+        <div class="stat"><div class="label">Exports</div><div class="value">{art.exported.length}</div></div>
+        <div class="stat"><div class="label">Specs</div><div class="value">{art.specs.length}</div></div>
+        <div class="stat"><div class="label">Verifications</div><div class="value">{art.verifications.length}</div></div>
+        <div class="stat"><div class="label">Diagnostics</div><div class="value">{art.diagnostics.length}</div></div>
+      </section>
+
+      <h2 id="specs">Formal specs</h2>
+      {view.specs.length === 0
+        ? <div class="empty">No specs discovered. Mark <code>def</code>s in <code>Spec.lean</code> with <code>@[spec_of "rust-exported" "{art.project.crate}::name"]</code>.</div>
+        : view.specs.map(sv => <SpecCard view={sv} projectSlug={view.slug} />)}
+
+      <h2 id="exports">Exported functions</h2>
+      {exportCards.length === 0
+        ? <div class="empty">No <code>#[no_mangle] extern "C"</code> exports were discovered by the extractor.</div>
+        : exportCards.map(({ e, html }) => (
+            <div class="card" id={`export-${anchorId(e.name)}`}>
+              <div class="head">
+                <span class="name">{e.name}</span>
+                <a class="loc" href={`#${fileLineIdPrefix(e.location.file)}-L${e.location.span.start.line}`}>
+                  {e.location.file}:{e.location.span.start.line}
+                </a>
+              </div>
+              {e.docstring && <div class="docstring">{e.docstring}</div>}
+              <div set:html={html} />
+            </div>
+          ))}
+
+      <h2 id="program">Program (Lean)</h2>
+      {art.program
+        ? <div class="card">
+            <div class="head">
+              <span class="name">{art.program.module}</span>
+              <a class="loc" href={`#${fileLineIdPrefix(art.program.location.file)}-L${art.program.location.span.start.line}`}>
+                {art.program.location.file}:{art.program.location.span.start.line}
+              </a>
+            </div>
+            <div set:html={programHtml ?? ""} />
+          </div>
+        : <div class="empty">No <code>Program</code> recorded.</div>}
+
+      {view.orphanVerifications.length > 0 && (
+        <>
+          <h2 id="orphans">Orphan verifications</h2>
+          <div class="empty">Theorems whose <code>@[proves …]</code> target was not found among this project's specs.</div>
+          {view.orphanVerifications.map((v) => (
+            <div class="card">
+              <div class="head">
+                <span class="name">{v.name}</span>
+                <a class="loc" href={`#${fileLineIdPrefix(v.location.file)}-L${(v.body_span?.start?.line ?? v.location.span.start.line)}`}>
+                  {v.location.file}:{v.location.span.start.line}
+                </a>
+              </div>
+              <div>proves: <code>{v.proves}</code>{" "}
+                <Badge kind={v.resolved ? "good" : "warn"} label={v.resolved ? "resolved" : "unresolved"} /></div>
+            </div>
+          ))}
+        </>
+      )}
+
+      <h2 id="diagnostics">Diagnostics</h2>
+      {art.diagnostics.length === 0
+        ? <div class="empty">No diagnostics.</div>
+        : art.diagnostics.map((d) => (
+            <div class="card">
+              <div class="head">
+                <span class="name">{d.kind}</span>
+                <Badge kind={sevKind(d.severity)} label={d.severity} />
+              </div>
+              {d.location && (
+                <a class="loc" href={`#${fileLineIdPrefix(d.location.file)}-L${d.location.span.start.line}`}>
+                  {d.location.file}:{d.location.span.start.line}
+                </a>
+              )}
+              <div style="margin-top: 4px;">{d.message}</div>
+            </div>
+          ))}
+
+      <h2 id="source">Source files <span style="color: var(--muted); font-weight: 400; font-size: 14px;">(appendix)</span></h2>
+      <SourceViewer files={art.code} />
+    </div>
+  </div>
+</Base>

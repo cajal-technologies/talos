@@ -10,5 +10,5 @@ fuel-bounded interpreter, `wp` framework, `TerminatesWith` predicate).
 
 The Core AST + WAT decoder are intentionally **not** re-exported — they
 exist only as internal scaffolding for the verifier's `.wasm → WAT → Lean
-source` pipeline (see `verifier/Verifier/EmitMini.lean`).
+source` pipeline (see `verifier/Verifier/Emit.lean`).
 -/

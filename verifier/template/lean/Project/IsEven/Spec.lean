@@ -4,8 +4,13 @@ namespace Project.IsEven.Spec
 
 open Wasm
 
-/-- The exported `is_even` function returns `1` if its `i32` argument is
-even, `0` otherwise. -/
+/-- The exported `is_even` returns `1` for even inputs and `0` otherwise.
+
+Informal spec:
+For any input `n : UInt32`, the wasm export `is_even` terminates and
+leaves a single i32 on the value stack, equal to `1` when `n` is even
+and `0` otherwise. The result is independent of the initial store. -/
+@[spec_of "rust-exported" "is_even::is_even"]
 def IsEvenSpec : Prop :=
   ∀ (initial : Store) (n : UInt32),
     TerminatesWith «module» 0 initial [.i32 n]

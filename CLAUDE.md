@@ -37,11 +37,11 @@ There is no separate test runner. Example correctness is encoded as Lean theorem
 
 ## Architecture
 
-Three layers, deliberately small and currently i32-only:
+Three layers, kept deliberately small:
 
-- **Syntax (AST).** Instructions, functions, and modules. The instruction set today is a minimal i32 core (arithmetic, comparisons, locals, structured control flow `block`/`loop`/`br`/`brIf`/`iff`, `call`, `ret`, `drop`). No memory, globals, tables, imports, or non-i32 value types yet.
-- **Semantics (interpreter).** A fuel-bounded big-step interpreter built around a single `step : Config → StepResult` function iterated by a `runLoop`. The execution state is a frame holding an operand stack (top-of-stack is the head of the list), a label stack for structured control flow, the remaining instructions, and locals; calls push the caller frame onto a call stack and return merges the callee's operand stack back onto it. Each label carries two continuations — one used on branch, one used on fall-through — which is how `block` vs `loop` differ. Insufficient operands, out-of-bounds access, division by zero, etc. produce a trap, which `run` surfaces as `none`.
-- **Reasoning (examples).** Each example pairs a hand-built module with proofs. The standard proof style is: unfold the interpreter and `simp` to reduce both sides to the same concrete computation; concrete-input sanity checks use `native_decide`; larger results compose previously proven theorems as black boxes rather than re-unfolding the interpreter. New examples should follow this pattern.
+- **Syntax (AST).** Instructions, functions, and modules. Keep the surface area minimal — only add constructs once they are needed by a concrete proof, and prefer the formulation that matches the Wasm spec's terminology so semantics and reasoning lemmas stay legible. Read the current state of `interpreter/Interpreter/Wasm/Syntax.lean` before assuming what is or isn't supported.
+- **Semantics (interpreter).** A fuel-bounded big-step interpreter. Traps (insufficient operands, out-of-bounds access, division by zero, etc.) are observable as a `none` result from `run`. When changing the semantics, the structure of the state and the shape of `step`/`run` are load-bearing for every existing proof — extend in place rather than rewriting, and keep new cases consistent with the existing ones. Read the file before editing.
+- **Reasoning (examples and lemmas).** The standard proof style: unfold the interpreter and `simp` to reduce both sides to the same concrete computation; use `native_decide` for concrete-input sanity checks; compose previously proven theorems as black boxes rather than re-unfolding the interpreter for larger results. New examples should follow this pattern.
 
 ## Public spec API: don't expose fuel
 
@@ -54,6 +54,4 @@ When writing or updating a `@[wasm_spec]` theorem, reach for these — the fuel 
 
 ## Examples
 
-Examples live in `interpreter/Interpreter/Wasm/Examples/`. Each file defines a hand-built Wasm module and proves theorems about it using the WP tactic layer. The standard pattern: state the property, apply `wp_run` to reduce to a concrete computation, then close with `simp` / `omega` / domain lemmas. New examples should follow this pattern.
-
-`Interpreter/Wasm/Examples/Factorial.lean` is a good reference: it proves a full loop invariant correctness theorem with a WP-based loop rule.
+Examples live in `interpreter/Interpreter/Wasm/Examples/`. Each file defines a hand-built Wasm module and proves theorems about it using the WP tactic layer. The standard pattern: state the property, apply `wp_run` to reduce to a concrete computation, then close with `simp` / `omega` / domain lemmas. New examples should follow this pattern; browse the existing examples directory to find one close to what you are doing and mirror its structure.

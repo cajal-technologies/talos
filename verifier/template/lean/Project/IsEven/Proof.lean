@@ -4,6 +4,7 @@ namespace Project.IsEven.Proof
 
 open Wasm Project.IsEven Project.IsEven.Spec
 
+@[proves Project.IsEven.Spec.IsEvenSpec]
 theorem is_even_spec : IsEvenSpec := by
   intro initial n
   apply TerminatesWith.of_wp_entry

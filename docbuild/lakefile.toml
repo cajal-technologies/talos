@@ -9,5 +9,5 @@ name = "«doc-gen4»"
 rev = "386e1a1a67d9264fef16789c2beaeb7aaa8b88e1"
 
 [[require]]
-name = "Programs"
-path = "../programs"
+name = "Project"
+path = "../programs/lean"

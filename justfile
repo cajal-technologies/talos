@@ -10,7 +10,7 @@ docs:
     #!/usr/bin/env bash
     set -euo pipefail
     cd "{{justfile_directory()}}/docbuild"
-    lake build Programs:docs
+    lake build Project:docs
     echo "Serving docs at http://localhost:8080 (Ctrl-C to stop)"
     python3 -m http.server 8080 --directory .lake/build/doc
 

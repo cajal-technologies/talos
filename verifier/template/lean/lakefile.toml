@@ -4,9 +4,7 @@ defaultTargets = ["Project"]
 
 [[require]]
 name = "CodeLib"
-git = "https://github.com/cajal-technologies/talos"
-subDir = "codelib"
-rev = "main"
+path = "../../../codelib"
 
 [[lean_lib]]
 name = "Project"

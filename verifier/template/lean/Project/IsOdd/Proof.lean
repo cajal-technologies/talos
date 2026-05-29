@@ -4,6 +4,7 @@ namespace Project.IsOdd.Proof
 
 open Wasm Project.IsOdd Project.IsOdd.Spec
 
+@[proves Project.IsOdd.Spec.IsOddSpec]
 theorem is_odd_spec : IsOddSpec := by
   intro initial n
   apply TerminatesWith.of_wp_entry
