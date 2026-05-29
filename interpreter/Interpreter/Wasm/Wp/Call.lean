@@ -10,27 +10,28 @@ import Interpreter.Wasm.Semantics.Lemmas
 
 namespace Wasm
 
-def FuncSpec (m : Module) (id : Nat)
+def FuncSpec (env : HostEnv α) (m : Module) (id : Nat)
     (Pre : List Value → Prop) (Post : Store α → List Value → Prop) : Prop :=
   ∀ args, Pre args → ∀ initial : Store α,
-    ∃ N, ∀ fuel ≥ N, ∃ vs st, run fuel m id initial args = .Success vs st ∧ Post st vs
+    ∃ N, ∀ fuel ≥ N, ∃ vs st, run fuel m id initial args env = .Success vs st ∧ Post st vs
 
-theorem wp_call_cons {id : Nat} {Pre : List Value → Prop} {Post : Store α → List Value → Prop}
-    (spec : FuncSpec m id Pre Post)
+theorem wp_call_cons {env : HostEnv α}
+    {id : Nat} {Pre : List Value → Prop} {Post : Store α → List Value → Prop}
+    (spec : FuncSpec env m id Pre Post)
     (hPre : Pre s.values)
-    (hPost : ∀ st' vs, Post st' vs → wp m rest Q st' { s with values := vs }) :
-    wp m (.call id :: rest) Q st s := by
+    (hPost : ∀ st' vs, Post st' vs → wp m rest Q st' { s with values := vs } env) :
+    wp m (.call id :: rest) Q st s env := by
   unfold wp
   unfold FuncSpec at spec
   obtain ⟨Ns, hNs⟩ := spec s.values hPre st
   obtain ⟨vs, st', hRun, hPost_vs⟩ := hNs Ns le_rfl
-  have hRun_ne : run Ns m id st s.values ≠ .OutOfFuel := by rw [hRun]; intro h; cases h
+  have hRun_ne : run Ns m id st s.values env ≠ .OutOfFuel := by rw [hRun]; intro h; cases h
   have hwp_rest := hPost st' vs hPost_vs
   unfold wp at hwp_rest
   obtain ⟨Nr, hNr⟩ := hwp_rest
   refine ⟨max (Ns + 1) (Nr + 1), fun fuel hfuel => ?_⟩
   obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-  have hRun_f : run f m id st s.values = .Success vs st' := by
+  have hRun_f : run f m id st s.values env = .Success vs st' := by
     rw [run_fuel_mono (by omega : f ≥ Ns) hRun_ne]; exact hRun
   rw [exec_call_cons, hRun_f]
   exact hNr (f + 1) (by omega)
@@ -48,7 +49,8 @@ theorem wp_call_cons {id : Nat} {Pre : List Value → Prop} {Post : Store α →
     host import; it defaults to `rfl`, which discharges for any module
     whose `imports` literal is `[]`. -/
 theorem FuncSpec.of_wp_body
-    {m : Module} {id : Nat} {f : Function} {Pre : List Value → Prop} {Post : Store α → List Value → Prop}
+    {env : HostEnv α} {m : Module} {id : Nat} {f : Function}
+    {Pre : List Value → Prop} {Post : Store α → List Value → Prop}
     (hf : m.funcs[id - m.imports.length]? = some f)
     (h : ∀ args, Pre args → ∀ initial : Store α,
       wp m f.body
@@ -58,9 +60,9 @@ theorem FuncSpec.of_wp_body
           | .Return st' vs      =>
               Post st' (vs.take f.results.length ++ args.drop f.numParams)
           | _                   => False)
-        initial (f.toLocals (args.take f.numParams).reverse))
+        initial (f.toLocals (args.take f.numParams).reverse) env)
     (hImp : m.imports[id]? = none := by rfl) :
-    FuncSpec m id Pre Post := by
+    FuncSpec env m id Pre Post := by
   intro args hPre initial
   have hwp := h args hPre initial
   unfold wp at hwp
@@ -69,7 +71,7 @@ theorem FuncSpec.of_wp_body
   have hQ := hN fuel hfuel
   rw [run_eq hImp]
   simp only [hf]
-  cases hexec : exec fuel m initial (f.toLocals (args.take f.numParams).reverse) f.body with
+  cases hexec : exec fuel m initial (f.toLocals (args.take f.numParams).reverse) f.body env with
   | Fallthrough st' s' =>
     rw [hexec] at hQ
     exact ⟨s'.values.take f.results.length ++ args.drop f.numParams, st', rfl, hQ⟩

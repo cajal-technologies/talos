@@ -33,21 +33,21 @@ leaves a single i64 on the value stack equal to `Nat.gcd a.toNat b.toNat`
 is preserved. -/
 @[spec_of "rust-exported" "num_integer::gcd_u64"]
 def GcdU64Spec : Prop :=
-  ∀ (initial : Store Unit) (a b : UInt64),
+  ∀ (env : HostEnv Unit) (initial : Store Unit) (a b : UInt64),
     -- Args are passed in stack order (top first). The Wasm caller pushes
     -- `a` then `b`, so the operand stack handed to `run` is `[b, a]` —
     -- which `run` reverses on entry to make local 0 = a, local 1 = b.
-    TerminatesWith «module» 0 initial [.i64 b, .i64 a]
+    TerminatesWith env «module» 0 initial [.i64 b, .i64 a]
       (fun _ rs => rs = [.i64 (UInt64.ofNat (Nat.gcd a.toNat b.toNat))])
 
 @[proves Project.NumInteger.Spec.GcdU64Spec]
 theorem gcd_u64_correct : GcdU64Spec := by
-  intro initial a b
+  intro env initial a b
   refine FuncSpec.to_TerminatesWith (Pre := fun args => args = [.i64 b, .i64 a]) ?spec rfl
   refine FuncSpec.of_wp_body (f := ⟨[.i64, .i64], [.i64, .i64], func0, [.i64]⟩) rfl ?_
   intro args hPre initial'
   subst hPre
-  show wp _ func0 _ _ _
+  show wp _ func0 _ _ _ _
   unfold func0
   wp_run
   simp

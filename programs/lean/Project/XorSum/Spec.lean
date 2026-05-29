@@ -44,16 +44,16 @@ order. Returns `0` when `len = 0`. Memory is read but not modified.
 Carries the side condition that every word read is in-bounds. -/
 @[spec_of "rust-exported" "xor_sum::xor_sum"]
 def XorSumSpec : Prop :=
-  ∀ (initial : Store Unit) (ptr len : UInt32)
+  ∀ (env : HostEnv Unit) (initial : Store Unit) (ptr len : UInt32)
     (_hmem : ∀ k < len.toNat, (ptr.toNat + 4 * k) % 4294967296 + 4 ≤ initial.mem.pages * 65536),
     -- Args in stack order (top first); `run` reverses on entry so
     -- local 0 = ptr, local 1 = len.
-    TerminatesWith «module» 0 initial [.i32 len, .i32 ptr]
+    TerminatesWith env «module» 0 initial [.i32 len, .i32 ptr]
       (fun st' rs => rs = [.i32 (xorFold st'.mem ptr len.toNat)])
 
 @[proves Project.XorSum.Spec.XorSumSpec]
 theorem xor_sum_correct : XorSumSpec := by
-  intro initial ptr len hmem
+  intro env initial ptr len hmem
   apply TerminatesWith.of_wp_entry_for (f := ⟨[.i32, .i32], [.i32], func0, [.i32]⟩) rfl
   unfold func0
   wp_run

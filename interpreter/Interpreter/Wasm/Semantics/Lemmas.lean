@@ -19,27 +19,30 @@ existential in `wp` well-behaved. -/
 `run`. Proved by induction on `f₁`; the three public theorems below are
 one-line projections. -/
 theorem fuel_mono_aux : ∀ (f₁ : Nat),
-    (∀ (m : Module) (st : Store α) (s : Locals) (inst : Instruction) (f₂ : Nat),
-        f₁ ≤ f₂ → execOne f₁ m st s inst ≠ .OutOfFuel →
-        execOne f₂ m st s inst = execOne f₁ m st s inst) ∧
-    (∀ (m : Module) (st : Store α) (s : Locals) (p : Program) (f₂ : Nat),
-        f₁ ≤ f₂ → exec f₁ m st s p ≠ .OutOfFuel →
-        exec f₂ m st s p = exec f₁ m st s p) ∧
-    (∀ (m : Module) (id : Nat) (initial : Store α) (args : List Value) (f₂ : Nat),
-        f₁ ≤ f₂ → run f₁ m id initial args ≠ .OutOfFuel →
-        run f₂ m id initial args = run f₁ m id initial args) := by
+    (∀ (m : Module) (env : HostEnv α) (st : Store α) (s : Locals)
+        (inst : Instruction) (f₂ : Nat),
+        f₁ ≤ f₂ → execOne f₁ m st s inst env ≠ .OutOfFuel →
+        execOne f₂ m st s inst env = execOne f₁ m st s inst env) ∧
+    (∀ (m : Module) (env : HostEnv α) (st : Store α) (s : Locals)
+        (p : Program) (f₂ : Nat),
+        f₁ ≤ f₂ → exec f₁ m st s p env ≠ .OutOfFuel →
+        exec f₂ m st s p env = exec f₁ m st s p env) ∧
+    (∀ (m : Module) (env : HostEnv α) (id : Nat) (initial : Store α)
+        (args : List Value) (f₂ : Nat),
+        f₁ ≤ f₂ → run f₁ m id initial args env ≠ .OutOfFuel →
+        run f₂ m id initial args env = run f₁ m id initial args env) := by
   intro f₁
   induction f₁ with
   | zero =>
     refine ⟨?_, ?_, ?_⟩
-    · intro m st s inst f₂ _ hne
+    · intro m env st s inst f₂ _ hne
       cases inst <;> simp only [execOne] at hne <;> exact absurd rfl hne
-    · intro m st s p f₂ _ hne
+    · intro m env st s p f₂ _ hne
       cases p with
       | nil => simp only [exec]
       | cons inst rest =>
         cases inst <;> simp only [exec, execOne] at hne <;> exact absurd rfl hne
-    · intro m id initial args f₂ _ hne
+    · intro m env id initial args f₂ _ hne
       simp only [run]
       rcases hImp : m.imports[id]? with _ | imp
       · -- wasm path: the in-module function index space.
@@ -58,35 +61,36 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
     obtain ⟨ihOne, ihExec, ihRun⟩ := ih
     -- Step 1: prove execOne at fuel k+1.
     have monoOne :
-        ∀ (m : Module) (st : Store α) (s : Locals) (inst : Instruction) (f₂ : Nat),
-          k + 1 ≤ f₂ → execOne (k + 1) m st s inst ≠ .OutOfFuel →
-          execOne f₂ m st s inst = execOne (k + 1) m st s inst := by
-      intro m st s inst f₂ hle hne
+        ∀ (m : Module) (env : HostEnv α) (st : Store α) (s : Locals)
+          (inst : Instruction) (f₂ : Nat),
+          k + 1 ≤ f₂ → execOne (k + 1) m st s inst env ≠ .OutOfFuel →
+          execOne f₂ m st s inst env = execOne (k + 1) m st s inst env := by
+      intro m env st s inst f₂ hle hne
       obtain ⟨k', rfl⟩ : ∃ k', f₂ = k' + 1 := ⟨f₂ - 1, by omega⟩
       have hk' : k ≤ k' := by omega
       cases inst with
       | block ps rs body =>
         simp only [execOne]
-        have hexec : exec k m st s body ≠ .OutOfFuel := by
+        have hexec : exec k m st s body env ≠ .OutOfFuel := by
           intro h; apply hne; simp only [execOne, h]
-        rw [ihExec m st s body k' hk' hexec]
+        rw [ihExec m env st s body k' hk' hexec]
       | loop ps rs body =>
         simp only [execOne]
-        have hexec : exec k m st s body ≠ .OutOfFuel := by
+        have hexec : exec k m st s body env ≠ .OutOfFuel := by
           intro h; apply hne; simp only [execOne, h]
-        rw [ihExec m st s body k' hk' hexec]
-        rcases hres : exec k m st s body with ⟨st', s'⟩ | ⟨n, st', s'⟩ | ⟨st', vs⟩ | msg | msg | _
+        rw [ihExec m env st s body k' hk' hexec]
+        rcases hres : exec k m st s body env with ⟨st', s'⟩ | ⟨n, st', s'⟩ | ⟨st', vs⟩ | msg | msg | _
         · rfl
         · cases n with
           | zero =>
             have hrec : execOne k m st'
                 { s' with values := s'.values.take ps ++ s.values.drop ps }
-                (.loop ps rs body) ≠ .OutOfFuel := by
+                (.loop ps rs body) env ≠ .OutOfFuel := by
               intro h
               apply hne
               simp only [execOne, hres]
               exact h
-            exact ihOne m st'
+            exact ihOne m env st'
               { s' with values := s'.values.take ps ++ s.values.drop ps }
               (.loop ps rs body) k' hk' hrec
           | succ _ => rfl
@@ -102,46 +106,47 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
           | i32 c =>
             by_cases hc : c ≠ 0
             · simp only [if_pos hc]
-              have hexec : exec k m st { s with values := vs } thn ≠ .OutOfFuel := by
+              have hexec : exec k m st { s with values := vs } thn env ≠ .OutOfFuel := by
                 intro h
                 apply hne
                 simp only [execOne, hvals, if_pos hc, h]
-              rw [ihExec m st { s with values := vs } thn k' hk' hexec]
+              rw [ihExec m env st { s with values := vs } thn k' hk' hexec]
             · simp only [if_neg hc]
-              have hexec : exec k m st { s with values := vs } els ≠ .OutOfFuel := by
+              have hexec : exec k m st { s with values := vs } els env ≠ .OutOfFuel := by
                 intro h
                 apply hne
                 simp only [execOne, hvals, if_neg hc, h]
-              rw [ihExec m st { s with values := vs } els k' hk' hexec]
+              rw [ihExec m env st { s with values := vs } els k' hk' hexec]
           | i64 _ => rfl
       | call id =>
         simp only [execOne]
-        have hrun : run k m id st s.values ≠ .OutOfFuel := by
+        have hrun : run k m id st s.values env ≠ .OutOfFuel := by
           intro h; apply hne; simp only [execOne, h]
-        rw [ihRun m id st s.values k' hk' hrun]
+        rw [ihRun m env id st s.values k' hk' hrun]
       | _ => simp only [execOne]
     -- Step 2: prove exec at fuel k+1 using monoOne.
     have monoExec :
-        ∀ (m : Module) (st : Store α) (s : Locals) (p : Program) (f₂ : Nat),
-          k + 1 ≤ f₂ → exec (k + 1) m st s p ≠ .OutOfFuel →
-          exec f₂ m st s p = exec (k + 1) m st s p := by
-      intro m st s p f₂ hle hne
+        ∀ (m : Module) (env : HostEnv α) (st : Store α) (s : Locals)
+          (p : Program) (f₂ : Nat),
+          k + 1 ≤ f₂ → exec (k + 1) m st s p env ≠ .OutOfFuel →
+          exec f₂ m st s p env = exec (k + 1) m st s p env := by
+      intro m env st s p f₂ hle hne
       induction p generalizing st s with
       | nil => simp only [exec]
       | cons inst rest ihRest =>
         simp only [exec] at hne ⊢
-        have hOne : execOne (k+1) m st s inst ≠ .OutOfFuel := by
+        have hOne : execOne (k+1) m st s inst env ≠ .OutOfFuel := by
           intro h; rw [h] at hne; exact hne rfl
-        rw [monoOne m st s inst f₂ hle hOne]
-        rcases hres : execOne (k+1) m st s inst with ⟨st', s'⟩ | ⟨n, st', s'⟩ | ⟨st', vs⟩ | msg | msg | _
+        rw [monoOne m env st s inst f₂ hle hOne]
+        rcases hres : execOne (k+1) m st s inst env with ⟨st', s'⟩ | ⟨n, st', s'⟩ | ⟨st', vs⟩ | msg | msg | _
         · -- Fallthrough
-          have hrest : exec (k+1) m st' s' rest ≠ .OutOfFuel := by
+          have hrest : exec (k+1) m st' s' rest env ≠ .OutOfFuel := by
             rw [hres] at hne; exact hne
           exact ihRest st' s' hrest
         all_goals rfl
     refine ⟨monoOne, monoExec, ?_⟩
     -- Step 3: run at fuel k+1.
-    intro m id initial args f₂ hle hne
+    intro m env id initial args f₂ hle hne
     simp only [run]
     rcases hImp : m.imports[id]? with _ | imp
     · -- wasm path
@@ -149,31 +154,34 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
       rcases h : m.funcs[id - m.imports.length]? with _ | f
       · rfl
       · simp only
-        have hexec : exec (k+1) m initial (f.toLocals (args.take f.numParams).reverse) f.body ≠ .OutOfFuel := by
+        have hexec : exec (k+1) m initial (f.toLocals (args.take f.numParams).reverse) f.body env ≠ .OutOfFuel := by
           intro hOOF
           apply hne
           simp only [run, hImp, h, hOOF]
-        rw [monoExec _ _ _ _ f₂ hle hexec]
+        rw [monoExec _ _ _ _ _ f₂ hle hexec]
     · -- host path: result is fuel-independent.
       rfl
 
 theorem execOne_fuel_mono
-    {m : Module} {st : Store α} {s : Locals} {inst : Instruction} {f₁ f₂ : Nat}
-    (hle : f₁ ≤ f₂) (hne : execOne f₁ m st s inst ≠ .OutOfFuel) :
-    execOne f₂ m st s inst = execOne f₁ m st s inst :=
-  (fuel_mono_aux f₁).1 m st s inst f₂ hle hne
+    {m : Module} {env : HostEnv α} {st : Store α} {s : Locals}
+    {inst : Instruction} {f₁ f₂ : Nat}
+    (hle : f₁ ≤ f₂) (hne : execOne f₁ m st s inst env ≠ .OutOfFuel) :
+    execOne f₂ m st s inst env = execOne f₁ m st s inst env :=
+  (fuel_mono_aux f₁).1 m env st s inst f₂ hle hne
 
 theorem exec_fuel_mono
-    {m : Module} {st : Store α} {s : Locals} {p : Program} {f₁ f₂ : Nat}
-    (hle : f₁ ≤ f₂) (hne : exec f₁ m st s p ≠ .OutOfFuel) :
-    exec f₂ m st s p = exec f₁ m st s p :=
-  (fuel_mono_aux f₁).2.1 m st s p f₂ hle hne
+    {m : Module} {env : HostEnv α} {st : Store α} {s : Locals}
+    {p : Program} {f₁ f₂ : Nat}
+    (hle : f₁ ≤ f₂) (hne : exec f₁ m st s p env ≠ .OutOfFuel) :
+    exec f₂ m st s p env = exec f₁ m st s p env :=
+  (fuel_mono_aux f₁).2.1 m env st s p f₂ hle hne
 
 theorem run_fuel_mono
-    {m : Module} {id : Nat} {initial : Store α} {args : List Value} {f₁ f₂ : Nat}
-    (hle : f₁ ≤ f₂) (hne : run f₁ m id initial args ≠ .OutOfFuel) :
-    run f₂ m id initial args = run f₁ m id initial args :=
-  (fuel_mono_aux f₁).2.2 m id initial args f₂ hle hne
+    {m : Module} {env : HostEnv α} {id : Nat} {initial : Store α}
+    {args : List Value} {f₁ f₂ : Nat}
+    (hle : f₁ ≤ f₂) (hne : run f₁ m id initial args env ≠ .OutOfFuel) :
+    run f₂ m id initial args env = run f₁ m id initial args env :=
+  (fuel_mono_aux f₁).2.2 m env id initial args f₂ hle hne
 
 /-! ## Control-flow unfoldings
 
@@ -182,20 +190,20 @@ explicitly. These lemmas restate each arm's behaviour in a form that
 exposes the body's `exec` call, which is what the wp framework rules need. -/
 
 theorem exec_block_cons
-    {m : Module} {st : Store α} {s : Locals}
+    {m : Module} {env : HostEnv α} {st : Store α} {s : Locals}
     {ps rs : Nat} {body rest : Program} {fuel : Nat} :
-    exec (fuel + 1) m st s (.block ps rs body :: rest) =
-      (match exec fuel m st s body with
+    exec (fuel + 1) m st s (.block ps rs body :: rest) env =
+      (match exec fuel m st s body env with
        | .Break 0 st' s'       =>
          exec (fuel + 1) m st'
-           { s' with values := s'.values.take rs ++ s.values.drop ps } rest
+           { s' with values := s'.values.take rs ++ s.values.drop ps } rest env
        | .Break (k + 1) st' s' => .Break k st' s'
        | .Fallthrough st' s'   =>
          exec (fuel + 1) m st'
-           { s' with values := s'.values.take rs ++ s.values.drop ps } rest
+           { s' with values := s'.values.take rs ++ s.values.drop ps } rest env
        | other                => other) := by
   simp only [exec, execOne]
-  rcases exec fuel m st s body with _ | ⟨n, _, _⟩ | _ | _ | _ | _
+  rcases exec fuel m st s body env with _ | ⟨n, _, _⟩ | _ | _ | _ | _
   · rfl
   · cases n <;> rfl
   · rfl
@@ -204,46 +212,46 @@ theorem exec_block_cons
   · rfl
 
 theorem exec_iff_cons
-    {m : Module} {st : Store α} {s : Locals}
+    {m : Module} {env : HostEnv α} {st : Store α} {s : Locals}
     {ps rs : Nat} {thn els rest : Program} {fuel : Nat}
     {c : UInt32} {vs : List Value}
     (hStack : s.values = .i32 c :: vs) :
-    exec (fuel + 1) m st s (.iff ps rs thn els :: rest) =
+    exec (fuel + 1) m st s (.iff ps rs thn els :: rest) env =
       (match exec fuel m st { s with values := vs }
-                (if c ≠ 0 then thn else els) with
+                (if c ≠ 0 then thn else els) env with
        | .Break 0 st' s'       =>
          exec (fuel + 1) m st'
-           { s' with values := s'.values.take rs ++ vs.drop ps } rest
+           { s' with values := s'.values.take rs ++ vs.drop ps } rest env
        | .Break (k + 1) st' s' => .Break k st' s'
        | .Fallthrough st' s'   =>
          exec (fuel + 1) m st'
-           { s' with values := s'.values.take rs ++ vs.drop ps } rest
+           { s' with values := s'.values.take rs ++ vs.drop ps } rest env
        | other                => other) := by
   simp only [exec, execOne, hStack]
   by_cases hc : c ≠ 0
   all_goals first
     | (simp only [if_pos hc]
-       rcases exec fuel m st { s with values := vs } thn with _ | ⟨n, _, _⟩ | _ | _ | _ | _
+       rcases exec fuel m st { s with values := vs } thn env with _ | ⟨n, _, _⟩ | _ | _ | _ | _
        · rfl
        · cases n <;> rfl
        all_goals rfl)
     | (simp only [if_neg hc]
-       rcases exec fuel m st { s with values := vs } els with _ | ⟨n, _, _⟩ | _ | _ | _ | _
+       rcases exec fuel m st { s with values := vs } els env with _ | ⟨n, _, _⟩ | _ | _ | _ | _
        · rfl
        · cases n <;> rfl
        all_goals rfl)
 
 theorem exec_call_cons
-    {m : Module} {st : Store α} {s : Locals}
+    {m : Module} {env : HostEnv α} {st : Store α} {s : Locals}
     {id : Nat} {rest : Program} {fuel : Nat} :
-    exec (fuel + 1) m st s (.call id :: rest) =
-      (match run fuel m id st s.values with
-       | .Success vs st' => exec (fuel + 1) m st' { s with values := vs } rest
+    exec (fuel + 1) m st s (.call id :: rest) env =
+      (match run fuel m id st s.values env with
+       | .Success vs st' => exec (fuel + 1) m st' { s with values := vs } rest env
        | .Trap st' msg   => .Trap st' msg
        | .Invalid msg    => .Invalid msg
        | .OutOfFuel      => .OutOfFuel) := by
   simp only [exec, execOne]
-  rcases run fuel m id st s.values with _ | _ | _ | _ <;> rfl
+  rcases run fuel m id st s.values env with _ | _ | _ | _ <;> rfl
 
 /-- Specialised characterisation of `exec` on a `.call id :: rest` whose
 target `id` falls inside the imports range. Exposes the host's `invoke`

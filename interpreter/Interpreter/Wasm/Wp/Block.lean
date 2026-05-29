@@ -15,38 +15,38 @@ theorem wp_block_cons {ps rs : Nat} {body rest : Program} {Q : Assertion α}
           (fun c => match c with
             | .Fallthrough st' s'   =>
               wp m rest Q st'
-                { s' with values := s'.values.take rs ++ s.values.drop ps }
+                { s' with values := s'.values.take rs ++ s.values.drop ps } env
             | .Break 0 st' s'       =>
               wp m rest Q st'
-                { s' with values := s'.values.take rs ++ s.values.drop ps }
+                { s' with values := s'.values.take rs ++ s.values.drop ps } env
             | .Break (k+1) st' s'   => Q (.Break k st' s')
             | other                => Q other)
-          st s) :
-    wp m (.block ps rs body :: rest) Q st s := by
+          st s env) :
+    wp m (.block ps rs body :: rest) Q st s env := by
   unfold wp at h ⊢
   obtain ⟨Nb, hN⟩ := h
-  by_cases hOOF : ∀ f ≥ Nb, exec f m st s body = .OutOfFuel
+  by_cases hOOF : ∀ f ≥ Nb, exec f m st s body env = .OutOfFuel
   · -- body always OutOfFuel: block propagates OutOfFuel; hN gives Q OutOfFuel.
     refine ⟨Nb + 1, fun fuel hfuel => ?_⟩
     obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-    have hbf : exec f m st s body = .OutOfFuel := hOOF f (by omega)
+    have hbf : exec f m st s body env = .OutOfFuel := hOOF f (by omega)
     have hpre := hN f (by omega)
     rw [hbf] at hpre
     rw [exec_block_cons, hbf]
     exact hpre
   · push Not at hOOF
     obtain ⟨f₀, hf₀, hf₀_ne⟩ := hOOF
-    have hk_stable : ∀ f' ≥ f₀, exec f' m st s body = exec f₀ m st s body := fun f' hf' =>
+    have hk_stable : ∀ f' ≥ f₀, exec f' m st s body env = exec f₀ m st s body env := fun f' hf' =>
       exec_fuel_mono hf' hf₀_ne
     have hQ_at := hN f₀ hf₀
-    cases hk : exec f₀ m st s body with
+    cases hk : exec f₀ m st s body env with
     | OutOfFuel => exact absurd hk hf₀_ne
     | Fallthrough r' s' =>
       rw [hk] at hQ_at
       obtain ⟨Nr, hNr⟩ := hQ_at
       refine ⟨max (f₀ + 1) Nr, fun fuel hfuel => ?_⟩
       obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-      have hbody : exec f m st s body = .Fallthrough r' s' := by
+      have hbody : exec f m st s body env = .Fallthrough r' s' := by
         rw [hk_stable f (by omega), hk]
       rw [exec_block_cons, hbody]
       exact hNr _ (by omega)
@@ -57,7 +57,7 @@ theorem wp_block_cons {ps rs : Nat} {body rest : Program} {Q : Assertion α}
         obtain ⟨Nr, hNr⟩ := hQ_at
         refine ⟨max (f₀ + 1) Nr, fun fuel hfuel => ?_⟩
         obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-        have hbody : exec f m st s body = .Break 0 r' s' := by
+        have hbody : exec f m st s body env = .Break 0 r' s' := by
           rw [hk_stable f (by omega), hk]
         rw [exec_block_cons, hbody]
         exact hNr _ (by omega)
@@ -65,7 +65,7 @@ theorem wp_block_cons {ps rs : Nat} {body rest : Program} {Q : Assertion α}
         rw [hk] at hQ_at
         refine ⟨f₀ + 1, fun fuel hfuel => ?_⟩
         obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-        have hbody : exec f m st s body = .Break (n'+1) r' s' := by
+        have hbody : exec f m st s body env = .Break (n'+1) r' s' := by
           rw [hk_stable f (by omega), hk]
         rw [exec_block_cons, hbody]
         exact hQ_at
@@ -73,7 +73,7 @@ theorem wp_block_cons {ps rs : Nat} {body rest : Program} {Q : Assertion α}
       rw [hk] at hQ_at
       refine ⟨f₀ + 1, fun fuel hfuel => ?_⟩
       obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-      have hbody : exec f m st s body = .Return r' vs := by
+      have hbody : exec f m st s body env = .Return r' vs := by
         rw [hk_stable f (by omega), hk]
       rw [exec_block_cons, hbody]
       exact hQ_at
@@ -81,7 +81,7 @@ theorem wp_block_cons {ps rs : Nat} {body rest : Program} {Q : Assertion α}
       rw [hk] at hQ_at
       refine ⟨f₀ + 1, fun fuel hfuel => ?_⟩
       obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-      have hbody : exec f m st s body = .Trap r' msg := by
+      have hbody : exec f m st s body env = .Trap r' msg := by
         rw [hk_stable f (by omega), hk]
       rw [exec_block_cons, hbody]
       exact hQ_at
@@ -89,7 +89,7 @@ theorem wp_block_cons {ps rs : Nat} {body rest : Program} {Q : Assertion α}
       rw [hk] at hQ_at
       refine ⟨f₀ + 1, fun fuel hfuel => ?_⟩
       obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-      have hbody : exec f m st s body = .Invalid msg := by
+      have hbody : exec f m st s body env = .Invalid msg := by
         rw [hk_stable f (by omega), hk]
       rw [exec_block_cons, hbody]
       exact hQ_at
@@ -103,39 +103,39 @@ theorem wp_iff_cons {ps rs : Nat} {thn els rest : Program} {Q : Assertion α}
               (fun cont => match cont with
                 | .Fallthrough st' s'   =>
                   wp m rest Q st'
-                    { s' with values := s'.values.take rs ++ vs.drop ps }
+                    { s' with values := s'.values.take rs ++ vs.drop ps } env
                 | .Break 0 st' s'       =>
                   wp m rest Q st'
-                    { s' with values := s'.values.take rs ++ vs.drop ps }
+                    { s' with values := s'.values.take rs ++ vs.drop ps } env
                 | .Break (k+1) st' s'   => Q (.Break k st' s')
                 | other                => Q other)
-              st { s with values := vs }) :
-    wp m (.iff ps rs thn els :: rest) Q st s := by
+              st { s with values := vs } env) :
+    wp m (.iff ps rs thn els :: rest) Q st s env := by
   unfold wp at hBody ⊢
   set body := if c ≠ 0 then thn else els with hbody_def
   set s' : Locals := { s with values := vs } with hs'_def
   obtain ⟨Nb, hN⟩ := hBody
-  by_cases hOOF : ∀ f ≥ Nb, exec f m st s' body = .OutOfFuel
+  by_cases hOOF : ∀ f ≥ Nb, exec f m st s' body env = .OutOfFuel
   · refine ⟨Nb + 1, fun fuel hfuel => ?_⟩
     obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-    have hbf : exec f m st s' body = .OutOfFuel := hOOF f (by omega)
+    have hbf : exec f m st s' body env = .OutOfFuel := hOOF f (by omega)
     have hpre := hN f (by omega)
     rw [hbf] at hpre
     rw [exec_iff_cons hStack, hbf]
     exact hpre
   · push Not at hOOF
     obtain ⟨f₀, hf₀, hf₀_ne⟩ := hOOF
-    have hk_stable : ∀ f' ≥ f₀, exec f' m st s' body = exec f₀ m st s' body := fun f' hf' =>
+    have hk_stable : ∀ f' ≥ f₀, exec f' m st s' body env = exec f₀ m st s' body env := fun f' hf' =>
       exec_fuel_mono hf' hf₀_ne
     have hQ_at := hN f₀ hf₀
-    cases hk : exec f₀ m st s' body with
+    cases hk : exec f₀ m st s' body env with
     | OutOfFuel => exact absurd hk hf₀_ne
     | Fallthrough r' s'' =>
       rw [hk] at hQ_at
       obtain ⟨Nr, hNr⟩ := hQ_at
       refine ⟨max (f₀ + 1) Nr, fun fuel hfuel => ?_⟩
       obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-      have hbody : exec f m st s' body = .Fallthrough r' s'' := by
+      have hbody : exec f m st s' body env = .Fallthrough r' s'' := by
         rw [hk_stable f (by omega), hk]
       rw [exec_iff_cons hStack, hbody]
       exact hNr _ (by omega)
@@ -146,7 +146,7 @@ theorem wp_iff_cons {ps rs : Nat} {thn els rest : Program} {Q : Assertion α}
         obtain ⟨Nr, hNr⟩ := hQ_at
         refine ⟨max (f₀ + 1) Nr, fun fuel hfuel => ?_⟩
         obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-        have hbody : exec f m st s' body = .Break 0 r' s'' := by
+        have hbody : exec f m st s' body env = .Break 0 r' s'' := by
           rw [hk_stable f (by omega), hk]
         rw [exec_iff_cons hStack, hbody]
         exact hNr _ (by omega)
@@ -154,7 +154,7 @@ theorem wp_iff_cons {ps rs : Nat} {thn els rest : Program} {Q : Assertion α}
         rw [hk] at hQ_at
         refine ⟨f₀ + 1, fun fuel hfuel => ?_⟩
         obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-        have hbody : exec f m st s' body = .Break (n'+1) r' s'' := by
+        have hbody : exec f m st s' body env = .Break (n'+1) r' s'' := by
           rw [hk_stable f (by omega), hk]
         rw [exec_iff_cons hStack, hbody]
         exact hQ_at
@@ -162,7 +162,7 @@ theorem wp_iff_cons {ps rs : Nat} {thn els rest : Program} {Q : Assertion α}
       rw [hk] at hQ_at
       refine ⟨f₀ + 1, fun fuel hfuel => ?_⟩
       obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-      have hbody : exec f m st s' body = .Return r' vs' := by
+      have hbody : exec f m st s' body env = .Return r' vs' := by
         rw [hk_stable f (by omega), hk]
       rw [exec_iff_cons hStack, hbody]
       exact hQ_at
@@ -170,7 +170,7 @@ theorem wp_iff_cons {ps rs : Nat} {thn els rest : Program} {Q : Assertion α}
       rw [hk] at hQ_at
       refine ⟨f₀ + 1, fun fuel hfuel => ?_⟩
       obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-      have hbody : exec f m st s' body = .Trap r' msg := by
+      have hbody : exec f m st s' body env = .Trap r' msg := by
         rw [hk_stable f (by omega), hk]
       rw [exec_iff_cons hStack, hbody]
       exact hQ_at
@@ -178,7 +178,7 @@ theorem wp_iff_cons {ps rs : Nat} {thn els rest : Program} {Q : Assertion α}
       rw [hk] at hQ_at
       refine ⟨f₀ + 1, fun fuel hfuel => ?_⟩
       obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-      have hbody : exec f m st s' body = .Invalid msg := by
+      have hbody : exec f m st s' body env = .Invalid msg := by
         rw [hk_stable f (by omega), hk]
       rw [exec_iff_cons hStack, hbody]
       exact hQ_at

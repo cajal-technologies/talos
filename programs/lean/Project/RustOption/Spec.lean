@@ -28,13 +28,13 @@ The "filtered out" and "already None" cases share the same answer —
 the sentinel `i64::MIN < 0` is never `> 0`. -/
 @[spec_of "rust-exported" "rust_option::filter_positive"]
 def FilterPositiveSpec : Prop :=
-  ∀ (initial : Store Unit) (opt : UInt64),
-    TerminatesWith «module» 0 initial [.i64 opt]
+  ∀ (env : HostEnv Unit) (initial : Store Unit) (opt : UInt64),
+    TerminatesWith env «module» 0 initial [.i64 opt]
       (fun _ rs => rs = [.i64 (if opt.toInt64 > 0 then opt else sentinel)])
 
 @[proves Project.RustOption.Spec.FilterPositiveSpec]
 theorem filter_positive_correct : FilterPositiveSpec := by
-  intro initial opt
+  intro env initial opt
   apply TerminatesWith.of_wp_entry (f := ⟨[.i64], [], func0, [.i64]⟩) rfl
   intro initial'
   unfold func0
@@ -51,13 +51,13 @@ and leaves a single i64 on the value stack equal to `0` if
 `opt = sentinel` (i.e. encodes `None`) and to `opt` otherwise. -/
 @[spec_of "rust-exported" "rust_option::unwrap_or_default"]
 def UnwrapOrDefaultSpec : Prop :=
-  ∀ (initial : Store Unit) (opt : UInt64),
-    TerminatesWith «module» 1 initial [.i64 opt]
+  ∀ (env : HostEnv Unit) (initial : Store Unit) (opt : UInt64),
+    TerminatesWith env «module» 1 initial [.i64 opt]
       (fun _ rs => rs = [.i64 (if opt = sentinel then 0 else opt)])
 
 @[proves Project.RustOption.Spec.UnwrapOrDefaultSpec]
 theorem unwrap_or_default_correct : UnwrapOrDefaultSpec := by
-  intro initial opt
+  intro env initial opt
   apply TerminatesWith.of_wp_entry (f := ⟨[.i64], [], func1, [.i64]⟩) rfl
   intro initial'
   unfold func1
@@ -74,13 +74,13 @@ equal to `b` if `a = sentinel` (i.e. `a` encodes `None`) and to `a`
 otherwise. -/
 @[spec_of "rust-exported" "rust_option::or"]
 def OrSpec : Prop :=
-  ∀ (initial : Store Unit) (a b : UInt64),
-    TerminatesWith «module» 2 initial [.i64 b, .i64 a]
+  ∀ (env : HostEnv Unit) (initial : Store Unit) (a b : UInt64),
+    TerminatesWith env «module» 2 initial [.i64 b, .i64 a]
       (fun _ rs => rs = [.i64 (if a = sentinel then b else a)])
 
 @[proves Project.RustOption.Spec.OrSpec]
 theorem or_correct : OrSpec := by
-  intro initial a b
+  intro env initial a b
   apply TerminatesWith.of_wp_entry (f := ⟨[.i64, .i64], [], func2, [.i64]⟩) rfl
   intro initial'
   unfold func2
@@ -97,8 +97,8 @@ and to `a` otherwise. The behaviour is bit-for-bit identical to
 [`OrSpec`] because the two exports share the same wasm function. -/
 @[spec_of "rust-exported" "rust_option::unwrap_or"]
 def UnwrapOrSpec : Prop :=
-  ∀ (initial : Store Unit) (a b : UInt64),
-    TerminatesWith «module» 2 initial [.i64 b, .i64 a]
+  ∀ (env : HostEnv Unit) (initial : Store Unit) (a b : UInt64),
+    TerminatesWith env «module» 2 initial [.i64 b, .i64 a]
       (fun _ rs => rs = [.i64 (if a = sentinel then b else a)])
 
 @[proves Project.RustOption.Spec.UnwrapOrSpec]
@@ -113,13 +113,13 @@ For any `v : UInt64`, the wasm export `wrap` terminates and leaves the
 input value on the value stack unchanged. -/
 @[spec_of "rust-exported" "rust_option::wrap"]
 def WrapSpec : Prop :=
-  ∀ (initial : Store Unit) (v : UInt64),
-    TerminatesWith «module» 3 initial [.i64 v]
+  ∀ (env : HostEnv Unit) (initial : Store Unit) (v : UInt64),
+    TerminatesWith env «module» 3 initial [.i64 v]
       (fun _ rs => rs = [.i64 v])
 
 @[proves Project.RustOption.Spec.WrapSpec]
 theorem wrap_correct : WrapSpec := by
-  intro initial v
+  intro env initial v
   apply TerminatesWith.of_wp_entry (f := ⟨[.i64], [], func3, [.i64]⟩) rfl
   intro initial'
   unfold func3
@@ -135,13 +135,13 @@ leaves a single i32 on the value stack equal to `0` if `opt = sentinel`
 and to `1` otherwise. -/
 @[spec_of "rust-exported" "rust_option::is_some"]
 def IsSomeSpec : Prop :=
-  ∀ (initial : Store Unit) (opt : UInt64),
-    TerminatesWith «module» 4 initial [.i64 opt]
+  ∀ (env : HostEnv Unit) (initial : Store Unit) (opt : UInt64),
+    TerminatesWith env «module» 4 initial [.i64 opt]
       (fun _ rs => rs = [.i32 (if opt = sentinel then 0 else 1)])
 
 @[proves Project.RustOption.Spec.IsSomeSpec]
 theorem is_some_correct : IsSomeSpec := by
-  intro initial opt
+  intro env initial opt
   apply TerminatesWith.of_wp_entry (f := ⟨[.i64], [], func4, [.i32]⟩) rfl
   intro initial'
   unfold func4
@@ -158,13 +158,13 @@ leaves a single i64 on the value stack equal to the sentinel if
 models `i64::wrapping_add`). -/
 @[spec_of "rust-exported" "rust_option::map_add"]
 def MapAddSpec : Prop :=
-  ∀ (initial : Store Unit) (opt k : UInt64),
-    TerminatesWith «module» 5 initial [.i64 k, .i64 opt]
+  ∀ (env : HostEnv Unit) (initial : Store Unit) (opt k : UInt64),
+    TerminatesWith env «module» 5 initial [.i64 k, .i64 opt]
       (fun _ rs => rs = [.i64 (if opt = sentinel then sentinel else opt + k)])
 
 @[proves Project.RustOption.Spec.MapAddSpec]
 theorem map_add_correct : MapAddSpec := by
-  intro initial opt k
+  intro env initial opt k
   apply TerminatesWith.of_wp_entry (f := ⟨[.i64, .i64], [], func5, [.i64]⟩) rfl
   intro initial'
   unfold func5
@@ -180,10 +180,10 @@ with the sentinel encoding). -/
 
 open Wasm.RustStd.Option
 
-theorem is_some_lifted (initial : Store Unit) (o : Option Int64) (h : o ≠ some Int64.minValue) :
-    TerminatesWith «module» 4 initial [.i64 (encode o)]
+theorem is_some_lifted (env : HostEnv Unit) (initial : Store Unit) (o : Option Int64) (h : o ≠ some Int64.minValue) :
+    TerminatesWith env «module» 4 initial [.i64 (encode o)]
       (fun _ rs => rs = [.i32 (if o.isSome then 1 else 0)]) := by
-  refine (is_some_correct initial (encode o)).mono ?_
+  refine (is_some_correct env initial (encode o)).mono ?_
   intro _ rs hrs; rw [hrs]; congr 1
   cases o with
   | none => simp
@@ -192,11 +192,11 @@ theorem is_some_lifted (initial : Store Unit) (o : Option Int64) (h : o ≠ some
       encode_ne_sentinel_of_some (by simpa using h)
     rw [if_neg hne]; simp
 
-theorem unwrap_or_lifted (initial : Store Unit) (o : Option Int64) (d : UInt64)
+theorem unwrap_or_lifted (env : HostEnv Unit) (initial : Store Unit) (o : Option Int64) (d : UInt64)
     (h : o ≠ some Int64.minValue) :
-    TerminatesWith «module» 2 initial [.i64 d, .i64 (encode o)]
+    TerminatesWith env «module» 2 initial [.i64 d, .i64 (encode o)]
       (fun _ rs => rs = [.i64 (match o with | some x => x.toUInt64 | none => d)]) := by
-  refine (or_correct initial (encode o) d).mono ?_
+  refine (or_correct env initial (encode o) d).mono ?_
   intro _ rs hrs; rw [hrs]; congr 1
   cases o with
   | none => simp
