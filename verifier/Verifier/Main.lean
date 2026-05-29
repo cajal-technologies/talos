@@ -135,6 +135,24 @@ private def templateFiles : List (String × String) := [
     include_str "../template/lean/Project/IsOdd/Run.lean")
 ]
 
+/-- The bundled `lean/lakefile.toml` points `CodeLib` at the in-repo path
+`../../../codelib` so the template itself builds inside the Talos monorepo.
+Scaffolded projects live outside the monorepo, so we rewrite the require
+to point at the published `cajal-technologies/talos` GitHub repo. -/
+private def scaffoldedLakefile : String :=
+  "name = \"Project\"\n\
+   version = \"0.1.0\"\n\
+   defaultTargets = [\"Project\"]\n\
+   \n\
+   [[require]]\n\
+   name = \"CodeLib\"\n\
+   git = \"https://github.com/cajal-technologies/talos.git\"\n\
+   subDir = \"codelib\"\n\
+   rev = \"main\"\n\
+   \n\
+   [[lean_lib]]\n\
+   name = \"Project\"\n"
+
 -- ----------------------------------------------------------------------------
 -- `check`
 -- ----------------------------------------------------------------------------
@@ -334,6 +352,7 @@ private def cmdNew (projectPathIn : String) : IO Unit := do
   IO.FS.createDirAll projectDir
   IO.println s!"==> scaffolding template into {projectDir}"
   for (rel, content) in templateFiles do
+    let content := if rel = "lean/lakefile.toml" then scaffoldedLakefile else content
     writeFile (projectDir / rel) content
   IO.println "==> cargo check"
   runOrDie "cargo" #["check"] (cwd := some (projectDir / "rust"))
