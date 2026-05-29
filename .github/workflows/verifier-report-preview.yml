@@ -59,10 +59,12 @@ jobs:
         id: deploy
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_SCOPE: ${{ vars.VERCEL_SCOPE }}
         run: |
           set -euo pipefail
           url=$(vercel deploy programs/out \
             --token="$VERCEL_TOKEN" \
+            --scope="$VERCEL_SCOPE" \
             --yes \
             --archive=tgz)
           echo "deploy-url=$url" >> "$GITHUB_OUTPUT"
@@ -72,6 +74,7 @@ jobs:
         id: alias
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_SCOPE: ${{ vars.VERCEL_SCOPE }}
           DEPLOY_URL: ${{ steps.deploy.outputs.deploy-url }}
         run: |
           set -euo pipefail
@@ -80,7 +83,9 @@ jobs:
           else
             alias="talos-verifier-report-latest.vercel.app"
           fi
-          vercel alias set "$DEPLOY_URL" "$alias" --token="$VERCEL_TOKEN"
+          vercel alias set "$DEPLOY_URL" "$alias" \
+            --token="$VERCEL_TOKEN" \
+            --scope="$VERCEL_SCOPE"
           echo "alias-url=https://$alias" >> "$GITHUB_OUTPUT"
           echo "Stable URL: https://$alias"
 
