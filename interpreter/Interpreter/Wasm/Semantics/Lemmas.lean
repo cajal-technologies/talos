@@ -109,11 +109,46 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
                 simp only [execOne, hvals, if_neg hc, h]
               rw [ihExec m st { s with values := vs } els k' hk' hexec]
           | i64 _ => rfl
+          | funcref _ => rfl
       | call id =>
         simp only [execOne]
         have hrun : run k m id st s.values ≠ .OutOfFuel := by
           intro h; apply hne; simp only [execOne, h]
         rw [ihRun m id st s.values k' hk' hrun]
+      | callIndirect ti tj =>
+        -- The two sides differ only in the `run k'` vs `run k` deep
+        -- inside; the wrapping match structure (on stack head, table
+        -- slot, function/type lookups, and signature check) is the same.
+        -- Case-split each discriminant; the non-recursive arms close by
+        -- `rfl` (both sides reduce to the same trap/invalid), and the
+        -- signature-matched arm uses `ihRun` to fold `run k' = run k`.
+        rcases hvals : s.values with _ | ⟨v, rest⟩
+        · simp only [execOne, hvals]
+        · cases hv : v with
+          | i64 _    => simp only [execOne, hvals, hv]
+          | funcref _ => simp only [execOne, hvals, hv]
+          | i32 i =>
+            rcases htbl : st.tables[tj]? with _ | tbl
+            · simp only [execOne, hvals, hv, htbl]
+            · rcases hslot : tbl[i.toNat]? with _ | slot
+              · simp only [execOne, hvals, hv, htbl, hslot]
+              · rcases hslot' : slot with _ | fid
+                · simp only [execOne, hvals, hv, htbl, hslot, hslot']
+                · rcases hfn : m.funcs[fid]? with _ | fn
+                  · simp only [execOne, hvals, hv, htbl, hslot, hslot', hfn]
+                  · rcases hty : m.types[ti]? with _ | ty
+                    · simp only [execOne, hvals, hv, htbl, hslot, hslot', hfn, hty]
+                    · by_cases hsig :
+                          fn.params = ty.params ∧ fn.results = ty.results
+                      · have hrun : run k m fid st rest ≠ .OutOfFuel := by
+                          intro h; apply hne
+                          simp only [execOne, hvals, hv, htbl, hslot, hslot',
+                            hfn, hty, if_pos hsig, h]
+                        simp only [execOne, hvals, hv, htbl, hslot, hslot',
+                          hfn, hty, if_pos hsig,
+                          ihRun m fid st rest k' hk' hrun]
+                      · simp only [execOne, hvals, hv, htbl, hslot, hslot',
+                          hfn, hty, if_neg hsig]
       | _ => simp only [execOne]
     -- Step 2: prove exec at fuel k+1 using monoOne.
     have monoExec :
@@ -234,6 +269,31 @@ theorem exec_call_cons
        | .OutOfFuel      => .OutOfFuel) := by
   simp only [exec, execOne]
   rcases run fuel m id st s.values with _ | _ | _ | _ <;> rfl
+
+/-- Specialised unfolding of `exec` on a `.callIndirect` head when the
+operand stack starts with an `i32` selector, the table+slot resolve to
+a non-null `funcref`, and the target function's signature matches the
+declared type. The WP rule consumes this lemma to bridge between the
+indirect call site and `FuncSpec` of the resolved callee. -/
+theorem exec_callIndirect_cons
+    {m : Module} {st : Store} {s : Locals}
+    {ti tj : Nat} {rest : Program} {fuel : Nat}
+    {i : UInt32} {vs0 : List Value}
+    {tbl : TableInst} {fid : Nat} {fn : Function} {ty : FuncType}
+    (hStack : s.values = .i32 i :: vs0)
+    (hTbl  : st.tables[tj]? = some tbl)
+    (hSlot : tbl[i.toNat]? = some (some fid))
+    (hFn   : m.funcs[fid]? = some fn)
+    (hTy   : m.types[ti]? = some ty)
+    (hSig  : fn.params = ty.params ∧ fn.results = ty.results) :
+    exec (fuel + 1) m st s (.callIndirect ti tj :: rest) =
+      (match run fuel m fid st vs0 with
+       | .Success vs st' => exec (fuel + 1) m st' { s with values := vs } rest
+       | .Trap st' msg   => .Trap st' msg
+       | .Invalid msg    => .Invalid msg
+       | .OutOfFuel      => .OutOfFuel) := by
+  simp only [exec, execOne, hStack, hTbl, hSlot, hFn, hTy, if_pos hSig]
+  rcases run fuel m fid st vs0 with _ | _ | _ | _ <;> rfl
 
 /-! ## `run` characterisation -/
 

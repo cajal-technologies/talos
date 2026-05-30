@@ -5,24 +5,30 @@ namespace Wasm
 /-! ## Value types and runtime values
 
 Wasm currently supports the integer half of Wasm's numeric types
-(`i32`, `i64`). Floats and reference types are out of scope; globals,
-tables, and `call_indirect` are intentionally skipped — the state shape
-has no `Store` for them. Memory loads/stores are supported. -/
+(`i32`, `i64`) plus the `funcref` reference type needed for tables and
+`call_indirect`. Floats and other reference types remain out of scope.
+Memory loads/stores, globals, tables, and indirect calls are supported. -/
 
 inductive ValueType where
   | i32
   | i64
+  | funcref
 deriving Repr, Inhabited, DecidableEq, BEq
 
 inductive Value where
-  | i32 (n : UInt32)
-  | i64 (n : UInt64)
+  | i32     (n : UInt32)
+  | i64     (n : UInt64)
+  /-- A `funcref`: `none` is the null ref; `some i` is a reference to
+  function index `i` in the enclosing module's function space. -/
+  | funcref (idx : Option Nat)
 deriving Repr, Inhabited, DecidableEq, BEq
 
-/-- Type-indexed zero used to initialise locals at function entry. -/
+/-- Type-indexed zero used to initialise locals at function entry. The
+zero for `funcref` is the null reference. -/
 def ValueType.zero : ValueType → Value
-  | .i32 => .i32 0
-  | .i64 => .i64 0
+  | .i32     => .i32 0
+  | .i64     => .i64 0
+  | .funcref => .funcref none
 
 /-- Module-level globals. Indexed by position in the module's globals list. -/
 structure Globals where
@@ -96,6 +102,15 @@ inductive Instruction where
   | brTable : List Nat → Nat → Instruction
   | ret     : Instruction
   | call    : Nat → Instruction
+
+  -- Indirect call. `typeIdx` selects the expected signature from the
+  -- enclosing module's type table; `tableIdx` selects the table (almost
+  -- always 0 in practice). The runtime pops an `i32` index `i`, looks up
+  -- `tables[tableIdx][i]`, requires it to be a non-null `funcref`, and
+  -- traps "indirect call type mismatch" if the target function's
+  -- signature differs from `types[typeIdx]`. Otherwise it dispatches to
+  -- that function via the standard calling convention.
+  | callIndirect : (typeIdx tableIdx : Nat) → Instruction
 
   -- i32 memory loads (static byte offset; address popped from stack as i32)
   | load8U  : UInt32 → Instruction  -- i32.load8_u:  zero-extend 1 byte  → i32
@@ -208,48 +223,134 @@ structure GlobalDecl where
   init : Value
 deriving Repr, Inhabited
 
-structure Module where
-  funcs   : List Function
-  exports : List Export := []
-  memory  : Option MemDecl := none
-  globals : List GlobalDecl := []
+/-- A function type, identified by `(type N)` in the source. Stored on
+the module so that `call_indirect` can compare the expected signature
+against the target function's declared signature at runtime. -/
+structure FuncType where
+  params  : List ValueType := []
+  results : List ValueType := []
+deriving Repr, Inhabited, DecidableEq, BEq
+
+/-- Declaration of a single table. The interpreter only models
+`funcref` tables; the size bounds are the declared minimum and (optional)
+declared maximum. A freshly instantiated table has `min` null refs. -/
+structure TableDecl where
+  min      : Nat
+  max      : Option Nat := none
+  elemType : ValueType  := .funcref
 deriving Repr, Inhabited
+
+/-- A `(elem ...)` declaration. *Active* segments carry
+`tableIdx := some t` and `offset := some n` and are written into
+`tables[t]` starting at offset `n` at instantiation time, then dropped.
+*Passive* and *declarative* segments leave `offset := none` (declarative
+additionally has `tableIdx := none`); their contents stay on the store
+in `elementSegments` until consumed by `table.init` / `elem.drop`. -/
+structure ElementSegment where
+  tableIdx : Option Nat := none
+  offset   : Option Nat := none
+  funcs    : List (Option Nat) := []
+deriving Repr, Inhabited
+
+structure Module where
+  funcs    : List Function
+  exports  : List Export := []
+  memory   : Option MemDecl := none
+  globals  : List GlobalDecl := []
+  /-- Function type declarations indexed by source-order position
+  (`(type 0)`, `(type 1)`, ...). `call_indirect (type N)` looks the
+  expected signature up here. -/
+  types    : List FuncType := []
+  /-- Table declarations. Wasm <2.0 allows at most one; we accept the
+  whole list anyway. -/
+  tables   : List TableDecl := []
+  elements : List ElementSegment := []
+deriving Repr, Inhabited
+
+/-- Runtime representation of a single table: a list of `funcref` slots
+(`none` = null, `some i` = function index `i`). The length is the
+table's current size; we don't model `table.grow`. -/
+abbrev TableInst : Type := List (Option Nat)
 
 /-- The mutable runtime state threaded through execution: module-level
-globals, the (optional) linear memory, and the available bytes per
-data segment (`none` = dropped or active-and-already-consumed; `some bs`
-= still available to `memory.init`). The `dataSegments` list is
-indexed by segment number in source order and has the same length as
-the declaring module's data list. -/
+globals, the (optional) linear memory, available bytes per data segment,
+plus runtime tables and per-element-segment status. Lists indexed by
+source-order positions and aligned with the declaring module's
+corresponding lists. -/
 structure Store where
-  globals      : Globals
-  mem          : Mem
-  dataSegments : List (Option (List UInt8)) := []
+  globals         : Globals
+  mem             : Mem
+  dataSegments    : List (Option (List UInt8)) := []
+  /-- Runtime tables. Same length and source order as the declaring
+  module's `tables`; entry `t` has size at least `tables[t].min`. -/
+  tables          : List TableInst := []
+  /-- Per-segment runtime status, mirroring `dataSegments` for `data`.
+  `none` = dropped or active-and-already-consumed; `some funcs` = passive
+  segment still available to `table.init`. Same length as the declaring
+  module's `elements` list. -/
+  elementSegments : List (Option (List (Option Nat))) := []
 deriving Repr, Inhabited
 
-/-- Build the initial store for a module: evaluate each global's `init`
-into `Globals.globals`; allocate a memory with `pagesMin` pages and
-write each *active* data segment at its declared offset; track all
-segments in `dataSegments` (passive → `some bytes`, active → `none`,
-because active segments are spec-equivalent to "dropped" immediately
-after instantiation). If the module has no memory, the store carries
-an empty 0-page memory and an empty `dataSegments` (never observed). -/
+/-- Replace `list[i]` in place. Returns the original list unchanged
+if `i ≥ list.length`. -/
+private def listSetAt (l : List α) (i : Nat) (v : α) : List α :=
+  match l, i with
+  | [],     _     => []
+  | _::xs, 0      => v :: xs
+  | x::xs, i + 1  => x :: listSetAt xs i v
+
+/-- Write `vs` into `l` starting at offset `off`, dropping writes that
+fall past the end. Used to apply an active element segment to a fresh
+table; bounds violations are detected by the caller before this is
+invoked, so silent truncation here is unreachable in well-formed
+input. -/
+private def listWriteAt (l : List α) (off : Nat) (vs : List α) : List α :=
+  match vs, off with
+  | [], _ => l
+  | v :: vs', 0     => match l with
+    | []      => []
+    | _ :: xs => v :: listWriteAt xs 0 vs'
+  | _,        i + 1 => match l with
+    | []      => []
+    | x :: xs => x :: listWriteAt xs i vs
+
 def Module.initialStore (m : Module) : Store :=
   let globals : Globals := { globals := m.globals.map (·.init) }
-  match m.memory with
-  | none      => { globals, mem := Mem.empty 0, dataSegments := [] }
-  | some decl =>
-    let m0 := Mem.empty decl.pagesMin.toNat
-    let mem : Mem := decl.data.foldl
-      (fun acc seg => match seg.offset with
-        | some off => acc.writeBytes off.toNat seg.bytes
-        | none     => acc)
-      m0
-    let dataSegments : List (Option (List UInt8)) :=
-      decl.data.map fun seg => match seg.offset with
-        | some _ => none           -- active: auto-dropped after init
-        | none   => some seg.bytes -- passive: available to memory.init
-    { globals, mem, dataSegments }
+  let (mem, dataSegments) : Mem × List (Option (List UInt8)) :=
+    match m.memory with
+    | none      => (Mem.empty 0, [])
+    | some decl =>
+      let m0 := Mem.empty decl.pagesMin.toNat
+      let mem : Mem := decl.data.foldl
+        (fun acc seg => match seg.offset with
+          | some off => acc.writeBytes off.toNat seg.bytes
+          | none     => acc)
+        m0
+      let dataSegments : List (Option (List UInt8)) :=
+        decl.data.map fun seg => match seg.offset with
+          | some _ => none
+          | none   => some seg.bytes
+      (mem, dataSegments)
+  -- Allocate tables filled with null refs at the declared minimum size.
+  let baseTables : List TableInst :=
+    m.tables.map fun td => (List.replicate td.min none : TableInst)
+  -- Apply active element segments. Passive/declarative segments leave the
+  -- table untouched and are tracked in `elementSegments` so `table.init`
+  -- can consume them later.
+  let tables : List TableInst := m.elements.foldl
+    (fun acc seg =>
+      match seg.tableIdx, seg.offset with
+      | some t, some off =>
+        match acc[t]? with
+        | some tbl => listSetAt acc t (listWriteAt tbl off seg.funcs)
+        | none     => acc
+      | _, _ => acc)
+    baseTables
+  let elementSegments : List (Option (List (Option Nat))) :=
+    m.elements.map fun seg => match seg.offset with
+      | some _ => none           -- active: auto-dropped
+      | none   => some seg.funcs -- passive / declarative
+  { globals, mem, dataSegments, tables, elementSegments }
 
 /-- Maximum number of pages an i32-indexed memory can hold (2^16, or 4 GiB).
 This is the wasm spec hard ceiling; `memory.grow` may not exceed it

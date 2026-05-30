@@ -124,6 +124,11 @@ def parseArgForType (t : ValueType) (s : String) : Except String Value :=
     match parseI64 s with
     | .ok v  => .ok (.i64 v)
     | .error _ => .error s!"argument out of range for i64: `{s}`"
+  | .funcref =>
+    -- No CLI surface for funcref args yet — pass `null` if the user
+    -- writes "null", otherwise refuse.
+    if s == "null" then .ok (.funcref none)
+    else .error s!"funcref argument must be 'null', got `{s}`"
 
 def parseArgs?
     (params : List ValueType) (args : List String) : Except String (List Value) :=
@@ -154,8 +159,10 @@ def resolveMethod (m : Module) (method : String) : Except String Nat :=
 /-! ## Result printing -/
 
 def renderValue : Value → String
-  | .i32 v => toString v.toInt32.toInt
-  | .i64 v => toString v.toInt64.toInt
+  | .i32 v            => toString v.toInt32.toInt
+  | .i64 v            => toString v.toInt64.toInt
+  | .funcref none     => "null"
+  | .funcref (some i) => s!"funcref:{i}"
 
 /-! ## Exit codes -/
 
@@ -200,8 +207,12 @@ def runOnce (a : Args) : IO UInt32 := do
     | .ok vs => pure vs
     | .error msg => IO.eprintln s!"error: {msg}"; return EXIT_ERR
 
-  -- Execute
-  match Wasm.run a.fuel m idx m.initialStore vs with
+  -- Execute. `Wasm.run` expects params in *stack* order (top = last
+  -- source arg) and reverses internally so local 0 maps to the first
+  -- argument; `parseArgs?` gives them in source order, so we reverse
+  -- here to match the call convention. (Single-arg functions are
+  -- order-insensitive, which masked this bug for the existing samples.)
+  match Wasm.run a.fuel m idx m.initialStore vs.reverse with
   | .Success results _ =>
     for v in results.reverse do
       IO.println (renderValue v)

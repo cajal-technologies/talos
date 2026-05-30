@@ -199,8 +199,10 @@ def decodeModuleFile (path : String) : IO (Except String Wasm.Module) := do
 /-! ## Compact value rendering for failure messages -/
 
 private def renderValue : Value → String
-  | .i32 u => s!"i32:{u.toInt32.toInt}"
-  | .i64 u => s!"i64:{u.toInt64.toInt}"
+  | .i32 u           => s!"i32:{u.toInt32.toInt}"
+  | .i64 u           => s!"i64:{u.toInt64.toInt}"
+  | .funcref none    => "funcref:null"
+  | .funcref (some i) => s!"funcref:{i}"
 
 /-- Render a `List Value`, truncating runs longer than `maxLen` (the
 interpreter occasionally leaves big stacks around on failure and that

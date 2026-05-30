@@ -110,7 +110,14 @@ def «module» : Wasm.Module :=
     { type := .i32, init := .i32 (1048576 : UInt32) },
     { type := .i32, init := .i32 (1048576 : UInt32) },
     { type := .i32, init := .i32 (1048576 : UInt32) }
-  ]
+  ],
+  types := [
+    { params := [.i64, .i64], results := [.i64] }
+  ],
+  tables := [
+    { min := 1, max := some 1, elemType := .funcref }
+  ],
+  elements := []
 }
 
 end Project.NumInteger
