@@ -3,14 +3,14 @@ import Interpreter.Wasm.Wp.Tactic
 namespace Wasm
 
 def SelectAbs : Program := [
-  .const 0,               
-  .localGet 0,          
-  .sub,                     
-  .localGet 0,              
-  .localGet 0,              
-  .const 0,                 
-  .ltS,                     
-  .select                   
+  .const 0,
+  .localGet 0,
+  .sub,
+  .localGet 0,
+  .localGet 0,
+  .const 0,
+  .ltS,
+  .select
 ]
 
 theorem selectAbsSpec (m : Module) (st : Store) (n : UInt32) :

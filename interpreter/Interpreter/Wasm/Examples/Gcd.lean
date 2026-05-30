@@ -1,9 +1,9 @@
 import Interpreter.Wasm.Wp.Tactic
 import Interpreter.Wasm.Wp.Block
 import Interpreter.Wasm.Wp.Loop
- 
+
 namespace Wasm
- 
+
 def Gcd : Program := [
   .loop 0 0 [
     .block 0 0 [
@@ -23,7 +23,7 @@ def Gcd : Program := [
   ],
   .localGet 0               -- return a
 ]
- 
+
 theorem gcdSpec (m : Module) (st : Store) (n k : UInt32) :
     wp m Gcd
       (fun c => ∃ st' s',
@@ -58,5 +58,5 @@ theorem gcdSpec (m : Module) (st : Store) (n k : UInt32) :
         exact (Nat.gcd_rec a.toNat b.toNat).symm
       · simp [UInt32.toNat_mod]
         exact Nat.mod_lt a.toNat hbpos
- 
+
 end Wasm
