@@ -1211,10 +1211,10 @@ private def parseDataSegment (xs : List Sexpr) : Except Err Wasm.DataSegment := 
   .ok { offset, bytes }
 
 /-- Walk a `(module ...)` form. `(func …)`, `(export …)`, `(global …)`,
-`(memory …)`, and `(data …)` all contribute to the resulting `Wasm.Module`.
-Other recognised fields (`type`, `import`, `table`, `elem`, `start`) are
-accepted lexically so the spec testsuite still loads, but their content is
-discarded. -/
+`(memory …)`, `(data …)`, and `(start …)` all contribute to the resulting
+`Wasm.Module`. Other recognised fields (`type`, `import`, `table`, `elem`)
+are accepted lexically so the spec testsuite still loads, but their content
+is discarded. -/
 def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
   let mut rest := xs
   match rest with
@@ -1229,6 +1229,7 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
   let mut globalDecls : Array Wasm.GlobalDecl := #[]
   let mut memDecl : Option Wasm.MemDecl := none
   let mut dataSegs : Array Wasm.DataSegment := #[]
+  let mut startFunc : Option Nat := none
   for f in rest do
     match f with
     | .list (.atom "type" :: body) =>
@@ -1254,6 +1255,9 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
       memDecl := some (← parseMemDecl body)
     | .list (.atom "data" :: body) =>
       dataSegs := dataSegs.push (← parseDataSegment body)
+    | .list [.atom "start", .atom ref] =>
+      if startFunc.isSome then throw "duplicate (start ...) declaration"
+      startFunc := some (← resolveFuncRef funcIds ref)
     | .list (.atom "import" :: tail) =>
       let isFuncImport := tail.any fun
         | .list (.atom "func" :: _) => true
@@ -1283,7 +1287,8 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
   return { funcs   := decls.toList.map (·.func)
            exports := exports.toList
            globals := globalDecls.toList
-           memory  := finalMem }
+           memory  := finalMem
+           startFunc }
 
 /-- Public entry point. Parses one top-level `(module …)` form. -/
 def decode (s : String) : Except Err Wasm.Module := do
