@@ -21,6 +21,7 @@ import Interpreter.Wasm.Examples.MemGrow
 import Interpreter.Wasm.Examples.MemFill
 import Interpreter.Wasm.Examples.MemCopy
 import Interpreter.Wasm.Examples.GlobalCounter
+import Interpreter.Wasm.Examples.ClzPopcnt
 
 /-! # Wasm.Examples.Basic
 

@@ -4,7 +4,13 @@
 /// `len == 0`.
 ///
 /// Thin `extern "C"` wrapper around [`crate::xor_sum`].
+///
+/// # Safety
+///
+/// `ptr` must be valid for reads of `len` `u32` words and properly
+/// aligned.
 #[unsafe(no_mangle)]
-pub extern "C" fn xor_sum(ptr: *const u32, len: usize) -> u32 {
-    unsafe { crate::xor_sum(ptr, len) }
+pub unsafe extern "C" fn xor_sum(ptr: *const u32, len: usize) -> u32 {
+    let xs = unsafe { core::slice::from_raw_parts(ptr, len) };
+    crate::xor_sum(xs)
 }
