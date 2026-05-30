@@ -316,7 +316,24 @@ def runCommand
     let slot ← (do
       let res ← decodeModuleFile s!"{wasmDir}/{filename}"
       match res with
-      | .ok m    => pure (ModuleSlot.ok m m.initialStore)
+      | .ok m =>
+        -- Per the wasm spec, if `(start $f)` is present we invoke it once
+        -- during instantiation with no args. A trap kills the instance.
+        -- We skip start entirely on modules with host imports: the
+        -- testsuite driver has no `HostEnv` to bind them, and the affected
+        -- modules in the spec testsuite (spectest's `print`/`print_i32`)
+        -- have no observable side effects anyway.
+        match m.startFunc with
+        | none => pure (ModuleSlot.ok m m.initialStore)
+        | some idx =>
+          if !m.imports.isEmpty then
+            pure (ModuleSlot.ok m m.initialStore)
+          else
+            match Wasm.run fuel m idx m.initialStore [] with
+            | .Success _ store' => pure (ModuleSlot.ok m store')
+            | .Trap _ msg       => pure (ModuleSlot.unavailable s!"start trapped: {msg}")
+            | .OutOfFuel        => pure (ModuleSlot.unavailable "start out of fuel")
+            | .Invalid msg      => pure (ModuleSlot.unavailable s!"start invalid: {msg}")
       | .error e => pure (ModuleSlot.unavailable e))
     let idx := st.modules.size
     let modules := st.modules.push slot

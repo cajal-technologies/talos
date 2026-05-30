@@ -230,6 +230,11 @@ structure Module where
   index-space convention. Empty for modules with no imports — the
   default everywhere until the host-function feature lands. -/
   imports : List ImportDecl := []
+  /-- Index of the optional `(start $f)` function. Per the wasm spec it is
+  invoked once during instantiation, after data/elem segments are written,
+  with no arguments and no results. A trap during start makes the whole
+  instantiation fail. -/
+  startFunc : Option Nat := none
 deriving Repr, Inhabited
 
 /-- The mutable runtime state threaded through execution: module-level
