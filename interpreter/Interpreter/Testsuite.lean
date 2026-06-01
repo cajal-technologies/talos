@@ -258,16 +258,31 @@ def EXIT_OK   : UInt32 := 0
 def EXIT_FAIL : UInt32 := 1
 def EXIT_ERR  : UInt32 := 3
 
-/-- Make a process-scoped temp dir via `mktemp -d`. Returns `.error` if
-neither `mktemp` is on PATH nor a sensible fallback exists. -/
+/-- Make a process-scoped temp dir and return its path. On Unix this shells out to mktemp -d; on Windows, which has no mktemp, it creates a uniquely named directory under TEMP (or TMP) with IO.FS.createDirAll. Returns .error if the directory can't be created. -/
 def makeTempDir : IO (Except String String) := do
-  let res ← (IO.Process.output { cmd := "mktemp", args := #["-d", "-t", "wasm-testsuite.XXXXXXXX"] }).toBaseIO
-  match res with
-  | .ok out =>
-    if out.exitCode = 0 then return .ok out.stdout.trimAscii.toString
-    else return .error s!"mktemp failed: {out.stderr.trimAscii.toString}"
-  | .error _ =>
-    return .error "could not create a temporary directory (mktemp not found)"
+  if System.Platform.isWindows then
+    let base ← do
+      match ← IO.getEnv "TEMP" with
+      | some d => pure d
+      | none   =>
+        match ← IO.getEnv "TMP" with
+        | some d => pure d
+        | none   => return .error "could not determine temp directory (TEMP and TMP are unset)"
+    let ns ← IO.monoMsNow
+    let path := System.FilePath.mk base / s!"wasm-testsuite-{ns}"
+    try
+      IO.FS.createDirAll path
+      return .ok path.toString
+    catch e =>
+      return .error s!"could not create temp directory {path}: {e.toString}"
+  else
+    let res ← (IO.Process.output { cmd := "mktemp", args := #["-d", "-t", "wasm-testsuite.XXXXXXXX"] }).toBaseIO
+    match res with
+    | .ok out =>
+      if out.exitCode = 0 then return .ok out.stdout.trimAscii.toString
+      else return .error s!"mktemp failed: {out.stderr.trimAscii.toString}"
+    | .error _ =>
+      return .error "could not create a temporary directory (mktemp not found)"
 
 def runAll (a : Args) : IO UInt32 := do
   let files ← try discoverFiles a.pattern
