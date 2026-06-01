@@ -44,7 +44,7 @@ Memory remains unchanged. Carries the side condition that every offset
 def MemchrSpec : Prop :=
   ∀ (env : HostEnv Unit) (initial : Store Unit) (ptr len needle : UInt32)
     (hmem : ∀ k < len.toNat, (k + ptr.toNat) % 4294967296 < initial.mem.pages * 65536),
-    TerminatesWith env «module» 0 initial [.i32 ptr, .i32 len, .i32 needle]
+    TerminatesWith env «module» 0 initial [.i32 needle, .i32 len, .i32 ptr]
       (fun st' rs => rs = [.i32 (memchrAux st'.mem ptr needle len.toNat 0)])
 
 @[proves Project.Memchr.Spec.MemchrSpec]
