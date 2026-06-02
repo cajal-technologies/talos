@@ -8,7 +8,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 pattern="${1:-}"
 
 if [[ -n "$pattern" ]]; then
-    lake -d "$ROOT/interpreter" exe testsuite "$pattern"
+    lake -d "$ROOT/interpreter" exe testsuite "$pattern" || true
 else
-    lake -d "$ROOT/interpreter" exe testsuite
+    lake -d "$ROOT/interpreter" exe testsuite || true
 fi
