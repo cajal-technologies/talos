@@ -109,8 +109,9 @@ testsuite pattern="":
 # and fails if the working tree drifts, so contributors whose changes shift
 # coverage must commit the updated report.
 [group("testsuite")]
+[working-directory("scripts")]
 testsuite-report:
-    WASM_TOOLS_VERSION={{ quote(WASM_TOOLS_VERSION) }} {{ ROOT }}/scripts/testsuite-report.sh
+    WASM_TOOLS_VERSION={{ quote(WASM_TOOLS_VERSION) }} testsuite-report.sh
 
 # ── verifier workflow ─────────────────────────────────────────────────────────
 
