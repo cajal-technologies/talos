@@ -91,17 +91,17 @@ runner-run +args:
 # Run the WebAssembly spec testsuite (vendor/testsuite/). Optional pattern
 # is a case-sensitive substring on the .wast filename stem.
 [group("testsuite")]
-[working-directory("scripts")]
+[working-directory(ROOT)]
 testsuite pattern="":
-    ./testsuite.sh {{ quote(pattern) }}
+    scripts/testsuite.sh {{ quote(pattern) }}
 
 # Regenerate testsuite_report.txt at the repo root. CI runs the same command
 # and fails if the working tree drifts, so contributors whose changes shift
 # coverage must commit the updated report.
 [group("testsuite")]
-[working-directory("scripts")]
+[working-directory(ROOT)]
 testsuite-report:
-    WASM_TOOLS_VERSION={{ quote(WASM_TOOLS_VERSION) }} ./testsuite-report.sh
+    WASM_TOOLS_VERSION={{ quote(WASM_TOOLS_VERSION) }} scripts/testsuite-report.sh
 
 # ── verifier workflow ─────────────────────────────────────────────────────────
 
