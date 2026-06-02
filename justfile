@@ -88,7 +88,7 @@ runner-build:
 [group("runner")]
 [working-directory("scripts")]
 runner-smoke:
-    runner-smoke.sh
+    ./runner-smoke.sh
 
 # Run the runner executable against samples/.
 [group("runner")]
@@ -103,7 +103,7 @@ runner-run +args:
 [group("testsuite")]
 [working-directory("scripts")]
 testsuite pattern="":
-    testsuite.sh {{ quote(pattern) }}
+    ./testsuite.sh {{ quote(pattern) }}
 
 # Regenerate testsuite_report.txt at the repo root. CI runs the same command
 # and fails if the working tree drifts, so contributors whose changes shift
@@ -111,7 +111,7 @@ testsuite pattern="":
 [group("testsuite")]
 [working-directory("scripts")]
 testsuite-report:
-    WASM_TOOLS_VERSION={{ quote(WASM_TOOLS_VERSION) }} testsuite-report.sh
+    WASM_TOOLS_VERSION={{ quote(WASM_TOOLS_VERSION) }} ./testsuite-report.sh
 
 # ── verifier workflow ─────────────────────────────────────────────────────────
 
@@ -131,12 +131,12 @@ verifier-check-force:
 # Generate HTML documentation and serve it at http://localhost:8080.
 [working-directory("scripts")]
 docs:
-    docs.sh
+    ./docs.sh
 
 # ── housekeeping ──────────────────────────────────────────────────────────────
 
 # Remove Lake build artefacts from all Lean packages and Cargo target dir.
 [working-directory("scripts")]
 clean:
-    clean.sh
+    ./clean.sh
 
