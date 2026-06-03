@@ -45,6 +45,12 @@ PY
 }
 
 seeded=0
+# Shared Mathlib + transitive Lake deps (~multi-GB); one tree at repo root.
+if [[ -d "$src/.lake/packages" && ! -e "$cwd/.lake/packages" ]]; then
+    mkdir -p "$cwd/.lake"
+    clone_dir "$src/.lake/packages" "$cwd/.lake/packages"
+    seeded=$((seeded + 1))
+fi
 for pkg in "${pkgs[@]}"; do
     src_lake="$src/$pkg/.lake"
     dst_lake="$cwd/$pkg/.lake"
@@ -53,12 +59,6 @@ for pkg in "${pkgs[@]}"; do
     [[ -e "$dst_lake" ]] && continue
 
     mkdir -p "$dst_lake"
-    # packages/ is the bulk (~7-9 GB, hundreds of thousands of files) and is
-    # treated as immutable from the worktree's perspective — clone the whole
-    # subtree in one syscall.
-    if [[ -d "$src_lake/packages" ]]; then
-        clone_dir "$src_lake/packages" "$dst_lake/packages"
-    fi
     # build/ and config/ are small and may be touched by builds — per-file
     # COW clone via cp -c is fine here.
     for sub in build config; do

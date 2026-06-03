@@ -1,6 +1,7 @@
 name = "Verifier"
 version = "0.1.0"
 defaultTargets = ["verifier"]
+packagesDir = "../.lake/packages"
 
 [[require]]
 name = "WasmInterpreterLean"
