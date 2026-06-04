@@ -429,6 +429,36 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
       | .Invalid msg    => .Invalid msg
       | .OutOfFuel      => .OutOfFuel
 
+    -- Indirect call. Pop an i32 index, look up the entry in the chosen
+    -- table, then dispatch to the referenced function — trapping on
+    -- out-of-bounds, null refs, or signature mismatches against the
+    -- declared `(type N)`. Trap message strings match the wasm spec's
+    -- canonical wording so the testsuite's `assert_trap` text matcher
+    -- accepts them.
+    | f + 1, .callIndirect typeIdx tableIdx => match s.values with
+      | .i32 i :: rest =>
+        match st.tables[tableIdx]? with
+        | none     => .Invalid s!"callIndirect: table index {tableIdx} out of range"
+        | some tbl =>
+          match tbl[i.toNat]? with
+          | none           => .Trap st "undefined element"
+          | some none      => .Trap st "uninitialized element"
+          | some (some fid) =>
+            match m.funcs[fid]? with
+            | none    => .Invalid s!"callIndirect: function index {fid} out of range"
+            | some fn =>
+              match m.types[typeIdx]? with
+              | none    => .Invalid s!"callIndirect: type index {typeIdx} out of range"
+              | some ty =>
+                if fn.params = ty.params ∧ fn.results = ty.results then
+                  match run f m fid st rest env with
+                  | .Success vs st' => .Fallthrough st' { s with values := vs }
+                  | .Trap st' msg   => .Trap st' msg
+                  | .Invalid msg    => .Invalid msg
+                  | .OutOfFuel      => .OutOfFuel
+                else .Trap st "indirect call type mismatch"
+      | _ => .Invalid "callIndirect: ill-shaped operand stack"
+
     -- Memory load / store. Every access traps when
     -- `addr.toNat + off.toNat + size > byteCap`; the check is done in
     -- `Nat` to avoid the i32 wraparound that would otherwise hide
