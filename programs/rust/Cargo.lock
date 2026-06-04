@@ -17,6 +17,10 @@ name = "is_even"
 version = "0.1.0"
 
 [[package]]
+name = "is_prime"
+version = "0.1.0"
+
+[[package]]
 name = "itoa"
 version = "0.1.0"
 dependencies = [

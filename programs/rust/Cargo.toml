@@ -3,6 +3,7 @@ resolver = "2"
 members = [
   "dyn_dispatch",
   "is_even",
+  "is_prime",
   "itoa",
   "memchr",
   "num_integer",
