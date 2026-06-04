@@ -2,45 +2,33 @@
 
 A running, opinionated list of Wasm features the interpreter does not yet support, roughly ranked by how often they show up when verifying real Rust-compiled Wasm. This is a guide for contributors looking for impactful work, not a commitment. Items near the top unlock the most real-world programs; items near the bottom are specialized and can wait.
 
-If you want to pick something up, open an issue first so we can compare notes on the design — especially for tier 1 items, where the data-model choices ripple through the rest of the interpreter and the WP layer.
+If you want to pick something up, open an issue first so we can compare notes on the design — especially for the higher-impact items, where the data-model choices ripple through the rest of the interpreter and the WP layer.
 
-## Tier 1 — common, blocking real programs
+## Already supported
 
-### Host functions / imports
+These were once on this roadmap and have since landed; listed here so the list above stays honest about what's done:
 
-Today `Module` has no `imports` field and `call` only dispatches to in-module functions. Without imports, no program that does I/O, allocates via a host allocator, or interacts with a runtime is verifiable — which rules out most "real" Wasm.
+- **Host functions / imports.** `Module.imports`, a `HostEnv α` threaded through `exec`/`run`, `call` dispatch into host imports, and the `HostContract`/`HostSpec` contract layer. The store is polymorphic over host state (`Store α`).
+- **Tables and `call_indirect`** (with `funcref` and element segments).
+- **Multi-value results.** `Function` and the public `run` API carry `List ValueType` results, not just i32.
+- **Start function.** `(start $f)` runs at instantiation; a trap there fails instantiation.
 
-Sketch of what's needed:
-
-- An import descriptor in `Module` (name, signature).
-- A host-function environment threaded through `Config`.
-- A `call_host` step rule that consults the environment.
-- A spec-level story for "the host does X" — probably an uninterpreted relation the user supplies per program, so that proofs can reason about host effects abstractly.
-
-### Tables and `call_indirect`
-
-Rust emits `call_indirect` for trait objects, function pointers, and some closure shapes. Without it, anything using `dyn Trait` is off-limits. Implementation involves `funcref`, element segments for table initialization, and the runtime type-check (with trap on mismatch or out-of-bounds).
-
-## Tier 2 — common in real codegen
-
-### Multi-value results
-
-`paramArity` / `resultArity` already exist on the block-like instructions, so the interpreter is mostly ready. The gap is in `Function` and the public `run` API, which are i32-shaped. Multi-value lets functions return tuples and is required for some Rust ABIs.
+## Tier 1 — common in real codegen
 
 ### Floats (f32 / f64)
 
-Large surface area: NaN propagation, rounding modes, canonicalization. Rarely worth the implementation cost for verification work unless a target program needs them. Punt until forced.
+Large surface area: NaN propagation, rounding modes, canonicalization. The WAT decoder currently maps float types to an `i32` placeholder (`Decoder/Wat.lean`), so float programs decode but are not modeled faithfully — a real implementation needs the actual value domain and operations. Rarely worth the cost for verification work unless a target program needs them, but it is the largest remaining gap for "real" Rust output.
 
-## Tier 3 — nice to have, low priority
+## Tier 2 — nice to have, lower priority
 
-- Mutable global imports (rounds out the host-functions design).
-- Start function.
+- Mutable global imports (memory/global/table imports are currently dropped by the decoder; only function imports are wired up).
 - Multiple memories.
 - Reference types beyond `funcref` (`externref`).
 - SIMD (`v128`).
 - Exception handling.
 - GC proposal.
+- Host reentrancy — a host function calling back into `run`. Out of scope today; real reentrant hosts (blockchain trampolines, JS) would need a dedicated milestone.
 
 ## Meta-gap: module linking
 
-There is currently no story for one verified module calling another. If the project heads toward verifying a *system* rather than a single program, the linking model shapes the host-function design above and is worth settling before tier 1 (1) gets built out. Worth a design discussion before code.
+There is currently no story for one verified module calling another. If the project heads toward verifying a *system* rather than a single program, the linking model shapes the host-function design and is worth settling before more host machinery gets built out. Worth a design discussion before code.
