@@ -16,6 +16,18 @@ jobs:
         with:
           lake-package-directory: programs/lean
           use-mathlib-cache: true
+      - name: Fail on build warnings
+        working-directory: programs/lean
+        run: |
+          set -o pipefail
+          # Rebuild (cached) and capture output. Warnings (e.g. `sorry`,
+          # unused-variable lints) are re-emitted on every build but do not
+          # change lake's exit code, so scan the log and fail if any appear.
+          lake build 2>&1 | tee build.log
+          if grep -E '(^|[[:space:]])warning:' build.log; then
+            echo "::error::Build produced warnings; warnings are not allowed."
+            exit 1
+          fi
 
   test:
     name: Smoke test
