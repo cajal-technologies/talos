@@ -23,7 +23,7 @@ memory. -/
 @[spec_of "rust-exported" "reverse_inplace::reverse_inplace"]
 def ReverseInplaceSpec : Prop :=
   ∀ (env : HostEnv Unit) (initial : Store Unit) (ptr len : UInt32)
-    (hmem : ∀ k < len.toNat, (ptr.toNat + 4 * k) % 4294967296 + 4 ≤ initial.mem.pages * 65536),
+    (_hmem : ∀ k < len.toNat, (ptr.toNat + 4 * k) % 4294967296 + 4 ≤ initial.mem.pages * 65536),
     TerminatesWith env «module» 0 initial [.i32 len, .i32 ptr]
       (fun st' rs => rs = [] ∧
         (∀ i < len.toNat,
