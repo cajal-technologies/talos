@@ -35,9 +35,9 @@ starting at `p`, calling this function with the stack
 and leaves the store unchanged. -/
 @[spec_of "rust-exported" "dyn_dispatch::Add::apply"]
 def AddApplySpec : Prop :=
-  ∀ (initial : Store) (p x : UInt32),
+  ∀ (initial : Store Unit) (p x : UInt32),
     p.toNat + 4 ≤ initial.mem.pages * 65536 →
-    TerminatesWith «module» 1 initial [.i32 x, .i32 p]
+    TerminatesWith ({} : HostEnv Unit) «module» 1 initial [.i32 x, .i32 p]
       (fun st rs => rs = [.i32 (initial.mem.read32 p + x)] ∧ st = initial)
 
 @[proves Project.DynDispatch.Spec.AddApplySpec]

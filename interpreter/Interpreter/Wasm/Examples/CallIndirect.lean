@@ -31,7 +31,7 @@ def callIndirectModule : Module :=
 /-- `incr` adds one to its argument. Holds for any initial store —
 the body never reads the store. -/
 theorem incrSpec (n : UInt32) :
-    FuncSpec callIndirectModule 0 (· = [.i32 n])
+    FuncSpec ({} : HostEnv Unit) callIndirectModule 0 (· = [.i32 n])
       (fun _ vs => vs = [.i32 (n + 1)]) := by
   apply FuncSpec.of_wp_body
     (f := { params := [.i32], body := Incr, results := [.i32] })
@@ -48,8 +48,8 @@ initial store. The indirect call resolves through table slot 0 to
 theorem dispatchSpec (n : UInt32) :
     wp callIndirectModule Dispatch
       (fun c => ∃ st' s', c = .Fallthrough st' s' ∧ s'.values = [.i32 (n + 1)])
-      callIndirectModule.initialStore
-      { params := [.i32 n], locals := [], values := [] } := by
+      (callIndirectModule.initialStore (α := Unit))
+      { params := [.i32 n], locals := [], values := [] } ({} : HostEnv Unit) := by
   unfold Dispatch
   wp_run
   simp

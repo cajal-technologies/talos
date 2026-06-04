@@ -137,7 +137,7 @@ subsequent successful invokes so that mutations to globals and memory
 are observable to later commands — matching the standard wasm semantics
 where the store is per-instance and persists across script actions. -/
 inductive ModuleSlot where
-  | ok (m : Wasm.Module) (store : Wasm.Store)
+  | ok (m : Wasm.Module) (store : Wasm.Store Unit)
   | unavailable (reason : String)
 deriving Inhabited
 

@@ -240,6 +240,19 @@ structure TableDecl where
   elemType : ValueType  := .funcref
 deriving Repr, Inhabited
 
+/-- Declaration of a function imported from the host. Imports occupy the
+low indices of the unified function index space: `call i` for
+`i < imports.length` dispatches to the host environment's `i`-th
+function; for `i ≥ imports.length` it dispatches to
+`funcs[i - imports.length]`. The `params`/`results` are the import's
+declared signature; the host environment is expected to honour it. -/
+structure ImportDecl where
+  «module» : String
+  name     : String
+  params   : List ValueType := []
+  results  : List ValueType := []
+deriving Repr, Inhabited, DecidableEq
+
 /-- A `(elem ...)` declaration. *Active* segments carry
 `tableIdx := some t` and `offset := some n` and are written into
 `tables[t]` starting at offset `n` at instantiation time, then dropped.
@@ -257,6 +270,10 @@ structure Module where
   exports  : List Export := []
   memory   : Option MemDecl := none
   globals  : List GlobalDecl := []
+  /-- Imported functions, in declaration order. See `ImportDecl` for the
+  index-space convention. Empty for modules with no imports — the
+  default everywhere except the host-function demos. -/
+  imports  : List ImportDecl := []
   /-- Function type declarations indexed by source-order position
   (`(type 0)`, `(type 1)`, ...). `call_indirect (type N)` looks the
   expected signature up here. -/
@@ -273,11 +290,16 @@ table's current size; we don't model `table.grow`. -/
 abbrev TableInst : Type := List (Option Nat)
 
 /-- The mutable runtime state threaded through execution: module-level
-globals, the (optional) linear memory, available bytes per data segment,
-plus runtime tables and per-element-segment status. Lists indexed by
-source-order positions and aligned with the declaring module's
-corresponding lists. -/
-structure Store where
+globals, the (optional) linear memory, available bytes per data segment
+(`none` = dropped or active-and-already-consumed; `some bs` = still
+available to `memory.init`), runtime tables and per-element-segment
+status, and a host-managed slot whose type `α` is supplied by the host.
+The Wasm core never inspects `host`; only host imports do.
+
+`α` is whatever shape a particular host needs — `Unit` for the
+hostless corpus, a KV map for a blockchain demo, a byte-trace for a
+logger, etc. No schema is baked into the Wasm core. -/
+structure Store (α : Type) where
   globals         : Globals
   mem             : Mem
   dataSegments    : List (Option (List UInt8)) := []
@@ -285,11 +307,12 @@ structure Store where
   module's `tables`; entry `t` has size at least `tables[t].min`. -/
   tables          : List TableInst := []
   /-- Per-segment runtime status, mirroring `dataSegments` for `data`.
-  `none` = dropped or active-and-already-consumed; `some funcs` = passive
-  segment still available to `table.init`. Same length as the declaring
-  module's `elements` list. -/
+  `none` = dropped or active-and-already-consumed; `some funcs` =
+  passive segment still available to `table.init`. Same length as the
+  declaring module's `elements` list. -/
   elementSegments : List (Option (List (Option Nat))) := []
-deriving Repr, Inhabited
+  host            : α
+deriving Repr
 
 /-- Replace `list[i]` in place. Returns the original list unchanged
 if `i ≥ list.length`. -/
@@ -314,7 +337,17 @@ private def listWriteAt (l : List α) (off : Nat) (vs : List α) : List α :=
     | []      => []
     | x :: xs => x :: listWriteAt xs i vs
 
-def Module.initialStore (m : Module) : Store :=
+/-- Build the initial store for a module: evaluate each global's `init`
+into `Globals.globals`; allocate a memory with `pagesMin` pages and
+write each *active* data segment at its declared offset; track all
+segments in `dataSegments` (passive → `some bytes`, active → `none`,
+because active segments are spec-equivalent to "dropped" immediately
+after instantiation). Allocate tables sized to each declaration's
+minimum (filled with null refs) and apply every active element segment;
+passive/declarative segments are stashed in `elementSegments` for
+`table.init` to consume later. Modules with no memory get an empty
+0-page memory. -/
+def Module.initialStore [Inhabited α] (m : Module) : Store α :=
   let globals : Globals := { globals := m.globals.map (·.init) }
   let (mem, dataSegments) : Mem × List (Option (List UInt8)) :=
     match m.memory with
@@ -328,8 +361,8 @@ def Module.initialStore (m : Module) : Store :=
         m0
       let dataSegments : List (Option (List UInt8)) :=
         decl.data.map fun seg => match seg.offset with
-          | some _ => none
-          | none   => some seg.bytes
+          | some _ => none           -- active: auto-dropped after init
+          | none   => some seg.bytes -- passive: available to memory.init
       (mem, dataSegments)
   -- Allocate tables filled with null refs at the declared minimum size.
   let baseTables : List TableInst :=
@@ -350,7 +383,7 @@ def Module.initialStore (m : Module) : Store :=
     m.elements.map fun seg => match seg.offset with
       | some _ => none           -- active: auto-dropped
       | none   => some seg.funcs -- passive / declarative
-  { globals, mem, dataSegments, tables, elementSegments }
+  { globals, mem, dataSegments, tables, elementSegments, host := default }
 
 /-- Maximum number of pages an i32-indexed memory can hold (2^16, or 4 GiB).
 This is the wasm spec hard ceiling; `memory.grow` may not exceed it

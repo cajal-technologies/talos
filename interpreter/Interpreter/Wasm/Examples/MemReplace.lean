@@ -30,14 +30,14 @@ def replaceModule : Module :=
     memory := some { pagesMin := 1, data := [{ offset := some 0, bytes := [42, 0, 0, 0] }] } }
 
 theorem replaceModule_init_mem :
-    replaceModule.initialStore.mem.read32 0 = 42 := by
+    (replaceModule.initialStore (α := Unit)).mem.read32 0 = 42 := by
   native_decide
 
 /-- For any store with at least one page of memory whose `mem[0] = old`,
     running `replace(new)` terminates with `old` on top of the value stack
     and `new` written back to `mem[0]`. The `1 ≤ st.mem.pages` hypothesis
     rules out the out-of-bounds trap on the load/store at offset 0. -/
-theorem replace_spec (st : Store) (new old : UInt32) (hpages : 1 ≤ st.mem.pages)
+theorem replace_spec (st : Store Unit) (new old : UInt32) (hpages : 1 ≤ st.mem.pages)
     (hmem : st.mem.read32 0 = old) :
     wp replaceModule replaceBody
       (fun c => c = .Fallthrough { st with mem := st.mem.write32 0 new }

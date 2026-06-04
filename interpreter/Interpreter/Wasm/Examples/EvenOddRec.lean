@@ -27,18 +27,18 @@ def evenOddModule : Module :=
 /-- Joint spec for both functions, proven simultaneously by strong induction
     on `n.toNat` (the unsigned measure). -/
 theorem evenOddSpec : ∀ n : UInt32,
-    FuncSpec evenOddModule 0 (· = [.i32 n])
+    FuncSpec ({} : HostEnv Unit) evenOddModule 0 (· = [.i32 n])
       (fun _ vs => vs = [.i32 (if n.toNat % 2 = 0 then 1 else 0)]) ∧
-    FuncSpec evenOddModule 1 (· = [.i32 n])
+    FuncSpec ({} : HostEnv Unit) evenOddModule 1 (· = [.i32 n])
       (fun _ vs => vs = [.i32 (if n.toNat % 2 = 1 then 1 else 0)]) := by
   intro n
   induction hk : n.toNat using Nat.strong_induction_on generalizing n with
   | _ k ih =>
   subst hk
   have ih' : ∀ (k : UInt32), k.toNat < n.toNat →
-      FuncSpec evenOddModule 0 (· = [.i32 k])
+      FuncSpec ({} : HostEnv Unit) evenOddModule 0 (· = [.i32 k])
         (fun _ vs => vs = [.i32 (if k.toNat % 2 = 0 then 1 else 0)]) ∧
-      FuncSpec evenOddModule 1 (· = [.i32 k])
+      FuncSpec ({} : HostEnv Unit) evenOddModule 1 (· = [.i32 k])
         (fun _ vs => vs = [.i32 (if k.toNat % 2 = 1 then 1 else 0)]) := by
     intro k hk; exact ih k.toNat hk k rfl
   clear ih

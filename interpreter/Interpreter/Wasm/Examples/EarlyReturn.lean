@@ -19,7 +19,7 @@ def EarlyReturn : Program := [
   .const 888
 ]
 
-theorem earlyReturnSpec (m : Module) (st : Store) (x : UInt32) :
+theorem earlyReturnSpec (m : Module) (st : Store Unit) (x : UInt32) :
     wp m EarlyReturn
         (fun c => c = .Return st [.i32 x])
         st { params := [.i32 x], locals := [], values := [] } := by

@@ -41,7 +41,7 @@ def growModule : Module :=
     memory := some { pagesMin := 1 } }
 
 private def runValues (fuel : Nat) (m : Module) (idx : Nat)
-    (st : Store) (args : List Value) : List Value :=
+    (st : Store Unit) (args : List Value) : List Value :=
   match run fuel m idx st args with
   | .Success vs _ => vs
   | _ => []

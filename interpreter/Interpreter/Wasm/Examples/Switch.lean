@@ -22,7 +22,7 @@ def Switch : Program := [
   .const 30, .ret
 ]
 
-theorem switchSpec (m : Module) (st : Store) (i : UInt32) :
+theorem switchSpec (m : Module) (st : Store Unit) (i : UInt32) :
     wp m Switch
         (fun c => c = .Return st
           [.i32 (if i.toNat = 0 then 10 else if i.toNat = 1 then 20 else 30)])

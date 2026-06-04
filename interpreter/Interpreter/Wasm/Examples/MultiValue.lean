@@ -106,7 +106,7 @@ def multiValueModule : Module :=
     a `Store` field and `Store` doesn't. Returns `[]` on any non-success
     outcome so the helper is total. Same idiom as `MemGrow.runValues`. -/
 private def runValues (fuel : Nat) (m : Module) (idx : Nat)
-    (st : Store) (args : List Value) : List Value :=
+    (st : Store Unit) (args : List Value) : List Value :=
   match run fuel m idx st args with
   | .Success vs _ => vs
   | _ => []
@@ -125,7 +125,7 @@ theorem swap_runs :
     interesting bit is the `Post`'s value-list has length 2 — every earlier
     example's `Post` carried a length-≤ 1 list. -/
 theorem swapSpec (a b : UInt32) :
-    FuncSpec multiValueModule 0 (· = [.i32 b, .i32 a])
+    FuncSpec ({} : HostEnv Unit) multiValueModule 0 (· = [.i32 b, .i32 a])
       (fun _ vs => vs = [.i32 a, .i32 b]) := by
   apply FuncSpec.of_wp_body
     (f := { params := [.i32, .i32], body := Swap, results := [.i32, .i32] })
@@ -139,7 +139,7 @@ theorem swapSpec (a b : UInt32) :
 /-! ### Check 3 — `FuncSpec` whose body is a single multi-value block -/
 
 theorem pairBlockSpec (x : UInt32) :
-    FuncSpec multiValueModule 1 (· = [.i32 x])
+    FuncSpec ({} : HostEnv Unit) multiValueModule 1 (· = [.i32 x])
       (fun _ vs => vs = [.i32 (x - 1), .i32 (1 + x)]) := by
   apply FuncSpec.of_wp_body
     (f := { params := [.i32], body := PairBlock, results := [.i32, .i32] })
@@ -157,7 +157,7 @@ theorem pairBlockSpec (x : UInt32) :
     every earlier example `vs` had length 1, so this is the first test that
     the rule composes when `f.results.length > 1`. -/
 theorem callsSwapSpec :
-    FuncSpec multiValueModule 2 (· = [])
+    FuncSpec ({} : HostEnv Unit) multiValueModule 2 (· = [])
       (fun _ vs => vs = [.i32 8]) := by
   apply FuncSpec.of_wp_body
     (f := { params := [], body := CallsSwap, results := [.i32] })

@@ -1,4 +1,4 @@
-import Interpreter.Wasm
+import Interpreter.Wasm.Semantics
 import Interpreter.Wasm.Decoder.Wat
 
 /-!
@@ -207,12 +207,15 @@ def runOnce (a : Args) : IO UInt32 := do
     | .ok vs => pure vs
     | .error msg => IO.eprintln s!"error: {msg}"; return EXIT_ERR
 
-  -- Execute. `Wasm.run` expects params in *stack* order (top = last
-  -- source arg) and reverses internally so local 0 maps to the first
-  -- argument; `parseArgs?` gives them in source order, so we reverse
-  -- here to match the call convention. (Single-arg functions are
-  -- order-insensitive, which masked this bug for the existing samples.)
-  match Wasm.run a.fuel m idx m.initialStore vs.reverse with
+  -- Execute. The runner is host-independent; pick `α := Unit` so the
+  -- trivial empty `HostEnv Unit` defaults in and the module runs
+  -- against no imports. `Wasm.run` expects params in *stack* order
+  -- (top = last source arg) and reverses internally so local 0 maps
+  -- to the first argument; `parseArgs?` gives them in source order,
+  -- so we reverse here to match the call convention. (Single-arg
+  -- functions are order-insensitive, which masked this for older
+  -- samples.)
+  match Wasm.run a.fuel m idx (m.initialStore (α := Unit)) vs.reverse with
   | .Success results _ =>
     for v in results.reverse do
       IO.println (renderValue v)

@@ -9,7 +9,7 @@ namespace Wasm
 
 def InfiniteLoop : Program := [.loop 0 0 [.br 0]]
 
-theorem infiniteLoopDiverges (m : Module) (st : Store) (s : Locals) :
+theorem infiniteLoopDiverges (m : Module) (st : Store Unit) (s : Locals) :
     wp m InfiniteLoop (fun c => c ≠ .OutOfFuel) st s → False := by
   unfold InfiniteLoop
   rw [wp_loop_br0_cons]

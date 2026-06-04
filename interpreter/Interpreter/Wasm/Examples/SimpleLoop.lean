@@ -22,7 +22,7 @@ def SimpleLoop : Program := [
     .localGet 1
 ]
 
-theorem simpleLoopSpec (m : Module) (st : Store) (n : UInt32) :
+theorem simpleLoopSpec (m : Module) (st : Store Unit) (n : UInt32) :
     wp m SimpleLoop
         (fun c => ∃ st' s', c = .Fallthrough st' s' ∧ s'.values = [.i32 n])
         st { params := [.i32 n], locals := [.i32 0], values := [] } := by

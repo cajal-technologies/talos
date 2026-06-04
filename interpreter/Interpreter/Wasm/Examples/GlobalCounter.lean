@@ -23,11 +23,11 @@ def tickModule : Module :=
     globals := [{ type := .i32, init := .i32 0 }] }
 
 theorem tickModule_initial_global :
-    tickModule.initialStore.globals.globals = [.i32 0] := by
+    (tickModule.initialStore (α := Unit)).globals.globals = [.i32 0] := by
   native_decide
 
 /-- One call to `tick` returns the old global value and increments it. -/
-theorem tick_spec (st : Store) (n : UInt32)
+theorem tick_spec (st : Store Unit) (n : UInt32)
     (hg : st.globals.globals[0]? = some (.i32 n)) :
     wp tickModule tickBody
       (fun c => c = .Fallthrough

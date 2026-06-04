@@ -49,13 +49,13 @@ def copyModule : Module :=
     memory := some { pagesMin := 1, data := [{ offset := some 0, bytes := initBytes }] } }
 
 private def runValues (fuel : Nat) (m : Module) (idx : Nat)
-    (st : Store) (args : List Value) : List Value :=
+    (st : Store Unit) (args : List Value) : List Value :=
   match run fuel m idx st args with
   | .Success vs _ => vs
   | _ => []
 
 private def runTrapMsg (fuel : Nat) (m : Module) (idx : Nat)
-    (st : Store) (args : List Value) : Option String :=
+    (st : Store Unit) (args : List Value) : Option String :=
   match run fuel m idx st args with
   | .Trap _ msg => some msg
   | _ => none

@@ -10,7 +10,7 @@ namespace Wasm
 
 def TrapUnreachable : Program := [.unreachable]
 
-theorem trapUnreachableSpec (m : Module) (st : Store) :
+theorem trapUnreachableSpec (m : Module) (st : Store Unit) :
     wp m TrapUnreachable
         (fun c => c = .Trap st "unreachable")
         st { params := [], locals := [], values := [] } := by

@@ -13,26 +13,26 @@ the caller of `run` — it collapses the in-flight control-flow variants
 
 namespace Wasm
 
-inductive Continuation where
-| Fallthrough : Store → Locals → Continuation
-| Break       : Nat → Store → Locals → Continuation
-| Return      : Store → List Value → Continuation
+inductive Continuation (α : Type) where
+| Fallthrough : Store α → Locals → Continuation α
+| Break       : Nat → Store α → Locals → Continuation α
+| Return      : Store α → List Value → Continuation α
 /-- A trap aborts the current invocation. Per the wasm spec, side
 effects already committed before the trap (memory writes, global
 updates) are visible in the store carried here — only the in-flight
 operand/locals state is lost. -/
-| Trap        : Store → String → Continuation
-| Invalid     : String → Continuation
-| OutOfFuel   : Continuation
+| Trap        : Store α → String → Continuation α
+| Invalid     : String → Continuation α
+| OutOfFuel   : Continuation α
 deriving Repr
 
-inductive Result where
-  | Success   : List Value → Store → Result
+inductive Result (α : Type) where
+  | Success   : List Value → Store α → Result α
   /-- See `Continuation.Trap`: the store reflects every side effect
   committed before the trap was raised. -/
-  | Trap      : Store → String → Result
-  | Invalid   : String → Result
-  | OutOfFuel : Result
+  | Trap      : Store α → String → Result α
+  | Invalid   : String → Result α
+  | OutOfFuel : Result α
 deriving Repr
 
 end Wasm

@@ -13,7 +13,7 @@ def earlyBrModule : Module := {
   funcs := [{ params := [.i32], results := [.i32], body := EarlyBr }]
 }
 
-theorem earlyBrSpec (m : Module) (st : Store) (x : UInt32) :
+theorem earlyBrSpec (m : Module) (st : Store Unit) (x : UInt32) :
     wp m EarlyBr
         (fun c => c = .Break 0 st
                     { params := [.i32 x], locals := [],

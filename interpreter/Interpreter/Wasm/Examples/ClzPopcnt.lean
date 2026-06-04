@@ -39,7 +39,7 @@ def clzPopcntModule : Module :=
 /-! ### Helpers -/
 
 private def runValues (fuel : Nat) (m : Module) (idx : Nat)
-    (st : Store) (args : List Value) : List Value :=
+    (st : Store Unit) (args : List Value) : List Value :=
   match run fuel m idx st args with
   | .Success vs _ => vs
   | _ => []
@@ -47,24 +47,24 @@ private def runValues (fuel : Nat) (m : Module) (idx : Nat)
 /-! ### Checks 1–3 — concrete `run` -/
 
 theorem clz_zero_runs :
-    runValues 10 clzPopcntModule 0 clzPopcntModule.initialStore [.i32 0]
+    runValues 10 clzPopcntModule 0 (clzPopcntModule.initialStore (α := Unit)) [.i32 0]
       = [.i32 32] := by
   native_decide
 
 theorem ctz_eight_runs :
-    runValues 10 clzPopcntModule 1 clzPopcntModule.initialStore [.i32 8]
+    runValues 10 clzPopcntModule 1 (clzPopcntModule.initialStore (α := Unit)) [.i32 8]
       = [.i32 3] := by
   native_decide
 
 theorem popcnt_nibble_runs :
-    runValues 10 clzPopcntModule 2 clzPopcntModule.initialStore [.i32 0xF]
+    runValues 10 clzPopcntModule 2 (clzPopcntModule.initialStore (α := Unit)) [.i32 0xF]
       = [.i32 4] := by
   native_decide
 
 /-! ### Checks 4–6 — `FuncSpec` via `wp` -/
 
 theorem clzSpec (a : UInt32) :
-    FuncSpec clzPopcntModule 0 (· = [.i32 a])
+    FuncSpec ({} : HostEnv Unit) clzPopcntModule 0 (· = [.i32 a])
       (fun _ vs => vs = [.i32 (UInt32.ofNat (clz32 32 a))]) := by
   apply FuncSpec.of_wp_body
     (f := { params := [.i32], body := ClzBody, results := [.i32] })
@@ -76,7 +76,7 @@ theorem clzSpec (a : UInt32) :
     simp
 
 theorem ctzSpec (a : UInt32) :
-    FuncSpec clzPopcntModule 1 (· = [.i32 a])
+    FuncSpec ({} : HostEnv Unit) clzPopcntModule 1 (· = [.i32 a])
       (fun _ vs => vs = [.i32 (UInt32.ofNat (ctz32 32 a))]) := by
   apply FuncSpec.of_wp_body
     (f := { params := [.i32], body := CtzBody, results := [.i32] })
@@ -88,7 +88,7 @@ theorem ctzSpec (a : UInt32) :
     simp
 
 theorem popcntSpec (a : UInt32) :
-    FuncSpec clzPopcntModule 2 (· = [.i32 a])
+    FuncSpec ({} : HostEnv Unit) clzPopcntModule 2 (· = [.i32 a])
       (fun _ vs => vs = [.i32 (UInt32.ofNat (popcnt32 32 a 0))]) := by
   apply FuncSpec.of_wp_body
     (f := { params := [.i32], body := PopcntBody, results := [.i32] })
