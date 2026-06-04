@@ -44,8 +44,9 @@ private def emitU64 (n : UInt64) : String :=
   parens s!"{n.toNat} : UInt64"
 
 private def emitValueType : Wasm.ValueType → String
-  | .i32 => ".i32"
-  | .i64 => ".i64"
+  | .i32     => ".i32"
+  | .i64     => ".i64"
+  | .funcref => ".funcref"
 
 private def emitValueTypes (xs : List Wasm.ValueType) : String :=
   list (xs.map emitValueType)
@@ -137,8 +138,9 @@ private def emitInstrShort : Wasm.Instruction → String
   | .br_if n        => s!".br_if {emitNat n}"
   | .brTable ts d   => s!".brTable {emitNatList ts} {emitNat d}"
   -- Calls / returns
-  | .call idx       => s!".call {emitNat idx}"
-  | .ret            => ".ret"
+  | .call idx                  => s!".call {emitNat idx}"
+  | .callIndirect ti tj        => s!".callIndirect {emitNat ti} {emitNat tj}"
+  | .ret                       => ".ret"
   -- Globals
   | .globalGet i    => s!".globalGet {emitNat i}"
   | .globalSet i    => s!".globalSet {emitNat i}"
@@ -238,8 +240,10 @@ private def emitExport (e : Wasm.Export) : String :=
   s!"\{ name := {repr e.name}, funcIdx := {emitNat e.funcIdx} }"
 
 private def emitValue : Wasm.Value → String
-  | .i32 n => s!".i32 {emitU32 n}"
-  | .i64 n => s!".i64 {emitU64 n}"
+  | .i32 n              => s!".i32 {emitU32 n}"
+  | .i64 n              => s!".i64 {emitU64 n}"
+  | .funcref none       => ".funcref none"
+  | .funcref (some i)   => s!".funcref (some {emitNat i})"
 
 private def emitGlobalDecl (g : Wasm.GlobalDecl) : String :=
   s!"\{ type := {emitValueType g.type}, init := {emitValue g.init} }"
@@ -266,6 +270,26 @@ private def emitOptionMem : Option Wasm.MemDecl → String
   | none   => "none"
   | some m => s!"some {emitMemDecl m}"
 
+private def emitFuncType (t : Wasm.FuncType) : String :=
+  s!"\{ params := {emitValueTypes t.params}, results := {emitValueTypes t.results} }"
+
+private def emitOptionNat : Option Nat → String
+  | none   => "none"
+  | some n => s!"some {emitNat n}"
+
+private def emitTableDecl (t : Wasm.TableDecl) : String :=
+  s!"\{ min := {emitNat t.min}, max := {emitOptionNat t.max}" ++
+  s!", elemType := {emitValueType t.elemType} }"
+
+private def emitFuncrefSlot : Option Nat → String
+  | none   => "none"
+  | some i => s!"some {emitNat i}"
+
+private def emitElementSegment (e : Wasm.ElementSegment) : String :=
+  s!"\{ tableIdx := {emitOptionNat e.tableIdx}" ++
+  s!", offset := {emitOptionNat e.offset}" ++
+  s!", funcs := {list (e.funcs.map emitFuncrefSlot)} }"
+
 /-- All function-body `def`s, joined by blank lines. -/
 def funcBodies (m : Wasm.Module) : String :=
   String.intercalate "\n\n" <|
@@ -277,8 +301,12 @@ def «module» (m : Wasm.Module) : String :=
   let exports := recordList (m.exports.map emitExport)
   let memory := emitOptionMem m.memory
   let globals := recordList (m.globals.map emitGlobalDecl)
+  let types    := recordList (m.types.map emitFuncType)
+  let tables   := recordList (m.tables.map emitTableDecl)
+  let elements := recordList (m.elements.map emitElementSegment)
   s!"\{\n  funcs := {funcs},\n  exports := {exports}" ++
-  s!",\n  memory := {memory},\n  globals := {globals}\n}"
+  s!",\n  memory := {memory},\n  globals := {globals}" ++
+  s!",\n  types := {types},\n  tables := {tables},\n  elements := {elements}\n}"
 
 /-- Emit the drift-check block: a `UInt64` hash constant pinned to the
 `module.wat` content at emit time, plus a `#eval` that re-reads the sibling

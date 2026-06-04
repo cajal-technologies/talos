@@ -604,7 +604,7 @@ def func18 : Wasm.Program :=
   .const (1 : UInt32),
   .localGet 0,
   .select,
-  .unreachable,
+  .callIndirect 0 0,
   .unreachable
 ]
 
@@ -816,7 +816,7 @@ def func22 : Wasm.Program :=
           .localGet 0,
           .localGet 1,
           .load32 (20 : UInt32),
-          .unreachable,
+          .callIndirect 0 0,
           .localGet 5,
           .localGet 4,
           .store8 (29 : UInt32),
@@ -838,14 +838,14 @@ def func22 : Wasm.Program :=
           .const (0 : UInt32),
           .load32 (1049732 : UInt32),
           .load32 (20 : UInt32),
-          .unreachable,
+          .callIndirect 0 0,
           .br 2
         ],
         .localGet 5,
         .localGet 0,
         .localGet 1,
         .load32 (24 : UInt32),
-        .unreachable,
+        .callIndirect 0 0,
         .br 2
       ],
       .const (2147483648 : UInt32),
@@ -5754,7 +5754,7 @@ def func59 : Wasm.Program :=
       .shrU,
       .localGet 1,
       .load32 (12 : UInt32),
-      .unreachable,
+      .callIndirect 1 0,
       .localSet 5,
       .br 1
     ],
@@ -5810,7 +5810,7 @@ def func59 : Wasm.Program :=
                 .localGet 4,
                 .localGet 5,
                 .load32 (4 : UInt32),
-                .unreachable,
+                .callIndirect 2 0,
                 .eqz,
                 .br_if 2,
                 .const (1 : UInt32),
@@ -5826,7 +5826,7 @@ def func59 : Wasm.Program :=
                 .localSet 5,
                 .localGet 5,
                 .localGet 6,
-                .unreachable,
+                .callIndirect 1 0,
                 .br_if 0,
                 .localGet 8,
                 .localGet 5,
@@ -5850,7 +5850,7 @@ def func59 : Wasm.Program :=
               .localSet 2,
               .localGet 2,
               .localGet 6,
-              .unreachable,
+              .callIndirect 1 0,
               .br_if 0,
               .localGet 5,
               .localGet 2,
@@ -6003,7 +6003,7 @@ def func59 : Wasm.Program :=
           .localGet 4,
           .localGet 5,
           .load32 (4 : UInt32),
-          .unreachable,
+          .callIndirect 2 0,
           .eqz,
           .br_if 0,
           .const (1 : UInt32),
@@ -6302,7 +6302,7 @@ def func61 : Wasm.Program :=
               .localGet 9,
               .localGet 11,
               .load32 (16 : UInt32),
-              .unreachable,
+              .callIndirect 2 0,
               .eqz,
               .br_if 0,
               .br 5
@@ -6359,7 +6359,7 @@ def func61 : Wasm.Program :=
             .const (48 : UInt32),
             .localGet 11,
             .load32 (16 : UInt32),
-            .unreachable,
+            .callIndirect 2 0,
             .eqz,
             .br_if 0,
             .br 4
@@ -6379,7 +6379,7 @@ def func61 : Wasm.Program :=
         .localGet 5,
         .localGet 11,
         .load32 (12 : UInt32),
-        .unreachable,
+        .callIndirect 1 0,
         .br_if 2,
         .const (0 : UInt32),
         .localSet 7,
@@ -6410,7 +6410,7 @@ def func61 : Wasm.Program :=
           .localGet 9,
           .localGet 11,
           .load32 (16 : UInt32),
-          .unreachable,
+          .callIndirect 2 0,
           .eqz,
           .br_if 0,
           .br 3
@@ -6423,7 +6423,7 @@ def func61 : Wasm.Program :=
       .localGet 5,
       .localGet 11,
       .load32 (12 : UInt32),
-      .unreachable,
+      .callIndirect 1 0,
       .br_if 1,
       .localGet 0,
       .localGet 14,
@@ -6451,7 +6451,7 @@ def func61 : Wasm.Program :=
     .localGet 5,
     .localGet 10,
     .load32 (12 : UInt32),
-    .unreachable,
+    .callIndirect 1 0,
     .localSet 13
   ],
   .localGet 13
@@ -6971,7 +6971,7 @@ def func63 : Wasm.Program :=
     .localGet 2,
     .localGet 1,
     .load32 (16 : UInt32),
-    .unreachable,
+    .callIndirect 2 0,
     .eqz,
     .br_if 0,
     .const (1 : UInt32),
@@ -6988,7 +6988,7 @@ def func63 : Wasm.Program :=
   .localGet 4,
   .localGet 1,
   .load32 (12 : UInt32),
-  .unreachable
+  .callIndirect 1 0
 ]
 
 def func64 : Wasm.Program :=
@@ -7000,7 +7000,7 @@ def func64 : Wasm.Program :=
   .localGet 0,
   .load32 (4 : UInt32),
   .load32 (12 : UInt32),
-  .unreachable
+  .callIndirect 1 0
 ]
 
 def func65 : Wasm.Program :=
@@ -7293,6 +7293,31 @@ def «module» : Wasm.Module :=
     { type := .i32, init := .i32 (1048576 : UInt32) },
     { type := .i32, init := .i32 (1050193 : UInt32) },
     { type := .i32, init := .i32 (1050208 : UInt32) }
+  ],
+  types := [
+    { params := [.i32, .i32], results := [] },
+    { params := [.i32, .i32, .i32], results := [.i32] },
+    { params := [.i32, .i32], results := [.i32] },
+    { params := [.i64], results := [.i32] },
+    { params := [.i32, .i32, .i64], results := [] },
+    { params := [.i64, .i32, .i32], results := [.i32] },
+    { params := [.i32, .i32, .i32], results := [] },
+    { params := [.i32, .i32, .i32, .i32], results := [.i32] },
+    { params := [], results := [] },
+    { params := [.i64, .i32], results := [.i32] },
+    { params := [.i32, .i32, .i32, .i32], results := [] },
+    { params := [.i32, .i32, .i32, .i32, .i32], results := [] },
+    { params := [.i32], results := [] },
+    { params := [.i32, .i32, .i32, .i32, .i32, .i32], results := [] },
+    { params := [.i32], results := [.i32] },
+    { params := [.i32, .i32, .i32, .i32, .i32, .i32], results := [.i32] },
+    { params := [.i32, .i32, .i32, .i32, .i32], results := [.i32] }
+  ],
+  tables := [
+    { min := 18, max := some 18, elemType := .funcref }
+  ],
+  elements := [
+    { tableIdx := some 0, offset := some 1, funcs := [some 23, some 15, some 47, some 46, some 51, some 45, some 44, some 42, some 43, some 16, some 41, some 49, some 48, some 50, some 40, some 39, some 65] }
   ]
 }
 

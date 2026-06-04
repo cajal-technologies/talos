@@ -3,6 +3,7 @@ import Interpreter.Wasm.Examples.SimpleLoop
 import Interpreter.Wasm.Examples.Factorial
 import Interpreter.Wasm.Examples.InfiniteLoop
 import Interpreter.Wasm.Examples.EvenOddRec
+import Interpreter.Wasm.Examples.CallIndirect
 import Interpreter.Wasm.Examples.SumI64
 import Interpreter.Wasm.Examples.IfAbs
 import Interpreter.Wasm.Examples.Switch

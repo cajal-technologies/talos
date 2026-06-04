@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+  "dyn_dispatch",
   "is_even",
   "itoa",
   "memchr",
