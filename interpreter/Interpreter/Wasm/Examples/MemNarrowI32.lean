@@ -44,11 +44,11 @@ def narrowI32Module : Module :=
       , { body := store16RoundtripBody, results := [.i32] } ]
     memory := some { pagesMin := 1, data := [{ offset := some 0, bytes := initBytes }] } }
 
-/-- Project the value stack out of a `Result`. `Store` carries a function-
+/-- Project the value stack out of a `Result Unit`. `Store Unit` carries a function-
     valued `Mem`, so it has no decidable equality; comparing the values
     alone keeps the `native_decide` checks below well-typed. -/
 private def runValues (fuel : Nat) (m : Module) (idx : Nat)
-    (st : Store) (args : List Value) : List Value :=
+    (st : Store Unit) (args : List Value) : List Value :=
   match run fuel m idx st args with
   | .Success vs _ => vs
   | _ => []

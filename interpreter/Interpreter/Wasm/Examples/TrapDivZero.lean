@@ -12,7 +12,7 @@ def TrapDivZero : Program := [
   .localGet 0, .localGet 1, .divU
 ]
 
-theorem trapDivZeroSpec (m : Module) (st : Store) (a b : UInt32) :
+theorem trapDivZeroSpec (m : Module) (st : Store Unit) (a b : UInt32) :
     wp m TrapDivZero
         (fun c =>
           if b = 0 then c = .Trap st "integer divide by zero"

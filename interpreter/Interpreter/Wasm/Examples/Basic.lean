@@ -20,6 +20,10 @@ import Interpreter.Wasm.Examples.MemGrow
 import Interpreter.Wasm.Examples.MemFill
 import Interpreter.Wasm.Examples.MemCopy
 import Interpreter.Wasm.Examples.GlobalCounter
+import Interpreter.Wasm.Examples.ClzPopcnt
+import Interpreter.Wasm.Examples.HostDispatch
+import Interpreter.Wasm.Examples.Counter
+import Interpreter.Wasm.Examples.DecoderImport
 
 /-! # Wasm.Examples.Basic
 

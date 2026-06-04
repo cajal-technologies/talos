@@ -212,53 +212,90 @@ private def atomToValueType? : String → Option Wasm.ValueType
   | "nullexternref" => some .i32
   | _     => none
 
+/-- Resolve a `(type N)` reference on a block/loop/if to the signature
+declared in the module's type table. Returns `none` if the index/id is
+unknown or the entry's signature is outside our supported integer
+subset; callers fall back to whatever inline `(param ...)` /
+`(result ...)` annotations follow. Constructed by `parseFunc` and
+threaded through `Ctx` so block/loop/if parsing can see the type table. -/
+abbrev BlockTypeResolver :=
+  String → Option (List Wasm.ValueType × List Wasm.ValueType)
+
 /-- Skip block/loop/if type annotations and collect explicit param/result
-types. The block-type info is discarded by callers (Wasm's block
-constructors carry no signature) but we still parse it to advance the
-token stream. -/
-private partial def skipBlockType :
+types. The block constructors `Wasm.Instruction.block` / `loop` / `iff`
+carry only arities (`paramArity`, `resultArity`), so we throw away the
+element types after counting them — but we *do* honour `(type N)`
+references by consulting the module's type table via `resolveType`, so
+a `block (type $sig)` whose entry declares non-zero arities is parsed
+with the correct arities instead of silently degenerating to `0 0`. -/
+private partial def skipBlockType (resolveType : BlockTypeResolver) :
     List Wasm.ValueType → List Wasm.ValueType → List Sexpr →
     List Wasm.ValueType × List Wasm.ValueType × List Sexpr
   | ps, rs, .list (.atom "result" :: ts) :: r =>
     let extra := ts.filterMap fun
       | .atom a => atomToValueType? a
       | _       => none
-    skipBlockType ps (rs ++ extra) r
+    skipBlockType resolveType ps (rs ++ extra) r
   | ps, rs, .list (.atom "param" :: ts) :: r =>
     let extra := ts.filterMap fun
       | .atom a => atomToValueType? a
       | _       => none
-    skipBlockType (ps ++ extra) rs r
-  | ps, rs, .list (.atom "type" :: _) :: r => skipBlockType ps rs r
+    skipBlockType resolveType (ps ++ extra) rs r
+  | ps, rs, .list (.atom "type" :: .atom ref :: _) :: r =>
+    -- A `(type N)` annotation adopts the type-table entry's signature as
+    -- the block's arity. wasm-tools commonly emits a redundant
+    -- `(type N) (param …) (result …)` triple where the inline forms
+    -- restate the resolved signature, so we also consume any trailing
+    -- `(param …)` / `(result …)` siblings to avoid double-counting.
+    -- If resolution fails, fall through to the inline accumulators.
+    match resolveType ref with
+    | some (resolvedPs, resolvedRs) =>
+      let r' := r.dropWhile fun
+        | .list (.atom "param" :: _)  => true
+        | .list (.atom "result" :: _) => true
+        | _ => false
+      (resolvedPs, resolvedRs, r')
+    | none => skipBlockType resolveType ps rs r
+  | ps, rs, .list (.atom "type" :: _) :: r =>
+    -- Malformed `(type …)` form (no atom reference) — preserve the old
+    -- behaviour of silently advancing the token stream.
+    skipBlockType resolveType ps rs r
   | ps, rs, .atom a :: r =>
     match atomToValueType? a with
     | some t => (ps, rs ++ [t], r)
     | none   => (ps, rs, .atom a :: r)
   | ps, rs, xs => (ps, rs, xs)
 
-/-- Pull an optional `$label` and any `(param T*)`/`(result T*)`
-annotations off the front of a block/loop/if's tokens. Returns the
-label (if any), parameter arity, result arity, and the remaining
-tokens. -/
-private def parseBlockHeader (xs : List Sexpr)
+/-- Pull an optional `$label` and any `(type N)` / `(param T*)` /
+`(result T*)` annotations off the front of a block/loop/if's tokens.
+Returns the label (if any), parameter arity, result arity, and the
+remaining tokens. `resolveType` looks up `(type N)` references against
+the module's type table; pass `fun _ => none` (or `Ctx.empty`'s default)
+when no type table is available. -/
+private def parseBlockHeader (resolveType : BlockTypeResolver) (xs : List Sexpr)
     : Option String × Nat × Nat × List Sexpr :=
   match xs with
   | .atom a :: r =>
     if a.startsWith "$" then
-      let (ps, rs, r') := skipBlockType [] [] r
+      let (ps, rs, r') := skipBlockType resolveType [] [] r
       (some (a.drop 1).toString, ps.length, rs.length, r')
     else
-      let (ps, rs, r') := skipBlockType [] [] xs
+      let (ps, rs, r') := skipBlockType resolveType [] [] xs
       (none, ps.length, rs.length, r')
   | _ =>
-    let (ps, rs, r') := skipBlockType [] [] xs
+    let (ps, rs, r') := skipBlockType resolveType [] [] xs
     (none, ps.length, rs.length, r')
 
 structure Ctx where
-  funcIds    : Std.HashMap String Nat
-  localIds   : Std.HashMap String Nat
-  globalIds  : Std.HashMap String Nat := {}
-  labelNames : List (Option String) := []
+  funcIds          : Std.HashMap String Nat
+  localIds         : Std.HashMap String Nat
+  globalIds        : Std.HashMap String Nat := {}
+  labelNames       : List (Option String) := []
+  /-- Resolves `(type N)` / `(type $sig)` references on `block`/`loop`/`if`
+  to the parsed signature, so multi-value block-types declared via the
+  type table are decoded with their correct arity. Defaults to "always
+  none" — callers without a type table behave exactly as before. -/
+  resolveBlockType : BlockTypeResolver := fun _ => none
 
 def Ctx.empty : Ctx := { funcIds := {}, localIds := {} }
 
@@ -733,13 +770,13 @@ private partial def parseFolded (ctx : Ctx) (xs : List Sexpr)
 private partial def foldedStructured (ctx : Ctx)
     (mk : Nat → Nat → List Wasm.Instruction → Wasm.Instruction)
     (xs : List Sexpr) : Except Err (List Wasm.Instruction) := do
-  let (label, ps, rs, xs') := parseBlockHeader xs
+  let (label, ps, rs, xs') := parseBlockHeader ctx.resolveBlockType xs
   let body ← parseInstrSeq (ctx.pushLabel label) xs'
   .ok [mk ps rs body]
 
 private partial def foldedIf (ctx : Ctx) (xs : List Sexpr)
     : Except Err (List Wasm.Instruction) := do
-  let (label, ps, rs, xs') := parseBlockHeader xs
+  let (label, ps, rs, xs') := parseBlockHeader ctx.resolveBlockType xs
   let bodyCtx := ctx.pushLabel label
   let mut condInstrs : List Wasm.Instruction := []
   let mut cur := xs'
@@ -876,7 +913,7 @@ private partial def parseStructured (ctx : Ctx)
     (mk : Nat → Nat → List Wasm.Instruction → Wasm.Instruction)
     (stops : Array String) (toks : List Sexpr)
     : Except Err (List Wasm.Instruction × List Sexpr) := do
-  let (label, ps, rs, toks') := parseBlockHeader toks
+  let (label, ps, rs, toks') := parseBlockHeader ctx.resolveBlockType toks
   let (body, after) ← parseInstrsUntil (ctx.pushLabel label) toks' stops
   match after with
   | _ :: aft => .ok ([mk ps rs body], dropTrailingLabel aft)
@@ -884,7 +921,7 @@ private partial def parseStructured (ctx : Ctx)
 
 private partial def parseIf (ctx : Ctx) (toks : List Sexpr)
     : Except Err (List Wasm.Instruction × List Sexpr) := do
-  let (label, ps, rs, toks') := parseBlockHeader toks
+  let (label, ps, rs, toks') := parseBlockHeader ctx.resolveBlockType toks
   let bodyCtx := ctx.pushLabel label
   let (thn, after) ← parseInstrsUntil bodyCtx toks' #["else", "end"]
   match after with
@@ -1113,7 +1150,11 @@ private def parseFunc (funcIds : Std.HashMap String Nat)
       | _ =>
         headerDone := true
     | _ => headerDone := true
-  let ctx : Ctx := { funcIds, localIds, globalIds }
+  let resolveBlockType : BlockTypeResolver := fun ref =>
+    match resolveTypeRef types ref with
+    | .ok sig  => some sig
+    | .error _ => none
+  let ctx : Ctx := { funcIds, localIds, globalIds, resolveBlockType }
   let instrs ← parseInstrSeq ctx rest
   return { symId, inlineExports,
            func := {
@@ -1282,18 +1323,91 @@ private def parseDataSegment (xs : List Sexpr) : Except Err Wasm.DataSegment := 
     | _ => .error "data segment: expected string literal(s)"
   .ok { offset, bytes }
 
+/-- Parse the `(param …)` / `(result …)` forms inside the `(func …)` of
+an `(import …)` declaration, returning `(params, results)`. Named
+param/local ids inside an import are ignored (they're never referenced
+by id from the wasm body — imports have no body). -/
+private def parseImportSig (xs : List Sexpr)
+    : Except Err (List Wasm.ValueType × List Wasm.ValueType) := do
+  let mut params : List Wasm.ValueType := []
+  let mut results : List Wasm.ValueType := []
+  for x in xs do
+    match x with
+    | .list (.atom "param" :: tail) =>
+      for t in tail do
+        match t with
+        | .atom a =>
+          if a.startsWith "$" then pure ()
+          else match atomToValueType? a with
+            | some vt => params := params ++ [vt]
+            | none    => throw s!"unsupported import param type: {a}"
+        | _ => throw "malformed (param ...) in import"
+    | .list (.atom "result" :: tail) =>
+      for t in tail do
+        match t with
+        | .atom a =>
+          match atomToValueType? a with
+          | some vt => results := results ++ [vt]
+          | none    => throw s!"unsupported import result type: {a}"
+        | _ => throw "malformed (result ...) in import"
+    | _ => pure ()
+  return (params, results)
+
+/-- Walk the module's fields collecting `(import "mod" "name" (func …))`
+forms. Each function import gets a positional unified-index `0 … N-1`
+and is recorded in `idOf` if it carries a `$name`. Imports of memory,
+global, and table are silently dropped (unsupported). -/
+private def collectImports (fields : List Sexpr)
+    : Except Err (List Wasm.ImportDecl × Std.HashMap String Nat) := do
+  let mut imports : List Wasm.ImportDecl := []
+  let mut idOf : Std.HashMap String Nat := {}
+  let mut i := 0
+  for f in fields do
+    match f with
+    | .list (.atom "import" :: tail) =>
+      match tail with
+      | [.atom modName, .atom importName, .list (.atom "func" :: funcBody)] =>
+        let modName' := stripQuotes modName
+        let importName' := stripQuotes importName
+        let funcBodyAfterId : List Sexpr :=
+          match funcBody with
+          | .atom a :: rest => if a.startsWith "$" then rest else funcBody
+          | _ => funcBody
+        match funcBody with
+        | .atom a :: _ =>
+          if a.startsWith "$" then
+            idOf := idOf.insert (a.drop 1).toString i
+        | _ => pure ()
+        let (params, results) ← parseImportSig funcBodyAfterId
+        imports := imports ++ [{ «module» := modName',
+                                  name := importName',
+                                  params, results }]
+        i := i + 1
+      | _ => pure ()  -- (import … (memory|global|table …)) — drop silently
+    | _ => pure ()
+  return (imports, idOf)
+
 /-- Walk a `(module ...)` form. `(func …)`, `(export …)`, `(global …)`,
-`(memory …)`, and `(data …)` all contribute to the resulting `Wasm.Module`.
-Other recognised fields (`type`, `import`, `table`, `elem`, `start`) are
-accepted lexically so the spec testsuite still loads, but their content is
-discarded. -/
+`(memory …)`, `(data …)`, `(start …)`, and `(import "mod" "name"
+(func …))` all contribute to the resulting `Wasm.Module`. Function
+imports occupy the low end of the unified function index space (indices
+`0 … N-1`); in-module function indices are shifted up by
+`imports.length`. Other recognised fields (`type`, `table`, `elem`, non-
+func imports) are accepted lexically so the spec testsuite still loads,
+but their content is discarded. -/
 def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
   let mut rest := xs
   match rest with
   | .atom a :: r =>
     if a.startsWith "$" then rest := r
   | _ => pure ()
-  let funcIds ← collectFuncNames rest
+  let (imports, importFuncIds) ← collectImports rest
+  let inModuleFuncIds ← collectFuncNames rest
+  -- Unified function index space: imports occupy `0 … imports.length - 1`,
+  -- in-module functions are shifted up by `imports.length`.
+  let mut funcIds : Std.HashMap String Nat := importFuncIds
+  for (name, idx) in inModuleFuncIds.toList do
+    funcIds := funcIds.insert name (idx + imports.length)
   let globalIds ← collectGlobalNames rest
   let mut decls : Array FuncDecl := #[]
   let mut topExports : Array (String × String) := #[]
@@ -1301,6 +1415,7 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
   let mut globalDecls : Array Wasm.GlobalDecl := #[]
   let mut memDecl : Option Wasm.MemDecl := none
   let mut dataSegs : Array Wasm.DataSegment := #[]
+  let mut startFunc : Option Nat := none
   for f in rest do
     match f with
     | .list (.atom "type" :: body) =>
@@ -1326,20 +1441,22 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
       memDecl := some (← parseMemDecl body)
     | .list (.atom "data" :: body) =>
       dataSegs := dataSegs.push (← parseDataSegment body)
-    | .list (.atom "import" :: tail) =>
-      let isFuncImport := tail.any fun
-        | .list (.atom "func" :: _) => true
-        | _ => false
-      if isFuncImport then
-        throw "function imports are not supported"
-      -- Other imports (memory, global, table) — dropped silently. Note that
-      -- dropping global imports without adjusting the index offset is the
-      -- root cause of the TODO in collectGlobalNames above.
+    | .list [.atom "start", .atom ref] =>
+      if startFunc.isSome then throw "duplicate (start ...) declaration"
+      startFunc := some (← resolveFuncRef funcIds ref)
+    | .list (.atom "import" :: _) =>
+      -- Already collected by `collectImports` above; function imports get
+      -- recorded in `imports` and contribute their low-end function
+      -- indices, non-func imports (memory, global, table) are dropped.
+      pure ()
     | _ =>
-      -- type / table / elem / start / stray atoms: skipped at module level.
+      -- type / table / elem / stray atoms: skipped at module level.
       continue
   let mut exports : Array Wasm.Export := #[]
-  let mut i := 0
+  -- Inline exports' `funcIdx` is in the unified index space: imports
+  -- occupy `0 … imports.length - 1`, so in-module function `k` is at
+  -- unified index `imports.length + k`.
+  let mut i := imports.length
   for d in decls do
     for n in d.inlineExports do
       exports := exports.push { name := n, funcIdx := i }
@@ -1355,7 +1472,9 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
   return { funcs   := decls.toList.map (·.func)
            exports := exports.toList
            globals := globalDecls.toList
-           memory  := finalMem }
+           memory  := finalMem
+           imports
+           startFunc }
 
 /-- Public entry point. Parses one top-level `(module …)` form. -/
 def decode (s : String) : Except Err Wasm.Module := do

@@ -15,7 +15,7 @@ def SumI64 : Program := [
   .wrapI64
 ]
 
-theorem sumI64Spec (m : Module) (st : Store) (x : UInt32) :
+theorem sumI64Spec (m : Module) (st : Store Unit) (x : UInt32) :
     wp m SumI64
         (fun c => c = .Fallthrough st
                     { params := [.i32 x], locals := [],

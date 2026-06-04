@@ -1,4 +1,4 @@
-import Interpreter.Wasm
+import Interpreter.Wasm.Semantics
 import Interpreter.Wasm.Decoder.Wat
 
 /-!
@@ -200,8 +200,10 @@ def runOnce (a : Args) : IO UInt32 := do
     | .ok vs => pure vs
     | .error msg => IO.eprintln s!"error: {msg}"; return EXIT_ERR
 
-  -- Execute
-  match Wasm.run a.fuel m idx m.initialStore vs with
+  -- Execute. The runner is host-independent; pick `α := Unit` so the
+  -- trivial empty `HostEnv Unit` defaults in and the module runs
+  -- against no imports.
+  match Wasm.run a.fuel m idx (m.initialStore (α := Unit)) vs with
   | .Success results _ =>
     for v in results.reverse do
       IO.println (renderValue v)

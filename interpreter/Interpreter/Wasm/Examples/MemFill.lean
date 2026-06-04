@@ -29,15 +29,15 @@ def fillModule : Module :=
     memory := some { pagesMin := 1 } }
 
 private def runValues (fuel : Nat) (m : Module) (idx : Nat)
-    (st : Store) (args : List Value) : List Value :=
+    (st : Store Unit) (args : List Value) : List Value :=
   match run fuel m idx st args with
   | .Success vs _ => vs
   | _ => []
 
-/-- Project the trap message (if any) out of a `Result`, so we can
-    `native_decide` against it without needing `DecidableEq Store`. -/
+/-- Project the trap message (if any) out of a `Result Unit`, so we can
+    `native_decide` against it without needing `DecidableEq Store Unit`. -/
 private def runTrapMsg (fuel : Nat) (m : Module) (idx : Nat)
-    (st : Store) (args : List Value) : Option String :=
+    (st : Store Unit) (args : List Value) : Option String :=
   match run fuel m idx st args with
   | .Trap _ msg => some msg
   | _ => none

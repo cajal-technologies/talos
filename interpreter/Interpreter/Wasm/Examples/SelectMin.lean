@@ -16,7 +16,7 @@ def SelectMin : Program := [
   .const 42, .drop                   -- pad with const 42; drop it again
 ]
 
-theorem selectMinSpec (m : Module) (st : Store) (x y : UInt32) :
+theorem selectMinSpec (m : Module) (st : Store Unit) (x y : UInt32) :
     wp m SelectMin
         (fun c => c = .Fallthrough st
                     { params := [.i32 x, .i32 y], locals := [],

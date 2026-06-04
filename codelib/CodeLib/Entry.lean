@@ -17,10 +17,11 @@ the function body (parametric in the initial store). Locals are built from
 `args.take f.numParams` reversed (Wasm calling convention), and the
 post-condition is checked on `Fallthrough`/`Return` after taking the top
 `f.results.length` values and appending the caller-remainder. -/
-theorem TerminatesWith.of_wp_entry {m : Module} {id : Nat} {f : Function}
-    {initial : Store} {args : List Value} {P : Store → List Value → Prop}
-    (hf : m.funcs[id]? = some f)
-    (h : ∀ initial : Store,
+theorem TerminatesWith.of_wp_entry {env : HostEnv α}
+    {m : Module} {id : Nat} {f : Function}
+    {initial : Store α} {args : List Value} {P : Store α → List Value → Prop}
+    (hf : m.funcs[id - m.imports.length]? = some f)
+    (h : ∀ initial : Store α,
       wp m f.body
         (fun c => match c with
           | .Fallthrough st' s' =>
@@ -28,18 +29,20 @@ theorem TerminatesWith.of_wp_entry {m : Module} {id : Nat} {f : Function}
           | .Return st' vs      =>
               P st' (vs.take f.results.length ++ args.drop f.numParams)
           | _                   => False)
-        initial (f.toLocals (args.take f.numParams).reverse)) :
-    TerminatesWith m id initial args P := by
+        initial (f.toLocals (args.take f.numParams).reverse) env)
+    (hImp : m.imports[id]? = none := by rfl) :
+    TerminatesWith env m id initial args P := by
   refine FuncSpec.to_TerminatesWith (Pre := (· = args))
-    (FuncSpec.of_wp_body hf ?_) rfl
+    (FuncSpec.of_wp_body hf ?_ hImp) rfl
   rintro _ rfl initial'; exact h initial'
 
 /-- Variant of `of_wp_entry` for a specific store rather than all stores.
 Use when the function body's correctness depends on properties of the
 initial store (e.g., memory bounds). -/
-theorem TerminatesWith.of_wp_entry_for {m : Module} {id : Nat} {f : Function}
-    {initial : Store} {args : List Value} {P : Store → List Value → Prop}
-    (hf : m.funcs[id]? = some f)
+theorem TerminatesWith.of_wp_entry_for {env : HostEnv α}
+    {m : Module} {id : Nat} {f : Function}
+    {initial : Store α} {args : List Value} {P : Store α → List Value → Prop}
+    (hf : m.funcs[id - m.imports.length]? = some f)
     (h : wp m f.body
         (fun c => match c with
           | .Fallthrough st' s' =>
@@ -47,15 +50,16 @@ theorem TerminatesWith.of_wp_entry_for {m : Module} {id : Nat} {f : Function}
           | .Return st' vs      =>
               P st' (vs.take f.results.length ++ args.drop f.numParams)
           | _                   => False)
-        initial (f.toLocals (args.take f.numParams).reverse)) :
-    TerminatesWith m id initial args P := by
+        initial (f.toLocals (args.take f.numParams).reverse) env)
+    (hImp : m.imports[id]? = none := by rfl) :
+    TerminatesWith env m id initial args P := by
   unfold TerminatesWith
   unfold wp at h
   obtain ⟨N, hN⟩ := h
   refine ⟨N, fun fuel hfuel => ?_⟩
   have hQ := hN fuel hfuel
-  rw [run_eq]; simp only [hf]
-  cases hexec : exec fuel m initial (f.toLocals (args.take f.numParams).reverse) f.body with
+  rw [run_eq hImp]; simp only [hf]
+  cases hexec : exec fuel m initial (f.toLocals (args.take f.numParams).reverse) f.body env with
   | Fallthrough st' s' =>
     rw [hexec] at hQ
     exact ⟨s'.values.take f.results.length ++ args.drop f.numParams, st', rfl, hQ⟩
@@ -70,11 +74,11 @@ theorem TerminatesWith.of_wp_entry_for {m : Module} {id : Nat} {f : Function}
 /-- Weakening the post-condition of a `TerminatesWith`. Lets a corpus
 proof state the natural raw-value spec, then relift it through an
 abstraction (e.g. an `Option` decoder) without re-running `wp`. -/
-theorem TerminatesWith.mono {m : Module} {id : Nat}
-    {initial : Store} {args : List Value}
-    {P Q : Store → List Value → Prop}
-    (h : TerminatesWith m id initial args P) (hPQ : ∀ st vs, P st vs → Q st vs) :
-    TerminatesWith m id initial args Q := by
+theorem TerminatesWith.mono {env : HostEnv α} {m : Module} {id : Nat}
+    {initial : Store α} {args : List Value}
+    {P Q : Store α → List Value → Prop}
+    (h : TerminatesWith env m id initial args P) (hPQ : ∀ st vs, P st vs → Q st vs) :
+    TerminatesWith env m id initial args Q := by
   obtain ⟨N, hN⟩ := h
   refine ⟨N, fun fuel hf => ?_⟩
   obtain ⟨vs, st, hRun, hP⟩ := hN fuel hf

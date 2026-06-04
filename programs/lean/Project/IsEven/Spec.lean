@@ -16,13 +16,13 @@ leaves a single i32 on the value stack, equal to `1` when `n` is even
 and `0` otherwise. The result is independent of the initial store. -/
 @[spec_of "rust-exported" "is_even::is_even"]
 def IsEvenSpec : Prop :=
-  ∀ (initial : Store) (n : UInt32),
-    TerminatesWith «module» 0 initial [.i32 n]
+  ∀ (env : HostEnv Unit) (initial : Store Unit) (n : UInt32),
+    TerminatesWith env «module» 0 initial [.i32 n]
       (fun _ rs => rs = [.i32 (if n.toNat % 2 = 0 then 1 else 0)])
 
 @[proves Project.IsEven.Spec.IsEvenSpec]
 theorem is_even_correct : IsEvenSpec := by
-  intro initial n
+  intro env initial n
   apply TerminatesWith.of_wp_entry (f := ⟨[.i32], [], func0, [.i32]⟩) rfl
   intro initial'
   unfold func0

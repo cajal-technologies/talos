@@ -208,24 +208,51 @@ structure GlobalDecl where
   init : Value
 deriving Repr, Inhabited
 
+/-- Declaration of a function imported from the host. Imports occupy the
+low indices of the unified function index space: `call i` for
+`i < imports.length` dispatches to the host environment's `i`-th
+function; for `i ≥ imports.length` it dispatches to
+`funcs[i - imports.length]`. The `params`/`results` are the import's
+declared signature; the host environment is expected to honour it. -/
+structure ImportDecl where
+  «module» : String
+  name     : String
+  params   : List ValueType := []
+  results  : List ValueType := []
+deriving Repr, Inhabited, DecidableEq
+
 structure Module where
   funcs   : List Function
   exports : List Export := []
   memory  : Option MemDecl := none
   globals : List GlobalDecl := []
+  /-- Imported functions, in declaration order. See `ImportDecl` for the
+  index-space convention. Empty for modules with no imports — the
+  default everywhere until the host-function feature lands. -/
+  imports : List ImportDecl := []
+  /-- Index of the optional `(start $f)` function. Per the wasm spec it is
+  invoked once during instantiation, after data/elem segments are written,
+  with no arguments and no results. A trap during start makes the whole
+  instantiation fail. -/
+  startFunc : Option Nat := none
 deriving Repr, Inhabited
 
 /-- The mutable runtime state threaded through execution: module-level
-globals, the (optional) linear memory, and the available bytes per
-data segment (`none` = dropped or active-and-already-consumed; `some bs`
-= still available to `memory.init`). The `dataSegments` list is
-indexed by segment number in source order and has the same length as
-the declaring module's data list. -/
-structure Store where
+globals, the (optional) linear memory, the available bytes per data
+segment (`none` = dropped or active-and-already-consumed; `some bs` =
+still available to `memory.init`), and a host-managed slot whose type
+`α` is supplied by the host. The Wasm core never inspects `host`; only
+host imports do.
+
+`α` is whatever shape a particular host needs — `Unit` for the
+hostless corpus, a KV map for a blockchain demo, a byte-trace for a
+logger, etc. No schema is baked into the Wasm core. -/
+structure Store (α : Type) where
   globals      : Globals
   mem          : Mem
   dataSegments : List (Option (List UInt8)) := []
-deriving Repr, Inhabited
+  host         : α
+deriving Repr
 
 /-- Build the initial store for a module: evaluate each global's `init`
 into `Globals.globals`; allocate a memory with `pagesMin` pages and
@@ -234,10 +261,10 @@ segments in `dataSegments` (passive → `some bytes`, active → `none`,
 because active segments are spec-equivalent to "dropped" immediately
 after instantiation). If the module has no memory, the store carries
 an empty 0-page memory and an empty `dataSegments` (never observed). -/
-def Module.initialStore (m : Module) : Store :=
+def Module.initialStore [Inhabited α] (m : Module) : Store α :=
   let globals : Globals := { globals := m.globals.map (·.init) }
   match m.memory with
-  | none      => { globals, mem := Mem.empty 0, dataSegments := [] }
+  | none      => { globals, mem := Mem.empty 0, dataSegments := [], host := default }
   | some decl =>
     let m0 := Mem.empty decl.pagesMin.toNat
     let mem : Mem := decl.data.foldl
@@ -249,7 +276,7 @@ def Module.initialStore (m : Module) : Store :=
       decl.data.map fun seg => match seg.offset with
         | some _ => none           -- active: auto-dropped after init
         | none   => some seg.bytes -- passive: available to memory.init
-    { globals, mem, dataSegments }
+    { globals, mem, dataSegments, host := default }
 
 /-- Maximum number of pages an i32-indexed memory can hold (2^16, or 4 GiB).
 This is the wasm spec hard ceiling; `memory.grow` may not exceed it

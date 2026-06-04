@@ -105,6 +105,6 @@
    "inputRev": "v4.30.0",
    "inherited": true,
    "configFile": "lakefile.toml"}],
- "name": "Programs",
+ "name": "Project",
  "lakeDir": ".lake",
  "fixedToolchain": false}

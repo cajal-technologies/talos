@@ -21,6 +21,13 @@ at `ptr + 4*(len-1-i)`. All other memory is unchanged. Carries the
 side condition that every offset `0..len` is in-bounds for the initial
 memory. -/
 @[spec_of "rust-exported" "reverse_inplace::reverse_inplace"]
-def ReverseInplaceSpec : Prop := True
+def ReverseInplaceSpec : Prop :=
+  ∀ (env : HostEnv Unit) (initial : Store Unit) (ptr len : UInt32)
+    (hmem : ∀ k < len.toNat, (ptr.toNat + 4 * k) % 4294967296 + 4 ≤ initial.mem.pages * 65536),
+    TerminatesWith env «module» 0 initial [.i32 len, .i32 ptr]
+      (fun st' rs => rs = [] ∧
+        (∀ i < len.toNat,
+          st'.mem.read32 (ptr + 4 * UInt32.ofNat i) =
+            initial.mem.read32 (ptr + 4 * UInt32.ofNat (len.toNat - 1 - i))))
 
 end Project.ReverseInplace.Spec
