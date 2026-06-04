@@ -1561,13 +1561,13 @@ private def collectImports (fields : List Sexpr)
   return (imports, idOf)
 
 /-- Walk a `(module ...)` form. `(func …)`, `(export …)`, `(global …)`,
-`(memory …)`, `(data …)`, and `(import "mod" "name" (func …))` all
-contribute to the resulting `Wasm.Module`. Function imports occupy the
-low end of the unified function index space (indices `0 … N-1`); in-
-module function indices are shifted up by `imports.length`. Other
-recognised fields (`type`, `table`, `elem`, `start`, non-func imports)
-are accepted lexically so the spec testsuite still loads, but their
-content is discarded. -/
+`(memory …)`, `(data …)`, `(start …)`, and `(import "mod" "name"
+(func …))` all contribute to the resulting `Wasm.Module`. Function
+imports occupy the low end of the unified function index space (indices
+`0 … N-1`); in-module function indices are shifted up by
+`imports.length`. Other recognised fields (`type`, `table`, `elem`, non-
+func imports) are accepted lexically so the spec testsuite still loads,
+but their content is discarded. -/
 def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
   let mut rest := xs
   match rest with
@@ -1591,6 +1591,7 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
   let mut dataSegs : Array Wasm.DataSegment := #[]
   let mut tableDecls : Array Wasm.TableDecl := #[]
   let mut elemSegs   : Array Wasm.ElementSegment := #[]
+  let mut startFunc : Option Nat := none
   for f in rest do
     match f with
     | .list (.atom "type" :: body) =>
@@ -1624,13 +1625,16 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
       | none     => pure ()
     | .list (.atom "elem" :: body) =>
       elemSegs := elemSegs.push (← parseElemSegment funcIds tableNames body)
+    | .list [.atom "start", .atom ref] =>
+      if startFunc.isSome then throw "duplicate (start ...) declaration"
+      startFunc := some (← resolveFuncRef funcIds ref)
     | .list (.atom "import" :: _) =>
       -- Already collected by `collectImports` above; function imports get
       -- recorded in `imports` and contribute their low-end function
       -- indices, non-func imports (memory, global, table) are dropped.
       pure ()
     | _ =>
-      -- type / table / elem / start / stray atoms: skipped at module level.
+      -- type / table / elem / stray atoms: skipped at module level.
       continue
   let mut exports : Array Wasm.Export := #[]
   -- Inline exports' `funcIdx` is in the unified index space: imports
@@ -1663,6 +1667,7 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
            globals  := globalDecls.toList
            memory   := finalMem
            imports
+           startFunc
            types    := moduleTypes
            tables   := tableDecls.toList
            elements := elemSegs.toList }

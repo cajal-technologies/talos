@@ -271,9 +271,13 @@ structure Module where
   memory   : Option MemDecl := none
   globals  : List GlobalDecl := []
   /-- Imported functions, in declaration order. See `ImportDecl` for the
-  index-space convention. Empty for modules with no imports — the
-  default everywhere except the host-function demos. -/
+  index-space convention. Empty for modules with no imports. -/
   imports  : List ImportDecl := []
+  /-- Index of the optional `(start $f)` function. Per the wasm spec it is
+  invoked once during instantiation, after data/elem segments are written,
+  with no arguments and no results. A trap during start makes the whole
+  instantiation fail. -/
+  startFunc : Option Nat := none
   /-- Function type declarations indexed by source-order position
   (`(type 0)`, `(type 1)`, ...). `call_indirect (type N)` looks the
   expected signature up here. -/
