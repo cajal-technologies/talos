@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
   "dyn_dispatch",
+  "host_counter",
   "is_even",
   "is_prime",
   "itoa",

@@ -1,4 +1,5 @@
 import Project.DynDispatch.Spec
+import Project.HostCounter.Spec
 import Project.IsEven.Spec
 import Project.IsPrime.Spec
 import Project.Itoa.Spec
