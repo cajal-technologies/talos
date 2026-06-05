@@ -1,5 +1,6 @@
 import Project.DynDispatch.Spec
 import Project.IsEven.Spec
+import Project.IsPrime.Spec
 import Project.Itoa.Spec
 -- Project.Memchr.Spec intentionally omitted: the proof in that file is
 -- currently broken (pre-existing, not from the structural refactor).

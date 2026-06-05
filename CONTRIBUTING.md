@@ -15,7 +15,7 @@ The codebase has five main parts — described at a level that shouldn't go stal
 ## Building
 
 ```bash
-lake build
+just build
 ```
 
 Dependencies:

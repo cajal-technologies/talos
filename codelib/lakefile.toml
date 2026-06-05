@@ -1,6 +1,7 @@
 name = "CodeLib"
 version = "0.1.0"
 defaultTargets = ["CodeLib"]
+packagesDir = "../.lake/packages"
 
 [[require]]
 name = "WasmInterpreterLean"

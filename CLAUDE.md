@@ -29,13 +29,12 @@ imports `CodeLib`, never the interpreter directly.
 ## Build / run / verify
 
 ```bash
-# from each package directory:
-lake update
-lake exe cache get
-lake build
+just lake-shared        # once: populate repo-root .lake/packages (Mathlib owner: interpreter/)
+# then, for each package:
+cd <package> && lake build
 ```
 
-**Never run a bare `lake build` in a fresh checkout, CI job, GitHub Action, README snippet, or shell command** — it will recompile Mathlib from source (tens of minutes to hours). Always precede it with `lake update && lake exe cache get` so Mathlib is pulled from the prebuilt cache. This applies everywhere `lake build` is mentioned: docs, READMEs, CI workflows, scripts, and ad-hoc terminal commands.
+Third-party Lake dependencies (Mathlib and its transitive packages) live in **one** tree at the repo root: `.lake/packages`. Every `lakefile.toml` sets `packagesDir` to that path; per-package `.lake/` holds only `build/` and `config/`.
 
 There is no separate test runner. Example correctness is encoded as Lean theorems and `native_decide` checks inside the examples; a successful `lake build` means every proof and decidable example check passed. To check a single source file in isolation: `lake env lean <path>`.
 
