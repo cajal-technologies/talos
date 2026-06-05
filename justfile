@@ -2,8 +2,9 @@
 # so a single Lake workspace invocation covers the full chain without rebuilding
 # Interpreter twice (which happens when each package is built as a separate root).
 # Interpreter executables (runner, testsuite) are built by their own recipes below.
+[working-directory("programs/lean")]
 build: lake-shared
-    lake -d {{justfile_directory()}}/programs    build
+    lake build
 
 [private]
 [working-directory("interpreter")]
