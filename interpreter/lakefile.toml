@@ -1,6 +1,7 @@
 name = "Interpreter"
 version = "0.1.0"
 defaultTargets = ["Interpreter"]
+packagesDir = "../.lake/packages"
 
 [[require]]
 name = "mathlib"

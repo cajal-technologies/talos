@@ -1,5 +1,5 @@
 {"version": "1.2.0",
- "packagesDir": ".lake/packages",
+ "packagesDir": "../.lake/packages",
  "packages":
  [{"url": "https://github.com/leanprover-community/mathlib4",
    "type": "git",
