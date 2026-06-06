@@ -5,3 +5,5 @@ edition = "2024"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
+
+[dependencies]

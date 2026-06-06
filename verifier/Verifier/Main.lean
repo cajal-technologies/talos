@@ -11,6 +11,24 @@ Run from the project root (directory with `rust/` and `lean/`).
 
 Subcommands: init, add, del, build, emit, prove, check, extract, report.
 Omit crate names for all workspace crates. `foo_bar` maps to `Project.FooBar`.
+
+## Template layout
+
+The scaffolding lives entirely under `verifier/template/`, decoupled from this
+code — editing it never requires touching Lean. Three independent trees:
+
+* `template/crate/`   — a single rust crate (no Lean). Copied by `add`, with the
+                        literal `CRATE_NAME` replaced by the new crate's name.
+* `template/project/` — a whole project (`rust/` + `lean/`) with a worked
+                        `is_even`/`IsEven` example. Copied verbatim by `init`.
+* `template/module/`  — the hand-written Lean files that accompany the
+                        auto-generated `Program.lean` (currently `Spec.lean`).
+                        Copied by `emit` into the crate's Lean module, with
+                        `CRATE_NAME` / `MODULE_NAME` replaced, never clobbering
+                        files that already exist.
+
+Adding a file to a crate's Lean module, or changing the starter rust, is a pure
+template edit. The verifier only ever copies these trees and substitutes names.
 -/
 
 open System (FilePath)
@@ -75,14 +93,8 @@ private def isNewer (a b : FilePath) : IO Bool := do
   let mb ← b.metadata
   return ma.modified > mb.modified
 
-/-- `true` iff `path` is a placeholder stub written by `verifier add` (always needs re-emit). -/
-private def isPlaceholder (path : FilePath) : IO Bool := do
-  if ¬ (← System.FilePath.pathExists path) then return false
-  let content ← IO.FS.readFile path
-  return content.startsWith "/-\n  Placeholder"
-
 -- ----------------------------------------------------------------------------
--- Template loading
+-- Template tree
 -- ----------------------------------------------------------------------------
 
 /-- Locate `verifier/template/` relative to the running binary.
@@ -92,72 +104,49 @@ private def locateTemplateRoot : IO FilePath := do
   let some verifierRoot := app.parent >>= (·.parent) >>= (·.parent) >>= (·.parent)
     | die s!"cannot locate template root (binary path: {app})"
   let root := verifierRoot / "template"
-  unless ← System.FilePath.pathExists (root / "lean" / "Project.lean") do
+  unless ← System.FilePath.pathExists (root / "project" / "lean" / "Project.lean") do
     die s!"template not found at {root}"
   pure root
 
--- The lean files created per crate by `verifier add` (besides Program.lean and Spec.lean).
--- Each name requires a matching template at verifier/template/crate/lean_<Name>.lean.
--- To add or remove a file: edit this list and add/remove the template file.
-private def crateModuleFiles : List String := ["Proof"]
+/-- Build/VCS directories we never copy out of a template tree, in case stray
+    artefacts are sitting on disk next to the source files. -/
+private def denyDir (name : String) : Bool :=
+  name == ".lake" || name == "target" || name == "build"
+    || name == ".git" || name == "node_modules"
 
-private def templateRelPaths : List String :=
-  let isEvenLean := (["Program", "Spec"] ++ crateModuleFiles).map
-    fun f => s!"lean/Project/IsEven/{f}.lean"
-  [ "rust/Cargo.toml", "rust/.cargo/config.toml", "rust/.gitignore", "rust/justfile",
-    "rust/is_even/Cargo.toml", "rust/is_even/src/lib.rs", "rust/is_even/src/exports.rs",
-    "lean/lean-toolchain", "lean/lakefile.toml", "lean/.gitignore", "lean/Project.lean"
-  ] ++ isEvenLean
+/-- Recursively copy `src` into `dst`, rewriting the text of every file through
+    `subst`. Directories named in `denyDir` are skipped. -/
+private partial def copyTree (src dst : FilePath) (subst : String → String) : IO Unit := do
+  IO.FS.createDirAll dst
+  for entry in (← src.readDir) do
+    let child  := entry.path
+    let target := dst / entry.fileName
+    if ← child.isDir then
+      unless denyDir entry.fileName do copyTree child target subst
+    else
+      IO.FS.writeFile target (subst (← IO.FS.readFile child))
 
-private def loadTemplateFiles : IO (List (String × String)) := do
-  let root ← locateTemplateRoot
-  templateRelPaths.mapM fun (rel : String) => do
-    let path := root / rel
-    unless ← System.FilePath.pathExists path do
-      die s!"template file missing: {path}"
-    pure (rel, ← IO.FS.readFile path)
-
-private def scaffoldedLakefile : String :=
-  "name = \"Project\"\n\
-   version = \"0.1.0\"\n\
-   defaultTargets = [\"Project\"]\n\
-   \n\
-   [[require]]\n\
-   name = \"CodeLib\"\n\
-   git = \"https://github.com/cajal-technologies/talos.git\"\n\
-   subDir = \"codelib\"\n\
-   rev = \"main\"\n\
-   \n\
-   [[lean_lib]]\n\
-   name = \"Project\"\n"
+/-- Like `copyTree`, but never overwrites a file that already exists at the
+    destination. Returns the files actually written. -/
+private partial def copyTreeNoClobber (src dst : FilePath) (subst : String → String) :
+    IO (Array FilePath) := do
+  let mut written : Array FilePath := #[]
+  for entry in (← src.readDir) do
+    let child  := entry.path
+    let target := dst / entry.fileName
+    if ← child.isDir then
+      unless denyDir entry.fileName do
+        written := written ++ (← copyTreeNoClobber child target subst)
+    else
+      unless ← System.FilePath.pathExists target do
+        if let some parent := target.parent then IO.FS.createDirAll parent
+        IO.FS.writeFile target (subst (← IO.FS.readFile child))
+        written := written.push target
+  pure written
 
 -- ----------------------------------------------------------------------------
--- Single-crate scaffold (`add`)
+-- Workspace / import bookkeeping
 -- ----------------------------------------------------------------------------
-
-private def withCrateName (s : String) (crate : String) : String :=
-  s.replace "CRATE_NAME" crate
-
-private def readCrateTemplate (rel : String) : IO String := do
-  let root ← locateTemplateRoot
-  IO.FS.readFile (root / "crate" / rel)
-
-private def leanProgramStub (pascal : String) : String :=
-  "/-\n  Placeholder until `verifier emit`. Replaced by auto-generated output.\n-/\n\n" ++
-  "import CodeLib\n\n" ++
-  s!"namespace Project.{pascal}\n\nopen Wasm\n\n" ++
-  "def «module» : Wasm.Module :=\n{\n  funcs := [],\n  exports := [],\n  memory := none,\n  globals := []\n}\n\n" ++
-  s!"end Project.{pascal}\n"
-
-private def leanSpecStub (crate pascal : String) : String :=
-  s!"import Project.{pascal}.Program\n\nnamespace Project.{pascal}.Spec\n\nopen Wasm\n\n" ++
-  "/-- TODO: refine after `verifier emit`.\n\nInformal spec:\n" ++
-  s!"Describe the wasm export `{crate}` here. -/\n" ++
-  s!"@[spec_of \"rust-exported\" \"{crate}::{crate}\"]\ndef {pascal}Spec : Prop :=\n  True\n\n" ++
-  s!"end Project.{pascal}.Spec\n"
-
-private def withPascal (s : String) (pascal : String) : String :=
-  s.replace "PASCAL" pascal
 
 private def addWorkspaceMember (cargoToml : FilePath) (crate : String) : IO Unit := do
   let txt ← IO.FS.readFile cargoToml
@@ -166,12 +155,6 @@ private def addWorkspaceMember (cargoToml : FilePath) (crate : String) : IO Unit
   unless fileContains txt needle do
     die s!"{cargoToml}: could not find `[workspace] members = [`"
   IO.FS.writeFile cargoToml (txt.replace needle (needle ++ "\n  \"" ++ crate ++ "\","))
-
-private def addProjectImports (projectLean : FilePath) (pascal : String) : IO Unit := do
-  let specLine := s!"import Project.{pascal}.Spec"
-  let txt ← IO.FS.readFile projectLean
-  if fileContains txt specLine then return
-  IO.FS.writeFile projectLean (txt.trimAsciiEnd.toString ++ "\n" ++ specLine ++ "\n")
 
 private def removeWorkspaceMember (cargoToml : FilePath) (crate : String) : IO Unit := do
   unless ← System.FilePath.pathExists cargoToml do return
@@ -198,6 +181,10 @@ private def removeProjectImport (projectLean : FilePath) (pascal : String) : IO 
   IO.FS.writeFile projectLean cleaned
   IO.println s!"    removed `{importLine}` from {projectLean}"
 
+-- ----------------------------------------------------------------------------
+-- `add` / `del`
+-- ----------------------------------------------------------------------------
+
 private def cmdAdd (crate : String) : IO Unit := do
   unless isValidCrateName crate do
     die s!"invalid crate name `{crate}` (use snake_case: letters, digits, underscores)"
@@ -205,23 +192,14 @@ private def cmdAdd (crate : String) : IO Unit := do
   let pascal := snakeToPascal crate
   let rustCrate := projectDir / "rust" / crate
   if ← System.FilePath.pathExists rustCrate then die s!"{rustCrate} already exists"
-  let leanMod := projectDir / "lean" / "Project" / pascal
-  if ← System.FilePath.pathExists leanMod then die s!"{leanMod} already exists"
   IO.println s!"==> adding crate `{crate}` → Project.{pascal}"
-  let cargoToml ← readCrateTemplate "rust_Cargo.toml"
-  let libRs ← readCrateTemplate "rust_lib.rs"
-  let exportsRs ← readCrateTemplate "rust_exports.rs"
-  writeFile (rustCrate / "Cargo.toml") (withCrateName cargoToml crate)
-  writeFile (rustCrate / "src/lib.rs") (withCrateName libRs crate)
-  writeFile (rustCrate / "src/exports.rs") (withCrateName exportsRs crate)
-  addWorkspaceMember (projectDir / "rust/Cargo.toml") crate
-  writeFile (leanMod / "Program.lean") (leanProgramStub pascal)
-  writeFile (leanMod / "Spec.lean") (leanSpecStub crate pascal)
-  for name in crateModuleFiles do
-    let content ← readCrateTemplate s!"lean_{name}.lean"
-    writeFile (leanMod / s!"{name}.lean") (withPascal content pascal)
-  addProjectImports (projectDir / "lean/Project.lean") pascal
+  let crateTemplate := (← locateTemplateRoot) / "crate"
+  copyTree crateTemplate rustCrate (·.replace "CRATE_NAME" crate)
+  addWorkspaceMember (projectDir / "rust" / "Cargo.toml") crate
+  IO.println s!"    wrote {rustCrate}"
   IO.println s!"==> done. Next: verifier build {crate} && verifier emit {crate}"
+  IO.println s!"==>   the Lean module (Program.lean + Spec.lean) is created by `verifier emit`;"
+  IO.println s!"==>   add `import Project.{pascal}.Spec` to lean/Project.lean to include it in the default build."
 
 private def cmdDel (crate : String) : IO Unit := do
   unless isValidCrateName crate do
@@ -249,7 +227,13 @@ private def cmdDel (crate : String) : IO Unit := do
   removeProjectImport   (projectDir / "lean" / "Project.lean") pascal
   IO.println s!"==> done"
 
-/-- One rust crate in the workspace, paired with its lean module dir. -/
+-- ----------------------------------------------------------------------------
+-- Crate discovery
+-- ----------------------------------------------------------------------------
+
+/-- One rust crate in the workspace, paired with its (possibly not-yet-created)
+    lean module dir. The lean dir is materialised by `emit`, so discovery never
+    requires it to exist. -/
 structure Crate where
   name    : String
   rustDir : FilePath
@@ -257,24 +241,17 @@ structure Crate where
 
 private def discoverCrates (projectDir : FilePath) : IO (Array Crate) := do
   let rustRoot := projectDir / "rust"
-  let leanRoot := projectDir / "lean" / "Project"
   unless ← System.FilePath.pathExists rustRoot do
     die s!"{rustRoot} not found — are you in a verifier project root?"
-  unless ← System.FilePath.pathExists leanRoot do
-    die s!"{leanRoot} not found — are you in a verifier project root?"
+  let leanRoot := projectDir / "lean" / "Project"
   let entries ← rustRoot.readDir
   let mut acc : Array Crate := #[]
   for entry in entries do
     let p := entry.path
     if ¬ (← p.isDir) then continue
-    let cargoToml := p / "Cargo.toml"
-    unless ← System.FilePath.pathExists cargoToml do continue
+    unless ← System.FilePath.pathExists (p / "Cargo.toml") do continue
     let name := entry.fileName
-    let mod := snakeToPascal name
-    let leanDir := leanRoot / mod
-    unless ← System.FilePath.pathExists leanDir do
-      die s!"crate `{name}` has no matching lean module at {leanDir}\n(expected {name} → {mod})"
-    acc := acc.push { name, rustDir := p, leanDir }
+    acc := acc.push { name, rustDir := p, leanDir := leanRoot / snakeToPascal name }
   pure acc
 
 private def selectCrates (all : Array Crate) (names : List String) : IO (Array Crate) := do
@@ -324,6 +301,18 @@ private def emitProgramFile (c : Crate) (m : Wasm.Module) : IO Unit := do
       ""
     ]
   IO.FS.writeFile (c.leanDir / "Program.lean") body
+
+/-- Copy the hand-written lean files (`template/module/`) that accompany the
+    generated `Program.lean` into the crate's lean module, substituting names.
+    Existing files are never overwritten, so user edits — and the committed
+    `programs/` corpus — survive re-emits untouched. -/
+private def scaffoldModuleFiles (c : Crate) : IO Unit := do
+  let moduleRoot := (← locateTemplateRoot) / "module"
+  let pascal := snakeToPascal c.name
+  let subst := fun (s : String) => (s.replace "MODULE_NAME" pascal).replace "CRATE_NAME" c.name
+  let written ← copyTreeNoClobber moduleRoot c.leanDir subst
+  for f in written do
+    IO.println s!"    scaffolded {f}"
 
 private def reproducibleRustflags (rustDir : FilePath) : IO String := do
   let sysrootOut ← IO.Process.output
@@ -383,11 +372,15 @@ private def buildWasm (projectDir : FilePath) (crates : Array Crate) : IO Unit :
     if writeWat then IO.FS.writeFile watFile watText
 
 private def emitOneCrate (projectDir : FilePath) (c : Crate) (forceEmit : Bool) : IO Unit := do
-  let wasmDst := projectDir / "rust" / "build" / c.name / "program.wasm"
+  let buildDir := projectDir / "rust" / "build" / c.name
+  let wasmDst := buildDir / "program.wasm"
+  let watFile := buildDir / "program.wat"
   let programLean := c.leanDir / "Program.lean"
-  let stale := forceEmit ∨ (← isPlaceholder programLean) ∨ (← isNewer wasmDst programLean)
+  unless ← System.FilePath.pathExists watFile do
+    die s!"{c.name}: {watFile} not found — run `verifier build {c.name}` first"
+  let stale := forceEmit ∨ (← isNewer wasmDst programLean)
   if stale then
-    let watText ← IO.FS.readFile (projectDir / "rust" / "build" / c.name / "program.wat")
+    let watText ← IO.FS.readFile watFile
     match Wasm.Decoder.Wat.decode watText with
     | .error e => die s!"{c.name}: wat decoder rejected the module: {e}"
     | .ok m    =>
@@ -395,6 +388,7 @@ private def emitOneCrate (projectDir : FilePath) (c : Crate) (forceEmit : Bool) 
       IO.println s!"    emitted {programLean}"
   else
     IO.println s!"    {programLean} is up to date"
+  scaffoldModuleFiles c
 
 private def emitPrograms (projectDir : FilePath) (crates : Array Crate) (forceEmit : Bool) : IO Unit := do
   for c in crates do
@@ -403,7 +397,7 @@ private def emitPrograms (projectDir : FilePath) (crates : Array Crate) (forceEm
 /-- Lake targets for `prove`: generated program + hand-written specs (matches `programs/`). -/
 private def proveTargets (crates : Array Crate) : Array String :=
   crates.foldl (init := #[]) fun acc c =>
-    let pascal := c.leanDir.fileName.getD ""
+    let pascal := snakeToPascal c.name
     acc.push s!"Project.{pascal}.Program" |>.push s!"Project.{pascal}.Spec"
 
 private def lakeBuildCount (leanDir : FilePath) (targets : Array String := #[]) : IO (Bool × Nat) := do
@@ -472,20 +466,15 @@ private def cmdInit (projectPathIn : String) : IO Unit := do
     let entries ← (projectDir.readDir : IO _)
     unless entries.isEmpty do
       die s!"{projectDir} already exists and is not empty"
-  IO.FS.createDirAll projectDir
-  IO.println s!"==> scaffolding template into {projectDir}"
-  let templateFiles ← loadTemplateFiles
-  for (rel, content) in templateFiles do
-    let content := if rel = "lean/lakefile.toml" then scaffoldedLakefile else content
-    writeFile (projectDir / rel) content
-  IO.println "==> cargo check"
-  runOrDie "cargo" #["check"] (cwd := some (projectDir / "rust"))
+  let projectTemplate := (← locateTemplateRoot) / "project"
+  IO.println s!"==> scaffolding {projectTemplate} → {projectDir}"
+  copyTree projectTemplate projectDir id
   let leanDir := projectDir / "lean"
   IO.println "==> lake update"
   runOrDie "lake" #["update"] (cwd := some leanDir)
   IO.println "==> lake exe cache get"
   runOrDie "lake" #["exe", "cache", "get"] (cwd := some leanDir)
-  IO.println "==> lake build (verifying template proofs)"
+  IO.println "==> lake build (verifying the bundled example)"
   let (ok, _) ← lakeBuildCount leanDir
   unless ok do die "initial lake build failed"
   IO.println s!"==> done. Project ready at {projectDir}"
@@ -615,7 +604,7 @@ def buildCmd : Cmd := `[Cli|
 
 def emitCmd : Cmd := `[Cli|
   emit VIA runEmit;
-  "Transpile program.wat → Program.lean for selected crates. [--force-emit]"
+  "Transpile program.wat → Program.lean and scaffold Spec.lean for selected crates. [--force-emit]"
 
   FLAGS:
     "force-emit"; "Re-emit even if wasm is older than Program.lean."

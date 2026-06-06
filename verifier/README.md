@@ -36,13 +36,14 @@ project/
     Project/
       IsEven/
         Program.lean          ← auto-generated from build/is_even/program.wasm
-        Spec.lean             ← `def MyProp : Prop := …` statements
-        Proof.lean            ← `theorem _ : MyProp := …` proofs
+        Spec.lean             ← `def MyProp : Prop := …` + proofs (scaffolded by `verifier emit`)
 ```
 
 The rust↔lean mapping is by name: crate `foo_bar` ↔ Lean module
-`Project.FooBar` (snake_case → PascalCase). If a Lean module dir is
-missing for a crate, `verifier check` (or `build` / `emit` / `prove` separately) errors out — the shape is fixed.
+`Project.FooBar` (snake_case → PascalCase). `verifier emit` creates the
+Lean module dir if it is missing — `Program.lean` every run, and the
+extra files (`Spec.lean`, …) from the bundled module template only when
+they don't already exist, so your edits are never overwritten.
 
 ## Setting up a Rust crate for wasm
 
@@ -122,8 +123,7 @@ lake exe verifier new my-project
 `<path>` must not exist (or must be empty). This:
 
 1. Copies the bundled template (cargo workspace with `is_even`, plus a Lean `Project` lib) into `my-project/`.
-2. Runs `cargo check` inside `my-project/rust/`.
-3. Runs an initial `lake build` inside `my-project/lean/` to fetch
+2. Runs an initial `lake build` inside `my-project/lean/` to fetch
    CodeLib and warm caches.
 
 Once it returns, you have a fully working example you can edit in
@@ -156,13 +156,19 @@ Pipeline:
 
 ### 3. Adding a crate
 
-1. `mkdir rust/foo_bar && …` — write `Cargo.toml`, `src/lib.rs`,
-   `src/exports.rs` following the conventions above.
-2. Add `"foo_bar"` to the `members` list in `rust/Cargo.toml`.
-3. Create `lean/Project/FooBar/{Program,Spec,Proof}.lean` (you can
-   copy the `IsEven` ones as a starting point).
-4. Add `import Project.FooBar.Spec` to `lean/Project.lean`.
-5. `lake exe verifier check`.
+1. `verifier add foo_bar` — copies the bundled crate template
+   (`Cargo.toml`, `src/lib.rs`, `src/exports.rs`) into `rust/foo_bar/`
+   with the name placeholder filled in, and registers `"foo_bar"` in the
+   `members` list of `rust/Cargo.toml`. No Lean files are created yet.
+2. Edit `rust/foo_bar/src/lib.rs` and `src/exports.rs` to implement and
+   export your function, following the conventions above.
+3. `verifier emit foo_bar` — builds the wasm (if needed), generates
+   `lean/Project/FooBar/Program.lean`, and scaffolds `Spec.lean` from the
+   module template. (`verifier check foo_bar` does build → emit → prove
+   in one go.)
+4. Add `import Project.FooBar.Spec` to `lean/Project.lean` so the new
+   module is part of the build.
+5. Fill in `Spec.lean`, then `verifier prove foo_bar` (or `check`).
 
 ### 4. Writing specs and proofs
 
@@ -227,17 +233,22 @@ verifier emit [crate…] [--force-emit]
 verifier prove [crate…]
 verifier check [crate…] [--force-emit] [--no-prove]
 verifier extract [crate…] [--out DIR]
-verifier report [--extracted DIR] [--out DIR]
+verifier report [crate…] [--extracted DIR] [--out DIR]
 ```
 
 Run from the project root. Omit crate names to process all crates.
 In the Talos monorepo: `cd programs && lake -d ../verifier exe verifier …`
 
 - `init` / `new` requires a non-existent or empty target directory.
-- `add` appends a crate to an existing project.
+- `add` copies the bundled crate template into `rust/<crate>/`
+  (`Cargo.toml`, `src/lib.rs`, `src/exports.rs`, with the name
+  placeholder filled in) and registers the crate in `rust/Cargo.toml`.
+  It creates no Lean files — those come from `emit`.
 - `del` removes a crate: deletes `rust/<crate>/`, `lean/Project/<Crate>/`, `rust/build/<crate>/`, and cleans the workspace member from `rust/Cargo.toml` and the import from `lean/Project.lean`.
 - `build` writes `rust/build/<crate>/program.{wasm,wat}` via cargo + wasm-tools.
-- `emit` decodes `program.wat` into `Program.lean`.
+- `emit` decodes `program.wat` into `Program.lean`, and scaffolds the
+  bundled module template (`Spec.lean`) into `lean/Project/<Crate>/`,
+  writing only files that don't already exist.
 - `prove` runs `lake build` on `Project/<Crate>/Program.lean` and `Spec.lean` per crate (not `Proof.lean` unless you import it in `Project.lean`).
 - `check` runs `build` → `emit` → `prove`.
 - `--force-emit` re-emits every selected `Program.lean` even when wasm is unchanged.
@@ -249,12 +260,13 @@ In the Talos monorepo: `cd programs && lake -d ../verifier exe verifier …`
   [`EXTRACT.md`](EXTRACT.md) for the full schema and the project
   conventions it relies on (`@[spec_of]`, `@[proves]`, docstring
   shape).
-- `verifier report` must be run from the project root. It runs
-  `verifier extract` into `./extracted/` and then builds the Astro
-  static site bundled at `verifier/report/` (located relative to the
-  verifier binary) into `./out/`. Requires `npm` on PATH; if
-  `verifier/report/node_modules` is missing the command runs
-  `npm install` first.
+- `report` must be run from the project root. It runs
+  `verifier extract` into `./extracted/` (override with `--extracted DIR`)
+  and then builds the Astro static site bundled at `verifier/report/`
+  (located relative to the verifier binary) into `./out/` (override with
+  `--out DIR`). An optional crate filter narrows the extract step.
+  Requires `npm` on PATH; if `verifier/report/node_modules` is missing the
+  command runs `npm install` first.
 
 ### CodeLib source
 

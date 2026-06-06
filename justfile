@@ -122,8 +122,9 @@ testsuite-report:
 #
 # Step-by-step development cycle:
 #   just verifier-init <path>   — scaffold a new project
+#   just verifier-add <crate>   — copy the rust crate template into rust/
 #   just verifier-build         — compile Rust → wasm/wat
-#   just verifier-emit          — transpile wat → Program.lean
+#   just verifier-emit          — transpile wat → Program.lean + scaffold Spec.lean
 #   [edit Spec.lean by hand]
 #   just verifier-prove         — run lake build to check proofs
 #
@@ -154,8 +155,8 @@ verifier-del crate:
 verifier-build *crates:
     @just _verifier build {{ crates }}
 
-# Transpile program.wat → Program.lean for selected crates; omit names for all.
-# Flags: --force-emit (re-emit even when wasm is unchanged).
+# Transpile program.wat → Program.lean and scaffold Spec.lean; omit names for all.
+# Flag: --force-emit (re-emit when wasm is unchanged). Example: just verifier-emit --force-emit is_even
 [group("verifier")]
 verifier-emit *crates:
     @just _verifier emit {{ crates }}
@@ -172,14 +173,16 @@ verifier-check *args:
     @just _verifier check {{ args }}
 
 # Extract JSON metadata per crate; omit names for all.
+# Flags: --out DIR (output directory, default ./extracted).
 [group("verifier")]
 verifier-extract *crates:
     @just _verifier extract {{ crates }}
 
 # Build the static HTML progress report (requires npm in verifier/report/).
+# Accepts an optional crate filter and flags: --extracted DIR, --out DIR.
 [group("verifier")]
-verifier-report:
-    @just _verifier report
+verifier-report *crate:
+    @just _verifier report {{ crate }}
 
 # ── docs ──────────────────────────────────────────────────────────────────────
 
