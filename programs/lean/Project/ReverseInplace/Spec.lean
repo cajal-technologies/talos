@@ -456,7 +456,7 @@ theorem func1_spec (env : HostEnv α) (base count sp : UInt32)
       simp [UInt32.toNat_add, UInt32.toNat_sub]
     -- L1: copy reversed into scratch `[sp-128, sp)`.
     apply wp_loop_cons
-      (Inv := fun st' s' => ∃ k, k ≤ count.toNat ∧
+      (Inv := fun st' s' => ∃ k, k < count.toNat ∧
         s' = { params := [.i32 base, .i32 count],
                locals := [.i32 (sp - 128), .i32 (count <<< (2 % 32) - 4 * UInt32.ofNat k),
                           .i32 (base - 4), .i32 (sp - 128 + 4 * UInt32.ofNat k)],
@@ -469,11 +469,22 @@ theorem func1_spec (env : HostEnv α) (base count sp : UInt32)
         | _ :: .i32 l3 :: _ => l3.toNat
         | _ => 0)
     · -- entry (k = 0): scratch only holds the fill
-      refine ⟨0, Nat.zero_le _, ?_, rfl, rfl, ?_, ?_⟩
+      refine ⟨0, by omega, ?_, rfl, rfl, ?_, ?_⟩
       · simp only [hz0, hsub0, hadd0, hb4]
       · intro j hj; exact fill_bytes_of_disjoint _ _ _ _ j (by omega)
       · intro jj hjj; omega
-    · sorry
+    · rintro st s ⟨k, hk, rfl, hg', hp', hframe1, hscr⟩
+      have hpg2 : st.mem.pages * 65536 ≤ 4294967296 := by rw [hp']; omega
+      have hcw : count <<< (2 % 32) = count * 4 := by
+        apply UInt32.toNat.inj
+        rw [UInt32.toNat_shiftLeft, UInt32.toNat_mul]; simp [Nat.shiftLeft_eq]
+      have haddr : base - (4 : UInt32) + (count <<< (2 % 32) - (4 : UInt32) * UInt32.ofNat k)
+          = base + (4 : UInt32) * UInt32.ofNat (count.toNat - 1 - k) := by
+        apply UInt32.toNat.inj
+        rw [hcw, toNat_base_add base (count.toNat - 1 - k) st.mem.pages (by rw [hp']; omega) hpg2]
+        simp [UInt32.toNat_add, UInt32.toNat_sub, UInt32.toNat_mul, UInt32.toNat_ofNat]
+        omega
+      sorry
   · -- `count = 0`: nothing to do; only the scratch fill changed memory.
     rename_i n vs hn heq
     simp only [List.cons.injEq, Value.i32.injEq] at heq
