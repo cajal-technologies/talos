@@ -446,11 +446,34 @@ theorem func1_spec (env : HostEnv α) (base count sp : UInt32)
       · exact absurd (UInt32.toNat.inj (by rw [h]; rfl)) hc0
       · exact h
     obtain ⟨-, rfl⟩ := heq
-    -- L1 (copy reversed into scratch `[sp-128, sp)`): invariant indexed by
-    -- completed iterations `k`, scratch[jj] = orig[count-1-jj] for jj<k.
-    -- L2 (copy scratch back to base): base[i] = scratch[i] = orig[count-1-i].
-    -- Both via wp_loop_cons + the framing lemmas, as in func0_spec.
-    sorry
+    have hsub0 : ∀ x : UInt32, x - 0 = x := fun x => by
+      apply UInt32.toNat.inj; simp
+    have hadd0 : ∀ x : UInt32, x + 0 = x := fun x => by
+      apply UInt32.toNat.inj; simp
+    have hz0 : (4 : UInt32) * UInt32.ofNat 0 = 0 := by decide
+    have hb4 : (4294967292 : UInt32) + base = base - 4 := by
+      apply UInt32.toNat.inj
+      simp [UInt32.toNat_add, UInt32.toNat_sub]
+    -- L1: copy reversed into scratch `[sp-128, sp)`.
+    apply wp_loop_cons
+      (Inv := fun st' s' => ∃ k, k ≤ count.toNat ∧
+        s' = { params := [.i32 base, .i32 count],
+               locals := [.i32 (sp - 128), .i32 (count <<< (2 % 32) - 4 * UInt32.ofNat k),
+                          .i32 (base - 4), .i32 (sp - 128 + 4 * UInt32.ofNat k)],
+               values := [] } ∧
+          st'.globals = st0.globals ∧ st'.mem.pages = st0.mem.pages ∧
+          (∀ j, (j < sp.toNat - 128 ∨ sp.toNat ≤ j) → st'.mem.bytes j = st0.mem.bytes j) ∧
+          (∀ jj, jj < k → st'.mem.read32 (sp - 128 + 4 * UInt32.ofNat jj)
+              = st0.mem.read32 (base + 4 * UInt32.ofNat (count.toNat - 1 - jj))))
+      (μ := fun _ s' => match s'.locals with
+        | _ :: .i32 l3 :: _ => l3.toNat
+        | _ => 0)
+    · -- entry (k = 0): scratch only holds the fill
+      refine ⟨0, Nat.zero_le _, ?_, rfl, rfl, ?_, ?_⟩
+      · simp only [hz0, hsub0, hadd0, hb4]
+      · intro j hj; exact fill_bytes_of_disjoint _ _ _ _ j (by omega)
+      · intro jj hjj; omega
+    · sorry
   · -- `count = 0`: nothing to do; only the scratch fill changed memory.
     rename_i n vs hn heq
     simp only [List.cons.injEq, Value.i32.injEq] at heq
