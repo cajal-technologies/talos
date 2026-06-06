@@ -510,7 +510,52 @@ theorem func1_spec (env : HostEnv α) (base count sp : UInt32)
       · -- fallthrough: scratch fully written; copy back (L2)
         sorry
       · -- continue: re-establish L1 invariant at `k + 1`
-        sorry
+        rename_i n vs hn heq
+        simp only [List.cons.injEq, Value.i32.injEq] at heq
+        simp only [hadd0]
+        have hl3v : (count <<< (2 % 32) - 4 * UInt32.ofNat k).toNat = 4 * (count.toNat - k) := by
+          rw [hcw]; simp [UInt32.toNat_sub, UInt32.toNat_mul, UInt32.toNat_ofNat]; omega
+        have hkc : k + 1 < count.toNat := by
+          by_contra h
+          have hkk : count.toNat - k = 1 := by omega
+          apply hn; rw [← heq.1]; apply UInt32.toNat.inj
+          rw [UInt32.toNat_add, hl3v, hkk]; simp
+        have hsl3 : (4294967292 : UInt32) + (count <<< (2 % 32) - (4 : UInt32) * UInt32.ofNat k)
+            = count <<< (2 % 32) - (4 : UInt32) * UInt32.ofNat (k + 1) := by
+          apply UInt32.toNat.inj
+          rw [hcw]; simp [UInt32.toNat_add, UInt32.toNat_sub, UInt32.toNat_mul, UInt32.toNat_ofNat]; omega
+        have hsl5 : (4 : UInt32) + (sp - 128 + 4 * UInt32.ofNat k)
+            = sp - 128 + 4 * UInt32.ofNat (k + 1) := by
+          apply UInt32.toNat.inj
+          simp [UInt32.toNat_add, hl5, hsm, UInt32.toNat_mul, UInt32.toNat_ofNat]; omega
+        refine ⟨⟨k + 1, hkc, by rw [hsl3, hsl5, List.append_nil], hg',
+          by rw [write32_pages]; exact hp', ?_, ?_⟩, ?_⟩
+        · -- frame: write at scratch cell k preserves bytes outside scratch
+          intro j hj
+          rw [write32_bytes_of_disjoint _ _ _ _ (by rw [hl5]; omega)]
+          exact hframe1 j hj
+        · -- content: scratch[jj] for jj < k+1
+          intro jj hjj
+          rcases Nat.lt_succ_iff_lt_or_eq.mp hjj with hlt | rfl
+          · have hjjN : (sp - 128 + 4 * UInt32.ofNat jj).toNat = sp.toNat - 128 + 4 * jj := by
+              rw [UInt32.toNat_add, hsm, UInt32.toNat_mul, UInt32.toNat_ofNat]; simp; omega
+            rw [read32_write32_disjoint _ _ _ _ (by rw [hjjN, hl5]; omega)]
+            exact hscr jj hlt
+          · rw [read32_write32_same, haddr]
+            have hX : (base + 4 * UInt32.ofNat (count.toNat - 1 - jj)).toNat
+                = base.toNat + 4 * (count.toNat - 1 - jj) :=
+              toNat_base_add base (count.toNat - 1 - jj) st.mem.pages hbL hpg2
+            exact read32_eq_of_bytes st0.mem st.mem _
+              (by rw [hX]; exact hframe1 _ (by omega))
+              (by rw [hX]; exact hframe1 _ (by omega))
+              (by rw [hX]; exact hframe1 _ (by omega))
+              (by rw [hX]; exact hframe1 _ (by omega))
+        · -- measure strictly decreases
+          rw [hl3v]
+          have hm : ((4294967292 : UInt32) + (count <<< (2 % 32) - (4 : UInt32) * UInt32.ofNat k)).toNat
+              = 4 * (count.toNat - k) - 4 := by
+            rw [hcw]; simp [UInt32.toNat_add, UInt32.toNat_sub, UInt32.toNat_mul, UInt32.toNat_ofNat]; omega
+          rw [hm]; omega
       · rename_i hne1 hne2; exact hne2 _ _ rfl
   · -- `count = 0`: nothing to do; only the scratch fill changed memory.
     rename_i n vs hn heq
