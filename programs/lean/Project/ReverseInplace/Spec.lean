@@ -405,7 +405,7 @@ theorem func0_spec (env : HostEnv α) (base count : UInt32)
 
 /-! ## `reverse_naive` (func1): copy-reversed-into-scratch then back -/
 
-set_option maxRecDepth 4000 in
+set_option maxRecDepth 8000 in
 /-- `reverse_naive` (func1) reverses the `count` 32-bit words at `base`
 in place by copying them reversed into a 128-byte shadow-stack scratch
 buffer at `global0 − 128` and copying back. The result cell `i` holds
@@ -553,10 +553,10 @@ theorem func1_spec (env : HostEnv α) (base count sp : UInt32)
               (by rw [hX]; exact hframe1 _ (by omega))
         -- L2: copy scratch back to the buffer.
         apply wp_loop_cons
-          (Inv := fun st' s' => ∃ m, m ≤ count.toNat ∧
+          (Inv := fun st' s' => ∃ m w5, m < count.toNat ∧
             s' = { params := [.i32 (base + 4 * UInt32.ofNat m), .i32 (count - UInt32.ofNat m)],
                    locals := [.i32 (sp - 128), .i32 (sp - 128 + 4 * UInt32.ofNat m), .i32 (base - 4),
-                              .i32 (4 + (sp - 128 + 4 * UInt32.ofNat k))],
+                              .i32 w5],
                    values := [] } ∧
               st'.globals = st0.globals ∧ st'.mem.pages = st0.mem.pages ∧
               (∀ j, (j < sp.toNat - 128 ∨ sp.toNat ≤ j) →
@@ -569,7 +569,8 @@ theorem func1_spec (env : HostEnv α) (base count sp : UInt32)
             | _ :: .i32 l1 :: _ => l1.toNat
             | _ => 0)
         · -- entry (m = 0)
-          refine ⟨0, Nat.zero_le _, ?_, hg', hMpages, fun j hj _ => hframeM j hj, hfull, ?_⟩
+          refine ⟨0, 4 + (sp - 128 + 4 * UInt32.ofNat k), by omega, ?_, hg', hMpages,
+            fun j hj _ => hframeM j hj, hfull, ?_⟩
           · simp only [show UInt32.ofNat 0 = 0 from rfl, show (4 : UInt32) * 0 = 0 from by decide,
               hadd0, hsub0, List.append_nil]
           · intro i hi; omega
