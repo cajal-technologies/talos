@@ -10,8 +10,76 @@ namespace Project.XorSum
 
 open Wasm
 
-/-- export: xor_sum -/
 def func0 : Wasm.Program :=
+  [
+  .globalGet 0,
+  .const (128 : UInt32),
+  .sub,
+  .localSet 2,
+  .localGet 2,
+  .globalSet 0,
+  .localGet 2,
+  .const (0 : UInt32),
+  .const (128 : UInt32),
+  .memoryFill,
+  .localGet 1,
+  .const (32 : UInt32),
+  .localGet 1,
+  .const (32 : UInt32),
+  .ltU,
+  .select,
+  .localSet 3,
+  .block 0 0 [
+    .localGet 1,
+    .eqz,
+    .br_if 0,
+    .localGet 0,
+    .const (1 : UInt32),
+    .add,
+    .localSet 4,
+    .localGet 2,
+    .localSet 1,
+    .localGet 3,
+    .localSet 5,
+    .loop 0 0 [
+      .localGet 1,
+      .localGet 0,
+      .store32 (0 : UInt32),
+      .localGet 0,
+      .localGet 4,
+      .add,
+      .localSet 0,
+      .localGet 1,
+      .const (4 : UInt32),
+      .add,
+      .localSet 1,
+      .localGet 5,
+      .const (4294967295 : UInt32),
+      .add,
+      .localSet 5,
+      .localGet 5,
+      .br_if 0
+    ]
+  ],
+  .block 0 0 [
+    .localGet 2,
+    .localGet 3,
+    .call 1,
+    .localGet 2,
+    .localGet 3,
+    .call 2,
+    .ne,
+    .br_if 0,
+    .localGet 2,
+    .const (128 : UInt32),
+    .add,
+    .globalSet 0,
+    .ret
+  ],
+  .unreachable
+]
+
+def func1 : Wasm.Program :=
   [
   .const (0 : UInt32),
   .localSet 2,
@@ -40,13 +108,65 @@ def func0 : Wasm.Program :=
   .localGet 2
 ]
 
+def func2 : Wasm.Program :=
+  [
+  .block 0 0 [
+    .block 0 0 [
+      .localGet 1,
+      .br_if 0,
+      .const (0 : UInt32),
+      .localSet 0,
+      .br 1
+    ],
+    .localGet 0,
+    .const (4294967292 : UInt32),
+    .add,
+    .localSet 2,
+    .localGet 1,
+    .const (2 : UInt32),
+    .shl,
+    .localSet 1,
+    .const (0 : UInt32),
+    .localSet 0,
+    .loop 0 0 [
+      .localGet 2,
+      .localGet 1,
+      .add,
+      .load32 (0 : UInt32),
+      .localGet 0,
+      .xor,
+      .localSet 0,
+      .localGet 1,
+      .const (4294967292 : UInt32),
+      .add,
+      .localSet 3,
+      .localGet 3,
+      .localSet 1,
+      .localGet 3,
+      .br_if 0
+    ]
+  ],
+  .localGet 0
+]
+
+/-- export: check -/
+def func3 : Wasm.Program :=
+  [
+  .localGet 0,
+  .localGet 1,
+  .call 0
+]
+
 def «module» : Wasm.Module :=
 {
   funcs := [
-    { params := [.i32, .i32], locals := [.i32], body := func0, results := [.i32] }
+    { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32], body := func0, results := [] },
+    { params := [.i32, .i32], locals := [.i32], body := func1, results := [.i32] },
+    { params := [.i32, .i32], locals := [.i32, .i32], body := func2, results := [.i32] },
+    { params := [.i32, .i32], locals := [], body := func3, results := [] }
   ],
   exports := [
-    { name := "xor_sum", funcIdx := 0 }
+    { name := "check", funcIdx := 3 }
   ],
   memory := some { pagesMin := (16 : UInt32), pagesMax := none, data := [] },
   globals := [
@@ -55,6 +175,7 @@ def «module» : Wasm.Module :=
     { type := .i32, init := .i32 (1048576 : UInt32) }
   ],
   types := [
+    { params := [.i32, .i32], results := [] },
     { params := [.i32, .i32], results := [.i32] }
   ],
   tables := [

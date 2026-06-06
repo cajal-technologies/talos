@@ -10,7 +10,6 @@ namespace Project.DynDispatch
 
 open Wasm
 
-/-- export: dispatch -/
 def func0 : Wasm.Program :=
   [
   .localGet 0,
@@ -30,13 +29,43 @@ def func0 : Wasm.Program :=
 
 def func1 : Wasm.Program :=
   [
+  .localGet 1,
+  .const (1 : UInt32),
+  .shl,
+  .localGet 1,
+  .const (1 : UInt32),
+  .add,
+  .localGet 0,
+  .const (1 : UInt32),
+  .and,
+  .select
+]
+
+def func2 : Wasm.Program :=
+  [
+  .block 0 0 [
+    .localGet 0,
+    .localGet 1,
+    .call 0,
+    .localGet 0,
+    .localGet 1,
+    .call 1,
+    .ne,
+    .br_if 0,
+    .ret
+  ],
+  .unreachable
+]
+
+def func3 : Wasm.Program :=
+  [
   .localGet 0,
   .load32 (0 : UInt32),
   .localGet 1,
   .add
 ]
 
-def func2 : Wasm.Program :=
+def func4 : Wasm.Program :=
   [
   .localGet 0,
   .load32 (0 : UInt32),
@@ -44,15 +73,26 @@ def func2 : Wasm.Program :=
   .mul
 ]
 
+/-- export: check -/
+def func5 : Wasm.Program :=
+  [
+  .localGet 0,
+  .localGet 1,
+  .call 2
+]
+
 def «module» : Wasm.Module :=
 {
   funcs := [
     { params := [.i32, .i32], locals := [], body := func0, results := [.i32] },
     { params := [.i32, .i32], locals := [], body := func1, results := [.i32] },
-    { params := [.i32, .i32], locals := [], body := func2, results := [.i32] }
+    { params := [.i32, .i32], locals := [], body := func2, results := [] },
+    { params := [.i32, .i32], locals := [], body := func3, results := [.i32] },
+    { params := [.i32, .i32], locals := [], body := func4, results := [.i32] },
+    { params := [.i32, .i32], locals := [], body := func5, results := [] }
   ],
   exports := [
-    { name := "dispatch", funcIdx := 0 }
+    { name := "check", funcIdx := 5 }
   ],
   memory := some { pagesMin := (17 : UInt32), pagesMax := none, data := [
     { offset := some (1048576 : UInt32), bytes := [(1 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (1 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (2 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (2 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (20 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (24 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8)] }
@@ -63,13 +103,14 @@ def «module» : Wasm.Module :=
     { type := .i32, init := .i32 (1048640 : UInt32) }
   ],
   types := [
-    { params := [.i32, .i32], results := [.i32] }
+    { params := [.i32, .i32], results := [.i32] },
+    { params := [.i32, .i32], results := [] }
   ],
   tables := [
     { min := 3, max := some 3, elemType := .funcref }
   ],
   elements := [
-    { tableIdx := some 0, offset := some 1, funcs := [some 1, some 2] }
+    { tableIdx := some 0, offset := some 1, funcs := [some 3, some 4] }
   ]
 }
 
