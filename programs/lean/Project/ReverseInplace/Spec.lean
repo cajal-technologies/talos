@@ -574,7 +574,84 @@ theorem func1_spec (env : HostEnv α) (base count sp : UInt32)
           · simp only [show UInt32.ofNat 0 = 0 from rfl, show (4 : UInt32) * 0 = 0 from by decide,
               hadd0, hsub0, List.append_nil]
           · intro i hi; omega
-        · sorry
+        · rintro stp s hInv
+          obtain ⟨p, l, v⟩ := s
+          obtain ⟨m, w5', hm, hs, hg2, hp2', hframe2, hscr2, hdone⟩ := hInv
+          injection hs with hp hl hv; subst hp; subst hl; subst hv
+          have hpg3 : stp.mem.pages * 65536 ≤ 4294967296 := by rw [hp2']; exact hpgb
+          have hl0m : (base + 4 * UInt32.ofNat m).toNat = base.toNat + 4 * m :=
+            toNat_base_add base m stp.mem.pages (by rw [hp2']; omega) hpg3
+          have hl3m : (sp - 128 + 4 * UInt32.ofNat m).toNat = sp.toNat - 128 + 4 * m := by
+            rw [UInt32.toNat_add, hsm, UInt32.toNat_mul, UInt32.toNat_ofNat]; simp; omega
+          have hval : stp.mem.read32 (sp - 128 + 4 * UInt32.ofNat m)
+              = st0.mem.read32 (base + 4 * UInt32.ofNat (count.toNat - 1 - m)) := hscr2 m hm
+          wp_run
+          simp only [List.length_cons, List.length_nil, List.getElem?_cons_zero,
+            List.getElem?_cons_succ, List.set_cons_zero, List.set_cons_succ, Nat.reduceAdd,
+            Nat.reduceLT, Nat.reduceSub, reduceIte, show ((0 : UInt32).toNat) = 0 from rfl]
+          rw [if_neg (by rw [hl3m]; omega), if_neg (by rw [hl0m]; omega)]
+          simp only [hadd0]
+          have hcontent : ∀ i, i < m + 1 →
+              (stp.mem.write32 (base + 4 * UInt32.ofNat m) (stp.mem.read32 (sp - 128 + 4 * UInt32.ofNat m))).read32
+                  (base + 4 * UInt32.ofNat i)
+                = st0.mem.read32 (base + 4 * UInt32.ofNat (count.toNat - 1 - i)) := by
+            intro i hi
+            have hci : (base + 4 * UInt32.ofNat i).toNat = base.toNat + 4 * i :=
+              toNat_base_add base i stp.mem.pages (by rw [hp2']; omega) hpg3
+            rcases Nat.lt_or_ge i m with hlt | hge
+            · rw [read32_write32_disjoint _ _ _ _ (by rw [hci, hl0m]; omega)]; exact hdone i hlt
+            · have : i = m := by omega
+              subst this; rw [read32_write32_same, hval]
+          have hscr' : ∀ jj, jj < count.toNat →
+              (stp.mem.write32 (base + 4 * UInt32.ofNat m) (stp.mem.read32 (sp - 128 + 4 * UInt32.ofNat m))).read32
+                  (sp - 128 + 4 * UInt32.ofNat jj)
+                = st0.mem.read32 (base + 4 * UInt32.ofNat (count.toNat - 1 - jj)) := by
+            intro jj hjj
+            have hjjN : (sp - 128 + 4 * UInt32.ofNat jj).toNat = sp.toNat - 128 + 4 * jj := by
+              rw [UInt32.toNat_add, hsm, UInt32.toNat_mul, UInt32.toNat_ofNat]; simp; omega
+            rw [read32_write32_disjoint _ _ _ _ (by rw [hjjN, hl0m]; omega)]; exact hscr2 jj hjj
+          have hframe' : ∀ j, (j < sp.toNat - 128 ∨ sp.toNat ≤ j) →
+              (j < base.toNat ∨ base.toNat + 4 * count.toNat ≤ j) →
+              (stp.mem.write32 (base + 4 * UInt32.ofNat m) (stp.mem.read32 (sp - 128 + 4 * UInt32.ofNat m))).bytes j
+                = st0.mem.bytes j := by
+            intro j hj1 hj2
+            rw [write32_bytes_of_disjoint _ _ _ _ (by rw [hl0m]; omega)]; exact hframe2 j hj1 hj2
+          have hcm : (count - UInt32.ofNat m).toNat = count.toNat - m := by
+            simp [UInt32.toNat_sub]; omega
+          have hcm1 : ((4294967295 : UInt32) + (count - UInt32.ofNat m)).toNat = count.toNat - m - 1 := by
+            rw [UInt32.toNat_add, hcm]
+            simp only [show ((4294967295 : UInt32).toNat) = 4294967295 from rfl]; omega
+          split
+          · rename_i vs2 heq2
+            simp only [List.cons.injEq, Value.i32.injEq] at heq2
+            have hmeq : m + 1 = count.toNat := by
+              have h2 : ((4294967295 : UInt32) + (count - UInt32.ofNat m)).toNat = 0 := by rw [heq2.1]; rfl
+              rw [hcm1] at h2; omega
+            refine ⟨trivial, hg2, by rw [write32_pages]; exact hp2', hframe', ?_⟩
+            intro i hi; exact hcontent i (by omega)
+          · rename_i n vs2 hn heq2
+            simp only [List.cons.injEq, Value.i32.injEq] at heq2
+            have hmlt : m + 1 < count.toNat := by
+              rcases Nat.lt_or_ge (m + 1) count.toNat with h | h
+              · exact h
+              · exfalso; apply hn; apply UInt32.toNat.inj
+                rw [← heq2.1, hcm1]; simp; omega
+            have hs0 : (4 : UInt32) + (base + 4 * UInt32.ofNat m) = base + 4 * UInt32.ofNat (m + 1) := by
+              apply UInt32.toNat.inj
+              rw [UInt32.toNat_add, hl0m,
+                toNat_base_add base (m + 1) stp.mem.pages (by rw [hp2']; omega) hpg3]
+              simp; omega
+            have hs1 : (4294967295 : UInt32) + (count - UInt32.ofNat m) = count - UInt32.ofNat (m + 1) := by
+              apply UInt32.toNat.inj
+              rw [hcm1]; simp [UInt32.toNat_sub, UInt32.toNat_ofNat]; omega
+            have hs3 : (4 : UInt32) + (sp - 128 + 4 * UInt32.ofNat m) = sp - 128 + 4 * UInt32.ofNat (m + 1) := by
+              apply UInt32.toNat.inj
+              simp [UInt32.toNat_add, hl3m, hsm, UInt32.toNat_mul, UInt32.toNat_ofNat]; omega
+            refine ⟨⟨m + 1, w5', hmlt, by rw [hs0, hs1, hs3, List.append_nil], hg2,
+              by rw [write32_pages]; exact hp2', hframe', hscr', ?_⟩, ?_⟩
+            · exact hcontent
+            · rw [hcm, hcm1]; omega
+          · rename_i hne1 hne2; exact (hne2 _ _ rfl).elim
       · -- continue: re-establish L1 invariant at `k + 1`
         rename_i n vs hn heq
         simp only [List.cons.injEq, Value.i32.injEq] at heq
