@@ -393,6 +393,78 @@ theorem func0_spec (env : HostEnv α) (base count : UInt32)
           · omega
         rw [hupd i hi, hmir2]
 
+/-! ## `reverse_naive` (func1): copy-reversed-into-scratch then back -/
+
+set_option maxRecDepth 4000 in
+/-- `reverse_naive` (func1) reverses the `count` 32-bit words at `base`
+in place by copying them reversed into a 128-byte shadow-stack scratch
+buffer at `global0 − 128` and copying back. The result cell `i` holds
+the original cell `count-1-i`. It leaves `global0` and every byte
+outside the buffer *and* the scratch untouched. The single call site in
+`check` supplies a scratch region disjoint from the buffer. -/
+theorem func1_spec (env : HostEnv α) (base count sp : UInt32)
+    (hcount : count.toNat ≤ 32) (tail : List Value) :
+    FuncSpecR env «module» 1
+      (fun st0 args => args = .i32 count :: .i32 base :: tail ∧
+        st0.globals.globals[0]? = some (.i32 sp) ∧
+        128 ≤ sp.toNat ∧ sp.toNat ≤ st0.mem.pages * 65536 ∧
+        base.toNat + 128 ≤ st0.mem.pages * 65536 ∧
+        st0.mem.pages * 65536 ≤ 4294967296 ∧
+        (base.toNat + 128 ≤ sp.toNat - 128 ∨ sp.toNat ≤ base.toNat))
+      (fun st0 st' vs => vs = tail ∧ st'.globals = st0.globals ∧
+        st'.mem.pages = st0.mem.pages ∧
+        (∀ j, (j < sp.toNat - 128 ∨ sp.toNat ≤ j) →
+            (j < base.toNat ∨ base.toNat + 4 * count.toNat ≤ j) →
+            st'.mem.bytes j = st0.mem.bytes j) ∧
+        (∀ i, i < count.toNat →
+            st'.mem.read32 (base + 4 * UInt32.ofNat i)
+              = st0.mem.read32 (base + 4 * UInt32.ofNat (count.toNat - 1 - i)))) := by
+  apply FuncSpecR.of_wp_body (f := ⟨[.i32, .i32], [.i32, .i32, .i32, .i32], func1, []⟩) rfl
+  rintro args st0 ⟨rfl, hsp, hsp128, hspb, hbb, hpgb, hdisj⟩
+  unfold func1
+  wp_run
+  rw [hsp]
+  simp only [List.reverse_cons, List.reverse_nil, List.nil_append, List.cons_append,
+    List.length_cons, List.length_nil, List.getElem?_cons_zero, List.getElem?_cons_succ,
+    List.set_cons_zero, List.set_cons_succ, Nat.reduceAdd, Nat.reduceLT, Nat.reduceSub, reduceIte,
+    show ((128 : UInt32).toNat) = 128 from rfl]
+  have hsm : (sp - 128).toNat = sp.toNat - 128 := by
+    rw [UInt32.toNat_sub]; simp [show ((128 : UInt32).toNat) = 128 from rfl]; omega
+  rw [hsm, if_neg (by omega)]
+  apply wp_block_cons
+  wp_run
+  simp only [List.length_cons, List.length_nil, List.getElem?_cons_zero, List.getElem?_cons_succ,
+    List.set_cons_zero, List.set_cons_succ, Nat.reduceAdd, Nat.reduceLT, Nat.reduceSub, reduceIte]
+  split
+  · -- `count ≥ 1`: copy reversed into scratch (L1), then back (L2).
+    rename_i vs heq
+    simp only [List.cons.injEq, Value.i32.injEq] at heq
+    have hc0 : count ≠ 0 := by
+      intro h; rw [if_pos h] at heq; exact absurd heq.1 (by decide)
+    have hcpos : 1 ≤ count.toNat := by
+      rcases Nat.eq_zero_or_pos count.toNat with h | h
+      · exact absurd (UInt32.toNat.inj (by rw [h]; rfl)) hc0
+      · exact h
+    obtain ⟨-, rfl⟩ := heq
+    -- L1 (copy reversed into scratch `[sp-128, sp)`): invariant indexed by
+    -- completed iterations `k`, scratch[jj] = orig[count-1-jj] for jj<k.
+    -- L2 (copy scratch back to base): base[i] = scratch[i] = orig[count-1-i].
+    -- Both via wp_loop_cons + the framing lemmas, as in func0_spec.
+    sorry
+  · -- `count = 0`: nothing to do; only the scratch fill changed memory.
+    rename_i n vs hn heq
+    simp only [List.cons.injEq, Value.i32.injEq] at heq
+    have hc0 : count = 0 := by
+      by_contra h; rw [if_neg h] at heq; exact hn heq.1.symm
+    rw [hc0]
+    refine ⟨trivial, trivial, rfl, ?_, ?_⟩
+    · intro j hj _
+      exact fill_bytes_of_disjoint _ _ _ _ j (by omega)
+    · intro i hi; simp at hi
+  · -- impossible: the scrutinee is a singleton cons.
+    rename_i hne1 hne2
+    exact hne2 _ _ rfl
+
 /-- The exported `check` terminates without trapping (and returns no
 values) on every `(seed, len)` input.
 
