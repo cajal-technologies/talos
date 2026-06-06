@@ -744,7 +744,12 @@ theorem func2_spec (env : HostEnv Unit) (seed len : UInt32) :
   wp_run
   simp only [List.length_cons, List.length_nil, List.getElem?_cons_zero, List.getElem?_cons_succ,
     List.set_cons_zero, List.set_cons_succ, Nat.reduceAdd, Nat.reduceLT, Nat.reduceSub, reduceIte]
-  sorry
+  split
+  · -- len ≠ 0: seed both buffers, reverse each, compare
+    sorry
+  · -- len = 0: reverse empty buffers, skip the comparison
+    sorry
+  · rename_i hne1 hne2; exact (hne2 _ _ rfl).elim
 
 /-- The exported `check` terminates without trapping (and returns no
 values) on every `(seed, len)` input.
