@@ -37,6 +37,18 @@ private structure CrateInfo where
   leanRel : String         -- repo-root relative POSIX
   hasLean : Bool
 
+
+private def selectByNames (all : Array CrateInfo) (names : List String) : IO (Array CrateInfo) := do
+  if names.isEmpty then return all
+  let mut out : Array CrateInfo := #[]
+  for n in names do
+    match all.find? (·.name == n) with
+    | some c => out := out.push c
+    | none   =>
+      throw <| IO.userError
+        s!"crate `{n}` not found (available: {String.intercalate ", " (all.toList.map (·.name))})"
+  pure out
+
 private def discoverCrates (projectDir : FilePath) : IO (Array CrateInfo) := do
   let rustRoot := projectDir / "rust"
   let leanRoot := projectDir / "lean" / "Project"
@@ -138,8 +150,9 @@ private def buildArtifact
   }
 
 /-- Entry point used by the CLI. -/
-def run (projectDir : FilePath) (outDir : FilePath) : IO Unit := do
-  let crates ← discoverCrates projectDir
+def run (projectDir : FilePath) (outDir : FilePath) (crateNames : List String := []) : IO Unit := do
+  let all ← discoverCrates projectDir
+  let crates ← selectByNames all crateNames
   if crates.isEmpty then
     throw (IO.userError s!"{projectDir}/rust has no crate subdirectories")
   let repoCommit ← Git.repoCommit projectDir
