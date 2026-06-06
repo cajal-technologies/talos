@@ -1,46 +1,51 @@
 import Project.Itoa.Program
 
 /-!
-# Specifications for `itoa_i64`, `itoa_u64`, `itoa_i64_len`
+# Specifications for `itoa::check_i64` and `itoa::check_u64`
 
-The proofs are deferred; the function bodies live in `Program.lean`.
-The `def`s below carry the spec statements and link to their Rust
-exports via `@[spec_of …]`; once a discharging theorem lands, tag it
-with `@[proves Project.Itoa.Spec.…]`.
+Each exported `check_*(n, cap)` runs two decimal formatters on `n` — the
+`itoa` crate (fast) and a hand-written digit-by-digit oracle (naive) —
+into separate on-stack buffers and traps via `unreachable` iff they
+disagree on either the returned length or the written bytes. Proving
+the wasm export terminates without trapping for every input is therefore
+the same as proving the two formatters agree on every `(n, cap)` pair
+within the buffer capacity.
 -/
 
 namespace Project.Itoa.Spec
 
 open Wasm
 
-/-- The exported `itoa_i64` writes the decimal representation of `n`
-into the buffer at `ptr` and returns its length, or `-1` if `cap` is
-too small to hold the representation.
+/-- The exported `check_i64` terminates without trapping (and returns no
+values) on every `(n, cap)` input.
 
 Informal spec:
-For any `n : Int64`, base pointer `ptr : UInt32`, and capacity
-`cap : UInt32`, the wasm export `itoa_i64` returns the number of bytes
-written if the decimal representation of `n` fits in `cap` bytes,
-otherwise `-1`. On success the buffer `[ptr, ptr+returned)` holds the
-ASCII-decimal bytes of `n`; on failure memory is unchanged. -/
-@[spec_of "rust-exported" "itoa::itoa_i64"]
-def ItoaI64Spec : Prop := True
+For any signed 64-bit input `n : UInt64` (the wasm value carrier; the
+host interprets it as `i64`) and any capacity `cap : UInt32`, the wasm
+export `check_i64` terminates and leaves an empty value stack.
+Termination-without-trapping is the whole content of the spec — the
+body traps via `unreachable` iff the `itoa`-crate formatter and the
+hand-written naive oracle disagree, so this property *is* the
+equivalence claim between the two implementations. -/
+@[spec_of "rust-exported" "itoa::check_i64"]
+def CheckI64Spec : Prop :=
+  ∀ (env : HostEnv Unit) (initial : Store Unit) (n : UInt64) (cap : UInt32),
+    TerminatesWith env «module» 7 initial [.i64 n, .i32 cap]
+      (fun _ rs => rs = [])
 
-/-- The exported `itoa_u64` is the unsigned-`u64` counterpart of
-[`ItoaI64Spec`], same convention.
-
-Informal spec:
-Same as `ItoaI64Spec`, but `n : UInt64`. -/
-@[spec_of "rust-exported" "itoa::itoa_u64"]
-def ItoaU64Spec : Prop := True
-
-/-- The exported `itoa_i64_len` returns the number of bytes the decimal
-representation of `n` would occupy, without writing anything.
+/-- The exported `check_u64` terminates without trapping (and returns no
+values) on every `(n, cap)` input.
 
 Informal spec:
-For any `n : Int64`, `itoa_i64_len(n)` returns the length, in bytes, of
-the ASCII-decimal representation of `n`. Memory is not touched. -/
-@[spec_of "rust-exported" "itoa::itoa_i64_len"]
-def ItoaI64LenSpec : Prop := True
+Same shape as [`CheckI64Spec`], but for the unsigned formatter export.
+`n : UInt64` is the wasm value carrier (interpreted as `u64` by the
+host) and `cap : UInt32` is the buffer capacity. Termination-without-
+trapping is equivalent to the `itoa`-crate and naive formatters
+agreeing on every `(n, cap)` input. -/
+@[spec_of "rust-exported" "itoa::check_u64"]
+def CheckU64Spec : Prop :=
+  ∀ (env : HostEnv Unit) (initial : Store Unit) (n : UInt64) (cap : UInt32),
+    TerminatesWith env «module» 8 initial [.i64 n, .i32 cap]
+      (fun _ rs => rs = [])
 
 end Project.Itoa.Spec

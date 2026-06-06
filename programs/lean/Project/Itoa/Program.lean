@@ -10,32 +10,572 @@ namespace Project.Itoa
 
 open Wasm
 
-/-- export: itoa_i64_len -/
 def func0 : Wasm.Program :=
+  [
+  .block 0 0 [
+    .block 0 0 [
+      .block 0 0 [
+        .block 0 0 [
+          .localGet 0,
+          .constI64 (18446744073709551615 : UInt64),
+          .gtSI64,
+          .br_if 0,
+          .const (2 : UInt32),
+          .localSet 4,
+          .block 0 0 [
+            .constI64 (0 : UInt64),
+            .localGet 0,
+            .subI64,
+            .localSet 5,
+            .localGet 5,
+            .constI64 (10 : UInt64),
+            .ltUI64,
+            .br_if 0,
+            .const (2 : UInt32),
+            .localSet 4,
+            .localGet 5,
+            .localSet 0,
+            .loop 0 0 [
+              .localGet 4,
+              .const (1 : UInt32),
+              .add,
+              .localSet 4,
+              .localGet 0,
+              .constI64 (100 : UInt64),
+              .ltUI64,
+              .localSet 6,
+              .localGet 0,
+              .constI64 (10 : UInt64),
+              .divUI64,
+              .localSet 0,
+              .localGet 6,
+              .eqz,
+              .br_if 0
+            ]
+          ],
+          .const (4294967295 : UInt32),
+          .localSet 6,
+          .localGet 4,
+          .localGet 3,
+          .gtS,
+          .br_if 1,
+          .block 0 0 [
+            .block 0 0 [
+              .localGet 2,
+              .eqz,
+              .br_if 0,
+              .localGet 1,
+              .const (45 : UInt32),
+              .store8 (0 : UInt32),
+              .localGet 4,
+              .const (2 : UInt32),
+              .geU,
+              .br_if 1,
+              .br 5
+            ],
+            .const (0 : UInt32),
+            .const (0 : UInt32),
+            .const (1049092 : UInt32),
+            .call 64,
+            .unreachable
+          ],
+          .localGet 4,
+          .const (4294967295 : UInt32),
+          .add,
+          .localSet 6,
+          .loop 0 0 [
+            .localGet 6,
+            .localGet 2,
+            .geU,
+            .br_if 3,
+            .localGet 1,
+            .localGet 6,
+            .add,
+            .localGet 5,
+            .localGet 5,
+            .constI64 (10 : UInt64),
+            .divUI64,
+            .localSet 0,
+            .localGet 0,
+            .constI64 (10 : UInt64),
+            .mulI64,
+            .subI64,
+            .wrapI64,
+            .const (48 : UInt32),
+            .or,
+            .store8 (0 : UInt32),
+            .localGet 6,
+            .const (1 : UInt32),
+            .gtU,
+            .localSet 3,
+            .localGet 6,
+            .const (4294967295 : UInt32),
+            .add,
+            .localSet 6,
+            .localGet 0,
+            .localSet 5,
+            .localGet 3,
+            .eqz,
+            .br_if 4,
+            .br 0
+          ]
+        ],
+        .localGet 0,
+        .localGet 1,
+        .localGet 2,
+        .localGet 3,
+        .call 1,
+        .localSet 6
+      ],
+      .localGet 6,
+      .ret
+    ],
+    .localGet 6,
+    .localGet 2,
+    .const (1049108 : UInt32),
+    .call 64,
+    .unreachable
+  ],
+  .localGet 4
+]
+
+def func1 : Wasm.Program :=
+  [
+  .block 0 0 [
+    .block 0 0 [
+      .block 0 0 [
+        .block 0 0 [
+          .block 0 0 [
+            .block 0 0 [
+              .localGet 0,
+              .constI64 (10 : UInt64),
+              .ltUI64,
+              .br_if 0,
+              .const (1 : UInt32),
+              .localSet 4,
+              .localGet 0,
+              .localSet 5,
+              .loop 0 0 [
+                .localGet 4,
+                .const (1 : UInt32),
+                .add,
+                .localSet 4,
+                .localGet 5,
+                .constI64 (100 : UInt64),
+                .ltUI64,
+                .localSet 6,
+                .localGet 5,
+                .constI64 (10 : UInt64),
+                .divUI64,
+                .localSet 5,
+                .localGet 6,
+                .eqz,
+                .br_if 0
+              ],
+              .localGet 4,
+              .localGet 3,
+              .leS,
+              .br_if 1,
+              .br 5
+            ],
+            .const (1 : UInt32),
+            .localSet 4,
+            .localGet 3,
+            .const (1 : UInt32),
+            .ltS,
+            .br_if 4,
+            .br 1
+          ],
+          .localGet 4,
+          .br_if 0,
+          .const (0 : UInt32),
+          .localSet 4,
+          .br 1
+        ],
+        .localGet 4,
+        .const (4294967295 : UInt32),
+        .add,
+        .localSet 3,
+        .localGet 3,
+        .localSet 6,
+        .loop 0 0 [
+          .localGet 3,
+          .localGet 2,
+          .geU,
+          .br_if 2,
+          .localGet 1,
+          .localGet 6,
+          .add,
+          .localGet 0,
+          .localGet 0,
+          .constI64 (10 : UInt64),
+          .divUI64,
+          .localSet 5,
+          .localGet 5,
+          .constI64 (10 : UInt64),
+          .mulI64,
+          .subI64,
+          .wrapI64,
+          .const (48 : UInt32),
+          .or,
+          .store8 (0 : UInt32),
+          .localGet 5,
+          .localSet 0,
+          .localGet 6,
+          .const (4294967295 : UInt32),
+          .add,
+          .localSet 6,
+          .localGet 6,
+          .const (4294967295 : UInt32),
+          .ne,
+          .br_if 0
+        ]
+      ],
+      .localGet 4,
+      .ret
+    ],
+    .localGet 6,
+    .localGet 2,
+    .const (1049124 : UInt32),
+    .call 64,
+    .unreachable
+  ],
+  .const (4294967295 : UInt32)
+]
+
+def func2 : Wasm.Program :=
+  [
+  .globalGet 0,
+  .const (64 : UInt32),
+  .sub,
+  .localSet 2,
+  .localGet 2,
+  .globalSet 0,
+  .localGet 2,
+  .constI64 (0 : UInt64),
+  .store64 (24 : UInt32),
+  .localGet 2,
+  .constI64 (0 : UInt64),
+  .store64 (16 : UInt32),
+  .localGet 2,
+  .constI64 (0 : UInt64),
+  .store64 (8 : UInt32),
+  .localGet 2,
+  .constI64 (0 : UInt64),
+  .store64 (0 : UInt32),
+  .localGet 2,
+  .constI64 (0 : UInt64),
+  .store64 (56 : UInt32),
+  .localGet 2,
+  .constI64 (0 : UInt64),
+  .store64 (48 : UInt32),
+  .localGet 2,
+  .constI64 (0 : UInt64),
+  .store64 (40 : UInt32),
+  .localGet 2,
+  .constI64 (0 : UInt64),
+  .store64 (32 : UInt32),
+  .block 0 0 [
+    .block 0 0 [
+      .localGet 0,
+      .localGet 2,
+      .const (32 : UInt32),
+      .localGet 1,
+      .const (0 : UInt32),
+      .localGet 1,
+      .const (0 : UInt32),
+      .gtS,
+      .select,
+      .localSet 1,
+      .localGet 1,
+      .const (32 : UInt32),
+      .localGet 1,
+      .const (32 : UInt32),
+      .ltS,
+      .select,
+      .localSet 1,
+      .localGet 1,
+      .call 3,
+      .localSet 3,
+      .localGet 3,
+      .localGet 0,
+      .localGet 2,
+      .const (32 : UInt32),
+      .add,
+      .const (32 : UInt32),
+      .localGet 1,
+      .call 0,
+      .ne,
+      .br_if 0,
+      .block 0 0 [
+        .localGet 3,
+        .const (1 : UInt32),
+        .ltS,
+        .br_if 0,
+        .const (0 : UInt32),
+        .localSet 1,
+        .loop 0 0 [
+          .localGet 1,
+          .const (32 : UInt32),
+          .eq,
+          .br_if 3,
+          .localGet 2,
+          .localGet 1,
+          .add,
+          .load8U (0 : UInt32),
+          .localGet 2,
+          .const (32 : UInt32),
+          .add,
+          .localGet 1,
+          .add,
+          .load8U (0 : UInt32),
+          .ne,
+          .br_if 2,
+          .localGet 3,
+          .localGet 1,
+          .const (1 : UInt32),
+          .add,
+          .localSet 1,
+          .localGet 1,
+          .ne,
+          .br_if 0
+        ]
+      ],
+      .localGet 2,
+      .const (64 : UInt32),
+      .add,
+      .globalSet 0,
+      .ret
+    ],
+    .unreachable
+  ],
+  .const (32 : UInt32),
+  .const (32 : UInt32),
+  .const (1049156 : UInt32),
+  .call 64,
+  .unreachable
+]
+
+def func3 : Wasm.Program :=
   [
   .globalGet 0,
   .const (48 : UInt32),
   .sub,
-  .localSet 1,
-  .localGet 1,
+  .localSet 4,
+  .localGet 4,
   .globalSet 0,
-  .localGet 1,
-  .localGet 1,
+  .localGet 4,
+  .localGet 4,
   .const (8 : UInt32),
   .add,
   .localGet 0,
-  .call 1,
-  .localGet 1,
-  .load32 (4 : UInt32),
-  .localSet 2,
-  .localGet 1,
-  .const (48 : UInt32),
-  .add,
-  .globalSet 0,
-  .localGet 2
+  .call 6,
+  .const (4294967295 : UInt32),
+  .localSet 5,
+  .block 0 0 [
+    .block 0 0 [
+      .localGet 4,
+      .load32 (4 : UInt32),
+      .localSet 6,
+      .localGet 6,
+      .localGet 3,
+      .gtS,
+      .br_if 0,
+      .localGet 6,
+      .localGet 2,
+      .gtU,
+      .br_if 1,
+      .localGet 1,
+      .localGet 6,
+      .localGet 4,
+      .load32 (0 : UInt32),
+      .localGet 6,
+      .const (1049188 : UInt32),
+      .call 56,
+      .localGet 6,
+      .localSet 5
+    ],
+    .localGet 4,
+    .const (48 : UInt32),
+    .add,
+    .globalSet 0,
+    .localGet 5,
+    .ret
+  ],
+  .const (0 : UInt32),
+  .localGet 6,
+  .localGet 2,
+  .const (1049172 : UInt32),
+  .call 61,
+  .unreachable
 ]
 
-def func1 : Wasm.Program :=
+def func4 : Wasm.Program :=
+  [
+  .globalGet 0,
+  .const (64 : UInt32),
+  .sub,
+  .localSet 2,
+  .localGet 2,
+  .globalSet 0,
+  .localGet 2,
+  .constI64 (0 : UInt64),
+  .store64 (24 : UInt32),
+  .localGet 2,
+  .constI64 (0 : UInt64),
+  .store64 (16 : UInt32),
+  .localGet 2,
+  .constI64 (0 : UInt64),
+  .store64 (8 : UInt32),
+  .localGet 2,
+  .constI64 (0 : UInt64),
+  .store64 (0 : UInt32),
+  .localGet 2,
+  .constI64 (0 : UInt64),
+  .store64 (56 : UInt32),
+  .localGet 2,
+  .constI64 (0 : UInt64),
+  .store64 (48 : UInt32),
+  .localGet 2,
+  .constI64 (0 : UInt64),
+  .store64 (40 : UInt32),
+  .localGet 2,
+  .constI64 (0 : UInt64),
+  .store64 (32 : UInt32),
+  .block 0 0 [
+    .localGet 0,
+    .localGet 2,
+    .const (32 : UInt32),
+    .localGet 1,
+    .const (0 : UInt32),
+    .localGet 1,
+    .const (0 : UInt32),
+    .gtS,
+    .select,
+    .localSet 1,
+    .localGet 1,
+    .const (32 : UInt32),
+    .localGet 1,
+    .const (32 : UInt32),
+    .ltS,
+    .select,
+    .localSet 1,
+    .localGet 1,
+    .call 5,
+    .localSet 3,
+    .localGet 3,
+    .localGet 0,
+    .localGet 2,
+    .const (32 : UInt32),
+    .add,
+    .const (32 : UInt32),
+    .localGet 1,
+    .call 1,
+    .ne,
+    .br_if 0,
+    .block 0 0 [
+      .localGet 3,
+      .const (1 : UInt32),
+      .ltS,
+      .br_if 0,
+      .localGet 2,
+      .localSet 1,
+      .localGet 2,
+      .const (32 : UInt32),
+      .add,
+      .localSet 4,
+      .loop 0 0 [
+        .localGet 1,
+        .load8U (0 : UInt32),
+        .localGet 4,
+        .load8U (0 : UInt32),
+        .ne,
+        .br_if 2,
+        .localGet 4,
+        .const (1 : UInt32),
+        .add,
+        .localSet 4,
+        .localGet 1,
+        .const (1 : UInt32),
+        .add,
+        .localSet 1,
+        .localGet 3,
+        .const (4294967295 : UInt32),
+        .add,
+        .localSet 3,
+        .localGet 3,
+        .br_if 0
+      ]
+    ],
+    .localGet 2,
+    .const (64 : UInt32),
+    .add,
+    .globalSet 0,
+    .ret
+  ],
+  .unreachable
+]
+
+def func5 : Wasm.Program :=
+  [
+  .globalGet 0,
+  .const (48 : UInt32),
+  .sub,
+  .localSet 4,
+  .localGet 4,
+  .globalSet 0,
+  .localGet 4,
+  .localGet 4,
+  .const (8 : UInt32),
+  .add,
+  .const (20 : UInt32),
+  .localGet 0,
+  .localGet 4,
+  .const (8 : UInt32),
+  .add,
+  .call 13,
+  .call 14,
+  .const (4294967295 : UInt32),
+  .localSet 5,
+  .block 0 0 [
+    .block 0 0 [
+      .localGet 4,
+      .load32 (4 : UInt32),
+      .localSet 6,
+      .localGet 6,
+      .localGet 3,
+      .gtS,
+      .br_if 0,
+      .localGet 6,
+      .localGet 2,
+      .gtU,
+      .br_if 1,
+      .localGet 1,
+      .localGet 6,
+      .localGet 4,
+      .load32 (0 : UInt32),
+      .localGet 6,
+      .const (1049188 : UInt32),
+      .call 56,
+      .localGet 6,
+      .localSet 5
+    ],
+    .localGet 4,
+    .const (48 : UInt32),
+    .add,
+    .globalSet 0,
+    .localGet 5,
+    .ret
+  ],
+  .const (0 : UInt32),
+  .localGet 6,
+  .localGet 2,
+  .const (1049172 : UInt32),
+  .call 61,
+  .unreachable
+]
+
+def func6 : Wasm.Program :=
   [
   .globalGet 0,
   .const (16 : UInt32),
@@ -53,7 +593,7 @@ def func1 : Wasm.Program :=
   .localGet 4,
   .subI64,
   .localGet 1,
-  .call 10,
+  .call 13,
   .localSet 5,
   .block 0 0 [
     .block 0 0 [
@@ -81,7 +621,7 @@ def func1 : Wasm.Program :=
     .localGet 1,
     .const (20 : UInt32),
     .localGet 5,
-    .call 11,
+    .call 14,
     .localGet 3,
     .load32 (12 : UInt32),
     .localSet 1,
@@ -100,149 +640,60 @@ def func1 : Wasm.Program :=
   ],
   .localGet 5,
   .const (20 : UInt32),
-  .const (1048940 : UInt32),
-  .call 60,
+  .const (1049140 : UInt32),
+  .call 64,
   .unreachable
 ]
 
-def func2 : Wasm.Program :=
-  [
-  .globalGet 0,
-  .const (48 : UInt32),
-  .sub,
-  .localSet 3,
-  .localGet 3,
-  .globalSet 0,
-  .localGet 3,
-  .localGet 3,
-  .const (8 : UInt32),
-  .add,
-  .localGet 0,
-  .call 1,
-  .const (4294967295 : UInt32),
-  .localSet 4,
-  .block 0 0 [
-    .localGet 3,
-    .load32 (4 : UInt32),
-    .localSet 5,
-    .localGet 5,
-    .localGet 2,
-    .gtS,
-    .br_if 0,
-    .localGet 1,
-    .localGet 5,
-    .localGet 3,
-    .load32 (0 : UInt32),
-    .localGet 5,
-    .const (1048956 : UInt32),
-    .call 53,
-    .localGet 5,
-    .localSet 4
-  ],
-  .localGet 3,
-  .const (48 : UInt32),
-  .add,
-  .globalSet 0,
-  .localGet 4
-]
-
-def func3 : Wasm.Program :=
-  [
-  .globalGet 0,
-  .const (48 : UInt32),
-  .sub,
-  .localSet 3,
-  .localGet 3,
-  .globalSet 0,
-  .localGet 3,
-  .localGet 3,
-  .const (8 : UInt32),
-  .add,
-  .const (20 : UInt32),
-  .localGet 0,
-  .localGet 3,
-  .const (8 : UInt32),
-  .add,
-  .call 10,
-  .call 11,
-  .const (4294967295 : UInt32),
-  .localSet 4,
-  .block 0 0 [
-    .localGet 3,
-    .load32 (4 : UInt32),
-    .localSet 5,
-    .localGet 5,
-    .localGet 2,
-    .gtS,
-    .br_if 0,
-    .localGet 1,
-    .localGet 5,
-    .localGet 3,
-    .load32 (0 : UInt32),
-    .localGet 5,
-    .const (1048972 : UInt32),
-    .call 53,
-    .localGet 5,
-    .localSet 4
-  ],
-  .localGet 3,
-  .const (48 : UInt32),
-  .add,
-  .globalSet 0,
-  .localGet 4
-]
-
-/-- export: itoa_i64 -/
-def func4 : Wasm.Program :=
-  [
-  .localGet 0,
-  .localGet 1,
-  .localGet 2,
-  .call 2
-]
-
-/-- export: itoa_u64 -/
-def func5 : Wasm.Program :=
-  [
-  .localGet 0,
-  .localGet 1,
-  .localGet 2,
-  .call 3
-]
-
-def func6 : Wasm.Program :=
-  [
-  .localGet 0,
-  .localGet 1,
-  .call 25,
-  .ret
-]
-
+/-- export: check_i64 -/
 def func7 : Wasm.Program :=
   [
   .localGet 0,
   .localGet 1,
-  .localGet 2,
-  .call 29,
+  .call 2
+]
+
+/-- export: check_u64 -/
+def func8 : Wasm.Program :=
+  [
+  .localGet 0,
+  .localGet 1,
+  .call 4
+]
+
+def func9 : Wasm.Program :=
+  [
+  .localGet 0,
+  .localGet 1,
+  .call 28,
   .ret
 ]
 
-def func8 : Wasm.Program :=
+def func10 : Wasm.Program :=
+  [
+  .localGet 0,
+  .localGet 1,
+  .localGet 2,
+  .call 32,
+  .ret
+]
+
+def func11 : Wasm.Program :=
   [
   .localGet 0,
   .localGet 1,
   .localGet 2,
   .localGet 3,
-  .call 31,
+  .call 34,
   .ret
 ]
 
-def func9 : Wasm.Program :=
+def func12 : Wasm.Program :=
   [
   .ret
 ]
 
-def func10 : Wasm.Program :=
+def func13 : Wasm.Program :=
   [
   .const (20 : UInt32),
   .localSet 2,
@@ -295,7 +746,7 @@ def func10 : Wasm.Program :=
           .localGet 7,
           .const (1 : UInt32),
           .shl,
-          .load16U (1049004 : UInt32),
+          .load16U (1049220 : UInt32),
           .store16 (0 : UInt32),
           .localGet 4,
           .const (4294967294 : UInt32),
@@ -307,7 +758,7 @@ def func10 : Wasm.Program :=
           .add,
           .const (1 : UInt32),
           .shl,
-          .load16U (1049004 : UInt32),
+          .load16U (1049220 : UInt32),
           .store16 (0 : UInt32),
           .localGet 5,
           .constI64 (9999999 : UInt64),
@@ -362,13 +813,13 @@ def func10 : Wasm.Program :=
         .shl,
         .localSet 2,
         .localGet 2,
-        .load8U (1049005 : UInt32),
+        .load8U (1049221 : UInt32),
         .store8 (0 : UInt32),
         .localGet 1,
         .localGet 4,
         .add,
         .localGet 2,
-        .load8U (1049004 : UInt32),
+        .load8U (1049220 : UInt32),
         .store8 (0 : UInt32),
         .localGet 6,
         .extendUI32,
@@ -377,14 +828,14 @@ def func10 : Wasm.Program :=
       ],
       .localGet 4,
       .const (20 : UInt32),
-      .const (1048988 : UInt32),
-      .call 60,
+      .const (1049204 : UInt32),
+      .call 64,
       .unreachable
     ],
     .const (4294967292 : UInt32),
     .const (20 : UInt32),
-    .const (1048988 : UInt32),
-    .call 60,
+    .const (1049204 : UInt32),
+    .call 64,
     .unreachable
   ],
   .block 0 0 [
@@ -420,12 +871,12 @@ def func10 : Wasm.Program :=
   ],
   .const (4294967295 : UInt32),
   .const (20 : UInt32),
-  .const (1048988 : UInt32),
-  .call 60,
+  .const (1049204 : UInt32),
+  .call 64,
   .unreachable
 ]
 
-def func11 : Wasm.Program :=
+def func14 : Wasm.Program :=
   [
   .localGet 0,
   .localGet 2,
@@ -439,13 +890,13 @@ def func11 : Wasm.Program :=
   .store32 (0 : UInt32)
 ]
 
-def func12 : Wasm.Program :=
+def func15 : Wasm.Program :=
   [
-  .call 28,
+  .call 31,
   .unreachable
 ]
 
-def func13 : Wasm.Program :=
+def func16 : Wasm.Program :=
   [
   .globalGet 0,
   .const (16 : UInt32),
@@ -464,7 +915,7 @@ def func13 : Wasm.Program :=
     .br_if 0,
     .const (0 : UInt32),
     .const (0 : UInt32),
-    .call 54,
+    .call 57,
     .unreachable
   ],
   .localGet 5,
@@ -504,7 +955,7 @@ def func13 : Wasm.Program :=
   .localGet 2,
   .localGet 3,
   .localGet 4,
-  .call 21,
+  .call 24,
   .block 0 0 [
     .localGet 5,
     .load32 (4 : UInt32),
@@ -515,7 +966,7 @@ def func13 : Wasm.Program :=
     .load32 (8 : UInt32),
     .localGet 5,
     .load32 (12 : UInt32),
-    .call 54,
+    .call 57,
     .unreachable
   ],
   .localGet 5,
@@ -533,7 +984,7 @@ def func13 : Wasm.Program :=
   .globalSet 0
 ]
 
-def func14 : Wasm.Program :=
+def func17 : Wasm.Program :=
   [
   .block 0 0 [
     .localGet 0,
@@ -545,11 +996,11 @@ def func14 : Wasm.Program :=
     .localGet 1,
     .localGet 0,
     .const (1 : UInt32),
-    .call 7
+    .call 10
   ]
 ]
 
-def func15 : Wasm.Program :=
+def func18 : Wasm.Program :=
   [
   .block 0 0 [
     .localGet 0,
@@ -562,11 +1013,11 @@ def func15 : Wasm.Program :=
     .load32 (4 : UInt32),
     .localGet 1,
     .const (1 : UInt32),
-    .call 7
+    .call 10
   ]
 ]
 
-def func16 : Wasm.Program :=
+def func19 : Wasm.Program :=
   [
   .block 0 0 [
     .localGet 0,
@@ -580,25 +1031,25 @@ def func16 : Wasm.Program :=
     .load32 (4 : UInt32),
     .localGet 1,
     .const (1 : UInt32),
-    .call 7
+    .call 10
   ]
 ]
 
-def func17 : Wasm.Program :=
+def func20 : Wasm.Program :=
   [
   .localGet 0,
-  .call 18,
+  .call 21,
   .unreachable
 ]
 
-def func18 : Wasm.Program :=
+def func21 : Wasm.Program :=
   [
   .localGet 0,
   .load32 (0 : UInt32),
   .localGet 0,
   .load32 (4 : UInt32),
   .const (0 : UInt32),
-  .load32 (1049720 : UInt32),
+  .load32 (1049936 : UInt32),
   .localSet 0,
   .localGet 0,
   .const (1 : UInt32),
@@ -608,14 +1059,14 @@ def func18 : Wasm.Program :=
   .unreachable
 ]
 
-def func19 : Wasm.Program :=
+def func22 : Wasm.Program :=
   [
   .localGet 0,
-  .call 20,
+  .call 23,
   .unreachable
 ]
 
-def func20 : Wasm.Program :=
+def func23 : Wasm.Program :=
   [
   .globalGet 0,
   .const (16 : UInt32),
@@ -647,7 +1098,7 @@ def func20 : Wasm.Program :=
     .localGet 2,
     .store32 (0 : UInt32),
     .localGet 1,
-    .const (1049228 : UInt32),
+    .const (1049444 : UInt32),
     .localGet 0,
     .load32 (4 : UInt32),
     .localGet 0,
@@ -657,7 +1108,7 @@ def func20 : Wasm.Program :=
     .load8U (8 : UInt32),
     .localGet 0,
     .load8U (9 : UInt32),
-    .call 22,
+    .call 25,
     .unreachable
   ],
   .localGet 1,
@@ -667,7 +1118,7 @@ def func20 : Wasm.Program :=
   .localGet 0,
   .store32 (12 : UInt32),
   .localGet 1,
-  .const (1049256 : UInt32),
+  .const (1049472 : UInt32),
   .localGet 0,
   .load32 (4 : UInt32),
   .localGet 0,
@@ -677,11 +1128,11 @@ def func20 : Wasm.Program :=
   .load8U (8 : UInt32),
   .localGet 0,
   .load8U (9 : UInt32),
-  .call 22,
+  .call 25,
   .unreachable
 ]
 
-def func21 : Wasm.Program :=
+def func24 : Wasm.Program :=
   [
   .const (1 : UInt32),
   .localSet 6,
@@ -732,7 +1183,7 @@ def func21 : Wasm.Program :=
             .mul,
             .localGet 4,
             .localGet 3,
-            .call 8,
+            .call 11,
             .localSet 7,
             .br 1
           ],
@@ -743,10 +1194,10 @@ def func21 : Wasm.Program :=
             .localSet 7,
             .br 2
           ],
-          .call 9,
+          .call 12,
           .localGet 3,
           .localGet 4,
-          .call 6,
+          .call 9,
           .localSet 7
         ],
         .localGet 7,
@@ -775,7 +1226,7 @@ def func21 : Wasm.Program :=
   .store32 (0 : UInt32)
 ]
 
-def func22 : Wasm.Program :=
+def func25 : Wasm.Program :=
   [
   .globalGet 0,
   .const (32 : UInt32),
@@ -789,13 +1240,13 @@ def func22 : Wasm.Program :=
         .block 0 0 [
           .block 0 0 [
             .const (1 : UInt32),
-            .call 38,
+            .call 41,
             .const (255 : UInt32),
             .and,
             .brTable [4, 1, 0] 1
           ],
           .const (0 : UInt32),
-          .load32 (1049724 : UInt32),
+          .load32 (1049940 : UInt32),
           .localSet 6,
           .localGet 6,
           .const (4294967295 : UInt32),
@@ -805,9 +1256,9 @@ def func22 : Wasm.Program :=
           .localGet 6,
           .const (1 : UInt32),
           .add,
-          .store32 (1049724 : UInt32),
+          .store32 (1049940 : UInt32),
           .const (0 : UInt32),
-          .load32 (1049728 : UInt32),
+          .load32 (1049944 : UInt32),
           .eqz,
           .br_if 1,
           .localGet 5,
@@ -831,12 +1282,12 @@ def func22 : Wasm.Program :=
           .load64 (8 : UInt32),
           .store64 (16 : UInt32),
           .const (0 : UInt32),
-          .load32 (1049728 : UInt32),
+          .load32 (1049944 : UInt32),
           .localGet 5,
           .const (16 : UInt32),
           .add,
           .const (0 : UInt32),
-          .load32 (1049732 : UInt32),
+          .load32 (1049948 : UInt32),
           .load32 (20 : UInt32),
           .callIndirect 0 0,
           .br 2
@@ -850,45 +1301,45 @@ def func22 : Wasm.Program :=
       ],
       .const (2147483648 : UInt32),
       .localGet 5,
-      .call 14
+      .call 17
     ],
     .const (0 : UInt32),
     .const (0 : UInt32),
-    .load32 (1049724 : UInt32),
+    .load32 (1049940 : UInt32),
     .const (4294967295 : UInt32),
     .add,
-    .store32 (1049724 : UInt32),
+    .store32 (1049940 : UInt32),
     .const (0 : UInt32),
     .const (0 : UInt32),
-    .store8 (1049716 : UInt32),
+    .store8 (1049932 : UInt32),
     .localGet 3,
     .eqz,
     .br_if 0,
     .localGet 0,
     .localGet 1,
-    .call 24,
+    .call 27,
     .unreachable
   ],
   .unreachable
 ]
 
-def func23 : Wasm.Program :=
+def func26 : Wasm.Program :=
   [
   .const (0 : UInt32),
   .const (1 : UInt32),
-  .store8 (1050192 : UInt32)
+  .store8 (1050408 : UInt32)
 ]
 
-def func24 : Wasm.Program :=
+def func27 : Wasm.Program :=
   [
   .localGet 0,
   .localGet 1,
-  .call 12,
+  .call 15,
   .drop,
   .unreachable
 ]
 
-def func25 : Wasm.Program :=
+def func28 : Wasm.Program :=
   [
   .block 0 0 [
     .localGet 1,
@@ -897,14 +1348,14 @@ def func25 : Wasm.Program :=
     .br_if 0,
     .localGet 1,
     .localGet 0,
-    .call 26,
+    .call 29,
     .ret
   ],
   .localGet 0,
-  .call 27
+  .call 30
 ]
 
-def func26 : Wasm.Program :=
+def func29 : Wasm.Program :=
   [
   .const (0 : UInt32),
   .localSet 2,
@@ -938,7 +1389,7 @@ def func26 : Wasm.Program :=
     .add,
     .const (12 : UInt32),
     .add,
-    .call 27,
+    .call 30,
     .localSet 1,
     .localGet 1,
     .eqz,
@@ -1047,7 +1498,7 @@ def func26 : Wasm.Program :=
         .store32 (4 : UInt32),
         .localGet 2,
         .localGet 1,
-        .call 33,
+        .call 36,
         .br 1
       ],
       .localGet 2,
@@ -1115,7 +1566,7 @@ def func26 : Wasm.Program :=
       .store32 (4 : UInt32),
       .localGet 1,
       .localGet 3,
-      .call 33
+      .call 36
     ],
     .localGet 0,
     .const (8 : UInt32),
@@ -1125,7 +1576,7 @@ def func26 : Wasm.Program :=
   .localGet 2
 ]
 
-def func27 : Wasm.Program :=
+def func30 : Wasm.Program :=
   [
   .globalGet 0,
   .const (16 : UInt32),
@@ -1159,7 +1610,7 @@ def func27 : Wasm.Program :=
           .and,
           .localSet 3,
           .const (0 : UInt32),
-          .load32 (1050152 : UInt32),
+          .load32 (1050368 : UInt32),
           .localSet 4,
           .localGet 4,
           .eqz,
@@ -1198,7 +1649,7 @@ def func27 : Wasm.Program :=
                 .block 0 0 [
                   .block 0 0 [
                     .const (0 : UInt32),
-                    .load32 (1050148 : UInt32),
+                    .load32 (1050364 : UInt32),
                     .localSet 6,
                     .localGet 6,
                     .const (16 : UInt32),
@@ -1237,12 +1688,12 @@ def func27 : Wasm.Program :=
                     .shl,
                     .localSet 3,
                     .localGet 3,
-                    .const (1049884 : UInt32),
+                    .const (1050100 : UInt32),
                     .add,
                     .localSet 0,
                     .localGet 0,
                     .localGet 3,
-                    .const (1049892 : UInt32),
+                    .const (1050108 : UInt32),
                     .add,
                     .load32 (0 : UInt32),
                     .localSet 2,
@@ -1262,13 +1713,13 @@ def func27 : Wasm.Program :=
                   ],
                   .localGet 3,
                   .const (0 : UInt32),
-                  .load32 (1050156 : UInt32),
+                  .load32 (1050372 : UInt32),
                   .leU,
                   .br_if 6,
                   .localGet 0,
                   .br_if 2,
                   .const (0 : UInt32),
-                  .load32 (1050152 : UInt32),
+                  .load32 (1050368 : UInt32),
                   .localSet 0,
                   .localGet 0,
                   .eqz,
@@ -1277,7 +1728,7 @@ def func27 : Wasm.Program :=
                   .ctz,
                   .const (2 : UInt32),
                   .shl,
-                  .const (1049740 : UInt32),
+                  .const (1049956 : UInt32),
                   .add,
                   .load32 (0 : UInt32),
                   .localSet 8,
@@ -1394,7 +1845,7 @@ def func27 : Wasm.Program :=
                           .load32 (28 : UInt32),
                           .const (2 : UInt32),
                           .shl,
-                          .const (1049740 : UInt32),
+                          .const (1049956 : UInt32),
                           .add,
                           .localSet 8,
                           .localGet 8,
@@ -1491,7 +1942,7 @@ def func27 : Wasm.Program :=
                 .localGet 7,
                 .rotl,
                 .and,
-                .store32 (1050148 : UInt32)
+                .store32 (1050364 : UInt32)
               ],
               .localGet 2,
               .const (8 : UInt32),
@@ -1536,12 +1987,12 @@ def func27 : Wasm.Program :=
                 .shl,
                 .localSet 2,
                 .localGet 2,
-                .const (1049884 : UInt32),
+                .const (1050100 : UInt32),
                 .add,
                 .localSet 8,
                 .localGet 8,
                 .localGet 2,
-                .const (1049892 : UInt32),
+                .const (1050108 : UInt32),
                 .add,
                 .load32 (0 : UInt32),
                 .localSet 0,
@@ -1565,7 +2016,7 @@ def func27 : Wasm.Program :=
               .localGet 9,
               .rotl,
               .and,
-              .store32 (1050148 : UInt32)
+              .store32 (1050364 : UInt32)
             ],
             .localGet 0,
             .localGet 3,
@@ -1592,18 +2043,18 @@ def func27 : Wasm.Program :=
             .store32 (0 : UInt32),
             .block 0 0 [
               .const (0 : UInt32),
-              .load32 (1050156 : UInt32),
+              .load32 (1050372 : UInt32),
               .localSet 2,
               .localGet 2,
               .eqz,
               .br_if 0,
               .const (0 : UInt32),
-              .load32 (1050164 : UInt32),
+              .load32 (1050380 : UInt32),
               .localSet 3,
               .block 0 0 [
                 .block 0 0 [
                   .const (0 : UInt32),
-                  .load32 (1050148 : UInt32),
+                  .load32 (1050364 : UInt32),
                   .localSet 7,
                   .localGet 7,
                   .const (1 : UInt32),
@@ -1619,11 +2070,11 @@ def func27 : Wasm.Program :=
                   .localGet 7,
                   .localGet 9,
                   .or,
-                  .store32 (1050148 : UInt32),
+                  .store32 (1050364 : UInt32),
                   .localGet 2,
                   .const (4294967288 : UInt32),
                   .and,
-                  .const (1049884 : UInt32),
+                  .const (1050100 : UInt32),
                   .add,
                   .localSet 2,
                   .localGet 2,
@@ -1635,11 +2086,11 @@ def func27 : Wasm.Program :=
                 .and,
                 .localSet 2,
                 .localGet 2,
-                .const (1049884 : UInt32),
+                .const (1050100 : UInt32),
                 .add,
                 .localSet 7,
                 .localGet 2,
-                .const (1049892 : UInt32),
+                .const (1050108 : UInt32),
                 .add,
                 .load32 (0 : UInt32),
                 .localSet 2
@@ -1663,21 +2114,21 @@ def func27 : Wasm.Program :=
             .localSet 0,
             .const (0 : UInt32),
             .localGet 6,
-            .store32 (1050164 : UInt32),
+            .store32 (1050380 : UInt32),
             .const (0 : UInt32),
             .localGet 8,
-            .store32 (1050156 : UInt32),
+            .store32 (1050372 : UInt32),
             .br 4
           ],
           .const (0 : UInt32),
           .const (0 : UInt32),
-          .load32 (1050152 : UInt32),
+          .load32 (1050368 : UInt32),
           .const (4294967294 : UInt32),
           .localGet 6,
           .load32 (28 : UInt32),
           .rotl,
           .and,
-          .store32 (1050152 : UInt32)
+          .store32 (1050368 : UInt32)
         ],
         .block 0 0 [
           .block 0 0 [
@@ -1706,18 +2157,18 @@ def func27 : Wasm.Program :=
               .localGet 2,
               .store32 (0 : UInt32),
               .const (0 : UInt32),
-              .load32 (1050156 : UInt32),
+              .load32 (1050372 : UInt32),
               .localSet 7,
               .localGet 7,
               .eqz,
               .br_if 1,
               .const (0 : UInt32),
-              .load32 (1050164 : UInt32),
+              .load32 (1050380 : UInt32),
               .localSet 0,
               .block 0 0 [
                 .block 0 0 [
                   .const (0 : UInt32),
-                  .load32 (1050148 : UInt32),
+                  .load32 (1050364 : UInt32),
                   .localSet 9,
                   .localGet 9,
                   .const (1 : UInt32),
@@ -1733,11 +2184,11 @@ def func27 : Wasm.Program :=
                   .localGet 9,
                   .localGet 5,
                   .or,
-                  .store32 (1050148 : UInt32),
+                  .store32 (1050364 : UInt32),
                   .localGet 7,
                   .const (4294967288 : UInt32),
                   .and,
-                  .const (1049884 : UInt32),
+                  .const (1050100 : UInt32),
                   .add,
                   .localSet 7,
                   .localGet 7,
@@ -1749,11 +2200,11 @@ def func27 : Wasm.Program :=
                 .and,
                 .localSet 7,
                 .localGet 7,
-                .const (1049884 : UInt32),
+                .const (1050100 : UInt32),
                 .add,
                 .localSet 9,
                 .localGet 7,
-                .const (1049892 : UInt32),
+                .const (1050108 : UInt32),
                 .add,
                 .load32 (0 : UInt32),
                 .localSet 7
@@ -1795,10 +2246,10 @@ def func27 : Wasm.Program :=
           ],
           .const (0 : UInt32),
           .localGet 8,
-          .store32 (1050164 : UInt32),
+          .store32 (1050380 : UInt32),
           .const (0 : UInt32),
           .localGet 2,
-          .store32 (1050156 : UInt32)
+          .store32 (1050372 : UInt32)
         ],
         .localGet 6,
         .const (8 : UInt32),
@@ -1820,7 +2271,7 @@ def func27 : Wasm.Program :=
               .localGet 5,
               .const (2 : UInt32),
               .shl,
-              .const (1049740 : UInt32),
+              .const (1049956 : UInt32),
               .add,
               .load32 (0 : UInt32),
               .localSet 6,
@@ -1940,7 +2391,7 @@ def func27 : Wasm.Program :=
             .ctz,
             .const (2 : UInt32),
             .shl,
-            .const (1049740 : UInt32),
+            .const (1049956 : UInt32),
             .add,
             .load32 (0 : UInt32),
             .localSet 0
@@ -2008,7 +2459,7 @@ def func27 : Wasm.Program :=
       .br_if 0,
       .block 0 0 [
         .const (0 : UInt32),
-        .load32 (1050156 : UInt32),
+        .load32 (1050372 : UInt32),
         .localSet 0,
         .localGet 0,
         .localGet 3,
@@ -2115,7 +2566,7 @@ def func27 : Wasm.Program :=
               .load32 (28 : UInt32),
               .const (2 : UInt32),
               .shl,
-              .const (1049740 : UInt32),
+              .const (1049956 : UInt32),
               .add,
               .localSet 6,
               .localGet 6,
@@ -2182,13 +2633,13 @@ def func27 : Wasm.Program :=
         ],
         .const (0 : UInt32),
         .const (0 : UInt32),
-        .load32 (1050152 : UInt32),
+        .load32 (1050368 : UInt32),
         .const (4294967294 : UInt32),
         .localGet 8,
         .load32 (28 : UInt32),
         .rotl,
         .and,
-        .store32 (1050152 : UInt32)
+        .store32 (1050368 : UInt32)
       ],
       .block 0 0 [
         .block 0 0 [
@@ -2222,13 +2673,13 @@ def func27 : Wasm.Program :=
             .br_if 0,
             .localGet 0,
             .localGet 2,
-            .call 37,
+            .call 40,
             .br 2
           ],
           .block 0 0 [
             .block 0 0 [
               .const (0 : UInt32),
-              .load32 (1050148 : UInt32),
+              .load32 (1050364 : UInt32),
               .localSet 6,
               .localGet 6,
               .const (1 : UInt32),
@@ -2244,11 +2695,11 @@ def func27 : Wasm.Program :=
               .localGet 6,
               .localGet 7,
               .or,
-              .store32 (1050148 : UInt32),
+              .store32 (1050364 : UInt32),
               .localGet 2,
               .const (248 : UInt32),
               .and,
-              .const (1049884 : UInt32),
+              .const (1050100 : UInt32),
               .add,
               .localSet 2,
               .localGet 2,
@@ -2260,11 +2711,11 @@ def func27 : Wasm.Program :=
             .and,
             .localSet 2,
             .localGet 2,
-            .const (1049884 : UInt32),
+            .const (1050100 : UInt32),
             .add,
             .localSet 6,
             .localGet 2,
-            .const (1049892 : UInt32),
+            .const (1050108 : UInt32),
             .add,
             .load32 (0 : UInt32),
             .localSet 2
@@ -2317,7 +2768,7 @@ def func27 : Wasm.Program :=
             .block 0 0 [
               .block 0 0 [
                 .const (0 : UInt32),
-                .load32 (1050156 : UInt32),
+                .load32 (1050372 : UInt32),
                 .localSet 0,
                 .localGet 0,
                 .localGet 3,
@@ -2325,7 +2776,7 @@ def func27 : Wasm.Program :=
                 .br_if 0,
                 .block 0 0 [
                   .const (0 : UInt32),
-                  .load32 (1050160 : UInt32),
+                  .load32 (1050376 : UInt32),
                   .localSet 0,
                   .localGet 0,
                   .localGet 3,
@@ -2334,13 +2785,13 @@ def func27 : Wasm.Program :=
                   .localGet 1,
                   .const (4 : UInt32),
                   .add,
-                  .const (1050192 : UInt32),
+                  .const (1050408 : UInt32),
                   .localGet 3,
                   .const (65583 : UInt32),
                   .add,
                   .const (4294901760 : UInt32),
                   .and,
-                  .call 52,
+                  .call 55,
                   .block 0 0 [
                     .localGet 1,
                     .load32 (4 : UInt32),
@@ -2356,7 +2807,7 @@ def func27 : Wasm.Program :=
                   .localSet 5,
                   .const (0 : UInt32),
                   .const (0 : UInt32),
-                  .load32 (1050172 : UInt32),
+                  .load32 (1050388 : UInt32),
                   .localGet 1,
                   .load32 (8 : UInt32),
                   .localSet 9,
@@ -2364,28 +2815,28 @@ def func27 : Wasm.Program :=
                   .add,
                   .localSet 0,
                   .localGet 0,
-                  .store32 (1050172 : UInt32),
+                  .store32 (1050388 : UInt32),
                   .const (0 : UInt32),
                   .localGet 0,
                   .const (0 : UInt32),
-                  .load32 (1050176 : UInt32),
+                  .load32 (1050392 : UInt32),
                   .localSet 2,
                   .localGet 2,
                   .localGet 0,
                   .localGet 2,
                   .gtU,
                   .select,
-                  .store32 (1050176 : UInt32),
+                  .store32 (1050392 : UInt32),
                   .block 0 0 [
                     .block 0 0 [
                       .block 0 0 [
                         .const (0 : UInt32),
-                        .load32 (1050168 : UInt32),
+                        .load32 (1050384 : UInt32),
                         .localSet 2,
                         .localGet 2,
                         .eqz,
                         .br_if 0,
-                        .const (1049868 : UInt32),
+                        .const (1050084 : UInt32),
                         .localSet 0,
                         .loop 0 0 [
                           .localGet 6,
@@ -2411,7 +2862,7 @@ def func27 : Wasm.Program :=
                       .block 0 0 [
                         .block 0 0 [
                           .const (0 : UInt32),
-                          .load32 (1050184 : UInt32),
+                          .load32 (1050400 : UInt32),
                           .localSet 0,
                           .localGet 0,
                           .eqz,
@@ -2423,185 +2874,23 @@ def func27 : Wasm.Program :=
                         ],
                         .const (0 : UInt32),
                         .localGet 6,
-                        .store32 (1050184 : UInt32)
+                        .store32 (1050400 : UInt32)
                       ],
                       .const (0 : UInt32),
                       .const (4095 : UInt32),
-                      .store32 (1050188 : UInt32),
+                      .store32 (1050404 : UInt32),
                       .const (0 : UInt32),
                       .localGet 5,
-                      .store32 (1049880 : UInt32),
-                      .const (0 : UInt32),
-                      .localGet 9,
-                      .store32 (1049872 : UInt32),
-                      .const (0 : UInt32),
-                      .localGet 6,
-                      .store32 (1049868 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1049884 : UInt32),
-                      .store32 (1049896 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1049892 : UInt32),
-                      .store32 (1049904 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1049884 : UInt32),
-                      .store32 (1049892 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1049900 : UInt32),
-                      .store32 (1049912 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1049892 : UInt32),
-                      .store32 (1049900 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1049908 : UInt32),
-                      .store32 (1049920 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1049900 : UInt32),
-                      .store32 (1049908 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1049916 : UInt32),
-                      .store32 (1049928 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1049908 : UInt32),
-                      .store32 (1049916 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1049924 : UInt32),
-                      .store32 (1049936 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1049916 : UInt32),
-                      .store32 (1049924 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1049932 : UInt32),
-                      .store32 (1049944 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1049924 : UInt32),
-                      .store32 (1049932 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1049940 : UInt32),
-                      .store32 (1049952 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1049932 : UInt32),
-                      .store32 (1049940 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1049948 : UInt32),
-                      .store32 (1049960 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1049940 : UInt32),
-                      .store32 (1049948 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1049948 : UInt32),
-                      .store32 (1049956 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1049956 : UInt32),
-                      .store32 (1049968 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1049956 : UInt32),
-                      .store32 (1049964 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1049964 : UInt32),
-                      .store32 (1049976 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1049964 : UInt32),
-                      .store32 (1049972 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1049972 : UInt32),
-                      .store32 (1049984 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1049972 : UInt32),
-                      .store32 (1049980 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1049980 : UInt32),
-                      .store32 (1049992 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1049980 : UInt32),
-                      .store32 (1049988 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1049988 : UInt32),
-                      .store32 (1050000 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1049988 : UInt32),
-                      .store32 (1049996 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1049996 : UInt32),
-                      .store32 (1050008 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1049996 : UInt32),
-                      .store32 (1050004 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1050004 : UInt32),
-                      .store32 (1050016 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1050004 : UInt32),
-                      .store32 (1050012 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1050012 : UInt32),
-                      .store32 (1050024 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1050020 : UInt32),
-                      .store32 (1050032 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1050012 : UInt32),
-                      .store32 (1050020 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1050028 : UInt32),
-                      .store32 (1050040 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1050020 : UInt32),
-                      .store32 (1050028 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1050036 : UInt32),
-                      .store32 (1050048 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1050028 : UInt32),
-                      .store32 (1050036 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1050044 : UInt32),
-                      .store32 (1050056 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1050036 : UInt32),
-                      .store32 (1050044 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1050052 : UInt32),
-                      .store32 (1050064 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1050044 : UInt32),
-                      .store32 (1050052 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1050060 : UInt32),
-                      .store32 (1050072 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1050052 : UInt32),
-                      .store32 (1050060 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1050068 : UInt32),
-                      .store32 (1050080 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1050060 : UInt32),
-                      .store32 (1050068 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1050076 : UInt32),
-                      .store32 (1050088 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1050068 : UInt32),
-                      .store32 (1050076 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1050084 : UInt32),
                       .store32 (1050096 : UInt32),
                       .const (0 : UInt32),
-                      .const (1050076 : UInt32),
+                      .localGet 9,
+                      .store32 (1050088 : UInt32),
+                      .const (0 : UInt32),
+                      .localGet 6,
                       .store32 (1050084 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1050092 : UInt32),
-                      .store32 (1050104 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1050084 : UInt32),
-                      .store32 (1050092 : UInt32),
                       .const (0 : UInt32),
                       .const (1050100 : UInt32),
                       .store32 (1050112 : UInt32),
-                      .const (0 : UInt32),
-                      .const (1050092 : UInt32),
-                      .store32 (1050100 : UInt32),
                       .const (0 : UInt32),
                       .const (1050108 : UInt32),
                       .store32 (1050120 : UInt32),
@@ -2627,6 +2916,168 @@ def func27 : Wasm.Program :=
                       .const (1050124 : UInt32),
                       .store32 (1050132 : UInt32),
                       .const (0 : UInt32),
+                      .const (1050140 : UInt32),
+                      .store32 (1050152 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050132 : UInt32),
+                      .store32 (1050140 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050148 : UInt32),
+                      .store32 (1050160 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050140 : UInt32),
+                      .store32 (1050148 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050156 : UInt32),
+                      .store32 (1050168 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050148 : UInt32),
+                      .store32 (1050156 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050164 : UInt32),
+                      .store32 (1050176 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050156 : UInt32),
+                      .store32 (1050164 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050164 : UInt32),
+                      .store32 (1050172 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050172 : UInt32),
+                      .store32 (1050184 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050172 : UInt32),
+                      .store32 (1050180 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050180 : UInt32),
+                      .store32 (1050192 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050180 : UInt32),
+                      .store32 (1050188 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050188 : UInt32),
+                      .store32 (1050200 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050188 : UInt32),
+                      .store32 (1050196 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050196 : UInt32),
+                      .store32 (1050208 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050196 : UInt32),
+                      .store32 (1050204 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050204 : UInt32),
+                      .store32 (1050216 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050204 : UInt32),
+                      .store32 (1050212 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050212 : UInt32),
+                      .store32 (1050224 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050212 : UInt32),
+                      .store32 (1050220 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050220 : UInt32),
+                      .store32 (1050232 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050220 : UInt32),
+                      .store32 (1050228 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050228 : UInt32),
+                      .store32 (1050240 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050236 : UInt32),
+                      .store32 (1050248 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050228 : UInt32),
+                      .store32 (1050236 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050244 : UInt32),
+                      .store32 (1050256 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050236 : UInt32),
+                      .store32 (1050244 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050252 : UInt32),
+                      .store32 (1050264 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050244 : UInt32),
+                      .store32 (1050252 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050260 : UInt32),
+                      .store32 (1050272 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050252 : UInt32),
+                      .store32 (1050260 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050268 : UInt32),
+                      .store32 (1050280 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050260 : UInt32),
+                      .store32 (1050268 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050276 : UInt32),
+                      .store32 (1050288 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050268 : UInt32),
+                      .store32 (1050276 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050284 : UInt32),
+                      .store32 (1050296 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050276 : UInt32),
+                      .store32 (1050284 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050292 : UInt32),
+                      .store32 (1050304 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050284 : UInt32),
+                      .store32 (1050292 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050300 : UInt32),
+                      .store32 (1050312 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050292 : UInt32),
+                      .store32 (1050300 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050308 : UInt32),
+                      .store32 (1050320 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050300 : UInt32),
+                      .store32 (1050308 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050316 : UInt32),
+                      .store32 (1050328 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050308 : UInt32),
+                      .store32 (1050316 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050324 : UInt32),
+                      .store32 (1050336 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050316 : UInt32),
+                      .store32 (1050324 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050332 : UInt32),
+                      .store32 (1050344 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050324 : UInt32),
+                      .store32 (1050332 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050340 : UInt32),
+                      .store32 (1050352 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050332 : UInt32),
+                      .store32 (1050340 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050348 : UInt32),
+                      .store32 (1050360 : UInt32),
+                      .const (0 : UInt32),
+                      .const (1050340 : UInt32),
+                      .store32 (1050348 : UInt32),
+                      .const (0 : UInt32),
                       .localGet 6,
                       .const (15 : UInt32),
                       .add,
@@ -2638,10 +3089,10 @@ def func27 : Wasm.Program :=
                       .add,
                       .localSet 2,
                       .localGet 2,
-                      .store32 (1050168 : UInt32),
+                      .store32 (1050384 : UInt32),
                       .const (0 : UInt32),
-                      .const (1050132 : UInt32),
-                      .store32 (1050140 : UInt32),
+                      .const (1050348 : UInt32),
+                      .store32 (1050356 : UInt32),
                       .const (0 : UInt32),
                       .localGet 6,
                       .localGet 0,
@@ -2656,7 +3107,7 @@ def func27 : Wasm.Program :=
                       .add,
                       .localSet 8,
                       .localGet 8,
-                      .store32 (1050160 : UInt32),
+                      .store32 (1050376 : UInt32),
                       .localGet 2,
                       .localGet 8,
                       .const (1 : UInt32),
@@ -2669,7 +3120,7 @@ def func27 : Wasm.Program :=
                       .store32 (4 : UInt32),
                       .const (0 : UInt32),
                       .const (2097152 : UInt32),
-                      .store32 (1050180 : UInt32),
+                      .store32 (1050396 : UInt32),
                       .br 8
                     ],
                     .localGet 2,
@@ -2696,7 +3147,7 @@ def func27 : Wasm.Program :=
                   ],
                   .const (0 : UInt32),
                   .const (0 : UInt32),
-                  .load32 (1050184 : UInt32),
+                  .load32 (1050400 : UInt32),
                   .localSet 0,
                   .localGet 0,
                   .localGet 6,
@@ -2704,12 +3155,12 @@ def func27 : Wasm.Program :=
                   .localGet 6,
                   .ltU,
                   .select,
-                  .store32 (1050184 : UInt32),
+                  .store32 (1050400 : UInt32),
                   .localGet 6,
                   .localGet 9,
                   .add,
                   .localSet 8,
-                  .const (1049868 : UInt32),
+                  .const (1050084 : UInt32),
                   .localSet 0,
                   .block 0 0 [
                     .block 0 0 [
@@ -2744,7 +3195,7 @@ def func27 : Wasm.Program :=
                       .eq,
                       .br_if 1
                     ],
-                    .const (1049868 : UInt32),
+                    .const (1050084 : UInt32),
                     .localSet 0,
                     .block 0 0 [
                       .loop 0 0 [
@@ -2784,7 +3235,7 @@ def func27 : Wasm.Program :=
                     .add,
                     .localSet 7,
                     .localGet 7,
-                    .store32 (1050168 : UInt32),
+                    .store32 (1050384 : UInt32),
                     .const (0 : UInt32),
                     .localGet 6,
                     .localGet 0,
@@ -2799,7 +3250,7 @@ def func27 : Wasm.Program :=
                     .add,
                     .localSet 4,
                     .localGet 4,
-                    .store32 (1050160 : UInt32),
+                    .store32 (1050376 : UInt32),
                     .localGet 7,
                     .localGet 4,
                     .const (1 : UInt32),
@@ -2812,7 +3263,7 @@ def func27 : Wasm.Program :=
                     .store32 (4 : UInt32),
                     .const (0 : UInt32),
                     .const (2097152 : UInt32),
-                    .store32 (1050180 : UInt32),
+                    .store32 (1050396 : UInt32),
                     .localGet 2,
                     .localGet 8,
                     .const (4294967264 : UInt32),
@@ -2834,13 +3285,13 @@ def func27 : Wasm.Program :=
                     .const (27 : UInt32),
                     .store32 (4 : UInt32),
                     .const (0 : UInt32),
-                    .load64 (1049868 : UInt32),
+                    .load64 (1050084 : UInt32),
                     .localSet 10,
                     .localGet 7,
                     .const (16 : UInt32),
                     .add,
                     .const (0 : UInt32),
-                    .load64 (1049876 : UInt32),
+                    .load64 (1050092 : UInt32),
                     .store64 (0 : UInt32),
                     .localGet 7,
                     .const (8 : UInt32),
@@ -2851,16 +3302,16 @@ def func27 : Wasm.Program :=
                     .store64 (0 : UInt32),
                     .const (0 : UInt32),
                     .localGet 5,
-                    .store32 (1049880 : UInt32),
+                    .store32 (1050096 : UInt32),
                     .const (0 : UInt32),
                     .localGet 9,
-                    .store32 (1049872 : UInt32),
+                    .store32 (1050088 : UInt32),
                     .const (0 : UInt32),
                     .localGet 6,
-                    .store32 (1049868 : UInt32),
+                    .store32 (1050084 : UInt32),
                     .const (0 : UInt32),
                     .localGet 0,
-                    .store32 (1049876 : UInt32),
+                    .store32 (1050092 : UInt32),
                     .localGet 7,
                     .const (28 : UInt32),
                     .add,
@@ -2907,13 +3358,13 @@ def func27 : Wasm.Program :=
                       .br_if 0,
                       .localGet 2,
                       .localGet 0,
-                      .call 37,
+                      .call 40,
                       .br 8
                     ],
                     .block 0 0 [
                       .block 0 0 [
                         .const (0 : UInt32),
-                        .load32 (1050148 : UInt32),
+                        .load32 (1050364 : UInt32),
                         .localSet 8,
                         .localGet 8,
                         .const (1 : UInt32),
@@ -2929,11 +3380,11 @@ def func27 : Wasm.Program :=
                         .localGet 8,
                         .localGet 6,
                         .or,
-                        .store32 (1050148 : UInt32),
+                        .store32 (1050364 : UInt32),
                         .localGet 0,
                         .const (248 : UInt32),
                         .and,
-                        .const (1049884 : UInt32),
+                        .const (1050100 : UInt32),
                         .add,
                         .localSet 0,
                         .localGet 0,
@@ -2945,11 +3396,11 @@ def func27 : Wasm.Program :=
                       .and,
                       .localSet 0,
                       .localGet 0,
-                      .const (1049884 : UInt32),
+                      .const (1050100 : UInt32),
                       .add,
                       .localSet 8,
                       .localGet 0,
-                      .const (1049892 : UInt32),
+                      .const (1050108 : UInt32),
                       .add,
                       .load32 (0 : UInt32),
                       .localSet 0
@@ -3008,12 +3459,12 @@ def func27 : Wasm.Program :=
                   .localSet 3,
                   .localGet 2,
                   .const (0 : UInt32),
-                  .load32 (1050168 : UInt32),
+                  .load32 (1050384 : UInt32),
                   .eq,
                   .br_if 3,
                   .localGet 2,
                   .const (0 : UInt32),
-                  .load32 (1050164 : UInt32),
+                  .load32 (1050380 : UInt32),
                   .eq,
                   .br_if 4,
                   .block 0 0 [
@@ -3032,7 +3483,7 @@ def func27 : Wasm.Program :=
                     .and,
                     .localSet 6,
                     .localGet 6,
-                    .call 32,
+                    .call 35,
                     .localGet 6,
                     .localGet 3,
                     .add,
@@ -3067,13 +3518,13 @@ def func27 : Wasm.Program :=
                     .br_if 0,
                     .localGet 0,
                     .localGet 3,
-                    .call 37,
+                    .call 40,
                     .br 6
                   ],
                   .block 0 0 [
                     .block 0 0 [
                       .const (0 : UInt32),
-                      .load32 (1050148 : UInt32),
+                      .load32 (1050364 : UInt32),
                       .localSet 2,
                       .localGet 2,
                       .const (1 : UInt32),
@@ -3089,11 +3540,11 @@ def func27 : Wasm.Program :=
                       .localGet 2,
                       .localGet 6,
                       .or,
-                      .store32 (1050148 : UInt32),
+                      .store32 (1050364 : UInt32),
                       .localGet 3,
                       .const (248 : UInt32),
                       .and,
-                      .const (1049884 : UInt32),
+                      .const (1050100 : UInt32),
                       .add,
                       .localSet 3,
                       .localGet 3,
@@ -3105,11 +3556,11 @@ def func27 : Wasm.Program :=
                     .and,
                     .localSet 3,
                     .localGet 3,
-                    .const (1049884 : UInt32),
+                    .const (1050100 : UInt32),
                     .add,
                     .localSet 2,
                     .localGet 3,
-                    .const (1049892 : UInt32),
+                    .const (1050108 : UInt32),
                     .add,
                     .load32 (0 : UInt32),
                     .localSet 3
@@ -3134,17 +3585,17 @@ def func27 : Wasm.Program :=
                 .sub,
                 .localSet 2,
                 .localGet 2,
-                .store32 (1050160 : UInt32),
+                .store32 (1050376 : UInt32),
                 .const (0 : UInt32),
                 .const (0 : UInt32),
-                .load32 (1050168 : UInt32),
+                .load32 (1050384 : UInt32),
                 .localSet 0,
                 .localGet 0,
                 .localGet 3,
                 .add,
                 .localSet 8,
                 .localGet 8,
-                .store32 (1050168 : UInt32),
+                .store32 (1050384 : UInt32),
                 .localGet 8,
                 .localGet 2,
                 .const (1 : UInt32),
@@ -3162,7 +3613,7 @@ def func27 : Wasm.Program :=
                 .br 6
               ],
               .const (0 : UInt32),
-              .load32 (1050164 : UInt32),
+              .load32 (1050380 : UInt32),
               .localSet 2,
               .block 0 0 [
                 .block 0 0 [
@@ -3176,10 +3627,10 @@ def func27 : Wasm.Program :=
                   .br_if 0,
                   .const (0 : UInt32),
                   .const (0 : UInt32),
-                  .store32 (1050164 : UInt32),
+                  .store32 (1050380 : UInt32),
                   .const (0 : UInt32),
                   .const (0 : UInt32),
-                  .store32 (1050156 : UInt32),
+                  .store32 (1050372 : UInt32),
                   .localGet 2,
                   .localGet 0,
                   .const (3 : UInt32),
@@ -3199,14 +3650,14 @@ def func27 : Wasm.Program :=
                 ],
                 .const (0 : UInt32),
                 .localGet 8,
-                .store32 (1050156 : UInt32),
+                .store32 (1050372 : UInt32),
                 .const (0 : UInt32),
                 .localGet 2,
                 .localGet 3,
                 .add,
                 .localSet 6,
                 .localGet 6,
-                .store32 (1050164 : UInt32),
+                .store32 (1050380 : UInt32),
                 .localGet 6,
                 .localGet 8,
                 .const (1 : UInt32),
@@ -3236,7 +3687,7 @@ def func27 : Wasm.Program :=
             .store32 (4 : UInt32),
             .const (0 : UInt32),
             .const (0 : UInt32),
-            .load32 (1050168 : UInt32),
+            .load32 (1050384 : UInt32),
             .localSet 0,
             .localGet 0,
             .const (15 : UInt32),
@@ -3249,13 +3700,13 @@ def func27 : Wasm.Program :=
             .add,
             .localSet 8,
             .localGet 8,
-            .store32 (1050168 : UInt32),
+            .store32 (1050384 : UInt32),
             .const (0 : UInt32),
             .localGet 0,
             .localGet 2,
             .sub,
             .const (0 : UInt32),
-            .load32 (1050160 : UInt32),
+            .load32 (1050376 : UInt32),
             .localGet 9,
             .add,
             .localSet 2,
@@ -3265,7 +3716,7 @@ def func27 : Wasm.Program :=
             .add,
             .localSet 6,
             .localGet 6,
-            .store32 (1050160 : UInt32),
+            .store32 (1050376 : UInt32),
             .localGet 8,
             .localGet 6,
             .const (1 : UInt32),
@@ -3278,20 +3729,20 @@ def func27 : Wasm.Program :=
             .store32 (4 : UInt32),
             .const (0 : UInt32),
             .const (2097152 : UInt32),
-            .store32 (1050180 : UInt32),
+            .store32 (1050396 : UInt32),
             .br 3
           ],
           .const (0 : UInt32),
           .localGet 0,
-          .store32 (1050168 : UInt32),
+          .store32 (1050384 : UInt32),
           .const (0 : UInt32),
           .const (0 : UInt32),
-          .load32 (1050160 : UInt32),
+          .load32 (1050376 : UInt32),
           .localGet 3,
           .add,
           .localSet 3,
           .localGet 3,
-          .store32 (1050160 : UInt32),
+          .store32 (1050376 : UInt32),
           .localGet 0,
           .localGet 3,
           .const (1 : UInt32),
@@ -3301,15 +3752,15 @@ def func27 : Wasm.Program :=
         ],
         .const (0 : UInt32),
         .localGet 0,
-        .store32 (1050164 : UInt32),
+        .store32 (1050380 : UInt32),
         .const (0 : UInt32),
         .const (0 : UInt32),
-        .load32 (1050156 : UInt32),
+        .load32 (1050372 : UInt32),
         .localGet 3,
         .add,
         .localSet 3,
         .localGet 3,
-        .store32 (1050156 : UInt32),
+        .store32 (1050372 : UInt32),
         .localGet 0,
         .localGet 3,
         .const (1 : UInt32),
@@ -3330,7 +3781,7 @@ def func27 : Wasm.Program :=
     .const (0 : UInt32),
     .localSet 0,
     .const (0 : UInt32),
-    .load32 (1050160 : UInt32),
+    .load32 (1050376 : UInt32),
     .localSet 2,
     .localGet 2,
     .localGet 3,
@@ -3342,17 +3793,17 @@ def func27 : Wasm.Program :=
     .sub,
     .localSet 2,
     .localGet 2,
-    .store32 (1050160 : UInt32),
+    .store32 (1050376 : UInt32),
     .const (0 : UInt32),
     .const (0 : UInt32),
-    .load32 (1050168 : UInt32),
+    .load32 (1050384 : UInt32),
     .localSet 0,
     .localGet 0,
     .localGet 3,
     .add,
     .localSet 8,
     .localGet 8,
-    .store32 (1050168 : UInt32),
+    .store32 (1050384 : UInt32),
     .localGet 8,
     .localGet 2,
     .const (1 : UInt32),
@@ -3375,12 +3826,12 @@ def func27 : Wasm.Program :=
   .localGet 0
 ]
 
-def func28 : Wasm.Program :=
+def func31 : Wasm.Program :=
   [
   .unreachable
 ]
 
-def func29 : Wasm.Program :=
+def func32 : Wasm.Program :=
   [
   .block 0 0 [
     .block 0 0 [
@@ -3418,23 +3869,23 @@ def func29 : Wasm.Program :=
         .br_if 2
       ],
       .localGet 0,
-      .call 30,
+      .call 33,
       .ret
     ],
-    .const (1049316 : UInt32),
+    .const (1049532 : UInt32),
     .const (46 : UInt32),
-    .const (1049364 : UInt32),
-    .call 57,
+    .const (1049580 : UInt32),
+    .call 60,
     .unreachable
   ],
-  .const (1049380 : UInt32),
+  .const (1049596 : UInt32),
   .const (46 : UInt32),
-  .const (1049428 : UInt32),
-  .call 57,
+  .const (1049644 : UInt32),
+  .call 60,
   .unreachable
 ]
 
-def func30 : Wasm.Program :=
+def func33 : Wasm.Program :=
   [
   .localGet 0,
   .const (4294967288 : UInt32),
@@ -3478,7 +3929,7 @@ def func30 : Wasm.Program :=
         .localSet 1,
         .localGet 1,
         .const (0 : UInt32),
-        .load32 (1050164 : UInt32),
+        .load32 (1050380 : UInt32),
         .ne,
         .br_if 0,
         .localGet 3,
@@ -3490,7 +3941,7 @@ def func30 : Wasm.Program :=
         .br_if 1,
         .const (0 : UInt32),
         .localGet 0,
-        .store32 (1050156 : UInt32),
+        .store32 (1050372 : UInt32),
         .localGet 3,
         .localGet 3,
         .load32 (4 : UInt32),
@@ -3509,7 +3960,7 @@ def func30 : Wasm.Program :=
       ],
       .localGet 1,
       .localGet 2,
-      .call 32
+      .call 35
     ],
     .block 0 0 [
       .block 0 0 [
@@ -3528,12 +3979,12 @@ def func30 : Wasm.Program :=
                     .br_if 0,
                     .localGet 3,
                     .const (0 : UInt32),
-                    .load32 (1050168 : UInt32),
+                    .load32 (1050384 : UInt32),
                     .eq,
                     .br_if 2,
                     .localGet 3,
                     .const (0 : UInt32),
-                    .load32 (1050164 : UInt32),
+                    .load32 (1050380 : UInt32),
                     .eq,
                     .br_if 3,
                     .localGet 3,
@@ -3542,7 +3993,7 @@ def func30 : Wasm.Program :=
                     .and,
                     .localSet 2,
                     .localGet 2,
-                    .call 32,
+                    .call 35,
                     .localGet 1,
                     .localGet 2,
                     .localGet 0,
@@ -3559,12 +4010,12 @@ def func30 : Wasm.Program :=
                     .store32 (0 : UInt32),
                     .localGet 1,
                     .const (0 : UInt32),
-                    .load32 (1050164 : UInt32),
+                    .load32 (1050380 : UInt32),
                     .ne,
                     .br_if 1,
                     .const (0 : UInt32),
                     .localGet 0,
-                    .store32 (1050156 : UInt32),
+                    .store32 (1050372 : UInt32),
                     .ret
                   ],
                   .localGet 3,
@@ -3589,19 +4040,19 @@ def func30 : Wasm.Program :=
                 .br_if 4,
                 .localGet 1,
                 .localGet 0,
-                .call 37,
+                .call 40,
                 .const (0 : UInt32),
                 .const (0 : UInt32),
-                .load32 (1050188 : UInt32),
+                .load32 (1050404 : UInt32),
                 .const (4294967295 : UInt32),
                 .add,
                 .localSet 1,
                 .localGet 1,
-                .store32 (1050188 : UInt32),
+                .store32 (1050404 : UInt32),
                 .localGet 1,
                 .br_if 6,
                 .const (0 : UInt32),
-                .load32 (1049876 : UInt32),
+                .load32 (1050092 : UInt32),
                 .localSet 0,
                 .localGet 0,
                 .br_if 2,
@@ -3611,15 +4062,15 @@ def func30 : Wasm.Program :=
               ],
               .const (0 : UInt32),
               .localGet 1,
-              .store32 (1050168 : UInt32),
+              .store32 (1050384 : UInt32),
               .const (0 : UInt32),
               .const (0 : UInt32),
-              .load32 (1050160 : UInt32),
+              .load32 (1050376 : UInt32),
               .localGet 0,
               .add,
               .localSet 0,
               .localGet 0,
-              .store32 (1050160 : UInt32),
+              .store32 (1050376 : UInt32),
               .localGet 1,
               .localGet 0,
               .const (1 : UInt32),
@@ -3628,37 +4079,37 @@ def func30 : Wasm.Program :=
               .block 0 0 [
                 .localGet 1,
                 .const (0 : UInt32),
-                .load32 (1050164 : UInt32),
+                .load32 (1050380 : UInt32),
                 .ne,
                 .br_if 0,
                 .const (0 : UInt32),
                 .const (0 : UInt32),
-                .store32 (1050156 : UInt32),
+                .store32 (1050372 : UInt32),
                 .const (0 : UInt32),
                 .const (0 : UInt32),
-                .store32 (1050164 : UInt32)
+                .store32 (1050380 : UInt32)
               ],
               .localGet 0,
               .const (0 : UInt32),
-              .load32 (1050180 : UInt32),
+              .load32 (1050396 : UInt32),
               .localSet 2,
               .localGet 2,
               .leU,
               .br_if 5,
               .const (0 : UInt32),
-              .load32 (1050168 : UInt32),
+              .load32 (1050384 : UInt32),
               .localSet 0,
               .localGet 0,
               .eqz,
               .br_if 5,
               .const (0 : UInt32),
-              .load32 (1050160 : UInt32),
+              .load32 (1050376 : UInt32),
               .localSet 4,
               .localGet 4,
               .const (41 : UInt32),
               .ltU,
               .br_if 4,
-              .const (1049868 : UInt32),
+              .const (1050084 : UInt32),
               .localSet 1,
               .loop 0 0 [
                 .block 0 0 [
@@ -3685,15 +4136,15 @@ def func30 : Wasm.Program :=
             ],
             .const (0 : UInt32),
             .localGet 1,
-            .store32 (1050164 : UInt32),
+            .store32 (1050380 : UInt32),
             .const (0 : UInt32),
             .const (0 : UInt32),
-            .load32 (1050156 : UInt32),
+            .load32 (1050372 : UInt32),
             .localGet 0,
             .add,
             .localSet 0,
             .localGet 0,
-            .store32 (1050156 : UInt32),
+            .store32 (1050372 : UInt32),
             .localGet 1,
             .localGet 0,
             .const (1 : UInt32),
@@ -3729,13 +4180,13 @@ def func30 : Wasm.Program :=
         ],
         .const (0 : UInt32),
         .localGet 1,
-        .store32 (1050188 : UInt32),
+        .store32 (1050404 : UInt32),
         .ret
       ],
       .block 0 0 [
         .block 0 0 [
           .const (0 : UInt32),
-          .load32 (1050148 : UInt32),
+          .load32 (1050364 : UInt32),
           .localSet 3,
           .localGet 3,
           .const (1 : UInt32),
@@ -3751,11 +4202,11 @@ def func30 : Wasm.Program :=
           .localGet 3,
           .localGet 2,
           .or,
-          .store32 (1050148 : UInt32),
+          .store32 (1050364 : UInt32),
           .localGet 0,
           .const (248 : UInt32),
           .and,
-          .const (1049884 : UInt32),
+          .const (1050100 : UInt32),
           .add,
           .localSet 0,
           .localGet 0,
@@ -3767,11 +4218,11 @@ def func30 : Wasm.Program :=
         .and,
         .localSet 0,
         .localGet 0,
-        .const (1049884 : UInt32),
+        .const (1050100 : UInt32),
         .add,
         .localSet 3,
         .localGet 0,
-        .const (1049892 : UInt32),
+        .const (1050108 : UInt32),
         .add,
         .load32 (0 : UInt32),
         .localSet 0
@@ -3793,7 +4244,7 @@ def func30 : Wasm.Program :=
     .block 0 0 [
       .block 0 0 [
         .const (0 : UInt32),
-        .load32 (1049876 : UInt32),
+        .load32 (1050092 : UInt32),
         .localSet 0,
         .localGet 0,
         .br_if 0,
@@ -3824,18 +4275,18 @@ def func30 : Wasm.Program :=
     ],
     .const (0 : UInt32),
     .localGet 1,
-    .store32 (1050188 : UInt32),
+    .store32 (1050404 : UInt32),
     .localGet 4,
     .localGet 2,
     .leU,
     .br_if 0,
     .const (0 : UInt32),
     .const (4294967295 : UInt32),
-    .store32 (1050180 : UInt32)
+    .store32 (1050396 : UInt32)
   ]
 ]
 
-def func31 : Wasm.Program :=
+def func34 : Wasm.Program :=
   [
   .block 0 0 [
     .block 0 0 [
@@ -3890,7 +4341,7 @@ def func31 : Wasm.Program :=
                       .br_if 0,
                       .localGet 2,
                       .localGet 3,
-                      .call 26,
+                      .call 29,
                       .localSet 2,
                       .localGet 2,
                       .br_if 1,
@@ -3953,13 +4404,13 @@ def func31 : Wasm.Program :=
                         .br_if 0,
                         .localGet 7,
                         .const (0 : UInt32),
-                        .load32 (1050168 : UInt32),
+                        .load32 (1050384 : UInt32),
                         .eq,
                         .br_if 1,
                         .block 0 0 [
                           .localGet 7,
                           .const (0 : UInt32),
-                          .load32 (1050164 : UInt32),
+                          .load32 (1050380 : UInt32),
                           .eq,
                           .br_if 0,
                           .localGet 7,
@@ -3983,7 +4434,7 @@ def func31 : Wasm.Program :=
                           .br_if 9,
                           .localGet 7,
                           .localGet 9,
-                          .call 32,
+                          .call 35,
                           .block 0 0 [
                             .localGet 5,
                             .localGet 1,
@@ -4024,7 +4475,7 @@ def func31 : Wasm.Program :=
                             .store32 (4 : UInt32),
                             .localGet 1,
                             .localGet 7,
-                            .call 33,
+                            .call 36,
                             .br 9
                           ],
                           .localGet 4,
@@ -4050,7 +4501,7 @@ def func31 : Wasm.Program :=
                           .br 8
                         ],
                         .const (0 : UInt32),
-                        .load32 (1050156 : UInt32),
+                        .load32 (1050372 : UInt32),
                         .localGet 6,
                         .add,
                         .localSet 7,
@@ -4127,10 +4578,10 @@ def func31 : Wasm.Program :=
                         ],
                         .const (0 : UInt32),
                         .localGet 1,
-                        .store32 (1050164 : UInt32),
+                        .store32 (1050380 : UInt32),
                         .const (0 : UInt32),
                         .localGet 6,
-                        .store32 (1050156 : UInt32),
+                        .store32 (1050372 : UInt32),
                         .br 7
                       ],
                       .localGet 6,
@@ -4167,11 +4618,11 @@ def func31 : Wasm.Program :=
                       .store32 (4 : UInt32),
                       .localGet 1,
                       .localGet 6,
-                      .call 33,
+                      .call 36,
                       .br 6
                     ],
                     .const (0 : UInt32),
-                    .load32 (1050160 : UInt32),
+                    .load32 (1050376 : UInt32),
                     .localGet 6,
                     .add,
                     .localSet 7,
@@ -4224,28 +4675,28 @@ def func31 : Wasm.Program :=
                   .localGet 8,
                   .leU,
                   .br_if 6,
-                  .const (1049380 : UInt32),
+                  .const (1049596 : UInt32),
                   .const (46 : UInt32),
-                  .const (1049428 : UInt32),
-                  .call 57,
+                  .const (1049644 : UInt32),
+                  .call 60,
                   .unreachable
                 ],
-                .const (1049316 : UInt32),
+                .const (1049532 : UInt32),
                 .const (46 : UInt32),
-                .const (1049364 : UInt32),
-                .call 57,
+                .const (1049580 : UInt32),
+                .call 60,
                 .unreachable
               ],
-              .const (1049380 : UInt32),
+              .const (1049596 : UInt32),
               .const (46 : UInt32),
-              .const (1049428 : UInt32),
-              .call 57,
+              .const (1049644 : UInt32),
+              .call 60,
               .unreachable
             ],
-            .const (1049316 : UInt32),
+            .const (1049532 : UInt32),
             .const (46 : UInt32),
-            .const (1049364 : UInt32),
-            .call 57,
+            .const (1049580 : UInt32),
+            .call 60,
             .unreachable
           ],
           .localGet 4,
@@ -4272,10 +4723,10 @@ def func31 : Wasm.Program :=
           .store32 (4 : UInt32),
           .const (0 : UInt32),
           .localGet 1,
-          .store32 (1050160 : UInt32),
+          .store32 (1050376 : UInt32),
           .const (0 : UInt32),
           .localGet 5,
-          .store32 (1050168 : UInt32)
+          .store32 (1050384 : UInt32)
         ],
         .localGet 8,
         .eqz,
@@ -4284,7 +4735,7 @@ def func31 : Wasm.Program :=
         .ret
       ],
       .localGet 3,
-      .call 27,
+      .call 30,
       .localSet 1,
       .localGet 1,
       .eqz,
@@ -4323,12 +4774,12 @@ def func31 : Wasm.Program :=
       .localSet 2
     ],
     .localGet 0,
-    .call 30
+    .call 33
   ],
   .localGet 2
 ]
 
-def func32 : Wasm.Program :=
+def func35 : Wasm.Program :=
   [
   .localGet 0,
   .load32 (12 : UInt32),
@@ -4430,7 +4881,7 @@ def func32 : Wasm.Program :=
               .load32 (28 : UInt32),
               .const (2 : UInt32),
               .shl,
-              .const (1049740 : UInt32),
+              .const (1049956 : UInt32),
               .add,
               .localSet 1,
               .localGet 1,
@@ -4482,14 +4933,14 @@ def func32 : Wasm.Program :=
         ],
         .const (0 : UInt32),
         .const (0 : UInt32),
-        .load32 (1050148 : UInt32),
+        .load32 (1050364 : UInt32),
         .const (4294967294 : UInt32),
         .localGet 1,
         .const (3 : UInt32),
         .shrU,
         .rotl,
         .and,
-        .store32 (1050148 : UInt32),
+        .store32 (1050364 : UInt32),
         .ret
       ],
       .localGet 2,
@@ -4527,16 +4978,16 @@ def func32 : Wasm.Program :=
   ],
   .const (0 : UInt32),
   .const (0 : UInt32),
-  .load32 (1050152 : UInt32),
+  .load32 (1050368 : UInt32),
   .const (4294967294 : UInt32),
   .localGet 0,
   .load32 (28 : UInt32),
   .rotl,
   .and,
-  .store32 (1050152 : UInt32)
+  .store32 (1050368 : UInt32)
 ]
 
-def func33 : Wasm.Program :=
+def func36 : Wasm.Program :=
   [
   .localGet 0,
   .localGet 1,
@@ -4570,7 +5021,7 @@ def func33 : Wasm.Program :=
         .localSet 0,
         .localGet 0,
         .const (0 : UInt32),
-        .load32 (1050164 : UInt32),
+        .load32 (1050380 : UInt32),
         .ne,
         .br_if 0,
         .localGet 2,
@@ -4582,7 +5033,7 @@ def func33 : Wasm.Program :=
         .br_if 1,
         .const (0 : UInt32),
         .localGet 1,
-        .store32 (1050156 : UInt32),
+        .store32 (1050372 : UInt32),
         .localGet 2,
         .localGet 2,
         .load32 (4 : UInt32),
@@ -4601,7 +5052,7 @@ def func33 : Wasm.Program :=
       ],
       .localGet 0,
       .localGet 3,
-      .call 32
+      .call 35
     ],
     .block 0 0 [
       .block 0 0 [
@@ -4616,12 +5067,12 @@ def func33 : Wasm.Program :=
             .br_if 0,
             .localGet 2,
             .const (0 : UInt32),
-            .load32 (1050168 : UInt32),
+            .load32 (1050384 : UInt32),
             .eq,
             .br_if 2,
             .localGet 2,
             .const (0 : UInt32),
-            .load32 (1050164 : UInt32),
+            .load32 (1050380 : UInt32),
             .eq,
             .br_if 3,
             .localGet 2,
@@ -4630,7 +5081,7 @@ def func33 : Wasm.Program :=
             .and,
             .localSet 3,
             .localGet 3,
-            .call 32,
+            .call 35,
             .localGet 0,
             .localGet 3,
             .localGet 1,
@@ -4647,12 +5098,12 @@ def func33 : Wasm.Program :=
             .store32 (0 : UInt32),
             .localGet 0,
             .const (0 : UInt32),
-            .load32 (1050164 : UInt32),
+            .load32 (1050380 : UInt32),
             .ne,
             .br_if 1,
             .const (0 : UInt32),
             .localGet 1,
-            .store32 (1050156 : UInt32),
+            .store32 (1050372 : UInt32),
             .ret
           ],
           .localGet 2,
@@ -4678,13 +5129,13 @@ def func33 : Wasm.Program :=
           .br_if 0,
           .localGet 0,
           .localGet 1,
-          .call 37,
+          .call 40,
           .ret
         ],
         .block 0 0 [
           .block 0 0 [
             .const (0 : UInt32),
-            .load32 (1050148 : UInt32),
+            .load32 (1050364 : UInt32),
             .localSet 2,
             .localGet 2,
             .const (1 : UInt32),
@@ -4700,11 +5151,11 @@ def func33 : Wasm.Program :=
             .localGet 2,
             .localGet 3,
             .or,
-            .store32 (1050148 : UInt32),
+            .store32 (1050364 : UInt32),
             .localGet 1,
             .const (248 : UInt32),
             .and,
-            .const (1049884 : UInt32),
+            .const (1050100 : UInt32),
             .add,
             .localSet 1,
             .localGet 1,
@@ -4716,11 +5167,11 @@ def func33 : Wasm.Program :=
           .and,
           .localSet 1,
           .localGet 1,
-          .const (1049884 : UInt32),
+          .const (1050100 : UInt32),
           .add,
           .localSet 2,
           .localGet 1,
-          .const (1049892 : UInt32),
+          .const (1050108 : UInt32),
           .add,
           .load32 (0 : UInt32),
           .localSet 1
@@ -4741,15 +5192,15 @@ def func33 : Wasm.Program :=
       ],
       .const (0 : UInt32),
       .localGet 0,
-      .store32 (1050168 : UInt32),
+      .store32 (1050384 : UInt32),
       .const (0 : UInt32),
       .const (0 : UInt32),
-      .load32 (1050160 : UInt32),
+      .load32 (1050376 : UInt32),
       .localGet 1,
       .add,
       .localSet 1,
       .localGet 1,
-      .store32 (1050160 : UInt32),
+      .store32 (1050376 : UInt32),
       .localGet 0,
       .localGet 1,
       .const (1 : UInt32),
@@ -4757,28 +5208,28 @@ def func33 : Wasm.Program :=
       .store32 (4 : UInt32),
       .localGet 0,
       .const (0 : UInt32),
-      .load32 (1050164 : UInt32),
+      .load32 (1050380 : UInt32),
       .ne,
       .br_if 1,
       .const (0 : UInt32),
       .const (0 : UInt32),
-      .store32 (1050156 : UInt32),
+      .store32 (1050372 : UInt32),
       .const (0 : UInt32),
       .const (0 : UInt32),
-      .store32 (1050164 : UInt32),
+      .store32 (1050380 : UInt32),
       .ret
     ],
     .const (0 : UInt32),
     .localGet 0,
-    .store32 (1050164 : UInt32),
+    .store32 (1050380 : UInt32),
     .const (0 : UInt32),
     .const (0 : UInt32),
-    .load32 (1050156 : UInt32),
+    .load32 (1050372 : UInt32),
     .localGet 1,
     .add,
     .localSet 1,
     .localGet 1,
-    .store32 (1050156 : UInt32),
+    .store32 (1050372 : UInt32),
     .localGet 0,
     .localGet 1,
     .const (1 : UInt32),
@@ -4793,7 +5244,7 @@ def func33 : Wasm.Program :=
   ]
 ]
 
-def func34 : Wasm.Program :=
+def func37 : Wasm.Program :=
   [
   .globalGet 0,
   .const (16 : UInt32),
@@ -4813,19 +5264,19 @@ def func34 : Wasm.Program :=
   .localGet 1,
   .const (4 : UInt32),
   .add,
-  .call 19,
+  .call 22,
   .unreachable
 ]
 
-def func35 : Wasm.Program :=
+def func38 : Wasm.Program :=
   [
   .localGet 1,
   .localGet 0,
-  .call 36,
+  .call 39,
   .unreachable
 ]
 
-def func36 : Wasm.Program :=
+def func39 : Wasm.Program :=
   [
   .globalGet 0,
   .const (16 : UInt32),
@@ -4842,11 +5293,11 @@ def func36 : Wasm.Program :=
   .localGet 2,
   .const (8 : UInt32),
   .add,
-  .call 17,
+  .call 20,
   .unreachable
 ]
 
-def func37 : Wasm.Program :=
+def func40 : Wasm.Program :=
   [
   .const (0 : UInt32),
   .localSet 2,
@@ -4891,12 +5342,12 @@ def func37 : Wasm.Program :=
   .localGet 2,
   .const (2 : UInt32),
   .shl,
-  .const (1049740 : UInt32),
+  .const (1049956 : UInt32),
   .add,
   .localSet 3,
   .block 0 0 [
     .const (0 : UInt32),
-    .load32 (1050152 : UInt32),
+    .load32 (1050368 : UInt32),
     .const (1 : UInt32),
     .localGet 2,
     .shl,
@@ -4918,10 +5369,10 @@ def func37 : Wasm.Program :=
     .store32 (8 : UInt32),
     .const (0 : UInt32),
     .const (0 : UInt32),
-    .load32 (1050152 : UInt32),
+    .load32 (1050368 : UInt32),
     .localGet 4,
     .or,
-    .store32 (1050152 : UInt32),
+    .store32 (1050368 : UInt32),
     .ret
   ],
   .block 0 0 [
@@ -5020,18 +5471,18 @@ def func37 : Wasm.Program :=
   .store32 (8 : UInt32)
 ]
 
-def func38 : Wasm.Program :=
+def func41 : Wasm.Program :=
   [
   .const (0 : UInt32),
   .localSet 1,
   .const (0 : UInt32),
   .const (0 : UInt32),
-  .load32 (1049736 : UInt32),
+  .load32 (1049952 : UInt32),
   .localSet 2,
   .localGet 2,
   .const (1 : UInt32),
   .add,
-  .store32 (1049736 : UInt32),
+  .store32 (1049952 : UInt32),
   .block 0 0 [
     .localGet 2,
     .const (0 : UInt32),
@@ -5040,48 +5491,48 @@ def func38 : Wasm.Program :=
     .const (1 : UInt32),
     .localSet 1,
     .const (0 : UInt32),
-    .load8U (1049716 : UInt32),
+    .load8U (1049932 : UInt32),
     .br_if 0,
     .const (0 : UInt32),
     .localGet 0,
-    .store8 (1049716 : UInt32),
+    .store8 (1049932 : UInt32),
     .const (0 : UInt32),
     .const (0 : UInt32),
-    .load32 (1049712 : UInt32),
+    .load32 (1049928 : UInt32),
     .const (1 : UInt32),
     .add,
-    .store32 (1049712 : UInt32),
+    .store32 (1049928 : UInt32),
     .const (2 : UInt32),
     .localSet 1
   ],
   .localGet 1
 ]
 
-def func39 : Wasm.Program :=
+def func42 : Wasm.Program :=
   [
   .localGet 0,
   .const (0 : UInt32),
-  .load64 (1049308 : UInt32),
+  .load64 (1049524 : UInt32),
   .store64 (8 : UInt32),
   .localGet 0,
   .const (0 : UInt32),
-  .load64 (1049300 : UInt32),
+  .load64 (1049516 : UInt32),
   .store64 (0 : UInt32)
 ]
 
-def func40 : Wasm.Program :=
+def func43 : Wasm.Program :=
   [
   .localGet 0,
   .const (0 : UInt32),
-  .load64 (1049292 : UInt32),
+  .load64 (1049508 : UInt32),
   .store64 (8 : UInt32),
   .localGet 0,
   .const (0 : UInt32),
-  .load64 (1049284 : UInt32),
+  .load64 (1049500 : UInt32),
   .store64 (0 : UInt32)
 ]
 
-def func41 : Wasm.Program :=
+def func44 : Wasm.Program :=
   [
   .block 0 0 [
     .localGet 0,
@@ -5094,7 +5545,7 @@ def func41 : Wasm.Program :=
     .load32 (4 : UInt32),
     .localGet 0,
     .load32 (8 : UInt32),
-    .call 64,
+    .call 68,
     .ret
   ],
   .localGet 1,
@@ -5109,20 +5560,20 @@ def func41 : Wasm.Program :=
   .load32 (0 : UInt32),
   .localGet 0,
   .load32 (4 : UInt32),
-  .call 59
+  .call 63
 ]
 
-def func42 : Wasm.Program :=
+def func45 : Wasm.Program :=
   [
   .localGet 0,
-  .const (1049444 : UInt32),
+  .const (1049660 : UInt32),
   .store32 (4 : UInt32),
   .localGet 0,
   .localGet 1,
   .store32 (0 : UInt32)
 ]
 
-def func43 : Wasm.Program :=
+def func46 : Wasm.Program :=
   [
   .localGet 0,
   .localGet 1,
@@ -5130,7 +5581,7 @@ def func43 : Wasm.Program :=
   .store64 (0 : UInt32)
 ]
 
-def func44 : Wasm.Program :=
+def func47 : Wasm.Program :=
   [
   .localGet 1,
   .load32 (4 : UInt32),
@@ -5138,17 +5589,17 @@ def func44 : Wasm.Program :=
   .localGet 1,
   .load32 (0 : UInt32),
   .localSet 3,
-  .call 9,
+  .call 12,
   .block 0 0 [
     .const (8 : UInt32),
     .const (4 : UInt32),
-    .call 6,
+    .call 9,
     .localSet 1,
     .localGet 1,
     .br_if 0,
     .const (4 : UInt32),
     .const (8 : UInt32),
-    .call 55,
+    .call 58,
     .unreachable
   ],
   .localGet 1,
@@ -5158,24 +5609,24 @@ def func44 : Wasm.Program :=
   .localGet 3,
   .store32 (0 : UInt32),
   .localGet 0,
-  .const (1049444 : UInt32),
+  .const (1049660 : UInt32),
   .store32 (4 : UInt32),
   .localGet 0,
   .localGet 1,
   .store32 (0 : UInt32)
 ]
 
-def func45 : Wasm.Program :=
+def func48 : Wasm.Program :=
   [
   .localGet 1,
   .localGet 0,
   .load32 (0 : UInt32),
   .localGet 0,
   .load32 (4 : UInt32),
-  .call 64
+  .call 68
 ]
 
-def func46 : Wasm.Program :=
+def func49 : Wasm.Program :=
   [
   .localGet 0,
   .load32 (8 : UInt32),
@@ -5222,7 +5673,7 @@ def func46 : Wasm.Program :=
     .localGet 3,
     .const (1 : UInt32),
     .const (1 : UInt32),
-    .call 13,
+    .call 16,
     .localGet 0,
     .load32 (8 : UInt32),
     .localSet 4
@@ -5325,7 +5776,7 @@ def func46 : Wasm.Program :=
   .const (0 : UInt32)
 ]
 
-def func47 : Wasm.Program :=
+def func50 : Wasm.Program :=
   [
   .block 0 0 [
     .block 0 0 [
@@ -5345,7 +5796,7 @@ def func47 : Wasm.Program :=
         .localGet 2,
         .const (1 : UInt32),
         .const (1 : UInt32),
-        .call 13,
+        .call 16,
         .localGet 0,
         .load32 (8 : UInt32),
         .localSet 3,
@@ -5374,7 +5825,7 @@ def func47 : Wasm.Program :=
   .const (0 : UInt32)
 ]
 
-def func48 : Wasm.Program :=
+def func51 : Wasm.Program :=
   [
   .globalGet 0,
   .const (32 : UInt32),
@@ -5400,7 +5851,7 @@ def func48 : Wasm.Program :=
     .localGet 2,
     .const (20 : UInt32),
     .add,
-    .const (1049204 : UInt32),
+    .const (1049420 : UInt32),
     .localGet 3,
     .load32 (0 : UInt32),
     .localSet 3,
@@ -5408,7 +5859,7 @@ def func48 : Wasm.Program :=
     .load32 (0 : UInt32),
     .localGet 3,
     .load32 (4 : UInt32),
-    .call 59,
+    .call 63,
     .drop,
     .localGet 2,
     .localGet 2,
@@ -5430,7 +5881,7 @@ def func48 : Wasm.Program :=
     .store64 (0 : UInt32)
   ],
   .localGet 0,
-  .const (1049460 : UInt32),
+  .const (1049676 : UInt32),
   .store32 (4 : UInt32),
   .localGet 0,
   .localGet 1,
@@ -5441,7 +5892,7 @@ def func48 : Wasm.Program :=
   .globalSet 0
 ]
 
-def func49 : Wasm.Program :=
+def func52 : Wasm.Program :=
   [
   .globalGet 0,
   .const (48 : UInt32),
@@ -5467,7 +5918,7 @@ def func49 : Wasm.Program :=
     .localGet 2,
     .const (36 : UInt32),
     .add,
-    .const (1049204 : UInt32),
+    .const (1049420 : UInt32),
     .localGet 3,
     .load32 (0 : UInt32),
     .localSet 3,
@@ -5475,7 +5926,7 @@ def func49 : Wasm.Program :=
     .load32 (0 : UInt32),
     .localGet 3,
     .load32 (4 : UInt32),
-    .call 59,
+    .call 63,
     .drop,
     .localGet 2,
     .localGet 2,
@@ -5514,17 +5965,17 @@ def func49 : Wasm.Program :=
   .localGet 2,
   .localGet 4,
   .store64 (8 : UInt32),
-  .call 9,
+  .call 12,
   .block 0 0 [
     .const (12 : UInt32),
     .const (4 : UInt32),
-    .call 6,
+    .call 9,
     .localSet 1,
     .localGet 1,
     .br_if 0,
     .const (4 : UInt32),
     .const (12 : UInt32),
-    .call 55,
+    .call 58,
     .unreachable
   ],
   .localGet 1,
@@ -5536,7 +5987,7 @@ def func49 : Wasm.Program :=
   .load64 (8 : UInt32),
   .store64 (0 : UInt32),
   .localGet 0,
-  .const (1049460 : UInt32),
+  .const (1049676 : UInt32),
   .store32 (4 : UInt32),
   .localGet 0,
   .localGet 1,
@@ -5547,23 +5998,23 @@ def func49 : Wasm.Program :=
   .globalSet 0
 ]
 
-def func50 : Wasm.Program :=
+def func53 : Wasm.Program :=
   [
   .localGet 0,
   .const (0 : UInt32),
   .store32 (0 : UInt32)
 ]
 
-def func51 : Wasm.Program :=
+def func54 : Wasm.Program :=
   [
   .localGet 0,
-  .const (1049204 : UInt32),
+  .const (1049420 : UInt32),
   .localGet 1,
   .localGet 2,
-  .call 59
+  .call 63
 ]
 
-def func52 : Wasm.Program :=
+def func55 : Wasm.Program :=
   [
   .block 0 0 [
     .block 0 0 [
@@ -5621,7 +6072,7 @@ def func52 : Wasm.Program :=
   .store32 (0 : UInt32)
 ]
 
-def func53 : Wasm.Program :=
+def func56 : Wasm.Program :=
   [
   .block 0 0 [
     .localGet 1,
@@ -5642,11 +6093,11 @@ def func53 : Wasm.Program :=
   .localGet 1,
   .localGet 3,
   .localGet 4,
-  .call 66,
+  .call 70,
   .unreachable
 ]
 
-def func54 : Wasm.Program :=
+def func57 : Wasm.Program :=
   [
   .block 0 0 [
     .localGet 0,
@@ -5654,31 +6105,31 @@ def func54 : Wasm.Program :=
     .br_if 0,
     .localGet 0,
     .localGet 1,
-    .call 55,
+    .call 58,
     .unreachable
   ],
-  .call 56,
+  .call 59,
   .unreachable
 ]
 
-def func55 : Wasm.Program :=
+def func58 : Wasm.Program :=
   [
   .localGet 1,
   .localGet 0,
-  .call 35,
+  .call 38,
   .unreachable
 ]
 
-def func56 : Wasm.Program :=
+def func59 : Wasm.Program :=
   [
-  .const (1049476 : UInt32),
+  .const (1049692 : UInt32),
   .const (35 : UInt32),
-  .const (1049496 : UInt32),
-  .call 58,
+  .const (1049712 : UInt32),
+  .call 62,
   .unreachable
 ]
 
-def func57 : Wasm.Program :=
+def func60 : Wasm.Program :=
   [
   .localGet 0,
   .localGet 1,
@@ -5687,11 +6138,170 @@ def func57 : Wasm.Program :=
   .const (1 : UInt32),
   .or,
   .localGet 2,
-  .call 58,
+  .call 62,
   .unreachable
 ]
 
-def func58 : Wasm.Program :=
+def func61 : Wasm.Program :=
+  [
+  .globalGet 0,
+  .const (32 : UInt32),
+  .sub,
+  .localSet 4,
+  .localGet 4,
+  .globalSet 0,
+  .block 0 0 [
+    .block 0 0 [
+      .block 0 0 [
+        .localGet 0,
+        .localGet 2,
+        .gtU,
+        .br_if 0,
+        .localGet 1,
+        .localGet 2,
+        .gtU,
+        .br_if 1,
+        .const (17 : UInt32),
+        .extendUI32,
+        .constI64 (32 : UInt64),
+        .shlI64,
+        .localSet 5,
+        .localGet 0,
+        .localGet 1,
+        .leU,
+        .br_if 2,
+        .localGet 4,
+        .localGet 0,
+        .store32 (8 : UInt32),
+        .localGet 4,
+        .localGet 1,
+        .store32 (12 : UInt32),
+        .localGet 4,
+        .localGet 5,
+        .localGet 4,
+        .const (12 : UInt32),
+        .add,
+        .extendUI32,
+        .orI64,
+        .store64 (24 : UInt32),
+        .localGet 4,
+        .localGet 5,
+        .localGet 4,
+        .const (8 : UInt32),
+        .add,
+        .extendUI32,
+        .orI64,
+        .store64 (16 : UInt32),
+        .const (1048576 : UInt32),
+        .localGet 4,
+        .const (16 : UInt32),
+        .add,
+        .localGet 3,
+        .call 62,
+        .unreachable
+      ],
+      .localGet 4,
+      .localGet 0,
+      .store32 (8 : UInt32),
+      .localGet 4,
+      .localGet 2,
+      .store32 (12 : UInt32),
+      .localGet 4,
+      .const (17 : UInt32),
+      .extendUI32,
+      .constI64 (32 : UInt64),
+      .shlI64,
+      .localSet 5,
+      .localGet 5,
+      .localGet 4,
+      .const (12 : UInt32),
+      .add,
+      .extendUI32,
+      .orI64,
+      .store64 (24 : UInt32),
+      .localGet 4,
+      .localGet 5,
+      .localGet 4,
+      .const (8 : UInt32),
+      .add,
+      .extendUI32,
+      .orI64,
+      .store64 (16 : UInt32),
+      .const (1048671 : UInt32),
+      .localGet 4,
+      .const (16 : UInt32),
+      .add,
+      .localGet 3,
+      .call 62,
+      .unreachable
+    ],
+    .localGet 4,
+    .localGet 1,
+    .store32 (8 : UInt32),
+    .localGet 4,
+    .localGet 2,
+    .store32 (12 : UInt32),
+    .localGet 4,
+    .const (17 : UInt32),
+    .extendUI32,
+    .constI64 (32 : UInt64),
+    .shlI64,
+    .localSet 5,
+    .localGet 5,
+    .localGet 4,
+    .const (12 : UInt32),
+    .add,
+    .extendUI32,
+    .orI64,
+    .store64 (24 : UInt32),
+    .localGet 4,
+    .localGet 5,
+    .localGet 4,
+    .const (8 : UInt32),
+    .add,
+    .extendUI32,
+    .orI64,
+    .store64 (16 : UInt32),
+    .const (1048728 : UInt32),
+    .localGet 4,
+    .const (16 : UInt32),
+    .add,
+    .localGet 3,
+    .call 62,
+    .unreachable
+  ],
+  .localGet 4,
+  .localGet 1,
+  .store32 (8 : UInt32),
+  .localGet 4,
+  .localGet 2,
+  .store32 (12 : UInt32),
+  .localGet 4,
+  .localGet 5,
+  .localGet 4,
+  .const (12 : UInt32),
+  .add,
+  .extendUI32,
+  .orI64,
+  .store64 (24 : UInt32),
+  .localGet 4,
+  .localGet 5,
+  .localGet 4,
+  .const (8 : UInt32),
+  .add,
+  .extendUI32,
+  .orI64,
+  .store64 (16 : UInt32),
+  .const (1048728 : UInt32),
+  .localGet 4,
+  .const (16 : UInt32),
+  .add,
+  .localGet 3,
+  .call 62,
+  .unreachable
+]
+
+def func62 : Wasm.Program :=
   [
   .globalGet 0,
   .const (32 : UInt32),
@@ -5719,11 +6329,11 @@ def func58 : Wasm.Program :=
   .localGet 3,
   .const (20 : UInt32),
   .add,
-  .call 34,
+  .call 37,
   .unreachable
 ]
 
-def func59 : Wasm.Program :=
+def func63 : Wasm.Program :=
   [
   .globalGet 0,
   .const (16 : UInt32),
@@ -6031,7 +6641,7 @@ def func59 : Wasm.Program :=
   .localGet 5
 ]
 
-def func60 : Wasm.Program :=
+def func64 : Wasm.Program :=
   [
   .globalGet 0,
   .const (32 : UInt32),
@@ -6066,16 +6676,16 @@ def func60 : Wasm.Program :=
   .extendUI32,
   .orI64,
   .store64 (16 : UInt32),
-  .const (1048576 : UInt32),
+  .const (1048616 : UInt32),
   .localGet 3,
   .const (16 : UInt32),
   .add,
   .localGet 2,
-  .call 58,
+  .call 62,
   .unreachable
 ]
 
-def func61 : Wasm.Program :=
+def func65 : Wasm.Program :=
   [
   .const (43 : UInt32),
   .const (1114112 : UInt32),
@@ -6116,7 +6726,7 @@ def func61 : Wasm.Program :=
         .br_if 0,
         .localGet 2,
         .localGet 3,
-        .call 62,
+        .call 66,
         .localSet 7,
         .br 1
       ],
@@ -6332,7 +6942,7 @@ def func61 : Wasm.Program :=
           .localGet 12,
           .localGet 2,
           .localGet 3,
-          .call 63,
+          .call 67,
           .br_if 3,
           .const (0 : UInt32),
           .localSet 7,
@@ -6372,7 +6982,7 @@ def func61 : Wasm.Program :=
         .localGet 12,
         .localGet 2,
         .localGet 3,
-        .call 63,
+        .call 67,
         .br_if 2,
         .localGet 10,
         .localGet 4,
@@ -6444,7 +7054,7 @@ def func61 : Wasm.Program :=
     .localGet 12,
     .localGet 2,
     .localGet 3,
-    .call 63,
+    .call 67,
     .br_if 0,
     .localGet 7,
     .localGet 4,
@@ -6457,7 +7067,7 @@ def func61 : Wasm.Program :=
   .localGet 13
 ]
 
-def func62 : Wasm.Program :=
+def func66 : Wasm.Program :=
   [
   .block 0 0 [
     .block 0 0 [
@@ -6960,7 +7570,7 @@ def func62 : Wasm.Program :=
   .localGet 8
 ]
 
-def func63 : Wasm.Program :=
+def func67 : Wasm.Program :=
   [
   .block 0 0 [
     .localGet 2,
@@ -6991,7 +7601,7 @@ def func63 : Wasm.Program :=
   .callIndirect 1 0
 ]
 
-def func64 : Wasm.Program :=
+def func68 : Wasm.Program :=
   [
   .localGet 0,
   .load32 (0 : UInt32),
@@ -7003,7 +7613,7 @@ def func64 : Wasm.Program :=
   .callIndirect 1 0
 ]
 
-def func65 : Wasm.Program :=
+def func69 : Wasm.Program :=
   [
   .globalGet 0,
   .const (16 : UInt32),
@@ -7058,7 +7668,7 @@ def func65 : Wasm.Program :=
       .localGet 8,
       .const (1 : UInt32),
       .shl,
-      .load16U (1049512 : UInt32),
+      .load16U (1049728 : UInt32),
       .store16 (0 : UInt32),
       .localGet 6,
       .const (4294967294 : UInt32),
@@ -7072,7 +7682,7 @@ def func65 : Wasm.Program :=
       .and,
       .const (1 : UInt32),
       .shl,
-      .load16U (1049512 : UInt32),
+      .load16U (1049728 : UInt32),
       .store16 (0 : UInt32),
       .localGet 3,
       .const (4294967292 : UInt32),
@@ -7118,7 +7728,7 @@ def func65 : Wasm.Program :=
     .and,
     .const (1 : UInt32),
     .shl,
-    .load16U (1049512 : UInt32),
+    .load16U (1049728 : UInt32),
     .store16 (0 : UInt32)
   ],
   .block 0 0 [
@@ -7142,7 +7752,7 @@ def func65 : Wasm.Program :=
     .localGet 0,
     .const (1 : UInt32),
     .shl,
-    .load8U (1049513 : UInt32),
+    .load8U (1049729 : UInt32),
     .store8 (0 : UInt32)
   ],
   .localGet 1,
@@ -7157,7 +7767,7 @@ def func65 : Wasm.Program :=
   .const (10 : UInt32),
   .localGet 3,
   .sub,
-  .call 61,
+  .call 65,
   .localSet 3,
   .localGet 2,
   .const (16 : UInt32),
@@ -7166,7 +7776,7 @@ def func65 : Wasm.Program :=
   .localGet 3
 ]
 
-def func66 : Wasm.Program :=
+def func70 : Wasm.Program :=
   [
   .globalGet 0,
   .const (32 : UInt32),
@@ -7201,106 +7811,109 @@ def func66 : Wasm.Program :=
   .extendUI32,
   .orI64,
   .store64 (16 : UInt32),
-  .const (1048852 : UInt32),
+  .const (1049004 : UInt32),
   .localGet 3,
   .const (16 : UInt32),
   .add,
   .localGet 2,
-  .call 58,
+  .call 62,
   .unreachable
 ]
 
 def «module» : Wasm.Module :=
 {
   funcs := [
-    { params := [.i64], locals := [.i32, .i32], body := func0, results := [.i32] },
-    { params := [.i32, .i32, .i64], locals := [.i32, .i64, .i32], body := func1, results := [] },
-    { params := [.i64, .i32, .i32], locals := [.i32, .i32, .i32], body := func2, results := [.i32] },
-    { params := [.i64, .i32, .i32], locals := [.i32, .i32, .i32], body := func3, results := [.i32] },
-    { params := [.i64, .i32, .i32], locals := [], body := func4, results := [.i32] },
-    { params := [.i64, .i32, .i32], locals := [], body := func5, results := [.i32] },
-    { params := [.i32, .i32], locals := [], body := func6, results := [.i32] },
-    { params := [.i32, .i32, .i32], locals := [], body := func7, results := [] },
-    { params := [.i32, .i32, .i32, .i32], locals := [], body := func8, results := [.i32] },
-    { params := [], locals := [], body := func9, results := [] },
-    { params := [.i64, .i32], locals := [.i32, .i64, .i32, .i64, .i32, .i32], body := func10, results := [.i32] },
-    { params := [.i32, .i32, .i32, .i32], locals := [], body := func11, results := [] },
-    { params := [.i32, .i32], locals := [], body := func12, results := [.i32] },
-    { params := [.i32, .i32, .i32, .i32, .i32], locals := [.i32], body := func13, results := [] },
-    { params := [.i32, .i32], locals := [], body := func14, results := [] },
-    { params := [.i32], locals := [.i32], body := func15, results := [] },
-    { params := [.i32], locals := [.i32], body := func16, results := [] },
-    { params := [.i32], locals := [], body := func17, results := [] },
-    { params := [.i32], locals := [], body := func18, results := [] },
-    { params := [.i32], locals := [], body := func19, results := [] },
-    { params := [.i32], locals := [.i32, .i32, .i32], body := func20, results := [] },
-    { params := [.i32, .i32, .i32, .i32, .i32, .i32], locals := [.i32, .i32, .i64], body := func21, results := [] },
-    { params := [.i32, .i32, .i32, .i32, .i32], locals := [.i32, .i32], body := func22, results := [] },
-    { params := [.i32, .i32], locals := [], body := func23, results := [] },
-    { params := [.i32, .i32], locals := [], body := func24, results := [] },
-    { params := [.i32, .i32], locals := [], body := func25, results := [.i32] },
-    { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32], body := func26, results := [.i32] },
-    { params := [.i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i64], body := func27, results := [.i32] },
-    { params := [], locals := [], body := func28, results := [] },
-    { params := [.i32, .i32, .i32], locals := [.i32, .i32], body := func29, results := [] },
-    { params := [.i32], locals := [.i32, .i32, .i32, .i32], body := func30, results := [] },
-    { params := [.i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32], body := func31, results := [.i32] },
-    { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32], body := func32, results := [] },
-    { params := [.i32, .i32], locals := [.i32, .i32], body := func33, results := [] },
-    { params := [.i32], locals := [.i32, .i64], body := func34, results := [] },
-    { params := [.i32, .i32], locals := [], body := func35, results := [] },
-    { params := [.i32, .i32], locals := [.i32], body := func36, results := [] },
-    { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32], body := func37, results := [] },
-    { params := [.i32], locals := [.i32, .i32], body := func38, results := [.i32] },
-    { params := [.i32, .i32], locals := [], body := func39, results := [] },
-    { params := [.i32, .i32], locals := [], body := func40, results := [] },
-    { params := [.i32, .i32], locals := [], body := func41, results := [.i32] },
+    { params := [.i64, .i32, .i32, .i32], locals := [.i32, .i64, .i32], body := func0, results := [.i32] },
+    { params := [.i64, .i32, .i32, .i32], locals := [.i32, .i64, .i32], body := func1, results := [.i32] },
+    { params := [.i64, .i32], locals := [.i32, .i32], body := func2, results := [] },
+    { params := [.i64, .i32, .i32, .i32], locals := [.i32, .i32, .i32], body := func3, results := [.i32] },
+    { params := [.i64, .i32], locals := [.i32, .i32, .i32], body := func4, results := [] },
+    { params := [.i64, .i32, .i32, .i32], locals := [.i32, .i32, .i32], body := func5, results := [.i32] },
+    { params := [.i32, .i32, .i64], locals := [.i32, .i64, .i32], body := func6, results := [] },
+    { params := [.i64, .i32], locals := [], body := func7, results := [] },
+    { params := [.i64, .i32], locals := [], body := func8, results := [] },
+    { params := [.i32, .i32], locals := [], body := func9, results := [.i32] },
+    { params := [.i32, .i32, .i32], locals := [], body := func10, results := [] },
+    { params := [.i32, .i32, .i32, .i32], locals := [], body := func11, results := [.i32] },
+    { params := [], locals := [], body := func12, results := [] },
+    { params := [.i64, .i32], locals := [.i32, .i64, .i32, .i64, .i32, .i32], body := func13, results := [.i32] },
+    { params := [.i32, .i32, .i32, .i32], locals := [], body := func14, results := [] },
+    { params := [.i32, .i32], locals := [], body := func15, results := [.i32] },
+    { params := [.i32, .i32, .i32, .i32, .i32], locals := [.i32], body := func16, results := [] },
+    { params := [.i32, .i32], locals := [], body := func17, results := [] },
+    { params := [.i32], locals := [.i32], body := func18, results := [] },
+    { params := [.i32], locals := [.i32], body := func19, results := [] },
+    { params := [.i32], locals := [], body := func20, results := [] },
+    { params := [.i32], locals := [], body := func21, results := [] },
+    { params := [.i32], locals := [], body := func22, results := [] },
+    { params := [.i32], locals := [.i32, .i32, .i32], body := func23, results := [] },
+    { params := [.i32, .i32, .i32, .i32, .i32, .i32], locals := [.i32, .i32, .i64], body := func24, results := [] },
+    { params := [.i32, .i32, .i32, .i32, .i32], locals := [.i32, .i32], body := func25, results := [] },
+    { params := [.i32, .i32], locals := [], body := func26, results := [] },
+    { params := [.i32, .i32], locals := [], body := func27, results := [] },
+    { params := [.i32, .i32], locals := [], body := func28, results := [.i32] },
+    { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32], body := func29, results := [.i32] },
+    { params := [.i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i64], body := func30, results := [.i32] },
+    { params := [], locals := [], body := func31, results := [] },
+    { params := [.i32, .i32, .i32], locals := [.i32, .i32], body := func32, results := [] },
+    { params := [.i32], locals := [.i32, .i32, .i32, .i32], body := func33, results := [] },
+    { params := [.i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32], body := func34, results := [.i32] },
+    { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32], body := func35, results := [] },
+    { params := [.i32, .i32], locals := [.i32, .i32], body := func36, results := [] },
+    { params := [.i32], locals := [.i32, .i64], body := func37, results := [] },
+    { params := [.i32, .i32], locals := [], body := func38, results := [] },
+    { params := [.i32, .i32], locals := [.i32], body := func39, results := [] },
+    { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32], body := func40, results := [] },
+    { params := [.i32], locals := [.i32, .i32], body := func41, results := [.i32] },
     { params := [.i32, .i32], locals := [], body := func42, results := [] },
     { params := [.i32, .i32], locals := [], body := func43, results := [] },
-    { params := [.i32, .i32], locals := [.i32, .i32], body := func44, results := [] },
-    { params := [.i32, .i32], locals := [], body := func45, results := [.i32] },
-    { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32], body := func46, results := [.i32] },
-    { params := [.i32, .i32, .i32], locals := [.i32], body := func47, results := [.i32] },
-    { params := [.i32, .i32], locals := [.i32, .i32, .i64], body := func48, results := [] },
-    { params := [.i32, .i32], locals := [.i32, .i32, .i64], body := func49, results := [] },
-    { params := [.i32, .i32], locals := [], body := func50, results := [] },
-    { params := [.i32, .i32, .i32], locals := [], body := func51, results := [.i32] },
-    { params := [.i32, .i32, .i32], locals := [.i32, .i32], body := func52, results := [] },
-    { params := [.i32, .i32, .i32, .i32, .i32], locals := [], body := func53, results := [] },
-    { params := [.i32, .i32], locals := [], body := func54, results := [] },
-    { params := [.i32, .i32], locals := [], body := func55, results := [] },
-    { params := [], locals := [], body := func56, results := [] },
-    { params := [.i32, .i32, .i32], locals := [], body := func57, results := [] },
-    { params := [.i32, .i32, .i32], locals := [.i32], body := func58, results := [] },
-    { params := [.i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32], body := func59, results := [.i32] },
-    { params := [.i32, .i32, .i32], locals := [.i32, .i64], body := func60, results := [] },
-    { params := [.i32, .i32, .i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i64], body := func61, results := [.i32] },
-    { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32], body := func62, results := [.i32] },
-    { params := [.i32, .i32, .i32, .i32, .i32], locals := [], body := func63, results := [.i32] },
-    { params := [.i32, .i32, .i32], locals := [], body := func64, results := [.i32] },
-    { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32], body := func65, results := [.i32] },
-    { params := [.i32, .i32, .i32], locals := [.i32, .i64], body := func66, results := [] }
+    { params := [.i32, .i32], locals := [], body := func44, results := [.i32] },
+    { params := [.i32, .i32], locals := [], body := func45, results := [] },
+    { params := [.i32, .i32], locals := [], body := func46, results := [] },
+    { params := [.i32, .i32], locals := [.i32, .i32], body := func47, results := [] },
+    { params := [.i32, .i32], locals := [], body := func48, results := [.i32] },
+    { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32], body := func49, results := [.i32] },
+    { params := [.i32, .i32, .i32], locals := [.i32], body := func50, results := [.i32] },
+    { params := [.i32, .i32], locals := [.i32, .i32, .i64], body := func51, results := [] },
+    { params := [.i32, .i32], locals := [.i32, .i32, .i64], body := func52, results := [] },
+    { params := [.i32, .i32], locals := [], body := func53, results := [] },
+    { params := [.i32, .i32, .i32], locals := [], body := func54, results := [.i32] },
+    { params := [.i32, .i32, .i32], locals := [.i32, .i32], body := func55, results := [] },
+    { params := [.i32, .i32, .i32, .i32, .i32], locals := [], body := func56, results := [] },
+    { params := [.i32, .i32], locals := [], body := func57, results := [] },
+    { params := [.i32, .i32], locals := [], body := func58, results := [] },
+    { params := [], locals := [], body := func59, results := [] },
+    { params := [.i32, .i32, .i32], locals := [], body := func60, results := [] },
+    { params := [.i32, .i32, .i32, .i32], locals := [.i32, .i64], body := func61, results := [] },
+    { params := [.i32, .i32, .i32], locals := [.i32], body := func62, results := [] },
+    { params := [.i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32], body := func63, results := [.i32] },
+    { params := [.i32, .i32, .i32], locals := [.i32, .i64], body := func64, results := [] },
+    { params := [.i32, .i32, .i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i64], body := func65, results := [.i32] },
+    { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32], body := func66, results := [.i32] },
+    { params := [.i32, .i32, .i32, .i32, .i32], locals := [], body := func67, results := [.i32] },
+    { params := [.i32, .i32, .i32], locals := [], body := func68, results := [.i32] },
+    { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32], body := func69, results := [.i32] },
+    { params := [.i32, .i32, .i32], locals := [.i32, .i64], body := func70, results := [] }
   ],
   exports := [
-    { name := "itoa_i64", funcIdx := 4 },
-    { name := "itoa_u64", funcIdx := 5 },
-    { name := "itoa_i64_len", funcIdx := 0 }
+    { name := "check_i64", funcIdx := 7 },
+    { name := "check_u64", funcIdx := 8 }
   ],
   memory := some { pagesMin := (17 : UInt32), pagesMax := none, data := [
-    { offset := some (1048576 : UInt32), bytes := [(32 : UInt8), (105 : UInt8), (110 : UInt8), (100 : UInt8), (101 : UInt8), (120 : UInt8), (32 : UInt8), (111 : UInt8), (117 : UInt8), (116 : UInt8), (32 : UInt8), (111 : UInt8), (102 : UInt8), (32 : UInt8), (98 : UInt8), (111 : UInt8), (117 : UInt8), (110 : UInt8), (100 : UInt8), (115 : UInt8), (58 : UInt8), (32 : UInt8), (116 : UInt8), (104 : UInt8), (101 : UInt8), (32 : UInt8), (108 : UInt8), (101 : UInt8), (110 : UInt8), (32 : UInt8), (105 : UInt8), (115 : UInt8), (32 : UInt8), (192 : UInt8), (18 : UInt8), (32 : UInt8), (98 : UInt8), (117 : UInt8), (116 : UInt8), (32 : UInt8), (116 : UInt8), (104 : UInt8), (101 : UInt8), (32 : UInt8), (105 : UInt8), (110 : UInt8), (100 : UInt8), (101 : UInt8), (120 : UInt8), (32 : UInt8), (105 : UInt8), (115 : UInt8), (32 : UInt8), (192 : UInt8), (0 : UInt8), (47 : UInt8), (114 : UInt8), (117 : UInt8), (115 : UInt8), (116 : UInt8), (99 : UInt8), (47 : UInt8), (53 : UInt8), (57 : UInt8), (56 : UInt8), (48 : UInt8), (55 : UInt8), (54 : UInt8), (49 : UInt8), (54 : UInt8), (101 : UInt8), (49 : UInt8), (102 : UInt8), (97 : UInt8), (50 : UInt8), (53 : UInt8), (52 : UInt8), (48 : UInt8), (55 : UInt8), (50 : UInt8), (52 : UInt8), (98 : UInt8), (102 : UInt8), (98 : UInt8), (97 : UInt8), (99 : UInt8), (49 : UInt8), (52 : UInt8), (100 : UInt8), (55 : UInt8), (57 : UInt8), (55 : UInt8), (54 : UInt8), (100 : UInt8), (55 : UInt8), (101 : UInt8), (52 : UInt8), (97 : UInt8), (51 : UInt8), (56 : UInt8), (54 : UInt8), (48 : UInt8), (47 : UInt8), (108 : UInt8), (105 : UInt8), (98 : UInt8), (114 : UInt8), (97 : UInt8), (114 : UInt8), (121 : UInt8), (47 : UInt8), (97 : UInt8), (108 : UInt8), (108 : UInt8), (111 : UInt8), (99 : UInt8), (47 : UInt8), (115 : UInt8), (114 : UInt8), (99 : UInt8), (47 : UInt8), (114 : UInt8), (97 : UInt8), (119 : UInt8), (95 : UInt8), (118 : UInt8), (101 : UInt8), (99 : UInt8), (47 : UInt8), (109 : UInt8), (111 : UInt8), (100 : UInt8), (46 : UInt8), (114 : UInt8), (115 : UInt8), (0 : UInt8), (47 : UInt8), (114 : UInt8), (117 : UInt8), (115 : UInt8), (116 : UInt8), (47 : UInt8), (100 : UInt8), (101 : UInt8), (112 : UInt8), (115 : UInt8), (47 : UInt8), (100 : UInt8), (108 : UInt8), (109 : UInt8), (97 : UInt8), (108 : UInt8), (108 : UInt8), (111 : UInt8), (99 : UInt8), (45 : UInt8), (48 : UInt8), (46 : UInt8), (50 : UInt8), (46 : UInt8), (49 : UInt8), (49 : UInt8), (47 : UInt8), (115 : UInt8), (114 : UInt8), (99 : UInt8), (47 : UInt8), (100 : UInt8), (108 : UInt8), (109 : UInt8), (97 : UInt8), (108 : UInt8), (108 : UInt8), (111 : UInt8), (99 : UInt8), (46 : UInt8), (114 : UInt8), (115 : UInt8), (0 : UInt8), (105 : UInt8), (116 : UInt8), (111 : UInt8), (97 : UInt8), (47 : UInt8), (115 : UInt8), (114 : UInt8), (99 : UInt8), (47 : UInt8), (108 : UInt8), (105 : UInt8), (98 : UInt8), (46 : UInt8), (114 : UInt8), (115 : UInt8), (0 : UInt8), (47 : UInt8), (99 : UInt8), (97 : UInt8), (114 : UInt8), (103 : UInt8), (111 : UInt8), (45 : UInt8), (104 : UInt8), (111 : UInt8), (109 : UInt8), (101 : UInt8), (47 : UInt8), (114 : UInt8), (101 : UInt8), (103 : UInt8), (105 : UInt8), (115 : UInt8), (116 : UInt8), (114 : UInt8), (121 : UInt8), (47 : UInt8), (115 : UInt8), (114 : UInt8), (99 : UInt8), (47 : UInt8), (105 : UInt8), (110 : UInt8), (100 : UInt8), (101 : UInt8), (120 : UInt8), (46 : UInt8), (99 : UInt8), (114 : UInt8), (97 : UInt8), (116 : UInt8), (101 : UInt8), (115 : UInt8), (46 : UInt8), (105 : UInt8), (111 : UInt8), (45 : UInt8), (49 : UInt8), (57 : UInt8), (52 : UInt8), (57 : UInt8), (99 : UInt8), (102 : UInt8), (56 : UInt8), (99 : UInt8), (54 : UInt8), (98 : UInt8), (53 : UInt8), (98 : UInt8), (53 : UInt8), (53 : UInt8), (55 : UInt8), (102 : UInt8), (47 : UInt8), (105 : UInt8), (116 : UInt8), (111 : UInt8), (97 : UInt8), (45 : UInt8), (49 : UInt8), (46 : UInt8), (48 : UInt8), (46 : UInt8), (49 : UInt8), (56 : UInt8), (47 : UInt8), (115 : UInt8), (114 : UInt8), (99 : UInt8), (47 : UInt8), (108 : UInt8), (105 : UInt8), (98 : UInt8), (46 : UInt8), (114 : UInt8), (115 : UInt8), (0 : UInt8), (38 : UInt8), (99 : UInt8), (111 : UInt8), (112 : UInt8), (121 : UInt8), (95 : UInt8), (102 : UInt8), (114 : UInt8), (111 : UInt8), (109 : UInt8), (95 : UInt8), (115 : UInt8), (108 : UInt8), (105 : UInt8), (99 : UInt8), (101 : UInt8), (58 : UInt8), (32 : UInt8), (115 : UInt8), (111 : UInt8), (117 : UInt8), (114 : UInt8), (99 : UInt8), (101 : UInt8), (32 : UInt8), (115 : UInt8), (108 : UInt8), (105 : UInt8), (99 : UInt8), (101 : UInt8), (32 : UInt8), (108 : UInt8), (101 : UInt8), (110 : UInt8), (103 : UInt8), (116 : UInt8), (104 : UInt8), (32 : UInt8), (40 : UInt8), (192 : UInt8), (43 : UInt8), (41 : UInt8), (32 : UInt8), (100 : UInt8), (111 : UInt8), (101 : UInt8), (115 : UInt8), (32 : UInt8), (110 : UInt8), (111 : UInt8), (116 : UInt8), (32 : UInt8), (109 : UInt8), (97 : UInt8), (116 : UInt8), (99 : UInt8), (104 : UInt8), (32 : UInt8), (100 : UInt8), (101 : UInt8), (115 : UInt8), (116 : UInt8), (105 : UInt8), (110 : UInt8), (97 : UInt8), (116 : UInt8), (105 : UInt8), (111 : UInt8), (110 : UInt8), (32 : UInt8), (115 : UInt8), (108 : UInt8), (105 : UInt8), (99 : UInt8), (101 : UInt8), (32 : UInt8), (108 : UInt8), (101 : UInt8), (110 : UInt8), (103 : UInt8), (116 : UInt8), (104 : UInt8), (32 : UInt8), (40 : UInt8), (192 : UInt8), (1 : UInt8), (41 : UInt8), (0 : UInt8), (195 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (80 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (188 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (1 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (179 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (15 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (22 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (49 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (179 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (15 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (39 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (49 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (195 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (80 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (76 : UInt8), (1 : UInt8), (0 : UInt8), (0 : UInt8), (1 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (48 : UInt8), (48 : UInt8), (48 : UInt8), (49 : UInt8), (48 : UInt8), (50 : UInt8), (48 : UInt8), (51 : UInt8), (48 : UInt8), (52 : UInt8), (48 : UInt8), (53 : UInt8), (48 : UInt8), (54 : UInt8), (48 : UInt8), (55 : UInt8), (48 : UInt8), (56 : UInt8), (48 : UInt8), (57 : UInt8), (49 : UInt8), (48 : UInt8), (49 : UInt8), (49 : UInt8), (49 : UInt8), (50 : UInt8), (49 : UInt8), (51 : UInt8), (49 : UInt8), (52 : UInt8), (49 : UInt8), (53 : UInt8), (49 : UInt8), (54 : UInt8), (49 : UInt8), (55 : UInt8), (49 : UInt8), (56 : UInt8), (49 : UInt8), (57 : UInt8), (50 : UInt8), (48 : UInt8), (50 : UInt8), (49 : UInt8), (50 : UInt8), (50 : UInt8), (50 : UInt8), (51 : UInt8), (50 : UInt8), (52 : UInt8), (50 : UInt8), (53 : UInt8), (50 : UInt8), (54 : UInt8), (50 : UInt8), (55 : UInt8), (50 : UInt8), (56 : UInt8), (50 : UInt8), (57 : UInt8), (51 : UInt8), (48 : UInt8), (51 : UInt8), (49 : UInt8), (51 : UInt8), (50 : UInt8), (51 : UInt8), (51 : UInt8), (51 : UInt8), (52 : UInt8), (51 : UInt8), (53 : UInt8), (51 : UInt8), (54 : UInt8), (51 : UInt8), (55 : UInt8), (51 : UInt8), (56 : UInt8), (51 : UInt8), (57 : UInt8), (52 : UInt8), (48 : UInt8), (52 : UInt8), (49 : UInt8), (52 : UInt8), (50 : UInt8), (52 : UInt8), (51 : UInt8), (52 : UInt8), (52 : UInt8), (52 : UInt8), (53 : UInt8), (52 : UInt8), (54 : UInt8), (52 : UInt8), (55 : UInt8), (52 : UInt8), (56 : UInt8), (52 : UInt8), (57 : UInt8), (53 : UInt8), (48 : UInt8), (53 : UInt8), (49 : UInt8), (53 : UInt8), (50 : UInt8), (53 : UInt8), (51 : UInt8), (53 : UInt8), (52 : UInt8), (53 : UInt8), (53 : UInt8), (53 : UInt8), (54 : UInt8), (53 : UInt8), (55 : UInt8), (53 : UInt8), (56 : UInt8), (53 : UInt8), (57 : UInt8), (54 : UInt8), (48 : UInt8), (54 : UInt8), (49 : UInt8), (54 : UInt8), (50 : UInt8), (54 : UInt8), (51 : UInt8), (54 : UInt8), (52 : UInt8), (54 : UInt8), (53 : UInt8), (54 : UInt8), (54 : UInt8), (54 : UInt8), (55 : UInt8), (54 : UInt8), (56 : UInt8), (54 : UInt8), (57 : UInt8), (55 : UInt8), (48 : UInt8), (55 : UInt8), (49 : UInt8), (55 : UInt8), (50 : UInt8), (55 : UInt8), (51 : UInt8), (55 : UInt8), (52 : UInt8), (55 : UInt8), (53 : UInt8), (55 : UInt8), (54 : UInt8), (55 : UInt8), (55 : UInt8), (55 : UInt8), (56 : UInt8), (55 : UInt8), (57 : UInt8), (56 : UInt8), (48 : UInt8), (56 : UInt8), (49 : UInt8), (56 : UInt8), (50 : UInt8), (56 : UInt8), (51 : UInt8), (56 : UInt8), (52 : UInt8), (56 : UInt8), (53 : UInt8), (56 : UInt8), (54 : UInt8), (56 : UInt8), (55 : UInt8), (56 : UInt8), (56 : UInt8), (56 : UInt8), (57 : UInt8), (57 : UInt8), (48 : UInt8), (57 : UInt8), (49 : UInt8), (57 : UInt8), (50 : UInt8), (57 : UInt8), (51 : UInt8), (57 : UInt8), (52 : UInt8), (57 : UInt8), (53 : UInt8), (57 : UInt8), (54 : UInt8), (57 : UInt8), (55 : UInt8), (57 : UInt8), (56 : UInt8), (57 : UInt8), (57 : UInt8), (2 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (12 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (3 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (5 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (8 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (6 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (7 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (8 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (9 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (10 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (11 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (12 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (13 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (14 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (109 : UInt8), (93 : UInt8), (203 : UInt8), (214 : UInt8), (44 : UInt8), (80 : UInt8), (235 : UInt8), (99 : UInt8), (120 : UInt8), (65 : UInt8), (166 : UInt8), (87 : UInt8), (113 : UInt8), (27 : UInt8), (139 : UInt8), (185 : UInt8), (21 : UInt8), (162 : UInt8), (92 : UInt8), (85 : UInt8), (52 : UInt8), (85 : UInt8), (7 : UInt8), (212 : UInt8), (83 : UInt8), (120 : UInt8), (173 : UInt8), (129 : UInt8), (81 : UInt8), (240 : UInt8), (163 : UInt8), (247 : UInt8), (97 : UInt8), (115 : UInt8), (115 : UInt8), (101 : UInt8), (114 : UInt8), (116 : UInt8), (105 : UInt8), (111 : UInt8), (110 : UInt8), (32 : UInt8), (102 : UInt8), (97 : UInt8), (105 : UInt8), (108 : UInt8), (101 : UInt8), (100 : UInt8), (58 : UInt8), (32 : UInt8), (112 : UInt8), (115 : UInt8), (105 : UInt8), (122 : UInt8), (101 : UInt8), (32 : UInt8), (62 : UInt8), (61 : UInt8), (32 : UInt8), (115 : UInt8), (105 : UInt8), (122 : UInt8), (101 : UInt8), (32 : UInt8), (43 : UInt8), (32 : UInt8), (109 : UInt8), (105 : UInt8), (110 : UInt8), (95 : UInt8), (111 : UInt8), (118 : UInt8), (101 : UInt8), (114 : UInt8), (104 : UInt8), (101 : UInt8), (97 : UInt8), (100 : UInt8), (0 : UInt8), (0 : UInt8), (136 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (42 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (177 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (9 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (97 : UInt8), (115 : UInt8), (115 : UInt8), (101 : UInt8), (114 : UInt8), (116 : UInt8), (105 : UInt8), (111 : UInt8), (110 : UInt8), (32 : UInt8), (102 : UInt8), (97 : UInt8), (105 : UInt8), (108 : UInt8), (101 : UInt8), (100 : UInt8), (58 : UInt8), (32 : UInt8), (112 : UInt8), (115 : UInt8), (105 : UInt8), (122 : UInt8), (101 : UInt8), (32 : UInt8), (60 : UInt8), (61 : UInt8), (32 : UInt8), (115 : UInt8), (105 : UInt8), (122 : UInt8), (101 : UInt8), (32 : UInt8), (43 : UInt8), (32 : UInt8), (109 : UInt8), (97 : UInt8), (120 : UInt8), (95 : UInt8), (111 : UInt8), (118 : UInt8), (101 : UInt8), (114 : UInt8), (104 : UInt8), (101 : UInt8), (97 : UInt8), (100 : UInt8), (0 : UInt8), (0 : UInt8), (136 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (42 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (183 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (13 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (8 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (15 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (2 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (12 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (99 : UInt8), (97 : UInt8), (112 : UInt8), (97 : UInt8), (99 : UInt8), (105 : UInt8), (116 : UInt8), (121 : UInt8), (32 : UInt8), (111 : UInt8), (118 : UInt8), (101 : UInt8), (114 : UInt8), (102 : UInt8), (108 : UInt8), (111 : UInt8), (119 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (55 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (80 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (28 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (5 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (48 : UInt8), (48 : UInt8), (48 : UInt8), (49 : UInt8), (48 : UInt8), (50 : UInt8), (48 : UInt8), (51 : UInt8), (48 : UInt8), (52 : UInt8), (48 : UInt8), (53 : UInt8), (48 : UInt8), (54 : UInt8), (48 : UInt8), (55 : UInt8), (48 : UInt8), (56 : UInt8), (48 : UInt8), (57 : UInt8), (49 : UInt8), (48 : UInt8), (49 : UInt8), (49 : UInt8), (49 : UInt8), (50 : UInt8), (49 : UInt8), (51 : UInt8), (49 : UInt8), (52 : UInt8), (49 : UInt8), (53 : UInt8), (49 : UInt8), (54 : UInt8), (49 : UInt8), (55 : UInt8), (49 : UInt8), (56 : UInt8), (49 : UInt8), (57 : UInt8), (50 : UInt8), (48 : UInt8), (50 : UInt8), (49 : UInt8), (50 : UInt8), (50 : UInt8), (50 : UInt8), (51 : UInt8), (50 : UInt8), (52 : UInt8), (50 : UInt8), (53 : UInt8), (50 : UInt8), (54 : UInt8), (50 : UInt8), (55 : UInt8), (50 : UInt8), (56 : UInt8), (50 : UInt8), (57 : UInt8), (51 : UInt8), (48 : UInt8), (51 : UInt8), (49 : UInt8), (51 : UInt8), (50 : UInt8), (51 : UInt8), (51 : UInt8), (51 : UInt8), (52 : UInt8), (51 : UInt8), (53 : UInt8), (51 : UInt8), (54 : UInt8), (51 : UInt8), (55 : UInt8), (51 : UInt8), (56 : UInt8), (51 : UInt8), (57 : UInt8), (52 : UInt8), (48 : UInt8), (52 : UInt8), (49 : UInt8), (52 : UInt8), (50 : UInt8), (52 : UInt8), (51 : UInt8), (52 : UInt8), (52 : UInt8), (52 : UInt8), (53 : UInt8), (52 : UInt8), (54 : UInt8), (52 : UInt8), (55 : UInt8), (52 : UInt8), (56 : UInt8), (52 : UInt8), (57 : UInt8), (53 : UInt8), (48 : UInt8), (53 : UInt8), (49 : UInt8), (53 : UInt8), (50 : UInt8), (53 : UInt8), (51 : UInt8), (53 : UInt8), (52 : UInt8), (53 : UInt8), (53 : UInt8), (53 : UInt8), (54 : UInt8), (53 : UInt8), (55 : UInt8), (53 : UInt8), (56 : UInt8), (53 : UInt8), (57 : UInt8), (54 : UInt8), (48 : UInt8), (54 : UInt8), (49 : UInt8), (54 : UInt8), (50 : UInt8), (54 : UInt8), (51 : UInt8), (54 : UInt8), (52 : UInt8), (54 : UInt8), (53 : UInt8), (54 : UInt8), (54 : UInt8), (54 : UInt8), (55 : UInt8), (54 : UInt8), (56 : UInt8), (54 : UInt8), (57 : UInt8), (55 : UInt8), (48 : UInt8), (55 : UInt8), (49 : UInt8), (55 : UInt8), (50 : UInt8), (55 : UInt8), (51 : UInt8), (55 : UInt8), (52 : UInt8), (55 : UInt8), (53 : UInt8), (55 : UInt8), (54 : UInt8), (55 : UInt8), (55 : UInt8), (55 : UInt8), (56 : UInt8), (55 : UInt8), (57 : UInt8), (56 : UInt8), (48 : UInt8), (56 : UInt8), (49 : UInt8), (56 : UInt8), (50 : UInt8), (56 : UInt8), (51 : UInt8), (56 : UInt8), (52 : UInt8), (56 : UInt8), (53 : UInt8), (56 : UInt8), (54 : UInt8), (56 : UInt8), (55 : UInt8), (56 : UInt8), (56 : UInt8), (56 : UInt8), (57 : UInt8), (57 : UInt8), (48 : UInt8), (57 : UInt8), (49 : UInt8), (57 : UInt8), (50 : UInt8), (57 : UInt8), (51 : UInt8), (57 : UInt8), (52 : UInt8), (57 : UInt8), (53 : UInt8), (57 : UInt8), (54 : UInt8), (57 : UInt8), (55 : UInt8), (57 : UInt8), (56 : UInt8), (57 : UInt8), (57 : UInt8)] }
+    { offset := some (1048576 : UInt32), bytes := [(22 : UInt8), (115 : UInt8), (108 : UInt8), (105 : UInt8), (99 : UInt8), (101 : UInt8), (32 : UInt8), (105 : UInt8), (110 : UInt8), (100 : UInt8), (101 : UInt8), (120 : UInt8), (32 : UInt8), (115 : UInt8), (116 : UInt8), (97 : UInt8), (114 : UInt8), (116 : UInt8), (115 : UInt8), (32 : UInt8), (97 : UInt8), (116 : UInt8), (32 : UInt8), (192 : UInt8), (13 : UInt8), (32 : UInt8), (98 : UInt8), (117 : UInt8), (116 : UInt8), (32 : UInt8), (101 : UInt8), (110 : UInt8), (100 : UInt8), (115 : UInt8), (32 : UInt8), (97 : UInt8), (116 : UInt8), (32 : UInt8), (192 : UInt8), (0 : UInt8), (32 : UInt8), (105 : UInt8), (110 : UInt8), (100 : UInt8), (101 : UInt8), (120 : UInt8), (32 : UInt8), (111 : UInt8), (117 : UInt8), (116 : UInt8), (32 : UInt8), (111 : UInt8), (102 : UInt8), (32 : UInt8), (98 : UInt8), (111 : UInt8), (117 : UInt8), (110 : UInt8), (100 : UInt8), (115 : UInt8), (58 : UInt8), (32 : UInt8), (116 : UInt8), (104 : UInt8), (101 : UInt8), (32 : UInt8), (108 : UInt8), (101 : UInt8), (110 : UInt8), (32 : UInt8), (105 : UInt8), (115 : UInt8), (32 : UInt8), (192 : UInt8), (18 : UInt8), (32 : UInt8), (98 : UInt8), (117 : UInt8), (116 : UInt8), (32 : UInt8), (116 : UInt8), (104 : UInt8), (101 : UInt8), (32 : UInt8), (105 : UInt8), (110 : UInt8), (100 : UInt8), (101 : UInt8), (120 : UInt8), (32 : UInt8), (105 : UInt8), (115 : UInt8), (32 : UInt8), (192 : UInt8), (0 : UInt8), (18 : UInt8), (114 : UInt8), (97 : UInt8), (110 : UInt8), (103 : UInt8), (101 : UInt8), (32 : UInt8), (115 : UInt8), (116 : UInt8), (97 : UInt8), (114 : UInt8), (116 : UInt8), (32 : UInt8), (105 : UInt8), (110 : UInt8), (100 : UInt8), (101 : UInt8), (120 : UInt8), (32 : UInt8), (192 : UInt8), (34 : UInt8), (32 : UInt8), (111 : UInt8), (117 : UInt8), (116 : UInt8), (32 : UInt8), (111 : UInt8), (102 : UInt8), (32 : UInt8), (114 : UInt8), (97 : UInt8), (110 : UInt8), (103 : UInt8), (101 : UInt8), (32 : UInt8), (102 : UInt8), (111 : UInt8), (114 : UInt8), (32 : UInt8), (115 : UInt8), (108 : UInt8), (105 : UInt8), (99 : UInt8), (101 : UInt8), (32 : UInt8), (111 : UInt8), (102 : UInt8), (32 : UInt8), (108 : UInt8), (101 : UInt8), (110 : UInt8), (103 : UInt8), (116 : UInt8), (104 : UInt8), (32 : UInt8), (192 : UInt8), (0 : UInt8), (16 : UInt8), (114 : UInt8), (97 : UInt8), (110 : UInt8), (103 : UInt8), (101 : UInt8), (32 : UInt8), (101 : UInt8), (110 : UInt8), (100 : UInt8), (32 : UInt8), (105 : UInt8), (110 : UInt8), (100 : UInt8), (101 : UInt8), (120 : UInt8), (32 : UInt8), (192 : UInt8), (34 : UInt8), (32 : UInt8), (111 : UInt8), (117 : UInt8), (116 : UInt8), (32 : UInt8), (111 : UInt8), (102 : UInt8), (32 : UInt8), (114 : UInt8), (97 : UInt8), (110 : UInt8), (103 : UInt8), (101 : UInt8), (32 : UInt8), (102 : UInt8), (111 : UInt8), (114 : UInt8), (32 : UInt8), (115 : UInt8), (108 : UInt8), (105 : UInt8), (99 : UInt8), (101 : UInt8), (32 : UInt8), (111 : UInt8), (102 : UInt8), (32 : UInt8), (108 : UInt8), (101 : UInt8), (110 : UInt8), (103 : UInt8), (116 : UInt8), (104 : UInt8), (32 : UInt8), (192 : UInt8), (0 : UInt8), (47 : UInt8), (114 : UInt8), (117 : UInt8), (115 : UInt8), (116 : UInt8), (99 : UInt8), (47 : UInt8), (53 : UInt8), (57 : UInt8), (56 : UInt8), (48 : UInt8), (55 : UInt8), (54 : UInt8), (49 : UInt8), (54 : UInt8), (101 : UInt8), (49 : UInt8), (102 : UInt8), (97 : UInt8), (50 : UInt8), (53 : UInt8), (52 : UInt8), (48 : UInt8), (55 : UInt8), (50 : UInt8), (52 : UInt8), (98 : UInt8), (102 : UInt8), (98 : UInt8), (97 : UInt8), (99 : UInt8), (49 : UInt8), (52 : UInt8), (100 : UInt8), (55 : UInt8), (57 : UInt8), (55 : UInt8), (54 : UInt8), (100 : UInt8), (55 : UInt8), (101 : UInt8), (52 : UInt8), (97 : UInt8), (51 : UInt8), (56 : UInt8), (54 : UInt8), (48 : UInt8), (47 : UInt8), (108 : UInt8), (105 : UInt8), (98 : UInt8), (114 : UInt8), (97 : UInt8), (114 : UInt8), (121 : UInt8), (47 : UInt8), (97 : UInt8), (108 : UInt8), (108 : UInt8), (111 : UInt8), (99 : UInt8), (47 : UInt8), (115 : UInt8), (114 : UInt8), (99 : UInt8), (47 : UInt8), (114 : UInt8), (97 : UInt8), (119 : UInt8), (95 : UInt8), (118 : UInt8), (101 : UInt8), (99 : UInt8), (47 : UInt8), (109 : UInt8), (111 : UInt8), (100 : UInt8), (46 : UInt8), (114 : UInt8), (115 : UInt8), (0 : UInt8), (47 : UInt8), (114 : UInt8), (117 : UInt8), (115 : UInt8), (116 : UInt8), (47 : UInt8), (100 : UInt8), (101 : UInt8), (112 : UInt8), (115 : UInt8), (47 : UInt8), (100 : UInt8), (108 : UInt8), (109 : UInt8), (97 : UInt8), (108 : UInt8), (108 : UInt8), (111 : UInt8), (99 : UInt8), (45 : UInt8), (48 : UInt8), (46 : UInt8), (50 : UInt8), (46 : UInt8), (49 : UInt8), (49 : UInt8), (47 : UInt8), (115 : UInt8), (114 : UInt8), (99 : UInt8), (47 : UInt8), (100 : UInt8), (108 : UInt8), (109 : UInt8), (97 : UInt8), (108 : UInt8), (108 : UInt8), (111 : UInt8), (99 : UInt8), (46 : UInt8), (114 : UInt8), (115 : UInt8), (0 : UInt8), (105 : UInt8), (116 : UInt8), (111 : UInt8), (97 : UInt8), (47 : UInt8), (115 : UInt8), (114 : UInt8), (99 : UInt8), (47 : UInt8), (108 : UInt8), (105 : UInt8), (98 : UInt8), (46 : UInt8), (114 : UInt8), (115 : UInt8), (0 : UInt8), (47 : UInt8), (99 : UInt8), (97 : UInt8), (114 : UInt8), (103 : UInt8), (111 : UInt8), (45 : UInt8), (104 : UInt8), (111 : UInt8), (109 : UInt8), (101 : UInt8), (47 : UInt8), (114 : UInt8), (101 : UInt8), (103 : UInt8), (105 : UInt8), (115 : UInt8), (116 : UInt8), (114 : UInt8), (121 : UInt8), (47 : UInt8), (115 : UInt8), (114 : UInt8), (99 : UInt8), (47 : UInt8), (105 : UInt8), (110 : UInt8), (100 : UInt8), (101 : UInt8), (120 : UInt8), (46 : UInt8), (99 : UInt8), (114 : UInt8), (97 : UInt8), (116 : UInt8), (101 : UInt8), (115 : UInt8), (46 : UInt8), (105 : UInt8), (111 : UInt8), (45 : UInt8), (49 : UInt8), (57 : UInt8), (52 : UInt8), (57 : UInt8), (99 : UInt8), (102 : UInt8), (56 : UInt8), (99 : UInt8), (54 : UInt8), (98 : UInt8), (53 : UInt8), (98 : UInt8), (53 : UInt8), (53 : UInt8), (55 : UInt8), (102 : UInt8), (47 : UInt8), (105 : UInt8), (116 : UInt8), (111 : UInt8), (97 : UInt8), (45 : UInt8), (49 : UInt8), (46 : UInt8), (48 : UInt8), (46 : UInt8), (49 : UInt8), (56 : UInt8), (47 : UInt8), (115 : UInt8), (114 : UInt8), (99 : UInt8), (47 : UInt8), (108 : UInt8), (105 : UInt8), (98 : UInt8), (46 : UInt8), (114 : UInt8), (115 : UInt8), (0 : UInt8), (38 : UInt8), (99 : UInt8), (111 : UInt8), (112 : UInt8), (121 : UInt8), (95 : UInt8), (102 : UInt8), (114 : UInt8), (111 : UInt8), (109 : UInt8), (95 : UInt8), (115 : UInt8), (108 : UInt8), (105 : UInt8), (99 : UInt8), (101 : UInt8), (58 : UInt8), (32 : UInt8), (115 : UInt8), (111 : UInt8), (117 : UInt8), (114 : UInt8), (99 : UInt8), (101 : UInt8), (32 : UInt8), (115 : UInt8), (108 : UInt8), (105 : UInt8), (99 : UInt8), (101 : UInt8), (32 : UInt8), (108 : UInt8), (101 : UInt8), (110 : UInt8), (103 : UInt8), (116 : UInt8), (104 : UInt8), (32 : UInt8), (40 : UInt8), (192 : UInt8), (43 : UInt8), (41 : UInt8), (32 : UInt8), (100 : UInt8), (111 : UInt8), (101 : UInt8), (115 : UInt8), (32 : UInt8), (110 : UInt8), (111 : UInt8), (116 : UInt8), (32 : UInt8), (109 : UInt8), (97 : UInt8), (116 : UInt8), (99 : UInt8), (104 : UInt8), (32 : UInt8), (100 : UInt8), (101 : UInt8), (115 : UInt8), (116 : UInt8), (105 : UInt8), (110 : UInt8), (97 : UInt8), (116 : UInt8), (105 : UInt8), (111 : UInt8), (110 : UInt8), (32 : UInt8), (115 : UInt8), (108 : UInt8), (105 : UInt8), (99 : UInt8), (101 : UInt8), (32 : UInt8), (108 : UInt8), (101 : UInt8), (110 : UInt8), (103 : UInt8), (116 : UInt8), (104 : UInt8), (32 : UInt8), (40 : UInt8), (192 : UInt8), (1 : UInt8), (41 : UInt8), (0 : UInt8), (75 : UInt8), (1 : UInt8), (16 : UInt8), (0 : UInt8), (15 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (78 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (5 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (75 : UInt8), (1 : UInt8), (16 : UInt8), (0 : UInt8), (15 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (83 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (9 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (75 : UInt8), (1 : UInt8), (16 : UInt8), (0 : UInt8), (15 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (50 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (9 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (91 : UInt8), (1 : UInt8), (16 : UInt8), (0 : UInt8), (80 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (188 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (1 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (75 : UInt8), (1 : UInt8), (16 : UInt8), (0 : UInt8), (15 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (129 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (75 : UInt8), (1 : UInt8), (16 : UInt8), (0 : UInt8), (15 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (28 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (8 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (75 : UInt8), (1 : UInt8), (16 : UInt8), (0 : UInt8), (15 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (28 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (20 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (91 : UInt8), (1 : UInt8), (16 : UInt8), (0 : UInt8), (80 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (76 : UInt8), (1 : UInt8), (0 : UInt8), (0 : UInt8), (1 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (48 : UInt8), (48 : UInt8), (48 : UInt8), (49 : UInt8), (48 : UInt8), (50 : UInt8), (48 : UInt8), (51 : UInt8), (48 : UInt8), (52 : UInt8), (48 : UInt8), (53 : UInt8), (48 : UInt8), (54 : UInt8), (48 : UInt8), (55 : UInt8), (48 : UInt8), (56 : UInt8), (48 : UInt8), (57 : UInt8), (49 : UInt8), (48 : UInt8), (49 : UInt8), (49 : UInt8), (49 : UInt8), (50 : UInt8), (49 : UInt8), (51 : UInt8), (49 : UInt8), (52 : UInt8), (49 : UInt8), (53 : UInt8), (49 : UInt8), (54 : UInt8), (49 : UInt8), (55 : UInt8), (49 : UInt8), (56 : UInt8), (49 : UInt8), (57 : UInt8), (50 : UInt8), (48 : UInt8), (50 : UInt8), (49 : UInt8), (50 : UInt8), (50 : UInt8), (50 : UInt8), (51 : UInt8), (50 : UInt8), (52 : UInt8), (50 : UInt8), (53 : UInt8), (50 : UInt8), (54 : UInt8), (50 : UInt8), (55 : UInt8), (50 : UInt8), (56 : UInt8), (50 : UInt8), (57 : UInt8), (51 : UInt8), (48 : UInt8), (51 : UInt8), (49 : UInt8), (51 : UInt8), (50 : UInt8), (51 : UInt8), (51 : UInt8), (51 : UInt8), (52 : UInt8), (51 : UInt8), (53 : UInt8), (51 : UInt8), (54 : UInt8), (51 : UInt8), (55 : UInt8), (51 : UInt8), (56 : UInt8), (51 : UInt8), (57 : UInt8), (52 : UInt8), (48 : UInt8), (52 : UInt8), (49 : UInt8), (52 : UInt8), (50 : UInt8), (52 : UInt8), (51 : UInt8), (52 : UInt8), (52 : UInt8), (52 : UInt8), (53 : UInt8), (52 : UInt8), (54 : UInt8), (52 : UInt8), (55 : UInt8), (52 : UInt8), (56 : UInt8), (52 : UInt8), (57 : UInt8), (53 : UInt8), (48 : UInt8), (53 : UInt8), (49 : UInt8), (53 : UInt8), (50 : UInt8), (53 : UInt8), (51 : UInt8), (53 : UInt8), (52 : UInt8), (53 : UInt8), (53 : UInt8), (53 : UInt8), (54 : UInt8), (53 : UInt8), (55 : UInt8), (53 : UInt8), (56 : UInt8), (53 : UInt8), (57 : UInt8), (54 : UInt8), (48 : UInt8), (54 : UInt8), (49 : UInt8), (54 : UInt8), (50 : UInt8), (54 : UInt8), (51 : UInt8), (54 : UInt8), (52 : UInt8), (54 : UInt8), (53 : UInt8), (54 : UInt8), (54 : UInt8), (54 : UInt8), (55 : UInt8), (54 : UInt8), (56 : UInt8), (54 : UInt8), (57 : UInt8), (55 : UInt8), (48 : UInt8), (55 : UInt8), (49 : UInt8), (55 : UInt8), (50 : UInt8), (55 : UInt8), (51 : UInt8), (55 : UInt8), (52 : UInt8), (55 : UInt8), (53 : UInt8), (55 : UInt8), (54 : UInt8), (55 : UInt8), (55 : UInt8), (55 : UInt8), (56 : UInt8), (55 : UInt8), (57 : UInt8), (56 : UInt8), (48 : UInt8), (56 : UInt8), (49 : UInt8), (56 : UInt8), (50 : UInt8), (56 : UInt8), (51 : UInt8), (56 : UInt8), (52 : UInt8), (56 : UInt8), (53 : UInt8), (56 : UInt8), (54 : UInt8), (56 : UInt8), (55 : UInt8), (56 : UInt8), (56 : UInt8), (56 : UInt8), (57 : UInt8), (57 : UInt8), (48 : UInt8), (57 : UInt8), (49 : UInt8), (57 : UInt8), (50 : UInt8), (57 : UInt8), (51 : UInt8), (57 : UInt8), (52 : UInt8), (57 : UInt8), (53 : UInt8), (57 : UInt8), (54 : UInt8), (57 : UInt8), (55 : UInt8), (57 : UInt8), (56 : UInt8), (57 : UInt8), (57 : UInt8), (2 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (12 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (3 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (5 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (8 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (6 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (7 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (8 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (9 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (10 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (11 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (12 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (13 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (14 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (109 : UInt8), (93 : UInt8), (203 : UInt8), (214 : UInt8), (44 : UInt8), (80 : UInt8), (235 : UInt8), (99 : UInt8), (120 : UInt8), (65 : UInt8), (166 : UInt8), (87 : UInt8), (113 : UInt8), (27 : UInt8), (139 : UInt8), (185 : UInt8), (21 : UInt8), (162 : UInt8), (92 : UInt8), (85 : UInt8), (52 : UInt8), (85 : UInt8), (7 : UInt8), (212 : UInt8), (83 : UInt8), (120 : UInt8), (173 : UInt8), (129 : UInt8), (81 : UInt8), (240 : UInt8), (163 : UInt8), (247 : UInt8), (97 : UInt8), (115 : UInt8), (115 : UInt8), (101 : UInt8), (114 : UInt8), (116 : UInt8), (105 : UInt8), (111 : UInt8), (110 : UInt8), (32 : UInt8), (102 : UInt8), (97 : UInt8), (105 : UInt8), (108 : UInt8), (101 : UInt8), (100 : UInt8), (58 : UInt8), (32 : UInt8), (112 : UInt8), (115 : UInt8), (105 : UInt8), (122 : UInt8), (101 : UInt8), (32 : UInt8), (62 : UInt8), (61 : UInt8), (32 : UInt8), (115 : UInt8), (105 : UInt8), (122 : UInt8), (101 : UInt8), (32 : UInt8), (43 : UInt8), (32 : UInt8), (109 : UInt8), (105 : UInt8), (110 : UInt8), (95 : UInt8), (111 : UInt8), (118 : UInt8), (101 : UInt8), (114 : UInt8), (104 : UInt8), (101 : UInt8), (97 : UInt8), (100 : UInt8), (0 : UInt8), (0 : UInt8), (32 : UInt8), (1 : UInt8), (16 : UInt8), (0 : UInt8), (42 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (177 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (9 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (97 : UInt8), (115 : UInt8), (115 : UInt8), (101 : UInt8), (114 : UInt8), (116 : UInt8), (105 : UInt8), (111 : UInt8), (110 : UInt8), (32 : UInt8), (102 : UInt8), (97 : UInt8), (105 : UInt8), (108 : UInt8), (101 : UInt8), (100 : UInt8), (58 : UInt8), (32 : UInt8), (112 : UInt8), (115 : UInt8), (105 : UInt8), (122 : UInt8), (101 : UInt8), (32 : UInt8), (60 : UInt8), (61 : UInt8), (32 : UInt8), (115 : UInt8), (105 : UInt8), (122 : UInt8), (101 : UInt8), (32 : UInt8), (43 : UInt8), (32 : UInt8), (109 : UInt8), (97 : UInt8), (120 : UInt8), (95 : UInt8), (111 : UInt8), (118 : UInt8), (101 : UInt8), (114 : UInt8), (104 : UInt8), (101 : UInt8), (97 : UInt8), (100 : UInt8), (0 : UInt8), (0 : UInt8), (32 : UInt8), (1 : UInt8), (16 : UInt8), (0 : UInt8), (42 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (183 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (13 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (8 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (15 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (2 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (12 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (99 : UInt8), (97 : UInt8), (112 : UInt8), (97 : UInt8), (99 : UInt8), (105 : UInt8), (116 : UInt8), (121 : UInt8), (32 : UInt8), (111 : UInt8), (118 : UInt8), (101 : UInt8), (114 : UInt8), (102 : UInt8), (108 : UInt8), (111 : UInt8), (119 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (207 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (80 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (28 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (5 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (48 : UInt8), (48 : UInt8), (48 : UInt8), (49 : UInt8), (48 : UInt8), (50 : UInt8), (48 : UInt8), (51 : UInt8), (48 : UInt8), (52 : UInt8), (48 : UInt8), (53 : UInt8), (48 : UInt8), (54 : UInt8), (48 : UInt8), (55 : UInt8), (48 : UInt8), (56 : UInt8), (48 : UInt8), (57 : UInt8), (49 : UInt8), (48 : UInt8), (49 : UInt8), (49 : UInt8), (49 : UInt8), (50 : UInt8), (49 : UInt8), (51 : UInt8), (49 : UInt8), (52 : UInt8), (49 : UInt8), (53 : UInt8), (49 : UInt8), (54 : UInt8), (49 : UInt8), (55 : UInt8), (49 : UInt8), (56 : UInt8), (49 : UInt8), (57 : UInt8), (50 : UInt8), (48 : UInt8), (50 : UInt8), (49 : UInt8), (50 : UInt8), (50 : UInt8), (50 : UInt8), (51 : UInt8), (50 : UInt8), (52 : UInt8), (50 : UInt8), (53 : UInt8), (50 : UInt8), (54 : UInt8), (50 : UInt8), (55 : UInt8), (50 : UInt8), (56 : UInt8), (50 : UInt8), (57 : UInt8), (51 : UInt8), (48 : UInt8), (51 : UInt8), (49 : UInt8), (51 : UInt8), (50 : UInt8), (51 : UInt8), (51 : UInt8), (51 : UInt8), (52 : UInt8), (51 : UInt8), (53 : UInt8), (51 : UInt8), (54 : UInt8), (51 : UInt8), (55 : UInt8), (51 : UInt8), (56 : UInt8), (51 : UInt8), (57 : UInt8), (52 : UInt8), (48 : UInt8), (52 : UInt8), (49 : UInt8), (52 : UInt8), (50 : UInt8), (52 : UInt8), (51 : UInt8), (52 : UInt8), (52 : UInt8), (52 : UInt8), (53 : UInt8), (52 : UInt8), (54 : UInt8), (52 : UInt8), (55 : UInt8), (52 : UInt8), (56 : UInt8), (52 : UInt8), (57 : UInt8), (53 : UInt8), (48 : UInt8), (53 : UInt8), (49 : UInt8), (53 : UInt8), (50 : UInt8), (53 : UInt8), (51 : UInt8), (53 : UInt8), (52 : UInt8), (53 : UInt8), (53 : UInt8), (53 : UInt8), (54 : UInt8), (53 : UInt8), (55 : UInt8), (53 : UInt8), (56 : UInt8), (53 : UInt8), (57 : UInt8), (54 : UInt8), (48 : UInt8), (54 : UInt8), (49 : UInt8), (54 : UInt8), (50 : UInt8), (54 : UInt8), (51 : UInt8), (54 : UInt8), (52 : UInt8), (54 : UInt8), (53 : UInt8), (54 : UInt8), (54 : UInt8), (54 : UInt8), (55 : UInt8), (54 : UInt8), (56 : UInt8), (54 : UInt8), (57 : UInt8), (55 : UInt8), (48 : UInt8), (55 : UInt8), (49 : UInt8), (55 : UInt8), (50 : UInt8), (55 : UInt8), (51 : UInt8), (55 : UInt8), (52 : UInt8), (55 : UInt8), (53 : UInt8), (55 : UInt8), (54 : UInt8), (55 : UInt8), (55 : UInt8), (55 : UInt8), (56 : UInt8), (55 : UInt8), (57 : UInt8), (56 : UInt8), (48 : UInt8), (56 : UInt8), (49 : UInt8), (56 : UInt8), (50 : UInt8), (56 : UInt8), (51 : UInt8), (56 : UInt8), (52 : UInt8), (56 : UInt8), (53 : UInt8), (56 : UInt8), (54 : UInt8), (56 : UInt8), (55 : UInt8), (56 : UInt8), (56 : UInt8), (56 : UInt8), (57 : UInt8), (57 : UInt8), (48 : UInt8), (57 : UInt8), (49 : UInt8), (57 : UInt8), (50 : UInt8), (57 : UInt8), (51 : UInt8), (57 : UInt8), (52 : UInt8), (57 : UInt8), (53 : UInt8), (57 : UInt8), (54 : UInt8), (57 : UInt8), (55 : UInt8), (57 : UInt8), (56 : UInt8), (57 : UInt8), (57 : UInt8)] }
   ] },
   globals := [
     { type := .i32, init := .i32 (1048576 : UInt32) },
-    { type := .i32, init := .i32 (1050193 : UInt32) },
-    { type := .i32, init := .i32 (1050208 : UInt32) }
+    { type := .i32, init := .i32 (1050409 : UInt32) },
+    { type := .i32, init := .i32 (1050416 : UInt32) }
   ],
   types := [
     { params := [.i32, .i32], results := [] },
     { params := [.i32, .i32, .i32], results := [.i32] },
     { params := [.i32, .i32], results := [.i32] },
-    { params := [.i64], results := [.i32] },
+    { params := [.i64, .i32, .i32, .i32], results := [.i32] },
+    { params := [.i64, .i32], results := [] },
     { params := [.i32, .i32, .i64], results := [] },
-    { params := [.i64, .i32, .i32], results := [.i32] },
     { params := [.i32, .i32, .i32], results := [] },
     { params := [.i32, .i32, .i32, .i32], results := [.i32] },
     { params := [], results := [] },
@@ -7317,7 +7930,7 @@ def «module» : Wasm.Module :=
     { min := 18, max := some 18, elemType := .funcref }
   ],
   elements := [
-    { tableIdx := some 0, offset := some 1, funcs := [some 23, some 15, some 47, some 46, some 51, some 45, some 44, some 42, some 43, some 16, some 41, some 49, some 48, some 50, some 40, some 39, some 65] }
+    { tableIdx := some 0, offset := some 1, funcs := [some 26, some 18, some 50, some 49, some 54, some 48, some 47, some 45, some 46, some 19, some 44, some 52, some 51, some 53, some 43, some 42, some 69] }
   ]
 }
 
