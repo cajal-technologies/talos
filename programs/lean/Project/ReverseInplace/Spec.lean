@@ -714,6 +714,25 @@ theorem func1_spec (env : HostEnv α) (base count sp : UInt32)
     rename_i hne1 hne2
     exact hne2 _ _ rfl
 
+/-! ## `check` (func2) and the export wrapper (func3) -/
+
+set_option maxRecDepth 8000 in
+/-- The `check` body (func2): allocate two 128-byte scratch buffers `A`,
+`B` on the shadow stack, seed them identically, reverse `A` with
+`reverse_fast` and `B` with `reverse_naive`, then compare — the
+`unreachable` is never hit because both reversers produce the same
+permutation of the same data. Terminates with an empty value stack. -/
+theorem func2_spec (env : HostEnv Unit) (seed len : UInt32) :
+    FuncSpecR env «module» 2
+      (fun st0 args => args = [.i32 len, .i32 seed] ∧
+        st0.globals.globals[0]? = some (.i32 1048576) ∧ st0.mem.pages = 17)
+      (fun _ _ vs => vs = []) := by
+  apply FuncSpecR.of_wp_body (f := ⟨[.i32, .i32], [.i32, .i32, .i32, .i32], func2, []⟩) rfl
+  rintro args st0 ⟨rfl, hg0, hpages⟩
+  unfold func2
+  wp_run
+  sorry
+
 /-- The exported `check` terminates without trapping (and returns no
 values) on every `(seed, len)` input.
 
@@ -731,6 +750,7 @@ The store is `Module.initialStore «module»` (a fresh instantiation):
 be trap-free given a well-formed stack pointer and enough memory pages.
 The fresh instantiation pins `global0 = 1048576` and `pages = 17`,
 which is exactly the contract under which the export is called. -/
+
 @[spec_of "rust-exported" "reverse_inplace::check"]
 def CheckSpec : Prop :=
   ∀ (env : HostEnv Unit) (seed len : UInt32),
