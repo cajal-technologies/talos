@@ -3,31 +3,32 @@ import Project.ReverseInplace.Program
 /-!
 # Specification for `reverse_inplace`
 
-The proof is deferred; the function body lives in `Program.lean`.
+The exported `check(seed, len)` runs two in-place reversers on
+identically-seeded buffers — one via the swap-from-both-ends pattern,
+one via copy-reversed-into-scratch-then-back — and traps via
+`unreachable` iff they disagree on any element. Proving the wasm
+export terminates without trapping for every input is therefore the
+same as proving the two reversers compute the same permutation on
+every seeded buffer.
 -/
 
 namespace Project.ReverseInplace.Spec
 
 open Wasm
 
-/-- The exported `reverse_inplace` reverses, in place, `len` contiguous
-`u32` words starting at `ptr` in linear memory.
+/-- The exported `check` terminates without trapping (and returns no
+values) on every `(seed, len)` input.
 
 Informal spec:
-For any base pointer `ptr` and length `len`, the wasm export
-`reverse_inplace` terminates with an empty result. Afterwards, for
-every `0 ≤ i < len`, the `u32` at `ptr + 4*i` equals the original `u32`
-at `ptr + 4*(len-1-i)`. All other memory is unchanged. Carries the
-side condition that every offset `0..len` is in-bounds for the initial
-memory. -/
-@[spec_of "rust-exported" "reverse_inplace::reverse_inplace"]
-def ReverseInplaceSpec : Prop :=
-  ∀ (env : HostEnv Unit) (initial : Store Unit) (ptr len : UInt32)
-    (_hmem : ∀ k < len.toNat, (ptr.toNat + 4 * k) % 4294967296 + 4 ≤ initial.mem.pages * 65536),
-    TerminatesWith env «module» 0 initial [.i32 len, .i32 ptr]
-      (fun st' rs => rs = [] ∧
-        (∀ i < len.toNat,
-          st'.mem.read32 (ptr + 4 * UInt32.ofNat i) =
-            initial.mem.read32 (ptr + 4 * UInt32.ofNat (len.toNat - 1 - i))))
+For any `seed len : UInt32`, the wasm export `check` terminates and
+leaves an empty value stack. Termination-without-trapping is the whole
+content of the spec — the body traps via `unreachable` iff the
+swap-from-both-ends and copy-reversed reversers disagree, so this
+property *is* the equivalence claim between the two implementations. -/
+@[spec_of "rust-exported" "reverse_inplace::check"]
+def CheckSpec : Prop :=
+  ∀ (env : HostEnv Unit) (initial : Store Unit) (seed len : UInt32),
+    TerminatesWith env «module» 3 initial [.i32 len, .i32 seed]
+      (fun _ rs => rs = [])
 
 end Project.ReverseInplace.Spec

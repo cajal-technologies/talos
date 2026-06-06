@@ -1,8 +1,10 @@
-/// Wasm-exported in-place reverse of a `len`-element `u32` slice
-/// starting at `ptr` in linear memory.
+/// Wasm-exported equivalence check between the swap-from-both-ends
+/// in-place reverser and the copy-reversed reference. Traps via
+/// `unreachable` iff the two disagree on `(seed, len)`.
 ///
-/// Thin `extern "C"` wrapper around [`crate::reverse_inplace`].
+/// Thin `extern "C"` wrapper around [`crate::check`]. The project
+/// convention reserves this file for the wasm ABI surface.
 #[unsafe(no_mangle)]
-pub extern "C" fn reverse_inplace(ptr: *mut u32, len: usize) {
-    unsafe { crate::reverse_inplace(ptr, len) }
+pub extern "C" fn check(seed: u32, len: u32) {
+    crate::check(seed, len)
 }

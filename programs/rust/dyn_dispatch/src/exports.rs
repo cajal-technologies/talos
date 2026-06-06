@@ -1,8 +1,10 @@
-/// Wasm-exported dispatcher. Returns `OPS[sel % 2].apply(x)`.
+/// Wasm-exported equivalence check between the vtable-based dispatcher
+/// and the direct-match reference. Traps via `unreachable` iff the two
+/// disagree on `(sel, x)`.
 ///
-/// Thin `extern "C"` wrapper around [`crate::dispatch`]; the indirect
-/// vtable call lives inside `dispatch`.
+/// Thin `extern "C"` wrapper around [`crate::check`]. The project
+/// convention reserves this file for the wasm ABI surface.
 #[unsafe(no_mangle)]
-pub extern "C" fn dispatch(sel: i32, x: i32) -> i32 {
-    crate::dispatch(sel, x)
+pub extern "C" fn check(sel: i32, x: i32) {
+    crate::check(sel, x)
 }
