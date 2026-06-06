@@ -495,7 +495,13 @@ theorem func1_spec (env : HostEnv α) (base count sp : UInt32)
       simp only [List.length_cons, List.length_nil, List.getElem?_cons_zero,
         List.getElem?_cons_succ, List.set_cons_zero, List.set_cons_succ, Nat.reduceAdd,
         Nat.reduceLT, Nat.reduceSub, reduceIte, show ((0 : UInt32).toNat) = 0 from rfl]
-      sorry
+      rw [if_neg (by rw [haddrN]; omega), if_neg (by rw [hl5]; omega)]
+      split
+      · -- fallthrough: scratch fully written; copy back (L2)
+        sorry
+      · -- continue: re-establish L1 invariant at `k + 1`
+        sorry
+      · rename_i hne1 hne2; exact hne2 _ _ rfl
   · -- `count = 0`: nothing to do; only the scratch fill changed memory.
     rename_i n vs hn heq
     simp only [List.cons.injEq, Value.i32.injEq] at heq
