@@ -7212,6 +7212,7 @@ def func66 : Wasm.Program :=
 
 def «module» : Wasm.Module :=
 {
+  imports := [],
   funcs := [
     { params := [.i64], locals := [.i32, .i32], body := func0, results := [.i32] },
     { params := [.i32, .i32, .i64], locals := [.i32, .i64, .i32], body := func1, results := [] },

@@ -46,6 +46,7 @@ def func2 : Wasm.Program :=
 
 def «module» : Wasm.Module :=
 {
+  imports := [],
   funcs := [
     { params := [.i32, .i32], locals := [], body := func0, results := [.i32] },
     { params := [.i32, .i32], locals := [], body := func1, results := [.i32] },

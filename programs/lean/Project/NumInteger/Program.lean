@@ -98,6 +98,7 @@ def func1 : Wasm.Program :=
 
 def «module» : Wasm.Module :=
 {
+  imports := [],
   funcs := [
     { params := [.i64, .i64], locals := [.i64, .i64], body := func0, results := [.i64] },
     { params := [.i64, .i64], locals := [], body := func1, results := [.i64] }

@@ -239,6 +239,11 @@ private def emitFunc (idx : Nat) (f : Wasm.Function) : String :=
 private def emitExport (e : Wasm.Export) : String :=
   s!"\{ name := {repr e.name}, funcIdx := {emitNat e.funcIdx} }"
 
+private def emitImport (i : Wasm.ImportDecl) : String :=
+  s!"\{ «module» := {repr i.«module»}, name := {repr i.name}" ++
+  s!", params := {emitValueTypes i.params}" ++
+  s!", results := {emitValueTypes i.results} }"
+
 private def emitValue : Wasm.Value → String
   | .i32 n              => s!".i32 {emitU32 n}"
   | .i64 n              => s!".i64 {emitU64 n}"
@@ -297,6 +302,7 @@ def funcBodies (m : Wasm.Module) : String :=
 
 /-- The module record, pretty-printed across multiple lines. -/
 def «module» (m : Wasm.Module) : String :=
+  let imports := recordList (m.imports.map emitImport)
   let funcs := recordList (m.funcs.mapIdx (fun i f => emitFunc i f))
   let exports := recordList (m.exports.map emitExport)
   let memory := emitOptionMem m.memory
@@ -304,7 +310,7 @@ def «module» (m : Wasm.Module) : String :=
   let types    := recordList (m.types.map emitFuncType)
   let tables   := recordList (m.tables.map emitTableDecl)
   let elements := recordList (m.elements.map emitElementSegment)
-  s!"\{\n  funcs := {funcs},\n  exports := {exports}" ++
+  s!"\{\n  imports := {imports},\n  funcs := {funcs},\n  exports := {exports}" ++
   s!",\n  memory := {memory},\n  globals := {globals}" ++
   s!",\n  types := {types},\n  tables := {tables},\n  elements := {elements}\n}"
 

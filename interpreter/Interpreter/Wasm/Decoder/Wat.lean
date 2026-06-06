@@ -1496,11 +1496,19 @@ private def parseElemSegment
     | _ => .error "elem: unsupported entry"
   .ok { tableIdx, offset, funcs }
 
-/-- Parse the `(param …)` / `(result …)` forms inside the `(func …)` of
-an `(import …)` declaration, returning `(params, results)`. Named
-param/local ids inside an import are ignored (they're never referenced
-by id from the wasm body — imports have no body). -/
-private def parseImportSig (xs : List Sexpr)
+/-- Parse the `(param …)` / `(result …)` / `(type N)` forms inside the
+`(func …)` of an `(import …)` declaration, returning `(params, results)`.
+
+Two equivalent surface forms are accepted:
+* inline `(param T) … (result T)` — directly populate the signature;
+* `(type N)` or `(type $sig)` — look up `N` in the module's type table.
+
+`wasm-tools print` emits the `(type N)` form for every Rust-compiled
+import, so resolving it here is the difference between a typed import
+and a `params := [], results := []` stub. Named param/local ids inside
+an import are ignored (they're never referenced by id from the wasm
+body — imports have no body). -/
+private def parseImportSig (types : Array TypeEntry) (xs : List Sexpr)
     : Except Err (List Wasm.ValueType × List Wasm.ValueType) := do
   let mut params : List Wasm.ValueType := []
   let mut results : List Wasm.ValueType := []
@@ -1523,6 +1531,14 @@ private def parseImportSig (xs : List Sexpr)
           | some vt => results := results ++ [vt]
           | none    => throw s!"unsupported import result type: {a}"
         | _ => throw "malformed (result ...) in import"
+    | .list [.atom "type", .atom ref] =>
+      -- `(type N)` / `(type $sig)` — resolve against the module's type
+      -- table. Overwrites any previously accumulated `(param …)` /
+      -- `(result …)`, matching the wasm convention that a referenced
+      -- type fully specifies the signature.
+      let (ps, rs) ← resolveTypeRef types ref
+      params := ps
+      results := rs
     | _ => pure ()
   return (params, results)
 
@@ -1530,7 +1546,7 @@ private def parseImportSig (xs : List Sexpr)
 forms. Each function import gets a positional unified-index `0 … N-1`
 and is recorded in `idOf` if it carries a `$name`. Imports of memory,
 global, and table are silently dropped (unsupported). -/
-private def collectImports (fields : List Sexpr)
+private def collectImports (types : Array TypeEntry) (fields : List Sexpr)
     : Except Err (List Wasm.ImportDecl × Std.HashMap String Nat) := do
   let mut imports : List Wasm.ImportDecl := []
   let mut idOf : Std.HashMap String Nat := {}
@@ -1551,7 +1567,7 @@ private def collectImports (fields : List Sexpr)
           if a.startsWith "$" then
             idOf := idOf.insert (a.drop 1).toString i
         | _ => pure ()
-        let (params, results) ← parseImportSig funcBodyAfterId
+        let (params, results) ← parseImportSig types funcBodyAfterId
         imports := imports ++ [{ «module» := modName',
                                   name := importName',
                                   params, results }]
@@ -1574,7 +1590,16 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
   | .atom a :: r =>
     if a.startsWith "$" then rest := r
   | _ => pure ()
-  let (imports, importFuncIds) ← collectImports rest
+  -- Collect `(type ...)` declarations first so import-signature
+  -- resolution (`(type N)` form) can look them up. The type table is
+  -- module-level and visible to every other field.
+  let mut types : Array TypeEntry := #[]
+  for f in rest do
+    match f with
+    | .list (.atom "type" :: body) =>
+      types := types.push (parseTypeField body)
+    | _ => pure ()
+  let (imports, importFuncIds) ← collectImports types rest
   let inModuleFuncIds ← collectFuncNames rest
   -- Unified function index space: imports occupy `0 … imports.length - 1`,
   -- in-module functions are shifted up by `imports.length`.
@@ -1585,18 +1610,12 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
   let tableNames := collectTableNames rest
   let mut decls : Array FuncDecl := #[]
   let mut topExports : Array (String × String) := #[]
-  let mut types : Array TypeEntry := #[]
   let mut globalDecls : Array Wasm.GlobalDecl := #[]
   let mut memDecl : Option Wasm.MemDecl := none
   let mut dataSegs : Array Wasm.DataSegment := #[]
   let mut tableDecls : Array Wasm.TableDecl := #[]
   let mut elemSegs   : Array Wasm.ElementSegment := #[]
   let mut startFunc : Option Nat := none
-  for f in rest do
-    match f with
-    | .list (.atom "type" :: body) =>
-      types := types.push (parseTypeField body)
-    | _ => pure ()
   for f in rest do
     match f with
     | .list (.atom "func" :: body) =>

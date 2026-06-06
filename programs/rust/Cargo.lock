@@ -13,6 +13,10 @@ name = "dyn_dispatch"
 version = "0.1.0"
 
 [[package]]
+name = "host_counter"
+version = "0.1.0"
+
+[[package]]
 name = "is_even"
 version = "0.1.0"
 

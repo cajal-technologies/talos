@@ -17,7 +17,9 @@ implementation. This file defines:
 * `CounterState` — the shape of `Store.host` for this host.
 * `incContract` / `getContract` — the per-import `HostContract`s.
 * `counterSpec` — the `HostSpec` bundling both contracts in import
-  order (`host_inc` at index `0`, `host_get` at index `1`).
+  order (`host_get` at index `0`, `host_inc` at index `1`). The order
+  matches how the Rust toolchain lays out the imports in the emitted
+  wasm — verified against `programs/rust/build/host_counter/program.wat`.
 * `incHost` / `getHost` / `counterEnv` — a reference `HostEnv`
   implementing the contracts (handy for `native_decide` smoke tests
   and as the witness that `counterSpec` is satisfiable).
@@ -55,12 +57,13 @@ def getContract : HostContract CounterState := fun st args res =>
   args = [] ∧
   res = .Return [.i32 (UInt32.ofNat st.host.counter)] st
 
-/-- The host specification bundling both contracts in declaration
-order. The Rust crate imports `host_inc` first and `host_get` second,
-so `counterSpec.contracts[0]?` resolves `call 0` and `[1]?` resolves
-`call 1`. -/
+/-- The host specification bundling both contracts in import order:
+`host_get` at index `0`, `host_inc` at index `1` (as emitted by the
+Rust toolchain into `program.wat`). So `counterSpec.contracts[0]?`
+resolves `call 0` (`host_get`) and `[1]?` resolves `call 1`
+(`host_inc`). -/
 def counterSpec : HostSpec CounterState :=
-  { contracts := [incContract, getContract] }
+  { contracts := [getContract, incContract] }
 
 /-! ## A reference host implementation
 
@@ -84,8 +87,9 @@ def getHost : HostFn CounterState :=
     invoke  := fun st _ =>
       .Return [.i32 (UInt32.ofNat st.host.counter)] st }
 
-/-- Reference `HostEnv` for the counter host. -/
+/-- Reference `HostEnv` for the counter host. Order matches the wasm
+import order: `host_get` at unified index `0`, `host_inc` at index `1`. -/
 def counterEnv : HostEnv CounterState :=
-  { funcs := [incHost, getHost] }
+  { funcs := [getHost, incHost] }
 
 end Project.HostCounter.Host

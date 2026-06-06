@@ -6,27 +6,32 @@ import CodeLib
 
 set_option maxRecDepth 1048576
 
-namespace Project.IsEven
+namespace Project.HostCounter
 
 open Wasm
 
-/-- export: is_even -/
 def func0 : Wasm.Program :=
   [
-  .localGet 0,
-  .const (1 : UInt32),
-  .and,
-  .eqz
+  .block 0 0 [
+    .call 0,
+    .const (9 : UInt32),
+    .gtU,
+    .br_if 0,
+    .call 1
+  ]
 ]
 
 def «module» : Wasm.Module :=
 {
-  imports := [],
+  imports := [
+    { «module» := "env", name := "host_get", params := [], results := [.i32] },
+    { «module» := "env", name := "host_inc", params := [], results := [] }
+  ],
   funcs := [
-    { params := [.i32], locals := [], body := func0, results := [.i32] }
+    { params := [], locals := [], body := func0, results := [] }
   ],
   exports := [
-    { name := "is_even", funcIdx := 0 }
+    { name := "step", funcIdx := 2 }
   ],
   memory := some { pagesMin := (16 : UInt32), pagesMax := none, data := [] },
   globals := [
@@ -35,7 +40,8 @@ def «module» : Wasm.Module :=
     { type := .i32, init := .i32 (1048576 : UInt32) }
   ],
   types := [
-    { params := [.i32], results := [.i32] }
+    { params := [], results := [.i32] },
+    { params := [], results := [] }
   ],
   tables := [
     { min := 1, max := some 1, elemType := .funcref }
@@ -43,4 +49,4 @@ def «module» : Wasm.Module :=
   elements := []
 }
 
-end Project.IsEven
+end Project.HostCounter
