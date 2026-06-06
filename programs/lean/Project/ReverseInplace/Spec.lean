@@ -748,7 +748,33 @@ theorem func2_spec (env : HostEnv Unit) (seed len : UInt32) :
   · -- len ≠ 0: seed both buffers, reverse each, compare
     sorry
   · -- len = 0: reverse empty buffers, skip the comparison
-    sorry
+    rename_i n vs hn heq
+    simp only [List.cons.injEq, Value.i32.injEq] at heq
+    have hlen0 : len = 0 := by by_contra h; rw [if_neg h] at heq; exact hn heq.1.symm
+    subst hlen0
+    simp only [show (if (if (0 : UInt32) < 32 then (1 : UInt32) else 0) ≠ 0 then Value.i32 0
+        else Value.i32 32) = Value.i32 0 from by decide]
+    apply wp_call_cons_rel (func0_spec env (1048576 - 256) 0 (by decide) [])
+    · exact ⟨rfl, by simp only [fill_pages, hpages]; decide, by simp only [fill_pages, hpages]; decide⟩
+    · intro st' vs hPost
+      obtain ⟨rfl, hgl, hpg, _, _⟩ := hPost
+      wp_run
+      simp only [List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT,
+        Nat.reduceSub, reduceIte]
+      have hgl0 : st'.globals.globals[0]? = some (Value.i32 (1048576 - 256)) := by
+        rw [hgl]
+        rcases hgg : st0.globals.globals with _ | ⟨hd, tl⟩
+        · rw [hgg] at hg0; simp at hg0
+        · simp
+      apply wp_call_cons_rel (func1_spec env (128 + (1048576 - 256)) 0 (1048576 - 256) (by decide) [])
+      · refine ⟨rfl, hgl0, by decide, ?_, ?_, ?_, by decide⟩
+        · rw [hpg]; simp only [fill_pages, hpages]; decide
+        · rw [hpg]; simp only [fill_pages, hpages]; decide
+        · rw [hpg]; simp only [fill_pages, hpages]; decide
+      · intro st'' vs2 hPost2
+        obtain ⟨rfl, hgl2, _, _, _⟩ := hPost2
+        wp_run
+        rw [hgl2, hgl0]; simp
   · rename_i hne1 hne2; exact (hne2 _ _ rfl).elim
 
 /-- The exported `check` terminates without trapping (and returns no
