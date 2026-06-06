@@ -484,6 +484,14 @@ theorem func1_spec (env : HostEnv α) (base count sp : UInt32)
         rw [hcw, toNat_base_add base (count.toNat - 1 - k) st.mem.pages (by rw [hp']; omega) hpg2]
         simp [UInt32.toNat_add, UInt32.toNat_sub, UInt32.toNat_mul, UInt32.toNat_ofNat]
         omega
+      have hl5 : (sp - 128 + 4 * UInt32.ofNat k).toNat = sp.toNat - 128 + 4 * k := by
+        rw [UInt32.toNat_add, hsm, UInt32.toNat_mul, UInt32.toNat_ofNat]; simp; omega
+      have hbL : base.toNat + 4 * (count.toNat - 1 - k) + 4 ≤ st.mem.pages * 65536 := by
+        rw [hp']; omega
+      have haddrN : (base - (4 : UInt32) + (count <<< (2 % 32) - (4 : UInt32) * UInt32.ofNat k)).toNat
+          = base.toNat + 4 * (count.toNat - 1 - k) := by
+        rw [haddr, toNat_base_add base (count.toNat - 1 - k) st.mem.pages hbL hpg2]
+      wp_run
       sorry
   · -- `count = 0`: nothing to do; only the scratch fill changed memory.
     rename_i n vs hn heq
