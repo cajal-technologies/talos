@@ -478,7 +478,7 @@ theorem func1_spec (env : HostEnv α) (base count sp : UInt32)
       have hcw : count <<< (2 % 32) = count * 4 := by
         apply UInt32.toNat.inj
         rw [UInt32.toNat_shiftLeft, UInt32.toNat_mul]; simp [Nat.shiftLeft_eq]
-      have haddr : base - (4 : UInt32) + (count <<< (2 % 32) - (4 : UInt32) * UInt32.ofNat k)
+      have haddr : count <<< (2 % 32) - (4 : UInt32) * UInt32.ofNat k + (base - 4)
           = base + (4 : UInt32) * UInt32.ofNat (count.toNat - 1 - k) := by
         apply UInt32.toNat.inj
         rw [hcw, toNat_base_add base (count.toNat - 1 - k) st.mem.pages (by rw [hp']; omega) hpg2]
@@ -488,10 +488,13 @@ theorem func1_spec (env : HostEnv α) (base count sp : UInt32)
         rw [UInt32.toNat_add, hsm, UInt32.toNat_mul, UInt32.toNat_ofNat]; simp; omega
       have hbL : base.toNat + 4 * (count.toNat - 1 - k) + 4 ≤ st.mem.pages * 65536 := by
         rw [hp']; omega
-      have haddrN : (base - (4 : UInt32) + (count <<< (2 % 32) - (4 : UInt32) * UInt32.ofNat k)).toNat
+      have haddrN : (count <<< (2 % 32) - (4 : UInt32) * UInt32.ofNat k + (base - 4)).toNat
           = base.toNat + 4 * (count.toNat - 1 - k) := by
         rw [haddr, toNat_base_add base (count.toNat - 1 - k) st.mem.pages hbL hpg2]
       wp_run
+      simp only [List.length_cons, List.length_nil, List.getElem?_cons_zero,
+        List.getElem?_cons_succ, List.set_cons_zero, List.set_cons_succ, Nat.reduceAdd,
+        Nat.reduceLT, Nat.reduceSub, reduceIte, show ((0 : UInt32).toNat) = 0 from rfl]
       sorry
   · -- `count = 0`: nothing to do; only the scratch fill changed memory.
     rename_i n vs hn heq
