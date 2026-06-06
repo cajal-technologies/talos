@@ -79,6 +79,16 @@ theorem read32_fill_disjoint (m : Mem) (off len : Nat) (val : UInt8) (b : UInt32
       fill_bytes_of_disjoint m off len val (b.toNat + 2) (by omega),
       fill_bytes_of_disjoint m off len val (b.toNat + 3) (by omega)]
 
+/-- A 32-bit read depends only on its four bytes: if two memories agree
+on `[a, a+4)` they agree on `read32 a`. -/
+theorem read32_eq_of_bytes (m m' : Mem) (a : UInt32)
+    (h0 : m'.bytes a.toNat = m.bytes a.toNat)
+    (h1 : m'.bytes (a.toNat + 1) = m.bytes (a.toNat + 1))
+    (h2 : m'.bytes (a.toNat + 2) = m.bytes (a.toNat + 2))
+    (h3 : m'.bytes (a.toNat + 3) = m.bytes (a.toNat + 3)) :
+    m'.read32 a = m.read32 a := by
+  simp only [Mem.read32, h0, h1, h2, h3]
+
 @[simp] theorem write32_pages (m : Mem) (a v : UInt32) :
     (m.write32 a v).pages = m.pages := rfl
 
