@@ -1,8 +1,8 @@
 # verifier
 
 A small Lean CLI that drives the Rust → wasm → Lean verification loop.
-`verifier new <path>` scaffolds a fixed-shape project from a bundled
-template (a Cargo workspace + a Lean project); `verifier check` builds
+`verifier init <path>` (`new` is an alias) scaffolds a fixed-shape project from a bundled
+template (a Cargo workspace + a Lean project); `verifier check` (or `build` / `emit` / `prove` separately) builds
 every crate to wasm, decodes it into a Lean `Program.lean`, and runs
 `lake build`.
 
@@ -27,31 +27,22 @@ project/
       Cargo.toml
       src/lib.rs              ← `pub fn is_even(...) -> bool { ... }`
       src/exports.rs          ← `#[unsafe(no_mangle)] pub extern "C" fn is_even`
-    is_odd/
-      Cargo.toml              ← depends on `is_even` (path = "../is_even")
-      src/lib.rs
-      src/exports.rs
     build/
-      is_even/{program.wasm, program.wat}   ← produced by `verifier check`
-      is_odd/{program.wasm, program.wat}
+      is_even/{program.wasm, program.wat}   ← produced by `verifier build`
   lean/
     lakefile.toml             ← name = "Project", CodeLib as a git dep
     lean-toolchain            ← matches the verifier's own toolchain
-    Project.lean              ← imports each `Project.<Crate>.Proof`
+    Project.lean              ← imports each `Project.<Crate>.Spec`
     Project/
       IsEven/
         Program.lean          ← auto-generated from build/is_even/program.wasm
         Spec.lean             ← `def MyProp : Prop := …` statements
         Proof.lean            ← `theorem _ : MyProp := …` proofs
-      IsOdd/
-        Program.lean
-        Spec.lean
-        Proof.lean
 ```
 
 The rust↔lean mapping is by name: crate `foo_bar` ↔ Lean module
 `Project.FooBar` (snake_case → PascalCase). If a Lean module dir is
-missing for a crate, `verifier check` errors out — the shape is fixed.
+missing for a crate, `verifier check` (or `build` / `emit` / `prove` separately) errors out — the shape is fixed.
 
 ## Setting up a Rust crate for wasm
 
@@ -91,7 +82,7 @@ build-wasm = "build --release --target wasm32-unknown-unknown"
 
 After this `cargo build-wasm` (run from `rust/`) produces every member
 crate's wasm under `target/wasm32-unknown-unknown/release/<crate>.wasm`.
-`verifier check` invokes this command and then copies each output into
+`verifier check` (or `build` / `emit` / `prove` separately) invokes this command and then copies each output into
 `rust/build/<crate>/program.wasm`.
 
 **`src/exports.rs`** — the single module that pins the public surface
@@ -130,15 +121,14 @@ lake exe verifier new my-project
 
 `<path>` must not exist (or must be empty). This:
 
-1. Copies the bundled template (cargo workspace with `is_even` and
-   `is_odd`, plus a Lean `Project` lib) into `my-project/`.
+1. Copies the bundled template (cargo workspace with `is_even`, plus a Lean `Project` lib) into `my-project/`.
 2. Runs `cargo check` inside `my-project/rust/`.
 3. Runs an initial `lake build` inside `my-project/lean/` to fetch
    CodeLib and warm caches.
 
 Once it returns, you have a fully working example you can edit in
 place — add a function in `rust/<crate>/src/lib.rs`, mirror it in
-`exports.rs`, and re-run `verifier check`.
+`exports.rs`, and re-run `verifier check` (or `build` / `emit` / `prove` separately).
 
 ### 2. Build + verify
 
@@ -171,7 +161,7 @@ Pipeline:
 2. Add `"foo_bar"` to the `members` list in `rust/Cargo.toml`.
 3. Create `lean/Project/FooBar/{Program,Spec,Proof}.lean` (you can
    copy the `IsEven` ones as a starting point).
-4. Add `import Project.FooBar.Proof` to `lean/Project.lean`.
+4. Add `import Project.FooBar.Spec` to `lean/Project.lean`.
 5. `lake exe verifier check`.
 
 ### 4. Writing specs and proofs
@@ -192,8 +182,8 @@ For any input `n : UInt32`, `is_even` returns `1` when `n` is even
 and `0` otherwise. -/
 @[spec_of "rust-exported" "is_even::is_even"]
 def IsEvenSpec : Prop :=
-  ∀ (initial : Store) (n : UInt32),
-    TerminatesWith «module» 0 initial [.i32 n]
+  ∀ (env : HostEnv Unit) (initial : Store Unit) (n : UInt32),
+    TerminatesWith env «module» 0 initial [.i32 n]
       (fun _ rs => rs = [.i32 (if n.toNat % 2 = 0 then 1 else 0)])
 
 end Project.IsEven.Spec
@@ -209,9 +199,13 @@ namespace Project.IsEven.Proof
 open Project.IsEven.Spec
 
 @[proves Project.IsEven.Spec.IsEvenSpec]
-theorem is_even_spec : IsEvenSpec := by
-  intro initial n
-  -- … your proof …
+theorem is_even_correct : IsEvenSpec := by
+  intro env initial n
+  apply TerminatesWith.of_wp_entry (f := ⟨[.i32], [], func0, [.i32]⟩) rfl
+  intro initial'
+  unfold func0
+  wp_run
+  simp [UInt32.and_one_eq_zero_iff_toNat_mod_two, UInt32.and_comm]
 
 end Project.IsEven.Proof
 ```
@@ -225,17 +219,30 @@ is recommended for organization but not required by those tools — see
 ## Commands
 
 ```
-verifier new     <project-path>
-verifier check   [--force-emit]
-verifier extract [--out DIR]
-verifier report  [--extracted DIR] [--out DIR]
+verifier init <path>              # alias: new
+verifier add <crate>
+verifier del <crate>
+verifier build [crate…]
+verifier emit [crate…] [--force-emit]
+verifier prove [crate…]
+verifier check [crate…] [--force-emit] [--no-prove]
+verifier extract [crate…] [--out DIR]
+verifier report [--extracted DIR] [--out DIR]
 ```
 
-- `verifier new` requires a non-existent or empty target directory.
-- `verifier check` must be run from the project root.
-- `--force-emit` re-emits every `Program.lean` even when its
-  corresponding `program.wasm` hasn't changed.
-- `verifier extract` must be run from the project root. It produces
+Run from the project root. Omit crate names to process all crates.
+In the Talos monorepo: `cd programs && lake -d ../verifier exe verifier …`
+
+- `init` / `new` requires a non-existent or empty target directory.
+- `add` appends a crate to an existing project.
+- `del` removes a crate: deletes `rust/<crate>/`, `lean/Project/<Crate>/`, `rust/build/<crate>/`, and cleans the workspace member from `rust/Cargo.toml` and the import from `lean/Project.lean`.
+- `build` writes `rust/build/<crate>/program.{wasm,wat}` via cargo + wasm-tools.
+- `emit` decodes `program.wat` into `Program.lean`.
+- `prove` runs `lake build` on `Project/<Crate>/Program.lean` and `Spec.lean` per crate (not `Proof.lean` unless you import it in `Project.lean`).
+- `check` runs `build` → `emit` → `prove`.
+- `--force-emit` re-emits every selected `Program.lean` even when wasm is unchanged.
+- `--no-prove` skips the final `lake build` (CI freshness check).
+- `extract` produces
   one JSON artifact per crate at `<DIR>/<crate>.json` (default
   `DIR = ./extracted/`) capturing source files, exports, the Lean
   program decl, formal specs, and verifications. See

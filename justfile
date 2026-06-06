@@ -20,26 +20,25 @@ WASM_TOOLS_VERSION := "1.251.0"
 # Interpreter executables (runner, testsuite) are built by their own recipes below.
 [working-directory("programs/lean")]
 build: lake-shared
-    lake build
+    @lake build
 
 [private]
 [working-directory("interpreter")]
 lake-shared:
-    lake update
-    lake exe cache get
+    @lake update
+    @lake exe cache get
 
 # Build the interpreter package (Wasm AST + semantics + WP tactic layer).
-
 [group("build")]
 [working-directory("interpreter")]
 build-interpreter:
-    lake build
+    @lake build
 
 # Build the codelib package (lifting lemmas + reasoning helpers).
 [group("build")]
 [working-directory("codelib")]
 build-codelib:
-    lake build
+    @lake build
 
 # Build the programs package (concrete Rust-to-Wasm proofs). This is the main
 # proof target: it depends on codelib which depends on interpreter, so one
@@ -47,13 +46,13 @@ build-codelib:
 [group("build")]
 [working-directory("programs/lean")]
 build-programs:
-    lake build
+    @lake build
 
 # Build the verifier tool (scaffolder + WAT emitter + proof checker).
 [group("build")]
 [working-directory("verifier")]
 build-verifier:
-    lake build
+    @lake build
 
 
 # ── Rust workspace ────────────────────────────────────────────────────────────
@@ -62,7 +61,7 @@ build-verifier:
 [private]
 [working-directory("programs/rust")]
 cargo-programs +args:
-    cargo {{ args }}
+    @cargo {{ args }}
 
 # Build all Rust crates in release mode (produces .wasm output under rust/build/).
 [group("rust-programs")]
@@ -76,25 +75,29 @@ rust-test: (cargo-programs "test")
 [group("rust-programs")]
 rust-lint: (cargo-programs "clippy")
 
+# Clean rust packages
+[group("rust-programs")]
+rust-clean: (cargo-programs "clean")
+
 # ── runner ────────────────────────────────────────────────────────────────────
 
 # Build the Wasm runner executable.
 [group("runner")]
 [working-directory("interpreter")]
 runner-build:
-    lake build runner
+    @lake build runner
 
 # Smoke-test the runner executable against samples/.
 [group("runner")]
 [working-directory("scripts")]
 runner-smoke:
-    ./runner-smoke.sh
+    @./runner-smoke.sh
 
 # Run the runner executable against samples/.
 [group("runner")]
 [working-directory("interpreter")]
 runner-run +args:
-    lake exe runner {{ args }}
+    @lake exe runner {{ args }}
 
 # ── testsuite ─────────────────────────────────────────────────────────────────
 
@@ -103,7 +106,7 @@ runner-run +args:
 [group("testsuite")]
 [working-directory(ROOT)]
 testsuite pattern="":
-    scripts/testsuite.sh {{ quote(pattern) }}
+    @scripts/testsuite.sh {{ quote(pattern) }}
 
 # Regenerate testsuite_report.txt at the repo root. CI runs the same command
 # and fails if the working tree drifts, so contributors whose changes shift
@@ -111,32 +114,83 @@ testsuite pattern="":
 [group("testsuite")]
 [working-directory(ROOT)]
 testsuite-report:
-    WASM_TOOLS_VERSION={{ quote(WASM_TOOLS_VERSION) }} scripts/testsuite-report.sh
+    @WASM_TOOLS_VERSION={{ quote(WASM_TOOLS_VERSION) }} scripts/testsuite-report.sh
 
 # ── verifier workflow ─────────────────────────────────────────────────────────
+# All verifier recipes run from programs/ (project root: rust/ + lean/).
+# Omit crate names to operate on all workspace crates.
+#
+# Step-by-step development cycle:
+#   just verifier-init <path>   — scaffold a new project
+#   just verifier-build         — compile Rust → wasm/wat
+#   just verifier-emit          — transpile wat → Program.lean
+#   [edit Spec.lean by hand]
+#   just verifier-prove         — run lake build to check proofs
+#
+# Or combined: just verifier-check [--force-emit] [--no-prove] [crate…]
 
-# Run the verifier check from the programs/ root (builds Rust, re-emits
-# Program.lean files if wasm changed, then runs lake build).
-[working-directory("verifier")]
-verifier-check:
-    lake exe verifier check
+[private]
+[working-directory("programs")]
+_verifier +args:
+    @lake -d ../verifier exe verifier {{ args }}
 
-# Re-emit all Program.lean files unconditionally, then run lake build.
-[working-directory("verifier")]
-verifier-check-force:
-    lake exe verifier check --force-emit
+# Scaffold a new verification project at <path> (relative to programs/).
+[group("verifier")]
+verifier-init path:
+    @just _verifier init {{ path }}
+
+# Add a crate to the current project (snake_case name, e.g. my_crate).
+[group("verifier")]
+verifier-add crate:
+    @just _verifier add {{ crate }}
+
+# Remove a crate from the current project (source, lean module, build artefacts, config references).
+[group("verifier")]
+verifier-del crate:
+    @just _verifier del {{ crate }}
+
+# Build wasm/wat for selected crates; omit names to process all.
+[group("verifier")]
+verifier-build *crates:
+    @just _verifier build {{ crates }}
+
+# Transpile program.wat → Program.lean for selected crates; omit names for all.
+# Flags: --force-emit (re-emit even when wasm is unchanged).
+[group("verifier")]
+verifier-emit *crates:
+    @just _verifier emit {{ crates }}
+
+# Run lake build on selected crates' Lean modules; omit names for all.
+[group("verifier")]
+verifier-prove *crates:
+    @just _verifier prove {{ crates }}
+
+# Full pipeline: build → emit → prove for selected crates; omit names for all.
+# Flags: --force-emit, --no-prove. Example: just verifier-check --force-emit is_even
+[group("verifier")]
+verifier-check *args:
+    @just _verifier check {{ args }}
+
+# Extract JSON metadata per crate; omit names for all.
+[group("verifier")]
+verifier-extract *crates:
+    @just _verifier extract {{ crates }}
+
+# Build the static HTML progress report (requires npm in verifier/report/).
+[group("verifier")]
+verifier-report:
+    @just _verifier report
 
 # ── docs ──────────────────────────────────────────────────────────────────────
 
 # Generate HTML documentation and serve it at http://localhost:8080.
 [working-directory("scripts")]
 docs:
-    ./docs.sh
+    @./docs.sh
 
 # ── housekeeping ──────────────────────────────────────────────────────────────
 
 # Remove Lake build artefacts from all Lean packages and Cargo target dir.
 [working-directory("scripts")]
 clean:
-    ./clean.sh
-
+    @./clean.sh
