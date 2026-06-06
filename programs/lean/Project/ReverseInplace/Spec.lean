@@ -168,6 +168,16 @@ buffer, cell `i` holds the original cell `mirrorIdx n s i`: the mirror
 `[n-s, n)`, and its original self in the still-untouched middle. -/
 def mirrorIdx (n s i : Nat) : Nat := if i < s ∨ n - s ≤ i then n - 1 - i else i
 
+/-- The `toNat` of an in-buffer pointer `base + 4*k` is exactly
+`base.toNat + 4*k` (no `UInt32` wraparound), given the 4-byte cell at
+that offset fits in memory and memory fits in `UInt32`. -/
+theorem toNat_base_add (base : UInt32) (k pages : Nat)
+    (hk : base.toNat + 4 * k + 4 ≤ pages * 65536)
+    (hpg : pages * 65536 ≤ 4294967296) :
+    (base + 4 * UInt32.ofNat k).toNat = base.toNat + 4 * k := by
+  simp [UInt32.toNat_add, UInt32.toNat_mul, UInt32.toNat_ofNat]
+  omega
+
 /-- `reverse_fast` (func0) reverses the `count` 32-bit words at `base`
 in place: the result cell `i` holds the original cell `count-1-i`. It
 touches no globals and no byte outside `[base, base + 4*count)`. The
@@ -213,7 +223,7 @@ theorem func0_spec (env : HostEnv α) (base count : UInt32)
     simp only [hc2, if_false]
     apply wp_loop_cons
       (Inv := fun st' s' => ∃ (t : Nat) (w5 : UInt32),
-        t ≤ count.toNat / 2 ∧
+        t < count.toNat / 2 ∧
         s' = { params := [.i32 (base + 4 * UInt32.ofNat t), .i32 count],
                locals := [.i32 (count - 1 - UInt32.ofNat t),
                           .i32 (base + 4 * UInt32.ofNat (count.toNat - 1 - t)),
@@ -228,7 +238,7 @@ theorem func0_spec (env : HostEnv α) (base count : UInt32)
         | (.i32 l2 :: _) => l2.toNat
         | _ => 0)
     · -- Invariant holds on entry (`t = 0`, nothing swapped yet).
-      refine ⟨0, 0, Nat.zero_le _, ?_, rfl, rfl, fun j _ => rfl, fun i hi => ?_⟩
+      refine ⟨0, 0, by omega, ?_, rfl, rfl, fun j _ => rfl, fun i hi => ?_⟩
       · have eP : base + 4 * UInt32.ofNat 0 = base := by
           simp [show UInt32.ofNat 0 = 0 from rfl]
         have e4 : (1 : UInt32) + UInt32.ofNat 0 = 1 := by
@@ -260,31 +270,128 @@ theorem func0_spec (env : HostEnv α) (base count : UInt32)
           simp only [mirrorIdx]; rw [if_neg (by omega)]
         rw [this]
     · -- One iteration preserves the invariant / establishes the post.
-      --
-      -- Outline (the remaining work for this proof):
-      --   rintro st s ⟨t, w5, ht, rfl, hg, hp, hframe, hcontent⟩
-      --   * The guard `localGet 2; const -1; eq; br_if 2` never fires: from
-      --     `t ≤ count.toNat / 2` and `2 ≤ count.toNat`, `l2 = count-1-t ≠ -1`
-      --     (its toNat is `count.toNat - 1 - t ∈ [0, count)`), so the `eq`
-      --     yields 0 and control stays in the loop body (no `Break 2` → no
-      --     `unreachable`/panic).
-      --   * The two `store32`s swap cells `t` and `count-1-t` (distinct since
-      --     `t < count-1-t` for `t < count.toNat/2`). Use
-      --     `read32_write32_same` / `read32_write32_disjoint` and
-      --     `write32_bytes_of_disjoint` to update `hcontent`/`hframe`; the
-      --     loads are in bounds via `hbound`/`hpg`. The new content matches
-      --     `mirrorIdx count.toNat (t+1)` (case-split each `i` on
-      --     `i = t`, `i = count-1-t`, else — exactly the `mirrorIdx` cases).
-      --   * The pointer/counter updates give the next state with `t+1`
-      --     (UInt32 bridging as in the `init` block).
-      --   * The final `localGet 5; br_if 0` branches on `l4 <U l2_new`
-      --     (`1+t <U count-2-t`):
-      --       - continue (`Break 0`): re-establish `Inv` at `t+1`; the measure
-      --         `l2.toNat = count-1-t` strictly decreases.
-      --       - fall through (`Fallthrough`): `t+1 = count.toNat/2`, so
-      --         `mirrorIdx count.toNat (t+1) i = count-1-i` for all `i`
-      --         (middle element maps to itself), establishing the post.
-      sorry
+      rintro st s ⟨t, w5, ht, rfl, hg, hp, hframe, hcontent⟩
+      have hpages : st.mem.pages = st0.mem.pages := hp
+      have hpg' : st.mem.pages * 65536 ≤ 4294967296 := by rw [hpages]; omega
+      have hb0 : base.toNat + 4 * t + 4 ≤ st.mem.pages * 65536 := by rw [hpages]; omega
+      have hb3 : base.toNat + 4 * (count.toNat - 1 - t) + 4 ≤ st.mem.pages * 65536 := by
+        rw [hpages]; omega
+      have hl0 : (base + 4 * UInt32.ofNat t).toNat = base.toNat + 4 * t :=
+        toNat_base_add _ _ _ hb0 hpg'
+      have hl3 : (base + 4 * UInt32.ofNat (count.toNat - 1 - t)).toNat
+          = base.toNat + 4 * (count.toNat - 1 - t) := toNat_base_add _ _ _ hb3 hpg'
+      have hl2 : (count - 1 - UInt32.ofNat t).toNat = count.toNat - 1 - t := by
+        simp [UInt32.toNat_sub, UInt32.toNat_ofNat]; omega
+      have hl2ne : ¬ (count - 1 - UInt32.ofNat t = 4294967295) := by
+        intro h; have h2 := congrArg UInt32.toNat h; rw [hl2] at h2
+        simp only [show ((4294967295 : UInt32).toNat) = 4294967295 from rfl] at h2; omega
+      have hmir : t < count.toNat - 1 - t := by omega
+      have htlt : t < count.toNat := by omega
+      wp_run
+      simp only [List.length_cons, List.length_nil, List.getElem?_cons_zero,
+        List.getElem?_cons_succ, List.set_cons_zero, List.set_cons_succ, Nat.reduceAdd,
+        Nat.reduceLT, Nat.reduceSub, reduceIte, hl2ne, hl0, hl3, write32_pages,
+        show ((0 : UInt32).toNat) = 0 from rfl]
+      rw [if_neg (by omega), if_neg (by omega), if_neg (by omega), if_neg (by omega)]
+      -- content of every cell after the two swaps = the (t+1)-partial reversal
+      have hupd : ∀ i, i < count.toNat →
+          ((st.mem.write32 (base + 4 * UInt32.ofNat t)
+                    (st.mem.read32 (base + 4 * UInt32.ofNat (count.toNat - 1 - t)))).write32
+                (base + 4 * UInt32.ofNat (count.toNat - 1 - t))
+                (st.mem.read32 (base + 4 * UInt32.ofNat t))).read32 (base + 4 * UInt32.ofNat i)
+            = st0.mem.read32 (base + 4 * UInt32.ofNat (mirrorIdx count.toNat (t + 1) i)) := by
+        intro i hi
+        have hci : (base + 4 * UInt32.ofNat i).toNat = base.toNat + 4 * i :=
+          toNat_base_add base i st.mem.pages (by rw [hpages]; omega) hpg'
+        by_cases hit : i = t
+        · subst hit
+          rw [read32_write32_disjoint _ _ _ _ (by rw [hl0, hl3]; omega), read32_write32_same]
+          have hm : mirrorIdx count.toNat (i + 1) i = count.toNat - 1 - i := by
+            simp only [mirrorIdx]; rw [if_pos (by omega)]
+          rw [hm, hcontent (count.toNat - 1 - i) (by omega)]
+          have hm2 : mirrorIdx count.toNat i (count.toNat - 1 - i) = count.toNat - 1 - i := by
+            simp only [mirrorIdx]; rw [if_neg (by omega)]
+          rw [hm2]
+        · by_cases hic : i = count.toNat - 1 - t
+          · subst hic
+            rw [read32_write32_same]
+            have hm : mirrorIdx count.toNat (t + 1) (count.toNat - 1 - t) = t := by
+              simp only [mirrorIdx]; rw [if_pos (by omega)]; omega
+            rw [hm, hcontent t (by omega)]
+            have hm2 : mirrorIdx count.toNat t t = t := by
+              simp only [mirrorIdx]; rw [if_neg (by omega)]
+            rw [hm2]
+          · rw [read32_write32_disjoint _ _ _ _ (by rw [hci, hl3]; omega),
+                read32_write32_disjoint _ _ _ _ (by rw [hci, hl0]; omega), hcontent i hi]
+            have hm : mirrorIdx count.toNat (t + 1) i = mirrorIdx count.toNat t i := by
+              simp only [mirrorIdx]
+              by_cases h1 : i < t ∨ count.toNat - t ≤ i
+              · rw [if_pos h1, if_pos (by omega)]
+              · rw [if_neg h1, if_neg (by omega)]
+            rw [hm]
+      -- bytes outside the buffer are untouched by the two swaps
+      have hframe' : ∀ j, (j < base.toNat ∨ base.toNat + 4 * count.toNat ≤ j) →
+          ((st.mem.write32 (base + 4 * UInt32.ofNat t)
+                    (st.mem.read32 (base + 4 * UInt32.ofNat (count.toNat - 1 - t)))).write32
+                (base + 4 * UInt32.ofNat (count.toNat - 1 - t))
+                (st.mem.read32 (base + 4 * UInt32.ofNat t))).bytes j = st0.mem.bytes j := by
+        intro j hj
+        rw [write32_bytes_of_disjoint _ _ _ _ (by rw [hl3]; omega),
+            write32_bytes_of_disjoint _ _ _ _ (by rw [hl0]; omega)]
+        exact hframe j hj
+      have hz : ∀ a : UInt32, a + 0 = a := fun a => by
+        apply UInt32.toNat.inj; simp
+      simp only [hz]
+      -- the continue test `1+t <U (count-1-t)-1` reduces to a Nat comparison
+      have hl1 : (1 + UInt32.ofNat t).toNat = 1 + t := by
+        simp [UInt32.toNat_add, UInt32.toNat_ofNat]; omega
+      have hl2m1 : (4294967295 + (count - 1 - UInt32.ofNat t)).toNat = count.toNat - 2 - t := by
+        rw [UInt32.toNat_add, hl2]
+        simp only [show ((4294967295 : UInt32).toNat) = 4294967295 from rfl]; omega
+      have hcondN :
+          (1 + UInt32.ofNat t < 4294967295 + (count - 1 - UInt32.ofNat t)) ↔ 2 * t + 4 ≤ count.toNat := by
+        rw [UInt32.lt_iff_toNat_lt, hl1, hl2m1]; omega
+      by_cases hcond : (1 : UInt32) + UInt32.ofNat t < 4294967295 + (count - 1 - UInt32.ofNat t)
+      · -- continue: re-establish the invariant at `t + 1`
+        have hcN : 2 * t + 4 ≤ count.toNat := hcondN.mp hcond
+        simp (config := {decide := true}) only [if_pos hcond]
+        refine ⟨⟨t + 1, (1 : UInt32), ?_, ?_, hg, hp, hframe', hupd⟩, ?_⟩
+        · -- t + 1 < count.toNat / 2
+          omega
+        · -- state equality (UInt32 pointer/counter bridging)
+          have hp4 : (4 : UInt32) + (base + 4 * UInt32.ofNat t) = base + 4 * UInt32.ofNat (t + 1) := by
+            apply UInt32.toNat.inj
+            rw [UInt32.toNat_add, hl0,
+              toNat_base_add base (t + 1) st.mem.pages (by rw [hpages]; omega) hpg']
+            simp only [show ((4 : UInt32).toNat) = 4 from rfl]; omega
+          have hp2 : (4294967295 : UInt32) + (count - 1 - UInt32.ofNat t)
+              = count - 1 - UInt32.ofNat (t + 1) := by
+            apply UInt32.toNat.inj
+            rw [hl2m1]
+            simp [UInt32.toNat_sub, UInt32.toNat_ofNat]; omega
+          have hp3 : (4294967292 : UInt32) + (base + 4 * UInt32.ofNat (count.toNat - 1 - t))
+              = base + 4 * UInt32.ofNat (count.toNat - 1 - (t + 1)) := by
+            apply UInt32.toNat.inj
+            rw [UInt32.toNat_add, hl3,
+              toNat_base_add base (count.toNat - 1 - (t + 1)) st.mem.pages (by rw [hpages]; omega) hpg']
+            simp only [show ((4294967292 : UInt32).toNat) = 4294967292 from rfl]; omega
+          have hp1 : (1 : UInt32) + (1 + UInt32.ofNat t) = 1 + UInt32.ofNat (t + 1) := by
+            apply UInt32.toNat.inj
+            simp [UInt32.toNat_add, UInt32.toNat_ofNat]; omega
+          rw [hp4, hp2, hp3, hp1, List.append_nil]
+        · -- measure strictly decreases
+          rw [hl2m1, hl2]; omega
+      · -- exit: the buffer is now fully reversed
+        have hcf : count.toNat ≤ 2 * t + 3 := by
+          by_contra h; exact hcond (hcondN.mpr (by omega))
+        simp (config := {decide := true}) only [if_neg hcond]
+        refine ⟨trivial, hg, hp, hframe', ?_⟩
+        intro i hi
+        have hmir2 : mirrorIdx count.toNat (t + 1) i = count.toNat - 1 - i := by
+          simp only [mirrorIdx]; split
+          · rfl
+          · omega
+        rw [hupd i hi, hmir2]
 
 /-- The exported `check` terminates without trapping (and returns no
 values) on every `(seed, len)` input.
