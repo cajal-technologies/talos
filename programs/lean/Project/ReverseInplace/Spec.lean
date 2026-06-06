@@ -738,6 +738,12 @@ theorem func2_spec (env : HostEnv Unit) (seed len : UInt32) :
     show ((128 : UInt32).toNat) = 128 from rfl,
     show ((1048576 : UInt32) - 256).toNat = 1048320 from rfl,
     show ((128 + ((1048576 : UInt32) - 256)).toNat) = 1048448 from rfl]
+  apply wp_block_cons
+  apply wp_block_cons
+  apply wp_block_cons
+  wp_run
+  simp only [List.length_cons, List.length_nil, List.getElem?_cons_zero, List.getElem?_cons_succ,
+    List.set_cons_zero, List.set_cons_succ, Nat.reduceAdd, Nat.reduceLT, Nat.reduceSub, reduceIte]
   sorry
 
 /-- The exported `check` terminates without trapping (and returns no
