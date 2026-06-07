@@ -746,6 +746,12 @@ theorem func2_spec (env : HostEnv Unit) (seed len : UInt32) :
     List.set_cons_zero, List.set_cons_succ, Nat.reduceAdd, Nat.reduceLT, Nat.reduceSub, reduceIte]
   split
   · -- len ≠ 0: seed both buffers, reverse each, compare
+    rename_i vs heq
+    simp only [List.cons.injEq, Value.i32.injEq] at heq
+    have hlen : len ≠ 0 := fun h => by rw [if_pos h] at heq; exact absurd heq.1 (by decide)
+    have hl4 : (if (if len < 32 then (1 : UInt32) else 0) ≠ 0 then Value.i32 len else Value.i32 32)
+        = Value.i32 (if len < 32 then len else 32) := by by_cases h : len < 32 <;> simp [h]
+    rw [hl4]
     sorry
   · -- len = 0: reverse empty buffers, skip the comparison
     rename_i n vs hn heq
