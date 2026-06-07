@@ -761,6 +761,11 @@ theorem func2_spec (env : HostEnv Unit) (seed len : UInt32) :
       split
       · omega
       · decide
+    set count := (if len < 32 then len else 32) with hcd
+    clear_value count
+    have hshl : count <<< (2 % 32) = count * 4 := by bv_decide
+    dsimp only
+    rw [hshl]
     sorry
   · -- len = 0: reverse empty buffers, skip the comparison
     rename_i n vs hn heq
