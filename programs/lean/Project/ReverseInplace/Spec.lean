@@ -1075,4 +1075,19 @@ def CheckSpec : Prop :=
     TerminatesWith env «module» 3 (Module.initialStore «module») [.i32 len, .i32 seed]
       (fun _ rs => rs = [])
 
+/-- The export `check` (func3, which forwards to func2) terminates with an
+empty value stack on the fresh instantiation, for every `(seed, len)` —
+i.e. the two reversers always agree. -/
+@[proves Project.ReverseInplace.Spec.CheckSpec]
+theorem check_correct : CheckSpec := by
+  intro env seed len
+  apply TerminatesWith.of_wp_entry_for (f := ⟨[.i32, .i32], [], func3, []⟩) rfl
+  unfold func3
+  wp_run
+  apply wp_call_cons_rel (func2_spec env seed len)
+  · exact ⟨rfl, rfl, rfl⟩
+  · intro st' vs hPost
+    subst hPost
+    wp_run; rfl
+
 end Project.ReverseInplace.Spec
