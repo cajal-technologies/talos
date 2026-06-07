@@ -872,6 +872,7 @@ theorem func2_spec (env : HostEnv Unit) (seed len : UInt32) :
     rename_i vs heq
     simp only [List.cons.injEq, Value.i32.injEq] at heq
     have hlen : len ≠ 0 := fun h => by rw [if_pos h] at heq; exact absurd heq.1 (by decide)
+    obtain ⟨-, rfl⟩ := heq
     have hl4 : (if (if len < 32 then (1 : UInt32) else 0) ≠ 0 then Value.i32 len else Value.i32 32)
         = Value.i32 (if len < 32 then len else 32) := by by_cases h : len < 32 <;> simp [h]
     rw [hl4]
@@ -889,7 +890,10 @@ theorem func2_spec (env : HostEnv Unit) (seed len : UInt32) :
     have hshl : count <<< (2 % 32) = count * 4 := by bv_decide
     dsimp only
     rw [hshl]
-    sorry
+    refine func2_seed env count seed (1 + seed) _ _ _ hc1 hc32 ?_ ?_
+    · exact hpages
+    · intro st' vf hst'g hst'p hAB
+      sorry
   · -- len = 0: reverse empty buffers, skip the comparison
     rename_i n vs hn heq
     simp only [List.cons.injEq, Value.i32.injEq] at heq
