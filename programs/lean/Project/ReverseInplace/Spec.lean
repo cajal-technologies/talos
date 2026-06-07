@@ -911,6 +911,43 @@ theorem func2_spec (env : HostEnv Unit) (seed len : UInt32) :
         · intro stB vsB hPostB
           obtain ⟨rfl, hglB, hpgB, hframeB, hcontB⟩ := hPostB
           wp_run
+          simp only [List.length_cons, List.length_nil, List.getElem?_cons_zero,
+            List.getElem?_cons_succ, List.set_cons_zero, List.set_cons_succ, Nat.reduceAdd,
+            Nat.reduceLT, Nat.reduceSub, reduceIte]
+          have frameB_read : ∀ a : UInt32, 1048320 ≤ a.toNat → a.toNat + 4 ≤ 1048448 →
+              stB.mem.read32 a = stA.mem.read32 a := fun a hlo hhi =>
+            read32_eq_of_bytes stA.mem stB.mem a
+              (hframeB a.toNat (Or.inr (by rw [show ((1048576 - 256 : UInt32).toNat) = 1048320 from rfl]; omega))
+                (Or.inl (by rw [show ((128 + (1048576 - 256) : UInt32).toNat) = 1048448 from rfl]; omega)))
+              (hframeB (a.toNat + 1) (Or.inr (by rw [show ((1048576 - 256 : UInt32).toNat) = 1048320 from rfl]; omega))
+                (Or.inl (by rw [show ((128 + (1048576 - 256) : UInt32).toNat) = 1048448 from rfl]; omega)))
+              (hframeB (a.toNat + 2) (Or.inr (by rw [show ((1048576 - 256 : UInt32).toNat) = 1048320 from rfl]; omega))
+                (Or.inl (by rw [show ((128 + (1048576 - 256) : UInt32).toNat) = 1048448 from rfl]; omega)))
+              (hframeB (a.toNat + 3) (Or.inr (by rw [show ((1048576 - 256 : UInt32).toNat) = 1048320 from rfl]; omega))
+                (Or.inl (by rw [show ((128 + (1048576 - 256) : UInt32).toNat) = 1048448 from rfl]; omega)))
+          have frameA_read : ∀ a : UInt32, 1048448 ≤ a.toNat → a.toNat + 4 ≤ 1048576 →
+              stA.mem.read32 a = st'.mem.read32 a := fun a hlo hhi =>
+            read32_eq_of_bytes st'.mem stA.mem a
+              (hframeA a.toNat (Or.inr (by rw [show ((1048576 - 256 : UInt32).toNat) = 1048320 from rfl]; omega)))
+              (hframeA (a.toNat + 1) (Or.inr (by rw [show ((1048576 - 256 : UInt32).toNat) = 1048320 from rfl]; omega)))
+              (hframeA (a.toNat + 2) (Or.inr (by rw [show ((1048576 - 256 : UInt32).toNat) = 1048320 from rfl]; omega)))
+              (hframeA (a.toNat + 3) (Or.inr (by rw [show ((1048576 - 256 : UInt32).toNat) = 1048320 from rfl]; omega)))
+          have hAB' : ∀ i, i < count.toNat →
+              stB.mem.read32 (1048576 - 256 + 4 * UInt32.ofNat i)
+                = stB.mem.read32 (128 + (1048576 - 256) + 4 * UInt32.ofNat i) := by
+            intro i hi
+            have hAi : (1048576 - 256 + 4 * UInt32.ofNat i).toNat = 1048320 + 4 * i :=
+              toNat_base_add (1048576 - 256) i 17
+                (by simp only [show ((1048576 - 256 : UInt32).toNat) = 1048320 from rfl]; omega) (by decide)
+            have hBj : (128 + (1048576 - 256) + 4 * UInt32.ofNat (count.toNat - 1 - i)).toNat
+                = 1048448 + 4 * (count.toNat - 1 - i) := by
+              rw [UInt32.add_comm 128 (1048576 - 256)]
+              exact toNat_base_add (1048576 - 256 + 128) (count.toNat - 1 - i) 17
+                (by simp only [show ((1048576 - 256 + 128 : UInt32).toNat) = 1048448 from rfl]; omega) (by decide)
+            rw [frameB_read _ (by rw [hAi]; omega) (by rw [hAi]; omega), hcontA i hi, hcontB i hi,
+                frameA_read _ (by rw [hBj]; omega) (by rw [hBj]; omega),
+                show (128 + (1048576 - 256) : UInt32) = 1048576 - 256 + 128 from by rw [UInt32.add_comm]]
+            exact hAB (count.toNat - 1 - i) (by omega)
           sorry
   · -- len = 0: reverse empty buffers, skip the comparison
     rename_i n vs hn heq
