@@ -752,6 +752,15 @@ theorem func2_spec (env : HostEnv Unit) (seed len : UInt32) :
     have hl4 : (if (if len < 32 then (1 : UInt32) else 0) ≠ 0 then Value.i32 len else Value.i32 32)
         = Value.i32 (if len < 32 then len else 32) := by by_cases h : len < 32 <;> simp [h]
     rw [hl4]
+    have hc32 : (if len < 32 then len else 32).toNat ≤ 32 := by
+      split
+      · rename_i h; rw [UInt32.lt_iff_toNat_lt, show ((32 : UInt32).toNat) = 32 from rfl] at h; omega
+      · decide
+    have hc1 : 1 ≤ (if len < 32 then len else 32).toNat := by
+      have hlz : len.toNat ≠ 0 := by intro hz; apply hlen; apply UInt32.toNat.inj; rw [hz]; rfl
+      split
+      · omega
+      · decide
     sorry
   · -- len = 0: reverse empty buffers, skip the comparison
     rename_i n vs hn heq
