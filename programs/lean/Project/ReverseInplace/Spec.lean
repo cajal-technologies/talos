@@ -765,8 +765,79 @@ theorem func2_seed (env : HostEnv Unit) (count v0 inc : UInt32) (M : Store Unit)
     have hAkv : (1048576 - 256 + 4 * UInt32.ofNat k).toNat = 1048320 + 4 * k := hAk k (by omega)
     have hBkv : (1048576 - 256 + 128 + 4 * UInt32.ofNat k).toNat = 1048448 + 4 * k := hBk k (by omega)
     have hpl2 : stp.mem.pages * 65536 = 1114112 := by rw [hpl]
+    have h0 : UInt32.toNat 0 = 0 := rfl
+    have e0 : ∀ x : UInt32, x + 0 = x := fun x => by apply UInt32.toNat.inj; simp
+    have hA' : (4 * UInt32.ofNat k + (1048576 - 256)).toNat = 1048320 + 4 * k := by
+      rw [UInt32.add_comm]; exact hAkv
+    have hB' : (4 * UInt32.ofNat k + (128 + (1048576 - 256))).toNat = 1048448 + 4 * k := by
+      rw [UInt32.add_comm]
+      exact toNat_base_add (128 + (1048576 - 256)) k 17
+        (by simp only [show ((128 + (1048576 - 256) : UInt32).toNat) = 1048448 from rfl]; omega) (by decide)
+    have hAw : (4 * UInt32.ofNat k + (1048576 - 256) + 0).toNat = 1048320 + 4 * k := by rw [e0]; exact hA'
+    have hBw : (4 * UInt32.ofNat k + (128 + (1048576 - 256)) + 0).toNat = 1048448 + 4 * k := by
+      rw [e0]; exact hB'
+    have heqA : (1048576 - 256 + 4 * UInt32.ofNat k) = (4 * UInt32.ofNat k + (1048576 - 256) + 0) := by
+      apply UInt32.toNat.inj; rw [hAkv, hAw]
+    have heqB : (1048576 - 256 + 128 + 4 * UInt32.ofNat k)
+        = (4 * UInt32.ofNat k + (128 + (1048576 - 256)) + 0) := by apply UInt32.toNat.inj; rw [hBkv, hBw]
     wp_run
-    sorry
+    simp only [List.length_cons, List.length_nil, List.getElem?_cons_zero, List.getElem?_cons_succ,
+      List.set_cons_zero, List.set_cons_succ, Nat.reduceAdd, Nat.reduceLT, Nat.reduceSub, reduceIte]
+    rw [if_neg (by rw [hB', h0, hpl2]; omega), if_neg (by rw [hA', h0, write32_pages, hpl2]; omega)]
+    have hcontent : ∀ i, i < k + 1 →
+        ((stp.mem.write32 (4 * UInt32.ofNat k + (128 + (1048576 - 256)) + 0) vf).write32
+            (4 * UInt32.ofNat k + (1048576 - 256) + 0) vf).read32 (1048576 - 256 + 4 * UInt32.ofNat i)
+          = ((stp.mem.write32 (4 * UInt32.ofNat k + (128 + (1048576 - 256)) + 0) vf).write32
+            (4 * UInt32.ofNat k + (1048576 - 256) + 0) vf).read32 (1048576 - 256 + 128 + 4 * UInt32.ofNat i) := by
+      intro i hi
+      rcases Nat.lt_or_ge i k with hlt | hge
+      · have hAi : (1048576 - 256 + 4 * UInt32.ofNat i).toNat = 1048320 + 4 * i := hAk i (by omega)
+        have hBi : (1048576 - 256 + 128 + 4 * UInt32.ofNat i).toNat = 1048448 + 4 * i := hBk i (by omega)
+        rw [read32_write32_disjoint _ _ _ _ (by rw [hAi, hAw]; omega),
+            read32_write32_disjoint _ _ _ _ (by rw [hAi, hBw]; omega),
+            read32_write32_disjoint _ _ _ _ (by rw [hBi, hAw]; omega),
+            read32_write32_disjoint _ _ _ _ (by rw [hBi, hBw]; omega)]
+        exact hcont i hlt
+      · have hik : i = k := by omega
+        subst hik
+        rw [heqA, read32_write32_same, heqB,
+            read32_write32_disjoint _ _ _ _ (by rw [hAw, hBw]; omega), read32_write32_same]
+    have hsucc : (4 : UInt32) + 4 * UInt32.ofNat k = 4 * UInt32.ofNat (k + 1) := by
+      apply UInt32.toNat.inj
+      simp [UInt32.toNat_add, UInt32.toNat_mul, UInt32.toNat_ofNat]; omega
+    have ht1 : ((4 : UInt32) + 4 * UInt32.ofNat k).toNat = 4 + 4 * k := by
+      simp [UInt32.toNat_add, UInt32.toNat_mul, UInt32.toNat_ofNat]; omega
+    have ht2 : (4 * UInt32.ofNat k).toNat = 4 * k := by
+      simp [UInt32.toNat_mul, UInt32.toNat_ofNat]; omega
+    split
+    · rename_i hzero
+      simp only [List.cons.injEq, Value.i32.injEq] at hzero
+      have hcveq : count * 4 = 4 + 4 * UInt32.ofNat k := by
+        by_contra h; rw [if_pos h] at hzero; exact absurd hzero.1 (by decide)
+      have hcv4 : (count * 4).toNat = count.toNat * 4 := by
+        rw [UInt32.toNat_mul, show ((4 : UInt32).toNat) = 4 from rfl, Nat.mod_eq_of_lt (by omega)]
+      have hkc : count.toNat = k + 1 := by
+        have := congrArg UInt32.toNat hcveq; rw [hcv4, ht1] at this; omega
+      rw [← hcveq]
+      exact hQ _ (inc + vf) (by rw [hgl]) (by rw [write32_pages, write32_pages]; exact hpl)
+        (fun i hi => hcontent i (by omega))
+    · rename_i n vs hn hval
+      simp only [List.cons.injEq, Value.i32.injEq] at hval
+      have hne4 : count * 4 ≠ 4 + 4 * UInt32.ofNat k := by
+        intro h; apply hn; rw [if_neg (not_not.mpr h)] at hval; exact hval.1.symm
+      have hcv4 : (count * 4).toNat = count.toNat * 4 := by
+        rw [UInt32.toNat_mul, show ((4 : UInt32).toNat) = 4 from rfl, Nat.mod_eq_of_lt (by omega)]
+      have hkc : k + 1 < count.toNat := by
+        rcases Nat.lt_or_ge (k + 1) count.toNat with h | h
+        · exact h
+        · exfalso; apply hne4; apply UInt32.toNat.inj; rw [hcv4, ht1]; omega
+      refine ⟨⟨k + 1, inc + vf, hkc, ?_, hgl, by rw [write32_pages, write32_pages]; exact hpl,
+        fun i hi => hcontent i (by omega)⟩, ?_⟩
+      · rw [hsucc, List.append_nil]
+      · show count.toNat * 4 - ((4 : UInt32) + 4 * UInt32.ofNat k).toNat
+            < count.toNat * 4 - (4 * UInt32.ofNat k).toNat
+        rw [ht1, ht2]; omega
+    · rename_i hne1 hne2; exact (hne2 _ _ rfl).elim
 
 set_option maxRecDepth 8000 in
 /-- The `check` body (func2): allocate two 128-byte scratch buffers `A`,
