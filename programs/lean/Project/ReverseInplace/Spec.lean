@@ -966,7 +966,26 @@ theorem func2_spec (env : HostEnv Unit) (seed len : UInt32) :
                 rw [show UInt32.ofNat 0 = (0 : UInt32) from by decide]; apply UInt32.toNat.inj; simp,
               show ∀ x : UInt32, x + 0 = x from fun x => by apply UInt32.toNat.inj; simp,
               List.append_nil]
-          · sorry
+          · intro stp s hInv
+            obtain ⟨p, l, v⟩ := s
+            obtain ⟨rfl, m, hm, hs⟩ := hInv
+            injection hs with hp hl hv; subst hp; subst hl; subst hv
+            have hpB2 : stB.mem.pages * 65536 = 1114112 := by rw [hpgB, hpgA, hst'p]
+            have e0 : ∀ x : UInt32, x + 0 = x := fun x => by apply UInt32.toNat.inj; simp
+            have hAm : (1048576 - 256 + 4 * UInt32.ofNat m).toNat = 1048320 + 4 * m :=
+              toNat_base_add (1048576 - 256) m 17
+                (by simp only [show ((1048576 - 256 : UInt32).toNat) = 1048320 from rfl]; omega) (by decide)
+            have hBm : (128 + (1048576 - 256) + 4 * UInt32.ofNat m).toNat = 1048448 + 4 * m := by
+              rw [UInt32.add_comm 128 (1048576 - 256)]
+              exact toNat_base_add (1048576 - 256 + 128) m 17
+                (by simp only [show ((1048576 - 256 + 128 : UInt32).toNat) = 1048448 from rfl]; omega) (by decide)
+            have hvals : stB.mem.read32 (1048576 - 256 + 4 * UInt32.ofNat m)
+                = stB.mem.read32 (128 + (1048576 - 256) + 4 * UInt32.ofNat m) := hAB' m hm
+            wp_run
+            simp only [List.length_cons, List.length_nil, List.getElem?_cons_zero,
+              List.getElem?_cons_succ, List.set_cons_zero, List.set_cons_succ, Nat.reduceAdd,
+              Nat.reduceLT, Nat.reduceSub, reduceIte]
+            sorry
   · -- len = 0: reverse empty buffers, skip the comparison
     rename_i n vs hn heq
     simp only [List.cons.injEq, Value.i32.injEq] at heq
