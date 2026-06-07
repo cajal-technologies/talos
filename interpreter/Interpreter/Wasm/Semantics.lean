@@ -707,6 +707,16 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
     | _, .nop => .Fallthrough st s
     | _, .unreachable => .Trap st "unreachable"
 
+    -- Reference instructions. `funcref` values reuse the existing
+    -- `Value.funcref (Option Nat)` representation, so these never touch the
+    -- store: `refNull`/`refFunc` just push a value, `refIsNull` inspects one.
+    | _, .refNull      => .Fallthrough st { s with values := .funcref none :: s.values }
+    | _, .refFunc fidx => .Fallthrough st { s with values := .funcref (some fidx) :: s.values }
+    | _, .refIsNull => match s.values with
+      | .funcref r :: vs =>
+        .Fallthrough st { s with values := .i32 (if r.isNone then 1 else 0) :: vs }
+      | _ => .Invalid "refIsNull: ill-shaped operand stack"
+
 def exec (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (p : Program)
     (env : HostEnv α := {}) : Continuation α :=
   match p with

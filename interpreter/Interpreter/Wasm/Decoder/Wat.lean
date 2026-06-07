@@ -416,6 +416,7 @@ private def parsePlainOp : String → Except Err Wasm.Instruction
   | "memory.grow"  => .ok .memoryGrow
   | "memory.fill"  => .ok .memoryFill
   | "memory.copy"  => .ok .memoryCopy
+  | "ref.is_null"  => .ok .refIsNull
   | op          =>
     -- Accept instructions from proposals the interpreter doesn't model
     -- (floats, SIMD, reference types, tables, GC, exceptions, tail calls)
@@ -531,7 +532,6 @@ interpreter doesn't model. Returns `none` for ops we don't pretend to
 support. -/
 private def stubImmediateCount (op : String) : Option Nat :=
   if op == "f32.const" || op == "f64.const"
-     || op == "ref.null" || op == "ref.func"
      || op == "ref.test" || op == "ref.cast"
      || op == "br_on_null" || op == "br_on_non_null"
      || op == "return_call" || op == "return_call_ref" || op == "call_ref"
@@ -671,6 +671,13 @@ private partial def parseInstr (ctx : Ctx) (toks : List Sexpr)
     | "call_indirect" | "return_call_indirect" => parseCallIndirect ctx rest
     | "memory.init" => parseImmediateNat parseNat .memoryInit op rest
     | "data.drop"   => parseImmediateNat parseNat .dataDrop   op rest
+    | "ref.func"    => parseImmediateNat (resolveNamed ctx.funcIds "function") .refFunc op rest
+    -- `ref.null ht` carries a heap-type immediate. We only model `funcref`,
+    -- so `ref.null func` becomes the null funcref; any other heap type
+    -- (e.g. `extern`) keeps the legacy decode-but-trap behaviour.
+    | "ref.null"    => match rest with
+      | .atom ht :: rest' => .ok ([if ht == "func" then .refNull else .unreachable], rest')
+      | _ => .error "ref.null expects a heap-type immediate"
     | "select"    =>
       let rec dropResults : List Sexpr → List Sexpr
         | .list (.atom "result" :: _) :: r => dropResults r
@@ -746,6 +753,12 @@ private partial def parseFolded (ctx : Ctx) (xs : List Sexpr)
     | "call"  => foldedWithImmediate ctx (resolveNamed ctx.funcIds "function") (fun i => [.call i]) rest
     | "memory.init" => foldedWithImmediate ctx parseNat (fun i => [.memoryInit i]) rest
     | "data.drop"   => foldedWithImmediate ctx parseNat (fun i => [.dataDrop i])   rest
+    | "ref.func"    =>
+      foldedWithImmediate ctx (resolveNamed ctx.funcIds "function") (fun i => [.refFunc i]) rest
+    | "ref.null"    =>
+      match rest with
+      | [.atom ht] => .ok [if ht == "func" then .refNull else .unreachable]
+      | _ => .error "folded ref.null expects exactly one heap-type immediate"
     | "call_indirect" | "return_call_indirect" => do
       let (instr, leftover) ← parseCallIndirect ctx rest
       unless leftover.isEmpty do

@@ -112,6 +112,14 @@ inductive Instruction where
   -- that function via the standard calling convention.
   | callIndirect : (typeIdx tableIdx : Nat) → Instruction
 
+  -- Reference instructions. `funcref` values are already modelled by
+  -- `Value.funcref (Option Nat)` (`none` = null, `some i` = a reference to
+  -- function index `i`). These produce and test such values; none of them
+  -- touch the store.
+  | refNull   : Instruction        -- ref.null func: push the null funcref
+  | refFunc   : Nat → Instruction  -- ref.func i:    push a reference to function `i`
+  | refIsNull : Instruction        -- ref.is_null:   pop a ref, push i32 1 if null else 0
+
   -- i32 memory loads (static byte offset; address popped from stack as i32)
   | load8U  : UInt32 → Instruction  -- i32.load8_u:  zero-extend 1 byte  → i32
   | load8S  : UInt32 → Instruction  -- i32.load8_s:  sign-extend 1 byte  → i32
