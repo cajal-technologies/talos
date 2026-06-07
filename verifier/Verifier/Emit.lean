@@ -232,6 +232,9 @@ private def emitInstrShort : Wasm.Instruction → String
   | .refNull        => ".refNull"
   | .refFunc i      => s!".refFunc {emitNat i}"
   | .refIsNull      => ".refIsNull"
+  -- Tables
+  | .tableGet t     => s!".tableGet {emitNat t}"
+  | .tableSize t    => s!".tableSize {emitNat t}"
   -- Globals
   | .globalGet i    => s!".globalGet {emitNat i}"
   | .globalSet i    => s!".globalSet {emitNat i}"

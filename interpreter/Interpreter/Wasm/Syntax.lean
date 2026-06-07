@@ -169,6 +169,16 @@ inductive Instruction where
   | refFunc   : Nat → Instruction  -- ref.func i:    push a reference to function `i`
   | refIsNull : Instruction        -- ref.is_null:   pop a ref, push i32 1 if null else 0
 
+  -- Table instructions. The runtime tables live on the `Store` (one
+  -- `TableInst = List (Option Nat)` per declared table). These read them
+  -- without mutating: `table.get t` pops an i32 index `i` and pushes
+  -- `tables[t][i]` as a `funcref` (trapping if `i` is past the table's
+  -- current length); `table.size t` pushes the table's current length as
+  -- an i32. A `tableIdx` that is itself out of range is a validation
+  -- error, not a runtime trap.
+  | tableGet  : Nat → Instruction  -- table.get t
+  | tableSize : Nat → Instruction  -- table.size t
+
   -- i32 memory loads (static byte offset; address popped from stack as i32)
   | load8U  : UInt32 → Instruction  -- i32.load8_u:  zero-extend 1 byte  → i32
   | load8S  : UInt32 → Instruction  -- i32.load8_s:  sign-extend 1 byte  → i32

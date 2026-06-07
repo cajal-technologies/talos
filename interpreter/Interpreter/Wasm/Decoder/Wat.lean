@@ -703,7 +703,9 @@ if op == "ref.test" || op == "ref.cast"
      || op == "br_on_null" || op == "br_on_non_null"
      || op == "return_call" || op == "return_call_ref" || op == "call_ref"
      || op == "elem.drop" || op == "throw" || op == "tag"
-     || op == "table.get" || op == "table.set" || op == "table.size"
+     -- `table.get`/`table.size` are modelled (see `parseInstr`/`parseFolded`);
+     -- the rest of the table ops are still stubbed.
+     || op == "table.set"
      || op == "table.grow" || op == "table.fill"
      || op == "struct.new" || op == "struct.new_default"
      || op == "array.new" || op == "array.new_default" || op == "array.new_fixed"
@@ -817,6 +819,19 @@ private def consumeBrOnCastImmediates (op : String)
     | .list _, .atom _ | .list _, .list _ => .ok rest
   | _ => .error s!"{op}: expected label + 2 type immediates"
 
+/-- Parse the *optional* table-index immediate carried by `table.get` /
+`table.size` in flat (post-`wasm-tools print`) form. The index is `$name`
+or a numeric literal when present and defaults to table `0` when omitted;
+we only consume a leading atom that `looksLikeLabel` (so an immediately
+following bare instruction op is left for the next parse step). -/
+private def parseOptTableIdx (ctx : Ctx) (mk : Nat → Wasm.Instruction)
+    : List Sexpr → Except Err (List Wasm.Instruction × List Sexpr)
+  | .atom a :: rest' =>
+    if looksLikeLabel a then do
+      .ok ([mk (← resolveNamed ctx.tableNames "table" a)], rest')
+    else .ok ([mk 0], .atom a :: rest')
+  | rest' => .ok ([mk 0], rest')
+
 mutual
 
 private partial def parseInstr (ctx : Ctx) (toks : List Sexpr)
@@ -851,6 +866,10 @@ private partial def parseInstr (ctx : Ctx) (toks : List Sexpr)
     | "ref.null"    => match rest with
       | .atom ht :: rest' => .ok ([if isNullFuncrefHeapType ht then .refNull else .unreachable], rest')
       | _ => .error "ref.null expects a heap-type immediate"
+    -- `table.get`/`table.size` carry an *optional* table-index immediate
+    -- (default 0); see `parseOptTableIdx`.
+    | "table.get"   => parseOptTableIdx ctx .tableGet rest
+    | "table.size"  => parseOptTableIdx ctx .tableSize rest
     | "select"    =>
       let rec dropResults : List Sexpr → List Sexpr
         | .list (.atom "result" :: _) :: r => dropResults r
@@ -940,6 +959,8 @@ private partial def parseFolded (ctx : Ctx) (xs : List Sexpr)
       match rest with
       | [.atom ht] => .ok [if isNullFuncrefHeapType ht then .refNull else .unreachable]
       | _ => .error "folded ref.null expects exactly one heap-type immediate"
+    | "table.get"   => foldedOptTableIdx ctx .tableGet rest
+    | "table.size"  => foldedOptTableIdx ctx .tableSize rest
     | "call_indirect" | "return_call_indirect" => do
       let (instr, leftover) ← parseCallIndirect ctx rest
       unless leftover.isEmpty do
@@ -1027,6 +1048,27 @@ private partial def foldedWithImmediate (ctx : Ctx)
       | .atom a => .error s!"folded form: unexpected atom operand '{a}'"
     .ok (acc ++ mkInstrs (← resolve n))
   | _ => .error "folded form: missing immediate"
+
+/-- Folded form of `table.get` / `table.size`. The table-index immediate is
+optional (a leading `$name`/numeric atom, default 0); everything after it
+is the folded index-operand sub-expression(s). -/
+private partial def foldedOptTableIdx (ctx : Ctx) (mk : Nat → Wasm.Instruction)
+    : List Sexpr → Except Err (List Wasm.Instruction)
+  | xs => do
+    let (tableIdx, ops) ← match xs with
+      | .atom a :: rest =>
+        if looksLikeLabel a then
+          pure ((← resolveNamed ctx.tableNames "table" a), rest)
+        else .error s!"folded table op: unexpected atom operand '{a}'"
+      | _ => pure (0, xs)
+    let mut acc : List Wasm.Instruction := []
+    for s in ops do
+      match s with
+      | .list ys =>
+        let sub ← parseFolded ctx ys
+        acc := acc ++ sub
+      | .atom a => .error s!"folded table op: unexpected atom operand '{a}'"
+    .ok (acc ++ [mk tableIdx])
 
 private partial def parseBrTable (ctx : Ctx) (toks : List Sexpr)
     : Except Err (List Wasm.Instruction × List Sexpr) := do
