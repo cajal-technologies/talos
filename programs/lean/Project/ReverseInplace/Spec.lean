@@ -839,7 +839,8 @@ theorem func2_seed (env : HostEnv Unit) (count v0 inc : UInt32) (M : Store Unit)
         rw [ht1, ht2]; omega
     · rename_i hne1 hne2; exact (hne2 _ _ rfl).elim
 
-set_option maxRecDepth 8000 in
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 2000000 in
 /-- The `check` body (func2): allocate two 128-byte scratch buffers `A`,
 `B` on the shadow stack, seed them identically, reverse `A` with
 `reverse_fast` and `B` with `reverse_naive`, then compare — the
@@ -970,7 +971,7 @@ theorem func2_spec (env : HostEnv Unit) (seed len : UInt32) :
             obtain ⟨p, l, v⟩ := s
             obtain ⟨rfl, m, hm, hs⟩ := hInv
             injection hs with hp hl hv; subst hp; subst hl; subst hv
-            have hpB2 : stB.mem.pages * 65536 = 1114112 := by rw [hpgB, hpgA, hst'p]
+            have hpB2 : stp.mem.pages * 65536 = 1114112 := by rw [hpgB, hpgA, hst'p]
             have e0 : ∀ x : UInt32, x + 0 = x := fun x => by apply UInt32.toNat.inj; simp
             have hAm : (1048576 - 256 + 4 * UInt32.ofNat m).toNat = 1048320 + 4 * m :=
               toNat_base_add (1048576 - 256) m 17
@@ -979,13 +980,47 @@ theorem func2_spec (env : HostEnv Unit) (seed len : UInt32) :
               rw [UInt32.add_comm 128 (1048576 - 256)]
               exact toNat_base_add (1048576 - 256 + 128) m 17
                 (by simp only [show ((1048576 - 256 + 128 : UInt32).toNat) = 1048448 from rfl]; omega) (by decide)
-            have hvals : stB.mem.read32 (1048576 - 256 + 4 * UInt32.ofNat m)
-                = stB.mem.read32 (128 + (1048576 - 256) + 4 * UInt32.ofNat m) := hAB' m hm
+            have hvals : stp.mem.read32 (1048576 - 256 + 4 * UInt32.ofNat m)
+                = stp.mem.read32 (128 + (1048576 - 256) + 4 * UInt32.ofNat m) := hAB' m hm
             wp_run
             simp only [List.length_cons, List.length_nil, List.getElem?_cons_zero,
               List.getElem?_cons_succ, List.set_cons_zero, List.set_cons_succ, Nat.reduceAdd,
               Nat.reduceLT, Nat.reduceSub, reduceIte]
-            sorry
+            rw [if_neg (by rw [hAm, show UInt32.toNat 0 = 0 from rfl, hpB2]; omega),
+                if_neg (by rw [hBm, show UInt32.toNat 0 = 0 from rfl, hpB2]; omega), e0, e0,
+                if_neg (fun hne => hne hvals)]
+            have hcm : (count - UInt32.ofNat m).toNat = count.toNat - m := by
+              simp [UInt32.toNat_sub]; omega
+            have hcm1 : (4294967295 + (count - UInt32.ofNat m)).toNat = count.toNat - m - 1 := by
+              rw [UInt32.toNat_add, hcm, show ((4294967295 : UInt32).toNat) = 4294967295 from rfl]; omega
+            by_cases hX : (4294967295 + (count - UInt32.ofNat m)) = 0
+            · rw [if_pos hX]; simp [hgB0]
+            · rw [if_neg hX]
+              have hmlt : m + 1 < count.toNat := by
+                rcases Nat.lt_or_ge (m + 1) count.toNat with h | h
+                · exact h
+                · exfalso; apply hX; apply UInt32.toNat.inj; rw [hcm1]; simp; omega
+              have hsA : (4 : UInt32) + (1048576 - 256 + 4 * UInt32.ofNat m)
+                  = 1048576 - 256 + 4 * UInt32.ofNat (m + 1) := by
+                apply UInt32.toNat.inj
+                rw [UInt32.toNat_add, hAm,
+                  toNat_base_add (1048576 - 256) (m + 1) 17
+                    (by simp only [show ((1048576 - 256 : UInt32).toNat) = 1048320 from rfl]; omega) (by decide),
+                  show ((4 : UInt32).toNat) = 4 from rfl,
+                  show ((1048576 - 256 : UInt32).toNat) = 1048320 from rfl]; omega
+              have hsB : (4 : UInt32) + (128 + (1048576 - 256) + 4 * UInt32.ofNat m)
+                  = 128 + (1048576 - 256) + 4 * UInt32.ofNat (m + 1) := by
+                apply UInt32.toNat.inj
+                rw [UInt32.toNat_add, hBm, UInt32.add_comm 128 (1048576 - 256),
+                  toNat_base_add (1048576 - 256 + 128) (m + 1) 17
+                    (by simp only [show ((1048576 - 256 + 128 : UInt32).toNat) = 1048448 from rfl]; omega) (by decide),
+                  show ((4 : UInt32).toNat) = 4 from rfl,
+                  show ((1048576 - 256 + 128 : UInt32).toNat) = 1048448 from rfl]; omega
+              have hsl : (4294967295 : UInt32) + (count - UInt32.ofNat m) = count - UInt32.ofNat (m + 1) := by
+                apply UInt32.toNat.inj; rw [hcm1]; simp [UInt32.toNat_sub]; omega
+              refine ⟨⟨trivial, m + 1, hmlt, ?_⟩, ?_⟩
+              · rw [hsB, hsA, hsl, List.append_nil]
+              · rw [hcm1, hcm]; omega
   · -- len = 0: reverse empty buffers, skip the comparison
     rename_i n vs hn heq
     simp only [List.cons.injEq, Value.i32.injEq] at heq
