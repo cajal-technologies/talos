@@ -948,7 +948,25 @@ theorem func2_spec (env : HostEnv Unit) (seed len : UInt32) :
                 frameA_read _ (by rw [hBj]; omega) (by rw [hBj]; omega),
                 show (128 + (1048576 - 256) : UInt32) = 1048576 - 256 + 128 from by rw [UInt32.add_comm]]
             exact hAB (count.toNat - 1 - i) (by omega)
-          sorry
+          have hgB0 : stB.globals.globals[0]? = some (Value.i32 (1048576 - 256)) := by
+            rw [hglB, hglA]; exact hst'g0
+          apply wp_block_cons
+          apply wp_loop_cons
+            (Inv := fun st'' s' => st'' = stB ∧ ∃ m, m < count.toNat ∧
+              s' = { params := [Value.i32 (128 + (1048576 - 256) + 4 * UInt32.ofNat m),
+                                Value.i32 (count * 4)],
+                     locals := [Value.i32 (1048576 - 256), Value.i32 (1048576 - 256 + 4 * UInt32.ofNat m),
+                                Value.i32 (count - UInt32.ofNat m), Value.i32 (1 + seed)], values := [] })
+            (μ := fun _ s' => match s'.locals with
+              | _ :: _ :: Value.i32 l4 :: _ => l4.toNat
+              | _ => 0)
+          · refine ⟨rfl, 0, by omega, ?_⟩
+            simp only [show (4 : UInt32) * UInt32.ofNat 0 = 0 from by decide,
+              show count - UInt32.ofNat 0 = count from by
+                rw [show UInt32.ofNat 0 = (0 : UInt32) from by decide]; apply UInt32.toNat.inj; simp,
+              show ∀ x : UInt32, x + 0 = x from fun x => by apply UInt32.toNat.inj; simp,
+              List.append_nil]
+          · sorry
   · -- len = 0: reverse empty buffers, skip the comparison
     rename_i n vs hn heq
     simp only [List.cons.injEq, Value.i32.injEq] at heq
