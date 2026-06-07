@@ -893,7 +893,25 @@ theorem func2_spec (env : HostEnv Unit) (seed len : UInt32) :
     refine func2_seed env count seed (1 + seed) _ _ _ hc1 hc32 ?_ ?_
     · exact hpages
     · intro st' vf hst'g hst'p hAB
-      sorry
+      have hst'g0 : st'.globals.globals[0]? = some (Value.i32 (1048576 - 256)) := by
+        rw [hst'g]; rcases hgg : st0.globals.globals with _ | ⟨hd, tl⟩
+        · rw [hgg] at hg0; simp at hg0
+        · simp
+      wp_run
+      apply wp_call_cons_rel (func0_spec env (1048576 - 256) count hc32 [])
+      · exact ⟨rfl, by rw [hst'p]; decide, by rw [hst'p]; decide⟩
+      · intro stA vsA hPostA
+        obtain ⟨rfl, hglA, hpgA, hframeA, hcontA⟩ := hPostA
+        wp_run
+        apply wp_call_cons_rel (func1_spec env (128 + (1048576 - 256)) count (1048576 - 256) hc32 [])
+        · refine ⟨rfl, by rw [hglA]; exact hst'g0, by decide, ?_, ?_, ?_, by decide⟩
+          · rw [hpgA, hst'p]; decide
+          · rw [hpgA, hst'p]; decide
+          · rw [hpgA, hst'p]; decide
+        · intro stB vsB hPostB
+          obtain ⟨rfl, hglB, hpgB, hframeB, hcontB⟩ := hPostB
+          wp_run
+          sorry
   · -- len = 0: reverse empty buffers, skip the comparison
     rename_i n vs hn heq
     simp only [List.cons.injEq, Value.i32.injEq] at heq
