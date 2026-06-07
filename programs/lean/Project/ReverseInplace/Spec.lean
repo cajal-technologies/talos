@@ -714,7 +714,59 @@ theorem func1_spec (env : HostEnv α) (base count sp : UInt32)
     rename_i hne1 hne2
     exact hne2 _ _ rfl
 
-/-! ## `check` (func2) and the export wrapper (func3) -/
+set_option maxRecDepth 8000 in
+/-- The seed loop of `check`: writes the same value to `A[i]` and `B[i]`
+(`A = global0 − 256`, `B = A + 128`) for every `i < count`, so the two
+scratch buffers end up holding identical data. The continuation `rest`
+under post `Q` is threaded through; on exit the buffers satisfy
+`A[i] = B[i]`. -/
+theorem func2_seed (env : HostEnv Unit) (count v0 inc : UInt32) (M : Store Unit)
+    (Q : Assertion Unit) (rest : Program)
+    (hc1 : 1 ≤ count.toNat) (hc32 : count.toNat ≤ 32) (hpM : M.mem.pages = 17)
+    (hQ : ∀ (st' : Store Unit) (vf : UInt32),
+        st'.globals = M.globals → st'.mem.pages = 17 →
+        (∀ i, i < count.toNat → st'.mem.read32 (1048576 - 256 + 4 * UInt32.ofNat i)
+            = st'.mem.read32 (1048576 - 256 + 128 + 4 * UInt32.ofNat i)) →
+        wp module rest Q st'
+          { params := [Value.i32 vf, Value.i32 (count * 4)],
+            locals := [Value.i32 (1048576 - 256), Value.i32 (count * 4), Value.i32 count,
+                       Value.i32 inc], values := [] } env) :
+    wp module
+      (Instruction.loop 0 0
+        [.localGet 2, .const 128, .add, .localGet 3, .add, .localGet 0, .store32 0, .localGet 2,
+          .localGet 3, .add, .localGet 0, .store32 0, .localGet 0, .localGet 5, .add, .localSet 0,
+          .localGet 1, .localGet 3, .const 4, .add, .localSet 3, .localGet 3, .ne, .br_if 0] :: rest)
+      Q M
+      { params := [Value.i32 v0, Value.i32 (count * 4)],
+        locals := [Value.i32 (1048576 - 256), Value.i32 0, Value.i32 count, Value.i32 inc],
+        values := [] } env := by
+  have hAk : ∀ k : Nat, k ≤ 32 → (1048576 - 256 + 4 * UInt32.ofNat k).toNat = 1048320 + 4 * k :=
+    fun k hk => toNat_base_add (1048576 - 256) k 17
+      (by simp only [show ((1048576 - 256 : UInt32).toNat) = 1048320 from rfl]; omega) (by decide)
+  have hBk : ∀ k : Nat, k ≤ 32 → (1048576 - 256 + 128 + 4 * UInt32.ofNat k).toNat = 1048448 + 4 * k :=
+    fun k hk => toNat_base_add (1048576 - 256 + 128) k 17
+      (by simp only [show ((1048576 - 256 + 128 : UInt32).toNat) = 1048448 from rfl]; omega) (by decide)
+  apply wp_loop_cons
+    (Inv := fun st' s' => ∃ k vf, k < count.toNat ∧
+      s' = { params := [Value.i32 vf, Value.i32 (count * 4)],
+             locals := [Value.i32 (1048576 - 256), Value.i32 (4 * UInt32.ofNat k), Value.i32 count,
+                        Value.i32 inc], values := [] } ∧
+      st'.globals = M.globals ∧ st'.mem.pages = 17 ∧
+      (∀ i, i < k → st'.mem.read32 (1048576 - 256 + 4 * UInt32.ofNat i)
+          = st'.mem.read32 (1048576 - 256 + 128 + 4 * UInt32.ofNat i)))
+    (μ := fun _ s' => match s'.locals with
+      | _ :: Value.i32 off :: _ => count.toNat * 4 - off.toNat
+      | _ => 0)
+  · exact ⟨0, v0, by omega, by simp, rfl, hpM, fun i hi => absurd hi (by omega)⟩
+  · rintro stp s hInv
+    obtain ⟨p, l, v⟩ := s
+    obtain ⟨k, vf, hk, hs, hgl, hpl, hcont⟩ := hInv
+    injection hs with hp hl hv; subst hp; subst hl; subst hv
+    have hAkv : (1048576 - 256 + 4 * UInt32.ofNat k).toNat = 1048320 + 4 * k := hAk k (by omega)
+    have hBkv : (1048576 - 256 + 128 + 4 * UInt32.ofNat k).toNat = 1048448 + 4 * k := hBk k (by omega)
+    have hpl2 : stp.mem.pages * 65536 = 1114112 := by rw [hpl]
+    wp_run
+    sorry
 
 set_option maxRecDepth 8000 in
 /-- The `check` body (func2): allocate two 128-byte scratch buffers `A`,
