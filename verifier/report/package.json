@@ -2,6 +2,7 @@
   "name": "talos-report",
   "version": "0.2.0",
   "private": true,
+  "license": "AGPL-3.0-only",
   "type": "module",
   "description": "Static-site generator (Astro) that turns `verifier extract` JSON artifacts into a browsable progress report.",
   "scripts": {
