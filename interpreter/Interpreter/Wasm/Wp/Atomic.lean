@@ -629,6 +629,26 @@ macro "wp_atomic" : tactic => `(tactic|
     wp m (.unreachable :: rest) Q st s env ↔ Q (.Trap st "unreachable") := by
   wp_atomic
 
+/-! ## Reference instructions -/
+
+@[simp, wp_simp] theorem wp_refNull_cons :
+    wp m (.refNull :: rest) Q st s env ↔
+    wp m rest Q st { s with values := .funcref none :: s.values } env := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_refFunc_cons :
+    wp m (.refFunc fidx :: rest) Q st s env ↔
+    wp m rest Q st { s with values := .funcref (some fidx) :: s.values } env := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_refIsNull_cons :
+    wp m (.refIsNull :: rest) Q st s env ↔
+    (match s.values with
+     | .funcref r :: vs =>
+       wp m rest Q st { s with values := .i32 (if r.isNone then 1 else 0) :: vs } env
+     | _ => Q (.Invalid "refIsNull: ill-shaped operand stack")) := by
+  wp_atomic
+
 /-! ## Globals -/
 
 @[simp, wp_simp] theorem wp_globalGet_cons :

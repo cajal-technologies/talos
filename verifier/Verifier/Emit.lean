@@ -228,6 +228,10 @@ private def emitInstrShort : Wasm.Instruction → String
   | .call idx                  => s!".call {emitNat idx}"
   | .callIndirect ti tj        => s!".callIndirect {emitNat ti} {emitNat tj}"
   | .ret                       => ".ret"
+  -- References
+  | .refNull        => ".refNull"
+  | .refFunc i      => s!".refFunc {emitNat i}"
+  | .refIsNull      => ".refIsNull"
   -- Globals
   | .globalGet i    => s!".globalGet {emitNat i}"
   | .globalSet i    => s!".globalSet {emitNat i}"
