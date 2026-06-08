@@ -92,10 +92,14 @@ diverge from chain execution.
      host contracts.
    - Done: add memory framing lemmas for `readBytes`, `read32`, and
      `writeBytes`.
-   - Add finer relational host contracts and simp lemmas for each host category
-     as proofs need abstraction from concrete host functions.
+   - Done: add finer relational host contracts and satisfaction theorems for
+     register/input, context/economics, crypto/logging, storage, and callback
+     result host categories used by current examples.
+   - Done: add storage projection simp lemmas plus a proved `KvSetter`
+     final-store postcondition.
    - Turn `KvSetter.SetSpec` from a stated proposition plus concrete checks into
-     a general theorem.
+     a general theorem by connecting the symbolic `run 100` equality to the
+     proved final-store model.
 
 10. Real contract pipeline
    - Done: decode/import a compiled `near-sdk-rs` contract.

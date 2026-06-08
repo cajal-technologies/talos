@@ -19,9 +19,10 @@ frame is the "iterate over all keys" reasoning the storage-as-a-function
 model makes free — no Wasm enumeration needed.
 
 Following the repo convention (cf. `XorSum/Spec.lean`), `SetSpec` is stated
-as a `def … : Prop`; its general proof rests on linear-memory framing
-lemmas (`read32`/`readBytes` through `writeBytes`) and is the next
-milestone. The `native_decide` theorems below prove the *whole pipeline*
+as a `def … : Prop`. The proof now has an explicit successful final-store
+model and a proved storage postcondition; the remaining proof step is the
+symbolic interpreter equality from `run 100` to that final store. The
+`native_decide` theorems below validate the *whole pipeline*
 — registers, the memory-or-register sentinel, length-prefix parsing, and
 `storage_write` semantics — executes correctly on concrete inputs.
 -/
@@ -88,9 +89,27 @@ def encodeKV (key val : List UInt8) : List UInt8 :=
 
 /-! ## Specification (stated; general proof is the next milestone) -/
 
+/-- Host projection after a successful `set`. Register `0` contains the
+raw input. Register `1` receives the old value only on overwrite, matching
+`storage_write`'s output-register convention. -/
+def finalHost (ns : NearState) (key val : List UInt8) : NearState :=
+  let input := encodeKV key val
+  let afterInput := ns.setRegister 0 input
+  match ns.storage key with
+  | some old => ((afterInput.setRegister 1 old).setStorage key val).invalidateIterators
+  | none     => (afterInput.setStorage key val).invalidateIterators
+
+/-- Final store after a successful `set`. -/
+def finalStore (ns : NearState) (key val : List UInt8) : Store NearState :=
+  let st0 := { («module».initialStore : Store NearState) with host := ns }
+  { st0 with
+    mem := st0.mem.writeBytes 0 (encodeKV key val)
+    host := finalHost ns key val }
+
 /-- **Spec for `set`.** For any incoming NEAR state whose `input` is the
-length-prefixed encoding of `(key, val)` (with sizes that fit a u32 and the
-single memory page), the call terminates and:
+length-prefixed encoding of `(key, val)` (with sizes that fit a u32, the
+single memory page, and the configured NEAR host limits), the call terminates
+and:
 
 * *projection after the call:* `storage[key] = val`;
 * *frame condition:* every other key is unchanged from the incoming state.
@@ -102,12 +121,26 @@ def SetSpec : Prop :=
   ∀ (ns : NearState) (key val : List UInt8),
     key.length < 4294967296 → val.length < 4294967296 →
     (encodeKV key val).length ≤ 65536 →
+    withinLimit ns.config.maxRegisterLen (encodeKV key val).length →
+    withinLimit ns.config.maxStorageKeyLen key.length →
+    withinLimit ns.config.maxStorageValueLen val.length →
+    (match ns.storage key with
+     | some old => withinLimit ns.config.maxRegisterLen old.length
+     | none     => true) →
     ns.context.input = encodeKV key val →
     TerminatesWith nearEnv «module» setIdx
       { («module».initialStore : Store NearState) with host := ns } []
       (fun st _ =>
         st.host.storage key = some val ∧
         (∀ k, k ≠ key → st.host.storage k = ns.storage k))
+
+theorem finalStore_satisfies_set_post (ns : NearState) (key val : List UInt8) :
+    (finalStore ns key val).host.storage key = some val ∧
+      (∀ k, k ≠ key → (finalStore ns key val).host.storage k = ns.storage k) := by
+  cases hOld : ns.storage key <;> constructor <;>
+    simp [finalStore, finalHost, hOld, NearState.setStorage, NearState.setRegister,
+      NearState.invalidateIterators]
+  all_goals intro k hk heq; contradiction
 
 /-! ## Concrete end-to-end validation
 
