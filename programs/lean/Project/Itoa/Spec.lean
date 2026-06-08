@@ -26,10 +26,20 @@ export `check_i64` terminates and leaves an empty value stack.
 Termination-without-trapping is the whole content of the spec — the
 body traps via `unreachable` iff the `itoa`-crate formatter and the
 hand-written naive oracle disagree, so this property *is* the
-equivalence claim between the two implementations. -/
+equivalence claim between the two implementations.
+
+The hypothesis `initial = «module».initialStore` pins the run to the
+canonical instantiated store: the `itoa`-crate formatter reads its
+decimal `DIGIT_TABLE` from the module's read-only data segment and
+relies on the stack-pointer global, so the property is only meaningful
+relative to a store in which the module's data and globals are
+installed (it is *false* for an arbitrary store, where the table is
+absent). This matches the equivalence-check corpus convention for
+memory/global-touching specs (cf. `xor_sum`). -/
 @[spec_of "rust-exported" "itoa::check_i64"]
 def CheckI64Spec : Prop :=
   ∀ (env : HostEnv Unit) (initial : Store Unit) (n : UInt64) (cap : UInt32),
+    initial = «module».initialStore →
     TerminatesWith env «module» 7 initial [.i64 n, .i32 cap]
       (fun _ rs => rs = [])
 
@@ -41,10 +51,13 @@ Same shape as [`CheckI64Spec`], but for the unsigned formatter export.
 `n : UInt64` is the wasm value carrier (interpreted as `u64` by the
 host) and `cap : UInt32` is the buffer capacity. Termination-without-
 trapping is equivalent to the `itoa`-crate and naive formatters
-agreeing on every `(n, cap)` input. -/
+agreeing on every `(n, cap)` input. As with `CheckI64Spec`, the
+hypothesis `initial = «module».initialStore` makes the formatter's
+`DIGIT_TABLE` and stack-pointer global present. -/
 @[spec_of "rust-exported" "itoa::check_u64"]
 def CheckU64Spec : Prop :=
   ∀ (env : HostEnv Unit) (initial : Store Unit) (n : UInt64) (cap : UInt32),
+    initial = «module».initialStore →
     TerminatesWith env «module» 8 initial [.i64 n, .i32 cap]
       (fun _ rs => rs = [])
 
