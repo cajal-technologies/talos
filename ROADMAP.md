@@ -97,9 +97,12 @@ diverge from chain execution.
      result host categories used by current examples.
    - Done: add storage projection simp lemmas plus a proved `KvSetter`
      final-store postcondition.
-   - Turn `KvSetter.SetSpec` from a stated proposition plus concrete checks into
-     a general theorem by connecting the symbolic `run 100` equality to the
-     proved final-store model.
+   - Done: add little-endian length decode lemmas used by the `KvSetter`
+     memory parser, and make `SetSpec` explicit about NEAR's non-view
+     requirement for mutating storage.
+   - Finish the general `KvSetter.SetSpec` theorem by factoring a small
+     `storage_write` memory-or-register invoke lemma, then connecting the
+     symbolic `run 100` equality to the proved final-store model.
 
 10. Real contract pipeline
    - Done: decode/import a compiled `near-sdk-rs` contract.

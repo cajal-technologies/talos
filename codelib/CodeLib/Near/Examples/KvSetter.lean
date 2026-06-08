@@ -87,6 +87,132 @@ def le64 (n : Nat) : List UInt8 :=
 def encodeKV (key val : List UInt8) : List UInt8 :=
   le32 key.length ++ key ++ le32 val.length ++ val
 
+theorem le32_parts_or (n : Nat) :
+    n % 256 ||| ((n / 256 % 256) <<< 8) ||| ((n / 65536 % 256) <<< 16) |||
+      ((n / 16777216 % 256) <<< 24) = n % 4294967296 := by
+  apply Nat.eq_of_testBit_eq
+  intro i
+  have hm0 : (n % 256).testBit i = (decide (i < 8) && n.testBit i) := by
+    simpa using (Nat.testBit_mod_two_pow n 8 i)
+  have hm1 : (n / 256 % 256).testBit (i - 8) =
+      (decide (i - 8 < 8) && n.testBit (i - 8 + 8)) := by
+    rw [show 256 = 2 ^ 8 by norm_num]
+    rw [Nat.testBit_mod_two_pow, Nat.testBit_div_two_pow]
+  have hm2 : (n / 65536 % 256).testBit (i - 16) =
+      (decide (i - 16 < 8) && n.testBit (i - 16 + 16)) := by
+    rw [show 65536 = 2 ^ 16 by norm_num, show 256 = 2 ^ 8 by norm_num]
+    rw [Nat.testBit_mod_two_pow, Nat.testBit_div_two_pow]
+  have hm3 : (n / 16777216 % 256).testBit (i - 24) =
+      (decide (i - 24 < 8) && n.testBit (i - 24 + 24)) := by
+    rw [show 16777216 = 2 ^ 24 by norm_num, show 256 = 2 ^ 8 by norm_num]
+    rw [Nat.testBit_mod_two_pow, Nat.testBit_div_two_pow]
+  have hm4 : (n % 4294967296).testBit i = (decide (i < 32) && n.testBit i) := by
+    rw [show 4294967296 = 2 ^ 32 by norm_num]
+    rw [Nat.testBit_mod_two_pow]
+  simp [Nat.testBit_or, Nat.testBit_shiftLeft, hm0, hm1, hm2, hm3, hm4]
+  by_cases h0 : i < 8
+  · have hi32 : i < 32 := by omega
+    have hn8 : ¬ 8 ≤ i := by omega
+    have hn16 : ¬ 16 ≤ i := by omega
+    have hn24 : ¬ 24 ≤ i := by omega
+    by_cases hb : n.testBit i <;> simp [h0, hi32, hn8, hn16, hn24, hb]
+  by_cases h1 : i < 16
+  · have hi8 : 8 ≤ i := by omega
+    have hi32 : i < 32 := by omega
+    have hi1 : i - 8 < 8 := by omega
+    have hsum : i - 8 + 8 = i := by omega
+    have hn16 : ¬ 16 ≤ i := by omega
+    have hn24 : ¬ 24 ≤ i := by omega
+    by_cases hb : n.testBit i <;> simp [h0, hi8, hi32, hi1, hsum, hn16, hn24, hb]
+  by_cases h2 : i < 24
+  · have hi8 : 8 ≤ i := by omega
+    have hi16 : 16 ≤ i := by omega
+    have hi32 : i < 32 := by omega
+    have hi1 : ¬ i - 8 < 8 := by omega
+    have hi2 : i - 16 < 8 := by omega
+    have hsum : i - 16 + 16 = i := by omega
+    have hn24 : ¬ 24 ≤ i := by omega
+    by_cases hb : n.testBit i <;> simp [h0, hi8, hi16, hi32, hi1, hi2, hsum, hn24, hb]
+  by_cases h3 : i < 32
+  · have hi8 : 8 ≤ i := by omega
+    have hi16 : 16 ≤ i := by omega
+    have hi24 : 24 ≤ i := by omega
+    have hi1 : ¬ i - 8 < 8 := by omega
+    have hi2 : ¬ i - 16 < 8 := by omega
+    have hi3 : i - 24 < 8 := by omega
+    have hsum : i - 24 + 24 = i := by omega
+    by_cases hb : n.testBit i <;> simp [h0, h3, hi8, hi16, hi24, hi1, hi2, hi3, hsum, hb]
+  · have hi8 : 8 ≤ i := by omega
+    have hi16 : 16 ≤ i := by omega
+    have hi24 : 24 ≤ i := by omega
+    have hi1 : ¬ i - 8 < 8 := by omega
+    have hi2 : ¬ i - 16 < 8 := by omega
+    have hi3 : ¬ i - 24 < 8 := by omega
+    by_cases hb : n.testBit i <;> simp [h0, h3, hi8, hi16, hi24, hi1, hi2, hi3, hb]
+
+@[simp] theorem read32_writeBytes_le32 (m : Mem) (n : Nat) :
+    (m.writeBytes 0 (le32 n)).read32 0 = UInt32.ofNat n := by
+  apply UInt32.toNat.inj
+  simp [le32, Mem.read32, Mem.writeBytes, UInt8.toNat_toUInt32, UInt32.toNat_ofNat]
+  rw [Nat.mod_eq_of_lt (by
+    rw [Nat.shiftLeft_eq]
+    have : n / 256 % 256 < 256 := Nat.mod_lt _ (by norm_num)
+    omega : ((n / 256 % 256) <<< 8) < 4294967296)]
+  rw [Nat.mod_eq_of_lt (by
+    rw [Nat.shiftLeft_eq]
+    have : n / 65536 % 256 < 256 := Nat.mod_lt _ (by norm_num)
+    omega : ((n / 65536 % 256) <<< 16) < 4294967296)]
+  rw [Nat.mod_eq_of_lt (by
+    rw [Nat.shiftLeft_eq]
+    have : n / 16777216 % 256 < 256 := Nat.mod_lt _ (by norm_num)
+    omega : ((n / 16777216 % 256) <<< 24) < 4294967296)]
+  exact le32_parts_or n
+
+@[simp] theorem read32_writeBytes_encode_keyLen (m : Mem) (key val : List UInt8) :
+    (m.writeBytes 0 (encodeKV key val)).read32 0 = UInt32.ofNat key.length := by
+  apply UInt32.toNat.inj
+  simp [encodeKV, le32, Mem.read32, Mem.writeBytes, UInt8.toNat_toUInt32, UInt32.toNat_ofNat]
+  rw [Nat.mod_eq_of_lt (by
+    rw [Nat.shiftLeft_eq]
+    have : key.length / 256 % 256 < 256 := Nat.mod_lt _ (by norm_num)
+    omega : ((key.length / 256 % 256) <<< 8) < 4294967296)]
+  rw [Nat.mod_eq_of_lt (by
+    rw [Nat.shiftLeft_eq]
+    have : key.length / 65536 % 256 < 256 := Nat.mod_lt _ (by norm_num)
+    omega : ((key.length / 65536 % 256) <<< 16) < 4294967296)]
+  rw [Nat.mod_eq_of_lt (by
+    rw [Nat.shiftLeft_eq]
+    have : key.length / 16777216 % 256 < 256 := Nat.mod_lt _ (by norm_num)
+    omega : ((key.length / 16777216 % 256) <<< 24) < 4294967296)]
+  exact le32_parts_or key.length
+
+@[simp] theorem read32_writeBytes_encode_valLen (m : Mem) (key val : List UInt8)
+    (hKeyAddr : key.length + 4 < 4294967296) :
+    (m.writeBytes 0 (encodeKV key val)).read32 (UInt32.ofNat key.length + 4) =
+      UInt32.ofNat val.length := by
+  apply UInt32.toNat.inj
+  have hAddr : (UInt32.ofNat key.length + 4).toNat = key.length + 4 := by
+    rw [UInt32.toNat_add, UInt32.toNat_ofNat]
+    change (key.length % 4294967296 + 4) % 4294967296 = key.length + 4
+    have hKey : key.length < 4294967296 := by omega
+    rw [Nat.mod_eq_of_lt hKey]
+    exact Nat.mod_eq_of_lt hKeyAddr
+  simp [encodeKV, le32, Mem.read32, Mem.writeBytes, hAddr, UInt8.toNat_toUInt32,
+    UInt32.toNat_ofNat]
+  rw [Nat.mod_eq_of_lt (by
+    rw [Nat.shiftLeft_eq]
+    have : val.length / 256 % 256 < 256 := Nat.mod_lt _ (by norm_num)
+    omega : ((val.length / 256 % 256) <<< 8) < 4294967296)]
+  rw [Nat.mod_eq_of_lt (by
+    rw [Nat.shiftLeft_eq]
+    have : val.length / 65536 % 256 < 256 := Nat.mod_lt _ (by norm_num)
+    omega : ((val.length / 65536 % 256) <<< 16) < 4294967296)]
+  rw [Nat.mod_eq_of_lt (by
+    rw [Nat.shiftLeft_eq]
+    have : val.length / 16777216 % 256 < 256 := Nat.mod_lt _ (by norm_num)
+    omega : ((val.length / 16777216 % 256) <<< 24) < 4294967296)]
+  exact le32_parts_or val.length
+
 /-! ## Specification (stated; general proof is the next milestone) -/
 
 /-- Host projection after a successful `set`. Register `0` contains the
@@ -106,10 +232,10 @@ def finalStore (ns : NearState) (key val : List UInt8) : Store NearState :=
     mem := st0.mem.writeBytes 0 (encodeKV key val)
     host := finalHost ns key val }
 
-/-- **Spec for `set`.** For any incoming NEAR state whose `input` is the
-length-prefixed encoding of `(key, val)` (with sizes that fit a u32, the
-single memory page, and the configured NEAR host limits), the call terminates
-and:
+/-- **Spec for `set`.** For any non-view incoming NEAR state whose `input`
+is the length-prefixed encoding of `(key, val)` (with sizes that fit a u32,
+the single memory page, and the configured NEAR host limits), the call
+terminates and:
 
 * *projection after the call:* `storage[key] = val`;
 * *frame condition:* every other key is unchanged from the incoming state.
@@ -119,6 +245,7 @@ by instantiation) with the NEAR projection injected as `host := ns`, per
 the repo convention for memory-touching specs. -/
 def SetSpec : Prop :=
   ∀ (ns : NearState) (key val : List UInt8),
+    ns.context.isView = false →
     key.length < 4294967296 → val.length < 4294967296 →
     (encodeKV key val).length ≤ 65536 →
     withinLimit ns.config.maxRegisterLen (encodeKV key val).length →
