@@ -43,6 +43,7 @@ theorem step_preserves_inv : StepPreservesInv := by
   -- Reduce `TerminatesWith` to a `wp` obligation on the body of `step`
   -- (in-module index 0; unified index 2 = stepIdx).
   wasm_entry_for
+  simp only [func0Def]
   -- Initial frame is empty (no params/locals/values).
   show wp _ func0 _ initial _ _
   unfold func0
@@ -61,6 +62,7 @@ theorem step_preserves_inv : StepPreservesInv := by
     intro vs st' hContract
     simp only [getContract] at hContract
     obtain ⟨_, hRes⟩ := hContract
+    set counter := (Store.host initial).counter with hCounterDef
     injection hRes with hvs hst
     subst hvs; subst hst
     -- Symbolically execute through `const 9`, `gtU`, `br_if 0`.
@@ -68,7 +70,6 @@ theorem step_preserves_inv : StepPreservesInv := by
     -- (as `UInt32`), so `br_if 0` branches iff `counter > 9`.
     wp_run
     -- Two paths: invariant says counter ≤ 10, so `counter > 9` ⟺ `counter = 10`.
-    set counter := initial.host.counter with hCounterDef
     have hInvNat : counter ≤ 10 := hInv
     have hSize : UInt32.size = 4294967296 := rfl
     have hCounterLt : counter < UInt32.size := by

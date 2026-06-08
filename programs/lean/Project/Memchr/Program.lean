@@ -42,11 +42,14 @@ def func0 : Wasm.Program :=
   .localGet 3
 ]
 
+def func0Def : Wasm.Function :=
+  { params := [.i32, .i32, .i32], locals := [.i32], body := func0, results := [.i32] }
+
 def «module» : Wasm.Module :=
 {
   imports := [],
   funcs := [
-    { params := [.i32, .i32, .i32], locals := [.i32], body := func0, results := [.i32] }
+    func0Def
   ],
   exports := [
     { name := "memchr", funcIdx := 0 }

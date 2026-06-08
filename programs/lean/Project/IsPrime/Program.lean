@@ -60,6 +60,9 @@ def func0 : Wasm.Program :=
   .localGet 1
 ]
 
+def func0Def : Wasm.Function :=
+  { params := [.i32], locals := [.i32, .i32, .i32, .i32], body := func0, results := [.i32] }
+
 def func1 : Wasm.Program :=
   [
   .block 0 0 [
@@ -111,6 +114,9 @@ def func1 : Wasm.Program :=
   .localGet 1
 ]
 
+def func1Def : Wasm.Function :=
+  { params := [.i32], locals := [.i32, .i32, .i32], body := func1, results := [.i32] }
+
 def func2 : Wasm.Program :=
   [
   .block 0 0 [
@@ -125,6 +131,9 @@ def func2 : Wasm.Program :=
   .unreachable
 ]
 
+def func2Def : Wasm.Function :=
+  { params := [.i32], locals := [], body := func2, results := [] }
+
 /-- export: check -/
 def func3 : Wasm.Program :=
   [
@@ -132,14 +141,17 @@ def func3 : Wasm.Program :=
   .call 2
 ]
 
+def func3Def : Wasm.Function :=
+  { params := [.i32], locals := [], body := func3, results := [] }
+
 def «module» : Wasm.Module :=
 {
   imports := [],
   funcs := [
-    { params := [.i32], locals := [.i32, .i32, .i32, .i32], body := func0, results := [.i32] },
-    { params := [.i32], locals := [.i32, .i32, .i32], body := func1, results := [.i32] },
-    { params := [.i32], locals := [], body := func2, results := [] },
-    { params := [.i32], locals := [], body := func3, results := [] }
+    func0Def,
+    func1Def,
+    func2Def,
+    func3Def
   ],
   exports := [
     { name := "check", funcIdx := 3 }

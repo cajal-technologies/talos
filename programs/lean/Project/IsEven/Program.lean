@@ -19,11 +19,14 @@ def func0 : Wasm.Program :=
   .eqz
 ]
 
+def func0Def : Wasm.Function :=
+  { params := [.i32], locals := [], body := func0, results := [.i32] }
+
 def «module» : Wasm.Module :=
 {
   imports := [],
   funcs := [
-    { params := [.i32], locals := [], body := func0, results := [.i32] }
+    func0Def
   ],
   exports := [
     { name := "is_even", funcIdx := 0 }

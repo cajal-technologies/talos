@@ -88,6 +88,9 @@ def func0 : Wasm.Program :=
   .localGet 2
 ]
 
+def func0Def : Wasm.Function :=
+  { params := [.i64, .i64], locals := [.i64, .i64], body := func0, results := [.i64] }
+
 /-- export: gcd_u64 -/
 def func1 : Wasm.Program :=
   [
@@ -96,12 +99,15 @@ def func1 : Wasm.Program :=
   .call 0
 ]
 
+def func1Def : Wasm.Function :=
+  { params := [.i64, .i64], locals := [], body := func1, results := [.i64] }
+
 def «module» : Wasm.Module :=
 {
   imports := [],
   funcs := [
-    { params := [.i64, .i64], locals := [.i64, .i64], body := func0, results := [.i64] },
-    { params := [.i64, .i64], locals := [], body := func1, results := [.i64] }
+    func0Def,
+    func1Def
   ],
   exports := [
     { name := "gcd_u64", funcIdx := 1 }

@@ -27,6 +27,9 @@ def func0 : Wasm.Program :=
   .callIndirect 0 0
 ]
 
+def func0Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [], body := func0, results := [.i32] }
+
 def func1 : Wasm.Program :=
   [
   .localGet 1,
@@ -40,6 +43,9 @@ def func1 : Wasm.Program :=
   .and,
   .select
 ]
+
+def func1Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [], body := func1, results := [.i32] }
 
 def func2 : Wasm.Program :=
   [
@@ -57,6 +63,9 @@ def func2 : Wasm.Program :=
   .unreachable
 ]
 
+def func2Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [], body := func2, results := [] }
+
 def func3 : Wasm.Program :=
   [
   .localGet 0,
@@ -64,6 +73,9 @@ def func3 : Wasm.Program :=
   .localGet 1,
   .add
 ]
+
+def func3Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [], body := func3, results := [.i32] }
 
 def func4 : Wasm.Program :=
   [
@@ -73,6 +85,9 @@ def func4 : Wasm.Program :=
   .mul
 ]
 
+def func4Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [], body := func4, results := [.i32] }
+
 /-- export: check -/
 def func5 : Wasm.Program :=
   [
@@ -81,16 +96,19 @@ def func5 : Wasm.Program :=
   .call 2
 ]
 
+def func5Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [], body := func5, results := [] }
+
 def «module» : Wasm.Module :=
 {
   imports := [],
   funcs := [
-    { params := [.i32, .i32], locals := [], body := func0, results := [.i32] },
-    { params := [.i32, .i32], locals := [], body := func1, results := [.i32] },
-    { params := [.i32, .i32], locals := [], body := func2, results := [] },
-    { params := [.i32, .i32], locals := [], body := func3, results := [.i32] },
-    { params := [.i32, .i32], locals := [], body := func4, results := [.i32] },
-    { params := [.i32, .i32], locals := [], body := func5, results := [] }
+    func0Def,
+    func1Def,
+    func2Def,
+    func3Def,
+    func4Def,
+    func5Def
   ],
   exports := [
     { name := "check", funcIdx := 5 }

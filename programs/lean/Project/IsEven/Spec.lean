@@ -25,6 +25,7 @@ theorem is_even_correct : IsEvenSpec := by
   intro env initial n
   wasm_entry
   intro initial'
+  simp only [func0Def]
   unfold func0
   wp_run
   simp [UInt32.and_one_eq_zero_iff_toNat_mod_two, UInt32.and_comm]

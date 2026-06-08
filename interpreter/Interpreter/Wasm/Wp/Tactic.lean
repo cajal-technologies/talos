@@ -24,10 +24,10 @@ macro "wp_done" : tactic => `(tactic| (wp_run; first | rfl | grind))
 code. This deliberately does not cross loops or calls: those still require an
 explicit invariant/specification boundary. -/
 macro "wp_peel" : tactic => `(tactic|
-  (repeat (first
+  ((repeat (first
     | apply wp_block_cons
     | refine wp_iff_cons rfl ?_));
-  wp_run;
-  simp)
+   wp_run;
+   simp))
 
 end Wasm

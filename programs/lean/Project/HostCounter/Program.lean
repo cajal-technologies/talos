@@ -21,6 +21,9 @@ def func0 : Wasm.Program :=
   ]
 ]
 
+def func0Def : Wasm.Function :=
+  { params := [], locals := [], body := func0, results := [] }
+
 def «module» : Wasm.Module :=
 {
   imports := [
@@ -28,7 +31,7 @@ def «module» : Wasm.Module :=
     { «module» := "env", name := "host_inc", params := [], results := [] }
   ],
   funcs := [
-    { params := [], locals := [], body := func0, results := [] }
+    func0Def
   ],
   exports := [
     { name := "step", funcIdx := 2 }

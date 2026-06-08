@@ -21,6 +21,9 @@ def func0 : Wasm.Program :=
   .select
 ]
 
+def func0Def : Wasm.Function :=
+  { params := [.i64], locals := [], body := func0, results := [.i64] }
+
 /-- export: unwrap_or_default -/
 def func1 : Wasm.Program :=
   [
@@ -31,6 +34,9 @@ def func1 : Wasm.Program :=
   .eqI64,
   .select
 ]
+
+def func1Def : Wasm.Function :=
+  { params := [.i64], locals := [], body := func1, results := [.i64] }
 
 /-- exports: or, unwrap_or -/
 def func2 : Wasm.Program :=
@@ -43,11 +49,17 @@ def func2 : Wasm.Program :=
   .select
 ]
 
+def func2Def : Wasm.Function :=
+  { params := [.i64, .i64], locals := [], body := func2, results := [.i64] }
+
 /-- export: wrap -/
 def func3 : Wasm.Program :=
   [
   .localGet 0
 ]
+
+def func3Def : Wasm.Function :=
+  { params := [.i64], locals := [], body := func3, results := [.i64] }
 
 /-- export: is_some -/
 def func4 : Wasm.Program :=
@@ -56,6 +68,9 @@ def func4 : Wasm.Program :=
   .constI64 (9223372036854775808 : UInt64),
   .neI64
 ]
+
+def func4Def : Wasm.Function :=
+  { params := [.i64], locals := [], body := func4, results := [.i32] }
 
 /-- export: map_add -/
 def func5 : Wasm.Program :=
@@ -70,16 +85,19 @@ def func5 : Wasm.Program :=
   .select
 ]
 
+def func5Def : Wasm.Function :=
+  { params := [.i64, .i64], locals := [], body := func5, results := [.i64] }
+
 def «module» : Wasm.Module :=
 {
   imports := [],
   funcs := [
-    { params := [.i64], locals := [], body := func0, results := [.i64] },
-    { params := [.i64], locals := [], body := func1, results := [.i64] },
-    { params := [.i64, .i64], locals := [], body := func2, results := [.i64] },
-    { params := [.i64], locals := [], body := func3, results := [.i64] },
-    { params := [.i64], locals := [], body := func4, results := [.i32] },
-    { params := [.i64, .i64], locals := [], body := func5, results := [.i64] }
+    func0Def,
+    func1Def,
+    func2Def,
+    func3Def,
+    func4Def,
+    func5Def
   ],
   exports := [
     { name := "wrap", funcIdx := 3 },

@@ -8,6 +8,7 @@ open Wasm Project.IsEven Project.IsEven.Spec
 theorem is_even_spec : IsEvenSpec := by
   intro initial n
   wasm_entry
+  simp only [func0Def]
   unfold func0
   wp_run
   simp [UInt32.and_one_eq_zero_iff_toNat_mod_two, UInt32.and_comm]
