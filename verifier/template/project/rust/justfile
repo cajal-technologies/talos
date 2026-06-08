@@ -1,6 +1,6 @@
 # Build every workspace member to wasm and stage the artifacts under
-# `build/<crate>/program.{wasm,wat}`. Mirrors what `verifier check` does
-# on the rust side, so you can iterate on the rust code without dragging
+# `build/<crate>/program.{wasm,wat}`. Mirrors the rust side of
+# `verifier build`, so you can iterate on the rust code without dragging
 # the lean toolchain in.
 
 default: build

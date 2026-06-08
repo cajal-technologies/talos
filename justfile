@@ -114,17 +114,66 @@ testsuite-report:
     WASM_TOOLS_VERSION={{ quote(WASM_TOOLS_VERSION) }} scripts/testsuite-report.sh
 
 # ── verifier workflow ─────────────────────────────────────────────────────────
+# All verifier recipes run from programs/ (project root: rust/ + lean/).
+# Omit crate names to operate on all workspace crates.
+#
+# Step-by-step development cycle:
+#   just verifier-init <path>   — scaffold a new project
+#   just verifier-build         — compile Rust → wasm/wat
+#   just verifier-emit          — transpile wat → Program.lean + scaffold Spec.lean
+#   [edit Spec.lean by hand]
+#   just verifier-prove         — run lake build to check proofs
+#
+# Or combined: just verifier-check [--force-emit] [--no-prove] [crate…]
 
-# Run the verifier check from the programs/ root (builds Rust, re-emits
-# Program.lean files if wasm changed, then runs lake build).
-[working-directory("verifier")]
-verifier-check:
-    lake exe verifier check
+[private]
+[working-directory("programs")]
+_verifier +args:
+    lake -d ../verifier exe verifier {{ args }}
 
-# Re-emit all Program.lean files unconditionally, then run lake build.
-[working-directory("verifier")]
-verifier-check-force:
-    lake exe verifier check --force-emit
+# Scaffold a new verification project at <path> (relative to programs/).
+[group("verifier")]
+verifier-init path:
+    just _verifier init {{ path }}
+
+# Remove a crate from the current project (source, lean module, build artefacts, config references).
+[group("verifier")]
+verifier-del crate:
+    just _verifier del {{ crate }}
+
+# Build wasm/wat for selected crates; omit names to process all.
+[group("verifier")]
+verifier-build *crates:
+    just _verifier build {{ crates }}
+
+# Transpile program.wat → Program.lean and scaffold Spec.lean; omit names for all.
+# Flag: --force-emit (re-emit when wasm is unchanged). Example: just verifier-emit --force-emit is_even
+[group("verifier")]
+verifier-emit *crates:
+    just _verifier emit {{ crates }}
+
+# Run lake build on selected crates' Lean modules; omit names for all.
+[group("verifier")]
+verifier-prove *crates:
+    just _verifier prove {{ crates }}
+
+# Full pipeline: build → emit → prove for selected crates; omit names for all.
+# Flags: --force-emit, --no-prove. Example: just verifier-check --force-emit is_even
+[group("verifier")]
+verifier-check *args:
+    just _verifier check {{ args }}
+
+# Extract JSON metadata per crate; omit names for all.
+# Flags: --out DIR (output directory, default ./extracted).
+[group("verifier")]
+verifier-extract *crates:
+    just _verifier extract {{ crates }}
+
+# Build the static HTML progress report (requires npm in verifier/report/).
+# Accepts an optional crate filter and flags: --extracted DIR, --out DIR.
+[group("verifier")]
+verifier-report *crate:
+    just _verifier report {{ crate }}
 
 # ── docs ──────────────────────────────────────────────────────────────────────
 
