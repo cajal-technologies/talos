@@ -201,6 +201,8 @@ def decodeModuleFile (path : String) : IO (Except String Wasm.Module) := do
 private def renderValue : Value → String
   | .i32 u           => s!"i32:{u.toInt32.toInt}"
   | .i64 u           => s!"i64:{u.toInt64.toInt}"
+  | .f32 b           => s!"f32:{(Float32.ofBits b).toFloat}"
+  | .f64 b           => s!"f64:{Float.ofBits b}"
   | .funcref none    => "funcref:null"
   | .funcref (some i) => s!"funcref:{i}"
 

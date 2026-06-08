@@ -1,4 +1,5 @@
 import Interpreter.Wasm.Syntax
+import Interpreter.Wasm.Float
 import Interpreter.Wasm.Locals
 import Interpreter.Wasm.Continuation
 import Interpreter.Wasm.Semantics
@@ -42,6 +43,7 @@ This umbrella module re-exports the public surface; the implementation is
 split into:
 
 * `Wasm.Syntax`            — instructions, programs, functions, modules
+* `Wasm.Float`             — `f32`/`f64` operations over IEEE-754 bit patterns
 * `Wasm.Locals`            — per-frame locals/value-stack state + helpers
 * `Wasm.Continuation`      — `Continuation` / `Result` outcome types
 * `Wasm.Semantics`         — `execOne` / `exec` / `run` mutual interpreter
