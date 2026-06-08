@@ -9,14 +9,16 @@ import Cli
 
 Run from the project root (directory with `rust/` and `lean/`).
 
-Subcommands: init, del, build, emit, prove, check, extract, report.
+Subcommands: init, add, del, build, emit, prove, check, extract, report.
 Omit crate names for all workspace crates. `foo_bar` maps to `Project.FooBar`.
 
 ## Template layout
 
 The scaffolding lives entirely under `verifier/template/`, decoupled from this
-code — editing it never requires touching Lean. Two independent trees:
+code — editing it never requires touching Lean. Three independent trees:
 
+* `template/crate/`   — a single rust crate (no Lean). Copied by `add`, with the
+                        literal `CRATE_NAME` replaced by the new crate's name.
 * `template/project/` — a whole project (`rust/` + `lean/`) with a worked
                         `is_even`/`IsEven` example. Copied verbatim by `init`.
 * `template/module/`  — the hand-written Lean files that accompany the
@@ -146,15 +148,23 @@ private partial def copyTreeNoClobber (src dst : FilePath) (subst : String → S
 -- Workspace / import bookkeeping
 -- ----------------------------------------------------------------------------
 
+private def addWorkspaceMember (cargoToml : FilePath) (crate : String) : IO Unit := do
+  let txt ← IO.FS.readFile cargoToml
+  if fileContains txt crate then return
+  let needle := "members = ["
+  unless fileContains txt needle do
+    die s!"{cargoToml}: could not find `[workspace] members = [`"
+  IO.FS.writeFile cargoToml (txt.replace needle (needle ++ "\n  \"" ++ crate ++ "\","))
+
 private def removeWorkspaceMember (cargoToml : FilePath) (crate : String) : IO Unit := do
   unless ← System.FilePath.pathExists cargoToml do return
   let txt ← IO.FS.readFile cargoToml
   let entry := s!"\"{crate}\""
   unless fileContains txt entry do return
-  -- Handle every format a `members = [...]` entry can take (manual edits, tooling).
+  -- Handle every format our addWorkspaceMember (or manual edits) can produce.
   let cleaned :=
     txt
-    |>.replace (s!"\n  {entry},") ""   -- entry written on its own line
+    |>.replace (s!"\n  {entry},") ""   -- form written by addWorkspaceMember
     |>.replace (s!",{entry}")     ""   -- inline trailing, no space
     |>.replace (s!", {entry}")    ""   -- inline trailing, with space
     |>.replace (s!"{entry},")     ""   -- inline leading, no space after
@@ -172,8 +182,24 @@ private def removeProjectImport (projectLean : FilePath) (pascal : String) : IO 
   IO.println s!"    removed `{importLine}` from {projectLean}"
 
 -- ----------------------------------------------------------------------------
--- `del`
+-- `add` / `del`
 -- ----------------------------------------------------------------------------
+
+private def cmdAdd (crate : String) : IO Unit := do
+  unless isValidCrateName crate do
+    die s!"invalid crate name `{crate}` (use snake_case: letters, digits, underscores)"
+  let projectDir ← projectDirFromCwd
+  let pascal := snakeToPascal crate
+  let rustCrate := projectDir / "rust" / crate
+  if ← System.FilePath.pathExists rustCrate then die s!"{rustCrate} already exists"
+  IO.println s!"==> adding crate `{crate}` → Project.{pascal}"
+  let crateTemplate := (← locateTemplateRoot) / "crate"
+  copyTree crateTemplate rustCrate (·.replace "CRATE_NAME" crate)
+  addWorkspaceMember (projectDir / "rust" / "Cargo.toml") crate
+  IO.println s!"    wrote {rustCrate}"
+  IO.println s!"==> done. Next: verifier build {crate} && verifier emit {crate}"
+  IO.println s!"==>   the Lean module (Program.lean + Spec.lean) is created by `verifier emit`;"
+  IO.println s!"==>   add `import Project.{pascal}.Spec` to lean/Project.lean to include it in the default build."
 
 private def cmdDel (crate : String) : IO Unit := do
   unless isValidCrateName crate do
@@ -479,6 +505,10 @@ def runInit (p : Parsed) : IO UInt32 := do
 
 def runNew (p : Parsed) : IO UInt32 := runInit p
 
+def runAdd (p : Parsed) : IO UInt32 := do
+  cmdAdd (p.positionalArg! "crate" |>.as! String)
+  pure 0
+
 def runDel (p : Parsed) : IO UInt32 := do
   cmdDel (p.positionalArg! "crate" |>.as! String)
   pure 0
@@ -561,6 +591,14 @@ def newCmd : Cmd := `[Cli|
     projectPath : String; "Directory to create (must not already exist or be empty)."
 ]
 
+def addCmd : Cmd := `[Cli|
+  add VIA runAdd;
+  "Add one crate to the current project (run from project root)."
+
+  ARGS:
+    crate : String; "Crate name in snake_case (e.g. my_crate)."
+]
+
 def delCmd : Cmd := `[Cli|
   del VIA runDel;
   "Remove a crate from the current project (source, lean module, build artefacts, Cargo.toml, Project.lean)."
@@ -638,6 +676,7 @@ def mainCmd : Cmd := `[Cli|
   SUBCOMMANDS:
     initCmd;
     newCmd;
+    addCmd;
     delCmd;
     buildCmd;
     emitCmd;
