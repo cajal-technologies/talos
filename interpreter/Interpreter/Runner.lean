@@ -124,6 +124,16 @@ def parseArgForType (t : ValueType) (s : String) : Except String Value :=
     match parseI64 s with
     | .ok v  => .ok (.i64 v)
     | .error _ => .error s!"argument out of range for i64: `{s}`"
+  | .f32 =>
+    -- No decimal float parser in core; a float CLI arg is its raw 32-bit
+    -- IEEE-754 encoding (e.g. `0x3f800000` for `1.0`).
+    match parseI32 s with
+    | .ok v  => .ok (.f32 v)
+    | .error _ => .error s!"f32 argument must be a 32-bit IEEE-754 bit pattern: `{s}`"
+  | .f64 =>
+    match parseI64 s with
+    | .ok v  => .ok (.f64 v)
+    | .error _ => .error s!"f64 argument must be a 64-bit IEEE-754 bit pattern: `{s}`"
   | .funcref =>
     -- No CLI surface for funcref args yet — pass `null` if the user
     -- writes "null", otherwise refuse.
@@ -161,6 +171,8 @@ def resolveMethod (m : Module) (method : String) : Except String Nat :=
 def renderValue : Value → String
   | .i32 v            => toString v.toInt32.toInt
   | .i64 v            => toString v.toInt64.toInt
+  | .f32 b            => toString (Float32.ofBits b).toFloat
+  | .f64 b            => toString (Float.ofBits b)
   | .funcref none     => "null"
   | .funcref (some i) => s!"funcref:{i}"
 
