@@ -88,8 +88,12 @@ diverge from chain execution.
      semantics.
 
 9. Proof-facing API
-   - Add host contracts and simp lemmas for each host category.
-   - Prove memory framing lemmas for `readBytes`, `read32`, and `writeBytes`.
+   - Done: add canonical and subset-resolved host specs backed by concrete
+     host contracts.
+   - Done: add memory framing lemmas for `readBytes`, `read32`, and
+     `writeBytes`.
+   - Add finer relational host contracts and simp lemmas for each host category
+     as proofs need abstraction from concrete host functions.
    - Turn `KvSetter.SetSpec` from a stated proposition plus concrete checks into
      a general theorem.
 

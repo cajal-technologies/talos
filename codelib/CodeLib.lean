@@ -6,6 +6,7 @@ import CodeLib.UInt64
 import CodeLib.RustStd.Option
 import CodeLib.Near.State
 import CodeLib.Near.Env
+import CodeLib.Near.Proof
 
 /-!
 # CodeLib — umbrella import for downstream code

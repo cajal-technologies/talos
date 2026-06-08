@@ -1,4 +1,4 @@
-import CodeLib.Near.Env
+import CodeLib.Near.Proof
 
 /-!
 # Example: a NEAR key-value setter
@@ -65,6 +65,11 @@ def «module» : Module :=
 
 /-- Unified function index of the exported `set`. -/
 def setIdx : Nat := importCount
+
+/-- The hand-built example imports the canonical NEAR host set, so the
+reference environment satisfies the canonical proof-facing spec. -/
+theorem near_env_satisfies : nearEnv.Satisfies «module» nearSpec :=
+  nearEnv_satisfies_canonical «module» rfl
 
 /-! ## Length-prefix encoding -/
 
@@ -199,6 +204,25 @@ def rejectsBadImportSignature : Bool :=
   | some _ => false
 
 theorem reject_bad_import_signature : rejectsBadImportSignature = true := by native_decide
+
+def resolvesSpecSubset : Bool :=
+  match resolveContracts?
+      [ { «module» := "env", name := "current_account_id", params := [.i64], results := [] }
+      , { «module» := "env", name := "storage_write",
+          params := [.i64, .i64, .i64, .i64, .i64], results := [.i64] } ] with
+  | some spec => spec.contracts.length == 2
+  | none      => false
+
+theorem resolve_spec_subset : resolvesSpecSubset = true := by native_decide
+
+def rejectsBadSpecSignature : Bool :=
+  match resolveContracts?
+      [ { «module» := "env", name := "storage_write",
+          params := [.i64, .i64], results := [.i64] } ] with
+  | none   => true
+  | some _ => false
+
+theorem reject_bad_spec_signature : rejectsBadSpecSignature = true := by native_decide
 
 def currentAccountWritesRegister : Bool :=
   let ns : NearState := { context := { currentAccountId := [99, 100] } }
