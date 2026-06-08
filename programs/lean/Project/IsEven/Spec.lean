@@ -23,7 +23,7 @@ def IsEvenSpec : Prop :=
 @[proves Project.IsEven.Spec.IsEvenSpec]
 theorem is_even_correct : IsEvenSpec := by
   intro env initial n
-  apply TerminatesWith.of_wp_entry (f := ⟨[.i32], [], func0, [.i32]⟩) rfl
+  wasm_entry
   intro initial'
   unfold func0
   wp_run

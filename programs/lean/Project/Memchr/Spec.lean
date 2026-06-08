@@ -45,12 +45,13 @@ def MemchrSpec : Prop :=
   ∀ (env : HostEnv Unit) (initial : Store Unit) (ptr len needle : UInt32)
     (hmem : ∀ k < len.toNat, (k + ptr.toNat) % 4294967296 < initial.mem.pages * 65536),
     TerminatesWith env «module» 0 initial [.i32 ptr, .i32 len, .i32 needle]
-      (fun st' rs => rs = [.i32 (memchrAux st'.mem ptr needle len.toNat 0)])
+      (fun st' rs => st' = initial ∧
+        rs = [.i32 (memchrAux initial.mem ptr needle len.toNat 0)])
 
 @[proves Project.Memchr.Spec.MemchrSpec]
 theorem memchr_correct : MemchrSpec := by
   intro env initial ptr len needle hmem
-  apply TerminatesWith.of_wp_entry_for (f := ⟨[.i32, .i32, .i32], [.i32], func0, [.i32]⟩) rfl
+  wasm_entry_for
   unfold func0
   wp_run
   simp
@@ -61,7 +62,7 @@ theorem memchr_correct : MemchrSpec := by
   · -- len = 0: br_if 0 exits block; result = local 3 = 0 = len
     simp [hlen, memchrAux]
   · -- len ≠ 0: falls through; enter loop
-    simp [hlen]
+    simp [hlen, memchrAux]
     apply wp_loop_cons
       (Inv := fun st' s' =>
         st' = initial ∧
@@ -86,8 +87,10 @@ theorem memchr_correct : MemchrSpec := by
       · -- Match: br_if 1 fires → exits block
         simp [hmatch]
         refine ⟨hmem k hk, ?_⟩
-        have hrem : len.toNat - k = (len.toNat - k - 1) + 1 := by omega
-        rw [← hinv, hrem, memchrAux_match hmatch]
+        constructor
+        · rfl
+        · have hrem : len.toNat - k = (len.toNat - k - 1) + 1 := by omega
+          rw [← hinv, hrem, memchrAux_match hmatch]
       · -- No match: br_if 1 doesn't fire
         simp [hmatch]
         have hsize : UInt32.size = 4294967296 := rfl
@@ -106,16 +109,18 @@ theorem memchr_correct : MemchrSpec := by
             simp only [show (1 : UInt32).toNat = 1 from rfl]
             rw [show 1 + k = k + 1 from by omega, Nat.mod_eq_of_lt hk1_lt]
           rw [hmod, ← hlen_eq]
-          -- goal: 1 + UInt32.ofNat k = memchrAux st'.mem ptr needle len.toNat 0
+          -- goal: 1 + UInt32.ofNat k = memchrAux initial.mem ptr needle len.toNat 0
           have hrem : len.toNat - k = 0 + 1 := by omega
           have step : memchrAux st'.mem ptr needle (len.toNat - k) k = UInt32.ofNat (k + 1) := by
             rw [hrem, memchrAux_no_match hmatch]; simp [memchrAux]
-          rw [← hinv, step]
-          -- goal: 1 + UInt32.ofNat k = UInt32.ofNat (k + 1)
-          apply UInt32.toNat.inj
-          rw [UInt32.toNat_add, UInt32.toNat_ofNat_of_lt' hk_lt, UInt32.toNat_ofNat_of_lt' hk1_lt]
-          simp only [show (1 : UInt32).toNat = 1 from rfl]
-          rw [show 1 + k = k + 1 from by omega, Nat.mod_eq_of_lt hk1_lt]
+          constructor
+          · rfl
+          · rw [← hinv, step]
+            -- goal: 1 + UInt32.ofNat k = UInt32.ofNat (k + 1)
+            apply UInt32.toNat.inj
+            rw [UInt32.toNat_add, UInt32.toNat_ofNat_of_lt' hk_lt, UInt32.toNat_ofNat_of_lt' hk1_lt]
+            simp only [show (1 : UInt32).toNat = 1 from rfl]
+            rw [show 1 + k = k + 1 from by omega, Nat.mod_eq_of_lt hk1_lt]
         · -- Loop continues: br_if 0 fires → Break 0
           simp [hexit]
           refine ⟨hmem k hk, ?_⟩

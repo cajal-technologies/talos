@@ -40,20 +40,9 @@ open Project.HostCounter.Spec
 theorem step_preserves_inv : StepPreservesInv := by
   intro env initial hSat hInv
   apply TerminatesWith.toPartiallyMeets
-  -- Pull resolver + contract for each import out of the satisfaction.
-  obtain ⟨hf_get, c_get, hEnv_get, hC_get, hCall_get⟩ := hSat 0 (by decide)
-  obtain ⟨hf_inc, c_inc, hEnv_inc, hC_inc, hCall_inc⟩ := hSat 1 (by decide)
-  -- The contracts for indices 0/1 are definitionally `getContract` /
-  -- `incContract` (cf. `counterSpec` in Host.lean). Reduce away the
-  -- generic `c_get` / `c_inc` so subsequent calls use the concrete shape.
-  have hC0 : counterSpec.contracts[0]? = some getContract := rfl
-  have hC1 : counterSpec.contracts[1]? = some incContract := rfl
-  rw [hC0] at hC_get; injection hC_get with hC_get'; subst hC_get'
-  rw [hC1] at hC_inc; injection hC_inc with hC_inc'; subst hC_inc'
   -- Reduce `TerminatesWith` to a `wp` obligation on the body of `step`
   -- (in-module index 0; unified index 2 = stepIdx).
-  apply TerminatesWith.of_wp_entry_for
-    (f := ⟨[], [], func0, []⟩) (by rfl)
+  wasm_entry_for
   -- Initial frame is empty (no params/locals/values).
   show wp _ func0 _ initial _ _
   unfold func0
@@ -63,27 +52,16 @@ theorem step_preserves_inv : StepPreservesInv := by
   -- `wp _ [] _` which closes by `wp_nil` against the entry post.
   apply wp_block_cons
   -- Inside the block, stack is empty. First instruction: `.call 0`
-  -- (host_get). Use the WP rule for host calls and discharge both
-  -- outcomes via the contract.
-  refine wp_call_host_cons
+  -- (host_get). Use the contract-facing host-call rule.
+  refine wp_call_host_contract
     (imp := { «module» := "env", name := "host_get",
               params := [], results := [.i32] })
-    (hf := hf_get) rfl hEnv_get ?_ ?_
+    (c := getContract) rfl hSat (by decide) rfl ?_ ?_
   · -- Return branch: host_get returned with the counter on the stack.
-    intro vs st' hInv'
-    -- The args slot in `hInv'` is `(List.take 0 …).reverse`; reduce it
-    -- to `[]` so the abstract `hf_get.invoke initial []` lines up with
-    -- the contract's specialisation below.
-    simp only [List.take,
-               List.reverse_nil] at hInv'
-    -- Specialise the get contract at `(initial, [])`.
-    have hContract := hCall_get initial []
-    -- `getContract initial [] (hf_get.invoke initial [])` unfolds to
-    -- `[] = [] ∧ hf_get.invoke … = .Return [.i32 (UInt32.ofNat …)] initial`.
+    intro vs st' hContract
     simp only [getContract] at hContract
     obtain ⟨_, hRes⟩ := hContract
-    rw [hRes] at hInv'
-    injection hInv' with hvs hst
+    injection hRes with hvs hst
     subst hvs; subst hst
     -- Symbolically execute through `const 9`, `gtU`, `br_if 0`.
     -- After `gtU` the top of stack is `if counter > 9 then 1 else 0`
@@ -106,19 +84,15 @@ theorem step_preserves_inv : StepPreservesInv := by
     · -- counter ≤ 9. Fall through to `.call 1` (host_inc), which bumps
       -- the counter by one; the new value is ≤ 10.
       simp [hcmp]
-      refine wp_call_host_cons
+      refine wp_call_host_contract
         (imp := { «module» := "env", name := "host_inc",
                   params := [], results := [] })
-        (hf := hf_inc) rfl hEnv_inc ?_ ?_
+        (c := incContract) rfl hSat (by decide) rfl ?_ ?_
       · -- Return branch for host_inc.
-        intro vs2 st2 hInv2
-        simp only [List.take,
-                   List.reverse_nil] at hInv2
-        have hContract2 := hCall_inc initial []
+        intro vs2 st2 hContract2
         simp only [incContract] at hContract2
         obtain ⟨_, hRes2⟩ := hContract2
-        rw [hRes2] at hInv2
-        injection hInv2 with hvs2 hst2
+        injection hRes2 with hvs2 hst2
         subst hvs2; subst hst2
         -- After inc, the block body is done; we reach `wp _ [] _` and
         -- close by `wp_nil` against the outer post (`CounterInv`).
@@ -136,22 +110,14 @@ theorem step_preserves_inv : StepPreservesInv := by
         simp only [CounterInv]
         omega
       · -- Trap branch for host_inc — ruled out by the contract.
-        intro st2 msg hInv2
-        simp only [List.take,
-                   List.reverse_nil] at hInv2
-        have hContract2 := hCall_inc initial []
+        intro st2 msg hContract2
         simp only [incContract] at hContract2
         obtain ⟨_, hRes2⟩ := hContract2
-        rw [hRes2] at hInv2
-        cases hInv2
+        cases hRes2
   · -- Trap branch for host_get — ruled out by the contract.
-    intro st' msg hInv'
-    simp only [List.take,
-               List.reverse_nil] at hInv'
-    have hContract := hCall_get initial []
+    intro st' msg hContract
     simp only [getContract] at hContract
     obtain ⟨_, hRes⟩ := hContract
-    rw [hRes] at hInv'
-    cases hInv'
+    cases hRes
 
 end Project.HostCounter.Proof

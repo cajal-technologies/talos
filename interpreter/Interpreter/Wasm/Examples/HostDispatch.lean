@@ -187,32 +187,20 @@ theorem inc_call_wp_abstract
     wp incModule [.call 0]
       (fun c => c = .Fallthrough st ⟨[], [], [.i32 (n + 1)]⟩)
       st ⟨[], [], [.i32 n]⟩ env := by
-  -- Pull the resolver + contract for import 0 out of the satisfaction.
-  obtain ⟨hf, c, hEnv, hC, hInvariant⟩ := hSat 0 (by decide)
-  -- The contract entry is exactly `incContract` (by definition of incSpec).
-  have hC0 : incSpec.contracts[0]? = some incContract := rfl
-  rw [hC0] at hC
-  injection hC with hC'
-  subst hC'
-  -- Apply the host-call WP rule against the abstract resolver `hf`.
-  refine wp_call_host_cons (imp := ⟨"env", "inc", [.i32], [.i32]⟩) (hf := hf)
-    rfl hEnv ?_ ?_
+  -- Apply the host-call WP rule through the abstract contract entry.
+  refine wp_call_host_contract
+    (imp := ⟨"env", "inc", [.i32], [.i32]⟩)
+    (c := incContract) rfl hSat (by decide) rfl ?_ ?_
   · -- Return: the contract gives the exact shape of the result.
-    intro vs st' hInv
-    simp only [List.take, List.reverse_cons, List.reverse_nil,
-               List.nil_append] at hInv
-    have hContract := hInvariant st [.i32 n] n rfl
-    rw [hInv] at hContract
+    intro vs st' hContract
+    have hContract := hContract n rfl
     injection hContract with hvs hst
     subst hvs
     subst hst
     simp
   · -- Trap: the contract forbids it (forces .Return), so the assumption is False.
-    intro st' msg hInv
-    simp only [List.take, List.reverse_cons, List.reverse_nil,
-               List.nil_append] at hInv
-    have hContract := hInvariant st [.i32 n] n rfl
-    rw [hInv] at hContract
+    intro st' msg hContract
+    have hContract := hContract n rfl
     cases hContract
 
 end HostDispatch

@@ -1,5 +1,6 @@
 import Interpreter.Wasm.Wp.Defs
 import Interpreter.Wasm.Semantics.Lemmas
+import Interpreter.Wasm.Spec.Defs
 
 /-! ### Function specifications and `call`.
 
@@ -13,7 +14,7 @@ namespace Wasm
 def FuncSpec (env : HostEnv α) (m : Module) (id : Nat)
     (Pre : List Value → Prop) (Post : Store α → List Value → Prop) : Prop :=
   ∀ args, Pre args → ∀ initial : Store α,
-    ∃ N, ∀ fuel ≥ N, ∃ vs st, run fuel m id initial args env = .Success vs st ∧ Post st vs
+    TerminatesWith env m id initial args Post
 
 /-- Store-specific core of the direct-call WP rule. Like `wp_call_cons`
 but consumes the callee's success behaviour *at the current store* `st`
@@ -49,6 +50,24 @@ theorem wp_call_cons {env : HostEnv α}
     (hPost : ∀ st' vs, Post st' vs → wp m rest Q st' { s with values := vs } env) :
     wp m (.call id :: rest) Q st s env :=
   wp_call_at (spec s.values hPre st) hPost
+
+/-- Direct-call WP rule consuming the public fuel-free total-correctness
+predicate directly. Prefer this wrapper when the callee spec is already a
+`TerminatesWith` theorem specialized to the current store and operands. -/
+theorem wp_call_tw {env : HostEnv α}
+    {id : Nat} {Post : Store α → List Value → Prop}
+    (hRun : TerminatesWith env m id st s.values Post)
+    (hPost : ∀ st' vs, Post st' vs → wp m rest Q st' { s with values := vs } env) :
+    wp m (.call id :: rest) Q st s env :=
+  wp_call_at hRun hPost
+
+/-- Backwards-compatible descriptive alias for `wp_call_tw`. -/
+theorem wp_call_of_terminates {env : HostEnv α}
+    {id : Nat} {Post : Store α → List Value → Prop}
+    (hRun : TerminatesWith env m id st s.values Post)
+    (hPost : ∀ st' vs, Post st' vs → wp m rest Q st' { s with values := vs } env) :
+    wp m (.call id :: rest) Q st s env :=
+  wp_call_tw hRun hPost
 
 /-- Store-specific core of the indirect-call WP rule. Instead of a
 store-polymorphic `FuncSpec`, it consumes the resolved callee's success
@@ -117,6 +136,25 @@ theorem wp_callIndirect_cons {α : Type} {env : HostEnv α}
     (hPost : ∀ st' vs, Post st' vs → wp m rest Q st' { s with values := vs } env) :
     wp m (.callIndirect ti tj :: rest) Q st s env :=
   wp_callIndirect_at hStack hTbl hSlot hFn hTy hSig (spec vs0 hPre st) hPost
+
+/-- Indirect-call WP rule consuming the resolved target's public
+`TerminatesWith` theorem directly. -/
+theorem wp_callIndirect_tw {α : Type} {env : HostEnv α}
+    {m : Module} {st : Store α} {s : Locals} {Q : Assertion α}
+    {rest : Program} {ti tj : Nat}
+    {Post : Store α → List Value → Prop}
+    {i : UInt32} {vs0 : List Value} {tbl : TableInst} {fid : Nat}
+    {fn : Function} {ty : FuncType}
+    (hStack : s.values = .i32 i :: vs0)
+    (hTbl  : st.tables[tj]? = some tbl)
+    (hSlot : tbl[i.toNat]? = some (some fid))
+    (hFn   : m.funcs[fid]? = some fn)
+    (hTy   : m.types[ti]? = some ty)
+    (hSig  : fn.params = ty.params ∧ fn.results = ty.results)
+    (hRun  : TerminatesWith env m fid st vs0 Post)
+    (hPost : ∀ st' vs, Post st' vs → wp m rest Q st' { s with values := vs } env) :
+    wp m (.callIndirect ti tj :: rest) Q st s env :=
+  wp_callIndirect_at hStack hTbl hSlot hFn hTy hSig hRun hPost
 
 /-- Bridge from `wp` of a function body to `FuncSpec`. The body sees locals
     built from `args.take f.numParams` reversed (so local 0 is the first
@@ -205,5 +243,35 @@ theorem wp_call_host_cons {m : Module} {env : HostEnv α}
     obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
     rw [exec_call_host_cons hImp hEnv, hInv]
     exact hTrap st' msg hInv
+
+/-- Host-call WP rule through an abstract contract in a satisfying
+`HostEnv`. The concrete resolver stays existential; proof branches receive
+only the contract fact for the actual host outcome. -/
+theorem wp_call_host_contract {m : Module} {env : HostEnv α}
+    {spec : HostSpec α} {id : Nat} {imp : ImportDecl} {c : HostContract α}
+    {rest : Program} {Q : Assertion α} {st : Store α} {s : Locals}
+    (hImp : m.imports[id]? = some imp)
+    (hSat : env.Satisfies m spec)
+    (hi : id < m.imports.length)
+    (hC : spec.contracts[id]? = some c)
+    (hReturn : ∀ vs st',
+      c st (s.values.take imp.params.length).reverse (.Return vs st') →
+      wp m rest Q st'
+        { s with values := vs.take imp.results.length
+                       ++ s.values.drop imp.params.length } env)
+    (hTrap : ∀ st' msg,
+      c st (s.values.take imp.params.length).reverse (.Trap st' msg) →
+      Q (.Trap st' msg)) :
+    wp m (.call id :: rest) Q st s env := by
+  obtain ⟨hf, hEnv, hContract⟩ := hSat.lookup_contract hi hC
+  refine wp_call_host_cons hImp hEnv ?_ ?_
+  · intro vs st' hInv
+    have hRel := hContract st (s.values.take imp.params.length).reverse
+    rw [hInv] at hRel
+    exact hReturn vs st' hRel
+  · intro st' msg hInv
+    have hRel := hContract st (s.values.take imp.params.length).reverse
+    rw [hInv] at hRel
+    exact hTrap st' msg hRel
 
 end Wasm

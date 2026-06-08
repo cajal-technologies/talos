@@ -64,34 +64,13 @@ def xorFwd (m : Mem) (ptr : UInt32) : Nat → UInt32
 lemma xorFwd_succ (m : Mem) (ptr : UInt32) (n : Nat) :
     xorFwd m ptr (n + 1) = xorFwd m ptr n ^^^ m.read32 (ptr + 4 * UInt32.ofNat n) := rfl
 
-/-! ## A store-specific `call` rule
+/-! ## Store-specific calls
 
 `wp_call_cons` consumes a `FuncSpec`, which quantifies over *all* initial
 stores. That is unusable here: `func1`/`func2` `load32` from memory and
-trap on a too-small store, so no total `FuncSpec` exists for them. We
-step `call` against a `TerminatesWith` *at the concrete current store*
-instead — same proof as `wp_call_cons`, just sourcing the success run
-from the store-specific hypothesis. -/
-
-private theorem wp_call_of_terminates {α : Type} {env : HostEnv α} {m : Module}
-    {id : Nat} {Q : Assertion α} {rest : Program} {st : Store α} {s : Locals}
-    {P : Store α → List Value → Prop}
-    (h : TerminatesWith env m id st s.values P)
-    (hPost : ∀ st' vs, P st' vs → wp m rest Q st' { s with values := vs } env) :
-    wp m (.call id :: rest) Q st s env := by
-  unfold wp
-  obtain ⟨Ns, hNs⟩ := h
-  obtain ⟨vs, st', hRun, hP⟩ := hNs Ns le_rfl
-  have hRun_ne : run Ns m id st s.values env ≠ .OutOfFuel := by rw [hRun]; intro h; cases h
-  have hwp_rest := hPost st' vs hP
-  unfold wp at hwp_rest
-  obtain ⟨Nr, hNr⟩ := hwp_rest
-  refine ⟨max (Ns + 1) (Nr + 1), fun fuel hfuel => ?_⟩
-  obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-  have hRun_f : run f m id st s.values env = .Success vs st' := by
-    rw [run_fuel_mono (by omega : f ≥ Ns) hRun_ne]; exact hRun
-  rw [exec_call_cons, hRun_f]
-  exact hNr (f + 1) (by omega)
+trap on a too-small store, so no total `FuncSpec` exists for them. The proof
+uses `Wasm.wp_call_of_terminates`, which steps a call against a
+`TerminatesWith` theorem at the concrete current store. -/
 
 /-! ## UInt32 ↔ Nat bridges for the loop counters -/
 

@@ -25,7 +25,7 @@ the `OPS`/vtable pointers out of *static* linear memory and resolves the
 call through the preinitialised function table, so the equivalence is
 meaningless (indeed false) over an arbitrary store. The end-to-end chain
 — memory-backed vtable read + table lookup + chained call — is discharged
-with `wp_callIndirect_at` / `wp_call_at`, the store-specific call WP rules. -/
+with `wp_callIndirect_tw` / `wp_call_tw`, the store-specific call WP rules. -/
 
 namespace Project.DynDispatch.Spec
 
@@ -97,7 +97,7 @@ private theorem dispatch_dyn (sel x : UInt32) :
     rw [show S.mem.read32 ((0 : UInt32) <<< 3 + 1048616) = 1048576 from by native_decide,
         show S.mem.read32 ((0 : UInt32) <<< 3 + 1048620) = 1048580 from by native_decide,
         show S.mem.read32 ((1048580 : UInt32) + 12) = 1 from by native_decide]
-    apply wp_callIndirect_at
+    apply wp_callIndirect_tw
       (i := 1) (vs0 := [.i32 x, .i32 1048576])
       (tbl := [none, some 3, some 4]) (fid := 3)
       (fn := { params := [.i32, .i32], locals := [], body := func3, results := [.i32] })
@@ -121,7 +121,7 @@ private theorem dispatch_dyn (sel x : UInt32) :
     rw [show S.mem.read32 ((1 : UInt32) <<< 3 + 1048616) = 1048596 from by native_decide,
         show S.mem.read32 ((1 : UInt32) <<< 3 + 1048620) = 1048600 from by native_decide,
         show S.mem.read32 ((1048600 : UInt32) + 12) = 2 from by native_decide]
-    apply wp_callIndirect_at
+    apply wp_callIndirect_tw
       (i := 2) (vs0 := [.i32 x, .i32 1048596])
       (tbl := [none, some 3, some 4]) (fid := 4)
       (fn := { params := [.i32, .i32], locals := [], body := func4, results := [.i32] })
@@ -172,7 +172,7 @@ private theorem check_block (sel x : UInt32) :
   apply wp_block_cons
   wp_run
   -- stack `[.i32 x, .i32 sel]`; call `func0` (dyn) via the store-specific rule
-  apply wp_call_at
+  apply wp_call_tw
   · exact dispatch_dyn sel x
   · rintro st' vs ⟨rfl, rfl⟩
     wp_run
@@ -205,7 +205,7 @@ theorem check_correct : CheckSpec := by
   unfold func5
   wp_run
   -- `check` just forwards `(sel, x)` to `func2`
-  apply wp_call_at
+  apply wp_call_tw
   · exact check_block sel x
   · rintro st' vs rfl
     wp_run

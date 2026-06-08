@@ -84,4 +84,20 @@ theorem TerminatesWith.mono {env : HostEnv α} {m : Module} {id : Nat}
   obtain ⟨vs, st, hRun, hP⟩ := hN fuel hf
   exact ⟨vs, st, hRun, hPQ st vs hP⟩
 
+/-- Start a store-parametric entry proof by inferring the generated
+`Function` witness from the concrete module. Use for specs whose body proof
+does not depend on facts about the caller's initial store. -/
+macro "wasm_entry" : tactic => `(tactic|
+  apply TerminatesWith.of_wp_entry (by rfl))
+
+/-- Store-specific entry-proof variant. Use when the proof depends on
+properties of the concrete initial store, such as memory bounds. -/
+macro "wasm_entry_for" : tactic => `(tactic|
+  apply TerminatesWith.of_wp_entry_for (by rfl))
+
+/-- Start a `FuncSpec` proof by inferring the generated `Function` witness
+from the concrete module. -/
+macro "wasm_funcspec" : tactic => `(tactic|
+  refine FuncSpec.of_wp_body (by rfl) ?_)
+
 end Wasm
