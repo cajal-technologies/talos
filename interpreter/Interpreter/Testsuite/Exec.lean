@@ -110,6 +110,22 @@ private def parseValueAt (ty val : String) : Except String Value :=
       let u := ((n % m + m) % m).toNat
       .ok (.i64 u.toUInt64)
     | none => .error s!"unparseable i64 value `{val}`"
+  -- Floats are given as the decimal of their raw bit pattern, except for
+  -- the NaN result patterns `nan:canonical`/`nan:arithmetic`. The
+  -- interpreter canonicalises every NaN it produces, so matching those
+  -- against the canonical NaN bit pattern is exact.
+  | "f32" =>
+    match val with
+    | "nan:canonical" | "nan:arithmetic" => .ok (.f32 0x7FC00000)
+    | _ => match val.toNat? with
+      | some n => .ok (.f32 (UInt32.ofNat (n % 4294967296)))
+      | none   => .error s!"unparseable f32 value `{val}`"
+  | "f64" =>
+    match val with
+    | "nan:canonical" | "nan:arithmetic" => .ok (.f64 0x7FF8000000000000)
+    | _ => match val.toNat? with
+      | some n => .ok (.f64 (UInt64.ofNat (n % 18446744073709551616)))
+      | none   => .error s!"unparseable f64 value `{val}`"
   | other => .error s!"non-integer value type `{other}`"
 
 private def parseValue (j : Json) : Except String Value :=

@@ -186,6 +186,108 @@ def parseI64 (s : String) : Except Err UInt64 := do
   let n ← parseIntLiteral s 64
   .ok (UInt64.ofNat n)
 
+/-! ## Float literal parsing
+
+`wasm-tools print` emits float constants as hex floats (`0x1.91eb86p+1`),
+`inf`, `nan`, or `nan:0x…`; raw `.wat` may also use decimal (`3.14`, `1e10`).
+A hex float is `mantissa · 2^exp`, which native `Float` reproduces exactly;
+decimal goes through `Float.ofScientific` (correctly rounded). The `f32`
+encoder rounds the `f64` magnitude to single precision — exact for every
+value `wasm-tools` prints, since those round-trip. -/
+
+private def floatMulPow2 : Float → Nat → Float
+  | x, 0 => x
+  | x, n + 1 => floatMulPow2 (x * 2.0) n
+private def floatDivPow2 : Float → Nat → Float
+  | x, 0 => x
+  | x, n + 1 => floatDivPow2 (x / 2.0) n
+private def floatScalePow2 (x : Float) (e : Int) : Float :=
+  if e ≥ 0 then floatMulPow2 x e.toNat else floatDivPow2 x (-e).toNat
+
+private def parseDecExp (s : String) : Except Err Int :=
+  if s.isEmpty then .ok 0
+  else
+    let (neg, body) :=
+      if s.startsWith "-" then (true, (s.drop 1).toString)
+      else if s.startsWith "+" then (false, (s.drop 1).toString)
+      else (false, s)
+    match body.toNat? with
+    | some n => .ok (if neg then -(Int.ofNat n) else Int.ofNat n)
+    | none   => .error s!"bad float exponent: {s}"
+
+/-- Magnitude of a hex float `INT[.FRAC][p±EXP]` (no `0x`, no sign). -/
+private def parseHexFloatMag (body : String) : Except Err Float := do
+  let (mant, expS) := match (body.replace "P" "p").splitOn "p" with
+    | [m]          => (m, "")
+    | m :: e :: _  => (m, e)
+    | []           => ("", "")
+  let (intH, fracH) := match mant.splitOn "." with
+    | [i]          => (i, "")
+    | i :: f :: _  => (i, f)
+    | []           => ("", "")
+  let m := (fromHexString? (intH ++ fracH)).getD 0
+  let e ← parseDecExp expS
+  .ok (floatScalePow2 (Float.ofNat m) (e - 4 * Int.ofNat fracH.length))
+
+/-- Magnitude of a decimal float `INT[.FRAC][e±EXP]` (no sign). -/
+private def parseDecFloatMag (body : String) : Except Err Float := do
+  let (mant, expS) := match (body.replace "E" "e").splitOn "e" with
+    | [m]          => (m, "")
+    | m :: e :: _  => (m, e)
+    | []           => ("", "")
+  let (intP, fracP) := match mant.splitOn "." with
+    | [i]          => (i, "")
+    | i :: f :: _  => (i, f)
+    | []           => ("", "")
+  let m := ((intP ++ fracP).toNat?).getD 0
+  let de ← parseDecExp expS
+  let exp := de - Int.ofNat fracP.length
+  .ok (Float.ofScientific m (exp < 0) exp.natAbs)
+
+/-- Sign and width-independent body of a float literal. -/
+private inductive FloatLitBody where
+  | finite (mag : Float)
+  | inf
+  | nan (payload : Option Nat)
+
+private def classifyFloatLit (s : String) : Except Err (Bool × FloatLitBody) := do
+  let (neg, r0) :=
+    if s.startsWith "-" then (true, (s.drop 1).toString)
+    else if s.startsWith "+" then (false, (s.drop 1).toString)
+    else (false, s)
+  let r := stripUnderscores r0
+  if r == "inf" then .ok (neg, .inf)
+  else if r == "nan" || r == "nan:canonical" || r == "nan:arithmetic" then
+    .ok (neg, .nan none)
+  else if r.startsWith "nan:0x" then
+    match fromHexString? (r.drop 6).toString with
+    | some p => .ok (neg, .nan (some p))
+    | none   => .error s!"bad nan payload: {s}"
+  else if r.startsWith "0x" || r.startsWith "0X" then
+    .ok (neg, .finite (← parseHexFloatMag (r.drop 2).toString))
+  else
+    .ok (neg, .finite (← parseDecFloatMag r))
+
+/-- Parse a WAT `f64` literal into its 64-bit IEEE-754 encoding. -/
+def parseF64Lit (s : String) : Except Err UInt64 := do
+  match (← classifyFloatLit s) with
+  | (neg, .finite mag) => .ok (if neg then (-mag).toBits else mag.toBits)
+  | (neg, .inf)        => .ok (if neg then 0xFFF0000000000000 else 0x7FF0000000000000)
+  | (neg, .nan none)   => .ok (if neg then 0xFFF8000000000000 else 0x7FF8000000000000)
+  | (neg, .nan (some p)) =>
+    let base : UInt64 := 0x7FF0000000000000 ||| UInt64.ofNat (p % 0x10000000000000)
+    .ok (if neg then base ||| 0x8000000000000000 else base)
+
+/-- Parse a WAT `f32` literal into its 32-bit IEEE-754 encoding. -/
+def parseF32Lit (s : String) : Except Err UInt32 := do
+  match (← classifyFloatLit s) with
+  | (neg, .finite mag) => .ok (if neg then (-mag).toFloat32.toBits else mag.toFloat32.toBits)
+  | (neg, .inf)        => .ok (if neg then 0xFF800000 else 0x7F800000)
+  | (neg, .nan none)   => .ok (if neg then 0xFFC00000 else 0x7FC00000)
+  | (neg, .nan (some p)) =>
+    let base : UInt32 := 0x7F800000 ||| UInt32.ofNat (p % 0x800000)
+    .ok (if neg then base ||| 0x80000000 else base)
+
 /-- Decode a value-type atom. The interpreter only models i32/i64; types
 from other proposals (floats, SIMD, reference types) are accepted at
 the decoder level — silently normalised to `i32` — so that modules
@@ -197,8 +299,8 @@ the same module. -/
 private def atomToValueType? : String → Option Wasm.ValueType
   | "i32"       => some .i32
   | "i64"       => some .i64
-  | "f32"       => some .i32  -- placeholder, see comment
-  | "f64"       => some .i32  -- placeholder
+  | "f32"       => some .f32
+  | "f64"       => some .f64
   | "v128"      => some .i32  -- placeholder
   | "funcref"   => some .i32  -- placeholder
   | "externref" => some .i32  -- placeholder
@@ -416,6 +518,82 @@ private def parsePlainOp : String → Except Err Wasm.Instruction
   | "memory.grow"  => .ok .memoryGrow
   | "memory.fill"  => .ok .memoryFill
   | "memory.copy"  => .ok .memoryCopy
+  -- f32 arithmetic / unary / comparison
+  | "f32.add" => .ok .f32Add
+  | "f32.sub" => .ok .f32Sub
+  | "f32.mul" => .ok .f32Mul
+  | "f32.div" => .ok .f32Div
+  | "f32.min" => .ok .f32Min
+  | "f32.max" => .ok .f32Max
+  | "f32.copysign" => .ok .f32Copysign
+  | "f32.abs" => .ok .f32Abs
+  | "f32.neg" => .ok .f32Neg
+  | "f32.sqrt" => .ok .f32Sqrt
+  | "f32.ceil" => .ok .f32Ceil
+  | "f32.floor" => .ok .f32Floor
+  | "f32.trunc" => .ok .f32Trunc
+  | "f32.nearest" => .ok .f32Nearest
+  | "f32.eq" => .ok .f32Eq
+  | "f32.ne" => .ok .f32Ne
+  | "f32.lt" => .ok .f32Lt
+  | "f32.gt" => .ok .f32Gt
+  | "f32.le" => .ok .f32Le
+  | "f32.ge" => .ok .f32Ge
+  -- f64 arithmetic / unary / comparison
+  | "f64.add" => .ok .f64Add
+  | "f64.sub" => .ok .f64Sub
+  | "f64.mul" => .ok .f64Mul
+  | "f64.div" => .ok .f64Div
+  | "f64.min" => .ok .f64Min
+  | "f64.max" => .ok .f64Max
+  | "f64.copysign" => .ok .f64Copysign
+  | "f64.abs" => .ok .f64Abs
+  | "f64.neg" => .ok .f64Neg
+  | "f64.sqrt" => .ok .f64Sqrt
+  | "f64.ceil" => .ok .f64Ceil
+  | "f64.floor" => .ok .f64Floor
+  | "f64.trunc" => .ok .f64Trunc
+  | "f64.nearest" => .ok .f64Nearest
+  | "f64.eq" => .ok .f64Eq
+  | "f64.ne" => .ok .f64Ne
+  | "f64.lt" => .ok .f64Lt
+  | "f64.gt" => .ok .f64Gt
+  | "f64.le" => .ok .f64Le
+  | "f64.ge" => .ok .f64Ge
+  -- integer → float
+  | "f32.convert_i32_s" => .ok .f32ConvertI32S
+  | "f32.convert_i32_u" => .ok .f32ConvertI32U
+  | "f32.convert_i64_s" => .ok .f32ConvertI64S
+  | "f32.convert_i64_u" => .ok .f32ConvertI64U
+  | "f64.convert_i32_s" => .ok .f64ConvertI32S
+  | "f64.convert_i32_u" => .ok .f64ConvertI32U
+  | "f64.convert_i64_s" => .ok .f64ConvertI64S
+  | "f64.convert_i64_u" => .ok .f64ConvertI64U
+  -- float → integer (trapping)
+  | "i32.trunc_f32_s" => .ok .i32TruncF32S
+  | "i32.trunc_f32_u" => .ok .i32TruncF32U
+  | "i32.trunc_f64_s" => .ok .i32TruncF64S
+  | "i32.trunc_f64_u" => .ok .i32TruncF64U
+  | "i64.trunc_f32_s" => .ok .i64TruncF32S
+  | "i64.trunc_f32_u" => .ok .i64TruncF32U
+  | "i64.trunc_f64_s" => .ok .i64TruncF64S
+  | "i64.trunc_f64_u" => .ok .i64TruncF64U
+  -- float → integer (saturating)
+  | "i32.trunc_sat_f32_s" => .ok .i32TruncSatF32S
+  | "i32.trunc_sat_f32_u" => .ok .i32TruncSatF32U
+  | "i32.trunc_sat_f64_s" => .ok .i32TruncSatF64S
+  | "i32.trunc_sat_f64_u" => .ok .i32TruncSatF64U
+  | "i64.trunc_sat_f32_s" => .ok .i64TruncSatF32S
+  | "i64.trunc_sat_f32_u" => .ok .i64TruncSatF32U
+  | "i64.trunc_sat_f64_s" => .ok .i64TruncSatF64S
+  | "i64.trunc_sat_f64_u" => .ok .i64TruncSatF64U
+  -- float ↔ float and bitwise reinterpret
+  | "f32.demote_f64"      => .ok .f32DemoteF64
+  | "f64.promote_f32"     => .ok .f64PromoteF32
+  | "i32.reinterpret_f32" => .ok .i32ReinterpretF32
+  | "i64.reinterpret_f64" => .ok .i64ReinterpretF64
+  | "f32.reinterpret_i32" => .ok .f32ReinterpretI32
+  | "f64.reinterpret_i64" => .ok .f64ReinterpretI64
   | op          =>
     -- Accept instructions from proposals the interpreter doesn't model
     -- (floats, SIMD, reference types, tables, GC, exceptions, tail calls)
@@ -435,20 +613,7 @@ private def parsePlainOp : String → Except Err Wasm.Instruction
        || op == "return_call" || op == "return_call_indirect" || op == "return_call_ref"
        || op == "call_ref" || op == "any.convert_extern"
        || op == "memory.atomic.notify" || op.startsWith "memory.atomic."
-       || op.startsWith "atomic."
-       -- int-from-float conversions: the operand is a float we don't
-       -- model, so we can't produce a real result; lower to unreachable
-       -- alongside the float-producing ops so mixed-signature modules
-       -- still decode.
-       || op == "i32.trunc_f32_s" || op == "i32.trunc_f32_u"
-       || op == "i32.trunc_f64_s" || op == "i32.trunc_f64_u"
-       || op == "i64.trunc_f32_s" || op == "i64.trunc_f32_u"
-       || op == "i64.trunc_f64_s" || op == "i64.trunc_f64_u"
-       || op == "i32.trunc_sat_f32_s" || op == "i32.trunc_sat_f32_u"
-       || op == "i32.trunc_sat_f64_s" || op == "i32.trunc_sat_f64_u"
-       || op == "i64.trunc_sat_f32_s" || op == "i64.trunc_sat_f32_u"
-       || op == "i64.trunc_sat_f64_s" || op == "i64.trunc_sat_f64_u"
-       || op == "i32.reinterpret_f32" || op == "i64.reinterpret_f64" then
+       || op.startsWith "atomic." then
       .ok .unreachable
     else
       .error s!"unsupported instruction: {op}"
@@ -530,8 +695,7 @@ stream when we accept-and-stub instructions from proposals the
 interpreter doesn't model. Returns `none` for ops we don't pretend to
 support. -/
 private def stubImmediateCount (op : String) : Option Nat :=
-  if op == "f32.const" || op == "f64.const"
-     || op == "ref.null" || op == "ref.func"
+  if op == "ref.null" || op == "ref.func"
      || op == "ref.test" || op == "ref.cast"
      || op == "br_on_null" || op == "br_on_non_null"
      || op == "return_call" || op == "return_call_ref" || op == "call_ref"
@@ -611,6 +775,10 @@ private def memOpToInstruction (op : String) (offset : UInt32) : Wasm.Instructio
   | "i64.store8"   => .store8I64  offset
   | "i64.store16"  => .store16I64 offset
   | "i64.store32"  => .store32I64 offset
+  | "f32.load"     => .f32Load  offset
+  | "f64.load"     => .f64Load  offset
+  | "f32.store"    => .f32Store offset
+  | "f64.store"    => .f64Store offset
   | _              => .unreachable
 
 private def looksLikeLabel (s : String) : Bool :=
@@ -659,6 +827,8 @@ private partial def parseInstr (ctx : Ctx) (toks : List Sexpr)
     match op with
     | "i32.const" => parseImmediateConst .const parseI32 op rest
     | "i64.const" => parseImmediateConst .constI64 parseI64 op rest
+    | "f32.const" => parseImmediateConst .f32Const parseF32Lit op rest
+    | "f64.const" => parseImmediateConst .f64Const parseF64Lit op rest
     | "local.get" => parseImmediateNat (resolveNamed ctx.localIds "local") .localGet op rest
     | "local.set" => parseImmediateNat (resolveNamed ctx.localIds "local") .localSet op rest
     | "local.tee" => parseLocalTee ctx rest
@@ -723,6 +893,14 @@ private partial def parseFolded (ctx : Ctx) (xs : List Sexpr)
       match rest with
       | [.atom n] => do .ok [.constI64 (← parseI64 n)]
       | _ => .error "folded i64.const expects exactly one immediate atom"
+    | "f32.const" =>
+      match rest with
+      | [.atom n] => do .ok [.f32Const (← parseF32Lit n)]
+      | _ => .error "folded f32.const expects exactly one immediate atom"
+    | "f64.const" =>
+      match rest with
+      | [.atom n] => do .ok [.f64Const (← parseF64Lit n)]
+      | _ => .error "folded f64.const expects exactly one immediate atom"
     | "local.get" =>
       match rest with
       | [.atom n] => do .ok [.localGet (← resolveNamed ctx.localIds "local" n)]
@@ -1299,11 +1477,12 @@ private def parseGlobalDecl (xs : List Sexpr) : Except Err Wasm.GlobalDecl := do
   let init : Wasm.Value ← match head?, tail with
     | some "i32.const", .atom n :: _ => .ok (.i32 (← parseI32 n))
     | some "i64.const", .atom n :: _ => .ok (.i64 (← parseI64 n))
+    | some "f32.const", .atom n :: _ => .ok (.f32 (← parseF32Lit n))
+    | some "f64.const", .atom n :: _ => .ok (.f64 (← parseF64Lit n))
     -- Init expressions from proposals we don't model are accepted by
     -- the decoder; the *value* is replaced with a zero placeholder
     -- since none of them feed an `i32`/`i64` computation. Function
     -- bodies that would read the global hit `unreachable` anyway.
-    | some "f32.const", _ | some "f64.const", _
     | some "v128.const", _
     | some "ref.null",  _ | some "ref.func",  _
     | some "global.get", _ => .ok (.i32 0)
