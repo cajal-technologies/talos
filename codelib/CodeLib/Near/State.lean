@@ -34,7 +34,8 @@ namespace Wasm
 /-- `2^64 - 1`, the NEAR register/length sentinel. Used by host functions
 that read an argument through `getMemOrReg`: a length field equal to this
 value means "the pointer is a register id, take the bytes already in that
-register" rather than "read this many bytes of linear memory". -/
+register" rather than "read this many bytes of linear memory". When used
+as an output `register_id`, the same value means "discard the output". -/
 def u64Max : UInt64 := 0xFFFFFFFFFFFFFFFF
 
 /-- Read `len` consecutive bytes of linear memory starting at byte offset
@@ -77,6 +78,11 @@ namespace NearState
 def setRegister (ns : NearState) (id : Nat) (data : List UInt8) : NearState :=
   { ns with registers := fun i => if i = id then some data else ns.registers i }
 
+/-- Set register `id` unless NEAR's output-register discard sentinel was
+passed. Output `register_id = u64::MAX` means "do not copy the output". -/
+def setRegisterIf (ns : NearState) (id : UInt64) (data : List UInt8) : NearState :=
+  if id = u64Max then ns else ns.setRegister id.toNat data
+
 /-- Insert/overwrite `key ↦ val` in storage. -/
 def setStorage (ns : NearState) (key val : List UInt8) : NearState :=
   { ns with storage := fun k => if k = key then some val else ns.storage k }
@@ -91,11 +97,11 @@ end NearState
 `(ptr, len)` pair: when `len = u64Max`, `ptr` is a *register id* and the
 bytes are taken from that register (`none` if the register is unset, which
 the caller turns into a trap); otherwise it reads `len` bytes of linear
-memory starting at `ptr`. Used uniformly by `storage_*` (keys/values) and
-`value_return`. The output `register_id` of a host function is **never**
-sentinel-encoded — only these input pairs are. -/
+memory starting at `ptr`, returning `none` when the range exceeds guest
+memory. Used uniformly by `storage_*` (keys/values) and `value_return`. -/
 def getMemOrReg (st : Store NearState) (ptr len : UInt64) : Option (List UInt8) :=
   if len = u64Max then st.host.registers ptr.toNat
+  else if ptr.toNat + len.toNat > st.mem.pages * 65536 then none
   else some (st.mem.readBytes ptr.toNat len.toNat)
 
 end Wasm

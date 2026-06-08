@@ -49,7 +49,7 @@ def inputFn : HostFn NearState :=
   { params := [.i64], results := []
     invoke := fun st args => match args with
       | [.i64 regId] =>
-        .Return [] { st with host := st.host.setRegister regId.toNat st.host.context.input }
+        .Return [] { st with host := st.host.setRegisterIf regId st.host.context.input }
       | _ => .Trap st "input: bad args" }
 
 /-- `read_register(register_id, ptr)`: copy the whole register into linear
@@ -89,7 +89,7 @@ def writeRegisterFn : HostFn NearState :=
           .Trap st "write_register: out of bounds"
         else
           let data := st.mem.readBytes dataPtr.toNat dataLen.toNat
-          .Return [] { st with host := st.host.setRegister regId.toNat data }
+          .Return [] { st with host := st.host.setRegisterIf regId data }
       | _ => .Trap st "write_register: bad args" }
 
 /-- `value_return(value_len, value_ptr)`: set the call's return data, read
@@ -107,7 +107,7 @@ def valueReturnFn : HostFn NearState :=
 
 Return convention (uniform): `0` = key was absent, `1` = key was present.
 On the present case the previous/read value is written to `register_id`
-(unconditionally — no sentinel on the output register). -/
+unless `register_id = u64Max`, which discards the output. -/
 
 /-- `storage_write(key_len, key_ptr, value_len, value_ptr, register_id) -> u64`.
 Inserts `key ↦ value`. If a value existed it is evicted into
@@ -121,7 +121,7 @@ def storageWriteFn : HostFn NearState :=
           match st.host.storage key with
           | some old =>
             .Return [.i64 1]
-              { st with host := (st.host.setRegister regId.toNat old).setStorage key val }
+              { st with host := (st.host.setRegisterIf regId old).setStorage key val }
           | none =>
             .Return [.i64 0] { st with host := st.host.setStorage key val }
         | _, _ => .Trap st "storage_write: invalid register"
@@ -138,7 +138,7 @@ def storageReadFn : HostFn NearState :=
         | none => .Trap st "storage_read: invalid register"
         | some key =>
           match st.host.storage key with
-          | some v => .Return [.i64 1] { st with host := st.host.setRegister regId.toNat v }
+          | some v => .Return [.i64 1] { st with host := st.host.setRegisterIf regId v }
           | none   => .Return [.i64 0] st
       | _ => .Trap st "storage_read: bad args" }
 
@@ -155,7 +155,7 @@ def storageRemoveFn : HostFn NearState :=
           match st.host.storage key with
           | some v =>
             .Return [.i64 1]
-              { st with host := (st.host.setRegister regId.toNat v).removeStorage key }
+              { st with host := (st.host.setRegisterIf regId v).removeStorage key }
           | none => .Return [.i64 0] st
       | _ => .Trap st "storage_remove: bad args" }
 

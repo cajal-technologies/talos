@@ -145,6 +145,38 @@ theorem demo2_stored : storedAt demoNs2 [1, 2] = some [7, 8, 9] := by native_dec
 
 theorem demo2_frame_other : storedAt demoNs2 [42] = some [100] := by native_decide
 
+/-! ## Host semantic regression checks -/
+
+def initialWith (ns : NearState) : Store NearState :=
+  { («module».initialStore : Store NearState) with host := ns }
+
+/-- Guest-memory inputs must trap when the requested range exceeds memory. -/
+def valueReturnOobTraps : Bool :=
+  match valueReturnFn.invoke (initialWith {}) [.i64 1, .i64 (UInt64.ofNat 65536)] with
+  | .Trap _ _ => true
+  | _         => false
+
+theorem value_return_oob_traps : valueReturnOobTraps = true := by native_decide
+
+/-- Output `register_id = u64::MAX` discards the output instead of writing
+to an actual register with that numeric id. -/
+def inputMaxDiscards : Bool :=
+  match inputFn.invoke (initialWith { context := { input := [1, 2, 3] } }) [.i64 u64Max] with
+  | .Return [] st => (st.host.registers u64Max.toNat).isNone
+  | _             => false
+
+theorem input_max_discards : inputMaxDiscards = true := by native_decide
+
+def storageReadMaxDiscards : Bool :=
+  let ns : NearState :=
+    { storage := fun k => if k = [1] then some [2] else none
+      registers := fun i => if i = 0 then some [1] else none }
+  match storageReadFn.invoke (initialWith ns) [.i64 u64Max, .i64 0, .i64 u64Max] with
+  | .Return [.i64 1] st => (st.host.registers u64Max.toNat).isNone
+  | _                   => false
+
+theorem storage_read_max_discards : storageReadMaxDiscards = true := by native_decide
+
 end KvSetter
 end Near
 end Wasm
