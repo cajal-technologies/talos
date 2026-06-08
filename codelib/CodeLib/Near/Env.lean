@@ -120,6 +120,10 @@ def disallowInView (name : String) (hf : HostFn NearState) : HostFn NearState :=
       else
         hf.invoke st args }
 
+/-- Append a log payload. The reference model stores log data as raw bytes:
+`log_utf8`/`log_utf16` names describe the guest ABI, but UTF decoding is not
+part of functional correctness here. Optional config limits model the
+nearcore-style log length/count traps when proofs opt into them. -/
 def appendLogResult (name : String) (st : Store NearState)
     (msg : List UInt8) : HostResult NearState :=
   checkDataLimit name "log" st.host.config.maxLogLen msg.length st <| fun _ =>

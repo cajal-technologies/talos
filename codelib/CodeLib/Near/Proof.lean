@@ -545,6 +545,54 @@ theorem nearEnv_satisfies_canonical (m : Module) (himports : m.imports = nearImp
       b0.toUInt32 ||| (b1.toUInt32 <<< 8) ||| (b2.toUInt32 <<< 16) ||| (b3.toUInt32 <<< 24) := by
   simp [Mem.read32, Mem.writeBytes]
 
+theorem readBytes_writeBytes_slice (m : Mem) (off start len : Nat) (data : List UInt8)
+    (h : start + len ≤ data.length) :
+    (m.writeBytes off data).readBytes (off + start) len = (data.drop start).take len := by
+  apply List.ext_getElem
+  · simp [Mem.readBytes]
+    omega
+  · intro i hi1 _hi2
+    have hi : i < len := by simpa [Mem.readBytes] using hi1
+    have hge : off ≤ off + start + i := by omega
+    have hlt : off + start + i < off + data.length := by omega
+    have hidx : off + start + i - off = start + i := by omega
+    simp [Mem.readBytes, Mem.writeBytes, hge, hlt, hidx]
+
+theorem getMemOrReg_mem (st : Store NearState) (ptr len : UInt64)
+    (hLen : len ≠ u64Max) (hBound : ptr.toNat + len.toNat ≤ memBytes st) :
+    getMemOrReg st ptr len = some (st.mem.readBytes ptr.toNat len.toNat) := by
+  unfold getMemOrReg
+  have hNot : ¬ ptr.toNat + len.toNat > st.mem.pages * 65536 := by
+    simpa [memBytes, Nat.not_lt] using hBound
+  simp [hLen, hNot]
+
+theorem storageWriteFn_invoke_present (st : Store NearState) (key val old : List UInt8)
+    (keyLen keyPtr valLen valPtr regId : UInt64) (stReg : Store NearState)
+    (hView : st.host.context.isView = false)
+    (hKeyGet : getMemOrReg st keyPtr keyLen = some key)
+    (hValGet : getMemOrReg st valPtr valLen = some val)
+    (hKeyLimit : withinLimit st.host.config.maxStorageKeyLen key.length = true)
+    (hValLimit : withinLimit st.host.config.maxStorageValueLen val.length = true)
+    (hOld : st.host.storage key = some old)
+    (hReg : checkedSetRegister? st regId old = some stReg) :
+    storageWriteFn.invoke st [.i64 keyLen, .i64 keyPtr, .i64 valLen, .i64 valPtr, .i64 regId] =
+      .Return [.i64 1] { stReg with host := (stReg.host.setStorage key val).invalidateIterators } := by
+  simp [storageWriteFn, disallowInView, hView, hKeyGet, hValGet, checkDataLimit,
+    hKeyLimit, hValLimit, hOld, hReg]
+
+theorem storageWriteFn_invoke_absent (st : Store NearState) (key val : List UInt8)
+    (keyLen keyPtr valLen valPtr regId : UInt64)
+    (hView : st.host.context.isView = false)
+    (hKeyGet : getMemOrReg st keyPtr keyLen = some key)
+    (hValGet : getMemOrReg st valPtr valLen = some val)
+    (hKeyLimit : withinLimit st.host.config.maxStorageKeyLen key.length = true)
+    (hValLimit : withinLimit st.host.config.maxStorageValueLen val.length = true)
+    (hOld : st.host.storage key = none) :
+    storageWriteFn.invoke st [.i64 keyLen, .i64 keyPtr, .i64 valLen, .i64 valPtr, .i64 regId] =
+      .Return [.i64 0] { st with host := (st.host.setStorage key val).invalidateIterators } := by
+  simp [storageWriteFn, disallowInView, hView, hKeyGet, hValGet, checkDataLimit,
+    hKeyLimit, hValLimit, hOld]
+
 /-! ## NEAR state projection lemmas -/
 
 @[simp] theorem setStorage_same (ns : NearState) (key val : List UInt8) :

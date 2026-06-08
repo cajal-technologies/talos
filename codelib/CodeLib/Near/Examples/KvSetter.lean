@@ -1,3 +1,4 @@
+import CodeLib.Entry
 import CodeLib.Near.Proof
 
 /-!
@@ -213,6 +214,68 @@ theorem le32_parts_or (n : Nat) :
     omega : ((val.length / 16777216 % 256) <<< 24) < 4294967296)]
   exact le32_parts_or val.length
 
+@[simp] theorem readBytes_writeBytes_encode_key (m : Mem) (key val : List UInt8) :
+    (m.writeBytes 0 (encodeKV key val)).readBytes 4 key.length = key := by
+  rw [show 4 = 0 + 4 by norm_num]
+  rw [readBytes_writeBytes_slice]
+  · simp [encodeKV, le32]
+  · simp [encodeKV, le32]
+    omega
+
+@[simp] theorem readBytes_writeBytes_encode_val (m : Mem) (key val : List UInt8) :
+    (m.writeBytes 0 (encodeKV key val)).readBytes (key.length + 8) val.length = val := by
+  rw [show key.length + 8 = 0 + (key.length + 8) by omega]
+  rw [readBytes_writeBytes_slice]
+  · simp [encodeKV, le32]
+  · simp [encodeKV, le32]
+    omega
+
+theorem u64_toNat_of_u32_len (n : Nat) (h : n < 4294967296) :
+    (UInt64.ofNat n).toNat = n := by
+  change (BitVec.ofNat 64 n).toNat = n
+  rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
+
+theorem u64_ofNat_ne_u64Max_of_u32_len (n : Nat) (h : n < 4294967296) :
+    UInt64.ofNat n ≠ u64Max := by
+  intro heq
+  have ht := congrArg UInt64.toNat heq
+  change (BitVec.ofNat 64 n).toNat = (18446744073709551615#64).toNat at ht
+  rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)] at ht
+  norm_num at ht
+  omega
+
+theorem u64_key_add8_toNat (key : List UInt8) (hKey : key.length < 4294967296) :
+    (UInt64.ofNat key.length + 8).toNat = key.length + 8 := by
+  rw [UInt64.toNat_add]
+  change ((UInt64.ofNat key.length).toNat + (8#64).toNat) %
+      18446744073709551616 = key.length + 8
+  rw [u64_toNat_of_u32_len key.length hKey]
+  norm_num
+  omega
+
+theorem getMemOrReg_writeBytes_encode_key (st : Store NearState) (key val : List UInt8)
+    (hKey : key.length < 4294967296)
+    (hMem : (encodeKV key val).length ≤ memBytes st) :
+    getMemOrReg { st with mem := st.mem.writeBytes 0 (encodeKV key val) }
+      (4 : UInt64) (UInt64.ofNat key.length) = some key := by
+  rw [getMemOrReg_mem]
+  · simp [u64_toNat_of_u32_len key.length hKey]
+  · exact u64_ofNat_ne_u64Max_of_u32_len key.length hKey
+  · simp [u64_toNat_of_u32_len key.length hKey, memBytes, encodeKV, le32] at hMem ⊢
+    omega
+
+theorem getMemOrReg_writeBytes_encode_val (st : Store NearState) (key val : List UInt8)
+    (hKey : key.length < 4294967296) (hVal : val.length < 4294967296)
+    (hMem : (encodeKV key val).length ≤ memBytes st) :
+    getMemOrReg { st with mem := st.mem.writeBytes 0 (encodeKV key val) }
+      (UInt64.ofNat key.length + 8) (UInt64.ofNat val.length) = some val := by
+  rw [getMemOrReg_mem]
+  · simp [u64_key_add8_toNat key hKey, u64_toNat_of_u32_len val.length hVal]
+  · exact u64_ofNat_ne_u64Max_of_u32_len val.length hVal
+  · simp [u64_key_add8_toNat key hKey, u64_toNat_of_u32_len val.length hVal,
+      memBytes, encodeKV, le32, Nat.add_comm, Nat.add_left_comm] at hMem ⊢
+    omega
+
 /-! ## Specification (stated; general proof is the next milestone) -/
 
 /-- Host projection after a successful `set`. Register `0` contains the
@@ -268,6 +331,168 @@ theorem finalStore_satisfies_set_post (ns : NearState) (key val : List UInt8) :
     simp [finalStore, finalHost, hOld, NearState.setStorage, NearState.setRegister,
       NearState.invalidateIterators]
   all_goals intro k hk heq; contradiction
+
+def afterInputStore (ns : NearState) (key val : List UInt8) : Store NearState :=
+  { globals := {}, mem := Mem.empty 1, host := ns.setRegister 0 (encodeKV key val) }
+
+def storageCallStore (ns : NearState) (key val : List UInt8) : Store NearState :=
+  { afterInputStore ns key val with
+    mem := (afterInputStore ns key val).mem.writeBytes 0 (encodeKV key val) }
+
+theorem storageWrite_invoke_encode_present (ns : NearState) (key val old : List UInt8)
+    (hView : ns.context.isView = false)
+    (hKey : key.length < 4294967296) (hVal : val.length < 4294967296)
+    (hLen : (encodeKV key val).length ≤ 65536)
+    (hKeyLim : withinLimit ns.config.maxStorageKeyLen key.length = true)
+    (hValLim : withinLimit ns.config.maxStorageValueLen val.length = true)
+    (hOld : ns.storage key = some old)
+    (hOldLim : withinLimit ns.config.maxRegisterLen old.length = true) :
+    storageWriteFn.invoke (storageCallStore ns key val)
+      [.i64 (UInt64.ofNat key.length), .i64 4, .i64 (UInt64.ofNat val.length),
+        .i64 (UInt64.ofNat key.length + 8), .i64 1] =
+      .Return [.i64 1]
+        { storageCallStore ns key val with
+          host := (((ns.setRegister 0 (encodeKV key val)).setRegister 1 old).setStorage key val).invalidateIterators } := by
+  refine storageWriteFn_invoke_present
+    (st := storageCallStore ns key val) (key := key) (val := val) (old := old)
+    (keyLen := UInt64.ofNat key.length) (keyPtr := 4)
+    (valLen := UInt64.ofNat val.length) (valPtr := UInt64.ofNat key.length + 8)
+    (regId := 1)
+    (stReg :=
+      { storageCallStore ns key val with
+        host := (ns.setRegister 0 (encodeKV key val)).setRegister 1 old }) ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · simpa [storageCallStore, afterInputStore, NearState.setRegister] using hView
+  · apply getMemOrReg_writeBytes_encode_key
+    · exact hKey
+    · simpa [afterInputStore, memBytes, Mem.empty] using hLen
+  · apply getMemOrReg_writeBytes_encode_val
+    · exact hKey
+    · exact hVal
+    · simpa [afterInputStore, memBytes, Mem.empty] using hLen
+  · simpa [storageCallStore, afterInputStore, NearState.setRegister] using hKeyLim
+  · simpa [storageCallStore, afterInputStore, NearState.setRegister] using hValLim
+  · simpa [storageCallStore, afterInputStore, NearState.setRegister] using hOld
+  · simp [storageCallStore, afterInputStore, checkedSetRegister?, hOldLim, NearState.setRegister, u64Max]
+
+theorem storageWrite_invoke_encode_absent (ns : NearState) (key val : List UInt8)
+    (hView : ns.context.isView = false)
+    (hKey : key.length < 4294967296) (hVal : val.length < 4294967296)
+    (hLen : (encodeKV key val).length ≤ 65536)
+    (hKeyLim : withinLimit ns.config.maxStorageKeyLen key.length = true)
+    (hValLim : withinLimit ns.config.maxStorageValueLen val.length = true)
+    (hOld : ns.storage key = none) :
+    storageWriteFn.invoke (storageCallStore ns key val)
+      [.i64 (UInt64.ofNat key.length), .i64 4, .i64 (UInt64.ofNat val.length),
+        .i64 (UInt64.ofNat key.length + 8), .i64 1] =
+      .Return [.i64 0]
+        { storageCallStore ns key val with
+          host := ((ns.setRegister 0 (encodeKV key val)).setStorage key val).invalidateIterators } := by
+  apply storageWriteFn_invoke_absent
+  · simpa [storageCallStore, afterInputStore, NearState.setRegister] using hView
+  · apply getMemOrReg_writeBytes_encode_key
+    · exact hKey
+    · simpa [afterInputStore, memBytes, Mem.empty] using hLen
+  · apply getMemOrReg_writeBytes_encode_val
+    · exact hKey
+    · exact hVal
+    · simpa [afterInputStore, memBytes, Mem.empty] using hLen
+  · simpa [storageCallStore, afterInputStore, NearState.setRegister] using hKeyLim
+  · simpa [storageCallStore, afterInputStore, NearState.setRegister] using hValLim
+  · simpa [storageCallStore, afterInputStore, NearState.setRegister] using hOld
+
+theorem set_spec : SetSpec := by
+  intro ns key val hView hKey hVal hLen hReg hKeyLim hValLim hOldLim hInput
+  apply TerminatesWith.of_wp_entry_for
+    (f := { params := [], locals := [], body := setBody, results := [] })
+  · simp [«module», setIdx, importCount]
+  · unfold setBody
+    wp_run
+    refine wp_call_host_cons
+      (imp := { «module» := "env", name := "input", params := [.i64], results := [] })
+      (hf := inputFn) rfl rfl ?_ ?_
+    · intro vs st' hInv
+      simp [inputFn, writeRegisterResult, checkedSetRegister?, hInput, hReg, u64Max] at hInv
+      rcases hInv with ⟨rfl, hst⟩
+      subst st'
+      wp_run
+      have hReg0 :
+          (ns.setRegister 0 (encodeKV key val)).registers 0 = some (encodeKV key val) := by
+        simp [NearState.setRegister]
+      have hReadBound :
+          ¬ ((«module».initialStore : Store NearState).mem.pages * 65536) <
+            (encodeKV key val).length := by
+        change ¬ 65536 < (encodeKV key val).length
+        omega
+      refine wp_call_host_cons
+        (imp := { «module» := "env", name := "read_register", params := [.i64, .i64], results := [] })
+        (hf := readRegisterFn) rfl rfl ?_ ?_
+      · intro vs st' hInv
+        simp [readRegisterFn, hReg0, memBytes, hReadBound] at hInv
+        rcases hInv with ⟨rfl, hst⟩
+        subst st'
+        wp_run
+        have hEncodeLen : key.length + val.length + 8 ≤ 65536 := by
+          simpa [encodeKV, le32, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using hLen
+        have hKeyAddr : key.length + 4 < 4294967296 := by omega
+        have hKeyMod : key.length % 4294967296 = key.length := Nat.mod_eq_of_lt hKey
+        have hValMod : val.length % 4294967296 = val.length := Nat.mod_eq_of_lt hVal
+        simp [read32_writeBytes_encode_keyLen, read32_writeBytes_encode_valLen, hKeyAddr,
+          hKeyMod, hValMod, «module», Module.initialStore, Mem.empty]
+        constructor
+        · omega
+        refine wp_call_host_cons
+          (imp := { «module» := "env", name := "storage_write", params := [.i64, .i64, .i64, .i64, .i64], results := [.i64] })
+          (hf := storageWriteFn) rfl rfl ?_ ?_
+        · intro vs st' hInv
+          simp only [List.take, List.reverse_cons, List.reverse_nil] at hInv
+          change storageWriteFn.invoke (storageCallStore ns key val)
+              [.i64 (UInt64.ofNat key.length), .i64 4, .i64 (UInt64.ofNat val.length),
+                .i64 (UInt64.ofNat key.length + 8), .i64 1] = .Return vs st' at hInv
+          cases hOldEq : ns.storage key with
+          | none =>
+            rw [storageWrite_invoke_encode_absent ns key val hView hKey hVal hLen
+              hKeyLim hValLim hOldEq] at hInv
+            injection hInv with hvs hst
+            subst hvs
+            subst st'
+            wp_run
+            constructor
+            · simp [NearState.setStorage, NearState.setRegister, NearState.invalidateIterators]
+            · intro k hk
+              simp [NearState.setStorage, NearState.setRegister, NearState.invalidateIterators, hk]
+          | some old =>
+            have hOldLimOld : withinLimit ns.config.maxRegisterLen old.length = true := by
+              simpa [hOldEq] using hOldLim
+            rw [storageWrite_invoke_encode_present ns key val old hView hKey hVal hLen
+              hKeyLim hValLim hOldEq hOldLimOld] at hInv
+            injection hInv with hvs hst
+            subst hvs
+            subst st'
+            wp_run
+            constructor
+            · simp [NearState.setStorage, NearState.setRegister, NearState.invalidateIterators]
+            · intro k hk
+              simp [NearState.setStorage, NearState.setRegister, NearState.invalidateIterators, hk]
+        · intro st' msg hInv
+          simp only [List.take, List.reverse_cons, List.reverse_nil] at hInv
+          change storageWriteFn.invoke (storageCallStore ns key val)
+              [.i64 (UInt64.ofNat key.length), .i64 4, .i64 (UInt64.ofNat val.length),
+                .i64 (UInt64.ofNat key.length + 8), .i64 1] = .Trap st' msg at hInv
+          cases hOldEq : ns.storage key with
+          | none =>
+            rw [storageWrite_invoke_encode_absent ns key val hView hKey hVal hLen
+              hKeyLim hValLim hOldEq] at hInv
+            contradiction
+          | some old =>
+            have hOldLimOld : withinLimit ns.config.maxRegisterLen old.length = true := by
+              simpa [hOldEq] using hOldLim
+            rw [storageWrite_invoke_encode_present ns key val old hView hKey hVal hLen
+              hKeyLim hValLim hOldEq hOldLimOld] at hInv
+            contradiction
+      · intro st' msg hInv
+        simp [readRegisterFn, hReg0, memBytes, hReadBound] at hInv
+    · intro st' msg hInv
+      simp [inputFn, writeRegisterResult, checkedSetRegister?, hInput, hReg, u64Max] at hInv
 
 /-! ## Concrete end-to-end validation
 
@@ -771,6 +996,25 @@ def logCountLimitTraps : Bool :=
   | _         => false
 
 theorem log_count_limit_traps : logCountLimitTraps = true := by native_decide
+
+def logLenLimitTraps : Bool :=
+  let ns : NearState := { config := { maxLogLen := some 1 } }
+  let st0 := initialWith ns
+  let st := { st0 with mem := st0.mem.writeBytes 0 [1, 2] }
+  match logUtf8Fn.invoke st [.i64 2, .i64 0] with
+  | .Trap _ _ => true
+  | _         => false
+
+theorem log_len_limit_traps : logLenLimitTraps = true := by native_decide
+
+def logUtf8StoresRawBytes : Bool :=
+  let st0 := initialWith {}
+  let st := { st0 with mem := st0.mem.writeBytes 0 [255] }
+  match logUtf8Fn.invoke st [.i64 1, .i64 0] with
+  | .Return [] st' => st'.host.logs == [[255]]
+  | _              => false
+
+theorem log_utf8_stores_raw_bytes : logUtf8StoresRawBytes = true := by native_decide
 
 def currentAccountInvalidTraps : Bool :=
   let ns : NearState :=
