@@ -98,6 +98,6 @@ diverge from chain execution.
      a general theorem.
 
 10. Real contract pipeline
-   - Decode/import a compiled `near-sdk-rs` contract.
-   - Resolve its imports through the NEAR resolver.
-   - Prove at least one storage or access-control property end to end.
+   - Done: decode/import a compiled `near-sdk-rs` contract.
+   - Done: resolve its imports through the NEAR resolver.
+   - Done: prove one concrete storage property end to end.

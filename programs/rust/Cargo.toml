@@ -7,6 +7,7 @@ members = [
   "is_prime",
   "itoa",
   "memchr",
+  "near_kv_contract",
   "num_integer",
   "reverse_inplace",
   "rust_option",
