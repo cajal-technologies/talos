@@ -9,20 +9,18 @@ contract imports from module `"env"`. Semantics transcribed from nearcore
 
 `HostEnv.funcs` is **positional**: index `i` resolves `call i` for
 `i < imports.length`. So the env and a module's `imports` must agree on
-order. To keep them in lockstep there is a single source of truth,
-`nearHostFns : List (ImportDecl × HostFn NearState)`, from which both
-`nearImports` and `nearEnv` are projected. A hand-built contract sets
-`imports := nearImports` and calls host functions by their canonical index
-(`input = 0`, `read_register = 1`, …, `storage_write = 5`, …).
+order. `nearHostFns : List (ImportDecl × HostFn NearState)` is the source
+of truth. Hand-built examples can use `nearImports`/`nearEnv` directly;
+real compiled modules should call `resolveEnv?` so their declared subset
+of imports is resolved by name/signature into the right positional order.
 
 ## Incremental strategy
 
-Every NEAR host function appears in the registry. The ones needed so far
-(Tier 0 I/O + storage) have real semantics; everything else is a
-**trapping stub** (`unsupported`). A contract that calls an un-modelled
-host function therefore *fails to verify loudly* (a trap the proof can't
-discharge) rather than silently misbehaving — implement a tier when a real
-contract needs it.
+Implemented tiers have real semantics; un-modelled crypto/promise entries
+are **trapping stubs** (`unsupported`). A contract that calls an
+un-modelled host function therefore *fails to verify loudly* (a trap the
+proof can't discharge) rather than silently misbehaving — implement a tier
+when a real contract needs it.
 
 Gas is intentionally unmodelled: functional correctness ignores it, and
 the interpreter's `fuel` already gives termination. Promises are deferred.
@@ -33,6 +31,43 @@ namespace Near
 
 /-- Byte capacity of `st`'s linear memory. -/
 @[inline] def memBytes (st : Store NearState) : Nat := st.mem.pages * 65536
+
+/-- Little-endian byte encoding of a NEAR `u128` value. Values above
+`2^128 - 1` are truncated modulo `2^128`, matching fixed-width writes. -/
+def leU128Bytes (n : Nat) : List UInt8 :=
+  (List.range 16).map (fun i => UInt8.ofNat (n / 2 ^ (8 * i) % 256))
+
+/-- Write bytes into guest memory, trapping when the range is out of bounds. -/
+def writeMemBytes (name : String) (st : Store NearState) (ptr : UInt64)
+    (data : List UInt8) : HostResult NearState :=
+  if ptr.toNat + data.length > memBytes st then
+    .Trap st s!"{name}: out of bounds"
+  else
+    .Return [] { st with mem := st.mem.writeBytes ptr.toNat data }
+
+/-- Write a `u128` into guest memory as 16 little-endian bytes. -/
+def writeU128 (name : String) (st : Store NearState) (ptr : UInt64)
+    (n : Nat) : HostResult NearState :=
+  writeMemBytes name st ptr (leU128Bytes n)
+
+def contextRegisterFn (name : String) (select : NearContext → List UInt8) : HostFn NearState :=
+  { params := [.i64], results := []
+    invoke := fun st args => match args with
+      | [.i64 regId] =>
+        .Return [] { st with host := st.host.setRegisterIf regId (select st.host.context) }
+      | _ => .Trap st s!"{name}: bad args" }
+
+def contextU64Fn (name : String) (select : NearContext → UInt64) : HostFn NearState :=
+  { params := [], results := [.i64]
+    invoke := fun st args => match args with
+      | [] => .Return [.i64 (select st.host.context)] st
+      | _  => .Trap st s!"{name}: bad args" }
+
+def contextU128MemFn (name : String) (select : NearContext → Nat) : HostFn NearState :=
+  { params := [.i64], results := []
+    invoke := fun st args => match args with
+      | [.i64 ptr] => writeU128 name st ptr (select st.host.context)
+      | _          => .Trap st s!"{name}: bad args" }
 
 /-! ## Trapping stub for un-modelled host functions -/
 
@@ -102,6 +137,114 @@ def valueReturnFn : HostFn NearState :=
         | none   => .Trap st "value_return: invalid register"
         | some v => .Return [] { st with host := { st.host with returnData := some v } }
       | _ => .Trap st "value_return: bad args" }
+
+/-! ## Context and economics -/
+
+def currentAccountIdFn : HostFn NearState :=
+  contextRegisterFn "current_account_id" (·.currentAccountId)
+
+def predecessorAccountIdFn : HostFn NearState :=
+  contextRegisterFn "predecessor_account_id" (·.predecessorAccountId)
+
+def signerAccountIdFn : HostFn NearState :=
+  contextRegisterFn "signer_account_id" (·.signerAccountId)
+
+def signerAccountPkFn : HostFn NearState :=
+  contextRegisterFn "signer_account_pk" (·.signerAccountPk)
+
+def blockIndexFn : HostFn NearState :=
+  contextU64Fn "block_index" (·.blockIndex)
+
+def blockTimestampFn : HostFn NearState :=
+  contextU64Fn "block_timestamp" (·.blockTimestamp)
+
+def epochHeightFn : HostFn NearState :=
+  contextU64Fn "epoch_height" (·.epochHeight)
+
+def storageUsageFn : HostFn NearState :=
+  contextU64Fn "storage_usage" (·.storageUsage)
+
+def accountBalanceFn : HostFn NearState :=
+  contextU128MemFn "account_balance" (·.accountBalance)
+
+def accountLockedBalanceFn : HostFn NearState :=
+  contextU128MemFn "account_locked_balance" (·.accountLockedBalance)
+
+def attachedDepositFn : HostFn NearState :=
+  contextU128MemFn "attached_deposit" (·.attachedDeposit)
+
+def prepaidGasFn : HostFn NearState :=
+  contextU64Fn "prepaid_gas" (·.prepaidGas)
+
+def usedGasFn : HostFn NearState :=
+  contextU64Fn "used_gas" (·.usedGas)
+
+def validatorStakeFn : HostFn NearState :=
+  { params := [.i64, .i64, .i64], results := []
+    invoke := fun st args => match args with
+      | [.i64 accountIdLen, .i64 accountIdPtr, .i64 stakePtr] =>
+        match getMemOrReg st accountIdPtr accountIdLen with
+        | none => .Trap st "validator_stake: invalid account id"
+        | some accountId =>
+          writeU128 "validator_stake" st stakePtr (st.host.context.validatorStake accountId)
+      | _ => .Trap st "validator_stake: bad args" }
+
+def validatorTotalStakeFn : HostFn NearState :=
+  contextU128MemFn "validator_total_stake" (·.validatorTotalStake)
+
+/-! ## Crypto and math, modelled as pure host-state hooks -/
+
+def digestFn (name : String) (hash : NearState → List UInt8 → List UInt8) : HostFn NearState :=
+  { params := [.i64, .i64, .i64], results := []
+    invoke := fun st args => match args with
+      | [.i64 valueLen, .i64 valuePtr, .i64 regId] =>
+        match getMemOrReg st valuePtr valueLen with
+        | none => .Trap st s!"{name}: invalid input"
+        | some value =>
+          .Return [] { st with host := st.host.setRegisterIf regId (hash st.host value) }
+      | _ => .Trap st s!"{name}: bad args" }
+
+def sha256Fn : HostFn NearState :=
+  digestFn "sha256" (·.sha256)
+
+def keccak256Fn : HostFn NearState :=
+  digestFn "keccak256" (·.keccak256)
+
+def keccak512Fn : HostFn NearState :=
+  digestFn "keccak512" (·.keccak512)
+
+def ripemd160Fn : HostFn NearState :=
+  digestFn "ripemd160" (·.ripemd160)
+
+def randomSeedFn : HostFn NearState :=
+  { params := [.i64], results := []
+    invoke := fun st args => match args with
+      | [.i64 regId] =>
+        .Return [] { st with host := st.host.setRegisterIf regId st.host.randomSeed }
+      | _ => .Trap st "random_seed: bad args" }
+
+def ecrecoverFn : HostFn NearState :=
+  { params := [.i64, .i64, .i64, .i64, .i64, .i64], results := [.i64]
+    invoke := fun st args => match args with
+      | [.i64 hashLen, .i64 hashPtr, .i64 sigLen, .i64 sigPtr, .i64 v, .i64 malleabilityFlag] =>
+        match getMemOrReg st hashPtr hashLen, getMemOrReg st sigPtr sigLen with
+        | some hash, some sig =>
+          match st.host.ecrecover hash sig v (malleabilityFlag != 0) with
+          | some pk =>
+            .Return [.i64 1] { st with host := st.host.setRegisterIf 0 pk }
+          | none => .Return [.i64 0] st
+        | _, _ => .Trap st "ecrecover: invalid input"
+      | _ => .Trap st "ecrecover: bad args" }
+
+def ed25519VerifyFn : HostFn NearState :=
+  { params := [.i64, .i64, .i64, .i64, .i64, .i64], results := [.i64]
+    invoke := fun st args => match args with
+      | [.i64 sigLen, .i64 sigPtr, .i64 msgLen, .i64 msgPtr, .i64 pkLen, .i64 pkPtr] =>
+        match getMemOrReg st sigPtr sigLen, getMemOrReg st msgPtr msgLen, getMemOrReg st pkPtr pkLen with
+        | some sig, some msg, some pk =>
+          .Return [.i64 (if st.host.ed25519Verify sig msg pk then 1 else 0)] st
+        | _, _, _ => .Trap st "ed25519_verify: invalid input"
+      | _ => .Trap st "ed25519_verify: bad args" }
 
 /-! ## Tier 1 — storage
 
@@ -178,6 +321,28 @@ def panicUtf8Fn : HostFn NearState :=
   { params := [.i64, .i64], results := []
     invoke := fun st _ => .Trap st "guest panic (utf8)" }
 
+def logUtf8Fn : HostFn NearState :=
+  { params := [.i64, .i64], results := []
+    invoke := fun st args => match args with
+      | [.i64 len, .i64 ptr] =>
+        match getMemOrReg st ptr len with
+        | none => .Trap st "log_utf8: invalid memory"
+        | some msg => .Return [] { st with host := { st.host with logs := st.host.logs ++ [msg] } }
+      | _ => .Trap st "log_utf8: bad args" }
+
+def logUtf16Fn : HostFn NearState :=
+  { params := [.i64, .i64], results := []
+    invoke := fun st args => match args with
+      | [.i64 len, .i64 ptr] =>
+        match getMemOrReg st ptr len with
+        | none => .Trap st "log_utf16: invalid memory"
+        | some msg => .Return [] { st with host := { st.host with logs := st.host.logs ++ [msg] } }
+      | _ => .Trap st "log_utf16: bad args" }
+
+def abortFn : HostFn NearState :=
+  { params := [.i32, .i32, .i32, .i32], results := []
+    invoke := fun st _ => .Trap st "guest abort" }
+
 /-! ## The registry — single source of truth -/
 
 private def imp (name : String) (params results : List ValueType) : ImportDecl :=
@@ -199,14 +364,36 @@ def nearHostFns : List (ImportDecl × HostFn NearState) :=
   , (imp "storage_has_key"      [.i64, .i64] [.i64],                storageHasKeyFn)  -- 8
   , (imp "panic"                [] [],                              panicFn)          -- 9
   , (imp "panic_utf8"           [.i64, .i64] [],                    panicUtf8Fn)      -- 10
-    -- Trapping stubs (un-modelled tiers): context, logging, crypto.
-  , (imp "current_account_id"     [.i64] [],     unsupported "current_account_id" [.i64] [])      -- 11
-  , (imp "predecessor_account_id" [.i64] [],     unsupported "predecessor_account_id" [.i64] [])  -- 12
-  , (imp "signer_account_id"      [.i64] [],     unsupported "signer_account_id" [.i64] [])       -- 13
-  , (imp "attached_deposit"       [.i64] [],     unsupported "attached_deposit" [.i64] [])        -- 14
-  , (imp "log_utf8"               [.i64, .i64] [], unsupported "log_utf8" [.i64, .i64] [])        -- 15
-  , (imp "sha256"           [.i64, .i64, .i64] [], unsupported "sha256" [.i64, .i64, .i64] [])    -- 16
-  , (imp "keccak256"        [.i64, .i64, .i64] [], unsupported "keccak256" [.i64, .i64, .i64] []) ]-- 17
+  , (imp "current_account_id"     [.i64] [],     currentAccountIdFn)                  -- 11
+  , (imp "predecessor_account_id" [.i64] [],     predecessorAccountIdFn)              -- 12
+  , (imp "signer_account_id"      [.i64] [],     signerAccountIdFn)                   -- 13
+  , (imp "attached_deposit"       [.i64] [],     attachedDepositFn)                   -- 14
+  , (imp "log_utf8"               [.i64, .i64] [], logUtf8Fn)                         -- 15
+  , (imp "sha256"           [.i64, .i64, .i64] [], sha256Fn)                                     -- 16
+  , (imp "keccak256"        [.i64, .i64, .i64] [], keccak256Fn)                                  -- 17
+  , (imp "signer_account_pk"      [.i64] [],     signerAccountPkFn)
+  , (imp "block_index"            [] [.i64],     blockIndexFn)
+  , (imp "block_height"           [] [.i64],     blockIndexFn)
+  , (imp "block_timestamp"        [] [.i64],     blockTimestampFn)
+  , (imp "epoch_height"           [] [.i64],     epochHeightFn)
+  , (imp "storage_usage"          [] [.i64],     storageUsageFn)
+  , (imp "account_balance"        [.i64] [],     accountBalanceFn)
+  , (imp "account_locked_balance" [.i64] [],     accountLockedBalanceFn)
+  , (imp "prepaid_gas"            [] [.i64],     prepaidGasFn)
+  , (imp "used_gas"               [] [.i64],     usedGasFn)
+  , (imp "validator_stake"        [.i64, .i64, .i64] [], validatorStakeFn)
+  , (imp "validator_total_stake"  [.i64] [],     validatorTotalStakeFn)
+  , (imp "log_utf16"              [.i64, .i64] [], logUtf16Fn)
+  , (imp "abort"                  [.i32, .i32, .i32, .i32] [], abortFn)
+    -- Remaining trapping stubs (un-modelled tier): promises.
+  , (imp "keccak512"        [.i64, .i64, .i64] [], keccak512Fn)
+  , (imp "ripemd160"        [.i64, .i64, .i64] [], ripemd160Fn)
+  , (imp "ecrecover"        [.i64, .i64, .i64, .i64, .i64, .i64] [.i64], ecrecoverFn)
+  , (imp "ed25519_verify"   [.i64, .i64, .i64, .i64, .i64, .i64] [.i64], ed25519VerifyFn)
+  , (imp "random_seed"      [.i64] [], randomSeedFn)
+  , (imp "promise_results_count" [] [.i64], unsupported "promise_results_count" [] [.i64])
+  , (imp "promise_result" [.i64, .i64] [.i64], unsupported "promise_result" [.i64, .i64] [.i64])
+  , (imp "promise_return" [.i64] [], unsupported "promise_return" [.i64] []) ]
 
 /-- Import declarations, in canonical order. A NEAR contract module sets
 `imports := nearImports`. -/
@@ -215,6 +402,29 @@ def nearImports : List ImportDecl := nearHostFns.map Prod.fst
 /-- The NEAR host environment. `funcs` aligns positionally with
 `nearImports`. -/
 def nearEnv : HostEnv NearState := { funcs := nearHostFns.map Prod.snd }
+
+/-- Import declarations match by module, name, params, and results. -/
+def importMatches (a b : ImportDecl) : Bool :=
+  a.«module» == b.«module» && a.name == b.name &&
+    a.params == b.params && a.results == b.results
+
+/-- Resolve one declared import to its NEAR host function. -/
+def resolveImport? (decl : ImportDecl) : Option (HostFn NearState) :=
+  (nearHostFns.find? (fun p => importMatches p.fst decl)).map Prod.snd
+
+/-- Resolve the exact subset/order of imports declared by a real module into
+a positional `HostEnv`. Returns `none` when an import is not a known NEAR
+function with the declared signature. -/
+def resolveImports? : List ImportDecl → Option (HostEnv NearState)
+  | [] => some { funcs := [] }
+  | decl :: rest =>
+    match resolveImport? decl, resolveImports? rest with
+    | some hf, some env => some { funcs := hf :: env.funcs }
+    | _, _ => none
+
+/-- Resolve a module's imports into a positional NEAR host environment. -/
+def resolveEnv? (m : Module) : Option (HostEnv NearState) :=
+  resolveImports? m.imports
 
 /-- Number of host imports; a contract's own functions start at this
 unified index. -/

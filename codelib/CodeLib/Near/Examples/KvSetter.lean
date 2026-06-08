@@ -177,6 +177,59 @@ def storageReadMaxDiscards : Bool :=
 
 theorem storage_read_max_discards : storageReadMaxDiscards = true := by native_decide
 
+def resolvesImportSubset : Bool :=
+  match resolveImports?
+      [ { «module» := "env", name := "current_account_id", params := [.i64], results := [] }
+      , { «module» := "env", name := "storage_write",
+          params := [.i64, .i64, .i64, .i64, .i64], results := [.i64] } ] with
+  | some env => env.funcs.length == 2
+  | none     => false
+
+theorem resolve_import_subset : resolvesImportSubset = true := by native_decide
+
+def rejectsBadImportSignature : Bool :=
+  match resolveImports?
+      [ { «module» := "env", name := "storage_write",
+          params := [.i64, .i64], results := [.i64] } ] with
+  | none   => true
+  | some _ => false
+
+theorem reject_bad_import_signature : rejectsBadImportSignature = true := by native_decide
+
+def currentAccountWritesRegister : Bool :=
+  let ns : NearState := { context := { currentAccountId := [99, 100] } }
+  match currentAccountIdFn.invoke (initialWith ns) [.i64 7] with
+  | .Return [] st => st.host.registers 7 == some [99, 100]
+  | _             => false
+
+theorem current_account_writes_register : currentAccountWritesRegister = true := by native_decide
+
+def accountBalanceWritesU128 : Bool :=
+  let ns : NearState := { context := { accountBalance := 258 } }
+  match accountBalanceFn.invoke (initialWith ns) [.i64 0] with
+  | .Return [] st => st.mem.readBytes 0 16 == leU128Bytes 258
+  | _             => false
+
+theorem account_balance_writes_u128 : accountBalanceWritesU128 = true := by native_decide
+
+def sha256HookWritesRegister : Bool :=
+  let ns : NearState := { sha256 := fun bs => bs ++ [9] }
+  let st0 := initialWith ns
+  let st := { st0 with mem := st0.mem.writeBytes 0 [1, 2] }
+  match sha256Fn.invoke st [.i64 2, .i64 0, .i64 5] with
+  | .Return [] st' => st'.host.registers 5 == some [1, 2, 9]
+  | _              => false
+
+theorem sha256_hook_writes_register : sha256HookWritesRegister = true := by native_decide
+
+def randomSeedWritesRegister : Bool :=
+  let ns : NearState := { randomSeed := [4, 5, 6] }
+  match randomSeedFn.invoke (initialWith ns) [.i64 3] with
+  | .Return [] st => st.host.registers 3 == some [4, 5, 6]
+  | _             => false
+
+theorem random_seed_writes_register : randomSeedWritesRegister = true := by native_decide
+
 end KvSetter
 end Near
 end Wasm

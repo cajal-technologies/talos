@@ -53,10 +53,21 @@ structure NearContext where
   currentAccountId     : List UInt8 := []
   predecessorAccountId : List UInt8 := []
   signerAccountId      : List UInt8 := []
+  signerAccountPk      : List UInt8 := []
   /-- Raw call input (method arguments). Read into a register by `input`. -/
   input                : List UInt8 := []
+  blockIndex           : UInt64 := 0
+  blockTimestamp       : UInt64 := 0
+  epochHeight          : UInt64 := 0
+  storageUsage         : UInt64 := 0
+  accountBalance       : Nat := 0
+  accountLockedBalance : Nat := 0
   /-- Attached deposit in yoctoNEAR (`u128`). -/
   attachedDeposit      : Nat := 0
+  prepaidGas           : UInt64 := 0
+  usedGas              : UInt64 := 0
+  validatorStake       : List UInt8 → Nat := fun _ => 0
+  validatorTotalStake  : Nat := 0
 deriving Inhabited
 
 /-- The NEAR host state threaded as `Store.host`. -/
@@ -70,6 +81,15 @@ structure NearState where
   returnData : Option (List UInt8) := none
   /-- Log lines emitted during the call, newest last. -/
   logs       : List (List UInt8) := []
+  sha256     : List UInt8 → List UInt8 := fun _ => []
+  keccak256  : List UInt8 → List UInt8 := fun _ => []
+  keccak512  : List UInt8 → List UInt8 := fun _ => []
+  ripemd160  : List UInt8 → List UInt8 := fun _ => []
+  randomSeed : List UInt8 := []
+  ecrecover  : List UInt8 → List UInt8 → UInt64 → Bool → Option (List UInt8) :=
+    fun _ _ _ _ => none
+  ed25519Verify : List UInt8 → List UInt8 → List UInt8 → Bool :=
+    fun _ _ _ => false
 deriving Inhabited
 
 namespace NearState
