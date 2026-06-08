@@ -20,10 +20,17 @@ observe and mutate:
 * `registers` — the NEAR register ABI scratch buffers (`id → bytes`). Host
   functions that "return" variable-length data write it to a register; the
   contract then copies it into linear memory via `read_register`.
-* `context`   — immutable call context (account ids, input bytes, deposit).
+* `context`   — immutable call context (account ids, input bytes, deposit,
+  and whether the call is a view call).
 * `returnData` / `logs` — outputs produced via `value_return` / logging.
+* `promiseResults` / `promises` — callback inputs and promise handles for
+  proof-visible cross-contract APIs.
+* `config`    — optional size limits that make unsupported oversize behavior
+  trap instead of silently entering proofs.
 
-Promises / cross-contract calls are deliberately out of scope for now.
+Promise creation/action modelling is deliberately incremental: callback
+result access and returned-promise selection are concrete; emitted receipt
+actions are added in `Env.lean` as the host API grows.
 
 The host-function semantics live in `CodeLib/Near/Env.lean`; this file is
 just the state shape plus the pure helpers those functions are built from.
@@ -56,6 +63,8 @@ structure NearContext where
   signerAccountPk      : List UInt8 := []
   /-- Raw call input (method arguments). Read into a register by `input`. -/
   input                : List UInt8 := []
+  /-- Whether this execution is a view call. Some host APIs trap in view mode. -/
+  isView               : Bool := false
   blockIndex           : UInt64 := 0
   blockTimestamp       : UInt64 := 0
   epochHeight          : UInt64 := 0
@@ -70,6 +79,35 @@ structure NearContext where
   validatorTotalStake  : Nat := 0
 deriving Inhabited
 
+/-- Optional NEAR host limits. `none` means the reference model leaves that
+limit unconstrained, which keeps existing concrete examples small and easy to
+compute while allowing fidelity checks to opt in to nearcore-style traps. -/
+structure NearConfig where
+  maxRegisterLen     : Option Nat := none
+  maxReturnLen       : Option Nat := none
+  maxLogLen          : Option Nat := none
+  maxNumberLogs      : Option Nat := none
+  maxStorageKeyLen   : Option Nat := none
+  maxStorageValueLen : Option Nat := none
+  validAccountId     : List UInt8 → Bool := fun _ => true
+  validPublicKey     : List UInt8 → Bool := fun _ => true
+deriving Inhabited
+
+/-- Result of a promise dependency visible to a callback. NEAR returns
+`0` for incomplete, `1` for successful, and `2` for failed results. -/
+inductive PromiseResult where
+  | notReady
+  | successful (data : List UInt8)
+  | failed
+deriving Inhabited, BEq
+
+/-- Promise handle allocated during the current execution. The action trace
+is added incrementally; a handle is already enough to validate
+`promise_return` indices. -/
+inductive NearPromise where
+  | pending
+deriving Inhabited, BEq
+
 /-- The NEAR host state threaded as `Store.host`. -/
 structure NearState where
   /-- Storage trie projection: `key ↦ value`, `none` when absent. -/
@@ -81,6 +119,13 @@ structure NearState where
   returnData : Option (List UInt8) := none
   /-- Log lines emitted during the call, newest last. -/
   logs       : List (List UInt8) := []
+  /-- Promise results available to callback executions. -/
+  promiseResults : List PromiseResult := []
+  /-- Promises created during this execution. -/
+  promises   : List NearPromise := []
+  /-- Promise selected as this call's return value by `promise_return`. -/
+  returnedPromise : Option Nat := none
+  config     : NearConfig := {}
   sha256     : List UInt8 → List UInt8 := fun _ => []
   keccak256  : List UInt8 → List UInt8 := fun _ => []
   keccak512  : List UInt8 → List UInt8 := fun _ => []

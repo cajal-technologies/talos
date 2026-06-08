@@ -230,6 +230,187 @@ def randomSeedWritesRegister : Bool :=
 
 theorem random_seed_writes_register : randomSeedWritesRegister = true := by native_decide
 
+def storageWriteViewTraps : Bool :=
+  let ns : NearState := { context := { isView := true } }
+  let st0 := initialWith ns
+  let st := { st0 with mem := st0.mem.writeBytes 0 [1, 2] }
+  match storageWriteFn.invoke st [.i64 1, .i64 0, .i64 1, .i64 1, .i64 0] with
+  | .Trap _ _ => true
+  | _         => false
+
+theorem storage_write_view_traps : storageWriteViewTraps = true := by native_decide
+
+def storageReadAllowedInView : Bool :=
+  let ns : NearState :=
+    { storage := fun k => if k = [1] then some [9] else none
+      context := { isView := true } }
+  let st0 := initialWith ns
+  let st := { st0 with mem := st0.mem.writeBytes 0 [1] }
+  match storageReadFn.invoke st [.i64 1, .i64 0, .i64 4] with
+  | .Return [.i64 1] st' => st'.host.registers 4 == some [9]
+  | _                    => false
+
+theorem storage_read_allowed_in_view : storageReadAllowedInView = true := by native_decide
+
+def attachedDepositViewTraps : Bool :=
+  let ns : NearState := { context := { isView := true, attachedDeposit := 7 } }
+  match attachedDepositFn.invoke (initialWith ns) [.i64 0] with
+  | .Trap _ _ => true
+  | _         => false
+
+theorem attached_deposit_view_traps : attachedDepositViewTraps = true := by native_decide
+
+def signerAccountViewTraps : Bool :=
+  let ns : NearState := { context := { isView := true, signerAccountId := [1] } }
+  match signerAccountIdFn.invoke (initialWith ns) [.i64 0] with
+  | .Trap _ _ => true
+  | _         => false
+
+theorem signer_account_view_traps : signerAccountViewTraps = true := by native_decide
+
+def promiseResultsCountWorks : Bool :=
+  let ns : NearState := { promiseResults := [.notReady, .successful [7], .failed] }
+  match promiseResultsCountFn.invoke (initialWith ns) [] with
+  | .Return [.i64 n] _ => n == 3
+  | _                  => false
+
+theorem promise_results_count_works : promiseResultsCountWorks = true := by native_decide
+
+def promiseResultSuccessWritesRegister : Bool :=
+  let ns : NearState := { promiseResults := [.notReady, .successful [7, 8], .failed] }
+  match promiseResultFn.invoke (initialWith ns) [.i64 1, .i64 9] with
+  | .Return [.i64 1] st => st.host.registers 9 == some [7, 8]
+  | _                   => false
+
+theorem promise_result_success_writes_register :
+    promiseResultSuccessWritesRegister = true := by native_decide
+
+def promiseResultFailedLeavesRegister : Bool :=
+  let ns : NearState :=
+    { promiseResults := [.failed]
+      registers := fun i => if i = 9 then some [1] else none }
+  match promiseResultFn.invoke (initialWith ns) [.i64 0, .i64 9] with
+  | .Return [.i64 2] st => st.host.registers 9 == some [1]
+  | _                   => false
+
+theorem promise_result_failed_leaves_register :
+    promiseResultFailedLeavesRegister = true := by native_decide
+
+def promiseResultBadIndexTraps : Bool :=
+  let ns : NearState := { promiseResults := [.successful [7]] }
+  match promiseResultFn.invoke (initialWith ns) [.i64 1, .i64 0] with
+  | .Trap _ _ => true
+  | _         => false
+
+theorem promise_result_bad_index_traps : promiseResultBadIndexTraps = true := by native_decide
+
+def promiseResultViewTraps : Bool :=
+  let ns : NearState := { context := { isView := true }, promiseResults := [.successful [7]] }
+  match promiseResultFn.invoke (initialWith ns) [.i64 0, .i64 0] with
+  | .Trap _ _ => true
+  | _         => false
+
+theorem promise_result_view_traps : promiseResultViewTraps = true := by native_decide
+
+def promiseReturnRecordsPromise : Bool :=
+  let ns : NearState := { promises := [.pending, .pending] }
+  match promiseReturnFn.invoke (initialWith ns) [.i64 1] with
+  | .Return [] st => st.host.returnedPromise == some 1
+  | _             => false
+
+theorem promise_return_records_promise : promiseReturnRecordsPromise = true := by native_decide
+
+def promiseReturnBadIndexTraps : Bool :=
+  let ns : NearState := { promises := [.pending] }
+  match promiseReturnFn.invoke (initialWith ns) [.i64 1] with
+  | .Trap _ _ => true
+  | _         => false
+
+theorem promise_return_bad_index_traps : promiseReturnBadIndexTraps = true := by native_decide
+
+def inputRegisterLimitTraps : Bool :=
+  let ns : NearState :=
+    { context := { input := [1, 2, 3] }
+      config := { maxRegisterLen := some 2 } }
+  match inputFn.invoke (initialWith ns) [.i64 0] with
+  | .Trap _ _ => true
+  | _         => false
+
+theorem input_register_limit_traps : inputRegisterLimitTraps = true := by native_decide
+
+def valueReturnLimitTraps : Bool :=
+  let ns : NearState := { config := { maxReturnLen := some 2 } }
+  let st0 := initialWith ns
+  let st := { st0 with mem := st0.mem.writeBytes 0 [1, 2, 3] }
+  match valueReturnFn.invoke st [.i64 3, .i64 0] with
+  | .Trap _ _ => true
+  | _         => false
+
+theorem value_return_limit_traps : valueReturnLimitTraps = true := by native_decide
+
+def storageWriteValueLimitTraps : Bool :=
+  let ns : NearState := { config := { maxStorageValueLen := some 0 } }
+  let st0 := initialWith ns
+  let st := { st0 with mem := st0.mem.writeBytes 0 [1, 2] }
+  match storageWriteFn.invoke st [.i64 1, .i64 0, .i64 1, .i64 1, .i64 0] with
+  | .Trap _ _ => true
+  | _         => false
+
+theorem storage_write_value_limit_traps :
+    storageWriteValueLimitTraps = true := by native_decide
+
+def logCountLimitTraps : Bool :=
+  let ns : NearState :=
+    { logs := [[]]
+      config := { maxNumberLogs := some 1 } }
+  match logUtf8Fn.invoke (initialWith ns) [.i64 0, .i64 0] with
+  | .Trap _ _ => true
+  | _         => false
+
+theorem log_count_limit_traps : logCountLimitTraps = true := by native_decide
+
+def currentAccountInvalidTraps : Bool :=
+  let ns : NearState :=
+    { context := { currentAccountId := [1] }
+      config := { validAccountId := fun _ => false } }
+  match currentAccountIdFn.invoke (initialWith ns) [.i64 0] with
+  | .Trap _ _ => true
+  | _         => false
+
+theorem current_account_invalid_traps : currentAccountInvalidTraps = true := by native_decide
+
+def validatorStakeInvalidAccountTraps : Bool :=
+  let ns : NearState := { config := { validAccountId := fun _ => false } }
+  let st0 := initialWith ns
+  let st := { st0 with mem := st0.mem.writeBytes 0 [1] }
+  match validatorStakeFn.invoke st [.i64 1, .i64 0, .i64 8] with
+  | .Trap _ _ => true
+  | _         => false
+
+theorem validator_stake_invalid_account_traps :
+    validatorStakeInvalidAccountTraps = true := by native_decide
+
+def signerPkInvalidTraps : Bool :=
+  let ns : NearState :=
+    { context := { signerAccountPk := [1, 2] }
+      config := { validPublicKey := fun _ => false } }
+  match signerAccountPkFn.invoke (initialWith ns) [.i64 0] with
+  | .Trap _ _ => true
+  | _         => false
+
+theorem signer_pk_invalid_traps : signerPkInvalidTraps = true := by native_decide
+
+def ed25519InvalidPublicKeyTraps : Bool :=
+  let ns : NearState := { config := { validPublicKey := fun _ => false } }
+  let st0 := initialWith ns
+  let st := { st0 with mem := st0.mem.writeBytes 0 [1] }
+  match ed25519VerifyFn.invoke st [.i64 0, .i64 0, .i64 0, .i64 0, .i64 1, .i64 0] with
+  | .Trap _ _ => true
+  | _         => false
+
+theorem ed25519_invalid_public_key_traps :
+    ed25519InvalidPublicKeyTraps = true := by native_decide
+
 end KvSetter
 end Near
 end Wasm

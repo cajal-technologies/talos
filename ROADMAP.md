@@ -22,6 +22,8 @@ diverge from chain execution.
   of NEAR functions.
 - Real semantics exist for common context/economics APIs, logging, and symbolic
   crypto hooks.
+- Real semantics exist for callback promise result access and returned-promise
+  selection.
 - The hand-built `KvSetter` example validates a small register/input/storage
   pipeline plus host-regression checks with concrete `native_decide` checks.
 
@@ -37,8 +39,9 @@ diverge from chain execution.
    - Done: implement account id and signer key register outputs.
    - Done: implement block height/index, block timestamp, epoch height, and storage
      usage.
-   - Add state fields for view-call mode and enforce `ProhibitedInView` where
-     useful for proof fidelity.
+   - Done: add a view-call mode flag and enforce `ProhibitedInView` for signer,
+     predecessor, attached deposit, gas, mutating storage, and promise-return
+     style APIs currently present in the registry.
 
 3. Economics API
    - Done: implement account balance, locked balance, attached deposit, prepaid gas,
@@ -58,9 +61,11 @@ diverge from chain execution.
      deterministic executable implementations added only when needed.
 
 6. Promises and cross-contract calls
-   - Add promise/result/action data structures.
+   - Done: add callback result and promise-handle state, implement
+     `promise_results_count`, `promise_result`, and `promise_return`.
+   - Add action data structures.
    - Implement `promise_create`, `promise_then`, `promise_and`, batch creation,
-     batch actions, result access, `promise_return`, and yield/resume APIs.
+     batch actions, and yield/resume APIs.
    - Model promises as an action trace suitable for proving emitted receipts and
      callbacks.
 
@@ -71,8 +76,9 @@ diverge from chain execution.
      preserving the current function-style storage projection for frame proofs.
 
 8. Limits and errors
-   - Add configurable limits for key/value/return/log/register sizes and account
-     id/public key validation.
+   - Done: add configurable limits for key/value/return/log/register sizes and
+     enforce them at host-state write boundaries.
+   - Done: add account id and public key validation hooks.
    - Keep traps loud when behavior is unsupported or outside the modeled NEAR
      semantics.
 

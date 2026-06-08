@@ -50,11 +50,76 @@ def writeU128 (name : String) (st : Store NearState) (ptr : UInt64)
     (n : Nat) : HostResult NearState :=
   writeMemBytes name st ptr (leU128Bytes n)
 
+def withinLimit (limit : Option Nat) (n : Nat) : Bool :=
+  match limit with
+  | none => true
+  | some max => decide (n ≤ max)
+
+def checkedSetRegister? (st : Store NearState) (regId : UInt64)
+    (data : List UInt8) : Option (Store NearState) :=
+  if regId = u64Max then
+    some st
+  else if withinLimit st.host.config.maxRegisterLen data.length then
+    some { st with host := st.host.setRegister regId.toNat data }
+  else
+    none
+
+def writeRegisterResult (name : String) (st : Store NearState) (regId : UInt64)
+    (data : List UInt8) (results : List Value := []) : HostResult NearState :=
+  match checkedSetRegister? st regId data with
+  | some st' => .Return results st'
+  | none     => .Trap st s!"{name}: register size exceeded"
+
+def checkDataLimit (name label : String) (limit : Option Nat) (n : Nat)
+    (st : Store NearState) (next : Unit → HostResult NearState) : HostResult NearState :=
+  if withinLimit limit n then
+    next ()
+  else
+    .Trap st s!"{name}: {label} size exceeded"
+
+def checkAccountId (name : String) (st : Store NearState) (accountId : List UInt8)
+    (next : Unit → HostResult NearState) : HostResult NearState :=
+  if st.host.config.validAccountId accountId then
+    next ()
+  else
+    .Trap st s!"{name}: invalid account id"
+
+def checkPublicKey (name : String) (st : Store NearState) (publicKey : List UInt8)
+    (next : Unit → HostResult NearState) : HostResult NearState :=
+  if st.host.config.validPublicKey publicKey then
+    next ()
+  else
+    .Trap st s!"{name}: invalid public key"
+
+def appendLogResult (name : String) (st : Store NearState)
+    (msg : List UInt8) : HostResult NearState :=
+  checkDataLimit name "log" st.host.config.maxLogLen msg.length st <| fun _ =>
+  checkDataLimit name "log count" st.host.config.maxNumberLogs (st.host.logs.length + 1) st <| fun _ =>
+    .Return [] { st with host := { st.host with logs := st.host.logs ++ [msg] } }
+
 def contextRegisterFn (name : String) (select : NearContext → List UInt8) : HostFn NearState :=
   { params := [.i64], results := []
     invoke := fun st args => match args with
       | [.i64 regId] =>
-        .Return [] { st with host := st.host.setRegisterIf regId (select st.host.context) }
+        writeRegisterResult name st regId (select st.host.context)
+      | _ => .Trap st s!"{name}: bad args" }
+
+def accountIdRegisterFn (name : String) (select : NearContext → List UInt8) : HostFn NearState :=
+  { params := [.i64], results := []
+    invoke := fun st args => match args with
+      | [.i64 regId] =>
+        let accountId := select st.host.context
+        checkAccountId name st accountId <| fun _ =>
+          writeRegisterResult name st regId accountId
+      | _ => .Trap st s!"{name}: bad args" }
+
+def publicKeyRegisterFn (name : String) (select : NearContext → List UInt8) : HostFn NearState :=
+  { params := [.i64], results := []
+    invoke := fun st args => match args with
+      | [.i64 regId] =>
+        let publicKey := select st.host.context
+        checkPublicKey name st publicKey <| fun _ =>
+          writeRegisterResult name st regId publicKey
       | _ => .Trap st s!"{name}: bad args" }
 
 def contextU64Fn (name : String) (select : NearContext → UInt64) : HostFn NearState :=
@@ -68,6 +133,19 @@ def contextU128MemFn (name : String) (select : NearContext → Nat) : HostFn Nea
     invoke := fun st args => match args with
       | [.i64 ptr] => writeU128 name st ptr (select st.host.context)
       | _          => .Trap st s!"{name}: bad args" }
+
+/-- Wrap a host function whose NEAR nearcore semantics return
+`ProhibitedInView` during view execution. The wrapped function remains
+unchanged for normal calls, keeping direct semantic tests representative of
+the registry entry. -/
+def disallowInView (name : String) (hf : HostFn NearState) : HostFn NearState :=
+  { params := hf.params
+    results := hf.results
+    invoke := fun st args =>
+      if st.host.context.isView then
+        .Trap st s!"{name}: ProhibitedInView"
+      else
+        hf.invoke st args }
 
 /-! ## Trapping stub for un-modelled host functions -/
 
@@ -84,7 +162,7 @@ def inputFn : HostFn NearState :=
   { params := [.i64], results := []
     invoke := fun st args => match args with
       | [.i64 regId] =>
-        .Return [] { st with host := st.host.setRegisterIf regId st.host.context.input }
+        writeRegisterResult "input" st regId st.host.context.input
       | _ => .Trap st "input: bad args" }
 
 /-- `read_register(register_id, ptr)`: copy the whole register into linear
@@ -124,7 +202,7 @@ def writeRegisterFn : HostFn NearState :=
           .Trap st "write_register: out of bounds"
         else
           let data := st.mem.readBytes dataPtr.toNat dataLen.toNat
-          .Return [] { st with host := st.host.setRegisterIf regId data }
+          writeRegisterResult "write_register" st regId data
       | _ => .Trap st "write_register: bad args" }
 
 /-- `value_return(value_len, value_ptr)`: set the call's return data, read
@@ -135,22 +213,27 @@ def valueReturnFn : HostFn NearState :=
       | [.i64 valLen, .i64 valPtr] =>
         match getMemOrReg st valPtr valLen with
         | none   => .Trap st "value_return: invalid register"
-        | some v => .Return [] { st with host := { st.host with returnData := some v } }
+        | some v =>
+          checkDataLimit "value_return" "return" st.host.config.maxReturnLen v.length st <|
+            fun _ => .Return [] { st with host := { st.host with returnData := some v } }
       | _ => .Trap st "value_return: bad args" }
 
 /-! ## Context and economics -/
 
 def currentAccountIdFn : HostFn NearState :=
-  contextRegisterFn "current_account_id" (·.currentAccountId)
+  accountIdRegisterFn "current_account_id" (·.currentAccountId)
 
 def predecessorAccountIdFn : HostFn NearState :=
-  contextRegisterFn "predecessor_account_id" (·.predecessorAccountId)
+  disallowInView "predecessor_account_id" <|
+    accountIdRegisterFn "predecessor_account_id" (·.predecessorAccountId)
 
 def signerAccountIdFn : HostFn NearState :=
-  contextRegisterFn "signer_account_id" (·.signerAccountId)
+  disallowInView "signer_account_id" <|
+    accountIdRegisterFn "signer_account_id" (·.signerAccountId)
 
 def signerAccountPkFn : HostFn NearState :=
-  contextRegisterFn "signer_account_pk" (·.signerAccountPk)
+  disallowInView "signer_account_pk" <|
+    publicKeyRegisterFn "signer_account_pk" (·.signerAccountPk)
 
 def blockIndexFn : HostFn NearState :=
   contextU64Fn "block_index" (·.blockIndex)
@@ -171,13 +254,16 @@ def accountLockedBalanceFn : HostFn NearState :=
   contextU128MemFn "account_locked_balance" (·.accountLockedBalance)
 
 def attachedDepositFn : HostFn NearState :=
-  contextU128MemFn "attached_deposit" (·.attachedDeposit)
+  disallowInView "attached_deposit" <|
+    contextU128MemFn "attached_deposit" (·.attachedDeposit)
 
 def prepaidGasFn : HostFn NearState :=
-  contextU64Fn "prepaid_gas" (·.prepaidGas)
+  disallowInView "prepaid_gas" <|
+    contextU64Fn "prepaid_gas" (·.prepaidGas)
 
 def usedGasFn : HostFn NearState :=
-  contextU64Fn "used_gas" (·.usedGas)
+  disallowInView "used_gas" <|
+    contextU64Fn "used_gas" (·.usedGas)
 
 def validatorStakeFn : HostFn NearState :=
   { params := [.i64, .i64, .i64], results := []
@@ -186,7 +272,8 @@ def validatorStakeFn : HostFn NearState :=
         match getMemOrReg st accountIdPtr accountIdLen with
         | none => .Trap st "validator_stake: invalid account id"
         | some accountId =>
-          writeU128 "validator_stake" st stakePtr (st.host.context.validatorStake accountId)
+          checkAccountId "validator_stake" st accountId <| fun _ =>
+            writeU128 "validator_stake" st stakePtr (st.host.context.validatorStake accountId)
       | _ => .Trap st "validator_stake: bad args" }
 
 def validatorTotalStakeFn : HostFn NearState :=
@@ -201,7 +288,7 @@ def digestFn (name : String) (hash : NearState → List UInt8 → List UInt8) : 
         match getMemOrReg st valuePtr valueLen with
         | none => .Trap st s!"{name}: invalid input"
         | some value =>
-          .Return [] { st with host := st.host.setRegisterIf regId (hash st.host value) }
+          writeRegisterResult name st regId (hash st.host value)
       | _ => .Trap st s!"{name}: bad args" }
 
 def sha256Fn : HostFn NearState :=
@@ -220,7 +307,7 @@ def randomSeedFn : HostFn NearState :=
   { params := [.i64], results := []
     invoke := fun st args => match args with
       | [.i64 regId] =>
-        .Return [] { st with host := st.host.setRegisterIf regId st.host.randomSeed }
+        writeRegisterResult "random_seed" st regId st.host.randomSeed
       | _ => .Trap st "random_seed: bad args" }
 
 def ecrecoverFn : HostFn NearState :=
@@ -231,7 +318,8 @@ def ecrecoverFn : HostFn NearState :=
         | some hash, some sig =>
           match st.host.ecrecover hash sig v (malleabilityFlag != 0) with
           | some pk =>
-            .Return [.i64 1] { st with host := st.host.setRegisterIf 0 pk }
+            checkPublicKey "ecrecover" st pk <| fun _ =>
+              writeRegisterResult "ecrecover" st 0 pk [.i64 1]
           | none => .Return [.i64 0] st
         | _, _ => .Trap st "ecrecover: invalid input"
       | _ => .Trap st "ecrecover: bad args" }
@@ -242,7 +330,8 @@ def ed25519VerifyFn : HostFn NearState :=
       | [.i64 sigLen, .i64 sigPtr, .i64 msgLen, .i64 msgPtr, .i64 pkLen, .i64 pkPtr] =>
         match getMemOrReg st sigPtr sigLen, getMemOrReg st msgPtr msgLen, getMemOrReg st pkPtr pkLen with
         | some sig, some msg, some pk =>
-          .Return [.i64 (if st.host.ed25519Verify sig msg pk then 1 else 0)] st
+          checkPublicKey "ed25519_verify" st pk <| fun _ =>
+            .Return [.i64 (if st.host.ed25519Verify sig msg pk then 1 else 0)] st
         | _, _, _ => .Trap st "ed25519_verify: invalid input"
       | _ => .Trap st "ed25519_verify: bad args" }
 
@@ -256,17 +345,21 @@ unless `register_id = u64Max`, which discards the output. -/
 Inserts `key ↦ value`. If a value existed it is evicted into
 `register_id` and `1` is returned; otherwise `0`. -/
 def storageWriteFn : HostFn NearState :=
+  disallowInView "storage_write" <|
   { params := [.i64, .i64, .i64, .i64, .i64], results := [.i64]
     invoke := fun st args => match args with
       | [.i64 keyLen, .i64 keyPtr, .i64 valLen, .i64 valPtr, .i64 regId] =>
         match getMemOrReg st keyPtr keyLen, getMemOrReg st valPtr valLen with
         | some key, some val =>
-          match st.host.storage key with
-          | some old =>
-            .Return [.i64 1]
-              { st with host := (st.host.setRegisterIf regId old).setStorage key val }
-          | none =>
-            .Return [.i64 0] { st with host := st.host.setStorage key val }
+          checkDataLimit "storage_write" "key" st.host.config.maxStorageKeyLen key.length st <| fun _ =>
+          checkDataLimit "storage_write" "value" st.host.config.maxStorageValueLen val.length st <| fun _ =>
+            match st.host.storage key with
+            | some old =>
+              match checkedSetRegister? st regId old with
+              | some st' => .Return [.i64 1] { st' with host := st'.host.setStorage key val }
+              | none     => .Trap st "storage_write: register size exceeded"
+            | none =>
+              .Return [.i64 0] { st with host := st.host.setStorage key val }
         | _, _ => .Trap st "storage_write: invalid register"
       | _ => .Trap st "storage_write: bad args" }
 
@@ -280,26 +373,30 @@ def storageReadFn : HostFn NearState :=
         match getMemOrReg st keyPtr keyLen with
         | none => .Trap st "storage_read: invalid register"
         | some key =>
-          match st.host.storage key with
-          | some v => .Return [.i64 1] { st with host := st.host.setRegisterIf regId v }
-          | none   => .Return [.i64 0] st
+          checkDataLimit "storage_read" "key" st.host.config.maxStorageKeyLen key.length st <| fun _ =>
+            match st.host.storage key with
+            | some v => writeRegisterResult "storage_read" st regId v [.i64 1]
+            | none   => .Return [.i64 0] st
       | _ => .Trap st "storage_read: bad args" }
 
 /-- `storage_remove(key_len, key_ptr, register_id) -> u64`. On hit, copies
 the removed value into `register_id`, removes the key and returns `1`; on
 miss returns `0`. -/
 def storageRemoveFn : HostFn NearState :=
+  disallowInView "storage_remove" <|
   { params := [.i64, .i64, .i64], results := [.i64]
     invoke := fun st args => match args with
       | [.i64 keyLen, .i64 keyPtr, .i64 regId] =>
         match getMemOrReg st keyPtr keyLen with
         | none => .Trap st "storage_remove: invalid register"
         | some key =>
-          match st.host.storage key with
-          | some v =>
-            .Return [.i64 1]
-              { st with host := (st.host.setRegisterIf regId v).removeStorage key }
-          | none => .Return [.i64 0] st
+          checkDataLimit "storage_remove" "key" st.host.config.maxStorageKeyLen key.length st <| fun _ =>
+            match st.host.storage key with
+            | some v =>
+              match checkedSetRegister? st regId v with
+              | some st' => .Return [.i64 1] { st' with host := st'.host.removeStorage key }
+              | none     => .Trap st "storage_remove: register size exceeded"
+            | none => .Return [.i64 0] st
       | _ => .Trap st "storage_remove: bad args" }
 
 /-- `storage_has_key(key_len, key_ptr) -> u64`: `1` if present, else `0`. -/
@@ -309,7 +406,9 @@ def storageHasKeyFn : HostFn NearState :=
       | [.i64 keyLen, .i64 keyPtr] =>
         match getMemOrReg st keyPtr keyLen with
         | none => .Trap st "storage_has_key: invalid register"
-        | some key => .Return [.i64 (if (st.host.storage key).isSome then 1 else 0)] st
+        | some key =>
+          checkDataLimit "storage_has_key" "key" st.host.config.maxStorageKeyLen key.length st <|
+            fun _ => .Return [.i64 (if (st.host.storage key).isSome then 1 else 0)] st
       | _ => .Trap st "storage_has_key: bad args" }
 
 /-- `panic()`: always traps. -/
@@ -327,7 +426,7 @@ def logUtf8Fn : HostFn NearState :=
       | [.i64 len, .i64 ptr] =>
         match getMemOrReg st ptr len with
         | none => .Trap st "log_utf8: invalid memory"
-        | some msg => .Return [] { st with host := { st.host with logs := st.host.logs ++ [msg] } }
+        | some msg => appendLogResult "log_utf8" st msg
       | _ => .Trap st "log_utf8: bad args" }
 
 def logUtf16Fn : HostFn NearState :=
@@ -336,12 +435,49 @@ def logUtf16Fn : HostFn NearState :=
       | [.i64 len, .i64 ptr] =>
         match getMemOrReg st ptr len with
         | none => .Trap st "log_utf16: invalid memory"
-        | some msg => .Return [] { st with host := { st.host with logs := st.host.logs ++ [msg] } }
+        | some msg => appendLogResult "log_utf16" st msg
       | _ => .Trap st "log_utf16: bad args" }
 
 def abortFn : HostFn NearState :=
   { params := [.i32, .i32, .i32, .i32], results := []
     invoke := fun st _ => .Trap st "guest abort" }
+
+/-! ## Promises and callback results -/
+
+def getPromiseResult? : List PromiseResult → Nat → Option PromiseResult
+  | [], _ => none
+  | r :: _, 0 => some r
+  | _ :: rs, n + 1 => getPromiseResult? rs n
+
+def promiseResultsCountFn : HostFn NearState :=
+  { params := [], results := [.i64]
+    invoke := fun st args => match args with
+      | [] => .Return [.i64 (UInt64.ofNat st.host.promiseResults.length)] st
+      | _  => .Trap st "promise_results_count: bad args" }
+
+def promiseResultFn : HostFn NearState :=
+  disallowInView "promise_result" <|
+  { params := [.i64, .i64], results := [.i64]
+    invoke := fun st args => match args with
+      | [.i64 resultIdx, .i64 regId] =>
+        match getPromiseResult? st.host.promiseResults resultIdx.toNat with
+        | none => .Trap st "promise_result: invalid promise result index"
+        | some .notReady => .Return [.i64 0] st
+        | some (.successful data) =>
+          writeRegisterResult "promise_result" st regId data [.i64 1]
+        | some .failed => .Return [.i64 2] st
+      | _ => .Trap st "promise_result: bad args" }
+
+def promiseReturnFn : HostFn NearState :=
+  disallowInView "promise_return" <|
+  { params := [.i64], results := []
+    invoke := fun st args => match args with
+      | [.i64 promiseIdx] =>
+        if promiseIdx.toNat < st.host.promises.length then
+          .Return [] { st with host := { st.host with returnedPromise := some promiseIdx.toNat } }
+        else
+          .Trap st "promise_return: invalid promise index"
+      | _ => .Trap st "promise_return: bad args" }
 
 /-! ## The registry — single source of truth -/
 
@@ -385,15 +521,15 @@ def nearHostFns : List (ImportDecl × HostFn NearState) :=
   , (imp "validator_total_stake"  [.i64] [],     validatorTotalStakeFn)
   , (imp "log_utf16"              [.i64, .i64] [], logUtf16Fn)
   , (imp "abort"                  [.i32, .i32, .i32, .i32] [], abortFn)
-    -- Remaining trapping stubs (un-modelled tier): promises.
+    -- Remaining trapping stubs (un-modelled tier): promise creation/actions.
   , (imp "keccak512"        [.i64, .i64, .i64] [], keccak512Fn)
   , (imp "ripemd160"        [.i64, .i64, .i64] [], ripemd160Fn)
   , (imp "ecrecover"        [.i64, .i64, .i64, .i64, .i64, .i64] [.i64], ecrecoverFn)
   , (imp "ed25519_verify"   [.i64, .i64, .i64, .i64, .i64, .i64] [.i64], ed25519VerifyFn)
   , (imp "random_seed"      [.i64] [], randomSeedFn)
-  , (imp "promise_results_count" [] [.i64], unsupported "promise_results_count" [] [.i64])
-  , (imp "promise_result" [.i64, .i64] [.i64], unsupported "promise_result" [.i64, .i64] [.i64])
-  , (imp "promise_return" [.i64] [], unsupported "promise_return" [.i64] []) ]
+  , (imp "promise_results_count" [] [.i64], promiseResultsCountFn)
+  , (imp "promise_result" [.i64, .i64] [.i64], promiseResultFn)
+  , (imp "promise_return" [.i64] [], promiseReturnFn) ]
 
 /-- Import declarations, in canonical order. A NEAR contract module sets
 `imports := nearImports`. -/
