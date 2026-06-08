@@ -101,17 +101,54 @@ inductive PromiseResult where
   | failed
 deriving Inhabited, BEq
 
-/-- Promise handle allocated during the current execution. The action trace
-is added incrementally; a handle is already enough to validate
-`promise_return` indices. -/
+/-- Function-call access-key allowance. `none` represents no allowance. -/
+abbrev Allowance := Option Nat
+
+/-- Access-key permission carried by promise batch add-key actions. -/
+inductive AccessKeyPermission where
+  | fullAccess
+  | functionCall (allowance : Allowance) (receiverId methodNames : List UInt8)
+deriving Inhabited, BEq
+
+/-- Receipt actions emitted by promise batch action host functions. -/
+inductive PromiseAction where
+  | createAccount
+  | deployContract (code : List UInt8)
+  | functionCall (methodName args : List UInt8) (amount : Nat) (gas : UInt64)
+  | transfer (amount : Nat)
+  | stake (amount : Nat) (publicKey : List UInt8)
+  | addKey (publicKey : List UInt8) (nonce : UInt64) (permission : AccessKeyPermission)
+  | deleteKey (publicKey : List UInt8)
+  | deleteAccount (beneficiaryId : List UInt8)
+deriving Inhabited, BEq
+
+/-- Promise handle allocated during the current execution. A batch promise
+emits actions toward an account; a callback batch depends on an earlier
+promise; a joint promise waits for several promises and cannot accept
+actions. -/
 inductive NearPromise where
-  | pending
+  | batch (accountId : List UInt8) (actions : List PromiseAction)
+  | callback (base : Nat) (accountId : List UInt8) (actions : List PromiseAction)
+  | and (dependencies : List Nat)
+  | yielded (methodName args : List UInt8) (gas weight : UInt64) (dataId : List UInt8)
+deriving Inhabited, BEq
+
+/-- Snapshot iterator over finite storage keys. The primary storage model
+remains a function; this is the finite witness needed by deprecated NEAR
+iterator host functions. -/
+structure StorageIterator where
+  entries : List (List UInt8 × List UInt8) := []
+  pos     : Nat := 0
 deriving Inhabited, BEq
 
 /-- The NEAR host state threaded as `Store.host`. -/
 structure NearState where
   /-- Storage trie projection: `key ↦ value`, `none` when absent. -/
   storage    : List UInt8 → Option (List UInt8) := fun _ => none
+  /-- Finite key support for deprecated storage iterator APIs. -/
+  storageKeys : List (List UInt8) := []
+  iterators  : Nat → Option StorageIterator := fun _ => none
+  nextIteratorId : Nat := 0
   /-- Register ABI scratch buffers: `id ↦ bytes`, `none` when unset. -/
   registers  : Nat → Option (List UInt8) := fun _ => none
   context    : NearContext := {}
@@ -125,6 +162,8 @@ structure NearState where
   promises   : List NearPromise := []
   /-- Promise selected as this call's return value by `promise_return`. -/
   returnedPromise : Option Nat := none
+  /-- Successful `promise_yield_resume` payloads, newest last. -/
+  yieldResumes : List (List UInt8 × List UInt8) := []
   config     : NearConfig := {}
   sha256     : List UInt8 → List UInt8 := fun _ => []
   keccak256  : List UInt8 → List UInt8 := fun _ => []
@@ -135,6 +174,20 @@ structure NearState where
     fun _ _ _ _ => none
   ed25519Verify : List UInt8 → List UInt8 → List UInt8 → Bool :=
     fun _ _ _ => false
+  yieldCreateToken : List UInt8 → List UInt8 → UInt64 → UInt64 → List UInt8 :=
+    fun _ _ _ _ => []
+  altBn128G1Multiexp : List UInt8 → List UInt8 := fun _ => []
+  altBn128G1Sum : List UInt8 → List UInt8 := fun _ => []
+  altBn128PairingCheck : List UInt8 → UInt64 := fun _ => 0
+  bls12381G1Multiexp : List UInt8 → UInt64 × List UInt8 := fun _ => (1, [])
+  bls12381G2Multiexp : List UInt8 → UInt64 × List UInt8 := fun _ => (1, [])
+  bls12381MapFpToG1 : List UInt8 → UInt64 × List UInt8 := fun _ => (1, [])
+  bls12381MapFp2ToG2 : List UInt8 → UInt64 × List UInt8 := fun _ => (1, [])
+  bls12381P1Decompress : List UInt8 → UInt64 × List UInt8 := fun _ => (1, [])
+  bls12381P2Decompress : List UInt8 → UInt64 × List UInt8 := fun _ => (1, [])
+  bls12381P1Sum : List UInt8 → UInt64 × List UInt8 := fun _ => (1, [])
+  bls12381P2Sum : List UInt8 → UInt64 × List UInt8 := fun _ => (1, [])
+  bls12381PairingCheck : List UInt8 → UInt64 := fun _ => 0
 deriving Inhabited
 
 namespace NearState
@@ -150,11 +203,23 @@ def setRegisterIf (ns : NearState) (id : UInt64) (data : List UInt8) : NearState
 
 /-- Insert/overwrite `key ↦ val` in storage. -/
 def setStorage (ns : NearState) (key val : List UInt8) : NearState :=
-  { ns with storage := fun k => if k = key then some val else ns.storage k }
+  { ns with
+    storage := fun k => if k = key then some val else ns.storage k
+    storageKeys := if ns.storageKeys.contains key then ns.storageKeys else ns.storageKeys ++ [key] }
 
 /-- Remove `key` from storage. -/
 def removeStorage (ns : NearState) (key : List UInt8) : NearState :=
-  { ns with storage := fun k => if k = key then none else ns.storage k }
+  { ns with
+    storage := fun k => if k = key then none else ns.storage k
+    storageKeys := ns.storageKeys.filter (fun k => k != key) }
+
+def invalidateIterators (ns : NearState) : NearState :=
+  { ns with iterators := fun _ => none }
+
+def setIterator (ns : NearState) (id : Nat) (it : StorageIterator) : NearState :=
+  { ns with
+    iterators := fun i => if i = id then some it else ns.iterators i
+    nextIteratorId := max ns.nextIteratorId (id + 1) }
 
 end NearState
 

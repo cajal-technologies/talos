@@ -24,6 +24,10 @@ diverge from chain execution.
   crypto hooks.
 - Real semantics exist for callback promise result access and returned-promise
   selection.
+- Real semantics exist for promise creation, joins, batch action traces, and
+  yield/resume traces.
+- Real semantics exist for deprecated trie iterators over finite storage-key
+  snapshots.
 - The hand-built `KvSetter` example validates a small register/input/storage
   pipeline plus host-regression checks with concrete `native_decide` checks.
 
@@ -56,24 +60,25 @@ diverge from chain execution.
 5. Crypto and math API
    - Done: add symbolic hooks for `sha256`, `keccak256`, `keccak512`,
      `ripemd160`, `ecrecover`, `ed25519_verify`, and `random_seed`.
-   - Still missing: symbolic support for alt-bn128 and BLS host functions.
-   - Prefer opaque, pure function fields in `NearState`/`NearConfig` first, with
-     deterministic executable implementations added only when needed.
+   - Done: add symbolic support for alt-bn128 and BLS host functions.
+   - Prefer opaque, pure function fields in `NearState` first, with deterministic
+     executable implementations added only when needed.
 
 6. Promises and cross-contract calls
    - Done: add callback result and promise-handle state, implement
      `promise_results_count`, `promise_result`, and `promise_return`.
-   - Add action data structures.
-   - Implement `promise_create`, `promise_then`, `promise_and`, batch creation,
-     batch actions, and yield/resume APIs.
-   - Model promises as an action trace suitable for proving emitted receipts and
-     callbacks.
+   - Done: add action data structures.
+   - Done: implement `promise_create`, `promise_then`, `promise_and`, batch
+     creation, batch actions, and yield/resume APIs.
+   - Done: model promises as an action trace suitable for proving emitted
+     receipts and callbacks.
 
 7. Trie iterators
-   - Implement `storage_iter_prefix`, `storage_iter_range`, and
+   - Done: implement `storage_iter_prefix`, `storage_iter_range`, and
      `storage_iter_next`.
-   - Extend the storage model with finite key snapshots or iterator state while
-     preserving the current function-style storage projection for frame proofs.
+   - Done: extend the storage model with finite key snapshots and iterator state
+     while preserving the current function-style storage projection for frame
+     proofs.
 
 8. Limits and errors
    - Done: add configurable limits for key/value/return/log/register sizes and

@@ -37,6 +37,22 @@ namespace Near
 def leU128Bytes (n : Nat) : List UInt8 :=
   (List.range 16).map (fun i => UInt8.ofNat (n / 2 ^ (8 * i) % 256))
 
+def leBytesToNat : List UInt8 → Nat
+  | [] => 0
+  | b :: bs => b.toNat + 256 * leBytesToNat bs
+
+def readMemNat (st : Store NearState) (ptr : UInt64) (len : Nat) : Option Nat :=
+  if ptr.toNat + len > memBytes st then
+    none
+  else
+    some (leBytesToNat (st.mem.readBytes ptr.toNat len))
+
+def readU64Mem (st : Store NearState) (ptr : UInt64) : Option Nat :=
+  readMemNat st ptr 8
+
+def readU128Mem (st : Store NearState) (ptr : UInt64) : Option Nat :=
+  readMemNat st ptr 16
+
 /-- Write bytes into guest memory, trapping when the range is out of bounds. -/
 def writeMemBytes (name : String) (st : Store NearState) (ptr : UInt64)
     (data : List UInt8) : HostResult NearState :=
@@ -91,11 +107,304 @@ def checkPublicKey (name : String) (st : Store NearState) (publicKey : List UInt
   else
     .Trap st s!"{name}: invalid public key"
 
+/-- Wrap a host function whose NEAR nearcore semantics return
+`ProhibitedInView` during view execution. The wrapped function remains
+unchanged for normal calls, keeping direct semantic tests representative of
+the registry entry. -/
+def disallowInView (name : String) (hf : HostFn NearState) : HostFn NearState :=
+  { params := hf.params
+    results := hf.results
+    invoke := fun st args =>
+      if st.host.context.isView then
+        .Trap st s!"{name}: ProhibitedInView"
+      else
+        hf.invoke st args }
+
 def appendLogResult (name : String) (st : Store NearState)
     (msg : List UInt8) : HostResult NearState :=
   checkDataLimit name "log" st.host.config.maxLogLen msg.length st <| fun _ =>
   checkDataLimit name "log count" st.host.config.maxNumberLogs (st.host.logs.length + 1) st <| fun _ =>
     .Return [] { st with host := { st.host with logs := st.host.logs ++ [msg] } }
+
+def getPromise? : List NearPromise → Nat → Option NearPromise
+  | [], _ => none
+  | p :: _, 0 => some p
+  | _ :: ps, n + 1 => getPromise? ps n
+
+def setPromise? : List NearPromise → Nat → NearPromise → Option (List NearPromise)
+  | [], _, _ => none
+  | _ :: ps, 0, p => some (p :: ps)
+  | q :: ps, n + 1, p => (setPromise? ps n p).map (fun ps' => q :: ps')
+
+def nextPromiseIdx (st : Store NearState) : UInt64 :=
+  UInt64.ofNat st.host.promises.length
+
+def appendPromise (st : Store NearState) (p : NearPromise) : Store NearState :=
+  { st with host := { st.host with promises := st.host.promises ++ [p] } }
+
+def promiseIndexValid (st : Store NearState) (idx : Nat) : Bool :=
+  (getPromise? st.host.promises idx).isSome
+
+def promiseDepsValid (st : Store NearState) (deps : List Nat) : Bool :=
+  deps.all (promiseIndexValid st)
+
+def appendPromiseAction? (ps : List NearPromise) (idx : Nat)
+    (action : PromiseAction) : Option (List NearPromise) :=
+  match getPromise? ps idx with
+  | some (.batch accountId actions) =>
+    setPromise? ps idx (.batch accountId (actions ++ [action]))
+  | some (.callback base accountId actions) =>
+    setPromise? ps idx (.callback base accountId (actions ++ [action]))
+  | _ => none
+
+def appendPromiseActionResult (name : String) (st : Store NearState)
+    (idx : UInt64) (action : PromiseAction) : HostResult NearState :=
+  match appendPromiseAction? st.host.promises idx.toNat action with
+  | some promises => .Return [] { st with host := { st.host with promises } }
+  | none          => .Trap st s!"{name}: invalid promise index"
+
+def promiseYieldDataIdExists (dataId : List UInt8) : List NearPromise → Bool
+  | [] => false
+  | (.yielded _ _ _ _ existing) :: ps => existing == dataId || promiseYieldDataIdExists dataId ps
+  | _ :: ps => promiseYieldDataIdExists dataId ps
+
+def readU64Array (st : Store NearState) (ptr : UInt64) : Nat → Option (List Nat)
+  | 0 => some []
+  | n + 1 =>
+    match readU64Mem st (UInt64.ofNat (ptr.toNat + 8 * n)), readU64Array st ptr n with
+    | some x, some xs => some (xs ++ [x])
+    | _, _ => none
+
+def createBatchPromiseResult (name : String) (st : Store NearState)
+    (accountId : List UInt8) : HostResult NearState :=
+  checkAccountId name st accountId <| fun _ =>
+    let idx := nextPromiseIdx st
+    .Return [.i64 idx] (appendPromise st (.batch accountId []))
+
+def createCallbackPromiseResult (name : String) (st : Store NearState)
+    (baseIdx : UInt64) (accountId : List UInt8) : HostResult NearState :=
+  if promiseIndexValid st baseIdx.toNat then
+    checkAccountId name st accountId <| fun _ =>
+      let idx := nextPromiseIdx st
+      .Return [.i64 idx] (appendPromise st (.callback baseIdx.toNat accountId []))
+  else
+    .Trap st s!"{name}: invalid promise index"
+
+def readFunctionCallAction? (st : Store NearState)
+    (methodNameLen methodNamePtr argsLen argsPtr amountPtr gas : UInt64) :
+    Option PromiseAction := do
+  let methodName ← getMemOrReg st methodNamePtr methodNameLen
+  let args ← getMemOrReg st argsPtr argsLen
+  let amount ← readU128Mem st amountPtr
+  some (.functionCall methodName args amount gas)
+
+def promiseCreateFn : HostFn NearState :=
+  disallowInView "promise_create" <|
+  { params := [.i64, .i64, .i64, .i64, .i64, .i64, .i64, .i64], results := [.i64]
+    invoke := fun st args => match args with
+      | [.i64 accountIdLen, .i64 accountIdPtr, .i64 methodNameLen, .i64 methodNamePtr,
+          .i64 argsLen, .i64 argsPtr, .i64 amountPtr, .i64 gas] =>
+        match getMemOrReg st accountIdPtr accountIdLen,
+            readFunctionCallAction? st methodNameLen methodNamePtr argsLen argsPtr amountPtr gas with
+        | some accountId, some action =>
+          checkAccountId "promise_create" st accountId <| fun _ =>
+            let idx := nextPromiseIdx st
+            .Return [.i64 idx] (appendPromise st (.batch accountId [action]))
+        | _, _ => .Trap st "promise_create: invalid input"
+      | _ => .Trap st "promise_create: bad args" }
+
+def promiseThenFn : HostFn NearState :=
+  disallowInView "promise_then" <|
+  { params := [.i64, .i64, .i64, .i64, .i64, .i64, .i64, .i64, .i64], results := [.i64]
+    invoke := fun st args => match args with
+      | [.i64 baseIdx, .i64 accountIdLen, .i64 accountIdPtr, .i64 methodNameLen, .i64 methodNamePtr,
+          .i64 argsLen, .i64 argsPtr, .i64 amountPtr, .i64 gas] =>
+        match getMemOrReg st accountIdPtr accountIdLen,
+            readFunctionCallAction? st methodNameLen methodNamePtr argsLen argsPtr amountPtr gas with
+        | some accountId, some action =>
+          if promiseIndexValid st baseIdx.toNat then
+            checkAccountId "promise_then" st accountId <| fun _ =>
+              let idx := nextPromiseIdx st
+              .Return [.i64 idx] (appendPromise st (.callback baseIdx.toNat accountId [action]))
+          else
+            .Trap st "promise_then: invalid promise index"
+        | _, _ => .Trap st "promise_then: invalid input"
+      | _ => .Trap st "promise_then: bad args" }
+
+def promiseAndFn : HostFn NearState :=
+  disallowInView "promise_and" <|
+  { params := [.i64, .i64], results := [.i64]
+    invoke := fun st args => match args with
+      | [.i64 promiseIdxPtr, .i64 promiseIdxCount] =>
+        match readU64Array st promiseIdxPtr promiseIdxCount.toNat with
+        | some deps =>
+          if promiseDepsValid st deps then
+            let idx := nextPromiseIdx st
+            .Return [.i64 idx] (appendPromise st (.and deps))
+          else
+            .Trap st "promise_and: invalid promise index"
+        | none => .Trap st "promise_and: invalid memory"
+      | _ => .Trap st "promise_and: bad args" }
+
+def promiseBatchCreateFn : HostFn NearState :=
+  disallowInView "promise_batch_create" <|
+  { params := [.i64, .i64], results := [.i64]
+    invoke := fun st args => match args with
+      | [.i64 accountIdLen, .i64 accountIdPtr] =>
+        match getMemOrReg st accountIdPtr accountIdLen with
+        | some accountId => createBatchPromiseResult "promise_batch_create" st accountId
+        | none => .Trap st "promise_batch_create: invalid account id"
+      | _ => .Trap st "promise_batch_create: bad args" }
+
+def promiseBatchThenFn : HostFn NearState :=
+  disallowInView "promise_batch_then" <|
+  { params := [.i64, .i64, .i64], results := [.i64]
+    invoke := fun st args => match args with
+      | [.i64 baseIdx, .i64 accountIdLen, .i64 accountIdPtr] =>
+        match getMemOrReg st accountIdPtr accountIdLen with
+        | some accountId => createCallbackPromiseResult "promise_batch_then" st baseIdx accountId
+        | none => .Trap st "promise_batch_then: invalid account id"
+      | _ => .Trap st "promise_batch_then: bad args" }
+
+def promiseBatchActionCreateAccountFn : HostFn NearState :=
+  disallowInView "promise_batch_action_create_account" <|
+  { params := [.i64], results := []
+    invoke := fun st args => match args with
+      | [.i64 promiseIdx] =>
+        appendPromiseActionResult "promise_batch_action_create_account" st promiseIdx .createAccount
+      | _ => .Trap st "promise_batch_action_create_account: bad args" }
+
+def promiseBatchActionDeployContractFn : HostFn NearState :=
+  disallowInView "promise_batch_action_deploy_contract" <|
+  { params := [.i64, .i64, .i64], results := []
+    invoke := fun st args => match args with
+      | [.i64 promiseIdx, .i64 codeLen, .i64 codePtr] =>
+        match getMemOrReg st codePtr codeLen with
+        | some code =>
+          appendPromiseActionResult "promise_batch_action_deploy_contract" st promiseIdx (.deployContract code)
+        | none => .Trap st "promise_batch_action_deploy_contract: invalid code"
+      | _ => .Trap st "promise_batch_action_deploy_contract: bad args" }
+
+def promiseBatchActionFunctionCallFn : HostFn NearState :=
+  disallowInView "promise_batch_action_function_call" <|
+  { params := [.i64, .i64, .i64, .i64, .i64, .i64, .i64], results := []
+    invoke := fun st args => match args with
+      | [.i64 promiseIdx, .i64 methodNameLen, .i64 methodNamePtr, .i64 argsLen,
+          .i64 argsPtr, .i64 amountPtr, .i64 gas] =>
+        match readFunctionCallAction? st methodNameLen methodNamePtr argsLen argsPtr amountPtr gas with
+        | some action =>
+          appendPromiseActionResult "promise_batch_action_function_call" st promiseIdx action
+        | none => .Trap st "promise_batch_action_function_call: invalid input"
+      | _ => .Trap st "promise_batch_action_function_call: bad args" }
+
+def promiseBatchActionTransferFn : HostFn NearState :=
+  disallowInView "promise_batch_action_transfer" <|
+  { params := [.i64, .i64], results := []
+    invoke := fun st args => match args with
+      | [.i64 promiseIdx, .i64 amountPtr] =>
+        match readU128Mem st amountPtr with
+        | some amount =>
+          appendPromiseActionResult "promise_batch_action_transfer" st promiseIdx (.transfer amount)
+        | none => .Trap st "promise_batch_action_transfer: invalid amount"
+      | _ => .Trap st "promise_batch_action_transfer: bad args" }
+
+def promiseBatchActionStakeFn : HostFn NearState :=
+  disallowInView "promise_batch_action_stake" <|
+  { params := [.i64, .i64, .i64, .i64], results := []
+    invoke := fun st args => match args with
+      | [.i64 promiseIdx, .i64 amountPtr, .i64 pkLen, .i64 pkPtr] =>
+        match readU128Mem st amountPtr, getMemOrReg st pkPtr pkLen with
+        | some amount, some pk =>
+          checkPublicKey "promise_batch_action_stake" st pk <| fun _ =>
+            appendPromiseActionResult "promise_batch_action_stake" st promiseIdx (.stake amount pk)
+        | _, _ => .Trap st "promise_batch_action_stake: invalid input"
+      | _ => .Trap st "promise_batch_action_stake: bad args" }
+
+def promiseBatchActionAddKeyWithFullAccessFn : HostFn NearState :=
+  disallowInView "promise_batch_action_add_key_with_full_access" <|
+  { params := [.i64, .i64, .i64, .i64], results := []
+    invoke := fun st args => match args with
+      | [.i64 promiseIdx, .i64 pkLen, .i64 pkPtr, .i64 nonce] =>
+        match getMemOrReg st pkPtr pkLen with
+        | some pk =>
+          checkPublicKey "promise_batch_action_add_key_with_full_access" st pk <| fun _ =>
+            appendPromiseActionResult "promise_batch_action_add_key_with_full_access" st promiseIdx
+              (.addKey pk nonce .fullAccess)
+        | none => .Trap st "promise_batch_action_add_key_with_full_access: invalid public key"
+      | _ => .Trap st "promise_batch_action_add_key_with_full_access: bad args" }
+
+def promiseBatchActionAddKeyWithFunctionCallFn : HostFn NearState :=
+  disallowInView "promise_batch_action_add_key_with_function_call" <|
+  { params := [.i64, .i64, .i64, .i64, .i64, .i64, .i64, .i64, .i64], results := []
+    invoke := fun st args => match args with
+      | [.i64 promiseIdx, .i64 pkLen, .i64 pkPtr, .i64 nonce, .i64 allowancePtr,
+          .i64 receiverLen, .i64 receiverPtr, .i64 methodsLen, .i64 methodsPtr] =>
+        match getMemOrReg st pkPtr pkLen, readU128Mem st allowancePtr,
+            getMemOrReg st receiverPtr receiverLen, getMemOrReg st methodsPtr methodsLen with
+        | some pk, some allowance, some receiverId, some methodNames =>
+          checkPublicKey "promise_batch_action_add_key_with_function_call" st pk <| fun _ =>
+          checkAccountId "promise_batch_action_add_key_with_function_call" st receiverId <| fun _ =>
+            appendPromiseActionResult "promise_batch_action_add_key_with_function_call" st promiseIdx
+              (.addKey pk nonce (.functionCall (some allowance) receiverId methodNames))
+        | _, _, _, _ => .Trap st "promise_batch_action_add_key_with_function_call: invalid input"
+      | _ => .Trap st "promise_batch_action_add_key_with_function_call: bad args" }
+
+def promiseBatchActionDeleteKeyFn : HostFn NearState :=
+  disallowInView "promise_batch_action_delete_key" <|
+  { params := [.i64, .i64, .i64], results := []
+    invoke := fun st args => match args with
+      | [.i64 promiseIdx, .i64 pkLen, .i64 pkPtr] =>
+        match getMemOrReg st pkPtr pkLen with
+        | some pk =>
+          checkPublicKey "promise_batch_action_delete_key" st pk <| fun _ =>
+            appendPromiseActionResult "promise_batch_action_delete_key" st promiseIdx (.deleteKey pk)
+        | none => .Trap st "promise_batch_action_delete_key: invalid public key"
+      | _ => .Trap st "promise_batch_action_delete_key: bad args" }
+
+def promiseBatchActionDeleteAccountFn : HostFn NearState :=
+  disallowInView "promise_batch_action_delete_account" <|
+  { params := [.i64, .i64, .i64], results := []
+    invoke := fun st args => match args with
+      | [.i64 promiseIdx, .i64 beneficiaryLen, .i64 beneficiaryPtr] =>
+        match getMemOrReg st beneficiaryPtr beneficiaryLen with
+        | some beneficiaryId =>
+          checkAccountId "promise_batch_action_delete_account" st beneficiaryId <| fun _ =>
+            appendPromiseActionResult "promise_batch_action_delete_account" st promiseIdx
+              (.deleteAccount beneficiaryId)
+        | none => .Trap st "promise_batch_action_delete_account: invalid beneficiary"
+      | _ => .Trap st "promise_batch_action_delete_account: bad args" }
+
+def promiseYieldCreateFn : HostFn NearState :=
+  disallowInView "promise_yield_create" <|
+  { params := [.i64, .i64, .i64, .i64, .i64, .i64, .i64], results := [.i64]
+    invoke := fun st args => match args with
+      | [.i64 methodNameLen, .i64 methodNamePtr, .i64 argsLen, .i64 argsPtr,
+          .i64 gas, .i64 weight, .i64 regId] =>
+        match getMemOrReg st methodNamePtr methodNameLen, getMemOrReg st argsPtr argsLen with
+        | some methodName, some callArgs =>
+          let dataId := st.host.yieldCreateToken methodName callArgs gas weight
+          match checkedSetRegister? st regId dataId with
+          | some st' =>
+            let idx := nextPromiseIdx st'
+            .Return [.i64 idx] (appendPromise st' (.yielded methodName callArgs gas weight dataId))
+          | none => .Trap st "promise_yield_create: register size exceeded"
+        | _, _ => .Trap st "promise_yield_create: invalid input"
+      | _ => .Trap st "promise_yield_create: bad args" }
+
+def promiseYieldResumeFn : HostFn NearState :=
+  disallowInView "promise_yield_resume" <|
+  { params := [.i64, .i64, .i64, .i64], results := [.i64]
+    invoke := fun st args => match args with
+      | [.i64 dataIdLen, .i64 dataIdPtr, .i64 payloadLen, .i64 payloadPtr] =>
+        match getMemOrReg st dataIdPtr dataIdLen, getMemOrReg st payloadPtr payloadLen with
+        | some dataId, some payload =>
+          if promiseYieldDataIdExists dataId st.host.promises then
+            .Return [.i64 1]
+              { st with host := { st.host with yieldResumes := st.host.yieldResumes ++ [(dataId, payload)] } }
+          else
+            .Return [.i64 0] st
+        | _, _ => .Trap st "promise_yield_resume: invalid input"
+      | _ => .Trap st "promise_yield_resume: bad args" }
 
 def contextRegisterFn (name : String) (select : NearContext → List UInt8) : HostFn NearState :=
   { params := [.i64], results := []
@@ -133,19 +442,6 @@ def contextU128MemFn (name : String) (select : NearContext → Nat) : HostFn Nea
     invoke := fun st args => match args with
       | [.i64 ptr] => writeU128 name st ptr (select st.host.context)
       | _          => .Trap st s!"{name}: bad args" }
-
-/-- Wrap a host function whose NEAR nearcore semantics return
-`ProhibitedInView` during view execution. The wrapped function remains
-unchanged for normal calls, keeping direct semantic tests representative of
-the registry entry. -/
-def disallowInView (name : String) (hf : HostFn NearState) : HostFn NearState :=
-  { params := hf.params
-    results := hf.results
-    invoke := fun st args =>
-      if st.host.context.isView then
-        .Trap st s!"{name}: ProhibitedInView"
-      else
-        hf.invoke st args }
 
 /-! ## Trapping stub for un-modelled host functions -/
 
@@ -335,6 +631,166 @@ def ed25519VerifyFn : HostFn NearState :=
         | _, _, _ => .Trap st "ed25519_verify: invalid input"
       | _ => .Trap st "ed25519_verify: bad args" }
 
+def mathRegisterFn (name : String) (op : NearState → List UInt8 → List UInt8) : HostFn NearState :=
+  { params := [.i64, .i64, .i64], results := []
+    invoke := fun st args => match args with
+      | [.i64 valueLen, .i64 valuePtr, .i64 regId] =>
+        match getMemOrReg st valuePtr valueLen with
+        | some value => writeRegisterResult name st regId (op st.host value)
+        | none => .Trap st s!"{name}: invalid input"
+      | _ => .Trap st s!"{name}: bad args" }
+
+def mathStatusRegisterFn (name : String)
+    (op : NearState → List UInt8 → UInt64 × List UInt8) : HostFn NearState :=
+  { params := [.i64, .i64, .i64], results := [.i64]
+    invoke := fun st args => match args with
+      | [.i64 valueLen, .i64 valuePtr, .i64 regId] =>
+        match getMemOrReg st valuePtr valueLen with
+        | some value =>
+          let (status, out) := op st.host value
+          if status == 0 then
+            writeRegisterResult name st regId out [.i64 status]
+          else
+            .Return [.i64 status] st
+        | none => .Trap st s!"{name}: invalid input"
+      | _ => .Trap st s!"{name}: bad args" }
+
+def mathStatusFn (name : String) (op : NearState → List UInt8 → UInt64) : HostFn NearState :=
+  { params := [.i64, .i64], results := [.i64]
+    invoke := fun st args => match args with
+      | [.i64 valueLen, .i64 valuePtr] =>
+        match getMemOrReg st valuePtr valueLen with
+        | some value => .Return [.i64 (op st.host value)] st
+        | none => .Trap st s!"{name}: invalid input"
+      | _ => .Trap st s!"{name}: bad args" }
+
+def altBn128G1MultiexpFn : HostFn NearState :=
+  mathRegisterFn "alt_bn128_g1_multiexp" (·.altBn128G1Multiexp)
+
+def altBn128G1SumFn : HostFn NearState :=
+  mathRegisterFn "alt_bn128_g1_sum" (·.altBn128G1Sum)
+
+def altBn128PairingCheckFn : HostFn NearState :=
+  mathStatusFn "alt_bn128_pairing_check" (·.altBn128PairingCheck)
+
+def bls12381G1MultiexpFn : HostFn NearState :=
+  mathStatusRegisterFn "bls12381_g1_multiexp" (·.bls12381G1Multiexp)
+
+def bls12381G2MultiexpFn : HostFn NearState :=
+  mathStatusRegisterFn "bls12381_g2_multiexp" (·.bls12381G2Multiexp)
+
+def bls12381MapFpToG1Fn : HostFn NearState :=
+  mathStatusRegisterFn "bls12381_map_fp_to_g1" (·.bls12381MapFpToG1)
+
+def bls12381MapFp2ToG2Fn : HostFn NearState :=
+  mathStatusRegisterFn "bls12381_map_fp2_to_g2" (·.bls12381MapFp2ToG2)
+
+def bls12381P1DecompressFn : HostFn NearState :=
+  mathStatusRegisterFn "bls12381_p1_decompress" (·.bls12381P1Decompress)
+
+def bls12381P2DecompressFn : HostFn NearState :=
+  mathStatusRegisterFn "bls12381_p2_decompress" (·.bls12381P2Decompress)
+
+def bls12381P1SumFn : HostFn NearState :=
+  mathStatusRegisterFn "bls12381_p1_sum" (·.bls12381P1Sum)
+
+def bls12381P2SumFn : HostFn NearState :=
+  mathStatusRegisterFn "bls12381_p2_sum" (·.bls12381P2Sum)
+
+def bls12381PairingCheckFn : HostFn NearState :=
+  mathStatusFn "bls12381_pairing_check" (·.bls12381PairingCheck)
+
+/-! ## Deprecated storage iterators -/
+
+def hasPrefixBytes : List UInt8 → List UInt8 → Bool
+  | [], _ => true
+  | _, [] => false
+  | p :: ps, b :: bs => p == b && hasPrefixBytes ps bs
+
+def bytesLt : List UInt8 → List UInt8 → Bool
+  | [], [] => false
+  | [], _ :: _ => true
+  | _ :: _, [] => false
+  | a :: as, b :: bs =>
+    if a.toNat < b.toNat then
+      true
+    else if b.toNat < a.toNat then
+      false
+    else
+      bytesLt as bs
+
+def bytesLe (a b : List UInt8) : Bool :=
+  a == b || bytesLt a b
+
+def iteratorEntries (st : Store NearState) (keep : List UInt8 → Bool) :
+    List (List UInt8 × List UInt8) :=
+  st.host.storageKeys.filterMap (fun key =>
+    if keep key then
+      (st.host.storage key).map (fun value => (key, value))
+    else
+      none)
+
+def createIteratorResult (st : Store NearState) (entries : List (List UInt8 × List UInt8)) :
+    HostResult NearState :=
+  let id := st.host.nextIteratorId
+  .Return [.i64 (UInt64.ofNat id)]
+    { st with host := st.host.setIterator id { entries := entries } }
+
+def storageIterPrefixFn : HostFn NearState :=
+  { params := [.i64, .i64], results := [.i64]
+    invoke := fun st args => match args with
+      | [.i64 prefixLen, .i64 prefixPtr] =>
+        match getMemOrReg st prefixPtr prefixLen with
+        | some pref =>
+          checkDataLimit "storage_iter_prefix" "key" st.host.config.maxStorageKeyLen pref.length st <|
+            fun _ => createIteratorResult st (iteratorEntries st (hasPrefixBytes pref))
+        | none => .Trap st "storage_iter_prefix: invalid prefix"
+      | _ => .Trap st "storage_iter_prefix: bad args" }
+
+def storageIterRangeFn : HostFn NearState :=
+  { params := [.i64, .i64, .i64, .i64], results := [.i64]
+    invoke := fun st args => match args with
+      | [.i64 startLen, .i64 startPtr, .i64 endLen, .i64 endPtr] =>
+        match getMemOrReg st startPtr startLen, getMemOrReg st endPtr endLen with
+        | some startKey, some endKey =>
+          checkDataLimit "storage_iter_range" "start key" st.host.config.maxStorageKeyLen startKey.length st <| fun _ =>
+          checkDataLimit "storage_iter_range" "end key" st.host.config.maxStorageKeyLen endKey.length st <| fun _ =>
+            if bytesLt startKey endKey then
+              createIteratorResult st
+                (iteratorEntries st (fun key => bytesLe startKey key && bytesLt key endKey))
+            else
+              createIteratorResult st []
+        | _, _ => .Trap st "storage_iter_range: invalid range"
+      | _ => .Trap st "storage_iter_range: bad args" }
+
+def getIteratorEntry? : List (List UInt8 × List UInt8) → Nat → Option (List UInt8 × List UInt8)
+  | [], _ => none
+  | e :: _, 0 => some e
+  | _ :: es, n + 1 => getIteratorEntry? es n
+
+def storageIterNextFn : HostFn NearState :=
+  { params := [.i64, .i64, .i64], results := [.i64]
+    invoke := fun st args => match args with
+      | [.i64 iteratorId, .i64 keyRegId, .i64 valueRegId] =>
+        if keyRegId == valueRegId then
+          .Trap st "storage_iter_next: duplicate registers"
+        else
+          match st.host.iterators iteratorId.toNat with
+          | none => .Trap st "storage_iter_next: invalid iterator"
+          | some it =>
+            match getIteratorEntry? it.entries it.pos with
+            | none => .Return [.i64 0] st
+            | some (key, value) =>
+              match checkedSetRegister? st keyRegId key with
+              | none => .Trap st "storage_iter_next: key register size exceeded"
+              | some stKey =>
+                match checkedSetRegister? stKey valueRegId value with
+                | none => .Trap st "storage_iter_next: value register size exceeded"
+                | some stVal =>
+                  .Return [.i64 1]
+                    { stVal with host := stVal.host.setIterator iteratorId.toNat { it with pos := it.pos + 1 } }
+      | _ => .Trap st "storage_iter_next: bad args" }
+
 /-! ## Tier 1 — storage
 
 Return convention (uniform): `0` = key was absent, `1` = key was present.
@@ -356,10 +812,12 @@ def storageWriteFn : HostFn NearState :=
             match st.host.storage key with
             | some old =>
               match checkedSetRegister? st regId old with
-              | some st' => .Return [.i64 1] { st' with host := st'.host.setStorage key val }
+              | some st' =>
+                .Return [.i64 1]
+                  { st' with host := (st'.host.setStorage key val).invalidateIterators }
               | none     => .Trap st "storage_write: register size exceeded"
             | none =>
-              .Return [.i64 0] { st with host := st.host.setStorage key val }
+              .Return [.i64 0] { st with host := (st.host.setStorage key val).invalidateIterators }
         | _, _ => .Trap st "storage_write: invalid register"
       | _ => .Trap st "storage_write: bad args" }
 
@@ -394,7 +852,8 @@ def storageRemoveFn : HostFn NearState :=
             match st.host.storage key with
             | some v =>
               match checkedSetRegister? st regId v with
-              | some st' => .Return [.i64 1] { st' with host := st'.host.removeStorage key }
+              | some st' =>
+                .Return [.i64 1] { st' with host := (st'.host.removeStorage key).invalidateIterators }
               | none     => .Trap st "storage_remove: register size exceeded"
             | none => .Return [.i64 0] st
       | _ => .Trap st "storage_remove: bad args" }
@@ -521,12 +980,53 @@ def nearHostFns : List (ImportDecl × HostFn NearState) :=
   , (imp "validator_total_stake"  [.i64] [],     validatorTotalStakeFn)
   , (imp "log_utf16"              [.i64, .i64] [], logUtf16Fn)
   , (imp "abort"                  [.i32, .i32, .i32, .i32] [], abortFn)
-    -- Remaining trapping stubs (un-modelled tier): promise creation/actions.
+  , (imp "storage_iter_prefix"    [.i64, .i64] [.i64], storageIterPrefixFn)
+  , (imp "storage_iter_range"     [.i64, .i64, .i64, .i64] [.i64], storageIterRangeFn)
+  , (imp "storage_iter_next"      [.i64, .i64, .i64] [.i64], storageIterNextFn)
   , (imp "keccak512"        [.i64, .i64, .i64] [], keccak512Fn)
   , (imp "ripemd160"        [.i64, .i64, .i64] [], ripemd160Fn)
   , (imp "ecrecover"        [.i64, .i64, .i64, .i64, .i64, .i64] [.i64], ecrecoverFn)
   , (imp "ed25519_verify"   [.i64, .i64, .i64, .i64, .i64, .i64] [.i64], ed25519VerifyFn)
   , (imp "random_seed"      [.i64] [], randomSeedFn)
+  , (imp "alt_bn128_g1_multiexp" [.i64, .i64, .i64] [], altBn128G1MultiexpFn)
+  , (imp "alt_bn128_g1_sum" [.i64, .i64, .i64] [], altBn128G1SumFn)
+  , (imp "alt_bn128_pairing_check" [.i64, .i64] [.i64], altBn128PairingCheckFn)
+  , (imp "bls12381_g1_multiexp" [.i64, .i64, .i64] [.i64], bls12381G1MultiexpFn)
+  , (imp "bls12381_g2_multiexp" [.i64, .i64, .i64] [.i64], bls12381G2MultiexpFn)
+  , (imp "bls12381_map_fp_to_g1" [.i64, .i64, .i64] [.i64], bls12381MapFpToG1Fn)
+  , (imp "bls12381_map_fp2_to_g2" [.i64, .i64, .i64] [.i64], bls12381MapFp2ToG2Fn)
+  , (imp "bls12381_p1_decompress" [.i64, .i64, .i64] [.i64], bls12381P1DecompressFn)
+  , (imp "bls12381_p2_decompress" [.i64, .i64, .i64] [.i64], bls12381P2DecompressFn)
+  , (imp "bls12381_p1_sum" [.i64, .i64, .i64] [.i64], bls12381P1SumFn)
+  , (imp "bls12381_p2_sum" [.i64, .i64, .i64] [.i64], bls12381P2SumFn)
+  , (imp "bls12381_pairing_check" [.i64, .i64] [.i64], bls12381PairingCheckFn)
+  , (imp "promise_create" [.i64, .i64, .i64, .i64, .i64, .i64, .i64, .i64] [.i64],
+      promiseCreateFn)
+  , (imp "promise_then" [.i64, .i64, .i64, .i64, .i64, .i64, .i64, .i64, .i64] [.i64],
+      promiseThenFn)
+  , (imp "promise_and" [.i64, .i64] [.i64], promiseAndFn)
+  , (imp "promise_batch_create" [.i64, .i64] [.i64], promiseBatchCreateFn)
+  , (imp "promise_batch_then" [.i64, .i64, .i64] [.i64], promiseBatchThenFn)
+  , (imp "promise_batch_action_create_account" [.i64] [], promiseBatchActionCreateAccountFn)
+  , (imp "promise_batch_action_deploy_contract" [.i64, .i64, .i64] [],
+      promiseBatchActionDeployContractFn)
+  , (imp "promise_batch_action_function_call" [.i64, .i64, .i64, .i64, .i64, .i64, .i64] [],
+      promiseBatchActionFunctionCallFn)
+  , (imp "promise_batch_action_transfer" [.i64, .i64] [], promiseBatchActionTransferFn)
+  , (imp "promise_batch_action_stake" [.i64, .i64, .i64, .i64] [], promiseBatchActionStakeFn)
+  , (imp "promise_batch_action_add_key_with_full_access" [.i64, .i64, .i64, .i64] [],
+      promiseBatchActionAddKeyWithFullAccessFn)
+  , (imp "promise_batch_action_add_key_with_function_call"
+      [.i64, .i64, .i64, .i64, .i64, .i64, .i64, .i64, .i64] [],
+      promiseBatchActionAddKeyWithFunctionCallFn)
+  , (imp "promise_batch_action_delete_key" [.i64, .i64, .i64] [],
+      promiseBatchActionDeleteKeyFn)
+  , (imp "promise_batch_action_delete_account" [.i64, .i64, .i64] [],
+      promiseBatchActionDeleteAccountFn)
+  , (imp "promise_yield_create" [.i64, .i64, .i64, .i64, .i64, .i64, .i64] [.i64],
+      promiseYieldCreateFn)
+  , (imp "promise_yield_resume" [.i64, .i64, .i64, .i64] [.i64],
+      promiseYieldResumeFn)
   , (imp "promise_results_count" [] [.i64], promiseResultsCountFn)
   , (imp "promise_result" [.i64, .i64] [.i64], promiseResultFn)
   , (imp "promise_return" [.i64] [], promiseReturnFn) ]

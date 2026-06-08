@@ -73,6 +73,10 @@ def le32 (n : Nat) : List UInt8 :=
   [ UInt8.ofNat (n % 256), UInt8.ofNat (n / 256 % 256),
     UInt8.ofNat (n / 65536 % 256), UInt8.ofNat (n / 16777216 % 256) ]
 
+/-- Little-endian 8-byte encoding of a `u64`-sized natural. -/
+def le64 (n : Nat) : List UInt8 :=
+  (List.range 8).map (fun i => UInt8.ofNat (n / 2 ^ (8 * i) % 256))
+
 /-- The contract's input wire format: `le32(|key|) ++ key ++ le32(|val|) ++ val`. -/
 def encodeKV (key val : List UInt8) : List UInt8 :=
   le32 key.length ++ key ++ le32 val.length ++ val
@@ -313,7 +317,7 @@ def promiseResultViewTraps : Bool :=
 theorem promise_result_view_traps : promiseResultViewTraps = true := by native_decide
 
 def promiseReturnRecordsPromise : Bool :=
-  let ns : NearState := { promises := [.pending, .pending] }
+  let ns : NearState := { promises := [.batch [1] [], .batch [2] []] }
   match promiseReturnFn.invoke (initialWith ns) [.i64 1] with
   | .Return [] st => st.host.returnedPromise == some 1
   | _             => false
@@ -321,12 +325,227 @@ def promiseReturnRecordsPromise : Bool :=
 theorem promise_return_records_promise : promiseReturnRecordsPromise = true := by native_decide
 
 def promiseReturnBadIndexTraps : Bool :=
-  let ns : NearState := { promises := [.pending] }
+  let ns : NearState := { promises := [.batch [1] []] }
   match promiseReturnFn.invoke (initialWith ns) [.i64 1] with
   | .Trap _ _ => true
   | _         => false
 
 theorem promise_return_bad_index_traps : promiseReturnBadIndexTraps = true := by native_decide
+
+def promiseBatchCreateRecordsAccount : Bool :=
+  let st0 := initialWith {}
+  let st := { st0 with mem := st0.mem.writeBytes 0 [10, 11] }
+  match promiseBatchCreateFn.invoke st [.i64 2, .i64 0] with
+  | .Return [.i64 0] st' => st'.host.promises == [.batch [10, 11] []]
+  | _                    => false
+
+theorem promise_batch_create_records_account :
+    promiseBatchCreateRecordsAccount = true := by native_decide
+
+def promiseCreateRecordsFunctionCall : Bool :=
+  let st0 := initialWith {}
+  let st1 := { st0 with mem := st0.mem.writeBytes 0 [10, 11] }
+  let st2 := { st1 with mem := st1.mem.writeBytes 8 [109] }
+  let st3 := { st2 with mem := st2.mem.writeBytes 16 [7] }
+  let st := { st3 with mem := st3.mem.writeBytes 24 (leU128Bytes 5) }
+  match promiseCreateFn.invoke st [.i64 2, .i64 0, .i64 1, .i64 8, .i64 1, .i64 16, .i64 24, .i64 30] with
+  | .Return [.i64 0] st' =>
+    st'.host.promises ==
+      [.batch [10, 11] [PromiseAction.functionCall [109] [7] 5 30]]
+  | _ => false
+
+theorem promise_create_records_function_call :
+    promiseCreateRecordsFunctionCall = true := by native_decide
+
+def promiseThenRecordsCallback : Bool :=
+  let ns : NearState := { promises := [.batch [1] []] }
+  let st0 := initialWith ns
+  let st1 := { st0 with mem := st0.mem.writeBytes 0 [10] }
+  let st2 := { st1 with mem := st1.mem.writeBytes 8 [109] }
+  let st3 := { st2 with mem := st2.mem.writeBytes 16 [7] }
+  let st := { st3 with mem := st3.mem.writeBytes 24 (leU128Bytes 5) }
+  match promiseThenFn.invoke st [.i64 0, .i64 1, .i64 0, .i64 1, .i64 8, .i64 1, .i64 16, .i64 24, .i64 30] with
+  | .Return [.i64 1] st' =>
+    st'.host.promises ==
+      [.batch [1] [], .callback 0 [10] [PromiseAction.functionCall [109] [7] 5 30]]
+  | _ => false
+
+theorem promise_then_records_callback :
+    promiseThenRecordsCallback = true := by native_decide
+
+def promiseAndRecordsDependencies : Bool :=
+  let ns : NearState := { promises := [.batch [1] [], .batch [2] []] }
+  let st0 := initialWith ns
+  let st := { st0 with mem := st0.mem.writeBytes 0 (le64 0 ++ le64 1) }
+  match promiseAndFn.invoke st [.i64 0, .i64 2] with
+  | .Return [.i64 2] st' =>
+    st'.host.promises == [.batch [1] [], .batch [2] [], .and [0, 1]]
+  | _ => false
+
+theorem promise_and_records_dependencies :
+    promiseAndRecordsDependencies = true := by native_decide
+
+def promiseBatchFunctionCallAppendsAction : Bool :=
+  let ns : NearState := { promises := [.batch [1] []] }
+  let st0 := initialWith ns
+  let st1 := { st0 with mem := st0.mem.writeBytes 0 [109] }
+  let st2 := { st1 with mem := st1.mem.writeBytes 8 [7] }
+  let st := { st2 with mem := st2.mem.writeBytes 16 (leU128Bytes 5) }
+  match promiseBatchActionFunctionCallFn.invoke st [.i64 0, .i64 1, .i64 0, .i64 1, .i64 8, .i64 16, .i64 30] with
+  | .Return [] st' =>
+    st'.host.promises ==
+      [.batch [1] [PromiseAction.functionCall [109] [7] 5 30]]
+  | _ => false
+
+theorem promise_batch_function_call_appends_action :
+    promiseBatchFunctionCallAppendsAction = true := by native_decide
+
+def promiseBatchTransferAppendsAction : Bool :=
+  let ns : NearState := { promises := [.batch [1] []] }
+  let st0 := initialWith ns
+  let st := { st0 with mem := st0.mem.writeBytes 0 (leU128Bytes 9) }
+  match promiseBatchActionTransferFn.invoke st [.i64 0, .i64 0] with
+  | .Return [] st' => st'.host.promises == [.batch [1] [PromiseAction.transfer 9]]
+  | _              => false
+
+theorem promise_batch_transfer_appends_action :
+    promiseBatchTransferAppendsAction = true := by native_decide
+
+def promiseActionOnJointTraps : Bool :=
+  let ns : NearState := { promises := [.and [0]] }
+  match promiseBatchActionCreateAccountFn.invoke (initialWith ns) [.i64 0] with
+  | .Trap _ _ => true
+  | _         => false
+
+theorem promise_action_on_joint_traps : promiseActionOnJointTraps = true := by native_decide
+
+def promiseBatchCreateViewTraps : Bool :=
+  let ns : NearState := { context := { isView := true } }
+  let st0 := initialWith ns
+  let st := { st0 with mem := st0.mem.writeBytes 0 [10] }
+  match promiseBatchCreateFn.invoke st [.i64 1, .i64 0] with
+  | .Trap _ _ => true
+  | _         => false
+
+theorem promise_batch_create_view_traps :
+    promiseBatchCreateViewTraps = true := by native_decide
+
+def promiseYieldCreateRecordsToken : Bool :=
+  let ns : NearState :=
+    { yieldCreateToken := fun method args gas weight =>
+        method ++ args ++ [UInt8.ofNat gas.toNat, UInt8.ofNat weight.toNat] }
+  let st0 := initialWith ns
+  let st1 := { st0 with mem := st0.mem.writeBytes 0 [109] }
+  let st := { st1 with mem := st1.mem.writeBytes 8 [7] }
+  match promiseYieldCreateFn.invoke st [.i64 1, .i64 0, .i64 1, .i64 8, .i64 3, .i64 4, .i64 9] with
+  | .Return [.i64 0] st' =>
+    st'.host.registers 9 == some [109, 7, 3, 4] &&
+      st'.host.promises == [.yielded [109] [7] 3 4 [109, 7, 3, 4]]
+  | _ => false
+
+theorem promise_yield_create_records_token :
+    promiseYieldCreateRecordsToken = true := by native_decide
+
+def promiseYieldResumeRecordsPayload : Bool :=
+  let ns : NearState := { promises := [.yielded [109] [7] 3 4 [1, 2]] }
+  let st0 := initialWith ns
+  let st1 := { st0 with mem := st0.mem.writeBytes 0 [1, 2] }
+  let st := { st1 with mem := st1.mem.writeBytes 8 [9] }
+  match promiseYieldResumeFn.invoke st [.i64 2, .i64 0, .i64 1, .i64 8] with
+  | .Return [.i64 1] st' => st'.host.yieldResumes == [([1, 2], [9])]
+  | _                    => false
+
+theorem promise_yield_resume_records_payload :
+    promiseYieldResumeRecordsPayload = true := by native_decide
+
+def promiseYieldResumeUnknownReturnsZero : Bool :=
+  let ns : NearState := { promises := [.yielded [109] [7] 3 4 [1, 2]] }
+  let st0 := initialWith ns
+  let st1 := { st0 with mem := st0.mem.writeBytes 0 [3, 4] }
+  let st := { st1 with mem := st1.mem.writeBytes 8 [9] }
+  match promiseYieldResumeFn.invoke st [.i64 2, .i64 0, .i64 1, .i64 8] with
+  | .Return [.i64 0] st' => st'.host.yieldResumes == []
+  | _                    => false
+
+theorem promise_yield_resume_unknown_returns_zero :
+    promiseYieldResumeUnknownReturnsZero = true := by native_decide
+
+def promiseYieldCreateViewTraps : Bool :=
+  let ns : NearState := { context := { isView := true } }
+  let st0 := initialWith ns
+  let st := { st0 with mem := st0.mem.writeBytes 0 [109] }
+  match promiseYieldCreateFn.invoke st [.i64 1, .i64 0, .i64 0, .i64 0, .i64 3, .i64 4, .i64 9] with
+  | .Trap _ _ => true
+  | _         => false
+
+theorem promise_yield_create_view_traps :
+    promiseYieldCreateViewTraps = true := by native_decide
+
+def iterNs : NearState :=
+  { storage := fun k =>
+      if k = [1, 2] then some [7]
+      else if k = [1, 3] then some [8]
+      else if k = [2] then some [9]
+      else none
+    storageKeys := [[1, 2], [1, 3], [2]] }
+
+def storageIterPrefixNextWorks : Bool :=
+  let st0 := initialWith iterNs
+  let st := { st0 with mem := st0.mem.writeBytes 0 [1] }
+  match storageIterPrefixFn.invoke st [.i64 1, .i64 0] with
+  | .Return [.i64 0] st' =>
+    match storageIterNextFn.invoke st' [.i64 0, .i64 4, .i64 5] with
+    | .Return [.i64 1] st'' =>
+      st''.host.registers 4 == some [1, 2] &&
+        st''.host.registers 5 == some [7]
+    | _ => false
+  | _ => false
+
+theorem storage_iter_prefix_next_works :
+    storageIterPrefixNextWorks = true := by native_decide
+
+def storageIterRangeNextWorks : Bool :=
+  let st0 := initialWith iterNs
+  let st1 := { st0 with mem := st0.mem.writeBytes 0 [1] }
+  let st := { st1 with mem := st1.mem.writeBytes 8 [2] }
+  match storageIterRangeFn.invoke st [.i64 1, .i64 0, .i64 1, .i64 8] with
+  | .Return [.i64 0] st' =>
+    match storageIterNextFn.invoke st' [.i64 0, .i64 4, .i64 5] with
+    | .Return [.i64 1] st'' =>
+      st''.host.registers 4 == some [1, 2] &&
+        st''.host.registers 5 == some [7]
+    | _ => false
+  | _ => false
+
+theorem storage_iter_range_next_works :
+    storageIterRangeNextWorks = true := by native_decide
+
+def storageIterDuplicateRegistersTrap : Bool :=
+  let st0 := initialWith iterNs
+  let st := { st0 with mem := st0.mem.writeBytes 0 [1] }
+  match storageIterPrefixFn.invoke st [.i64 1, .i64 0] with
+  | .Return [.i64 0] st' =>
+    match storageIterNextFn.invoke st' [.i64 0, .i64 4, .i64 4] with
+    | .Trap _ _ => true
+    | _         => false
+  | _ => false
+
+theorem storage_iter_duplicate_registers_trap :
+    storageIterDuplicateRegistersTrap = true := by native_decide
+
+def storageWriteInvalidatesIterators : Bool :=
+  let st0 := initialWith iterNs
+  let st1 := { st0 with mem := st0.mem.writeBytes 0 [1] }
+  match storageIterPrefixFn.invoke st1 [.i64 1, .i64 0] with
+  | .Return [.i64 0] stIter =>
+    let st2 := { stIter with mem := stIter.mem.writeBytes 16 [3, 4] }
+    match storageWriteFn.invoke st2 [.i64 1, .i64 16, .i64 1, .i64 17, .i64 0] with
+    | .Return [.i64 0] stWritten => (stWritten.host.iterators 0).isNone
+    | _ => false
+  | _ => false
+
+theorem storage_write_invalidates_iterators :
+    storageWriteInvalidatesIterators = true := by native_decide
 
 def inputRegisterLimitTraps : Bool :=
   let ns : NearState :=
@@ -410,6 +629,52 @@ def ed25519InvalidPublicKeyTraps : Bool :=
 
 theorem ed25519_invalid_public_key_traps :
     ed25519InvalidPublicKeyTraps = true := by native_decide
+
+def altBn128HookWritesRegister : Bool :=
+  let ns : NearState := { altBn128G1Multiexp := fun bs => bs ++ [9] }
+  let st0 := initialWith ns
+  let st := { st0 with mem := st0.mem.writeBytes 0 [1, 2] }
+  match altBn128G1MultiexpFn.invoke st [.i64 2, .i64 0, .i64 5] with
+  | .Return [] st' => st'.host.registers 5 == some [1, 2, 9]
+  | _              => false
+
+theorem alt_bn128_hook_writes_register :
+    altBn128HookWritesRegister = true := by native_decide
+
+def bls12381HookWritesRegister : Bool :=
+  let ns : NearState := { bls12381G1Multiexp := fun bs => (0, bs ++ [9]) }
+  let st0 := initialWith ns
+  let st := { st0 with mem := st0.mem.writeBytes 0 [1, 2] }
+  match bls12381G1MultiexpFn.invoke st [.i64 2, .i64 0, .i64 5] with
+  | .Return [.i64 0] st' => st'.host.registers 5 == some [1, 2, 9]
+  | _                    => false
+
+theorem bls12381_hook_writes_register :
+    bls12381HookWritesRegister = true := by native_decide
+
+def bls12381InvalidLeavesRegister : Bool :=
+  let ns : NearState :=
+    { bls12381G1Multiexp := fun _ => (1, [9])
+      registers := fun i => if i = 5 then some [1] else none }
+  let st0 := initialWith ns
+  let st := { st0 with mem := st0.mem.writeBytes 0 [1, 2] }
+  match bls12381G1MultiexpFn.invoke st [.i64 2, .i64 0, .i64 5] with
+  | .Return [.i64 1] st' => st'.host.registers 5 == some [1]
+  | _                    => false
+
+theorem bls12381_invalid_leaves_register :
+    bls12381InvalidLeavesRegister = true := by native_decide
+
+def bls12381PairingStatusReturns : Bool :=
+  let ns : NearState := { bls12381PairingCheck := fun _ => 1 }
+  let st0 := initialWith ns
+  let st := { st0 with mem := st0.mem.writeBytes 0 [1, 2] }
+  match bls12381PairingCheckFn.invoke st [.i64 2, .i64 0] with
+  | .Return [.i64 1] _ => true
+  | _                  => false
+
+theorem bls12381_pairing_status_returns :
+    bls12381PairingStatusReturns = true := by native_decide
 
 end KvSetter
 end Near
