@@ -40,15 +40,28 @@ namespace Decoded
 /-- A `.wat` module exercising all three reference instructions.
 `$f` is function index 0; `null_is_null` (index 1) returns `ref.is_null`
 of the null reference (⇒ 1); `func_is_null` (index 2) returns
-`ref.is_null` of a reference to `$f` (⇒ 0). -/
+`ref.is_null` of a reference to `$f` (⇒ 0). The remaining functions cover
+the function-null heap type `nofunc` and global init expressions that produce
+stored `funcref` values. -/
 def refWat : String := "
 (module
   (func $f (result i32) i32.const 7)
+  (global $g_func funcref (ref.func $f))
+  (global $g_null funcref (ref.null nofunc))
   (func $null_is_null (export \"null_is_null\") (result i32)
     ref.null func
     ref.is_null)
   (func $func_is_null (export \"func_is_null\") (result i32)
     ref.func $f
+    ref.is_null)
+  (func $nofunc_is_null (export \"nofunc_is_null\") (result i32)
+    ref.null nofunc
+    ref.is_null)
+  (func $global_func_is_null (export \"global_func_is_null\") (result i32)
+    global.get $g_func
+    ref.is_null)
+  (func $global_null_is_null (export \"global_null_is_null\") (result i32)
+    global.get $g_null
     ref.is_null))
 "
 
@@ -57,10 +70,10 @@ private def decoded : Wasm.Module :=
   | .ok m    => m
   | .error _ => default
 
-/-- Decoding succeeds with all three functions (rules out the `default`
+/-- Decoding succeeds with all six functions (rules out the `default`
 fallback above; `Instruction` has no `DecidableEq`, so we check a
 decidable projection rather than the bodies directly). -/
-theorem decodes_three_funcs : decoded.funcs.length = 3 := by native_decide
+theorem decodes_six_funcs : decoded.funcs.length = 6 := by native_decide
 
 private def runVals (idx : Nat) : List Value :=
   match run 10 decoded idx (decoded.initialStore (α := Unit)) [] with
@@ -76,6 +89,17 @@ theorem null_is_null_runs : runVals 1 = [.i32 1] := by native_decide
 `func_is_null` returns `[0]`. This also pins down `ref.func $f`
 resolving the name `$f` to a non-null reference. -/
 theorem func_is_null_runs : runVals 2 = [.i32 0] := by native_decide
+
+/-- `nofunc` is the null function-reference heap type, so it is represented
+by the same `funcref none` value as `ref.null func`. -/
+theorem nofunc_is_null_runs : runVals 3 = [.i32 1] := by native_decide
+
+/-- Global `ref.func` initializers are decoded to stored `funcref` values,
+not integer placeholders, so `ref.is_null (global.get ...)` can inspect them. -/
+theorem global_func_is_null_runs : runVals 4 = [.i32 0] := by native_decide
+
+/-- Global function-null initializers are likewise decoded as `funcref none`. -/
+theorem global_null_is_null_runs : runVals 5 = [.i32 1] := by native_decide
 
 end Decoded
 end Wasm

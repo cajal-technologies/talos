@@ -31413,7 +31413,7 @@ ref_func.wast:4 register skipped:register
 ref_func.wast:6 module pass
 ref_func.wast:56 assert_return pass
 ref_func.wast:57 assert_return pass
-ref_func.wast:58 assert_return interpreter_error
+ref_func.wast:58 assert_return pass
 ref_func.wast:60 assert_return fail
 ref_func.wast:61 assert_return fail
 ref_func.wast:62 assert_return fail

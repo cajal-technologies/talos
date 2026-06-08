@@ -327,6 +327,9 @@ private def resolveNamed (table : Std.HashMap String Nat) (kind : String)
     | none => .error s!"unknown {kind} id: {s}"
   else parseNat s
 
+private def isNullFuncrefHeapType (ht : String) : Bool :=
+  ht == "func" || ht == "nofunc"
+
 private def dropTrailingLabel : List Sexpr → List Sexpr
   | .atom a :: r => if a.startsWith "$" then r else .atom a :: r
   | xs => xs
@@ -673,10 +676,10 @@ private partial def parseInstr (ctx : Ctx) (toks : List Sexpr)
     | "data.drop"   => parseImmediateNat parseNat .dataDrop   op rest
     | "ref.func"    => parseImmediateNat (resolveNamed ctx.funcIds "function") .refFunc op rest
     -- `ref.null ht` carries a heap-type immediate. We only model `funcref`,
-    -- so `ref.null func` becomes the null funcref; any other heap type
-    -- (e.g. `extern`) keeps the legacy decode-but-trap behaviour.
+    -- so function-null heap types become the null funcref; any other heap
+    -- type (e.g. `extern`) keeps the legacy decode-but-trap behaviour.
     | "ref.null"    => match rest with
-      | .atom ht :: rest' => .ok ([if ht == "func" then .refNull else .unreachable], rest')
+      | .atom ht :: rest' => .ok ([if isNullFuncrefHeapType ht then .refNull else .unreachable], rest')
       | _ => .error "ref.null expects a heap-type immediate"
     | "select"    =>
       let rec dropResults : List Sexpr → List Sexpr
@@ -757,7 +760,7 @@ private partial def parseFolded (ctx : Ctx) (xs : List Sexpr)
       foldedWithImmediate ctx (resolveNamed ctx.funcIds "function") (fun i => [.refFunc i]) rest
     | "ref.null"    =>
       match rest with
-      | [.atom ht] => .ok [if ht == "func" then .refNull else .unreachable]
+      | [.atom ht] => .ok [if isNullFuncrefHeapType ht then .refNull else .unreachable]
       | _ => .error "folded ref.null expects exactly one heap-type immediate"
     | "call_indirect" | "return_call_indirect" => do
       let (instr, leftover) ← parseCallIndirect ctx rest
@@ -1282,7 +1285,8 @@ private def parseWatString (s : String) : Except Err (List UInt8) :=
   if !s.startsWith "\"" then .error s!"expected string literal, got: {s}"
   else decodeWatBytes (stripQuotes s).toList
 
-private def parseGlobalDecl (xs : List Sexpr) : Except Err Wasm.GlobalDecl := do
+private def parseGlobalDecl (funcIds : Std.HashMap String Nat) (xs : List Sexpr) :
+    Except Err Wasm.GlobalDecl := do
   let xs := match xs with
     | .atom a :: r => if a.startsWith "$" then r else xs
     | _ => xs
@@ -1312,13 +1316,20 @@ private def parseGlobalDecl (xs : List Sexpr) : Except Err Wasm.GlobalDecl := do
   let init : Wasm.Value ← match head?, tail with
     | some "i32.const", .atom n :: _ => .ok (.i32 (← parseI32 n))
     | some "i64.const", .atom n :: _ => .ok (.i64 (← parseI64 n))
+    | some "ref.null", .atom ht :: _ =>
+      if isNullFuncrefHeapType ht then
+        .ok (.funcref none)
+      else
+        .ok (.i32 0)
+    | some "ref.func", .atom ref :: _ => .ok (.funcref (some (← resolveFuncRef funcIds ref)))
+    | some "ref.func", _ => .error "global ref.func init expects a function immediate"
+    | some "ref.null", _ => .error "global ref.null init expects a heap-type immediate"
     -- Init expressions from proposals we don't model are accepted by
     -- the decoder; the *value* is replaced with a zero placeholder
     -- since none of them feed an `i32`/`i64` computation. Function
     -- bodies that would read the global hit `unreachable` anyway.
     | some "f32.const", _ | some "f64.const", _
     | some "v128.const", _
-    | some "ref.null",  _ | some "ref.func",  _
     | some "global.get", _ => .ok (.i32 0)
     | _, _ => .error "global init expression must be i32.const or i64.const"
   .ok { type := vt, init }
@@ -1643,7 +1654,7 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
         -- Export of a non-func item (memory, global, table) — drop silently.
         continue
     | .list (.atom "global" :: body) =>
-      globalDecls := globalDecls.push (← parseGlobalDecl body)
+      globalDecls := globalDecls.push (← parseGlobalDecl funcIds body)
     | .list (.atom "memory" :: body) =>
       if memDecl.isSome then throw "duplicate (memory ...) declaration"
       memDecl := some (← parseMemDecl body)
