@@ -150,11 +150,12 @@ private partial def copyTreeNoClobber (src dst : FilePath) (subst : String → S
 
 private def addWorkspaceMember (cargoToml : FilePath) (crate : String) : IO Unit := do
   let txt ← IO.FS.readFile cargoToml
-  if fileContains txt crate then return
+  let entry := s!"\"{crate}\""
+  if fileContains txt entry then return
   let needle := "members = ["
   unless fileContains txt needle do
     die s!"{cargoToml}: could not find `[workspace] members = [`"
-  IO.FS.writeFile cargoToml (txt.replace needle (needle ++ "\n  \"" ++ crate ++ "\","))
+  IO.FS.writeFile cargoToml (txt.replace needle (needle ++ "\n  " ++ entry ++ ","))
 
 private def removeWorkspaceMember (cargoToml : FilePath) (crate : String) : IO Unit := do
   unless ← System.FilePath.pathExists cargoToml do return
