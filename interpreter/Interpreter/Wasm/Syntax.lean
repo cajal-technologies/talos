@@ -4,30 +4,40 @@ namespace Wasm
 
 /-! ## Value types and runtime values
 
-Wasm currently supports the integer half of Wasm's numeric types
-(`i32`, `i64`) plus the `funcref` reference type needed for tables and
-`call_indirect`. Floats and other reference types remain out of scope.
-Memory loads/stores, globals, tables, and indirect calls are supported. -/
+Wasm's numeric types `i32`, `i64`, `f32`, `f64`, plus the `funcref`
+reference type needed for tables and `call_indirect`. Floats are carried
+by their IEEE-754 bit pattern (`f32` as `UInt32`, `f64` as `UInt64`); the
+operations live in `Interpreter.Wasm.Float`. Other reference types remain
+out of scope. Memory loads/stores, globals, tables, and indirect calls are
+supported. -/
 
 inductive ValueType where
   | i32
   | i64
+  | f32
+  | f64
   | funcref
 deriving Repr, Inhabited, DecidableEq, BEq
 
 inductive Value where
   | i32     (n : UInt32)
   | i64     (n : UInt64)
+  /-- An `f32`, stored as its 32-bit IEEE-754 encoding. -/
+  | f32     (bits : UInt32)
+  /-- An `f64`, stored as its 64-bit IEEE-754 encoding. -/
+  | f64     (bits : UInt64)
   /-- A `funcref`: `none` is the null ref; `some i` is a reference to
   function index `i` in the enclosing module's function space. -/
   | funcref (idx : Option Nat)
 deriving Repr, Inhabited, DecidableEq, BEq
 
 /-- Type-indexed zero used to initialise locals at function entry. The
-zero for `funcref` is the null reference. -/
+zero for a float is `+0.0` (all-zero bits); for `funcref` the null reference. -/
 def ValueType.zero : ValueType → Value
   | .i32     => .i32 0
   | .i64     => .i64 0
+  | .f32     => .f32 0
+  | .f64     => .f64 0
   | .funcref => .funcref none
 
 /-- Module-level globals. Indexed by position in the module's globals list. -/
@@ -86,6 +96,45 @@ inductive Instruction where
   | extend8S   | extend16S
   | extend8SI64 | extend16SI64 | extend32SI64
 
+  -- Float constants (carry the IEEE-754 bit pattern directly)
+  | f32Const : UInt32 → Instruction
+  | f64Const : UInt64 → Instruction
+
+  -- Float arithmetic
+  | f32Add | f32Sub | f32Mul | f32Div | f32Min | f32Max | f32Copysign
+  | f64Add | f64Sub | f64Mul | f64Div | f64Min | f64Max | f64Copysign
+
+  -- Float unary
+  | f32Abs | f32Neg | f32Sqrt | f32Ceil | f32Floor | f32Trunc | f32Nearest
+  | f64Abs | f64Neg | f64Sqrt | f64Ceil | f64Floor | f64Trunc | f64Nearest
+
+  -- Float comparison (results land as i32 0/1)
+  | f32Eq | f32Ne | f32Lt | f32Gt | f32Le | f32Ge
+  | f64Eq | f64Ne | f64Lt | f64Gt | f64Le | f64Ge
+
+  -- Float memory (static byte offset; address popped from stack as i32)
+  | f32Load  : UInt32 → Instruction  -- f32.load:  4-byte load  → f32
+  | f64Load  : UInt32 → Instruction  -- f64.load:  8-byte load  → f64
+  | f32Store : UInt32 → Instruction  -- f32.store: 4-byte store
+  | f64Store : UInt32 → Instruction  -- f64.store: 8-byte store
+
+  -- Integer → float conversions (`S`/`U` = signed/unsigned source)
+  | f32ConvertI32S | f32ConvertI32U | f32ConvertI64S | f32ConvertI64U
+  | f64ConvertI32S | f64ConvertI32U | f64ConvertI64S | f64ConvertI64U
+
+  -- Float → integer conversions, trapping on NaN / out-of-range
+  | i32TruncF32S | i32TruncF32U | i32TruncF64S | i32TruncF64U
+  | i64TruncF32S | i64TruncF32U | i64TruncF64S | i64TruncF64U
+
+  -- Float → integer conversions, saturating (NaN → 0, clamp to range)
+  | i32TruncSatF32S | i32TruncSatF32U | i32TruncSatF64S | i32TruncSatF64U
+  | i64TruncSatF32S | i64TruncSatF32U | i64TruncSatF64S | i64TruncSatF64U
+
+  -- Float ↔ float, and bitwise reinterpretation between a float and the
+  -- same-width integer (a pure retag of the bits)
+  | f32DemoteF64 | f64PromoteF32
+  | i32ReinterpretF32 | i64ReinterpretF64 | f32ReinterpretI32 | f64ReinterpretI64
+
   -- Structured control. Each block-like form carries its arity:
   -- `paramArity` is the number of values consumed from the operand
   -- stack on entry, `resultArity` the number of values left on top
@@ -111,6 +160,14 @@ inductive Instruction where
   -- signature differs from `types[typeIdx]`. Otherwise it dispatches to
   -- that function via the standard calling convention.
   | callIndirect : (typeIdx tableIdx : Nat) → Instruction
+
+  -- Reference instructions. `funcref` values are already modelled by
+  -- `Value.funcref (Option Nat)` (`none` = null, `some i` = a reference to
+  -- function index `i`). These produce and test such values; none of them
+  -- touch the store.
+  | refNull   : Instruction        -- ref.null func: push the null funcref
+  | refFunc   : Nat → Instruction  -- ref.func i:    push a reference to function `i`
+  | refIsNull : Instruction        -- ref.is_null:   pop a ref, push i32 1 if null else 0
 
   -- i32 memory loads (static byte offset; address popped from stack as i32)
   | load8U  : UInt32 → Instruction  -- i32.load8_u:  zero-extend 1 byte  → i32

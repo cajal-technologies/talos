@@ -118,6 +118,8 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
                 simp only [execOne, hvals, if_neg hc, h]
               rw [ihExec m env st { s with values := vs } els k' hk' hexec]
           | i64 _ => rfl
+          | f32 _ => rfl
+          | f64 _ => rfl
           | funcref _ => rfl
       | call id =>
         simp only [execOne]
@@ -135,6 +137,8 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
         · simp only [execOne, hvals]
         · cases hv : v with
           | i64 _    => simp only [execOne, hvals, hv]
+          | f32 _    => simp only [execOne, hvals, hv]
+          | f64 _    => simp only [execOne, hvals, hv]
           | funcref _ => simp only [execOne, hvals, hv]
           | i32 i =>
             rcases htbl : st.tables[tj]? with _ | tbl

@@ -1,4 +1,5 @@
 import Interpreter.Wasm.Syntax
+import Interpreter.Wasm.Float
 import Interpreter.Wasm.Locals
 import Interpreter.Wasm.Continuation
 import Interpreter.Wasm.Host
@@ -363,6 +364,297 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
         .Fallthrough st { s with values := .i64 r' :: vs }
       | _ => .Invalid "extend32SI64: ill-shaped operand stack"
 
+    -- Float constants
+    | _, Instruction.f32Const v => .Fallthrough st { s with values := .f32 v :: s.values }
+    | _, Instruction.f64Const v => .Fallthrough st { s with values := .f64 v :: s.values }
+
+    -- f32 arithmetic. The top operand is `b`, the one below it `a`; results
+    -- follow the wasm convention `a ⊘ b` (`sub` is `a - b`, `div` is `a / b`).
+    | _, Instruction.f32Add => match s.values with
+      | .f32 b :: .f32 a :: vs => .Fallthrough st { s with values := .f32 (f32Add a b) :: vs }
+      | _ => .Invalid "f32Add: ill-shaped operand stack"
+    | _, Instruction.f32Sub => match s.values with
+      | .f32 b :: .f32 a :: vs => .Fallthrough st { s with values := .f32 (f32Sub a b) :: vs }
+      | _ => .Invalid "f32Sub: ill-shaped operand stack"
+    | _, Instruction.f32Mul => match s.values with
+      | .f32 b :: .f32 a :: vs => .Fallthrough st { s with values := .f32 (f32Mul a b) :: vs }
+      | _ => .Invalid "f32Mul: ill-shaped operand stack"
+    | _, Instruction.f32Div => match s.values with
+      | .f32 b :: .f32 a :: vs => .Fallthrough st { s with values := .f32 (f32Div a b) :: vs }
+      | _ => .Invalid "f32Div: ill-shaped operand stack"
+    | _, Instruction.f32Min => match s.values with
+      | .f32 b :: .f32 a :: vs => .Fallthrough st { s with values := .f32 (f32Min a b) :: vs }
+      | _ => .Invalid "f32Min: ill-shaped operand stack"
+    | _, Instruction.f32Max => match s.values with
+      | .f32 b :: .f32 a :: vs => .Fallthrough st { s with values := .f32 (f32Max a b) :: vs }
+      | _ => .Invalid "f32Max: ill-shaped operand stack"
+    | _, Instruction.f32Copysign => match s.values with
+      | .f32 b :: .f32 a :: vs => .Fallthrough st { s with values := .f32 (f32Copysign a b) :: vs }
+      | _ => .Invalid "f32Copysign: ill-shaped operand stack"
+
+    -- f64 arithmetic
+    | _, Instruction.f64Add => match s.values with
+      | .f64 b :: .f64 a :: vs => .Fallthrough st { s with values := .f64 (f64Add a b) :: vs }
+      | _ => .Invalid "f64Add: ill-shaped operand stack"
+    | _, Instruction.f64Sub => match s.values with
+      | .f64 b :: .f64 a :: vs => .Fallthrough st { s with values := .f64 (f64Sub a b) :: vs }
+      | _ => .Invalid "f64Sub: ill-shaped operand stack"
+    | _, Instruction.f64Mul => match s.values with
+      | .f64 b :: .f64 a :: vs => .Fallthrough st { s with values := .f64 (f64Mul a b) :: vs }
+      | _ => .Invalid "f64Mul: ill-shaped operand stack"
+    | _, Instruction.f64Div => match s.values with
+      | .f64 b :: .f64 a :: vs => .Fallthrough st { s with values := .f64 (f64Div a b) :: vs }
+      | _ => .Invalid "f64Div: ill-shaped operand stack"
+    | _, Instruction.f64Min => match s.values with
+      | .f64 b :: .f64 a :: vs => .Fallthrough st { s with values := .f64 (f64Min a b) :: vs }
+      | _ => .Invalid "f64Min: ill-shaped operand stack"
+    | _, Instruction.f64Max => match s.values with
+      | .f64 b :: .f64 a :: vs => .Fallthrough st { s with values := .f64 (f64Max a b) :: vs }
+      | _ => .Invalid "f64Max: ill-shaped operand stack"
+    | _, Instruction.f64Copysign => match s.values with
+      | .f64 b :: .f64 a :: vs => .Fallthrough st { s with values := .f64 (f64Copysign a b) :: vs }
+      | _ => .Invalid "f64Copysign: ill-shaped operand stack"
+
+    -- f32 unary
+    | _, Instruction.f32Abs => match s.values with
+      | .f32 a :: vs => .Fallthrough st { s with values := .f32 (f32Abs a) :: vs }
+      | _ => .Invalid "f32Abs: ill-shaped operand stack"
+    | _, Instruction.f32Neg => match s.values with
+      | .f32 a :: vs => .Fallthrough st { s with values := .f32 (f32Neg a) :: vs }
+      | _ => .Invalid "f32Neg: ill-shaped operand stack"
+    | _, Instruction.f32Sqrt => match s.values with
+      | .f32 a :: vs => .Fallthrough st { s with values := .f32 (f32Sqrt a) :: vs }
+      | _ => .Invalid "f32Sqrt: ill-shaped operand stack"
+    | _, Instruction.f32Ceil => match s.values with
+      | .f32 a :: vs => .Fallthrough st { s with values := .f32 (f32Ceil a) :: vs }
+      | _ => .Invalid "f32Ceil: ill-shaped operand stack"
+    | _, Instruction.f32Floor => match s.values with
+      | .f32 a :: vs => .Fallthrough st { s with values := .f32 (f32Floor a) :: vs }
+      | _ => .Invalid "f32Floor: ill-shaped operand stack"
+    | _, Instruction.f32Trunc => match s.values with
+      | .f32 a :: vs => .Fallthrough st { s with values := .f32 (f32Trunc a) :: vs }
+      | _ => .Invalid "f32Trunc: ill-shaped operand stack"
+    | _, Instruction.f32Nearest => match s.values with
+      | .f32 a :: vs => .Fallthrough st { s with values := .f32 (f32Nearest a) :: vs }
+      | _ => .Invalid "f32Nearest: ill-shaped operand stack"
+
+    -- f64 unary
+    | _, Instruction.f64Abs => match s.values with
+      | .f64 a :: vs => .Fallthrough st { s with values := .f64 (f64Abs a) :: vs }
+      | _ => .Invalid "f64Abs: ill-shaped operand stack"
+    | _, Instruction.f64Neg => match s.values with
+      | .f64 a :: vs => .Fallthrough st { s with values := .f64 (f64Neg a) :: vs }
+      | _ => .Invalid "f64Neg: ill-shaped operand stack"
+    | _, Instruction.f64Sqrt => match s.values with
+      | .f64 a :: vs => .Fallthrough st { s with values := .f64 (f64Sqrt a) :: vs }
+      | _ => .Invalid "f64Sqrt: ill-shaped operand stack"
+    | _, Instruction.f64Ceil => match s.values with
+      | .f64 a :: vs => .Fallthrough st { s with values := .f64 (f64Ceil a) :: vs }
+      | _ => .Invalid "f64Ceil: ill-shaped operand stack"
+    | _, Instruction.f64Floor => match s.values with
+      | .f64 a :: vs => .Fallthrough st { s with values := .f64 (f64Floor a) :: vs }
+      | _ => .Invalid "f64Floor: ill-shaped operand stack"
+    | _, Instruction.f64Trunc => match s.values with
+      | .f64 a :: vs => .Fallthrough st { s with values := .f64 (f64Trunc a) :: vs }
+      | _ => .Invalid "f64Trunc: ill-shaped operand stack"
+    | _, Instruction.f64Nearest => match s.values with
+      | .f64 a :: vs => .Fallthrough st { s with values := .f64 (f64Nearest a) :: vs }
+      | _ => .Invalid "f64Nearest: ill-shaped operand stack"
+
+    -- f32 comparison (top = `b`, below = `a`; compares `a ⋈ b`)
+    | _, Instruction.f32Eq => match s.values with
+      | .f32 b :: .f32 a :: vs => .Fallthrough st { s with values := .i32 (if f32Eq a b then 1 else 0) :: vs }
+      | _ => .Invalid "f32Eq: ill-shaped operand stack"
+    | _, Instruction.f32Ne => match s.values with
+      | .f32 b :: .f32 a :: vs => .Fallthrough st { s with values := .i32 (if f32Ne a b then 1 else 0) :: vs }
+      | _ => .Invalid "f32Ne: ill-shaped operand stack"
+    | _, Instruction.f32Lt => match s.values with
+      | .f32 b :: .f32 a :: vs => .Fallthrough st { s with values := .i32 (if f32Lt a b then 1 else 0) :: vs }
+      | _ => .Invalid "f32Lt: ill-shaped operand stack"
+    | _, Instruction.f32Gt => match s.values with
+      | .f32 b :: .f32 a :: vs => .Fallthrough st { s with values := .i32 (if f32Gt a b then 1 else 0) :: vs }
+      | _ => .Invalid "f32Gt: ill-shaped operand stack"
+    | _, Instruction.f32Le => match s.values with
+      | .f32 b :: .f32 a :: vs => .Fallthrough st { s with values := .i32 (if f32Le a b then 1 else 0) :: vs }
+      | _ => .Invalid "f32Le: ill-shaped operand stack"
+    | _, Instruction.f32Ge => match s.values with
+      | .f32 b :: .f32 a :: vs => .Fallthrough st { s with values := .i32 (if f32Ge a b then 1 else 0) :: vs }
+      | _ => .Invalid "f32Ge: ill-shaped operand stack"
+
+    -- f64 comparison
+    | _, Instruction.f64Eq => match s.values with
+      | .f64 b :: .f64 a :: vs => .Fallthrough st { s with values := .i32 (if f64Eq a b then 1 else 0) :: vs }
+      | _ => .Invalid "f64Eq: ill-shaped operand stack"
+    | _, Instruction.f64Ne => match s.values with
+      | .f64 b :: .f64 a :: vs => .Fallthrough st { s with values := .i32 (if f64Ne a b then 1 else 0) :: vs }
+      | _ => .Invalid "f64Ne: ill-shaped operand stack"
+    | _, Instruction.f64Lt => match s.values with
+      | .f64 b :: .f64 a :: vs => .Fallthrough st { s with values := .i32 (if f64Lt a b then 1 else 0) :: vs }
+      | _ => .Invalid "f64Lt: ill-shaped operand stack"
+    | _, Instruction.f64Gt => match s.values with
+      | .f64 b :: .f64 a :: vs => .Fallthrough st { s with values := .i32 (if f64Gt a b then 1 else 0) :: vs }
+      | _ => .Invalid "f64Gt: ill-shaped operand stack"
+    | _, Instruction.f64Le => match s.values with
+      | .f64 b :: .f64 a :: vs => .Fallthrough st { s with values := .i32 (if f64Le a b then 1 else 0) :: vs }
+      | _ => .Invalid "f64Le: ill-shaped operand stack"
+    | _, Instruction.f64Ge => match s.values with
+      | .f64 b :: .f64 a :: vs => .Fallthrough st { s with values := .i32 (if f64Ge a b then 1 else 0) :: vs }
+      | _ => .Invalid "f64Ge: ill-shaped operand stack"
+
+    -- Float memory loads / stores. Bytes move unchanged through the same
+    -- little-endian `Mem` words the i32/i64 accesses use.
+    | _, .f32Load off => match s.values with
+      | .i32 a :: vs =>
+        if a.toNat + off.toNat + 4 > st.mem.pages * 65536 then
+          .Trap st "out of bounds memory access"
+        else
+          .Fallthrough st { s with values := .f32 (st.mem.read32 (a + off)) :: vs }
+      | _ => .Invalid "f32Load: ill-shaped operand stack"
+    | _, .f64Load off => match s.values with
+      | .i32 a :: vs =>
+        if a.toNat + off.toNat + 8 > st.mem.pages * 65536 then
+          .Trap st "out of bounds memory access"
+        else
+          .Fallthrough st { s with values := .f64 (st.mem.read64 (a + off)) :: vs }
+      | _ => .Invalid "f64Load: ill-shaped operand stack"
+    | _, .f32Store off => match s.values with
+      | .f32 v :: .i32 a :: vs =>
+        if a.toNat + off.toNat + 4 > st.mem.pages * 65536 then
+          .Trap st "out of bounds memory access"
+        else
+          .Fallthrough { st with mem := st.mem.write32 (a + off) v } { s with values := vs }
+      | _ => .Invalid "f32Store: ill-shaped operand stack"
+    | _, .f64Store off => match s.values with
+      | .f64 v :: .i32 a :: vs =>
+        if a.toNat + off.toNat + 8 > st.mem.pages * 65536 then
+          .Trap st "out of bounds memory access"
+        else
+          .Fallthrough { st with mem := st.mem.write64 (a + off) v } { s with values := vs }
+      | _ => .Invalid "f64Store: ill-shaped operand stack"
+
+    -- Integer → float
+    | _, Instruction.f32ConvertI32S => match s.values with
+      | .i32 a :: vs => .Fallthrough st { s with values := .f32 (f32ConvertI32S a) :: vs }
+      | _ => .Invalid "f32ConvertI32S: ill-shaped operand stack"
+    | _, Instruction.f32ConvertI32U => match s.values with
+      | .i32 a :: vs => .Fallthrough st { s with values := .f32 (f32ConvertI32U a) :: vs }
+      | _ => .Invalid "f32ConvertI32U: ill-shaped operand stack"
+    | _, Instruction.f32ConvertI64S => match s.values with
+      | .i64 a :: vs => .Fallthrough st { s with values := .f32 (f32ConvertI64S a) :: vs }
+      | _ => .Invalid "f32ConvertI64S: ill-shaped operand stack"
+    | _, Instruction.f32ConvertI64U => match s.values with
+      | .i64 a :: vs => .Fallthrough st { s with values := .f32 (f32ConvertI64U a) :: vs }
+      | _ => .Invalid "f32ConvertI64U: ill-shaped operand stack"
+    | _, Instruction.f64ConvertI32S => match s.values with
+      | .i32 a :: vs => .Fallthrough st { s with values := .f64 (f64ConvertI32S a) :: vs }
+      | _ => .Invalid "f64ConvertI32S: ill-shaped operand stack"
+    | _, Instruction.f64ConvertI32U => match s.values with
+      | .i32 a :: vs => .Fallthrough st { s with values := .f64 (f64ConvertI32U a) :: vs }
+      | _ => .Invalid "f64ConvertI32U: ill-shaped operand stack"
+    | _, Instruction.f64ConvertI64S => match s.values with
+      | .i64 a :: vs => .Fallthrough st { s with values := .f64 (f64ConvertI64S a) :: vs }
+      | _ => .Invalid "f64ConvertI64S: ill-shaped operand stack"
+    | _, Instruction.f64ConvertI64U => match s.values with
+      | .i64 a :: vs => .Fallthrough st { s with values := .f64 (f64ConvertI64U a) :: vs }
+      | _ => .Invalid "f64ConvertI64U: ill-shaped operand stack"
+
+    -- Float → integer (trapping). NaN traps "invalid conversion to
+    -- integer"; an out-of-range magnitude traps "integer overflow".
+    | _, Instruction.i32TruncF32S => match s.values with
+      | .f32 a :: vs => match i32TruncF32S a with
+        | some r => .Fallthrough st { s with values := .i32 r :: vs }
+        | none => if (Float32.ofBits a).isNaN then .Trap st "invalid conversion to integer"
+                  else .Trap st "integer overflow"
+      | _ => .Invalid "i32TruncF32S: ill-shaped operand stack"
+    | _, Instruction.i32TruncF32U => match s.values with
+      | .f32 a :: vs => match i32TruncF32U a with
+        | some r => .Fallthrough st { s with values := .i32 r :: vs }
+        | none => if (Float32.ofBits a).isNaN then .Trap st "invalid conversion to integer"
+                  else .Trap st "integer overflow"
+      | _ => .Invalid "i32TruncF32U: ill-shaped operand stack"
+    | _, Instruction.i32TruncF64S => match s.values with
+      | .f64 a :: vs => match i32TruncF64S a with
+        | some r => .Fallthrough st { s with values := .i32 r :: vs }
+        | none => if (Float.ofBits a).isNaN then .Trap st "invalid conversion to integer"
+                  else .Trap st "integer overflow"
+      | _ => .Invalid "i32TruncF64S: ill-shaped operand stack"
+    | _, Instruction.i32TruncF64U => match s.values with
+      | .f64 a :: vs => match i32TruncF64U a with
+        | some r => .Fallthrough st { s with values := .i32 r :: vs }
+        | none => if (Float.ofBits a).isNaN then .Trap st "invalid conversion to integer"
+                  else .Trap st "integer overflow"
+      | _ => .Invalid "i32TruncF64U: ill-shaped operand stack"
+    | _, Instruction.i64TruncF32S => match s.values with
+      | .f32 a :: vs => match i64TruncF32S a with
+        | some r => .Fallthrough st { s with values := .i64 r :: vs }
+        | none => if (Float32.ofBits a).isNaN then .Trap st "invalid conversion to integer"
+                  else .Trap st "integer overflow"
+      | _ => .Invalid "i64TruncF32S: ill-shaped operand stack"
+    | _, Instruction.i64TruncF32U => match s.values with
+      | .f32 a :: vs => match i64TruncF32U a with
+        | some r => .Fallthrough st { s with values := .i64 r :: vs }
+        | none => if (Float32.ofBits a).isNaN then .Trap st "invalid conversion to integer"
+                  else .Trap st "integer overflow"
+      | _ => .Invalid "i64TruncF32U: ill-shaped operand stack"
+    | _, Instruction.i64TruncF64S => match s.values with
+      | .f64 a :: vs => match i64TruncF64S a with
+        | some r => .Fallthrough st { s with values := .i64 r :: vs }
+        | none => if (Float.ofBits a).isNaN then .Trap st "invalid conversion to integer"
+                  else .Trap st "integer overflow"
+      | _ => .Invalid "i64TruncF64S: ill-shaped operand stack"
+    | _, Instruction.i64TruncF64U => match s.values with
+      | .f64 a :: vs => match i64TruncF64U a with
+        | some r => .Fallthrough st { s with values := .i64 r :: vs }
+        | none => if (Float.ofBits a).isNaN then .Trap st "invalid conversion to integer"
+                  else .Trap st "integer overflow"
+      | _ => .Invalid "i64TruncF64U: ill-shaped operand stack"
+
+    -- Float → integer (saturating; never traps)
+    | _, Instruction.i32TruncSatF32S => match s.values with
+      | .f32 a :: vs => .Fallthrough st { s with values := .i32 (i32TruncSatF32S a) :: vs }
+      | _ => .Invalid "i32TruncSatF32S: ill-shaped operand stack"
+    | _, Instruction.i32TruncSatF32U => match s.values with
+      | .f32 a :: vs => .Fallthrough st { s with values := .i32 (i32TruncSatF32U a) :: vs }
+      | _ => .Invalid "i32TruncSatF32U: ill-shaped operand stack"
+    | _, Instruction.i32TruncSatF64S => match s.values with
+      | .f64 a :: vs => .Fallthrough st { s with values := .i32 (i32TruncSatF64S a) :: vs }
+      | _ => .Invalid "i32TruncSatF64S: ill-shaped operand stack"
+    | _, Instruction.i32TruncSatF64U => match s.values with
+      | .f64 a :: vs => .Fallthrough st { s with values := .i32 (i32TruncSatF64U a) :: vs }
+      | _ => .Invalid "i32TruncSatF64U: ill-shaped operand stack"
+    | _, Instruction.i64TruncSatF32S => match s.values with
+      | .f32 a :: vs => .Fallthrough st { s with values := .i64 (i64TruncSatF32S a) :: vs }
+      | _ => .Invalid "i64TruncSatF32S: ill-shaped operand stack"
+    | _, Instruction.i64TruncSatF32U => match s.values with
+      | .f32 a :: vs => .Fallthrough st { s with values := .i64 (i64TruncSatF32U a) :: vs }
+      | _ => .Invalid "i64TruncSatF32U: ill-shaped operand stack"
+    | _, Instruction.i64TruncSatF64S => match s.values with
+      | .f64 a :: vs => .Fallthrough st { s with values := .i64 (i64TruncSatF64S a) :: vs }
+      | _ => .Invalid "i64TruncSatF64S: ill-shaped operand stack"
+    | _, Instruction.i64TruncSatF64U => match s.values with
+      | .f64 a :: vs => .Fallthrough st { s with values := .i64 (i64TruncSatF64U a) :: vs }
+      | _ => .Invalid "i64TruncSatF64U: ill-shaped operand stack"
+
+    -- Float ↔ float, and bitwise reinterpret (a pure retag of the bits)
+    | _, Instruction.f32DemoteF64 => match s.values with
+      | .f64 a :: vs => .Fallthrough st { s with values := .f32 (f32DemoteF64 a) :: vs }
+      | _ => .Invalid "f32DemoteF64: ill-shaped operand stack"
+    | _, Instruction.f64PromoteF32 => match s.values with
+      | .f32 a :: vs => .Fallthrough st { s with values := .f64 (f64PromoteF32 a) :: vs }
+      | _ => .Invalid "f64PromoteF32: ill-shaped operand stack"
+    | _, Instruction.i32ReinterpretF32 => match s.values with
+      | .f32 b :: vs => .Fallthrough st { s with values := .i32 b :: vs }
+      | _ => .Invalid "i32ReinterpretF32: ill-shaped operand stack"
+    | _, Instruction.i64ReinterpretF64 => match s.values with
+      | .f64 b :: vs => .Fallthrough st { s with values := .i64 b :: vs }
+      | _ => .Invalid "i64ReinterpretF64: ill-shaped operand stack"
+    | _, Instruction.f32ReinterpretI32 => match s.values with
+      | .i32 b :: vs => .Fallthrough st { s with values := .f32 b :: vs }
+      | _ => .Invalid "f32ReinterpretI32: ill-shaped operand stack"
+    | _, Instruction.f64ReinterpretI64 => match s.values with
+      | .i64 b :: vs => .Fallthrough st { s with values := .f64 b :: vs }
+      | _ => .Invalid "f64ReinterpretI64: ill-shaped operand stack"
+
     -- Structured control. Stack discipline matches the wasm spec:
     -- on entry, the top `paramArity` values are the construct's inputs;
     -- on a `br` to a `block`/`if` we keep the top `resultArity` values
@@ -706,6 +998,16 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
       | _ => .Invalid "select: ill-shaped operand stack"
     | _, .nop => .Fallthrough st s
     | _, .unreachable => .Trap st "unreachable"
+
+    -- Reference instructions. `funcref` values reuse the existing
+    -- `Value.funcref (Option Nat)` representation, so these never touch the
+    -- store: `refNull`/`refFunc` just push a value, `refIsNull` inspects one.
+    | _, .refNull      => .Fallthrough st { s with values := .funcref none :: s.values }
+    | _, .refFunc fidx => .Fallthrough st { s with values := .funcref (some fidx) :: s.values }
+    | _, .refIsNull => match s.values with
+      | .funcref r :: vs =>
+        .Fallthrough st { s with values := .i32 (if r.isNone then 1 else 0) :: vs }
+      | _ => .Invalid "refIsNull: ill-shaped operand stack"
 
 def exec (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (p : Program)
     (env : HostEnv α := {}) : Continuation α :=
