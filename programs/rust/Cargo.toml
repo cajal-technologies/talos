@@ -14,6 +14,12 @@ members = [
   "xor_sum",
 ]
 
+# The wasm here is a verification subject, not a deployable artifact: keep
+# codegen as close to a direct transpilation of the Rust source as possible.
+# No optimization, no LTO, full debug info (DWARF + name section land in the
+# target/ wasm; the committed program.wasm is still stripped of custom
+# sections by `wasm-tools strip` for reproducibility).
 [profile.release]
-opt-level = "s"
-lto = true
+opt-level = 0
+lto = false
+debug = "full"

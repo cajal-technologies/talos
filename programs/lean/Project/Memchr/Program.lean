@@ -10,46 +10,121 @@ namespace Project.Memchr
 
 open Wasm
 
-/-- export: memchr -/
 def func0 : Wasm.Program :=
   [
-  .const (0 : UInt32),
+  .globalGet 0,
+  .const (32 : UInt32),
+  .sub,
   .localSet 3,
+  .localGet 3,
+  .localGet 0,
+  .store32 (12 : UInt32),
+  .localGet 3,
+  .localGet 1,
+  .store32 (16 : UInt32),
+  .localGet 3,
+  .localGet 2,
+  .store8 (23 : UInt32),
+  .localGet 3,
+  .const (0 : UInt32),
+  .store32 (8 : UInt32),
   .block 0 0 [
-    .localGet 1,
-    .eqz,
-    .br_if 0,
     .loop 0 0 [
+      .block 0 0 [
+        .localGet 3,
+        .load32 (8 : UInt32),
+        .localGet 1,
+        .ltU,
+        .const (1 : UInt32),
+        .and,
+        .br_if 0,
+        .localGet 3,
+        .localGet 1,
+        .store32 (4 : UInt32),
+        .br 2
+      ],
+      .localGet 3,
+      .load32 (8 : UInt32),
+      .localSet 4,
+      .localGet 3,
       .localGet 0,
+      .store32 (24 : UInt32),
       .localGet 3,
-      .add,
-      .load8U (0 : UInt32),
-      .localGet 2,
-      .eq,
-      .br_if 1,
-      .localGet 1,
-      .localGet 3,
-      .const (1 : UInt32),
-      .add,
-      .localSet 3,
-      .localGet 3,
-      .ne,
-      .br_if 0
+      .localGet 4,
+      .store32 (28 : UInt32),
+      .block 0 0 [
+        .localGet 0,
+        .localGet 4,
+        .add,
+        .load8U (0 : UInt32),
+        .const (255 : UInt32),
+        .and,
+        .localGet 2,
+        .const (255 : UInt32),
+        .and,
+        .eq,
+        .const (1 : UInt32),
+        .and,
+        .br_if 0,
+        .localGet 3,
+        .localGet 3,
+        .load32 (8 : UInt32),
+        .const (1 : UInt32),
+        .add,
+        .store32 (8 : UInt32),
+        .br 1
+      ]
     ],
-    .localGet 1,
-    .localSet 3
+    .localGet 3,
+    .localGet 3,
+    .load32 (8 : UInt32),
+    .store32 (4 : UInt32)
   ],
-  .localGet 3
+  .localGet 3,
+  .load32 (4 : UInt32),
+  .ret
+]
+
+/-- export: memchr -/
+def func1 : Wasm.Program :=
+  [
+  .globalGet 0,
+  .const (16 : UInt32),
+  .sub,
+  .localSet 3,
+  .localGet 3,
+  .globalSet 0,
+  .localGet 3,
+  .localGet 0,
+  .store32 (4 : UInt32),
+  .localGet 3,
+  .localGet 1,
+  .store32 (8 : UInt32),
+  .localGet 3,
+  .localGet 2,
+  .store8 (15 : UInt32),
+  .localGet 0,
+  .localGet 1,
+  .localGet 2,
+  .call 0,
+  .localSet 4,
+  .localGet 3,
+  .const (16 : UInt32),
+  .add,
+  .globalSet 0,
+  .localGet 4,
+  .ret
 ]
 
 def «module» : Wasm.Module :=
 {
   imports := [],
   funcs := [
-    { params := [.i32, .i32, .i32], locals := [.i32], body := func0, results := [.i32] }
+    { params := [.i32, .i32, .i32], locals := [.i32, .i32], body := func0, results := [.i32] },
+    { params := [.i32, .i32, .i32], locals := [.i32, .i32], body := func1, results := [.i32] }
   ],
   exports := [
-    { name := "memchr", funcIdx := 0 }
+    { name := "memchr", funcIdx := 1 }
   ],
   memory := some { pagesMin := (16 : UInt32), pagesMax := none, data := [] },
   globals := [
