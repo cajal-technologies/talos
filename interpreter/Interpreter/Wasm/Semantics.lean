@@ -1009,6 +1009,26 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
         .Fallthrough st { s with values := .i32 (if r.isNone then 1 else 0) :: vs }
       | _ => .Invalid "refIsNull: ill-shaped operand stack"
 
+    -- Table read instructions. Both look the runtime table up on the
+    -- store; neither mutates it. An out-of-range *table* index is a
+    -- validation error (`.Invalid`); an out-of-bounds *element* index is a
+    -- genuine runtime trap, with the wasm spec's canonical wording so the
+    -- testsuite's `assert_trap` text matcher accepts it.
+    | _, .tableGet tableIdx => match s.values with
+      | .i32 i :: vs =>
+        match st.tables[tableIdx]? with
+        | none     => .Invalid s!"tableGet: table index {tableIdx} out of range"
+        | some tbl =>
+          match tbl[i.toNat]? with
+          | none   => .Trap st "out of bounds table access"
+          | some r => .Fallthrough st { s with values := .funcref r :: vs }
+      | _ => .Invalid "tableGet: ill-shaped operand stack"
+    | _, .tableSize tableIdx =>
+      match st.tables[tableIdx]? with
+      | none     => .Invalid s!"tableSize: table index {tableIdx} out of range"
+      | some tbl =>
+        .Fallthrough st { s with values := .i32 (UInt32.ofNat tbl.length) :: s.values }
+
 def exec (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (p : Program)
     (env : HostEnv α := {}) : Continuation α :=
   match p with

@@ -649,6 +649,29 @@ macro "wp_atomic" : tactic => `(tactic|
      | _ => Q (.Invalid "refIsNull: ill-shaped operand stack")) := by
   wp_atomic
 
+/-! ## Table instructions -/
+
+@[simp, wp_simp] theorem wp_tableGet_cons :
+    wp m (.tableGet tableIdx :: rest) Q st s env ↔
+    (match s.values with
+     | .i32 i :: vs =>
+       (match st.tables[tableIdx]? with
+        | none     => Q (.Invalid s!"tableGet: table index {tableIdx} out of range")
+        | some tbl =>
+          (match tbl[i.toNat]? with
+           | none   => Q (.Trap st "out of bounds table access")
+           | some r => wp m rest Q st { s with values := .funcref r :: vs } env))
+     | _ => Q (.Invalid "tableGet: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_tableSize_cons :
+    wp m (.tableSize tableIdx :: rest) Q st s env ↔
+    (match st.tables[tableIdx]? with
+     | none     => Q (.Invalid s!"tableSize: table index {tableIdx} out of range")
+     | some tbl =>
+       wp m rest Q st { s with values := .i32 (UInt32.ofNat tbl.length) :: s.values } env) := by
+  wp_atomic
+
 /-! ## Globals -/
 
 @[simp, wp_simp] theorem wp_globalGet_cons :
