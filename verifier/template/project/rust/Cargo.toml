@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["is_even", "is_odd"]
+members = ["is_even"]
 
 [profile.release]
 opt-level = "s"

@@ -232,6 +232,9 @@ private def emitInstrShort : Wasm.Instruction → String
   | .refNull        => ".refNull"
   | .refFunc i      => s!".refFunc {emitNat i}"
   | .refIsNull      => ".refIsNull"
+  -- Tables
+  | .tableGet t     => s!".tableGet {emitNat t}"
+  | .tableSize t    => s!".tableSize {emitNat t}"
   -- Globals
   | .globalGet i    => s!".globalGet {emitNat i}"
   | .globalSet i    => s!".globalSet {emitNat i}"
@@ -420,7 +423,7 @@ message; if the hash disagrees, `#eval` emits an `error` which still
 surfaces. -/
 def driftCheck (relWatPath : String) (watHash : UInt64) : String :=
   String.intercalate "\n" [
-    "/-- Hash of the source `module.wat` captured when `verifier check` last ran. -/",
+    "/-- Hash of the source `module.wat` captured when `verifier emit` last ran. -/",
     s!"private def expectedWatHash : UInt64 := {watHash.toNat}",
     "",
     "-- Compile-time drift check: errors if `module.wat` has changed without a corresponding re-emit.",
@@ -431,7 +434,7 @@ def driftCheck (relWatPath : String) (watHash : UInt64) : String :=
     "  let actual ← IO.FS.readFile path",
     "  if actual.hash ≠ expectedWatHash then",
     "    throw <| IO.userError",
-    s!"      s!\"\{path} has drifted from Program.lean; re-run `lake exe verifier check`.\""
+    s!"      s!\"\{path} has drifted from Program.lean; re-run `lake exe verifier emit`.\""
   ]
 
 end Verifier.Emit

@@ -35,16 +35,16 @@ jobs:
           tool: wasm-tools
 
       # Re-emit every Program.lean from the committed wasm sources.
-      # `--no-build` skips the final `lake build` — proof correctness is
+      # `--no-prove` skips the final `lake build` — proof correctness is
       # covered by the main CI job; here we only check for drift.
       - name: Regenerate programs
         working-directory: programs
-        run: lake -d ../verifier exe verifier check --no-build
+        run: lake -d ../verifier exe verifier check --no-prove
 
       # Fail if any generated file changed.
       - name: Assert no drift
         run: |
           git diff --exit-code -- programs/ \
             || { echo ""; echo "Generated files are out of date. Re-run:"; \
-                 echo "  cd programs && lake -d ../verifier exe verifier check"; \
+                 echo "  cd programs && lake -d ../verifier exe verifier check --no-prove"; \
                  exit 1; }

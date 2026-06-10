@@ -1,11 +1,12 @@
 name = "Project"
 version = "0.1.0"
 defaultTargets = ["Project"]
-packagesDir = "../../../.lake/packages"
 
 [[require]]
 name = "CodeLib"
-path = "../../../codelib"
+git = "https://github.com/cajal-technologies/talos"
+subDir = "codelib"
+rev = "main"
 
 [[lean_lib]]
 name = "Project"
