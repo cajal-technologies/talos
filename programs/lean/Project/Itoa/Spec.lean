@@ -37,12 +37,17 @@ relies on the stack-pointer global, so the property is only meaningful
 relative to a store in which the module's data and globals are
 installed (it is *false* for an arbitrary store, where the table is
 absent). This matches the equivalence-check corpus convention for
-memory/global-touching specs (cf. `xor_sum`). -/
+memory/global-touching specs (cf. `xor_sum`).
+
+Unoptimized (`opt-level=0`) pipeline: the export `check_i64` is
+`func31`, a shadow-stack wrapper that spills its arguments to a frame
+in linear memory and forwards to `func28`, which in turn wraps the
+actual harness `func23`. -/
 @[spec_of "rust-exported" "itoa::check_i64"]
 def CheckI64Spec : Prop :=
   ∀ (env : HostEnv Unit) (initial : Store Unit) (n : UInt64) (cap : UInt32),
     initial = «module».initialStore →
-    TerminatesWith env «module» 7 initial [.i32 cap, .i64 n]
+    TerminatesWith env «module» 31 initial [.i32 cap, .i64 n]
       (fun _ rs => rs = [])
 
 /-- The exported `check_u64` terminates without trapping (and returns no
@@ -56,12 +61,16 @@ host) and `cap : UInt32` is the buffer capacity. As above, the
 Termination-without-trapping is equivalent to the `itoa`-crate and
 naive formatters agreeing on every `(n, cap)` input. As with
 `CheckI64Spec`, the hypothesis `initial = «module».initialStore` makes
-the formatter's `DIGIT_TABLE` and stack-pointer global present. -/
+the formatter's `DIGIT_TABLE` and stack-pointer global present.
+
+Unoptimized (`opt-level=0`) pipeline: the export `check_u64` is
+`func32`, a shadow-stack wrapper forwarding to `func29`, which wraps
+the actual harness `func21`. -/
 @[spec_of "rust-exported" "itoa::check_u64"]
 def CheckU64Spec : Prop :=
   ∀ (env : HostEnv Unit) (initial : Store Unit) (n : UInt64) (cap : UInt32),
     initial = «module».initialStore →
-    TerminatesWith env «module» 8 initial [.i32 cap, .i64 n]
+    TerminatesWith env «module» 32 initial [.i32 cap, .i64 n]
       (fun _ rs => rs = [])
 
 end Project.Itoa.Spec
