@@ -958,4 +958,600 @@ macro "wp_atomic" : tactic => `(tactic|
        wp m rest Q { st with dataSegments := st.dataSegments.set i none } s env) := by
   wp_atomic
 
+/-! ## float constants -/
+
+@[simp, wp_simp] theorem wp_f32Const_cons :
+    wp m (.f32Const v :: rest) Q st s env ↔
+    wp m rest Q st { s with values := .f32 v :: s.values } env := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f64Const_cons :
+    wp m (.f64Const v :: rest) Q st s env ↔
+    wp m rest Q st { s with values := .f64 v :: s.values } env := by
+  wp_atomic
+
+/-! ## f32 arithmetic -/
+
+@[simp, wp_simp] theorem wp_f32Add_cons :
+    wp m (.f32Add :: rest) Q st s env ↔
+    (match s.values with
+     | .f32 b :: .f32 a :: vs => wp m rest Q st { s with values := .f32 (f32Add a b) :: vs } env
+     | _ => Q (.Invalid "f32Add: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f32Sub_cons :
+    wp m (.f32Sub :: rest) Q st s env ↔
+    (match s.values with
+     | .f32 b :: .f32 a :: vs => wp m rest Q st { s with values := .f32 (f32Sub a b) :: vs } env
+     | _ => Q (.Invalid "f32Sub: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f32Mul_cons :
+    wp m (.f32Mul :: rest) Q st s env ↔
+    (match s.values with
+     | .f32 b :: .f32 a :: vs => wp m rest Q st { s with values := .f32 (f32Mul a b) :: vs } env
+     | _ => Q (.Invalid "f32Mul: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f32Div_cons :
+    wp m (.f32Div :: rest) Q st s env ↔
+    (match s.values with
+     | .f32 b :: .f32 a :: vs => wp m rest Q st { s with values := .f32 (f32Div a b) :: vs } env
+     | _ => Q (.Invalid "f32Div: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f32Min_cons :
+    wp m (.f32Min :: rest) Q st s env ↔
+    (match s.values with
+     | .f32 b :: .f32 a :: vs => wp m rest Q st { s with values := .f32 (f32Min a b) :: vs } env
+     | _ => Q (.Invalid "f32Min: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f32Max_cons :
+    wp m (.f32Max :: rest) Q st s env ↔
+    (match s.values with
+     | .f32 b :: .f32 a :: vs => wp m rest Q st { s with values := .f32 (f32Max a b) :: vs } env
+     | _ => Q (.Invalid "f32Max: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f32Copysign_cons :
+    wp m (.f32Copysign :: rest) Q st s env ↔
+    (match s.values with
+     | .f32 b :: .f32 a :: vs => wp m rest Q st { s with values := .f32 (f32Copysign a b) :: vs } env
+     | _ => Q (.Invalid "f32Copysign: ill-shaped operand stack")) := by
+  wp_atomic
+
+/-! ## f64 arithmetic -/
+
+@[simp, wp_simp] theorem wp_f64Add_cons :
+    wp m (.f64Add :: rest) Q st s env ↔
+    (match s.values with
+     | .f64 b :: .f64 a :: vs => wp m rest Q st { s with values := .f64 (f64Add a b) :: vs } env
+     | _ => Q (.Invalid "f64Add: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f64Sub_cons :
+    wp m (.f64Sub :: rest) Q st s env ↔
+    (match s.values with
+     | .f64 b :: .f64 a :: vs => wp m rest Q st { s with values := .f64 (f64Sub a b) :: vs } env
+     | _ => Q (.Invalid "f64Sub: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f64Mul_cons :
+    wp m (.f64Mul :: rest) Q st s env ↔
+    (match s.values with
+     | .f64 b :: .f64 a :: vs => wp m rest Q st { s with values := .f64 (f64Mul a b) :: vs } env
+     | _ => Q (.Invalid "f64Mul: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f64Div_cons :
+    wp m (.f64Div :: rest) Q st s env ↔
+    (match s.values with
+     | .f64 b :: .f64 a :: vs => wp m rest Q st { s with values := .f64 (f64Div a b) :: vs } env
+     | _ => Q (.Invalid "f64Div: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f64Min_cons :
+    wp m (.f64Min :: rest) Q st s env ↔
+    (match s.values with
+     | .f64 b :: .f64 a :: vs => wp m rest Q st { s with values := .f64 (f64Min a b) :: vs } env
+     | _ => Q (.Invalid "f64Min: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f64Max_cons :
+    wp m (.f64Max :: rest) Q st s env ↔
+    (match s.values with
+     | .f64 b :: .f64 a :: vs => wp m rest Q st { s with values := .f64 (f64Max a b) :: vs } env
+     | _ => Q (.Invalid "f64Max: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f64Copysign_cons :
+    wp m (.f64Copysign :: rest) Q st s env ↔
+    (match s.values with
+     | .f64 b :: .f64 a :: vs => wp m rest Q st { s with values := .f64 (f64Copysign a b) :: vs } env
+     | _ => Q (.Invalid "f64Copysign: ill-shaped operand stack")) := by
+  wp_atomic
+
+/-! ## f32 unary -/
+
+@[simp, wp_simp] theorem wp_f32Abs_cons :
+    wp m (.f32Abs :: rest) Q st s env ↔
+    (match s.values with
+     | .f32 a :: vs => wp m rest Q st { s with values := .f32 (f32Abs a) :: vs } env
+     | _ => Q (.Invalid "f32Abs: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f32Neg_cons :
+    wp m (.f32Neg :: rest) Q st s env ↔
+    (match s.values with
+     | .f32 a :: vs => wp m rest Q st { s with values := .f32 (f32Neg a) :: vs } env
+     | _ => Q (.Invalid "f32Neg: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f32Sqrt_cons :
+    wp m (.f32Sqrt :: rest) Q st s env ↔
+    (match s.values with
+     | .f32 a :: vs => wp m rest Q st { s with values := .f32 (f32Sqrt a) :: vs } env
+     | _ => Q (.Invalid "f32Sqrt: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f32Ceil_cons :
+    wp m (.f32Ceil :: rest) Q st s env ↔
+    (match s.values with
+     | .f32 a :: vs => wp m rest Q st { s with values := .f32 (f32Ceil a) :: vs } env
+     | _ => Q (.Invalid "f32Ceil: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f32Floor_cons :
+    wp m (.f32Floor :: rest) Q st s env ↔
+    (match s.values with
+     | .f32 a :: vs => wp m rest Q st { s with values := .f32 (f32Floor a) :: vs } env
+     | _ => Q (.Invalid "f32Floor: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f32Trunc_cons :
+    wp m (.f32Trunc :: rest) Q st s env ↔
+    (match s.values with
+     | .f32 a :: vs => wp m rest Q st { s with values := .f32 (f32Trunc a) :: vs } env
+     | _ => Q (.Invalid "f32Trunc: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f32Nearest_cons :
+    wp m (.f32Nearest :: rest) Q st s env ↔
+    (match s.values with
+     | .f32 a :: vs => wp m rest Q st { s with values := .f32 (f32Nearest a) :: vs } env
+     | _ => Q (.Invalid "f32Nearest: ill-shaped operand stack")) := by
+  wp_atomic
+
+/-! ## f64 unary -/
+
+@[simp, wp_simp] theorem wp_f64Abs_cons :
+    wp m (.f64Abs :: rest) Q st s env ↔
+    (match s.values with
+     | .f64 a :: vs => wp m rest Q st { s with values := .f64 (f64Abs a) :: vs } env
+     | _ => Q (.Invalid "f64Abs: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f64Neg_cons :
+    wp m (.f64Neg :: rest) Q st s env ↔
+    (match s.values with
+     | .f64 a :: vs => wp m rest Q st { s with values := .f64 (f64Neg a) :: vs } env
+     | _ => Q (.Invalid "f64Neg: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f64Sqrt_cons :
+    wp m (.f64Sqrt :: rest) Q st s env ↔
+    (match s.values with
+     | .f64 a :: vs => wp m rest Q st { s with values := .f64 (f64Sqrt a) :: vs } env
+     | _ => Q (.Invalid "f64Sqrt: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f64Ceil_cons :
+    wp m (.f64Ceil :: rest) Q st s env ↔
+    (match s.values with
+     | .f64 a :: vs => wp m rest Q st { s with values := .f64 (f64Ceil a) :: vs } env
+     | _ => Q (.Invalid "f64Ceil: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f64Floor_cons :
+    wp m (.f64Floor :: rest) Q st s env ↔
+    (match s.values with
+     | .f64 a :: vs => wp m rest Q st { s with values := .f64 (f64Floor a) :: vs } env
+     | _ => Q (.Invalid "f64Floor: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f64Trunc_cons :
+    wp m (.f64Trunc :: rest) Q st s env ↔
+    (match s.values with
+     | .f64 a :: vs => wp m rest Q st { s with values := .f64 (f64Trunc a) :: vs } env
+     | _ => Q (.Invalid "f64Trunc: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f64Nearest_cons :
+    wp m (.f64Nearest :: rest) Q st s env ↔
+    (match s.values with
+     | .f64 a :: vs => wp m rest Q st { s with values := .f64 (f64Nearest a) :: vs } env
+     | _ => Q (.Invalid "f64Nearest: ill-shaped operand stack")) := by
+  wp_atomic
+
+/-! ## f32 comparison -/
+
+@[simp, wp_simp] theorem wp_f32Eq_cons :
+    wp m (.f32Eq :: rest) Q st s env ↔
+    (match s.values with
+     | .f32 b :: .f32 a :: vs => wp m rest Q st { s with values := .i32 (if f32Eq a b then 1 else 0) :: vs } env
+     | _ => Q (.Invalid "f32Eq: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f32Ne_cons :
+    wp m (.f32Ne :: rest) Q st s env ↔
+    (match s.values with
+     | .f32 b :: .f32 a :: vs => wp m rest Q st { s with values := .i32 (if f32Ne a b then 1 else 0) :: vs } env
+     | _ => Q (.Invalid "f32Ne: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f32Lt_cons :
+    wp m (.f32Lt :: rest) Q st s env ↔
+    (match s.values with
+     | .f32 b :: .f32 a :: vs => wp m rest Q st { s with values := .i32 (if f32Lt a b then 1 else 0) :: vs } env
+     | _ => Q (.Invalid "f32Lt: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f32Gt_cons :
+    wp m (.f32Gt :: rest) Q st s env ↔
+    (match s.values with
+     | .f32 b :: .f32 a :: vs => wp m rest Q st { s with values := .i32 (if f32Gt a b then 1 else 0) :: vs } env
+     | _ => Q (.Invalid "f32Gt: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f32Le_cons :
+    wp m (.f32Le :: rest) Q st s env ↔
+    (match s.values with
+     | .f32 b :: .f32 a :: vs => wp m rest Q st { s with values := .i32 (if f32Le a b then 1 else 0) :: vs } env
+     | _ => Q (.Invalid "f32Le: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f32Ge_cons :
+    wp m (.f32Ge :: rest) Q st s env ↔
+    (match s.values with
+     | .f32 b :: .f32 a :: vs => wp m rest Q st { s with values := .i32 (if f32Ge a b then 1 else 0) :: vs } env
+     | _ => Q (.Invalid "f32Ge: ill-shaped operand stack")) := by
+  wp_atomic
+
+/-! ## f64 comparison -/
+
+@[simp, wp_simp] theorem wp_f64Eq_cons :
+    wp m (.f64Eq :: rest) Q st s env ↔
+    (match s.values with
+     | .f64 b :: .f64 a :: vs => wp m rest Q st { s with values := .i32 (if f64Eq a b then 1 else 0) :: vs } env
+     | _ => Q (.Invalid "f64Eq: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f64Ne_cons :
+    wp m (.f64Ne :: rest) Q st s env ↔
+    (match s.values with
+     | .f64 b :: .f64 a :: vs => wp m rest Q st { s with values := .i32 (if f64Ne a b then 1 else 0) :: vs } env
+     | _ => Q (.Invalid "f64Ne: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f64Lt_cons :
+    wp m (.f64Lt :: rest) Q st s env ↔
+    (match s.values with
+     | .f64 b :: .f64 a :: vs => wp m rest Q st { s with values := .i32 (if f64Lt a b then 1 else 0) :: vs } env
+     | _ => Q (.Invalid "f64Lt: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f64Gt_cons :
+    wp m (.f64Gt :: rest) Q st s env ↔
+    (match s.values with
+     | .f64 b :: .f64 a :: vs => wp m rest Q st { s with values := .i32 (if f64Gt a b then 1 else 0) :: vs } env
+     | _ => Q (.Invalid "f64Gt: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f64Le_cons :
+    wp m (.f64Le :: rest) Q st s env ↔
+    (match s.values with
+     | .f64 b :: .f64 a :: vs => wp m rest Q st { s with values := .i32 (if f64Le a b then 1 else 0) :: vs } env
+     | _ => Q (.Invalid "f64Le: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f64Ge_cons :
+    wp m (.f64Ge :: rest) Q st s env ↔
+    (match s.values with
+     | .f64 b :: .f64 a :: vs => wp m rest Q st { s with values := .i32 (if f64Ge a b then 1 else 0) :: vs } env
+     | _ => Q (.Invalid "f64Ge: ill-shaped operand stack")) := by
+  wp_atomic
+
+/-! ## float memory -/
+
+@[simp, wp_simp] theorem wp_f32Load_cons :
+    wp m (.f32Load off :: rest) Q st s env ↔
+    (match s.values with
+     | .i32 a :: vs =>
+       if a.toNat + off.toNat + 4 > st.mem.pages * 65536 then
+         Q (.Trap st "out of bounds memory access")
+       else wp m rest Q st { s with values := .f32 (st.mem.read32 (a + off)) :: vs } env
+     | _ => Q (.Invalid "f32Load: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f64Load_cons :
+    wp m (.f64Load off :: rest) Q st s env ↔
+    (match s.values with
+     | .i32 a :: vs =>
+       if a.toNat + off.toNat + 8 > st.mem.pages * 65536 then
+         Q (.Trap st "out of bounds memory access")
+       else wp m rest Q st { s with values := .f64 (st.mem.read64 (a + off)) :: vs } env
+     | _ => Q (.Invalid "f64Load: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f32Store_cons :
+    wp m (.f32Store off :: rest) Q st s env ↔
+    (match s.values with
+     | .f32 v :: .i32 a :: vs =>
+       if a.toNat + off.toNat + 4 > st.mem.pages * 65536 then
+         Q (.Trap st "out of bounds memory access")
+       else wp m rest Q { st with mem := st.mem.write32 (a + off) v } { s with values := vs } env
+     | _ => Q (.Invalid "f32Store: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f64Store_cons :
+    wp m (.f64Store off :: rest) Q st s env ↔
+    (match s.values with
+     | .f64 v :: .i32 a :: vs =>
+       if a.toNat + off.toNat + 8 > st.mem.pages * 65536 then
+         Q (.Trap st "out of bounds memory access")
+       else wp m rest Q { st with mem := st.mem.write64 (a + off) v } { s with values := vs } env
+     | _ => Q (.Invalid "f64Store: ill-shaped operand stack")) := by
+  wp_atomic
+
+/-! ## integer → float conversions -/
+
+@[simp, wp_simp] theorem wp_f32ConvertI32S_cons :
+    wp m (.f32ConvertI32S :: rest) Q st s env ↔
+    (match s.values with
+     | .i32 a :: vs => wp m rest Q st { s with values := .f32 (f32ConvertI32S a) :: vs } env
+     | _ => Q (.Invalid "f32ConvertI32S: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f32ConvertI32U_cons :
+    wp m (.f32ConvertI32U :: rest) Q st s env ↔
+    (match s.values with
+     | .i32 a :: vs => wp m rest Q st { s with values := .f32 (f32ConvertI32U a) :: vs } env
+     | _ => Q (.Invalid "f32ConvertI32U: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f32ConvertI64S_cons :
+    wp m (.f32ConvertI64S :: rest) Q st s env ↔
+    (match s.values with
+     | .i64 a :: vs => wp m rest Q st { s with values := .f32 (f32ConvertI64S a) :: vs } env
+     | _ => Q (.Invalid "f32ConvertI64S: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f32ConvertI64U_cons :
+    wp m (.f32ConvertI64U :: rest) Q st s env ↔
+    (match s.values with
+     | .i64 a :: vs => wp m rest Q st { s with values := .f32 (f32ConvertI64U a) :: vs } env
+     | _ => Q (.Invalid "f32ConvertI64U: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f64ConvertI32S_cons :
+    wp m (.f64ConvertI32S :: rest) Q st s env ↔
+    (match s.values with
+     | .i32 a :: vs => wp m rest Q st { s with values := .f64 (f64ConvertI32S a) :: vs } env
+     | _ => Q (.Invalid "f64ConvertI32S: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f64ConvertI32U_cons :
+    wp m (.f64ConvertI32U :: rest) Q st s env ↔
+    (match s.values with
+     | .i32 a :: vs => wp m rest Q st { s with values := .f64 (f64ConvertI32U a) :: vs } env
+     | _ => Q (.Invalid "f64ConvertI32U: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f64ConvertI64S_cons :
+    wp m (.f64ConvertI64S :: rest) Q st s env ↔
+    (match s.values with
+     | .i64 a :: vs => wp m rest Q st { s with values := .f64 (f64ConvertI64S a) :: vs } env
+     | _ => Q (.Invalid "f64ConvertI64S: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f64ConvertI64U_cons :
+    wp m (.f64ConvertI64U :: rest) Q st s env ↔
+    (match s.values with
+     | .i64 a :: vs => wp m rest Q st { s with values := .f64 (f64ConvertI64U a) :: vs } env
+     | _ => Q (.Invalid "f64ConvertI64U: ill-shaped operand stack")) := by
+  wp_atomic
+
+/-! ## float → integer (trapping) -/
+
+@[simp, wp_simp] theorem wp_i32TruncF32S_cons :
+    wp m (.i32TruncF32S :: rest) Q st s env ↔
+    (match s.values with
+     | .f32 a :: vs =>
+       match i32TruncF32S a with
+       | some r => wp m rest Q st { s with values := .i32 r :: vs } env
+       | none => if (Float32.ofBits a).isNaN then Q (.Trap st "invalid conversion to integer")
+                 else Q (.Trap st "integer overflow")
+     | _ => Q (.Invalid "i32TruncF32S: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_i32TruncF32U_cons :
+    wp m (.i32TruncF32U :: rest) Q st s env ↔
+    (match s.values with
+     | .f32 a :: vs =>
+       match i32TruncF32U a with
+       | some r => wp m rest Q st { s with values := .i32 r :: vs } env
+       | none => if (Float32.ofBits a).isNaN then Q (.Trap st "invalid conversion to integer")
+                 else Q (.Trap st "integer overflow")
+     | _ => Q (.Invalid "i32TruncF32U: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_i32TruncF64S_cons :
+    wp m (.i32TruncF64S :: rest) Q st s env ↔
+    (match s.values with
+     | .f64 a :: vs =>
+       match i32TruncF64S a with
+       | some r => wp m rest Q st { s with values := .i32 r :: vs } env
+       | none => if (Float.ofBits a).isNaN then Q (.Trap st "invalid conversion to integer")
+                 else Q (.Trap st "integer overflow")
+     | _ => Q (.Invalid "i32TruncF64S: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_i32TruncF64U_cons :
+    wp m (.i32TruncF64U :: rest) Q st s env ↔
+    (match s.values with
+     | .f64 a :: vs =>
+       match i32TruncF64U a with
+       | some r => wp m rest Q st { s with values := .i32 r :: vs } env
+       | none => if (Float.ofBits a).isNaN then Q (.Trap st "invalid conversion to integer")
+                 else Q (.Trap st "integer overflow")
+     | _ => Q (.Invalid "i32TruncF64U: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_i64TruncF32S_cons :
+    wp m (.i64TruncF32S :: rest) Q st s env ↔
+    (match s.values with
+     | .f32 a :: vs =>
+       match i64TruncF32S a with
+       | some r => wp m rest Q st { s with values := .i64 r :: vs } env
+       | none => if (Float32.ofBits a).isNaN then Q (.Trap st "invalid conversion to integer")
+                 else Q (.Trap st "integer overflow")
+     | _ => Q (.Invalid "i64TruncF32S: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_i64TruncF32U_cons :
+    wp m (.i64TruncF32U :: rest) Q st s env ↔
+    (match s.values with
+     | .f32 a :: vs =>
+       match i64TruncF32U a with
+       | some r => wp m rest Q st { s with values := .i64 r :: vs } env
+       | none => if (Float32.ofBits a).isNaN then Q (.Trap st "invalid conversion to integer")
+                 else Q (.Trap st "integer overflow")
+     | _ => Q (.Invalid "i64TruncF32U: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_i64TruncF64S_cons :
+    wp m (.i64TruncF64S :: rest) Q st s env ↔
+    (match s.values with
+     | .f64 a :: vs =>
+       match i64TruncF64S a with
+       | some r => wp m rest Q st { s with values := .i64 r :: vs } env
+       | none => if (Float.ofBits a).isNaN then Q (.Trap st "invalid conversion to integer")
+                 else Q (.Trap st "integer overflow")
+     | _ => Q (.Invalid "i64TruncF64S: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_i64TruncF64U_cons :
+    wp m (.i64TruncF64U :: rest) Q st s env ↔
+    (match s.values with
+     | .f64 a :: vs =>
+       match i64TruncF64U a with
+       | some r => wp m rest Q st { s with values := .i64 r :: vs } env
+       | none => if (Float.ofBits a).isNaN then Q (.Trap st "invalid conversion to integer")
+                 else Q (.Trap st "integer overflow")
+     | _ => Q (.Invalid "i64TruncF64U: ill-shaped operand stack")) := by
+  wp_atomic
+
+/-! ## float → integer (saturating) -/
+
+@[simp, wp_simp] theorem wp_i32TruncSatF32S_cons :
+    wp m (.i32TruncSatF32S :: rest) Q st s env ↔
+    (match s.values with
+     | .f32 a :: vs => wp m rest Q st { s with values := .i32 (i32TruncSatF32S a) :: vs } env
+     | _ => Q (.Invalid "i32TruncSatF32S: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_i32TruncSatF32U_cons :
+    wp m (.i32TruncSatF32U :: rest) Q st s env ↔
+    (match s.values with
+     | .f32 a :: vs => wp m rest Q st { s with values := .i32 (i32TruncSatF32U a) :: vs } env
+     | _ => Q (.Invalid "i32TruncSatF32U: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_i32TruncSatF64S_cons :
+    wp m (.i32TruncSatF64S :: rest) Q st s env ↔
+    (match s.values with
+     | .f64 a :: vs => wp m rest Q st { s with values := .i32 (i32TruncSatF64S a) :: vs } env
+     | _ => Q (.Invalid "i32TruncSatF64S: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_i32TruncSatF64U_cons :
+    wp m (.i32TruncSatF64U :: rest) Q st s env ↔
+    (match s.values with
+     | .f64 a :: vs => wp m rest Q st { s with values := .i32 (i32TruncSatF64U a) :: vs } env
+     | _ => Q (.Invalid "i32TruncSatF64U: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_i64TruncSatF32S_cons :
+    wp m (.i64TruncSatF32S :: rest) Q st s env ↔
+    (match s.values with
+     | .f32 a :: vs => wp m rest Q st { s with values := .i64 (i64TruncSatF32S a) :: vs } env
+     | _ => Q (.Invalid "i64TruncSatF32S: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_i64TruncSatF32U_cons :
+    wp m (.i64TruncSatF32U :: rest) Q st s env ↔
+    (match s.values with
+     | .f32 a :: vs => wp m rest Q st { s with values := .i64 (i64TruncSatF32U a) :: vs } env
+     | _ => Q (.Invalid "i64TruncSatF32U: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_i64TruncSatF64S_cons :
+    wp m (.i64TruncSatF64S :: rest) Q st s env ↔
+    (match s.values with
+     | .f64 a :: vs => wp m rest Q st { s with values := .i64 (i64TruncSatF64S a) :: vs } env
+     | _ => Q (.Invalid "i64TruncSatF64S: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_i64TruncSatF64U_cons :
+    wp m (.i64TruncSatF64U :: rest) Q st s env ↔
+    (match s.values with
+     | .f64 a :: vs => wp m rest Q st { s with values := .i64 (i64TruncSatF64U a) :: vs } env
+     | _ => Q (.Invalid "i64TruncSatF64U: ill-shaped operand stack")) := by
+  wp_atomic
+
+/-! ## float ↔ float / reinterpret -/
+
+@[simp, wp_simp] theorem wp_f32DemoteF64_cons :
+    wp m (.f32DemoteF64 :: rest) Q st s env ↔
+    (match s.values with
+     | .f64 a :: vs => wp m rest Q st { s with values := .f32 (f32DemoteF64 a) :: vs } env
+     | _ => Q (.Invalid "f32DemoteF64: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f64PromoteF32_cons :
+    wp m (.f64PromoteF32 :: rest) Q st s env ↔
+    (match s.values with
+     | .f32 a :: vs => wp m rest Q st { s with values := .f64 (f64PromoteF32 a) :: vs } env
+     | _ => Q (.Invalid "f64PromoteF32: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_i32ReinterpretF32_cons :
+    wp m (.i32ReinterpretF32 :: rest) Q st s env ↔
+    (match s.values with
+     | .f32 b :: vs => wp m rest Q st { s with values := .i32 b :: vs } env
+     | _ => Q (.Invalid "i32ReinterpretF32: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_i64ReinterpretF64_cons :
+    wp m (.i64ReinterpretF64 :: rest) Q st s env ↔
+    (match s.values with
+     | .f64 b :: vs => wp m rest Q st { s with values := .i64 b :: vs } env
+     | _ => Q (.Invalid "i64ReinterpretF64: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f32ReinterpretI32_cons :
+    wp m (.f32ReinterpretI32 :: rest) Q st s env ↔
+    (match s.values with
+     | .i32 b :: vs => wp m rest Q st { s with values := .f32 b :: vs } env
+     | _ => Q (.Invalid "f32ReinterpretI32: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_f64ReinterpretI64_cons :
+    wp m (.f64ReinterpretI64 :: rest) Q st s env ↔
+    (match s.values with
+     | .i64 b :: vs => wp m rest Q st { s with values := .f64 b :: vs } env
+     | _ => Q (.Invalid "f64ReinterpretI64: ill-shaped operand stack")) := by
+  wp_atomic
+
 end Wasm
