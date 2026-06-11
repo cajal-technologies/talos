@@ -170,14 +170,21 @@ inductive Instruction where
   | refIsNull : Instruction        -- ref.is_null:   pop a ref, push i32 1 if null else 0
 
   -- Table instructions. The runtime tables live on the `Store` (one
-  -- `TableInst = List (Option Nat)` per declared table). These read them
-  -- without mutating: `table.get t` pops an i32 index `i` and pushes
-  -- `tables[t][i]` as a `funcref` (trapping if `i` is past the table's
-  -- current length); `table.size t` pushes the table's current length as
-  -- an i32. A `tableIdx` that is itself out of range is a validation
-  -- error, not a runtime trap.
+  -- `TableInst = List (Option Nat)` per declared table). `table.get t`
+  -- pops an i32 index `i` and pushes `tables[t][i]` as a `funcref`
+  -- (trapping if `i` is past the table's current length); `table.size t`
+  -- pushes the table's current length as an i32; `table.set t` pops a
+  -- `funcref` and then an i32 index `i` and writes the funcref into
+  -- `tables[t][i]` (trapping if `i` is out of bounds). A `tableIdx` that
+  -- is itself out of range is a validation error, not a runtime trap.
   | tableGet  : Nat → Instruction  -- table.get t
   | tableSize : Nat → Instruction  -- table.size t
+  | tableSet  : Nat → Instruction  -- table.set t
+  | tableGrow : Nat → Instruction  -- table.grow t
+  | tableFill : Nat → Instruction  -- table.fill t
+  | tableCopy : (dstTableIdx srcTableIdx : Nat) → Instruction  -- table.copy dst src
+  | tableInit : (tableIdx segIdx : Nat) → Instruction          -- table.init t e
+  | elemDrop  : Nat → Instruction                               -- elem.drop e
 
   -- i32 memory loads (static byte offset; address popped from stack as i32)
   | load8U  : UInt32 → Instruction  -- i32.load8_u:  zero-extend 1 byte  → i32
@@ -357,7 +364,7 @@ deriving Repr, Inhabited
 
 /-- Runtime representation of a single table: a list of `funcref` slots
 (`none` = null, `some i` = function index `i`). The length is the
-table's current size; we don't model `table.grow`. -/
+table's current size. -/
 abbrev TableInst : Type := List (Option Nat)
 
 /-- The mutable runtime state threaded through execution: module-level

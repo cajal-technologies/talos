@@ -702,11 +702,8 @@ private def stubImmediateCount (op : String) : Option Nat :=
 if op == "ref.test" || op == "ref.cast"
      || op == "br_on_null" || op == "br_on_non_null"
      || op == "return_call" || op == "return_call_ref" || op == "call_ref"
-     || op == "elem.drop" || op == "throw" || op == "tag"
-     -- `table.get`/`table.size` are modelled (see `parseInstr`/`parseFolded`);
-     -- the rest of the table ops are still stubbed.
-     || op == "table.set"
-     || op == "table.grow" || op == "table.fill"
+     || op == "throw" || op == "tag"
+     -- all table ops are now modelled; see `parseInstr`/`parseFolded`.
      || op == "struct.new" || op == "struct.new_default"
      || op == "array.new" || op == "array.new_default" || op == "array.new_fixed"
      -- array element accessors take 1 atom (the array type ref) only;
@@ -730,10 +727,8 @@ if op == "ref.test" || op == "ref.cast"
      || op == "array.copy"
      || op == "array.init_data" || op == "array.init_elem"
   then some 2
-  -- `table.init` and `table.copy` are handled separately by
-  -- `consumeTableBulkAtoms` (0..2 label-looking atoms — wasm-tools'
-  -- canonical print emits 0/1 when default tables are used and 2
-  -- when both tables are named).
+  -- `table.init` and `elem.drop` are now modelled instructions;
+  -- `table.copy` likewise. All have explicit cases in `parseInstr`/`parseFolded`.
   else none
 
 /-- Drop the first `n` atom tokens from `toks`. Errors if a non-atom is
@@ -832,6 +827,17 @@ private def parseOptTableIdx (ctx : Ctx) (mk : Nat → Wasm.Instruction)
     else .ok ([mk 0], .atom a :: rest')
   | rest' => .ok ([mk 0], rest')
 
+/-- Consume one optional table-index atom, returning the resolved index and
+the remaining token stream.  Used by `table.copy` which takes two such
+indices (dst then src), each optional and defaulting to 0. -/
+private def parseOneOptTableIdx (ctx : Ctx)
+    : List Sexpr → Except Err (Nat × List Sexpr)
+  | .atom a :: rest =>
+    if looksLikeLabel a then do
+      .ok ((← resolveNamed ctx.tableNames "table" a), rest)
+    else .ok (0, .atom a :: rest)
+  | rest => .ok (0, rest)
+
 mutual
 
 private partial def parseInstr (ctx : Ctx) (toks : List Sexpr)
@@ -866,10 +872,25 @@ private partial def parseInstr (ctx : Ctx) (toks : List Sexpr)
     | "ref.null"    => match rest with
       | .atom ht :: rest' => .ok ([if isNullFuncrefHeapType ht then .refNull else .unreachable], rest')
       | _ => .error "ref.null expects a heap-type immediate"
-    -- `table.get`/`table.size` carry an *optional* table-index immediate
-    -- (default 0); see `parseOptTableIdx`.
+    -- `table.get`/`table.size`/`table.set` carry an *optional* table-index
+    -- immediate (default 0); see `parseOptTableIdx`.
     | "table.get"   => parseOptTableIdx ctx .tableGet rest
     | "table.size"  => parseOptTableIdx ctx .tableSize rest
+    | "table.set"   => parseOptTableIdx ctx .tableSet rest
+    | "table.grow"  => parseOptTableIdx ctx .tableGrow rest
+    | "table.fill"  => parseOptTableIdx ctx .tableFill rest
+    | "table.copy"  => do
+      let (dst, r1) ← parseOneOptTableIdx ctx rest
+      let (src, r2) ← parseOneOptTableIdx ctx r1
+      .ok ([.tableCopy dst src], r2)
+    | "table.init" => do
+      match rest with
+      | .atom seg :: r1 =>
+        let segIdx ← parseNat seg
+        let (tableIdx, r2) ← parseOneOptTableIdx ctx r1
+        .ok ([.tableInit tableIdx segIdx], r2)
+      | _ => .error "table.init: expected segment index immediate"
+    | "elem.drop"  => parseImmediateNat parseNat .elemDrop op rest
     | "select"    =>
       let rec dropResults : List Sexpr → List Sexpr
         | .list (.atom "result" :: _) :: r => dropResults r
@@ -899,8 +920,6 @@ private partial def parseInstr (ctx : Ctx) (toks : List Sexpr)
           -- immediates so the token stream stays aligned.
           let rest' ← if op == "v128.const" then
             consumeV128ConstImmediates rest
-          else if op == "table.copy" || op == "table.init" then
-            .ok (consumeTableBulkAtoms 2 rest)
           else if op == "br_on_cast" || op == "br_on_cast_fail" then
             consumeBrOnCastImmediates op rest
           else match stubImmediateCount op with
@@ -961,6 +980,12 @@ private partial def parseFolded (ctx : Ctx) (xs : List Sexpr)
       | _ => .error "folded ref.null expects exactly one heap-type immediate"
     | "table.get"   => foldedOptTableIdx ctx .tableGet rest
     | "table.size"  => foldedOptTableIdx ctx .tableSize rest
+    | "table.set"   => foldedOptTableIdx ctx .tableSet rest
+    | "table.grow"  => foldedOptTableIdx ctx .tableGrow rest
+    | "table.fill"  => foldedOptTableIdx ctx .tableFill rest
+    | "table.copy"  => foldedTableCopy ctx rest
+    | "table.init"  => foldedTableInit ctx rest
+    | "elem.drop"   => foldedWithImmediate ctx parseNat (fun i => [.elemDrop i]) rest
     | "call_indirect" | "return_call_indirect" => do
       let (instr, leftover) ← parseCallIndirect ctx rest
       unless leftover.isEmpty do
@@ -1069,6 +1094,38 @@ private partial def foldedOptTableIdx (ctx : Ctx) (mk : Nat → Wasm.Instruction
         acc := acc ++ sub
       | .atom a => .error s!"folded table op: unexpected atom operand '{a}'"
     .ok (acc ++ [mk tableIdx])
+
+/-- Folded form of `table.copy`. Consumes two optional table-index atoms
+(dst then src, both defaulting to 0) then processes the three operand
+sub-expressions. -/
+private partial def foldedTableCopy (ctx : Ctx)
+    : List Sexpr → Except Err (List Wasm.Instruction) := fun xs => do
+  let (dst, r1) ← parseOneOptTableIdx ctx xs
+  let (src, r2) ← parseOneOptTableIdx ctx r1
+  let mut acc : List Wasm.Instruction := []
+  for s in r2 do
+    match s with
+    | .list ys =>
+      let sub ← parseFolded ctx ys
+      acc := acc ++ sub
+    | .atom a => .error s!"folded table.copy: unexpected atom operand '{a}'"
+  .ok (acc ++ [.tableCopy dst src])
+
+private partial def foldedTableInit (ctx : Ctx)
+    : List Sexpr → Except Err (List Wasm.Instruction) := fun xs => do
+  match xs with
+  | .atom seg :: rest =>
+    let segIdx ← parseNat seg
+    let (tableIdx, r2) ← parseOneOptTableIdx ctx rest
+    let mut acc : List Wasm.Instruction := []
+    for s in r2 do
+      match s with
+      | .list ys =>
+        let sub ← parseFolded ctx ys
+        acc := acc ++ sub
+      | .atom a => .error s!"folded table.init: unexpected atom operand '{a}'"
+    .ok (acc ++ [.tableInit tableIdx segIdx])
+  | _ => .error "folded table.init: expected segment index immediate"
 
 private partial def parseBrTable (ctx : Ctx) (toks : List Sexpr)
     : Except Err (List Wasm.Instruction × List Sexpr) := do
