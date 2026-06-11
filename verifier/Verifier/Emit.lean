@@ -235,6 +235,12 @@ private def emitInstrShort : Wasm.Instruction → String
   -- Tables
   | .tableGet t     => s!".tableGet {emitNat t}"
   | .tableSize t    => s!".tableSize {emitNat t}"
+  | .tableSet t     => s!".tableSet {emitNat t}"
+  | .tableGrow t    => s!".tableGrow {emitNat t}"
+  | .tableFill t    => s!".tableFill {emitNat t}"
+  | .tableCopy d s  => s!".tableCopy {emitNat d} {emitNat s}"
+  | .tableInit t e  => s!".tableInit {emitNat t} {emitNat e}"
+  | .elemDrop e     => s!".elemDrop {emitNat e}"
   -- Globals
   | .globalGet i    => s!".globalGet {emitNat i}"
   | .globalSet i    => s!".globalSet {emitNat i}"

@@ -1009,10 +1009,9 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
         .Fallthrough st { s with values := .i32 (if r.isNone then 1 else 0) :: vs }
       | _ => .Invalid "refIsNull: ill-shaped operand stack"
 
-    -- Table read instructions. Both look the runtime table up on the
-    -- store; neither mutates it. An out-of-range *table* index is a
-    -- validation error (`.Invalid`); an out-of-bounds *element* index is a
-    -- genuine runtime trap, with the wasm spec's canonical wording so the
+    -- Table instructions. An out-of-range *table* index is a validation
+    -- error (`.Invalid`); an out-of-bounds *element* index is a genuine
+    -- runtime trap, with the wasm spec's canonical wording so the
     -- testsuite's `assert_trap` text matcher accepts it.
     | _, .tableGet tableIdx => match s.values with
       | .i32 i :: vs =>
@@ -1028,6 +1027,95 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
       | none     => .Invalid s!"tableSize: table index {tableIdx} out of range"
       | some tbl =>
         .Fallthrough st { s with values := .i32 (UInt32.ofNat tbl.length) :: s.values }
+    | _, .tableSet tableIdx => match s.values with
+      | .funcref r :: .i32 i :: vs =>
+        match st.tables[tableIdx]? with
+        | none     => .Invalid s!"tableSet: table index {tableIdx} out of range"
+        | some tbl =>
+          match tbl[i.toNat]? with
+          | none   => .Trap st "out of bounds table access"
+          | some _ =>
+            let tbl' := tbl.set i.toNat r
+            .Fallthrough { st with tables := st.tables.set tableIdx tbl' }
+                         { s with values := vs }
+      | _ => .Invalid "tableSet: ill-shaped operand stack"
+    | _, .tableGrow tableIdx => match s.values with
+      | .i32 delta :: .funcref r :: vs =>
+        match st.tables[tableIdx]? with
+        | none => .Invalid s!"tableGrow: table index {tableIdx} out of range"
+        | some tbl =>
+          match m.tables[tableIdx]? >>= (·.max) with
+          | none =>
+            .Fallthrough { st with tables := st.tables.set tableIdx (tbl ++ List.replicate delta.toNat r) }
+                         { s with values := .i32 (UInt32.ofNat tbl.length) :: vs }
+          | some n =>
+            if tbl.length + delta.toNat ≤ n then
+              .Fallthrough { st with tables := st.tables.set tableIdx (tbl ++ List.replicate delta.toNat r) }
+                           { s with values := .i32 (UInt32.ofNat tbl.length) :: vs }
+            else
+              .Fallthrough st { s with values := .i32 (0xFFFFFFFF : UInt32) :: vs }
+      | _ => .Invalid "tableGrow: ill-shaped operand stack"
+    | _, .tableFill tableIdx => match s.values with
+      | .i32 len :: .funcref val :: .i32 idx :: vs =>
+        match st.tables[tableIdx]? with
+        | none => .Invalid s!"tableFill: table index {tableIdx} out of range"
+        | some tbl =>
+          if idx.toNat + len.toNat > tbl.length then
+            .Trap st "out of bounds table access"
+          else
+            let tbl' := tbl.take idx.toNat ++ List.replicate len.toNat val ++ tbl.drop (idx.toNat + len.toNat)
+            .Fallthrough { st with tables := st.tables.set tableIdx tbl' }
+                         { s with values := vs }
+      | _ => .Invalid "tableFill: ill-shaped operand stack"
+    -- table.copy dst src: pops i32 len (top), i32 src_offset, i32 dst_offset.
+    -- Reads from srcTable[src..src+len) and writes to dstTable[dst..dst+len).
+    -- Trap is checked atomically before any write.  Same-table overlap is
+    -- handled correctly because srcSlice is extracted from the original table.
+    | _, .tableCopy dstTableIdx srcTableIdx => match s.values with
+      | .i32 len :: .i32 src :: .i32 dst :: vs =>
+        match st.tables[dstTableIdx]? with
+        | none => .Invalid s!"tableCopy: dst table index {dstTableIdx} out of range"
+        | some dstTbl =>
+          match st.tables[srcTableIdx]? with
+          | none => .Invalid s!"tableCopy: src table index {srcTableIdx} out of range"
+          | some srcTbl =>
+            if dst.toNat + len.toNat > dstTbl.length ∨ src.toNat + len.toNat > srcTbl.length then
+              .Trap st "out of bounds table access"
+            else
+              let srcSlice := (srcTbl.drop src.toNat).take len.toNat
+              let dstTbl' := dstTbl.take dst.toNat ++ srcSlice ++ dstTbl.drop (dst.toNat + len.toNat)
+              .Fallthrough { st with tables := st.tables.set dstTableIdx dstTbl' }
+                           { s with values := vs }
+      | _ => .Invalid "tableCopy: ill-shaped operand stack"
+
+    | _, .tableInit tableIdx segIdx => match s.values with
+      | .i32 len :: .i32 src :: .i32 dst :: vs =>
+        match st.tables[tableIdx]? with
+        | none => .Invalid s!"tableInit: table index {tableIdx} out of range"
+        | some dstTbl =>
+          match st.elementSegments[segIdx]? with
+          | none => .Invalid s!"tableInit: segment index {segIdx} out of range"
+          | some none =>
+            if 0 < len.toNat ∨ dst.toNat + len.toNat > dstTbl.length then
+              .Trap st "out of bounds table access"
+            else
+              .Fallthrough st { s with values := vs }
+          | some (some funcs) =>
+            if src.toNat + len.toNat > funcs.length
+               ∨ dst.toNat + len.toNat > dstTbl.length then
+              .Trap st "out of bounds table access"
+            else
+              let srcSlice := (funcs.drop src.toNat).take len.toNat
+              let dstTbl' := dstTbl.take dst.toNat ++ srcSlice ++ dstTbl.drop (dst.toNat + len.toNat)
+              .Fallthrough { st with tables := st.tables.set tableIdx dstTbl' }
+                           { s with values := vs }
+      | _ => .Invalid "tableInit: ill-shaped operand stack"
+    | _, .elemDrop i =>
+      match st.elementSegments[i]? with
+      | none => .Invalid s!"elemDrop: segment index {i} out of range"
+      | some _ =>
+        let elementSegments' := st.elementSegments.set i none
+        .Fallthrough { st with elementSegments := elementSegments' } s
 
 def exec (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (p : Program)
     (env : HostEnv α := {}) : Continuation α :=
