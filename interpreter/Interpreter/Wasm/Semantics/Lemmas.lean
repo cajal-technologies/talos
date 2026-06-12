@@ -205,6 +205,18 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
                             ihRun m env fid st rest k' hk' hrun]
                         · simp only [execOne, hvals, hv, htbl, hslot, hslot', hr,
                             hfn, hty, if_neg hsig]
+      | memOp kIdx inner =>
+        rcases hmem : st.extraMems[kIdx - 1]? with _ | memK
+        · simp only [execOne, hmem]
+        · rcases hdecl : m.extraMemories[kIdx - 1]? with _ | declK
+          · simp only [execOne, hmem, hdecl]
+          · have hin : execOne k { m with memory := some declK }
+                { st with mem := memK } s inner env ≠ .OutOfFuel := by
+              intro h; apply hne
+              simp only [execOne, hmem, hdecl, h]
+            simp only [execOne, hmem, hdecl,
+              ihOne { m with memory := some declK } env { st with mem := memK }
+                s inner k' hk' hin]
       | _ => simp only [execOne]
     -- Step 2: prove exec at fuel k+1 using monoOne.
     have monoExec :

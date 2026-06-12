@@ -45,13 +45,6 @@ register" rather than "read this many bytes of linear memory". When used
 as an output `register_id`, the same value means "discard the output". -/
 def u64Max : UInt64 := 0xFFFFFFFFFFFFFFFF
 
-/-- Read `len` consecutive bytes of linear memory starting at byte offset
-`off`. Total (out-of-range addresses read whatever `bytes` returns there);
-callers bounds-check first. The `List.range`-map shape is the canonical
-"easy to `simp`/compute through" form, matching `Mem.fill`/`Mem.copy`. -/
-def Mem.readBytes (m : Mem) (off len : Nat) : List UInt8 :=
-  (List.range len).map (fun i => m.bytes (off + i))
-
 /-- Immutable per-call NEAR context. Account ids and `input` are raw byte
 strings (NEAR account ids are UTF-8; contract input is opaque bytes,
 conventionally JSON or Borsh). `attachedDeposit` is a yoctoNEAR `u128`,

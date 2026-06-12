@@ -1195,6 +1195,47 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
         let dataSegments' := st.dataSegments.set i none
         .Fallthrough { st with dataSegments := dataSegments' } s
 
+    -- Multi-memory. Swap memory `k` (and its declaration) into the
+    -- default slot, run the wrapped memory instruction, then swap the
+    -- (possibly written) memory back into `extraMems`. The wrapped
+    -- instruction never breaks/returns, so only `Fallthrough` and `Trap`
+    -- carry a store to map back.
+    | f + 1, .memOp k inner =>
+      match st.extraMems[k - 1]?, m.extraMemories[k - 1]? with
+      | some memK, some declK =>
+        let stIn : Store α := { st with mem := memK }
+        let mIn : Module := { m with memory := some declK }
+        let restore (st' : Store α) : Store α :=
+          { st' with mem := st.mem, extraMems := st.extraMems.set (k - 1) st'.mem }
+        match execOne f mIn stIn s inner env with
+        | .Fallthrough st' s' => .Fallthrough (restore st') s'
+        | .Trap st' msg       => .Trap (restore st') msg
+        | other               => other
+      | _, _ => .Invalid s!"memOp: memory index {k} out of range"
+
+    -- Cross-memory memory.copy (multi-memory). Each address operand is
+    -- read by its runtime width (i32 or i64, per its memory's declared
+    -- address type); bounds are checked in ℕ before any write.
+    | _, .memoryCopyBetween dstMem srcMem => match s.values with
+      | lenV :: srcV :: dstV :: vs =>
+        match lenV.addrNat?, srcV.addrNat?, dstV.addrNat? with
+        | some len, some src, some dst =>
+          let memOf : Nat → Option Mem := fun k =>
+            if k = 0 then some st.mem else st.extraMems[k - 1]?
+          match memOf dstMem, memOf srcMem with
+          | some dMem, some sMem =>
+            if dst + len > dMem.pages * 65536 ∨ src + len > sMem.pages * 65536 then
+              .Trap st "out of bounds memory access"
+            else
+              let dMem' := dMem.writeBytes dst (sMem.readBytes src len)
+              let st' :=
+                if dstMem = 0 then { st with mem := dMem' }
+                else { st with extraMems := st.extraMems.set (dstMem - 1) dMem' }
+              .Fallthrough st' { s with values := vs }
+          | _, _ => .Invalid "memoryCopyBetween: memory index out of range"
+        | _, _, _ => .Invalid "memoryCopyBetween: ill-shaped operand stack"
+      | _ => .Invalid "memoryCopyBetween: ill-shaped operand stack"
+
     -- SIMD (v128). Lane semantics live in `Interpreter.Wasm.Simd`; the
     -- arms here only manage the operand stack and (for the memory
     -- variants) the usual Nat-domain bounds checks. A v128 occupies 16

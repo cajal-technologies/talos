@@ -414,6 +414,9 @@ structure Ctx where
   /-- `$name → element segment index` for `(elem $name ...)` declarations,
   so `table.init` / `elem.drop` can resolve symbolic segment refs. -/
   elemNames        : Std.HashMap String Nat := {}
+  /-- `$name → memory index` for `(memory $name ...)` declarations
+  (multi-memory). -/
+  memNames         : Std.HashMap String Nat := {}
   /-- Resolves `(type N)` / `(type $sig)` references on `block`/`loop`/`if`
   to the parsed signature, so multi-value block-types declared via the
   type table are decoded with their correct arity. Defaults to "always
@@ -532,10 +535,6 @@ private def parsePlainOp : String → Except Err Wasm.Instruction
   | "select"    => .ok .select
   | "nop"       => .ok .nop
   | "unreachable" => .ok .unreachable
-  | "memory.size"  => .ok .memorySize
-  | "memory.grow"  => .ok .memoryGrow
-  | "memory.fill"  => .ok .memoryFill
-  | "memory.copy"  => .ok .memoryCopy
   -- f32 arithmetic / unary / comparison
   | "f32.add" => .ok .f32Add
   | "f32.sub" => .ok .f32Sub
@@ -1022,6 +1021,52 @@ private def parseTableInit (ctx : Ctx)
     else .error "table.init expects an element-segment immediate"
   | _ => .error "table.init expects an element-segment immediate"
 
+/-- Wrap a memory instruction for a non-default memory (multi-memory). -/
+private def wrapMem (k : Nat) (i : Wasm.Instruction) : Wasm.Instruction :=
+  if k = 0 then i else .memOp k i
+
+/-- Parse the optional memory-index immediate of `memory.size` /
+`memory.grow` / `memory.fill` (default 0), wrapping for non-default
+memories. -/
+private def parseOptMemIdx (ctx : Ctx) (i : Wasm.Instruction)
+    : List Sexpr → Except Err (List Wasm.Instruction × List Sexpr)
+  | .atom a :: rest' =>
+    if looksLikeLabel a then do
+      .ok ([wrapMem (← resolveNamed ctx.memNames "memory" a) i], rest')
+    else .ok ([i], .atom a :: rest')
+  | rest' => .ok ([i], rest')
+
+/-- `memory.copy` carries 0 or 2 memory-index immediates. Distinct (or
+non-default) memories decode to the cross-memory instruction. -/
+private def parseMemCopy (ctx : Ctx)
+    : List Sexpr → Except Err (List Wasm.Instruction × List Sexpr)
+  | .atom a :: .atom b :: rest' =>
+    if looksLikeLabel a && looksLikeLabel b then do
+      let d ← resolveNamed ctx.memNames "memory" a
+      let sM ← resolveNamed ctx.memNames "memory" b
+      if d = 0 && sM = 0 then .ok ([.memoryCopy], rest')
+      else .ok ([.memoryCopyBetween d sM], rest')
+    else .ok ([.memoryCopy], .atom a :: .atom b :: rest')
+  | rest' => .ok ([.memoryCopy], rest')
+
+/-- `memory.init` carries 1 or 2 immediates: `dataIdx` alone for the
+default memory, or `memIdx dataIdx`. -/
+private def parseMemInit (ctx : Ctx)
+    : List Sexpr → Except Err (List Wasm.Instruction × List Sexpr)
+  | .atom a :: .atom b :: rest' =>
+    if looksLikeLabel a && looksLikeLabel b then do
+      let k ← resolveNamed ctx.memNames "memory" a
+      let d ← parseNat b
+      .ok ([wrapMem k (.memoryInit d)], rest')
+    else if looksLikeLabel a then do
+      .ok ([.memoryInit (← parseNat a)], .atom b :: rest')
+    else .error "memory.init expects a data-segment immediate"
+  | .atom a :: rest' =>
+    if looksLikeLabel a then do
+      .ok ([.memoryInit (← parseNat a)], rest')
+    else .error "memory.init expects a data-segment immediate"
+  | _ => .error "memory.init expects a data-segment immediate"
+
 mutual
 
 private partial def parseInstr (ctx : Ctx) (toks : List Sexpr)
@@ -1047,7 +1092,11 @@ private partial def parseInstr (ctx : Ctx) (toks : List Sexpr)
     | "br_table"  => parseBrTable ctx rest
     | "call"      => parseImmediateNat (resolveNamed ctx.funcIds "function") .call op rest
     | "call_indirect" | "return_call_indirect" => parseCallIndirect ctx rest
-    | "memory.init" => parseImmediateNat parseNat .memoryInit op rest
+    | "memory.size" => parseOptMemIdx ctx .memorySize rest
+    | "memory.grow" => parseOptMemIdx ctx .memoryGrow rest
+    | "memory.fill" => parseOptMemIdx ctx .memoryFill rest
+    | "memory.copy" => parseMemCopy ctx rest
+    | "memory.init" => parseMemInit ctx rest
     | "data.drop"   => parseImmediateNat parseNat .dataDrop   op rest
     | "ref.func"    => parseImmediateNat (resolveNamed ctx.funcIds "function") .refFunc op rest
     -- `ref.null ht` carries a heap-type immediate. `func`-like heap types
@@ -1095,18 +1144,37 @@ private partial def parseInstr (ctx : Ctx) (toks : List Sexpr)
       | none =>
       match isMemOp op with
       | some na => do
-        let (offset, rest') ← consumeMemAttrs na rest
+        -- Optional memory-index immediate (multi-memory) before the
+        -- offset/align attributes: `i32.load $mem1 offset=1`.
+        let (lead?, rest0) : Option String × List Sexpr := match rest with
+          | .atom a :: r => if looksLikeLabel a then (some a, r) else (none, rest)
+          | r => (none, r)
+        let (offset, rest') ← consumeMemAttrs na rest0
         -- v128 lane-load/store ops carry an additional lane-index atom
-        -- after the offset/align attrs.
+        -- after the offset/align attrs. The grammar is
+        -- `memidx? memarg laneidx`, so for lane ops two bare atoms mean
+        -- memidx-then-lane and a single bare atom is just the lane.
         if op.endsWith "_lane" && op.startsWith "v128." then
-          match rest' with
-          | .atom n :: rest'' =>
+          match lead?, rest' with
+          | some a, .atom n :: rest'' =>
+            let memIdx ← resolveNamed ctx.memNames "memory" a
+            match memLaneOpToInstruction op offset (← parseNat n) with
+            | some i => .ok ([wrapMem memIdx i], rest'')
+            | none   => .error s!"unknown lane memory op: {op}"
+          | some a, rest'' =>
+            match memLaneOpToInstruction op offset (← parseNat a) with
+            | some i => .ok ([i], rest'')
+            | none   => .error s!"unknown lane memory op: {op}"
+          | none, .atom n :: rest'' =>
             match memLaneOpToInstruction op offset (← parseNat n) with
             | some i => .ok ([i], rest'')
             | none   => .error s!"unknown lane memory op: {op}"
-          | _ => .error s!"{op} expects a lane immediate"
-        else
-          .ok ([memOpToInstruction op offset], rest')
+          | none, _ => .error s!"{op} expects a lane immediate"
+        else do
+          let memIdx ← match lead? with
+            | some a => resolveNamed ctx.memNames "memory" a
+            | none   => pure 0
+          .ok ([wrapMem memIdx (memOpToInstruction op offset)], rest')
       | none =>
         match simdOp? op with
         | some i => .ok ([i], rest)
@@ -1166,7 +1234,6 @@ private partial def parseFolded (ctx : Ctx) (xs : List Sexpr)
     | "br_table" => foldedBrTable ctx rest
     | "select" => foldedSelect ctx rest
     | "call"  => foldedWithImmediate ctx (resolveNamed ctx.funcIds "function") (fun i => [.call i]) rest
-    | "memory.init" => foldedWithImmediate ctx parseNat (fun i => [.memoryInit i]) rest
     | "data.drop"   => foldedWithImmediate ctx parseNat (fun i => [.dataDrop i])   rest
     | "ref.func"    =>
       foldedWithImmediate ctx (resolveNamed ctx.funcIds "function") (fun i => [.refFunc i]) rest
@@ -1602,6 +1669,7 @@ private def parseFunc (funcIds : Std.HashMap String Nat)
     (globalIds : Std.HashMap String Nat)
     (tableNames : Std.HashMap String Nat)
     (elemNames : Std.HashMap String Nat)
+    (memNames : Std.HashMap String Nat)
     (types : Array TypeEntry) (xs : List Sexpr)
     : Except Err FuncDecl := do
   let mut paramTypes : List Wasm.ValueType := []
@@ -1713,7 +1781,8 @@ private def parseFunc (funcIds : Std.HashMap String Nat)
     match resolveTypeRef types ref with
     | .ok sig  => some sig
     | .error _ => none
-  let ctx : Ctx := { funcIds, localIds, globalIds, types, tableNames, elemNames, resolveBlockType }
+  let ctx : Ctx := { funcIds, localIds, globalIds, types, tableNames, elemNames,
+                     memNames, resolveBlockType }
   let instrs ← parseInstrSeq ctx rest
   return { symId, inlineExports,
            func := {
@@ -1850,6 +1919,13 @@ private def parseMemDecl (xs : List Sexpr) : Except Err Wasm.MemDecl := do
   let xs := match xs with
     | .atom a :: r => if a.startsWith "$" then r else xs
     | _ => xs
+  -- Skip inline `(export "n")` annotations and an `(import "m" "n")`
+  -- form (an imported memory decodes as a fresh local memory with the
+  -- declared bounds until cross-module linking is supported).
+  let xs := xs.dropWhile fun
+    | .list (.atom "export" :: _) => true
+    | .list (.atom "import" :: _) => true
+    | _ => false
   -- Optional explicit address type: `i64` selects a 64-bit (memory64)
   -- memory; `i32` is accepted for symmetry and means the default.
   let (is64, xs) : Bool × List Sexpr := match xs with
@@ -1873,15 +1949,21 @@ private def parseMemDecl (xs : List Sexpr) : Except Err Wasm.MemDecl := do
 
 /-- Parse a `(data ...)` body. Active segments produce `offset := some n`;
 passive segments (no offset expression) produce `offset := none`. -/
-private def parseDataSegment (xs : List Sexpr) : Except Err Wasm.DataSegment := do
-  -- Strip optional segment id ($name) or memory index (bare number).
+private def parseDataSegment (memNames : Std.HashMap String Nat)
+    (xs : List Sexpr) : Except Err Wasm.DataSegment := do
+  -- Strip an optional segment id ($name).
   let xs := match xs with
-    | .atom a :: r => if a.startsWith "$" || a.all Char.isDigit then r else xs
+    | .atom a :: r => if a.startsWith "$" then r else xs
     | _ => xs
-  -- Strip optional explicit `(memory N)` reference.
-  let xs := match xs with
-    | .list (.atom "memory" :: _) :: r => r
-    | _ => xs
+  -- Optional target memory (multi-memory): a bare index or an explicit
+  -- `(memory N|$name)` form.
+  let (memIdx, xs) ← match xs with
+    | .atom a :: r =>
+      if a.all Char.isDigit then do pure ((← parseNat a), r)
+      else pure ((0 : Nat), .atom a :: r)
+    | .list [.atom "memory", .atom mref] :: r => do
+      pure ((← resolveNamed memNames "memory" mref), r)
+    | r => pure ((0 : Nat), r)
   -- Extract the offset constant; passive segments have no offset form.
   -- Non-`i32.const` offset expressions (e.g. `(global.get N)` pointing
   -- at an imported global) are accepted with a 0 placeholder so the
@@ -1915,7 +1997,7 @@ private def parseDataSegment (xs : List Sexpr) : Except Err Wasm.DataSegment := 
     match tok with
     | .atom s => bytes := bytes ++ (← parseWatString s)
     | _ => .error "data segment: expected string literal(s)"
-  .ok { offset, bytes }
+  .ok { offset, bytes, memIdx }
 
 /-- Collect names declared by `(table $name ...)` forms in source order.
 Same pattern as `collectFuncNames` / `collectGlobalNames`. -/
@@ -1925,6 +2007,23 @@ private def collectTableNames (fields : List Sexpr) : Std.HashMap String Nat := 
   for f in fields do
     match f with
     | .list (.atom "table" :: body) =>
+      match body with
+      | .atom a :: _ =>
+        if a.startsWith "$" then
+          idOf := idOf.insert (a.drop 1).toString i
+      | _ => pure ()
+      i := i + 1
+    | _ => pure ()
+  return idOf
+
+/-- Collect names declared by `(memory $name ...)` forms in source order
+(multi-memory). -/
+private def collectMemNames (fields : List Sexpr) : Std.HashMap String Nat := Id.run do
+  let mut idOf : Std.HashMap String Nat := {}
+  let mut i := 0
+  for f in fields do
+    match f with
+    | .list (.atom "memory" :: body) =>
       match body with
       | .atom a :: _ =>
         if a.startsWith "$" then
@@ -2225,10 +2324,12 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
   let globalIds ← collectGlobalNames rest
   let tableNames := collectTableNames rest
   let elemNames := collectElemNames rest
+  let memNames := collectMemNames rest
   let mut decls : Array FuncDecl := #[]
   let mut topExports : Array (String × String) := #[]
   let mut globalDecls : Array Wasm.GlobalDecl := #[]
   let mut memDecl : Option Wasm.MemDecl := none
+  let mut extraMemDecls : Array Wasm.MemDecl := #[]
   let mut dataSegs : Array Wasm.DataSegment := #[]
   let mut tableDecls : Array Wasm.TableDecl := #[]
   let mut elemSegs   : Array Wasm.ElementSegment := #[]
@@ -2236,7 +2337,8 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
   for f in rest do
     match f with
     | .list (.atom "func" :: body) =>
-      decls := decls.push (← parseFunc funcIds globalIds tableNames elemNames types body)
+      decls := decls.push
+        (← parseFunc funcIds globalIds tableNames elemNames memNames types body)
     | .list (.atom "export" :: tail) =>
       match tail with
       | [.atom name, .list [.atom "func", .atom ref]] =>
@@ -2249,10 +2351,13 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
     | .list (.atom "global" :: body) =>
       globalDecls := globalDecls.push (← parseGlobalDecl funcIds body)
     | .list (.atom "memory" :: body) =>
-      if memDecl.isSome then throw "duplicate (memory ...) declaration"
-      memDecl := some (← parseMemDecl body)
+      -- Multi-memory: the first declaration is the default memory, the
+      -- rest land in `extraMemories` (memory index k = extraMemories[k-1]).
+      match memDecl with
+      | none   => memDecl := some (← parseMemDecl body)
+      | some _ => extraMemDecls := extraMemDecls.push (← parseMemDecl body)
     | .list (.atom "data" :: body) =>
-      dataSegs := dataSegs.push (← parseDataSegment body)
+      dataSegs := dataSegs.push (← parseDataSegment memNames body)
     | .list (.atom "table" :: body) =>
       let (td, inlineSeg?) ← parseTableDecl funcIds tableDecls.size body
       tableDecls := tableDecls.push td
@@ -2302,6 +2407,7 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
            exports  := exports.toList
            globals  := globalDecls.toList
            memory   := finalMem
+           extraMemories := extraMemDecls.toList
            imports
            startFunc
            types    := moduleTypes

@@ -160,6 +160,11 @@ def Mem.writeBytes (m : Mem) (offset : Nat) (data : List UInt8) : Mem :=
           exact this)
       else m.bytes i }
 
+/-- Read `len` bytes starting at byte offset `offset`. Used by the
+cross-memory `memory.copy`; the caller checks bounds. -/
+def Mem.readBytes (m : Mem) (offset len : Nat) : List UInt8 :=
+  (List.range len).map fun i => m.bytes (offset + i)
+
 /-- Write a slice of `src` into memory at `dst`. The byte at address
 `dst + k` (for `0 ≤ k < len`) is `src[srcOff + k]`. The caller is
 responsible for bounds — both `dst + len ≤ pages * 65536` and

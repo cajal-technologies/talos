@@ -67,6 +67,14 @@ def Value.scalarBitsFor? : Simd.Shape → Value → Option Nat
   | .f64x2, .f64 x => some x.toNat
   | _,      _      => none
 
+/-- The address payload of an `i32` or `i64` operand as a `Nat`. Wasm's
+64-bit address types (memory64) make the operand width per-memory; bulk
+ops with several address operands accept each one by its runtime type. -/
+def Value.addrNat? : Value → Option Nat
+  | .i32 a => some a.toNat
+  | .i64 a => some a.toNat
+  | _      => none
+
 /-- A size/length result, typed by the owning memory/table's address
 type: `i64` for 64-bit memories/tables (memory64 proposal), `i32`
 otherwise. Used by `memory.size`, `table.size`, and the grow results. -/
@@ -304,6 +312,19 @@ inductive Instruction where
   -- can read from it). Idempotent.
   | dataDrop : Nat → Instruction
 
+  -- Multi-memory. `memOp k op` runs the memory instruction `op` against
+  -- memory index `k ≥ 1` (`Store.extraMems[k-1]`): the interpreter swaps
+  -- that memory (and its declaration) into the default slot, runs `op`,
+  -- and swaps the result back. The decoder only wraps memory
+  -- instructions, and only when the index is non-zero.
+  | memOp : (memIdx : Nat) → Instruction → Instruction
+
+  -- memory.copy d s with distinct memories (multi-memory): pops
+  -- [len, src, dst] (top = len; each i32 or i64 per its memory's address
+  -- type) and copies from memory `s` to memory `d`, with both bounds
+  -- checked before any write.
+  | memoryCopyBetween : (dstMem srcMem : Nat) → Instruction
+
   -- SIMD (v128). Lane-level semantics live in `Interpreter.Wasm.Simd`;
   -- the constructors here group the proposal's ~240 mnemonics by
   -- operand/result shape. Memory variants mirror the scalar load/store
@@ -373,6 +394,9 @@ a *passive* segment carries `offset := none` and stays available to
 structure DataSegment where
   offset : Option UInt32
   bytes  : List UInt8
+  /-- Target memory index (multi-memory): 0 is the default memory, k ≥ 1
+  the k-th extra memory (`Module.extraMemories[k-1]`). -/
+  memIdx : Nat := 0
 deriving Repr, Inhabited
 
 /-- Declaration of a single linear memory. Wasm allows at most one
@@ -443,6 +467,11 @@ structure Module where
   funcs    : List Function
   exports  : List Export := []
   memory   : Option MemDecl := none
+  /-- Additional memories (multi-memory proposal), in declaration order:
+  memory index `k ≥ 1` is `extraMemories[k-1]`. Their active data
+  segments live in `memory`'s (global, source-ordered) `data` list,
+  routed by `DataSegment.memIdx`. -/
+  extraMemories : List MemDecl := []
   globals  : List GlobalDecl := []
   /-- Imported functions, in declaration order. See `ImportDecl` for the
   index-space convention. Empty for modules with no imports. -/
@@ -480,6 +509,9 @@ logger, etc. No schema is baked into the Wasm core. -/
 structure Store (α : Type) where
   globals         : Globals
   mem             : Mem
+  /-- Runtime instances of the module's `extraMemories` (multi-memory):
+  memory index `k ≥ 1` is `extraMems[k-1]`. -/
+  extraMems       : List Mem := []
   dataSegments    : List (Option (List UInt8)) := []
   /-- Runtime tables. Same length and source order as the declaring
   module's `tables`; entry `t` has size at least `tables[t].min`. -/
@@ -527,21 +559,32 @@ passive/declarative segments are stashed in `elementSegments` for
 0-page memory. -/
 def Module.initialStore [Inhabited α] (m : Module) : Store α :=
   let globals : Globals := { globals := m.globals.map (·.init) }
+  -- Apply the active data segments targeting memory `idx` to `m0`.
+  -- Segments live in one global, source-ordered list (memory 0's
+  -- `data`); `DataSegment.memIdx` routes each to its memory.
+  let applySegs (segs : List DataSegment) (idx : Nat) (m0 : Mem) : Mem :=
+    segs.foldl
+      (fun acc seg => match seg.offset with
+        | some off =>
+          if seg.memIdx = idx then acc.writeBytes off.toNat seg.bytes else acc
+        | none     => acc)
+      m0
+  let allSegs : List DataSegment := match m.memory with
+    | some decl => decl.data
+    | none      => []
   let (mem, dataSegments) : Mem × List (Option (List UInt8)) :=
     match m.memory with
     | none      => (Mem.empty 0, [])
     | some decl =>
-      let m0 := Mem.empty decl.pagesMin.toNat
-      let mem : Mem := decl.data.foldl
-        (fun acc seg => match seg.offset with
-          | some off => acc.writeBytes off.toNat seg.bytes
-          | none     => acc)
-        m0
+      let mem : Mem := applySegs decl.data 0 (Mem.empty decl.pagesMin.toNat)
       let dataSegments : List (Option (List UInt8)) :=
         decl.data.map fun seg => match seg.offset with
           | some _ => none           -- active: auto-dropped after init
           | none   => some seg.bytes -- passive: available to memory.init
       (mem, dataSegments)
+  -- Extra memories (multi-memory): memory k = extraMems[k-1].
+  let extraMems : List Mem := m.extraMemories.zipIdx.map fun (decl, i) =>
+    applySegs allSegs (i + 1) (Mem.empty decl.pagesMin.toNat)
   -- Allocate tables filled with the element type's null ref at the
   -- declared minimum size.
   let baseTables : List TableInst :=
@@ -562,7 +605,7 @@ def Module.initialStore [Inhabited α] (m : Module) : Store α :=
     m.elements.map fun seg => match seg.offset with
       | some _ => none           -- active: auto-dropped
       | none   => some seg.funcs -- passive / declarative
-  { globals, mem, dataSegments, tables, elementSegments, host := default }
+  { globals, mem, extraMems, dataSegments, tables, elementSegments, host := default }
 
 /-- Maximum number of pages an i32-indexed memory can hold (2^16, or 4 GiB).
 This is the wasm spec hard ceiling; `memory.grow` may not exceed it
