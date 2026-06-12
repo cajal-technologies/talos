@@ -126,6 +126,22 @@ private def parseValueAt (ty val : String) : Except String Value :=
     | _ => match val.toNat? with
       | some n => .ok (.f64 (UInt64.ofNat (n % 18446744073709551616)))
       | none   => .error s!"unparseable f64 value `{val}`"
+  -- Reference values: `wast2json` encodes the payload as a decimal host
+  -- index or the string `null`. `(ref.func)`-style "any non-null ref"
+  -- expectations carry no usable payload and surface as parse errors,
+  -- which the caller reports as skipped/unsupported rather than failed.
+  | "externref" =>
+    match val with
+    | "null" => .ok (.externref none)
+    | _ => match val.toNat? with
+      | some n => .ok (.externref (some n))
+      | none   => .error s!"unparseable externref value `{val}`"
+  | "funcref" =>
+    match val with
+    | "null" => .ok (.funcref none)
+    | _ => match val.toNat? with
+      | some n => .ok (.funcref (some n))
+      | none   => .error s!"unparseable funcref value `{val}`"
   | other => .error s!"non-integer value type `{other}`"
 
 private def parseValue (j : Json) : Except String Value :=
@@ -221,6 +237,8 @@ private def renderValue : Value → String
   | .f64 b           => s!"f64:{Float.ofBits b}"
   | .funcref none    => "funcref:null"
   | .funcref (some i) => s!"funcref:{i}"
+  | .externref none    => "externref:null"
+  | .externref (some i) => s!"externref:{i}"
 
 /-- Render a `List Value`, truncating runs longer than `maxLen` (the
 interpreter occasionally leaves big stacks around on failure and that

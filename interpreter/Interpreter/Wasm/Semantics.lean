@@ -733,10 +733,12 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
         | none     => .Invalid s!"callIndirect: table index {tableIdx} out of range"
         | some tbl =>
           match tbl[i.toNat]? with
-          | none           => .Trap st "undefined element"
-          | some none      => .Trap st "uninitialized element"
-          | some (some fid) =>
-            match m.funcs[fid]? with
+          | none                       => .Trap st "undefined element"
+          | some (.funcref none)       => .Trap st "uninitialized element"
+          | some (.funcref (some fid)) =>
+            -- Signature lookup is in the *unified* function index space
+            -- (imports first), matching what the table entry refers to.
+            match m.funcSig? fid with
             | none    => .Invalid s!"callIndirect: function index {fid} out of range"
             | some fn =>
               match m.types[typeIdx]? with
@@ -749,6 +751,7 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
                   | .Invalid msg    => .Invalid msg
                   | .OutOfFuel      => .OutOfFuel
                 else .Trap st "indirect call type mismatch"
+          | some _ => .Invalid "callIndirect: non-funcref table entry"
       | _ => .Invalid "callIndirect: ill-shaped operand stack"
 
     -- Memory load / store. Every access traps when
@@ -999,13 +1002,17 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
     | _, .nop => .Fallthrough st s
     | _, .unreachable => .Trap st "unreachable"
 
-    -- Reference instructions. `funcref` values reuse the existing
-    -- `Value.funcref (Option Nat)` representation, so these never touch the
-    -- store: `refNull`/`refFunc` just push a value, `refIsNull` inspects one.
-    | _, .refNull      => .Fallthrough st { s with values := .funcref none :: s.values }
-    | _, .refFunc fidx => .Fallthrough st { s with values := .funcref (some fidx) :: s.values }
+    -- Reference instructions. Reference values are carried directly on
+    -- the operand stack (`Value.funcref` / `Value.externref`), so these
+    -- never touch the store: the null/func constructors just push a
+    -- value, `refIsNull` inspects one.
+    | _, .refNull       => .Fallthrough st { s with values := .funcref none :: s.values }
+    | _, .refNullExtern => .Fallthrough st { s with values := .externref none :: s.values }
+    | _, .refFunc fidx  => .Fallthrough st { s with values := .funcref (some fidx) :: s.values }
     | _, .refIsNull => match s.values with
       | .funcref r :: vs =>
+        .Fallthrough st { s with values := .i32 (if r.isNone then 1 else 0) :: vs }
+      | .externref r :: vs =>
         .Fallthrough st { s with values := .i32 (if r.isNone then 1 else 0) :: vs }
       | _ => .Invalid "refIsNull: ill-shaped operand stack"
 
@@ -1021,13 +1028,105 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
         | some tbl =>
           match tbl[i.toNat]? with
           | none   => .Trap st "out of bounds table access"
-          | some r => .Fallthrough st { s with values := .funcref r :: vs }
+          | some r => .Fallthrough st { s with values := r :: vs }
       | _ => .Invalid "tableGet: ill-shaped operand stack"
     | _, .tableSize tableIdx =>
       match st.tables[tableIdx]? with
       | none     => .Invalid s!"tableSize: table index {tableIdx} out of range"
       | some tbl =>
         .Fallthrough st { s with values := .i32 (UInt32.ofNat tbl.length) :: s.values }
+
+    -- table.set t: pops [val(ref), idx(i32)] (top = val).
+    | _, .tableSet tableIdx => match s.values with
+      | v :: .i32 i :: vs =>
+        match st.tables[tableIdx]? with
+        | none     => .Invalid s!"tableSet: table index {tableIdx} out of range"
+        | some tbl =>
+          if i.toNat < tbl.length then
+            let tables' := listSetAt st.tables tableIdx (listSetAt tbl i.toNat v)
+            .Fallthrough { st with tables := tables' } { s with values := vs }
+          else .Trap st "out of bounds table access"
+      | _ => .Invalid "tableSet: ill-shaped operand stack"
+
+    -- table.grow t: pops [delta(i32), init(ref)] (top = delta). Pushes
+    -- the old size on success, -1 on failure. Growth past the declared
+    -- max (or the implementation ceiling, see `Module.tableCap`) fails.
+    | _, .tableGrow tableIdx => match s.values with
+      | .i32 delta :: init :: vs =>
+        match st.tables[tableIdx]? with
+        | none     => .Invalid s!"tableGrow: table index {tableIdx} out of range"
+        | some tbl =>
+          let cur := tbl.length
+          if cur + delta.toNat ≤ m.tableCap tableIdx then
+            let tables' := listSetAt st.tables tableIdx
+              (tbl ++ List.replicate delta.toNat init)
+            .Fallthrough { st with tables := tables' }
+              { s with values := .i32 (UInt32.ofNat cur) :: vs }
+          else
+            .Fallthrough st { s with values := .i32 (0xFFFFFFFF : UInt32) :: vs }
+      | _ => .Invalid "tableGrow: ill-shaped operand stack"
+
+    -- table.fill t: pops [len(i32), val(ref), dst(i32)] (top = len).
+    -- Bounds are checked before any write, matching the spec's atomicity.
+    | _, .tableFill tableIdx => match s.values with
+      | .i32 len :: v :: .i32 dst :: vs =>
+        match st.tables[tableIdx]? with
+        | none     => .Invalid s!"tableFill: table index {tableIdx} out of range"
+        | some tbl =>
+          if dst.toNat + len.toNat > tbl.length then
+            .Trap st "out of bounds table access"
+          else
+            let tbl' := listWriteAt tbl dst.toNat (List.replicate len.toNat v)
+            .Fallthrough { st with tables := listSetAt st.tables tableIdx tbl' }
+              { s with values := vs }
+      | _ => .Invalid "tableFill: ill-shaped operand stack"
+
+    -- table.copy d s: pops [len(i32), src(i32), dst(i32)] (top = len).
+    -- The source slice is captured before the write, so overlapping
+    -- ranges behave like memmove, as the spec requires.
+    | _, .tableCopy dstIdx srcIdx => match s.values with
+      | .i32 len :: .i32 src :: .i32 dst :: vs =>
+        match st.tables[dstIdx]?, st.tables[srcIdx]? with
+        | some dstTbl, some srcTbl =>
+          if dst.toNat + len.toNat > dstTbl.length
+             ∨ src.toNat + len.toNat > srcTbl.length then
+            .Trap st "out of bounds table access"
+          else
+            let slice := (srcTbl.drop src.toNat).take len.toNat
+            let dstTbl' := listWriteAt dstTbl dst.toNat slice
+            .Fallthrough { st with tables := listSetAt st.tables dstIdx dstTbl' }
+              { s with values := vs }
+        | _, _ => .Invalid s!"tableCopy: table index out of range"
+      | _ => .Invalid "tableCopy: ill-shaped operand stack"
+
+    -- table.init t e: pops [len(i32), src(i32), dst(i32)] (top = len).
+    -- A dropped segment behaves as length 0; bounds are checked before
+    -- any write.
+    | _, .tableInit tableIdx elemIdx => match s.values with
+      | .i32 len :: .i32 src :: .i32 dst :: vs =>
+        match st.tables[tableIdx]? with
+        | none     => .Invalid s!"tableInit: table index {tableIdx} out of range"
+        | some tbl =>
+          match st.elementSegments[elemIdx]? with
+          | none => .Invalid s!"tableInit: segment index {elemIdx} out of range"
+          | some seg =>
+            let segFuncs := seg.getD []
+            if src.toNat + len.toNat > segFuncs.length
+               ∨ dst.toNat + len.toNat > tbl.length then
+              .Trap st "out of bounds table access"
+            else
+              let slice := ((segFuncs.drop src.toNat).take len.toNat).map Value.funcref
+              let tbl' := listWriteAt tbl dst.toNat slice
+              .Fallthrough { st with tables := listSetAt st.tables tableIdx tbl' }
+                { s with values := vs }
+      | _ => .Invalid "tableInit: ill-shaped operand stack"
+
+    -- elem.drop e: mark element segment `e` as dropped. Idempotent.
+    | _, .elemDrop elemIdx =>
+      match st.elementSegments[elemIdx]? with
+      | none => .Invalid s!"elemDrop: segment index {elemIdx} out of range"
+      | some _ =>
+        .Fallthrough { st with elementSegments := st.elementSegments.set elemIdx none } s
 
 def exec (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (p : Program)
     (env : HostEnv α := {}) : Continuation α :=

@@ -121,6 +121,7 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
           | f32 _ => rfl
           | f64 _ => rfl
           | funcref _ => rfl
+          | externref _ => rfl
       | call id =>
         simp only [execOne]
         have hrun : run k m id st s.values env ≠ .OutOfFuel := by
@@ -140,28 +141,36 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
           | f32 _    => simp only [execOne, hvals, hv]
           | f64 _    => simp only [execOne, hvals, hv]
           | funcref _ => simp only [execOne, hvals, hv]
+          | externref _ => simp only [execOne, hvals, hv]
           | i32 i =>
             rcases htbl : st.tables[tj]? with _ | tbl
             · simp only [execOne, hvals, hv, htbl]
             · rcases hslot : tbl[i.toNat]? with _ | slot
               · simp only [execOne, hvals, hv, htbl, hslot]
-              · rcases hslot' : slot with _ | fid
-                · simp only [execOne, hvals, hv, htbl, hslot, hslot']
-                · rcases hfn : m.funcs[fid]? with _ | fn
-                  · simp only [execOne, hvals, hv, htbl, hslot, hslot', hfn]
-                  · rcases hty : m.types[ti]? with _ | ty
-                    · simp only [execOne, hvals, hv, htbl, hslot, hslot', hfn, hty]
-                    · by_cases hsig :
-                          fn.params = ty.params ∧ fn.results = ty.results
-                      · have hrun : run k m fid st rest env ≠ .OutOfFuel := by
-                          intro h; apply hne
-                          simp only [execOne, hvals, hv, htbl, hslot, hslot',
-                            hfn, hty, if_pos hsig, h]
-                        simp only [execOne, hvals, hv, htbl, hslot, hslot',
-                          hfn, hty, if_pos hsig,
-                          ihRun m env fid st rest k' hk' hrun]
-                      · simp only [execOne, hvals, hv, htbl, hslot, hslot',
-                          hfn, hty, if_neg hsig]
+              · cases hslot' : slot with
+                | i32 _ => simp only [execOne, hvals, hv, htbl, hslot, hslot']
+                | i64 _ => simp only [execOne, hvals, hv, htbl, hslot, hslot']
+                | f32 _ => simp only [execOne, hvals, hv, htbl, hslot, hslot']
+                | f64 _ => simp only [execOne, hvals, hv, htbl, hslot, hslot']
+                | externref _ => simp only [execOne, hvals, hv, htbl, hslot, hslot']
+                | funcref r =>
+                  rcases hr : r with _ | fid
+                  · simp only [execOne, hvals, hv, htbl, hslot, hslot', hr]
+                  · rcases hfn : m.funcSig? fid with _ | fn
+                    · simp only [execOne, hvals, hv, htbl, hslot, hslot', hr, hfn]
+                    · rcases hty : m.types[ti]? with _ | ty
+                      · simp only [execOne, hvals, hv, htbl, hslot, hslot', hr, hfn, hty]
+                      · by_cases hsig :
+                            fn.params = ty.params ∧ fn.results = ty.results
+                        · have hrun : run k m fid st rest env ≠ .OutOfFuel := by
+                            intro h; apply hne
+                            simp only [execOne, hvals, hv, htbl, hslot, hslot', hr,
+                              hfn, hty, if_pos hsig, h]
+                          simp only [execOne, hvals, hv, htbl, hslot, hslot', hr,
+                            hfn, hty, if_pos hsig,
+                            ihRun m env fid st rest k' hk' hrun]
+                        · simp only [execOne, hvals, hv, htbl, hslot, hslot', hr,
+                            hfn, hty, if_neg hsig]
       | _ => simp only [execOne]
     -- Step 2: prove exec at fuel k+1 using monoOne.
     have monoExec :
@@ -323,11 +332,11 @@ theorem exec_callIndirect_cons {α : Type}
     {m : Module} {env : HostEnv α} {st : Store α} {s : Locals}
     {ti tj : Nat} {rest : Program} {fuel : Nat}
     {i : UInt32} {vs0 : List Value}
-    {tbl : TableInst} {fid : Nat} {fn : Function} {ty : FuncType}
+    {tbl : TableInst} {fid : Nat} {fn : FuncType} {ty : FuncType}
     (hStack : s.values = .i32 i :: vs0)
     (hTbl  : st.tables[tj]? = some tbl)
-    (hSlot : tbl[i.toNat]? = some (some fid))
-    (hFn   : m.funcs[fid]? = some fn)
+    (hSlot : tbl[i.toNat]? = some (.funcref (some fid)))
+    (hFn   : m.funcSig? fid = some fn)
     (hTy   : m.types[ti]? = some ty)
     (hSig  : fn.params = ty.params ∧ fn.results = ty.results) :
     exec (fuel + 1) m st s (.callIndirect ti tj :: rest) env =

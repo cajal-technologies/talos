@@ -32,7 +32,7 @@ namespace Wasm
 
 /-- `TableProbe` reads table 0 three ways: it asks whether slot 2 is null
 (`table.get` then `ref.is_null`) and then pushes the table's size. Run
-against a table `[some 0, some 1, none]` it leaves the operand stack
+against a table `[.funcref (some 0), .funcref (some 1), .funcref none]` it leaves the operand stack
 `[.i32 3, .i32 1]` (top first): slot 2 is null so `ref.is_null ⇒ 1`, and
 the table has length 3. -/
 def TableProbe : Program := [
@@ -42,7 +42,7 @@ def TableProbe : Program := [
 ]
 
 theorem tableProbeSpec (m : Module) (st : Store Unit)
-    (htbl : st.tables = [[some 0, some 1, none]]) :
+    (htbl : st.tables = [[.funcref (some 0), .funcref (some 1), .funcref none]]) :
     wp m TableProbe
         (fun c => c = .Fallthrough st
                     { params := [], locals := [], values := [.i32 3, .i32 1] })
@@ -86,11 +86,11 @@ fallback above; `Instruction` has no `DecidableEq`, so we check a
 decidable projection rather than the bodies directly). -/
 theorem decodes_five_funcs : decoded.funcs.length = 5 := by native_decide
 
-/-- The active element segment populates table 0 as `[some 0, some 1, none]`:
+/-- The active element segment populates table 0 as funcrefs `[some 0, some 1, none]`:
 slots 0 and 1 reference `$f0`/`$f1`, slot 2 stays null. This pins down the
 `(elem (i32.const 0) $f0 $f1)` decode and the initial-store construction. -/
 theorem table_populated :
-    (decoded.initialStore (α := Unit)).tables = [[some 0, some 1, none]] := by
+    (decoded.initialStore (α := Unit)).tables = [[.funcref (some 0), .funcref (some 1), .funcref none]] := by
   native_decide
 
 private def runVals (idx : Nat) (args : List Value) : List Value :=

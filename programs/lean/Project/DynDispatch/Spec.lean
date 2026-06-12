@@ -99,8 +99,8 @@ private theorem dispatch_dyn (sel x : UInt32) :
         show S.mem.read32 ((1048580 : UInt32) + 12) = 1 from by native_decide]
     apply wp_callIndirect_tw
       (i := 1) (vs0 := [.i32 x, .i32 1048576])
-      (tbl := [none, some 3, some 4]) (fid := 3)
-      (fn := { params := [.i32, .i32], locals := [], body := func3, results := [.i32] })
+      (tbl := [.funcref none, .funcref (some 3), .funcref (some 4)]) (fid := 3)
+      (fn := { params := [.i32, .i32], results := [.i32] })
       (ty := { params := [.i32, .i32], results := [.i32] })
       (Post := fun st rs => rs = [.i32 (S.mem.read32 1048576 + x)] ∧ st = S)
     · rfl
@@ -123,8 +123,8 @@ private theorem dispatch_dyn (sel x : UInt32) :
         show S.mem.read32 ((1048600 : UInt32) + 12) = 2 from by native_decide]
     apply wp_callIndirect_tw
       (i := 2) (vs0 := [.i32 x, .i32 1048596])
-      (tbl := [none, some 3, some 4]) (fid := 4)
-      (fn := { params := [.i32, .i32], locals := [], body := func4, results := [.i32] })
+      (tbl := [.funcref none, .funcref (some 3), .funcref (some 4)]) (fid := 4)
+      (fn := { params := [.i32, .i32], results := [.i32] })
       (ty := { params := [.i32, .i32], results := [.i32] })
       (Post := fun st rs => rs = [.i32 (S.mem.read32 1048596 * x)] ∧ st = S)
     · rfl

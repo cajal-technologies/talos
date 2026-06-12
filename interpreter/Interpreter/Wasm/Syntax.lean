@@ -17,6 +17,7 @@ inductive ValueType where
   | f32
   | f64
   | funcref
+  | externref
 deriving Repr, Inhabited, DecidableEq, BEq
 
 inductive Value where
@@ -29,16 +30,23 @@ inductive Value where
   /-- A `funcref`: `none` is the null ref; `some i` is a reference to
   function index `i` in the enclosing module's function space. -/
   | funcref (idx : Option Nat)
+  /-- An `externref`: `none` is the null ref; `some n` is an opaque
+  host reference distinguished only by its identity `n`. The wasm core
+  never inspects the payload — it only moves externrefs around (locals,
+  globals, tables, `select`) and tests them for null. -/
+  | externref (idx : Option Nat)
 deriving Repr, Inhabited, DecidableEq, BEq
 
 /-- Type-indexed zero used to initialise locals at function entry. The
-zero for a float is `+0.0` (all-zero bits); for `funcref` the null reference. -/
+zero for a float is `+0.0` (all-zero bits); for a reference type the
+null reference of that type. -/
 def ValueType.zero : ValueType → Value
-  | .i32     => .i32 0
-  | .i64     => .i64 0
-  | .f32     => .f32 0
-  | .f64     => .f64 0
-  | .funcref => .funcref none
+  | .i32       => .i32 0
+  | .i64       => .i64 0
+  | .f32       => .f32 0
+  | .f64       => .f64 0
+  | .funcref   => .funcref none
+  | .externref => .externref none
 
 /-- Module-level globals. Indexed by position in the module's globals list. -/
 structure Globals where
@@ -166,18 +174,50 @@ inductive Instruction where
   -- function index `i`). These produce and test such values; none of them
   -- touch the store.
   | refNull   : Instruction        -- ref.null func: push the null funcref
+  | refNullExtern : Instruction    -- ref.null extern: push the null externref
   | refFunc   : Nat → Instruction  -- ref.func i:    push a reference to function `i`
   | refIsNull : Instruction        -- ref.is_null:   pop a ref, push i32 1 if null else 0
 
   -- Table instructions. The runtime tables live on the `Store` (one
-  -- `TableInst = List (Option Nat)` per declared table). These read them
-  -- without mutating: `table.get t` pops an i32 index `i` and pushes
-  -- `tables[t][i]` as a `funcref` (trapping if `i` is past the table's
-  -- current length); `table.size t` pushes the table's current length as
-  -- an i32. A `tableIdx` that is itself out of range is a validation
-  -- error, not a runtime trap.
+  -- `TableInst = List Value`, holding reference values, per declared
+  -- table). `table.get t` pops an i32 index `i` and pushes `tables[t][i]`
+  -- (trapping if `i` is past the table's current length); `table.size t`
+  -- pushes the table's current length as an i32. A `tableIdx` that is
+  -- itself out of range is a validation error, not a runtime trap.
   | tableGet  : Nat → Instruction  -- table.get t
   | tableSize : Nat → Instruction  -- table.size t
+
+  -- table.set t: pops [val(ref), idx(i32)] (top = val) and writes
+  -- `tables[t][idx] := val`, trapping "out of bounds table access" if
+  -- `idx` is past the table's current length.
+  | tableSet  : Nat → Instruction
+
+  -- table.grow t: pops [delta(i32), init(ref)] (top = delta). On success
+  -- the table is extended by `delta` copies of `init` and the *old* size
+  -- is pushed; on failure (past the declared max, or past the
+  -- implementation's growth ceiling — the spec permits growth to fail)
+  -- pushes -1.
+  | tableGrow : Nat → Instruction
+
+  -- table.fill t: pops [len(i32), val(ref), dst(i32)] (top = len) and
+  -- writes `val` into `tables[t][dst, dst+len)`. Traps "out of bounds
+  -- table access" before any write if `dst+len` exceeds the table size.
+  | tableFill : Nat → Instruction
+
+  -- table.copy d s: pops [len(i32), src(i32), dst(i32)] (top = len) and
+  -- copies `tables[s][src, src+len)` to `tables[d][dst, dst+len)` with
+  -- memmove semantics. Traps before any write if either range escapes
+  -- its table.
+  | tableCopy : (dstIdx srcIdx : Nat) → Instruction
+
+  -- table.init t e: pops [len(i32), src(i32), dst(i32)] (top = len) and
+  -- copies entries `[src, src+len)` of element segment `e` into
+  -- `tables[t][dst, dst+len)`. A dropped segment behaves as length 0.
+  -- Traps before any write on either bounds violation.
+  | tableInit : (tableIdx elemIdx : Nat) → Instruction
+
+  -- elem.drop e: mark element segment `e` as dropped. Idempotent.
+  | elemDrop : Nat → Instruction
 
   -- i32 memory loads (static byte offset; address popped from stack as i32)
   | load8U  : UInt32 → Instruction  -- i32.load8_u:  zero-extend 1 byte  → i32
@@ -355,10 +395,10 @@ structure Module where
   elements : List ElementSegment := []
 deriving Repr, Inhabited
 
-/-- Runtime representation of a single table: a list of `funcref` slots
-(`none` = null, `some i` = function index `i`). The length is the
-table's current size; we don't model `table.grow`. -/
-abbrev TableInst : Type := List (Option Nat)
+/-- Runtime representation of a single table: a list of reference
+values (`.funcref` or `.externref`, matching the table's declared
+element type). The length is the table's current size. -/
+abbrev TableInst : Type := List Value
 
 /-- The mutable runtime state threaded through execution: module-level
 globals, the (optional) linear memory, available bytes per data segment
@@ -387,7 +427,7 @@ deriving Repr
 
 /-- Replace `list[i]` in place. Returns the original list unchanged
 if `i ≥ list.length`. -/
-private def listSetAt (l : List α) (i : Nat) (v : α) : List α :=
+def listSetAt (l : List α) (i : Nat) (v : α) : List α :=
   match l, i with
   | [],     _     => []
   | _::xs, 0      => v :: xs
@@ -398,7 +438,7 @@ fall past the end. Used to apply an active element segment to a fresh
 table; bounds violations are detected by the caller before this is
 invoked, so silent truncation here is unreachable in well-formed
 input. -/
-private def listWriteAt (l : List α) (off : Nat) (vs : List α) : List α :=
+def listWriteAt (l : List α) (off : Nat) (vs : List α) : List α :=
   match vs, off with
   | [], _ => l
   | v :: vs', 0     => match l with
@@ -435,9 +475,10 @@ def Module.initialStore [Inhabited α] (m : Module) : Store α :=
           | some _ => none           -- active: auto-dropped after init
           | none   => some seg.bytes -- passive: available to memory.init
       (mem, dataSegments)
-  -- Allocate tables filled with null refs at the declared minimum size.
+  -- Allocate tables filled with the element type's null ref at the
+  -- declared minimum size.
   let baseTables : List TableInst :=
-    m.tables.map fun td => (List.replicate td.min none : TableInst)
+    m.tables.map fun td => (List.replicate td.min td.elemType.zero : TableInst)
   -- Apply active element segments. Passive/declarative segments leave the
   -- table untouched and are tracked in `elementSegments` so `table.init`
   -- can consume them later.
@@ -446,7 +487,7 @@ def Module.initialStore [Inhabited α] (m : Module) : Store α :=
       match seg.tableIdx, seg.offset with
       | some t, some off =>
         match acc[t]? with
-        | some tbl => listSetAt acc t (listWriteAt tbl off seg.funcs)
+        | some tbl => listSetAt acc t (listWriteAt tbl off (seg.funcs.map Value.funcref))
         | none     => acc
       | _, _ => acc)
     baseTables
@@ -476,5 +517,37 @@ def Module.memoryCap (m : Module) : Nat :=
 /-- Look up the index of an exported function by name. -/
 def Module.findExport (m : Module) (name : String) : Option Nat :=
   (m.exports.find? (·.name = name)).map (·.funcIdx)
+
+/-- Signature of a function in the *unified* index space: indices below
+`imports.length` resolve to the import's declared signature, the rest to
+the in-module function's declared signature. Used by `call_indirect` to
+type-check the table entry against the expected `(type N)` — looking the
+target up in `m.funcs` directly would be off by `imports.length` for
+modules with function imports. -/
+def Module.funcSig? (m : Module) (i : Nat) : Option FuncType :=
+  match m.imports[i]? with
+  | some imp => some { params := imp.params, results := imp.results }
+  | none     =>
+    match m.funcs[i - m.imports.length]? with
+    | some f => some { params := f.params, results := f.results }
+    | none   => none
+
+/-- Implementation ceiling on `table.grow`. The wasm spec allows growth
+to fail for implementation-defined reasons; this interpreter materialises
+tables as Lean lists, so unbounded growth (the suite probes deltas up to
+`0xFFFF_FFF0`) must be refused rather than attempted. Growth that stays
+within a table's *declared* max is always honoured — declared maxima in
+practice are small — and growth beyond this ceiling fails with -1. -/
+def Module.tableHardCap : Nat := 1_000_000
+
+/-- Effective `table.grow` ceiling for table `t` of `m`: the declared max
+(if any) intersected with the implementation ceiling `tableHardCap`. -/
+def Module.tableCap (m : Module) (t : Nat) : Nat :=
+  match m.tables[t]? with
+  | some td =>
+    match td.max with
+    | some n => Nat.min n Module.tableHardCap
+    | none   => Module.tableHardCap
+  | none => Module.tableHardCap
 
 end Wasm

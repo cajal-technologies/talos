@@ -288,30 +288,31 @@ def parseF32Lit (s : String) : Except Err UInt32 := do
     let base : UInt32 := 0x7F800000 ||| UInt32.ofNat (p % 0x800000)
     .ok (if neg then base ||| 0x80000000 else base)
 
-/-- Decode a value-type atom. The interpreter only models i32/i64; types
-from other proposals (floats, SIMD, reference types) are accepted at
+/-- Decode a value-type atom. Numeric types and the two reference types
+of wasm 2.0 (`funcref`, `externref`) are modelled directly. Types from
+proposals the interpreter doesn't yet model (SIMD, GC) are accepted at
 the decoder level — silently normalised to `i32` — so that modules
 which include such types in *signatures* still decode. Functions whose
 bodies actually touch those types will hit `unreachable` (because the
 corresponding instructions are also lowered to `unreachable`), giving
-the testsuite runner a chance to run any i32-only exports declared in
+the testsuite runner a chance to run any supported exports declared in
 the same module. -/
 private def atomToValueType? : String → Option Wasm.ValueType
   | "i32"       => some .i32
   | "i64"       => some .i64
   | "f32"       => some .f32
   | "f64"       => some .f64
+  | "funcref"   => some .funcref
+  | "externref" => some .externref
   | "v128"      => some .i32  -- placeholder
-  | "funcref"   => some .i32  -- placeholder
-  | "externref" => some .i32  -- placeholder
   | "anyref"    => some .i32  -- placeholder
   | "eqref"     => some .i32  -- placeholder
   | "i31ref"    => some .i32  -- placeholder
   | "structref" => some .i32  -- placeholder
   | "arrayref"  => some .i32  -- placeholder
   | "nullref"   => some .i32  -- placeholder
-  | "nullfuncref"   => some .i32
-  | "nullexternref" => some .i32
+  | "nullfuncref"   => some .funcref
+  | "nullexternref" => some .externref
   | _     => none
 
 /-- Resolve a `(type N)` reference on a block/loop/if to the signature
@@ -410,6 +411,9 @@ structure Ctx where
   testsuite almost always uses table 0 implicitly, but the form is
   legal. -/
   tableNames       : Std.HashMap String Nat := {}
+  /-- `$name → element segment index` for `(elem $name ...)` declarations,
+  so `table.init` / `elem.drop` can resolve symbolic segment refs. -/
+  elemNames        : Std.HashMap String Nat := {}
   /-- Resolves `(type N)` / `(type $sig)` references on `block`/`loop`/`if`
   to the parsed signature, so multi-value block-types declared via the
   type table are decoded with their correct arity. Defaults to "always
@@ -431,6 +435,17 @@ private def resolveNamed (table : Std.HashMap String Nat) (kind : String)
 
 private def isNullFuncrefHeapType (ht : String) : Bool :=
   ht == "func" || ht == "nofunc"
+
+private def isNullExternrefHeapType (ht : String) : Bool :=
+  ht == "extern" || ht == "noextern"
+
+/-- Decode a `ref.null ht` heap-type immediate into the matching null-ref
+push. Heap types from proposals we don't model decode to `unreachable`
+(consistent with their other instructions). -/
+private def refNullInstr (ht : String) : Wasm.Instruction :=
+  if isNullFuncrefHeapType ht then .refNull
+  else if isNullExternrefHeapType ht then .refNullExtern
+  else .unreachable
 
 private def dropTrailingLabel : List Sexpr → List Sexpr
   | .atom a :: r => if a.startsWith "$" then r else .atom a :: r
@@ -702,11 +717,7 @@ private def stubImmediateCount (op : String) : Option Nat :=
 if op == "ref.test" || op == "ref.cast"
      || op == "br_on_null" || op == "br_on_non_null"
      || op == "return_call" || op == "return_call_ref" || op == "call_ref"
-     || op == "elem.drop" || op == "throw" || op == "tag"
-     -- `table.get`/`table.size` are modelled (see `parseInstr`/`parseFolded`);
-     -- the rest of the table ops are still stubbed.
-     || op == "table.set"
-     || op == "table.grow" || op == "table.fill"
+     || op == "throw" || op == "tag"
      || op == "struct.new" || op == "struct.new_default"
      || op == "array.new" || op == "array.new_default" || op == "array.new_fixed"
      -- array element accessors take 1 atom (the array type ref) only;
@@ -730,10 +741,6 @@ if op == "ref.test" || op == "ref.cast"
      || op == "array.copy"
      || op == "array.init_data" || op == "array.init_elem"
   then some 2
-  -- `table.init` and `table.copy` are handled separately by
-  -- `consumeTableBulkAtoms` (0..2 label-looking atoms — wasm-tools'
-  -- canonical print emits 0/1 when default tables are used and 2
-  -- when both tables are named).
   else none
 
 /-- Drop the first `n` atom tokens from `toks`. Errors if a non-atom is
@@ -795,19 +802,6 @@ private def looksLikeLabel (s : String) : Bool :=
   else
     s.toList.all (fun c => c.isDigit || c = '_')
 
-/-- Consume up to `k` label-looking atoms immediately following
-`table.copy` / `table.init`. wasm-tools' canonical print emits 0 or 2
-atoms for `table.copy` (depending on whether named tables are involved)
-and 1 or 2 atoms for `table.init` (the element segment index is always
-emitted, the destination table index only when non-default), so we stop
-once we've consumed `k` atoms or hit a non-label token. -/
-private partial def consumeTableBulkAtoms : Nat → List Sexpr → List Sexpr
-  | 0, ts => ts
-  | k+1, .atom a :: ts =>
-    if looksLikeLabel a then consumeTableBulkAtoms k ts
-    else .atom a :: ts
-  | _+1, ts => ts
-
 /-- Consume the label immediate and the two type-immediates of a
 `br_on_cast` / `br_on_cast_fail`. The label is a single atom; each type
 is either an atom (e.g. `anyref`) or a `(ref …)` list. -/
@@ -831,6 +825,36 @@ private def parseOptTableIdx (ctx : Ctx) (mk : Nat → Wasm.Instruction)
       .ok ([mk (← resolveNamed ctx.tableNames "table" a)], rest')
     else .ok ([mk 0], .atom a :: rest')
   | rest' => .ok ([mk 0], rest')
+
+/-- `table.copy` carries 0 or 2 table-index immediates: none for the
+default `(0, 0)` pair, or `dst src` when either table is non-default. -/
+private def parseTableCopy (ctx : Ctx)
+    : List Sexpr → Except Err (List Wasm.Instruction × List Sexpr)
+  | .atom a :: .atom b :: rest' =>
+    if looksLikeLabel a && looksLikeLabel b then do
+      let d ← resolveNamed ctx.tableNames "table" a
+      let s ← resolveNamed ctx.tableNames "table" b
+      .ok ([.tableCopy d s], rest')
+    else .ok ([.tableCopy 0 0], .atom a :: .atom b :: rest')
+  | rest' => .ok ([.tableCopy 0 0], rest')
+
+/-- `table.init` carries 1 or 2 immediates: `elemIdx` alone for the
+default table, or `tableIdx elemIdx` when the table is non-default. -/
+private def parseTableInit (ctx : Ctx)
+    : List Sexpr → Except Err (List Wasm.Instruction × List Sexpr)
+  | .atom a :: .atom b :: rest' =>
+    if looksLikeLabel a && looksLikeLabel b then do
+      let t ← resolveNamed ctx.tableNames "table" a
+      let e ← resolveNamed ctx.elemNames "elem" b
+      .ok ([.tableInit t e], rest')
+    else if looksLikeLabel a then do
+      .ok ([.tableInit 0 (← resolveNamed ctx.elemNames "elem" a)], .atom b :: rest')
+    else .error "table.init expects an element-segment immediate"
+  | .atom a :: rest' =>
+    if looksLikeLabel a then do
+      .ok ([.tableInit 0 (← resolveNamed ctx.elemNames "elem" a)], rest')
+    else .error "table.init expects an element-segment immediate"
+  | _ => .error "table.init expects an element-segment immediate"
 
 mutual
 
@@ -860,16 +884,22 @@ private partial def parseInstr (ctx : Ctx) (toks : List Sexpr)
     | "memory.init" => parseImmediateNat parseNat .memoryInit op rest
     | "data.drop"   => parseImmediateNat parseNat .dataDrop   op rest
     | "ref.func"    => parseImmediateNat (resolveNamed ctx.funcIds "function") .refFunc op rest
-    -- `ref.null ht` carries a heap-type immediate. We only model `funcref`,
-    -- so function-null heap types become the null funcref; any other heap
-    -- type (e.g. `extern`) keeps the legacy decode-but-trap behaviour.
+    -- `ref.null ht` carries a heap-type immediate. `func`-like heap types
+    -- become the null funcref, `extern`-like ones the null externref; heap
+    -- types from unmodelled proposals keep the decode-but-trap behaviour.
     | "ref.null"    => match rest with
-      | .atom ht :: rest' => .ok ([if isNullFuncrefHeapType ht then .refNull else .unreachable], rest')
+      | .atom ht :: rest' => .ok ([refNullInstr ht], rest')
       | _ => .error "ref.null expects a heap-type immediate"
-    -- `table.get`/`table.size` carry an *optional* table-index immediate
-    -- (default 0); see `parseOptTableIdx`.
+    -- Table ops carry an *optional* table-index immediate (default 0);
+    -- see `parseOptTableIdx`.
     | "table.get"   => parseOptTableIdx ctx .tableGet rest
     | "table.size"  => parseOptTableIdx ctx .tableSize rest
+    | "table.set"   => parseOptTableIdx ctx .tableSet rest
+    | "table.grow"  => parseOptTableIdx ctx .tableGrow rest
+    | "table.fill"  => parseOptTableIdx ctx .tableFill rest
+    | "table.copy"  => parseTableCopy ctx rest
+    | "table.init"  => parseTableInit ctx rest
+    | "elem.drop"   => parseImmediateNat (resolveNamed ctx.elemNames "elem") .elemDrop op rest
     | "select"    =>
       let rec dropResults : List Sexpr → List Sexpr
         | .list (.atom "result" :: _) :: r => dropResults r
@@ -899,8 +929,6 @@ private partial def parseInstr (ctx : Ctx) (toks : List Sexpr)
           -- immediates so the token stream stays aligned.
           let rest' ← if op == "v128.const" then
             consumeV128ConstImmediates rest
-          else if op == "table.copy" || op == "table.init" then
-            .ok (consumeTableBulkAtoms 2 rest)
           else if op == "br_on_cast" || op == "br_on_cast_fail" then
             consumeBrOnCastImmediates op rest
           else match stubImmediateCount op with
@@ -957,10 +985,25 @@ private partial def parseFolded (ctx : Ctx) (xs : List Sexpr)
       foldedWithImmediate ctx (resolveNamed ctx.funcIds "function") (fun i => [.refFunc i]) rest
     | "ref.null"    =>
       match rest with
-      | [.atom ht] => .ok [if isNullFuncrefHeapType ht then .refNull else .unreachable]
+      | [.atom ht] => .ok [refNullInstr ht]
       | _ => .error "folded ref.null expects exactly one heap-type immediate"
     | "table.get"   => foldedOptTableIdx ctx .tableGet rest
     | "table.size"  => foldedOptTableIdx ctx .tableSize rest
+    | "table.set"   => foldedOptTableIdx ctx .tableSet rest
+    | "table.grow"  => foldedOptTableIdx ctx .tableGrow rest
+    | "table.fill"  => foldedOptTableIdx ctx .tableFill rest
+    | "table.copy" | "table.init" | "elem.drop" => do
+      -- Reuse the linear parsers for the immediates, then treat the
+      -- remaining forms as folded operand sub-expressions.
+      let (instr, leftover) ← parseInstr ctx (.atom op :: rest)
+      let mut acc : List Wasm.Instruction := []
+      for s in leftover do
+        match s with
+        | .list ys =>
+          let sub ← parseFolded ctx ys
+          acc := acc ++ sub
+        | .atom a => .error s!"folded {op}: unexpected atom operand '{a}'"
+      .ok (acc ++ instr)
     | "call_indirect" | "return_call_indirect" => do
       let (instr, leftover) ← parseCallIndirect ctx rest
       unless leftover.isEmpty do
@@ -1150,25 +1193,25 @@ private partial def parseImmediateNat (resolve : String → Except Err Nat)
   | .atom n :: rest' => do .ok ([mk (← resolve n)], rest')
   | _ => .error s!"{op} expects an immediate"
 
-/-- Parse a `call_indirect` instruction. The wasm-tools-canonical form is
-`call_indirect [(table T)] (type N)`. We resolve both into numeric
-indices using the surrounding `ctx`. The `(param …)/(result …)` inline-
-signature form (legal in raw `.wast`) does not appear in our input after
-`wasm-tools print`, so we don't try to handle it. -/
+/-- Parse a `call_indirect` instruction. The wasm-tools-canonical forms
+are `call_indirect [$t | (table T)] (type N)`; raw `.wat` may instead
+carry an inline `(param …)* (result …)*` signature, which we resolve to
+the first matching entry of the module's type table (wasm-tools'
+canonical encoding always materialises such an entry). -/
 private partial def parseCallIndirect (ctx : Ctx) (toks : List Sexpr)
     : Except Err (List Wasm.Instruction × List Sexpr) := do
   let mut rest := toks
   let mut tableIdx : Nat := 0
+  -- Optional table immediate: a bare `$t`/numeric atom (canonical print)
+  -- or a `(table T)` list (raw wast).
   match rest with
   | .list [.atom "table", .atom t] :: r =>
-    let idx ←
-      if t.startsWith "$" then
-        match ctx.tableNames[(t.drop 1).toString]? with
-        | some i => .ok i
-        | none   => .error s!"unknown table id: {t}"
-      else parseNat t
-    tableIdx := idx
+    tableIdx := (← resolveNamed ctx.tableNames "table" t)
     rest := r
+  | .atom a :: r =>
+    if looksLikeLabel a then
+      tableIdx := (← resolveNamed ctx.tableNames "table" a)
+      rest := r
   | _ => pure ()
   match rest with
   | .list [.atom "type", .atom n] :: r =>
@@ -1179,8 +1222,47 @@ private partial def parseCallIndirect (ctx : Ctx) (toks : List Sexpr)
         | some i => .ok i
         | none   => .error s!"unknown type id: {n}"
       else parseNat n
+    -- A redundant inline `(param …)/(result …)` restating the resolved
+    -- signature may follow; consume it.
+    let r := r.dropWhile fun
+      | .list (.atom "param" :: _)  => true
+      | .list (.atom "result" :: _) => true
+      | _ => false
     .ok ([.callIndirect typeIdx tableIdx], r)
-  | _ => .error "call_indirect expects a (type N) annotation"
+  | _ =>
+    -- Inline signature without `(type N)`: collect `(param …)*
+    -- (result …)*` and resolve against the type table.
+    let mut ps : List Wasm.ValueType := []
+    let mut rs : List Wasm.ValueType := []
+    let mut r := rest
+    let mut stop := false
+    while !stop do
+      match r with
+      | .list (.atom "param" :: tail) :: r' =>
+        for t in tail do
+          match t with
+          | .atom a =>
+            if a.startsWith "$" then pure ()
+            else match atomToValueType? a with
+              | some vt => ps := ps ++ [vt]
+              | none    => .error s!"call_indirect: unsupported param type {a}"
+          | .list _ => ps := ps ++ [.i32]
+        r := r'
+      | .list (.atom "result" :: tail) :: r' =>
+        for t in tail do
+          match t with
+          | .atom a =>
+            match atomToValueType? a with
+            | some vt => rs := rs ++ [vt]
+            | none    => .error s!"call_indirect: unsupported result type {a}"
+          | .list _ => rs := rs ++ [.i32]
+        r := r'
+      | _ => stop := true
+    -- With no inline forms at all this is the bare `call_indirect`,
+    -- whose type is the empty signature `[] → []`.
+    match ctx.types.findIdx? (fun te => te.sig = some (ps, rs)) with
+    | some i => .ok ([.callIndirect i tableIdx], r)
+    | none   => .error "call_indirect: inline signature has no matching type entry"
 
 private partial def parseStructured (ctx : Ctx)
     (mk : Nat → Nat → List Wasm.Instruction → Wasm.Instruction)
@@ -1346,6 +1428,7 @@ private def decodeWatString (s : String) : String :=
 private def parseFunc (funcIds : Std.HashMap String Nat)
     (globalIds : Std.HashMap String Nat)
     (tableNames : Std.HashMap String Nat)
+    (elemNames : Std.HashMap String Nat)
     (types : Array TypeEntry) (xs : List Sexpr)
     : Except Err FuncDecl := do
   let mut paramTypes : List Wasm.ValueType := []
@@ -1457,7 +1540,7 @@ private def parseFunc (funcIds : Std.HashMap String Nat)
     match resolveTypeRef types ref with
     | .ok sig  => some sig
     | .error _ => none
-  let ctx : Ctx := { funcIds, localIds, globalIds, types, tableNames, resolveBlockType }
+  let ctx : Ctx := { funcIds, localIds, globalIds, types, tableNames, elemNames, resolveBlockType }
   let instrs ← parseInstrSeq ctx rest
   return { symId, inlineExports,
            func := {
@@ -1571,6 +1654,8 @@ private def parseGlobalDecl (funcIds : Std.HashMap String Nat) (xs : List Sexpr)
     | some "ref.null", .atom ht :: _ =>
       if isNullFuncrefHeapType ht then
         .ok (.funcref none)
+      else if isNullExternrefHeapType ht then
+        .ok (.externref none)
       else
         .ok (.i32 0)
     | some "ref.func", .atom ref :: _ => .ok (.funcref (some (← resolveFuncRef funcIds ref)))
@@ -1646,6 +1731,33 @@ private def collectTableNames (fields : List Sexpr) : Std.HashMap String Nat := 
     | _ => pure ()
   return idOf
 
+/-- Collect names declared by `(elem $name ...)` forms, numbering them the
+way `parseModule` numbers element segments: an inline `(table … (elem …))`
+initializer occupies one (anonymous) slot in the element index space at
+the table's source position, exactly as the spec's inline-elem
+abbreviation expands to a leading active segment. -/
+private def collectElemNames (fields : List Sexpr) : Std.HashMap String Nat := Id.run do
+  let mut idOf : Std.HashMap String Nat := {}
+  let mut i := 0
+  for f in fields do
+    match f with
+    | .list (.atom "elem" :: body) =>
+      match body with
+      | .atom "declare" :: .atom a :: _
+      | .atom a :: _ =>
+        if a.startsWith "$" then
+          idOf := idOf.insert (a.drop 1).toString i
+      | _ => pure ()
+      i := i + 1
+    | .list (.atom "table" :: body) =>
+      -- Inline `(elem …)` initializer inside a table declaration.
+      if body.any (fun s => match s with
+          | .list (.atom "elem" :: _) => true
+          | _ => false) then
+        i := i + 1
+    | _ => pure ()
+  return idOf
+
 /-- Parse the body of one `(table ...)` form. We accept the canonical
 post-`wasm-tools print` shapes:
 
@@ -1682,22 +1794,17 @@ private def parseTableDecl (funcIds : Std.HashMap String Nat) (tableIdx : Nat)
     let n := funcs.length
     .ok ({ min := n, max := some n, elemType := .funcref },
          some { tableIdx := some tableIdx, offset := some 0, funcs })
-  | [.atom min, .atom "funcref"] =>
+  | [.atom min, .atom elemTy] =>
+    -- Single-bound declaration. `funcref`/`externref` are modelled;
+    -- element types from unmodelled proposals fall back to `funcref` so
+    -- the index space stays aligned (nothing references those tables).
     let n ← parseNat min
-    .ok ({ min := n, elemType := .funcref }, none)
-  | [.atom min, .atom max, .atom "funcref"] =>
+    .ok ({ min := n, elemType := (atomToValueType? elemTy).getD .funcref }, none)
+  | [.atom min, .atom max, .atom elemTy] =>
     let nMin ← parseNat min
     let nMax ← parseNat max
-    .ok ({ min := nMin, max := some nMax, elemType := .funcref }, none)
-  | [.atom min, .atom _other] =>
-    -- Non-funcref single-bound: accept with the declared minimum so
-    -- index space stays aligned; we never inspect its element type.
-    let n ← parseNat min
-    .ok ({ min := n, elemType := .funcref }, none)
-  | [.atom min, .atom max, .atom _other] =>
-    let nMin ← parseNat min
-    let nMax ← parseNat max
-    .ok ({ min := nMin, max := some nMax, elemType := .funcref }, none)
+    .ok ({ min := nMin, max := some nMax,
+           elemType := (atomToValueType? elemTy).getD .funcref }, none)
   | [.atom _other] => .ok ({ min := 0, elemType := .funcref }, none)
   | _ => .error "malformed (table ...) declaration"
 
@@ -1745,8 +1852,9 @@ private def parseElemSegment
     let v ← parseNat n; offset := some v; rest := r
   | _ => pure ()
   match rest with
-  | .atom "func"    :: r => rest := r
-  | .atom "funcref" :: r => rest := r
+  | .atom "func"      :: r => rest := r
+  | .atom "funcref"   :: r => rest := r
+  | .atom "externref" :: r => rest := r
   | _ => pure ()
   if isDeclarative then offset := none
   let mut funcs : List (Option Nat) := []
@@ -1883,6 +1991,7 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
     funcIds := funcIds.insert name (idx + imports.length)
   let globalIds ← collectGlobalNames rest
   let tableNames := collectTableNames rest
+  let elemNames := collectElemNames rest
   let mut decls : Array FuncDecl := #[]
   let mut topExports : Array (String × String) := #[]
   let mut globalDecls : Array Wasm.GlobalDecl := #[]
@@ -1894,7 +2003,7 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
   for f in rest do
     match f with
     | .list (.atom "func" :: body) =>
-      decls := decls.push (← parseFunc funcIds globalIds tableNames types body)
+      decls := decls.push (← parseFunc funcIds globalIds tableNames elemNames types body)
     | .list (.atom "export" :: tail) =>
       match tail with
       | [.atom name, .list [.atom "func", .atom ref]] =>

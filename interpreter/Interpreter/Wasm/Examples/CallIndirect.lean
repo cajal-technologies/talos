@@ -59,8 +59,8 @@ theorem dispatchSpec (n : UInt32) :
   -- then chain into `incrSpec`.
   apply wp_callIndirect_cons
     (i := 0) (vs0 := [.i32 n])
-    (tbl := [some 0]) (fid := 0)
-    (fn := { params := [.i32], body := Incr, results := [.i32] })
+    (tbl := [.funcref (some 0)]) (fid := 0)
+    (fn := { params := [.i32], results := [.i32] })
     (ty := { params := [.i32], results := [.i32] })
     (Pre  := (· = [.i32 n]))
     (Post := fun _ vs => vs = [.i32 (n + 1)])

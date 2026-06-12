@@ -641,10 +641,17 @@ macro "wp_atomic" : tactic => `(tactic|
     wp m rest Q st { s with values := .funcref (some fidx) :: s.values } env := by
   wp_atomic
 
+@[simp, wp_simp] theorem wp_refNullExtern_cons :
+    wp m (.refNullExtern :: rest) Q st s env ↔
+    wp m rest Q st { s with values := .externref none :: s.values } env := by
+  wp_atomic
+
 @[simp, wp_simp] theorem wp_refIsNull_cons :
     wp m (.refIsNull :: rest) Q st s env ↔
     (match s.values with
      | .funcref r :: vs =>
+       wp m rest Q st { s with values := .i32 (if r.isNone then 1 else 0) :: vs } env
+     | .externref r :: vs =>
        wp m rest Q st { s with values := .i32 (if r.isNone then 1 else 0) :: vs } env
      | _ => Q (.Invalid "refIsNull: ill-shaped operand stack")) := by
   wp_atomic
@@ -660,7 +667,7 @@ macro "wp_atomic" : tactic => `(tactic|
         | some tbl =>
           (match tbl[i.toNat]? with
            | none   => Q (.Trap st "out of bounds table access")
-           | some r => wp m rest Q st { s with values := .funcref r :: vs } env))
+           | some r => wp m rest Q st { s with values := r :: vs } env))
      | _ => Q (.Invalid "tableGet: ill-shaped operand stack")) := by
   wp_atomic
 
