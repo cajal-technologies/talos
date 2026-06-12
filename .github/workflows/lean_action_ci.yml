@@ -22,6 +22,20 @@ jobs:
           key: lake-pkgs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}-${{ hashFiles('interpreter/lake-manifest.json') }}
           restore-keys: |
             lake-pkgs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}-
+      # Incremental build cache for the in-repo packages: a from-scratch
+      # proof build is ~25-40 min of elaboration; restoring the previous
+      # run's oleans lets lake rebuild only what changed. The key embeds
+      # the commit so every run saves a fresh snapshot; restore falls back
+      # to the most recent one on the same toolchain.
+      - uses: actions/cache@v4
+        with:
+          path: |
+            interpreter/.lake/build
+            codelib/.lake/build
+            programs/lean/.lake/build
+          key: lake-build-${{ runner.os }}-${{ hashFiles('lean-toolchain') }}-${{ github.sha }}
+          restore-keys: |
+            lake-build-${{ runner.os }}-${{ hashFiles('lean-toolchain') }}-
       # The heavyweight proof files (Itoa.Proofs, ReverseInplace.Spec,
       # RustOption.Spec) each peak at multiple GB during elaboration; at
       # default parallelism the runner gets OOM-killed (SIGTERM, exit 143).
