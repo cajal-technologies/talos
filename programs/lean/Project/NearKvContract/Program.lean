@@ -102,6 +102,9 @@ def func0 : Wasm.Program :=
   .ret
 ]
 
+def func0Def : Wasm.Function :=
+  { params := [], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32], body := func0, results := [] }
+
 def func1 : Wasm.Program :=
   [
   .localGet 1,
@@ -137,6 +140,9 @@ def func1 : Wasm.Program :=
   .ret
 ]
 
+def func1Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [.i32], body := func1, results := [] }
+
 def func2 : Wasm.Program :=
   [
   .localGet 0,
@@ -151,11 +157,17 @@ def func2 : Wasm.Program :=
   .ret
 ]
 
+def func2Def : Wasm.Function :=
+  { params := [.i32], locals := [], body := func2, results := [] }
+
 def func3 : Wasm.Program :=
   [
   .call 4,
   .ret
 ]
+
+def func3Def : Wasm.Function :=
+  { params := [], locals := [], body := func3, results := [] }
 
 def func4 : Wasm.Program :=
   [
@@ -165,6 +177,9 @@ def func4 : Wasm.Program :=
   .ret
 ]
 
+def func4Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [], body := func4, results := [.i32] }
+
 def func5 : Wasm.Program :=
   [
   .localGet 0,
@@ -173,6 +188,9 @@ def func5 : Wasm.Program :=
   .call 65,
   .ret
 ]
+
+def func5Def : Wasm.Function :=
+  { params := [.i32, .i32, .i32], locals := [], body := func5, results := [] }
 
 def func6 : Wasm.Program :=
   [
@@ -184,6 +202,9 @@ def func6 : Wasm.Program :=
   .ret
 ]
 
+def func6Def : Wasm.Function :=
+  { params := [.i32, .i32, .i32, .i32], locals := [], body := func6, results := [.i32] }
+
 /-- export: set_from_input -/
 def func7 : Wasm.Program :=
   [
@@ -193,10 +214,16 @@ def func7 : Wasm.Program :=
   .ret
 ]
 
+def func7Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [], body := func7, results := [.i32] }
+
 def func8 : Wasm.Program :=
   [
   .ret
 ]
+
+def func8Def : Wasm.Function :=
+  { params := [], locals := [], body := func8, results := [] }
 
 def func9 : Wasm.Program :=
   [
@@ -209,6 +236,9 @@ def func9 : Wasm.Program :=
   .store32 (0 : UInt32),
   .ret
 ]
+
+def func9Def : Wasm.Function :=
+  { params := [.i32], locals := [], body := func9, results := [] }
 
 def func10 : Wasm.Program :=
   [
@@ -279,6 +309,9 @@ def func10 : Wasm.Program :=
   .ret
 ]
 
+def func10Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [.i32, .i32], body := func10, results := [] }
+
 def func11 : Wasm.Program :=
   [
   .globalGet 0,
@@ -307,6 +340,9 @@ def func11 : Wasm.Program :=
   .globalSet 0,
   .ret
 ]
+
+def func11Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [.i32], body := func11, results := [] }
 
 def func12 : Wasm.Program :=
   [
@@ -349,6 +385,9 @@ def func12 : Wasm.Program :=
   ],
   .ret
 ]
+
+def func12Def : Wasm.Function :=
+  { params := [.i32, .i64, .i64], locals := [.i32, .i64], body := func12, results := [] }
 
 def func13 : Wasm.Program :=
   [
@@ -394,6 +433,9 @@ def func13 : Wasm.Program :=
   .ret
 ]
 
+def func13Def : Wasm.Function :=
+  { params := [.i32, .i64], locals := [.i32, .i64], body := func13, results := [] }
+
 def func14 : Wasm.Program :=
   [
   .globalGet 0,
@@ -422,6 +464,9 @@ def func14 : Wasm.Program :=
   .globalSet 0,
   .ret
 ]
+
+def func14Def : Wasm.Function :=
+  { params := [.i32, .i64], locals := [.i32], body := func14, results := [] }
 
 def func15 : Wasm.Program :=
   [
@@ -560,6 +605,9 @@ def func15 : Wasm.Program :=
   .ret
 ]
 
+def func15Def : Wasm.Function :=
+  { params := [.i32, .i64, .i32], locals := [.i32, .i64, .i64, .i64, .i32, .i32], body := func15, results := [] }
+
 def func16 : Wasm.Program :=
   [
   .globalGet 0,
@@ -577,6 +625,9 @@ def func16 : Wasm.Program :=
   .call 93,
   .unreachable
 ]
+
+def func16Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [.i32], body := func16, results := [] }
 
 def func17 : Wasm.Program :=
   [
@@ -668,6 +719,9 @@ def func17 : Wasm.Program :=
   .ret
 ]
 
+def func17Def : Wasm.Function :=
+  { params := [.i32, .i32, .i32, .i32], locals := [.i32, .i64, .i64, .i64, .i64, .i32, .i32, .i32], body := func17, results := [.i32] }
+
 def func18 : Wasm.Program :=
   [
   .globalGet 0,
@@ -692,6 +746,9 @@ def func18 : Wasm.Program :=
   .ret
 ]
 
+def func18Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [.i32], body := func18, results := [] }
+
 def func19 : Wasm.Program :=
   [
   .globalGet 0,
@@ -704,6 +761,9 @@ def func19 : Wasm.Program :=
   .unreachable
 ]
 
+def func19Def : Wasm.Function :=
+  { params := [], locals := [.i32], body := func19, results := [.i32] }
+
 def func20 : Wasm.Program :=
   [
   .localGet 0,
@@ -711,6 +771,9 @@ def func20 : Wasm.Program :=
   .call 22,
   .ret
 ]
+
+def func20Def : Wasm.Function :=
+  { params := [.i32], locals := [], body := func20, results := [] }
 
 def func21 : Wasm.Program :=
   [
@@ -764,6 +827,9 @@ def func21 : Wasm.Program :=
   .ret
 ]
 
+def func21Def : Wasm.Function :=
+  { params := [.i32, .i64], locals := [.i32, .i32, .i32, .i32], body := func21, results := [] }
+
 def func22 : Wasm.Program :=
   [
   .globalGet 0,
@@ -806,6 +872,9 @@ def func22 : Wasm.Program :=
   .localGet 4,
   .ret
 ]
+
+def func22Def : Wasm.Function :=
+  { params := [.i32, .i32, .i32], locals := [.i32, .i32], body := func22, results := [.i32] }
 
 def func23 : Wasm.Program :=
   [
@@ -859,6 +928,9 @@ def func23 : Wasm.Program :=
   .ret
 ]
 
+def func23Def : Wasm.Function :=
+  { params := [.i32, .i32, .i32], locals := [.i32, .i32, .i32], body := func23, results := [] }
+
 def func24 : Wasm.Program :=
   [
   .globalGet 0,
@@ -889,6 +961,9 @@ def func24 : Wasm.Program :=
   .globalSet 0,
   .ret
 ]
+
+def func24Def : Wasm.Function :=
+  { params := [.i32, .i64], locals := [.i32, .i32], body := func24, results := [] }
 
 def func25 : Wasm.Program :=
   [
@@ -928,6 +1003,9 @@ def func25 : Wasm.Program :=
   .ret
 ]
 
+def func25Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [.i32, .i32, .i32], body := func25, results := [] }
+
 def func26 : Wasm.Program :=
   [
   .globalGet 0,
@@ -941,6 +1019,9 @@ def func26 : Wasm.Program :=
   .load32 (4 : UInt32),
   .ret
 ]
+
+def func26Def : Wasm.Function :=
+  { params := [.i32], locals := [.i32], body := func26, results := [.i32] }
 
 def func27 : Wasm.Program :=
   [
@@ -962,6 +1043,9 @@ def func27 : Wasm.Program :=
   .store32 (8 : UInt32),
   .ret
 ]
+
+def func27Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [.i32], body := func27, results := [] }
 
 def func28 : Wasm.Program :=
   [
@@ -1006,6 +1090,9 @@ def func28 : Wasm.Program :=
   .ret
 ]
 
+def func28Def : Wasm.Function :=
+  { params := [.i32], locals := [.i32, .i32], body := func28, results := [] }
+
 def func29 : Wasm.Program :=
   [
   .globalGet 0,
@@ -1027,6 +1114,9 @@ def func29 : Wasm.Program :=
   .store32 (0 : UInt32),
   .ret
 ]
+
+def func29Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [.i32, .i32], body := func29, results := [] }
 
 def func30 : Wasm.Program :=
   [
@@ -1188,6 +1278,9 @@ def func30 : Wasm.Program :=
   .ret
 ]
 
+def func30Def : Wasm.Function :=
+  { params := [.i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32], body := func30, results := [] }
+
 def func31 : Wasm.Program :=
   [
   .globalGet 0,
@@ -1226,6 +1319,9 @@ def func31 : Wasm.Program :=
   .globalSet 0,
   .ret
 ]
+
+def func31Def : Wasm.Function :=
+  { params := [.i32, .i32, .i32, .i32], locals := [.i32], body := func31, results := [] }
 
 def func32 : Wasm.Program :=
   [
@@ -1273,6 +1369,9 @@ def func32 : Wasm.Program :=
   .ret
 ]
 
+def func32Def : Wasm.Function :=
+  { params := [.i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32], body := func32, results := [] }
+
 def func33 : Wasm.Program :=
   [
   .globalGet 0,
@@ -1319,6 +1418,9 @@ def func33 : Wasm.Program :=
   .ret
 ]
 
+def func33Def : Wasm.Function :=
+  { params := [.i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32], body := func33, results := [] }
+
 def func34 : Wasm.Program :=
   [
   .globalGet 0,
@@ -1341,6 +1443,9 @@ def func34 : Wasm.Program :=
   .ret
 ]
 
+def func34Def : Wasm.Function :=
+  { params := [.i32], locals := [.i32], body := func34, results := [] }
+
 def func35 : Wasm.Program :=
   [
   .globalGet 0,
@@ -1360,6 +1465,9 @@ def func35 : Wasm.Program :=
   .globalSet 0,
   .ret
 ]
+
+def func35Def : Wasm.Function :=
+  { params := [.i32], locals := [.i32], body := func35, results := [] }
 
 def func36 : Wasm.Program :=
   [
@@ -1423,6 +1531,9 @@ def func36 : Wasm.Program :=
   ],
   .ret
 ]
+
+def func36Def : Wasm.Function :=
+  { params := [.i32, .i32, .i32], locals := [.i32, .i32, .i32], body := func36, results := [] }
 
 def func37 : Wasm.Program :=
   [
@@ -1537,6 +1648,9 @@ def func37 : Wasm.Program :=
   .ret
 ]
 
+def func37Def : Wasm.Function :=
+  { params := [.i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32], body := func37, results := [] }
+
 def func38 : Wasm.Program :=
   [
   .globalGet 0,
@@ -1610,6 +1724,9 @@ def func38 : Wasm.Program :=
   .globalSet 0,
   .ret
 ]
+
+def func38Def : Wasm.Function :=
+  { params := [.i32, .i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32], body := func38, results := [] }
 
 def func39 : Wasm.Program :=
   [
@@ -1701,6 +1818,9 @@ def func39 : Wasm.Program :=
   ],
   .ret
 ]
+
+def func39Def : Wasm.Function :=
+  { params := [.i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32], body := func39, results := [] }
 
 def func40 : Wasm.Program :=
   [
@@ -1997,6 +2117,9 @@ def func40 : Wasm.Program :=
   .ret
 ]
 
+def func40Def : Wasm.Function :=
+  { params := [.i32, .i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i64, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32], body := func40, results := [] }
+
 def func41 : Wasm.Program :=
   [
   .globalGet 0,
@@ -2021,22 +2144,34 @@ def func41 : Wasm.Program :=
   .ret
 ]
 
+def func41Def : Wasm.Function :=
+  { params := [.i32], locals := [.i32, .i32], body := func41, results := [] }
+
 def func42 : Wasm.Program :=
   [
   .call 47,
   .unreachable
 ]
 
+def func42Def : Wasm.Function :=
+  { params := [], locals := [], body := func42, results := [] }
+
 def func43 : Wasm.Program :=
   [
   .unreachable
 ]
+
+def func43Def : Wasm.Function :=
+  { params := [], locals := [], body := func43, results := [] }
 
 def func44 : Wasm.Program :=
   [
   .call 64,
   .unreachable
 ]
+
+def func44Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [], body := func44, results := [.i32] }
 
 def func45 : Wasm.Program :=
   [
@@ -2126,6 +2261,9 @@ def func45 : Wasm.Program :=
   .globalSet 0
 ]
 
+def func45Def : Wasm.Function :=
+  { params := [.i32, .i32, .i32, .i32, .i32], locals := [.i32], body := func45, results := [] }
+
 def func46 : Wasm.Program :=
   [
   .block 0 0 [
@@ -2141,6 +2279,9 @@ def func46 : Wasm.Program :=
     .call 9
   ]
 ]
+
+def func46Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [], body := func46, results := [] }
 
 def func47 : Wasm.Program :=
   [
@@ -2158,6 +2299,9 @@ def func47 : Wasm.Program :=
     .call 9
   ]
 ]
+
+def func47Def : Wasm.Function :=
+  { params := [.i32], locals := [.i32], body := func47, results := [] }
 
 def func48 : Wasm.Program :=
   [
@@ -2177,12 +2321,18 @@ def func48 : Wasm.Program :=
   ]
 ]
 
+def func48Def : Wasm.Function :=
+  { params := [.i32], locals := [.i32], body := func48, results := [] }
+
 def func49 : Wasm.Program :=
   [
   .localGet 0,
   .call 54,
   .unreachable
 ]
+
+def func49Def : Wasm.Function :=
+  { params := [.i32], locals := [], body := func49, results := [] }
 
 def func50 : Wasm.Program :=
   [
@@ -2201,12 +2351,18 @@ def func50 : Wasm.Program :=
   .unreachable
 ]
 
+def func50Def : Wasm.Function :=
+  { params := [.i32], locals := [], body := func50, results := [] }
+
 def func51 : Wasm.Program :=
   [
   .localGet 0,
   .call 56,
   .unreachable
 ]
+
+def func51Def : Wasm.Function :=
+  { params := [.i32], locals := [], body := func51, results := [] }
 
 def func52 : Wasm.Program :=
   [
@@ -2273,6 +2429,9 @@ def func52 : Wasm.Program :=
   .call 58,
   .unreachable
 ]
+
+def func52Def : Wasm.Function :=
+  { params := [.i32], locals := [.i32, .i32, .i32], body := func52, results := [] }
 
 def func53 : Wasm.Program :=
   [
@@ -2367,6 +2526,9 @@ def func53 : Wasm.Program :=
   .localGet 6,
   .store32 (0 : UInt32)
 ]
+
+def func53Def : Wasm.Function :=
+  { params := [.i32, .i32, .i32, .i32, .i32, .i32], locals := [.i32, .i32, .i64], body := func53, results := [] }
 
 def func54 : Wasm.Program :=
   [
@@ -2465,12 +2627,18 @@ def func54 : Wasm.Program :=
   .unreachable
 ]
 
+def func54Def : Wasm.Function :=
+  { params := [.i32, .i32, .i32, .i32, .i32], locals := [.i32, .i32], body := func54, results := [] }
+
 def func55 : Wasm.Program :=
   [
   .const (0 : UInt32),
   .const (1 : UInt32),
   .store8 (1049700 : UInt32)
 ]
+
+def func55Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [], body := func55, results := [] }
 
 def func56 : Wasm.Program :=
   [
@@ -2480,6 +2648,9 @@ def func56 : Wasm.Program :=
   .drop,
   .unreachable
 ]
+
+def func56Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [], body := func56, results := [] }
 
 def func57 : Wasm.Program :=
   [
@@ -2496,6 +2667,9 @@ def func57 : Wasm.Program :=
   .localGet 0,
   .call 63
 ]
+
+def func57Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [], body := func57, results := [.i32] }
 
 def func58 : Wasm.Program :=
   [
@@ -2717,6 +2891,9 @@ def func58 : Wasm.Program :=
   ],
   .localGet 2
 ]
+
+def func58Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32], body := func58, results := [.i32] }
 
 def func59 : Wasm.Program :=
   [
@@ -4968,10 +5145,16 @@ def func59 : Wasm.Program :=
   .localGet 0
 ]
 
+def func59Def : Wasm.Function :=
+  { params := [.i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i64], body := func59, results := [.i32] }
+
 def func60 : Wasm.Program :=
   [
   .unreachable
 ]
+
+def func60Def : Wasm.Function :=
+  { params := [], locals := [], body := func60, results := [] }
 
 def func61 : Wasm.Program :=
   [
@@ -5026,6 +5209,9 @@ def func61 : Wasm.Program :=
   .call 93,
   .unreachable
 ]
+
+def func61Def : Wasm.Function :=
+  { params := [.i32, .i32, .i32], locals := [.i32, .i32], body := func61, results := [] }
 
 def func62 : Wasm.Program :=
   [
@@ -5427,6 +5613,9 @@ def func62 : Wasm.Program :=
     .store32 (1049688 : UInt32)
   ]
 ]
+
+def func62Def : Wasm.Function :=
+  { params := [.i32], locals := [.i32, .i32, .i32, .i32], body := func62, results := [] }
 
 def func63 : Wasm.Program :=
   [
@@ -5921,6 +6110,9 @@ def func63 : Wasm.Program :=
   .localGet 2
 ]
 
+def func63Def : Wasm.Function :=
+  { params := [.i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32], body := func63, results := [.i32] }
+
 def func64 : Wasm.Program :=
   [
   .localGet 0,
@@ -6128,6 +6320,9 @@ def func64 : Wasm.Program :=
   .and,
   .store32 (1049660 : UInt32)
 ]
+
+def func64Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32], body := func64, results := [] }
 
 def func65 : Wasm.Program :=
   [
@@ -6386,6 +6581,9 @@ def func65 : Wasm.Program :=
   ]
 ]
 
+def func65Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [.i32, .i32], body := func65, results := [] }
+
 def func66 : Wasm.Program :=
   [
   .globalGet 0,
@@ -6409,6 +6607,9 @@ def func66 : Wasm.Program :=
   .call 55,
   .unreachable
 ]
+
+def func66Def : Wasm.Function :=
+  { params := [.i32], locals := [.i32, .i64], body := func66, results := [] }
 
 def func67 : Wasm.Program :=
   [
@@ -6451,6 +6652,9 @@ def func67 : Wasm.Program :=
   .localGet 1
 ]
 
+def func67Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [], body := func67, results := [.i32] }
+
 def func68 : Wasm.Program :=
   [
   .localGet 1,
@@ -6458,6 +6662,9 @@ def func68 : Wasm.Program :=
   .call 73,
   .unreachable
 ]
+
+def func68Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [], body := func68, results := [] }
 
 def func69 : Wasm.Program :=
   [
@@ -6479,6 +6686,9 @@ def func69 : Wasm.Program :=
   .call 53,
   .unreachable
 ]
+
+def func69Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [.i32], body := func69, results := [] }
 
 def func70 : Wasm.Program :=
   [
@@ -6654,6 +6864,9 @@ def func70 : Wasm.Program :=
   .store32 (8 : UInt32)
 ]
 
+def func70Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32], body := func70, results := [] }
+
 def func71 : Wasm.Program :=
   [
   .const (0 : UInt32),
@@ -6691,6 +6904,9 @@ def func71 : Wasm.Program :=
   .localGet 1
 ]
 
+def func71Def : Wasm.Function :=
+  { params := [.i32], locals := [.i32, .i32], body := func71, results := [.i32] }
+
 def func72 : Wasm.Program :=
   [
   .localGet 0,
@@ -6703,6 +6919,9 @@ def func72 : Wasm.Program :=
   .store64 (0 : UInt32)
 ]
 
+def func72Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [], body := func72, results := [] }
+
 def func73 : Wasm.Program :=
   [
   .localGet 0,
@@ -6714,6 +6933,9 @@ def func73 : Wasm.Program :=
   .load64 (1048868 : UInt32),
   .store64 (0 : UInt32)
 ]
+
+def func73Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [], body := func73, results := [] }
 
 def func74 : Wasm.Program :=
   [
@@ -6746,6 +6968,9 @@ def func74 : Wasm.Program :=
   .call 95
 ]
 
+def func74Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [], body := func74, results := [.i32] }
+
 def func75 : Wasm.Program :=
   [
   .localGet 0,
@@ -6756,6 +6981,9 @@ def func75 : Wasm.Program :=
   .store32 (0 : UInt32)
 ]
 
+def func75Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [], body := func75, results := [] }
+
 def func76 : Wasm.Program :=
   [
   .localGet 0,
@@ -6763,6 +6991,9 @@ def func76 : Wasm.Program :=
   .load64 (0 : UInt32),
   .store64 (0 : UInt32)
 ]
+
+def func76Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [], body := func76, results := [] }
 
 def func77 : Wasm.Program :=
   [
@@ -6799,6 +7030,9 @@ def func77 : Wasm.Program :=
   .store32 (0 : UInt32)
 ]
 
+def func77Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [.i32, .i32], body := func77, results := [] }
+
 def func78 : Wasm.Program :=
   [
   .localGet 1,
@@ -6808,6 +7042,9 @@ def func78 : Wasm.Program :=
   .load32 (4 : UInt32),
   .call 96
 ]
+
+def func78Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [], body := func78, results := [.i32] }
 
 def func79 : Wasm.Program :=
   [
@@ -6959,6 +7196,9 @@ def func79 : Wasm.Program :=
   .const (0 : UInt32)
 ]
 
+def func79Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32], body := func79, results := [.i32] }
+
 def func80 : Wasm.Program :=
   [
   .block 0 0 [
@@ -7007,6 +7247,9 @@ def func80 : Wasm.Program :=
   .store32 (8 : UInt32),
   .const (0 : UInt32)
 ]
+
+def func80Def : Wasm.Function :=
+  { params := [.i32, .i32, .i32], locals := [.i32], body := func80, results := [.i32] }
 
 def func81 : Wasm.Program :=
   [
@@ -7074,6 +7317,9 @@ def func81 : Wasm.Program :=
   .add,
   .globalSet 0
 ]
+
+def func81Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [.i32, .i32, .i64], body := func81, results := [] }
 
 def func82 : Wasm.Program :=
   [
@@ -7181,12 +7427,18 @@ def func82 : Wasm.Program :=
   .globalSet 0
 ]
 
+def func82Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [.i32, .i32, .i64], body := func82, results := [] }
+
 def func83 : Wasm.Program :=
   [
   .localGet 0,
   .const (0 : UInt32),
   .store32 (0 : UInt32)
 ]
+
+def func83Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [], body := func83, results := [] }
 
 def func84 : Wasm.Program :=
   [
@@ -7196,6 +7448,9 @@ def func84 : Wasm.Program :=
   .localGet 2,
   .call 95
 ]
+
+def func84Def : Wasm.Function :=
+  { params := [.i32, .i32, .i32], locals := [], body := func84, results := [.i32] }
 
 def func85 : Wasm.Program :=
   [
@@ -7255,6 +7510,9 @@ def func85 : Wasm.Program :=
   .store32 (0 : UInt32)
 ]
 
+def func85Def : Wasm.Function :=
+  { params := [.i32, .i32, .i32], locals := [.i32, .i32], body := func85, results := [] }
+
 def func86 : Wasm.Program :=
   [
   .block 0 0 [
@@ -7270,6 +7528,9 @@ def func86 : Wasm.Program :=
   .unreachable
 ]
 
+def func86Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [], body := func86, results := [] }
+
 def func87 : Wasm.Program :=
   [
   .localGet 1,
@@ -7277,6 +7538,9 @@ def func87 : Wasm.Program :=
   .call 72,
   .unreachable
 ]
+
+def func87Def : Wasm.Function :=
+  { params := [.i32, .i32], locals := [], body := func87, results := [] }
 
 def func88 : Wasm.Program :=
   [
@@ -7286,6 +7550,9 @@ def func88 : Wasm.Program :=
   .call 94,
   .unreachable
 ]
+
+def func88Def : Wasm.Function :=
+  { params := [], locals := [], body := func88, results := [] }
 
 def func89 : Wasm.Program :=
   [
@@ -7299,6 +7566,9 @@ def func89 : Wasm.Program :=
   .call 94,
   .unreachable
 ]
+
+def func89Def : Wasm.Function :=
+  { params := [.i32, .i32, .i32], locals := [], body := func89, results := [] }
 
 def func90 : Wasm.Program :=
   [
@@ -7331,6 +7601,9 @@ def func90 : Wasm.Program :=
   .call 70,
   .unreachable
 ]
+
+def func90Def : Wasm.Function :=
+  { params := [.i32, .i32, .i32], locals := [.i32], body := func90, results := [] }
 
 def func91 : Wasm.Program :=
   [
@@ -7640,6 +7913,9 @@ def func91 : Wasm.Program :=
   .localGet 5
 ]
 
+def func91Def : Wasm.Function :=
+  { params := [.i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32], body := func91, results := [.i32] }
+
 def func92 : Wasm.Program :=
   [
   .localGet 0,
@@ -7652,6 +7928,9 @@ def func92 : Wasm.Program :=
   .callIndirect 2 0
 ]
 
+def func92Def : Wasm.Function :=
+  { params := [.i32, .i32, .i32], locals := [], body := func92, results := [.i32] }
+
 def «module» : Wasm.Module :=
 {
   imports := [
@@ -7661,99 +7940,99 @@ def «module» : Wasm.Module :=
     { «module» := "env", name := "input", params := [.i64], results := [] }
   ],
   funcs := [
-    { params := [], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32], body := func0, results := [] },
-    { params := [.i32, .i32], locals := [.i32], body := func1, results := [] },
-    { params := [.i32], locals := [], body := func2, results := [] },
-    { params := [], locals := [], body := func3, results := [] },
-    { params := [.i32, .i32], locals := [], body := func4, results := [.i32] },
-    { params := [.i32, .i32, .i32], locals := [], body := func5, results := [] },
-    { params := [.i32, .i32, .i32, .i32], locals := [], body := func6, results := [.i32] },
-    { params := [.i32, .i32], locals := [], body := func7, results := [.i32] },
-    { params := [], locals := [], body := func8, results := [] },
-    { params := [.i32], locals := [], body := func9, results := [] },
-    { params := [.i32, .i32], locals := [.i32, .i32], body := func10, results := [] },
-    { params := [.i32, .i32], locals := [.i32], body := func11, results := [] },
-    { params := [.i32, .i64, .i64], locals := [.i32, .i64], body := func12, results := [] },
-    { params := [.i32, .i64], locals := [.i32, .i64], body := func13, results := [] },
-    { params := [.i32, .i64], locals := [.i32], body := func14, results := [] },
-    { params := [.i32, .i64, .i32], locals := [.i32, .i64, .i64, .i64, .i32, .i32], body := func15, results := [] },
-    { params := [.i32, .i32], locals := [.i32], body := func16, results := [] },
-    { params := [.i32, .i32, .i32, .i32], locals := [.i32, .i64, .i64, .i64, .i64, .i32, .i32, .i32], body := func17, results := [.i32] },
-    { params := [.i32, .i32], locals := [.i32], body := func18, results := [] },
-    { params := [], locals := [.i32], body := func19, results := [.i32] },
-    { params := [.i32], locals := [], body := func20, results := [] },
-    { params := [.i32, .i64], locals := [.i32, .i32, .i32, .i32], body := func21, results := [] },
-    { params := [.i32, .i32, .i32], locals := [.i32, .i32], body := func22, results := [.i32] },
-    { params := [.i32, .i32, .i32], locals := [.i32, .i32, .i32], body := func23, results := [] },
-    { params := [.i32, .i64], locals := [.i32, .i32], body := func24, results := [] },
-    { params := [.i32, .i32], locals := [.i32, .i32, .i32], body := func25, results := [] },
-    { params := [.i32], locals := [.i32], body := func26, results := [.i32] },
-    { params := [.i32, .i32], locals := [.i32], body := func27, results := [] },
-    { params := [.i32], locals := [.i32, .i32], body := func28, results := [] },
-    { params := [.i32, .i32], locals := [.i32, .i32], body := func29, results := [] },
-    { params := [.i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32], body := func30, results := [] },
-    { params := [.i32, .i32, .i32, .i32], locals := [.i32], body := func31, results := [] },
-    { params := [.i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32], body := func32, results := [] },
-    { params := [.i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32], body := func33, results := [] },
-    { params := [.i32], locals := [.i32], body := func34, results := [] },
-    { params := [.i32], locals := [.i32], body := func35, results := [] },
-    { params := [.i32, .i32, .i32], locals := [.i32, .i32, .i32], body := func36, results := [] },
-    { params := [.i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32], body := func37, results := [] },
-    { params := [.i32, .i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32], body := func38, results := [] },
-    { params := [.i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32], body := func39, results := [] },
-    { params := [.i32, .i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i64, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32], body := func40, results := [] },
-    { params := [.i32], locals := [.i32, .i32], body := func41, results := [] },
-    { params := [], locals := [], body := func42, results := [] },
-    { params := [], locals := [], body := func43, results := [] },
-    { params := [.i32, .i32], locals := [], body := func44, results := [.i32] },
-    { params := [.i32, .i32, .i32, .i32, .i32], locals := [.i32], body := func45, results := [] },
-    { params := [.i32, .i32], locals := [], body := func46, results := [] },
-    { params := [.i32], locals := [.i32], body := func47, results := [] },
-    { params := [.i32], locals := [.i32], body := func48, results := [] },
-    { params := [.i32], locals := [], body := func49, results := [] },
-    { params := [.i32], locals := [], body := func50, results := [] },
-    { params := [.i32], locals := [], body := func51, results := [] },
-    { params := [.i32], locals := [.i32, .i32, .i32], body := func52, results := [] },
-    { params := [.i32, .i32, .i32, .i32, .i32, .i32], locals := [.i32, .i32, .i64], body := func53, results := [] },
-    { params := [.i32, .i32, .i32, .i32, .i32], locals := [.i32, .i32], body := func54, results := [] },
-    { params := [.i32, .i32], locals := [], body := func55, results := [] },
-    { params := [.i32, .i32], locals := [], body := func56, results := [] },
-    { params := [.i32, .i32], locals := [], body := func57, results := [.i32] },
-    { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32], body := func58, results := [.i32] },
-    { params := [.i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i64], body := func59, results := [.i32] },
-    { params := [], locals := [], body := func60, results := [] },
-    { params := [.i32, .i32, .i32], locals := [.i32, .i32], body := func61, results := [] },
-    { params := [.i32], locals := [.i32, .i32, .i32, .i32], body := func62, results := [] },
-    { params := [.i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32], body := func63, results := [.i32] },
-    { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32], body := func64, results := [] },
-    { params := [.i32, .i32], locals := [.i32, .i32], body := func65, results := [] },
-    { params := [.i32], locals := [.i32, .i64], body := func66, results := [] },
-    { params := [.i32, .i32], locals := [], body := func67, results := [.i32] },
-    { params := [.i32, .i32], locals := [], body := func68, results := [] },
-    { params := [.i32, .i32], locals := [.i32], body := func69, results := [] },
-    { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32], body := func70, results := [] },
-    { params := [.i32], locals := [.i32, .i32], body := func71, results := [.i32] },
-    { params := [.i32, .i32], locals := [], body := func72, results := [] },
-    { params := [.i32, .i32], locals := [], body := func73, results := [] },
-    { params := [.i32, .i32], locals := [], body := func74, results := [.i32] },
-    { params := [.i32, .i32], locals := [], body := func75, results := [] },
-    { params := [.i32, .i32], locals := [], body := func76, results := [] },
-    { params := [.i32, .i32], locals := [.i32, .i32], body := func77, results := [] },
-    { params := [.i32, .i32], locals := [], body := func78, results := [.i32] },
-    { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32], body := func79, results := [.i32] },
-    { params := [.i32, .i32, .i32], locals := [.i32], body := func80, results := [.i32] },
-    { params := [.i32, .i32], locals := [.i32, .i32, .i64], body := func81, results := [] },
-    { params := [.i32, .i32], locals := [.i32, .i32, .i64], body := func82, results := [] },
-    { params := [.i32, .i32], locals := [], body := func83, results := [] },
-    { params := [.i32, .i32, .i32], locals := [], body := func84, results := [.i32] },
-    { params := [.i32, .i32, .i32], locals := [.i32, .i32], body := func85, results := [] },
-    { params := [.i32, .i32], locals := [], body := func86, results := [] },
-    { params := [.i32, .i32], locals := [], body := func87, results := [] },
-    { params := [], locals := [], body := func88, results := [] },
-    { params := [.i32, .i32, .i32], locals := [], body := func89, results := [] },
-    { params := [.i32, .i32, .i32], locals := [.i32], body := func90, results := [] },
-    { params := [.i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32], body := func91, results := [.i32] },
-    { params := [.i32, .i32, .i32], locals := [], body := func92, results := [.i32] }
+    func0Def,
+    func1Def,
+    func2Def,
+    func3Def,
+    func4Def,
+    func5Def,
+    func6Def,
+    func7Def,
+    func8Def,
+    func9Def,
+    func10Def,
+    func11Def,
+    func12Def,
+    func13Def,
+    func14Def,
+    func15Def,
+    func16Def,
+    func17Def,
+    func18Def,
+    func19Def,
+    func20Def,
+    func21Def,
+    func22Def,
+    func23Def,
+    func24Def,
+    func25Def,
+    func26Def,
+    func27Def,
+    func28Def,
+    func29Def,
+    func30Def,
+    func31Def,
+    func32Def,
+    func33Def,
+    func34Def,
+    func35Def,
+    func36Def,
+    func37Def,
+    func38Def,
+    func39Def,
+    func40Def,
+    func41Def,
+    func42Def,
+    func43Def,
+    func44Def,
+    func45Def,
+    func46Def,
+    func47Def,
+    func48Def,
+    func49Def,
+    func50Def,
+    func51Def,
+    func52Def,
+    func53Def,
+    func54Def,
+    func55Def,
+    func56Def,
+    func57Def,
+    func58Def,
+    func59Def,
+    func60Def,
+    func61Def,
+    func62Def,
+    func63Def,
+    func64Def,
+    func65Def,
+    func66Def,
+    func67Def,
+    func68Def,
+    func69Def,
+    func70Def,
+    func71Def,
+    func72Def,
+    func73Def,
+    func74Def,
+    func75Def,
+    func76Def,
+    func77Def,
+    func78Def,
+    func79Def,
+    func80Def,
+    func81Def,
+    func82Def,
+    func83Def,
+    func84Def,
+    func85Def,
+    func86Def,
+    func87Def,
+    func88Def,
+    func89Def,
+    func90Def,
+    func91Def,
+    func92Def
   ],
   exports := [
     { name := "set_from_input", funcIdx := 7 }

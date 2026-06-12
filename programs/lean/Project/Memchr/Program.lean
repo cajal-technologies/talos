@@ -85,6 +85,9 @@ def func0 : Wasm.Program :=
   .ret
 ]
 
+def func0Def : Wasm.Function :=
+  { params := [.i32, .i32, .i32], locals := [.i32, .i32], body := func0, results := [.i32] }
+
 /-- export: memchr -/
 def func1 : Wasm.Program :=
   [
@@ -116,12 +119,15 @@ def func1 : Wasm.Program :=
   .ret
 ]
 
+def func1Def : Wasm.Function :=
+  { params := [.i32, .i32, .i32], locals := [.i32, .i32], body := func1, results := [.i32] }
+
 def «module» : Wasm.Module :=
 {
   imports := [],
   funcs := [
-    { params := [.i32, .i32, .i32], locals := [.i32, .i32], body := func0, results := [.i32] },
-    { params := [.i32, .i32, .i32], locals := [.i32, .i32], body := func1, results := [.i32] }
+    func0Def,
+    func1Def
   ],
   exports := [
     { name := "memchr", funcIdx := 1 }
