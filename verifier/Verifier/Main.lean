@@ -315,37 +315,63 @@ private def scaffoldModuleFiles (c : Crate) : IO Unit := do
   for f in written do
     IO.println s!"    scaffolded {f}"
 
-private def reproducibleRustflags (rustDir : FilePath) : IO String := do
-  let sysrootOut ← IO.Process.output
-    { cmd := "rustc", args := #["--print", "sysroot"], cwd := some rustDir }
-  let sysroot :=
-    if sysrootOut.exitCode = 0 then sysrootOut.stdout.trimAscii else ""
-  let cargoHome ← do
-    match ← IO.getEnv "CARGO_HOME" with
-    | some v => pure v
-    | none =>
-      match ← IO.getEnv "HOME" with
-      | some h => pure (h ++ "/.cargo")
-      | none   => pure ""
-  let home := (← IO.getEnv "HOME").getD ""
-  let mut remaps : Array String := #[]
-  if !home.isEmpty then
-    remaps := remaps.push s!"--remap-path-prefix={home}=/home"
-  if !cargoHome.isEmpty then
-    remaps := remaps.push s!"--remap-path-prefix={cargoHome}=/cargo-home"
-  if !sysroot.isEmpty then
-    remaps := remaps.push s!"--remap-path-prefix={sysroot}=/rustc-sysroot"
-  pure (String.intercalate " " remaps.toList)
+/-- Fixed absolute directory the Rust workspace is mirrored into before
+building. Cargo folds the package *path* of path-dependencies into
+`-C metadata`, which feeds rustc's symbol disambiguators and, through
+them, the emission *order* of functions in the wasm. Building from the
+checkout directory therefore produces differently-ordered (though
+behaviorally identical) modules on every machine, and CI's
+generated-file freshness check can never match a local emit. Mirroring
+the workspace to one canonical path before invoking cargo pins the
+package identity — and with `codegen-units = 1` the output module is
+byte-stable across checkouts. -/
+private def canonicalBuildRoot : FilePath := "/tmp/talos-canonical-build"
+
+/-- The RUSTFLAGS for the canonical wasm build. The *string value* of
+RUSTFLAGS feeds cargo's per-unit `-C metadata` hash, which seeds rustc's
+symbol disambiguators and through them the emission *order* of functions
+in the module — so any machine-specific path inside RUSTFLAGS makes
+every machine build a differently-ordered (though behaviorally
+identical) module, and CI's freshness check can never agree with a
+local emit. This constant must therefore contain no machine-dependent
+component. The single remap covers the only paths that can reach the
+*stripped* artifact (the workspace, mirrored under `canonicalBuildRoot`);
+machine-specific registry/sysroot paths appear in DWARF custom sections
+only, which `wasm-tools strip` removes before the wat/Program emit, and
+release toolchains pre-remap std sources to `/rustc/<commit>`
+identically on every platform. -/
+private def canonicalRustflags : String :=
+  s!"--remap-path-prefix={canonicalBuildRoot}=/talos-build"
 
 private def buildWasm (projectDir : FilePath) (crates : Array Crate) : IO Unit := do
   IO.println "==> cargo build-wasm (workspace)"
-  let rustDir := projectDir / "rust"
-  let rustflags ← reproducibleRustflags rustDir
+  let rustDir := canonicalBuildRoot / "rust"
+  IO.FS.createDirAll rustDir
+  -- Mirror sources; keep `target/` (incremental cache) and drop `build/`
+  -- (the per-crate output tree lives only in the real checkout).
+  runOrDie "rsync"
+    #["-a", "--delete", "--exclude", "target", "--exclude", "build",
+      (projectDir / "rust").toString ++ "/", rustDir.toString]
+  -- Point CARGO_HOME at a fixed symlink to the real cargo home: registry
+  -- dep sources then appear under the canonical prefix on every rustc
+  -- command line. The command-line source path of a unit feeds its hash
+  -- (and so symbol disambiguators / function order) — leaving the real,
+  -- machine-specific cargo home on the command line reintroduces
+  -- cross-machine drift even with constant RUSTFLAGS.
+  let realCargoHome ← do
+    match ← IO.getEnv "CARGO_HOME" with
+    | some v => pure v
+    | none   => pure (((← IO.getEnv "HOME").getD "") ++ "/.cargo")
+  let cargoHomeLink := canonicalBuildRoot / "cargo-home"
+  if ← System.FilePath.pathExists cargoHomeLink then
+    IO.FS.removeFile cargoHomeLink
+  runOrDie "ln" #["-s", realCargoHome, cargoHomeLink.toString]
   runOrDie "cargo" #["build-wasm"]
     (cwd := some rustDir)
-    (env := #[("RUSTFLAGS", some rustflags)])
+    (env := #[("RUSTFLAGS", some canonicalRustflags),
+              ("CARGO_HOME", some cargoHomeLink.toString)])
   let buildRoot := projectDir / "rust" / "build"
-  let cargoTarget := projectDir / "rust" / "target" / "wasm32-unknown-unknown" / "release"
+  let cargoTarget := rustDir / "target" / "wasm32-unknown-unknown" / "release"
   for c in crates do
     let outDir := buildRoot / c.name
     IO.FS.createDirAll outDir

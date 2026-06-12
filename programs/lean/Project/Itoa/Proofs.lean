@@ -25,7 +25,7 @@ This file is built bottom-up:
 2. `decimalDigits` — the shared decimal-string reference both formatters
    are proven to produce, plus the byte-level framing, `DIGIT_TABLE`,
    and magic-division lemma layers (all carried over from the
-   pre-migration proof; only the table base moved, to `1049400`).
+   pre-migration proof; only the table base moved, to `1049424`).
 3. export-wrapper bridges (`func31`/`func32` and `func28`/`func29`)
    peeling the shadow-stack hops, and the conditional top-level
    theorems reducing `CheckI64Spec` / `CheckU64Spec` to `HarnessSpec
@@ -376,7 +376,7 @@ theorem outPtr_add_ne (outPtr : UInt32) {i j : Nat} (hi : i < 20) (hj : j < 20) 
   · simp [UInt32.size]
     omega
 
-theorem outPtr_add_toNat_of_before_table (outPtr : UInt32) (houtTable : outPtr.toNat + 20 ≤ 1049400)
+theorem outPtr_add_toNat_of_before_table (outPtr : UInt32) (houtTable : outPtr.toNat + 20 ≤ 1049424)
     {k : Nat} (hk : k < 20) :
     (outPtr + UInt32.ofNat k).toNat = outPtr.toNat + k := by
   rw [UInt32.toNat_add]
@@ -389,7 +389,7 @@ theorem outPtr_add_toNat_of_before_table (outPtr : UInt32) (houtTable : outPtr.t
     omega
 
 theorem outPtr_16_19_addr_facts_before_table (outPtr : UInt32)
-    (houtTable : outPtr.toNat + 20 ≤ 1049400) :
+    (houtTable : outPtr.toNat + 20 ≤ 1049424) :
     (outPtr + 17).toNat = (outPtr + 16).toNat + 1 ∧
     (outPtr + 19).toNat = (outPtr + 18).toNat + 1 ∧
     (outPtr + 16).toNat ≠ (outPtr + 18).toNat ∧
@@ -450,7 +450,7 @@ theorem packed_two_digits_high_byte (lo hi : Nat) (hlo : lo < 10) (hhi : hi < 10
 
 /-! ### `itoa` digit table in the canonical initial store -/
 
-def digitTableBase : Nat := 1049400
+def digitTableBase : Nat := 1049424
 
 def harnessFramePtr : Nat := 1048512
 
@@ -517,7 +517,7 @@ theorem digit_table_read16_high_byte (d : Nat) (h : d < 100) :
   interval_cases d <;> native_decide
 
 theorem digit_table_read16_u32 (d : UInt32) (h : d.toNat < 100) :
-    («module».initialStore (α := Unit)).mem.read16 ((d <<< (1 : UInt32)) + 1049400) =
+    («module».initialStore (α := Unit)).mem.read16 ((d <<< (1 : UInt32)) + 1049424) =
       (UInt32.ofNat (48 + d.toNat / 10)) ||| ((UInt32.ofNat (48 + d.toNat % 10)) <<< 8) := by
   have hshift : (d <<< (1 : UInt32)).toNat = 2 * d.toNat := by
     rw [UInt32.toNat_shiftLeft]
@@ -528,11 +528,11 @@ theorem digit_table_read16_u32 (d : UInt32) (h : d.toNat < 100) :
       omega
     rw [Nat.mod_eq_of_lt hlt]
     omega
-  have haddr : (d <<< (1 : UInt32)) + 1049400 =
+  have haddr : (d <<< (1 : UInt32)) + 1049424 =
       UInt32.ofNat (digitTableBase + 2 * d.toNat) := by
     apply UInt32.toNat.inj
     rw [UInt32.toNat_add, hshift]
-    simp only [show (1049400 : UInt32).toNat = 1049400 from rfl]
+    simp only [show (1049424 : UInt32).toNat = 1049424 from rfl]
     rw [UInt32.toNat_ofNat_of_lt']
     · simp [digitTableBase]
       omega
@@ -542,15 +542,15 @@ theorem digit_table_read16_u32 (d : UInt32) (h : d.toNat < 100) :
   exact digit_table_read16_nat d.toNat h
 
 theorem digit_table_addr_u32_le (d : UInt32) (h : d.toNat < 100) :
-    ((d <<< (1 : UInt32)) + 1049400).toNat ≤ 1049598 := by
+    ((d <<< (1 : UInt32)) + 1049424).toNat ≤ 1049622 := by
   rw [UInt32.toNat_add, UInt32.toNat_shiftLeft]
   simp only [show (1 : UInt32).toNat % 32 = 1 from rfl,
-    show (1049400 : UInt32).toNat = 1049400 from rfl]
+    show (1049424 : UInt32).toNat = 1049424 from rfl]
   rw [Nat.shiftLeft_eq]
   have hlt : d.toNat * 2 < UInt32.size := by
     have hsize : UInt32.size = 4294967296 := rfl
     omega
-  have hsumlt : d.toNat * 2 + 1049400 < UInt32.size := by
+  have hsumlt : d.toNat * 2 + 1049424 < UInt32.size := by
     have hsize : UInt32.size = 4294967296 := rfl
     omega
   rw [Nat.mod_eq_of_lt hlt, Nat.mod_eq_of_lt hsumlt]
@@ -559,7 +559,7 @@ theorem digit_table_addr_u32_le (d : UInt32) (h : d.toNat < 100) :
 set_option maxHeartbeats 2000000 in
 theorem digit_table_read16_u32_low_byte (d : UInt32) (h : d.toNat < 100) :
     (((«module».initialStore (α := Unit)).mem.read16
-        ((d <<< (1 : UInt32)) + 1049400)) &&& 0xFF).toUInt8 =
+        ((d <<< (1 : UInt32)) + 1049424)) &&& 0xFF).toUInt8 =
       UInt8.ofNat (48 + d.toNat / 10) := by
   rw [digit_table_read16_u32 d h]
   interval_cases d.toNat <;> native_decide
@@ -567,21 +567,21 @@ theorem digit_table_read16_u32_low_byte (d : UInt32) (h : d.toNat < 100) :
 set_option maxHeartbeats 2000000 in
 theorem digit_table_read16_u32_high_byte (d : UInt32) (h : d.toNat < 100) :
     ((((«module».initialStore (α := Unit)).mem.read16
-        ((d <<< (1 : UInt32)) + 1049400)) >>> 8) &&& 0xFF).toUInt8 =
+        ((d <<< (1 : UInt32)) + 1049424)) >>> 8) &&& 0xFF).toUInt8 =
       UInt8.ofNat (48 + d.toNat % 10) := by
   rw [digit_table_read16_u32 d h]
   interval_cases d.toNat <;> native_decide
 
 theorem write16_digit_table_u32_low_byte (m : Mem) (a d : UInt32) (h : d.toNat < 100) :
     (m.write16 a ((«module».initialStore (α := Unit)).mem.read16
-        ((d <<< (1 : UInt32)) + 1049400))).bytes a.toNat =
+        ((d <<< (1 : UInt32)) + 1049424))).bytes a.toNat =
       UInt8.ofNat (48 + d.toNat / 10) := by
   rw [read16_write16_low]
   exact digit_table_read16_u32_low_byte d h
 
 theorem write16_digit_table_u32_high_byte (m : Mem) (a d : UInt32) (h : d.toNat < 100) :
     (m.write16 a ((«module».initialStore (α := Unit)).mem.read16
-        ((d <<< (1 : UInt32)) + 1049400))).bytes (a.toNat + 1) =
+        ((d <<< (1 : UInt32)) + 1049424))).bytes (a.toNat + 1) =
       UInt8.ofNat (48 + d.toNat % 10) := by
   rw [read16_write16_high]
   exact digit_table_read16_u32_high_byte d h
@@ -655,7 +655,7 @@ theorem u64_chunk_remainder_lt10000 (n : UInt64) (hn : n.toNat < 10000) :
   simp
 
 theorem digit_table_quot_addr_le_lt10000 (n : UInt64) (hn : n.toNat < 10000) :
-    ((UInt32.ofNat (n.toNat / 100) <<< (1 : UInt32)) + 1049400).toNat ≤ 1049598 := by
+    ((UInt32.ofNat (n.toNat / 100) <<< (1 : UInt32)) + 1049424).toNat ≤ 1049622 := by
   have hd : (UInt32.ofNat (n.toNat / 100)).toNat < 100 := by
     rw [UInt32.toNat_ofNat_of_lt']
     · omega
@@ -664,15 +664,15 @@ theorem digit_table_quot_addr_le_lt10000 (n : UInt64) (hn : n.toNat < 10000) :
   exact digit_table_addr_u32_le (UInt32.ofNat (n.toNat / 100)) hd
 
 theorem digit_table_quot_load16_bound_lt10000 (pages : Nat) (n : UInt64)
-    (hn : n.toNat < 10000) (htable : 1049600 ≤ pages * 65536) :
-    ¬ ((UInt32.ofNat (n.toNat / 100) <<< (1 : UInt32)) + 1049400).toNat + 0 + 2 >
+    (hn : n.toNat < 10000) (htable : 1049624 ≤ pages * 65536) :
+    ¬ ((UInt32.ofNat (n.toNat / 100) <<< (1 : UInt32)) + 1049424).toNat + 0 + 2 >
       pages * 65536 := by
   have hle := digit_table_quot_addr_le_lt10000 n hn
   omega
 
 theorem digit_table_quot_load16_bound_nat_lt10000 (pages : Nat) (n : UInt64)
-    (hn : n.toNat < 10000) (htable : 1049600 ≤ pages * 65536) :
-    ((5243 * n.toNat % 4294967296) >>> 19 <<< 1) % 4294967296 + 1049400 + 2 ≤
+    (hn : n.toNat < 10000) (htable : 1049624 ≤ pages * 65536) :
+    ((5243 * n.toNat % 4294967296) >>> 19 <<< 1) % 4294967296 + 1049424 + 2 ≤
       pages * 65536 := by
   rw [magic_div100_shift_lt10000 n hn, Nat.shiftLeft_eq]
   have hlt : (n.toNat / 100) * 2 < 4294967296 := by omega
@@ -733,7 +733,7 @@ theorem two_digit_table_read_ones (n : UInt64) (hn : n.toNat < 100) :
     («module».initialStore (α := Unit)).mem.read8
         (((UInt32.ofNat (n.toNat % 2 ^ 32) +
           4294967196 * ((5243 * UInt32.ofNat (n.toNat % 2 ^ 32)) >>> (19 : UInt32))) <<< (1 : UInt32)) +
-          1049401) =
+          1049425) =
       UInt8.ofNat (48 + n.toNat % 10) := by
   rw [two_digit_table_index_u32 n hn]
   interval_cases n.toNat <;> native_decide
@@ -742,7 +742,7 @@ theorem two_digit_table_read_tens (n : UInt64) (hn : n.toNat < 100) :
     («module».initialStore (α := Unit)).mem.read8
         (((UInt32.ofNat (n.toNat % 2 ^ 32) +
           4294967196 * ((5243 * UInt32.ofNat (n.toNat % 2 ^ 32)) >>> (19 : UInt32))) <<< (1 : UInt32)) +
-          1049400) =
+          1049424) =
       UInt8.ofNat (48 + n.toNat / 10) := by
   rw [two_digit_table_index_u32 n hn]
   interval_cases n.toNat <;> native_decide
@@ -808,23 +808,23 @@ theorem digit_pair_table_low_read16_lt10000 (n : Nat) (_hn : n < 10000) :
 
 theorem digit_pair_table_high_read16_u32_lt10000 (n : UInt64) (hn : n.toNat < 10000) :
     («module».initialStore (α := Unit)).mem.read16
-        ((UInt32.ofNat (n.toNat / 100) <<< (1 : UInt32)) + 1049400) =
+        ((UInt32.ofNat (n.toNat / 100) <<< (1 : UInt32)) + 1049424) =
       (UInt32.ofNat (48 + n.toNat / 1000)) |||
         ((UInt32.ofNat (48 + n.toNat / 100 % 10)) <<< 8) := by
   have haddr :
-      (UInt32.ofNat (n.toNat / 100) <<< (1 : UInt32)) + 1049400 =
+      (UInt32.ofNat (n.toNat / 100) <<< (1 : UInt32)) + 1049424 =
         UInt32.ofNat (digitTableBase + 2 * (n.toNat / 100)) := by
     apply UInt32.toNat.inj
     rw [UInt32.toNat_add, UInt32.toNat_shiftLeft]
     simp only [show (1 : UInt32).toNat % 32 = 1 from rfl,
-      show (1049400 : UInt32).toNat = 1049400 from rfl]
+      show (1049424 : UInt32).toNat = 1049424 from rfl]
     rw [Nat.shiftLeft_eq]
     rw [UInt32.toNat_ofNat_of_lt', UInt32.toNat_ofNat_of_lt']
     · simp [digitTableBase]
       have hlt : (n.toNat / 100) * 2 < UInt32.size := by
         have hsize : UInt32.size = 4294967296 := rfl
         omega
-      have hsumlt : (n.toNat / 100) * 2 + 1049400 < UInt32.size := by
+      have hsumlt : (n.toNat / 100) * 2 + 1049424 < UInt32.size := by
         have hsize : UInt32.size = 4294967296 := rfl
         omega
       rw [Nat.mod_eq_of_lt hsumlt]
@@ -879,15 +879,15 @@ theorem digit_pair_table_low_read16_u32_lt10000 (n : UInt64) (hn : n.toNat < 100
     («module».initialStore (α := Unit)).mem.read16
         (((UInt32.ofNat (n.toNat % 2 ^ 32) +
           4294967196 * ((5243 * UInt32.ofNat (n.toNat % 2 ^ 32)) >>> (19 : UInt32))) <<< (1 : UInt32)) +
-          1049400) =
+          1049424) =
       (UInt32.ofNat (48 + n.toNat / 10 % 10)) |||
         ((UInt32.ofNat (48 + n.toNat % 10)) <<< 8) := by
   rw [digit_pair_table_index_u32_lt10000 n hn]
-  rw [show UInt32.ofNat (2 * (n.toNat % 100)) + 1049400 =
+  rw [show UInt32.ofNat (2 * (n.toNat % 100)) + 1049424 =
       UInt32.ofNat (digitTableBase + 2 * (n.toNat % 100)) by
     apply UInt32.toNat.inj
     rw [UInt32.toNat_add]
-    simp only [show (1049400 : UInt32).toNat = 1049400 from rfl]
+    simp only [show (1049424 : UInt32).toNat = 1049424 from rfl]
     rw [UInt32.toNat_ofNat_of_lt', UInt32.toNat_ofNat_of_lt']
     · simp [digitTableBase]
       omega
@@ -908,7 +908,7 @@ theorem read16_low_pair_after_output_write16_lt10000 (n : UInt64) (outPtr word :
     simp only [show (16 : UInt32).toNat = 16 from rfl]
     have hlt : outPtr.toNat + 16 < UInt32.size := by
       simp [UInt32.size]
-      have houtSmall : outPtr.toNat + 20 ≤ 1049400 := by
+      have houtSmall : outPtr.toNat + 20 ≤ 1049424 := by
         simpa [digitTableBase] using houtTable
       omega
     rw [Nat.mod_eq_of_lt hlt]
@@ -941,17 +941,17 @@ theorem read16_low_pair_after_output_write16_u32_lt10000 (n : UInt64) (outPtr wo
     ((«module».initialStore (α := Unit)).mem.write16 (outPtr + 16) word).read16
         (((UInt32.ofNat (n.toNat % 2 ^ 32) +
           4294967196 * ((5243 * UInt32.ofNat (n.toNat % 2 ^ 32)) >>> (19 : UInt32))) <<< (1 : UInt32)) +
-          1049400) =
+          1049424) =
       («module».initialStore (α := Unit)).mem.read16
         (((UInt32.ofNat (n.toNat % 2 ^ 32) +
           4294967196 * ((5243 * UInt32.ofNat (n.toNat % 2 ^ 32)) >>> (19 : UInt32))) <<< (1 : UInt32)) +
-          1049400) := by
+          1049424) := by
   rw [digit_pair_table_index_u32_lt10000 n hn]
-  rw [show UInt32.ofNat (2 * (n.toNat % 100)) + 1049400 =
+  rw [show UInt32.ofNat (2 * (n.toNat % 100)) + 1049424 =
       UInt32.ofNat (digitTableBase + 2 * (n.toNat % 100)) by
     apply UInt32.toNat.inj
     rw [UInt32.toNat_add]
-    simp only [show (1049400 : UInt32).toNat = 1049400 from rfl]
+    simp only [show (1049424 : UInt32).toNat = 1049424 from rfl]
     rw [UInt32.toNat_ofNat_of_lt', UInt32.toNat_ofNat_of_lt']
     · simp [digitTableBase]
       omega
@@ -970,34 +970,34 @@ theorem write16_two_pairs_digits_lt10000 (m : Mem) (outPtr : UInt32) (n : UInt64
     (h1718ne : (outPtr + 17).toNat ≠ (outPtr + 18).toNat)
     (h1719ne : (outPtr + 17).toNat ≠ (outPtr + 18).toNat + 1)
     (hhi :
-      (((m.read16 ((UInt32.ofNat (n.toNat / 100) <<< (1 : UInt32)) + 1049400)) &&& 0xFF).toUInt8 =
+      (((m.read16 ((UInt32.ofNat (n.toNat / 100) <<< (1 : UInt32)) + 1049424)) &&& 0xFF).toUInt8 =
         UInt8.ofNat (48 + n.toNat / 1000)))
     (hhi' :
-      ((((m.read16 ((UInt32.ofNat (n.toNat / 100) <<< (1 : UInt32)) + 1049400)) >>> 8) &&& 0xFF).toUInt8 =
+      ((((m.read16 ((UInt32.ofNat (n.toNat / 100) <<< (1 : UInt32)) + 1049424)) >>> 8) &&& 0xFF).toUInt8 =
         UInt8.ofNat (48 + n.toNat / 100 % 10)))
     (hlo :
       (((m.write16 (outPtr + 16)
-          (m.read16 ((UInt32.ofNat (n.toNat / 100) <<< (1 : UInt32)) + 1049400))).read16
+          (m.read16 ((UInt32.ofNat (n.toNat / 100) <<< (1 : UInt32)) + 1049424))).read16
             (((UInt32.ofNat (n.toNat % 2 ^ 32) +
               4294967196 * ((5243 * UInt32.ofNat (n.toNat % 2 ^ 32)) >>> (19 : UInt32))) <<< (1 : UInt32)) +
-              1049400)) &&& 0xFF).toUInt8 =
+              1049424)) &&& 0xFF).toUInt8 =
         UInt8.ofNat (48 + n.toNat / 10 % 10))
     (hlo' :
       ((((m.write16 (outPtr + 16)
-          (m.read16 ((UInt32.ofNat (n.toNat / 100) <<< (1 : UInt32)) + 1049400))).read16
+          (m.read16 ((UInt32.ofNat (n.toNat / 100) <<< (1 : UInt32)) + 1049424))).read16
             (((UInt32.ofNat (n.toNat % 2 ^ 32) +
               4294967196 * ((5243 * UInt32.ofNat (n.toNat % 2 ^ 32)) >>> (19 : UInt32))) <<< (1 : UInt32)) +
-              1049400)) >>> 8) &&& 0xFF).toUInt8 =
+              1049424)) >>> 8) &&& 0xFF).toUInt8 =
         UInt8.ofNat (48 + n.toNat % 10)) :
     let m' :=
       (m.write16 (outPtr + 16)
-        (m.read16 ((UInt32.ofNat (n.toNat / 100) <<< (1 : UInt32)) + 1049400))).write16
+        (m.read16 ((UInt32.ofNat (n.toNat / 100) <<< (1 : UInt32)) + 1049424))).write16
           (outPtr + 18)
           ((m.write16 (outPtr + 16)
-            (m.read16 ((UInt32.ofNat (n.toNat / 100) <<< (1 : UInt32)) + 1049400))).read16
+            (m.read16 ((UInt32.ofNat (n.toNat / 100) <<< (1 : UInt32)) + 1049424))).read16
               (((UInt32.ofNat (n.toNat % 2 ^ 32) +
                 4294967196 * ((5243 * UInt32.ofNat (n.toNat % 2 ^ 32)) >>> (19 : UInt32))) <<< (1 : UInt32)) +
-                1049400))
+                1049424))
     m'.bytes (outPtr + 16).toNat = UInt8.ofNat (48 + n.toNat / 1000) ∧
     m'.bytes (outPtr + 17).toNat = UInt8.ofNat (48 + n.toNat / 100 % 10) ∧
     m'.bytes (outPtr + 18).toNat = UInt8.ofNat (48 + n.toNat / 10 % 10) ∧
@@ -1025,13 +1025,13 @@ theorem write16_two_pairs_digits_lt10000_initial (outPtr : UInt32) (n : UInt64)
     let m := («module».initialStore (α := Unit)).mem
     let m' :=
       (m.write16 (outPtr + 16)
-        (m.read16 ((UInt32.ofNat (n.toNat / 100) <<< (1 : UInt32)) + 1049400))).write16
+        (m.read16 ((UInt32.ofNat (n.toNat / 100) <<< (1 : UInt32)) + 1049424))).write16
           (outPtr + 18)
           ((m.write16 (outPtr + 16)
-            (m.read16 ((UInt32.ofNat (n.toNat / 100) <<< (1 : UInt32)) + 1049400))).read16
+            (m.read16 ((UInt32.ofNat (n.toNat / 100) <<< (1 : UInt32)) + 1049424))).read16
               (((UInt32.ofNat (n.toNat % 2 ^ 32) +
                 4294967196 * ((5243 * UInt32.ofNat (n.toNat % 2 ^ 32)) >>> (19 : UInt32))) <<< (1 : UInt32)) +
-                1049400))
+                1049424))
     m'.bytes (outPtr + 16).toNat = UInt8.ofNat (48 + n.toNat / 1000) ∧
     m'.bytes (outPtr + 17).toNat = UInt8.ofNat (48 + n.toNat / 100 % 10) ∧
     m'.bytes (outPtr + 18).toNat = UInt8.ofNat (48 + n.toNat / 10 % 10) ∧
@@ -1046,12 +1046,12 @@ theorem write16_two_pairs_digits_lt10000_initial (outPtr : UInt32) (n : UInt64)
   · rw [digit_pair_table_high_read16_u32_lt10000 n hn]
     exact packed_two_digits_high_byte (n.toNat / 1000) (n.toNat / 100 % 10) (by omega) (by omega)
   · rw [read16_low_pair_after_output_write16_u32_lt10000 n outPtr
-      (m.read16 ((UInt32.ofNat (n.toNat / 100) <<< (1 : UInt32)) + 1049400)) hn houtTable]
+      (m.read16 ((UInt32.ofNat (n.toNat / 100) <<< (1 : UInt32)) + 1049424)) hn houtTable]
     rw [digit_pair_table_low_read16_u32_lt10000 n hn]
     exact packed_two_digits_low_byte (n.toNat / 10 % 10) (n.toNat % 10) (by omega)
       (Nat.mod_lt _ (by norm_num))
   · rw [read16_low_pair_after_output_write16_u32_lt10000 n outPtr
-      (m.read16 ((UInt32.ofNat (n.toNat / 100) <<< (1 : UInt32)) + 1049400)) hn houtTable]
+      (m.read16 ((UInt32.ofNat (n.toNat / 100) <<< (1 : UInt32)) + 1049424)) hn houtTable]
     rw [digit_pair_table_low_read16_u32_lt10000 n hn]
     exact packed_two_digits_high_byte (n.toNat / 10 % 10) (n.toNat % 10) (by omega)
       (Nat.mod_lt _ (by norm_num))
@@ -3552,7 +3552,7 @@ theorem func49_spec (env : HostEnv Unit) (st0 : Store Unit) (g : UInt32)
     rw [haddr16]; exact t16
   have t8' : ((8 : UInt32) + (g - 48)).toNat = g.toNat - 48 + 8 := by
     rw [haddr8]; exact t8
-  apply wp_call_of_terminates (func47_spec env _ (g - 48) (16 + (g - 48)) a1 a2 a3 1049600
+  apply wp_call_of_terminates (func47_spec env _ (g - 48) (16 + (g - 48)) a1 a2 a3 1049624
     (by simp [hpg]) (by simp [List.getElem?_set_self hglen])
     (by omega) (by omega) (by omega))
   rintro st' vs ⟨hpg', hg', hrs, hr16, hr20, hpres⟩
