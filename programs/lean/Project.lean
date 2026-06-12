@@ -10,6 +10,7 @@ import Project.Itoa.Proofs
 -- The spec/attributes are still picked up by `verifier extract` via the
 -- source-scan, independent of elaboration.
 import Project.NumInteger.Spec
+import Project.NearFlag.Spec
 import Project.NearKvContract.Spec
 import Project.ReverseInplace.Spec
 import Project.RustOption.Spec
