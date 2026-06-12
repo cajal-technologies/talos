@@ -42,7 +42,7 @@ memory/global-touching specs (cf. `xor_sum`).
 Unoptimized (`opt-level=0`) pipeline: the export `check_i64` is
 `func31`, a shadow-stack wrapper that spills its arguments to a frame
 in linear memory and forwards to `func28`, which in turn wraps the
-actual harness `func23`. -/
+actual harness `func21`. -/
 @[spec_of "rust-exported" "itoa::check_i64"]
 def CheckI64Spec : Prop :=
   ∀ (env : HostEnv Unit) (initial : Store Unit) (n : UInt64) (cap : UInt32),
@@ -65,7 +65,7 @@ the formatter's `DIGIT_TABLE` and stack-pointer global present.
 
 Unoptimized (`opt-level=0`) pipeline: the export `check_u64` is
 `func32`, a shadow-stack wrapper forwarding to `func29`, which wraps
-the actual harness `func21`. -/
+the actual harness `func23`. -/
 @[spec_of "rust-exported" "itoa::check_u64"]
 def CheckU64Spec : Prop :=
   ∀ (env : HostEnv Unit) (initial : Store Unit) (n : UInt64) (cap : UInt32),

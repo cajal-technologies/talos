@@ -9,8 +9,8 @@ iff they disagree. No-trap is therefore the equivalence of the two
 formatters; both compute the decimal representation of `n`.
 
 Unoptimized (`opt-level=0`) pipeline: the export chains are
-`check_i64 = func31 → func28 → func23` (harness) and
-`check_u64 = func32 → func29 → func21`. Inside a harness, the fast
+`check_i64 = func31 → func28 → func21` (harness) and
+`check_u64 = func32 → func29 → func23`. Inside a harness, the fast
 formatter is `func24`/`func22` (wrapping the `itoa` core) and the naive
 oracle is `func3 → func4` (i64) / `func5 → func6` (u64); `func7` clamps
 the capacity and a byte-compare loop traps on any disagreement.
@@ -29,7 +29,7 @@ This file is built bottom-up:
 3. export-wrapper bridges (`func31`/`func32` and `func28`/`func29`)
    peeling the shadow-stack hops, and the conditional top-level
    theorems reducing `CheckI64Spec` / `CheckU64Spec` to `HarnessSpec
-   23` / `HarnessSpec 21`.
+   21` / `HarnessSpec 23`.
 
 The pre-migration proofs of the *old* register-allocated function
 bodies (naive formatters `func0`/`func1`, fast-formatter base cases
@@ -43,8 +43,8 @@ abstract continuation so the per-iteration proofs stay small), its
 wrapper `func5`, the i64 core `func4` (delegating to `func6` for
 non-negative inputs, with its own loop lemmas for the negative path),
 its wrapper `func3`, the capacity clamp `func7`, and the harness
-byte-compare loop (`harness_compare_loop`, shared by `func21` and
-`func23`). Re-proving the fast-formatter core (`func40` and its
+byte-compare loop (`harness_compare_loop`, shared by `func23` and
+`func21`). Re-proving the fast-formatter core (`func40` and its
 helpers, behind `func22`/`func24`) — and then discharging the
 `HarnessSpec` hypotheses — is the remaining open work.
 -/
@@ -1110,9 +1110,9 @@ Under the unoptimized pipeline `check_i64` is `func31` and `check_u64`
 is `func32`. Each is a 16-byte shadow-stack wrapper that spills its
 `(n, cap)` arguments into its frame (debug spills, never read back) and
 forwards to a second wrapper of exactly the same shape (`func28` /
-`func29`), which forwards to the actual harness (`func23` / `func21`).
+`func29`), which forwards to the actual harness (`func21` / `func23`).
 The bridge lemmas below peel both hops, reducing `CheckI64Spec` /
-`CheckU64Spec` to `HarnessSpec 23` / `HarnessSpec 21` — the still-open
+`CheckU64Spec` to `HarnessSpec 21` / `HarnessSpec 23` — the still-open
 no-trap specs of the equivalence harnesses themselves. -/
 
 @[simp] theorem write64_pages (m : Mem) (a : UInt32) (v : UInt64) :
@@ -1156,8 +1156,8 @@ def DataIntact (st : Store Unit) : Prop :=
 /-- Shape of the harness specs the wrapper bridges consume: from any
 frame state with intact data and enough shadow-stack headroom, the
 harness `idx` terminates without trapping, leaves an empty stack, and
-restores the frame. `HarnessSpec 23` (`check_i64`'s inner body) and
-`HarnessSpec 21` (`check_u64`'s) are precisely the equivalence claims
+restores the frame. `HarnessSpec 21` (`check_i64`'s inner body) and
+`HarnessSpec 23` (`check_u64`'s) are precisely the equivalence claims
 between the `itoa`-crate formatter and the naive oracle. -/
 def HarnessSpec (idx : Nat) : Prop :=
   ∀ (env : HostEnv Unit) (st : Store Unit) (g : UInt32) (n : UInt64) (cap : UInt32),
@@ -1170,8 +1170,8 @@ private theorem initial_global0 :
   native_decide
 
 /-- The middle wrapper `func28`: spill `(n, cap)` to a fresh 16-byte
-frame, forward to the harness `func23`, restore the stack pointer. -/
-theorem func28_spec (hh : HarnessSpec 23) (env : HostEnv Unit) (st0 : Store Unit)
+frame, forward to the harness `func21`, restore the stack pointer. -/
+theorem func28_spec (hh : HarnessSpec 21) (env : HostEnv Unit) (st0 : Store Unit)
     (g : UInt32) (n : UInt64) (cap : UInt32)
     (hfr : Frame g st0) (hdi : DataIntact st0)
     (hlo : 65552 ≤ g.toNat) (hhi : g.toNat ≤ 1048576) :
@@ -1205,8 +1205,8 @@ theorem func28_spec (hh : HarnessSpec 23) (env : HostEnv Unit) (st0 : Store Unit
   simp [hg', hback, Frame, hpg', List.getElem?_set_self hglen']
 
 /-- The middle wrapper `func29`: same shape as `func28`, forwarding to
-the `u64` harness `func21`. -/
-theorem func29_spec (hh : HarnessSpec 21) (env : HostEnv Unit) (st0 : Store Unit)
+the `u64` harness `func23`. -/
+theorem func29_spec (hh : HarnessSpec 23) (env : HostEnv Unit) (st0 : Store Unit)
     (g : UInt32) (n : UInt64) (cap : UInt32)
     (hfr : Frame g st0) (hdi : DataIntact st0)
     (hlo : 65552 ≤ g.toNat) (hhi : g.toNat ≤ 1048576) :
@@ -1240,7 +1240,7 @@ theorem func29_spec (hh : HarnessSpec 21) (env : HostEnv Unit) (st0 : Store Unit
   simp [hg', hback, Frame, hpg', List.getElem?_set_self hglen']
 
 /-- The exported wrapper `func31` (`check_i64`). -/
-theorem func31_spec (hh : HarnessSpec 23) (env : HostEnv Unit) (st0 : Store Unit)
+theorem func31_spec (hh : HarnessSpec 21) (env : HostEnv Unit) (st0 : Store Unit)
     (g : UInt32) (n : UInt64) (cap : UInt32)
     (hfr : Frame g st0) (hdi : DataIntact st0)
     (hlo : 65568 ≤ g.toNat) (hhi : g.toNat ≤ 1048576) :
@@ -1274,7 +1274,7 @@ theorem func31_spec (hh : HarnessSpec 23) (env : HostEnv Unit) (st0 : Store Unit
   simp [hg', hback, Frame, hpg', List.getElem?_set_self hglen']
 
 /-- The exported wrapper `func32` (`check_u64`). -/
-theorem func32_spec (hh : HarnessSpec 21) (env : HostEnv Unit) (st0 : Store Unit)
+theorem func32_spec (hh : HarnessSpec 23) (env : HostEnv Unit) (st0 : Store Unit)
     (g : UInt32) (n : UInt64) (cap : UInt32)
     (hfr : Frame g st0) (hdi : DataIntact st0)
     (hlo : 65568 ≤ g.toNat) (hhi : g.toNat ≤ 1048576) :
@@ -1311,11 +1311,11 @@ theorem func32_spec (hh : HarnessSpec 21) (env : HostEnv Unit) (st0 : Store Unit
 
 The same logical endpoint as the pre-migration file: `CheckI64Spec` /
 `CheckU64Spec` reduced to the harness specs. Discharging `HarnessSpec
-23` / `HarnessSpec 21` (fast formatter ≡ naive oracle, composed through
+21` / `HarnessSpec 23` (fast formatter ≡ naive oracle, composed through
 `func24`/`func22`, `func3`/`func5` and the byte-compare loop) is the
 remaining open proof obligation. -/
 
-theorem check_i64_correct_of_harness_spec (hh : HarnessSpec 23) :
+theorem check_i64_correct_of_harness_spec (hh : HarnessSpec 21) :
     Project.Itoa.Spec.CheckI64Spec := by
   intro env initial n cap hinit
   subst hinit
@@ -1324,7 +1324,7 @@ theorem check_i64_correct_of_harness_spec (hh : HarnessSpec 23) :
     (by decide) (by decide)).mono ?_
   exact fun st vs h => h.1
 
-theorem check_u64_correct_of_harness_spec (hh : HarnessSpec 21) :
+theorem check_u64_correct_of_harness_spec (hh : HarnessSpec 23) :
     Project.Itoa.Spec.CheckU64Spec := by
   intro env initial n cap hinit
   subst hinit
@@ -2811,7 +2811,7 @@ theorem func3_spec (env : HostEnv Unit) (st0 : Store Unit) (g out : UInt32)
 
 /-! ## The harness byte-compare loop, standalone
 
-The tail of `func21`/`func23` (textually identical in both): walk the
+The tail of `func23`/`func21` (textually identical in both): walk the
 index slot `fp+68` over `[0, len)`, comparing the fast buffer at
 `[fp, fp+32)` against the naive buffer at `[fp+32, fp+64)` byte by
 byte, trapping (`call 17`) on any disagreement. Under the hypothesis

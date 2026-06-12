@@ -22,6 +22,10 @@ jobs:
         with:
           lake-package-directory: programs/lean
           use-mathlib-cache: true
+          # The heavyweight proof files (Itoa.Proofs, ReverseInplace.Spec,
+          # RustOption.Spec) each peak at multiple GB during elaboration; at
+          # default parallelism the runner gets OOM-killed (SIGTERM, exit 143).
+          build-args: --jobs=2
       - name: Fail on build warnings
         working-directory: programs/lean
         run: |
