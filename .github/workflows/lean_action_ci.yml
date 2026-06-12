@@ -80,6 +80,11 @@ jobs:
           sudo swapon /mnt/swapfile
           free -h
       - uses: leanprover/lean-action@v1
+        env:
+          # Cap lean's parallel elaboration tasks: each task can hold
+          # multi-GB state on the heavyweight proof files, and the
+          # default (= nproc) thrashes the runner into swap death.
+          LEAN_NUM_THREADS: "2"
         with:
           lake-package-directory: programs/lean
           build-args: Project.Itoa.Proofs
@@ -114,6 +119,8 @@ jobs:
           sudo swapon /mnt/swapfile
           free -h
       - uses: leanprover/lean-action@v1
+        env:
+          LEAN_NUM_THREADS: "2"
         with:
           lake-package-directory: programs/lean
           use-mathlib-cache: true
