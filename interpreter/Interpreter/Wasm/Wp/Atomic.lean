@@ -668,6 +668,13 @@ macro "wp_atomic" : tactic => `(tactic|
           (match tbl[i.toNat]? with
            | none   => Q (.Trap st "out of bounds table access")
            | some r => wp m rest Q st { s with values := r :: vs } env))
+     | .i64 i :: vs =>
+       (match st.tables[tableIdx]? with
+        | none     => Q (.Invalid s!"tableGet: table index {tableIdx} out of range")
+        | some tbl =>
+          (match tbl[i.toNat]? with
+           | none   => Q (.Trap st "out of bounds table access")
+           | some r => wp m rest Q st { s with values := r :: vs } env))
      | _ => Q (.Invalid "tableGet: ill-shaped operand stack")) := by
   wp_atomic
 
@@ -676,7 +683,8 @@ macro "wp_atomic" : tactic => `(tactic|
     (match st.tables[tableIdx]? with
      | none     => Q (.Invalid s!"tableSize: table index {tableIdx} out of range")
      | some tbl =>
-       wp m rest Q st { s with values := .i32 (UInt32.ofNat tbl.length) :: s.values } env) := by
+       wp m rest Q st
+         { s with values := sizeValue (m.tableIs64 tableIdx) tbl.length :: s.values } env) := by
   wp_atomic
 
 /-! ## Globals -/
@@ -709,6 +717,10 @@ macro "wp_atomic" : tactic => `(tactic|
        if a.toNat + off.toNat + 4 > st.mem.pages * 65536 then
          Q (.Trap st "out of bounds memory access")
        else wp m rest Q st { s with values := .i32 (st.mem.read32 (a + off)) :: vs } env
+     | .i64 a :: vs =>
+       if a.toNat + off.toNat + 4 > st.mem.pages * 65536 then
+         Q (.Trap st "out of bounds memory access")
+       else wp m rest Q st { s with values := .i32 (st.mem.read32 (a.toUInt32 + off)) :: vs } env
      | _ => Q (.Invalid "load32: ill-shaped operand stack")) := by
   wp_atomic
 
@@ -719,6 +731,10 @@ macro "wp_atomic" : tactic => `(tactic|
        if a.toNat + off.toNat + 4 > st.mem.pages * 65536 then
          Q (.Trap st "out of bounds memory access")
        else wp m rest Q { st with mem := st.mem.write32 (a + off) v } { s with values := vs } env
+     | .i32 v :: .i64 a :: vs =>
+       if a.toNat + off.toNat + 4 > st.mem.pages * 65536 then
+         Q (.Trap st "out of bounds memory access")
+       else wp m rest Q { st with mem := st.mem.write32 (a.toUInt32 + off) v } { s with values := vs } env
      | _ => Q (.Invalid "store32: ill-shaped operand stack")) := by
   wp_atomic
 
@@ -729,6 +745,10 @@ macro "wp_atomic" : tactic => `(tactic|
        if a.toNat + off.toNat + 1 > st.mem.pages * 65536 then
          Q (.Trap st "out of bounds memory access")
        else wp m rest Q st { s with values := .i32 (st.mem.read8 (a + off)).toUInt32 :: vs } env
+     | .i64 a :: vs =>
+       if a.toNat + off.toNat + 1 > st.mem.pages * 65536 then
+         Q (.Trap st "out of bounds memory access")
+       else wp m rest Q st { s with values := .i32 (st.mem.read8 (a.toUInt32 + off)).toUInt32 :: vs } env
      | _ => Q (.Invalid "load8U: ill-shaped operand stack")) := by
   wp_atomic
 
@@ -739,6 +759,10 @@ macro "wp_atomic" : tactic => `(tactic|
        if a.toNat + off.toNat + 1 > st.mem.pages * 65536 then
          Q (.Trap st "out of bounds memory access")
        else wp m rest Q st { s with values := .i32 (Int32.ofInt (signExtend (st.mem.read8 (a + off)).toNat 8)).toUInt32 :: vs } env
+     | .i64 a :: vs =>
+       if a.toNat + off.toNat + 1 > st.mem.pages * 65536 then
+         Q (.Trap st "out of bounds memory access")
+       else wp m rest Q st { s with values := .i32 (Int32.ofInt (signExtend (st.mem.read8 (a.toUInt32 + off)).toNat 8)).toUInt32 :: vs } env
      | _ => Q (.Invalid "load8S: ill-shaped operand stack")) := by
   wp_atomic
 
@@ -749,6 +773,10 @@ macro "wp_atomic" : tactic => `(tactic|
        if a.toNat + off.toNat + 2 > st.mem.pages * 65536 then
          Q (.Trap st "out of bounds memory access")
        else wp m rest Q st { s with values := .i32 (st.mem.read16 (a + off)) :: vs } env
+     | .i64 a :: vs =>
+       if a.toNat + off.toNat + 2 > st.mem.pages * 65536 then
+         Q (.Trap st "out of bounds memory access")
+       else wp m rest Q st { s with values := .i32 (st.mem.read16 (a.toUInt32 + off)) :: vs } env
      | _ => Q (.Invalid "load16U: ill-shaped operand stack")) := by
   wp_atomic
 
@@ -759,6 +787,10 @@ macro "wp_atomic" : tactic => `(tactic|
        if a.toNat + off.toNat + 2 > st.mem.pages * 65536 then
          Q (.Trap st "out of bounds memory access")
        else wp m rest Q st { s with values := .i32 (Int32.ofInt (signExtend (st.mem.read16 (a + off)).toNat 16)).toUInt32 :: vs } env
+     | .i64 a :: vs =>
+       if a.toNat + off.toNat + 2 > st.mem.pages * 65536 then
+         Q (.Trap st "out of bounds memory access")
+       else wp m rest Q st { s with values := .i32 (Int32.ofInt (signExtend (st.mem.read16 (a.toUInt32 + off)).toNat 16)).toUInt32 :: vs } env
      | _ => Q (.Invalid "load16S: ill-shaped operand stack")) := by
   wp_atomic
 
@@ -769,6 +801,10 @@ macro "wp_atomic" : tactic => `(tactic|
        if a.toNat + off.toNat + 1 > st.mem.pages * 65536 then
          Q (.Trap st "out of bounds memory access")
        else wp m rest Q { st with mem := st.mem.write8 (a + off) v.toUInt8 } { s with values := vs } env
+     | .i32 v :: .i64 a :: vs =>
+       if a.toNat + off.toNat + 1 > st.mem.pages * 65536 then
+         Q (.Trap st "out of bounds memory access")
+       else wp m rest Q { st with mem := st.mem.write8 (a.toUInt32 + off) v.toUInt8 } { s with values := vs } env
      | _ => Q (.Invalid "store8: ill-shaped operand stack")) := by
   wp_atomic
 
@@ -779,6 +815,10 @@ macro "wp_atomic" : tactic => `(tactic|
        if a.toNat + off.toNat + 2 > st.mem.pages * 65536 then
          Q (.Trap st "out of bounds memory access")
        else wp m rest Q { st with mem := st.mem.write16 (a + off) v } { s with values := vs } env
+     | .i32 v :: .i64 a :: vs =>
+       if a.toNat + off.toNat + 2 > st.mem.pages * 65536 then
+         Q (.Trap st "out of bounds memory access")
+       else wp m rest Q { st with mem := st.mem.write16 (a.toUInt32 + off) v } { s with values := vs } env
      | _ => Q (.Invalid "store16: ill-shaped operand stack")) := by
   wp_atomic
 
@@ -789,6 +829,10 @@ macro "wp_atomic" : tactic => `(tactic|
        if a.toNat + off.toNat + 8 > st.mem.pages * 65536 then
          Q (.Trap st "out of bounds memory access")
        else wp m rest Q st { s with values := .i64 (st.mem.read64 (a + off)) :: vs } env
+     | .i64 a :: vs =>
+       if a.toNat + off.toNat + 8 > st.mem.pages * 65536 then
+         Q (.Trap st "out of bounds memory access")
+       else wp m rest Q st { s with values := .i64 (st.mem.read64 (a.toUInt32 + off)) :: vs } env
      | _ => Q (.Invalid "load64: ill-shaped operand stack")) := by
   wp_atomic
 
@@ -799,6 +843,10 @@ macro "wp_atomic" : tactic => `(tactic|
        if a.toNat + off.toNat + 8 > st.mem.pages * 65536 then
          Q (.Trap st "out of bounds memory access")
        else wp m rest Q { st with mem := st.mem.write64 (a + off) v } { s with values := vs } env
+     | .i64 v :: .i64 a :: vs =>
+       if a.toNat + off.toNat + 8 > st.mem.pages * 65536 then
+         Q (.Trap st "out of bounds memory access")
+       else wp m rest Q { st with mem := st.mem.write64 (a.toUInt32 + off) v } { s with values := vs } env
      | _ => Q (.Invalid "store64: ill-shaped operand stack")) := by
   wp_atomic
 
@@ -809,6 +857,10 @@ macro "wp_atomic" : tactic => `(tactic|
        if a.toNat + off.toNat + 1 > st.mem.pages * 65536 then
          Q (.Trap st "out of bounds memory access")
        else wp m rest Q st { s with values := .i64 (st.mem.read8 (a + off)).toUInt64 :: vs } env
+     | .i64 a :: vs =>
+       if a.toNat + off.toNat + 1 > st.mem.pages * 65536 then
+         Q (.Trap st "out of bounds memory access")
+       else wp m rest Q st { s with values := .i64 (st.mem.read8 (a.toUInt32 + off)).toUInt64 :: vs } env
      | _ => Q (.Invalid "load8UI64: ill-shaped operand stack")) := by
   wp_atomic
 
@@ -819,6 +871,10 @@ macro "wp_atomic" : tactic => `(tactic|
        if a.toNat + off.toNat + 1 > st.mem.pages * 65536 then
          Q (.Trap st "out of bounds memory access")
        else wp m rest Q st { s with values := .i64 (Int64.ofInt (signExtend (st.mem.read8 (a + off)).toNat 8)).toUInt64 :: vs } env
+     | .i64 a :: vs =>
+       if a.toNat + off.toNat + 1 > st.mem.pages * 65536 then
+         Q (.Trap st "out of bounds memory access")
+       else wp m rest Q st { s with values := .i64 (Int64.ofInt (signExtend (st.mem.read8 (a.toUInt32 + off)).toNat 8)).toUInt64 :: vs } env
      | _ => Q (.Invalid "load8SI64: ill-shaped operand stack")) := by
   wp_atomic
 
@@ -829,6 +885,10 @@ macro "wp_atomic" : tactic => `(tactic|
        if a.toNat + off.toNat + 2 > st.mem.pages * 65536 then
          Q (.Trap st "out of bounds memory access")
        else wp m rest Q st { s with values := .i64 (st.mem.read16 (a + off)).toUInt64 :: vs } env
+     | .i64 a :: vs =>
+       if a.toNat + off.toNat + 2 > st.mem.pages * 65536 then
+         Q (.Trap st "out of bounds memory access")
+       else wp m rest Q st { s with values := .i64 (st.mem.read16 (a.toUInt32 + off)).toUInt64 :: vs } env
      | _ => Q (.Invalid "load16UI64: ill-shaped operand stack")) := by
   wp_atomic
 
@@ -839,6 +899,10 @@ macro "wp_atomic" : tactic => `(tactic|
        if a.toNat + off.toNat + 2 > st.mem.pages * 65536 then
          Q (.Trap st "out of bounds memory access")
        else wp m rest Q st { s with values := .i64 (Int64.ofInt (signExtend (st.mem.read16 (a + off)).toNat 16)).toUInt64 :: vs } env
+     | .i64 a :: vs =>
+       if a.toNat + off.toNat + 2 > st.mem.pages * 65536 then
+         Q (.Trap st "out of bounds memory access")
+       else wp m rest Q st { s with values := .i64 (Int64.ofInt (signExtend (st.mem.read16 (a.toUInt32 + off)).toNat 16)).toUInt64 :: vs } env
      | _ => Q (.Invalid "load16SI64: ill-shaped operand stack")) := by
   wp_atomic
 
@@ -849,6 +913,10 @@ macro "wp_atomic" : tactic => `(tactic|
        if a.toNat + off.toNat + 4 > st.mem.pages * 65536 then
          Q (.Trap st "out of bounds memory access")
        else wp m rest Q st { s with values := .i64 (st.mem.read32 (a + off)).toUInt64 :: vs } env
+     | .i64 a :: vs =>
+       if a.toNat + off.toNat + 4 > st.mem.pages * 65536 then
+         Q (.Trap st "out of bounds memory access")
+       else wp m rest Q st { s with values := .i64 (st.mem.read32 (a.toUInt32 + off)).toUInt64 :: vs } env
      | _ => Q (.Invalid "load32UI64: ill-shaped operand stack")) := by
   wp_atomic
 
@@ -859,6 +927,10 @@ macro "wp_atomic" : tactic => `(tactic|
        if a.toNat + off.toNat + 4 > st.mem.pages * 65536 then
          Q (.Trap st "out of bounds memory access")
        else wp m rest Q st { s with values := .i64 (Int64.ofInt (signExtend (st.mem.read32 (a + off)).toNat 32)).toUInt64 :: vs } env
+     | .i64 a :: vs =>
+       if a.toNat + off.toNat + 4 > st.mem.pages * 65536 then
+         Q (.Trap st "out of bounds memory access")
+       else wp m rest Q st { s with values := .i64 (Int64.ofInt (signExtend (st.mem.read32 (a.toUInt32 + off)).toNat 32)).toUInt64 :: vs } env
      | _ => Q (.Invalid "load32SI64: ill-shaped operand stack")) := by
   wp_atomic
 
@@ -869,6 +941,10 @@ macro "wp_atomic" : tactic => `(tactic|
        if a.toNat + off.toNat + 1 > st.mem.pages * 65536 then
          Q (.Trap st "out of bounds memory access")
        else wp m rest Q { st with mem := st.mem.write8 (a + off) v.toUInt8 } { s with values := vs } env
+     | .i64 v :: .i64 a :: vs =>
+       if a.toNat + off.toNat + 1 > st.mem.pages * 65536 then
+         Q (.Trap st "out of bounds memory access")
+       else wp m rest Q { st with mem := st.mem.write8 (a.toUInt32 + off) v.toUInt8 } { s with values := vs } env
      | _ => Q (.Invalid "store8I64: ill-shaped operand stack")) := by
   wp_atomic
 
@@ -879,6 +955,10 @@ macro "wp_atomic" : tactic => `(tactic|
        if a.toNat + off.toNat + 2 > st.mem.pages * 65536 then
          Q (.Trap st "out of bounds memory access")
        else wp m rest Q { st with mem := st.mem.write16 (a + off) v.toUInt32 } { s with values := vs } env
+     | .i64 v :: .i64 a :: vs =>
+       if a.toNat + off.toNat + 2 > st.mem.pages * 65536 then
+         Q (.Trap st "out of bounds memory access")
+       else wp m rest Q { st with mem := st.mem.write16 (a.toUInt32 + off) v.toUInt32 } { s with values := vs } env
      | _ => Q (.Invalid "store16I64: ill-shaped operand stack")) := by
   wp_atomic
 
@@ -889,12 +969,16 @@ macro "wp_atomic" : tactic => `(tactic|
        if a.toNat + off.toNat + 4 > st.mem.pages * 65536 then
          Q (.Trap st "out of bounds memory access")
        else wp m rest Q { st with mem := st.mem.write32 (a + off) v.toUInt32 } { s with values := vs } env
+     | .i64 v :: .i64 a :: vs =>
+       if a.toNat + off.toNat + 4 > st.mem.pages * 65536 then
+         Q (.Trap st "out of bounds memory access")
+       else wp m rest Q { st with mem := st.mem.write32 (a.toUInt32 + off) v.toUInt32 } { s with values := vs } env
      | _ => Q (.Invalid "store32I64: ill-shaped operand stack")) := by
   wp_atomic
 
 @[simp, wp_simp] theorem wp_memorySize_cons :
     wp m (.memorySize :: rest) Q st s env ↔
-    wp m rest Q st { s with values := .i32 st.mem.pages.toUInt32 :: s.values } env := by
+    wp m rest Q st { s with values := sizeValue m.memIs64 st.mem.pages :: s.values } env := by
   wp_atomic
 
 @[simp, wp_simp] theorem wp_memoryGrow_cons :
@@ -907,6 +991,16 @@ macro "wp_atomic" : tactic => `(tactic|
             { s with values := .i32 cur.toUInt32 :: vs } env
        | none =>
          wp m rest Q st { s with values := .i32 (0xFFFFFFFF : UInt32) :: vs } env
+     | .i64 delta :: vs =>
+       if delta.toNat ≥ 2 ^ 32 then
+         wp m rest Q st { s with values := .i64 (0xFFFFFFFFFFFFFFFF : UInt64) :: vs } env
+       else
+         match st.mem.grow delta.toUInt32 m.memoryCap with
+         | some (mem', cur) =>
+           wp m rest Q { st with mem := mem' }
+              { s with values := .i64 cur.toUInt64 :: vs } env
+         | none =>
+           wp m rest Q st { s with values := .i64 (0xFFFFFFFFFFFFFFFF : UInt64) :: vs } env
      | _ => Q (.Invalid "memoryGrow: ill-shaped operand stack")) := by
   wp_atomic
 
@@ -914,6 +1008,12 @@ macro "wp_atomic" : tactic => `(tactic|
     wp m (.memoryFill :: rest) Q st s env ↔
     (match s.values with
      | .i32 len :: .i32 val :: .i32 dst :: vs =>
+       if dst.toNat + len.toNat > st.mem.pages * 65536 then
+         Q (.Trap st "out of bounds memory access")
+       else
+         wp m rest Q { st with mem := st.mem.fill dst.toNat len.toNat val.toUInt8 }
+            { s with values := vs } env
+     | .i64 len :: .i32 val :: .i64 dst :: vs =>
        if dst.toNat + len.toNat > st.mem.pages * 65536 then
          Q (.Trap st "out of bounds memory access")
        else
@@ -932,6 +1032,13 @@ macro "wp_atomic" : tactic => `(tactic|
        else
          wp m rest Q { st with mem := st.mem.copy dst.toNat src.toNat len.toNat }
             { s with values := vs } env
+     | .i64 len :: .i64 src :: .i64 dst :: vs =>
+       if dst.toNat + len.toNat > st.mem.pages * 65536
+          ∨ src.toNat + len.toNat > st.mem.pages * 65536 then
+         Q (.Trap st "out of bounds memory access")
+       else
+         wp m rest Q { st with mem := st.mem.copy dst.toNat src.toNat len.toNat }
+            { s with values := vs } env
      | _ => Q (.Invalid "memoryCopy: ill-shaped operand stack")) := by
   wp_atomic
 
@@ -939,6 +1046,22 @@ macro "wp_atomic" : tactic => `(tactic|
     wp m (.memoryInit i :: rest) Q st s env ↔
     (match s.values with
      | .i32 len :: .i32 src :: .i32 dst :: vs =>
+       (match st.dataSegments[i]? with
+        | none => Q (.Invalid s!"memoryInit: segment index {i} out of range")
+        | some none =>
+          if 0 < len.toNat ∨ dst.toNat + len.toNat > st.mem.pages * 65536 then
+            Q (.Trap st "out of bounds memory access")
+          else
+            wp m rest Q st { s with values := vs } env
+        | some (some segBytes) =>
+          if src.toNat + len.toNat > segBytes.length
+             ∨ dst.toNat + len.toNat > st.mem.pages * 65536 then
+            Q (.Trap st "out of bounds memory access")
+          else
+            wp m rest Q
+              { st with mem := st.mem.writeBytesFrom dst.toNat segBytes src.toNat len.toNat }
+              { s with values := vs } env)
+     | .i32 len :: .i32 src :: .i64 dst :: vs =>
        (match st.dataSegments[i]? with
         | none => Q (.Invalid s!"memoryInit: segment index {i} out of range")
         | some none =>
@@ -1278,6 +1401,10 @@ macro "wp_atomic" : tactic => `(tactic|
        if a.toNat + off.toNat + 4 > st.mem.pages * 65536 then
          Q (.Trap st "out of bounds memory access")
        else wp m rest Q st { s with values := .f32 (st.mem.read32 (a + off)) :: vs } env
+     | .i64 a :: vs =>
+       if a.toNat + off.toNat + 4 > st.mem.pages * 65536 then
+         Q (.Trap st "out of bounds memory access")
+       else wp m rest Q st { s with values := .f32 (st.mem.read32 (a.toUInt32 + off)) :: vs } env
      | _ => Q (.Invalid "f32Load: ill-shaped operand stack")) := by
   wp_atomic
 
@@ -1288,6 +1415,10 @@ macro "wp_atomic" : tactic => `(tactic|
        if a.toNat + off.toNat + 8 > st.mem.pages * 65536 then
          Q (.Trap st "out of bounds memory access")
        else wp m rest Q st { s with values := .f64 (st.mem.read64 (a + off)) :: vs } env
+     | .i64 a :: vs =>
+       if a.toNat + off.toNat + 8 > st.mem.pages * 65536 then
+         Q (.Trap st "out of bounds memory access")
+       else wp m rest Q st { s with values := .f64 (st.mem.read64 (a.toUInt32 + off)) :: vs } env
      | _ => Q (.Invalid "f64Load: ill-shaped operand stack")) := by
   wp_atomic
 
@@ -1298,6 +1429,10 @@ macro "wp_atomic" : tactic => `(tactic|
        if a.toNat + off.toNat + 4 > st.mem.pages * 65536 then
          Q (.Trap st "out of bounds memory access")
        else wp m rest Q { st with mem := st.mem.write32 (a + off) v } { s with values := vs } env
+     | .f32 v :: .i64 a :: vs =>
+       if a.toNat + off.toNat + 4 > st.mem.pages * 65536 then
+         Q (.Trap st "out of bounds memory access")
+       else wp m rest Q { st with mem := st.mem.write32 (a.toUInt32 + off) v } { s with values := vs } env
      | _ => Q (.Invalid "f32Store: ill-shaped operand stack")) := by
   wp_atomic
 
@@ -1308,6 +1443,10 @@ macro "wp_atomic" : tactic => `(tactic|
        if a.toNat + off.toNat + 8 > st.mem.pages * 65536 then
          Q (.Trap st "out of bounds memory access")
        else wp m rest Q { st with mem := st.mem.write64 (a + off) v } { s with values := vs } env
+     | .f64 v :: .i64 a :: vs =>
+       if a.toNat + off.toNat + 8 > st.mem.pages * 65536 then
+         Q (.Trap st "out of bounds memory access")
+       else wp m rest Q { st with mem := st.mem.write64 (a.toUInt32 + off) v } { s with values := vs } env
      | _ => Q (.Invalid "f64Store: ill-shaped operand stack")) := by
   wp_atomic
 

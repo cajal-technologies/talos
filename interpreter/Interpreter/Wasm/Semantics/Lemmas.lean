@@ -138,7 +138,38 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
         rcases hvals : s.values with _ | ⟨v, rest⟩
         · simp only [execOne, hvals]
         · cases hv : v with
-          | i64 _    => simp only [execOne, hvals, hv]
+          | i64 i =>
+            -- table64 selector arm: same case tree as the i32 arm below,
+            -- with an i64 selector.
+            rcases htbl : st.tables[tj]? with _ | tbl
+            · simp only [execOne, hvals, hv, htbl]
+            · rcases hslot : tbl[i.toNat]? with _ | slot
+              · simp only [execOne, hvals, hv, htbl, hslot]
+              · cases hslot' : slot with
+                | i32 _ => simp only [execOne, hvals, hv, htbl, hslot, hslot']
+                | i64 _ => simp only [execOne, hvals, hv, htbl, hslot, hslot']
+                | f32 _ => simp only [execOne, hvals, hv, htbl, hslot, hslot']
+                | f64 _ => simp only [execOne, hvals, hv, htbl, hslot, hslot']
+                | externref _ => simp only [execOne, hvals, hv, htbl, hslot, hslot']
+                | v128 _ => simp only [execOne, hvals, hv, htbl, hslot, hslot']
+                | funcref r =>
+                  rcases hr : r with _ | fid
+                  · simp only [execOne, hvals, hv, htbl, hslot, hslot', hr]
+                  · rcases hfn : m.funcSig? fid with _ | fn
+                    · simp only [execOne, hvals, hv, htbl, hslot, hslot', hr, hfn]
+                    · rcases hty : m.types[ti]? with _ | ty
+                      · simp only [execOne, hvals, hv, htbl, hslot, hslot', hr, hfn, hty]
+                      · by_cases hsig :
+                            fn.params = ty.params ∧ fn.results = ty.results
+                        · have hrun : run k m fid st rest env ≠ .OutOfFuel := by
+                            intro h; apply hne
+                            simp only [execOne, hvals, hv, htbl, hslot, hslot', hr,
+                              hfn, hty, if_pos hsig, h]
+                          simp only [execOne, hvals, hv, htbl, hslot, hslot', hr,
+                            hfn, hty, if_pos hsig,
+                            ihRun m env fid st rest k' hk' hrun]
+                        · simp only [execOne, hvals, hv, htbl, hslot, hslot', hr,
+                            hfn, hty, if_neg hsig]
           | f32 _    => simp only [execOne, hvals, hv]
           | f64 _    => simp only [execOne, hvals, hv]
           | funcref _ => simp only [execOne, hvals, hv]

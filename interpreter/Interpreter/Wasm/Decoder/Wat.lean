@@ -1850,11 +1850,25 @@ private def parseMemDecl (xs : List Sexpr) : Except Err Wasm.MemDecl := do
   let xs := match xs with
     | .atom a :: r => if a.startsWith "$" then r else xs
     | _ => xs
+  -- Optional explicit address type: `i64` selects a 64-bit (memory64)
+  -- memory; `i32` is accepted for symmetry and means the default.
+  let (is64, xs) : Bool × List Sexpr := match xs with
+    | .atom "i64" :: r => (true, r)
+    | .atom "i32" :: r => (false, r)
+    | _ => (false, xs)
+  -- 64-bit memories may declare page bounds past 2^32; clamp them into
+  -- the UInt32 fields. The effective grow ceiling (`Module.memoryCap`,
+  -- 65536 pages) sits far below the clamp, so semantics are unaffected.
+  let parsePages (s : String) : Except Err UInt32 :=
+    if is64 then do
+      let n ← parseUnsignedNat (stripUnderscores s)
+      .ok (UInt32.ofNat (Nat.min n 0xFFFFFFFF))
+    else parseU32 s
   match xs with
   | [.atom min] =>
-    .ok { pagesMin := ← parseU32 min }
+    .ok { pagesMin := ← parsePages min, is64 }
   | [.atom min, .atom max] =>
-    .ok { pagesMin := ← parseU32 min, pagesMax := some (← parseU32 max) }
+    .ok { pagesMin := ← parsePages min, pagesMax := some (← parsePages max), is64 }
   | _ => .error "malformed (memory ...): expected (memory min) or (memory min max)"
 
 /-- Parse a `(data ...)` body. Active segments produce `offset := some n`;
@@ -1878,6 +1892,19 @@ private def parseDataSegment (xs : List Sexpr) : Except Err Wasm.DataSegment := 
       do .ok ((some (← parseU32 n) : Option UInt32), r)
     | .list [.atom "i32.const", .atom n] :: r =>
       do .ok ((some (← parseU32 n) : Option UInt32), r)
+    -- memory64: active offsets in a 64-bit memory are i64 constants. The
+    -- segment offset field is 32 bits; active 64-bit segments in practice
+    -- are tiny, so a genuinely huge offset is a decode error.
+    | .list [.atom "offset", .list [.atom "i64.const", .atom n]] :: r =>
+      do
+        let v ← parseI64 n
+        if v.toNat ≥ 2 ^ 32 then .error "data offset out of range"
+        else .ok ((some v.toUInt32 : Option UInt32), r)
+    | .list [.atom "i64.const", .atom n] :: r =>
+      do
+        let v ← parseI64 n
+        if v.toNat ≥ 2 ^ 32 then .error "data offset out of range"
+        else .ok ((some v.toUInt32 : Option UInt32), r)
     | .list [.atom "offset", .list (.atom "global.get" :: _)] :: r
     | .list (.atom "global.get" :: _) :: r =>
       .ok ((some (0 : UInt32) : Option UInt32), r)
@@ -1951,6 +1978,20 @@ private def parseTableDecl (funcIds : Std.HashMap String Nat) (tableIdx : Nat)
   let xs := match xs with
     | .atom a :: r => if a.startsWith "$" then r else xs
     | _ => xs
+  -- Optional explicit address type: `i64` selects a 64-bit (table64)
+  -- table; `i32` is accepted for symmetry and means the default.
+  let (is64, xs) : Bool × List Sexpr := match xs with
+    | .atom "i64" :: r => (true, r)
+    | .atom "i32" :: r => (false, r)
+    | _ => (false, xs)
+  -- 64-bit tables may declare bounds past 2^32; parse them in full and
+  -- clamp at the implementation growth ceiling (`Module.tableCap` would
+  -- intersect with it anyway, and tables are materialised as lists).
+  let parseBound (s : String) : Except Err Nat :=
+    if is64 then do
+      let n ← parseUnsignedNat (stripUnderscores s)
+      .ok (Nat.min n Wasm.Module.tableHardCap)
+    else parseNat s
   match xs with
   | [.atom "funcref", .list (.atom "elem" :: items)] =>
     let items := match items with
@@ -1968,20 +2009,29 @@ private def parseTableDecl (funcIds : Std.HashMap String Nat) (tableIdx : Nat)
       | .list [.atom "ref.null", _] => funcs := funcs ++ [none]
       | _ => .error "(table funcref (elem ...)): expected func reference"
     let n := funcs.length
-    .ok ({ min := n, max := some n, elemType := .funcref },
+    .ok ({ min := n, max := some n, elemType := .funcref, is64 },
          some { tableIdx := some tableIdx, offset := some 0, funcs })
   | [.atom min, .atom elemTy] =>
     -- Single-bound declaration. `funcref`/`externref` are modelled;
     -- element types from unmodelled proposals fall back to `funcref` so
     -- the index space stays aligned (nothing references those tables).
-    let n ← parseNat min
-    .ok ({ min := n, elemType := (atomToValueType? elemTy).getD .funcref }, none)
+    let n ← parseBound min
+    .ok ({ min := n, elemType := (atomToValueType? elemTy).getD .funcref, is64 }, none)
   | [.atom min, .atom max, .atom elemTy] =>
-    let nMin ← parseNat min
-    let nMax ← parseNat max
+    let nMin ← parseBound min
+    let nMax ← parseBound max
     .ok ({ min := nMin, max := some nMax,
-           elemType := (atomToValueType? elemTy).getD .funcref }, none)
-  | [.atom _other] => .ok ({ min := 0, elemType := .funcref }, none)
+           elemType := (atomToValueType? elemTy).getD .funcref, is64 }, none)
+  -- List element types, e.g. `(table $t 1 1 (ref null $t))` — treated as
+  -- funcref placeholders (typed function references are not modelled).
+  | [.atom min, .list _] =>
+    let n ← parseBound min
+    .ok ({ min := n, elemType := .funcref, is64 }, none)
+  | [.atom min, .atom max, .list _] =>
+    let nMin ← parseBound min
+    let nMax ← parseBound max
+    .ok ({ min := nMin, max := some nMax, elemType := .funcref, is64 }, none)
+  | [.atom _other] => .ok ({ min := 0, elemType := .funcref, is64 }, none)
   | _ => .error "malformed (table ...) declaration"
 
 /-- Parse one `(elem ...)` declaration. Handles every shape produced by
@@ -2021,16 +2071,23 @@ private def parseElemSegment
   match rest with
   | .list [.atom "offset", .list [.atom "i32.const", .atom n]] :: r =>
     let v ← parseNat n; offset := some v; rest := r
+  | .list [.atom "offset", .list [.atom "i64.const", .atom n]] :: r =>
+    -- table64: active offsets in a 64-bit table are i64 constants.
+    let v ← parseI64 n; offset := some v.toNat; rest := r
   | .list (.atom "offset" :: _) :: r =>
     -- Other offset expressions (constant globals etc.) — not modelled.
     offset := some 0; rest := r
   | .list [.atom "i32.const", .atom n] :: r =>
     let v ← parseNat n; offset := some v; rest := r
+  | .list [.atom "i64.const", .atom n] :: r =>
+    let v ← parseI64 n; offset := some v.toNat; rest := r
   | _ => pure ()
   match rest with
   | .atom "func"      :: r => rest := r
   | .atom "funcref"   :: r => rest := r
   | .atom "externref" :: r => rest := r
+  -- List type form, e.g. `(ref null $t)` — skipped like the keywords.
+  | .list (.atom "ref" :: _) :: r => rest := r
   | _ => pure ()
   if isDeclarative then offset := none
   let mut funcs : List (Option Nat) := []

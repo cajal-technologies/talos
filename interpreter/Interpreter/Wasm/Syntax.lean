@@ -67,6 +67,18 @@ def Value.scalarBitsFor? : Simd.Shape → Value → Option Nat
   | .f64x2, .f64 x => some x.toNat
   | _,      _      => none
 
+/-- A size/length result, typed by the owning memory/table's address
+type: `i64` for 64-bit memories/tables (memory64 proposal), `i32`
+otherwise. Used by `memory.size`, `table.size`, and the grow results. -/
+def sizeValue (is64 : Bool) (n : Nat) : Value :=
+  if is64 then .i64 (UInt64.ofNat n) else .i32 (UInt32.ofNat n)
+
+@[simp] theorem sizeValue_false (n : Nat) :
+    sizeValue false n = .i32 (UInt32.ofNat n) := rfl
+
+@[simp] theorem sizeValue_true (n : Nat) :
+    sizeValue true n = .i64 (UInt64.ofNat n) := rfl
+
 /-- Module-level globals. Indexed by position in the module's globals list. -/
 structure Globals where
   globals : List Value := []
@@ -369,6 +381,10 @@ structure MemDecl where
   pagesMin : UInt32
   pagesMax : Option UInt32 := none
   data     : List DataSegment := []
+  /-- `true` for a 64-bit memory (the wasm 3.0 memory64 address type):
+  addresses are popped as `i64`, and `memory.size` / `memory.grow` speak
+  `i64` instead of `i32`. -/
+  is64     : Bool := false
 deriving Repr, Inhabited
 
 /-- Declaration of a module-level global with its initial value. -/
@@ -392,6 +408,10 @@ structure TableDecl where
   min      : Nat
   max      : Option Nat := none
   elemType : ValueType  := .funcref
+  /-- `true` for a 64-bit table (the wasm 3.0 table64 address type):
+  element indices are popped as `i64`, and `table.size` / `table.grow`
+  speak `i64` instead of `i32`. -/
+  is64     : Bool := false
 deriving Repr, Inhabited
 
 /-- Declaration of a function imported from the host. Imports occupy the
@@ -552,7 +572,12 @@ def Module.memoryHardCap : Nat := 65536
 /-- Effective `memory.grow` ceiling for `m`: the declared `pagesMax`
 (if any) intersected with `memoryHardCap`. Modules with no memory
 declaration get the hard cap; this is never observed in practice
-because such modules have no memory instructions. -/
+because such modules have no memory instructions.
+
+The 65536-page (4 GiB) ceiling deliberately applies to 64-bit
+(memory64) memories as well: the spec permits `memory.grow` to fail
+for implementation-defined reasons, and this interpreter caps every
+memory at the i32 hard limit. -/
 def Module.memoryCap (m : Module) : Nat :=
   match m.memory with
   | some d =>
@@ -560,6 +585,18 @@ def Module.memoryCap (m : Module) : Nat :=
     | some n => Nat.min n.toNat Module.memoryHardCap
     | none   => Module.memoryHardCap
   | none => Module.memoryHardCap
+
+/-- Whether the module's memory is 64-bit-addressed (memory64). -/
+def Module.memIs64 (m : Module) : Bool :=
+  match m.memory with
+  | some d => d.is64
+  | none   => false
+
+/-- Whether table `t` is 64-bit-indexed (table64). -/
+def Module.tableIs64 (m : Module) (t : Nat) : Bool :=
+  match m.tables[t]? with
+  | some td => td.is64
+  | none    => false
 
 /-- Look up the index of an exported function by name. -/
 def Module.findExport (m : Module) (name : String) : Option Nat :=
