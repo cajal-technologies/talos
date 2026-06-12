@@ -586,6 +586,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "near_flag"
+version = "0.1.0"
+
+[[package]]
 name = "near_kv_contract"
 version = "0.1.0"
 dependencies = [
