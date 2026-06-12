@@ -71,67 +71,93 @@ def initialWith (ns : NearState) : Store NearState :=
 /-! ## Concrete memory facts
 
 The data segment puts `"flag setflag\x01"` at offset 1048576, and the
-linear memory has 17 pages. These facts do not depend on the incoming
-`NearState`, so they are discharged by computation. -/
+linear memory has 17 pages. The opt-level=0 prologue carves a 32-byte
+shadow-stack frame at `1048576 - 32 = 1048544` and spills the (constant)
+host-call arguments into it via `store32` at frame offsets 8–28, i.e. at
+addresses 1048552–1048572 — all strictly **below** the data segment at
+1048576. `mem1`/`mem2` are the concrete memories at the two host-call
+sites; the readBytes facts the host calls need are discharged by
+computation, exactly as for the pristine `initMem`. -/
 
 /-- The (NearState-independent) initial linear memory. -/
 def initMem : Mem := («module».initialStore : Store NearState).mem
 
-theorem initialWith_mem (ns : NearState) : (initialWith ns).mem = initMem := rfl
+@[simp] theorem initialWith_mem (ns : NearState) : (initialWith ns).mem = initMem := rfl
 
-theorem initMem_pages : initMem.pages = 17 := by decide
+@[simp] theorem initialWith_host (ns : NearState) : (initialWith ns).host = ns := rfl
 
-theorem initMem_log :
-    initMem.readBytes (1048576 : UInt64).toNat (8 : UInt64).toNat = logMsg := by
+@[simp] theorem initMem_pages : initMem.pages = 17 := by decide
+
+/-- `write32` never changes the page count. Keeping this as a `simp`/
+`wp_simp` lemma is what lets the store32 bounds checks in the prologue
+collapse without ever whnf-ing the concrete memory term. -/
+@[simp, wp_simp] theorem write32_pages (m : Mem) (a v : UInt32) :
+    (m.write32 a v).pages = m.pages := rfl
+
+/-- Linear memory at the `log_utf8` call site: the prologue has spilled
+the two argument constants at 1048568/1048572 (frame offsets 24/28). -/
+def mem1 : Mem := (initMem.write32 1048568 1048576).write32 1048572 8
+
+/-- Linear memory at the `storage_write` call site: four more spills at
+1048552–1048564 (frame offsets 8–20). -/
+def mem2 : Mem :=
+  (((mem1.write32 1048560 1048584).write32 1048564 4).write32
+    1048552 1048588).write32 1048556 1
+
+theorem mem1_pages : mem1.pages = 17 := initMem_pages
+
+theorem mem2_pages : mem2.pages = 17 := initMem_pages
+
+theorem mem1_log :
+    mem1.readBytes (1048576 : UInt64).toNat (8 : UInt64).toNat = logMsg := by
   decide
 
-theorem initMem_key :
-    initMem.readBytes (1048584 : UInt64).toNat (4 : UInt64).toNat = flagKey := by
+theorem mem2_key :
+    mem2.readBytes (1048584 : UInt64).toNat (4 : UInt64).toNat = flagKey := by
   decide
 
-theorem initMem_val :
-    initMem.readBytes (1048588 : UInt64).toNat (1 : UInt64).toNat = flagVal := by
+theorem mem2_val :
+    mem2.readBytes (1048588 : UInt64).toNat (1 : UInt64).toNat = flagVal := by
   decide
 
-/-! ## Host-invocation lemmas -/
+/-! ## Host-invocation lemmas
 
-theorem getMemOrReg_initMem (st : Store NearState) (hMem : st.mem = initMem)
+Stated against any store whose memory *reads back* the constant
+message/key/value at the constant pointers (and has the canonical 17
+pages) — the spilled shadow-stack frame below 1048576 is irrelevant to
+the host calls, and this formulation absorbs it. -/
+
+theorem getMemOrReg_of_readBytes (st : Store NearState)
     {ptr len : UInt64} {out : List UInt8} (hLen : len ≠ u64Max)
+    (hPages : st.mem.pages = 17)
     (hBound : ptr.toNat + len.toNat ≤ 17 * 65536)
-    (hRead : initMem.readBytes ptr.toNat len.toNat = out) :
+    (hRead : st.mem.readBytes ptr.toNat len.toNat = out) :
     getMemOrReg st ptr len = some out := by
   have hB : ptr.toNat + len.toNat ≤ memBytes st := by
-    rw [memBytes, hMem, initMem_pages]; exact hBound
-  rw [getMemOrReg_mem st ptr len hLen hB, hMem, hRead]
+    rw [memBytes, hPages]; exact hBound
+  rw [getMemOrReg_mem st ptr len hLen hB, hRead]
 
-/-- `log_utf8(8, 1048576)` on any store carrying the initial memory:
-appends `logMsg` to the host log list. -/
-theorem logUtf8_invoke (st : Store NearState) (hMem : st.mem = initMem)
+/-- `log_utf8(8, 1048576)` on any 17-page store whose memory reads back
+`logMsg` at 1048576: appends `logMsg` to the host log list. -/
+theorem logUtf8_invoke (st : Store NearState)
+    (hPages : st.mem.pages = 17)
+    (hRead : st.mem.readBytes (1048576 : UInt64).toNat (8 : UInt64).toNat = logMsg)
     (hLen : withinLimit st.host.config.maxLogLen logMsg.length)
     (hCount : withinLimit st.host.config.maxNumberLogs (st.host.logs.length + 1)) :
     logUtf8Fn.invoke st [.i64 8, .i64 1048576] =
       .Return [] { st with host := { st.host with logs := st.host.logs ++ [logMsg] } } := by
   have hGet : getMemOrReg st 1048576 8 = some logMsg :=
-    getMemOrReg_initMem st hMem (by decide) (by decide) initMem_log
+    getMemOrReg_of_readBytes st (by decide) hPages (by decide) hRead
   simp [logUtf8Fn, hGet, appendLogResult, checkDataLimit, hLen, hCount]
 
-/-- The store after the `log_utf8` call: initial memory and globals,
-`logMsg` appended to the incoming logs. -/
-def afterLog (ns : NearState) : Store NearState :=
-  { initialWith ns with host := { ns with logs := ns.logs ++ [logMsg] } }
-
-/-- The store after the `storage_write` call: additionally
-`flagKey ↦ flagVal` is inserted (and iterators invalidated, matching
-`storage_write` semantics). -/
-def afterSet (ns : NearState) : Store NearState :=
-  { initialWith ns with
-    host := (NearState.setStorage { ns with logs := ns.logs ++ [logMsg] }
-      flagKey flagVal).invalidateIterators }
-
 /-- `storage_write(4, 1048584, 1, 1048588, u64::MAX)` on any non-view
-store carrying the initial memory: sets `flagKey ↦ flagVal`, discarding
-any evicted value (output register is the `u64::MAX` sentinel). -/
-theorem storageWrite_invoke (st : Store NearState) (hMem : st.mem = initMem)
+17-page store whose memory reads back `flagKey`/`flagVal` at
+1048584/1048588: sets `flagKey ↦ flagVal`, discarding any evicted value
+(output register is the `u64::MAX` sentinel). -/
+theorem storageWrite_invoke (st : Store NearState)
+    (hPages : st.mem.pages = 17)
+    (hKeyRead : st.mem.readBytes (1048584 : UInt64).toNat (4 : UInt64).toNat = flagKey)
+    (hValRead : st.mem.readBytes (1048588 : UInt64).toNat (1 : UInt64).toNat = flagVal)
     (hView : st.host.context.isView = false)
     (hKeyLim : withinLimit st.host.config.maxStorageKeyLen flagKey.length)
     (hValLim : withinLimit st.host.config.maxStorageValueLen flagVal.length) :
@@ -140,9 +166,9 @@ theorem storageWrite_invoke (st : Store NearState) (hMem : st.mem = initMem)
       .Return [.i64 (if (st.host.storage flagKey).isSome then 1 else 0)]
         { st with host := (st.host.setStorage flagKey flagVal).invalidateIterators } := by
   have hKeyGet : getMemOrReg st 1048584 4 = some flagKey :=
-    getMemOrReg_initMem st hMem (by decide) (by decide) initMem_key
+    getMemOrReg_of_readBytes st (by decide) hPages (by decide) hKeyRead
   have hValGet : getMemOrReg st 1048588 1 = some flagVal :=
-    getMemOrReg_initMem st hMem (by decide) (by decide) initMem_val
+    getMemOrReg_of_readBytes st (by decide) hPages (by decide) hValRead
   cases hOld : st.host.storage flagKey with
   | none =>
     rw [storageWriteFn_invoke_absent st flagKey flagVal 4 1048584 1 1048588
@@ -153,26 +179,6 @@ theorem storageWrite_invoke (st : Store NearState) (hMem : st.mem = initMem)
       18446744073709551615 st hView hKeyGet hValGet hKeyLim hValLim hOld
       (by simp [checkedSetRegister?, u64Max])]
     simp
-
-/-- `log_utf8` step, specialized to the module's initial store: lands
-exactly in `afterLog ns`. -/
-theorem logUtf8_invoke_init (ns : NearState)
-    (hLen : withinLimit ns.config.maxLogLen logMsg.length)
-    (hCount : withinLimit ns.config.maxNumberLogs (ns.logs.length + 1)) :
-    logUtf8Fn.invoke (initialWith ns) [.i64 8, .i64 1048576] =
-      .Return [] (afterLog ns) :=
-  logUtf8_invoke (initialWith ns) rfl hLen hCount
-
-/-- `storage_write` step, specialized to `afterLog ns`: lands exactly
-in `afterSet ns`. -/
-theorem storageWrite_invoke_afterLog (ns : NearState)
-    (hView : ns.context.isView = false)
-    (hKeyLim : withinLimit ns.config.maxStorageKeyLen flagKey.length)
-    (hValLim : withinLimit ns.config.maxStorageValueLen flagVal.length) :
-    storageWriteFn.invoke (afterLog ns)
-      [.i64 4, .i64 1048584, .i64 1, .i64 1048588, .i64 18446744073709551615] =
-      .Return [.i64 (if (ns.storage flagKey).isSome then 1 else 0)] (afterSet ns) :=
-  storageWrite_invoke (afterLog ns) rfl hView hKeyLim hValLim
 
 /-! ## The specification -/
 
@@ -222,39 +228,40 @@ theorem set_flag_spec : SetFlagSpec := by
   · rfl
   · unfold func0Def func0
     wp_run
+    have hg : (initialWith ns).globals.globals[0]? = some (.i32 1048576) := rfl
+    simp [hg]
     refine wp_call_host_cons
       (imp := { «module» := "env", name := "log_utf8", params := [.i64, .i64], results := [] })
       (hf := logUtf8Fn) rfl rfl ?_ ?_
     · intro vs st' hInv
       norm_num at hInv
-      rw [logUtf8_invoke_init ns hLogLen hLogCount] at hInv
+      rw [logUtf8_invoke _ mem1_pages mem1_log hLogLen hLogCount] at hInv
       injection hInv with hvs hst
       subst hvs
       subst st'
       wp_run
+      simp
       refine wp_call_host_cons
         (imp := { «module» := "env", name := "storage_write",
                   params := [.i64, .i64, .i64, .i64, .i64], results := [.i64] })
         (hf := storageWriteFn) rfl rfl ?_ ?_
       · intro vs st' hInv
         norm_num at hInv
-        rw [storageWrite_invoke_afterLog ns hView hKeyLim hValLim] at hInv
+        rw [storageWrite_invoke _ mem2_pages mem2_key mem2_val hView hKeyLim hValLim] at hInv
         injection hInv with hvs hst
         subst hvs
         subst st'
         wp_run
-        refine ⟨?_, ?_, ?_⟩
-        · simp [afterSet, NearState.invalidateIterators]
-        · intro k hk
-          simp [afterSet, NearState.invalidateIterators, setStorage_other _ hk]
-        · simp [afterSet, NearState.invalidateIterators, NearState.setStorage]
+        have hgl : ((initialWith ns).globals.globals.set 0 (Value.i32 1048544)).length = 3 := rfl
+        simp [hgl, SetFlagPost, NearState.setStorage, NearState.invalidateIterators]
+        exact fun k hk hk' => absurd hk' hk
       · intro st' msg hInv
         norm_num at hInv
-        rw [storageWrite_invoke_afterLog ns hView hKeyLim hValLim] at hInv
+        rw [storageWrite_invoke _ mem2_pages mem2_key mem2_val hView hKeyLim hValLim] at hInv
         cases hInv
     · intro st' msg hInv
       norm_num at hInv
-      rw [logUtf8_invoke_init ns hLogLen hLogCount] at hInv
+      rw [logUtf8_invoke _ mem1_pages mem1_log hLogLen hLogCount] at hInv
       cases hInv
 
 /-! ## Concrete end-to-end validation

@@ -12,23 +12,58 @@ open Wasm
 
 def func0 : Wasm.Program :=
   [
-  .constI64 (8 : UInt64),
+  .globalGet 0,
+  .const (32 : UInt32),
+  .sub,
+  .localSet 0,
+  .localGet 0,
+  .globalSet 0,
+  .localGet 0,
+  .const (1048576 : UInt32),
+  .store32 (24 : UInt32),
+  .localGet 0,
+  .const (8 : UInt32),
+  .store32 (28 : UInt32),
   .const (1048576 : UInt32),
   .extendUI32,
+  .localSet 1,
+  .constI64 (8 : UInt64),
+  .localGet 1,
   .call 0,
-  .constI64 (4 : UInt64),
+  .localGet 0,
+  .const (1048584 : UInt32),
+  .store32 (16 : UInt32),
+  .localGet 0,
+  .const (4 : UInt32),
+  .store32 (20 : UInt32),
   .const (1048584 : UInt32),
   .extendUI32,
-  .constI64 (1 : UInt64),
+  .localSet 2,
+  .localGet 0,
+  .const (1048588 : UInt32),
+  .store32 (8 : UInt32),
+  .localGet 0,
+  .const (1 : UInt32),
+  .store32 (12 : UInt32),
   .const (1048588 : UInt32),
   .extendUI32,
+  .localSet 3,
+  .constI64 (4 : UInt64),
+  .localGet 2,
+  .constI64 (1 : UInt64),
+  .localGet 3,
   .constI64 (18446744073709551615 : UInt64),
   .call 1,
-  .drop
+  .drop,
+  .localGet 0,
+  .const (32 : UInt32),
+  .add,
+  .globalSet 0,
+  .ret
 ]
 
 def func0Def : Wasm.Function :=
-  { params := [], locals := [], body := func0, results := [] }
+  { params := [], locals := [.i32, .i64, .i64, .i64], body := func0, results := [] }
 
 def «module» : Wasm.Module :=
 {

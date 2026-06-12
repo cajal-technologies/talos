@@ -18,14 +18,22 @@ jobs:
           key: lake-pkgs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}-${{ hashFiles('interpreter/lake-manifest.json') }}
           restore-keys: |
             lake-pkgs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}-
+      # The heavyweight proof files (Itoa.Proofs, ReverseInplace.Spec,
+      # RustOption.Spec) each peak at multiple GB during elaboration; at
+      # default parallelism the runner gets OOM-killed (SIGTERM, exit 143).
+      # Lake has no flag to limit build parallelism, so give the runner
+      # swap to absorb the peak instead.
+      - name: Add swap
+        run: |
+          sudo fallocate -l 16G /mnt/swapfile
+          sudo chmod 600 /mnt/swapfile
+          sudo mkswap /mnt/swapfile
+          sudo swapon /mnt/swapfile
+          free -h
       - uses: leanprover/lean-action@v1
         with:
           lake-package-directory: programs/lean
           use-mathlib-cache: true
-          # The heavyweight proof files (Itoa.Proofs, ReverseInplace.Spec,
-          # RustOption.Spec) each peak at multiple GB during elaboration; at
-          # default parallelism the runner gets OOM-killed (SIGTERM, exit 143).
-          build-args: --jobs=2
       - name: Fail on build warnings
         working-directory: programs/lean
         run: |
