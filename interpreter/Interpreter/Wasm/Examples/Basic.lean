@@ -8,6 +8,8 @@ import Interpreter.Wasm.Examples.SumI64
 import Interpreter.Wasm.Examples.IfAbs
 import Interpreter.Wasm.Examples.Switch
 import Interpreter.Wasm.Examples.SelectMin
+import Interpreter.Wasm.Examples.RefIsNull
+import Interpreter.Wasm.Examples.TableDispatch
 import Interpreter.Wasm.Examples.EarlyReturn
 import Interpreter.Wasm.Examples.EarlyBr
 import Interpreter.Wasm.Examples.EarlyBrInvalid
@@ -21,6 +23,7 @@ import Interpreter.Wasm.Examples.MemGrow
 import Interpreter.Wasm.Examples.MemFill
 import Interpreter.Wasm.Examples.MemCopy
 import Interpreter.Wasm.Examples.GlobalCounter
+import Interpreter.Wasm.Examples.MultiValue
 import Interpreter.Wasm.Examples.ClzPopcnt
 import Interpreter.Wasm.Examples.HostDispatch
 import Interpreter.Wasm.Examples.Counter

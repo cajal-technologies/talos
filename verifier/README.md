@@ -156,10 +156,10 @@ Pipeline:
 
 ### 3. Adding a crate
 
-1. Create `rust/foo_bar/` by hand — copying the bundled `is_even` crate
-   is the easiest start — and add `"foo_bar"` to the `members` list of
-   `rust/Cargo.toml`, following the conventions in "Setting up a Rust
-   crate for wasm" above. No Lean files are needed yet.
+1. `verifier add foo_bar` — copies the bundled crate template
+   (`Cargo.toml`, `src/lib.rs`, `src/exports.rs`) into `rust/foo_bar/`
+   with the name placeholder filled in, and registers `"foo_bar"` in the
+   `members` list of `rust/Cargo.toml`. No Lean files are created yet.
 2. Edit `rust/foo_bar/src/lib.rs` and `src/exports.rs` to implement and
    export your function, following the conventions above.
 3. `verifier emit foo_bar` — builds the wasm (if needed), generates
@@ -226,6 +226,7 @@ is recommended for organization but not required by those tools — see
 
 ```
 verifier init <path>              # alias: new
+verifier add <crate>
 verifier del <crate>
 verifier build [crate…]
 verifier emit [crate…] [--force-emit]
@@ -239,6 +240,10 @@ Run from the project root. Omit crate names to process all crates.
 In the Talos monorepo: `cd programs && lake -d ../verifier exe verifier …`
 
 - `init` / `new` requires a non-existent or empty target directory.
+- `add` copies the bundled crate template into `rust/<crate>/`
+  (`Cargo.toml`, `src/lib.rs`, `src/exports.rs`, with the name
+  placeholder filled in) and registers the crate in `rust/Cargo.toml`.
+  It creates no Lean files — those come from `emit`.
 - `del` removes a crate: deletes `rust/<crate>/`, `lean/Project/<Crate>/`, `rust/build/<crate>/`, and cleans the workspace member from `rust/Cargo.toml` and the import from `lean/Project.lean`.
 - `build` writes `rust/build/<crate>/program.{wasm,wat}` via cargo + wasm-tools.
 - `emit` decodes `program.wat` into `Program.lean`, and scaffolds the

@@ -89,4 +89,26 @@ def HostEnv.Satisfies (env : HostEnv α) (m : Module) (spec : HostSpec α) : Pro
     ∃ hf c, env.funcs[i]? = some hf ∧ spec.contracts[i]? = some c ∧
             ∀ st args, c st args (hf.invoke st args)
 
+/-- Look up a satisfying host resolver together with its abstract contract. -/
+theorem HostEnv.Satisfies.lookup
+    {env : HostEnv α} {m : Module} {spec : HostSpec α}
+    (hSat : env.Satisfies m spec) {i : Nat} (hi : i < m.imports.length) :
+    ∃ hf c, env.funcs[i]? = some hf ∧ spec.contracts[i]? = some c ∧
+            ∀ st args, c st args (hf.invoke st args) :=
+  hSat i hi
+
+/-- Look up a satisfying host resolver when the expected contract entry is
+known definitionally. This is the common proof-side path: keep the concrete
+host implementation hidden, but recover the named contract relation. -/
+theorem HostEnv.Satisfies.lookup_contract
+    {env : HostEnv α} {m : Module} {spec : HostSpec α}
+    (hSat : env.Satisfies m spec) {i : Nat} (hi : i < m.imports.length)
+    {c : HostContract α} (hC : spec.contracts[i]? = some c) :
+    ∃ hf, env.funcs[i]? = some hf ∧ ∀ st args, c st args (hf.invoke st args) := by
+  obtain ⟨hf, c', hEnv, hC', hCall⟩ := hSat.lookup hi
+  rw [hC] at hC'
+  injection hC' with hc
+  subst hc
+  exact ⟨hf, hEnv, hCall⟩
+
 end Wasm

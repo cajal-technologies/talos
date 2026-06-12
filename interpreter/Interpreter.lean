@@ -1,4 +1,5 @@
 import Interpreter.Wasm
+import Interpreter.Wasm.Examples.Basic
 
 /-!
 # Interpreter — public surface

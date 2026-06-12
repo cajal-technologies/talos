@@ -11,37 +11,11 @@ import Interpreter.Wasm.Wp.Loop
 import Interpreter.Wasm.Wp.Call
 import Interpreter.Wasm.Wp.Tactic
 import Interpreter.Wasm.Spec.Termination
-import Interpreter.Wasm.Decoder.Wat
-import Interpreter.Wasm.Examples.IsEven
-import Interpreter.Wasm.Examples.SimpleLoop
-import Interpreter.Wasm.Examples.Factorial
-import Interpreter.Wasm.Examples.InfiniteLoop
-import Interpreter.Wasm.Examples.EvenOddRec
-import Interpreter.Wasm.Examples.SumI64
-import Interpreter.Wasm.Examples.IfAbs
-import Interpreter.Wasm.Examples.Switch
-import Interpreter.Wasm.Examples.SelectMin
-import Interpreter.Wasm.Examples.RefIsNull
-import Interpreter.Wasm.Examples.TableDispatch
-import Interpreter.Wasm.Examples.EarlyReturn
-import Interpreter.Wasm.Examples.EarlyBr
-import Interpreter.Wasm.Examples.EarlyBrInvalid
-import Interpreter.Wasm.Examples.TrapDivZero
-import Interpreter.Wasm.Examples.MemDataSection
-import Interpreter.Wasm.Examples.MemReplace
-import Interpreter.Wasm.Examples.MemNarrowI32
-import Interpreter.Wasm.Examples.MemI64
-import Interpreter.Wasm.Examples.MemGrow
-import Interpreter.Wasm.Examples.MemFill
-import Interpreter.Wasm.Examples.MemCopy
-import Interpreter.Wasm.Examples.GlobalCounter
-import Interpreter.Wasm.Examples.MultiValue
-import Interpreter.Wasm.Examples.Basic
 
 /-! # Wasm
 
 A minimal Wasm core paired with a weakest-precondition reasoning framework.
-This umbrella module re-exports the public surface; the implementation is
+This umbrella module re-exports the public core surface; the implementation is
 split into:
 
 * `Wasm.Syntax`            — instructions, programs, functions, modules
@@ -57,6 +31,10 @@ split into:
 * `Wasm.Spec.Termination`  — fuel-free `TerminatesWith` /
                                  `PartiallyMeets` predicates (user-facing
                                  spec API)
-* `Wasm.Examples.Basic`    — umbrella import for the bundled worked
-                                 examples
+
+Worked examples live under `Interpreter.Wasm.Examples.*` and are bundled by
+`Interpreter.Wasm.Examples.Basic`; decoder internals live under
+`Interpreter.Wasm.Decoder.*`. They are intentionally not re-exported here so
+downstream proof packages can import the core API without depending on examples
+or verifier plumbing.
 -/

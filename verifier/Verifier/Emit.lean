@@ -321,6 +321,7 @@ private def exportDocComment (es : List Wasm.Export) (idx : Nat) : String :=
   | ns   => s!"/-- exports: {String.intercalate ", " ns} -/\n"
 
 private def funcBodyName (idx : Nat) : String := s!"func{idx}"
+private def funcDefName (idx : Nat) : String := s!"func{idx}Def"
 
 private def emitFuncBodyDef (es : List Wasm.Export) (idx : Nat) (f : Wasm.Function) : String :=
   let body := emitInstrList 0 f.body
@@ -329,6 +330,9 @@ private def emitFuncBodyDef (es : List Wasm.Export) (idx : Nat) (f : Wasm.Functi
 private def emitFunc (idx : Nat) (f : Wasm.Function) : String :=
   s!"\{ params := {emitValueTypes f.params}, locals := {emitValueTypes f.locals}" ++
   s!", body := {funcBodyName idx}, results := {emitValueTypes f.results} }"
+
+private def emitFuncDef (idx : Nat) (f : Wasm.Function) : String :=
+  s!"def {funcDefName idx} : Wasm.Function :=\n  {emitFunc idx f}"
 
 private def emitExport (e : Wasm.Export) : String :=
   s!"\{ name := {repr e.name}, funcIdx := {emitNat e.funcIdx} }"
@@ -391,15 +395,15 @@ private def emitElementSegment (e : Wasm.ElementSegment) : String :=
   s!", offset := {emitOptionNat e.offset}" ++
   s!", funcs := {list (e.funcs.map emitFuncrefSlot)} }"
 
-/-- All function-body `def`s, joined by blank lines. -/
+/-- All function-body and named `Function` `def`s, joined by blank lines. -/
 def funcBodies (m : Wasm.Module) : String :=
   String.intercalate "\n\n" <|
-    m.funcs.mapIdx (fun i f => emitFuncBodyDef m.exports i f)
+    m.funcs.mapIdx (fun i f => emitFuncBodyDef m.exports i f ++ "\n\n" ++ emitFuncDef i f)
 
 /-- The module record, pretty-printed across multiple lines. -/
 def «module» (m : Wasm.Module) : String :=
   let imports := recordList (m.imports.map emitImport)
-  let funcs := recordList (m.funcs.mapIdx (fun i f => emitFunc i f))
+  let funcs := recordList (m.funcs.mapIdx (fun i _ => funcDefName i))
   let exports := recordList (m.exports.map emitExport)
   let memory := emitOptionMem m.memory
   let globals := recordList (m.globals.map emitGlobalDecl)

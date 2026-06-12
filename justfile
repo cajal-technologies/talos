@@ -119,6 +119,7 @@ testsuite-report:
 #
 # Step-by-step development cycle:
 #   just verifier-init <path>   — scaffold a new project
+#   just verifier-add <crate>   — copy the rust crate template into rust/
 #   just verifier-build         — compile Rust → wasm/wat
 #   just verifier-emit          — transpile wat → Program.lean + scaffold Spec.lean
 #   [edit Spec.lean by hand]
@@ -135,6 +136,11 @@ _verifier +args:
 [group("verifier")]
 verifier-init path:
     just _verifier init {{ path }}
+
+# Add a crate to the current project (snake_case name, e.g. my_crate).
+[group("verifier")]
+verifier-add crate:
+    just _verifier add {{ crate }}
 
 # Remove a crate from the current project (source, lean module, build artefacts, config references).
 [group("verifier")]
@@ -188,4 +194,3 @@ docs:
 [working-directory("scripts")]
 clean:
     ./clean.sh
-

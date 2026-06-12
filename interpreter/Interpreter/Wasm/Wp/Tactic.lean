@@ -1,4 +1,5 @@
 import Interpreter.Wasm.Wp.Atomic
+import Interpreter.Wasm.Wp.Block
 
 /-! ### Tactics.
 
@@ -18,5 +19,15 @@ macro "wp_run" : tactic => `(tactic|
     ValueType.zero, List.headD])
 
 macro "wp_done" : tactic => `(tactic| (wp_run; first | rfl | grind))
+
+/-- Peel low-information structural boundaries, then simplify straight-line
+code. This deliberately does not cross loops or calls: those still require an
+explicit invariant/specification boundary. -/
+macro "wp_peel" : tactic => `(tactic|
+  ((repeat (first
+    | apply wp_block_cons
+    | refine wp_iff_cons rfl ?_));
+   wp_run;
+   simp))
 
 end Wasm
