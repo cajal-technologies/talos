@@ -327,24 +327,27 @@ package identity — and with `codegen-units = 1` the output module is
 byte-stable across checkouts. -/
 private def canonicalBuildRoot : FilePath := "/tmp/talos-canonical-build"
 
-/-- The RUSTFLAGS for the canonical wasm build. The *string value* of
-RUSTFLAGS feeds cargo's per-unit `-C metadata` hash, which seeds rustc's
-symbol disambiguators and through them the emission *order* of functions
-in the module — so any machine-specific path inside RUSTFLAGS makes
-every machine build a differently-ordered (though behaviorally
-identical) module, and CI's freshness check can never agree with a
-local emit. This constant must therefore contain no machine-dependent
-component. The single remap covers the only paths that can reach the
-*stripped* artifact (the workspace, mirrored under `canonicalBuildRoot`);
-machine-specific registry/sysroot paths appear in DWARF custom sections
-only, which `wasm-tools strip` removes before the wat/Program emit, and
-release toolchains pre-remap std sources to `/rustc/<commit>`
-identically on every platform. -/
-private def canonicalRustflags : String :=
-  s!"--remap-path-prefix={canonicalBuildRoot}=/talos-build"
+/-- Docker image for the canonical wasm build, pinned by toolchain
+version AND platform. rustc's symbol disambiguators — and through them
+the emission *order* of functions in the module — are seeded by cargo's
+per-unit hash, which folds in the workspace path, the RUSTFLAGS string,
+and the registry source paths on the rustc command line; beyond that,
+the near-sdk proc-macro expansion differs across *host architectures*.
+Canonicalizing paths and flags fixed cross-checkout drift but not the
+aarch64-darwin vs x86_64-linux divergence, so the build runs inside a
+fixed-platform container: identical image + identical mount path +
+fixed in-image cargo home ⇒ byte-identical wasm on every machine. -/
+private def canonicalBuildImage : String := "rust:1.95.0"
+private def canonicalBuildPlatform : String := "linux/amd64"
+
+/-- The workspace mount point inside the build container — the one path
+that can reach the stripped artifact (panic `Location` strings in data
+segments). Fixed by construction; everything else (cargo home, sysroot)
+is fixed by the image. -/
+private def containerWorkspace : String := "/talos-build"
 
 private def buildWasm (projectDir : FilePath) (crates : Array Crate) : IO Unit := do
-  IO.println "==> cargo build-wasm (workspace)"
+  IO.println s!"==> cargo build-wasm (workspace, in {canonicalBuildImage} {canonicalBuildPlatform})"
   let rustDir := canonicalBuildRoot / "rust"
   IO.FS.createDirAll rustDir
   -- Mirror sources; keep `target/` (incremental cache) and drop `build/`
@@ -352,24 +355,16 @@ private def buildWasm (projectDir : FilePath) (crates : Array Crate) : IO Unit :
   runOrDie "rsync"
     #["-a", "--delete", "--exclude", "target", "--exclude", "build",
       (projectDir / "rust").toString ++ "/", rustDir.toString]
-  -- Point CARGO_HOME at a fixed symlink to the real cargo home: registry
-  -- dep sources then appear under the canonical prefix on every rustc
-  -- command line. The command-line source path of a unit feeds its hash
-  -- (and so symbol disambiguators / function order) — leaving the real,
-  -- machine-specific cargo home on the command line reintroduces
-  -- cross-machine drift even with constant RUSTFLAGS.
-  let realCargoHome ← do
-    match ← IO.getEnv "CARGO_HOME" with
-    | some v => pure v
-    | none   => pure (((← IO.getEnv "HOME").getD "") ++ "/.cargo")
-  let cargoHomeLink := canonicalBuildRoot / "cargo-home"
-  if ← System.FilePath.pathExists cargoHomeLink then
-    IO.FS.removeFile cargoHomeLink
-  runOrDie "ln" #["-s", realCargoHome, cargoHomeLink.toString]
-  runOrDie "cargo" #["build-wasm"]
-    (cwd := some rustDir)
-    (env := #[("RUSTFLAGS", some canonicalRustflags),
-              ("CARGO_HOME", some cargoHomeLink.toString)])
+  -- Named volumes cache the rustup toolchain and registry across runs.
+  runOrDie "docker"
+    #["run", "--rm",
+      "--platform", canonicalBuildPlatform,
+      "-v", s!"{rustDir}:{containerWorkspace}/rust",
+      "-v", "talos-rustup:/usr/local/rustup",
+      "-v", "talos-cargo-registry:/usr/local/cargo/registry",
+      "-w", s!"{containerWorkspace}/rust",
+      canonicalBuildImage,
+      "cargo", "build", "--release", "--target", "wasm32-unknown-unknown"]
   let buildRoot := projectDir / "rust" / "build"
   let cargoTarget := rustDir / "target" / "wasm32-unknown-unknown" / "release"
   for c in crates do

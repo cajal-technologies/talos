@@ -249,7 +249,7 @@ private theorem func40_chunk_loop (env : HostEnv Unit) (n : UInt64) (out fp : UI
     (hv : st1.mem.read64 (fp + 24) = n)
     (hpos : st1.mem.read32 (fp + 20) = 20)
     (htab : ∀ t : Nat, t < 200 →
-      B (1049424 + t) = («module».initialStore (α := Unit)).mem.bytes (1049424 + t))
+      B (1049408 + t) = («module».initialStore (α := Unit)).mem.bytes (1049408 + t))
     (hpres : ∀ i : Nat, i < fp.toNat - 48 ∨ fp.toNat + 176 ≤ i →
       st1.mem.bytes i = B i)
     (hexit : ∀ (st' : Store Unit) (k : Nat)
@@ -422,7 +422,7 @@ private theorem func40_chunk_loop (env : HostEnv Unit) (n : UInt64) (out fp : UI
                       .const (0 : UInt32),
                       .add,
                       .localSet 11,
-                      .const (1049424 : UInt32),
+                      .const (1049408 : UInt32),
                       .const (200 : UInt32),
                       .localGet 11,
                       .const (1049348 : UInt32),
@@ -467,7 +467,7 @@ private theorem func40_chunk_loop (env : HostEnv Unit) (n : UInt64) (out fp : UI
                   .const (1 : UInt32),
                   .add,
                   .localSet 15,
-                  .const (1049424 : UInt32),
+                  .const (1049408 : UInt32),
                   .const (200 : UInt32),
                   .localGet 15,
                   .const (1049348 : UInt32),
@@ -512,7 +512,7 @@ private theorem func40_chunk_loop (env : HostEnv Unit) (n : UInt64) (out fp : UI
               .const (0 : UInt32),
               .add,
               .localSet 19,
-              .const (1049424 : UInt32),
+              .const (1049408 : UInt32),
               .const (200 : UInt32),
               .localGet 19,
               .const (1049348 : UInt32),
@@ -557,7 +557,7 @@ private theorem func40_chunk_loop (env : HostEnv Unit) (n : UInt64) (out fp : UI
           .const (1 : UInt32),
           .add,
           .localSet 23,
-          .const (1049424 : UInt32),
+          .const (1049408 : UInt32),
           .const (200 : UInt32),
           .localGet 23,
           .const (1049348 : UInt32),
@@ -896,7 +896,7 @@ private theorem func40_chunk_loop (env : HostEnv Unit) (n : UInt64) (out fp : UI
         simp [Nat.shiftLeft_eq]
         omega
       simp [hpg6, hq0, hq4, hp20a, p0, p4, p112, p116, hlt9, p20]
-      apply wp_call_of_terminates (func39_spec env _ fp 1049424 200
+      apply wp_call_of_terminates (func39_spec env _ fp 1049408 200
         (UInt32.ofNat (n.toNat / 10 ^ (4 * k) % 10000 / 100) <<< 1) 1049348
         (by simp [hpg6]) (by simpa using hgl6) (by omega) (by omega))
       rintro st7 vs7 ⟨hpg7, hgl7, hrs7, hfr7⟩
@@ -918,7 +918,7 @@ private theorem func40_chunk_loop (env : HostEnv Unit) (n : UInt64) (out fp : UI
             write32_bytes_of_disjoint _ _ _ _ (by have a := t112.out; omega)]
         exact hB6 i h1 h2
       have haddr1 : Frozen ((UInt32.ofNat (n.toNat / 10 ^ (4 * k) % 10000 / 100) <<< 1 +
-          1049424).toNat = 1049424 + 2 * (n.toNat / 10 ^ (4 * k) % 10000 / 100)) :=
+          1049408).toNat = 1049408 + 2 * (n.toNat / 10 ^ (4 * k) % 10000 / 100)) :=
         Frozen.mk (by
           rw [hshl_q,
               toNat_add_of_lt _ _ (by
@@ -929,7 +929,7 @@ private theorem func40_chunk_loop (env : HostEnv Unit) (n : UInt64) (out fp : UI
           simp
           omega)
       have hbyte1 : st7.mem.read8
-          (UInt32.ofNat (n.toNat / 10 ^ (4 * k) % 10000 / 100) <<< 1 + 1049424) =
+          (UInt32.ofNat (n.toNat / 10 ^ (4 * k) % 10000 / 100) <<< 1 + 1049408) =
           UInt8.ofNat (48 + n.toNat / 10 ^ (4 * k) % 10000 / 1000) := by
         show st7.mem.bytes _ = _
         rw [haddr1.out, hB7 _ (by omega) (by omega), htab _ (by omega)]
@@ -937,7 +937,7 @@ private theorem func40_chunk_loop (env : HostEnv Unit) (n : UInt64) (out fp : UI
           (n.toNat / 10 ^ (4 * k) % 10000) (by omega)
         simpa [digitTableBase] using h
       have ptab1 : ¬ (1114112 <
-          (UInt32.ofNat (n.toNat / 10 ^ (4 * k) % 10000 / 100) <<< 1 + 1049424).toNat
+          (UInt32.ofNat (n.toNat / 10 ^ (4 * k) % 10000 / 100) <<< 1 + 1049408).toNat
             + 0 + 1) := by
         have a := haddr1.out
         omega
@@ -950,7 +950,7 @@ private theorem func40_chunk_loop (env : HostEnv Unit) (n : UInt64) (out fp : UI
       have p144 : ¬ (1114112 < fp.toNat + 144 + 4) := by omega
       have p151 : ¬ (1114112 < fp.toNat + 151 + 1) := by omega
       have hguard_tab1 : ¬ (1114112 ≤
-          ((n.toNat / 10 ^ (4 * k) % 10000 / 100 % 4294967296) <<< 1 + 1049424) %
+          ((n.toNat / 10 ^ (4 * k) % 10000 / 100 % 4294967296) <<< 1 + 1049408) %
             4294967296) := by
         have e1 : n.toNat / 10 ^ (4 * k) % 10000 / 100 % 4294967296 =
             n.toNat / 10 ^ (4 * k) % 10000 / 100 := Nat.mod_eq_of_lt (by omega)
@@ -991,7 +991,7 @@ private theorem func40_chunk_loop (env : HostEnv Unit) (n : UInt64) (out fp : UI
         omega
       wp_run
       simp [hpg7, hbyte1, p144, p151, hguard_tab1, hguard_out1, p20, hp20b, h17, hlt13]
-      apply wp_call_of_terminates (func39_spec env _ fp 1049424 200
+      apply wp_call_of_terminates (func39_spec env _ fp 1049408 200
         ((1 : UInt32) + UInt32.ofNat (n.toNat / 10 ^ (4 * k) % 10000 / 100) <<< 1) 1049348
         (by simp [hpg7]) (by simpa using hgl7) (by omega) (by omega))
       rintro st8 vs8 ⟨hpg8, hgl8, hrs8, hfr8⟩
@@ -1009,7 +1009,7 @@ private theorem func40_chunk_loop (env : HostEnv Unit) (n : UInt64) (out fp : UI
         simp
         omega
       have haddr2 : Frozen ((((1 : UInt32) + UInt32.ofNat (n.toNat / 10 ^ (4 * k) % 10000 / 100) <<< 1) +
-          1049424).toNat = 1049424 + (2 * (n.toNat / 10 ^ (4 * k) % 10000 / 100) + 1)) :=
+          1049408).toNat = 1049408 + (2 * (n.toNat / 10 ^ (4 * k) % 10000 / 100) + 1)) :=
         Frozen.mk (by
           rw [hshl_q, hone,
               toNat_add_of_lt _ _ (by
@@ -1028,7 +1028,7 @@ private theorem func40_chunk_loop (env : HostEnv Unit) (n : UInt64) (out fp : UI
             write32_bytes_of_disjoint _ _ _ _ (by have a := t144.out; omega)]
         exact hB7 i h1 h2
       have hbyte2 : st8.mem.read8
-          (((1 : UInt32) + UInt32.ofNat (n.toNat / 10 ^ (4 * k) % 10000 / 100) <<< 1) + 1049424) =
+          (((1 : UInt32) + UInt32.ofNat (n.toNat / 10 ^ (4 * k) % 10000 / 100) <<< 1) + 1049408) =
           UInt8.ofNat (48 + n.toNat / 10 ^ (4 * k) % 10000 / 100 % 10) := by
         show st8.mem.bytes _ = _
         rw [haddr2.out, hB8 _ (by omega) (by omega), htab _ (by omega)]
@@ -1036,7 +1036,7 @@ private theorem func40_chunk_loop (env : HostEnv Unit) (n : UInt64) (out fp : UI
           (n.toNat / 10 ^ (4 * k) % 10000) (by omega)
         simpa [digitTableBase, Nat.add_assoc] using h
       have hguard_tab2 : ¬ (1114112 ≤
-          (1 + (n.toNat / 10 ^ (4 * k) % 10000 / 100 % 4294967296) <<< 1 + 1049424) %
+          (1 + (n.toNat / 10 ^ (4 * k) % 10000 / 100 % 4294967296) <<< 1 + 1049408) %
             4294967296) := by
         have e1 : n.toNat / 10 ^ (4 * k) % 10000 / 100 % 4294967296 =
             n.toNat / 10 ^ (4 * k) % 10000 / 100 := Nat.mod_eq_of_lt (by omega)
@@ -1081,7 +1081,7 @@ private theorem func40_chunk_loop (env : HostEnv Unit) (n : UInt64) (out fp : UI
       wp_run
       simp [hpg8, hbyte2, p136, p143, hguard_tab2, hguard_out2, p20, hp20c, h18, hlt17]
       -- digit 3: `DIGIT_TABLE[2 * (c % 100)]` at `out + (18 - 4k)`
-      apply wp_call_of_terminates (func39_spec env _ fp 1049424 200
+      apply wp_call_of_terminates (func39_spec env _ fp 1049408 200
         (UInt32.ofNat (n.toNat / 10 ^ (4 * k) % 100) <<< 1) 1049348
         (by simp [hpg8]) (by simpa using hgl8) (by omega) (by omega))
       rintro st9 vs9 ⟨hpg9, hgl9, hrs9, hfr9⟩
@@ -1098,7 +1098,7 @@ private theorem func40_chunk_loop (env : HostEnv Unit) (n : UInt64) (out fp : UI
         simp [Nat.shiftLeft_eq]
         omega
       have haddr3 : Frozen ((UInt32.ofNat (n.toNat / 10 ^ (4 * k) % 100) <<< 1 +
-          1049424).toNat = 1049424 + 2 * (n.toNat / 10 ^ (4 * k) % 100)) :=
+          1049408).toNat = 1049408 + 2 * (n.toNat / 10 ^ (4 * k) % 100)) :=
         Frozen.mk (by
           rw [hshl_r,
               toNat_add_of_lt _ _ (by
@@ -1117,7 +1117,7 @@ private theorem func40_chunk_loop (env : HostEnv Unit) (n : UInt64) (out fp : UI
             write32_bytes_of_disjoint _ _ _ _ (by have a := t136.out; omega)]
         exact hB8 i h1 h2
       have hbyte3 : st9.mem.read8
-          (UInt32.ofNat (n.toNat / 10 ^ (4 * k) % 100) <<< 1 + 1049424) =
+          (UInt32.ofNat (n.toNat / 10 ^ (4 * k) % 100) <<< 1 + 1049408) =
           UInt8.ofNat (48 + n.toNat / 10 ^ (4 * k) % 10000 / 10 % 10) := by
         show st9.mem.bytes _ = _
         rw [haddr3.out, hB9 _ (by omega) (by omega), htab _ (by omega)]
@@ -1127,7 +1127,7 @@ private theorem func40_chunk_loop (env : HostEnv Unit) (n : UInt64) (out fp : UI
               from by omega] at h
         simpa [digitTableBase] using h
       have hguard_tab3 : ¬ (1114112 ≤
-          ((n.toNat / 10 ^ (4 * k) % 100 % 4294967296) <<< 1 + 1049424) %
+          ((n.toNat / 10 ^ (4 * k) % 100 % 4294967296) <<< 1 + 1049408) %
             4294967296) := by
         have e1 : n.toNat / 10 ^ (4 * k) % 100 % 4294967296 =
             n.toNat / 10 ^ (4 * k) % 100 := Nat.mod_eq_of_lt (by omega)
@@ -1172,7 +1172,7 @@ private theorem func40_chunk_loop (env : HostEnv Unit) (n : UInt64) (out fp : UI
       wp_run
       simp [hpg9, hbyte3, p128, p135, hguard_tab3, hguard_out3, p20, hp20d, h19, hlt21]
       -- digit 4: `DIGIT_TABLE[2 * (c % 100) + 1]` at `out + (19 - 4k)`
-      apply wp_call_of_terminates (func39_spec env _ fp 1049424 200
+      apply wp_call_of_terminates (func39_spec env _ fp 1049408 200
         ((1 : UInt32) + UInt32.ofNat (n.toNat / 10 ^ (4 * k) % 100) <<< 1) 1049348
         (by simp [hpg9]) (by simpa using hgl9) (by omega) (by omega))
       rintro st10 vs10 ⟨hpg10, hgl10, hrs10, hfr10⟩
@@ -1190,8 +1190,8 @@ private theorem func40_chunk_loop (env : HostEnv Unit) (n : UInt64) (out fp : UI
         simp
         omega
       have haddr4 : Frozen ((((1 : UInt32) +
-          UInt32.ofNat (n.toNat / 10 ^ (4 * k) % 100) <<< 1) + 1049424).toNat =
-          1049424 + (2 * (n.toNat / 10 ^ (4 * k) % 100) + 1)) :=
+          UInt32.ofNat (n.toNat / 10 ^ (4 * k) % 100) <<< 1) + 1049408).toNat =
+          1049408 + (2 * (n.toNat / 10 ^ (4 * k) % 100) + 1)) :=
         Frozen.mk (by
           rw [hshl_r, hone3,
               toNat_add_of_lt _ _ (by
@@ -1210,7 +1210,7 @@ private theorem func40_chunk_loop (env : HostEnv Unit) (n : UInt64) (out fp : UI
             write32_bytes_of_disjoint _ _ _ _ (by have a := t128.out; omega)]
         exact hB9 i h1 h2
       have hbyte4 : st10.mem.read8
-          (((1 : UInt32) + UInt32.ofNat (n.toNat / 10 ^ (4 * k) % 100) <<< 1) + 1049424) =
+          (((1 : UInt32) + UInt32.ofNat (n.toNat / 10 ^ (4 * k) % 100) <<< 1) + 1049408) =
           UInt8.ofNat (48 + n.toNat / 10 ^ (4 * k) % 10) := by
         show st10.mem.bytes _ = _
         rw [haddr4.out, hB10 _ (by omega) (by omega), htab _ (by omega)]
@@ -1222,7 +1222,7 @@ private theorem func40_chunk_loop (env : HostEnv Unit) (n : UInt64) (out fp : UI
               from by omega] at h
         simpa [digitTableBase, Nat.add_assoc] using h
       have hguard_tab4 : ¬ (1114112 ≤
-          (1 + (n.toNat / 10 ^ (4 * k) % 100 % 4294967296) <<< 1 + 1049424) %
+          (1 + (n.toNat / 10 ^ (4 * k) % 100 % 4294967296) <<< 1 + 1049408) %
             4294967296) := by
         have e1 : n.toNat / 10 ^ (4 * k) % 100 % 4294967296 =
             n.toNat / 10 ^ (4 * k) % 100 := Nat.mod_eq_of_lt (by omega)
