@@ -7,6 +7,7 @@ import Project.Itoa.Spec
 import Project.Itoa.Proofs
 import Project.Memchr.Spec
 import Project.NumInteger.Spec
+import Project.NearFlag.Spec
 import Project.NearKvContract.Spec
 import Project.ReverseInplace.Spec
 import Project.RustOption.Spec

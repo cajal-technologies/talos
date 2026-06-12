@@ -1307,6 +1307,42 @@ private def stripQuotes (s : String) : String :=
     ((s.drop 1).dropEnd 1).toString
   else s
 
+private def hexDigitVal (c : Char) : Option Nat :=
+  if c.isDigit then some (c.toNat - '0'.toNat)
+  else if 'a' ≤ c && c ≤ 'f' then some (10 + c.toNat - 'a'.toNat)
+  else if 'A' ≤ c && c ≤ 'F' then some (10 + c.toNat - 'A'.toNat)
+  else none
+
+-- decode WAT string escapes to a String (for export/import names)
+private partial def decodeWatStringChars : List Char → String
+  | []                       => ""
+  | '\\' :: 'n'  :: r       => "\n" ++ decodeWatStringChars r
+  | '\\' :: 't'  :: r       => "\t" ++ decodeWatStringChars r
+  | '\\' :: 'r'  :: r       => "\r" ++ decodeWatStringChars r
+  | '\\' :: '"'  :: r       => "\"" ++ decodeWatStringChars r
+  | '\\' :: '\\' :: r       => "\\" ++ decodeWatStringChars r
+  | '\\' :: 'u'  :: '{' :: r =>
+    let (hex, rest) := r.span (· != '}')
+    match rest with
+    | '}' :: r' =>
+      if !hex.isEmpty && hex.all (fun c => (hexDigitVal c).isSome) then
+        let n := hex.foldl (fun acc c => acc * 16 + (hexDigitVal c).getD 0) 0
+        String.singleton (Char.ofNat n) ++ decodeWatStringChars r'
+      else "\\u{" ++ decodeWatStringChars (hex ++ rest)
+    | _ => "\\u{" ++ decodeWatStringChars (hex ++ rest)
+  | '\\' :: h1 :: h2 :: r   =>
+    match hexDigitVal h1, hexDigitVal h2 with
+    | some d1, some d2 =>
+      String.singleton (Char.ofNat (d1 * 16 + d2)) ++ decodeWatStringChars r
+    | _, _ => "\\" ++ decodeWatStringChars (h1 :: h2 :: r)
+  | '\\' :: c :: r           => "\\" ++ String.singleton c ++ decodeWatStringChars r
+  | c :: r                   => String.singleton c ++ decodeWatStringChars r
+
+private def decodeWatString (s : String) : String :=
+  if s.length ≥ 2 && s.startsWith "\"" && s.endsWith "\"" then
+    decodeWatStringChars ((s.drop 1).dropEnd 1).toString.toList
+  else s
+
 private def parseFunc (funcIds : Std.HashMap String Nat)
     (globalIds : Std.HashMap String Nat)
     (tableNames : Std.HashMap String Nat)
@@ -1409,7 +1445,7 @@ private def parseFunc (funcIds : Std.HashMap String Nat)
       | "export" =>
         match tail with
         | [.atom s] =>
-          inlineExports := inlineExports ++ [stripQuotes s]
+          inlineExports := inlineExports ++ [decodeWatString s]
         | _ => throw "malformed inline (export ...)"
         rest := r
       | "import" =>
@@ -1479,12 +1515,6 @@ private def collectGlobalNames (fields : List Sexpr)
       i := i + 1
     | _ => pure ()
   return idOf
-
-private def hexDigitVal (c : Char) : Option Nat :=
-  if c.isDigit then some (c.toNat - '0'.toNat)
-  else if 'a' ≤ c && c ≤ 'f' then some (10 + c.toNat - 'a'.toNat)
-  else if 'A' ≤ c && c ≤ 'F' then some (10 + c.toNat - 'A'.toNat)
-  else none
 
 private partial def decodeWatBytes : List Char → Except Err (List UInt8)
   | []                   => .ok []
@@ -1801,8 +1831,8 @@ private def collectImports (types : Array TypeEntry) (fields : List Sexpr)
     | .list (.atom "import" :: tail) =>
       match tail with
       | [.atom modName, .atom importName, .list (.atom "func" :: funcBody)] =>
-        let modName' := stripQuotes modName
-        let importName' := stripQuotes importName
+        let modName' := decodeWatString modName
+        let importName' := decodeWatString importName
         let funcBodyAfterId : List Sexpr :=
           match funcBody with
           | .atom a :: rest => if a.startsWith "$" then rest else funcBody
@@ -1868,7 +1898,7 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
     | .list (.atom "export" :: tail) =>
       match tail with
       | [.atom name, .list [.atom "func", .atom ref]] =>
-        topExports := topExports.push (stripQuotes name, ref)
+        topExports := topExports.push (decodeWatString name, ref)
       | [.atom _, .list (.atom "func" :: _)] =>
         throw "malformed top-level (export … (func …))"
       | _ =>
