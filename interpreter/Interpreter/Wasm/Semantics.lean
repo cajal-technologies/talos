@@ -786,6 +786,45 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
           | some _ => .Invalid "returnCallIndirect: non-funcref table entry"
       | _ => .Invalid "returnCallIndirect: ill-shaped operand stack"
 
+    -- Typed function references. `call_ref` dispatches through a popped
+    -- funcref (null traps with the spec's wording); validation makes a
+    -- runtime signature check unnecessary. `return_call_ref` is the
+    -- tail-call form, resolved by `run` like the other tail calls.
+    | f + 1, .callRef _typeIdx => match s.values with
+      | .funcref none :: _ => .Trap st "null function reference"
+      | .funcref (some fid) :: rest =>
+        (match run f m fid st rest env with
+         | .Success vs st' => .Fallthrough st' { s with values := vs }
+         | .Trap st' msg   => .Trap st' msg
+         | .Invalid msg    => .Invalid msg
+         | .OutOfFuel      => .OutOfFuel)
+      | _ => .Invalid "callRef: ill-shaped operand stack"
+    | _, .returnCallRef _typeIdx => match s.values with
+      | .funcref none :: _ => .Trap st "null function reference"
+      | .funcref (some fid) :: rest => .ReturnCall fid st rest
+      | _ => .Invalid "returnCallRef: ill-shaped operand stack"
+    | _, .refAsNonNull => match s.values with
+      | v :: vs =>
+        match v.isNullRef? with
+        | some true  => .Trap st "null reference"
+        | some false => .Fallthrough st { s with values := v :: vs }
+        | none       => .Invalid "refAsNonNull: ill-shaped operand stack"
+      | _ => .Invalid "refAsNonNull: ill-shaped operand stack"
+    | _, .brOnNull n => match s.values with
+      | v :: vs =>
+        match v.isNullRef? with
+        | some true  => .Break n st { s with values := vs }
+        | some false => .Fallthrough st { s with values := v :: vs }
+        | none       => .Invalid "brOnNull: ill-shaped operand stack"
+      | _ => .Invalid "brOnNull: ill-shaped operand stack"
+    | _, .brOnNonNull n => match s.values with
+      | v :: vs =>
+        match v.isNullRef? with
+        | some true  => .Fallthrough st { s with values := vs }
+        | some false => .Break n st { s with values := v :: vs }
+        | none       => .Invalid "brOnNonNull: ill-shaped operand stack"
+      | _ => .Invalid "brOnNonNull: ill-shaped operand stack"
+
     -- Indirect call. Pop an i32 index, look up the entry in the chosen
     -- table, then dispatch to the referenced function — trapping on
     -- out-of-bounds, null refs, or signature mismatches against the

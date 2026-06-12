@@ -75,6 +75,13 @@ def Value.addrNat? : Value → Option Nat
   | .i64 a => some a.toNat
   | _      => none
 
+/-- Null test for reference values: `some true/false` for refs, `none`
+for non-reference values (ill-typed input). -/
+def Value.isNullRef? : Value → Option Bool
+  | .funcref r   => some r.isNone
+  | .externref r => some r.isNone
+  | _            => none
+
 /-- A size/length result, typed by the owning memory/table's address
 type: `i64` for 64-bit memories/tables (memory64 proposal), `i32`
 otherwise. Used by `memory.size`, `table.size`, and the grow results. -/
@@ -206,6 +213,20 @@ inductive Instruction where
   -- of tail calls consume fuel but not host stack.
   | returnCall : Nat → Instruction
   | returnCallIndirect : (typeIdx tableIdx : Nat) → Instruction
+
+  -- Typed function references (wasm 3.0). `call_ref (type N)` pops a
+  -- funcref and dispatches to it, trapping on null; the static type
+  -- annotation needs no runtime check (validation guarantees it), so the
+  -- immediate is kept only for round-tripping. `return_call_ref` is its
+  -- tail-call form. `ref.as_non_null` asserts non-null (trapping
+  -- otherwise); `br_on_null l` branches to `l` when the popped ref is
+  -- null (consuming it) and pushes it back otherwise; `br_on_non_null l`
+  -- branches with the ref kept when non-null and consumes it otherwise.
+  | callRef : (typeIdx : Nat) → Instruction
+  | returnCallRef : (typeIdx : Nat) → Instruction
+  | refAsNonNull : Instruction
+  | brOnNull : Nat → Instruction
+  | brOnNonNull : Nat → Instruction
 
   -- Indirect call. `typeIdx` selects the expected signature from the
   -- enclosing module's type table; `tableIdx` selects the table (almost

@@ -15,6 +15,10 @@ Once a run has succeeded with some amount of fuel (≠ `.OutOfFuel`), adding
 more fuel doesn't change the answer. This is what makes the `∃ N, ∀ fuel ≥ N`
 existential in `wp` well-behaved. -/
 
+-- The single induction over every instruction arm; `execOne`'s match has
+-- grown large enough (SIMD, 64-bit, multi-memory, tail calls) that the
+-- default heartbeat budget no longer covers its equation unfolding.
+set_option maxHeartbeats 1600000 in
 /-- Joint induction principle for fuel monotonicity of `execOne`, `exec`, and
 `run`. Proved by induction on `f₁`; the three public theorems below are
 one-line projections. -/
@@ -207,6 +211,23 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
                             ihRun m env fid st rest k' hk' hrun]
                         · simp only [execOne, hvals, hv, htbl, hslot, hslot', hr,
                             hfn, hty, if_neg hsig]
+      | callRef ti =>
+        rcases hvals : s.values with _ | ⟨v, rest⟩
+        · simp only [execOne, hvals]
+        · cases hv : v with
+          | i32 _ => simp only [execOne, hvals, hv]
+          | i64 _ => simp only [execOne, hvals, hv]
+          | f32 _ => simp only [execOne, hvals, hv]
+          | f64 _ => simp only [execOne, hvals, hv]
+          | externref _ => simp only [execOne, hvals, hv]
+          | v128 _ => simp only [execOne, hvals, hv]
+          | funcref r =>
+            rcases hr : r with _ | fid
+            · simp only [execOne, hvals, hv, hr]
+            · have hrun : run k m fid st rest env ≠ .OutOfFuel := by
+                intro h; apply hne; simp only [execOne, hvals, hv, hr, h]
+              simp only [execOne, hvals, hv, hr,
+                ihRun m env fid st rest k' hk' hrun]
       | memOp kIdx inner =>
         rcases hmem : st.extraMems[kIdx - 1]? with _ | memK
         · simp only [execOne, hmem]

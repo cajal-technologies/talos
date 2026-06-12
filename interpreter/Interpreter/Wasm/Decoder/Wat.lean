@@ -315,6 +315,26 @@ private def atomToValueType? : String → Option Wasm.ValueType
   | "nullexternref" => some .externref
   | _     => none
 
+private def isNullFuncrefHeapType (ht : String) : Bool :=
+  ht == "func" || ht == "nofunc"
+
+private def isNullExternrefHeapType (ht : String) : Bool :=
+  ht == "extern" || ht == "noextern"
+
+/-- Decode a reference value-type written in list form, e.g.
+`(ref func)`, `(ref null extern)`, `(ref $t)`. Symbolic and numeric heap
+types refer to the type table — pre-GC those are function types, so they
+map to `funcref`; GC heap types keep the `i32` placeholder used for
+unmodelled proposals. -/
+private def listToValueType (xs : List Sexpr) : Wasm.ValueType :=
+  match xs with
+  | [.atom "ref", .atom ht] | [.atom "ref", .atom "null", .atom ht] =>
+    if isNullFuncrefHeapType ht then .funcref
+    else if isNullExternrefHeapType ht then .externref
+    else if ht.startsWith "$" || ht.all Char.isDigit then .funcref
+    else .i32
+  | _ => .i32
+
 /-- Resolve a `(type N)` reference on a block/loop/if to the signature
 declared in the module's type table. Returns `none` if the index/id is
 unknown or the entry's signature is outside our supported integer
@@ -337,12 +357,12 @@ private partial def skipBlockType (resolveType : BlockTypeResolver) :
   | ps, rs, .list (.atom "result" :: ts) :: r =>
     let extra := ts.filterMap fun
       | .atom a => atomToValueType? a
-      | _       => none
+      | .list l => some (listToValueType l)
     skipBlockType resolveType ps (rs ++ extra) r
   | ps, rs, .list (.atom "param" :: ts) :: r =>
     let extra := ts.filterMap fun
       | .atom a => atomToValueType? a
-      | _       => none
+      | .list l => some (listToValueType l)
     skipBlockType resolveType (ps ++ extra) rs r
   | ps, rs, .list (.atom "type" :: .atom ref :: _) :: r =>
     -- A `(type N)` annotation adopts the type-table entry's signature as
@@ -436,18 +456,15 @@ private def resolveNamed (table : Std.HashMap String Nat) (kind : String)
     | none => .error s!"unknown {kind} id: {s}"
   else parseNat s
 
-private def isNullFuncrefHeapType (ht : String) : Bool :=
-  ht == "func" || ht == "nofunc"
-
-private def isNullExternrefHeapType (ht : String) : Bool :=
-  ht == "extern" || ht == "noextern"
-
 /-- Decode a `ref.null ht` heap-type immediate into the matching null-ref
 push. Heap types from proposals we don't model decode to `unreachable`
 (consistent with their other instructions). -/
 private def refNullInstr (ht : String) : Wasm.Instruction :=
   if isNullFuncrefHeapType ht then .refNull
   else if isNullExternrefHeapType ht then .refNullExtern
+  -- Concrete heap types (`$t` / numeric) refer to the type table; pre-GC
+  -- those are function types, so the null they denote is the null funcref.
+  else if ht.startsWith "$" || ht.all Char.isDigit then .refNull
   else .unreachable
 
 private def dropTrailingLabel : List Sexpr → List Sexpr
@@ -714,8 +731,6 @@ interpreter doesn't model. Returns `none` for ops we don't pretend to
 support. -/
 private def stubImmediateCount (op : String) : Option Nat :=
 if op == "ref.test" || op == "ref.cast"
-     || op == "br_on_null" || op == "br_on_non_null"
-     || op == "return_call_ref" || op == "call_ref"
      || op == "throw" || op == "tag"
      || op == "struct.new" || op == "struct.new_default"
      || op == "array.new" || op == "array.new_default" || op == "array.new_fixed"
@@ -1021,6 +1036,16 @@ private def parseTableInit (ctx : Ctx)
     else .error "table.init expects an element-segment immediate"
   | _ => .error "table.init expects an element-segment immediate"
 
+/-- Resolve a type-index immediate (`$t` or numeric) against the
+module's type table. Used by `call_ref` / `return_call_ref`. -/
+private def resolveTypeIdx (ctx : Ctx) (n : String) : Except Err Nat :=
+  if n.startsWith "$" then
+    let name := (n.drop 1).toString
+    match ctx.types.findIdx? (fun te => te.symId = some name) with
+    | some i => .ok i
+    | none   => .error s!"unknown type id: {n}"
+  else parseNat n
+
 /-- Wrap a memory instruction for a non-default memory (multi-memory). -/
 private def wrapMem (k : Nat) (i : Wasm.Instruction) : Wasm.Instruction :=
   if k = 0 then i else .memOp k i
@@ -1091,6 +1116,11 @@ private partial def parseInstr (ctx : Ctx) (toks : List Sexpr)
     | "br_if"     => parseImmediateNat (resolveLabel ctx) .br_if op rest
     | "br_table"  => parseBrTable ctx rest
     | "call"      => parseImmediateNat (resolveNamed ctx.funcIds "function") .call op rest
+    | "call_ref" => parseImmediateNat (resolveTypeIdx ctx) .callRef op rest
+    | "return_call_ref" => parseImmediateNat (resolveTypeIdx ctx) .returnCallRef op rest
+    | "ref.as_non_null" => .ok ([.refAsNonNull], rest)
+    | "br_on_null" => parseImmediateNat (resolveLabel ctx) .brOnNull op rest
+    | "br_on_non_null" => parseImmediateNat (resolveLabel ctx) .brOnNonNull op rest
     | "call_indirect" => parseCallIndirect ctx .callIndirect rest
     | "return_call_indirect" => parseCallIndirect ctx .returnCallIndirect rest
     | "return_call" =>
@@ -1276,6 +1306,14 @@ private partial def parseFolded (ctx : Ctx) (xs : List Sexpr)
     | "return_call" =>
       foldedWithImmediate ctx (resolveNamed ctx.funcIds "function")
         (fun i => [.returnCall i]) rest
+    | "call_ref" =>
+      foldedWithImmediate ctx (resolveTypeIdx ctx) (fun i => [.callRef i]) rest
+    | "return_call_ref" =>
+      foldedWithImmediate ctx (resolveTypeIdx ctx) (fun i => [.returnCallRef i]) rest
+    | "br_on_null" =>
+      foldedWithImmediate ctx (resolveLabel ctx) (fun n => [.brOnNull n]) rest
+    | "br_on_non_null" =>
+      foldedWithImmediate ctx (resolveLabel ctx) (fun n => [.brOnNonNull n]) rest
     | "block" => foldedStructured ctx .block rest
     | "loop"  => foldedStructured ctx .loop  rest
     | "if"    => foldedIf ctx rest
@@ -1500,7 +1538,7 @@ private partial def parseCallIndirect (ctx : Ctx)
             else match atomToValueType? a with
               | some vt => ps := ps ++ [vt]
               | none    => .error s!"call_indirect: unsupported param type {a}"
-          | .list _ => ps := ps ++ [.i32]
+          | .list l => ps := ps ++ [listToValueType l]
         r := r'
       | .list (.atom "result" :: tail) :: r' =>
         for t in tail do
@@ -1509,7 +1547,7 @@ private partial def parseCallIndirect (ctx : Ctx)
             match atomToValueType? a with
             | some vt => rs := rs ++ [vt]
             | none    => .error s!"call_indirect: unsupported result type {a}"
-          | .list _ => rs := rs ++ [.i32]
+          | .list l => rs := rs ++ [listToValueType l]
         r := r'
       | _ => stop := true
     -- With no inline forms at all this is the bare `call_indirect`,
@@ -1624,7 +1662,7 @@ private def parseTypeField (xs : List Sexpr) : TypeEntry := Id.run do
             -- Reference-type forms like `(ref null T)` are lowered to
             -- the i32 placeholder so the function still type-checks
             -- against our reduced value type set.
-            | .list _ => paramTypes := paramTypes ++ [.i32]
+            | .list l => paramTypes := paramTypes ++ [listToValueType l]
         | .list (.atom "result" :: tail) =>
           for t in tail do
             match t with
@@ -1632,7 +1670,7 @@ private def parseTypeField (xs : List Sexpr) : TypeEntry := Id.run do
               match atomToValueType? a with
               | some vt => resultTypes := resultTypes ++ [vt]
               | none    => ok := false
-            | .list _ => resultTypes := resultTypes ++ [.i32]
+            | .list l => resultTypes := resultTypes ++ [listToValueType l]
         | _ => ok := false
       if ok then return some (paramTypes, resultTypes) else return none
     | _ => none
@@ -1720,7 +1758,7 @@ private def parseFunc (funcIds : Std.HashMap String Nat)
                   | some vt => paramTypes := paramTypes ++ [vt]
                   | none    => throw s!"unsupported param type: {a}"
               -- Reference-type forms like `(ref null T)` → i32 placeholder.
-              | .list _ => paramTypes := paramTypes ++ [.i32]
+              | .list l => paramTypes := paramTypes ++ [listToValueType l]
           else
             for t in tail do
               match t with
@@ -1728,7 +1766,7 @@ private def parseFunc (funcIds : Std.HashMap String Nat)
                 match atomToValueType? a with
                 | some vt => paramTypes := paramTypes ++ [vt]
                 | none    => throw s!"unsupported param type: {a}"
-              | .list _ => paramTypes := paramTypes ++ [.i32]
+              | .list l => paramTypes := paramTypes ++ [listToValueType l]
         rest := r
       | "local" =>
         let named := tail.any fun
@@ -1745,7 +1783,7 @@ private def parseFunc (funcIds : Std.HashMap String Nat)
                 | some vt => localTypes := localTypes ++ [vt]
                 | none    => throw s!"unsupported local type: {a}"
             -- Reference-type forms like `(ref null T)` → i32 placeholder.
-            | .list _ => localTypes := localTypes ++ [.i32]
+            | .list l => localTypes := localTypes ++ [listToValueType l]
         else
           for t in tail do
             match t with
@@ -1753,7 +1791,7 @@ private def parseFunc (funcIds : Std.HashMap String Nat)
               match atomToValueType? a with
               | some vt => localTypes := localTypes ++ [vt]
               | none    => throw s!"unsupported local type: {a}"
-            | .list _ => localTypes := localTypes ++ [.i32]
+            | .list l => localTypes := localTypes ++ [listToValueType l]
         rest := r
       | "result" =>
         -- wasm-tools commonly emits `(type N) (param …) (result …)` where
@@ -1767,7 +1805,7 @@ private def parseFunc (funcIds : Std.HashMap String Nat)
               | some vt => resultTypes := resultTypes ++ [vt]
               | none    => throw s!"unsupported result type: {a}"
             -- Reference-type forms like `(ref null T)` → i32 placeholder.
-            | .list _ => resultTypes := resultTypes ++ [.i32]
+            | .list l => resultTypes := resultTypes ++ [listToValueType l]
         rest := r
       | "type" =>
         match tail with
