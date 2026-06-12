@@ -715,7 +715,7 @@ support. -/
 private def stubImmediateCount (op : String) : Option Nat :=
 if op == "ref.test" || op == "ref.cast"
      || op == "br_on_null" || op == "br_on_non_null"
-     || op == "return_call" || op == "return_call_ref" || op == "call_ref"
+     || op == "return_call_ref" || op == "call_ref"
      || op == "throw" || op == "tag"
      || op == "struct.new" || op == "struct.new_default"
      || op == "array.new" || op == "array.new_default" || op == "array.new_fixed"
@@ -1091,7 +1091,10 @@ private partial def parseInstr (ctx : Ctx) (toks : List Sexpr)
     | "br_if"     => parseImmediateNat (resolveLabel ctx) .br_if op rest
     | "br_table"  => parseBrTable ctx rest
     | "call"      => parseImmediateNat (resolveNamed ctx.funcIds "function") .call op rest
-    | "call_indirect" | "return_call_indirect" => parseCallIndirect ctx rest
+    | "call_indirect" => parseCallIndirect ctx .callIndirect rest
+    | "return_call_indirect" => parseCallIndirect ctx .returnCallIndirect rest
+    | "return_call" =>
+      parseImmediateNat (resolveNamed ctx.funcIds "function") .returnCall op rest
     | "memory.size" => parseOptMemIdx ctx .memorySize rest
     | "memory.grow" => parseOptMemIdx ctx .memoryGrow rest
     | "memory.fill" => parseOptMemIdx ctx .memoryFill rest
@@ -1259,10 +1262,20 @@ private partial def parseFolded (ctx : Ctx) (xs : List Sexpr)
         | .atom a => .error s!"folded {op}: unexpected atom operand '{a}'"
       .ok (acc ++ instr)
     | "call_indirect" | "return_call_indirect" => do
-      let (instr, leftover) ← parseCallIndirect ctx rest
-      unless leftover.isEmpty do
-        .error "folded call_indirect: trailing tokens"
-      .ok instr
+      let mk : Nat → Nat → Wasm.Instruction :=
+        if op == "call_indirect" then .callIndirect else .returnCallIndirect
+      let (instr, leftover) ← parseCallIndirect ctx mk rest
+      let mut acc : List Wasm.Instruction := []
+      for sx in leftover do
+        match sx with
+        | .list ys =>
+          let sub ← parseFolded ctx ys
+          acc := acc ++ sub
+        | .atom a => .error s!"folded {op}: unexpected atom operand '{a}'"
+      .ok (acc ++ instr)
+    | "return_call" =>
+      foldedWithImmediate ctx (resolveNamed ctx.funcIds "function")
+        (fun i => [.returnCall i]) rest
     | "block" => foldedStructured ctx .block rest
     | "loop"  => foldedStructured ctx .loop  rest
     | "if"    => foldedIf ctx rest
@@ -1438,7 +1451,8 @@ are `call_indirect [$t | (table T)] (type N)`; raw `.wat` may instead
 carry an inline `(param …)* (result …)*` signature, which we resolve to
 the first matching entry of the module's type table (wasm-tools'
 canonical encoding always materialises such an entry). -/
-private partial def parseCallIndirect (ctx : Ctx) (toks : List Sexpr)
+private partial def parseCallIndirect (ctx : Ctx)
+    (mk : Nat → Nat → Wasm.Instruction) (toks : List Sexpr)
     : Except Err (List Wasm.Instruction × List Sexpr) := do
   let mut rest := toks
   let mut tableIdx : Nat := 0
@@ -1468,7 +1482,7 @@ private partial def parseCallIndirect (ctx : Ctx) (toks : List Sexpr)
       | .list (.atom "param" :: _)  => true
       | .list (.atom "result" :: _) => true
       | _ => false
-    .ok ([.callIndirect typeIdx tableIdx], r)
+    .ok ([mk typeIdx tableIdx], r)
   | _ =>
     -- Inline signature without `(type N)`: collect `(param …)*
     -- (result …)*` and resolve against the type table.
@@ -1501,7 +1515,7 @@ private partial def parseCallIndirect (ctx : Ctx) (toks : List Sexpr)
     -- With no inline forms at all this is the bare `call_indirect`,
     -- whose type is the empty signature `[] → []`.
     match ctx.types.findIdx? (fun te => te.sig = some (ps, rs)) with
-    | some i => .ok ([.callIndirect i tableIdx], r)
+    | some i => .ok ([mk i tableIdx], r)
     | none   => .error "call_indirect: inline signature has no matching type entry"
 
 private partial def parseStructured (ctx : Ctx)

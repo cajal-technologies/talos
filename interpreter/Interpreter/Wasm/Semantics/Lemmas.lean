@@ -79,7 +79,8 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
         have hexec : exec k m st s body env ≠ .OutOfFuel := by
           intro h; apply hne; simp only [execOne, h]
         rw [ihExec m env st s body k' hk' hexec]
-        rcases hres : exec k m st s body env with ⟨st', s'⟩ | ⟨n, st', s'⟩ | ⟨st', vs⟩ | msg | msg | _
+        rcases hres : exec k m st s body env with
+          ⟨st', s'⟩ | ⟨n, st', s'⟩ | ⟨st', vs⟩ | msg | msg | _ | ⟨id', st', vs⟩
         · rfl
         · cases n with
           | zero =>
@@ -98,6 +99,7 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
         · rfl
         · rfl
         · exact absurd hres hexec
+        · rfl
       | iff ps rs thn els =>
         simp only [execOne]
         rcases hvals : s.values with _ | ⟨v, vs⟩
@@ -253,6 +255,24 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
           apply hne
           simp only [run, hImp, h, hOOF]
         rw [monoExec _ _ _ _ _ f₂ hle hexec]
+        -- The ReturnCall arm still references `runTail` at the two fuels;
+        -- fold them with the run-level IH. All other arms are identical.
+        rcases hres : exec (k+1) m initial
+            (f.toLocals (args.take f.numParams).reverse) f.body env with
+          _ | ⟨n, _, _⟩ | _ | _ | _ | _ | ⟨id', st', vs⟩
+        · rfl
+        · cases n <;> rfl
+        · rfl
+        · rfl
+        · rfl
+        · rfl
+        · obtain ⟨f₂', rfl⟩ : ∃ f₂', f₂ = f₂' + 1 := ⟨f₂ - 1, by omega⟩
+          have hk2 : k ≤ f₂' := by omega
+          have hrt : run k m id' st' vs env ≠ .OutOfFuel := by
+            intro hOOF
+            apply hne
+            simp only [run, hImp, h, hres, runTail, hOOF]
+          simp only [runTail, ihRun m env id' st' vs f₂' hk2 hrt]
     · -- host path: result is fuel-independent.
       rfl
 
@@ -297,9 +317,10 @@ theorem exec_block_cons
            { s' with values := s'.values.take rs ++ s.values.drop ps } rest env
        | other                => other) := by
   simp only [exec, execOne]
-  rcases exec fuel m st s body env with _ | ⟨n, _, _⟩ | _ | _ | _ | _
+  rcases exec fuel m st s body env with _ | ⟨n, _, _⟩ | _ | _ | _ | _ | _
   · rfl
   · cases n <;> rfl
+  · rfl
   · rfl
   · rfl
   · rfl
@@ -423,13 +444,18 @@ theorem run_eq
            .Invalid "Unexpected break targeting scope out of function"
          | .Invalid msg      => .Invalid msg
          | .Trap st msg      => .Trap st msg
-         | .OutOfFuel        => .OutOfFuel) := by
+         | .OutOfFuel        => .OutOfFuel
+         | .ReturnCall id' st' vs =>
+           match runTail fuel m id' st' vs env with
+           | .Success vs2 st2 =>
+             .Success (vs2.take f.results.length ++ callerRemainder) st2
+           | other => other) := by
   simp only [run, hImp]
   rcases m.funcs[id - m.imports.length]? with _ | f
   · rfl
   · simp only
     rcases exec fuel m initial (f.toLocals (args.take f.numParams).reverse) f.body env with
-      _ | ⟨n, _, _⟩ | _ | _ | _ | _
+      _ | ⟨n, _, _⟩ | _ | _ | _ | _ | _
     · rfl
     · cases n <;> rfl
     all_goals rfl

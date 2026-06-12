@@ -741,6 +741,51 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
       | .Invalid msg    => .Invalid msg
       | .OutOfFuel      => .OutOfFuel
 
+    -- Tail calls. Both build a `ReturnCall` continuation; `run` resolves
+    -- the re-dispatch (consuming one unit of fuel per tail call), so a
+    -- chain of N tail calls needs O(N) fuel but constant host stack.
+    -- `return_call_indirect` performs the same table lookup, null check,
+    -- and signature check as `call_indirect`, with the same trap wording.
+    | _, .returnCall id => .ReturnCall id st s.values
+    | _, .returnCallIndirect typeIdx tableIdx => match s.values with
+      | .i32 i :: rest =>
+        match st.tables[tableIdx]? with
+        | none     => .Invalid s!"returnCallIndirect: table index {tableIdx} out of range"
+        | some tbl =>
+          match tbl[i.toNat]? with
+          | none                       => .Trap st "undefined element"
+          | some (.funcref none)       => .Trap st "uninitialized element"
+          | some (.funcref (some fid)) =>
+            match m.funcSig? fid with
+            | none    => .Invalid s!"returnCallIndirect: function index {fid} out of range"
+            | some fn =>
+              match m.types[typeIdx]? with
+              | none    => .Invalid s!"returnCallIndirect: type index {typeIdx} out of range"
+              | some ty =>
+                if fn.params = ty.params ∧ fn.results = ty.results then
+                  .ReturnCall fid st rest
+                else .Trap st "indirect call type mismatch"
+          | some _ => .Invalid "returnCallIndirect: non-funcref table entry"
+      | .i64 i :: rest =>
+        match st.tables[tableIdx]? with
+        | none     => .Invalid s!"returnCallIndirect: table index {tableIdx} out of range"
+        | some tbl =>
+          match tbl[i.toNat]? with
+          | none                       => .Trap st "undefined element"
+          | some (.funcref none)       => .Trap st "uninitialized element"
+          | some (.funcref (some fid)) =>
+            match m.funcSig? fid with
+            | none    => .Invalid s!"returnCallIndirect: function index {fid} out of range"
+            | some fn =>
+              match m.types[typeIdx]? with
+              | none    => .Invalid s!"returnCallIndirect: type index {typeIdx} out of range"
+              | some ty =>
+                if fn.params = ty.params ∧ fn.results = ty.results then
+                  .ReturnCall fid st rest
+                else .Trap st "indirect call type mismatch"
+          | some _ => .Invalid "returnCallIndirect: non-funcref table entry"
+      | _ => .Invalid "returnCallIndirect: ill-shaped operand stack"
+
     -- Indirect call. Pop an i32 index, look up the entry in the chosen
     -- table, then dispatch to the referenced function — trapping on
     -- out-of-bounds, null refs, or signature mismatches against the
@@ -1699,7 +1744,25 @@ def run (fuel : Nat) (m : Module) (id : Nat)
       | Continuation.Invalid msg      => .Invalid msg
       | Continuation.OutOfFuel        => .OutOfFuel
       | Continuation.Trap st msg      => .Trap st msg
+      -- Tail call: the callee replaces this frame. Validation guarantees
+      -- the callee's result types equal `f.results`, so truncating its
+      -- results to `f.results.length` and restoring this frame's
+      -- caller-remainder preserves the standard calling convention.
+      | Continuation.ReturnCall id' st' vs =>
+        match runTail fuel m id' st' vs env with
+        | .Success vs2 st2 => .Success (vs2.take f.results.length ++ callerRemainder) st2
+        | other => other
     | none => .Invalid "Function index out of bounds"
+
+/-- Resolve a pending tail call: re-dispatch with one less fuel. Kept as
+its own (mutual) definition so `run`'s equation lemma does not mention
+`run` itself — `simp only [run]` unfolds one frame and stops at
+`runTail`, exactly like the pre-tail-call unfolding discipline. -/
+def runTail (fuel : Nat) (m : Module) (id : Nat)
+    (st : Store α) (vs : List Value) (env : HostEnv α := {}) : Result α :=
+  match fuel with
+  | 0 => .OutOfFuel
+  | f' + 1 => run f' m id st vs env
 
 end
 

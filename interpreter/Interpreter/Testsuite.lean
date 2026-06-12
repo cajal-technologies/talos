@@ -25,7 +25,11 @@ namespace Wasm.Testsuite
 
 /-! ## Setup -/
 
-def defaultFuel : Nat := 1_000_000
+-- Large enough for the deepest fuel consumers in the suite (the
+-- million-deep tail-call chains in return_call*.wast, ~10 fuel per
+-- link); fuel is a bound, not a cost, so this only affects runaway
+-- programs.
+def defaultFuel : Nat := 50_000_000
 
 def testsuiteDir : String := "vendor/testsuite"
 

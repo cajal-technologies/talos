@@ -93,6 +93,14 @@ theorem wp_block_cons {ps rs : Nat} {body rest : Program} {Q : Assertion α}
         rw [hk_stable f (by omega), hk]
       rw [exec_block_cons, hbody]
       exact hQ_at
+    | ReturnCall fid st' vs =>
+      rw [hk] at hQ_at
+      refine ⟨f₀ + 1, fun fuel hfuel => ?_⟩
+      obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
+      have hbody : exec f m st s body env = .ReturnCall fid st' vs := by
+        rw [hk_stable f (by omega), hk]
+      rw [exec_block_cons, hbody]
+      exact hQ_at
 
 /-- `iff` rule: dispatch on the top-of-stack i32 condition, then reason like
     a block on the chosen branch. Stack precondition: `.i32 c :: vs` on top. -/
@@ -179,6 +187,14 @@ theorem wp_iff_cons {ps rs : Nat} {thn els rest : Program} {Q : Assertion α}
       refine ⟨f₀ + 1, fun fuel hfuel => ?_⟩
       obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
       have hbody : exec f m st s' body env = .Invalid msg := by
+        rw [hk_stable f (by omega), hk]
+      rw [exec_iff_cons hStack, hbody]
+      exact hQ_at
+    | ReturnCall fid st'' vs' =>
+      rw [hk] at hQ_at
+      refine ⟨f₀ + 1, fun fuel hfuel => ?_⟩
+      obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
+      have hbody : exec f m st s' body env = .ReturnCall fid st'' vs' := by
         rw [hk_stable f (by omega), hk]
       rw [exec_iff_cons hStack, hbody]
       exact hQ_at

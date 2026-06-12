@@ -24,6 +24,11 @@ operand/locals state is lost. -/
 | Trap        : Store α → String → Continuation α
 | Invalid     : String → Continuation α
 | OutOfFuel   : Continuation α
+/-- A pending tail call (`return_call` / `return_call_indirect`): the
+current frame is being replaced by an invocation of function `id` with
+the carried operand stack. `run` resolves it by re-dispatching; it never
+escapes past `run`. -/
+| ReturnCall  : Nat → Store α → List Value → Continuation α
 deriving Repr
 
 inductive Result (α : Type) where

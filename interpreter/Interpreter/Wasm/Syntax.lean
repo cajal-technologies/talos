@@ -199,6 +199,14 @@ inductive Instruction where
   | ret     : Instruction
   | call    : Nat → Instruction
 
+  -- Tail calls. `return_call f` replaces the current frame with an
+  -- invocation of `f`: the callee's results become the current
+  -- function's results (validation requires the result types to agree).
+  -- The fuel-bounded interpreter resolves these in `run`, so deep chains
+  -- of tail calls consume fuel but not host stack.
+  | returnCall : Nat → Instruction
+  | returnCallIndirect : (typeIdx tableIdx : Nat) → Instruction
+
   -- Indirect call. `typeIdx` selects the expected signature from the
   -- enclosing module's type table; `tableIdx` selects the table (almost
   -- always 0 in practice). The runtime pops an `i32` index `i`, looks up
