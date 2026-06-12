@@ -122,6 +122,7 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
           | f64 _ => rfl
           | funcref _ => rfl
           | externref _ => rfl
+          | v128 _ => rfl
       | call id =>
         simp only [execOne]
         have hrun : run k m id st s.values env ≠ .OutOfFuel := by
@@ -142,6 +143,7 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
           | f64 _    => simp only [execOne, hvals, hv]
           | funcref _ => simp only [execOne, hvals, hv]
           | externref _ => simp only [execOne, hvals, hv]
+          | v128 _ => simp only [execOne, hvals, hv]
           | i32 i =>
             rcases htbl : st.tables[tj]? with _ | tbl
             · simp only [execOne, hvals, hv, htbl]
@@ -153,6 +155,7 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
                 | f32 _ => simp only [execOne, hvals, hv, htbl, hslot, hslot']
                 | f64 _ => simp only [execOne, hvals, hv, htbl, hslot, hslot']
                 | externref _ => simp only [execOne, hvals, hv, htbl, hslot, hslot']
+                | v128 _ => simp only [execOne, hvals, hv, htbl, hslot, hslot']
                 | funcref r =>
                   rcases hr : r with _ | fid
                   · simp only [execOne, hvals, hv, htbl, hslot, hslot', hr]

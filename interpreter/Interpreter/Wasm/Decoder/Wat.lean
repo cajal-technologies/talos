@@ -304,7 +304,7 @@ private def atomToValueType? : String → Option Wasm.ValueType
   | "f64"       => some .f64
   | "funcref"   => some .funcref
   | "externref" => some .externref
-  | "v128"      => some .i32  -- placeholder
+  | "v128"      => some .v128
   | "anyref"    => some .i32  -- placeholder
   | "eqref"     => some .i32  -- placeholder
   | "i31ref"    => some .i32  -- placeholder
@@ -724,12 +724,7 @@ if op == "ref.test" || op == "ref.cast"
      -- struct accessors take 2 (type + field), see below.
      || op == "array.get" || op == "array.get_u" || op == "array.get_s"
      || op == "array.set" || op == "array.fill"
-     -- SIMD lane-index ops: one lane-index atom.
-     || op.endsWith ".extract_lane" || op.endsWith ".extract_lane_s"
-     || op.endsWith ".extract_lane_u" || op.endsWith ".replace_lane"
   then some 1
-  -- `i8x16.shuffle` has 16 lane-index immediates.
-  else if op == "i8x16.shuffle" then some 16
   -- `br_on_cast`/`br_on_cast_fail` take label + from_type + to_type,
   -- where the type immediates can be atoms (`anyref`) or lists
   -- (`(ref $t)`); they are handled separately by
@@ -750,20 +745,162 @@ private partial def consumeStubAtoms (op : String) : Nat → List Sexpr → Exce
   | k+1, .atom _ :: ts => consumeStubAtoms op k ts
   | _+1, _ => .error s!"{op}: expected immediate atom"
 
-/-- v128.const has a shape-dependent number of immediates. -/
-private def consumeV128ConstImmediates (rest : List Sexpr) : Except Err (List Sexpr) :=
-  match rest with
-  | .atom shape :: r =>
-    let count : Nat := match shape with
-      | "i8x16" => 16
-      | "i16x8" => 8
-      | "i32x4" => 4
-      | "i64x2" => 2
-      | "f32x4" => 4
-      | "f64x2" => 2
-      | _      => 0
-    consumeStubAtoms "v128.const" count r
-  | _ => .ok rest
+/-! ## SIMD mnemonic table
+
+Shape-prefixed mnemonics (`i8x16.add`, `f64x2.pmin`, …) decode through
+`simdOp?`; the per-shape availability of an op (e.g. `mul` only on
+i16x8/i32x4/i64x2) is validation's concern, not the decoder's. -/
+
+private def simdShapeOfPrefix? : String → Option Wasm.Simd.Shape
+  | "i8x16" => some .i8x16
+  | "i16x8" => some .i16x8
+  | "i32x4" => some .i32x4
+  | "i64x2" => some .i64x2
+  | "f32x4" => some .f32x4
+  | "f64x2" => some .f64x2
+  | _ => none
+
+private def simdShapeIsFloat : Wasm.Simd.Shape → Bool
+  | .f32x4 | .f64x2 => true
+  | _ => false
+
+private def simdICmp? : String → Option Wasm.Simd.ICmp
+  | "eq" => some .eq | "ne" => some .ne
+  | "lt_s" => some .ltS | "lt_u" => some .ltU
+  | "gt_s" => some .gtS | "gt_u" => some .gtU
+  | "le_s" => some .leS | "le_u" => some .leU
+  | "ge_s" => some .geS | "ge_u" => some .geU
+  | _ => none
+
+private def simdFCmp? : String → Option Wasm.Simd.FCmp
+  | "eq" => some .eq | "ne" => some .ne
+  | "lt" => some .lt | "gt" => some .gt
+  | "le" => some .le | "ge" => some .ge
+  | _ => none
+
+/-- Decode a no-immediate SIMD mnemonic. -/
+private def simdOp? (op : String) : Option Wasm.Instruction :=
+  match op with
+  | "v128.not"       => some (.vUnOp .not)
+  | "v128.and"       => some (.vBinOp .and)
+  | "v128.andnot"    => some (.vBinOp .andnot)
+  | "v128.or"        => some (.vBinOp .or)
+  | "v128.xor"       => some (.vBinOp .xor)
+  | "v128.bitselect" => some .vBitselect
+  | "v128.any_true"  => some (.vTestOp .anyTrue)
+  | _ =>
+    match op.splitOn "." with
+    | [pre, name] =>
+      match simdShapeOfPrefix? pre with
+      | none => none
+      | some sh =>
+        let flt := simdShapeIsFloat sh
+        match name with
+        | "splat"    => some (.vSplat sh)
+        | "all_true" => some (.vTestOp (.allTrue sh))
+        | "bitmask"  => some (.vTestOp (.bitmask sh))
+        | "shl"      => some (.vShiftOp (.shl sh))
+        | "shr_s"    => some (.vShiftOp (.shrS sh))
+        | "shr_u"    => some (.vShiftOp (.shrU sh))
+        | "neg"      => some (.vUnOp (if flt then .fNeg sh else .intNeg sh))
+        | "abs"      => some (.vUnOp (if flt then .fAbs sh else .intAbs sh))
+        | "popcnt"   => some (.vUnOp .popcnt)
+        | "sqrt"     => some (.vUnOp (.fSqrt sh))
+        | "ceil"     => some (.vUnOp (.fCeil sh))
+        | "floor"    => some (.vUnOp (.fFloor sh))
+        | "trunc"    => some (.vUnOp (.fTrunc sh))
+        | "nearest"  => some (.vUnOp (.fNearest sh))
+        | "add"      => some (.vBinOp (if flt then .fAdd sh else .add sh))
+        | "sub"      => some (.vBinOp (if flt then .fSub sh else .sub sh))
+        | "mul"      => some (.vBinOp (if flt then .fMul sh else .mul sh))
+        | "div"      => some (.vBinOp (.fDiv sh))
+        | "min"      => some (.vBinOp (.fMin sh))
+        | "max"      => some (.vBinOp (.fMax sh))
+        | "pmin"     => some (.vBinOp (.fPmin sh))
+        | "pmax"     => some (.vBinOp (.fPmax sh))
+        | "min_s"    => some (.vBinOp (.minI sh true))
+        | "min_u"    => some (.vBinOp (.minI sh false))
+        | "max_s"    => some (.vBinOp (.maxI sh true))
+        | "max_u"    => some (.vBinOp (.maxI sh false))
+        | "add_sat_s" => some (.vBinOp (.addSat sh true))
+        | "add_sat_u" => some (.vBinOp (.addSat sh false))
+        | "sub_sat_s" => some (.vBinOp (.subSat sh true))
+        | "sub_sat_u" => some (.vBinOp (.subSat sh false))
+        | "avgr_u"   => some (.vBinOp (.avgrU sh))
+        | "swizzle"  => some (.vBinOp .swizzle)
+        | "q15mulr_sat_s" => some (.vBinOp .q15mulrSatS)
+        | "dot_i16x8_s"   => some (.vBinOp .dot)
+        | "demote_f64x2_zero" => some (.vUnOp .f32x4DemoteF64x2Zero)
+        | "promote_low_f32x4" => some (.vUnOp .f64x2PromoteLowF32x4)
+        | "trunc_sat_f32x4_s" => some (.vUnOp (.i32x4TruncSatF32x4 true))
+        | "trunc_sat_f32x4_u" => some (.vUnOp (.i32x4TruncSatF32x4 false))
+        | "trunc_sat_f64x2_s_zero" => some (.vUnOp (.i32x4TruncSatF64x2Zero true))
+        | "trunc_sat_f64x2_u_zero" => some (.vUnOp (.i32x4TruncSatF64x2Zero false))
+        | "convert_i32x4_s" => some (.vUnOp (.f32x4ConvertI32x4 true))
+        | "convert_i32x4_u" => some (.vUnOp (.f32x4ConvertI32x4 false))
+        | "convert_low_i32x4_s" => some (.vUnOp (.f64x2ConvertLowI32x4 true))
+        | "convert_low_i32x4_u" => some (.vUnOp (.f64x2ConvertLowI32x4 false))
+        | _ =>
+          -- Suffix families: extend / extadd_pairwise / extmul / narrow /
+          -- comparisons. All encode signedness as a trailing `_s`/`_u`.
+          let signed := name.endsWith "_s"
+          if name.startsWith "extend_low_" || name.startsWith "extend_high_" then
+            some (.vUnOp (.extend sh (name.startsWith "extend_high_") signed))
+          else if name.startsWith "extadd_pairwise_" then
+            some (.vUnOp (.extaddPairwise sh signed))
+          else if name.startsWith "extmul_low_" || name.startsWith "extmul_high_" then
+            some (.vBinOp (.extmul sh (name.startsWith "extmul_high_") signed))
+          else if name.startsWith "narrow_" then
+            some (.vBinOp (.narrow sh signed))
+          else if flt then
+            (simdFCmp? name).map fun c => .vBinOp (.fcmp sh c)
+          else
+            (simdICmp? name).map fun c => .vBinOp (.cmp sh c)
+    | _ => none
+
+/-- Parse the immediates of a `v128.const`: a shape atom followed by the
+shape's lane count of literals. -/
+private def parseV128Const (toks : List Sexpr)
+    : Except Err (BitVec 128 × List Sexpr) := do
+  match toks with
+  | .atom shapeName :: r =>
+    let sh ← match simdShapeOfPrefix? shapeName with
+      | some sh => .ok sh
+      | none    => .error s!"v128.const: unknown shape `{shapeName}`"
+    let cnt := sh.laneCount
+    let mut lanes : List Nat := []
+    let mut rest := r
+    for _ in [0:cnt] do
+      match rest with
+      | .atom lit :: r' =>
+        let n : Nat ← match sh with
+          | .i8x16 => parseIntLiteral lit 8
+          | .i16x8 => parseIntLiteral lit 16
+          | .i32x4 => (·.toNat) <$> parseI32 lit
+          | .i64x2 => (·.toNat) <$> parseI64 lit
+          | .f32x4 => (·.toNat) <$> parseF32Lit lit
+          | .f64x2 => (·.toNat) <$> parseF64Lit lit
+        lanes := lanes ++ [n]
+        rest := r'
+      | _ => .error "v128.const: missing lane literal"
+    .ok (Wasm.Simd.ofLanes sh.laneBits lanes, rest)
+  | _ => .error "v128.const expects a shape immediate"
+
+/-- Decode the lane-immediate SIMD ops (`extract_lane`, `replace_lane`):
+returns the constructor to apply to the parsed lane index. -/
+private def simdLaneOp? (op : String) : Option (Nat → Wasm.Instruction) :=
+  match op.splitOn "." with
+  | [pre, name] =>
+    match simdShapeOfPrefix? pre with
+    | none => none
+    | some sh =>
+      match name with
+      | "extract_lane"   => some (.vExtractLane sh false)
+      | "extract_lane_s" => some (.vExtractLane sh true)
+      | "extract_lane_u" => some (.vExtractLane sh false)
+      | "replace_lane"   => some (.vReplaceLane sh)
+      | _ => none
+  | _ => none
 
 /-- Map a memory op name and byte offset to the appropriate instruction. -/
 private def memOpToInstruction (op : String) (offset : UInt32) : Wasm.Instruction :=
@@ -791,7 +928,36 @@ private def memOpToInstruction (op : String) (offset : UInt32) : Wasm.Instructio
   | "f64.load"     => .f64Load  offset
   | "f32.store"    => .f32Store offset
   | "f64.store"    => .f64Store offset
+  | "v128.load"    => .v128Load  offset
+  | "v128.store"   => .v128Store offset
+  | "v128.load8x8_s"   => .v128LoadExt 8  true  offset
+  | "v128.load8x8_u"   => .v128LoadExt 8  false offset
+  | "v128.load16x4_s"  => .v128LoadExt 16 true  offset
+  | "v128.load16x4_u"  => .v128LoadExt 16 false offset
+  | "v128.load32x2_s"  => .v128LoadExt 32 true  offset
+  | "v128.load32x2_u"  => .v128LoadExt 32 false offset
+  | "v128.load8_splat"  => .v128LoadSplat 8  offset
+  | "v128.load16_splat" => .v128LoadSplat 16 offset
+  | "v128.load32_splat" => .v128LoadSplat 32 offset
+  | "v128.load64_splat" => .v128LoadSplat 64 offset
+  | "v128.load32_zero"  => .v128LoadZero 32 offset
+  | "v128.load64_zero"  => .v128LoadZero 64 offset
   | _              => .unreachable
+
+/-- Map a lane-indexed v128 memory op (`v128.load8_lane` …) to its
+instruction. Returns `none` for non-lane ops. -/
+private def memLaneOpToInstruction (op : String) (offset : UInt32) (lane : Nat)
+    : Option Wasm.Instruction :=
+  match op with
+  | "v128.load8_lane"   => some (.v128LoadLane  8  lane offset)
+  | "v128.load16_lane"  => some (.v128LoadLane  16 lane offset)
+  | "v128.load32_lane"  => some (.v128LoadLane  32 lane offset)
+  | "v128.load64_lane"  => some (.v128LoadLane  64 lane offset)
+  | "v128.store8_lane"  => some (.v128StoreLane 8  lane offset)
+  | "v128.store16_lane" => some (.v128StoreLane 16 lane offset)
+  | "v128.store32_lane" => some (.v128StoreLane 32 lane offset)
+  | "v128.store64_lane" => some (.v128StoreLane 64 lane offset)
+  | _ => none
 
 private def looksLikeLabel (s : String) : Bool :=
   if s.startsWith "$" then true
@@ -910,26 +1076,47 @@ private partial def parseInstr (ctx : Ctx) (toks : List Sexpr)
     | "if"        => parseIf ctx rest
     | "end"       => .error "stray 'end'"
     | "else"      => .error "stray 'else'"
+    | "v128.const" => do
+      let (bits, rest') ← parseV128Const rest
+      .ok ([.vConst bits], rest')
+    | "i8x16.shuffle" => do
+      let mut lanes : List Nat := []
+      let mut r := rest
+      for _ in [0:16] do
+        match r with
+        | .atom n :: r' => lanes := lanes ++ [(← parseNat n)]; r := r'
+        | _ => .error "i8x16.shuffle expects 16 lane immediates"
+      .ok ([.vShuffle lanes], r)
     | _ =>
+      match simdLaneOp? op with
+      | some mk => match rest with
+        | .atom n :: rest' => do .ok ([mk (← parseNat n)], rest')
+        | _ => .error s!"{op} expects a lane immediate"
+      | none =>
       match isMemOp op with
       | some na => do
         let (offset, rest') ← consumeMemAttrs na rest
         -- v128 lane-load/store ops carry an additional lane-index atom
-        -- after the offset/align attrs. We discard it since the
-        -- instruction is lowered to `unreachable` anyway.
-        let rest'' ← if op.endsWith "_lane" && op.startsWith "v128." then
-          consumeStubAtoms op 1 rest'
-        else .ok rest'
-        .ok ([memOpToInstruction op offset], rest'')
+        -- after the offset/align attrs.
+        if op.endsWith "_lane" && op.startsWith "v128." then
+          match rest' with
+          | .atom n :: rest'' =>
+            match memLaneOpToInstruction op offset (← parseNat n) with
+            | some i => .ok ([i], rest'')
+            | none   => .error s!"unknown lane memory op: {op}"
+          | _ => .error s!"{op} expects a lane immediate"
+        else
+          .ok ([memOpToInstruction op offset], rest')
       | none =>
+        match simdOp? op with
+        | some i => .ok ([i], rest)
+        | none =>
         match parsePlainOp op with
         | .error e => .error e
         | .ok i => do
           -- For ops we lowered to `unreachable`, consume any textual
           -- immediates so the token stream stays aligned.
-          let rest' ← if op == "v128.const" then
-            consumeV128ConstImmediates rest
-          else if op == "br_on_cast" || op == "br_on_cast_fail" then
+          let rest' ← if op == "br_on_cast" || op == "br_on_cast_fail" then
             consumeBrOnCastImmediates op rest
           else match stubImmediateCount op with
             | some n => consumeStubAtoms op n rest
@@ -1013,25 +1200,11 @@ private partial def parseFolded (ctx : Ctx) (xs : List Sexpr)
     | "loop"  => foldedStructured ctx .loop  rest
     | "if"    => foldedIf ctx rest
     | _ => do
-      -- Plain op or memory op with optional `offset=`/`align=` attrs.
-      let (head, rest') ← match isMemOp op with
-        | some na => do
-          let (offset, rest'') ← consumeMemAttrs na rest
-          let rest''' ← if op.endsWith "_lane" && op.startsWith "v128." then
-            consumeStubAtoms op 1 rest''
-          else .ok rest''
-          .ok (memOpToInstruction op offset, rest''')
-        | none => do
-          let head ← parsePlainOp op
-          -- For ops we lowered to `unreachable`, consume any textual
-          -- immediates so the remaining tokens are valid operand
-          -- expressions (`(...)` forms).
-          let rest' ← if op == "v128.const" then
-            consumeV128ConstImmediates rest
-          else match stubImmediateCount op with
-            | some n => consumeStubAtoms op n rest
-            | none   => .ok rest
-          .ok (head, rest')
+      -- Plain op, SIMD op, or memory op with optional `offset=`/`align=`
+      -- attrs (plus lane/shape immediates for SIMD). Delegate the head +
+      -- immediate parsing to the linear parser, then treat the remaining
+      -- `(...)` forms as folded operand sub-expressions.
+      let (heads, rest') ← parseInstr ctx (.atom op :: rest)
       let mut acc : List Wasm.Instruction := []
       for s in rest' do
         match s with
@@ -1039,7 +1212,7 @@ private partial def parseFolded (ctx : Ctx) (xs : List Sexpr)
           let sub ← parseFolded ctx ys
           acc := acc ++ sub
         | .atom a => .error s!"folded {op}: unexpected atom operand '{a}'"
-      .ok (acc ++ [head])
+      .ok (acc ++ heads)
   | _ => .error "malformed folded form"
 
 private partial def foldedStructured (ctx : Ctx)
@@ -1665,7 +1838,10 @@ private def parseGlobalDecl (funcIds : Std.HashMap String Nat) (xs : List Sexpr)
     -- the decoder; the *value* is replaced with a zero placeholder
     -- since none of them feed an `i32`/`i64` computation. Function
     -- bodies that would read the global hit `unreachable` anyway.
-    | some "v128.const", _
+    | some "v128.const", _ =>
+      match parseV128Const tail with
+      | .ok (bits, _) => .ok (.v128 bits)
+      | .error e      => .error e
     | some "global.get", _ => .ok (.i32 0)
     | _, _ => .error "global init expression must be i32.const or i64.const"
   .ok { type := vt, init }

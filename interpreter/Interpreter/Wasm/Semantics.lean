@@ -989,6 +989,144 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
         let dataSegments' := st.dataSegments.set i none
         .Fallthrough { st with dataSegments := dataSegments' } s
 
+    -- SIMD (v128). Lane semantics live in `Interpreter.Wasm.Simd`; the
+    -- arms here only manage the operand stack and (for the memory
+    -- variants) the usual Nat-domain bounds checks. A v128 occupies 16
+    -- bytes in memory, lane 0 first (little-endian), so the two 64-bit
+    -- halves are the low word at `a` and the high word at `a+8`.
+    | _, .vConst bits => .Fallthrough st { s with values := .v128 bits :: s.values }
+    | _, .vUnOp op => match s.values with
+      | .v128 a :: vs => .Fallthrough st { s with values := .v128 (op.eval a) :: vs }
+      | _ => .Invalid "vUnOp: ill-shaped operand stack"
+    | _, .vBinOp op => match s.values with
+      | .v128 b :: .v128 a :: vs =>
+        .Fallthrough st { s with values := .v128 (op.eval a b) :: vs }
+      | _ => .Invalid "vBinOp: ill-shaped operand stack"
+    | _, .vBitselect => match s.values with
+      | .v128 c :: .v128 b :: .v128 a :: vs =>
+        .Fallthrough st { s with values := .v128 ((a &&& c) ||| (b &&& ~~~c)) :: vs }
+      | _ => .Invalid "vBitselect: ill-shaped operand stack"
+    | _, .vTestOp op => match s.values with
+      | .v128 a :: vs => .Fallthrough st { s with values := .i32 (op.eval a) :: vs }
+      | _ => .Invalid "vTestOp: ill-shaped operand stack"
+    | _, .vShiftOp op => match s.values with
+      | .i32 k :: .v128 a :: vs =>
+        .Fallthrough st { s with values := .v128 (op.eval a k) :: vs }
+      | _ => .Invalid "vShiftOp: ill-shaped operand stack"
+    | _, .vSplat sh => match s.values with
+      | v :: vs =>
+        match v.scalarBitsFor? sh with
+        | some x => .Fallthrough st { s with values := .v128 (Simd.splat sh x) :: vs }
+        | none   => .Invalid "vSplat: ill-shaped operand stack"
+      | _ => .Invalid "vSplat: ill-shaped operand stack"
+    | _, .vExtractLane sh signed lane => match s.values with
+      | .v128 a :: vs =>
+        let n := Simd.getLane sh.laneBits lane a
+        let v : Value := match sh with
+          | .i8x16 => .i32 (if signed then UInt32.ofNat (Simd.toU 32 (Simd.sx 8 n))
+                            else UInt32.ofNat n)
+          | .i16x8 => .i32 (if signed then UInt32.ofNat (Simd.toU 32 (Simd.sx 16 n))
+                            else UInt32.ofNat n)
+          | .i32x4 => .i32 (UInt32.ofNat n)
+          | .i64x2 => .i64 (UInt64.ofNat n)
+          | .f32x4 => .f32 (UInt32.ofNat n)
+          | .f64x2 => .f64 (UInt64.ofNat n)
+        .Fallthrough st { s with values := v :: vs }
+      | _ => .Invalid "vExtractLane: ill-shaped operand stack"
+    | _, .vReplaceLane sh lane => match s.values with
+      | v :: .v128 a :: vs =>
+        match v.scalarBitsFor? sh with
+        | some x =>
+          .Fallthrough st
+            { s with values := .v128 (Simd.setLane sh.laneBits lane a x) :: vs }
+        | none => .Invalid "vReplaceLane: ill-shaped operand stack"
+      | _ => .Invalid "vReplaceLane: ill-shaped operand stack"
+    | _, .vShuffle idx => match s.values with
+      | .v128 b :: .v128 a :: vs =>
+        .Fallthrough st { s with values := .v128 (Simd.shuffle idx a b) :: vs }
+      | _ => .Invalid "vShuffle: ill-shaped operand stack"
+    | _, .v128Load off => match s.values with
+      | .i32 a :: vs =>
+        if a.toNat + off.toNat + 16 > st.mem.pages * 65536 then
+          .Trap st "out of bounds memory access"
+        else
+          let lo := st.mem.read64 (a + off)
+          let hi := st.mem.read64 (a + off + 8)
+          let bits := BitVec.ofNat 128 (lo.toNat + hi.toNat * 2 ^ 64)
+          .Fallthrough st { s with values := .v128 bits :: vs }
+      | _ => .Invalid "v128Load: ill-shaped operand stack"
+    | _, .v128Store off => match s.values with
+      | .v128 v :: .i32 a :: vs =>
+        if a.toNat + off.toNat + 16 > st.mem.pages * 65536 then
+          .Trap st "out of bounds memory access"
+        else
+          let lo := UInt64.ofNat (v.toNat % 2 ^ 64)
+          let hi := UInt64.ofNat (v.toNat / 2 ^ 64)
+          let mem' := (st.mem.write64 (a + off) lo).write64 (a + off + 8) hi
+          .Fallthrough { st with mem := mem' } { s with values := vs }
+      | _ => .Invalid "v128Store: ill-shaped operand stack"
+    | _, .v128LoadExt srcBits signed off => match s.values with
+      | .i32 a :: vs =>
+        if a.toNat + off.toNat + 8 > st.mem.pages * 65536 then
+          .Trap st "out of bounds memory access"
+        else
+          let word := st.mem.read64 (a + off)
+          let dstBits := srcBits * 2
+          let cnt := 64 / srcBits
+          let lanes := (List.range cnt).map fun i =>
+            let n := (word.toNat >>> (i * srcBits)) % 2 ^ srcBits
+            if signed then Simd.toU dstBits (Simd.sx srcBits n) else n
+          .Fallthrough st { s with values := .v128 (Simd.ofLanes dstBits lanes) :: vs }
+      | _ => .Invalid "v128LoadExt: ill-shaped operand stack"
+    | _, .v128LoadSplat bits off => match s.values with
+      | .i32 a :: vs =>
+        if a.toNat + off.toNat + bits / 8 > st.mem.pages * 65536 then
+          .Trap st "out of bounds memory access"
+        else
+          let n : Nat := match bits with
+            | 8  => (st.mem.read8 (a + off)).toNat
+            | 16 => (st.mem.read16 (a + off)).toNat
+            | 32 => (st.mem.read32 (a + off)).toNat
+            | _  => (st.mem.read64 (a + off)).toNat
+          let lanes := List.replicate (128 / bits) n
+          .Fallthrough st { s with values := .v128 (Simd.ofLanes bits lanes) :: vs }
+      | _ => .Invalid "v128LoadSplat: ill-shaped operand stack"
+    | _, .v128LoadZero bits off => match s.values with
+      | .i32 a :: vs =>
+        if a.toNat + off.toNat + bits / 8 > st.mem.pages * 65536 then
+          .Trap st "out of bounds memory access"
+        else
+          let n : Nat := match bits with
+            | 32 => (st.mem.read32 (a + off)).toNat
+            | _  => (st.mem.read64 (a + off)).toNat
+          .Fallthrough st { s with values := .v128 (BitVec.ofNat 128 n) :: vs }
+      | _ => .Invalid "v128LoadZero: ill-shaped operand stack"
+    | _, .v128LoadLane bits lane off => match s.values with
+      | .v128 v :: .i32 a :: vs =>
+        if a.toNat + off.toNat + bits / 8 > st.mem.pages * 65536 then
+          .Trap st "out of bounds memory access"
+        else
+          let n : Nat := match bits with
+            | 8  => (st.mem.read8 (a + off)).toNat
+            | 16 => (st.mem.read16 (a + off)).toNat
+            | 32 => (st.mem.read32 (a + off)).toNat
+            | _  => (st.mem.read64 (a + off)).toNat
+          .Fallthrough st { s with values := .v128 (Simd.setLane bits lane v n) :: vs }
+      | _ => .Invalid "v128LoadLane: ill-shaped operand stack"
+    | _, .v128StoreLane bits lane off => match s.values with
+      | .v128 v :: .i32 a :: vs =>
+        if a.toNat + off.toNat + bits / 8 > st.mem.pages * 65536 then
+          .Trap st "out of bounds memory access"
+        else
+          let n := Simd.getLane bits lane v
+          let mem' := match bits with
+            | 8  => st.mem.write8  (a + off) (UInt8.ofNat n)
+            | 16 => st.mem.write16 (a + off) (UInt32.ofNat n)
+            | 32 => st.mem.write32 (a + off) (UInt32.ofNat n)
+            | _  => st.mem.write64 (a + off) (UInt64.ofNat n)
+          .Fallthrough { st with mem := mem' } { s with values := vs }
+      | _ => .Invalid "v128StoreLane: ill-shaped operand stack"
+
     -- Return / parametric / nullary
     | _, .ret  => .Return st s.values
     | _, .drop => match s.values with

@@ -144,15 +144,139 @@ private def parseValueAt (ty val : String) : Except String Value :=
       | none   => .error s!"unparseable funcref value `{val}`"
   | other => .error s!"non-integer value type `{other}`"
 
+private def laneBitsOf? : String → Option Nat
+  | "i8"  => some 8
+  | "i16" => some 16
+  | "i32" => some 32
+  | "i64" => some 64
+  | "f32" => some 32
+  | "f64" => some 64
+  | _     => none
+
+/-- Parse one v128 lane literal into its unsigned `bits`-wide value. Lane
+strings are signed decimals (integers) or the decimal of the raw bit
+pattern (floats) — both reduce the same way. -/
+private def parseLane (bits : Nat) (val : String) : Except String Nat :=
+  match val.toInt? with
+  | some n =>
+    let m : Int := (2 ^ bits : Nat)
+    .ok ((n % m + m) % m).toNat
+  | none => .error s!"unparseable v128 lane `{val}`"
+
+/-- Extract the lane-string array of a v128 JSON value. -/
+private def jlanes? (j : Json) : Option (Array String) := do
+  let arr ← jarr? j "value"
+  arr.mapM (·.getStr?.toOption)
+
+/-- Parse a v128 argument (concrete lanes only) into its bit pattern. -/
+private def parseV128Arg (j : Json) : Except String Value := do
+  let laneTy := jstr? j "lane_type" |>.getD ""
+  let bits ← match laneBitsOf? laneTy with
+    | some b => .ok b
+    | none   => .error s!"unknown v128 lane type `{laneTy}`"
+  let lanes ← match jlanes? j with
+    | some ls => .ok ls
+    | none    => .error "v128 value missing lane array"
+  let mut acc : List Nat := []
+  for l in lanes do
+    acc := acc ++ [← parseLane bits l]
+  return .v128 (Wasm.Simd.ofLanes bits acc)
+
 private def parseValue (j : Json) : Except String Value :=
-  match jstr? j "type", jstr? j "value" with
-  | some ty, some val => parseValueAt ty val
-  | _, _ => .error "value missing type/value"
+  match jstr? j "type" with
+  | some "v128" => parseV128Arg j
+  | some ty =>
+    match jstr? j "value" with
+    | some val => parseValueAt ty val
+    | none => .error "value missing type/value"
+  | none => .error "value missing type/value"
 
 private def parseValues (arr : Array Json) : Except String (List Value) := do
   let mut acc : Array Value := #[]
   for j in arr do
     acc := acc.push (← parseValue j)
+  return acc.toList
+
+/-! ## Expected-result patterns
+
+`assert_return` expectations are richer than concrete values: a float (or
+float lane) may be `nan:canonical` / `nan:arithmetic`, which match NaN
+*classes* rather than one bit pattern. -/
+
+/-- Pattern for one scalar float or one v128 lane, as an unsigned
+bit-pattern of width `bits`. -/
+private inductive LanePat where
+  | exact (n : Nat)
+  | canonicalNan (bits : Nat)
+  | arithmeticNan (bits : Nat)
+deriving Repr, Inhabited
+
+/-- `nan:canonical` = NaN whose payload is exactly the canonical payload
+(sign bit unconstrained); `nan:arithmetic` = NaN whose payload MSB is set
+(sign bit unconstrained). -/
+private def LanePat.matches : LanePat → Nat → Bool
+  | .exact e, n => n = e
+  | .canonicalNan 32, n => n % 2 ^ 32 &&& 0x7FFFFFFF = 0x7FC00000
+  | .canonicalNan _,  n => n &&& 0x7FFFFFFFFFFFFFFF = 0x7FF8000000000000
+  | .arithmeticNan 32, n => n % 2 ^ 32 &&& 0x7FC00000 = 0x7FC00000
+  | .arithmeticNan _,  n => n &&& 0x7FF8000000000000 = 0x7FF8000000000000
+
+private def lanePatOf (bits : Nat) (val : String) : Except String LanePat :=
+  match val with
+  | "nan:canonical"  => .ok (.canonicalNan bits)
+  | "nan:arithmetic" => .ok (.arithmeticNan bits)
+  | _ => LanePat.exact <$> parseLane bits val
+
+/-- One expected result: a concrete value, a scalar float NaN-class
+pattern, or a per-lane v128 pattern. -/
+private inductive ExpectedVal where
+  | exact (v : Value)
+  | f32Pat (p : LanePat)
+  | f64Pat (p : LanePat)
+  | v128Pat (laneBits : Nat) (lanes : List LanePat)
+deriving Repr, Inhabited
+
+private def ExpectedVal.matches : ExpectedVal → Value → Bool
+  | .exact e, v => e == v
+  | .f32Pat p, .f32 b => p.matches b.toNat
+  | .f64Pat p, .f64 b => p.matches b.toNat
+  | .v128Pat bits ps, .v128 v =>
+    ps.length = 128 / bits &&
+    (List.zip ps (Wasm.Simd.toLanes bits v)).all fun (p, n) => p.matches n
+  | _, _ => false
+
+private def parseExpectedValue (j : Json) : Except String ExpectedVal := do
+  match jstr? j "type" with
+  | some "v128" =>
+    let laneTy := jstr? j "lane_type" |>.getD ""
+    let bits ← match laneBitsOf? laneTy with
+      | some b => .ok b
+      | none   => .error s!"unknown v128 lane type `{laneTy}`"
+    let lanes ← match jlanes? j with
+      | some ls => .ok ls
+      | none    => .error "v128 value missing lane array"
+    let mut acc : List LanePat := []
+    for l in lanes do
+      acc := acc ++ [← lanePatOf bits l]
+    return .v128Pat bits acc
+  | some "f32" =>
+    match jstr? j "value" with
+    | some val => ExpectedVal.f32Pat <$> lanePatOf 32 val
+    | none => .error "value missing type/value"
+  | some "f64" =>
+    match jstr? j "value" with
+    | some val => ExpectedVal.f64Pat <$> lanePatOf 64 val
+    | none => .error "value missing type/value"
+  | some ty =>
+    match jstr? j "value" with
+    | some val => ExpectedVal.exact <$> parseValueAt ty val
+    | none => .error "value missing type/value"
+  | none => .error "value missing type/value"
+
+private def parseExpectedValues (arr : Array Json) : Except String (List ExpectedVal) := do
+  let mut acc : Array ExpectedVal := #[]
+  for j in arr do
+    acc := acc.push (← parseExpectedValue j)
   return acc.toList
 
 /-! ## Module slot management
@@ -239,6 +363,7 @@ private def renderValue : Value → String
   | .funcref (some i) => s!"funcref:{i}"
   | .externref none    => "externref:null"
   | .externref (some i) => s!"externref:{i}"
+  | .v128 b          => s!"v128:0x{String.ofList (Nat.toDigits 16 b.toNat)}"
 
 /-- Render a `List Value`, truncating runs longer than `maxLen` (the
 interpreter occasionally leaves big stacks around on failure and that
@@ -251,6 +376,21 @@ private def renderValues (vs : List Value) (maxLen : Nat := 8) : String :=
     let head := vs.take maxLen |>.map renderValue
     "[" ++ String.intercalate ", " head ++ s!", … ({n - maxLen} more)]"
 
+private def renderLanePat : LanePat → String
+  | .exact n => toString n
+  | .canonicalNan _ => "nan:canonical"
+  | .arithmeticNan _ => "nan:arithmetic"
+
+private def renderExpected : ExpectedVal → String
+  | .exact v => renderValue v
+  | .f32Pat p => s!"f32:{renderLanePat p}"
+  | .f64Pat p => s!"f64:{renderLanePat p}"
+  | .v128Pat bits ps =>
+    s!"v128.{bits}[" ++ String.intercalate ", " (ps.map renderLanePat) ++ "]"
+
+private def renderExpecteds (es : List ExpectedVal) : String :=
+  "[" ++ String.intercalate ", " (es.map renderExpected) ++ "]"
+
 /-! ## Command execution -/
 
 /-- Invoke `field` on `slot`'s module with the given args, comparing
@@ -261,7 +401,8 @@ unexpected trap we still commit the pre-trap store, matching wasm's
 "side effects up to the trap are observable" semantics. Out-of-fuel
 and invalid leave the slot unchanged. -/
 def runAssertReturn
-    (slot : ModuleSlot) (field : String) (args expected : List Value) (fuel : Nat)
+    (slot : ModuleSlot) (field : String) (args : List Value)
+    (expected : List ExpectedVal) (fuel : Nat)
     : Outcome × ModuleSlot :=
   match slot with
   | .unavailable _ => (.moduleUnavailable, slot)
@@ -277,8 +418,10 @@ def runAssertReturn
       | .Success rs store' =>
         let actual := rs.reverse
         let slot' := .ok m store'
-        if actual = expected then (.pass, slot')
-        else (.fail s!"expected {renderValues expected}, got {renderValues actual}", slot')
+        let ok := actual.length = expected.length &&
+          (List.zip expected actual).all fun (e, v) => e.matches v
+        if ok then (.pass, slot')
+        else (.fail s!"expected {renderExpecteds expected}, got {renderValues actual}", slot')
       | .Trap store' msg => (.fail s!"unexpected trap `{msg}`", .ok m store')
       | .OutOfFuel => (.outOfFuel, slot)
       | .Invalid msg => (.interpreterError msg, slot)
@@ -395,7 +538,7 @@ def runCommand
       | .error e => return (st, mk (.interpreterError e))
       | .ok i =>
         let expectedJ := jarr? cmd "expected" |>.getD #[]
-        match parseValues expectedJ with
+        match parseExpectedValues expectedJ with
         | .error e => return (st, mk (.skipped s!"non-integer expected: {e}"))
         | .ok expected =>
           let slot := st.modules[i]!

@@ -1,4 +1,5 @@
 import Interpreter.Wasm.Mem
+import Interpreter.Wasm.Simd
 
 namespace Wasm
 
@@ -18,6 +19,7 @@ inductive ValueType where
   | f64
   | funcref
   | externref
+  | v128
 deriving Repr, Inhabited, DecidableEq, BEq
 
 inductive Value where
@@ -35,6 +37,9 @@ inductive Value where
   never inspects the payload — it only moves externrefs around (locals,
   globals, tables, `select`) and tests them for null. -/
   | externref (idx : Option Nat)
+  /-- A `v128` SIMD vector, stored as its 128-bit pattern (lane 0 at the
+  least-significant end, matching wasm's little-endian lane order). -/
+  | v128 (bits : BitVec 128)
 deriving Repr, Inhabited, DecidableEq, BEq
 
 /-- Type-indexed zero used to initialise locals at function entry. The
@@ -47,6 +52,20 @@ def ValueType.zero : ValueType → Value
   | .f64       => .f64 0
   | .funcref   => .funcref none
   | .externref => .externref none
+  | .v128      => .v128 0
+
+/-- The scalar payload of a value, as the unsigned `Nat` of its bit
+pattern, when the value is the scalar kind lane shape `sh` expects
+(`i32` for i8x16/i16x8/i32x4, `i64` for i64x2, `f32`/`f64` for the float
+shapes). Used by `vSplat`/`vReplaceLane`, which consume one scalar. -/
+def Value.scalarBitsFor? : Simd.Shape → Value → Option Nat
+  | .i8x16, .i32 x => some x.toNat
+  | .i16x8, .i32 x => some x.toNat
+  | .i32x4, .i32 x => some x.toNat
+  | .i64x2, .i64 x => some x.toNat
+  | .f32x4, .f32 x => some x.toNat
+  | .f64x2, .f64 x => some x.toNat
+  | _,      _      => none
 
 /-- Module-level globals. Indexed by position in the module's globals list. -/
 structure Globals where
@@ -272,6 +291,34 @@ inductive Instruction where
   -- Data drop: marks segment `i` as dropped (no further memory.init
   -- can read from it). Idempotent.
   | dataDrop : Nat → Instruction
+
+  -- SIMD (v128). Lane-level semantics live in `Interpreter.Wasm.Simd`;
+  -- the constructors here group the proposal's ~240 mnemonics by
+  -- operand/result shape. Memory variants mirror the scalar load/store
+  -- constructors (static byte offset; i32 address popped from the stack).
+  | vConst   : BitVec 128 → Instruction       -- v128.const
+  | vUnOp    : Simd.UnOp → Instruction        -- v128 → v128
+  | vBinOp   : Simd.BinOp → Instruction       -- v128 v128 → v128
+  | vBitselect : Instruction                  -- v128 v128 v128 → v128
+  | vTestOp  : Simd.TestOp → Instruction      -- v128 → i32
+  | vShiftOp : Simd.ShiftOp → Instruction     -- v128 i32 → v128
+  | vSplat   : Simd.Shape → Instruction       -- scalar → v128
+  -- extract_lane: `signed` only meaningful for the i8x16/i16x8 `_s` forms
+  | vExtractLane : Simd.Shape → (signed : Bool) → (lane : Nat) → Instruction
+  | vReplaceLane : Simd.Shape → (lane : Nat) → Instruction
+  | vShuffle : List Nat → Instruction         -- i8x16.shuffle (16 lane indices)
+  | v128Load  : UInt32 → Instruction          -- v128.load: 16-byte load
+  | v128Store : UInt32 → Instruction          -- v128.store: 16-byte store
+  -- v128.load8x8_s/u, 16x4, 32x2: load 8 bytes, widen each half-lane
+  | v128LoadExt : (srcBits : Nat) → (signed : Bool) → UInt32 → Instruction
+  -- v128.load8/16/32/64_splat: load one lane, broadcast
+  | v128LoadSplat : (bits : Nat) → UInt32 → Instruction
+  -- v128.load32/64_zero: load one lane, zero the rest
+  | v128LoadZero : (bits : Nat) → UInt32 → Instruction
+  -- v128.load8/16/32/64_lane: load one lane into an existing vector
+  | v128LoadLane  : (bits lane : Nat) → UInt32 → Instruction
+  -- v128.store8/16/32/64_lane: store one lane of a vector
+  | v128StoreLane : (bits lane : Nat) → UInt32 → Instruction
 
   -- Parametric / nullary
   | drop
