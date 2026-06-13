@@ -1333,6 +1333,14 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
       | .v128 b :: .v128 a :: vs =>
         .Fallthrough st { s with values := .v128 (op.eval a b) :: vs }
       | _ => .Invalid "vBinOp: ill-shaped operand stack"
+    | _, .vFma sh neg => match s.values with
+      | .v128 c :: .v128 b :: .v128 a :: vs =>
+        .Fallthrough st { s with values := .v128 (Simd.fma sh neg a b c) :: vs }
+      | _ => .Invalid "vFma: ill-shaped operand stack"
+    | _, .vDotAdd => match s.values with
+      | .v128 c :: .v128 b :: .v128 a :: vs =>
+        .Fallthrough st { s with values := .v128 (Simd.dotAdd a b c) :: vs }
+      | _ => .Invalid "vDotAdd: ill-shaped operand stack"
     | _, .vBitselect => match s.values with
       | .v128 c :: .v128 b :: .v128 a :: vs =>
         .Fallthrough st { s with values := .v128 ((a &&& c) ||| (b &&& ~~~c)) :: vs }

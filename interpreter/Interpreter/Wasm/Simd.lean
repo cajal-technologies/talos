@@ -268,6 +268,7 @@ inductive BinOp where
   /-- `dst.extmul_{low,high}_src_{s,u}`. -/
   | extmul (dst : Shape) (high : Bool) (signed : Bool)
   | dot                                      -- i32x4.dot_i16x8_s
+  | dotI8                                    -- i16x8.relaxed_dot_i8x16_i7x16_s
   /-- `dst.narrow_src_{s,u}`: `dst` ∈ {i8x16, i16x8}, source lanes are
   double width; result = saturated `a`-lanes then saturated `b`-lanes. -/
   | narrow (dst : Shape) (signed : Bool)
@@ -327,6 +328,12 @@ def BinOp.eval (op : BinOp) (a b : V128) : V128 :=
     ofLanes 32 <| (List.range 4).map fun i =>
       toU 32 (sx 16 (la.getD (2 * i) 0) * sx 16 (lb.getD (2 * i) 0)
             + sx 16 (la.getD (2 * i + 1) 0) * sx 16 (lb.getD (2 * i + 1) 0))
+  | .dotI8 =>
+    let la := toLanes 8 a
+    let lb := toLanes 8 b
+    ofLanes 16 <| (List.range 8).map fun i =>
+      toU 16 (sx 8 (la.getD (2 * i) 0) * sx 8 (lb.getD (2 * i) 0)
+            + sx 8 (la.getD (2 * i + 1) 0) * sx 8 (lb.getD (2 * i + 1) 0))
   | .narrow dst signed =>
     let db := dst.laneBits
     let sb := db * 2
@@ -407,6 +414,48 @@ def ShiftOp.eval (op : ShiftOp) (v : V128) (count : UInt32) : V128 :=
     let n := sh.laneBits
     let k := count.toNat % n
     mapLanes n (fun x => toU n (Int.shiftRight (sx n x) k)) v
+
+/-! ## Relaxed SIMD (deterministic choices)
+
+The relaxed-SIMD ops admit several implementation behaviours; the
+testsuite accepts any of the listed alternatives. We always pick the
+deterministic, unfused choice: `relaxed_madd` is multiply-then-add with
+intermediate rounding, `laneselect` is bitwise `bitselect`, the relaxed
+truncations/min/max coincide with the non-relaxed ops. -/
+
+/-- `f32x4/f64x2.relaxed_madd` (`neg := false`) and `relaxed_nmadd`
+(`neg := true`): per-lane `±(a*b) + c`, unfused. -/
+def fma (sh : Shape) (neg : Bool) (a b c : V128) : V128 :=
+  match sh with
+  | .f64x2 =>
+    ofLanes 64 <| List.zipWith (fun ab cc =>
+        f64LaneBin f64Add (if neg then f64LaneUn f64Neg ab else ab) cc)
+      (List.zipWith (f64LaneBin f64Mul) (toLanes 64 a) (toLanes 64 b))
+      (toLanes 64 c)
+  | _ =>
+    ofLanes 32 <| List.zipWith (fun ab cc =>
+        f32LaneBin f32Add (if neg then f32LaneUn f32Neg ab else ab) cc)
+      (List.zipWith (f32LaneBin f32Mul) (toLanes 32 a) (toLanes 32 b))
+      (toLanes 32 c)
+
+/-- `i16x8.relaxed_dot_i8x16_i7x16_s`: per-16-bit-lane signed dot of the
+two corresponding i8 pairs (both operands read signed — the
+deterministic choice). -/
+def dot8 (a b : V128) : V128 :=
+  let la := toLanes 8 a
+  let lb := toLanes 8 b
+  ofLanes 16 <| (List.range 8).map fun i =>
+    toU 16 (sx 8 (la.getD (2 * i) 0) * sx 8 (lb.getD (2 * i) 0)
+          + sx 8 (la.getD (2 * i + 1) 0) * sx 8 (lb.getD (2 * i + 1) 0))
+
+/-- `i32x4.relaxed_dot_i8x16_i7x16_add_s`: `dot8` pairs widened and
+pairwise-summed into i32 lanes, plus the accumulator `c`. -/
+def dotAdd (a b c : V128) : V128 :=
+  let d := toLanes 16 (dot8 a b)
+  let lc := toLanes 32 c
+  ofLanes 32 <| (List.range 4).map fun i =>
+    toU 32 (sx 16 (d.getD (2 * i) 0) + sx 16 (d.getD (2 * i + 1) 0)
+          + sx 32 (lc.getD i 0))
 
 /-! ## Splat / shuffle helpers -/
 

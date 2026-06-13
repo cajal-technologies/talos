@@ -854,6 +854,21 @@ private def simdOp? (op : String) : Option Wasm.Instruction :=
         | "convert_i32x4_u" => some (.vUnOp (.f32x4ConvertI32x4 false))
         | "convert_low_i32x4_s" => some (.vUnOp (.f64x2ConvertLowI32x4 true))
         | "convert_low_i32x4_u" => some (.vUnOp (.f64x2ConvertLowI32x4 false))
+        -- Relaxed SIMD: deterministic choices coinciding with (or built
+        -- from) the non-relaxed semantics.
+        | "relaxed_swizzle" => some (.vBinOp .swizzle)
+        | "relaxed_min" => some (.vBinOp (.fMin sh))
+        | "relaxed_max" => some (.vBinOp (.fMax sh))
+        | "relaxed_q15mulr_s" => some (.vBinOp .q15mulrSatS)
+        | "relaxed_madd"  => some (.vFma sh false)
+        | "relaxed_nmadd" => some (.vFma sh true)
+        | "relaxed_laneselect" => some .vBitselect
+        | "relaxed_trunc_f32x4_s" => some (.vUnOp (.i32x4TruncSatF32x4 true))
+        | "relaxed_trunc_f32x4_u" => some (.vUnOp (.i32x4TruncSatF32x4 false))
+        | "relaxed_trunc_f64x2_s_zero" => some (.vUnOp (.i32x4TruncSatF64x2Zero true))
+        | "relaxed_trunc_f64x2_u_zero" => some (.vUnOp (.i32x4TruncSatF64x2Zero false))
+        | "relaxed_dot_i8x16_i7x16_s" => some (.vBinOp .dotI8)
+        | "relaxed_dot_i8x16_i7x16_add_s" => some .vDotAdd
         | _ =>
           -- Suffix families: extend / extadd_pairwise / extmul / narrow /
           -- comparisons. All encode signedness as a trailing `_s`/`_u`.

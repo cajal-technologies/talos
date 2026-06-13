@@ -369,6 +369,10 @@ inductive Instruction where
   | vExtractLane : Simd.Shape → (signed : Bool) → (lane : Nat) → Instruction
   | vReplaceLane : Simd.Shape → (lane : Nat) → Instruction
   | vShuffle : List Nat → Instruction         -- i8x16.shuffle (16 lane indices)
+  -- Relaxed SIMD, deterministic choices (see Interpreter.Wasm.Simd):
+  -- relaxed_madd/nmadd (unfused multiply-add) and the dot-add form.
+  | vFma : Simd.Shape → (neg : Bool) → Instruction  -- v128³ → v128
+  | vDotAdd : Instruction                           -- v128³ → v128
   | v128Load  : UInt32 → Instruction          -- v128.load: 16-byte load
   | v128Store : UInt32 → Instruction          -- v128.store: 16-byte store
   -- v128.load8x8_s/u, 16x4, 32x2: load 8 bytes, widen each half-lane

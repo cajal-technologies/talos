@@ -234,19 +234,29 @@ private inductive ExpectedVal where
   | f32Pat (p : LanePat)
   | f64Pat (p : LanePat)
   | v128Pat (laneBits : Nat) (lanes : List LanePat)
+  /-- `(either a b …)` from the relaxed-SIMD tests: any alternative
+  matches. -/
+  | either (alts : List ExpectedVal)
 deriving Repr, Inhabited
 
-private def ExpectedVal.matches : ExpectedVal → Value → Bool
+private partial def ExpectedVal.matches : ExpectedVal → Value → Bool
   | .exact e, v => e == v
   | .f32Pat p, .f32 b => p.matches b.toNat
   | .f64Pat p, .f64 b => p.matches b.toNat
   | .v128Pat bits ps, .v128 v =>
     ps.length = 128 / bits &&
     (List.zip ps (Wasm.Simd.toLanes bits v)).all fun (p, n) => p.matches n
+  | .either alts, v => alts.any (·.matches v)
   | _, _ => false
 
-private def parseExpectedValue (j : Json) : Except String ExpectedVal := do
+private partial def parseExpectedValue (j : Json) : Except String ExpectedVal := do
   match jstr? j "type" with
+  | some "either" =>
+    let altsJ := jarr? j "values" |>.getD #[]
+    let mut alts : List ExpectedVal := []
+    for a in altsJ do
+      alts := alts ++ [← parseExpectedValue a]
+    return .either alts
   | some "v128" =>
     let laneTy := jstr? j "lane_type" |>.getD ""
     let bits ← match laneBitsOf? laneTy with
@@ -528,12 +538,14 @@ private def renderLanePat : LanePat → String
   | .canonicalNan _ => "nan:canonical"
   | .arithmeticNan _ => "nan:arithmetic"
 
-private def renderExpected : ExpectedVal → String
+private partial def renderExpected : ExpectedVal → String
   | .exact v => renderValue v
   | .f32Pat p => s!"f32:{renderLanePat p}"
   | .f64Pat p => s!"f64:{renderLanePat p}"
   | .v128Pat bits ps =>
     s!"v128.{bits}[" ++ String.intercalate ", " (ps.map renderLanePat) ++ "]"
+  | .either alts =>
+    "either(" ++ String.intercalate " | " (alts.map renderExpected) ++ ")"
 
 private def renderExpecteds (es : List ExpectedVal) : String :=
   "[" ++ String.intercalate ", " (es.map renderExpected) ++ "]"
