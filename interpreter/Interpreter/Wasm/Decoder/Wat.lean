@@ -1869,18 +1869,21 @@ private def collectFuncNames (fields : List Sexpr)
     | _ => pure ()
   return idOf
 
--- TODO: imported globals are not counted here, so the index space is wrong
--- when imports are present. Wasm places imported globals first (indices
--- 0 … N-1) and declared globals after (indices N … N+M-1). This function
--- assigns 0 … M-1 to declared globals, so any `global.get`/`global.set`
--- that references a declared global will be off by N and will likely trap
--- at runtime. The fix is to count the `(import … (global …))` forms first
--- and start `i` at that offset. Rust's wasm32-unknown-unknown target never
--- imports globals, so the corpus is unaffected for now.
 private def collectGlobalNames (fields : List Sexpr)
     : Except Err (Std.HashMap String Nat) := do
   let mut idOf : Std.HashMap String Nat := {}
   let mut i := 0
+  -- Imported globals occupy the low indices, in import order.
+  for f in fields do
+    match f with
+    | .list [.atom "import", .atom _, .atom _, .list (.atom "global" :: body)] =>
+      match body with
+      | .atom a :: _ =>
+        if a.startsWith "$" then
+          idOf := idOf.insert (a.drop 1).toString i
+      | _ => pure ()
+      i := i + 1
+    | _ => pure ()
   for f in fields do
     match f with
     | .list (.atom "global" :: body) =>
@@ -1917,6 +1920,10 @@ private def parseGlobalDecl (funcIds : Std.HashMap String Nat) (xs : List Sexpr)
   let xs := match xs with
     | .atom a :: r => if a.startsWith "$" then r else xs
     | _ => xs
+  -- Skip inline `(export "n")` annotations (captured by `parseModule`).
+  let xs := xs.dropWhile fun
+    | .list (.atom "export" :: _) => true
+    | _ => false
   let (vt, xs) ← match xs with
     | .list (.atom "mut" :: .atom t :: _) :: r =>
       match atomToValueType? t with
@@ -2056,6 +2063,17 @@ Same pattern as `collectFuncNames` / `collectGlobalNames`. -/
 private def collectTableNames (fields : List Sexpr) : Std.HashMap String Nat := Id.run do
   let mut idOf : Std.HashMap String Nat := {}
   let mut i := 0
+  -- Imported tables occupy the low indices, in import order.
+  for f in fields do
+    match f with
+    | .list [.atom "import", .atom _, .atom _, .list (.atom "table" :: body)] =>
+      match body with
+      | .atom a :: _ =>
+        if a.startsWith "$" then
+          idOf := idOf.insert (a.drop 1).toString i
+      | _ => pure ()
+      i := i + 1
+    | _ => pure ()
   for f in fields do
     match f with
     | .list (.atom "table" :: body) =>
@@ -2073,6 +2091,17 @@ private def collectTableNames (fields : List Sexpr) : Std.HashMap String Nat := 
 private def collectMemNames (fields : List Sexpr) : Std.HashMap String Nat := Id.run do
   let mut idOf : Std.HashMap String Nat := {}
   let mut i := 0
+  -- Imported memorys occupy the low indices, in import order.
+  for f in fields do
+    match f with
+    | .list [.atom "import", .atom _, .atom _, .list (.atom "memory" :: body)] =>
+      match body with
+      | .atom a :: _ =>
+        if a.startsWith "$" then
+          idOf := idOf.insert (a.drop 1).toString i
+      | _ => pure ()
+      i := i + 1
+    | _ => pure ()
   for f in fields do
     match f with
     | .list (.atom "memory" :: body) =>
@@ -2309,6 +2338,45 @@ private def parseImportSig (types : Array TypeEntry) (xs : List Sexpr)
     | _ => pure ()
   return (params, results)
 
+/-- Parse the type body of an imported global (`(global $id? <gt>)`) into
+a zero-initialised `GlobalDecl`. -/
+private def parseImportedGlobal (xs : List Sexpr) : Wasm.GlobalDecl :=
+  let xs := match xs with
+    | .atom a :: r => if a.startsWith "$" then r else xs
+    | _ => xs
+  let vt : Wasm.ValueType := match xs with
+    | .list (.atom "mut" :: .atom t :: _) :: _ => (atomToValueType? t).getD .i32
+    | .list (.atom "mut" :: .list l :: _) :: _ => listToValueType l
+    | .atom t :: _ => (atomToValueType? t).getD .i32
+    | .list l :: _ => listToValueType l
+    | _ => .i32
+  { type := vt, init := vt.zero }
+
+/-- Collect imported non-function entities, in import order: zero-content
+decl slots for the low indices of each index space, plus the
+(module, name) pairs the harness uses to substitute real values. -/
+private def collectEntityImports (funcIds : Std.HashMap String Nat)
+    (fields : List Sexpr)
+    : Except Err (List ((String × String) × Wasm.GlobalDecl)
+                × List ((String × String) × Wasm.TableDecl)
+                × List ((String × String) × Wasm.MemDecl)) := do
+  let mut globs : List ((String × String) × Wasm.GlobalDecl) := []
+  let mut tbls  : List ((String × String) × Wasm.TableDecl) := []
+  let mut mems  : List ((String × String) × Wasm.MemDecl) := []
+  for f in fields do
+    match f with
+    | .list [.atom "import", .atom modName, .atom impName, .list (.atom kind :: body)] =>
+      let key := (decodeWatString modName, decodeWatString impName)
+      match kind with
+      | "global" => globs := globs ++ [(key, parseImportedGlobal body)]
+      | "table"  =>
+        let (td, _) ← parseTableDecl funcIds 0 body
+        tbls := tbls ++ [(key, td)]
+      | "memory" => mems := mems ++ [(key, ← parseMemDecl body)]
+      | _ => pure ()
+    | _ => pure ()
+  return (globs, tbls, mems)
+
 /-- Walk the module's fields collecting `(import "mod" "name" (func …))`
 forms. Each function import gets a positional unified-index `0 … N-1`
 and is recorded in `idOf` if it carries a `$name`. Imports of memory,
@@ -2367,6 +2435,7 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
       types := types.push (parseTypeField body)
     | _ => pure ()
   let (imports, importFuncIds) ← collectImports types rest
+  let (globImps, tblImps, memImps) ← collectEntityImports importFuncIds rest
   let inModuleFuncIds ← collectFuncNames rest
   -- Unified function index space: imports occupy `0 … imports.length - 1`,
   -- in-module functions are shifted up by `imports.length`.
@@ -2377,8 +2446,15 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
   let tableNames := collectTableNames rest
   let elemNames := collectElemNames rest
   let memNames := collectMemNames rest
+  let inlineExportsOf : List Sexpr → List String := fun body =>
+    (body.filterMap fun
+      | .list [.atom "export", .atom n] => some (decodeWatString n)
+      | _ => none)
   let mut decls : Array FuncDecl := #[]
   let mut topExports : Array (String × String) := #[]
+  let mut globalExports : Array (String × Nat) := #[]
+  let mut tableExports  : Array (String × Nat) := #[]
+  let mut memoryExports : Array (String × Nat) := #[]
   let mut globalDecls : Array Wasm.GlobalDecl := #[]
   let mut memDecl : Option Wasm.MemDecl := none
   let mut extraMemDecls : Array Wasm.MemDecl := #[]
@@ -2397,21 +2473,37 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
         topExports := topExports.push (decodeWatString name, ref)
       | [.atom _, .list (.atom "func" :: _)] =>
         throw "malformed top-level (export … (func …))"
+      | [.atom name, .list [.atom "global", .atom ref]] =>
+        globalExports := globalExports.push
+          (decodeWatString name, ← resolveNamed globalIds "global" ref)
+      | [.atom name, .list [.atom "table", .atom ref]] =>
+        tableExports := tableExports.push
+          (decodeWatString name, ← resolveNamed tableNames "table" ref)
+      | [.atom name, .list [.atom "memory", .atom ref]] =>
+        memoryExports := memoryExports.push
+          (decodeWatString name, ← resolveNamed memNames "memory" ref)
       | _ =>
-        -- Export of a non-func item (memory, global, table) — drop silently.
         continue
     | .list (.atom "global" :: body) =>
+      for n in inlineExportsOf body do
+        globalExports := globalExports.push (n, globImps.length + globalDecls.size)
       globalDecls := globalDecls.push (← parseGlobalDecl funcIds body)
     | .list (.atom "memory" :: body) =>
-      -- Multi-memory: the first declaration is the default memory, the
-      -- rest land in `extraMemories` (memory index k = extraMemories[k-1]).
+      -- Multi-memory: declared memories follow the imported ones in the
+      -- index space; the combined list is split into the default memory
+      -- and `extraMemories` below.
+      let declared := (if memDecl.isSome then 1 else 0) + extraMemDecls.size
+      for n in inlineExportsOf body do
+        memoryExports := memoryExports.push (n, memImps.length + declared)
       match memDecl with
       | none   => memDecl := some (← parseMemDecl body)
       | some _ => extraMemDecls := extraMemDecls.push (← parseMemDecl body)
     | .list (.atom "data" :: body) =>
       dataSegs := dataSegs.push (← parseDataSegment memNames body)
     | .list (.atom "table" :: body) =>
-      let (td, inlineSeg?) ← parseTableDecl funcIds tableDecls.size body
+      for n in inlineExportsOf body do
+        tableExports := tableExports.push (n, tblImps.length + tableDecls.size)
+      let (td, inlineSeg?) ← parseTableDecl funcIds (tblImps.length + tableDecls.size) body
       tableDecls := tableDecls.push td
       match inlineSeg? with
       | some seg => elemSegs := elemSegs.push seg
@@ -2441,11 +2533,19 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
   for (name, ref) in topExports do
     let idx ← resolveFuncRef funcIds ref
     exports := exports.push { name, funcIdx := idx }
-  let finalMem : Option Wasm.MemDecl := match memDecl with
-    | some decl => some { decl with data := decl.data ++ dataSegs.toList }
-    | none      =>
-      if dataSegs.isEmpty then none
-      else some { pagesMin := 0, data := dataSegs.toList }
+  -- Memory index space: imported memories first, then declarations. The
+  -- combined head is the default memory and carries the (global,
+  -- source-ordered) data segment list.
+  let allMemDecls : List Wasm.MemDecl :=
+    memImps.map (·.2)
+      ++ (match memDecl with | some d => [d] | none => [])
+      ++ extraMemDecls.toList
+  let (finalMem, finalExtraMems) : Option Wasm.MemDecl × List Wasm.MemDecl :=
+    match allMemDecls with
+    | [] =>
+      (if dataSegs.isEmpty then none
+       else some { pagesMin := 0, data := dataSegs.toList }, [])
+    | d0 :: rest' => (some { d0 with data := d0.data ++ dataSegs.toList }, rest')
   -- Project the parsed `TypeEntry` array down to `Wasm.FuncType`. Entries
   -- whose signature we couldn't model (e.g. SIMD/reference proposals) get
   -- a placeholder empty signature so type-index positions stay aligned;
@@ -2457,14 +2557,20 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
     | none          => {}
   return { funcs    := decls.toList.map (·.func)
            exports  := exports.toList
-           globals  := globalDecls.toList
+           globals  := globImps.map (·.2) ++ globalDecls.toList
            memory   := finalMem
-           extraMemories := extraMemDecls.toList
+           extraMemories := finalExtraMems
            imports
            startFunc
            types    := moduleTypes
-           tables   := tableDecls.toList
-           elements := elemSegs.toList }
+           tables   := tblImps.map (·.2) ++ tableDecls.toList
+           elements := elemSegs.toList
+           importedGlobals  := globImps.map (·.1)
+           importedTables   := tblImps.map (·.1)
+           importedMemories := memImps.map (·.1)
+           globalExports := globalExports.toList
+           tableExports  := tableExports.toList
+           memoryExports := memoryExports.toList }
 
 /-- Public entry point. Parses one top-level `(module …)` form. -/
 def decode (s : String) : Except Err Wasm.Module := do

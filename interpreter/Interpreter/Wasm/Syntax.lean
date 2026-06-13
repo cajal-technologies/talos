@@ -518,6 +518,22 @@ structure Module where
   whole list anyway. -/
   tables   : List TableDecl := []
   elements : List ElementSegment := []
+  /-- Names of imported non-function entities, aligned with the *first*
+  k entries of the corresponding index space: per the wasm spec,
+  imported globals/tables/memories occupy the low indices in import
+  order, ahead of the module's own declarations. The decoder fills the
+  corresponding decl slots with the import's declared shape (zero
+  contents); the test harness substitutes registered/spectest values at
+  instantiation. -/
+  importedGlobals  : List (String × String) := []
+  importedTables   : List (String × String) := []
+  importedMemories : List (String × String) := []
+  /-- Exported non-function entities: name → index into the
+  corresponding index space. Used by the harness to resolve
+  cross-module entity imports. -/
+  globalExports : List (String × Nat) := []
+  tableExports  : List (String × Nat) := []
+  memoryExports : List (String × Nat) := []
 deriving Repr, Inhabited
 
 /-- Runtime representation of a single table: a list of reference
