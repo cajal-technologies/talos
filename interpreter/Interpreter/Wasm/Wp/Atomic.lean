@@ -672,6 +672,78 @@ macro "wp_atomic" : tactic => `(tactic|
        wp m rest Q st { s with values := .i32 (UInt32.ofNat tbl.length) :: s.values } env) := by
   wp_atomic
 
+@[simp, wp_simp] theorem wp_tableSet_cons :
+    wp m (.tableSet tableIdx :: rest) Q st s env ↔
+    (match s.values with
+     | .funcref r :: .i32 i :: vs =>
+       (match st.tables[tableIdx]? with
+        | none     => Q (.Invalid s!"tableSet: table index {tableIdx} out of range")
+        | some tbl =>
+          (match tbl[i.toNat]? with
+           | none   => Q (.Trap st "out of bounds table access")
+           | some _ =>
+             wp m rest Q { st with tables := st.tables.set tableIdx (tbl.set i.toNat r) }
+                         { s with values := vs } env))
+     | _ => Q (.Invalid "tableSet: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_tableGrow_cons :
+    wp m (.tableGrow tableIdx :: rest) Q st s env ↔
+    (match s.values with
+     | .i32 delta :: .funcref r :: vs =>
+       (match st.tables[tableIdx]? with
+        | none => Q (.Invalid s!"tableGrow: table index {tableIdx} out of range")
+        | some tbl =>
+          (match m.tables[tableIdx]? >>= (·.max) with
+           | none =>
+             wp m rest Q { st with tables := st.tables.set tableIdx (tbl ++ List.replicate delta.toNat r) }
+                         { s with values := .i32 (UInt32.ofNat tbl.length) :: vs } env
+           | some n =>
+             if tbl.length + delta.toNat ≤ n then
+               wp m rest Q { st with tables := st.tables.set tableIdx (tbl ++ List.replicate delta.toNat r) }
+                           { s with values := .i32 (UInt32.ofNat tbl.length) :: vs } env
+             else
+               wp m rest Q st { s with values := .i32 (0xFFFFFFFF : UInt32) :: vs } env))
+     | _ => Q (.Invalid "tableGrow: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_tableFill_cons :
+    wp m (.tableFill tableIdx :: rest) Q st s env ↔
+    (match s.values with
+     | .i32 len :: .funcref val :: .i32 idx :: vs =>
+       (match st.tables[tableIdx]? with
+        | none => Q (.Invalid s!"tableFill: table index {tableIdx} out of range")
+        | some tbl =>
+          if idx.toNat + len.toNat > tbl.length then
+            Q (.Trap st "out of bounds table access")
+          else
+            wp m rest Q { st with tables := st.tables.set tableIdx
+                                    (tbl.take idx.toNat ++ List.replicate len.toNat val ++ tbl.drop (idx.toNat + len.toNat)) }
+                        { s with values := vs } env)
+     | _ => Q (.Invalid "tableFill: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_tableCopy_cons :
+    wp m (.tableCopy dstTableIdx srcTableIdx :: rest) Q st s env ↔
+    (match s.values with
+     | .i32 len :: .i32 src :: .i32 dst :: vs =>
+       (match st.tables[dstTableIdx]? with
+        | none => Q (.Invalid s!"tableCopy: dst table index {dstTableIdx} out of range")
+        | some dstTbl =>
+          (match st.tables[srcTableIdx]? with
+           | none => Q (.Invalid s!"tableCopy: src table index {srcTableIdx} out of range")
+           | some srcTbl =>
+             if dst.toNat + len.toNat > dstTbl.length ∨ src.toNat + len.toNat > srcTbl.length then
+               Q (.Trap st "out of bounds table access")
+             else
+               wp m rest Q { st with tables := st.tables.set dstTableIdx
+                                       (dstTbl.take dst.toNat ++
+                                        (srcTbl.drop src.toNat).take len.toNat ++
+                                        dstTbl.drop (dst.toNat + len.toNat)) }
+                           { s with values := vs } env))
+     | _ => Q (.Invalid "tableCopy: ill-shaped operand stack")) := by
+  wp_atomic
+
 /-! ## Globals -/
 
 @[simp, wp_simp] theorem wp_globalGet_cons :
@@ -956,6 +1028,41 @@ macro "wp_atomic" : tactic => `(tactic|
      | none => Q (.Invalid s!"dataDrop: segment index {i} out of range")
      | some _ =>
        wp m rest Q { st with dataSegments := st.dataSegments.set i none } s env) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_tableInit_cons :
+    wp m (.tableInit tableIdx segIdx :: rest) Q st s env ↔
+    (match s.values with
+     | .i32 len :: .i32 src :: .i32 dst :: vs =>
+       (match st.tables[tableIdx]? with
+        | none => Q (.Invalid s!"tableInit: table index {tableIdx} out of range")
+        | some dstTbl =>
+          (match st.elementSegments[segIdx]? with
+           | none => Q (.Invalid s!"tableInit: segment index {segIdx} out of range")
+           | some none =>
+             if 0 < len.toNat ∨ dst.toNat + len.toNat > dstTbl.length then
+               Q (.Trap st "out of bounds table access")
+             else
+               wp m rest Q st { s with values := vs } env
+           | some (some funcs) =>
+             if src.toNat + len.toNat > funcs.length
+                ∨ dst.toNat + len.toNat > dstTbl.length then
+               Q (.Trap st "out of bounds table access")
+             else
+               wp m rest Q { st with tables := st.tables.set tableIdx
+                                       (dstTbl.take dst.toNat ++
+                                        (funcs.drop src.toNat).take len.toNat ++
+                                        dstTbl.drop (dst.toNat + len.toNat)) }
+                           { s with values := vs } env))
+     | _ => Q (.Invalid "tableInit: ill-shaped operand stack")) := by
+  wp_atomic
+
+@[simp, wp_simp] theorem wp_elemDrop_cons :
+    wp m (.elemDrop i :: rest) Q st s env ↔
+    (match st.elementSegments[i]? with
+     | none => Q (.Invalid s!"elemDrop: segment index {i} out of range")
+     | some _ =>
+       wp m rest Q { st with elementSegments := st.elementSegments.set i none } s env) := by
   wp_atomic
 
 /-! ## float constants -/
