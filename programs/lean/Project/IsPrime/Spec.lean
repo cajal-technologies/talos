@@ -8,14 +8,42 @@ The exported `check(n)` runs two trial-division primality tests on `n`
 and traps via `unreachable` iff they disagree. Proving the wasm export
 terminates without trapping for every `n : UInt32` is therefore the
 same as proving the two algorithms agree on every input.
+
+At `opt-level=0` the live call graph is
+
+```
+func4 (exported `check` wrapper)
+  └─ func3 (compare both algorithms, `unreachable` on disagreement)
+       ├─ func2 (naive trial division over [2, n))
+       └─ func1 (fast trial division over [2, n/2])
+```
+
+Every function carries the unoptimized shadow-stack discipline: the
+prologue claims a 16-byte frame below `global 0` and spills values to
+linear memory at fixed frame offsets (the loop counter lives at
+`fp + 8`, the result flag byte at `fp + 7`, the argument spill at
+`fp + 12`), and the epilogue restores `global 0`. With the canonical
+instantiation (`global 0 = 1048576`, 17 pages of memory) the frames sit
+at `1048560` (func4), `1048544` (func3) and `1048528` (func1/func2),
+all comfortably in bounds.
 -/
 
 namespace Project.IsPrime.Spec
 
 open Wasm
 
+set_option maxRecDepth 1048576
+
 /-- The exported `check` terminates without trapping (and returns no
-values) on every `UInt32` input.
+values) on every `UInt32` input, when run from the module's canonical
+instantiation.
+
+The `initial = «module».initialStore` hypothesis is load-bearing: the
+unoptimized body spills its locals to the shadow stack at
+`global 0 − 16` and below, so under an adversarial store (e.g.
+`mem.pages = 0`) the very first spill would trap. The canonical store
+sets `global 0 = 1048576` with 17 pages (`17 · 65536 = 1114112`
+bytes), so every frame access is in bounds.
 
 Informal spec:
 For any `n : UInt32`, the wasm export `check` terminates and leaves an
@@ -27,7 +55,8 @@ claim between the two algorithms. -/
 @[spec_of "rust-exported" "is_prime::check"]
 def CheckSpec : Prop :=
   ∀ (env : HostEnv Unit) (initial : Store Unit) (n : UInt32),
-    TerminatesWith env «module» 3 initial [.i32 n]
+    initial = «module».initialStore →
+    TerminatesWith env «module» 4 initial [.i32 n]
       (fun _ rs => rs = [])
 
 /-- `n` is prime in the `UInt32` sense iff `n ≥ 2` and no `d` in
@@ -72,22 +101,6 @@ theorem prime_iff_fast (n : Nat) (hn : 2 ≤ n) :
 
 /-! ## UInt32 ↔ Nat bridges for the loop counters -/
 
-/-- `d - 1` is encoded in the wasm as `d + 0xFFFFFFFF`. For `d ≥ 1` this is
-the genuine predecessor. -/
-theorem toNat_add_neg_one {d : UInt32} (hd : 1 ≤ d.toNat) :
-    (d + 4294967295).toNat = d.toNat - 1 := by
-  rw [UInt32.toNat_add]
-  have hconst : (4294967295 : UInt32).toNat = 4294967295 := rfl
-  have hlt := d.toNat_lt
-  rw [hconst]; omega
-
-/-- `d + 1` does not overflow as long as `d.toNat + 1 < 2 ^ 32`. -/
-theorem toNat_add_one {d : UInt32} (hd : d.toNat + 1 < 2 ^ 32) :
-    (d + 1).toNat = d.toNat + 1 := by
-  rw [UInt32.toNat_add]
-  have hconst : (1 : UInt32).toNat = 1 := rfl
-  rw [hconst]; omega
-
 /-- `n >>> 1` computes `n / 2` on the `Nat` view. -/
 theorem toNat_shiftRight_one (n : UInt32) : (n >>> 1).toNat = n.toNat / 2 := by
   rw [UInt32.toNat_shiftRight]
@@ -102,12 +115,51 @@ theorem rem_eq_zero_iff (a b : UInt32) : a % b = 0 ↔ a.toNat % b.toNat = 0 := 
   · intro h; rw [h]; rfl
   · intro h; apply UInt32.toNat.inj; rw [h]; rfl
 
+/-! ## Memory framing lemmas
+
+The shadow-stack code spills the loop counter to `fp + 8` and the
+result flag to `fp + 7`, and reads each back at the very address it
+was last written. Only "read-after-same-address-write" facts (plus
+page preservation) are needed; no disjointness reasoning is required
+because every read in the live path is of the most recent write at
+that address. -/
+
+@[simp] private theorem write32_pages (m : Mem) (a v : UInt32) :
+    (m.write32 a v).pages = m.pages := rfl
+
+@[simp] private theorem write8_pages (m : Mem) (a : UInt32) (v : UInt8) :
+    (m.write8 a v).pages = m.pages := rfl
+
+/-- A 32-bit read sees the value of a same-address 32-bit write. -/
+@[simp] private theorem read32_write32_same (m : Mem) (a v : UInt32) :
+    (m.write32 a v).read32 a = v := by
+  simp only [Mem.read32, Mem.write32]
+  have e1 : a.toNat + 1 ≠ a.toNat := by omega
+  have e2 : a.toNat + 2 ≠ a.toNat := by omega
+  have e3 : a.toNat + 3 ≠ a.toNat := by omega
+  have e21 : a.toNat + 2 ≠ a.toNat + 1 := by omega
+  have e31 : a.toNat + 3 ≠ a.toNat + 1 := by omega
+  have e32 : a.toNat + 3 ≠ a.toNat + 2 := by omega
+  simp only [e1, e2, e3, e21, e31, e32, if_true, if_false]
+  bv_decide
+
+/-- A byte read sees the value of a same-address byte write. -/
+@[simp] private theorem read8_write8_same (m : Mem) (a : UInt32) (v : UInt8) :
+    (m.write8 a v).read8 a = v := by
+  simp [Mem.read8, Mem.write8]
+
 /-! ## Per-function correctness
 
 The two trial-division functions both compute the primality indicator of
-`n`; `func0` via the fast `[2, n/2]` range, `func1` via the naive `[2, n)`
-range. We prove both produce `primeI n`, so the comparison in `func2`
-never observes a difference (and never traps). -/
+`n`; `func1` via the fast `[2, n/2]` range, `func2` via the naive `[2, n)`
+range. We prove both produce `primeI n`, so the comparison in `func3`
+never observes a difference (and never traps).
+
+Both functions write linear memory (their shadow-stack frame at
+`[1048528, 1048544)`), so no store-polymorphic `FuncSpec` exists for
+them; the lemmas are `TerminatesWith`s at a parametric store
+constrained to 17 pages and `global 0 = 1048544` (the value `func3`'s
+prologue installs), discharged at the call sites via `wp_call_at`. -/
 
 open scoped Classical in
 /-- The primality indicator: `1` when `n` is prime, `0` otherwise. -/
@@ -115,261 +167,264 @@ noncomputable def primeI (n : UInt32) : UInt32 :=
   if IsPrimeNat n.toNat then 1 else 0
 
 open scoped Classical in
-/-- `func1` (naive `[2, n)` loop) returns the primality indicator of `n`.
-A `tail` of caller values below the argument is framed through unchanged. -/
-theorem func1_spec (env : HostEnv Unit) (n : UInt32) (tail : List Value) :
-    FuncSpec env «module» 1 (· = .i32 n :: tail)
-      (fun _ vs => vs = .i32 (primeI n) :: tail) := by
-  apply FuncSpec.of_wp_body (f := ⟨[.i32], [.i32, .i32, .i32], func1, [.i32]⟩) rfl
-  rintro args rfl initial
-  unfold func1
-  apply wp_block_cons
+/-- `func2` (naive `[2, n)` loop) returns the primality indicator of `n`.
+Runs in a 16-byte shadow-stack frame at `1048528`; the loop counter `d`
+lives in memory at `1048536 = fp + 8`, the result flag byte at
+`1048535 = fp + 7`. The store's pages and `global 0` are restored on
+exit. -/
+theorem func2_at (env : HostEnv Unit) (st0 : Store Unit) (n : UInt32)
+    (hpg : st0.mem.pages = 17)
+    (hgl : st0.globals.globals = [.i32 1048544, .i32 1049601, .i32 1049616]) :
+    TerminatesWith env «module» 2 st0 [.i32 n]
+      (fun st' vs => vs = [.i32 (primeI n)] ∧ st'.mem.pages = 17 ∧
+        st'.globals.globals = [.i32 1048544, .i32 1049601, .i32 1049616]) := by
+  apply TerminatesWith.of_wp_entry_for
+    (f := ⟨[.i32], [.i32, .i32, .i32], func2, [.i32]⟩) rfl
+  unfold func2
   wp_run
-  by_cases hn2 : 2 ≤ n
-  · -- `n ≥ 2`: enter the main block.
-    simp [hn2]
-    apply wp_block_cons   -- outer block B
-    apply wp_block_cons   -- inner block C (the `n == 2` early-prime test)
-    wp_run
-    simp
-    by_cases hn3 : n = 2
-    · -- `n = 2`: prime, the `br 1` exit carries `1`.
-      subst hn3
-      have hp : IsPrimeNat 2 := ⟨le_refl _, fun d hd hd2 => by omega⟩
-      simp [primeI, hp]
-    · -- `n ≥ 3`: run the naive trial-division loop over `[2, n)`.
-      simp [hn3]
-      have hn2' : 2 ≤ n.toNat := by
-        have := UInt32.le_iff_toNat_le.mp hn2; simpa using this
-      have hne : n.toNat ≠ 2 := by
-        intro h; exact hn3 (UInt32.toNat.inj (by rw [h]; rfl))
-      have hn3' : 3 ≤ n.toNat := by omega
-      apply wp_loop_cons
-        (Inv := fun _ s' => ∃ (a c : Value) (d : UInt32),
-          s' = { params := [.i32 n], locals := [a, .i32 d, c], values := [] } ∧
-            3 ≤ d.toNat ∧ d.toNat ≤ n.toNat ∧
-            (∀ e, 2 ≤ e → e ≤ d.toNat - 2 → n.toNat % e ≠ 0))
-        (μ := fun _ s' => match s'.locals with
-          | [_, .i32 d, _] => n.toNat - d.toNat
-          | _ => 0)
-      · -- invariant holds on entry (`d = 3`)
-        refine ⟨.i32 0, .i32 0, 3, rfl, le_refl _, hn3', fun e he he2 => ?_⟩
-        have h3 : (3 : UInt32).toNat = 3 := rfl
+  simp only [hgl, hpg]
+  -- Prologue done: frame at 1048528, `n` spilled to 1048540.
+  simp
+  apply wp_block_cons   -- A: everything up to the epilogue
+  apply wp_block_cons   -- B: the `n < 2` early exit
+  apply wp_block_cons   -- C: guard
+  wp_run
+  by_cases hn2 : n < 2
+  · -- `n < 2`: flag := 0, exit; `n` is not prime.
+    have hlt : n.toNat < 2 := by
+      have := UInt32.lt_iff_toNat_lt.mp hn2
+      simpa using this
+    have hnp : ¬ IsPrimeNat n.toNat := by rintro ⟨h2, _⟩; omega
+    simp [hn2, hpg, primeI, hnp]
+  · -- `n ≥ 2`: seed the counter with 2 and run the loop.
+    have hn2' : 2 ≤ n.toNat := by
+      rcases Nat.lt_or_ge n.toNat 2 with h | h
+      · exact absurd (UInt32.lt_iff_toNat_lt.mpr (by simpa using h)) hn2
+      · exact h
+    simp [hn2, hpg]
+    apply wp_loop_cons
+      (Inv := fun st' s' =>
+        st'.mem.pages = 17 ∧
+        st'.globals.globals = [.i32 1048528, .i32 1049601, .i32 1049616] ∧
+        ∃ (l2 l3 : Value) (d : UInt32),
+          s' = { params := [.i32 n], locals := [.i32 1048528, l2, l3],
+                 values := [] } ∧
+          st'.mem.read32 1048536 = d ∧
+          2 ≤ d.toNat ∧ d.toNat ≤ n.toNat ∧
+          (∀ e, 2 ≤ e → e < d.toNat → n.toNat % e ≠ 0))
+      (μ := fun st' _ => n.toNat + 1 - (st'.mem.read32 1048536).toNat)
+    · -- invariant on entry (`d = 2`)
+      refine ⟨by simp [hpg], by simp, .i32 0, .i32 0, 2, rfl, ?_, ?_, ?_, ?_⟩
+      · simp
+      · simp
+      · simpa using hn2'
+      · intro e he he2
+        have : (2 : UInt32).toNat = 2 := rfl
         omega
-      · -- one iteration preserves the invariant / establishes the post
-        rintro st' s' ⟨a, c, d, rfl, hd3, hdn, hdiv⟩
-        -- `4294967295 + d` is `d - 1` (no underflow since `d ≥ 3`)
-        have hd1 : (4294967295 + d).toNat = d.toNat - 1 := by
-          rw [UInt32.toNat_add]
-          have hc : (4294967295 : UInt32).toNat = 4294967295 := rfl
-          have hlt := d.toNat_lt
-          rw [hc]; omega
-        have hne0 : ¬ (4294967295 + d = 0) := by
-          intro h
-          have hz : (4294967295 + d).toNat = 0 := by rw [h]; rfl
-          rw [hd1] at hz; omega
-        have hrem : (n % (4294967295 + d) = 0) ↔ n.toNat % (d.toNat - 1) = 0 := by
-          rw [rem_eq_zero_iff, hd1]
+    · -- one iteration preserves the invariant / establishes the post
+      rintro st' s' ⟨hpg', hgl', l2, l3, d, rfl, hd, hd2, hdn, hdiv⟩
+      have hdne0 : ¬ d = 0 := by
+        intro h; subst h; simp at hd2
+      apply wp_block_cons   -- D: the `d < n` loop-exit test
+      wp_run
+      simp [hd, hpg']
+      by_cases hlt : d < n
+      · -- `d < n`: check divisibility of `n` by `d`.
+        simp [hlt]
+        apply wp_block_cons   -- E: increment-or-exit
+        apply wp_block_cons   -- F: panic guard
+        apply wp_block_cons   -- G: the actual tests
         wp_run
-        simp
-        refine ⟨hne0, ?_⟩
-        by_cases h1 : n % (4294967295 + d) = 0
-        · -- `d - 1` divides `n`: composite, result `0`
-          have hdiv0 : n.toNat % (d.toNat - 1) = 0 := hrem.mp h1
+        simp [hdne0, hpg']
+        by_cases hrem : n % d = 0
+        · -- divisor found: composite, flag := 0, result 0
+          have hdlt : d.toNat < n.toNat := UInt32.lt_iff_toNat_lt.mp hlt
+          have hremn : n.toNat % d.toNat = 0 := (rem_eq_zero_iff n d).mp hrem
           have hnp : ¬ IsPrimeNat n.toNat := by
             rintro ⟨_, hP⟩
-            exact hP (d.toNat - 1) (by omega) (by omega) hdiv0
-          simp [h1, primeI, hnp]
-        · -- `d - 1` does not divide `n`
-          have hd1ne : n.toNat % (d.toNat - 1) ≠ 0 := fun h => h1 (hrem.mpr h)
-          by_cases h2 : n = d
-          · -- reached `d = n`: every divisor in `[2, n)` checked → prime
-            have heq : n.toNat = d.toNat := by rw [h2]
-            have hP : IsPrimeNat n.toNat := by
-              refine ⟨hn2', fun e he2 hen => ?_⟩
-              by_cases he : e ≤ d.toNat - 2
-              · exact hdiv e he2 he
-              · have : e = d.toNat - 1 := by omega
-                rw [this]; exact hd1ne
-            simp only [if_neg h1, if_pos h2, primeI, if_pos hP]
-          · -- continue the loop with `d + 1`
-            have hdlt : d.toNat < n.toNat :=
-              lt_of_le_of_ne hdn (fun h => h2 (UInt32.toNat.inj h).symm)
-            have hnlt : n.toNat < 4294967296 := by have := n.toNat_lt; omega
-            have hmod : (1 + d.toNat) % 4294967296 = d.toNat + 1 := by omega
-            simp only [h1, h2, if_false]
-            rw [hmod]
-            refine ⟨⟨by omega, by omega, fun e he2 hee => ?_⟩, by omega⟩
-            by_cases he : e ≤ d.toNat - 2
-            · exact hdiv e he2 he
-            · have : e = d.toNat - 1 := by omega
-              rw [this]; exact hd1ne
-  · -- `n < 2`: returns `0`, and `n` is not prime.
-    have hlt : n.toNat < 2 := by
-      rw [UInt32.le_iff_toNat_le] at hn2
-      simpa using hn2
-    have hnp : ¬ IsPrimeNat n.toNat := by rintro ⟨h2, _⟩; omega
-    simp [hn2, primeI, hnp]
+            exact hP d.toNat (by omega) (by omega) hremn
+          simp [hrem, hgl', primeI, hnp]
+        · -- no divisor: increment `d` and continue
+          have hdlt : d.toNat < n.toNat := UInt32.lt_iff_toNat_lt.mp hlt
+          have hremn : n.toNat % d.toNat ≠ 0 :=
+            fun h => hrem ((rem_eq_zero_iff n d).mpr h)
+          simp [hrem, hd]
+          have hmod : (1 + d.toNat) % 4294967296 = d.toNat + 1 := by
+            have := n.toNat_lt
+            omega
+          rw [hmod]
+          refine ⟨⟨hgl', by omega, by omega, ?_⟩, by omega⟩
+          intro e he he2
+          rcases Nat.lt_or_ge e d.toNat with h | h
+          · exact hdiv e he h
+          · have : e = d.toNat := by omega
+            subst this; exact hremn
+      · -- `d ≥ n`: every divisor in `[2, n)` checked → prime, flag := 1
+        have hnd : n.toNat ≤ d.toNat := by
+          rcases Nat.lt_or_ge d.toNat n.toNat with h | h
+          · exact absurd (UInt32.lt_iff_toNat_lt.mpr h) hlt
+          · exact h
+        have hP : IsPrimeNat n.toNat :=
+          ⟨hn2', fun e he2 hen => hdiv e he2 (by omega)⟩
+        simp [hlt, hgl', primeI, hP]
 
 open scoped Classical in
-/-- `func0` (fast `[2, n/2]` loop) returns the primality indicator of `n`.
-A `tail` of caller values below the argument is framed through unchanged. -/
-theorem func0_spec (env : HostEnv Unit) (n : UInt32) (tail : List Value) :
-    FuncSpec env «module» 0 (· = .i32 n :: tail)
-      (fun _ vs => vs = .i32 (primeI n) :: tail) := by
-  apply FuncSpec.of_wp_body (f := ⟨[.i32], [.i32, .i32, .i32, .i32], func0, [.i32]⟩) rfl
-  rintro args rfl initial
-  unfold func0
-  apply wp_block_cons
+/-- `func1` (fast `[2, n/2]` loop) returns the primality indicator of `n`.
+Same frame discipline as [`func2_at`]: counter at `1048536`, flag at
+`1048535`, pages and `global 0` restored on exit. -/
+theorem func1_at (env : HostEnv Unit) (st0 : Store Unit) (n : UInt32)
+    (hpg : st0.mem.pages = 17)
+    (hgl : st0.globals.globals = [.i32 1048544, .i32 1049601, .i32 1049616]) :
+    TerminatesWith env «module» 1 st0 [.i32 n]
+      (fun st' vs => vs = [.i32 (primeI n)] ∧ st'.mem.pages = 17 ∧
+        st'.globals.globals = [.i32 1048544, .i32 1049601, .i32 1049616]) := by
+  apply TerminatesWith.of_wp_entry_for
+    (f := ⟨[.i32], [.i32, .i32, .i32], func1, [.i32]⟩) rfl
+  unfold func1
   wp_run
-  by_cases hn2 : 2 ≤ n
-  · simp [hn2]
-    apply wp_block_cons   -- outer block B
-    apply wp_block_cons   -- inner block C (`n < 4` early-prime test)
-    wp_run
-    simp
-    by_cases hn4 : 4 ≤ n
-    · -- `n ≥ 4`: run the fast trial-division loop over `[2, n/2]`
-      have hn4' : 4 ≤ n.toNat := by
-        have := UInt32.le_iff_toNat_le.mp hn4; simpa using this
-      have hhalf : (n >>> 1).toNat = n.toNat / 2 := toNat_shiftRight_one n
-      simp [hn4]
-      apply wp_loop_cons
-        (Inv := fun _ s' => ∃ (a e : Value) (d : UInt32),
-          s' = { params := [.i32 n], locals := [a, .i32 (n >>> 1), .i32 d, e], values := [] } ∧
-            2 ≤ d.toNat ∧ d.toNat ≤ n.toNat / 2 ∧
-            (∀ k, 2 ≤ k → k < d.toNat → n.toNat % k ≠ 0))
-        (μ := fun _ s' => match s'.locals with
-          | [_, _, .i32 d, _] => n.toNat / 2 - d.toNat
-          | _ => 0)
-      · -- invariant on entry (`d = 2`)
-        refine ⟨.i32 0, .i32 0, 2, rfl, by decide, ?_, fun k hk hk2 => ?_⟩
-        · have h2t : (2 : UInt32).toNat = 2 := rfl; omega
-        · have h2t : (2 : UInt32).toNat = 2 := rfl; omega
-      · -- one iteration preserves the invariant / establishes the post
-        rintro st' s' ⟨a, e, d, rfl, hd2, hdhalf, hdiv⟩
-        have hne_d : ¬ d = 0 := by
-          intro h; subst h; exact absurd hd2 (by decide)
-        wp_run
-        simp
-        refine ⟨hne_d, ?_⟩
-        by_cases heq : n >>> 1 = d
-        · -- `d = n / 2`: this is the final divisor; the loop exits here
-          have hdt : d.toNat = n.toNat / 2 := by rw [← heq]; exact hhalf
-          simp only [heq, if_true]
-          by_cases hdvd : n % d = 0
-          · -- `n / 2` divides `n`: composite
-            have hdvd0 : n.toNat % d.toNat = 0 := (rem_eq_zero_iff n d).mp hdvd
-            have hnp : ¬ IsPrimeNat n.toNat := by
-              rintro ⟨_, hP⟩
-              exact hP d.toNat (by omega) (by omega) hdvd0
-            simp [hdvd, primeI, hnp]
-          · -- no divisor in `[2, n/2]`: prime
-            have hdvdne : n.toNat % d.toNat ≠ 0 :=
-              fun h => hdvd ((rem_eq_zero_iff n d).mpr h)
-            have hP : IsPrimeNat n.toNat := by
-              rw [prime_iff_fast n.toNat (by omega)]
-              intro k hk2 hkhalf
-              by_cases hkd : k < d.toNat
-              · exact hdiv k hk2 hkd
-              · have : k = d.toNat := by omega
-                rw [this]; exact hdvdne
-            simp [hdvd, primeI, hP]
-        · -- `d < n / 2`: keep scanning
-          have hdtlt : d.toNat < n.toNat / 2 := by
-            refine lt_of_le_of_ne hdhalf (fun h => heq ?_)
-            exact UInt32.toNat.inj (by rw [hhalf, h])
-          simp only [heq, if_false]
-          by_cases hdvd : n % d = 0
-          · -- `d` divides `n`: composite
-            have hdvd0 : n.toNat % d.toNat = 0 := (rem_eq_zero_iff n d).mp hdvd
-            have hnp : ¬ IsPrimeNat n.toNat := by
-              rintro ⟨_, hP⟩
-              exact hP d.toNat (by omega) (by omega) hdvd0
-            simp [hdvd, primeI, hnp]
-          · -- `d` does not divide `n`: continue with `d + 1`
-            have hdvdne : n.toNat % d.toNat ≠ 0 :=
-              fun h => hdvd ((rem_eq_zero_iff n d).mpr h)
-            have hnlt : n.toNat < 4294967296 := by have := n.toNat_lt; omega
-            have hmod : (1 + d.toNat) % 4294967296 = d.toNat + 1 := by omega
-            simp only [hmod]
-            refine ⟨⟨by omega, by omega, fun k hk2 hkd => ?_⟩, by omega⟩
-            by_cases hkd' : k < d.toNat
-            · exact hdiv k hk2 hkd'
-            · have : k = d.toNat := by omega
-              rw [this]; exact hdvdne
-    · -- `n ∈ {2, 3}`: prime
-      have h2' : 2 ≤ n.toNat := by
-        have := UInt32.le_iff_toNat_le.mp hn2; simpa using this
-      have h4' : n.toNat < 4 := by
-        rw [UInt32.le_iff_toNat_le] at hn4; simpa using hn4
-      have hP : IsPrimeNat n.toNat := by
-        refine ⟨h2', fun k hk2 hkn => ?_⟩
-        interval_cases n.toNat <;> (interval_cases k <;> decide)
-      simp [hn4, primeI, hP]
+  simp only [hgl, hpg]
+  simp
+  apply wp_block_cons   -- A
+  apply wp_block_cons   -- B
+  apply wp_block_cons   -- C
+  wp_run
+  by_cases hn2 : n < 2
   · have hlt : n.toNat < 2 := by
-      rw [UInt32.le_iff_toNat_le] at hn2; simpa using hn2
+      have := UInt32.lt_iff_toNat_lt.mp hn2
+      simpa using this
     have hnp : ¬ IsPrimeNat n.toNat := by rintro ⟨h2, _⟩; omega
-    simp [hn2, primeI, hnp]
+    simp [hn2, hpg, primeI, hnp]
+  · have hn2' : 2 ≤ n.toNat := by
+      rcases Nat.lt_or_ge n.toNat 2 with h | h
+      · exact absurd (UInt32.lt_iff_toNat_lt.mpr (by simpa using h)) hn2
+      · exact h
+    have hhalf : (n >>> 1).toNat = n.toNat / 2 := toNat_shiftRight_one n
+    simp [hn2, hpg]
+    apply wp_loop_cons
+      (Inv := fun st' s' =>
+        st'.mem.pages = 17 ∧
+        st'.globals.globals = [.i32 1048528, .i32 1049601, .i32 1049616] ∧
+        ∃ (l2 l3 : Value) (d : UInt32),
+          s' = { params := [.i32 n], locals := [.i32 1048528, l2, l3],
+                 values := [] } ∧
+          st'.mem.read32 1048536 = d ∧
+          2 ≤ d.toNat ∧ d.toNat ≤ n.toNat / 2 + 1 ∧
+          (∀ e, 2 ≤ e → e < d.toNat → n.toNat % e ≠ 0))
+      (μ := fun st' _ => n.toNat / 2 + 2 - (st'.mem.read32 1048536).toNat)
+    · -- invariant on entry (`d = 2`)
+      refine ⟨by simp [hpg], by simp, .i32 0, .i32 0, 2, rfl, ?_, ?_, ?_, ?_⟩
+      · simp
+      · simp
+      · have : (2 : UInt32).toNat = 2 := rfl
+        omega
+      · intro e he he2
+        have : (2 : UInt32).toNat = 2 := rfl
+        omega
+    · rintro st' s' ⟨hpg', hgl', l2, l3, d, rfl, hd, hd2, hdn, hdiv⟩
+      have hdne0 : ¬ d = 0 := by
+        intro h; subst h; simp at hd2
+      apply wp_block_cons   -- D: the `d ≤ n/2` loop-exit test
+      wp_run
+      simp [hd, hpg']
+      by_cases hle : d ≤ n >>> 1
+      · -- `d ≤ n/2`: check divisibility of `n` by `d`.
+        have hdhalf : d.toNat ≤ n.toNat / 2 := by
+          have := UInt32.le_iff_toNat_le.mp hle
+          rw [hhalf] at this
+          exact this
+        simp [hle]
+        apply wp_block_cons   -- E
+        apply wp_block_cons   -- F
+        apply wp_block_cons   -- G
+        wp_run
+        simp [hdne0, hpg']
+        by_cases hrem : n % d = 0
+        · -- divisor found: composite
+          have hremn : n.toNat % d.toNat = 0 := (rem_eq_zero_iff n d).mp hrem
+          have hnp : ¬ IsPrimeNat n.toNat := by
+            rintro ⟨_, hP⟩
+            exact hP d.toNat (by omega) (by omega) hremn
+          simp [hrem, hgl', primeI, hnp]
+        · -- no divisor: increment and continue
+          have hremn : n.toNat % d.toNat ≠ 0 :=
+            fun h => hrem ((rem_eq_zero_iff n d).mpr h)
+          simp [hrem, hd]
+          have hmod : (1 + d.toNat) % 4294967296 = d.toNat + 1 := by
+            have := n.toNat_lt
+            omega
+          rw [hmod]
+          refine ⟨⟨hgl', by omega, by omega, ?_⟩, by omega⟩
+          intro e he he2
+          rcases Nat.lt_or_ge e d.toNat with h | h
+          · exact hdiv e he h
+          · have : e = d.toNat := by omega
+            subst this; exact hremn
+      · -- `d > n/2`: every divisor in `[2, n/2]` checked → prime
+        have hgt : n.toNat / 2 < d.toNat := by
+          rcases Nat.lt_or_ge (n.toNat / 2) d.toNat with h | h
+          · exact h
+          · exact absurd (UInt32.le_iff_toNat_le.mpr (by rw [hhalf]; exact h)) hle
+        have hP : IsPrimeNat n.toNat := by
+          rw [prime_iff_fast n.toNat hn2']
+          intro k hk2 hkhalf
+          exact hdiv k hk2 (by omega)
+        simp [hle, hgl', primeI, hP]
 
 open scoped Classical in
-/-- `func2` runs both tests, compares them, and (because they agree) never
-trips the `unreachable`; it returns with an empty value stack. -/
-theorem func2_spec (env : HostEnv Unit) (n : UInt32) :
-    FuncSpec env «module» 2 (· = [.i32 n])
-      (fun _ vs => vs = []) := by
-  apply FuncSpec.of_wp_body (f := ⟨[.i32], [], func2, []⟩) rfl
-  rintro args rfl initial
-  unfold func2
-  apply wp_block_cons
-  wp_run
-  -- stack: [.i32 n]; call func1 (naive)
-  apply wp_call_cons (func1_spec env n [])
-  · rfl
-  · rintro st1 vs1 rfl
-    wp_run
-    -- stack: [.i32 n, .i32 (primeI n)]; call func0 (fast) framing the naive result
-    apply wp_call_cons (func0_spec env n [.i32 (primeI n)])
-    · rfl
-    · rintro st0 vs0 rfl
-      -- stack: [.i32 (primeI n), .i32 (primeI n)]; `ne` yields 0, `br_if` not taken, `ret`
-      wp_run
-      simp
-
-/-- Proof that the wasm `check` export never traps.
-
-Proof outline (to be filled in):
-
-1.  Step through the export wrapper `func1` (`.localGet 0; .call 0`)
-    to reduce to a `wp` obligation on `func0`.
-2.  Unfold `func0` and use `wp_block_cons` to peel the outermost block.
-3.  Handle the `n < 3` early-exit branch directly (both algorithms
-    return `false` in lockstep).
-4.  For `n ≥ 3`, apply `wp_loop_cons` to the naive loop with invariant
-        `∃ d, 3 ≤ d ∧ (∀ d' ∈ [2, d), n % d' ≠ 0)`
-    and termination measure `n - d`. The loop exits in two ways:
-    either it finds a divisor (`local 2 = 0`) or it walks to `d = n`
-    (prime).
-5.  Apply `wp_loop_cons` to the fast loop with invariant
-        `∃ d, 2 ≤ d ∧ (∀ d' ∈ [2, d), n % d' ≠ 0)`
-    and termination measure `n / 2 - d`. Same two exits, bounded by
-    `n / 2`.
-6.  Close the post-loop comparison block by `prime_iff_fast`: both
-    loops yield the same composite/prime verdict, so the
-    `br_if`/`br 2 → unreachable` edge is never taken.
--/
-@[proves Project.IsPrime.Spec.CheckSpec]
-theorem check_correct : CheckSpec := by
-  intro env initial n
-  -- `func3` is the exported `check` wrapper: it just forwards `n` to `func2`.
-  apply TerminatesWith.of_wp_entry (f := ⟨[.i32], [], func3, []⟩) rfl
-  intro initial'
+/-- `func3` runs both tests, compares them, and (because they agree)
+never trips the `unreachable`; it returns with an empty value stack,
+its 16-byte frame at `1048544` released and `global 0` restored. -/
+theorem func3_at (env : HostEnv Unit) (st0 : Store Unit) (n : UInt32)
+    (hpg : st0.mem.pages = 17)
+    (hgl : st0.globals.globals = [.i32 1048560, .i32 1049601, .i32 1049616]) :
+    TerminatesWith env «module» 3 st0 [.i32 n]
+      (fun st' vs => vs = [] ∧ st'.mem.pages = 17 ∧
+        st'.globals.globals = [.i32 1048560, .i32 1049601, .i32 1049616]) := by
+  apply TerminatesWith.of_wp_entry_for
+    (f := ⟨[.i32], [.i32, .i32, .i32], func3, []⟩) rfl
   unfold func3
   wp_run
-  apply wp_call_cons (func2_spec env n)
-  · rfl
-  · rintro st' vs rfl
-    wp_run
-    rfl
+  simp only [hgl, hpg]
+  simp
+  -- `.call 2` (naive) at the post-prologue store
+  refine wp_call_at
+    (Post := fun st' vs => vs = [.i32 (primeI n)] ∧ st'.mem.pages = 17 ∧
+      st'.globals.globals = [.i32 1048544, .i32 1049601, .i32 1049616])
+    (func2_at env _ n (by simp [hpg]) (by simp)) ?_
+  rintro st2 vs2 ⟨rfl, hpg2, hgl2⟩
+  wp_run
+  -- `.call 1` (fast) at the store func2 left behind
+  refine wp_call_at
+    (Post := fun st' vs => vs = [.i32 (primeI n)] ∧ st'.mem.pages = 17 ∧
+      st'.globals.globals = [.i32 1048544, .i32 1049601, .i32 1049616])
+    (func1_at env _ n hpg2 hgl2) ?_
+  rintro st1 vs1 ⟨rfl, hpg1, hgl1⟩
+  wp_run
+  apply wp_block_cons
+  wp_run
+  -- both results are `primeI n`, so `ne` yields 0 and the `br_if`
+  -- guarding the `unreachable` is never taken
+  simp [hgl1, hpg1]
+
+@[proves Project.IsPrime.Spec.CheckSpec]
+theorem check_correct : CheckSpec := by
+  intro env initial n hinit
+  subst hinit
+  have hpg : («module».initialStore : Store Unit).mem.pages = 17 := by rfl
+  have hgl : («module».initialStore : Store Unit).globals.globals
+      = [.i32 1048576, .i32 1049601, .i32 1049616] := by rfl
+  -- `func4` is the exported `check` wrapper: spill `n`, forward to `func3`.
+  apply TerminatesWith.of_wp_entry_for (f := ⟨[.i32], [.i32], func4, []⟩) rfl
+  unfold func4
+  wp_run
+  simp only [hgl, hpg]
+  simp
+  refine wp_call_at
+    (Post := fun st' vs => vs = [] ∧ st'.mem.pages = 17 ∧
+      st'.globals.globals = [.i32 1048560, .i32 1049601, .i32 1049616])
+    (func3_at env _ n (by simp [hpg]) (by simp)) ?_
+  rintro st' vs ⟨rfl, hpg', hgl'⟩
+  wp_run
+  simp [hgl']
 
 end Project.IsPrime.Spec

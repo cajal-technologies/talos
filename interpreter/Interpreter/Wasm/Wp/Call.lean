@@ -85,11 +85,11 @@ theorem wp_callIndirect_at {α : Type} {env : HostEnv α}
     {rest : Program} {ti tj : Nat}
     {Post : Store α → List Value → Prop}
     {i : UInt32} {vs0 : List Value} {tbl : TableInst} {fid : Nat}
-    {fn : Function} {ty : FuncType}
+    {fn : FuncType} {ty : FuncType}
     (hStack : s.values = .i32 i :: vs0)
     (hTbl  : st.tables[tj]? = some tbl)
     (hSlot : tbl[i.toNat]? = some (some fid))
-    (hFn   : m.funcs[fid]? = some fn)
+    (hFn   : m.funcSig? fid = some fn)
     (hTy   : m.types[ti]? = some ty)
     (hSig  : fn.params = ty.params ∧ fn.results = ty.results)
     (hRun  : ∃ N, ∀ fuel ≥ N, ∃ vs st',
@@ -124,11 +124,11 @@ theorem wp_callIndirect_cons {α : Type} {env : HostEnv α}
     {rest : Program} {ti tj : Nat}
     {Pre : List Value → Prop} {Post : Store α → List Value → Prop}
     {i : UInt32} {vs0 : List Value} {tbl : TableInst} {fid : Nat}
-    {fn : Function} {ty : FuncType}
+    {fn : FuncType} {ty : FuncType}
     (hStack : s.values = .i32 i :: vs0)
     (hTbl  : st.tables[tj]? = some tbl)
     (hSlot : tbl[i.toNat]? = some (some fid))
-    (hFn   : m.funcs[fid]? = some fn)
+    (hFn   : m.funcSig? fid = some fn)
     (hTy   : m.types[ti]? = some ty)
     (hSig  : fn.params = ty.params ∧ fn.results = ty.results)
     (spec  : FuncSpec env m fid Pre Post)
@@ -144,11 +144,11 @@ theorem wp_callIndirect_tw {α : Type} {env : HostEnv α}
     {rest : Program} {ti tj : Nat}
     {Post : Store α → List Value → Prop}
     {i : UInt32} {vs0 : List Value} {tbl : TableInst} {fid : Nat}
-    {fn : Function} {ty : FuncType}
+    {fn : FuncType} {ty : FuncType}
     (hStack : s.values = .i32 i :: vs0)
     (hTbl  : st.tables[tj]? = some tbl)
     (hSlot : tbl[i.toNat]? = some (some fid))
-    (hFn   : m.funcs[fid]? = some fn)
+    (hFn   : m.funcSig? fid = some fn)
     (hTy   : m.types[ti]? = some ty)
     (hSig  : fn.params = ty.params ∧ fn.results = ty.results)
     (hRun  : TerminatesWith env m fid st vs0 Post)

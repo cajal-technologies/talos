@@ -477,4 +477,19 @@ def Module.memoryCap (m : Module) : Nat :=
 def Module.findExport (m : Module) (name : String) : Option Nat :=
   (m.exports.find? (·.name = name)).map (·.funcIdx)
 
+/-- Signature of the function at *unified* index `id`: indices below
+`m.imports.length` resolve to the import's declared signature, the
+remainder to `m.funcs` after shifting down by `m.imports.length` —
+the same convention `run` uses for dispatch. `call_indirect` checks
+the declared `(type N)` against this, so table entries referencing
+host imports type-check exactly like in-module functions. For modules
+with `imports = []` the import arm reduces away by computation. -/
+def Module.funcSig? (m : Module) (id : Nat) : Option FuncType :=
+  match m.imports[id]? with
+  | some imp => some { params := imp.params, results := imp.results }
+  | none     =>
+    match m.funcs[id - m.imports.length]? with
+    | some fn => some { params := fn.params, results := fn.results }
+    | none    => none
+
 end Wasm

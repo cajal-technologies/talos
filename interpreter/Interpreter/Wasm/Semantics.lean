@@ -736,7 +736,7 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
           | none           => .Trap st "undefined element"
           | some none      => .Trap st "uninitialized element"
           | some (some fid) =>
-            match m.funcs[fid]? with
+            match m.funcSig? fid with
             | none    => .Invalid s!"callIndirect: function index {fid} out of range"
             | some fn =>
               match m.types[typeIdx]? with

@@ -5,10 +5,7 @@ import Project.IsEven.Spec
 import Project.IsPrime.Spec
 import Project.Itoa.Spec
 import Project.Itoa.Proofs
--- Project.Memchr.Spec intentionally omitted: the proof in that file is
--- currently broken (pre-existing, not from the structural refactor).
--- The spec/attributes are still picked up by `verifier extract` via the
--- source-scan, independent of elaboration.
+import Project.Memchr.Spec
 import Project.NumInteger.Spec
 import Project.NearFlag.Spec
 import Project.NearKvContract.Spec

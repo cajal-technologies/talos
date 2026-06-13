@@ -147,7 +147,7 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
               · simp only [execOne, hvals, hv, htbl, hslot]
               · rcases hslot' : slot with _ | fid
                 · simp only [execOne, hvals, hv, htbl, hslot, hslot']
-                · rcases hfn : m.funcs[fid]? with _ | fn
+                · rcases hfn : m.funcSig? fid with _ | fn
                   · simp only [execOne, hvals, hv, htbl, hslot, hslot', hfn]
                   · rcases hty : m.types[ti]? with _ | ty
                     · simp only [execOne, hvals, hv, htbl, hslot, hslot', hfn, hty]
@@ -323,11 +323,11 @@ theorem exec_callIndirect_cons {α : Type}
     {m : Module} {env : HostEnv α} {st : Store α} {s : Locals}
     {ti tj : Nat} {rest : Program} {fuel : Nat}
     {i : UInt32} {vs0 : List Value}
-    {tbl : TableInst} {fid : Nat} {fn : Function} {ty : FuncType}
+    {tbl : TableInst} {fid : Nat} {fn : FuncType} {ty : FuncType}
     (hStack : s.values = .i32 i :: vs0)
     (hTbl  : st.tables[tj]? = some tbl)
     (hSlot : tbl[i.toNat]? = some (some fid))
-    (hFn   : m.funcs[fid]? = some fn)
+    (hFn   : m.funcSig? fid = some fn)
     (hTy   : m.types[ti]? = some ty)
     (hSig  : fn.params = ty.params ∧ fn.results = ty.results) :
     exec (fuel + 1) m st s (.callIndirect ti tj :: rest) env =

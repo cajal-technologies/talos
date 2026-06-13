@@ -14,15 +14,28 @@ def func0 : Wasm.Program :=
   [
   .block 0 0 [
     .call 0,
-    .const (9 : UInt32),
-    .gtU,
+    .const (10 : UInt32),
+    .ltU,
+    .const (1 : UInt32),
+    .and,
+    .eqz,
     .br_if 0,
     .call 1
-  ]
+  ],
+  .ret
 ]
 
 def func0Def : Wasm.Function :=
   { params := [], locals := [], body := func0, results := [] }
+
+def func1 : Wasm.Program :=
+  [
+  .call 2,
+  .ret
+]
+
+def func1Def : Wasm.Function :=
+  { params := [], locals := [], body := func1, results := [] }
 
 def «module» : Wasm.Module :=
 {
@@ -31,10 +44,11 @@ def «module» : Wasm.Module :=
     { «module» := "env", name := "host_inc", params := [], results := [] }
   ],
   funcs := [
-    func0Def
+    func0Def,
+    func1Def
   ],
   exports := [
-    { name := "step", funcIdx := 2 }
+    { name := "step", funcIdx := 3 }
   ],
   memory := some { pagesMin := (16 : UInt32), pagesMax := none, data := [] },
   globals := [
