@@ -6,137 +6,10 @@ on:
   pull_request:
   workflow_dispatch:
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
-# The proof build is split into a chain of jobs, each comfortably under
-# ~20 minutes, handing off the .lake/build trees via per-sha caches.
-# Two reasons: (1) actions/cache only saves when a job *completes*, so a
-# single long job that gets killed never seeds its own cache; (2) jobs
-# on this org are observed to be force-cancelled at ~24 minutes of
-# runtime, so no single job may exceed that.
 jobs:
-  deps:
-    name: Build interpreter + codelib
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v4
-        with:
-          path: .lake/packages
-          key: lake-pkgs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}-${{ hashFiles('interpreter/lake-manifest.json') }}
-          restore-keys: |
-            lake-pkgs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}-
-      # Warm-start from the most recent build tree on this toolchain;
-      # save under this sha for the downstream jobs.
-      - uses: actions/cache@v4
-        with:
-          path: |
-            interpreter/.lake/build
-            codelib/.lake/build
-            programs/lean/.lake/build
-          key: lake-build-deps-${{ runner.os }}-${{ hashFiles('lean-toolchain') }}-${{ github.sha }}
-          restore-keys: |
-            lake-build-deps-${{ runner.os }}-${{ hashFiles('lean-toolchain') }}-
-      - uses: leanprover/lean-action@v1
-        with:
-          lake-package-directory: codelib
-          use-mathlib-cache: true
-
-  # The itoa proof modules are the heaviest elaboration units in the
-  # corpus; Itoa/Proofs.lean is split into Base/NaiveU64/NaiveI64/Fast
-  # precisely so the work fits into sub-ceiling jobs with cache
-  # checkpoints between them.
-  itoa-naive:
-    name: Build Itoa proofs (base + u64)
-    runs-on: ubuntu-latest
-    needs: deps
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v4
-        with:
-          path: .lake/packages
-          key: lake-pkgs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}-${{ hashFiles('interpreter/lake-manifest.json') }}
-          restore-keys: |
-            lake-pkgs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}-
-      - uses: actions/cache/restore@v4
-        with:
-          path: |
-            interpreter/.lake/build
-            codelib/.lake/build
-            programs/lean/.lake/build
-          key: lake-build-deps-${{ runner.os }}-${{ hashFiles('lean-toolchain') }}-${{ github.sha }}
-      - uses: actions/cache@v4
-        with:
-          path: |
-            interpreter/.lake/build
-            codelib/.lake/build
-            programs/lean/.lake/build
-          key: lake-build-itoa-naive-${{ runner.os }}-${{ hashFiles('lean-toolchain') }}-${{ github.sha }}
-      # Elaboration peaks at multiple GB; swap absorbs it, and the thread
-      # cap keeps concurrent multi-GB elaboration tasks from thrashing
-      # the runner to death.
-      - name: Add swap
-        run: |
-          sudo fallocate -l 16G /mnt/swapfile
-          sudo chmod 600 /mnt/swapfile
-          sudo mkswap /mnt/swapfile
-          sudo swapon /mnt/swapfile
-          free -h
-      - uses: leanprover/lean-action@v1
-        env:
-          LEAN_NUM_THREADS: "2"
-        with:
-          lake-package-directory: programs/lean
-          build-args: Project.Itoa.Proofs.NaiveU64
-          use-mathlib-cache: true
-
-  itoa-i64:
-    name: Build Itoa proofs (i64)
-    runs-on: ubuntu-latest
-    needs: itoa-naive
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v4
-        with:
-          path: .lake/packages
-          key: lake-pkgs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}-${{ hashFiles('interpreter/lake-manifest.json') }}
-          restore-keys: |
-            lake-pkgs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}-
-      - uses: actions/cache/restore@v4
-        with:
-          path: |
-            interpreter/.lake/build
-            codelib/.lake/build
-            programs/lean/.lake/build
-          key: lake-build-itoa-naive-${{ runner.os }}-${{ hashFiles('lean-toolchain') }}-${{ github.sha }}
-      - uses: actions/cache@v4
-        with:
-          path: |
-            interpreter/.lake/build
-            codelib/.lake/build
-            programs/lean/.lake/build
-          key: lake-build-itoa-${{ runner.os }}-${{ hashFiles('lean-toolchain') }}-${{ github.sha }}
-      - name: Add swap
-        run: |
-          sudo fallocate -l 16G /mnt/swapfile
-          sudo chmod 600 /mnt/swapfile
-          sudo mkswap /mnt/swapfile
-          sudo swapon /mnt/swapfile
-          free -h
-      - uses: leanprover/lean-action@v1
-        env:
-          LEAN_NUM_THREADS: "2"
-        with:
-          lake-package-directory: programs/lean
-          build-args: Project.Itoa.Proofs.NaiveI64
-          use-mathlib-cache: true
-
   build:
     name: Build & verify proofs
     runs-on: ubuntu-latest
-    needs: itoa-i64
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v4
@@ -145,25 +18,7 @@ jobs:
           key: lake-pkgs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}-${{ hashFiles('interpreter/lake-manifest.json') }}
           restore-keys: |
             lake-pkgs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}-
-      - uses: actions/cache/restore@v4
-        with:
-          path: |
-            interpreter/.lake/build
-            codelib/.lake/build
-            programs/lean/.lake/build
-          key: lake-build-itoa-${{ runner.os }}-${{ hashFiles('lean-toolchain') }}-${{ github.sha }}
-      # The remaining heavyweight proof files (ReverseInplace.Spec,
-      # RustOption.Spec, XorSum.Spec) also peak at multiple GB.
-      - name: Add swap
-        run: |
-          sudo fallocate -l 16G /mnt/swapfile
-          sudo chmod 600 /mnt/swapfile
-          sudo mkswap /mnt/swapfile
-          sudo swapon /mnt/swapfile
-          free -h
       - uses: leanprover/lean-action@v1
-        env:
-          LEAN_NUM_THREADS: "2"
         with:
           lake-package-directory: programs/lean
           use-mathlib-cache: true
@@ -192,13 +47,6 @@ jobs:
           key: lake-pkgs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}-${{ hashFiles('interpreter/lake-manifest.json') }}
           restore-keys: |
             lake-pkgs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}-
-      - uses: actions/cache/restore@v4
-        with:
-          path: |
-            interpreter/.lake/build
-            codelib/.lake/build
-            programs/lean/.lake/build
-          key: lake-build-itoa-${{ runner.os }}-${{ hashFiles('lean-toolchain') }}-${{ github.sha }}
       - uses: leanprover/lean-action@v1
         with:
           lake-package-directory: interpreter
