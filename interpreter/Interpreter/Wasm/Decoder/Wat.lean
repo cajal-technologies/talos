@@ -1209,12 +1209,22 @@ private partial def parseInstr (ctx : Ctx) (toks : List Sexpr)
         -- `memidx? memarg laneidx`, so for lane ops two bare atoms mean
         -- memidx-then-lane and a single bare atom is just the lane.
         if op.endsWith "_lane" && op.startsWith "v128." then
+          -- Grammar `memidx? memarg laneidx`. With no attrs the leading
+          -- atom(s) are ambiguous; the lane is mandatory and is the LAST
+          -- immediate, so a second leading atom is the lane only when it
+          -- *itself* looks like a label (otherwise it's the next
+          -- instruction, e.g. a bare `local.get` sibling in flat form).
           match lead?, rest' with
           | some a, .atom n :: rest'' =>
-            let memIdx ← resolveNamed ctx.memNames "memory" a
-            match memLaneOpToInstruction op offset (← parseNat n) with
-            | some i => .ok ([wrapMem memIdx i], rest'')
-            | none   => .error s!"unknown lane memory op: {op}"
+            if looksLikeLabel n then do
+              let memIdx ← resolveNamed ctx.memNames "memory" a
+              match memLaneOpToInstruction op offset (← parseNat n) with
+              | some i => .ok ([wrapMem memIdx i], rest'')
+              | none   => .error s!"unknown lane memory op: {op}"
+            else
+              match memLaneOpToInstruction op offset (← parseNat a) with
+              | some i => .ok ([i], .atom n :: rest'')
+              | none   => .error s!"unknown lane memory op: {op}"
           | some a, rest'' =>
             match memLaneOpToInstruction op offset (← parseNat a) with
             | some i => .ok ([i], rest'')
