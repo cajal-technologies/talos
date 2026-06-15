@@ -410,7 +410,8 @@ private def buildEnv (st : ScriptState) (m : Wasm.Module) (fuel : Nat)
                 | .Success vs _ => .Return vs s
                 | .Trap _ msg   => .Trap s msg
                 | .Invalid msg  => .Trap s s!"invalid in imported function: {msg}"
-                | .OutOfFuel    => .Trap s "out of fuel in imported function" }
+                | .OutOfFuel    => .Trap s "out of fuel in imported function"
+                | .Thrown _ _ _ => .Trap s "uncaught exception" }
           | none =>
             { invoke := fun s _ =>
                 .Trap s s!"unknown import {imp.module}.{imp.name}" }
@@ -521,6 +522,8 @@ private def renderValue : Value → String
   | .externref none    => "externref:null"
   | .externref (some i) => s!"externref:{i}"
   | .v128 b          => s!"v128:0x{String.ofList (Nat.toDigits 16 b.toNat)}"
+  | .exnref none     => "exnref:null"
+  | .exnref (some i) => s!"exnref:{i}"
 
 /-- Render a `List Value`, truncating runs longer than `maxLen` (the
 interpreter occasionally leaves big stacks around on failure and that
@@ -584,6 +587,7 @@ def runAssertReturn
       | .Trap store' msg => (.fail s!"unexpected trap `{msg}`", .ok m store' env)
       | .OutOfFuel => (.outOfFuel, slot)
       | .Invalid msg => (.interpreterError msg, slot)
+      | .Thrown _ _ store' => (.fail "uncaught exception", .ok m store' env)
 
 /-- Invoke and require a trap whose reason contains `expectedReason`.
 On the expected trap we commit the pre-trap store (writes performed
@@ -607,6 +611,8 @@ def runAssertTrap
         else (.fail s!"expected trap `{expectedReason}`, got trap `{msg}`", slot')
       | .OutOfFuel => (.outOfFuel, slot)
       | .Invalid msg => (.interpreterError msg, slot)
+      | .Thrown _ _ store' =>
+        (.fail s!"expected trap `{expectedReason}`, got uncaught exception", .ok m store' env)
 
 /-- Plain `(invoke …)` outside an assertion: passes iff it doesn't trap.
 The post-call (or post-trap) store is propagated so subsequent commands
@@ -623,6 +629,25 @@ def runActionOnly
       match Wasm.run fuel m idx store args.reverse env with
       | .Success _ store' => (.pass, .ok m store' env)
       | .Trap store' msg => (.fail s!"unexpected trap `{msg}`", .ok m store' env)
+      | .OutOfFuel => (.outOfFuel, slot)
+      | .Invalid msg => (.interpreterError msg, slot)
+      | .Thrown _ _ store' => (.fail "uncaught exception", .ok m store' env)
+
+/-- `assert_exception`: invoke and require an uncaught exception. -/
+def runAssertException
+    (slot : ModuleSlot) (field : String) (args : List Value) (fuel : Nat)
+    : Outcome × ModuleSlot :=
+  match slot with
+  | .unavailable _ => (.moduleUnavailable, slot)
+  | .ok m store env =>
+    match m.findExport field with
+    | none => (.fail s!"unknown export `{field}`", slot)
+    | some idx =>
+      match Wasm.run fuel m idx store args.reverse env with
+      | .Thrown _ _ store' => (.pass, .ok m store' env)
+      | .Success rs store' =>
+        (.fail s!"expected exception, returned {renderValues rs.reverse}", .ok m store' env)
+      | .Trap store' msg => (.fail s!"expected exception, got trap `{msg}`", .ok m store' env)
       | .OutOfFuel => (.outOfFuel, slot)
       | .Invalid msg => (.interpreterError msg, slot)
 
@@ -671,6 +696,7 @@ def runCommand
           | .Trap _ msg       => pure (ModuleSlot.unavailable s!"start trapped: {msg}")
           | .OutOfFuel        => pure (ModuleSlot.unavailable "start out of fuel")
           | .Invalid msg      => pure (ModuleSlot.unavailable s!"start invalid: {msg}")
+          | .Thrown _ _ _     => pure (ModuleSlot.unavailable "uncaught exception in start")
       | .error e => pure (ModuleSlot.unavailable e))
     let idx := st.modules.size
     let modules := st.modules.push slot
@@ -739,6 +765,17 @@ def runCommand
         let reason := jstr? cmd "text" |>.getD ""
         let slot := st.modules[i]!
         let (outcome, slot') := runAssertTrap slot field args reason fuel
+        return ({ st with modules := st.modules.set! i slot' }, mk outcome)
+  | "assert_exception" =>
+    let actJ := jobj? cmd "action" |>.getD Json.null
+    match parseInvokeAction actJ with
+    | .error e => return (st, mk (.interpreterError s!"action parse: {e}"))
+    | .ok (modName?, field, args) =>
+      match resolveModuleIdx st modName? with
+      | .error e => return (st, mk (.interpreterError e))
+      | .ok i =>
+        let slot := st.modules[i]!
+        let (outcome, slot') := runAssertException slot field args fuel
         return ({ st with modules := st.modules.set! i slot' }, mk outcome)
   | "action" =>
     let actJ := jobj? cmd "action" |>.getD Json.null

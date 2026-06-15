@@ -740,6 +740,7 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
       | .Trap st' msg   => .Trap st' msg
       | .Invalid msg    => .Invalid msg
       | .OutOfFuel      => .OutOfFuel
+      | .Thrown tag args st' => .Throwing tag args st' s
 
     -- Tail calls. Both build a `ReturnCall` continuation; `run` resolves
     -- the re-dispatch (consuming one unit of fuel per tail call), so a
@@ -786,6 +787,59 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
           | some _ => .Invalid "returnCallIndirect: non-funcref table entry"
       | _ => .Invalid "returnCallIndirect: ill-shaped operand stack"
 
+    -- Exception handling. `throw` pops the tag's parameters and raises;
+    -- `tryTable` runs its body like a `block` and intercepts a raised
+    -- exception with the first matching clause, branching to the
+    -- clause's label with the exception's arguments (plus the package as
+    -- an `exnref` for the `_ref` forms; `catch_all` passes no values).
+    | _, .throwI tagIdx =>
+      match m.tags[tagIdx]? with
+      | none => .Invalid s!"throw: tag index {tagIdx} out of range"
+      | some tagTy =>
+        let n := tagTy.params.length
+        if s.values.length < n then .Invalid "throw: ill-shaped operand stack"
+        else .Throwing tagIdx (s.values.take n) st { s with values := s.values.drop n }
+    | _, .throwRef => match s.values with
+      | .exnref none :: _ => .Trap st "null exception reference"
+      | .exnref (some i) :: vs =>
+        match st.exns[i]? with
+        | none => .Invalid s!"throwRef: exception index {i} out of range"
+        | some (tag, args) => .Throwing tag args st { s with values := vs }
+      | _ => .Invalid "throwRef: ill-shaped operand stack"
+    | f + 1, .tryTable ps rs catches body =>
+      let belowStack := s.values.drop ps
+      match exec f m st s body env with
+      | .Fallthrough r' s' =>
+        .Fallthrough r' { s' with values := s'.values.take rs ++ belowStack }
+      | .Break 0 r' s' =>
+        .Fallthrough r' { s' with values := s'.values.take rs ++ belowStack }
+      | .Break (k + 1) r' s' => .Break k r' s'
+      | .Throwing tag args r' s' =>
+        match catches.find? (fun c => match c with
+          | .catch t _ | .catchRef t _ => t = tag
+          | .catchAll _ | .catchAllRef _ => true) with
+        | none => .Throwing tag args r' s'
+        | some c =>
+          -- Values pushed for the branch target (head = top of stack)
+          -- and the possibly-extended store (the `_ref` forms register
+          -- the exception package).
+          let (vals, r'') : List Value × Store α := match c with
+            | .catch _ _      => (args, r')
+            | .catchAll _     => ([], r')
+            | .catchRef _ _   =>
+              (.exnref (some r'.exns.length) :: args,
+               { r' with exns := r'.exns ++ [(tag, args)] })
+            | .catchAllRef _  =>
+              ([.exnref (some r'.exns.length)],
+               { r' with exns := r'.exns ++ [(tag, args)] })
+          let lbl : Nat := match c with
+            | .catch _ l | .catchRef _ l | .catchAll l | .catchAllRef l => l
+          -- A caught exception branches like a `br lbl` executed at the
+          -- position of the `tryTable` itself: label 0 is the construct
+          -- *enclosing* it, so the break propagates outward unchanged.
+          .Break lbl r'' { s' with values := vals ++ belowStack }
+      | other => other
+
     -- Typed function references. `call_ref` dispatches through a popped
     -- funcref (null traps with the spec's wording); validation makes a
     -- runtime signature check unnecessary. `return_call_ref` is the
@@ -797,7 +851,8 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
          | .Success vs st' => .Fallthrough st' { s with values := vs }
          | .Trap st' msg   => .Trap st' msg
          | .Invalid msg    => .Invalid msg
-         | .OutOfFuel      => .OutOfFuel)
+         | .OutOfFuel      => .OutOfFuel
+         | .Thrown tag args st' => .Throwing tag args st' s)
       | _ => .Invalid "callRef: ill-shaped operand stack"
     | _, .returnCallRef _typeIdx => match s.values with
       | .funcref none :: _ => .Trap st "null function reference"
@@ -854,6 +909,7 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
                   | .Trap st' msg   => .Trap st' msg
                   | .Invalid msg    => .Invalid msg
                   | .OutOfFuel      => .OutOfFuel
+                  | .Thrown tag args st' => .Throwing tag args st' s
                 else .Trap st "indirect call type mismatch"
           | some _ => .Invalid "callIndirect: non-funcref table entry"
       -- table64: the selector arrives as an i64. The flow is identical to
@@ -878,6 +934,7 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
                   | .Trap st' msg   => .Trap st' msg
                   | .Invalid msg    => .Invalid msg
                   | .OutOfFuel      => .OutOfFuel
+                  | .Thrown tag args st' => .Throwing tag args st' s
                 else .Trap st "indirect call type mismatch"
           | some _ => .Invalid "callIndirect: non-funcref table entry"
       | _ => .Invalid "callIndirect: ill-shaped operand stack"
@@ -1294,6 +1351,7 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
         match execOne f mIn stIn s inner env with
         | .Fallthrough st' s' => .Fallthrough (restore st') s'
         | .Trap st' msg       => .Trap (restore st') msg
+        | .Throwing t a st' s' => .Throwing t a (restore st') s'
         | other               => other
       | _, _ => .Invalid s!"memOp: memory index {k} out of range"
 
@@ -1795,6 +1853,7 @@ def run (fuel : Nat) (m : Module) (id : Nat)
       -- the callee's result types equal `f.results`, so truncating its
       -- results to `f.results.length` and restoring this frame's
       -- caller-remainder preserves the standard calling convention.
+      | Continuation.Throwing tag args st' _ => .Thrown tag args st'
       | Continuation.ReturnCall id' st' vs =>
         match runTail fuel m id' st' vs env with
         | .Success vs2 st2 => .Success (vs2.take f.results.length ++ callerRemainder) st2

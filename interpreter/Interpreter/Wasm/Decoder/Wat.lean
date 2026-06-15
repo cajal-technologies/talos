@@ -304,6 +304,7 @@ private def atomToValueType? : String → Option Wasm.ValueType
   | "f64"       => some .f64
   | "funcref"   => some .funcref
   | "externref" => some .externref
+  | "exnref"    => some .exnref
   | "v128"      => some .v128
   | "anyref"    => some .i32  -- placeholder
   | "eqref"     => some .i32  -- placeholder
@@ -437,6 +438,9 @@ structure Ctx where
   /-- `$name → memory index` for `(memory $name ...)` declarations
   (multi-memory). -/
   memNames         : Std.HashMap String Nat := {}
+  /-- `$name → tag index` for `(tag $name ...)` declarations
+  (exception handling). -/
+  tagNames         : Std.HashMap String Nat := {}
   /-- Resolves `(type N)` / `(type $sig)` references on `block`/`loop`/`if`
   to the parsed signature, so multi-value block-types declared via the
   type table are decoded with their correct arity. Defaults to "always
@@ -731,7 +735,6 @@ interpreter doesn't model. Returns `none` for ops we don't pretend to
 support. -/
 private def stubImmediateCount (op : String) : Option Nat :=
 if op == "ref.test" || op == "ref.cast"
-     || op == "throw" || op == "tag"
      || op == "struct.new" || op == "struct.new_default"
      || op == "array.new" || op == "array.new_default" || op == "array.new_fixed"
      -- array element accessors take 1 atom (the array type ref) only;
@@ -1131,6 +1134,9 @@ private partial def parseInstr (ctx : Ctx) (toks : List Sexpr)
     | "br_if"     => parseImmediateNat (resolveLabel ctx) .br_if op rest
     | "br_table"  => parseBrTable ctx rest
     | "call"      => parseImmediateNat (resolveNamed ctx.funcIds "function") .call op rest
+    | "throw" => parseImmediateNat (resolveNamed ctx.tagNames "tag") .throwI op rest
+    | "throw_ref" => .ok ([.throwRef], rest)
+    | "try_table" => parseTryTable ctx rest
     | "call_ref" => parseImmediateNat (resolveTypeIdx ctx) .callRef op rest
     | "return_call_ref" => parseImmediateNat (resolveTypeIdx ctx) .returnCallRef op rest
     | "ref.as_non_null" => .ok ([.refAsNonNull], rest)
@@ -1321,6 +1327,9 @@ private partial def parseFolded (ctx : Ctx) (xs : List Sexpr)
     | "return_call" =>
       foldedWithImmediate ctx (resolveNamed ctx.funcIds "function")
         (fun i => [.returnCall i]) rest
+    | "throw" =>
+      foldedWithImmediate ctx (resolveNamed ctx.tagNames "tag") (fun i => [.throwI i]) rest
+    | "try_table" => foldedTryTable ctx rest
     | "call_ref" =>
       foldedWithImmediate ctx (resolveTypeIdx ctx) (fun i => [.callRef i]) rest
     | "return_call_ref" =>
@@ -1571,6 +1580,51 @@ private partial def parseCallIndirect (ctx : Ctx)
     | some i => .ok ([mk i tableIdx], r)
     | none   => .error "call_indirect: inline signature has no matching type entry"
 
+/-- Parse the catch clauses of a `try_table`. Clause labels are branch
+depths relative to the scope *enclosing* the `try_table` (label 0 is the
+construct surrounding it), matching the binary format: a caught
+exception behaves like a branch executed at the position of the
+`try_table` instruction itself. -/
+private partial def parseCatchClauses (ctx bodyCtx : Ctx)
+    : List Sexpr → Except Err (List Wasm.CatchClause × List Sexpr)
+  | .list (.atom "catch" :: .atom t :: .atom l :: _) :: r => do
+    let tag ← resolveNamed ctx.tagNames "tag" t
+    let lbl ← resolveLabel ctx l
+    let (rest, r') ← parseCatchClauses ctx bodyCtx r
+    .ok (.catch tag lbl :: rest, r')
+  | .list (.atom "catch_ref" :: .atom t :: .atom l :: _) :: r => do
+    let tag ← resolveNamed ctx.tagNames "tag" t
+    let lbl ← resolveLabel ctx l
+    let (rest, r') ← parseCatchClauses ctx bodyCtx r
+    .ok (.catchRef tag lbl :: rest, r')
+  | .list (.atom "catch_all" :: .atom l :: _) :: r => do
+    let lbl ← resolveLabel ctx l
+    let (rest, r') ← parseCatchClauses ctx bodyCtx r
+    .ok (.catchAll lbl :: rest, r')
+  | .list (.atom "catch_all_ref" :: .atom l :: _) :: r => do
+    let lbl ← resolveLabel ctx l
+    let (rest, r') ← parseCatchClauses ctx bodyCtx r
+    .ok (.catchAllRef lbl :: rest, r')
+  | r => .ok ([], r)
+
+private partial def parseTryTable (ctx : Ctx) (toks : List Sexpr)
+    : Except Err (List Wasm.Instruction × List Sexpr) := do
+  let (label, ps, rs, toks') := parseBlockHeader ctx.resolveBlockType toks
+  let bodyCtx := ctx.pushLabel label
+  let (clauses, toks'') ← parseCatchClauses ctx bodyCtx toks'
+  let (body, after) ← parseInstrsUntil bodyCtx toks'' #["end"]
+  match after with
+  | _ :: aft => .ok ([.tryTable ps rs clauses body], dropTrailingLabel aft)
+  | [] => .error "unterminated try_table"
+
+private partial def foldedTryTable (ctx : Ctx) (xs : List Sexpr)
+    : Except Err (List Wasm.Instruction) := do
+  let (label, ps, rs, xs') := parseBlockHeader ctx.resolveBlockType xs
+  let bodyCtx := ctx.pushLabel label
+  let (clauses, xs'') ← parseCatchClauses ctx bodyCtx xs'
+  let body ← parseInstrSeq bodyCtx xs''
+  .ok [.tryTable ps rs clauses body]
+
 private partial def parseStructured (ctx : Ctx)
     (mk : Nat → Nat → List Wasm.Instruction → Wasm.Instruction)
     (stops : Array String) (toks : List Sexpr)
@@ -1737,6 +1791,7 @@ private def parseFunc (funcIds : Std.HashMap String Nat)
     (tableNames : Std.HashMap String Nat)
     (elemNames : Std.HashMap String Nat)
     (memNames : Std.HashMap String Nat)
+    (tagNames : Std.HashMap String Nat)
     (types : Array TypeEntry) (xs : List Sexpr)
     : Except Err FuncDecl := do
   let mut paramTypes : List Wasm.ValueType := []
@@ -1849,7 +1904,7 @@ private def parseFunc (funcIds : Std.HashMap String Nat)
     | .ok sig  => some sig
     | .error _ => none
   let ctx : Ctx := { funcIds, localIds, globalIds, types, tableNames, elemNames,
-                     memNames, resolveBlockType }
+                     memNames, tagNames, resolveBlockType }
   let instrs ← parseInstrSeq ctx rest
   return { symId, inlineExports,
            func := {
@@ -2353,6 +2408,58 @@ private def parseImportSig (types : Array TypeEntry) (xs : List Sexpr)
     | _ => pure ()
   return (params, results)
 
+/-- Collect `$name → tag index` (imports first, then declarations). -/
+private def collectTagNames (fields : List Sexpr) : Std.HashMap String Nat := Id.run do
+  let mut idOf : Std.HashMap String Nat := {}
+  let mut i := 0
+  for f in fields do
+    match f with
+    | .list [.atom "import", .atom _, .atom _, .list (.atom "tag" :: body)] =>
+      match body with
+      | .atom a :: _ =>
+        if a.startsWith "$" then idOf := idOf.insert (a.drop 1).toString i
+      | _ => pure ()
+      i := i + 1
+    | _ => pure ()
+  for f in fields do
+    match f with
+    | .list (.atom "tag" :: body) =>
+      match body with
+      | .atom a :: _ =>
+        if a.startsWith "$" then idOf := idOf.insert (a.drop 1).toString i
+      | _ => pure ()
+      i := i + 1
+    | _ => pure ()
+  return idOf
+
+/-- Parse a tag's signature: `(tag $id? (type N))` or inline
+`(param …)*` forms (tags have no results). -/
+private def parseTagSig (types : Array TypeEntry) (xs : List Sexpr)
+    : Except Err Wasm.FuncType := do
+  let xs := match xs with
+    | .atom a :: r => if a.startsWith "$" then r else xs
+    | _ => xs
+  let xs := xs.dropWhile fun
+    | .list (.atom "export" :: _) => true
+    | _ => false
+  match xs with
+  | .list [.atom "type", .atom ref] :: _ =>
+    let (ps, _) ← resolveTypeRef types ref
+    .ok { params := ps }
+  | _ =>
+    let mut ps : List Wasm.ValueType := []
+    for x in xs do
+      match x with
+      | .list (.atom "param" :: tail) =>
+        for t in tail do
+          match t with
+          | .atom a =>
+            if a.startsWith "$" then pure ()
+            else ps := ps ++ [(atomToValueType? a).getD .i32]
+          | .list l => ps := ps ++ [listToValueType l]
+      | _ => pure ()
+    .ok { params := ps }
+
 /-- Parse the type body of an imported global (`(global $id? <gt>)`) into
 a zero-initialised `GlobalDecl`. -/
 private def parseImportedGlobal (xs : List Sexpr) : Wasm.GlobalDecl :=
@@ -2448,6 +2555,13 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
     match f with
     | .list (.atom "type" :: body) =>
       types := types.push (parseTypeField body)
+    -- Recursive type groups (`(rec (type …) …)`, GC proposal): the inner
+    -- types occupy consecutive indices, flattened into the table here.
+    | .list (.atom "rec" :: inner) =>
+      for t in inner do
+        match t with
+        | .list (.atom "type" :: body) => types := types.push (parseTypeField body)
+        | _ => pure ()
     | _ => pure ()
   let (imports, importFuncIds) ← collectImports types rest
   let (globImps, tblImps, memImps) ← collectEntityImports importFuncIds rest
@@ -2461,6 +2575,19 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
   let tableNames := collectTableNames rest
   let elemNames := collectElemNames rest
   let memNames := collectMemNames rest
+  let tagNames := collectTagNames rest
+  -- Tag index space: imported tags first, then declarations.
+  let mut tags : Array Wasm.FuncType := #[]
+  for f in rest do
+    match f with
+    | .list [.atom "import", .atom _, .atom _, .list (.atom "tag" :: body)] =>
+      tags := tags.push (← parseTagSig types body)
+    | _ => pure ()
+  for f in rest do
+    match f with
+    | .list (.atom "tag" :: body) =>
+      tags := tags.push (← parseTagSig types body)
+    | _ => pure ()
   let inlineExportsOf : List Sexpr → List String := fun body =>
     (body.filterMap fun
       | .list [.atom "export", .atom n] => some (decodeWatString n)
@@ -2481,7 +2608,7 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
     match f with
     | .list (.atom "func" :: body) =>
       decls := decls.push
-        (← parseFunc funcIds globalIds tableNames elemNames memNames types body)
+        (← parseFunc funcIds globalIds tableNames elemNames memNames tagNames types body)
     | .list (.atom "export" :: tail) =>
       match tail with
       | [.atom name, .list [.atom "func", .atom ref]] =>
@@ -2585,7 +2712,8 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
            importedMemories := memImps.map (·.1)
            globalExports := globalExports.toList
            tableExports  := tableExports.toList
-           memoryExports := memoryExports.toList }
+           memoryExports := memoryExports.toList
+           tags := tags.toList }
 
 /-- Public entry point. Parses one top-level `(module …)` form. -/
 def decode (s : String) : Except Err Wasm.Module := do

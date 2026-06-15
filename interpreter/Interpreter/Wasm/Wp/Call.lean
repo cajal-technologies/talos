@@ -203,6 +203,7 @@ theorem FuncSpec.of_wp_body
   | Invalid msg => rw [hexec] at hQ; exact hQ.elim
   | OutOfFuel => rw [hexec] at hQ; exact hQ.elim
   | ReturnCall fid st' vs => rw [hexec] at hQ; exact hQ.elim
+  | Throwing tag targs st' s' => rw [hexec] at hQ; exact hQ.elim
 
 /-! ### Host calls.
 

@@ -36,12 +36,13 @@ private theorem exec_loop_cons_unfold {α : Type} (fuel : Nat) (m : Module)
        | .Break (k+1) st' s' => .Break k st' s'
        | other => other) := by
   simp only [exec, execOne]
-  rcases hb : exec fuel m st s body env with ⟨_, _⟩ | ⟨n, _, _⟩ | ⟨_, _⟩ | _ | _ | _ | ⟨_, _, _⟩
+  rcases hb : exec fuel m st s body env with
+    ⟨_, _⟩ | ⟨n, _, _⟩ | ⟨_, _⟩ | _ | _ | _ | ⟨_, _, _⟩ | ⟨_, _, _, _⟩
   · rfl
   · cases n
     · simp only
       rcases hk : execOne fuel _ _ _ (.loop ps rs body) env
-        with ⟨_, _⟩ | ⟨_, _, _⟩ | ⟨_, _⟩ | _ | _ | _ | ⟨_, _, _⟩ <;> rfl
+        with ⟨_, _⟩ | ⟨_, _, _⟩ | ⟨_, _⟩ | _ | _ | _ | ⟨_, _, _⟩ | ⟨_, _, _, _⟩ <;> rfl
     · rfl
   all_goals rfl
 
@@ -183,6 +184,16 @@ theorem wp_loop_cons {ps rs : Nat} {body rest : Program} {Q : Assertion α}
         refine ⟨f₀ + 1, fun fuel hfuel => ?_⟩
         obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
         have hbody : exec f m st s body env = .ReturnCall fid st' vs := by
+          rw [hk_stable f (by omega), hk]
+        rw [exec_loop_cons_unfold, hbody]
+        simp only
+        exact hQ_at
+      | Throwing tag targs st' s' =>
+        rw [hk] at hQ_at
+        simp only at hQ_at
+        refine ⟨f₀ + 1, fun fuel hfuel => ?_⟩
+        obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
+        have hbody : exec f m st s body env = .Throwing tag targs st' s' := by
           rw [hk_stable f (by omega), hk]
         rw [exec_loop_cons_unfold, hbody]
         simp only

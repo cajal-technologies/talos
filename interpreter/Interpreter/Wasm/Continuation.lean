@@ -29,6 +29,12 @@ current frame is being replaced by an invocation of function `id` with
 the carried operand stack. `run` resolves it by re-dispatching; it never
 escapes past `run`. -/
 | ReturnCall  : Nat → Store α → List Value → Continuation α
+/-- An exception in flight (`throw` tag with the popped arguments, in
+stack order). It unwinds like a trap until a `try_table` with a matching
+catch clause intercepts it; the carried `Locals` are the frame state at
+the throw point (locals mutations made before the throw stay visible to
+an in-frame catch, exactly as for `Break`). -/
+| Throwing    : Nat → List Value → Store α → Locals → Continuation α
 deriving Repr
 
 inductive Result (α : Type) where
@@ -38,6 +44,10 @@ inductive Result (α : Type) where
   | Trap      : Store α → String → Result α
   | Invalid   : String → Result α
   | OutOfFuel : Result α
+  /-- An exception escaped the invocation uncaught: tag index and the
+  thrown arguments (stack order). Callers re-raise it in their own frame
+  (`execOne`'s call arms) or report it (`assert_exception`). -/
+  | Thrown    : Nat → List Value → Store α → Result α
 deriving Repr
 
 end Wasm

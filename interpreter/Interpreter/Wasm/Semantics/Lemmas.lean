@@ -85,6 +85,7 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
         rw [ihExec m env st s body k' hk' hexec]
         rcases hres : exec k m st s body env with
           ⟨st', s'⟩ | ⟨n, st', s'⟩ | ⟨st', vs⟩ | msg | msg | _ | ⟨id', st', vs⟩
+            | ⟨tag, targs, st', s'⟩
         · rfl
         · cases n with
           | zero =>
@@ -103,6 +104,7 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
         · rfl
         · rfl
         · exact absurd hres hexec
+        · rfl
         · rfl
       | iff ps rs thn els =>
         simp only [execOne]
@@ -128,6 +130,7 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
           | f64 _ => rfl
           | funcref _ => rfl
           | externref _ => rfl
+          | exnref _ => rfl
           | v128 _ => rfl
       | call id =>
         simp only [execOne]
@@ -157,6 +160,7 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
                 | f32 _ => simp only [execOne, hvals, hv, htbl, hslot, hslot']
                 | f64 _ => simp only [execOne, hvals, hv, htbl, hslot, hslot']
                 | externref _ => simp only [execOne, hvals, hv, htbl, hslot, hslot']
+                | exnref _ => simp only [execOne, hvals, hv, htbl, hslot, hslot']
                 | v128 _ => simp only [execOne, hvals, hv, htbl, hslot, hslot']
                 | funcref r =>
                   rcases hr : r with _ | fid
@@ -180,6 +184,7 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
           | f64 _    => simp only [execOne, hvals, hv]
           | funcref _ => simp only [execOne, hvals, hv]
           | externref _ => simp only [execOne, hvals, hv]
+          | exnref _ => simp only [execOne, hvals, hv]
           | v128 _ => simp only [execOne, hvals, hv]
           | i32 i =>
             rcases htbl : st.tables[tj]? with _ | tbl
@@ -192,6 +197,7 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
                 | f32 _ => simp only [execOne, hvals, hv, htbl, hslot, hslot']
                 | f64 _ => simp only [execOne, hvals, hv, htbl, hslot, hslot']
                 | externref _ => simp only [execOne, hvals, hv, htbl, hslot, hslot']
+                | exnref _ => simp only [execOne, hvals, hv, htbl, hslot, hslot']
                 | v128 _ => simp only [execOne, hvals, hv, htbl, hslot, hslot']
                 | funcref r =>
                   rcases hr : r with _ | fid
@@ -211,6 +217,11 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
                             ihRun m env fid st rest k' hk' hrun]
                         · simp only [execOne, hvals, hv, htbl, hslot, hslot', hr,
                             hfn, hty, if_neg hsig]
+      | tryTable ps rs catches body =>
+        simp only [execOne]
+        have hexec : exec k m st s body env ≠ .OutOfFuel := by
+          intro h; apply hne; simp only [execOne, h]
+        rw [ihExec m env st s body k' hk' hexec]
       | callRef ti =>
         rcases hvals : s.values with _ | ⟨v, rest⟩
         · simp only [execOne, hvals]
@@ -220,6 +231,7 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
           | f32 _ => simp only [execOne, hvals, hv]
           | f64 _ => simp only [execOne, hvals, hv]
           | externref _ => simp only [execOne, hvals, hv]
+          | exnref _ => simp only [execOne, hvals, hv]
           | v128 _ => simp only [execOne, hvals, hv]
           | funcref r =>
             rcases hr : r with _ | fid
@@ -280,7 +292,7 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
         -- fold them with the run-level IH. All other arms are identical.
         rcases hres : exec (k+1) m initial
             (f.toLocals (args.take f.numParams).reverse) f.body env with
-          _ | ⟨n, _, _⟩ | _ | _ | _ | _ | ⟨id', st', vs⟩
+          _ | ⟨n, _, _⟩ | _ | _ | _ | _ | ⟨id', st', vs⟩ | _
         · rfl
         · cases n <;> rfl
         · rfl
@@ -294,6 +306,7 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
             apply hne
             simp only [run, hImp, h, hres, runTail, hOOF]
           simp only [runTail, ihRun m env id' st' vs f₂' hk2 hrt]
+        · rfl
     · -- host path: result is fuel-independent.
       rfl
 
@@ -338,9 +351,10 @@ theorem exec_block_cons
            { s' with values := s'.values.take rs ++ s.values.drop ps } rest env
        | other                => other) := by
   simp only [exec, execOne]
-  rcases exec fuel m st s body env with _ | ⟨n, _, _⟩ | _ | _ | _ | _ | _
+  rcases exec fuel m st s body env with _ | ⟨n, _, _⟩ | _ | _ | _ | _ | _ | _
   · rfl
   · cases n <;> rfl
+  · rfl
   · rfl
   · rfl
   · rfl
@@ -385,9 +399,10 @@ theorem exec_call_cons
        | .Success vs st' => exec (fuel + 1) m st' { s with values := vs } rest env
        | .Trap st' msg   => .Trap st' msg
        | .Invalid msg    => .Invalid msg
-       | .OutOfFuel      => .OutOfFuel) := by
+       | .OutOfFuel      => .OutOfFuel
+       | .Thrown tag targs st' => .Throwing tag targs st' s) := by
   simp only [exec, execOne]
-  rcases run fuel m id st s.values env with _ | _ | _ | _ <;> rfl
+  rcases run fuel m id st s.values env with _ | _ | _ | _ | _ <;> rfl
 
 /-- Specialised characterisation of `exec` on a `.call id :: rest` whose
 target `id` falls inside the imports range. Exposes the host's `invoke`
@@ -432,9 +447,10 @@ theorem exec_callIndirect_cons {α : Type}
        | .Success vs st' => exec (fuel + 1) m st' { s with values := vs } rest env
        | .Trap st' msg   => .Trap st' msg
        | .Invalid msg    => .Invalid msg
-       | .OutOfFuel      => .OutOfFuel) := by
+       | .OutOfFuel      => .OutOfFuel
+       | .Thrown tag targs st' => .Throwing tag targs st' s) := by
   simp only [exec, execOne, hStack, hTbl, hSlot, hFn, hTy, if_pos hSig]
-  rcases run fuel m fid st vs0 env with _ | _ | _ | _ <;> rfl
+  rcases run fuel m fid st vs0 env with _ | _ | _ | _ | _ <;> rfl
 
 /-! ## `run` characterisation -/
 
@@ -466,6 +482,7 @@ theorem run_eq
          | .Invalid msg      => .Invalid msg
          | .Trap st msg      => .Trap st msg
          | .OutOfFuel        => .OutOfFuel
+         | .Throwing tag targs st' _ => .Thrown tag targs st'
          | .ReturnCall id' st' vs =>
            match runTail fuel m id' st' vs env with
            | .Success vs2 st2 =>
@@ -476,7 +493,7 @@ theorem run_eq
   · rfl
   · simp only
     rcases exec fuel m initial (f.toLocals (args.take f.numParams).reverse) f.body env with
-      _ | ⟨n, _, _⟩ | _ | _ | _ | _ | _
+      _ | ⟨n, _, _⟩ | _ | _ | _ | _ | _ | _
     · rfl
     · cases n <;> rfl
     all_goals rfl

@@ -20,6 +20,7 @@ inductive ValueType where
   | funcref
   | externref
   | v128
+  | exnref
 deriving Repr, Inhabited, DecidableEq, BEq
 
 inductive Value where
@@ -40,6 +41,10 @@ inductive Value where
   /-- A `v128` SIMD vector, stored as its 128-bit pattern (lane 0 at the
   least-significant end, matching wasm's little-endian lane order). -/
   | v128 (bits : BitVec 128)
+  /-- An `exnref`: `none` is the null ref; `some i` indexes the exception
+  package list on the `Store` (`Store.exns`), which `catch_ref` appends
+  to and `throw_ref` re-raises from. -/
+  | exnref (idx : Option Nat)
 deriving Repr, Inhabited, DecidableEq, BEq
 
 /-- Type-indexed zero used to initialise locals at function entry. The
@@ -53,6 +58,7 @@ def ValueType.zero : ValueType → Value
   | .funcref   => .funcref none
   | .externref => .externref none
   | .v128      => .v128 0
+  | .exnref    => .exnref none
 
 /-- The scalar payload of a value, as the unsigned `Nat` of its bit
 pattern, when the value is the scalar kind lane shape `sh` expects
@@ -80,6 +86,7 @@ for non-reference values (ill-typed input). -/
 def Value.isNullRef? : Value → Option Bool
   | .funcref r   => some r.isNone
   | .externref r => some r.isNone
+  | .exnref r    => some r.isNone
   | _            => none
 
 /-- A size/length result, typed by the owning memory/table's address
@@ -98,6 +105,17 @@ def sizeValue (is64 : Bool) (n : Nat) : Value :=
 structure Globals where
   globals : List Value := []
 deriving Repr, Inhabited
+
+/-- One catch clause of a `try_table`. The label is a branch depth
+resolved from just inside the construct (0 = the `try_table` itself).
+`catch`/`catchRef` match one tag; the `All` forms match any. The `Ref`
+forms additionally push the caught exception package as an `exnref`. -/
+inductive CatchClause where
+  | catch (tag label : Nat)
+  | catchRef (tag label : Nat)
+  | catchAll (label : Nat)
+  | catchAllRef (label : Nat)
+deriving Repr, Inhabited, DecidableEq
 
 /-! ## Instructions
 
@@ -213,6 +231,17 @@ inductive Instruction where
   -- of tail calls consume fuel but not host stack.
   | returnCall : Nat → Instruction
   | returnCallIndirect : (typeIdx tableIdx : Nat) → Instruction
+
+  -- Exception handling (wasm 3.0). `throw t` pops tag `t`'s parameters
+  -- and raises an exception that unwinds until a `tryTable` with a
+  -- matching clause catches it; `throwRef` re-raises a caught exception
+  -- package (trapping on the null exnref). `tryTable` executes its body
+  -- like a `block`; clause labels are resolved as branches from just
+  -- inside the construct (label 0 exits the `tryTable` itself).
+  | throwI : (tagIdx : Nat) → Instruction
+  | throwRef : Instruction
+  | tryTable : (paramArity resultArity : Nat) → List CatchClause →
+               List Instruction → Instruction
 
   -- Typed function references (wasm 3.0). `call_ref (type N)` pops a
   -- funcref and dispatches to it, trapping on null; the static type
@@ -538,6 +567,9 @@ structure Module where
   globalExports : List (String × Nat) := []
   tableExports  : List (String × Nat) := []
   memoryExports : List (String × Nat) := []
+  /-- Exception tags (exception-handling proposal), indexed by position;
+  each carries the tag's parameter types (`results` is always empty). -/
+  tags : List FuncType := []
 deriving Repr, Inhabited
 
 /-- Runtime representation of a single table: a list of reference
@@ -570,6 +602,10 @@ structure Store (α : Type) where
   passive segment still available to `table.init`. Same length as the
   declaring module's `elements` list. -/
   elementSegments : List (Option (List (Option Nat))) := []
+  /-- Caught exception packages (tag index × thrown args in stack order),
+  appended by `catch_ref` clauses and re-raised by `throw_ref`. Indexed
+  by `Value.exnref`. -/
+  exns            : List (Nat × List Value) := []
   host            : α
 deriving Repr
 

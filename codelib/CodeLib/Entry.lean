@@ -71,6 +71,7 @@ theorem TerminatesWith.of_wp_entry_for {env : HostEnv α}
   | Invalid msg => rw [hexec] at hQ; exact hQ.elim
   | OutOfFuel => rw [hexec] at hQ; exact hQ.elim
   | ReturnCall fid st' vs => rw [hexec] at hQ; exact hQ.elim
+  | Throwing tag targs st' s' => rw [hexec] at hQ; exact hQ.elim
 
 /-- Weakening the post-condition of a `TerminatesWith`. Lets a corpus
 proof state the natural raw-value spec, then relift it through an

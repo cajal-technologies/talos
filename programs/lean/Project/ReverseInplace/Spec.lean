@@ -148,6 +148,7 @@ theorem FuncSpecR.of_wp_body
   | Invalid msg => rw [hexec] at hQ; exact hQ.elim
   | OutOfFuel => rw [hexec] at hQ; exact hQ.elim
   | ReturnCall fid st' vs => rw [hexec] at hQ; exact hQ.elim
+  | Throwing tag targs st' s' => rw [hexec] at hQ; exact hQ.elim
 
 theorem wp_call_cons_rel {env : HostEnv α} {m : Module}
     {id : Nat} {Pre : Store α → List Value → Prop} {Post : Store α → Store α → List Value → Prop}
