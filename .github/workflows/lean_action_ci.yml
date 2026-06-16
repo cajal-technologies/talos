@@ -68,6 +68,11 @@ jobs:
           key: ${{ steps.deps-cache.outputs.cache-primary-key }}
 
       # Stage 2 — build the proofs and verify there are no warnings.
+      # The four Itoa.Proofs.* modules each peak at several GB during
+      # elaboration; built concurrently (lake parallelises across cores) they
+      # exhaust the 16 GB runner and the process is OOM-killed (exit 143) at
+      # the very end of the build. Elaborate them one at a time first to bound
+      # peak memory, then build the rest of the corpus in parallel.
       # Warnings (e.g. `sorry`, unused-variable lints) are re-emitted on every
       # build but do not change lake's exit code, so scan the log and fail if
       # any appear. (A newly-introduced `sorry` lives in a changed file, which
@@ -75,8 +80,13 @@ jobs:
       - name: Build & verify proofs (fail on warnings)
         working-directory: programs/lean
         run: |
-          set -o pipefail
-          lake build 2>&1 | tee build.log
+          set -eo pipefail
+          {
+            for m in Base NaiveU64 NaiveI64 Fast; do
+              lake build Project.Itoa.Proofs."$m"
+            done
+            lake build
+          } 2>&1 | tee build.log
           if grep -E '(^|[[:space:]])warning:' build.log; then
             echo "::error::Build produced warnings; warnings are not allowed."
             exit 1
