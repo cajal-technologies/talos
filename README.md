@@ -1,6 +1,7 @@
 # Talos
 
 [![Lean](https://img.shields.io/badge/Lean-v4.30.0-blue?logo=lean)](lean-toolchain)
+[![Telegram](https://img.shields.io/badge/Telegram-Join%20the%20discussion-2CA5E0?logo=telegram&logoColor=white)](https://t.me/TalosDev)
 
 **Talos** is a WebAssembly interpreter written in Lean 4, named after the bronze giant of Greek mythology who guarded Crete — a mechanical guardian, built to enforce rules.
 
