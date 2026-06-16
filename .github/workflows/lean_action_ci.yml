@@ -10,8 +10,23 @@ jobs:
   build:
     name: Build & verify proofs
     runs-on: ubuntu-latest
+    env:
+      # A single Itoa.Proofs module's elaboration exceeds the 16 GB runner
+      # when Lean fans theorems across all cores concurrently (each holds
+      # multi-GB state). Cap Lean's worker threads so peak memory stays
+      # bounded; combined with the swap below this fits without OOM.
+      LEAN_NUM_THREADS: "2"
     steps:
       - uses: actions/checkout@v4
+      # Backstop for the heaviest proof modules: 16 GB of swap so any
+      # transient overcommit is absorbed instead of OOM-killing the build.
+      - name: Add swap
+        run: |
+          sudo fallocate -l 16G /mnt/swapfile
+          sudo chmod 600 /mnt/swapfile
+          sudo mkswap /mnt/swapfile
+          sudo swapon /mnt/swapfile
+          free -h
       - uses: actions/cache@v4
         with:
           path: .lake/packages
