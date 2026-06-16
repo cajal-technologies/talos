@@ -2,6 +2,10 @@
 
 Thanks for your interest. This document covers how the project is structured, how to build and test it, and how to contribute.
 
+## Join the discussion
+
+Talos is under active development and we'd love your help shaping it. Join the conversation on our Telegram channel — [**@TalosDev**](https://t.me/TalosDev) — to ask questions, propose ideas, coordinate on contributions, and stay in the loop on where the project is headed.
+
 ## Architecture overview
 
 The codebase has five main parts — described at a level that shouldn't go stale as features are added:
