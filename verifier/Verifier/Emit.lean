@@ -44,11 +44,14 @@ private def emitU64 (n : UInt64) : String :=
   parens s!"{n.toNat} : UInt64"
 
 private def emitValueType : Wasm.ValueType → String
-  | .i32     => ".i32"
-  | .i64     => ".i64"
-  | .f32     => ".f32"
-  | .f64     => ".f64"
-  | .funcref => ".funcref"
+  | .i32       => ".i32"
+  | .i64       => ".i64"
+  | .f32       => ".f32"
+  | .f64       => ".f64"
+  | .funcref   => ".funcref"
+  | .externref => ".externref"
+  | .v128      => ".v128"
+  | .exnref    => ".exnref"
 
 private def emitValueTypes (xs : List Wasm.ValueType) : String :=
   list (xs.map emitValueType)
@@ -280,6 +283,53 @@ private def emitInstrShort : Wasm.Instruction → String
   | .iff pa ra thn els    =>
       s!".iff {emitNat pa} {emitNat ra} " ++
         list (thn.map emitInstrShort) ++ " " ++ list (els.map emitInstrShort)
+  -- Reference / table (wasm 2.0+)
+  | .refNullExtern        => ".refNullExtern"
+  | .tableSet t           => s!".tableSet {emitNat t}"
+  | .tableGrow t          => s!".tableGrow {emitNat t}"
+  | .tableFill t          => s!".tableFill {emitNat t}"
+  | .tableCopy d s        => s!".tableCopy {emitNat d} {emitNat s}"
+  | .tableInit t e        => s!".tableInit {emitNat t} {emitNat e}"
+  | .elemDrop e           => s!".elemDrop {emitNat e}"
+  -- Tail calls
+  | .returnCall i         => s!".returnCall {emitNat i}"
+  | .returnCallIndirect ti tj => s!".returnCallIndirect {emitNat ti} {emitNat tj}"
+  -- Typed function references
+  | .callRef t            => s!".callRef {emitNat t}"
+  | .returnCallRef t      => s!".returnCallRef {emitNat t}"
+  | .refAsNonNull         => ".refAsNonNull"
+  | .brOnNull l           => s!".brOnNull {emitNat l}"
+  | .brOnNonNull l        => s!".brOnNonNull {emitNat l}"
+  -- Exception handling
+  | .throwI t             => s!".throwI {emitNat t}"
+  | .throwRef             => ".throwRef"
+  | .tryTable pa ra cs body =>
+      s!".tryTable {emitNat pa} {emitNat ra} {reprStr cs} " ++ list (body.map emitInstrShort)
+  -- Multi-memory
+  | .memOp k i            => s!".memOp {emitNat k} (" ++ emitInstrShort i ++ ")"
+  | .memoryCopyBetween d s => s!".memoryCopyBetween {emitNat d} {emitNat s}"
+  -- SIMD (v128). Lane semantics carry `Simd.*` immediates, rendered via
+  -- their `Repr`. The Rust-compiled corpus never emits these.
+  | .vConst bits          => s!".vConst (BitVec.ofNat 128 {bits.toNat})"
+  | .vUnOp op             => s!".vUnOp {reprStr op}"
+  | .vBinOp op            => s!".vBinOp {reprStr op}"
+  | .vBitselect           => ".vBitselect"
+  | .vTestOp op           => s!".vTestOp {reprStr op}"
+  | .vShiftOp op          => s!".vShiftOp {reprStr op}"
+  | .vSplat sh            => s!".vSplat {reprStr sh}"
+  | .vExtractLane sh signed lane =>
+      s!".vExtractLane {reprStr sh} {reprStr signed} {emitNat lane}"
+  | .vReplaceLane sh lane => s!".vReplaceLane {reprStr sh} {emitNat lane}"
+  | .vShuffle ls          => s!".vShuffle {emitNatList ls}"
+  | .vFma sh neg          => s!".vFma {reprStr sh} {reprStr neg}"
+  | .vDotAdd              => ".vDotAdd"
+  | .v128Load off         => s!".v128Load {emitU32 off}"
+  | .v128Store off        => s!".v128Store {emitU32 off}"
+  | .v128LoadExt sb signed off => s!".v128LoadExt {emitNat sb} {reprStr signed} {emitU32 off}"
+  | .v128LoadSplat b off  => s!".v128LoadSplat {emitNat b} {emitU32 off}"
+  | .v128LoadZero b off   => s!".v128LoadZero {emitNat b} {emitU32 off}"
+  | .v128LoadLane b l off => s!".v128LoadLane {emitNat b} {emitNat l} {emitU32 off}"
+  | .v128StoreLane b l off => s!".v128StoreLane {emitNat b} {emitNat l} {emitU32 off}"
 
 mutual
   /-- Render an instruction prefixed with `indent ind`. Structured-control
@@ -349,6 +399,11 @@ private def emitValue : Wasm.Value → String
   | .f64 bits           => s!".f64 {emitU64 bits}"
   | .funcref none       => ".funcref none"
   | .funcref (some i)   => s!".funcref (some {emitNat i})"
+  | .externref none     => ".externref none"
+  | .externref (some i) => s!".externref (some {emitNat i})"
+  | .v128 bits          => s!".v128 (BitVec.ofNat 128 {bits.toNat})"
+  | .exnref none        => ".exnref none"
+  | .exnref (some i)    => s!".exnref (some {emitNat i})"
 
 private def emitGlobalDecl (g : Wasm.GlobalDecl) : String :=
   s!"\{ type := {emitValueType g.type}, init := {emitValue g.init} }"
