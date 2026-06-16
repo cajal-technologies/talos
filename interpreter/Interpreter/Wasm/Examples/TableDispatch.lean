@@ -42,14 +42,17 @@ def TableProbe : Program := [
 ]
 
 theorem tableProbeSpec (m : Module) (st : Store Unit)
-    (htbl : st.tables = [[.funcref (some 0), .funcref (some 1), .funcref none]]) :
+    (htbl : st.tables = [[.funcref (some 0), .funcref (some 1), .funcref none]])
+    -- `table.size`'s result type follows the table's declared address
+    -- type; this spec is for a 32-bit table (`table.size : … → i32`).
+    (h64 : m.tableIs64 0 = false) :
     wp m TableProbe
         (fun c => c = .Fallthrough st
                     { params := [], locals := [], values := [.i32 3, .i32 1] })
         st { params := [], locals := [], values := [] } := by
   unfold TableProbe
   wp_run
-  simp [htbl]
+  simp [htbl, h64, sizeValue]
 
 namespace Decoded
 

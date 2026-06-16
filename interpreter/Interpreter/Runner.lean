@@ -139,6 +139,14 @@ def parseArgForType (t : ValueType) (s : String) : Except String Value :=
     -- writes "null", otherwise refuse.
     if s == "null" then .ok (.funcref none)
     else .error s!"funcref argument must be 'null', got `{s}`"
+  | .externref =>
+    if s == "null" then .ok (.externref none)
+    else .error s!"externref argument must be 'null', got `{s}`"
+  | .exnref =>
+    if s == "null" then .ok (.exnref none)
+    else .error s!"exnref argument must be 'null', got `{s}`"
+  | .v128 =>
+    .error s!"no CLI surface for v128 arguments: `{s}`"
 
 def parseArgs?
     (params : List ValueType) (args : List String) : Except String (List Value) :=
@@ -175,6 +183,11 @@ def renderValue : Value → String
   | .f64 b            => toString (Float.ofBits b)
   | .funcref none     => "null"
   | .funcref (some i) => s!"funcref:{i}"
+  | .externref none     => "null"
+  | .externref (some i) => s!"externref:{i}"
+  | .exnref none        => "null"
+  | .exnref (some i)    => s!"exnref:{i}"
+  | .v128 b             => s!"v128:0x{String.ofList (Nat.toDigits 16 b.toNat)}"
 
 /-! ## Exit codes -/
 
@@ -239,6 +252,9 @@ def runOnce (a : Args) : IO UInt32 := do
   | .OutOfFuel =>
     IO.eprintln "out of fuel"
     return EXIT_OUT_OF_FUEL
+  | .Thrown tag _ _ =>
+    IO.eprintln s!"uncaught exception (tag {tag})"
+    return EXIT_TRAP
   | .Invalid msg =>
     IO.eprintln s!"error: {msg}"
     return EXIT_ERR
