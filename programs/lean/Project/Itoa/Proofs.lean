@@ -2271,6 +2271,7 @@ theorem func0_spec (env : HostEnv Unit) (st : Store Unit)
           (outPtr := outPtr) (outLen := outLen) (l0i := n) (l3i := cap)
           (le_refl 1) (by rw [← hmn, hL1]) (by omega)
           (by simp only [write8_pages]; omega) (by omega) ?_ using 2
+        · rfl
         · exact ((List.cons.injEq _ _ _ _).mp heq).2.symm
         · intro mem' m5 m0 l3 hp hd hf
           simp only [wp_simp, hlen]
