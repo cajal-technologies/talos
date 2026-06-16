@@ -18,22 +18,78 @@ jobs:
           key: lake-pkgs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}-${{ hashFiles('interpreter/lake-manifest.json') }}
           restore-keys: |
             lake-pkgs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}-
+
+      # Incremental verification cache. lake re-elaborates only modules whose
+      # source (or a dependency) changed, reusing cached .olean otherwise —
+      # and an .olean is only reused when lake's trace check confirms the
+      # inputs are unchanged, so reuse never skips real verification.
+      #
+      # The build splits into two layers with separate caches:
+      #   * deps  = interpreter + codelib  (~11 min cold, changes rarely)
+      #   * proofs = programs/lean          (~11 min cold, the active surface)
+      # The deps cache is keyed by the deps SOURCES, so it stays a hit across
+      # every proof-only change and is rebuilt only when the interpreter or
+      # codelib actually change. Crucially it is saved with an explicit
+      # mid-job `actions/cache/save` immediately after the deps build — NOT a
+      # post-step — so it survives even if the proof layer is later cancelled.
+      # That breaks the bootstrap: once the deps cache exists, every run skips
+      # straight to the proofs (~11 min) and comfortably completes.
+      - uses: actions/cache/restore@v4
+        id: deps-cache
+        with:
+          path: |
+            interpreter/.lake/build
+            codelib/.lake/build
+          key: lake-build-deps-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'interpreter/**/*.lean', 'interpreter/lakefile.toml', 'codelib/**/*.lean', 'codelib/lakefile.toml') }}
+      - uses: actions/cache/restore@v4
+        id: proofs-cache
+        with:
+          path: programs/lean/.lake/build
+          key: lake-build-proofs-${{ runner.os }}-${{ hashFiles('lean-toolchain') }}-${{ github.sha }}
+          restore-keys: |
+            lake-build-proofs-${{ runner.os }}-${{ hashFiles('lean-toolchain') }}-
+
+      # Stage 1 — build only the dependency layer (interpreter + codelib).
       - uses: leanprover/lean-action@v1
         with:
           lake-package-directory: programs/lean
+          build-args: CodeLib
           use-mathlib-cache: true
-      - name: Fail on build warnings
+
+      # Persist the deps cache NOW (explicit save, not a post-step) so it
+      # survives even if the proof build below is cancelled. Skipped on a hit.
+      - name: Save deps build cache
+        if: steps.deps-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            interpreter/.lake/build
+            codelib/.lake/build
+          key: ${{ steps.deps-cache.outputs.cache-primary-key }}
+
+      # Stage 2 — build the proofs and verify there are no warnings.
+      # Warnings (e.g. `sorry`, unused-variable lints) are re-emitted on every
+      # build but do not change lake's exit code, so scan the log and fail if
+      # any appear. (A newly-introduced `sorry` lives in a changed file, which
+      # lake re-elaborates, so it is always re-emitted and caught.)
+      - name: Build & verify proofs (fail on warnings)
         working-directory: programs/lean
         run: |
           set -o pipefail
-          # Rebuild (cached) and capture output. Warnings (e.g. `sorry`,
-          # unused-variable lints) are re-emitted on every build but do not
-          # change lake's exit code, so scan the log and fail if any appear.
           lake build 2>&1 | tee build.log
           if grep -E '(^|[[:space:]])warning:' build.log; then
             echo "::error::Build produced warnings; warnings are not allowed."
             exit 1
           fi
+
+      # Persist the proofs cache for the next run's warm start. Keyed by sha;
+      # the restore above falls back to the most recent proofs cache.
+      - name: Save proofs build cache
+        if: always() && steps.proofs-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: programs/lean/.lake/build
+          key: ${{ steps.proofs-cache.outputs.cache-primary-key }}
 
   test:
     name: Smoke test
@@ -47,6 +103,14 @@ jobs:
           key: lake-pkgs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}-${{ hashFiles('interpreter/lake-manifest.json') }}
           restore-keys: |
             lake-pkgs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}-
+      # Reuse the interpreter oleans the build job already produced so the
+      # runner exe links without re-elaborating the interpreter.
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            interpreter/.lake/build
+            codelib/.lake/build
+          key: lake-build-deps-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'interpreter/**/*.lean', 'interpreter/lakefile.toml', 'codelib/**/*.lean', 'codelib/lakefile.toml') }}
       - uses: leanprover/lean-action@v1
         with:
           lake-package-directory: interpreter
