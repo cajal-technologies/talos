@@ -1492,18 +1492,14 @@ private def collectFuncNames (fields : List Sexpr)
     | _ => pure ()
   return idOf
 
--- TODO: imported globals are not counted here, so the index space is wrong
--- when imports are present. Wasm places imported globals first (indices
--- 0 … N-1) and declared globals after (indices N … N+M-1). This function
--- assigns 0 … M-1 to declared globals, so any `global.get`/`global.set`
--- that references a declared global will be off by N and will likely trap
--- at runtime. The fix is to count the `(import … (global …))` forms first
--- and start `i` at that offset. Rust's wasm32-unknown-unknown target never
--- imports globals, so the corpus is unaffected for now.
 private def collectGlobalNames (fields : List Sexpr)
     : Except Err (Std.HashMap String Nat) := do
   let mut idOf : Std.HashMap String Nat := {}
   let mut i := 0
+  for f in fields do
+    match f with
+    | .list [.atom "import", _, _, .list (.atom "global" :: _)] => i := i + 1
+    | _ => pure ()
   for f in fields do
     match f with
     | .list (.atom "global" :: body) =>
