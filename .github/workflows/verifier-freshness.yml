@@ -6,10 +6,6 @@ on:
   pull_request:
   workflow_dispatch:
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   freshness:
     name: Programs up to date
@@ -25,19 +21,18 @@ jobs:
           build-args: verifier
           use-mathlib-cache: false
 
-      # The wasm build itself runs inside a pinned docker image
-      # (rust:1.95.0, linux/amd64 — see verifier/Verifier/Main.lean), so no
-      # host Rust toolchain is needed. Pre-pull the image for clearer logs.
-      - name: Pull canonical build image
-        run: docker pull --platform linux/amd64 rust:1.95.0
+      # Pre-install the rustc version pinned by programs/rust/rust-toolchain.toml
+      # (with the wasm32 target it declares) so the first cargo invocation
+      # doesn't have to download it mid-build.
+      - name: Install pinned Rust toolchain
+        working-directory: programs/rust
+        run: rustup show active-toolchain || rustup toolchain install
 
-      # wasm-tools is needed by `verifier check` (strip + wat printer).
-      # Pinned: its text output feeds the generated-file comparison, so a
-      # version skew between CI and contributors is itself a drift source.
+      # wasm-tools is needed by `verifier check` (wat printer).
       - name: Install wasm-tools
         uses: taiki-e/install-action@v2
         with:
-          tool: wasm-tools@1.251.0
+          tool: wasm-tools
 
       # Re-emit every Program.lean from the committed wasm sources.
       # `--no-prove` skips the final `lake build` — proof correctness is
