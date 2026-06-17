@@ -25,6 +25,9 @@ def sentinel : UInt64 := 0x8000000000000000
 
 @[simp] theorem sentinel_eq : sentinel = (9223372036854775808 : UInt64) := rfl
 
+/-- `i64::MIN` reinterpreted as `UInt64` is exactly the sentinel. -/
+theorem minValue_toUInt64 : (Int64.minValue : Int64).toUInt64 = sentinel := rfl
+
 /-- Encode an abstract `Option Int64` into the wasm `UInt64` representation. -/
 def encode : Option Int64 → UInt64
   | none   => sentinel
@@ -47,7 +50,7 @@ theorem encode_ne_sentinel_of_some {x : Int64} (hx : x ≠ Int64.minValue) :
   apply hx
   apply toUInt64_injective
   show x.toUInt64 = (Int64.minValue : Int64).toUInt64
-  simpa [sentinel] using h
+  rw [minValue_toUInt64]; exact h
 
 /-- `encode o = sentinel` iff `o ∈ {none, some Int64.minValue}`. -/
 theorem encode_eq_sentinel_iff (o : Option Int64) :
@@ -59,7 +62,7 @@ theorem encode_eq_sentinel_iff (o : Option Int64) :
     · intro h
       right
       have hx : x.toUInt64 = (Int64.minValue : Int64).toUInt64 := by
-        simpa [sentinel] using h
+        rw [minValue_toUInt64]; exact h
       exact congrArg some (toUInt64_injective hx)
     · rintro (h | h)
       · cases h
