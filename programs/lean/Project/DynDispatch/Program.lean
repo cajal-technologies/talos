@@ -117,9 +117,9 @@ def «module» : Wasm.Module :=
     { offset := some (1048576 : UInt32), bytes := [(1 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (1 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (2 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (2 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (20 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (24 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8)] }
   ] },
   globals := [
-    { type := .i32, init := .i32 (1048576 : UInt32) },
-    { type := .i32, init := .i32 (1048632 : UInt32) },
-    { type := .i32, init := .i32 (1048640 : UInt32) }
+    { init := .i32 (1048576 : UInt32) },
+    { init := .i32 (1048632 : UInt32) },
+    { init := .i32 (1048640 : UInt32) }
   ],
   types := [
     { params := [.i32, .i32], results := [.i32] },

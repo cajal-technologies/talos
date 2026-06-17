@@ -46,9 +46,9 @@ def «module» : Wasm.Module :=
     { offset := some (1048576 : UInt32), bytes := [(102 : UInt8), (108 : UInt8), (97 : UInt8), (103 : UInt8), (32 : UInt8), (115 : UInt8), (101 : UInt8), (116 : UInt8), (102 : UInt8), (108 : UInt8), (97 : UInt8), (103 : UInt8), (1 : UInt8)] }
   ] },
   globals := [
-    { type := .i32, init := .i32 (1048576 : UInt32) },
-    { type := .i32, init := .i32 (1048589 : UInt32) },
-    { type := .i32, init := .i32 (1048592 : UInt32) }
+    { init := .i32 (1048576 : UInt32) },
+    { init := .i32 (1048589 : UInt32) },
+    { init := .i32 (1048592 : UInt32) }
   ],
   types := [
     { params := [.i64, .i64], results := [] },

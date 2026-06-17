@@ -20,7 +20,7 @@ def tickBody : Program := [
 
 def tickModule : Module :=
   { funcs   := [{ params := [], locals := [], body := tickBody, results := [.i32] }]
-    globals := [{ type := .i32, init := .i32 0 }] }
+    globals := [{ init := .i32 0 }] }
 
 theorem tickModule_initial_global :
     (tickModule.initialStore (α := Unit)).globals.globals = [.i32 0] := by

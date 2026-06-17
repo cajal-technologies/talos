@@ -158,9 +158,9 @@ def «module» : Wasm.Module :=
   ],
   memory := some { pagesMin := (16 : UInt32), pagesMax := none, data := [] },
   globals := [
-    { type := .i32, init := .i32 (1048576 : UInt32) },
-    { type := .i32, init := .i32 (1048576 : UInt32) },
-    { type := .i32, init := .i32 (1048576 : UInt32) }
+    { init := .i32 (1048576 : UInt32) },
+    { init := .i32 (1048576 : UInt32) },
+    { init := .i32 (1048576 : UInt32) }
   ],
   types := [
     { params := [.i32], results := [.i32] },
