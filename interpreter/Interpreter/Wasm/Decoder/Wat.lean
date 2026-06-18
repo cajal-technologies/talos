@@ -2242,7 +2242,10 @@ private def parseGlobalDecl (ctx : Ctx) (xs : List Sexpr) :
     | _ => false
   if needsExpr then
     let prog ← parseInstrSeq ctx xs
-    return ({ type := vt, init := .anyref none, initExpr := prog } : Wasm.GlobalDecl)
+    -- Positional constructor (fields: type, init, initExpr) — avoids
+    -- field-name resolution, which misbehaved under the verifier package's
+    -- build options.
+    return (⟨vt, .anyref none, prog⟩ : Wasm.GlobalDecl)
   -- The init expression is either wrapped in a `(...)` list or — in
   -- wasm-tools' canonical print — emitted as a bare sequence of atoms
   -- (for v128.const this is `v128.const <shape> <lanes...>`, six tokens).
