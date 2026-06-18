@@ -1966,10 +1966,6 @@ private def collectGlobalNames (fields : List Sexpr)
     | _ => pure ()
   for f in fields do
     match f with
-    | .list [.atom "import", _, _, .list (.atom "global" :: _)] => i := i + 1
-    | _ => pure ()
-  for f in fields do
-    match f with
     | .list (.atom "global" :: body) =>
       match body with
       | .atom a :: _ =>
