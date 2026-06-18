@@ -18,8 +18,8 @@ namespace Wasm
     the `exec`-unfolding helpers from `Defs.lean`. -/
 macro "wp_atomic" : tactic => `(tactic|
   (repeat' (first
-    | (apply wp_of_exec_eq_succ; intro fuel; simp_all [exec, execOne])
-    | (apply wp_of_exec_const_succ; intro fuel; simp_all [exec, execOne])
+    | (apply wp_of_exec_eq_succ; intro fuel; simp_all [exec, execOne.eq_def])
+    | (apply wp_of_exec_const_succ; intro fuel; simp_all [exec, execOne.eq_def])
     | split)
    all_goals try grind))
 
@@ -652,6 +652,10 @@ macro "wp_atomic" : tactic => `(tactic|
      | .funcref r :: vs =>
        wp m rest Q st { s with values := .i32 (if r.isNone then 1 else 0) :: vs } env
      | .externref r :: vs =>
+       wp m rest Q st { s with values := .i32 (if r.isNone then 1 else 0) :: vs } env
+     | .anyref r :: vs =>
+       wp m rest Q st { s with values := .i32 (if r.isNone then 1 else 0) :: vs } env
+     | .exnref r :: vs =>
        wp m rest Q st { s with values := .i32 (if r.isNone then 1 else 0) :: vs } env
      | _ => Q (.Invalid "refIsNull: ill-shaped operand stack")) := by
   wp_atomic

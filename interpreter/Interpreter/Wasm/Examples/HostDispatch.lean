@@ -133,8 +133,7 @@ theorem inc_call_wp (st : Store Unit) (n : UInt32) :
     intro vs st' hInv
     -- `hInv : incHost.invoke st [.i32 n] = .Return vs st'`.
     -- Unfolding the host fn computes the LHS to `.Return [.i32 (n+1)] st`.
-    simp only [incHost, List.take, List.reverse_cons, List.reverse_nil,
-               List.nil_append] at hInv
+    simp only [incHost] at hInv
     -- Now `hInv : HostResult.Return [.i32 (n+1)] st = .Return vs st'`.
     injection hInv with hvs hst
     subst hvs
@@ -144,8 +143,7 @@ theorem inc_call_wp (st : Store Unit) (n : UInt32) :
   · -- Trap case is unreachable: the host always returns on a one-element
     -- i32 stack, so `hInv` equates two distinct `HostResult Unit` constructors.
     intro st' msg hInv
-    simp only [incHost, List.take, List.reverse_cons, List.reverse_nil,
-               List.nil_append] at hInv
+    simp only [incHost] at hInv
     cases hInv
 
 /-! ### M4: abstract specification through `HostSpec Unit` + `Satisfies`

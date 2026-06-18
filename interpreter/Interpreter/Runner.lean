@@ -145,6 +145,9 @@ def parseArgForType (t : ValueType) (s : String) : Except String Value :=
   | .exnref =>
     if s == "null" then .ok (.exnref none)
     else .error s!"exnref argument must be 'null', got `{s}`"
+  | .anyref =>
+    if s == "null" then .ok (.anyref none)
+    else .error s!"anyref argument must be 'null', got `{s}`"
   | .v128 =>
     .error s!"no CLI surface for v128 arguments: `{s}`"
 
@@ -187,6 +190,10 @@ def renderValue : Value → String
   | .externref (some i) => s!"externref:{i}"
   | .exnref none        => "null"
   | .exnref (some i)    => s!"exnref:{i}"
+  | .anyref none              => "null"
+  | .anyref (some (.i31 n))   => s!"i31:{n.toInt32.toInt}"
+  | .anyref (some (.struct a)) => s!"struct:{a}"
+  | .anyref (some (.array a))  => s!"array:{a}"
   | .v128 b             => s!"v128:0x{String.ofList (Nat.toDigits 16 b.toNat)}"
 
 /-! ## Exit codes -/

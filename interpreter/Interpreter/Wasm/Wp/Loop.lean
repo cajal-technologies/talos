@@ -35,7 +35,7 @@ private theorem exec_loop_cons_unfold {α : Type} (fuel : Nat) (m : Module)
             | other => other)
        | .Break (k+1) st' s' => .Break k st' s'
        | other => other) := by
-  simp only [exec, execOne]
+  simp only [exec, execOne_loop_succ]
   rcases hb : exec fuel m st s body env with
     ⟨_, _⟩ | ⟨n, _, _⟩ | ⟨_, _⟩ | _ | _ | _ | ⟨_, _, _⟩ | ⟨_, _, _, _⟩
   · rfl
@@ -203,16 +203,16 @@ theorem wp_loop_cons {ps rs : Nat} {body rest : Program} {Q : Assertion α}
     or `Break 0 st s` (when fuel ≥ 1). -/
 private theorem exec_br0 (f : Nat) (m : Module) (st : Store α) (s : Locals) :
     exec f m st s [.br 0] = (match f with | 0 => .OutOfFuel | _ + 1 => .Break 0 st s) := by
-  cases f <;> simp [exec, execOne]
+  cases f <;> simp [exec, execOne.eq_def]
 
 /-- A loop with body `[.br 0]` always runs out of fuel: no amount of fuel
     suffices, since each iteration consumes one and returns to the same state. -/
 private theorem execOne_loop_br0 (f : Nat) (m : Module) (st : Store α) (s : Locals) :
     execOne f m st s (.loop 0 0 [.br 0]) = .OutOfFuel := by
   induction f generalizing st s with
-  | zero => simp [execOne]
+  | zero => simp [execOne.eq_def]
   | succ f' ih =>
-    simp only [execOne]
+    simp only [execOne_loop_succ]
     rw [exec_br0]
     cases f' with
     | zero => rfl
@@ -223,7 +223,7 @@ private theorem exec_loop_br0_cons (f : Nat) (m : Module) (st : Store α) (s : L
     (rest : Program) :
     exec f m st s (.loop 0 0 [.br 0] :: rest) = .OutOfFuel := by
   cases f with
-  | zero => simp [exec, execOne]
+  | zero => simp [exec, execOne.eq_def]
   | succ f' =>
     simp only [exec]
     rw [execOne_loop_br0]

@@ -52,6 +52,7 @@ private def emitValueType : Wasm.ValueType → String
   | .externref => ".externref"
   | .v128      => ".v128"
   | .exnref    => ".exnref"
+  | .anyref    => ".anyref"
 
 private def emitValueTypes (xs : List Wasm.ValueType) : String :=
   list (xs.map emitValueType)
@@ -330,6 +331,9 @@ private def emitInstrShort : Wasm.Instruction → String
   | .v128LoadZero b off   => s!".v128LoadZero {emitNat b} {emitU32 off}"
   | .v128LoadLane b l off => s!".v128LoadLane {emitNat b} {emitNat l} {emitU32 off}"
   | .v128StoreLane b l off => s!".v128StoreLane {emitNat b} {emitNat l} {emitU32 off}"
+  -- GC ops (GC proposal). Rendered via `GcOp`'s `Repr`; the Rust-compiled
+  -- corpus this emitter targets never produces them.
+  | .gc op                => s!".gc ({reprStr op})"
 
 mutual
   /-- Render an instruction prefixed with `indent ind`. Structured-control
@@ -404,6 +408,8 @@ private def emitValue : Wasm.Value → String
   | .v128 bits          => s!".v128 (BitVec.ofNat 128 {bits.toNat})"
   | .exnref none        => ".exnref none"
   | .exnref (some i)    => s!".exnref (some {emitNat i})"
+  | .anyref none        => ".anyref none"
+  | .anyref (some r)    => s!".anyref (some ({reprStr r}))"
 
 private def emitGlobalDecl (g : Wasm.GlobalDecl) : String :=
   s!"\{ init := {emitValue g.init} }"

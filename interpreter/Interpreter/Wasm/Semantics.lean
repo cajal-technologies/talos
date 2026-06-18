@@ -44,6 +44,352 @@ def signExtend (n : Nat) (bits : Nat) : Int :=
   let bound := 2 ^ bits
   if n ≥ half then (n : Int) - (bound : Int) else (n : Int)
 
+/-- Whether `ht` is one of the abstract heap types in the `any` hierarchy
+(the only ones a managed `anyref` can inhabit), as opposed to the
+`func`/`extern` families. Concrete struct/array type indices also live
+under `any`. -/
+def GcHeapType.inAnyHierarchy : GcHeapType → Bool
+  | .any | .eq | .i31 | .structT | .arrayT | .noneT | .concrete _ => true
+  | _ => false
+
+/-- Decide whether a (non-null) managed reference `r` is a subtype of the
+abstract heap type `ht`. Concrete struct/array type indices are resolved
+against the module's GC type definitions and their declared supertypes. -/
+def AnyRef.matchesHeap (m : Module) (st : Store α) (ht : GcHeapType) : AnyRef → Bool
+  | .i31 _ => match ht with
+    | .any | .eq | .i31 => true
+    | _ => false
+  | .struct addr => match ht with
+    | .any | .eq | .structT => true
+    | .concrete t => match st.gcHeap[addr]? with
+      | some obj => m.gcTypeSubtype obj.typeIdx t
+      | none     => false
+    | _ => false
+  | .array addr => match ht with
+    | .any | .eq | .arrayT => true
+    | .concrete t => match st.gcHeap[addr]? with
+      | some obj => m.gcTypeSubtype obj.typeIdx t
+      | none     => false
+    | _ => false
+
+/-- Whether reference value `v` matches the target reference type
+`(ref null?ₙ ht)` used by `ref.test`/`ref.cast`/`br_on_cast`. The null
+reference matches exactly when the target is nullable and `ht` is in the
+same (any vs func vs extern) bottom family. -/
+def gcRefMatches (m : Module) (st : Store α) (nullable : Bool)
+    (ht : GcHeapType) : Value → Bool
+  | .anyref none      => nullable && ht.inAnyHierarchy
+  | .anyref (some r)  => r.matchesHeap m st ht
+  | .funcref none     => nullable && (ht == .func || ht == .noFunc)
+  | .funcref (some _) => ht == .func
+  | .externref none   => nullable && (ht == .extern || ht == .noExtern)
+  | .externref (some _) => ht == .extern
+  | _                 => false
+
+/-- Truncate a value to a packed field's width when storing it (GC
+proposal); non-packed fields store the value unchanged. -/
+def FieldType.pack (ft : FieldType) (v : Value) : Value :=
+  match ft.storage, v with
+  | .packed 8,  .i32 x => .i32 (x &&& 0xff)
+  | .packed 16, .i32 x => .i32 (x &&& 0xffff)
+  | _,          _      => v
+
+/-- Read a field/element with sign extension (`*.get_s`): a packed
+`i8`/`i16` slot is sign-extended to `i32`; everything else is unchanged. -/
+def FieldType.readS (ft : FieldType) (v : Value) : Value :=
+  match ft.storage, v with
+  | .packed 8,  .i32 x => .i32 (if x &&& 0x80 ≠ 0 then x ||| 0xffffff00 else x)
+  | .packed 16, .i32 x => .i32 (if x &&& 0x8000 ≠ 0 then x ||| 0xffff0000 else x)
+  | _,          _      => v
+
+/-- Read `n` little-endian bytes from a byte list as a `Nat`. Missing bytes
+read as 0 (callers bounds-check first). -/
+def readBytesLE (bytes : List UInt8) (off n : Nat) : Nat :=
+  (List.range n).foldl (fun acc i => acc + (bytes[off + i]?.getD 0).toNat * 2 ^ (8 * i)) 0
+
+/-- Read one storage-type element from a byte list (little-endian), for
+`array.new_data` / `array.init_data`. -/
+def readStorageLE (storage : StorageType) (bytes : List UInt8) (off : Nat) : Value :=
+  let n := readBytesLE bytes off storage.byteSize
+  match storage with
+  | .packed _ => .i32 (UInt32.ofNat n)
+  | .val .i32 => .i32 (UInt32.ofNat n)
+  | .val .i64 => .i64 (UInt64.ofNat n)
+  | .val .f32 => .f32 (UInt32.ofNat n)
+  | .val .f64 => .f64 (UInt64.ofNat n)
+  | .val _    => .i32 0
+
+/-- Evaluate a simple element-segment item constant expression to its
+reference value (GC proposal). Covers the forms element segments use:
+`ref.func`, `ref.null`, `ref.i31` of a constant, and scalar constants.
+Heap-allocating items (`struct.new`) are not handled here. -/
+def evalConstRef : Program → Option Value
+  | [.refFunc f]                 => some (.funcref (some f))
+  | [.refNull]                   => some (.funcref none)
+  | [.refNullExtern]             => some (.externref none)
+  | [.gc .refNullAny]            => some (.anyref none)
+  | [.const n]                   => some (.i32 n)
+  | [.constI64 n]                => some (.i64 n)
+  | [.const n, .gc .refI31]      => some (.anyref (some (.i31 (n &&& 0x7fffffff))))
+  | _                            => none
+
+/-- The reference values a (passive, non-dropped) element segment yields,
+preferring decoded GC const-expr items and falling back to funcref
+indices. -/
+def ElementSegment.values (seg : ElementSegment) : List Value :=
+  if seg.exprs.isEmpty then seg.funcs.map Value.funcref
+  else seg.exprs.map (fun e => (evalConstRef e).getD (.anyref none))
+
+/-- Execute one GC-proposal instruction. These never consume fuel or
+recurse into `exec`/`run` — `struct.new`/`array.new` allocate on
+`st.gcHeap`, the accessors read/update it, and `ref.test`/`ref.cast` decide
+subtyping via `gcRefMatches` — so they live outside the fuel-threaded
+`execOne` mutual block, dispatched from it by a single `gc` arm. -/
+def execGcOp (m : Module) (st : Store α) (s : Locals) : GcOp → Continuation α
+  | .refNullAny => .Fallthrough st { s with values := .anyref none :: s.values }
+  | .refI31 => match s.values with
+    | .i32 x :: vs =>
+      .Fallthrough st { s with values := .anyref (some (.i31 (x &&& 0x7fffffff))) :: vs }
+    | _ => .Invalid "refI31: ill-shaped operand stack"
+  | .i31GetU => match s.values with
+    | .anyref (some (.i31 n)) :: vs =>
+      .Fallthrough st { s with values := .i32 n :: vs }
+    | .anyref none :: _ => .Trap st "null i31 reference"
+    | _ => .Invalid "i31GetU: ill-shaped operand stack"
+  | .i31GetS => match s.values with
+    | .anyref (some (.i31 n)) :: vs =>
+      let signed := if n &&& 0x40000000 ≠ 0 then n ||| 0x80000000 else n
+      .Fallthrough st { s with values := .i32 signed :: vs }
+    | .anyref none :: _ => .Trap st "null i31 reference"
+    | _ => .Invalid "i31GetS: ill-shaped operand stack"
+  | .refEq => match s.values with
+    | .anyref a :: .anyref b :: vs =>
+      .Fallthrough st { s with values := .i32 (if a == b then 1 else 0) :: vs }
+    | _ => .Invalid "refEq: ill-shaped operand stack"
+  | .refTest nullable ht => match s.values with
+    | v :: vs => match v with
+      | .anyref _ | .funcref _ | .externref _ | .exnref _ =>
+        .Fallthrough st
+          { s with values := .i32 (if gcRefMatches m st nullable ht v then 1 else 0) :: vs }
+      | _ => .Invalid "refTest: non-reference operand"
+    | _ => .Invalid "refTest: ill-shaped operand stack"
+  | .refCast nullable ht => match s.values with
+    | v :: vs => match v with
+      | .anyref _ | .funcref _ | .externref _ | .exnref _ =>
+        if gcRefMatches m st nullable ht v then
+          .Fallthrough st { s with values := v :: vs }
+        else .Trap st "cast failure"
+      | _ => .Invalid "refCast: non-reference operand"
+    | _ => .Invalid "refCast: ill-shaped operand stack"
+  -- `br_on_cast`/`br_on_cast_fail`: the ref stays on the operand stack in
+  -- both the taken and the fall-through case.
+  | .brOnCast label nullable ht => match s.values with
+    | v :: _ =>
+      if gcRefMatches m st nullable ht v then .Break label st s else .Fallthrough st s
+    | _ => .Invalid "brOnCast: ill-shaped operand stack"
+  | .brOnCastFail label nullable ht => match s.values with
+    | v :: _ =>
+      if gcRefMatches m st nullable ht v then .Fallthrough st s else .Break label st s
+    | _ => .Invalid "brOnCastFail: ill-shaped operand stack"
+  -- Structs. `struct.new` pops one value per field (last field on top).
+  | .structNew t => match m.structFields? t with
+    | some fields =>
+      let n := fields.length
+      if s.values.length < n then .Invalid "structNew: operand stack underflow"
+      else
+        let args := (s.values.take n).reverse
+        let packed := (fields.zip args).map (fun (ft, v) => ft.pack v)
+        .Fallthrough { st with gcHeap := st.gcHeap ++ [.struct t packed] }
+          { s with values := .anyref (some (.struct st.gcHeap.length)) :: s.values.drop n }
+    | none => .Invalid "structNew: not a struct type"
+  | .structNewDefault t => match m.structFields? t with
+    | some fields =>
+      .Fallthrough
+        { st with gcHeap := st.gcHeap ++ [.struct t (fields.map (·.storage.zero))] }
+        { s with values := .anyref (some (.struct st.gcHeap.length)) :: s.values }
+    | none => .Invalid "structNewDefault: not a struct type"
+  | .structGet _ f => match s.values with
+    | .anyref (some (.struct addr)) :: vs => match st.gcHeap[addr]? with
+      | some (.struct _ fields) => match fields[f]? with
+        | some v => .Fallthrough st { s with values := v :: vs }
+        | none   => .Invalid "structGet: field index out of range"
+      | _ => .Invalid "structGet: not a struct"
+    | .anyref none :: _ => .Trap st "null structure reference"
+    | _ => .Invalid "structGet: ill-shaped operand stack"
+  | .structGetU _ f => match s.values with
+    | .anyref (some (.struct addr)) :: vs => match st.gcHeap[addr]? with
+      | some (.struct _ fields) => match fields[f]? with
+        | some v => .Fallthrough st { s with values := v :: vs }
+        | none   => .Invalid "structGetU: field index out of range"
+      | _ => .Invalid "structGetU: not a struct"
+    | .anyref none :: _ => .Trap st "null structure reference"
+    | _ => .Invalid "structGetU: ill-shaped operand stack"
+  | .structGetS t f => match s.values with
+    | .anyref (some (.struct addr)) :: vs => match st.gcHeap[addr]? with
+      | some (.struct _ fields) => match fields[f]?, m.structField? t f with
+        | some v, some ft => .Fallthrough st { s with values := ft.readS v :: vs }
+        | _, _ => .Invalid "structGetS: field index out of range"
+      | _ => .Invalid "structGetS: not a struct"
+    | .anyref none :: _ => .Trap st "null structure reference"
+    | _ => .Invalid "structGetS: ill-shaped operand stack"
+  | .structSet t f => match s.values with
+    | val :: .anyref (some (.struct addr)) :: vs => match st.gcHeap[addr]? with
+      | some (.struct ty fields) =>
+        let pval := match m.structField? t f with | some ft => ft.pack val | none => val
+        .Fallthrough { st with gcHeap := st.gcHeap.set addr (.struct ty (fields.set f pval)) }
+          { s with values := vs }
+      | _ => .Invalid "structSet: not a struct"
+    | _ :: .anyref none :: _ => .Trap st "null structure reference"
+    | _ => .Invalid "structSet: ill-shaped operand stack"
+  -- Arrays.
+  | .arrayNew t => match s.values with
+    | .i32 len :: init :: vs =>
+      let pinit := match m.arrayElem? t with | some ft => ft.pack init | none => init
+      .Fallthrough { st with gcHeap := st.gcHeap ++ [.array t (List.replicate len.toNat pinit)] }
+        { s with values := .anyref (some (.array st.gcHeap.length)) :: vs }
+    | _ => .Invalid "arrayNew: ill-shaped operand stack"
+  | .arrayNewDefault t => match s.values with
+    | .i32 len :: vs =>
+      let z := match m.arrayElem? t with | some ft => ft.storage.zero | none => .i32 0
+      .Fallthrough { st with gcHeap := st.gcHeap ++ [.array t (List.replicate len.toNat z)] }
+        { s with values := .anyref (some (.array st.gcHeap.length)) :: vs }
+    | _ => .Invalid "arrayNewDefault: ill-shaped operand stack"
+  | .arrayNewFixed t n =>
+    if s.values.length < n then .Invalid "arrayNewFixed: operand stack underflow"
+    else
+      let elems := (s.values.take n).reverse
+      let pelems := match m.arrayElem? t with | some ft => elems.map ft.pack | none => elems
+      .Fallthrough { st with gcHeap := st.gcHeap ++ [.array t pelems] }
+        { s with values := .anyref (some (.array st.gcHeap.length)) :: s.values.drop n }
+  | .arrayGet _ => match s.values with
+    | .i32 idx :: .anyref (some (.array addr)) :: vs => match st.gcHeap[addr]? with
+      | some (.array _ elems) => match elems[idx.toNat]? with
+        | some v => .Fallthrough st { s with values := v :: vs }
+        | none   => .Trap st "out of bounds array access"
+      | _ => .Invalid "arrayGet: not an array"
+    | _ :: .anyref none :: _ => .Trap st "null array reference"
+    | _ => .Invalid "arrayGet: ill-shaped operand stack"
+  | .arrayGetU _ => match s.values with
+    | .i32 idx :: .anyref (some (.array addr)) :: vs => match st.gcHeap[addr]? with
+      | some (.array _ elems) => match elems[idx.toNat]? with
+        | some v => .Fallthrough st { s with values := v :: vs }
+        | none   => .Trap st "out of bounds array access"
+      | _ => .Invalid "arrayGetU: not an array"
+    | _ :: .anyref none :: _ => .Trap st "null array reference"
+    | _ => .Invalid "arrayGetU: ill-shaped operand stack"
+  | .arrayGetS t => match s.values with
+    | .i32 idx :: .anyref (some (.array addr)) :: vs => match st.gcHeap[addr]? with
+      | some (.array _ elems) => match elems[idx.toNat]?, m.arrayElem? t with
+        | some v, some ft => .Fallthrough st { s with values := ft.readS v :: vs }
+        | _, _ => .Trap st "out of bounds array access"
+      | _ => .Invalid "arrayGetS: not an array"
+    | _ :: .anyref none :: _ => .Trap st "null array reference"
+    | _ => .Invalid "arrayGetS: ill-shaped operand stack"
+  | .arraySet t => match s.values with
+    | val :: .i32 idx :: .anyref (some (.array addr)) :: vs => match st.gcHeap[addr]? with
+      | some (.array ty elems) =>
+        if idx.toNat ≥ elems.length then .Trap st "out of bounds array access"
+        else
+          let pval := match m.arrayElem? t with | some ft => ft.pack val | none => val
+          .Fallthrough { st with gcHeap := st.gcHeap.set addr (.array ty (elems.set idx.toNat pval)) }
+            { s with values := vs }
+      | _ => .Invalid "arraySet: not an array"
+    | _ :: _ :: .anyref none :: _ => .Trap st "null array reference"
+    | _ => .Invalid "arraySet: ill-shaped operand stack"
+  | .arrayLen => match s.values with
+    | .anyref (some (.array addr)) :: vs => match st.gcHeap[addr]? with
+      | some (.array _ elems) =>
+        .Fallthrough st { s with values := .i32 (UInt32.ofNat elems.length) :: vs }
+      | _ => .Invalid "arrayLen: not an array"
+    | .anyref none :: _ => .Trap st "null array reference"
+    | _ => .Invalid "arrayLen: ill-shaped operand stack"
+  -- `array.fill $t`: [arrayref, d, val, n] → fill elems[d..d+n) with val.
+  | .arrayFill t => match s.values with
+    | .i32 n :: val :: .i32 d :: .anyref (some (.array addr)) :: vs => match st.gcHeap[addr]? with
+      | some (.array ty elems) =>
+        if d.toNat + n.toNat > elems.length then .Trap st "out of bounds array access"
+        else
+          let pval := match m.arrayElem? t with | some ft => ft.pack val | none => val
+          let elems' := (List.range elems.length).map fun i =>
+            if d.toNat ≤ i && i < d.toNat + n.toNat then pval else elems[i]!
+          .Fallthrough { st with gcHeap := st.gcHeap.set addr (.array ty elems') } { s with values := vs }
+      | _ => .Invalid "arrayFill: not an array"
+    | _ :: _ :: _ :: .anyref none :: _ => .Trap st "null array reference"
+    | _ => .Invalid "arrayFill: ill-shaped operand stack"
+  -- `array.copy $dt $st`: [dst, dstD, src, srcD, n] → copy elements.
+  | .arrayCopy _ _ => match s.values with
+    | .i32 n :: .i32 srcD :: .anyref (some (.array srcAddr)) :: .i32 dstD
+        :: .anyref (some (.array dstAddr)) :: vs =>
+      match st.gcHeap[srcAddr]?, st.gcHeap[dstAddr]? with
+      | some (.array _ srcElems), some (.array dty dstElems) =>
+        if srcD.toNat + n.toNat > srcElems.length || dstD.toNat + n.toNat > dstElems.length then
+          .Trap st "out of bounds array access"
+        else
+          let dstElems' := (List.range dstElems.length).map fun i =>
+            if dstD.toNat ≤ i && i < dstD.toNat + n.toNat then srcElems[srcD.toNat + (i - dstD.toNat)]!
+            else dstElems[i]!
+          .Fallthrough { st with gcHeap := st.gcHeap.set dstAddr (.array dty dstElems') } { s with values := vs }
+      | _, _ => .Invalid "arrayCopy: not an array"
+    | _ => .Invalid "arrayCopy: ill-shaped operand stack"
+  -- `array.new_data $t $d`: [off, n] → array of n elements read from data
+  -- segment `d` (little-endian, sized by the element storage type).
+  | .arrayNewData t d => match s.values with
+    | .i32 n :: .i32 off :: vs => match m.arrayElem? t, st.dataSegments[d]? with
+      | some ft, some (some bytes) =>
+        let sz := ft.storage.byteSize
+        if off.toNat + n.toNat * sz > bytes.length then .Trap st "out of bounds memory access"
+        else
+          let elems := (List.range n.toNat).map fun i => readStorageLE ft.storage bytes (off.toNat + i * sz)
+          .Fallthrough { st with gcHeap := st.gcHeap ++ [.array t elems] }
+            { s with values := .anyref (some (.array st.gcHeap.length)) :: vs }
+      | _, _ => .Trap st "out of bounds memory access"
+    | _ => .Invalid "arrayNewData: ill-shaped operand stack"
+  -- `array.init_data $t $d`: [arrayref, d, off, n] → write into existing array.
+  | .arrayInitData t d => match s.values with
+    | .i32 n :: .i32 off :: .i32 dstD :: .anyref (some (.array addr)) :: vs =>
+      match m.arrayElem? t, st.gcHeap[addr]?, st.dataSegments[d]? with
+      | some ft, some (.array ty elems), some (some bytes) =>
+        let sz := ft.storage.byteSize
+        if off.toNat + n.toNat * sz > bytes.length || dstD.toNat + n.toNat > elems.length then
+          .Trap st "out of bounds memory access"
+        else
+          let elems' := (List.range elems.length).map fun i =>
+            if dstD.toNat ≤ i && i < dstD.toNat + n.toNat then
+              readStorageLE ft.storage bytes (off.toNat + (i - dstD.toNat) * sz)
+            else elems[i]!
+          .Fallthrough { st with gcHeap := st.gcHeap.set addr (.array ty elems') } { s with values := vs }
+      | _, _, _ => .Trap st "out of bounds memory access"
+    | _ :: _ :: _ :: .anyref none :: _ => .Trap st "null array reference"
+    | _ => .Invalid "arrayInitData: ill-shaped operand stack"
+  -- `array.new_elem`/`array.init_elem`: element-segment-sourced arrays. Only
+  -- funcref segments (stored as func indices) are modelled.
+  | .arrayNewElem t e => match s.values with
+    | .i32 n :: .i32 off :: vs => match st.elementSegments[e]?, m.elements[e]? with
+      | some (some _), some seg =>
+        let refs := seg.values
+        if off.toNat + n.toNat > refs.length then .Trap st "out of bounds table access"
+        else
+          let elems := (List.range n.toNat).map fun i => refs[off.toNat + i]!
+          .Fallthrough { st with gcHeap := st.gcHeap ++ [.array t elems] }
+            { s with values := .anyref (some (.array st.gcHeap.length)) :: vs }
+      | _, _ => .Trap st "out of bounds table access"
+    | _ => .Invalid "arrayNewElem: ill-shaped operand stack"
+  | .arrayInitElem _ e => match s.values with
+    | .i32 n :: .i32 off :: .i32 dstD :: .anyref (some (.array addr)) :: vs =>
+      match st.gcHeap[addr]?, st.elementSegments[e]?, m.elements[e]? with
+      | some (.array ty elems), some (some _), some seg =>
+        let refs := seg.values
+        if off.toNat + n.toNat > refs.length || dstD.toNat + n.toNat > elems.length then
+          .Trap st "out of bounds table access"
+        else
+          let elems' := (List.range elems.length).map fun i =>
+            if dstD.toNat ≤ i && i < dstD.toNat + n.toNat then refs[off.toNat + (i - dstD.toNat)]!
+            else elems[i]!
+          .Fallthrough { st with gcHeap := st.gcHeap.set addr (.array ty elems') } { s with values := vs }
+      | _, _, _ => .Trap st "out of bounds table access"
+    | _ :: _ :: _ :: .anyref none :: _ => .Trap st "null array reference"
+    | _ => .Invalid "arrayInitElem: ill-shaped operand stack"
+
 /-! ## Big-step fuel-bounded interpreter.
 
 Mutual recursion across three entry points:
@@ -1616,7 +1962,15 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
         .Fallthrough st { s with values := .i32 (if r.isNone then 1 else 0) :: vs }
       | .externref r :: vs =>
         .Fallthrough st { s with values := .i32 (if r.isNone then 1 else 0) :: vs }
+      | .anyref r :: vs =>
+        .Fallthrough st { s with values := .i32 (if r.isNone then 1 else 0) :: vs }
+      | .exnref r :: vs =>
+        .Fallthrough st { s with values := .i32 (if r.isNone then 1 else 0) :: vs }
       | _ => .Invalid "refIsNull: ill-shaped operand stack"
+
+    -- GC-proposal instructions (i31/structs/arrays/casts): all are
+    -- non-recursive single steps, handled by `execGcOp`.
+    | _, .gc g => execGcOp m st s g
 
     -- Table read instructions. Both look the runtime table up on the
     -- store; neither mutates it. An out-of-range *table* index is a
@@ -1871,5 +2225,52 @@ def runTail (fuel : Nat) (m : Module) (id : Nat)
   | f' + 1 => run f' m id st vs env
 
 end
+
+/-- Evaluate the constant-expression initializers of globals that need to
+run at instantiation (GC proposal: `struct.new`/`array.new*` allocate heap
+objects). Each global's `initExpr` is executed in order against the
+current store — so a later initializer sees earlier globals (`global.get`)
+and the accumulated `gcHeap` — and its result value is written into the
+global slot. Globals with an empty `initExpr` keep their decoded `init`. -/
+def Module.runConstGlobals (fuel : Nat) (m : Module) (st : Store α)
+    (env : HostEnv α := {}) : Store α := Id.run do
+  let mut st := st
+  let mut gi := 0
+  for g in m.globals do
+    if !g.initExpr.isEmpty then
+      match exec fuel m st {} g.initExpr env with
+      | .Fallthrough st' s' =>
+        match s'.values with
+        | v :: _ =>
+          st := { st' with globals := { globals := st'.globals.globals.set gi v } }
+        | [] => pure ()
+      | _ => pure ()
+    gi := gi + 1
+  return st
+
+/-- Evaluate the constant-expression items of active GC element segments
+(GC proposal) and write the resulting reference values into their tables.
+Runs after `runConstGlobals` so items may read globals. Plain funcref
+segments (`funcs`) are applied separately and have no `exprs`. -/
+def Module.runConstElems (fuel : Nat) (m : Module) (st : Store α)
+    (env : HostEnv α := {}) : Store α := Id.run do
+  let mut st := st
+  for seg in m.elements do
+    match seg.tableIdx, seg.offset with
+    | some ti, some off =>
+      if !seg.exprs.isEmpty then
+        let mut i := 0
+        for e in seg.exprs do
+          match exec fuel m st {} e env with
+          | .Fallthrough st' s' =>
+            st := st'
+            match s'.values, st'.tables[ti]? with
+            | v :: _, some tbl =>
+              st := { st' with tables := st'.tables.set ti (tbl.set (off + i) v) }
+            | _, _ => pure ()
+          | _ => pure ()
+          i := i + 1
+    | _, _ => pure ()
+  return st
 
 end Wasm
