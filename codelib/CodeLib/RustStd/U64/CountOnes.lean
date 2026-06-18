@@ -6,15 +6,10 @@ import CodeLib.Entry
 # `u64::count_ones` — reusable body theorem (Group A)
 
 `count_ones` is a compiler intrinsic: at `opt-level = 0` its body is the
-`i64.popcnt` core wrapped in the standard frame spill. The theorem here is
-*body-parametric* — it holds for this exact body at **any** index in **any**
-module, given a stack-pointer global and enough memory not to trap. A
-concrete crate discharges those hypotheses with `rfl` / `decide`.
-
-Caveat (Group A): because this is an inlined intrinsic, other crates that
-call `x.count_ones()` will not contain this function — they inline
-`i64.popcnt` directly. Genuine cross-*call* reuse is the Group B story
-(`AbsDiff`); here reuse is exercised by a crate re-exporting the body.
+`i64.popcnt` core wrapped in the standard frame spill. The theorem is stated
+in **weakest-precondition** form, directly about the body — no module/index
+or host-function hypotheses, no `TerminatesWith`. `of_returns_wp` lifts it to
+the `TerminatesWith` form a concrete crate (or a caller) needs.
 -/
 
 namespace Wasm.RustStd.U64
@@ -33,19 +28,19 @@ def countOnesFunc : Function :=
   { params := [.i64], locals := [.i32], body := countOnesBody, results := [.i32] }
 
 set_option maxRecDepth 4096 in
-/-- `count_ones` returns the population count of its `u64` argument. Reusable
-across modules: supply `hf` (this body is function `id`), `hsp` (global 0 is
-the stack pointer `sp`), and the no-trap bounds on `sp`. -/
-theorem countOnes_terminates {α} (env : HostEnv α) (m : Module) (id : Nat)
-    (st : Store α) (v : UInt64) (sp : UInt32)
-    (hf : m.funcs[id - m.imports.length]? = some countOnesFunc)
+/-- Running `count_ones`'s body with `v` in local 0 returns the population
+count of `v` on top of the stack, leaving the stack pointer (global 0) and the
+memory size untouched. `sp` is the stack-pointer value; `16 ≤ sp ≤ pages·64KiB`
+are the no-trap bounds on the frame spill. -/
+theorem countOnes_wp {α} {m : Module} {env : HostEnv α} (st : Store α)
+    (sp : UInt32) (v : UInt64) (vs : List Value)
     (hsp : st.globals.globals[0]? = some (.i32 sp))
-    (hlo : 16 ≤ sp.toNat) (hhi : sp.toNat ≤ st.mem.pages * 65536)
-    (hImp : m.imports[id]? = none) :
-    TerminatesWith env m id st [.i64 v]
-      (fun _ rs => rs = [.i32 (UInt32.ofNat (popcnt64 64 v 0))]) := by
-  refine TerminatesWith.of_wp_entry_for (f := countOnesFunc) hf ?_ hImp
-  unfold countOnesFunc countOnesBody
+    (hlo : 16 ≤ sp.toNat) (hhi : sp.toNat ≤ st.mem.pages * 65536) :
+    wp m countOnesBody
+      (Returns (.i32 (UInt32.ofNat (popcnt64 64 v 0)) :: vs)
+        (fun st' => st'.globals = st.globals ∧ st'.mem.pages = st.mem.pages))
+      st ⟨[.i64 v], [.i32 0], vs⟩ env := by
+  unfold countOnesBody Returns
   wp_run
   have hle : (16 : UInt32) ≤ sp := UInt32.le_iff_toNat_le.mpr (by simpa using hlo)
   have hsub : (sp - 16).toNat = sp.toNat - 16 := UInt32.toNat_sub_of_le sp 16 hle
@@ -58,9 +53,9 @@ theorem countOnes_terminates {α} (env : HostEnv α) (m : Module) (id : Nat)
       show (BitVec.ofNat 64 (popcnt64 64 v 0)).toNat = popcnt64 64 v 0 % 2 ^ 64
       exact BitVec.toNat_ofNat _ _
     rw [hb, Nat.mod_eq_of_lt hp64]; exact Nat.mod_eq_of_lt hp32
-  simp only [hsp, List.reverse_cons, List.reverse_nil, List.nil_append, List.length_cons,
-    List.length_nil, Nat.sub_self, List.set_cons_zero, List.getElem?_cons_zero,
-    Nat.reduceAdd, Nat.reduceLT, reduceIte, h12, hnt, Mem.read32_write32_same,
-    Mem.write32_pages, List.append_nil, key]
+  simp only [hsp, List.length_cons, List.length_nil, Nat.reduceLT, Nat.reduceAdd,
+    Nat.reduceSub, reduceIte, List.set_cons_zero, List.getElem?_cons_zero,
+    h12, hnt, Mem.read32_write32_same, Mem.write32_pages, key,
+    Continuation.Return.injEq, exists_eq_left', and_true]
 
 end Wasm.RustStd.U64
