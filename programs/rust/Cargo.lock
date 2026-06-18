@@ -32,3 +32,11 @@ version = "0.1.0"
 dependencies = [
  "num-integer",
 ]
+
+[[package]]
+name = "rust_consumer"
+version = "0.1.0"
+
+[[package]]
+name = "rust_std"
+version = "0.1.0"
