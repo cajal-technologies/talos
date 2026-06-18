@@ -208,7 +208,7 @@ def execGcOp (m : Module) (st : Store α) (s : Locals) : GcOp → Continuation �
         { st with gcHeap := st.gcHeap ++ [.struct t (fields.map (·.storage.zero))] }
         { s with values := .anyref (some (.struct st.gcHeap.length)) :: s.values }
     | none => .Invalid "structNewDefault: not a struct type"
-  | .structGet t f => match s.values with
+  | .structGet _ f => match s.values with
     | .anyref (some (.struct addr)) :: vs => match st.gcHeap[addr]? with
       | some (.struct _ fields) => match fields[f]? with
         | some v => .Fallthrough st { s with values := v :: vs }
@@ -216,7 +216,7 @@ def execGcOp (m : Module) (st : Store α) (s : Locals) : GcOp → Continuation �
       | _ => .Invalid "structGet: not a struct"
     | .anyref none :: _ => .Trap st "null structure reference"
     | _ => .Invalid "structGet: ill-shaped operand stack"
-  | .structGetU t f => match s.values with
+  | .structGetU _ f => match s.values with
     | .anyref (some (.struct addr)) :: vs => match st.gcHeap[addr]? with
       | some (.struct _ fields) => match fields[f]? with
         | some v => .Fallthrough st { s with values := v :: vs }
@@ -261,7 +261,7 @@ def execGcOp (m : Module) (st : Store α) (s : Locals) : GcOp → Continuation �
       let pelems := match m.arrayElem? t with | some ft => elems.map ft.pack | none => elems
       .Fallthrough { st with gcHeap := st.gcHeap ++ [.array t pelems] }
         { s with values := .anyref (some (.array st.gcHeap.length)) :: s.values.drop n }
-  | .arrayGet t => match s.values with
+  | .arrayGet _ => match s.values with
     | .i32 idx :: .anyref (some (.array addr)) :: vs => match st.gcHeap[addr]? with
       | some (.array _ elems) => match elems[idx.toNat]? with
         | some v => .Fallthrough st { s with values := v :: vs }
@@ -269,7 +269,7 @@ def execGcOp (m : Module) (st : Store α) (s : Locals) : GcOp → Continuation �
       | _ => .Invalid "arrayGet: not an array"
     | _ :: .anyref none :: _ => .Trap st "null array reference"
     | _ => .Invalid "arrayGet: ill-shaped operand stack"
-  | .arrayGetU t => match s.values with
+  | .arrayGetU _ => match s.values with
     | .i32 idx :: .anyref (some (.array addr)) :: vs => match st.gcHeap[addr]? with
       | some (.array _ elems) => match elems[idx.toNat]? with
         | some v => .Fallthrough st { s with values := v :: vs }
@@ -374,7 +374,7 @@ def execGcOp (m : Module) (st : Store α) (s : Locals) : GcOp → Continuation �
             { s with values := .anyref (some (.array st.gcHeap.length)) :: vs }
       | _, _ => .Trap st "out of bounds table access"
     | _ => .Invalid "arrayNewElem: ill-shaped operand stack"
-  | .arrayInitElem t e => match s.values with
+  | .arrayInitElem _ e => match s.values with
     | .i32 n :: .i32 off :: .i32 dstD :: .anyref (some (.array addr)) :: vs =>
       match st.gcHeap[addr]?, st.elementSegments[e]?, m.elements[e]? with
       | some (.array ty elems), some (some _), some seg =>

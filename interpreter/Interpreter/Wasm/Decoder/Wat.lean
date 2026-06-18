@@ -2242,7 +2242,7 @@ private def parseGlobalDecl (ctx : Ctx) (xs : List Sexpr) :
     | _ => false
   if needsExpr then
     let prog ← parseInstrSeq ctx xs
-    return { type := vt, init := .anyref none, initExpr := prog }
+    return ({ type := vt, init := .anyref none, initExpr := prog } : Wasm.GlobalDecl)
   -- The init expression is either wrapped in a `(...)` list or — in
   -- wasm-tools' canonical print — emitted as a bare sequence of atoms
   -- (for v128.const this is `v128.const <shape> <lanes...>`, six tokens).
@@ -2595,12 +2595,14 @@ private def parseElemSegment (ctx : Ctx)
   | .atom "func"      :: r => rest := r
   | .atom "funcref"   :: r => rest := r
   | .atom "externref" :: r => rest := r
-  -- GC managed-reference element types (GC proposal): the items are
-  -- constant expressions evaluated at instantiation.
+  -- GC managed-reference element-type keyword (GC proposal): the items are
+  -- constant expressions. Only consume `rest` when this atom really is such
+  -- a keyword — otherwise it is the first funcref item (e.g. `$f0`), which
+  -- the item loop below must still see.
   | .atom t :: r =>
     if t == "i31ref" || t == "anyref" || t == "eqref"
-       || t == "structref" || t == "arrayref" || t == "nullref" then isGc := true
-    rest := r
+       || t == "structref" || t == "arrayref" || t == "nullref" then
+      isGc := true; rest := r
   -- List type form `(ref null? ht)`: GC when `ht` is a managed heap type.
   | .list (.atom "ref" :: inner) :: r =>
     if elemRefIsGc inner then isGc := true
