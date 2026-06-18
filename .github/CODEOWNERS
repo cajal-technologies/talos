@@ -1,0 +1,10 @@
+# Code owners for this repository.
+#
+# Owners listed here are automatically requested for review on pull requests
+# that modify files they own, and (with branch protection's "Require review
+# from Code Owners" enabled) their approval is required before merging.
+#
+# See: https://docs.github.com/articles/about-code-owners
+
+# Default owner for everything in the repository.
+* @mfornet
