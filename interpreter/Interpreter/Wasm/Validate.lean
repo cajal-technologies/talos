@@ -70,6 +70,92 @@ def Program.isConstExpr (p : Program) : Bool :=
       | _ => false
     | _ => false
 
+/-! ### Straight-line operand-stack type check
+
+A deliberately partial check: it simulates the operand stack through a
+function body that contains no control flow, with the field/element result
+types pulled precisely from the GC type table, and reports `type mismatch`
+when an instruction's operand has the wrong type or the body's final stack
+doesn't match the declared results. Reference types are compared loosely
+(any ref matches any ref — full GC subtyping is not modelled), and any
+control-flow / unmodelled instruction makes the check bail out (returns
+`ok` for that function), so it never produces a false rejection on a shape
+it doesn't understand. -/
+
+/-- Loose value-type compatibility: scalars exact, all reference types
+mutually compatible. -/
+def vtCompat (a b : ValueType) : Bool :=
+  match a, b with
+  | .i32, .i32 | .i64, .i64 | .f32, .f32 | .f64, .f64 | .v128, .v128 => true
+  | .funcref, _ | .externref, _ | .anyref, _ | .exnref, _ =>
+    match b with | .funcref | .externref | .anyref | .exnref => true | _ => false
+  | _, _ => false
+
+/-- The storage type's value type, as seen by the stack checker. -/
+def StorageType.vt : StorageType → ValueType
+  | .val vt   => vt
+  | .packed _ => .i32
+
+/-- The `(pops, pushes)` operand-stack signature of a straight-line
+instruction (top of stack first in each list), or `none` to bail out
+(control flow or an instruction this partial checker does not model). -/
+def Instruction.straightSig (m : Module) (locals : List ValueType)
+    : Instruction → Option (List ValueType × List ValueType)
+  | .const _    => some ([], [.i32])
+  | .constI64 _ => some ([], [.i64])
+  | .f32Const _ => some ([], [.f32])
+  | .f64Const _ => some ([], [.f64])
+  | .localGet i => (locals[i]?).map fun t => ([], [t])
+  | .localSet i => (locals[i]?).map fun t => ([t], [])
+  | .globalGet i => (m.globals[i]?).map fun g => ([], [g.type])
+  | .globalSet i => (m.globals[i]?).map fun g => ([g.type], [])
+  | .drop => none   -- polymorphic operand; skip rather than guess
+  | .add | .sub | .mul | .divU | .divS | .remU | .remS
+  | .and | .or | .xor | .shl | .shrU | .shrS | .rotl | .rotr =>
+    some ([.i32, .i32], [.i32])
+  | .eqz => some ([.i32], [.i32])
+  | .eq | .ne | .ltU | .ltS | .gtU | .gtS | .leU | .leS | .geU | .geS =>
+    some ([.i32, .i32], [.i32])
+  | .gc op => match op with
+    | .refI31 => some ([.i32], [.anyref])
+    | .i31GetS | .i31GetU => some ([.anyref], [.i32])
+    | .refEq => some ([.anyref, .anyref], [.i32])
+    | .structGet t f | .structGetS t f | .structGetU t f =>
+      (m.structField? t f).map fun ft => ([.anyref], [ft.storage.vt])
+    | .structSet t f =>
+      (m.structField? t f).map fun ft => ([ft.storage.vt, .anyref], [])
+    | .structNew t =>
+      (m.structFields? t).map fun fs => ((fs.map (·.storage.vt)).reverse ++ [], [.anyref])
+    | .arrayGet t | .arrayGetS t | .arrayGetU t =>
+      (m.arrayElem? t).map fun ft => ([.i32, .anyref], [ft.storage.vt])
+    | .arraySet t =>
+      (m.arrayElem? t).map fun ft => ([ft.storage.vt, .i32, .anyref], [])
+    | .arrayLen => some ([.anyref], [.i32])
+    | .arrayNewDefault _ => some ([.i32], [.anyref])
+    | .arrayNew t => (m.arrayElem? t).map fun ft => ([.i32, ft.storage.vt], [.anyref])
+    | _ => none
+  | _ => none
+
+/-- Straight-line type check of one function body. Bails out (returns
+`ok`) on any instruction whose signature is `none`. -/
+def Module.checkFuncStraight (m : Module) (f : Function) : Except String Unit := do
+  let locals := f.params ++ f.locals
+  let mut stack : List ValueType := []   -- top of stack at the head
+  for inst in f.body do
+    match inst.straightSig m locals with
+    | none => return ()   -- control flow / unmodelled → give up, accept
+    | some (pops, pushes) =>
+      let mut s := stack
+      for p in pops do
+        match s with
+        | t :: rest => if !vtCompat t p then throw "type mismatch" else s := rest
+        | []        => throw "type mismatch"
+      stack := pushes.reverse ++ s
+  -- Body fully modelled: the residual stack must match the declared results.
+  if stack.length != f.results.length then throw "type mismatch"
+  for (a, b) in stack.reverse.zip f.results do
+    if !vtCompat a b then throw "type mismatch"
+
 /-- Run the partial structural validator. `throw` on the first violation. -/
 def Module.validate (m : Module) : Except String Unit := do
   let nTypes := m.gcTypes.length
@@ -103,5 +189,8 @@ def Module.validate (m : Module) : Except String Unit := do
   for g in m.globals do
     if !g.initExpr.isEmpty && !g.initExpr.isConstExpr then
       throw "constant expression required"
+  -- 4. Straight-line operand-stack type check of each function body.
+  for f in m.funcs do
+    m.checkFuncStraight f
 
 end Wasm
