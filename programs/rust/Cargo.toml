@@ -1,18 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
-  "dyn_dispatch",
-  "host_counter",
-  "is_even",
-  "is_prime",
-  "itoa",
-  "memchr",
-  "near_flag",
-  "near_kv_contract",
   "num_integer",
-  "reverse_inplace",
-  "rust_option",
-  "xor_sum",
 ]
 
 [profile.release]
