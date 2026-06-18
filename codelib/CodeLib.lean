@@ -3,6 +3,8 @@ import CodeLib.Basic
 import CodeLib.Entry
 import CodeLib.UInt32
 import CodeLib.UInt64
+import CodeLib.RustStd.Frame
+import CodeLib.RustStd.U64.AbsDiff
 import CodeLib.RustStd.Option
 import CodeLib.Near.State
 import CodeLib.Near.Env

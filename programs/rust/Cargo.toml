@@ -2,6 +2,8 @@
 resolver = "2"
 members = [
   "num_integer",
+  "rust_u64",
+  "total_variation",
 ]
 
 [profile.release]
