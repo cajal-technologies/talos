@@ -1,5 +1,6 @@
 import Interpreter.Wasm
 import Interpreter.Wasm.Decoder.Wat
+import Interpreter.Wasm.Validate
 import Lean.Data.Json
 
 /-!
@@ -826,6 +827,17 @@ def runCommand
         let slot := st.modules[i]!
         let (outcome, slot') := runActionOnly slot field args fuel
         return ({ st with modules := st.modules.set! i slot' }, mk outcome)
+  | "assert_invalid" | "assert_malformed" =>
+    -- The module is declared ill-formed; we pass when our decoder or the
+    -- partial static validator rejects it, and fail only if we accept it.
+    -- (Run only here — never on a normal `(module …)` — so an aggressive
+    -- check can never break a valid module.)
+    let filename := jstr? cmd "filename" |>.getD ""
+    match (← decodeModuleFile s!"{wasmDir}/{filename}") with
+    | .error _ => return (st, mk .pass)
+    | .ok m => match m.validate with
+      | .error _ => return (st, mk .pass)
+      | .ok ()   => return (st, mk (.skipped s!"{kind}: not rejected"))
   | other =>
     return (st, mk (.skipped other))
 

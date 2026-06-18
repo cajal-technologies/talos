@@ -435,6 +435,8 @@ private structure TypeEntry where
   /-- For a struct type, the field names (`(field $x …)`), positionally;
   `none` for anonymous fields. Used to resolve `struct.get $t $field`. -/
   fieldNames : List (Option String) := []
+  /-- `false` when declared `(sub …)` without `final` (open for subtyping). -/
+  isFinal : Bool := true
 deriving Inhabited
 
 structure Ctx where
@@ -1927,6 +1929,12 @@ private def parseTypeField (xs : List Sexpr) : TypeEntry := Id.run do
     match rest with
     | [single] => compositeFieldNames single
     | _        => []
+  -- `(sub …)` without `final` declares the type open for subtyping.
+  let isFinal : Bool :=
+    match rest with
+    | [.list (.atom "sub" :: .atom "final" :: _)] => true
+    | [.list (.atom "sub" :: _)]                  => false
+    | _                                           => true
   let sig : Option (List Wasm.ValueType × List Wasm.ValueType) :=
     match (match rest with | [single] => funcSigForms? single | _ => none) with
     | some sigForms => Id.run do
@@ -1958,7 +1966,7 @@ private def parseTypeField (xs : List Sexpr) : TypeEntry := Id.run do
         | _ => ok := false
       if ok then return some (paramTypes, resultTypes) else return none
     | none => none
-  return { symId, sig, comp, superRef, fieldNames }
+  return { symId, sig, comp, superRef, fieldNames, isFinal }
 
 private def stripQuotes (s : String) : String :=
   if s.length ≥ 2 && s.startsWith "\"" && s.endsWith "\"" then
@@ -2985,7 +2993,7 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
       | none   => match te.sig with
         | some (ps, rs) => .func { params := ps, results := rs }
         | none          => .func {}
-    { comp, super := te.superRef.bind resolveSuper }
+    { comp, super := te.superRef.bind resolveSuper, «final» := te.isFinal }
   return { funcs    := decls.toList.map (·.func)
            exports  := exports.toList
            globals  := globImps.map (·.2) ++ globalDecls.toList

@@ -638,6 +638,10 @@ the same position as `Module.types`. -/
 structure GcTypeDef where
   comp  : CompositeType
   super : Option Nat := none
+  /-- `false` when the type is declared open for subtyping (`(sub …)`
+  without `final`). A supertype named by another type's `sub` clause must
+  be non-final. -/
+  «final» : Bool := true
 deriving Repr, Inhabited
 
 /-- Declaration of a single table. The interpreter only models
