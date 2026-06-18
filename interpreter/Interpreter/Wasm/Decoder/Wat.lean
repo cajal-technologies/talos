@@ -2217,7 +2217,7 @@ private def parseGlobalDecl (ctx : Ctx) (xs : List Sexpr) :
   let xs := xs.dropWhile fun
     | .list (.atom "export" :: _) => true
     | _ => false
-  let (vt, xs) ← match xs with
+  let (_vt, xs) ← match xs with
     | .list (.atom "mut" :: .atom t :: _) :: r =>
       match atomToValueType? t with
       | some vt => .ok (vt, r)
@@ -2242,10 +2242,9 @@ private def parseGlobalDecl (ctx : Ctx) (xs : List Sexpr) :
     | _ => false
   if needsExpr then
     let prog ← parseInstrSeq ctx xs
-    -- Positional constructor (fields: type, init, initExpr) — avoids
-    -- field-name resolution, which misbehaved under the verifier package's
-    -- build options.
-    return (⟨vt, .anyref none, prog⟩ : Wasm.GlobalDecl)
+    -- The value can't be folded at decode time; stash a placeholder `init`
+    -- and let `Module.runConstGlobals` evaluate `initExpr` at instantiation.
+    return { init := .anyref none, initExpr := prog }
   -- The init expression is either wrapped in a `(...)` list or — in
   -- wasm-tools' canonical print — emitted as a bare sequence of atoms
   -- (for v128.const this is `v128.const <shape> <lanes...>`, six tokens).
@@ -2289,7 +2288,7 @@ private def parseGlobalDecl (ctx : Ctx) (xs : List Sexpr) :
       | .error e      => .error e
     | some "global.get", _ => .ok (.i32 0)
     | _, _ => .error "global init expression must be i32.const or i64.const"
-  .ok { type := vt, init }
+  .ok { init }
 
 private def parseMemDecl (xs : List Sexpr) : Except Err Wasm.MemDecl := do
   let xs := match xs with
@@ -2753,7 +2752,7 @@ private def parseImportedGlobal (xs : List Sexpr) : Wasm.GlobalDecl :=
     | .atom t :: _ => (atomToValueType? t).getD .i32
     | .list l :: _ => listToValueType l
     | _ => .i32
-  { type := vt, init := vt.zero }
+  { init := vt.zero }
 
 /-- Collect imported non-function entities, in import order: zero-content
 decl slots for the low indices of each index space, plus the

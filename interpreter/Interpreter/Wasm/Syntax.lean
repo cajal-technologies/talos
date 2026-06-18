@@ -606,7 +606,6 @@ deriving Repr, Inhabited
 
 /-- Declaration of a module-level global with its initial value. -/
 structure GlobalDecl where
-  type : ValueType
   init : Value
   /-- For globals whose initializer is a constant expression that must run
   at instantiation (GC proposal: `struct.new`/`array.new*` allocate on the

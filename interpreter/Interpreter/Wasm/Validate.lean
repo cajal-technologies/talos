@@ -96,6 +96,20 @@ def StorageType.vt : StorageType → ValueType
   | .val vt   => vt
   | .packed _ => .i32
 
+/-- The static value type a global exposes. The `type` field was dropped
+from `GlobalDecl` (it was unused at runtime), so recover the declared type
+from the initializer value the decoder stored. -/
+def Value.toValueType : Value → ValueType
+  | .i32 _       => .i32
+  | .i64 _       => .i64
+  | .f32 _       => .f32
+  | .f64 _       => .f64
+  | .v128 _      => .v128
+  | .funcref _   => .funcref
+  | .externref _ => .externref
+  | .exnref _    => .exnref
+  | .anyref _    => .anyref
+
 /-- The `(pops, pushes)` operand-stack signature of a straight-line
 instruction (top of stack first in each list), or `none` to bail out
 (control flow or an instruction this partial checker does not model). -/
@@ -107,8 +121,8 @@ def Instruction.straightSig (m : Module) (locals : List ValueType)
   | .f64Const _ => some ([], [.f64])
   | .localGet i => (locals[i]?).map fun t => ([], [t])
   | .localSet i => (locals[i]?).map fun t => ([t], [])
-  | .globalGet i => (m.globals[i]?).map fun g => ([], [g.type])
-  | .globalSet i => (m.globals[i]?).map fun g => ([g.type], [])
+  | .globalGet i => (m.globals[i]?).map fun g => ([], [Value.toValueType g.init])
+  | .globalSet i => (m.globals[i]?).map fun g => ([Value.toValueType g.init], [])
   | .drop => none   -- polymorphic operand; skip rather than guess
   | .add | .sub | .mul | .divU | .divS | .remU | .remS
   | .and | .or | .xor | .shl | .shrU | .shrS | .rotl | .rotr =>

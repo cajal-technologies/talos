@@ -412,7 +412,7 @@ private def emitValue : Wasm.Value → String
   | .anyref (some r)    => s!".anyref (some ({reprStr r}))"
 
 private def emitGlobalDecl (g : Wasm.GlobalDecl) : String :=
-  s!"\{ type := {emitValueType g.type}, init := {emitValue g.init} }"
+  s!"\{ init := {emitValue g.init} }"
 
 private def emitByte (b : UInt8) : String := s!"({b.toNat} : UInt8)"
 
