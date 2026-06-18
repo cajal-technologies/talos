@@ -475,7 +475,6 @@ deriving Repr, Inhabited
 
 /-- Declaration of a module-level global with its initial value. -/
 structure GlobalDecl where
-  type : ValueType
   init : Value
 deriving Repr, Inhabited
 

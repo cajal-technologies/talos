@@ -1966,6 +1966,10 @@ private def collectGlobalNames (fields : List Sexpr)
     | _ => pure ()
   for f in fields do
     match f with
+    | .list [.atom "import", _, _, .list (.atom "global" :: _)] => i := i + 1
+    | _ => pure ()
+  for f in fields do
+    match f with
     | .list (.atom "global" :: body) =>
       match body with
       | .atom a :: _ =>
@@ -2004,7 +2008,7 @@ private def parseGlobalDecl (funcIds : Std.HashMap String Nat) (xs : List Sexpr)
   let xs := xs.dropWhile fun
     | .list (.atom "export" :: _) => true
     | _ => false
-  let (vt, xs) ← match xs with
+  let (_vt, xs) ← match xs with
     | .list (.atom "mut" :: .atom t :: _) :: r =>
       match atomToValueType? t with
       | some vt => .ok (vt, r)
@@ -2052,7 +2056,7 @@ private def parseGlobalDecl (funcIds : Std.HashMap String Nat) (xs : List Sexpr)
       | .error e      => .error e
     | some "global.get", _ => .ok (.i32 0)
     | _, _ => .error "global init expression must be i32.const or i64.const"
-  .ok { type := vt, init }
+  .ok { init }
 
 private def parseMemDecl (xs : List Sexpr) : Except Err Wasm.MemDecl := do
   let xs := match xs with
@@ -2482,7 +2486,7 @@ private def parseImportedGlobal (xs : List Sexpr) : Wasm.GlobalDecl :=
     | .atom t :: _ => (atomToValueType? t).getD .i32
     | .list l :: _ => listToValueType l
     | _ => .i32
-  { type := vt, init := vt.zero }
+  { init := vt.zero }
 
 /-- Collect imported non-function entities, in import order: zero-content
 decl slots for the low indices of each index space, plus the

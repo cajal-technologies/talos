@@ -406,7 +406,7 @@ private def emitValue : Wasm.Value → String
   | .exnref (some i)    => s!".exnref (some {emitNat i})"
 
 private def emitGlobalDecl (g : Wasm.GlobalDecl) : String :=
-  s!"\{ type := {emitValueType g.type}, init := {emitValue g.init} }"
+  s!"\{ init := {emitValue g.init} }"
 
 private def emitByte (b : UInt8) : String := s!"({b.toNat} : UInt8)"
 
