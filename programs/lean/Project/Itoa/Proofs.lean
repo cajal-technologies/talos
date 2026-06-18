@@ -1775,10 +1775,11 @@ private theorem write_loop_correct (st : Store Unit) (env : HostEnv Unit)
       have htb : st'.tables = st.tables := by rw [hshape]
       have hes : st'.elementSegments = st.elementSegments := by rw [hshape]
       have hh : st'.host = st.host := by rw [hshape]
+      have hgc : st'.gcHeap = st.gcHeap := by rw [hshape]
       have haddrE : UInt32.ofNat (L - 1 - k) + outPtr = outPtr := by rw [hLk0]; simp
       have hl6 : (4294967295 : UInt32) + UInt32.ofNat (L - 1 - k) = 4294967295 := by
         rw [hLk0]; simp
-      rw [hg, hem, hex, hds, htb, hes, hh, hM10, haddrE, hl6]
+      rw [hg, hem, hex, hds, htb, hes, hh, hgc, hM10, haddrE, hl6]
       apply hexit
       · simp [hpages]
       · intro j hj
@@ -1803,7 +1804,7 @@ private theorem write_loop_correct (st : Store Unit) (env : HostEnv Unit)
         · exfalso; have hk0 : L - 1 - k = 0 := by omega
           rw [hk0] at heq; simp at heq; exact hnv heq.left.symm
       refine ⟨⟨k + 1, hkLt, hpages,
-        ⟨by rw [hshape], by rw [hshape], by rw [hshape], by rw [hshape], by rw [hshape], by rw [hshape]⟩, ?_, ?_, ?_, ?_⟩, ?_⟩
+        ⟨by rw [hshape], by rw [hshape], by rw [hshape], by rw [hshape], by rw [hshape], by rw [hshape], by rw [hshape]⟩, ?_, ?_, ?_, ?_⟩, ?_⟩
       · -- remaining value: M / 10 = ofNat (n / 10^(k+1))
         have hMtoNat1 : (UInt64.ofNat (n.toNat / 10 ^ (k + 1))).toNat = n.toNat / 10 ^ (k + 1) :=
           UInt64.toNat_ofNat_of_lt (Nat.lt_of_le_of_lt (Nat.div_le_self _ _) (UInt64.toNat_lt n))
@@ -2103,7 +2104,7 @@ private theorem neg_write_loop_correct (st : Store Unit) (env : HostEnv Unit)
           UInt32.toNat_ofNat_of_lt' (by omega)]
         omega
       refine ⟨⟨k + 1, hkLt, hpages,
-        ⟨by rw [hshape], by rw [hshape], by rw [hshape], by rw [hshape], by rw [hshape], by rw [hshape]⟩, ⟨he5, he6⟩, ?_, ?_⟩, ?_⟩
+        ⟨by rw [hshape], by rw [hshape], by rw [hshape], by rw [hshape], by rw [hshape], by rw [hshape], by rw [hshape]⟩, ⟨he5, he6⟩, ?_, ?_⟩, ?_⟩
       · -- digits
         intro i hi1 hi2
         by_cases hie : outPtr.toNat + 1 + i = L - k + outPtr.toNat
@@ -2146,6 +2147,7 @@ private theorem neg_write_loop_correct (st : Store Unit) (env : HostEnv Unit)
       have htb : st'.tables = st.tables := by rw [hshape]
       have hes : st'.elementSegments = st.elementSegments := by rw [hshape]
       have hh : st'.host = st.host := by rw [hshape]
+      have hgc : st'.gcHeap = st.gcHeap := by rw [hshape]
       have hl3 : (if 1 < UInt32.ofNat (L - k) then (1 : UInt32) else 0) = 0 := by
         rw [if_neg]; intro hlt; have := UInt32.lt_iff_toNat_lt.mp hlt
         rw [htoNatLk, show (1 : UInt32).toNat = 1 from rfl] at this; omega
@@ -2155,7 +2157,7 @@ private theorem neg_write_loop_correct (st : Store Unit) (env : HostEnv Unit)
         apply UInt32.toNat.inj
         rw [UInt32.toNat_add, UInt32.toNat_add, show (1 : UInt32).toNat = 1 from rfl]
         omega
-      rw [hg, hem, hex, hds, htb, hes, hh, hM10, hl3, hl6, haddrE]
+      rw [hg, hem, hex, hds, htb, hes, hh, hgc, hM10, hl3, hl6, haddrE]
       apply hexit
       · simp [hpages]
       · intro j hj

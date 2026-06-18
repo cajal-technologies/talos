@@ -237,6 +237,11 @@ private inductive ExpectedVal where
   /-- `(either a b …)` from the relaxed-SIMD tests: any alternative
   matches. -/
   | either (alts : List ExpectedVal)
+  /-- A GC managed-reference expectation without a concrete payload
+  (`i31ref`/`structref`/`arrayref`/`anyref`/`eqref`/`nullref`): the test
+  only pins the reference's *kind*, so any live reference of the right
+  shape matches (and `nullref` matches the managed null). -/
+  | gcRef (kind : String)
 deriving Repr, Inhabited
 
 private partial def ExpectedVal.matches : ExpectedVal → Value → Bool
@@ -247,6 +252,15 @@ private partial def ExpectedVal.matches : ExpectedVal → Value → Bool
     ps.length = 128 / bits &&
     (List.zip ps (Wasm.Simd.toLanes bits v)).all fun (p, n) => p.matches n
   | .either alts, v => alts.any (·.matches v)
+  | .gcRef kind, v => match kind, v with
+    | "nullref", .anyref none      => true
+    | "nullref", _                 => false
+    | "i31ref", .anyref (some (.i31 _))    => true
+    | "structref", .anyref (some (.struct _)) => true
+    | "arrayref", .anyref (some (.array _))   => true
+    -- `anyref`/`eqref` (and any other live managed ref) match any non-null.
+    | _, .anyref (some _)          => true
+    | _, _                         => false
   | _, _ => false
 
 private partial def parseExpectedValue (j : Json) : Except String ExpectedVal := do
@@ -278,7 +292,21 @@ private partial def parseExpectedValue (j : Json) : Except String ExpectedVal :=
     | some val => ExpectedVal.f64Pat <$> lanePatOf 64 val
     | none => .error "value missing type/value"
   | some ty =>
-    match jstr? j "value" with
+    -- GC managed-reference result types (GC proposal). `wast2json` encodes
+    -- these with no `value` (any ref of the kind), `"null"`, or — for i31 —
+    -- a concrete scalar.
+    if ty == "i31ref" || ty == "structref" || ty == "arrayref"
+       || ty == "anyref" || ty == "eqref" || ty == "nullref" then
+      match jstr? j "value" with
+      | none          => return .gcRef ty
+      | some "null"   => return .gcRef "nullref"
+      | some v => match v.toInt? with
+        | some n =>
+          let m : Int := 4294967296
+          let u := ((n % m + m) % m).toNat
+          return .exact (.anyref (some (.i31 (u.toUInt32 &&& 0x7fffffff))))
+        | none => return .gcRef ty
+    else match jstr? j "value" with
     | some val => ExpectedVal.exact <$> parseValueAt ty val
     | none => .error "value missing type/value"
   | none => .error "value missing type/value"
@@ -524,6 +552,10 @@ private def renderValue : Value → String
   | .v128 b          => s!"v128:0x{String.ofList (Nat.toDigits 16 b.toNat)}"
   | .exnref none     => "exnref:null"
   | .exnref (some i) => s!"exnref:{i}"
+  | .anyref none              => "anyref:null"
+  | .anyref (some (.i31 n))   => s!"i31:{n.toInt32.toInt}"
+  | .anyref (some (.struct a)) => s!"struct:{a}"
+  | .anyref (some (.array a))  => s!"array:{a}"
 
 /-- Render a `List Value`, truncating runs longer than `maxLen` (the
 interpreter occasionally leaves big stacks around on failure and that
@@ -549,6 +581,7 @@ private partial def renderExpected : ExpectedVal → String
     s!"v128.{bits}[" ++ String.intercalate ", " (ps.map renderLanePat) ++ "]"
   | .either alts =>
     "either(" ++ String.intercalate " | " (alts.map renderExpected) ++ ")"
+  | .gcRef kind => s!"<any {kind}>"
 
 private def renderExpecteds (es : List ExpectedVal) : String :=
   "[" ++ String.intercalate ", " (es.map renderExpected) ++ "]"
@@ -688,6 +721,11 @@ def runCommand
         -- the instance.
         let env := buildEnv st m fuel
         let store0 := applyEntityImports st m m.initialStore
+        -- Run constant-expression global initializers (GC `struct.new` /
+        -- `array.new*` allocate on the heap) now that imports are in place,
+        -- then GC element-segment item initializers into their tables.
+        let store0 := m.runConstGlobals fuel store0 env
+        let store0 := m.runConstElems fuel store0 env
         match m.startFunc with
         | none => pure (ModuleSlot.ok m store0 env)
         | some idx =>

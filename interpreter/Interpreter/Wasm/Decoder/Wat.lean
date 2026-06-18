@@ -306,12 +306,13 @@ private def atomToValueType? : String → Option Wasm.ValueType
   | "externref" => some .externref
   | "exnref"    => some .exnref
   | "v128"      => some .v128
-  | "anyref"    => some .i32  -- placeholder
-  | "eqref"     => some .i32  -- placeholder
-  | "i31ref"    => some .i32  -- placeholder
-  | "structref" => some .i32  -- placeholder
-  | "arrayref"  => some .i32  -- placeholder
-  | "nullref"   => some .i32  -- placeholder
+  -- GC managed reference types (GC proposal) collapse to the `anyref` slot.
+  | "anyref"    => some .anyref
+  | "eqref"     => some .anyref
+  | "i31ref"    => some .anyref
+  | "structref" => some .anyref
+  | "arrayref"  => some .anyref
+  | "nullref"   => some .anyref
   | "nullfuncref"   => some .funcref
   | "nullexternref" => some .externref
   | _     => none
@@ -332,7 +333,15 @@ private def listToValueType (xs : List Sexpr) : Wasm.ValueType :=
   | [.atom "ref", .atom ht] | [.atom "ref", .atom "null", .atom ht] =>
     if isNullFuncrefHeapType ht then .funcref
     else if isNullExternrefHeapType ht then .externref
-    else if ht.startsWith "$" || ht.all Char.isDigit then .funcref
+    -- GC abstract heap types (GC proposal): a managed reference type, so its
+    -- zero is the managed null `anyref`.
+    else if ht == "any" || ht == "eq" || ht == "i31"
+         || ht == "struct" || ht == "array" || ht == "none" then .anyref
+    -- A concrete `(ref $t)` / `(ref N)` in GC modules is overwhelmingly a
+    -- struct/array type; treat it as a managed reference so its zero is the
+    -- managed null. (Typed-funcref locals are set before use, so only the
+    -- unused zero-init differs.)
+    else if ht.startsWith "$" || ht.all Char.isDigit then .anyref
     else .i32
   | _ => .i32
 
@@ -417,6 +426,15 @@ resolution. -/
 private structure TypeEntry where
   symId : Option String
   sig   : Option (List Wasm.ValueType × List Wasm.ValueType)
+  /-- GC composite type (struct/array/func) for this entry, if recognised
+  (GC proposal). Filled alongside `sig`. -/
+  comp     : Option Wasm.CompositeType := none
+  /-- Unresolved `sub $super` reference, resolved to an index in
+  `parseModule` once the whole type table is known. -/
+  superRef : Option String := none
+  /-- For a struct type, the field names (`(field $x …)`), positionally;
+  `none` for anonymous fields. Used to resolve `struct.get $t $field`. -/
+  fieldNames : List (Option String) := []
 deriving Inhabited
 
 structure Ctx where
@@ -463,12 +481,22 @@ private def resolveNamed (table : Std.HashMap String Nat) (kind : String)
 /-- Decode a `ref.null ht` heap-type immediate into the matching null-ref
 push. Heap types from proposals we don't model decode to `unreachable`
 (consistent with their other instructions). -/
-private def refNullInstr (ht : String) : Wasm.Instruction :=
+private def refNullInstr (types : Array TypeEntry) (ht : String) : Wasm.Instruction :=
   if isNullFuncrefHeapType ht then .refNull
   else if isNullExternrefHeapType ht then .refNullExtern
-  -- Concrete heap types (`$t` / numeric) refer to the type table; pre-GC
-  -- those are function types, so the null they denote is the null funcref.
-  else if ht.startsWith "$" || ht.all Char.isDigit then .refNull
+  -- GC abstract heap types (GC proposal): the null they denote is the
+  -- shared managed null `anyref`.
+  else if ht == "any" || ht == "eq" || ht == "i31"
+       || ht == "struct" || ht == "array" || ht == "none" then .gc .refNullAny
+  -- Concrete heap types (`$t` / numeric): a struct/array type denotes the
+  -- managed null; a function type denotes the null funcref.
+  else if ht.startsWith "$" || ht.all Char.isDigit then
+    let idx? := if ht.startsWith "$" then
+        types.findIdx? (·.symId = some (ht.drop 1).toString)
+      else ht.toNat?
+    match idx?.bind (fun i => (types[i]?).bind (·.comp)) with
+    | some (.struct _) | some (.array _) => .gc .refNullAny
+    | _ => .refNull
   else .unreachable
 
 private def dropTrailingLabel : List Sexpr → List Sexpr
@@ -633,6 +661,11 @@ private def parsePlainOp : String → Except Err Wasm.Instruction
   | "f32.reinterpret_i32" => .ok .f32ReinterpretI32
   | "f64.reinterpret_i64" => .ok .f64ReinterpretI64
   | "ref.is_null"  => .ok .refIsNull
+  -- GC reference instructions (GC proposal).
+  | "ref.i31"      => .ok (.gc .refI31)
+  | "i31.get_s"    => .ok (.gc .i31GetS)
+  | "i31.get_u"    => .ok (.gc .i31GetU)
+  | "ref.eq"       => .ok (.gc .refEq)
   | op          =>
     -- Accept instructions from proposals the interpreter doesn't model
     -- (floats, SIMD, reference types, tables, GC, exceptions, tail calls)
@@ -733,27 +766,11 @@ consumes. Used to keep the linear/folded parsers in sync with the token
 stream when we accept-and-stub instructions from proposals the
 interpreter doesn't model. Returns `none` for ops we don't pretend to
 support. -/
-private def stubImmediateCount (op : String) : Option Nat :=
-if op == "ref.test" || op == "ref.cast"
-     || op == "struct.new" || op == "struct.new_default"
-     || op == "array.new" || op == "array.new_default" || op == "array.new_fixed"
-     -- array element accessors take 1 atom (the array type ref) only;
-     -- struct accessors take 2 (type + field), see below.
-     || op == "array.get" || op == "array.get_u" || op == "array.get_s"
-     || op == "array.set" || op == "array.fill"
-  then some 1
-  -- `br_on_cast`/`br_on_cast_fail` take label + from_type + to_type,
-  -- where the type immediates can be atoms (`anyref`) or lists
-  -- (`(ref $t)`); they are handled separately by
-  -- `consumeBrOnCastImmediates`.
-  else if op == "br_on_cast" || op == "br_on_cast_fail" then none
-  else if op == "struct.get" || op == "struct.get_u" || op == "struct.get_s"
-     || op == "struct.set"
-     || op == "array.new_elem" || op == "array.new_data"
-     || op == "array.copy"
-     || op == "array.init_data" || op == "array.init_elem"
-  then some 2
-  else none
+private def stubImmediateCount (_op : String) : Option Nat :=
+  -- `br_on_cast`/`br_on_cast_fail` take label + from_type + to_type and are
+  -- handled separately by `consumeBrOnCastImmediates`; all other GC ops are
+  -- now decoded to real instructions.
+  none
 
 /-- Drop the first `n` atom tokens from `toks`. Errors if a non-atom is
 encountered or the stream is too short. -/
@@ -1064,6 +1081,41 @@ private def resolveTypeIdx (ctx : Ctx) (n : String) : Except Err Nat :=
     | none   => .error s!"unknown type id: {n}"
   else parseNat n
 
+/-- Resolve a heap-type token (`any`/`eq`/`i31`/`struct`/`array`/`none`,
+the `func`/`extern` families, or a concrete `$t`/index) to a
+`GcHeapType`. -/
+private def heapTypeOfAtom (ctx : Ctx) (a : String) : Except Err Wasm.GcHeapType :=
+  match a with
+  | "any"      => .ok .any
+  | "eq"       => .ok .eq
+  | "i31"      => .ok .i31
+  | "struct"   => .ok .structT
+  | "array"    => .ok .arrayT
+  | "none"     => .ok .noneT
+  | "func"     => .ok .func
+  | "nofunc"   => .ok .noFunc
+  | "extern"   => .ok .extern
+  | "noextern" => .ok .noExtern
+  | _          => Wasm.GcHeapType.concrete <$> resolveTypeIdx ctx a
+
+/-- Parse a `ref.test`/`ref.cast` target reference-type immediate into its
+nullability and heap type. Accepts the `…ref` abbreviations (all nullable),
+the explicit `(ref ht)` (non-nullable), and `(ref null ht)` (nullable). -/
+private def parseRefTypeImmediate (ctx : Ctx) : Sexpr → Except Err (Bool × Wasm.GcHeapType)
+  | .atom "anyref"        => .ok (true, .any)
+  | .atom "eqref"         => .ok (true, .eq)
+  | .atom "i31ref"        => .ok (true, .i31)
+  | .atom "structref"     => .ok (true, .structT)
+  | .atom "arrayref"      => .ok (true, .arrayT)
+  | .atom "nullref"       => .ok (true, .noneT)
+  | .atom "funcref"       => .ok (true, .func)
+  | .atom "nullfuncref"   => .ok (true, .noFunc)
+  | .atom "externref"     => .ok (true, .extern)
+  | .atom "nullexternref" => .ok (true, .noExtern)
+  | .list [.atom "ref", .atom "null", .atom ht] => (fun h => (true, h)) <$> heapTypeOfAtom ctx ht
+  | .list [.atom "ref", .atom ht]               => (fun h => (false, h)) <$> heapTypeOfAtom ctx ht
+  | _ => .error "unsupported ref-type immediate"
+
 /-- Wrap a memory instruction for a non-default memory (multi-memory). -/
 private def wrapMem (k : Nat) (i : Wasm.Instruction) : Wasm.Instruction :=
   if k = 0 then i else .memOp k i
@@ -1140,6 +1192,78 @@ private partial def parseInstr (ctx : Ctx) (toks : List Sexpr)
     | "call_ref" => parseImmediateNat (resolveTypeIdx ctx) .callRef op rest
     | "return_call_ref" => parseImmediateNat (resolveTypeIdx ctx) .returnCallRef op rest
     | "ref.as_non_null" => .ok ([.refAsNonNull], rest)
+    | "ref.test" => match rest with
+      | t :: rest' => do
+        let (n, ht) ← parseRefTypeImmediate ctx t
+        .ok ([.gc (.refTest n ht)], rest')
+      | _ => .error "ref.test expects a reference-type immediate"
+    | "ref.cast" => match rest with
+      | t :: rest' => do
+        let (n, ht) ← parseRefTypeImmediate ctx t
+        .ok ([.gc (.refCast n ht)], rest')
+      | _ => .error "ref.cast expects a reference-type immediate"
+    | "br_on_cast" | "br_on_cast_fail" => match rest with
+      | .atom lbl :: _t1 :: t2 :: rest' => do
+        let label ← resolveLabel ctx lbl
+        let (n2, ht2) ← parseRefTypeImmediate ctx t2
+        let instr := if op == "br_on_cast" then Wasm.GcOp.brOnCast label n2 ht2
+                     else Wasm.GcOp.brOnCastFail label n2 ht2
+        .ok ([.gc instr], rest')
+      | _ => .error s!"{op} expects label + 2 type immediates"
+    -- Struct / array instructions (GC proposal). Type immediates resolve
+    -- against the GC type table; field/length immediates are numeric.
+    | "struct.new"         => parseImmediateNat (resolveTypeIdx ctx) (fun i => .gc (.structNew i)) op rest
+    | "struct.new_default" => parseImmediateNat (resolveTypeIdx ctx) (fun i => .gc (.structNewDefault i)) op rest
+    | "struct.get" | "struct.get_s" | "struct.get_u" | "struct.set" => match rest with
+      | .atom t :: .atom f :: rest' => do
+        let ti ← resolveTypeIdx ctx t
+        let fi ← if f.startsWith "$" then
+            let name := (f.drop 1).toString
+            match (ctx.types[ti]?).bind (·.fieldNames.findIdx? (· = some name)) with
+            | some i => .ok i
+            | none   => .error s!"unknown struct field: {f}"
+          else parseNat f
+        let mk : Nat → Nat → Wasm.GcOp := match op with
+          | "struct.get"   => Wasm.GcOp.structGet
+          | "struct.get_s" => Wasm.GcOp.structGetS
+          | "struct.get_u" => Wasm.GcOp.structGetU
+          | _              => Wasm.GcOp.structSet
+        .ok ([.gc (mk ti fi)], rest')
+      | _ => .error s!"{op} expects type and field immediates"
+    | "array.new"         => parseImmediateNat (resolveTypeIdx ctx) (fun i => .gc (.arrayNew i)) op rest
+    | "array.new_default" => parseImmediateNat (resolveTypeIdx ctx) (fun i => .gc (.arrayNewDefault i)) op rest
+    | "array.new_fixed" => match rest with
+      | .atom t :: .atom n :: rest' => do
+        let ti ← resolveTypeIdx ctx t
+        let nn ← parseNat n
+        .ok ([.gc (.arrayNewFixed ti nn)], rest')
+      | _ => .error "array.new_fixed expects type and length immediates"
+    | "array.get"   => parseImmediateNat (resolveTypeIdx ctx) (fun i => .gc (.arrayGet i)) op rest
+    | "array.get_s" => parseImmediateNat (resolveTypeIdx ctx) (fun i => .gc (.arrayGetS i)) op rest
+    | "array.get_u" => parseImmediateNat (resolveTypeIdx ctx) (fun i => .gc (.arrayGetU i)) op rest
+    | "array.set"   => parseImmediateNat (resolveTypeIdx ctx) (fun i => .gc (.arraySet i)) op rest
+    | "array.len"   => .ok ([.gc .arrayLen], rest)
+    | "array.fill"  => parseImmediateNat (resolveTypeIdx ctx) (fun i => .gc (.arrayFill i)) op rest
+    | "array.copy" => match rest with
+      | .atom dt :: .atom st :: rest' => do
+        .ok ([.gc (.arrayCopy (← resolveTypeIdx ctx dt) (← resolveTypeIdx ctx st))], rest')
+      | _ => .error "array.copy expects two type immediates"
+    | "array.new_data" => match rest with
+      | .atom t :: .atom d :: rest' => do
+        .ok ([.gc (.arrayNewData (← resolveTypeIdx ctx t) (← parseNat d))], rest')
+      | _ => .error "array.new_data expects type and data immediates"
+    | "array.init_data" => match rest with
+      | .atom t :: .atom d :: rest' => do
+        .ok ([.gc (.arrayInitData (← resolveTypeIdx ctx t) (← parseNat d))], rest')
+      | _ => .error "array.init_data expects type and data immediates"
+    | "array.new_elem" => match rest with
+      | .atom t :: .atom e :: rest' => do
+        .ok ([.gc (.arrayNewElem (← resolveTypeIdx ctx t) (← resolveNamed ctx.elemNames "elem" e))], rest')
+      | _ => .error "array.new_elem expects type and elem immediates"
+    | "array.init_elem" => match rest with
+      | .atom t :: .atom e :: rest' => do
+        .ok ([.gc (.arrayInitElem (← resolveTypeIdx ctx t) (← resolveNamed ctx.elemNames "elem" e))], rest')
+      | _ => .error "array.init_elem expects type and elem immediates"
     | "br_on_null" => parseImmediateNat (resolveLabel ctx) .brOnNull op rest
     | "br_on_non_null" => parseImmediateNat (resolveLabel ctx) .brOnNonNull op rest
     | "call_indirect" => parseCallIndirect ctx .callIndirect rest
@@ -1157,7 +1281,7 @@ private partial def parseInstr (ctx : Ctx) (toks : List Sexpr)
     -- become the null funcref, `extern`-like ones the null externref; heap
     -- types from unmodelled proposals keep the decode-but-trap behaviour.
     | "ref.null"    => match rest with
-      | .atom ht :: rest' => .ok ([refNullInstr ht], rest')
+      | .atom ht :: rest' => .ok ([refNullInstr ctx.types ht], rest')
       | _ => .error "ref.null expects a heap-type immediate"
     -- Table ops carry an *optional* table-index immediate (default 0);
     -- see `parseOptTableIdx`.
@@ -1303,7 +1427,7 @@ private partial def parseFolded (ctx : Ctx) (xs : List Sexpr)
       foldedWithImmediate ctx (resolveNamed ctx.funcIds "function") (fun i => [.refFunc i]) rest
     | "ref.null"    =>
       match rest with
-      | [.atom ht] => .ok [refNullInstr ht]
+      | [.atom ht] => .ok [refNullInstr ctx.types ht]
       | _ => .error "folded ref.null expects exactly one heap-type immediate"
     | "table.get"   => foldedOptTableIdx ctx .tableGet rest
     | "table.size"  => foldedOptTableIdx ctx .tableSize rest
@@ -1713,6 +1837,78 @@ private def resolveTypeRef (types : Array TypeEntry) (s : String)
     .error s!"(type {s}) is not a supported (func ...) signature"
   | none => .error s!"type index out of range: {idx}"
 
+/-- Parse a storage type (`i8`/`i16` packed, a numeric/value type, or a
+reference type) for a struct field or array element (GC proposal). -/
+private def parseStorageType : Sexpr → Wasm.StorageType
+  | .atom "i8"  => .packed 8
+  | .atom "i16" => .packed 16
+  | .atom a     => match atomToValueType? a with
+    | some vt => .val vt
+    | none    => .val .anyref
+  | .list (.atom "ref" :: _) => .val .anyref
+  | .list l                  => .val (listToValueType l)
+
+/-- Parse a field type `st` or `(mut st)` into a `FieldType`. -/
+private def parseFieldType : Sexpr → Wasm.FieldType
+  | .list [.atom "mut", st] => { storage := parseStorageType st, isMut := true }
+  | st                      => { storage := parseStorageType st, isMut := false }
+
+/-- Parse a `(field …)` form into its declared fields, each paired with its
+optional name. A `(field $x st)` is one named field; `(field st …)` is one
+anonymous field per storage type. -/
+private def parseFieldDecl : Sexpr → List (Option String × Wasm.FieldType)
+  | .list (.atom "field" :: .atom name :: [ft]) =>
+    if name.startsWith "$" then [(some (name.drop 1).toString, parseFieldType ft)]
+    else [(none, parseFieldType (.atom name)), (none, parseFieldType ft)]
+  | .list (.atom "field" :: fs) => fs.map (fun ft => (none, parseFieldType ft))
+  | _                           => []
+
+private def parseFields (s : Sexpr) : List Wasm.FieldType :=
+  (parseFieldDecl s).map (·.2)
+
+/-- Recognise the GC composite type `(struct …)` / `(array …)` / `(func …)`
+and, for `(sub $super …)`, peel the supertype reference. Returns the
+composite together with the unresolved super name. -/
+private partial def parseComposite : Sexpr → Option Wasm.CompositeType × Option String
+  | .list (.atom "struct" :: fieldForms) =>
+    (some (.struct (fieldForms.flatMap parseFields)), none)
+  | .list [.atom "array", ft] =>
+    (some (.array (parseFieldType ft)), none)
+  | .list (.atom "sub" :: rest) =>
+    -- `(sub $super comp)` or `(sub final $super comp)`; the comp is the
+    -- last element, the super reference (if any) the preceding `$id`.
+    let rest := match rest with | .atom "final" :: r => r | r => r
+    match rest with
+    | [.atom sup, comp] => let (c, _) := parseComposite comp; (c, some sup)
+    | [comp]            => let (c, _) := parseComposite comp; (c, none)
+    | _                 => (none, none)
+  | _ => (none, none)
+
+/-- The `(func …)` signature forms of a type body, peeling a `(sub …)`
+wrapper. In GC modules `wasm-tools print` wraps function types as
+`(sub final (func …))`, so a bare-`(func …)` match alone misses them. -/
+private partial def funcSigForms? : Sexpr → Option (List Sexpr)
+  | .list (.atom "func" :: sigForms) => some sigForms
+  | .list (.atom "sub" :: rest) =>
+    let rest := match rest with | .atom "final" :: r => r | r => r
+    match rest with
+    | [_, comp] => funcSigForms? comp
+    | [comp]    => funcSigForms? comp
+    | _         => none
+  | _ => none
+
+/-- Positional field names of a struct composite (peeling any `(sub …)`). -/
+private partial def compositeFieldNames : Sexpr → List (Option String)
+  | .list (.atom "struct" :: fieldForms) =>
+    fieldForms.flatMap (fun f => (parseFieldDecl f).map (·.1))
+  | .list (.atom "sub" :: rest) =>
+    let rest := match rest with | .atom "final" :: r => r | r => r
+    match rest with
+    | [_, comp] => compositeFieldNames comp
+    | [comp]    => compositeFieldNames comp
+    | _         => []
+  | _ => []
+
 private def parseTypeField (xs : List Sexpr) : TypeEntry := Id.run do
   let mut symId : Option String := none
   let mut rest := xs
@@ -1722,9 +1918,18 @@ private def parseTypeField (xs : List Sexpr) : TypeEntry := Id.run do
       symId := some (a.drop 1).toString
       rest := r
   | _ => pure ()
-  let sig : Option (List Wasm.ValueType × List Wasm.ValueType) :=
+  -- GC composite types (struct/array, possibly under `(sub …)`).
+  let (comp, superRef) : Option Wasm.CompositeType × Option String :=
     match rest with
-    | [.list (.atom "func" :: sigForms)] => Id.run do
+    | [single] => parseComposite single
+    | _        => (none, none)
+  let fieldNames : List (Option String) :=
+    match rest with
+    | [single] => compositeFieldNames single
+    | _        => []
+  let sig : Option (List Wasm.ValueType × List Wasm.ValueType) :=
+    match (match rest with | [single] => funcSigForms? single | _ => none) with
+    | some sigForms => Id.run do
       let mut paramTypes : List Wasm.ValueType := []
       let mut resultTypes : List Wasm.ValueType := []
       let mut ok := true
@@ -1752,8 +1957,8 @@ private def parseTypeField (xs : List Sexpr) : TypeEntry := Id.run do
             | .list l => resultTypes := resultTypes ++ [listToValueType l]
         | _ => ok := false
       if ok then return some (paramTypes, resultTypes) else return none
-    | _ => none
-  return { symId, sig }
+    | none => none
+  return { symId, sig, comp, superRef, fieldNames }
 
 private def stripQuotes (s : String) : String :=
   if s.length ≥ 2 && s.startsWith "\"" && s.endsWith "\"" then
@@ -1995,7 +2200,7 @@ private def parseWatString (s : String) : Except Err (List UInt8) :=
   if !s.startsWith "\"" then .error s!"expected string literal, got: {s}"
   else decodeWatBytes (stripQuotes s).toList
 
-private def parseGlobalDecl (funcIds : Std.HashMap String Nat) (xs : List Sexpr) :
+private def parseGlobalDecl (ctx : Ctx) (xs : List Sexpr) :
     Except Err Wasm.GlobalDecl := do
   let xs := match xs with
     | .atom a :: r => if a.startsWith "$" then r else xs
@@ -2019,6 +2224,17 @@ private def parseGlobalDecl (funcIds : Std.HashMap String Nat) (xs : List Sexpr)
     -- `(ref null T)` form (immutable ref type).
     | .list (.atom "ref" :: _) :: r => .ok (.i32, r)
     | _ => .error "malformed (global ...): missing type"
+  -- GC heap-allocating initializers (`struct.new`/`array.new*`) cannot be
+  -- folded to a single value at decode time; keep the const-expr program so
+  -- `Module.runConstGlobals` can evaluate it at instantiation.
+  let needsExpr := xs.any fun
+    | .atom a => a == "struct.new" || a == "struct.new_default"
+        || a == "array.new" || a == "array.new_default" || a == "array.new_fixed"
+        || a == "array.new_data" || a == "array.new_elem"
+    | _ => false
+  if needsExpr then
+    let prog ← parseInstrSeq ctx xs
+    return { type := vt, init := .anyref none, initExpr := prog }
   -- The init expression is either wrapped in a `(...)` list or — in
   -- wasm-tools' canonical print — emitted as a bare sequence of atoms
   -- (for v128.const this is `v128.const <shape> <lanes...>`, six tokens).
@@ -2028,6 +2244,10 @@ private def parseGlobalDecl (funcIds : Std.HashMap String Nat) (xs : List Sexpr)
     | .atom h :: rest           => (some h, rest)
     | _                         => (none, [])
   let init : Wasm.Value ← match head?, tail with
+    -- GC constant init `i32.const N ref.i31` (flat form emitted by
+    -- `wasm-tools print`): box the low 31 bits as an i31 reference.
+    | some "i32.const", [.atom n, .atom "ref.i31"] =>
+      .ok (.anyref (some (.i31 ((← parseI32 n) &&& 0x7fffffff))))
     | some "i32.const", .atom n :: _ => .ok (.i32 (← parseI32 n))
     | some "i64.const", .atom n :: _ => .ok (.i64 (← parseI64 n))
     | some "f32.const", .atom n :: _ => .ok (.f32 (← parseF32Lit n))
@@ -2037,9 +2257,15 @@ private def parseGlobalDecl (funcIds : Std.HashMap String Nat) (xs : List Sexpr)
         .ok (.funcref none)
       else if isNullExternrefHeapType ht then
         .ok (.externref none)
+      else if ht == "any" || ht == "eq" || ht == "i31"
+           || ht == "struct" || ht == "array" || ht == "none" then
+        .ok (.anyref none)
       else
         .ok (.i32 0)
-    | some "ref.func", .atom ref :: _ => .ok (.funcref (some (← resolveFuncRef funcIds ref)))
+    -- `(ref.i31 (i32.const N))` constant init (GC proposal).
+    | some "ref.i31", [.list [.atom "i32.const", .atom n]] =>
+      .ok (.anyref (some (.i31 ((← parseI32 n) &&& 0x7fffffff))))
+    | some "ref.func", .atom ref :: _ => .ok (.funcref (some (← resolveFuncRef ctx.funcIds ref)))
     | some "ref.func", _ => .error "global ref.func init expects a function immediate"
     | some "ref.null", _ => .error "global ref.null init expects a heap-type immediate"
     -- Init expressions from proposals we don't model are accepted by
@@ -2282,17 +2508,30 @@ private def parseTableDecl (funcIds : Std.HashMap String Nat) (tableIdx : Nat)
     let nMax ← parseBound max
     .ok ({ min := nMin, max := some nMax,
            elemType := (atomToValueType? elemTy).getD .funcref, is64 }, none)
-  -- List element types, e.g. `(table $t 1 1 (ref null $t))` — treated as
-  -- funcref placeholders (typed function references are not modelled).
-  | [.atom min, .list _] =>
+  -- List element types, e.g. `(table $t 1 1 (ref null $t))`. `listToValueType`
+  -- maps GC heap references to the `anyref` slot (so the table fills with the
+  -- managed null) and other ref types to funcref/externref.
+  | [.atom min, .list l] =>
     let n ← parseBound min
-    .ok ({ min := n, elemType := .funcref, is64 }, none)
-  | [.atom min, .atom max, .list _] =>
+    .ok ({ min := n, elemType := listToValueType l, is64 }, none)
+  | [.atom min, .atom max, .list l] =>
     let nMin ← parseBound min
     let nMax ← parseBound max
-    .ok ({ min := nMin, max := some nMax, elemType := .funcref, is64 }, none)
+    .ok ({ min := nMin, max := some nMax, elemType := listToValueType l, is64 }, none)
   | [.atom _other] => .ok ({ min := 0, elemType := .funcref, is64 }, none)
   | _ => .error "malformed (table ...) declaration"
+
+/-- Whether a `(ref null? ht)` element type uses the constant-expression
+item form rather than the bare funcref list. Abstract `func`/`extern`
+element types keep the funcref/externref `funcs` path; every other ref
+type (GC abstract heap types and concrete `$t` typed references) takes the
+const-expr path, whose evaluator handles `ref.func`/`ref.i31`/`struct.new`
+uniformly. -/
+private def elemRefIsGc (inner : List Sexpr) : Bool :=
+  match inner with
+  | [.atom ht] | [.atom "null", .atom ht] =>
+    !(isNullFuncrefHeapType ht || isNullExternrefHeapType ht)
+  | _ => false
 
 /-- Parse one `(elem ...)` declaration. Handles every shape produced by
 `wasm-tools print`: active w/ default or explicit table, passive with
@@ -2304,11 +2543,13 @@ Inside the function-ref list each entry is one of:
 * `(ref.null func)` — null entry
 * `(item …)` — canonical wrapper; we look one level inside
 -/
-private def parseElemSegment
-    (funcIds : Std.HashMap String Nat) (tableNames : Std.HashMap String Nat)
+private def parseElemSegment (ctx : Ctx)
     (xs : List Sexpr) : Except Err Wasm.ElementSegment := do
+  let funcIds := ctx.funcIds
+  let tableNames := ctx.tableNames
   let mut rest := xs
   let mut isDeclarative := false
+  let mut isGc := false
   match rest with
   | .atom "declare" :: r => isDeclarative := true; rest := r
   | _ => pure ()
@@ -2346,10 +2587,27 @@ private def parseElemSegment
   | .atom "func"      :: r => rest := r
   | .atom "funcref"   :: r => rest := r
   | .atom "externref" :: r => rest := r
-  -- List type form, e.g. `(ref null $t)` — skipped like the keywords.
-  | .list (.atom "ref" :: _) :: r => rest := r
+  -- GC managed-reference element types (GC proposal): the items are
+  -- constant expressions evaluated at instantiation.
+  | .atom t :: r =>
+    if t == "i31ref" || t == "anyref" || t == "eqref"
+       || t == "structref" || t == "arrayref" || t == "nullref" then isGc := true
+    rest := r
+  -- List type form `(ref null? ht)`: GC when `ht` is a managed heap type.
+  | .list (.atom "ref" :: inner) :: r =>
+    if elemRefIsGc inner then isGc := true
+    rest := r
   | _ => pure ()
   if isDeclarative then offset := none
+  if isGc then
+    -- Each item is a `(item <const-expr>)` (or a bare const-expr) producing
+    -- one reference value; keep the program for `runConstElems`.
+    let mut exprs : List Wasm.Program := []
+    for it in rest do
+      match it with
+      | .list (.atom "item" :: inner) => exprs := exprs ++ [← parseInstrSeq ctx inner]
+      | other                         => exprs := exprs ++ [← parseInstrSeq ctx [other]]
+    return { tableIdx, offset, exprs }
   let mut funcs : List (Option Nat) := []
   for it in rest do
     match it with
@@ -2639,7 +2897,10 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
     | .list (.atom "global" :: body) =>
       for n in inlineExportsOf body do
         globalExports := globalExports.push (n, globImps.length + globalDecls.size)
-      globalDecls := globalDecls.push (← parseGlobalDecl funcIds body)
+      let gResolveBlockType : BlockTypeResolver := fun ref =>
+        (match resolveTypeRef types ref with | .ok sig => some sig | .error _ => none)
+      let gctx : Ctx := { Ctx.empty with funcIds := funcIds, globalIds := globalIds, types := types, tableNames := tableNames, elemNames := elemNames, memNames := memNames, tagNames := tagNames, resolveBlockType := gResolveBlockType }
+      globalDecls := globalDecls.push (← parseGlobalDecl gctx body)
     | .list (.atom "memory" :: body) =>
       -- Multi-memory: declared memories follow the imported ones in the
       -- index space; the combined list is split into the default memory
@@ -2661,7 +2922,10 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
       | some seg => elemSegs := elemSegs.push seg
       | none     => pure ()
     | .list (.atom "elem" :: body) =>
-      elemSegs := elemSegs.push (← parseElemSegment funcIds tableNames body)
+      let eResolveBlockType : BlockTypeResolver := fun ref =>
+        (match resolveTypeRef types ref with | .ok sig => some sig | .error _ => none)
+      let ectx : Ctx := { Ctx.empty with funcIds := funcIds, globalIds := globalIds, types := types, tableNames := tableNames, elemNames := elemNames, memNames := memNames, tagNames := tagNames, resolveBlockType := eResolveBlockType }
+      elemSegs := elemSegs.push (← parseElemSegment ectx body)
     | .list [.atom "start", .atom ref] =>
       if startFunc.isSome then throw "duplicate (start ...) declaration"
       startFunc := some (← resolveFuncRef funcIds ref)
@@ -2707,6 +2971,21 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
     match te.sig with
     | some (ps, rs) => { params := ps, results := rs }
     | none          => {}
+  -- GC type table (GC proposal), parallel-indexed to `moduleTypes`. Each
+  -- entry carries its composite type (struct/array, or the func signature)
+  -- and resolved `sub` supertype index.
+  let resolveSuper : String → Option Nat := fun s =>
+    let name := if s.startsWith "$" then (s.drop 1).toString else s
+    match types.findIdx? (fun t => t.symId = some name) with
+    | some i => some i
+    | none   => s.toNat?
+  let gcTypes : List Wasm.GcTypeDef := types.toList.map fun te =>
+    let comp : Wasm.CompositeType := match te.comp with
+      | some c => c
+      | none   => match te.sig with
+        | some (ps, rs) => .func { params := ps, results := rs }
+        | none          => .func {}
+    { comp, super := te.superRef.bind resolveSuper }
   return { funcs    := decls.toList.map (·.func)
            exports  := exports.toList
            globals  := globImps.map (·.2) ++ globalDecls.toList
@@ -2715,6 +2994,7 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
            imports
            startFunc
            types    := moduleTypes
+           gcTypes
            tables   := tblImps.map (·.2) ++ tableDecls.toList
            elements := elemSegs.toList
            importedGlobals  := globImps.map (·.1)

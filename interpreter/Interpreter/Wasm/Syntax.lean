@@ -21,6 +21,48 @@ inductive ValueType where
   | externref
   | v128
   | exnref
+  /-- Any reference into the managed GC heap (GC proposal): the runtime
+  union of `i31`, `struct`, and `array` references plus the null of any
+  `anyref`/`eqref`/`i31ref`/`structref`/`arrayref` heap type. Our reduced
+  value-type lattice collapses all of these to a single `anyref` slot;
+  the static heap type is only needed by `ref.cast`/`ref.test`, which read
+  it from their instruction immediate rather than from the local's type. -/
+  | anyref
+deriving Repr, Inhabited, DecidableEq, BEq
+
+/-- The live (non-null) shapes a managed GC reference can take (GC
+proposal). `i31` is an unboxed 31-bit scalar (top bit always clear);
+`struct`/`array` carry the address of a heap object in `Store.gcHeap`. -/
+inductive AnyRef where
+  | i31    (n : UInt32)
+  | struct (addr : Nat)
+  | array  (addr : Nat)
+deriving Repr, Inhabited, DecidableEq, BEq
+
+/-- A heap type immediate for `ref.test`/`ref.cast`/`br_on_cast` (GC
+proposal). The abstract heap types form the fixed top of the subtype
+lattice; `concrete i` refers to struct/array type definition `i`. The
+`func`/`extern` families never name an `anyref`, so a managed reference
+never matches them. -/
+inductive GcHeapType where
+  | any | eq | i31 | structT | arrayT | noneT
+  | func | noFunc | «extern» | noExtern
+  | concrete (typeIdx : Nat)
+deriving Repr, Inhabited, DecidableEq, BEq
+
+/-- The storage type of a struct field or array element (GC proposal).
+Packed `i8`/`i16` fields are stored in a full `i32` slot but read back
+with explicit sign or zero extension by `*.get_s`/`*.get_u`. -/
+inductive StorageType where
+  | val    (vt : ValueType)
+  | packed (bits : Nat)          -- 8 or 16
+deriving Repr, Inhabited, DecidableEq, BEq
+
+/-- A struct field / array element declaration: its storage type and
+mutability. -/
+structure FieldType where
+  storage : StorageType
+  isMut   : Bool := false
 deriving Repr, Inhabited, DecidableEq, BEq
 
 inductive Value where
@@ -45,6 +87,13 @@ inductive Value where
   package list on the `Store` (`Store.exns`), which `catch_ref` appends
   to and `throw_ref` re-raises from. -/
   | exnref (idx : Option Nat)
+  /-- A managed GC reference (GC proposal): `none` is the null reference
+  (of whichever `anyref`/`eqref`/`i31ref`/`structref`/`arrayref` heap type
+  the producing instruction declared); `some r` is a live reference whose
+  shape is one of the `AnyRef` payloads. Folding `i31`/`struct`/`array`
+  into one `Value` constructor keeps every exhaustive `match … with` over
+  `Value` to a single new arm. -/
+  | anyref (r : Option AnyRef)
 deriving Repr, Inhabited, DecidableEq, BEq
 
 /-- Type-indexed zero used to initialise locals at function entry. The
@@ -59,6 +108,39 @@ def ValueType.zero : ValueType → Value
   | .externref => .externref none
   | .v128      => .v128 0
   | .exnref    => .exnref none
+  | .anyref    => .anyref none
+
+/-- The default zero value of a storage type, for `struct.new_default` /
+`array.new_default`. -/
+def StorageType.zero : StorageType → Value
+  | .val vt    => vt.zero
+  | .packed _  => .i32 0
+
+/-- The in-memory byte width of a storage type, for `array.new_data` /
+`array.init_data` reads. Reference slots have no data-segment encoding;
+they report 0. -/
+def StorageType.byteSize : StorageType → Nat
+  | .packed 8  => 1
+  | .packed 16 => 2
+  | .packed _  => 1
+  | .val .i32  => 4
+  | .val .i64  => 8
+  | .val .f32  => 4
+  | .val .f64  => 8
+  | .val _     => 0
+
+/-- A runtime heap object (GC proposal): a struct (a flat field record) or
+an array (a flat element vector), each tagged with the type index it was
+allocated at so `ref.cast`/`ref.test` can recover its runtime type. Packed
+fields/elements are held as their `i32` slot. -/
+inductive GcObject where
+  | struct (typeIdx : Nat) (fields : List Value)
+  | array  (typeIdx : Nat) (elems : List Value)
+deriving Repr, Inhabited
+
+def GcObject.typeIdx : GcObject → Nat
+  | .struct t _ => t
+  | .array  t _ => t
 
 /-- The scalar payload of a value, as the unsigned `Nat` of its bit
 pattern, when the value is the scalar kind lane shape `sh` expects
@@ -87,6 +169,7 @@ def Value.isNullRef? : Value → Option Bool
   | .funcref r   => some r.isNone
   | .externref r => some r.isNone
   | .exnref r    => some r.isNone
+  | .anyref r    => some r.isNone
   | _            => none
 
 /-- A size/length result, typed by the owning memory/table's address
@@ -115,6 +198,48 @@ inductive CatchClause where
   | catchRef (tag label : Nat)
   | catchAll (label : Nat)
   | catchAllRef (label : Nat)
+deriving Repr, Inhabited, DecidableEq
+
+/-- GC-proposal instructions, bundled so the parent `Instruction` stays
+under the compiled constructor-tag limit. Every one is a non-recursive
+single step over `(Module, Store, Locals)`. -/
+inductive GcOp where
+  -- References / i31.
+  | refNullAny                                   -- ref.null <gc heaptype>
+  | refI31                                       -- ref.i31
+  | i31GetS                                      -- i31.get_s
+  | i31GetU                                      -- i31.get_u
+  | refEq                                        -- ref.eq
+  | refTest (nullable : Bool) (ht : GcHeapType)  -- ref.test (ref null? ht)
+  | refCast (nullable : Bool) (ht : GcHeapType)  -- ref.cast (ref null? ht)
+  -- `br_on_cast l rt1 rt2`: branch to `l` (keeping the ref) when it matches
+  -- the target type `rt2`, else fall through. `_fail` is the negation. Only
+  -- the target type's nullability/heap type is needed at runtime.
+  | brOnCast     (label : Nat) (nullable : Bool) (ht : GcHeapType)
+  | brOnCastFail (label : Nat) (nullable : Bool) (ht : GcHeapType)
+  -- Structs. `*.get_s`/`get_u` read packed `i8`/`i16` fields with sign /
+  -- zero extension.
+  | structNew        (typeIdx : Nat)
+  | structNewDefault (typeIdx : Nat)
+  | structGet        (typeIdx fieldIdx : Nat)
+  | structGetS       (typeIdx fieldIdx : Nat)
+  | structGetU       (typeIdx fieldIdx : Nat)
+  | structSet        (typeIdx fieldIdx : Nat)
+  -- Arrays.
+  | arrayNew         (typeIdx : Nat)
+  | arrayNewDefault  (typeIdx : Nat)
+  | arrayNewFixed    (typeIdx n : Nat)
+  | arrayGet         (typeIdx : Nat)
+  | arrayGetS        (typeIdx : Nat)
+  | arrayGetU        (typeIdx : Nat)
+  | arraySet         (typeIdx : Nat)
+  | arrayLen
+  | arrayFill        (typeIdx : Nat)
+  | arrayCopy        (dstType srcType : Nat)
+  | arrayNewData     (typeIdx dataIdx : Nat)
+  | arrayNewElem     (typeIdx elemIdx : Nat)
+  | arrayInitData    (typeIdx dataIdx : Nat)
+  | arrayInitElem    (typeIdx elemIdx : Nat)
 deriving Repr, Inhabited, DecidableEq
 
 /-! ## Instructions
@@ -274,6 +399,12 @@ inductive Instruction where
   | refNullExtern : Instruction    -- ref.null extern: push the null externref
   | refFunc   : Nat → Instruction  -- ref.func i:    push a reference to function `i`
   | refIsNull : Instruction        -- ref.is_null:   pop a ref, push i32 1 if null else 0
+
+  -- All GC-proposal instructions are bundled under the single `gc`
+  -- constructor (`GcOp` below). They are non-recursive single steps, so
+  -- this keeps `Instruction`'s constructor count under the compiled-tag
+  -- limit and keeps every GC step out of the fuel-threaded `execOne` match.
+  | gc : GcOp → Instruction
 
   -- Table instructions. The runtime tables live on the `Store` (one
   -- `TableInst = List Value`, holding reference values, per declared
@@ -477,6 +608,12 @@ deriving Repr, Inhabited
 structure GlobalDecl where
   type : ValueType
   init : Value
+  /-- For globals whose initializer is a constant expression that must run
+  at instantiation (GC proposal: `struct.new`/`array.new*` allocate on the
+  heap), the parsed const-expr program. Empty when `init` already holds the
+  value. Evaluated by `Module.runConstGlobals` after the base store and
+  imports are set up. -/
+  initExpr : Program := []
 deriving Repr, Inhabited
 
 /-- A function type, identified by `(type N)` in the source. Stored on
@@ -486,6 +623,22 @@ structure FuncType where
   params  : List ValueType := []
   results : List ValueType := []
 deriving Repr, Inhabited, DecidableEq, BEq
+
+/-- A GC composite type definition (GC proposal): a function signature, a
+struct's field list, or an array's element type. -/
+inductive CompositeType where
+  | func   (sig : FuncType)
+  | struct (fields : List FieldType)
+  | array  (elem : FieldType)
+deriving Repr, Inhabited
+
+/-- One entry of the module's GC type table: the composite type plus the
+declared immediate supertype index (`sub $super …`), if any. Indexed by
+the same position as `Module.types`. -/
+structure GcTypeDef where
+  comp  : CompositeType
+  super : Option Nat := none
+deriving Repr, Inhabited
 
 /-- Declaration of a single table. The interpreter only models
 `funcref` tables; the size bounds are the declared minimum and (optional)
@@ -523,6 +676,12 @@ structure ElementSegment where
   tableIdx : Option Nat := none
   offset   : Option Nat := none
   funcs    : List (Option Nat) := []
+  /-- For GC element segments (GC proposal) whose items are constant
+  expressions (`(item i32.const N ref.i31)`, `struct.new`, …), the parsed
+  const-expr program per item. Evaluated at instantiation by
+  `Module.runConstElems`, which writes the resulting values into the table.
+  Empty for plain funcref segments (which use `funcs`). -/
+  exprs    : List Program := []
 deriving Repr, Inhabited
 
 structure Module where
@@ -547,6 +706,11 @@ structure Module where
   (`(type 0)`, `(type 1)`, ...). `call_indirect (type N)` looks the
   expected signature up here. -/
   types    : List FuncType := []
+  /-- GC composite type definitions (GC proposal), indexed by the *same*
+  source-order position as `types` (one entry per `(type …)` /
+  recursion-group member). `struct.*`/`array.*`/`ref.cast (ref $t)` read
+  field layouts and subtyping from here. Empty for non-GC modules. -/
+  gcTypes  : List GcTypeDef := []
   /-- Table declarations. Wasm <2.0 allows at most one; we accept the
   whole list anyway. -/
   tables   : List TableDecl := []
@@ -606,6 +770,11 @@ structure Store (α : Type) where
   appended by `catch_ref` clauses and re-raised by `throw_ref`. Indexed
   by `Value.exnref`. -/
   exns            : List (Nat × List Value) := []
+  /-- The managed GC heap (GC proposal): `struct.new`/`array.new` append
+  here and return the new object's index as a `Value.anyref (some (.struct
+  a))` / `(.array a)`. Append-only — GC reclamation is unobservable to a
+  fuel-bounded run, so we never free. -/
+  gcHeap          : List GcObject := []
   host            : α
 deriving Repr
 
@@ -743,6 +912,41 @@ def Module.funcSig? (m : Module) (i : Nat) : Option FuncType :=
     match m.funcs[i - m.imports.length]? with
     | some f => some { params := f.params, results := f.results }
     | none   => none
+
+/-- Whether GC type index `a` is a (reflexive, transitive) subtype of `b`,
+following the declared `sub $super` chain. Bounded by the type-table size
+so a malformed cyclic chain still terminates. -/
+def Module.gcTypeSubtype (m : Module) (a b : Nat) : Bool :=
+  let rec go (fuel x : Nat) : Bool :=
+    if x == b then true
+    else match fuel with
+      | 0      => false
+      | f + 1  => match m.gcTypes[x]? with
+        | some d => match d.super with
+          | some p => go f p
+          | none   => false
+        | none   => false
+  go m.gcTypes.length a
+
+/-- Look up the struct/array composite type at index `i`. -/
+def Module.gcComposite? (m : Module) (i : Nat) : Option CompositeType :=
+  (m.gcTypes[i]?).map (·.comp)
+
+/-- The field list of struct type `i`, if `i` names a struct. -/
+def Module.structFields? (m : Module) (i : Nat) : Option (List FieldType) :=
+  match m.gcComposite? i with
+  | some (.struct fs) => some fs
+  | _                 => none
+
+/-- The field declaration of struct type `i`'s field `f`. -/
+def Module.structField? (m : Module) (i f : Nat) : Option FieldType :=
+  (m.structFields? i).bind (·[f]?)
+
+/-- The element field type of array type `i`, if `i` names an array. -/
+def Module.arrayElem? (m : Module) (i : Nat) : Option FieldType :=
+  match m.gcComposite? i with
+  | some (.array ft) => some ft
+  | _                => none
 
 /-- Implementation ceiling on `table.grow`. The wasm spec allows growth
 to fail for implementation-defined reasons; this interpreter materialises
