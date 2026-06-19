@@ -498,4 +498,73 @@ def driftCheck (relWatPath : String) (watHash : UInt64) : String :=
     s!"      s!\"\{path} has drifted from Program.lean; re-run `lake exe verifier emit`.\""
   ]
 
+/-! ## CodeLib scaffolding (`lift`)
+
+Render a single function body as a ready-to-prove `CodeLib/RustStd/<Type>/`
+file: the verbatim body + `Function` record (so it matches the emitted module
+exactly — checked by `rfl` in the per-crate spec), plus a wp-form theorem stub
+in the house style. The post-condition (`Returns …`) and the proof are left as
+`sorry` for the human to fill, mirroring `CountOnes` / `AbsDiff`. -/
+
+private def valLeanType : Wasm.ValueType → String
+  | .i64 => "UInt64"
+  | .i32 => "UInt32"
+  | _    => "UInt32 /- TODO: unsupported value type -/"
+
+private def valCtor : Wasm.ValueType → String
+  | .i64 => ".i64"
+  | _    => ".i32"
+
+private def valZero : Wasm.ValueType → String
+  | .i64 => ".i64 0"
+  | _    => ".i32 0"
+
+private def paramName (i : Nat) : String := String.singleton (Char.ofNat (97 + i))
+
+/-- Full CodeLib scaffold file for function `f`, named `<funcName>`/`<bodyName>`
+under `namespace Wasm.RustStd.<typeNs>`. -/
+def codeLibScaffold (typeNs fnName bodyName funcName : String)
+    (f : Wasm.Function) : String :=
+  let binders := String.intercalate " "
+    (f.params.mapIdx fun i t => s!"({paramName i} : {valLeanType t})")
+  let paramLocals := "[" ++ String.intercalate ", "
+    (f.params.mapIdx fun i t => s!"{valCtor t} {paramName i}") ++ "]"
+  let zeroLocals := "[" ++ String.intercalate ", " (f.locals.map valZero) ++ "]"
+  let body := emitInstrList 0 f.body
+  String.intercalate "\n" [
+    "import CodeLib.RustStd.Frame",
+    "import Interpreter.Wasm.Wp.Tactic",
+    "import Interpreter.Wasm.Wp.Block",
+    "import CodeLib.Entry",
+    "",
+    s!"/-! AUTO-SCAFFOLDED by `verifier lift`. Fill in the `Returns` result and",
+    s!"the proof (see `CountOnes` / `AbsDiff` for templates), then delete this note. -/",
+    "",
+    s!"namespace Wasm.RustStd.{typeNs}",
+    "",
+    "open Wasm",
+    "",
+    s!"/-- Verbatim opt-0 body of `{fnName}`. -/",
+    s!"def {bodyName} : Program :=\n  {body}",
+    "",
+    s!"def {funcName} : Function :=",
+    s!"  \{ params := {emitValueTypes f.params}, locals := {emitValueTypes f.locals}" ++
+      s!", body := {bodyName}, results := {emitValueTypes f.results} }",
+    "",
+    "set_option maxRecDepth 4096 in",
+    s!"/-- TODO: state what `{fnName}` returns, then prove it. -/",
+    s!"theorem {fnName}_wp \{α} \{m : Module} \{env : HostEnv α} (st : Store α)",
+    s!"    (sp : UInt32) {binders} (vs : List Value)",
+    s!"    (hsp : st.globals.globals[0]? = some (.i32 sp))",
+    s!"    (hlo : 16 ≤ sp.toNat) (hhi : sp.toNat ≤ st.mem.pages * 65536) :",
+    s!"    wp m {bodyName}",
+    s!"      (Returns ((sorry : Value) :: vs)",
+    s!"        (fun st' => st'.globals = st.globals ∧ st'.mem.pages = st.mem.pages))",
+    s!"      st ⟨{paramLocals}, {zeroLocals}, vs⟩ env := by",
+    s!"  sorry",
+    "",
+    s!"end Wasm.RustStd.{typeNs}",
+    ""
+  ]
+
 end Verifier.Emit
