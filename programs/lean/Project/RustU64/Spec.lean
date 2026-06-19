@@ -37,7 +37,7 @@ theorem add_correct : AddSpec := by
 @[spec_of "rust-exported" "rust_u64::sub"]
 def SubSpec : Prop :=
   ∀ (env : HostEnv Unit) (a b : UInt64),
-    TerminatesWith env «module» 3 «module».initialStore [.i64 b, .i64 a]
+    TerminatesWith env «module» 5 «module».initialStore [.i64 b, .i64 a]
       (fun _ rs => rs = [.i64 (a - b)])
 
 @[proves Project.RustU64.Spec.SubSpec]
@@ -52,7 +52,7 @@ theorem sub_correct : SubSpec := by
 @[spec_of "rust-exported" "rust_u64::mul"]
 def MulSpec : Prop :=
   ∀ (env : HostEnv Unit) (a b : UInt64),
-    TerminatesWith env «module» 4 «module».initialStore [.i64 b, .i64 a]
+    TerminatesWith env «module» 6 «module».initialStore [.i64 b, .i64 a]
       (fun _ rs => rs = [.i64 (a * b)])
 
 @[proves Project.RustU64.Spec.MulSpec]
@@ -69,7 +69,7 @@ theorem mul_correct : MulSpec := by
 @[spec_of "rust-exported" "rust_u64::div"]
 def DivSpec : Prop :=
   ∀ (env : HostEnv Unit) (a b : UInt64), b ≠ 0 →
-    TerminatesWith env «module» 5 «module».initialStore [.i64 b, .i64 a]
+    TerminatesWith env «module» 3 «module».initialStore [.i64 b, .i64 a]
       (fun _ rs => rs = [.i64 (a / b)])
 
 @[proves Project.RustU64.Spec.DivSpec]

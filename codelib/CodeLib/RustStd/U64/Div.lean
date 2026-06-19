@@ -60,7 +60,7 @@ def divGuard : Instruction :=
 /-- Verbatim opt-0 body of `rust_u64::div`: the shared guard followed by this
 crate's panic tail (`const`/`call`/`unreachable`). -/
 def divBody : Program :=
-  divGuard :: [.const (1048600 : UInt32), .call 56, .unreachable]
+  divGuard :: [.const (1048600 : UInt32), .call 59, .unreachable]
 
 def divFunc : Function :=
   { params := [.i64, .i64], locals := [], body := divBody, results := [.i64] }
