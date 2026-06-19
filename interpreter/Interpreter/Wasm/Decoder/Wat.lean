@@ -2208,6 +2208,25 @@ private def parseWatString (s : String) : Except Err (List UInt8) :=
   if !s.startsWith "\"" then .error s!"expected string literal, got: {s}"
   else decodeWatBytes (stripQuotes s).toList
 
+/- Whether a global-initializer sexpr mentions an instruction whose value
+depends on the store and so cannot be folded to a literal at decode time:
+`global.get` of an imported global (wasm 1.0), or the extended-const
+arithmetic ops (`i32.add`/`i32.sub`/`i32.mul`, i64 ditto). Recurses into
+folded operand forms (the flat form emitted by `wasm-tools print` is
+handled by the list case). -/
+mutual
+  /-- Scan a single sexpr; recurse into a `(…)` list via the list helper. -/
+  def initExprNeedsEval : Sexpr → Bool
+    | .atom a =>
+      a == "global.get"
+        || a ∈ #["i32.add", "i32.sub", "i32.mul", "i64.add", "i64.sub", "i64.mul"]
+    | .list ys => initExprNeedsEvalList ys
+  /-- Scan a sequence of sexprs (the operands of a folded instruction). -/
+  def initExprNeedsEvalList : List Sexpr → Bool
+    | [] => false
+    | y :: ys => initExprNeedsEval y || initExprNeedsEvalList ys
+end
+
 private def parseGlobalDecl (ctx : Ctx) (xs : List Sexpr) :
     Except Err Wasm.GlobalDecl := do
   let xs := match xs with
@@ -2245,6 +2264,22 @@ private def parseGlobalDecl (ctx : Ctx) (xs : List Sexpr) :
     -- The value can't be folded at decode time; stash a placeholder `init`
     -- and let `Module.runConstGlobals` evaluate `initExpr` at instantiation.
     return { init := .anyref none, initExpr := prog }
+  -- `global.get` of an imported global is a wasm 1.0 constant expression,
+  -- and `i32.add`/`i32.sub`/`i32.mul` (i64 ditto) are the extended-const
+  -- proposal. Neither can be folded to a single value at decode time — the
+  -- value depends on the store — so, like the GC allocator case above, keep
+  -- the const-expr program and let `Module.runConstGlobals` evaluate it at
+  -- instantiation once the imported globals are in place. The placeholder
+  -- `init` carries the declared value type for static type-checking.
+  --
+  -- `wasm-tools print` emits these as a *flat* instruction sequence
+  -- (`i32.const 20 i32.const 2 i32.mul …`), so detect by scanning every
+  -- atom (recursing into folded forms) for a `global.get` or arithmetic
+  -- op rather than looking only at the head. Plain const / ref / v128
+  -- initializers contain none of these and keep folding to a literal below.
+  if xs.any initExprNeedsEval then
+    let prog ← parseInstrSeq ctx xs
+    return { init := _vt.zero, initExpr := prog }
   -- The init expression is either wrapped in a `(...)` list or — in
   -- wasm-tools' canonical print — emitted as a bare sequence of atoms
   -- (for v128.const this is `v128.const <shape> <lanes...>`, six tokens).
@@ -2286,7 +2321,6 @@ private def parseGlobalDecl (ctx : Ctx) (xs : List Sexpr) :
       match parseV128Const tail with
       | .ok (bits, _) => .ok (.v128 bits)
       | .error e      => .error e
-    | some "global.get", _ => .ok (.i32 0)
     | _, _ => .error "global init expression must be i32.const or i64.const"
   .ok { init }
 

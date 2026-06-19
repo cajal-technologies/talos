@@ -1,0 +1,64 @@
+import Interpreter.Wasm.Decoder.Wat
+import Interpreter.Wasm.Wp.Tactic
+
+/-! ## Example: constant-expression global initializers in the WAT decoder
+
+    A global initializer is a constant expression, not just a single
+    `*.const`. The wasm 1.0 core spec permits `global.get` of an imported
+    global, and the extended-const proposal adds `i32.add`/`i32.sub`/`i32.mul`
+    (i64 ditto). Talos keeps such initializers as a program in `GlobalDecl.
+    initExpr` and evaluates them at instantiation via `Module.runConstGlobals`
+    rather than folding them to a literal at decode time.
+
+    This module exercises a nested arithmetic initializer end-to-end so a
+    regression — the initializer collapsing to its first operand, or the
+    placeholder zero leaking through — fails the build. -/
+
+namespace Wasm
+namespace GlobalInitExpr
+
+/-- A module whose only global is initialised with an extended-const
+expression: `(20 * 3) - 18 = 42`. -/
+def globalInitExprWat : String := "
+(module
+  (global $g i32 (i32.sub (i32.mul (i32.const 20) (i32.const 3)) (i32.const 18)))
+  (func $getG (export \"getG\") (result i32)
+    global.get $g))
+"
+
+private def decoded : Wasm.Module :=
+  match Wasm.Decoder.Wat.decode globalInitExprWat with
+  | .ok m    => m
+  | .error _ => default
+
+/-- The initializer is kept as a program rather than folded to a single
+literal: the global's `initExpr` is non-empty. -/
+theorem decoded_global_keeps_initExpr :
+    (decoded.globals[0]?.map (·.initExpr.isEmpty)).getD true = false := by
+  native_decide
+
+/-- `runConstGlobals` evaluates the arithmetic initializer against the
+fresh store and writes `42` into the global slot. -/
+theorem runConstGlobals_evaluates_initExpr :
+    (decoded.runConstGlobals 64 (decoded.initialStore (α := Unit)) {}).globals.globals[0]?
+      = some (.i32 42) := by
+  native_decide
+
+private def emptyEnv : HostEnv Unit := { funcs := [] }
+
+private def runVals (idx : Nat) (st : Store Unit) (args : List Value) :
+    List Value :=
+  match run 64 decoded idx st args emptyEnv with
+  | .Success vs _ => vs
+  | _ => []
+
+/-- End-to-end: running `getG` after initialising the globals returns `42`.
+The old behaviour — placeholder `0` from `ValueType.zero`, or the first
+operand `20` — would return `0` or `20` instead. -/
+theorem getG_returns_42 :
+    runVals 0 (decoded.runConstGlobals 64 (decoded.initialStore (α := Unit)) {}) []
+      = [.i32 42] := by
+  native_decide
+
+end GlobalInitExpr
+end Wasm
