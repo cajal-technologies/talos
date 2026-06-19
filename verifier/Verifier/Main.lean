@@ -447,6 +447,52 @@ private def cmdEmit (names : List String) (forceEmit : Bool) : IO Unit := do
   printCrateBanner crates
   emitPrograms projectDir crates forceEmit
 
+/-- Capitalize the first character (for `absDiff` → `AbsDiff.lean`). -/
+private def capFirst (s : String) : String :=
+  match s.toList with
+  | []      => s
+  | c :: cs => String.ofList (c.toUpper :: cs)
+
+/-- `lift`: scaffold a `CodeLib/RustStd/<Type>/<Name>.lean` from one function of
+a crate's decoded module. Copies the body verbatim (so it matches the emitted
+module — `rfl`-checked downstream) and leaves the post-condition + proof as
+`sorry` to fill in. -/
+private def cmdLift (crate : String) (funcIdx : Nat) (typeNs fnName : String) : IO Unit := do
+  let projectDir ← projectDirFromCwd
+  let crates ← discoverSelected projectDir [crate]
+  let some c := crates[0]? | die s!"crate `{crate}` not found in this project"
+  let watFile := projectDir / "rust" / "build" / c.name / "program.wat"
+  unless ← System.FilePath.pathExists watFile do
+    die s!"{c.name}: {watFile} not found — run `verifier build {c.name}` first"
+  let watText ← IO.FS.readFile watFile
+  match Wasm.Decoder.Wat.decode watText with
+  | .error e => die s!"{c.name}: wat decoder rejected the module: {e}"
+  | .ok m =>
+    let some f := m.funcs[funcIdx]? |
+      die s!"function index {funcIdx} out of range (module has {m.funcs.length} functions)"
+    -- The scaffold renders params/locals through i32/i64-only helpers and names
+    -- params with single letters; reject inputs it can't render faithfully
+    -- rather than emit subtly-wrong code.
+    let isI32I64 : Wasm.ValueType → Bool := fun
+      | .i32 | .i64 => true
+      | _           => false
+    unless (f.params ++ f.locals).all isI32I64 do
+      die s!"function {funcIdx} has a non-i32/i64 param or local; `lift` only supports i32/i64 today"
+    if f.params.length > 12 then
+      die s!"function {funcIdx} has {f.params.length} params; `lift`'s single-letter param naming only goes up to 12 — lift it by hand"
+    let bodyName := fnName ++ "Body"
+    let funcName := fnName ++ "Func"
+    let content := Verifier.Emit.codeLibScaffold typeNs fnName bodyName funcName f
+    let some repoRoot := projectDir.parent | die "could not locate repo root from project dir"
+    let dst := repoRoot / "codelib" / "CodeLib" / "RustStd" / typeNs / (capFirst fnName ++ ".lean")
+    if ← System.FilePath.pathExists dst then
+      die s!"{dst} already exists — refusing to overwrite"
+    if let some parent := dst.parent then IO.FS.createDirAll parent
+    IO.FS.writeFile dst content
+    IO.println s!"    scaffolded {dst}"
+    IO.println s!"    next: fill the `Returns` result + proof, then add"
+    IO.println s!"          `import CodeLib.RustStd.{typeNs}.{capFirst fnName}` to codelib/CodeLib.lean"
+
 private def cmdProve (names : List String) : IO Unit := do
   let projectDir ← projectDirFromCwd
   let crates ← discoverSelected projectDir names
@@ -520,6 +566,14 @@ def runBuild (p : Parsed) : IO UInt32 := do
 
 def runEmit (p : Parsed) : IO UInt32 := do
   cmdEmit (p.variableArgs.map (·.as! String) |>.toList) (p.hasFlag "force-emit")
+  pure 0
+
+def runLift (p : Parsed) : IO UInt32 := do
+  let crate := p.positionalArg! "crate" |>.as! String
+  let idxStr := p.positionalArg! "funcIdx" |>.as! String
+  let some idx := idxStr.toNat? | die s!"funcIdx must be a number, got `{idxStr}`"
+  cmdLift crate idx (p.positionalArg! "type" |>.as! String)
+    (p.positionalArg! "name" |>.as! String)
   pure 0
 
 def runProve (p : Parsed) : IO UInt32 := do
@@ -627,6 +681,17 @@ def emitCmd : Cmd := `[Cli|
     ...crates : String; "Crate names; default: all."
 ]
 
+def liftCmd : Cmd := `[Cli|
+  lift VIA runLift;
+  "Scaffold codelib/CodeLib/RustStd/<Type>/<Name>.lean from one function of a crate's module."
+
+  ARGS:
+    crate   : String; "Crate name (snake_case)."
+    funcIdx : String; "Index among the module's defined functions (the emitted func0, func1, …; excludes imports)."
+    type    : String; "Type namespace under CodeLib/RustStd (e.g. U64)."
+    name    : String; "lowerCamel base (absDiff → absDiffBody/absDiffFunc/absDiff_wp, file AbsDiff.lean)."
+]
+
 def proveCmd : Cmd := `[Cli|
   prove VIA runProve;
   "Run `lake build` on selected crates' Lean modules (omit names for all)."
@@ -681,6 +746,7 @@ def mainCmd : Cmd := `[Cli|
     delCmd;
     buildCmd;
     emitCmd;
+    liftCmd;
     proveCmd;
     checkCmd;
     extractCmd;

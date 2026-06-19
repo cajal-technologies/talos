@@ -158,6 +158,13 @@ verifier-build *crates:
 verifier-emit *crates:
     just _verifier emit {{ crates }}
 
+# Scaffold codelib/CodeLib/RustStd/<Type>/<Name>.lean from one function of a crate's
+# module (verbatim body + Function record + wp-form theorem stub to fill in).
+# Example: just verifier-lift rust_std 0 U64 absDiff
+[group("verifier")]
+verifier-lift crate funcidx type name:
+    just _verifier lift {{ crate }} {{ funcidx }} {{ type }} {{ name }}
+
 # Run lake build on selected crates' Lean modules; omit names for all.
 [group("verifier")]
 verifier-prove *crates:
