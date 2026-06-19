@@ -64,11 +64,27 @@ def func2 : Wasm.Program :=
   .localGet 1,
   .call 1,
   .drop,
+  .localGet 0,
+  .localGet 1,
+  .call 3,
+  .drop,
   .ret
 ]
 
 def func2Def : Wasm.Function :=
   { params := [.i64, .i64], locals := [], body := func2, results := [] }
+
+/-- export: mul -/
+def func3 : Wasm.Program :=
+  [
+  .localGet 0,
+  .localGet 1,
+  .mulI64,
+  .ret
+]
+
+def func3Def : Wasm.Function :=
+  { params := [.i64, .i64], locals := [], body := func3, results := [.i64] }
 
 def «module» : Wasm.Module :=
 {
@@ -76,11 +92,13 @@ def «module» : Wasm.Module :=
   funcs := [
     func0Def,
     func1Def,
-    func2Def
+    func2Def,
+    func3Def
   ],
   exports := [
     { name := "abs_diff", funcIdx := 1 },
-    { name := "entrypoint", funcIdx := 2 }
+    { name := "entrypoint", funcIdx := 2 },
+    { name := "mul", funcIdx := 3 }
   ],
   memory := some { pagesMin := (16 : UInt32), pagesMax := none, data := [] },
   globals := [
