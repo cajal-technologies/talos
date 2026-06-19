@@ -7,6 +7,7 @@ import CodeLib.RustStd.Frame
 import CodeLib.RustStd.U64.AbsDiff
 import CodeLib.RustStd.U64.Add
 import CodeLib.RustStd.U64.Sub
+import CodeLib.RustStd.U64.Mul
 import CodeLib.RustStd.Option
 import CodeLib.Near.State
 import CodeLib.Near.Env
