@@ -63,4 +63,20 @@ theorem mul_correct : MulSpec := by
       (mul_wp «module».initialStore a b [])
       rfl).mono (fun _ _ h => h.1)
 
+-- `div` is `a / b` inlined (the body guards the `i64.div_u` against a zero
+-- divisor and panics otherwise); a direct crate export. With `b ≠ 0` the
+-- guard falls through and the function returns the unsigned quotient.
+@[spec_of "rust-exported" "rust_u64::div"]
+def DivSpec : Prop :=
+  ∀ (env : HostEnv Unit) (a b : UInt64), b ≠ 0 →
+    TerminatesWith env «module» 5 «module».initialStore [.i64 b, .i64 a]
+      (fun _ rs => rs = [.i64 (a / b)])
+
+@[proves Project.RustU64.Spec.DivSpec]
+theorem div_correct : DivSpec := by
+  intro env a b hb
+  exact (TerminatesWith.of_returns_wp (f := divFunc)
+      (rs := [.i64 (a / b)]) rfl rfl
+      (div_wp «module».initialStore a b [] _ hb) rfl).mono (fun _ _ h => h.1)
+
 end Project.RustU64.Spec

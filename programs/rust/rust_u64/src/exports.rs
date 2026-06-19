@@ -18,6 +18,11 @@ pub extern "C" fn mul(a: u64, b: u64) -> u64 {
     a * b
 }
 
+#[unsafe(no_mangle)]
+pub extern "C" fn div(a: u64, b: u64) -> u64 {
+    a / b
+}
+
 
 #[unsafe(no_mangle)]
 pub extern "C" fn entrypoint(a: u64, b: u64) {
@@ -25,4 +30,5 @@ pub extern "C" fn entrypoint(a: u64, b: u64) {
     let _ = add(a, b);
     let _ = sub(a, b);
     let _ = mul(a, b);
+    let _ = div(a, b);
 }

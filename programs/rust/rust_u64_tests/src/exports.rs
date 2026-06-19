@@ -53,3 +53,21 @@ pub extern "C" fn mul(a: u64, b: u64) -> u64 {
 pub extern "C" fn mul_prod3(a: u64, b: u64, c: u64) -> u64 {
     mul(mul(a, b), c)
 }
+
+// ─── u64::div (inlines the guarded i64.div_u at opt-0) ─────────────────────
+// Shim: identical source/codegen to `rust_u64::div`. Division-by-zero is always
+// checked (even in release), so the opt-0 body is a `block` guarding the
+// `i64.div_u`, followed by a crate-specific panic tail. The guard/divide prefix
+// is identical to CodeLib `divFunc`; only the trailing panic `const`/`call`
+// indices are resolved per crate (`div_wp` is reused tail-generically).
+#[unsafe(no_mangle)]
+pub extern "C" fn div(a: u64, b: u64) -> u64 {
+    a / b
+}
+
+/// Test for `u64::div`: a non-trivial chain `(a / b) / c` (two `div` calls;
+/// requires `b != 0` and `c != 0`).
+#[unsafe(no_mangle)]
+pub extern "C" fn div_chain(a: u64, b: u64, c: u64) -> u64 {
+    div(div(a, b), c)
+}
