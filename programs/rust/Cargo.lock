@@ -32,3 +32,11 @@ version = "0.1.0"
 dependencies = [
  "num-integer",
 ]
+
+[[package]]
+name = "rust_u64"
+version = "0.1.0"
+
+[[package]]
+name = "total_variation"
+version = "0.1.0"
