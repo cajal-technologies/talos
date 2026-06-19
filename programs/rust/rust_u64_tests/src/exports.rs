@@ -25,3 +25,17 @@ pub extern "C" fn add(a: u64, b: u64) -> u64 {
 pub extern "C" fn add_sum3(a: u64, b: u64, c: u64) -> u64 {
     add(add(a, b), c)
 }
+
+// ─── u64::sub (inlines to a single i64.sub) ────────────────────────────────
+// Shim: identical source/codegen to `rust_u64::sub`, so its opt-0 body is the
+// frame-less `[localGet 0, localGet 1, subI64, ret]` == CodeLib `subFunc`.
+#[unsafe(no_mangle)]
+pub extern "C" fn sub(a: u64, b: u64) -> u64 {
+    a - b
+}
+
+/// Test for `u64::sub`: a non-trivial chain `(a - b) - c` (two `sub` calls).
+#[unsafe(no_mangle)]
+pub extern "C" fn sub_chain3(a: u64, b: u64, c: u64) -> u64 {
+    sub(sub(a, b), c)
+}

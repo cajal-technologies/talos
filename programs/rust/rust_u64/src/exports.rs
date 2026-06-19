@@ -8,9 +8,15 @@ pub extern "C" fn add(a: u64, b: u64) -> u64 {
     a + b
 }
 
+#[unsafe(no_mangle)]
+pub extern "C" fn sub(a: u64, b: u64) -> u64 {
+    a - b
+}
+
 
 #[unsafe(no_mangle)]
 pub extern "C" fn entrypoint(a: u64, b: u64) {
     let _ = abs_diff(a, b);
     let _ = add(a, b);
+    let _ = sub(a, b);
 }
