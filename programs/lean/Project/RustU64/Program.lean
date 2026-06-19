@@ -57,18 +57,34 @@ def func1 : Wasm.Program :=
 def func1Def : Wasm.Function :=
   { params := [.i64, .i64], locals := [], body := func1, results := [.i64] }
 
-/-- export: entrypoint -/
+/-- export: add -/
 def func2 : Wasm.Program :=
+  [
+  .localGet 0,
+  .localGet 1,
+  .addI64,
+  .ret
+]
+
+def func2Def : Wasm.Function :=
+  { params := [.i64, .i64], locals := [], body := func2, results := [.i64] }
+
+/-- export: entrypoint -/
+def func3 : Wasm.Program :=
   [
   .localGet 0,
   .localGet 1,
   .call 1,
   .drop,
+  .localGet 0,
+  .localGet 1,
+  .call 2,
+  .drop,
   .ret
 ]
 
-def func2Def : Wasm.Function :=
-  { params := [.i64, .i64], locals := [], body := func2, results := [] }
+def func3Def : Wasm.Function :=
+  { params := [.i64, .i64], locals := [], body := func3, results := [] }
 
 def «module» : Wasm.Module :=
 {
@@ -76,11 +92,13 @@ def «module» : Wasm.Module :=
   funcs := [
     func0Def,
     func1Def,
-    func2Def
+    func2Def,
+    func3Def
   ],
   exports := [
     { name := "abs_diff", funcIdx := 1 },
-    { name := "entrypoint", funcIdx := 2 }
+    { name := "add", funcIdx := 2 },
+    { name := "entrypoint", funcIdx := 3 }
   ],
   memory := some { pagesMin := (16 : UInt32), pagesMax := none, data := [] },
   globals := [
