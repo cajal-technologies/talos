@@ -59,6 +59,13 @@ theorem absDiff_wp {α} {m : Module} {env : HostEnv α} (st : Store α)
     (hlo : 16 ≤ sp.toNat) (hhi : sp.toNat ≤ st.mem.pages * 65536) :
     wp m absDiffBody
       (Returns (.i64 (if a < b then b - a else a - b) :: vs)
+        -- TODO(frame-locality): this only asserts `globals` and `mem.pages` are
+        -- preserved, not the caller's memory *contents* outside the spilled frame
+        -- `[sp-16, sp)`. Sufficient for callers that don't read the scratch region
+        -- between calls (e.g. `total_variation`), but a caller needing "this call
+        -- didn't clobber address X" can't get it here. Strengthen to also assert
+        -- frame-locality (memory unchanged outside `[sp-16, sp)`) so the body
+        -- theorem composes for arbitrary callers.
         (fun st' => st'.globals = st.globals ∧ st'.mem.pages = st.mem.pages))
       st ⟨[.i64 a, .i64 b], [.i32 0], vs⟩ env := by
   unfold absDiffBody Returns
