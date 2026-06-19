@@ -335,17 +335,6 @@ theorem UInt64.shr_ctz_toNat_odd (a : UInt64) (ha : a ≠ 0) :
   rw [UInt64.shr_ctz_toNat a ha]
   exact UInt64.ctz64_shr_odd a ha
 
-/-! ## No-wrap subtraction -/
-
-theorem UInt64.toNat_sub_of_le (a b : UInt64) (h : b ≤ a) :
-    (a - b).toNat = a.toNat - b.toNat := by
-  rw [UInt64.toNat_sub]
-  have hle : b.toNat ≤ a.toNat := UInt64.le_iff_toNat_le.mp h
-  have hlt : a.toNat < 2^64 := a.toNat_lt
-  have hkey : 2^64 - b.toNat + a.toNat = 2^64 + (a.toNat - b.toNat) := by omega
-  rw [hkey, Nat.add_mod_left]
-  exact Nat.mod_eq_of_lt (by omega)
-
 /-! ## Nat-level Stein identity -/
 
 private theorem _aux_coprime_two_pow_of_odd (k m : Nat) (hm : m % 2 = 1) :

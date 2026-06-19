@@ -16,8 +16,10 @@ form that does not care about the concrete spill address:
 * `Mem.read{32,64}_write{32,64}_same` — read-after-write at the same
   address returns the value (no bound on the address needed).
 * `Mem.write{32,64}_pages` — a store leaves the page count unchanged.
-* `UInt32.toNat_sub_of_le` — frame-pointer arithmetic (`sp - 16`) without
-  underflow, needed for the in-bounds (no-trap) obligation.
+
+The in-bounds (no-trap) obligation also needs `sp - 16` not to underflow;
+that is `UInt32.toNat_sub_of_le`, which Lean core already provides
+(`Init.Data.UInt.Lemmas`), so it is used directly rather than re-proved here.
 
 The four `Mem.*` lemmas are intentionally global `@[simp]` — confluent,
 terminating rewrites used corpus-wide. Op-specific lemmas (e.g. `popcnt`
@@ -58,17 +60,5 @@ returns the stored value. -/
 
 @[simp] theorem Mem.write64_pages (m : Mem) (a : UInt32) (v : UInt64) :
     (m.write64 a v).pages = m.pages := rfl
-
-/-! ## Frame-pointer arithmetic -/
-
-/-- `sp - 16` does not underflow when `16 ≤ sp`. -/
-theorem UInt32.toNat_sub_of_le (a b : UInt32) (h : b ≤ a) :
-    (a - b).toNat = a.toNat - b.toNat := by
-  rw [UInt32.toNat_sub]
-  have hle : b.toNat ≤ a.toNat := UInt32.le_iff_toNat_le.mp h
-  have hlt : a.toNat < 2 ^ 32 := a.toNat_lt
-  have hkey : 2 ^ 32 - b.toNat + a.toNat = 2 ^ 32 + (a.toNat - b.toNat) := by omega
-  rw [hkey, Nat.add_mod_left]
-  exact Nat.mod_eq_of_lt (by omega)
 
 end Wasm
