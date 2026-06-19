@@ -16,10 +16,12 @@ form that does not care about the concrete spill address:
 * `Mem.read{32,64}_write{32,64}_same` — read-after-write at the same
   address returns the value (no bound on the address needed).
 * `Mem.write{32,64}_pages` — a store leaves the page count unchanged.
-* `popcnt64_le` / `popcnt64_lt_2pow32` — `popcnt` fits in 32 bits, so the
-  `i32.wrap_i64` after an `i64.popcnt` never truncates.
 * `UInt32.toNat_sub_of_le` — frame-pointer arithmetic (`sp - 16`) without
   underflow, needed for the in-bounds (no-trap) obligation.
+
+The four `Mem.*` lemmas are intentionally global `@[simp]` — confluent,
+terminating rewrites used corpus-wide. Op-specific lemmas (e.g. `popcnt`
+bounds) are added here only once a real proof first consumes them.
 -/
 
 namespace Wasm
@@ -56,25 +58,6 @@ returns the stored value. -/
 
 @[simp] theorem Mem.write64_pages (m : Mem) (a : UInt32) (v : UInt64) :
     (m.write64 a v).pages = m.pages := rfl
-
-/-! ## `popcnt64` width bound -/
-
-/-- `popcnt64 k a acc` counts at most one extra bit per step. -/
-theorem popcnt64_le (k : Nat) (a : UInt64) (acc : Nat) :
-    popcnt64 k a acc ≤ k + acc := by
-  induction k generalizing a acc with
-  | zero => simp [popcnt64]
-  | succ k ih =>
-    unfold popcnt64
-    have h1 : (a &&& 1).toNat ≤ 1 := by
-      have : (a &&& 1).toNat = a.toNat % 2 := by
-        rw [UInt64.toNat_and]; exact Nat.and_one_is_mod a.toNat
-      omega
-    have := ih (a >>> 1) (acc + (a &&& 1).toNat)
-    omega
-
-theorem popcnt64_lt_2pow32 (a : UInt64) : popcnt64 64 a 0 < 2 ^ 32 := by
-  have := popcnt64_le 64 a 0; omega
 
 /-! ## Frame-pointer arithmetic -/
 

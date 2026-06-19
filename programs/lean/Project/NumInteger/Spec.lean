@@ -47,43 +47,6 @@ theorem write64_bytes_of_disjoint (m : Mem) (a : UInt32) (v : UInt64) (i : Nat)
   have h7 : i ≠ a.toNat + 7 := by omega
   simp [h0, h1, h2, h3, h4, h5, h6, h7]
 
-/-- A 64-bit read sees the value of a same-address 64-bit write. -/
-theorem read64_write64_same (m : Mem) (a : UInt32) (v : UInt64) :
-    (m.write64 a v).read64 a = v := by
-  simp only [Mem.read64, Mem.write64]
-  have e1 : a.toNat + 1 ≠ a.toNat := by omega
-  have e2 : a.toNat + 2 ≠ a.toNat := by omega
-  have e3 : a.toNat + 3 ≠ a.toNat := by omega
-  have e4 : a.toNat + 4 ≠ a.toNat := by omega
-  have e5 : a.toNat + 5 ≠ a.toNat := by omega
-  have e6 : a.toNat + 6 ≠ a.toNat := by omega
-  have e7 : a.toNat + 7 ≠ a.toNat := by omega
-  have e21 : a.toNat + 2 ≠ a.toNat + 1 := by omega
-  have e31 : a.toNat + 3 ≠ a.toNat + 1 := by omega
-  have e41 : a.toNat + 4 ≠ a.toNat + 1 := by omega
-  have e51 : a.toNat + 5 ≠ a.toNat + 1 := by omega
-  have e61 : a.toNat + 6 ≠ a.toNat + 1 := by omega
-  have e71 : a.toNat + 7 ≠ a.toNat + 1 := by omega
-  have e32 : a.toNat + 3 ≠ a.toNat + 2 := by omega
-  have e42 : a.toNat + 4 ≠ a.toNat + 2 := by omega
-  have e52 : a.toNat + 5 ≠ a.toNat + 2 := by omega
-  have e62 : a.toNat + 6 ≠ a.toNat + 2 := by omega
-  have e72 : a.toNat + 7 ≠ a.toNat + 2 := by omega
-  have e43 : a.toNat + 4 ≠ a.toNat + 3 := by omega
-  have e53 : a.toNat + 5 ≠ a.toNat + 3 := by omega
-  have e63 : a.toNat + 6 ≠ a.toNat + 3 := by omega
-  have e73 : a.toNat + 7 ≠ a.toNat + 3 := by omega
-  have e54 : a.toNat + 5 ≠ a.toNat + 4 := by omega
-  have e64 : a.toNat + 6 ≠ a.toNat + 4 := by omega
-  have e74 : a.toNat + 7 ≠ a.toNat + 4 := by omega
-  have e65 : a.toNat + 6 ≠ a.toNat + 5 := by omega
-  have e75 : a.toNat + 7 ≠ a.toNat + 5 := by omega
-  have e76 : a.toNat + 7 ≠ a.toNat + 6 := by omega
-  simp only [e1, e2, e3, e4, e5, e6, e7, e21, e31, e41, e51, e61, e71,
-    e32, e42, e52, e62, e72, e43, e53, e63, e73, e54, e64, e74, e65, e75, e76,
-    if_true, if_false]
-  bv_decide
-
 /-- A 64-bit read is unaffected by a 64-bit write to a disjoint 8-byte
 range. -/
 theorem read64_write64_disjoint (m : Mem) (a b : UInt32) (v : UInt64)
@@ -109,19 +72,6 @@ theorem write32_bytes_of_disjoint (m : Mem) (a v : UInt32) (i : Nat)
   have h2 : i ≠ a.toNat + 2 := by omega
   have h3 : i ≠ a.toNat + 3 := by omega
   simp [h0, h1, h2, h3]
-
-/-- A 32-bit read sees the value of a same-address 32-bit write. -/
-theorem read32_write32_same (m : Mem) (a v : UInt32) :
-    (m.write32 a v).read32 a = v := by
-  simp only [Mem.read32, Mem.write32]
-  have e1 : a.toNat + 1 ≠ a.toNat := by omega
-  have e2 : a.toNat + 2 ≠ a.toNat := by omega
-  have e3 : a.toNat + 3 ≠ a.toNat := by omega
-  have e21 : a.toNat + 2 ≠ a.toNat + 1 := by omega
-  have e31 : a.toNat + 3 ≠ a.toNat + 1 := by omega
-  have e32 : a.toNat + 3 ≠ a.toNat + 2 := by omega
-  simp only [e1, e2, e3, e21, e31, e32, if_true, if_false]
-  bv_decide
 
 /-- A 64-bit read is unaffected by a 32-bit write to a disjoint range. -/
 theorem read64_write32_disjoint (m : Mem) (a b : UInt32) (v : UInt32)
@@ -156,12 +106,6 @@ theorem read32_write64_disjoint (m : Mem) (a : UInt32) (b : UInt32) (v : UInt64)
       write64_bytes_of_disjoint m b v (a.toNat + 1) (by omega),
       write64_bytes_of_disjoint m b v (a.toNat + 2) (by omega),
       write64_bytes_of_disjoint m b v (a.toNat + 3) (by omega)]
-
-@[simp] theorem write64_pages (m : Mem) (a : UInt32) (v : UInt64) :
-    (m.write64 a v).pages = m.pages := rfl
-
-@[simp] theorem write32_pages (m : Mem) (a v : UInt32) :
-    (m.write32 a v).pages = m.pages := rfl
 
 /-! ## Shift-amount bridge
 
@@ -289,9 +233,9 @@ theorem meatLoop_wp (env : HostEnv Unit) (stm : Store Unit) (a b : UInt64)
     Nat.reduceLeDiff,
     UInt32.reduceAdd, UInt32.reduceToNat, gt_iff_lt,
     read64_write64_disjoint, read64_write32_disjoint,
-    read32_write32_same,
+    Mem.read32_write32_same,
     hpg, ha, hb,
-    write64_pages, write32_pages]
+    Mem.write64_pages, Mem.write32_pages]
   -- Rewrite the two odd-part shift amounts into the `CodeLib` form.
   rw [shift_pipeline a ha0, shift_pipeline b hb0]
   -- Abbreviations for the odd parts and the recombination shift.
@@ -319,9 +263,9 @@ theorem meatLoop_wp (env : HostEnv Unit) (stm : Store Unit) (a b : UInt64)
     rw [hstL]
     rw [read64_write64_disjoint _ _ _ _ (by decide),
         read64_write32_disjoint _ _ _ _ (by decide),
-        read64_write64_same]
+        Mem.read64_write64_same]
   have hLb : stL.mem.read64 1048528 = bo := by
-    rw [hstL]; rw [read64_write64_same]
+    rw [hstL]; rw [Mem.read64_write64_same]
   -- The shift amount used by the final `shl` recombine.
   have hsh : UInt64.ofNat ((63 : UInt32) &&&
       UInt32.ofNat ((UInt64.ofNat (ctz64 64 (a ||| b))).toNat % 2 ^ 32)).toNat % 64
@@ -357,14 +301,14 @@ theorem meatLoop_wp (env : HostEnv Unit) (stm : Store Unit) (a b : UInt64)
       -- The break stores `x <<< shift` at slot 1048512.
       refine hQ _ _ ?_ ?_ hglob' rfl
       · -- result slot holds the gcd.
-        rw [read64_write64_same, hsh]
+        rw [Mem.read64_write64_same, hsh]
         have hrec := UInt64.recombine_loop a b x ha0 hb0 ?_
         · simpa [ao, bo, UInt64.toNat_shiftRight] using hrec
         · rw [Nat.gcd_self]
           have hgcd' := hgcd
           rw [hao, hbo] at hgcd'
           simpa [UInt64.toNat_shiftRight] using hgcd'
-      · rw [write64_pages]; exact hpg'
+      · rw [Mem.write64_pages]; exact hpg'
     · -- x ≠ y: fall into block B.
       rw [if_pos hxy]
       simp only [show (1 : UInt32) &&& 1 = 1 from rfl]
@@ -374,9 +318,9 @@ theorem meatLoop_wp (env : HostEnv Unit) (stm : Store Unit) (a b : UInt64)
         List.getElem?_cons_zero, List.getElem?_cons_succ, List.set_cons_zero, List.set_cons_succ,
         Nat.reduceLT, Nat.reduceAdd, Nat.reduceMul, Nat.reduceSub, reduceIte,
         UInt32.reduceAdd, UInt32.reduceToNat, gt_iff_lt, hpg', hxr, hyr,
-        read64_write64_same, read64_write64_disjoint, read64_write32_disjoint,
-        read32_write32_same,
-        write64_pages, write32_pages]
+        Mem.read64_write64_same, read64_write64_disjoint, read64_write32_disjoint,
+        Mem.read32_write32_same,
+        Mem.write64_pages, Mem.write32_pages]
       simp only [List.take_zero, List.drop_zero, List.nil_append]
       by_cases hlt : y < x
       · -- y < x: subtract y from x, halve x.  (x-branch.)
@@ -456,9 +400,9 @@ theorem func1_terminates (env : HostEnv Unit) (st1 : Store Unit) (a b : UInt64)
   -- pointer (local 2) is 1048512. Abbreviate the in-frame store.
   set M0 : Mem := (st1.mem.write64 1048520 a).write64 1048528 b with hM0
   have hM0a : M0.read64 1048520 = a := by
-    rw [hM0, read64_write64_disjoint _ _ _ _ (by decide), read64_write64_same]
+    rw [hM0, read64_write64_disjoint _ _ _ _ (by decide), Mem.read64_write64_same]
   have hM0b : M0.read64 1048528 = b := by
-    rw [hM0, read64_write64_same]
+    rw [hM0, Mem.read64_write64_same]
   have hM0pg : M0.pages = 16 := by rw [hM0]; simp [hpg]
   -- Recognize the OUTER block body as `MIDDLE_block :: meatLoopProg` (defeq),
   -- keeping the giant meat opaque to `simp` during the zero-checks.
@@ -483,8 +427,8 @@ theorem func1_terminates (env : HostEnv Unit) (st1 : Store Unit) (a b : UInt64)
     UInt32.reduceAdd, UInt32.reduceToNat, gt_iff_lt, hM0a, hM0b, hM0pg]
   -- The result slot read after the recombine-as-OR store.
   have horRead : (M0.write64 1048512 (a ||| b)).read64 1048512 = a ||| b :=
-    read64_write64_same _ _ _
-  have horPg : (M0.write64 1048512 (a ||| b)).pages = 16 := by rw [write64_pages]; exact hM0pg
+    Mem.read64_write64_same _ _ _
+  have horPg : (M0.write64 1048512 (a ||| b)).pages = 16 := by rw [Mem.write64_pages]; exact hM0pg
   by_cases ha0 : a = 0
   · -- a = 0: result is `0 ||| b = b = gcd 0 b`.
     subst ha0
@@ -546,10 +490,10 @@ theorem func0_terminates (env : HostEnv Unit) (a b : UInt64) :
   -- is 1048560.  Discharge `func1` via its `TerminatesWith`.
   apply wp_call_of_terminates
     (func1_terminates env _ a b []
-      (by rw [write64_pages, write64_pages]; exact hp)
+      (by rw [Mem.write64_pages, Mem.write64_pages]; exact hp)
       (by rfl)
-      (by rw [read64_write64_disjoint _ _ _ _ (by decide), read64_write64_same])
-      (by rw [read64_write64_same]))
+      (by rw [read64_write64_disjoint _ _ _ _ (by decide), Mem.read64_write64_same])
+      (by rw [Mem.read64_write64_same]))
   -- The call returns `gcd a b`; restore the stack pointer and `ret`.
   rintro stA vsA ⟨hAglob, rfl⟩
   wp_run

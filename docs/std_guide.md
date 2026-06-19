@@ -53,7 +53,7 @@ and one line in `entrypoint`.
 
 ---
 
-## Example prove `u64::abs_diff` in CodeLib
+## Example: prove `u64::abs_diff` in CodeLib
 
 ### 1. Create the crate (first time only)
 ```bash
@@ -215,6 +215,12 @@ just verifier-prove rust_u64
 
 A separate crate using `abs_diff` non-trivially:
 `total_variation a b c = |a-b| + |b-c|` (two calls, summed).
+
+(No `entrypoint` keep-alive is needed here: `total_variation` is itself the
+exported `#[unsafe(no_mangle)]` function — a root export, so it can't be
+dead-code eliminated. The `entrypoint` wrapper is only for the per-type corpus
+crates like `rust_u64`, where the individual method wrappers would otherwise be
+dropped.)
 
 ### 1–3. Create, write, build same as before.
 ```bash
