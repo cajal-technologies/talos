@@ -470,6 +470,16 @@ private def cmdLift (crate : String) (funcIdx : Nat) (typeNs fnName : String) : 
   | .ok m =>
     let some f := m.funcs[funcIdx]? |
       die s!"function index {funcIdx} out of range (module has {m.funcs.length} functions)"
+    -- The scaffold renders params/locals through i32/i64-only helpers and names
+    -- params with single letters; reject inputs it can't render faithfully
+    -- rather than emit subtly-wrong code.
+    let isI32I64 : Wasm.ValueType → Bool := fun
+      | .i32 | .i64 => true
+      | _           => false
+    unless (f.params ++ f.locals).all isI32I64 do
+      die s!"function {funcIdx} has a non-i32/i64 param or local; `lift` only supports i32/i64 today"
+    if f.params.length > 12 then
+      die s!"function {funcIdx} has {f.params.length} params; `lift`'s single-letter param naming only goes up to 12 — lift it by hand"
     let bodyName := fnName ++ "Body"
     let funcName := fnName ++ "Func"
     let content := Verifier.Emit.codeLibScaffold typeNs fnName bodyName funcName f
@@ -677,7 +687,7 @@ def liftCmd : Cmd := `[Cli|
 
   ARGS:
     crate   : String; "Crate name (snake_case)."
-    funcIdx : String; "Function index in the emitted module (func0, func1, …)."
+    funcIdx : String; "Index among the module's defined functions (the emitted func0, func1, …; excludes imports)."
     type    : String; "Type namespace under CodeLib/RustStd (e.g. U64)."
     name    : String; "lowerCamel base (absDiff → absDiffBody/absDiffFunc/absDiff_wp, file AbsDiff.lean)."
 ]

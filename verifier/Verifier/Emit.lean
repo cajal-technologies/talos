@@ -498,7 +498,7 @@ Render a single function body as a ready-to-prove `CodeLib/RustStd/<Type>/`
 file: the verbatim body + `Function` record (so it matches the emitted module
 exactly — checked by `rfl` in the per-crate spec), plus a wp-form theorem stub
 in the house style. The post-condition (`Returns …`) and the proof are left as
-`sorry` for the human to fill, mirroring `CountOnes` / `AbsDiff`. -/
+`sorry` for the human to fill, mirroring `AbsDiff`. -/
 
 private def valLeanType : Wasm.ValueType → String
   | .i64 => "UInt64"
@@ -513,6 +513,9 @@ private def valZero : Wasm.ValueType → String
   | .i64 => ".i64 0"
   | _    => ".i32 0"
 
+/-- Single-letter binder name `a`, `b`, … for the `i`-th parameter. Only valid
+for `i < 12`: it must stay clear of the theorem's `m : Module` binder (offset 12)
+and the printable-letter range (offset 26). Callers (`cmdLift`) guard the arity. -/
 private def paramName (i : Nat) : String := String.singleton (Char.ofNat (97 + i))
 
 /-- Full CodeLib scaffold file for function `f`, named `<funcName>`/`<bodyName>`
@@ -532,7 +535,10 @@ def codeLibScaffold (typeNs fnName bodyName funcName : String)
     "import CodeLib.Entry",
     "",
     s!"/-! AUTO-SCAFFOLDED by `verifier lift`. Fill in the `Returns` result and",
-    s!"the proof (see `CountOnes` / `AbsDiff` for templates), then delete this note. -/",
+    s!"the proof (see `AbsDiff` for a template), then delete this note.",
+    s!"The `sp`/`hsp`/`hlo`/`hhi` hypotheses and the frame post-condition follow the",
+    s!"shadow-stack (global 0 = SP) convention; drop them for a function that uses",
+    s!"neither the shadow stack nor memory. -/",
     "",
     s!"namespace Wasm.RustStd.{typeNs}",
     "",
