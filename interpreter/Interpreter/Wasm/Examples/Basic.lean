@@ -1,4 +1,5 @@
 import Interpreter.Wasm.Examples.IsEven
+import Interpreter.Wasm.Examples.NatBignum
 import Interpreter.Wasm.Examples.SimpleLoop
 import Interpreter.Wasm.Examples.Factorial
 import Interpreter.Wasm.Examples.InfiniteLoop
