@@ -17339,12 +17339,12 @@ global.wast:206 assert_return pass
 global.wast:207 assert_return pass
 global.wast:208 assert_return pass
 global.wast:209 assert_return pass
-global.wast:210 assert_return fail
-global.wast:211 assert_return fail
-global.wast:212 assert_return fail
-global.wast:213 assert_return fail
-global.wast:214 assert_return fail
-global.wast:215 assert_return fail
+global.wast:210 assert_return pass
+global.wast:211 assert_return pass
+global.wast:212 assert_return pass
+global.wast:213 assert_return pass
+global.wast:214 assert_return pass
+global.wast:215 assert_return pass
 global.wast:217 assert_return pass
 global.wast:218 assert_return pass
 global.wast:219 assert_return pass
@@ -17508,7 +17508,7 @@ i31.wast:136 assert_return module_unavailable
 i31.wast:137 assert_return module_unavailable
 i31.wast:138 assert_return module_unavailable
 i31.wast:140 module pass
-i31.wast:148 assert_return interpreter_error
+i31.wast:148 assert_return pass
 i31.wast:150 module pass
 i31.wast:164 assert_return pass
 i31.wast:165 action pass
@@ -19359,7 +19359,7 @@ linking.wast:364 module pass
 linking.wast:370 module pass
 linking.wast:371 register pass
 linking.wast:372 module pass
-linking.wast:376 assert_return fail
+linking.wast:376 assert_return pass
 linking.wast:379 assert_uninstantiable skipped:assert_uninstantiable
 linking.wast:388 assert_unlinkable skipped:assert_unlinkable
 linking.wast:397 assert_trap pass

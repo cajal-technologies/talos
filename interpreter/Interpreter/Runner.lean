@@ -247,7 +247,16 @@ def runOnce (a : Args) : IO UInt32 := do
   -- so we reverse here to match the call convention. (Single-arg
   -- functions are order-insensitive, which masked this for older
   -- samples.)
-  match Wasm.run a.fuel m idx (m.initialStore (α := Unit)) vs.reverse with
+  --
+  -- Evaluate constant-expression global initializers (`global.get`,
+  -- extended-const arithmetic, GC `struct.new`/`array.new*`) into the
+  -- fresh store before running, the same way the testsuite driver does
+  -- at instantiation — otherwise those globals keep their zero
+  -- placeholder. There are no imports here, so `global.get` of an
+  -- imported global is unreachable; the import pre-flight above
+  -- rejects any module that would need one.
+  let store0 := m.runConstGlobals a.fuel (m.initialStore (α := Unit)) {}
+  match Wasm.run a.fuel m idx store0 vs.reverse with
   | .Success results _ =>
     for v in results.reverse do
       IO.println (renderValue v)
