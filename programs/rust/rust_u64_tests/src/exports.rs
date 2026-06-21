@@ -1,73 +1,52 @@
 //! Reuse tests for the `CodeLib/RustStd/U64` corpus.
 //!
-//! One crate accumulating *non-trivial* uses of the u64 std functions proven
-//! in CodeLib, so each new CodeLib theorem gets exercised through the `call`
-//! rule in a single emitted module (`Project.RustU64Tests.Spec`) instead of a
-//! crate per function. Mirrors how `rust_u64` accumulates the corpus itself.
-//!
-//! Convention per std function:
-//!   * if the std fn compiles to a real *called* function (e.g. `abs_diff`),
-//!     call it directly — the `.call` reuses its CodeLib theorem;
-//!   * if the std fn *inlines* at opt-0 (e.g. `+` → `i64.add`), expose a local
-//!     `#[no_mangle] extern "C"` shim with the same body (so its emitted
-//!     `Function` record equals the CodeLib `…Func`), then call the shim.
+//! Each operator gets TWO structurally-distinct functions that use it INLINE
+//! the way real client code emits it (no `#[no_mangle]` shim manufacturing a
+//! call, no calling the op as a function). Their proofs in `Spec.lean`
+//! discharge the inlined instruction chunks by reusing the CodeLib chunk
+//! theorems — exactly what `opt-0`'s "same inlined sequence everywhere"
+//! guarantees.
 
-// ─── u64::add (inlines to a single i64.add) ────────────────────────────────
-// Shim: identical source/codegen to `rust_u64::add`, so its opt-0 body is the
-// frame-less `[localGet 0, localGet 1, addI64, ret]` == CodeLib `addFunc`.
-#[unsafe(no_mangle)]
-pub extern "C" fn add(a: u64, b: u64) -> u64 {
-    a + b
-}
+// ── add ─────────────────────────────────────────────────────────────────────
+#[unsafe(no_mangle)] pub extern "C" fn add_chain(a: u64, b: u64, c: u64) -> u64 { a + b + c }
+#[unsafe(no_mangle)] pub extern "C" fn add_then_mul(a: u64, b: u64, c: u64) -> u64 { (a + b) * c }
 
-/// Test for `u64::add`: a non-trivial chain `(a + b) + c` (two `add` calls).
-#[unsafe(no_mangle)]
-pub extern "C" fn add_sum3(a: u64, b: u64, c: u64) -> u64 {
-    add(add(a, b), c)
-}
+// ── sub ─────────────────────────────────────────────────────────────────────
+#[unsafe(no_mangle)] pub extern "C" fn sub_chain(a: u64, b: u64, c: u64) -> u64 { a - b - c }
+#[unsafe(no_mangle)] pub extern "C" fn sub_then_add(a: u64, b: u64, c: u64) -> u64 { (a - b) + c }
 
-// ─── u64::sub (inlines to a single i64.sub) ────────────────────────────────
-// Shim: identical source/codegen to `rust_u64::sub`, so its opt-0 body is the
-// frame-less `[localGet 0, localGet 1, subI64, ret]` == CodeLib `subFunc`.
-#[unsafe(no_mangle)]
-pub extern "C" fn sub(a: u64, b: u64) -> u64 {
-    a - b
-}
+// ── mul ─────────────────────────────────────────────────────────────────────
+#[unsafe(no_mangle)] pub extern "C" fn mul_chain(a: u64, b: u64, c: u64) -> u64 { a * b * c }
+#[unsafe(no_mangle)] pub extern "C" fn mul_then_add(a: u64, b: u64, c: u64) -> u64 { a * b + c }
 
-/// Test for `u64::sub`: a non-trivial chain `(a - b) - c` (two `sub` calls).
-#[unsafe(no_mangle)]
-pub extern "C" fn sub_chain3(a: u64, b: u64, c: u64) -> u64 {
-    sub(sub(a, b), c)
-}
+// ── bitand ──────────────────────────────────────────────────────────────────
+#[unsafe(no_mangle)] pub extern "C" fn and_chain(a: u64, b: u64, c: u64) -> u64 { a & b & c }
+#[unsafe(no_mangle)] pub extern "C" fn and_then_or(a: u64, b: u64, c: u64) -> u64 { (a & b) | c }
 
-// ─── u64::mul (inlines to a single i64.mul) ────────────────────────────────
-// Shim: identical source/codegen to `rust_u64::mul`, so its opt-0 body is the
-// frame-less `[localGet 0, localGet 1, mulI64, ret]` == CodeLib `mulFunc`.
-#[unsafe(no_mangle)]
-pub extern "C" fn mul(a: u64, b: u64) -> u64 {
-    a * b
-}
+// ── bitor ───────────────────────────────────────────────────────────────────
+#[unsafe(no_mangle)] pub extern "C" fn or_chain(a: u64, b: u64, c: u64) -> u64 { a | b | c }
+#[unsafe(no_mangle)] pub extern "C" fn or_then_xor(a: u64, b: u64, c: u64) -> u64 { (a | b) ^ c }
 
-/// Test for `u64::mul`: a non-trivial chain `(a * b) * c` (two `mul` calls).
-#[unsafe(no_mangle)]
-pub extern "C" fn mul_prod3(a: u64, b: u64, c: u64) -> u64 {
-    mul(mul(a, b), c)
-}
+// ── bitxor ──────────────────────────────────────────────────────────────────
+#[unsafe(no_mangle)] pub extern "C" fn xor_chain(a: u64, b: u64, c: u64) -> u64 { a ^ b ^ c }
+#[unsafe(no_mangle)] pub extern "C" fn xor_then_and(a: u64, b: u64, c: u64) -> u64 { (a ^ b) & c }
 
-// ─── u64::div (inlines the guarded i64.div_u at opt-0) ─────────────────────
-// Shim: identical source/codegen to `rust_u64::div`. Division-by-zero is always
-// checked (even in release), so the opt-0 body is a `block` guarding the
-// `i64.div_u`, followed by a crate-specific panic tail. The guard/divide prefix
-// is identical to CodeLib `divFunc`; only the trailing panic `const`/`call`
-// indices are resolved per crate (`div_wp` is reused tail-generically).
-#[unsafe(no_mangle)]
-pub extern "C" fn div(a: u64, b: u64) -> u64 {
-    a / b
-}
+// ── not ─────────────────────────────────────────────────────────────────────
+#[unsafe(no_mangle)] pub extern "C" fn not_twice(a: u64) -> u64 { !!a }
+#[unsafe(no_mangle)] pub extern "C" fn not_then_xor(a: u64, b: u64) -> u64 { (!a) ^ b }
 
-/// Test for `u64::div`: a non-trivial chain `(a / b) / c` (two `div` calls;
-/// requires `b != 0` and `c != 0`).
-#[unsafe(no_mangle)]
-pub extern "C" fn div_chain(a: u64, b: u64, c: u64) -> u64 {
-    div(div(a, b), c)
-}
+// ── shl ─────────────────────────────────────────────────────────────────────
+#[unsafe(no_mangle)] pub extern "C" fn shl_then_add(a: u64, n: u32, b: u64) -> u64 { (a << n) + b }
+#[unsafe(no_mangle)] pub extern "C" fn shl_twice(a: u64, n: u32, m: u32) -> u64 { (a << n) << m }
+
+// ── shr ─────────────────────────────────────────────────────────────────────
+#[unsafe(no_mangle)] pub extern "C" fn shr_then_sub(a: u64, n: u32, b: u64) -> u64 { (a >> n) - b }
+#[unsafe(no_mangle)] pub extern "C" fn shr_twice(a: u64, n: u32, m: u32) -> u64 { (a >> n) >> m }
+
+// ── div (divisors nonzero) ──────────────────────────────────────────────────
+#[unsafe(no_mangle)] pub extern "C" fn div_then_add(a: u64, b: u64, c: u64) -> u64 { a / b + c }
+#[unsafe(no_mangle)] pub extern "C" fn div_then_mul(a: u64, b: u64, c: u64) -> u64 { (a / b) * c }
+
+// ── rem (divisors nonzero) ──────────────────────────────────────────────────
+#[unsafe(no_mangle)] pub extern "C" fn rem_then_add(a: u64, b: u64, c: u64) -> u64 { a % b + c }
+#[unsafe(no_mangle)] pub extern "C" fn rem_then_mul(a: u64, b: u64, c: u64) -> u64 { (a % b) * c }

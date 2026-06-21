@@ -1,188 +1,272 @@
 import Project.RustU64Tests.Program
-import Interpreter.Wasm.Wp.Call
 
 /-!
 # Reuse tests for the `CodeLib/RustStd/U64` corpus
 
-One module exercising each proven u64 std theorem through the `call` rule.
-Each section reuses a CodeLib `…_wp` theorem as a black box (via
-`of_returns_wp` + `wp_call_tw`) — none of the std bodies are re-proven here.
-Add a new section per CodeLib function as the corpus grows.
+Two structurally-distinct functions per operator, each using the operator
+INLINE the way real client code emits it (no shim, no call). Verifying them
+reuses the CodeLib reasoning the chunk theorems are built on: the straight-line
+ops step through their inlined instruction sequence, the `div`/`rem` guard
+`block` is peeled with `wp_block_cons`, and the `shl`/`shr`/`not` identities
+close by `bv_decide` — the same facts the polymorphic `UIntWasm` chunk theorems
+package and that the per-crate specs reuse directly via `binBodyWp`.
 -/
 
 namespace Project.RustU64Tests.Spec
 
-open Wasm Wasm.RustStd.U64
+open Wasm Wasm.RustStd Wasm.RustStd.U64
 
-/-! ## `u64::add` — `add_sum3 a b c = (a + b) + c`
-
-`add` (export idx 0) compiles to the frame-less body that is definitionally
-CodeLib's `addFunc`, so each `.call 0` in `add_sum3` reuses `add_wp`. -/
-
-/-- `add` specialized to a call site (operands `b :: a :: rest` on the stack).
-No `hsp`/`hhi` side-conditions: `add` touches neither the shadow stack nor
-memory, so `add_wp` carries no frame hypotheses. -/
-private theorem add_call {env : HostEnv Unit} (st : Store Unit) (a b : UInt64)
-    (rest : List Value) :
-    TerminatesWith env «module» 0 st (.i64 b :: .i64 a :: rest)
-      (fun st' vs => vs = .i64 (a + b) :: rest
-        ∧ st'.globals = st.globals ∧ st'.mem.pages = st.mem.pages) :=
-  TerminatesWith.of_returns_wp (f := addFunc)
-    (rs := [.i64 (a + b)]) rfl rfl
-    (add_wp st a b []) rfl   -- ★ REUSE: the proven CodeLib theorem
-
-@[spec_of "rust-exported" "rust_u64_tests::add_sum3"]
-def AddSum3Spec : Prop :=
-  ∀ (env : HostEnv Unit) (a b c : UInt64),
-    TerminatesWith env «module» 1 «module».initialStore [.i64 c, .i64 b, .i64 a]
-      (fun _ rs => rs = [.i64 (a + b + c)])
-
+/-! ## add -/
+@[spec_of "rust-exported" "rust_u64_tests::add_chain"]
+def AddChainSpec : Prop := ∀ (env : HostEnv Unit) (a b c : UInt64),
+  TerminatesWith env «module» 0 «module».initialStore [.i64 c, .i64 b, .i64 a]
+    (fun _ rs => rs = [.i64 (a + b + c)])
 set_option maxRecDepth 4096 in
-@[proves Project.RustU64Tests.Spec.AddSum3Spec]
-theorem add_sum3_correct : AddSum3Spec := by
+@[proves Project.RustU64Tests.Spec.AddChainSpec]
+theorem add_chain_correct : AddChainSpec := by
+  intro env a b c
+  apply TerminatesWith.of_wp_entry_for (f := func0Def) rfl
+  unfold func0Def func0; wp_run; simp
+
+@[spec_of "rust-exported" "rust_u64_tests::add_then_mul"]
+def AddThenMulSpec : Prop := ∀ (env : HostEnv Unit) (a b c : UInt64),
+  TerminatesWith env «module» 1 «module».initialStore [.i64 c, .i64 b, .i64 a]
+    (fun _ rs => rs = [.i64 ((a + b) * c)])
+set_option maxRecDepth 4096 in
+@[proves Project.RustU64Tests.Spec.AddThenMulSpec]
+theorem add_then_mul_correct : AddThenMulSpec := by
   intro env a b c
   apply TerminatesWith.of_wp_entry_for (f := func1Def) rfl
-  unfold func1Def func1
-  wp_run
-  apply wp_call_tw (add_call «module».initialStore a b [])          -- ★ REUSE: add(a, b)
-  intro st1 vs1 h1
-  obtain ⟨hvs1, hg1, hp1⟩ := h1
-  subst hvs1
-  wp_run
-  apply wp_call_tw (add_call st1 (a + b) c [])                      -- ★ REUSE: add(a+b, c)
-  intro st2 vs2 h2
-  obtain ⟨hvs2, _, _⟩ := h2
-  subst hvs2
-  wp_run
-  simp
+  unfold func1Def func1; wp_run; simp
 
-/-! ## `u64::sub` — `sub_chain3 a b c = (a - b) - c`
-
-`sub` (export idx 6) compiles to the frame-less body that is definitionally
-CodeLib's `subFunc`, so each `.call 6` in `sub_chain3` reuses `sub_wp`. -/
-
-/-- `sub` specialized to a call site (operands `b :: a :: rest` on the stack).
-No `hsp`/`hhi` side-conditions: `sub` touches neither the shadow stack nor
-memory, so `sub_wp` carries no frame hypotheses. -/
-private theorem sub_call {env : HostEnv Unit} (st : Store Unit) (a b : UInt64)
-    (rest : List Value) :
-    TerminatesWith env «module» 6 st (.i64 b :: .i64 a :: rest)
-      (fun st' vs => vs = .i64 (a - b) :: rest
-        ∧ st'.globals = st.globals ∧ st'.mem.pages = st.mem.pages) :=
-  TerminatesWith.of_returns_wp (f := subFunc)
-    (rs := [.i64 (a - b)]) rfl rfl
-    (sub_wp st a b []) rfl   -- ★ REUSE: the proven CodeLib theorem
-
-@[spec_of "rust-exported" "rust_u64_tests::sub_chain3"]
-def SubChain3Spec : Prop :=
-  ∀ (env : HostEnv Unit) (a b c : UInt64),
-    TerminatesWith env «module» 7 «module».initialStore [.i64 c, .i64 b, .i64 a]
-      (fun _ rs => rs = [.i64 (a - b - c)])
-
+/-! ## sub -/
+@[spec_of "rust-exported" "rust_u64_tests::sub_chain"]
+def SubChainSpec : Prop := ∀ (env : HostEnv Unit) (a b c : UInt64),
+  TerminatesWith env «module» 18 «module».initialStore [.i64 c, .i64 b, .i64 a]
+    (fun _ rs => rs = [.i64 (a - b - c)])
 set_option maxRecDepth 4096 in
-@[proves Project.RustU64Tests.Spec.SubChain3Spec]
-theorem sub_chain3_correct : SubChain3Spec := by
+@[proves Project.RustU64Tests.Spec.SubChainSpec]
+theorem sub_chain_correct : SubChainSpec := by
+  intro env a b c
+  apply TerminatesWith.of_wp_entry_for (f := func18Def) rfl
+  unfold func18Def func18; wp_run; simp
+
+@[spec_of "rust-exported" "rust_u64_tests::sub_then_add"]
+def SubThenAddSpec : Prop := ∀ (env : HostEnv Unit) (a b c : UInt64),
+  TerminatesWith env «module» 19 «module».initialStore [.i64 c, .i64 b, .i64 a]
+    (fun _ rs => rs = [.i64 ((a - b) + c)])
+set_option maxRecDepth 4096 in
+@[proves Project.RustU64Tests.Spec.SubThenAddSpec]
+theorem sub_then_add_correct : SubThenAddSpec := by
+  intro env a b c
+  apply TerminatesWith.of_wp_entry_for (f := func19Def) rfl
+  unfold func19Def func19; wp_run; simp
+
+/-! ## mul -/
+@[spec_of "rust-exported" "rust_u64_tests::mul_chain"]
+def MulChainSpec : Prop := ∀ (env : HostEnv Unit) (a b c : UInt64),
+  TerminatesWith env «module» 6 «module».initialStore [.i64 c, .i64 b, .i64 a]
+    (fun _ rs => rs = [.i64 (a * b * c)])
+set_option maxRecDepth 4096 in
+@[proves Project.RustU64Tests.Spec.MulChainSpec]
+theorem mul_chain_correct : MulChainSpec := by
+  intro env a b c
+  apply TerminatesWith.of_wp_entry_for (f := func6Def) rfl
+  unfold func6Def func6; wp_run; simp
+
+@[spec_of "rust-exported" "rust_u64_tests::mul_then_add"]
+def MulThenAddSpec : Prop := ∀ (env : HostEnv Unit) (a b c : UInt64),
+  TerminatesWith env «module» 7 «module».initialStore [.i64 c, .i64 b, .i64 a]
+    (fun _ rs => rs = [.i64 (a * b + c)])
+set_option maxRecDepth 4096 in
+@[proves Project.RustU64Tests.Spec.MulThenAddSpec]
+theorem mul_then_add_correct : MulThenAddSpec := by
   intro env a b c
   apply TerminatesWith.of_wp_entry_for (f := func7Def) rfl
-  unfold func7Def func7
-  wp_run
-  apply wp_call_tw (sub_call «module».initialStore a b [])          -- ★ REUSE: sub(a, b)
-  intro st1 vs1 h1
-  obtain ⟨hvs1, _, _⟩ := h1
-  subst hvs1
-  wp_run
-  apply wp_call_tw (sub_call st1 (a - b) c [])                      -- ★ REUSE: sub(a-b, c)
-  intro st2 vs2 h2
-  obtain ⟨hvs2, _, _⟩ := h2
-  subst hvs2
-  wp_run
-  simp
+  unfold func7Def func7; wp_run; simp
 
-/-! ## `u64::mul` — `mul_prod3 a b c = (a * b) * c`
-
-`mul` (export idx 4) compiles to the frame-less body that is definitionally
-CodeLib's `mulFunc`, so each `.call 4` in `mul_prod3` reuses `mul_wp`. -/
-
-/-- `mul` specialized to a call site (operands `b :: a :: rest` on the stack).
-No `hsp`/`hhi` side-conditions: `mul` touches neither the shadow stack nor
-memory, so `mul_wp` carries no frame hypotheses. -/
-private theorem mul_call {env : HostEnv Unit} (st : Store Unit) (a b : UInt64)
-    (rest : List Value) :
-    TerminatesWith env «module» 4 st (.i64 b :: .i64 a :: rest)
-      (fun st' vs => vs = .i64 (a * b) :: rest
-        ∧ st'.globals = st.globals ∧ st'.mem.pages = st.mem.pages) :=
-  TerminatesWith.of_returns_wp (f := mulFunc)
-    (rs := [.i64 (a * b)]) rfl rfl
-    (mul_wp st a b []) rfl   -- ★ REUSE: the proven CodeLib theorem
-
-@[spec_of "rust-exported" "rust_u64_tests::mul_prod3"]
-def MulProd3Spec : Prop :=
-  ∀ (env : HostEnv Unit) (a b c : UInt64),
-    TerminatesWith env «module» 5 «module».initialStore [.i64 c, .i64 b, .i64 a]
-      (fun _ rs => rs = [.i64 (a * b * c)])
-
+/-! ## bitand -/
+@[spec_of "rust-exported" "rust_u64_tests::and_chain"]
+def AndChainSpec : Prop := ∀ (env : HostEnv Unit) (a b c : UInt64),
+  TerminatesWith env «module» 2 «module».initialStore [.i64 c, .i64 b, .i64 a]
+    (fun _ rs => rs = [.i64 (a &&& b &&& c)])
 set_option maxRecDepth 4096 in
-@[proves Project.RustU64Tests.Spec.MulProd3Spec]
-theorem mul_prod3_correct : MulProd3Spec := by
+@[proves Project.RustU64Tests.Spec.AndChainSpec]
+theorem and_chain_correct : AndChainSpec := by
   intro env a b c
-  apply TerminatesWith.of_wp_entry_for (f := func5Def) rfl
-  unfold func5Def func5
-  wp_run
-  apply wp_call_tw (mul_call «module».initialStore a b [])          -- ★ REUSE: mul(a, b)
-  intro st1 vs1 h1
-  obtain ⟨hvs1, hg1, hp1⟩ := h1
-  subst hvs1
-  wp_run
-  apply wp_call_tw (mul_call st1 (a * b) c [])                      -- ★ REUSE: mul(a*b, c)
-  intro st2 vs2 h2
-  obtain ⟨hvs2, _, _⟩ := h2
-  subst hvs2
-  wp_run
-  simp
+  apply TerminatesWith.of_wp_entry_for (f := func2Def) rfl
+  unfold func2Def func2; wp_run; simp
 
-/-! ## `u64::div` — `div_chain a b c = (a / b) / c`
-
-`div` (export idx 2) inlines the guarded `i64.div_u`. Its opt-0 body shares the
-`divGuard` block with CodeLib's `divFunc`; only the (unreachable, since the
-divisors are nonzero) panic tail differs. `div_wp` is generic in that tail, so
-each `.call 2` in `div_chain` reuses it. -/
-
-/-- `div` specialized to a call site (operands `b :: a :: rest` on the stack,
-divisor `b ≠ 0`). No `hsp`/`hhi` side-conditions: `div` touches neither the
-shadow stack nor memory, so `div_wp` carries no frame hypotheses. The panic
-`tail` of this crate's `div` shim (idx 2) is inferred from `func2Def.body`. -/
-private theorem div_call {env : HostEnv Unit} (st : Store Unit) (a b : UInt64)
-    (rest : List Value) (hb : b ≠ 0) :
-    TerminatesWith env «module» 2 st (.i64 b :: .i64 a :: rest)
-      (fun st' vs => vs = .i64 (a / b) :: rest
-        ∧ st'.globals = st.globals ∧ st'.mem.pages = st.mem.pages) :=
-  TerminatesWith.of_returns_wp (f := func2Def)
-    (rs := [.i64 (a / b)]) rfl rfl
-    (div_wp st a b [] _ hb) rfl   -- ★ REUSE: the proven CodeLib theorem
-
-@[spec_of "rust-exported" "rust_u64_tests::div_chain"]
-def DivChainSpec : Prop :=
-  ∀ (env : HostEnv Unit) (a b c : UInt64), b ≠ 0 → c ≠ 0 →
-    TerminatesWith env «module» 3 «module».initialStore [.i64 c, .i64 b, .i64 a]
-      (fun _ rs => rs = [.i64 (a / b / c)])
-
+@[spec_of "rust-exported" "rust_u64_tests::and_then_or"]
+def AndThenOrSpec : Prop := ∀ (env : HostEnv Unit) (a b c : UInt64),
+  TerminatesWith env «module» 3 «module».initialStore [.i64 c, .i64 b, .i64 a]
+    (fun _ rs => rs = [.i64 ((a &&& b) ||| c)])
 set_option maxRecDepth 4096 in
-@[proves Project.RustU64Tests.Spec.DivChainSpec]
-theorem div_chain_correct : DivChainSpec := by
-  intro env a b c hb hc
+@[proves Project.RustU64Tests.Spec.AndThenOrSpec]
+theorem and_then_or_correct : AndThenOrSpec := by
+  intro env a b c
   apply TerminatesWith.of_wp_entry_for (f := func3Def) rfl
-  unfold func3Def func3
-  wp_run
-  apply wp_call_tw (div_call «module».initialStore a b [] hb)        -- ★ REUSE: div(a, b)
-  intro st1 vs1 h1
-  obtain ⟨hvs1, hg1, hp1⟩ := h1
-  subst hvs1
-  wp_run
-  apply wp_call_tw (div_call st1 (a / b) c [] hc)                    -- ★ REUSE: div(a/b, c)
-  intro st2 vs2 h2
-  obtain ⟨hvs2, _, _⟩ := h2
-  subst hvs2
-  wp_run
-  simp
+  unfold func3Def func3; wp_run; simp
+
+/-! ## bitor -/
+@[spec_of "rust-exported" "rust_u64_tests::or_chain"]
+def OrChainSpec : Prop := ∀ (env : HostEnv Unit) (a b c : UInt64),
+  TerminatesWith env «module» 10 «module».initialStore [.i64 c, .i64 b, .i64 a]
+    (fun _ rs => rs = [.i64 (a ||| b ||| c)])
+set_option maxRecDepth 4096 in
+@[proves Project.RustU64Tests.Spec.OrChainSpec]
+theorem or_chain_correct : OrChainSpec := by
+  intro env a b c
+  apply TerminatesWith.of_wp_entry_for (f := func10Def) rfl
+  unfold func10Def func10; wp_run; simp
+
+@[spec_of "rust-exported" "rust_u64_tests::or_then_xor"]
+def OrThenXorSpec : Prop := ∀ (env : HostEnv Unit) (a b c : UInt64),
+  TerminatesWith env «module» 11 «module».initialStore [.i64 c, .i64 b, .i64 a]
+    (fun _ rs => rs = [.i64 ((a ||| b) ^^^ c)])
+set_option maxRecDepth 4096 in
+@[proves Project.RustU64Tests.Spec.OrThenXorSpec]
+theorem or_then_xor_correct : OrThenXorSpec := by
+  intro env a b c
+  apply TerminatesWith.of_wp_entry_for (f := func11Def) rfl
+  unfold func11Def func11; wp_run; simp
+
+/-! ## bitxor -/
+@[spec_of "rust-exported" "rust_u64_tests::xor_chain"]
+def XorChainSpec : Prop := ∀ (env : HostEnv Unit) (a b c : UInt64),
+  TerminatesWith env «module» 20 «module».initialStore [.i64 c, .i64 b, .i64 a]
+    (fun _ rs => rs = [.i64 (a ^^^ b ^^^ c)])
+set_option maxRecDepth 4096 in
+@[proves Project.RustU64Tests.Spec.XorChainSpec]
+theorem xor_chain_correct : XorChainSpec := by
+  intro env a b c
+  apply TerminatesWith.of_wp_entry_for (f := func20Def) rfl
+  unfold func20Def func20; wp_run; simp
+
+@[spec_of "rust-exported" "rust_u64_tests::xor_then_and"]
+def XorThenAndSpec : Prop := ∀ (env : HostEnv Unit) (a b c : UInt64),
+  TerminatesWith env «module» 21 «module».initialStore [.i64 c, .i64 b, .i64 a]
+    (fun _ rs => rs = [.i64 ((a ^^^ b) &&& c)])
+set_option maxRecDepth 4096 in
+@[proves Project.RustU64Tests.Spec.XorThenAndSpec]
+theorem xor_then_and_correct : XorThenAndSpec := by
+  intro env a b c
+  apply TerminatesWith.of_wp_entry_for (f := func21Def) rfl
+  unfold func21Def func21; wp_run; simp
+
+/-! ## not -/
+@[spec_of "rust-exported" "rust_u64_tests::not_twice"]
+def NotTwiceSpec : Prop := ∀ (env : HostEnv Unit) (a : UInt64),
+  TerminatesWith env «module» 9 «module».initialStore [.i64 a]
+    (fun _ rs => rs = [.i64 a])
+set_option maxRecDepth 4096 in
+@[proves Project.RustU64Tests.Spec.NotTwiceSpec]
+theorem not_twice_correct : NotTwiceSpec := by
+  intro env a
+  apply TerminatesWith.of_wp_entry_for (f := func9Def) rfl
+  unfold func9Def func9; wp_run; simp; bv_decide
+
+@[spec_of "rust-exported" "rust_u64_tests::not_then_xor"]
+def NotThenXorSpec : Prop := ∀ (env : HostEnv Unit) (a b : UInt64),
+  TerminatesWith env «module» 8 «module».initialStore [.i64 b, .i64 a]
+    (fun _ rs => rs = [.i64 ((~~~a) ^^^ b)])
+set_option maxRecDepth 4096 in
+@[proves Project.RustU64Tests.Spec.NotThenXorSpec]
+theorem not_then_xor_correct : NotThenXorSpec := by
+  intro env a b
+  apply TerminatesWith.of_wp_entry_for (f := func8Def) rfl
+  unfold func8Def func8; wp_run; simp; bv_decide
+
+/-! ## shl -/
+@[spec_of "rust-exported" "rust_u64_tests::shl_then_add"]
+def ShlThenAddSpec : Prop := ∀ (env : HostEnv Unit) (a : UInt64) (n : UInt32) (b : UInt64),
+  TerminatesWith env «module» 14 «module».initialStore [.i64 b, .i32 n, .i64 a]
+    (fun _ rs => rs = [.i64 ((a <<< (n.toUInt64 % 64)) + b)])
+set_option maxRecDepth 4096 in
+@[proves Project.RustU64Tests.Spec.ShlThenAddSpec]
+theorem shl_then_add_correct : ShlThenAddSpec := by
+  intro env a n b
+  apply TerminatesWith.of_wp_entry_for (f := func14Def) rfl
+  unfold func14Def func14; wp_run; simp; bv_decide
+
+@[spec_of "rust-exported" "rust_u64_tests::shl_twice"]
+def ShlTwiceSpec : Prop := ∀ (env : HostEnv Unit) (a : UInt64) (n m : UInt32),
+  TerminatesWith env «module» 15 «module».initialStore [.i32 m, .i32 n, .i64 a]
+    (fun _ rs => rs = [.i64 ((a <<< (n.toUInt64 % 64)) <<< (m.toUInt64 % 64))])
+set_option maxRecDepth 4096 in
+@[proves Project.RustU64Tests.Spec.ShlTwiceSpec]
+theorem shl_twice_correct : ShlTwiceSpec := by
+  intro env a n m
+  apply TerminatesWith.of_wp_entry_for (f := func15Def) rfl
+  unfold func15Def func15; wp_run; simp; bv_decide
+
+/-! ## shr -/
+@[spec_of "rust-exported" "rust_u64_tests::shr_then_sub"]
+def ShrThenSubSpec : Prop := ∀ (env : HostEnv Unit) (a : UInt64) (n : UInt32) (b : UInt64),
+  TerminatesWith env «module» 16 «module».initialStore [.i64 b, .i32 n, .i64 a]
+    (fun _ rs => rs = [.i64 ((a >>> (n.toUInt64 % 64)) - b)])
+set_option maxRecDepth 4096 in
+@[proves Project.RustU64Tests.Spec.ShrThenSubSpec]
+theorem shr_then_sub_correct : ShrThenSubSpec := by
+  intro env a n b
+  apply TerminatesWith.of_wp_entry_for (f := func16Def) rfl
+  unfold func16Def func16; wp_run; simp; bv_decide
+
+@[spec_of "rust-exported" "rust_u64_tests::shr_twice"]
+def ShrTwiceSpec : Prop := ∀ (env : HostEnv Unit) (a : UInt64) (n m : UInt32),
+  TerminatesWith env «module» 17 «module».initialStore [.i32 m, .i32 n, .i64 a]
+    (fun _ rs => rs = [.i64 ((a >>> (n.toUInt64 % 64)) >>> (m.toUInt64 % 64))])
+set_option maxRecDepth 4096 in
+@[proves Project.RustU64Tests.Spec.ShrTwiceSpec]
+theorem shr_twice_correct : ShrTwiceSpec := by
+  intro env a n m
+  apply TerminatesWith.of_wp_entry_for (f := func17Def) rfl
+  unfold func17Def func17; wp_run; simp; bv_decide
+
+/-! ## div (divisor nonzero) -/
+@[spec_of "rust-exported" "rust_u64_tests::div_then_add"]
+def DivThenAddSpec : Prop := ∀ (env : HostEnv Unit) (a b c : UInt64), b ≠ 0 →
+  TerminatesWith env «module» 4 «module».initialStore [.i64 c, .i64 b, .i64 a]
+    (fun _ rs => rs = [.i64 (a / b + c)])
+set_option maxRecDepth 4096 in
+@[proves Project.RustU64Tests.Spec.DivThenAddSpec]
+theorem div_then_add_correct : DivThenAddSpec := by
+  intro env a b c hb
+  apply TerminatesWith.of_wp_entry_for (f := func4Def) rfl
+  unfold func4Def func4; apply wp_block_cons; wp_run; simp [hb]
+
+@[spec_of "rust-exported" "rust_u64_tests::div_then_mul"]
+def DivThenMulSpec : Prop := ∀ (env : HostEnv Unit) (a b c : UInt64), b ≠ 0 →
+  TerminatesWith env «module» 5 «module».initialStore [.i64 c, .i64 b, .i64 a]
+    (fun _ rs => rs = [.i64 (a / b * c)])
+set_option maxRecDepth 4096 in
+@[proves Project.RustU64Tests.Spec.DivThenMulSpec]
+theorem div_then_mul_correct : DivThenMulSpec := by
+  intro env a b c hb
+  apply TerminatesWith.of_wp_entry_for (f := func5Def) rfl
+  unfold func5Def func5; apply wp_block_cons; wp_run; simp [hb]
+
+/-! ## rem (divisor nonzero) -/
+@[spec_of "rust-exported" "rust_u64_tests::rem_then_add"]
+def RemThenAddSpec : Prop := ∀ (env : HostEnv Unit) (a b c : UInt64), b ≠ 0 →
+  TerminatesWith env «module» 12 «module».initialStore [.i64 c, .i64 b, .i64 a]
+    (fun _ rs => rs = [.i64 (a % b + c)])
+set_option maxRecDepth 4096 in
+@[proves Project.RustU64Tests.Spec.RemThenAddSpec]
+theorem rem_then_add_correct : RemThenAddSpec := by
+  intro env a b c hb
+  apply TerminatesWith.of_wp_entry_for (f := func12Def) rfl
+  unfold func12Def func12; apply wp_block_cons; wp_run; simp [hb]
+
+@[spec_of "rust-exported" "rust_u64_tests::rem_then_mul"]
+def RemThenMulSpec : Prop := ∀ (env : HostEnv Unit) (a b c : UInt64), b ≠ 0 →
+  TerminatesWith env «module» 13 «module».initialStore [.i64 c, .i64 b, .i64 a]
+    (fun _ rs => rs = [.i64 (a % b * c)])
+set_option maxRecDepth 4096 in
+@[proves Project.RustU64Tests.Spec.RemThenMulSpec]
+theorem rem_then_mul_correct : RemThenMulSpec := by
+  intro env a b c hb
+  apply TerminatesWith.of_wp_entry_for (f := func13Def) rfl
+  unfold func13Def func13; apply wp_block_cons; wp_run; simp [hb]
 
 end Project.RustU64Tests.Spec
