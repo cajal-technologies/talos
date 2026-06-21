@@ -4,17 +4,20 @@ import Project.RustU64Tests.Program
 # Reuse tests for the `CodeLib/RustStd/U64` corpus
 
 Two structurally-distinct functions per operator, each using the operator INLINE
-the way real client code emits it (no shim, no `.call`). For the straight-line
-ops and `not`, the proof discharges every inlined op by **rewriting with that
-op's CodeLib chunk theorem** (`add_seq`, `mul_seq`, …, `not_seq`) — the op's own
+the way real client code emits it (no shim, no `.call`). **Every** inlined op is
+discharged by rewriting with that op's CodeLib chunk theorem — the op's own
 atomic `wp_*` lemma is deliberately NOT in the `simp` set, so the reusable
-CodeLib theorem is the only way through (you can confirm: drop the `_seq` lemma
-and the proof fails). This is a CodeLib proof reused on *inlined* client code.
+CodeLib theorem is the only way through (confirm by dropping the chunk lemma: the
+proof then fails). This is a CodeLib proof reused on *inlined* client code, which
+is the whole point — the same theorem also serves the called export body.
 
-`div`/`rem` reuse `div_chunk`/`rem_chunk` after peeling the zero-divisor guard
-`block`. `shl`/`shr` are the width-specific mask-extend-shift; they verify inline
-and close the `b % 64` normalisation with `bv_decide` (the reusable theorem
-`U64.shlBodyWp` is exercised in the per-crate spec).
+- straight-line + `not`: `add_seq`/`sub_seq`/`mul_seq`/`and_seq`/`or_seq`/
+  `xor_seq`/`not_seq`.
+- `shl`/`shr`: `shl_seq`/`shr_seq` — the width-specific mask-extend-shift chunk
+  (the `b % 64` normalisation is baked into the chunk, so no `bv_decide` here).
+- `div`/`rem`: peel the zero-divisor guard `block` (`wp_block_cons`), then reuse
+  `div_chunk`/`rem_chunk` for the divide/remainder (`divUI64`/`remUI64` atomics
+  excluded). The trailing `+ c` / `* c` reuses `add_seq` / `mul_seq` too.
 -/
 
 set_option linter.unusedSimpArgs false
@@ -266,8 +269,17 @@ theorem div_then_add_correct : DivThenAddSpec := by
   apply TerminatesWith.of_wp_entry_for (f := func4Def) rfl
   unfold func4Def func4
   apply wp_block_cons
-  wp_run
-  simp [hb]
+  have h10 : (1 : UInt32) &&& 0 = 0 := by decide
+  simp only [Function.toLocals, Function.numParams, List.take, List.reverse, List.reverseAux,
+    List.map, ValueType.zero, wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
+    List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
+    List.drop, wp_constI64_cons, wp_eqI64_cons, hb, ↓reduceIte, wp_const_cons, wp_and_cons,
+    wp_br_if_cons, h10]
+  rw [div_chunk a b _ hb]
+  simp only [wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
+    List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
+    List.drop, add_seq, wp_ret_cons]
+  simp [List.take]
 
 @[spec_of "rust-exported" "rust_u64_tests::div_then_mul"]
 def DivThenMulSpec : Prop := ∀ (env : HostEnv Unit) (a b c : UInt64), b ≠ 0 →
@@ -280,8 +292,17 @@ theorem div_then_mul_correct : DivThenMulSpec := by
   apply TerminatesWith.of_wp_entry_for (f := func5Def) rfl
   unfold func5Def func5
   apply wp_block_cons
-  wp_run
-  simp [hb]
+  have h10 : (1 : UInt32) &&& 0 = 0 := by decide
+  simp only [Function.toLocals, Function.numParams, List.take, List.reverse, List.reverseAux,
+    List.map, ValueType.zero, wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
+    List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
+    List.drop, wp_constI64_cons, wp_eqI64_cons, hb, ↓reduceIte, wp_const_cons, wp_and_cons,
+    wp_br_if_cons, h10]
+  rw [div_chunk a b _ hb]
+  simp only [wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
+    List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
+    List.drop, mul_seq, wp_ret_cons]
+  simp [List.take]
 
 /-! ## rem (divisor nonzero) -/
 @[spec_of "rust-exported" "rust_u64_tests::rem_then_add"]
@@ -295,8 +316,17 @@ theorem rem_then_add_correct : RemThenAddSpec := by
   apply TerminatesWith.of_wp_entry_for (f := func12Def) rfl
   unfold func12Def func12
   apply wp_block_cons
-  wp_run
-  simp [hb]
+  have h10 : (1 : UInt32) &&& 0 = 0 := by decide
+  simp only [Function.toLocals, Function.numParams, List.take, List.reverse, List.reverseAux,
+    List.map, ValueType.zero, wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
+    List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
+    List.drop, wp_constI64_cons, wp_eqI64_cons, hb, ↓reduceIte, wp_const_cons, wp_and_cons,
+    wp_br_if_cons, h10]
+  rw [rem_chunk a b _ hb]
+  simp only [wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
+    List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
+    List.drop, add_seq, wp_ret_cons]
+  simp [List.take]
 
 @[spec_of "rust-exported" "rust_u64_tests::rem_then_mul"]
 def RemThenMulSpec : Prop := ∀ (env : HostEnv Unit) (a b c : UInt64), b ≠ 0 →
@@ -309,8 +339,17 @@ theorem rem_then_mul_correct : RemThenMulSpec := by
   apply TerminatesWith.of_wp_entry_for (f := func13Def) rfl
   unfold func13Def func13
   apply wp_block_cons
-  wp_run
-  simp [hb]
+  have h10 : (1 : UInt32) &&& 0 = 0 := by decide
+  simp only [Function.toLocals, Function.numParams, List.take, List.reverse, List.reverseAux,
+    List.map, ValueType.zero, wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
+    List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
+    List.drop, wp_constI64_cons, wp_eqI64_cons, hb, ↓reduceIte, wp_const_cons, wp_and_cons,
+    wp_br_if_cons, h10]
+  rw [rem_chunk a b _ hb]
+  simp only [wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
+    List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
+    List.drop, mul_seq, wp_ret_cons]
+  simp [List.take]
 
 /-! ## shl / shr — width-specific mask-extend-shift (reusable theorem: `U64.shlBodyWp`) -/
 @[spec_of "rust-exported" "rust_u64_tests::shl_then_add"]
@@ -322,7 +361,12 @@ set_option maxRecDepth 4096 in
 theorem shl_then_add_correct : ShlThenAddSpec := by
   intro env a n b
   apply TerminatesWith.of_wp_entry_for (f := func14Def) rfl
-  unfold func14Def func14; wp_run; simp; bv_decide
+  unfold func14Def func14
+  simp only [Function.toLocals, Function.numParams, List.take, List.reverse, List.reverseAux,
+    List.map, ValueType.zero, wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
+    List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
+    List.drop, shl_seq, add_seq, wp_ret_cons, Continuation.Return.injEq, List.cons.injEq,
+    and_true, List.append_nil]
 
 @[spec_of "rust-exported" "rust_u64_tests::shl_twice"]
 def ShlTwiceSpec : Prop := ∀ (env : HostEnv Unit) (a : UInt64) (n m : UInt32),
@@ -333,7 +377,12 @@ set_option maxRecDepth 4096 in
 theorem shl_twice_correct : ShlTwiceSpec := by
   intro env a n m
   apply TerminatesWith.of_wp_entry_for (f := func15Def) rfl
-  unfold func15Def func15; wp_run; simp; bv_decide
+  unfold func15Def func15
+  simp only [Function.toLocals, Function.numParams, List.take, List.reverse, List.reverseAux,
+    List.map, ValueType.zero, wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
+    List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
+    List.drop, shl_seq, wp_ret_cons, Continuation.Return.injEq, List.cons.injEq,
+    and_true, List.append_nil]
 
 @[spec_of "rust-exported" "rust_u64_tests::shr_then_sub"]
 def ShrThenSubSpec : Prop := ∀ (env : HostEnv Unit) (a : UInt64) (n : UInt32) (b : UInt64),
@@ -344,7 +393,12 @@ set_option maxRecDepth 4096 in
 theorem shr_then_sub_correct : ShrThenSubSpec := by
   intro env a n b
   apply TerminatesWith.of_wp_entry_for (f := func16Def) rfl
-  unfold func16Def func16; wp_run; simp; bv_decide
+  unfold func16Def func16
+  simp only [Function.toLocals, Function.numParams, List.take, List.reverse, List.reverseAux,
+    List.map, ValueType.zero, wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
+    List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
+    List.drop, shr_seq, sub_seq, wp_ret_cons, Continuation.Return.injEq, List.cons.injEq,
+    and_true, List.append_nil]
 
 @[spec_of "rust-exported" "rust_u64_tests::shr_twice"]
 def ShrTwiceSpec : Prop := ∀ (env : HostEnv Unit) (a : UInt64) (n m : UInt32),
@@ -355,6 +409,11 @@ set_option maxRecDepth 4096 in
 theorem shr_twice_correct : ShrTwiceSpec := by
   intro env a n m
   apply TerminatesWith.of_wp_entry_for (f := func17Def) rfl
-  unfold func17Def func17; wp_run; simp; bv_decide
+  unfold func17Def func17
+  simp only [Function.toLocals, Function.numParams, List.take, List.reverse, List.reverseAux,
+    List.map, ValueType.zero, wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
+    List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
+    List.drop, shr_seq, wp_ret_cons, Continuation.Return.injEq, List.cons.injEq,
+    and_true, List.append_nil]
 
 end Project.RustU64Tests.Spec

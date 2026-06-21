@@ -21,13 +21,20 @@ def divBody : Program :=
     .const 1048600, .call 66, .unreachable ]
 
 set_option maxRecDepth 4096 in
-/-- Export-body theorem for `rust_u64::div` (divisor ≠ 0): peel the guard, divide. -/
+/-- Export-body theorem for `rust_u64::div` (divisor ≠ 0): peel the zero-divisor
+guard `block`, then **reuse `div_chunk`** for the divide itself (the `divUI64`
+atomic is excluded from the guard reduction so the chunk is the only path). -/
 theorem divBodyWp {α} {m : Module} {env : HostEnv α} (st : Store α)
     (a b : UInt64) (vs : List Value) (hb : b ≠ 0) :
     wp m divBody (Returns (.i64 (a / b) :: vs) (framePost st)) st ⟨[.i64 a, .i64 b], [], vs⟩ env := by
   unfold divBody Returns framePost
   apply wp_block_cons
-  wp_run
-  simp [hb]
+  have h10 : (1 : UInt32) &&& 0 = 0 := by decide
+  simp only [wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
+    List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT,
+    reduceIte, wp_constI64_cons, wp_eqI64_cons, hb, ↓reduceIte, wp_const_cons,
+    wp_and_cons, wp_br_if_cons, h10]
+  rw [div_chunk a b _ hb]
+  simp
 
 end Wasm.RustStd.U64
