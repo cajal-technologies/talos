@@ -2122,13 +2122,17 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
         | some tbl =>
           match st.elementSegments[elemIdx]? with
           | none => .Invalid s!"tableInit: segment index {elemIdx} out of range"
-          | some seg =>
-            let segFuncs := seg.getD []
-            if src.toNat + len.toNat > segFuncs.length
+          | some dropped? =>
+            -- Active segments take their values from `m.elements` (covering
+            -- the const-expr item form); a dropped segment is empty.
+            let vals := match dropped? with
+              | none   => []
+              | some _ => (m.elements[elemIdx]?.map ElementSegment.values).getD []
+            if src.toNat + len.toNat > vals.length
                ∨ dst.toNat + len.toNat > tbl.length then
               .Trap st "out of bounds table access"
             else
-              let slice := ((segFuncs.drop src.toNat).take len.toNat).map Value.funcref
+              let slice := (vals.drop src.toNat).take len.toNat
               let tbl' := listWriteAt tbl dst.toNat slice
               .Fallthrough { st with tables := listSetAt st.tables tableIdx tbl' }
                 { s with values := vs }
@@ -2140,13 +2144,17 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
         | some tbl =>
           match st.elementSegments[elemIdx]? with
           | none => .Invalid s!"tableInit: segment index {elemIdx} out of range"
-          | some seg =>
-            let segFuncs := seg.getD []
-            if src.toNat + len.toNat > segFuncs.length
+          | some dropped? =>
+            -- Active segments take their values from `m.elements` (covering
+            -- the const-expr item form); a dropped segment is empty.
+            let vals := match dropped? with
+              | none   => []
+              | some _ => (m.elements[elemIdx]?.map ElementSegment.values).getD []
+            if src.toNat + len.toNat > vals.length
                ∨ dst.toNat + len.toNat > tbl.length then
               .Trap st "out of bounds table access"
             else
-              let slice := ((segFuncs.drop src.toNat).take len.toNat).map Value.funcref
+              let slice := (vals.drop src.toNat).take len.toNat
               let tbl' := listWriteAt tbl dst.toNat slice
               .Fallthrough { st with tables := listSetAt st.tables tableIdx tbl' }
                 { s with values := vs }
