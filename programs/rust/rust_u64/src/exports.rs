@@ -94,6 +94,22 @@ pub extern "C" fn ge(a: u64, b: u64) -> bool {
     a >= b
 }
 
+// ── Ord: min / max / clamp ─────────────────────────────────────────────────
+#[unsafe(no_mangle)]
+pub extern "C" fn min(a: u64, b: u64) -> u64 {
+    a.min(b)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn max(a: u64, b: u64) -> u64 {
+    a.max(b)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn clamp(a: u64, lo: u64, hi: u64) -> u64 {
+    a.clamp(lo, hi)
+}
+
 
 #[unsafe(no_mangle)]
 pub extern "C" fn entrypoint(a: u64, b: u64, n: u32) {

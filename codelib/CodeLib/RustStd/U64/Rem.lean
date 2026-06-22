@@ -17,7 +17,7 @@ theorem rem_chunk {α : Type} {m : Module} {env : HostEnv α} {Q : Assertion α}
 def remBody : Program :=
   [ .block 0 0 [ .localGet 1, .constI64 0, .eqI64, .const 1, .and, .br_if 0,
                  .localGet 0, .localGet 1, .remUI64, .ret ],
-    .const 1048616, .call 73, .unreachable ]
+    .const 1048664, .call 84, .unreachable ]
 
 set_option maxRecDepth 4096 in
 /-- Export-body theorem for `rust_u64::rem` (divisor ≠ 0): peel the guard, then

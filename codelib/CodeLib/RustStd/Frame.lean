@@ -53,6 +53,38 @@ returns the stored value. -/
              Nat.reduceEqDiff]
   bv_decide
 
+/-- A `write64` leaves every byte outside its 8-byte range `[a, a+8)`
+untouched. -/
+theorem Mem.write64_bytes_outside (m : Mem) (a : UInt32) (v : UInt64) (i : Nat)
+    (h : i < a.toNat ∨ a.toNat + 8 ≤ i) : (m.write64 a v).bytes i = m.bytes i := by
+  simp only [Mem.write64]
+  have h0 : ¬ (i = a.toNat)     := by omega
+  have h1 : ¬ (i = a.toNat + 1) := by omega
+  have h2 : ¬ (i = a.toNat + 2) := by omega
+  have h3 : ¬ (i = a.toNat + 3) := by omega
+  have h4 : ¬ (i = a.toNat + 4) := by omega
+  have h5 : ¬ (i = a.toNat + 5) := by omega
+  have h6 : ¬ (i = a.toNat + 6) := by omega
+  have h7 : ¬ (i = a.toNat + 7) := by omega
+  simp only [h0, h1, h2, h3, h4, h5, h6, h7, ↓reduceIte]
+
+/-- Reading a 64-bit word from a range disjoint from a preceding `write64`
+returns the original (pre-write) value. The companion to
+`read64_write64_same` for multi-spill frames (`min`/`max`) that store two
+operands at adjacent 8-byte slots. -/
+theorem Mem.read64_write64_disjoint (m : Mem) (a b : UInt32) (v : UInt64)
+    (h : a.toNat + 8 ≤ b.toNat ∨ b.toNat + 8 ≤ a.toNat) :
+    (m.write64 b v).read64 a = m.read64 a := by
+  simp only [Mem.read64]
+  rw [Mem.write64_bytes_outside m b v a.toNat (by omega),
+      Mem.write64_bytes_outside m b v (a.toNat + 1) (by omega),
+      Mem.write64_bytes_outside m b v (a.toNat + 2) (by omega),
+      Mem.write64_bytes_outside m b v (a.toNat + 3) (by omega),
+      Mem.write64_bytes_outside m b v (a.toNat + 4) (by omega),
+      Mem.write64_bytes_outside m b v (a.toNat + 5) (by omega),
+      Mem.write64_bytes_outside m b v (a.toNat + 6) (by omega),
+      Mem.write64_bytes_outside m b v (a.toNat + 7) (by omega)]
+
 /-! ## Stores preserve the page count -/
 
 @[simp] theorem Mem.write32_pages (m : Mem) (a v : UInt32) :

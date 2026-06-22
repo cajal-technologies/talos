@@ -71,3 +71,14 @@
 
 #[unsafe(no_mangle)] pub extern "C" fn ge_u64(a: u64, b: u64, c: u64) -> u64 { (a >= b) as u64 + c }
 #[unsafe(no_mangle)] pub extern "C" fn ge_two(a: u64, b: u64, c: u64, d: u64) -> u64 { (a >= b) as u64 + (c >= d) as u64 }
+
+// ── Ord: min / max / clamp — these compile to `call`s to the framed inner fns,
+//    so the tests are call-reuse demos (reuse <fn>_wp via the call rule).
+#[unsafe(no_mangle)] pub extern "C" fn max_add(a: u64, b: u64, c: u64) -> u64 { a.max(b) + c }
+#[unsafe(no_mangle)] pub extern "C" fn max_chain(a: u64, b: u64, c: u64) -> u64 { a.max(b).max(c) }
+
+#[unsafe(no_mangle)] pub extern "C" fn min_add(a: u64, b: u64, c: u64) -> u64 { a.min(b) + c }
+#[unsafe(no_mangle)] pub extern "C" fn min_chain(a: u64, b: u64, c: u64) -> u64 { a.min(b).min(c) }
+
+#[unsafe(no_mangle)] pub extern "C" fn clamp_add(a: u64, lo: u64, hi: u64, c: u64) -> u64 { a.clamp(lo, hi) + c }
+#[unsafe(no_mangle)] pub extern "C" fn clamp_mul(a: u64, lo: u64, hi: u64, c: u64) -> u64 { a.clamp(lo, hi) * c }
