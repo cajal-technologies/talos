@@ -1179,8 +1179,8 @@ array_copy.wast:18 assert_invalid skipped:assert_invalid: not rejected
 array_copy.wast:30 assert_invalid skipped:assert_invalid: not rejected
 array_copy.wast:42 assert_invalid skipped:assert_invalid: not rejected
 array_copy.wast:54 module pass
-array_copy.wast:97 assert_trap interpreter_error
-array_copy.wast:98 assert_trap interpreter_error
+array_copy.wast:97 assert_trap pass
+array_copy.wast:98 assert_trap pass
 array_copy.wast:101 assert_trap pass
 array_copy.wast:102 assert_trap pass
 array_copy.wast:105 assert_trap pass
