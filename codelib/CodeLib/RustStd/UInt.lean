@@ -61,6 +61,22 @@ abbrev UnChunk (frag : Program) (op : T → T) : Prop :=
     wp m (frag ++ rest) Q st ⟨P, L, toV a :: vs⟩ env ↔
     wp m rest Q st ⟨P, L, toV (op a) :: vs⟩ env
 
+/-- Chunk shape for a comparison / boolean-returning op: with `toV b :: toV a ::
+vs` on the stack, running `frag` then `rest` equals running `rest` with the `i32`
+result `res a b` on the stack. The result is an `i32` (the wasm `bool`), **not** a
+`toV`-carried `T`, which is what distinguishes this from `BinChunk`.
+
+At `opt-0` a comparison `a OP b` compiles to `[cmpOp, i32.const 1, i32.and]` — the
+`i64.cmp` already yields `0/1`, and the `& 1` is a redundant `bool` normalisation.
+So for the six comparisons `res a b = if a OP b then 1 else 0`, and the mask is
+discharged *inside* the per-op chunk proof, leaving this clean `i32` result that
+`cmpBodyWp` and inlined client sites both reuse. -/
+abbrev CmpChunk (frag : Program) (res : T → T → UInt32) : Prop :=
+  ∀ {α : Type} {m : Module} {env : HostEnv α} {Q : Assertion α} {st : Store α}
+    {P L : List Value} {rest : Program} (a b : T) (vs : List Value),
+    wp m (frag ++ rest) Q st ⟨P, L, toV b :: toV a :: vs⟩ env ↔
+    wp m rest Q st ⟨P, L, .i32 (res a b) :: vs⟩ env
+
 /-- Turn a binary chunk into the opt-0 export-body theorem
 `[localGet 0, localGet 1] ++ frag ++ [ret]` — by **reusing the chunk** (the
 opaque `frag` means `wp_run` can't bypass it). The per-crate spec feeds this to
@@ -89,6 +105,23 @@ theorem unBodyWp {frag : Program} {op : T → T} (chunk : UnChunk frag op)
   wp_run
   simp
   rw [chunk a vs]
+  simp
+
+/-- Turn a comparison chunk into the opt-0 export-body theorem
+`[localGet 0, localGet 1] ++ frag ++ [ret]` — by **reusing the chunk**. Mirrors
+`binBodyWp`, but the result lands as the `i32` boolean `res a b` (a `bool`
+return), not a `toV`-carried `T`. The per-crate spec feeds this to
+`of_returns_wp`. -/
+theorem cmpBodyWp {frag : Program} {res : T → T → UInt32} (chunk : CmpChunk frag res)
+    {α : Type} {m : Module} {env : HostEnv α} (st : Store α) (a b : T) (vs : List Value) :
+    wp m ([.localGet 0, .localGet 1] ++ frag ++ [.ret])
+      (Returns (.i32 (res a b) :: vs) (framePost st))
+      st ⟨[toV a, toV b], [], vs⟩ env := by
+  unfold Returns framePost
+  simp only [List.cons_append, List.nil_append]
+  wp_run
+  simp
+  rw [chunk a b vs]
   simp
 
 end

@@ -63,6 +63,37 @@ pub extern "C" fn shr(a: u64, b: u32) -> u64 {
     a >> b
 }
 
+// ── Comparisons (eq .. ge) ─────────────────────────────────────────────────
+#[unsafe(no_mangle)]
+pub extern "C" fn eq(a: u64, b: u64) -> bool {
+    a == b
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ne(a: u64, b: u64) -> bool {
+    a != b
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn lt(a: u64, b: u64) -> bool {
+    a < b
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn le(a: u64, b: u64) -> bool {
+    a <= b
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn gt(a: u64, b: u64) -> bool {
+    a > b
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ge(a: u64, b: u64) -> bool {
+    a >= b
+}
+
 
 #[unsafe(no_mangle)]
 pub extern "C" fn entrypoint(a: u64, b: u64, n: u32) {

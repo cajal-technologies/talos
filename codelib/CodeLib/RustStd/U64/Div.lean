@@ -18,7 +18,7 @@ theorem div_chunk {α : Type} {m : Module} {env : HostEnv α} {Q : Assertion α}
 def divBody : Program :=
   [ .block 0 0 [ .localGet 1, .constI64 0, .eqI64, .const 1, .and, .br_if 0,
                  .localGet 0, .localGet 1, .divUI64, .ret ],
-    .const 1048600, .call 66, .unreachable ]
+    .const 1048600, .call 72, .unreachable ]
 
 set_option maxRecDepth 4096 in
 /-- Export-body theorem for `rust_u64::div` (divisor ≠ 0): peel the zero-divisor

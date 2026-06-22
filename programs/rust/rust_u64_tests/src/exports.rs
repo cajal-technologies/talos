@@ -50,3 +50,24 @@
 // ── rem (divisors nonzero) ──────────────────────────────────────────────────
 #[unsafe(no_mangle)] pub extern "C" fn rem_then_add(a: u64, b: u64, c: u64) -> u64 { a % b + c }
 #[unsafe(no_mangle)] pub extern "C" fn rem_then_mul(a: u64, b: u64, c: u64) -> u64 { (a % b) * c }
+
+// ── Comparisons (eq .. ge): each `a OP b` inlines to `cmpOp; i32.const 1; i32.and`
+//    (the `bool` normalisation). Tests use it via `as u64` so the masked chunk is
+//    reused inline: one comparison + a scalar, and two comparisons summed.
+#[unsafe(no_mangle)] pub extern "C" fn eq_u64(a: u64, b: u64, c: u64) -> u64 { (a == b) as u64 + c }
+#[unsafe(no_mangle)] pub extern "C" fn eq_two(a: u64, b: u64, c: u64, d: u64) -> u64 { (a == b) as u64 + (c == d) as u64 }
+
+#[unsafe(no_mangle)] pub extern "C" fn ne_u64(a: u64, b: u64, c: u64) -> u64 { (a != b) as u64 + c }
+#[unsafe(no_mangle)] pub extern "C" fn ne_two(a: u64, b: u64, c: u64, d: u64) -> u64 { (a != b) as u64 + (c != d) as u64 }
+
+#[unsafe(no_mangle)] pub extern "C" fn lt_u64(a: u64, b: u64, c: u64) -> u64 { (a < b) as u64 + c }
+#[unsafe(no_mangle)] pub extern "C" fn lt_two(a: u64, b: u64, c: u64, d: u64) -> u64 { (a < b) as u64 + (c < d) as u64 }
+
+#[unsafe(no_mangle)] pub extern "C" fn le_u64(a: u64, b: u64, c: u64) -> u64 { (a <= b) as u64 + c }
+#[unsafe(no_mangle)] pub extern "C" fn le_two(a: u64, b: u64, c: u64, d: u64) -> u64 { (a <= b) as u64 + (c <= d) as u64 }
+
+#[unsafe(no_mangle)] pub extern "C" fn gt_u64(a: u64, b: u64, c: u64) -> u64 { (a > b) as u64 + c }
+#[unsafe(no_mangle)] pub extern "C" fn gt_two(a: u64, b: u64, c: u64, d: u64) -> u64 { (a > b) as u64 + (c > d) as u64 }
+
+#[unsafe(no_mangle)] pub extern "C" fn ge_u64(a: u64, b: u64, c: u64) -> u64 { (a >= b) as u64 + c }
+#[unsafe(no_mangle)] pub extern "C" fn ge_two(a: u64, b: u64, c: u64, d: u64) -> u64 { (a >= b) as u64 + (c >= d) as u64 }
