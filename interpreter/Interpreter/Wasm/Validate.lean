@@ -62,7 +62,7 @@ def Instruction.typeRefs : Instruction → List Nat
 (the forms a global / element initializer may contain). -/
 def Program.isConstExpr (p : Program) : Bool :=
   p.all fun i => match i with
-    | .const _ | .constI64 _ | .refNull | .refNullExtern | .refFunc _ => true
+    | .const _ | .constI64 _ | .refNull | .refNullExtern | .refNullExn | .refFunc _ => true
     | .globalGet _ => true
     | .gc g => match g with
       | .refI31 | .refNullAny | .structNew _ | .structNewDefault _

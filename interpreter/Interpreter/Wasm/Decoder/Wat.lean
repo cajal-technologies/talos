@@ -490,6 +490,9 @@ private def refNullInstr (types : Array TypeEntry) (ht : String) : Wasm.Instruct
   -- shared managed null `anyref`.
   else if ht == "any" || ht == "eq" || ht == "i31"
        || ht == "struct" || ht == "array" || ht == "none" then .gc .refNullAny
+  -- Exception heap types (exception-handling proposal): the null they denote
+  -- is the null `exnref`.
+  else if ht == "exn" || ht == "noexn" then .refNullExn
   -- Concrete heap types (`$t` / numeric): a struct/array type denotes the
   -- managed null; a function type denotes the null funcref.
   else if ht.startsWith "$" || ht.all Char.isDigit then
