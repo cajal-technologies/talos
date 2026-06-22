@@ -2298,15 +2298,14 @@ private def parseGlobalDecl (ctx : Ctx) (xs : List Sexpr) :
     | some "f32.const", .atom n :: _ => .ok (.f32 (← parseF32Lit n))
     | some "f64.const", .atom n :: _ => .ok (.f64 (← parseF64Lit n))
     | some "ref.null", .atom ht :: _ =>
-      if isNullFuncrefHeapType ht then
-        .ok (.funcref none)
-      else if isNullExternrefHeapType ht then
-        .ok (.externref none)
-      else if ht == "any" || ht == "eq" || ht == "i31"
-           || ht == "struct" || ht == "array" || ht == "none" then
-        .ok (.anyref none)
-      else
-        .ok (.i32 0)
+      -- Reuse `refNullInstr`'s heap-type resolution (incl. concrete `$t`
+      -- types, where a struct/array denotes the managed null and a function
+      -- type the null funcref); map the resulting null to its init value.
+      match refNullInstr ctx.types ht with
+      | .refNullExtern  => .ok (.externref none)
+      | .gc .refNullAny => .ok (.anyref none)
+      | .refNull        => .ok (.funcref none)
+      | _               => .ok (.i32 0)
     -- `(ref.i31 (i32.const N))` constant init (GC proposal).
     | some "ref.i31", [.list [.atom "i32.const", .atom n]] =>
       .ok (.anyref (some (.i31 ((← parseI32 n) &&& 0x7fffffff))))
