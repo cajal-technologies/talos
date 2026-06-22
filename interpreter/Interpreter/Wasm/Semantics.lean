@@ -330,6 +330,10 @@ def execGcOp (m : Module) (st : Store α) (s : Locals) : GcOp → Continuation �
             else dstElems[i]!
           .Fallthrough { st with gcHeap := st.gcHeap.set dstAddr (.array dty dstElems') } { s with values := vs }
       | _, _ => .Invalid "arrayCopy: not an array"
+    -- A null source or destination array reference traps, even when n = 0,
+    -- mirroring every other array op (arrayGet/Set/Fill/...).
+    | .i32 _ :: .i32 _ :: .anyref none :: _ => .Trap st "null array reference"
+    | .i32 _ :: .i32 _ :: _ :: .i32 _ :: .anyref none :: _ => .Trap st "null array reference"
     | _ => .Invalid "arrayCopy: ill-shaped operand stack"
   -- `array.new_data $t $d`: [off, n] → array of n elements read from data
   -- segment `d` (little-endian, sized by the element storage type).
