@@ -171,4 +171,15 @@ theorem ne_correct : NeSpec := by
   exact (TerminatesWith.of_returns_wp (f := func19Def) (rs := [.i32 (if a ≠ b then 1 else 0)]) rfl rfl
       (neBodyWp «module».initialStore a b []) rfl).mono (fun _ _ h => h.1)
 
+@[spec_of "rust-exported" "rust_u64::lt"]
+def LtSpec : Prop :=
+  ∀ (env : HostEnv Unit) (a b : UInt64),
+    TerminatesWith env «module» 18 «module».initialStore [.i64 b, .i64 a]
+      (fun _ rs => rs = [.i32 (if a < b then 1 else 0)])
+@[proves Project.RustU64.Spec.LtSpec]
+theorem lt_correct : LtSpec := by
+  intro env a b
+  exact (TerminatesWith.of_returns_wp (f := func18Def) (rs := [.i32 (if a < b then 1 else 0)]) rfl rfl
+      (ltBodyWp «module».initialStore a b []) rfl).mono (fun _ _ h => h.1)
+
 end Project.RustU64.Spec

@@ -20,6 +20,7 @@ import CodeLib.RustStd.U64.Shl
 import CodeLib.RustStd.U64.Shr
 import CodeLib.RustStd.U64.Eq
 import CodeLib.RustStd.U64.Ne
+import CodeLib.RustStd.U64.Lt
 import CodeLib.RustStd.Option
 import CodeLib.Near.State
 import CodeLib.Near.Env
