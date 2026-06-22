@@ -554,4 +554,38 @@ theorem le_two_correct : LeTwoSpec := by
     List.drop, le_seq, wp_extendUI32_cons, add_seq, wp_ret_cons, Continuation.Return.injEq,
     List.cons.injEq, and_true, List.append_nil]
 
+/-! ## gt — `(a > b) as u64` reuses `gt_seq` inline (`wp_gtUI64_cons` excluded). -/
+@[spec_of "rust-exported" "rust_u64_tests::gt_u64"]
+def GtU64Spec : Prop := ∀ (env : HostEnv Unit) (a b c : UInt64),
+  TerminatesWith env «module» 11 «module».initialStore [.i64 c, .i64 b, .i64 a]
+    (fun _ rs => rs = [.i64 (UInt64.ofNat (if a > b then (1 : UInt32) else 0).toNat + c)])
+set_option maxRecDepth 4096 in
+@[proves Project.RustU64Tests.Spec.GtU64Spec]
+theorem gt_u64_correct : GtU64Spec := by
+  intro env a b c
+  apply TerminatesWith.of_wp_entry_for (f := func11Def) rfl
+  unfold func11Def func11
+  simp only [Function.toLocals, Function.numParams, List.take, List.reverse, List.reverseAux,
+    List.map, ValueType.zero, wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
+    List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
+    List.drop, gt_seq, wp_extendUI32_cons, add_seq, wp_ret_cons, Continuation.Return.injEq,
+    List.cons.injEq, and_true, List.append_nil]
+
+@[spec_of "rust-exported" "rust_u64_tests::gt_two"]
+def GtTwoSpec : Prop := ∀ (env : HostEnv Unit) (a b c d : UInt64),
+  TerminatesWith env «module» 10 «module».initialStore [.i64 d, .i64 c, .i64 b, .i64 a]
+    (fun _ rs => rs = [.i64 (UInt64.ofNat (if a > b then (1 : UInt32) else 0).toNat
+                          + UInt64.ofNat (if c > d then (1 : UInt32) else 0).toNat)])
+set_option maxRecDepth 4096 in
+@[proves Project.RustU64Tests.Spec.GtTwoSpec]
+theorem gt_two_correct : GtTwoSpec := by
+  intro env a b c d
+  apply TerminatesWith.of_wp_entry_for (f := func10Def) rfl
+  unfold func10Def func10
+  simp only [Function.toLocals, Function.numParams, List.take, List.reverse, List.reverseAux,
+    List.map, ValueType.zero, wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
+    List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
+    List.drop, gt_seq, wp_extendUI32_cons, add_seq, wp_ret_cons, Continuation.Return.injEq,
+    List.cons.injEq, and_true, List.append_nil]
+
 end Project.RustU64Tests.Spec

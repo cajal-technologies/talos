@@ -193,4 +193,15 @@ theorem le_correct : LeSpec := by
   exact (TerminatesWith.of_returns_wp (f := func17Def) (rs := [.i32 (if a ≤ b then 1 else 0)]) rfl rfl
       (leBodyWp «module».initialStore a b []) rfl).mono (fun _ _ h => h.1)
 
+@[spec_of "rust-exported" "rust_u64::gt"]
+def GtSpec : Prop :=
+  ∀ (env : HostEnv Unit) (a b : UInt64),
+    TerminatesWith env «module» 16 «module».initialStore [.i64 b, .i64 a]
+      (fun _ rs => rs = [.i32 (if a > b then 1 else 0)])
+@[proves Project.RustU64.Spec.GtSpec]
+theorem gt_correct : GtSpec := by
+  intro env a b
+  exact (TerminatesWith.of_returns_wp (f := func16Def) (rs := [.i32 (if a > b then 1 else 0)]) rfl rfl
+      (gtBodyWp «module».initialStore a b []) rfl).mono (fun _ _ h => h.1)
+
 end Project.RustU64.Spec
