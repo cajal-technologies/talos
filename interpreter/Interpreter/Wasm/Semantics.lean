@@ -119,27 +119,6 @@ def readStorageLE (storage : StorageType) (bytes : List UInt8) (off : Nat) : Val
   | .val .f64 => .f64 (UInt64.ofNat n)
   | .val _    => .i32 0
 
-/-- Evaluate a simple element-segment item constant expression to its
-reference value (GC proposal). Covers the forms element segments use:
-`ref.func`, `ref.null`, `ref.i31` of a constant, and scalar constants.
-Heap-allocating items (`struct.new`) are not handled here. -/
-def evalConstRef : Program → Option Value
-  | [.refFunc f]                 => some (.funcref (some f))
-  | [.refNull]                   => some (.funcref none)
-  | [.refNullExtern]             => some (.externref none)
-  | [.gc .refNullAny]            => some (.anyref none)
-  | [.const n]                   => some (.i32 n)
-  | [.constI64 n]                => some (.i64 n)
-  | [.const n, .gc .refI31]      => some (.anyref (some (.i31 (n &&& 0x7fffffff))))
-  | _                            => none
-
-/-- The reference values a (passive, non-dropped) element segment yields,
-preferring decoded GC const-expr items and falling back to funcref
-indices. -/
-def ElementSegment.values (seg : ElementSegment) : List Value :=
-  if seg.exprs.isEmpty then seg.funcs.map Value.funcref
-  else seg.exprs.map (fun e => (evalConstRef e).getD (.anyref none))
-
 /-- Execute one GC-proposal instruction. These never consume fuel or
 recurse into `exec`/`run` — `struct.new`/`array.new` allocate on
 `st.gcHeap`, the accessors read/update it, and `ref.test`/`ref.cast` decide

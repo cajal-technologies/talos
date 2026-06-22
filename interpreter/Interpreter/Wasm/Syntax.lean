@@ -804,6 +804,27 @@ def listWriteAt (l : List α) (off : Nat) (vs : List α) : List α :=
     | []      => []
     | x :: xs => x :: listWriteAt xs i vs
 
+/-- Evaluate a simple element-segment item constant expression to its
+reference value (GC proposal). Covers the forms element segments use:
+`ref.func`, `ref.null`, `ref.i31` of a constant, and scalar constants.
+Heap-allocating items (`struct.new`) are not handled here. -/
+def evalConstRef : Program → Option Value
+  | [.refFunc f]                 => some (.funcref (some f))
+  | [.refNull]                   => some (.funcref none)
+  | [.refNullExtern]             => some (.externref none)
+  | [.gc .refNullAny]            => some (.anyref none)
+  | [.const n]                   => some (.i32 n)
+  | [.constI64 n]                => some (.i64 n)
+  | [.const n, .gc .refI31]      => some (.anyref (some (.i31 (n &&& 0x7fffffff))))
+  | _                            => none
+
+/-- The reference values a (passive, non-dropped) element segment yields,
+preferring decoded GC const-expr items and falling back to funcref
+indices. -/
+def ElementSegment.values (seg : ElementSegment) : List Value :=
+  if seg.exprs.isEmpty then seg.funcs.map Value.funcref
+  else seg.exprs.map (fun e => (evalConstRef e).getD (.anyref none))
+
 /-- Build the initial store for a module: evaluate each global's `init`
 into `Globals.globals`; allocate a memory with `pagesMin` pages and
 write each *active* data segment at its declared offset; track all
@@ -854,7 +875,7 @@ def Module.initialStore [Inhabited α] (m : Module) : Store α :=
       match seg.tableIdx, seg.offset with
       | some t, some off =>
         match acc[t]? with
-        | some tbl => listSetAt acc t (listWriteAt tbl off (seg.funcs.map Value.funcref))
+        | some tbl => listSetAt acc t (listWriteAt tbl off seg.values)
         | none     => acc
       | _, _ => acc)
     baseTables
