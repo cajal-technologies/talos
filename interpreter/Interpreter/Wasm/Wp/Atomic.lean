@@ -646,6 +646,11 @@ macro "wp_atomic" : tactic => `(tactic|
     wp m rest Q st { s with values := .externref none :: s.values } env := by
   wp_atomic
 
+@[simp, wp_simp] theorem wp_refNullExn_cons :
+    wp m (.refNullExn :: rest) Q st s env ↔
+    wp m rest Q st { s with values := .exnref none :: s.values } env := by
+  wp_atomic
+
 @[simp, wp_simp] theorem wp_refIsNull_cons :
     wp m (.refIsNull :: rest) Q st s env ↔
     (match s.values with

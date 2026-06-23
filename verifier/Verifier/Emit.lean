@@ -286,6 +286,7 @@ private def emitInstrShort : Wasm.Instruction → String
         list (thn.map emitInstrShort) ++ " " ++ list (els.map emitInstrShort)
   -- Reference / table (wasm 2.0+)
   | .refNullExtern        => ".refNullExtern"
+  | .refNullExn           => ".refNullExn"
   | .tableSet t           => s!".tableSet {emitNat t}"
   | .tableGrow t          => s!".tableGrow {emitNat t}"
   | .tableFill t          => s!".tableFill {emitNat t}"

@@ -397,6 +397,7 @@ inductive Instruction where
   -- touch the store.
   | refNull   : Instruction        -- ref.null func: push the null funcref
   | refNullExtern : Instruction    -- ref.null extern: push the null externref
+  | refNullExn : Instruction       -- ref.null exn/noexn: push the null exnref
   | refFunc   : Nat → Instruction  -- ref.func i:    push a reference to function `i`
   | refIsNull : Instruction        -- ref.is_null:   pop a ref, push i32 1 if null else 0
 

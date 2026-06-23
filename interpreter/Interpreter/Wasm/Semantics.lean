@@ -127,6 +127,7 @@ def evalConstRef : Program → Option Value
   | [.refFunc f]                 => some (.funcref (some f))
   | [.refNull]                   => some (.funcref none)
   | [.refNullExtern]             => some (.externref none)
+  | [.refNullExn]                => some (.exnref none)
   | [.gc .refNullAny]            => some (.anyref none)
   | [.const n]                   => some (.i32 n)
   | [.constI64 n]                => some (.i64 n)
@@ -1960,6 +1961,7 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
     -- value, `refIsNull` inspects one.
     | _, .refNull       => .Fallthrough st { s with values := .funcref none :: s.values }
     | _, .refNullExtern => .Fallthrough st { s with values := .externref none :: s.values }
+    | _, .refNullExn    => .Fallthrough st { s with values := .exnref none :: s.values }
     | _, .refFunc fidx  => .Fallthrough st { s with values := .funcref (some fidx) :: s.values }
     | _, .refIsNull => match s.values with
       | .funcref r :: vs =>
