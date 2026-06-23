@@ -2123,8 +2123,10 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
           match st.elementSegments[elemIdx]? with
           | none => .Invalid s!"tableInit: segment index {elemIdx} out of range"
           | some dropped? =>
-            -- Active segments take their values from `m.elements` (covering
-            -- the const-expr item form); a dropped segment is empty.
+            -- A non-dropped (passive/declarative) segment takes its values
+            -- from `m.elements`, covering the const-expr item form; a dropped
+            -- segment (which includes active segments, auto-dropped at
+            -- instantiation) is empty.
             let vals := match dropped? with
               | none   => []
               | some _ => (m.elements[elemIdx]?.map ElementSegment.values).getD []
@@ -2145,8 +2147,10 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
           match st.elementSegments[elemIdx]? with
           | none => .Invalid s!"tableInit: segment index {elemIdx} out of range"
           | some dropped? =>
-            -- Active segments take their values from `m.elements` (covering
-            -- the const-expr item form); a dropped segment is empty.
+            -- A non-dropped (passive/declarative) segment takes its values
+            -- from `m.elements`, covering the const-expr item form; a dropped
+            -- segment (which includes active segments, auto-dropped at
+            -- instantiation) is empty.
             let vals := match dropped? with
               | none   => []
               | some _ => (m.elements[elemIdx]?.map ElementSegment.values).getD []
