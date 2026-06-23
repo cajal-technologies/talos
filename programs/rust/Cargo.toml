@@ -1,6 +1,8 @@
 [workspace]
 resolver = "2"
 members = [
+  "rust_array_tests",
+  "rust_array",
   "rust_u64_tests",
   "num_integer",
   "rust_u64",

@@ -18,6 +18,8 @@ import CodeLib.RustStd.U64.BitXor
 import CodeLib.RustStd.U64.Not
 import CodeLib.RustStd.U64.Shl
 import CodeLib.RustStd.U64.Shr
+import CodeLib.RustStd.Array.Len
+import CodeLib.RustStd.Array.IsEmpty
 import CodeLib.RustStd.Option
 import CodeLib.Near.State
 import CodeLib.Near.Env
