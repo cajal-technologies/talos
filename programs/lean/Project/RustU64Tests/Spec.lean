@@ -16,7 +16,7 @@ is the whole point — the same theorem also serves the called export body.
 - `shl`/`shr`: `shl_seq`/`shr_seq` — the width-specific mask-extend-shift chunk
   (the `b % 64` normalisation is baked into the chunk, so no `bv_decide` here).
 - `div`/`rem`: peel the zero-divisor guard `block` (`wp_block_cons`), then reuse
-  `div_chunk`/`rem_chunk` for the divide/remainder (`divUI64`/`remUI64` atomics
+  `div_seq`/`rem_seq` for the divide/remainder (`divUI64`/`remUI64` atomics
   excluded). The trailing `+ c` / `* c` reuses `add_seq` / `mul_seq` too.
 -/
 
@@ -257,7 +257,7 @@ theorem not_then_xor_correct : NotThenXorSpec := by
     List.drop, not_seq, xor_seq, wp_ret_cons, Continuation.Return.injEq, List.cons.injEq,
     and_true, List.append_nil]
 
-/-! ## div (divisor nonzero) — peel the guard, then reuse `div_chunk` -/
+/-! ## div (divisor nonzero) — peel the guard, then reuse `div_seq` -/
 @[spec_of "rust-exported" "rust_u64_tests::div_then_add"]
 def DivThenAddSpec : Prop := ∀ (env : HostEnv Unit) (a b c : UInt64), b ≠ 0 →
   TerminatesWith env «module» 4 «module».initialStore [.i64 c, .i64 b, .i64 a]
@@ -275,7 +275,7 @@ theorem div_then_add_correct : DivThenAddSpec := by
     List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
     List.drop, wp_constI64_cons, wp_eqI64_cons, hb, ↓reduceIte, wp_const_cons, wp_and_cons,
     wp_br_if_cons, h10]
-  rw [div_chunk a b _ hb]
+  rw [div_seq a b _ hb]
   simp only [wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
     List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
     List.drop, add_seq, wp_ret_cons]
@@ -298,7 +298,7 @@ theorem div_then_mul_correct : DivThenMulSpec := by
     List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
     List.drop, wp_constI64_cons, wp_eqI64_cons, hb, ↓reduceIte, wp_const_cons, wp_and_cons,
     wp_br_if_cons, h10]
-  rw [div_chunk a b _ hb]
+  rw [div_seq a b _ hb]
   simp only [wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
     List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
     List.drop, mul_seq, wp_ret_cons]
@@ -322,7 +322,7 @@ theorem rem_then_add_correct : RemThenAddSpec := by
     List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
     List.drop, wp_constI64_cons, wp_eqI64_cons, hb, ↓reduceIte, wp_const_cons, wp_and_cons,
     wp_br_if_cons, h10]
-  rw [rem_chunk a b _ hb]
+  rw [rem_seq a b _ hb]
   simp only [wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
     List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
     List.drop, add_seq, wp_ret_cons]
@@ -345,7 +345,7 @@ theorem rem_then_mul_correct : RemThenMulSpec := by
     List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
     List.drop, wp_constI64_cons, wp_eqI64_cons, hb, ↓reduceIte, wp_const_cons, wp_and_cons,
     wp_br_if_cons, h10]
-  rw [rem_chunk a b _ hb]
+  rw [rem_seq a b _ hb]
   simp only [wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
     List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
     List.drop, mul_seq, wp_ret_cons]
@@ -365,8 +365,8 @@ theorem shl_then_add_correct : ShlThenAddSpec := by
   simp only [Function.toLocals, Function.numParams, List.take, List.reverse, List.reverseAux,
     List.map, ValueType.zero, wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
     List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
-    List.drop, shl_seq, add_seq, wp_ret_cons, Continuation.Return.injEq, List.cons.injEq,
-    and_true, List.append_nil]
+    List.drop, shiftAmountFrag, shiftMask, shl_seq, add_seq, wp_ret_cons,
+    Continuation.Return.injEq, List.cons.injEq, and_true, List.append_nil]
 
 @[spec_of "rust-exported" "rust_u64_tests::shl_twice"]
 def ShlTwiceSpec : Prop := ∀ (env : HostEnv Unit) (a : UInt64) (n m : UInt32),
@@ -381,8 +381,8 @@ theorem shl_twice_correct : ShlTwiceSpec := by
   simp only [Function.toLocals, Function.numParams, List.take, List.reverse, List.reverseAux,
     List.map, ValueType.zero, wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
     List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
-    List.drop, shl_seq, wp_ret_cons, Continuation.Return.injEq, List.cons.injEq,
-    and_true, List.append_nil]
+    List.drop, shiftAmountFrag, shiftMask, shl_seq, wp_ret_cons, Continuation.Return.injEq,
+    List.cons.injEq, and_true, List.append_nil]
 
 @[spec_of "rust-exported" "rust_u64_tests::shr_then_sub"]
 def ShrThenSubSpec : Prop := ∀ (env : HostEnv Unit) (a : UInt64) (n : UInt32) (b : UInt64),
@@ -397,8 +397,8 @@ theorem shr_then_sub_correct : ShrThenSubSpec := by
   simp only [Function.toLocals, Function.numParams, List.take, List.reverse, List.reverseAux,
     List.map, ValueType.zero, wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
     List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
-    List.drop, shr_seq, sub_seq, wp_ret_cons, Continuation.Return.injEq, List.cons.injEq,
-    and_true, List.append_nil]
+    List.drop, shiftAmountFrag, shiftMask, shr_seq, sub_seq, wp_ret_cons,
+    Continuation.Return.injEq, List.cons.injEq, and_true, List.append_nil]
 
 @[spec_of "rust-exported" "rust_u64_tests::shr_twice"]
 def ShrTwiceSpec : Prop := ∀ (env : HostEnv Unit) (a : UInt64) (n m : UInt32),
@@ -413,7 +413,7 @@ theorem shr_twice_correct : ShrTwiceSpec := by
   simp only [Function.toLocals, Function.numParams, List.take, List.reverse, List.reverseAux,
     List.map, ValueType.zero, wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
     List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
-    List.drop, shr_seq, wp_ret_cons, Continuation.Return.injEq, List.cons.injEq,
-    and_true, List.append_nil]
+    List.drop, shiftAmountFrag, shiftMask, shr_seq, wp_ret_cons, Continuation.Return.injEq,
+    List.cons.injEq, and_true, List.append_nil]
 
 end Project.RustU64Tests.Spec

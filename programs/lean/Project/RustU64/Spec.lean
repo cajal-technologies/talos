@@ -37,7 +37,7 @@ def AddSpec : Prop :=
 theorem add_correct : AddSpec := by
   intro env a b
   exact (TerminatesWith.of_returns_wp (f := func2Def) (rs := [.i64 (a + b)]) rfl rfl
-      (addBodyWp «module».initialStore a b []) rfl).mono (fun _ _ h => h.1)
+      (binBodyReturnsWp add_chunk «module».initialStore 0 1 a b [] rfl rfl) rfl).mono (fun _ _ h => h.1)
 
 @[spec_of "rust-exported" "rust_u64::sub"]
 def SubSpec : Prop :=
@@ -48,7 +48,7 @@ def SubSpec : Prop :=
 theorem sub_correct : SubSpec := by
   intro env a b
   exact (TerminatesWith.of_returns_wp (f := func8Def) (rs := [.i64 (a - b)]) rfl rfl
-      (subBodyWp «module».initialStore a b []) rfl).mono (fun _ _ h => h.1)
+      (binBodyReturnsWp sub_chunk «module».initialStore 0 1 a b [] rfl rfl) rfl).mono (fun _ _ h => h.1)
 
 @[spec_of "rust-exported" "rust_u64::mul"]
 def MulSpec : Prop :=
@@ -59,7 +59,7 @@ def MulSpec : Prop :=
 theorem mul_correct : MulSpec := by
   intro env a b
   exact (TerminatesWith.of_returns_wp (f := func9Def) (rs := [.i64 (a * b)]) rfl rfl
-      (mulBodyWp «module».initialStore a b []) rfl).mono (fun _ _ h => h.1)
+      (binBodyReturnsWp mul_chunk «module».initialStore 0 1 a b [] rfl rfl) rfl).mono (fun _ _ h => h.1)
 
 @[spec_of "rust-exported" "rust_u64::div"]
 def DivSpec : Prop :=
@@ -70,7 +70,8 @@ def DivSpec : Prop :=
 theorem div_correct : DivSpec := by
   intro env a b hb
   exact (TerminatesWith.of_returns_wp (f := func6Def) (rs := [.i64 (a / b)]) rfl rfl
-      (divBodyWp «module».initialStore a b [] hb) rfl).mono (fun _ _ h => h.1)
+      (divBodyWp «module».initialStore 0 1 a b [] [.const 1048600, .call 66, .unreachable]
+        rfl rfl hb) rfl).mono (fun _ _ h => h.1)
 
 @[spec_of "rust-exported" "rust_u64::rem"]
 def RemSpec : Prop :=
@@ -81,7 +82,8 @@ def RemSpec : Prop :=
 theorem rem_correct : RemSpec := by
   intro env a b hb
   exact (TerminatesWith.of_returns_wp (f := func10Def) (rs := [.i64 (a % b)]) rfl rfl
-      (remBodyWp «module».initialStore a b [] hb) rfl).mono (fun _ _ h => h.1)
+      (remBodyWp «module».initialStore 0 1 a b [] [.const 1048616, .call 67, .unreachable]
+        rfl rfl hb) rfl).mono (fun _ _ h => h.1)
 
 @[spec_of "rust-exported" "rust_u64::bitand"]
 def BitAndSpec : Prop :=
@@ -92,7 +94,7 @@ def BitAndSpec : Prop :=
 theorem bitand_correct : BitAndSpec := by
   intro env a b
   exact (TerminatesWith.of_returns_wp (f := func3Def) (rs := [.i64 (a &&& b)]) rfl rfl
-      (bitandBodyWp «module».initialStore a b []) rfl).mono (fun _ _ h => h.1)
+      (binBodyReturnsWp bitand_chunk «module».initialStore 0 1 a b [] rfl rfl) rfl).mono (fun _ _ h => h.1)
 
 @[spec_of "rust-exported" "rust_u64::bitor"]
 def BitOrSpec : Prop :=
@@ -103,7 +105,7 @@ def BitOrSpec : Prop :=
 theorem bitor_correct : BitOrSpec := by
   intro env a b
   exact (TerminatesWith.of_returns_wp (f := func4Def) (rs := [.i64 (a ||| b)]) rfl rfl
-      (bitorBodyWp «module».initialStore a b []) rfl).mono (fun _ _ h => h.1)
+      (binBodyReturnsWp bitor_chunk «module».initialStore 0 1 a b [] rfl rfl) rfl).mono (fun _ _ h => h.1)
 
 @[spec_of "rust-exported" "rust_u64::bitxor"]
 def BitXorSpec : Prop :=
@@ -114,7 +116,7 @@ def BitXorSpec : Prop :=
 theorem bitxor_correct : BitXorSpec := by
   intro env a b
   exact (TerminatesWith.of_returns_wp (f := func5Def) (rs := [.i64 (a ^^^ b)]) rfl rfl
-      (bitxorBodyWp «module».initialStore a b []) rfl).mono (fun _ _ h => h.1)
+      (binBodyReturnsWp bitxor_chunk «module».initialStore 0 1 a b [] rfl rfl) rfl).mono (fun _ _ h => h.1)
 
 @[spec_of "rust-exported" "rust_u64::not"]
 def NotSpec : Prop :=
@@ -125,7 +127,7 @@ def NotSpec : Prop :=
 theorem not_correct : NotSpec := by
   intro env a
   exact (TerminatesWith.of_returns_wp (f := func11Def) (rs := [.i64 (~~~a)]) rfl rfl
-      (notBodyWp «module».initialStore a []) rfl).mono (fun _ _ h => h.1)
+      (unBodyReturnsWp not_chunk «module».initialStore 0 a [] rfl) rfl).mono (fun _ _ h => h.1)
 
 @[spec_of "rust-exported" "rust_u64::shl"]
 def ShlSpec : Prop :=
@@ -136,7 +138,8 @@ def ShlSpec : Prop :=
 theorem shl_correct : ShlSpec := by
   intro env a b
   exact (TerminatesWith.of_returns_wp (f := func12Def) (rs := [.i64 (a <<< (b.toUInt64 % 64))])
-      rfl rfl (shlBodyWp «module».initialStore a b []) rfl).mono (fun _ _ h => h.1)
+      rfl rfl (hbinBodyReturnsWp shl_chunk «module».initialStore 0 1 a b [] rfl rfl) rfl).mono
+      (fun _ _ h => h.1)
 
 @[spec_of "rust-exported" "rust_u64::shr"]
 def ShrSpec : Prop :=
@@ -147,6 +150,7 @@ def ShrSpec : Prop :=
 theorem shr_correct : ShrSpec := by
   intro env a b
   exact (TerminatesWith.of_returns_wp (f := func13Def) (rs := [.i64 (a >>> (b.toUInt64 % 64))])
-      rfl rfl (shrBodyWp «module».initialStore a b []) rfl).mono (fun _ _ h => h.1)
+      rfl rfl (hbinBodyReturnsWp shr_chunk «module».initialStore 0 1 a b [] rfl rfl) rfl).mono
+      (fun _ _ h => h.1)
 
 end Project.RustU64.Spec

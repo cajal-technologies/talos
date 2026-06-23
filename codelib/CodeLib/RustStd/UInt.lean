@@ -19,9 +19,10 @@ general binary shape: if locals `i` and `j` contain encoded `a` and `b`, then
 `[localGet i, localGet j] ++ frag` followed by any `rest` is equivalent to
 running `rest` with the encoded result on top of the existing operand stack.
 `BinChunk` is the homogeneous specialization of that shape, and `UnChunk` is
-the unary variant. The body helpers produce `Continuation.Fallthrough`
-postconditions for reusable instruction sequences; they deliberately do not
-append or reason about `.ret`.
+the unary variant. `HBinChunkWhere` is the same binary shape with an explicit
+side condition for operations that can trap on some inputs. The body helpers
+produce `Continuation.Fallthrough` postconditions for reusable instruction
+sequences; they deliberately do not append or reason about `.ret`.
 -/
 
 namespace Wasm.RustStd
@@ -32,6 +33,13 @@ open Wasm
 class UIntWasm (T : Type) where
   /-- The wasm value carrying a `T`. -/
   toV : T → Value
+
+/-- `u32` is carried as `Value.i32`, including when it is a mixed-width operand
+to a `u64` operation such as shifts. -/
+instance instUIntWasmUInt32 : UIntWasm UInt32 where
+  toV a := .i32 a
+
+@[simp] theorem toV_u32 (a : UInt32) : (UIntWasm.toV a : Value) = .i32 a := rfl
 
 section
 variable {T : Type} [UIntWasm T]
@@ -53,6 +61,19 @@ abbrev HBinChunk {A B C : Type} [UIntWasm A] [UIntWasm B] [UIntWasm C]
     wp m ([.localGet i, .localGet j] ++ frag ++ rest) Q st ⟨P, L, vs⟩ env ↔
     wp m rest Q st ⟨P, L, toV (op a b) :: vs⟩ env
 
+/-- Heterogeneous binary chunk shape with an input side condition. Use this for
+instructions that trap on some operand values, such as unsigned division by
+zero. -/
+abbrev HBinChunkWhere {A B C : Type} [UIntWasm A] [UIntWasm B] [UIntWasm C]
+    (frag : Program) (op : A → B → C) (pre : A → B → Prop) : Prop :=
+  ∀ {α : Type} {m : Module} {env : HostEnv α} {Q : Assertion α} {st : Store α}
+    {P L : List Value} {rest : Program} (i j : Nat) (a : A) (b : B) (vs : List Value)
+    (_ha : (⟨P, L, vs⟩ : Locals).get i = some (toV a))
+    (_hb : (⟨P, L, vs⟩ : Locals).get j = some (toV b))
+    (_hpre : pre a b),
+    wp m ([.localGet i, .localGet j] ++ frag ++ rest) Q st ⟨P, L, vs⟩ env ↔
+    wp m rest Q st ⟨P, L, toV (op a b) :: vs⟩ env
+
 /-- Homogeneous binary chunk shape, defined from the heterogeneous one. -/
 abbrev BinChunk (frag : Program) (op : T → T → T) : Prop :=
   HBinChunk frag op
@@ -65,10 +86,11 @@ abbrev UnChunk (frag : Program) (op : T → T) : Prop :=
     wp m ([.localGet i] ++ frag ++ rest) Q st ⟨P, L, vs⟩ env ↔
     wp m rest Q st ⟨P, L, toV (op a) :: vs⟩ env
 
-/-- Turn a binary chunk into a fallthrough theorem for any local frame. -/
-theorem binBodyWp {frag : Program} {op : T → T → T} (chunk : BinChunk frag op)
+/-- Turn a heterogeneous binary chunk into a fallthrough theorem for any local frame. -/
+theorem hbinBodyWp {A B C : Type} [UIntWasm A] [UIntWasm B] [UIntWasm C]
+    {frag : Program} {op : A → B → C} (chunk : HBinChunk frag op)
     {α : Type} {m : Module} {env : HostEnv α} (st : Store α)
-    {P L : List Value} (i j : Nat) (a b : T) (vs : List Value)
+    {P L : List Value} (i j : Nat) (a : A) (b : B) (vs : List Value)
     (ha : (⟨P, L, vs⟩ : Locals).get i = some (toV a))
     (hb : (⟨P, L, vs⟩ : Locals).get j = some (toV b)) :
     wp m ([.localGet i, .localGet j] ++ frag)
@@ -84,6 +106,85 @@ theorem binBodyWp {frag : Program} {op : T → T → T} (chunk : BinChunk frag o
     unfold framePost
     simp
   simpa only [List.append_nil] using h
+
+/-- Turn a side-conditioned heterogeneous binary chunk into a fallthrough theorem
+for any local frame. -/
+theorem hbinBodyWpWhere {A B C : Type} [UIntWasm A] [UIntWasm B] [UIntWasm C]
+    {frag : Program} {op : A → B → C} {pre : A → B → Prop}
+    (chunk : HBinChunkWhere frag op pre)
+    {α : Type} {m : Module} {env : HostEnv α} (st : Store α)
+    {P L : List Value} (i j : Nat) (a : A) (b : B) (vs : List Value)
+    (ha : (⟨P, L, vs⟩ : Locals).get i = some (toV a))
+    (hb : (⟨P, L, vs⟩ : Locals).get j = some (toV b))
+    (hpre : pre a b) :
+    wp m ([.localGet i, .localGet j] ++ frag)
+      (fun c => ∃ st',
+        c = .Fallthrough st' ⟨P, L, toV (op a b) :: vs⟩ ∧ framePost st st')
+      st ⟨P, L, vs⟩ env := by
+  have h :
+      wp m ([.localGet i, .localGet j] ++ frag ++ [])
+        (fun c => ∃ st',
+          c = .Fallthrough st' ⟨P, L, toV (op a b) :: vs⟩ ∧ framePost st st')
+        st ⟨P, L, vs⟩ env := by
+    rw [chunk i j a b vs ha hb hpre]
+    unfold framePost
+    simp
+  simpa only [List.append_nil] using h
+
+/-- Variant of `hbinBodyWp` for exported function bodies that immediately return
+after the reusable fragment. -/
+theorem hbinBodyReturnsWp {A B C : Type} [UIntWasm A] [UIntWasm B] [UIntWasm C]
+    {frag : Program} {op : A → B → C} (chunk : HBinChunk frag op)
+    {α : Type} {m : Module} {env : HostEnv α} (st : Store α)
+    {P L : List Value} (i j : Nat) (a : A) (b : B) (vs : List Value)
+    (ha : (⟨P, L, vs⟩ : Locals).get i = some (toV a))
+    (hb : (⟨P, L, vs⟩ : Locals).get j = some (toV b)) :
+    wp m ([.localGet i, .localGet j] ++ frag ++ [.ret])
+      (Returns (toV (op a b) :: vs) (framePost st))
+      st ⟨P, L, vs⟩ env := by
+  rw [chunk i j a b vs ha hb]
+  unfold Returns framePost
+  simp
+
+/-- Variant of `hbinBodyWpWhere` for exported function bodies that immediately
+return after the reusable fragment. -/
+theorem hbinBodyWhereReturnsWp {A B C : Type} [UIntWasm A] [UIntWasm B] [UIntWasm C]
+    {frag : Program} {op : A → B → C} {pre : A → B → Prop}
+    (chunk : HBinChunkWhere frag op pre)
+    {α : Type} {m : Module} {env : HostEnv α} (st : Store α)
+    {P L : List Value} (i j : Nat) (a : A) (b : B) (vs : List Value)
+    (ha : (⟨P, L, vs⟩ : Locals).get i = some (toV a))
+    (hb : (⟨P, L, vs⟩ : Locals).get j = some (toV b))
+    (hpre : pre a b) :
+    wp m ([.localGet i, .localGet j] ++ frag ++ [.ret])
+      (Returns (toV (op a b) :: vs) (framePost st))
+      st ⟨P, L, vs⟩ env := by
+  rw [chunk i j a b vs ha hb hpre]
+  unfold Returns framePost
+  simp
+
+/-- Turn a homogeneous binary chunk into a fallthrough theorem for any local frame. -/
+theorem binBodyWp {frag : Program} {op : T → T → T} (chunk : BinChunk frag op)
+    {α : Type} {m : Module} {env : HostEnv α} (st : Store α)
+    {P L : List Value} (i j : Nat) (a b : T) (vs : List Value)
+    (ha : (⟨P, L, vs⟩ : Locals).get i = some (toV a))
+    (hb : (⟨P, L, vs⟩ : Locals).get j = some (toV b)) :
+    wp m ([.localGet i, .localGet j] ++ frag)
+      (fun c => ∃ st',
+        c = .Fallthrough st' ⟨P, L, toV (op a b) :: vs⟩ ∧ framePost st st')
+      st ⟨P, L, vs⟩ env :=
+  hbinBodyWp chunk st i j a b vs ha hb
+
+/-- Homogeneous specialization of `hbinBodyReturnsWp`. -/
+theorem binBodyReturnsWp {frag : Program} {op : T → T → T} (chunk : BinChunk frag op)
+    {α : Type} {m : Module} {env : HostEnv α} (st : Store α)
+    {P L : List Value} (i j : Nat) (a b : T) (vs : List Value)
+    (ha : (⟨P, L, vs⟩ : Locals).get i = some (toV a))
+    (hb : (⟨P, L, vs⟩ : Locals).get j = some (toV b)) :
+    wp m ([.localGet i, .localGet j] ++ frag ++ [.ret])
+      (Returns (toV (op a b) :: vs) (framePost st))
+      st ⟨P, L, vs⟩ env :=
+  hbinBodyReturnsWp chunk st i j a b vs ha hb
 
 /-- Turn a unary chunk into a fallthrough theorem for any local frame. -/
 theorem unBodyWp {frag : Program} {op : T → T} (chunk : UnChunk frag op)
@@ -103,6 +204,19 @@ theorem unBodyWp {frag : Program} {op : T → T} (chunk : UnChunk frag op)
     unfold framePost
     simp
   simpa only [List.append_nil] using h
+
+/-- Variant of `unBodyWp` for exported function bodies that immediately return
+after the reusable fragment. -/
+theorem unBodyReturnsWp {frag : Program} {op : T → T} (chunk : UnChunk frag op)
+    {α : Type} {m : Module} {env : HostEnv α} (st : Store α)
+    {P L : List Value} (i : Nat) (a : T) (vs : List Value)
+    (ha : (⟨P, L, vs⟩ : Locals).get i = some (toV a)) :
+    wp m ([.localGet i] ++ frag ++ [.ret])
+      (Returns (toV (op a) :: vs) (framePost st))
+      st ⟨P, L, vs⟩ env := by
+  rw [chunk i a vs ha]
+  unfold Returns framePost
+  simp
 
 end
 

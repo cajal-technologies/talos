@@ -5,7 +5,7 @@ import CodeLib.RustStd.U64.Basic
 namespace Wasm.RustStd.U64
 open Wasm Wasm.RustStd
 
-def MAX_U64 : UInt64 := 0xFFFF_FFFF_FFFF_FFFF
+abbrev MAX_U64 : UInt64 := 0xFFFF_FFFF_FFFF_FFFF
 
 /-- The inlined chunk `[.constI64 allOnes, .xorI64]` computes `~~~a` after reading a local. -/
 theorem not_chunk : UnChunk (T := UInt64) [.constI64 MAX_U64, .xorI64] (~~~ ·) := by
