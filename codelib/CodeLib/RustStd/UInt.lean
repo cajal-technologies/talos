@@ -6,38 +6,35 @@ import CodeLib.Entry
 /-!
 # `CodeLib.RustStd.UInt` — the type-agnostic trunk
 
-Common reasoning shared by every fixed-width unsigned integer type. A
-`UIntWasm T` instance just fixes how a `T` is carried as a wasm `Value`
-(`toV`); everything reusable is proven once here, over an arbitrary instance,
-and each per-type / per-function file (`U64/Add.lean`, `U32/Add.lean`, …) plugs
-in its concrete instruction fragment.
+Common reasoning shared by Rust-style integer operations compiled to Wasm. A
+`UIntWasm T` instance only fixes how a Lean type `T` is carried as a wasm
+`Value` (`toV`); algebraic structure stays with the concrete operation theorem.
+That keeps this trunk usable for homogeneous operations (`UInt64 → UInt64 →
+UInt64`) and heterogeneous ones (`A → B → C`) whose operands/results have
+different wasm encodings.
 
-The reusable unit is a **chunk theorem**: "this inlined instruction sequence,
-run on stack operands, computes this Lean operation". A `BinChunk` is stated
-with the operands on the value stack (`⟨P, L, toV b :: toV a :: vs⟩`) so it
-`rw`s directly onto an inlined occurrence — no `.call`, no shim, exactly what
-`opt-0`'s "same inlined sequence everywhere" buys us. The chunk for a given
-`(type, op)` lives in that op's file and is discharged by reusing the
-interpreter's atomic `wp_*` lemma; `binBodyWp`/`unBodyWp` here turn any chunk
-into the function-body theorem the per-crate `TerminatesWith` spec bridges via
-`of_returns_wp` (so the *same* chunk serves a called export and an inlined use).
+The reusable unit is a **chunk theorem**: "this instruction fragment, fed by
+operands read from locals, computes this Lean operation". `HBinChunk` is the
+general binary shape: if locals `i` and `j` contain encoded `a` and `b`, then
+`[localGet i, localGet j] ++ frag` followed by any `rest` is equivalent to
+running `rest` with the encoded result on top of the existing operand stack.
+`BinChunk` is the homogeneous specialization of that shape, and `UnChunk` is
+the unary variant. The body helpers produce `Continuation.Fallthrough`
+postconditions for reusable instruction sequences; they deliberately do not
+append or reason about `.ret`.
 -/
 
 namespace Wasm.RustStd
 
 open Wasm
 
-/-- A fixed-width unsigned integer type carried as a wasm `Value`. The algebraic
-operations come from `T`'s existing instances; only the wasm encoding is new. -/
-class UIntWasm (T : Type)
-    [Add T] [Sub T] [Mul T] [AndOp T] [OrOp T] [HXor T T T] [Complement T]
-    [Div T] [Mod T] [OfNat T 0] [DecidableEq T] where
+/-- A fixed-width unsigned integer type carried as a wasm `Value`. -/
+class UIntWasm (T : Type) where
   /-- The wasm value carrying a `T`. -/
   toV : T → Value
 
 section
-variable {T : Type} [Add T] [Sub T] [Mul T] [AndOp T] [OrOp T] [HXor T T T]
-  [Complement T] [Div T] [Mod T] [OfNat T 0] [DecidableEq T] [UIntWasm T]
+variable {T : Type} [UIntWasm T]
 
 open UIntWasm
 
@@ -45,51 +42,67 @@ open UIntWasm
 abbrev framePost {α} (st : Store α) : Store α → Prop :=
   fun st' => st'.globals = st.globals ∧ st'.mem.pages = st.mem.pages
 
-/-- Chunk shape for a binary op: with `toV b :: toV a :: vs` on the stack,
-running `frag` then `rest` equals running `rest` with `toV (op a b)` on the
-stack. The reusable inline-sequence theorem. -/
-abbrev BinChunk (frag : Program) (op : T → T → T) : Prop :=
+/-- Heterogeneous binary chunk shape. The operands are read from arbitrary
+locals `i` and `j`, not preloaded onto the operand stack. -/
+abbrev HBinChunk {A B C : Type} [UIntWasm A] [UIntWasm B] [UIntWasm C]
+    (frag : Program) (op : A → B → C) : Prop :=
   ∀ {α : Type} {m : Module} {env : HostEnv α} {Q : Assertion α} {st : Store α}
-    {P L : List Value} {rest : Program} (a b : T) (vs : List Value),
-    wp m (frag ++ rest) Q st ⟨P, L, toV b :: toV a :: vs⟩ env ↔
+    {P L : List Value} {rest : Program} (i j : Nat) (a : A) (b : B) (vs : List Value)
+    (_ha : (⟨P, L, vs⟩ : Locals).get i = some (toV a))
+    (_hb : (⟨P, L, vs⟩ : Locals).get j = some (toV b)),
+    wp m ([.localGet i, .localGet j] ++ frag ++ rest) Q st ⟨P, L, vs⟩ env ↔
     wp m rest Q st ⟨P, L, toV (op a b) :: vs⟩ env
 
-/-- Chunk shape for a unary op (`not`). -/
+/-- Homogeneous binary chunk shape, defined from the heterogeneous one. -/
+abbrev BinChunk (frag : Program) (op : T → T → T) : Prop :=
+  HBinChunk frag op
+
+/-- Chunk shape for a unary op (`not`), with the operand read from local `i`. -/
 abbrev UnChunk (frag : Program) (op : T → T) : Prop :=
   ∀ {α : Type} {m : Module} {env : HostEnv α} {Q : Assertion α} {st : Store α}
-    {P L : List Value} {rest : Program} (a : T) (vs : List Value),
-    wp m (frag ++ rest) Q st ⟨P, L, toV a :: vs⟩ env ↔
+    {P L : List Value} {rest : Program} (i : Nat) (a : T) (vs : List Value)
+    (_ha : (⟨P, L, vs⟩ : Locals).get i = some (toV a)),
+    wp m ([.localGet i] ++ frag ++ rest) Q st ⟨P, L, vs⟩ env ↔
     wp m rest Q st ⟨P, L, toV (op a) :: vs⟩ env
 
-/-- Turn a binary chunk into the opt-0 export-body theorem
-`[localGet 0, localGet 1] ++ frag ++ [ret]` — by **reusing the chunk** (the
-opaque `frag` means `wp_run` can't bypass it). The per-crate spec feeds this to
-`of_returns_wp`. -/
+/-- Turn a binary chunk into a fallthrough theorem for any local frame. -/
 theorem binBodyWp {frag : Program} {op : T → T → T} (chunk : BinChunk frag op)
-    {α : Type} {m : Module} {env : HostEnv α} (st : Store α) (a b : T) (vs : List Value) :
-    wp m ([.localGet 0, .localGet 1] ++ frag ++ [.ret])
-      (Returns (toV (op a b) :: vs) (framePost st))
-      st ⟨[toV a, toV b], [], vs⟩ env := by
-  unfold Returns framePost
-  simp only [List.cons_append, List.nil_append]
-  wp_run
-  simp
-  rw [chunk a b vs]
-  simp
+    {α : Type} {m : Module} {env : HostEnv α} (st : Store α)
+    {P L : List Value} (i j : Nat) (a b : T) (vs : List Value)
+    (ha : (⟨P, L, vs⟩ : Locals).get i = some (toV a))
+    (hb : (⟨P, L, vs⟩ : Locals).get j = some (toV b)) :
+    wp m ([.localGet i, .localGet j] ++ frag)
+      (fun c => ∃ st',
+        c = .Fallthrough st' ⟨P, L, toV (op a b) :: vs⟩ ∧ framePost st st')
+      st ⟨P, L, vs⟩ env := by
+  have h :
+      wp m ([.localGet i, .localGet j] ++ frag ++ [])
+        (fun c => ∃ st',
+          c = .Fallthrough st' ⟨P, L, toV (op a b) :: vs⟩ ∧ framePost st st')
+        st ⟨P, L, vs⟩ env := by
+    rw [chunk i j a b vs ha hb]
+    unfold framePost
+    simp
+  simpa only [List.append_nil] using h
 
-/-- Turn a unary chunk into the opt-0 export-body theorem
-`[localGet 0] ++ frag ++ [ret]`. -/
+/-- Turn a unary chunk into a fallthrough theorem for any local frame. -/
 theorem unBodyWp {frag : Program} {op : T → T} (chunk : UnChunk frag op)
-    {α : Type} {m : Module} {env : HostEnv α} (st : Store α) (a : T) (vs : List Value) :
-    wp m ([.localGet 0] ++ frag ++ [.ret])
-      (Returns (toV (op a) :: vs) (framePost st))
-      st ⟨[toV a], [], vs⟩ env := by
-  unfold Returns framePost
-  simp only [List.cons_append, List.nil_append]
-  wp_run
-  simp
-  rw [chunk a vs]
-  simp
+    {α : Type} {m : Module} {env : HostEnv α} (st : Store α)
+    {P L : List Value} (i : Nat) (a : T) (vs : List Value)
+    (ha : (⟨P, L, vs⟩ : Locals).get i = some (toV a)) :
+    wp m ([.localGet i] ++ frag)
+      (fun c => ∃ st',
+        c = .Fallthrough st' ⟨P, L, toV (op a) :: vs⟩ ∧ framePost st st')
+      st ⟨P, L, vs⟩ env := by
+  have h :
+      wp m ([.localGet i] ++ frag ++ [])
+        (fun c => ∃ st',
+          c = .Fallthrough st' ⟨P, L, toV (op a) :: vs⟩ ∧ framePost st st')
+        st ⟨P, L, vs⟩ env := by
+    rw [chunk i a vs ha]
+    unfold framePost
+    simp
+  simpa only [List.append_nil] using h
 
 end
 
