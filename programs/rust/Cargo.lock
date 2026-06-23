@@ -34,6 +34,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "rust_array"
+version = "0.1.0"
+
+[[package]]
+name = "rust_array_tests"
+version = "0.1.0"
+
+[[package]]
 name = "rust_u64"
 version = "0.1.0"
 
