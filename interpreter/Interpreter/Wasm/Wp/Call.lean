@@ -91,7 +91,7 @@ theorem wp_callIndirect_at {α : Type} {env : HostEnv α}
     (hSlot : tbl[i.toNat]? = some (.funcref (some fid)))
     (hFn   : m.funcSig? fid = some fn)
     (hTy   : m.types[ti]? = some ty)
-    (hSig  : fn.params = ty.params ∧ fn.results = ty.results)
+    (hSig  : m.indirectCallTypeOk fid ti fn ty = true)
     (hRun  : ∃ N, ∀ fuel ≥ N, ∃ vs st',
               run fuel m fid st vs0 env = .Success vs st' ∧ Post st' vs)
     (hPost : ∀ st' vs, Post st' vs → wp m rest Q st' { s with values := vs } env) :
@@ -130,7 +130,7 @@ theorem wp_callIndirect_cons {α : Type} {env : HostEnv α}
     (hSlot : tbl[i.toNat]? = some (.funcref (some fid)))
     (hFn   : m.funcSig? fid = some fn)
     (hTy   : m.types[ti]? = some ty)
-    (hSig  : fn.params = ty.params ∧ fn.results = ty.results)
+    (hSig  : m.indirectCallTypeOk fid ti fn ty = true)
     (spec  : FuncSpec env m fid Pre Post)
     (hPre  : Pre vs0)
     (hPost : ∀ st' vs, Post st' vs → wp m rest Q st' { s with values := vs } env) :
@@ -150,7 +150,7 @@ theorem wp_callIndirect_tw {α : Type} {env : HostEnv α}
     (hSlot : tbl[i.toNat]? = some (.funcref (some fid)))
     (hFn   : m.funcSig? fid = some fn)
     (hTy   : m.types[ti]? = some ty)
-    (hSig  : fn.params = ty.params ∧ fn.results = ty.results)
+    (hSig  : m.indirectCallTypeOk fid ti fn ty = true)
     (hRun  : TerminatesWith env m fid st vs0 Post)
     (hPost : ∀ st' vs, Post st' vs → wp m rest Q st' { s with values := vs } env) :
     wp m (.callIndirect ti tj :: rest) Q st s env :=

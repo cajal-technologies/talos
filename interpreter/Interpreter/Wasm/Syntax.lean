@@ -568,6 +568,14 @@ structure Function where
   local 0 is the first (deepest) argument, and the top `results.length`
   values are returned to the caller on exit. -/
   results : List ValueType := []
+  /-- Index into `Module.types`/`gcTypes` of the function's declared
+  `(type N)`, when known. `(return_)call_indirect` consults this to check
+  the *nominal* subtype relation against the call-site type — structural
+  equality of `params`/`results` is necessary but not sufficient once a
+  `rec`/`sub` hierarchy is in play (issue #95). `none` means the declared
+  type is unrecorded, and the indirect-call check falls back to structural
+  equality alone. -/
+  typeIdx : Option Nat := none
 deriving Repr, Inhabited
 
 @[inline] def Function.numParams (f : Function) : Nat := f.params.length
@@ -917,6 +925,15 @@ def Module.funcSig? (m : Module) (i : Nat) : Option FuncType :=
     | some f => some { params := f.params, results := f.results }
     | none   => none
 
+/-- Declared nominal type index of a function in the *unified* index space,
+when recorded. Imports carry no declared `(type N)` here, so they return
+`none`; in-module functions return their `Function.typeIdx`. Used by the
+`(return_)call_indirect` type check to consult the `rec`/`sub` hierarchy. -/
+def Module.funcTypeIdx? (m : Module) (i : Nat) : Option Nat :=
+  match m.imports[i]? with
+  | some _ => none
+  | none   => (m.funcs[i - m.imports.length]?).bind (·.typeIdx)
+
 /-- Whether GC type index `a` is a (reflexive, transitive) subtype of `b`,
 following the declared `sub $super` chain. Bounded by the type-table size
 so a malformed cyclic chain still terminates. -/
@@ -931,6 +948,27 @@ def Module.gcTypeSubtype (m : Module) (a b : Nat) : Bool :=
           | none   => false
         | none   => false
   go m.gcTypes.length a
+
+/-- Runtime type check shared by all four `(return_)call_indirect` arms
+(issue #95). A table entry resolving to function `fid` is callable at the
+call-site type `typeIdx` when:
+
+* the looked-up structural signatures match (`fn` is the target's
+  `funcSig?`, `ty` is `types[typeIdx]`) — necessary for the calling
+  convention; and
+* the target's declared nominal type, when recorded (`funcTypeIdx?`), is a
+  **subtype** of `typeIdx`. A function typed `$super` must *not* satisfy a
+  call site expecting `$sub` even though their params/results coincide.
+
+When the target's declared type is unrecorded (`funcTypeIdx? = none`) the
+nominal clause is vacuously satisfied and the check degrades to the
+structural comparison the interpreter used before issue #95. -/
+def Module.indirectCallTypeOk (m : Module) (fid typeIdx : Nat)
+    (fn ty : FuncType) : Bool :=
+  fn.params == ty.params && fn.results == ty.results &&
+  (match m.funcTypeIdx? fid with
+   | some src => m.gcTypeSubtype src typeIdx
+   | none     => true)
 
 /-- Look up the struct/array composite type at index `i`. -/
 def Module.gcComposite? (m : Module) (i : Nat) : Option CompositeType :=
