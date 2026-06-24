@@ -320,6 +320,22 @@ private def reproducibleRustflags (rustDir : FilePath) : IO String := do
     { cmd := "rustc", args := #["--print", "sysroot"], cwd := some rustDir }
   let sysroot :=
     if sysrootOut.exitCode = 0 then sysrootOut.stdout.trimAscii else ""
+  -- The precompiled std bakes core/alloc panic locations as
+  -- `/rustc/<commit-hash>/library/...`. A toolchain that *also* has the
+  -- `rust-src` component installed instead resolves those source paths to the
+  -- local tree at `<sysroot>/lib/rustlib/src/rust/library/...`, which would
+  -- otherwise leak into the emitted data section and make the wasm differ
+  -- between contributors who do and don't have `rust-src` (CI does not).
+  -- Remapping the rust-src tree onto the same virtual `/rustc/<hash>` prefix
+  -- normalises both cases to identical bytes.
+  let versionOut ← IO.Process.output
+    { cmd := "rustc", args := #["-vV"], cwd := some rustDir }
+  let commitHash :=
+    if versionOut.exitCode = 0 then
+      match versionOut.stdout.splitOn "commit-hash: " with
+      | _ :: rest :: _ => ((rest.splitOn "\n").headD "").trim
+      | _              => ""
+    else ""
   let cargoHome ← do
     match ← IO.getEnv "CARGO_HOME" with
     | some v => pure v
@@ -335,6 +351,11 @@ private def reproducibleRustflags (rustDir : FilePath) : IO String := do
     remaps := remaps.push s!"--remap-path-prefix={cargoHome}=/cargo-home"
   if !sysroot.isEmpty then
     remaps := remaps.push s!"--remap-path-prefix={sysroot}=/rustc-sysroot"
+  -- More specific than the `{sysroot}` remap above; rustc applies the
+  -- longest-matching prefix, so rust-src paths get the `/rustc/<hash>` form.
+  if !sysroot.isEmpty && !commitHash.isEmpty then
+    remaps := remaps.push
+      s!"--remap-path-prefix={sysroot}/lib/rustlib/src/rust=/rustc/{commitHash}"
   pure (String.intercalate " " remaps.toList)
 
 private def buildWasm (projectDir : FilePath) (crates : Array Crate) : IO Unit := do
