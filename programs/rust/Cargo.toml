@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+  "merge_sort",
   "rust_u64_tests",
   "num_integer",
   "rust_u64",
