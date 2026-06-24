@@ -40,12 +40,12 @@ def wordsAt (m : Mem) (base : UInt32) (n : Nat) : List UInt32 :=
 
 LLVM's wasm layout for this module places the shadow stack below `1048576`
 (global 0, the stack pointer), the static data and the allocator's mutable
-bookkeeping in `[…, 1050304)`, and the heap at and above `1050304` (global 2,
+bookkeeping in `[…, 1050240)`, and the heap at and above `1050240` (global 2,
 `__heap_base`). The data buffer must live in the heap, and the allocator hands
 out the scratch buffer from the heap as well. -/
 
 /-- `__heap_base` for `«module»` (init value of global 2). -/
-def heapBase : Nat := 1050304
+def heapBase : Nat := 1050240
 
 /-- The exported `merge_sort(data_ptr, len)` sorts the `len`-word region at
 `data_ptr` ascending, in place, allocating its scratch buffer internally.
@@ -59,8 +59,9 @@ permutation of its original contents.
 
 The data buffer must be a valid heap region:
 
-* `heapBase ≤ data_ptr` (in the heap) and `data_ptr + 4*len ≤ pages * 65536`
-  (in bounds).
+* `data_ptr + 4*len ≤ pages * 65536` (in bounds). That the buffer is *in the
+  heap* (`heapBase ≤ data_ptr`) follows from the scratch margin below, so it is
+  not stated as a separate hypothesis.
 
 Because scratch is now allocated *inside* the call rather than supplied, the
 statement also has to constrain the heap so that the allocation behaves. These
@@ -86,12 +87,13 @@ def MergeSortSpec : Prop :=
     let n   := len.toNat
     let dLo := dataPtr.toNat
     let dHi := dLo + 4 * n
-    -- data buffer in the heap and in bounds
-    heapBase ≤ dLo →
+    -- data buffer in bounds (its lower end is constrained by the scratch
+    -- margin below, which already implies `heapBase ≤ dLo`)
     dHi ≤ st.mem.pages * 65536 →
     -- allocator control state is pristine (see docstring)
     (∀ i, i < heapBase → st.mem.bytes i = («module».initialStore (α := Unit)).mem.bytes i) →
-    -- scratch fits in the free window below the data buffer (provisional)
+    -- scratch fits in the free window below the data buffer (provisional);
+    -- this also places the data buffer in the heap (`heapBase ≤ dLo`)
     heapBase + 4 * n ≤ dLo →
     TerminatesWith env «module» 33 st [.i32 len, .i32 dataPtr]
       (fun st' rs =>
