@@ -16,10 +16,12 @@ theorem len_chunk : LenChunk [] (id : UInt32 → UInt32) := by
   intro α m env Q st P L rest len vs
   simp
 
-/-- Inlined slice `len`: a single `localGet` of the length component. A
-length-only op with an empty fragment has no stack transform, so the reusable
-content is exactly `wp_localGet_cons`; this names it in slice vocabulary for
-client proofs (and keeps `len`'s inline form symmetric with `is_empty`'s). -/
+/-- Inlined slice `len`: a single `localGet` of the length component. `len` has
+an empty fragment (`op = id`), so this carries no stack transform — it is
+definitionally `wp_localGet_cons`, named in slice vocabulary because it is what
+the reuse tests `rw` with at an inlined `xs.len()`. (Unlike `is_empty`, `len`'s
+"chunk" is trivial; the load-bearing reuse for `len` is the called body
+`lenBodyWp`.) -/
 theorem len_seq {α : Type} {m : Module} {env : HostEnv α} {Q : Assertion α}
     {st : Store α} {P L : List Value} {rest : Program}
     (i : Nat) (len : UInt32) (vs : List Value)
