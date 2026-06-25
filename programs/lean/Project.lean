@@ -1,3 +1,4 @@
+import Project.MergeSort.Proof
 import Project.MergeSort.Spec
 import Project.NumInteger.Spec
 import Project.RustU64.Spec
