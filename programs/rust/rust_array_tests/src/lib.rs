@@ -12,12 +12,12 @@ pub fn len_plus_arg<T>(xs: &[T], n: usize) -> usize {
     xs.len() + n
 }
 
-/// Inline `is_empty` use followed by arithmetic.
+/// `is_empty` use (lowered to a `call` at opt-0) followed by arithmetic.
 pub fn empty_plus_three<T>(xs: &[T]) -> u32 {
     xs.is_empty() as u32 + 3
 }
 
-/// Inline `is_empty` use combined with an independent flag.
+/// `is_empty` use (lowered to a `call` at opt-0) combined with an independent flag.
 pub fn empty_xor_flag<T>(xs: &[T], flag: u32) -> u32 {
     (xs.is_empty() as u32) ^ flag
 }

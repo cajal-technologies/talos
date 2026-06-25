@@ -14,7 +14,10 @@ Two layers, both discharged by reusing the `CodeLib/RustStd/Array` chunks:
   through the `crate::is_empty` re-mask wrapper `func1`). The export specs are
   therefore conditional on the caller having laid a fat pointer in memory at the
   argument pointer `p` (`read32 (p+0) = dataPtr`, `read32 (p+4) = len`) within
-  bounds — exactly the ABI contract.
+  bounds — exactly the ABI contract. They are *conditional total correctness*:
+  given that contract the call terminates with the right value; the
+  out-of-bounds case (where the `load32` traps) is outside the contract and
+  deliberately not asserted.
 -/
 
 namespace Project.RustArray.Spec
