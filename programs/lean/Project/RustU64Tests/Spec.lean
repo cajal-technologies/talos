@@ -15,9 +15,10 @@ is the whole point — the same theorem also serves the called export body.
   `xor_seq`/`not_seq`.
 - `shl`/`shr`: `shl_seq`/`shr_seq` — the width-specific mask-extend-shift chunk
   (the `b % 64` normalisation is baked into the chunk, so no `bv_decide` here).
-- `div`/`rem`: peel the zero-divisor guard `block` (`wp_block_cons`), then reuse
-  `div_seq`/`rem_seq` for the divide/remainder (`divUI64`/`remUI64` atomics
-  excluded). The trailing `+ c` / `* c` reuses `add_seq` / `mul_seq` too.
+- `div`/`rem`: peel the `block` (`wp_block_cons`), reuse `nonzeroGuardSeq` for the
+  zero-divisor guard (no hand-rolled guard simp), then reuse `div_seq`/`rem_seq`
+  for the divide/remainder (`divUI64`/`remUI64` atomics excluded). The trailing
+  `+ c` / `* c` reuses `add_seq` / `mul_seq` too.
 -/
 
 set_option linter.unusedSimpArgs false
@@ -268,13 +269,14 @@ theorem div_then_add_correct : DivThenAddSpec := by
   intro env a b c hb
   apply TerminatesWith.of_wp_entry_for (f := func4Def) rfl
   unfold func4Def func4
-  apply wp_block_cons
-  have h10 : (1 : UInt32) &&& 0 = 0 := by decide
   simp only [Function.toLocals, Function.numParams, List.take, List.reverse, List.reverseAux,
-    List.map, ValueType.zero, wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
+    List.map, ValueType.zero, List.length_cons, List.length_nil]
+  apply wp_block_cons
+  have hget : (⟨[.i64 a, .i64 b, .i64 c], [], []⟩ : Locals).get 1 = some (.i64 b) := rfl
+  rw [nonzeroGuardSeq 1 b [] hget hb]
+  simp only [wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
     List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
-    List.drop, wp_constI64_cons, wp_eqI64_cons, hb, ↓reduceIte, wp_const_cons, wp_and_cons,
-    wp_br_if_cons, h10]
+    List.drop]
   rw [div_seq a b _ hb]
   simp only [wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
     List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
@@ -291,13 +293,14 @@ theorem div_then_mul_correct : DivThenMulSpec := by
   intro env a b c hb
   apply TerminatesWith.of_wp_entry_for (f := func5Def) rfl
   unfold func5Def func5
-  apply wp_block_cons
-  have h10 : (1 : UInt32) &&& 0 = 0 := by decide
   simp only [Function.toLocals, Function.numParams, List.take, List.reverse, List.reverseAux,
-    List.map, ValueType.zero, wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
+    List.map, ValueType.zero, List.length_cons, List.length_nil]
+  apply wp_block_cons
+  have hget : (⟨[.i64 a, .i64 b, .i64 c], [], []⟩ : Locals).get 1 = some (.i64 b) := rfl
+  rw [nonzeroGuardSeq 1 b [] hget hb]
+  simp only [wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
     List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
-    List.drop, wp_constI64_cons, wp_eqI64_cons, hb, ↓reduceIte, wp_const_cons, wp_and_cons,
-    wp_br_if_cons, h10]
+    List.drop]
   rw [div_seq a b _ hb]
   simp only [wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
     List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
@@ -315,13 +318,14 @@ theorem rem_then_add_correct : RemThenAddSpec := by
   intro env a b c hb
   apply TerminatesWith.of_wp_entry_for (f := func12Def) rfl
   unfold func12Def func12
-  apply wp_block_cons
-  have h10 : (1 : UInt32) &&& 0 = 0 := by decide
   simp only [Function.toLocals, Function.numParams, List.take, List.reverse, List.reverseAux,
-    List.map, ValueType.zero, wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
+    List.map, ValueType.zero, List.length_cons, List.length_nil]
+  apply wp_block_cons
+  have hget : (⟨[.i64 a, .i64 b, .i64 c], [], []⟩ : Locals).get 1 = some (.i64 b) := rfl
+  rw [nonzeroGuardSeq 1 b [] hget hb]
+  simp only [wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
     List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
-    List.drop, wp_constI64_cons, wp_eqI64_cons, hb, ↓reduceIte, wp_const_cons, wp_and_cons,
-    wp_br_if_cons, h10]
+    List.drop]
   rw [rem_seq a b _ hb]
   simp only [wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
     List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
@@ -338,20 +342,21 @@ theorem rem_then_mul_correct : RemThenMulSpec := by
   intro env a b c hb
   apply TerminatesWith.of_wp_entry_for (f := func13Def) rfl
   unfold func13Def func13
-  apply wp_block_cons
-  have h10 : (1 : UInt32) &&& 0 = 0 := by decide
   simp only [Function.toLocals, Function.numParams, List.take, List.reverse, List.reverseAux,
-    List.map, ValueType.zero, wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
+    List.map, ValueType.zero, List.length_cons, List.length_nil]
+  apply wp_block_cons
+  have hget : (⟨[.i64 a, .i64 b, .i64 c], [], []⟩ : Locals).get 1 = some (.i64 b) := rfl
+  rw [nonzeroGuardSeq 1 b [] hget hb]
+  simp only [wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
     List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
-    List.drop, wp_constI64_cons, wp_eqI64_cons, hb, ↓reduceIte, wp_const_cons, wp_and_cons,
-    wp_br_if_cons, h10]
+    List.drop]
   rw [rem_seq a b _ hb]
   simp only [wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
     List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
     List.drop, mul_seq, wp_ret_cons]
   simp [List.take]
 
-/-! ## shl / shr — width-specific mask-extend-shift (reusable theorem: `U64.shlBodyWp`) -/
+/-! ## shl / shr — width-specific mask-extend-shift (reusable theorem: `U64.shl_seq`) -/
 @[spec_of "rust-exported" "rust_u64_tests::shl_then_add"]
 def ShlThenAddSpec : Prop := ∀ (env : HostEnv Unit) (a : UInt64) (n : UInt32) (b : UInt64),
   TerminatesWith env «module» 14 «module».initialStore [.i64 b, .i32 n, .i64 a]

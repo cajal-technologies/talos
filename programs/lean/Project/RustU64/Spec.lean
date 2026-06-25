@@ -3,16 +3,27 @@ import Project.RustU64.Program
 /-!
 # `rust_u64` per-crate specs (abs_diff + operators add .. shr)
 
-Each spec is discharged by reusing the per-function CodeLib theorem from
-`CodeLib/RustStd/U64/<Fn>.lean` (`addBodyWp`, …, `divBodyWp`, `shlBodyWp`, …),
-which is itself built on the type-agnostic trunk `CodeLib/RustStd/UInt.lean`.
-No operator body is re-proven here — `of_returns_wp` bridges the reusable `wp`
-fact to `TerminatesWith`.
+Each spec is discharged by reusing the per-function CodeLib chunk from
+`CodeLib/RustStd/U64/<Fn>.lean` (`add_chunk`, …, `shl_chunk`, …) through the
+trunk's body combinators (`binBodyReturnsWp`, `unBodyReturnsWp`, and
+`divBodyWp`/`remBodyWp` for the guarded ops), all built on the type-agnostic
+trunk `CodeLib/RustStd/UInt.lean`. No operator body is re-proven here —
+`of_returns_wp` bridges the reusable `wp` fact to `TerminatesWith`.
 -/
 
 namespace Project.RustU64.Spec
 
 open Wasm Wasm.RustStd Wasm.RustStd.U64
+
+/-! The panic tail emitted after a guarded op's `block`: push the panic message's
+data offset, `call` the imported panic handler, then `unreachable`. The reusable
+`divBodyWp`/`remBodyWp` deliberately quantify over this tail (it is unreachable
+when the divisor is nonzero), so the concrete literals — which are specific to
+*this* module's data layout and import table, not to CodeLib — are named here at
+the call site. Naming them keeps the `func*Def` body match legible: a regenerated
+module that shifts the offset or func index is a one-line edit here. -/
+def divPanicTail : Program := [.const 1048600, .call 66, .unreachable]
+def remPanicTail : Program := [.const 1048616, .call 67, .unreachable]
 
 @[spec_of "rust-internal" "core::num::abs_diff"]
 def AbsDiffSpec : Prop :=
@@ -70,7 +81,7 @@ def DivSpec : Prop :=
 theorem div_correct : DivSpec := by
   intro env a b hb
   exact (TerminatesWith.of_returns_wp (f := func6Def) (rs := [.i64 (a / b)]) rfl rfl
-      (divBodyWp «module».initialStore 0 1 a b [] [.const 1048600, .call 66, .unreachable]
+      (divBodyWp «module».initialStore 0 1 a b [] divPanicTail
         rfl rfl hb) rfl).mono (fun _ _ h => h.1)
 
 @[spec_of "rust-exported" "rust_u64::rem"]
@@ -82,7 +93,7 @@ def RemSpec : Prop :=
 theorem rem_correct : RemSpec := by
   intro env a b hb
   exact (TerminatesWith.of_returns_wp (f := func10Def) (rs := [.i64 (a % b)]) rfl rfl
-      (remBodyWp «module».initialStore 0 1 a b [] [.const 1048616, .call 67, .unreachable]
+      (remBodyWp «module».initialStore 0 1 a b [] remPanicTail
         rfl rfl hb) rfl).mono (fun _ _ h => h.1)
 
 @[spec_of "rust-exported" "rust_u64::bitand"]
@@ -138,7 +149,7 @@ def ShlSpec : Prop :=
 theorem shl_correct : ShlSpec := by
   intro env a b
   exact (TerminatesWith.of_returns_wp (f := func12Def) (rs := [.i64 (a <<< (b.toUInt64 % 64))])
-      rfl rfl (hbinBodyReturnsWp shl_chunk «module».initialStore 0 1 a b [] rfl rfl) rfl).mono
+      rfl rfl (binBodyReturnsWp shl_chunk «module».initialStore 0 1 a b [] rfl rfl) rfl).mono
       (fun _ _ h => h.1)
 
 @[spec_of "rust-exported" "rust_u64::shr"]
@@ -150,7 +161,7 @@ def ShrSpec : Prop :=
 theorem shr_correct : ShrSpec := by
   intro env a b
   exact (TerminatesWith.of_returns_wp (f := func13Def) (rs := [.i64 (a >>> (b.toUInt64 % 64))])
-      rfl rfl (hbinBodyReturnsWp shr_chunk «module».initialStore 0 1 a b [] rfl rfl) rfl).mono
+      rfl rfl (binBodyReturnsWp shr_chunk «module».initialStore 0 1 a b [] rfl rfl) rfl).mono
       (fun _ _ h => h.1)
 
 end Project.RustU64.Spec
