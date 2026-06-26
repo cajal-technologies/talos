@@ -68,4 +68,28 @@ theorem wordsAt_write32_of_disjoint (m : Mem) (base a v : UInt32) (n : Nat)
   rw [Mem.read32_write32_of_disjoint m a (base + 4 * UInt32.ofNat i) v
       (by rw [toNat_wordAddr base n i hi hub]; omega)]
 
+/-- `read32` depends only on the four bytes it reads. -/
+theorem Mem.read32_congr (m m' : Mem) (a : UInt32)
+    (h0 : m'.bytes a.toNat = m.bytes a.toNat)
+    (h1 : m'.bytes (a.toNat + 1) = m.bytes (a.toNat + 1))
+    (h2 : m'.bytes (a.toNat + 2) = m.bytes (a.toNat + 2))
+    (h3 : m'.bytes (a.toNat + 3) = m.bytes (a.toNat + 3)) :
+    m'.read32 a = m.read32 a := by
+  simp only [Mem.read32, h0, h1, h2, h3]
+
+/-- Byte-agreement bridge: if `m'` matches `m` on every byte of the region
+`[base, base + 4*n)`, then `wordsAt` agrees there. This converts the
+byte-level effect/frame of a wasm function into the `wordsAt` view. -/
+theorem wordsAt_congr_of_bytes (m m' : Mem) (base : UInt32) (n : Nat)
+    (hub : base.toNat + 4 * n ≤ 4294967296)
+    (h : ∀ i, base.toNat ≤ i → i < base.toNat + 4 * n → m'.bytes i = m.bytes i) :
+    wordsAt m' base n = wordsAt m base n := by
+  simp only [wordsAt]
+  apply List.map_congr_left
+  intro i hi
+  rw [List.mem_range] at hi
+  have ha : (base + 4 * UInt32.ofNat i).toNat = base.toNat + 4 * i :=
+    toNat_wordAddr base n i hi hub
+  apply Mem.read32_congr <;> rw [ha] <;> apply h <;> omega
+
 end Project.MergeSort.Framing
