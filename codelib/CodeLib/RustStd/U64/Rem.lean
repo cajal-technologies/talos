@@ -1,38 +1,42 @@
 import CodeLib.RustStd.U64.Basic
 
-/-! `u64::rem` (`a % b`) — inlined as a zero-divisor guard `block` around `i64.rem_u`. -/
+/-! `u64::rem` (`a % b`) — a zero-divisor guard `block` around `i64.rem_u`,
+reusing the trunk's `checkedBinBodyReturnsWp` template. -/
 
 namespace Wasm.RustStd.U64
 open Wasm Wasm.RustStd
 
-/-- The bare `i64.rem_u` chunk on stack operands, divisor ≠ 0. -/
-theorem rem_chunk {α : Type} {m : Module} {env : HostEnv α} {Q : Assertion α}
+/-- The reusable chunk for the bare `i64.rem_u`, carrying the nonzero-divisor
+precondition. -/
+theorem rem_chunk :
+    BinChunk (A := UInt64) (B := UInt64) (C := UInt64)
+      [.remUI64] (· % ·) (fun _ b => b ≠ 0) := by
+  intro α m env Q st P L rest a b vs hne
+  simp only [List.cons_append, List.nil_append, toV_u64, wp_remUI64_cons, hne, ↓reduceIte]
+
+/-- Concrete restatement of `rem_chunk` for `rw`/`simp` at an inlined `i64.rem_u`
+once the guard has loaded operands. -/
+theorem rem_seq {α : Type} {m : Module} {env : HostEnv α} {Q : Assertion α}
     {st : Store α} {P L : List Value} {rest : Program} (a b : UInt64) (vs : List Value)
     (hb : b ≠ 0) :
     wp m (.remUI64 :: rest) Q st ⟨P, L, .i64 b :: .i64 a :: vs⟩ env ↔
       wp m rest Q st ⟨P, L, .i64 (a % b) :: vs⟩ env := by
-  simp only [wp_remUI64_cons, hb, ↓reduceIte]
-
-/-- Verbatim opt-0 body of `rust_u64::rem`. -/
-def remBody : Program :=
-  [ .block 0 0 [ .localGet 1, .constI64 0, .eqI64, .const 1, .and, .br_if 0,
-                 .localGet 0, .localGet 1, .remUI64, .ret ],
-    .const 1048616, .call 67, .unreachable ]
+  simpa only [toV_u64, List.cons_append, List.nil_append]
+    using rem_chunk (rest := rest) a b vs hb
 
 set_option maxRecDepth 4096 in
-/-- Export-body theorem for `rust_u64::rem` (divisor ≠ 0): peel the guard, then
-**reuse `rem_chunk`** for the remainder (the `remUI64` atomic is excluded). -/
+/-- Checked remainder body for any dividend/divisor local pair, reusing the
+trunk's guarded-body template with the `nonzeroGuard` fall-through. The panic
+`tail` is arbitrary (unreachable when `b ≠ 0`). -/
 theorem remBodyWp {α} {m : Module} {env : HostEnv α} (st : Store α)
-    (a b : UInt64) (vs : List Value) (hb : b ≠ 0) :
-    wp m remBody (Returns (.i64 (a % b) :: vs) (framePost st)) st ⟨[.i64 a, .i64 b], [], vs⟩ env := by
-  unfold remBody Returns framePost
-  apply wp_block_cons
-  have h10 : (1 : UInt32) &&& 0 = 0 := by decide
-  simp only [wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
-    List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT,
-    reduceIte, wp_constI64_cons, wp_eqI64_cons, hb, ↓reduceIte, wp_const_cons,
-    wp_and_cons, wp_br_if_cons, h10]
-  rw [rem_chunk a b _ hb]
-  simp
+    {P L : List Value} (i j : Nat) (a b : UInt64) (vs : List Value) (tail : Program)
+    (ha : (⟨P, L, vs⟩ : Locals).get i = some (.i64 a))
+    (hb : (⟨P, L, vs⟩ : Locals).get j = some (.i64 b))
+    (hne : b ≠ 0) :
+    wp m (checkedBinBody (nonzeroGuard j) [.remUI64] i j ++ tail)
+      (Returns (.i64 (a % b) :: vs) (framePost st))
+      st ⟨P, L, vs⟩ env :=
+  checkedBinBodyReturnsWp rem_chunk st i j a b vs tail
+    (fun {_Q _rest} => nonzeroGuardWp j b vs hb hne) ha hb hne
 
 end Wasm.RustStd.U64
