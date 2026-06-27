@@ -1114,7 +1114,7 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
               match m.types[typeIdx]? with
               | none    => .Invalid s!"returnCallIndirect: type index {typeIdx} out of range"
               | some ty =>
-                if fn.params = ty.params ∧ fn.results = ty.results then
+                if m.indirectCallTypeOk fid typeIdx fn ty = true then
                   .ReturnCall fid st rest
                 else .Trap st "indirect call type mismatch"
           | some _ => .Invalid "returnCallIndirect: non-funcref table entry"
@@ -1132,7 +1132,7 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
               match m.types[typeIdx]? with
               | none    => .Invalid s!"returnCallIndirect: type index {typeIdx} out of range"
               | some ty =>
-                if fn.params = ty.params ∧ fn.results = ty.results then
+                if m.indirectCallTypeOk fid typeIdx fn ty = true then
                   .ReturnCall fid st rest
                 else .Trap st "indirect call type mismatch"
           | some _ => .Invalid "returnCallIndirect: non-funcref table entry"
@@ -1254,7 +1254,7 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
               match m.types[typeIdx]? with
               | none    => .Invalid s!"callIndirect: type index {typeIdx} out of range"
               | some ty =>
-                if fn.params = ty.params ∧ fn.results = ty.results then
+                if m.indirectCallTypeOk fid typeIdx fn ty = true then
                   match run f m fid st rest env with
                   | .Success vs st' => .Fallthrough st' { s with values := vs }
                   | .Trap st' msg   => .Trap st' msg
@@ -1279,7 +1279,7 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
               match m.types[typeIdx]? with
               | none    => .Invalid s!"callIndirect: type index {typeIdx} out of range"
               | some ty =>
-                if fn.params = ty.params ∧ fn.results = ty.results then
+                if m.indirectCallTypeOk fid typeIdx fn ty = true then
                   match run f m fid st rest env with
                   | .Success vs st' => .Fallthrough st' { s with values := vs }
                   | .Trap st' msg   => .Trap st' msg

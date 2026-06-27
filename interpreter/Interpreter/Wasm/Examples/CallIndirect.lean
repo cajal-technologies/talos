@@ -69,7 +69,7 @@ theorem dispatchSpec (n : UInt32) :
   · rfl
   · rfl
   · rfl
-  · exact ⟨rfl, rfl⟩
+  · decide
   · exact incrSpec n
   · rfl
   · rintro st' vs rfl

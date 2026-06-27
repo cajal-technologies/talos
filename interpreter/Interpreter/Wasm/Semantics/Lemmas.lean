@@ -215,7 +215,7 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
                     · rcases hty : m.types[ti]? with _ | ty
                       · simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot', hr, hfn, hty]
                       · by_cases hsig :
-                            fn.params = ty.params ∧ fn.results = ty.results
+                            m.indirectCallTypeOk fid ti fn ty = true
                         · have hrun : run k m fid st rest env ≠ .OutOfFuel := by
                             intro h; apply hne
                             simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot', hr,
@@ -253,7 +253,7 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
                     · rcases hty : m.types[ti]? with _ | ty
                       · simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot', hr, hfn, hty]
                       · by_cases hsig :
-                            fn.params = ty.params ∧ fn.results = ty.results
+                            m.indirectCallTypeOk fid ti fn ty = true
                         · have hrun : run k m fid st rest env ≠ .OutOfFuel := by
                             intro h; apply hne
                             simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot', hr,
@@ -490,7 +490,7 @@ theorem exec_callIndirect_cons {α : Type}
     (hSlot : tbl[i.toNat]? = some (.funcref (some fid)))
     (hFn   : m.funcSig? fid = some fn)
     (hTy   : m.types[ti]? = some ty)
-    (hSig  : fn.params = ty.params ∧ fn.results = ty.results) :
+    (hSig  : m.indirectCallTypeOk fid ti fn ty = true) :
     exec (fuel + 1) m st s (.callIndirect ti tj :: rest) env =
       (match run fuel m fid st vs0 env with
        | .Success vs st' => exec (fuel + 1) m st' { s with values := vs } rest env
