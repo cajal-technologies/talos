@@ -92,4 +92,41 @@ theorem wordsAt_congr_of_bytes (m m' : Mem) (base : UInt32) (n : Nat)
     toNat_wordAddr base n i hi hub
   apply Mem.read32_congr <;> rw [ha] <;> apply h <;> omega
 
+/-! ## 64-bit ↔ 32-bit store/load bridges
+
+The opt-0 codegen shuffles slice descriptors through 64-bit `load`/`store`
+pairs. These bridges turn each 64-bit access into the two adjacent 32-bit
+words, so the `read32`/`write32` framing lemmas above carry through. -/
+
+/-- A 64-bit store is two adjacent 32-bit stores (low word first), provided the
+8-byte footprint does not wrap the 32-bit address space. -/
+theorem Mem.write64_eq_write32 (m : Mem) (a : UInt32) (v : UInt64)
+    (h : a.toNat + 8 ≤ 4294967296) :
+    m.write64 a v = (m.write32 a v.toUInt32).write32 (a + 4) (v >>> 32).toUInt32 := by
+  have ha4 : (a + 4).toNat = a.toNat + 4 := by
+    rw [UInt32.toNat_add, show (4 : UInt32).toNat = 4 from rfl]; omega
+  simp only [Mem.write64, Mem.write32]
+  congr 1
+  funext i
+  simp only [ha4]
+  split_ifs <;> first | omega | bv_decide
+
+/-- The low 32 bits of a 64-bit load are the 32-bit load at the same address. -/
+theorem Mem.read64_toUInt32 (m : Mem) (a : UInt32) :
+    (m.read64 a).toUInt32 = m.read32 a := by
+  simp only [Mem.read64, Mem.read32]
+  bv_decide
+
+/-- The high 32 bits of a 64-bit load are the 32-bit load four bytes up. -/
+theorem Mem.read64_shiftRight32_toUInt32 (m : Mem) (a : UInt32)
+    (h : a.toNat + 8 ≤ 4294967296) :
+    (m.read64 a >>> 32).toUInt32 = m.read32 (a + 4) := by
+  have ha4 : (a + 4).toNat = a.toNat + 4 := by
+    rw [UInt32.toNat_add, show (4 : UInt32).toNat = 4 from rfl]; omega
+  simp only [Mem.read64, Mem.read32, ha4,
+    show a.toNat + 4 + 1 = a.toNat + 5 from rfl,
+    show a.toNat + 4 + 2 = a.toNat + 6 from rfl,
+    show a.toNat + 4 + 3 = a.toNat + 7 from rfl]
+  bv_decide
+
 end Project.MergeSort.Framing
