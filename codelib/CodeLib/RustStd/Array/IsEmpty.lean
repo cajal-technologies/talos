@@ -47,4 +47,30 @@ theorem isEmptyBodyWp {α} {m : Module} {env : HostEnv α} (st : Store α)
       (Returns (.i32 (isEmptyValue len) :: vs) (framePost st)) st ⟨P, L, vs⟩ env :=
   unBodyReturnsWp isEmpty_chunk st i len vs hlen
 
+/-- Reusable *callee* fact for a generated leaf `is_empty` body. Any module
+function `id` whose body is the canonical `[localGet 1, const 0, eq, const 1, and,
+ret]` (the slice length sits in param local `1`, the second fat-pointer field)
+terminates, when called with stack `(len, dataPtr, …rest)`, returning
+`isEmptyValue len` on top of `rest`. Each corpus' leaf `is_empty` call bridge is
+this lemma at its concrete `func…Def`, so the `of_returns_wp`/`isEmptyBodyWp` glue
+lives here once instead of being restated per corpus. -/
+theorem isEmptyBodyTerminates {α} {env : HostEnv α} {m : Module} {id : Nat}
+    {f : Function} (st : Store α) (dataPtr len : UInt32) (rest : List Value)
+    (hf : m.funcs[id - m.imports.length]? = some f)
+    (hbody : f.body = [.localGet 1, .const 0, .eq, .const 1, .and, .ret])
+    (hnp : f.numParams = 2)
+    (hres : f.results.length = 1)
+    (hImp : m.imports[id]? = none := by rfl) :
+    TerminatesWith env m id st (.i32 len :: .i32 dataPtr :: rest)
+      (fun st' vs => vs = .i32 (isEmptyValue len) :: rest ∧ framePost st st') := by
+  refine (TerminatesWith.of_returns_wp (f := f) (rs := [.i32 (isEmptyValue len)])
+      (P := framePost st) hf hres.symm ?_ hImp).mono ?_
+  · rw [hbody]
+    simp only [Function.toLocals, hnp]
+    exact isEmptyBodyWp st 1 len [] rfl
+  · intro st' vs h
+    refine ⟨?_, h.2⟩
+    rw [h.1, hnp]
+    simp
+
 end Wasm.RustStd.Array

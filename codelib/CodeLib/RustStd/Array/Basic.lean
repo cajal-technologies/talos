@@ -90,4 +90,20 @@ theorem fatPtrLoadWp {α : Type} {m : Module} {env : HostEnv α} {Q : Assertion 
   simp only [Locals.get] at hp
   simp only [wp_localGet_cons, Locals.get, hp, wp_load32_cons, hb0, hb4, ↓reduceIte, hdata, hlen]
 
+/-- Open a memory-resident slice export: peel the entry frame down to the
+`localGet 0; load32 0; localGet 0; load32 4` prefix (the slice pointer is the
+first param, local `0`) and rewrite that prefix with `fatPtrLoadWp`, leaving the
+called body with `len` on top of `dataPtr`. Every export wrapper in the slice
+corpora opens the same way; this is that opener as one tactic so the peel set and
+the `fatPtrLoadWp` invocation live in a single place. Use as
+`load_fat_ptr p, dataPtr, len using hfat`. -/
+syntax "load_fat_ptr " term ", " term ", " term " using " term : tactic
+
+macro_rules
+  | `(tactic| load_fat_ptr $p, $dataPtr, $len using $hfat) =>
+    `(tactic|
+      (simp only [Function.toLocals, Function.numParams, List.take, List.reverse,
+          List.reverseAux, List.map, List.length_cons, List.length_nil]
+       rw [fatPtrLoadWp 0 $p $dataPtr $len [] (by simp) $hfat]))
+
 end Wasm.RustStd.Array

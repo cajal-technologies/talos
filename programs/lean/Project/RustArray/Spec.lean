@@ -61,13 +61,13 @@ private theorem len_call {env : HostEnv Unit} (st : Store Unit)
   TerminatesWith.of_returns_wp (f := func0Def) (rs := [.i32 len]) rfl rfl
     (lenBodyWp st 1 len [] rfl) rfl
 
-/-- `func2` (`is_empty` leaf body) as a callee: returns `isEmptyValue len`. -/
+/-- `func2` (`is_empty` leaf body) as a callee: returns `isEmptyValue len`,
+reusing the CodeLib leaf bridge `isEmptyBodyTerminates`. -/
 private theorem isEmptyLeaf_call {env : HostEnv Unit} (st : Store Unit)
     (dataPtr len : UInt32) (rest : List Value) :
     TerminatesWith env «module» 2 st (.i32 len :: .i32 dataPtr :: rest)
       (fun st' vs => vs = .i32 (isEmptyValue len) :: rest ∧ framePost st st') :=
-  TerminatesWith.of_returns_wp (f := func2Def) (rs := [.i32 (isEmptyValue len)]) rfl rfl
-    (isEmptyBodyWp st 1 len [] rfl) rfl
+  isEmptyBodyTerminates st dataPtr len rest rfl rfl rfl rfl
 
 /-- `func1` (`crate::is_empty`) as a callee: calls the leaf `is_empty` and
 re-masks the bool with `& 1`, which `isEmptyValue_and_one` collapses. -/
@@ -99,9 +99,7 @@ theorem len_export_correct : LenExportSpec := by
   intro env st p dataPtr len hfat
   apply TerminatesWith.of_wp_entry_for (f := func4Def) rfl
   unfold func4Def func4
-  simp only [Function.toLocals, Function.numParams, List.take, List.reverse, List.reverseAux,
-    List.map, List.length_cons, List.length_nil]
-  rw [fatPtrLoadWp 0 p dataPtr len [] (by simp) hfat]
+  load_fat_ptr p, dataPtr, len using hfat
   apply wp_call_tw (len_call st dataPtr len [])
   intro st1 vs1 h1
   obtain ⟨hvs1, _⟩ := h1
@@ -120,9 +118,7 @@ theorem is_empty_export_correct : IsEmptyExportSpec := by
   intro env st p dataPtr len hfat
   apply TerminatesWith.of_wp_entry_for (f := func5Def) rfl
   unfold func5Def func5
-  simp only [Function.toLocals, Function.numParams, List.take, List.reverse, List.reverseAux,
-    List.map, List.length_cons, List.length_nil]
-  rw [fatPtrLoadWp 0 p dataPtr len [] (by simp) hfat]
+  load_fat_ptr p, dataPtr, len using hfat
   apply wp_call_tw (crateIsEmpty_call st dataPtr len [])
   intro st1 vs1 h1
   subst h1
