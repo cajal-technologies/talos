@@ -33,13 +33,12 @@ private theorem lenPlusOne_call {env : HostEnv Unit} (st : Store Unit)
   apply TerminatesWith.of_wp_entry_for (f := func1Def) rfl
   unfold func1Def func1
   simp only [Function.toLocals, Function.numParams, List.take, List.reverse, List.reverseAux,
-    List.map, ValueType.zero, Locals.get, List.length_cons, List.length_nil,
+    List.map, ValueType.zero, wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
     List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
     List.drop]
-  rw [len_seq 1 len [] rfl]
   simp only [wp_const_cons, wp_add_cons, wp_ret_cons, Continuation.Return.injEq,
     List.cons.injEq, List.cons_append, and_true, List.append_nil]
-  rw [show (1 : UInt32) + len = len + 1 from by bv_decide]
+  rw [UInt32.add_comm 1 len]
   simp
 
 private theorem lenPlusArg_call {env : HostEnv Unit} (st : Store Unit)
@@ -49,15 +48,11 @@ private theorem lenPlusArg_call {env : HostEnv Unit} (st : Store Unit)
   apply TerminatesWith.of_wp_entry_for (f := func0Def) rfl
   unfold func0Def func0
   simp only [Function.toLocals, Function.numParams, List.take, List.reverse, List.reverseAux,
-    List.map, ValueType.zero, Locals.get, List.length_cons, List.length_nil,
+    List.map, ValueType.zero, wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
     List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
-    List.drop]
-  rw [len_seq 1 len [] rfl]
-  simp only [wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
-    List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
-    wp_add_cons, wp_ret_cons, Continuation.Return.injEq, List.cons.injEq, List.cons_append,
-    and_true, List.append_nil]
-  rw [show n + len = len + n from by bv_decide]
+    List.drop, wp_add_cons, wp_ret_cons, Continuation.Return.injEq, List.cons.injEq,
+    List.cons_append, and_true, List.append_nil]
+  rw [UInt32.add_comm n len]
   simp
 
 private theorem emptyPlusThree_call {env : HostEnv Unit} (st : Store Unit)
@@ -73,7 +68,7 @@ private theorem emptyPlusThree_call {env : HostEnv Unit} (st : Store Unit)
   subst hvs1
   wp_run
   rw [isEmptyValue_and_one]
-  rw [show (3 : UInt32) + isEmptyValue len = isEmptyValue len + 3 from by bv_decide]
+  rw [UInt32.add_comm 3 (isEmptyValue len)]
   simp
 
 private theorem emptyXorFlag_call {env : HostEnv Unit} (st : Store Unit)
@@ -141,26 +136,26 @@ theorem empty_xor_flag_correct : EmptyXorFlagSpec := by
 The internal specs above verify the inlined-reuse impl bodies. The wasm exports
 (`func5`–`func8`) receive the slice as a fat pointer in linear memory: each loads
 `(dataPtr, len)` back with `fatPtrLoadWp` and calls the impl body above. So, like
-the `rust_u64_tests` crate, the actual exported functions are verified — here
-end-to-end through the memory marshalling, conditional on the in-bounds ABI
-contract, reusing the same call bridges. -/
+the `rust_u64_tests` crate, the actual exported functions are verified — but
+unlike that scalar crate, here end-to-end through the memory marshalling,
+conditional on the shared `FatPtrAt` ABI contract, reusing the same call
+bridges. -/
 
 @[spec_of "rust-exported" "rust_array_tests::len_plus_one"]
 def LenPlusOneExportSpec : Prop :=
   ∀ (env : HostEnv Unit) (st : Store Unit) (p dataPtr len : UInt32),
-    st.mem.read32 (p + 0) = dataPtr → st.mem.read32 (p + 4) = len →
-    p.toNat + 8 ≤ st.mem.pages * 65536 →
+    FatPtrAt st p dataPtr len →
     TerminatesWith env «module» 8 st [.i32 p] (fun _ rs => rs = [.i32 (len + 1)])
 
 set_option maxRecDepth 4096 in
 @[proves Project.RustArrayTests.Spec.LenPlusOneExportSpec]
 theorem len_plus_one_export_correct : LenPlusOneExportSpec := by
-  intro env st p dataPtr len hdata hlen hbound
+  intro env st p dataPtr len hfat
   apply TerminatesWith.of_wp_entry_for (f := func8Def) rfl
   unfold func8Def func8
   simp only [Function.toLocals, Function.numParams, List.take, List.reverse, List.reverseAux,
     List.map, List.length_cons, List.length_nil]
-  rw [fatPtrLoadWp 0 p dataPtr len [] (by simp) hbound hdata hlen]
+  rw [fatPtrLoadWp 0 p dataPtr len [] (by simp) hfat]
   apply wp_call_tw (lenPlusOne_call st dataPtr len [])
   intro st1 vs1 h1
   subst h1
@@ -170,19 +165,18 @@ theorem len_plus_one_export_correct : LenPlusOneExportSpec := by
 @[spec_of "rust-exported" "rust_array_tests::len_plus_arg"]
 def LenPlusArgExportSpec : Prop :=
   ∀ (env : HostEnv Unit) (st : Store Unit) (p dataPtr len n : UInt32),
-    st.mem.read32 (p + 0) = dataPtr → st.mem.read32 (p + 4) = len →
-    p.toNat + 8 ≤ st.mem.pages * 65536 →
+    FatPtrAt st p dataPtr len →
     TerminatesWith env «module» 7 st [.i32 n, .i32 p] (fun _ rs => rs = [.i32 (len + n)])
 
 set_option maxRecDepth 4096 in
 @[proves Project.RustArrayTests.Spec.LenPlusArgExportSpec]
 theorem len_plus_arg_export_correct : LenPlusArgExportSpec := by
-  intro env st p dataPtr len n hdata hlen hbound
+  intro env st p dataPtr len n hfat
   apply TerminatesWith.of_wp_entry_for (f := func7Def) rfl
   unfold func7Def func7
   simp only [Function.toLocals, Function.numParams, List.take, List.reverse, List.reverseAux,
     List.map, List.length_cons, List.length_nil]
-  rw [fatPtrLoadWp 0 p dataPtr len [] (by simp) hbound hdata hlen]
+  rw [fatPtrLoadWp 0 p dataPtr len [] (by simp) hfat]
   wp_run
   apply wp_call_tw (lenPlusArg_call st dataPtr len n [])
   intro st1 vs1 h1
@@ -193,19 +187,18 @@ theorem len_plus_arg_export_correct : LenPlusArgExportSpec := by
 @[spec_of "rust-exported" "rust_array_tests::empty_plus_three"]
 def EmptyPlusThreeExportSpec : Prop :=
   ∀ (env : HostEnv Unit) (st : Store Unit) (p dataPtr len : UInt32),
-    st.mem.read32 (p + 0) = dataPtr → st.mem.read32 (p + 4) = len →
-    p.toNat + 8 ≤ st.mem.pages * 65536 →
+    FatPtrAt st p dataPtr len →
     TerminatesWith env «module» 5 st [.i32 p] (fun _ rs => rs = [.i32 (isEmptyValue len + 3)])
 
 set_option maxRecDepth 4096 in
 @[proves Project.RustArrayTests.Spec.EmptyPlusThreeExportSpec]
 theorem empty_plus_three_export_correct : EmptyPlusThreeExportSpec := by
-  intro env st p dataPtr len hdata hlen hbound
+  intro env st p dataPtr len hfat
   apply TerminatesWith.of_wp_entry_for (f := func5Def) rfl
   unfold func5Def func5
   simp only [Function.toLocals, Function.numParams, List.take, List.reverse, List.reverseAux,
     List.map, List.length_cons, List.length_nil]
-  rw [fatPtrLoadWp 0 p dataPtr len [] (by simp) hbound hdata hlen]
+  rw [fatPtrLoadWp 0 p dataPtr len [] (by simp) hfat]
   apply wp_call_tw (emptyPlusThree_call st dataPtr len [])
   intro st1 vs1 h1
   subst h1
@@ -215,20 +208,19 @@ theorem empty_plus_three_export_correct : EmptyPlusThreeExportSpec := by
 @[spec_of "rust-exported" "rust_array_tests::empty_xor_flag"]
 def EmptyXorFlagExportSpec : Prop :=
   ∀ (env : HostEnv Unit) (st : Store Unit) (p dataPtr len flag : UInt32),
-    st.mem.read32 (p + 0) = dataPtr → st.mem.read32 (p + 4) = len →
-    p.toNat + 8 ≤ st.mem.pages * 65536 →
+    FatPtrAt st p dataPtr len →
     TerminatesWith env «module» 6 st [.i32 flag, .i32 p]
       (fun _ rs => rs = [.i32 (isEmptyValue len ^^^ flag)])
 
 set_option maxRecDepth 4096 in
 @[proves Project.RustArrayTests.Spec.EmptyXorFlagExportSpec]
 theorem empty_xor_flag_export_correct : EmptyXorFlagExportSpec := by
-  intro env st p dataPtr len flag hdata hlen hbound
+  intro env st p dataPtr len flag hfat
   apply TerminatesWith.of_wp_entry_for (f := func6Def) rfl
   unfold func6Def func6
   simp only [Function.toLocals, Function.numParams, List.take, List.reverse, List.reverseAux,
     List.map, List.length_cons, List.length_nil]
-  rw [fatPtrLoadWp 0 p dataPtr len [] (by simp) hbound hdata hlen]
+  rw [fatPtrLoadWp 0 p dataPtr len [] (by simp) hfat]
   wp_run
   apply wp_call_tw (emptyXorFlag_call st dataPtr len flag [])
   intro st1 vs1 h1

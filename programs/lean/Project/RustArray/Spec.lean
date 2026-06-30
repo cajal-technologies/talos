@@ -13,11 +13,11 @@ Two layers, both discharged by reusing the `CodeLib/RustStd/Array` chunks:
   fields back with `fatPtrLoadWp` and then `call` the bodies above (`is_empty`
   through the `crate::is_empty` re-mask wrapper `func1`). The export specs are
   therefore conditional on the caller having laid a fat pointer in memory at the
-  argument pointer `p` (`read32 (p+0) = dataPtr`, `read32 (p+4) = len`) within
-  bounds — exactly the ABI contract. They are *conditional total correctness*:
-  given that contract the call terminates with the right value; the
-  out-of-bounds case (where the `load32` traps) is outside the contract and
-  deliberately not asserted.
+  argument pointer `p` — the shared `FatPtrAt` contract (`dataPtr` at `p+0`, `len`
+  at `p+4`, in bounds). They are *conditional total correctness*: given that
+  contract the call terminates with the right value; the out-of-bounds case
+  (where the `load32` traps) is outside the contract and deliberately not
+  asserted.
 -/
 
 namespace Project.RustArray.Spec
@@ -90,19 +90,18 @@ private theorem crateIsEmpty_call {env : HostEnv Unit} (st : Store Unit)
 
 @[spec_of "rust-exported" "rust_array::len"]
 def LenExportSpec : Prop := ∀ (env : HostEnv Unit) (st : Store Unit) (p dataPtr len : UInt32),
-  st.mem.read32 (p + 0) = dataPtr → st.mem.read32 (p + 4) = len →
-  p.toNat + 8 ≤ st.mem.pages * 65536 →
+  FatPtrAt st p dataPtr len →
   TerminatesWith env «module» 4 st [.i32 p]
     (fun _ rs => rs = [.i32 len])
 
 @[proves Project.RustArray.Spec.LenExportSpec]
 theorem len_export_correct : LenExportSpec := by
-  intro env st p dataPtr len hdata hlen hbound
+  intro env st p dataPtr len hfat
   apply TerminatesWith.of_wp_entry_for (f := func4Def) rfl
   unfold func4Def func4
   simp only [Function.toLocals, Function.numParams, List.take, List.reverse, List.reverseAux,
     List.map, List.length_cons, List.length_nil]
-  rw [fatPtrLoadWp 0 p dataPtr len [] (by simp) hbound hdata hlen]
+  rw [fatPtrLoadWp 0 p dataPtr len [] (by simp) hfat]
   apply wp_call_tw (len_call st dataPtr len [])
   intro st1 vs1 h1
   obtain ⟨hvs1, _⟩ := h1
@@ -112,19 +111,18 @@ theorem len_export_correct : LenExportSpec := by
 
 @[spec_of "rust-exported" "rust_array::is_empty"]
 def IsEmptyExportSpec : Prop := ∀ (env : HostEnv Unit) (st : Store Unit) (p dataPtr len : UInt32),
-  st.mem.read32 (p + 0) = dataPtr → st.mem.read32 (p + 4) = len →
-  p.toNat + 8 ≤ st.mem.pages * 65536 →
+  FatPtrAt st p dataPtr len →
   TerminatesWith env «module» 5 st [.i32 p]
     (fun _ rs => rs = [.i32 (isEmptyValue len)])
 
 @[proves Project.RustArray.Spec.IsEmptyExportSpec]
 theorem is_empty_export_correct : IsEmptyExportSpec := by
-  intro env st p dataPtr len hdata hlen hbound
+  intro env st p dataPtr len hfat
   apply TerminatesWith.of_wp_entry_for (f := func5Def) rfl
   unfold func5Def func5
   simp only [Function.toLocals, Function.numParams, List.take, List.reverse, List.reverseAux,
     List.map, List.length_cons, List.length_nil]
-  rw [fatPtrLoadWp 0 p dataPtr len [] (by simp) hbound hdata hlen]
+  rw [fatPtrLoadWp 0 p dataPtr len [] (by simp) hfat]
   apply wp_call_tw (crateIsEmpty_call st dataPtr len [])
   intro st1 vs1 h1
   subst h1
