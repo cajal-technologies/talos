@@ -107,4 +107,64 @@ theorem func5_tw (env : HostEnv Unit) (st : Store Unit)
   · -- guard fails: contradicts the no-panic precondition `mid ≤ len`
     exact absurd (UInt32.le_iff_toNat_le.mpr hsplit) hle
 
+-- `func13` is the core of `copy_from_slice`: after checking the lengths match,
+-- it `memory.copy`s `dlen*4` bytes from `src` to `dst`. No stack frame.
+set_option maxRecDepth 8192 in
+theorem func13_tw (env : HostEnv Unit) (st : Store Unit)
+    (dst dlen src slen pl : UInt32)
+    (hlen : dlen = slen)
+    (hbd : dst.toNat + (dlen <<< 2).toNat ≤ st.mem.pages * 65536)
+    (hbs : src.toNat + (dlen <<< 2).toNat ≤ st.mem.pages * 65536) :
+    TerminatesWith env «module» 13 st
+      [.i32 pl, .i32 slen, .i32 src, .i32 dlen, .i32 dst]
+      (fun st' vs => vs = [] ∧
+        st' = { st with mem := st.mem.copy dst.toNat src.toNat (dlen <<< 2).toNat }) := by
+  apply TerminatesWith.of_wp_entry_for (f := func13Def) rfl
+  unfold func13Def func13
+  subst hlen
+  apply wp_block_cons
+  apply wp_block_cons
+  mstep
+  rw [if_neg (by simp : ¬(dlen ≠ dlen)), show (1 &&& 0 : UInt32) = 0 from rfl]
+  apply wp_block_cons
+  mstep
+  have hcopy0 : st.mem.copy dst.toNat src.toNat 0 = st.mem := by
+    simp only [Mem.copy, Nat.add_zero]
+    congr 1
+    funext i
+    split_ifs with h
+    · omega
+    · rfl
+  have e : (dlen <<< (2 % 32)).toNat = (dlen <<< 2).toNat := rfl
+  by_cases hz : dlen <<< (2 % 32) = 0
+  · -- empty copy: the count is zero, so the copy is a no-op
+    rw [if_pos hz]
+    refine ⟨trivial, ?_⟩
+    have hz0 : (dlen <<< 2).toNat = 0 := by rw [← e, hz]; rfl
+    rw [hz0, hcopy0]
+  · -- nonempty copy: bounds hold, both copy expressions coincide
+    rw [if_neg hz, if_neg (by omega)]
+    exact ⟨trivial, rfl⟩
+
+-- `func7` (`copy_from_slice`) is a thin wrapper over `func13`: copy the
+-- `dlen`-word source `src` over the destination `dst`.
+set_option maxRecDepth 8192 in
+theorem func7_tw (env : HostEnv Unit) (st : Store Unit)
+    (dst dlen src slen pl : UInt32)
+    (hlen : dlen = slen)
+    (hbd : dst.toNat + (dlen <<< 2).toNat ≤ st.mem.pages * 65536)
+    (hbs : src.toNat + (dlen <<< 2).toNat ≤ st.mem.pages * 65536) :
+    TerminatesWith env «module» 7 st
+      [.i32 pl, .i32 slen, .i32 src, .i32 dlen, .i32 dst]
+      (fun st' vs => vs = [] ∧
+        st' = { st with mem := st.mem.copy dst.toNat src.toNat (dlen <<< 2).toNat }) := by
+  apply TerminatesWith.of_wp_entry_for (f := func7Def) rfl
+  unfold func7Def func7
+  mstep
+  refine wp_call_tw (func13_tw env st dst dlen src slen pl hlen hbd hbs) ?_
+  intro st' vs hpost
+  obtain ⟨rfl, rfl⟩ := hpost
+  mstep
+  exact ⟨trivial, trivial⟩
+
 end Project.MergeSort.Leaves
