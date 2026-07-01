@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+  "merge_sort",
   "swap_elements",
   "rust_array",
   "rust_array_tests",

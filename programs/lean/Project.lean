@@ -1,3 +1,7 @@
+import Project.MergeSort.Framing
+import Project.MergeSort.Leaves
+import Project.MergeSort.Proof
+import Project.MergeSort.Spec
 import Project.NumInteger.Spec
 import Project.RustArray.Spec
 import Project.RustArrayTests.Spec
