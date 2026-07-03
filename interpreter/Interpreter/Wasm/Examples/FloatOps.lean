@@ -1,4 +1,5 @@
 import Interpreter.Wasm.Semantics
+import Interpreter.Wasm.Examples.Harness
 
 /-! ## Example: floating-point operations
 
@@ -13,6 +14,7 @@ Expected values are written as `Float`/`Float32` literals decoded to bits via
 `toBits`, so each theorem reads as the IEEE arithmetic it stands for. -/
 
 namespace Wasm
+open Wasm.Examples
 
 /-- `(2.0 + 3.0) * 4.0` in `f64` ⇒ `20.0`. -/
 def f64Arith : Program :=
@@ -59,14 +61,6 @@ def floatModule : Module :=
       , { body := reinterpret,  results := [.f32] }
       , { body := memRoundtrip, results := [.f64] } ]
     memory := some { pagesMin := 1 } }
-
-/-- Project the value stack out of a `Result Unit`; `Store Unit` carries a
-    function-valued `Mem` and so has no decidable equality. -/
-private def runValues (fuel : Nat) (m : Module) (idx : Nat)
-    (st : Store Unit) (args : List Value) : List Value :=
-  match run fuel m idx st args with
-  | .Success vs _ => vs
-  | _ => []
 
 theorem f64_arith :
     runValues 10 floatModule 0 floatModule.initialStore [] = [.f64 (20.0 : Float).toBits] := by

@@ -1,6 +1,7 @@
 import Interpreter.Wasm.Decoder.Wat
 import Interpreter.Wasm.Wp.Tactic
 import Interpreter.Wasm.Wp.Call
+import Interpreter.Wasm.Examples.Harness
 
 /-! ## Example: decoding a WAT module with imports (M9)
 
@@ -13,6 +14,7 @@ import Interpreter.Wasm.Wp.Call
        expected return value. -/
 
 namespace Wasm
+open Wasm.Examples
 namespace DecoderImport
 
 /-- A `.wat` module with a single host import (`env.inc : i32 → i32`)
@@ -30,10 +32,7 @@ def importWat : String := "
 shape of its `imports`, `funcs` body, and `exports`. We project each
 field rather than comparing whole `Module`s because `Module` has no
 `DecidableEq` instance. -/
-private def decoded : Wasm.Module :=
-  match Wasm.Decoder.Wat.decode importWat with
-  | .ok m    => m
-  | .error _ => default
+private def decoded : Wasm.Module := decodeOrDefault importWat
 
 /-- The single import is `env.inc : i32 → i32`. -/
 theorem importWat_imports :
@@ -68,16 +67,10 @@ def incHost : HostFn Unit :=
 
 def incEnv : HostEnv Unit := { funcs := [incHost] }
 
-private def runVals (m : Module) (env : HostEnv Unit) (idx : Nat)
-    (st : Store Unit) (args : List Value) : List Value :=
-  match run 10 m idx st args env with
-  | .Success vs _ => vs
-  | _ => []
-
 /-- Calling `caller(41)` against `incEnv` returns `[42]` — the import
 was resolved through `Module.imports[0]` → `HostEnv.funcs[0]`. -/
 theorem caller_against_incEnv :
-    runVals decoded incEnv 1 (decoded.initialStore (α := Unit)) [.i32 41]
+    runValues 10 decoded 1 (decoded.initialStore (α := Unit)) [.i32 41] incEnv
       = [.i32 42] := by
   native_decide
 

@@ -55,7 +55,7 @@ Three Lake packages in a monorepo, forming a strict dependency chain:
 |---------|------|---------|
 | `Interpreter` | `interpreter/` | Wasm AST, semantics, WP tactic layer |
 | `CodeLib` | `codelib/` | Lifting lemmas and program-reasoning helpers |
-| `Programs` | `programs/` | Concrete Rust-to-Wasm verification tasks |
+| `Project` | `programs/lean/` | Concrete Rust-to-Wasm verification tasks |
 
 ## Using as a dependency
 
@@ -89,9 +89,9 @@ just build   # builds interpreter → codelib → programs in order
 Or build a single package:
 
 ```bash
-cd interpreter && lake build
-cd codelib     && lake build
-cd programs    && lake build
+cd interpreter  && lake build
+cd codelib      && lake build
+cd programs/lean && lake build
 ```
 
 Dependencies:

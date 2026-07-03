@@ -20,10 +20,8 @@ frame is the "iterate over all keys" reasoning the storage-as-a-function
 model makes free — no Wasm enumeration needed.
 
 Following the repo convention (cf. `XorSum/Spec.lean`), `SetSpec` is stated
-as a `def … : Prop`. The proof now has an explicit successful final-store
-model and a proved storage postcondition; the remaining proof step is the
-symbolic interpreter equality from `run 100` to that final store. The
-`native_decide` theorems below validate the *whole pipeline*
+as a `def … : Prop` and fully proved (`set_spec`) via the WP layer. The
+`native_decide` theorems below additionally validate the *whole pipeline*
 — registers, the memory-or-register sentinel, length-prefix parsing, and
 `storage_write` semantics — executes correctly on concrete inputs.
 -/
@@ -276,24 +274,7 @@ theorem getMemOrReg_writeBytes_encode_val (st : Store NearState) (key val : List
       memBytes, encodeKV, le32, Nat.add_comm, Nat.add_left_comm] at hMem ⊢
     omega
 
-/-! ## Specification (stated; general proof is the next milestone) -/
-
-/-- Host projection after a successful `set`. Register `0` contains the
-raw input. Register `1` receives the old value only on overwrite, matching
-`storage_write`'s output-register convention. -/
-def finalHost (ns : NearState) (key val : List UInt8) : NearState :=
-  let input := encodeKV key val
-  let afterInput := ns.setRegister 0 input
-  match ns.storage key with
-  | some old => ((afterInput.setRegister 1 old).setStorage key val).invalidateIterators
-  | none     => (afterInput.setStorage key val).invalidateIterators
-
-/-- Final store after a successful `set`. -/
-def finalStore (ns : NearState) (key val : List UInt8) : Store NearState :=
-  let st0 := { («module».initialStore : Store NearState) with host := ns }
-  { st0 with
-    mem := st0.mem.writeBytes 0 (encodeKV key val)
-    host := finalHost ns key val }
+/-! ## Specification -/
 
 /-- **Spec for `set`.** For any non-view incoming NEAR state whose `input`
 is the length-prefixed encoding of `(key, val)` (with sizes that fit a u32,
@@ -323,14 +304,6 @@ def SetSpec : Prop :=
       (fun st _ =>
         st.host.storage key = some val ∧
         (∀ k, k ≠ key → st.host.storage k = ns.storage k))
-
-theorem finalStore_satisfies_set_post (ns : NearState) (key val : List UInt8) :
-    (finalStore ns key val).host.storage key = some val ∧
-      (∀ k, k ≠ key → (finalStore ns key val).host.storage k = ns.storage k) := by
-  cases hOld : ns.storage key <;> constructor <;>
-    simp [finalStore, finalHost, hOld, NearState.setStorage, NearState.setRegister,
-      NearState.invalidateIterators]
-  all_goals intro k hk heq; contradiction
 
 def afterInputStore (ns : NearState) (key val : List UInt8) : Store NearState :=
   { globals := {}, mem := Mem.empty 1, host := ns.setRegister 0 (encodeKV key val) }

@@ -1,4 +1,5 @@
 import Interpreter.Wasm.Wp.Tactic
+import Interpreter.Wasm.Examples.Harness
 
 /-! ## Example: i64 memory loads/stores
 
@@ -13,6 +14,7 @@ import Interpreter.Wasm.Wp.Tactic
     constant, then read it back through the matching unsigned load. -/
 
 namespace Wasm
+open Wasm.Examples
 
 private def initBytes : List UInt8 :=
   [0x88, 0xFF, 0x66, 0x55, 0x44, 0x33, 0x22, 0xFF]
@@ -63,13 +65,6 @@ def i64MemModule : Module :=
       , { body := store64RoundtripBody,    results := [.i64] }  -- 10
       ]
     memory := some { pagesMin := 1, data := [{ offset := some 0, bytes := initBytes }] } }
-
-/-- Project the value stack out of a `Result Unit`; see `MemNarrowI32.lean`. -/
-private def runValues (fuel : Nat) (m : Module) (idx : Nat)
-    (st : Store Unit) (args : List Value) : List Value :=
-  match run fuel m idx st args with
-  | .Success vs _ => vs
-  | _ => []
 
 theorem load64_returns_word :
     runValues 10 i64MemModule 0 i64MemModule.initialStore [] = [.i64 0xFF2233445566FF88] := by

@@ -1,13 +1,19 @@
 import Interpreter.Wasm
 
 /-!
-# `TerminatesWith.of_wp_entry`
+# Entry bridges: fuel-free `TerminatesWith` spec ⇒ `wp` goal on the body
 
-Single-step bridge from a fuel-free `TerminatesWith` spec down to a `wp`
-goal on the function body. Fuses `FuncSpec.to_TerminatesWith` and
-`FuncSpec.of_wp_body` and specializes to a fixed argument list, so corpus
+Single-step bridges from a fuel-free `TerminatesWith` spec down to a `wp`
+goal on the function body. They fuse `FuncSpec.to_TerminatesWith` and
+`FuncSpec.of_wp_body` and specialize to a fixed argument list, so corpus
 proofs don't have to name `Pre`/`Post` or run the `FuncSpec` plumbing by
 hand.
+
+* `of_wp_entry` — store-parametric (body proof holds for every initial store).
+* `of_wp_entry_for` — store-specific (body proof depends on the concrete store,
+  e.g. memory bounds); the corpus workhorse, reached via `of_returns_wp` below.
+* `TerminatesWith.mono` — weaken the post-condition, e.g. to relift a raw-value
+  spec through an abstraction decoder.
 -/
 
 namespace Wasm
@@ -85,22 +91,6 @@ theorem TerminatesWith.mono {env : HostEnv α} {m : Module} {id : Nat}
   refine ⟨N, fun fuel hf => ?_⟩
   obtain ⟨vs, st, hRun, hP⟩ := hN fuel hf
   exact ⟨vs, st, hRun, hPQ st vs hP⟩
-
-/-- Start a store-parametric entry proof by inferring the generated
-`Function` witness from the concrete module. Use for specs whose body proof
-does not depend on facts about the caller's initial store. -/
-macro "wasm_entry" : tactic => `(tactic|
-  apply TerminatesWith.of_wp_entry (by rfl))
-
-/-- Store-specific entry-proof variant. Use when the proof depends on
-properties of the concrete initial store, such as memory bounds. -/
-macro "wasm_entry_for" : tactic => `(tactic|
-  apply TerminatesWith.of_wp_entry_for (by rfl))
-
-/-- Start a `FuncSpec` proof by inferring the generated `Function` witness
-from the concrete module. -/
-macro "wasm_funcspec" : tactic => `(tactic|
-  refine FuncSpec.of_wp_body (by rfl) ?_)
 
 /-! ## wp-style function specs
 

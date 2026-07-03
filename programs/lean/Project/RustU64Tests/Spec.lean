@@ -11,8 +11,8 @@ CodeLib theorem is the only way through (confirm by dropping the chunk lemma: th
 proof then fails). This is a CodeLib proof reused on *inlined* client code, which
 is the whole point — the same theorem also serves the called export body.
 
-- straight-line + `not`: `add_seq`/`sub_seq`/`mul_seq`/`and_seq`/`or_seq`/
-  `xor_seq`/`not_seq`.
+- straight-line + `not`: `add_seq`/`sub_seq`/`mul_seq`/`bitand_seq`/`bitor_seq`/
+  `bitxor_seq`/`not_seq`.
 - `shl`/`shr`: `shl_seq`/`shr_seq` — the width-specific mask-extend-shift chunk
   (the `b % 64` normalisation is baked into the chunk, so no `bv_decide` here).
 - `div`/`rem`: peel the `block` (`wp_block_cons`), reuse `nonzeroGuardSeq` for the
@@ -140,7 +140,7 @@ theorem and_chain_correct : AndChainSpec := by
   simp only [Function.toLocals, Function.numParams, List.take, List.reverse, List.reverseAux,
     List.map, ValueType.zero, wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
     List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
-    List.drop, and_seq, wp_ret_cons, Continuation.Return.injEq, List.cons.injEq, and_true,
+    List.drop, bitand_seq, wp_ret_cons, Continuation.Return.injEq, List.cons.injEq, and_true,
     List.append_nil]
 
 @[spec_of "rust-exported" "rust_u64_tests::and_then_or"]
@@ -156,7 +156,7 @@ theorem and_then_or_correct : AndThenOrSpec := by
   simp only [Function.toLocals, Function.numParams, List.take, List.reverse, List.reverseAux,
     List.map, ValueType.zero, wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
     List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
-    List.drop, and_seq, or_seq, wp_ret_cons, Continuation.Return.injEq, List.cons.injEq,
+    List.drop, bitand_seq, bitor_seq, wp_ret_cons, Continuation.Return.injEq, List.cons.injEq,
     and_true, List.append_nil]
 
 /-! ## bitor -/
@@ -173,7 +173,7 @@ theorem or_chain_correct : OrChainSpec := by
   simp only [Function.toLocals, Function.numParams, List.take, List.reverse, List.reverseAux,
     List.map, ValueType.zero, wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
     List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
-    List.drop, or_seq, wp_ret_cons, Continuation.Return.injEq, List.cons.injEq, and_true,
+    List.drop, bitor_seq, wp_ret_cons, Continuation.Return.injEq, List.cons.injEq, and_true,
     List.append_nil]
 
 @[spec_of "rust-exported" "rust_u64_tests::or_then_xor"]
@@ -189,7 +189,7 @@ theorem or_then_xor_correct : OrThenXorSpec := by
   simp only [Function.toLocals, Function.numParams, List.take, List.reverse, List.reverseAux,
     List.map, ValueType.zero, wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
     List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
-    List.drop, or_seq, xor_seq, wp_ret_cons, Continuation.Return.injEq, List.cons.injEq,
+    List.drop, bitor_seq, bitxor_seq, wp_ret_cons, Continuation.Return.injEq, List.cons.injEq,
     and_true, List.append_nil]
 
 /-! ## bitxor -/
@@ -206,7 +206,7 @@ theorem xor_chain_correct : XorChainSpec := by
   simp only [Function.toLocals, Function.numParams, List.take, List.reverse, List.reverseAux,
     List.map, ValueType.zero, wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
     List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
-    List.drop, xor_seq, wp_ret_cons, Continuation.Return.injEq, List.cons.injEq, and_true,
+    List.drop, bitxor_seq, wp_ret_cons, Continuation.Return.injEq, List.cons.injEq, and_true,
     List.append_nil]
 
 @[spec_of "rust-exported" "rust_u64_tests::xor_then_and"]
@@ -222,7 +222,7 @@ theorem xor_then_and_correct : XorThenAndSpec := by
   simp only [Function.toLocals, Function.numParams, List.take, List.reverse, List.reverseAux,
     List.map, ValueType.zero, wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
     List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
-    List.drop, xor_seq, and_seq, wp_ret_cons, Continuation.Return.injEq, List.cons.injEq,
+    List.drop, bitxor_seq, bitand_seq, wp_ret_cons, Continuation.Return.injEq, List.cons.injEq,
     and_true, List.append_nil]
 
 /-! ## not -/
@@ -255,7 +255,7 @@ theorem not_then_xor_correct : NotThenXorSpec := by
   simp only [Function.toLocals, Function.numParams, List.take, List.reverse, List.reverseAux,
     List.map, ValueType.zero, wp_localGet_cons, Locals.get, List.length_cons, List.length_nil,
     List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.reduceAdd, Nat.reduceLT, reduceIte,
-    List.drop, not_seq, xor_seq, wp_ret_cons, Continuation.Return.injEq, List.cons.injEq,
+    List.drop, not_seq, bitxor_seq, wp_ret_cons, Continuation.Return.injEq, List.cons.injEq,
     and_true, List.append_nil]
 
 /-! ## div (divisor nonzero) — peel the guard, then reuse `div_seq` -/

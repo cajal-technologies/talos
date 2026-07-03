@@ -3,6 +3,13 @@
 
 Small bridge lemmas connecting `UInt32` bitwise operations to the
 `Nat` view that user-facing specifications prefer.
+
+`and_one_eq_zero_iff_toNat_mod_two` is consumed by the verifier's scaffolded
+starter proof (`verifier/template/project/lean/Project/IsEven/Spec.lean`), so
+the module is live even though nothing in `programs/lean` references it yet. It
+overlaps the width-generic parity bridge in `UInt64.lean`; both are candidates
+to fold into one shared low-bit lemma once that consolidation is done (keep this
+public name as a corollary — the template simp-references it).
 -/
 
 namespace Wasm
