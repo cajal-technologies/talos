@@ -11,6 +11,7 @@ members = [
   "float_trunc",
   "float_minmax",
   "float_round",
+  "float_reinterpret",
 ]
 [profile.release]
 opt-level = 0
