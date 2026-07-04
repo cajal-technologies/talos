@@ -3,9 +3,13 @@ import Interpreter.Wasm
 /-!
 # `CodeLib.RustStd.Option`
 
-Shared helpers for reasoning about the C-ABI `Option<i64>` encoding used
-by `corpus/rust/rust_std/option` and any downstream crate that picks up
-the same convention.
+Shared helpers for reasoning about the C-ABI `Option<i64>` encoding.
+
+Staged ahead of its first consumer: no crate in `programs/rust` uses this yet.
+It is here because the corpus roadmap reaches `Option`-returning std methods
+(`unwrap_or`, `is_some`, `map`) and the `checked_*` arithmetic family, all of
+which return an `Option` across an `extern "C"` boundary and so hit exactly this
+sentinel encoding.
 
 The convention is:
 
