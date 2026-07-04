@@ -21,16 +21,6 @@ without weakening or rephrasing the executable semantics. -/
 def exactHostContract (hf : HostFn NearState) : HostContract NearState :=
   fun st args res => res = hf.invoke st args
 
-def inputContract : HostContract NearState := exactHostContract inputFn
-def readRegisterContract : HostContract NearState := exactHostContract readRegisterFn
-def registerLenContract : HostContract NearState := exactHostContract registerLenFn
-def writeRegisterContract : HostContract NearState := exactHostContract writeRegisterFn
-def valueReturnContract : HostContract NearState := exactHostContract valueReturnFn
-def storageWriteContract : HostContract NearState := exactHostContract storageWriteFn
-def storageReadContract : HostContract NearState := exactHostContract storageReadFn
-def storageRemoveContract : HostContract NearState := exactHostContract storageRemoveFn
-def storageHasKeyContract : HostContract NearState := exactHostContract storageHasKeyFn
-
 /-! ## Relational host contracts
 
 These contracts expose the proof-relevant pre/post relation for the NEAR
@@ -275,7 +265,15 @@ def promiseResultRelContract : HostContract NearState := fun st args res =>
       | some .failed => res = .Return [.i64 2] st
     | _ => trapResult st res
 
-/-! ## Concrete host-function satisfaction theorems -/
+/-! ## Concrete host-function satisfaction theorems
+
+Each theorem proves that a `…RelContract` above is satisfied by the executable
+`HostFn` in `Env.lean`. They have no downstream consumers by design: they are
+staged ahead of a full NEAR-contract verification, and meanwhile double as
+*build-time sync checks* — because this file is in the `CodeLib` build, any
+change to a `HostFn` that desyncs it from its relational contract breaks the
+corresponding proof here. Keep them until a NEAR example consumes the contracts.
+-/
 
 theorem inputFn_satisfies_rel :
     ∀ st args, inputRelContract st args (inputFn.invoke st args) := by
