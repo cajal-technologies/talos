@@ -6,10 +6,9 @@ page count (1 page = 64 KiB). The function is total: reads outside the
 (typically zero, since `Mem.empty` initialises with `fun _ => 0`), but
 well-formed programs never read those addresses.
 
-This is Step 1 of the linear-memory refactor: only the API and the
-field/structure are introduced. No proofs (frame lemmas, bounds, etc.)
-are added yet — those come later when instructions actually start
-consuming `Mem`.
+This is the live memory model backing every memory instruction:
+loads/stores, `memory.size`/`grow`/`fill`/`copy`/`init`, and the
+multi-memory and data-segment machinery all read and write a `Mem`.
 
 The simplicity-of-reasoning convention applies: writes update the
 underlying `bytes` function pointwise via `fun i => if i ∈ range then …

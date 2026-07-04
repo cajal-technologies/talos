@@ -146,7 +146,9 @@ private def f32LaneBin (f : UInt32 → UInt32 → UInt32) (a b : Nat) : Nat :=
 private def f64LaneBin (f : UInt64 → UInt64 → UInt64) (a b : Nat) : Nat :=
   (f (UInt64.ofNat a) (UInt64.ofNat b)).toNat
 
-/-- `pmin`: `b < a ? b : a`, NaN-insensitive, operand returned unchanged. -/
+/-- The `pmin`/`pmax` family (f32 and f64): `pmin a b = b < a ? b : a` and
+`pmax a b = a < b ? b : a`, NaN-insensitive, returning the chosen operand
+unchanged rather than a canonicalised result. -/
 def f32Pmin (a b : UInt32) : UInt32 := if f32Lt b a then b else a
 def f32Pmax (a b : UInt32) : UInt32 := if f32Lt a b then b else a
 def f64Pmin (a b : UInt64) : UInt64 := if f64Lt b a then b else a
