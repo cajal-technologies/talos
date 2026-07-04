@@ -1,4 +1,5 @@
 import Interpreter.Wasm.Semantics
+import Interpreter.Wasm.Examples.Harness
 
 /-! ## Example: `(return_)call_indirect` rejects a non-subtype (issue #95)
 
@@ -44,6 +45,8 @@ import Interpreter.Wasm.Semantics
 
 namespace Wasm
 
+open Wasm.Examples
+
 namespace CallIndirectSubtype
 
 /-- `$impl : $super` — the function the table holds. Its declared type is
@@ -83,20 +86,17 @@ require of the stored function's type (`$super`) against the call-site type
 (`$sub`); it fails, so the calls must trap. -/
 theorem super_not_subtype_sub : m.gcTypeSubtype 0 1 = false := by native_decide
 
-private def trapMsg (r : Result Unit) : Option String :=
-  match r with | .Trap _ msg => some msg | _ => none
-
 /-- `call_indirect (type $sub)` against `$impl : $super` traps: `$super` is
 not a subtype of `$sub` (`super_not_subtype_sub`). Before #95 this returned
 `7 + 1000 = 1007`. -/
 theorem call_indirect_traps :
-    trapMsg (run 20 m 1 (m.initialStore (α := Unit)) []) =
+    runTrapMsg 20 m 1 (m.initialStore (α := Unit)) [] =
       some "indirect call type mismatch" := by native_decide
 
 /-- `return_call_indirect (type $sub)` traps for the same reason — the
 issue's comment noted the bug was duplicated in the tail-call arms. -/
 theorem return_call_indirect_traps :
-    trapMsg (run 20 m 2 (m.initialStore (α := Unit)) []) =
+    runTrapMsg 20 m 2 (m.initialStore (α := Unit)) [] =
       some "indirect call type mismatch" := by native_decide
 
 end CallIndirectSubtype

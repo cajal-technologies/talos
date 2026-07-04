@@ -1,4 +1,5 @@
 import Interpreter.Wasm.Wp.Tactic
+import Interpreter.Wasm.Examples.Harness
 
 /-! ## Example: EarlyBrInvalid
 
@@ -9,19 +10,13 @@ import Interpreter.Wasm.Wp.Tactic
 
 namespace Wasm
 
+open Wasm.Examples
+
 def EarlyBrInvalid : Program := [.localGet 0, .br 1]
 
 def earlyBrInvalidModule : Module := {
   funcs := [{ params := [.i32], results := [.i32], body := EarlyBrInvalid }]
 }
-
-/-- Project the invalid message (if any) out of a `Result Unit`, so we can
-    `native_decide` against it without needing `DecidableEq Store Unit`. -/
-private def runInvalidMsg (fuel : Nat) (m : Module) (idx : Nat)
-    (st : Store Unit) (args : List Value) : Option String :=
-  match run fuel m idx st args with
-  | .Invalid msg => some msg
-  | _            => none
 
 theorem early_br_out_of_scope_is_invalid :
     runInvalidMsg 10 earlyBrInvalidModule 0

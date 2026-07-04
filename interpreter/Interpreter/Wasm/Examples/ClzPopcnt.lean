@@ -1,5 +1,6 @@
 import Interpreter.Wasm.Wp.Tactic
 import Interpreter.Wasm.Wp.Call
+import Interpreter.Wasm.Examples.Harness
 
 /-! ## Example: ClzPopcnt
 
@@ -18,6 +19,7 @@ import Interpreter.Wasm.Wp.Call
     Wasm defines `clz`/`ctz` of zero as 32; `popcnt` counts set bits. -/
 
 namespace Wasm
+open Wasm.Examples
 
 /-! ### Function bodies -/
 
@@ -35,14 +37,6 @@ def clzPopcntModule : Module :=
       [ { params := [.i32], body := ClzBody,    results := [.i32] }
       , { params := [.i32], body := CtzBody,    results := [.i32] }
       , { params := [.i32], body := PopcntBody, results := [.i32] } ] }
-
-/-! ### Helpers -/
-
-private def runValues (fuel : Nat) (m : Module) (idx : Nat)
-    (st : Store Unit) (args : List Value) : List Value :=
-  match run fuel m idx st args with
-  | .Success vs _ => vs
-  | _ => []
 
 /-! ### Checks 1–3 — concrete `run` -/
 

@@ -1,4 +1,5 @@
 import Interpreter.Wasm.Wp.Tactic
+import Interpreter.Wasm.Examples.Harness
 
 /-! ## Example: memory.size / memory.grow
 
@@ -11,6 +12,7 @@ import Interpreter.Wasm.Wp.Tactic
        untouched and pushes `-1` (`0xFFFFFFFF`). -/
 
 namespace Wasm
+open Wasm.Examples
 
 /-- Push the current page count. -/
 def sizeBody : Program := [.memorySize]
@@ -39,12 +41,6 @@ def growModule : Module :=
       -- function returns two i32s under Wasm's standard convention.
       , { body := growFailBody,      results := [.i32, .i32] } ]
     memory := some { pagesMin := 1 } }
-
-private def runValues (fuel : Nat) (m : Module) (idx : Nat)
-    (st : Store Unit) (args : List Value) : List Value :=
-  match run fuel m idx st args with
-  | .Success vs _ => vs
-  | _ => []
 
 theorem memorySize_reads_pagesMin :
     runValues 10 growModule 0 growModule.initialStore [] = [.i32 1] := by

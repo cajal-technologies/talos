@@ -1,5 +1,6 @@
 import Interpreter.Wasm.Wp.Tactic
 import Interpreter.Wasm.Wp.Call
+import Interpreter.Wasm.Examples.Harness
 
 /-! ## Example: host-function dispatch (M2)
 
@@ -15,6 +16,7 @@ import Interpreter.Wasm.Wp.Call
     `run`) sits at unified index `1` — that's the index passed to `run`. -/
 
 namespace Wasm
+open Wasm.Examples
 namespace HostDispatch
 
 /-! ### Demo 1 — `inc`: host returns a value
@@ -88,31 +90,19 @@ def memLoadModule : Module :=
 
 /-! ### `native_decide` checks
 
-    `runVals` / `runTrap` extract the success values or trap message so
+    `runValues` / `runTrapMsg` extract the success values or trap message so
     we don't need `DecidableEq` on `Store Unit`. -/
 
-private def runVals (m : Module) (env : HostEnv Unit) (idx : Nat)
-    (st : Store Unit) (args : List Value) : List Value :=
-  match run 10 m idx st args env with
-  | .Success vs _ => vs
-  | _ => []
-
-private def runTrap (m : Module) (env : HostEnv Unit) (idx : Nat)
-    (st : Store Unit) (args : List Value) : Option String :=
-  match run 10 m idx st args env with
-  | .Trap _ msg => some msg
-  | _ => none
-
 theorem inc_returns_plus_one :
-    runVals incModule incEnv 1 incModule.initialStore [.i32 41] = [.i32 42] := by
+    runValues 10 incModule 1 incModule.initialStore [.i32 41] incEnv = [.i32 42] := by
   native_decide
 
 theorem abort_propagates_trap :
-    runTrap abortModule abortEnv 1 abortModule.initialStore [] = some "host abort" := by
+    runTrapMsg 10 abortModule 1 abortModule.initialStore [] abortEnv = some "host abort" := by
   native_decide
 
 theorem memLoad_reads_caller_memory :
-    runVals memLoadModule memLoadEnv 1 memLoadModule.initialStore [.i32 0]
+    runValues 10 memLoadModule 1 memLoadModule.initialStore [.i32 0] memLoadEnv
       = [.i32 42] := by
   native_decide
 
