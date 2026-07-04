@@ -189,11 +189,6 @@ namespace NearState
 def setRegister (ns : NearState) (id : Nat) (data : List UInt8) : NearState :=
   { ns with registers := fun i => if i = id then some data else ns.registers i }
 
-/-- Set register `id` unless NEAR's output-register discard sentinel was
-passed. Output `register_id = u64::MAX` means "do not copy the output". -/
-def setRegisterIf (ns : NearState) (id : UInt64) (data : List UInt8) : NearState :=
-  if id = u64Max then ns else ns.setRegister id.toNat data
-
 /-- Insert/overwrite `key ↦ val` in storage. -/
 def setStorage (ns : NearState) (key val : List UInt8) : NearState :=
   { ns with
