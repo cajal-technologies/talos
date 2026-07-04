@@ -9,16 +9,21 @@ syntactically, but fuel is a proof obligation -- it isn't part of what a
 function "does". User-facing specs should never mention fuel. This module
 introduces the two predicates the corpus + verifier use to state specs:
 
-* `TerminatesWith m id initial args P` -- total correctness. Some fuel
+* `TerminatesWith env m id initial args P` -- total correctness. Some fuel
   succeeds with a result satisfying `P`, and (by `run_fuel_mono`) every
   larger fuel produces the same result. Discharge by exhibiting one
   concrete fuel internally and calling `TerminatesWith.of_run` /
   `of_run_eq`.
 
-* `PartiallyMeets m id initial args P` -- partial correctness. Whenever
+* `PartiallyMeets env m id initial args P` -- partial correctness. Whenever
   a fuel-bounded run terminates with `.Success`, the result satisfies
   `P`. No termination claim; weaker than `TerminatesWith` but composable
   with programs whose termination depends on inputs.
+
+`of_run` / `of_run_eq` (total-correctness discharge) and `toPartiallyMeets`
+(total ⇒ partial bridge) are the intended public discharge API; they are
+staged ahead of their first corpus consumer (a target whose termination is
+input-dependent, e.g. the recursive `merge_sort` work).
 -/
 
 namespace Wasm
