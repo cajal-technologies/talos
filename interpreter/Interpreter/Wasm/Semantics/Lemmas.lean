@@ -400,15 +400,15 @@ theorem exec_block_cons
            { s' with values := s'.values.take rs ++ s.values.drop ps } rest env
        | other                => other) := by
   simp only [exec, execOne.eq_def]
-  rcases exec fuel m st s body env with _ | ⟨n, _, _⟩ | _ | _ | _ | _ | _ | _
-  · rfl
-  · cases n <;> rfl
-  · rfl
-  · rfl
-  · rfl
-  · rfl
-  · rfl
-  · rfl
+  cases exec fuel m st s body env with
+  | Fallthrough _ _ => rfl
+  | Break n _ _ => cases n <;> rfl
+  | Return _ _ => rfl
+  | Trap _ _ => rfl
+  | Invalid _ => rfl
+  | OutOfFuel => rfl
+  | ReturnCall _ _ _ => rfl
+  | Throwing _ _ _ _ => rfl
 
 theorem exec_iff_cons
     {m : Module} {env : HostEnv α} {st : Store α} {s : Locals}
@@ -428,17 +428,26 @@ theorem exec_iff_cons
        | other                => other) := by
   simp only [exec, execOne.eq_def, hStack]
   by_cases hc : c ≠ 0
-  all_goals first
-    | (simp only [if_pos hc]
-       rcases exec fuel m st { s with values := vs } thn env with _ | ⟨n, _, _⟩ | _ | _ | _ | _
-       · rfl
-       · cases n <;> rfl
-       all_goals rfl)
-    | (simp only [if_neg hc]
-       rcases exec fuel m st { s with values := vs } els env with _ | ⟨n, _, _⟩ | _ | _ | _ | _
-       · rfl
-       · cases n <;> rfl
-       all_goals rfl)
+  · simp only [if_pos hc]
+    cases exec fuel m st { s with values := vs } thn env with
+    | Fallthrough _ _ => rfl
+    | Break n _ _ => cases n <;> rfl
+    | Return _ _ => rfl
+    | Trap _ _ => rfl
+    | Invalid _ => rfl
+    | OutOfFuel => rfl
+    | ReturnCall _ _ _ => rfl
+    | Throwing _ _ _ _ => rfl
+  · simp only [if_neg hc]
+    cases exec fuel m st { s with values := vs } els env with
+    | Fallthrough _ _ => rfl
+    | Break n _ _ => cases n <;> rfl
+    | Return _ _ => rfl
+    | Trap _ _ => rfl
+    | Invalid _ => rfl
+    | OutOfFuel => rfl
+    | ReturnCall _ _ _ => rfl
+    | Throwing _ _ _ _ => rfl
 
 theorem exec_call_cons
     {m : Module} {env : HostEnv α} {st : Store α} {s : Locals}

@@ -36,15 +36,28 @@ private theorem exec_loop_cons_unfold {α : Type} (fuel : Nat) (m : Module)
        | .Break (k+1) st' s' => .Break k st' s'
        | other => other) := by
   simp only [exec, execOne_loop_succ]
-  rcases hb : exec fuel m st s body env with
-    ⟨_, _⟩ | ⟨n, _, _⟩ | ⟨_, _⟩ | _ | _ | _ | ⟨_, _, _⟩ | ⟨_, _, _, _⟩
-  · rfl
-  · cases n
-    · simp only
-      rcases hk : execOne fuel _ _ _ (.loop ps rs body) env
-        with ⟨_, _⟩ | ⟨_, _, _⟩ | ⟨_, _⟩ | _ | _ | _ | ⟨_, _, _⟩ | ⟨_, _, _, _⟩ <;> rfl
-    · rfl
-  all_goals rfl
+  cases hb : exec fuel m st s body env with
+  | Fallthrough _ _ => rfl
+  | Break n _ _ =>
+    cases n with
+    | zero =>
+      simp only
+      cases hk : execOne fuel _ _ _ (.loop ps rs body) env with
+      | Fallthrough _ _ => rfl
+      | Break _ _ _ => rfl
+      | Return _ _ => rfl
+      | Trap _ _ => rfl
+      | Invalid _ => rfl
+      | OutOfFuel => rfl
+      | ReturnCall _ _ _ => rfl
+      | Throwing _ _ _ _ => rfl
+    | succ _ => rfl
+  | Return _ _ => rfl
+  | Trap _ _ => rfl
+  | Invalid _ => rfl
+  | OutOfFuel => rfl
+  | ReturnCall _ _ _ => rfl
+  | Throwing _ _ _ _ => rfl
 
 theorem wp_loop_cons {ps rs : Nat} {body rest : Program} {Q : Assertion α}
     (Inv : AssertionF α) (μ : Store α → Locals → Nat)
