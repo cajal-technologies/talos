@@ -8,7 +8,7 @@ Bridge lemmas between `UInt64` bitwise operations (`>>>`, `<<<`, `|||`,
 `-`, the interpreter's `ctz64`) and the `Nat` view that user-facing
 specifications prefer.
 
-Used by `Corpus/Crates/NumInteger/Spec.lean` (Stein's binary GCD on
+Used by `programs/lean/Project/NumInteger/Spec.lean` (Stein's binary GCD on
 `u64`). Many of the lemmas here are general-purpose and may move to a
 more central location once a second consumer appears.
 
@@ -79,15 +79,6 @@ private theorem ctz64_eq_ntz (k : Nat) (a : UInt64) :
       simp [h, h2]
       rw [ih, _aux_shiftRight_one_toNat]
 
-private theorem ntz_le (k n : Nat) : ntz k n ≤ 64 := by
-  induction k generalizing n with
-  | zero => exact Nat.le_refl _
-  | succ k ih =>
-    unfold ntz
-    split
-    · omega
-    · exact ih _
-
 private theorem ntz_lt_or_low_bits_zero (k n : Nat) :
     ntz k n < 64 ∨ (ntz k n = 64 ∧ ∀ i < k, (n / 2^i) % 2 = 0) := by
   induction k generalizing n with
@@ -128,10 +119,9 @@ theorem UInt64.ctz64_lt (a : UInt64) (ha : a ≠ 0) : ctz64 64 a < 64 := by
     apply UInt64.toNat.inj
     show a.toNat = 0
     have h64 : a.toNat < 2 ^ 64 := a.toNat_lt
-    -- All 64 low bits zero + a.toNat < 2^64 ⇒ a.toNat = 0.
+    -- All 64 low bits are zero and `a.toNat < 2^64`, so every bit is zero
+    -- (`% 2 = 0` at index `i` is `testBit i = false`); hence `a.toNat = 0`.
     have : ∀ i < 64, a.toNat / 2^i % 2 = 0 := hzero
-    -- Standard: this implies a.toNat = 0.
-    -- Use Nat.eq_zero_of_testBit_eq_false? We have % 2 = 0 = testBit = false.
     apply Nat.zero_of_testBit_eq_false (n := a.toNat)
     intro i
     by_cases hi : i < 64
