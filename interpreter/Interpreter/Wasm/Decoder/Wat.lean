@@ -9,10 +9,10 @@ A small parser for the WebAssembly text format, targeting Wasm's AST.
 Supported:
 * `(module ...)` with any number of `(func ...)` definitions.
 * `(type ...)`, `(export ...)`, `(import ...)`, `(table ...)`, `(memory ...)`,
-  `(global ...)`, `(elem ...)`, `(data ...)`, `(start ...)` — recognized at the
-  module level. Only `func` and `export` contribute to the resulting
-  `Wasm.Module`; the rest are accepted to allow round-tripping the spec
-  testsuite, but their content is discarded.
+  `(global ...)`, `(elem ...)`, `(data ...)`, `(tag ...)`, `(start ...)` —
+  recognized at the module level and fully parsed into the resulting
+  `Wasm.Module`. (Non-func imports, i.e.
+  `(import … (memory|global|table …))`, are the one exception: dropped.)
 * Func headers may include `(type N)`, `(param ...)*`, `(result ...)*`,
   `(local ...)*` in any order, with grouped or singleton declarations.
 * Linear instruction stream and folded operand expressions
@@ -26,8 +26,10 @@ Supported:
 * Numeric indices and symbolic identifiers (`$L`).
 * `(;0;)` block comments and `;;` line comments are stripped during tokenization.
 
-Features Wasm does not model (memory loads/stores, `memory.*`, globals,
-`call_indirect`, tables) are accepted lexically but lowered to
+Memory loads/stores, `memory.*`, globals, `call_indirect`, tables,
+floats, and SIMD are all modelled and decode to real instructions.
+Instructions from proposals the interpreter still doesn't model (e.g.
+atomics/threads) are accepted lexically but lowered to
 `Wasm.Instruction.unreachable` so the surrounding function still
 type-checks. `local.tee i` is desugared to `[local.set i; local.get i]`. -/
 
@@ -672,13 +674,14 @@ private def parsePlainOp : String → Except Err Wasm.Instruction
   | "i31.get_u"    => .ok (.gc .i31GetU)
   | "ref.eq"       => .ok (.gc .refEq)
   | op          =>
-    -- Accept instructions from proposals the interpreter doesn't model
-    -- (floats, SIMD, reference types, tables, GC, exceptions, tail calls)
-    -- by lowering them to `unreachable`. This lets modules whose
-    -- *signatures* or unrelated functions touch these features still
-    -- decode; any function that actually executes such an instruction
-    -- traps with "unreachable" instead of failing to decode at all,
-    -- which would cascade to every assert in the file.
+    -- Fallback for mnemonics not matched above (and not caught by
+    -- `simdOp?`): still-unmodelled proposals such as atomics/threads and
+    -- relaxed SIMD, plus stray leftovers from partly-modelled proposals
+    -- (reference types, tables, GC, exceptions, tail calls). Lower them to
+    -- `unreachable` so modules whose *signatures* or unrelated functions
+    -- touch these features still decode; a function that actually executes
+    -- such an instruction traps with "unreachable" instead of failing to
+    -- decode at all, which would cascade to every assert in the file.
     if op.startsWith "f32." || op.startsWith "f64." || op.startsWith "v128."
        || op.startsWith "i8x16." || op.startsWith "i16x8." || op.startsWith "i32x4."
        || op.startsWith "i64x2." || op.startsWith "f32x4." || op.startsWith "f64x2."
@@ -695,9 +698,9 @@ private def parsePlainOp : String → Except Err Wasm.Instruction
     else
       .error s!"unsupported instruction: {op}"
 
-/-- Memory ops that take an offset immediate. We accept them lexically
-(`offset=`/`align=` attributes parsed and discarded) but emit
-`unreachable` for the instruction itself. -/
+/-- Memory ops that take an offset immediate, mapped to their natural
+alignment (byte width). `offset=`/`align=` attributes are parsed off the
+token stream; `memOpToInstruction` then emits the real load/store. -/
 private def isMemOp (op : String) : Option Nat :=
   match op with
   | "i32.load"     => some 4
@@ -714,10 +717,8 @@ private def isMemOp (op : String) : Option Nat :=
   | "i64.store8"   => some 1
   | "i64.store16"  => some 2
   | "i64.store32"  => some 4
-  -- Float and SIMD memory ops are lexically accepted (their offset=/
-  -- align= attributes parsed and discarded), but `memOpToInstruction`
-  -- lowers them to `unreachable` since the interpreter doesn't model
-  -- those value types.
+  -- Float and SIMD memory ops (their offset=/align= attributes parsed the
+  -- same way); `memOpToInstruction` emits the matching real load/store.
   | "f32.load" | "f32.store" => some 4
   | "f64.load" | "f64.store" => some 8
   | "v128.load" | "v128.store" => some 16
@@ -765,24 +766,6 @@ private def consumeMemAttrs (natAlign : Nat) (toks : List Sexpr)
         | none => .ok (offset, .atom a :: r)
     | xs => .ok (offset, xs)
   loop 0 toks
-
-/-- Number of atom immediates a *lowered* (treated-as-`unreachable`) op
-consumes. Used to keep the linear/folded parsers in sync with the token
-stream when we accept-and-stub instructions from proposals the
-interpreter doesn't model. Returns `none` for ops we don't pretend to
-support. -/
-private def stubImmediateCount (_op : String) : Option Nat :=
-  -- `br_on_cast`/`br_on_cast_fail` take label + from_type + to_type and are
-  -- handled separately by `consumeBrOnCastImmediates`; all other GC ops are
-  -- now decoded to real instructions.
-  none
-
-/-- Drop the first `n` atom tokens from `toks`. Errors if a non-atom is
-encountered or the stream is too short. -/
-private partial def consumeStubAtoms (op : String) : Nat → List Sexpr → Except Err (List Sexpr)
-  | 0, ts => .ok ts
-  | k+1, .atom _ :: ts => consumeStubAtoms op k ts
-  | _+1, _ => .error s!"{op}: expected immediate atom"
 
 /-! ## SIMD mnemonic table
 
@@ -1379,9 +1362,7 @@ private partial def parseInstr (ctx : Ctx) (toks : List Sexpr)
           -- immediates so the token stream stays aligned.
           let rest' ← if op == "br_on_cast" || op == "br_on_cast_fail" then
             consumeBrOnCastImmediates op rest
-          else match stubImmediateCount op with
-            | some n => consumeStubAtoms op n rest
-            | none   => .ok rest
+          else .ok rest
           .ok ([i], rest')
 
 private partial def parseFolded (ctx : Ctx) (xs : List Sexpr)
@@ -2849,14 +2830,13 @@ private def collectImports (types : Array TypeEntry) (fields : List Sexpr)
     | _ => pure ()
   return (imports, idOf)
 
-/-- Walk a `(module ...)` form. `(func …)`, `(export …)`, `(global …)`,
-`(memory …)`, `(data …)`, `(start …)`, and `(import "mod" "name"
-(func …))` all contribute to the resulting `Wasm.Module`. Function
-imports occupy the low end of the unified function index space (indices
-`0 … N-1`); in-module function indices are shifted up by
-`imports.length`. Other recognised fields (`type`, `table`, `elem`, non-
-func imports) are accepted lexically so the spec testsuite still loads,
-but their content is discarded. -/
+/-- Walk a `(module ...)` form. `(type …)`, `(func …)`, `(export …)`,
+`(global …)`, `(table …)`, `(memory …)`, `(elem …)`, `(data …)`,
+`(tag …)`, `(start …)`, and `(import "mod" "name" (func …))` all
+contribute to the resulting `Wasm.Module`. Function imports occupy the
+low end of the unified function index space (indices `0 … N-1`);
+in-module function indices are shifted up by `imports.length`. Only
+non-func imports (`(import … (memory|global|table …))`) are dropped. -/
 def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
   let mut rest := xs
   match rest with
