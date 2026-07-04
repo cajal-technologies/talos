@@ -1,6 +1,7 @@
 import Interpreter.Wasm.Wp.Tactic
 import Interpreter.Wasm.Wp.Block
 import Interpreter.Wasm.Wp.Loop
+import Interpreter.Wasm.Examples.UIntLemmas
 
 /-! ## Example: Factorial
 
@@ -47,11 +48,7 @@ theorem factorialSpec (m : Module) (st : Store Unit) (n : UInt32) :
     · have hxn : x.toNat ≠ 0 := by
         intro h
         exact hx (UInt32.toNat.inj h)
-      have hxsub : (x - 1).toNat = x.toNat - 1 := by
-        rw [UInt32.toNat_sub]
-        simp only [show (1 : UInt32).toNat = 1 from rfl]
-        have := x.toNat_lt
-        omega
+      have hxsub := UInt32.toNat_sub_one_eq hxn
       simp [hx]
       refine ⟨?_, by omega⟩
       rw [← hacc]
