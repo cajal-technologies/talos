@@ -4,6 +4,7 @@ import Interpreter.Wasm.Examples.Factorial
 import Interpreter.Wasm.Examples.InfiniteLoop
 import Interpreter.Wasm.Examples.EvenOddRec
 import Interpreter.Wasm.Examples.CallIndirect
+import Interpreter.Wasm.Examples.CallIndirectSubtype
 import Interpreter.Wasm.Examples.SumI64
 import Interpreter.Wasm.Examples.IfAbs
 import Interpreter.Wasm.Examples.Switch
@@ -29,6 +30,7 @@ import Interpreter.Wasm.Examples.HostDispatch
 import Interpreter.Wasm.Examples.Counter
 import Interpreter.Wasm.Examples.DecoderImport
 import Interpreter.Wasm.Examples.DecoderImportedGlobal
+import Interpreter.Wasm.Examples.GlobalInitExpr
 import Interpreter.Wasm.Examples.FloatOps
 
 /-! # Wasm.Examples.Basic
