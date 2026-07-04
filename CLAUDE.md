@@ -17,10 +17,10 @@ Three Lake packages in a monorepo, forming a strict dependency chain:
 ```
 interpreter/   ← Wasm AST, semantics, WP tactic layer  (Lake package: Interpreter)
 codelib/       ← lifting lemmas and reasoning helpers   (Lake package: CodeLib)
-programs/      ← concrete Rust-to-Wasm verification     (Lake package: Programs)
+programs/lean/ ← concrete Rust-to-Wasm verification     (Lake package: Project)
 ```
 
-`programs/rust/` holds the Rust source crates; `programs/Programs/` holds the
+`programs/rust/` holds the Rust source crates; `programs/lean/Project/` holds the
 generated `Program.lean` files and hand-written `Spec.lean` / `Proofs.lean`.
 
 Dependency direction: `interpreter` → `codelib` → `programs`. Downstream code
@@ -30,7 +30,7 @@ imports `CodeLib`, never the interpreter directly.
 
 ```bash
 just lake-shared        # once: populate repo-root .lake/packages (Mathlib owner: interpreter/)
-# then, for each package:
+# then, for each package (the `Project` package lives in programs/lean/, not programs/):
 cd <package> && lake build
 ```
 
@@ -43,17 +43,17 @@ There is no separate test runner. Example correctness is encoded as Lean theorem
 Three layers, kept deliberately small:
 
 - **Syntax (AST).** Instructions, functions, and modules. Keep the surface area minimal — only add constructs once they are needed by a concrete proof, and prefer the formulation that matches the Wasm spec's terminology so semantics and reasoning lemmas stay legible. Read the current state of `interpreter/Interpreter/Wasm/Syntax.lean` before assuming what is or isn't supported.
-- **Semantics (interpreter).** A fuel-bounded big-step interpreter. Traps (insufficient operands, out-of-bounds access, division by zero, etc.) are observable as a `none` result from `run`. When changing the semantics, the structure of the state and the shape of `step`/`run` are load-bearing for every existing proof — extend in place rather than rewriting, and keep new cases consistent with the existing ones. Read the file before editing.
+- **Semantics (interpreter).** A fuel-bounded big-step interpreter. Traps (insufficient operands, out-of-bounds access, division by zero, etc.) are observable as a `.Trap` result from `run` (which returns a `Result α`: `.Success` / `.Trap` / `.Invalid` / `.OutOfFuel`), distinct from a successful `.Success`. When changing the semantics, the structure of the state and the shape of `step`/`run` are load-bearing for every existing proof — extend in place rather than rewriting, and keep new cases consistent with the existing ones. Read the file before editing.
 - **Reasoning (examples and lemmas).** The standard proof style: unfold the interpreter and `simp` to reduce both sides to the same concrete computation; use `native_decide` for concrete-input sanity checks; compose previously proven theorems as black boxes rather than re-unfolding the interpreter for larger results. New examples should follow this pattern.
 
 ## Public spec API: don't expose fuel
 
 `run` takes an explicit `fuel : Nat` so that it terminates syntactically, but fuel is a proof obligation, not part of what a wasm function "does". User-facing specs should never mention fuel — no `∃ fuel, run … fuel = some rs` and no fixed numeric fuel in the statement. Use the fuel-free predicates from `Interpreter/Wasm/Spec/Termination.lean` instead:
 
-- `Wasm.TerminatesWith m entry args P` — total correctness (some fuel succeeds, result satisfies `P`). Discharge via `TerminatesWith.of_run` / `of_run_eq` by exhibiting a concrete fuel internally.
-- `Wasm.PartiallyMeets m entry args P` — partial correctness (every terminating fuel-bounded run satisfies `P`).
+- `Wasm.TerminatesWith env m entry initial args P` — total correctness (some fuel succeeds, result satisfies `P`). Discharge via `TerminatesWith.of_run` / `of_run_eq` by exhibiting a concrete fuel internally.
+- `Wasm.PartiallyMeets env m entry initial args P` — partial correctness (every terminating fuel-bounded run satisfies `P`).
 
-When writing or updating a `@[wasm_spec]` theorem, reach for these — the fuel value belongs inside the proof, not the statement.
+When writing or updating a spec theorem (tagged `@[spec_of …]` / `@[proves …]`; see `codelib/CodeLib/Attrs.lean`), reach for these — the fuel value belongs inside the proof, not the statement.
 
 ## Examples
 
