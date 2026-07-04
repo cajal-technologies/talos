@@ -22,10 +22,8 @@ namespace Wasm
 abbrev Assertion α  := Continuation α → Prop
 abbrev AssertionF α := Store α → Locals → Prop
 
-abbrev ImplyF (P Q : AssertionF α) := ∀ st s, P st s → Q st s
-abbrev Imply  (P Q : Assertion α)  := ∀ c, P c → Q c
+abbrev Imply (P Q : Assertion α) := ∀ c, P c → Q c
 
-notation:50 P:51 " ⇒ " Q:51 => ImplyF P Q
 notation:50 P:51 " ⇛ " Q:51 => Imply P Q
 
 @[irreducible]
@@ -73,9 +71,5 @@ theorem wp.conseq {Q Q' : Assertion α} (hq : Q ⇛ Q')
   unfold wp at h ⊢
   obtain ⟨N, hN⟩ := h
   exact ⟨N, fun fuel hf => hq _ (hN fuel hf)⟩
-
-theorem wp.imp {Q Q' : Assertion α}
-    (h : wp m c Q st s env) (hq : ∀ c, Q c → Q' c) : wp m c Q' st s env :=
-  wp.conseq hq h
 
 end Wasm
