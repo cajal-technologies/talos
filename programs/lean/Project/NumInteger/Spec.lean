@@ -488,7 +488,7 @@ theorem func0_terminates (env : HostEnv Unit) (a b : UInt64) :
   simp [hp]
   -- At the call point: memory holds `a` at 1048560, `b` at 1048568, global0
   -- is 1048560.  Discharge `func1` via its `TerminatesWith`.
-  apply wp_call_of_terminates
+  apply wp_call_tw
     (func1_terminates env _ a b []
       (by rw [Mem.write64_pages, Mem.write64_pages]; exact hp)
       (by rfl)
@@ -526,7 +526,7 @@ theorem gcd_u64_correct : GcdU64Spec := by
   apply TerminatesWith.of_wp_entry_for (f := ⟨[.i64, .i64], [], func2, [.i64], none⟩) rfl
   unfold func2
   wp_run
-  apply wp_call_of_terminates (func0_terminates env a b)
+  apply wp_call_tw (func0_terminates env a b)
   rintro st' vs rfl
   wp_run
   rfl

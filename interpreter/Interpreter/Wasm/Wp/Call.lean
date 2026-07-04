@@ -61,14 +61,6 @@ theorem wp_call_tw {env : HostEnv α}
     wp m (.call id :: rest) Q st s env :=
   wp_call_at hRun hPost
 
-/-- Backwards-compatible descriptive alias for `wp_call_tw`. -/
-theorem wp_call_of_terminates {env : HostEnv α}
-    {id : Nat} {Post : Store α → List Value → Prop}
-    (hRun : TerminatesWith env m id st s.values Post)
-    (hPost : ∀ st' vs, Post st' vs → wp m rest Q st' { s with values := vs } env) :
-    wp m (.call id :: rest) Q st s env :=
-  wp_call_tw hRun hPost
-
 /-- Store-specific core of the indirect-call WP rule. Instead of a
 store-polymorphic `FuncSpec`, it consumes the resolved callee's success
 behaviour *at the current store* `st` — exactly a `TerminatesWith`
@@ -138,7 +130,10 @@ theorem wp_callIndirect_cons {α : Type} {env : HostEnv α}
   wp_callIndirect_at hStack hTbl hSlot hFn hTy hSig (spec vs0 hPre st) hPost
 
 /-- Indirect-call WP rule consuming the resolved target's public
-`TerminatesWith` theorem directly. -/
+`TerminatesWith` theorem directly — the indirect analogue of `wp_call_tw`.
+Staged ahead of its first consumer: the corpus reaches indirect calls once a
+Rust fn-pointer / trait-object / vtable dispatch target is verified, at which
+point this is the rule that composes the callee's `TerminatesWith` spec. -/
 theorem wp_callIndirect_tw {α : Type} {env : HostEnv α}
     {m : Module} {st : Store α} {s : Locals} {Q : Assertion α}
     {rest : Program} {ti tj : Nat}
