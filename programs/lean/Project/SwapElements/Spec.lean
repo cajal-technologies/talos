@@ -63,8 +63,12 @@ def SwapElementsSpec : Prop :=
     i < len → j < len →
     -- the array is addressable and its element offsets do not wrap UInt32
     ptr.toNat + 8 * len.toNat ≤ st.mem.pages * 65536 →
+    -- memory fits in 32-bit address space (standard wasm constraint: pages ≤ 65536)
+    st.mem.pages * 65536 ≤ 4294967296 →
     -- the array does not collide with the callee's shadow-stack scratch frame
     1048576 ≤ ptr.toNat →
+    -- shadow-stack pointer at the wasm shadow-stack base on entry
+    st.globals.globals[0]? = some (.i32 1048576) →
     TerminatesWith env «module» 4 st
       [.i32 j, .i32 i, .i32 len, .i32 ptr]
       (fun st' rs =>

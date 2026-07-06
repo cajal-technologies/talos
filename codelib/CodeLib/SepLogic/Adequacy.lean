@@ -47,7 +47,7 @@ instance instBIMonoPredWasmF :
     iintro #HΦΨ %s
     obtain ⟨ws⟩ := s
     unfold wp_wasm_F
-    simp only [LeibnizO.car]
+    simp only []
     split
     · iintro H; iexact H
     · iintro H; iexact H
