@@ -267,9 +267,9 @@ theorem check_terminates : FloatReinterpretSpec := by
     cases heq : f32Eq v7 v4
     · -- v7 ≠ v4: store 0, break outer
       simp [heq]
-      simp [hp4, hnt, hg4, hrestored]
+      simp [hrestored]
     · -- v7 = v4: break inner → outer body: store 1
       simp [heq]
-      simp [hp4, hnt, hg4, hrestored]
+      simp [hrestored]
 
 end Project.FloatReinterpret.Spec

@@ -1,6 +1,3 @@
-use core::arch::wasm32::{f32_min, f32_max};
-
-/// Naive min: loop with if-comparison
 fn naive_min(arr: &[f32]) -> f32 {
     let mut m = arr[0];
     let mut i = 1;
@@ -13,18 +10,16 @@ fn naive_min(arr: &[f32]) -> f32 {
     m
 }
 
-/// Optimized min: uses f32.min wasm instruction via intrinsic
 fn opt_min(arr: &[f32]) -> f32 {
     let mut m = arr[0];
     let mut i = 1;
     while i < arr.len() {
-        m = unsafe { f32_min(m, arr[i]) };
+        m = m.min(arr[i]);
         i += 1;
     }
     m
 }
 
-/// Naive max: loop with if-comparison
 fn naive_max(arr: &[f32]) -> f32 {
     let mut m = arr[0];
     let mut i = 1;
@@ -37,12 +32,11 @@ fn naive_max(arr: &[f32]) -> f32 {
     m
 }
 
-/// Optimized max: uses f32.max wasm instruction via intrinsic
 fn opt_max(arr: &[f32]) -> f32 {
     let mut m = arr[0];
     let mut i = 1;
     while i < arr.len() {
-        m = unsafe { f32_max(m, arr[i]) };
+        m = m.max(arr[i]);
         i += 1;
     }
     m
