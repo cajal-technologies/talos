@@ -227,7 +227,7 @@ theorem check_terminates : FloatReinterpretSpec := by
     cases heq09 : f32Eq v0 v9
     · -- v0 ≠ v9: break inner → outer body: store 0
       simp [heq09]
-      simp [hp9, hnt, hg9, hrestored]
+      simp [hp9, hg9]
     · -- v0 = v9: continue; second comparison
       simp [heq09]
       apply wp_call_of_terminates
@@ -241,10 +241,10 @@ theorem check_terminates : FloatReinterpretSpec := by
       cases heq02 : f32Eq v0' v2
       · -- v0' ≠ v2: break inner → outer body: store 0
         simp [heq02]
-        simp [hp2, hnt, hg2, hrestored]
+        simp [hp2, hg2]
       · -- v0' = v2: store 1, break outer
         simp [heq02]
-        simp [hp2, hnt, hg2, hrestored]
+        simp [hp2,hg2]
   · -- check_copysign
     intro env x y
     have hg : («module».initialStore : Store Unit).globals.globals[0]? = some (.i32 1048576) := rfl
@@ -267,9 +267,10 @@ theorem check_terminates : FloatReinterpretSpec := by
     cases heq : f32Eq v7 v4
     · -- v7 ≠ v4: store 0, break outer
       simp [heq]
-      simp [hrestored]
+      simp [hp4, hg4]
     · -- v7 = v4: break inner → outer body: store 1
       simp [heq]
-      simp [hrestored]
+      simp [hp4, hg4]
+
 
 end Project.FloatReinterpret.Spec
