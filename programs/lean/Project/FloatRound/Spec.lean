@@ -147,13 +147,13 @@ private theorem func0_term (env : HostEnv Unit) (st : Store Unit) (sp x : UInt32
     simp [hge]
     cases hle' : f32Le (f32Sub x v1) 3204448256
     · -- frac > -0.5: neutral (B cont: store v1 directly)
-      simp [hle']
+      simp
       -- B cont: localGet 1, localGet 2, f32Store 12, br 1
       -- rest_after_A: localGet 1, f32Load 12, localSet 4, localGet 1, const 16, add, globalSet 0, localGet 4, ret
       simp [hp1', hnt0', hg1', hrestored']
       exact globals_set0 sp hg1'
     · -- frac <= -0.5: floor branch (A cont: call func3)
-      simp [hle']
+      simp
       -- A cont: localGet 1, localGet 2, call 3
       apply wp_call_of_terminates
         (func3_term env st1 (sp - 16) v1 [.i32 (sp - 16)] hg1' hp1' h16_1 hb1)
@@ -215,9 +215,9 @@ theorem check_round_terminates : FloatRoundSpec := by
   cases heq : f32Eq v0 v4
   · -- not equal: store32 0 at 1048560+12, br 1
     simp [heq]
-    simp [hp4, hnt6, hg4, hrestored6]
+    simp [hp4, hg4]
   · -- equal: B cont: store32 1 at 1048560+12
     simp [heq]
-    simp [hp4, hnt6, hg4, hrestored6]
+    simp [hp4, hg4]
 
 end Project.FloatRound.Spec
