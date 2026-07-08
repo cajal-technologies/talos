@@ -105,4 +105,64 @@ theorem Mem.read64_write32_disjoint (m : Mem) (a b : UInt32) (v : UInt32)
       Mem.write32_bytes_outside m b v (a.toNat + 6) (by omega),
       Mem.write32_bytes_outside m b v (a.toNat + 7) (by omega)]
 
+/-- Reading a byte is unaffected by a `write32` to a disjoint 4-byte slot. -/
+theorem Mem.read8_write32_disjoint (m : Mem) (a b : UInt32) (v : UInt32)
+    (h : a.toNat < b.toNat ∨ b.toNat + 4 ≤ a.toNat) :
+    (m.write32 b v).read8 a = m.read8 a := by
+  simp only [Mem.read8]; exact Mem.write32_bytes_outside m b v a.toNat (by omega)
+
+/-- Reading a byte is unaffected by a `write64` to a disjoint 8-byte slot. -/
+theorem Mem.read8_write64_disjoint (m : Mem) (a b : UInt32) (v : UInt64)
+    (h : a.toNat < b.toNat ∨ b.toNat + 8 ≤ a.toNat) :
+    (m.write64 b v).read8 a = m.read8 a := by
+  simp only [Mem.read8]; exact Mem.write64_bytes_outside m b v a.toNat (by omega)
+
+/-! ## `memory.copy` read-back and framing
+
+`memory.copy` (`wp_memoryCopy_cons`) reduces to `Mem.copy dst src len`, defined
+pointwise against the *pre-copy* bytes (`memmove` semantics). These read the
+result back — the payload lemmas for `encode`/`decode`. -/
+
+/-- A byte in the copy's destination range reads the corresponding source byte
+of the pre-copy memory. -/
+theorem Mem.copy_bytes_inside (m : Mem) (dst src len i : Nat)
+    (h : dst ≤ i ∧ i < dst + len) :
+    (m.copy dst src len).bytes i = m.bytes (src + (i - dst)) := by
+  simp only [Mem.copy]; rw [if_pos h]
+
+/-- A byte outside the copy's destination range is unchanged. -/
+theorem Mem.copy_bytes_outside (m : Mem) (dst src len i : Nat)
+    (h : i < dst ∨ dst + len ≤ i) :
+    (m.copy dst src len).bytes i = m.bytes i := by
+  simp only [Mem.copy]; rw [if_neg (by omega : ¬ (dst ≤ i ∧ i < dst + len))]
+
+/-- `memory.copy` preserves the page count. -/
+@[simp] theorem Mem.copy_pages (m : Mem) (dst src len : Nat) :
+    (m.copy dst src len).pages = m.pages := rfl
+
+/-- Reading a byte inside a `Mem.copy` destination returns the corresponding
+pre-copy source byte. -/
+theorem Mem.read8_copy_inside (m : Mem) (a : UInt32) (dst src len : Nat)
+    (h : dst ≤ a.toNat ∧ a.toNat < dst + len) :
+    (m.copy dst src len).read8 a = m.bytes (src + (a.toNat - dst)) := by
+  simp only [Mem.read8]; exact Mem.copy_bytes_inside m dst src len a.toNat h
+
+/-- Reading a byte from a range disjoint from a `Mem.copy` destination returns
+the pre-copy value. -/
+theorem Mem.read8_copy_disjoint (m : Mem) (a : UInt32) (dst src len : Nat)
+    (h : a.toNat < dst ∨ dst + len ≤ a.toNat) :
+    (m.copy dst src len).read8 a = m.read8 a := by
+  simp only [Mem.read8]; exact Mem.copy_bytes_outside m dst src len a.toNat h
+
+/-- Reading a 32-bit word from a range disjoint from a `Mem.copy` destination
+returns the pre-copy value (frames the length prefix past the payload copy). -/
+theorem Mem.read32_copy_disjoint (m : Mem) (a : UInt32) (dst src len : Nat)
+    (h : a.toNat + 4 ≤ dst ∨ dst + len ≤ a.toNat) :
+    (m.copy dst src len).read32 a = m.read32 a := by
+  simp only [Mem.read32]
+  rw [Mem.copy_bytes_outside m dst src len a.toNat (by omega),
+      Mem.copy_bytes_outside m dst src len (a.toNat + 1) (by omega),
+      Mem.copy_bytes_outside m dst src len (a.toNat + 2) (by omega),
+      Mem.copy_bytes_outside m dst src len (a.toNat + 3) (by omega)]
+
 end Wasm
