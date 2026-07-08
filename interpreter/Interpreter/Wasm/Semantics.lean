@@ -1075,8 +1075,9 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
     -- Branching
     | _, .br n => .Break n st s
     | _, .br_if n => match s.values with
-      | .i32 0 :: vs => .Fallthrough st { s with values := vs }
-      | .i32 _ :: vs => .Break n st { s with values := vs }
+      | .i32 c :: vs =>
+        if c = 0 then .Fallthrough st { s with values := vs }
+        else .Break n st { s with values := vs }
       | _ => .Invalid "br_if: ill-shaped operand stack"
     | _, .brTable targets dflt => match s.values with
       | .i32 i :: vs =>

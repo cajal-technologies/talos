@@ -53,7 +53,7 @@ theorem simpleLoopSpec (m : Module) (st : Store Unit) (n : UInt32) :
         simp only [show (1 : UInt32).toNat = 1 from rfl]
         have := x.toNat_lt
         omega
-      simp
+      simp [hx]
       have hy : y.toNat < 4294967295 := by
         have hn := n.toNat_lt
         omega

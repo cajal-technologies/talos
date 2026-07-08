@@ -589,8 +589,9 @@ macro "wp_atomic" : tactic => `(tactic|
 @[simp, wp_simp] theorem wp_br_if_cons :
     wp m (.br_if n :: rest) Q st s env ↔
     (match s.values with
-     | .i32 0 :: vs => wp m rest Q st { s with values := vs } env
-     | .i32 _ :: vs => Q (.Break n st { s with values := vs })
+     | .i32 c :: vs =>
+       if c = 0 then wp m rest Q st { s with values := vs } env
+       else Q (.Break n st { s with values := vs })
      | _ => Q (.Invalid "br_if: ill-shaped operand stack")) := by
   wp_atomic
 
