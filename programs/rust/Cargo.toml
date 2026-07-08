@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+  "encode_decode",
   "swap_elements",
   "rust_array",
   "rust_array_tests",
