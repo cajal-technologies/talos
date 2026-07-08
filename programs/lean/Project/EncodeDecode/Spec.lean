@@ -90,7 +90,8 @@ def EncodeSpec : Prop :=
         ∧ st'.mem.read32 dst_ptr = src_len
         ∧ (∀ k : UInt32, k.toNat < src_len.toNat →
             st'.mem.read8 (dst_ptr + 4 + k) = st.mem.read8 (src_ptr + k))
-        ∧ st'.globals = st.globals)
+        ∧ st'.globals = st.globals
+        ∧ st'.mem.pages = st.mem.pages)
 
 @[proves Project.EncodeDecode.Spec.EncodeSpec]
 theorem encode_correct : EncodeSpec := by
@@ -108,9 +109,10 @@ theorem encode_correct : EncodeSpec := by
   by_cases hz : src_len = 0
   · subst hz
     simp only [wp_simp, wp_entry, wp_reduce]
-    refine ⟨_, rfl, ?_, ?_, hglob1⟩
+    refine ⟨_, rfl, ?_, ?_, hglob1, ?_⟩
     · rw [hmem1]; exact Mem.read32_write32_same _ _ _
     · intro k hk; omega
+    · simp only [Mem.copy_pages, Mem.write32_pages, hmem1]
   · have hsl : src_len.toNat ≠ 0 := fun h => hz (UInt32.toNat.inj (by simpa using h))
     have hscr : (1048576 - 16 + 12 : UInt32).toNat = 1048572 := by decide
     have ha : (4 + dst_ptr).toNat = dst_ptr.toNat + 4 := by
@@ -119,7 +121,7 @@ theorem encode_correct : EncodeSpec := by
     have hntC : ¬ ((4 + dst_ptr).toNat + src_len.toNat > st.mem.pages * 65536
         ∨ src_ptr.toNat + src_len.toNat > st.mem.pages * 65536) := by rw [ha]; omega
     simp only [wp_simp, wp_entry, wp_reduce, hz, hp1, hntC]
-    refine ⟨_, rfl, ?_, ?_, hglob1⟩
+    refine ⟨_, rfl, ?_, ?_, hglob1, ?_⟩
     · rw [Mem.read32_copy_disjoint _ dst_ptr (4 + dst_ptr).toNat src_ptr.toNat src_len.toNat
             (Or.inl (le_of_eq ha.symm)), hmem1, Mem.read32_write32_same]
     · intro k hk
@@ -134,6 +136,7 @@ theorem encode_correct : EncodeSpec := by
           Mem.write32_bytes_outside _ (1048576 - 16 + 12) src_len (src_ptr.toNat + k.toNat)
             (by rw [hscr]; omega),
           Mem.read8, hsk]
+    · rw [Mem.copy_pages]; exact hp1
 
 /-- **`decode` is correct.** Reads the length prefix (`load32`, via `func0`),
 validates the frame, and copies the payload (`memory.copy`), returning the
@@ -157,7 +160,8 @@ def DecodeSpec : Prop :=
       (fun st' rs => rs = [.i64 (UInt64.ofNat (st.mem.read32 src_ptr).toNat)]
         ∧ (∀ k : UInt32, k.toNat < (st.mem.read32 src_ptr).toNat →
             st'.mem.read8 (dst_ptr + k) = st.mem.read8 (src_ptr + 4 + k))
-        ∧ st'.globals = st.globals)
+        ∧ st'.globals = st.globals
+        ∧ st'.mem.pages = st.mem.pages)
 
 @[proves Project.EncodeDecode.Spec.DecodeSpec]
 theorem decode_correct : DecodeSpec := by
@@ -206,7 +210,8 @@ theorem decode_correct : DecodeSpec := by
   by_cases hz : st.mem.read32 src_ptr = 0
   · simp only [wp_simp, wp_entry, wp_reduce, hz, hg2, hglob2, hgf,
       Mem.write64_pages, hnt64, Mem.read64_write64_same, List.getElem?_set_self hlen]
-    exact ⟨_, rfl, fun k hk => (Nat.not_lt_zero _ hk).elim, rfl⟩
+    refine ⟨_, rfl, fun k hk => (Nat.not_lt_zero _ hk).elim, rfl, ?_⟩
+    rw [Mem.write64_pages]; exact hp2
   · have hn0 : (st.mem.read32 src_ptr).toNat ≠ 0 := fun h => hz (UInt32.toNat.inj (by simpa using h))
     have ha4 : (4 + src_ptr).toNat = src_ptr.toNat + 4 := by
       simp only [UInt32.toNat_add, show (4 : UInt32).toNat = 4 from rfl]; omega
@@ -216,7 +221,9 @@ theorem decode_correct : DecodeSpec := by
     simp only [wp_simp, wp_entry, wp_reduce, hz, hg2, hglob2, hgf,
       Mem.copy_pages, Mem.write64_pages, hnt64, hntC, Mem.read64_write64_same,
       List.getElem?_set_self hlen]
-    refine ⟨_, rfl, ?_, rfl⟩
+    refine ⟨_, rfl, ?_, rfl, ?_⟩
+    rotate_left
+    · rw [Mem.write64_pages, Mem.copy_pages]; exact hp2
     intro k hk
     have hdk : (dst_ptr + k).toNat = dst_ptr.toNat + k.toNat := by
       simp only [UInt32.toNat_add]; omega
