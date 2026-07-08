@@ -345,7 +345,6 @@ theorem meatLoop_wp (env : HostEnv Unit) (stm : Store Unit) (a b : UInt64)
           · rw [hx1]; exact hodd'
           · rw [hx1]; exact hgcd'.trans hgcd
           · rw [hx1]; have := hdec; omega
-        · rename_i h; exact (h 1 vals rfl).elim
       · -- ¬(y < x): subtract x from y, halve y.  (y-branch.)
         rw [if_neg hlt]
         obtain ⟨hne', hodd', hgcd', hdec⟩ :=
@@ -373,9 +372,7 @@ theorem meatLoop_wp (env : HostEnv Unit) (stm : Store Unit) (a b : UInt64)
           · rw [hy1]; exact hodd'
           · rw [hy1]; exact hgcd'.trans hgcd
           · rw [hy1]; have := hdec; omega
-        · rename_i h0 h; simp only [List.cons.injEq, Value.i32.injEq,
-            show (1 : UInt32) &&& 0 = 0 from rfl] at h; exact (h0 h.1.symm).elim
-        · rename_i h; exact (h 0 vals rfl).elim
+        · rename_i h; simp at h
 
 set_option maxHeartbeats 4000000 in
 theorem func1_terminates (env : HostEnv Unit) (st1 : Store Unit) (a b : UInt64)
