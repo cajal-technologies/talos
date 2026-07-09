@@ -1,4 +1,5 @@
 import Project.EncodeDecode.Spec
+import Project.EncodeDecodeTests.Spec
 import Project.NumInteger.Spec
 import Project.RustArray.Spec
 import Project.RustArrayTests.Spec
