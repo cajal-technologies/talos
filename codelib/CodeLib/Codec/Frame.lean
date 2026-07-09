@@ -1,6 +1,5 @@
 import CodeLib.Entry
 import CodeLib.Wp
-import CodeLib.UInt32
 import CodeLib.RustStd.Frame
 import CodeLib.RustStd.Mem
 import Interpreter.Wasm.Wp.Call
