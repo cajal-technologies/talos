@@ -95,4 +95,62 @@ theorem encode_frame_correct : EncodeFrameSpec := by
   simp only [wp_simp, wp_entry, wp_reduce]
   exact ⟨_, rfl, hread, hpay, hglob, hpages⟩
 
+/-! ## `roundtrip` — `encode` then `decode`, recovering the payload
+
+The headline: a single client program that calls *both* codec functions, proved
+by crossing each `call` with the matching codec theorem and chaining their
+posts. No memory reasoning of its own. -/
+
+@[spec_of "rust-exported" "encode_decode_tests::roundtrip"]
+def RoundtripSpec : Prop :=
+  ∀ (env : HostEnv Unit) (st : Store Unit) (src len mid dst cap : UInt32),
+    st.globals.globals[0]? = some (.i32 1048576) →
+    st.mem.pages ≤ 65536 →
+    mid.toNat + 4 + len.toNat ≤ st.mem.pages * 65536 →
+    src.toNat + len.toNat ≤ st.mem.pages * 65536 →
+    dst.toNat + len.toNat ≤ st.mem.pages * 65536 →
+    len.toNat ≤ cap.toNat →
+    1048576 ≤ mid.toNat →
+    1048576 ≤ src.toNat →
+    1048576 ≤ dst.toNat →
+    (src.toNat + len.toNat ≤ mid.toNat ∨ mid.toNat + 4 + len.toNat ≤ src.toNat) →
+    TerminatesWith env «module» 2 st [.i32 cap, .i32 dst, .i32 mid, .i32 len, .i32 src]
+      (fun st' rs => rs = [.i64 (UInt64.ofNat len.toNat)]
+        ∧ ∀ k : UInt32, k.toNat < len.toNat →
+            st'.mem.read8 (dst + k) = st.mem.read8 (src + k))
+
+@[proves Project.EncodeDecodeTests.Spec.RoundtripSpec]
+theorem roundtrip_correct : RoundtripSpec := by
+  intro env st src len mid dst cap hg hpg hmB hsB hdB hcap hm hs hd hsm
+  refine TerminatesWith.of_returns_wp (f := func2Def)
+    (rs := [.i64 (UInt64.ofNat len.toNat)]) rfl rfl ?_ rfl
+  simp only [func2Def]
+  unfold func2 Returns
+  simp only [wp_simp, wp_entry, wp_reduce]
+  -- cross `encode` (call 6): src → mid
+  refine wp_call_tw (encodeTerminates st src len mid
+    rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl hg hpg hmB hsB hm hs hsm) ?_
+  rintro st1 vs1 ⟨rfl, hread, hpay1, hglob1, hpages1⟩
+  simp only [wp_simp, wp_entry, wp_reduce]
+  -- cross `decode` (call 5): the frame at mid → dst
+  have h4len : (4 + len).toNat = 4 + len.toNat := by
+    simp only [UInt32.toNat_add, show (4 : UInt32).toNat = 4 from rfl]; omega
+  have hg1 : st1.globals.globals[0]? = some (.i32 1048576) := by rw [hglob1]; exact hg
+  refine wp_call_tw (decodeTerminates st1 mid (4 + len) dst cap
+    rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl hg1
+    (by rw [hpages1]; exact hpg)
+    (by rw [h4len]; omega)
+    (by rw [hread, h4len]; omega)
+    (by rw [hread]; exact hcap)
+    (by rw [hpages1, h4len]; omega)
+    (by rw [hpages1, hread]; omega)
+    hm hd) ?_
+  rintro st2 vs2 ⟨rfl, hpay2, hglob2, hpages2⟩
+  simp only [wp_simp, wp_entry, wp_reduce]
+  rw [hread]
+  refine ⟨_, rfl, ?_⟩
+  intro k hk
+  rw [hpay2 k (by rw [hread]; exact hk)]
+  exact hpay1 k hk
+
 end Project.EncodeDecodeTests.Spec
