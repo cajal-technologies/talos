@@ -13,6 +13,13 @@ name = "encode_decode"
 version = "0.1.0"
 
 [[package]]
+name = "encode_decode_tests"
+version = "0.1.0"
+dependencies = [
+ "encode_decode",
+]
+
+[[package]]
 name = "num-integer"
 version = "0.1.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
