@@ -16,7 +16,7 @@ that *uses* the codec costs a couple of tactics, not a fresh proof.
 
 namespace Project.EncodeDecodeTests.Spec
 
-open Wasm Project.EncodeDecode.Spec
+open Wasm Wasm.Codec Project.EncodeDecode.Spec
 
 set_option maxRecDepth 1048576
 set_option linter.unusedSimpArgs false

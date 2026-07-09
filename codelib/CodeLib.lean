@@ -7,6 +7,7 @@ import CodeLib.UInt32
 import CodeLib.UInt64
 import CodeLib.RustStd.Frame
 import CodeLib.RustStd.Mem
+import CodeLib.Codec.Frame
 import CodeLib.RustStd.UInt
 import CodeLib.RustStd.U64.Basic
 import CodeLib.RustStd.U64.AbsDiff
