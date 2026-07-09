@@ -20,8 +20,48 @@ open Wasm
 set_option maxRecDepth 1048576
 set_option linter.unusedSimpArgs false
 
-/-- `func1` — the `store32` helper (`write_unaligned`): stores the `u32` `p1` at
-address `p0`, roundtripping through a scratch slot at `global0 - 4`. -/
+/-- Reusable, **module-parametric** `store32` helper: any module function whose
+body/params/locals are the `write_unaligned` outline stores `p1` at `p0` (through
+a scratch slot at `global0 - 4`) and terminates. Keyed on the body like the
+`Array` corpus' `isEmptyBodyTerminates`, so a *client* module that calls this
+helper reuses it via `wp_call_tw` instead of re-proving it. -/
+theorem store32Terminates {env : HostEnv Unit} {m : Module} {id : Nat} {f : Function}
+    (st : Store Unit) (p0 p1 p2 g0 : UInt32)
+    (hf : m.funcs[id - m.imports.length]? = some f)
+    (hp : f.params = [.i32, .i32, .i32])
+    (hl : f.locals = [.i32])
+    (hb : f.body = [.globalGet 0, .const (16 : UInt32), .sub, .localSet 3,
+      .localGet 3, .localGet 1, .store32 (12 : UInt32), .localGet 0, .localGet 3,
+      .load32 (12 : UInt32), .store32 (0 : UInt32), .ret])
+    (hr : f.results = [])
+    (hg   : st.globals.globals[0]? = some (.i32 g0))
+    (hg16 : 16 ≤ g0.toNat)
+    (hgB  : g0.toNat ≤ st.mem.pages * 65536)
+    (hp0  : p0.toNat + 4 ≤ st.mem.pages * 65536)
+    (hImp : m.imports[id]? = none := by rfl) :
+    TerminatesWith env m id st [.i32 p2, .i32 p1, .i32 p0]
+      (fun st' rs => rs = []
+        ∧ st'.mem = (st.mem.write32 (g0 - 16 + 12) p1).write32 p0 p1
+        ∧ st'.globals = st.globals) := by
+  have hnp : f.numParams = 3 := by simp only [Function.numParams, hp]; rfl
+  refine (TerminatesWith.of_returns_wp (rs := []) (P := fun st' =>
+      st'.mem = (st.mem.write32 (g0 - 16 + 12) p1).write32 p0 p1 ∧ st'.globals = st.globals)
+      hf (by simp [hr]) ?_ hImp).mono ?_
+  · rw [hb]
+    have hle16 : (16 : UInt32) ≤ g0 := UInt32.le_iff_toNat_le.mpr (by simpa using hg16)
+    have hsub16 : (g0 - 16).toNat = g0.toNat - 16 := UInt32.toNat_sub_of_le g0 16 hle16
+    have hnt12 : ¬ ((g0 - 16).toNat + 12 + 4 > st.mem.pages * 65536) := by rw [hsub16]; omega
+    have hnt0 : ¬ (p0.toNat + 0 + 4 > st.mem.pages * 65536) := by omega
+    simp only [Returns, wp_simp, wp_entry, wp_reduce, hp, hl, hg, hnt12, hnt0,
+      Mem.write32_pages, Mem.read32_write32_same]
+    refine ⟨_, rfl, ?_, rfl⟩
+    simp only [UInt32.add_zero]
+  · intro st' vs h
+    refine ⟨?_, h.2⟩
+    rw [h.1, hnp]; rfl
+
+/-- `func1` — the codec module's own `store32` helper: `store32Terminates` at
+`«module»`'s function 1. -/
 theorem func1_store (env : HostEnv Unit) (st : Store Unit) (p0 p1 p2 g0 : UInt32)
     (hg   : st.globals.globals[0]? = some (.i32 g0))
     (hg16 : 16 ≤ g0.toNat)
@@ -30,21 +70,52 @@ theorem func1_store (env : HostEnv Unit) (st : Store Unit) (p0 p1 p2 g0 : UInt32
     TerminatesWith env «module» 1 st [.i32 p2, .i32 p1, .i32 p0]
       (fun st' rs => rs = []
         ∧ st'.mem = (st.mem.write32 (g0 - 16 + 12) p1).write32 p0 p1
-        ∧ st'.globals = st.globals) := by
-  refine TerminatesWith.of_returns_wp (f := func1Def) (rs := []) rfl rfl ?_ rfl
-  simp only [func1Def]
-  unfold func1 Returns
-  have hle16 : (16 : UInt32) ≤ g0 := UInt32.le_iff_toNat_le.mpr (by simpa using hg16)
-  have hsub16 : (g0 - 16).toNat = g0.toNat - 16 := UInt32.toNat_sub_of_le g0 16 hle16
-  have hnt12 : ¬ ((g0 - 16).toNat + 12 + 4 > st.mem.pages * 65536) := by rw [hsub16]; omega
-  have hnt0 : ¬ (p0.toNat + 0 + 4 > st.mem.pages * 65536) := by omega
-  simp only [wp_simp, wp_entry, wp_reduce, hg, hnt12, hnt0,
-    Mem.write32_pages, Mem.read32_write32_same]
-  refine ⟨_, rfl, ?_, rfl⟩
-  simp only [UInt32.add_zero]
+        ∧ st'.globals = st.globals) :=
+  store32Terminates st p0 p1 p2 g0 rfl rfl rfl rfl rfl hg hg16 hgB hp0
 
-/-- `func0` — the `load32` helper (`read_unaligned`): returns the `u32` at `p0`,
-roundtripping through scratch slots at `global0 - 8` and `global0 - 4`. -/
+/-- Reusable, **module-parametric** `load32` helper: any module function whose
+body is the `read_unaligned` outline returns the `u32` at `p0`. The callee twin
+of `store32Terminates`, reused across a client `call`. -/
+theorem load32Terminates {env : HostEnv Unit} {m : Module} {id : Nat} {f : Function}
+    (st : Store Unit) (p0 p1 g0 : UInt32)
+    (hf : m.funcs[id - m.imports.length]? = some f)
+    (hp : f.params = [.i32, .i32])
+    (hl : f.locals = [.i32])
+    (hb : f.body = [.globalGet 0, .const (16 : UInt32), .sub, .localSet 2,
+      .localGet 2, .localGet 0, .load32 (0 : UInt32), .store32 (8 : UInt32),
+      .localGet 2, .localGet 2, .load32 (8 : UInt32), .store32 (12 : UInt32),
+      .localGet 2, .load32 (12 : UInt32), .ret])
+    (hr : f.results = [.i32])
+    (hg   : st.globals.globals[0]? = some (.i32 g0))
+    (hg16 : 16 ≤ g0.toNat)
+    (hgB  : g0.toNat ≤ st.mem.pages * 65536)
+    (hp0  : p0.toNat + 4 ≤ st.mem.pages * 65536)
+    (hImp : m.imports[id]? = none := by rfl) :
+    TerminatesWith env m id st [.i32 p1, .i32 p0]
+      (fun st' rs => rs = [.i32 (st.mem.read32 p0)]
+        ∧ st'.mem = (st.mem.write32 (g0 - 16 + 8) (st.mem.read32 p0)).write32
+            (g0 - 16 + 12) (st.mem.read32 p0)
+        ∧ st'.globals = st.globals) := by
+  have hnp : f.numParams = 2 := by simp only [Function.numParams, hp]; rfl
+  refine (TerminatesWith.of_returns_wp (rs := [.i32 (st.mem.read32 p0)]) (P := fun st' =>
+      st'.mem = (st.mem.write32 (g0 - 16 + 8) (st.mem.read32 p0)).write32
+        (g0 - 16 + 12) (st.mem.read32 p0) ∧ st'.globals = st.globals)
+      hf (by simp [hr]) ?_ hImp).mono ?_
+  · rw [hb]
+    have hle16 : (16 : UInt32) ≤ g0 := UInt32.le_iff_toNat_le.mpr (by simpa using hg16)
+    have hsub16 : (g0 - 16).toNat = g0.toNat - 16 := UInt32.toNat_sub_of_le g0 16 hle16
+    have hnt0 : ¬ (p0.toNat + 0 + 4 > st.mem.pages * 65536) := by omega
+    have hnt8 : ¬ ((g0 - 16).toNat + 8 + 4 > st.mem.pages * 65536) := by rw [hsub16]; omega
+    have hnt12 : ¬ ((g0 - 16).toNat + 12 + 4 > st.mem.pages * 65536) := by rw [hsub16]; omega
+    simp only [Returns, wp_simp, wp_entry, wp_reduce, hp, hl, hg, hnt0, hnt8, hnt12,
+      Mem.write32_pages, Mem.read32_write32_same, UInt32.add_zero]
+    exact ⟨_, rfl, rfl, rfl⟩
+  · intro st' vs h
+    refine ⟨?_, h.2⟩
+    rw [h.1, hnp]; rfl
+
+/-- `func0` — the codec module's own `load32` helper: `load32Terminates` at
+`«module»`'s function 0. -/
 theorem func0_load (env : HostEnv Unit) (st : Store Unit) (p0 p1 g0 : UInt32)
     (hg   : st.globals.globals[0]? = some (.i32 g0))
     (hg16 : 16 ≤ g0.toNat)
@@ -54,18 +125,8 @@ theorem func0_load (env : HostEnv Unit) (st : Store Unit) (p0 p1 g0 : UInt32)
       (fun st' rs => rs = [.i32 (st.mem.read32 p0)]
         ∧ st'.mem = (st.mem.write32 (g0 - 16 + 8) (st.mem.read32 p0)).write32
             (g0 - 16 + 12) (st.mem.read32 p0)
-        ∧ st'.globals = st.globals) := by
-  refine TerminatesWith.of_returns_wp (f := func0Def) (rs := [.i32 (st.mem.read32 p0)]) rfl rfl ?_ rfl
-  simp only [func0Def]
-  unfold func0 Returns
-  have hle16 : (16 : UInt32) ≤ g0 := UInt32.le_iff_toNat_le.mpr (by simpa using hg16)
-  have hsub16 : (g0 - 16).toNat = g0.toNat - 16 := UInt32.toNat_sub_of_le g0 16 hle16
-  have hnt0 : ¬ (p0.toNat + 0 + 4 > st.mem.pages * 65536) := by omega
-  have hnt8 : ¬ ((g0 - 16).toNat + 8 + 4 > st.mem.pages * 65536) := by rw [hsub16]; omega
-  have hnt12 : ¬ ((g0 - 16).toNat + 12 + 4 > st.mem.pages * 65536) := by rw [hsub16]; omega
-  simp only [wp_simp, wp_entry, wp_reduce, hg, hnt0, hnt8, hnt12,
-    Mem.write32_pages, Mem.read32_write32_same, UInt32.add_zero]
-  exact ⟨_, rfl, rfl, rfl⟩
+        ∧ st'.globals = st.globals) :=
+  load32Terminates st p0 p1 g0 rfl rfl rfl rfl rfl hg hg16 hgB hp0
 
 /-- **`encode` is correct.** Writes the length prefix (`store32`, via `func1`)
 then the payload (`memory.copy`), returning `4 + src_len`.
