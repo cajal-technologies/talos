@@ -30,7 +30,14 @@ import Interpreter.Wasm.Examples.Counter
 import Interpreter.Wasm.Examples.DecoderImport
 import Interpreter.Wasm.Examples.DecoderImportedGlobal
 import Interpreter.Wasm.Examples.FloatOps
+import Interpreter.Wasm.Examples.Gcd
+import Interpreter.Wasm.Examples.SelectAbs
+import Interpreter.Wasm.Examples.GlobalInitExpr
+import Interpreter.Wasm.Examples.CallIndirectSubtype
 
 /-! # Wasm.Examples.Basic
 
-Umbrella import for the bundled worked examples. -/
+Umbrella import for the bundled worked examples. Every example file under
+`Interpreter/Wasm/Examples/` must be imported here: this module is the only
+thing the CI `Interpreter` build reaches, so an example missing from this list
+is never compiled and its `native_decide` checks never run. -/
