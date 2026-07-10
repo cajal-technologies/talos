@@ -86,6 +86,37 @@ theorem TerminatesWith.mono {env : HostEnv α} {m : Module} {id : Nat}
   obtain ⟨vs, st, hRun, hP⟩ := hN fuel hf
   exact ⟨vs, st, hRun, hPQ st vs hP⟩
 
+/-- Discharge `TerminatesWith` for a **concrete** call by evaluating a fixed
+fuel and checking the success result with a `Bool` predicate.
+
+`run N … = .Success vs st` can't be closed by `native_decide` directly — `Store`
+carries a function-valued `Mem`, so `Result` has no `DecidableEq`. This bridge
+sidesteps that: the run equality comes from `cases` (definitional, no decidable
+instance needed), while the *only* obligation `native_decide` sees is the
+`Bool`-valued `check` on the concrete result. Use it to land end-to-end
+total-correctness instances for particular inputs (e.g. `encode "hi"`), where
+symbolically reasoning through the whole body (allocator loops and all) is
+unnecessary because the input is fixed.
+
+`hsound` lifts the `Bool` check to the intended `Prop` post; `hcheck` is the
+`by native_decide` obligation. -/
+theorem TerminatesWith.of_run_check {α} {env : HostEnv α} {m : Module} {id : Nat}
+    {initial : Store α} {args : List Value} {P : Store α → List Value → Prop}
+    (N : Nat) (check : List Value → Store α → Bool)
+    (hsound : ∀ vs st, check vs st = true → P st vs)
+    (hcheck : (match run N m id initial args env with
+               | .Success vs st => check vs st
+               | _ => false) = true) :
+    TerminatesWith env m id initial args P := by
+  cases hr : run N m id initial args env with
+  | Success vs st =>
+      rw [hr] at hcheck
+      exact TerminatesWith.of_run N vs st hr (hsound vs st hcheck)
+  | Trap st msg => rw [hr] at hcheck; simp at hcheck
+  | Invalid msg => rw [hr] at hcheck; simp at hcheck
+  | OutOfFuel => rw [hr] at hcheck; simp at hcheck
+  | Thrown t a st => rw [hr] at hcheck; simp at hcheck
+
 /-- Start a store-parametric entry proof by inferring the generated
 `Function` witness from the concrete module. Use for specs whose body proof
 does not depend on facts about the caller's initial store. -/

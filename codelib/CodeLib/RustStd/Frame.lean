@@ -61,4 +61,47 @@ returns the stored value. -/
 @[simp] theorem Mem.write64_pages (m : Mem) (a : UInt32) (v : UInt64) :
     (m.write64 a v).pages = m.pages := rfl
 
+/-! ## `memory.copy` framing
+
+`memory.copy dst src len` overwrites exactly `[dst, dst+len)` with the *pre-copy*
+bytes of `[src, src+len)` (see `Mem.copy`; this gives `memmove` semantics for
+free). These lemmas answer the two questions a proof asks after a bulk copy —
+what a byte *inside* the destination now reads (the matching source byte), and
+that bytes *outside*, plus the page count, are untouched — mirroring the store
+round-trip lemmas above. -/
+
+/-- `memory.copy` leaves the page count unchanged. -/
+@[simp] theorem Mem.copy_pages (m : Mem) (dst src len : Nat) :
+    (m.copy dst src len).pages = m.pages := rfl
+
+/-- A destination byte after `memory.copy` reads the matching source byte of the
+pre-copy memory. -/
+theorem Mem.bytes_copy_inside (m : Mem) (dst src len i : Nat)
+    (h : dst ≤ i ∧ i < dst + len) :
+    (m.copy dst src len).bytes i = m.bytes (src + (i - dst)) := by
+  simp only [Mem.copy]
+  rw [if_pos h]
+
+/-- A byte outside the copied destination range is unchanged by `memory.copy`. -/
+theorem Mem.bytes_copy_outside (m : Mem) (dst src len i : Nat)
+    (h : i < dst ∨ dst + len ≤ i) :
+    (m.copy dst src len).bytes i = m.bytes i := by
+  simp only [Mem.copy]
+  rw [if_neg (by omega)]
+
+/-- `read8` of a destination byte after `memory.copy` returns the matching
+source byte of the pre-copy memory. -/
+theorem Mem.read8_copy_inside (m : Mem) (dst src len : Nat) (a : UInt32)
+    (h : dst ≤ a.toNat ∧ a.toNat < dst + len) :
+    (m.copy dst src len).read8 a = m.bytes (src + (a.toNat - dst)) := by
+  simp only [Mem.read8]
+  exact Mem.bytes_copy_inside m dst src len a.toNat h
+
+/-- `read8` outside the copied destination range is unchanged. -/
+theorem Mem.read8_copy_outside (m : Mem) (dst src len : Nat) (a : UInt32)
+    (h : a.toNat < dst ∨ dst + len ≤ a.toNat) :
+    (m.copy dst src len).read8 a = m.read8 a := by
+  simp only [Mem.read8]
+  exact Mem.bytes_copy_outside m dst src len a.toNat h
+
 end Wasm

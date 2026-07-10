@@ -91,4 +91,60 @@ def EncodeSpec : Prop :=
             st'.mem.read8 (st'.mem.read32 (retPtr + 4) + k)
               = st.mem.read8 (dataPtr + k))
 
+/-! ## Proven concrete instance
+
+`EncodeSpec` above is the *symbolic-length* goal; discharging it in full means
+verifying `dlmalloc` for arbitrary allocation sizes (the allocator frontier),
+and two things must first be tightened in the statement:
+
+* the `∀ st` must be **pinned** — the allocator reads its heap metadata from
+  memory, so it only behaves on the module's initial store with the input
+  written in (an arbitrary `st` could carry garbage metadata and never
+  terminate). `gcd_u64` pins `st = «module».initialStore` for the same reason.
+* the allocation region begins at `«module».initialStore`'s page limit,
+  `17 * 65536 = 1114112` (allocations `memory.grow` past it), not `1050048`.
+
+Both are settled here for a *fixed* input, giving a fully discharged,
+sorry-free total-correctness instance via `TerminatesWith.of_run_check`:
+encoding the ASCII string `"hi"` (bytes `104, 105`) placed at `exA` in the
+module's initial store terminates, writing a `Vec<u8>` of length `2` whose
+buffer holds `[104, 105]`. -/
+
+/-- Input byte address ("hi" lands here), the `&str` struct address, and the
+result-slot address — all inside the non-aliasing window `[1048576, 1114112)`. -/
+def exA : UInt32 := 1049800
+def exArgPtr : UInt32 := 1049540
+def exRetPtr : UInt32 := 1049520
+
+/-- `«module».initialStore` with `"hi"` written at `exA` and a `&str {exA, 2}`
+struct at `exArgPtr`. -/
+def exStore : Store Unit :=
+  let m := («module».initialStore (α := Unit)).mem
+  let m := m.write8 exA 104
+  let m := m.write8 (exA + 1) 105
+  let m := m.write32 exArgPtr exA
+  let m := m.write32 (exArgPtr + 4) 2
+  { («module».initialStore (α := Unit)) with mem := m }
+
+/-- `Bool` success check fed to `native_decide`: empty stack, `len = 2`, buffer
+bytes `104, 105`. -/
+private def exCheck (vs : List Value) (st : Store Unit) : Bool :=
+  (vs.length == 0) && (st.mem.read32 (exRetPtr + 8) == 2) &&
+  (st.mem.read8 (st.mem.read32 (exRetPtr + 4)) == 104) &&
+  (st.mem.read8 (st.mem.read32 (exRetPtr + 4) + 1) == 105)
+
+/-- Total-correctness instance: `encode "hi"` terminates, returning a `Vec<u8>`
+of length `2` whose buffer holds `[104, 105]`. Fully discharged (no `sorry`). -/
+theorem encode_hi :
+    TerminatesWith ({} : HostEnv Unit) «module» 8 exStore [.i32 exArgPtr, .i32 exRetPtr]
+      (fun st' rs => rs = [] ∧ st'.mem.read32 (exRetPtr + 8) = 2 ∧
+        st'.mem.read8 (st'.mem.read32 (exRetPtr + 4)) = 104 ∧
+        st'.mem.read8 (st'.mem.read32 (exRetPtr + 4) + 1) = 105) := by
+  apply TerminatesWith.of_run_check 64 exCheck
+  · intro vs st h
+    unfold exCheck at h
+    simp only [Bool.and_eq_true, beq_iff_eq, List.length_eq_zero_iff] at h
+    exact ⟨h.1.1.1, h.1.1.2, h.1.2, h.2⟩
+  · native_decide
+
 end Project.Encode.Spec
