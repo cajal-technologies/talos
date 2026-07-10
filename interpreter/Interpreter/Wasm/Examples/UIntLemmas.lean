@@ -1,4 +1,4 @@
-import Interpreter.Wasm.Semantics
+import Init
 
 /-!
 # `UInt32` counter-stepping lemmas for the examples
