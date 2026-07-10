@@ -148,4 +148,37 @@ theorem decode_hi :
     exact ⟨h.1.1.1, h.1.1.2, h.1.2, h.2⟩
   · native_decide
 
+/-! ### Battery over several inputs
+
+The same total-correctness instance discharged for a range of concrete ASCII
+inputs (lengths 0, 5) via the reusable `of_run_check` bridge. `decCheck bytes`
+states: empty stack, result `String` length `= bytes.length`, and the result
+buffer's first `bytes.length` bytes equal `bytes` (vacuous for the empty input). -/
+
+/-- Input store: `bytes` written at `exA`, with a `&[u8] {exA, bytes.length}`. -/
+private def storeFor (bytes : List UInt8) : Store Unit :=
+  let m := («module».initialStore (α := Unit)).mem
+  let m := m.writeBytes exA.toNat bytes
+  let m := m.write32 exArgPtr exA
+  let m := m.write32 (exArgPtr + 4) (UInt32.ofNat bytes.length)
+  { («module».initialStore (α := Unit)) with mem := m }
+
+/-- Success check for a concrete expected byte list. -/
+private def decCheck (bytes : List UInt8) (vs : List Value) (st : Store Unit) : Bool :=
+  (vs.length == 0) && (st.mem.read32 (exRetPtr + 8) == UInt32.ofNat bytes.length) &&
+  (st.mem.readBytes (st.mem.read32 (exRetPtr + 4)).toNat bytes.length == bytes)
+
+/-- `decode []` (empty input) terminates with an empty (length-0) `String`. -/
+theorem decode_empty :
+    TerminatesWith ({} : HostEnv Unit) «module» 24 (storeFor []) [.i32 exArgPtr, .i32 exRetPtr]
+      (fun st' vs => decCheck [] vs st' = true) :=
+  TerminatesWith.of_run_check 64 (decCheck []) (fun _ _ h => h) (by native_decide)
+
+/-- `decode [104,101,108,108,111]` ("hello") terminates with that 5-byte `String`. -/
+theorem decode_hello :
+    TerminatesWith ({} : HostEnv Unit) «module» 24 (storeFor [104, 101, 108, 108, 111])
+      [.i32 exArgPtr, .i32 exRetPtr]
+      (fun st' vs => decCheck [104, 101, 108, 108, 111] vs st' = true) :=
+  TerminatesWith.of_run_check 64 (decCheck [104, 101, 108, 108, 111]) (fun _ _ h => h) (by native_decide)
+
 end Project.Decode.Spec
