@@ -129,4 +129,62 @@ theorem Mem.read64_shiftRight32_toUInt32 (m : Mem) (a : UInt32)
     show a.toNat + 4 + 3 = a.toNat + 7 from rfl]
   bv_decide
 
+/-! ## `memory.copy` and `wordsAt`
+
+`copy_from_slice` lowers to a single `Mem.copy`; these lemmas read the result
+back at the `wordsAt` level for the caller (`func3`'s copy-back step). -/
+
+/-- A byte inside the copied destination range at offset `d` equals the source
+byte at offset `d` (read from the pre-copy memory — `memmove` semantics). -/
+theorem Mem.bytes_copy_add (m : Mem) (dst src cnt d : Nat) (h : d < cnt) :
+    (m.copy dst src cnt).bytes (dst + d) = m.bytes (src + d) := by
+  simp only [Mem.copy]
+  rw [if_pos (And.intro (Nat.le_add_right dst d) (by omega))]
+  congr 1; omega
+
+/-- A byte outside the copied destination range is untouched. -/
+theorem Mem.bytes_copy_of_disjoint (m : Mem) (dst src cnt j : Nat)
+    (h : j < dst ∨ dst + cnt ≤ j) :
+    (m.copy dst src cnt).bytes j = m.bytes j := by
+  simp only [Mem.copy]
+  rw [if_neg (by omega)]
+
+/-- Reading back the destination of a `4*n`-byte copy gives the source words:
+`copy_from_slice` makes the destination equal the source slice. -/
+theorem wordsAt_copy_dst (m : Mem) (dst src : UInt32) (n : Nat)
+    (hd : dst.toNat + 4 * n ≤ 4294967296)
+    (hs : src.toNat + 4 * n ≤ 4294967296) :
+    wordsAt (m.copy dst.toNat src.toNat (4 * n)) dst n = wordsAt m src n := by
+  simp only [wordsAt]
+  apply List.map_congr_left
+  intro i hi
+  rw [List.mem_range] at hi
+  have hda : (dst + 4 * UInt32.ofNat i).toNat = dst.toNat + 4 * i := toNat_wordAddr dst n i hi hd
+  have hsa : (src + 4 * UInt32.ofNat i).toNat = src.toNat + 4 * i := toNat_wordAddr src n i hi hs
+  have b0 : (m.copy dst.toNat src.toNat (4 * n)).bytes (dst.toNat + 4 * i)
+      = m.bytes (src.toNat + 4 * i) := Mem.bytes_copy_add m _ _ _ (4 * i) (by omega)
+  have b1 : (m.copy dst.toNat src.toNat (4 * n)).bytes (dst.toNat + 4 * i + 1)
+      = m.bytes (src.toNat + 4 * i + 1) := Mem.bytes_copy_add m _ _ _ (4 * i + 1) (by omega)
+  have b2 : (m.copy dst.toNat src.toNat (4 * n)).bytes (dst.toNat + 4 * i + 2)
+      = m.bytes (src.toNat + 4 * i + 2) := Mem.bytes_copy_add m _ _ _ (4 * i + 2) (by omega)
+  have b3 : (m.copy dst.toNat src.toNat (4 * n)).bytes (dst.toNat + 4 * i + 3)
+      = m.bytes (src.toNat + 4 * i + 3) := Mem.bytes_copy_add m _ _ _ (4 * i + 3) (by omega)
+  simp only [Mem.read32, hda, hsa, b0, b1, b2, b3]
+
+/-- A `wordsAt` region disjoint from a copy's destination is unchanged. -/
+theorem wordsAt_copy_of_disjoint (m : Mem) (base dst src : UInt32) (n cnt : Nat)
+    (hub : base.toNat + 4 * n ≤ 4294967296)
+    (hdis : base.toNat + 4 * n ≤ dst.toNat ∨ dst.toNat + cnt ≤ base.toNat) :
+    wordsAt (m.copy dst.toNat src.toNat cnt) base n = wordsAt m base n := by
+  simp only [wordsAt]
+  apply List.map_congr_left
+  intro i hi
+  rw [List.mem_range] at hi
+  have hba : (base + 4 * UInt32.ofNat i).toNat = base.toNat + 4 * i := toNat_wordAddr base n i hi hub
+  have b0 := Mem.bytes_copy_of_disjoint m dst.toNat src.toNat cnt (base.toNat + 4 * i) (by omega)
+  have b1 := Mem.bytes_copy_of_disjoint m dst.toNat src.toNat cnt (base.toNat + 4 * i + 1) (by omega)
+  have b2 := Mem.bytes_copy_of_disjoint m dst.toNat src.toNat cnt (base.toNat + 4 * i + 2) (by omega)
+  have b3 := Mem.bytes_copy_of_disjoint m dst.toNat src.toNat cnt (base.toNat + 4 * i + 3) (by omega)
+  simp only [Mem.read32, hba, b0, b1, b2, b3]
+
 end Project.MergeSort.Framing
