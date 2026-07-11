@@ -4,6 +4,7 @@ import CodeLib.Entry
 import CodeLib.UInt32
 import CodeLib.UInt64
 import CodeLib.RustStd.Frame
+import CodeLib.RustStd.Region
 import CodeLib.RustStd.UInt
 import CodeLib.RustStd.U64.Basic
 import CodeLib.RustStd.U64.AbsDiff

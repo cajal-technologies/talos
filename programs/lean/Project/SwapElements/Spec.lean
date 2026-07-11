@@ -69,31 +69,29 @@ open Wasm
 /-- Byte address of the `k`-th `u64` element of an array based at `ptr`. -/
 @[reducible] def elemAddr (ptr k : UInt32) : UInt32 := ptr + 8 * k
 
-/-! ## Address arithmetic -/
+/-! ## Address arithmetic
 
-/-- `x <<< 3 = 8 * x` on `UInt32`, matching the wasm `(const 3) shl`. -/
-theorem shl3 (x : UInt32) : x <<< (3 % 32 : UInt32) = 8 * x := by bv_decide
+`elemAddr ptr k` is definitionally `(MemRegion.slot64 ptr k).base`, so the
+slot algebra from `CodeLib.RustStd.Region` applies directly; the local names
+below just specialise it to the `elemAddr` spelling the spec uses. -/
 
 /-- Address arithmetic the codegen emits: `(k <<< 3) + ptr = elemAddr ptr k`. -/
-theorem elemAddr_of_shl (ptr k : UInt32) : k <<< (3 % 32 : UInt32) + ptr = elemAddr ptr k := by
-  simp only [elemAddr]; bv_decide
+theorem elemAddr_of_shl (ptr k : UInt32) : k <<< (3 % 32 : UInt32) + ptr = elemAddr ptr k :=
+  MemRegion.slot64_of_shl ptr k
 
 /-- No address wraparound: for an element index whose byte offset stays below
 `2^32`, the wasm address `ptr + 8*k` is the true integer `ptr.toNat + 8*k.toNat`. -/
 theorem elemAddr_toNat (ptr k : UInt32) (h : ptr.toNat + 8 * k.toNat < 4294967296) :
-    (elemAddr ptr k).toNat = ptr.toNat + 8 * k.toNat := by
-  simp only [elemAddr, UInt32.toNat_add, UInt32.toNat_mul, UInt32.reduceToNat]
-  omega
+    (elemAddr ptr k).toNat = ptr.toNat + 8 * k.toNat :=
+  MemRegion.slot64_base_toNat ptr k h
 
 /-- Two distinct in-bounds element addresses are 8-byte disjoint. -/
 theorem elemAddr_disjoint (ptr k l : UInt32)
     (hk : ptr.toNat + 8 * k.toNat < 4294967296) (hl : ptr.toNat + 8 * l.toNat < 4294967296)
     (hkl : k ≠ l) :
     (elemAddr ptr k).toNat + 8 ≤ (elemAddr ptr l).toNat
-      ∨ (elemAddr ptr l).toNat + 8 ≤ (elemAddr ptr k).toNat := by
-  rw [elemAddr_toNat ptr k hk, elemAddr_toNat ptr l hl]
-  have : k.toNat ≠ l.toNat := fun he => hkl (UInt32.toNat.inj he)
-  omega
+      ∨ (elemAddr ptr l).toNat + 8 ≤ (elemAddr ptr k).toNat :=
+  MemRegion.slot64_disjoint ptr k l hk hl hkl
 
 /-! ## `func2`: the exchange leaf -/
 
