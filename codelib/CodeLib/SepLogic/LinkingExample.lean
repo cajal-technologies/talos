@@ -1,101 +1,77 @@
 import CodeLib.SepLogic.ModuleLinking
-import CodeLib.SepLogic.Adequacy
 import CodeLib.SepLogic.WasmHeap
-
-/-! # Module Linking Example: two sequential increment calls
-
-Module A exports `increment(ptr)`:
-  pre  : `st.mem.read64 ptr = v`  for some `v`
-  post : `st'.mem.read64 ptr = v + 1`
-  frame: every 8-byte cell whose range doesn't overlap `[ptr, ptr+8)` is
-         unchanged — this is the ownership guarantee.
-
-Module B imports `increment`, calls it TWICE on the same `ptr`.
-B's proof NEVER mentions A's implementation; it only uses the spec.
-The frame property is used to show that an unrelated cell `ptr₂` is
-preserved across both calls. -/
 
 namespace Wasm.SepLogic.LinkingExample
 
--- Shadow the ancestor Wasm.FuncSpec (an interpreter def with 5 args from
--- Wasm.Wp.Call) so that bare `FuncSpec` refers to our structure.
+-- Shadow Wasm.FuncSpec (interpreter's 5-arg def from Interpreter.Wasm.Wp.Call)
+-- that ancestor-namespace lookup would otherwise resolve bare `FuncSpec` to.
 private abbrev FuncSpec := Wasm.SepLogic.ModuleLinking.FuncSpec
+open Wasm.SepLogic.ModuleLinking (funcSatisfies frame_rule link_modules)
 
-open Wasm.SepLogic.ModuleLinking (funcSatisfies link_modules compose_with_import)
+open Iris
 
-/-- Specification for `increment ptr v`:
-    the function reads `v` from `ptr`, writes `v + 1` back, and guarantees
-    that every non-overlapping 8-byte cell is unchanged (frame rule). -/
+variable [inst : WasmHeapGS]
+
+-- Note on `∗`: in iris-lean `∗` is only available inside `iprop(...)` or `⊢`/`⊣⊢`
+-- macros (see Iris.BI.BIBase). In term position, use `iprop% (A ∗ B)` instead.
+
+/-- Increment specification: the function reads ptr (value `v`), writes `v+1`, returns.
+    `pre` owns the memory cell; `post` owns it with the new value.
+    No `frame` field — the caller's additional resources are preserved by ∗. -/
 def incrementSpec (ptr : UInt32) (v : UInt64) : FuncSpec where
-  pre   := fun st  => st.mem.read64 ptr = v
-  post  := fun st' rs => st'.mem.read64 ptr = v + 1 ∧ rs = []
-  -- frame: every u64 cell whose byte range [addr, addr+8) does not
-  -- overlap [ptr, ptr+8) is preserved.
-  frame := fun st st' =>
-    ∀ (addr : UInt32),
-      (addr.toNat + 8 ≤ ptr.toNat ∨ ptr.toNat + 8 ≤ addr.toNat) →
-      st'.mem.read64 addr = st.mem.read64 addr
+  pre  := fun _st      => pointsTo_u64 ptr v
+  post := fun _st' _vs => pointsTo_u64 ptr (v + 1)
 
-/-- **Two-call increment theorem**.
+/-- Two sequential increment calls with an automatic iProp frame.
 
-    Given any module satisfying `incrementSpec ptr w` for every starting
-    value `w`, calling increment TWICE at `ptr` gives `v + 2`, and an
-    unrelated cell `ptr₂` (non-overlapping with `ptr`) is preserved across
-    both calls.
+    ## Setup
+    Initial heap: `pointsTo_u64 ptr v ∗ pointsTo_u64 ptr₂ u`
+    The second cell `ptr₂` is the caller's frame — it must be untouched.
 
-    ## How the frame is used
+    ## Call 1  (frame R = pointsTo_u64 ptr₂ u)
+    Apply `h_incr v` with R = pointsTo_u64 ptr₂ u; hpre already has the right form.
+    TerminatesWith gives `∃ σ₁, genHeapInterp σ₁ ⊢ pointsTo_u64 ptr (v+1) ∗ pointsTo_u64 ptr₂ u`
 
-    After call 1 (initial store `st`, result `st₁`):
-    - postcondition: `st₁.read64 ptr = v + 1`
-    - **frame**: `st₁.read64 ptr₂ = st.read64 ptr₂ = u`   ← uses frame
+    ## Call 2  (same frame R)
+    Apply `h_incr (v+1)` at the new heap σ₁; same frame R.
+    TerminatesWith gives `∃ σ₂, genHeapInterp σ₂ ⊢ pointsTo_u64 ptr (v+2) ∗ pointsTo_u64 ptr₂ u`
 
-    After call 2 (initial store `st₁`, result `st₂`):
-    - postcondition: `st₂.read64 ptr = (v+1)+1 = v+2`
-    - **frame**: `st₂.read64 ptr₂ = st₁.read64 ptr₂ = u`  ← uses frame
-
-    B's proof is parametric over `m` and never inspects its code. -/
+    The frame `pointsTo_u64 ptr₂ u` is preserved automatically by ∗;
+    no explicit `S.frame` condition is needed. -/
 theorem linked_two_calls
     (m : Wasm.Module) (ptr ptr₂ : UInt32) (v u : UInt64)
     (incr_idx : Nat)
-    (h_nonoverlap : ptr₂.toNat + 8 ≤ ptr.toNat ∨ ptr.toNat + 8 ≤ ptr₂.toNat)
     (h_incr : ∀ w, funcSatisfies m incr_idx (incrementSpec ptr w)) :
-    ∀ (env : Wasm.HostEnv Unit) (st : Wasm.Store Unit),
-      st.mem.read64 ptr  = v →
-      st.mem.read64 ptr₂ = u →
+    ∀ (env : Wasm.HostEnv Unit) (st : Wasm.Store Unit)
+      (σ : WasmHeapMap (Option UInt8)),
+      (genHeapInterp σ ⊢ pointsTo_u64 ptr v ∗ pointsTo_u64 ptr₂ u) →
       Wasm.TerminatesWith env m incr_idx st []
         (fun st₁ _ =>
-          st₁.mem.read64 ptr  = v + 1 ∧
-          st₁.mem.read64 ptr₂ = u     ∧
+          ∃ σ₁ : WasmHeapMap (Option UInt8),
+          (genHeapInterp σ₁ ⊢ pointsTo_u64 ptr (v + 1) ∗ pointsTo_u64 ptr₂ u) ∧
           Wasm.TerminatesWith env m incr_idx st₁ []
-            (fun st₂ _ =>
-              st₂.mem.read64 ptr  = v + 2 ∧
-              st₂.mem.read64 ptr₂ = u)) := by
-  intro env st hpre₁ hpre₂
-  -- ── First call ──────────────────────────────────────────────────────────
-  obtain ⟨N₁, hN₁⟩ := h_incr v env st [] hpre₁
+            (fun _ _ =>
+              ∃ σ₂ : WasmHeapMap (Option UInt8),
+              genHeapInterp σ₂ ⊢ pointsTo_u64 ptr (v + 2) ∗ pointsTo_u64 ptr₂ u)) := by
+  intro env st σ hpre
+  -- ── Call 1 ──────────────────────────────────────────────────────────────────
+  -- h_incr v : funcSatisfies m incr_idx (incrementSpec ptr v)
+  -- frame R = pointsTo_u64 ptr₂ u; hpre already witnesses pre ∗ R.
+  obtain ⟨N₁, hN₁⟩ := h_incr v env st [] (pointsTo_u64 ptr₂ u) σ hpre
   refine ⟨N₁, fun fuel₁ hle₁ => ?_⟩
-  obtain ⟨vs₁, st₁, hrun₁, hpostframe₁⟩ := hN₁ fuel₁ hle₁
-  obtain ⟨hpost₁, hfr₁⟩ := hpostframe₁
-  -- Unfold incrementSpec so hpost₁ and hfr₁ have explicit function types
-  simp only [incrementSpec] at hpost₁ hfr₁
-  obtain ⟨hv₁, _⟩ := hpost₁
-  -- Frame from call 1: ptr₂ is outside the footprint → unchanged
-  have hu₁ : st₁.mem.read64 ptr₂ = u :=
-    (hfr₁ ptr₂ h_nonoverlap).trans hpre₂
-  refine ⟨vs₁, st₁, hrun₁, hv₁, hu₁, ?_⟩
-  -- ── Second call ─────────────────────────────────────────────────────────
-  -- At st₁ with st₁.read64 ptr = v+1; apply spec at starting value (v+1)
-  obtain ⟨N₂, hN₂⟩ := h_incr (v + 1) env st₁ [] hv₁
+  obtain ⟨vs₁, st₁, hrun₁, σ₁, hpost₁⟩ := hN₁ fuel₁ hle₁
+  -- hpost₁ : genHeapInterp σ₁ ⊢ pointsTo_u64 ptr (v+1) ∗ pointsTo_u64 ptr₂ u
+  refine ⟨vs₁, st₁, hrun₁, σ₁, hpost₁, ?_⟩
+  -- ── Call 2 ──────────────────────────────────────────────────────────────────
+  -- h_incr (v+1) at heap σ₁; same frame R = pointsTo_u64 ptr₂ u.
+  obtain ⟨N₂, hN₂⟩ := h_incr (v + 1) env st₁ [] (pointsTo_u64 ptr₂ u) σ₁ hpost₁
   refine ⟨N₂, fun fuel₂ hle₂ => ?_⟩
-  obtain ⟨vs₂, st₂, hrun₂, hpostframe₂⟩ := hN₂ fuel₂ hle₂
-  obtain ⟨hpost₂, hfr₂⟩ := hpostframe₂
-  simp only [incrementSpec] at hpost₂ hfr₂
-  obtain ⟨hv₂, _⟩ := hpost₂
-  -- Frame from call 2: ptr₂ still unchanged
-  have hu₂ : st₂.mem.read64 ptr₂ = u :=
-    (hfr₂ ptr₂ h_nonoverlap).trans hu₁
-  -- (v+1)+1 = v+2 for UInt64
-  refine ⟨vs₂, st₂, hrun₂, ?_, hu₂⟩
-  rw [hv₂, UInt64.add_assoc]; congr 1
+  obtain ⟨vs₂, st₂, hrun₂, σ₂, hpost₂⟩ := hN₂ fuel₂ hle₂
+  -- hpost₂ type: genHeapInterp σ₂ ⊢ (incrementSpec ptr (v+1)).post st₂ vs₂ ∗ ...
+  -- Unfold incrementSpec to expose `(v+1)+1`, then rewrite to `v+2`.
+  simp only [incrementSpec] at hpost₂
+  -- Now: hpost₂ : genHeapInterp σ₂ ⊢ pointsTo_u64 ptr ((v+1)+1) ∗ pointsTo_u64 ptr₂ u
+  rw [show (v + 1 : UInt64) + 1 = v + 2 from by rw [UInt64.add_assoc]; congr 1] at hpost₂
+  exact ⟨vs₂, st₂, hrun₂, σ₂, hpost₂⟩
 
 end Wasm.SepLogic.LinkingExample

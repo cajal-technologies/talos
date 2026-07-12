@@ -2,105 +2,87 @@ import CodeLib.SepLogic.Adequacy
 import CodeLib.SepLogic.WasmHeap
 import CodeLib.SepLogic.WasmWP
 
-/-! # Module Linking Infrastructure (with Frame Rule)
-
-Prop-level module linking following Iris-Wasm (Rao et al., PLDI 2023) §2.2,
-Lemma 3.1.
-
-## Design note
-
-The ideal formulation uses iProp ownership predicates (`pointsTo_u64` etc.) for
-`pre`/`post`, with `funcSatisfies` bridging to `TerminatesWith` via
-`wasm_heap_adequacy`.  That gives the full frame rule automatically: owning a
-cell `{pointsTo_u64 ptr v}` is exclusive, so the separation-logic frame rule
-guarantees every cell NOT in the function's footprint is untouched.
-
-Here we use a Prop-level form that makes the frame obligation *explicit* in the
-`FuncSpec` structure, demonstrating the key ownership insight without requiring
-a full iProp elaboration of function specs.  The `frame` field plays the same
-role as the separation-logic frame rule: the function spec *promises* that
-memory outside its footprint is preserved, enabling callers to compose calls
-without re-proving preservation of unrelated state.  The proof that a concrete
-function satisfies this frame promise would normally proceed by exhibiting an
-iProp Hoare triple and applying `wasm_heap_adequacy`. -/
-
 namespace Wasm.SepLogic.ModuleLinking
+open Iris
 
-open Wasm
+variable [inst : WasmHeapGS]
 
-/-- Pre/post/frame specification for a Wasm function.
+/-! # iProp module linking (Iris-Wasm §2.2)
 
-    `pre`   — precondition on the initial store.
-    `post`  — postcondition on the final store and return values.
-    `frame` — the ownership component: `frame st st'` asserts that the
-              function's effect is confined to the footprint declared by
-              `pre`/`post`; every address OUTSIDE that footprint has the
-              same value in `st'` as in `st`.  Callers use `frame` to
-              know their other memory is preserved across a call. -/
+`FuncSpec.pre` and `FuncSpec.post` are `IProp WasmHeapGF` ownership predicates,
+NOT Prop assertions about store values. There is **no** explicit `frame` field.
+
+The frame rule is automatic: `funcSatisfies` universally quantifies over any
+additional caller resource `R : IProp WasmHeapGF`. The implementation only needs
+to reason about `pre` and `post`; `R` carries through automatically via
+`BI.sep_assoc`.
+
+Note on `∗` syntax: in iris-lean, the separating conjunction `∗` is defined via
+`iprop(...)` macro expansion (see Iris.BI.BIBase). It is NOT a standalone infix
+operator — it only elaborates inside `iprop(P ∗ Q)`, `iprop%(P ∗ Q)`, or the
+`P ⊢ Q` / `P ⊣⊢ Q` macros (which wrap operands in `iprop`). -/
+
+/-- iProp function specification. `pre st` and `post st' vs` are ownership
+    assertions in the Iris ghost heap — e.g. `pointsTo_u64 ptr v`.
+    No `frame` field is needed: the separation conjunction `∗` provides it. -/
 structure FuncSpec where
-  pre   : Store Unit → Prop
-  post  : Store Unit → List Value → Prop
-  /-- `frame st st'` — everything outside the spec's footprint is unchanged. -/
-  frame : Store Unit → Store Unit → Prop
+  pre  : Store Unit → IProp WasmHeapGF
+  post : Store Unit → List Value → IProp WasmHeapGF
 
-/-- `funcSatisfies m idx S` — function `idx` of module `m` satisfies `S`:
-    whenever `S.pre` holds, the call terminates, `S.post` holds, AND the
-    frame condition holds (memory outside the footprint is preserved).
+/-- `funcSatisfies m idx S`: function `idx` of module `m` satisfies spec `S`.
 
-    The full iProp path to discharging this would be: state the function
-    body as an iProp WP, extract a `wp_wasm_prop` via `wasm_heap_adequacy`,
-    then promote to `TerminatesWith` using `wp_wasm_prop_to_TerminatesWith`. -/
+    For any caller frame `R` and heap state `σ` where `S.pre st ∗ R` holds,
+    calling `idx` terminates and the resulting heap satisfies `S.post st' vs ∗ R`.
+
+    The universal quantification over `R` is the separation-logic frame rule
+    baked into the spec: the function guarantees its postcondition AND preserves
+    all additional resources the caller already owns. -/
 def funcSatisfies (m : Module) (idx : Nat) (S : FuncSpec) : Prop :=
-  ∀ (env : HostEnv Unit) (st : Store Unit) (args : List Value),
-    S.pre st →
-    TerminatesWith env m idx st args (fun st' rs => S.post st' rs ∧ S.frame st st')
+  ∀ (env : HostEnv Unit) (st : Store Unit) (args : List Value)
+    (R : IProp WasmHeapGF) (σ : WasmHeapMap (Option UInt8)),
+    (genHeapInterp σ ⊢ S.pre st ∗ R) →
+    TerminatesWith env m idx st args
+      (fun st' vs => ∃ σ' : WasmHeapMap (Option UInt8),
+        genHeapInterp σ' ⊢ S.post st' vs ∗ R)
 
-/-- Module linking theorem (Iris-Wasm Lemma 3.1, Prop-level with frame).
+-- Helper: frame-wrapped spec. Must use `iprop%` since `∗` is only available
+-- inside the `iprop(...)` macro expansion (not as a standalone term operator).
+-- @[reducible] ensures the projection `(framedSpec S R).pre st` is unfolded
+-- to `BIBase.sep (S.pre st) R` during type-checking in `frame_rule`.
+@[reducible] private def framedSpec (S : FuncSpec) (R : IProp WasmHeapGF) : FuncSpec where
+  pre  st     := iprop% S.pre st ∗ R
+  post st' vs := iprop% S.post st' vs ∗ R
 
-    If `m` exports a function satisfying spec `S`, and a client property
-    `P_correct` holds for ANY module satisfying `S`, then `P_correct`
-    holds for `m`.  The client `P_correct` never inspects `m`'s code. -/
+/-- Frame rule: if `S` is satisfied, then `{S.pre ∗ R}` / `{S.post ∗ R}` is also
+    satisfied for any additional frame `R`.
+
+    Proof: reassociate `(pre ∗ R) ∗ R' ↔ pre ∗ (R ∗ R')` using `BI.sep_assoc`,
+    apply `funcSatisfies` with compound frame `R ∗ R'`, then reassociate back. -/
+theorem frame_rule
+    {m : Module} {idx : Nat} {S : FuncSpec} (R : IProp WasmHeapGF)
+    (h : funcSatisfies m idx S) :
+    funcSatisfies m idx (framedSpec S R) := by
+  intro env st args R' σ hpre
+  -- hpre : genHeapInterp σ ⊢ (S.pre st ∗ R) ∗ R'
+  -- Apply h with compound frame (R ∗ R') using BI.sep_assoc.mp.
+  -- Note: `∗` in term position requires `iprop%` wrapper (Iris elaboration rule).
+  have h1 : genHeapInterp σ ⊢ S.pre st ∗ (iprop%(R ∗ R')) := hpre.trans BI.sep_assoc.mp
+  obtain ⟨N, hN⟩ := h env st args (iprop%(R ∗ R')) σ h1
+  refine ⟨N, fun fuel hle => ?_⟩
+  obtain ⟨vs, st', hrun, σ', hpost⟩ := hN fuel hle
+  -- hpost : genHeapInterp σ' ⊢ S.post st' vs ∗ (R ∗ R')
+  exact ⟨vs, st', hrun, σ', hpost.trans BI.sep_assoc.symm.mp⟩
+
+/-- Module linking (Iris-Wasm §3.1 with iProp specs).
+
+    If `m` exports `idx` satisfying `S`, and `P_correct` holds for any module
+    satisfying `S`, then `P_correct m` holds — the client never sees the body. -/
 theorem link_modules
     {m : Module} {idx : Nat} {S : FuncSpec}
     {P_correct : FuncSpec → Prop}
-    (h_export  : funcSatisfies m idx S)
-    (h_import  : ∀ S', funcSatisfies m idx S' → P_correct S') :
+    (h_export : funcSatisfies m idx S)
+    (h_import : ∀ S', funcSatisfies m idx S' → P_correct S') :
     P_correct S :=
   h_import S h_export
-
-/-- Weakening: if `S` is satisfied and the post/frame can be weakened,
-    the derived spec is also satisfied. -/
-theorem funcSatisfies_mono
-    {m : Module} {idx : Nat} {S : FuncSpec}
-    {Q : Store Unit → List Value → Prop}
-    {F : Store Unit → Store Unit → Prop}
-    (h  : funcSatisfies m idx S)
-    (hQ : ∀ st' rs, S.post  st' rs → Q st' rs)
-    (hF : ∀ st st', S.frame st  st' → F st  st') :
-    funcSatisfies m idx { pre := S.pre, post := Q, frame := F } := by
-  intro env st args hpre
-  obtain ⟨N, hN⟩ := h env st args hpre
-  exact ⟨N, fun fuel hle => by
-    obtain ⟨vs, st', hrun, hpost, hfr⟩ := hN fuel hle
-    exact ⟨vs, st', hrun, hQ st' vs hpost, hF st st' hfr⟩⟩
-
-/-- Call-composition rule with frame.
-
-    Given that `g` satisfies `S_g`, the continuation `h_cont` receives both
-    the postcondition and the frame guarantee, enabling it to reason about
-    memory the function did NOT touch without knowing `g`'s implementation. -/
-theorem compose_with_import
-    {m : Module} {env : HostEnv Unit}
-    {st : Store Unit} {args : List Value}
-    {g_idx : Nat} {S_g : FuncSpec}
-    (h_g     : funcSatisfies m g_idx S_g)
-    (h_g_pre : S_g.pre st)
-    {Q : Store Unit → List Value → Prop}
-    (h_cont  : ∀ st' rs, S_g.post st' rs → S_g.frame st st' → Q st' rs) :
-    TerminatesWith env m g_idx st args Q := by
-  obtain ⟨N, hN⟩ := h_g env st args h_g_pre
-  exact ⟨N, fun fuel hle => by
-    obtain ⟨vs, st', hrun, hpost, hfr⟩ := hN fuel hle
-    exact ⟨vs, st', hrun, h_cont st' vs hpost hfr⟩⟩
 
 end Wasm.SepLogic.ModuleLinking
