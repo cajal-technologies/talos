@@ -124,4 +124,19 @@ theorem arrayAt_set (ptr : UInt32) (xs : List UInt32) (k : Nat)
 #check @pointsTo_u32
 #check @arrayAt
 end Test
+
+section
+open Wasm
+
+/-- Exclusive ownership of function slot `idx` in module `m`:
+    the function table entry equals `f`. Prop-level (not iProp) —
+    for single-module proofs this suffices; the linking theorem's
+    structure provides the ownership discipline. -/
+def funcPointsTo (m : Module) (idx : Nat) (f : Function) : Prop :=
+  m.funcs[idx]? = some f
+
+notation m " ↦func[" idx "] " f => funcPointsTo m idx f
+
+end
+
 end Wasm.SepLogic
