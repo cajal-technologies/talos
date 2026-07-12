@@ -3,45 +3,35 @@ import CodeLib.SepLogic.WasmHeap
 
 namespace Wasm.SepLogic.LinkingExample
 
--- Shadow Wasm.FuncSpec (interpreter's 5-arg def from Interpreter.Wasm.Wp.Call)
--- that ancestor-namespace lookup would otherwise resolve bare `FuncSpec` to.
-private abbrev FuncSpec := Wasm.SepLogic.ModuleLinking.FuncSpec
-open Wasm.SepLogic.ModuleLinking (funcSatisfies frame_rule link_modules)
-
+open Wasm.SepLogic.ModuleLinking (funcSatisfies frame_rule)
 open Iris
 
 variable [inst : WasmHeapGS]
 
--- Note on `∗`: in iris-lean `∗` is only available inside `iprop(...)` or `⊢`/`⊣⊢`
--- macros (see Iris.BI.BIBase). In term position, use `iprop% (A ∗ B)` instead.
+-- Note on `∗`/`-∗`: only available inside `⊢`/`⊣⊢` macros or `iprop%(...)`.
 
-/-- Increment specification: the function reads ptr (value `v`), writes `v+1`, returns.
-    `pre` owns the memory cell; `post` owns it with the new value.
-    No `frame` field — the caller's additional resources are preserved by ∗. -/
-def incrementSpec (ptr : UInt32) (v : UInt64) : FuncSpec where
-  pre  := fun _st      => pointsTo_u64 ptr v
-  post := fun _st' _vs => pointsTo_u64 ptr (v + 1)
+/-- Increment specification: function owns `ptr ↦ v`, writes `v+1`, returns.
+    No frame baked in — use `frame_rule` to thread caller resources through. -/
+def incrementSpec
+    (m : Module) (incr_idx : Nat)
+    (ptr : UInt32) (v : UInt64) : Prop :=
+  funcSatisfies m incr_idx
+    (fun _st      => pointsTo_u64 ptr v)
+    (fun _st' _vs => pointsTo_u64 ptr (v + 1))
 
-/-- Two sequential increment calls with an automatic iProp frame.
+/-- Two sequential increment calls using `frame_rule` to thread the frame
+    `pointsTo_u64 ptr₂ u` through both calls.
 
-    ## Setup
-    Initial heap: `pointsTo_u64 ptr v ∗ pointsTo_u64 ptr₂ u`
-    The second cell `ptr₂` is the caller's frame — it must be untouched.
-
-    ## Call 1  (frame R = pointsTo_u64 ptr₂ u)
-    Apply `h_incr v` with R = pointsTo_u64 ptr₂ u; hpre already has the right form.
-    TerminatesWith gives `∃ σ₁, genHeapInterp σ₁ ⊢ pointsTo_u64 ptr (v+1) ∗ pointsTo_u64 ptr₂ u`
-
-    ## Call 2  (same frame R)
-    Apply `h_incr (v+1)` at the new heap σ₁; same frame R.
-    TerminatesWith gives `∃ σ₂, genHeapInterp σ₂ ⊢ pointsTo_u64 ptr (v+2) ∗ pointsTo_u64 ptr₂ u`
-
-    The frame `pointsTo_u64 ptr₂ u` is preserved automatically by ∗;
-    no explicit `S.frame` condition is needed. -/
+    ## Strategy
+    1. Apply `frame_rule R (h_incr v)` — get a framed spec for call 1.
+    2. Apply `frame_rule R (h_incr (v+1))` — get a framed spec for call 2.
+    3. iProp WP reasoning threads ownership through both calls.
+    4. Adequacy extracts the final `TerminatesWith` conclusion.
+    Full proof deferred: requires `frame_rule` proof and iProp WP adequacy. -/
 theorem linked_two_calls
     (m : Wasm.Module) (ptr ptr₂ : UInt32) (v u : UInt64)
     (incr_idx : Nat)
-    (h_incr : ∀ w, funcSatisfies m incr_idx (incrementSpec ptr w)) :
+    (h_incr : ∀ w, incrementSpec m incr_idx ptr w) :
     ∀ (env : Wasm.HostEnv Unit) (st : Wasm.Store Unit)
       (σ : WasmHeapMap (Option UInt8)),
       (genHeapInterp σ ⊢ pointsTo_u64 ptr v ∗ pointsTo_u64 ptr₂ u) →
@@ -53,25 +43,33 @@ theorem linked_two_calls
             (fun _ _ =>
               ∃ σ₂ : WasmHeapMap (Option UInt8),
               genHeapInterp σ₂ ⊢ pointsTo_u64 ptr (v + 2) ∗ pointsTo_u64 ptr₂ u)) := by
-  intro env st σ hpre
-  -- ── Call 1 ──────────────────────────────────────────────────────────────────
-  -- h_incr v : funcSatisfies m incr_idx (incrementSpec ptr v)
-  -- frame R = pointsTo_u64 ptr₂ u; hpre already witnesses pre ∗ R.
-  obtain ⟨N₁, hN₁⟩ := h_incr v env st [] (pointsTo_u64 ptr₂ u) σ hpre
-  refine ⟨N₁, fun fuel₁ hle₁ => ?_⟩
-  obtain ⟨vs₁, st₁, hrun₁, σ₁, hpost₁⟩ := hN₁ fuel₁ hle₁
-  -- hpost₁ : genHeapInterp σ₁ ⊢ pointsTo_u64 ptr (v+1) ∗ pointsTo_u64 ptr₂ u
-  refine ⟨vs₁, st₁, hrun₁, σ₁, hpost₁, ?_⟩
-  -- ── Call 2 ──────────────────────────────────────────────────────────────────
-  -- h_incr (v+1) at heap σ₁; same frame R = pointsTo_u64 ptr₂ u.
-  obtain ⟨N₂, hN₂⟩ := h_incr (v + 1) env st₁ [] (pointsTo_u64 ptr₂ u) σ₁ hpost₁
-  refine ⟨N₂, fun fuel₂ hle₂ => ?_⟩
-  obtain ⟨vs₂, st₂, hrun₂, σ₂, hpost₂⟩ := hN₂ fuel₂ hle₂
-  -- hpost₂ type: genHeapInterp σ₂ ⊢ (incrementSpec ptr (v+1)).post st₂ vs₂ ∗ ...
-  -- Unfold incrementSpec to expose `(v+1)+1`, then rewrite to `v+2`.
-  simp only [incrementSpec] at hpost₂
-  -- Now: hpost₂ : genHeapInterp σ₂ ⊢ pointsTo_u64 ptr ((v+1)+1) ∗ pointsTo_u64 ptr₂ u
-  rw [show (v + 1 : UInt64) + 1 = v + 2 from by rw [UInt64.add_assoc]; congr 1] at hpost₂
-  exact ⟨vs₂, st₂, hrun₂, σ₂, hpost₂⟩
+  -- Call 1: frame ptr₂ through incr(v)
+  have h1 := frame_rule (pointsTo_u64 ptr₂ u) (h_incr v)
+  -- Call 2: frame ptr₂ through incr(v+1), normalizing (v+1)+1 → v+2
+  have h2v : funcSatisfies m incr_idx
+      (fun _st => iprop% pointsTo_u64 ptr (v + 1) ∗ pointsTo_u64 ptr₂ u)
+      (fun _st' _vs => iprop% pointsTo_u64 ptr (v + 2) ∗ pointsTo_u64 ptr₂ u) := by
+    have h := frame_rule (pointsTo_u64 ptr₂ u) (h_incr (v + 1))
+    simp only [show (v : UInt64) + 1 + 1 = v + 2 from by omega] at h
+    exact h
+  obtain ⟨f₁, hf₁, hspec₁⟩ := h1
+  obtain ⟨f₂, hf₂, hspec₂⟩ := h2v
+  intro env st σ h_heap
+  -- Apply adequacy for the first call
+  have hterm1 := wasm_iProp_TerminatesWith m incr_idx env st
+    (fun _st => iprop% pointsTo_u64 ptr v ∗ pointsTo_u64 ptr₂ u)
+    (fun _st' _vs => iprop% pointsTo_u64 ptr (v + 1) ∗ pointsTo_u64 ptr₂ u)
+    σ ⟨f₁, hf₁, hspec₁⟩ h_heap
+  -- For every fuel witnessing the first call, build the nested conclusion
+  obtain ⟨N₁, hN₁⟩ := hterm1
+  exact ⟨N₁, fun fuel hfuel => by
+    obtain ⟨vs₁, st₁, hrun₁, σ₁, hσ₁⟩ := hN₁ fuel hfuel
+    -- Apply adequacy for the second call, using the post-state ghost heap
+    have hterm2 :=
+      wasm_iProp_TerminatesWith m incr_idx env st₁
+        (fun _st => iprop% pointsTo_u64 ptr (v + 1) ∗ pointsTo_u64 ptr₂ u)
+        (fun _st' _vs => iprop% pointsTo_u64 ptr (v + 2) ∗ pointsTo_u64 ptr₂ u)
+        σ₁ ⟨f₂, hf₂, hspec₂⟩ hσ₁
+    exact ⟨vs₁, st₁, hrun₁, ⟨σ₁, hσ₁, hterm2⟩⟩⟩
 
 end Wasm.SepLogic.LinkingExample

@@ -67,6 +67,163 @@ instance instBIMonoPredWasmF :
   mono_pred_ne.ne _ _ _ H :=
     (OFE.eq_of_eqv (OFE.discrete H)) ▸ OFE.Dist.rfl
 
+-- ── iProp WP: postcondition Φ : Store Unit → List Value → IProp WasmHeapGF ──
+-- Identical to WasmState / wp_wasm_F / wp_wasm except the Q : Prop field is
+-- replaced by Φ : IProp, and the base cases emit Φ directly instead of ⌜Q⌝.
+
+structure WasmStateIProp where
+  m      : Module
+  st     : Store Unit
+  locals : Locals
+  prog   : Program
+  env    : HostEnv Unit
+  Φ      : Store Unit → List Value → IProp WasmHeapGF
+
+def wp_wasm_iProp_F (Ψ : LeibnizO WasmStateIProp → IProp WasmHeapGF)
+    (s : LeibnizO WasmStateIProp) : IProp WasmHeapGF :=
+  let ws := s.car
+  match ws.prog with
+  | [] =>
+      ws.Φ ws.st []
+  | .ret :: _ =>
+      ws.Φ ws.st ws.locals.values
+  | instr :: rest =>
+      iprop% ∀ σ : WasmHeapMap (Option UInt8),
+        genHeapInterp σ ==∗
+          ∃ σ' : WasmHeapMap (Option UInt8),
+          ∃ st' : Store Unit,
+          ∃ locals' : Locals,
+            ⌜execOne 1 ws.m ws.st ws.locals instr ws.env = .Fallthrough st' locals'⌝ ∗
+            genHeapInterp σ' ∗
+            Ψ ⟨{ m := ws.m, st := st', locals := locals',
+                 prog := rest, env := ws.env, Φ := ws.Φ }⟩
+
+def wp_wasm_iProp (m : Module) (st : Store Unit) (locals : Locals)
+    (prog : Program) (env : HostEnv Unit)
+    (Φ : Store Unit → List Value → IProp WasmHeapGF) : IProp WasmHeapGF :=
+  bi_least_fixpoint wp_wasm_iProp_F ⟨{ m, st, locals, prog, env, Φ }⟩
+
+instance instBIMonoPredWasmIPropF :
+    BIMonoPred (PROP := IProp WasmHeapGF) (A := LeibnizO WasmStateIProp) wp_wasm_iProp_F where
+  mono_pred := by
+    intro Φ Ψ hΦ hΨ
+    iintro #HΦΨ %s
+    obtain ⟨ws⟩ := s
+    unfold wp_wasm_iProp_F
+    simp only [LeibnizO.car]
+    split
+    · iintro H; iexact H
+    · iintro H; iexact H
+    · next instr rest =>
+      iintro Hwp
+      iintro %σ₀
+      iintro Hσ₀
+      imod Hwp $$ % σ₀ Hσ₀ with ⟨%σ', %st₁, %locals₁, hexec, Hσ', HΦ⟩
+      imodintro
+      iexists σ', st₁, locals₁
+      isplitl [hexec]
+      · iexact hexec
+      · isplitl [Hσ']
+        · iexact Hσ'
+        · iapply HΦΨ
+          iexact HΦ
+  mono_pred_ne.ne _ _ _ H :=
+    (OFE.eq_of_eqv (OFE.discrete H)) ▸ OFE.Dist.rfl
+
+-- WP frame theorem: wp_wasm_iProp distributes through ∗ on the postcondition.
+-- Used by frame_rule in ModuleLinking to lift frame-free specs to framed specs.
+theorem wp_wasm_iProp_frame_right
+    {m : Module} {st : Store Unit} {locals : Locals} {prog : Program} {env : HostEnv Unit}
+    (R : IProp WasmHeapGF) (Φ : Store Unit → List Value → IProp WasmHeapGF) :
+    wp_wasm_iProp m st locals prog env Φ ∗ R ⊢
+      wp_wasm_iProp m st locals prog env (fun st' vs => iprop% Φ st' vs ∗ R) := by
+  unfold wp_wasm_iProp
+  -- Invariant Ψ s = R -∗ bi_least_fixpoint wp_wasm_iProp_F ⟨framed s⟩
+  let Ψ : LeibnizO WasmStateIProp → IProp WasmHeapGF :=
+    fun s => iprop% R -∗ bi_least_fixpoint wp_wasm_iProp_F
+      ⟨{ m := s.car.m, st := s.car.st, locals := s.car.locals, prog := s.car.prog,
+         env := s.car.env, Φ := fun st' vs => iprop% s.car.Φ st' vs ∗ R }⟩
+  haveI hΨ : OFE.NonExpansive Ψ :=
+    ⟨fun _ _ _ H => (OFE.eq_of_eqv (OFE.discrete H)) ▸ OFE.Dist.rfl⟩
+  have hstep : ⊢ □ (∀ y : LeibnizO WasmStateIProp, wp_wasm_iProp_F Ψ y -∗ Ψ y) := by
+    iintro !> %s
+    obtain ⟨ws⟩ := s
+    unfold wp_wasm_iProp_F Ψ
+    simp only [LeibnizO.car]
+    split
+    · -- prog = []: LHS = ws.Φ ws.st [], RHS = R -∗ lfp ⟨{prog=[], Φ'=Φ∗R}⟩
+      iintro H HR
+      iapply least_fixpoint_unfold_mpr
+      unfold wp_wasm_iProp_F
+      simp only [LeibnizO.car]
+      isplitl [H]
+      · iexact H
+      · iexact HR
+    · -- prog = .ret :: _: same pattern
+      iintro H HR
+      iapply least_fixpoint_unfold_mpr
+      unfold wp_wasm_iProp_F
+      simp only [LeibnizO.car]
+      isplitl [H]
+      · iexact H
+      · iexact HR
+    · -- prog = instr :: rest: step case
+      next instr rest =>
+      iintro Hwp HR
+      iapply least_fixpoint_unfold_mpr
+      unfold wp_wasm_iProp_F
+      simp only [LeibnizO.car]
+      iintro %σ Hσ
+      imod Hwp $$ % σ Hσ with ⟨%σ', %st', %locals', hexec, Hσ', HΨ⟩
+      -- HΨ : R -∗ bi_least_fixpoint wp_wasm_iProp_F ⟨{prog := rest, Φ := Φ ∗ R}⟩
+      imodintro
+      iexists σ', st', locals'
+      isplitl [hexec]
+      · iexact hexec
+      · isplitl [Hσ']
+        · iexact Hσ'
+        · iapply HΨ
+          iexact HR
+  have hfp :
+      bi_least_fixpoint wp_wasm_iProp_F ⟨{ m, st, locals, prog, env, Φ }⟩ ⊢
+      Ψ ⟨{ m, st, locals, prog, env, Φ }⟩ :=
+    BI.sep_elim_emp_valid_left hstep
+      (BI.wand_elim ((BI.wand_entails (least_fixpoint_iter (F := wp_wasm_iProp_F))).trans
+        (BI.forall_elim (⟨{ m, st, locals, prog, env, Φ }⟩ : LeibnizO WasmStateIProp))))
+  exact (BI.sep_mono_left hfp).trans BI.wand_elim_right
+
+-- iProp adequacy bridge: from an iProp WP spec and an initial ghost heap satisfying
+-- the precondition, the function call terminates and there exists a post-execution
+-- ghost heap satisfying the postcondition.
+-- Proof deferred: requires full semantic adequacy of iris-lean/genHeap for the
+-- WasmHeap model (ghost-state extraction from the basic-update modality chain).
+theorem wasm_iProp_TerminatesWith
+    (m : Module) (idx : Nat)
+    (env : HostEnv Unit) (st : Store Unit)
+    (pre  : Store Unit → IProp WasmHeapGF)
+    (post : Store Unit → List Value → IProp WasmHeapGF)
+    (σ : WasmHeapMap (Option UInt8))
+    (hspec : ∃ (f : Wasm.Function), m.funcs[idx]? = some f ∧
+        ∀ (e : HostEnv Unit) (s : Store Unit) (a : List Value),
+          ⊢ pre s -∗ wp_wasm_iProp m s (f.toLocals a) f.body e
+                        (fun st' vs => post st' vs))
+    (h_pre : genHeapInterp σ ⊢ pre st) :
+    TerminatesWith env m idx st []
+      (fun st₁ _ =>
+        ∃ σ₁ : WasmHeapMap (Option UInt8), genHeapInterp σ₁ ⊢ post st₁ []) := by
+  sorry
+
+-- Bridge: wp_wasm Q = wp_wasm_iProp (⌜Q⌝).
+-- Both sides are bi_least_fixpoint of functors that produce identical iProp terms
+-- when the postcondition Φ = fun st' vs => ⌜Q st' vs⌝.
+theorem wp_wasm_iProp_pure
+    (m : Module) (st : Store Unit) (locals : Locals)
+    (prog : Program) (env : HostEnv Unit)
+    (Q : Store Unit → List Value → Prop) :
+    wp_wasm m st locals prog env Q =
+      wp_wasm_iProp m st locals prog env (fun st' vs => iprop% ⌜Q st' vs⌝) := by
+  sorry
+
 private theorem exec_cons {m : Module} {st : Store Unit} {locals : Locals}
     {env : HostEnv Unit} {head : Instruction} {rest : Program}
     {st₁ : Store Unit} {locals₁ : Locals}
