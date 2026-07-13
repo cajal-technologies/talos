@@ -74,4 +74,119 @@ theorem func1_of_func2 (env : HostEnv Unit) (st : Store Unit)
   wp_run
   exact hP
 
+/-- `ConvertVec::to_vec` (func 2): the heart — allocate via `with_capacity_in`
+(func 6, isolated as the contract `hcap`), write the `Vec` header `{cap, ptr, 0}`
+at `sret`, then `memory.copy` the input into the fresh buffer `ptr` and set the
+length. Given the allocator returns a buffer disjoint from the input and the
+return slot, the buffer ends up holding a byte-for-byte copy of the input. -/
+theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
+    (sret dataPtr len sp cap ptr : UInt32)
+    (hsp : st.globals.globals[0]? = some (.i32 sp))
+    (hcap : TerminatesWith env «module» 6
+      { st with globals := { globals := st.globals.globals.set 0 (.i32 (sp - 16)) } }
+      [.i32 1, .i32 1, .i32 len, .i32 (8 + (sp - 16))]
+      (fun s6 vs6 => vs6 = []
+        ∧ s6.globals.globals[0]? = some (.i32 (sp - 16))
+        ∧ s6.mem.pages ≤ 65536
+        ∧ (sp - 16).toNat + 16 ≤ s6.mem.pages * 65536
+        ∧ s6.mem.read32 (sp - 16 + 8) = cap
+        ∧ s6.mem.read32 (sp - 16 + 12) = ptr
+        ∧ ptr.toNat + len.toNat ≤ s6.mem.pages * 65536
+        ∧ dataPtr.toNat + len.toNat ≤ s6.mem.pages * 65536
+        ∧ sret.toNat + 12 ≤ s6.mem.pages * 65536
+        ∧ (ptr.toNat + len.toNat ≤ dataPtr.toNat ∨ dataPtr.toNat + len.toNat ≤ ptr.toNat)
+        ∧ (ptr.toNat + len.toNat ≤ sret.toNat ∨ sret.toNat + 12 ≤ ptr.toNat)
+        ∧ (∀ k : UInt32, k.toNat < len.toNat →
+             s6.mem.read8 (dataPtr + k) = st.mem.read8 (dataPtr + k))))
+    (hsd : sret.toNat + 12 ≤ dataPtr.toNat ∨ dataPtr.toNat + len.toNat ≤ sret.toNat) :
+    TerminatesWith env «module» 2 st [.i32 len, .i32 dataPtr, .i32 sret]
+      (fun st' vs => vs = []
+        ∧ st'.mem.read32 (sret + 8) = len
+        ∧ st'.mem.read32 (sret + 4) = ptr
+        ∧ ∀ k : UInt32, k.toNat < len.toNat →
+            st'.mem.read8 (ptr + k) = st.mem.read8 (dataPtr + k)) := by
+  apply TerminatesWith.of_wp_entry_for (f := func2Def) rfl
+  unfold func2Def func2
+  wp_run
+  rw [hsp]
+  simp
+  apply wp_call_tw hcap
+  rintro s6 vs6 ⟨rfl, hglob6, hpg, hframe, hc8, hp12, hpbound, hdbound, hsbound,
+    hdisj_d, hdisj_s, hpres⟩
+  have e4 : (sret + 4).toNat = sret.toNat + 4 := by
+    rw [UInt32.toNat_add, show (4 : UInt32).toNat = 4 from rfl]; simp only [Nat.reducePow]; omega
+  have e8 : (sret + 8).toNat = sret.toNat + 8 := by
+    rw [UInt32.toNat_add, show (8 : UInt32).toNat = 8 from rfl]; simp only [Nat.reducePow]; omega
+  wp_run
+  simp only [List.length_cons, List.length_nil, List.getElem?_cons_zero,
+    List.getElem?_cons_succ, List.set_cons_zero, List.set_cons_succ, List.getElem?_nil,
+    Nat.reduceAdd, Nat.reduceSub, Nat.reduceLT, reduceIte, Mem.write32_pages,
+    show UInt32.toNat 0 = 0 from rfl, show UInt32.toNat 4 = 4 from rfl,
+    show UInt32.toNat 8 = 8 from rfl, show UInt32.toNat 12 = 12 from rfl, hp12, hc8]
+  rw [if_neg (by omega), if_neg (by omega), if_neg (by omega), if_neg (by omega),
+    if_neg (by omega)]
+  apply wp_block_cons
+  by_cases hlen : len = 0
+  · subst hlen
+    wp_run
+    simp only [List.length_cons, List.length_nil, List.getElem?_cons_zero,
+      List.getElem?_cons_succ, List.set_cons_zero, List.set_cons_succ, List.getElem?_nil,
+      Nat.reduceAdd, Nat.reduceSub, Nat.reduceLT, reduceIte, show UInt32.toNat 0 = 0 from rfl,
+      hglob6, gt_iff_lt, Nat.lt_irrefl]
+    rw [show (if ((1 : UInt32) &&& if (0 : UInt32) < 0 then 1 else 0) = 0 then (1 : UInt32) else 0)
+          = 1 from by decide]
+    refine ⟨Mem.read32_write32_same _ _ _, ?_, ?_⟩
+    · rw [Mem.read32_write32_disjoint _ (sret + 4) (sret + 8) 0 (by rw [e4, e8]; omega)]
+      exact Mem.read32_write32_same _ _ _
+    · intro k hk; exact absurd hk (Nat.not_lt_zero _)
+  · -- len > 0: the guard passes, run the memory.copy
+    have hpos : (0 : UInt32) < len := by
+      have h2 : 0 < len.toNat := by
+        rcases Nat.eq_zero_or_pos len.toNat with hz | hp
+        · exact absurd (by rw [← UInt32.toNat_inj]; simpa using hz) hlen
+        · exact hp
+      exact UInt32.lt_iff_toNat_lt.mpr (by simpa using h2)
+    wp_run
+    simp only [List.length_cons, List.length_nil, List.getElem?_cons_zero,
+      List.getElem?_cons_succ, List.set_cons_zero, List.set_cons_succ, List.getElem?_nil,
+      Nat.reduceAdd, Nat.reduceSub, Nat.reduceLT, reduceIte, hpos, hglob6, Mem.write32_pages,
+      show UInt32.toNat 4 = 4 from rfl]
+    rw [if_neg (show ¬ ((1 : UInt32) &&& 1 = 0) from by decide)]
+    simp only [reduceIte]
+    rw [if_neg (by omega)]
+    have hdst : (((s6.mem.write32 (sret + 0) cap).write32 (sret + 4) ptr).write32 (sret + 8) 0).read32
+        (sret + 4) = ptr := by
+      rw [Mem.read32_write32_disjoint _ (sret + 4) (sret + 8) 0 (by rw [e4, e8]; omega),
+        Mem.read32_write32_same]
+    rw [hdst]
+    apply wp_block_cons
+    wp_run
+    simp only [List.length_cons, List.length_nil, List.getElem?_cons_zero,
+      List.getElem?_cons_succ, List.set_cons_zero, List.set_cons_succ, List.getElem?_nil,
+      Nat.reduceAdd, Nat.reduceSub, Nat.reduceLT, reduceIte, hdst, hglob6, Mem.copy_pages,
+      Mem.write32_pages, hlen, show UInt32.toNat 8 = 8 from rfl,
+      show len <<< (0 % 32) = len from by simp]
+    rw [if_neg (by omega), if_neg (by omega)]
+    refine ⟨Mem.read32_write32_same _ _ _, ?_, ?_⟩
+    · rw [Mem.read32_write32_disjoint _ (sret + 4) (sret + 8) len (by rw [e4, e8]; omega),
+        Mem.read32_copy_outside _ ptr.toNat dataPtr.toNat len.toNat (sret + 4) (by rw [e4]; omega)]
+      exact hdst
+    · intro k hk
+      have ek : (ptr + k).toNat = ptr.toNat + k.toNat := by
+        rw [UInt32.toNat_add]; simp only [Nat.reducePow]; omega
+      have edk : (dataPtr + k).toNat = dataPtr.toNat + k.toNat := by
+        rw [UInt32.toNat_add]; simp only [Nat.reducePow]; omega
+      have hs0 : (sret + 0).toNat = sret.toNat := by simp
+      have hbyte : (((s6.mem.write32 (sret + 0) cap).write32 (sret + 4) ptr).write32 (sret + 8) 0).read8
+          (dataPtr + k) = st.mem.read8 (dataPtr + k) := by
+        rw [Mem.read8_write32_disjoint _ (dataPtr + k) (sret + 8) 0 (by rw [edk, e8]; omega),
+          Mem.read8_write32_disjoint _ (dataPtr + k) (sret + 4) ptr (by rw [edk, e4]; omega),
+          Mem.read8_write32_disjoint _ (dataPtr + k) (sret + 0) cap (by rw [edk, hs0]; omega)]
+        exact hpres k hk
+      rw [Mem.read8_write32_disjoint _ (ptr + k) (sret + 8) len (by rw [ek, e8]; omega),
+        Mem.read8_copy_inside _ ptr.toNat dataPtr.toNat len.toNat (ptr + k) (by rw [ek]; omega),
+        show dataPtr.toNat + ((ptr + k).toNat - ptr.toNat) = (dataPtr + k).toNat
+          from by rw [ek, edk]; omega]
+      exact hbyte
+
 end Project.Encode.Proofs

@@ -104,4 +104,41 @@ theorem Mem.read8_copy_outside (m : Mem) (dst src len : Nat) (a : UInt32)
   simp only [Mem.read8]
   exact Mem.bytes_copy_outside m dst src len a.toNat h
 
+/-- `read32` outside the copied destination range is unchanged. -/
+theorem Mem.read32_copy_outside (m : Mem) (dst src len : Nat) (a : UInt32)
+    (h : a.toNat + 4 ≤ dst ∨ dst + len ≤ a.toNat) :
+    (m.copy dst src len).read32 a = m.read32 a := by
+  simp only [Mem.read32, Mem.copy]
+  rw [if_neg (by omega), if_neg (by omega), if_neg (by omega), if_neg (by omega)]
+
+/-! ## Disjoint 32-bit store framing
+
+A store to `[b, b+4)` leaves bytes outside that range — and any 8-bit or 32-bit
+read disjoint from it — unchanged. (The same-address round-trip is above; these
+are the disjoint counterparts, for proofs that write several nearby fields.) -/
+
+/-- A byte outside a 32-bit store is unchanged. -/
+theorem Mem.write32_bytes_of_disjoint (m : Mem) (a v : UInt32) (i : Nat)
+    (h : i < a.toNat ∨ a.toNat + 4 ≤ i) :
+    (m.write32 a v).bytes i = m.bytes i := by
+  simp only [Mem.write32]
+  rw [if_neg (by omega), if_neg (by omega), if_neg (by omega), if_neg (by omega)]
+
+/-- `read8` disjoint from a 32-bit store is unchanged. -/
+theorem Mem.read8_write32_disjoint (m : Mem) (a b v : UInt32)
+    (h : a.toNat < b.toNat ∨ b.toNat + 4 ≤ a.toNat) :
+    (m.write32 b v).read8 a = m.read8 a := by
+  simp only [Mem.read8]
+  exact Mem.write32_bytes_of_disjoint m b v a.toNat h
+
+/-- `read32` disjoint from a 32-bit store is unchanged. -/
+theorem Mem.read32_write32_disjoint (m : Mem) (a b v : UInt32)
+    (h : a.toNat + 4 ≤ b.toNat ∨ b.toNat + 4 ≤ a.toNat) :
+    (m.write32 b v).read32 a = m.read32 a := by
+  simp only [Mem.read32]
+  rw [Mem.write32_bytes_of_disjoint m b v a.toNat (by omega),
+      Mem.write32_bytes_of_disjoint m b v (a.toNat + 1) (by omega),
+      Mem.write32_bytes_of_disjoint m b v (a.toNat + 2) (by omega),
+      Mem.write32_bytes_of_disjoint m b v (a.toNat + 3) (by omega)]
+
 end Wasm
