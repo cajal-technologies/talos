@@ -227,4 +227,47 @@ theorem encode_of_alloc (env : HostEnv Unit) (st : Store Unit)
   exact (func2_terminates env st retPtr dataPtr len sp cap ptr hsp hcap hsd).mono
     (fun _ _ h => h.2)
 
+/-! ## Allocator plumbing (loop-free layers above `dlmalloc`)
+
+The call chain from `with_capacity_in` down to the real allocator is
+`func6 → func3 → func5 → func0 → func9 → func27 → func29 (dlmalloc::malloc)`.
+Every layer is loop-free except `func29`. These lemmas peel the loop-free layers,
+reducing the allocation obligation to a single `dlmalloc::malloc` contract. -/
+
+/-- `__rust_alloc` (func 9) is a pass-through to `__rdl_alloc` (func 27). -/
+theorem func9_of_func27 (env : HostEnv Unit) (st : Store Unit) (size align : UInt32)
+    (R : Store Unit → UInt32 → Prop)
+    (hf27 : TerminatesWith env «module» 27 st [.i32 align, .i32 size]
+              (fun st' vs => ∃ p, vs = [.i32 p] ∧ R st' p)) :
+    TerminatesWith env «module» 9 st [.i32 align, .i32 size]
+      (fun st' vs => ∃ p, vs = [.i32 p] ∧ R st' p) := by
+  apply TerminatesWith.of_wp_entry_for (f := func9Def) rfl
+  unfold func9Def func9
+  wp_run
+  apply wp_call_tw hf27
+  rintro st' vs ⟨p, rfl, hR⟩
+  wp_run
+  exact ⟨p, rfl, hR⟩
+
+/-- `__rdl_alloc` (func 27) calls `dlmalloc::malloc` (func 29) directly when the
+alignment is small (`< 9`), which is always the case for byte buffers. -/
+theorem func27_of_func29 (env : HostEnv Unit) (st : Store Unit) (size align : UInt32)
+    (R : Store Unit → UInt32 → Prop) (halign : align.toNat < 9)
+    (hf29 : TerminatesWith env «module» 29 st [.i32 size]
+              (fun st' vs => ∃ p, vs = [.i32 p] ∧ R st' p)) :
+    TerminatesWith env «module» 27 st [.i32 align, .i32 size]
+      (fun st' vs => ∃ p, vs = [.i32 p] ∧ R st' p) := by
+  have hlt : align < 9 := UInt32.lt_iff_toNat_lt.mpr (by simpa using halign)
+  apply TerminatesWith.of_wp_entry_for (f := func27Def) rfl
+  unfold func27Def func27
+  apply wp_block_cons
+  wp_run
+  simp only [List.length_cons, List.length_nil, List.getElem?_cons_zero,
+    List.getElem?_cons_succ, List.getElem?_nil, Nat.reduceAdd, Nat.reduceLT, reduceIte,
+    List.reverse_cons, List.reverse_nil, List.nil_append, List.cons_append, hlt]
+  apply wp_call_tw hf29
+  rintro st' vs ⟨p, rfl, hR⟩
+  wp_run
+  exact ⟨p, rfl, hR⟩
+
 end Project.Encode.Proofs
