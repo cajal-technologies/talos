@@ -77,7 +77,7 @@ abbrev entry3 : Nat := 0
 
 /-! ## The equivalence -/
 
-/-- **Program equivalence of the two `gcd_u64` builds (primary form).**
+/-- **Program equivalence of the two `gcd_u64` builds.**
 
 For every argument pair and every candidate observable outcome
 `(result, hostFinal)`, the two builds agree: the `opt-level = 0` export
@@ -107,33 +107,13 @@ def GcdOptEquiv : Prop :=
       TerminatesWith env mod3 entry3 initial [.i64 a, .i64 b]
           (fun st vs => vs = result ∧ st.host = hostFinal)
 
-/-- **Program equivalence (concrete "happy-path" form).**
+/-! ## Proof obligation (left as `sorry` — to be discharged in a follow-up)
 
-Both builds are total on the canonical store, so the equivalence also reads
-positively: from the same initial store and the same arguments there is a
-**common** return value that *both* builds produce, and *both* leave the host
-state untouched. This drops the trap-symmetry that `GcdOptEquiv`'s
-biconditional also expresses, in exchange for being easier to read and to
-consume downstream. -/
-def GcdOptEquiv' : Prop :=
-  ∀ (env : HostEnv Unit) (initial : Store Unit) (a b : UInt64),
-    initial = mod0.initialStore →
-    ∃ result : List Value,
-      TerminatesWith env mod0 entry0 initial [.i64 a, .i64 b]
-          (fun st vs => vs = result ∧ st.host = initial.host) ∧
-      TerminatesWith env mod3 entry3 initial [.i64 a, .i64 b]
-          (fun st vs => vs = result ∧ st.host = initial.host)
-
-/-! ## Proof obligations (left as `sorry` — to be discharged in a follow-up)
-
-These are intentionally unproved: this file is the *statement* deliverable.
-The modules are not wired into `lean/Project.lean`, so the `sorry` warnings do
+This is intentionally unproved: this file is the *statement* deliverable.
+The modules are not wired into `lean/Project.lean`, so the `sorry` warning does
 not reach the default build / CI. -/
 
 theorem gcd_opt_equiv : GcdOptEquiv := by
-  sorry
-
-theorem gcd_opt_equiv' : GcdOptEquiv' := by
   sorry
 
 end Project.NumIntegerOpt3.Equivalence
