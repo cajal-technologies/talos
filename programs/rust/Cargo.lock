@@ -34,6 +34,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "num_integer_opt3"
+version = "0.1.0"
+dependencies = [
+ "num-integer",
+]
+
+[[package]]
 name = "rust_array"
 version = "0.1.0"
 
