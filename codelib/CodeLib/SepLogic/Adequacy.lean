@@ -889,4 +889,110 @@ theorem wp_wasm_prop_to_TerminatesWith
   | ReturnCall fid st' vs => rw [hexec] at hwp_fuel; exact hwp_fuel.elim
   | Throwing tag targs st' s' => rw [hexec] at hwp_fuel; exact hwp_fuel.elim
 
+-- ── iProp trivialize / bridge ──────────────────────────────────────────────────
+
+/-- Trivialize the iProp postcondition: any wp_wasm_iProp entails the Prop WP with
+    True postcondition.  Proved by lfp induction: Ψ' s = wp_wasm_iProp s.{Φ:=⌜True⌝}.
+    Base cases close by `BI.pure_intro trivial`; step case closes by definitional
+    equality (Ψ' ignores the Φ field, so Ψ' {Φ=post} = Ψ' {Φ=⌜True⌝} = lfp {⌜True⌝}). -/
+lemma wp_wasm_iProp_trivialize
+    {m : Module} {st : Store Unit} {locals : Locals} {prog : Program}
+    {env : HostEnv Unit} {post : Store Unit → List Value → IProp WasmHeapGF} :
+    wp_wasm_iProp m st locals prog env post ⊢
+      wp_wasm m st locals prog env (fun _ _ => True) := by
+  rw [wp_wasm_iProp_pure]
+  let Ψ' : LeibnizO WasmStateIProp → IProp WasmHeapGF :=
+    fun s => bi_least_fixpoint wp_wasm_iProp_F
+      ⟨{ m := s.car.m, st := s.car.st, locals := s.car.locals,
+         prog := s.car.prog, env := s.car.env,
+         Φ := fun _ _ => iprop% ⌜True⌝ }⟩
+  haveI hΨ' : OFE.NonExpansive Ψ' :=
+    ⟨fun _ _ _ H => (OFE.eq_of_eqv (OFE.discrete H)) ▸ OFE.Dist.rfl⟩
+  have hstep : ⊢ □ (∀ y : LeibnizO WasmStateIProp, wp_wasm_iProp_F Ψ' y -∗ Ψ' y) := by
+    iintro !> %s
+    obtain ⟨ws⟩ := s
+    rcases hprog : ws.prog with _ | ⟨instr, rest⟩
+    · -- prog = [] : postcondition → ⌜True⌝ trivially in affine BI
+      unfold wp_wasm_iProp_F Ψ'; simp only [LeibnizO.car, hprog]
+      iintro _H
+      iapply least_fixpoint_unfold_mpr
+      unfold wp_wasm_iProp_F; simp only [LeibnizO.car, hprog]
+      exact BI.pure_intro trivial
+    · by_cases h_ret : instr = Instruction.ret
+      · -- prog = .ret :: _ : same trivial close
+        subst h_ret
+        unfold wp_wasm_iProp_F Ψ'; simp only [LeibnizO.car, hprog]
+        iintro _H
+        iapply least_fixpoint_unfold_mpr
+        unfold wp_wasm_iProp_F; simp only [LeibnizO.car, hprog]
+        exact BI.pure_intro trivial
+      · -- prog = instr :: rest (instr ≠ .ret): Ψ' ignores Φ, so Hwp IS the goal
+        unfold wp_wasm_iProp_F Ψ'; simp only [LeibnizO.car, hprog]
+        iintro Hwp
+        iapply least_fixpoint_unfold_mpr
+        unfold wp_wasm_iProp_F; simp only [LeibnizO.car, hprog]
+        iexact Hwp
+  have hfp :
+      bi_least_fixpoint wp_wasm_iProp_F ⟨{ m, st, locals, prog, env, Φ := post }⟩ ⊢
+      Ψ' ⟨{ m, st, locals, prog, env, Φ := post }⟩ :=
+    BI.sep_elim_emp_valid_left hstep
+      (BI.wand_elim ((BI.wand_entails (least_fixpoint_iter (F := wp_wasm_iProp_F))).trans
+        (BI.forall_elim (⟨{ m, st, locals, prog, env, Φ := post }⟩ : LeibnizO WasmStateIProp))))
+  exact hfp
+
+/-- iProp call bridge: from a function spec instance and a valid initial combined
+    assertion `⊢ genHeapInterp σ ∗ pre st`, extract Prop-level termination.
+
+    Takes the funcSatisfies spec instantiated at a specific (env={}, st, args=[]):
+      hspec : ⊢ pre st -∗ wp_wasm_iProp m st (f.toLocals []) f.body {} post
+
+    Proof chain:
+      hspec + h_init → ⊢ genHeapInterp σ ∗ wp_wasm_iProp ... post
+      wp_wasm_iProp_trivialize → ⊢ genHeapInterp σ ∗ wp_wasm ... True
+      wasm_adequacy + pure_soundness → wp_wasm_prop m st (f.toLocals []) f.body {} True
+      wp_wasm_prop_to_TerminatesWith → TerminatesWith {} m callid st [] (fun _ _ => True)
+
+    NOTE: `⊢ genHeapInterp σ ∗ pre st` is the CORRECT combined form (AUTH ∗ FRAG
+    together), obtainable via `genHeap_init` at allocation time.  The form
+    `genHeapInterp σ ⊢ pre st` (AUTH ⊢ FRAG) is false in the genHeap RA model
+    and cannot serve as a hypothesis here.
+
+    NOTE: This theorem lives in Adequacy (not ModuleLinking) to avoid a circular
+    import: ModuleLinking imports Adequacy, so Adequacy cannot reference
+    `funcSatisfies`.  Callers unpack `funcSatisfies` via `obtain ⟨f, hf, hspec⟩`
+    before calling this lemma. -/
+theorem wp_wasm_iProp_call
+    {m : Module} {st : Store Unit} {callid : Nat}
+    {pre : Store Unit → IProp WasmHeapGF}
+    {post : Store Unit → List Value → IProp WasmHeapGF}
+    {f : Function} {σ : WasmHeapMap (Option UInt8)}
+    (hf : m.funcs[callid]? = some f)
+    (hspec : ⊢ pre st -∗
+        wp_wasm_iProp m st (f.toLocals []) f.body {} (fun st' vs => post st' vs))
+    (h_init : ⊢ genHeapInterp σ ∗ pre st)
+    (himp : m.imports[callid]? = none)
+    (h_noimports : m.imports.length = 0)
+    (hresults : f.results.length = 0) :
+    TerminatesWith {} m callid st [] (fun _ _ => True) := by
+  -- Combine initial assertion with body spec
+  have hwp_init : ⊢ genHeapInterp σ ∗
+      wp_wasm_iProp m st (f.toLocals []) f.body {} (fun st' vs => post st' vs) :=
+    h_init.trans (BI.sep_mono_right (BI.wand_entails hspec))
+  -- Trivialize iProp postcondition to get Prop-level WP
+  have hwp_true : ⊢ genHeapInterp σ ∗ wp_wasm m st (f.toLocals []) f.body {} (fun _ _ => True) :=
+    hwp_init.trans (BI.sep_mono_right wp_wasm_iProp_trivialize)
+  -- Extract Prop-level wp_wasm_prop via adequacy
+  have hwp_prop : wp_wasm_prop m st (f.toLocals []) f.body {} (fun _ _ => True) :=
+    pure_soundness (hwp_true.trans (wasm_adequacy m st (f.toLocals []) f.body {} (fun _ _ => True) σ))
+  -- Convert to TerminatesWith
+  have h_adj : m.funcs[callid - m.imports.length]? = some f := by
+    rw [h_noimports, Nat.sub_zero]; exact hf
+  -- Convert hwp_prop: (args.take f.numParams).reverse for args=[] equals []
+  have hwp_prop' :
+      wp_wasm_prop m st
+        (f.toLocals (([] : List Value).take f.numParams).reverse)
+        f.body {} (fun _ _ => True) := by
+    simp only [List.take_nil, List.reverse_nil]; exact hwp_prop
+  exact wp_wasm_prop_to_TerminatesWith h_adj himp hresults (Nat.zero_le _) (fun _ _ h => h) hwp_prop'
+
 end Wasm.SepLogic

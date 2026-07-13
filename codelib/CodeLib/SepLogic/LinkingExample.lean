@@ -61,4 +61,74 @@ theorem linked_two_calls
     exact h
   exact ⟨h1, h2v⟩
 
+/-- iProp → Prop bridge: the increment function terminates from a valid initial
+    combined assertion `⊢ genHeapInterp σ ∗ (ptr ↦ v ∗ ptr₂ ↦ u)`.
+
+    Uses `wp_wasm_iProp_call` to chain:
+      funcSatisfies (via frame_rule) + h_init
+        → ⊢ genHeapInterp σ ∗ wp_wasm_iProp ... (pointsTo ptr (v+1) ∗ pointsTo ptr₂ u)
+        → ⊢ genHeapInterp σ ∗ wp_wasm ... True            (trivialize postcondition)
+        → wp_wasm_prop ... True                             (wasm_adequacy + pure_soundness)
+        → TerminatesWith {} m incr_idx st [] (fun _ _ => True)  (conversion)
+
+    ## Why `fun _ _ => True` and not `fun st' _ => st'.mem.read64 ptr = v + 2`
+
+    The `v + 2` conclusion would require:
+    1. Sequential composition: a second `TerminatesWith` for the post-state `st₁`
+       from the first call.  But after extracting `True` from the first call we
+       lose track of `st₁` and cannot build `⊢ genHeapInterp σ₁ ∗ pointsTo ptr (v+1)`
+       needed to run `wp_wasm_iProp_call` again.
+    2. Ghost-to-physical link: `genHeap_valid` gives `get? σ addr = some (some byte)`
+       (ghost map content), not `st'.mem.bytes addr.toNat = byte` (physical memory).
+       The connection requires `heapAgreesWithMem σ mem` as a maintained invariant,
+       which is not currently set up as an iProp invariant.
+
+    Both missing pieces belong to a heap-with-invariant setup (e.g. Iris invariants
+    for `heapAgreesWithMem`).  This theorem shows the iProp→Prop adequacy path
+    is already in place; only the sequential ghost-state tracking is missing.
+
+    ## Hypothesis note
+    `⊢ genHeapInterp σ ∗ (...)` is the CORRECT combined form (AUTH ∗ FRAG).
+    The form `genHeapInterp σ ⊢ ...` (AUTH ⊢ FRAG alone) is false in the genHeap
+    RA model and cannot be used here. -/
+theorem linked_terminates
+    (m : Wasm.Module) (ptr ptr₂ : UInt32) (v u : UInt64)
+    (incr_idx : Nat)
+    (h_incr : ∀ w, incrementSpec m incr_idx ptr w)
+    (st : Store Unit) (σ : WasmHeapMap (Option UInt8))
+    (h_init : ⊢ genHeapInterp σ ∗ (pointsTo_u64 ptr v ∗ pointsTo_u64 ptr₂ u))
+    (himp : m.imports[incr_idx]? = none)
+    (h_noimports : m.imports.length = 0)
+    (hresults : ∀ f, m.funcs[incr_idx]? = some f → f.results.length = 0) :
+    TerminatesWith {} m incr_idx st [] (fun _ _ => True) := by
+  obtain ⟨f, hf, hspec⟩ := frame_rule (pointsTo_u64 ptr₂ u) (h_incr v)
+  -- Coerce hspec {} st [] to explicit iProp types to avoid HOU when chaining below:
+  -- the framed pre beta-reduces to (pointsTo_u64 ptr v ∗ pointsTo_u64 ptr₂ u) by
+  -- (fun _ => pointsTo_u64 ptr v) st = pointsTo_u64 ptr v, handled by isDefEq.
+  have hspec_inst : ⊢ (iprop% pointsTo_u64 ptr v ∗ pointsTo_u64 ptr₂ u) -∗
+      wp_wasm_iProp m st (f.toLocals []) f.body {}
+        (fun st' vs => iprop% pointsTo_u64 ptr (v + 1) ∗ pointsTo_u64 ptr₂ u) :=
+    hspec {} st []
+  -- Chain h_init through hspec_inst: ⊢ genHeapInterp σ ∗ wp_wasm_iProp ...
+  have hwp_init : ⊢ genHeapInterp σ ∗
+      wp_wasm_iProp m st (f.toLocals []) f.body {}
+        (fun st' vs => iprop% pointsTo_u64 ptr (v + 1) ∗ pointsTo_u64 ptr₂ u) :=
+    h_init.trans (BI.sep_mono_right (BI.wand_entails hspec_inst))
+  -- Trivialize iProp postcondition → Prop WP with True
+  have hwp_true : ⊢ genHeapInterp σ ∗ wp_wasm m st (f.toLocals []) f.body {} (fun _ _ => True) :=
+    hwp_init.trans (BI.sep_mono_right wp_wasm_iProp_trivialize)
+  -- Adequacy: extract Prop-level wp_wasm_prop
+  have hwp_prop : wp_wasm_prop m st (f.toLocals []) f.body {} (fun _ _ => True) :=
+    pure_soundness (hwp_true.trans
+      (wasm_adequacy m st (f.toLocals []) f.body {} (fun _ _ => True) σ))
+  -- Normalize args form for TerminatesWith ([] take/reverse = [])
+  have hwp_prop' :
+      wp_wasm_prop m st
+        (f.toLocals (([] : List Value).take f.numParams).reverse)
+        f.body {} (fun _ _ => True) := by
+    simp only [List.take_nil, List.reverse_nil]; exact hwp_prop
+  exact wp_wasm_prop_to_TerminatesWith
+    (by rw [h_noimports, Nat.sub_zero]; exact hf)
+    himp (hresults f hf) (Nat.zero_le _) (fun _ _ h => h) hwp_prop'
+
 end Wasm.SepLogic.LinkingExample
