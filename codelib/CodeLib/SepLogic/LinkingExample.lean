@@ -50,7 +50,10 @@ theorem linked_two_calls
       (fun _st => iprop% pointsTo_u64 ptr (v + 1) ∗ pointsTo_u64 ptr₂ u)
       (fun _st' _vs => iprop% pointsTo_u64 ptr (v + 2) ∗ pointsTo_u64 ptr₂ u) := by
     have h := frame_rule (pointsTo_u64 ptr₂ u) (h_incr (v + 1))
-    simp only [show (v : UInt64) + 1 + 1 = v + 2 from by omega] at h
+    have heq : (v + 1 + 1 : UInt64) = v + 2 := by
+      have h1 : (1 : UInt64) + 1 = 2 := by native_decide
+      rw [UInt64.add_assoc, h1]
+    simp only [heq] at h
     exact h
   obtain ⟨f₁, hf₁, hspec₁⟩ := h1
   obtain ⟨f₂, hf₂, hspec₂⟩ := h2v

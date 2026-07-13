@@ -134,7 +134,7 @@ instance instBIMonoPredWasmIPropF :
 -- Used by frame_rule in ModuleLinking to lift frame-free specs to framed specs.
 theorem wp_wasm_iProp_frame_right
     {m : Module} {st : Store Unit} {locals : Locals} {prog : Program} {env : HostEnv Unit}
-    (R : IProp WasmHeapGF) (Φ : Store Unit → List Value → IProp WasmHeapGF) :
+    {R : IProp WasmHeapGF} {Φ : Store Unit → List Value → IProp WasmHeapGF} :
     wp_wasm_iProp m st locals prog env Φ ∗ R ⊢
       wp_wasm_iProp m st locals prog env (fun st' vs => iprop% Φ st' vs ∗ R) := by
   unfold wp_wasm_iProp
@@ -148,49 +148,47 @@ theorem wp_wasm_iProp_frame_right
   have hstep : ⊢ □ (∀ y : LeibnizO WasmStateIProp, wp_wasm_iProp_F Ψ y -∗ Ψ y) := by
     iintro !> %s
     obtain ⟨ws⟩ := s
-    unfold wp_wasm_iProp_F Ψ
-    simp only [LeibnizO.car]
-    split
-    · -- prog = []: LHS = ws.Φ ws.st [], RHS = R -∗ lfp ⟨{prog=[], Φ'=Φ∗R}⟩
+    rcases hprog : ws.prog with _ | ⟨instr, rest⟩
+    · -- ws.prog = []
+      unfold wp_wasm_iProp_F Ψ; simp only [LeibnizO.car, hprog]
       iintro H HR
       iapply least_fixpoint_unfold_mpr
-      unfold wp_wasm_iProp_F
-      simp only [LeibnizO.car]
+      unfold wp_wasm_iProp_F; simp only [LeibnizO.car, hprog]
       isplitl [H]
       · iexact H
       · iexact HR
-    · -- prog = .ret :: _: same pattern
-      iintro H HR
-      iapply least_fixpoint_unfold_mpr
-      unfold wp_wasm_iProp_F
-      simp only [LeibnizO.car]
-      isplitl [H]
-      · iexact H
-      · iexact HR
-    · -- prog = instr :: rest: step case
-      next instr rest =>
-      iintro Hwp HR
-      iapply least_fixpoint_unfold_mpr
-      unfold wp_wasm_iProp_F
-      simp only [LeibnizO.car]
-      iintro %σ Hσ
-      imod Hwp $$ % σ Hσ with ⟨%σ', %st', %locals', hexec, Hσ', HΨ⟩
-      -- HΨ : R -∗ bi_least_fixpoint wp_wasm_iProp_F ⟨{prog := rest, Φ := Φ ∗ R}⟩
-      imodintro
-      iexists σ', st', locals'
-      isplitl [hexec]
-      · iexact hexec
-      · isplitl [Hσ']
-        · iexact Hσ'
-        · iapply HΨ
-          iexact HR
+    · by_cases h_ret : instr = Instruction.ret
+      · -- ws.prog = .ret :: rest
+        subst h_ret
+        unfold wp_wasm_iProp_F Ψ; simp only [LeibnizO.car, hprog]
+        iintro H HR
+        iapply least_fixpoint_unfold_mpr
+        unfold wp_wasm_iProp_F; simp only [LeibnizO.car, hprog]
+        isplitl [H]
+        · iexact H
+        · iexact HR
+      · -- ws.prog = instr :: rest, instr ≠ .ret
+        unfold wp_wasm_iProp_F Ψ; simp only [LeibnizO.car, hprog]
+        iintro Hwp HR
+        iapply least_fixpoint_unfold_mpr
+        unfold wp_wasm_iProp_F; simp only [LeibnizO.car, hprog]
+        iintro %σ Hσ
+        imod Hwp $$ %σ Hσ with ⟨%σ', %st', %locals', hexec, Hσ', HΨ⟩
+        imodintro
+        iexists σ', st', locals'
+        isplitl [hexec]
+        · iexact hexec
+        · isplitl [Hσ']
+          · iexact Hσ'
+          · iapply HΨ
+            iexact HR
   have hfp :
       bi_least_fixpoint wp_wasm_iProp_F ⟨{ m, st, locals, prog, env, Φ }⟩ ⊢
       Ψ ⟨{ m, st, locals, prog, env, Φ }⟩ :=
     BI.sep_elim_emp_valid_left hstep
       (BI.wand_elim ((BI.wand_entails (least_fixpoint_iter (F := wp_wasm_iProp_F))).trans
         (BI.forall_elim (⟨{ m, st, locals, prog, env, Φ }⟩ : LeibnizO WasmStateIProp))))
-  exact (BI.sep_mono_left hfp).trans BI.wand_elim_right
+  exact (BI.sep_mono_left hfp).trans BI.wand_elim_left
 
 -- iProp adequacy bridge: from an iProp WP spec and an initial ghost heap satisfying
 -- the precondition, the function call terminates and there exists a post-execution
@@ -222,7 +220,105 @@ theorem wp_wasm_iProp_pure
     (Q : Store Unit → List Value → Prop) :
     wp_wasm m st locals prog env Q =
       wp_wasm_iProp m st locals prog env (fun st' vs => iprop% ⌜Q st' vs⌝) := by
-  sorry
+  unfold wp_wasm wp_wasm_iProp
+  apply IProp.ext
+  constructor
+  · -- mp: lfp wp_wasm_F ⟨{Q}⟩ ⊢ lfp wp_wasm_iProp_F ⟨{Φ=⌜Q⌝}⟩
+    -- Invariant: Ψ₁ s = lfp wp_wasm_iProp_F ⟨{Φ=⌜s.car.Q⌝}⟩
+    let Ψ₁ : LeibnizO WasmState → IProp WasmHeapGF :=
+      fun s => bi_least_fixpoint wp_wasm_iProp_F
+        ⟨{ m := s.car.m, st := s.car.st, locals := s.car.locals, prog := s.car.prog,
+           env := s.car.env, Φ := fun st' vs => iprop% ⌜s.car.Q st' vs⌝ }⟩
+    haveI hΨ₁ : OFE.NonExpansive Ψ₁ :=
+      ⟨fun _ _ _ H => (OFE.eq_of_eqv (OFE.discrete H)) ▸ OFE.Dist.rfl⟩
+    have hstep₁ : ⊢ □ (∀ y : LeibnizO WasmState, wp_wasm_F Ψ₁ y -∗ Ψ₁ y) := by
+      iintro !> %s
+      obtain ⟨ws₁⟩ := s
+      rcases hprog₁ : ws₁.prog with _ | ⟨instr₁, rest₁⟩
+      · -- ws₁.prog = []
+        unfold wp_wasm_F Ψ₁; simp only [LeibnizO.car, hprog₁]
+        iintro H
+        iapply least_fixpoint_unfold_mpr
+        unfold wp_wasm_iProp_F; simp only [LeibnizO.car, hprog₁]
+        iexact H
+      · by_cases h_ret₁ : instr₁ = Instruction.ret
+        · -- ws₁.prog = .ret :: rest₁
+          subst h_ret₁
+          unfold wp_wasm_F Ψ₁; simp only [LeibnizO.car, hprog₁]
+          iintro H
+          iapply least_fixpoint_unfold_mpr
+          unfold wp_wasm_iProp_F; simp only [LeibnizO.car, hprog₁]
+          iexact H
+        · -- ws₁.prog = instr₁ :: rest₁, instr₁ ≠ .ret
+          unfold wp_wasm_F Ψ₁; simp only [LeibnizO.car, hprog₁]
+          iintro H
+          iapply least_fixpoint_unfold_mpr
+          unfold wp_wasm_iProp_F; simp only [LeibnizO.car, hprog₁]
+          iexact H
+    exact BI.sep_elim_emp_valid_left hstep₁
+      (BI.wand_elim ((BI.wand_entails (least_fixpoint_iter (F := wp_wasm_F))).trans
+        (BI.forall_elim (⟨{ m, st, locals, prog, env, Q }⟩ : LeibnizO WasmState))))
+  · -- mpr: lfp wp_wasm_iProp_F ⟨{Φ=⌜Q⌝}⟩ ⊢ lfp wp_wasm_F ⟨{Q}⟩
+    -- Invariant: Ψ₂ s = ∀ Q', (∀ st' vs, s.car.Φ st' vs -∗ ⌜Q' st' vs⌝) -∗ lfp wp_wasm_F ⟨{Q=Q'}⟩
+    let Ψ₂ : LeibnizO WasmStateIProp → IProp WasmHeapGF :=
+      fun s =>
+        let toWF : (Store Unit → List Value → Prop) → IProp WasmHeapGF :=
+          fun Q' => bi_least_fixpoint wp_wasm_F
+            ⟨{ m := s.car.m, st := s.car.st, locals := s.car.locals,
+               prog := s.car.prog, env := s.car.env, Q := Q' }⟩
+        iprop% ∀ Q' : Store Unit → List Value → Prop,
+          (∀ st' vs, s.car.Φ st' vs -∗ ⌜Q' st' vs⌝) -∗ toWF Q'
+    haveI hΨ₂ : OFE.NonExpansive Ψ₂ :=
+      ⟨fun _ _ _ H => (OFE.eq_of_eqv (OFE.discrete H)) ▸ OFE.Dist.rfl⟩
+    have hstep₂ : ⊢ □ (∀ y : LeibnizO WasmStateIProp, wp_wasm_iProp_F Ψ₂ y -∗ Ψ₂ y) := by
+      iintro !> %s
+      obtain ⟨ws₂⟩ := s
+      rcases hprog₂ : ws₂.prog with _ | ⟨instr₂, rest₂⟩
+      · -- ws₂.prog = []
+        unfold wp_wasm_iProp_F Ψ₂; simp only [LeibnizO.car, hprog₂]
+        iintro H %Q'' HΦQ''
+        iapply least_fixpoint_unfold_mpr
+        unfold wp_wasm_F; simp only [LeibnizO.car, hprog₂]
+        ispecialize HΦQ'' $$ %ws₂.st %([] : List Value)
+        ispecialize HΦQ'' $$ H
+        iexact HΦQ''
+      · by_cases h_ret₂ : instr₂ = Instruction.ret
+        · -- ws₂.prog = .ret :: rest₂
+          subst h_ret₂
+          unfold wp_wasm_iProp_F Ψ₂; simp only [LeibnizO.car, hprog₂]
+          iintro H %Q'' HΦQ''
+          iapply least_fixpoint_unfold_mpr
+          unfold wp_wasm_F; simp only [LeibnizO.car, hprog₂]
+          ispecialize HΦQ'' $$ %ws₂.st %ws₂.locals.values
+          ispecialize HΦQ'' $$ H
+          iexact HΦQ''
+        · -- ws₂.prog = instr₂ :: rest₂, instr₂ ≠ .ret
+          unfold wp_wasm_iProp_F Ψ₂; simp only [LeibnizO.car, hprog₂]
+          iintro Hwp₂ %Q'' HΦQ''
+          iapply least_fixpoint_unfold_mpr
+          unfold wp_wasm_F; simp only [LeibnizO.car, hprog₂]
+          iintro %σ₂ Hσ₂
+          imod Hwp₂ $$ %σ₂ Hσ₂ with ⟨%σ₂', %st₂', %loc₂', hexec₂, Hσ₂', Hcont₂⟩
+          imodintro
+          iexists σ₂', st₂', loc₂'
+          isplitl [hexec₂]
+          · iexact hexec₂
+          · isplitl [Hσ₂']
+            · iexact Hσ₂'
+            · ispecialize Hcont₂ $$ %Q'' HΦQ''
+              iexact Hcont₂
+    have hfp₂ :
+        bi_least_fixpoint wp_wasm_iProp_F
+          ⟨{ m, st, locals, prog, env, Φ := fun st' vs => iprop% ⌜Q st' vs⌝ }⟩ ⊢
+        Ψ₂ ⟨{ m, st, locals, prog, env, Φ := fun st' vs => iprop% ⌜Q st' vs⌝ }⟩ :=
+      BI.sep_elim_emp_valid_left hstep₂
+        (BI.wand_elim ((BI.wand_entails (least_fixpoint_iter (F := wp_wasm_iProp_F))).trans
+          (BI.forall_elim
+            (⟨{ m, st, locals, prog, env, Φ := fun st' vs => iprop% ⌜Q st' vs⌝ }⟩ :
+              LeibnizO WasmStateIProp))))
+    exact BI.sep_elim_emp_valid_left
+      (BI.forall_intro (fun _ => BI.forall_intro (fun _ => BI.wand_rfl)))
+      (BI.wand_elim_swap (hfp₂.trans (BI.forall_elim Q)))
 
 private theorem exec_cons {m : Module} {st : Store Unit} {locals : Locals}
     {env : HostEnv Unit} {head : Instruction} {rest : Program}
