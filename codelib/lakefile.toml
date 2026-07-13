@@ -7,5 +7,11 @@ packagesDir = "../.lake/packages"
 name = "WasmInterpreterLean"
 path = "../interpreter"
 
+[[require]]
+name = "iris"
+git.url = "https://github.com/leanprover-community/iris-lean.git"
+git.subDir = "Iris"
+git.rev = "v4.31.0"
+
 [[lean_lib]]
 name = "CodeLib"
