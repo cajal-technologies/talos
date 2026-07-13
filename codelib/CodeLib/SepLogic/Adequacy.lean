@@ -190,26 +190,6 @@ theorem wp_wasm_iProp_frame_right
         (BI.forall_elim (⟨{ m, st, locals, prog, env, Φ }⟩ : LeibnizO WasmStateIProp))))
   exact (BI.sep_mono_left hfp).trans BI.wand_elim_left
 
--- iProp adequacy bridge: from an iProp WP spec and an initial ghost heap satisfying
--- the precondition, the function call terminates and there exists a post-execution
--- ghost heap satisfying the postcondition.
--- Proof deferred: requires full semantic adequacy of iris-lean/genHeap for the
--- WasmHeap model (ghost-state extraction from the basic-update modality chain).
-theorem wasm_iProp_TerminatesWith
-    (m : Module) (idx : Nat)
-    (env : HostEnv Unit) (st : Store Unit)
-    (pre  : Store Unit → IProp WasmHeapGF)
-    (post : Store Unit → List Value → IProp WasmHeapGF)
-    (σ : WasmHeapMap (Option UInt8))
-    (hspec : ∃ (f : Wasm.Function), m.funcs[idx]? = some f ∧
-        ∀ (e : HostEnv Unit) (s : Store Unit) (a : List Value),
-          ⊢ pre s -∗ wp_wasm_iProp m s (f.toLocals a) f.body e
-                        (fun st' vs => post st' vs))
-    (h_pre : genHeapInterp σ ⊢ pre st) :
-    TerminatesWith env m idx st []
-      (fun st₁ _ =>
-        ∃ σ₁ : WasmHeapMap (Option UInt8), genHeapInterp σ₁ ⊢ post st₁ []) := by
-  sorry
 
 -- Bridge: wp_wasm Q = wp_wasm_iProp (⌜Q⌝).
 -- Both sides are bi_least_fixpoint of functors that produce identical iProp terms
