@@ -189,4 +189,42 @@ theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
           from by rw [ek, edk]; omega]
       exact hbyte
 
+/-- **Encode is correct for all inputs, modulo the allocator.** Composing the
+four loop-free layers, the exported `encode` (func 8) — given the
+`with_capacity_in`/allocator contract `hcap` — terminates writing a `Vec<u8>`
+whose length is the input length and whose buffer holds a byte-for-byte copy of
+the input string. The only remaining obligation for an unconditional `EncodeSpec`
+is discharging `hcap` (the `dlmalloc` frontier). -/
+theorem encode_of_alloc (env : HostEnv Unit) (st : Store Unit)
+    (retPtr argPtr dataPtr len sp cap ptr : UInt32)
+    (hdata : st.mem.read32 argPtr = dataPtr)
+    (hlen : st.mem.read32 (argPtr + 4) = len)
+    (hb : argPtr.toNat + 8 ≤ st.mem.pages * 65536)
+    (hsp : st.globals.globals[0]? = some (.i32 sp))
+    (hcap : TerminatesWith env «module» 6
+      { st with globals := { globals := st.globals.globals.set 0 (.i32 (sp - 16)) } }
+      [.i32 1, .i32 1, .i32 len, .i32 (8 + (sp - 16))]
+      (fun s6 vs6 => vs6 = []
+        ∧ s6.globals.globals[0]? = some (.i32 (sp - 16))
+        ∧ s6.mem.pages ≤ 65536
+        ∧ (sp - 16).toNat + 16 ≤ s6.mem.pages * 65536
+        ∧ s6.mem.read32 (sp - 16 + 8) = cap
+        ∧ s6.mem.read32 (sp - 16 + 12) = ptr
+        ∧ ptr.toNat + len.toNat ≤ s6.mem.pages * 65536
+        ∧ dataPtr.toNat + len.toNat ≤ s6.mem.pages * 65536
+        ∧ retPtr.toNat + 12 ≤ s6.mem.pages * 65536
+        ∧ (ptr.toNat + len.toNat ≤ dataPtr.toNat ∨ dataPtr.toNat + len.toNat ≤ ptr.toNat)
+        ∧ (ptr.toNat + len.toNat ≤ retPtr.toNat ∨ retPtr.toNat + 12 ≤ ptr.toNat)
+        ∧ (∀ k : UInt32, k.toNat < len.toNat →
+             s6.mem.read8 (dataPtr + k) = st.mem.read8 (dataPtr + k))))
+    (hsd : retPtr.toNat + 12 ≤ dataPtr.toNat ∨ dataPtr.toNat + len.toNat ≤ retPtr.toNat) :
+    TerminatesWith env «module» 8 st [.i32 argPtr, .i32 retPtr]
+      (fun st' _ => st'.mem.read32 (retPtr + 8) = len ∧ st'.mem.read32 (retPtr + 4) = ptr ∧
+        ∀ k : UInt32, k.toNat < len.toNat → st'.mem.read8 (ptr + k) = st.mem.read8 (dataPtr + k)) := by
+  apply func8_of_func7 env st retPtr argPtr dataPtr len _ hdata hlen hb
+  apply func7_of_func1 env st retPtr dataPtr len _
+  apply func1_of_func2 env st retPtr dataPtr len _
+  exact (func2_terminates env st retPtr dataPtr len sp cap ptr hsp hcap hsd).mono
+    (fun _ _ h => h.2)
+
 end Project.Encode.Proofs
