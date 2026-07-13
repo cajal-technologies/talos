@@ -242,7 +242,9 @@ theorem wp_wasm_prop_loop
             rest env Q) ∨
         (∃ stB sB, exec fuel m stA locA body env = .Break 0 stB sB ∧
           I stB { sB with values := sB.values.take ps ++ locA.values.drop ps } ∧
-          μ stB { sB with values := sB.values.take ps ++ locA.values.drop ps } < μ stA locA)) :
+          μ stB { sB with values := sB.values.take ps ++ locA.values.drop ps } < μ stA locA) ∨
+        (∃ stB vs, exec fuel m stA locA body env = .Return stB vs ∧
+          Q stB vs)) :
     wp_wasm_prop m st locals (.loop ps rs body :: rest) env Q := by
   -- restate exec_loop_cons_unfold (private in Loop.lean) using execOne_loop_succ
   have exec_loop_unfold : ∀ (f : Nat) (stA : Store Unit) (sA : Locals),
@@ -279,6 +281,7 @@ theorem wp_wasm_prop_loop
     intro stA sA hI hμ
     obtain ⟨N, hN⟩ := hstep stA sA hI
     rcases hN N le_rfl with ⟨stB, sB, hbody, hwp⟩ | ⟨stB, sB, hbody, hI', hμ'⟩
+        | ⟨stB, vs, hbody, hQ⟩
     · -- Fallthrough: body exits, compose fuels for body and rest
       obtain ⟨fuel_rest, hfuel⟩ := hwp
       have hbody_ne : exec N m stA sA body env ≠ .OutOfFuel := by
@@ -334,6 +337,10 @@ theorem wp_wasm_prop_loop
       rw [heq,
         exec_fuel_mono (Nat.le_trans (Nat.le_max_right N fuel_loop) (Nat.le_succ _)) hfuel_ne]
       exact hfuel_loop
+    · -- Return: body exits via .Return; the loop's "other => other" arm propagates it straight out
+      refine ⟨N + 1, ?_⟩
+      simp only [exec_loop_unfold N stA sA, hbody]
+      exact hQ
 
 -- toy: empty-body loop always exits immediately, validating wp_wasm_prop_loop
 private example (m : Module) (st : Store Unit) (locals : Locals) :
@@ -442,6 +449,110 @@ theorem wp_wasm_sub
     ⊢ wp_wasm m st locals (.sub :: rest) env Q :=
   wp_wasm_step (by simp only [execOne.eq_def, hstack]) hstep
 
+theorem wp_wasm_mul
+    {m : Module} {st : Store Unit} {locals : Locals}
+    {rest : Program} {env : HostEnv Unit}
+    {Q : Store Unit → List Value → Prop}
+    {a b : UInt32} {vs : List Value}
+    (hstack : locals.values = .i32 a :: .i32 b :: vs)
+    (hstep : ∀ σ : WasmHeapMap (Option UInt8),
+        ⊢ genHeapInterp σ ==∗
+        ∃ σ' : WasmHeapMap (Option UInt8),
+        genHeapInterp σ' ∗ wp_wasm m st { locals with values := .i32 (a * b) :: vs } rest env Q) :
+    ⊢ wp_wasm m st locals (.mul :: rest) env Q :=
+  wp_wasm_step (by simp only [execOne.eq_def, hstack]) hstep
+
+theorem wp_wasm_eqz
+    {m : Module} {st : Store Unit} {locals : Locals}
+    {rest : Program} {env : HostEnv Unit}
+    {Q : Store Unit → List Value → Prop}
+    {a : UInt32} {vs : List Value}
+    (hstack : locals.values = .i32 a :: vs)
+    (hstep : ∀ σ : WasmHeapMap (Option UInt8),
+        ⊢ genHeapInterp σ ==∗
+        ∃ σ' : WasmHeapMap (Option UInt8),
+        genHeapInterp σ' ∗ wp_wasm m st { locals with values := .i32 (if a = 0 then 1 else 0) :: vs } rest env Q) :
+    ⊢ wp_wasm m st locals (.eqz :: rest) env Q :=
+  wp_wasm_step (by simp only [execOne.eq_def, hstack]) hstep
+
+theorem wp_wasm_ltU
+    {m : Module} {st : Store Unit} {locals : Locals}
+    {rest : Program} {env : HostEnv Unit}
+    {Q : Store Unit → List Value → Prop}
+    {a b : UInt32} {vs : List Value}
+    (hstack : locals.values = .i32 b :: .i32 a :: vs)
+    (hstep : ∀ σ : WasmHeapMap (Option UInt8),
+        ⊢ genHeapInterp σ ==∗
+        ∃ σ' : WasmHeapMap (Option UInt8),
+        genHeapInterp σ' ∗ wp_wasm m st { locals with values := .i32 (if a < b then 1 else 0) :: vs } rest env Q) :
+    ⊢ wp_wasm m st locals (.ltU :: rest) env Q :=
+  wp_wasm_step (by simp only [execOne.eq_def, hstack]) hstep
+
+theorem wp_wasm_leU
+    {m : Module} {st : Store Unit} {locals : Locals}
+    {rest : Program} {env : HostEnv Unit}
+    {Q : Store Unit → List Value → Prop}
+    {a b : UInt32} {vs : List Value}
+    (hstack : locals.values = .i32 b :: .i32 a :: vs)
+    (hstep : ∀ σ : WasmHeapMap (Option UInt8),
+        ⊢ genHeapInterp σ ==∗
+        ∃ σ' : WasmHeapMap (Option UInt8),
+        genHeapInterp σ' ∗ wp_wasm m st { locals with values := .i32 (if a ≤ b then 1 else 0) :: vs } rest env Q) :
+    ⊢ wp_wasm m st locals (.leU :: rest) env Q :=
+  wp_wasm_step (by simp only [execOne.eq_def, hstack]) hstep
+
+theorem wp_wasm_gtU
+    {m : Module} {st : Store Unit} {locals : Locals}
+    {rest : Program} {env : HostEnv Unit}
+    {Q : Store Unit → List Value → Prop}
+    {a b : UInt32} {vs : List Value}
+    (hstack : locals.values = .i32 b :: .i32 a :: vs)
+    (hstep : ∀ σ : WasmHeapMap (Option UInt8),
+        ⊢ genHeapInterp σ ==∗
+        ∃ σ' : WasmHeapMap (Option UInt8),
+        genHeapInterp σ' ∗ wp_wasm m st { locals with values := .i32 (if a > b then 1 else 0) :: vs } rest env Q) :
+    ⊢ wp_wasm m st locals (.gtU :: rest) env Q :=
+  wp_wasm_step (by simp only [execOne.eq_def, hstack]) hstep
+
+theorem wp_wasm_geU
+    {m : Module} {st : Store Unit} {locals : Locals}
+    {rest : Program} {env : HostEnv Unit}
+    {Q : Store Unit → List Value → Prop}
+    {a b : UInt32} {vs : List Value}
+    (hstack : locals.values = .i32 b :: .i32 a :: vs)
+    (hstep : ∀ σ : WasmHeapMap (Option UInt8),
+        ⊢ genHeapInterp σ ==∗
+        ∃ σ' : WasmHeapMap (Option UInt8),
+        genHeapInterp σ' ∗ wp_wasm m st { locals with values := .i32 (if a ≥ b then 1 else 0) :: vs } rest env Q) :
+    ⊢ wp_wasm m st locals (.geU :: rest) env Q :=
+  wp_wasm_step (by simp only [execOne.eq_def, hstack]) hstep
+
+theorem wp_wasm_and
+    {m : Module} {st : Store Unit} {locals : Locals}
+    {rest : Program} {env : HostEnv Unit}
+    {Q : Store Unit → List Value → Prop}
+    {a b : UInt32} {vs : List Value}
+    (hstack : locals.values = .i32 a :: .i32 b :: vs)
+    (hstep : ∀ σ : WasmHeapMap (Option UInt8),
+        ⊢ genHeapInterp σ ==∗
+        ∃ σ' : WasmHeapMap (Option UInt8),
+        genHeapInterp σ' ∗ wp_wasm m st { locals with values := .i32 (a &&& b) :: vs } rest env Q) :
+    ⊢ wp_wasm m st locals (.and :: rest) env Q :=
+  wp_wasm_step (by simp only [execOne.eq_def, hstack]) hstep
+
+theorem wp_wasm_shl
+    {m : Module} {st : Store Unit} {locals : Locals}
+    {rest : Program} {env : HostEnv Unit}
+    {Q : Store Unit → List Value → Prop}
+    {a b : UInt32} {vs : List Value}
+    (hstack : locals.values = .i32 b :: .i32 a :: vs)
+    (hstep : ∀ σ : WasmHeapMap (Option UInt8),
+        ⊢ genHeapInterp σ ==∗
+        ∃ σ' : WasmHeapMap (Option UInt8),
+        genHeapInterp σ' ∗ wp_wasm m st { locals with values := .i32 (a <<< (b % 32)) :: vs } rest env Q) :
+    ⊢ wp_wasm m st locals (.shl :: rest) env Q :=
+  wp_wasm_step (by simp only [execOne.eq_def, hstack]) hstep
+
 theorem wp_wasm_load64
     {m : Module} {st : Store Unit} {locals : Locals}
     {rest : Program} {env : HostEnv Unit}
@@ -544,28 +655,5 @@ theorem wp_wasm_prop_to_TerminatesWith
   | OutOfFuel => rw [hexec] at hwp_fuel; exact hwp_fuel.elim
   | ReturnCall fid st' vs => rw [hexec] at hwp_fuel; exact hwp_fuel.elim
   | Throwing tag targs st' s' => rw [hexec] at hwp_fuel; exact hwp_fuel.elim
-
--- Bridge: iProp wp_wasm proof → Prop wp_wasm_prop
--- Creates ghost state internally via genHeap_init_names,
--- applies the iProp proof, then extracts the pure result.
--- This is HeapLang's heap_adequacy pattern.
-theorem wasm_heap_adequacy
-    (m : Module) (st : Store Unit) (locals : Locals)
-    (prog : Program) (env : HostEnv Unit)
-    (Q : Store Unit → List Value → Prop)
-    (hwp : ∀ [inst : WasmHeapGS], ⊢ wp_wasm m st locals prog env Q) :
-    wp_wasm_prop m st locals prog env Q := by
-  apply pure_soundness (PROP := IProp WasmHeapGF)
-  have hbupd : emp ⊢ (|==> ⌜wp_wasm_prop m st locals prog env Q⌝ : IProp WasmHeapGF) := by
-    refine (genHeap_init (L := UInt32) (V := Option UInt8)
-        (GF := WasmHeapGF) (H := WasmHeapMap) ∅).trans ?_
-    apply bupd_mono
-    apply BI.exists_elim
-    intro G
-    letI inst : WasmHeapGS := WasmHeapGS.mk (togenHeapGS := G)
-    apply BI.sep_elim_left.trans
-    apply (BI.sep_intro_emp_valid_right .rfl hwp).trans
-    exact wasm_adequacy m st locals prog env Q ∅
-  exact hbupd.trans bupd_elim
 
 end Wasm.SepLogic
