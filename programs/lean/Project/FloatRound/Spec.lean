@@ -104,7 +104,7 @@ private theorem func4_term (env : HostEnv Unit) (st : Store Unit) (sp x : UInt32
         st'.globals.globals[0]? = some (.i32 sp) ∧ st'.mem.pages = 16) := by
   apply TerminatesWith.of_wp_entry_for (f := ⟨[.f32], [], func4, [.f32], none⟩) rfl
   unfold func4; wp_run
-  apply wp_call_of_terminates (func5_term env st sp x [] hg hp h16 hb)
+  apply wp_call_tw (func5_term env st sp x [] hg hp h16 hb)
   rintro st5 vs5 ⟨v5, rfl, hg5, hp5⟩
   wp_run
   exact ⟨v5, rfl, hg5, hp5⟩
@@ -127,7 +127,7 @@ private theorem func0_term (env : HostEnv Unit) (st : Store Unit) (sp x : UInt32
   have hg1 : ({st with globals := {globals := st.globals.globals.set 0 (.i32 (sp - 16))}} : Store Unit).globals.globals[0]? = some (.i32 (sp - 16)) :=
     globals_set0 (sp - 16) hg
   -- call func1(x) -> v1 = f32Trunc x (operationally), global and mem unchanged
-  apply wp_call_of_terminates (func1_term env _ (sp - 16) x [] hg1 hp h16_1 hb1)
+  apply wp_call_tw (func1_term env _ (sp - 16) x [] hg1 hp h16_1 hb1)
   rintro st1 vs1 ⟨v1, rfl, hg1', hp1'⟩
   -- compute frac = x - v1, enter 4-level block structure
   wp_run
@@ -155,7 +155,7 @@ private theorem func0_term (env : HostEnv Unit) (st : Store Unit) (sp x : UInt32
     · -- frac <= -0.5: floor branch (A cont: call func3)
       simp
       -- A cont: localGet 1, localGet 2, call 3
-      apply wp_call_of_terminates
+      apply wp_call_tw
         (func3_term env st1 (sp - 16) v1 [.i32 (sp - 16)] hg1' hp1' h16_1 hb1)
       rintro st3 vs3 ⟨v3, rfl, hg3, hp3⟩
       have hnt3' : (sp - 16).toNat ≤ 1048560 := by
@@ -167,7 +167,7 @@ private theorem func0_term (env : HostEnv Unit) (st : Store Unit) (sp x : UInt32
   · -- frac >= 0.5: ceil branch (C cont: call func2, f32Store 12, br 2)
     simp [hge]
     -- C cont: localGet 1, localGet 2, call 2
-    apply wp_call_of_terminates
+    apply wp_call_tw
       (func2_term env st1 (sp - 16) v1 [.i32 (sp - 16)] hg1' hp1' h16_1 hb1)
     rintro st2 vs2 ⟨v2, rfl, hg2, hp2⟩
     have hnt2' : (sp - 16).toNat ≤ 1048560 := by
@@ -199,12 +199,12 @@ theorem check_round_terminates : FloatRoundSpec := by
   apply wp_block_cons; apply wp_block_cons
   wp_run
   -- call func0(x)
-  apply wp_call_of_terminates
+  apply wp_call_tw
     (func0_term env _ (1048576 - 16) x hg6 (by rfl) (by decide) (by decide))
   rintro st0 vs0 ⟨v0, rfl, hg0, hp0⟩
   wp_run
   -- call func4(x)
-  apply wp_call_of_terminates
+  apply wp_call_tw
     (func4_term env st0 (1048576 - 16) x [.f32 v0] hg0 hp0 (by decide) (by decide))
   rintro st4 vs4 ⟨v4, rfl, hg4, hp4⟩
   -- f32Eq, const 1, and, br_if 0: case split on equality

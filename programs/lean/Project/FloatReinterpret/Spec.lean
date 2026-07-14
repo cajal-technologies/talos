@@ -96,7 +96,7 @@ private theorem func0_term (env : HostEnv Unit) (st : Store Unit) (sp x : UInt32
         st'.globals.globals[0]? = some (.i32 sp) ∧ st'.mem.pages = 16) := by
   apply TerminatesWith.of_wp_entry_for (f := ⟨[.f32], [], func0, [.f32], none⟩) rfl
   unfold func0; wp_run
-  apply wp_call_of_terminates (func1_term env st sp x [] hg hp h16 hb)
+  apply wp_call_tw (func1_term env st sp x [] hg hp h16 hb)
   rintro st1 vs1 ⟨v1, rfl, hg1, hp1⟩
   wp_run
   exact ⟨v1, rfl, hg1, hp1⟩
@@ -112,7 +112,7 @@ private theorem func2_term (env : HostEnv Unit) (st : Store Unit) (sp x : UInt32
         st'.globals.globals[0]? = some (.i32 sp) ∧ st'.mem.pages = 16) := by
   apply TerminatesWith.of_wp_entry_for (f := ⟨[.f32], [], func2, [.f32], none⟩) rfl
   unfold func2; wp_run
-  apply wp_call_of_terminates (func3_term env st sp (f64PromoteF32 x) [] hg hp h16 hb)
+  apply wp_call_tw (func3_term env st sp (f64PromoteF32 x) [] hg hp h16 hb)
   rintro st3 vs3 ⟨v3, rfl, hg3, hp3⟩
   wp_run
   exact ⟨f32DemoteF64 v3, rfl, hg3, hp3⟩
@@ -144,7 +144,7 @@ private theorem func7_term (env : HostEnv Unit) (st : Store Unit) (sp x y : UInt
         st'.globals.globals[0]? = some (.i32 sp) ∧ st'.mem.pages = 16) := by
   apply TerminatesWith.of_wp_entry_for (f := ⟨[.f32, .f32], [], func7, [.f32], none⟩) rfl
   unfold func7; wp_run
-  apply wp_call_of_terminates (func8_term env st sp x y [] hg hp h16 hb)
+  apply wp_call_tw (func8_term env st sp x y [] hg hp h16 hb)
   rintro st8 vs8 ⟨v8, rfl, hg8, hp8⟩
   wp_run
   exact ⟨v8, rfl, hg8, hp8⟩
@@ -160,10 +160,10 @@ private theorem func9_term (env : HostEnv Unit) (st : Store Unit) (sp x : UInt32
         st'.globals.globals[0]? = some (.i32 sp) ∧ st'.mem.pages = 16) := by
   apply TerminatesWith.of_wp_entry_for (f := ⟨[.f32], [], func9, [.f32], none⟩) rfl
   unfold func9; wp_run
-  apply wp_call_of_terminates (func5_term env st sp x [] hg hp)
+  apply wp_call_tw (func5_term env st sp x [] hg hp)
   rintro st5 vs5 ⟨v5, rfl, hg5, hp5⟩
   wp_run
-  apply wp_call_of_terminates (func6_term env st5 sp (2147483647 &&& v5) [] hg5 hp5)
+  apply wp_call_tw (func6_term env st5 sp (2147483647 &&& v5) [] hg5 hp5)
   rintro st6 vs6 ⟨v6, rfl, hg6, hp6⟩
   wp_run
   exact ⟨v6, rfl, hg6, hp6⟩
@@ -179,13 +179,13 @@ private theorem func4_term (env : HostEnv Unit) (st : Store Unit) (sp x y : UInt
         st'.globals.globals[0]? = some (.i32 sp) ∧ st'.mem.pages = 16) := by
   apply TerminatesWith.of_wp_entry_for (f := ⟨[.f32, .f32], [], func4, [.f32], none⟩) rfl
   unfold func4; wp_run
-  apply wp_call_of_terminates (func5_term env st sp y [] hg hp)
+  apply wp_call_tw (func5_term env st sp y [] hg hp)
   rintro st5 vs5 ⟨v5, rfl, hg5, hp5⟩
   wp_run
-  apply wp_call_of_terminates (func5_term env st5 sp x [.i32 (2147483648 &&& v5)] hg5 hp5)
+  apply wp_call_tw (func5_term env st5 sp x [.i32 (2147483648 &&& v5)] hg5 hp5)
   rintro st5' vs5' ⟨v5', rfl, hg5', hp5'⟩
   wp_run
-  apply wp_call_of_terminates
+  apply wp_call_tw
     (func6_term env st5' sp ((2147483648 &&& v5) ||| (2147483647 &&& v5')) [] hg5' hp5')
   rintro st6 vs6 ⟨v6, rfl, hg6, hp6⟩
   wp_run
@@ -215,11 +215,11 @@ theorem check_terminates : FloatReinterpretSpec := by
       globals_set0 (1048576 - 16) hg
     apply wp_block_cons; apply wp_block_cons
     wp_run
-    apply wp_call_of_terminates
+    apply wp_call_tw
       (func0_term env _ (1048576 - 16) x [] hg10 (by rfl) (by decide) (by decide))
     rintro st0 vs0 ⟨v0, rfl, hg0, hp0⟩
     wp_run
-    apply wp_call_of_terminates (func9_term env st0 (1048576 - 16) x [.f32 v0] hg0 hp0)
+    apply wp_call_tw (func9_term env st0 (1048576 - 16) x [.f32 v0] hg0 hp0)
     rintro st9 vs9 ⟨v9, rfl, hg9, hp9⟩
     wp_run
     have hnt : ¬ ((1048576 - 16 : UInt32).toNat + 12 + 4 > 16 * 65536) := by decide
@@ -230,11 +230,11 @@ theorem check_terminates : FloatReinterpretSpec := by
       simp [hp9, hg9]
     · -- v0 = v9: continue; second comparison
       simp [heq09]
-      apply wp_call_of_terminates
+      apply wp_call_tw
         (func0_term env st9 (1048576 - 16) x [] hg9 hp9 (by decide) (by decide))
       rintro st0' vs0' ⟨v0', rfl, hg0', hp0'⟩
       wp_run
-      apply wp_call_of_terminates
+      apply wp_call_tw
         (func2_term env st0' (1048576 - 16) x [.f32 v0'] hg0' hp0' (by decide) (by decide))
       rintro st2 vs2 ⟨v2, rfl, hg2, hp2⟩
       wp_run
@@ -255,11 +255,11 @@ theorem check_terminates : FloatReinterpretSpec := by
       globals_set0 (1048576 - 16) hg
     apply wp_block_cons; apply wp_block_cons
     wp_run
-    apply wp_call_of_terminates
+    apply wp_call_tw
       (func7_term env _ (1048576 - 16) x y [] hg11 (by rfl) (by decide) (by decide))
     rintro st7 vs7 ⟨v7, rfl, hg7, hp7⟩
     wp_run
-    apply wp_call_of_terminates (func4_term env st7 (1048576 - 16) x y [.f32 v7] hg7 hp7)
+    apply wp_call_tw (func4_term env st7 (1048576 - 16) x y [.f32 v7] hg7 hp7)
     rintro st4 vs4 ⟨v4, rfl, hg4, hp4⟩
     wp_run
     have hnt : ¬ ((1048576 - 16 : UInt32).toNat + 12 + 4 > 16 * 65536) := by decide

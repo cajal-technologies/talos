@@ -163,10 +163,10 @@ theorem check_correct : FloatTruncSpec := by
   unfold func2
   apply wp_block_cons
   wp_run
-  apply wp_call_of_terminates (func0_terminates env x)
+  apply wp_call_tw (func0_terminates env x)
   rintro st0 vs0 rfl
   wp_run
-  apply wp_call_of_terminates (func1_terminates env st0 x [.i32 (i32TruncSatF32S x)])
+  apply wp_call_tw (func1_terminates env st0 x [.i32 (i32TruncSatF32S x)])
   rintro st1 vs1 rfl
   wp_run
   simp [ne_eq]
