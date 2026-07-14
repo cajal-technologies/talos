@@ -51,10 +51,4 @@ theorem store_sound (σ : WasmHeapMap (Option UInt8)) (mem : Mem)
       fun h' => h (UInt32.ext h')
     exact (if_neg hne).trans (h_agree addr' v' h_get)
 
--- GenHeap lemmas for our types:
-#check @genHeap_valid (GF := WasmHeapGF) (L := UInt32)
-    (V := Option UInt8) (H := WasmHeapMap)
-#check @genHeap_update (GF := WasmHeapGF) (L := UInt32)
-    (V := Option UInt8) (H := WasmHeapMap)
-
 end Wasm.SepLogic

@@ -27,8 +27,6 @@ class WasmHeapGS extends genHeapGS UInt32 (Option UInt8) WasmHeapGF WasmHeapMap
 -- Now test: does the points-to notation work?
 section Test
 variable [inst : WasmHeapGS]
--- This is the payoff: addr ↦ byte for Wasm memory
-#check (pointsTo (L := UInt32) (V := Option UInt8) (GF := WasmHeapGF) (H := WasmHeapMap))
 -- Notation for Wasm points-to
 notation:50 addr:50 " ↦w " v:50 => pointsTo (L := UInt32) (V := Option UInt8)
     (GF := WasmHeapGF) (H := WasmHeapMap) addr (DFrac.own 1) (some v)
@@ -120,8 +118,5 @@ theorem arrayAt_set (ptr : UInt32) (xs : List UInt32) (k : Nat)
       exact (BI.sep_mono_right (ih (ptr + 4) k' hk')).trans
         (BI.sep_left_comm.mp.trans (BI.sep_mono_right
           (BI.wand_intro (BI.sep_assoc.mp.trans (BI.sep_mono_right BI.wand_elim_left)))))
-#check @pointsTo_u64
-#check @pointsTo_u32
-#check @arrayAt
 end Test
 end Wasm.SepLogic
