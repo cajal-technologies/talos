@@ -234,13 +234,15 @@ The call chain from `with_capacity_in` down to the real allocator is
 Every layer is loop-free except `func29`. These lemmas peel the loop-free layers,
 reducing the allocation obligation to a single `dlmalloc::malloc` contract. -/
 
-/-- `__rust_alloc` (func 9) is a pass-through to `__rdl_alloc` (func 27). -/
+/-- `__rust_alloc` (func 9) is a pass-through to `__rdl_alloc` (func 27). The
+`rest` tail is caller stack left below the two arguments (e.g. the frame pointer
+`func0` keeps for its post-call store). -/
 theorem func9_of_func27 (env : HostEnv Unit) (st : Store Unit) (size align : UInt32)
-    (R : Store Unit → UInt32 → Prop)
+    (rest : List Value) (R : Store Unit → UInt32 → Prop)
     (hf27 : TerminatesWith env «module» 27 st [.i32 align, .i32 size]
               (fun st' vs => ∃ p, vs = [.i32 p] ∧ R st' p)) :
-    TerminatesWith env «module» 9 st [.i32 align, .i32 size]
-      (fun st' vs => ∃ p, vs = [.i32 p] ∧ R st' p) := by
+    TerminatesWith env «module» 9 st (.i32 align :: .i32 size :: rest)
+      (fun st' vs => ∃ p, vs = .i32 p :: rest ∧ R st' p) := by
   apply TerminatesWith.of_wp_entry_for (f := func9Def) rfl
   unfold func9Def func9
   wp_run
