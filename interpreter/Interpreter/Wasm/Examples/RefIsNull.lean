@@ -1,5 +1,6 @@
 import Interpreter.Wasm.Decoder.Wat
 import Interpreter.Wasm.Wp.Tactic
+import Interpreter.Wasm.Examples.Harness
 
 /-! ## Example: reference instructions (`ref.null`, `ref.func`, `ref.is_null`)
 
@@ -17,6 +18,7 @@ import Interpreter.Wasm.Wp.Tactic
       parser path the AST proof can't see. -/
 
 namespace Wasm
+open Wasm.Examples
 
 /-- `RefReflect` pushes the null reference and tests it (`ref.is_null` ⇒ 1),
 then pushes a reference to function 0 and tests that (`ref.is_null` ⇒ 0),
@@ -65,10 +67,7 @@ def refWat : String := "
     ref.is_null))
 "
 
-private def decoded : Wasm.Module :=
-  match Wasm.Decoder.Wat.decode refWat with
-  | .ok m    => m
-  | .error _ => default
+private def decoded : Wasm.Module := decodeOrDefault refWat
 
 /-- Decoding succeeds with all six functions (rules out the `default`
 fallback above; `Instruction` has no `DecidableEq`, so we check a
@@ -76,9 +75,7 @@ decidable projection rather than the bodies directly). -/
 theorem decodes_six_funcs : decoded.funcs.length = 6 := by native_decide
 
 private def runVals (idx : Nat) : List Value :=
-  match run 10 decoded idx (decoded.initialStore (α := Unit)) [] with
-  | .Success vs _ => vs
-  | _ => []
+  runValues 10 decoded idx (decoded.initialStore (α := Unit)) []
 
 /-- End-to-end (decode → run): the null reference is null, so
 `null_is_null` returns `[1]`. A mis-decoded `ref.null`/`ref.is_null`
