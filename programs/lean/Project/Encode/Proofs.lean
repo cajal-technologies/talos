@@ -270,4 +270,12 @@ theorem func27_of_func29 (env : HostEnv Unit) (st : Store Unit) (size align : UI
   wp_run
   exact ⟨p, rfl, hR⟩
 
+/-- `__rust_no_alloc_shim_is_unstable_v2` (func 13) is a no-op that returns. -/
+theorem func13_terminates (env : HostEnv Unit) (st : Store Unit) :
+    TerminatesWith env «module» 13 st [] (fun st' vs => st' = st ∧ vs = []) := by
+  apply TerminatesWith.of_wp_entry_for (f := func13Def) rfl
+  unfold func13Def func13
+  wp_run
+  exact ⟨trivial, rfl⟩
+
 end Project.Encode.Proofs
