@@ -11,8 +11,10 @@ Supported:
 * `(type ...)`, `(export ...)`, `(import ...)`, `(table ...)`, `(memory ...)`,
   `(global ...)`, `(elem ...)`, `(data ...)`, `(tag ...)`, `(start ...)` —
   recognized at the module level and fully parsed into the resulting
-  `Wasm.Module`. (Non-func imports, i.e.
-  `(import … (memory|global|table …))`, are the one exception: dropped.)
+  `Wasm.Module`. Non-func imports (`(import … (memory|global|table …))`)
+  are parsed too: each becomes a placeholder decl at the low end of its
+  index space and is recorded in `importedGlobals`/`importedTables`/
+  `importedMemories` for later host substitution.
 * Func headers may include `(type N)`, `(param ...)*`, `(result ...)*`,
   `(local ...)*` in any order, with grouped or singleton declarations.
 * Linear instruction stream and folded operand expressions
@@ -1005,17 +1007,6 @@ private def looksLikeLabel (s : String) : Bool :=
   else
     s.toList.all (fun c => c.isDigit || c = '_')
 
-/-- Consume the label immediate and the two type-immediates of a
-`br_on_cast` / `br_on_cast_fail`. The label is a single atom; each type
-is either an atom (e.g. `anyref`) or a `(ref …)` list. -/
-private def consumeBrOnCastImmediates (op : String)
-    : List Sexpr → Except Err (List Sexpr)
-  | .atom _ :: t1 :: t2 :: rest =>
-    match t1, t2 with
-    | .atom _, .atom _ | .atom _, .list _
-    | .list _, .atom _ | .list _, .list _ => .ok rest
-  | _ => .error s!"{op}: expected label + 2 type immediates"
-
 /-- Parse the *optional* table-index immediate carried by `table.get` /
 `table.size` in flat (post-`wasm-tools print`) form. The index is `$name`
 or a numeric literal when present and defaults to table `0` when omitted;
@@ -1357,13 +1348,12 @@ private partial def parseInstr (ctx : Ctx) (toks : List Sexpr)
         | none =>
         match parsePlainOp op with
         | .error e => .error e
-        | .ok i => do
-          -- For ops we lowered to `unreachable`, consume any textual
-          -- immediates so the token stream stays aligned.
-          let rest' ← if op == "br_on_cast" || op == "br_on_cast_fail" then
-            consumeBrOnCastImmediates op rest
-          else .ok rest
-          .ok ([i], rest')
+        -- Ops reaching this fallback are lowered to `unreachable` and carry
+        -- no immediates we track, so the token stream stays aligned with
+        -- `rest` untouched. (Ops that *do* carry immediates — including
+        -- `br_on_cast`/`br_on_cast_fail` — are handled by explicit arms above
+        -- and never fall through here.)
+        | .ok i => .ok ([i], rest)
 
 private partial def parseFolded (ctx : Ctx) (xs : List Sexpr)
     : Except Err (List Wasm.Instruction) :=
@@ -2832,11 +2822,14 @@ private def collectImports (types : Array TypeEntry) (fields : List Sexpr)
 
 /-- Walk a `(module ...)` form. `(type …)`, `(func …)`, `(export …)`,
 `(global …)`, `(table …)`, `(memory …)`, `(elem …)`, `(data …)`,
-`(tag …)`, `(start …)`, and `(import "mod" "name" (func …))` all
-contribute to the resulting `Wasm.Module`. Function imports occupy the
-low end of the unified function index space (indices `0 … N-1`);
-in-module function indices are shifted up by `imports.length`. Only
-non-func imports (`(import … (memory|global|table …))`) are dropped. -/
+`(tag …)`, `(start …)`, and `(import "mod" "name" (…))` — for func and
+non-func imports alike — all contribute to the resulting `Wasm.Module`.
+Function imports occupy the low end of the unified function index space
+(indices `0 … N-1`); in-module function indices are shifted up by
+`imports.length`. Non-func imports (`(import … (memory|global|table …))`)
+are collected by `collectEntityImports` into placeholder decls at the low
+end of the global/table/memory index spaces and recorded in
+`importedGlobals`/`importedTables`/`importedMemories`. -/
 def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
   let mut rest := xs
   match rest with

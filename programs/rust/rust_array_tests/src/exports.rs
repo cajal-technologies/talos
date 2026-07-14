@@ -4,7 +4,7 @@
 //! a length read while `is_empty` lowers to a `call`, so the two shapes the chunk
 //! corpus targets are both exercised: the inlined-`len` read is stepped directly
 //! by `wp_run` (`wp_localGet_cons`/`wp_add_cons`), while the `is_empty` `call`
-//! reuses the CodeLib `isEmptyBodyWp` body theorem. The source helpers are generic
+//! reuses the CodeLib `isEmptyBodyTerminates` leaf bridge. The source helpers are generic
 //! over `T`; these wrappers only choose a concrete monomorphization so Rust emits
 //! wasm.
 

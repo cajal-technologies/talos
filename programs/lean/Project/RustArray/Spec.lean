@@ -7,7 +7,8 @@ import Interpreter.Wasm.Wp.Call
 Two layers, both discharged by reusing the `CodeLib/RustStd/Array` chunks:
 
 * the internal raw `(ptr, len)` bodies (`func0` = `len`, `func2` = `is_empty`),
-  reusing `lenBodyWp` / `isEmptyBodyWp`; and
+  reusing the CodeLib leaf bridges `lenBodyTerminates` / `isEmptyBodyTerminates`
+  (both instances of the trunk's `unSliceBodyTerminates`); and
 * the exported ABI wrappers (`func4` = `len`, `func5` = `is_empty`), which receive
   the slice as a fat pointer in linear memory: they `load32` the `(dataPtr, len)`
   fields back with `fatPtrLoadWp` and then `call` the bodies above (`is_empty`
@@ -24,42 +25,21 @@ namespace Project.RustArray.Spec
 
 open Wasm Wasm.RustStd Wasm.RustStd.Array
 
-/-! ## Internal `(ptr, len)` bodies -/
+/-! ## Call bridges
 
-@[spec_of "rust-internal" "rust_array::len"]
-def LenSpec : Prop := ∀ (env : HostEnv Unit) (ptr len : UInt32),
-  TerminatesWith env «module» 0 «module».initialStore [.i32 len, .i32 ptr]
-    (fun _ rs => rs = [.i32 len])
+Each bridge is the callee's behaviour at an *arbitrary* store (these bodies touch
+no memory), reusing the CodeLib `Array` chunks. They serve both layers: the
+internal specs below are each the matching bridge at `«module».initialStore`, and
+the exported wrappers `call` the same body after marshalling the fat pointer back
+from memory. -/
 
-@[proves Project.RustArray.Spec.LenSpec]
-theorem len_correct : LenSpec := by
-  intro env ptr len
-  exact (TerminatesWith.of_returns_wp (f := func0Def) (rs := [.i32 len]) rfl rfl
-      (lenBodyWp «module».initialStore 1 len [] rfl) rfl).mono (fun _ _ h => h.1)
-
-@[spec_of "rust-internal" "rust_array::is_empty"]
-def IsEmptySpec : Prop := ∀ (env : HostEnv Unit) (ptr len : UInt32),
-  TerminatesWith env «module» 2 «module».initialStore [.i32 len, .i32 ptr]
-    (fun _ rs => rs = [.i32 (isEmptyValue len)])
-
-@[proves Project.RustArray.Spec.IsEmptySpec]
-theorem is_empty_correct : IsEmptySpec := by
-  intro env ptr len
-  exact (TerminatesWith.of_returns_wp (f := func2Def) (rs := [.i32 (isEmptyValue len)]) rfl rfl
-      (isEmptyBodyWp «module».initialStore 1 len [] rfl) rfl).mono (fun _ _ h => h.1)
-
-/-! ## Call bridges for the exported wrappers
-
-Each bridge is the callee's behaviour at the export's store, reusing the body
-chunk above; `wp_call_tw` threads it through the `.call` in the wrapper. -/
-
-/-- `func0` (`len` body) as a callee: returns the length argument. -/
+/-- `func0` (`len` body) as a callee: returns the length argument, via the CodeLib
+leaf bridge `lenBodyTerminates`. -/
 private theorem len_call {env : HostEnv Unit} (st : Store Unit)
     (dataPtr len : UInt32) (rest : List Value) :
     TerminatesWith env «module» 0 st (.i32 len :: .i32 dataPtr :: rest)
       (fun st' vs => vs = .i32 len :: rest ∧ framePost st st') :=
-  TerminatesWith.of_returns_wp (f := func0Def) (rs := [.i32 len]) rfl rfl
-    (lenBodyWp st 1 len [] rfl) rfl
+  lenBodyTerminates st dataPtr len rest rfl rfl rfl rfl
 
 /-- `func2` (`is_empty` leaf body) as a callee: returns `isEmptyValue len`,
 reusing the CodeLib leaf bridge `isEmptyBodyTerminates`. -/
@@ -86,6 +66,31 @@ private theorem crateIsEmpty_call {env : HostEnv Unit} (st : Store Unit)
   rw [isEmptyValue_and_one]
   simp
 
+/-! ## Internal `(ptr, len)` body specs
+
+Each is the matching call bridge at `«module».initialStore` with an empty trailing
+stack (`.mono` drops the `framePost` frame the caller-facing spec doesn't need). -/
+
+@[spec_of "rust-internal" "rust_array::len"]
+def LenSpec : Prop := ∀ (env : HostEnv Unit) (ptr len : UInt32),
+  TerminatesWith env «module» 0 «module».initialStore [.i32 len, .i32 ptr]
+    (fun _ rs => rs = [.i32 len])
+
+@[proves Project.RustArray.Spec.LenSpec]
+theorem len_correct : LenSpec := by
+  intro env ptr len
+  exact (len_call «module».initialStore ptr len []).mono (fun _ _ h => h.1)
+
+@[spec_of "rust-internal" "rust_array::is_empty"]
+def IsEmptySpec : Prop := ∀ (env : HostEnv Unit) (ptr len : UInt32),
+  TerminatesWith env «module» 2 «module».initialStore [.i32 len, .i32 ptr]
+    (fun _ rs => rs = [.i32 (isEmptyValue len)])
+
+@[proves Project.RustArray.Spec.IsEmptySpec]
+theorem is_empty_correct : IsEmptySpec := by
+  intro env ptr len
+  exact (isEmptyLeaf_call «module».initialStore ptr len []).mono (fun _ _ h => h.1)
+
 /-! ## Exported ABI wrappers (fat pointer in memory) -/
 
 @[spec_of "rust-exported" "rust_array::len"]
@@ -97,9 +102,7 @@ def LenExportSpec : Prop := ∀ (env : HostEnv Unit) (st : Store Unit) (p dataPt
 @[proves Project.RustArray.Spec.LenExportSpec]
 theorem len_export_correct : LenExportSpec := by
   intro env st p dataPtr len hfat
-  apply TerminatesWith.of_wp_entry_for (f := func4Def) rfl
-  unfold func4Def func4
-  load_fat_ptr p, dataPtr, len using hfat
+  open_slice_export func4Def, func4 at p, dataPtr, len using hfat
   apply wp_call_tw (len_call st dataPtr len [])
   intro st1 vs1 h1
   obtain ⟨hvs1, _⟩ := h1
@@ -116,9 +119,7 @@ def IsEmptyExportSpec : Prop := ∀ (env : HostEnv Unit) (st : Store Unit) (p da
 @[proves Project.RustArray.Spec.IsEmptyExportSpec]
 theorem is_empty_export_correct : IsEmptyExportSpec := by
   intro env st p dataPtr len hfat
-  apply TerminatesWith.of_wp_entry_for (f := func5Def) rfl
-  unfold func5Def func5
-  load_fat_ptr p, dataPtr, len using hfat
+  open_slice_export func5Def, func5 at p, dataPtr, len using hfat
   apply wp_call_tw (crateIsEmpty_call st dataPtr len [])
   intro st1 vs1 h1
   subst h1

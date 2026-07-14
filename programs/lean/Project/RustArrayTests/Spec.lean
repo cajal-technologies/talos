@@ -140,9 +140,7 @@ def LenPlusOneExportSpec : Prop :=
 @[proves Project.RustArrayTests.Spec.LenPlusOneExportSpec]
 theorem len_plus_one_export_correct : LenPlusOneExportSpec := by
   intro env st p dataPtr len hfat
-  apply TerminatesWith.of_wp_entry_for (f := func8Def) rfl
-  unfold func8Def func8
-  load_fat_ptr p, dataPtr, len using hfat
+  open_slice_export func8Def, func8 at p, dataPtr, len using hfat
   apply wp_call_tw (lenPlusOne_call st dataPtr len [])
   intro st1 vs1 h1
   subst h1
@@ -158,9 +156,7 @@ def LenPlusArgExportSpec : Prop :=
 @[proves Project.RustArrayTests.Spec.LenPlusArgExportSpec]
 theorem len_plus_arg_export_correct : LenPlusArgExportSpec := by
   intro env st p dataPtr len n hfat
-  apply TerminatesWith.of_wp_entry_for (f := func7Def) rfl
-  unfold func7Def func7
-  load_fat_ptr p, dataPtr, len using hfat
+  open_slice_export func7Def, func7 at p, dataPtr, len using hfat
   wp_run
   apply wp_call_tw (lenPlusArg_call st dataPtr len n [])
   intro st1 vs1 h1
@@ -177,9 +173,7 @@ def EmptyPlusThreeExportSpec : Prop :=
 @[proves Project.RustArrayTests.Spec.EmptyPlusThreeExportSpec]
 theorem empty_plus_three_export_correct : EmptyPlusThreeExportSpec := by
   intro env st p dataPtr len hfat
-  apply TerminatesWith.of_wp_entry_for (f := func5Def) rfl
-  unfold func5Def func5
-  load_fat_ptr p, dataPtr, len using hfat
+  open_slice_export func5Def, func5 at p, dataPtr, len using hfat
   apply wp_call_tw (emptyPlusThree_call st dataPtr len [])
   intro st1 vs1 h1
   subst h1
@@ -196,9 +190,7 @@ def EmptyXorFlagExportSpec : Prop :=
 @[proves Project.RustArrayTests.Spec.EmptyXorFlagExportSpec]
 theorem empty_xor_flag_export_correct : EmptyXorFlagExportSpec := by
   intro env st p dataPtr len flag hfat
-  apply TerminatesWith.of_wp_entry_for (f := func6Def) rfl
-  unfold func6Def func6
-  load_fat_ptr p, dataPtr, len using hfat
+  open_slice_export func6Def, func6 at p, dataPtr, len using hfat
   wp_run
   apply wp_call_tw (emptyXorFlag_call st dataPtr len flag [])
   intro st1 vs1 h1
