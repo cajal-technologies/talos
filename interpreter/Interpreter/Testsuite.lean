@@ -12,19 +12,24 @@ contains `PATTERN` as a substring (case-sensitive). Subdirectories of
 
 Per `.wast` file we shell out to `wasm-tools json-from-wast` to split the
 script into a JSON manifest plus per-module `.wasm` files, then walk the
-commands. Only `module`, `assert_return`, `assert_trap`, and `action` are
-executed — every other command type (`assert_invalid`, `assert_malformed`,
-`assert_unlinkable`, etc.) is reported as `Skipped(<kind>)`.
+commands. `module`, `register`, `assert_return`, `assert_trap`,
+`assert_exception`, and `action` are executed against the interpreter.
+`assert_invalid`/`assert_malformed` are also run — we decode and statically
+validate the module, pass when it is rejected, and record
+`Skipped(<kind>: not rejected)` only if we wrongly accept it. Every remaining
+command type (`assert_unlinkable`, etc.) falls through to `Skipped(<kind>)`.
 
 Output is the human-readable per-file report by default. `--json` emits the
 results as a JSON array instead; `--report` emits the stable text coverage
 report (one sorted line per command, outcome tag only) that CI byte-compares
 to detect coverage drift. The two are mutually exclusive.
 
-Exit code: nonzero iff any `Fail`, `InterpreterError`, or `OutOfFuel`
-outcome was recorded. `DecodeError`/`ModuleUnavailable`/`Skipped` don't
-fail the run — they're "feature not implemented" signal, not regressions.
-`--report` always exits 0 (the report diff, not the exit code, is the gate).
+Exit code: `1` iff any `Fail`, `InterpreterError`, or `OutOfFuel` outcome was
+recorded, and `3` for a setup failure (bad arguments, an unreadable testsuite
+directory, no matching files, or temp-dir creation failure). `DecodeError`/
+`ModuleUnavailable`/`Skipped` don't fail the run — they're "feature not
+implemented" signal, not regressions. `--report` always exits 0 (the report
+diff, not the exit code, is the gate).
 -/
 
 namespace Wasm.Testsuite
