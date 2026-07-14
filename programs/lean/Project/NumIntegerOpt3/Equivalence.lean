@@ -52,8 +52,8 @@ store (stack pointer too low, too few pages) `mod0` can **trap** where the
 memory-free `mod3` still returns `gcd`. So the two are *not* equivalent for a
 completely arbitrary initial state. Restricted to the canonical initial store
 (`global 0 = 1048576`, 16 zeroed pages — i.e. `mod0.initialStore`) both builds
-are total and their outcomes coincide. That precondition is the hypothesis
-`initial = mod0.initialStore` below.
+are total and their outcomes coincide. That is why `mod0.initialStore` is the
+fixed starting store passed to `ObservationallyEquiv` below.
 
 Everything in this file is a **statement only** — the proofs are left as
 `sorry` for a follow-up.
@@ -79,33 +79,17 @@ abbrev entry3 : Nat := 0
 
 /-- **Program equivalence of the two `gcd_u64` builds.**
 
-For every argument pair and every candidate observable outcome
-`(result, hostFinal)`, the two builds agree: the `opt-level = 0` export
-reaches that outcome **iff** the `opt-level = 3` export does.
+For every argument pair, the two builds are `Wasm.ObservationallyEquiv` from
+the canonical initial store: they agree on the returned value / trap and on the
+host state, with linear memory left unobserved (the general notion, and why a
+trap on one side forces a trap on the other, live in `CodeLib.Equivalence`).
 
-Reading the biconditional:
-
-* Instantiating `result`/`hostFinal` at the value `mod3` actually returns
-  forces `mod0` to return the same thing (agreement on success).
-* If a build never returns — it traps or diverges — then *no* outcome is
-  reachable for it, so `TerminatesWith … = False` for every `(result,
-  hostFinal)`; the biconditional then forces the other build to have no
-  reachable outcome either (agreement on failure).
-
-Linear memory is never mentioned, so `mod0`'s spurious shadow-stack writes do
-not break the equivalence. The `Store.host` conjunct records that the host
-state is preserved identically; for this import-free module the host type is
-`Unit`, so it holds automatically — it is written explicitly to pin down the
-intended, general shape of the observation. -/
+Passing `mod0.initialStore` as the fixed starting store is load-bearing — on a
+pathological store `mod0` can trap where the memory-free `mod3` still returns
+(see the note above). -/
 def GcdOptEquiv : Prop :=
-  ∀ (env : HostEnv Unit) (initial : Store Unit) (a b : UInt64),
-    initial = mod0.initialStore →
-    ∀ (result : List Value) (hostFinal : Unit),
-      TerminatesWith env mod0 entry0 initial [.i64 a, .i64 b]
-          (fun st vs => vs = result ∧ st.host = hostFinal)
-        ↔
-      TerminatesWith env mod3 entry3 initial [.i64 a, .i64 b]
-          (fun st vs => vs = result ∧ st.host = hostFinal)
+  ∀ (env : HostEnv Unit) (a b : UInt64),
+    ObservationallyEquiv env mod0 entry0 mod3 entry3 mod0.initialStore [.i64 a, .i64 b]
 
 /-! ## Proof obligation (left as `sorry` — to be discharged in a follow-up)
 
