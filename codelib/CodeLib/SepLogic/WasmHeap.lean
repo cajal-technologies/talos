@@ -30,20 +30,24 @@ variable [inst : WasmHeapGS]
 -- Notation for Wasm points-to
 notation:50 addr:50 " ↦w " v:50 => pointsTo (L := UInt32) (V := Option UInt8)
     (GF := WasmHeapGF) (H := WasmHeapMap) addr (DFrac.own 1) (some v)
+-- Little-endian byte extractors, matching `Mem.write32/write64`'s stored bytes
+-- exactly. Using the same bit-extraction form (shift + mask) as the interpreter
+-- is what lets the soundness bridge (`WasmRules`) connect ownership to
+-- `Mem.read64`/`write64` via `bv_decide` instead of Nat-division reasoning.
+def byte64 (v : UInt64) (n : Nat) : UInt8 := ((v >>> UInt64.ofNat (8 * n)) &&& 0xFF).toUInt8
+def byte32 (v : UInt32) (n : Nat) : UInt8 := ((v >>> UInt32.ofNat (8 * n)) &&& 0xFF).toUInt8
 -- Multi-byte: u64 as 8 consecutive owned bytes (little-endian)
 def pointsTo_u64 (addr : UInt32) (v : UInt64) : IProp WasmHeapGF :=
-  let byte (n : Nat) : UInt8 := ⟨(v.toNat / (256 ^ n)) % 256, by omega⟩
   iprop%
-    (addr ↦w byte 0) ∗ ((addr + 1) ↦w byte 1) ∗
-    ((addr + 2) ↦w byte 2) ∗ ((addr + 3) ↦w byte 3) ∗
-    ((addr + 4) ↦w byte 4) ∗ ((addr + 5) ↦w byte 5) ∗
-    ((addr + 6) ↦w byte 6) ∗ ((addr + 7) ↦w byte 7)
+    (addr ↦w byte64 v 0) ∗ ((addr + 1) ↦w byte64 v 1) ∗
+    ((addr + 2) ↦w byte64 v 2) ∗ ((addr + 3) ↦w byte64 v 3) ∗
+    ((addr + 4) ↦w byte64 v 4) ∗ ((addr + 5) ↦w byte64 v 5) ∗
+    ((addr + 6) ↦w byte64 v 6) ∗ ((addr + 7) ↦w byte64 v 7)
 -- Multi-byte: u32 as 4 consecutive owned bytes (little-endian)
 def pointsTo_u32 (addr : UInt32) (v : UInt32) : IProp WasmHeapGF :=
-  let byte (n : Nat) : UInt8 := ⟨(v.toNat / (256 ^ n)) % 256, by omega⟩
   iprop%
-    (addr ↦w byte 0) ∗ ((addr + 1) ↦w byte 1) ∗
-    ((addr + 2) ↦w byte 2) ∗ ((addr + 3) ↦w byte 3)
+    (addr ↦w byte32 v 0) ∗ ((addr + 1) ↦w byte32 v 1) ∗
+    ((addr + 2) ↦w byte32 v 2) ∗ ((addr + 3) ↦w byte32 v 3)
 -- Array ownership: n consecutive u32 elements at ptr
 -- arrayAt ptr [x₀, x₁, ..., xₙ₋₁] = pointsTo_u32 ptr x₀ ∗ pointsTo_u32 (ptr+4) x₁ ∗ ...
 def arrayAt (ptr : UInt32) (xs : List UInt32) : IProp WasmHeapGF :=
