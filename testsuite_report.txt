@@ -4252,10 +4252,10 @@ data.wast:154 module pass
 data.wast:160 module pass
 data.wast:166 module pass
 data.wast:171 module pass
-data.wast:178 module decode_error
-data.wast:183 module decode_error
-data.wast:188 module decode_error
-data.wast:195 module decode_error
+data.wast:178 module pass
+data.wast:183 module pass
+data.wast:188 module pass
+data.wast:195 module pass
 data.wast:211 assert_uninstantiable skipped:assert_uninstantiable
 data.wast:219 assert_uninstantiable skipped:assert_uninstantiable
 data.wast:227 assert_uninstantiable skipped:assert_uninstantiable
@@ -4278,14 +4278,14 @@ data.wast:374 assert_invalid skipped:assert_invalid: not rejected
 data.wast:396 assert_invalid skipped:assert_invalid: not rejected
 data.wast:415 assert_invalid skipped:assert_invalid: not rejected
 data.wast:423 assert_invalid pass
-data.wast:431 assert_invalid pass
-data.wast:439 assert_invalid pass
-data.wast:447 assert_invalid pass
-data.wast:456 assert_invalid pass
-data.wast:465 assert_invalid pass
+data.wast:431 assert_invalid skipped:assert_invalid: not rejected
+data.wast:439 assert_invalid skipped:assert_invalid: not rejected
+data.wast:447 assert_invalid skipped:assert_invalid: not rejected
+data.wast:456 assert_invalid skipped:assert_invalid: not rejected
+data.wast:465 assert_invalid skipped:assert_invalid: not rejected
 data.wast:473 assert_invalid pass
-data.wast:481 assert_invalid pass
-data.wast:489 assert_invalid pass
+data.wast:481 assert_invalid skipped:assert_invalid: not rejected
+data.wast:489 assert_invalid skipped:assert_invalid: not rejected
 data.wast:497 assert_invalid skipped:assert_invalid: not rejected
 data.wast:506 assert_invalid skipped:assert_invalid: not rejected
 data.wast:514 assert_invalid skipped:assert_invalid: not rejected
@@ -4329,16 +4329,16 @@ elem.wast:98 module pass
 elem.wast:103 module pass
 elem.wast:109 module pass
 elem.wast:118 module pass
-elem.wast:128 module decode_error
-elem.wast:135 module decode_error
+elem.wast:128 module pass
+elem.wast:135 module pass
 elem.wast:142 module pass
 elem.wast:156 assert_return pass
 elem.wast:157 assert_return pass
 elem.wast:161 module pass
 elem.wast:175 assert_return pass
 elem.wast:176 assert_return pass
-elem.wast:178 module decode_error
-elem.wast:182 module decode_error
+elem.wast:178 module pass
+elem.wast:182 module pass
 elem.wast:190 module pass
 elem.wast:195 module pass
 elem.wast:201 module pass
@@ -4416,10 +4416,10 @@ elem.wast:784 assert_invalid skipped:assert_invalid: not rejected
 elem.wast:792 assert_invalid pass
 elem.wast:800 assert_invalid skipped:assert_invalid: not rejected
 elem.wast:808 assert_invalid skipped:assert_invalid: not rejected
-elem.wast:816 assert_invalid pass
-elem.wast:825 assert_invalid pass
-elem.wast:833 assert_invalid pass
-elem.wast:842 assert_invalid pass
+elem.wast:816 assert_invalid skipped:assert_invalid: not rejected
+elem.wast:825 assert_invalid skipped:assert_invalid: not rejected
+elem.wast:833 assert_invalid skipped:assert_invalid: not rejected
+elem.wast:842 assert_invalid skipped:assert_invalid: not rejected
 elem.wast:854 assert_invalid skipped:assert_invalid: not rejected
 elem.wast:862 assert_invalid pass
 elem.wast:870 assert_invalid pass
@@ -4462,16 +4462,16 @@ elem.wast:1041 register pass
 elem.wast:1043 module decode_error
 elem.wast:1053 assert_return module_unavailable
 elem.wast:1057 module pass
-elem.wast:1065 assert_return fail
+elem.wast:1065 assert_return pass
 elem.wast:1066 assert_trap fail
 elem.wast:1068 module pass
-elem.wast:1076 assert_return fail
+elem.wast:1076 assert_return pass
 elem.wast:1077 assert_trap fail
 elem.wast:1079 module pass
-elem.wast:1087 assert_return fail
+elem.wast:1087 assert_return pass
 elem.wast:1088 assert_trap fail
 elem.wast:1092 module pass
-elem.wast:1109 assert_return fail
+elem.wast:1109 assert_return pass
 elem.wast:1110 assert_trap fail
 endianness.wast:1 module pass
 endianness.wast:133 assert_return pass

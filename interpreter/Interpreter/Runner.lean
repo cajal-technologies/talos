@@ -256,6 +256,9 @@ def runOnce (a : Args) : IO UInt32 := do
   -- imported global is unreachable; the import pre-flight above
   -- rejects any module that would need one.
   let store0 := m.runConstGlobals a.fuel (m.initialStore (α := Unit)) {}
+  -- Data/elem segments whose offset is itself a const-expr are deferred
+  -- by `initialStore`; write them now that the globals are evaluated.
+  let store0 := m.runActiveSegments a.fuel store0 {}
   match Wasm.run a.fuel m idx store0 vs.reverse with
   | .Success results _ =>
     for v in results.reverse do

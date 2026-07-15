@@ -601,6 +601,14 @@ structure DataSegment where
   /-- Target memory index (multi-memory): 0 is the default memory, k ≥ 1
   the k-th extra memory (`Module.extraMemories[k-1]`). -/
   memIdx : Nat := 0
+  /-- For active segments whose offset is a constant expression that cannot
+  be folded to a literal at decode time (`global.get`, extended-const
+  arithmetic), the parsed const-expr program. When non-empty, `offset`
+  holds a `some 0` placeholder (the segment is still *active*) and the
+  segment is written by `Module.runActiveSegments` at instantiation —
+  after `Module.runConstGlobals` has put the globals in place — instead
+  of by `Module.initialStore`. -/
+  offsetExpr : Program := []
 deriving Repr, Inhabited
 
 /-- Declaration of a single linear memory. Wasm allows at most one
@@ -696,6 +704,13 @@ structure ElementSegment where
   `Module.runConstElems`, which writes the resulting values into the table.
   Empty for plain funcref segments (which use `funcs`). -/
   exprs    : List Program := []
+  /-- For active segments whose offset is a constant expression that cannot
+  be folded to a literal at decode time (`global.get`, extended-const
+  arithmetic), the parsed const-expr program. When non-empty, `offset`
+  holds a `some 0` placeholder (the segment is still *active*) and the
+  segment is written by `Module.runActiveSegments` at instantiation
+  instead of by `Module.initialStore`. -/
+  offsetExpr : Program := []
 deriving Repr, Inhabited
 
 structure Module where
@@ -830,11 +845,16 @@ def Module.initialStore [Inhabited α] (m : Module) : Store α :=
   -- Apply the active data segments targeting memory `idx` to `m0`.
   -- Segments live in one global, source-ordered list (memory 0's
   -- `data`); `DataSegment.memIdx` routes each to its memory.
+  -- Segments with a pending `offsetExpr` are skipped here: their offset
+  -- depends on the store (imported globals), so `Module.runActiveSegments`
+  -- writes them at instantiation after the globals are in place.
   let applySegs (segs : List DataSegment) (idx : Nat) (m0 : Mem) : Mem :=
     segs.foldl
       (fun acc seg => match seg.offset with
         | some off =>
-          if seg.memIdx = idx then acc.writeBytes off.toNat seg.bytes else acc
+          if seg.memIdx = idx && seg.offsetExpr.isEmpty then
+            acc.writeBytes off.toNat seg.bytes
+          else acc
         | none     => acc)
       m0
   let allSegs : List DataSegment := match m.memory with
@@ -860,13 +880,17 @@ def Module.initialStore [Inhabited α] (m : Module) : Store α :=
   -- Apply active element segments. Passive/declarative segments leave the
   -- table untouched and are tracked in `elementSegments` so `table.init`
   -- can consume them later.
+  -- As with data segments, elements with a pending `offsetExpr` are
+  -- deferred to `Module.runActiveSegments`.
   let tables : List TableInst := m.elements.foldl
     (fun acc seg =>
       match seg.tableIdx, seg.offset with
       | some t, some off =>
-        match acc[t]? with
-        | some tbl => listSetAt acc t (listWriteAt tbl off (seg.funcs.map Value.funcref))
-        | none     => acc
+        if seg.offsetExpr.isEmpty then
+          match acc[t]? with
+          | some tbl => listSetAt acc t (listWriteAt tbl off (seg.funcs.map Value.funcref))
+          | none     => acc
+        else acc
       | _, _ => acc)
     baseTables
   let elementSegments : List (Option (List (Option Nat))) :=

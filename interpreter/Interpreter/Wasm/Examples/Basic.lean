@@ -33,6 +33,7 @@ import Interpreter.Wasm.Examples.FloatOps
 import Interpreter.Wasm.Examples.Gcd
 import Interpreter.Wasm.Examples.SelectAbs
 import Interpreter.Wasm.Examples.GlobalInitExpr
+import Interpreter.Wasm.Examples.SegmentOffsetExpr
 import Interpreter.Wasm.Examples.CallIndirectSubtype
 
 /-! # Wasm.Examples.Basic
