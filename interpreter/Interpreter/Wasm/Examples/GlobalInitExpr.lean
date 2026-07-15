@@ -1,5 +1,6 @@
 import Interpreter.Wasm.Decoder.Wat
 import Interpreter.Wasm.Wp.Tactic
+import Interpreter.Wasm.Examples.Harness
 
 /-! ## Example: constant-expression global initializers in the WAT decoder
 
@@ -15,6 +16,7 @@ import Interpreter.Wasm.Wp.Tactic
     placeholder zero leaking through — fails the build. -/
 
 namespace Wasm
+open Wasm.Examples
 namespace GlobalInitExpr
 
 /-- A module whose only global is initialised with an extended-const
@@ -26,10 +28,7 @@ def globalInitExprWat : String := "
     global.get $g))
 "
 
-private def decoded : Wasm.Module :=
-  match Wasm.Decoder.Wat.decode globalInitExprWat with
-  | .ok m    => m
-  | .error _ => default
+private def decoded : Wasm.Module := decodeOrDefault globalInitExprWat
 
 /-- The initializer is kept as a program rather than folded to a single
 literal: the global's `initExpr` is non-empty. -/
@@ -44,13 +43,9 @@ theorem runConstGlobals_evaluates_initExpr :
       = some (.i32 42) := by
   native_decide
 
-private def emptyEnv : HostEnv Unit := { funcs := [] }
-
 private def runVals (idx : Nat) (st : Store Unit) (args : List Value) :
     List Value :=
-  match run 64 decoded idx st args emptyEnv with
-  | .Success vs _ => vs
-  | _ => []
+  runValues 64 decoded idx st args
 
 /-- End-to-end: running `getG` after initialising the globals returns `42`.
 The old behaviour — placeholder `0` from `ValueType.zero`, or the first

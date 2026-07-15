@@ -1,5 +1,6 @@
 import Interpreter.Wasm.Decoder.Wat
 import Interpreter.Wasm.Wp.Tactic
+import Interpreter.Wasm.Examples.Harness
 
 /-! ## Example: table instructions (`table.get`, `table.size`)
 
@@ -29,6 +30,7 @@ import Interpreter.Wasm.Wp.Tactic
       reads. -/
 
 namespace Wasm
+open Wasm.Examples
 
 /-- `TableProbe` reads table 0 three ways: it asks whether slot 2 is null
 (`table.get` then `ref.is_null`) and then pushes the table's size. Run
@@ -79,10 +81,7 @@ def dispatchWat : String := "
     call_indirect (type $sig)))
 "
 
-private def decoded : Wasm.Module :=
-  match Wasm.Decoder.Wat.decode dispatchWat with
-  | .ok m    => m
-  | .error _ => default
+private def decoded : Wasm.Module := decodeOrDefault dispatchWat
 
 /-- Decoding succeeds with all five functions (rules out the `default`
 fallback above; `Instruction` has no `DecidableEq`, so we check a
@@ -97,9 +96,7 @@ theorem table_populated :
   native_decide
 
 private def runVals (idx : Nat) (args : List Value) : List Value :=
-  match run 20 decoded idx (decoded.initialStore (α := Unit)) args with
-  | .Success vs _ => vs
-  | _ => []
+  runValues 20 decoded idx (decoded.initialStore (α := Unit)) args
 
 /-- End-to-end (decode → run): `table.size` reports the declared length 3. -/
 theorem sz_runs : runVals 2 [] = [.i32 3] := by native_decide

@@ -15,10 +15,11 @@ exact shape the integer trunk `CodeLib/RustStd/UInt.lean` already abstracts as
 `UnChunk` (over any `UIntWasm` type; here `UInt32`, whose `toV` is `.i32`).
 So a length-only op needs *no new chunk shape*: its chunk is a `UnChunk` instance
 (`Len.len_chunk`, `IsEmpty.isEmpty_chunk`) and its called monomorphized body is
-discharged by the trunk's `unBodyReturnsWp` (`Len.lenBodyWp`,
-`IsEmpty.isEmptyBodyWp`) — the same `unBodyReturnsWp` reads the length from an
-**arbitrary** local `i` (slices carry the length in the second fat-pointer field,
-e.g. param local `1`), so nothing slice-specific is needed there.
+discharged by the shared `unSliceBodyTerminates` below (instantiated per op as
+`Len.lenBodyTerminates`, `IsEmpty.isEmptyBodyTerminates`), which feeds the chunk
+through the integer trunk's `unBodyReturnsWp`. That reads the length from the
+slice's second fat-pointer field (param local `1`), so nothing beyond the chunk
+is needed per op.
 
 The one genuinely new unit here is `fatPtrLoadWp`: unlike a scalar, a slice
 crosses the C ABI **spilled to linear memory**, so the export wrapper must read
@@ -105,5 +106,57 @@ macro_rules
       (simp only [Function.toLocals, Function.numParams, List.take, List.reverse,
           List.reverseAux, List.map, List.length_cons, List.length_nil]
        rw [fatPtrLoadWp 0 $p $dataPtr $len [] (by simp) $hfat]))
+
+/-- Open a memory-resident slice *export* proof: apply the entry lemma, unfold the
+wrapper `def`s, and marshal the fat pointer back from memory with `load_fat_ptr` —
+the uniform three-line head every slice export shares before it `call`s its body.
+`fdef`/`fbody` are the wrapper's `Function`/`Program` defs; the remaining operands
+match `load_fat_ptr`. Leaves the goal just past the fat-pointer read, with the
+per-export tail (`wp_call_tw`, result rewriting) still explicit since it varies. -/
+syntax "open_slice_export " ident ", " ident " at "
+  term ", " term ", " term " using " term : tactic
+
+macro_rules
+  | `(tactic| open_slice_export $fdef, $fbody at $p, $dataPtr, $len using $hfat) =>
+    `(tactic|
+      (apply TerminatesWith.of_wp_entry_for (f := $fdef) rfl
+       unfold $fdef $fbody
+       load_fat_ptr $p, $dataPtr, $len using $hfat))
+
+/-! ## Generic length-only slice callee
+
+A length-only slice primitive compiles at opt-0 to a two-param leaf body
+`[.localGet 1] ++ frag ++ [.ret]`: the fat pointer is passed as `(dataPtr, len)`
+(local `0`, local `1`), the body reads the length from local `1`, and `frag` is a
+`UnChunk` transforming it. `len` (`frag = []`, `op = id`) and `is_empty`
+(`frag = [.const 0, .eq, .const 1, .and]`, `op = isEmptyValue`) are both this
+shape, so one chunk-generic `TerminatesWith` bridge serves them — and any future
+unary slice primitive — instead of a per-op copy of the `of_returns_wp` glue. -/
+
+/-- Callee bridge for a length-only slice body: any module function `id` whose
+body is `[.localGet 1] ++ frag ++ [.ret]` for a `UnChunk frag op` terminates,
+when called with stack `(len, dataPtr, …rest)`, returning `op len` on top of
+`rest`. Instantiate at a concrete chunk (`len_chunk`, `isEmpty_chunk`) to obtain
+that primitive's leaf-call fact; the `of_returns_wp`/`unBodyReturnsWp` glue lives
+here once. -/
+theorem unSliceBodyTerminates {α} {env : HostEnv α} {m : Module} {id : Nat}
+    {f : Function} {frag : Program} {op : UInt32 → UInt32} (chunk : UnChunk frag op)
+    (st : Store α) (dataPtr len : UInt32) (rest : List Value)
+    (hf : m.funcs[id - m.imports.length]? = some f)
+    (hbody : f.body = [.localGet 1] ++ frag ++ [.ret])
+    (hnp : f.numParams = 2)
+    (hres : f.results.length = 1)
+    (hImp : m.imports[id]? = none := by rfl) :
+    TerminatesWith env m id st (.i32 len :: .i32 dataPtr :: rest)
+      (fun st' vs => vs = .i32 (op len) :: rest ∧ framePost st st') := by
+  refine (TerminatesWith.of_returns_wp (f := f) (rs := [.i32 (op len)])
+      (P := framePost st) hf hres.symm ?_ hImp).mono ?_
+  · rw [hbody]
+    simp only [Function.toLocals, hnp]
+    exact unBodyReturnsWp chunk st 1 len [] rfl
+  · intro st' vs h
+    refine ⟨?_, h.2⟩
+    rw [h.1, hnp]
+    simp
 
 end Wasm.RustStd.Array

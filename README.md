@@ -1,6 +1,6 @@
 # Talos
 
-[![Lean](https://img.shields.io/badge/Lean-v4.31.0-blue?logo=lean)](lean-toolchain)
+[![Lean](https://img.shields.io/badge/Lean-v4.32.0-blue?logo=lean)](lean-toolchain)
 [![Telegram](https://img.shields.io/badge/Telegram-Join%20the%20discussion-2CA5E0?logo=telegram&logoColor=white)](https://t.me/TalosDev)
 
 **Talos** is a WebAssembly interpreter written in Lean 4, named after the bronze giant of Greek mythology who guarded Crete — a mechanical guardian, built to enforce rules.
@@ -55,7 +55,7 @@ Three Lake packages in a monorepo, forming a strict dependency chain:
 |---------|------|---------|
 | `Interpreter` | `interpreter/` | Wasm AST, semantics, WP tactic layer |
 | `CodeLib` | `codelib/` | Lifting lemmas and program-reasoning helpers |
-| `Programs` | `programs/` | Concrete Rust-to-Wasm verification tasks |
+| `Project` | `programs/lean/` | Concrete Rust-to-Wasm verification tasks |
 
 ## Using as a dependency
 
@@ -89,9 +89,9 @@ just build   # builds interpreter → codelib → programs in order
 Or build a single package:
 
 ```bash
-cd interpreter && lake build
-cd codelib     && lake build
-cd programs    && lake build
+cd interpreter  && lake build
+cd codelib      && lake build
+cd programs/lean && lake build
 ```
 
 Dependencies:

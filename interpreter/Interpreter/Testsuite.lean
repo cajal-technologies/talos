@@ -3,7 +3,7 @@ import Interpreter.Testsuite.Exec
 /-!
 # `testsuite` — run the W3C Wasm spec testsuite against this interpreter
 
-  lake exe testsuite [--fuel N] [-h|--help] [PATTERN]
+  lake exe testsuite [--fuel N] [--json|--report] [-h|--help] [PATTERN]
 
 If `PATTERN` is omitted, runs every top-level `.wast` file under
 `vendor/testsuite/`. Otherwise filters to files whose relative path
@@ -12,13 +12,24 @@ contains `PATTERN` as a substring (case-sensitive). Subdirectories of
 
 Per `.wast` file we shell out to `wasm-tools json-from-wast` to split the
 script into a JSON manifest plus per-module `.wasm` files, then walk the
-commands. Only `module`, `assert_return`, `assert_trap`, and `action` are
-executed — every other command type (`assert_invalid`, `assert_malformed`,
-`register`, `assert_unlinkable`, etc.) is reported as `Skipped(<kind>)`.
+commands. `module`, `register`, `assert_return`, `assert_trap`,
+`assert_exception`, and `action` are executed against the interpreter.
+`assert_invalid`/`assert_malformed` are also run — we decode and statically
+validate the module, pass when it is rejected, and record
+`Skipped(<kind>: not rejected)` only if we wrongly accept it. Every remaining
+command type (`assert_unlinkable`, etc.) falls through to `Skipped(<kind>)`.
 
-Exit code: nonzero iff any `Fail`, `InterpreterError`, or `OutOfFuel`
-outcome was recorded. `DecodeError`/`ModuleUnavailable`/`Skipped` don't
-fail the run — they're "feature not implemented" signal, not regressions.
+Output is the human-readable per-file report by default. `--json` emits the
+results as a JSON array instead; `--report` emits the stable text coverage
+report (one sorted line per command, outcome tag only) that CI byte-compares
+to detect coverage drift. The two are mutually exclusive.
+
+Exit code: `1` iff any `Fail`, `InterpreterError`, or `OutOfFuel` outcome was
+recorded, and `3` for a setup failure (bad arguments, an unreadable testsuite
+directory, no matching files, or temp-dir creation failure). `DecodeError`/
+`ModuleUnavailable`/`Skipped` don't fail the run — they're "feature not
+implemented" signal, not regressions. `--report` always exits 0 (the report
+diff, not the exit code, is the gate).
 -/
 
 namespace Wasm.Testsuite
@@ -38,7 +49,7 @@ def usage : String :=
 
   PATTERN     If given, only run .wast files whose path contains this substring.
               If omitted, run every top-level .wast file under vendor/testsuite/.
-  --fuel N    Per-assertion reduction-step cap, default 1_000_000.
+  --fuel N    Per-assertion reduction-step cap, default 50_000_000.
   --json      Emit results as a JSON array instead of the human-readable report.
   --report    Emit the stable text coverage report (one line per command,
               sorted, outcome tag only — used by CI to detect coverage drift).
@@ -231,8 +242,9 @@ end
 report file is byte-compared in CI, so anything emitted here must not depend
 on incidental error wording. Free-form sources are:
   * `non-integer expected: <parser err>` — collapse to `non-integer-expected`.
-All other reasons are already constant strings (`register`, raw wast command
-names like `assert_invalid`/`assert_malformed`/etc.) and pass through. -/
+All other reasons are already stable strings (`assert_invalid`/`assert_malformed`
++ `: not rejected` when we accept an ill-formed module, and raw wast command
+names like `assert_unlinkable` from the fallthrough) and pass through. -/
 private def skippedBucket (r : String) : String :=
   if r.startsWith "non-integer expected" then "non-integer-expected"
   else r

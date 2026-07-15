@@ -14,8 +14,8 @@ hands pointers to `func1`, the actual binary-GCD loop. `func1` copies the
 operands into its own 48-byte scratch frame and runs Stein's algorithm
 entirely through `i64.load`/`i64.store`. The proof therefore threads the
 running values through the memory model with the read-after-write framing
-lemmas below, reusing the `UInt64` Stein lemmas from `CodeLib` for the
-arithmetic core.
+lemmas from `CodeLib.RustStd.Frame`, reusing the `UInt64` Stein lemmas
+from `CodeLib` for the arithmetic core.
 -/
 
 namespace Project.NumInteger.Spec
@@ -23,89 +23,6 @@ namespace Project.NumInteger.Spec
 open Wasm
 
 set_option maxRecDepth 1048576
-
-/-! ## Memory framing lemmas
-
-Read-after-write algebra over the function-model `Mem`, specialized to the
-64-bit loads/stores this module performs. A 64-bit read sees a same-address
-64-bit write and is unaffected by a disjoint 64-bit or 32-bit write; a
-32-bit read sees a same-address 32-bit write. These are generic `Mem` facts
-developed here while the proof drives them out. -/
-
-/-- A byte outside the 8-byte footprint of a `write64` is unchanged. -/
-theorem write64_bytes_of_disjoint (m : Mem) (a : UInt32) (v : UInt64) (i : Nat)
-    (h : i < a.toNat ∨ a.toNat + 8 ≤ i) :
-    (m.write64 a v).bytes i = m.bytes i := by
-  simp only [Mem.write64]
-  have h0 : i ≠ a.toNat := by omega
-  have h1 : i ≠ a.toNat + 1 := by omega
-  have h2 : i ≠ a.toNat + 2 := by omega
-  have h3 : i ≠ a.toNat + 3 := by omega
-  have h4 : i ≠ a.toNat + 4 := by omega
-  have h5 : i ≠ a.toNat + 5 := by omega
-  have h6 : i ≠ a.toNat + 6 := by omega
-  have h7 : i ≠ a.toNat + 7 := by omega
-  simp [h0, h1, h2, h3, h4, h5, h6, h7]
-
-/-- A 64-bit read is unaffected by a 64-bit write to a disjoint 8-byte
-range. -/
-theorem read64_write64_disjoint (m : Mem) (a b : UInt32) (v : UInt64)
-    (h : b.toNat + 8 ≤ a.toNat ∨ a.toNat + 8 ≤ b.toNat) :
-    (m.write64 a v).read64 b = m.read64 b := by
-  simp only [Mem.read64]
-  rw [write64_bytes_of_disjoint m a v b.toNat (by omega),
-      write64_bytes_of_disjoint m a v (b.toNat + 1) (by omega),
-      write64_bytes_of_disjoint m a v (b.toNat + 2) (by omega),
-      write64_bytes_of_disjoint m a v (b.toNat + 3) (by omega),
-      write64_bytes_of_disjoint m a v (b.toNat + 4) (by omega),
-      write64_bytes_of_disjoint m a v (b.toNat + 5) (by omega),
-      write64_bytes_of_disjoint m a v (b.toNat + 6) (by omega),
-      write64_bytes_of_disjoint m a v (b.toNat + 7) (by omega)]
-
-/-- A byte outside the 4-byte footprint of a `write32` is unchanged. -/
-theorem write32_bytes_of_disjoint (m : Mem) (a v : UInt32) (i : Nat)
-    (h : i < a.toNat ∨ a.toNat + 4 ≤ i) :
-    (m.write32 a v).bytes i = m.bytes i := by
-  simp only [Mem.write32]
-  have h0 : i ≠ a.toNat := by omega
-  have h1 : i ≠ a.toNat + 1 := by omega
-  have h2 : i ≠ a.toNat + 2 := by omega
-  have h3 : i ≠ a.toNat + 3 := by omega
-  simp [h0, h1, h2, h3]
-
-/-- A 64-bit read is unaffected by a 32-bit write to a disjoint range. -/
-theorem read64_write32_disjoint (m : Mem) (a b : UInt32) (v : UInt32)
-    (h : b.toNat + 4 ≤ a.toNat ∨ a.toNat + 8 ≤ b.toNat) :
-    (m.write32 b v).read64 a = m.read64 a := by
-  simp only [Mem.read64]
-  rw [write32_bytes_of_disjoint m b v a.toNat (by omega),
-      write32_bytes_of_disjoint m b v (a.toNat + 1) (by omega),
-      write32_bytes_of_disjoint m b v (a.toNat + 2) (by omega),
-      write32_bytes_of_disjoint m b v (a.toNat + 3) (by omega),
-      write32_bytes_of_disjoint m b v (a.toNat + 4) (by omega),
-      write32_bytes_of_disjoint m b v (a.toNat + 5) (by omega),
-      write32_bytes_of_disjoint m b v (a.toNat + 6) (by omega),
-      write32_bytes_of_disjoint m b v (a.toNat + 7) (by omega)]
-
-/-- A 32-bit read is unaffected by a 32-bit write to a disjoint range. -/
-theorem read32_write32_disjoint (m : Mem) (a b v : UInt32)
-    (h : b.toNat + 4 ≤ a.toNat ∨ a.toNat + 4 ≤ b.toNat) :
-    (m.write32 a v).read32 b = m.read32 b := by
-  simp only [Mem.read32]
-  rw [write32_bytes_of_disjoint m a v b.toNat (by omega),
-      write32_bytes_of_disjoint m a v (b.toNat + 1) (by omega),
-      write32_bytes_of_disjoint m a v (b.toNat + 2) (by omega),
-      write32_bytes_of_disjoint m a v (b.toNat + 3) (by omega)]
-
-/-- A 32-bit read is unaffected by a 64-bit write to a disjoint range. -/
-theorem read32_write64_disjoint (m : Mem) (a : UInt32) (b : UInt32) (v : UInt64)
-    (h : a.toNat + 4 ≤ b.toNat ∨ b.toNat + 8 ≤ a.toNat) :
-    (m.write64 b v).read32 a = m.read32 a := by
-  simp only [Mem.read32]
-  rw [write64_bytes_of_disjoint m b v a.toNat (by omega),
-      write64_bytes_of_disjoint m b v (a.toNat + 1) (by omega),
-      write64_bytes_of_disjoint m b v (a.toNat + 2) (by omega),
-      write64_bytes_of_disjoint m b v (a.toNat + 3) (by omega)]
 
 /-! ## Shift-amount bridge
 
@@ -232,7 +149,7 @@ theorem meatLoop_wp (env : HostEnv Unit) (stm : Store Unit) (a b : UInt64)
     Nat.reduceLT, Nat.reduceAdd, Nat.reduceMul, Nat.reduceSub, reduceIte,
     Nat.reduceLeDiff,
     UInt32.reduceAdd, UInt32.reduceToNat, gt_iff_lt,
-    read64_write64_disjoint, read64_write32_disjoint,
+    Mem.read64_write64_disjoint, Mem.read64_write32_disjoint,
     Mem.read32_write32_same,
     hpg, ha, hb,
     Mem.write64_pages, Mem.write32_pages]
@@ -261,8 +178,8 @@ theorem meatLoop_wp (env : HostEnv Unit) (stm : Store Unit) (a b : UInt64)
   have hLpg : stL.mem.pages = 16 := by rw [hstL]; simp [hpg]
   have hLa : stL.mem.read64 1048520 = ao := by
     rw [hstL]
-    rw [read64_write64_disjoint _ _ _ _ (by decide),
-        read64_write32_disjoint _ _ _ _ (by decide),
+    rw [Mem.read64_write64_disjoint _ _ _ _ (by decide),
+        Mem.read64_write32_disjoint _ _ _ _ (by decide),
         Mem.read64_write64_same]
   have hLb : stL.mem.read64 1048528 = bo := by
     rw [hstL]; rw [Mem.read64_write64_same]
@@ -318,7 +235,7 @@ theorem meatLoop_wp (env : HostEnv Unit) (stm : Store Unit) (a b : UInt64)
         List.getElem?_cons_zero, List.getElem?_cons_succ, List.set_cons_zero, List.set_cons_succ,
         Nat.reduceLT, Nat.reduceAdd, Nat.reduceMul, Nat.reduceSub, reduceIte,
         UInt32.reduceAdd, UInt32.reduceToNat, gt_iff_lt, hpg', hxr, hyr,
-        Mem.read64_write64_same, read64_write64_disjoint, read64_write32_disjoint,
+        Mem.read64_write64_same, Mem.read64_write64_disjoint, Mem.read64_write32_disjoint,
         Mem.read32_write32_same,
         Mem.write64_pages, Mem.write32_pages]
       simp only [List.take_zero, List.drop_zero, List.nil_append]
@@ -395,12 +312,12 @@ theorem func1_terminates (env : HostEnv Unit) (st1 : Store Unit) (a b : UInt64)
   -- After frame setup + the two argument copies the memory is
   -- `(st1.mem.write64 1048520 a).write64 1048528 b`, the frame pointer is
   -- `local2 = 1048512`, and the bound checks are discharged by `hpg`.
-  simp [ha, hb, read64_write64_disjoint, hpg]
+  simp [ha, hb, Mem.read64_write64_disjoint, hpg]
   -- Memory now holds `a` at slot 1048520 and `b` at slot 1048528; frame
   -- pointer (local 2) is 1048512. Abbreviate the in-frame store.
   set M0 : Mem := (st1.mem.write64 1048520 a).write64 1048528 b with hM0
   have hM0a : M0.read64 1048520 = a := by
-    rw [hM0, read64_write64_disjoint _ _ _ _ (by decide), Mem.read64_write64_same]
+    rw [hM0, Mem.read64_write64_disjoint _ _ _ _ (by decide), Mem.read64_write64_same]
   have hM0b : M0.read64 1048528 = b := by
     rw [hM0, Mem.read64_write64_same]
   have hM0pg : M0.pages = 16 := by rw [hM0]; simp [hpg]
@@ -492,7 +409,7 @@ theorem func0_terminates (env : HostEnv Unit) (a b : UInt64) :
     (func1_terminates env _ a b []
       (by rw [Mem.write64_pages, Mem.write64_pages]; exact hp)
       (by rfl)
-      (by rw [read64_write64_disjoint _ _ _ _ (by decide), Mem.read64_write64_same])
+      (by rw [Mem.read64_write64_disjoint _ _ _ _ (by decide), Mem.read64_write64_same])
       (by rw [Mem.read64_write64_same]))
   -- The call returns `gcd a b`; restore the stack pointer and `ret`.
   rintro stA vsA ⟨hAglob, rfl⟩

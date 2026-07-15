@@ -9,8 +9,11 @@ members = [
   "num_integer_opt3",
   "rust_u64",
   "total_variation",
+  "float_trunc",
+  "float_minmax",
+  "float_round",
+  "float_reinterpret",
 ]
-
 [profile.release]
 opt-level = 0
 lto = false

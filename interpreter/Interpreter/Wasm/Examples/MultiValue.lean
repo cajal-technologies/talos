@@ -3,6 +3,7 @@ import Interpreter.Wasm.Wp.Block
 import Interpreter.Wasm.Wp.Call
 import Interpreter.Wasm.Spec.Termination
 import Interpreter.Wasm.Decoder.Wat
+import Interpreter.Wasm.Examples.Harness
 
 /-! ## Example: multi-value
 
@@ -56,6 +57,7 @@ import Interpreter.Wasm.Decoder.Wat
     set `local 0 = a`, `local 1 = b`. -/
 
 namespace Wasm
+open Wasm.Examples
 
 /-! ### Function bodies -/
 
@@ -100,16 +102,6 @@ def multiValueModule : Module :=
         { params  := [],           body := CallsSwap, results := [.i32] } ] }
 
 /-! ### Check 1 — concrete `run` of a multi-value function -/
-
-/-- Helper: extract just the values list from a `Result`. `List Value` has
-    `DecidableEq` (so `native_decide` works on it), whereas `Result` carries
-    a `Store` field and `Store` doesn't. Returns `[]` on any non-success
-    outcome so the helper is total. Same idiom as `MemGrow.runValues`. -/
-private def runValues (fuel : Nat) (m : Module) (idx : Nat)
-    (st : Store Unit) (args : List Value) : List Value :=
-  match run fuel m idx st args with
-  | .Success vs _ => vs
-  | _ => []
 
 /-- Pushing `1` then `2` (so `2` is on top) and calling `swap` leaves
     `[1, 2]` (now `1` on top). Closed by `native_decide`, which compiles

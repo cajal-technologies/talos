@@ -26,6 +26,7 @@ import CodeLib.RustStd.Option
 import CodeLib.Near.State
 import CodeLib.Near.Env
 import CodeLib.Near.Proof
+import CodeLib.IEEE32.Exec
 
 /-!
 # CodeLib — umbrella import for downstream code
