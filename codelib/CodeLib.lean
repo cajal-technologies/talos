@@ -25,6 +25,10 @@ import CodeLib.RustStd.Option
 import CodeLib.Near.State
 import CodeLib.Near.Env
 import CodeLib.Near.Proof
+import CodeLib.SepLogic.WasmHeap
+import CodeLib.SepLogic.WasmRules
+import CodeLib.SepLogic.WasmWP
+import CodeLib.SepLogic.Adequacy
 
 /-!
 # CodeLib — umbrella import for downstream code

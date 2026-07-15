@@ -3,16 +3,23 @@ import Interpreter.Wasm
 
 /-! # Bridge: Talos Mem ↔ iris-lean GenHeap
 
-The state interpretation maintains agreement between
-the abstract GenHeap state σ and physical Mem.bytes.
-We never build σ explicitly — GenHeap tracks it internally.
+Defines `heapAgreesWithMem` — the agreement predicate between an abstract
+GenHeap state σ and physical `Mem.bytes` — together with per-byte load/store
+soundness lemmas for it.
+
+**Status: not yet wired into the WP.** Nothing in `wp_wasm_F`,
+`wasm_adequacy`, or `wasm_heap_adequacy` currently asserts this agreement:
+the ghost heap threaded through `wp_wasm` is a free-floating resource, so a
+`pointsTo` fact does not (yet) imply anything about `st.mem`. These
+definitions are the intended ingredient for a future state interpretation
+that maintains `heapAgreesWithMem σ st.mem` across steps; until that lands,
+memory facts in program proofs must come from pure hypotheses about
+`st.mem` (as the load/store rules in `Adequacy.lean` require).
 -/
 
 namespace Wasm.SepLogic
 
 open Iris Wasm Std
-
-variable [inst : WasmHeapGS]
 
 /-! Agreement: wherever GenHeap has an entry, Mem agrees. -/
 

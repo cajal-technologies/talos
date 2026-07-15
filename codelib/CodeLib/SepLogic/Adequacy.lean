@@ -16,6 +16,23 @@ structure WasmState where
   env    : HostEnv Unit
   Q      : Store Unit → List Value → Prop
 
+/-- WP functional for the iProp-level `wp_wasm` fixpoint.
+
+**Scope:** the step case demands `execOne 1 … = .Fallthrough …` — one
+instruction at fuel 1, completing by fallthrough. This covers straight-line
+instructions (const, add, local/global get/set, load/store, …) but NOT
+`.call`/`.block`/`.loop` with non-empty bodies (`execOne 1` runs their body
+at fuel 0 → `.OutOfFuel`) nor instructions producing `.Break`/`.Return`
+(only `.ret` has a dedicated terminal case). Control flow is currently
+handled at the Prop level by `wp_wasm_prop_call`/`_block`/`_loop`, composed
+with this fixpoint through the adequacy bridge. Generalizing the step case
+over the full `ExecResult` (with a fuel-monotone continuation) is the
+intended future shape.
+
+**Ghost state:** the ghost heap σ threaded through the step case is not
+(yet) tied to the physical `st.mem` — see the status note in
+`WasmRules.lean`. Memory facts enter the load/store rules below as pure
+hypotheses about `st.mem`. -/
 def wp_wasm_F (Φ : LeibnizO WasmState → IProp WasmHeapGF)
     (s : LeibnizO WasmState) : IProp WasmHeapGF :=
   let ws := s.car
@@ -67,6 +84,7 @@ instance instBIMonoPredWasmF :
   mono_pred_ne.ne _ _ _ H :=
     (OFE.eq_of_eqv (OFE.discrete H)) ▸ OFE.Dist.rfl
 
+omit inst in
 private theorem exec_cons {m : Module} {st : Store Unit} {locals : Locals}
     {env : HostEnv Unit} {head : Instruction} {rest : Program}
     {st₁ : Store Unit} {locals₁ : Locals}
@@ -125,6 +143,9 @@ theorem wp_wasm_step
       · iexact Hσ'
       · iexact Hwp
 
+-- linter false positive: `LeibnizO.car` below is a structural projection
+-- reduction the subsequent `split` depends on, but unusedSimpArgs flags it
+set_option linter.unusedSimpArgs false in
 theorem wasm_adequacy
     (m : Module) (st : Store Unit) (locals : Locals)
     (prog : Program) (env : HostEnv Unit)
@@ -168,6 +189,7 @@ theorem wasm_adequacy
 
 -- call rule: if the callee terminates with a postcondition that implies the
 -- continuation terminates, the whole call sequence terminates.
+omit inst in
 theorem wp_wasm_prop_call
     {m : Module} {st : Store Unit} {locals : Locals}
     {callid : Nat} {rest : Program} {env : HostEnv Unit}
@@ -193,6 +215,7 @@ theorem wp_wasm_prop_call
 
 -- block rule: body either falls through or breaks to label 0;
 -- both cases produce the same trimmed continuation locals.
+omit inst in
 theorem wp_wasm_prop_block
     {m : Module} {st : Store Unit} {locals : Locals}
     {bt bl : Nat} {body : Program} {rest : Program}
@@ -227,6 +250,7 @@ theorem wp_wasm_prop_block
 
 -- loop rule: invariant I and measure μ; body either falls through (exit) or
 -- breaks to label 0 (re-enter) with I re-established and μ decreased.
+omit inst in
 theorem wp_wasm_prop_loop
     {m : Module} {st : Store Unit} {locals : Locals}
     {ps rs : Nat} {body : Program} {rest : Program}
@@ -512,9 +536,11 @@ theorem wp_wasm_store32
     (by simp only [execOne.eq_def, hstack]; rw [if_neg (by omega)])
     hstep
 
+omit inst in
 theorem wp_wasm_prop_to_TerminatesWith
     {m : Module} {id : Nat} {f : Function}
     {initial : Store Unit} {args : List Value}
+    {env : HostEnv Unit}
     {P : Store Unit → List Value → Prop}
     (hf : m.funcs[id - m.imports.length]? = some f)
     (himp : m.imports[id]? = none)
@@ -523,11 +549,11 @@ theorem wp_wasm_prop_to_TerminatesWith
     (hcompat : ∀ st' vals, P st' vals → P st' [])
     (hwp : wp_wasm_prop m initial
         (f.toLocals (args.take f.numParams).reverse)
-        f.body {} P) :
-    TerminatesWith {} m id initial args P := by
+        f.body env P) :
+    TerminatesWith env m id initial args P := by
   obtain ⟨fuel₀, hwp_fuel⟩ := hwp
   have hcr : args.drop f.numParams = [] := List.drop_eq_nil_of_le hlen
-  cases hexec : exec fuel₀ m initial (f.toLocals (args.take f.numParams).reverse) f.body {} with
+  cases hexec : exec fuel₀ m initial (f.toLocals (args.take f.numParams).reverse) f.body env with
   | Fallthrough st' s' =>
     rw [hexec] at hwp_fuel
     exact TerminatesWith.of_run fuel₀ [] st'
@@ -549,11 +575,12 @@ theorem wp_wasm_prop_to_TerminatesWith
 -- Creates ghost state internally via genHeap_init_names,
 -- applies the iProp proof, then extracts the pure result.
 -- This is HeapLang's heap_adequacy pattern.
+omit inst in
 theorem wasm_heap_adequacy
     (m : Module) (st : Store Unit) (locals : Locals)
     (prog : Program) (env : HostEnv Unit)
     (Q : Store Unit → List Value → Prop)
-    (hwp : ∀ [inst : WasmHeapGS], ⊢ wp_wasm m st locals prog env Q) :
+    (hwp : ∀ [WasmHeapGS], ⊢ wp_wasm m st locals prog env Q) :
     wp_wasm_prop m st locals prog env Q := by
   apply pure_soundness (PROP := IProp WasmHeapGF)
   have hbupd : emp ⊢ (|==> ⌜wp_wasm_prop m st locals prog env Q⌝ : IProp WasmHeapGF) := by

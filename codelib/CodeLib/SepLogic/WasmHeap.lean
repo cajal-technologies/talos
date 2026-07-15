@@ -24,8 +24,22 @@ instance instWasmHeapPreS : genHeapPreS UInt32 (Option UInt8) WasmHeapGF WasmHea
   metaData := by exists 6
 -- The full genHeap instance with ghost names
 class WasmHeapGS extends genHeapGS UInt32 (Option UInt8) WasmHeapGF WasmHeapMap
--- Now test: does the points-to notation work?
-section Test
+/-! ## Points-to assertions
+
+Byte-level `↦w` plus multi-byte and array derived forms.
+
+**Address arithmetic caveat:** the multi-byte assertions below compute
+their footprint with `UInt32` addition (`addr + 1`, …), which wraps
+mod 2^32, whereas the interpreter's `Mem.read64`/`write64` index bytes at
+`addr.toNat + k : Nat` with no wraparound. The two footprints agree only
+when the access does not overflow the 32-bit address space (e.g.
+`addr.toNat + 8 ≤ 2^32` for `pointsTo_u64`, and
+`ptr.toNat + 4 * xs.length ≤ 2^32` for `arrayAt`). Any future rule
+bridging these assertions to `Mem.read*/write*` must carry such a
+no-overflow side condition — without it the ghost footprint at high
+addresses wraps to low addresses and the bridge would be unprovable (or
+unsound if forced). -/
+section PointsTo
 variable [inst : WasmHeapGS]
 -- Notation for Wasm points-to
 notation:50 addr:50 " ↦w " v:50 => pointsTo (L := UInt32) (V := Option UInt8)
@@ -118,5 +132,5 @@ theorem arrayAt_set (ptr : UInt32) (xs : List UInt32) (k : Nat)
       exact (BI.sep_mono_right (ih (ptr + 4) k' hk')).trans
         (BI.sep_left_comm.mp.trans (BI.sep_mono_right
           (BI.wand_intro (BI.sep_assoc.mp.trans (BI.sep_mono_right BI.wand_elim_left)))))
-end Test
+end PointsTo
 end Wasm.SepLogic

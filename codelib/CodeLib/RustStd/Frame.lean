@@ -16,14 +16,23 @@ form that does not care about the concrete spill address:
 * `Mem.read{32,64}_write{32,64}_same` — read-after-write at the same
   address returns the value (no bound on the address needed).
 * `Mem.write{32,64}_pages` — a store leaves the page count unchanged.
+* `Mem.read{32,64}_write{32,64}_disjoint` — a read is unaffected by a
+  write to a disjoint byte range, in every width combination, built on
+  the byte-level `Mem.write{32,64}_bytes_of_disjoint`. Proofs that juggle
+  several frame slots (argument spills vs. scratch vs. result) need these
+  to carry a value across the unrelated stores in between.
 
 The in-bounds (no-trap) obligation also needs `sp - 16` not to underflow;
 that is `UInt32.toNat_sub_of_le`, which Lean core already provides
 (`Init.Data.UInt.Lemmas`), so it is used directly rather than re-proved here.
 
-The four `Mem.*` lemmas are intentionally global `@[simp]` — confluent,
-terminating rewrites used corpus-wide. Op-specific lemmas (e.g. `popcnt`
-bounds) are added here only once a real proof first consumes them.
+The unconditional `_same`/`_pages` lemmas are intentionally global `@[simp]`
+— confluent, terminating rewrites used corpus-wide. The `_disjoint` family
+is deliberately **not** `@[simp]`: each rewrite carries a disjointness side
+condition, so proofs name these lemmas explicitly (in a `simp only` set or
+a `rw`) and discharge the side goal with `decide` / `omega` on the concrete
+frame addresses. Op-specific lemmas (e.g. `popcnt` bounds) are added here
+only once a real proof first consumes them.
 -/
 
 namespace Wasm
@@ -52,6 +61,95 @@ returns the stored value. -/
   simp only [Nat.add_eq_left, OfNat.ofNat_ne_zero, Nat.succ_ne_self, ↓reduceIte,
              Nat.reduceEqDiff]
   bv_decide
+
+/-! ## Byte-level write footprints
+
+A write only touches the bytes inside its footprint. These are the
+building blocks for the word-level disjointness lemmas below, and are
+occasionally useful on their own when a proof descends to `Mem.bytes`. -/
+
+/-- A byte outside the 8-byte footprint of a `write64` is unchanged. -/
+theorem Mem.write64_bytes_of_disjoint (m : Mem) (a : UInt32) (v : UInt64) (i : Nat)
+    (h : i < a.toNat ∨ a.toNat + 8 ≤ i) :
+    (m.write64 a v).bytes i = m.bytes i := by
+  simp only [Mem.write64]
+  have h0 : i ≠ a.toNat := by omega
+  have h1 : i ≠ a.toNat + 1 := by omega
+  have h2 : i ≠ a.toNat + 2 := by omega
+  have h3 : i ≠ a.toNat + 3 := by omega
+  have h4 : i ≠ a.toNat + 4 := by omega
+  have h5 : i ≠ a.toNat + 5 := by omega
+  have h6 : i ≠ a.toNat + 6 := by omega
+  have h7 : i ≠ a.toNat + 7 := by omega
+  simp [h0, h1, h2, h3, h4, h5, h6, h7]
+
+/-- A byte outside the 4-byte footprint of a `write32` is unchanged. -/
+theorem Mem.write32_bytes_of_disjoint (m : Mem) (a v : UInt32) (i : Nat)
+    (h : i < a.toNat ∨ a.toNat + 4 ≤ i) :
+    (m.write32 a v).bytes i = m.bytes i := by
+  simp only [Mem.write32]
+  have h0 : i ≠ a.toNat := by omega
+  have h1 : i ≠ a.toNat + 1 := by omega
+  have h2 : i ≠ a.toNat + 2 := by omega
+  have h3 : i ≠ a.toNat + 3 := by omega
+  simp [h0, h1, h2, h3]
+
+/-! ## Disjoint read/write framing
+
+A read is unaffected by a write to a disjoint byte range, in all four
+width combinations of the opt-0 corpus (`read{32,64}` × `write{32,64}`).
+The disjointness hypothesis puts one footprint entirely before the other,
+stated on `.toNat` so that `decide` / `omega` closes it when the frame
+addresses are concrete. -/
+
+/-- A 64-bit read is unaffected by a 64-bit write to a disjoint 8-byte
+range. -/
+theorem Mem.read64_write64_disjoint (m : Mem) (a b : UInt32) (v : UInt64)
+    (h : b.toNat + 8 ≤ a.toNat ∨ a.toNat + 8 ≤ b.toNat) :
+    (m.write64 a v).read64 b = m.read64 b := by
+  simp only [Mem.read64]
+  rw [Mem.write64_bytes_of_disjoint m a v b.toNat (by omega),
+      Mem.write64_bytes_of_disjoint m a v (b.toNat + 1) (by omega),
+      Mem.write64_bytes_of_disjoint m a v (b.toNat + 2) (by omega),
+      Mem.write64_bytes_of_disjoint m a v (b.toNat + 3) (by omega),
+      Mem.write64_bytes_of_disjoint m a v (b.toNat + 4) (by omega),
+      Mem.write64_bytes_of_disjoint m a v (b.toNat + 5) (by omega),
+      Mem.write64_bytes_of_disjoint m a v (b.toNat + 6) (by omega),
+      Mem.write64_bytes_of_disjoint m a v (b.toNat + 7) (by omega)]
+
+/-- A 64-bit read is unaffected by a 32-bit write to a disjoint range. -/
+theorem Mem.read64_write32_disjoint (m : Mem) (a b : UInt32) (v : UInt32)
+    (h : b.toNat + 4 ≤ a.toNat ∨ a.toNat + 8 ≤ b.toNat) :
+    (m.write32 b v).read64 a = m.read64 a := by
+  simp only [Mem.read64]
+  rw [Mem.write32_bytes_of_disjoint m b v a.toNat (by omega),
+      Mem.write32_bytes_of_disjoint m b v (a.toNat + 1) (by omega),
+      Mem.write32_bytes_of_disjoint m b v (a.toNat + 2) (by omega),
+      Mem.write32_bytes_of_disjoint m b v (a.toNat + 3) (by omega),
+      Mem.write32_bytes_of_disjoint m b v (a.toNat + 4) (by omega),
+      Mem.write32_bytes_of_disjoint m b v (a.toNat + 5) (by omega),
+      Mem.write32_bytes_of_disjoint m b v (a.toNat + 6) (by omega),
+      Mem.write32_bytes_of_disjoint m b v (a.toNat + 7) (by omega)]
+
+/-- A 32-bit read is unaffected by a 32-bit write to a disjoint range. -/
+theorem Mem.read32_write32_disjoint (m : Mem) (a b v : UInt32)
+    (h : b.toNat + 4 ≤ a.toNat ∨ a.toNat + 4 ≤ b.toNat) :
+    (m.write32 a v).read32 b = m.read32 b := by
+  simp only [Mem.read32]
+  rw [Mem.write32_bytes_of_disjoint m a v b.toNat (by omega),
+      Mem.write32_bytes_of_disjoint m a v (b.toNat + 1) (by omega),
+      Mem.write32_bytes_of_disjoint m a v (b.toNat + 2) (by omega),
+      Mem.write32_bytes_of_disjoint m a v (b.toNat + 3) (by omega)]
+
+/-- A 32-bit read is unaffected by a 64-bit write to a disjoint range. -/
+theorem Mem.read32_write64_disjoint (m : Mem) (a : UInt32) (b : UInt32) (v : UInt64)
+    (h : a.toNat + 4 ≤ b.toNat ∨ b.toNat + 8 ≤ a.toNat) :
+    (m.write64 b v).read32 a = m.read32 a := by
+  simp only [Mem.read32]
+  rw [Mem.write64_bytes_of_disjoint m b v a.toNat (by omega),
+      Mem.write64_bytes_of_disjoint m b v (a.toNat + 1) (by omega),
+      Mem.write64_bytes_of_disjoint m b v (a.toNat + 2) (by omega),
+      Mem.write64_bytes_of_disjoint m b v (a.toNat + 3) (by omega)]
 
 /-! ## Stores preserve the page count -/
 
