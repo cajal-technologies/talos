@@ -80,11 +80,11 @@ theorem wordsAt_write32_extend (m : Wasm.Mem) (base : UInt32) (k : Nat) (v : UIn
   simp only [show k + 1 - k = 1 from by omega, g1, g2]
 
 theorem merge_nil_left (xs : List UInt32) : List.merge [] xs (· ≤ ·) = xs := by
-  simp [List.merge]
+  simp
 
 theorem merge_nil_right (xs : List UInt32) : List.merge xs [] (· ≤ ·) = xs := by
   induction xs with
-  | nil => simp [List.merge]
-  | cons x xs ih => simp [List.merge, ih]
+  | nil => simp
+  | cons x xs ih => simp
 
 end Project.MergeSort.Spec

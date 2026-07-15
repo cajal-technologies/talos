@@ -95,6 +95,10 @@ def MergeSortSpec : Prop :=
     -- scratch fits in the free window below the data buffer (provisional);
     -- this also places the data buffer in the heap (`heapBase ≤ dLo`)
     heapBase + 4 * n ≤ dLo →
+    -- initial stack pointer is 1048576 (global 0 holds the Wasm shadow-stack pointer)
+    st.globals.globals[0]? = some (.i32 1048576) →
+    -- memory fits in the 32-bit address space (pages bound for wordsAt disjointness)
+    st.mem.pages * 65536 ≤ 4294967296 →
     TerminatesWith env «module» 33 st [.i32 len, .i32 dataPtr]
       (fun st' rs =>
         -- no return values …
