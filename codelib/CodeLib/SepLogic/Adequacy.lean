@@ -668,7 +668,261 @@ theorem wp_wasm_store32
       · iexact Hσ'
       · iexact Hwp
 
+
 omit inst in
+
+theorem wp_iProp_load64 [WasmHeapGS]
+    {σ : WasmHeapMap (Option UInt8)} {addr : UInt32} {v : UInt64} {mem : Mem}
+    (hagree : heapAgreesWithMem σ mem)
+    (hnw : addr.toNat + 8 ≤ 2 ^ 32) :
+    genHeapInterp σ ∗ pointsTo_u64 addr v ==∗
+      genHeapInterp σ ∗ pointsTo_u64 addr v ∗ ⌜mem.read64 addr = v⌝ := by
+  simp only [pointsTo_u64]
+  iintro ⟨Hσ, Hpt0, Hpt1, Hpt2, Hpt3, Hpt4, Hpt5, Hpt6, Hpt7⟩
+  have haddr0 : addr + UInt32.ofNat 0 = addr := by
+    apply UInt32.toNat.inj; rw [toNat_add_ofNat addr 0 (by omega)]; simp
+  ihave %Hget0 : ⌜get? σ addr = some (some (byte64 v 0))⌝ $$ [Hσ Hpt0]
+  · ihave >%_ := genHeap_valid $$ [$Hσ $Hpt0]; itrivial
+  ihave %Hget1 : ⌜get? σ (addr + 1) = some (some (byte64 v 1))⌝ $$ [Hσ Hpt1]
+  · ihave >%_ := genHeap_valid $$ [$Hσ $Hpt1]; itrivial
+  ihave %Hget2 : ⌜get? σ (addr + 2) = some (some (byte64 v 2))⌝ $$ [Hσ Hpt2]
+  · ihave >%_ := genHeap_valid $$ [$Hσ $Hpt2]; itrivial
+  ihave %Hget3 : ⌜get? σ (addr + 3) = some (some (byte64 v 3))⌝ $$ [Hσ Hpt3]
+  · ihave >%_ := genHeap_valid $$ [$Hσ $Hpt3]; itrivial
+  ihave %Hget4 : ⌜get? σ (addr + 4) = some (some (byte64 v 4))⌝ $$ [Hσ Hpt4]
+  · ihave >%_ := genHeap_valid $$ [$Hσ $Hpt4]; itrivial
+  ihave %Hget5 : ⌜get? σ (addr + 5) = some (some (byte64 v 5))⌝ $$ [Hσ Hpt5]
+  · ihave >%_ := genHeap_valid $$ [$Hσ $Hpt5]; itrivial
+  ihave %Hget6 : ⌜get? σ (addr + 6) = some (some (byte64 v 6))⌝ $$ [Hσ Hpt6]
+  · ihave >%_ := genHeap_valid $$ [$Hσ $Hpt6]; itrivial
+  ihave %Hget7 : ⌜get? σ (addr + 7) = some (some (byte64 v 7))⌝ $$ [Hσ Hpt7]
+  · ihave >%_ := genHeap_valid $$ [$Hσ $Hpt7]; itrivial
+  have hmem : mem.read64 addr = v :=
+    read64_sound σ mem addr v hnw hagree (fun i hi => by
+      have h8 : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 ∨ i = 4 ∨ i = 5 ∨ i = 6 ∨ i = 7 := by omega
+      rcases h8 with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl
+      · simp only [haddr0]; exact Hget0
+      · exact Hget1
+      · exact Hget2
+      · exact Hget3
+      · exact Hget4
+      · exact Hget5
+      · exact Hget6
+      · exact Hget7)
+  imodintro
+  isplitl [Hσ]
+  · iexact Hσ
+  isplitl [Hpt0 Hpt1 Hpt2 Hpt3 Hpt4 Hpt5 Hpt6 Hpt7]
+  · isplitl [Hpt0]; · iexact Hpt0
+    isplitl [Hpt1]; · iexact Hpt1
+    isplitl [Hpt2]; · iexact Hpt2
+    isplitl [Hpt3]; · iexact Hpt3
+    isplitl [Hpt4]; · iexact Hpt4
+    isplitl [Hpt5]; · iexact Hpt5
+    isplitl [Hpt6]; · iexact Hpt6
+    iexact Hpt7
+  · ipureintro; exact hmem
+
+theorem wp_iProp_store64 [WasmHeapGS]
+    {σ : WasmHeapMap (Option UInt8)} {addr : UInt32} {v_old v_new : UInt64} {mem : Mem}
+    (hagree : heapAgreesWithMem σ mem)
+    (hnw : addr.toNat + 8 ≤ 2 ^ 32) :
+    genHeapInterp σ ∗ pointsTo_u64 addr v_old ==∗
+      ∃ σ' : WasmHeapMap (Option UInt8),
+        ⌜heapAgreesWithMem σ' (mem.write64 addr v_new)⌝ ∗
+        genHeapInterp σ' ∗ pointsTo_u64 addr v_new := by
+  let σ' : WasmHeapMap (Option UInt8) :=
+    insert (insert (insert (insert (insert (insert (insert (insert σ
+      addr (some (byte64 v_new 0)))
+      (addr + 1) (some (byte64 v_new 1)))
+      (addr + 2) (some (byte64 v_new 2)))
+      (addr + 3) (some (byte64 v_new 3)))
+      (addr + 4) (some (byte64 v_new 4)))
+      (addr + 5) (some (byte64 v_new 5)))
+      (addr + 6) (some (byte64 v_new 6)))
+      (addr + 7) (some (byte64 v_new 7))
+  have haddr0 : addr + UInt32.ofNat 0 = addr := by
+    apply UInt32.toNat.inj; rw [toNat_add_ofNat addr 0 (by omega)]; simp
+  simp only [pointsTo_u64]
+  iintro ⟨Hσ, Hpt0, Hpt1, Hpt2, Hpt3, Hpt4, Hpt5, Hpt6, Hpt7⟩
+  imod genHeap_update (v₂ := some (byte64 v_new 0)) $$ [$Hσ $Hpt0] with ⟨Hσ, Hpt0⟩
+  imod genHeap_update (v₂ := some (byte64 v_new 1)) $$ [$Hσ $Hpt1] with ⟨Hσ, Hpt1⟩
+  imod genHeap_update (v₂ := some (byte64 v_new 2)) $$ [$Hσ $Hpt2] with ⟨Hσ, Hpt2⟩
+  imod genHeap_update (v₂ := some (byte64 v_new 3)) $$ [$Hσ $Hpt3] with ⟨Hσ, Hpt3⟩
+  imod genHeap_update (v₂ := some (byte64 v_new 4)) $$ [$Hσ $Hpt4] with ⟨Hσ, Hpt4⟩
+  imod genHeap_update (v₂ := some (byte64 v_new 5)) $$ [$Hσ $Hpt5] with ⟨Hσ, Hpt5⟩
+  imod genHeap_update (v₂ := some (byte64 v_new 6)) $$ [$Hσ $Hpt6] with ⟨Hσ, Hpt6⟩
+  imod genHeap_update (v₂ := some (byte64 v_new 7)) $$ [$Hσ $Hpt7] with ⟨Hσ, Hpt7⟩
+  ihave %Hget0 : ⌜get? σ' addr = some (some (byte64 v_new 0))⌝ $$ [Hσ Hpt0]
+  · ihave >%_ := genHeap_valid $$ [$Hσ $Hpt0]; itrivial
+  ihave %Hget1 : ⌜get? σ' (addr + 1) = some (some (byte64 v_new 1))⌝ $$ [Hσ Hpt1]
+  · ihave >%_ := genHeap_valid $$ [$Hσ $Hpt1]; itrivial
+  ihave %Hget2 : ⌜get? σ' (addr + 2) = some (some (byte64 v_new 2))⌝ $$ [Hσ Hpt2]
+  · ihave >%_ := genHeap_valid $$ [$Hσ $Hpt2]; itrivial
+  ihave %Hget3 : ⌜get? σ' (addr + 3) = some (some (byte64 v_new 3))⌝ $$ [Hσ Hpt3]
+  · ihave >%_ := genHeap_valid $$ [$Hσ $Hpt3]; itrivial
+  ihave %Hget4 : ⌜get? σ' (addr + 4) = some (some (byte64 v_new 4))⌝ $$ [Hσ Hpt4]
+  · ihave >%_ := genHeap_valid $$ [$Hσ $Hpt4]; itrivial
+  ihave %Hget5 : ⌜get? σ' (addr + 5) = some (some (byte64 v_new 5))⌝ $$ [Hσ Hpt5]
+  · ihave >%_ := genHeap_valid $$ [$Hσ $Hpt5]; itrivial
+  ihave %Hget6 : ⌜get? σ' (addr + 6) = some (some (byte64 v_new 6))⌝ $$ [Hσ Hpt6]
+  · ihave >%_ := genHeap_valid $$ [$Hσ $Hpt6]; itrivial
+  ihave %Hget7 : ⌜get? σ' (addr + 7) = some (some (byte64 v_new 7))⌝ $$ [Hσ Hpt7]
+  · ihave >%_ := genHeap_valid $$ [$Hσ $Hpt7]; itrivial
+  have hagree' : heapAgreesWithMem σ' (mem.write64 addr v_new) :=
+    write64_agree σ σ' mem addr v_new hnw hagree
+      (fun i hi => by
+        have h8 : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 ∨ i = 4 ∨ i = 5 ∨ i = 6 ∨ i = 7 := by omega
+        rcases h8 with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl
+        · simp only [haddr0]; exact Hget0
+        · exact Hget1
+        · exact Hget2
+        · exact Hget3
+        · exact Hget4
+        · exact Hget5
+        · exact Hget6
+        · exact Hget7)
+      (fun k w hk hne => by
+        have ne0 : addr ≠ k := fun h => hne 0 (by omega) (h.symm.trans haddr0.symm)
+        have ne1 : (addr + 1 : UInt32) ≠ k := Ne.symm (hne 1 (by omega))
+        have ne2 : (addr + 2 : UInt32) ≠ k := Ne.symm (hne 2 (by omega))
+        have ne3 : (addr + 3 : UInt32) ≠ k := Ne.symm (hne 3 (by omega))
+        have ne4 : (addr + 4 : UInt32) ≠ k := Ne.symm (hne 4 (by omega))
+        have ne5 : (addr + 5 : UInt32) ≠ k := Ne.symm (hne 5 (by omega))
+        have ne6 : (addr + 6 : UInt32) ≠ k := Ne.symm (hne 6 (by omega))
+        have ne7 : (addr + 7 : UInt32) ≠ k := Ne.symm (hne 7 (by omega))
+        have heq : σ' = insert (insert (insert (insert (insert (insert (insert (insert σ
+            addr (some (byte64 v_new 0))) (addr + 1) (some (byte64 v_new 1)))
+            (addr + 2) (some (byte64 v_new 2))) (addr + 3) (some (byte64 v_new 3)))
+            (addr + 4) (some (byte64 v_new 4))) (addr + 5) (some (byte64 v_new 5)))
+            (addr + 6) (some (byte64 v_new 6))) (addr + 7) (some (byte64 v_new 7)) := rfl
+        rw [heq] at hk
+        rwa [get?_insert_ne ne7, get?_insert_ne ne6, get?_insert_ne ne5,
+             get?_insert_ne ne4, get?_insert_ne ne3, get?_insert_ne ne2,
+             get?_insert_ne ne1, get?_insert_ne ne0] at hk)
+  imodintro
+  iexists σ'
+  isplitl []
+  · ipureintro; exact hagree'
+  isplitl [Hσ]
+  · iexact Hσ
+  isplitl [Hpt0]
+  · iexact Hpt0
+  isplitl [Hpt1]
+  · iexact Hpt1
+  isplitl [Hpt2]
+  · iexact Hpt2
+  isplitl [Hpt3]
+  · iexact Hpt3
+  isplitl [Hpt4]
+  · iexact Hpt4
+  isplitl [Hpt5]
+  · iexact Hpt5
+  isplitl [Hpt6]
+  · iexact Hpt6
+  iexact Hpt7
+
+theorem wp_iProp_load32 [WasmHeapGS]
+    {σ : WasmHeapMap (Option UInt8)} {addr : UInt32} {v : UInt32} {mem : Mem}
+    (hagree : heapAgreesWithMem σ mem)
+    (hnw : addr.toNat + 4 ≤ 2 ^ 32) :
+    genHeapInterp σ ∗ pointsTo_u32 addr v ==∗
+      genHeapInterp σ ∗ pointsTo_u32 addr v ∗ ⌜mem.read32 addr = v⌝ := by
+  simp only [pointsTo_u32]
+  iintro ⟨Hσ, Hpt0, Hpt1, Hpt2, Hpt3⟩
+  have haddr0 : addr + UInt32.ofNat 0 = addr := by
+    apply UInt32.toNat.inj; rw [toNat_add_ofNat addr 0 (by omega)]; simp
+  ihave %Hget0 : ⌜get? σ addr = some (some (byte32 v 0))⌝ $$ [Hσ Hpt0]
+  · ihave >%_ := genHeap_valid $$ [$Hσ $Hpt0]; itrivial
+  ihave %Hget1 : ⌜get? σ (addr + 1) = some (some (byte32 v 1))⌝ $$ [Hσ Hpt1]
+  · ihave >%_ := genHeap_valid $$ [$Hσ $Hpt1]; itrivial
+  ihave %Hget2 : ⌜get? σ (addr + 2) = some (some (byte32 v 2))⌝ $$ [Hσ Hpt2]
+  · ihave >%_ := genHeap_valid $$ [$Hσ $Hpt2]; itrivial
+  ihave %Hget3 : ⌜get? σ (addr + 3) = some (some (byte32 v 3))⌝ $$ [Hσ Hpt3]
+  · ihave >%_ := genHeap_valid $$ [$Hσ $Hpt3]; itrivial
+  have hmem : mem.read32 addr = v :=
+    read32_sound σ mem addr v hnw hagree (fun i hi => by
+      have h4 : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 := by omega
+      rcases h4 with rfl|rfl|rfl|rfl
+      · simp only [haddr0]; exact Hget0
+      · exact Hget1
+      · exact Hget2
+      · exact Hget3)
+  imodintro
+  isplitl [Hσ]
+  · iexact Hσ
+  isplitl [Hpt0 Hpt1 Hpt2 Hpt3]
+  · isplitl [Hpt0]; · iexact Hpt0
+    isplitl [Hpt1]; · iexact Hpt1
+    isplitl [Hpt2]; · iexact Hpt2
+    iexact Hpt3
+  · ipureintro; exact hmem
+
+theorem wp_iProp_store32 [WasmHeapGS]
+    {σ : WasmHeapMap (Option UInt8)} {addr : UInt32} {v_old v_new : UInt32} {mem : Mem}
+    (hagree : heapAgreesWithMem σ mem)
+    (hnw : addr.toNat + 4 ≤ 2 ^ 32) :
+    genHeapInterp σ ∗ pointsTo_u32 addr v_old ==∗
+      ∃ σ' : WasmHeapMap (Option UInt8),
+        ⌜heapAgreesWithMem σ' (mem.write32 addr v_new)⌝ ∗
+        genHeapInterp σ' ∗ pointsTo_u32 addr v_new := by
+  let σ' : WasmHeapMap (Option UInt8) :=
+    insert (insert (insert (insert σ
+      addr (some (byte32 v_new 0)))
+      (addr + 1) (some (byte32 v_new 1)))
+      (addr + 2) (some (byte32 v_new 2)))
+      (addr + 3) (some (byte32 v_new 3))
+  have haddr0 : addr + UInt32.ofNat 0 = addr := by
+    apply UInt32.toNat.inj; rw [toNat_add_ofNat addr 0 (by omega)]; simp
+  simp only [pointsTo_u32]
+  iintro ⟨Hσ, Hpt0, Hpt1, Hpt2, Hpt3⟩
+  imod genHeap_update (v₂ := some (byte32 v_new 0)) $$ [$Hσ $Hpt0] with ⟨Hσ, Hpt0⟩
+  imod genHeap_update (v₂ := some (byte32 v_new 1)) $$ [$Hσ $Hpt1] with ⟨Hσ, Hpt1⟩
+  imod genHeap_update (v₂ := some (byte32 v_new 2)) $$ [$Hσ $Hpt2] with ⟨Hσ, Hpt2⟩
+  imod genHeap_update (v₂ := some (byte32 v_new 3)) $$ [$Hσ $Hpt3] with ⟨Hσ, Hpt3⟩
+  ihave %Hget0 : ⌜get? σ' addr = some (some (byte32 v_new 0))⌝ $$ [Hσ Hpt0]
+  · ihave >%_ := genHeap_valid $$ [$Hσ $Hpt0]; itrivial
+  ihave %Hget1 : ⌜get? σ' (addr + 1) = some (some (byte32 v_new 1))⌝ $$ [Hσ Hpt1]
+  · ihave >%_ := genHeap_valid $$ [$Hσ $Hpt1]; itrivial
+  ihave %Hget2 : ⌜get? σ' (addr + 2) = some (some (byte32 v_new 2))⌝ $$ [Hσ Hpt2]
+  · ihave >%_ := genHeap_valid $$ [$Hσ $Hpt2]; itrivial
+  ihave %Hget3 : ⌜get? σ' (addr + 3) = some (some (byte32 v_new 3))⌝ $$ [Hσ Hpt3]
+  · ihave >%_ := genHeap_valid $$ [$Hσ $Hpt3]; itrivial
+  have hagree' : heapAgreesWithMem σ' (mem.write32 addr v_new) :=
+    write32_agree σ σ' mem addr v_new hnw hagree
+      (fun i hi => by
+        have h4 : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 := by omega
+        rcases h4 with rfl|rfl|rfl|rfl
+        · simp only [haddr0]; exact Hget0
+        · exact Hget1
+        · exact Hget2
+        · exact Hget3)
+      (fun k w hk hne => by
+        have ne0 : addr ≠ k := fun h => hne 0 (by omega) (h.symm.trans haddr0.symm)
+        have ne1 : (addr + 1 : UInt32) ≠ k := Ne.symm (hne 1 (by omega))
+        have ne2 : (addr + 2 : UInt32) ≠ k := Ne.symm (hne 2 (by omega))
+        have ne3 : (addr + 3 : UInt32) ≠ k := Ne.symm (hne 3 (by omega))
+        have heq : σ' = insert (insert (insert (insert σ
+            addr (some (byte32 v_new 0))) (addr + 1) (some (byte32 v_new 1)))
+            (addr + 2) (some (byte32 v_new 2))) (addr + 3) (some (byte32 v_new 3)) := rfl
+        rw [heq] at hk
+        rwa [get?_insert_ne ne3, get?_insert_ne ne2,
+             get?_insert_ne ne1, get?_insert_ne ne0] at hk)
+  imodintro
+  iexists σ'
+  isplitl []
+  · ipureintro; exact hagree'
+  isplitl [Hσ]
+  · iexact Hσ
+  isplitl [Hpt0]
+  · iexact Hpt0
+  isplitl [Hpt1]
+  · iexact Hpt1
+  isplitl [Hpt2]
+  · iexact Hpt2
+  iexact Hpt3
+
+
 theorem wp_wasm_prop_to_TerminatesWith
     {m : Module} {id : Nat} {f : Function}
     {initial : Store Unit} {args : List Value}
