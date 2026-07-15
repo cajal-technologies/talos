@@ -14,10 +14,13 @@ framing lemmas in `CodeLib.RustStd.Frame`.
   and symbolic array addresses alike.
 * Bridges from `Disjoint` facts to the `Frame` read/write lemmas
   (`Mem.read64_write64_of_region`, …): thin one-liners, so proofs can carry a
-  single region fact instead of re-shaping `Or`s at every call site.
+  single region fact instead of re-shaping `Or`s at every call site. All four
+  take the **written region first**; flip with `Disjoint.symm` if a fact
+  arrives in the other orientation.
 * **Disjoint stores commute** (`Mem.write64_write64_comm`, 32/32 and mixed
-  widths): requested in #68 and previously missing everywhere. Proved
-  byte-pointwise from the function-model `Mem`.
+  widths): requested in #68 and previously missing everywhere. Each width pair
+  is a one-line instance of `Mem.write_write_comm_of_footprints` (Frame), so a
+  new width costs only its two byte-level footprint lemmas there.
 * `slot64` — the `k`-th 8-byte element slot of a `u64` array region, with the
   no-wrap and pairwise-disjointness lemmas array proofs otherwise re-derive
   (first consumer: `Project.SwapElements.Spec`).
@@ -36,7 +39,12 @@ deriving Repr, DecidableEq
 
 namespace MemRegion
 
-/-- Two regions occupy disjoint integer byte ranges. -/
+/-- Ordered interval disjointness: one region's byte range ends at or before
+the other's begins. For non-empty regions this coincides with set-disjointness
+of the byte ranges; a zero-length region strictly *inside* another counts as
+overlapping here even though it occupies no bytes. That strictness is
+deliberate — it keeps the shape a plain two-case `omega` fact, and every
+consumer instantiates a positive `len` (4 or 8). -/
 def Disjoint (r₁ r₂ : MemRegion) : Prop :=
   r₁.base.toNat + r₁.len ≤ r₂.base.toNat ∨ r₂.base.toNat + r₂.len ≤ r₁.base.toNat
 
@@ -50,14 +58,16 @@ end MemRegion
 
 /-! ## Bridging `Disjoint` to the `Frame` read/write lemmas
 
-The `Frame` lemmas take the raw interval disjunction with the *write* address
-on the left; these wrappers take a `Disjoint` fact between the written region
-and the read region, in either order. -/
+The `Frame` lemmas each take a raw interval disjunction whose orientation is
+an artifact of their statements; these wrappers hide that behind one uniform
+convention: the `Disjoint` fact always names the **written** region first and
+the read region second. A fact oriented the other way flips with
+`Disjoint.symm`. -/
 
 theorem Mem.read64_write64_of_region (m : Mem) (a b : UInt32) (v : UInt64)
     (h : MemRegion.Disjoint ⟨a, 8⟩ ⟨b, 8⟩) :
     (m.write64 a v).read64 b = m.read64 b :=
-  Mem.read64_write64_disjoint m a b v (h.elim Or.inr Or.inl)
+  Mem.read64_write64_disjoint m a b v h.symm
 
 theorem Mem.read64_write32_of_region (m : Mem) (a b : UInt32) (v : UInt32)
     (h : MemRegion.Disjoint ⟨b, 4⟩ ⟨a, 8⟩) :
@@ -67,88 +77,50 @@ theorem Mem.read64_write32_of_region (m : Mem) (a b : UInt32) (v : UInt32)
 theorem Mem.read32_write32_of_region (m : Mem) (a b v : UInt32)
     (h : MemRegion.Disjoint ⟨a, 4⟩ ⟨b, 4⟩) :
     (m.write32 a v).read32 b = m.read32 b :=
-  Mem.read32_write32_disjoint m a b v (h.elim Or.inr Or.inl)
+  Mem.read32_write32_disjoint m a b v h.symm
 
 theorem Mem.read32_write64_of_region (m : Mem) (a b : UInt32) (v : UInt64)
-    (h : MemRegion.Disjoint ⟨a, 4⟩ ⟨b, 8⟩) :
+    (h : MemRegion.Disjoint ⟨b, 8⟩ ⟨a, 4⟩) :
     (m.write64 b v).read32 a = m.read32 a :=
-  Mem.read32_write64_disjoint m a b v h
+  Mem.read32_write64_disjoint m a b v h.symm
 
-/-! ## Disjoint stores commute -/
+/-! ## Disjoint stores commute
 
-/-- Two memories with equal page counts and pointwise-equal bytes are equal. -/
-theorem Mem.ext_bytes {m₁ m₂ : Mem} (hp : m₁.pages = m₂.pages)
-    (hb : ∀ i, m₁.bytes i = m₂.bytes i) : m₁ = m₂ := by
-  cases m₁; cases m₂
-  simp only [Mem.mk.injEq]
-  exact ⟨hp, funext hb⟩
-
-/-- Inside its 8-byte footprint, the byte written by a `write64` depends only
-on the address and value, not on the underlying memory. -/
-theorem Mem.write64_bytes_in (m m' : Mem) (a : UInt32) (v : UInt64) (i : Nat)
-    (hi : a.toNat ≤ i ∧ i < a.toNat + 8) :
-    (m.write64 a v).bytes i = (m'.write64 a v).bytes i := by
-  simp only [Mem.write64]
-  split_ifs <;> first | rfl | omega
-
-/-- Inside its 4-byte footprint, the byte written by a `write32` depends only
-on the address and value, not on the underlying memory. -/
-theorem Mem.write32_bytes_in (m m' : Mem) (a v : UInt32) (i : Nat)
-    (hi : a.toNat ≤ i ∧ i < a.toNat + 4) :
-    (m.write32 a v).bytes i = (m'.write32 a v).bytes i := by
-  simp only [Mem.write32]
-  split_ifs <;> first | rfl | omega
+One-line instances of `Mem.write_write_comm_of_footprints` (Frame): each
+width supplies page preservation plus its two byte-level footprint facts. -/
 
 /-- Two 64-bit stores to disjoint ranges commute. -/
 theorem Mem.write64_write64_comm (m : Mem) (a b : UInt32) (v w : UInt64)
     (h : MemRegion.Disjoint ⟨a, 8⟩ ⟨b, 8⟩) :
-    (m.write64 a v).write64 b w = (m.write64 b w).write64 a v := by
-  have hd : a.toNat + 8 ≤ b.toNat ∨ b.toNat + 8 ≤ a.toNat := h
-  refine Mem.ext_bytes (by simp) fun i => ?_
-  by_cases hia : a.toNat ≤ i ∧ i < a.toNat + 8
-  · rw [Mem.write64_bytes_of_disjoint _ b w i (by omega)]
-    exact Mem.write64_bytes_in m (m.write64 b w) a v i hia
-  · by_cases hib : b.toNat ≤ i ∧ i < b.toNat + 8
-    · rw [Mem.write64_bytes_of_disjoint (m.write64 b w) a v i (by omega)]
-      exact Mem.write64_bytes_in (m.write64 a v) m b w i hib
-    · rw [Mem.write64_bytes_of_disjoint _ b w i (by omega),
-          Mem.write64_bytes_of_disjoint _ a v i (by omega),
-          Mem.write64_bytes_of_disjoint _ a v i (by omega),
-          Mem.write64_bytes_of_disjoint _ b w i (by omega)]
+    (m.write64 a v).write64 b w = (m.write64 b w).write64 a v :=
+  Mem.write_write_comm_of_footprints (·.write64 a v) (·.write64 b w) a b 8 8 h
+    (fun _ => rfl) (fun _ => rfl)
+    (fun m i hi => Mem.write64_bytes_of_disjoint m a v i hi)
+    (fun m i hi => Mem.write64_bytes_of_disjoint m b w i hi)
+    (fun m m' i hi => Mem.write64_bytes_in m m' a v i hi)
+    (fun m m' i hi => Mem.write64_bytes_in m m' b w i hi) m
 
 /-- Two 32-bit stores to disjoint ranges commute. -/
 theorem Mem.write32_write32_comm (m : Mem) (a b : UInt32) (v w : UInt32)
     (h : MemRegion.Disjoint ⟨a, 4⟩ ⟨b, 4⟩) :
-    (m.write32 a v).write32 b w = (m.write32 b w).write32 a v := by
-  have hd : a.toNat + 4 ≤ b.toNat ∨ b.toNat + 4 ≤ a.toNat := h
-  refine Mem.ext_bytes (by simp) fun i => ?_
-  by_cases hia : a.toNat ≤ i ∧ i < a.toNat + 4
-  · rw [Mem.write32_bytes_of_disjoint _ b w i (by omega)]
-    exact Mem.write32_bytes_in m (m.write32 b w) a v i hia
-  · by_cases hib : b.toNat ≤ i ∧ i < b.toNat + 4
-    · rw [Mem.write32_bytes_of_disjoint (m.write32 b w) a v i (by omega)]
-      exact Mem.write32_bytes_in (m.write32 a v) m b w i hib
-    · rw [Mem.write32_bytes_of_disjoint _ b w i (by omega),
-          Mem.write32_bytes_of_disjoint _ a v i (by omega),
-          Mem.write32_bytes_of_disjoint _ a v i (by omega),
-          Mem.write32_bytes_of_disjoint _ b w i (by omega)]
+    (m.write32 a v).write32 b w = (m.write32 b w).write32 a v :=
+  Mem.write_write_comm_of_footprints (·.write32 a v) (·.write32 b w) a b 4 4 h
+    (fun _ => rfl) (fun _ => rfl)
+    (fun m i hi => Mem.write32_bytes_of_disjoint m a v i hi)
+    (fun m i hi => Mem.write32_bytes_of_disjoint m b w i hi)
+    (fun m m' i hi => Mem.write32_bytes_in m m' a v i hi)
+    (fun m m' i hi => Mem.write32_bytes_in m m' b w i hi) m
 
 /-- A 64-bit store and a 32-bit store to disjoint ranges commute. -/
 theorem Mem.write64_write32_comm (m : Mem) (a b : UInt32) (v : UInt64) (w : UInt32)
     (h : MemRegion.Disjoint ⟨a, 8⟩ ⟨b, 4⟩) :
-    (m.write64 a v).write32 b w = (m.write32 b w).write64 a v := by
-  have hd : a.toNat + 8 ≤ b.toNat ∨ b.toNat + 4 ≤ a.toNat := h
-  refine Mem.ext_bytes (by simp) fun i => ?_
-  by_cases hia : a.toNat ≤ i ∧ i < a.toNat + 8
-  · rw [Mem.write32_bytes_of_disjoint _ b w i (by omega)]
-    exact Mem.write64_bytes_in m (m.write32 b w) a v i hia
-  · by_cases hib : b.toNat ≤ i ∧ i < b.toNat + 4
-    · rw [Mem.write64_bytes_of_disjoint (m.write32 b w) a v i (by omega)]
-      exact Mem.write32_bytes_in (m.write64 a v) m b w i hib
-    · rw [Mem.write32_bytes_of_disjoint _ b w i (by omega),
-          Mem.write64_bytes_of_disjoint _ a v i (by omega),
-          Mem.write64_bytes_of_disjoint _ a v i (by omega),
-          Mem.write32_bytes_of_disjoint _ b w i (by omega)]
+    (m.write64 a v).write32 b w = (m.write32 b w).write64 a v :=
+  Mem.write_write_comm_of_footprints (·.write64 a v) (·.write32 b w) a b 8 4 h
+    (fun _ => rfl) (fun _ => rfl)
+    (fun m i hi => Mem.write64_bytes_of_disjoint m a v i hi)
+    (fun m i hi => Mem.write32_bytes_of_disjoint m b w i hi)
+    (fun m m' i hi => Mem.write64_bytes_in m m' a v i hi)
+    (fun m m' i hi => Mem.write32_bytes_in m m' b w i hi) m
 
 /-! ## Array element slots -/
 
@@ -160,13 +132,15 @@ array specs. -/
 def slot64 (base k : UInt32) : MemRegion := ⟨base + 8 * k, 8⟩
 
 /-- `x <<< 3 = 8 * x` on `UInt32`: bridges the `(const 3) shl` address
-computation LLVM emits to the `8 * k` slot offset. -/
+computation LLVM emits to the `8 * k` slot offset. The single `bv_decide`
+fact of the slot algebra — `slot64_of_shl` derives from it. -/
 theorem shl3_eq_mul8 (x : UInt32) : x <<< (3 % 32 : UInt32) = 8 * x := by bv_decide
 
 /-- The codegen's `(k <<< 3) + base` lands on the slot base address. -/
 theorem slot64_of_shl (base k : UInt32) :
     k <<< (3 % 32 : UInt32) + base = (slot64 base k).base := by
-  simp only [slot64]; bv_decide
+  simp only [slot64]
+  rw [shl3_eq_mul8, UInt32.add_comm]
 
 /-- No wraparound: if the slot's true byte offset stays below `2^32`, the wasm
 address of `slot64 base k` is the integer `base.toNat + 8 * k.toNat`. -/
