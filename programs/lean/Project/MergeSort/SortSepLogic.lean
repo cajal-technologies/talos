@@ -27,6 +27,7 @@ call graph (imports = [], .call N = funcN):
 -/
 
 -- func15: straight-line, stores v1 at ptr, v2 at ptr+4
+omit [WasmHeapGS] in
 private theorem func15_terminates
     (st : Store Unit) (ptr v1 v2 v3 : UInt32)
     (hb : ptr.toNat + 8 ≤ st.mem.pages * 65536) :
@@ -72,7 +73,10 @@ private theorem func15_terminates
 set_option maxHeartbeats 8000000 in
 private theorem func3_terminates
     (st : Store Unit) (src_ptr src_n dst_ptr dst_n sp : UInt32)
-    (hsp : st.globals.globals[0]? = some (.i32 sp)) :
+    (hsp : st.globals.globals[0]? = some (.i32 sp))
+    (hpristine : ∀ i, i < 1050240 →
+      st.mem.bytes i = («module».initialStore (α := Unit)).mem.bytes i)
+    (hmargin : 1050240 + 4 * src_n.toNat ≤ st.mem.pages * 65536) :
     TerminatesWith {} «module» 3 st
       [.i32 dst_n, .i32 dst_ptr, .i32 src_n, .i32 src_ptr]
       (fun st' _ =>
@@ -82,17 +86,20 @@ private theorem func3_terminates
   suffices key : ∀ (n : Nat) (st : Store Unit) (src_ptr src_n dst_ptr dst_n sp : UInt32),
       src_n.toNat = n →
       st.globals.globals[0]? = some (.i32 sp) →
+      (∀ i, i < 1050240 →
+        st.mem.bytes i = («module».initialStore (α := Unit)).mem.bytes i) →
+      1050240 + 4 * src_n.toNat ≤ st.mem.pages * 65536 →
       TerminatesWith {} «module» 3 st
         [.i32 dst_n, .i32 dst_ptr, .i32 src_n, .i32 src_ptr]
         (fun st' _ =>
           (wordsAt st'.mem src_ptr src_n.toNat).Pairwise (· ≤ ·) ∧
           (wordsAt st'.mem src_ptr src_n.toNat).Perm
             (wordsAt st.mem src_ptr src_n.toNat)) from
-    key _ st src_ptr src_n dst_ptr dst_n sp rfl hsp
+    key _ st src_ptr src_n dst_ptr dst_n sp rfl hsp hpristine hmargin
   intro n
   induction n using Nat.strong_induction_on with
   | _ n IH =>
-    intro st src_ptr src_n dst_ptr dst_n sp hn hsp
+    intro st src_ptr src_n dst_ptr dst_n sp hn hsp hpristine hmargin
     by_cases hbase : src_n.toNat ≤ 1
     · -- base case: src_n ≤ 1, block exits via br_if 0, no allocator calls
       -- trace: globalGet/const/sub/localSet/localGet/globalSet (preamble, 6),
@@ -169,7 +176,7 @@ private theorem func3_terminates
       --     call 6: wp_wasm_prop_call (func6_terminates, preconditions from func5 spec)
       --     call 7 (sorry: copy-back deferred)
       --   postamble (5 insts, simp): localGet 4 / const 32 / add / globalSet 0 / ret
-      push_neg at hbase
+      simp only [not_le] at hbase
       apply wp_wasm_prop_to_TerminatesWith (f := func3Def)
       · rfl
       · rfl
@@ -177,7 +184,12 @@ private theorem func3_terminates
       · simp [Function.numParams, func3Def]
       · intro _ _ h; exact h
       -- dlmalloc_alloc_spec covers func5 (call 5 × 2); state-threading deferred
-      exact (dlmalloc_alloc_spec {} «module» st (src_n >>> 1) sorry sorry).elim fun _ _ => sorry -- allocator: deferred per MergeSortSpec design
+      -- hpristine supplies the pristine-allocator obligation; margin: (src_n>>>1).toNat ≤ src_n.toNat
+      exact (dlmalloc_alloc_spec {} «module» st (src_n >>> 1) hpristine
+          (by have h : (src_n >>> 1).toNat ≤ src_n.toNat := by
+                rw [UInt32.toNat_shiftRight]; exact Nat.shiftRight_le _ _
+              omega)).elim fun _ _ =>
+        sorry -- TODO: state-thread alloc ptr → left IH (src_n>>>1 < src_n via hbase) → right IH → func6_terminates → copy-back (func7 deferred)
 
 -- func1: sort with pre-allocated scratch; delegates to func3
 -- allocator calls (func2, func4) deferred
@@ -190,7 +202,10 @@ private theorem func3_terminates
 --   call 4 (sorry: allocator terminates: deferred per MergeSortSpec)
 --   postamble (5 insts, simp): frame+32 / globalSet 0 / ret
 private theorem func1_terminates
-    (st : Store Unit) (data_ptr len : UInt32) :
+    (st : Store Unit) (data_ptr len : UInt32)
+    (hpristine : ∀ i, i < 1050240 →
+      st.mem.bytes i = («module».initialStore (α := Unit)).mem.bytes i)
+    (hmargin : 1050240 + 4 * len.toNat ≤ st.mem.pages * 65536) :
     TerminatesWith {} «module» 1 st
       [.i32 len, .i32 data_ptr]
       (fun st' _ =>
@@ -204,7 +219,9 @@ private theorem func1_terminates
   · simp [Function.numParams, func1Def]
   · intro _ _ h; exact h
   -- dlmalloc_alloc_spec covers func2/func4 allocator calls; state-threading deferred
-  exact (dlmalloc_alloc_spec {} «module» st len sorry sorry).elim fun _ _ => sorry -- allocator: deferred per MergeSortSpec design
+  -- hpristine and hmargin directly satisfy dlmalloc's obligations
+  exact (dlmalloc_alloc_spec {} «module» st len hpristine hmargin).elim fun _ _ =>
+    sorry -- TODO: state-thread alloc ptr → func0 (copy, simp) → func3_terminates hpristine (derived margin) → func4 dealloc (deferred)
 
 -- merge_sort_correct: compose func33 → func15 + func1
 -- Intended structure:
@@ -218,10 +235,12 @@ private theorem func1_terminates
 -- env bridge: «module».imports = [], run is env-independent
 theorem merge_sort_correct : MergeSortSpec := by
   intro env st dataPtr len n dLo dHi hdHi hpristine hmargin
-  refine (dlmalloc_alloc_spec env «module» st len ?_ ?_).elim fun _ _ => sorry
-  · intro i hi
-    exact hpristine i (by have : heapBase = 1050240 := rfl; omega)
-  · have : heapBase = 1050240 := rfl
-    omega
+  have hpristine' : ∀ i, i < 1050240 →
+      st.mem.bytes i = («module».initialStore (α := Unit)).mem.bytes i :=
+    fun i hi => hpristine i (by have : heapBase = 1050240 := rfl; omega)
+  have hmargin' : 1050240 + 4 * len.toNat ≤ st.mem.pages * 65536 := by
+    have : heapBase = 1050240 := rfl; omega
+  exact (func1_terminates st dataPtr len hpristine' hmargin').elim fun _ _ =>
+    sorry -- TODO: wire func1 result into func33 via wp_wasm_prop_to_TerminatesWith for func33: preamble → func15_terminates → func1 call → postamble
 
 end Wasm.SepLogic.MergeSort
