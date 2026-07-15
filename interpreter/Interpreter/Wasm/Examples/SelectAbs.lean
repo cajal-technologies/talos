@@ -13,7 +13,7 @@ def SelectAbs : Program := [
   .select
 ]
 
-theorem selectAbsSpec (m : Module) (st : Store) (n : UInt32) :
+theorem selectAbsSpec (m : Module) (st : Store Unit) (n : UInt32) :
     wp m SelectAbs
       (fun c => ∃ st' s',
         c = .Fallthrough st' s' ∧
@@ -22,7 +22,9 @@ theorem selectAbsSpec (m : Module) (st : Store) (n : UInt32) :
   unfold SelectAbs
   -- wp_run fires all @[simp] lemmas including wp_select_cons
   wp_run
-  simp [Int32.lt_iff_toInt32_lt]
-  split <;> rfl
+  simp
+  by_cases hneg : n.toInt32 < 0
+  · simp [hneg]
+  · simp [hneg]
 
 end Wasm

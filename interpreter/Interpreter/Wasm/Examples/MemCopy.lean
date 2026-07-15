@@ -1,4 +1,5 @@
 import Interpreter.Wasm.Wp.Tactic
+import Interpreter.Wasm.Examples.Harness
 
 /-! ## Example: memory.copy
 
@@ -9,6 +10,8 @@ import Interpreter.Wasm.Wp.Tactic
     either range escapes the legal byte span. -/
 
 namespace Wasm
+
+open Wasm.Examples
 
 private def initBytes : List UInt8 :=
   [0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88]
@@ -47,18 +50,6 @@ def copyModule : Module :=
       , { body := copyOverlapBody,  results := [.i64] }
       , { body := copyTrapBody } ]
     memory := some { pagesMin := 1, data := [{ offset := some 0, bytes := initBytes }] } }
-
-private def runValues (fuel : Nat) (m : Module) (idx : Nat)
-    (st : Store Unit) (args : List Value) : List Value :=
-  match run fuel m idx st args with
-  | .Success vs _ => vs
-  | _ => []
-
-private def runTrapMsg (fuel : Nat) (m : Module) (idx : Nat)
-    (st : Store Unit) (args : List Value) : Option String :=
-  match run fuel m idx st args with
-  | .Trap _ msg => some msg
-  | _ => none
 
 theorem copy_disjoint_moves_bytes :
     runValues 10 copyModule 0 copyModule.initialStore [] = [.i32 0x44332211] := by

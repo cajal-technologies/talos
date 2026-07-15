@@ -24,7 +24,7 @@ def Gcd : Program := [
   .localGet 0               -- return a
 ]
 
-theorem gcdSpec (m : Module) (st : Store) (n k : UInt32) :
+theorem gcdSpec (m : Module) (st : Store Unit) (n k : UInt32) :
     wp m Gcd
       (fun c => ∃ st' s',
         c = .Fallthrough st' s' ∧
@@ -34,15 +34,15 @@ theorem gcdSpec (m : Module) (st : Store) (n k : UInt32) :
   apply wp_loop_cons
     (Inv := fun st' s' =>
         st' = st ∧
-        ∃ a b : UInt32,
-          s' = { params := [.i32 a, .i32 b], locals := [.i32 0], values := [] } ∧
+        ∃ a b c : UInt32,
+          s' = { params := [.i32 a, .i32 b], locals := [.i32 c], values := [] } ∧
           Nat.gcd a.toNat b.toNat = Nat.gcd n.toNat k.toNat)
     (μ := fun _ s' =>
         match s'.params with
         | [_, .i32 b] => b.toNat
         | _           => 0)
-  · exact ⟨rfl, n, k, rfl, rfl⟩
-  · rintro st' s' ⟨rfl, a, b, rfl, hgcd⟩
+  · exact ⟨rfl, n, k, 0, rfl, rfl⟩
+  · rintro st' s' ⟨rfl, a, b, c, rfl, hgcd⟩
     apply wp_block_cons
     wp_run
     simp
@@ -50,13 +50,14 @@ theorem gcdSpec (m : Module) (st : Store) (n k : UInt32) :
     · subst hb
       simp [Nat.gcd_zero_right] at hgcd
       simp [← hgcd, UInt32.ofNat_toNat]
-    · have hbpos : 0 < b.toNat :=
-        Nat.pos_of_ne_zero (fun h => hb (UInt32.toNat_eq_zero.mp h))
-      refine ⟨rfl, b, a % b, rfl, ?_, ?_⟩
-      · rw [← hgcd]
-        simp [UInt32.toNat_mod]
-        exact (Nat.gcd_rec a.toNat b.toNat).symm
-      · simp [UInt32.toNat_mod]
-        exact Nat.mod_lt a.toNat hbpos
+    · simp only [hb, if_false]
+      have hbpos : 0 < b.toNat := by
+        rcases Nat.eq_zero_or_pos b.toNat with h | h
+        · exact absurd (UInt32.toNat.inj (h.trans UInt32.toNat_zero.symm)) hb
+        · exact h
+      refine ⟨not_false, ?_, ?_⟩
+      · rw [← hgcd, Nat.gcd_comm b.toNat (a.toNat % b.toNat),
+          Nat.gcd_comm a.toNat b.toNat, Nat.gcd_rec b.toNat a.toNat]
+      · exact Nat.mod_lt a.toNat hbpos
 
 end Wasm

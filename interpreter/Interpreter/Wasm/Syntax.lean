@@ -122,6 +122,8 @@ they report 0. -/
 def StorageType.byteSize : StorageType → Nat
   | .packed 8  => 1
   | .packed 16 => 2
+  -- Packed widths are only ever 8 or 16; this catch-all is unreachable for
+  -- well-formed inputs and just keeps the match total.
   | .packed _  => 1
   | .val .i32  => 4
   | .val .i64  => 8

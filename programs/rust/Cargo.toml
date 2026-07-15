@@ -6,11 +6,21 @@ members = [
   "rust_array_tests",
   "rust_u64_tests",
   "num_integer",
+  "num_integer_opt3",
   "rust_u64",
   "total_variation",
+  "float_trunc",
+  "float_minmax",
+  "float_round",
+  "float_reinterpret",
 ]
-
 [profile.release]
 opt-level = 0
 lto = false
 codegen-units = 1
+
+# `num_integer_opt3` is byte-for-byte the same source as `num_integer`, but
+# compiled at `opt-level = 3` (everything else at the workspace default 0). The
+# two emitted wasm modules are the subject of a program-equivalence proof.
+[profile.release.package.num_integer_opt3]
+opt-level = 3

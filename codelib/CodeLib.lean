@@ -1,9 +1,13 @@
 import CodeLib.Attrs
 import CodeLib.Basic
 import CodeLib.Entry
+import CodeLib.Equivalence
 import CodeLib.UInt32
 import CodeLib.UInt64
 import CodeLib.RustStd.Frame
+import CodeLib.RustStd.Region
+import CodeLib.RustStd.MemArray
+import CodeLib.RustStd.MemFillLoop
 import CodeLib.RustStd.UInt
 import CodeLib.RustStd.U64.Basic
 import CodeLib.RustStd.U64.AbsDiff
@@ -25,6 +29,7 @@ import CodeLib.RustStd.Option
 import CodeLib.Near.State
 import CodeLib.Near.Env
 import CodeLib.Near.Proof
+import CodeLib.IEEE32.Exec
 import CodeLib.SepLogic.WasmHeap
 import CodeLib.SepLogic.WasmRules
 import CodeLib.SepLogic.WasmWP

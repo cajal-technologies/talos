@@ -1,4 +1,6 @@
 import Project.NumInteger.Spec
+import Project.NumIntegerOpt3.Spec
+import Project.NumIntegerOpt3.Equivalence
 import Project.RustArray.Spec
 import Project.RustArrayTests.Spec
 import Project.RustU64.Spec
@@ -6,3 +8,7 @@ import Project.RustU64Tests.Spec
 import Project.SwapElements.Spec
 import Project.SwapElements.SwapSepLogic
 import Project.TotalVariation.Spec
+import Project.FloatTrunc.Spec
+import Project.FloatRound.Spec
+import Project.FloatReinterpret.Spec
+import Project.FloatMinmax.Spec

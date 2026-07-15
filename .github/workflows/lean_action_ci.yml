@@ -50,7 +50,14 @@ jobs:
       - uses: leanprover/lean-action@v1
         with:
           lake-package-directory: interpreter
-          build-args: runner
+          # Build the `Interpreter` library (not just the `runner` exe) so the
+          # worked examples under Interpreter/Wasm/Examples/ — which the main
+          # `programs/lean` build does not reach — are compiled and their
+          # `native_decide` checks run, keeping an example from silently
+          # rotting. Coverage is only as complete as Examples/Basic.lean's
+          # umbrella import: this build reaches an example iff Basic.lean
+          # imports it, so every example file must be listed there.
+          build-args: Interpreter runner
           use-mathlib-cache: true
       - name: Install just
         uses: taiki-e/install-action@just

@@ -121,8 +121,9 @@ def readStorageLE (storage : StorageType) (bytes : List UInt8) (off : Nat) : Val
 
 /-- Evaluate a simple element-segment item constant expression to its
 reference value (GC proposal). Covers the forms element segments use:
-`ref.func`, `ref.null`, `ref.i31` of a constant, and scalar constants.
-Heap-allocating items (`struct.new`) are not handled here. -/
+`ref.func`; the null refs `ref.null func`/`extern`/`exn` and `ref.null`
+of a GC heap type; the `i32`/`i64` scalar constants; and `ref.i31` of an
+`i32.const`. Heap-allocating items (`struct.new`) are not handled here. -/
 def evalConstRef : Program → Option Value
   | [.refFunc f]                 => some (.funcref (some f))
   | [.refNull]                   => some (.funcref none)

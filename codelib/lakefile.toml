@@ -11,7 +11,8 @@ path = "../interpreter"
 name = "iris"
 git.url = "https://github.com/leanprover-community/iris-lean.git"
 git.subDir = "Iris"
-git.rev = "v4.31.0"
+# post-v4.32 bump (iris-lean#514); no v4.32.0 tag cut yet, so pin the commit
+git.rev = "c2485783af2626575d171398c86cea8b3a6e79ad"
 
 [[lean_lib]]
 name = "CodeLib"

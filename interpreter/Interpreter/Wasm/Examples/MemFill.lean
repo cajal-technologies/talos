@@ -1,4 +1,5 @@
 import Interpreter.Wasm.Wp.Tactic
+import Interpreter.Wasm.Examples.Harness
 
 /-! ## Example: memory.fill
 
@@ -7,6 +8,8 @@ import Interpreter.Wasm.Wp.Tactic
     any write when the destination range escapes the legal byte span. -/
 
 namespace Wasm
+
+open Wasm.Examples
 
 /-- Fill the first 8 bytes with `0xAB`, then read them back as one i64.
     The expected payload is the byte `0xAB` repeated eight times. -/
@@ -27,20 +30,6 @@ def fillTrapBody : Program := [
 def fillModule : Module :=
   { funcs := [{ body := fillThenReadBody, results := [.i64] }, { body := fillTrapBody }]
     memory := some { pagesMin := 1 } }
-
-private def runValues (fuel : Nat) (m : Module) (idx : Nat)
-    (st : Store Unit) (args : List Value) : List Value :=
-  match run fuel m idx st args with
-  | .Success vs _ => vs
-  | _ => []
-
-/-- Project the trap message (if any) out of a `Result Unit`, so we can
-    `native_decide` against it without needing `DecidableEq Store Unit`. -/
-private def runTrapMsg (fuel : Nat) (m : Module) (idx : Nat)
-    (st : Store Unit) (args : List Value) : Option String :=
-  match run fuel m idx st args with
-  | .Trap _ msg => some msg
-  | _ => none
 
 theorem fill_then_load_returns_repeated_byte :
     runValues 10 fillModule 0 fillModule.initialStore []

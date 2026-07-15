@@ -40,10 +40,6 @@ inductive Outcome where
   | moduleUnavailable
 deriving Repr, Inhabited
 
-def Outcome.isFail : Outcome → Bool
-  | .fail _ | .interpreterError _ | .outOfFuel => true
-  | _ => false
-
 /-- One executed command's recorded outcome, with its source `.wast` line. -/
 structure CmdResult where
   line    : Nat

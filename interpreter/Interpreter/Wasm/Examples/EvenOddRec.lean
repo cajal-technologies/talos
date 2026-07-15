@@ -1,6 +1,7 @@
 import Interpreter.Wasm.Wp.Tactic
 import Interpreter.Wasm.Wp.Block
 import Interpreter.Wasm.Wp.Call
+import Interpreter.Wasm.Examples.UIntLemmas
 
 /-! ## Example: IsEvenRec / IsOddRec
 
@@ -54,12 +55,7 @@ theorem evenOddSpec : ∀ n : UInt32,
       simp
       by_cases hn : n = 0
       · subst hn; simp
-      · have hn1 : (n - 1).toNat < n.toNat := by
-          have hnn : n.toNat ≠ 0 := fun h => hn (UInt32.toNat.inj h)
-          rw [UInt32.toNat_sub]
-          simp only [show (1 : UInt32).toNat = 1 from rfl]
-          have := n.toNat_lt
-          omega
+      · have hn1 : (n - 1).toNat < n.toNat := UInt32.toNat_sub_one_lt (fun h => hn (UInt32.toNat.inj h))
         have ihOdd := (ih' (n - 1) hn1).2
         simp [hn]
         apply wp_call_cons
@@ -71,11 +67,7 @@ theorem evenOddSpec : ∀ n : UInt32,
           wp_run
           simp
           have hnn : n.toNat ≠ 0 := fun h => hn (UInt32.toNat.inj h)
-          have hnsub : (n - 1).toNat = n.toNat - 1 := by
-            rw [UInt32.toNat_sub]
-            simp only [show (1 : UInt32).toNat = 1 from rfl]
-            have := n.toNat_lt
-            omega
+          have hnsub := UInt32.toNat_sub_one_eq hnn
           rw [hnsub]
           split_ifs <;> simp_all <;> omega
   · -- IsOddRec
@@ -89,12 +81,7 @@ theorem evenOddSpec : ∀ n : UInt32,
       simp
       by_cases hn : n = 0
       · subst hn; simp
-      · have hn1 : (n - 1).toNat < n.toNat := by
-          have hnn : n.toNat ≠ 0 := fun h => hn (UInt32.toNat.inj h)
-          rw [UInt32.toNat_sub]
-          simp only [show (1 : UInt32).toNat = 1 from rfl]
-          have := n.toNat_lt
-          omega
+      · have hn1 : (n - 1).toNat < n.toNat := UInt32.toNat_sub_one_lt (fun h => hn (UInt32.toNat.inj h))
         have ihEven := (ih' (n - 1) hn1).1
         simp [hn]
         apply wp_call_cons
@@ -106,11 +93,7 @@ theorem evenOddSpec : ∀ n : UInt32,
           wp_run
           simp
           have hnn : n.toNat ≠ 0 := fun h => hn (UInt32.toNat.inj h)
-          have hnsub : (n - 1).toNat = n.toNat - 1 := by
-            rw [UInt32.toNat_sub]
-            simp only [show (1 : UInt32).toNat = 1 from rfl]
-            have := n.toNat_lt
-            omega
+          have hnsub := UInt32.toNat_sub_one_eq hnn
           rw [hnsub]
           split_ifs <;> simp_all <;> omega
 

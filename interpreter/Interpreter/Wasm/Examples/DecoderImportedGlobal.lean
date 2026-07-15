@@ -1,6 +1,7 @@
 import Interpreter.Wasm.Decoder.Wat
 import Interpreter.Wasm.Wp.Tactic
 import Interpreter.Wasm.Wp.Call
+import Interpreter.Wasm.Examples.Harness
 
 /-! ## Example: imported-global index offset in the WAT decoder
 
@@ -15,6 +16,7 @@ import Interpreter.Wasm.Wp.Call
     global end-to-end so a future miscount fails the build. -/
 
 namespace Wasm
+open Wasm.Examples
 namespace DecoderImportedGlobal
 
 /-- A `.wat` module with one imported global `spectest.ig : i32` (unified
@@ -28,10 +30,7 @@ def importedGlobalWat : String := "
     global.get $d))
 "
 
-private def decoded : Wasm.Module :=
-  match Wasm.Decoder.Wat.decode importedGlobalWat with
-  | .ok m    => m
-  | .error _ => default
+private def decoded : Wasm.Module := decodeOrDefault importedGlobalWat
 
 /-- One imported global at index `0`, one declared global at index `1`. -/
 theorem importedGlobalWat_global_layout :
@@ -56,16 +55,8 @@ theorem importedGlobalWat_getD_index :
 /-- End-to-end: running `getD` reads the declared global and returns `99`.
 A wrong index would read the import's zero slot (`0`) or trap out of
 bounds (empty result). -/
-private def emptyEnv : HostEnv Unit := { funcs := [] }
-
-private def runVals (m : Module) (env : HostEnv Unit) (idx : Nat)
-    (st : Store Unit) (args : List Value) : List Value :=
-  match run 10 m idx st args env with
-  | .Success vs _ => vs
-  | _ => []
-
 theorem importedGlobalWat_getD_returns_99 :
-    runVals decoded emptyEnv 0 (decoded.initialStore (α := Unit)) []
+    runValues 10 decoded 0 (decoded.initialStore (α := Unit)) []
       = [.i32 99] := by
   native_decide
 
