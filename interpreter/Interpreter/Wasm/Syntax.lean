@@ -640,7 +640,7 @@ inductive CompositeType where
   | func   (sig : FuncType)
   | struct (fields : List FieldType)
   | array  (elem : FieldType)
-deriving Repr, Inhabited
+deriving Repr, Inhabited, DecidableEq, BEq
 
 /-- One entry of the module's GC type table: the composite type plus the
 declared immediate supertype index (`sub $super …`), if any. Indexed by
@@ -652,6 +652,14 @@ structure GcTypeDef where
   without `final`). A supertype named by another type's `sub` clause must
   be non-final. -/
   «final» : Bool := true
+  /-- Recursion-group id for members of a multi-member `(rec …)` group:
+  every member carries `some g` with the same `g` (the decoder uses the
+  group's first type index). `none` means the type forms a singleton
+  recursion group — the common case, and the default for hand-built
+  modules. Iso-recursive type equivalence (`Module.gcTypeEquiv`) compares
+  whole recursion groups, so this matters exactly when a `(rec …)` has
+  more than one member. -/
+  recGroup : Option Nat := none
 deriving Repr, Inhabited
 
 /-- Declaration of a single table. The interpreter only models
@@ -936,12 +944,75 @@ def Module.funcTypeIdx? (m : Module) (i : Nat) : Option Nat :=
   | some _ => none
   | none   => (m.funcs[i - m.imports.length]?).bind (·.typeIdx)
 
-/-- Whether GC type index `a` is a (reflexive, transitive) subtype of `b`,
-following the declared `sub $super` chain. Bounded by the type-table size
-so a malformed cyclic chain still terminates. -/
+/-- The member indices of the recursion group containing GC type `x`, in
+index order. A type with `recGroup := none` (or out of range) is its own
+singleton group; members of a multi-member `(rec …)` group share a
+`recGroup := some g` marker. -/
+def Module.gcRecGroup (m : Module) (x : Nat) : List Nat :=
+  match m.gcTypes[x]? with
+  | some { recGroup := some g, .. } =>
+    (List.range m.gcTypes.length).filter fun i =>
+      match m.gcTypes[i]? with
+      | some d => d.recGroup == some g
+      | none   => false
+  | _ => [x]
+
+/-- Iso-recursive equivalence of GC type indices `a` and `b` (issue #96):
+whether they denote the *same* defined type, per the spec's canonical
+(rec-group-wise) reading, rather than merely being the same table index.
+Two separately declared but structurally identical types — e.g. twin
+`(struct (field i32))` declarations — are one type and must compare equal.
+
+Two indices are equivalent when their recursion groups have the same
+shape and they sit at the same position within them: pairwise, the
+members' composite types and finality match, and their declared
+supertypes are either the same relative member of their own group (a
+recursive reference) or, when they point outside the group, equivalent
+defined types in turn. Composite types here contain no nested type
+indices (our reduced value-type lattice collapses reference types), so
+only the `super` edges recurse; the recursion is fuel-bounded by the
+type-table size so malformed cyclic chains still terminate.
+
+Known precision limit, inherited from the value-type lattice: two types
+that differ *only* in a field's or signature's concrete reference type
+(e.g. `(struct (field (ref $f1)))` vs `(struct (field (ref $f2)))` with
+`$f1 ≢ $f2`) canonicalize to the same composite here and are
+conservatively identified as equivalent, where the spec keeps them
+apart. Distinguishing them needs concrete heap types in `ValueType`. -/
+def Module.gcTypeEquiv (m : Module) (a b : Nat) : Bool :=
+  let rec go (fuel : Nat) (a b : Nat) : Bool :=
+    a == b ||
+    (let ga := m.gcRecGroup a
+     let gb := m.gcRecGroup b
+     ga.length == gb.length &&
+     ga.idxOf a == gb.idxOf b &&
+     (ga.zip gb).all fun (x, y) =>
+       match m.gcTypes[x]?, m.gcTypes[y]? with
+       | some dx, some dy =>
+         dx.final == dy.final &&
+         dx.comp == dy.comp &&
+         (match dx.super, dy.super with
+          | none, none => true
+          | some px, some py =>
+            (match ga.idxOf? px, gb.idxOf? py with
+             | some i, some j => i == j
+             | none, none =>
+               (match fuel with
+                | 0     => false
+                | f + 1 => go f px py)
+             | _, _ => false)
+          | _, _ => false)
+       | _, _ => false)
+  go m.gcTypes.length a b
+
+/-- Whether GC type index `a` is a (reflexive, transitive) subtype of `b`:
+some type on `a`'s declared `sub $super` chain is *equivalent* to `b`
+(`gcTypeEquiv`, not index equality — a structurally identical twin
+declaration of `b` counts). Bounded by the type-table size so a malformed
+cyclic chain still terminates. -/
 def Module.gcTypeSubtype (m : Module) (a b : Nat) : Bool :=
   let rec go (fuel x : Nat) : Bool :=
-    if x == b then true
+    if m.gcTypeEquiv x b then true
     else match fuel with
       | 0      => false
       | f + 1  => match m.gcTypes[x]? with

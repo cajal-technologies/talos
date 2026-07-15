@@ -75,13 +75,37 @@ def AnyRef.matchesHeap (m : Module) (st : Store α) (ht : GcHeapType) : AnyRef �
 /-- Whether reference value `v` matches the target reference type
 `(ref null?ₙ ht)` used by `ref.test`/`ref.cast`/`br_on_cast`. The null
 reference matches exactly when the target is nullable and `ht` is in the
-same (any vs func vs extern) bottom family. -/
+same (any vs func vs extern) bottom family.
+
+A non-null funcref matches the abstract `func` heap type always, and a
+concrete target `(ref $ft)` when the function's declared type is a
+subtype of `$ft` (issue #96). When the declared type is unrecorded
+(`funcTypeIdx? = none`, hand-built modules) the check degrades to
+structural equality of the function's signature against the target's
+composite type, mirroring `Module.indirectCallTypeOk`. -/
 def gcRefMatches (m : Module) (st : Store α) (nullable : Bool)
     (ht : GcHeapType) : Value → Bool
   | .anyref none      => nullable && ht.inAnyHierarchy
   | .anyref (some r)  => r.matchesHeap m st ht
-  | .funcref none     => nullable && (ht == .func || ht == .noFunc)
-  | .funcref (some _) => ht == .func
+  | .funcref none     =>
+    nullable &&
+    (ht == .func || ht == .noFunc ||
+     -- Null also inhabits every nullable *concrete* function type: the
+     -- null funcref has type `nofunc`, the bottom of the func family.
+     (match ht with
+      | .concrete t => match m.gcComposite? t with
+        | some (.func _) => true
+        | _ => false
+      | _ => false))
+  | .funcref (some f) => match ht with
+    | .func       => true
+    | .concrete t =>
+      (match m.funcTypeIdx? f with
+       | some src => m.gcTypeSubtype src t
+       | none     => match m.funcSig? f, m.gcComposite? t with
+         | some fn, some (.func ty) => fn == ty
+         | _, _ => false)
+    | _ => false
   | .externref none   => nullable && (ht == .extern || ht == .noExtern)
   | .externref (some _) => ht == .extern
   | _                 => false

@@ -441,6 +441,10 @@ private structure TypeEntry where
   fieldNames : List (Option String) := []
   /-- `false` when declared `(sub …)` without `final` (open for subtyping). -/
   isFinal : Bool := true
+  /-- Recursion-group marker for members of a multi-member `(rec …)` group
+  (the group's first type index); `none` for singleton groups. Threaded
+  into `GcTypeDef.recGroup` for iso-recursive type equivalence. -/
+  recGroup : Option Nat := none
 deriving Inhabited
 
 structure Ctx where
@@ -1798,15 +1802,21 @@ private structure FuncDecl where
   inlineExports : List String
   func          : Wasm.Function
 
-private def resolveTypeRef (types : Array TypeEntry) (s : String)
-    : Except Err (List Wasm.ValueType × List Wasm.ValueType) := do
-  let idx ← if s.startsWith "$" then
+/-- Resolve a `(type N)` / `(type $sig)` reference to its type-table
+index. -/
+private def resolveTypeIdxRef (types : Array TypeEntry) (s : String)
+    : Except Err Nat :=
+  if s.startsWith "$" then
     let name := (s.drop 1).toString
     match types.findIdx? (fun t => t.symId = some name) with
     | some i => .ok i
     | none => .error s!"unknown type id: {s}"
   else
     parseNat s
+
+private def resolveTypeRef (types : Array TypeEntry) (s : String)
+    : Except Err (List Wasm.ValueType × List Wasm.ValueType) := do
+  let idx ← resolveTypeIdxRef types s
   match types[idx]? with
   | some { sig := some sig, .. } => .ok sig
   | some { sig := none, .. } =>
@@ -1998,6 +2008,11 @@ private def parseFunc (funcIds : Std.HashMap String Nat)
   let mut inlineExports : List String := []
   let mut localIds : Std.HashMap String Nat := {}
   let mut typeApplied : Bool := false
+  -- Declared `(type N)` index, recorded on the function so the runtime
+  -- nominal type checks (`(return_)call_indirect`, `ref.test`/`ref.cast`
+  -- against a concrete function type) can consult the `rec`/`sub`
+  -- hierarchy (issues #95/#96).
+  let mut declaredTypeIdx : Option Nat := none
   let mut rest := xs
   match rest with
   | .atom a :: r =>
@@ -2083,6 +2098,7 @@ private def parseFunc (funcIds : Std.HashMap String Nat)
           paramTypes := ps
           resultTypes := rs
           typeApplied := true
+          declaredTypeIdx := some (← resolveTypeIdxRef types ref)
         | _ => throw "malformed (type ...) reference"
         rest := r
       | "export" =>
@@ -2109,6 +2125,7 @@ private def parseFunc (funcIds : Std.HashMap String Nat)
              locals  := localTypes
              body    := instrs
              results := resultTypes
+             typeIdx := declaredTypeIdx
            } }
 
 private def resolveFuncRef (idOf : Std.HashMap String Nat) (s : String)
@@ -2846,10 +2863,19 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
       types := types.push (parseTypeField body)
     -- Recursive type groups (`(rec (type …) …)`, GC proposal): the inner
     -- types occupy consecutive indices, flattened into the table here.
+    -- Multi-member groups are tagged with a shared recursion-group marker
+    -- (the first member's index) so iso-recursive type equivalence can
+    -- compare whole groups; singleton groups stay untagged.
     | .list (.atom "rec" :: inner) =>
+      let groupStart := types.size
+      let groupSize := inner.countP fun
+        | .list (.atom "type" :: _) => true
+        | _ => false
+      let marker := if groupSize > 1 then some groupStart else none
       for t in inner do
         match t with
-        | .list (.atom "type" :: body) => types := types.push (parseTypeField body)
+        | .list (.atom "type" :: body) =>
+          types := types.push { parseTypeField body with recGroup := marker }
         | _ => pure ()
     | _ => pure ()
   let (imports, importFuncIds) ← collectImports types rest
@@ -3006,7 +3032,8 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
       | none   => match te.sig with
         | some (ps, rs) => .func { params := ps, results := rs }
         | none          => .func {}
-    { comp, super := te.superRef.bind resolveSuper, «final» := te.isFinal }
+    { comp, super := te.superRef.bind resolveSuper, «final» := te.isFinal,
+      recGroup := te.recGroup }
   return { funcs    := decls.toList.map (·.func)
            exports  := exports.toList
            globals  := globImps.map (·.2) ++ globalDecls.toList

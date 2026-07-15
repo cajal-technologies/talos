@@ -2106,7 +2106,7 @@ br_on_cast_fail.wast:98 assert_return pass
 br_on_cast_fail.wast:99 assert_return fail
 br_on_cast_fail.wast:104 module pass
 br_on_cast_fail.wast:220 action pass
-br_on_cast_fail.wast:221 action fail
+br_on_cast_fail.wast:221 action pass
 br_on_cast_fail.wast:226 module pass
 br_on_cast_fail.wast:241 assert_invalid skipped:assert_invalid: not rejected
 br_on_cast_fail.wast:250 assert_invalid skipped:assert_invalid: not rejected
@@ -31318,7 +31318,7 @@ ref_cast.wast:93 assert_trap pass
 ref_cast.wast:94 assert_trap pass
 ref_cast.wast:99 module pass
 ref_cast.wast:185 action pass
-ref_cast.wast:186 action fail
+ref_cast.wast:186 action pass
 ref_eq.wast:1 module pass
 ref_eq.wast:29 action pass
 ref_eq.wast:31 assert_return pass
@@ -31551,7 +31551,7 @@ ref_test.wast:176 assert_return fail
 ref_test.wast:177 assert_return pass
 ref_test.wast:182 module pass
 ref_test.wast:329 assert_return pass
-ref_test.wast:330 assert_return fail
+ref_test.wast:330 assert_return pass
 relaxed_dot_product.wast:3 module pass
 relaxed_dot_product.wast:18 assert_return pass
 relaxed_dot_product.wast:24 assert_return pass
@@ -64049,9 +64049,9 @@ type-rec.wast:157 assert_unlinkable skipped:assert_unlinkable
 type-rec.wast:167 module pass
 type-rec.wast:174 assert_return pass
 type-rec.wast:176 module pass
-type-rec.wast:183 assert_trap fail
+type-rec.wast:183 assert_trap pass
 type-rec.wast:185 module pass
-type-rec.wast:192 assert_trap fail
+type-rec.wast:192 assert_trap pass
 type-rec.wast:197 module pass
 type-rec.wast:205 assert_invalid skipped:assert_invalid: not rejected
 type-rec.wast:217 assert_invalid skipped:assert_invalid: not rejected
@@ -64088,33 +64088,33 @@ type-subtyping.wast:283 module pass
 type-subtyping.wast:336 assert_return fail
 type-subtyping.wast:337 assert_trap pass
 type-subtyping.wast:338 assert_trap pass
-type-subtyping.wast:339 assert_trap fail
+type-subtyping.wast:339 assert_trap pass
 type-subtyping.wast:340 assert_trap pass
 type-subtyping.wast:341 assert_trap pass
 type-subtyping.wast:342 assert_trap pass
 type-subtyping.wast:344 module pass
-type-subtyping.wast:368 assert_trap fail
-type-subtyping.wast:369 assert_trap fail
+type-subtyping.wast:368 assert_trap pass
+type-subtyping.wast:369 assert_trap pass
 type-subtyping.wast:370 assert_trap pass
 type-subtyping.wast:371 assert_trap pass
 type-subtyping.wast:373 module pass
 type-subtyping.wast:398 assert_return pass
-type-subtyping.wast:399 assert_trap fail
-type-subtyping.wast:400 assert_trap fail
+type-subtyping.wast:399 assert_trap pass
+type-subtyping.wast:400 assert_trap pass
 type-subtyping.wast:402 module pass
-type-subtyping.wast:412 assert_return fail
+type-subtyping.wast:412 assert_return pass
 type-subtyping.wast:414 module pass
-type-subtyping.wast:430 assert_return fail
+type-subtyping.wast:430 assert_return pass
 type-subtyping.wast:432 module pass
-type-subtyping.wast:442 assert_return pass
+type-subtyping.wast:442 assert_return fail
 type-subtyping.wast:444 module pass
-type-subtyping.wast:453 assert_return fail
+type-subtyping.wast:453 assert_return pass
 type-subtyping.wast:455 module pass
-type-subtyping.wast:473 assert_return fail
+type-subtyping.wast:473 assert_return pass
 type-subtyping.wast:476 module pass
-type-subtyping.wast:488 assert_return fail
+type-subtyping.wast:488 assert_return pass
 type-subtyping.wast:492 module pass
-type-subtyping.wast:510 assert_return fail
+type-subtyping.wast:510 assert_return pass
 type-subtyping.wast:515 module pass
 type-subtyping.wast:523 assert_return pass
 type-subtyping.wast:525 module pass
