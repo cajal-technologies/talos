@@ -1,5 +1,5 @@
-import Project.NumInteger.Program        -- opt-level 0 build → `Project.NumInteger.module`
-import Project.NumIntegerOpt3.Program    -- opt-level 3 build → `Project.NumIntegerOpt3.module`
+import Project.NumInteger.Spec           -- opt-level 0 build + its `gcd_u64_correct`
+import Project.NumIntegerOpt3.Spec        -- opt-level 3 build + its `mod3_gcd`
 
 /-!
 # Equivalence of the two `gcd_u64` builds (`opt-level = 0` vs `opt-level = 3`)
@@ -54,9 +54,6 @@ completely arbitrary initial state. Restricted to the canonical initial store
 (`global 0 = 1048576`, 16 zeroed pages — i.e. `mod0.initialStore`) both builds
 are total and their outcomes coincide. That is why `mod0.initialStore` is the
 fixed starting store passed to `ObservationallyEquiv` below.
-
-Everything in this file is a **statement only** — the proofs are left as
-`sorry` for a follow-up.
 -/
 
 namespace Project.NumIntegerOpt3.Equivalence
@@ -91,13 +88,26 @@ def GcdOptEquiv : Prop :=
   ∀ (env : HostEnv Unit) (a b : UInt64),
     ObservationallyEquiv env mod0 entry0 mod3 entry3 mod0.initialStore [.i64 a, .i64 b]
 
-/-! ## Proof obligation (left as `sorry` — to be discharged in a follow-up)
+/-! ## Proof
 
-This is intentionally unproved: this file is the *statement* deliverable.
-The modules are not wired into `lean/Project.lean`, so the `sorry` warning does
-not reach the default build / CI. -/
+The proof reduces the equivalence to a *common outcome* both builds reach
+(`ObservationallyEquiv.of_common_outcome`): each exported `gcd_u64` terminates
+with the same value — the gcd — and the same (trivial) host state. The opt0
+side reuses `Project.NumInteger.Spec.gcd_u64_correct`; the opt3 side uses
+`Project.NumIntegerOpt3.Spec.mod3_gcd`. Neither `gcd_u64` touches the host
+state, so the `Store.host` conjunct is `rfl`. -/
 
 theorem gcd_opt_equiv : GcdOptEquiv := by
-  sorry
+  intro env a b
+  refine ObservationallyEquiv.of_common_outcome
+    (r := [.i64 (UInt64.ofNat (Nat.gcd a.toNat b.toNat))]) (h := ()) ?_ ?_
+  · -- opt0: `gcd_u64_correct` returns `gcd b a`; commute to `gcd a b`.
+    refine (Project.NumInteger.Spec.gcd_u64_correct env mod0.initialStore b a rfl).mono ?_
+    rintro st vs rfl
+    exact ⟨by rw [Nat.gcd_comm], rfl⟩
+  · -- opt3: `mod3_gcd` returns `gcd a b` and leaves the store unchanged.
+    refine (Project.NumIntegerOpt3.Spec.mod3_gcd env mod0.initialStore a b).mono ?_
+    rintro st vs ⟨rfl, _⟩
+    exact ⟨rfl, rfl⟩
 
 end Project.NumIntegerOpt3.Equivalence
