@@ -1,4 +1,6 @@
 import Project.NumInteger.Spec
+import Project.NumIntegerOpt3.Spec
+import Project.NumIntegerOpt3.Equivalence
 import Project.RustArray.Spec
 import Project.RustArrayTests.Spec
 import Project.RustU64.Spec
