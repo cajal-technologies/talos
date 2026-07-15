@@ -62,6 +62,44 @@ theorem Mem.words64_write64_outside (m : Mem) (base : UInt32) (n : Nat) (a : UIn
   have haddr := Mem.words64_slotAddr_toNat base k (by omega)
   exact Mem.read64_write64_disjoint m a _ v (by rw [haddr]; omega)
 
+/-- Exchanging two array elements, as a view equation: if `m'` reads back `m`'s
+`j`-th word at slot `i`, `m`'s `i`-th word at slot `j`, and agrees with `m` at
+every other slot of the array, then `m'`'s view is `m`'s view with positions `i`
+and `j` swapped.
+
+This is the view-level counterpart of the per-element postcondition a `swap`
+proof naturally produces, and it is what lets such a proof be *composed* — e.g.
+two builds of the same swap can be compared by observing this one list, rather
+than their (genuinely different) whole memories.
+
+Everything is stated at the slot addresses `base + 8*k`, so no no-wrap
+hypothesis is needed; `i = j` is allowed (both sides then degenerate to `m`'s
+view). -/
+theorem Mem.words64_swap {m m' : Mem} {base : UInt32} {n i j : Nat}
+    (hi : i < n) (hj : j < n)
+    (h_i : m'.read64 (base + 8 * UInt32.ofNat i) = m.read64 (base + 8 * UInt32.ofNat j))
+    (h_j : m'.read64 (base + 8 * UInt32.ofNat j) = m.read64 (base + 8 * UInt32.ofNat i))
+    (h_k : ∀ k < n, k ≠ i → k ≠ j →
+      m'.read64 (base + 8 * UInt32.ofNat k) = m.read64 (base + 8 * UInt32.ofNat k)) :
+    m'.words64 base n =
+      ((m.words64 base n).set i (m.read64 (base + 8 * UInt32.ofNat j))).set j
+        (m.read64 (base + 8 * UInt32.ofNat i)) := by
+  apply List.ext_getElem (by simp)
+  intro k hk _
+  simp only [Mem.length_words64] at hk
+  rw [Mem.getElem_words64 m' base n k hk]
+  by_cases hkj : k = j
+  · subst hkj
+    rw [List.getElem_set_self]
+    exact h_j
+  · rw [List.getElem_set_ne (Ne.symm hkj)]
+    by_cases hki : k = i
+    · subst hki
+      rw [List.getElem_set_self]
+      exact h_i
+    · rw [List.getElem_set_ne (Ne.symm hki), Mem.getElem_words64 m base n k hk]
+      exact h_k k hk hki hkj
+
 /-- One more word: `words64 base (n+1)` is `words64 base n` with the `n`-th
 word appended. -/
 theorem Mem.words64_succ (m : Mem) (base : UInt32) (n : Nat) :
