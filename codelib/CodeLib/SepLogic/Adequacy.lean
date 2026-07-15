@@ -33,8 +33,8 @@ intended future shape.
 (yet) tied to the physical `st.mem` — see the status note in
 `WasmRules.lean`. Memory facts enter the load/store rules below as pure
 hypotheses about `st.mem`. -/
-def wp_wasm_F (Φ : LeibnizO WasmState → IProp WasmHeapGF)
-    (s : LeibnizO WasmState) : IProp WasmHeapGF :=
+def wp_wasm_F (Φ : DiscreteO WasmState → IProp WasmHeapGF)
+    (s : DiscreteO WasmState) : IProp WasmHeapGF :=
   let ws := s.car
   match ws.prog with
   | [] =>
@@ -58,7 +58,7 @@ def wp_wasm (m : Module) (st : Store Unit) (locals : Locals)
   bi_least_fixpoint wp_wasm_F ⟨{ m, st, locals, prog, env, Q }⟩
 
 instance instBIMonoPredWasmF :
-    BIMonoPred (PROP := IProp WasmHeapGF) (A := LeibnizO WasmState) wp_wasm_F where
+    BIMonoPred (PROP := IProp WasmHeapGF) (A := DiscreteO WasmState) wp_wasm_F where
   mono_pred := by
     intro Φ Ψ hΦ hΨ
     iintro #HΦΨ %s
@@ -82,7 +82,7 @@ instance instBIMonoPredWasmF :
         · iapply HΦΨ
           iexact HΦ
   mono_pred_ne.ne _ _ _ H :=
-    (OFE.eq_of_eqv (OFE.discrete H)) ▸ OFE.Dist.rfl
+    (DiscreteO.ext (DiscreteO.dist_inj H)) ▸ OFE.Dist.rfl
 
 omit inst in
 private theorem exec_cons {m : Module} {st : Store Unit} {locals : Locals}
@@ -143,7 +143,7 @@ theorem wp_wasm_step
       · iexact Hσ'
       · iexact Hwp
 
--- linter false positive: `LeibnizO.car` below is a structural projection
+-- linter false positive: `DiscreteO.car` below is a structural projection
 -- reduction the subsequent `split` depends on, but unusedSimpArgs flags it
 set_option linter.unusedSimpArgs false in
 theorem wasm_adequacy
@@ -154,16 +154,16 @@ theorem wasm_adequacy
     genHeapInterp σ ∗ wp_wasm m st locals prog env Q ⊢
       ⌜wp_wasm_prop m st locals prog env Q⌝ := by
   unfold wp_wasm
-  let Ψ : LeibnizO WasmState → IProp WasmHeapGF :=
+  let Ψ : DiscreteO WasmState → IProp WasmHeapGF :=
     fun s => iprop% ∀ σ' : WasmHeapMap (Option UInt8), genHeapInterp σ' -∗
       ⌜wp_wasm_prop s.car.m s.car.st s.car.locals s.car.prog s.car.env s.car.Q⌝
   haveI hΨ : OFE.NonExpansive Ψ :=
-    ⟨fun _ _ _ H => (OFE.eq_of_eqv (OFE.discrete H)) ▸ OFE.Dist.rfl⟩
-  have hstep : ⊢ □ (∀ y : LeibnizO WasmState, wp_wasm_F Ψ y -∗ Ψ y) := by
+    ⟨fun _ _ _ H => (DiscreteO.ext (DiscreteO.dist_inj H)) ▸ OFE.Dist.rfl⟩
+  have hstep : ⊢ □ (∀ y : DiscreteO WasmState, wp_wasm_F Ψ y -∗ Ψ y) := by
     iintro !> %s
     obtain ⟨⟨m', st', locals', prog', env', Q'⟩⟩ := s
     unfold wp_wasm_F Ψ
-    simp only [LeibnizO.car]
+    simp only [DiscreteO.car]
     split
     · refine BI.entails_wand (BI.pure_elim' fun h =>
         BI.forall_intro fun _ => BI.wand_intro (BI.pure_intro ⟨0, ?_⟩))
@@ -183,7 +183,7 @@ theorem wasm_adequacy
       Ψ ⟨{ m, st, locals, prog, env, Q }⟩ :=
     BI.sep_elim_emp_valid_left hstep
       (BI.wand_elim ((BI.wand_entails (least_fixpoint_iter (F := wp_wasm_F))).trans
-        (BI.forall_elim (⟨{ m, st, locals, prog, env, Q }⟩ : LeibnizO WasmState))))
+        (BI.forall_elim (⟨{ m, st, locals, prog, env, Q }⟩ : DiscreteO WasmState))))
   exact ((BI.sep_mono_right hfp).trans
     (BI.sep_mono_right (BI.forall_elim σ))).trans BI.wand_elim_right
 

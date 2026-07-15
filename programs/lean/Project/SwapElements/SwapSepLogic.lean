@@ -80,6 +80,7 @@ without `global 0 = 1048576` on entry, func4's scratch frame (`global 0 −
 -- func3 spills ptr/len into the 8-byte slot at [1048568, 1048575]
 -- body: write32(1048572, len) then write32(1048568, ptr)
 set_option maxHeartbeats 4000000 in
+omit inst in
 private theorem func3_terminates (env : HostEnv Unit) (st : Store Unit)
     (ptr len : UInt32)
     (hpg : (1048576 : Nat) ≤ st.mem.pages * 65536) :
@@ -164,6 +165,7 @@ private theorem func3_terminates (env : HostEnv Unit) (st : Store Unit)
 
 -- func2: the actual swap via scratch at 1048552 (global0 = 1048560 at call time)
 set_option maxHeartbeats 4000000 in
+omit inst in
 private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
     (ptr_a ptr_b : UInt32)
     (hg0 : st.globals.globals[0]? = some (.i32 (1048560 : UInt32)))
@@ -331,6 +333,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
 
 -- func1: bounds-check i < len and j < len, compute addresses, call func2
 -- called from func0 with args [.i32 1048604, .i32 j, .i32 i, .i32 len, .i32 ptr]
+omit inst in
 private theorem func1_terminates_sw (env : HostEnv Unit) (st : Store Unit)
     (ptr len i j : UInt32)
     (hi : i < len) (hj : j < len)
@@ -351,16 +354,10 @@ private theorem func1_terminates_sw (env : HostEnv Unit) (st : Store Unit)
             st'.mem.read64 a = st.mem.read64 a) := by
   have hi_nat : i.toNat < len.toNat := hi
   have hj_nat : j.toNat < len.toNat := hj
-  have helemI : (elemAddr ptr i).toNat = ptr.toNat + 8 * i.toNat := by
-    unfold elemAddr
-    rw [UInt32.toNat_add, UInt32.toNat_mul]
-    simp only [show (8 : UInt32).toNat = 8 from rfl]
-    rw [Nat.mod_eq_of_lt (by omega), Nat.mod_eq_of_lt (by omega)]
-  have helemJ : (elemAddr ptr j).toNat = ptr.toNat + 8 * j.toNat := by
-    unfold elemAddr
-    rw [UInt32.toNat_add, UInt32.toNat_mul]
-    simp only [show (8 : UInt32).toNat = 8 from rfl]
-    rw [Nat.mod_eq_of_lt (by omega), Nat.mod_eq_of_lt (by omega)]
+  have helemI : (elemAddr ptr i).toNat = ptr.toNat + 8 * i.toNat :=
+    elemAddr_toNat ptr i (by omega)
+  have helemJ : (elemAddr ptr j).toNat = ptr.toNat + 8 * j.toNat :=
+    elemAddr_toNat ptr j (by omega)
   have hpg_a : (elemAddr ptr i).toNat + 8 ≤ st.mem.pages * 65536 := by
     rw [helemI]; omega
   have hpg_b : (elemAddr ptr j).toNat + 8 ≤ st.mem.pages * 65536 := by
@@ -370,11 +367,9 @@ private theorem func1_terminates_sw (env : HostEnv Unit) (st : Store Unit)
   have hdisj : elemAddr ptr i = elemAddr ptr j ∨
                (elemAddr ptr i).toNat + 8 ≤ (elemAddr ptr j).toNat ∨
                (elemAddr ptr j).toNat + 8 ≤ (elemAddr ptr i).toNat := by
-    rcases Nat.lt_or_ge i.toNat j.toNat with h | h
-    · right; left; rw [helemI, helemJ]; omega
-    · rcases Nat.eq_or_lt_of_le h with heq | hlt
-      · left; apply UInt32.toNat.inj; rw [helemI, helemJ]; omega
-      · right; right; rw [helemI, helemJ]; omega
+    rcases eq_or_ne i j with rfl | hne
+    · exact Or.inl rfl
+    · exact Or.inr (elemAddr_disjoint ptr i j (by omega) (by omega) hne)
   -- Call func2 and build the exec trace through func1's nested blocks
   obtain ⟨N2, hN2⟩ := func2_terminates env st (elemAddr ptr i) (elemAddr ptr j)
       hg0 (by omega) hpg_a hpg_b hge_a hge_b hdisj
@@ -428,6 +423,7 @@ private theorem func1_terminates_sw (env : HostEnv Unit) (st : Store Unit)
   · exact ⟨rfl, hglob2, hpages2, hrA2, hrB2, hother2⟩
 
 -- func0: simple wrapper that calls func1
+omit inst in
 private theorem func0_terminates_sw (env : HostEnv Unit) (st : Store Unit)
     (ptr len i j : UInt32)
     (hi : i < len) (hj : j < len)
@@ -475,6 +471,7 @@ private theorem func0_terminates_sw (env : HostEnv Unit) (st : Store Unit)
 
 /-! ## Top-level spec -/
 
+omit inst in
 @[proves Project.SwapElements.Spec.SwapElementsSpec]
 theorem swap_spec_sep : SwapElementsSpec := by
   intro env st ptr len i j hi hj hbound hptr hpages hg0
@@ -534,10 +531,7 @@ theorem swap_spec_sep : SwapElementsSpec := by
       (elemAddr ptr k).toNat = ptr.toNat + 8 * k.toNat := by
     intro k hk
     have hk_nat : k.toNat < len.toNat := hk
-    unfold elemAddr
-    simp only [UInt32.toNat_add, UInt32.toNat_mul,
-               show (8 : UInt32).toNat = 8 from rfl]
-    omega
+    exact elemAddr_toNat ptr k (by omega)
   have helemI := helem_toNat i hi
   have helemJ := helem_toNat j hj
   -- Final store after restoring global0 = 1048576

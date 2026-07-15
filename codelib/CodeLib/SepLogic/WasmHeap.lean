@@ -13,8 +13,8 @@ abbrev WasmHeapGF : BundledGFunctors
   | 1 => ⟨constOF (DisjointLeibnizSet CoPset), by infer_instance⟩
   | 2 => ⟨constOF (DisjointLeibnizSet PosSet), by infer_instance⟩
   | 3 => ⟨Auth.AuthURF (constOF Credit), by infer_instance⟩
-  | 4 => ⟨constOF (HeapView UInt32 (Agree (LeibnizO (Option UInt8))) WasmHeapMap), by infer_instance⟩
-  | 5 => ⟨constOF (HeapView UInt32 (Agree (LeibnizO GName)) WasmHeapMap), by infer_instance⟩
+  | 4 => ⟨constOF (HeapView UInt32 (Agree (DiscreteO (Option UInt8))) WasmHeapMap), by infer_instance⟩
+  | 5 => ⟨constOF (HeapView UInt32 (Agree (DiscreteO GName)) WasmHeapMap), by infer_instance⟩
   | 6 => ⟨constOF MetaUR, by infer_instance⟩
   | _ => ⟨constOF Unit, by infer_instance⟩
 -- Wire genHeapPreS (following HeapLang's instHeapLangGS_HeapLangS)
