@@ -43,11 +43,13 @@ def wp_wasm_F (Φ : DiscreteO WasmState → IProp WasmHeapGF)
       iprop% ⌜ws.Q ws.st ws.locals.values⌝
   | instr :: rest =>
       iprop% ∀ σ : WasmHeapMap (Option UInt8),
+        ⌜heapAgreesWithMem σ ws.st.mem⌝ -∗
         genHeapInterp σ ==∗
           ∃ σ' : WasmHeapMap (Option UInt8),
           ∃ st' : Store Unit,
           ∃ locals' : Locals,
             ⌜execOne 1 ws.m ws.st ws.locals instr ws.env = .Fallthrough st' locals'⌝ ∗
+            ⌜heapAgreesWithMem σ' st'.mem⌝ ∗
             genHeapInterp σ' ∗
             Φ ⟨{ m := ws.m, st := st', locals := locals',
                  prog := rest, env := ws.env, Q := ws.Q }⟩
@@ -71,16 +73,19 @@ instance instBIMonoPredWasmF :
     · next instr rest =>
       iintro Hwp
       iintro %σ₀
+      iintro hagree
       iintro Hσ₀
-      imod Hwp $$ % σ₀ Hσ₀ with ⟨%σ', %st₁, %locals₁, hexec, Hσ', HΦ⟩
+      imod Hwp $$ % σ₀ hagree Hσ₀ with ⟨%σ', %st₁, %locals₁, hexec, hagree', Hσ', HΦ⟩
       imodintro
       iexists σ', st₁, locals₁
       isplitl [hexec]
       · iexact hexec
-      · isplitl [Hσ']
-        · iexact Hσ'
-        · iapply HΦΨ
-          iexact HΦ
+      · isplitl [hagree']
+        · iexact hagree'
+        · isplitl [Hσ']
+          · iexact Hσ'
+          · iapply HΦΨ
+            iexact HΦ
   mono_pred_ne.ne _ _ _ H :=
     (DiscreteO.ext (DiscreteO.dist_inj H)) ▸ OFE.Dist.rfl
 
@@ -109,10 +114,10 @@ theorem wp_wasm_step
     {instr₀ : Instruction} {rest₀ : Program}
     {env : HostEnv Unit} {Q : Store Unit → List Value → Prop}
     (hexec : execOne 1 m st locals instr₀ env = .Fallthrough st' locals')
+    (hmem : st'.mem = st.mem)
     (hstep : ∀ σ : WasmHeapMap (Option UInt8),
         ⊢ genHeapInterp σ ==∗
-        ∃ σ' : WasmHeapMap (Option UInt8),
-        genHeapInterp σ' ∗ wp_wasm m st' locals' rest₀ env Q) :
+        genHeapInterp σ ∗ wp_wasm m st' locals' rest₀ env Q) :
     ⊢ wp_wasm m st locals (instr₀ :: rest₀) env Q := by
   unfold wp_wasm
   iapply least_fixpoint_unfold_mpr
@@ -133,15 +138,17 @@ theorem wp_wasm_step
     -- unfold wp_wasm in the Lean hypothesis before entering iris mode
     -- so Hwp arrives with the bi_least_fixpoint form iexact can unify
     unfold wp_wasm at hstep
-    iintro %σ Hσ
-    imod (hstep σ) $$ Hσ with ⟨%σ', Hσ', Hwp⟩
+    iintro %σ %hagree Hσ
+    imod (hstep σ) $$ Hσ with ⟨Hσ', Hwp⟩
     imodintro
-    iexists σ', st', locals'
+    iexists σ, st', locals'
     isplitl []
     · exact BI.pure_intro hexec
-    · isplitl [Hσ']
-      · iexact Hσ'
-      · iexact Hwp
+    · isplitl []
+      · exact BI.pure_intro (hmem ▸ hagree)
+      · isplitl [Hσ']
+        · iexact Hσ'
+        · iexact Hwp
 
 -- linter false positive: `DiscreteO.car` below is a structural projection
 -- reduction the subsequent `split` depends on, but unusedSimpArgs flags it
@@ -150,12 +157,14 @@ theorem wasm_adequacy
     (m : Module) (st : Store Unit) (locals : Locals)
     (prog : Program) (env : HostEnv Unit)
     (Q : Store Unit → List Value → Prop)
-    (σ : WasmHeapMap (Option UInt8)) :
+    (σ : WasmHeapMap (Option UInt8))
+    (hagree : heapAgreesWithMem σ st.mem) :
     genHeapInterp σ ∗ wp_wasm m st locals prog env Q ⊢
       ⌜wp_wasm_prop m st locals prog env Q⌝ := by
   unfold wp_wasm
   let Ψ : DiscreteO WasmState → IProp WasmHeapGF :=
-    fun s => iprop% ∀ σ' : WasmHeapMap (Option UInt8), genHeapInterp σ' -∗
+    fun s => iprop% ∀ σ' : WasmHeapMap (Option UInt8),
+      ⌜heapAgreesWithMem σ' s.car.st.mem⌝ -∗ genHeapInterp σ' -∗
       ⌜wp_wasm_prop s.car.m s.car.st s.car.locals s.car.prog s.car.env s.car.Q⌝
   haveI hΨ : OFE.NonExpansive Ψ :=
     ⟨fun _ _ _ H => (DiscreteO.ext (DiscreteO.dist_inj H)) ▸ OFE.Dist.rfl⟩
@@ -166,18 +175,19 @@ theorem wasm_adequacy
     simp only [DiscreteO.car]
     split
     · refine BI.entails_wand (BI.pure_elim' fun h =>
-        BI.forall_intro fun _ => BI.wand_intro (BI.pure_intro ⟨0, ?_⟩))
+        BI.forall_intro fun _ => BI.wand_intro (BI.wand_intro (BI.pure_intro ⟨0, ?_⟩)))
       simp only [exec]; exact h
     · refine BI.entails_wand (BI.pure_elim' fun h =>
-        BI.forall_intro fun _ => BI.wand_intro (BI.pure_intro ⟨1, ?_⟩))
+        BI.forall_intro fun _ => BI.wand_intro (BI.wand_intro (BI.pure_intro ⟨1, ?_⟩)))
       simp only [exec, execOne]; exact h
     · next instr rest =>
       iintro Hwp
       iintro %σ_any
+      iintro hagree_any
       iintro Hσ_any
-      imod Hwp $$ % σ_any Hσ_any with ⟨%σ₁, %st₁, %locals₁, hexec, Hσ₁, Hcont⟩
+      imod Hwp $$ % σ_any hagree_any Hσ_any with ⟨%σ₁, %st₁, %locals₁, hexec, hagree₁, Hσ₁, Hcont⟩
       icases hexec with %hexec_lean
-      icases Hcont $$ % σ₁ Hσ₁ with %hwp_lean
+      icases Hcont $$ % σ₁ hagree₁ Hσ₁ with %hwp_lean
       exact BI.pure_intro (exec_cons hexec_lean hwp_lean)
   have hfp : bi_least_fixpoint wp_wasm_F ⟨{ m, st, locals, prog, env, Q }⟩ ⊢
       Ψ ⟨{ m, st, locals, prog, env, Q }⟩ :=
@@ -185,7 +195,9 @@ theorem wasm_adequacy
       (BI.wand_elim ((BI.wand_entails (least_fixpoint_iter (F := wp_wasm_F))).trans
         (BI.forall_elim (⟨{ m, st, locals, prog, env, Q }⟩ : DiscreteO WasmState))))
   exact ((BI.sep_mono_right hfp).trans
-    (BI.sep_mono_right (BI.forall_elim σ))).trans BI.wand_elim_right
+    (BI.sep_mono_right (BI.forall_elim σ))).trans
+    ((BI.sep_mono_right (BI.sep_elim_emp_valid_left (BI.pure_intro hagree) BI.wand_elim_right)).trans
+    BI.wand_elim_right)
 
 -- call rule: if the callee terminates with a postcondition that implies the
 -- continuation terminates, the whole call sequence terminates.
@@ -473,10 +485,10 @@ theorem wp_wasm_globalGet
     (hget : st.globals.globals[i]? = some v)
     (hstep : ∀ σ : WasmHeapMap (Option UInt8),
         ⊢ genHeapInterp σ ==∗
-        ∃ σ' : WasmHeapMap (Option UInt8),
-        genHeapInterp σ' ∗ wp_wasm m st { locals with values := v :: locals.values } rest env Q) :
+        genHeapInterp σ ∗
+        wp_wasm m st { locals with values := v :: locals.values } rest env Q) :
     ⊢ wp_wasm m st locals (.globalGet i :: rest) env Q :=
-  wp_wasm_step (by simp only [execOne.eq_def, hget]) hstep
+  wp_wasm_step (by simp only [execOne.eq_def, hget]) rfl hstep
 
 theorem wp_wasm_globalSet
     {m : Module} {st : Store Unit} {locals : Locals}
@@ -487,12 +499,13 @@ theorem wp_wasm_globalSet
     (hbound : st.globals.globals[i]? = some old)
     (hstep : ∀ σ : WasmHeapMap (Option UInt8),
         ⊢ genHeapInterp σ ==∗
-        ∃ σ' : WasmHeapMap (Option UInt8),
-        genHeapInterp σ' ∗ wp_wasm m
+        genHeapInterp σ ∗ wp_wasm m
           { st with globals := { globals := st.globals.globals.set i v } }
           { locals with values := vs } rest env Q) :
     ⊢ wp_wasm m st locals (.globalSet i :: rest) env Q :=
-  wp_wasm_step (by simp only [execOne.eq_def, hstack, hbound]) hstep
+  wp_wasm_step (by simp only [execOne.eq_def, hstack, hbound])
+    (show { st with globals := { globals := st.globals.globals.set i v } }.mem = st.mem from rfl)
+    hstep
 
 theorem wp_wasm_localGet
     {m : Module} {st : Store Unit} {locals : Locals}
@@ -502,10 +515,10 @@ theorem wp_wasm_localGet
     (hget : locals.get i = some v)
     (hstep : ∀ σ : WasmHeapMap (Option UInt8),
         ⊢ genHeapInterp σ ==∗
-        ∃ σ' : WasmHeapMap (Option UInt8),
-        genHeapInterp σ' ∗ wp_wasm m st { locals with values := v :: locals.values } rest env Q) :
+        genHeapInterp σ ∗
+        wp_wasm m st { locals with values := v :: locals.values } rest env Q) :
     ⊢ wp_wasm m st locals (.localGet i :: rest) env Q :=
-  wp_wasm_step (by simp only [execOne.eq_def, hget]) hstep
+  wp_wasm_step (by simp only [execOne.eq_def, hget]) rfl hstep
 
 theorem wp_wasm_localSet
     {m : Module} {st : Store Unit} {locals : Locals}
@@ -516,10 +529,10 @@ theorem wp_wasm_localSet
     (hset : locals.set? i v = some locals')
     (hstep : ∀ σ : WasmHeapMap (Option UInt8),
         ⊢ genHeapInterp σ ==∗
-        ∃ σ' : WasmHeapMap (Option UInt8),
-        genHeapInterp σ' ∗ wp_wasm m st { locals' with values := vs } rest env Q) :
+        genHeapInterp σ ∗
+        wp_wasm m st { locals' with values := vs } rest env Q) :
     ⊢ wp_wasm m st locals (.localSet i :: rest) env Q :=
-  wp_wasm_step (by simp only [execOne.eq_def, hstack, hset]) hstep
+  wp_wasm_step (by simp only [execOne.eq_def, hstack, hset]) rfl hstep
 
 theorem wp_wasm_const
     {m : Module} {st : Store Unit} {locals : Locals}
@@ -528,10 +541,10 @@ theorem wp_wasm_const
     (v : UInt32)
     (hstep : ∀ σ : WasmHeapMap (Option UInt8),
         ⊢ genHeapInterp σ ==∗
-        ∃ σ' : WasmHeapMap (Option UInt8),
-        genHeapInterp σ' ∗ wp_wasm m st { locals with values := .i32 v :: locals.values } rest env Q) :
+        genHeapInterp σ ∗
+        wp_wasm m st { locals with values := .i32 v :: locals.values } rest env Q) :
     ⊢ wp_wasm m st locals (.const v :: rest) env Q :=
-  wp_wasm_step (by simp only [execOne.eq_def]) hstep
+  wp_wasm_step (by simp only [execOne.eq_def]) rfl hstep
 
 theorem wp_wasm_add
     {m : Module} {st : Store Unit} {locals : Locals}
@@ -541,10 +554,10 @@ theorem wp_wasm_add
     (hstack : locals.values = .i32 a :: .i32 b :: vs)
     (hstep : ∀ σ : WasmHeapMap (Option UInt8),
         ⊢ genHeapInterp σ ==∗
-        ∃ σ' : WasmHeapMap (Option UInt8),
-        genHeapInterp σ' ∗ wp_wasm m st { locals with values := .i32 (a + b) :: vs } rest env Q) :
+        genHeapInterp σ ∗
+        wp_wasm m st { locals with values := .i32 (a + b) :: vs } rest env Q) :
     ⊢ wp_wasm m st locals (.add :: rest) env Q :=
-  wp_wasm_step (by simp only [execOne.eq_def, hstack]) hstep
+  wp_wasm_step (by simp only [execOne.eq_def, hstack]) rfl hstep
 
 theorem wp_wasm_sub
     {m : Module} {st : Store Unit} {locals : Locals}
@@ -554,10 +567,10 @@ theorem wp_wasm_sub
     (hstack : locals.values = .i32 a :: .i32 b :: vs)
     (hstep : ∀ σ : WasmHeapMap (Option UInt8),
         ⊢ genHeapInterp σ ==∗
-        ∃ σ' : WasmHeapMap (Option UInt8),
-        genHeapInterp σ' ∗ wp_wasm m st { locals with values := .i32 (b - a) :: vs } rest env Q) :
+        genHeapInterp σ ∗
+        wp_wasm m st { locals with values := .i32 (b - a) :: vs } rest env Q) :
     ⊢ wp_wasm m st locals (.sub :: rest) env Q :=
-  wp_wasm_step (by simp only [execOne.eq_def, hstack]) hstep
+  wp_wasm_step (by simp only [execOne.eq_def, hstack]) rfl hstep
 
 theorem wp_wasm_load64
     {m : Module} {st : Store Unit} {locals : Locals}
@@ -568,13 +581,12 @@ theorem wp_wasm_load64
     (hbounds : addr.toNat + off.toNat + 8 ≤ st.mem.pages * 65536)
     (hstep : ∀ σ : WasmHeapMap (Option UInt8),
         ⊢ genHeapInterp σ ==∗
-        ∃ σ' : WasmHeapMap (Option UInt8),
-        genHeapInterp σ' ∗ wp_wasm m st
+        genHeapInterp σ ∗ wp_wasm m st
           { locals with values := .i64 (st.mem.read64 (addr + off)) :: vs } rest env Q) :
     ⊢ wp_wasm m st locals (.load64 off :: rest) env Q :=
   wp_wasm_step
     (by simp only [execOne.eq_def, hstack]; rw [if_neg (by omega)])
-    hstep
+    rfl hstep
 
 theorem wp_wasm_store64
     {m : Module} {st : Store Unit} {locals : Locals}
@@ -584,15 +596,29 @@ theorem wp_wasm_store64
     (hstack : locals.values = .i64 v :: .i32 addr :: vs)
     (hbounds : addr.toNat + off.toNat + 8 ≤ st.mem.pages * 65536)
     (hstep : ∀ σ : WasmHeapMap (Option UInt8),
+        heapAgreesWithMem σ st.mem →
         ⊢ genHeapInterp σ ==∗
         ∃ σ' : WasmHeapMap (Option UInt8),
-        genHeapInterp σ' ∗ wp_wasm m
+        ⌜heapAgreesWithMem σ' (st.mem.write64 (addr + off) v)⌝ ∗ genHeapInterp σ' ∗ wp_wasm m
           { st with mem := st.mem.write64 (addr + off) v }
           { locals with values := vs } rest env Q) :
-    ⊢ wp_wasm m st locals (.store64 off :: rest) env Q :=
-  wp_wasm_step
-    (by simp only [execOne.eq_def, hstack]; rw [if_neg (by omega)])
-    hstep
+    ⊢ wp_wasm m st locals (.store64 off :: rest) env Q := by
+  unfold wp_wasm
+  iapply least_fixpoint_unfold_mpr
+  simp only [wp_wasm_F]
+  -- concrete prog means simp already evaluated the match to the step case
+  unfold wp_wasm at hstep
+  iintro %σ %hagree Hσ
+  imod (hstep σ hagree) $$ Hσ with ⟨%σ', hagree', Hσ', Hwp⟩
+  imodintro
+  iexists σ', { st with mem := st.mem.write64 (addr + off) v }, { locals with values := vs }
+  isplitl []
+  · exact BI.pure_intro (by simp only [execOne.eq_def, hstack]; rw [if_neg (by omega)])
+  · isplitl [hagree']
+    · iexact hagree'
+    · isplitl [Hσ']
+      · iexact Hσ'
+      · iexact Hwp
 
 theorem wp_wasm_load32
     {m : Module} {st : Store Unit} {locals : Locals}
@@ -603,13 +629,12 @@ theorem wp_wasm_load32
     (hbounds : addr.toNat + off.toNat + 4 ≤ st.mem.pages * 65536)
     (hstep : ∀ σ : WasmHeapMap (Option UInt8),
         ⊢ genHeapInterp σ ==∗
-        ∃ σ' : WasmHeapMap (Option UInt8),
-        genHeapInterp σ' ∗ wp_wasm m st
+        genHeapInterp σ ∗ wp_wasm m st
           { locals with values := .i32 (st.mem.read32 (addr + off)) :: vs } rest env Q) :
     ⊢ wp_wasm m st locals (.load32 off :: rest) env Q :=
   wp_wasm_step
     (by simp only [execOne.eq_def, hstack]; rw [if_neg (by omega)])
-    hstep
+    rfl hstep
 
 theorem wp_wasm_store32
     {m : Module} {st : Store Unit} {locals : Locals}
@@ -619,15 +644,29 @@ theorem wp_wasm_store32
     (hstack : locals.values = .i32 v :: .i32 addr :: vs)
     (hbounds : addr.toNat + off.toNat + 4 ≤ st.mem.pages * 65536)
     (hstep : ∀ σ : WasmHeapMap (Option UInt8),
+        heapAgreesWithMem σ st.mem →
         ⊢ genHeapInterp σ ==∗
         ∃ σ' : WasmHeapMap (Option UInt8),
-        genHeapInterp σ' ∗ wp_wasm m
+        ⌜heapAgreesWithMem σ' (st.mem.write32 (addr + off) v)⌝ ∗ genHeapInterp σ' ∗ wp_wasm m
           { st with mem := st.mem.write32 (addr + off) v }
           { locals with values := vs } rest env Q) :
-    ⊢ wp_wasm m st locals (.store32 off :: rest) env Q :=
-  wp_wasm_step
-    (by simp only [execOne.eq_def, hstack]; rw [if_neg (by omega)])
-    hstep
+    ⊢ wp_wasm m st locals (.store32 off :: rest) env Q := by
+  unfold wp_wasm
+  iapply least_fixpoint_unfold_mpr
+  simp only [wp_wasm_F]
+  -- concrete prog means simp already evaluated the match to the step case
+  unfold wp_wasm at hstep
+  iintro %σ %hagree Hσ
+  imod (hstep σ hagree) $$ Hσ with ⟨%σ', hagree', Hσ', Hwp⟩
+  imodintro
+  iexists σ', { st with mem := st.mem.write32 (addr + off) v }, { locals with values := vs }
+  isplitl []
+  · exact BI.pure_intro (by simp only [execOne.eq_def, hstack]; rw [if_neg (by omega)])
+  · isplitl [hagree']
+    · iexact hagree'
+    · isplitl [Hσ']
+      · iexact Hσ'
+      · iexact Hwp
 
 omit inst in
 theorem wp_wasm_prop_to_TerminatesWith
@@ -685,7 +724,9 @@ theorem wasm_heap_adequacy
     letI inst : WasmHeapGS := WasmHeapGS.mk (togenHeapGS := G)
     apply BI.sep_elim_left.trans
     apply (BI.sep_intro_emp_valid_right .rfl hwp).trans
-    exact wasm_adequacy m st locals prog env Q ∅
+    exact wasm_adequacy m st locals prog env Q ∅ (fun addr _ h => by
+      have he : get? (∅ : WasmHeapMap (Option UInt8)) addr = none := rfl
+      simp [he] at h)
   exact hbupd.trans bupd_elim
 
 end Wasm.SepLogic
