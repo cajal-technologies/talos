@@ -106,6 +106,19 @@ theorem Mem.words32_ext {m m' : Mem} {base : UInt32} {n : Nat}
   simp only [length_words32] at hk
   rw [getElem_words32 m base n k hk, getElem_words32 m' base n k hk, h k hk]
 
+/-- The wasm address of the `k`-th `u32` slot, `base + 4 * k`, is the integer
+`base.toNat + 4 * k` as long as it does not wrap. Shared address bridge for the
+framing lemmas below (and their loop consumers); the 32-bit twin of
+`Mem.words64_slotAddr_toNat`. -/
+theorem Mem.words32_slotAddr_toNat (base : UInt32) (k : Nat)
+    (h : base.toNat + 4 * k < 4294967296) :
+    (base + 4 * UInt32.ofNat k).toNat = base.toNat + 4 * k := by
+  have hsize : (UInt32.size : Nat) = 4294967296 := rfl
+  have hkn : (UInt32.ofNat k).toNat = k :=
+    UInt32.toNat_ofNat_of_lt' (by omega : k < UInt32.size)
+  have := MemRegion.slot32_base_toNat base (UInt32.ofNat k) (by rw [hkn]; omega)
+  rw [hkn] at this; exact this
+
 /-- A `write32` disjoint from the whole `[base, base+4n)` region leaves the
 view unchanged. -/
 theorem Mem.words32_write32_outside (m : Mem) (base : UInt32) (n : Nat) (a v : UInt32)
@@ -114,11 +127,7 @@ theorem Mem.words32_write32_outside (m : Mem) (base : UInt32) (n : Nat) (a v : U
     (m.write32 a v).words32 base n = m.words32 base n := by
   apply words32_ext
   intro k hk
-  have hkn : (UInt32.ofNat k).toNat = k :=
-    UInt32.toNat_ofNat_of_lt' (by have : (UInt32.size : Nat) = 4294967296 := rfl; omega)
-  have haddr : (base + 4 * UInt32.ofNat k).toNat = base.toNat + 4 * k := by
-    have := MemRegion.slot32_base_toNat base (UInt32.ofNat k) (by rw [hkn]; omega)
-    rw [hkn] at this; exact this
+  have haddr := Mem.words32_slotAddr_toNat base k (by omega)
   exact Mem.read32_write32_disjoint m a _ v (by rw [haddr]; omega)
 
 /-- One more word: `words32 base (n+1)` is `words32 base n` with the `n`-th
@@ -134,11 +143,7 @@ theorem Mem.words32_write32_snoc (m : Mem) (base : UInt32) (n : Nat) (w : UInt32
     (hbnd : base.toNat + 4 * (n + 1) ≤ 4294967296) :
     (m.write32 (base + 4 * UInt32.ofNat n) w).words32 base (n + 1)
       = m.words32 base n ++ [w] := by
-  have hkn : (UInt32.ofNat n).toNat = n :=
-    UInt32.toNat_ofNat_of_lt' (by have : (UInt32.size : Nat) = 4294967296 := rfl; omega)
-  have haddr : (base + 4 * UInt32.ofNat n).toNat = base.toNat + 4 * n := by
-    have := MemRegion.slot32_base_toNat base (UInt32.ofNat n) (by rw [hkn]; omega)
-    rw [hkn] at this; exact this
+  have haddr := Mem.words32_slotAddr_toNat base n (by omega)
   rw [Mem.words32_succ,
       Mem.words32_write32_outside m base n _ w (by omega) (Or.inr (by rw [haddr])),
       Mem.read32_write32_same]
