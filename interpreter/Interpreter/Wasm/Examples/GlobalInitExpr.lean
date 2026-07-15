@@ -55,5 +55,59 @@ theorem getG_returns_42 :
       = [.i32 42] := by
   native_decide
 
+/-! ### GC allocator initializers (issue #109)
+
+    `struct.new` is a constant instruction, so a global may be initialised
+    with a plain `(struct.new $s (i32.const 100))`. The decoder used to
+    detect GC allocators only at the top level of the initializer sexpr, so
+    the folded leaf form was rejected while the same allocation wrapped in
+    extended-const arithmetic — caught by the (recursive) extended-const
+    scan — was accepted. Both forms must decode and evaluate to the same
+    module behaviour. -/
+
+/-- Leaf form: the initializer is a folded `struct.new` with a plain
+`i32.const` field value. -/
+def structGlobalLeafWat : String := "
+(module
+  (type $s (struct (field i32)))
+  (global $g (ref $s) (struct.new $s (i32.const 100)))
+  (func $f (export \"f\") (result i32)
+    (struct.get $s 0 (global.get $g))))
+"
+
+/-- Arithmetic form: the same allocation with the field value computed by an
+extended-const expression. -/
+def structGlobalArithWat : String := "
+(module
+  (type $s (struct (field i32)))
+  (global $g (ref $s) (struct.new $s (i32.add (i32.const 50) (i32.const 50))))
+  (func $f (export \"f\") (result i32)
+    (struct.get $s 0 (global.get $g))))
+"
+
+private def decodedLeaf : Wasm.Module := decodeOrDefault structGlobalLeafWat
+private def decodedArith : Wasm.Module := decodeOrDefault structGlobalArithWat
+
+/-- The leaf `struct.new` initializer decodes (rather than erroring) and is
+kept as a const-expr program for `runConstGlobals`. -/
+theorem leaf_struct_new_keeps_initExpr :
+    (decodedLeaf.globals[0]?.map (·.initExpr.isEmpty)).getD true = false := by
+  native_decide
+
+/-- End-to-end: reading the struct field of the leaf-initialised global
+returns `100`. -/
+theorem leaf_struct_new_returns_100 :
+    runValues 64 decodedLeaf 0
+      (decodedLeaf.runConstGlobals 64 (decodedLeaf.initialStore (α := Unit)) {}) []
+      = [.i32 100] := by
+  native_decide
+
+/-- The arithmetic-wrapped form evaluates to the same result. -/
+theorem arith_struct_new_returns_100 :
+    runValues 64 decodedArith 0
+      (decodedArith.runConstGlobals 64 (decodedArith.initialStore (α := Unit)) {}) []
+      = [.i32 100] := by
+  native_decide
+
 end GlobalInitExpr
 end Wasm

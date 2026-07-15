@@ -2189,17 +2189,32 @@ arithmetic ops (`i32.add`/`i32.sub`/`i32.mul`, i64 ditto). Recurses into
 folded operand forms (the flat form emitted by `wasm-tools print` is
 handled by the list case). -/
 mutual
-  /-- Scan a single sexpr; recurse into a `(…)` list via the list helper. -/
-  def initExprNeedsEval : Sexpr → Bool
-    | .atom a =>
-      a == "global.get"
-        || a ∈ #["i32.add", "i32.sub", "i32.mul", "i64.add", "i64.sub", "i64.mul"]
-    | .list ys => initExprNeedsEvalList ys
+  /-- Scan a single sexpr for an atom satisfying `p`; recurse into a `(…)`
+  list via the list helper (covers both the folded operand form and the flat
+  form emitted by `wasm-tools print`). -/
+  def initExprMentions (p : String → Bool) : Sexpr → Bool
+    | .atom a => p a
+    | .list ys => initExprMentionsList p ys
   /-- Scan a sequence of sexprs (the operands of a folded instruction). -/
-  def initExprNeedsEvalList : List Sexpr → Bool
+  def initExprMentionsList (p : String → Bool) : List Sexpr → Bool
     | [] => false
-    | y :: ys => initExprNeedsEval y || initExprNeedsEvalList ys
+    | y :: ys => initExprMentions p y || initExprMentionsList p ys
 end
+
+/-- Scan a single sexpr; recurse into a `(…)` list via the list helper. -/
+def initExprNeedsEval : Sexpr → Bool :=
+  initExprMentions fun a =>
+    a == "global.get"
+      || a ∈ #["i32.add", "i32.sub", "i32.mul", "i64.add", "i64.sub", "i64.mul"]
+
+/-- Whether a global-initializer sexpr mentions a GC heap-allocating constant
+instruction (`struct.new`/`array.new*`), in either the flat or the folded
+form. Such initializers cannot be folded to a literal at decode time. -/
+def initExprAllocates : Sexpr → Bool :=
+  initExprMentions fun a =>
+    a ∈ #["struct.new", "struct.new_default",
+          "array.new", "array.new_default", "array.new_fixed",
+          "array.new_data", "array.new_elem"]
 
 private def parseGlobalDecl (ctx : Ctx) (xs : List Sexpr) :
     Except Err Wasm.GlobalDecl := do
@@ -2228,12 +2243,7 @@ private def parseGlobalDecl (ctx : Ctx) (xs : List Sexpr) :
   -- GC heap-allocating initializers (`struct.new`/`array.new*`) cannot be
   -- folded to a single value at decode time; keep the const-expr program so
   -- `Module.runConstGlobals` can evaluate it at instantiation.
-  let needsExpr := xs.any fun
-    | .atom a => a == "struct.new" || a == "struct.new_default"
-        || a == "array.new" || a == "array.new_default" || a == "array.new_fixed"
-        || a == "array.new_data" || a == "array.new_elem"
-    | _ => false
-  if needsExpr then
+  if xs.any initExprAllocates then
     let prog ← parseInstrSeq ctx xs
     -- The value can't be folded at decode time; stash a placeholder `init`
     -- and let `Module.runConstGlobals` evaluate `initExpr` at instantiation.
