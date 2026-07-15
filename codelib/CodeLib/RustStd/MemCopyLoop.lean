@@ -49,7 +49,7 @@ theorem copyWords_spec (m : Module) (st : Store Unit) (dst src n : UInt32)
     (hsrc : src.toNat + 4 * n.toNat ≤ st.mem.pages * 65536)
     (hdst : dst.toNat + 4 * n.toNat ≤ st.mem.pages * 65536)
     (hpages : st.mem.pages ≤ 65536)
-    (hdisj : dst.toNat + 4 * n.toNat ≤ src.toNat ∨ src.toNat + 4 * n.toNat ≤ dst.toNat) :
+    (hdisj : MemRegion.Disjoint ⟨dst, 4 * n.toNat⟩ ⟨src, 4 * n.toNat⟩) :
     wp m CopyWords
         (fun c => ∃ st' s', c = .Fallthrough st' s'
           ∧ st'.mem.words32 dst n.toNat = st.mem.words32 src n.toNat
@@ -60,6 +60,7 @@ theorem copyWords_spec (m : Module) (st : Store Unit) (dst src n : UInt32)
         st { params := [.i32 dst, .i32 src, .i32 n], locals := [.i32 0], values := [] } := by
   have hcap : st.mem.pages * 65536 ≤ 4294967296 := by
     have := Nat.mul_le_mul_right 65536 hpages; omega
+  have hdisj : dst.toNat + 4 * n.toNat ≤ src.toNat ∨ src.toNat + 4 * n.toNat ≤ dst.toNat := hdisj
   unfold CopyWords
   wp_run
   simp
@@ -87,11 +88,12 @@ theorem copyWords_spec (m : Module) (st : Store Unit) (dst src n : UInt32)
       have hmod1 : (1 + i.toNat) % 4294967296 = i.toNat + 1 := by
         rw [Nat.mod_eq_of_lt (by have := n.toNat_lt; omega)]; omega
       have hshlN : i.toNat <<< 2 = i.toNat * 4 := by rw [Nat.shiftLeft_eq]
-      have haddr_d : 4 * i + dst = dst + 4 * UInt32.ofNat i.toNat := by rw [hoi]; bv_decide
-      have haddr_s : 4 * i + src = src + 4 * UInt32.ofNat i.toNat := by rw [hoi]; bv_decide
-      have hda : (dst + 4 * UInt32.ofNat i.toNat).toNat = dst.toNat + 4 * i.toNat := by
-        rw [hoi]; have := MemRegion.slot32_base_toNat dst i (by omega)
-        simpa [MemRegion.slot32] using this
+      have haddr_d : 4 * i + dst = dst + 4 * UInt32.ofNat i.toNat := by
+        rw [hoi]; exact UInt32.add_comm _ _
+      have haddr_s : 4 * i + src = src + 4 * UInt32.ofNat i.toNat := by
+        rw [hoi]; exact UInt32.add_comm _ _
+      have hda : (dst + 4 * UInt32.ofNat i.toNat).toNat = dst.toNat + 4 * i.toNat :=
+        Mem.words32_slotAddr_toNat dst i.toNat (by omega)
       simp only [hlt, ↓reduceIte, hshlU, hshlN, hmod1, haddr_d, haddr_s]
       set w : UInt32 := st'.mem.read32 (src + 4 * UInt32.ofNat i.toNat) with hw
       refine ⟨?_, ?_, ⟨?_, ?_, ?_, ?_, ?_⟩, ?_⟩
