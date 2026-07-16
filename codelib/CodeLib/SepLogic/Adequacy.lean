@@ -983,4 +983,30 @@ theorem wasm_heap_adequacy
       simp [he] at h)
   exact hbupd.trans bupd_elim
 
+-- Adequacy with memory footprint: allocates ghost state from σ, hands
+-- ownership tokens to hwp via a wand, then extracts the pure result.
+-- Use when the proof needs pointsTo_u64 / pointsTo_u32 for memory reads/writes.
+theorem wasm_heap_adequacy_with_mem
+    (m : Module) (st : Store Unit) (locals : Locals)
+    (prog : Program) (env : HostEnv Unit)
+    (Q : Store Unit → List Value → Prop)
+    (σ : WasmHeapMap (Option UInt8))
+    (hagree : heapAgreesWithMem σ st.mem)
+    (hwp : ∀ [inst : WasmHeapGS],
+        ⊢ ([∗map] l ↦ v ∈ σ, pointsTo l (DFrac.own 1) v) -∗
+          wp_wasm m st locals prog env Q) :
+    wp_wasm_prop m st locals prog env Q := by
+  apply pure_soundness (PROP := IProp WasmHeapGF)
+  have hbupd : emp ⊢ (|==> ⌜wp_wasm_prop m st locals prog env Q⌝ : IProp WasmHeapGF) := by
+    refine (genHeap_init (L := UInt32) (V := Option UInt8)
+        (GF := WasmHeapGF) (H := WasmHeapMap) σ).trans ?_
+    apply bupd_mono
+    apply BI.exists_elim
+    intro G
+    letI inst : WasmHeapGS := WasmHeapGS.mk (togenHeapGS := G)
+    apply (BI.sep_mono_right BI.sep_elim_left).trans
+    exact (BI.sep_mono_right (BI.sep_elim_emp_valid_left hwp BI.wand_elim_left)).trans
+      (wasm_adequacy m st locals prog env Q σ hagree)
+  exact hbupd.trans bupd_elim
+
 end Wasm.SepLogic
