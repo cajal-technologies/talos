@@ -113,6 +113,18 @@ testsuite pattern="":
 testsuite-report:
     WASM_TOOLS_VERSION={{ quote(WASM_TOOLS_VERSION) }} scripts/testsuite-report.sh
 
+# ── differential ──────────────────────────────────────────────────────────────
+
+# Differential-test the runner against a trusted oracle (V8) via @jasisz's miscast.
+# Drives the runner as miscast's custom system-under-test; a SOUNDNESS row is the
+# runner accepting or running a module every oracle rejects or traps on (see #108).
+# With no args, runs the recgroup soundness mode; anything passed goes through to
+# miscast, e.g. `just differential --mode recgroup -n 300`.
+[group("differential")]
+[working-directory(ROOT)]
+differential *args:
+    scripts/differential.sh {{ args }}
+
 # ── verifier workflow ─────────────────────────────────────────────────────────
 # All verifier recipes run from programs/ (project root: rust/ + lean/).
 # Omit crate names to operate on all workspace crates.

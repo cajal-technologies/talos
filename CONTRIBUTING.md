@@ -56,6 +56,17 @@ The recipe requires the pinned `wasm-tools` version (see `WASM_TOOLS_VERSION` in
 
 Bumping `WASM_TOOLS_VERSION` or the `vendor/testsuite` submodule will also change the report — those bumps and the regenerated report belong in the same commit.
 
+## Differential testing
+
+Beyond the spec testsuite, `just differential` keeps the runner in parity with a trusted engine (V8) by running the same modules on both and flagging divergences — above all **soundness** divergences, where the runner accepts or runs a module the oracle rejects or traps on.
+
+```bash
+just differential                          # recgroup soundness mode, V8 oracle
+just differential --mode recgroup -n 300   # reproduce the full #108 cluster
+```
+
+It drives the runner as the custom system-under-test for [miscast](https://github.com/jasisz/miscast) (pinned as an external dependency). Requires `wasm-tools` and `node` ≥ 22. See [`differential/README.md`](differential/README.md) for details.
+
 ## Contributing code
 
 Pull requests are welcome. A few guidelines:

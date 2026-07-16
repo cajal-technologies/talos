@@ -24,3 +24,6 @@ verifier-report/
 
 extracted/
 out/
+
+# differential-testing scratch (pinned miscast clone + run output)
+.differential-cache/
