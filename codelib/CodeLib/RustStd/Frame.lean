@@ -65,8 +65,24 @@ returns the stored value. -/
 /-! ## Byte-level write footprints
 
 A write only touches the bytes inside its footprint. These are the
-building blocks for the word-level disjointness lemmas below, and are
-occasionally useful on their own when a proof descends to `Mem.bytes`. -/
+building blocks for the word-level disjointness lemmas below (and for the
+store-commutation lemmas in `CodeLib.RustStd.Region`), and are
+occasionally useful on their own when a proof descends to `Mem.bytes`.
+
+Per width there are two facts: outside its footprint a store leaves the
+byte unchanged (`write*_bytes_of_disjoint`), and inside its footprint the
+byte depends only on the address and value, not the underlying memory
+(`write*_bytes_in`). Together with `Mem.ext_bytes` and page preservation,
+these are exactly the ingredients `Mem.write_write_comm_of_footprints`
+needs, so adding a new width to the commutation family costs only the two
+byte lemmas. -/
+
+/-- Two memories with equal page counts and pointwise-equal bytes are equal. -/
+theorem Mem.ext_bytes {m₁ m₂ : Mem} (hp : m₁.pages = m₂.pages)
+    (hb : ∀ i, m₁.bytes i = m₂.bytes i) : m₁ = m₂ := by
+  cases m₁; cases m₂
+  simp only [Mem.mk.injEq]
+  exact ⟨hp, funext hb⟩
 
 /-- A byte outside the 8-byte footprint of a `write64` is unchanged. -/
 theorem Mem.write64_bytes_of_disjoint (m : Mem) (a : UInt32) (v : UInt64) (i : Nat)
@@ -93,6 +109,48 @@ theorem Mem.write32_bytes_of_disjoint (m : Mem) (a v : UInt32) (i : Nat)
   have h2 : i ≠ a.toNat + 2 := by omega
   have h3 : i ≠ a.toNat + 3 := by omega
   simp [h0, h1, h2, h3]
+
+/-- Inside its 8-byte footprint, the byte written by a `write64` depends only
+on the address and value, not on the underlying memory. -/
+theorem Mem.write64_bytes_in (m m' : Mem) (a : UInt32) (v : UInt64) (i : Nat)
+    (hi : a.toNat ≤ i ∧ i < a.toNat + 8) :
+    (m.write64 a v).bytes i = (m'.write64 a v).bytes i := by
+  simp only [Mem.write64]
+  split_ifs <;> first | rfl | omega
+
+/-- Inside its 4-byte footprint, the byte written by a `write32` depends only
+on the address and value, not on the underlying memory. -/
+theorem Mem.write32_bytes_in (m m' : Mem) (a v : UInt32) (i : Nat)
+    (hi : a.toNat ≤ i ∧ i < a.toNat + 4) :
+    (m.write32 a v).bytes i = (m'.write32 a v).bytes i := by
+  simp only [Mem.write32]
+  split_ifs <;> first | rfl | omega
+
+/-- Skeleton for "disjoint stores commute", abstracted over the two stores.
+`f` writes an `na`-byte footprint at `a`, `g` an `nb`-byte footprint at `b`;
+each is described by page preservation plus its two byte-level facts
+(unchanged outside the footprint, memory-independent inside it). Every
+concrete width pair instantiates this with its `write*_bytes_of_disjoint` /
+`write*_bytes_in` lemmas — see `CodeLib.RustStd.Region`. -/
+theorem Mem.write_write_comm_of_footprints
+    (f g : Mem → Mem) (a b : UInt32) (na nb : Nat)
+    (hd : a.toNat + na ≤ b.toNat ∨ b.toNat + nb ≤ a.toNat)
+    (hfp : ∀ m, (f m).pages = m.pages)
+    (hgp : ∀ m, (g m).pages = m.pages)
+    (hfo : ∀ m i, (i < a.toNat ∨ a.toNat + na ≤ i) → (f m).bytes i = m.bytes i)
+    (hgo : ∀ m i, (i < b.toNat ∨ b.toNat + nb ≤ i) → (g m).bytes i = m.bytes i)
+    (hfi : ∀ m m' i, (a.toNat ≤ i ∧ i < a.toNat + na) → (f m).bytes i = (f m').bytes i)
+    (hgi : ∀ m m' i, (b.toNat ≤ i ∧ i < b.toNat + nb) → (g m).bytes i = (g m').bytes i)
+    (m : Mem) : g (f m) = f (g m) := by
+  refine Mem.ext_bytes (by rw [hgp, hfp, hfp, hgp]) fun i => ?_
+  by_cases hia : a.toNat ≤ i ∧ i < a.toNat + na
+  · rw [hgo (f m) i (by omega)]
+    exact hfi m (g m) i hia
+  · by_cases hib : b.toNat ≤ i ∧ i < b.toNat + nb
+    · rw [hfo (g m) i (by omega)]
+      exact hgi (f m) m i hib
+    · rw [hgo (f m) i (by omega), hfo m i (by omega),
+          hfo (g m) i (by omega), hgo m i (by omega)]
 
 /-! ## Disjoint read/write framing
 
