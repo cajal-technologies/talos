@@ -556,4 +556,262 @@ theorem run_eq
     · cases n <;> rfl
     all_goals rfl
 
+
+/-! ## Environment independence
+
+When a module declares no imported functions (`imports = []`), the host
+environment is never consulted: the host arm of `run` is dead, and `env`
+is otherwise only threaded, never inspected. So `run` (hence `exec` /
+`execOne`) gives the same result under any two environments. This is what
+lets fuel-free specs and `iris`-style adequacy results quantify over an
+arbitrary `env` yet be discharged at the canonical empty one. Proved by
+the same joint fuel induction as `fuel_mono_aux`. -/
+set_option maxHeartbeats 1600000 in
+/-- Joint env-independence for `execOne`, `exec`, and `run`, over any module
+with no imported functions. Proved by induction on fuel, mirroring
+`fuel_mono_aux`. The three projections follow. -/
+theorem env_indep_aux {α : Type} : ∀ (f : Nat),
+    (∀ (m : Module) (_ : m.imports.length = 0) (st : Store α) (s : Locals)
+        (inst : Instruction) (env env' : HostEnv α),
+        execOne f m st s inst env = execOne f m st s inst env') ∧
+    (∀ (m : Module) (_ : m.imports.length = 0) (st : Store α) (s : Locals)
+        (p : Program) (env env' : HostEnv α),
+        exec f m st s p env = exec f m st s p env') ∧
+    (∀ (m : Module) (_ : m.imports.length = 0) (id : Nat) (initial : Store α)
+        (args : List Value) (env env' : HostEnv α),
+        run f m id initial args env = run f m id initial args env') := by
+  intro f
+  induction f with
+  | zero =>
+    have hOne : ∀ (m : Module) (_ : m.imports.length = 0) (st : Store α) (s : Locals)
+        (inst : Instruction) (env env' : HostEnv α),
+        execOne 0 m st s inst env = execOne 0 m st s inst env' := by
+      intro m _ st s inst env env'
+      simp only [execOne.eq_def]
+    have hExec : ∀ (m : Module) (_ : m.imports.length = 0) (st : Store α) (s : Locals)
+        (p : Program) (env env' : HostEnv α),
+        exec 0 m st s p env = exec 0 m st s p env' := by
+      intro m hh st s p env env'
+      cases p with
+      | nil => simp only [exec]
+      | cons inst rest => simp only [exec, execOne.eq_def]
+    refine ⟨hOne, hExec, ?_⟩
+    intro m hh id initial args env env'
+    have hnone : m.imports[id]? = none := by
+      rw [List.eq_nil_of_length_eq_zero hh]; rfl
+    simp only [run, hnone]
+    rcases h : m.funcs[id - m.imports.length]? with _ | fn
+    · rfl
+    · simp only
+      rw [hExec m hh initial (fn.toLocals (args.take fn.numParams).reverse) fn.body env env']
+      rcases hres : exec 0 m initial
+          (fn.toLocals (args.take fn.numParams).reverse) fn.body env' with
+        _ | ⟨n, _, _⟩ | _ | _ | _ | _ | ⟨id', st', vs⟩ | _
+      · rfl
+      · cases n <;> rfl
+      · rfl
+      · rfl
+      · rfl
+      · rfl
+      · simp only [runTail]
+      · rfl
+  | succ k ih =>
+    obtain ⟨ihOne, ihExec, ihRun⟩ := ih
+    -- Step 1: execOne at fuel k+1.
+    have hOne : ∀ (m : Module) (_ : m.imports.length = 0) (st : Store α) (s : Locals)
+        (inst : Instruction) (env env' : HostEnv α),
+        execOne (k + 1) m st s inst env = execOne (k + 1) m st s inst env' := by
+      intro m hh st s inst env env'
+      cases inst with
+      | block ps rs body =>
+        simp only [execOne.eq_def]
+        rw [ihExec m hh st s body env env']
+      | loop ps rs body =>
+        simp only [execOne_loop_succ]
+        rw [ihExec m hh st s body env env']
+        rcases hres : exec k m st s body env' with
+          ⟨st', s'⟩ | ⟨n, st', s'⟩ | ⟨st', vs⟩ | msg | msg | _ | ⟨id', st', vs⟩
+            | ⟨tag, targs, st', s'⟩
+        · rfl
+        · cases n with
+          | zero =>
+            exact ihOne m hh st'
+              { s' with values := s'.values.take ps ++ s.values.drop ps }
+              (.loop ps rs body) env env'
+          | succ _ => rfl
+        · rfl
+        · rfl
+        · rfl
+        · rfl
+        · rfl
+        · rfl
+      | iff ps rs thn els =>
+        simp only [execOne.eq_def]
+        rcases hvals : s.values with _ | ⟨v, vs⟩
+        · rfl
+        · cases v with
+          | i32 c =>
+            by_cases hc : c ≠ 0
+            · simp only [if_pos hc]
+              rw [ihExec m hh st { s with values := vs } thn env env']
+            · simp only [if_neg hc]
+              rw [ihExec m hh st { s with values := vs } els env env']
+          | i64 _ => rfl
+          | f32 _ => rfl
+          | f64 _ => rfl
+          | funcref _ => rfl
+          | externref _ => rfl
+          | exnref _ => rfl
+          | v128 _ => rfl
+          | anyref _ => rfl
+      | call id =>
+        simp only [execOne.eq_def]
+        rw [ihRun m hh id st s.values env env']
+      | callIndirect ti tj =>
+        rcases hvals : s.values with _ | ⟨v, rest⟩
+        · simp only [execOne.eq_def, hvals]
+        · cases hv : v with
+          | i64 i =>
+            rcases htbl : st.tables[tj]? with _ | tbl
+            · simp only [execOne.eq_def, hvals, hv, htbl]
+            · rcases hslot : tbl[i.toNat]? with _ | slot
+              · simp only [execOne.eq_def, hvals, hv, htbl, hslot]
+              · cases hslot' : slot with
+                | i32 _ => simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot']
+                | i64 _ => simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot']
+                | f32 _ => simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot']
+                | f64 _ => simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot']
+                | externref _ => simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot']
+                | exnref _ => simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot']
+                | v128 _ => simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot']
+                | funcref r =>
+                  rcases hr : r with _ | fid
+                  · simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot', hr]
+                  · rcases hfn : m.funcSig? fid with _ | fnsig
+                    · simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot', hr, hfn]
+                    · rcases hty : m.types[ti]? with _ | ty
+                      · simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot', hr, hfn, hty]
+                      · by_cases hsig : m.indirectCallTypeOk fid ti fnsig ty = true
+                        · simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot', hr,
+                            hfn, hty, if_pos hsig, ihRun m hh fid st rest env env']
+                        · simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot', hr,
+                            hfn, hty, if_neg hsig]
+                | anyref _ => simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot']
+          | f32 _    => simp only [execOne.eq_def, hvals, hv]
+          | f64 _    => simp only [execOne.eq_def, hvals, hv]
+          | funcref _ => simp only [execOne.eq_def, hvals, hv]
+          | externref _ => simp only [execOne.eq_def, hvals, hv]
+          | exnref _ => simp only [execOne.eq_def, hvals, hv]
+          | v128 _ => simp only [execOne.eq_def, hvals, hv]
+          | i32 i =>
+            rcases htbl : st.tables[tj]? with _ | tbl
+            · simp only [execOne.eq_def, hvals, hv, htbl]
+            · rcases hslot : tbl[i.toNat]? with _ | slot
+              · simp only [execOne.eq_def, hvals, hv, htbl, hslot]
+              · cases hslot' : slot with
+                | i32 _ => simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot']
+                | i64 _ => simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot']
+                | f32 _ => simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot']
+                | f64 _ => simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot']
+                | externref _ => simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot']
+                | exnref _ => simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot']
+                | v128 _ => simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot']
+                | funcref r =>
+                  rcases hr : r with _ | fid
+                  · simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot', hr]
+                  · rcases hfn : m.funcSig? fid with _ | fnsig
+                    · simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot', hr, hfn]
+                    · rcases hty : m.types[ti]? with _ | ty
+                      · simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot', hr, hfn, hty]
+                      · by_cases hsig : m.indirectCallTypeOk fid ti fnsig ty = true
+                        · simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot', hr,
+                            hfn, hty, if_pos hsig, ihRun m hh fid st rest env env']
+                        · simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot', hr,
+                            hfn, hty, if_neg hsig]
+                | anyref _ => simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot']
+          | anyref _ => simp only [execOne.eq_def, hvals, hv]
+      | tryTable ps rs catches body =>
+        simp only [execOne.eq_def]
+        rw [ihExec m hh st s body env env']
+      | callRef ti =>
+        rcases hvals : s.values with _ | ⟨v, rest⟩
+        · simp only [execOne.eq_def, hvals]
+        · cases hv : v with
+          | i32 _ => simp only [execOne.eq_def, hvals, hv]
+          | i64 _ => simp only [execOne.eq_def, hvals, hv]
+          | f32 _ => simp only [execOne.eq_def, hvals, hv]
+          | f64 _ => simp only [execOne.eq_def, hvals, hv]
+          | externref _ => simp only [execOne.eq_def, hvals, hv]
+          | exnref _ => simp only [execOne.eq_def, hvals, hv]
+          | v128 _ => simp only [execOne.eq_def, hvals, hv]
+          | funcref r =>
+            rcases hr : r with _ | fid
+            · simp only [execOne.eq_def, hvals, hv, hr]
+            · simp only [execOne.eq_def, hvals, hv, hr, ihRun m hh fid st rest env env']
+          | anyref _ => simp only [execOne.eq_def, hvals, hv]
+      | memOp kIdx inner =>
+        rcases hmem : st.extraMems[kIdx - 1]? with _ | memK
+        · simp only [execOne_memOp_succ, hmem]
+        · rcases hdecl : m.extraMemories[kIdx - 1]? with _ | declK
+          · simp only [execOne_memOp_succ, hmem, hdecl]
+          · simp only [execOne_memOp_succ, hmem, hdecl,
+              ihOne { m with memory := some declK } hh { st with mem := memK }
+                s inner env env']
+      | _ => simp only [execOne.eq_def]
+    -- Step 2: exec at fuel k+1 using hOne.
+    have hExec : ∀ (m : Module) (_ : m.imports.length = 0) (st : Store α) (s : Locals)
+        (p : Program) (env env' : HostEnv α),
+        exec (k + 1) m st s p env = exec (k + 1) m st s p env' := by
+      intro m hh st s p env env'
+      induction p generalizing st s with
+      | nil => simp only [exec]
+      | cons inst rest ihRest =>
+        simp only [exec]
+        rw [hOne m hh st s inst env env']
+        rcases hres : execOne (k+1) m st s inst env' with
+          ⟨st', s'⟩ | ⟨n, st', s'⟩ | ⟨st', vs⟩ | msg | msg | _ | ⟨id', st', vs⟩
+            | ⟨tag, targs, st', s'⟩
+        · exact ihRest st' s'
+        all_goals rfl
+    refine ⟨hOne, hExec, ?_⟩
+    -- Step 3: run at fuel k+1.
+    intro m hh id initial args env env'
+    have hnone : m.imports[id]? = none := by
+      rw [List.eq_nil_of_length_eq_zero hh]; rfl
+    simp only [run, hnone]
+    rcases h : m.funcs[id - m.imports.length]? with _ | fn
+    · rfl
+    · simp only
+      rw [hExec m hh initial (fn.toLocals (args.take fn.numParams).reverse) fn.body env env']
+      rcases hres : exec (k+1) m initial
+          (fn.toLocals (args.take fn.numParams).reverse) fn.body env' with
+        _ | ⟨n, _, _⟩ | _ | _ | _ | _ | ⟨id', st', vs⟩ | _
+      · rfl
+      · cases n <;> rfl
+      · rfl
+      · rfl
+      · rfl
+      · rfl
+      · simp only [runTail, ihRun m hh id' st' vs env env']
+      · rfl
+
+theorem execOne_env_indep
+    {m : Module} (hm : m.imports.length = 0) {st : Store α} {s : Locals}
+    {inst : Instruction} {fuel : Nat} {env env' : HostEnv α} :
+    execOne fuel m st s inst env = execOne fuel m st s inst env' :=
+  (env_indep_aux fuel).1 m hm st s inst env env'
+
+theorem exec_env_indep
+    {m : Module} (hm : m.imports.length = 0) {st : Store α} {s : Locals}
+    {p : Program} {fuel : Nat} {env env' : HostEnv α} :
+    exec fuel m st s p env = exec fuel m st s p env' :=
+  (env_indep_aux fuel).2.1 m hm st s p env env'
+
+/-- With no imported functions, `run` does not depend on the host environment. -/
+theorem run_env_indep
+    {m : Module} (hm : m.imports.length = 0) {id : Nat} {initial : Store α}
+    {args : List Value} {fuel : Nat} {env env' : HostEnv α} :
+    run fuel m id initial args env = run fuel m id initial args env' :=
+  (env_indep_aux fuel).2.2 m hm id initial args env env'
+
 end Wasm
