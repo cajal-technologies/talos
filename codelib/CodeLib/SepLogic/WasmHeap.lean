@@ -41,8 +41,9 @@ addresses wraps to low addresses and the bridge would be unprovable (or
 unsound if forced). -/
 section PointsTo
 variable [inst : WasmHeapGS]
--- Notation for Wasm points-to
-notation:50 addr:50 " ↦w " v:50 => pointsTo (L := UInt32) (V := Option UInt8)
+-- Notation for Wasm points-to (scoped: available inside this namespace
+-- and via `open Wasm.SepLogic`, without leaking through the CodeLib umbrella)
+scoped notation:50 addr:50 " ↦w " v:50 => pointsTo (L := UInt32) (V := Option UInt8)
     (GF := WasmHeapGF) (H := WasmHeapMap) addr (DFrac.own 1) (some v)
 -- Multi-byte: u64 as 8 consecutive owned bytes (little-endian)
 def pointsTo_u64 (addr : UInt32) (v : UInt64) : IProp WasmHeapGF :=
@@ -64,6 +65,15 @@ def arrayAt (ptr : UInt32) (xs : List UInt32) : IProp WasmHeapGF :=
   match xs with
   | [] => iprop% emp
   | x :: rest => iprop% (pointsTo_u32 ptr x) ∗ (arrayAt (ptr + 4) rest)
+-- element-offset arithmetic shared by the arrayAt lemmas: stepping past
+-- the head element shifts the base by one 4-byte stride
+omit inst in
+private theorem elem_offset_succ (ptr : UInt32) (k : Nat) :
+    ptr + 4 * UInt32.ofNat (k + 1) = (ptr + 4) + 4 * UInt32.ofNat k := by
+  symm
+  rw [UInt32.ofNat_add, show UInt32.ofNat 1 = 1 from rfl, UInt32.mul_add, UInt32.mul_one]
+  rw [UInt32.add_assoc ptr 4, UInt32.add_comm 4, ← UInt32.add_assoc]
+
 -- arrayAt splits across ++ : ownership of a concatenation is
 -- ownership of both halves (merge_sort_into splits data at mid)
 theorem arrayAt_append (ptr : UInt32) (xs ys : List UInt32) :
@@ -73,38 +83,8 @@ theorem arrayAt_append (ptr : UInt32) (xs ys : List UInt32) :
   | nil => simp [arrayAt]; exact BI.emp_sep.symm
   | cons x rest ih =>
     simp only [List.cons_append, List.length_cons, arrayAt]
-    rw [show ptr + 4 * UInt32.ofNat (rest.length + 1) = (ptr + 4) + 4 * UInt32.ofNat rest.length from by
-      symm
-      rw [UInt32.ofNat_add, show UInt32.ofNat 1 = 1 from rfl, UInt32.mul_add, UInt32.mul_one]
-      rw [UInt32.add_assoc ptr 4, UInt32.add_comm 4, ← UInt32.add_assoc]]
+    rw [elem_offset_succ]
     exact (BI.sep_congr_right (ih (ptr + 4))).trans BI.sep_assoc.symm
-
--- extract element k: whole-array ownership gives the single
--- cell plus everything else (merge reads left[i], right[j])
-theorem arrayAt_get (ptr : UInt32) (xs : List UInt32) (k : Nat)
-    (hk : k < xs.length) :
-    arrayAt ptr xs ⊢
-    pointsTo_u32 (ptr + 4 * UInt32.ofNat k) xs[k] ∗
-    (pointsTo_u32 (ptr + 4 * UInt32.ofNat k) xs[k] -∗ arrayAt ptr xs) := by
-  induction xs generalizing ptr k with
-  | nil => simp at hk
-  | cons x rest ih =>
-    cases k with
-    | zero =>
-      simp only [List.getElem_cons_zero, arrayAt]
-      rw [show ptr + 4 * UInt32.ofNat 0 = ptr from by simp [UInt32.ofNat]]
-      exact BI.sep_mono .rfl (BI.wand_intro BI.sep_symm)
-    | succ k' =>
-      simp only [List.length_cons] at hk
-      have hk' : k' < rest.length := by omega
-      simp only [List.getElem_cons_succ, arrayAt]
-      rw [show ptr + 4 * UInt32.ofNat (k' + 1) = (ptr + 4) + 4 * UInt32.ofNat k' from by
-        symm
-        rw [UInt32.ofNat_add, show UInt32.ofNat 1 = 1 from rfl, UInt32.mul_add, UInt32.mul_one]
-        rw [UInt32.add_assoc ptr 4, UInt32.add_comm 4, ← UInt32.add_assoc]]
-      exact (BI.sep_mono_right (ih (ptr + 4) k' hk')).trans
-        (BI.sep_left_comm.mp.trans (BI.sep_mono_right
-          (BI.wand_intro (BI.sep_assoc.mp.trans (BI.sep_mono_right BI.wand_elim_left)))))
 
 -- update element k: give back a cell with a NEW value,
 -- own the updated array (merge writes out[k] = v)
@@ -125,12 +105,20 @@ theorem arrayAt_set (ptr : UInt32) (xs : List UInt32) (k : Nat)
       simp only [List.length_cons] at hk
       have hk' : k' < rest.length := by omega
       simp only [List.getElem_cons_succ, List.set_cons_succ, arrayAt]
-      rw [show ptr + 4 * UInt32.ofNat (k' + 1) = (ptr + 4) + 4 * UInt32.ofNat k' from by
-        symm
-        rw [UInt32.ofNat_add, show UInt32.ofNat 1 = 1 from rfl, UInt32.mul_add, UInt32.mul_one]
-        rw [UInt32.add_assoc ptr 4, UInt32.add_comm 4, ← UInt32.add_assoc]]
+      rw [elem_offset_succ]
       exact (BI.sep_mono_right (ih (ptr + 4) k' hk')).trans
         (BI.sep_left_comm.mp.trans (BI.sep_mono_right
           (BI.wand_intro (BI.sep_assoc.mp.trans (BI.sep_mono_right BI.wand_elim_left)))))
+
+-- extract element k: whole-array ownership gives the single
+-- cell plus everything else (merge reads left[i], right[j]).
+-- The special case of arrayAt_set that writes back the value just read.
+theorem arrayAt_get (ptr : UInt32) (xs : List UInt32) (k : Nat)
+    (hk : k < xs.length) :
+    arrayAt ptr xs ⊢
+    pointsTo_u32 (ptr + 4 * UInt32.ofNat k) xs[k] ∗
+    (pointsTo_u32 (ptr + 4 * UInt32.ofNat k) xs[k] -∗ arrayAt ptr xs) := by
+  have h := arrayAt_set ptr xs k xs[k] hk
+  rwa [List.set_getElem_self] at h
 end PointsTo
 end Wasm.SepLogic

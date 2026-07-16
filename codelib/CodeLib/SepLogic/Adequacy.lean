@@ -215,22 +215,26 @@ theorem wp_wasm_prop_call
 
 -- block rule: body either falls through or breaks to label 0;
 -- both cases produce the same trimmed continuation locals.
+-- A single body fuel suffices: the rule lifts it via `exec_fuel_mono`
+-- internally. Scope: bodies that exit via an outward break (`Break (k+1)`)
+-- or `Return` are not covered — trace those at the exec level and hop over
+-- them with `wp_wasm_prop_of_exec_eq` (as swap's `func1` does).
 omit inst in
 theorem wp_wasm_prop_block
     {m : Module} {st : Store Unit} {locals : Locals}
     {bt bl : Nat} {body : Program} {rest : Program}
     {env : HostEnv Unit}
     {Q : Store Unit → List Value → Prop}
-    (hbody : ∃ N, ∀ fuel ≥ N,
-      (∃ st' s', exec fuel m st locals body env = .Fallthrough st' s' ∧
+    (hbody : ∃ N,
+      (∃ st' s', exec N m st locals body env = .Fallthrough st' s' ∧
         wp_wasm_prop m st' { s' with values := s'.values.take bl ++ locals.values.drop bt }
           rest env Q) ∨
-      (∃ st' s', exec fuel m st locals body env = .Break 0 st' s' ∧
+      (∃ st' s', exec N m st locals body env = .Break 0 st' s' ∧
         wp_wasm_prop m st' { s' with values := s'.values.take bl ++ locals.values.drop bt }
           rest env Q)) :
     wp_wasm_prop m st locals (.block bt bl body :: rest) env Q := by
   obtain ⟨N, hN⟩ := hbody
-  rcases hN N le_rfl with ⟨st', s', hbody_result, hwp⟩ | ⟨st', s', hbody_result, hwp⟩ <;> {
+  rcases hN with ⟨st', s', hbody_result, hwp⟩ | ⟨st', s', hbody_result, hwp⟩ <;> {
     obtain ⟨fuel_rest, hfuel⟩ := hwp
     have hbody_ne : exec N m st locals body env ≠ .OutOfFuel := by
       rw [hbody_result]; intro h; cases h
@@ -250,6 +254,7 @@ theorem wp_wasm_prop_block
 
 -- loop rule: invariant I and measure μ; body either falls through (exit) or
 -- breaks to label 0 (re-enter) with I re-established and μ decreased.
+-- As with the block rule, a single body fuel per iteration suffices.
 omit inst in
 theorem wp_wasm_prop_loop
     {m : Module} {st : Store Unit} {locals : Locals}
@@ -260,11 +265,11 @@ theorem wp_wasm_prop_loop
     (μ : Store Unit → Locals → Nat)
     (hinit : I st locals)
     (hstep : ∀ stA locA, I stA locA →
-      ∃ N, ∀ fuel ≥ N,
-        (∃ stB sB, exec fuel m stA locA body env = .Fallthrough stB sB ∧
+      ∃ N,
+        (∃ stB sB, exec N m stA locA body env = .Fallthrough stB sB ∧
           wp_wasm_prop m stB { sB with values := sB.values.take rs ++ locA.values.drop ps }
             rest env Q) ∨
-        (∃ stB sB, exec fuel m stA locA body env = .Break 0 stB sB ∧
+        (∃ stB sB, exec N m stA locA body env = .Break 0 stB sB ∧
           I stB { sB with values := sB.values.take ps ++ locA.values.drop ps } ∧
           μ stB { sB with values := sB.values.take ps ++ locA.values.drop ps } < μ stA locA)) :
     wp_wasm_prop m st locals (.loop ps rs body :: rest) env Q := by
@@ -302,7 +307,7 @@ theorem wp_wasm_prop_loop
   | _ n IH =>
     intro stA sA hI hμ
     obtain ⟨N, hN⟩ := hstep stA sA hI
-    rcases hN N le_rfl with ⟨stB, sB, hbody, hwp⟩ | ⟨stB, sB, hbody, hI', hμ'⟩
+    rcases hN with ⟨stB, sB, hbody, hwp⟩ | ⟨stB, sB, hbody, hI', hμ'⟩
     · -- Fallthrough: body exits, compose fuels for body and rest
       obtain ⟨fuel_rest, hfuel⟩ := hwp
       have hbody_ne : exec N m stA sA body env ≠ .OutOfFuel := by
@@ -365,9 +370,97 @@ private example (m : Module) (st : Store Unit) (locals : Locals) :
   apply wp_wasm_prop_loop (I := fun _ _ => True) (μ := fun _ _ => 0)
   · trivial
   · intro stA sA _
-    refine ⟨0, fun fuel _ => Or.inl ⟨stA, sA, ?_, ⟨0, ?_⟩⟩⟩
+    refine ⟨0, Or.inl ⟨stA, sA, ?_, ⟨0, ?_⟩⟩⟩
     · simp only [exec]
     · simp only [List.take_zero, List.nil_append, List.drop_zero, exec]
+
+-- toy: empty block body falls through, validating the block rule's
+-- Fallthrough disjunct
+private example (m : Module) (st : Store Unit) (locals : Locals) :
+    wp_wasm_prop m st locals [.block 0 0 []] {} (fun _ _ => True) := by
+  apply wp_wasm_prop_block
+  refine ⟨0, Or.inl ⟨st, locals, ?_, ⟨0, ?_⟩⟩⟩
+  · simp only [exec]
+  · simp only [exec]
+
+-- toy: `br 0` body breaks to the block label, validating the Break-0 disjunct
+private example (m : Module) (st : Store Unit) (locals : Locals) :
+    wp_wasm_prop m st locals [.block 0 0 [.br 0]] {} (fun _ _ => True) := by
+  apply wp_wasm_prop_block
+  refine ⟨1, Or.inr ⟨st, locals, ?_, ⟨0, ?_⟩⟩⟩
+  · simp [exec, execOne]
+  · simp only [exec]
+
+omit inst in
+/-- `TerminatesWith` is monotone in its postcondition. Stated here (rather
+than in the interpreter's `Spec/Defs.lean`) so the SepLogic layer stays
+self-contained; the main consumer is `wp_wasm_prop_call`, whose callee spec
+must be weakened to "the continuation's WP holds". -/
+theorem _root_.Wasm.TerminatesWith.mono {α : Type} {env : HostEnv α} {m : Module}
+    {id : Nat} {initial : Store α} {args : List Value}
+    {P P' : Store α → List Value → Prop}
+    (h : TerminatesWith env m id initial args P)
+    (himp : ∀ st vs, P st vs → P' st vs) :
+    TerminatesWith env m id initial args P' := by
+  obtain ⟨N, hN⟩ := h
+  exact ⟨N, fun fuel hf =>
+    let ⟨vs, st, hrun, hp⟩ := hN fuel hf
+    ⟨vs, st, hrun, himp st vs hp⟩⟩
+
+omit inst in
+/-- Transport `wp_wasm_prop` along a fuel-indexed execution equation: if
+`prog` from `(st, locals)` always reduces to `prog'` from `(st', locals')`
+(with structural fuel offsets `K` and `c` fixed by the instructions crossed),
+then a WP for the reduct is a WP for the original. Program proofs use this
+to hop over an already-traced straight-line or block prefix to the next
+composition point (typically a `.call` handled by `wp_wasm_prop_call`)
+without threading concrete fuel values. -/
+theorem wp_wasm_prop_of_exec_eq
+    {m : Module} {st st' : Store Unit} {locals locals' : Locals}
+    {prog prog' : Program} {env : HostEnv Unit}
+    {Q : Store Unit → List Value → Prop} (K c : Nat)
+    (h : ∀ fuel, exec (fuel + K) m st locals prog env
+               = exec (fuel + c) m st' locals' prog' env)
+    (hwp : wp_wasm_prop m st' locals' prog' env Q) :
+    wp_wasm_prop m st locals prog env Q := by
+  obtain ⟨n, hn⟩ := hwp
+  have hne : exec n m st' locals' prog' env ≠ .OutOfFuel := by
+    intro ho; simp only [ho] at hn
+  refine ⟨n + K, ?_⟩
+  rw [h n, exec_fuel_mono (Nat.le_add_right n c) hne]
+  exact hn
+
+/-- Discharge the ghost-update obligation of a per-instruction rule when the
+step leaves the ghost heap untouched — every current rule: memory facts enter
+the load/store rules as pure hypotheses (see the note on `wp_wasm_F`), so the
+heap resource passes through unchanged. Collapses the per-step
+`iintro/imodintro/iexists` boilerplate of program proofs to a single
+combinator: `wp_wasm_localGet hget (ghost_id ?_)`. -/
+theorem ghost_id {P : IProp WasmHeapGF} (h : ⊢ P) :
+    ∀ σ : WasmHeapMap (Option UInt8),
+      ⊢ genHeapInterp σ ==∗
+        ∃ σ' : WasmHeapMap (Option UInt8), genHeapInterp σ' ∗ P := by
+  intro σ
+  iintro Hσ
+  imodintro
+  iexists σ
+  isplitl [Hσ]
+  · iexact Hσ
+  · exact h
+
+/-- Terminal rule: a program at `.ret` satisfies the WP when the
+postcondition holds of the current store and value stack. Closes the
+per-instruction chain of a program proof. -/
+theorem wp_wasm_ret
+    {m : Module} {st : Store Unit} {locals : Locals} {rest : Program}
+    {env : HostEnv Unit} {Q : Store Unit → List Value → Prop}
+    (h : Q st locals.values) :
+    ⊢ wp_wasm m st locals (.ret :: rest) env Q := by
+  unfold wp_wasm
+  iapply least_fixpoint_unfold_mpr
+  unfold wp_wasm_F
+  dsimp only []
+  exact BI.pure_intro h
 
 -- per-instruction iProp rules for wp_wasm
 -- each wraps wp_wasm_step and discharges the execOne obligation

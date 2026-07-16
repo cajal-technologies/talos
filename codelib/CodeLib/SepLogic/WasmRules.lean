@@ -4,8 +4,9 @@ import Interpreter.Wasm
 /-! # Bridge: Talos Mem ↔ iris-lean GenHeap
 
 Defines `heapAgreesWithMem` — the agreement predicate between an abstract
-GenHeap state σ and physical `Mem.bytes` — together with per-byte load/store
-soundness lemmas for it.
+GenHeap state σ and physical memory — together with per-byte load/store
+soundness lemmas for it, stated against the interpreter's `Mem.read8` /
+`Mem.write8` API so they apply directly to interpreter-produced states.
 
 **Status: not yet wired into the WP.** Nothing in `wp_wasm_F`,
 `wasm_adequacy`, or `wasm_heap_adequacy` currently asserts this agreement:
@@ -25,7 +26,7 @@ open Iris Wasm Std
 
 def heapAgreesWithMem (σ : WasmHeapMap (Option UInt8)) (mem : Mem) : Prop :=
   ∀ (addr : UInt32) (v : UInt8),
-    get? σ addr = some (some v) → mem.bytes addr.toNat = v
+    get? σ addr = some (some v) → mem.read8 addr = v
 
 /-! Soundness of load:
 If GenHeap says addr ↦ v and σ agrees with Mem,
@@ -35,27 +36,24 @@ theorem load_sound (σ : WasmHeapMap (Option UInt8)) (mem : Mem)
     (addr : UInt32) (v : UInt8)
     (h_agree : heapAgreesWithMem σ mem)
     (h_own : get? σ addr = some (some v)) :
-    mem.bytes addr.toNat = v :=
+    mem.read8 addr = v :=
   h_agree addr v h_own
 
 /-! Soundness of store:
-After Mem.write8, the updated σ still agrees with new Mem. -/
+After Mem.write8, the updated σ still agrees with the new Mem. -/
 
 theorem store_sound (σ : WasmHeapMap (Option UInt8)) (mem : Mem)
-    (addr : UInt32) (old_v new_v : UInt8)
-    (h_agree : heapAgreesWithMem σ mem)
-    (h_own : get? σ addr = some (some old_v)) :
-    heapAgreesWithMem (insert σ addr (some new_v))
-      ⟨mem.pages, fun n =>
-        if n = addr.toNat then new_v else mem.bytes n⟩ := by
+    (addr : UInt32) (new_v : UInt8)
+    (h_agree : heapAgreesWithMem σ mem) :
+    heapAgreesWithMem (insert σ addr (some new_v)) (mem.write8 addr new_v) := by
   intro addr' v' h_get
   by_cases h : addr' = addr
   · subst h
     simp [get?_insert_eq rfl] at h_get
-    simp [h_get]
+    simp [Mem.write8, Mem.read8, h_get]
   · simp [get?_insert_ne (Ne.symm h)] at h_get
     have hne : addr'.toNat ≠ addr.toNat :=
       fun h' => h (UInt32.ext h')
-    exact (if_neg hne).trans (h_agree addr' v' h_get)
+    simpa [Mem.write8, Mem.read8, hne] using h_agree addr' v' h_get
 
 end Wasm.SepLogic
