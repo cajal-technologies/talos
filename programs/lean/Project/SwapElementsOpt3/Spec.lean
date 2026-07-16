@@ -1,6 +1,5 @@
 import Project.SwapElementsOpt3.Program
-import Interpreter.Wasm.Wp.Call
-import Interpreter.Wasm.Wp.Tactic
+import Project.SwapElements.Spec
 
 /-!
 # Specification and proof for `swap_elements_opt3`
@@ -40,20 +39,12 @@ namespace Project.SwapElementsOpt3.Spec
 
 open Wasm
 
+-- The element-address vocabulary (`elemAddr` and its arithmetic lemmas) is
+-- shared with the opt0 build's spec, so the two postconditions match
+-- syntactically and the equivalence proof needs no normalisation step.
+open Project.SwapElements.Spec (elemAddr elemAddr_of_shl elemAddr_toNat)
+
 set_option maxRecDepth 1048576
-
-/-- Byte address of the `k`-th `u64` element of an array based at `ptr`. -/
-@[reducible] def elemAddr (ptr k : UInt32) : UInt32 := ptr + 8 * k
-
-/-- Address arithmetic the codegen emits: `(k <<< 3) + ptr = elemAddr ptr k`. -/
-theorem elemAddr_of_shl (ptr k : UInt32) : k <<< (3 % 32 : UInt32) + ptr = elemAddr ptr k :=
-  MemRegion.slot64_of_shl ptr k
-
-/-- No address wraparound: for an element index whose byte offset stays below
-`2^32`, the wasm address `ptr + 8*k` is the true integer `ptr.toNat + 8*k.toNat`. -/
-theorem elemAddr_toNat (ptr k : UInt32) (h : ptr.toNat + 8 * k.toNat < 4294967296) :
-    (elemAddr ptr k).toNat = ptr.toNat + 8 * k.toNat :=
-  MemRegion.slot64_base_toNat ptr k h
 
 /-- `func0` (index 0, the export): bounds checks fused with the exchange. -/
 theorem func0_swap (env : HostEnv Unit) (st : Store Unit) (ptr len i j : UInt32)
