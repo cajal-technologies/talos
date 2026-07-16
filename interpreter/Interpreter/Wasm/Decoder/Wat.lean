@@ -229,7 +229,11 @@ private def parseHexFloatMag (body : String) : Except Err Float := do
     | [i]          => (i, "")
     | i :: f :: _  => (i, f)
     | []           => ("", "")
-  let m := (fromHexString? (intH ++ fracH)).getD 0
+  -- A mantissa that fails to lex must be an error, not 0: this parser also
+  -- backs the runner's CLI float args, where a garbage literal silently
+  -- running as 0.0 would mask typos (and fake agreement in differential runs).
+  let some m := fromHexString? (intH ++ fracH)
+    | .error s!"bad hex float literal: 0x{body}"
   let e ← parseDecExp expS
   .ok (floatScalePow2 (Float.ofNat m) (e - 4 * Int.ofNat fracH.length))
 
@@ -243,7 +247,9 @@ private def parseDecFloatMag (body : String) : Except Err Float := do
     | [i]          => (i, "")
     | i :: f :: _  => (i, f)
     | []           => ("", "")
-  let m := ((intP ++ fracP).toNat?).getD 0
+  -- Same strictness rationale as `parseHexFloatMag`: garbage must not be 0.
+  let some m := (intP ++ fracP).toNat?
+    | .error s!"bad float literal: {body}"
   let de ← parseDecExp expS
   let exp := de - Int.ofNat fracP.length
   .ok (Float.ofScientific m (exp < 0) exp.natAbs)

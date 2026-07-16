@@ -27,6 +27,14 @@ unsupported, so it never shows up as a false divergence.
 spoke this contract natively; driving the runner directly keeps the verdict
 mapping in one place instead of two.)
 
+The contract is enforced, not assumed: every run starts with **canaries** that
+probe the runner's actual output against miscast's own classification regexes —
+an arg-count complaint must not read as validator rejection (that would record
+false REJECT agreement on invalid modules), an uncaught exception must read as
+a trap, and a garbage float argument must fail the run rather than parse as
+`0.0`. A reworded runner error message that breaks the coupling fails the run
+immediately instead of silently skewing verdicts.
+
 miscast is pinned as an external dependency (a rev in `scripts/differential.sh`),
 not vendored. The first run clones it into `.differential-cache/` (gitignored);
 set `MISCAST_DIR=/path/to/miscast` to use a local checkout instead.
@@ -44,8 +52,9 @@ set `MISCAST_DIR=/path/to/miscast` to use a local checkout instead.
 `replay`). Each is one soundness corner, and a regression guard. **Every seed
 must export its entry point as `f`** — miscast drives a bare `.wat` through the
 export named `f` (the convention its own seed corpus follows); any other name
-makes the seed-driven modes silently skip the module. Seeds are also runnable
-directly:
+makes the seed-driven modes silently skip the module. `scripts/differential.sh`
+lints the corpus for this on every run, so a wrongly named seed fails loudly.
+Seeds are also runnable directly:
 
 ```bash
 cd interpreter && lake exe runner ../differential/seeds/recgroup_callindirect.wat f
@@ -56,7 +65,11 @@ which the runner now handles correctly. It must keep trapping.
 
 ## Known noise
 
-The runner's Lean float formatting differs from V8's, so some `f64` results show up
-as *value* (not soundness) divergences. Those are formatting noise, not bugs; the
-follow-up CI gate baselines them (and the #108 recgroup cluster) so it only trips on
-new divergences.
+The runner's Lean float formatting differs from V8's, so `f64` results *can* show
+up as *value* (not soundness) divergences in modes that compare results as text.
+Note that earlier sweeps predate two fixes on this branch — float CLI args used to
+be read as raw bit patterns, and garbage float literals used to parse as `0.0` —
+both of which manufactured exactly this kind of value divergence. The follow-up CI
+gate must therefore derive its baseline from a **fresh** full sweep on this branch
+(plus the #108 recgroup cluster), not from the earlier runs, so genuinely fixed
+noise is not baselined over real future divergences.
