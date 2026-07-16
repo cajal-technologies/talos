@@ -65,7 +65,7 @@ just differential                          # recgroup soundness mode, V8 oracle
 just differential --mode recgroup -n 300   # reproduce the full #108 cluster
 ```
 
-It drives the runner as the custom system-under-test for [miscast](https://github.com/jasisz/miscast) (pinned as an external dependency). Requires `wasm-tools` and `node` ≥ 22. See [`differential/README.md`](differential/README.md) for details.
+It drives the runner as the custom system-under-test for [miscast](https://github.com/jasisz/miscast) (pinned as an external dependency). Requires `wasm-tools`, `python3`, `git`, and `node` ≥ 22 (on `PATH` or under `~/.nvm`). See [`differential/README.md`](differential/README.md) for details.
 
 ## Contributing code
 
