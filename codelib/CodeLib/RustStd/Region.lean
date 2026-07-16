@@ -162,6 +162,45 @@ theorem slot64_disjoint (base k l : UInt32)
   simp only [slot64]
   omega
 
+/-- The `k`-th 4-byte slot of a `u32` array based at `base` (wasm address
+`base + 4 * k`). The 32-bit twin of `slot64`, matching the `Mem.words32`
+element stride. -/
+def slot32 (base k : UInt32) : MemRegion := ⟨base + 4 * k, 4⟩
+
+/-- `x <<< 2 = 4 * x` on `UInt32`: the `(const 2) shl` address computation LLVM
+emits for a `u32` array index. -/
+theorem shl2_eq_mul4 (x : UInt32) : x <<< (2 % 32 : UInt32) = 4 * x := by bv_decide
+
+/-- The codegen's `(k <<< 2) + base` lands on the slot base address. The
+32-bit twin of `slot64_of_shl` (whose consumer is `SwapElementsSpec`); the
+`u32` element-slot proofs of the merge_sort work (PR #106) are the intended
+consumer here. -/
+theorem slot32_of_shl (base k : UInt32) :
+    k <<< (2 % 32 : UInt32) + base = (slot32 base k).base := by
+  simp only [slot32]; bv_decide
+
+/-- No wraparound: if the slot's true byte offset stays below `2^32`, the wasm
+address of `slot32 base k` is the integer `base.toNat + 4 * k.toNat`. -/
+theorem slot32_base_toNat (base k : UInt32)
+    (h : base.toNat + 4 * k.toNat < 4294967296) :
+    (slot32 base k).base.toNat = base.toNat + 4 * k.toNat := by
+  simp only [slot32, UInt32.toNat_add, UInt32.toNat_mul, UInt32.reduceToNat]
+  omega
+
+/-- Distinct in-bounds element slots of a no-wrap `u32` array are disjoint.
+The 32-bit twin of `slot64_disjoint`, for the same per-element aliasing
+arguments (`SwapElementsSpec`-style) over `u32` arrays (PR #106). -/
+theorem slot32_disjoint (base k l : UInt32)
+    (hk : base.toNat + 4 * k.toNat < 4294967296)
+    (hl : base.toNat + 4 * l.toNat < 4294967296)
+    (hkl : k ≠ l) :
+    (slot32 base k).Disjoint (slot32 base l) := by
+  unfold Disjoint
+  rw [slot32_base_toNat base k hk, slot32_base_toNat base l hl]
+  have : k.toNat ≠ l.toNat := fun he => hkl (UInt32.toNat.inj he)
+  simp only [slot32]
+  omega
+
 end MemRegion
 
 end Wasm
