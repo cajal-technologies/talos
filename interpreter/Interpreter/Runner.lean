@@ -127,8 +127,10 @@ def parseArgForType (t : ValueType) (s : String) : Except String Value :=
     | .error _ => .error s!"argument out of range for i64: `{s}`"
   | .f32 =>
     -- WAT float literal (decimal, hex-float, `inf`, `nan[:0x…]`) — the same
-    -- grammar `f32.const` accepts, via the decoder's parser. This is what a
-    -- differential harness replaying `.wast` invokes hands us verbatim.
+    -- grammar `f32.const` accepts, via the decoder's parser. The CLI is a
+    -- human surface: a literal means its value, never a raw bit pattern.
+    -- (miscast never passes float args — it skips float-arg invokes
+    -- upstream — so this is for people, and guarded by a harness canary.)
     match parseF32Lit s with
     | .ok v  => .ok (.f32 v)
     | .error _ => .error s!"bad f32 literal: `{s}`"

@@ -19,8 +19,9 @@ the runner, points miscast's custom system-under-test at it, and runs it against
 No adapter is needed: miscast invokes a custom SUT as `CUSTOM_CMD='<cmd> {wat} {export}'`
 and reads a value from stdout / a trap from a `trap:` line, which is exactly the
 runner's CLI and output contract — including uncaught exceptions (reported as a
-`trap:` line, matching V8's classification) and float arguments (the WAT literal
-grammar, the same values V8 sees). Out-of-fuel (exit 2, empty stdout) reads as
+`trap:` line, matching V8's classification). Invoke arguments are i32/i64 only —
+miscast skips float- and ref-arg actions upstream — and the runner reads them as
+plain integers, exactly as V8 does. Out-of-fuel (exit 2, empty stdout) reads as
 unsupported, so it never shows up as a false divergence.
 
 (miscast also ships `tools/talos_run.py`, an adapter written before the runner
