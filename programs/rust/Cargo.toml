@@ -6,6 +6,7 @@ members = [
   "rust_array_tests",
   "rust_u64_tests",
   "num_integer",
+  "mergesort",
   "num_integer_opt3",
   "rust_u64",
   "total_variation",
