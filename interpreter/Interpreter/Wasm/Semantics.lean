@@ -75,13 +75,37 @@ def AnyRef.matchesHeap (m : Module) (st : Store α) (ht : GcHeapType) : AnyRef �
 /-- Whether reference value `v` matches the target reference type
 `(ref null?ₙ ht)` used by `ref.test`/`ref.cast`/`br_on_cast`. The null
 reference matches exactly when the target is nullable and `ht` is in the
-same (any vs func vs extern) bottom family. -/
+same (any vs func vs extern) bottom family.
+
+A non-null funcref matches the abstract `func` heap type always, and a
+concrete target `(ref $ft)` when the function's declared type is a
+subtype of `$ft` (issue #96). When the declared type is unrecorded
+(`funcTypeIdx? = none`, hand-built modules) the check degrades to
+structural equality of the function's signature against the target's
+composite type, mirroring `Module.indirectCallTypeOk`. -/
 def gcRefMatches (m : Module) (st : Store α) (nullable : Bool)
     (ht : GcHeapType) : Value → Bool
   | .anyref none      => nullable && ht.inAnyHierarchy
   | .anyref (some r)  => r.matchesHeap m st ht
-  | .funcref none     => nullable && (ht == .func || ht == .noFunc)
-  | .funcref (some _) => ht == .func
+  | .funcref none     =>
+    nullable &&
+    (ht == .func || ht == .noFunc ||
+     -- Null also inhabits every nullable *concrete* function type: the
+     -- null funcref has type `nofunc`, the bottom of the func family.
+     (match ht with
+      | .concrete t => match m.gcComposite? t with
+        | some (.func _) => true
+        | _ => false
+      | _ => false))
+  | .funcref (some f) => match ht with
+    | .func       => true
+    | .concrete t =>
+      (match m.funcTypeIdx? f with
+       | some src => m.gcTypeSubtype src t
+       | none     => match m.funcSig? f, m.gcComposite? t with
+         | some fn, some (.func ty) => fn == ty
+         | _, _ => false)
+    | _ => false
   | .externref none   => nullable && (ht == .extern || ht == .noExtern)
   | .externref (some _) => ht == .extern
   | _                 => false
@@ -2277,7 +2301,9 @@ def Module.runConstElems (fuel : Nat) (m : Module) (st : Store α)
   for seg in m.elements do
     match seg.tableIdx, seg.offset with
     | some ti, some off =>
-      if !seg.exprs.isEmpty then
+      -- Segments whose offset is itself a pending const-expr are written
+      -- by `runActiveSegments` (which knows the real offset) instead.
+      if !seg.exprs.isEmpty && seg.offsetExpr.isEmpty then
         let mut i := 0
         for e in seg.exprs do
           match exec fuel m st {} e env with
@@ -2289,6 +2315,73 @@ def Module.runConstElems (fuel : Nat) (m : Module) (st : Store α)
             | _, _ => pure ()
           | _ => pure ()
           i := i + 1
+    | _, _ => pure ()
+  return st
+
+/-- Write the active data/element segments whose offset is a constant
+expression that could not be folded at decode time (`global.get` of an
+imported global, extended-const arithmetic). `Module.initialStore` skips
+these segments (their offset depends on the store); this pass evaluates
+each `offsetExpr` against the current store and writes the segment at
+the computed offset. Runs after `runConstGlobals` so the offsets see the
+evaluated (and imported) globals. -/
+def Module.runActiveSegments (fuel : Nat) (m : Module) (st : Store α)
+    (env : HostEnv α := {}) : Store α := Id.run do
+  let mut st := st
+  -- Evaluate one offset const-expr to a byte/element offset. `i64`
+  -- results come from memory64/table64 modules.
+  let evalOffset (st : Store α) (prog : Program) : Option Nat :=
+    match exec fuel m st {} prog env with
+    | .Fallthrough _ s' =>
+      match s'.values with
+      | .i32 v :: _ => some v.toNat
+      | .i64 v :: _ => some v.toNat
+      | _           => none
+    | _ => none
+  -- Active data segments with a pending offset expression. Segments live
+  -- in one global, source-ordered list (memory 0's `data`), routed to
+  -- their memory by `DataSegment.memIdx`.
+  let segs := match m.memory with
+    | some decl => decl.data
+    | none      => []
+  for seg in segs do
+    if seg.offset.isSome && !seg.offsetExpr.isEmpty then
+      match evalOffset st seg.offsetExpr with
+      | some off =>
+        if seg.memIdx = 0 then
+          st := { st with mem := st.mem.writeBytes off seg.bytes }
+        else
+          match st.extraMems[seg.memIdx - 1]? with
+          | some mem0 =>
+            let mems := st.extraMems.set (seg.memIdx - 1) (mem0.writeBytes off seg.bytes)
+            st := { st with extraMems := mems }
+          | none => pure ()
+      | none => pure ()
+  -- Active element segments with a pending offset expression.
+  for seg in m.elements do
+    match seg.tableIdx, seg.offset with
+    | some ti, some _ =>
+      if !seg.offsetExpr.isEmpty then
+        match evalOffset st seg.offsetExpr, st.tables[ti]? with
+        | some off, some tbl =>
+          if seg.exprs.isEmpty then
+            let tbls := st.tables.set ti (listWriteAt tbl off (seg.funcs.map Value.funcref))
+            st := { st with tables := tbls }
+          else
+            -- GC const-expr items, as in `runConstElems`, but at the
+            -- evaluated offset.
+            let mut i := 0
+            for e in seg.exprs do
+              match exec fuel m st {} e env with
+              | .Fallthrough st' s' =>
+                st := st'
+                match s'.values, st'.tables[ti]? with
+                | v :: _, some tbl' =>
+                  st := { st' with tables := st'.tables.set ti (tbl'.set (off + i) v) }
+                | _, _ => pure ()
+              | _ => pure ()
+              i := i + 1
+        | _, _ => pure ()
     | _, _ => pure ()
   return st
 

@@ -8,6 +8,7 @@ import CodeLib.RustStd.Frame
 import CodeLib.RustStd.Region
 import CodeLib.RustStd.MemArray
 import CodeLib.RustStd.MemFillLoop
+import CodeLib.RustStd.MemCopyLoop
 import CodeLib.RustStd.UInt
 import CodeLib.RustStd.U64.Basic
 import CodeLib.RustStd.U64.AbsDiff
@@ -30,6 +31,10 @@ import CodeLib.Near.State
 import CodeLib.Near.Env
 import CodeLib.Near.Proof
 import CodeLib.IEEE32.Exec
+import CodeLib.SepLogic.WasmHeap
+import CodeLib.SepLogic.WasmRules
+import CodeLib.SepLogic.WasmWP
+import CodeLib.SepLogic.Adequacy
 
 /-!
 # CodeLib — umbrella import for downstream code

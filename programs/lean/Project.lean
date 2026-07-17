@@ -6,6 +6,7 @@ import Project.RustArrayTests.Spec
 import Project.RustU64.Spec
 import Project.RustU64Tests.Spec
 import Project.SwapElements.Spec
+import Project.SwapElements.SwapSepLogic
 import Project.SwapElementsOpt3.Spec
 import Project.SwapElementsOpt3.Equivalence
 import Project.TotalVariation.Spec

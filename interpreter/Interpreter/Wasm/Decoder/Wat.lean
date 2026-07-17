@@ -441,6 +441,10 @@ private structure TypeEntry where
   fieldNames : List (Option String) := []
   /-- `false` when declared `(sub …)` without `final` (open for subtyping). -/
   isFinal : Bool := true
+  /-- Recursion-group marker for members of a multi-member `(rec …)` group
+  (the group's first type index); `none` for singleton groups. Threaded
+  into `GcTypeDef.recGroup` for iso-recursive type equivalence. -/
+  recGroup : Option Nat := none
 deriving Inhabited
 
 structure Ctx where
@@ -1798,15 +1802,21 @@ private structure FuncDecl where
   inlineExports : List String
   func          : Wasm.Function
 
-private def resolveTypeRef (types : Array TypeEntry) (s : String)
-    : Except Err (List Wasm.ValueType × List Wasm.ValueType) := do
-  let idx ← if s.startsWith "$" then
+/-- Resolve a `(type N)` / `(type $sig)` reference to its type-table
+index. -/
+private def resolveTypeIdxRef (types : Array TypeEntry) (s : String)
+    : Except Err Nat :=
+  if s.startsWith "$" then
     let name := (s.drop 1).toString
     match types.findIdx? (fun t => t.symId = some name) with
     | some i => .ok i
     | none => .error s!"unknown type id: {s}"
   else
     parseNat s
+
+private def resolveTypeRef (types : Array TypeEntry) (s : String)
+    : Except Err (List Wasm.ValueType × List Wasm.ValueType) := do
+  let idx ← resolveTypeIdxRef types s
   match types[idx]? with
   | some { sig := some sig, .. } => .ok sig
   | some { sig := none, .. } =>
@@ -1998,6 +2008,11 @@ private def parseFunc (funcIds : Std.HashMap String Nat)
   let mut inlineExports : List String := []
   let mut localIds : Std.HashMap String Nat := {}
   let mut typeApplied : Bool := false
+  -- Declared `(type N)` index, recorded on the function so the runtime
+  -- nominal type checks (`(return_)call_indirect`, `ref.test`/`ref.cast`
+  -- against a concrete function type) can consult the `rec`/`sub`
+  -- hierarchy (issues #95/#96).
+  let mut declaredTypeIdx : Option Nat := none
   let mut rest := xs
   match rest with
   | .atom a :: r =>
@@ -2083,6 +2098,7 @@ private def parseFunc (funcIds : Std.HashMap String Nat)
           paramTypes := ps
           resultTypes := rs
           typeApplied := true
+          declaredTypeIdx := some (← resolveTypeIdxRef types ref)
         | _ => throw "malformed (type ...) reference"
         rest := r
       | "export" =>
@@ -2109,6 +2125,7 @@ private def parseFunc (funcIds : Std.HashMap String Nat)
              locals  := localTypes
              body    := instrs
              results := resultTypes
+             typeIdx := declaredTypeIdx
            } }
 
 private def resolveFuncRef (idOf : Std.HashMap String Nat) (s : String)
@@ -2341,8 +2358,9 @@ private def parseMemDecl (xs : List Sexpr) : Except Err Wasm.MemDecl := do
 
 /-- Parse a `(data ...)` body. Active segments produce `offset := some n`;
 passive segments (no offset expression) produce `offset := none`. -/
-private def parseDataSegment (memNames : Std.HashMap String Nat)
+private def parseDataSegment (ctx : Ctx)
     (xs : List Sexpr) : Except Err Wasm.DataSegment := do
+  let memNames := ctx.memNames
   -- Strip an optional segment id ($name).
   let xs := match xs with
     | .atom a :: r => if a.startsWith "$" then r else xs
@@ -2357,15 +2375,17 @@ private def parseDataSegment (memNames : Std.HashMap String Nat)
       pure ((← resolveNamed memNames "memory" mref), r)
     | r => pure ((0 : Nat), r)
   -- Extract the offset constant; passive segments have no offset form.
-  -- Non-`i32.const` offset expressions (e.g. `(global.get N)` pointing
-  -- at an imported global) are accepted with a 0 placeholder so the
-  -- module still decodes; tests that depend on the actual offset will
-  -- fail at runtime rather than at decode time.
+  -- Non-literal offset expressions (`global.get`, extended-const
+  -- arithmetic) cannot be folded at decode time — the value depends on
+  -- the store — so they are kept as a const-expr program in
+  -- `offsetExpr` (with a `some 0` active-marker placeholder in
+  -- `offset`) and evaluated at instantiation by
+  -- `Module.runActiveSegments`.
   let parsed ← match xs with
     | .list [.atom "offset", .list [.atom "i32.const", .atom n]] :: r =>
-      do .ok ((some (← parseU32 n) : Option UInt32), r)
+      do .ok ((some (← parseU32 n) : Option UInt32), ([] : Wasm.Program), r)
     | .list [.atom "i32.const", .atom n] :: r =>
-      do .ok ((some (← parseU32 n) : Option UInt32), r)
+      do .ok ((some (← parseU32 n) : Option UInt32), ([] : Wasm.Program), r)
     -- memory64: active offsets in a 64-bit memory are i64 constants. The
     -- segment offset field is 32 bits; active 64-bit segments in practice
     -- are tiny, so a genuinely huge offset is a decode error.
@@ -2373,23 +2393,31 @@ private def parseDataSegment (memNames : Std.HashMap String Nat)
       do
         let v ← parseI64 n
         if v.toNat ≥ 2 ^ 32 then .error "data offset out of range"
-        else .ok ((some v.toUInt32 : Option UInt32), r)
+        else .ok ((some v.toUInt32 : Option UInt32), ([] : Wasm.Program), r)
     | .list [.atom "i64.const", .atom n] :: r =>
       do
         let v ← parseI64 n
         if v.toNat ≥ 2 ^ 32 then .error "data offset out of range"
-        else .ok ((some v.toUInt32 : Option UInt32), r)
-    | .list [.atom "offset", .list (.atom "global.get" :: _)] :: r
-    | .list (.atom "global.get" :: _) :: r =>
-      .ok ((some (0 : UInt32) : Option UInt32), r)
-    | _ => .ok ((none : Option UInt32), xs)
-  let (offset, rest) := parsed
+        else .ok ((some v.toUInt32 : Option UInt32), ([] : Wasm.Program), r)
+    -- Non-literal offset expressions (`global.get`, extended-const
+    -- arithmetic): keep the const-expr program for evaluation at
+    -- instantiation; `some 0` marks the segment active.
+    | .list (.atom "offset" :: es) :: r =>
+      do .ok ((some (0 : UInt32) : Option UInt32), (← parseInstrSeq ctx es), r)
+    -- Bare (unwrapped) non-literal offset expression, e.g.
+    -- `(data (global.get $o) "…")`.
+    | e :: r =>
+      if initExprNeedsEval e then
+        do .ok ((some (0 : UInt32) : Option UInt32), (← parseInstrSeq ctx [e]), r)
+      else .ok ((none : Option UInt32), ([] : Wasm.Program), xs)
+    | _ => .ok ((none : Option UInt32), ([] : Wasm.Program), xs)
+  let (offset, offsetExpr, rest) := parsed
   let mut bytes : List UInt8 := []
   for tok in rest do
     match tok with
     | .atom s => bytes := bytes ++ (← parseWatString s)
     | _ => .error "data segment: expected string literal(s)"
-  .ok { offset, bytes, memIdx }
+  .ok { offset, bytes, memIdx, offsetExpr }
 
 /-- Collect names declared by `(table $name ...)` forms in source order.
 Same pattern as `collectFuncNames` / `collectGlobalNames`. -/
@@ -2596,19 +2624,32 @@ private def parseElemSegment (ctx : Ctx)
     tableIdx := some idx; rest := r
   | _ => pure ()
   let mut offset : Option Nat := none
+  let mut offsetExpr : Wasm.Program := []
   match rest with
   | .list [.atom "offset", .list [.atom "i32.const", .atom n]] :: r =>
     let v ← parseNat n; offset := some v; rest := r
   | .list [.atom "offset", .list [.atom "i64.const", .atom n]] :: r =>
     -- table64: active offsets in a 64-bit table are i64 constants.
     let v ← parseI64 n; offset := some v.toNat; rest := r
-  | .list (.atom "offset" :: _) :: r =>
-    -- Other offset expressions (constant globals etc.) — not modelled.
-    offset := some 0; rest := r
+  | .list (.atom "offset" :: es) :: r =>
+    -- Non-literal offset expressions (`global.get`, extended-const
+    -- arithmetic): keep the const-expr program for evaluation at
+    -- instantiation by `Module.runActiveSegments`; `some 0` marks the
+    -- segment active.
+    offset := some 0; offsetExpr := (← parseInstrSeq ctx es); rest := r
   | .list [.atom "i32.const", .atom n] :: r =>
     let v ← parseNat n; offset := some v; rest := r
   | .list [.atom "i64.const", .atom n] :: r =>
     let v ← parseI64 n; offset := some v.toNat; rest := r
+  -- Bare (unwrapped) non-literal offset expression, e.g.
+  -- `(elem (global.get $o) $f)`. Guard against `(item …)` heads so a
+  -- passive segment's first const-expr item is never taken for an offset.
+  | e :: r =>
+    match e with
+    | .list (.atom "item" :: _) => pure ()
+    | _ =>
+      if initExprNeedsEval e then
+        offset := some 0; offsetExpr := (← parseInstrSeq ctx [e]); rest := r
   | _ => pure ()
   match rest with
   | .atom "func"      :: r => rest := r
@@ -2627,7 +2668,7 @@ private def parseElemSegment (ctx : Ctx)
     if elemRefIsGc inner then isGc := true
     rest := r
   | _ => pure ()
-  if isDeclarative then offset := none
+  if isDeclarative then offset := none; offsetExpr := []
   if isGc then
     -- Each item is a `(item <const-expr>)` (or a bare const-expr) producing
     -- one reference value; keep the program for `runConstElems`.
@@ -2636,7 +2677,7 @@ private def parseElemSegment (ctx : Ctx)
       match it with
       | .list (.atom "item" :: inner) => exprs := exprs ++ [← parseInstrSeq ctx inner]
       | other                         => exprs := exprs ++ [← parseInstrSeq ctx [other]]
-    return { tableIdx, offset, exprs }
+    return { tableIdx, offset, exprs, offsetExpr }
   let mut funcs : List (Option Nat) := []
   for it in rest do
     match it with
@@ -2657,7 +2698,7 @@ private def parseElemSegment (ctx : Ctx)
       | [.list [.atom "ref.null", _]] => funcs := funcs ++ [none]
       | _ => .error "elem: unsupported (item ...) form"
     | _ => .error "elem: unsupported entry"
-  .ok { tableIdx, offset, funcs }
+  .ok { tableIdx, offset, funcs, offsetExpr }
 
 /-- Parse the `(param …)` / `(result …)` / `(type N)` forms inside the
 `(func …)` of an `(import …)` declaration, returning `(params, results)`.
@@ -2856,10 +2897,19 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
       types := types.push (parseTypeField body)
     -- Recursive type groups (`(rec (type …) …)`, GC proposal): the inner
     -- types occupy consecutive indices, flattened into the table here.
+    -- Multi-member groups are tagged with a shared recursion-group marker
+    -- (the first member's index) so iso-recursive type equivalence can
+    -- compare whole groups; singleton groups stay untagged.
     | .list (.atom "rec" :: inner) =>
+      let groupStart := types.size
+      let groupSize := inner.countP fun
+        | .list (.atom "type" :: _) => true
+        | _ => false
+      let marker := if groupSize > 1 then some groupStart else none
       for t in inner do
         match t with
-        | .list (.atom "type" :: body) => types := types.push (parseTypeField body)
+        | .list (.atom "type" :: body) =>
+          types := types.push { parseTypeField body with recGroup := marker }
         | _ => pure ()
     | _ => pure ()
   let (imports, importFuncIds) ← collectImports types rest
@@ -2943,7 +2993,8 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
       | none   => memDecl := some (← parseMemDecl body)
       | some _ => extraMemDecls := extraMemDecls.push (← parseMemDecl body)
     | .list (.atom "data" :: body) =>
-      dataSegs := dataSegs.push (← parseDataSegment memNames body)
+      let dctx : Ctx := { Ctx.empty with funcIds := funcIds, globalIds := globalIds, types := types, tableNames := tableNames, elemNames := elemNames, memNames := memNames, tagNames := tagNames }
+      dataSegs := dataSegs.push (← parseDataSegment dctx body)
     | .list (.atom "table" :: body) =>
       for n in inlineExportsOf body do
         tableExports := tableExports.push (n, tblImps.length + tableDecls.size)
@@ -3016,7 +3067,8 @@ def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
       | none   => match te.sig with
         | some (ps, rs) => .func { params := ps, results := rs }
         | none          => .func {}
-    { comp, super := te.superRef.bind resolveSuper, «final» := te.isFinal }
+    { comp, super := te.superRef.bind resolveSuper, «final» := te.isFinal,
+      recGroup := te.recGroup }
   return { funcs    := decls.toList.map (·.func)
            exports  := exports.toList
            globals  := globImps.map (·.2) ++ globalDecls.toList

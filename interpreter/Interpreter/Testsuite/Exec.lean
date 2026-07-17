@@ -723,6 +723,10 @@ def runCommand
         -- then GC element-segment item initializers into their tables.
         let store0 := m.runConstGlobals fuel store0 env
         let store0 := m.runConstElems fuel store0 env
+        -- Data/elem segments whose offset is itself a const-expr
+        -- (`global.get`, extended-const) are deferred by `initialStore`;
+        -- write them now that the globals hold their real values.
+        let store0 := m.runActiveSegments fuel store0 env
         match m.startFunc with
         | none => pure (ModuleSlot.ok m store0 env)
         | some idx =>
