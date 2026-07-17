@@ -957,6 +957,36 @@ theorem wp_wasm_prop_to_TerminatesWith
   | ReturnCall fid st' vs => rw [hexec] at hwp_fuel; exact hwp_fuel.elim
   | Throwing tag targs st' s' => rw [hexec] at hwp_fuel; exact hwp_fuel.elim
 
+-- Like wp_wasm_load64 but exposes heapAgreesWithMem in hstep,
+-- enabling wp_iProp_load64 inside the continuation.
+theorem wp_wasm_load64_agree
+    {m : Module} {st : Store Unit} {locals : Locals}
+    {rest : Program} {env : HostEnv Unit} {Q : Store Unit → List Value → Prop}
+    {addr : UInt32} {off : UInt32} {vs : List Value}
+    (hstack : locals.values = .i32 addr :: vs)
+    (hbounds : addr.toNat + off.toNat + 8 ≤ st.mem.pages * 65536)
+    (hstep : ∀ σ : WasmHeapMap (Option UInt8),
+        heapAgreesWithMem σ st.mem →
+        ⊢ genHeapInterp σ ==∗
+        genHeapInterp σ ∗ wp_wasm m st
+          { locals with values := .i64 (st.mem.read64 (addr + off)) :: vs } rest env Q) :
+    ⊢ wp_wasm m st locals (.load64 off :: rest) env Q := by
+  unfold wp_wasm
+  iapply least_fixpoint_unfold_mpr
+  simp only [wp_wasm_F]
+  unfold wp_wasm at hstep
+  iintro %σ %hagree Hσ
+  imod (hstep σ hagree) $$ Hσ with ⟨Hσ', Hwp⟩
+  imodintro
+  iexists σ, st, { locals with values := .i64 (st.mem.read64 (addr + off)) :: vs }
+  isplitl []
+  · exact BI.pure_intro (by simp only [execOne.eq_def, hstack]; rw [if_neg (by omega)])
+  · isplitl []
+    · exact BI.pure_intro hagree
+    · isplitl [Hσ']
+      · iexact Hσ'
+      · iexact Hwp
+
 -- Bridge: iProp wp_wasm proof → Prop wp_wasm_prop
 -- Creates ghost state internally via genHeap_init_names,
 -- applies the iProp proof, then extracts the pure result.

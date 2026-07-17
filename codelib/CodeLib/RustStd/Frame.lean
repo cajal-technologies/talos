@@ -217,4 +217,68 @@ theorem Mem.read32_write64_disjoint (m : Mem) (a : UInt32) (b : UInt32) (v : UIn
 @[simp] theorem Mem.write64_pages (m : Mem) (a : UInt32) (v : UInt64) :
     (m.write64 a v).pages = m.pages := rfl
 
+theorem Mem.read32_write32_disjoint (m : Mem) (a b : UInt32) (v : UInt32)
+    (h : b.toNat + 4 ≤ a.toNat ∨ a.toNat + 4 ≤ b.toNat) :
+    (m.write32 a v).read32 b = m.read32 b := by
+  simp only [Mem.read32, Mem.write32]
+  have h00 : b.toNat ≠ a.toNat := by omega
+  have h01 : b.toNat ≠ a.toNat + 1 := by omega
+  have h02 : b.toNat ≠ a.toNat + 2 := by omega
+  have h03 : b.toNat ≠ a.toNat + 3 := by omega
+  have h10 : b.toNat + 1 ≠ a.toNat := by omega
+  have h11 : b.toNat + 1 ≠ a.toNat + 1 := by omega
+  have h12 : b.toNat + 1 ≠ a.toNat + 2 := by omega
+  have h13 : b.toNat + 1 ≠ a.toNat + 3 := by omega
+  have h20 : b.toNat + 2 ≠ a.toNat := by omega
+  have h21 : b.toNat + 2 ≠ a.toNat + 1 := by omega
+  have h22 : b.toNat + 2 ≠ a.toNat + 2 := by omega
+  have h23 : b.toNat + 2 ≠ a.toNat + 3 := by omega
+  have h30 : b.toNat + 3 ≠ a.toNat := by omega
+  have h31 : b.toNat + 3 ≠ a.toNat + 1 := by omega
+  have h32 : b.toNat + 3 ≠ a.toNat + 2 := by omega
+  have h33 : b.toNat + 3 ≠ a.toNat + 3 := by omega
+  simp only [h00, h01, h02, h03, h10, h11, h12, h13,
+             h20, h21, h22, h23, h30, h31, h32, h33, ↓reduceIte]
+
+theorem Mem.read64_write32_disjoint (m : Mem) (a b : UInt32) (v : UInt32)
+    (h : b.toNat + 8 ≤ a.toNat ∨ a.toNat + 4 ≤ b.toNat) :
+    (m.write32 a v).read64 b = m.read64 b := by
+  simp only [Mem.read64, Mem.write32]
+  have h00 : b.toNat ≠ a.toNat := by omega
+  have h01 : b.toNat ≠ a.toNat + 1 := by omega
+  have h02 : b.toNat ≠ a.toNat + 2 := by omega
+  have h03 : b.toNat ≠ a.toNat + 3 := by omega
+  have h10 : b.toNat + 1 ≠ a.toNat := by omega
+  have h11 : b.toNat + 1 ≠ a.toNat + 1 := by omega
+  have h12 : b.toNat + 1 ≠ a.toNat + 2 := by omega
+  have h13 : b.toNat + 1 ≠ a.toNat + 3 := by omega
+  have h20 : b.toNat + 2 ≠ a.toNat := by omega
+  have h21 : b.toNat + 2 ≠ a.toNat + 1 := by omega
+  have h22 : b.toNat + 2 ≠ a.toNat + 2 := by omega
+  have h23 : b.toNat + 2 ≠ a.toNat + 3 := by omega
+  have h30 : b.toNat + 3 ≠ a.toNat := by omega
+  have h31 : b.toNat + 3 ≠ a.toNat + 1 := by omega
+  have h32 : b.toNat + 3 ≠ a.toNat + 2 := by omega
+  have h33 : b.toNat + 3 ≠ a.toNat + 3 := by omega
+  have h40 : b.toNat + 4 ≠ a.toNat := by omega
+  have h41 : b.toNat + 4 ≠ a.toNat + 1 := by omega
+  have h42 : b.toNat + 4 ≠ a.toNat + 2 := by omega
+  have h43 : b.toNat + 4 ≠ a.toNat + 3 := by omega
+  have h50 : b.toNat + 5 ≠ a.toNat := by omega
+  have h51 : b.toNat + 5 ≠ a.toNat + 1 := by omega
+  have h52 : b.toNat + 5 ≠ a.toNat + 2 := by omega
+  have h53 : b.toNat + 5 ≠ a.toNat + 3 := by omega
+  have h60 : b.toNat + 6 ≠ a.toNat := by omega
+  have h61 : b.toNat + 6 ≠ a.toNat + 1 := by omega
+  have h62 : b.toNat + 6 ≠ a.toNat + 2 := by omega
+  have h63 : b.toNat + 6 ≠ a.toNat + 3 := by omega
+  have h70 : b.toNat + 7 ≠ a.toNat := by omega
+  have h71 : b.toNat + 7 ≠ a.toNat + 1 := by omega
+  have h72 : b.toNat + 7 ≠ a.toNat + 2 := by omega
+  have h73 : b.toNat + 7 ≠ a.toNat + 3 := by omega
+  simp only [h00, h01, h02, h03, h10, h11, h12, h13,
+             h20, h21, h22, h23, h30, h31, h32, h33,
+             h40, h41, h42, h43, h50, h51, h52, h53,
+             h60, h61, h62, h63, h70, h71, h72, h73, ↓reduceIte]
+
 end Wasm

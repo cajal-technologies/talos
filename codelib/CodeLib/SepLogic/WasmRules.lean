@@ -124,4 +124,32 @@ theorem write32_agree (σ σ' : WasmHeapMap (Option UInt8)) (mem : Mem)
           (hframe' (k.toNat - addr.toNat) (by omega))
       · rw [write32_bytes_ne mem addr v k.toNat (Or.inr hge2)]; exact hmem
 
+theorem byte32_read32 (mem : Mem) (a : UInt32) (i : Nat) (hi : i < 4) :
+    byte32 (mem.read32 a) i = mem.bytes (a.toNat + i) := by
+  simp only [Mem.read32, byte32]
+  set b0 : UInt8 := mem.bytes a.toNat
+  set b1 : UInt8 := mem.bytes (a.toNat + 1)
+  set b2 : UInt8 := mem.bytes (a.toNat + 2)
+  set b3 : UInt8 := mem.bytes (a.toNat + 3)
+  have h4 : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 := by omega
+  rcases h4 with rfl | rfl | rfl | rfl <;>
+    simp only [Nat.add_zero, Nat.reduceMul, Nat.mul_zero, Nat.mul_one, UInt32.reduceOfNat] <;>
+    bv_decide
+
+theorem byte64_read64 (mem : Mem) (a : UInt32) (i : Nat) (hi : i < 8) :
+    byte64 (mem.read64 a) i = mem.bytes (a.toNat + i) := by
+  simp only [Mem.read64, byte64]
+  set b0 : UInt8 := mem.bytes a.toNat
+  set b1 : UInt8 := mem.bytes (a.toNat + 1)
+  set b2 : UInt8 := mem.bytes (a.toNat + 2)
+  set b3 : UInt8 := mem.bytes (a.toNat + 3)
+  set b4 : UInt8 := mem.bytes (a.toNat + 4)
+  set b5 : UInt8 := mem.bytes (a.toNat + 5)
+  set b6 : UInt8 := mem.bytes (a.toNat + 6)
+  set b7 : UInt8 := mem.bytes (a.toNat + 7)
+  have h8 : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 ∨ i = 4 ∨ i = 5 ∨ i = 6 ∨ i = 7 := by omega
+  rcases h8 with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+    simp only [Nat.add_zero, Nat.reduceMul, Nat.mul_zero, Nat.mul_one, UInt64.reduceOfNat] <;>
+    bv_decide
+
 end Wasm.SepLogic
