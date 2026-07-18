@@ -722,7 +722,7 @@ theorem wp_iProp_load64 [WasmHeapGS]
     isplitl [Hpt6]; · iexact Hpt6
     iexact Hpt7
   · ipureintro; exact hmem
-
+omit inst in
 theorem wp_iProp_store64 [WasmHeapGS]
     {σ : WasmHeapMap (Option UInt8)} {addr : UInt32} {v_old v_new : UInt64} {mem : Mem}
     (hagree : heapAgreesWithMem σ mem)
@@ -821,7 +821,7 @@ theorem wp_iProp_store64 [WasmHeapGS]
   isplitl [Hpt6]
   · iexact Hpt6
   iexact Hpt7
-
+omit inst in
 theorem wp_iProp_load32 [WasmHeapGS]
     {σ : WasmHeapMap (Option UInt8)} {addr : UInt32} {v : UInt32} {mem : Mem}
     (hagree : heapAgreesWithMem σ mem)
@@ -857,7 +857,7 @@ theorem wp_iProp_load32 [WasmHeapGS]
     isplitl [Hpt2]; · iexact Hpt2
     iexact Hpt3
   · ipureintro; exact hmem
-
+omit inst in
 theorem wp_iProp_store32 [WasmHeapGS]
     {σ : WasmHeapMap (Option UInt8)} {addr : UInt32} {v_old v_new : UInt32} {mem : Mem}
     (hagree : heapAgreesWithMem σ mem)
@@ -922,7 +922,7 @@ theorem wp_iProp_store32 [WasmHeapGS]
   · iexact Hpt2
   iexact Hpt3
 
-
+omit inst in
 theorem wp_wasm_prop_to_TerminatesWith
     {m : Module} {id : Nat} {f : Function}
     {initial : Store Unit} {args : List Value}
@@ -1016,13 +1016,14 @@ theorem wasm_heap_adequacy
 -- Adequacy with memory footprint: allocates ghost state from σ, hands
 -- ownership tokens to hwp via a wand, then extracts the pure result.
 -- Use when the proof needs pointsTo_u64 / pointsTo_u32 for memory reads/writes.
+omit inst in
 theorem wasm_heap_adequacy_with_mem
     (m : Module) (st : Store Unit) (locals : Locals)
     (prog : Program) (env : HostEnv Unit)
     (Q : Store Unit → List Value → Prop)
     (σ : WasmHeapMap (Option UInt8))
     (hagree : heapAgreesWithMem σ st.mem)
-    (hwp : ∀ [inst : WasmHeapGS],
+    (hwp : ∀ [WasmHeapGS],
         ⊢ ([∗map] l ↦ v ∈ σ, pointsTo l (DFrac.own 1) v) -∗
           wp_wasm m st locals prog env Q) :
     wp_wasm_prop m st locals prog env Q := by

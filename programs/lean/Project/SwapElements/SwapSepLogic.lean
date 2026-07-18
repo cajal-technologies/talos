@@ -119,11 +119,11 @@ private theorem func3_terminates (env : HostEnv Unit) (st : Store Unit)
         m₂.read64 a = st.mem.read64 a := by
       intro a ha
       simp only [hm₂, show (1048568 : UInt32) + (0 : UInt32) = (1048568 : UInt32) from rfl]
-      rw [Mem.read64_write32_disjoint m₁ (1048568 : UInt32) a ptr
-            (Or.inr (by simp only [show (1048568 : UInt32).toNat = 1048568 from rfl]; omega))]
+      rw [Mem.read64_write32_disjoint m₁ a (1048568 : UInt32) ptr
+            (Or.inl (by simp only [show (1048568 : UInt32).toNat = 1048568 from rfl]; omega))]
       simp only [hm₁, show (1048568 : UInt32) + (4 : UInt32) = (1048572 : UInt32) from rfl]
-      rw [Mem.read64_write32_disjoint st.mem (1048572 : UInt32) a len
-            (Or.inr (by simp only [show (1048572 : UInt32).toNat = 1048572 from rfl]; omega))]
+      rw [Mem.read64_write32_disjoint st.mem a (1048572 : UInt32) len
+            (Or.inl (by simp only [show (1048572 : UInt32).toNat = 1048572 from rfl]; omega))]
     have hbds1 : ¬(st.mem.pages * 65536 < 1048576) := by omega
     have hbds2 : ¬(st.mem.pages * 65536 < 1048572) := by omega
     refine ⟨1, ?_⟩
