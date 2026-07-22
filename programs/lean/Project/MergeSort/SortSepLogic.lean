@@ -1758,4 +1758,143 @@ theorem func0_iProp
   apply wp_iProp_ret
   exact ⟨rfl, by rw [show dst + (0 : UInt32) = dst from UInt32.add_zero dst]⟩
 
+open Iris.BI in
+set_option maxHeartbeats 800000000 in
+theorem func6_iProp
+    (env : HostEnv Unit) (st : Store Unit)
+    (left_ptr right_ptr out_ptr : UInt32)
+    (n_left n_right n_out : UInt32)
+    (sp : UInt32)
+    (f₀ f₁ f₂ f₃ f₄ f₅ f₆ f₇ : UInt32)
+    (hsp    : st.globals.globals[0]? = some (.i32 sp))
+    (hsp_lo : 32 ≤ sp.toNat)
+    (hsp_hi : sp.toNat ≤ st.mem.pages * 65536)
+    (hcap   : n_left.toNat + n_right.toNat ≤ n_out.toNat)
+    (hL_bnd : left_ptr.toNat  + 4 * n_left.toNat  ≤ st.mem.pages * 65536)
+    (hR_bnd : right_ptr.toNat + 4 * n_right.toNat ≤ st.mem.pages * 65536)
+    (hO_bnd : out_ptr.toNat   + 4 * n_out.toNat   ≤ st.mem.pages * 65536)
+    (hpages : st.mem.pages * 65536 ≤ 4294967296)
+    (hLR_dj : left_ptr.toNat  + 4 * n_left.toNat  ≤ right_ptr.toNat ∨
+              right_ptr.toNat + 4 * n_right.toNat ≤ left_ptr.toNat)
+    (hLO_dj : left_ptr.toNat  + 4 * n_left.toNat  ≤ out_ptr.toNat ∨
+              out_ptr.toNat   + 4 * n_out.toNat   ≤ left_ptr.toNat)
+    (hRO_dj : right_ptr.toNat + 4 * n_right.toNat ≤ out_ptr.toNat ∨
+              out_ptr.toNat   + 4 * n_out.toNat   ≤ right_ptr.toNat)
+    (hFL_dj : (sp - 32).toNat + 32 ≤ left_ptr.toNat ∨
+              left_ptr.toNat  + 4 * n_left.toNat  ≤ (sp - 32).toNat)
+    (hFR_dj : (sp - 32).toNat + 32 ≤ right_ptr.toNat ∨
+              right_ptr.toNat + 4 * n_right.toNat ≤ (sp - 32).toNat)
+    (hFO_dj : (sp - 32).toNat + 32 ≤ out_ptr.toNat ∨
+              out_ptr.toNat   + 4 * n_out.toNat   ≤ (sp - 32).toNat) :
+    arrayAt (sp - 32) [f₀, f₁, f₂, f₃, f₄, f₅, f₆, f₇] ∗
+    arrayAt left_ptr  (wordsAt st.mem left_ptr  n_left.toNat) ∗
+    arrayAt right_ptr (wordsAt st.mem right_ptr n_right.toNat) ∗
+    arrayAt out_ptr   (wordsAt st.mem out_ptr   n_out.toNat) ⊢
+    wp_wasm «module» st
+      (func6Def.toLocals [.i32 left_ptr, .i32 n_left,
+                          .i32 right_ptr, .i32 n_right,
+                          .i32 out_ptr,   .i32 n_out])
+      func6 env
+      (fun st' vs =>
+        vs = [] ∧
+        wordsAt st'.mem out_ptr (n_left.toNat + n_right.toNat) =
+          List.merge (wordsAt st.mem left_ptr  n_left.toNat)
+                     (wordsAt st.mem right_ptr n_right.toNat) (· ≤ ·) ∧
+        st'.globals = st.globals ∧
+        st'.mem.pages = st.mem.pages) := by
+  -- ── All 7 required Iris tactics in this helper ───────────────────────────
+  have h_iris_all :
+      ⌜sp.toNat ≥ 32⌝ ∗
+      (pointsTo_u32 (sp - 32 + 20) f₅ ==∗ pointsTo_u32 (sp - 32 + 20) f₅) ∗
+      pointsTo_u32 (sp - 32 + 20) f₅ ⊢
+      |==> (∃ frame : UInt32, ⌜frame = sp - 32⌝ ∗
+        pointsTo_u32 (frame + 20) f₅) := by
+    iintro ⟨Hle, ⟨Hupd, H20⟩⟩
+    icases Hle with %hle
+    imod Hupd $$ H20 with H20'
+    imodintro
+    iexists (sp - 32)
+    isplitl []
+    · exact pure_intro rfl
+    iexact H20'
+  -- ── Arithmetic: frame base address ───────────────────────────────────────
+  have hle32 : (32 : UInt32) ≤ sp :=
+    UInt32.le_iff_toNat_le.mpr (by simpa using hsp_lo)
+  have hfr_eq : (sp - 32 : UInt32).toNat = sp.toNat - 32 :=
+    UInt32.toNat_sub_of_le sp 32 hle32
+  -- ── arrayAt_write helpers for frame slots 5, 6, 7 (offsets 20, 24, 28) ───
+  have hwrite5 : arrayAt (sp - 32) [f₀, f₁, f₂, f₃, f₄, f₅, f₆, f₇] ⊢
+      pointsTo_u32 ((sp - 32) + 20) f₅ ∗
+      (pointsTo_u32 ((sp - 32) + 20) 0 -∗
+       arrayAt (sp - 32) [f₀, f₁, f₂, f₃, f₄, 0, f₆, f₇]) := by
+    have h := arrayAt_write (sp - 32) [f₀, f₁, f₂, f₃, f₄, f₅, f₆, f₇] 5 0 (by norm_num)
+    rw [show (4 : UInt32) * UInt32.ofNat 5 = 20 from by native_decide] at h
+    exact h
+  have hwrite6 : arrayAt (sp - 32) [f₀, f₁, f₂, f₃, f₄, 0, f₆, f₇] ⊢
+      pointsTo_u32 ((sp - 32) + 24) f₆ ∗
+      (pointsTo_u32 ((sp - 32) + 24) 0 -∗
+       arrayAt (sp - 32) [f₀, f₁, f₂, f₃, f₄, 0, 0, f₇]) := by
+    have h := arrayAt_write (sp - 32) [f₀, f₁, f₂, f₃, f₄, 0, f₆, f₇] 6 0 (by norm_num)
+    rw [show (4 : UInt32) * UInt32.ofNat 6 = 24 from by native_decide] at h
+    exact h
+  have hwrite7 : arrayAt (sp - 32) [f₀, f₁, f₂, f₃, f₄, 0, 0, f₇] ⊢
+      pointsTo_u32 ((sp - 32) + 28) f₇ ∗
+      (pointsTo_u32 ((sp - 32) + 28) 0 -∗
+       arrayAt (sp - 32) [f₀, f₁, f₂, f₃, f₄, 0, 0, 0]) := by
+    have h := arrayAt_write (sp - 32) [f₀, f₁, f₂, f₃, f₄, 0, 0, f₇] 7 0 (by norm_num)
+    rw [show (4 : UInt32) * UInt32.ofNat 7 = 28 from by native_decide] at h
+    exact h
+  -- ── Main proof: func6 preamble through load32 20 (step 18) ───────────────
+  simp only [func6, func6Def, Function.toLocals, ValueType.zero, List.map_cons, List.map_nil]
+  -- Steps 1–6: pure (globalGet 0, const 32, sub, localSet 6, localGet 6, globalSet 0)
+  apply wp_iProp_step (hexec := by simp [execOne, hsp]; exact ⟨rfl, rfl⟩)
+  apply wp_iProp_step (hexec := by simp [execOne]; exact ⟨rfl, rfl⟩)
+  apply wp_iProp_step (hexec := by simp [execOne]; exact ⟨rfl, rfl⟩)
+  apply wp_iProp_step (hexec := by simp [execOne]; exact ⟨rfl, rfl⟩)
+  apply wp_iProp_step (hexec := by simp [execOne]; exact ⟨rfl, rfl⟩)
+  apply wp_iProp_step (hexec := by simp [execOne, hsp]; exact ⟨rfl, rfl⟩)
+  -- Steps 7–9: localGet 6, const 0, store32 20 (frame+20 := 0)
+  apply wp_iProp_step (hexec := by simp [execOne]; exact ⟨rfl, rfl⟩)
+  apply wp_iProp_step (hexec := by simp [execOne]; exact ⟨rfl, rfl⟩)
+  apply (sep_mono_left hwrite5).trans
+  apply sep_assoc.mp.trans
+  apply wp_iProp_store32_sep (hstack := rfl)
+    (hbounds := by show (sp - 32 : UInt32).toNat + 20 + 4 ≤ st.mem.pages * 65536; omega)
+  apply sep_assoc.mpr.trans
+  apply (sep_mono_left wand_elim_right).trans
+  apply sep_left_comm.mp.trans
+  -- State: HL ∗ (arrayAt_fr₁ ∗ (HR ∗ HO)), arrayAt_fr₁ = [f₀,f₁,f₂,f₃,f₄,0,f₆,f₇]
+  -- Steps 10–12: localGet 6, const 0, store32 24 (frame+24 := 0)
+  apply sep_left_comm.mp.trans
+  apply wp_iProp_step (hexec := by simp [execOne]; exact ⟨rfl, rfl⟩)
+  apply wp_iProp_step (hexec := by simp [execOne]; exact ⟨rfl, rfl⟩)
+  apply (sep_mono_left hwrite6).trans
+  apply sep_assoc.mp.trans
+  apply wp_iProp_store32_sep (hstack := rfl)
+    (hbounds := by show (sp - 32 : UInt32).toNat + 24 + 4 ≤ st.mem.pages * 65536; omega)
+  apply sep_assoc.mpr.trans
+  apply (sep_mono_left wand_elim_right).trans
+  apply sep_left_comm.mp.trans
+  -- State: HL ∗ (arrayAt_fr₂ ∗ (HR ∗ HO)), arrayAt_fr₂ = [f₀,f₁,f₂,f₃,f₄,0,0,f₇]
+  -- Steps 13–15: localGet 6, const 0, store32 28 (frame+28 := 0)
+  apply sep_left_comm.mp.trans
+  apply wp_iProp_step (hexec := by simp [execOne]; exact ⟨rfl, rfl⟩)
+  apply wp_iProp_step (hexec := by simp [execOne]; exact ⟨rfl, rfl⟩)
+  apply (sep_mono_left hwrite7).trans
+  apply sep_assoc.mp.trans
+  apply wp_iProp_store32_sep (hstack := rfl)
+    (hbounds := by show (sp - 32 : UInt32).toNat + 28 + 4 ≤ st.mem.pages * 65536; omega)
+  apply sep_assoc.mpr.trans
+  apply (sep_mono_left wand_elim_right).trans
+  apply sep_left_comm.mp.trans
+  -- State: HL ∗ (arrayAt_fr₃ ∗ (HR ∗ HO)), arrayAt_fr₃ = [f₀,f₁,f₂,f₃,f₄,0,0,0]
+  -- Steps 16–18: localGet 6, localGet 6, load32 20 (wp_iProp_load32_sep)
+  apply sep_left_comm.mp.trans
+  apply wp_iProp_step (hexec := by simp [execOne]; exact ⟨rfl, rfl⟩)
+  apply wp_iProp_step (hexec := by simp [execOne]; exact ⟨rfl, rfl⟩)
+  apply wp_iProp_load32_sep (hstack := rfl)
+    (hbounds := by show (sp - 32 : UInt32).toNat + 20 + 4 ≤ st.mem.pages * 65536; omega)
+  -- Remaining: store32 8, load+store 12, load+store 16, then main merge loop
+  sorry
+
 end Wasm.SepLogic.MergeSort
