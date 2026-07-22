@@ -234,7 +234,7 @@ theorem func6_terminates
        by rcases hFR_dj with h | h <;> [left; right] <;> (rw [← hfr_toNat] at h; omega),
        by rcases hFO_dj with h | h <;> [left; right] <;> (rw [← hfr_toNat] at h; omega)⟩
     -- execute the main merge block
-    obtain ⟨N_merge, st₂, loc₂, h_step, h_exit, hI₂⟩ :=
+    obtain ⟨N_merge, st₂, loc₂, h_step, h_exit, hI₂, _, _, _⟩ :=
       func6_after_merge_block st₁ loc₁ frame out_ptr left_ptr right_ptr n_left n_right n_out hI₀
     -- execute the outer drain loop
     obtain ⟨N_drain, stF, h_drain, h_content⟩ :=

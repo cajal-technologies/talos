@@ -656,4 +656,155 @@ theorem wp_wasm_prop_to_TerminatesWith
   | ReturnCall fid st' vs => rw [hexec] at hwp_fuel; exact hwp_fuel.elim
   | Throwing tag targs st' s' => rw [hexec] at hwp_fuel; exact hwp_fuel.elim
 
+-- bridge: iris WP + ghost heap → wp_wasm_prop
+theorem wasm_heap_adequacy_with_mem
+    (m : Module) (st : Store Unit) (locals : Locals)
+    (prog : Program) (env : HostEnv Unit)
+    (Q : Store Unit → List Value → Prop)
+    (σ₀ : WasmHeapMap (Option UInt8))
+    (hwp : ⊢ genHeapInterp σ₀ ∗ wp_wasm m st locals prog env Q) :
+    wp_wasm_prop m st locals prog env Q :=
+  pure_soundness (hwp.trans (wasm_adequacy m st locals prog env Q σ₀))
+
+-- update all 4 ghost bytes of a u32 cell
+private theorem pointsTo_u32_update
+    (σ : WasmHeapMap (Option UInt8)) (addr old_v new_v : UInt32) :
+    genHeapInterp σ ∗ pointsTo_u32 addr old_v ==∗
+    ∃ σ' : WasmHeapMap (Option UInt8), genHeapInterp σ' ∗ pointsTo_u32 addr new_v := by
+  simp only [pointsTo_u32]
+  iintro ⟨Hσ, ⟨Hb0, ⟨Hb1, ⟨Hb2, Hb3⟩⟩⟩⟩
+  imod genHeap_update (v₂ := some ⟨(new_v.toNat / 256 ^ 0) % 256, by omega⟩)
+    $$ [$Hσ $Hb0] with ⟨Hσ, Hb0⟩
+  imod genHeap_update (v₂ := some ⟨(new_v.toNat / 256 ^ 1) % 256, by omega⟩)
+    $$ [$Hσ $Hb1] with ⟨Hσ, Hb1⟩
+  imod genHeap_update (v₂ := some ⟨(new_v.toNat / 256 ^ 2) % 256, by omega⟩)
+    $$ [$Hσ $Hb2] with ⟨Hσ, Hb2⟩
+  imod genHeap_update (v₂ := some ⟨(new_v.toNat / 256 ^ 3) % 256, by omega⟩)
+    $$ [$Hσ $Hb3] with ⟨Hσ, Hb3⟩
+  imodintro
+  iexists _
+  isplitl [Hσ]
+  · iexact Hσ
+  · isplitl [Hb0]
+    · iexact Hb0
+    · isplitl [Hb1]
+      · iexact Hb1
+      · isplitl [Hb2]
+        · iexact Hb2
+        · iexact Hb3
+
+-- step rule: pure instruction, no ghost heap change
+theorem wp_iProp_step
+    {m : Module} {st st' : Store Unit} {locals locals' : Locals}
+    {instr : Instruction} {rest : Program}
+    {env : HostEnv Unit} {Q : Store Unit → List Value → Prop}
+    {P : IProp WasmHeapGF}
+    (hexec : execOne 1 m st locals instr env = .Fallthrough st' locals')
+    (hcont : P ⊢ wp_wasm m st' locals' rest env Q) :
+    P ⊢ wp_wasm m st locals (instr :: rest) env Q := by
+  unfold wp_wasm at *
+  iintro HP
+  iapply least_fixpoint_unfold_mpr
+  simp only [wp_wasm_F]
+  split
+  · contradiction
+  · next tail h =>
+    obtain ⟨rfl, _⟩ := List.cons.inj h
+    simp [execOne] at hexec
+  · next instr' rest' h =>
+    obtain ⟨h1, h2⟩ := List.cons.inj h
+    subst h1; subst h2
+    iintro %σ Hσ
+    imodintro
+    iexists σ, st', locals'
+    isplitl []
+    · exact BI.pure_intro hexec
+    · isplitl [Hσ]
+      · iexact Hσ
+      · exact hcont
+
+-- load32 with frame: reads a value from memory, frame unchanged
+theorem wp_iProp_load32_sep
+    {m : Module} {st : Store Unit} {locals : Locals}
+    {rest : Program} {env : HostEnv Unit}
+    {Q : Store Unit → List Value → Prop}
+    {addr off : UInt32} {vs : List Value}
+    {F : IProp WasmHeapGF}
+    (hstack : locals.values = .i32 addr :: vs)
+    (hbounds : addr.toNat + off.toNat + 4 ≤ st.mem.pages * 65536)
+    (hcont : F ⊢
+             wp_wasm m st { locals with values := .i32 (st.mem.read32 (addr + off)) :: vs }
+             rest env Q) :
+    F ⊢ wp_wasm m st locals (.load32 off :: rest) env Q :=
+  wp_iProp_step (hexec := by simp only [execOne.eq_def, hstack]; rw [if_neg (by omega)]) hcont
+
+-- store32 rule: transfers ghost ownership from old to new value
+theorem wp_iProp_store32
+    {m : Module} {st : Store Unit} {locals : Locals}
+    {rest : Program} {env : HostEnv Unit}
+    {Q : Store Unit → List Value → Prop}
+    {addr off v old_v : UInt32} {vs : List Value}
+    (hstack : locals.values = .i32 v :: .i32 addr :: vs)
+    (hbounds : addr.toNat + off.toNat + 4 ≤ st.mem.pages * 65536)
+    (hcont : pointsTo_u32 (addr + off) v ⊢
+             wp_wasm m { st with mem := st.mem.write32 (addr + off) v }
+             { locals with values := vs } rest env Q) :
+    pointsTo_u32 (addr + off) old_v ⊢
+    wp_wasm m st locals (.store32 off :: rest) env Q := by
+  unfold wp_wasm at *
+  iintro Hpt
+  iapply least_fixpoint_unfold_mpr
+  simp only [wp_wasm_F]
+  iintro %σ Hσ
+  imod (pointsTo_u32_update σ (addr + off) old_v v) $$ [$Hσ $Hpt] with ⟨%σ', Hσ', Hpt'⟩
+  imodintro
+  iexists σ', { st with mem := st.mem.write32 (addr + off) v }, { locals with values := vs }
+  isplitl []
+  · exact BI.pure_intro (by simp only [execOne.eq_def, hstack]; rw [if_neg (by omega)])
+  · isplitl [Hσ']
+    · iexact Hσ'
+    · exact hcont
+
+-- store32 with frame: like wp_iProp_store32 but preserves a frame resource F alongside the cell
+theorem wp_iProp_store32_sep
+    {m : Module} {st : Store Unit} {locals : Locals}
+    {rest : Program} {env : HostEnv Unit}
+    {Q : Store Unit → List Value → Prop}
+    {addr off v old_v : UInt32} {vs : List Value}
+    {F : IProp WasmHeapGF}
+    (hstack : locals.values = .i32 v :: .i32 addr :: vs)
+    (hbounds : addr.toNat + off.toNat + 4 ≤ st.mem.pages * 65536)
+    (hcont : pointsTo_u32 (addr + off) v ∗ F ⊢
+             wp_wasm m { st with mem := st.mem.write32 (addr + off) v }
+             { locals with values := vs } rest env Q) :
+    pointsTo_u32 (addr + off) old_v ∗ F ⊢
+    wp_wasm m st locals (.store32 off :: rest) env Q := by
+  unfold wp_wasm at *
+  iintro ⟨Hpt, HF⟩
+  iapply least_fixpoint_unfold_mpr
+  simp only [wp_wasm_F]
+  iintro %σ Hσ
+  imod (pointsTo_u32_update σ (addr + off) old_v v) $$ [$Hσ $Hpt] with ⟨%σ', Hσ', Hpt'⟩
+  imodintro
+  iexists σ', { st with mem := st.mem.write32 (addr + off) v }, { locals with values := vs }
+  isplitl []
+  · exact BI.pure_intro (by simp only [execOne.eq_def, hstack]; rw [if_neg (by omega)])
+  · isplitl [Hσ']
+    · iexact Hσ'
+    · exact (BI.sep_comm.mp.trans hcont)
+
+-- ret rule: closes wp for .ret, any remaining ghost resource is discarded (affine)
+theorem wp_iProp_ret
+    {P : IProp WasmHeapGF}
+    {m : Module} {st : Store Unit} {locals : Locals}
+    {rest : Program} {env : HostEnv Unit}
+    {Q : Store Unit → List Value → Prop}
+    (hQ : Q st locals.values) :
+    P ⊢ wp_wasm m st locals (.ret :: rest) env Q := by
+  unfold wp_wasm
+  iintro _
+  iapply least_fixpoint_unfold_mpr
+  simp only [wp_wasm_F]
+  exact BI.pure_intro hQ
+
 end Wasm.SepLogic

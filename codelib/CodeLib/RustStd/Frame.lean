@@ -159,4 +159,52 @@ theorem Mem.read32_write64_disjoint (m : Mem) (a : UInt32) (b : UInt32) (v : UIn
 @[simp] theorem Mem.write64_pages (m : Mem) (a : UInt32) (v : UInt64) :
     (m.write64 a v).pages = m.pages := rfl
 
+/-! ## Mixed-width read/write round-trips
+
+These lemmas extract the lower or upper 32-bit half from a `write64` or
+`read64` — the pattern that arises when func5 copies 8-byte descriptors
+through the shadow stack and then reads back the individual 32-bit fields. -/
+
+/-- Reading the lower 32 bits from a `write64` at the same address returns
+    the low 32-bit half of the stored value. -/
+theorem Mem.read32_write64_low (m : Mem) (a : UInt32) (v : UInt64) :
+    (m.write64 a v).read32 a = v.toUInt32 := by
+  simp only [Mem.read32, Mem.write64]
+  simp only [Nat.add_eq_left, OfNat.ofNat_ne_zero, Nat.succ_ne_self, ↓reduceIte,
+             Nat.reduceEqDiff]
+  bv_decide
+
+/-- The lower 32 bits of a `read64` equal the `read32` at the same address. -/
+theorem Mem.read64_lo_is_read32 (m : Mem) (a : UInt32) :
+    (m.read64 a).toUInt32 = m.read32 a := by
+  simp only [Mem.read64, Mem.read32]
+  bv_decide
+
+/-- Reading the upper 32 bits from a `write64` at the same base address
+    (offset +4) returns the high 32-bit half of the stored value.
+    Requires that the address does not overflow: `(a + 4).toNat = a.toNat + 4`. -/
+theorem Mem.read32_write64_high (m : Mem) (a : UInt32) (v : UInt64)
+    (hnat : (a + 4).toNat = a.toNat + 4) :
+    (m.write64 a v).read32 (a + 4) = (v >>> 32).toUInt32 := by
+  -- After hnat, read positions are a.toNat+4, a.toNat+4+1, a.toNat+4+2, a.toNat+4+3;
+  -- normalize the +1/+2/+3 offsets so they match the write64 footprint indices.
+  simp only [Mem.read32, Mem.write64, hnat,
+             show a.toNat + 4 + 1 = a.toNat + 5 from by omega,
+             show a.toNat + 4 + 2 = a.toNat + 6 from by omega,
+             show a.toNat + 4 + 3 = a.toNat + 7 from by omega]
+  simp only [Nat.add_eq_left, OfNat.ofNat_ne_zero, Nat.succ_ne_self, ↓reduceIte,
+             Nat.reduceEqDiff]
+  bv_decide
+
+/-- The upper 32 bits of a `read64` equal the `read32` at offset +4.
+    Requires that the address does not overflow: `(a + 4).toNat = a.toNat + 4`. -/
+theorem Mem.read64_hi_is_read32 (m : Mem) (a : UInt32)
+    (hnat : (a + 4).toNat = a.toNat + 4) :
+    ((m.read64 a) >>> 32).toUInt32 = m.read32 (a + 4) := by
+  simp only [Mem.read64, Mem.read32, hnat,
+             show a.toNat + 4 + 1 = a.toNat + 5 from by omega,
+             show a.toNat + 4 + 2 = a.toNat + 6 from by omega,
+             show a.toNat + 4 + 3 = a.toNat + 7 from by omega]
+  bv_decide
+
 end Wasm

@@ -3748,7 +3748,12 @@ theorem main_merge_loop_spec_exec
            ((wordsAt st.mem right_ptr n_right.toNat).drop j₀)
            (· ≤ ·)) ∧
       MergeLoopInv frame out_ptr left_ptr right_ptr n_left n_right n_out
-        i₀ j₀ k₀ st st₂ loc₂ := by
+        i₀ j₀ k₀ st st₂ loc₂ ∧
+      st₂.globals = st.globals ∧
+      (∀ ix, frame.toNat + 32 ≤ ix →
+             (ix < out_ptr.toNat ∨ ix ≥ out_ptr.toNat + 4 * n_out.toNat) →
+             st₂.mem.bytes ix = st.mem.bytes ix) ∧
+      st₂.mem.pages = st.mem.pages := by
   -- strong induction on μ = (n_left - i) + (n_right - j)
   suffices key : ∀ n stA locA,
       MergeLoopInv frame out_ptr left_ptr right_ptr n_left n_right n_out
@@ -3780,7 +3785,12 @@ theorem main_merge_loop_spec_exec
              ((wordsAt st.mem right_ptr n_right.toNat).drop j₀)
              (· ≤ ·)) ∧
         MergeLoopInv frame out_ptr left_ptr right_ptr n_left n_right n_out
-          i₀ j₀ k₀ st st₂ loc₂ from
+          i₀ j₀ k₀ st st₂ loc₂ ∧
+        st₂.globals = stA.globals ∧
+        (∀ ix, frame.toNat + 32 ≤ ix →
+               (ix < out_ptr.toNat ∨ ix ≥ out_ptr.toNat + 4 * n_out.toNat) →
+               st₂.mem.bytes ix = stA.mem.bytes ix) ∧
+        st₂.mem.pages = stA.mem.pages from
     key _ st locals hI₀ rfl
   intro n
   induction n using Nat.strong_induction_on with
@@ -4597,7 +4607,7 @@ theorem main_merge_loop_spec_exec
                 Nat.mod_eq_of_lt (by have := n_right.toNat_lt; omega)]
             omega
           -- IH at reduced measure: input is (stC_A, locA_out_A)
-          obtain ⟨f_rest, st₂, loc₂, hf_exec, hQ_rest, hMI_rest⟩ := IH _ hμ_A stC_A locA_out_A hI_A rfl
+          obtain ⟨f_rest, st₂, loc₂, hf_exec, hQ_rest, hMI_rest, hG_A, hFrm_A, hPages_A⟩ := IH _ hμ_A stC_A locA_out_A hI_A rfl
           -- Fuel composition: one body iteration at stA then IH fuel at stC_A
           have hbody_ne : exec f_A m stA locA mainMergeBody env ≠ .OutOfFuel := by
             simp [h_body_A]
@@ -4637,7 +4647,21 @@ theorem main_merge_loop_spec_exec
             · simp [exec, locA_out_A, locA_out_locs]
             · cases n with | zero => simp [exec, locA_out_A, locA_out_locs] | succ k => rfl
             all_goals rfl
-          exact ⟨max f_A f_rest + 2, st₂, loc₂, by rw [heq, hblock_mono]; exact hf_exec, hQ_rest, hMI_rest⟩
+          have hFrm_stC_A : ∀ ix, frame.toNat + 32 ≤ ix →
+              (ix < out_ptr.toNat ∨ ix ≥ out_ptr.toNat + 4 * n_out.toNat) →
+              stC_A.mem.bytes ix = stA.mem.bytes ix := fun ix hix hout => by
+            simp only [stC_A, mem3_A, mem2_A, mem1_A]
+            rw [Mem.write32_bytes_of_disjoint _ (frame + 16) _ ix
+                  (by right; rw [hft16]; omega),
+                Mem.write32_bytes_of_disjoint _ (frame + 8) _ ix
+                  (by right; rw [hft8]; omega),
+                Mem.write32_bytes_of_disjoint _ (out_ptr + 4 * UInt32.ofNat k) _ ix
+                  (by rcases hout with h | h
+                      · left; rw [hout_k_toNat]; omega
+                      · right; rw [hout_k_toNat]; omega)]
+          have hPages_stC_A : stC_A.mem.pages = stA.mem.pages := by
+            simp only [stC_A, mem3_A, mem2_A, mem1_A, Mem.write32_pages]
+          exact ⟨max f_A f_rest + 2, st₂, loc₂, by rw [heq, hblock_mono]; exact hf_exec, hQ_rest, hMI_rest, hG_A, fun ix hix hout => (hFrm_A ix hix hout).trans (hFrm_stC_A ix hix hout), hPages_A.trans hPages_stC_A⟩
         · -- ── path B: left[i] > right[j]: copy right[j] to out[k], j++, k++ ──
           let mem1_B := stA.mem.write32 (out_ptr + 4 * UInt32.ofNat k) right_j
           let mem2_B := mem1_B.write32 (frame + 12) (UInt32.ofNat j + 1)
@@ -5368,7 +5392,7 @@ theorem main_merge_loop_spec_exec
                 Nat.mod_eq_of_lt (by have := n_right.toNat_lt; omega)]
             omega
           -- IH at reduced measure: input is (stC_B, locB_out_B)
-          obtain ⟨f_rest, st₂, loc₂, hf_exec, hQ_rest, hMI_rest⟩ := IH _ hμ_B stC_B locB_out_B hI_B rfl
+          obtain ⟨f_rest, st₂, loc₂, hf_exec, hQ_rest, hMI_rest, hG_B, hFrm_B, hPages_B⟩ := IH _ hμ_B stC_B locB_out_B hI_B rfl
           -- Fuel composition: one body iteration at stA then IH fuel at stC_B
           have hbody_ne : exec f_B m stA locA mainMergeBody env ≠ .OutOfFuel := by
             simp [h_body_B]
@@ -5406,7 +5430,21 @@ theorem main_merge_loop_spec_exec
             · simp [exec, locB_out_B, locB_out_locs]
             · cases n with | zero => simp [exec, locB_out_B, locB_out_locs] | succ k => rfl
             all_goals rfl
-          exact ⟨max f_B f_rest + 2, st₂, loc₂, by rw [heq, hblock_mono]; exact hf_exec, hQ_rest, hMI_rest⟩
+          have hFrm_stC_B : ∀ ix, frame.toNat + 32 ≤ ix →
+              (ix < out_ptr.toNat ∨ ix ≥ out_ptr.toNat + 4 * n_out.toNat) →
+              stC_B.mem.bytes ix = stA.mem.bytes ix := fun ix hix hout => by
+            simp only [stC_B, mem3_B, mem2_B, mem1_B]
+            rw [Mem.write32_bytes_of_disjoint _ (frame + 16) _ ix
+                  (by right; rw [hft16]; omega),
+                Mem.write32_bytes_of_disjoint _ (frame + 12) _ ix
+                  (by right; rw [hft12]; omega),
+                Mem.write32_bytes_of_disjoint _ (out_ptr + 4 * UInt32.ofNat k) _ ix
+                  (by rcases hout with h | h
+                      · left; rw [hout_k_toNat]; omega
+                      · right; rw [hout_k_toNat]; omega)]
+          have hPages_stC_B : stC_B.mem.pages = stA.mem.pages := by
+            simp only [stC_B, mem3_B, mem2_B, mem1_B, Mem.write32_pages]
+          exact ⟨max f_B f_rest + 2, st₂, loc₂, by rw [heq, hblock_mono]; exact hf_exec, hQ_rest, hMI_rest, hG_B, fun ix hix hout => (hFrm_B ix hix hout).trans (hFrm_stC_B ix hix hout), hPages_B.trans hPages_stC_B⟩
       · -- exit: j = n_right
         -- body's second br_if 1 fires: exec 1 body = Break 1 → exec 2 loop = Break 0
         -- → exec 3 block = Fallthrough.  Q: stA.mem.read32(frame+12) = n_right.
@@ -5450,7 +5488,7 @@ theorem main_merge_loop_spec_exec
           apply UInt32.toNat_inj.mp
           simp
         exact ⟨3, stA, locA, h_block_exit_j, ⟨Or.inr hQ_j, i, j, hi_lo, hi_hi, hj_lo, hj_hi,
-               hi_m, hj_m, hk_m, hleft, hright, hcontent⟩, hI_save⟩
+               hi_m, hj_m, hk_m, hleft, hright, hcontent⟩, hI_save, rfl, fun _ _ _ => rfl, rfl⟩
     · -- exit: i = n_left
       -- body's first br_if 1 fires immediately: exec 1 body = Break 1 → exec 2 loop = Break 0
       -- → exec 3 block = Fallthrough.  Q: stA.mem.read32(frame+8) = n_left.
@@ -5484,7 +5522,7 @@ theorem main_merge_loop_spec_exec
         apply UInt32.toNat_inj.mp
         simp
       exact ⟨3, stA, locA, h_block_exit_i, ⟨Or.inl hQ_i, i, j, hi_lo, hi_hi, hj_lo, hj_hi,
-             hi_m, hj_m, hk_m, hleft, hright, hcontent⟩, hI_save⟩
+             hi_m, hj_m, hk_m, hleft, hright, hcontent⟩, hI_save, rfl, fun _ _ _ => rfl, rfl⟩
 private theorem exec_step_FT
     {f : Nat} {m : Module} {st : Store Unit} {loc : Locals}
     {inst : Instruction} {rest : Program} {env : HostEnv Unit}
@@ -5517,13 +5555,18 @@ theorem func6_after_merge_block
       (st₂.mem.read32 (frame + 8) = n_left ∨
        st₂.mem.read32 (frame + 12) = n_right) ∧
       MergeLoopInv frame out_ptr left_ptr right_ptr n_left n_right n_out
-        0 0 0 st₁ st₂ loc₂ := by
-  obtain ⟨N, st₂, loc₂, h_exec, h_exit, hI₂⟩ :=
+        0 0 0 st₁ st₂ loc₂ ∧
+      st₂.globals = st₁.globals ∧
+      (∀ ix, frame.toNat + 32 ≤ ix →
+             (ix < out_ptr.toNat ∨ ix ≥ out_ptr.toNat + 4 * n_out.toNat) →
+             st₂.mem.bytes ix = st₁.mem.bytes ix) ∧
+      st₂.mem.pages = st₁.mem.pages := by
+  obtain ⟨N, st₂, loc₂, h_exec, ⟨h_exit, hI₂⟩, h_gp, h_frm, h_pages⟩ :=
     main_merge_loop_spec_exec st₁ loc₁ frame out_ptr left_ptr right_ptr
       n_left n_right n_out 0 0 0 hI₀
   have h_split : (Project.MergeSort.func6.drop 27 : Program) =
       .block 0 0 [.loop 0 0 mainMergeBody] :: Project.MergeSort.func6.drop 28 := rfl
-  refine ⟨N, st₂, loc₂, ?_, h_exit.1, hI₂⟩
+  refine ⟨N, st₂, loc₂, ?_, h_exit, h_gp, h_frm, h_pages⟩
   intro fuel hfuel
   rw [h_split]
   apply exec_step_FT

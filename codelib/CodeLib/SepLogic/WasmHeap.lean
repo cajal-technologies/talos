@@ -120,6 +120,49 @@ theorem arrayAt_set (ptr : UInt32) (xs : List UInt32) (k : Nat)
       exact (BI.sep_mono_right (ih (ptr + 4) k' hk')).trans
         (BI.sep_left_comm.mp.trans (BI.sep_mono_right
           (BI.wand_intro (BI.sep_assoc.mp.trans (BI.sep_mono_right BI.wand_elim_left)))))
+-- definitional unfoldings as simp lemmas
+@[simp]
+theorem arrayAt_nil (ptr : UInt32) :
+    arrayAt ptr [] ⊣⊢ emp := by simp [arrayAt]
+
+@[simp]
+theorem arrayAt_cons (ptr : UInt32) (x : UInt32) (xs : List UInt32) :
+    arrayAt ptr (x :: xs) ⊣⊢ pointsTo_u32 ptr x ∗ arrayAt (ptr + 4) xs := by simp [arrayAt]
+
+-- forward half of arrayAt_append
+theorem arrayAt_split (ptr : UInt32) (xs ys : List UInt32) :
+    arrayAt ptr (xs ++ ys) ⊢ arrayAt ptr xs ∗ arrayAt (ptr + 4 * UInt32.ofNat xs.length) ys :=
+  (arrayAt_append ptr xs ys).mp
+
+-- backward half of arrayAt_append
+theorem arrayAt_concat (ptr : UInt32) (xs ys : List UInt32) :
+    arrayAt ptr xs ∗ arrayAt (ptr + 4 * UInt32.ofNat xs.length) ys ⊢ arrayAt ptr (xs ++ ys) :=
+  (arrayAt_append ptr xs ys).mpr
+
+-- read at index i: extract pointsTo and get a wand to restore the array
+theorem arrayAt_read (ptr : UInt32) (xs : List UInt32) (i : Nat) (hi : i < xs.length) :
+    arrayAt ptr xs ⊢
+    pointsTo_u32 (ptr + 4 * UInt32.ofNat i) xs[i] ∗
+    (pointsTo_u32 (ptr + 4 * UInt32.ofNat i) xs[i] -∗ arrayAt ptr xs) :=
+  arrayAt_get ptr xs i hi
+
+-- write at index i: extract old pointsTo and get a wand to put a new value back
+theorem arrayAt_write (ptr : UInt32) (xs : List UInt32) (i : Nat) (v : UInt32) (hi : i < xs.length) :
+    arrayAt ptr xs ⊢
+    pointsTo_u32 (ptr + 4 * UInt32.ofNat i) xs[i] ∗
+    (pointsTo_u32 (ptr + 4 * UInt32.ofNat i) v -∗ arrayAt ptr (xs.set i v)) :=
+  arrayAt_set ptr xs i v hi
+
+-- snoc: append a single element using pointsTo at the end
+theorem arrayAt_snoc (ptr : UInt32) (xs : List UInt32) (y : UInt32) :
+    arrayAt ptr xs ∗ pointsTo_u32 (ptr + 4 * UInt32.ofNat xs.length) y ⊢ arrayAt ptr (xs ++ [y]) :=
+  have hpt : pointsTo_u32 (ptr + 4 * UInt32.ofNat xs.length) y ⊢
+      arrayAt (ptr + 4 * UInt32.ofNat xs.length) [y] :=
+    ((arrayAt_cons (ptr + 4 * UInt32.ofNat xs.length) y []).trans
+      ((BI.sep_congr_right (arrayAt_nil ((ptr + 4 * UInt32.ofNat xs.length) + 4))).trans
+        BI.sep_emp)).mpr
+  (BI.sep_mono_right hpt).trans (arrayAt_append ptr xs [y]).mpr
+
 #check @pointsTo_u64
 #check @pointsTo_u32
 #check @arrayAt
