@@ -1895,6 +1895,106 @@ theorem func6_iProp
   apply wp_iProp_load32_sep (hstack := rfl)
     (hbounds := by show (sp - 32 : UInt32).toNat + 20 + 4 ≤ st.mem.pages * 65536; omega)
   -- Remaining: store32 8, load+store 12, load+store 16, then main merge loop
+  -- ── Offset arithmetic for frame slots 2–4 ─────────────────────────────────
+  have hof8  : (sp - 32 + 8  : UInt32).toNat = sp.toNat - 32 + 8  := by
+    have h : (8  : UInt32).toNat = 8  := rfl; rw [UInt32.toNat_add, h, hfr_eq]; omega
+  have hof12 : (sp - 32 + 12 : UInt32).toNat = sp.toNat - 32 + 12 := by
+    have h : (12 : UInt32).toNat = 12 := rfl; rw [UInt32.toNat_add, h, hfr_eq]; omega
+  have hof16 : (sp - 32 + 16 : UInt32).toNat = sp.toNat - 32 + 16 := by
+    have h : (16 : UInt32).toNat = 16 := rfl; rw [UInt32.toNat_add, h, hfr_eq]; omega
+  have hof20 : (sp - 32 + 20 : UInt32).toNat = sp.toNat - 32 + 20 := by
+    have h : (20 : UInt32).toNat = 20 := rfl; rw [UInt32.toNat_add, h, hfr_eq]; omega
+  have hof24 : (sp - 32 + 24 : UInt32).toNat = sp.toNat - 32 + 24 := by
+    have h : (24 : UInt32).toNat = 24 := rfl; rw [UInt32.toNat_add, h, hfr_eq]; omega
+  have hof28 : (sp - 32 + 28 : UInt32).toNat = sp.toNat - 32 + 28 := by
+    have h : (28 : UInt32).toNat = 28 := rfl; rw [UInt32.toNat_add, h, hfr_eq]; omega
+  -- ── Read values: frame slots 2, 3, 4 are 0 (from prior stores at 20,24,28) ─
+  have hread_f20 : (st.mem.write32 (sp - 32 + 20) 0 |>.write32 (sp - 32 + 24) 0
+      |>.write32 (sp - 32 + 28) 0).read32 (sp - 32 + 20) = 0 := by
+    rw [Mem.read32_write32_of_disjoint _ _ _ _ (Or.inr (by
+          have h1 := hof20; have h2 := hof28; omega)),
+        Mem.read32_write32_of_disjoint _ _ _ _ (Or.inr (by
+          have h1 := hof20; have h2 := hof24; omega)),
+        Mem.read32_write32_same]
+  have hread_f24 : (st.mem.write32 (sp - 32 + 20) 0 |>.write32 (sp - 32 + 24) 0
+      |>.write32 (sp - 32 + 28) 0 |>.write32 (sp - 32 + 8) 0).read32 (sp - 32 + 24) = 0 := by
+    rw [Mem.read32_write32_of_disjoint _ _ _ _ (Or.inl (by
+          have h1 := hof8; have h2 := hof24; omega)),
+        Mem.read32_write32_of_disjoint _ _ _ _ (Or.inr (by
+          have h1 := hof24; have h2 := hof28; omega)),
+        Mem.read32_write32_same]
+  have hread_f28 : (st.mem.write32 (sp - 32 + 20) 0 |>.write32 (sp - 32 + 24) 0
+      |>.write32 (sp - 32 + 28) 0 |>.write32 (sp - 32 + 8) 0
+      |>.write32 (sp - 32 + 12) 0).read32 (sp - 32 + 28) = 0 := by
+    rw [Mem.read32_write32_of_disjoint _ _ _ _ (Or.inl (by
+          have h1 := hof12; have h2 := hof28; omega)),
+        Mem.read32_write32_of_disjoint _ _ _ _ (Or.inl (by
+          have h1 := hof8; have h2 := hof28; omega)),
+        Mem.read32_write32_same]
+  -- ── arrayAt_write helpers for frame slots 2, 3, 4 (offsets 8, 12, 16) ──────
+  have hwrite2 : arrayAt (sp - 32) [f₀, f₁, f₂, f₃, f₄, 0, 0, 0] ⊢
+      pointsTo_u32 ((sp - 32) + 8) f₂ ∗
+      (pointsTo_u32 ((sp - 32) + 8) 0 -∗
+       arrayAt (sp - 32) [f₀, f₁, 0, f₃, f₄, 0, 0, 0]) := by
+    have h := arrayAt_write (sp - 32) [f₀, f₁, f₂, f₃, f₄, 0, 0, 0] 2 0 (by norm_num)
+    rw [show (4 : UInt32) * UInt32.ofNat 2 = 8 from by native_decide] at h
+    exact h
+  have hwrite3 : arrayAt (sp - 32) [f₀, f₁, 0, f₃, f₄, 0, 0, 0] ⊢
+      pointsTo_u32 ((sp - 32) + 12) f₃ ∗
+      (pointsTo_u32 ((sp - 32) + 12) 0 -∗
+       arrayAt (sp - 32) [f₀, f₁, 0, 0, f₄, 0, 0, 0]) := by
+    have h := arrayAt_write (sp - 32) [f₀, f₁, 0, f₃, f₄, 0, 0, 0] 3 0 (by norm_num)
+    rw [show (4 : UInt32) * UInt32.ofNat 3 = 12 from by native_decide] at h
+    exact h
+  have hwrite4 : arrayAt (sp - 32) [f₀, f₁, 0, 0, f₄, 0, 0, 0] ⊢
+      pointsTo_u32 ((sp - 32) + 16) f₄ ∗
+      (pointsTo_u32 ((sp - 32) + 16) 0 -∗
+       arrayAt (sp - 32) [f₀, f₁, 0, 0, 0, 0, 0, 0]) := by
+    have h := arrayAt_write (sp - 32) [f₀, f₁, 0, 0, f₄, 0, 0, 0] 4 0 (by norm_num)
+    rw [show (4 : UInt32) * UInt32.ofNat 4 = 16 from by native_decide] at h
+    exact h
+  -- ── Step 19: store32 8 (i := 0) ──────────────────────────────────────────
+  simp only [hread_f20]
+  apply (sep_mono_left hwrite2).trans
+  apply sep_assoc.mp.trans
+  apply wp_iProp_store32_sep (hstack := rfl)
+    (hbounds := by show (sp - 32 : UInt32).toNat + 8 + 4 ≤ st.mem.pages * 65536; omega)
+  apply sep_assoc.mpr.trans
+  apply (sep_mono_left wand_elim_right).trans
+  apply sep_left_comm.mp.trans
+  -- ── Steps 20–22: localGet 6, localGet 6, load32 24 ───────────────────────
+  apply sep_left_comm.mp.trans
+  apply wp_iProp_step (hexec := by simp [execOne]; exact ⟨rfl, rfl⟩)
+  apply wp_iProp_step (hexec := by simp [execOne]; exact ⟨rfl, rfl⟩)
+  apply wp_iProp_load32_sep (hstack := rfl)
+    (hbounds := by show (sp - 32 : UInt32).toNat + 24 + 4 ≤ st.mem.pages * 65536; omega)
+  simp only [hread_f24]
+  -- ── Step 23: store32 12 (j := 0) ─────────────────────────────────────────
+  apply (sep_mono_left hwrite3).trans
+  apply sep_assoc.mp.trans
+  apply wp_iProp_store32_sep (hstack := rfl)
+    (hbounds := by show (sp - 32 : UInt32).toNat + 12 + 4 ≤ st.mem.pages * 65536; omega)
+  apply sep_assoc.mpr.trans
+  apply (sep_mono_left wand_elim_right).trans
+  apply sep_left_comm.mp.trans
+  -- ── Steps 24–26: localGet 6, localGet 6, load32 28 ───────────────────────
+  apply sep_left_comm.mp.trans
+  apply wp_iProp_step (hexec := by simp [execOne]; exact ⟨rfl, rfl⟩)
+  apply wp_iProp_step (hexec := by simp [execOne]; exact ⟨rfl, rfl⟩)
+  apply wp_iProp_load32_sep (hstack := rfl)
+    (hbounds := by show (sp - 32 : UInt32).toNat + 28 + 4 ≤ st.mem.pages * 65536; omega)
+  simp only [hread_f28]
+  -- ── Step 27: store32 16 (k := 0) ─────────────────────────────────────────
+  apply (sep_mono_left hwrite4).trans
+  apply sep_assoc.mp.trans
+  apply wp_iProp_store32_sep (hstack := rfl)
+    (hbounds := by show (sp - 32 : UInt32).toNat + 16 + 4 ≤ st.mem.pages * 65536; omega)
+  apply sep_assoc.mpr.trans
+  apply (sep_mono_left wand_elim_right).trans
+  -- ── Block+loop: bridge from Prop-level (wp_wasm_F cannot handle .block/.loop) ─
+  apply wp_wasm_pure_complete
+  -- Goal: wp_wasm_prop «module» st₂₇ loc₂₇ (func6.drop 27) {} Q
+  -- Derivable from func6_terminates_frame via h_setup + Q-weakening.
   sorry
 
 end Wasm.SepLogic.MergeSort

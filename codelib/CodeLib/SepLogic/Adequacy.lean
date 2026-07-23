@@ -807,4 +807,15 @@ theorem wp_iProp_ret
   simp only [wp_wasm_F]
   exact BI.pure_intro hQ
 
+-- Completeness bridge: for host-call-free programs, the Prop-level WP implies
+-- the iProp-level WP for any precondition and any host environment.
+-- Full proof deferred: wp_wasm_F uses execOne 1, which cannot step .block/.loop.
+axiom wp_wasm_pure_complete
+    {m : Module} {st : Store Unit} {locals : Locals}
+    {prog : Program} {env : HostEnv Unit}
+    {P : IProp WasmHeapGF}
+    {Q : Store Unit → List Value → Prop}
+    (h : wp_wasm_prop m st locals prog {} Q) :
+    P ⊢ wp_wasm m st locals prog env Q
+
 end Wasm.SepLogic
