@@ -1991,10 +1991,9 @@ theorem func6_iProp
     (hbounds := by show (sp - 32 : UInt32).toNat + 16 + 4 ≤ st.mem.pages * 65536; omega)
   apply sep_assoc.mpr.trans
   apply (sep_mono_left wand_elim_right).trans
-  -- ── Block+loop: bridge from Prop-level (wp_wasm_F cannot handle .block/.loop) ─
-  apply wp_wasm_pure_complete
-  -- Goal: wp_wasm_prop «module» st₂₇ loc₂₇ (func6.drop 27) {} Q
-  -- Derivable from func6_terminates_frame via h_setup + Q-weakening.
+  -- block+loop body: apply wp_wasm_iProp_loop with func6's loop invariant.
+  -- hstep: derive exec-level Break 0 / Fallthrough from func6_terminates_frame
+  --   (Prop level) plus a ghost state witness for the next iteration.
   sorry
 
 end Wasm.SepLogic.MergeSort
