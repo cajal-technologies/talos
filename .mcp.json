@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "lean-lsp-mcp": {
+      "type": "stdio",
+      "command": "C:\\Users\\User\\Miniconda\\Scripts\\lean-lsp-mcp.exe",
+      "args": [
+        "--lean-project-path",
+        "programs/lean"
+      ],
+      "env": {
+        "PYTHONUTF8": "1"
+      }
+    }
+  }
+}

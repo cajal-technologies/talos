@@ -3,7 +3,7 @@ import Project.MergeSort.Leaves
 import Project.MergeSort.ContentLemmas
 import Project.MergeSort.Spec
 import CodeLib.SepLogic.Adequacy
-import CodeLib.SepLogic.AllocSpec
+import Project.MergeSort.AllocSpec
 import CodeLib.Entry
 import Interpreter.Wasm.Wp.Tactic
 import Interpreter.Wasm.Wp.Call
@@ -49,7 +49,7 @@ private theorem TerminatesWith.env_lift {env : HostEnv Unit} {id : Nat}
   refine ⟨N, fun fuel hle => ?_⟩
   obtain ⟨vs, st', hrun, hpost⟩ := hN fuel hle
   exact ⟨vs, st',
-    (run_env_indep «module» (by native_decide) fuel id st args env {}).trans hrun,
+    (run_env_indep (by native_decide) fuel id st args env {}).trans hrun,
     hpost⟩
 
 -- func15: straight-line, stores v1 at ptr, v2 at ptr+4; structural postcondition
