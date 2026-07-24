@@ -24,6 +24,14 @@ instance instWasmHeapPreS : genHeapPreS UInt32 (Option UInt8) WasmHeapGF WasmHea
   metaData := by exists 6
 -- The full genHeap instance with ghost names
 class WasmHeapGS extends genHeapGS UInt32 (Option UInt8) WasmHeapGF WasmHeapMap
+-- Byte extraction helpers (shift form): byte n of a little-endian 32/64-bit value.
+-- The shift form is used here so bv_decide-based proofs in WasmRules.lean work,
+-- and so iexact in Adequacy.lean sees a transparent definition.
+def byte32 (v : UInt32) (n : Nat) : UInt8 :=
+  ((v >>> UInt32.ofNat (8 * n)) &&& 0xFF).toUInt8
+def byte64 (v : UInt64) (n : Nat) : UInt8 :=
+  ((v >>> UInt64.ofNat (8 * n)) &&& 0xFF).toUInt8
+
 /-! ## Points-to assertions
 
 Byte-level `↦w` plus multi-byte and array derived forms.
@@ -47,18 +55,16 @@ scoped notation:50 addr:50 " ↦w " v:50 => pointsTo (L := UInt32) (V := Option 
     (GF := WasmHeapGF) (H := WasmHeapMap) addr (DFrac.own 1) (some v)
 -- Multi-byte: u64 as 8 consecutive owned bytes (little-endian)
 def pointsTo_u64 (addr : UInt32) (v : UInt64) : IProp WasmHeapGF :=
-  let byte (n : Nat) : UInt8 := ⟨(v.toNat / (256 ^ n)) % 256, by omega⟩
   iprop%
-    (addr ↦w byte 0) ∗ ((addr + 1) ↦w byte 1) ∗
-    ((addr + 2) ↦w byte 2) ∗ ((addr + 3) ↦w byte 3) ∗
-    ((addr + 4) ↦w byte 4) ∗ ((addr + 5) ↦w byte 5) ∗
-    ((addr + 6) ↦w byte 6) ∗ ((addr + 7) ↦w byte 7)
+    (addr ↦w byte64 v 0) ∗ ((addr + 1) ↦w byte64 v 1) ∗
+    ((addr + 2) ↦w byte64 v 2) ∗ ((addr + 3) ↦w byte64 v 3) ∗
+    ((addr + 4) ↦w byte64 v 4) ∗ ((addr + 5) ↦w byte64 v 5) ∗
+    ((addr + 6) ↦w byte64 v 6) ∗ ((addr + 7) ↦w byte64 v 7)
 -- Multi-byte: u32 as 4 consecutive owned bytes (little-endian)
 def pointsTo_u32 (addr : UInt32) (v : UInt32) : IProp WasmHeapGF :=
-  let byte (n : Nat) : UInt8 := ⟨(v.toNat / (256 ^ n)) % 256, by omega⟩
   iprop%
-    (addr ↦w byte 0) ∗ ((addr + 1) ↦w byte 1) ∗
-    ((addr + 2) ↦w byte 2) ∗ ((addr + 3) ↦w byte 3)
+    (addr ↦w byte32 v 0) ∗ ((addr + 1) ↦w byte32 v 1) ∗
+    ((addr + 2) ↦w byte32 v 2) ∗ ((addr + 3) ↦w byte32 v 3)
 -- Array ownership: n consecutive u32 elements at ptr
 -- arrayAt ptr [x₀, x₁, ..., xₙ₋₁] = pointsTo_u32 ptr x₀ ∗ pointsTo_u32 (ptr+4) x₁ ∗ ...
 def arrayAt (ptr : UInt32) (xs : List UInt32) : IProp WasmHeapGF :=
@@ -121,4 +127,13 @@ theorem arrayAt_get (ptr : UInt32) (xs : List UInt32) (k : Nat)
   have h := arrayAt_set ptr xs k xs[k] hk
   rwa [List.set_getElem_self] at h
 end PointsTo
+
+-- (addr + UInt32.ofNat n).toNat = addr.toNat + n, when no overflow
+theorem toNat_add_ofNat (a : UInt32) (n : Nat) (h : a.toNat + n < 2^32) :
+    (a + UInt32.ofNat n).toNat = a.toNat + n := by
+  rw [UInt32.toNat_add]
+  have h1 : (UInt32.ofNat n).toNat = n % 2^32 := rfl
+  rw [h1]
+  omega
+
 end Wasm.SepLogic
