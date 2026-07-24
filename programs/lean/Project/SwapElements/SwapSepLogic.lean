@@ -1443,6 +1443,12 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
     have hbds_b : ¬(st.mem.pages * 65536 < ptr_b.toNat + 8) := by omega
     -- Pages invariant
     have hpages : m₃.pages = st.mem.pages := rfl
+    -- Opaque-let helpers: m₁/m₂/m₃ are opaque to simp, so derive equalities explicitly
+    have hm₁_eq : m₁ = st.mem.write64 scr vA := rfl
+    have hm₂_eq : m₂ = m₁.write64 ptr_a vB := rfl
+    have hm₃_eq : m₃ = m₂.write64 ptr_b vA := rfl
+    have hpages₁ : m₁.pages = st.mem.pages := rfl
+    have hpages₂ : m₂.pages = st.mem.pages := rfl
     rcases hdisj with rfl | hlt | hlt
     · -- rfl case: ptr_a = ptr_b (swap is a no-op)
       -- vB = vA, m₂ = m₁.write64 ptr_a vA, m₃ = m₂.write64 ptr_a vA
@@ -1548,7 +1554,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         imodintro
         iexists σ₂, st,
           { params := [.i32 ptr_a, .i32 ptr_b], locals := [.i32 (0 : UInt32)],
-            values := [.i32 (1048560 : UInt32), .i32 (16 : UInt32)] }
+            values := [.i32 (16 : UInt32), .i32 (1048560 : UInt32)] }
         isplitl []; · exact BI.pure_intro (by simp [execOne.eq_def, Locals.get])
         isplitl []; · exact BI.pure_intro hagree₂
         isplitl [Hσ₂]; · iexact Hσ₂
@@ -1587,7 +1593,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         imodintro
         iexists σ₆, st,
           { params := [.i32 ptr_a, .i32 ptr_b], locals := [.i32 (1048544 : UInt32)],
-            values := [.i32 (1048544 : UInt32), .i32 ptr_a] }
+            values := [.i32 ptr_a, .i32 (1048544 : UInt32)] }
         isplitl []; · exact BI.pure_intro (by simp [execOne.eq_def, Locals.get])
         isplitl []; · exact BI.pure_intro hagree₆
         isplitl [Hσ₆]; · iexact Hσ₆
@@ -1595,11 +1601,11 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₇ %hagree₇ Hσ₇
         imod (wp_iProp_load64 hagree₇ (show ptr_a.toNat + 8 ≤ 2 ^ 32 from by omega))
-          $$ [Hσ₇ HA] with ⟨Hσ₇, HA, %heq_a⟩
+          $$ [$Hσ₇ $HA] with ⟨Hσ₇, HA, %heq_a⟩
         imodintro
         iexists σ₇, st,
           { params := [.i32 ptr_a, .i32 ptr_b], locals := [.i32 (1048544 : UInt32)],
-            values := [.i32 (1048544 : UInt32), .i64 vA] }
+            values := [.i64 vA, .i32 (1048544 : UInt32)] }
         isplitl []
         · exact BI.pure_intro (by
             simp [execOne.eq_def, Locals.get, if_neg hbds_a, UInt32.add_zero, heq_a])
@@ -1609,7 +1615,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₈ %hagree₈ Hσ₈
         imod (wp_iProp_store64 (v_new := vA) hagree₈
-          (show scr.toNat + 8 ≤ 2 ^ 32 from by omega)) $$ [Hσ₈ HS] with
+          (show scr.toNat + 8 ≤ 2 ^ 32 from by omega)) $$ [$Hσ₈ $HS] with
           ⟨%σ₈', %hagree₈', Hσ₈', HS'⟩
         imodintro
         iexists σ₈', { st with mem := m₁ },
@@ -1617,7 +1623,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         isplitl []
         · exact BI.pure_intro (by
             simp [execOne.eq_def, Locals.get, if_neg hbds_scratch,
-                  show (1048544 : UInt32) + 8 = scr from rfl])
+                  show (1048544 : UInt32) + 8 = scr from rfl, hm₁_eq])
         isplitl []; · exact BI.pure_intro hagree₈'
         isplitl [Hσ₈']; · iexact Hσ₈'
         -- Inst 9: localGet 0
@@ -1636,7 +1642,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         imodintro
         iexists σ₁₀, { st with mem := m₁ },
           { params := [.i32 ptr_a, .i32 ptr_b], locals := [.i32 (1048544 : UInt32)],
-            values := [.i32 ptr_a, .i32 ptr_b] }
+            values := [.i32 ptr_b, .i32 ptr_a] }
         isplitl []; · exact BI.pure_intro (by simp [execOne.eq_def, Locals.get])
         isplitl []; · exact BI.pure_intro hagree₁₀
         isplitl [Hσ₁₀]; · iexact Hσ₁₀
@@ -1644,14 +1650,14 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₁₁ %hagree₁₁ Hσ₁₁
         imod (wp_iProp_load64 hagree₁₁ (show ptr_b.toNat + 8 ≤ 2 ^ 32 from by omega))
-          $$ [Hσ₁₁ HB] with ⟨Hσ₁₁, HB, %heq_b⟩
+          $$ [$Hσ₁₁ $HB] with ⟨Hσ₁₁, HB, %heq_b⟩
         imodintro
         iexists σ₁₁, { st with mem := m₁ },
           { params := [.i32 ptr_a, .i32 ptr_b], locals := [.i32 (1048544 : UInt32)],
-            values := [.i32 ptr_a, .i64 vB] }
+            values := [.i64 vB, .i32 ptr_a] }
         isplitl []
         · exact BI.pure_intro (by
-            simp [execOne.eq_def, Locals.get, Mem.write64_pages,
+            simp [execOne.eq_def, Locals.get, hpages₁,
                   if_neg hbds_b, UInt32.add_zero, heq_b])
         isplitl []; · exact BI.pure_intro hagree₁₁
         isplitl [Hσ₁₁]; · iexact Hσ₁₁
@@ -1659,15 +1665,15 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₁₂ %hagree₁₂ Hσ₁₂
         imod (wp_iProp_store64 (v_new := vB) hagree₁₂
-          (show ptr_a.toNat + 8 ≤ 2 ^ 32 from by omega)) $$ [Hσ₁₂ HA] with
+          (show ptr_a.toNat + 8 ≤ 2 ^ 32 from by omega)) $$ [$Hσ₁₂ $HA] with
           ⟨%σ₁₂', %hagree₁₂', Hσ₁₂', HA'⟩
         imodintro
         iexists σ₁₂', { st with mem := m₂ },
           { params := [.i32 ptr_a, .i32 ptr_b], locals := [.i32 (1048544 : UInt32)], values := [] }
         isplitl []
         · exact BI.pure_intro (by
-            simp [execOne.eq_def, Locals.get, Mem.write64_pages,
-                  if_neg hbds_a, UInt32.add_zero])
+            simp [execOne.eq_def, Locals.get, hpages₁,
+                  if_neg hbds_a, UInt32.add_zero, hm₂_eq])
         isplitl []; · exact BI.pure_intro hagree₁₂'
         isplitl [Hσ₁₂']; · iexact Hσ₁₂'
         -- Inst 13: localGet 1
@@ -1686,7 +1692,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         imodintro
         iexists σ₁₄, { st with mem := m₂ },
           { params := [.i32 ptr_a, .i32 ptr_b], locals := [.i32 (1048544 : UInt32)],
-            values := [.i32 ptr_b, .i32 (1048544 : UInt32)] }
+            values := [.i32 (1048544 : UInt32), .i32 ptr_b] }
         isplitl []; · exact BI.pure_intro (by simp [execOne.eq_def, Locals.get])
         isplitl []; · exact BI.pure_intro hagree₁₄
         isplitl [Hσ₁₄]; · iexact Hσ₁₄
@@ -1694,14 +1700,14 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₁₅ %hagree₁₅ Hσ₁₅
         imod (wp_iProp_load64 hagree₁₅ (show scr.toNat + 8 ≤ 2 ^ 32 from by omega))
-          $$ [Hσ₁₅ HS'] with ⟨Hσ₁₅, HS', %heq_s⟩
+          $$ [$Hσ₁₅ $HS'] with ⟨Hσ₁₅, HS', %heq_s⟩
         imodintro
         iexists σ₁₅, { st with mem := m₂ },
           { params := [.i32 ptr_a, .i32 ptr_b], locals := [.i32 (1048544 : UInt32)],
-            values := [.i32 ptr_b, .i64 vA] }
+            values := [.i64 vA, .i32 ptr_b] }
         isplitl []
         · exact BI.pure_intro (by
-            simp [execOne.eq_def, Locals.get, Mem.write64_pages, if_neg hbds_scratch,
+            simp [execOne.eq_def, Locals.get, hpages₂, if_neg hbds_scratch,
                   show (1048544 : UInt32) + 8 = scr from rfl, heq_s])
         isplitl []; · exact BI.pure_intro hagree₁₅
         isplitl [Hσ₁₅]; · iexact Hσ₁₅
@@ -1709,26 +1715,26 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₁₆ %hagree₁₆ Hσ₁₆
         imod (wp_iProp_store64 (v_new := vA) hagree₁₆
-          (show ptr_b.toNat + 8 ≤ 2 ^ 32 from by omega)) $$ [Hσ₁₆ HB] with
+          (show ptr_b.toNat + 8 ≤ 2 ^ 32 from by omega)) $$ [$Hσ₁₆ $HB] with
           ⟨%σ₁₆', %hagree₁₆', Hσ₁₆', HB'⟩
         -- Extract postcondition facts from ownership tokens using m₃ agreement
         imod (wp_iProp_load64 hagree₁₆' (show ptr_a.toNat + 8 ≤ 2 ^ 32 from by omega))
-          $$ [Hσ₁₆' HA'] with ⟨Hσ_a, _, %heq_pa⟩
+          $$ [$Hσ₁₆' $HA'] with ⟨Hσ_a, _, %heq_pa⟩
         imod (wp_iProp_load64 hagree₁₆' (show ptr_b.toNat + 8 ≤ 2 ^ 32 from by omega))
-          $$ [Hσ_a HB'] with ⟨Hσ_b, _, %heq_pb⟩
+          $$ [$Hσ_a $HB'] with ⟨Hσ_b, _, %heq_pb⟩
         imodintro
         iexists σ₁₆', { st with mem := m₃ },
           { params := [.i32 ptr_a, .i32 ptr_b], locals := [.i32 (1048544 : UInt32)], values := [] }
         isplitl []
         · exact BI.pure_intro (by
-            simp [execOne.eq_def, Locals.get, Mem.write64_pages,
-                  if_neg hbds_b, UInt32.add_zero])
+            simp [execOne.eq_def, Locals.get, hpages₂,
+                  if_neg hbds_b, UInt32.add_zero, hm₃_eq])
         isplitl []; · exact BI.pure_intro hagree₁₆'
         isplitl [Hσ_b]; · iexact Hσ_b
         -- Inst 17: ret
         iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         ipureintro
-        refine ⟨rfl, rfl, hpages, heq_pa, heq_pb, fun a h1 h2 h3 => ?_⟩
+        refine ⟨trivial, trivial, hpages, heq_pa, heq_pb, fun a h1 h2 h3 => ?_⟩
         apply read64_of_digits; intro i hi
         rw [write64_bytes_ne m₂ ptr_b vA (a.toNat + i)
               (by rcases h2 with h | h; exact Or.inl (by omega); exact Or.inr (by omega))]
@@ -1794,7 +1800,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         imodintro
         iexists σ₂, st,
           { params := [.i32 ptr_a, .i32 ptr_b], locals := [.i32 (0 : UInt32)],
-            values := [.i32 (1048560 : UInt32), .i32 (16 : UInt32)] }
+            values := [.i32 (16 : UInt32), .i32 (1048560 : UInt32)] }
         isplitl []; · exact BI.pure_intro (by simp [execOne.eq_def, Locals.get])
         isplitl []; · exact BI.pure_intro hagree₂
         isplitl [Hσ₂]; · iexact Hσ₂
@@ -1829,18 +1835,18 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         imodintro
         iexists σ₆, st,
           { params := [.i32 ptr_a, .i32 ptr_b], locals := [.i32 (1048544 : UInt32)],
-            values := [.i32 (1048544 : UInt32), .i32 ptr_a] }
+            values := [.i32 ptr_a, .i32 (1048544 : UInt32)] }
         isplitl []; · exact BI.pure_intro (by simp [execOne.eq_def, Locals.get])
         isplitl []; · exact BI.pure_intro hagree₆
         isplitl [Hσ₆]; · iexact Hσ₆
         iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₇ %hagree₇ Hσ₇
         imod (wp_iProp_load64 hagree₇ (show ptr_a.toNat + 8 ≤ 2 ^ 32 from by omega))
-          $$ [Hσ₇ HA] with ⟨Hσ₇, HA, %heq_a⟩
+          $$ [$Hσ₇ $HA] with ⟨Hσ₇, HA, %heq_a⟩
         imodintro
         iexists σ₇, st,
           { params := [.i32 ptr_a, .i32 ptr_b], locals := [.i32 (1048544 : UInt32)],
-            values := [.i32 (1048544 : UInt32), .i64 vA] }
+            values := [.i64 vA, .i32 (1048544 : UInt32)] }
         isplitl []
         · exact BI.pure_intro (by
             simp [execOne.eq_def, Locals.get, if_neg hbds_a, UInt32.add_zero, heq_a])
@@ -1849,7 +1855,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₈ %hagree₈ Hσ₈
         imod (wp_iProp_store64 (v_new := vA) hagree₈
-          (show scr.toNat + 8 ≤ 2 ^ 32 from by omega)) $$ [Hσ₈ HS] with
+          (show scr.toNat + 8 ≤ 2 ^ 32 from by omega)) $$ [$Hσ₈ $HS] with
           ⟨%σ₈', %hagree₈', Hσ₈', HS'⟩
         imodintro
         iexists σ₈', { st with mem := m₁ },
@@ -1857,7 +1863,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         isplitl []
         · exact BI.pure_intro (by
             simp [execOne.eq_def, Locals.get, if_neg hbds_scratch,
-                  show (1048544 : UInt32) + 8 = scr from rfl])
+                  show (1048544 : UInt32) + 8 = scr from rfl, hm₁_eq])
         isplitl []; · exact BI.pure_intro hagree₈'
         isplitl [Hσ₈']; · iexact Hσ₈'
         iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
@@ -1874,36 +1880,36 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         imodintro
         iexists σ₁₀, { st with mem := m₁ },
           { params := [.i32 ptr_a, .i32 ptr_b], locals := [.i32 (1048544 : UInt32)],
-            values := [.i32 ptr_a, .i32 ptr_b] }
+            values := [.i32 ptr_b, .i32 ptr_a] }
         isplitl []; · exact BI.pure_intro (by simp [execOne.eq_def, Locals.get])
         isplitl []; · exact BI.pure_intro hagree₁₀
         isplitl [Hσ₁₀]; · iexact Hσ₁₀
         iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₁₁ %hagree₁₁ Hσ₁₁
         imod (wp_iProp_load64 hagree₁₁ (show ptr_b.toNat + 8 ≤ 2 ^ 32 from by omega))
-          $$ [Hσ₁₁ HB] with ⟨Hσ₁₁, HB, %heq_b⟩
+          $$ [$Hσ₁₁ $HB] with ⟨Hσ₁₁, HB, %heq_b⟩
         imodintro
         iexists σ₁₁, { st with mem := m₁ },
           { params := [.i32 ptr_a, .i32 ptr_b], locals := [.i32 (1048544 : UInt32)],
-            values := [.i32 ptr_a, .i64 vB] }
+            values := [.i64 vB, .i32 ptr_a] }
         isplitl []
         · exact BI.pure_intro (by
-            simp [execOne.eq_def, Locals.get, Mem.write64_pages,
+            simp [execOne.eq_def, Locals.get, hpages₁,
                   if_neg hbds_b, UInt32.add_zero, heq_b])
         isplitl []; · exact BI.pure_intro hagree₁₁
         isplitl [Hσ₁₁]; · iexact Hσ₁₁
         iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₁₂ %hagree₁₂ Hσ₁₂
         imod (wp_iProp_store64 (v_new := vB) hagree₁₂
-          (show ptr_a.toNat + 8 ≤ 2 ^ 32 from by omega)) $$ [Hσ₁₂ HA] with
+          (show ptr_a.toNat + 8 ≤ 2 ^ 32 from by omega)) $$ [$Hσ₁₂ $HA] with
           ⟨%σ₁₂', %hagree₁₂', Hσ₁₂', HA'⟩
         imodintro
         iexists σ₁₂', { st with mem := m₂ },
           { params := [.i32 ptr_a, .i32 ptr_b], locals := [.i32 (1048544 : UInt32)], values := [] }
         isplitl []
         · exact BI.pure_intro (by
-            simp [execOne.eq_def, Locals.get, Mem.write64_pages,
-                  if_neg hbds_a, UInt32.add_zero])
+            simp [execOne.eq_def, Locals.get, hpages₁,
+                  if_neg hbds_a, UInt32.add_zero, hm₂_eq])
         isplitl []; · exact BI.pure_intro hagree₁₂'
         isplitl [Hσ₁₂']; · iexact Hσ₁₂'
         iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
@@ -1920,45 +1926,45 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         imodintro
         iexists σ₁₄, { st with mem := m₂ },
           { params := [.i32 ptr_a, .i32 ptr_b], locals := [.i32 (1048544 : UInt32)],
-            values := [.i32 ptr_b, .i32 (1048544 : UInt32)] }
+            values := [.i32 (1048544 : UInt32), .i32 ptr_b] }
         isplitl []; · exact BI.pure_intro (by simp [execOne.eq_def, Locals.get])
         isplitl []; · exact BI.pure_intro hagree₁₄
         isplitl [Hσ₁₄]; · iexact Hσ₁₄
         iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₁₅ %hagree₁₅ Hσ₁₅
         imod (wp_iProp_load64 hagree₁₅ (show scr.toNat + 8 ≤ 2 ^ 32 from by omega))
-          $$ [Hσ₁₅ HS'] with ⟨Hσ₁₅, HS', %heq_s⟩
+          $$ [$Hσ₁₅ $HS'] with ⟨Hσ₁₅, HS', %heq_s⟩
         imodintro
         iexists σ₁₅, { st with mem := m₂ },
           { params := [.i32 ptr_a, .i32 ptr_b], locals := [.i32 (1048544 : UInt32)],
-            values := [.i32 ptr_b, .i64 vA] }
+            values := [.i64 vA, .i32 ptr_b] }
         isplitl []
         · exact BI.pure_intro (by
-            simp [execOne.eq_def, Locals.get, Mem.write64_pages, if_neg hbds_scratch,
+            simp [execOne.eq_def, Locals.get, hpages₂, if_neg hbds_scratch,
                   show (1048544 : UInt32) + 8 = scr from rfl, heq_s])
         isplitl []; · exact BI.pure_intro hagree₁₅
         isplitl [Hσ₁₅]; · iexact Hσ₁₅
         iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₁₆ %hagree₁₆ Hσ₁₆
         imod (wp_iProp_store64 (v_new := vA) hagree₁₆
-          (show ptr_b.toNat + 8 ≤ 2 ^ 32 from by omega)) $$ [Hσ₁₆ HB] with
+          (show ptr_b.toNat + 8 ≤ 2 ^ 32 from by omega)) $$ [$Hσ₁₆ $HB] with
           ⟨%σ₁₆', %hagree₁₆', Hσ₁₆', HB'⟩
         imod (wp_iProp_load64 hagree₁₆' (show ptr_a.toNat + 8 ≤ 2 ^ 32 from by omega))
-          $$ [Hσ₁₆' HA'] with ⟨Hσ_a, _, %heq_pa⟩
+          $$ [$Hσ₁₆' $HA'] with ⟨Hσ_a, _, %heq_pa⟩
         imod (wp_iProp_load64 hagree₁₆' (show ptr_b.toNat + 8 ≤ 2 ^ 32 from by omega))
-          $$ [Hσ_a HB'] with ⟨Hσ_b, _, %heq_pb⟩
+          $$ [$Hσ_a $HB'] with ⟨Hσ_b, _, %heq_pb⟩
         imodintro
         iexists σ₁₆', { st with mem := m₃ },
           { params := [.i32 ptr_a, .i32 ptr_b], locals := [.i32 (1048544 : UInt32)], values := [] }
         isplitl []
         · exact BI.pure_intro (by
-            simp [execOne.eq_def, Locals.get, Mem.write64_pages,
-                  if_neg hbds_b, UInt32.add_zero])
+            simp [execOne.eq_def, Locals.get, hpages₂,
+                  if_neg hbds_b, UInt32.add_zero, hm₃_eq])
         isplitl []; · exact BI.pure_intro hagree₁₆'
         isplitl [Hσ_b]; · iexact Hσ_b
         iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         ipureintro
-        refine ⟨rfl, rfl, hpages, heq_pa, heq_pb, fun a h1 h2 h3 => ?_⟩
+        refine ⟨trivial, trivial, hpages, heq_pa, heq_pb, fun a h1 h2 h3 => ?_⟩
         apply read64_of_digits; intro i hi
         rw [write64_bytes_ne m₂ ptr_b vA (a.toNat + i)
               (by rcases h2 with h | h; exact Or.inl (by omega); exact Or.inr (by omega))]
