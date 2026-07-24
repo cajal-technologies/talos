@@ -75,6 +75,44 @@ example :
       | _ => none := by
   native_decide
 
+/-- Covers the complete straight-line i64 expression image used by the
+proof-oriented MiniC/Wasm pipeline: arithmetic, signed comparison, equality,
+inequality, zero test, and unsigned i32-to-i64 extension. -/
+def i64ExpressionCoverage : Program := [
+  .constI64 9,
+  .constI64 4,
+  .subI64,
+  .constI64 3,
+  .addI64,
+  .constI64 2,
+  .mulI64,
+  .constI64 16,
+  .eqI64,
+  .extendUI32,
+  .eqzI64,
+  .constI64 0,
+  .constI64 1,
+  .neI64,
+  .extendUI32,
+  .constI64 2,
+  .leSI64
+]
+
+def i64ExpressionCoverageConfig : Config Unit :=
+  ofOld testRuntime testStore {} i64ExpressionCoverage
+
+example :
+    (runSteps 18 i64ExpressionCoverageConfig).values? =
+      some [.i32 1, .i32 0] := by
+  native_decide
+
+example :
+    (runSteps 18 i64ExpressionCoverageConfig).values? =
+      match exec 1 testModule testStore {} i64ExpressionCoverage with
+      | .Fallthrough _ frame => some frame.values
+      | _ => none := by
+  native_decide
+
 def divideByZero : Program := [
   .const 7,
   .const 0,
@@ -123,5 +161,27 @@ theorem discriminator_wellFormed :
   apply FrameProgramWellFormed.localGet (v := .i32 4)
   · rfl
   exact .finish _
+
+/-- The whole-program refinement theorem is directly consumable on a concrete
+well-formed program, without reconstructing its instruction-by-instruction
+simulation at the use site. -/
+example :
+    some
+        (runSteps (discriminator.length + 1)
+          discriminatorConfig) =
+      liftOldProgramContinuation testRuntime
+        (exec 1 testModule testStore discriminatorFrame discriminator
+          (default : HostEnv Unit)) := by
+  simpa only [discriminatorConfig] using
+    runSteps_agrees_exec testRuntime testModule testStore discriminatorFrame
+      discriminator (α := Unit) default discriminator_wellFormed
+
+/-- Completion is stable under extra iterator fuel, matching the migration's
+public fuel-monotonicity requirement. -/
+example :
+    runSteps 20 discriminatorConfig = runSteps 6 discriminatorConfig := by
+  apply runSteps_fuel_mono (fuel₁ := 6)
+  · decide
+  · native_decide
 
 end Wasm.Examples.SmallStep

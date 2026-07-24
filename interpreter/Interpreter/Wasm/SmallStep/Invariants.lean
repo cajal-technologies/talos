@@ -62,6 +62,47 @@ inductive FrameProgramWellFormed : Locals → Program → Prop where
   | divUTrap (frame rest a vs)
       (hvalues : frame.values = .i32 0 :: .i32 a :: vs) :
       FrameProgramWellFormed frame (.divU :: rest)
+  | addI64 (frame rest a b vs)
+      (hvalues : frame.values = .i64 b :: .i64 a :: vs)
+      (hnext : FrameProgramWellFormed
+        { frame with values := .i64 (a + b) :: vs } rest) :
+      FrameProgramWellFormed frame (.addI64 :: rest)
+  | subI64 (frame rest a b vs)
+      (hvalues : frame.values = .i64 b :: .i64 a :: vs)
+      (hnext : FrameProgramWellFormed
+        { frame with values := .i64 (a - b) :: vs } rest) :
+      FrameProgramWellFormed frame (.subI64 :: rest)
+  | mulI64 (frame rest a b vs)
+      (hvalues : frame.values = .i64 b :: .i64 a :: vs)
+      (hnext : FrameProgramWellFormed
+        { frame with values := .i64 (a * b) :: vs } rest) :
+      FrameProgramWellFormed frame (.mulI64 :: rest)
+  | leSI64 (frame rest a b vs)
+      (hvalues : frame.values = .i64 b :: .i64 a :: vs)
+      (hnext : FrameProgramWellFormed
+        { frame with values := .i32 (if a.toInt64 ≤ b.toInt64 then 1 else 0) :: vs }
+        rest) :
+      FrameProgramWellFormed frame (.leSI64 :: rest)
+  | eqI64 (frame rest a b vs)
+      (hvalues : frame.values = .i64 b :: .i64 a :: vs)
+      (hnext : FrameProgramWellFormed
+        { frame with values := .i32 (if a = b then 1 else 0) :: vs } rest) :
+      FrameProgramWellFormed frame (.eqI64 :: rest)
+  | neI64 (frame rest a b vs)
+      (hvalues : frame.values = .i64 b :: .i64 a :: vs)
+      (hnext : FrameProgramWellFormed
+        { frame with values := .i32 (if a = b then 0 else 1) :: vs } rest) :
+      FrameProgramWellFormed frame (.neI64 :: rest)
+  | eqzI64 (frame rest) (a : UInt64) (vs)
+      (hvalues : frame.values = .i64 a :: vs)
+      (hnext : FrameProgramWellFormed
+        { frame with values := .i32 (if a = 0 then 1 else 0) :: vs } rest) :
+      FrameProgramWellFormed frame (.eqzI64 :: rest)
+  | extendUI32 (frame rest a vs)
+      (hvalues : frame.values = .i32 a :: vs)
+      (hnext : FrameProgramWellFormed
+        { frame with values := .i64 a.toUInt64 :: vs } rest) :
+      FrameProgramWellFormed frame (.extendUI32 :: rest)
 
 /-- Well-formed terminal expressions are unconditional; running expressions
 must carry a structurally valid pure-core program. -/
@@ -109,6 +150,30 @@ private theorem wellFormed_running_step
   | divUTrap frame rest a vs hvalues =>
       refine ⟨_, .divUTrap store frame rest a vs hvalues, ?_⟩
       trivial
+  | addI64 frame rest a b vs hvalues hnext =>
+      refine ⟨_, .addI64 store frame rest a b vs hvalues, ?_⟩
+      exact hnext
+  | subI64 frame rest a b vs hvalues hnext =>
+      refine ⟨_, .subI64 store frame rest a b vs hvalues, ?_⟩
+      exact hnext
+  | mulI64 frame rest a b vs hvalues hnext =>
+      refine ⟨_, .mulI64 store frame rest a b vs hvalues, ?_⟩
+      exact hnext
+  | leSI64 frame rest a b vs hvalues hnext =>
+      refine ⟨_, .leSI64 store frame rest a b vs hvalues, ?_⟩
+      exact hnext
+  | eqI64 frame rest a b vs hvalues hnext =>
+      refine ⟨_, .eqI64 store frame rest a b vs hvalues, ?_⟩
+      exact hnext
+  | neI64 frame rest a b vs hvalues hnext =>
+      refine ⟨_, .neI64 store frame rest a b vs hvalues, ?_⟩
+      exact hnext
+  | eqzI64 frame rest a vs hvalues hnext =>
+      refine ⟨_, .eqzI64 store frame rest a vs hvalues, ?_⟩
+      exact hnext
+  | extendUI32 frame rest a vs hvalues hnext =>
+      refine ⟨_, .extendUI32 store frame rest a vs hvalues, ?_⟩
+      exact hnext
 
 theorem wellFormed_progress {config : Config α} :
     WellFormed config → ¬ Terminal config → ∃ out, Step config out := by

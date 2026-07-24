@@ -36,6 +36,14 @@ SUPPORTED = {
     "sub",
     "mul",
     "divU",
+    "addI64",
+    "subI64",
+    "mulI64",
+    "leSI64",
+    "eqI64",
+    "neI64",
+    "eqzI64",
+    "extendUI32",
 }
 
 FIELDS = [

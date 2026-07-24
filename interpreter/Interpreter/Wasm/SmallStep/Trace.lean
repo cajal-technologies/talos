@@ -23,13 +23,35 @@ inductive Trace : Config α → List StepLabel → Config α → Prop where
       (tail : Trace out.next labels final) :
       Trace config (out.label :: labels) final
 
+/-- Sequential composition of traces concatenates their label words. -/
+theorem Trace.trans
+    {config middle final : Config α} {labels₁ labels₂ : List StepLabel}
+    (first : Trace config labels₁ middle)
+    (second : Trace middle labels₂ final) :
+    Trace config (labels₁ ++ labels₂) final := by
+  induction first with
+  | refl => simpa using second
+  | cons head tail ih =>
+      exact .cons head (ih second)
+
 /-- External observations of a trace. -/
 def externalObservations (labels : List StepLabel) : List WasmObservation :=
   labels.flatMap StepLabel.observations
 
+@[simp]
+theorem externalObservations_append (labels₁ labels₂ : List StepLabel) :
+    externalObservations (labels₁ ++ labels₂) =
+      externalObservations labels₁ ++ externalObservations labels₂ := by
+  simp [externalObservations]
+
 /-- Remove administrative labels while preserving every instruction label. -/
 def eraseAdmin (labels : List StepLabel) : List StepLabel :=
   labels.filter fun label => label.kind == .instruction
+
+@[simp]
+theorem eraseAdmin_append (labels₁ labels₂ : List StepLabel) :
+    eraseAdmin (labels₁ ++ labels₂) = eraseAdmin labels₁ ++ eraseAdmin labels₂ := by
+  simp [eraseAdmin]
 
 def AdministrativeStep (config config' : Config α) : Prop :=
   ∃ out,
@@ -149,6 +171,46 @@ theorem runSteps_done (fuel) (values : List Value) (store : MachineStore α) :
 theorem runSteps_trapped (fuel) (reason : TrapReason) (store : MachineStore α) :
     runSteps fuel { expr := .trapped reason, store } = .trapped reason store := by
   cases fuel <;> rfl
+
+/-- `runSteps` is an action of additive fuel.  The only resumable result is
+`outOfFuel`; success, trap, and diagnostic stuckness are absorbing. -/
+theorem runSteps_add (fuel₁ fuel₂ : Nat) (config : Config α) :
+    runSteps (fuel₁ + fuel₂) config =
+      match runSteps fuel₁ config with
+      | .outOfFuel config' => runSteps fuel₂ config'
+      | result => result := by
+  induction fuel₁ generalizing config with
+  | zero =>
+      cases config with
+      | mk expr store =>
+        cases expr <;> simp [runSteps]
+  | succ fuel₁ ih =>
+      cases config with
+      | mk expr store =>
+        cases expr with
+        | done values => simp [runSteps]
+        | trapped reason => simp [runSteps]
+        | running thread =>
+            let config : Config α := { expr := .running thread, store }
+            cases hstep : step? config with
+            | none =>
+                simp [runSteps, config, hstep, Nat.succ_add]
+            | some out =>
+                simpa [runSteps, config, hstep, Nat.succ_add] using
+                  ih (config := out.next)
+
+/-- Once an iteration has produced any non-fuel result, increasing fuel leaves
+the complete result—not merely its classification—unchanged. -/
+theorem runSteps_fuel_mono
+    {fuel₁ fuel₂ : Nat} {config : Config α}
+    (hle : fuel₁ ≤ fuel₂)
+    (hfinished :
+      (runSteps fuel₁ config).classification ≠ .outOfFuel) :
+    runSteps fuel₂ config = runSteps fuel₁ config := by
+  obtain ⟨extra, rfl⟩ := Nat.exists_eq_add_of_le hle
+  rw [runSteps_add]
+  generalize hresult : runSteps fuel₁ config = result
+  cases result <;> simp_all [IterationResult.classification]
 
 theorem runSteps_trace (fuel : Nat) (config : Config α) :
     ∃ labels,

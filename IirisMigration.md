@@ -529,8 +529,8 @@ Maintain a table in this document or a nearby generated file:
 | Area | Old implementation/proof | New implementation/proof | Tests | Status | Notes |
 |---|---|---|---|---|---|
 | Initialization | `Module.initialStore` | TBD | TBD | Not started | Include segments/imports |
-| Core stepping | `execOne`/`exec` | `SmallStep.Step`/`step?` | small-step examples | Pure-core slice | Labelled constants, locals, i32 add/sub/mul/divU |
-| Runner | `run`/`runTail` | `SmallStep.runSteps` | discriminator/trap/invalid canaries | Pure-core slice | Iterator-to-trace theorem; CLI cutover deferred |
+| Core stepping | `execOne`/`exec` | `SmallStep.Step`/`step?` | small-step examples | Pure-core slice | 16 labelled constructors: locals/constants; i32 add/sub/mul/divU; i64 add/sub/mul/leS/eq/ne/eqz; i64.extend_i32_u |
+| Runner | `run`/`runTail` | `SmallStep.runSteps` | discriminator/trap/invalid/i64-expression canaries | Pure-core slice | `runSteps_add`, exact post-terminal `runSteps_fuel_mono`, iterator-to-trace, and whole-program `runSteps_agrees_exec`; CLI cutover deferred |
 | Control flow | current WP tactics | Iris rules | control examples | Not started | |
 | Linear memory | `Mem`, memory arms | small-step memory | memory ladder | Not started | |
 | Iris integration | `CodeLib.SepLogic` | `SmallStep.Iris.instLanguage` | adapter build | Pure-core adapter | State interpretation/adequacy deferred |

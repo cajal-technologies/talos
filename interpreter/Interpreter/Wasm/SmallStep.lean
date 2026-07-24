@@ -13,7 +13,8 @@ multiplication, and unsigned division (including its trapping case).
 
 The transition result already has the shape required by iris-lean: a list of
 observations and a list of spawned expressions.  Both are empty for this
-single-threaded, host-free fragment.
+single-threaded, host-free fragment.  The i64 cases cover the straight-line
+numeric image emitted by the repository's proof-oriented MiniC/Wasm pipeline.
 -/
 
 namespace Wasm.SmallStep
@@ -118,6 +119,14 @@ inductive PureCoreInstruction : Instruction → Prop where
   | sub : PureCoreInstruction .sub
   | mul : PureCoreInstruction .mul
   | divU : PureCoreInstruction .divU
+  | addI64 : PureCoreInstruction .addI64
+  | subI64 : PureCoreInstruction .subI64
+  | mulI64 : PureCoreInstruction .mulI64
+  | leSI64 : PureCoreInstruction .leSI64
+  | eqI64 : PureCoreInstruction .eqI64
+  | neI64 : PureCoreInstruction .neI64
+  | eqzI64 : PureCoreInstruction .eqzI64
+  | extendUI32 : PureCoreInstruction .extendUI32
 
 /-- Authoritative relational semantics for the pure-core slice. -/
 inductive Step : Config α → StepResult α → Prop where
@@ -178,6 +187,54 @@ inductive Step : Config α → StepResult α → Prop where
       Step
         { expr := .running { frame, code := .divU :: rest }, store }
         (trapResult store .integerDivideByZero)
+  | addI64 (store frame rest a b vs)
+      (hvalues : frame.values = .i64 b :: .i64 a :: vs) :
+      Step
+        { expr := .running { frame, code := .addI64 :: rest }, store }
+        (instructionResult store
+          { frame with values := .i64 (a + b) :: vs } rest)
+  | subI64 (store frame rest a b vs)
+      (hvalues : frame.values = .i64 b :: .i64 a :: vs) :
+      Step
+        { expr := .running { frame, code := .subI64 :: rest }, store }
+        (instructionResult store
+          { frame with values := .i64 (a - b) :: vs } rest)
+  | mulI64 (store frame rest a b vs)
+      (hvalues : frame.values = .i64 b :: .i64 a :: vs) :
+      Step
+        { expr := .running { frame, code := .mulI64 :: rest }, store }
+        (instructionResult store
+          { frame with values := .i64 (a * b) :: vs } rest)
+  | leSI64 (store frame rest a b vs)
+      (hvalues : frame.values = .i64 b :: .i64 a :: vs) :
+      Step
+        { expr := .running { frame, code := .leSI64 :: rest }, store }
+        (instructionResult store
+          { frame with values := .i32 (if a.toInt64 ≤ b.toInt64 then 1 else 0) :: vs } rest)
+  | eqI64 (store frame rest a b vs)
+      (hvalues : frame.values = .i64 b :: .i64 a :: vs) :
+      Step
+        { expr := .running { frame, code := .eqI64 :: rest }, store }
+        (instructionResult store
+          { frame with values := .i32 (if a = b then 1 else 0) :: vs } rest)
+  | neI64 (store frame rest a b vs)
+      (hvalues : frame.values = .i64 b :: .i64 a :: vs) :
+      Step
+        { expr := .running { frame, code := .neI64 :: rest }, store }
+        (instructionResult store
+          { frame with values := .i32 (if a = b then 0 else 1) :: vs } rest)
+  | eqzI64 (store frame rest) (a : UInt64) (vs)
+      (hvalues : frame.values = .i64 a :: vs) :
+      Step
+        { expr := .running { frame, code := .eqzI64 :: rest }, store }
+        (instructionResult store
+          { frame with values := .i32 (if a = 0 then 1 else 0) :: vs } rest)
+  | extendUI32 (store frame rest a vs)
+      (hvalues : frame.values = .i32 a :: vs) :
+      Step
+        { expr := .running { frame, code := .extendUI32 :: rest }, store }
+        (instructionResult store
+          { frame with values := .i64 a.toUInt64 :: vs } rest)
 
 /-- Deterministic executable presentation of `Step`.
 
@@ -237,6 +294,59 @@ def step? (config : Config α) : Option (StepResult α) :=
               else
                 some <| instructionResult config.store
                   { thread.frame with values := .i32 (a / b) :: vs } rest
+          | _ => none
+      | .addI64 =>
+          match thread.frame.values with
+          | .i64 b :: .i64 a :: vs =>
+              some <| instructionResult config.store
+                { thread.frame with values := .i64 (a + b) :: vs } rest
+          | _ => none
+      | .subI64 =>
+          match thread.frame.values with
+          | .i64 b :: .i64 a :: vs =>
+              some <| instructionResult config.store
+                { thread.frame with values := .i64 (a - b) :: vs } rest
+          | _ => none
+      | .mulI64 =>
+          match thread.frame.values with
+          | .i64 b :: .i64 a :: vs =>
+              some <| instructionResult config.store
+                { thread.frame with values := .i64 (a * b) :: vs } rest
+          | _ => none
+      | .leSI64 =>
+          match thread.frame.values with
+          | .i64 b :: .i64 a :: vs =>
+              let result : UInt32 :=
+                if a.toInt64 ≤ b.toInt64 then 1 else 0
+              some <| instructionResult config.store
+                { thread.frame with values := .i32 result :: vs } rest
+          | _ => none
+      | .eqI64 =>
+          match thread.frame.values with
+          | .i64 b :: .i64 a :: vs =>
+              let result : UInt32 := if a = b then 1 else 0
+              some <| instructionResult config.store
+                { thread.frame with values := .i32 result :: vs } rest
+          | _ => none
+      | .neI64 =>
+          match thread.frame.values with
+          | .i64 b :: .i64 a :: vs =>
+              let result : UInt32 := if a = b then 0 else 1
+              some <| instructionResult config.store
+                { thread.frame with values := .i32 result :: vs } rest
+          | _ => none
+      | .eqzI64 =>
+          match thread.frame.values with
+          | .i64 a :: vs =>
+              let result : UInt32 := if a = 0 then 1 else 0
+              some <| instructionResult config.store
+                { thread.frame with values := .i32 result :: vs } rest
+          | _ => none
+      | .extendUI32 =>
+          match thread.frame.values with
+          | .i32 a :: vs =>
+              some <| instructionResult config.store
+                { thread.frame with values := .i64 a.toUInt64 :: vs } rest
           | _ => none
       | _ => none
 
@@ -302,6 +412,54 @@ theorem step?_sound {config : Config α} {out : StepResult α} :
           first
           | apply Step.divUTrap <;> assumption
           | apply Step.divU <;> assumption
+      | addI64 =>
+        simp only [step?] at h
+        split at h <;> simp_all
+        subst out
+        apply Step.addI64
+        assumption
+      | subI64 =>
+        simp only [step?] at h
+        split at h <;> simp_all
+        subst out
+        apply Step.subI64
+        assumption
+      | mulI64 =>
+        simp only [step?] at h
+        split at h <;> simp_all
+        subst out
+        apply Step.mulI64
+        assumption
+      | leSI64 =>
+        simp only [step?] at h
+        split at h <;> simp_all
+        subst out
+        apply Step.leSI64
+        assumption
+      | eqI64 =>
+        simp only [step?] at h
+        split at h <;> simp_all
+        subst out
+        apply Step.eqI64
+        assumption
+      | neI64 =>
+        simp only [step?] at h
+        split at h <;> simp_all
+        subst out
+        apply Step.neI64
+        assumption
+      | eqzI64 =>
+        simp only [step?] at h
+        split at h <;> simp_all
+        subst out
+        apply Step.eqzI64
+        assumption
+      | extendUI32 =>
+        simp only [step?] at h
+        split at h <;> simp_all
+        subst out
+        apply Step.extendUI32
+        assumption
       | _ => simp [step?] at h
 
 theorem step?_complete {config : Config α} {out : StepResult α} :
