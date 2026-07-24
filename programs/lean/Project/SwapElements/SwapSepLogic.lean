@@ -26,6 +26,10 @@ namespace Project.SwapElements.SwapSepLogic
 
 open Iris Wasm Wasm.SepLogic Std LawfulPartialMap Project.SwapElements.Spec
 
+set_option linter.unusedVariables false
+set_option linter.unusedSimpArgs false
+set_option linter.unusedSectionVars false
+
 private theorem addr_ne_intra
     {p : UInt32} {i j : UInt32}
     (hi : i.toNat < 8) (hj : j.toNat < 8)
@@ -1539,7 +1543,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         isplitl []; · exact BI.pure_intro hagree₁
         isplitl [Hσ₁]; · iexact Hσ₁
         -- Inst 2: const 16
-        unfold wp_wasm; iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
+        iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₂ %hagree₂ Hσ₂
         imodintro
         iexists σ₂, st,
@@ -1549,7 +1553,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         isplitl []; · exact BI.pure_intro hagree₂
         isplitl [Hσ₂]; · iexact Hσ₂
         -- Inst 3: sub
-        unfold wp_wasm; iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
+        iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₃ %hagree₃ Hσ₃
         imodintro
         iexists σ₃, st,
@@ -1559,7 +1563,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         isplitl []; · exact BI.pure_intro hagree₃
         isplitl [Hσ₃]; · iexact Hσ₃
         -- Inst 4: localSet 2
-        unfold wp_wasm; iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
+        iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₄ %hagree₄ Hσ₄
         imodintro
         iexists σ₄, st,
@@ -1568,7 +1572,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         isplitl []; · exact BI.pure_intro hagree₄
         isplitl [Hσ₄]; · iexact Hσ₄
         -- Inst 5: localGet 2
-        unfold wp_wasm; iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
+        iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₅ %hagree₅ Hσ₅
         imodintro
         iexists σ₅, st,
@@ -1578,7 +1582,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         isplitl []; · exact BI.pure_intro hagree₅
         isplitl [Hσ₅]; · iexact Hσ₅
         -- Inst 6: localGet 0
-        unfold wp_wasm; iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
+        iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₆ %hagree₆ Hσ₆
         imodintro
         iexists σ₆, st,
@@ -1588,7 +1592,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         isplitl []; · exact BI.pure_intro hagree₆
         isplitl [Hσ₆]; · iexact Hσ₆
         -- Inst 7: load64 0 at ptr_a → reads vA
-        unfold wp_wasm; iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
+        iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₇ %hagree₇ Hσ₇
         imod (wp_iProp_load64 hagree₇ (show ptr_a.toNat + 8 ≤ 2 ^ 32 from by omega))
           $$ [Hσ₇ HA] with ⟨Hσ₇, HA, %heq_a⟩
@@ -1602,7 +1606,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         isplitl []; · exact BI.pure_intro hagree₇
         isplitl [Hσ₇]; · iexact Hσ₇
         -- Inst 8: store64 8 at 1048544+8=scr with value vA
-        unfold wp_wasm; iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
+        iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₈ %hagree₈ Hσ₈
         imod (wp_iProp_store64 (v_new := vA) hagree₈
           (show scr.toNat + 8 ≤ 2 ^ 32 from by omega)) $$ [Hσ₈ HS] with
@@ -1617,7 +1621,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         isplitl []; · exact BI.pure_intro hagree₈'
         isplitl [Hσ₈']; · iexact Hσ₈'
         -- Inst 9: localGet 0
-        unfold wp_wasm; iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
+        iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₉ %hagree₉ Hσ₉
         imodintro
         iexists σ₉, { st with mem := m₁ },
@@ -1627,7 +1631,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         isplitl []; · exact BI.pure_intro hagree₉
         isplitl [Hσ₉]; · iexact Hσ₉
         -- Inst 10: localGet 1
-        unfold wp_wasm; iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
+        iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₁₀ %hagree₁₀ Hσ₁₀
         imodintro
         iexists σ₁₀, { st with mem := m₁ },
@@ -1637,7 +1641,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         isplitl []; · exact BI.pure_intro hagree₁₀
         isplitl [Hσ₁₀]; · iexact Hσ₁₀
         -- Inst 11: load64 0 at ptr_b from m₁ → reads vB
-        unfold wp_wasm; iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
+        iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₁₁ %hagree₁₁ Hσ₁₁
         imod (wp_iProp_load64 hagree₁₁ (show ptr_b.toNat + 8 ≤ 2 ^ 32 from by omega))
           $$ [Hσ₁₁ HB] with ⟨Hσ₁₁, HB, %heq_b⟩
@@ -1652,7 +1656,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         isplitl []; · exact BI.pure_intro hagree₁₁
         isplitl [Hσ₁₁]; · iexact Hσ₁₁
         -- Inst 12: store64 0 at ptr_a from m₁ with value vB
-        unfold wp_wasm; iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
+        iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₁₂ %hagree₁₂ Hσ₁₂
         imod (wp_iProp_store64 (v_new := vB) hagree₁₂
           (show ptr_a.toNat + 8 ≤ 2 ^ 32 from by omega)) $$ [Hσ₁₂ HA] with
@@ -1667,7 +1671,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         isplitl []; · exact BI.pure_intro hagree₁₂'
         isplitl [Hσ₁₂']; · iexact Hσ₁₂'
         -- Inst 13: localGet 1
-        unfold wp_wasm; iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
+        iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₁₃ %hagree₁₃ Hσ₁₃
         imodintro
         iexists σ₁₃, { st with mem := m₂ },
@@ -1677,7 +1681,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         isplitl []; · exact BI.pure_intro hagree₁₃
         isplitl [Hσ₁₃]; · iexact Hσ₁₃
         -- Inst 14: localGet 2
-        unfold wp_wasm; iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
+        iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₁₄ %hagree₁₄ Hσ₁₄
         imodintro
         iexists σ₁₄, { st with mem := m₂ },
@@ -1687,7 +1691,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         isplitl []; · exact BI.pure_intro hagree₁₄
         isplitl [Hσ₁₄]; · iexact Hσ₁₄
         -- Inst 15: load64 8 at 1048544+8=scr from m₂ → reads vA
-        unfold wp_wasm; iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
+        iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₁₅ %hagree₁₅ Hσ₁₅
         imod (wp_iProp_load64 hagree₁₅ (show scr.toNat + 8 ≤ 2 ^ 32 from by omega))
           $$ [Hσ₁₅ HS'] with ⟨Hσ₁₅, HS', %heq_s⟩
@@ -1702,7 +1706,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         isplitl []; · exact BI.pure_intro hagree₁₅
         isplitl [Hσ₁₅]; · iexact Hσ₁₅
         -- Inst 16: store64 0 at ptr_b from m₂ with value vA
-        unfold wp_wasm; iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
+        iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₁₆ %hagree₁₆ Hσ₁₆
         imod (wp_iProp_store64 (v_new := vA) hagree₁₆
           (show ptr_b.toNat + 8 ≤ 2 ^ 32 from by omega)) $$ [Hσ₁₆ HB] with
@@ -1722,7 +1726,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         isplitl []; · exact BI.pure_intro hagree₁₆'
         isplitl [Hσ_b]; · iexact Hσ_b
         -- Inst 17: ret
-        unfold wp_wasm; iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
+        iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         ipureintro
         refine ⟨rfl, rfl, hpages, heq_pa, heq_pb, fun a h1 h2 h3 => ?_⟩
         apply read64_of_digits; intro i hi
@@ -1785,7 +1789,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         isplitl []; · exact BI.pure_intro (by simp [execOne.eq_def, Locals.get, hg0, Function.toLocals, Function.numParams, func2Def, List.take, List.length, List.map, ValueType.zero])
         isplitl []; · exact BI.pure_intro hagree₁
         isplitl [Hσ₁]; · iexact Hσ₁
-        unfold wp_wasm; iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
+        iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₂ %hagree₂ Hσ₂
         imodintro
         iexists σ₂, st,
@@ -1794,7 +1798,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         isplitl []; · exact BI.pure_intro (by simp [execOne.eq_def, Locals.get])
         isplitl []; · exact BI.pure_intro hagree₂
         isplitl [Hσ₂]; · iexact Hσ₂
-        unfold wp_wasm; iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
+        iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₃ %hagree₃ Hσ₃
         imodintro
         iexists σ₃, st,
@@ -1803,7 +1807,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         isplitl []; · exact BI.pure_intro (by simp [execOne.eq_def, Locals.get])
         isplitl []; · exact BI.pure_intro hagree₃
         isplitl [Hσ₃]; · iexact Hσ₃
-        unfold wp_wasm; iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
+        iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₄ %hagree₄ Hσ₄
         imodintro
         iexists σ₄, st,
@@ -1811,7 +1815,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         isplitl []; · exact BI.pure_intro (by simp [execOne.eq_def, Locals.get, Locals.set?])
         isplitl []; · exact BI.pure_intro hagree₄
         isplitl [Hσ₄]; · iexact Hσ₄
-        unfold wp_wasm; iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
+        iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₅ %hagree₅ Hσ₅
         imodintro
         iexists σ₅, st,
@@ -1820,7 +1824,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         isplitl []; · exact BI.pure_intro (by simp [execOne.eq_def, Locals.get])
         isplitl []; · exact BI.pure_intro hagree₅
         isplitl [Hσ₅]; · iexact Hσ₅
-        unfold wp_wasm; iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
+        iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₆ %hagree₆ Hσ₆
         imodintro
         iexists σ₆, st,
@@ -1829,7 +1833,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         isplitl []; · exact BI.pure_intro (by simp [execOne.eq_def, Locals.get])
         isplitl []; · exact BI.pure_intro hagree₆
         isplitl [Hσ₆]; · iexact Hσ₆
-        unfold wp_wasm; iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
+        iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₇ %hagree₇ Hσ₇
         imod (wp_iProp_load64 hagree₇ (show ptr_a.toNat + 8 ≤ 2 ^ 32 from by omega))
           $$ [Hσ₇ HA] with ⟨Hσ₇, HA, %heq_a⟩
@@ -1842,7 +1846,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
             simp [execOne.eq_def, Locals.get, if_neg hbds_a, UInt32.add_zero, heq_a])
         isplitl []; · exact BI.pure_intro hagree₇
         isplitl [Hσ₇]; · iexact Hσ₇
-        unfold wp_wasm; iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
+        iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₈ %hagree₈ Hσ₈
         imod (wp_iProp_store64 (v_new := vA) hagree₈
           (show scr.toNat + 8 ≤ 2 ^ 32 from by omega)) $$ [Hσ₈ HS] with
@@ -1856,7 +1860,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
                   show (1048544 : UInt32) + 8 = scr from rfl])
         isplitl []; · exact BI.pure_intro hagree₈'
         isplitl [Hσ₈']; · iexact Hσ₈'
-        unfold wp_wasm; iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
+        iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₉ %hagree₉ Hσ₉
         imodintro
         iexists σ₉, { st with mem := m₁ },
@@ -1865,7 +1869,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         isplitl []; · exact BI.pure_intro (by simp [execOne.eq_def, Locals.get])
         isplitl []; · exact BI.pure_intro hagree₉
         isplitl [Hσ₉]; · iexact Hσ₉
-        unfold wp_wasm; iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
+        iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₁₀ %hagree₁₀ Hσ₁₀
         imodintro
         iexists σ₁₀, { st with mem := m₁ },
@@ -1874,7 +1878,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         isplitl []; · exact BI.pure_intro (by simp [execOne.eq_def, Locals.get])
         isplitl []; · exact BI.pure_intro hagree₁₀
         isplitl [Hσ₁₀]; · iexact Hσ₁₀
-        unfold wp_wasm; iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
+        iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₁₁ %hagree₁₁ Hσ₁₁
         imod (wp_iProp_load64 hagree₁₁ (show ptr_b.toNat + 8 ≤ 2 ^ 32 from by omega))
           $$ [Hσ₁₁ HB] with ⟨Hσ₁₁, HB, %heq_b⟩
@@ -1888,7 +1892,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
                   if_neg hbds_b, UInt32.add_zero, heq_b])
         isplitl []; · exact BI.pure_intro hagree₁₁
         isplitl [Hσ₁₁]; · iexact Hσ₁₁
-        unfold wp_wasm; iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
+        iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₁₂ %hagree₁₂ Hσ₁₂
         imod (wp_iProp_store64 (v_new := vB) hagree₁₂
           (show ptr_a.toNat + 8 ≤ 2 ^ 32 from by omega)) $$ [Hσ₁₂ HA] with
@@ -1902,7 +1906,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
                   if_neg hbds_a, UInt32.add_zero])
         isplitl []; · exact BI.pure_intro hagree₁₂'
         isplitl [Hσ₁₂']; · iexact Hσ₁₂'
-        unfold wp_wasm; iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
+        iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₁₃ %hagree₁₃ Hσ₁₃
         imodintro
         iexists σ₁₃, { st with mem := m₂ },
@@ -1911,7 +1915,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         isplitl []; · exact BI.pure_intro (by simp [execOne.eq_def, Locals.get])
         isplitl []; · exact BI.pure_intro hagree₁₃
         isplitl [Hσ₁₃]; · iexact Hσ₁₃
-        unfold wp_wasm; iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
+        iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₁₄ %hagree₁₄ Hσ₁₄
         imodintro
         iexists σ₁₄, { st with mem := m₂ },
@@ -1920,7 +1924,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
         isplitl []; · exact BI.pure_intro (by simp [execOne.eq_def, Locals.get])
         isplitl []; · exact BI.pure_intro hagree₁₄
         isplitl [Hσ₁₄]; · iexact Hσ₁₄
-        unfold wp_wasm; iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
+        iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₁₅ %hagree₁₅ Hσ₁₅
         imod (wp_iProp_load64 hagree₁₅ (show scr.toNat + 8 ≤ 2 ^ 32 from by omega))
           $$ [Hσ₁₅ HS'] with ⟨Hσ₁₅, HS', %heq_s⟩
@@ -1934,7 +1938,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
                   show (1048544 : UInt32) + 8 = scr from rfl, heq_s])
         isplitl []; · exact BI.pure_intro hagree₁₅
         isplitl [Hσ₁₅]; · iexact Hσ₁₅
-        unfold wp_wasm; iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
+        iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         iintro %σ₁₆ %hagree₁₆ Hσ₁₆
         imod (wp_iProp_store64 (v_new := vA) hagree₁₆
           (show ptr_b.toNat + 8 ≤ 2 ^ 32 from by omega)) $$ [Hσ₁₆ HB] with
@@ -1952,7 +1956,7 @@ private theorem func2_terminates (env : HostEnv Unit) (st : Store Unit)
                   if_neg hbds_b, UInt32.add_zero])
         isplitl []; · exact BI.pure_intro hagree₁₆'
         isplitl [Hσ_b]; · iexact Hσ_b
-        unfold wp_wasm; iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
+        iapply least_fixpoint_unfold_mpr; simp only [wp_wasm_F]
         ipureintro
         refine ⟨rfl, rfl, hpages, heq_pa, heq_pb, fun a h1 h2 h3 => ?_⟩
         apply read64_of_digits; intro i hi
