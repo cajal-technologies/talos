@@ -208,43 +208,57 @@ private def floatDivPow2 : Float → Nat → Float
 private def floatScalePow2 (x : Float) (e : Int) : Float :=
   if e ≥ 0 then floatMulPow2 x e.toNat else floatDivPow2 x (-e).toNat
 
+/-- Exponent after an explicit `p`/`e` separator; empty is malformed (`1e`). -/
 private def parseDecExp (s : String) : Except Err Int :=
-  if s.isEmpty then .ok 0
-  else
-    let (neg, body) :=
-      if s.startsWith "-" then (true, (s.drop 1).toString)
-      else if s.startsWith "+" then (false, (s.drop 1).toString)
-      else (false, s)
-    match body.toNat? with
-    | some n => .ok (if neg then -(Int.ofNat n) else Int.ofNat n)
-    | none   => .error s!"bad float exponent: {s}"
+  let (neg, body) :=
+    if s.startsWith "-" then (true, (s.drop 1).toString)
+    else if s.startsWith "+" then (false, (s.drop 1).toString)
+    else (false, s)
+  match body.toNat? with
+  | some n => .ok (if neg then -(Int.ofNat n) else Int.ofNat n)
+  | none   => .error s!"bad float exponent: {s}"
 
-/-- Magnitude of a hex float `INT[.FRAC][p±EXP]` (no `0x`, no sign). -/
+/-- Magnitude of a hex float `INT[.FRAC][p±EXP]` (no `0x`, no sign).
+
+A literal that fails to lex must be an error, not a plausible value: this
+parser also backs the runner's CLI float args, where garbage silently
+running as *some* float would mask typos (and fake agreement in
+differential runs). Hence one dot and one exponent at most — extra
+segments (`1.2.3`, `0x1p2p9`) are malformed, not silently dropped —
+an explicit exponent must be non-empty, and an unlexable mantissa is
+an error rather than 0. -/
 private def parseHexFloatMag (body : String) : Except Err Float := do
-  let (mant, expS) := match (body.replace "P" "p").splitOn "p" with
-    | [m]          => (m, "")
-    | m :: e :: _  => (m, e)
-    | []           => ("", "")
-  let (intH, fracH) := match mant.splitOn "." with
-    | [i]          => (i, "")
-    | i :: f :: _  => (i, f)
-    | []           => ("", "")
-  let m := (fromHexString? (intH ++ fracH)).getD 0
-  let e ← parseDecExp expS
+  let (mant, expS?) ← match (body.replace "P" "p").splitOn "p" with
+    | [m]     => .ok (m, none)
+    | [m, e]  => .ok (m, some e)
+    | _       => .error s!"bad hex float literal: 0x{body}"
+  let (intH, fracH) ← match mant.splitOn "." with
+    | [i]     => .ok (i, "")
+    | [i, f]  => .ok (i, f)
+    | _       => .error s!"bad hex float literal: 0x{body}"
+  let some m := fromHexString? (intH ++ fracH)
+    | .error s!"bad hex float literal: 0x{body}"
+  let e ← match expS? with
+    | none      => pure 0
+    | some expS => parseDecExp expS
   .ok (floatScalePow2 (Float.ofNat m) (e - 4 * Int.ofNat fracH.length))
 
-/-- Magnitude of a decimal float `INT[.FRAC][e±EXP]` (no sign). -/
+/-- Magnitude of a decimal float `INT[.FRAC][e±EXP]` (no sign). Same
+strictness rules as `parseHexFloatMag`. -/
 private def parseDecFloatMag (body : String) : Except Err Float := do
-  let (mant, expS) := match (body.replace "E" "e").splitOn "e" with
-    | [m]          => (m, "")
-    | m :: e :: _  => (m, e)
-    | []           => ("", "")
-  let (intP, fracP) := match mant.splitOn "." with
-    | [i]          => (i, "")
-    | i :: f :: _  => (i, f)
-    | []           => ("", "")
-  let m := ((intP ++ fracP).toNat?).getD 0
-  let de ← parseDecExp expS
+  let (mant, expS?) ← match (body.replace "E" "e").splitOn "e" with
+    | [m]     => .ok (m, none)
+    | [m, e]  => .ok (m, some e)
+    | _       => .error s!"bad float literal: {body}"
+  let (intP, fracP) ← match mant.splitOn "." with
+    | [i]     => .ok (i, "")
+    | [i, f]  => .ok (i, f)
+    | _       => .error s!"bad float literal: {body}"
+  let some m := (intP ++ fracP).toNat?
+    | .error s!"bad float literal: {body}"
+  let de ← match expS? with
+    | none      => pure 0
+    | some expS => parseDecExp expS
   let exp := de - Int.ofNat fracP.length
   .ok (Float.ofScientific m (exp < 0) exp.natAbs)
 

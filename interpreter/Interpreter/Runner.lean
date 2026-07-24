@@ -32,9 +32,10 @@ def usage : String :=
   <method>  Export name, or a non-negative integer interpreted as a
             function index. The integer rule always wins — an export
             literally named \"0\" is unreachable.
-  [args...] One numeric literal per declared parameter. Decimal (`42`,
-            `-1`) and hex (`0xff`) accepted. The declared parameter
-            type drives the width/signedness coercion.
+  [args...] One numeric literal per declared parameter. Integers take
+            decimal (`42`, `-1`) or hex (`0xff`); floats take the WAT
+            literal grammar (`1.5`, `-0x1.8p+2`, `inf`, `nan`). The
+            declared parameter type drives the coercion.
   --fuel N  Reduction-step cap, default 1_000_000.
   -h, --help  Print this message and exit 0."
 
@@ -125,15 +126,18 @@ def parseArgForType (t : ValueType) (s : String) : Except String Value :=
     | .ok v  => .ok (.i64 v)
     | .error _ => .error s!"argument out of range for i64: `{s}`"
   | .f32 =>
-    -- No decimal float parser in core; a float CLI arg is its raw 32-bit
-    -- IEEE-754 encoding (e.g. `0x3f800000` for `1.0`).
-    match parseI32 s with
+    -- WAT float literal (decimal, hex-float, `inf`, `nan[:0x…]`) — the same
+    -- grammar `f32.const` accepts, via the decoder's parser. The CLI is a
+    -- human surface: a literal means its value, never a raw bit pattern.
+    -- (miscast never passes float args — it skips float-arg invokes
+    -- upstream — so this is for people, and guarded by a harness canary.)
+    match parseF32Lit s with
     | .ok v  => .ok (.f32 v)
-    | .error _ => .error s!"f32 argument must be a 32-bit IEEE-754 bit pattern: `{s}`"
+    | .error _ => .error s!"bad f32 literal: `{s}`"
   | .f64 =>
-    match parseI64 s with
+    match parseF64Lit s with
     | .ok v  => .ok (.f64 v)
-    | .error _ => .error s!"f64 argument must be a 64-bit IEEE-754 bit pattern: `{s}`"
+    | .error _ => .error s!"bad f64 literal: `{s}`"
   | .funcref =>
     -- No CLI surface for funcref args yet — pass `null` if the user
     -- writes "null", otherwise refuse.
@@ -153,8 +157,12 @@ def parseArgForType (t : ValueType) (s : String) : Except String Value :=
 
 def parseArgs?
     (params : List ValueType) (args : List String) : Except String (List Value) :=
+  -- Wording matters downstream: a differential harness (miscast) greps
+  -- stderr for validator-rejection vocabulary ("mismatch", "expected",
+  -- "arity", …) — a CLI arg-count complaint must not read as the module
+  -- being rejected, so keep those words out of this message.
   if params.length ≠ args.length then
-    .error s!"arg-count mismatch: function expects {params.length}, got {args.length}"
+    .error s!"wrong number of arguments: function takes {params.length}, got {args.length}"
   else
     let rec go : List ValueType → List String → Except String (List Value)
       | [], [] => .ok []
@@ -272,7 +280,10 @@ def runOnce (a : Args) : IO UInt32 := do
     IO.eprintln "out of fuel"
     return EXIT_OUT_OF_FUEL
   | .Thrown tag _ _ =>
-    IO.eprintln s!"uncaught exception (tag {tag})"
+    -- The `trap:` prefix keeps the CLI surface uniform (exit code already
+    -- says trap) and lets trap-line consumers (miscast) classify an escaped
+    -- exception the way V8 does, instead of dropping the case as unsupported.
+    IO.eprintln s!"trap: uncaught exception (tag {tag})"
     return EXIT_TRAP
   | .Invalid msg =>
     IO.eprintln s!"error: {msg}"
