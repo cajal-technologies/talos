@@ -944,4 +944,149 @@ theorem wp_wasm_iProp_loop
       simp only [exec_loop_unfold N stA locA, hbody]
       exact hQ
 
+-- iProp block rule: for a block containing a single loop,
+-- where the loop body's Break 1 exits the block (Fallthrough at block level),
+-- Break 0 restarts the loop (measure decreases), and Return propagates.
+-- Same proof structure as wp_wasm_iProp_loop; mirrors "Handle Break 1 as Break 0 at block level".
+theorem wp_wasm_iProp_block
+    {m : Module} {st : Store Unit} {locals : Locals}
+    {bt bl : Nat} {loopBody : Program} {rest : Program}
+    {env : HostEnv Unit}
+    {Q : Store Unit → List Value → Prop}
+    (measure : Nat)
+    (I : Nat → Store Unit → Locals → IProp WasmHeapGF)
+    (σ₀ : WasmHeapMap (Option UInt8))
+    (hinit : ⊢ genHeapInterp σ₀ ∗ I measure st locals)
+    -- For bt = 0 this is trivially true; for general bt it requires bt ≤ sB.values.length.
+    -- In the merge sort application bt = bl = 0, so the caller proves this by simp.
+    (h_drop_eq : ∀ (vs ws : List Value),
+        (vs.take bt ++ ws.drop bt).drop bt = ws.drop bt)
+    (hstep : ∀ n stA locA,
+        (∃ σ : WasmHeapMap (Option UInt8), ⊢ genHeapInterp σ ∗ I n stA locA) →
+        ∃ N, ∀ fuel ≥ N,
+          -- Loop body Break 1 → loop gives Break 0 → block Fallthroughs → rest
+          (∃ stB sB, exec fuel m stA locA loopBody env = .Break 1 stB sB ∧
+            wp_wasm_prop m stB
+              { sB with values := sB.values.take bl ++ locA.values.drop bt }
+              rest env Q) ∨
+          -- Loop body Break 0 → loop restarts (measure decreases, ghost state updated)
+          (∃ stB sB, exec fuel m stA locA loopBody env = .Break 0 stB sB ∧
+            ∃ n' : Nat, n' < n ∧
+            ∃ σ' : WasmHeapMap (Option UInt8),
+              ⊢ genHeapInterp σ' ∗
+                I n' stB { sB with values := sB.values.take bt ++ locA.values.drop bt }) ∨
+          -- Loop body Return → propagates through loop and block
+          (∃ stB vs, exec fuel m stA locA loopBody env = .Return stB vs ∧ Q stB vs)) :
+    wp_wasm_prop m st locals (.block bt bl [.loop bt bl loopBody] :: rest) env Q := by
+  suffices key : ∀ n stA locA,
+      (∃ σ : WasmHeapMap (Option UInt8), ⊢ genHeapInterp σ ∗ I n stA locA) →
+      wp_wasm_prop m stA locA (.block bt bl [.loop bt bl loopBody] :: rest) env Q from
+    key measure st locals ⟨σ₀, hinit⟩
+  intro n
+  induction n using Nat.strong_induction_on with
+  | _ n IH =>
+    intro stA locA ⟨σ, hI⟩
+    obtain ⟨N, hN⟩ := hstep n stA locA ⟨σ, hI⟩
+    rcases hN N le_rfl with ⟨stB, sB, hbody, hwp⟩ | ⟨stB, sB, hbody, n', hn', σ', hI'⟩
+        | ⟨stB, vs, hbody, hQ⟩
+    · -- Break 1: loop body gives Break 1 → loop exits as Break 0 → block Fallthroughs
+      obtain ⟨fuel_rest, hfuel⟩ := hwp
+      have hbody_ne : exec N m stA locA loopBody env ≠ .OutOfFuel := by
+        rw [hbody]; intro h; cases h
+      have hfuel_ne : exec fuel_rest m stB
+          { sB with values := sB.values.take bl ++ locA.values.drop bt } rest env ≠ .OutOfFuel := by
+        intro h; simp only [h] at hfuel
+      -- execOne (N+1) (.loop ..) = .Break 0 stB sB  (Break 1 propagates as Break 0)
+      have h_execOne : execOne (N + 1) m stA locA (.loop bt bl loopBody) env = .Break 0 stB sB := by
+        simp only [execOne_loop_succ, hbody]
+      -- exec (N+1) [.loop ..] = .Break 0 stB sB  (use list notation to match exec_block_cons)
+      have h_loop : exec (N + 1) m stA locA [.loop bt bl loopBody] env = .Break 0 stB sB := by
+        simp only [exec, h_execOne]
+      have h_loop_ne : exec (N + 1) m stA locA [.loop bt bl loopBody] env ≠ .OutOfFuel := by
+        rw [h_loop]; intro h; cases h
+      -- Monotone: exec (max (N+1) fuel_rest) [.loop ..] = .Break 0
+      have h_loop' : exec (max (N + 1) fuel_rest) m stA locA [.loop bt bl loopBody] env = .Break 0 stB sB :=
+        (exec_fuel_mono (Nat.le_max_left (N + 1) fuel_rest) h_loop_ne).trans h_loop
+      -- Rest fuel monotone
+      have hfuel' : exec (max (N + 1) fuel_rest + 1) m stB
+          { sB with values := sB.values.take bl ++ locA.values.drop bt } rest env =
+          exec fuel_rest m stB
+          { sB with values := sB.values.take bl ++ locA.values.drop bt } rest env :=
+        exec_fuel_mono (by omega) hfuel_ne
+      -- Assemble via exec_block_cons: .Break 0 from loop → Fallthrough from block → rest
+      refine ⟨max (N + 1) fuel_rest + 1, ?_⟩
+      simp only [exec_block_cons, h_loop', hfuel']
+      exact hfuel
+    · -- Break 0: loop body restarts; apply IH with smaller measure
+      set trimmed : Locals :=
+        { sB with values := sB.values.take bt ++ locA.values.drop bt } with htrimmed
+      obtain ⟨fuel_IH, hfuel_IH⟩ := IH n' hn' stB trimmed ⟨σ', hI'⟩
+      have hfuel_IH_ne : exec fuel_IH m stB trimmed
+          (.block bt bl [.loop bt bl loopBody] :: rest) env ≠ .OutOfFuel := by
+        intro h; simp only [h] at hfuel_IH
+      have hbody_ne : exec N m stA locA loopBody env ≠ .OutOfFuel := by
+        rw [hbody]; intro h; cases h
+      -- trimmed.values.drop bt = locA.values.drop bt (by h_drop_eq, since trimmed.values = sB.values.take bt ++ locA.values.drop bt)
+      have h_drop : trimmed.values.drop bt = locA.values.drop bt :=
+        h_drop_eq sB.values locA.values
+      -- fuel_IH ≥ 1: exec 0 (.block :: rest) = OutOfFuel by definition
+      have hfuel_IH_pos : 0 < fuel_IH := by
+        apply Nat.pos_of_ne_zero
+        rintro rfl
+        exact hfuel_IH_ne (by simp only [exec.eq_def, execOne.eq_def])
+      -- exec (fuel_IH - 1) [.loop ..] at stB trimmed ≠ OutOfFuel
+      have h_loop_ne : exec (fuel_IH - 1) m stB trimmed [.loop bt bl loopBody] env ≠ .OutOfFuel := by
+        intro h
+        apply hfuel_IH_ne
+        rw [show fuel_IH = fuel_IH - 1 + 1 from (Nat.succ_pred_eq_of_pos hfuel_IH_pos).symm]
+        simp only [exec_block_cons, h]
+      -- execOne (fuel_IH - 1) (.loop ..) at stB trimmed ≠ OutOfFuel
+      have h_execOne_ne : execOne (fuel_IH - 1) m stB trimmed (.loop bt bl loopBody) env ≠ .OutOfFuel := by
+        intro h; apply h_loop_ne; simp only [exec, h]
+      -- Monotone execOne up to max N fuel_IH
+      have h_execOne_mono : execOne (max N fuel_IH) m stB trimmed (.loop bt bl loopBody) env =
+          execOne (fuel_IH - 1) m stB trimmed (.loop bt bl loopBody) env :=
+        execOne_fuel_mono (by omega) h_execOne_ne
+      have h_execOne_ne2 : execOne (max N fuel_IH) m stB trimmed (.loop bt bl loopBody) env ≠ .OutOfFuel := by
+        rw [h_execOne_mono]; exact h_execOne_ne
+      -- exec (max N fuel_IH) loopBody at stA = .Break 0
+      have hbody' : exec (max N fuel_IH) m stA locA loopBody env = .Break 0 stB sB :=
+        (exec_fuel_mono (Nat.le_max_left N fuel_IH) hbody_ne).trans hbody
+      -- execOne (max N fuel_IH + 1) (.loop ..) at stB trimmed = execOne at max N fuel_IH
+      have h_execOne_succ : execOne (max N fuel_IH + 1) m stB trimmed (.loop bt bl loopBody) env =
+          execOne (max N fuel_IH) m stB trimmed (.loop bt bl loopBody) env :=
+        execOne_fuel_mono (Nat.le_succ _) h_execOne_ne2
+      -- execOne (max N fuel_IH + 1) (.loop ..) at stA = at stB trimmed  (restart equality)
+      have h_execOne_eq : execOne (max N fuel_IH + 1) m stA locA (.loop bt bl loopBody) env =
+          execOne (max N fuel_IH + 1) m stB trimmed (.loop bt bl loopBody) env := by
+        conv_lhs => rw [execOne_loop_succ]
+        simp only [hbody', ← htrimmed]
+        exact h_execOne_succ.symm
+      -- exec (max N fuel_IH + 1) [.loop ..] at stA = at stB trimmed
+      have h_loop_eq : exec (max N fuel_IH + 1) m stA locA [.loop bt bl loopBody] env =
+          exec (max N fuel_IH + 1) m stB trimmed [.loop bt bl loopBody] env := by
+        simp only [exec, h_execOne_eq]
+      -- exec (max N fuel_IH + 2) (.block :: rest) at stA = at stB trimmed  (via loop equality + drop eq)
+      have h_block_eq : exec (max N fuel_IH + 2) m stA locA
+          (.block bt bl [.loop bt bl loopBody] :: rest) env =
+          exec (max N fuel_IH + 2) m stB trimmed
+          (.block bt bl [.loop bt bl loopBody] :: rest) env := by
+        simp only [exec_block_cons, h_loop_eq, h_drop]
+      -- exec (max N fuel_IH + 2) (.block :: rest) at stB trimmed = exec fuel_IH  (mono)
+      have h_block_mono : exec (max N fuel_IH + 2) m stB trimmed
+          (.block bt bl [.loop bt bl loopBody] :: rest) env =
+          exec fuel_IH m stB trimmed
+          (.block bt bl [.loop bt bl loopBody] :: rest) env :=
+        exec_fuel_mono (by omega) hfuel_IH_ne
+      refine ⟨max N fuel_IH + 2, ?_⟩
+      rw [h_block_eq, h_block_mono]; exact hfuel_IH
+    · -- Return: loop body returns → execOne returns → block propagates
+      have h_execOne_ret : execOne (N + 1) m stA locA (.loop bt bl loopBody) env = .Return stB vs := by
+        simp only [execOne_loop_succ, hbody]
+      have h_loop_ret : exec (N + 1) m stA locA [.loop bt bl loopBody] env = .Return stB vs := by
+        simp only [exec, h_execOne_ret]
+      refine ⟨N + 2, ?_⟩
+      simp only [exec_block_cons, h_loop_ret]
+      exact hQ
+
 end Wasm.SepLogic
