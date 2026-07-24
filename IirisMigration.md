@@ -1,5 +1,8 @@
 # Iris migration plan
 
+Pure-core small-step contribution: Abraxas1010 (The Institute for
+Ontological Mathematics / Equation Capital dba Apoth3osis).
+
 ## Status and scope
 
 This document is the working plan for the small-step and iris-lean migration on
@@ -10,7 +13,8 @@ migration.
 
 The final architecture has:
 
-- one relational small-step semantics, `Step`, used by iris-lean;
+- one observation-labelled relational small-step semantics, `Step`, used by
+  iris-lean;
 - one deterministic executable step function, `step?`, proved equivalent to
   `Step`;
 - a fuel-bounded runner obtained by iterating `step?`;
@@ -47,6 +51,19 @@ structure Config where
   expr : Expr
   store : Store
   deriving BEq, Repr
+
+inductive StepKind
+  | instruction
+  | administrative
+
+structure StepLabel where
+  kind : StepKind
+  observations : List WasmObservation
+
+structure StepResult where
+  label : StepLabel
+  next : Config
+  spawned : List Expr
 ```
 
 These names and field types may change as the implementation teaches us more.
@@ -88,8 +105,8 @@ atomicity exposed to Iris.
 Assume the semantics is deterministic and target:
 
 ```lean
-theorem step_iff {config config' : Config} :
-    step? config = some config' ↔ Step config config'
+theorem step_iff {config : Config} {out : StepResult} :
+    step? config = some out ↔ Step config out
 ```
 
 Flag a case before implementation if it depends on scheduling, external input,
@@ -106,6 +123,18 @@ Iris relation; never silently select one result.
 - Iris instances and rules refer to `Step`, not to a second transition system.
 - During coexistence, the old big-step interpreter is a regression oracle, not
   a permanent second specification.
+
+### Observations and spawned expressions
+
+Observations and spawned expressions belong to the authoritative transition
+result, not only to an iris-lean adapter. The interpreter remains independent
+of iris-lean; the adapter is a definitional projection from `Step` into
+`PrimStep`.
+
+The initial single-threaded pure-core fragment emits `[]` and spawns `[]`.
+Administrative transitions must emit no observations. This makes removal of
+administrative labels from a trace observation-preserving rather than an
+unchecked erasure of host or store effects.
 
 ## Definition of done
 
@@ -173,6 +202,9 @@ Tasks:
   and unsupported.
 - Inventory the existing `CodeLib.SepLogic` implementation. Mark each component
   as reusable, replaceable by iris-lean language machinery, or temporary.
+- Keep `IrisMigrationCoverage.csv` fresh with
+  `python3 scripts/small-step-coverage.py --check`. The ledger is generated
+  from `Instruction`, so adding a constructor without a row fails CI.
 
 Exit checks:
 
@@ -497,11 +529,11 @@ Maintain a table in this document or a nearby generated file:
 | Area | Old implementation/proof | New implementation/proof | Tests | Status | Notes |
 |---|---|---|---|---|---|
 | Initialization | `Module.initialStore` | TBD | TBD | Not started | Include segments/imports |
-| Core stepping | `execOne`/`exec` | `Step`/`step?` | TBD | Not started | |
-| Runner | `run`/`runTail` | fuel iterator | differential canaries | Not started | |
+| Core stepping | `execOne`/`exec` | `SmallStep.Step`/`step?` | small-step examples | Pure-core slice | Labelled constants, locals, i32 add/sub/mul/divU |
+| Runner | `run`/`runTail` | `SmallStep.runSteps` | discriminator/trap/invalid canaries | Pure-core slice | Iterator-to-trace theorem; CLI cutover deferred |
 | Control flow | current WP tactics | Iris rules | control examples | Not started | |
 | Linear memory | `Mem`, memory arms | small-step memory | memory ladder | Not started | |
-| Iris integration | `CodeLib.SepLogic` | iris-lean adapter | adequacy proofs | Not started | Reuse vs replace audit |
+| Iris integration | `CodeLib.SepLogic` | `SmallStep.Iris.instLanguage` | adapter build | Pure-core adapter | State interpretation/adequacy deferred |
 | Existing examples | `Interpreter/Wasm/Examples` | ported corpus | package build | Not started | |
 | Downstream proofs | `CodeLib`, `programs/lean` | new API | package build | Not started | |
 

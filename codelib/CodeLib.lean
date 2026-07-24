@@ -35,6 +35,7 @@ import CodeLib.SepLogic.WasmHeap
 import CodeLib.SepLogic.WasmRules
 import CodeLib.SepLogic.WasmWP
 import CodeLib.SepLogic.Adequacy
+import CodeLib.SepLogic.SmallStepLanguage
 
 /-!
 # CodeLib — umbrella import for downstream code

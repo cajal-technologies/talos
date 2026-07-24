@@ -4,6 +4,10 @@ import Interpreter.Wasm.Locals
 import Interpreter.Wasm.Continuation
 import Interpreter.Wasm.Semantics
 import Interpreter.Wasm.Semantics.Lemmas
+import Interpreter.Wasm.SmallStep
+import Interpreter.Wasm.SmallStep.Invariants
+import Interpreter.Wasm.SmallStep.Trace
+import Interpreter.Wasm.SmallStep.Refinement
 import Interpreter.Wasm.Wp.Defs
 import Interpreter.Wasm.Wp.Atomic
 import Interpreter.Wasm.Wp.Block
@@ -25,6 +29,8 @@ split into:
 * `Wasm.Semantics`         — `execOne` / `exec` / `run` mutual interpreter
 * `Wasm.Semantics.Lemmas`  — bridge lemmas between `exec` and `wp`
                                  (fuel monotonicity, atomic unfoldings, …)
+* `Wasm.SmallStep`         — observation-labelled relational semantics and
+                                 proved-equivalent executable stepper
 * `Wasm.Wp.*`              — `wp` framework: definitions, atomic
                                  equations, block / loop / call rules, and
                                  the `wp_run` / `wp_done` tactics

@@ -36,6 +36,7 @@ import Interpreter.Wasm.Examples.GlobalInitExpr
 import Interpreter.Wasm.Examples.SegmentOffsetExpr
 import Interpreter.Wasm.Examples.CallIndirectSubtype
 import Interpreter.Wasm.Examples.RefCastFuncType
+import Interpreter.Wasm.Examples.SmallStep
 
 /-! # Wasm.Examples.Basic
 

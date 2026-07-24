@@ -55,6 +55,12 @@ build-programs:
 build-verifier:
     lake build
 
+# Check that the generated Iris-migration coverage ledger accounts for every
+# `Instruction` constructor.
+[group("build")]
+small-step-coverage-check:
+    python3 scripts/small-step-coverage.py --check
+
 
 # ── Rust workspace ────────────────────────────────────────────────────────────
 
