@@ -31,15 +31,17 @@ two lemmas restate each arm with a left-hand side fixed at *successor* fuel
 predecessor-fuel `execOne` alone. -/
 
 theorem execOne_loop_succ {α : Type} (f : Nat) (m : Module) (st : Store α)
-    (s : Locals) (env : HostEnv α) (ps rs : Nat) (body : Program) :
-    execOne (f + 1) m st s (.loop ps rs body) env =
+    (s : Locals) (env : HostEnv α) (ps rs : Nat) (body : Program)
+    (paramTypes resultTypes : List ValueType := []) :
+    execOne (f + 1) m st s
+        (.loop ps rs body paramTypes resultTypes) env =
       (let belowStack := s.values.drop ps
        match exec f m st s body env with
        | .Fallthrough r' s' =>
          .Fallthrough r' { s' with values := s'.values.take rs ++ belowStack }
        | .Break 0 r' s' =>
          execOne f m r' { s' with values := s'.values.take ps ++ belowStack }
-           (.loop ps rs body) env
+           (.loop ps rs body paramTypes resultTypes) env
        | .Break (k + 1) r' s' => .Break k r' s'
        | other => other) := by
   rw [execOne.eq_def]; rfl
@@ -117,12 +119,12 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
       obtain ⟨k', rfl⟩ : ∃ k', f₂ = k' + 1 := ⟨f₂ - 1, by omega⟩
       have hk' : k ≤ k' := by omega
       cases inst with
-      | block ps rs body =>
+      | block ps rs body _ _ =>
         simp only [execOne.eq_def]
         have hexec : exec k m st s body env ≠ .OutOfFuel := by
           intro h; apply hne; simp only [execOne.eq_def, h]
         rw [ihExec m env st s body k' hk' hexec]
-      | loop ps rs body =>
+      | loop ps rs body paramTypes resultTypes =>
         simp only [execOne_loop_succ]
         have hexec : exec k m st s body env ≠ .OutOfFuel := by
           intro h; apply hne; simp only [execOne_loop_succ, h]
@@ -135,14 +137,14 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
           | zero =>
             have hrec : execOne k m st'
                 { s' with values := s'.values.take ps ++ s.values.drop ps }
-                (.loop ps rs body) env ≠ .OutOfFuel := by
+                (.loop ps rs body paramTypes resultTypes) env ≠ .OutOfFuel := by
               intro h
               apply hne
               simp only [execOne_loop_succ, hres]
               exact h
             exact ihOne m env st'
               { s' with values := s'.values.take ps ++ s.values.drop ps }
-              (.loop ps rs body) k' hk' hrec
+              (.loop ps rs body paramTypes resultTypes) k' hk' hrec
           | succ _ => rfl
         · rfl
         · rfl
@@ -150,7 +152,7 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
         · exact absurd hres hexec
         · rfl
         · rfl
-      | iff ps rs thn els =>
+      | iff ps rs thn els _ _ =>
         simp only [execOne.eq_def]
         rcases hvals : s.values with _ | ⟨v, vs⟩
         · rfl
@@ -265,7 +267,7 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
                             hfn, hty, if_neg hsig]
                 | anyref _ => simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot']
           | anyref _ => simp only [execOne.eq_def, hvals, hv]
-      | tryTable ps rs catches body =>
+      | tryTable ps rs catches body _ _ =>
         simp only [execOne.eq_def]
         have hexec : exec k m st s body env ≠ .OutOfFuel := by
           intro h; apply hne; simp only [execOne.eq_def, h]
@@ -480,9 +482,10 @@ theorem exec_call_host_cons
            { s with values := vs.take imp.results.length
                           ++ s.values.drop imp.params.length }
            rest env
-       | .Trap st' msg => .Trap st' msg) := by
+       | .Trap st' msg => .Trap st' msg
+       | .Throw st' tag arguments => .Throwing tag arguments st' s) := by
   simp only [exec, execOne.eq_def, run, hImp, hEnv]
-  rcases hf.invoke st (s.values.take imp.params.length).reverse with _ | _ <;> rfl
+  rcases hf.invoke st (s.values.take imp.params.length).reverse with _ | _ | _ <;> rfl
 
 /-- Specialised unfolding of `exec` on a `.callIndirect` head when the
 operand stack starts with an `i32` selector, the table+slot resolve to
@@ -623,10 +626,10 @@ theorem env_indep_aux {α : Type} : ∀ (f : Nat),
         execOne (k + 1) m st s inst env = execOne (k + 1) m st s inst env' := by
       intro m hh st s inst env env'
       cases inst with
-      | block ps rs body =>
+      | block ps rs body _ _ =>
         simp only [execOne.eq_def]
         rw [ihExec m hh st s body env env']
-      | loop ps rs body =>
+      | loop ps rs body paramTypes resultTypes =>
         simp only [execOne_loop_succ]
         rw [ihExec m hh st s body env env']
         rcases hres : exec k m st s body env' with
@@ -637,7 +640,7 @@ theorem env_indep_aux {α : Type} : ∀ (f : Nat),
           | zero =>
             exact ihOne m hh st'
               { s' with values := s'.values.take ps ++ s.values.drop ps }
-              (.loop ps rs body) env env'
+              (.loop ps rs body paramTypes resultTypes) env env'
           | succ _ => rfl
         · rfl
         · rfl
@@ -645,7 +648,7 @@ theorem env_indep_aux {α : Type} : ∀ (f : Nat),
         · rfl
         · rfl
         · rfl
-      | iff ps rs thn els =>
+      | iff ps rs thn els _ _ =>
         simp only [execOne.eq_def]
         rcases hvals : s.values with _ | ⟨v, vs⟩
         · rfl
@@ -730,7 +733,7 @@ theorem env_indep_aux {α : Type} : ∀ (f : Nat),
                             hfn, hty, if_neg hsig]
                 | anyref _ => simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot']
           | anyref _ => simp only [execOne.eq_def, hvals, hv]
-      | tryTable ps rs catches body =>
+      | tryTable ps rs catches body _ _ =>
         simp only [execOne.eq_def]
         rw [ihExec m hh st s body env env']
       | callRef ti =>

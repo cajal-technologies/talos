@@ -1,28 +1,25 @@
-import Interpreter.Wasm.Wp.Tactic
+import Interpreter.Wasm.SmallStep
+import Std.Tactic.BVDecide
 
 /-! ## Example: memory replace
 
-    The function `replace(new : i32) → i32` reads the `i32` stored at
-    memory offset 0, writes `new` there, and returns the old value.  This
-    is the first example that exercises `load32` / `store32` instructions
-    end-to-end.
-
-    The module starts with a one-page memory whose first four bytes are
-    `[42, 0, 0, 0]`, so `mem[0]` holds the little-endian value `42`.
-
-    Calling `replace(99)` on the initial store should therefore return
-    `42` and leave `99` in `mem[0]`. -/
+    `replace(new : i32) → i32` reads the `i32` at memory offset zero,
+    writes `new`, and returns the old value. Unlike the closed memory
+    examples, its main contract is symbolic over an arbitrary one-page-or-
+    larger store.
+-/
 
 namespace Wasm
+open SmallStep
 
 def replaceBody : Program := [
-  .const 0,    -- push address 0
-  .load32 0,   -- read mem[0] → old value
-  .localSet 1, -- save old value to local 1
-  .const 0,    -- push address 0
-  .localGet 0, -- push new value (param)
-  .store32 0,  -- mem[0] = new value
-  .localGet 1  -- push old value (return)
+  .const 0,
+  .load32 0,
+  .localSet 1,
+  .const 0,
+  .localGet 0,
+  .store32 0,
+  .localGet 1
 ]
 
 def replaceModule : Module :=
@@ -33,23 +30,80 @@ theorem replaceModule_init_mem :
     (replaceModule.initialStore (α := Unit)).mem.read32 0 = 42 := by
   native_decide
 
-/-- For any store with at least one page of memory whose `mem[0] = old`,
-    running `replace(new)` terminates with `old` on top of the value stack
-    and `new` written back to `mem[0]`. The `1 ≤ st.mem.pages` hypothesis
-    rules out the out-of-bounds trap on the load/store at offset 0. -/
-theorem replace_spec (st : Store Unit) (new old : UInt32) (hpages : 1 ≤ st.mem.pages)
-    (hmem : st.mem.read32 0 = old) :
-    wp replaceModule replaceBody
-      (fun c => c = .Fallthrough { st with mem := st.mem.write32 0 new }
-                    { params := [.i32 new], locals := [.i32 old], values := [.i32 old] })
-      st ⟨[.i32 new], [.i32 0], []⟩ := by
-  unfold replaceBody
-  wp_run
-  have : ¬ (4 > st.mem.pages * 65536) := by
-    have : 4 ≤ st.mem.pages * 65536 := by
-      have : 1 * 65536 ≤ st.mem.pages * 65536 := Nat.mul_le_mul_right _ hpages
-      omega
-    omega
-  simp [hmem, this]
+def replaceStore (st : Store Unit) : MachineStore Unit :=
+  { runtime := { module := replaceModule, host := {} }
+    wasm := st }
+
+def replaceConfig (st : Store Unit) (new : UInt32) : Config Unit :=
+  { expr := .running
+      { locals := { params := [.i32 new], locals := [.i32 0] }
+        code := replaceBody
+        resultArity := 1
+        callerRemainder := [] }
+    store := replaceStore st }
+
+def replaceFinalStore (st : Store Unit) (new : UInt32) : MachineStore Unit :=
+  { replaceStore st with
+    wasm := { st with mem := st.mem.write32 0 new } }
+
+/-- The instruction-granular relational trace of `replace`. -/
+def replaceTrace : List StepKind := [
+  .instruction (.const 0),
+  .instruction (.load32 0),
+  .instruction (.localSet 1),
+  .instruction (.const 0),
+  .instruction (.localGet 0),
+  .instruction (.store32 0),
+  .instruction (.localGet 1),
+  .administrative .finish
+]
+
+theorem replace_steps (st : Store Unit) (new old : UInt32)
+    (hpages : 1 ≤ st.mem.pages) (hmem : st.mem.read32 0 = old) :
+    Steps (replaceConfig st new) replaceTrace
+      ⟨.done [.i32 old], replaceFinalStore st new⟩ := by
+  rw [← hmem]
+  have hbound : 4 ≤ st.mem.pages * 65536 := by omega
+  refine .cons .const ?_
+  refine .cons (.load32 ?_) ?_
+  · simpa [replaceStore] using hbound
+  refine .cons (.localSet (by rfl)) ?_
+  refine .cons .const ?_
+  refine .cons (.localGet (by rfl)) ?_
+  refine .cons (.store32 ?_) ?_
+  · simpa [replaceStore] using hbound
+  refine .cons (.localGet (by rfl)) ?_
+  exact .cons .finish (.refl _)
+
+/-- The exact finite trace, retaining the original reusable preconditions. -/
+theorem replace_runs (st : Store Unit) (new old : UInt32)
+    (hpages : 1 ≤ st.mem.pages) (hmem : st.mem.read32 0 = old) :
+    (runSteps 8 (replaceConfig st new)).result =
+      .success [.i32 old] (replaceFinalStore st new) := by
+  simpa [replaceTrace] using
+    SmallStep.runSteps_eq_success_of_steps
+      (replace_steps st new old hpages hmem)
+
+theorem replace_spec (st : Store Unit) (new old : UInt32)
+    (hpages : 1 ≤ st.mem.pages) (hmem : st.mem.read32 0 = old) :
+    TerminatesWith (replaceConfig st new) (fun values store =>
+      values = [.i32 old] ∧
+      store.wasm.mem.read32 0 = new) := by
+  apply runSteps_success_terminates (replace_runs st new old hpages hmem)
+  constructor
+  · rfl
+  simp [replaceFinalStore, replaceStore, Mem.read32, Mem.write32]
+  bv_decide
+
+theorem replace_partial (st : Store Unit) (new old : UInt32)
+    (hpages : 1 ≤ st.mem.pages) (hmem : st.mem.read32 0 = old) :
+    PartiallyMeets (replaceConfig st new) (fun values store =>
+      values = [.i32 old] ∧
+      store.wasm.mem.read32 0 = new) := by
+  apply runSteps_success_partiallyMeets (replace_runs st new old hpages hmem)
+  constructor
+  · rfl
+  simp [replaceFinalStore, replaceStore, Mem.read32, Mem.write32]
+  bv_decide
 
 end Wasm

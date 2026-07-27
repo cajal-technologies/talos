@@ -23,6 +23,397 @@ preserve the intent and coverage of existing examples wherever possible. Iris
 proofs provide partial correctness for now: they describe executions that
 reach completion but do not prove that completion occurs.
 
+## Implementation status
+
+The current migration branch has crossed the executable cutover boundary:
+
+- `Wasm.SmallStep.Step` is the relational semantics and `stepChecked?` is its
+  proved sound, complete, deterministic executable presentation.
+- The CLI runner and testsuite execute only the small-step iterator. Neither
+  production entry point calls the legacy `run` function or evaluates a
+  second in-process semantics. Differential testing is isolated in the
+  dedicated V8/miscast harness.
+- The full recorded testsuite baseline is
+  `64740 pass / 0 fail / 357 skip / 18 cascade / 27 decode errors /
+  0 interpreter errors / 0 out of fuel`; `testsuite_report.txt` has SHA-256
+  `67ff73b1d4094747ae1df8a0220e50373779b2614774c5fb9bf39c186ac1bc07`.
+  Static branch-depth,
+  passive bulk-memory, and table/element validation converted a cumulative
+  2,346 formerly unrejected `assert_invalid` cases into passes without losing
+  any prior pass.
+- Indirect-call null-table traps now retain and render the selected element
+  index rather than collapsing it to a generic string. This closes the
+  isolated `bulk.wast` mismatch; the focused bulk corpus is 187/187 green.
+- Instantiated memories and tables now carry stable script-wide identities in
+  the testsuite driver. Imported resources hydrate from and commit to shared
+  registries instead of remaining disconnected snapshots. Memory growth caps
+  belong to the instantiated memory, so an importer cannot widen an
+  exporter's maximum; `memory_grow*`, `imports*`, and the focused load corpus
+  are green. Active-segment and start-function instantiation traps commit
+  earlier shared effects. Functions now also carry stable identities:
+  cross-instance table entries invoke the exporting instance rather than
+  being reinterpreted in the caller's local function index space. The focused
+  linking corpus is 123/123 green.
+- Passive GC element-segment constant expressions are evaluated once at
+  instantiation and cached as runtime values. Nested `array.new_elem` and
+  `array.init_elem` therefore retain heap references instead of replacing
+  them with null, while dropped segments behave as empty for zero-length
+  operations. Array destination bounds now report structural array traps
+  before source data/element bounds. The focused `array.wast`,
+  `array_init_data.wast`, and `array_init_elem.wast` executed cases are all
+  green.
+- `any.convert_extern` and `extern.convert_any` now have explicit syntax,
+  validation, and semantics. `AnyRef.host` retains internalized host identity;
+  managed references externalize through a deterministic reserved handle
+  range. All executed `extern.wast` cases pass, and the related reference
+  test/cast clusters no longer fail.
+- iris-lean `ToVal`, `PrimStep`, `Language`, `StateInterp`, primitive lifting,
+  and adequacy are implemented over the small-step relation. The authoritative
+  GenHeap state is tied to physical memory bytes. Instantiated globals use a
+  separately named authoritative ghost map (avoiding the ambiguity of two
+  simultaneous `genHeapGS` instances). Instantiated tables likewise use a
+  stable-index authoritative map; `table.get` preserves complete-table
+  ownership and `table.set` updates physical and ghost contents together.
+  A table-aware state-sensitive adequacy theorem and closed set/get proof
+  recover the reached physical table. Primitive `table.size`, successful
+  32/64-bit `table.grow` (including deterministic capacity failure), and
+  `table.fill` rules now cover immutable width/capacity metadata and lockstep
+  physical/ghost growth and filling. Closed grow/fill/read and table64
+  success-then-failure proofs recover the exact enlarged tables. Same-table
+  `table.copy` now has an authoritative overlap-safe rule and a closed
+  regression that proves source snapshot semantics. Distinct-table copy has a
+  separate rule and closed proof that update-framing preserves the physical
+  source while replacing only the destination. `global.get` has a physical-state
+  lifting rule plus a concrete end-to-end adequacy witness. Immutable runtime
+  module ownership now ties direct-call function lookup to the physical
+  `MachineStore`; call entry and caller resumption have primitive rules and a
+  closed end-to-end adequacy witness.
+- Instantiated element segments now have typed authoritative ownership threaded
+  through `StateInterp` and every adequacy allocator. `table.init` reads both
+  its live segment and destination table through physical agreement;
+  `elem.drop` updates physical and ghost segment status together. A closed
+  initialize-then-drop proof recovers both the reached table and dropped
+  segment.
+- A state-sensitive strong-adequacy bridge now preserves the reached
+  `StateInterp` instead of discarding it like iris-lean's value-only
+  convenience wrapper. WP posts can combine returned byte/global ownership
+  with the final physical `MachineStore`; the manual word roundtrip uses this
+  bridge to prove the actual final `Mem.read32`.
+- Handwritten byte/word roundtrip, fill, aligned and overlapping copy, swap,
+  passive initialization/drop, reverse, a three-word partition kernel, and a
+  compare-and-branch merge of two singleton runs have executable and
+  relational checks plus Iris WP contracts. The word roundtrip, mutating
+  two-word swap, three-word partition, singleton merge, fill, aligned copy, overlapping copy, and passive
+  initialization/drop additionally have end-to-end iris-lean adequacy theorems
+  with allocated physical/ghost agreement. The overlapping copy owns the
+  aliased source and destination as one eight-byte region and proves
+  memmove-style snapshot behavior.
+- Host failures and known GC failures now use distinct structural
+  `TrapReason` constructors; the generic `.legacy` trap escape hatch has been
+  removed. Host traps retain committed host-store effects, and a focused GC
+  regression checks that a null i31 access becomes `.nullI31Reference`.
+
+Open cutover rows:
+
+- `Project/SwapElements/SwapSepLogic.lean` no longer imports or elaborates the
+  legacy custom `wp_wasm` layer. The repository-level
+  `CodeLib.SepLogic.WasmWP` fixpoint and its `CodeLib.SepLogic.Adequacy`
+  bridge are now deleted after a reference audit confirmed that no live module
+  imported them; iris-lean's WP and `SmallStepAdequacy` are the sole live
+  separation-logic execution path. The obsolete duplicate proof block in
+  `SwapSepLogic` is commented migration history pending final source deletion; the separately
+  maintained public `TerminatesWith` theorem in `SwapElements/Spec.lean`
+  remains until that API is moved to finite small-step traces. The `CodeLib`
+  umbrella likewise no longer exports the legacy layer; new clients see the
+  small-step Iris API.
+  `RustStd.UInt` is now a contextual iris-lean chunk API, and every U64
+  arithmetic, bitwise, shift, division, remainder, and not chunk has been
+  ported to the primitive small-step lifting rules. The unused fuel-bounded
+  array callee/ABI tactics were removed; `FatPtrAt` plus the authoritative
+  small-step loader are the live slice interface. Among CodeLib and programs,
+  only the terminating `SwapElements` public spec now directly imports
+  `Interpreter.Wasm.Wp.*`.
+- Authoritative `i64.load`, `i64.store`, global ownership, `global.get`,
+  direct-call entry, and caller resumption are complete. Migrating the
+  `SwapElements` callers next requires composing the generated bounds-check
+  path with the newly available block, branch, comparison, bitwise, shift,
+  and arithmetic lifting rules. The exact 28-step successful `func1` prefix
+  and its physical-runtime-checked `call 2` entry are proved. The generated
+  `func3` spill helper is now also closed through iris-lean adequacy from its
+  concrete initial module memory, with all eight affected bytes owned by the
+  physical/ghost agreement. The generated `func2` proof is call-stack
+  polymorphic, and the complete successful
+  `func1 → func2 → func1 return` path is now composed over authoritative
+  runtime, global, scratch-word, and array-word ownership. `func1` itself is
+  now call-stack polymorphic, and the generated `func0` forwarding wrapper is
+  composed through its concrete direct-call frame with both contextual and
+  top-level Iris WPs. `func3` likewise has a contextual pre-return rule ready
+  for composition in the export. The full successful `func4` export now
+  composes stack-pointer lowering, the `func3` spill call, physical reloads,
+  the nested `func0 → func1 → func2` swap, stack-pointer restoration, and
+  terminal return. A concrete two-element array closes this WP through
+  authoritative heap/global/runtime adequacy, covering five disjoint physical
+  words and both nested direct-call frames. Equal indices now have a separate
+  one-cell lifting rule: the exact 16-instruction exchange leaf sequentially
+  reuses one exclusive eight-byte owner, rather than assuming two owners for
+  aliased bytes. This rule is composed through `func1` and `func0`, and a
+  concrete same-index execution has closed authoritative heap/global/runtime
+  adequacy proving the array word is unchanged. The alias rule is now also
+  composed through the exported `func4`; its closed footprint owns exactly
+  scratch, two spill words, and one array word. Both the distinct-index and
+  equal-index export examples have executable finite-trace
+  `SmallStep.TerminatesWith` witnesses in addition to their Iris
+  `PartiallyMeets` proofs. State-sensitive adequacy now additionally proves
+  that the equal-index export's reached physical memory still contains the
+  original array word. A framed `u64` agreement rule preserves state and word
+  ownership across observations, so the distinct-index export example proves
+  both reached physical reads (`0 ↦ 22`, `8 ↦ 11`) in one postcondition. The
+  distinct-index export now also has a fully parameterized non-aliasing
+  `PartiallyMeets` contract: for arbitrary validated pointer, length, indices,
+  initial words, heap/global ghost maps, and physical store agreement, it
+  proves that the reached physical store contains the two exchanged words at
+  the computed dynamic addresses. The equal-index path has the corresponding
+  fully parameterized one-owner contract and proves that the reached physical
+  word is unchanged. `Project.SwapElements.SmallStepSpec` now registers both
+  cases as the public small-step/Iris specification surface. The legacy
+  total-correctness spec remains imported by the opt-level-3 equivalence proof
+  until that proof is recast over finite traces. Out-of-bounds paths remain.
+  Element segments, exceptions, and GC registries need analogous authoritative
+  treatment as their proof rules are ported; bulk-table rules still need to be
+  derived from the table registry.
+- The remaining interpreter example/spec files retain legacy theorem
+  statements. Their intent must be ported or recorded as termination-deferred.
+  `ClzPopcnt.lean`, `MultiValue.lean`, `MemFill.lean`, `MemCopy.lean`,
+  `MemReplace.lean`, `MemGrow.lean`, `MemDataSection.lean`,
+  `MemNarrowI32.lean`, `MemI64.lean`, `SegmentOffsetExpr.lean`,
+  `GlobalInitExpr.lean`, `GlobalCounter.lean`, `SelectAbs.lean`,
+  `SelectMin.lean`, `SumI64.lean`, `IsEven.lean`, `TrapDivZero.lean`, and
+  `TrapUnreachable.lean`, `RefIsNull.lean`, `EarlyBr.lean`,
+  `EarlyReturn.lean`, `IfAbs.lean`, `DecoderImport.lean`,
+  `DecoderImportedGlobal.lean`, `EarlyBrInvalid.lean`, `FloatOps.lean`,
+  `HostDispatch.lean`, `CallIndirect.lean`, `TableDispatch.lean`,
+  `Switch.lean`, `InfiniteLoop.lean`, `CallIndirectSubtype.lean`,
+  `RefCastFuncType.lean`, `Counter.lean`, and the shared `Harness.lean` are fully cut over:
+  none imports the custom WP or calls `runValues`. Successful public specs are small-step
+  `TerminatesWith` theorems with matching `PartiallyMeets` results; trapping
+  examples instead state exact structured terminal outcomes and relational
+  reachability. All 41 example files are now cut over from the legacy proof
+  API. `Factorial.lean`, `Gcd.lean`, and `SimpleLoop.lean` prove decreasing
+  loops with explicit relational traces; `EvenOddRec.lean` proves mutual
+  recursion contextually over arbitrary saved call stacks.
+  `MultiValue` additionally covers multi-result block exit and call-frame
+  return ordering. The bulk-memory pair specifies successful physical-memory
+  effects, overlapping `memmove` behavior, and atomic out-of-bounds traps.
+  The reusable `SmallStep.TrapsWith` predicate and its runner soundness bridge
+  now give those terminal trap specifications the same fuel-free public shape
+  as `TerminatesWith`, while keeping traps distinct from successful values.
+  `TrapDivZero` and `TrapUnreachable` use this public contract and preserve the
+  reached physical store in their postconditions. Bulk fill/copy, SIMD memory,
+  table get/fill, indirect and tail-indirect calls, and null-reference examples
+  now use it as well. `TrapsWith` supports trace prefixing and postcondition
+  framing, and semantic determinism proves that one initial configuration
+  cannot both terminate normally and trap. The remaining structured example
+  families—memory64/indexed memory, data/element segment reuse, numeric and
+  float conversion, GC, exceptions, host dispatch, and concrete-reference
+  casts—also expose `TrapsWith`; host abort additionally proves its committed
+  physical-memory effect. A reason-projection bridge supports host-parametric
+  stores that intentionally lack decidable whole-store equality.
+  `MemReplace` preserves the stronger symbolic theorem over an arbitrary
+  sufficiently large store, including an explicit instruction-granular
+  relational trace. `MemGrow` frames an existing word across successful
+  growth and proves exact whole-store preservation on failure. The data
+  section examples cover literal initialization plus deferred const-expression
+  data and element offsets, observed through a load and an indirect call.
+  `GlobalInitExpr` covers extended arithmetic plus leaf and arithmetic GC
+  allocator initializers as observed through small-step `struct.get`.
+  `MemNarrowI32` and `MemI64` bundle total and partial contracts for all 17
+  full-width/narrow load and partial-width store cases.
+  `GlobalCounter` does the same for mutable global state and threads three
+  concrete calls through the physical store.
+- The handwritten Iris memory ladder now closes physical-store
+  `PartiallyMeets` results for a word roundtrip, a two-word in-place swap, and
+  a three-word reverse, a three-word partition kernel, a four-byte `memory.fill`, and an aligned four-byte
+  `memory.copy`, and an overlapping four-byte `memory.copy`. The reverse
+  theorem proves both endpoint exchange and preservation of the framed middle
+  word. The partition theorem preserves all three words, places pivot `22`
+  between the lower and upper partitions, and proves both unsigned partition
+  inequalities from the reached physical store. The merge kernel executes a
+  Wasm unsigned comparison and structured `if`; regressions exercise both
+  branches, while Iris adequacy proves the swapping case is sorted in physical
+  memory. Fill proves its target update while framing a disjoint word; aligned
+  copy proves preservation of its source and the destination update; and
+  overlapping copy proves snapshot/memmove semantics under one exclusive
+  eight-byte owner. Passive `memory.init` and `data.drop` are tied to a new
+  authoritative data-segment registry: initialization reads the owned live
+  segment and dropping changes both the physical status and ghost fragment to
+  `none`. A reusable framed `u32` agreement lemma preserves the authoritative
+  state interpretation while physical facts are extracted for several
+  disjoint words; this is the 32-bit counterpart of the existing framed `u64`
+  rule used by `swap_elements`.
+- Validation closure remains substantial. The new checked stepper currently
+  has 229 explicit `InternalError` exits, while the retained big-step
+  implementation still has 309 `.Invalid` sites. The current `ValidConfig`
+  wrapper proves semantic error-freedom, but decode/type validation has not
+  yet been connected to a concrete machine well-formedness predicate. Static
+  branch-depth validation now rejects out-of-scope `br`, `br_if`, `br_table`,
+  reference-branch, and GC cast-branch labels before execution.
+  Host exceptions are no longer diagnostic exits: direct and indirect calls,
+  their tail-call forms, and `call_ref`/`return_call_ref` all enter the
+  ordinary structured exception-unwinding machine. Focused regressions cover
+  every imported call form. Nested propagation markers are also handled by an
+  explicit administrative unwind: the current exception continues outward
+  and supersedes the stale marker instead of producing an internal error.
+  Passive bulk-memory validation now also rejects missing memories and invalid
+  data-segment indices for `memory.init`, invalid `data.drop` indices, and the
+  straight-line wasm32/memory64 operand-type matrix. Successful instruction
+  checks expose the exact index bounds used by instantiation, which proves one
+  runtime segment-status entry per declared data segment. The focused
+  `memory_init`, `memory_init0`, and `memory_init64` corpus now has 493 passes
+  with zero skips or failures.
+  Passive data segments are now correctly accepted without a linear memory,
+  as required by GC `array.new_data`/`array.init_data`; only active segments
+  set the decoder's `dataWithoutMemory` validation marker. Constant-expression
+  validation now recognizes floating-point and SIMD constants, and
+  `array.init_data` validation checks destination mutability and numeric/vector
+  storage explicitly. Precise concrete-reference signatures now cover GC
+  struct and array construction, access, mutation, and copy; declaration
+  checks retain `ref.func` precision; and reference branches refine nullable
+  operands on their non-null paths. A forced-validation run of the focused
+  array corpus improved from 38 direct passes and 16 rejected normal modules
+  to 244 passes with no rejected normal modules. Focused `call_ref` and
+  `return_call_ref` runs likewise have 86 passes with no rejection, while the
+  reference-branch corpus has 84 passes and only its 12 intentional harness
+  skips. Global production validation remains gated on the remaining
+  proposal-specific false rejections.
+  Table/element-segment validation rejects missing tables and invalid element
+  indices for `table.init`, rejects invalid `elem.drop` indices, and selects
+  the destination operand type from the wasm32/table64 declaration. The
+  focused `table_init` and `table_init64` corpus now has 1,658 passes with
+  zero skips or failures. Instantiation proves that active element writes
+  preserve the table registry length and that every validated table or
+  element-segment index resolves in the initial store.
+  Ordinary table get/set/size/grow/fill/copy now validate every selected
+  table and derive element/address types from its declaration, including
+  table64 and mixed-width copy. The focused mixed `table.copy` corpus now has
+  3,460 passes with zero skips or failures; declaration-check proofs expose
+  every table lookup required by execution.
+  Bulk fill/copy validation rejects a missing selected memory and enforces
+  the exact wasm32/memory64 destination, source, and length types for default
+  and indexed memories. The focused `memory_fill` corpus now has 216 passes,
+  and `memory_copy` has 8,943 passes, both with zero skips or failures.
+  Scalar integer and floating load/store validation now covers the complete
+  value-type matrix, selected-memory existence, memory64 addresses, and
+  indexed-memory wrappers. It converted 120 additional invalid assertions
+  across the full suite. The remaining scalar load/store skips are nested
+  under structured control and require the structured validator track rather
+  than additional instruction signatures.
+  `memory.size` and `memory.grow` now validate selected-memory existence and
+  use the selected declaration’s wasm32/memory64 type for results and deltas,
+  including indexed-memory wrappers. The focused `memory_size` corpus has
+  95 passes with no skips or failures.
+  Function-body `global.get`/`global.set` references now reject out-of-range
+  indices and expose the concrete declaration lookup required by execution.
+  `GlobalDecl` and the WAT decoder now retain declared type and mutability;
+  immutable writes and folded initializer type mismatches are rejected while
+  hand-built legacy modules remain source compatible. Successful
+  `global.set` checks expose both the declaration and its mutability proof.
+  Decoded initializer programs are retained separately from runtime-deferred
+  expressions. Validation enforces the supported constant-expression
+  instruction set, exact stack result, declaration order, and immutable
+  source-global requirement without changing instantiation behavior. The
+  focused global corpus now has 109 passes and 12 skips; its remaining
+  validation cases are nested function-body stack-flow and one reference-type
+  precision gap.
+  Direct calls and `ref.func` now reject unknown function indices using the
+  unified imported-plus-local function lookup. Indirect, tail-indirect,
+  `call_ref`, and tail-reference calls validate their type indices; indirect
+  calls additionally validate the selected table and use its table32/table64
+  selector type. Straight-line direct, indirect, and reference-call stack
+  signatures are checked. The focused call corpus has 417 passes, zero
+  failures, and 60 skips.
+  The operand checker now traverses blocks, loops, and both `if` arms instead
+  of abandoning validation at the first structured instruction. It tracks
+  branch transfers, exact label signatures, branch-only exits, and the
+  WebAssembly unreachable-stack polymorphism rule. Structured instructions
+  retain their declared parameter/result types in addition to cached arities;
+  legacy handwritten constructors remain source-compatible through defaulted
+  metadata. Core integer, float, conversion, and reinterpretation instructions
+  have complete scalar signatures. The focused `block`, `if`, `loop`,
+  `unreached-invalid`, and `return` suites now report 790 passes with no skips
+  or failures.
+  Exception validation checks `throw` tag indices and argument signatures,
+  the `throw_ref` operand, exact `try_table` parameter/result types, and every
+  catch clause against its tag arguments and selected outer label signature.
+  `throw.wast` and `throw_ref.wast` now have no validation skips;
+  `try_table.wast` has one remaining validation skip owned by concrete
+  reference nullability.
+  SIMD validation now covers every grouped unary, binary, ternary, test,
+  shift, splat, extract, replace, shuffle, relaxed, and memory constructor.
+  Scalar lane types and memory32/memory64 address widths are checked, as are
+  lane and shuffle immediates. The focused SIMD corpus has 25,989 passes,
+  zero failures, and one remaining skip; that skip is an unknown-local case
+  shared with the local-index validation track rather than a SIMD signature
+  gap.
+  Function-local references are validated recursively against the combined
+  parameter/local namespace, including code following `unreachable`. The
+  focused `local_get`, `local_set`, and SIMD-load corpora now have no skips or
+  failures; successful checks expose the concrete local-index bound.
+  Module-interface validation checks function/global/table/memory export
+  indices, name uniqueness across all four export kinds, and the start
+  function's unified index and empty parameter/result signature. The focused
+  export and start corpora now have 132 passes, zero failures, and two
+  non-validation skips.
+  Data and element declarations now retain folded offset types, explicit
+  empty/deferred offset-expression presence, and declared element types.
+  Validation rejects decoder-synthesized “data without memory”, unknown
+  active memory/table targets, wrong memory64/table64 offset types,
+  non-constant or mistyped offsets, mutable/unknown globals, unknown element
+  functions, and active table/segment type mismatches. Successful active
+  checks prove the selected resource exists. This closes all previously
+  unrejected `data.wast` and `elem.wast` assertions and adds 51 full-suite
+  passes without changing any execution failure.
+  Direct, indirect, and reference tail calls now consume their complete
+  operand signatures, require their result signature to agree with the
+  enclosing function, and enter the unreachable terminal typing state. All
+  direct-tail invalid assertions and all but one indirect-tail assertion are
+  closed; the remaining reference-tail cases require precise reference
+  subtyping rather than the validator's current coarse reference classes.
+  Memory declaration-limit validation still requires an AST/decoder repair:
+  `MemDecl` stores limits as `UInt32`, erasing source overflow before
+  validation. The former “active data without a declared memory” information
+  loss is closed by the explicit `dataWithoutMemory` decoder marker.
+  Testsuite driver limitations account for the five baseline
+  `interpreter_error` rows (`extern.wast` reference arguments and
+  `instance.wast` named module instances); they are not small-step execution
+  fallbacks.
+- `Interpreter/Wasm/SmallStepCoverage.md` records the constructor-family and
+  runtime-error ledger. `stepPlainChecked?` now enumerates every
+  `Instruction` constructor explicitly: there is no generic unsupported
+  fallback, and adding new syntax causes an exhaustiveness error until its
+  behavior is classified. `memOp` is explicitly owned by the checked indexed
+  memory wrapper.
+- Quicksort and mergesort still need complete executable, oracle, mutation, and
+  Iris proof coverage.
+- The legacy big-step implementation remains for old theorem statements and
+  focused source-level comparison lemmas until those proof and example
+  ledgers are closed; it is no longer on the runner or testsuite execution
+  path.
+
+Latest gates after the precise-reference validation slice:
+
+- a temporary full validation gate improved from `64240` passes, `451`
+  validation cascades, and `94` decode errors to `64514` passes, `212`
+  cascades, and `58` decode errors; it was removed after measurement because
+  the remaining normal-module rejections are not production-safe;
+- regenerating the production testsuite report with pinned
+  `wasm-tools 1.251.0` produces `64739` passes, zero failures, `358` skips,
+  `18` unavailable-module rows, `27` decode-error rows, and no interpreter
+  errors or out-of-fuel results (SHA-256
+  `a7f64212824ec3dcf3611fe0af8c3df7b6ea6749aa90a3c4f6a4b5359b0c8b38`);
+- the pinned differential mutation corpus reports `AGREE=70`,
+  `FINDINGS=0`, `SOUNDNESS=0`, and `VALUE=0`; the focused 50-case recgroup
+  rerun also reports `AGREE=50` with no findings.
+
 ## Fixed design decisions
 
 ### Machine boundary
@@ -497,13 +888,17 @@ Maintain a table in this document or a nearby generated file:
 | Area | Old implementation/proof | New implementation/proof | Tests | Status | Notes |
 |---|---|---|---|---|---|
 | Initialization | `Module.initialStore` | TBD | TBD | Not started | Include segments/imports |
-| Core stepping | `execOne`/`exec` | `Step`/`step?` | TBD | Not started | |
-| Runner | `run`/`runTail` | fuel iterator | differential canaries | Not started | |
+| Core stepping | `execOne`/`exec` | `Step`/`step?` | correspondence and package builds | In progress | Small-step covers the testsuite; old definitions remain only for proof migration and focused comparisons |
+| Runner | `run`/`runTail` | fuel iterator | full baseline and differential canaries | Complete | CLI and testsuite are small-step-only; external V8 differential remains green |
 | Control flow | current WP tactics | Iris rules | control examples | Not started | |
-| Linear memory | `Mem`, memory arms | small-step memory | memory ladder | Not started | |
-| Iris integration | `CodeLib.SepLogic` | iris-lean adapter | adequacy proofs | Not started | Reuse vs replace audit |
-| Existing examples | `Interpreter/Wasm/Examples` | ported corpus | package build | Not started | |
-| Downstream proofs | `CodeLib`, `programs/lean` | new API | package build | Not started | |
+| Linear memory | `Mem`, memory arms | small-step memory | byte/word/fill/copy/swap/reverse ladder | In progress | byte, u32, and u64 Iris ownership rules implemented |
+| Iris integration | `CodeLib.SepLogic` | iris-lean adapter | memory/global adequacy proofs | In progress | Physical byte and global agreement implemented |
+| Existing examples | `Interpreter/Wasm/Examples` | ported corpus | package build | Complete | All 41 files are fully cut over; the shared harness executes only `initConfig`/`runSteps`, and no example imports the custom WP layer |
+| Downstream proofs | `CodeLib`, `programs/lean` | new API | package build | In progress | Generated `func2`/`func3` leaves, the successful `func1 → func2` call/return path, and the reusable `u64::abs_diff` body are ported to Iris small-step WP; Iris adequacy lowers generically to relational `PartiallyMeets`. Every `Project.RustU64` public spec now uses this path, including guarded division/remainder; `TotalVariation` and other outer callers remain |
+
+The companion inline-operator corpus in `Project.RustU64Tests` is fully cut
+over: all 22 public specs use closed small-step Iris adequacy, including the
+four guarded div/rem and four masked-shift compositions.
 
 Expand this ledger before M2 and update it in every migration PR.
 
@@ -787,6 +1182,15 @@ about termination when one side consumes all supplied fuel; differential tests
 must increase fuel or report the case as inconclusive rather than a semantic
 divergence.
 
+`CodeLib.Equivalence` now also provides the fuel-free
+`Wasm.SmallStep.ObservationallyEquivOn` relation directly over initialized
+`Config`s. It distinguishes `.done values` from `.trapped reason`, so
+structural traps are observable and are not conflated with divergence. Its
+outcome-uniqueness and common success/trap rules are proved from deterministic
+terminal `Steps`; no theorem in this new layer mentions legacy `run`. Program
+equivalence files should move to this relation as each side acquires a
+finite-trace total-correctness theorem.
+
 ### Total-correctness theorem migration
 
 **Decision:** preserve the distinction in theorem names and in the migration
@@ -814,3 +1218,226 @@ small-step `TerminatesWith` predicate—existence of a finite multistep trace to
 combine it with Iris partial correctness to recover total correctness. During
 this migration it is acceptable to defer those proofs, but never acceptable to
 erase their intent or describe partial correctness as termination.
+
+### Downstream proof cutover ledger
+
+- `Project.RustU64.Spec` and `Project.RustU64Tests.Spec`: all public operator
+  specifications use small-step `PartiallyMeets` and iris-lean WP.
+- `Project.TotalVariation.Spec`: both generated calls reuse the contextual
+  Iris `abs_diff` body rule with authoritative scratch memory, globals, and
+  runtime-module ownership.
+- `Project.RustArray.Spec` and `Project.RustArrayTests.Spec`: every internal and
+  exported specification uses small-step `PartiallyMeets` and iris-lean WP.
+  Export wrappers allocate authoritative ownership for the physical
+  `(dataPtr, len)` words through `fatPtrHeap`; `wp_loadFatPtr` then performs the
+  two `i32.load`s and preserves the generated call structure. Neither file
+  imports or mentions the legacy interpreter or custom WP.
+- `Project.NumIntegerOpt3.Spec`: the complete optimized Stein GCD body now has
+  a small-step `PartiallyMeets` proof. Its subtract-and-halve loop uses Iris
+  Löb induction over nonzero odd operands and a preserved mathematical GCD;
+  both equality exits share a proved recombination tail. Total correctness is
+  also complete in the small-step semantics: generated setup, odd-part
+  normalization, both decreasing loop arms, both equality exits, and final
+  recombination have explicit `SmallStep.Steps` traces, composed by strong
+  induction on `x.toNat + y.toNat`. The final result theorem combines this
+  finite termination proof with Iris partial correctness. This total
+  small-step theorem is now the registered public `@[spec_of]/@[proves]`
+  contract for the exported `num_integer_opt3::gcd_u64`. The former legacy
+  theorem remains referenced only by the old `ObservationallyEquiv` API;
+  migrating that API is the remaining optimized-GCD equivalence cutover.
+- `Project.NumInteger.Spec`: the memory-backed opt0 implementation now has an
+  authoritative 64-byte frame model spanning the caller and callee frames,
+  with proved physical-memory agreement, bounds, typed ownership
+  decomposition, and a reusable spill-prologue rule. Both generated zero
+  branches have complete iris-lean WP proofs through the nested blocks,
+  result store/load, and return. They are combined into a mathematical-GCD
+  rule and a closed `SmallStep.PartiallyMeets` theorem over a concrete
+  `Config`. The nonzero normalization prefix is also complete: the shared
+  trailing-zero count and both operand counts are stored and reloaded from
+  their exact scratch offsets, and both frame operands are replaced by their
+  odd parts before entering the generated loop. The loop's equality guard and
+  recombination exit now have compositional iris-lean WP rules: the guard reads
+  both authoritative operand slots, the tail shifts by the saved shared count,
+  updates the result slot, and exposes the generated `br 2` to the enclosing
+  control-frame proof. Both arm-specific odd-part normalization tails are also
+  proved over their physical operand and scratch words (`fp+28` for the left
+  arm and `fp+32` for the right arm), including their generated `br 0`/`br 1`
+  exits. Both complete mutating arms now also perform their frame-backed
+  subtraction before invoking those normalization tails, preserving the
+  untouched operand and all framed resources. The generated unsigned
+  comparison now dispatches through the actual second-block frame: its taken
+  edge exits into the left-decreasing continuation, while its fallthrough
+  executes the right-decreasing body; both finish at real loop-frame
+  back-edges. Equality dispatch is likewise connected to its concrete first
+  block: equal operands reach recombination and `br 2`, while unequal operands
+  enter the second block. A composed loop-body rule now hides both
+  administrative block frames and exposes exactly the final exit and two
+  back-edges. The complete loop rule is parameterized over locals 6–9 rather
+  than assuming their first-iteration zero values: each arm overwrites only
+  its generated temporaries and carries the other scratch locals through the
+  back-edge. The enclosing Iris Löb invariant is now proved: both real
+  back-edges preserve nonzeroness, oddness, and the mathematical GCD via the
+  Stein-step lemmas, while equality proves recombination and hands `br 2` to
+  the caller. The boxed recursive hypothesis is threaded explicitly through
+  the compositional control rule, so no spatial resource is duplicated.
+  Loop entry is connected to the generated `.loop` instruction, and the full
+  nonzero core now composes physical scratch-memory normalization, the loop,
+  and the original-input recombination identity into one Iris rule. Its
+  `br 2` exit is now proved against the concrete three-frame control stack:
+  it targets the generated outer block, executes the actual result-slot load
+  epilogue, and returns the mathematical GCD. This is composed with the
+  nonzero core while existentially retaining the loop-mutated operand and
+  scratch ownership. The initial nested guards and spill prefix are now also
+  connected: the nonzero path traverses the three generated blocks, retains
+  the real outer control frame, executes the complete core, and returns.
+  Authoritative-frame adequacy yields a closed `SmallStep.PartiallyMeets`
+  theorem for nonzero inputs; combined with the earlier zero theorem, opt0
+  `func1` now has one small-step partial-correctness theorem for all operands.
+  The zero and nonzero paths also now have contextual pre-return rules. These
+  are composed through the actual direct-call frame in `func0`: its prologue
+  allocates and fills the caller frame, `func1` returns into the suspended
+  caller, and the epilogue restores the stack pointer and returns the GCD.
+  The resulting `func0_smallStep_wp` retains the complete physical frame under
+  existential ownership. Canonical memory/global agreement now connects that
+  rule to a closed `SmallStep.PartiallyMeets` theorem for `func0`. The generated
+  `func2` export wrapper is also composed through its real call frame and has
+  both an Iris WP rule and closed operational partial correctness from the
+  canonical module store. That theorem is now the registered public
+  `@[spec_of]/@[proves]` contract for `num_integer::gcd_u64`. The former total
+  big-step theorem is explicitly named `gcd_u64_legacy_correct` and remains
+  only behind the legacy cross-optimization equivalence API. Finite-trace
+  opt0 termination and migration of that equivalence API remain.
+- The small-step Iris lifting layer now includes authoritative `global.set`.
+  A ghost/physical agreement lemma updates the instantiated global array and
+  ghost map together; `StateInterp` preserves that invariant, and the primitive
+  WP rule consumes `globalPointsTo index oldValue` and returns ownership of the
+  new value. Opt0 `func0` exercises the rule in both directions for its stack
+  pointer (`1048576 → 1048560 → 1048576`).
+- `Project.FloatTrunc.Spec`: both generated conversion functions and the
+  exported agreement check have authoritative small-step Iris proofs. The
+  `naive_trunc` proof covers its NaN, positive saturation, negative saturation,
+  and ordinary conversion paths while preserving the scratch word and stack
+  pointer global; contextual body rules compose both calls in `check`. The
+  legacy theorems remain only to preserve the public `TerminatesWith` contract
+  until finite-trace total correctness is connected to that API.
+- `CodeLib.RustStd.U64.AbsDiff` is now small-step-only. Its unreferenced custom
+  `wp` body theorem and all legacy WP imports were removed after the
+  contextual iris-lean body rule and closed `SmallStep.PartiallyMeets`
+  adequacy theorem were verified as the stronger live API.
+- Symbolic memory-loop migration now has typed whole-region ownership on both
+  word widths. `arrayAt` supplies append/split and indexed get/set laws for
+  u32 copy loops; the new `array64At` supplies the corresponding u64 laws for
+  fill loops. These assertions are built from the authoritative byte
+  `pointsTo` resources consumed by the small-step load/store rules, so a loop
+  invariant can split a completed prefix from its remaining suffix and
+  reassemble an updated region without referring to the legacy interpreter.
+  `SmallStep.wp_loop_löb` now packages the guarded iris-lean Löb hypothesis,
+  invariant resource, and initial administrative `.loop` transition, leaving
+  concrete proofs to establish the body exit/back-edge cases.
+  The family-indexed `wp_loop_löb_family` variant additionally allows locals
+  and ownership to change at each back-edge while retaining the fixed
+  operational control frame. Typed prefix/head/suffix split laws now expose
+  exactly one next u32/u64 cell, and `array64At_fill_next` returns a separating
+  continuation that reassembles the u64 region with its filled prefix extended
+  by one element. `fillWords_storeIteration_wp` now connects that spatial
+  update to the actual seven-instruction Wasm body
+  (`local.get`/shift/add/`i64.store`), including all non-wrapping byte-address
+  obligations and preservation of an arbitrary framed Iris resource.
+  The u32 copy side now has the analogous two-region transition:
+  `arrayAt_copy_next` focuses disjoint source/destination cells and returns a
+  continuation preserving the source while extending the copied destination
+  prefix. `copyWords_loadStoreIteration_wp` connects that ownership update to
+  the generated dual address calculation, `i32.load`, and `i32.store`, again
+  framing an arbitrary resource.
+  The u64 fill loop is now migrated completely. Its nested block guard, taken
+  `br_if`, false-path `br 1`, authoritative store, local increment, real
+  outer-block-to-loop back-edge, and final administrative loop exit compose
+  under a Löb invariant indexed by the current word and remaining suffix.
+  `fillWords_smallStep_wp` is universal in `n` and the original region
+  contents. The unreferenced legacy `wp_loop_cons` theorem and all old WP
+  imports were removed from `MemFillLoop`.
+  The u32 copy loop is likewise migrated completely.
+  `copyWords_smallStep_wp` covers initialization, nested blocks, its guard,
+  the authoritative source load and destination store, increment, real
+  back-edge, and terminal exit under a family-indexed Löb invariant. It is
+  universal in the source words and preserves arbitrary framed resources.
+  The unreferenced legacy copy theorem and all old WP imports were removed
+  from `MemCopyLoop`.
+- The `swap_elements` element-address vocabulary is now isolated in
+  `Project.SwapElements.Address`, independent of either execution semantics.
+  The authoritative distinct-address and aliasing contracts remain in
+  `SmallStepSpec`; the legacy total-correctness file and opt-level equivalence
+  consume the neutral address layer only where their still-deferred
+  finite-trace migration requires it.
+  A first authoritative opt-level comparison now lives in
+  `Project.SwapElementsOpt3.SmallStepEquivalence`. It runs the real opt0
+  exported call chain and the real opt3 inlined export from the same concrete
+  two-word store, proves finite relational termination for both, and derives
+  `SmallStep.ObservationallyEquivOn` for the caller-visible array while
+  excluding opt0's private scratch traffic. The reusable
+  `runSteps_checked_terminates` bridge keeps the executable fuel inside the
+  proof and supports state-sensitive Boolean checks of the reached store.
+  The opt3 side now also has a universal authoritative Iris rule and physical
+  adequacy theorem. `opt3_func0_distinct_smallStep_wp` executes both generated
+  `geU` guards, both address calculations, both `i64.load`s, both
+  `i64.store`s, and the return; its store-level companion proves the two
+  reached physical words are exchanged for arbitrary owned stores. This added
+  the previously missing primitive `wp_geU` rule proved directly from
+  `SmallStep.Step.geU`.
+  `opt3_func0_terminates` separately constructs the complete symbolic finite
+  trace from relational `Step` constructors. Combining it with adequacy gives
+  `opt3_func0_distinct_store_terminatesWith`, a fuel-free universal total
+  contract whose postcondition reads the swapped words from the reached
+  physical memory. No legacy interpreter theorem is used on the opt3 side.
+- `Project.FloatReinterpret.Spec`: both pure reinterpret leaves now have
+  authoritative small-step Iris rules and closed `PartiallyMeets` theorems.
+  Their generated bit-manipulation callers for `f32.abs` and `f32.copysign`
+  are composed through the real saved call frames and likewise have closed
+  operational partial-correctness proofs. The frame-backed `f32.abs`
+  implementation now owns its concrete shadow-stack word and stack-pointer
+  global authoritatively, and its generated wrapper is composed through the
+  actual call frame; both have closed small-step partial-correctness theorems.
+  This migration also added the previously missing primitive Iris lifting
+  rules for `i32.or`, `f32.load`, `f32.store`, `f64.load`, and `f64.store`;
+  both store rules update physical memory and authoritative ghost bytes
+  together. The frame-backed `f64.abs` implementation now also has a closed
+  authoritative proof, and its promote/call/demote wrapper is composed through
+  the actual saved call frame. The frame-backed `f32.copysign` implementation
+  and its generated wrapper are now proved in the same style. All internal
+  functions in this module therefore have small-step proofs. The two exported
+  comparison functions use a proved combined authoritative heap: their outer
+  result word is at `1048572`, while calls made under the lowered stack pointer
+  use an inner `f64` scratch range at `1048552–1048559` (whose upper four bytes
+  are also the `f32` scratch word). Physical agreement, bounds, and typed
+  ownership decomposition are complete. Lowered-stack contextual rules now
+  compose `func0 → func1`, `func2 → func3`, and `func7 → func8` while framing
+  the other export resources. The overlapping inner `u64` ownership now has
+  proved split/merge rules for its two `u32` halves, and the bitwise `func9`
+  path is call-stack polymorphic. For `check_abs`, the shared result-load,
+  local-update, stack-pointer restoration, and return epilogue is proved, as
+  are both generated block exits (`0` via outer fallthrough and `1` via
+  `br 1`). Both comparisons are now connected to those exits. The complete
+  `check_abs` body covers stack-pointer lowering/restoration, both nested
+  blocks, both failure points, the successful `br 1`, and its result
+  epilogue. `check_copysign` is likewise complete through its frame-backed and
+  bit-manipulation calls and both administrative exit paths. Authoritative
+  heap/global/runtime adequacy gives closed `SmallStep.PartiallyMeets`
+  theorems for both exports.
+- `Project.FloatRound.Spec`: migration has started with a three-word
+  authoritative footprint covering the deepest callee scratch word, the
+  naive-round frame result, and the exported result. Physical agreement,
+  bounds, global agreement, and typed ownership decomposition are proved. The
+  optimized `f32.nearest` frame and wrapper have contextual small-step Iris
+  rules. A shared deep-frame rule now proves the generated `f32.trunc`,
+  `f32.ceil`, and `f32.floor` bodies at their concrete nested-frame address.
+  The four-block naive-round control flow is now complete as compositional
+  Iris rules: the positive-half branch executes the generated ceil call and
+  `br 2`, the negative-half branch executes the floor continuation, and the
+  neutral branch stores the truncation result and exits through `br 1`.
+  `func0` composes its stack-pointer prologue, truncation call, fraction
+  calculation, all four administrative frames, result epilogue, and return in
+  one call-stack-polymorphic rule. The exported comparison now composes that
+  arbitrary naive result with the optimized wrapper through both real call
+  frames, proves both boolean exits, restores the stack-pointer global, and
+  returns. Authoritative heap/global/runtime adequacy gives a closed
+  `SmallStep.PartiallyMeets` theorem for `check_round`.

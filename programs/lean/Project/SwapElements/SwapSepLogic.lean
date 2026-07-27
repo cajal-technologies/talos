@@ -1,25 +1,16 @@
 import Project.SwapElements.Program
-import Project.SwapElements.Spec
-import CodeLib.SepLogic.Adequacy
-import CodeLib.SepLogic.WasmWP
-import CodeLib.Entry
-import CodeLib.RustStd.Frame
+import CodeLib.SepLogic.SmallStepLifting
+import CodeLib.SepLogic.SmallStepAdequacy
 
-/-! # Swap Elements — Separation Logic Proof
+/-! # Swap Elements — iris-lean small-step proof
 
-End-to-end proof of `SwapElementsSpec` through the SepLogic layer.
-
-Call chain: func4 → func0 → func1 → func2 (and func4 → func3 for the
-fat-pointer spill). The leaves (func2, func3) are proved through the
-iris-lean pipeline: `wasm_heap_adequacy` enters the iProp world, the
-per-instruction `wp_wasm_*` rules step each instruction (with `ghost_id`
-discharging the — currently trivial — ghost-heap obligation), and
-`wp_wasm_prop_to_TerminatesWith` lowers the result to a spec-level
-statement. The callers (func0, func1, func4) compose at the Prop level:
-`wp_wasm_prop_of_exec_eq` hops over the already-traced straight-line (or
-bounds-check block) prefix to the `.call` site, and `wp_wasm_prop_call`
-splices in the callee's `TerminatesWith`. No concrete fuel values appear
-outside the hop offsets, which are fixed by the block nesting depth.
+The full generated call chain is proved directly with iris-lean `WP` over
+`Wasm.SmallStep.Step`: func4 → func3 and func4 → func0 → func1 → func2.
+Authoritative heap, global, and runtime ownership connects those rules to
+closed operational `PartiallyMeets` theorems. Separate contracts cover
+distinct and equal element addresses, so the alias case never duplicates an
+exclusive byte owner. Concrete export executions also carry finite-trace
+`SmallStep.TerminatesWith` witnesses from the executable step iterator.
 
 Key memory facts after the swap:
   final_mem = (st.mem
@@ -30,17 +21,1827 @@ Key memory facts after the swap:
     .write64(ptr + 8*j, vA))      -- func2: *ptr_b = temp
   where vA = st.mem.read64(ptr + 8*i), vB = st.mem.read64(ptr + 8*j).
 
-The `Mem.*_disjoint` framing lemmas (CodeLib.RustStd.Frame) show that
-addresses ≥ 1048576 other than ptr+8*i and ptr+8*j are unchanged by all
-these writes.
-
 The spec's global0 and pages-bound preconditions are load-bearing here:
 without `global 0 = 1048576` on entry, func4's scratch frame (`global 0 −
 16`) could alias the array and the swap postcondition would be false. -/
 
 namespace Project.SwapElements.SwapSepLogic
 
-open Iris Wasm Wasm.SepLogic Project.SwapElements.Spec
+open Iris Iris.ProgramLogic Language.Notation Std
+open Wasm Wasm.SepLogic
+
+set_option maxRecDepth 1048576
+
+private def func1OuterBody : Program :=
+  match func1 with
+  | .block _ _ body _ _ :: _ => body
+  | _ => []
+
+private def func1OuterContinuation : Program :=
+  match func1 with
+  | .block _ _ _ _ _ :: continuation => continuation
+  | _ => []
+
+private def func1MiddleBody : Program :=
+  match func1OuterBody with
+  | .block _ _ body _ _ :: _ => body
+  | _ => []
+
+private def func1MiddleContinuation : Program :=
+  match func1OuterBody with
+  | .block _ _ _ _ _ :: continuation => continuation
+  | _ => []
+
+private def func1InnerBody : Program :=
+  match func1MiddleBody with
+  | .block _ _ body _ _ :: _ => body
+  | _ => []
+
+private def func1OuterFrame : Wasm.SmallStep.ControlFrame :=
+  { kind := .block
+    paramArity := 0
+    resultArity := 0
+    body := func1OuterBody
+    continuation := func1OuterContinuation
+    belowStack := [] }
+
+set_option maxHeartbeats 4000000 in
+/-- The exact successful bounds-check prefix of generated `func1`. After
+twenty-eight instruction-level transitions, `i < len` and `j < len` select the
+outward branch to the real `call 2` continuation and leave `&arr[i]` in local
+slot five and `&arr[j]` on the operand stack. -/
+theorem func1_happyPrefix_smallStep_wp
+    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (ptr len i j : UInt32) (hi : i < len) (hj : j < len)
+    (calls : List Wasm.SmallStep.CallFrame) :
+    let addressI := (i <<< (3 % 32)) + ptr
+    let addressJ := (j <<< (3 % 32)) + ptr
+    ▷^[28] WP (Wasm.SmallStep.Expr.running
+      ⟨⟨[.i32 ptr, .i32 len, .i32 i, .i32 j, .i32 1048604],
+          [.i32 addressI], [.i32 addressJ, .i32 addressI]⟩,
+        [.call 2, .ret], 0, [], [func1OuterFrame], calls⟩ :
+        Wasm.SmallStep.Expr Unit) @ s; E {{ Φ }} ⊢
+    WP (Wasm.SmallStep.Expr.running
+      ⟨⟨[.i32 ptr, .i32 len, .i32 i, .i32 j, .i32 1048604],
+          [.i32 0], []⟩,
+        func1, 0, [], [], calls⟩ : Wasm.SmallStep.Expr Unit) @ s; E {{ Φ }} := by
+  dsimp only
+  iintro Htarget
+  simp only [func1]
+  iapply Wasm.SmallStep.wp_block
+  inext
+  iapply Wasm.SmallStep.wp_block
+  inext
+  iapply Wasm.SmallStep.wp_block
+  inext
+  iapply Wasm.SmallStep.wp_localGet rfl
+  inext
+  iapply Wasm.SmallStep.wp_localGet rfl
+  inext
+  iapply Wasm.SmallStep.wp_ltU (result := 1) (by simp [hi])
+  inext
+  iapply Wasm.SmallStep.wp_const
+  inext
+  iapply Wasm.SmallStep.wp_and
+  inext
+  rw [show (1 &&& 1 : UInt32) = 1 by decide]
+  iapply Wasm.SmallStep.wp_eqz (value := 1) (result := 0) rfl
+  inext
+  iapply Wasm.SmallStep.wp_brIfZero
+  inext
+  iapply Wasm.SmallStep.wp_localGet rfl
+  inext
+  iapply Wasm.SmallStep.wp_localGet rfl
+  inext
+  iapply Wasm.SmallStep.wp_const
+  inext
+  iapply Wasm.SmallStep.wp_shl
+  inext
+  iapply Wasm.SmallStep.wp_add
+  inext
+  iapply Wasm.SmallStep.wp_localSet rfl
+  inext
+  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
+    List.set]
+  iapply Wasm.SmallStep.wp_localGet rfl
+  inext
+  iapply Wasm.SmallStep.wp_localGet rfl
+  inext
+  iapply Wasm.SmallStep.wp_ltU (result := 1) (by simp [hj])
+  inext
+  iapply Wasm.SmallStep.wp_const
+  inext
+  iapply Wasm.SmallStep.wp_and
+  inext
+  rw [show (1 &&& 1 : UInt32) = 1 by decide]
+  iapply Wasm.SmallStep.wp_brIf (by decide) rfl
+  inext
+  simp only [List.take_nil, List.drop_nil, List.nil_append]
+  iapply Wasm.SmallStep.wp_localGet rfl
+  inext
+  iapply Wasm.SmallStep.wp_localGet rfl
+  inext
+  iapply Wasm.SmallStep.wp_localGet rfl
+  inext
+  iapply Wasm.SmallStep.wp_const
+  inext
+  iapply Wasm.SmallStep.wp_shl
+  inext
+  iapply Wasm.SmallStep.wp_add
+  inext
+  simp only [func1OuterFrame, func1OuterBody, func1OuterContinuation, func1]
+  iexact Htarget
+
+/-- The generated `call 2` transition reached by
+`func1_happyPrefix_smallStep_wp`. Runtime ownership proves that function index
+two is the concrete generated `func2Def`, and the installed call frame retains
+the outer bounds-check frame and `func1`'s final return continuation. -/
+theorem func1_call2_entry_smallStep_wp
+    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (ptr len i j : UInt32) (calls : List Wasm.SmallStep.CallFrame) :
+    let addressI := (i <<< (3 % 32)) + ptr
+    let addressJ := (j <<< (3 % 32)) + ptr
+    let caller : Wasm.SmallStep.CallFrame :=
+      { locals :=
+          ⟨[.i32 ptr, .i32 len, .i32 i, .i32 j, .i32 1048604],
+            [.i32 addressI], []⟩
+        continuation := [.ret]
+        resultArity := 0
+        callerRemainder := []
+        control := [func1OuterFrame] }
+    ▷ runtimeModuleOwn «module» -∗
+    ▷ (runtimeModuleOwn «module» -∗
+      WP (Wasm.SmallStep.Expr.running
+        ⟨⟨[.i32 addressI, .i32 addressJ], [.i32 0], []⟩,
+          func2, 0, [], [], caller :: calls⟩ :
+          Wasm.SmallStep.Expr Unit) @ s; E {{ Φ }}) -∗
+    WP (Wasm.SmallStep.Expr.running
+      ⟨⟨[.i32 ptr, .i32 len, .i32 i, .i32 j, .i32 1048604],
+          [.i32 addressI], [.i32 addressJ, .i32 addressI]⟩,
+        [.call 2, .ret], 0, [], [func1OuterFrame], calls⟩ :
+        Wasm.SmallStep.Expr Unit) @ s; E {{ Φ }} := by
+  dsimp only
+  simpa [func2Def, Function.toLocals, Function.numParams, ValueType.zero] using
+    (Wasm.SmallStep.wp_call (α := Unit) (s := s) (E := E)
+      (Φ := Φ)
+      (params := [.i32 ptr, .i32 len, .i32 i, .i32 j, .i32 1048604])
+      (localValues := [.i32 ((i <<< (3 % 32)) + ptr)])
+      (values :=
+        [.i32 ((j <<< (3 % 32)) + ptr),
+          .i32 ((i <<< (3 % 32)) + ptr)])
+      (code := [.ret]) (arity := 0) (remainder := [])
+      (controls := [func1OuterFrame]) (calls := calls)
+      «module» 2 func2Def (by decide) rfl)
+
+/-- The generated exchange leaf executed beneath `func1`'s concrete call
+frame. Its final `ret` resumes `func1`, whose own final `ret` then completes
+the top-level invocation. -/
+theorem func2_in_func1_context_smallStep_wp
+    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (R : IProp WasmHeapGF)
+    (ptr len i j : UInt32) (oldScratch oldA oldB : UInt64)
+    (hroomI : ((i <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296)
+    (hroomJ : ((j <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296)
+    (calls : List Wasm.SmallStep.CallFrame)
+    (hreturn :
+      R ∗ globalPointsTo 0 (.i32 1048560) ∗
+        pointsTo_u64 1048552 oldA ∗
+        pointsTo_u64 ((i <<< (3 % 32)) + ptr) oldB ∗
+        pointsTo_u64 ((j <<< (3 % 32)) + ptr) oldA ⊢
+      WP (Wasm.SmallStep.Expr.running
+        ⟨⟨[.i32 ptr, .i32 len, .i32 i, .i32 j, .i32 1048604],
+            [.i32 ((i <<< (3 % 32)) + ptr)], []⟩,
+          [.ret], 0, [], [func1OuterFrame], calls⟩ :
+          Wasm.SmallStep.Expr Unit) @ s; E {{ Φ }}) :
+    let addressI := (i <<< (3 % 32)) + ptr
+    let addressJ := (j <<< (3 % 32)) + ptr
+    let caller : Wasm.SmallStep.CallFrame :=
+      { locals :=
+          ⟨[.i32 ptr, .i32 len, .i32 i, .i32 j, .i32 1048604],
+            [.i32 addressI], []⟩
+        continuation := [.ret]
+        resultArity := 0
+        callerRemainder := []
+        control := [func1OuterFrame] }
+    R ∗ globalPointsTo 0 (.i32 1048560) ∗
+      pointsTo_u64 1048552 oldScratch ∗
+      pointsTo_u64 addressI oldA ∗ pointsTo_u64 addressJ oldB ⊢
+    WP (Wasm.SmallStep.Expr.running
+      ⟨⟨[.i32 addressI, .i32 addressJ], [.i32 0], []⟩,
+        func2, 0, [], [], caller :: calls⟩ :
+        Wasm.SmallStep.Expr Unit) @ s; E {{ Φ }} := by
+  dsimp only
+  iintro ⟨HR, Hresources⟩
+  simp only [func2]
+  iapply Wasm.SmallStep.wp_swapElementsFunc2Prefix
+    ((i <<< (3 % 32)) + ptr) ((j <<< (3 % 32)) + ptr)
+    oldScratch oldA oldB hroomI hroomJ
+  isplitl [Hresources]
+  · iexact Hresources
+  · inext
+    iintro Hresources
+    iapply Wasm.SmallStep.wp_returnFromCallExplicit
+    inext
+    simp only [List.take, List.nil_append]
+    iapply hreturn
+    iframe
+
+/-- Equal-index counterpart of `func2_in_func1_context_smallStep_wp`. The
+callee receives the same pointer twice, so one array-word owner is threaded
+sequentially through both loads and stores. -/
+theorem func2Alias_in_func1_context_smallStep_wp
+    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (R : IProp WasmHeapGF)
+    (ptr len i : UInt32) (oldScratch oldValue : UInt64)
+    (hroom : ((i <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296)
+    (calls : List Wasm.SmallStep.CallFrame)
+    (hreturn :
+      R ∗ globalPointsTo 0 (.i32 1048560) ∗
+        pointsTo_u64 1048552 oldValue ∗
+        pointsTo_u64 ((i <<< (3 % 32)) + ptr) oldValue ⊢
+      WP (Wasm.SmallStep.Expr.running
+        ⟨⟨[.i32 ptr, .i32 len, .i32 i, .i32 i, .i32 1048604],
+            [.i32 ((i <<< (3 % 32)) + ptr)], []⟩,
+          [.ret], 0, [], [func1OuterFrame], calls⟩ :
+          Wasm.SmallStep.Expr Unit) @ s; E {{ Φ }}) :
+    let address := (i <<< (3 % 32)) + ptr
+    R ∗ globalPointsTo 0 (.i32 1048560) ∗
+      pointsTo_u64 1048552 oldScratch ∗ pointsTo_u64 address oldValue ⊢
+    WP (Wasm.SmallStep.Expr.running
+      ⟨⟨[.i32 address, .i32 address], [.i32 0], []⟩,
+        func2, 0, [], [], {
+          locals :=
+            ⟨[.i32 ptr, .i32 len, .i32 i, .i32 i, .i32 1048604],
+              [.i32 address], []⟩
+          continuation := [.ret]
+          resultArity := 0
+          callerRemainder := []
+          control := [func1OuterFrame] } :: calls⟩ :
+        Wasm.SmallStep.Expr Unit) @ s; E {{ Φ }} := by
+  dsimp only
+  iintro ⟨HR, Hresources⟩
+  simp only [func2]
+  iapply Wasm.SmallStep.wp_swapElementsFunc2AliasPrefix
+    ((i <<< (3 % 32)) + ptr) oldScratch oldValue hroom
+  isplitl [Hresources]
+  · iexact Hresources
+  · inext
+    iintro Hresources
+    iapply Wasm.SmallStep.wp_returnFromCallExplicit
+    inext
+    simp only [List.take, List.nil_append]
+    iapply hreturn
+    iframe
+
+/-- Successful equal-index path of the generated bounds-checking wrapper. -/
+theorem func1_alias_context_smallStep_wp
+    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (R : IProp WasmHeapGF)
+    (ptr len i : UInt32) (oldScratch oldValue : UInt64)
+    (hi : i < len)
+    (hroom : ((i <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296)
+    (calls : List Wasm.SmallStep.CallFrame)
+    (hreturn :
+      R ∗ runtimeModuleOwn «module» ∗
+        globalPointsTo 0 (.i32 1048560) ∗
+        pointsTo_u64 1048552 oldValue ∗
+        pointsTo_u64 ((i <<< (3 % 32)) + ptr) oldValue ⊢
+      WP (Wasm.SmallStep.Expr.running
+        ⟨⟨[.i32 ptr, .i32 len, .i32 i, .i32 i, .i32 1048604],
+            [.i32 ((i <<< (3 % 32)) + ptr)], []⟩,
+          [.ret], 0, [], [func1OuterFrame], calls⟩ :
+          Wasm.SmallStep.Expr Unit) @ s; E {{ Φ }}) :
+    R ∗ runtimeModuleOwn «module» ∗
+      globalPointsTo 0 (.i32 1048560) ∗
+      pointsTo_u64 1048552 oldScratch ∗
+      pointsTo_u64 ((i <<< (3 % 32)) + ptr) oldValue ⊢
+    WP (Wasm.SmallStep.Expr.running
+      ⟨⟨[.i32 ptr, .i32 len, .i32 i, .i32 i, .i32 1048604],
+          [.i32 0], []⟩,
+        func1, 0, [], [], calls⟩ :
+        Wasm.SmallStep.Expr Unit) @ s; E {{ Φ }} := by
+  iintro ⟨HR, Hruntime, Hresources⟩
+  iapply func1_happyPrefix_smallStep_wp ptr len i i hi hi calls
+  inext
+  iapply func1_call2_entry_smallStep_wp ptr len i i calls $$ Hruntime
+  inext
+  iintro Hruntime
+  iapply func2Alias_in_func1_context_smallStep_wp
+    (iprop% R ∗ runtimeModuleOwn «module»)
+    ptr len i oldScratch oldValue hroom calls
+  · iintro ⟨⟨HR, Hruntime⟩, Hresources⟩
+    iapply hreturn
+    iframe
+  · iframe
+
+/-- Call-stack-polymorphic happy path of generated `func1`. The theorem stops
+at `func1`'s own final return, allowing callers to choose whether that return
+completes the execution or resumes another generated frame. -/
+theorem func1_happy_context_smallStep_wp
+    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (R : IProp WasmHeapGF)
+    (ptr len i j : UInt32) (oldScratch oldA oldB : UInt64)
+    (hi : i < len) (hj : j < len)
+    (hroomI : ((i <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296)
+    (hroomJ : ((j <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296)
+    (calls : List Wasm.SmallStep.CallFrame)
+    (hreturn :
+      R ∗ runtimeModuleOwn «module» ∗
+        globalPointsTo 0 (.i32 1048560) ∗
+        pointsTo_u64 1048552 oldA ∗
+        pointsTo_u64 ((i <<< (3 % 32)) + ptr) oldB ∗
+        pointsTo_u64 ((j <<< (3 % 32)) + ptr) oldA ⊢
+      WP (Wasm.SmallStep.Expr.running
+        ⟨⟨[.i32 ptr, .i32 len, .i32 i, .i32 j, .i32 1048604],
+            [.i32 ((i <<< (3 % 32)) + ptr)], []⟩,
+          [.ret], 0, [], [func1OuterFrame], calls⟩ :
+          Wasm.SmallStep.Expr Unit) @ s; E {{ Φ }}) :
+    let addressI := (i <<< (3 % 32)) + ptr
+    let addressJ := (j <<< (3 % 32)) + ptr
+    R ∗ runtimeModuleOwn «module» ∗
+      globalPointsTo 0 (.i32 1048560) ∗
+      pointsTo_u64 1048552 oldScratch ∗
+      pointsTo_u64 addressI oldA ∗ pointsTo_u64 addressJ oldB ⊢
+    WP (Wasm.SmallStep.Expr.running
+      ⟨⟨[.i32 ptr, .i32 len, .i32 i, .i32 j, .i32 1048604],
+          [.i32 0], []⟩,
+        func1, 0, [], [], calls⟩ : Wasm.SmallStep.Expr Unit) @ s; E {{ Φ }} := by
+  dsimp only
+  iintro ⟨HR, Hruntime, Hresources⟩
+  iapply func1_happyPrefix_smallStep_wp ptr len i j hi hj calls
+  inext
+  iapply func1_call2_entry_smallStep_wp ptr len i j calls $$ Hruntime
+  inext
+  iintro Hruntime
+  iapply func2_in_func1_context_smallStep_wp
+    (iprop% R ∗ runtimeModuleOwn «module»)
+    ptr len i j oldScratch oldA oldB hroomI hroomJ calls
+  · iintro ⟨⟨HR, Hruntime⟩, Hresources⟩
+    iapply hreturn
+    iframe
+  · iframe
+
+/-- End-to-end happy path of generated `func1`: both bounds checks succeed,
+the physical-runtime-checked direct call enters `func2`, the three words are
+exchanged, and both administrative returns are discharged. -/
+theorem func1_happy_smallStep_wp
+    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    (ptr len i j : UInt32) (oldScratch oldA oldB : UInt64)
+    (hi : i < len) (hj : j < len)
+    (hroomI : ((i <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296)
+    (hroomJ : ((j <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296) :
+    let addressI := (i <<< (3 % 32)) + ptr
+    let addressJ := (j <<< (3 % 32)) + ptr
+    runtimeModuleOwn «module» ∗
+      globalPointsTo 0 (.i32 1048560) ∗
+      pointsTo_u64 1048552 oldScratch ∗
+      pointsTo_u64 addressI oldA ∗ pointsTo_u64 addressJ oldB ⊢
+    WP (Wasm.SmallStep.Expr.running
+      ⟨⟨[.i32 ptr, .i32 len, .i32 i, .i32 j, .i32 1048604],
+          [.i32 0], []⟩,
+        func1, 0, [], [], []⟩ : Wasm.SmallStep.Expr Unit) @ s; E
+      {{ result, ⌜result = []⌝ ∗
+        globalPointsTo 0 (.i32 1048560) ∗
+        pointsTo_u64 1048552 oldA ∗
+        pointsTo_u64 addressI oldB ∗ pointsTo_u64 addressJ oldA }} := by
+  dsimp only
+  iintro Hresources
+  iapply func1_happy_context_smallStep_wp (iprop(True))
+    ptr len i j oldScratch oldA oldB hi hj hroomI hroomJ []
+  iintro ⟨_Htrue, Hruntime, Hresources⟩
+  iclear Hruntime
+  iapply Wasm.SmallStep.wp_returnFromFunction
+  inext
+  iapply wp_value'
+  isplitr
+  · ipureintro
+    rfl
+  · iexact Hresources
+  · isplitr
+    · itrivial
+    · iexact Hresources
+
+/-- The generated `func0` forwarding wrapper, composed through its real direct
+call frame. This remains contextual so the exported wrapper can suspend above
+it without duplicating any semantics. -/
+theorem func0_happy_context_smallStep_wp
+    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (R : IProp WasmHeapGF)
+    (ptr len i j : UInt32) (oldScratch oldA oldB : UInt64)
+    (hi : i < len) (hj : j < len)
+    (hroomI : ((i <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296)
+    (hroomJ : ((j <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296)
+    (calls : List Wasm.SmallStep.CallFrame)
+    (hreturn :
+      R ∗ runtimeModuleOwn «module» ∗
+        globalPointsTo 0 (.i32 1048560) ∗
+        pointsTo_u64 1048552 oldA ∗
+        pointsTo_u64 ((i <<< (3 % 32)) + ptr) oldB ∗
+        pointsTo_u64 ((j <<< (3 % 32)) + ptr) oldA ⊢
+      WP (Wasm.SmallStep.Expr.running
+        ⟨⟨[.i32 ptr, .i32 len, .i32 i, .i32 j], [], []⟩,
+          [.ret], 0, [], [], calls⟩ :
+          Wasm.SmallStep.Expr Unit) @ s; E {{ Φ }}) :
+    R ∗ runtimeModuleOwn «module» ∗
+      globalPointsTo 0 (.i32 1048560) ∗
+      pointsTo_u64 1048552 oldScratch ∗
+      pointsTo_u64 ((i <<< (3 % 32)) + ptr) oldA ∗
+      pointsTo_u64 ((j <<< (3 % 32)) + ptr) oldB ⊢
+    WP (Wasm.SmallStep.Expr.running
+      ⟨⟨[.i32 ptr, .i32 len, .i32 i, .i32 j], [], []⟩,
+        func0, 0, [], [], calls⟩ :
+        Wasm.SmallStep.Expr Unit) @ s; E {{ Φ }} := by
+  iintro ⟨HR, Hruntime, Hresources⟩
+  simp only [func0]
+  iapply Wasm.SmallStep.wp_localGet rfl
+  inext
+  iapply Wasm.SmallStep.wp_localGet rfl
+  inext
+  iapply Wasm.SmallStep.wp_localGet rfl
+  inext
+  iapply Wasm.SmallStep.wp_localGet rfl
+  inext
+  iapply Wasm.SmallStep.wp_const
+  inext
+  iapply Wasm.SmallStep.wp_call «module» 1 func1Def
+    (by simp [«module»]) (by simp [«module»]) $$ Hruntime
+  inext
+  iintro Hruntime
+  simp only [func1Def, Function.toLocals, Function.numParams,
+    List.length_cons, List.length_nil, Nat.reduceAdd, List.take, List.drop,
+    List.reverse_cons, List.reverse_nil, List.nil_append,
+    List.cons_append, List.map, ValueType.zero]
+  iapply func1_happy_context_smallStep_wp R
+    ptr len i j oldScratch oldA oldB hi hj hroomI hroomJ _
+  · iintro Hresources
+    iapply Wasm.SmallStep.wp_returnFromCallExplicit
+    inext
+    simp only [List.take, List.nil_append]
+    iapply hreturn
+    iexact Hresources
+  · iframe
+
+/-- Equal-index path of the generated forwarding wrapper. -/
+theorem func0_alias_context_smallStep_wp
+    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (R : IProp WasmHeapGF)
+    (ptr len i : UInt32) (oldScratch oldValue : UInt64)
+    (hi : i < len)
+    (hroom : ((i <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296)
+    (calls : List Wasm.SmallStep.CallFrame)
+    (hreturn :
+      R ∗ runtimeModuleOwn «module» ∗
+        globalPointsTo 0 (.i32 1048560) ∗
+        pointsTo_u64 1048552 oldValue ∗
+        pointsTo_u64 ((i <<< (3 % 32)) + ptr) oldValue ⊢
+      WP (Wasm.SmallStep.Expr.running
+        ⟨⟨[.i32 ptr, .i32 len, .i32 i, .i32 i], [], []⟩,
+          [.ret], 0, [], [], calls⟩ :
+          Wasm.SmallStep.Expr Unit) @ s; E {{ Φ }}) :
+    R ∗ runtimeModuleOwn «module» ∗
+      globalPointsTo 0 (.i32 1048560) ∗
+      pointsTo_u64 1048552 oldScratch ∗
+      pointsTo_u64 ((i <<< (3 % 32)) + ptr) oldValue ⊢
+    WP (Wasm.SmallStep.Expr.running
+      ⟨⟨[.i32 ptr, .i32 len, .i32 i, .i32 i], [], []⟩,
+        func0, 0, [], [], calls⟩ :
+        Wasm.SmallStep.Expr Unit) @ s; E {{ Φ }} := by
+  iintro ⟨HR, Hruntime, Hresources⟩
+  simp only [func0]
+  iapply Wasm.SmallStep.wp_localGet rfl
+  inext
+  iapply Wasm.SmallStep.wp_localGet rfl
+  inext
+  iapply Wasm.SmallStep.wp_localGet rfl
+  inext
+  iapply Wasm.SmallStep.wp_localGet rfl
+  inext
+  iapply Wasm.SmallStep.wp_const
+  inext
+  iapply Wasm.SmallStep.wp_call «module» 1 func1Def
+    (by simp [«module»]) (by simp [«module»]) $$ Hruntime
+  inext
+  iintro Hruntime
+  simp only [func1Def, Function.toLocals, Function.numParams,
+    List.length_cons, List.length_nil, Nat.reduceAdd, List.take, List.drop,
+    List.reverse_cons, List.reverse_nil, List.nil_append,
+    List.cons_append, List.map, ValueType.zero]
+  iapply func1_alias_context_smallStep_wp R
+    ptr len i oldScratch oldValue hi hroom _
+  · iintro Hresources
+    iapply Wasm.SmallStep.wp_returnFromCallExplicit
+    inext
+    simp only [List.take, List.nil_append]
+    iapply hreturn
+    iexact Hresources
+  · iframe
+
+/-- Top-level equal-index forwarding-wrapper contract. -/
+theorem func0_alias_smallStep_wp
+    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    (ptr len i : UInt32) (oldScratch oldValue : UInt64)
+    (hi : i < len)
+    (hroom : ((i <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296) :
+    runtimeModuleOwn «module» ∗
+      globalPointsTo 0 (.i32 1048560) ∗
+      pointsTo_u64 1048552 oldScratch ∗
+      pointsTo_u64 ((i <<< (3 % 32)) + ptr) oldValue ⊢
+    WP (Wasm.SmallStep.Expr.running
+      ⟨⟨[.i32 ptr, .i32 len, .i32 i, .i32 i], [], []⟩,
+        func0, 0, [], [], []⟩ :
+        Wasm.SmallStep.Expr Unit) @ s; E
+      {{ result, ⌜result = []⌝ ∗
+        globalPointsTo 0 (.i32 1048560) ∗
+        pointsTo_u64 1048552 oldValue ∗
+        pointsTo_u64 ((i <<< (3 % 32)) + ptr) oldValue }} := by
+  iintro Hresources
+  iapply func0_alias_context_smallStep_wp (iprop(True))
+    ptr len i oldScratch oldValue hi hroom []
+  · iintro ⟨_Htrue, Hruntime, Hresources⟩
+    iclear Hruntime
+    iapply Wasm.SmallStep.wp_returnFromFunction
+    inext
+    iapply wp_value'
+    isplitr
+    · ipureintro
+      rfl
+    · iexact Hresources
+  · isplitr
+    · itrivial
+    · iexact Hresources
+
+/-- Closed-WP form of the generated forwarding wrapper. -/
+theorem func0_happy_smallStep_wp
+    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    (ptr len i j : UInt32) (oldScratch oldA oldB : UInt64)
+    (hi : i < len) (hj : j < len)
+    (hroomI : ((i <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296)
+    (hroomJ : ((j <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296) :
+    runtimeModuleOwn «module» ∗
+      globalPointsTo 0 (.i32 1048560) ∗
+      pointsTo_u64 1048552 oldScratch ∗
+      pointsTo_u64 ((i <<< (3 % 32)) + ptr) oldA ∗
+      pointsTo_u64 ((j <<< (3 % 32)) + ptr) oldB ⊢
+    WP (Wasm.SmallStep.Expr.running
+      ⟨⟨[.i32 ptr, .i32 len, .i32 i, .i32 j], [], []⟩,
+        func0, 0, [], [], []⟩ :
+        Wasm.SmallStep.Expr Unit) @ s; E
+      {{ result, ⌜result = []⌝ ∗
+        globalPointsTo 0 (.i32 1048560) ∗
+        pointsTo_u64 1048552 oldA ∗
+        pointsTo_u64 ((i <<< (3 % 32)) + ptr) oldB ∗
+        pointsTo_u64 ((j <<< (3 % 32)) + ptr) oldA }} := by
+  iintro Hresources
+  iapply func0_happy_context_smallStep_wp (iprop(True))
+    ptr len i j oldScratch oldA oldB hi hj hroomI hroomJ []
+  iintro ⟨_Htrue, Hruntime, Hresources⟩
+  iclear Hruntime
+  iapply Wasm.SmallStep.wp_returnFromFunction
+  inext
+  iapply wp_value'
+  isplitr
+  · ipureintro
+    rfl
+  · iexact Hresources
+  · isplitr
+    · itrivial
+    · iexact Hresources
+
+/-- Small-step Iris proof for the generated `func2` exchange leaf. Global 0
+selects its scratch frame, while authoritative eight-byte ownership connects
+all three physical words to the operational `load64`/`store64` steps. -/
+theorem func2_smallStep_wp
+    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    (ptrA ptrB : UInt32) (oldScratch oldA oldB : UInt64)
+    (hroomA : ptrA.toNat + 8 ≤ 4294967296)
+    (hroomB : ptrB.toNat + 8 ≤ 4294967296) :
+    globalPointsTo 0 (.i32 1048560) ∗
+      pointsTo_u64 1048552 oldScratch ∗
+      pointsTo_u64 ptrA oldA ∗ pointsTo_u64 ptrB oldB ⊢
+    WP (Wasm.SmallStep.Expr.running
+      ⟨⟨[.i32 ptrA, .i32 ptrB], [.i32 0], []⟩,
+        func2, 0, [], [], []⟩ : Wasm.SmallStep.Expr Unit) @ s; E
+      {{ result, ⌜result = []⌝ ∗
+        globalPointsTo 0 (.i32 1048560) ∗
+        pointsTo_u64 1048552 oldA ∗
+        pointsTo_u64 ptrA oldB ∗ pointsTo_u64 ptrB oldA }} := by
+  simpa only [func2] using
+    (Wasm.SmallStep.wp_swapElementsFunc2
+      (α := Unit) (s := s) (E := E)
+      ptrA ptrB oldScratch oldA oldB hroomA hroomB)
+
+/-- Small-step Iris proof for the generated `func3` leaf. This is the first
+downstream swap proof that uses iris-lean's `WP` over `Wasm.SmallStep.Step`;
+the legacy theorem below remains temporarily because it additionally proves
+total termination and a large physical framing postcondition. -/
+theorem func3_context_smallStep_wp
+    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (R : IProp WasmHeapGF)
+    (oldPtr oldLen ptr len : UInt32)
+    (calls : List Wasm.SmallStep.CallFrame)
+    (hreturn :
+      R ∗ pointsTo_u32 1048568 ptr ∗ pointsTo_u32 1048572 len ⊢
+      WP (Wasm.SmallStep.Expr.running
+        ⟨⟨[.i32 1048568, .i32 ptr, .i32 len, .i32 1048652], [], []⟩,
+          [.ret], 0, [], [], calls⟩ :
+          Wasm.SmallStep.Expr Unit) @ s; E {{ Φ }}) :
+    R ∗ pointsTo_u32 1048568 oldPtr ∗ pointsTo_u32 1048572 oldLen ⊢
+    WP (Wasm.SmallStep.Expr.running
+      ⟨⟨[.i32 1048568, .i32 ptr, .i32 len, .i32 1048652], [], []⟩,
+        func3, 0, [], [], calls⟩ :
+        Wasm.SmallStep.Expr Unit) @ s; E {{ Φ }} := by
+  iintro ⟨HR, Hptr, Hlen⟩
+  simp only [func3]
+  iapply Wasm.SmallStep.wp_localGet rfl
+  inext
+  iapply Wasm.SmallStep.wp_localGet rfl
+  inext
+  ihave HlenLater :
+      ▷ pointsTo_u32 ((1048568 : UInt32) + 4) oldLen $$ [Hlen]
+  · inext
+    rw [show (1048568 : UInt32) + 4 = 1048572 from rfl]
+    iexact Hlen
+  iapply Wasm.SmallStep.wp_store32 oldLen rfl rfl rfl rfl $$ HlenLater
+  inext
+  iintro Hlen
+  iapply Wasm.SmallStep.wp_localGet rfl
+  inext
+  iapply Wasm.SmallStep.wp_localGet rfl
+  inext
+  ihave HptrLater :
+      ▷ pointsTo_u32 ((1048568 : UInt32) + 0) oldPtr $$ [Hptr]
+  · inext
+    rw [UInt32.add_zero]
+    iexact Hptr
+  iapply Wasm.SmallStep.wp_store32 oldPtr rfl rfl rfl rfl $$ HptrLater
+  inext
+  iintro Hptr
+  iapply hreturn
+  rw [UInt32.add_zero,
+    ← show (1048568 : UInt32) + 4 = 1048572 from rfl]
+  iframe
+
+theorem func3_smallStep_wp
+    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    (oldPtr oldLen ptr len : UInt32) :
+    pointsTo_u32 1048568 oldPtr ∗ pointsTo_u32 1048572 oldLen ⊢
+    WP (Wasm.SmallStep.Expr.running
+      ⟨⟨[.i32 1048568, .i32 ptr, .i32 len, .i32 1048652], [], []⟩,
+        func3, 0, [], [], []⟩ : Wasm.SmallStep.Expr Unit) @ s; E
+      {{ result, ⌜result = []⌝ ∗
+        pointsTo_u32 1048568 ptr ∗ pointsTo_u32 1048572 len }} := by
+  simpa only [func3] using
+    (Wasm.SmallStep.wp_swapElementsFunc3
+      (α := Unit) (s := s) (E := E) oldPtr oldLen ptr len)
+
+/-- Successful exported path through the generated stack frame, spill helper,
+forwarding wrapper, bounds checks, and exchange leaf. The postcondition keeps
+the complete touched footprint so the subsequent adequacy theorem can connect
+every ghost cell back to physical Wasm memory. -/
+theorem func4_happy_smallStep_wp
+    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    (ptr len i j oldSpillPtr oldSpillLen : UInt32)
+    (oldScratch oldA oldB : UInt64)
+    (hi : i < len) (hj : j < len)
+    (hroomI : ((i <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296)
+    (hroomJ : ((j <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296) :
+    runtimeModuleOwn «module» ∗
+      globalPointsTo 0 (.i32 1048576) ∗
+      pointsTo_u64 1048552 oldScratch ∗
+      pointsTo_u32 1048568 oldSpillPtr ∗
+      pointsTo_u32 1048572 oldSpillLen ∗
+      pointsTo_u64 ((i <<< (3 % 32)) + ptr) oldA ∗
+      pointsTo_u64 ((j <<< (3 % 32)) + ptr) oldB ⊢
+    WP (Wasm.SmallStep.Expr.running
+      ⟨⟨[.i32 ptr, .i32 len, .i32 i, .i32 j],
+          [.i32 0, .i32 0, .i32 0], []⟩,
+        func4, 0, [], [], []⟩ :
+        Wasm.SmallStep.Expr Unit) @ s; E
+      {{ result, ⌜result = []⌝ ∗
+        globalPointsTo 0 (.i32 1048576) ∗
+        pointsTo_u64 1048552 oldA ∗
+        pointsTo_u32 1048568 ptr ∗ pointsTo_u32 1048572 len ∗
+        pointsTo_u64 ((i <<< (3 % 32)) + ptr) oldB ∗
+        pointsTo_u64 ((j <<< (3 % 32)) + ptr) oldA }} := by
+  iintro ⟨Hruntime, Hglobal, Hscratch, HspillPtr, HspillLen, HA, HB⟩
+  simp only [func4]
+  iapply Wasm.SmallStep.wp_globalGet $$ Hglobal
+  inext
+  iintro Hglobal
+  iapply Wasm.SmallStep.wp_const
+  inext
+  iapply Wasm.SmallStep.wp_sub
+  inext
+  iapply Wasm.SmallStep.wp_localSet rfl
+  inext
+  simp only [UInt32.reduceSub, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub, List.set]
+  iapply Wasm.SmallStep.wp_localGet rfl
+  inext
+  ihave HglobalLater : ▷ globalPointsTo 0 (.i32 1048576) $$ [Hglobal]
+  · inext
+    iexact Hglobal
+  iapply Wasm.SmallStep.wp_globalSet $$ HglobalLater
+  inext
+  iintro Hglobal
+  iapply Wasm.SmallStep.wp_const
+  inext
+  iapply Wasm.SmallStep.wp_localSet rfl
+  inext
+  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
+    List.set]
+  iapply Wasm.SmallStep.wp_localGet rfl
+  inext
+  iapply Wasm.SmallStep.wp_const
+  inext
+  iapply Wasm.SmallStep.wp_add
+  inext
+  iapply Wasm.SmallStep.wp_localGet rfl
+  inext
+  iapply Wasm.SmallStep.wp_localGet rfl
+  inext
+  iapply Wasm.SmallStep.wp_localGet rfl
+  inext
+  iapply Wasm.SmallStep.wp_call «module» 3 func3Def
+    (by simp [«module»]) (by simp [«module»]) $$ Hruntime
+  inext
+  iintro Hruntime
+  simp [func3Def, Function.toLocals, Function.numParams]
+  iapply func3_context_smallStep_wp
+    (iprop% runtimeModuleOwn «module» ∗ globalPointsTo 0 (.i32 1048560) ∗
+      pointsTo_u64 1048552 oldScratch ∗
+      pointsTo_u64 ((i <<< (3 % 32)) + ptr) oldA ∗
+      pointsTo_u64 ((j <<< (3 % 32)) + ptr) oldB)
+    oldSpillPtr oldSpillLen ptr len _
+  · iintro ⟨Hrest, HspillPtr, HspillLen⟩
+    icases Hrest with ⟨Hruntime, Hglobal, Hscratch, HA, HB⟩
+    iapply Wasm.SmallStep.wp_returnFromCallExplicit
+    inext
+    simp only [List.take, List.nil_append]
+    iapply Wasm.SmallStep.wp_localGet rfl
+    inext
+    ihave HlenLater :
+        ▷ pointsTo_u32 ((1048560 : UInt32) + 12) len $$ [HspillLen]
+    · inext
+      rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
+      iexact HspillLen
+    iapply Wasm.SmallStep.wp_load32 len
+      (by decide) (by decide) (by decide) (by decide) $$ HlenLater
+    inext
+    iintro HspillLen
+    iapply Wasm.SmallStep.wp_localSet rfl
+    inext
+    simp only [List.length_cons, List.length_nil, Nat.reduceAdd,
+      Nat.reduceSub, List.set]
+    iapply Wasm.SmallStep.wp_localGet rfl
+    inext
+    ihave HptrLater :
+        ▷ pointsTo_u32 ((1048560 : UInt32) + 8) ptr $$ [HspillPtr]
+    · inext
+      rw [show (1048560 : UInt32) + 8 = 1048568 by decide]
+      iexact HspillPtr
+    iapply Wasm.SmallStep.wp_load32 ptr
+      (by decide) (by decide) (by decide) (by decide) $$ HptrLater
+    inext
+    iintro HspillPtr
+    iapply Wasm.SmallStep.wp_localGet rfl
+    inext
+    iapply Wasm.SmallStep.wp_localGet rfl
+    inext
+    iapply Wasm.SmallStep.wp_localGet rfl
+    inext
+    iapply Wasm.SmallStep.wp_call «module» 0 func0Def
+      (by simp [«module»]) (by simp [«module»]) $$ Hruntime
+    inext
+    iintro Hruntime
+    simp [func0Def, Function.toLocals, Function.numParams]
+    iapply func0_happy_context_smallStep_wp
+      (iprop% pointsTo_u32 1048568 ptr ∗ pointsTo_u32 1048572 len)
+      ptr len i j oldScratch oldA oldB hi hj hroomI hroomJ _
+    · iintro ⟨⟨HspillPtr, HspillLen⟩,
+        Hruntime, Hglobal, Hscratch, HA, HB⟩
+      iapply Wasm.SmallStep.wp_returnFromCallExplicit
+      inext
+      simp only [List.take, List.nil_append]
+      iapply Wasm.SmallStep.wp_localGet rfl
+      inext
+      iapply Wasm.SmallStep.wp_const
+      inext
+      iapply Wasm.SmallStep.wp_add
+      inext
+      ihave HglobalLater :
+          ▷ globalPointsTo 0 (.i32 1048560) $$ [Hglobal]
+      · inext
+        iexact Hglobal
+      iapply Wasm.SmallStep.wp_globalSet $$ HglobalLater
+      inext
+      iintro Hglobal
+      rw [show (16 : UInt32) + 1048560 = 1048576 by decide]
+      rw [show (3 % 32 : UInt32) = 3 by decide]
+      iapply Wasm.SmallStep.wp_returnFromFunction
+      inext
+      iapply wp_value'
+      isplitr
+      · ipureintro
+        rfl
+      · iframe
+    · rw [show (3 % 32 : UInt32) = 3 by decide]
+      iframe
+  · rw [show (3 % 32 : UInt32) = 3 by decide]
+    iframe
+
+/-- Equal-index exported path. The generated stack-frame mechanics are
+identical to `func4_happy_smallStep_wp`, but the nested exchange uses the
+one-cell alias contract. -/
+theorem func4_alias_smallStep_wp
+    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    (ptr len i oldSpillPtr oldSpillLen : UInt32)
+    (oldScratch oldValue : UInt64)
+    (hi : i < len)
+    (hroom : ((i <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296) :
+    runtimeModuleOwn «module» ∗
+      globalPointsTo 0 (.i32 1048576) ∗
+      pointsTo_u64 1048552 oldScratch ∗
+      pointsTo_u32 1048568 oldSpillPtr ∗
+      pointsTo_u32 1048572 oldSpillLen ∗
+      pointsTo_u64 ((i <<< (3 % 32)) + ptr) oldValue ⊢
+    WP (Wasm.SmallStep.Expr.running
+      ⟨⟨[.i32 ptr, .i32 len, .i32 i, .i32 i],
+          [.i32 0, .i32 0, .i32 0], []⟩,
+        func4, 0, [], [], []⟩ :
+        Wasm.SmallStep.Expr Unit) @ s; E
+      {{ result, ⌜result = []⌝ ∗
+        globalPointsTo 0 (.i32 1048576) ∗
+        pointsTo_u64 1048552 oldValue ∗
+        pointsTo_u32 1048568 ptr ∗ pointsTo_u32 1048572 len ∗
+        pointsTo_u64 ((i <<< (3 % 32)) + ptr) oldValue }} := by
+  iintro ⟨Hruntime, Hglobal, Hscratch, HspillPtr, HspillLen, Hcell⟩
+  simp only [func4]
+  iapply Wasm.SmallStep.wp_globalGet $$ Hglobal
+  inext
+  iintro Hglobal
+  iapply Wasm.SmallStep.wp_const
+  inext
+  iapply Wasm.SmallStep.wp_sub
+  inext
+  iapply Wasm.SmallStep.wp_localSet rfl
+  inext
+  simp only [UInt32.reduceSub, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub, List.set]
+  iapply Wasm.SmallStep.wp_localGet rfl
+  inext
+  ihave HglobalLater : ▷ globalPointsTo 0 (.i32 1048576) $$ [Hglobal]
+  · inext
+    iexact Hglobal
+  iapply Wasm.SmallStep.wp_globalSet $$ HglobalLater
+  inext
+  iintro Hglobal
+  iapply Wasm.SmallStep.wp_const
+  inext
+  iapply Wasm.SmallStep.wp_localSet rfl
+  inext
+  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
+    List.set]
+  iapply Wasm.SmallStep.wp_localGet rfl
+  inext
+  iapply Wasm.SmallStep.wp_const
+  inext
+  iapply Wasm.SmallStep.wp_add
+  inext
+  iapply Wasm.SmallStep.wp_localGet rfl
+  inext
+  iapply Wasm.SmallStep.wp_localGet rfl
+  inext
+  iapply Wasm.SmallStep.wp_localGet rfl
+  inext
+  iapply Wasm.SmallStep.wp_call «module» 3 func3Def
+    (by simp [«module»]) (by simp [«module»]) $$ Hruntime
+  inext
+  iintro Hruntime
+  simp [func3Def, Function.toLocals, Function.numParams]
+  iapply func3_context_smallStep_wp
+    (iprop% runtimeModuleOwn «module» ∗ globalPointsTo 0 (.i32 1048560) ∗
+      pointsTo_u64 1048552 oldScratch ∗
+      pointsTo_u64 ((i <<< (3 % 32)) + ptr) oldValue)
+    oldSpillPtr oldSpillLen ptr len _
+  · iintro ⟨Hrest, HspillPtr, HspillLen⟩
+    icases Hrest with ⟨Hruntime, Hglobal, Hscratch, Hcell⟩
+    iapply Wasm.SmallStep.wp_returnFromCallExplicit
+    inext
+    simp only [List.take, List.nil_append]
+    iapply Wasm.SmallStep.wp_localGet rfl
+    inext
+    ihave HlenLater :
+        ▷ pointsTo_u32 ((1048560 : UInt32) + 12) len $$ [HspillLen]
+    · inext
+      rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
+      iexact HspillLen
+    iapply Wasm.SmallStep.wp_load32 len
+      (by decide) (by decide) (by decide) (by decide) $$ HlenLater
+    inext
+    iintro HspillLen
+    iapply Wasm.SmallStep.wp_localSet rfl
+    inext
+    simp only [List.length_cons, List.length_nil, Nat.reduceAdd,
+      Nat.reduceSub, List.set]
+    iapply Wasm.SmallStep.wp_localGet rfl
+    inext
+    ihave HptrLater :
+        ▷ pointsTo_u32 ((1048560 : UInt32) + 8) ptr $$ [HspillPtr]
+    · inext
+      rw [show (1048560 : UInt32) + 8 = 1048568 by decide]
+      iexact HspillPtr
+    iapply Wasm.SmallStep.wp_load32 ptr
+      (by decide) (by decide) (by decide) (by decide) $$ HptrLater
+    inext
+    iintro HspillPtr
+    iapply Wasm.SmallStep.wp_localGet rfl
+    inext
+    iapply Wasm.SmallStep.wp_localGet rfl
+    inext
+    iapply Wasm.SmallStep.wp_localGet rfl
+    inext
+    iapply Wasm.SmallStep.wp_call «module» 0 func0Def
+      (by simp [«module»]) (by simp [«module»]) $$ Hruntime
+    inext
+    iintro Hruntime
+    simp [func0Def, Function.toLocals, Function.numParams]
+    iapply func0_alias_context_smallStep_wp
+      (iprop% pointsTo_u32 1048568 ptr ∗ pointsTo_u32 1048572 len)
+      ptr len i oldScratch oldValue hi hroom _
+    · iintro ⟨⟨HspillPtr, HspillLen⟩,
+        Hruntime, Hglobal, Hscratch, Hcell⟩
+      iapply Wasm.SmallStep.wp_returnFromCallExplicit
+      inext
+      simp only [List.take, List.nil_append]
+      iapply Wasm.SmallStep.wp_localGet rfl
+      inext
+      iapply Wasm.SmallStep.wp_const
+      inext
+      iapply Wasm.SmallStep.wp_add
+      inext
+      ihave HglobalLater :
+          ▷ globalPointsTo 0 (.i32 1048560) $$ [Hglobal]
+      · inext
+        iexact Hglobal
+      iapply Wasm.SmallStep.wp_globalSet $$ HglobalLater
+      inext
+      iintro Hglobal
+      rw [show (16 : UInt32) + 1048560 = 1048576 by decide]
+      rw [show (3 % 32 : UInt32) = 3 by decide]
+      iapply Wasm.SmallStep.wp_returnFromFunction
+      inext
+      iapply wp_value'
+      isplitr
+      · ipureintro
+        rfl
+      · iframe
+    · rw [show (3 % 32 : UInt32) = 3 by decide]
+      iframe
+  · rw [show (3 % 32 : UInt32) = 3 by decide]
+    iframe
+
+/-! ## Parameterized authoritative export contract -/
+
+def func4ConfigFromStore (wasm : Store Unit)
+    (ptr len i j : UInt32) : Wasm.SmallStep.Config Unit :=
+  { expr := .running
+      ⟨⟨[.i32 ptr, .i32 len, .i32 i, .i32 j],
+          [.i32 0, .i32 0, .i32 0], []⟩,
+        func4, 0, [], [], []⟩
+    store :=
+      { runtime := { module := «module», host := {} }
+        wasm := wasm } }
+
+/-- Fully parameterized distinct-address partial correctness. The footprint
+decomposition is the separation-logic form of disjointness: it is impossible
+to supply two exclusive `u64` owners for overlapping bytes. -/
+theorem func4_distinct_store_partiallyMeets
+    (wasm : Store Unit) (ptr len i j : UInt32)
+    (oldSpillPtr oldSpillLen : UInt32)
+    (oldScratch oldA oldB : UInt64)
+    (σ : WasmHeapMap (Option UInt8))
+    (globalσ : WasmGlobalMap Value)
+    (hi : i < len) (hj : j < len)
+    (hroomI : ((i <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296)
+    (hroomJ : ((j <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296)
+    (hagree : heapAgreesWithMem σ wasm.mem)
+    (hinBounds : heapAddressesInBounds σ wasm.mem)
+    (hglobals : globalHeapAgrees globalσ wasm.globals)
+    (hresources : ∀ [WasmHeapGS],
+      ([∗map] address ↦ value ∈ σ,
+        pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+          address (DFrac.own 1) value) ⊢
+      pointsTo_u64 1048552 oldScratch ∗
+      pointsTo_u32 1048568 oldSpillPtr ∗
+      pointsTo_u32 1048572 oldSpillLen ∗
+      pointsTo_u64 ((i <<< (3 % 32)) + ptr) oldA ∗
+      pointsTo_u64 ((j <<< (3 % 32)) + ptr) oldB)
+    (hglobalOwn : ∀ [WasmGlobalGS],
+      ([∗map] index ↦ value ∈ globalσ,
+        globalPointsTo index value) ⊢
+      globalPointsTo 0 (.i32 1048576)) :
+    Wasm.SmallStep.PartiallyMeets
+      (func4ConfigFromStore wasm ptr len i j)
+      (fun values store =>
+        values = [] ∧
+          store.wasm.mem.read64 ((i <<< (3 % 32)) + ptr) = oldB ∧
+          store.wasm.mem.read64 ((j <<< (3 % 32)) + ptr) = oldA) := by
+  let addressI := (i <<< (3 % 32)) + ptr
+  let addressJ := (j <<< (3 % 32)) + ptr
+  have hroomI' : addressI.toNat + 8 ≤ 4294967296 := by
+    simpa [addressI] using hroomI
+  have hroomJ' : addressJ.toNat + 8 ≤ 4294967296 := by
+    simpa [addressJ] using hroomJ
+  have hi1 : (addressI + 1).toNat = addressI.toNat + 1 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap addressI 1
+      (by omega) (by omega)
+  have hi2 : (addressI + 2).toNat = addressI.toNat + 2 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap addressI 2 (by omega) (by omega)
+  have hi3 : (addressI + 3).toNat = addressI.toNat + 3 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap addressI 3 (by omega) (by omega)
+  have hi4 : (addressI + 4).toNat = addressI.toNat + 4 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap addressI 4 (by omega) (by omega)
+  have hi5 : (addressI + 5).toNat = addressI.toNat + 5 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap addressI 5 (by omega) (by omega)
+  have hi6 : (addressI + 6).toNat = addressI.toNat + 6 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap addressI 6 (by omega) (by omega)
+  have hi7 : (addressI + 7).toNat = addressI.toNat + 7 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap addressI 7 (by omega) (by omega)
+  have hj1 : (addressJ + 1).toNat = addressJ.toNat + 1 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 1 (by omega) (by omega)
+  have hj2 : (addressJ + 2).toNat = addressJ.toNat + 2 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 2 (by omega) (by omega)
+  have hj3 : (addressJ + 3).toNat = addressJ.toNat + 3 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 3 (by omega) (by omega)
+  have hj4 : (addressJ + 4).toNat = addressJ.toNat + 4 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 4 (by omega) (by omega)
+  have hj5 : (addressJ + 5).toNat = addressJ.toNat + 5 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 5 (by omega) (by omega)
+  have hj6 : (addressJ + 6).toNat = addressJ.toNat + 6 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 6 (by omega) (by omega)
+  have hj7 : (addressJ + 7).toNat = addressJ.toNat + 7 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 7 (by omega) (by omega)
+  apply
+    Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_store_partiallyMeets.{0}
+      (α := Unit) (σ := σ) (globalσ := globalσ)
+  · exact hagree
+  · exact hinBounds
+  · exact hglobals
+  · intro gs
+    iintro ⟨Hheap, Hglobals, Hruntime⟩
+    ihave Hresources := hresources $$ Hheap
+    ihave Hglobal := hglobalOwn $$ Hglobals
+    icases Hresources with
+      ⟨Hscratch, HspillPtr, HspillLen, HA, HB⟩
+    have hpost : ∀ values : List Value,
+        (iprop% ⌜values = []⌝ ∗
+          globalPointsTo 0 (.i32 1048576) ∗
+          pointsTo_u64 1048552 oldA ∗
+          pointsTo_u32 1048568 ptr ∗ pointsTo_u32 1048572 len ∗
+          pointsTo_u64 addressI oldB ∗ pointsTo_u64 addressJ oldA) ⊢
+        (iprop% ∀ (store : Wasm.SmallStep.MachineStore Unit)
+            (_observations : List Wasm.SmallStep.StepKind),
+          stateInterp (GF := WasmHeapGF) store 0 [] 0 -∗
+          ⌜values = [] ∧ store.wasm.mem.read64 addressI = oldB ∧
+            store.wasm.mem.read64 addressJ = oldA⌝) := by
+      intro values
+      iintro ⟨%hvalues, _Hglobal, _Hscratch,
+        _HspillPtr, _HspillLen, HA, HB⟩
+        %store %_observations Hstate
+      imod Wasm.SmallStep.stateInterp_pointsTo_u64_facts_frame
+        store 0 [] 0 addressI oldB hi1 hi2 hi3 hi4 hi5 hi6 hi7 $$
+          [$Hstate $HA] with ⟨Hstate, _HA, %HfactsI⟩
+      imod Wasm.SmallStep.stateInterp_pointsTo_u64_facts
+        store 0 [] 0 addressJ oldA hj1 hj2 hj3 hj4 hj5 hj6 hj7 $$
+          [$Hstate $HB] with %HfactsJ
+      ipureintro
+      exact ⟨hvalues, HfactsI.1, HfactsJ.1⟩
+    iapply wp_mono hpost
+    simp only [func4ConfigFromStore]
+    iapply func4_happy_smallStep_wp
+      ptr len i j oldSpillPtr oldSpillLen oldScratch oldA oldB
+      hi hj hroomI hroomJ
+    iframe
+
+/-- Fully parameterized equal-index partial correctness.  This version needs
+only one exclusive array-word owner and proves that the reached physical word
+is unchanged. -/
+theorem func4_alias_store_partiallyMeets
+    (wasm : Store Unit) (ptr len i : UInt32)
+    (oldSpillPtr oldSpillLen : UInt32)
+    (oldScratch oldValue : UInt64)
+    (σ : WasmHeapMap (Option UInt8))
+    (globalσ : WasmGlobalMap Value)
+    (hi : i < len)
+    (hroom : ((i <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296)
+    (hagree : heapAgreesWithMem σ wasm.mem)
+    (hinBounds : heapAddressesInBounds σ wasm.mem)
+    (hglobals : globalHeapAgrees globalσ wasm.globals)
+    (hresources : ∀ [WasmHeapGS],
+      ([∗map] address ↦ value ∈ σ,
+        pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+          address (DFrac.own 1) value) ⊢
+      pointsTo_u64 1048552 oldScratch ∗
+      pointsTo_u32 1048568 oldSpillPtr ∗
+      pointsTo_u32 1048572 oldSpillLen ∗
+      pointsTo_u64 ((i <<< (3 % 32)) + ptr) oldValue)
+    (hglobalOwn : ∀ [WasmGlobalGS],
+      ([∗map] index ↦ value ∈ globalσ,
+        globalPointsTo index value) ⊢
+      globalPointsTo 0 (.i32 1048576)) :
+    Wasm.SmallStep.PartiallyMeets
+      (func4ConfigFromStore wasm ptr len i i)
+      (fun values store =>
+        values = [] ∧
+          store.wasm.mem.read64 ((i <<< (3 % 32)) + ptr) = oldValue) := by
+  let address := (i <<< (3 % 32)) + ptr
+  have hroom' : address.toNat + 8 ≤ 4294967296 := by
+    simpa [address] using hroom
+  have h1 : (address + 1).toNat = address.toNat + 1 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap address 1 (by omega) (by omega)
+  have h2 : (address + 2).toNat = address.toNat + 2 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap address 2 (by omega) (by omega)
+  have h3 : (address + 3).toNat = address.toNat + 3 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap address 3 (by omega) (by omega)
+  have h4 : (address + 4).toNat = address.toNat + 4 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap address 4 (by omega) (by omega)
+  have h5 : (address + 5).toNat = address.toNat + 5 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap address 5 (by omega) (by omega)
+  have h6 : (address + 6).toNat = address.toNat + 6 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap address 6 (by omega) (by omega)
+  have h7 : (address + 7).toNat = address.toNat + 7 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap address 7 (by omega) (by omega)
+  apply
+    Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_store_partiallyMeets.{0}
+      (α := Unit) (σ := σ) (globalσ := globalσ)
+  · exact hagree
+  · exact hinBounds
+  · exact hglobals
+  · intro gs
+    iintro ⟨Hheap, Hglobals, Hruntime⟩
+    ihave Hresources := hresources $$ Hheap
+    ihave Hglobal := hglobalOwn $$ Hglobals
+    icases Hresources with
+      ⟨Hscratch, HspillPtr, HspillLen, Hcell⟩
+    have hpost : ∀ values : List Value,
+        (iprop% ⌜values = []⌝ ∗
+          globalPointsTo 0 (.i32 1048576) ∗
+          pointsTo_u64 1048552 oldValue ∗
+          pointsTo_u32 1048568 ptr ∗ pointsTo_u32 1048572 len ∗
+          pointsTo_u64 address oldValue) ⊢
+        (iprop% ∀ (store : Wasm.SmallStep.MachineStore Unit)
+            (_observations : List Wasm.SmallStep.StepKind),
+          stateInterp (GF := WasmHeapGF) store 0 [] 0 -∗
+          ⌜values = [] ∧
+            store.wasm.mem.read64 address = oldValue⌝) := by
+      intro values
+      iintro ⟨%hvalues, _Hglobal, _Hscratch,
+        _HspillPtr, _HspillLen, Hcell⟩
+        %store %_observations Hstate
+      imod Wasm.SmallStep.stateInterp_pointsTo_u64_facts
+        store 0 [] 0 address oldValue h1 h2 h3 h4 h5 h6 h7 $$
+          [$Hstate $Hcell] with %Hfacts
+      ipureintro
+      exact ⟨hvalues, Hfacts.1⟩
+    iapply wp_mono hpost
+    simp only [func4ConfigFromStore]
+    iapply func4_alias_smallStep_wp
+      ptr len i oldSpillPtr oldSpillLen oldScratch oldValue hi hroom
+    iframe
+
+/-! ## Closed authoritative small-step execution of the spill helper -/
+
+private theorem emptyHeap_agrees (memory : Mem) :
+    heapAgreesWithMem (∅ : WasmHeapMap (Option UInt8)) memory := by
+  intro address value hget
+  rw [get?_empty] at hget
+  contradiction
+
+private theorem emptyHeap_inBounds (memory : Mem) :
+    heapAddressesInBounds (∅ : WasmHeapMap (Option UInt8)) memory := by
+  intro address value hget
+  rw [get?_empty] at hget
+  contradiction
+
+def func3Config (ptr len : UInt32) : Wasm.SmallStep.Config Unit :=
+  { expr := .running
+      ⟨⟨[.i32 1048568, .i32 ptr, .i32 len, .i32 1048652], [], []⟩,
+        func3, 0, [], [], []⟩
+    store :=
+      { runtime := { module := «module», host := {} }
+        wasm := «module».initialStore } }
+
+def func3Heap : WasmHeapMap (Option UInt8) :=
+  store32Heap (store32Heap ∅ 1048568 0) 1048572 0
+
+private def func3Mem (memory : Mem) : Mem :=
+  (memory.write32 1048568 0).write32 1048572 0
+
+private theorem func3_initialMem_eq :
+    func3Mem («module».initialStore : Store Unit).mem =
+      («module».initialStore : Store Unit).mem := by
+  unfold func3Mem
+  rw [Mem.write32_eq_self (by decide) (by decide) (by decide) (by decide)]
+  rw [Mem.write32_eq_self (by decide) (by decide) (by decide) (by decide)]
+
+theorem func3Heap_agrees (ptr len : UInt32) :
+    heapAgreesWithMem func3Heap (func3Config ptr len).store.wasm.mem := by
+  change heapAgreesWithMem func3Heap
+    («module».initialStore : Store Unit).mem
+  rw [← func3_initialMem_eq]
+  unfold func3Heap func3Mem
+  apply store32_sound <;> try rfl
+  apply store32_sound <;> try rfl
+  exact emptyHeap_agrees _
+
+theorem func3Heap_inBounds (ptr len : UInt32) :
+    heapAddressesInBounds func3Heap
+      (func3Config ptr len).store.wasm.mem := by
+  change heapAddressesInBounds func3Heap
+    («module».initialStore : Store Unit).mem
+  rw [← func3_initialMem_eq]
+  unfold func3Heap func3Mem
+  apply store32_inBounds <;> try rfl
+  · apply store32_inBounds <;> try rfl
+    · exact emptyHeap_inBounds _
+    · decide
+  · decide
+
+theorem func3Heap_pointsTo [WasmHeapGS] :
+    ([∗map] address ↦ value ∈ func3Heap,
+      pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+        address (DFrac.own 1) value) ⊢
+      pointsTo_u32 1048568 0 ∗ pointsTo_u32 1048572 0 := by
+  unfold func3Heap
+  iintro Hheap
+  ihave Houter := store32Heap_pointsTo
+    (store32Heap ∅ 1048568 0) 1048572 0
+    (by decide) (by decide) (by decide) (by decide)
+    (by decide) (by decide) (by decide) $$ Hheap
+  icases Houter with ⟨Hlen, Hheap⟩
+  ihave Hinner := store32Heap_pointsTo
+    (∅ : WasmHeapMap (Option UInt8)) 1048568 0
+    (by decide) (by decide) (by decide) (by decide)
+    (by decide) (by decide) (by decide) $$ Hheap
+  icases Hinner with ⟨Hptr, Hempty⟩
+  iframe
+
+/-- The spill helper's existing instruction proof, closed through iris-lean
+adequacy and the authoritative physical byte interpretation. -/
+theorem func3_smallStep (ptr len : UInt32) :
+    Wasm.SmallStep.PartiallyMeets (func3Config ptr len)
+      (fun values _store => values = []) := by
+  apply Wasm.SmallStep.adequate_to_partiallyMeets
+  apply Wasm.SmallStep.wasm_smallStep_heap_adequacy.{0}
+    (α := Unit) (σ := func3Heap)
+    (φ := fun values => values = [])
+  · exact func3Heap_agrees ptr len
+  · exact func3Heap_inBounds ptr len
+  · intro gs
+    iintro Hheap
+    ihave Hwords := func3Heap_pointsTo $$ Hheap
+    icases Hwords with ⟨Hptr, Hlen⟩
+    have hpost : ∀ values : List Value,
+        (iprop% ⌜values = []⌝ ∗
+          pointsTo_u32 1048568 ptr ∗ pointsTo_u32 1048572 len) ⊢
+        (iprop% ⌜values = []⌝) := by
+      intro values
+      iintro ⟨%hvalues, _Hptr, _Hlen⟩
+      ipureintro
+      exact hvalues
+    iapply wp_mono hpost
+    simp only [func3Config]
+    iapply func3_smallStep_wp (s := Stuckness.NotStuck) (E := ⊤)
+      0 0 ptr len
+    iframe
+
+/-! ## Closed exported two-element example -/
+
+def func4ExampleHeap : WasmHeapMap (Option UInt8) :=
+  store64Heap
+    (store64Heap
+      (store32Heap
+        (store32Heap (store64Heap ∅ 1048552 0) 1048568 0)
+        1048572 0)
+      0 11)
+    8 22
+
+private def func4ExampleMem (memory : Mem) : Mem :=
+  ((((memory.write64 1048552 0).write32 1048568 0).write32 1048572 0
+    ).write64 0 11).write64 8 22
+
+def func4ExampleConfig : Wasm.SmallStep.Config Unit :=
+  let initial : Store Unit := «module».initialStore
+  { expr := .running
+      ⟨⟨[.i32 0, .i32 2, .i32 0, .i32 1],
+          [.i32 0, .i32 0, .i32 0], []⟩,
+        func4, 0, [], [], []⟩
+    store :=
+      { runtime := { module := «module», host := {} }
+        wasm := { initial with mem := func4ExampleMem initial.mem } } }
+
+def func4ExampleGlobals : WasmGlobalMap Value :=
+  insert ∅ 0 (.i32 1048576)
+
+theorem func4ExampleHeap_agrees :
+    heapAgreesWithMem func4ExampleHeap
+      func4ExampleConfig.store.wasm.mem := by
+  unfold func4ExampleHeap func4ExampleConfig func4ExampleMem
+  apply store64_sound <;> try rfl
+  apply store64_sound <;> try rfl
+  apply store32_sound <;> try rfl
+  apply store32_sound <;> try rfl
+  apply store64_sound <;> try rfl
+  exact emptyHeap_agrees _
+
+theorem func4ExampleHeap_inBounds :
+    heapAddressesInBounds func4ExampleHeap
+      func4ExampleConfig.store.wasm.mem := by
+  unfold func4ExampleHeap func4ExampleConfig func4ExampleMem
+  apply store64_inBounds <;> try rfl
+  · apply store64_inBounds <;> try rfl
+    · apply store32_inBounds <;> try rfl
+      · apply store32_inBounds <;> try rfl
+        · apply store64_inBounds <;> try rfl
+          · exact emptyHeap_inBounds _
+          · decide
+        · decide
+      · decide
+    · decide
+  · decide
+
+theorem func4ExampleGlobals_agree :
+    globalHeapAgrees func4ExampleGlobals
+      func4ExampleConfig.store.wasm.globals := by
+  intro index value hget
+  simp only [func4ExampleGlobals] at hget
+  by_cases hindex : index = 0
+  · subst index
+    simp only [get?_insert_eq rfl] at hget
+    obtain rfl := Option.some.inj hget
+    rfl
+  · rw [get?_insert_ne (Ne.symm hindex), get?_empty] at hget
+    contradiction
+
+theorem func4ExampleHeap_pointsTo [WasmHeapGS] :
+    ([∗map] address ↦ value ∈ func4ExampleHeap,
+      pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+        address (DFrac.own 1) value) ⊢
+      pointsTo_u64 1048552 0 ∗
+      pointsTo_u32 1048568 0 ∗ pointsTo_u32 1048572 0 ∗
+      pointsTo_u64 0 11 ∗ pointsTo_u64 8 22 := by
+  unfold func4ExampleHeap
+  iintro Hheap
+  ihave H8 := store64Heap_pointsTo _ 8 22
+    (by decide) (by decide) (by decide) (by decide)
+    (by decide) (by decide) (by decide) (by decide) $$ Hheap
+  icases H8 with ⟨H8, Hheap⟩
+  ihave H0 := store64Heap_pointsTo _ 0 11
+    (by decide) (by decide) (by decide) (by decide)
+    (by decide) (by decide) (by decide) (by decide) $$ Hheap
+  icases H0 with ⟨H0, Hheap⟩
+  ihave Hlen := store32Heap_pointsTo _ 1048572 0
+    (by decide) (by decide) (by decide) (by decide)
+    (by decide) (by decide) (by decide) $$ Hheap
+  icases Hlen with ⟨Hlen, Hheap⟩
+  ihave Hptr := store32Heap_pointsTo _ 1048568 0
+    (by decide) (by decide) (by decide) (by decide)
+    (by decide) (by decide) (by decide) $$ Hheap
+  icases Hptr with ⟨Hptr, Hheap⟩
+  ihave Hscratch := store64Heap_pointsTo
+    (∅ : WasmHeapMap (Option UInt8)) 1048552 0
+    (by decide) (by decide) (by decide) (by decide)
+    (by decide) (by decide) (by decide) (by decide) $$ Hheap
+  icases Hscratch with ⟨Hscratch, Hempty⟩
+  iframe
+
+theorem func4ExampleGlobals_pointsTo [WasmGlobalGS] :
+    ([∗map] index ↦ value ∈ func4ExampleGlobals,
+      globalPointsTo index value) ⊢
+      globalPointsTo 0 (.i32 1048576) := by
+  unfold func4ExampleGlobals
+  rw [(BI.BigSepM.bigSepM_insert (get?_empty 0)).to_eq,
+    BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
+  exact .rfl
+
+/-- The real exported swap executes under the authoritative small-step
+semantics on a concrete two-element array and returns normally. -/
+theorem func4Example_smallStep :
+    Wasm.SmallStep.PartiallyMeets func4ExampleConfig
+      (fun values _store => values = []) := by
+  apply Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_partiallyMeets.{0}
+    (α := Unit) (σ := func4ExampleHeap)
+    (globalσ := func4ExampleGlobals)
+    (φ := fun values => values = [])
+  · exact func4ExampleHeap_agrees
+  · exact func4ExampleHeap_inBounds
+  · exact func4ExampleGlobals_agree
+  · intro gs
+    iintro ⟨Hheap, Hglobals, Hruntime⟩
+    ihave Hwords := func4ExampleHeap_pointsTo $$ Hheap
+    ihave Hglobal := func4ExampleGlobals_pointsTo $$ Hglobals
+    icases Hwords with ⟨Hscratch, HspillPtr, HspillLen, H0, H8⟩
+    have hpost : ∀ values : List Value,
+        (iprop% ⌜values = []⌝ ∗
+          globalPointsTo 0 (.i32 1048576) ∗
+          pointsTo_u64 1048552 11 ∗
+          pointsTo_u32 1048568 0 ∗ pointsTo_u32 1048572 2 ∗
+          pointsTo_u64 0 22 ∗ pointsTo_u64 8 11) ⊢
+        (iprop% ⌜values = []⌝) := by
+      intro values
+      iintro ⟨%hvalues, _Hresources⟩
+      ipureintro
+      exact hvalues
+    iapply wp_mono hpost
+    simp only [func4ExampleConfig]
+    have hfunc4 := func4_happy_smallStep_wp
+      (s := Stuckness.NotStuck) (E := ⊤)
+      0 2 0 1 0 0 0 11 22
+      (by decide) (by decide) (by decide) (by decide)
+    simp only [
+      show ((0 : UInt32) <<< (3 % 32)) + 0 = 0 by decide,
+      show ((1 : UInt32) <<< (3 % 32)) + 0 = 8 by decide] at hfunc4
+    iapply hfunc4
+    iframe
+
+/-- State-sensitive adequacy for the distinct-index export example proves
+both sides of the physical swap in the reached `MachineStore`. -/
+theorem func4Example_store_smallStep :
+    Wasm.SmallStep.PartiallyMeets func4ExampleConfig
+      (fun values store =>
+        values = [] ∧ store.wasm.mem.read64 0 = 22 ∧
+          store.wasm.mem.read64 8 = 11) := by
+  apply
+    Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_store_partiallyMeets.{0}
+      (α := Unit) (σ := func4ExampleHeap)
+      (globalσ := func4ExampleGlobals)
+  · exact func4ExampleHeap_agrees
+  · exact func4ExampleHeap_inBounds
+  · exact func4ExampleGlobals_agree
+  · intro gs
+    iintro ⟨Hheap, Hglobals, Hruntime⟩
+    ihave Hwords := func4ExampleHeap_pointsTo $$ Hheap
+    ihave Hglobal := func4ExampleGlobals_pointsTo $$ Hglobals
+    icases Hwords with ⟨Hscratch, HspillPtr, HspillLen, H0, H8⟩
+    have hpost : ∀ values : List Value,
+        (iprop% ⌜values = []⌝ ∗
+          globalPointsTo 0 (.i32 1048576) ∗
+          pointsTo_u64 1048552 11 ∗
+          pointsTo_u32 1048568 0 ∗ pointsTo_u32 1048572 2 ∗
+          pointsTo_u64 0 22 ∗ pointsTo_u64 8 11) ⊢
+        (iprop% ∀ (store : Wasm.SmallStep.MachineStore Unit)
+            (_observations : List Wasm.SmallStep.StepKind),
+          stateInterp (GF := WasmHeapGF) store 0 [] 0 -∗
+          ⌜values = [] ∧ store.wasm.mem.read64 0 = 22 ∧
+            store.wasm.mem.read64 8 = 11⌝) := by
+      intro values
+      iintro ⟨%hvalues, _Hglobal, _Hscratch,
+        _HspillPtr, _HspillLen, H0, H8⟩
+        %store %_observations Hstate
+      imod Wasm.SmallStep.stateInterp_pointsTo_u64_facts_frame
+        store 0 [] 0 0 22
+        (by decide) (by decide) (by decide) (by decide)
+        (by decide) (by decide) (by decide) $$
+          [$Hstate $H0] with ⟨Hstate, _H0, %Hfacts0⟩
+      imod Wasm.SmallStep.stateInterp_pointsTo_u64_facts
+        store 0 [] 0 8 11
+        (by decide) (by decide) (by decide) (by decide)
+        (by decide) (by decide) (by decide) $$
+          [$Hstate $H8] with %Hfacts8
+      ipureintro
+      exact ⟨hvalues, Hfacts0.1, Hfacts8.1⟩
+    iapply wp_mono hpost
+    simp only [func4ExampleConfig]
+    have hfunc4 := func4_happy_smallStep_wp
+      (s := Stuckness.NotStuck) (E := ⊤)
+      0 2 0 1 0 0 0 11 22
+      (by decide) (by decide) (by decide) (by decide)
+    simp only [
+      show ((0 : UInt32) <<< (3 % 32)) + 0 = 0 by decide,
+      show ((1 : UInt32) <<< (3 % 32)) + 0 = 8 by decide] at hfunc4
+    iapply hfunc4
+    iframe
+
+/-- Executable finite-trace witness complementing the Iris partial-correctness
+proof for the distinct-index export example. -/
+theorem func4Example_terminates :
+    Wasm.SmallStep.TerminatesWith func4ExampleConfig
+      (fun values _store => values = []) := by
+  apply Wasm.SmallStep.runSteps_values_terminates (fuel := 200)
+  native_decide
+
+def func4AliasHeap : WasmHeapMap (Option UInt8) :=
+  store64Heap
+    (store32Heap
+      (store32Heap (store64Heap ∅ 1048552 0) 1048568 0)
+      1048572 0)
+    0 42
+
+private def func4AliasMem (memory : Mem) : Mem :=
+  (((memory.write64 1048552 0).write32 1048568 0).write32 1048572 0
+    ).write64 0 42
+
+def func4AliasConfig : Wasm.SmallStep.Config Unit :=
+  let initial : Store Unit := «module».initialStore
+  { expr := .running
+      ⟨⟨[.i32 0, .i32 1, .i32 0, .i32 0],
+          [.i32 0, .i32 0, .i32 0], []⟩,
+        func4, 0, [], [], []⟩
+    store :=
+      { runtime := { module := «module», host := {} }
+        wasm := { initial with mem := func4AliasMem initial.mem } } }
+
+theorem func4AliasHeap_agrees :
+    heapAgreesWithMem func4AliasHeap
+      func4AliasConfig.store.wasm.mem := by
+  unfold func4AliasHeap func4AliasConfig func4AliasMem
+  apply store64_sound <;> try rfl
+  apply store32_sound <;> try rfl
+  apply store32_sound <;> try rfl
+  apply store64_sound <;> try rfl
+  exact emptyHeap_agrees _
+
+theorem func4AliasHeap_inBounds :
+    heapAddressesInBounds func4AliasHeap
+      func4AliasConfig.store.wasm.mem := by
+  unfold func4AliasHeap func4AliasConfig func4AliasMem
+  apply store64_inBounds <;> try rfl
+  · apply store32_inBounds <;> try rfl
+    · apply store32_inBounds <;> try rfl
+      · apply store64_inBounds <;> try rfl
+        · exact emptyHeap_inBounds _
+        · decide
+      · decide
+    · decide
+  · decide
+
+theorem func4AliasHeap_pointsTo [WasmHeapGS] :
+    ([∗map] address ↦ value ∈ func4AliasHeap,
+      pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+        address (DFrac.own 1) value) ⊢
+      pointsTo_u64 1048552 0 ∗
+      pointsTo_u32 1048568 0 ∗ pointsTo_u32 1048572 0 ∗
+      pointsTo_u64 0 42 := by
+  unfold func4AliasHeap
+  iintro Hheap
+  ihave Hcell := store64Heap_pointsTo _ 0 42
+    (by decide) (by decide) (by decide) (by decide)
+    (by decide) (by decide) (by decide) (by decide) $$ Hheap
+  icases Hcell with ⟨Hcell, Hheap⟩
+  ihave Hlen := store32Heap_pointsTo _ 1048572 0
+    (by decide) (by decide) (by decide) (by decide)
+    (by decide) (by decide) (by decide) $$ Hheap
+  icases Hlen with ⟨Hlen, Hheap⟩
+  ihave Hptr := store32Heap_pointsTo _ 1048568 0
+    (by decide) (by decide) (by decide) (by decide)
+    (by decide) (by decide) (by decide) $$ Hheap
+  icases Hptr with ⟨Hptr, Hheap⟩
+  ihave Hscratch := store64Heap_pointsTo
+    (∅ : WasmHeapMap (Option UInt8)) 1048552 0
+    (by decide) (by decide) (by decide) (by decide)
+    (by decide) (by decide) (by decide) (by decide) $$ Hheap
+  icases Hscratch with ⟨Hscratch, Hempty⟩
+  iframe
+
+/-- The exported wrapper also closes in the equal-index case from one array
+word of authoritative ownership. -/
+theorem func4Alias_smallStep :
+    Wasm.SmallStep.PartiallyMeets func4AliasConfig
+      (fun values _store => values = []) := by
+  apply Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_partiallyMeets.{0}
+    (α := Unit) (σ := func4AliasHeap)
+    (globalσ := func4ExampleGlobals)
+    (φ := fun values => values = [])
+  · exact func4AliasHeap_agrees
+  · exact func4AliasHeap_inBounds
+  · exact func4ExampleGlobals_agree
+  · intro gs
+    iintro ⟨Hheap, Hglobals, Hruntime⟩
+    ihave Hwords := func4AliasHeap_pointsTo $$ Hheap
+    ihave Hglobal := func4ExampleGlobals_pointsTo $$ Hglobals
+    icases Hwords with ⟨Hscratch, HspillPtr, HspillLen, Hcell⟩
+    have hpost : ∀ values : List Value,
+        (iprop% ⌜values = []⌝ ∗
+          globalPointsTo 0 (.i32 1048576) ∗
+          pointsTo_u64 1048552 42 ∗
+          pointsTo_u32 1048568 0 ∗ pointsTo_u32 1048572 1 ∗
+          pointsTo_u64 0 42) ⊢
+        (iprop% ⌜values = []⌝) := by
+      intro values
+      iintro ⟨%hvalues, _Hresources⟩
+      ipureintro
+      exact hvalues
+    iapply wp_mono hpost
+    simp only [func4AliasConfig]
+    have halias := func4_alias_smallStep_wp
+      (s := Stuckness.NotStuck) (E := ⊤)
+      0 1 0 0 0 0 42 (by decide) (by decide)
+    simp only [
+      show ((0 : UInt32) <<< (3 % 32)) + 0 = 0 by decide] at halias
+    iapply halias
+    iframe
+
+/-- State-sensitive adequacy for the exported equal-index case: the physical
+array word in the reached `MachineStore` is unchanged. -/
+theorem func4Alias_store_smallStep :
+    Wasm.SmallStep.PartiallyMeets func4AliasConfig
+      (fun values store =>
+        values = [] ∧ store.wasm.mem.read64 0 = 42) := by
+  apply
+    Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_store_partiallyMeets.{0}
+      (α := Unit) (σ := func4AliasHeap)
+      (globalσ := func4ExampleGlobals)
+  · exact func4AliasHeap_agrees
+  · exact func4AliasHeap_inBounds
+  · exact func4ExampleGlobals_agree
+  · intro gs
+    iintro ⟨Hheap, Hglobals, Hruntime⟩
+    ihave Hwords := func4AliasHeap_pointsTo $$ Hheap
+    ihave Hglobal := func4ExampleGlobals_pointsTo $$ Hglobals
+    icases Hwords with ⟨Hscratch, HspillPtr, HspillLen, Hcell⟩
+    have hpost : ∀ values : List Value,
+        (iprop% ⌜values = []⌝ ∗
+          globalPointsTo 0 (.i32 1048576) ∗
+          pointsTo_u64 1048552 42 ∗
+          pointsTo_u32 1048568 0 ∗ pointsTo_u32 1048572 1 ∗
+          pointsTo_u64 0 42) ⊢
+        (iprop% ∀ (store : Wasm.SmallStep.MachineStore Unit)
+            (_observations : List Wasm.SmallStep.StepKind),
+          stateInterp (GF := WasmHeapGF) store 0 [] 0 -∗
+          ⌜values = [] ∧ store.wasm.mem.read64 0 = 42⌝) := by
+      intro values
+      iintro ⟨%hvalues, _Hglobal, _Hscratch,
+        _HspillPtr, _HspillLen, Hcell⟩
+        %store %_observations Hstate
+      imod Wasm.SmallStep.stateInterp_pointsTo_u64_facts
+        store 0 [] 0 0 42
+        (by decide) (by decide) (by decide) (by decide)
+        (by decide) (by decide) (by decide) $$
+          [$Hstate $Hcell] with %Hfacts
+      ipureintro
+      exact ⟨hvalues, Hfacts.1⟩
+    iapply wp_mono hpost
+    simp only [func4AliasConfig]
+    have halias := func4_alias_smallStep_wp
+      (s := Stuckness.NotStuck) (E := ⊤)
+      0 1 0 0 0 0 42 (by decide) (by decide)
+    simp only [
+      show ((0 : UInt32) <<< (3 % 32)) + 0 = 0 by decide] at halias
+    iapply halias
+    iframe
+
+/-- Executable finite-trace witness for the equal-index export example. -/
+theorem func4Alias_terminates :
+    Wasm.SmallStep.TerminatesWith func4AliasConfig
+      (fun values _store => values = []) := by
+  apply Wasm.SmallStep.runSteps_values_terminates (fuel := 200)
+  native_decide
+
+/-! ## Closed equal-index example -/
+
+def func0AliasHeap : WasmHeapMap (Option UInt8) :=
+  store64Heap (store64Heap ∅ 1048552 0) 0 42
+
+def func0AliasConfig : Wasm.SmallStep.Config Unit :=
+  let initial : Store Unit := «module».initialStore
+  { expr := .running
+      ⟨⟨[.i32 0, .i32 1, .i32 0, .i32 0], [], []⟩,
+        func0, 0, [], [], []⟩
+    store :=
+      { runtime := { module := «module», host := {} }
+        wasm :=
+          { initial with
+            mem := (initial.mem.write64 1048552 0).write64 0 42
+            globals := { globals := [Value.i32 1048560] } } } }
+
+def func0AliasGlobals : WasmGlobalMap Value :=
+  insert ∅ 0 (.i32 1048560)
+
+theorem func0AliasHeap_agrees :
+    heapAgreesWithMem func0AliasHeap
+      func0AliasConfig.store.wasm.mem := by
+  unfold func0AliasHeap func0AliasConfig
+  apply store64_sound <;> try rfl
+  apply store64_sound <;> try rfl
+  exact emptyHeap_agrees _
+
+theorem func0AliasHeap_inBounds :
+    heapAddressesInBounds func0AliasHeap
+      func0AliasConfig.store.wasm.mem := by
+  unfold func0AliasHeap func0AliasConfig
+  apply store64_inBounds <;> try rfl
+  · apply store64_inBounds <;> try rfl
+    · exact emptyHeap_inBounds _
+    · decide
+  · decide
+
+theorem func0AliasGlobals_agree :
+    globalHeapAgrees func0AliasGlobals
+      func0AliasConfig.store.wasm.globals := by
+  intro index value hget
+  simp only [func0AliasGlobals] at hget
+  by_cases hindex : index = 0
+  · subst index
+    simp only [get?_insert_eq rfl] at hget
+    obtain rfl := Option.some.inj hget
+    rfl
+  · rw [get?_insert_ne (Ne.symm hindex), get?_empty] at hget
+    contradiction
+
+theorem func0AliasHeap_pointsTo [WasmHeapGS] :
+    ([∗map] address ↦ value ∈ func0AliasHeap,
+      pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+        address (DFrac.own 1) value) ⊢
+      pointsTo_u64 1048552 0 ∗ pointsTo_u64 0 42 := by
+  unfold func0AliasHeap
+  iintro Hheap
+  ihave Hcell := store64Heap_pointsTo _ 0 42
+    (by decide) (by decide) (by decide) (by decide)
+    (by decide) (by decide) (by decide) (by decide) $$ Hheap
+  icases Hcell with ⟨Hcell, Hheap⟩
+  ihave Hscratch := store64Heap_pointsTo
+    (∅ : WasmHeapMap (Option UInt8)) 1048552 0
+    (by decide) (by decide) (by decide) (by decide)
+    (by decide) (by decide) (by decide) (by decide) $$ Hheap
+  icases Hscratch with ⟨Hscratch, Hempty⟩
+  iframe
+
+theorem func0AliasGlobals_pointsTo [WasmGlobalGS] :
+    ([∗map] index ↦ value ∈ func0AliasGlobals,
+      globalPointsTo index value) ⊢
+      globalPointsTo 0 (.i32 1048560) := by
+  unfold func0AliasGlobals
+  rw [(BI.BigSepM.bigSepM_insert (get?_empty 0)).to_eq,
+    BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
+  exact .rfl
+
+/-- Same-index swapping is a real one-cell execution, not a degenerate proof
+that duplicates exclusive ownership. -/
+theorem func0Alias_smallStep :
+    Wasm.SmallStep.PartiallyMeets func0AliasConfig
+      (fun values _store => values = []) := by
+  apply Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_partiallyMeets.{0}
+    (α := Unit) (σ := func0AliasHeap)
+    (globalσ := func0AliasGlobals)
+    (φ := fun values => values = [])
+  · exact func0AliasHeap_agrees
+  · exact func0AliasHeap_inBounds
+  · exact func0AliasGlobals_agree
+  · intro gs
+    iintro ⟨Hheap, Hglobals, Hruntime⟩
+    ihave Hwords := func0AliasHeap_pointsTo $$ Hheap
+    ihave Hglobal := func0AliasGlobals_pointsTo $$ Hglobals
+    icases Hwords with ⟨Hscratch, Hcell⟩
+    have hpost : ∀ values : List Value,
+        (iprop% ⌜values = []⌝ ∗
+          globalPointsTo 0 (.i32 1048560) ∗
+          pointsTo_u64 1048552 42 ∗ pointsTo_u64 0 42) ⊢
+        (iprop% ⌜values = []⌝) := by
+      intro values
+      iintro ⟨%hvalues, _Hresources⟩
+      ipureintro
+      exact hvalues
+    iapply wp_mono hpost
+    simp only [func0AliasConfig]
+    have halias := func0_alias_smallStep_wp
+      (s := Stuckness.NotStuck) (E := ⊤)
+      0 1 0 0 42 (by decide) (by decide)
+    simp only [
+      show ((0 : UInt32) <<< (3 % 32)) + 0 = 0 by decide] at halias
+    iapply halias
+    iframe
+
+/- The former custom `wp_wasm`/big-step proof block lived below this point.
+It is retained temporarily as commented migration history while the public
+`TerminatesWith` statement in `Spec.lean` is moved to the finite-trace
+small-step API. It is no longer elaborated and no legacy SepLogic module is
+imported by this file.
 
 -- func3 spills ptr/len into the 8-byte slot at [1048568, 1048575]
 -- body: write32(1048572, len) then write32(1048568, ptr)
@@ -505,5 +2306,6 @@ theorem swap_spec_sep : SwapElementsSpec := by
           · rw [hread3_ne (elemAddr ptr k) (by rw [helemK]; omega)]
   exact wp_wasm_prop_to_TerminatesWith hf₄ himp₄ rfl (Nat.le_refl _)
     (fun _ _ h => ⟨rfl, h.2⟩) hwp
+-/
 
 end Project.SwapElements.SwapSepLogic

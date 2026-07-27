@@ -38,36 +38,10 @@ theorem shiftAmount_norm (b : UInt32) :
   simp; bv_decide
 
 /-- The emitted nonzero-divisor guard prefix used before unsigned division and
-remainder. -/
+remainder. Contextual small-step proofs consume its instructions with the
+primitive iris-lean lifting rules. -/
 abbrev nonzeroGuard (i : Nat) : Program :=
   [.localGet i, .constI64 0, .eqI64, .const 1, .and, .br_if 0]
-
-/-- The opt-0 unsigned-division guard falls through unchanged when the divisor
-local is a nonzero `u64`. -/
-theorem nonzeroGuardWp {α : Type} {m : Module} {env : HostEnv α} {Q : Assertion α}
-    {st : Store α} {P L : List Value} {rest : Program}
-    (i : Nat) (b : UInt64) (vs : List Value)
-    (hget : (⟨P, L, vs⟩ : Locals).get i = some (.i64 b)) (hb : b ≠ 0) :
-    wp m (nonzeroGuard i ++ rest)
-      Q st ⟨P, L, vs⟩ env ↔
-    wp m rest Q st ⟨P, L, vs⟩ env := by
-  have h10 : (1 : UInt32) &&& 0 = 0 := by decide
-  simp only [nonzeroGuard, List.cons_append, List.nil_append, wp_localGet_cons, hget,
-    wp_constI64_cons, wp_eqI64_cons, hb, ↓reduceIte, wp_const_cons, wp_and_cons,
-    wp_br_if_cons, h10]
-
-/-- Cons-form restatement of `nonzeroGuardWp`, for `rw`/`simp` at an inlined,
-flat (generated) program where the guard is spelled out instead of appearing as
-`nonzeroGuard i ++ …`. Same fact, different program shape — the way `*_seq`
-relates to `*_chunk`. -/
-theorem nonzeroGuardSeq {α : Type} {m : Module} {env : HostEnv α} {Q : Assertion α}
-    {st : Store α} {P L : List Value} {rest : Program}
-    (i : Nat) (b : UInt64) (vs : List Value)
-    (hget : (⟨P, L, vs⟩ : Locals).get i = some (.i64 b)) (hb : b ≠ 0) :
-    wp m (.localGet i :: .constI64 0 :: .eqI64 :: .const 1 :: .and :: .br_if 0 :: rest)
-      Q st ⟨P, L, vs⟩ env ↔
-    wp m rest Q st ⟨P, L, vs⟩ env :=
-  nonzeroGuardWp i b vs hget hb
 
 end U64
 

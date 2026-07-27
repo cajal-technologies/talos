@@ -223,7 +223,11 @@ theorem wp_call_host_cons {m : Module} {env : HostEnv α}
                        ++ s.values.drop imp.params.length } env)
     (hTrap : ∀ st' msg,
       hf.invoke st (s.values.take imp.params.length).reverse = .Trap st' msg →
-      Q (.Trap st' msg)) :
+      Q (.Trap st' msg))
+    (hThrow : ∀ st' tag arguments,
+      hf.invoke st (s.values.take imp.params.length).reverse =
+        .Throw st' tag arguments →
+      Q (.Throwing tag arguments st' s)) :
     wp m (.call id :: rest) Q st s env := by
   unfold wp
   cases hInv : hf.invoke st (s.values.take imp.params.length).reverse with
@@ -240,6 +244,11 @@ theorem wp_call_host_cons {m : Module} {env : HostEnv α}
     obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
     rw [exec_call_host_cons hImp hEnv, hInv]
     exact hTrap st' msg hInv
+  | Throw st' tag arguments =>
+    refine ⟨1, fun fuel hfuel => ?_⟩
+    obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
+    rw [exec_call_host_cons hImp hEnv, hInv]
+    exact hThrow st' tag arguments hInv
 
 /-- Host-call WP rule through an abstract contract in a satisfying
 `HostEnv`. The concrete resolver stays existential; proof branches receive
@@ -258,10 +267,14 @@ theorem wp_call_host_contract {m : Module} {env : HostEnv α}
                        ++ s.values.drop imp.params.length } env)
     (hTrap : ∀ st' msg,
       c st (s.values.take imp.params.length).reverse (.Trap st' msg) →
-      Q (.Trap st' msg)) :
+      Q (.Trap st' msg))
+    (hThrow : ∀ st' tag arguments,
+      c st (s.values.take imp.params.length).reverse
+        (.Throw st' tag arguments) →
+      Q (.Throwing tag arguments st' s)) :
     wp m (.call id :: rest) Q st s env := by
   obtain ⟨hf, hEnv, hContract⟩ := hSat.lookup_contract hi hC
-  refine wp_call_host_cons hImp hEnv ?_ ?_
+  refine wp_call_host_cons hImp hEnv ?_ ?_ ?_
   · intro vs st' hInv
     have hRel := hContract st (s.values.take imp.params.length).reverse
     rw [hInv] at hRel
@@ -270,5 +283,9 @@ theorem wp_call_host_contract {m : Module} {env : HostEnv α}
     have hRel := hContract st (s.values.take imp.params.length).reverse
     rw [hInv] at hRel
     exact hTrap st' msg hRel
+  · intro st' tag arguments hInv
+    have hRel := hContract st (s.values.take imp.params.length).reverse
+    rw [hInv] at hRel
+    exact hThrow st' tag arguments hRel
 
 end Wasm

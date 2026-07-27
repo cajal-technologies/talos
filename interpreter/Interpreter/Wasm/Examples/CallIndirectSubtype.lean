@@ -1,5 +1,4 @@
-import Interpreter.Wasm.Semantics
-import Interpreter.Wasm.Examples.Harness
+import Interpreter.Wasm.SmallStep
 
 /-! ## Example: `(return_)call_indirect` rejects a non-subtype (issue #95)
 
@@ -44,8 +43,7 @@ import Interpreter.Wasm.Examples.Harness
     unset (so decoded modules keep the pre-#95 structural-only behaviour). -/
 
 namespace Wasm
-
-open Wasm.Examples
+open SmallStep
 
 namespace CallIndirectSubtype
 
@@ -86,18 +84,72 @@ require of the stored function's type (`$super`) against the call-site type
 (`$sub`); it fails, so the calls must trap. -/
 theorem super_not_subtype_sub : m.gcTypeSubtype 0 1 = false := by native_decide
 
+def callConfig : Config Unit :=
+  { expr := .running
+      { locals := {}
+        code := F
+        resultArity := 1
+        callerRemainder := [] }
+    store := { runtime := { module := m, host := {} }, wasm := m.initialStore } }
+
+def returnCallConfig : Config Unit :=
+  { expr := .running
+      { locals := {}
+        code := G
+        resultArity := 1
+        callerRemainder := [] }
+    store := { runtime := { module := m, host := {} }, wasm := m.initialStore } }
+
 /-- `call_indirect (type $sub)` against `$impl : $super` traps: `$super` is
 not a subtype of `$sub` (`super_not_subtype_sub`). Before #95 this returned
 `7 + 1000 = 1007`. -/
 theorem call_indirect_traps :
-    runTrapMsg 20 m 1 (m.initialStore (α := Unit)) [] =
-      some "indirect call type mismatch" := by native_decide
+    Steps callConfig
+      [(.instruction (.const 7)), (.instruction (.const 0)),
+       (.instruction (.callIndirect 1 0))]
+      ⟨.trapped .indirectCallTypeMismatch, callConfig.store⟩ := by
+  apply Steps.cons .const
+  apply Steps.cons .const
+  exact Steps.cons
+    (.callIndirectTypeMismatch rfl rfl rfl (by decide) (by decide)
+      rfl rfl rfl (by native_decide))
+    (Steps.refl _)
 
 /-- `return_call_indirect (type $sub)` traps for the same reason — the
 issue's comment noted the bug was duplicated in the tail-call arms. -/
 theorem return_call_indirect_traps :
-    runTrapMsg 20 m 2 (m.initialStore (α := Unit)) [] =
-      some "indirect call type mismatch" := by native_decide
+    Steps returnCallConfig
+      [(.instruction (.const 7)), (.instruction (.const 0)),
+       (.instruction (.returnCallIndirect 1 0))]
+      ⟨.trapped .indirectCallTypeMismatch, returnCallConfig.store⟩ := by
+  apply Steps.cons .const
+  apply Steps.cons .const
+  exact Steps.cons
+    (.returnCallIndirectTypeMismatch rfl rfl rfl (by decide)
+      rfl rfl rfl (by native_decide))
+    (Steps.refl _)
+
+theorem call_indirect_trapsWith :
+    TrapsWith callConfig .indirectCallTypeMismatch
+      (fun store => store = callConfig.store) :=
+  TrapsWith.of_steps call_indirect_traps rfl
+
+theorem return_call_indirect_trapsWith :
+    TrapsWith returnCallConfig .indirectCallTypeMismatch
+      (fun store => store = returnCallConfig.store) :=
+  TrapsWith.of_steps return_call_indirect_traps rfl
+
+theorem call_indirect_runs_trap :
+    (runSteps 3 callConfig).result.finalConfig? =
+      some ⟨.trapped .indirectCallTypeMismatch, callConfig.store⟩ := by
+  exact congrArg RunnerResult.finalConfig?
+    (runSteps_finalConfig_of_steps call_indirect_traps)
+
+theorem return_call_indirect_runs_trap :
+    (runSteps 3 returnCallConfig).result.finalConfig? =
+      some ⟨.trapped .indirectCallTypeMismatch, returnCallConfig.store⟩ := by
+  exact congrArg RunnerResult.finalConfig?
+    (runSteps_finalConfig_of_steps return_call_indirect_traps)
 
 end CallIndirectSubtype
 end Wasm

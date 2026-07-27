@@ -1,4 +1,4 @@
-import Interpreter.Wasm.Semantics
+import Interpreter.Wasm.SmallStep
 import Interpreter.Wasm.Decoder.Wat
 
 /-!
@@ -152,6 +152,9 @@ def parseArgForType (t : ValueType) (s : String) : Except String Value :=
   | .anyref =>
     if s == "null" then .ok (.anyref none)
     else .error s!"anyref argument must be 'null', got `{s}`"
+  | .ref _ _ =>
+    if s == "null" then .ok t.zero
+    else .error s!"reference argument must be 'null', got `{s}`"
   | .v128 =>
     .error s!"no CLI surface for v128 arguments: `{s}`"
 
@@ -202,6 +205,7 @@ def renderValue : Value → String
   | .anyref (some (.i31 n))   => s!"i31:{n.toInt32.toInt}"
   | .anyref (some (.struct a)) => s!"struct:{a}"
   | .anyref (some (.array a))  => s!"array:{a}"
+  | .anyref (some (.host id))  => s!"host:{id}"
   | .v128 b             => s!"v128:0x{String.ofList (Nat.toDigits 16 b.toNat)}"
 
 /-! ## Exit codes -/
@@ -247,9 +251,10 @@ def runOnce (a : Args) : IO UInt32 := do
     | .ok vs => pure vs
     | .error msg => IO.eprintln s!"error: {msg}"; return EXIT_ERR
 
-  -- Execute. The runner is host-independent; pick `α := Unit` so the
-  -- trivial empty `HostEnv Unit` defaults in and the module runs
-  -- against no imports. `Wasm.run` expects params in *stack* order
+  -- Execute through the authoritative small-step machine. The runner is
+  -- host-independent; pick `α := Unit` so the trivial empty `HostEnv Unit`
+  -- defaults in and the module runs against no imports. `initConfig` expects
+  -- params in *stack* order
   -- (top = last source arg) and reverses internally so local 0 maps
   -- to the first argument; `parseArgs?` gives them in source order,
   -- so we reverse here to match the call convention. (Single-arg
@@ -267,26 +272,33 @@ def runOnce (a : Args) : IO UInt32 := do
   -- Data/elem segments whose offset is itself a const-expr are deferred
   -- by `initialStore`; write them now that the globals are evaluated.
   let store0 := m.runActiveSegments a.fuel store0 {}
-  match Wasm.run a.fuel m idx store0 vs.reverse with
-  | .Success results _ =>
+  let runtime : Wasm.SmallStep.RuntimeEnv Unit := { module := m, host := {} }
+  let config ← match Wasm.SmallStep.initConfig runtime idx store0 vs.reverse with
+    | .ok config => pure config
+    | .error error =>
+      IO.eprintln s!"error: small-step initialization error: {error.message}"
+      return EXIT_ERR
+  match (Wasm.SmallStep.runSteps a.fuel config).result with
+  | .success results _ =>
     for v in results.reverse do
       IO.println (renderValue v)
     return EXIT_OK
-  | .Trap _ msg =>
-    if msg.isEmpty then IO.eprintln "trap"
-    else IO.eprintln s!"trap: {msg}"
-    return EXIT_TRAP
-  | .OutOfFuel =>
-    IO.eprintln "out of fuel"
-    return EXIT_OUT_OF_FUEL
-  | .Thrown tag _ _ =>
+  | .trapped (.uncaughtException tag _) _ =>
     -- The `trap:` prefix keeps the CLI surface uniform (exit code already
     -- says trap) and lets trap-line consumers (miscast) classify an escaped
     -- exception the way V8 does, instead of dropping the case as unsupported.
     IO.eprintln s!"trap: uncaught exception (tag {tag})"
     return EXIT_TRAP
-  | .Invalid msg =>
-    IO.eprintln s!"error: {msg}"
+  | .trapped reason _ =>
+    let msg := reason.message
+    if msg.isEmpty then IO.eprintln "trap"
+    else IO.eprintln s!"trap: {msg}"
+    return EXIT_TRAP
+  | .outOfFuel _ =>
+    IO.eprintln "out of fuel"
+    return EXIT_OUT_OF_FUEL
+  | .internalError error _ =>
+    IO.eprintln s!"error: small-step internal error: {error.message}"
     return EXIT_ERR
 
 end Wasm.Runner

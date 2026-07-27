@@ -1,20 +1,44 @@
-import Interpreter.Wasm.Wp.Tactic
+import Interpreter.Wasm.SmallStep
 
 /-! ## Example: TrapUnreachable
 
-    Unconditional trap for `unreachable`: rustc lowers panics and
-    "impossible" control-flow arms to this instruction. Complements
-    `TrapDivZero`, which shows a *conditional* arithmetic trap. -/
+`unreachable` takes one instruction step to a structured terminal trap.
+-/
 
 namespace Wasm
+open SmallStep
 
 def TrapUnreachable : Program := [.unreachable]
 
-theorem trapUnreachableSpec (m : Module) (st : Store Unit) :
-    wp m TrapUnreachable
-        (fun c => c = .Trap st "unreachable")
-        st { params := [], locals := [], values := [] } := by
-  unfold TrapUnreachable
-  wp_run
+def trapUnreachableModule : Module :=
+  { funcs := [{ body := TrapUnreachable }] }
+
+def trapUnreachableConfig : Config Unit :=
+  { expr := .running
+      { locals := {}
+        code := TrapUnreachable
+        resultArity := 0
+        callerRemainder := [] }
+    store :=
+      { runtime := { module := trapUnreachableModule, host := {} }
+        wasm := trapUnreachableModule.initialStore } }
+
+theorem trapUnreachableSpec :
+    Steps trapUnreachableConfig
+      [(.instruction .unreachable)]
+      ⟨.trapped .unreachable, trapUnreachableConfig.store⟩ :=
+  Steps.cons .unreachable (Steps.refl _)
+
+theorem trapUnreachable_runs :
+    (runSteps 1 trapUnreachableConfig).result =
+      .trapped .unreachable trapUnreachableConfig.store :=
+  runSteps_finalConfig_of_steps trapUnreachableSpec
+
+/-- Fuel-free public trap specification. -/
+theorem trapUnreachable_traps :
+    TrapsWith trapUnreachableConfig .unreachable
+      (fun store => store = trapUnreachableConfig.store) := by
+  apply runSteps_trapped_trapsWith trapUnreachable_runs
+  rfl
 
 end Wasm

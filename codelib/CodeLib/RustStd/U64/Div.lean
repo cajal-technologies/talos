@@ -1,42 +1,22 @@
 import CodeLib.RustStd.U64.Basic
 
-/-! `u64::div` (`a / b`) — a zero-divisor guard `block` around `i64.div_u`,
-reusing the trunk's `checkedBinBodyReturnsWp` template. -/
+/-! `u64::div` — contextual iris-lean chunk for unsigned division. -/
 
 namespace Wasm.RustStd.U64
-open Wasm Wasm.RustStd
 
-/-- The reusable chunk for the bare `i64.div_u`, carrying the nonzero-divisor
-precondition. -/
+open Wasm Wasm.RustStd
+open Iris Iris.ProgramLogic Language.Notation
+
 theorem div_chunk :
     BinChunk (A := UInt64) (B := UInt64) (C := UInt64)
       [.divUI64] (· / ·) (fun _ b => b ≠ 0) := by
-  intro α m env Q st P L rest a b vs hne
-  simp only [List.cons_append, List.nil_append, toV_u64, wp_divUI64_cons, hne, ↓reduceIte]
-
-/-- Concrete restatement of `div_chunk` for `rw`/`simp` at an inlined `i64.div_u`
-once the guard has loaded operands. -/
-theorem div_seq {α : Type} {m : Module} {env : HostEnv α} {Q : Assertion α}
-    {st : Store α} {P L : List Value} {rest : Program} (a b : UInt64) (vs : List Value)
-    (hb : b ≠ 0) :
-    wp m (.divUI64 :: rest) Q st ⟨P, L, .i64 b :: .i64 a :: vs⟩ env ↔
-      wp m rest Q st ⟨P, L, .i64 (a / b) :: vs⟩ env := by
-  simpa only [toV_u64, List.cons_append, List.nil_append]
-    using div_chunk (rest := rest) a b vs hb
-
-set_option maxRecDepth 4096 in
-/-- Checked divide body for any dividend/divisor local pair, reusing the trunk's
-guarded-body template with the `nonzeroGuard` fall-through. The panic `tail` is
-arbitrary (unreachable when `b ≠ 0`). -/
-theorem divBodyWp {α} {m : Module} {env : HostEnv α} (st : Store α)
-    {P L : List Value} (i j : Nat) (a b : UInt64) (vs : List Value) (tail : Program)
-    (ha : (⟨P, L, vs⟩ : Locals).get i = some (.i64 a))
-    (hb : (⟨P, L, vs⟩ : Locals).get j = some (.i64 b))
-    (hne : b ≠ 0) :
-    wp m (checkedBinBody (nonzeroGuard j) [.divUI64] i j ++ tail)
-      (Returns (.i64 (a / b) :: vs) (framePost st))
-      st ⟨P, L, vs⟩ env :=
-  checkedBinBodyReturnsWp div_chunk st i j a b vs tail
-    (fun {_Q _rest} => nonzeroGuardWp j b vs hb hne) ha hb hne
+  intro α hlc inst s E Φ params localValues rest arity remainder
+    controls calls a b vs hne
+  simpa only [toV_u64, List.cons_append, List.nil_append] using
+    (Wasm.SmallStep.wp_divUI64
+      (hlc := hlc) (s := s) (E := E) (Φ := Φ) (α := α)
+      (params := params) (localValues := localValues) (values := vs)
+      (dividend := a) (divisor := b) (code := rest) (arity := arity)
+      (remainder := remainder) (controls := controls) (calls := calls) hne)
 
 end Wasm.RustStd.U64

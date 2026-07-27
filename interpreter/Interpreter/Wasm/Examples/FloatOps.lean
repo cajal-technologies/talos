@@ -1,5 +1,4 @@
-import Interpreter.Wasm.Semantics
-import Interpreter.Wasm.Examples.Harness
+import Interpreter.Wasm.SmallStep
 
 /-! ## Example: floating-point operations
 
@@ -14,7 +13,7 @@ Expected values are written as `Float`/`Float32` literals decoded to bits via
 `toBits`, so each theorem reads as the IEEE arithmetic it stands for. -/
 
 namespace Wasm
-open Wasm.Examples
+open SmallStep
 
 /-- `(2.0 + 3.0) * 4.0` in `f64` ⇒ `20.0`. -/
 def f64Arith : Program :=
@@ -62,36 +61,62 @@ def floatModule : Module :=
       , { body := memRoundtrip, results := [.f64] } ]
     memory := some { pagesMin := 1 } }
 
+def floatConfig (index : Nat) : Config Unit :=
+  { expr := .running
+      { locals := {}
+        code := floatModule.funcs[index]!.body
+        resultArity := floatModule.funcs[index]!.results.length
+        callerRemainder := [] }
+    store :=
+      { runtime := { module := floatModule, host := {} }
+        wasm := floatModule.initialStore } }
+
 theorem f64_arith :
-    runValues 10 floatModule 0 floatModule.initialStore [] = [.f64 (20.0 : Float).toBits] := by
+    (runSteps 10 (floatConfig 0)).result.values? =
+      some [.f64 (20.0 : Float).toBits] := by
   native_decide
 
 theorem f32_arith :
-    runValues 10 floatModule 1 floatModule.initialStore [] = [.f32 (3.0 : Float32).toBits] := by
+    (runSteps 10 (floatConfig 1)).result.values? =
+      some [.f32 (3.0 : Float32).toBits] := by
   native_decide
 
 theorem f64_compare :
-    runValues 10 floatModule 2 floatModule.initialStore [] = [.i32 1] := by
+    (runSteps 10 (floatConfig 2)).result.values? = some [.i32 1] := by
   native_decide
 
 theorem f64_sqrt :
-    runValues 10 floatModule 3 floatModule.initialStore [] = [.f64 (3.0 : Float).toBits] := by
+    (runSteps 10 (floatConfig 3)).result.values? =
+      some [.f64 (3.0 : Float).toBits] := by
   native_decide
 
 theorem f64_min :
-    runValues 10 floatModule 4 floatModule.initialStore [] = [.f64 (2.0 : Float).toBits] := by
+    (runSteps 10 (floatConfig 4)).result.values? =
+      some [.f64 (2.0 : Float).toBits] := by
   native_decide
 
 theorem conv_roundtrip :
-    runValues 10 floatModule 5 floatModule.initialStore [] = [.i32 7] := by
+    (runSteps 10 (floatConfig 5)).result.values? = some [.i32 7] := by
   native_decide
 
 theorem reinterpret_one :
-    runValues 10 floatModule 6 floatModule.initialStore [] = [.f32 (1.0 : Float32).toBits] := by
+    (runSteps 10 (floatConfig 6)).result.values? =
+      some [.f32 (1.0 : Float32).toBits] := by
   native_decide
 
 theorem mem_roundtrip :
-    runValues 10 floatModule 7 floatModule.initialStore [] = [.f64 (3.5 : Float).toBits] := by
+    (runSteps 10 (floatConfig 7)).result.values? =
+      some [.f64 (3.5 : Float).toBits] := by
   native_decide
+
+theorem mem_roundtrip_spec :
+    TerminatesWith (floatConfig 7)
+      (fun values _ => values = [.f64 (3.5 : Float).toBits]) :=
+  runSteps_values_terminates mem_roundtrip
+
+theorem mem_roundtrip_partial :
+    PartiallyMeets (floatConfig 7)
+      (fun values _ => values = [.f64 (3.5 : Float).toBits]) :=
+  runSteps_values_partiallyMeets mem_roundtrip
 
 end Wasm

@@ -1,27 +1,25 @@
-import Interpreter.Wasm.Wp.Tactic
-import Interpreter.Wasm.Examples.Harness
+import Interpreter.Wasm.Validate
 
 /-! ## Example: EarlyBrInvalid
 
-    A top-level `.br k` with `k ≥ 1` targets a label that does not exist
-    on the function's static label stack. Wasm validation would reject
-    this program; the unvalidated interpreter surfaces it as `.Invalid`
-    with the dedicated "scope out of function" message. -/
+A top-level `br k` with `k ≥ 1` targets no static label. Validation rejects
+the module, so this malformed control state never enters small-step execution.
+-/
 
 namespace Wasm
 
-open Wasm.Examples
-
 def EarlyBrInvalid : Program := [.localGet 0, .br 1]
 
-def earlyBrInvalidModule : Module := {
-  funcs := [{ params := [.i32], results := [.i32], body := EarlyBrInvalid }]
-}
+def earlyBrInvalidModule : Module :=
+  { funcs := [{
+      params := [.i32]
+      results := [.i32]
+      body := EarlyBrInvalid }] }
 
 theorem early_br_out_of_scope_is_invalid :
-    runInvalidMsg 10 earlyBrInvalidModule 0
-        earlyBrInvalidModule.initialStore [.i32 42]
-      = some "Unexpected break targeting scope out of function" := by
+    (match earlyBrInvalidModule.validate with
+      | .error message => some message
+      | .ok _ => none) = some "unknown label" := by
   native_decide
 
 end Wasm

@@ -994,7 +994,7 @@ macro "wp_atomic" : tactic => `(tactic|
     wp m (.memoryGrow :: rest) Q st s env ↔
     (match s.values with
      | .i32 delta :: vs =>
-       match st.mem.grow delta m.memoryCap with
+       match st.mem.grow delta (st.memoryCap m 0) with
        | some (mem', cur) =>
          wp m rest Q { st with mem := mem' }
             { s with values := .i32 cur.toUInt32 :: vs } env
@@ -1004,7 +1004,7 @@ macro "wp_atomic" : tactic => `(tactic|
        if delta.toNat ≥ 2 ^ 32 then
          wp m rest Q st { s with values := .i64 (0xFFFFFFFFFFFFFFFF : UInt64) :: vs } env
        else
-         match st.mem.grow delta.toUInt32 m.memoryCap with
+         match st.mem.grow delta.toUInt32 (st.memoryCap m 0) with
          | some (mem', cur) =>
            wp m rest Q { st with mem := mem' }
               { s with values := .i64 cur.toUInt64 :: vs } env

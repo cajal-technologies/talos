@@ -45,7 +45,7 @@ See [`interpreter/samples/factorial.wat`](interpreter/samples/factorial.wat) for
 
 **Prove something about it:**
 
-[`interpreter/Interpreter/Wasm/Examples/Factorial.lean`](interpreter/Interpreter/Wasm/Examples/Factorial.lean) shows a complete correctness proof using the WP tactic layer.
+[`interpreter/Interpreter/Wasm/Examples/Factorial.lean`](interpreter/Interpreter/Wasm/Examples/Factorial.lean) shows a complete correctness proof by composing instruction-granular small-step traces.
 
 ## Repository layout
 

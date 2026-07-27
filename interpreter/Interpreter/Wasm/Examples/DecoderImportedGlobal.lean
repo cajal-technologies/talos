@@ -1,7 +1,5 @@
 import Interpreter.Wasm.Decoder.Wat
-import Interpreter.Wasm.Wp.Tactic
-import Interpreter.Wasm.Wp.Call
-import Interpreter.Wasm.Examples.Harness
+import Interpreter.Wasm.SmallStep
 
 /-! ## Example: imported-global index offset in the WAT decoder
 
@@ -16,7 +14,7 @@ import Interpreter.Wasm.Examples.Harness
     global end-to-end so a future miscount fails the build. -/
 
 namespace Wasm
-open Wasm.Examples
+open SmallStep
 namespace DecoderImportedGlobal
 
 /-- A `.wat` module with one imported global `spectest.ig : i32` (unified
@@ -30,7 +28,10 @@ def importedGlobalWat : String := "
     global.get $d))
 "
 
-private def decoded : Wasm.Module := decodeOrDefault importedGlobalWat
+private def decoded : Wasm.Module :=
+  match Wasm.Decoder.Wat.decode importedGlobalWat with
+  | .ok module => module
+  | .error _ => default
 
 /-- One imported global at index `0`, one declared global at index `1`. -/
 theorem importedGlobalWat_global_layout :
@@ -52,13 +53,28 @@ theorem importedGlobalWat_getD_index :
     firstGlobalGetIdx decoded = some 1 := by
   native_decide
 
-/-- End-to-end: running `getD` reads the declared global and returns `99`.
-A wrong index would read the import's zero slot (`0`) or trap out of
-bounds (empty result). -/
+def getDConfig : Config Unit :=
+  { expr := .running
+      { locals := {}
+        code := decoded.funcs[0]!.body
+        resultArity := decoded.funcs[0]!.results.length
+        callerRemainder := [] }
+    store :=
+      { runtime := { module := decoded, host := {} }
+        wasm := decoded.initialStore } }
+
+/-- End-to-end: small-step execution reads declared global index `1`. -/
 theorem importedGlobalWat_getD_returns_99 :
-    runValues 10 decoded 0 (decoded.initialStore (α := Unit)) []
-      = [.i32 99] := by
+    (runSteps 2 getDConfig).result.values? = some [.i32 99] := by
   native_decide
+
+theorem importedGlobalWat_getD_spec :
+    TerminatesWith getDConfig (fun values _ => values = [.i32 99]) :=
+  runSteps_values_terminates importedGlobalWat_getD_returns_99
+
+theorem importedGlobalWat_getD_partial :
+    PartiallyMeets getDConfig (fun values _ => values = [.i32 99]) :=
+  runSteps_values_partiallyMeets importedGlobalWat_getD_returns_99
 
 end DecoderImportedGlobal
 end Wasm

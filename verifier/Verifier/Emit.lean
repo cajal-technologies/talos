@@ -43,6 +43,22 @@ private def emitU32 (n : UInt32) : String :=
 private def emitU64 (n : UInt64) : String :=
   parens s!"{n.toNat} : UInt64"
 
+private def emitHeapType : Wasm.GcHeapType → String
+  | .any => ".any"
+  | .eq => ".eq"
+  | .i31 => ".i31"
+  | .structT => ".structT"
+  | .arrayT => ".arrayT"
+  | .noneT => ".noneT"
+  | .func => ".func"
+  | .noFunc => ".noFunc"
+  | .extern => ".extern"
+  | .noExtern => ".noExtern"
+  | .exn => ".exn"
+  | .noExn => ".noExn"
+  | .concrete typeIdx => s!".concrete {emitNat typeIdx}"
+  | .named name => s!".named {repr name}"
+
 private def emitValueType : Wasm.ValueType → String
   | .i32       => ".i32"
   | .i64       => ".i64"
@@ -53,6 +69,8 @@ private def emitValueType : Wasm.ValueType → String
   | .v128      => ".v128"
   | .exnref    => ".exnref"
   | .anyref    => ".anyref"
+  | .ref nullable heap =>
+      s!".ref {repr nullable} ({emitHeapType heap})"
 
 private def emitValueTypes (xs : List Wasm.ValueType) : String :=
   list (xs.map emitValueType)
@@ -233,7 +251,7 @@ private def emitInstrShort : Wasm.Instruction → String
   | .callIndirect ti tj        => s!".callIndirect {emitNat ti} {emitNat tj}"
   | .ret                       => ".ret"
   -- References
-  | .refNull        => ".refNull"
+  | .refNull _      => ".refNull"
   | .refFunc i      => s!".refFunc {emitNat i}"
   | .refIsNull      => ".refIsNull"
   -- Tables
@@ -277,16 +295,16 @@ private def emitInstrShort : Wasm.Instruction → String
   | .unreachable    => ".unreachable"
   -- Structured control: should be handled by emitInstr; fall back to a flat
   -- one-line form so this function remains total.
-  | .block pa ra body     =>
+  | .block pa ra body _ _ =>
       s!".block {emitNat pa} {emitNat ra} " ++ list (body.map emitInstrShort)
-  | .loop pa ra body      =>
+  | .loop pa ra body _ _  =>
       s!".loop {emitNat pa} {emitNat ra} " ++ list (body.map emitInstrShort)
-  | .iff pa ra thn els    =>
+  | .iff pa ra thn els _ _ =>
       s!".iff {emitNat pa} {emitNat ra} " ++
         list (thn.map emitInstrShort) ++ " " ++ list (els.map emitInstrShort)
   -- Reference / table (wasm 2.0+)
-  | .refNullExtern        => ".refNullExtern"
-  | .refNullExn           => ".refNullExn"
+  | .refNullExtern _      => ".refNullExtern"
+  | .refNullExn _         => ".refNullExn"
   | .tableSet t           => s!".tableSet {emitNat t}"
   | .tableGrow t          => s!".tableGrow {emitNat t}"
   | .tableFill t          => s!".tableFill {emitNat t}"
@@ -305,7 +323,7 @@ private def emitInstrShort : Wasm.Instruction → String
   -- Exception handling
   | .throwI t             => s!".throwI {emitNat t}"
   | .throwRef             => ".throwRef"
-  | .tryTable pa ra cs body =>
+  | .tryTable pa ra cs body _ _ =>
       s!".tryTable {emitNat pa} {emitNat ra} {reprStr cs} " ++ list (body.map emitInstrShort)
   -- Multi-memory
   | .memOp k i            => s!".memOp {emitNat k} (" ++ emitInstrShort i ++ ")"
@@ -341,11 +359,11 @@ mutual
   bodies are recursively broken across lines; leaf instructions stay on the
   caller's line. -/
   private partial def emitInstr (ind : Nat) : Wasm.Instruction → String
-    | .block pa ra body =>
+    | .block pa ra body _ _ =>
         indent ind ++ s!".block {emitNat pa} {emitNat ra} " ++ emitInstrList ind body
-    | .loop pa ra body =>
+    | .loop pa ra body _ _ =>
         indent ind ++ s!".loop {emitNat pa} {emitNat ra} " ++ emitInstrList ind body
-    | .iff pa ra thn els =>
+    | .iff pa ra thn els _ _ =>
         indent ind ++ s!".iff {emitNat pa} {emitNat ra} " ++
           emitInstrList ind thn ++ " " ++ emitInstrList ind els
     | other =>
