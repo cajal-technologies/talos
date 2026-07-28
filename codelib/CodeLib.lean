@@ -38,6 +38,11 @@ import CodeLib.SepLogic.SmallStepLanguage
 import CodeLib.SepLogic.SmallStepState
 import CodeLib.SepLogic.SmallStepLifting
 import CodeLib.SepLogic.SmallStepAdequacy
+import CodeLib.Examples.Gcd
+import CodeLib.Examples.MergeSort
+import CodeLib.Examples.MergeSort.Pure
+import CodeLib.Examples.MergeSort.Laws
+import CodeLib.Examples.MergeSort.Proof
 
 /-!
 # CodeLib — umbrella import for downstream code

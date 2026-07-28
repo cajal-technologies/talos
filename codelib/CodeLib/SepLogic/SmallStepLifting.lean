@@ -323,6 +323,35 @@ theorem wp_add
       {{ Φ }} :=
   wp_pureStep _ _ _ (fun _ => Step.add)
 
+theorem wp_mul
+    {params localValues values : List Value}
+    {lhs rhs : UInt32} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame} :
+    ▷ WP (.running
+      ⟨⟨params, localValues, .i32 (rhs * lhs) :: values⟩,
+        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
+    WP (.running
+      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
+        .mul :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
+      {{ Φ }} :=
+  wp_pureStep _ _ _ (fun _ => Step.mul)
+
+theorem wp_remU
+    {params localValues values : List Value}
+    {dividend divisor : UInt32} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame}
+    (hdivisor : divisor ≠ 0) :
+    ▷ WP (.running
+      ⟨⟨params, localValues, .i32 (dividend % divisor) :: values⟩,
+        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
+    WP (.running
+      ⟨⟨params, localValues, .i32 divisor :: .i32 dividend :: values⟩,
+        .remU :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
+      {{ Φ }} :=
+  wp_pureStep _ _ _ (fun _ => Step.remU hdivisor)
+
 theorem wp_addI64
     {params localValues values : List Value}
     {lhs rhs : UInt64} {code : Program} {arity : Nat}
@@ -818,7 +847,7 @@ at each back-edge.
 control frame.  The guarded hypothesis quantifies over every family index, so
 a body proof may establish `I next` and branch back to `locals next`.
 -/
-private def loopBodyExpr (locals : Locals)
+def loopBodyExpr (locals : Locals)
     (paramArity resultArity arity : Nat)
     (body code : Program) (remainder belowStack : List Value)
     (controls : List ControlFrame) (calls : List CallFrame) : Expr α :=
