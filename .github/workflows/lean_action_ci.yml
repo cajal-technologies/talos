@@ -7,8 +7,25 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    name: Build & verify proofs
+  codelib:
+    name: Build CodeLib proofs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: .lake/packages
+          key: lake-pkgs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}-${{ hashFiles('interpreter/lake-manifest.json') }}
+          restore-keys: |
+            lake-pkgs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}-
+      - uses: leanprover/lean-action@v1
+        with:
+          lake-package-directory: codelib
+          build-args: "--wfail"
+          use-mathlib-cache: true
+
+  programs:
+    name: Build program proofs
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,17 +38,13 @@ jobs:
       - uses: leanprover/lean-action@v1
         with:
           lake-package-directory: programs/lean
-          # Build every CodeLib module (including its verified examples) as a
-          # separate target. Keeping examples out of the downstream umbrella
-          # avoids loading their large proof environments into every Project
-          # module in parallel on the hosted runner.
-          build-args: "@CodeLib Project --wfail"
+          build-args: "Project --wfail"
           use-mathlib-cache: true
 
   test:
     name: Smoke test
     runs-on: ubuntu-latest
-    needs: build
+    needs: [codelib, programs]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v4
