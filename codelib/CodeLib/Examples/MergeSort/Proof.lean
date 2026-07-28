@@ -71,7 +71,7 @@ theorem wp_mergeMainStep
     (source temporary : UInt32) (input scratch : List UInt32)
     (left mid right i j k : Nat) (emitted : List UInt32)
     (hinv : MergeLoopInvariant input scratch left mid right i j k emitted)
-    (hi : i < mid) (hj : j < right)
+    (_hi : i < mid) (_hj : j < right)
     (hiLen : i < input.length) (hjLen : j < input.length)
     (hkLen : k < scratch.length)
     (hlayout : ValidLayout source temporary input.length)
@@ -1400,7 +1400,7 @@ theorem wp_mergeSortPrepareRight
     {Φ : List Value → IProp WasmHeapGF}
     (source temporary : UInt32)
     (count width left mid oldRight : Nat)
-    (htwoWidth : width * 2 < UInt32.size)
+    (_htwoWidth : width * 2 < UInt32.size)
     (hrightCandidate : left + width * 2 < UInt32.size)
     (hcountSize : count < UInt32.size)
     {code : Program} {arity : Nat} {remainder : List Value}
@@ -1435,7 +1435,7 @@ theorem wp_mergeSortPrepareRight
       (2 : UInt32) * UInt32.ofNat width =
         UInt32.ofNat (width * 2) := by
     rw [UInt32.mul_comm]
-    simpa using (u32_ofNat_mul (a := width) (b := 2) htwoWidth)
+    exact u32_ofNat_mul (a := width) (b := 2) _htwoWidth
   rw [hmul]
   iapply Wasm.SmallStep.wp_add
   inext
@@ -1449,7 +1449,7 @@ theorem wp_mergeSortPrepareRight
   simp [sortLocals, List.set]
   have hmul' :
       UInt32.ofNat width * 2 = UInt32.ofNat (width * 2) := by
-    simpa using (u32_ofNat_mul (a := width) (b := 2) htwoWidth)
+    exact u32_ofNat_mul (a := width) (b := 2) _htwoWidth
   rw [hmul', u32_ofNat_add hrightCandidate]
   iapply Wasm.SmallStep.wp_localGet rfl
   inext
@@ -1471,7 +1471,7 @@ theorem wp_mergeSortPrepareRight
     simp only [if_pos (by decide : (1 : UInt32) ≠ 0)]
     iapply Wasm.SmallStep.wp_exitControl rfl
     inext
-    simp only [sortLocals, List.take_zero, List.nil_append,
+    simp only [List.take_zero, List.nil_append,
       Nat.min_eq_left (Nat.le_of_lt hright)]
     simp only [List.drop_zero]
     iexact Hcont
@@ -1483,11 +1483,11 @@ theorem wp_mergeSortPrepareRight
     inext
     iapply Wasm.SmallStep.wp_localSet rfl
     inext
-    simp only [sortLocals,
+    simp only [
       Nat.min_eq_right (by omega : count ≤ left + width * 2)]
     iapply Wasm.SmallStep.wp_exitControl rfl
     inext
-    simp only [sortLocals, List.take_zero, List.nil_append]
+    simp only [List.take_zero, List.nil_append]
     simp [List.set, List.drop_zero]
     iexact Hcont
 
@@ -1605,7 +1605,7 @@ theorem wp_mergeSortPrepare
     simp only [if_pos (by decide : (1 : UInt32) ≠ 0)]
     iapply Wasm.SmallStep.wp_exitControl rfl
     inext
-    simp only [sortLocals, List.take_zero, List.nil_append,
+    simp only [List.take_zero, List.nil_append,
       Nat.min_eq_left (Nat.le_of_lt hmid)]
     simp only [List.drop_zero]
     iapply wp_mergeSortPrepareRight_from
@@ -1625,12 +1625,11 @@ theorem wp_mergeSortPrepare
     inext
     iapply Wasm.SmallStep.wp_localSet rfl
     inext
-    simp only [sortLocals, List.take_zero, List.nil_append,
-      Nat.min_eq_right (by omega : count ≤ left + width)]
+    simp only [Nat.min_eq_right (by omega : count ≤ left + width)]
     iapply Wasm.SmallStep.wp_exitControl rfl
     inext
-    simp only [sortLocals, List.take_zero, List.nil_append]
-    simp [sortLocals, List.set]
+    simp only [List.take_zero, List.nil_append]
+    simp [List.set]
     iapply wp_mergeSortPrepareRight_from
       (⟨[.i32 source, .i32 temporary, .i32 (UInt32.ofNat count)],
         [.i32 (UInt32.ofNat width), .i32 (UInt32.ofNat left),
@@ -1683,7 +1682,7 @@ theorem wp_mergeSortCallAdvance
   inext
   iapply Wasm.SmallStep.wp_localGet rfl
   inext
-  simp only [mergeArguments, sortLocals]
+  simp only [sortLocals]
   have HmergeCall := wp_merge runtimeModule mergeIndex himports hfunction
     source temporary input scratch left mid right
     (s := s) (E := E) (Φ := Φ)
@@ -1718,9 +1717,7 @@ theorem wp_mergeSortCallAdvance
       (2 : UInt32) * UInt32.ofNat width =
         UInt32.ofNat (width * 2) := by
     rw [UInt32.mul_comm]
-    simpa using
-      (u32_ofNat_mul (a := width) (b := 2)
-        (by omega : width * 2 < UInt32.size))
+    exact u32_ofNat_mul (a := width) (b := 2) (by omega)
   rw [hmul]
   iapply Wasm.SmallStep.wp_add
   inext
@@ -1731,7 +1728,7 @@ theorem wp_mergeSortCallAdvance
   rw [hadd]
   iapply Wasm.SmallStep.wp_localSet rfl
   inext
-  simp [sortLocals, List.set]
+  simp [List.set]
   iapply Hcont $$ Hruntime Hpost
 
 set_option maxHeartbeats 8000000 in
@@ -1922,7 +1919,7 @@ theorem wp_mergeSortInnerLoop
           %hnextScratchLength, Hsource, Htemporary⟩
       iapply Wasm.SmallStep.wp_br rfl
       inext
-      simp only [sortLocals, List.take_zero, List.nil_append]
+      simp only [List.take_zero, List.nil_append]
       have hnextPass :
           left + width * 2 = (state.pass + 1) * (2 * width) := by
         simp only [left]
@@ -1939,8 +1936,7 @@ theorem wp_mergeSortInnerLoop
       ispecialize Hrec $$
         %(⟨output, nextScratch, state.pass + 1,
           newMid, newRight⟩ : SortInnerState)
-      simp only [SortInnerState.pass, SortInnerState.mid,
-        SortInnerState.right, newMid, newRight, left, hnextPass]
+      simp only [newMid, newRight, left, hnextPass]
       iapply Hrec
       isplitr
       · ipureintro
@@ -1956,17 +1952,16 @@ theorem wp_mergeSortInnerLoop
         rw [← hnextPass]
         exact hrightCandidate
       iframe
-      simp only [Finish, sortLocals, hnextPass]
+      simp only [Finish, sortLocals]
       iexact Hfinish
     · have hcmp :
           ¬UInt32.ofNat (state.pass * (2 * width)) <
             UInt32.ofNat count := by
         simpa only [left] using (mt hleftCmp.mp hleftCount)
-      simp only [if_neg hcmp,
-        if_pos (by decide : (0 : UInt32) = 0)]
+      simp only [if_neg hcmp]
       iapply Wasm.SmallStep.wp_brIf (by decide) rfl
       inext
-      simp only [sortLocals, List.take_zero, List.nil_append,
+      simp only [List.take_zero, List.nil_append,
         List.drop_zero]
       iapply Hfinish $$ %state.current %state.scratch %state.pass
         %state.mid %state.right %hpass %hvaluesLength
@@ -2132,7 +2127,7 @@ theorem wp_mergeSortOuterLoop
       inext
       iapply Wasm.SmallStep.wp_localSet rfl
       inext
-      simp [sortLocals, List.set]
+      simp [List.set]
       have hpassStart :
           MergePassInvariant state.current state.current
             state.width 0 :=
@@ -2185,16 +2180,15 @@ theorem wp_mergeSortOuterLoop
       rw [hmul]
       iapply Wasm.SmallStep.wp_localSet rfl
       inext
-      simp [sortLocals, List.set]
+      simp
       iapply Wasm.SmallStep.wp_br rfl
       inext
-      simp only [sortLocals, List.take_zero, List.nil_append]
+      simp only [List.take_zero, List.nil_append]
       ispecialize Hrec $$
         %(⟨output, nextScratch, state.width * 2,
           pass' * (2 * state.width), nextMid, nextRight⟩ :
           SortOuterState)
-      simp only [SortOuterState.width, SortOuterState.left,
-        SortOuterState.mid, SortOuterState.right, UInt32.ofNat_mul]
+      simp only [UInt32.ofNat_mul]
       iapply Hrec
       isplitr
       · ipureintro
@@ -2220,18 +2214,17 @@ theorem wp_mergeSortOuterLoop
     · have hcmp :
           ¬UInt32.ofNat state.width < UInt32.ofNat count :=
         mt hwidthCmp.mp hwidthCount'
-      simp only [if_neg hcmp,
-        if_pos (by decide : (0 : UInt32) = 0)]
+      simp only [if_neg hcmp]
       iapply Wasm.SmallStep.wp_brIf (by decide) rfl
       inext
-      simp only [sortLocals, List.take_zero, List.nil_append,
+      simp only [List.take_zero, List.nil_append,
         List.drop_zero]
       iapply Hfinish $$ %state.current %state.scratch %state.width
         %state.left %state.mid %state.right %hruns' %hperm'
         %hvaluesLength %hscratchLength
         %(Nat.le_of_not_gt hwidthCount')
         Hruntime Hsource Htemporary
-  · simp only [Inv, SortOuterState.width]
+  · simp only [Inv]
     isplitr
     · ipureintro
       exact hruns
@@ -2285,7 +2278,7 @@ theorem wp_mergeSortBody
   inext
   iapply Wasm.SmallStep.wp_localSet rfl
   inext
-  simp [sortLocals, List.set]
+  simp [sortLocals]
   ihave Hpre' := mergeSortPre_elim source temporary input scratch $$ Hpre
   icases Hpre' with
     ⟨Hsource, Htemporary, %hscratchLength, %hlayout⟩
@@ -2386,7 +2379,7 @@ theorem wp_mergeSort
   iintro %width %left %mid %right Hruntime Hpost
   iapply Wasm.SmallStep.wp_returnFromCallExplicit
   inext
-  simp only [sortLocals, List.take_zero, List.nil_append,
+  simp only [List.take_zero, List.nil_append,
     List.drop_eq_nil_of_le (by simp : 3 ≤
       (mergeSortArguments source temporary input.length stack).length)]
   iapply Hcont $$ Hruntime Hpost
