@@ -11,7 +11,7 @@ jobs:
     name: Programs up to date
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # The verifier executable doesn't need Mathlib (see PR #12), so we
       # skip the mathlib cache entirely.
