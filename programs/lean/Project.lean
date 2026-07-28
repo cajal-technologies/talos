@@ -7,8 +7,10 @@ import Project.RustU64.Spec
 import Project.RustU64Tests.Spec
 import Project.SwapElements.Spec
 import Project.SwapElements.SwapSepLogic
+import Project.SwapElements.SmallStepSpec
 import Project.SwapElementsOpt3.Spec
 import Project.SwapElementsOpt3.Equivalence
+import Project.SwapElementsOpt3.SmallStepEquivalence
 import Project.TotalVariation.Spec
 import Project.FloatTrunc.Spec
 import Project.FloatRound.Spec

@@ -1,22 +1,14 @@
-import Interpreter.Wasm.Wp.Tactic
+import Interpreter.Wasm.SmallStep
 
-/-! ## Example: data-section plumbing
+/-! ## Example: literal data-section initialization
 
-    Smallest possible example exercising the new memory surface. The
-    module declares one page of linear memory with a single `(data ...)`
-    segment of four bytes at offset 0; the function body is a no-op that
-    returns the constant 7. The interesting content is the *initial
-    store*: `Module.initialStore` should fold the data segment into the
-    memory, and `Mem.read32` at offset 0 should reassemble the four
-    little-endian bytes into a `UInt32`.
-
-    Load/store *instructions* are not yet wired up — that's the next
-    milestone. Until then this example just pins down the plumbing.
-
-    Bytes `[0x42, 0x43, 0x44, 0x45]` little-endian-decoded as a u32 give
-    `0x45444342`. -/
+    The module declares one page with four bytes at offset zero. Its initial
+    machine store exposes those bytes to the authoritative small-step
+    execution of a simple function.
+-/
 
 namespace Wasm
+open SmallStep
 
 def memModule : Module :=
   { funcs := [{ body := [.const 7], results := [.i32] }]
@@ -27,5 +19,36 @@ def memModule : Module :=
 theorem memDataSection_read32_zero :
     (memModule.initialStore (α := Unit)).mem.read32 0 = 0x45444342 := by
   native_decide
+
+def memDataStore : MachineStore Unit :=
+  { runtime := { module := memModule, host := {} }
+    wasm := memModule.initialStore }
+
+def memDataConfig : Config Unit :=
+  { expr := .running
+      { locals := {}
+        code := memModule.funcs[0]!.body
+        resultArity := 1
+        callerRemainder := [] }
+    store := memDataStore }
+
+theorem memDataSection_runs :
+    (runSteps 2 memDataConfig).result =
+      .success [.i32 7] memDataStore := by
+  rfl
+
+theorem memDataSection_spec :
+    TerminatesWith memDataConfig (fun values store =>
+      values = [.i32 7] ∧
+      store.wasm.mem.read32 0 = 0x45444342) := by
+  apply runSteps_success_terminates memDataSection_runs
+  constructor <;> native_decide
+
+theorem memDataSection_partial :
+    PartiallyMeets memDataConfig (fun values store =>
+      values = [.i32 7] ∧
+      store.wasm.mem.read32 0 = 0x45444342) := by
+  apply runSteps_success_partiallyMeets memDataSection_runs
+  constructor <;> native_decide
 
 end Wasm

@@ -30,6 +30,9 @@ inductive HostResult (α : Type) where
   committed *before* the trap was raised — matches the wasm spec's
   atomicity rule for `unreachable` and out-of-bounds memory. -/
   | Trap   : Store α → String → HostResult α
+  /-- A linked Wasm function escaped by throwing an exception. The tag is
+  expressed in the importing module's local tag index space. -/
+  | Throw  : Store α → Nat → List Value → HostResult α
 
 /-- A single host-resolved function. `params`/`results` describe the
 declared signature so callers and validators can sanity-check it; the
@@ -45,6 +48,10 @@ structure HostFn (α : Type) where
 indexed identically to the declaring module's `imports` field. -/
 structure HostEnv (α : Type) where
   funcs : List (HostFn α) := []
+  /-- Script-wide function instances reachable through shared funcref
+  tables. Ordinary module imports remain in `funcs`; these entries are
+  addressed by the reserved foreign-function range. -/
+  foreignFuncs : List (HostFn α) := []
 
 @[inline] def HostEnv.empty : HostEnv α := {}
 

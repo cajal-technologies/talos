@@ -56,6 +56,7 @@ def GcHeapType.inAnyHierarchy : GcHeapType → Bool
 abstract heap type `ht`. Concrete struct/array type indices are resolved
 against the module's GC type definitions and their declared supertypes. -/
 def AnyRef.matchesHeap (m : Module) (st : Store α) (ht : GcHeapType) : AnyRef → Bool
+  | .host _ => ht == .any
   | .i31 _ => match ht with
     | .any | .eq | .i31 => true
     | _ => false
@@ -150,10 +151,10 @@ of a GC heap type; the `i32`/`i64` scalar constants; and `ref.i31` of an
 `i32.const`. Heap-allocating items (`struct.new`) are not handled here. -/
 def evalConstRef : Program → Option Value
   | [.refFunc f]                 => some (.funcref (some f))
-  | [.refNull]                   => some (.funcref none)
-  | [.refNullExtern]             => some (.externref none)
-  | [.refNullExn]                => some (.exnref none)
-  | [.gc .refNullAny]            => some (.anyref none)
+  | [.refNull _]                 => some (.funcref none)
+  | [.refNullExtern _]           => some (.externref none)
+  | [.refNullExn _]              => some (.exnref none)
+  | [.gc (.refNullAny _)]        => some (.anyref none)
   | [.const n]                   => some (.i32 n)
   | [.constI64 n]                => some (.i64 n)
   | [.const n, .gc .refI31]      => some (.anyref (some (.i31 (n &&& 0x7fffffff))))
@@ -163,8 +164,28 @@ def evalConstRef : Program → Option Value
 preferring decoded GC const-expr items and falling back to funcref
 indices. -/
 def ElementSegment.values (seg : ElementSegment) : List Value :=
-  if seg.exprs.isEmpty then seg.funcs.map Value.funcref
+  if seg.exprs.isEmpty then seg.plainValues
   else seg.exprs.map (fun e => (evalConstRef e).getD (.anyref none))
+
+/-- Host-supplied extern handles occupy the unsigned 64-bit range. Handles
+at or above this boundary are deterministic encodings of Wasm-managed
+references externalized by `extern.convert_any`. -/
+def externInternalBase : Nat := 2 ^ 64
+
+def AnyRef.toExternId : AnyRef → Nat
+  | .host id => id
+  | .i31 value => externInternalBase + 3 * value.toNat
+  | .struct address => externInternalBase + 3 * address + 1
+  | .array address => externInternalBase + 3 * address + 2
+
+def anyRefOfExternId (id : Nat) : AnyRef :=
+  if id < externInternalBase then .host id
+  else
+    let encoded := id - externInternalBase
+    match encoded % 3 with
+    | 0 => .i31 ((encoded / 3).toUInt32 &&& 0x7fffffff)
+    | 1 => .struct (encoded / 3)
+    | _ => .array (encoded / 3)
 
 /-- Execute one GC-proposal instruction. These never consume fuel or
 recurse into `exec`/`run` — `struct.new`/`array.new` allocate on
@@ -172,7 +193,8 @@ recurse into `exec`/`run` — `struct.new`/`array.new` allocate on
 subtyping via `gcRefMatches` — so they live outside the fuel-threaded
 `execOne` mutual block, dispatched from it by a single `gc` arm. -/
 def execGcOp (m : Module) (st : Store α) (s : Locals) : GcOp → Continuation α
-  | .refNullAny => .Fallthrough st { s with values := .anyref none :: s.values }
+  | .refNullAny _ =>
+      .Fallthrough st { s with values := .anyref none :: s.values }
   | .refI31 => match s.values with
     | .i32 x :: vs =>
       .Fallthrough st { s with values := .anyref (some (.i31 (x &&& 0x7fffffff))) :: vs }
@@ -192,6 +214,20 @@ def execGcOp (m : Module) (st : Store α) (s : Locals) : GcOp → Continuation �
     | .anyref a :: .anyref b :: vs =>
       .Fallthrough st { s with values := .i32 (if a == b then 1 else 0) :: vs }
     | _ => .Invalid "refEq: ill-shaped operand stack"
+  | .anyConvertExtern => match s.values with
+    | .externref none :: vs =>
+      .Fallthrough st { s with values := .anyref none :: vs }
+    | .externref (some id) :: vs =>
+      .Fallthrough st
+        { s with values := .anyref (some (anyRefOfExternId id)) :: vs }
+    | _ => .Invalid "any.convert_extern: expected externref"
+  | .externConvertAny => match s.values with
+    | .anyref none :: vs =>
+      .Fallthrough st { s with values := .externref none :: vs }
+    | .anyref (some ref) :: vs =>
+      .Fallthrough st
+        { s with values := .externref (some ref.toExternId) :: vs }
+    | _ => .Invalid "extern.convert_any: expected anyref"
   | .refTest nullable ht => match s.values with
     | v :: vs => match v with
       | .anyref _ | .funcref _ | .externref _ | .exnref _ =>
@@ -378,9 +414,12 @@ def execGcOp (m : Module) (st : Store α) (s : Locals) : GcOp → Continuation �
   | .arrayInitData t d => match s.values with
     | .i32 n :: .i32 off :: .i32 dstD :: .anyref (some (.array addr)) :: vs =>
       match m.arrayElem? t, st.gcHeap[addr]?, st.dataSegments[d]? with
-      | some ft, some (.array ty elems), some (some bytes) =>
+      | some ft, some (.array ty elems), some segment =>
         let sz := ft.storage.byteSize
-        if off.toNat + n.toNat * sz > bytes.length || dstD.toNat + n.toNat > elems.length then
+        let bytes := segment.getD []
+        if dstD.toNat + n.toNat > elems.length then
+          .Trap st "out of bounds array access"
+        else if off.toNat + n.toNat * sz > bytes.length then
           .Trap st "out of bounds memory access"
         else
           let elems' := (List.range elems.length).map fun i =>
@@ -394,9 +433,10 @@ def execGcOp (m : Module) (st : Store α) (s : Locals) : GcOp → Continuation �
   -- `array.new_elem`/`array.init_elem`: element-segment-sourced arrays. Only
   -- funcref segments (stored as func indices) are modelled.
   | .arrayNewElem t e => match s.values with
-    | .i32 n :: .i32 off :: vs => match st.elementSegments[e]?, m.elements[e]? with
-      | some (some _), some seg =>
-        let refs := seg.values
+    | .i32 n :: .i32 off :: vs =>
+      match st.elementSegments[e]?, st.elementValues[e]? with
+      | some status, some cached =>
+        let refs := if status.isSome then cached.getD [] else []
         if off.toNat + n.toNat > refs.length then .Trap st "out of bounds table access"
         else
           let elems := (List.range n.toNat).map fun i => refs[off.toNat + i]!
@@ -406,10 +446,12 @@ def execGcOp (m : Module) (st : Store α) (s : Locals) : GcOp → Continuation �
     | _ => .Invalid "arrayNewElem: ill-shaped operand stack"
   | .arrayInitElem _ e => match s.values with
     | .i32 n :: .i32 off :: .i32 dstD :: .anyref (some (.array addr)) :: vs =>
-      match st.gcHeap[addr]?, st.elementSegments[e]?, m.elements[e]? with
-      | some (.array ty elems), some (some _), some seg =>
-        let refs := seg.values
-        if off.toNat + n.toNat > refs.length || dstD.toNat + n.toNat > elems.length then
+      match st.gcHeap[addr]?, st.elementSegments[e]?, st.elementValues[e]? with
+      | some (.array ty elems), some status, some cached =>
+        let refs := if status.isSome then cached.getD [] else []
+        if dstD.toNat + n.toNat > elems.length then
+          .Trap st "out of bounds array access"
+        else if off.toNat + n.toNat > refs.length then
           .Trap st "out of bounds table access"
         else
           let elems' := (List.range elems.length).map fun i =>
@@ -1059,7 +1101,7 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
     -- pushed between the entry mark and the kept top are discarded —
     -- the validator guarantees there are exactly the right number of
     -- "kept" values on top at every branch and at fall-through.
-    | f + 1, .block paramArity resultArity body =>
+    | f + 1, .block paramArity resultArity body _ _ =>
       let belowStack := s.values.drop paramArity
       match exec f m st s body env with
       | .Fallthrough r' s' =>
@@ -1071,7 +1113,7 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
         .Fallthrough r' { s' with values := s'.values.take resultArity ++ belowStack }
       | .Break (k + 1) r' s' => .Break k r' s'
       | other => other
-    | f + 1, .loop paramArity resultArity body =>
+    | f + 1, .loop paramArity resultArity body _ _ =>
       let belowStack := s.values.drop paramArity
       match exec f m st s body env with
       | .Fallthrough r' s' =>
@@ -1083,7 +1125,7 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
         execOne f m r' { s' with values := s'.values.take paramArity ++ belowStack } inst env
       | .Break (k + 1) r' s' => .Break k r' s'
       | other => other
-    | f + 1, .iff paramArity resultArity thn els => match s.values with
+    | f + 1, .iff paramArity resultArity thn els _ _ => match s.values with
       | .i32 c :: vs =>
         let belowStack := vs.drop paramArity
         let s' : Locals := { s with values := vs }
@@ -1182,7 +1224,7 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
         | none => .Invalid s!"throwRef: exception index {i} out of range"
         | some (tag, args) => .Throwing tag args st { s with values := vs }
       | _ => .Invalid "throwRef: ill-shaped operand stack"
-    | f + 1, .tryTable ps rs catches body =>
+    | f + 1, .tryTable ps rs catches body _ _ =>
       let belowStack := s.values.drop ps
       match exec f m st s body env with
       | .Fallthrough r' s' =>
@@ -1596,7 +1638,7 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
       .Fallthrough st { s with values := sizeValue m.memIs64 st.mem.pages :: s.values }
     | _, .memoryGrow => match s.values with
       | .i32 delta :: vs =>
-        match st.mem.grow delta m.memoryCap with
+        match st.mem.grow delta (st.memoryCap m 0) with
         | some (mem', cur) =>
           .Fallthrough { st with mem := mem' }
             { s with values := .i32 cur.toUInt32 :: vs }
@@ -1610,7 +1652,7 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
         if delta.toNat ≥ 2 ^ 32 then
           .Fallthrough st { s with values := .i64 (0xFFFFFFFFFFFFFFFF : UInt64) :: vs }
         else
-          match st.mem.grow delta.toUInt32 m.memoryCap with
+          match st.mem.grow delta.toUInt32 (st.memoryCap m 0) with
           | some (mem', cur) =>
             .Fallthrough { st with mem := mem' }
               { s with values := .i64 cur.toUInt64 :: vs }
@@ -1984,9 +2026,12 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
     -- the operand stack (`Value.funcref` / `Value.externref`), so these
     -- never touch the store: the null/func constructors just push a
     -- value, `refIsNull` inspects one.
-    | _, .refNull       => .Fallthrough st { s with values := .funcref none :: s.values }
-    | _, .refNullExtern => .Fallthrough st { s with values := .externref none :: s.values }
-    | _, .refNullExn    => .Fallthrough st { s with values := .exnref none :: s.values }
+    | _, .refNull _ =>
+        .Fallthrough st { s with values := .funcref none :: s.values }
+    | _, .refNullExtern _ =>
+        .Fallthrough st { s with values := .externref none :: s.values }
+    | _, .refNullExn _ =>
+        .Fallthrough st { s with values := .exnref none :: s.values }
     | _, .refFunc fidx  => .Fallthrough st { s with values := .funcref (some fidx) :: s.values }
     | _, .refIsNull => match s.values with
       | .funcref r :: vs =>
@@ -2200,7 +2245,8 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
       match st.elementSegments[elemIdx]? with
       | none => .Invalid s!"elemDrop: segment index {elemIdx} out of range"
       | some _ =>
-        .Fallthrough { st with elementSegments := st.elementSegments.set elemIdx none } s
+        .Fallthrough
+          { st with elementSegments := st.elementSegments.set elemIdx none } s
 
 def exec (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (p : Program)
     (env : HostEnv α := {}) : Continuation α :=
@@ -2230,6 +2276,7 @@ def run (fuel : Nat) (m : Module) (id : Nat)
       | .Return vs st' =>
         .Success (vs.take imp.results.length ++ callerRemainder) st'
       | .Trap st' msg  => .Trap st' msg
+      | .Throw st' tag arguments => .Thrown tag arguments st'
   | none =>
     match m.funcs[id - m.imports.length]? with
     | some f =>
@@ -2298,7 +2345,22 @@ segments (`funcs`) are applied separately and have no `exprs`. -/
 def Module.runConstElems (fuel : Nat) (m : Module) (st : Store α)
     (env : HostEnv α := {}) : Store α := Id.run do
   let mut st := st
-  for seg in m.elements do
+  for (seg, segIndex) in m.elements.zipIdx do
+    -- Passive/declarative GC segments need their item expressions evaluated
+    -- into runtime values even though they are not written to a table yet.
+    if seg.offset.isNone && !seg.exprs.isEmpty then
+      let mut values : List Value := []
+      for e in seg.exprs do
+        match exec fuel m st {} e env with
+        | .Fallthrough st' s' =>
+          st := st'
+          match s'.values with
+          | value :: _ => values := values ++ [value]
+          | [] => pure ()
+        | _ => pure ()
+      st :=
+        { st with
+          elementValues := st.elementValues.set segIndex (some values) }
     match seg.tableIdx, seg.offset with
     | some ti, some off =>
       -- Segments whose offset is itself a pending const-expr are written
@@ -2349,12 +2411,15 @@ def Module.runActiveSegments (fuel : Nat) (m : Module) (st : Store α)
       match evalOffset st seg.offsetExpr with
       | some off =>
         if seg.memIdx = 0 then
-          st := { st with mem := st.mem.writeBytes off seg.bytes }
+          if off + seg.bytes.length ≤ st.mem.pages * 65536 then
+            st := { st with mem := st.mem.writeBytes off seg.bytes }
         else
           match st.extraMems[seg.memIdx - 1]? with
           | some mem0 =>
-            let mems := st.extraMems.set (seg.memIdx - 1) (mem0.writeBytes off seg.bytes)
-            st := { st with extraMems := mems }
+            if off + seg.bytes.length ≤ mem0.pages * 65536 then
+              let mems := st.extraMems.set (seg.memIdx - 1)
+                (mem0.writeBytes off seg.bytes)
+              st := { st with extraMems := mems }
           | none => pure ()
       | none => pure ()
   -- Active element segments with a pending offset expression.
@@ -2364,10 +2429,12 @@ def Module.runActiveSegments (fuel : Nat) (m : Module) (st : Store α)
       if !seg.offsetExpr.isEmpty then
         match evalOffset st seg.offsetExpr, st.tables[ti]? with
         | some off, some tbl =>
-          if seg.exprs.isEmpty then
+          let length := if seg.exprs.isEmpty then
+            seg.funcs.length else seg.exprs.length
+          if off + length ≤ tbl.length && seg.exprs.isEmpty then
             let tbls := st.tables.set ti (listWriteAt tbl off (seg.funcs.map Value.funcref))
             st := { st with tables := tbls }
-          else
+          else if off + length ≤ tbl.length then
             -- GC const-expr items, as in `runConstElems`, but at the
             -- evaluated offset.
             let mut i := 0

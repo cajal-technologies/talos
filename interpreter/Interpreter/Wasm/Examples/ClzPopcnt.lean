@@ -1,25 +1,23 @@
-import Interpreter.Wasm.Wp.Tactic
-import Interpreter.Wasm.Wp.Call
-import Interpreter.Wasm.Examples.Harness
+import Interpreter.Wasm.SmallStep
 
 /-! ## Example: ClzPopcnt
 
-    Unary i32 bit-counting ops (`clz`, `ctz`, `popcnt`) are implemented in
-    `Semantics` via `clz32` / `ctz32` / `popcnt32` and have matching
-    `wp_*_cons` rules in `Wp.Atomic`, but until this file no worked example
-    or proof referred to them.
+    Unary i32 bit-counting ops (`clz`, `ctz`, `popcnt`) are executed by the
+    authoritative small-step machine.
 
     One shared module exports three single-instruction bodies. Six checks:
 
     * `clz_zero_runs` / `ctz_eight_runs` / `popcnt_nibble_runs` — concrete
-      `run` on representative inputs, closed by `native_decide`.
-    * `clzSpec` / `ctzSpec` / `popcntSpec` — parametric `FuncSpec` for each
-      body via `FuncSpec.of_wp_body` + `wp_run`.
+      small-step traces on representative inputs.
+    * `clzSpec` / `ctzSpec` / `popcntSpec` — parametric, fuel-free
+      `TerminatesWith` contracts.
+    * matching `*_partial` theorems preserve partial-correctness intent for
+      Iris clients.
 
     Wasm defines `clz`/`ctz` of zero as 32; `popcnt` counts set bits. -/
 
 namespace Wasm
-open Wasm.Examples
+open SmallStep
 
 /-! ### Function bodies -/
 
@@ -38,59 +36,88 @@ def clzPopcntModule : Module :=
       , { params := [.i32], body := CtzBody,    results := [.i32] }
       , { params := [.i32], body := PopcntBody, results := [.i32] } ] }
 
-/-! ### Checks 1–3 — concrete `run` -/
+def bitCountConfig (body : Program) (a : UInt32) : Config Unit :=
+  { expr := .running
+      { locals := { params := [.i32 a] }
+        code := body
+        resultArity := 1
+        callerRemainder := [] }
+    store :=
+      { runtime := { module := clzPopcntModule, host := {} }
+        wasm := clzPopcntModule.initialStore } }
+
+def clzConfig (a : UInt32) : Config Unit := bitCountConfig ClzBody a
+def ctzConfig (a : UInt32) : Config Unit := bitCountConfig CtzBody a
+def popcntConfig (a : UInt32) : Config Unit := bitCountConfig PopcntBody a
+
+/-! ### Checks 1–3 — concrete small-step execution -/
 
 theorem clz_zero_runs :
-    runValues 10 clzPopcntModule 0 (clzPopcntModule.initialStore (α := Unit)) [.i32 0]
-      = [.i32 32] := by
-  native_decide
+    (runSteps 3 (clzConfig 0)).result.values? = some [.i32 32] := by
+  rfl
 
 theorem ctz_eight_runs :
-    runValues 10 clzPopcntModule 1 (clzPopcntModule.initialStore (α := Unit)) [.i32 8]
-      = [.i32 3] := by
-  native_decide
+    (runSteps 3 (ctzConfig 8)).result.values? = some [.i32 3] := by
+  rfl
 
 theorem popcnt_nibble_runs :
-    runValues 10 clzPopcntModule 2 (clzPopcntModule.initialStore (α := Unit)) [.i32 0xF]
-      = [.i32 4] := by
-  native_decide
+    (runSteps 3 (popcntConfig 0xF)).result.values? = some [.i32 4] := by
+  rfl
 
-/-! ### Checks 4–6 — `FuncSpec` via `wp` -/
+/-! ### Checks 4–6 — fuel-free small-step specifications -/
 
 theorem clzSpec (a : UInt32) :
-    FuncSpec ({} : HostEnv Unit) clzPopcntModule 0 (· = [.i32 a])
-      (fun _ vs => vs = [.i32 (UInt32.ofNat (clz32 32 a))]) := by
-  apply FuncSpec.of_wp_body
-    (f := { params := [.i32], body := ClzBody, results := [.i32] })
+    TerminatesWith (clzConfig a)
+      (fun values _ =>
+        values = [.i32 (UInt32.ofNat (clz32 32 a))]) := by
+  apply runSteps_success_terminates (fuel := 3)
+    (values := [.i32 (UInt32.ofNat (clz32 32 a))])
   · rfl
-  · rintro args rfl initial
-    simp [Function.toLocals, Function.numParams]
-    unfold ClzBody
-    wp_run
-    simp
+  · rfl
 
 theorem ctzSpec (a : UInt32) :
-    FuncSpec ({} : HostEnv Unit) clzPopcntModule 1 (· = [.i32 a])
-      (fun _ vs => vs = [.i32 (UInt32.ofNat (ctz32 32 a))]) := by
-  apply FuncSpec.of_wp_body
-    (f := { params := [.i32], body := CtzBody, results := [.i32] })
+    TerminatesWith (ctzConfig a)
+      (fun values _ =>
+        values = [.i32 (UInt32.ofNat (ctz32 32 a))]) := by
+  apply runSteps_success_terminates (fuel := 3)
+    (values := [.i32 (UInt32.ofNat (ctz32 32 a))])
   · rfl
-  · rintro args rfl initial
-    simp [Function.toLocals, Function.numParams]
-    unfold CtzBody
-    wp_run
-    simp
+  · rfl
 
 theorem popcntSpec (a : UInt32) :
-    FuncSpec ({} : HostEnv Unit) clzPopcntModule 2 (· = [.i32 a])
-      (fun _ vs => vs = [.i32 (UInt32.ofNat (popcnt32 32 a 0))]) := by
-  apply FuncSpec.of_wp_body
-    (f := { params := [.i32], body := PopcntBody, results := [.i32] })
+    TerminatesWith (popcntConfig a)
+      (fun values _ =>
+        values = [.i32 (UInt32.ofNat (popcnt32 32 a 0))]) := by
+  apply runSteps_success_terminates (fuel := 3)
+    (values := [.i32 (UInt32.ofNat (popcnt32 32 a 0))])
   · rfl
-  · rintro args rfl initial
-    simp [Function.toLocals, Function.numParams]
-    unfold PopcntBody
-    wp_run
-    simp
+  · rfl
+
+theorem clz_partial (a : UInt32) :
+    PartiallyMeets (clzConfig a)
+      (fun values _ =>
+        values = [.i32 (UInt32.ofNat (clz32 32 a))]) := by
+  apply runSteps_success_partiallyMeets (fuel := 3)
+    (values := [.i32 (UInt32.ofNat (clz32 32 a))])
+  · rfl
+  · rfl
+
+theorem ctz_partial (a : UInt32) :
+    PartiallyMeets (ctzConfig a)
+      (fun values _ =>
+        values = [.i32 (UInt32.ofNat (ctz32 32 a))]) := by
+  apply runSteps_success_partiallyMeets (fuel := 3)
+    (values := [.i32 (UInt32.ofNat (ctz32 32 a))])
+  · rfl
+  · rfl
+
+theorem popcnt_partial (a : UInt32) :
+    PartiallyMeets (popcntConfig a)
+      (fun values _ =>
+        values = [.i32 (UInt32.ofNat (popcnt32 32 a 0))]) := by
+  apply runSteps_success_partiallyMeets (fuel := 3)
+    (values := [.i32 (UInt32.ofNat (popcnt32 32 a 0))])
+  · rfl
+  · rfl
 
 end Wasm

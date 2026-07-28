@@ -1,5 +1,5 @@
 import Project.SwapElementsOpt3.Program
-import Project.SwapElements.Spec
+import Project.SwapElements.Address
 
 /-!
 # Specification and proof for `swap_elements_opt3`

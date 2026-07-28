@@ -1,4 +1,5 @@
 import Interpreter.Wasm
+import Interpreter.Wasm.SmallStep
 import Interpreter.Wasm.Decoder.Wat
 import Interpreter.Wasm.Validate
 import Lean.Data.Json
@@ -20,6 +21,29 @@ namespace Wasm.Testsuite
 
 open Wasm Wasm.Decoder.Wat
 open Lean (Json)
+
+/-- Invoke through the migrated small-step semantics. The iterator has its own
+explicit cap so an intentionally divergent program cannot consume the
+testsuite's full fuel allowance. Initialization failures and invariant
+violations remain observable driver errors rather than falling back to a
+second semantics. -/
+private def runSmallStep
+    (fuel : Nat) (m : Wasm.Module) (idx : Nat)
+    (store : Wasm.Store Unit) (args : List Wasm.Value)
+    (env : Wasm.HostEnv Unit) : Wasm.Result Unit :=
+  let runtime : Wasm.SmallStep.RuntimeEnv Unit := { module := m, host := env }
+  match Wasm.SmallStep.initConfig runtime idx store args with
+  | .error error => .Invalid s!"small-step initialization error: {error.message}"
+  | .ok config =>
+    match (Wasm.SmallStep.runSteps (min fuel 15_000_000) config).result with
+    | .success values finalStore => .Success values finalStore.wasm
+    | .trapped (.uncaughtException tag arguments) finalStore =>
+      .Thrown tag arguments finalStore.wasm
+    | .trapped reason finalStore =>
+      .Trap finalStore.wasm reason.message
+    | .outOfFuel _ => .OutOfFuel
+    | .internalError error _ =>
+      .Invalid s!"small-step internal error: {error.message}"
 
 /-! ## Outcomes -/
 
@@ -139,6 +163,12 @@ private def parseValueAt (ty val : String) : Except String Value :=
     | _ => match val.toNat? with
       | some n => .ok (.funcref (some n))
       | none   => .error s!"unparseable funcref value `{val}`"
+  | "anyref" =>
+    match val with
+    | "null" => .ok (.anyref none)
+    | _ => match val.toNat? with
+      | some n => .ok (.anyref (some (.host n)))
+      | none => .error s!"unparseable anyref value `{val}`"
   | other => .error s!"non-integer value type `{other}`"
 
 private def laneBitsOf? : String → Option Nat
@@ -299,9 +329,12 @@ private partial def parseExpectedValue (j : Json) : Except String ExpectedVal :=
       | some "null"   => return .gcRef "nullref"
       | some v => match v.toInt? with
         | some n =>
-          let m : Int := 4294967296
-          let u := ((n % m + m) % m).toNat
-          return .exact (.anyref (some (.i31 (u.toUInt32 &&& 0x7fffffff))))
+          if ty == "anyref" then
+            return .exact (.anyref (some (.host n.toNat)))
+          else
+            let m : Int := 4294967296
+            let u := ((n % m + m) % m).toNat
+            return .exact (.anyref (some (.i31 (u.toUInt32 &&& 0x7fffffff))))
         | none => return .gcRef ty
     else match jstr? j "value" with
     | some val => ExpectedVal.exact <$> parseValueAt ty val
@@ -333,6 +366,10 @@ inductive ModuleSlot where
 deriving Inhabited
 
 structure ScriptState where
+  /-- Named module definitions are decoded but not instantiated until a
+  subsequent `module_instance` command. Each instantiation receives fresh
+  local resources, as required by the component-model script syntax. -/
+  definitions : List (String × Wasm.Module) := []
   /-- All declared modules in source order. -/
   modules : Array ModuleSlot := #[]
   /-- `$name` → index into `modules`. Small enough that a linear list is fine. -/
@@ -340,6 +377,18 @@ structure ScriptState where
   /-- `(register "M")` bindings: registered name → index into `modules`.
   Imports from a registered module resolve against that instance. -/
   registered : List (String × Nat) := []
+  /-- Script-wide instantiated mutable globals. -/
+  sharedGlobals : Array Wasm.Value := #[]
+  /-- Allocated exception-tag identities (payload-free but generative). -/
+  sharedTags : Array Unit := #[]
+  /-- Script-wide callable function instances referenced by shared tables. -/
+  sharedFunctions : Array (Wasm.HostFn Unit) := #[]
+  /-- Script-wide instantiated memories. Module-local memory indices carry
+  stable IDs into this array, so imports alias resources rather than copying
+  snapshots. The cap travels with the resource. -/
+  sharedMemories : Array (Wasm.Mem × Nat) := #[]
+  /-- Script-wide instantiated tables, indexed by stable table identity. -/
+  sharedTables : Array (Wasm.TableInst × Nat) := #[]
 
 /-- Look up the index of the module an action wants. With no name, it's
 the last declared one. Returning the index (rather than the slot itself)
@@ -418,7 +467,8 @@ private def resolveRegistered (st : ScriptState) (modName : String)
 /-- Build the host environment backing a module's function imports. -/
 private def buildEnv (st : ScriptState) (m : Wasm.Module) (fuel : Nat)
     : Wasm.HostEnv Unit :=
-  { funcs := m.imports.map fun imp =>
+  { foreignFuncs := st.sharedFunctions.toList
+    funcs := m.imports.map fun imp =>
       if imp.module == "spectest" && spectestPrintNames.contains imp.name then
         { params := imp.params, results := imp.results,
           invoke := fun s _ => .Return [] s }
@@ -429,14 +479,19 @@ private def buildEnv (st : ScriptState) (m : Wasm.Module) (fuel : Nat)
           | some fidx =>
             { params := imp.params, results := imp.results,
               invoke := fun s args =>
-                -- `args` arrive first-declared-first; `Wasm.run` expects
+                -- `args` arrive first-declared-first; `initConfig` expects
                 -- stack order (head = last argument).
-                match Wasm.run fuel em fidx estore args.reverse eenv with
+                match runSmallStep fuel em fidx estore args.reverse eenv with
                 | .Success vs _ => .Return vs s
                 | .Trap _ msg   => .Trap s msg
                 | .Invalid msg  => .Trap s s!"invalid in imported function: {msg}"
                 | .OutOfFuel    => .Trap s "out of fuel in imported function"
-                | .Thrown _ _ _ => .Trap s "uncaught exception" }
+                | .Thrown tag arguments _ =>
+                  let globalTag := estore.tagIds[tag]?.getD tag
+                  let localTag :=
+                    (s.tagIds.findIdx? (· = globalTag)).getD
+                      (s.tagIds.length + globalTag)
+                  .Throw s localTag arguments }
           | none =>
             { invoke := fun s _ =>
                 .Trap s s!"unknown import {imp.module}.{imp.name}" }
@@ -476,34 +531,45 @@ private def applyEntityImports (sst : ScriptState) (m : Wasm.Module)
     gi := gi + 1
   let mut ti := 0
   for (modN, name) in m.importedTables do
-    let t? : Option Wasm.TableInst :=
+    let t? : Option (Wasm.TableInst × Nat) :=
       if modN == "spectest" && name == "table" then
-        some (List.replicate 10 (Wasm.Value.funcref none))
+        some (List.replicate 10 (Wasm.Value.funcref none),
+          Wasm.Module.tableHardCap)
       else match resolveRegistered sst modN with
         | some (em, estore, _) =>
           match em.tableExports.find? (·.1 = name) with
-          | some (_, tIdx) => estore.tables[tIdx]?
+          | some (_, tIdx) =>
+            estore.tables[tIdx]?.map fun table =>
+              (table, em.tableCap tIdx)
           | none => none
         | none => none
     match t? with
-    | some t => store := { store with tables := Wasm.listSetAt store.tables ti t }
+    | some (t, _) =>
+      store :=
+        { store with
+          tables := Wasm.listSetAt store.tables ti t }
     | none => pure ()
     ti := ti + 1
   let mut mi := 0
   for (modN, name) in m.importedMemories do
-    let mem? : Option Wasm.Mem :=
-      if modN == "spectest" && name == "memory" then some (Wasm.Mem.empty 1)
+    let mem? : Option (Wasm.Mem × Nat) :=
+      if modN == "spectest" && name == "memory" then
+        -- The spec harness defines `(memory 1 2)`.
+        some (Wasm.Mem.empty 1, 2)
       else match resolveRegistered sst modN with
         | some (em, estore, _) =>
           match em.memoryExports.find? (·.1 = name) with
           | some (_, mIdx) =>
-            if mIdx = 0 then some estore.mem else estore.extraMems[mIdx - 1]?
+            let selected :=
+              if mIdx = 0 then some estore.mem else estore.extraMems[mIdx - 1]?
+            selected.map fun memory => (memory, estore.memoryCap em mIdx)
           | none => none
         | none => none
     match mem? with
-    | some mem =>
+    | some (mem, cap) =>
       if mi = 0 then store := { store with mem := mem }
       else store := { store with extraMems := Wasm.listSetAt store.extraMems (mi - 1) mem }
+      store := { store with memoryCaps := Wasm.listSetAt store.memoryCaps mi cap }
     | none => pure ()
     mi := mi + 1
   -- Re-apply active segments on top of the copied entities.
@@ -512,28 +578,383 @@ private def applyEntityImports (sst : ScriptState) (m : Wasm.Module)
     for seg in d0.data do
       match seg.offset with
       | some off =>
-        if seg.memIdx = 0 then
-          store := { store with mem := store.mem.writeBytes off.toNat seg.bytes }
+        if !seg.offsetExpr.isEmpty then pure ()
+        else if seg.memIdx = 0 then
+          if off.toNat + seg.bytes.length ≤ store.mem.pages * 65536 then
+            store := { store with mem := store.mem.writeBytes off.toNat seg.bytes }
         else
           match store.extraMems[seg.memIdx - 1]? with
           | some em =>
-            let mems' := Wasm.listSetAt store.extraMems (seg.memIdx - 1)
-              (em.writeBytes off.toNat seg.bytes)
-            store := { store with extraMems := mems' }
+            if off.toNat + seg.bytes.length ≤ em.pages * 65536 then
+              let mems' := Wasm.listSetAt store.extraMems (seg.memIdx - 1)
+                (em.writeBytes off.toNat seg.bytes)
+              store := { store with extraMems := mems' }
           | none => pure ()
       | none => pure ()
   | none => pure ()
   for seg in m.elements do
     match seg.tableIdx, seg.offset with
     | some t, some off =>
-      match store.tables[t]? with
+      if !seg.offsetExpr.isEmpty then pure ()
+      else match store.tables[t]? with
       | some tbl =>
-        let tbls' := Wasm.listSetAt store.tables t
-          (Wasm.listWriteAt tbl off (seg.funcs.map Wasm.Value.funcref))
-        store := { store with tables := tbls' }
+        if off + seg.plainValues.length ≤ tbl.length then
+          let tbls' := Wasm.listSetAt store.tables t
+            (Wasm.listWriteAt tbl off seg.plainValues)
+          store := { store with tables := tbls' }
       | none => pure ()
     | _, _ => pure ()
   return store
+
+private def storeMemory? (store : Wasm.Store Unit) (index : Nat) :
+    Option Wasm.Mem :=
+  let canonical :=
+    match store.memoryIds[index]? with
+    | some id => (store.memoryIds.findIdx? (· = id)).getD index
+    | none => index
+  if canonical = 0 then some store.mem else store.extraMems[canonical - 1]?
+
+private def setStoreMemory (store : Wasm.Store Unit) (index : Nat)
+    (memory : Wasm.Mem) : Wasm.Store Unit :=
+  if index = 0 then { store with mem := memory }
+  else
+    { store with
+      extraMems := Wasm.listSetAt store.extraMems (index - 1) memory }
+
+/-- Re-apply literal-offset active segments after imported resources have been
+hydrated from their canonical script-wide identities. `initialStore` and
+`applyEntityImports` necessarily run before those identities are assigned;
+without this pass their writes can be hidden by the subsequent hydration. -/
+private def reapplyLiteralActiveSegments (m : Wasm.Module)
+    (store0 : Wasm.Store Unit) : Wasm.Store Unit := Id.run do
+  let mut store := store0
+  match m.memory with
+  | some memory =>
+    for segment in memory.data do
+      match segment.offset with
+      | some offset =>
+        if !segment.offsetExpr.isEmpty then pure ()
+        else
+          match storeMemory? store segment.memIdx with
+          | some target =>
+            if offset.toNat + segment.bytes.length ≤ target.pages * 65536 then
+              store := setStoreMemory store segment.memIdx
+                (target.writeBytes offset.toNat segment.bytes)
+          | none => pure ()
+      | none => pure ()
+  | none => pure ()
+  for segment in m.elements do
+    match segment.tableIdx, segment.offset with
+    | some tableIndex, some offset =>
+      if !segment.offsetExpr.isEmpty then pure ()
+      else
+        match store.tables[tableIndex]? with
+        | some table =>
+          if offset + segment.plainValues.length ≤ table.length then
+            store :=
+              { store with
+                tables := Wasm.listSetAt store.tables tableIndex
+                  (Wasm.listWriteAt table offset segment.plainValues) }
+        | none => pure ()
+    | _, _ => pure ()
+  return store
+
+/-- Give every local resource a script-wide stable identity. Imported
+resources reuse the identity exported by the registered instance; locally
+defined resources append fresh entries. -/
+private def assignResourceIds (sst : ScriptState) (m : Wasm.Module)
+    (store0 : Wasm.Store Unit) :
+    Wasm.Store Unit × Array (Wasm.Mem × Nat) ×
+      Array (Wasm.TableInst × Nat) := Id.run do
+  let mut store := store0
+  let mut memories := sst.sharedMemories
+  let mut tables := sst.sharedTables
+  let mut memoryIds : List Nat := []
+  let mut tableIds : List Nat := []
+
+  for index in List.range store0.memoryCaps.length do
+    let importedId? :=
+      if h : index < m.importedMemories.length then
+        let (modName, name) := m.importedMemories[index]
+        match resolveRegistered sst modName with
+        | some (em, estore, _) =>
+          match em.memoryExports.find? (·.1 = name) with
+          | some (_, exportIndex) => estore.memoryIds[exportIndex]?
+          | none => none
+        | none => none
+      else none
+    let id ← match importedId? with
+      | some id =>
+        match memories[id]? with
+        | some (memory, cap) =>
+          store := setStoreMemory store index memory
+          store :=
+            { store with
+              memoryCaps := Wasm.listSetAt store.memoryCaps index cap }
+        | none => pure ()
+        pure id
+      | none =>
+        let id := memories.size
+        match storeMemory? store index with
+        | some memory =>
+          memories := memories.push
+            (memory, store.memoryCap m index)
+        | none => pure ()
+        pure id
+    memoryIds := memoryIds ++ [id]
+
+  for index in List.range store0.tables.length do
+    let importedId? :=
+      if h : index < m.importedTables.length then
+        let (modName, name) := m.importedTables[index]
+        match resolveRegistered sst modName with
+        | some (em, estore, _) =>
+          match em.tableExports.find? (·.1 = name) with
+          | some (_, exportIndex) => estore.tableIds[exportIndex]?
+          | none => none
+        | none => none
+      else none
+    let id ← match importedId? with
+      | some id =>
+        match tables[id]? with
+        | some (table, _) =>
+          let decode : Wasm.Value → Wasm.Value
+            | .funcref (some encoded) =>
+              if Wasm.SmallStep.foreignFunctionBase ≤ encoded then
+                let functionId :=
+                  encoded - Wasm.SmallStep.foreignFunctionBase
+                match store.functionIds.findIdx? (· = functionId) with
+                | some localIndex => .funcref (some localIndex)
+                | none => .funcref (some encoded)
+              else .funcref (some encoded)
+            | value => value
+          store :=
+            { store with
+              tables := Wasm.listSetAt store.tables index (table.map decode) }
+        | none => pure ()
+        pure id
+      | none =>
+        let id := tables.size
+        match store.tables[index]? with
+        | some table =>
+          tables := tables.push (table, m.tableCap index)
+        | none => pure ()
+        pure id
+    tableIds := tableIds ++ [id]
+
+  return ({ store with memoryIds, tableIds }, memories, tables)
+
+private def assignGlobalIds (sst : ScriptState) (m : Wasm.Module)
+    (store0 : Wasm.Store Unit) : Wasm.Store Unit × Array Wasm.Value := Id.run do
+  let mut globals := sst.sharedGlobals
+  let mut globalIds : List Nat := []
+  for index in List.range store0.globals.globals.length do
+    let importedId? :=
+      if index < m.importedGlobals.length then
+        let (modName, name) := m.importedGlobals[index]!
+        match resolveRegistered sst modName with
+        | some (em, estore, _) =>
+          match em.globalExports.find? (·.1 = name) with
+          | some (_, exportIndex) => estore.globalIds[exportIndex]?
+          | none => none
+        | none => none
+      else none
+    let id ← match importedId? with
+      | some id => pure id
+      | none =>
+        let id := globals.size
+        match store0.globals.globals[index]? with
+        | some value => globals := globals.push value
+        | none => pure ()
+        pure id
+    globalIds := globalIds ++ [id]
+  return ({ store0 with globalIds }, globals)
+
+private def assignTagIds (sst : ScriptState) (m : Wasm.Module)
+    (store0 : Wasm.Store Unit) : Wasm.Store Unit × Array Unit := Id.run do
+  let mut tags := sst.sharedTags
+  let mut tagIds : List Nat := []
+  for index in List.range m.tags.length do
+    let importedId? :=
+      if index < m.importedTags.length then
+        let (modName, name) := m.importedTags[index]!
+        match resolveRegistered sst modName with
+        | some (em, estore, _) =>
+          match em.tagExports.find? (·.1 = name) with
+          | some (_, exportIndex) => estore.tagIds[exportIndex]?
+          | none => none
+        | none => none
+      else none
+    let id ← match importedId? with
+      | some id => pure id
+      | none =>
+        let id := tags.size
+        tags := tags.push ()
+        pure id
+    tagIds := tagIds ++ [id]
+  return ({ store0 with tagIds }, tags)
+
+private def assignFunctionIds (sst : ScriptState) (m : Wasm.Module)
+    (store0 : Wasm.Store Unit) (env : Wasm.HostEnv Unit) (fuel : Nat) :
+    Wasm.Store Unit × Array (Wasm.HostFn Unit) := Id.run do
+  let mut functions := sst.sharedFunctions
+  let mut functionIds : List Nat := []
+  let functionCount := m.imports.length + m.funcs.length
+  for index in List.range functionCount do
+    let importedId? :=
+      if index < m.imports.length then
+        let imp := m.imports[index]!
+        match resolveRegistered sst imp.module with
+        | some (em, estore, _) =>
+          match em.findExport imp.name with
+          | some exportIndex => estore.functionIds[exportIndex]?
+          | none => none
+        | none => none
+      else none
+    let id ← match importedId? with
+      | some id => pure id
+      | none =>
+        let id := functions.size
+        let signature := (m.funcSig? index).getD {}
+        let capturedStore := store0
+        let function : Wasm.HostFn Unit :=
+          { params := signature.params
+            results := signature.results
+            invoke := fun callerStore args =>
+              match runSmallStep fuel m index capturedStore args.reverse env with
+              | .Success values _ => .Return values callerStore
+              | .Trap _ message => .Trap callerStore message
+              | .Invalid message =>
+                .Trap callerStore s!"invalid in foreign function: {message}"
+              | .OutOfFuel => .Trap callerStore "out of fuel in foreign function"
+              | .Thrown tag arguments _ =>
+                let globalTag := capturedStore.tagIds[tag]?.getD tag
+                let localTag :=
+                  (callerStore.tagIds.findIdx? (· = globalTag)).getD
+                    (callerStore.tagIds.length + globalTag)
+                .Throw callerStore localTag arguments }
+        functions := functions.push function
+        pure id
+    functionIds := functionIds ++ [id]
+  return ({ store0 with functionIds }, functions)
+
+private def encodeSharedFuncref (store : Wasm.Store Unit) : Wasm.Value → Wasm.Value
+  | .funcref (some index) =>
+    if Wasm.SmallStep.foreignFunctionBase ≤ index then .funcref (some index)
+    else
+      match store.functionIds[index]? with
+      | some id => .funcref (some (Wasm.SmallStep.foreignFunctionBase + id))
+      | none => .funcref (some index)
+  | value => value
+
+private def decodeSharedFuncref (store : Wasm.Store Unit) : Wasm.Value → Wasm.Value
+  | .funcref (some index) =>
+    if Wasm.SmallStep.foreignFunctionBase ≤ index then
+      let id := index - Wasm.SmallStep.foreignFunctionBase
+      match store.functionIds.findIdx? (· = id) with
+      | some localIndex => .funcref (some localIndex)
+      | none => .funcref (some index)
+    else .funcref (some index)
+  | value => value
+
+/-- Refresh a module-local store from the script-wide shared resources before
+an action. -/
+private def hydrateStore (sst : ScriptState) (store0 : Wasm.Store Unit) :
+    Wasm.Store Unit := Id.run do
+  let mut store := store0
+  for (id, index) in store0.globalIds.zipIdx do
+    match sst.sharedGlobals[id]? with
+    | some value =>
+      store := { store with globals :=
+        { globals := Wasm.listSetAt store.globals.globals index value } }
+    | none => pure ()
+  for (id, index) in store0.memoryIds.zipIdx do
+    match sst.sharedMemories[id]? with
+    | some (memory, cap) =>
+      store := setStoreMemory store index memory
+      store :=
+        { store with
+          memoryCaps := Wasm.listSetAt store.memoryCaps index cap }
+    | none => pure ()
+  for (id, index) in store0.tableIds.zipIdx do
+    match sst.sharedTables[id]? with
+    | some (table, _) =>
+      store :=
+        { store with
+          tables := Wasm.listSetAt store.tables index
+            (table.map (decodeSharedFuncref store0)) }
+    | none => pure ()
+  return store
+
+private def hydrateSlot (sst : ScriptState) (fuel : Nat) : ModuleSlot → ModuleSlot
+  | .ok m store _ => .ok m (hydrateStore sst store) (buildEnv sst m fuel)
+  | slot => slot
+
+/-- Commit a module-local post-store back to every shared resource it
+addresses. Other instances observe the update on their next action. -/
+private def commitStore (sst : ScriptState) (m : Wasm.Module)
+    (store : Wasm.Store Unit) : ScriptState := Id.run do
+  let mut globals := sst.sharedGlobals
+  let mut memories := sst.sharedMemories
+  let mut tables := sst.sharedTables
+  for (id, index) in store.globalIds.zipIdx do
+    match store.globals.globals[index]? with
+    | some value =>
+      if id < globals.size then globals := globals.set! id value
+    | none => pure ()
+  for (id, index) in store.memoryIds.zipIdx do
+    match storeMemory? store index with
+    | some memory =>
+      if id < memories.size then
+        memories := memories.set! id (memory, store.memoryCap m index)
+    | none => pure ()
+  for (id, index) in store.tableIds.zipIdx do
+    match store.tables[index]? with
+    | some table =>
+      if id < tables.size then
+        tables := tables.set! id
+          (table.map (encodeSharedFuncref store), m.tableCap index)
+    | none => pure ()
+  return { sst with
+    sharedGlobals := globals
+    sharedMemories := memories
+    sharedTables := tables }
+
+private def commitSlot (sst : ScriptState) : ModuleSlot → ScriptState
+  | .ok m store _ => commitStore sst m store
+  | _ => sst
+
+/-- Detect an active-segment instantiation trap. Element segments precede
+data segments in the WebAssembly instantiation algorithm, which is observable:
+successful writes to an imported table remain committed when a later data
+segment traps. Pending const-expression offsets are handled by the ordinary
+instantiation pass and are conservatively ignored here for now. -/
+private def activeSegmentTrap? (m : Wasm.Module) (store : Wasm.Store Unit) :
+    Option String :=
+  let tableTrap := m.elements.findSome? fun segment =>
+    match segment.tableIdx, segment.offset with
+    | some tableIndex, some offset =>
+      match store.tables[tableIndex]? with
+      | some table =>
+        let length :=
+          if segment.exprs.isEmpty then segment.funcs.length
+          else segment.exprs.length
+        if offset + length ≤ table.length then none
+        else some "out of bounds table access"
+      | none => some "out of bounds table access"
+    | _, _ => none
+  tableTrap.orElse fun _ =>
+    let segments := (m.memory.map (·.data)).getD []
+    segments.findSome? fun segment =>
+      match segment.offset with
+      | some offset =>
+        match storeMemory? store segment.memIdx with
+        | some memory =>
+          if offset.toNat + segment.bytes.length ≤ memory.pages * 65536 then
+            none
+          else some "out of bounds memory access"
+        | none => some "out of bounds memory access"
+      | none => none
 
 /-! ## Compact value rendering for failure messages -/
 
@@ -553,6 +974,7 @@ private def renderValue : Value → String
   | .anyref (some (.i31 n))   => s!"i31:{n.toInt32.toInt}"
   | .anyref (some (.struct a)) => s!"struct:{a}"
   | .anyref (some (.array a))  => s!"array:{a}"
+  | .anyref (some (.host id))  => s!"host:{id}"
 
 /-- Render a `List Value`, truncating runs longer than `maxLen` (the
 interpreter occasionally leaves big stacks around on failure and that
@@ -602,11 +1024,11 @@ def runAssertReturn
     match m.findExport field with
     | none => (.fail s!"unknown export `{field}`", slot)
     | some idx =>
-      -- `Wasm.run` expects params in *stack* order (top = last source arg)
+      -- `initConfig` expects params in *stack* order (top = last source arg)
       -- because WAT-decoded functions reverse params to assign locals[0] to
       -- the first source argument. The testsuite parses args in source
       -- order, so we reverse here to match the call convention.
-      match Wasm.run fuel m idx store args.reverse env with
+      match runSmallStep fuel m idx store args.reverse env with
       | .Success rs store' =>
         let actual := rs.reverse
         let slot' := .ok m store' env
@@ -632,7 +1054,7 @@ def runAssertTrap
     match m.findExport field with
     | none => (.fail s!"unknown export `{field}`", slot)
     | some idx =>
-      match Wasm.run fuel m idx store args.reverse env with
+      match runSmallStep fuel m idx store args.reverse env with
       | .Success rs store' =>
         (.fail s!"expected trap `{expectedReason}`, returned {renderValues rs.reverse}", .ok m store' env)
       | .Trap store' msg =>
@@ -656,7 +1078,7 @@ def runActionOnly
     match m.findExport field with
     | none => (.fail s!"unknown export `{field}`", slot)
     | some idx =>
-      match Wasm.run fuel m idx store args.reverse env with
+      match runSmallStep fuel m idx store args.reverse env with
       | .Success _ store' => (.pass, .ok m store' env)
       | .Trap store' msg => (.fail s!"unexpected trap `{msg}`", .ok m store' env)
       | .OutOfFuel => (.outOfFuel, slot)
@@ -673,7 +1095,7 @@ def runAssertException
     match m.findExport field with
     | none => (.fail s!"unknown export `{field}`", slot)
     | some idx =>
-      match Wasm.run fuel m idx store args.reverse env with
+      match runSmallStep fuel m idx store args.reverse env with
       | .Thrown _ _ store' => (.pass, .ok m store' env)
       | .Success rs store' =>
         (.fail s!"expected exception, returned {renderValues rs.reverse}", .ok m store' env)
@@ -694,6 +1116,76 @@ def parseInvokeAction (j : Json) : Except String (Option String × String × Lis
 
 /-! ## Per-file driver -/
 
+private def instantiateModule (st : ScriptState) (m : Wasm.Module) (fuel : Nat) :
+    ModuleSlot × Array Wasm.Value × Array Unit × Array (Wasm.HostFn Unit) ×
+      Array (Wasm.Mem × Nat) × Array (Wasm.TableInst × Nat) :=
+  let env := buildEnv st m fuel
+  let store0 := applyEntityImports st m m.initialStore
+  let (store0, sharedGlobals) := assignGlobalIds st m store0
+  let (store0, sharedTags) := assignTagIds st m store0
+  let (store0, sharedFunctions) := assignFunctionIds st m store0 env fuel
+  let functionState := { st with sharedFunctions := sharedFunctions }
+  let (store0, sharedMemories, sharedTables) :=
+    assignResourceIds functionState m store0
+  let store0 := reapplyLiteralActiveSegments m store0
+  let store0 := m.runConstGlobals fuel store0 env
+  let store0 := m.runConstElems fuel store0 env
+  let store0 := m.runActiveSegments fuel store0 env
+  match m.startFunc with
+  | none =>
+    let sharedState := commitStore
+      { st with
+        sharedGlobals := sharedGlobals
+        sharedTags := sharedTags
+        sharedFunctions := sharedFunctions
+        sharedMemories := sharedMemories
+        sharedTables := sharedTables } m store0
+    (.ok m store0 env, sharedState.sharedGlobals, sharedTags, sharedFunctions,
+      sharedState.sharedMemories, sharedState.sharedTables)
+  | some idx =>
+    match runSmallStep fuel m idx store0 [] env with
+    | .Success _ store' =>
+      let sharedState := commitStore
+        { st with
+          sharedGlobals := sharedGlobals
+          sharedTags := sharedTags
+          sharedFunctions := sharedFunctions
+          sharedMemories := sharedMemories
+          sharedTables := sharedTables } m store'
+      (.ok m store' env, sharedState.sharedGlobals, sharedTags, sharedFunctions,
+        sharedState.sharedMemories, sharedState.sharedTables)
+    | .Trap store' msg =>
+      let sharedState := commitStore
+        { st with
+          sharedGlobals := sharedGlobals
+          sharedTags := sharedTags
+          sharedFunctions := sharedFunctions
+          sharedMemories := sharedMemories
+          sharedTables := sharedTables } m store'
+      (.unavailable s!"start trapped: {msg}",
+        sharedState.sharedGlobals, sharedTags, sharedFunctions,
+        sharedState.sharedMemories,
+        sharedState.sharedTables)
+    | .OutOfFuel =>
+      (.unavailable "start out of fuel", sharedGlobals, sharedTags, sharedFunctions,
+        sharedMemories, sharedTables)
+    | .Invalid msg =>
+      (.unavailable s!"start invalid: {msg}", sharedGlobals, sharedTags,
+        sharedFunctions,
+        sharedMemories, sharedTables)
+    | .Thrown _ _ store' =>
+      let sharedState := commitStore
+        { st with
+          sharedGlobals := sharedGlobals
+          sharedTags := sharedTags
+          sharedFunctions := sharedFunctions
+          sharedMemories := sharedMemories
+          sharedTables := sharedTables } m store'
+      (.unavailable "uncaught exception in start",
+        sharedState.sharedGlobals, sharedTags, sharedFunctions,
+        sharedState.sharedMemories,
+        sharedState.sharedTables)
+
 /-- Process a single command JSON object, possibly mutating `st`. Returns
 the outcome to record (and `none` if the command itself was just a state
 mutation like `module`/`register`, which we still record as a row so the
@@ -705,38 +1197,50 @@ def runCommand
   let kind := jstr? cmd "type" |>.getD "unknown"
   let mk (o : Outcome) : CmdResult := { line, kind, outcome := o }
   match kind with
+  | "module_definition" =>
+    let filename := jstr? cmd "filename" |>.getD ""
+    let name := jstr? cmd "name" |>.getD ""
+    match (← decodeModuleFile s!"{wasmDir}/{filename}") with
+    | .error e => return (st, mk (.decodeError e))
+    | .ok m =>
+      return ({ st with definitions := (name, m) :: st.definitions }, mk .pass)
+  | "module_instance" =>
+    let instanceName := jstr? cmd "instance" |>.getD ""
+    let definitionName := jstr? cmd "module" |>.getD ""
+    match st.definitions.find? (·.1 = definitionName) with
+    | none =>
+      return (st, mk (.interpreterError
+        s!"unknown module definition `{definitionName}`"))
+    | some (_, m) =>
+      let (slot, sharedGlobals, sharedTags, sharedFunctions,
+          sharedMemories, sharedTables) :=
+        instantiateModule st m fuel
+      let idx := st.modules.size
+      let modules := st.modules.push slot
+      let named := (instanceName, idx) :: st.named
+      let outcome : Outcome := match slot with
+        | .ok _ _ _ => Outcome.pass
+        | .unavailable e => Outcome.interpreterError e
+      pure ({ st with
+        modules := modules
+        named := named
+        sharedGlobals := sharedGlobals
+        sharedTags := sharedTags
+        sharedFunctions := sharedFunctions
+        sharedMemories := sharedMemories
+        sharedTables := sharedTables }, mk outcome)
   | "module" =>
     let filename := jstr? cmd "filename" |>.getD ""
     let name?    := jstr? cmd "name"
-    let slot ← (do
+    let (slot, sharedGlobals, sharedTags, sharedFunctions,
+        sharedMemories, sharedTables) ← (do
       let res ← decodeModuleFile s!"{wasmDir}/{filename}"
       match res with
-      | .ok m =>
-        -- Resolve imports (registered instances + ambient spectest) and
-        -- copy imported entity values into the fresh store; then, per the
-        -- wasm spec, invoke the optional `(start $f)` once. A trap kills
-        -- the instance.
-        let env := buildEnv st m fuel
-        let store0 := applyEntityImports st m m.initialStore
-        -- Run constant-expression global initializers (GC `struct.new` /
-        -- `array.new*` allocate on the heap) now that imports are in place,
-        -- then GC element-segment item initializers into their tables.
-        let store0 := m.runConstGlobals fuel store0 env
-        let store0 := m.runConstElems fuel store0 env
-        -- Data/elem segments whose offset is itself a const-expr
-        -- (`global.get`, extended-const) are deferred by `initialStore`;
-        -- write them now that the globals hold their real values.
-        let store0 := m.runActiveSegments fuel store0 env
-        match m.startFunc with
-        | none => pure (ModuleSlot.ok m store0 env)
-        | some idx =>
-          match Wasm.run fuel m idx store0 [] env with
-          | .Success _ store' => pure (ModuleSlot.ok m store' env)
-          | .Trap _ msg       => pure (ModuleSlot.unavailable s!"start trapped: {msg}")
-          | .OutOfFuel        => pure (ModuleSlot.unavailable "start out of fuel")
-          | .Invalid msg      => pure (ModuleSlot.unavailable s!"start invalid: {msg}")
-          | .Thrown _ _ _     => pure (ModuleSlot.unavailable "uncaught exception in start")
-      | .error e => pure (ModuleSlot.unavailable e))
+      | .ok m => pure (instantiateModule st m fuel)
+      | .error e =>
+        pure (ModuleSlot.unavailable e, st.sharedGlobals, st.sharedTags,
+          st.sharedFunctions,
+          st.sharedMemories, st.sharedTables))
     let idx := st.modules.size
     let modules := st.modules.push slot
     let named := match name? with
@@ -746,7 +1250,14 @@ def runCommand
       match slot with
       | .ok _ _ _ => .pass
       | .unavailable e => .decodeError e
-    return ({ st with modules, named }, mk outcome)
+    return ({ st with
+      modules := modules
+      named := named
+      sharedGlobals := sharedGlobals
+      sharedTags := sharedTags
+      sharedFunctions := sharedFunctions
+      sharedMemories := sharedMemories
+      sharedTables := sharedTables }, mk outcome)
   | "register" =>
     let asName := jstr? cmd "as" |>.getD ""
     match resolveModuleIdx st (jstr? cmd "name") with
@@ -765,7 +1276,7 @@ def runCommand
         match parseExpectedValues expectedJ with
         | .error e => return (st, mk (.skipped s!"non-integer expected: {e}"))
         | .ok expected =>
-          match st.modules[i]! with
+          match hydrateSlot st fuel st.modules[i]! with
           | .unavailable _ => return (st, mk .moduleUnavailable)
           | .ok m store _ =>
             match m.globalExports.find? (·.1 = field) with
@@ -790,9 +1301,10 @@ def runCommand
         match parseExpectedValues expectedJ with
         | .error e => return (st, mk (.skipped s!"non-integer expected: {e}"))
         | .ok expected =>
-          let slot := st.modules[i]!
+          let slot := hydrateSlot st fuel st.modules[i]!
           let (outcome, slot') := runAssertReturn slot field args expected fuel
-          return ({ st with modules := st.modules.set! i slot' }, mk outcome)
+          let st' := { st with modules := st.modules.set! i slot' }
+          return (commitSlot st' slot', mk outcome)
   | "assert_trap" =>
     let actJ := jobj? cmd "action" |>.getD Json.null
     match parseInvokeAction actJ with
@@ -802,9 +1314,10 @@ def runCommand
       | .error e => return (st, mk (.interpreterError e))
       | .ok i =>
         let reason := jstr? cmd "text" |>.getD ""
-        let slot := st.modules[i]!
+        let slot := hydrateSlot st fuel st.modules[i]!
         let (outcome, slot') := runAssertTrap slot field args reason fuel
-        return ({ st with modules := st.modules.set! i slot' }, mk outcome)
+        let st' := { st with modules := st.modules.set! i slot' }
+        return (commitSlot st' slot', mk outcome)
   | "assert_exception" =>
     let actJ := jobj? cmd "action" |>.getD Json.null
     match parseInvokeAction actJ with
@@ -813,9 +1326,10 @@ def runCommand
       match resolveModuleIdx st modName? with
       | .error e => return (st, mk (.interpreterError e))
       | .ok i =>
-        let slot := st.modules[i]!
+        let slot := hydrateSlot st fuel st.modules[i]!
         let (outcome, slot') := runAssertException slot field args fuel
-        return ({ st with modules := st.modules.set! i slot' }, mk outcome)
+        let st' := { st with modules := st.modules.set! i slot' }
+        return (commitSlot st' slot', mk outcome)
   | "action" =>
     let actJ := jobj? cmd "action" |>.getD Json.null
     match parseInvokeAction actJ with
@@ -824,9 +1338,72 @@ def runCommand
       match resolveModuleIdx st modName? with
       | .error e => return (st, mk (.interpreterError e))
       | .ok i =>
-        let slot := st.modules[i]!
+        let slot := hydrateSlot st fuel st.modules[i]!
         let (outcome, slot') := runActionOnly slot field args fuel
-        return ({ st with modules := st.modules.set! i slot' }, mk outcome)
+        let st' := { st with modules := st.modules.set! i slot' }
+        return (commitSlot st' slot', mk outcome)
+  | "assert_uninstantiable" =>
+    let filename := jstr? cmd "filename" |>.getD ""
+    let expected := jstr? cmd "text" |>.getD ""
+    match (← decodeModuleFile s!"{wasmDir}/{filename}") with
+    | .error error =>
+      return (st, mk (.skipped s!"assert_uninstantiable decode: {error}"))
+    | .ok m =>
+      let env := buildEnv st m fuel
+      let imported := applyEntityImports st m m.initialStore
+      let (store0, sharedGlobals) := assignGlobalIds st m imported
+      let (store0, sharedTags) := assignTagIds st m store0
+      let (store0, sharedFunctions) := assignFunctionIds st m store0 env fuel
+      let functionState := { st with sharedFunctions := sharedFunctions }
+      let (store0, sharedMemories, sharedTables) :=
+        assignResourceIds functionState m store0
+      let store0 := reapplyLiteralActiveSegments m store0
+      let store0 := m.runConstGlobals fuel store0 env
+      let store0 := m.runConstElems fuel store0 env
+      let store0 := m.runActiveSegments fuel store0 env
+      let preparedState :=
+        { st with
+          sharedGlobals := sharedGlobals
+          sharedTags := sharedTags
+          sharedFunctions := sharedFunctions
+          sharedMemories := sharedMemories
+          sharedTables := sharedTables }
+      match activeSegmentTrap? m store0 with
+      | some actual =>
+        let st' := commitStore preparedState m store0
+        if actual.contains expected || expected.contains actual then
+          return (st', mk .pass)
+        else
+          return (st', mk (.fail
+            s!"expected instantiation trap `{expected}`, got `{actual}`"))
+      | none =>
+        match m.startFunc with
+        | none =>
+          return (st, mk (.fail
+            s!"expected instantiation trap `{expected}`, module instantiated"))
+        | some startIndex =>
+          match runSmallStep fuel m startIndex store0 [] env with
+          | .Trap store' actual =>
+            let st' := commitStore preparedState m store'
+            if actual.contains expected || expected.contains actual then
+              return (st', mk .pass)
+            else
+              return (st', mk (.fail
+                s!"expected instantiation trap `{expected}`, got `{actual}`"))
+          | .Thrown tag _ store' =>
+            let st' := commitStore preparedState m store'
+            let actual := s!"uncaught exception with tag {tag}"
+            if actual.contains expected || expected.contains actual then
+              return (st', mk .pass)
+            else
+              return (st', mk (.fail
+                s!"expected instantiation trap `{expected}`, got `{actual}`"))
+          | .Success _ store' =>
+            let st' := commitStore preparedState m store'
+            return (st', mk (.fail
+              s!"expected instantiation trap `{expected}`, start returned"))
+          | .OutOfFuel => return (st, mk .outOfFuel)
+          | .Invalid error => return (st, mk (.interpreterError error))
   | "assert_invalid" | "assert_malformed" =>
     -- The module is declared ill-formed; we pass when our decoder or the
     -- partial static validator rejects it, and fail only if we accept it.

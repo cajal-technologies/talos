@@ -1,50 +1,59 @@
 import Interpreter.Wasm.Decoder.Wat
-import Interpreter.Wasm.Wp.Tactic
-import Interpreter.Wasm.Examples.Harness
+import Interpreter.Wasm.SmallStep
 
 /-! ## Example: reference instructions (`ref.null`, `ref.func`, `ref.is_null`)
 
-    `funcref` values are modelled by `Value.funcref (Option Nat)`: `none` is
-    the null reference and `some i` is a reference to function index `i`.
-    These three instructions only push/inspect such values — they never read
-    the store — so the spec below holds for *any* module `m` and *any*
-    store `st`.
-
-    Two halves:
-    * `refReflectSpec` is a Hoare-style proof about the AST directly.
-    * the `Decoded` section feeds real `.wat` text through the decoder and
-      checks, by computation (`native_decide`), that the text lowers to the
-      right instructions and runs to the right values — covering the
-      parser path the AST proof can't see. -/
+The AST theorem is an instruction-granular relational trace. The decoded
+checks execute the same authoritative small-step machine, covering parsing,
+constant-global initialization, and execution without the legacy interpreter.
+-/
 
 namespace Wasm
-open Wasm.Examples
+open SmallStep
 
-/-- `RefReflect` pushes the null reference and tests it (`ref.is_null` ⇒ 1),
-then pushes a reference to function 0 and tests that (`ref.is_null` ⇒ 0),
-leaving the operand stack `[.i32 0, .i32 1]` (top first). -/
 def RefReflect : Program := [
-  .refNull,   .refIsNull,   -- null reference      → push i32 1 (is null)
-  .refFunc 0, .refIsNull    -- reference to func 0 → push i32 0 (not null)
+  .refNull, .refIsNull,
+  .refFunc 0, .refIsNull
 ]
 
-theorem refReflectSpec (m : Module) (st : Store Unit) :
-    wp m RefReflect
-        (fun c => c = .Fallthrough st
-                    { params := [], locals := [], values := [.i32 0, .i32 1] })
-        st { params := [], locals := [], values := [] } := by
-  unfold RefReflect
-  wp_run
-  simp
+def refReflectConfig (m : Module) (st : Store α) : Config α :=
+  { expr := .running
+      { locals := {}
+        code := RefReflect
+        resultArity := 2
+        callerRemainder := [] }
+    store := { runtime := { module := m, host := {} }, wasm := st } }
+
+theorem refReflect_steps (m : Module) (st : Store α) :
+    Steps (refReflectConfig m st)
+      [(.instruction .refNull), (.instruction .refIsNull),
+       (.instruction (.refFunc 0)), (.instruction .refIsNull),
+       (.administrative .finish)]
+      ⟨.done [.i32 0, .i32 1], (refReflectConfig m st).store⟩ := by
+  apply Steps.cons .refNull
+  apply Steps.cons (.refIsNullTrue rfl)
+  apply Steps.cons .refFunc
+  apply Steps.cons (.refIsNullFalse rfl)
+  exact Steps.cons .finish (Steps.refl _)
+
+theorem refReflectSpec (m : Module) (st : Store α) :
+    TerminatesWith (refReflectConfig m st)
+      (fun values store =>
+        values = [.i32 0, .i32 1] ∧ store.wasm = st) := by
+  refine ⟨_, _, _, refReflect_steps m st, ?_⟩
+  exact ⟨rfl, rfl⟩
+
+theorem refReflect_partial (m : Module) (st : Store α) :
+    PartiallyMeets (refReflectConfig m st)
+      (fun values store =>
+        values = [.i32 0, .i32 1] ∧ store.wasm = st) := by
+  intro trace values store execution
+  obtain ⟨rfl, rfl⟩ :=
+    steps_done_deterministic (refReflect_steps m st) execution
+  exact ⟨rfl, rfl⟩
 
 namespace Decoded
 
-/-- A `.wat` module exercising all three reference instructions.
-`$f` is function index 0; `null_is_null` (index 1) returns `ref.is_null`
-of the null reference (⇒ 1); `func_is_null` (index 2) returns
-`ref.is_null` of a reference to `$f` (⇒ 0). The remaining functions cover
-the function-null heap type `nofunc` and global init expressions that produce
-stored `funcref` values. -/
 def refWat : String := "
 (module
   (func $f (result i32) i32.const 7)
@@ -67,36 +76,46 @@ def refWat : String := "
     ref.is_null))
 "
 
-private def decoded : Wasm.Module := decodeOrDefault refWat
+private def decoded : Wasm.Module :=
+  match Wasm.Decoder.Wat.decode refWat with
+  | .ok module => module
+  | .error _ => default
 
-/-- Decoding succeeds with all six functions (rules out the `default`
-fallback above; `Instruction` has no `DecidableEq`, so we check a
-decidable projection rather than the bodies directly). -/
+private def initializedStore : Store Unit :=
+  decoded.runConstGlobals 64 (decoded.initialStore (α := Unit)) {}
+
+private def decodedConfig (index : Nat) : Config Unit :=
+  { expr := .running
+      { locals := {}
+        code := decoded.funcs[index]!.body
+        resultArity := decoded.funcs[index]!.results.length
+        callerRemainder := [] }
+    store :=
+      { runtime := { module := decoded, host := {} }
+        wasm := initializedStore } }
+
+private def runVals (index : Nat) : Option (List Value) :=
+  (runSteps 3 (decodedConfig index)).result.values?
+
 theorem decodes_six_funcs : decoded.funcs.length = 6 := by native_decide
 
-private def runVals (idx : Nat) : List Value :=
-  runValues 10 decoded idx (decoded.initialStore (α := Unit)) []
+theorem null_is_null_runs : runVals 1 = some [.i32 1] := by native_decide
 
-/-- End-to-end (decode → run): the null reference is null, so
-`null_is_null` returns `[1]`. A mis-decoded `ref.null`/`ref.is_null`
-would change this value, so the run pins down the parser too. -/
-theorem null_is_null_runs : runVals 1 = [.i32 1] := by native_decide
+theorem func_is_null_runs : runVals 2 = some [.i32 0] := by native_decide
 
-/-- End-to-end (decode → run): a function reference is not null, so
-`func_is_null` returns `[0]`. This also pins down `ref.func $f`
-resolving the name `$f` to a non-null reference. -/
-theorem func_is_null_runs : runVals 2 = [.i32 0] := by native_decide
+theorem nofunc_is_null_runs : runVals 3 = some [.i32 1] := by native_decide
 
-/-- `nofunc` is the null function-reference heap type, so it is represented
-by the same `funcref none` value as `ref.null func`. -/
-theorem nofunc_is_null_runs : runVals 3 = [.i32 1] := by native_decide
+theorem global_func_is_null_runs : runVals 4 = some [.i32 0] := by native_decide
 
-/-- Global `ref.func` initializers are decoded to stored `funcref` values,
-not integer placeholders, so `ref.is_null (global.get ...)` can inspect them. -/
-theorem global_func_is_null_runs : runVals 4 = [.i32 0] := by native_decide
+theorem global_null_is_null_runs : runVals 5 = some [.i32 1] := by native_decide
 
-/-- Global function-null initializers are likewise decoded as `funcref none`. -/
-theorem global_null_is_null_runs : runVals 5 = [.i32 1] := by native_decide
+theorem null_is_null_spec :
+    TerminatesWith (decodedConfig 1) (fun values _ => values = [.i32 1]) :=
+  runSteps_values_terminates null_is_null_runs
+
+theorem func_is_null_spec :
+    TerminatesWith (decodedConfig 2) (fun values _ => values = [.i32 0]) :=
+  runSteps_values_terminates func_is_null_runs
 
 end Decoded
 end Wasm

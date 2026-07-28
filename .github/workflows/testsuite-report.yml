@@ -13,11 +13,11 @@ jobs:
     name: Check testsuite_report.txt is up to date
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: true
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: .lake/packages
           key: lake-pkgs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}-${{ hashFiles('interpreter/lake-manifest.json') }}

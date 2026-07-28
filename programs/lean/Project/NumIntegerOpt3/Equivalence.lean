@@ -1,4 +1,4 @@
-import Project.NumInteger.Spec           -- opt-level 0 build + its `gcd_u64_correct`
+import Project.NumInteger.Spec           -- opt-level 0 build + compatibility theorem
 import Project.NumIntegerOpt3.Spec        -- opt-level 3 build + its `mod3_gcd`
 
 /-!
@@ -72,6 +72,21 @@ abbrev entry0 : Nat := 2
 /-- `gcd_u64` is exported at func **0** in the `opt-level = 3` build. -/
 abbrev entry3 : Nat := 0
 
+/-! ## Small-step cutover -/
+
+/-- The optimized side already supplies the common outcome required by the
+authoritative small-step equivalence relation. -/
+theorem mod3_smallStep_common_outcome (a b : UInt64) :
+    SmallStep.TerminatesWith
+      (Project.NumIntegerOpt3.Spec.gcdConfig a b)
+      (fun values store =>
+        values = [.i64 (UInt64.ofNat (Nat.gcd a.toNat b.toNat))] ∧
+        store.wasm.host = ()) := by
+  refine
+    (Project.NumIntegerOpt3.Spec.mod3_gcd_smallStep_total a b).mono ?_
+  intro values store hvalues
+  exact ⟨hvalues, Subsingleton.elim _ _⟩
+
 /-! ## The equivalence -/
 
 /-- **Program equivalence of the two `gcd_u64` builds.**
@@ -90,19 +105,22 @@ def GcdOptEquiv : Prop :=
 
 /-! ## Proof
 
-The proof reduces the equivalence to a *common outcome* both builds reach
+The legacy proof reduces the equivalence to a *common outcome* both builds reach
 (`ObservationallyEquiv.of_common_outcome`): each exported `gcd_u64` terminates
 with the same value — the gcd — and the same (trivial) host state. The opt0
-side reuses `Project.NumInteger.Spec.gcd_u64_correct`; the opt3 side uses
-`Project.NumIntegerOpt3.Spec.mod3_gcd`. Neither `gcd_u64` touches the host
-state, so the `Store.host` conjunct is `rfl`. -/
+side temporarily reuses `Project.NumInteger.Spec.gcd_u64_legacy_correct`; the
+opt3 side uses `Project.NumIntegerOpt3.Spec.mod3_gcd`. Public spec discovery
+for both modules is already small-step-only. Neither `gcd_u64` touches the
+host state, so the `Store.host` conjunct is `rfl`. -/
 
 theorem gcd_opt_equiv : GcdOptEquiv := by
   intro env a b
   refine ObservationallyEquiv.of_common_outcome
     (r := [.i64 (UInt64.ofNat (Nat.gcd a.toNat b.toNat))]) (h := ()) ?_ ?_
-  · -- opt0: `gcd_u64_correct` returns `gcd b a`; commute to `gcd a b`.
-    refine (Project.NumInteger.Spec.gcd_u64_correct env mod0.initialStore b a rfl).mono ?_
+  · -- opt0 compatibility theorem returns `gcd b a`; commute to `gcd a b`.
+    refine
+      (Project.NumInteger.Spec.gcd_u64_legacy_correct
+        env mod0.initialStore b a rfl).mono ?_
     rintro st vs rfl
     exact ⟨by rw [Nat.gcd_comm], rfl⟩
   · -- opt3: `mod3_gcd` returns `gcd a b` and leaves the store unchanged.

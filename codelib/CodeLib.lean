@@ -26,6 +26,7 @@ import CodeLib.RustStd.U64.Shr
 import CodeLib.RustStd.Array.Basic
 import CodeLib.RustStd.Array.Len
 import CodeLib.RustStd.Array.IsEmpty
+import CodeLib.RustStd.Array.SmallStep
 import CodeLib.RustStd.Option
 import CodeLib.Near.State
 import CodeLib.Near.Env
@@ -33,8 +34,10 @@ import CodeLib.Near.Proof
 import CodeLib.IEEE32.Exec
 import CodeLib.SepLogic.WasmHeap
 import CodeLib.SepLogic.WasmRules
-import CodeLib.SepLogic.WasmWP
-import CodeLib.SepLogic.Adequacy
+import CodeLib.SepLogic.SmallStepLanguage
+import CodeLib.SepLogic.SmallStepState
+import CodeLib.SepLogic.SmallStepLifting
+import CodeLib.SepLogic.SmallStepAdequacy
 
 /-!
 # CodeLib — umbrella import for downstream code

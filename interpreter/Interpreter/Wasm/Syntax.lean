@@ -12,6 +12,17 @@ operations live in `Interpreter.Wasm.Float`. Other reference types remain
 out of scope. Memory loads/stores, globals, tables, and indirect calls are
 supported. -/
 
+/-- A heap type used by both static reference types and GC cast/test
+instructions. `named` preserves a symbolic source reference until module
+validation resolves it to the corresponding type-table index. -/
+inductive GcHeapType where
+  | any | eq | i31 | structT | arrayT | noneT
+  | func | noFunc | «extern» | noExtern
+  | exn | noExn
+  | concrete (typeIdx : Nat)
+  | named (typeName : String)
+deriving Repr, Inhabited, DecidableEq, BEq
+
 inductive ValueType where
   | i32
   | i64
@@ -28,6 +39,10 @@ inductive ValueType where
   the static heap type is only needed by `ref.cast`/`ref.test`, which read
   it from their instruction immediate rather than from the local's type. -/
   | anyref
+  /-- An exact static reference type. Runtime values continue to use the
+  existing `funcref`/`externref`/`exnref`/`anyref` constructors; this case is
+  validation metadata preserving nullability and heap-type precision. -/
+  | ref (nullable : Bool) (heap : GcHeapType)
 deriving Repr, Inhabited, DecidableEq, BEq
 
 /-- The live (non-null) shapes a managed GC reference can take (GC
@@ -37,17 +52,8 @@ inductive AnyRef where
   | i31    (n : UInt32)
   | struct (addr : Nat)
   | array  (addr : Nat)
-deriving Repr, Inhabited, DecidableEq, BEq
-
-/-- A heap type immediate for `ref.test`/`ref.cast`/`br_on_cast` (GC
-proposal). The abstract heap types form the fixed top of the subtype
-lattice; `concrete i` refers to struct/array type definition `i`. The
-`func`/`extern` families never name an `anyref`, so a managed reference
-never matches them. -/
-inductive GcHeapType where
-  | any | eq | i31 | structT | arrayT | noneT
-  | func | noFunc | «extern» | noExtern
-  | concrete (typeIdx : Nat)
+  /-- An opaque host reference internalized by `any.convert_extern`. -/
+  | host   (id : Nat)
 deriving Repr, Inhabited, DecidableEq, BEq
 
 /-- The storage type of a struct field or array element (GC proposal).
@@ -109,6 +115,12 @@ def ValueType.zero : ValueType → Value
   | .v128      => .v128 0
   | .exnref    => .exnref none
   | .anyref    => .anyref none
+  | .ref _ heap =>
+      match heap with
+      | .func | .noFunc => .funcref none
+      | .extern | .noExtern => .externref none
+      | .exn | .noExn => .exnref none
+      | _ => .anyref none
 
 /-- The default zero value of a storage type, for `struct.new_default` /
 `array.new_default`. -/
@@ -207,11 +219,13 @@ under the compiled constructor-tag limit. Every one is a non-recursive
 single step over `(Module, Store, Locals)`. -/
 inductive GcOp where
   -- References / i31.
-  | refNullAny                                   -- ref.null <gc heaptype>
+  | refNullAny (staticType : ValueType := .anyref)
   | refI31                                       -- ref.i31
   | i31GetS                                      -- i31.get_s
   | i31GetU                                      -- i31.get_u
   | refEq                                        -- ref.eq
+  | anyConvertExtern                             -- any.convert_extern
+  | externConvertAny                             -- extern.convert_any
   | refTest (nullable : Bool) (ht : GcHeapType)  -- ref.test (ref null? ht)
   | refCast (nullable : Bool) (ht : GcHeapType)  -- ref.cast (ref null? ht)
   -- `br_on_cast l rt1 rt2`: branch to `l` (keeping the ref) when it matches
@@ -342,9 +356,12 @@ inductive Instruction where
   -- control flow respects the wasm spec: a `br` to a `block`/`if`
   -- keeps `resultArity` values; a `br` back to a `loop` keeps
   -- `paramArity` values (the loop's "carried" iteration state).
-  | block : (paramArity resultArity : Nat) → List Instruction → Instruction
-  | loop  : (paramArity resultArity : Nat) → List Instruction → Instruction
-  | iff   : (paramArity resultArity : Nat) → List Instruction → List Instruction → Instruction
+  | block : (paramArity resultArity : Nat) → List Instruction →
+      (paramTypes resultTypes : List ValueType := []) → Instruction
+  | loop  : (paramArity resultArity : Nat) → List Instruction →
+      (paramTypes resultTypes : List ValueType := []) → Instruction
+  | iff   : (paramArity resultArity : Nat) → List Instruction → List Instruction →
+      (paramTypes resultTypes : List ValueType := []) → Instruction
   | br      : Nat → Instruction
   | br_if   : Nat → Instruction
   | brTable : List Nat → Nat → Instruction
@@ -368,7 +385,8 @@ inductive Instruction where
   | throwI : (tagIdx : Nat) → Instruction
   | throwRef : Instruction
   | tryTable : (paramArity resultArity : Nat) → List CatchClause →
-               List Instruction → Instruction
+               List Instruction →
+               (paramTypes resultTypes : List ValueType := []) → Instruction
 
   -- Typed function references (wasm 3.0). `call_ref (type N)` pops a
   -- funcref and dispatches to it, trapping on null; the static type
@@ -397,9 +415,9 @@ inductive Instruction where
   -- `Value.funcref (Option Nat)` (`none` = null, `some i` = a reference to
   -- function index `i`). These produce and test such values; none of them
   -- touch the store.
-  | refNull   : Instruction        -- ref.null func: push the null funcref
-  | refNullExtern : Instruction    -- ref.null extern: push the null externref
-  | refNullExn : Instruction       -- ref.null exn/noexn: push the null exnref
+  | refNull   : (staticType : ValueType := .funcref) → Instruction
+  | refNullExtern : (staticType : ValueType := .externref) → Instruction
+  | refNullExn : (staticType : ValueType := .exnref) → Instruction
   | refFunc   : Nat → Instruction  -- ref.func i:    push a reference to function `i`
   | refIsNull : Instruction        -- ref.is_null:   pop a ref, push i32 1 if null else 0
 
@@ -601,6 +619,13 @@ structure DataSegment where
   /-- Target memory index (multi-memory): 0 is the default memory, k ≥ 1
   the k-th extra memory (`Module.extraMemories[k-1]`). -/
   memIdx : Nat := 0
+  /-- Source type of a folded literal active offset. `none` for passive
+  segments, deferred expressions, and legacy hand-built declarations. -/
+  offsetType : Option ValueType := none
+  /-- Whether `offsetExpr` came from an explicit source expression. This
+  distinguishes an invalid empty expression from a folded literal/passive
+  segment, both of which otherwise store `[]`. -/
+  offsetExprPresent : Bool := false
   /-- For active segments whose offset is a constant expression that cannot
   be folded to a literal at decode time (`global.get`, extended-const
   arithmetic), the parsed const-expr program. When non-empty, `offset`
@@ -626,6 +651,18 @@ deriving Repr, Inhabited
 /-- Declaration of a module-level global with its initial value. -/
 structure GlobalDecl where
   init : Value
+  /-- Declared WebAssembly value type. `none` preserves compatibility for
+  hand-built modules, whose type is recovered from `init`; decoded modules
+  always retain the source declaration here. -/
+  declaredType : Option ValueType := none
+  /-- Whether `global.set` may mutate this global. Hand-built legacy modules
+  default to mutable; decoded modules always retain the source mutability. -/
+  isMut : Bool := true
+  /-- Decoded initializer program retained for validation. `initExpr` below
+  remains the subset which must actually be evaluated during instantiation;
+  keeping these separate avoids changing runtime behavior for folded
+  constants. `none` preserves compatibility for hand-built modules. -/
+  sourceInit : Option Program := none
   /-- For globals whose initializer is a constant expression that must run
   at instantiation (GC proposal: `struct.new`/`array.new*` allocate on the
   heap), the parsed const-expr program. Empty when `init` already holds the
@@ -655,6 +692,9 @@ declared immediate supertype index (`sub $super …`), if any. Indexed by
 the same position as `Module.types`. -/
 structure GcTypeDef where
   comp  : CompositeType
+  /-- Symbolic source name, retained so static `(ref $T)` annotations can be
+  resolved after decoding without affecting runtime type indices. -/
+  sourceName : Option String := none
   super : Option Nat := none
   /-- `false` when the type is declared open for subtyping (`(sub …)`
   without `final`). A supertype named by another type's `sub` clause must
@@ -705,6 +745,15 @@ in `elementSegments` until consumed by `table.init` / `elem.drop`. -/
 structure ElementSegment where
   tableIdx : Option Nat := none
   offset   : Option Nat := none
+  /-- Source type of a folded literal active offset. -/
+  offsetType : Option ValueType := none
+  offsetExprPresent : Bool := false
+  /-- Declared segment element type. `none` preserves legacy hand-built
+  declarations, which are treated as funcref segments. -/
+  elemType : Option ValueType := none
+  /-- Declarative segments are dropped immediately at instantiation, unlike
+  passive segments (which otherwise share `tableIdx = none`, `offset = none`). -/
+  declarative : Bool := false
   funcs    : List (Option Nat) := []
   /-- For GC element segments (GC proposal) whose items are constant
   expressions (`(item i32.const N ref.i31)`, `struct.new`, …), the parsed
@@ -721,6 +770,12 @@ structure ElementSegment where
   offsetExpr : Program := []
 deriving Repr, Inhabited
 
+def ElementSegment.plainValues (segment : ElementSegment) : List Value :=
+  if segment.elemType == some .externref then
+    segment.funcs.map Value.externref
+  else
+    segment.funcs.map Value.funcref
+
 structure Module where
   funcs    : List Function
   exports  : List Export := []
@@ -730,6 +785,11 @@ structure Module where
   segments live in `memory`'s (global, source-ordered) `data` list,
   routed by `DataSegment.memIdx`. -/
   extraMemories : List MemDecl := []
+  /-- The decoder historically synthesized a zero-page memory to retain data
+  segments from an invalid module with no memory declaration. Keep that
+  compatibility representation explicit so validation can still reject the
+  original source condition. -/
+  dataWithoutMemory : Bool := false
   globals  : List GlobalDecl := []
   /-- Imported functions, in declaration order. See `ImportDecl` for the
   index-space convention. Empty for modules with no imports. -/
@@ -762,12 +822,14 @@ structure Module where
   importedGlobals  : List (String × String) := []
   importedTables   : List (String × String) := []
   importedMemories : List (String × String) := []
+  importedTags     : List (String × String) := []
   /-- Exported non-function entities: name → index into the
   corresponding index space. Used by the harness to resolve
   cross-module entity imports. -/
   globalExports : List (String × Nat) := []
   tableExports  : List (String × Nat) := []
   memoryExports : List (String × Nat) := []
+  tagExports    : List (String × Nat) := []
   /-- Exception tags (exception-handling proposal), indexed by position;
   each carries the tag's parameter types (`results` is always empty). -/
   tags : List FuncType := []
@@ -790,19 +852,43 @@ hostless corpus, a KV map for a blockchain demo, a byte-trace for a
 logger, etc. No schema is baked into the Wasm core. -/
 structure Store (α : Type) where
   globals         : Globals
+  /-- Stable runtime identities for the module's global index space. -/
+  globalIds       : List Nat := []
+  /-- Stable identities for the unified local function index space. -/
+  functionIds     : List Nat := []
   mem             : Mem
   /-- Runtime instances of the module's `extraMemories` (multi-memory):
   memory index `k ≥ 1` is `extraMems[k-1]`. -/
   extraMems       : List Mem := []
+  /-- Per-memory runtime growth limits, in memory-index order. Limits are
+  properties of instantiated memory resources rather than of the module
+  currently accessing them: an imported memory retains the exporter's
+  maximum even when the importing declaration permits a larger maximum.
+  Empty preserves compatibility for hand-built stores, whose executor falls
+  back to the module declaration. -/
+  memoryCaps      : List Nat := []
+  /-- Stable runtime identities for the module's memory index space.
+  Execution indexes through the local list; instantiation/linking uses these
+  identities to make imports alias the same shared resource. -/
+  memoryIds       : List Nat := []
   dataSegments    : List (Option (List UInt8)) := []
   /-- Runtime tables. Same length and source order as the declaring
   module's `tables`; entry `t` has size at least `tables[t].min`. -/
   tables          : List TableInst := []
+  /-- Stable runtime identities for the module's table index space. -/
+  tableIds        : List Nat := []
   /-- Per-segment runtime status, mirroring `dataSegments` for `data`.
   `none` = dropped or active-and-already-consumed; `some funcs` =
   passive segment still available to `table.init`. Same length as the
   declaring module's `elements` list. -/
   elementSegments : List (Option (List (Option Nat))) := []
+  /-- Evaluated runtime values of element segments. This complements the
+  legacy `elementSegments` live/dropped status: plain funcref segments are
+  available immediately, while GC constant-expression items are populated by
+  `runConstElems` during instantiation. Dropping a segment clears both lists. -/
+  elementValues   : List (Option (List Value)) := []
+  /-- Stable identities for exception tags in the module-local index space. -/
+  tagIds          : List Nat := []
   /-- Caught exception packages (tag index × thrown args in stack order),
   appended by `catch_ref` clauses and re-raised by `throw_ref`. Indexed
   by `Value.exnref`. -/
@@ -838,6 +924,12 @@ def listWriteAt (l : List α) (off : Nat) (vs : List α) : List α :=
     | []      => []
     | x :: xs => x :: listWriteAt xs i vs
 
+/-- Maximum number of pages an i32-indexed memory can hold (2^16, or 4 GiB). -/
+def Module.memoryHardCap : Nat := 65536
+
+/-- Implementation ceiling for materialized runtime tables. -/
+def Module.tableHardCap : Nat := 1_000_000
+
 /-- Build the initial store for a module: evaluate each global's `init`
 into `Globals.globals`; allocate a memory with `pagesMin` pages and
 write each *active* data segment at its declared offset; track all
@@ -861,7 +953,9 @@ def Module.initialStore [Inhabited α] (m : Module) : Store α :=
       (fun acc seg => match seg.offset with
         | some off =>
           if seg.memIdx = idx && seg.offsetExpr.isEmpty then
-            acc.writeBytes off.toNat seg.bytes
+            if off.toNat + seg.bytes.length ≤ acc.pages * 65536 then
+              acc.writeBytes off.toNat seg.bytes
+            else acc
           else acc
         | none     => acc)
       m0
@@ -896,21 +990,41 @@ def Module.initialStore [Inhabited α] (m : Module) : Store α :=
       | some t, some off =>
         if seg.offsetExpr.isEmpty then
           match acc[t]? with
-          | some tbl => listSetAt acc t (listWriteAt tbl off (seg.funcs.map Value.funcref))
+          | some tbl =>
+            if off + seg.plainValues.length ≤ tbl.length then
+              listSetAt acc t (listWriteAt tbl off seg.plainValues)
+            else acc
           | none     => acc
         else acc
       | _, _ => acc)
     baseTables
   let elementSegments : List (Option (List (Option Nat))) :=
-    m.elements.map fun seg => match seg.offset with
-      | some _ => none           -- active: auto-dropped
-      | none   => some seg.funcs -- passive / declarative
-  { globals, mem, extraMems, dataSegments, tables, elementSegments, host := default }
-
-/-- Maximum number of pages an i32-indexed memory can hold (2^16, or 4 GiB).
-This is the wasm spec hard ceiling; `memory.grow` may not exceed it
-regardless of the per-module declared max. -/
-def Module.memoryHardCap : Nat := 65536
+    m.elements.map fun seg =>
+      if seg.declarative then none
+      else match seg.offset with
+        | some _ => none         -- active: auto-dropped
+        | none   => some seg.funcs
+  let elementValues : List (Option (List Value)) :=
+    m.elements.map fun seg =>
+      if seg.declarative then none
+      else match seg.offset with
+        | some _ => none
+        | none =>
+          if seg.exprs.isEmpty then
+            some seg.plainValues
+          else some []
+  let memoryCaps : List Nat :=
+    (m.memory.toList ++ m.extraMemories).map fun decl =>
+      match decl.pagesMax with
+      | some n => Nat.min n.toNat Module.memoryHardCap
+      | none => Module.memoryHardCap
+  let memoryIds := List.range memoryCaps.length
+  let tableIds := List.range tables.length
+  let tagIds := List.range m.tags.length
+  let globalIds := List.range globals.globals.length
+  let functionIds := List.range (m.imports.length + m.funcs.length)
+  { globals, globalIds, functionIds, mem, extraMems, memoryCaps, memoryIds, dataSegments, tables,
+    tableIds, elementSegments, elementValues, tagIds, host := default }
 
 /-- Effective `memory.grow` ceiling for `m`: the declared `pagesMax`
 (if any) intersected with `memoryHardCap`. Modules with no memory
@@ -981,6 +1095,44 @@ def Module.gcRecGroup (m : Module) (x : Nat) : List Nat :=
       | none   => false
   | _ => [x]
 
+private def gcHeapTypeEquivWith
+    (typeEquiv : Nat → Nat → Bool) : GcHeapType → GcHeapType → Bool
+  | .concrete a, .concrete b => typeEquiv a b
+  | a, b => a == b
+
+private def gcValueTypeEquivWith
+    (typeEquiv : Nat → Nat → Bool) : ValueType → ValueType → Bool
+  | .ref nullableA heapA, .ref nullableB heapB =>
+      nullableA == nullableB && gcHeapTypeEquivWith typeEquiv heapA heapB
+  | a, b => a == b
+
+private def gcStorageTypeEquivWith
+    (typeEquiv : Nat → Nat → Bool) : StorageType → StorageType → Bool
+  | .val a, .val b => gcValueTypeEquivWith typeEquiv a b
+  | .packed a, .packed b => a == b
+  | _, _ => false
+
+private def gcFieldTypeEquivWith
+    (typeEquiv : Nat → Nat → Bool) (a b : FieldType) : Bool :=
+  a.isMut == b.isMut &&
+  gcStorageTypeEquivWith typeEquiv a.storage b.storage
+
+private def gcCompositeEquivWith
+    (typeEquiv : Nat → Nat → Bool) : CompositeType → CompositeType → Bool
+  | .func a, .func b =>
+      a.params.length == b.params.length &&
+      (a.params.zip b.params).all fun (x, y) =>
+        gcValueTypeEquivWith typeEquiv x y
+      &&
+      a.results.length == b.results.length &&
+      (a.results.zip b.results).all fun (x, y) =>
+        gcValueTypeEquivWith typeEquiv x y
+  | .struct a, .struct b =>
+      a.length == b.length &&
+      (a.zip b).all fun (x, y) => gcFieldTypeEquivWith typeEquiv x y
+  | .array a, .array b => gcFieldTypeEquivWith typeEquiv a b
+  | _, _ => false
+
 /-- Iso-recursive equivalence of GC type indices `a` and `b` (issue #96):
 whether they denote the *same* defined type, per the spec's canonical
 (rec-group-wise) reading, rather than merely being the same table index.
@@ -1014,7 +1166,16 @@ def Module.gcTypeEquiv (m : Module) (a b : Nat) : Bool :=
        match m.gcTypes[x]?, m.gcTypes[y]? with
        | some dx, some dy =>
          dx.final == dy.final &&
-         dx.comp == dy.comp &&
+         gcCompositeEquivWith
+           (fun px py =>
+             match ga.idxOf? px, gb.idxOf? py with
+             | some i, some j => i == j
+             | none, none =>
+                 match fuel with
+                 | 0 => false
+                 | f + 1 => go f px py
+             | _, _ => false)
+           dx.comp dy.comp &&
          (match dx.super, dy.super with
           | none, none => true
           | some px, some py =>
@@ -1050,22 +1211,21 @@ def Module.gcTypeSubtype (m : Module) (a b : Nat) : Bool :=
 (issue #95). A table entry resolving to function `fid` is callable at the
 call-site type `typeIdx` when:
 
-* the looked-up structural signatures match (`fn` is the target's
-  `funcSig?`, `ty` is `types[typeIdx]`) — necessary for the calling
-  convention; and
-* the target's declared nominal type, when recorded (`funcTypeIdx?`), is a
-  **subtype** of `typeIdx`. A function typed `$super` must *not* satisfy a
-  call site expecting `$sub` even though their params/results coincide.
+* when the target's declared nominal type is recorded (`funcTypeIdx?`), it
+  is a **subtype** of `typeIdx`. This semantic comparison also establishes
+  compatible signatures, including iso-recursive reference types whose raw
+  table indices differ;
+* otherwise, the looked-up structural signatures match (`fn` is the
+  target's `funcSig?`, `ty` is `types[typeIdx]`).
 
 When the target's declared type is unrecorded (`funcTypeIdx? = none`) the
 nominal clause is vacuously satisfied and the check degrades to the
 structural comparison the interpreter used before issue #95. -/
 def Module.indirectCallTypeOk (m : Module) (fid typeIdx : Nat)
     (fn ty : FuncType) : Bool :=
-  fn.params == ty.params && fn.results == ty.results &&
-  (match m.funcTypeIdx? fid with
-   | some src => m.gcTypeSubtype src typeIdx
-   | none     => true)
+  match m.funcTypeIdx? fid with
+  | some src => m.gcTypeSubtype src typeIdx
+  | none => fn.params == ty.params && fn.results == ty.results
 
 /-- Look up the struct/array composite type at index `i`. -/
 def Module.gcComposite? (m : Module) (i : Nat) : Option CompositeType :=
@@ -1087,14 +1247,6 @@ def Module.arrayElem? (m : Module) (i : Nat) : Option FieldType :=
   | some (.array ft) => some ft
   | _                => none
 
-/-- Implementation ceiling on `table.grow`. The wasm spec allows growth
-to fail for implementation-defined reasons; this interpreter materialises
-tables as Lean lists, so unbounded growth (the suite probes deltas up to
-`0xFFFF_FFF0`) must be refused rather than attempted. Growth that stays
-within a table's *declared* max is always honoured — declared maxima in
-practice are small — and growth beyond this ceiling fails with -1. -/
-def Module.tableHardCap : Nat := 1_000_000
-
 /-- Effective `table.grow` ceiling for table `t` of `m`: the declared max
 (if any) intersected with the implementation ceiling `tableHardCap`. -/
 def Module.tableCap (m : Module) (t : Nat) : Nat :=
@@ -1104,5 +1256,18 @@ def Module.tableCap (m : Module) (t : Nat) : Nat :=
     | some n => Nat.min n Module.tableHardCap
     | none   => Module.tableHardCap
   | none => Module.tableHardCap
+
+/-- Runtime growth ceiling for memory `index`. Instantiated-resource metadata
+takes precedence over the accessing module's declaration. -/
+def Store.memoryCap (store : Store α) (m : Module) (index : Nat) : Nat :=
+  (store.memoryCaps[index]?).getD <|
+    if index = 0 then m.memoryCap
+    else
+      match m.extraMemories[index - 1]? with
+      | some decl =>
+        match decl.pagesMax with
+        | some n => Nat.min n.toNat Module.memoryHardCap
+        | none => Module.memoryHardCap
+      | none => Module.memoryHardCap
 
 end Wasm

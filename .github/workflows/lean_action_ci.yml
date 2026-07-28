@@ -7,12 +7,29 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    name: Build & verify proofs
-    runs-on: ubuntu-latest
+  codelib:
+    name: Build CodeLib proofs
+    runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v4
+      - uses: actions/checkout@v5
+      - uses: actions/cache@v5
+        with:
+          path: .lake/packages
+          key: lake-pkgs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}-${{ hashFiles('interpreter/lake-manifest.json') }}
+          restore-keys: |
+            lake-pkgs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}-
+      - uses: leanprover/lean-action@v1
+        with:
+          lake-package-directory: codelib
+          build-args: "--wfail"
+          use-mathlib-cache: true
+
+  programs:
+    name: Build program proofs
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/cache@v5
         with:
           path: .lake/packages
           key: lake-pkgs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}-${{ hashFiles('interpreter/lake-manifest.json') }}
@@ -21,27 +38,16 @@ jobs:
       - uses: leanprover/lean-action@v1
         with:
           lake-package-directory: programs/lean
+          build-args: "Project --wfail"
           use-mathlib-cache: true
-      - name: Fail on build warnings
-        working-directory: programs/lean
-        run: |
-          set -o pipefail
-          # Rebuild (cached) and capture output. Warnings (e.g. `sorry`,
-          # unused-variable lints) are re-emitted on every build but do not
-          # change lake's exit code, so scan the log and fail if any appear.
-          lake build 2>&1 | tee build.log
-          if grep -E '(^|[[:space:]])warning:' build.log; then
-            echo "::error::Build produced warnings; warnings are not allowed."
-            exit 1
-          fi
 
   test:
     name: Smoke test
     runs-on: ubuntu-latest
-    needs: build
+    needs: [codelib, programs]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v4
+      - uses: actions/checkout@v5
+      - uses: actions/cache@v5
         with:
           path: .lake/packages
           key: lake-pkgs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}-${{ hashFiles('interpreter/lake-manifest.json') }}

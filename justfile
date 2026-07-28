@@ -1,5 +1,4 @@
 # Root of the monorepo.
-ROOT := justfile_directory()
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
 [private]
@@ -101,7 +100,7 @@ runner-run +args:
 # Run the WebAssembly spec testsuite (vendor/testsuite/). Optional pattern
 # is a case-sensitive substring on the .wast filename stem.
 [group("testsuite")]
-[working-directory(ROOT)]
+[working-directory(".")]
 testsuite pattern="":
     scripts/testsuite.sh {{ quote(pattern) }}
 
@@ -109,7 +108,7 @@ testsuite pattern="":
 # and fails if the working tree drifts, so contributors whose changes shift
 # coverage must commit the updated report.
 [group("testsuite")]
-[working-directory(ROOT)]
+[working-directory(".")]
 testsuite-report:
     WASM_TOOLS_VERSION={{ quote(WASM_TOOLS_VERSION) }} scripts/testsuite-report.sh
 
@@ -121,7 +120,7 @@ testsuite-report:
 # With no args, runs the recgroup soundness mode; anything passed goes through to
 # miscast, e.g. `just differential --mode recgroup -n 300`.
 [group("differential")]
-[working-directory(ROOT)]
+[working-directory(".")]
 differential *args:
     scripts/differential.sh {{ args }}
 

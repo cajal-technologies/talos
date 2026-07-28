@@ -1,30 +1,17 @@
 import Interpreter.Wasm.Decoder.Wat
-import Interpreter.Wasm.Wp.Tactic
-import Interpreter.Wasm.Examples.Harness
+import Interpreter.Wasm.SmallStep
 
-/-! ## Example: const-expr data/elem segment offsets
+/-! ## Example: const-expression data/element segment offsets
 
-    An active data or element segment's offset is a constant expression,
-    not just a literal: wasm 1.0 permits `global.get`, and the
-    extended-const proposal adds `i32.add`/`i32.sub`/`i32.mul` (i64
-    ditto). Talos keeps such offsets as a program in
-    `DataSegment.offsetExpr` / `ElementSegment.offsetExpr`; the segment
-    is skipped by `Module.initialStore` and written at instantiation by
-    `Module.runActiveSegments`, once `Module.runConstGlobals` has put
-    the globals in place.
-
-    This module is the regression test for issue #101, where such
-    segments landed at offset 0: the data below must end up at byte 4,
-    and the table entry at slot 2, or the theorems fail the build. -/
+    Active segment offsets may use constant expressions such as
+    `global.get`. Instantiation must evaluate those expressions before the
+    small-step machine observes memory and table contents.
+-/
 
 namespace Wasm
-open Wasm.Examples
+open SmallStep
 namespace SegmentOffsetExpr
 
-/-- A module whose data segment lands at `global.get $o = 4` and whose
-element segment lands at `global.get $t = 2`. `readByte4` observes the
-data placement; `callAt2` observes the element placement (it traps if
-the funcref landed at slot 0 instead). -/
 def segmentOffsetWat : String := "
 (module
   (global $o i32 (i32.const 4))
@@ -41,39 +28,124 @@ def segmentOffsetWat : String := "
     (call_indirect (type $ri) (i32.const 2))))
 "
 
-private def decoded : Wasm.Module := decodeOrDefault segmentOffsetWat
+private def decoded : Wasm.Module :=
+  match Wasm.Decoder.Wat.decode segmentOffsetWat with
+  | .ok module => module
+  | .error _ => default
 
-/-- The non-literal offsets are kept as programs rather than collapsed
-to a `0` placeholder: both segments carry a non-empty `offsetExpr`. -/
 theorem decoded_segments_keep_offsetExpr :
     ((decoded.memory.bind (·.data[0]?)).map (·.offsetExpr.isEmpty)).getD true = false
     ∧ (decoded.elements[0]?.map (·.offsetExpr.isEmpty)).getD true = false := by
   constructor <;> native_decide
 
-/-- The instantiated store used by the theorems below: base store, then
-global initializers, then the deferred const-expr-offset segments. -/
 private def store0 : Store Unit :=
-  let m := decoded
-  m.runActiveSegments 64 (m.runConstGlobals 64 (m.initialStore (α := Unit)) {}) {}
+  let module := decoded
+  module.runActiveSegments 64
+    (module.runConstGlobals 64 (module.initialStore (α := Unit)) {}) {}
 
-/-- `runActiveSegments` writes the data segment at the evaluated offset:
-byte 4 holds `'A' = 65`. The issue-#101 behaviour — the segment landing
-at offset 0 — would leave byte 4 zero. -/
+def segmentMachineStore : MachineStore Unit :=
+  { runtime := { module := decoded, host := {} }
+    wasm := store0 }
+
+private def functionConfig (index : Nat) : Config Unit :=
+  { expr := .running
+      { locals := {}
+        code := decoded.funcs[index]!.body
+        resultArity := decoded.funcs[index]!.results.length
+        callerRemainder := [] }
+    store := segmentMachineStore }
+
+def readByte4Config : Config Unit := functionConfig 1
+def callAt2Config : Config Unit := functionConfig 2
+
+private def readByte4StoreOK : RunnerResult Unit → Bool
+  | .success _ store =>
+      store.wasm.mem.read8 4 == 65 &&
+      store.wasm.mem.read8 0 == 0
+  | _ => false
+
+private theorem readByte4_store_ok :
+    readByte4StoreOK (runSteps 3 readByte4Config).result = true := by
+  native_decide
+
 theorem readByte4_returns_65 :
-    runValues 64 decoded ((decoded.findExport "readByte4").getD 0) store0 []
-      = [.i32 65] := by
+    (runSteps 3 readByte4Config).result.values? =
+      some [.i32 65] := by
   native_decide
 
-/-- Likewise the element segment: the funcref lands in table slot 2, so
-`call_indirect` at index 2 reaches `$f42`. With the segment at slot 0
-this call trapped on a null table entry. -/
+theorem readByte4_spec :
+    TerminatesWith readByte4Config (fun values store =>
+      values = [.i32 65] ∧
+      store.wasm.mem.read8 4 = 65 ∧
+      store.wasm.mem.read8 0 = 0) := by
+  have hcheck := readByte4_store_ok
+  have hvalues := readByte4_returns_65
+  generalize hr : (runSteps 3 readByte4Config).result = result at hcheck
+  rw [hr] at hvalues
+  cases result with
+  | success values store =>
+    apply runSteps_success_terminates hr
+    have hv : values = [.i32 65] := by
+      simpa [RunnerResult.values?] using hvalues
+    have hs :
+        store.wasm.mem.read8 4 = 65 ∧
+        store.wasm.mem.read8 0 = 0 := by
+      simpa [readByte4StoreOK] using hcheck
+    exact ⟨hv, hs⟩
+  | trapped | outOfFuel | internalError =>
+    simp [RunnerResult.values?] at hvalues
+
+theorem readByte4_partial :
+    PartiallyMeets readByte4Config (fun values store =>
+      values = [.i32 65] ∧ store.wasm.mem.read8 4 = 65) := by
+  have hcheck := readByte4_store_ok
+  have hvalues := readByte4_returns_65
+  generalize hr : (runSteps 3 readByte4Config).result = result at hcheck
+  rw [hr] at hvalues
+  cases result with
+  | success values store =>
+    apply runSteps_success_partiallyMeets hr
+    constructor
+    · simpa [RunnerResult.values?] using hvalues
+    · have hs :
+          store.wasm.mem.read8 4 = 65 ∧
+          store.wasm.mem.read8 0 = 0 := by
+        simpa [readByte4StoreOK] using hcheck
+      exact hs.1
+  | trapped | outOfFuel | internalError =>
+    simp [RunnerResult.values?] at hvalues
+
 theorem callAt2_returns_42 :
-    runValues 64 decoded ((decoded.findExport "callAt2").getD 0) store0 []
-      = [.i32 42] := by
+    (runSteps 16 callAt2Config).result.values? =
+      some [.i32 42] := by
   native_decide
 
-/-- And nothing leaked to the old placeholder location: byte 0 of the
-memory is still zero (the segment was *moved*, not duplicated). -/
+theorem callAt2_spec :
+    TerminatesWith callAt2Config (fun values _ =>
+      values = [.i32 42]) := by
+  have hvalues := callAt2_returns_42
+  generalize hr : (runSteps 16 callAt2Config).result = result
+  rw [hr] at hvalues
+  cases result with
+  | success values store =>
+    apply runSteps_success_terminates hr
+    simpa [RunnerResult.values?] using hvalues
+  | trapped | outOfFuel | internalError =>
+    simp [RunnerResult.values?] at hvalues
+
+theorem callAt2_partial :
+    PartiallyMeets callAt2Config (fun values _ =>
+      values = [.i32 42]) := by
+  have hvalues := callAt2_returns_42
+  generalize hr : (runSteps 16 callAt2Config).result = result
+  rw [hr] at hvalues
+  cases result with
+  | success values store =>
+    apply runSteps_success_partiallyMeets hr
+    simpa [RunnerResult.values?] using hvalues
+  | trapped | outOfFuel | internalError =>
+    simp [RunnerResult.values?] at hvalues
+
 theorem byte0_still_zero : store0.mem.read8 0 = 0 := by
   native_decide
 

@@ -1,5 +1,4 @@
-import Interpreter.Wasm.Wp.Tactic
-import Interpreter.Wasm.Wp.Call
+import Interpreter.Wasm.SmallStep
 
 /-! ## Example: storage-backed counter (M5 + M6)
 
@@ -20,10 +19,11 @@ import Interpreter.Wasm.Wp.Call
        the contracts.
 
     Real blockchain runtimes pass byte-sequence keys/values via linear
-    memory; this demo uses i32 args directly. The mechanism
-    (`Satisfies` + `wp_call_host_cons`) generalises unchanged. -/
+    memory; this demo uses i32 args directly. The relational `Satisfies`
+    contract and host-step constructor generalise unchanged. -/
 
 namespace Wasm
+open SmallStep
 namespace Counter
 
 /-! ### Host state shape and helpers
@@ -85,6 +85,12 @@ def counterModule : Module :=
       { body := counterBody }
     ] }
 
+private theorem counter_import0 : 0 < counterModule.imports.length := by
+  decide
+
+private theorem counter_import1 : 1 < counterModule.imports.length := by
+  decide
+
 /-! ### Relational contracts -/
 
 def storageReadContract : HostContract HostState :=
@@ -117,69 +123,83 @@ theorem env_satisfies : Counter.env.Satisfies counterModule counterSpec := by
     rfl
   · omega
 
-/-! ### Abstract correctness
+def counterConfig (env : HostEnv HostState)
+    (st : Store HostState) : Config HostState :=
+  { expr := .running
+      { locals := {}
+        code := counterBody
+        resultArity := 0
+        callerRemainder := [] }
+    store := { runtime := { module := counterModule, host := env }, wasm := st } }
 
-    Running the counter from any initial store ends in a store whose
-    `host` alist has slot 0 set to `1 + old`. The proof never touches
-    the concrete host functions; it only consumes the relational
-    facts from `hSat`. -/
+theorem counter_steps
+    {env : HostEnv HostState}
+    (hSat : env.Satisfies counterModule counterSpec)
+    (st : Store HostState) :
+    Steps (counterConfig env st)
+      [(.instruction (.const 0)), (.instruction (.const 0)), (.host 0),
+       (.instruction (.const 1)), (.instruction .add), (.host 1),
+       (.administrative .finish)]
+      ⟨.done [],
+        { (counterConfig env st).store with
+          wasm := { st with
+            host := Counter.insert st.host 0
+              (1 + Counter.lookup st.host 0) } }⟩ := by
+  obtain ⟨readHost, hreadHost, hreadContract⟩ :=
+    hSat.lookup_contract (i := 0) (by decide)
+      (c := storageReadContract) rfl
+  obtain ⟨writeHost, hwriteHost, hwriteContract⟩ :=
+    hSat.lookup_contract (i := 1) (by decide)
+      (c := storageWriteContract) rfl
+  have hread :
+      readHost.invoke st [.i32 0] =
+        .Return [.i32 (Counter.lookup st.host 0)] st :=
+    hreadContract st [.i32 0] 0 rfl
+  have hwrite :
+      writeHost.invoke st
+          [.i32 0, .i32 (1 + Counter.lookup st.host 0)] =
+        .Return []
+          { st with host :=
+              (Counter.insert st.host 0
+                (1 + Counter.lookup st.host 0)) } :=
+    hwriteContract st
+      [.i32 0, .i32 (1 + Counter.lookup st.host 0)]
+      0 (1 + Counter.lookup st.host 0) rfl
+  apply Steps.cons .const
+  apply Steps.cons .const
+  apply Steps.cons (.callHostReturn counter_import0 rfl hreadHost hread)
+  apply Steps.cons .const
+  apply Steps.cons .add
+  apply Steps.cons (.callHostReturn counter_import1 rfl hwriteHost hwrite)
+  exact Steps.cons .finish (Steps.refl _)
 
 theorem counter_correct
     {env : HostEnv HostState}
     (hSat : env.Satisfies counterModule counterSpec)
     (st : Store HostState) :
-    wp counterModule counterBody
-      (fun c => c = .Fallthrough
-                      { st with host := Counter.insert st.host 0
-                                           (1 + Counter.lookup st.host 0) }
-                      ⟨[], [], []⟩)
-      st ⟨[], [], []⟩ env := by
-  -- Extract resolvers + contracts for both imports.
-  obtain ⟨hfR, cR, hEnvR, hCR, hInvR⟩ := hSat 0 (by decide)
-  obtain ⟨hfW, cW, hEnvW, hCW, hInvW⟩ := hSat 1 (by decide)
-  -- Pin the contracts to the spec entries.
-  have hCRid : counterSpec.contracts[0]? = some storageReadContract := rfl
-  rw [hCRid] at hCR; injection hCR with hCR'; subst hCR'
-  have hCWid : counterSpec.contracts[1]? = some storageWriteContract := rfl
-  rw [hCWid] at hCW; injection hCW with hCW'; subst hCW'
-  unfold counterBody
-  simp only [wp_const_cons]
-  refine wp_call_host_cons
-    (imp := ⟨"env", "storage_read", [.i32], [.i32]⟩) (hf := hfR)
-    rfl hEnvR ?_ ?_
-  · intro vsR stR hInvR_eq
-    simp at hInvR_eq
-    have hCR := hInvR st [.i32 0] 0 rfl
-    rw [hInvR_eq] at hCR
-    injection hCR with hvs hst
-    subst vsR
-    subst stR
-    simp only [wp_const_cons, wp_add_cons]
-    refine wp_call_host_cons
-      (imp := ⟨"env", "storage_write", [.i32, .i32], []⟩) (hf := hfW)
-      rfl hEnvW ?_ ?_
-    · intro vsW stW hInvW_eq
-      simp at hInvW_eq
-      have hCW := hInvW st
-                    [.i32 0, .i32 (1 + Counter.lookup st.host 0)]
-                    0 (1 + Counter.lookup st.host 0) rfl
-      rw [hInvW_eq] at hCW
-      injection hCW with hvs hst
-      subst vsW
-      subst stW
-      simp
-    · intro stW msg hInvW_eq
-      simp at hInvW_eq
-      have hCW := hInvW st
-                    [.i32 0, .i32 (1 + Counter.lookup st.host 0)]
-                    0 (1 + Counter.lookup st.host 0) rfl
-      rw [hInvW_eq] at hCW
-      cases hCW
-  · intro stR msg hInvR_eq
-    simp at hInvR_eq
-    have hCR := hInvR st [.i32 0] 0 rfl
-    rw [hInvR_eq] at hCR
-    cases hCR
+    TerminatesWith (counterConfig env st)
+      (fun values store =>
+        values = [] ∧
+        store.wasm.host =
+          Counter.insert st.host 0
+            (1 + Counter.lookup st.host 0)) := by
+  refine ⟨_, _, _, counter_steps hSat st, rfl, ?_⟩
+  rfl
+
+theorem counter_partial
+    {env : HostEnv HostState}
+    (hSat : env.Satisfies counterModule counterSpec)
+    (st : Store HostState) :
+    PartiallyMeets (counterConfig env st)
+      (fun values store =>
+        values = [] ∧
+        store.wasm.host =
+          Counter.insert st.host 0
+            (1 + Counter.lookup st.host 0)) := by
+  intro trace values store execution
+  obtain ⟨rfl, rfl⟩ :=
+    steps_done_deterministic (counter_steps hSat st) execution
+  exact ⟨rfl, rfl⟩
 
 end Counter
 end Wasm

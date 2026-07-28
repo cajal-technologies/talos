@@ -1,26 +1,35 @@
 import Interpreter.Wasm.Decoder.Wat
-import Interpreter.Wasm.Wp.Tactic
-import Interpreter.Wasm.Examples.Harness
+import Interpreter.Wasm.SmallStep
 
-/-! ## Example: constant-expression global initializers in the WAT decoder
+/-! ## Example: constant-expression global initializers
 
-    A global initializer is a constant expression, not just a single
-    `*.const`. The wasm 1.0 core spec permits `global.get` of an imported
-    global, and the extended-const proposal adds `i32.add`/`i32.sub`/`i32.mul`
-    (i64 ditto). Talos keeps such initializers as a program in `GlobalDecl.
-    initExpr` and evaluates them at instantiation via `Module.runConstGlobals`
-    rather than folding them to a literal at decode time.
-
-    This module exercises a nested arithmetic initializer end-to-end so a
-    regression — the initializer collapsing to its first operand, or the
-    placeholder zero leaking through — fails the build. -/
+    Extended constant expressions and GC allocation expressions are evaluated
+    during instantiation. The resulting physical stores are then observed by
+    the authoritative small-step machine.
+-/
 
 namespace Wasm
-open Wasm.Examples
+open SmallStep
 namespace GlobalInitExpr
 
-/-- A module whose only global is initialised with an extended-const
-expression: `(20 * 3) - 18 = 42`. -/
+private def decodeWat (wat : String) : Wasm.Module :=
+  match Wasm.Decoder.Wat.decode wat with
+  | .ok module => module
+  | .error _ => default
+
+private def initializedStore (module : Module) : Store Unit :=
+  module.runConstGlobals 64 (module.initialStore (α := Unit)) {}
+
+private def initializedConfig (module : Module) : Config Unit :=
+  { expr := .running
+      { locals := {}
+        code := module.funcs[0]!.body
+        resultArity := module.funcs[0]!.results.length
+        callerRemainder := [] }
+    store :=
+      { runtime := { module, host := {} }
+        wasm := initializedStore module } }
+
 def globalInitExprWat : String := "
 (module
   (global $g i32 (i32.sub (i32.mul (i32.const 20) (i32.const 3)) (i32.const 18)))
@@ -28,45 +37,32 @@ def globalInitExprWat : String := "
     global.get $g))
 "
 
-private def decoded : Wasm.Module := decodeOrDefault globalInitExprWat
+private def decoded : Wasm.Module := decodeWat globalInitExprWat
 
-/-- The initializer is kept as a program rather than folded to a single
-literal: the global's `initExpr` is non-empty. -/
 theorem decoded_global_keeps_initExpr :
     (decoded.globals[0]?.map (·.initExpr.isEmpty)).getD true = false := by
   native_decide
 
-/-- `runConstGlobals` evaluates the arithmetic initializer against the
-fresh store and writes `42` into the global slot. -/
 theorem runConstGlobals_evaluates_initExpr :
-    (decoded.runConstGlobals 64 (decoded.initialStore (α := Unit)) {}).globals.globals[0]?
-      = some (.i32 42) := by
+    (initializedStore decoded).globals.globals[0]? = some (.i32 42) := by
   native_decide
 
-private def runVals (idx : Nat) (st : Store Unit) (args : List Value) :
-    List Value :=
-  runValues 64 decoded idx st args
+def getGConfig : Config Unit := initializedConfig decoded
 
-/-- End-to-end: running `getG` after initialising the globals returns `42`.
-The old behaviour — placeholder `0` from `ValueType.zero`, or the first
-operand `20` — would return `0` or `20` instead. -/
 theorem getG_returns_42 :
-    runVals 0 (decoded.runConstGlobals 64 (decoded.initialStore (α := Unit)) {}) []
-      = [.i32 42] := by
+    (runSteps 2 getGConfig).result.values? = some [.i32 42] := by
   native_decide
 
-/-! ### GC allocator initializers (issue #109)
+theorem getG_spec :
+    TerminatesWith getGConfig (fun values _ => values = [.i32 42]) :=
+  runSteps_values_terminates getG_returns_42
 
-    `struct.new` is a constant instruction, so a global may be initialised
-    with a plain `(struct.new $s (i32.const 100))`. The decoder used to
-    detect GC allocators only at the top level of the initializer sexpr, so
-    the folded leaf form was rejected while the same allocation wrapped in
-    extended-const arithmetic — caught by the (recursive) extended-const
-    scan — was accepted. Both forms must decode and evaluate to the same
-    module behaviour. -/
+theorem getG_partial :
+    PartiallyMeets getGConfig (fun values _ => values = [.i32 42]) :=
+  runSteps_values_partiallyMeets getG_returns_42
 
-/-- Leaf form: the initializer is a folded `struct.new` with a plain
-`i32.const` field value. -/
+/-! ### GC allocator initializers (issue #109) -/
+
 def structGlobalLeafWat : String := "
 (module
   (type $s (struct (field i32)))
@@ -75,8 +71,6 @@ def structGlobalLeafWat : String := "
     (struct.get $s 0 (global.get $g))))
 "
 
-/-- Arithmetic form: the same allocation with the field value computed by an
-extended-const expression. -/
 def structGlobalArithWat : String := "
 (module
   (type $s (struct (field i32)))
@@ -85,29 +79,45 @@ def structGlobalArithWat : String := "
     (struct.get $s 0 (global.get $g))))
 "
 
-private def decodedLeaf : Wasm.Module := decodeOrDefault structGlobalLeafWat
-private def decodedArith : Wasm.Module := decodeOrDefault structGlobalArithWat
+private def decodedLeaf : Wasm.Module := decodeWat structGlobalLeafWat
+private def decodedArith : Wasm.Module := decodeWat structGlobalArithWat
 
-/-- The leaf `struct.new` initializer decodes (rather than erroring) and is
-kept as a const-expr program for `runConstGlobals`. -/
 theorem leaf_struct_new_keeps_initExpr :
     (decodedLeaf.globals[0]?.map (·.initExpr.isEmpty)).getD true = false := by
   native_decide
 
-/-- End-to-end: reading the struct field of the leaf-initialised global
-returns `100`. -/
+def leafStructConfig : Config Unit := initializedConfig decodedLeaf
+def arithStructConfig : Config Unit := initializedConfig decodedArith
+
 theorem leaf_struct_new_returns_100 :
-    runValues 64 decodedLeaf 0
-      (decodedLeaf.runConstGlobals 64 (decodedLeaf.initialStore (α := Unit)) {}) []
-      = [.i32 100] := by
+    (runSteps 4 leafStructConfig).result.values? =
+      some [.i32 100] := by
   native_decide
 
-/-- The arithmetic-wrapped form evaluates to the same result. -/
+theorem leaf_struct_new_spec :
+    TerminatesWith leafStructConfig
+      (fun values _ => values = [.i32 100]) :=
+  runSteps_values_terminates leaf_struct_new_returns_100
+
+theorem leaf_struct_new_partial :
+    PartiallyMeets leafStructConfig
+      (fun values _ => values = [.i32 100]) :=
+  runSteps_values_partiallyMeets leaf_struct_new_returns_100
+
 theorem arith_struct_new_returns_100 :
-    runValues 64 decodedArith 0
-      (decodedArith.runConstGlobals 64 (decodedArith.initialStore (α := Unit)) {}) []
-      = [.i32 100] := by
+    (runSteps 4 arithStructConfig).result.values? =
+      some [.i32 100] := by
   native_decide
+
+theorem arith_struct_new_spec :
+    TerminatesWith arithStructConfig
+      (fun values _ => values = [.i32 100]) :=
+  runSteps_values_terminates arith_struct_new_returns_100
+
+theorem arith_struct_new_partial :
+    PartiallyMeets arithStructConfig
+      (fun values _ => values = [.i32 100]) :=
+  runSteps_values_partiallyMeets arith_struct_new_returns_100
 
 end GlobalInitExpr
 end Wasm

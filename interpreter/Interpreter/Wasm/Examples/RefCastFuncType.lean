@@ -35,6 +35,7 @@ import Interpreter.Wasm.Examples.Harness
 namespace Wasm
 
 open Wasm.Examples
+open Wasm.SmallStep
 
 namespace RefCastFuncType
 
@@ -124,6 +125,22 @@ theorem cast_call :
 /-- Casting a `$ft` funcref *down* to `$sub` still traps. -/
 theorem cast_super_traps :
     runTrapMsg 20 m 7 (m.initialStore (α := Unit)) [] = some "cast failure" := by
+  native_decide
+
+def castSuperConfig : Config Unit :=
+  { expr := .running
+      { locals := {}
+        code := CastSuper
+        resultArity := 1
+        callerRemainder := [] }
+    store :=
+      { runtime := { module := m, host := {} }
+        wasm := m.initialStore } }
+
+theorem cast_super_trapsWith :
+    TrapsWith castSuperConfig .castFailure
+      (fun _ => True) := by
+  apply runSteps_trapReason_trapsWith (fuel := 320)
   native_decide
 
 /-- The null funcref inhabits the nullable concrete type `(ref null $ft)`… -/

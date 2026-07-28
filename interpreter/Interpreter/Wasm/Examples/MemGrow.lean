@@ -1,33 +1,23 @@
-import Interpreter.Wasm.Wp.Tactic
-import Interpreter.Wasm.Examples.Harness
+import Interpreter.Wasm.SmallStep
 
 /-! ## Example: memory.size / memory.grow
 
-    Three sanity checks:
-
-    1. `memory.size` returns the initial page count.
-    2. `memory.grow delta` returns the *previous* page count and bumps
-       `memory.size` by `delta` when the request is in range.
-    3. Asking for more pages than the cap allows leaves the memory
-       untouched and pushes `-1` (`0xFFFFFFFF`). -/
+    Small-step contracts for observing memory size, successful growth, and
+    failed growth. Successful growth preserves existing bytes; failure
+    returns `-1` and preserves the complete physical store.
+-/
 
 namespace Wasm
-open Wasm.Examples
+open SmallStep
 
-/-- Push the current page count. -/
 def sizeBody : Program := [.memorySize]
 
-/-- Grow by 2 pages, drop the old-size return value, then push the new
-    size. -/
 def growThenSizeBody : Program := [
   .const 2, .memoryGrow,
   .drop,
   .memorySize
 ]
 
-/-- Try to grow far beyond `memoryHardCap` (65536 pages). Wasm specifies
-    that this leaves the memory alone and pushes `-1`. We then push the
-    unchanged size, so the value stack ends as `[size, -1]` (top = size). -/
 def growFailBody : Program := [
   .const 0xFFFFFF00, .memoryGrow,
   .memorySize
@@ -35,26 +25,123 @@ def growFailBody : Program := [
 
 def growModule : Module :=
   { funcs :=
-      [ { body := sizeBody,          results := [.i32] }
-      , { body := growThenSizeBody,  results := [.i32] }
-      -- growFailBody leaves `[size, -1]` on the stack (top = size), so the
-      -- function returns two i32s under Wasm's standard convention.
-      , { body := growFailBody,      results := [.i32, .i32] } ]
+      [ { body := sizeBody, results := [.i32] }
+      , { body := growThenSizeBody, results := [.i32] }
+      , { body := growFailBody, results := [.i32, .i32] } ]
     memory := some { pagesMin := 1 } }
 
+/-- Seed a framed word so growth preservation is observable. -/
+def growInitialWasmStore : Store Unit :=
+  { growModule.initialStore (α := Unit) with
+    mem := (growModule.initialStore (α := Unit)).mem.write32 64 0xC0DEC0DE }
+
+def growStore : MachineStore Unit :=
+  { runtime := { module := growModule, host := {} }
+    wasm := growInitialWasmStore }
+
+private def growConfig (body : Program) (arity : Nat) : Config Unit :=
+  { expr := .running
+      { locals := {}
+        code := body
+        resultArity := arity
+        callerRemainder := [] }
+    store := growStore }
+
+def sizeConfig : Config Unit := growConfig sizeBody 1
+def growThenSizeConfig : Config Unit := growConfig growThenSizeBody 1
+def growFailConfig : Config Unit := growConfig growFailBody 2
+
+def grownMemory : Mem := { growInitialWasmStore.mem with pages := 3 }
+
+def growSuccessStore : MachineStore Unit :=
+  { growStore with
+    wasm := { growInitialWasmStore with mem := grownMemory } }
+
 theorem memorySize_reads_pagesMin :
-    runValues 10 growModule 0 growModule.initialStore [] = [.i32 1] := by
-  native_decide
+    (runSteps 2 sizeConfig).result =
+      .success [.i32 1] growStore := by
+  rfl
+
+theorem memorySize_spec :
+    TerminatesWith sizeConfig (fun values store =>
+      values = [.i32 1] ∧ store = growStore) := by
+  apply runSteps_success_terminates memorySize_reads_pagesMin
+  exact ⟨rfl, rfl⟩
 
 theorem memoryGrow_bumps_size :
-    runValues 10 growModule 1 growModule.initialStore [] = [.i32 3] := by
-  native_decide
+    (runSteps 6 growThenSizeConfig).result =
+      .success [.i32 3] growSuccessStore := by
+  rfl
 
-/-- Grow request exceeds the cap → `-1` (`0xFFFFFFFF`) is returned and the
-    memory still reports its original size on top of the stack. -/
+/-- Growth changes only the page count and frames the pre-existing word. -/
+theorem memoryGrow_spec :
+    TerminatesWith growThenSizeConfig (fun values store =>
+      values = [.i32 3] ∧
+      store.wasm.mem.pages = 3 ∧
+      store.wasm.mem.read32 64 = 0xC0DEC0DE) := by
+  apply runSteps_success_terminates memoryGrow_bumps_size
+  constructor
+  · rfl
+  constructor <;> native_decide
+
+theorem memoryGrow_partial :
+    PartiallyMeets growThenSizeConfig (fun values store =>
+      values = [.i32 3] ∧
+      store.wasm.mem.pages = 3 ∧
+      store.wasm.mem.read32 64 = 0xC0DEC0DE) := by
+  apply runSteps_success_partiallyMeets memoryGrow_bumps_size
+  constructor
+  · rfl
+  constructor <;> native_decide
+
+/-- An oversized request returns `-1`, reports the unchanged size, and does
+not mutate any component of the machine store. -/
 theorem memoryGrow_oversize_returns_neg_one :
-    runValues 10 growModule 2 growModule.initialStore []
-      = [.i32 1, .i32 0xFFFFFFFF] := by
-  native_decide
+    (runSteps 4 growFailConfig).result =
+      .success [.i32 1, .i32 0xFFFFFFFF] growStore := by
+  rfl
+
+theorem memoryGrow_failure_spec :
+    TerminatesWith growFailConfig (fun values store =>
+      values = [.i32 1, .i32 0xFFFFFFFF] ∧ store = growStore) := by
+  apply runSteps_success_terminates memoryGrow_oversize_returns_neg_one
+  exact ⟨rfl, rfl⟩
+
+theorem memoryGrow_failure_partial :
+    PartiallyMeets growFailConfig (fun values store =>
+      values = [.i32 1, .i32 0xFFFFFFFF] ∧ store = growStore) := by
+  apply runSteps_success_partiallyMeets memoryGrow_oversize_returns_neg_one
+  exact ⟨rfl, rfl⟩
+
+/-! ### Imported-resource limit ownership
+
+An importing declaration may be more permissive than the resource it imports.
+The instantiated memory's cap remains authoritative. This models an exported
+`(memory 2 5)` accessed through an importing `(memory 1 6)`: once the shared
+resource reaches five pages, another growth must fail. -/
+
+def importingGrowthModule : Module :=
+  { funcs := [{ body := [.const 1, .memoryGrow], results := [.i32] }]
+    memory := some { pagesMin := 1, pagesMax := some 6 } }
+
+def importedLimitStore : Store Unit :=
+  { importingGrowthModule.initialStore with
+    mem := { (importingGrowthModule.initialStore (α := Unit)).mem with pages := 5 }
+    memoryCaps := [5] }
+
+def importedLimitConfig : Config Unit :=
+  { expr := .running
+      { locals := {}
+        code := importingGrowthModule.funcs[0]!.body
+        resultArity := 1
+        callerRemainder := [] }
+    store :=
+      { runtime := { module := importingGrowthModule, host := {} }
+        wasm := importedLimitStore } }
+
+theorem imported_memory_retains_exporter_limit :
+    (runSteps 3 importedLimitConfig).result =
+      .success [.i32 0xFFFFFFFF] importedLimitConfig.store := by
+  rfl
 
 end Wasm
