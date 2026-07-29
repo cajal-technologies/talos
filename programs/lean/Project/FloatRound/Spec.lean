@@ -117,7 +117,6 @@ theorem roundGlobals_pointsTo [WasmGlobalGS] :
   unfold roundGlobals
   rw [(BI.BigSepM.bigSepM_insert (get?_empty 0)).to_eq,
     BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
-  exact .rfl
 
 /-! ## Small-step optimized-round path -/
 

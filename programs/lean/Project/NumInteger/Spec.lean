@@ -981,7 +981,6 @@ theorem func1GlobalHeap_pointsTo [WasmGlobalGS] :
   unfold func1GlobalHeap
   rw [(BI.BigSepM.bigSepM_insert (get?_empty 0)).to_eq,
     BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
-  exact .rfl
 
 def func1ZeroConfig
     (result oldX oldY : UInt64)
@@ -4812,7 +4811,6 @@ theorem func0GlobalHeap_pointsTo [WasmGlobalGS] :
   unfold func0GlobalHeap
   rw [(BI.BigSepM.bigSepM_insert (get?_empty 0)).to_eq,
     BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
-  exact .rfl
 
 def func0Config (a b : UInt64) : Wasm.SmallStep.Config Unit :=
   let initial : Store Unit := «module».initialStore

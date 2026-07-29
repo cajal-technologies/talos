@@ -318,7 +318,6 @@ theorem func1Globals_pointsTo [WasmGlobalGS] :
   unfold func1Globals
   rw [(BI.BigSepM.bigSepM_insert (get?_empty 0)).to_eq,
     BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
-  exact .rfl
 
 theorem func1_body_smallStep_wp
     [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
