@@ -1,5 +1,6 @@
 import CodeLib.SepLogic.SmallStepLifting
 import Iris.ProgramLogic.Adequacy
+import Iris.ProgramLogic.TotalAdequacy
 
 /-!
 # Adequacy for the Wasm small-step Iris language
@@ -227,6 +228,209 @@ theorem wasm_smallStep_partiallyMeets
     PartiallyMeets config (fun values _store => φ values) :=
   adequate_to_partiallyMeets config (fun values _store => φ values)
     (wasm_smallStep_adequacy config φ hwp)
+
+instance instWasmLanguageNoFork :
+    LanguageNoFork (Expr α) (MachineStore α) StepKind (List Value) where
+  no_fork h := h.1
+
+/-- A closed total WP proof strongly normalizes the authoritative Wasm
+single-thread machine. The ghost initialization is the total-WP counterpart
+of `wasm_smallStep_adequacy`; both use the same `StateInterp`. -/
+theorem wasm_smallStep_stronglyNormalizing
+    [WasmSmallStepGpreS]
+    (config : Config α) (φ : List Value → Prop)
+    (htwp : ∀ [WasmSmallStepGS .hasNoLC],
+      ⊢@{IProp WasmHeapGF}
+        (WP config.expr @ Stuckness.NotStuck; ⊤
+          [{ values, ⌜φ values⌝ }])) :
+    StronglyNormalizing
+      (ExprErasedStep (Expr := Expr α)
+        (State := MachineStore α) (Obs := StepKind))
+      (config.expr, config.store) := by
+  apply stronglyNormalizing_expr_of_threadPool
+  apply twp_total (hlc := .hasNoLC) (GF := WasmHeapGF)
+    Stuckness.NotStuck config.expr config.store
+    (fun values => iprop(⌜φ values⌝)) 0 0
+  intro inv
+  imod genHeap_init (L := UInt32) (V := Option UInt8)
+      (GF := WasmHeapGF) (H := WasmHeapMap) ∅ with
+    ⟨%heapGS, Hheap, Hpoints, Hmeta⟩
+  letI globalMapG : GhostMapG WasmHeapGF Nat Value WasmGlobalMap := by
+    constructor
+    exists 7
+  imod (ghost_map_alloc_empty (GF := WasmHeapGF) (K := Nat)
+      (V := Value) (H := WasmGlobalMap)) with ⟨%globalName, Hglobals⟩
+  letI dataSegmentMapG :
+      GhostMapG WasmHeapGF Nat (Option (List UInt8))
+        WasmDataSegmentMap := by
+    constructor
+    exists 9
+  imod (ghost_map_alloc_empty (GF := WasmHeapGF) (K := Nat)
+      (V := Option (List UInt8)) (H := WasmDataSegmentMap)) with
+    ⟨%dataSegmentName, Hsegments⟩
+  letI tableMapG : GhostMapG WasmHeapGF Nat TableInst WasmTableMap := by
+    constructor
+    exists 10
+  imod (ghost_map_alloc_empty (GF := WasmHeapGF) (K := Nat)
+      (V := TableInst) (H := WasmTableMap)) with
+    ⟨%tableName, Htables⟩
+  letI elementSegmentMapG :
+      GhostMapG WasmHeapGF Nat (Option (List (Option Nat)))
+        WasmElementSegmentMap := by
+    constructor
+    exists 11
+  imod (ghost_map_alloc_empty (GF := WasmHeapGF) (K := Nat)
+      (V := Option (List (Option Nat))) (H := WasmElementSegmentMap)) with
+    ⟨%elementSegmentName, HelementSegments⟩
+  letI wasmHeapGS : WasmHeapGS :=
+    { togenHeapGS := heapGS }
+  letI wasmGlobalGS : WasmGlobalGS :=
+    { toGhostMapG := globalMapG
+      globalName := globalName }
+  letI wasmDataSegmentGS : WasmDataSegmentGS :=
+    { toGhostMapG := dataSegmentMapG
+      dataSegmentName := dataSegmentName }
+  letI wasmTableGS : WasmTableGS :=
+    { toGhostMapG := tableMapG
+      tableName := tableName }
+  letI wasmElementSegmentGS : WasmElementSegmentGS :=
+    { toGhostMapG := elementSegmentMapG
+      elementSegmentName := elementSegmentName }
+  letI runtimeElem :
+      ElemG WasmHeapGF (constOF (Agree (DiscreteO Module))) := by
+    exists 8
+  imod (iOwn_alloc (E := runtimeElem)
+      (toAgree ⟨config.store.runtime.module⟩) (fun _ => trivial)) with
+    ⟨%runtimeName, Hruntime⟩
+  letI runtimeGS : WasmRuntimeModuleGS :=
+    { runtimeElem
+      runtimeName }
+  letI gs : WasmSmallStepGS .hasNoLC :=
+    { toInvGS_gen := inv
+      toWasmHeapGS := wasmHeapGS
+      global := wasmGlobalGS
+      dataSegment := wasmDataSegmentGS
+      table := wasmTableGS
+      elementSegment := wasmElementSegmentGS
+      runtime := runtimeGS }
+  iclear Hpoints Hmeta
+  imodintro
+  iexists
+    (fun store (_ : Nat) (observations : List StepKind) (_ : Nat) =>
+      stateInterp (GF := WasmHeapGF) store 0 observations 0),
+    (fun _ => 0), (fun _ => iprop(True)),
+    (fun _ _ _ _ => by
+      iintro Hstate
+      imodintro
+      iexact Hstate)
+  dsimp only
+  isplitl [Hheap Hglobals Hsegments Htables HelementSegments Hruntime]
+  · iapply (stateInterp_eq config.store 0 [] 0).mpr
+    iexists (∅ : WasmHeapMap (Option UInt8))
+    iexists (∅ : WasmGlobalMap Value)
+    iexists (∅ : WasmDataSegmentMap (Option (List UInt8)))
+    iexists (∅ : WasmTableMap TableInst)
+    iexists (∅ : WasmElementSegmentMap (Option (List (Option Nat))))
+    unfold runtimeModuleOwn
+    iframe Hheap Hglobals Hsegments Htables HelementSegments Hruntime
+    ipureintro
+    exact ⟨heapAgreesWithMem_empty _,
+      heapAddressesInBounds_empty _,
+      globalHeapAgrees_empty _,
+      dataSegmentHeapAgrees_empty _,
+      ⟨tableHeapAgrees_empty _, elementSegmentHeapAgrees_empty _⟩⟩
+  · iintro _
+    exact htwp
+
+private theorem stronglyNormalizing_reaches_irreducible
+    {β : Type _} {step : β → β → Prop} {start : β}
+    (hsn : StronglyNormalizing step start) :
+    ∃ final,
+      Relation.ReflTransGen step start final ∧
+      ∀ next, ¬step final next := by
+  unfold StronglyNormalizing at hsn
+  refine Acc.recOn hsn
+    (motive := fun current _ =>
+      ∃ final,
+        Relation.ReflTransGen step current final ∧
+        ∀ next, ¬step final next) ?_
+  intro current _ ih
+  by_cases hnext : ∃ next, step current next
+  · obtain ⟨next, hstep⟩ := hnext
+    obtain ⟨final, hsteps, hirred⟩ := ih next hstep
+    exact ⟨final,
+      (Relation.ReflTransGen.single hstep).trans hsteps, hirred⟩
+  · exact ⟨current, .refl, by
+      intro next hstep
+      exact hnext ⟨next, hstep⟩⟩
+
+private theorem exprErasedSteps_to_steps
+    {source target : Expr α × MachineStore α}
+    (hsteps : Relation.ReflTransGen
+      (ExprErasedStep (Expr := Expr α)
+        (State := MachineStore α) (Obs := StepKind))
+      source target) :
+    ∃ trace,
+      Steps ⟨source.1, source.2⟩ trace ⟨target.1, target.2⟩ := by
+  induction hsteps with
+  | refl =>
+    exact ⟨[], .refl _⟩
+  | tail _ erasedStep ih =>
+    obtain ⟨trace, hprefix⟩ := ih
+    obtain ⟨κ, forks, hprim⟩ := erasedStep
+    rcases hprim with ⟨hforks, kind, hκ, hstep⟩
+    exact ⟨trace ++ [kind], hprefix.trans (.single hstep)⟩
+
+/-- Strong normalization plus ordinary Iris safety/partial correctness yields
+Talos's finite-trace total-correctness predicate. -/
+theorem stronglyNormalizing_adequate_terminates
+    (config : Config α)
+    (post : List Value → MachineStore α → Prop)
+    (hsn : StronglyNormalizing
+      (ExprErasedStep (Expr := Expr α)
+        (State := MachineStore α) (Obs := StepKind))
+      (config.expr, config.store))
+    (had : adequate Stuckness.NotStuck config.expr config.store post) :
+    TerminatesWith config post := by
+  obtain ⟨⟨finalExpr, finalStore⟩, hreach, hirred⟩ :=
+    stronglyNormalizing_reaches_irreducible hsn
+  obtain ⟨trace, hsteps⟩ := exprErasedSteps_to_steps hreach
+  have hirisReach := hsteps.to_languageErasedSteps
+  have hnotStuck := had.adequate_not_stuck
+    [finalExpr] finalStore finalExpr rfl hirisReach (by simp)
+  rcases hnotStuck with hvalue | hreducible
+  · cases hval : toVal finalExpr with
+    | none =>
+      simp [hval] at hvalue
+    | some values =>
+      have hexpr : finalExpr = (.done values : Expr α) :=
+        (ToVal.coe_of_toVal_eq_some hval).symm
+      subst finalExpr
+      exact ⟨trace, values, finalStore, hsteps,
+        had.adequate_result [] finalStore values hirisReach⟩
+  · obtain ⟨κ, nextExpr, nextStore, forks, hprim⟩ := hreducible
+    exact False.elim
+      (hirred (nextExpr, nextStore) ⟨κ, forks, hprim⟩)
+
+/-- Closed total-WP adequacy in Talos's public `TerminatesWith` form. TWP
+supplies strong normalization; `twp.to_wp` supplies safety and the result
+postcondition. -/
+theorem wasm_smallStep_terminates
+    [WasmSmallStepGpreS]
+    (config : Config α) (φ : List Value → Prop)
+    (htwp : ∀ (hlc : HasLC) [WasmSmallStepGS hlc],
+      ⊢@{IProp WasmHeapGF}
+        (WP config.expr @ Stuckness.NotStuck; ⊤
+          [{ values, ⌜φ values⌝ }])) :
+    TerminatesWith config (fun values _store => φ values) := by
+  apply stronglyNormalizing_adequate_terminates config
+    (fun values _store => φ values)
+    (wasm_smallStep_stronglyNormalizing config φ
+      (htwp .hasNoLC))
+  apply wasm_smallStep_adequacy config φ
+  intro gs
+  iapply twp.to_wp
+  exact htwp .hasLC
 
 /-- Closed adequacy with persistent knowledge of the concrete runtime module.
 This is the call-capable counterpart of `wasm_smallStep_adequacy`. -/

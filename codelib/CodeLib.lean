@@ -37,6 +37,7 @@ import CodeLib.SepLogic.WasmRules
 import CodeLib.SepLogic.SmallStepLanguage
 import CodeLib.SepLogic.SmallStepState
 import CodeLib.SepLogic.SmallStepLifting
+import CodeLib.SepLogic.SmallStepTotalLifting
 import CodeLib.SepLogic.SmallStepAdequacy
 
 /-!
