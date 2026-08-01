@@ -359,7 +359,6 @@ theorem absDiffGlobals_pointsTo [WasmGlobalGS] :
   unfold absDiffGlobals
   rw [(BI.BigSepM.bigSepM_insert (get?_empty 0)).to_eq,
     BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
-  exact .rfl
 
 theorem absDiffBodyHeap_agrees
     (runtimeModule : Module) (initial : Store Unit)

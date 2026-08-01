@@ -294,7 +294,7 @@ theorem wasm_smallStep_runtime_adequacy
   imod (iOwn_alloc (E := runtimeElem)
       (runtimeValue • runtimeValue) (fun n =>
         CMRA.valid_iff_validN.mp
-          (Agree.toAgree_op_valid_iff_equiv.mpr .rfl) n)) with
+          (toAgree_op_valid_iff_eq.mpr rfl) n)) with
     ⟨%runtimeName, Hruntime⟩
   letI runtimeGS : WasmRuntimeModuleGS :=
     { runtimeElem
@@ -530,7 +530,7 @@ theorem wasm_smallStep_heap_globals_runtime_adequacy
   imod (iOwn_alloc (E := runtimeElem)
       (runtimeValue • runtimeValue) (fun n =>
         CMRA.valid_iff_validN.mp
-          (Agree.toAgree_op_valid_iff_equiv.mpr .rfl) n)) with
+          (toAgree_op_valid_iff_eq.mpr rfl) n)) with
     ⟨%runtimeName, Hruntime⟩
   letI runtimeGS : WasmRuntimeModuleGS :=
     { runtimeElem
@@ -656,7 +656,7 @@ theorem wasm_smallStep_heap_globals_runtime_store_adequacy
   imod (iOwn_alloc (E := runtimeElem)
       (runtimeValue • runtimeValue) (fun n =>
         CMRA.valid_iff_validN.mp
-          (Agree.toAgree_op_valid_iff_equiv.mpr .rfl) n)) with
+          (toAgree_op_valid_iff_eq.mpr rfl) n)) with
     ⟨%runtimeName, Hruntime⟩
   letI runtimeGS : WasmRuntimeModuleGS :=
     { runtimeElem
@@ -814,7 +814,7 @@ theorem wasm_smallStep_heap_globals_segments_runtime_store_adequacy
   imod (iOwn_alloc (E := runtimeElem)
       (runtimeValue • runtimeValue) (fun n =>
         CMRA.valid_iff_validN.mp
-          (Agree.toAgree_op_valid_iff_equiv.mpr .rfl) n)) with
+          (toAgree_op_valid_iff_eq.mpr rfl) n)) with
     ⟨%runtimeName, Hruntime⟩
   letI runtimeGS : WasmRuntimeModuleGS :=
     { runtimeElem
@@ -993,7 +993,7 @@ theorem wasm_smallStep_heap_globals_segments_tables_runtime_store_adequacy
   imod (iOwn_alloc (E := runtimeElem)
       (runtimeValue • runtimeValue) (fun n =>
         CMRA.valid_iff_validN.mp
-          (Agree.toAgree_op_valid_iff_equiv.mpr .rfl) n)) with
+          (toAgree_op_valid_iff_eq.mpr rfl) n)) with
     ⟨%runtimeName, Hruntime⟩
   letI runtimeGS : WasmRuntimeModuleGS :=
     { runtimeElem
@@ -1227,7 +1227,6 @@ private theorem global0Heap_pointsTo [WasmGlobalGS] :
   unfold global0Heap
   rw [(BI.BigSepM.bigSepM_insert (get?_empty 0)).to_eq,
     BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
-  exact .rfl
 
 /-- A concrete adequacy witness for authoritative globals: the WP may derive
 the result of `global.get 0` only from ownership allocated for the matching
@@ -2538,8 +2537,6 @@ private theorem memoryInitDropSegments_pointsTo [WasmDataSegmentGS] :
   unfold memoryInitDropSegments
   rw [(BI.BigSepM.bigSepM_insert (get?_empty 0)).to_eq,
     BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
-  iintro Hsegment
-  iexact Hsegment
 
 def memoryInitDropAdequacyModule : Module :=
   { funcs :=
@@ -2644,8 +2641,6 @@ private theorem tableSetGetMap_pointsTo [WasmTableGS] :
   unfold tableSetGetMap
   rw [(BI.BigSepM.bigSepM_insert (get?_empty 0)).to_eq,
     BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
-  iintro Htable
-  iexact Htable
 
 def tableSetGetAdequacyModule : Module :=
   { funcs :=
@@ -2997,8 +2992,6 @@ private theorem tableCopyOverlapMap_pointsTo [WasmTableGS] :
   unfold tableCopyOverlapMap
   rw [(BI.BigSepM.bigSepM_insert (get?_empty 0)).to_eq,
     BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
-  iintro Htable
-  iexact Htable
 
 def tableCopyOverlapAdequacyModule : Module :=
   { funcs := [{ body := [] }, { body := [] }, { body := [] }]
@@ -3344,8 +3337,6 @@ private theorem tableInitDropTableMap_pointsTo [WasmTableGS] :
   unfold tableInitDropTableMap
   rw [(BI.BigSepM.bigSepM_insert (get?_empty 0)).to_eq,
     BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
-  iintro Htable
-  iexact Htable
 
 private theorem tableInitDropElementMap_pointsTo [WasmElementSegmentGS] :
     ([∗map] index ↦ value ∈ tableInitDropElementMap,
@@ -3354,8 +3345,6 @@ private theorem tableInitDropElementMap_pointsTo [WasmElementSegmentGS] :
   unfold tableInitDropElementMap
   rw [(BI.BigSepM.bigSepM_insert (get?_empty 0)).to_eq,
     BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
-  iintro Hsegment
-  iexact Hsegment
 
 def tableInitDropAdequacyModule : Module :=
   { funcs := [{ body := [] }]

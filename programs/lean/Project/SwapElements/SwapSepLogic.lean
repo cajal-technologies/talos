@@ -1448,7 +1448,6 @@ theorem func4ExampleGlobals_pointsTo [WasmGlobalGS] :
   unfold func4ExampleGlobals
   rw [(BI.BigSepM.bigSepM_insert (get?_empty 0)).to_eq,
     BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
-  exact .rfl
 
 /-- The real exported swap executes under the authoritative small-step
 semantics on a concrete two-element array and returns normally. -/
@@ -1799,7 +1798,6 @@ theorem func0AliasGlobals_pointsTo [WasmGlobalGS] :
   unfold func0AliasGlobals
   rw [(BI.BigSepM.bigSepM_insert (get?_empty 0)).to_eq,
     BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
-  exact .rfl
 
 /-- Same-index swapping is a real one-cell execution, not a degenerate proof
 that duplicates exclusive ownership. -/
