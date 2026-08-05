@@ -4266,10 +4266,10 @@ data.wast:267 assert_uninstantiable pass
 data.wast:274 assert_uninstantiable pass
 data.wast:282 assert_uninstantiable pass
 data.wast:290 assert_uninstantiable pass
-data.wast:298 assert_uninstantiable skipped:assert_uninstantiable decode: decode: bad integer literal: -1
-data.wast:305 assert_uninstantiable skipped:assert_uninstantiable decode: decode: bad integer literal: -1
-data.wast:313 assert_uninstantiable skipped:assert_uninstantiable decode: decode: bad integer literal: -100
-data.wast:320 assert_uninstantiable skipped:assert_uninstantiable decode: decode: bad integer literal: -100
+data.wast:298 assert_uninstantiable pass
+data.wast:305 assert_uninstantiable pass
+data.wast:313 assert_uninstantiable pass
+data.wast:320 assert_uninstantiable pass
 data.wast:330 assert_invalid pass
 data.wast:338 assert_invalid pass
 data.wast:351 assert_invalid pass
@@ -4307,10 +4307,10 @@ data1.wast:72 assert_uninstantiable pass
 data1.wast:81 assert_uninstantiable pass
 data1.wast:89 assert_uninstantiable pass
 data1.wast:99 assert_uninstantiable pass
-data1.wast:109 assert_uninstantiable skipped:assert_uninstantiable decode: decode: bad integer literal: -1
-data1.wast:118 assert_uninstantiable skipped:assert_uninstantiable decode: decode: bad integer literal: -1
-data1.wast:128 assert_uninstantiable skipped:assert_uninstantiable decode: decode: bad integer literal: -100
-data1.wast:137 assert_uninstantiable skipped:assert_uninstantiable decode: decode: bad integer literal: -100
+data1.wast:109 assert_uninstantiable pass
+data1.wast:118 assert_uninstantiable pass
+data1.wast:128 assert_uninstantiable pass
+data1.wast:137 assert_uninstantiable pass
 data_drop0.wast:2 module pass
 data_drop0.wast:18 action pass
 data_drop0.wast:19 action pass
@@ -4397,10 +4397,10 @@ elem.wast:628 assert_uninstantiable pass
 elem.wast:636 assert_uninstantiable pass
 elem.wast:645 assert_uninstantiable pass
 elem.wast:653 assert_uninstantiable pass
-elem.wast:662 assert_uninstantiable skipped:assert_uninstantiable decode: decode: bad integer literal: -1
-elem.wast:670 assert_uninstantiable skipped:assert_uninstantiable decode: decode: bad integer literal: -1
-elem.wast:679 assert_uninstantiable skipped:assert_uninstantiable decode: decode: bad integer literal: -10
-elem.wast:687 assert_uninstantiable skipped:assert_uninstantiable decode: decode: bad integer literal: -10
+elem.wast:662 assert_uninstantiable pass
+elem.wast:670 assert_uninstantiable pass
+elem.wast:679 assert_uninstantiable pass
+elem.wast:687 assert_uninstantiable pass
 elem.wast:698 module pass
 elem.wast:706 assert_trap pass
 elem.wast:708 module pass

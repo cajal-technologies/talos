@@ -2432,10 +2432,10 @@ private def parseDataSegment (ctx : Ctx)
   -- `Module.runActiveSegments`.
   let parsed ← match xs with
     | .list [.atom "offset", .list [.atom "i32.const", .atom n]] :: r =>
-      do .ok ((some (← parseU32 n) : Option UInt32), some .i32,
+      do .ok ((some (← parseI32 n) : Option UInt32), some .i32,
         false, ([] : Wasm.Program), r)
     | .list [.atom "i32.const", .atom n] :: r =>
-      do .ok ((some (← parseU32 n) : Option UInt32), some .i32,
+      do .ok ((some (← parseI32 n) : Option UInt32), some .i32,
         false, ([] : Wasm.Program), r)
     -- memory64: active offsets in a 64-bit memory are i64 constants. The
     -- segment offset field is 32 bits; active 64-bit segments in practice
@@ -2703,7 +2703,7 @@ private def parseElemSegment (ctx : Ctx)
   let mut offsetExpr : Wasm.Program := []
   match rest with
   | .list [.atom "offset", .list [.atom "i32.const", .atom n]] :: r =>
-    let v ← parseNat n; offset := some v; offsetType := some .i32; rest := r
+    let v ← parseI32 n; offset := some v.toNat; offsetType := some .i32; rest := r
   | .list [.atom "offset", .list [.atom "i64.const", .atom n]] :: r =>
     -- table64: active offsets in a 64-bit table are i64 constants.
     let v ← parseI64 n; offset := some v.toNat; offsetType := some .i64; rest := r
@@ -2715,7 +2715,7 @@ private def parseElemSegment (ctx : Ctx)
     offset := some 0; offsetExprPresent := true
     offsetExpr := (← parseInstrSeq ctx es); rest := r
   | .list [.atom "i32.const", .atom n] :: r =>
-    let v ← parseNat n; offset := some v; offsetType := some .i32; rest := r
+    let v ← parseI32 n; offset := some v.toNat; offsetType := some .i32; rest := r
   | .list [.atom "i64.const", .atom n] :: r =>
     let v ← parseI64 n; offset := some v.toNat; offsetType := some .i64; rest := r
   -- Bare (unwrapped) non-literal offset expression, e.g.
