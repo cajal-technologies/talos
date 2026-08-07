@@ -9,10 +9,10 @@ path = "../interpreter"
 
 [[require]]
 name = "iris"
-git.url = "https://github.com/mfornet/iris-lean.git"
+git.url = "https://github.com/leanprover-community/iris-lean.git"
 git.subDir = "Iris"
-# Fork revision containing total weakest preconditions and their proof-mode API.
-git.rev = "3d9ecf13c89946a877fceb048a389e1596808157"
+# Total weakest preconditions from iris-lean#554; pin the PR head commit.
+rev = "ab3f3b9284849de00fad44d5983714fa987a5970"
 
 [[lean_lib]]
 name = "CodeLib"
