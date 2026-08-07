@@ -241,6 +241,21 @@ theorem twp_mul
       [{ Φ }] :=
   twp_pureStep _ _ _ (fun _ => Step.mul)
 
+theorem twp_shl
+    {params localValues values : List Value}
+    {lhs rhs : UInt32} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame} :
+    WP (.running
+      ⟨⟨params, localValues, .i32 (lhs <<< (rhs % 32)) :: values⟩,
+        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
+        [{ Φ }] ⊢
+    WP (.running
+      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
+        .shl :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
+      [{ Φ }] :=
+  twp_pureStep _ _ _ (fun _ => Step.shl)
+
 theorem twp_ltU
     {params localValues values : List Value}
     {lhs rhs result : UInt32} {code : Program} {arity : Nat}
