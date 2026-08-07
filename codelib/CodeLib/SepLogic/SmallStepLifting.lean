@@ -37,7 +37,7 @@ theorem wp_pureStep
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[kind], .running next, store, [],
+    exact ⟨[], .running next, store, [],
       ⟨rfl, _, rfl, hstep store⟩⟩
   iintro !> %e₂ %store₂ %forks %Hprim Hcredit
   rcases Hprim with ⟨hforks, actualKind, hobs, wasmStep⟩
@@ -145,7 +145,7 @@ theorem wp_finish
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.administrative .finish],
+    exact ⟨[],
       .done (values.take arity ++ remainder), store, [],
       ⟨rfl, _, rfl, Step.finish⟩⟩
   iintro !> %e₂ %store₂ %forks %Hstep Hcredit
@@ -188,7 +188,7 @@ theorem wp_returnFromFunction
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.administrative .returnFromFunction],
+    exact ⟨[],
       .done (locals.values.take arity ++ remainder), store, [],
       ⟨rfl, _, rfl, Step.returnFromFunction⟩⟩
   iintro !> %e₂ %store₂ %forks %Hstep Hcredit
@@ -234,7 +234,7 @@ theorem wp_const
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction (.const value)],
+    exact ⟨[],
       .running ⟨⟨params, localValues, .i32 value :: values⟩,
         code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl, Step.const⟩⟩
@@ -282,7 +282,7 @@ theorem wp_sub
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction .sub],
+    exact ⟨[],
       .running
         ⟨⟨params, localValues, .i32 (lhs - rhs) :: values⟩,
           code, arity, remainder, controls, calls⟩,
@@ -998,11 +998,11 @@ theorem wp_refIsNull
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
     cases isNull
-    · exact ⟨[.instruction .refIsNull],
+    · exact ⟨[],
         .running ⟨⟨params, localValues, .i32 0 :: values⟩,
           code, arity, remainder, controls, calls⟩,
         store, [], ⟨rfl, _, rfl, Step.refIsNullFalse hnull⟩⟩
-    · exact ⟨[.instruction .refIsNull],
+    · exact ⟨[],
         .running ⟨⟨params, localValues, .i32 1 :: values⟩,
           code, arity, remainder, controls, calls⟩,
         store, [], ⟨rfl, _, rfl, Step.refIsNullTrue hnull⟩⟩
@@ -1060,7 +1060,7 @@ theorem wp_localGet
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction (.localGet index)],
+    exact ⟨[],
       .running ⟨⟨params, localValues, value :: values⟩,
         code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl, Step.localGet hget⟩⟩
@@ -1110,7 +1110,7 @@ theorem wp_localSet
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction (.localSet index)],
+    exact ⟨[],
       .running ⟨{ locals' with values },
         code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl, Step.localSet hset⟩⟩
@@ -1184,7 +1184,7 @@ theorem wp_call
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction (.call functionIndex)],
+    exact ⟨[],
       .running
         ⟨fn.toLocals (values.take fn.numParams).reverse,
           fn.body, fn.results.length, [], [],
@@ -1250,7 +1250,7 @@ theorem wp_returnFromCallExplicit
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.administrative .returnFromCall],
+    exact ⟨[],
       .running
         ⟨{ callerLocals with
             values :=
@@ -1316,7 +1316,7 @@ theorem wp_globalGet_of_canonical
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction (.globalGet index)],
+    exact ⟨[],
       .running ⟨⟨params, localValues, value :: values⟩,
         code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl, Step.globalGet (by
@@ -1388,7 +1388,7 @@ theorem wp_globalSet_of_canonical
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction (.globalSet index)],
+    exact ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       updatedStore, [], ⟨rfl, _, rfl, by
@@ -1426,7 +1426,7 @@ theorem wp_globalSet_of_canonical
   simp only [List.length_nil, Nat.add_zero,
     Iris.Algebra.BigOpL.bigOpL_nil]
   imod stateInterp_global_set store ns
-      ([.instruction (.globalSet index)] ++ obs') nt
+      obs' nt
       index oldValue newValue $$ [$Hσ $Hglobal] with ⟨Hσ, Hglobal⟩
   imod Hclose
   imodintro
@@ -1511,7 +1511,7 @@ theorem wp_tableGet
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction (.tableGet tableIndex)],
+    exact ⟨[],
       .running ⟨⟨params, localValues, value :: values⟩,
         code, arity, remainder, controls, calls⟩,
       store, [],
@@ -1588,7 +1588,7 @@ theorem wp_tableSize
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction (.tableSize tableIndex)],
+    exact ⟨[],
       .running ⟨⟨params, localValues,
           sizeValue (store.runtime.module.tableIs64 tableIndex) table.length ::
             values⟩,
@@ -1672,7 +1672,7 @@ theorem wp_tableSet
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction (.tableSet tableIndex)],
+    exact ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       updatedStore, [],
@@ -1703,7 +1703,7 @@ theorem wp_tableSet
   simp only [List.length_nil, Nat.add_zero,
     Iris.Algebra.BigOpL.bigOpL_nil]
   imod stateInterp_table_set store ns
-      ([.instruction (.tableSet tableIndex)] ++ obs') nt
+      obs' nt
       tableIndex table newTable $$ [$Hσ $Htable] with ⟨Hσ, Htable⟩
   imod Hclose
   imodintro
@@ -1770,7 +1770,7 @@ theorem wp_tableGrow32
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction (.tableGrow tableIndex)],
+    exact ⟨[],
       .running
         ⟨⟨params, localValues, .i32 table.length.toUInt32 :: values⟩,
           code, arity, remainder, controls, calls⟩,
@@ -1802,7 +1802,7 @@ theorem wp_tableGrow32
   simp only [List.length_nil, Nat.add_zero,
     Iris.Algebra.BigOpL.bigOpL_nil]
   imod stateInterp_table_set store ns
-      ([.instruction (.tableGrow tableIndex)] ++ obs') nt
+      obs' nt
       tableIndex table newTable $$ [$Hσ $Htable] with ⟨Hσ, Htable⟩
   imod Hclose
   imodintro
@@ -1868,7 +1868,7 @@ theorem wp_tableGrow64
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction (.tableGrow tableIndex)],
+    exact ⟨[],
       .running
         ⟨⟨params, localValues, .i64 table.length.toUInt64 :: values⟩,
           code, arity, remainder, controls, calls⟩,
@@ -1900,7 +1900,7 @@ theorem wp_tableGrow64
   simp only [List.length_nil, Nat.add_zero,
     Iris.Algebra.BigOpL.bigOpL_nil]
   imod stateInterp_table_set store ns
-      ([.instruction (.tableGrow tableIndex)] ++ obs') nt
+      obs' nt
       tableIndex table newTable $$ [$Hσ $Htable] with ⟨Hσ, Htable⟩
   imod Hclose
   imodintro
@@ -1961,7 +1961,7 @@ theorem wp_tableGrow32Failure
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction (.tableGrow tableIndex)],
+    exact ⟨[],
       .running
         ⟨⟨params, localValues,
             .i32 (0xFFFFFFFF : UInt32) :: values⟩,
@@ -2053,7 +2053,7 @@ theorem wp_tableGrow64Failure
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction (.tableGrow tableIndex)],
+    exact ⟨[],
       .running
         ⟨⟨params, localValues,
             .i64 (0xFFFFFFFFFFFFFFFF : UInt64) :: values⟩,
@@ -2140,7 +2140,7 @@ theorem wp_tableFill
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction (.tableFill tableIndex)],
+    exact ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       updatedStore, [],
@@ -2172,7 +2172,7 @@ theorem wp_tableFill
   simp only [List.length_nil, Nat.add_zero,
     Iris.Algebra.BigOpL.bigOpL_nil]
   imod stateInterp_table_set store ns
-      ([.instruction (.tableFill tableIndex)] ++ obs') nt
+      obs' nt
       tableIndex table newTable $$ [$Hσ $Htable] with ⟨Hσ, Htable⟩
   imod Hclose
   imodintro
@@ -2235,7 +2235,7 @@ theorem wp_tableCopySame
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction (.tableCopy tableIndex tableIndex)],
+    exact ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       updatedStore, [],
@@ -2270,7 +2270,7 @@ theorem wp_tableCopySame
   simp only [List.length_nil, Nat.add_zero,
     Iris.Algebra.BigOpL.bigOpL_nil]
   imod stateInterp_table_set store ns
-      ([.instruction (.tableCopy tableIndex tableIndex)] ++ obs') nt
+      obs' nt
       tableIndex table newTable $$ [$Hσ $Htable] with ⟨Hσ, Htable⟩
   imod Hclose
   imodintro
@@ -2349,8 +2349,7 @@ theorem wp_tableCopyDistinct
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction
-        (.tableCopy destinationTableIndex sourceTableIndex)],
+    exact ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       updatedStore, [],
@@ -2388,8 +2387,7 @@ theorem wp_tableCopyDistinct
   simp only [List.length_nil, Nat.add_zero,
     Iris.Algebra.BigOpL.bigOpL_nil]
   imod stateInterp_table_set store ns
-      ([.instruction
-        (.tableCopy destinationTableIndex sourceTableIndex)] ++ obs') nt
+      obs' nt
       destinationTableIndex destinationTable newDestinationTable $$
       [$Hσ $Hdestination] with ⟨Hσ, Hdestination⟩
   imod Hclose
@@ -2441,7 +2439,7 @@ theorem wp_load8U
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction (.load8U offset)],
+    exact ⟨[],
       .running ⟨⟨params, localValues, .i32 byte.toUInt32 :: values⟩,
         code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl, by simpa [Hread] using Step.load8U hbound⟩⟩
@@ -2514,7 +2512,7 @@ theorem wp_load8UI64
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction (.load8UI64 offset)],
+    exact ⟨[],
       .running ⟨⟨params, localValues, .i64 byte.toUInt64 :: values⟩,
         code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl,
@@ -2588,7 +2586,7 @@ theorem wp_store8
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction (.store8 offset)],
+    exact ⟨[],
       .running ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
       { store with wasm :=
           { store.wasm with
@@ -2618,7 +2616,7 @@ theorem wp_store8
   subst e₂
   subst store₂
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_store8 store ns ([.instruction (.store8 offset)] ++ obs') nt
+  imod stateInterp_store8 store ns obs' nt
       (address + offset) oldByte value.toUInt8
       (by simpa [hnowrap] using HinBounds) $$ [$Hσ $Hpt] with ⟨Hσ, Hpt⟩
   imod Hclose
@@ -2667,7 +2665,7 @@ theorem wp_store8I64
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction (.store8I64 offset)],
+    exact ⟨[],
       .running ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
       { store with wasm :=
           { store.wasm with
@@ -2697,7 +2695,7 @@ theorem wp_store8I64
   subst e₂
   subst store₂
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_store8 store ns ([.instruction (.store8I64 offset)] ++ obs') nt
+  imod stateInterp_store8 store ns obs' nt
       (address + offset) oldByte value.toUInt8
       (by simpa [hnowrap] using HinBounds) $$ [$Hσ $Hpt] with ⟨Hσ, Hpt⟩
   imod Hclose
@@ -2749,7 +2747,7 @@ theorem wp_load32
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction (.load32 offset)],
+    exact ⟨[],
       .running ⟨⟨params, localValues, .i32 word :: values⟩,
         code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl, by simpa [Hread] using Step.load32 hbound⟩⟩
@@ -2821,7 +2819,7 @@ theorem wp_store32
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction (.store32 offset)],
+    exact ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       { store with wasm :=
@@ -2853,7 +2851,7 @@ theorem wp_store32
   subst e₂
   subst store₂
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_store32 store ns ([.instruction (.store32 offset)] ++ obs') nt
+  imod stateInterp_store32 store ns obs' nt
       (address + offset) oldWord value h1 h2 h3 Hfacts.2 $$
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
   imod Hclose
@@ -2905,7 +2903,7 @@ theorem wp_f32Load
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction (.f32Load offset)],
+    exact ⟨[],
       .running ⟨⟨params, localValues, .f32 word :: values⟩,
         code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl,
@@ -2979,7 +2977,7 @@ theorem wp_f32Store
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction (.f32Store offset)],
+    exact ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       { store with wasm :=
@@ -3014,7 +3012,7 @@ theorem wp_f32Store
   subst e₂
   subst store₂
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_store32 store ns ([.instruction (.f32Store offset)] ++ obs') nt
+  imod stateInterp_store32 store ns obs' nt
       (address + offset) oldWord value h1 h2 h3 Hfacts.2 $$
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
   imod Hclose
@@ -3071,7 +3069,7 @@ theorem wp_load64
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction (.load64 offset)],
+    exact ⟨[],
       .running ⟨⟨params, localValues, .i64 word :: values⟩,
         code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl, by
@@ -3152,7 +3150,7 @@ theorem wp_store64
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction (.store64 offset)],
+    exact ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       { store with wasm :=
@@ -3185,7 +3183,7 @@ theorem wp_store64
   subst e₂
   subst store₂
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_store64 store ns ([.instruction (.store64 offset)] ++ obs') nt
+  imod stateInterp_store64 store ns obs' nt
       (address + offset) oldWord value h1 h2 h3 h4 h5 h6 h7 Hfacts.2 $$
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
   imod Hclose
@@ -3242,7 +3240,7 @@ theorem wp_f64Load
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction (.f64Load offset)],
+    exact ⟨[],
       .running ⟨⟨params, localValues, .f64 word :: values⟩,
         code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl, by
@@ -3323,7 +3321,7 @@ theorem wp_f64Store
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction (.f64Store offset)],
+    exact ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       { store with wasm :=
@@ -3358,7 +3356,7 @@ theorem wp_f64Store
   subst e₂
   subst store₂
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_store64 store ns ([.instruction (.f64Store offset)] ++ obs') nt
+  imod stateInterp_store64 store ns obs' nt
       (address + offset) oldWord value h1 h2 h3 h4 h5 h6 h7 Hfacts.2 $$
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
   imod Hclose
@@ -3405,7 +3403,7 @@ theorem wp_fill16_four_AB
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction .memoryFill],
+    exact ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       { store with wasm :=
@@ -3436,7 +3434,7 @@ theorem wp_fill16_four_AB
   subst store₂
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
   imod stateInterp_fill16_four_AB store ns
-      ([.instruction .memoryFill] ++ obs') nt oldWord Hfacts.2 $$
+      obs' nt oldWord Hfacts.2 $$
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
   imod Hclose
   imodintro
@@ -3487,7 +3485,7 @@ theorem wp_memoryInit16_four
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction (.memoryInit 0)],
+    exact ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       { store with wasm :=
@@ -3521,7 +3519,7 @@ theorem wp_memoryInit16_four
   subst store₂
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
   imod stateInterp_init16_four store ns
-      ([.instruction (.memoryInit 0)] ++ obs') nt oldWord HwordFacts.2 $$
+      obs' nt oldWord HwordFacts.2 $$
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
   imod Hclose
   imodintro
@@ -3565,7 +3563,7 @@ theorem wp_dataDrop0
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction (.dataDrop 0)],
+    exact ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       { store with wasm :=
@@ -3598,7 +3596,7 @@ theorem wp_dataDrop0
   subst store₂
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
   imod stateInterp_dataSegment_drop store ns
-      ([.instruction (.dataDrop 0)] ++ obs') nt 0 (some bytes) $$
+      obs' nt 0 (some bytes) $$
       [$Hσ $Hsegment] with ⟨Hσ, Hsegment⟩
   imod Hclose
   imodintro
@@ -3645,7 +3643,7 @@ theorem wp_elemDrop
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction (.elemDrop elementIndex)],
+    exact ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       { store with wasm :=
@@ -3680,7 +3678,7 @@ theorem wp_elemDrop
   simp only [List.length_nil, Nat.add_zero,
     Iris.Algebra.BigOpL.bigOpL_nil]
   imod stateInterp_elementSegment_drop store ns
-      ([.instruction (.elemDrop elementIndex)] ++ obs') nt
+      obs' nt
       elementIndex (some entries) $$ [$Hσ $Hsegment] with
     ⟨Hσ, Hsegment⟩
   imod Hclose
@@ -3782,7 +3780,7 @@ theorem wp_tableInitLive
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction (.tableInit tableIndex elementIndex)],
+    exact ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       updatedStore, [],
@@ -3818,7 +3816,7 @@ theorem wp_tableInitLive
   simp only [List.length_nil, Nat.add_zero,
     Iris.Algebra.BigOpL.bigOpL_nil]
   imod stateInterp_table_set store ns
-      ([.instruction (.tableInit tableIndex elementIndex)] ++ obs') nt
+      obs' nt
       tableIndex table newTable $$ [$Hσ $Htable] with
     ⟨Hσ, Htable⟩
   imod Hclose
@@ -3867,7 +3865,7 @@ theorem wp_copy2_zero_four
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction .memoryCopy],
+    exact ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       { store with wasm :=
@@ -3898,7 +3896,7 @@ theorem wp_copy2_zero_four
   subst store₂
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
   imod stateInterp_copy2_zero_four store ns
-      ([.instruction .memoryCopy] ++ obs') nt $$
+      obs' nt $$
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
   imod Hclose
   imodintro
@@ -3954,7 +3952,7 @@ theorem wp_copy8_zero_four
   isplitr
   · ipureintro
     cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[.instruction .memoryCopy],
+    exact ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       { store with wasm :=
@@ -3986,7 +3984,7 @@ theorem wp_copy8_zero_four
   subst store₂
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
   imod stateInterp_copy8_zero_four store ns
-      ([.instruction .memoryCopy] ++ obs') nt oldDestination $$
+      obs' nt oldDestination $$
       [$Hσ $Hsource $Hdestination] with
       ⟨Hσ, Hsource, Hdestination⟩
   imod Hclose

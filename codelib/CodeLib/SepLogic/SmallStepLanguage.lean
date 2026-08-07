@@ -5,8 +5,12 @@ import Interpreter.Wasm.SmallStep
 # iris-lean language adapter for the Wasm small-step machine
 
 This is deliberately a thin adapter: the semantic transition remains
-`Wasm.SmallStep.Step`, observations expose its instruction/administrative/host
-label, and WebAssembly does not fork Iris threads.
+`Wasm.SmallStep.Step`, and WebAssembly does not fork Iris threads.
+
+Iris observations are empty because iris-lean's total weakest precondition
+accepts only silent reductions. The authoritative Talos `Step` relation still
+carries every instruction/administrative/host `StepKind`, so this does not
+erase labels from the Wasm semantics or its `Steps` traces.
 -/
 
 namespace Wasm.SmallStep
@@ -29,7 +33,7 @@ instance instPrimStep :
   primStep source observation target :=
     target.2.2 = [] ∧
     ∃ kind,
-      observation = [kind] ∧
+      observation = [] ∧
       Step ⟨source.1, source.2⟩ kind ⟨target.1, target.2.1⟩
 
 instance instLanguage :
@@ -53,17 +57,16 @@ theorem primStep_iff
     {e e' : Expr α} {store store' : MachineStore α}
     {observation : List StepKind} {forks} :
     Iff (PrimStep.primStep (e, store) observation (e', store', forks))
-      (forks = [] ∧ ∃ kind, observation = [kind] ∧
+      (forks = [] ∧ ∃ kind, observation = [] ∧
         Step ⟨e, store⟩ kind ⟨e', store'⟩) :=
   Iff.rfl
 
-/-- A Talos relational trace is exactly an iris-lean thread-pool trace with a
-single expression and no forks. The accumulated Iris observation list is the
-Talos `StepKind` trace. -/
+/-- A Talos relational trace induces a silent iris-lean thread-pool trace with
+a single expression and no forks. Step labels remain in the Talos trace. -/
 theorem Steps.to_languageNSteps
     (steps : Steps config trace final) :
     Language.NSteps trace.length
-      ([config.expr], config.store) trace
+      ([config.expr], config.store) []
       ([final.expr], final.store) := by
   induction steps with
   | refl config =>
@@ -71,7 +74,7 @@ theorem Steps.to_languageNSteps
   | @cons config kind next trace final head tail ih =>
     apply Language.NSteps.cons
       (ρ₂ := ([next.expr], next.store))
-      (obs := [kind]) (obs' := trace)
+      (obs := []) (obs' := [])
     · apply Language.Step.atomic
         (eₜ := []) (t₁ := []) (t₂ := [])
       exact ⟨rfl, kind, rfl, head⟩
@@ -83,6 +86,6 @@ theorem Steps.to_languageErasedSteps
     ([config.expr], config.store) -·->ₜₚ*
       ([final.expr], final.store) :=
   (Language.erasedStep_nSteps _ _).mpr
-    ⟨trace.length, trace, steps.to_languageNSteps⟩
+    ⟨trace.length, [], steps.to_languageNSteps⟩
 
 end Wasm.SmallStep
