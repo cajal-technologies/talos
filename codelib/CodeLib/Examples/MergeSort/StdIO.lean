@@ -1,4 +1,4 @@
-import CodeLib.Examples.MergeSort
+import CodeLib.Examples.MergeSort.TotalProof
 import Interpreter.Wasm.Host.StdIO
 
 /-!
@@ -21,19 +21,59 @@ def bufferBytes : Nat := 32768
 def source : UInt32 := 0
 def scratch : UInt32 := UInt32.ofNat bufferBytes
 
+/-- The four little-endian bytes of a 32-bit word. -/
+def encodeWord (value : UInt32) : List UInt8 :=
+  [ (value &&& 0xff).toUInt8
+  , ((value >>> 8) &&& 0xff).toUInt8
+  , ((value >>> 16) &&& 0xff).toUInt8
+  , ((value >>> 24) &&& 0xff).toUInt8 ]
+
+/-- Reassemble a 32-bit word from its four little-endian bytes. -/
+def decodeWord (b₀ b₁ b₂ b₃ : UInt8) : UInt32 :=
+  b₀.toUInt32 ||| (b₁.toUInt32 <<< 8) |||
+    (b₂.toUInt32 <<< 16) ||| (b₃.toUInt32 <<< 24)
+
 /-- Packed little-endian serialization of a list of 32-bit words. -/
 def serialize (values : List UInt32) : List UInt8 :=
-  let memory := writeWordArray (Mem.empty 1) 0 values
-  memory.readBytes 0 (4 * values.length)
+  values.flatMap encodeWord
 
-/-- Decode a packed little-endian byte sequence.  A trailing partial word is
+/-- Decode a packed little-endian byte sequence. A trailing partial word is
 rejected rather than silently ignored. -/
-def deserialize (bytes : List UInt8) : Option (List UInt32) :=
-  if bytes.length % 4 = 0 then
-    let memory := (Mem.empty 1).writeBytes 0 bytes
-    some (readWordArray memory 0 (bytes.length / 4))
-  else
-    none
+def deserialize : List UInt8 → Option (List UInt32)
+  | [] => some []
+  | b₀ :: b₁ :: b₂ :: b₃ :: rest =>
+      (deserialize rest).map (decodeWord b₀ b₁ b₂ b₃ :: ·)
+  | _ => none
+
+@[simp] theorem decode_encode (value : UInt32) :
+    decodeWord
+      (value &&& 0xff).toUInt8
+      (((value >>> 8) &&& 0xff).toUInt8)
+      (((value >>> 16) &&& 0xff).toUInt8)
+      (((value >>> 24) &&& 0xff).toUInt8) = value := by
+  simp only [decodeWord]
+  bv_decide
+
+@[simp] theorem deserialize_serialize (values : List UInt32) :
+    deserialize (serialize values) = some values := by
+  induction values with
+  | nil => rfl
+  | cons value values ih =>
+      simp only [serialize, List.flatMap_cons, encodeWord, List.cons_append,
+        List.nil_append, deserialize, decode_encode]
+      change (deserialize (serialize values)).map (value :: ·) = some (value :: values)
+      rw [ih]
+      rfl
+
+@[simp] theorem serialize_length (values : List UInt32) :
+    (serialize values).length = 4 * values.length := by
+  induction values with
+  | nil => rfl
+  | cons value values ih =>
+      change (List.flatMap encodeWord values).length = 4 * values.length at ih
+      simp only [serialize, List.flatMap_cons, encodeWord, List.cons_append,
+        List.nil_append, List.length_cons, Nat.mul_add]
+      omega
 
 /-- The stream-facing wrapper.  Local `0` remembers the byte count returned
 by `read`; dividing it by four gives the number of words passed to merge sort.

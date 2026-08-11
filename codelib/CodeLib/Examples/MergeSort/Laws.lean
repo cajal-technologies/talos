@@ -100,12 +100,12 @@ theorem wp_lessLocal
     ▷ WP (.running
       ⟨⟨params, localValues,
           .i32 (if lhs < rhs then 1 else 0) :: stack⟩,
-        code, arity, remainder, controls, calls⟩ : Expr Unit)
+        code, arity, remainder, controls, calls⟩ : Expr α)
         @ s; E {{ Φ }} ⊢
     WP (.running
       ⟨⟨params, localValues, stack⟩,
         lessLocal lhsIndex rhsIndex ++ code,
-        arity, remainder, controls, calls⟩ : Expr Unit)
+        arity, remainder, controls, calls⟩ : Expr α)
         @ s; E {{ Φ }} := by
   iintro Hwp
   simp only [lessLocal, List.cons_append, List.nil_append]
@@ -130,12 +130,12 @@ theorem wp_address
       some (.i32 element)) :
     ▷ WP (.running
       ⟨⟨params, localValues, .i32 (4 * element + base) :: stack⟩,
-        code, arity, remainder, controls, calls⟩ : Expr Unit)
+        code, arity, remainder, controls, calls⟩ : Expr α)
         @ s; E {{ Φ }} ⊢
     WP (.running
       ⟨⟨params, localValues, stack⟩,
         address baseIndex elementIndex ++ code,
-        arity, remainder, controls, calls⟩ : Expr Unit)
+        arity, remainder, controls, calls⟩ : Expr α)
         @ s; E {{ Φ }} := by
   iintro Hwp
   simp only [address, List.cons_append, List.nil_append]
@@ -164,10 +164,10 @@ theorem wp_increment
       Locals).set? index (.i32 (1 + value)) = some updated) :
     ▷ WP (.running
       ⟨{ updated with values := stack }, code, arity, remainder,
-        controls, calls⟩ : Expr Unit) @ s; E {{ Φ }} ⊢
+        controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
     WP (.running
       ⟨⟨params, localValues, stack⟩, increment index ++ code,
-        arity, remainder, controls, calls⟩ : Expr Unit) @ s; E {{ Φ }} := by
+        arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} := by
   iintro Hwp
   simp only [increment, List.cons_append, List.nil_append]
   iapply Wasm.SmallStep.wp_localGet hget
@@ -193,10 +193,10 @@ theorem wp_increment_nil
       Locals).set? index (.i32 (1 + value)) = some updated) :
     ▷ WP (.running
       ⟨{ updated with values := stack }, [], arity, remainder,
-        controls, calls⟩ : Expr Unit) @ s; E {{ Φ }} ⊢
+        controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
     WP (.running
       ⟨⟨params, localValues, stack⟩, increment index,
-        arity, remainder, controls, calls⟩ : Expr Unit) @ s; E {{ Φ }} := by
+        arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} := by
   simpa only [List.append_nil] using
     (wp_increment (s := s) (E := E) (Φ := Φ)
       (code := []) hget hset)
@@ -215,17 +215,17 @@ theorem wp_loop_löb_family_from
     (body_closes : ∀ i,
       ⊢@{IProp WasmHeapGF} (iprop%
         ▷ (∀ (j : ι), I j -∗
-          WP (loopBodyExpr (α := Unit) (locals j)
+          WP (loopBodyExpr (α := α) (locals j)
             paramArity resultArity arity body code remainder belowStack
             controls calls) @ s; E {{ Φ }}) -∗
         I i -∗
-          WP (loopBodyExpr (α := Unit) (locals i)
+          WP (loopBodyExpr (α := α) (locals i)
             paramArity resultArity arity body code remainder belowStack
             controls calls) @ s; E {{ Φ }})) :
     I initial ⊢
       WP (.running
         ⟨initialLocals, .loop paramArity resultArity body :: code,
-          arity, remainder, controls, calls⟩ : Expr Unit)
+          arity, remainder, controls, calls⟩ : Expr α)
         @ s; E {{ Φ }} := by
   subst initialLocals
   exact wp_loop_löb_family locals I initial hbelow body_closes
@@ -250,12 +250,12 @@ theorem wp_loadAt_cell
       (pointsTo_u32 address word -∗
         WP (.running
           ⟨⟨params, localValues, .i32 word :: stack⟩,
-            code, arity, remainder, controls, calls⟩ : Expr Unit)
+            code, arity, remainder, controls, calls⟩ : Expr α)
           @ s; E {{ Φ }}) ⊢
     WP (.running
       ⟨⟨params, localValues, stack⟩,
         loadAt baseIndex elementIndex ++ code,
-        arity, remainder, controls, calls⟩ : Expr Unit)
+        arity, remainder, controls, calls⟩ : Expr α)
       @ s; E {{ Φ }} := by
   have h1' : ((address + 0) + 1).toNat =
       (address + 0).toNat + 1 := by simpa using h1
@@ -301,12 +301,12 @@ theorem wp_loadAt
       (arrayAt base input -∗
         WP (.running
           ⟨⟨params, localValues, .i32 input[k] :: stack⟩,
-            code, arity, remainder, controls, calls⟩ : Expr Unit)
+            code, arity, remainder, controls, calls⟩ : Expr α)
           @ s; E {{ Φ }}) ⊢
     WP (.running
       ⟨⟨params, localValues, stack⟩,
         loadAt baseIndex elementIndex ++ code,
-        arity, remainder, controls, calls⟩ : Expr Unit)
+        arity, remainder, controls, calls⟩ : Expr α)
       @ s; E {{ Φ }} := by
   have hslot :
       (base + 4 * UInt32.ofNat k).toNat = base.toNat + 4 * k := by
@@ -357,11 +357,11 @@ theorem wp_store32_cell
       (pointsTo_u32 address newWord -∗
         WP (.running
           ⟨⟨params, localValues, stack⟩,
-            code, arity, remainder, controls, calls⟩ : Expr Unit)
+            code, arity, remainder, controls, calls⟩ : Expr α)
           @ s; E {{ Φ }}) ⊢
     WP (.running
       ⟨⟨params, localValues, .i32 newWord :: .i32 address :: stack⟩,
-        .store32 0 :: code, arity, remainder, controls, calls⟩ : Expr Unit)
+        .store32 0 :: code, arity, remainder, controls, calls⟩ : Expr α)
       @ s; E {{ Φ }} := by
   have h1' : ((address + 0) + 1).toNat = (address + 0).toNat + 1 := by
     simpa using h1
@@ -417,13 +417,13 @@ theorem wp_copyAt
         arrayAt temporary (scratch.set k input[i]) -∗
         WP (.running
           ⟨⟨params, localValues, stack⟩,
-            code, arity, remainder, controls, calls⟩ : Expr Unit)
+            code, arity, remainder, controls, calls⟩ : Expr α)
           @ s; E {{ Φ }}) ⊢
     WP (.running
       ⟨⟨params, localValues, stack⟩,
         storeAt temporaryIndex temporaryElement
           (loadAt sourceIndex sourceElement) ++ code,
-        arity, remainder, controls, calls⟩ : Expr Unit)
+        arity, remainder, controls, calls⟩ : Expr α)
       @ s; E {{ Φ }} := by
   let destination := 4 * UInt32.ofNat k + temporary
   have hslot :
@@ -503,12 +503,12 @@ theorem twp_lessLocal
     WP (.running
       ⟨⟨params, localValues,
           .i32 (if lhs < rhs then 1 else 0) :: stack⟩,
-        code, arity, remainder, controls, calls⟩ : Expr Unit)
+        code, arity, remainder, controls, calls⟩ : Expr α)
         @ s; E [{ Φ }] ⊢
     WP (.running
       ⟨⟨params, localValues, stack⟩,
         lessLocal lhsIndex rhsIndex ++ code,
-        arity, remainder, controls, calls⟩ : Expr Unit)
+        arity, remainder, controls, calls⟩ : Expr α)
         @ s; E [{ Φ }] := by
   iintro Hwp
   simp only [lessLocal, List.cons_append, List.nil_append]
@@ -531,12 +531,12 @@ theorem twp_address
       some (.i32 element)) :
     WP (.running
       ⟨⟨params, localValues, .i32 (4 * element + base) :: stack⟩,
-        code, arity, remainder, controls, calls⟩ : Expr Unit)
+        code, arity, remainder, controls, calls⟩ : Expr α)
         @ s; E [{ Φ }] ⊢
     WP (.running
       ⟨⟨params, localValues, stack⟩,
         address baseIndex elementIndex ++ code,
-        arity, remainder, controls, calls⟩ : Expr Unit)
+        arity, remainder, controls, calls⟩ : Expr α)
         @ s; E [{ Φ }] := by
   iintro Hwp
   simp only [address, List.cons_append, List.nil_append]
@@ -561,10 +561,10 @@ theorem twp_increment
       Locals).set? index (.i32 (1 + value)) = some updated) :
     WP (.running
       ⟨{ updated with values := stack }, code, arity, remainder,
-        controls, calls⟩ : Expr Unit) @ s; E [{ Φ }] ⊢
+        controls, calls⟩ : Expr α) @ s; E [{ Φ }] ⊢
     WP (.running
       ⟨⟨params, localValues, stack⟩, increment index ++ code,
-        arity, remainder, controls, calls⟩ : Expr Unit) @ s; E [{ Φ }] := by
+        arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }] := by
   iintro Hwp
   simp only [increment, List.cons_append, List.nil_append]
   iapply Wasm.SmallStep.twp_localGet hget
@@ -587,10 +587,10 @@ theorem twp_increment_nil
       Locals).set? index (.i32 (1 + value)) = some updated) :
     WP (.running
       ⟨{ updated with values := stack }, [], arity, remainder,
-        controls, calls⟩ : Expr Unit) @ s; E [{ Φ }] ⊢
+        controls, calls⟩ : Expr α) @ s; E [{ Φ }] ⊢
     WP (.running
       ⟨⟨params, localValues, stack⟩, increment index,
-        arity, remainder, controls, calls⟩ : Expr Unit) @ s; E [{ Φ }] := by
+        arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }] := by
   simpa only [List.append_nil] using
     (twp_increment (s := s) (E := E) (Φ := Φ)
       (code := []) hget hset)
@@ -615,12 +615,12 @@ theorem twp_loadAt_cell
       (pointsTo_u32 address word -∗
         WP (.running
           ⟨⟨params, localValues, .i32 word :: stack⟩,
-            code, arity, remainder, controls, calls⟩ : Expr Unit)
+            code, arity, remainder, controls, calls⟩ : Expr α)
           @ s; E [{ Φ }]) ⊢
     WP (.running
       ⟨⟨params, localValues, stack⟩,
         loadAt baseIndex elementIndex ++ code,
-        arity, remainder, controls, calls⟩ : Expr Unit)
+        arity, remainder, controls, calls⟩ : Expr α)
       @ s; E [{ Φ }] := by
   have h1' : ((address + 0) + 1).toNat =
       (address + 0).toNat + 1 := by simpa using h1
@@ -664,12 +664,12 @@ theorem twp_loadAt
       (arrayAt base input -∗
         WP (.running
           ⟨⟨params, localValues, .i32 input[k] :: stack⟩,
-            code, arity, remainder, controls, calls⟩ : Expr Unit)
+            code, arity, remainder, controls, calls⟩ : Expr α)
           @ s; E [{ Φ }]) ⊢
     WP (.running
       ⟨⟨params, localValues, stack⟩,
         loadAt baseIndex elementIndex ++ code,
-        arity, remainder, controls, calls⟩ : Expr Unit)
+        arity, remainder, controls, calls⟩ : Expr α)
       @ s; E [{ Φ }] := by
   have hslot :
       (base + 4 * UInt32.ofNat k).toNat = base.toNat + 4 * k := by
@@ -720,11 +720,11 @@ theorem twp_store32_cell
       (pointsTo_u32 address newWord -∗
         WP (.running
           ⟨⟨params, localValues, stack⟩,
-            code, arity, remainder, controls, calls⟩ : Expr Unit)
+            code, arity, remainder, controls, calls⟩ : Expr α)
           @ s; E [{ Φ }]) ⊢
     WP (.running
       ⟨⟨params, localValues, .i32 newWord :: .i32 address :: stack⟩,
-        .store32 0 :: code, arity, remainder, controls, calls⟩ : Expr Unit)
+        .store32 0 :: code, arity, remainder, controls, calls⟩ : Expr α)
       @ s; E [{ Φ }] := by
   have h1' : ((address + 0) + 1).toNat = (address + 0).toNat + 1 := by
     simpa using h1
@@ -779,13 +779,13 @@ theorem twp_copyAt
         arrayAt temporary (scratch.set k input[i]) -∗
         WP (.running
           ⟨⟨params, localValues, stack⟩,
-            code, arity, remainder, controls, calls⟩ : Expr Unit)
+            code, arity, remainder, controls, calls⟩ : Expr α)
           @ s; E [{ Φ }]) ⊢
     WP (.running
       ⟨⟨params, localValues, stack⟩,
         storeAt temporaryIndex temporaryElement
           (loadAt sourceIndex sourceElement) ++ code,
-        arity, remainder, controls, calls⟩ : Expr Unit)
+        arity, remainder, controls, calls⟩ : Expr α)
       @ s; E [{ Φ }] := by
   let destination := 4 * UInt32.ofNat k + temporary
   have hslot :
