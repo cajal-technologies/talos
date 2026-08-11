@@ -865,7 +865,7 @@ theorem sortHeap_pointsTo [WasmHeapGS]
       rw [hscratchNat]
       simp only [UInt32.size]
       omega
-  simp only [sortHeap, sourceHeap]
+  simp only [sortHeap]
   iintro Hheap
   ihave HscratchSplit := Quicksort.quicksortHeapAux_pointsTo
     sourceHeap scratch (scratchValues input) hdisjoint hscratchFit $$ Hheap
@@ -970,6 +970,74 @@ private theorem mergeSortPost_elim [WasmHeapGS]
   iexact Hpost
 
 set_option maxHeartbeats 6000000 in
+theorem twp_sort [WasmSmallStepGS hlc]
+    (input : List UInt32) (hfit : Fits input) :
+    (([∗map] address ↦ value ∈ sortHeap input,
+        pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+          address (DFrac.own 1) value) ∗
+      ([∗map] index ↦ value ∈ (∅ : WasmGlobalMap Value),
+        globalPointsTo index value) ∗
+      runtimeModuleOwn (sortConfig input).store.runtime.module) ⊢
+      WP (sortConfig input).expr @ Stuckness.NotStuck; ⊤
+        [{ values,
+          ∀ (store : MachineStore Unit) (_observations : List StepKind),
+            stateInterp (GF := WasmHeapGF) store 0 [] 0 -∗
+            ⌜SortPost input values store⌝ }] := by
+  iintro ⟨Hheap, _Hglobals, Hruntime⟩
+  ihave Harrays := sortHeap_pointsTo input hfit $$ Hheap
+  icases Harrays with ⟨Hsource, Hscratch⟩
+  simp only [sortConfig]
+  iapply twp_mergeSortBody (α := Unit) module 3
+    (by decide) (by rfl)
+    source scratch input (scratchValues input)
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hsource Hscratch]
+  · unfold mergeSortPre
+    isplitl [Hsource]
+    · iexact Hsource
+    isplitl [Hscratch]
+    · iexact Hscratch
+    isplitr
+    · ipureintro
+      exact scratchValues_length input
+    · ipureintro
+      exact validLayout input hfit
+  · iintro %width %left %mid %right Hruntime Hpost
+    ihave Hpost' := mergeSortPost_elim source scratch input $$ Hpost
+    icases Hpost' with ⟨%output, %scratchFinal, %hsorted, %_hscratchLength,
+      Hsource, _Hscratch⟩
+    iapply Wasm.SmallStep.twp_returnFromFunction
+    iapply twp.value rfl
+    iintro %store %observations Hstate
+    imod Quicksort.arrayAt_readWordArray store 0 [] 0 source output
+      (by
+        have hlength := hsorted.2.length_eq
+        rw [← hlength]
+        rw [fits_iff] at hfit
+        simp only [source, UInt32.reduceToNat, Nat.zero_add, UInt32.size]
+        change 4 * input.length ≤ 32768 at hfit
+        omega) $$ [$Hstate $Hsource] with
+      ⟨Hstate, Hsource, %hread⟩
+    have hread' : readWordArray store.wasm.mem source output.length = output := by
+      simpa only [quicksort_readWordArray_eq] using hread
+    imod arrayAt_capacity store 0 [] 0 source output
+      (by
+        have hlength := hsorted.2.length_eq
+        rw [← hlength]
+        rw [fits_iff] at hfit
+        simp only [source, UInt32.reduceToNat, Nat.zero_add, UInt32.size]
+        change 4 * input.length ≤ 32768 at hfit
+        omega)
+      (by simp [source]) $$ [$Hstate $Hsource] with
+      ⟨_Hstate, _Hsource, %hcapacity⟩
+    ipureintro
+    exact ⟨output, hsorted, by
+      rw [hsorted.2.length_eq]
+      exact hread', by
+      rw [hsorted.2.length_eq]
+      simpa only [source, UInt32.reduceToNat, Nat.zero_add] using hcapacity⟩
+
 theorem sort_partiallyMeets (input : List UInt32) (hfit : Fits input) :
     SmallStep.PartiallyMeets (sortConfig input) (SortPost input) := by
   apply wasm_smallStep_heap_globals_runtime_store_partiallyMeets.{0}
@@ -978,61 +1046,43 @@ theorem sort_partiallyMeets (input : List UInt32) (hfit : Fits input) :
   · exact sortHeap_inBounds input hfit
   · exact globalHeapAgrees_empty _
   · intro _
-    iintro ⟨Hheap, _Hglobals, Hruntime⟩
-    ihave Harrays := sortHeap_pointsTo input hfit $$ Hheap
-    icases Harrays with ⟨Hsource, Hscratch⟩
-    simp only [sortConfig]
+    iintro Hresources
     iapply twp.to_wp
-    iapply twp_mergeSortBody (α := Unit) module 3
-      (by decide) (by rfl)
-      source scratch input (scratchValues input)
-    isplitl [Hruntime]
-    · iexact Hruntime
-    isplitl [Hsource Hscratch]
-    · unfold mergeSortPre
-      isplitl [Hsource]
-      · iexact Hsource
-      isplitl [Hscratch]
-      · iexact Hscratch
-      isplitr
-      · ipureintro
-        exact scratchValues_length input
-      · ipureintro
-        exact validLayout input hfit
-    · iintro %width %left %mid %right Hruntime Hpost
-      ihave Hpost' := mergeSortPost_elim source scratch input $$ Hpost
-      icases Hpost' with ⟨%output, %scratchFinal, %hsorted, %_hscratchLength,
-        Hsource, _Hscratch⟩
-      iapply Wasm.SmallStep.twp_returnFromFunction
-      iapply twp.value rfl
-      iintro %store %observations Hstate
-      imod Quicksort.arrayAt_readWordArray store 0 [] 0 source output
-        (by
-          have hlength := hsorted.2.length_eq
-          rw [← hlength]
-          rw [fits_iff] at hfit
-          simp only [source, UInt32.reduceToNat, Nat.zero_add, UInt32.size]
-          change 4 * input.length ≤ 32768 at hfit
-          omega) $$ [$Hstate $Hsource] with
-        ⟨Hstate, Hsource, %hread⟩
-      have hread' : readWordArray store.wasm.mem source output.length = output := by
-        simpa only [quicksort_readWordArray_eq] using hread
-      imod arrayAt_capacity store 0 [] 0 source output
-        (by
-          have hlength := hsorted.2.length_eq
-          rw [← hlength]
-          rw [fits_iff] at hfit
-          simp only [source, UInt32.reduceToNat, Nat.zero_add, UInt32.size]
-          change 4 * input.length ≤ 32768 at hfit
-          omega)
-        (by simp [source]) $$ [$Hstate $Hsource] with
-        ⟨_Hstate, _Hsource, %hcapacity⟩
-      ipureintro
-      exact ⟨output, hsorted, by
-        rw [hsorted.2.length_eq]
-        exact hread', by
-        rw [hsorted.2.length_eq]
-        simpa only [source, UInt32.reduceToNat, Nat.zero_add] using hcapacity⟩
+    iapply twp_sort input hfit
+    iexact Hresources
+
+theorem sort_stronglyNormalizing (input : List UInt32) (hfit : Fits input) :
+    Iris.ProgramLogic.StronglyNormalizing
+      (Iris.ProgramLogic.ExprErasedStep (Expr := Expr Unit)
+        (State := MachineStore Unit) (Obs := StepKind))
+      ((sortConfig input).expr, (sortConfig input).store) := by
+  apply Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_stronglyNormalizing.{0}
+    (sortConfig input) (sortHeap input) ∅
+    (fun _values => iprop(True))
+  · exact sortHeap_agrees input hfit
+  · exact sortHeap_inBounds input hfit
+  · exact globalHeapAgrees_empty _
+  · intro _
+    iintro Hresources
+    ihave Hsort := twp_sort input hfit $$ Hresources
+    iapply twp.mono (fun _values => ?_) $$ Hsort
+    iintro _Hpost
+    itrivial
+
+theorem sort_terminatesWith (input : List UInt32) (hfit : Fits input) :
+    SmallStep.TerminatesWith (sortConfig input) (SortPost input) := by
+  apply Wasm.SmallStep.stronglyNormalizing_adequate_terminates
+    (sortConfig input) (SortPost input) (sort_stronglyNormalizing input hfit)
+  apply wasm_smallStep_heap_globals_runtime_store_adequacy.{0}
+    (sortConfig input) (sortHeap input) ∅ (SortPost input)
+  · exact sortHeap_agrees input hfit
+  · exact sortHeap_inBounds input hfit
+  · exact globalHeapAgrees_empty _
+  · intro _
+    iintro Hresources
+    iapply twp.to_wp
+    iapply twp_sort input hfit
+    iexact Hresources
 
 theorem runSteps_sort_correct (fuel : Nat) (input : List UInt32)
     (hfit : Fits input) (values : List Value)
@@ -1073,6 +1123,22 @@ theorem execute_sort_correct (fuel : Nat) (input : List UInt32)
   | outOfFuel resultConfig => simp at hexecute
   | internalError error resultConfig => simp at hexecute
 
+theorem execute_sort_complete (input : List UInt32) (hfit : Fits input) :
+    ∃ fuel values store,
+      executeSort fuel (afterRead input)
+        (mergeSortArguments source scratch input.length []) =
+          some (values, store) ∧
+      SortPost input values
+        { runtime := { module, host := Wasm.StdIO.env }, wasm := store } := by
+  rcases sort_terminatesWith input hfit with
+    ⟨trace, values, finalStore, hsteps, hpost⟩
+  let store : Store Wasm.StdIO.State :=
+    replaceHost finalStore.wasm (afterRead input).host
+  refine ⟨trace.length, values, store, ?_, ?_⟩
+  · simp only [executeSort, initConfig_sort]
+    rw [runSteps_eq_success_of_steps hsteps]
+  · simpa only [SortPost, store, replaceHost] using hpost
+
 set_option maxRecDepth 10000 in
 theorem run_fits (fuel : Nat) (input : List UInt32) (hfit : Fits input) :
     run fuel (serialize input) =
@@ -1089,10 +1155,10 @@ theorem run_correct (fuel : Nat) (input : List UInt32) (bytes : List UInt8)
   rw [run_fits fuel input hfit] at hrun
   unfold runAfterRead at hrun
   rw [probe_afterRead input] at hrun
-  simp only [Option.bind_some, guard, decide_true, if_true] at hrun
+  simp only [guard] at hrun
   rw [encodedLength_words input hfit] at hrun
   simp only [Bind.bind, Option.bind] at hrun
-  simp only [if_true, Pure.pure, Bind.bind, Option.bind] at hrun
+  simp only [if_true, Pure.pure] at hrun
   generalize hsortResult : executeSort fuel (afterRead input)
       (mergeSortArguments source scratch input.length []) = sortResult at hrun
   cases sortResult with
@@ -1115,9 +1181,9 @@ theorem run_correct (fuel : Nat) (input : List UInt32) (bytes : List UInt8)
         exact hcapacity
       have hwrite := execute_write_bytes afterSort
         (UInt32.ofNat (serialize input).length) hwriteBound
-      simp only [Option.bind_some, Prod.fst, Prod.snd] at hrun
+      simp only [] at hrun
       rw [hwrite] at hrun
-      simp only [Bind.bind, Option.bind, Pure.pure] at hrun
+      simp only [] at hrun
       have houtput : afterSort.host.output = [] := by
         rw [hhost]
         rfl
@@ -1169,6 +1235,53 @@ output.  Keeping resource-bounded termination separate leaves `Correct` clean. -
 def Complete : Prop :=
   ∀ input, Fits input →
     ∃ output, RunsValues input output
+
+theorem complete : Complete := by
+  intro input hfit
+  rcases execute_sort_complete input hfit with
+    ⟨fuel, values, afterSort, hsort, hpost⟩
+  obtain ⟨output, hsorted, hread, hcapacity⟩ := hpost
+  have hhost := executeSort_host fuel (afterRead input) afterSort
+    (mergeSortArguments source scratch input.length []) values hsort
+  have hbyteLength :
+      (UInt32.ofNat (serialize input).length).toNat = 4 * input.length := by
+    rw [encodedLength_toNat input hfit, serialize_length]
+  have hwriteBound : source.toNat +
+      (UInt32.ofNat (serialize input).length).toNat ≤
+      Wasm.StdIO.byteCapacity afterSort := by
+    simp only [source, UInt32.reduceToNat, Nat.zero_add,
+      Wasm.StdIO.byteCapacity, hbyteLength]
+    exact hcapacity
+  have hwrite := execute_write_bytes afterSort
+    (UInt32.ofNat (serialize input).length) hwriteBound
+  have houtput : afterSort.host.output = [] := by
+    rw [hhost]
+    rfl
+  have hrun : run fuel (serialize input) =
+      some (afterSort.mem.readBytes source.toNat (4 * input.length)) := by
+    rw [run_fits fuel input hfit]
+    unfold runAfterRead
+    rw [probe_afterRead input]
+    simp only [guard]
+    rw [encodedLength_words input hfit]
+    simp only [Bind.bind, Option.bind]
+    simp only [if_true, Pure.pure]
+    rw [hsort]
+    simp only []
+    rw [hwrite]
+    simp only []
+    simp only [writtenStore, houtput,
+      List.nil_append, hbyteLength]
+  refine ⟨output, fuel, ?_⟩
+  unfold runValues
+  rw [hrun]
+  simp only [Option.bind_some]
+  rw [deserialize_readBytes]
+  · exact congrArg some hread
+  · rw [fits_iff] at hfit
+    simp only [source, UInt32.reduceToNat, Nat.zero_add, UInt32.size]
+    change 4 * input.length ≤ 32768 at hfit
+    omega
 
 theorem exec_empty : run 100 (serialize []) = some (serialize []) := by
   native_decide
