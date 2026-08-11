@@ -36,7 +36,7 @@ def byteCapacity (st : Store State) : Nat := st.mem.pages * 65536
 def rangeInBounds (st : Store State) (pointer length : Nat) : Bool :=
   pointer + length ≤ byteCapacity st
 
-private def readResult (st : Store State) (args : List Value) : HostResult State :=
+def readResult (st : Store State) (args : List Value) : HostResult State :=
   match args with
   | [.i32 length, .i32 pointer] =>
       let bytes := st.host.input.take length.toNat
@@ -51,7 +51,7 @@ private def readResult (st : Store State) (args : List Value) : HostResult State
         .Trap st "stdio.read: out of bounds memory access"
   | _ => .Trap st "stdio.read: expected (length, pointer)"
 
-private def writeResult (st : Store State) (args : List Value) : HostResult State :=
+def writeResult (st : Store State) (args : List Value) : HostResult State :=
   match args with
   | [.i32 length, .i32 pointer] =>
       if rangeInBounds st pointer.toNat length.toNat then
@@ -70,6 +70,51 @@ def readHost : HostFn State :=
   { params := [.i32, .i32]
     results := [.i32]
     invoke := readResult }
+
+/-- Reading from an empty input succeeds with zero bytes whenever the empty
+half-open range at `pointer` is valid, and leaves the store unchanged. -/
+theorem read_empty (st : Store State) (length pointer : UInt32)
+    (hinput : st.host.input = [])
+    (hptr : pointer.toNat ≤ byteCapacity st) :
+    readHost.invoke st [.i32 length, .i32 pointer] = .Return [.i32 0] st := by
+  simp only [readHost, readResult]
+  rw [hinput]
+  simp only [List.take_nil, List.length_nil]
+  rw [if_pos]
+  · cases st with
+    | mk globals globalIds functionIds mem extraMems memoryCaps memoryIds
+        dataSegments tables tableIds elementSegments elementValues tagIds exns
+        gcHeap host =>
+      cases host
+      simp only at hinput
+      subst_vars
+      cases mem
+      simp only [Mem.writeBytes, List.length_nil, Nat.add_zero, List.drop_zero]
+      congr
+      funext i
+      rw [dif_neg (by omega)]
+  · simp only [rangeInBounds, Nat.add_zero]
+    exact decide_eq_true hptr
+
+/-- A one-byte EOF probe placed exactly one past memory traps whenever input
+remains.  Together with `read_empty`, this distinguishes EOF from truncation
+without adding a third host function. -/
+theorem read_one_past_traps (st : Store State) (pointer : UInt32)
+    (hinput : st.host.input ≠ [])
+    (hptr : pointer.toNat = byteCapacity st) :
+    readHost.invoke st [.i32 1, .i32 pointer] =
+      .Trap st "stdio.read: out of bounds memory access" := by
+  simp only [readHost, readResult]
+  cases hi : st.host.input with
+  | nil => exact False.elim (hinput hi)
+  | cons byte bytes =>
+      simp only [show (1 : UInt32).toNat = 1 by decide,
+        List.take_succ_cons, List.take_zero, List.length_cons, List.length_nil]
+      rw [if_neg (by
+        simp only [rangeInBounds]
+        intro h
+        have := of_decide_eq_true h
+        omega)]
 
 /-- Concrete implementation of the `write(length, pointer)` import. -/
 def writeHost : HostFn State :=

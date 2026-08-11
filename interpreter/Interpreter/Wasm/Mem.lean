@@ -159,6 +159,38 @@ def Mem.writeBytes (m : Mem) (offset : Nat) (data : List UInt8) : Mem :=
           exact this)
       else m.bytes i }
 
+/-- Writing concatenated byte strings is the same as writing the first string
+and then the second one immediately after it. -/
+theorem Mem.writeBytes_append (m : Mem) (offset : Nat) (xs ys : List UInt8) :
+    m.writeBytes offset (xs ++ ys) =
+      (m.writeBytes offset xs).writeBytes (offset + xs.length) ys := by
+  cases m with
+  | mk pages bytes =>
+    simp only [Mem.writeBytes]
+    congr
+    funext i
+    simp only [List.length_append]
+    by_cases hy : offset + xs.length ≤ i ∧
+        i < offset + xs.length + ys.length
+    · rw [dif_pos hy]
+      have hall : offset ≤ i ∧ i < offset + (xs.length + ys.length) := by
+        omega
+      rw [dif_pos hall]
+      rw [List.getElem_append_right (by omega)]
+      congr 1
+      omega
+    · rw [dif_neg hy]
+      by_cases hx : offset ≤ i ∧ i < offset + xs.length
+      · rw [dif_pos hx]
+        have hall : offset ≤ i ∧ i < offset + (xs.length + ys.length) := by
+          omega
+        rw [dif_pos hall]
+        rw [List.getElem_append_left (by omega)]
+      · rw [dif_neg hx]
+        have hall : ¬(offset ≤ i ∧ i < offset + (xs.length + ys.length)) := by
+          omega
+        rw [dif_neg hall]
+
 /-- Read `len` bytes starting at byte offset `offset`. Used by the
 cross-memory `memory.copy`; the caller checks bounds. -/
 def Mem.readBytes (m : Mem) (offset len : Nat) : List UInt8 :=

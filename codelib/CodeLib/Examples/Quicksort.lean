@@ -415,7 +415,7 @@ theorem quicksort_oracle_sorted :
 
 /-! ## Adequacy infrastructure -/
 
-private def quicksortHeapAux (σ : WasmHeapMap (Option UInt8)) (base : UInt32) :
+def quicksortHeapAux (σ : WasmHeapMap (Option UInt8)) (base : UInt32) :
     List UInt32 → WasmHeapMap (Option UInt8)
   | [] => σ
   | x :: xs => quicksortHeapAux (store32Heap σ base x) (base + 4) xs
@@ -433,7 +433,7 @@ def quicksortConfig (arr : UInt32) (input : List UInt32) : Config Unit :=
       { runtime := { module := quicksortModule, host := {} }
         wasm := { initial with mem := writeWordArray initial.mem arr input } } }
 
-private theorem quicksortHeapAux_agrees
+theorem quicksortHeapAux_agrees
     (σ : WasmHeapMap (Option UInt8)) (mem : Mem) (base : UInt32) (xs : List UInt32)
     (hagree : heapAgreesWithMem σ mem)
     (hfit : base.toNat + 4 * xs.length ≤ UInt32.size) :
@@ -464,7 +464,7 @@ theorem quicksortHeap_agrees (arr : UInt32) (input : List UInt32)
   · intro addr byte hget; simp [get?_empty] at hget
   · exact hfit
 
-private theorem quicksortHeapAux_inBounds
+theorem quicksortHeapAux_inBounds
     (σ : WasmHeapMap (Option UInt8)) (mem : Mem) (base : UInt32) (xs : List UInt32)
     (hinBounds : heapAddressesInBounds σ mem)
     (hfit : base.toNat + 4 * xs.length ≤ UInt32.size)
@@ -503,7 +503,7 @@ theorem quicksortHeap_inBounds (arr : UInt32) (input : List UInt32)
     simp only [hpages]
     exact hmem
 
-private theorem quicksortHeapAux_pointsTo [WasmHeapGS]
+theorem quicksortHeapAux_pointsTo [WasmHeapGS]
     (σ : WasmHeapMap (Option UInt8)) (base : UInt32) (xs : List UInt32)
     (hdisjoint : ∀ a b, get? σ a = some b → a.toNat < base.toNat)
     (hfit : base.toNat + 4 * xs.length < UInt32.size) :
