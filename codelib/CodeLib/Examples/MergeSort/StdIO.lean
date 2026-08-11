@@ -1,4 +1,6 @@
 import CodeLib.Examples.MergeSort.TotalProof
+import CodeLib.Examples.Quicksort
+import CodeLib.RustStd.MemArray
 import Interpreter.Wasm.Host.StdIO
 
 /-!
@@ -13,7 +15,8 @@ words, and writes the sorted first half to the append-only output stream.
 
 namespace Wasm.Examples.MergeSort.StdIO
 
-open Wasm SmallStep
+open Wasm SepLogic SmallStep
+open Iris Iris.Std
 
 /-- Each of the source and scratch arrays owns half of the 64-KiB page. -/
 def bufferBytes : Nat := 32768
@@ -207,6 +210,81 @@ theorem writeWordArray_readWordArray (mem : Mem) (base : UInt32)
       simp only [readWordArray, writeWordArray]
       rw [write32_read32, ih]
 
+theorem quicksort_writeWordArray_eq (mem : Mem) (base : UInt32)
+    (values : List UInt32) :
+    Quicksort.writeWordArray mem base values = writeWordArray mem base values := by
+  induction values generalizing mem base with
+  | nil => rfl
+  | cons value values ih =>
+      simp only [Quicksort.writeWordArray, writeWordArray]
+      rw [ih]
+
+theorem quicksort_readWordArray_eq (mem : Mem) (base : UInt32)
+    (count : Nat) :
+    Quicksort.readWordArray mem base count = readWordArray mem base count := by
+  induction count generalizing base with
+  | zero => rfl
+  | succ count ih =>
+      simp only [Quicksort.readWordArray, readWordArray]
+      rw [ih]
+
+theorem quicksortHeapAux_addresses_lt
+    (σ : WasmHeapMap (Option UInt8)) (base : UInt32)
+    (values : List UInt32) (limit : Nat)
+    (hσ : ∀ address byte, get? σ address = some byte →
+      address.toNat < base.toNat)
+    (hfit : base.toNat + 4 * values.length ≤ limit)
+    (hlimit : limit < UInt32.size) :
+    ∀ address byte,
+      get? (Quicksort.quicksortHeapAux σ base values) address = some byte →
+      address.toNat < limit := by
+  induction values generalizing σ base with
+  | nil =>
+      intro address byte hget
+      exact Nat.lt_of_lt_of_le (hσ address byte hget) (by simpa using hfit)
+  | cons value values ih =>
+      simp only [Quicksort.quicksortHeapAux, List.length_cons] at *
+      have h4 : (base + 4 : UInt32).toNat = base.toNat + 4 :=
+        UInt32.add_ofNat_toNat_noWrap base 4 (by decide) (by
+          simp only [UInt32.size] at hlimit
+          omega)
+      have hn1 : (base + 1).toNat = base.toNat + 1 :=
+        UInt32.add_ofNat_toNat_noWrap base 1 (by decide) (by
+          simp only [UInt32.size] at hlimit
+          omega)
+      have hn2 : (base + 2).toNat = base.toNat + 2 :=
+        UInt32.add_ofNat_toNat_noWrap base 2 (by decide) (by
+          simp only [UInt32.size] at hlimit
+          omega)
+      have hn3 : (base + 3).toNat = base.toNat + 3 :=
+        UInt32.add_ofNat_toNat_noWrap base 3 (by decide) (by
+          simp only [UInt32.size] at hlimit
+          omega)
+      apply ih (store32Heap σ base value) (base + 4)
+      · intro address byte hget
+        rw [h4]
+        by_cases h3 : address = base + 3
+        · subst h3
+          rw [hn3]
+          omega
+        by_cases h2 : address = base + 2
+        · subst h2
+          rw [hn2]
+          omega
+        by_cases h1 : address = base + 1
+        · subst h1
+          rw [hn1]
+          omega
+        by_cases h0 : address = base
+        · subst h0
+          omega
+        · simp only [store32Heap,
+              get?_insert_ne (Ne.symm h3), get?_insert_ne (Ne.symm h2),
+              get?_insert_ne (Ne.symm h1), get?_insert_ne (Ne.symm h0)] at hget
+          exact Nat.lt_trans (hσ address byte hget) (by omega)
+      · rw [h4]
+        omega
+
 /-- The stream-facing wrapper.  Local `0` remembers the byte count returned
 by `read`; dividing it by four gives the number of words passed to merge sort.
 
@@ -257,6 +335,47 @@ def execute (fuel entry : Nat) (store : Store Wasm.StdIO.State)
       match (SmallStep.runSteps fuel phase).result with
       | .success values finalStore => some (values, finalStore.wasm)
       | _ => none
+
+/-- Change only the host-owned component of a Wasm store. This is a
+type-changing record update: all core Wasm resources remain identical. -/
+def replaceHost (store : Store α) (host : β) : Store β :=
+  { store with host := host }
+
+/-- Execute merge sort with an inert host environment, then reattach the
+unchanged StdIO buffers. The sort and merge functions have no path to an
+import, so this makes their host independence explicit. -/
+def executeSort (fuel : Nat) (store : Store Wasm.StdIO.State)
+    (args : List Value) : Option (List Value × Store Wasm.StdIO.State) :=
+  match SmallStep.initConfig
+      { module, host := ({} : HostEnv Unit) } 2 (replaceHost store ()) args with
+  | .error _ => none
+  | .ok phase =>
+      match (SmallStep.runSteps fuel phase).result with
+      | .success values finalStore =>
+          some (values, replaceHost finalStore.wasm store.host)
+      | _ => none
+
+theorem executeSort_host (fuel : Nat) (initial final : Store Wasm.StdIO.State)
+    (args : List Value) (values : List Value)
+    (hexecute : executeSort fuel initial args = some (values, final)) :
+    final.host = initial.host := by
+  unfold executeSort at hexecute
+  split at hexecute
+  · contradiction
+  · generalize hresult : (runSteps fuel _).result = result at hexecute
+    cases result <;> simp_all [replaceHost]
+    case success =>
+      have hhost := congrArg (fun concrete : Store Wasm.StdIO.State =>
+        concrete.host) hexecute.2
+      simpa [replaceHost] using hhost.symm
+
+def writtenStore (store : Store Wasm.StdIO.State) (length : UInt32) :
+    Store Wasm.StdIO.State :=
+  { store with
+    host :=
+      { input := store.host.input
+        output := store.host.output ++
+          store.mem.readBytes source.toNat length.toNat } }
 
 theorem execute_read (store wasm : Store Wasm.StdIO.State)
     (length pointer count : UInt32)
@@ -371,6 +490,17 @@ theorem execute_write (store wasm : Store Wasm.StdIO.State)
   rw [show (runSteps 2 initial).result =
       .success [] { machine with wasm } by simpa using hrun]
 
+theorem execute_write_bytes (store : Store Wasm.StdIO.State) (length : UInt32)
+    (hbound : source.toNat + length.toNat ≤ Wasm.StdIO.byteCapacity store) :
+    execute 2 1 store [.i32 source, .i32 length] =
+      some ([], writtenStore store length) := by
+  apply execute_write
+  simp only [Wasm.StdIO.writeHost, Wasm.StdIO.writeResult]
+  rw [if_pos]
+  · rfl
+  · simp only [Wasm.StdIO.rangeInBounds]
+    exact decide_eq_true hbound
+
 private theorem take_eq_self_of_length_le {β : Type} (xs : List β) (n : Nat)
     (h : xs.length ≤ n) : xs.take n = xs := by
   induction xs generalizing n with
@@ -386,7 +516,7 @@ private theorem take_eq_self_of_length_le {β : Type} (xs : List β) (n : Nat)
     (initialStore input).host = Wasm.StdIO.State.ofInput input := by
   rfl
 
-set_option maxRecDepth 10000 in
+set_option maxRecDepth 100000 in
 private theorem initial_byteCapacity (input : List UInt8) :
     Wasm.StdIO.byteCapacity (initialStore input) = 65536 := by
   change (module.initialStore (α := Wasm.StdIO.State)).mem.pages * 65536 = 65536
@@ -428,6 +558,22 @@ def afterRead (input : List UInt32) : Store Wasm.StdIO.State :=
     mem := (initialStore (serialize input)).mem.writeBytes
       source.toNat (serialize input)
     host := { input := [], output := [] } }
+
+/-- Exact authoritative configuration used by the merge-sort phase. -/
+def sortConfig (input : List UInt32) : Config Unit :=
+  { expr := .running
+      ⟨sortLocals source scratch input.length 0 0 0 0 [],
+        mergeSortBody 3, 0, [], [], []⟩
+    store :=
+      { runtime := { module, host := {} }
+        wasm := replaceHost (afterRead input) () } }
+
+theorem initConfig_sort (input : List UInt32) :
+    SmallStep.initConfig { module, host := ({} : HostEnv Unit) } 2
+      (replaceHost (afterRead input) ())
+      (mergeSortArguments source scratch input.length []) =
+      .ok (sortConfig input) := by
+  rfl
 
 set_option maxRecDepth 10000 in
 theorem read_fits (input : List UInt32)
@@ -486,6 +632,17 @@ theorem probe_traps_of_too_long (input : List UInt8)
   · rw [afterBoundedRead_byteCapacity]
     exact UInt32.toNat_ofNat_of_lt' (by decide)
 
+def runAfterRead (fuel : Nat) (byteLength : UInt32)
+    (afterRead : Store Wasm.StdIO.State) : Option (List UInt8) := do
+  let (probeValues, afterProbe) ← execute 2 0 afterRead
+    [.i32 (UInt32.ofNat 65536), .i32 1]
+  guard (probeValues = [.i32 0])
+  let (_, afterSort) ← executeSort fuel afterProbe
+    (mergeSortArguments source scratch (byteLength.toNat / 4) [])
+  let (_, afterWrite) ← execute 2 1 afterSort
+    [.i32 source, .i32 byteLength]
+  pure afterWrite.host.output
+
 /-- Execute the stream program in four explicit phases: read the source
 region, prove EOF with the one-past-memory probe, run merge sort, then append
 the sorted source region through `write`.  Every phase still executes through
@@ -496,26 +653,21 @@ def run (fuel : Nat) (input : List UInt8) : Option (List UInt8) := do
   let byteLength ← match readValues with
     | [.i32 length] => some length
     | _ => none
-  let (probeValues, afterProbe) ← execute 2 0 afterRead
-    [.i32 (UInt32.ofNat 65536), .i32 1]
-  guard (probeValues = [.i32 0])
-  let (_, afterSort) ← execute fuel 2 afterProbe
-    (mergeSortArguments source scratch (byteLength.toNat / 4) [])
-  let (_, afterWrite) ← execute 2 1 afterSort
-    [.i32 source, .i32 byteLength]
-  pure afterWrite.host.output
+  runAfterRead fuel byteLength afterRead
 
 theorem run_none_of_too_long (fuel : Nat) (input : List UInt8)
     (hlong : bufferBytes < input.length) :
     run fuel input = none := by
-  simp [run, read_bounded]
-  intro values store hprobe
   have hprobeNone : execute 2 0 (afterBoundedRead input)
-      [.i32 (65536 : UInt32), .i32 1] = none := by
-    simpa only [show (65536 : UInt32) = UInt32.ofNat 65536 by decide] using
-      probe_traps_of_too_long input hlong
-  rw [hprobeNone] at hprobe
-  contradiction
+      [.i32 (UInt32.ofNat 65536), .i32 1] = none :=
+    probe_traps_of_too_long input hlong
+  unfold run
+  rw [read_bounded]
+  change runAfterRead fuel (UInt32.ofNat (input.take bufferBytes).length)
+    (afterBoundedRead input) = none
+  unfold runAfterRead
+  rw [hprobeNone]
+  rfl
 
 /-- A clean, host-level execution predicate.  Fuel is hidden existentially
 and neither linear memory nor Wasm machine state appears in client specs. -/
@@ -535,9 +687,451 @@ def RunsValues (input output : List UInt32) : Prop :=
 def Fits (values : List UInt32) : Prop :=
   (serialize values).length ≤ bufferBytes
 
+/-- Scratch words are whatever is currently present in the reserved second
+half of memory. The merge-sort proof only requires scratch storage of the
+right length; it does not require a particular initial value. -/
+def scratchValues (input : List UInt32) : List UInt32 :=
+  readWordArray (afterRead input).mem scratch input.length
+
+/-- Authoritative ghost heap covering both arrays used by merge sort. -/
+def sortHeap (input : List UInt32) : WasmHeapMap (Option UInt8) :=
+  Quicksort.quicksortHeapAux
+    (Quicksort.quicksortHeapAux ∅ source input)
+    scratch (scratchValues input)
+
 theorem fits_iff (values : List UInt32) :
     Fits values ↔ 4 * values.length ≤ bufferBytes := by
   simp only [Fits, serialize_length]
+
+theorem encodedLength_toNat (input : List UInt32) (hfit : Fits input) :
+    (UInt32.ofNat (serialize input).length).toNat = (serialize input).length := by
+  apply UInt32.toNat_ofNat_of_lt'
+  rw [fits_iff] at hfit
+  change 4 * input.length ≤ 32768 at hfit
+  simp only [serialize_length, UInt32.size]
+  omega
+
+theorem encodedLength_words (input : List UInt32) (hfit : Fits input) :
+    (UInt32.ofNat (serialize input).length).toNat / 4 = input.length := by
+  rw [encodedLength_toNat input hfit, serialize_length]
+  omega
+
+theorem scratchValues_length (input : List UInt32) :
+    (scratchValues input).length = input.length := by
+  have aux (mem : Mem) (base : UInt32) (count : Nat) :
+      (readWordArray mem base count).length = count := by
+    induction count generalizing base with
+    | zero => rfl
+    | succ count ih =>
+        simp only [readWordArray, List.length_cons]
+        rw [ih]
+  exact aux _ _ _
+
+theorem afterRead_mem_eq (input : List UInt32) (hfit : Fits input) :
+    (afterRead input).mem =
+      writeWordArray (initialStore (serialize input)).mem source input := by
+  unfold afterRead
+  simp only
+  apply writeBytes_serialize
+  simp only [source, UInt32.reduceToNat, Nat.zero_add, UInt32.size]
+  rw [fits_iff] at hfit
+  change 4 * input.length ≤ 32768 at hfit
+  omega
+
+theorem sortHeap_agrees (input : List UInt32) (hfit : Fits input) :
+    heapAgreesWithMem (sortHeap input) (afterRead input).mem := by
+  let initialMem := (initialStore (serialize input)).mem
+  let sourceHeap := Quicksort.quicksortHeapAux ∅ source input
+  have hempty : heapAgreesWithMem (∅ : WasmHeapMap (Option UInt8)) initialMem := by
+    intro address byte hget
+    have hemptyGet : Iris.Std.get? (∅ : WasmHeapMap (Option UInt8)) address = none :=
+      Iris.Std.get?_empty address
+    rw [hemptyGet] at hget
+    contradiction
+  have hsource : heapAgreesWithMem sourceHeap (afterRead input).mem := by
+    rw [afterRead_mem_eq input hfit]
+    simpa only [sourceHeap, initialMem, quicksort_writeWordArray_eq] using
+      Quicksort.quicksortHeapAux_agrees ∅ initialMem source input hempty
+      (by
+        rw [fits_iff] at hfit
+        simp only [source, UInt32.reduceToNat, Nat.zero_add, UInt32.size]
+        change 4 * input.length ≤ 32768 at hfit
+        omega)
+  have hscratch := Quicksort.quicksortHeapAux_agrees sourceHeap
+    (afterRead input).mem scratch (scratchValues input) hsource
+    (by
+      rw [scratchValues_length]
+      rw [fits_iff] at hfit
+      have hscratchNat : scratch.toNat = 32768 := by decide
+      rw [hscratchNat]
+      simp only [UInt32.size]
+      change 4 * input.length ≤ 32768 at hfit
+      omega)
+  rw [quicksort_writeWordArray_eq] at hscratch
+  simpa only [sortHeap, sourceHeap, scratchValues,
+    writeWordArray_readWordArray] using hscratch
+
+theorem sortHeap_inBounds (input : List UInt32) (hfit : Fits input) :
+    heapAddressesInBounds (sortHeap input) (afterRead input).mem := by
+  let initialMem := (initialStore (serialize input)).mem
+  let sourceHeap := Quicksort.quicksortHeapAux ∅ source input
+  have hempty : heapAddressesInBounds
+      (∅ : WasmHeapMap (Option UInt8)) initialMem := by
+    intro address byte hget
+    have hemptyGet : Iris.Std.get? (∅ : WasmHeapMap (Option UInt8)) address = none :=
+      Iris.Std.get?_empty address
+    rw [hemptyGet] at hget
+    contradiction
+  have hsource : heapAddressesInBounds sourceHeap (afterRead input).mem := by
+    rw [afterRead_mem_eq input hfit]
+    simpa only [sourceHeap, initialMem, quicksort_writeWordArray_eq] using
+      Quicksort.quicksortHeapAux_inBounds ∅ initialMem source input hempty
+      (by
+        rw [fits_iff] at hfit
+        simp only [source, UInt32.reduceToNat, Nat.zero_add, UInt32.size]
+        change 4 * input.length ≤ 32768 at hfit
+        omega)
+      (by
+        change source.toNat + 4 * input.length ≤
+          Wasm.StdIO.byteCapacity (initialStore (serialize input))
+        rw [initial_byteCapacity]
+        rw [fits_iff] at hfit
+        simp only [source, UInt32.reduceToNat, Nat.zero_add]
+        change 4 * input.length ≤ 32768 at hfit
+        omega)
+  have hscratch := Quicksort.quicksortHeapAux_inBounds sourceHeap
+    (afterRead input).mem scratch (scratchValues input) hsource
+    (by
+      rw [scratchValues_length]
+      rw [fits_iff] at hfit
+      have hscratchNat : scratch.toNat = 32768 := by decide
+      rw [hscratchNat]
+      simp only [UInt32.size]
+      change 4 * input.length ≤ 32768 at hfit
+      omega)
+    (by
+      rw [scratchValues_length]
+      change scratch.toNat + 4 * input.length ≤
+        Wasm.StdIO.byteCapacity (afterRead input)
+      rw [afterRead_byteCapacity]
+      rw [fits_iff] at hfit
+      have hscratchNat : scratch.toNat = 32768 := by decide
+      rw [hscratchNat]
+      change 4 * input.length ≤ 32768 at hfit
+      omega)
+  rw [quicksort_writeWordArray_eq] at hscratch
+  simpa only [sortHeap, sourceHeap, scratchValues,
+    writeWordArray_readWordArray] using hscratch
+
+theorem sortHeap_pointsTo [WasmHeapGS]
+    (input : List UInt32) (hfit : Fits input) :
+    ([∗map] address ↦ value ∈ sortHeap input,
+      pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+        address (DFrac.own 1) value) ⊢
+      arrayAt source input ∗ arrayAt scratch (scratchValues input) := by
+  let sourceHeap := Quicksort.quicksortHeapAux ∅ source input
+  have hempty : ∀ address byte,
+      get? (∅ : WasmHeapMap (Option UInt8)) address = some byte →
+      address.toNat < source.toNat := by
+    intro address byte hget
+    have hemptyGet : get? (∅ : WasmHeapMap (Option UInt8)) address = none :=
+      get?_empty address
+    rw [hemptyGet] at hget
+    contradiction
+  have hsourceFit : source.toNat + 4 * input.length < UInt32.size := by
+    rw [fits_iff] at hfit
+    simp only [source, UInt32.reduceToNat, Nat.zero_add, UInt32.size]
+    change 4 * input.length ≤ 32768 at hfit
+    omega
+  have hscratchFit :
+      scratch.toNat + 4 * (scratchValues input).length < UInt32.size := by
+    rw [scratchValues_length]
+    rw [fits_iff] at hfit
+    have hscratchNat : scratch.toNat = 32768 := by decide
+    rw [hscratchNat]
+    simp only [UInt32.size]
+    change 4 * input.length ≤ 32768 at hfit
+    omega
+  have hdisjoint : ∀ address byte, get? sourceHeap address = some byte →
+      address.toNat < scratch.toNat := by
+    apply quicksortHeapAux_addresses_lt ∅ source input scratch.toNat hempty
+    · rw [fits_iff] at hfit
+      have hscratchNat : scratch.toNat = 32768 := by decide
+      rw [hscratchNat]
+      simp only [source, UInt32.reduceToNat, Nat.zero_add]
+      change 4 * input.length ≤ 32768 at hfit
+      exact hfit
+    · have hscratchNat : scratch.toNat = 32768 := by decide
+      rw [hscratchNat]
+      simp only [UInt32.size]
+      omega
+  simp only [sortHeap, sourceHeap]
+  iintro Hheap
+  ihave HscratchSplit := Quicksort.quicksortHeapAux_pointsTo
+    sourceHeap scratch (scratchValues input) hdisjoint hscratchFit $$ Hheap
+  icases HscratchSplit with ⟨Hscratch, HsourceHeap⟩
+  ihave HsourceSplit := Quicksort.quicksortHeapAux_pointsTo
+    ∅ source input hempty hsourceFit $$ HsourceHeap
+  icases HsourceSplit with ⟨Hsource, _Hempty⟩
+  isplitl [Hsource]
+  · iexact Hsource
+  · iexact Hscratch
+
+theorem arrayAt_capacity [WasmSmallStepGS hlc]
+    (store : MachineStore α) (steps : Nat)
+    (observations : List StepKind) (threads : Nat)
+    (base : UInt32) (values : List UInt32)
+    (hfit : base.toNat + 4 * values.length < UInt32.size)
+    (hbaseBound : base.toNat ≤ store.wasm.mem.pages * 65536) :
+    stateInterp (GF := WasmHeapGF) store steps observations threads ∗
+      arrayAt base values ==∗
+    stateInterp (GF := WasmHeapGF) store steps observations threads ∗
+      arrayAt base values ∗
+      ⌜base.toNat + 4 * values.length ≤ store.wasm.mem.pages * 65536⌝ := by
+  by_cases hempty : values = []
+  · subst values
+    iintro ⟨Hstate, Harray⟩
+    imodintro
+    isplitl [Hstate]
+    · iexact Hstate
+    isplitl [Harray]
+    · iexact Harray
+    · ipureintro
+      simpa using hbaseBound
+  · have hlength : 0 < values.length := by
+      cases values with
+      | nil => contradiction
+      | cons value values => simp
+    let k := values.length - 1
+    have hk : k < values.length := by simp [k, hlength]
+    let address := base + 4 * UInt32.ofNat k
+    have haddress : address.toNat = base.toNat + 4 * k := by
+      exact Mem.words32_slotAddr_toNat base k (by
+        simp only [UInt32.size] at hfit
+        omega)
+    have h1 : (address + 1).toNat = address.toNat + 1 :=
+      UInt32.add_ofNat_toNat_noWrap address 1 (by decide) (by
+        simp only [UInt32.size] at hfit
+        rw [haddress]
+        omega)
+    have h2 : (address + 2).toNat = address.toNat + 2 :=
+      UInt32.add_ofNat_toNat_noWrap address 2 (by decide) (by
+        simp only [UInt32.size] at hfit
+        rw [haddress]
+        omega)
+    have h3 : (address + 3).toNat = address.toNat + 3 :=
+      UInt32.add_ofNat_toNat_noWrap address 3 (by decide) (by
+        simp only [UInt32.size] at hfit
+        rw [haddress]
+        omega)
+    iintro ⟨Hstate, Harray⟩
+    ihave Hfocus := arrayAt_get base values k hk $$ Harray
+    icases Hfocus with ⟨Hword, Hrestore⟩
+    imod stateInterp_pointsTo_u32_facts_frame store steps observations threads
+      address values[k] h1 h2 h3 $$ [$Hstate $Hword] with
+      ⟨Hstate, Hword, %hfacts⟩
+    imodintro
+    isplitl [Hstate]
+    · iexact Hstate
+    isplitl [Hrestore Hword]
+    · iapply Hrestore
+      iexact Hword
+    · ipureintro
+      rw [haddress] at hfacts
+      dsimp only [k] at hfacts
+      omega
+
+theorem validLayout (input : List UInt32) (hfit : Fits input) :
+    ValidLayout source scratch input.length := by
+  rw [fits_iff] at hfit
+  unfold ValidLayout arrayByteRange
+  simp only [source, UInt32.reduceToNat, Nat.zero_add]
+  have hscratchNat : scratch.toNat = 32768 := by decide
+  rw [hscratchNat]
+  simp only [UInt32.size]
+  change 4 * input.length ≤ 32768 at hfit
+  omega
+
+def SortPost (input : List UInt32)
+    (_values : List Value) (store : MachineStore α) : Prop :=
+  ∃ output, SortedPermutation input output ∧
+    readWordArray store.wasm.mem source input.length = output ∧
+    4 * input.length ≤ store.wasm.mem.pages * 65536
+
+private theorem mergeSortPost_elim [WasmHeapGS]
+    (source scratch : UInt32) (input : List UInt32) :
+    mergeSortPost source scratch input ⊢
+      (iprop% ∃ output scratchFinal : List UInt32,
+        ⌜SortedPermutation input output⌝ ∗
+        ⌜scratchFinal.length = input.length⌝ ∗
+        arrayAt source output ∗ arrayAt scratch scratchFinal) := by
+  unfold mergeSortPost
+  iintro Hpost
+  iexact Hpost
+
+set_option maxHeartbeats 6000000 in
+theorem sort_partiallyMeets (input : List UInt32) (hfit : Fits input) :
+    SmallStep.PartiallyMeets (sortConfig input) (SortPost input) := by
+  apply wasm_smallStep_heap_globals_runtime_store_partiallyMeets.{0}
+    (sortConfig input) (sortHeap input) ∅ (SortPost input)
+  · exact sortHeap_agrees input hfit
+  · exact sortHeap_inBounds input hfit
+  · exact globalHeapAgrees_empty _
+  · intro _
+    iintro ⟨Hheap, _Hglobals, Hruntime⟩
+    ihave Harrays := sortHeap_pointsTo input hfit $$ Hheap
+    icases Harrays with ⟨Hsource, Hscratch⟩
+    simp only [sortConfig]
+    iapply twp.to_wp
+    iapply twp_mergeSortBody (α := Unit) module 3
+      (by decide) (by rfl)
+      source scratch input (scratchValues input)
+    isplitl [Hruntime]
+    · iexact Hruntime
+    isplitl [Hsource Hscratch]
+    · unfold mergeSortPre
+      isplitl [Hsource]
+      · iexact Hsource
+      isplitl [Hscratch]
+      · iexact Hscratch
+      isplitr
+      · ipureintro
+        exact scratchValues_length input
+      · ipureintro
+        exact validLayout input hfit
+    · iintro %width %left %mid %right Hruntime Hpost
+      ihave Hpost' := mergeSortPost_elim source scratch input $$ Hpost
+      icases Hpost' with ⟨%output, %scratchFinal, %hsorted, %_hscratchLength,
+        Hsource, _Hscratch⟩
+      iapply Wasm.SmallStep.twp_returnFromFunction
+      iapply twp.value rfl
+      iintro %store %observations Hstate
+      imod Quicksort.arrayAt_readWordArray store 0 [] 0 source output
+        (by
+          have hlength := hsorted.2.length_eq
+          rw [← hlength]
+          rw [fits_iff] at hfit
+          simp only [source, UInt32.reduceToNat, Nat.zero_add, UInt32.size]
+          change 4 * input.length ≤ 32768 at hfit
+          omega) $$ [$Hstate $Hsource] with
+        ⟨Hstate, Hsource, %hread⟩
+      have hread' : readWordArray store.wasm.mem source output.length = output := by
+        simpa only [quicksort_readWordArray_eq] using hread
+      imod arrayAt_capacity store 0 [] 0 source output
+        (by
+          have hlength := hsorted.2.length_eq
+          rw [← hlength]
+          rw [fits_iff] at hfit
+          simp only [source, UInt32.reduceToNat, Nat.zero_add, UInt32.size]
+          change 4 * input.length ≤ 32768 at hfit
+          omega)
+        (by simp [source]) $$ [$Hstate $Hsource] with
+        ⟨_Hstate, _Hsource, %hcapacity⟩
+      ipureintro
+      exact ⟨output, hsorted, by
+        rw [hsorted.2.length_eq]
+        exact hread', by
+        rw [hsorted.2.length_eq]
+        simpa only [source, UInt32.reduceToNat, Nat.zero_add] using hcapacity⟩
+
+theorem runSteps_sort_correct (fuel : Nat) (input : List UInt32)
+    (hfit : Fits input) (values : List Value)
+    (store : MachineStore Unit)
+    (hrun : (runSteps fuel (sortConfig input)).result =
+      .success values store) :
+    SortPost input values store := by
+  apply sort_partiallyMeets input hfit
+    (runSteps fuel (sortConfig input)).trace values store
+  apply runSteps_sound
+  simp [hrun, RunnerResult.finalConfig?]
+
+theorem execute_sort_correct (fuel : Nat) (input : List UInt32)
+    (hfit : Fits input) (values : List Value)
+    (store : Store Wasm.StdIO.State)
+    (hexecute : executeSort fuel (afterRead input)
+      (mergeSortArguments source scratch input.length []) =
+      some (values, store)) :
+    SortPost input values
+      { runtime := { module, host := Wasm.StdIO.env }, wasm := store } := by
+  simp only [executeSort, initConfig_sort] at hexecute
+  generalize hresult : (runSteps fuel (sortConfig input)).result = result at hexecute
+  cases result with
+  | success resultValues resultStore =>
+      simp only [Option.some.injEq, Prod.mk.injEq] at hexecute
+      rcases hexecute with ⟨hvalues, hstore⟩
+      subst values
+      have hpost := runSteps_sort_correct fuel input hfit resultValues
+        resultStore hresult
+      obtain ⟨output, hsorted, hread, hcapacity⟩ := hpost
+      have hmem : resultStore.wasm.mem = store.mem := by
+        have := congrArg (fun concrete : Store Wasm.StdIO.State => concrete.mem)
+          hstore
+        simpa [replaceHost] using this
+      exact ⟨output, hsorted, by simpa [hmem] using hread,
+        by simpa [hmem] using hcapacity⟩
+  | trapped reason resultStore => simp at hexecute
+  | outOfFuel resultConfig => simp at hexecute
+  | internalError error resultConfig => simp at hexecute
+
+set_option maxRecDepth 10000 in
+theorem run_fits (fuel : Nat) (input : List UInt32) (hfit : Fits input) :
+    run fuel (serialize input) =
+      runAfterRead fuel (UInt32.ofNat (serialize input).length) (afterRead input) := by
+  unfold run
+  rw [read_fits input hfit]
+  simp only [Bind.bind, Option.bind]
+
+set_option maxRecDepth 10000 in
+theorem run_correct (fuel : Nat) (input : List UInt32) (bytes : List UInt8)
+    (hfit : Fits input) (hrun : run fuel (serialize input) = some bytes) :
+    ∃ output, SortedPermutation input output ∧
+      deserialize bytes = some output := by
+  rw [run_fits fuel input hfit] at hrun
+  unfold runAfterRead at hrun
+  rw [probe_afterRead input] at hrun
+  simp only [Option.bind_some, guard, decide_true, if_true] at hrun
+  rw [encodedLength_words input hfit] at hrun
+  simp only [Bind.bind, Option.bind] at hrun
+  simp only [if_true, Pure.pure, Bind.bind, Option.bind] at hrun
+  generalize hsortResult : executeSort fuel (afterRead input)
+      (mergeSortArguments source scratch input.length []) = sortResult at hrun
+  cases sortResult with
+  | none => simp at hrun
+  | some sortPair =>
+      rcases sortPair with ⟨sortValues, afterSort⟩
+      have hpost := execute_sort_correct fuel input hfit sortValues afterSort
+        hsortResult
+      obtain ⟨output, hsorted, hread, hcapacity⟩ := hpost
+      have hhost := executeSort_host fuel (afterRead input) afterSort
+        (mergeSortArguments source scratch input.length []) sortValues hsortResult
+      have hbyteLength :
+          (UInt32.ofNat (serialize input).length).toNat = 4 * input.length := by
+        rw [encodedLength_toNat input hfit, serialize_length]
+      have hwriteBound : source.toNat +
+          (UInt32.ofNat (serialize input).length).toNat ≤
+          Wasm.StdIO.byteCapacity afterSort := by
+        simp only [source, UInt32.reduceToNat, Nat.zero_add,
+          Wasm.StdIO.byteCapacity, hbyteLength]
+        exact hcapacity
+      have hwrite := execute_write_bytes afterSort
+        (UInt32.ofNat (serialize input).length) hwriteBound
+      simp only [Option.bind_some, Prod.fst, Prod.snd] at hrun
+      rw [hwrite] at hrun
+      simp only [Bind.bind, Option.bind, Pure.pure] at hrun
+      have houtput : afterSort.host.output = [] := by
+        rw [hhost]
+        rfl
+      have hbytes : bytes = afterSort.mem.readBytes source.toNat
+          (UInt32.ofNat (serialize input).length).toNat := by
+        simpa [writtenStore, houtput] using hrun.symm
+      refine ⟨output, hsorted, ?_⟩
+      rw [hbytes, hbyteLength]
+      rw [deserialize_readBytes]
+      · exact congrArg some hread
+      · rw [fits_iff] at hfit
+        simp only [source, UInt32.reduceToNat, Nat.zero_add, UInt32.size]
+        change 4 * input.length ≤ 32768 at hfit
+        omega
 
 theorem RunsValues.fits {input output : List UInt32}
     (h : RunsValues input output) : Fits input := by
@@ -553,6 +1147,22 @@ finite-memory resource limit. -/
 def Correct : Prop :=
   ∀ input output,
     RunsValues input output → SortedPermutation input output
+
+theorem correct : Correct := by
+  intro input output hruns
+  have hfit := RunsValues.fits hruns
+  rcases hruns with ⟨fuel, hrunValues⟩
+  unfold runValues at hrunValues
+  cases hrun : run fuel (serialize input) with
+  | none => simp [hrun] at hrunValues
+  | some bytes =>
+      simp only [hrun, Option.bind_some] at hrunValues
+      obtain ⟨sorted, hsorted, hdeserialize⟩ :=
+        run_correct fuel input bytes hfit hrun
+      rw [hdeserialize] at hrunValues
+      simp only [Option.some.injEq] at hrunValues
+      subst output
+      exact hsorted
 
 /-- Every input that fits the current fixed layout successfully produces an
 output.  Keeping resource-bounded termination separate leaves `Correct` clean. -/
