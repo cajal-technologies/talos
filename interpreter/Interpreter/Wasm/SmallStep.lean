@@ -6275,7 +6275,10 @@ by
 termination_by firstMemOpDepth config
 decreasing_by
   subst_vars
-  simp [firstMemOpDepth, isMemOp] <;> assumption
+  simp only [firstMemOpDepth] <;> try assumption
+  rw [hi]
+  change 0 < 1
+  omega
 
 set_option maxHeartbeats 5000000 in
 theorem stepChecked?_complete {config config' : Config α} {kind : StepKind} :
@@ -6420,7 +6423,11 @@ by
 termination_by firstMemOpDepth config
 decreasing_by
   subst_vars
-  simp [firstMemOpDepth, isMemOp] <;> assumption
+  simp only [firstMemOpDepth] <;> try assumption
+  change (if isMemOp _ = true then 1 else 0) < 1
+  simp_all only [Bool.false_eq_true]
+  simp only [if_false]
+  omega
 
 theorem step_iff {config config' : Config α} {kind : StepKind} :
     stepChecked? config = .ok (some (kind, config')) ↔ Step config kind config' :=

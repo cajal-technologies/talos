@@ -4,15 +4,15 @@ defaultTargets = ["CodeLib"]
 packagesDir = "../.lake/packages"
 
 [[require]]
-name = "WasmInterpreterLean"
-path = "../interpreter"
+name = "iris"
+git = "https://github.com/mfornet/iris-lean.git"
+subDir = "Iris"
+# Fork revision containing total weakest preconditions and their proof-mode API.
+rev = "3d9ecf13c89946a877fceb048a389e1596808157"
 
 [[require]]
-name = "iris"
-git.url = "https://github.com/mfornet/iris-lean.git"
-git.subDir = "Iris"
-# Fork revision containing total weakest preconditions and their proof-mode API.
-git.rev = "3d9ecf13c89946a877fceb048a389e1596808157"
+name = "WasmInterpreterLean"
+path = "../interpreter"
 
 [[lean_lib]]
 name = "CodeLib"
