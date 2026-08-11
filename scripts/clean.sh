@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-for pkg in interpreter codelib programs/lean verifier docbuild; do
+for pkg in interpreter codelib programs/lean verifier; do
     dir="$ROOT/$pkg"
     [[ -d "$dir/.lake" ]] && rm -rf "$dir/.lake" && echo "cleaned $pkg/.lake"
 done

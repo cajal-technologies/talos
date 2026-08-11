@@ -24,7 +24,7 @@ if [[ ! -d "$src/.git" && ! -f "$src/.git" ]]; then
 fi
 
 # Lake packages to seed. Add new package directories here if the repo grows.
-pkgs=(interpreter codelib programs docbuild)
+pkgs=(interpreter codelib programs)
 
 # Whole-directory APFS clone via the clonefile(2) syscall — one call per dir
 # instead of one per file. The kernel still has to allocate an inode per file

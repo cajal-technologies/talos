@@ -199,13 +199,6 @@ verifier-extract *crates:
 verifier-report *crate:
     just _verifier report {{ crate }}
 
-# ── docs ──────────────────────────────────────────────────────────────────────
-
-# Generate HTML documentation and serve it at http://localhost:8080.
-[working-directory("scripts")]
-docs:
-    ./docs.sh
-
 # ── housekeeping ──────────────────────────────────────────────────────────────
 
 # Remove Lake build artefacts from all Lean packages and Cargo target dir.

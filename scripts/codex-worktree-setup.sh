@@ -95,7 +95,6 @@ if [[ "${source_tree}" != "${worktree}" ]]; then
         codelib
         programs/lean
         verifier
-        docbuild
     )
     for package_dir in "${package_dirs[@]}"; do
         clone_tree \
