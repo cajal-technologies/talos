@@ -7,12 +7,12 @@ packagesDir = "../.lake/packages"
 name = "iris"
 git = "https://github.com/mfornet/iris-lean.git"
 subDir = "Iris"
-# Fork revision containing total weakest preconditions and their proof-mode API.
-rev = "3d9ecf13c89946a877fceb048a389e1596808157"
+# Total weakest preconditions from iris-lean#554; pin the PR head commit.
+rev = "27f05563f6f65993056c44da95be8a474dc9e57f"
 
 [[require]]
 name = "WasmInterpreterLean"
 path = "../interpreter"
-
 [[lean_lib]]
 name = "CodeLib"
+roots = ["CodeLib", "CodeLib.Examples.Quicksort.Proof"]
