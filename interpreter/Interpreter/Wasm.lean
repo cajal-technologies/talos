@@ -5,6 +5,7 @@ import Interpreter.Wasm.Continuation
 import Interpreter.Wasm.Semantics
 import Interpreter.Wasm.Semantics.Lemmas
 import Interpreter.Wasm.SmallStep
+import Interpreter.Wasm.MeasureTermination
 import Interpreter.Wasm.Wp.Defs
 import Interpreter.Wasm.Wp.Atomic
 import Interpreter.Wasm.Wp.Block
