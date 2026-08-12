@@ -3,6 +3,7 @@
 use std::io::{BufReader, BufWriter, Read, Write};
 
 mod sys {
+    #[link(wasm_import_module = "stdio")]
     unsafe extern "C" {
         pub fn read(buf: *mut u8, count: usize) -> usize;
         pub fn write(buf: *const u8, count: usize);
