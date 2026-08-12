@@ -1,3 +1,5 @@
+//! Rust I/O adapters for the host functions provided to Talos Wasm programs.
+
 use std::io::{BufReader, BufWriter, Read, Write};
 
 mod sys {
@@ -7,20 +9,20 @@ mod sys {
     }
 }
 
-pub fn read(buf: &mut [u8], count: usize) -> usize {
-    unsafe { sys::read(buf.as_mut_ptr(), count) }
+fn read(buf: &mut [u8]) -> usize {
+    unsafe { sys::read(buf.as_mut_ptr(), buf.len()) }
 }
 
-pub fn write(buf: &[u8]) {
+fn write(buf: &[u8]) {
     unsafe { sys::write(buf.as_ptr(), buf.len()) }
 }
 
-// External interface for reading and writing using methods provided by the host
-pub struct ExtIO {}
+/// An unbuffered byte stream backed by Talos host imports.
+pub struct ExtIO;
 
 impl ExtIO {
     pub fn new() -> Self {
-        ExtIO {}
+        Self
     }
 
     pub fn buffered() -> (BufReader<Self>, BufWriter<Self>) {
@@ -38,8 +40,7 @@ impl Default for ExtIO {
 
 impl Read for ExtIO {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        let count = read(buf, buf.len());
-        Ok(count)
+        Ok(read(buf))
     }
 }
 

@@ -1,5 +1,4 @@
 pub mod exports;
-pub mod stdio;
 
 fn merge<T: Ord + Clone>(left: &[T], right: &[T], merged: &mut [T]) {
     let mut i = 0;

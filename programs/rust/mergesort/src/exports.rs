@@ -1,5 +1,5 @@
-use crate::stdio::ExtIO;
 use std::io::{BufRead, Write};
+use talos_stdio::ExtIO;
 
 #[unsafe(no_mangle)]
 pub extern "C" fn mergesort() {
