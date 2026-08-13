@@ -27,6 +27,7 @@ import Interpreter.Wasm.Examples.MultiValue
 import Interpreter.Wasm.Examples.ClzPopcnt
 import Interpreter.Wasm.Examples.HostDispatch
 import Interpreter.Wasm.Examples.Counter
+import Interpreter.Wasm.Examples.Random
 import Interpreter.Wasm.Examples.DecoderImport
 import Interpreter.Wasm.Examples.DecoderImportedGlobal
 import Interpreter.Wasm.Examples.FloatOps
