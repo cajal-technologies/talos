@@ -801,19 +801,6 @@ theorem twp_loopSortCall [WasmSmallStepGS hlc]
     · simpa [hlength] using hwords
     · simpa [array, hlength] using hcapacity
 
-theorem recursive_sort_partiallyMeets (input : List UInt64) (hfit : Fits input) :
-    SmallStep.PartiallyMeets (concreteSortConfig recursive input) (SortPost input) := by
-  apply wasm_smallStep_heap_globals_runtime_store_partiallyMeets.{0}
-    (concreteSortConfig recursive input) (inputHeap input) ∅ (SortPost input)
-  · exact inputHeap_agrees recursive input hfit
-  · exact inputHeap_inBounds recursive input hfit
-  · exact globalHeapAgrees_empty _
-  · intro _
-    iintro Hresources
-    iapply twp.to_wp
-    iapply twp_recursiveSortCall input hfit
-    iexact Hresources
-
 theorem recursive_sort_stronglyNormalizing
     (input : List UInt64) (hfit : Fits input) :
     Iris.ProgramLogic.StronglyNormalizing
@@ -850,19 +837,6 @@ theorem recursive_sort_terminatesWith
     iintro Hresources
     iapply twp.to_wp
     iapply twp_recursiveSortCall input hfit
-    iexact Hresources
-
-theorem loop_sort_partiallyMeets (input : List UInt64) (hfit : Fits input) :
-    SmallStep.PartiallyMeets (concreteSortConfig loop input) (SortPost input) := by
-  apply wasm_smallStep_heap_globals_runtime_store_partiallyMeets.{0}
-    (concreteSortConfig loop input) (inputHeap input) ∅ (SortPost input)
-  · exact inputHeap_agrees loop input hfit
-  · exact inputHeap_inBounds loop input hfit
-  · exact globalHeapAgrees_empty _
-  · intro _
-    iintro Hresources
-    iapply twp.to_wp
-    iapply twp_loopSortCall input hfit
     iexact Hresources
 
 theorem loop_sort_stronglyNormalizing
