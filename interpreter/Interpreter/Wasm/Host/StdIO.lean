@@ -1,4 +1,4 @@
-import Interpreter.Wasm.SmallStep
+import Interpreter.Wasm.Host.Run
 
 /-!
 # A byte-buffer standard-I/O host
@@ -16,6 +16,11 @@ provides two imports, both using `(length, pointer)` argument order:
 An out-of-bounds memory range or malformed argument list traps without making
 any state change.  Zero-length accesses are valid even at the byte immediately
 after the end of memory, matching the usual half-open-range convention.
+
+`Runs` at the end of this file names the byte-stream contract once: a spec
+author states "this export, on these input bytes, terminates having written
+these output bytes" without rebuilding the machine by hand.  It is the
+`StdIO` reading of the host-agnostic `Wasm.RunsWith`.
 -/
 
 namespace Wasm.StdIO
@@ -160,5 +165,17 @@ theorem env_satisfies (m : Module) (himports : m.imports = imports) :
     rfl
   · simp [imports] at hi
     omega
+
+/-! ## The byte-stream contract
+
+Nothing below depends on a particular module, so a workspace states its
+contract by supplying its own `«module»` rather than by repeating the setup.
+-/
+
+/-- Export `op` of `m`, run on `input`, terminates having returned no values
+and written exactly `output`.  Fuel, linear memory and host-state plumbing stay
+inside the relation; the statement mentions only the two byte streams. -/
+def Runs (m : Module) (op : String) (input output : List UInt8) : Prop :=
+  RunsWith env m op (State.ofInput input) (fun final => final.output = output)
 
 end Wasm.StdIO

@@ -31,24 +31,10 @@ base-ten numbers separated by one ASCII space, with no trailing newline. -/
 def encodeValues (values : List UInt64) : List UInt8 :=
   (String.intercalate " " (values.map toString)).toUTF8.toList
 
-/-- Initial Wasm store with `input` attached to the deterministic StdIO host. -/
-def initialStore (input : List UInt8) : Store StdIO.State :=
-  { («module».initialStore (α := StdIO.State)) with
-      host := StdIO.State.ofInput input }
-
-/-- Initialize the generated module at its exported `mergesort` entry point. -/
-def initialConfig? (input : List UInt8) : Option (SmallStep.Config StdIO.State) := do
-  let entry ← «module».findExport "mergesort"
-  (SmallStep.initConfig
-    { module := «module», host := StdIO.env }
-    entry (initialStore input) []).toOption
-
-/-- Fuel-free relational execution over byte streams. -/
+/-- Fuel-free relational execution over byte streams, through the shared StdIO
+seam at the generated module's exported `mergesort` entry point. -/
 def RunsBytes (input output : List UInt8) : Prop :=
-  ∃ initial,
-    initialConfig? input = some initial ∧
-    SmallStep.TerminatesWith initial (fun values final =>
-      values = [] ∧ final.wasm.host.output = output)
+  StdIO.Runs «module» "mergesort" input output
 
 /-- The host-level execution relation exposed to clients of the specification. -/
 def RunsValues (input output : List UInt64) : Prop :=
