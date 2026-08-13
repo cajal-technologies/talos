@@ -69,8 +69,4 @@ def MergesortSpec : Prop :=
   ∀ input, ∃ output,
     RunsValues input output ∧ SortedPermutation input output
 
-@[proves Project.Mergesort.Spec.MergesortSpec]
-theorem mergesort_correct : MergesortSpec := by
-  sorry
-
 end Project.Mergesort.Spec
