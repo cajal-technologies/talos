@@ -14,7 +14,7 @@ members = [
   "float_minmax",
   "float_round",
   "float_reinterpret",
-  "libs/talos_stdio",
+  "talos_stdio",
   "mergesort",
 ]
 [profile.release]

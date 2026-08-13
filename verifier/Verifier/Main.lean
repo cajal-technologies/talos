@@ -251,6 +251,7 @@ private def discoverCrates (projectDir : FilePath) : IO (Array Crate) := do
     let p := entry.path
     if ¬ (← p.isDir) then continue
     unless ← System.FilePath.pathExists (p / "Cargo.toml") do continue
+    if ← System.FilePath.pathExists (p / ".talos-library") then continue
     let name := entry.fileName
     acc := acc.push { name, rustDir := p, leanDir := leanRoot / snakeToPascal name }
   pure acc

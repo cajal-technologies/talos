@@ -61,6 +61,7 @@ private def discoverCrates (projectDir : FilePath) : IO (Array CrateInfo) := do
     if ¬ (← p.isDir) then continue
     let cargoToml := p / "Cargo.toml"
     unless ← System.FilePath.pathExists cargoToml do continue
+    if ← System.FilePath.pathExists (p / ".talos-library") then continue
     let name := entry.fileName
     let mod := snakeToPascal name
     let leanDir := leanRoot / mod

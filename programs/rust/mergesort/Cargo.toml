@@ -7,4 +7,4 @@ edition = "2024"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-talos-stdio = { path = "../libs/talos_stdio" }
+talos-stdio = { path = "../talos_stdio" }
