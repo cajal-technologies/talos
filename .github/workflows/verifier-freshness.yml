@@ -41,13 +41,6 @@ jobs:
         working-directory: programs
         run: lake -d ../verifier exe verifier check --no-prove
 
-      - name: Upload regenerated mergesort module
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: mergesort-program-linux
-          path: programs/lean/Project/Mergesort/Program.lean
-
       # Fail if any generated file changed.
       - name: Assert no drift
         run: |
