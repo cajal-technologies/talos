@@ -37,6 +37,11 @@ private theorem twp_eq
       @ s; E [{ Φ }] :=
   Wasm.SmallStep.twp_pureStep _ _ _ (fun _ => Step.eq hresult)
 
+private theorem pointsTo_u32_at_eq
+    [WasmHeapGS] {left right value : UInt32} (h : left = right) :
+    pointsTo_u32 left value ⊢ pointsTo_u32 right value := by
+  rw [h]
+
 def writeFmtAtPrepare : Program := func33.drop 18
 def writeFmtAfterPrepare : Program := func33.drop 19
 
@@ -87,6 +92,11 @@ def formatPrepareMiddleFrame : ControlFrame :=
     body := formatPrepareMiddleBody
     continuation := formatPrepareAfterMiddle
     belowStack := [] }
+
+def formatPrepareStaticLocals
+    (frame second staticFirst staticSecond : UInt32) : List Value :=
+  [.i32 frame, .i32 second, .i32 0, .i32 0,
+   .i32 staticFirst, .i32 staticSecond, .i32 0, .i32 0, .i32 0]
 
 theorem writeFmtAtPrepare_eq :
     writeFmtAtPrepare = .call 36 :: writeFmtAfterPrepare := by
@@ -210,6 +220,101 @@ theorem formatPrepare_aligned_dispatch_twp
   iapply twp_brIf (by decide) (by rfl)
   simp only [List.take_zero, List.nil_append]
   iapply Hdone $$ HR
+
+/-! The aligned representation selects the two-word static formatting table.
+This rule executes both static loads, copies them into the generated scratch
+frame, and takes the depth-one branch to the outer continuation. -/
+theorem formatPrepare_static_path_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (resultPtr inputPtr frame second staticFirst staticSecond : UInt32)
+    (oldFrame4 oldFrame8 : UInt32)
+    (hframeRoom : frame.toNat + 12 ≤ UInt32.size)
+    {R : IProp WasmHeapGF}
+    {controls : List ControlFrame} {calls : List CallFrame} :
+    pointsTo_u32 1049096 staticFirst ∗
+      pointsTo_u32 1049100 staticSecond ∗
+      pointsTo_u32 (frame + 4) oldFrame4 ∗
+      pointsTo_u32 (frame + 8) oldFrame8 ∗ R ∗
+      (pointsTo_u32 1049096 staticFirst ∗
+        pointsTo_u32 1049100 staticSecond ∗
+        pointsTo_u32 (frame + 4) staticFirst ∗
+        pointsTo_u32 (frame + 8) staticSecond ∗ R -∗
+        WP (.running
+          ⟨⟨[.i32 resultPtr, .i32 inputPtr],
+              formatPrepareStaticLocals frame second staticFirst staticSecond,
+              []⟩,
+            formatPrepareAfterOuter, 0, [], controls, calls⟩ : Expr α)
+          @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨⟨[.i32 resultPtr, .i32 inputPtr],
+          formatPrepareLocals frame second, []⟩,
+        formatPrepareStaticPath, 0, [],
+        formatPrepareMiddleFrame :: formatPrepareOuterFrame :: controls,
+        calls⟩ : Expr α) @ s; E [{ Φ }] := by
+  obtain ⟨hf40, hf41, hf42, hf43⟩ :=
+    descriptorSlot32Facts frame 4 12 hframeRoom (by decide)
+  obtain ⟨hf80, hf81, hf82, hf83⟩ :=
+    descriptorSlot32Facts frame 8 12 hframeRoom (by decide)
+  iintro ⟨HstaticFirst, HstaticSecond, Hframe4, Hframe8, HR, Hdone⟩
+  simp only [formatPrepareStaticPath, formatPrepareMiddleBody,
+    formatPrepareOuterBody, func34, List.drop]
+  iapply twp_const
+  ihave HstaticFirstAt :
+      pointsTo_u32 ((0 : UInt32) + 1049096) staticFirst $$ [HstaticFirst]
+  · rw [show (0 : UInt32) + 1049096 = 1049096 by decide]
+    iexact HstaticFirst
+  iapply twp_load32 staticFirst (by decide) (by decide) (by decide) (by decide) $$
+    HstaticFirstAt
+  iintro HstaticFirstAt
+  iapply twp_localSet rfl
+  simp only [formatPrepareLocals, List.set, List.length_cons,
+    List.length_nil, Nat.reduceAdd, Nat.reduceSub]
+  iapply twp_const
+  ihave HstaticSecondAt :
+      pointsTo_u32 ((0 : UInt32) + 1049100) staticSecond $$ [HstaticSecond]
+  · rw [show (0 : UInt32) + 1049100 = 1049100 by decide]
+    iexact HstaticSecond
+  iapply twp_load32 staticSecond (by decide) (by decide) (by decide) (by decide) $$
+    HstaticSecondAt
+  iintro HstaticSecondAt
+  iapply twp_localSet rfl
+  simp only [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_store32 oldFrame4 hf40 hf41 hf42 hf43 $$ Hframe4
+  iintro Hframe4
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_store32 oldFrame8 hf80 hf81 hf82 hf83 $$ Hframe8
+  iintro Hframe8
+  iapply twp_br (by rfl)
+  simp only [formatPrepareOuterFrame, formatPrepareAfterOuter,
+    func34, List.drop, List.take_zero, List.nil_append]
+  isimp only [formatPrepareStaticLocals, formatPrepareAfterOuter,
+    formatPrepareMiddleFrame, formatPrepareOuterFrame,
+    formatPrepareAfterMiddle, formatPrepareMiddleBody,
+    formatPrepareOuterBody, func34, List.drop] at Hdone
+  ihave HstaticFirst : pointsTo_u32 1049096 staticFirst $$ [HstaticFirstAt]
+  · iapply pointsTo_u32_at_eq
+      (show (0 : UInt32) + 1049096 = 1049096 by decide)
+    iexact HstaticFirstAt
+  ihave HstaticSecond : pointsTo_u32 1049100 staticSecond $$ [HstaticSecondAt]
+  · iapply pointsTo_u32_at_eq
+      (show (0 : UInt32) + 1049100 = 1049100 by decide)
+    iexact HstaticSecondAt
+  iapply Hdone
+  isplitl [HstaticFirst]
+  · iexact HstaticFirst
+  isplitl [HstaticSecond]
+  · iexact HstaticSecond
+  isplitl [Hframe4]
+  · iexact Hframe4
+  isplitl [Hframe8]
+  · iexact Hframe8
+  iexact HR
 
 /-! Exact generated prologue of local `func33`, through both saved argument
 stores and both operands for absolute call 36. -/
