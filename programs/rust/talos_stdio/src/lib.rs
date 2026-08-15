@@ -10,12 +10,32 @@ mod sys {
     }
 }
 
+/// Invoke the canonical `stdio.read` import without constructing an
+/// intermediate Rust slice.
+///
+/// # Safety
+///
+/// `buf` must be writable for `count` bytes.
+pub unsafe fn read_raw(buf: *mut u8, count: usize) -> usize {
+    unsafe { sys::read(buf, count) }
+}
+
+/// Invoke the canonical `stdio.write` import without constructing an
+/// intermediate Rust slice.
+///
+/// # Safety
+///
+/// `buf` must be readable for `count` bytes.
+pub unsafe fn write_raw(buf: *const u8, count: usize) {
+    unsafe { sys::write(buf, count) }
+}
+
 fn read(buf: &mut [u8]) -> usize {
-    unsafe { sys::read(buf.as_mut_ptr(), buf.len()) }
+    unsafe { read_raw(buf.as_mut_ptr(), buf.len()) }
 }
 
 fn write(buf: &[u8]) {
-    unsafe { sys::write(buf.as_ptr(), buf.len()) }
+    unsafe { write_raw(buf.as_ptr(), buf.len()) }
 }
 
 /// An unbuffered byte stream backed by Talos host imports.
