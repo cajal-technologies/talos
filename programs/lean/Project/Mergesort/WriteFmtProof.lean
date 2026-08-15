@@ -481,6 +481,122 @@ theorem formatPrepare_static_suffix_twp
   · iexact Hresult4
   iexact HR
 
+/-! Full aligned successful body contract for generated local `func34`. -/
+theorem formatPrepare_body_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (resultPtr inputPtr stackTop second staticFirst staticSecond : UInt32)
+    (oldFrame4 oldFrame8 oldResult0 oldResult4 : UInt32)
+    (oldFlag : UInt8)
+    (heven : second &&& 1 = 0)
+    (hinputRoom : inputPtr.toNat + 8 ≤ UInt32.size)
+    (hframeRoom : (stackTop - 16).toNat + 16 ≤ UInt32.size)
+    (hresultRoom : resultPtr.toNat + 8 ≤ UInt32.size)
+    {R : IProp WasmHeapGF}
+    {controls : List ControlFrame} {calls : List CallFrame} :
+    globalPointsTo 0 (.i32 stackTop) ∗
+      pointsTo_u32 (inputPtr + 4) second ∗
+      pointsTo_u32 1049096 staticFirst ∗
+      pointsTo_u32 1049100 staticSecond ∗
+      pointsTo_u32 ((stackTop - 16) + 4) oldFrame4 ∗
+      pointsTo_u32 ((stackTop - 16) + 8) oldFrame8 ∗
+      pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+        ((stackTop - 16) + 15) (DFrac.own 1) (some oldFlag) ∗
+      pointsTo_u32 resultPtr oldResult0 ∗
+      pointsTo_u32 (resultPtr + 4) oldResult4 ∗ R ∗
+      (globalPointsTo 0 (.i32 stackTop) ∗
+        pointsTo_u32 (inputPtr + 4) second ∗
+        pointsTo_u32 1049096 staticFirst ∗
+        pointsTo_u32 1049100 staticSecond ∗
+        pointsTo_u32 ((stackTop - 16) + 4) staticFirst ∗
+        pointsTo_u32 ((stackTop - 16) + 8) staticSecond ∗
+        pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+          ((stackTop - 16) + 15) (DFrac.own 1) (some (0 : UInt8)) ∗
+        pointsTo_u32 resultPtr staticFirst ∗
+        pointsTo_u32 (resultPtr + 4) staticSecond ∗ R -∗
+        WP (.running
+          ⟨⟨[.i32 resultPtr, .i32 inputPtr],
+              formatPrepareFinalLocals (stackTop - 16) second
+                staticFirst staticSecond, []⟩,
+            [.ret], 0, [], controls, calls⟩ : Expr α)
+          @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨⟨[.i32 resultPtr, .i32 inputPtr],
+          List.replicate 9 (.i32 0), []⟩,
+        func34, 0, [], controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] := by
+  have hframeRoom12 : (stackTop - 16).toNat + 12 ≤ UInt32.size := by
+    omega
+  iintro ⟨Hglobal, Hsecond, HstaticFirst, HstaticSecond, Hframe4,
+    Hframe8, Hflag, Hresult0, Hresult4, HR, Hdone⟩
+  iapply formatPrepare_prefix_twp resultPtr inputPtr stackTop second hinputRoom
+  isplitl [Hglobal]
+  · iexact Hglobal
+  isplitl [Hsecond]
+  · iexact Hsecond
+  iintro Hglobal Hsecond
+  iapply formatPrepare_aligned_dispatch_twp
+    resultPtr inputPtr (stackTop - 16) second heven (R := R)
+  isplitl [HR]
+  · iexact HR
+  iintro HR
+  iapply formatPrepare_static_path_twp resultPtr inputPtr (stackTop - 16)
+    second staticFirst staticSecond oldFrame4 oldFrame8 hframeRoom12
+    (R := R)
+  isplitl [HstaticFirst]
+  · iexact HstaticFirst
+  isplitl [HstaticSecond]
+  · iexact HstaticSecond
+  isplitl [Hframe4]
+  · iexact Hframe4
+  isplitl [Hframe8]
+  · iexact Hframe8
+  isplitl [HR]
+  · iexact HR
+  iintro ⟨HstaticFirst, HstaticSecond, Hframe4, Hframe8, HR⟩
+  iapply formatPrepare_static_suffix_twp resultPtr inputPtr (stackTop - 16)
+    second staticFirst staticSecond oldFlag oldResult0 oldResult4
+    hframeRoom hresultRoom (R := R)
+  isplitl [HstaticFirst]
+  · iexact HstaticFirst
+  isplitl [HstaticSecond]
+  · iexact HstaticSecond
+  isplitl [Hframe4]
+  · iexact Hframe4
+  isplitl [Hframe8]
+  · iexact Hframe8
+  isplitl [Hflag]
+  · iexact Hflag
+  isplitl [Hresult0]
+  · iexact Hresult0
+  isplitl [Hresult4]
+  · iexact Hresult4
+  isplitl [HR]
+  · iexact HR
+  iintro ⟨HstaticFirst, HstaticSecond, Hframe4, Hframe8, Hflag,
+    Hresult0, Hresult4, HR⟩
+  iapply Hdone
+  isplitl [Hglobal]
+  · iexact Hglobal
+  isplitl [Hsecond]
+  · iexact Hsecond
+  isplitl [HstaticFirst]
+  · iexact HstaticFirst
+  isplitl [HstaticSecond]
+  · iexact HstaticSecond
+  isplitl [Hframe4]
+  · iexact Hframe4
+  isplitl [Hframe8]
+  · iexact Hframe8
+  isplitl [Hflag]
+  · iexact Hflag
+  isplitl [Hresult0]
+  · iexact Hresult0
+  isplitl [Hresult4]
+  · iexact Hresult4
+  iexact HR
+
 /-! Exact generated prologue of local `func33`, through both saved argument
 stores and both operands for absolute call 36. -/
 theorem writeFmt_to_prepare_call_twp
