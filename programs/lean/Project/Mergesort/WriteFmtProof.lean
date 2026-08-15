@@ -715,6 +715,231 @@ theorem formatPrepare_call_twp
   · iexact Hresult4
   iexact HR
 
+def writeFmtFallbackOuterBody : Program :=
+  match func33.drop 34 with
+  | .block _ _ body :: _ => body
+  | _ => []
+
+def writeFmtFallbackAfterOuter : Program := func33.drop 35
+
+def writeFmtFallbackFrame : ControlFrame :=
+  { kind := .block
+    paramArity := 0
+    resultArity := 0
+    body := writeFmtFallbackOuterBody
+    continuation := writeFmtFallbackAfterOuter
+    belowStack := [] }
+
+def writeFmtAtFallbackCall : Program := [.call 30]
+
+def writeFmtFallbackLocals (frame : UInt32) : List Value :=
+  [.i32 frame, .i32 0, .i32 0, .i32 0]
+
+/-! Compose the generated format preparation call and the zero-static-table
+dispatch.  The result is the exact fallback call to local `func28` at absolute
+index 30. -/
+theorem writeFmt_prepare_to_fallback_call_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (resultPtr writerPtr formatPtr argumentsPtr frame : UInt32)
+    (oldHelper4 oldHelper8 oldResult8 oldResult12 oldFrame24 oldFrame28 : UInt32)
+    (oldHelperFlag : UInt8)
+    (hargumentsEven : argumentsPtr &&& 1 = 0)
+    (hinputRoom : (frame + 16).toNat + 8 ≤ UInt32.size)
+    (hhelperRoom : (frame - 16).toNat + 16 ≤ UInt32.size)
+    (hresultRoom : (frame + 8).toNat + 8 ≤ UInt32.size)
+    (hframeRoom : frame.toNat + 32 ≤ UInt32.size)
+    {R : IProp WasmHeapGF}
+    {controls : List ControlFrame} {calls : List CallFrame} :
+    runtimeModuleOwn «module» ∗
+      globalPointsTo 0 (.i32 frame) ∗
+      pointsTo_u32 1049096 0 ∗ pointsTo_u32 1049100 0 ∗
+      pointsTo_u32 ((frame - 16) + 4) oldHelper4 ∗
+      pointsTo_u32 ((frame - 16) + 8) oldHelper8 ∗
+      pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+        ((frame - 16) + 15) (DFrac.own 1) (some oldHelperFlag) ∗
+      pointsTo_u32 (frame + 8) oldResult8 ∗
+      pointsTo_u32 (frame + 12) oldResult12 ∗
+      pointsTo_u32 (frame + 16) formatPtr ∗
+      pointsTo_u32 (frame + 20) argumentsPtr ∗
+      pointsTo_u32 (frame + 24) oldFrame24 ∗
+      pointsTo_u32 (frame + 28) oldFrame28 ∗ R ∗
+      (runtimeModuleOwn «module» ∗
+        globalPointsTo 0 (.i32 frame) ∗
+        pointsTo_u32 1049096 0 ∗ pointsTo_u32 1049100 0 ∗
+        pointsTo_u32 ((frame - 16) + 4) 0 ∗
+        pointsTo_u32 ((frame - 16) + 8) 0 ∗
+        pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+          ((frame - 16) + 15) (DFrac.own 1) (some (0 : UInt8)) ∗
+        pointsTo_u32 (frame + 8) 0 ∗
+        pointsTo_u32 (frame + 12) 0 ∗
+        pointsTo_u32 (frame + 16) formatPtr ∗
+        pointsTo_u32 (frame + 20) argumentsPtr ∗
+        pointsTo_u32 (frame + 24) 0 ∗ pointsTo_u32 (frame + 28) 0 ∗ R -∗
+        WP (.running
+          ⟨⟨writeFmtParams resultPtr writerPtr formatPtr argumentsPtr,
+              writeFmtFallbackLocals frame,
+              [.i32 argumentsPtr, .i32 formatPtr,
+               .i32 writerPtr, .i32 resultPtr]⟩,
+            writeFmtAtFallbackCall, 0, [],
+            writeFmtFallbackFrame :: controls, calls⟩ : Expr α)
+          @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨⟨writeFmtParams resultPtr writerPtr formatPtr argumentsPtr,
+          writeFmtLocals frame,
+          [.i32 (frame + 16), .i32 (frame + 8)]⟩,
+        writeFmtAtPrepare, 0, [], controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] := by
+  simp only [writeFmtParams, writeFmtLocals]
+  obtain ⟨h80, h81, h82, h83⟩ :=
+    descriptorSlot32Facts frame 8 32 hframeRoom (by decide)
+  obtain ⟨h120, h121, h122, h123⟩ :=
+    descriptorSlot32Facts frame 12 32 hframeRoom (by decide)
+  obtain ⟨h160, h161, h162, h163⟩ :=
+    descriptorSlot32Facts frame 16 32 hframeRoom (by decide)
+  obtain ⟨h200, h201, h202, h203⟩ :=
+    descriptorSlot32Facts frame 20 32 hframeRoom (by decide)
+  obtain ⟨h240, h241, h242, h243⟩ :=
+    descriptorSlot32Facts frame 24 32 hframeRoom (by decide)
+  obtain ⟨h280, h281, h282, h283⟩ :=
+    descriptorSlot32Facts frame 28 32 hframeRoom (by decide)
+  iintro ⟨Hruntime, Hglobal, HstaticFirst, HstaticSecond, Hhelper4,
+    Hhelper8, HhelperFlag, Hresult8, Hresult12, Hformat, Harguments,
+    Hframe24, Hframe28, HR, Hdone⟩
+  ihave HargumentsAt : pointsTo_u32 ((frame + 16) + 4) argumentsPtr $$
+      [Harguments]
+  · iapply pointsTo_u32_at_eq
+      (show frame + 20 = (frame + 16) + 4 by bv_decide)
+    iexact Harguments
+  ihave Hresult12At : pointsTo_u32 ((frame + 8) + 4) oldResult12 $$
+      [Hresult12]
+  · iapply pointsTo_u32_at_eq
+      (show frame + 12 = (frame + 8) + 4 by bv_decide)
+    iexact Hresult12
+  rw [writeFmtAtPrepare_eq]
+  have Hprepare := formatPrepare_call_twp (α := α)
+    (frame + 8) (frame + 16) frame argumentsPtr
+    0 0 oldHelper4 oldHelper8 oldResult8 oldResult12 oldHelperFlag
+    hargumentsEven hinputRoom hhelperRoom hresultRoom (R := R)
+    (s := s) (E := E) (Φ := Φ)
+    (callerLocals :=
+      ⟨writeFmtParams resultPtr writerPtr formatPtr argumentsPtr,
+        writeFmtLocals frame, []⟩)
+    (stack := []) (code := writeFmtAfterPrepare) (arity := 0)
+    (remainder := []) (controls := controls) (calls := calls)
+  simp only [List.append_nil, writeFmtParams, writeFmtLocals] at Hprepare
+  iapply Hprepare
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hglobal]
+  · iexact Hglobal
+  isplitl [HargumentsAt]
+  · iexact HargumentsAt
+  isplitl [HstaticFirst]
+  · iexact HstaticFirst
+  isplitl [HstaticSecond]
+  · iexact HstaticSecond
+  isplitl [Hhelper4]
+  · iexact Hhelper4
+  isplitl [Hhelper8]
+  · iexact Hhelper8
+  isplitl [HhelperFlag]
+  · iexact HhelperFlag
+  isplitl [Hresult8]
+  · iexact Hresult8
+  isplitl [Hresult12At]
+  · iexact Hresult12At
+  isplitl [HR]
+  · iexact HR
+  iintro ⟨Hruntime, Hglobal, Harguments, HstaticFirst, HstaticSecond,
+    Hhelper4, Hhelper8, HhelperFlag, Hresult8, Hresult12, HR⟩
+  ihave Harguments' : pointsTo_u32 (frame + 20) argumentsPtr $$ [Harguments]
+  · iapply pointsTo_u32_at_eq
+      (show (frame + 16) + 4 = frame + 20 by bv_decide)
+    iexact Harguments
+  ihave Hresult12' : pointsTo_u32 (frame + 12) 0 $$ [Hresult12]
+  · iapply pointsTo_u32_at_eq
+      (show (frame + 8) + 4 = frame + 12 by bv_decide)
+    iexact Hresult12
+  simp only [writeFmtAfterPrepare, func33, List.drop]
+  iapply twp_localGet rfl
+  iapply twp_load32 0 h120 h121 h122 h123 $$ Hresult12'
+  iintro Hresult12
+  iapply twp_localSet rfl
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_load32 0 h80 h81 h82 h83 $$ Hresult8
+  iintro Hresult8
+  iapply twp_store32 oldFrame24 h240 h241 h242 h243 $$ Hframe24
+  iintro Hframe24
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_store32 oldFrame28 h280 h281 h282 h283 $$ Hframe28
+  iintro Hframe28
+  iapply twp_localGet rfl
+  iapply twp_load32 0 h240 h241 h242 h243 $$ Hframe24
+  iintro Hframe24
+  iapply twp_localSet rfl
+  iapply twp_const
+  iapply twp_localSet rfl
+  iapply twp_block
+  simp only [List.drop_zero]
+  iapply twp_block
+  simp only [List.drop_zero]
+  iapply twp_const
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_selectI32 (selected := 0) (by decide)
+  iapply twp_const
+  iapply twp_and
+  rw [show (0 : UInt32) &&& 1 = 0 by decide]
+  iapply twp_eqz (value := 0) (result := 1) (by decide)
+  iapply twp_brIf (by decide) (by rfl)
+  simp only [List.take_zero, List.nil_append]
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_load32 formatPtr h160 h161 h162 h163 $$ Hformat
+  iintro Hformat
+  iapply twp_localGet rfl
+  iapply twp_load32 argumentsPtr h200 h201 h202 h203 $$ Harguments'
+  iintro Harguments
+  simp only [List.length, List.set]
+  isimp only [writeFmtParams, writeFmtLocals, writeFmtFallbackLocals,
+    writeFmtAtFallbackCall,
+    writeFmtFallbackFrame, writeFmtFallbackOuterBody,
+    writeFmtFallbackAfterOuter, func33, List.drop, List.set,
+    List.length] at Hdone
+  iapply Hdone
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hglobal]
+  · iexact Hglobal
+  isplitl [HstaticFirst]
+  · iexact HstaticFirst
+  isplitl [HstaticSecond]
+  · iexact HstaticSecond
+  isplitl [Hhelper4]
+  · iexact Hhelper4
+  isplitl [Hhelper8]
+  · iexact Hhelper8
+  isplitl [HhelperFlag]
+  · iexact HhelperFlag
+  isplitl [Hresult8]
+  · iexact Hresult8
+  isplitl [Hresult12]
+  · iexact Hresult12
+  isplitl [Hformat]
+  · iexact Hformat
+  isplitl [Harguments]
+  · iexact Harguments
+  isplitl [Hframe24]
+  · iexact Hframe24
+  isplitl [Hframe28]
+  · iexact Hframe28
+  iexact HR
+
 /-! Exact generated prologue of local `func33`, through both saved argument
 stores and both operands for absolute call 36. -/
 theorem writeFmt_to_prepare_call_twp
