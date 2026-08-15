@@ -37,6 +37,47 @@ theorem twp_and
       @ s; E [{ Φ }] :=
   twp_pureStep _ _ _ (fun _ => Step.and)
 
+/-- Total lifting rule for the generated `i32.wrap_i64` instruction. -/
+theorem twp_wrapI64
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    {params localValues values : List Value}
+    {value : UInt64} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame} :
+    WP (.running
+      ⟨⟨params, localValues,
+          .i32 (UInt32.ofNat (value.toNat % 2 ^ 32)) :: values⟩,
+        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }] ⊢
+    WP (.running
+      ⟨⟨params, localValues, .i64 value :: values⟩,
+        .wrapI64 :: code, arity, remainder, controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] :=
+  twp_pureStep _ _ _ (fun _ => Step.wrapI64)
+
+/-- Total lifting rule for an `i32` select. -/
+theorem twp_selectI32
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    {params localValues values : List Value}
+    {condition first second selected : UInt32}
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    (hselected : selected = if condition ≠ 0 then first else second) :
+    WP (.running
+      ⟨⟨params, localValues, .i32 selected :: values⟩,
+        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }] ⊢
+    WP (.running
+      ⟨⟨params, localValues,
+          .i32 condition :: .i32 second :: .i32 first :: values⟩,
+        .select :: code, arity, remainder, controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] :=
+  twp_pureStep _ _ _ (fun _ => Step.select (by
+    rw [hselected]
+    by_cases hzero : condition = 0 <;> simp [hzero]))
+
 theorem twp_or
     [WasmSmallStepGS hlc]
     {s : Stuckness} {E : CoPset}

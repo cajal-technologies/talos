@@ -109,6 +109,13 @@ theorem charSearcherNextMatch_index : «module».funcs[86]? = some func86Def := 
 theorem utf8Encode_index : «module».funcs[88]? = some func88Def := by rfl
 theorem iteratorMap_index : «module».funcs[90]? = some func90Def := by rfl
 theorem iteratorCollect_index : «module».funcs[91]? = some func91Def := by rfl
+theorem iteratorCollectImpl_index : «module».funcs[92]? = some func92Def := by rfl
+theorem iteratorFromIter_index : «module».funcs[118]? = some func118Def := by rfl
+theorem iteratorCollectConsume_index : «module».funcs[124]? = some func124Def := by rfl
+theorem iteratorCollectCore_index : «module».funcs[10]? = some func10Def := by rfl
+theorem iteratorSizeHintForward_index : «module».funcs[3]? = some func3Def := by rfl
+theorem iteratorSizeHint_index : «module».funcs[4]? = some func4Def := by rfl
+theorem iteratorCollectAllocator_index : «module».funcs[140]? = some func140Def := by rfl
 theorem vecLen_index : «module».funcs[103]? = some func103Def := by rfl
 /- `func105` is the public `Vec<u64>::from_elem` shim.  Its immediate
 `call 108` includes the two imports, and therefore resolves to local
