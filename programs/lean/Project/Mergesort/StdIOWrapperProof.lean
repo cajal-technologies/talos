@@ -81,4 +81,32 @@ theorem stdioNoopWrapper_body_twp
         @ s; E [{ Φ }] := by
   rfl
 
+/-- Composable total call rule for the generated no-op wrapper at absolute
+index 136. -/
+theorem stdioNoopWrapper_call_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    {callerLocals : Locals} {stack : List Value}
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame} :
+    runtimeModuleOwn «module» ∗
+      (runtimeModuleOwn «module» -∗
+        WP (.running
+          ⟨{ callerLocals with values := stack },
+            code, arity, remainder, controls, calls⟩ : Expr α)
+          @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨{ callerLocals with values := stack },
+        .call 136 :: code, arity, remainder, controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] := by
+  iintro ⟨Hruntime, Hcont⟩
+  iapply Wasm.SmallStep.twp_call (α := α) «module» 136 func134Def
+      (by decide) stdioNoopWrapper_index $$ Hruntime
+  iintro Hruntime
+  simp [func134Def, Function.toLocals, Function.numParams, func134]
+  iapply Wasm.SmallStep.twp_returnFromCallExplicit (α := α)
+  simp only [List.take, List.nil_append]
+  iapply Hcont $$ Hruntime
+
 end Project.Mergesort.StdIOWrapperProof
