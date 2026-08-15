@@ -36,6 +36,7 @@ def specCloneFromFunction : Wasm.Function := func95Def
 def splitAtUncheckedFunction : Wasm.Function := func96Def
 def splitAtFunction : Wasm.Function := func97Def
 def parseByteFunction : Wasm.Function := func52Def
+def wideMul128Function : Wasm.Function := func254Def
 
 theorem merge_body : mergeFunction.body = func125 := rfl
 theorem sort_body : sortFunction.body = func126 := rfl
@@ -50,6 +51,7 @@ theorem specCloneFrom_body : specCloneFromFunction.body = func95 := rfl
 theorem splitAtUnchecked_body : splitAtUncheckedFunction.body = func96 := rfl
 theorem splitAt_body : splitAtFunction.body = func97 := rfl
 theorem parseByte_body : parseByteFunction.body = func52 := rfl
+theorem wideMul128_body : wideMul128Function.body = func254 := rfl
 
 theorem merge_index : «module».funcs[125]? = some mergeFunction := by
   rfl
@@ -72,6 +74,8 @@ theorem splitAt_index :
     «module».funcs[97]? = some splitAtFunction := by rfl
 theorem parseByte_index :
     «module».funcs[52]? = some parseByteFunction := by rfl
+theorem wideMul128_index :
+    «module».funcs[254]? = some wideMul128Function := by rfl
 
 /-! ## Direct callees of the exported text driver
 
@@ -103,7 +107,12 @@ theorem charSearcherNextMatch_index : «module».funcs[86]? = some func86Def := 
 theorem iteratorMap_index : «module».funcs[90]? = some func90Def := by rfl
 theorem iteratorCollect_index : «module».funcs[91]? = some func91Def := by rfl
 theorem vecLen_index : «module».funcs[103]? = some func103Def := by rfl
+/- `func105` is the public `Vec<u64>::from_elem` shim.  Its immediate
+`call 108` includes the two imports, and therefore resolves to local
+`func106`, not local `func108`. -/
 theorem vecFromElem_index : «module».funcs[105]? = some func105Def := by rfl
+theorem vecFromElemImpl_index : «module».funcs[106]? = some func106Def := by rfl
+theorem u64IsZero_index : «module».funcs[98]? = some func98Def := by rfl
 theorem stringNew_index : «module».funcs[110]? = some func110Def := by rfl
 theorem stringDeref_index : «module».funcs[119]? = some func119Def := by rfl
 theorem vecDerefMut_index : «module».funcs[122]? = some func122Def := by rfl
