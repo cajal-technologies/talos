@@ -1,4 +1,5 @@
 import Project.Mergesort.FormatProof
+import Project.Mergesort.MemoryFillProof
 
 /-!
 # Generated buffered-format writer
@@ -18,6 +19,7 @@ open Project.Mergesort.FunctionSpecs
 open Project.Mergesort.RangeProof
 open Project.Mergesort.FormatProof
 open Project.Mergesort.Machine
+open Project.Mergesort.MemoryFillProof
 
 private theorem twp_eq
     [WasmSmallStepGS hlc]
@@ -97,6 +99,12 @@ def formatPrepareStaticLocals
     (frame second staticFirst staticSecond : UInt32) : List Value :=
   [.i32 frame, .i32 second, .i32 0, .i32 0,
    .i32 staticFirst, .i32 staticSecond, .i32 0, .i32 0, .i32 0]
+
+def formatPrepareFinalLocals
+    (frame second staticFirst staticSecond : UInt32) : List Value :=
+  [.i32 frame, .i32 second, .i32 0, .i32 0,
+   .i32 staticFirst, .i32 staticSecond, .i32 staticFirst,
+   .i32 staticSecond, .i32 staticFirst]
 
 theorem writeFmtAtPrepare_eq :
     writeFmtAtPrepare = .call 36 :: writeFmtAfterPrepare := by
@@ -314,6 +322,163 @@ theorem formatPrepare_static_path_twp
   · iexact Hframe4
   isplitl [Hframe8]
   · iexact Hframe8
+  iexact HR
+
+/-! The post-dispatch suffix repeats the generated representation check,
+copies the static pair to the result area, and reaches the function return. -/
+theorem formatPrepare_static_suffix_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (resultPtr inputPtr frame second staticFirst staticSecond : UInt32)
+    (oldFlag : UInt8) (oldResult0 oldResult4 : UInt32)
+    (hframeRoom : frame.toNat + 16 ≤ UInt32.size)
+    (hresultRoom : resultPtr.toNat + 8 ≤ UInt32.size)
+    {R : IProp WasmHeapGF}
+    {controls : List ControlFrame} {calls : List CallFrame} :
+    pointsTo_u32 1049096 staticFirst ∗
+      pointsTo_u32 1049100 staticSecond ∗
+      pointsTo_u32 (frame + 4) staticFirst ∗
+      pointsTo_u32 (frame + 8) staticSecond ∗
+      pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+        (frame + 15) (DFrac.own 1) (some oldFlag) ∗
+      pointsTo_u32 resultPtr oldResult0 ∗
+      pointsTo_u32 (resultPtr + 4) oldResult4 ∗ R ∗
+      (pointsTo_u32 1049096 staticFirst ∗
+        pointsTo_u32 1049100 staticSecond ∗
+        pointsTo_u32 (frame + 4) staticFirst ∗
+        pointsTo_u32 (frame + 8) staticSecond ∗
+        pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+          (frame + 15) (DFrac.own 1) (some (0 : UInt8)) ∗
+        pointsTo_u32 resultPtr staticFirst ∗
+        pointsTo_u32 (resultPtr + 4) staticSecond ∗ R -∗
+        WP (.running
+          ⟨⟨[.i32 resultPtr, .i32 inputPtr],
+              formatPrepareFinalLocals frame second staticFirst staticSecond,
+              []⟩,
+            [.ret], 0, [], controls, calls⟩ : Expr α)
+          @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨⟨[.i32 resultPtr, .i32 inputPtr],
+          formatPrepareStaticLocals frame second staticFirst staticSecond,
+          []⟩,
+        formatPrepareAfterOuter, 0, [], controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] := by
+  have hf15 : (frame + 15).toNat = frame.toNat + 15 := by
+    apply UInt32.add_ofNat_toNat_noWrap
+    · decide
+    · simp only [UInt32.size] at hframeRoom ⊢
+      omega
+  obtain ⟨hf40, hf41, hf42, hf43⟩ :=
+    descriptorSlot32Facts frame 4 16 hframeRoom (by decide)
+  obtain ⟨hf80, hf81, hf82, hf83⟩ :=
+    descriptorSlot32Facts frame 8 16 hframeRoom (by decide)
+  obtain ⟨hr0, hr1, hr2, hr3⟩ :=
+    descriptorSlot32Facts resultPtr 0 8 hresultRoom (by decide)
+  obtain ⟨hr40, hr41, hr42, hr43⟩ :=
+    descriptorSlot32Facts resultPtr 4 8 hresultRoom (by decide)
+  iintro ⟨HstaticFirst, HstaticSecond, Hframe4, Hframe8, Hflag,
+    Hresult0, Hresult4, HR, Hdone⟩
+  simp only [formatPrepareAfterOuter, func34, List.drop]
+  iapply twp_localGet rfl
+  iapply twp_const
+  iapply twp_store8_owned oldFlag hf15 $$ Hflag
+  iintro Hflag
+  rw [show (0 : UInt32).toUInt8 = (0 : UInt8) by decide]
+  iapply twp_block
+  simp only [List.drop_zero]
+  iapply twp_block
+  simp only [List.drop_zero]
+  iapply twp_localGet rfl
+  iapply twp_load8U_owned 0 hf15 $$ Hflag
+  iintro Hflag
+  rw [show (0 : UInt8).toUInt32 = (0 : UInt32) by decide]
+  iapply twp_const
+  iapply twp_and
+  rw [show (0 : UInt32) &&& 1 = 0 by decide]
+  iapply twp_brIfZero
+  iapply twp_const
+  ihave HstaticFirstAt :
+      pointsTo_u32 ((0 : UInt32) + 1049096) staticFirst $$ [HstaticFirst]
+  · iapply pointsTo_u32_at_eq
+      (show 1049096 = (0 : UInt32) + 1049096 by decide)
+    iexact HstaticFirst
+  iapply twp_load32 staticFirst (by decide) (by decide) (by decide) (by decide) $$
+    HstaticFirstAt
+  iintro HstaticFirstAt
+  iapply twp_localSet rfl
+  simp only [formatPrepareStaticLocals, List.set, List.length_cons,
+    List.length_nil, Nat.reduceAdd, Nat.reduceSub]
+  iapply twp_const
+  ihave HstaticSecondAt :
+      pointsTo_u32 ((0 : UInt32) + 1049100) staticSecond $$ [HstaticSecond]
+  · iapply pointsTo_u32_at_eq
+      (show 1049100 = (0 : UInt32) + 1049100 by decide)
+    iexact HstaticSecond
+  iapply twp_load32 staticSecond (by decide) (by decide) (by decide) (by decide) $$
+    HstaticSecondAt
+  iintro HstaticSecondAt
+  iapply twp_localSet rfl
+  simp only [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_store32 staticFirst hf40 hf41 hf42 hf43 $$ Hframe4
+  iintro Hframe4
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_store32 staticSecond hf80 hf81 hf82 hf83 $$ Hframe8
+  iintro Hframe8
+  iapply twp_br (by rfl)
+  simp only [List.take_zero, List.nil_append]
+  iapply twp_localGet rfl
+  iapply twp_load32 staticFirst hf40 hf41 hf42 hf43 $$ Hframe4
+  iintro Hframe4
+  iapply twp_localSet rfl
+  simp only [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_load32 staticSecond hf80 hf81 hf82 hf83 $$ Hframe8
+  iintro Hframe8
+  iapply twp_store32 oldResult4 hr40 hr41 hr42 hr43 $$ Hresult4
+  iintro Hresult4
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  ihave Hresult0At : pointsTo_u32 (resultPtr + 0) oldResult0 $$ [Hresult0]
+  · iapply pointsTo_u32_at_eq
+      (show resultPtr = resultPtr + 0 by bv_decide)
+    iexact Hresult0
+  iapply twp_store32 oldResult0 hr0 hr1 hr2 hr3 $$ Hresult0At
+  iintro Hresult0At
+  ihave Hresult0 : pointsTo_u32 resultPtr staticFirst $$ [Hresult0At]
+  · iapply pointsTo_u32_at_eq
+      (show resultPtr + 0 = resultPtr by bv_decide)
+    iexact Hresult0At
+  isimp only [formatPrepareFinalLocals] at Hdone
+  ihave HstaticFirst : pointsTo_u32 1049096 staticFirst $$ [HstaticFirstAt]
+  · iapply pointsTo_u32_at_eq
+      (show (0 : UInt32) + 1049096 = 1049096 by decide)
+    iexact HstaticFirstAt
+  ihave HstaticSecond : pointsTo_u32 1049100 staticSecond $$ [HstaticSecondAt]
+  · iapply pointsTo_u32_at_eq
+      (show (0 : UInt32) + 1049100 = 1049100 by decide)
+    iexact HstaticSecondAt
+  iapply Hdone
+  isplitl [HstaticFirst]
+  · iexact HstaticFirst
+  isplitl [HstaticSecond]
+  · iexact HstaticSecond
+  isplitl [Hframe4]
+  · iexact Hframe4
+  isplitl [Hframe8]
+  · iexact Hframe8
+  isplitl [Hflag]
+  · iexact Hflag
+  isplitl [Hresult0]
+  · iexact Hresult0
+  isplitl [Hresult4]
+  · iexact Hresult4
   iexact HR
 
 /-! Exact generated prologue of local `func33`, through both saved argument
