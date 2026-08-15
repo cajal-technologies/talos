@@ -91,6 +91,7 @@ theorem parseClosure_index : «module».funcs[2]? = some func2Def := by rfl
 theorem writeFmt_index : «module».funcs[33]? = some func33Def := by rfl
 theorem readLine_index : «module».funcs[37]? = some func37Def := by rfl
 theorem displayArgument_index : «module».funcs[43]? = some func43Def := by rfl
+theorem utf8Capacity_index : «module».funcs[45]? = some func45Def := by rfl
 theorem argumentsNew_index : «module».funcs[49]? = some func49Def := by rfl
 theorem argumentsFromStr_index : «module».funcs[50]? = some func50Def := by rfl
 theorem dropString_index : «module».funcs[62]? = some func62Def := by rfl
@@ -99,11 +100,13 @@ theorem dropIntoIterU64_index : «module».funcs[74]? = some func74Def := by rfl
 theorem dropBufReader_index : «module».funcs[78]? = some func78Def := by rfl
 theorem dropBufWriter_index : «module».funcs[79]? = some func79Def := by rfl
 theorem stringSplit_index : «module».funcs[82]? = some func82Def := by rfl
+theorem splitConstructor_index : «module».funcs[83]? = some func83Def := by rfl
 theorem stringParse_index : «module».funcs[81]? = some func81Def := by rfl
 theorem u64FromAsciiRadix_index : «module».funcs[51]? = some func51Def := by rfl
 theorem u64FromStr_index : «module».funcs[53]? = some func53Def := by rfl
 theorem splitInternalNext_index : «module».funcs[84]? = some func84Def := by rfl
 theorem charSearcherNextMatch_index : «module».funcs[86]? = some func86Def := by rfl
+theorem utf8Encode_index : «module».funcs[88]? = some func88Def := by rfl
 theorem iteratorMap_index : «module».funcs[90]? = some func90Def := by rfl
 theorem iteratorCollect_index : «module».funcs[91]? = some func91Def := by rfl
 theorem vecLen_index : «module».funcs[103]? = some func103Def := by rfl
@@ -113,6 +116,16 @@ theorem vecLen_index : «module».funcs[103]? = some func103Def := by rfl
 theorem vecFromElem_index : «module».funcs[105]? = some func105Def := by rfl
 theorem vecFromElemImpl_index : «module».funcs[106]? = some func106Def := by rfl
 theorem u64IsZero_index : «module».funcs[98]? = some func98Def := by rfl
+theorem allocatorResult_index : «module».funcs[143]? = some func143Def := by rfl
+theorem zeroedAllocator_index : «module».funcs[144]? = some func144Def := by rfl
+theorem zeroedAllocatorWrapper_index :
+    «module».funcs[145]? = some func145Def := by rfl
+/- The allocator result path reaches `func131` at absolute index 133;
+`func131` is the generated forwarding shim for dlmalloc at absolute 172. -/
+theorem allocatorForward_index : «module».funcs[131]? = some func131Def := by rfl
+theorem dlmalloc_index : «module».funcs[170]? = some func170Def := by rfl
+theorem alignedAllocator_index : «module».funcs[161]? = some func161Def := by rfl
+theorem smallAllocator_index : «module».funcs[162]? = some func162Def := by rfl
 theorem stringNew_index : «module».funcs[110]? = some func110Def := by rfl
 theorem stringDeref_index : «module».funcs[119]? = some func119Def := by rfl
 theorem vecDerefMut_index : «module».funcs[122]? = some func122Def := by rfl

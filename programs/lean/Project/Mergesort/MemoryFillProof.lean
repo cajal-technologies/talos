@@ -16,6 +16,89 @@ open Iris Iris.ProgramLogic Language.Notation Std
 open Wasm.SepLogic Wasm.SmallStep
 open Project.Mergesort.MemoryCopyProof
 
+/- Total owned-byte counterpart of `i32.load8_u`, used to inspect an
+allocator header before deciding whether the returned payload needs filling. -/
+theorem twp_load8U_owned
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    {params localValues values : List Value}
+    {address offset : UInt32} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame} (byte : UInt8)
+    (hnowrap : (address + offset).toNat =
+      address.toNat + offset.toNat) :
+    let current : ThreadState α :=
+      ⟨⟨params, localValues, .i32 address :: values⟩,
+        .load8U offset :: code, arity, remainder, controls, calls⟩
+    let next : ThreadState α :=
+      ⟨⟨params, localValues, .i32 byte.toUInt32 :: values⟩,
+        code, arity, remainder, controls, calls⟩
+    pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+        (address + offset) (DFrac.own 1) (some byte) -∗
+    (pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+        (address + offset) (DFrac.own 1) (some byte) -∗
+      WP (Expr.running next : Expr α) @ s; E [{ Φ }]) -∗
+      WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
+  dsimp only
+  iintro Hpt Htwp
+  iapply twp_lift_step_no_fork rfl
+  iintro %store %ns %obs %nt Hstate
+  ihave %Hfacts : ⌜store.wasm.mem.read8 (address + offset) = byte ∧
+      (address + offset).toNat < store.wasm.mem.pages * 65536⌝ $$
+      [Hstate Hpt]
+  · imod stateInterp_pointsTo_facts store ns obs nt
+      (address + offset) byte $$ [$Hstate $Hpt] with %Hfacts
+    ipureintro
+    exact Hfacts
+  have hbound : address.toNat + offset.toNat + 1 ≤
+      store.wasm.mem.pages * 65536 := by
+    rw [← hnowrap]
+    omega
+  iapply fupd_mask_intro Std.LawfulSet.empty_subset
+  iintro Hclose
+  isplitr
+  · ipureintro
+    cases s <;> simp only [Stuckness.MaybeReducibleNoObs]
+    exact ⟨.running
+        ⟨⟨params, localValues, .i32 byte.toUInt32 :: values⟩,
+          code, arity, remainder, controls, calls⟩,
+      store, [], ⟨rfl, .instruction (.load8U offset), rfl,
+        by simpa [Hfacts.1] using
+          (Step.load8U (α := α) (address := address) hbound)⟩⟩
+  iintro %κ %e₂ %store₂ %forks %Hstep
+  rcases Hstep with ⟨hforks, _kind, _hobs, wasmStep⟩
+  change forks = [] at hforks
+  subst forks
+  subst κ
+  have expectedStep : Step
+      ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
+        .load8U offset :: code, arity, remainder, controls, calls⟩, store⟩
+      (.instruction (.load8U offset))
+      ⟨.running ⟨⟨params, localValues, .i32 byte.toUInt32 :: values⟩,
+        code, arity, remainder, controls, calls⟩, store⟩ := by
+    simpa [Hfacts.1] using
+      (Step.load8U (α := α) (address := address) hbound)
+  obtain ⟨rfl, hconfig⟩ := step_deterministic expectedStep wasmStep
+  have parts := Config.mk.inj hconfig
+  have hexpr := parts.1
+  have hstore := parts.2
+  simp only at hexpr hstore
+  subst e₂
+  subst store₂
+  imod Hclose
+  imodintro
+  isplit
+  · ipureintro
+    rfl
+  isplit
+  · ipureintro
+    rfl
+  isplitl [Hstate]
+  · iexact Hstate
+  · iapply Htwp
+    iexact Hpt
+
 theorem Mem.writeBytes_replicate_eq_fill
     (mem : Mem) (offset length : Nat) (value : UInt8) :
     mem.writeBytes offset (List.replicate length value) =
