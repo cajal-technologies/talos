@@ -8,6 +8,7 @@ import Project.Mergesort.VectorProof
 import Project.Mergesort.IteratorProof
 import Project.Mergesort.OutputIteratorProof
 import Project.Mergesort.FormatProof
+import Project.Mergesort.ArgumentsProof
 import Project.Mergesort.StringProof
 import Project.Mergesort.MergeFunctionProof
 import Project.Mergesort.SortFunctionProof

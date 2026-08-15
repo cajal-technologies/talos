@@ -37,6 +37,23 @@ theorem twp_and
       @ s; E [{ Φ }] :=
   twp_pureStep _ _ _ (fun _ => Step.and)
 
+theorem twp_or
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    {params localValues values : List Value}
+    {lhs rhs : UInt32} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame} :
+    WP (.running
+      ⟨⟨params, localValues, .i32 (lhs ||| rhs) :: values⟩,
+        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }] ⊢
+    WP (.running
+      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
+        .or :: code, arity, remainder, controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] :=
+  twp_pureStep _ _ _ (fun _ => Step.or)
+
 theorem twp_gtU
     [WasmSmallStepGS hlc]
     {s : Stuckness} {E : CoPset}
