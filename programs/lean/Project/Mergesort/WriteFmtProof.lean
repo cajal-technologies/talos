@@ -28,9 +28,82 @@ def writeFmtParams
 def writeFmtLocals (frame : UInt32) : List Value :=
   [.i32 frame, .i32 0, .i32 0, .i32 0]
 
+def formatPrepareOuterBody : Program :=
+  match func34.drop 7 with
+  | .block _ _ body :: _ => body
+  | _ => []
+
+def formatPrepareAfterOuter : Program := func34.drop 8
+
+def formatPrepareLocals (frame second : UInt32) : List Value :=
+  [.i32 frame, .i32 second, .i32 0, .i32 0, .i32 0,
+   .i32 0, .i32 0, .i32 0, .i32 0]
+
+def formatPrepareOuterFrame : ControlFrame :=
+  { kind := .block
+    paramArity := 0
+    resultArity := 0
+    body := formatPrepareOuterBody
+    continuation := formatPrepareAfterOuter
+    belowStack := [] }
+
 theorem writeFmtAtPrepare_eq :
     writeFmtAtPrepare = .call 36 :: writeFmtAfterPrepare := by
   rfl
+
+theorem formatPrepare_at_outer_eq :
+    func34.drop 7 =
+      .block 0 0 formatPrepareOuterBody :: formatPrepareAfterOuter := by
+  rfl
+
+/-! Exact prefix of local `func34` (absolute 36).  It computes the 16-byte
+scratch address, reads the second input word, and enters the generated outer
+control block without interpreting either representation branch yet. -/
+theorem formatPrepare_prefix_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (resultPtr inputPtr stackTop second : UInt32)
+    (hinputRoom : inputPtr.toNat + 8 ≤ UInt32.size)
+    {controls : List ControlFrame} {calls : List CallFrame} :
+    globalPointsTo 0 (.i32 stackTop) ∗
+      pointsTo_u32 (inputPtr + 4) second ∗
+      (globalPointsTo 0 (.i32 stackTop) -∗
+        pointsTo_u32 (inputPtr + 4) second -∗
+        WP (.running
+          ⟨⟨[.i32 resultPtr, .i32 inputPtr],
+              formatPrepareLocals (stackTop - 16) second, []⟩,
+            formatPrepareOuterBody, 0, [],
+            formatPrepareOuterFrame :: controls, calls⟩ : Expr α)
+          @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨⟨[.i32 resultPtr, .i32 inputPtr],
+          List.replicate 9 (.i32 0), []⟩,
+        func34, 0, [], controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] := by
+  obtain ⟨h40, h41, h42, h43⟩ :=
+    descriptorSlot32Facts inputPtr 4 8 hinputRoom (by decide)
+  iintro ⟨Hglobal, Hsecond, Hdone⟩
+  simp only [func34]
+  iapply twp_globalGet0
+  isplitl [Hglobal]
+  · iexact Hglobal
+  iintro Hglobal
+  iapply twp_const
+  iapply twp_sub
+  iapply twp_localSet rfl
+  simp only [List.replicate_succ, List.replicate_zero, List.set,
+    List.length, Nat.sub_self]
+  iapply twp_localGet rfl
+  iapply twp_load32 second h40 h41 h42 h43 $$ Hsecond
+  iintro Hsecond
+  iapply twp_localSet rfl
+  simp only [List.length, List.set]
+  iapply twp_block
+  simp only [List.drop_zero]
+  isimp only [formatPrepareLocals, formatPrepareOuterBody,
+    formatPrepareOuterFrame, formatPrepareAfterOuter, func34, List.drop] at Hdone
+  iapply Hdone $$ Hglobal Hsecond
 
 /-! Exact generated prologue of local `func33`, through both saved argument
 stores and both operands for absolute call 36. -/
