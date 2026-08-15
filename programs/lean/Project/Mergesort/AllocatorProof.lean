@@ -2410,4 +2410,196 @@ theorem dlmalloc_singleton_ownedResult_twp
   iapply Hdone $$ Hruntime Hglobal Hmap Hhead HheaderTail Hheader Harray
     HnextHeader
 
+def dlmallocSingletonZeroedAt [WasmHeapGS] [WasmGlobalGS]
+    (size stackTop smallMap chunk previous data nextHeader : UInt32)
+    (tail : List UInt64) : IProp WasmHeapGF :=
+  iprop% globalPointsTo 0 (.i32 ((stackTop - 16) + 16)) ∗
+    pointsTo_u32 1056608 (smallAllocatorClearedSmallMap size smallMap) ∗
+    pointsTo_u32 (smallAllocatorBinHeadAddress size smallMap) chunk ∗
+    headerWordTailAt (data + 4294967292)
+      (smallAllocatorAllocatedHeader size smallMap) ∗
+    pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+      (data + 4294967292) (DFrac.own 1)
+      (some (u32Byte (smallAllocatorAllocatedHeader size smallMap) 0)) ∗
+    array64At data
+      (List.replicate
+        (packU32 (smallAllocatorBinSentinel size smallMap) previous :: tail).length
+        0) ∗
+    pointsTo_u32 (smallAllocatorNextChunk size smallMap chunk + 4)
+      (nextHeader ||| 1)
+
+/- Local `func131` is now a complete owned allocator forwarder on the verified
+singleton path: func170 returns by fallthrough and leaves func131 at its
+generated explicit `ret` with the zeroed data pointer. -/
+theorem allocatorForward_singleton_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (size align stackTop smallMap chunk previous data oldHeader
+      nextHeader : UInt32)
+    (headerByte : UInt8) (tail : List UInt64)
+    (halign : align < 9)
+    (hsmall : size < 245)
+    (havailable : smallAllocatorShiftedMap size smallMap &&& 3 ≠ 0)
+    (hnonzero : headerByte.toUInt32 &&& 3 ≠ 0)
+    (hheaderByte : headerByte = u32Byte oldHeader 0)
+    (hdata : data = chunk + 8) (hdataNonzero : data ≠ 0)
+    (hsize : size ≠ 0)
+    (hlength : size.toNat =
+      8 * (packU32 (smallAllocatorBinSentinel size smallMap) previous :: tail).length)
+    (hpayloadRoom : data.toNat +
+      8 * (packU32 (smallAllocatorBinSentinel size smallMap) previous :: tail).length ≤
+      UInt32.size)
+    (hheadRoom : (smallAllocatorBinHeadAddress size smallMap).toNat + 4 ≤
+      UInt32.size)
+    (hchunkLinksRoom : chunk.toNat + 12 ≤ UInt32.size)
+    (hchunkRoom : chunk.toNat + 8 ≤ UInt32.size)
+    (hnextRoom : (smallAllocatorNextChunk size smallMap chunk).toNat + 8 ≤
+      UInt32.size)
+    {calls : List CallFrame} :
+    runtimeModuleOwn «module» ∗
+      globalPointsTo 0 (.i32 stackTop) ∗
+      pointsTo_u32 1056608 smallMap ∗
+      pointsTo_u32 (smallAllocatorBinHeadAddress size smallMap) chunk ∗
+      headerWordTailAt (data + 4294967292) oldHeader ∗
+      dlmallocOwnedResult data headerByte
+        (packU32 (smallAllocatorBinSentinel size smallMap) previous :: tail) ∗
+      pointsTo_u32 (smallAllocatorNextChunk size smallMap chunk + 4)
+        nextHeader ∗
+      (runtimeModuleOwn «module» -∗
+        dlmallocSingletonZeroedAt size stackTop smallMap chunk previous data
+          nextHeader tail -∗
+        WP (.running
+          ⟨⟨[.i32 size, .i32 align], [], [.i32 data]⟩,
+            [.ret], 1, [], [], calls⟩ : Expr α) @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨⟨[.i32 size, .i32 align], [], []⟩,
+        func131, 1, [], [], calls⟩ : Expr α) @ s; E [{ Φ }] := by
+  iintro ⟨Hruntime, Hglobal, Hmap, Hhead, HheaderTail, Howned,
+    HnextHeader, Hdone⟩
+  have Hforward := allocatorForward_body_twp (α := α)
+    size align (s := s) (E := E) (Φ := Φ) (calls := calls)
+  iapply Hforward
+  isplitl [Hruntime]
+  · iexact Hruntime
+  iintro Hruntime
+  have Hdlmalloc := dlmalloc_singleton_ownedResult_twp (α := α)
+    size align stackTop smallMap chunk previous data oldHeader nextHeader
+    headerByte tail halign hsmall havailable hnonzero hheaderByte hdata
+    hdataNonzero hsize hlength hpayloadRoom hheadRoom hchunkLinksRoom
+    hchunkRoom hnextRoom
+    (s := s) (E := E) (Φ := Φ) (controls := [])
+    (calls := allocatorForwardFrame size align :: calls)
+  simp only [allocatorForwardFrame] at Hdlmalloc
+  iapply Hdlmalloc
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hglobal]
+  · iexact Hglobal
+  isplitl [Hmap]
+  · iexact Hmap
+  isplitl [Hhead]
+  · iexact Hhead
+  isplitl [HheaderTail]
+  · iexact HheaderTail
+  isplitl [Howned]
+  · iexact Howned
+  isplitl [HnextHeader]
+  · iexact HnextHeader
+  iintro Hruntime Hglobal Hmap Hhead HheaderTail Hheader Harray HnextHeader
+  iapply twp_returnFromCallFallthrough
+  simp only [List.take, List.singleton_append]
+  ihave Hzeroed : dlmallocSingletonZeroedAt size stackTop smallMap chunk
+      previous data nextHeader tail $$
+      [Hglobal Hmap Hhead HheaderTail Hheader Harray HnextHeader]
+  · isimp only [dlmallocSingletonZeroedAt]
+    iframe
+  iapply Hdone $$ Hruntime Hzeroed
+
+/- Absolute-index-133 call rule for the complete singleton allocator path. -/
+theorem allocatorForward_singleton_call_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (size align stackTop smallMap chunk previous data oldHeader
+      nextHeader : UInt32)
+    (headerByte : UInt8) (tail : List UInt64)
+    (halign : align < 9) (hsmall : size < 245)
+    (havailable : smallAllocatorShiftedMap size smallMap &&& 3 ≠ 0)
+    (hnonzero : headerByte.toUInt32 &&& 3 ≠ 0)
+    (hheaderByte : headerByte = u32Byte oldHeader 0)
+    (hdata : data = chunk + 8) (hdataNonzero : data ≠ 0)
+    (hsize : size ≠ 0)
+    (hlength : size.toNat =
+      8 * (packU32 (smallAllocatorBinSentinel size smallMap) previous :: tail).length)
+    (hpayloadRoom : data.toNat +
+      8 * (packU32 (smallAllocatorBinSentinel size smallMap) previous :: tail).length ≤
+      UInt32.size)
+    (hheadRoom : (smallAllocatorBinHeadAddress size smallMap).toNat + 4 ≤
+      UInt32.size)
+    (hchunkLinksRoom : chunk.toNat + 12 ≤ UInt32.size)
+    (hchunkRoom : chunk.toNat + 8 ≤ UInt32.size)
+    (hnextRoom : (smallAllocatorNextChunk size smallMap chunk).toNat + 8 ≤
+      UInt32.size)
+    {callerLocals : Locals} {stack : List Value}
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame} :
+    runtimeModuleOwn «module» ∗
+      globalPointsTo 0 (.i32 stackTop) ∗
+      pointsTo_u32 1056608 smallMap ∗
+      pointsTo_u32 (smallAllocatorBinHeadAddress size smallMap) chunk ∗
+      headerWordTailAt (data + 4294967292) oldHeader ∗
+      dlmallocOwnedResult data headerByte
+        (packU32 (smallAllocatorBinSentinel size smallMap) previous :: tail) ∗
+      pointsTo_u32 (smallAllocatorNextChunk size smallMap chunk + 4)
+        nextHeader ∗
+      (runtimeModuleOwn «module» -∗
+        dlmallocSingletonZeroedAt size stackTop smallMap chunk previous data
+          nextHeader tail -∗
+        WP (.running
+          ⟨{ callerLocals with values := .i32 data :: stack },
+            code, arity, remainder, controls, calls⟩ : Expr α)
+          @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨{ callerLocals with values := [.i32 align, .i32 size] ++ stack },
+        .call 133 :: code, arity, remainder, controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] := by
+  iintro ⟨Hruntime, Hglobal, Hmap, Hhead, HheaderTail, Howned,
+    HnextHeader, Hdone⟩
+  iapply Wasm.SmallStep.twp_call (α := α) «module» 133 func131Def
+      (by decide) (by rfl) $$ Hruntime
+  iintro Hruntime
+  simp [func131Def, Function.toLocals, Function.numParams]
+  have Hbody := allocatorForward_singleton_twp (α := α)
+    size align stackTop smallMap chunk previous data oldHeader nextHeader
+    headerByte tail halign hsmall havailable hnonzero hheaderByte hdata
+    hdataNonzero hsize hlength hpayloadRoom hheadRoom hchunkLinksRoom
+    hchunkRoom hnextRoom
+    (s := s) (E := E) (Φ := Φ)
+    (calls :=
+      { locals := { callerLocals with values := stack }
+        continuation := code
+        resultArity := arity
+        callerRemainder := remainder
+        control := controls } :: calls)
+  iapply Hbody
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hglobal]
+  · iexact Hglobal
+  isplitl [Hmap]
+  · iexact Hmap
+  isplitl [Hhead]
+  · iexact Hhead
+  isplitl [HheaderTail]
+  · iexact HheaderTail
+  isplitl [Howned]
+  · iexact Howned
+  isplitl [HnextHeader]
+  · iexact HnextHeader
+  iintro Hruntime Hzeroed
+  iapply Wasm.SmallStep.twp_returnFromCallExplicit (α := α)
+  simp only [List.take, List.singleton_append]
+  iapply Hdone $$ Hruntime Hzeroed
+
 end Project.Mergesort.AllocatorProof
