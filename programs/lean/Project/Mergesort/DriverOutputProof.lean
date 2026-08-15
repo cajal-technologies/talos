@@ -1,5 +1,6 @@
 import Project.Mergesort.DriverSortProof
 import Project.Mergesort.OutputIteratorProof
+import Project.Mergesort.MemoryFillProof
 
 /-!
 # Generated driver output-iterator setup
@@ -28,11 +29,17 @@ open Project.Mergesort.SortFunctionProof
 open Project.Mergesort.OutputIteratorProof
 open Project.Mergesort.SplitAtProof
 open Project.Mergesort.FormatProof
+open Project.Mergesort.MemoryFillProof
 
 def driverAfterFirstFlag : Program := func127.drop 141
 def driverAtIntoIter : Program := func127.drop 155
 def driverAfterIntoIter : Program := func127.drop 156
 def driverAtOutputLoop : Program := func127.drop 164
+
+theorem driverAfterSort_firstFlag_eq :
+    driverAfterSort =
+      [.localGet 0, .const 1, .store8 255] ++ driverAfterFirstFlag := by
+  rfl
 
 theorem driverAfterFirstFlag_eq :
     driverAfterFirstFlag =
@@ -52,6 +59,42 @@ theorem driverAfterIntoIter_eq :
        .localGet 0, .localGet 0, .load64 256, .store64 288] ++
         driverAtOutputLoop := by
   rfl
+
+/-! Exact initialization of the generated "first output element" flag. -/
+theorem driver_first_flag_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (frame length inputLength data scratchLength : UInt32)
+    (oldFlag : UInt8)
+    (hflag : (frame + 255).toNat = frame.toNat + 255)
+    {calls : List CallFrame} :
+    pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+        (frame + 255) (DFrac.own 1) (some oldFlag) ∗
+      (pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+          (frame + 255) (DFrac.own 1) (some (1 : UInt8)) -∗
+        WP (.running
+          ⟨⟨[], driverSortCallLocals frame length inputLength data
+              scratchLength, []⟩,
+            driverAfterFirstFlag, 0, [], [], calls⟩ : Expr α)
+          @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨⟨[], driverSortCallLocals frame length inputLength data scratchLength,
+          []⟩,
+        driverAfterSort, 0, [], [], calls⟩ : Expr α)
+      @ s; E [{ Φ }] := by
+  iintro ⟨Hflag, Hdone⟩
+  rw [driverAfterSort_firstFlag_eq]
+  simp only [List.cons_append, List.nil_append]
+  iapply twp_localGet rfl
+  iapply twp_const
+  iapply twp_store8_owned oldFlag hflag $$ Hflag
+  iintro Hflag
+  ihave HflagOne : pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+      (frame + 255) (DFrac.own 1) (some (1 : UInt8)) $$ [Hflag]
+  · rw [show (1 : UInt32).toUInt8 = (1 : UInt8) by decide]
+    iexact Hflag
+  iapply Hdone $$ HflagOne
 
 /-! Exact generated descriptor-copy and iterator-construction segment. -/
 set_option maxHeartbeats 6000000 in
@@ -407,5 +450,101 @@ theorem driver_into_iter_setup_twp
     iframe
   iapply Hdone $$ Hruntime Hglobal HsourceDesc HcopiedDesc HresultDesc
     HiterDesc Hflag HworkspaceOut
+
+/-! Composed post-sort path from the exact instruction after `.call 128`
+through first-element flag initialization and iterator construction. -/
+set_option maxHeartbeats 7000000 in
+theorem driver_after_sort_to_output_loop_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (frame capacity data length : UInt32)
+    (oldVecCapacity oldVecData oldVecLength : UInt32)
+    (oldResult0 oldResult4 oldResult8 oldResult12 : UInt32)
+    (oldIter0 oldIter4 oldIter8 oldIter12 : UInt32)
+    (oldFlag : UInt8)
+    (depth : Nat)
+    (hframeRoom : frame.toNat + 304 ≤ UInt32.size)
+    (hcalleeRoom : (frame - 48).toNat + 48 ≤ UInt32.size)
+    {calls : List CallFrame} :
+    runtimeModuleOwn «module» ∗
+      globalPointsTo 0 (.i32 frame) ∗
+      vecDescriptorAt (148 + frame) capacity data length ∗
+      vecDescriptorAt (272 + frame) oldVecCapacity oldVecData oldVecLength ∗
+      intoIterDescriptorAt (256 + frame) oldResult0 oldResult4
+        oldResult8 oldResult12 ∗
+      intoIterDescriptorAt (288 + frame) oldIter0 oldIter4
+        oldIter8 oldIter12 ∗
+      pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+        (255 + frame) (DFrac.own 1) (some oldFlag) ∗
+      SortWorkspace frame (depth + 1) ∗
+      (runtimeModuleOwn «module» -∗
+        globalPointsTo 0 (.i32 frame) -∗
+        vecDescriptorAt (148 + frame) capacity data length -∗
+        vecDescriptorAt (272 + frame) capacity data length -∗
+        intoIterDescriptorAt (256 + frame) data data capacity
+          (data + (length <<< 3)) -∗
+        intoIterDescriptorAt (288 + frame) data data capacity
+          (data + (length <<< 3)) -∗
+        pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+          (255 + frame) (DFrac.own 1) (some (1 : UInt8)) -∗
+        SortWorkspace frame (depth + 1) -∗
+        WP (.running
+          ⟨⟨[], driverSortCallLocals frame length length data length, []⟩,
+            driverAtOutputLoop, 0, [], [], calls⟩ : Expr α)
+          @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨⟨[], driverSortCallLocals frame length length data length, []⟩,
+        driverAfterSort, 0, [], [], calls⟩ : Expr α)
+      @ s; E [{ Φ }] := by
+  have hflagNat : (frame + 255).toNat = frame.toNat + 255 := by
+    apply UInt32.add_ofNat_toNat_noWrap
+    · decide
+    · simp only [UInt32.size] at hframeRoom ⊢
+      omega
+  have hflagAddr : frame + 255 = 255 + frame := UInt32.add_comm frame 255
+  iintro ⟨Hruntime, Hglobal, Hsource, Hcopied, Hresult, Hiter,
+    Hflag, Hworkspace, Hdone⟩
+  ihave HflagAt : pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+      (frame + 255) (DFrac.own 1) (some oldFlag) $$ [Hflag]
+  · rw [hflagAddr]
+    iexact Hflag
+  have Hfirst := driver_first_flag_twp (α := α)
+    frame length length data length oldFlag hflagNat
+    (s := s) (E := E) (Φ := Φ) (calls := calls)
+  iapply Hfirst
+  isplitl [HflagAt]
+  · iexact HflagAt
+  iintro HflagAt
+  ihave Hflag : pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+      (255 + frame) (DFrac.own 1) (some (1 : UInt8)) $$ [HflagAt]
+  · rw [← hflagAddr]
+    iexact HflagAt
+  have Hsetup := driver_into_iter_setup_twp (α := α)
+    frame capacity data length
+    oldVecCapacity oldVecData oldVecLength
+    oldResult0 oldResult4 oldResult8 oldResult12
+    oldIter0 oldIter4 oldIter8 oldIter12
+    1 depth hframeRoom hcalleeRoom
+    (s := s) (E := E) (Φ := Φ) (calls := calls)
+  iapply Hsetup
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hglobal]
+  · iexact Hglobal
+  isplitl [Hsource]
+  · iexact Hsource
+  isplitl [Hcopied]
+  · iexact Hcopied
+  isplitl [Hresult]
+  · iexact Hresult
+  isplitl [Hiter]
+  · iexact Hiter
+  isplitl [Hflag]
+  · iexact Hflag
+  isplitl [Hworkspace]
+  · iexact Hworkspace
+  iintro Hruntime Hglobal Hsource Hcopied Hresult Hiter Hflag Hworkspace
+  iapply Hdone $$ Hruntime Hglobal Hsource Hcopied Hresult Hiter Hflag Hworkspace
 
 end Project.Mergesort.DriverOutputProof

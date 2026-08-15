@@ -99,6 +99,100 @@ theorem twp_load8U_owned
   · iapply Htwp
     iexact Hpt
 
+/-- Total owned-byte counterpart of `i32.store8`.  The physical byte and its
+exclusive heap fragment are updated together, making the rule composable in
+generated-code total-correctness proofs. -/
+theorem twp_store8_owned
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    {params localValues values : List Value}
+    {address offset value : UInt32} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame} (oldByte : UInt8)
+    (hnowrap : (address + offset).toNat =
+      address.toNat + offset.toNat) :
+    let current : ThreadState α :=
+      ⟨⟨params, localValues, .i32 value :: .i32 address :: values⟩,
+        .store8 offset :: code, arity, remainder, controls, calls⟩
+    let next : ThreadState α :=
+      ⟨⟨params, localValues, values⟩,
+        code, arity, remainder, controls, calls⟩
+    pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+        (address + offset) (DFrac.own 1) (some oldByte) -∗
+    (pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+        (address + offset) (DFrac.own 1) (some value.toUInt8) -∗
+      WP (Expr.running next : Expr α) @ s; E [{ Φ }]) -∗
+      WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
+  dsimp only
+  iintro Hpt Htwp
+  iapply twp_lift_step_no_fork rfl
+  iintro %store %ns %obs %nt Hstate
+  ihave %HinBounds :
+      ⌜(address + offset).toNat < store.wasm.mem.pages * 65536⌝ $$
+      [Hstate Hpt]
+  · imod stateInterp_pointsTo_inBounds store ns obs nt
+      (address + offset) oldByte $$ [$Hstate $Hpt] with %HinBounds
+    ipureintro
+    exact HinBounds
+  have hbound : address.toNat + offset.toNat + 1 ≤
+      store.wasm.mem.pages * 65536 := by
+    rw [← hnowrap]
+    omega
+  let updatedStore : MachineStore α :=
+    { store with wasm :=
+        { store.wasm with
+          mem := store.wasm.mem.write8 (address + offset) value.toUInt8 } }
+  iapply fupd_mask_intro Std.LawfulSet.empty_subset
+  iintro Hclose
+  isplitr
+  · ipureintro
+    cases s <;> simp only [Stuckness.MaybeReducibleNoObs]
+    exact ⟨.running
+        ⟨⟨params, localValues, values⟩,
+          code, arity, remainder, controls, calls⟩,
+      updatedStore, [], ⟨rfl, .instruction (.store8 offset), rfl, by
+        dsimp [updatedStore]
+        exact Step.store8 hbound⟩⟩
+  iintro %κ %e₂ %store₂ %forks %Hstep
+  rcases Hstep with ⟨hforks, _kind, _hobs, wasmStep⟩
+  change forks = [] at hforks
+  subst forks
+  subst κ
+  have expectedStep : Step
+      ⟨.running
+        ⟨⟨params, localValues, .i32 value :: .i32 address :: values⟩,
+          .store8 offset :: code, arity, remainder, controls, calls⟩, store⟩
+      (.instruction (.store8 offset))
+      ⟨.running ⟨⟨params, localValues, values⟩,
+          code, arity, remainder, controls, calls⟩,
+        updatedStore⟩ := by
+    dsimp [updatedStore]
+    exact Step.store8 hbound
+  obtain ⟨rfl, hconfig⟩ := step_deterministic expectedStep wasmStep
+  have parts := Config.mk.inj hconfig
+  have hexpr := parts.1
+  have hstore := parts.2
+  simp only at hexpr hstore
+  subst e₂
+  subst store₂
+  imod stateInterp_store8 store ns obs nt
+      (address + offset) oldByte value.toUInt8
+      (by simpa [hnowrap] using HinBounds) $$
+      [$Hstate $Hpt] with ⟨Hstate, Hpt⟩
+  imod Hclose
+  imodintro
+  isplit
+  · ipureintro
+    rfl
+  isplit
+  · ipureintro
+    rfl
+  isplitl [Hstate]
+  · iexact Hstate
+  · iapply Htwp
+    iexact Hpt
+
 theorem Mem.writeBytes_replicate_eq_fill
     (mem : Mem) (offset length : Nat) (value : UInt8) :
     mem.writeBytes offset (List.replicate length value) =
