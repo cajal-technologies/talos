@@ -194,6 +194,10 @@ def sortAtFirstRecursiveCall : Program := sortAfterFirstRange.drop 18
 /-- Continuation supplied to the first recursive call. -/
 def sortAfterFirstRecursiveCall : Program := sortAtFirstRecursiveCall.drop 1
 
+@[simp] theorem sortAtFirstRecursiveCall_cons :
+    sortAtFirstRecursiveCall = .call 128 :: sortAfterFirstRecursiveCall := by
+  rfl
+
 /-- Continuation after constructing and loading the data suffix descriptor. -/
 def sortAfterDataSuffix : Program := sortAfterFirstRecursiveCall.drop 16
 
@@ -217,9 +221,17 @@ def sortAtSecondRecursiveCall : Program := sortAfterDataSuffix.drop 18
 
 def sortAfterSecondRecursiveCall : Program := sortAtSecondRecursiveCall.drop 1
 
+@[simp] theorem sortAtSecondRecursiveCall_cons :
+    sortAtSecondRecursiveCall = .call 128 :: sortAfterSecondRecursiveCall := by
+  rfl
+
 def sortAtMergeCall : Program := sortAfterSecondRecursiveCall.drop 18
 
 def sortAfterMerge : Program := sortAtMergeCall.drop 1
+
+@[simp] theorem sortAtMergeCall_cons :
+    sortAtMergeCall = .call 127 :: sortAfterMerge := by
+  rfl
 
 private def sortRangeFromParams
     (resultPtr start dataPtr length sourceLoc : UInt32) : List Value :=
@@ -503,6 +515,11 @@ theorem sort_rangeFrom_call_twp
   rw [show (1 % 32 : UInt32).toNat % 32 = 1 by decide]
   simp [Nat.shiftRight_eq_div_pow]
 
+@[simp] theorem midpoint_one_toNat (length : UInt32) :
+    (length >>> (1 : UInt32)).toNat = length.toNat >>> 1 := by
+  rw [UInt32.toNat_shiftRight]
+  simp [Nat.shiftRight_eq_div_pow]
+
 theorem midpoint_input_length {input : List UInt64} {length : UInt32}
     (hlength : input.length = length.toNat) :
     (length >>> (1 % 32)).toNat = input.length / 2 := by
@@ -559,6 +576,25 @@ theorem suffix_length_lt {length : UInt32} (hlarge : 1 < length) :
   rw [UInt32.lt_iff_toNat_lt] at hlarge
   rw [show (1 : UInt32).toNat = 1 by decide] at hlarge
   omega
+
+theorem midpoint_suffix_ptr_eq (base length : UInt32) :
+    base + (8 : UInt32) * UInt32.ofNat (length >>> (1 % 32)).toNat =
+      base + ((length >>> (1 % 32)) <<< 3) := by
+  rw [UInt32.ofNat_toNat]
+  bv_decide
+
+theorem midpoint_suffix_length_toNat (length : UInt32) :
+    (length - (length >>> (1 % 32))).toNat =
+      length.toNat - (length >>> (1 % 32)).toNat := by
+  apply UInt32.toNat_sub_of_le
+  exact midpoint_le
+
+theorem midpoint_suffix_length_value (length : UInt32) :
+    UInt32.ofNat
+        (length.toNat - (length >>> (1 % 32)).toNat) =
+      length - (length >>> (1 % 32)) := by
+  rw [← midpoint_suffix_length_toNat]
+  exact UInt32.ofNat_toNat
 
 theorem sortRel_base {input : List UInt64} (hlength : input.length ≤ 1) :
     SortRel input input :=
@@ -1685,6 +1721,355 @@ theorem sort_copy_back_epilogue_twp
   simp only [sortParams, sortSecondCallLocals]
   iapply Hcont $$ Hruntime Hglobal Hscratch Hdata
 
+/-- Semantic and spatial suffix of the recursive branch.  The two recursively
+sorted halves already occupy the data slice.  This rule reuses the lower sort
+frame for `split_at` and merge temporaries, performs merge and copy-back, and
+repackages the complete workspace. -/
+theorem sort_after_second_recursive_workspace_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (dataPtr length scratchPtr scratchLength frame stackTop mid : UInt32)
+    (input left right scratch : List UInt64) (depth : Nat)
+    (hleftSort : SortRel (input.take mid.toNat) left)
+    (hrightSort : SortRel (input.drop mid.toNat) right)
+    (hscratchLength : scratch.length = left.length + right.length)
+    (hscratchValue : scratchLength = length)
+    (hleftValue : UInt32.ofNat left.length = mid)
+    (hrightValue : UInt32.ofNat right.length = length - mid)
+    (htotalValue : UInt32.ofNat (left.length + right.length) = length)
+    (hlengthNat : length.toNat = left.length + right.length)
+    (hrightPtr : dataPtr + (8 : UInt32) * UInt32.ofNat left.length =
+      dataPtr + (mid <<< 3))
+    (hmid : mid ≤ length)
+    (hleftFit : dataPtr.toNat + 8 * left.length ≤ UInt32.size)
+    (hrightFit : (dataPtr + (mid <<< 3)).toNat +
+      8 * right.length ≤ UInt32.size)
+    (hscratchFit : scratchPtr.toNat +
+      8 * (left.length + right.length) ≤ UInt32.size)
+    (hdataFit : dataPtr.toNat +
+      8 * (left.length + right.length) ≤ UInt32.size)
+    (hbytes : 8 * (left.length + right.length) < UInt32.size)
+    (hnonempty : left.length + right.length ≠ 0)
+    (hframeLow : 48 ≤ frame.toNat)
+    (hframeRoom : frame.toNat + 48 ≤ UInt32.size)
+    (hresultRoom : (frame + 32).toNat + 16 ≤ UInt32.size)
+    (hrestore : (48 : UInt32) + frame = stackTop)
+    {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame} :
+    runtimeModuleOwn «module» ∗
+      globalPointsTo 0 (.i32 frame) ∗
+      array64At dataPtr (left ++ right) ∗
+      array64At scratchPtr scratch ∗
+      SortFrameOwn frame ∗
+      SortWorkspace frame (depth + 1) ∗
+      (∀ (merged : List UInt64),
+        ⌜SortRel input merged⌝ -∗
+        runtimeModuleOwn «module» -∗
+        globalPointsTo 0 (.i32 stackTop) -∗
+        array64At dataPtr merged -∗
+        array64At scratchPtr merged -∗
+        SortFrameOwn frame -∗
+        SortWorkspace frame (depth + 1) -∗
+        WP (.running
+          ⟨⟨sortParams dataPtr length scratchPtr scratchLength,
+              sortSecondCallLocals frame mid dataPtr mid mid
+                (dataPtr + (mid <<< 3)) (length - mid)
+                (scratchLength - mid), []⟩,
+            [.ret], arity, remainder, controls, calls⟩ : Expr α)
+          @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨⟨sortParams dataPtr length scratchPtr scratchLength,
+          sortSecondCallLocals frame mid dataPtr mid mid
+            (dataPtr + (mid <<< 3)) (length - mid)
+            (scratchLength - mid), []⟩,
+        sortAfterSecondRecursiveCall, arity, remainder,
+        sortOuterFrame :: controls, calls⟩ : Expr α) @ s; E [{ Φ }] := by
+  obtain ⟨_hmergeFrameRoom, _hinnerRoom, hsplitFrameRoom⟩ :=
+    sort_helper_rooms frame hframeLow
+  have hmergeFrameRoom : (frame - 16).toNat + 16 ≤ UInt32.size :=
+    _hmergeFrameRoom
+  have hmergeRestore : (frame - 16) + 16 = frame :=
+    UInt32.sub_add_cancel frame 16
+  have hmergedLength (merged : List UInt64)
+      (hmerge : MergeRel left right merged) :
+      merged.length = left.length + right.length := by
+    have hp := (perm_of_mergeRel hmerge).length_eq
+    simpa using hp.symm
+  let childFrame := frame - 48
+  subst scratchLength
+  iintro ⟨Hruntime, Hglobal, Hdata, Hscratch, Hframe, Hworkspace, Hcont⟩
+  isimp only [SortFrameOwn] at Hframe
+  icases Hframe with
+    ⟨%c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7, %c8, %c9, %c10, %c11,
+      Hc0, Hc1, Hc2, Hc3, Hc4, Hc5, Hc6, Hc7, Hc8, Hc9, Hc10, Hc11⟩
+  icases (sortWorkspace_succ frame depth).mp $$ Hworkspace with
+    ⟨Hchild, Hrest⟩
+  isimp only [SortFrameOwn] at Hchild
+  icases Hchild with
+    ⟨%n0, %n1, %n2, %n3, %n4, %n5, %n6, %n7, %n8, %n9, %n10, %n11,
+      Hn0, Hn1, Hn2, Hn3, Hn4, Hn5, Hn6, Hn7, Hn8, Hn9, Hn10, Hn11⟩
+  iapply sort_split_to_merge_call_twp
+    dataPtr length scratchPtr length frame mid
+    n4 n5 n6 n7 n8 n9 n10 n11 c8 c9 c10 c11
+    hmid hsplitFrameRoom hframeRoom hresultRoom
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hglobal]
+  · iexact Hglobal
+  isplitl [Hn4]
+  · iapply sort_pointsTo_u32_at_eq
+      (show childFrame + 16 = (frame - 32) + 0 by
+        dsimp only [childFrame]; bv_decide)
+    iexact Hn4
+  isplitl [Hn5]
+  · iapply sort_pointsTo_u32_at_eq
+      (show childFrame + 20 = (frame - 32) + 4 by
+        dsimp only [childFrame]; bv_decide)
+    iexact Hn5
+  isplitl [Hn6]
+  · iapply sort_pointsTo_u32_at_eq
+      (show childFrame + 24 = (frame - 32) + 8 by
+        dsimp only [childFrame]; bv_decide)
+    iexact Hn6
+  isplitl [Hn7]
+  · iapply sort_pointsTo_u32_at_eq
+      (show childFrame + 28 = (frame - 32) + 12 by
+        dsimp only [childFrame]; bv_decide)
+    iexact Hn7
+  isplitl [Hn8]
+  · iapply sort_pointsTo_u32_at_eq
+      (show childFrame + 32 = (frame - 32) + 16 by
+        dsimp only [childFrame]; bv_decide)
+    iexact Hn8
+  isplitl [Hn9]
+  · iapply sort_pointsTo_u32_at_eq
+      (show childFrame + 36 = (frame - 32) + 20 by
+        dsimp only [childFrame]; bv_decide)
+    iexact Hn9
+  isplitl [Hn10]
+  · iapply sort_pointsTo_u32_at_eq
+      (show childFrame + 40 = (frame - 32) + 24 by
+        dsimp only [childFrame]; bv_decide)
+    iexact Hn10
+  isplitl [Hn11]
+  · iapply sort_pointsTo_u32_at_eq
+      (show childFrame + 44 = (frame - 32) + 28 by
+        dsimp only [childFrame]; bv_decide)
+    iexact Hn11
+  isplitl [Hc8]
+  · iexact Hc8
+  isplitl [Hc9]
+  · iexact Hc9
+  isplitl [Hc10]
+  · iexact Hc10
+  isplitl [Hc11]
+  · iexact Hc11
+  iintro Hsplit
+  icases Hsplit with
+    ⟨Hruntime, Hglobal, Hf0, Hf8, Hf16, Hf24, Hr0, Hr8⟩
+  ihave Hf0Pair : pointsTo_u32 ((frame - 32) + 0) dataPtr ∗
+      pointsTo_u32 (((frame - 32) + 0) + 4) mid $$ [Hf0]
+  · iapply sort_sliceDescriptorAt_elim
+    iexact Hf0
+  ihave Hf8Pair : pointsTo_u32 ((frame - 32) + 8)
+      (dataPtr + (mid <<< 3)) ∗
+      pointsTo_u32 (((frame - 32) + 8) + 4) (length - mid) $$ [Hf8]
+  · iapply sort_sliceDescriptorAt_elim
+    iexact Hf8
+  ihave Hf16Pair : pointsTo_u32 ((frame - 32) + 16) dataPtr ∗
+      pointsTo_u32 (((frame - 32) + 16) + 4) mid $$ [Hf16]
+  · iapply sort_sliceDescriptorAt_elim
+    iexact Hf16
+  ihave Hf24Pair : pointsTo_u32 ((frame - 32) + 24)
+      (dataPtr + (mid <<< 3)) ∗
+      pointsTo_u32 (((frame - 32) + 24) + 4) (length - mid) $$ [Hf24]
+  · iapply sort_sliceDescriptorAt_elim
+    iexact Hf24
+  ihave Hr0Pair : pointsTo_u32 (frame + 32) dataPtr ∗
+      pointsTo_u32 ((frame + 32) + 4) mid $$ [Hr0]
+  · iapply sort_sliceDescriptorAt_elim
+    iexact Hr0
+  ihave Hr8Pair : pointsTo_u32 (frame + 40)
+      (dataPtr + (mid <<< 3)) ∗
+      pointsTo_u32 ((frame + 40) + 4) (length - mid) $$ [Hr8]
+  · iapply sort_sliceDescriptorAt_elim
+    iexact Hr8
+  icases Hf0Pair with ⟨Hf0, Hf4⟩
+  icases Hf8Pair with ⟨Hf8, Hf12⟩
+  icases Hf16Pair with ⟨Hf16, Hf20⟩
+  icases Hf24Pair with ⟨Hf24, Hf28⟩
+  icases Hr0Pair with ⟨Hr0, Hr4⟩
+  icases Hr8Pair with ⟨Hr8, Hr12⟩
+  ihave HdataParts : array64At dataPtr left ∗
+      array64At (dataPtr + (mid <<< 3)) right $$ [Hdata]
+  · rw [← hrightPtr]
+    iapply (array64At_append dataPtr left right).mp
+    iexact Hdata
+  icases HdataParts with ⟨Hleft, Hright⟩
+  ihave Hi : pointsTo_u32 ((frame - 16) + 4) mid $$ [Hf20]
+  · iapply sort_pointsTo_u32_at_eq
+      (show ((frame - 32) + 16) + 4 = (frame - 16) + 4 by bv_decide)
+    iexact Hf20
+  ihave Hj : pointsTo_u32 ((frame - 16) + 8)
+      (dataPtr + (mid <<< 3)) $$ [Hf24]
+  · iapply sort_pointsTo_u32_at_eq
+      (show (frame - 32) + 24 = (frame - 16) + 8 by bv_decide)
+    iexact Hf24
+  ihave Hk : pointsTo_u32 ((frame - 16) + 12) (length - mid) $$ [Hf28]
+  · iapply sort_pointsTo_u32_at_eq
+      (show ((frame - 32) + 24) + 4 = (frame - 16) + 12 by bv_decide)
+    iexact Hf28
+  have Hmerge := merge_call_twp (α := α)
+    dataPtr (dataPtr + (mid <<< 3)) scratchPtr frame
+    left right scratch mid (dataPtr + (mid <<< 3)) (length - mid)
+    ⟨sortParams dataPtr length scratchPtr length,
+      sortSecondCallLocals frame mid dataPtr mid mid
+        (dataPtr + (mid <<< 3)) (length - mid) (length - mid), []⟩
+    [] hscratchLength hleftFit hrightFit hscratchFit
+    hmergeFrameRoom hmergeRestore
+    (code := sortAfterMerge) (arity := arity) (remainder := remainder)
+    (controls := sortOuterFrame :: controls) (calls := calls)
+    (s := s) (E := E) (Φ := Φ)
+  rw [hleftValue, hrightValue, htotalValue] at Hmerge
+  simp only [List.append_nil] at Hmerge
+  rw [sortAtMergeCall_cons]
+  iapply Hmerge
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hglobal]
+  · iexact Hglobal
+  isplitl [Hleft]
+  · iexact Hleft
+  isplitl [Hright]
+  · iexact Hright
+  isplitl [Hscratch]
+  · iexact Hscratch
+  isplitl [Hi]
+  · iexact Hi
+  isplitl [Hj]
+  · iexact Hj
+  isplitl [Hk]
+  · iexact Hk
+  iintro %merged %hmerge Hruntime Hglobal Hleft Hright Hscratch Hi Hj Hk
+  ihave Hdata : array64At dataPtr (left ++ right) $$ [Hleft Hright]
+  · iapply (array64At_append dataPtr left right).mpr
+    isplitl [Hleft]
+    · iexact Hleft
+    · rw [hrightPtr]
+      iexact Hright
+  have hmergedLen := hmergedLength merged hmerge
+  have hmergedDest : merged.length = (left ++ right).length := by
+    simpa using hmergedLen
+  have hmergedNonempty : merged ≠ [] := by
+    intro hempty
+    rw [hempty, List.length_nil] at hmergedLen
+    omega
+  ihave Hr4Plain : pointsTo_u32 (frame + 36) mid $$ [Hr4]
+  · iapply sort_pointsTo_u32_at_eq
+      (show (frame + 32) + 4 = frame + 36 by bv_decide)
+    iexact Hr4
+  ihave Hr12Plain : pointsTo_u32 (frame + 44) (length - mid) $$ [Hr12]
+  · iapply sort_pointsTo_u32_at_eq
+      (show (frame + 40) + 4 = frame + 44 by bv_decide)
+    iexact Hr12
+  ihave HframeOwn : SortFrameOwn frame $$
+      [Hc0 Hc1 Hc2 Hc3 Hc4 Hc5 Hc6 Hc7
+        Hr0 Hr4Plain Hr8 Hr12Plain]
+  · isimp only [SortFrameOwn]
+    iexists c0
+    iexists c1
+    iexists c2
+    iexists c3
+    iexists c4
+    iexists c5
+    iexists c6
+    iexists c7
+    iexists dataPtr
+    iexists mid
+    iexists (dataPtr + (mid <<< 3))
+    iexists (length - mid)
+    iframe
+  ihave Hf0Back : pointsTo_u32 (childFrame + 16) dataPtr $$ [Hf0]
+  · iapply sort_pointsTo_u32_at_eq
+      (show (frame - 32) + 0 = childFrame + 16 by
+        dsimp only [childFrame]; bv_decide)
+    iexact Hf0
+  ihave Hf4Back : pointsTo_u32 (childFrame + 20) mid $$ [Hf4]
+  · iapply sort_pointsTo_u32_at_eq
+      (show ((frame - 32) + 0) + 4 = childFrame + 20 by
+        dsimp only [childFrame]; bv_decide)
+    iexact Hf4
+  ihave Hf8Back : pointsTo_u32 (childFrame + 24)
+      (dataPtr + (mid <<< 3)) $$ [Hf8]
+  · iapply sort_pointsTo_u32_at_eq
+      (show (frame - 32) + 8 = childFrame + 24 by
+        dsimp only [childFrame]; bv_decide)
+    iexact Hf8
+  ihave Hf12Back : pointsTo_u32 (childFrame + 28) (length - mid) $$ [Hf12]
+  · iapply sort_pointsTo_u32_at_eq
+      (show ((frame - 32) + 8) + 4 = childFrame + 28 by
+        dsimp only [childFrame]; bv_decide)
+    iexact Hf12
+  ihave Hf16Back : pointsTo_u32 (childFrame + 32) dataPtr $$ [Hf16]
+  · iapply sort_pointsTo_u32_at_eq
+      (show (frame - 32) + 16 = childFrame + 32 by
+        dsimp only [childFrame]; bv_decide)
+    iexact Hf16
+  ihave HiBack : pointsTo_u32 (childFrame + 36) mid $$ [Hi]
+  · iapply sort_pointsTo_u32_at_eq
+      (show (frame - 16) + 4 = childFrame + 36 by
+        dsimp only [childFrame]; bv_decide)
+    iexact Hi
+  ihave HjBack : pointsTo_u32 (childFrame + 40) (length - mid) $$ [Hj]
+  · iapply sort_pointsTo_u32_at_eq
+      (show (frame - 16) + 8 = childFrame + 40 by
+        dsimp only [childFrame]; bv_decide)
+    iexact Hj
+  ihave HkBack : pointsTo_u32 (childFrame + 44) length $$ [Hk]
+  · iapply sort_pointsTo_u32_at_eq
+      (show (frame - 16) + 12 = childFrame + 44 by
+        dsimp only [childFrame]; bv_decide)
+    iexact Hk
+  ihave HchildOwn : SortFrameOwn childFrame $$
+      [Hn0 Hn1 Hn2 Hn3 Hf0Back Hf4Back Hf8Back Hf12Back
+        Hf16Back HiBack HjBack HkBack]
+  · isimp only [SortFrameOwn]
+    iexists n0
+    iexists n1
+    iexists n2
+    iexists n3
+    iexists dataPtr
+    iexists mid
+    iexists (dataPtr + (mid <<< 3))
+    iexists (length - mid)
+    iexists dataPtr
+    iexists mid
+    iexists (length - mid)
+    iexists length
+    iframe
+  ihave Hworkspace : SortWorkspace frame (depth + 1) $$ [HchildOwn Hrest]
+  · iapply (sortWorkspace_succ frame depth).mpr
+    iframe
+  iapply sort_copy_back_epilogue_twp
+    dataPtr length scratchPtr length frame stackTop mid
+    merged (left ++ right) rfl hmergedNonempty
+    (by rw [hlengthNat, hmergedLen]) hmergedDest
+    (by rw [hmergedLen]; exact hscratchFit) (by simpa using hdataFit)
+    (by rw [hmergedLen]; exact hbytes) hrestore
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hglobal]
+  · iexact Hglobal
+  isplitl [Hscratch]
+  · iexact Hscratch
+  isplitl [Hdata]
+  · iexact Hdata
+  iintro Hruntime Hglobal Hscratch Hdata
+  iapply Hcont $$ %merged
+    %(SortRel.split mid.toNat hleftSort hrightSort hmerge)
+    Hruntime Hglobal Hdata Hscratch HframeOwn Hworkspace
+
 /-- Exact total rule for the generated base-case path of `func126`.
 
 The continuation is deliberately positioned at the final generated `ret`,
@@ -1864,5 +2249,554 @@ theorem sort_body_small_workspace_twp
   · iexact Hscratch
   iintro %Hsort Hglobal Hinput Hscratch
   iapply Hcont $$ Hruntime %Hsort Hglobal Hinput Hscratch Hworkspace
+
+/-- Fuel-indexed total body rule.  `depth` bounds the input length; two extra
+workspace layers cover the current frame and the largest generated helper
+frame.  The scratch contents are intentionally existential in the postcondition
+because the base path leaves them unchanged while the recursive path uses them
+for the merged output. -/
+theorem sort_body_fuel_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (dataPtr length scratchPtr scratchLength stackTop : UInt32)
+    (input scratch : List UInt64) (depth : Nat)
+    (hinputLength : input.length = length.toNat)
+    (hscratchLength : scratch.length = input.length)
+    (hscratchValue : scratchLength = length)
+    (hdataFit : dataPtr.toNat + 8 * input.length ≤ UInt32.size)
+    (hscratchFit : scratchPtr.toNat + 8 * input.length ≤ UInt32.size)
+    (hbytes : 8 * input.length < UInt32.size)
+    (hmeasure : input.length ≤ depth)
+    (hsafe : 48 * (depth + 2) ≤ stackTop.toNat)
+    {calls : List CallFrame} :
+    runtimeModuleOwn «module» ∗
+      globalPointsTo 0 (.i32 stackTop) ∗
+      array64At dataPtr input ∗
+      array64At scratchPtr scratch ∗
+      SortWorkspace stackTop (depth + 2) ∗
+      (∀ (output scratchFinal : List UInt64) (finalLocals : List Value),
+        ⌜SortRel input output⌝ -∗
+        ⌜scratchFinal.length = input.length⌝ -∗
+        runtimeModuleOwn «module» -∗
+        globalPointsTo 0 (.i32 stackTop) -∗
+        array64At dataPtr output -∗
+        array64At scratchPtr scratchFinal -∗
+        SortWorkspace stackTop (depth + 2) -∗
+        WP (.running
+          ⟨⟨sortParams dataPtr length scratchPtr scratchLength,
+              finalLocals, []⟩,
+            [.ret], 0, [], [], calls⟩ : Expr α) @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨⟨sortParams dataPtr length scratchPtr scratchLength,
+          sortZeroLocals, []⟩,
+        func126, 0, [], [], calls⟩ : Expr α) @ s; E [{ Φ }] := by
+  subst scratchLength
+  induction depth using Nat.strong_induction_on generalizing
+      dataPtr length scratchPtr stackTop input scratch calls with
+  | h depth ih =>
+      by_cases hsmall : length ≤ 1
+      · iintro ⟨Hruntime, Hglobal, Hinput, Hscratch, Hworkspace, Hcont⟩
+        iapply sort_body_small_workspace_twp
+          dataPtr length scratchPtr length stackTop input scratch
+          (depth + 2) hsmall hinputLength
+        isplitl [Hruntime]
+        · iexact Hruntime
+        isplitl [Hglobal]
+        · iexact Hglobal
+        isplitl [Hinput]
+        · iexact Hinput
+        isplitl [Hscratch]
+        · iexact Hscratch
+        isplitl [Hworkspace]
+        · iexact Hworkspace
+        iintro Hruntime %Hsort Hglobal Hinput Hscratch Hworkspace
+        iapply Hcont $$ %input %scratch %(sortFramedLocals (stackTop - 48))
+          %Hsort %hscratchLength Hruntime Hglobal Hinput Hscratch Hworkspace
+      · have hlarge : 1 < length := by
+          rw [UInt32.le_iff_toNat_le] at hsmall
+          rw [UInt32.lt_iff_toNat_lt]
+          rw [show (1 : UInt32).toNat = 1 by decide] at hsmall ⊢
+          omega
+        have hdepth : 2 ≤ depth := by
+          rw [UInt32.lt_iff_toNat_lt] at hlarge
+          rw [show (1 : UInt32).toNat = 1 by decide] at hlarge
+          omega
+        have hmidInput : (length >>> (1 % 32)).toNat ≤ input.length := by
+          rw [hinputLength]
+          have hmidValue := midpoint_le (length := length)
+          rw [UInt32.le_iff_toNat_le] at hmidValue
+          exact hmidValue
+        have hmidScratch : (length >>> (1 % 32)).toNat ≤ scratch.length := by
+          rw [hscratchLength]
+          exact hmidInput
+        have hleftLength :
+            (input.take (length >>> (1 % 32)).toNat).length =
+              (length >>> (1 % 32)).toNat :=
+          List.length_take_of_le hmidInput
+        have hrightLength :
+            (input.drop (length >>> (1 % 32)).toNat).length =
+              input.length - (length >>> (1 % 32)).toNat := by
+          simp only [List.length_drop]
+        have hscratchLeftLength :
+            (scratch.take (length >>> (1 % 32)).toNat).length =
+              (length >>> (1 % 32)).toNat :=
+          List.length_take_of_le hmidScratch
+        have hscratchRightLength :
+            (scratch.drop (length >>> (1 % 32)).toNat).length =
+              scratch.length - (length >>> (1 % 32)).toNat := by
+          simp only [List.length_drop]
+        have hleftMeasure :
+            (input.take (length >>> (1 % 32)).toNat).length ≤ depth - 1 := by
+          rw [hleftLength]
+          have hlt := midpoint_lt_length hlarge
+          omega
+        have hrightMeasure :
+            (input.drop (length >>> (1 % 32)).toNat).length ≤ depth - 1 := by
+          rw [hrightLength]
+          have hlt := suffix_length_lt hlarge
+          rw [hinputLength]
+          omega
+        have hframeSafe : 48 * (depth + 1) ≤ (stackTop - 48).toNat := by
+          exact (sortWorkspace_stack_step stackTop (depth + 1) hsafe).2.1
+        have hleftDataFit : dataPtr.toNat +
+            8 * (input.take (length >>> (1 % 32)).toNat).length ≤
+              UInt32.size := by
+          rw [hleftLength]
+          omega
+        have hleftScratchFit : scratchPtr.toNat +
+            8 * (input.take (length >>> (1 % 32)).toNat).length ≤
+              UInt32.size := by
+          rw [hleftLength]
+          omega
+        have hleftBytes :
+            8 * (input.take (length >>> (1 % 32)).toNat).length <
+              UInt32.size := by
+          rw [hleftLength]
+          omega
+        have hdataFullFit : dataPtr.toNat + 8 * length.toNat ≤ UInt32.size := by
+          rw [← hinputLength]
+          exact hdataFit
+        have hscratchFullFit :
+            scratchPtr.toNat + 8 * length.toNat ≤ UInt32.size := by
+          rw [← hinputLength]
+          exact hscratchFit
+        have hrightDataFit :
+            (dataPtr + ((length >>> (1 % 32)) <<< 3)).toNat +
+                8 * (input.drop (length >>> (1 % 32)).toNat).length ≤
+              UInt32.size := by
+          rw [hrightLength, suffix_ptr_toNat dataPtr length hlarge hdataFullFit,
+            hinputLength, midpoint_toNat]
+          omega
+        have hrightScratchFit :
+            (scratchPtr + ((length >>> (1 % 32)) <<< 3)).toNat +
+                8 * (input.drop (length >>> (1 % 32)).toNat).length ≤
+              UInt32.size := by
+          rw [hrightLength, suffix_ptr_toNat scratchPtr length hlarge
+            hscratchFullFit, hinputLength, midpoint_toNat]
+          omega
+        have hrightBytes :
+            8 * (input.drop (length >>> (1 % 32)).toNat).length <
+              UInt32.size := by
+          rw [hrightLength]
+          omega
+        have hrightScratchLengthEq :
+            (scratch.drop (length >>> (1 % 32)).toNat).length =
+              (input.drop (length >>> (1 % 32)).toNat).length := by
+          rw [hscratchRightLength, hrightLength, hscratchLength]
+        have hrightValueLength :
+            (input.drop (length >>> (1 % 32)).toNat).length =
+              (length - (length >>> (1 % 32))).toNat := by
+          rw [hrightLength, hinputLength, midpoint_suffix_length_toNat]
+        iintro ⟨Hruntime, Hglobal, Hinput, Hscratch, Hworkspace, Hcont⟩
+        iapply sort_to_first_recursive_call_workspace_twp
+          dataPtr length scratchPtr length stackTop depth hlarge
+          (midpoint_le (length := length)) hsafe
+        isplitl [Hruntime]
+        · iexact Hruntime
+        isplitl [Hglobal]
+        · iexact Hglobal
+        isplitl [Hworkspace]
+        · iexact Hworkspace
+        iintro Hruntime Hglobal Hframe Htail
+        ihave HdataParts :
+            array64At dataPtr (input.take (length >>> (1 % 32)).toNat) ∗
+              array64At (dataPtr + ((length >>> (1 % 32)) <<< 3))
+                (input.drop (length >>> (1 % 32)).toNat) $$ [Hinput]
+        · rw [← midpoint_suffix_ptr_eq dataPtr length]
+          iapply (array64At_splitAt dataPtr input
+            (length >>> (1 % 32)).toNat hmidInput).mp
+          iexact Hinput
+        icases HdataParts with ⟨HleftInput, HrightInput⟩
+        ihave HscratchParts :
+            array64At scratchPtr (scratch.take (length >>> (1 % 32)).toNat) ∗
+              array64At (scratchPtr + ((length >>> (1 % 32)) <<< 3))
+                (scratch.drop (length >>> (1 % 32)).toNat) $$ [Hscratch]
+        · rw [← midpoint_suffix_ptr_eq scratchPtr length]
+          iapply (array64At_splitAt scratchPtr scratch
+            (length >>> (1 % 32)).toNat hmidScratch).mp
+          iexact Hscratch
+        icases HscratchParts with ⟨HleftScratch, HrightScratch⟩
+        rw [sortAtFirstRecursiveCall_cons]
+        iapply Wasm.SmallStep.twp_call (α := α) «module» 128 sortFunction
+            (by decide) sort_index $$ Hruntime
+        iintro Hruntime
+        simp [sortFunction, func126Def, Function.toLocals, Function.numParams,
+          ValueType.zero]
+        have HleftBody := ih (depth - 1) (by omega)
+          dataPtr (length >>> (1 % 32)) scratchPtr (stackTop - 48)
+          (input.take (length >>> (1 % 32)).toNat)
+          (scratch.take (length >>> (1 % 32)).toNat)
+          hleftLength (by rw [hscratchLeftLength, hleftLength])
+          hleftDataFit hleftScratchFit hleftBytes hleftMeasure
+          (by omega : 48 * (depth - 1 + 2) ≤ (stackTop - 48).toNat)
+          (calls :=
+            { locals :=
+                ⟨sortParams dataPtr length scratchPtr length,
+                  sortFirstCallLocals (stackTop - 48)
+                    (length >>> (1 % 32)) dataPtr
+                    (length >>> (1 % 32)) (length >>> (1 % 32)), []⟩
+              continuation := sortAfterFirstRecursiveCall
+              resultArity := 0
+              callerRemainder := []
+              control := [sortOuterFrame] } :: calls)
+        have hdepthWorkspace : depth - 1 + 2 = depth + 1 := by omega
+        rw [hdepthWorkspace] at HleftBody
+        simp only [sortParams, sortZeroLocals,
+          show (1 % 32 : UInt32) = 1 by decide] at HleftBody ⊢
+        iapply HleftBody
+        isplitl [Hruntime]
+        · iexact Hruntime
+        isplitl [Hglobal]
+        · iexact Hglobal
+        isplitl [HleftInput]
+        · rw [midpoint_one_toNat]
+          iexact HleftInput
+        isplitl [HleftScratch]
+        · rw [midpoint_one_toNat]
+          iexact HleftScratch
+        isplitl [Htail]
+        · iexact Htail
+        iintro %left %leftScratch %leftFinalLocals %hleftSort
+          %hleftScratchLength Hruntime Hglobal Hleft HleftScratch Htail
+        iapply Wasm.SmallStep.twp_returnFromCallExplicit (α := α)
+        simp only [List.take_zero, List.nil_append,
+          List.drop_eq_nil_of_le (by decide : 4 ≤
+            [.i32 dataPtr, .i32 (length >>> (1 % 32)), .i32 scratchPtr,
+              .i32 (length >>> (1 % 32))].length)]
+        have hframeRoom : (stackTop - 48).toNat + 48 ≤ UInt32.size :=
+          (sortWorkspace_stack_step stackTop (depth + 1) hsafe).2.2
+        have Hbetween := sort_between_recursive_calls_workspace_twp (α := α)
+          dataPtr length scratchPtr length (stackTop - 48)
+          (length >>> (1 % 32)) depth
+          (midpoint_le (length := length)) (midpoint_le (length := length))
+          hframeRoom (s := s) (E := E) (Φ := Φ)
+          (arity := 0) (remainder := []) (controls := []) (calls := calls)
+        simp only [sortParams,
+          show (1 % 32 : UInt32) = 1 by decide] at Hbetween
+        iapply Hbetween
+        isplitl [Hruntime]
+        · iexact Hruntime
+        isplitl [Hglobal]
+        · iexact Hglobal
+        isplitl [Hframe]
+        · iexact Hframe
+        isplitl [Htail]
+        · iexact Htail
+        iintro Hruntime Hglobal Hframe Htail
+        rw [sortAtSecondRecursiveCall_cons]
+        iapply Wasm.SmallStep.twp_call (α := α) «module» 128 sortFunction
+            (by decide) sort_index $$ Hruntime
+        iintro Hruntime
+        simp [sortFunction, func126Def, Function.toLocals, Function.numParams,
+          ValueType.zero]
+        have HrightBody := ih (depth - 1) (by omega)
+          (dataPtr + ((length >>> (1 % 32)) <<< 3))
+          (length - (length >>> (1 % 32)))
+          (scratchPtr + ((length >>> (1 % 32)) <<< 3))
+          (stackTop - 48)
+          (input.drop (length >>> (1 % 32)).toNat)
+          (scratch.drop (length >>> (1 % 32)).toNat)
+          hrightValueLength hrightScratchLengthEq
+          hrightDataFit hrightScratchFit hrightBytes hrightMeasure
+          (by omega : 48 * (depth - 1 + 2) ≤ (stackTop - 48).toNat)
+          (calls :=
+            { locals :=
+                ⟨sortParams dataPtr length scratchPtr length,
+                  sortSecondCallLocals (stackTop - 48)
+                    (length >>> (1 % 32)) dataPtr
+                    (length >>> (1 % 32)) (length >>> (1 % 32))
+                    (dataPtr + ((length >>> (1 % 32)) <<< 3))
+                    (length - (length >>> (1 % 32)))
+                    (length - (length >>> (1 % 32))), []⟩
+              continuation := sortAfterSecondRecursiveCall
+              resultArity := 0
+              callerRemainder := []
+              control := [sortOuterFrame] } :: calls)
+        rw [hdepthWorkspace] at HrightBody
+        simp only [sortParams, sortZeroLocals,
+          show (1 % 32 : UInt32) = 1 by decide] at HrightBody ⊢
+        iapply HrightBody
+        isplitl [Hruntime]
+        · iexact Hruntime
+        isplitl [Hglobal]
+        · iexact Hglobal
+        isplitl [HrightInput]
+        · rw [midpoint_one_toNat]
+          iexact HrightInput
+        isplitl [HrightScratch]
+        · rw [midpoint_one_toNat]
+          iexact HrightScratch
+        isplitl [Htail]
+        · iexact Htail
+        iintro %right %rightScratch %rightFinalLocals %hrightSort
+          %hrightScratchLength Hruntime Hglobal Hright HrightScratch Htail
+        iapply Wasm.SmallStep.twp_returnFromCallExplicit (α := α)
+        simp only [List.take_zero, List.nil_append,
+          List.drop_eq_nil_of_le (by decide : 4 ≤
+            [.i32 (dataPtr + ((length >>> (1 % 32)) <<< 3)),
+              .i32 (length - (length >>> (1 % 32))),
+              .i32 (scratchPtr + ((length >>> (1 % 32)) <<< 3)),
+              .i32 (length - (length >>> (1 % 32)))].length)]
+        have hmidInputOne : (length >>> (1 : UInt32)).toNat ≤ input.length := by
+          simpa only [show (1 % 32 : UInt32) = 1 by decide] using hmidInput
+        have hleftOutLength :
+            left.length = (input.take (length >>> (1 : UInt32)).toNat).length :=
+          SortRel.length_eq hleftSort
+        have hrightOutLength :
+            right.length = (input.drop (length >>> (1 : UInt32)).toNat).length :=
+          SortRel.length_eq hrightSort
+        have hleftValue : UInt32.ofNat left.length = length >>> (1 : UInt32) := by
+          rw [hleftOutLength, List.length_take_of_le hmidInputOne]
+          exact UInt32.ofNat_toNat
+        have hrightValue : UInt32.ofNat right.length =
+            length - (length >>> (1 : UInt32)) := by
+          rw [hrightOutLength, List.length_drop, hinputLength]
+          simpa only [show (1 % 32 : UInt32) = 1 by decide] using
+            midpoint_suffix_length_value length
+        have hsumLength : left.length + right.length = input.length := by
+          rw [hleftOutLength, hrightOutLength, List.length_take,
+            List.length_drop]
+          omega
+        have htotalValue : UInt32.ofNat (left.length + right.length) = length := by
+          rw [hsumLength, hinputLength]
+          exact UInt32.ofNat_toNat
+        have hrightPtr : dataPtr + (8 : UInt32) * UInt32.ofNat left.length =
+            dataPtr + ((length >>> (1 : UInt32)) <<< 3) := by
+          rw [hleftValue]
+          bv_decide
+        have hleftScratchValue : UInt32.ofNat leftScratch.length =
+            length >>> (1 : UInt32) := by
+          rw [hleftScratchLength, List.length_take_of_le hmidInputOne]
+          exact UInt32.ofNat_toNat
+        have hscratchCombined :
+            (leftScratch ++ rightScratch).length = left.length + right.length := by
+          simp only [List.length_append]
+          rw [hleftScratchLength, hrightScratchLength,
+            hleftOutLength, hrightOutLength]
+        ihave Hdata : array64At dataPtr (left ++ right) $$ [Hleft Hright]
+        · iapply (array64At_append dataPtr left right).mpr
+          isplitl [Hleft]
+          · iexact Hleft
+          · rw [hrightPtr]
+            iexact Hright
+        ihave Hscratch : array64At scratchPtr (leftScratch ++ rightScratch)
+            $$ [HleftScratch HrightScratch]
+        · iapply (array64At_append scratchPtr leftScratch rightScratch).mpr
+          isplitl [HleftScratch]
+          · iexact HleftScratch
+          · rw [hleftScratchValue]
+            rw [show scratchPtr + (8 : UInt32) * (length >>> (1 : UInt32)) =
+              scratchPtr + ((length >>> (1 : UInt32)) <<< 3) by bv_decide]
+            iexact HrightScratch
+        have hframeLow : 48 ≤ (stackTop - 48).toNat := by omega
+        have hresultRoom : (((stackTop - 48) + 32).toNat + 16) ≤
+            UInt32.size := by
+          have h32 : ((stackTop - 48) + 32).toNat =
+              (stackTop - 48).toNat + 32 := by
+            apply UInt32.add_ofNat_toNat_noWrap
+            · decide
+            · simpa only [UInt32.size] using
+                (show (stackTop - 48).toNat + 32 < UInt32.size by omega)
+          rw [h32]
+          omega
+        have hrestore : (48 : UInt32) + (stackTop - 48) = stackTop := by
+          rw [UInt32.add_comm]
+          exact UInt32.sub_add_cancel stackTop 48
+        have hleftFit : dataPtr.toNat + 8 * left.length ≤ UInt32.size := by
+          rw [hleftOutLength, List.length_take_of_le hmidInputOne]
+          omega
+        have hrightFit :
+            (dataPtr + ((length >>> (1 : UInt32)) <<< 3)).toNat +
+                8 * right.length ≤ UInt32.size := by
+          rw [hrightOutLength]
+          simpa only [show (1 % 32 : UInt32) = 1 by decide] using hrightDataFit
+        have hlengthNat : length.toNat = left.length + right.length := by
+          rw [hsumLength, hinputLength]
+        have Hsuffix := sort_after_second_recursive_workspace_twp (α := α)
+          dataPtr length scratchPtr length (stackTop - 48) stackTop
+          (length >>> (1 : UInt32)) input left right
+          (leftScratch ++ rightScratch) depth
+          hleftSort hrightSort hscratchCombined rfl
+          hleftValue hrightValue htotalValue hlengthNat hrightPtr
+          (midpoint_le (length := length)) hleftFit hrightFit
+          (by rw [hsumLength]; exact hscratchFit)
+          (by rw [hsumLength]; exact hdataFit)
+          (by rw [hsumLength]; exact hbytes)
+          (by rw [hsumLength]; rw [hinputLength];
+              rw [UInt32.lt_iff_toNat_lt] at hlarge; omega)
+          hframeLow hframeRoom hresultRoom hrestore
+          (s := s) (E := E) (Φ := Φ)
+          (arity := 0) (remainder := []) (controls := []) (calls := calls)
+        simp only [sortParams] at Hsuffix ⊢
+        iapply Hsuffix
+        isplitl [Hruntime]
+        · iexact Hruntime
+        isplitl [Hglobal]
+        · iexact Hglobal
+        isplitl [Hdata]
+        · iexact Hdata
+        isplitl [Hscratch]
+        · iexact Hscratch
+        isplitl [Hframe]
+        · iexact Hframe
+        isplitl [Htail]
+        · iexact Htail
+        iintro %output %Hsort Hruntime Hglobal Hdata Hscratch Hframe Htail
+        ihave Hworkspace : SortWorkspace stackTop (depth + 2) $$ [Hframe Htail]
+        · iapply (sortWorkspace_succ stackTop (depth + 1)).mpr
+          iframe
+        have houtputLength : output.length = input.length :=
+          SortRel.length_eq Hsort
+        iapply Hcont $$ %output %output
+          %(sortSecondCallLocals (stackTop - 48) (length >>> (1 : UInt32))
+            dataPtr (length >>> (1 : UInt32)) (length >>> (1 : UInt32))
+            (dataPtr + ((length >>> (1 : UInt32)) <<< 3))
+            (length - (length >>> (1 : UInt32)))
+            (length - (length >>> (1 : UInt32))))
+          %Hsort %houtputLength Hruntime Hglobal Hdata Hscratch Hworkspace
+
+/-- Complete total-correctness rule for the unchanged generated `func126`
+body.  The workspace depth is chosen from the semantic input length, so fuel
+does not escape into the public contract. -/
+theorem sort_body_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (dataPtr length scratchPtr scratchLength stackTop : UInt32)
+    (input scratch : List UInt64)
+    (hinputLength : input.length = length.toNat)
+    (hscratchLength : scratch.length = input.length)
+    (hscratchValue : scratchLength = length)
+    (hdataFit : dataPtr.toNat + 8 * input.length ≤ UInt32.size)
+    (hscratchFit : scratchPtr.toNat + 8 * input.length ≤ UInt32.size)
+    (hbytes : 8 * input.length < UInt32.size)
+    (hsafe : 48 * (input.length + 2) ≤ stackTop.toNat)
+    {calls : List CallFrame} :
+    runtimeModuleOwn «module» ∗
+      globalPointsTo 0 (.i32 stackTop) ∗
+      array64At dataPtr input ∗
+      array64At scratchPtr scratch ∗
+      SortWorkspace stackTop (input.length + 2) ∗
+      (∀ (output scratchFinal : List UInt64) (finalLocals : List Value),
+        ⌜SortRel input output⌝ -∗
+        ⌜scratchFinal.length = input.length⌝ -∗
+        runtimeModuleOwn «module» -∗
+        globalPointsTo 0 (.i32 stackTop) -∗
+        array64At dataPtr output -∗
+        array64At scratchPtr scratchFinal -∗
+        SortWorkspace stackTop (input.length + 2) -∗
+        WP (.running
+          ⟨⟨sortParams dataPtr length scratchPtr scratchLength,
+              finalLocals, []⟩,
+            [.ret], 0, [], [], calls⟩ : Expr α) @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨⟨sortParams dataPtr length scratchPtr scratchLength,
+          sortZeroLocals, []⟩,
+        func126, 0, [], [], calls⟩ : Expr α) @ s; E [{ Φ }] := by
+  exact sort_body_fuel_twp dataPtr length scratchPtr scratchLength stackTop
+    input scratch input.length hinputLength hscratchLength hscratchValue
+    hdataFit hscratchFit hbytes (by rfl) hsafe
+
+/-- Total direct-call rule for absolute function index `128`.  It returns the
+declarative recursive trace and the public sorted-permutation postcondition,
+while preserving runtime, shadow workspace, and both array regions. -/
+theorem sort_call_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (dataPtr length scratchPtr scratchLength stackTop : UInt32)
+    (input scratch : List UInt64)
+    (hinputLength : input.length = length.toNat)
+    (hscratchLength : scratch.length = input.length)
+    (hscratchValue : scratchLength = length)
+    (hdataFit : dataPtr.toNat + 8 * input.length ≤ UInt32.size)
+    (hscratchFit : scratchPtr.toNat + 8 * input.length ≤ UInt32.size)
+    (hbytes : 8 * input.length < UInt32.size)
+    (hsafe : 48 * (input.length + 2) ≤ stackTop.toNat)
+    {callerLocals : Locals} {stack : List Value}
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame} :
+    runtimeModuleOwn «module» ∗
+      globalPointsTo 0 (.i32 stackTop) ∗
+      array64At dataPtr input ∗
+      array64At scratchPtr scratch ∗
+      SortWorkspace stackTop (input.length + 2) ∗
+      (∀ (output scratchFinal : List UInt64),
+        ⌜SortRel input output⌝ -∗
+        ⌜SortPost input output⌝ -∗
+        ⌜scratchFinal.length = input.length⌝ -∗
+        runtimeModuleOwn «module» -∗
+        globalPointsTo 0 (.i32 stackTop) -∗
+        array64At dataPtr output -∗
+        array64At scratchPtr scratchFinal -∗
+        SortWorkspace stackTop (input.length + 2) -∗
+        WP (.running
+          ⟨{ callerLocals with values := stack }, code,
+            arity, remainder, controls, calls⟩ : Expr α)
+          @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨{ callerLocals with values :=
+          [.i32 scratchLength, .i32 scratchPtr, .i32 length, .i32 dataPtr] ++
+            stack },
+        .call 128 :: code, arity, remainder, controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] := by
+  iintro ⟨Hruntime, Hglobal, Hinput, Hscratch, Hworkspace, Hcont⟩
+  iapply Wasm.SmallStep.twp_call (α := α) «module» 128 sortFunction
+      (by decide) sort_index $$ Hruntime
+  iintro Hruntime
+  simp [sortFunction, func126Def, Function.toLocals, Function.numParams,
+    ValueType.zero]
+  have Hbody := sort_body_twp (α := α)
+    dataPtr length scratchPtr scratchLength stackTop input scratch
+    hinputLength hscratchLength hscratchValue hdataFit hscratchFit hbytes
+    hsafe (s := s) (E := E) (Φ := Φ)
+    (calls :=
+      { locals := { callerLocals with values := stack }
+        continuation := code
+        resultArity := arity
+        callerRemainder := remainder
+        control := controls } :: calls)
+  simp only [sortParams, sortZeroLocals] at Hbody
+  iapply Hbody
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hglobal]
+  · iexact Hglobal
+  isplitl [Hinput]
+  · iexact Hinput
+  isplitl [Hscratch]
+  · iexact Hscratch
+  isplitl [Hworkspace]
+  · iexact Hworkspace
+  iintro %output %scratchFinal %finalLocals %Hsort %hscratchFinalLength
+    Hruntime Hglobal Hinput Hscratch Hworkspace
+  iapply Wasm.SmallStep.twp_returnFromCallExplicit (α := α)
+  simp only [List.take_zero, List.nil_append,
+    List.drop_eq_nil_of_le (by decide : 4 ≤
+      [.i32 dataPtr, .i32 length, .i32 scratchPtr, .i32 scratchLength].length)]
+  iapply Hcont $$ %output %scratchFinal %Hsort
+    %(sortedPermutation_of_sortRel Hsort) %hscratchFinalLength
+    Hruntime Hglobal Hinput Hscratch Hworkspace
 
 end Project.Mergesort.SortFunctionProof
