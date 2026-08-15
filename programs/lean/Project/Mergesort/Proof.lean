@@ -19,6 +19,7 @@ import Project.Mergesort.ParseByteProof
 import Project.Mergesort.ParseProof
 import Project.Mergesort.WideMulProof
 import Project.Mergesort.DriverProof
+import Project.Mergesort.DriverSortProof
 import Project.Mergesort.StdIOWrapperProof
 
 /-!
