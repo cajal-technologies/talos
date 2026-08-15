@@ -44,6 +44,10 @@ private theorem pointsTo_u32_at_eq
     pointsTo_u32 left value ⊢ pointsTo_u32 right value := by
   rw [h]
 
+private theorem formatPrepare_index :
+    «module».funcs[34]? = some func34Def := by
+  rfl
+
 def writeFmtAtPrepare : Program := func33.drop 18
 def writeFmtAfterPrepare : Program := func33.drop 19
 
@@ -577,6 +581,120 @@ theorem formatPrepare_body_twp
   iintro ⟨HstaticFirst, HstaticSecond, Hframe4, Hframe8, Hflag,
     Hresult0, Hresult4, HR⟩
   iapply Hdone
+  isplitl [Hglobal]
+  · iexact Hglobal
+  isplitl [Hsecond]
+  · iexact Hsecond
+  isplitl [HstaticFirst]
+  · iexact HstaticFirst
+  isplitl [HstaticSecond]
+  · iexact HstaticSecond
+  isplitl [Hframe4]
+  · iexact Hframe4
+  isplitl [Hframe8]
+  · iexact Hframe8
+  isplitl [Hflag]
+  · iexact Hflag
+  isplitl [Hresult0]
+  · iexact Hresult0
+  isplitl [Hresult4]
+  · iexact Hresult4
+  iexact HR
+
+/-! Composable absolute-index-36 wrapper for the aligned `func34` path. -/
+theorem formatPrepare_call_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (resultPtr inputPtr stackTop second staticFirst staticSecond : UInt32)
+    (oldFrame4 oldFrame8 oldResult0 oldResult4 : UInt32)
+    (oldFlag : UInt8)
+    (heven : second &&& 1 = 0)
+    (hinputRoom : inputPtr.toNat + 8 ≤ UInt32.size)
+    (hframeRoom : (stackTop - 16).toNat + 16 ≤ UInt32.size)
+    (hresultRoom : resultPtr.toNat + 8 ≤ UInt32.size)
+    {R : IProp WasmHeapGF}
+    {callerLocals : Locals} {stack : List Value}
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame} :
+    runtimeModuleOwn «module» ∗
+      globalPointsTo 0 (.i32 stackTop) ∗
+      pointsTo_u32 (inputPtr + 4) second ∗
+      pointsTo_u32 1049096 staticFirst ∗
+      pointsTo_u32 1049100 staticSecond ∗
+      pointsTo_u32 ((stackTop - 16) + 4) oldFrame4 ∗
+      pointsTo_u32 ((stackTop - 16) + 8) oldFrame8 ∗
+      pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+        ((stackTop - 16) + 15) (DFrac.own 1) (some oldFlag) ∗
+      pointsTo_u32 resultPtr oldResult0 ∗
+      pointsTo_u32 (resultPtr + 4) oldResult4 ∗ R ∗
+      (runtimeModuleOwn «module» ∗
+        globalPointsTo 0 (.i32 stackTop) ∗
+        pointsTo_u32 (inputPtr + 4) second ∗
+        pointsTo_u32 1049096 staticFirst ∗
+        pointsTo_u32 1049100 staticSecond ∗
+        pointsTo_u32 ((stackTop - 16) + 4) staticFirst ∗
+        pointsTo_u32 ((stackTop - 16) + 8) staticSecond ∗
+        pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+          ((stackTop - 16) + 15) (DFrac.own 1) (some (0 : UInt8)) ∗
+        pointsTo_u32 resultPtr staticFirst ∗
+        pointsTo_u32 (resultPtr + 4) staticSecond ∗ R -∗
+        WP (.running
+          ⟨{ callerLocals with values := stack },
+            code, arity, remainder, controls, calls⟩ : Expr α)
+          @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨{ callerLocals with values :=
+          [.i32 inputPtr, .i32 resultPtr] ++ stack },
+        .call 36 :: code, arity, remainder, controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] := by
+  iintro ⟨Hruntime, Hglobal, Hsecond, HstaticFirst, HstaticSecond,
+    Hframe4, Hframe8, Hflag, Hresult0, Hresult4, HR, Hdone⟩
+  iapply Wasm.SmallStep.twp_call (α := α) «module» 36 func34Def
+      (by decide) formatPrepare_index $$ Hruntime
+  iintro Hruntime
+  simp [func34Def, Function.toLocals, Function.numParams, ValueType.zero]
+  have Hbody := formatPrepare_body_twp (α := α)
+    resultPtr inputPtr stackTop second staticFirst staticSecond
+    oldFrame4 oldFrame8 oldResult0 oldResult4 oldFlag heven
+    hinputRoom hframeRoom hresultRoom
+    (s := s) (E := E) (Φ := Φ) (R := R)
+    (controls := [])
+    (calls :=
+      { locals := { callerLocals with values := stack }
+        continuation := code
+        resultArity := arity
+        callerRemainder := remainder
+        control := controls } :: calls)
+  simp only [List.replicate_succ, List.replicate_zero] at Hbody
+  iapply Hbody
+  isplitl [Hglobal]
+  · iexact Hglobal
+  isplitl [Hsecond]
+  · iexact Hsecond
+  isplitl [HstaticFirst]
+  · iexact HstaticFirst
+  isplitl [HstaticSecond]
+  · iexact HstaticSecond
+  isplitl [Hframe4]
+  · iexact Hframe4
+  isplitl [Hframe8]
+  · iexact Hframe8
+  isplitl [Hflag]
+  · iexact Hflag
+  isplitl [Hresult0]
+  · iexact Hresult0
+  isplitl [Hresult4]
+  · iexact Hresult4
+  isplitl [HR]
+  · iexact HR
+  iintro ⟨Hglobal, Hsecond, HstaticFirst, HstaticSecond, Hframe4,
+    Hframe8, Hflag, Hresult0, Hresult4, HR⟩
+  iapply Wasm.SmallStep.twp_returnFromCallExplicit (α := α)
+  simp only [List.take_zero, List.nil_append]
+  iapply Hdone
+  isplitl [Hruntime]
+  · iexact Hruntime
   isplitl [Hglobal]
   · iexact Hglobal
   isplitl [Hsecond]
