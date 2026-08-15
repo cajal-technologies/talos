@@ -1,5 +1,6 @@
 import Project.Mergesort.TextProof
-import Project.Mergesort.RangeProof
+import Project.Mergesort.ParseByteProof
+import CodeLib.Examples.SelectionSort.TotalProof
 
 /-!
 # Generated decimal `u64` parser proof
@@ -27,6 +28,7 @@ open Wasm.SepLogic Wasm.SmallStep
 open Project.Mergesort.FunctionSpecs
 open Project.Mergesort.Machine
 open Project.Mergesort.RangeProof
+open Project.Mergesort.ParseByteProof
 open Project.Mergesort.TextProof
 
 /-! ## Mathematical invariant for the generated digit loops -/
@@ -365,6 +367,369 @@ private theorem parserSlotFacts (base : UInt32) (offset : Nat)
   · simpa using hstep 1 (by omega)
   · simpa using hstep 2 (by omega)
   · simpa using hstep 3 (by omega)
+
+private theorem parserWideSlotFacts (base : UInt32) (offset : Nat)
+    (hroom : base.toNat + 120 ≤ UInt32.size)
+    (hoffset : offset + 4 ≤ 120) :
+    (base + UInt32.ofNat offset).toNat = base.toNat + offset ∧
+    ((base + UInt32.ofNat offset) + 1).toNat =
+      (base + UInt32.ofNat offset).toNat + 1 ∧
+    ((base + UInt32.ofNat offset) + 2).toNat =
+      (base + UInt32.ofNat offset).toNat + 2 ∧
+    ((base + UInt32.ofNat offset) + 3).toNat =
+      (base + UInt32.ofNat offset).toNat + 3 := by
+  have hoff : offset < UInt32.size := by
+    simp only [UInt32.size] at hroom ⊢
+    omega
+  have hbaseOffset : base.toNat + offset < UInt32.size := by
+    simp only [UInt32.size] at hroom ⊢
+    omega
+  have h0 := UInt32.add_ofNat_toNat_noWrap base offset hoff hbaseOffset
+  have hstep (n : Nat) (hn : n ≤ 3) :
+      ((base + UInt32.ofNat offset) + UInt32.ofNat n).toNat =
+        (base + UInt32.ofNat offset).toNat + n := by
+    apply UInt32.add_ofNat_toNat_noWrap
+    · omega
+    · rw [h0]
+      simp only [UInt32.size] at hroom ⊢
+      omega
+  exact ⟨h0, by simpa using hstep 1 (by omega),
+    by simpa using hstep 2 (by omega), by simpa using hstep 3 (by omega)⟩
+
+private theorem parserWideSlot64Facts (base : UInt32) (offset : Nat)
+    (hroom : base.toNat + 120 ≤ UInt32.size)
+    (hoffset : offset + 8 ≤ 120) :
+    (base + UInt32.ofNat offset).toNat = base.toNat + offset ∧
+    ((base + UInt32.ofNat offset) + 1).toNat =
+      (base + UInt32.ofNat offset).toNat + 1 ∧
+    ((base + UInt32.ofNat offset) + 2).toNat =
+      (base + UInt32.ofNat offset).toNat + 2 ∧
+    ((base + UInt32.ofNat offset) + 3).toNat =
+      (base + UInt32.ofNat offset).toNat + 3 ∧
+    ((base + UInt32.ofNat offset) + 4).toNat =
+      (base + UInt32.ofNat offset).toNat + 4 ∧
+    ((base + UInt32.ofNat offset) + 5).toNat =
+      (base + UInt32.ofNat offset).toNat + 5 ∧
+    ((base + UInt32.ofNat offset) + 6).toNat =
+      (base + UInt32.ofNat offset).toNat + 6 ∧
+    ((base + UInt32.ofNat offset) + 7).toNat =
+      (base + UInt32.ofNat offset).toNat + 7 := by
+  have hoff : offset < UInt32.size := by
+    simp only [UInt32.size] at hroom ⊢
+    omega
+  have hbaseOffset : base.toNat + offset < UInt32.size := by
+    simp only [UInt32.size] at hroom ⊢
+    omega
+  have h0 := UInt32.add_ofNat_toNat_noWrap base offset hoff hbaseOffset
+  have hstep (n : Nat) (hn : n ≤ 7) :
+      ((base + UInt32.ofNat offset) + UInt32.ofNat n).toNat =
+        (base + UInt32.ofNat offset).toNat + n := by
+    apply UInt32.add_ofNat_toNat_noWrap
+    · omega
+    · rw [h0]
+      simp only [UInt32.size] at hroom ⊢
+      omega
+  exact ⟨h0, by simpa using hstep 1 (by omega),
+    by simpa using hstep 2 (by omega), by simpa using hstep 3 (by omega),
+    by simpa using hstep 4 (by omega), by simpa using hstep 5 (by omega),
+    by simpa using hstep 6 (by omega), by simpa using hstep 7 (by omega)⟩
+
+private def decimalDigitLocals
+    (frame nextPtr nextLength byte temporaryDigit finalDigit : UInt32) :
+    List Value :=
+  (((((fromAsciiRadixFramedLocals frame).set 29 (.i32 nextPtr)).set 30
+    (.i32 nextLength)).set 31 (.i32 byte)).set 32
+    (.i32 temporaryDigit)).set 33 (.i32 finalDigit)
+
+/-- Successful result block entered after `func52` has decoded a decimal
+byte. -/
+def decimalDigitResultBody : Program := [
+  .localGet 4, .load32 56, .const 1, .and, .eqz, .br_if 0,
+  .localGet 4, .load32 60, .localSet 37,
+  .localGet 4, .localGet 4, .load64 112,
+  .localGet 37, .extendUI32, .addI64, .store64 112,
+  .localGet 4, .localGet 33, .store32 48,
+  .localGet 4, .localGet 34, .store32 52,
+  .br 1]
+
+/-- Exact generated segment from the prepared byte local through the
+successful decoder result and accumulator update. -/
+def decimalDigitCallSegment : Program := [
+  .localGet 4, .const 8, .add,
+  .localGet 35, .localGet 3, .call 54,
+  .localGet 4, .load32 12, .localSet 36,
+  .localGet 4, .localGet 4, .load32 8, .store32 56,
+  .localGet 4, .localGet 36, .store32 60,
+  .block 0 0 decimalDigitResultBody]
+
+private theorem twp_extendUI32
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    {params localValues values : List Value}
+    {value : UInt32} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame} :
+    WP (.running
+      ⟨⟨params, localValues,
+          .i64 (UInt64.ofNat value.toNat) :: values⟩,
+        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }] ⊢
+    WP (.running
+      ⟨⟨params, localValues, .i32 value :: values⟩,
+        .extendUI32 :: code, arity, remainder, controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] :=
+  twp_pureStep _ _ _ (fun _ => Step.extendUI32)
+
+private theorem twp_addI64
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    {params localValues values : List Value}
+    {lhs rhs : UInt64} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame} :
+    WP (.running
+      ⟨⟨params, localValues, .i64 (lhs + rhs) :: values⟩,
+        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }] ⊢
+    WP (.running
+      ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
+        .addI64 :: code, arity, remainder, controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] :=
+  twp_pureStep _ _ _ (fun _ => Step.addI64)
+
+/-- One exact successful canonical-digit segment of generated `func51`.
+
+The byte and the already-multiplied accumulator are the values prepared by
+the immediately preceding generated instructions.  This rule crosses the
+absolute-index-54 `func52` call, copies its descriptor, takes the successful
+block path, adds the decoded digit, and commits the next pointer and length.
+It stops at the loop back-edge so a later loop rule can consume the updated
+mathematical and machine invariants together. -/
+theorem decimalDigitCallSegment_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (resultPtr textPtr textLength frame : UInt32)
+    (nextPtr nextLength byte : UInt32)
+    (value acc : UInt64) (consumed rest : List Char) (c : Char)
+    (oldTemporary oldFinal : UInt32)
+    (oldInner4 oldInner8 oldInner12 : UInt32)
+    (oldResult8 oldResult12 oldCopy56 oldCopy60 : UInt32)
+    (oldPointer oldLength : UInt32)
+    (hbyteNumeric : byte ≤ 57)
+    (hdigit : byte - 48 < 10)
+    (hdecode : UInt64.ofNat (byte - 48).toNat =
+      UInt64.ofNat (digitNat c))
+    (hinvariant : DecimalMachineLoopInvariant
+      (toString value) consumed (c :: rest) acc)
+    (hinnerRoom : (frame - 16).toNat + 16 ≤ UInt32.size)
+    (hframeRoom : frame.toNat + 120 ≤ UInt32.size)
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame} :
+    runtimeModuleOwn «module» ∗
+      globalPointsTo 0 (.i32 frame) ∗
+      pointsTo_u32 ((frame - 16) + 4) oldInner4 ∗
+      pointsTo_u32 ((frame - 16) + 8) oldInner8 ∗
+      pointsTo_u32 ((frame - 16) + 12) oldInner12 ∗
+      pointsTo_u32 (frame + 8) oldResult8 ∗
+      pointsTo_u32 (frame + 12) oldResult12 ∗
+      pointsTo_u32 (frame + 56) oldCopy56 ∗
+      pointsTo_u32 (frame + 60) oldCopy60 ∗
+      pointsTo_u64 (frame + 112) (acc * UInt64.ofNat 10) ∗
+      pointsTo_u32 (frame + 48) oldPointer ∗
+      pointsTo_u32 (frame + 52) oldLength ∗
+      ((⌜DecimalMachineLoopInvariant (toString value)
+          (consumed ++ [c]) rest (machineNextAccumulator acc c)⌝ ∗
+        runtimeModuleOwn «module» ∗
+        globalPointsTo 0 (.i32 frame) ∗
+        pointsTo_u32 ((frame - 16) + 4) 1 ∗
+        pointsTo_u32 ((frame - 16) + 8) (byte - 48) ∗
+        pointsTo_u32 ((frame - 16) + 12) (byte - 48) ∗
+        pointsTo_u32 (frame + 8) 1 ∗
+        pointsTo_u32 (frame + 12) (byte - 48) ∗
+        pointsTo_u32 (frame + 56) 1 ∗
+        pointsTo_u32 (frame + 60) (byte - 48) ∗
+        pointsTo_u64 (frame + 112) (machineNextAccumulator acc c) ∗
+        pointsTo_u32 (frame + 48) nextPtr ∗
+        pointsTo_u32 (frame + 52) nextLength) -∗
+        WP (.running
+          ⟨⟨fromAsciiRadixParams resultPtr textPtr textLength 10,
+              decimalDigitLocals frame nextPtr nextLength byte
+                (byte - 48) (byte - 48), []⟩,
+            [.br 1], arity, remainder,
+            { kind := .block
+              paramArity := 0
+              resultArity := 0
+              body := decimalDigitResultBody
+              continuation := code
+              belowStack := [] } :: controls,
+            calls⟩ : Expr α) @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨⟨fromAsciiRadixParams resultPtr textPtr textLength 10,
+          decimalDigitLocals frame nextPtr nextLength byte
+            oldTemporary oldFinal, []⟩,
+        decimalDigitCallSegment ++ code, arity, remainder, controls, calls⟩ :
+        Expr α) @ s; E [{ Φ }] := by
+  obtain ⟨h80, h81, h82, h83⟩ :=
+    parserWideSlotFacts frame 8 hframeRoom (by decide)
+  obtain ⟨h120, h121, h122, h123⟩ :=
+    parserWideSlotFacts frame 12 hframeRoom (by decide)
+  obtain ⟨h480, h481, h482, h483⟩ :=
+    parserWideSlotFacts frame 48 hframeRoom (by decide)
+  obtain ⟨h520, h521, h522, h523⟩ :=
+    parserWideSlotFacts frame 52 hframeRoom (by decide)
+  obtain ⟨h560, h561, h562, h563⟩ :=
+    parserWideSlotFacts frame 56 hframeRoom (by decide)
+  obtain ⟨h600, h601, h602, h603⟩ :=
+    parserWideSlotFacts frame 60 hframeRoom (by decide)
+  obtain ⟨h1120, h1121, h1122, h1123, h1124, h1125, h1126, h1127⟩ :=
+    parserWideSlot64Facts frame 112 hframeRoom (by decide)
+  have hresultRoom : (frame + 8).toNat + 8 ≤ UInt32.size := by
+    have h80' : (frame + 8).toNat = frame.toNat + 8 := by
+      simpa using h80
+    rw [h80']
+    omega
+  have hresult12 : (frame + 8) + 4 = frame + 12 := by
+    rw [UInt32.add_assoc]
+    rw [show (8 : UInt32) + 4 = 12 by decide]
+  have hnextInvariant := hinvariant.takeCanonicalDigit
+  have hnextMachine :
+      acc * UInt64.ofNat 10 + UInt64.ofNat (byte - 48).toNat =
+        machineNextAccumulator acc c := by
+    rw [hdecode]
+    rfl
+  iintro ⟨Hruntime, Hglobal, Hinner4, Hinner8, Hinner12,
+    Hresult8, Hresult12, Hcopy56, Hcopy60, Hacc, Hpointer, Hlength,
+    Hcont⟩
+  simp only [decimalDigitCallSegment, List.cons_append, List.nil_append]
+  iapply twp_localGet rfl
+  iapply twp_const
+  iapply twp_add
+  rw [UInt32.add_comm 8 frame]
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  ihave Hresult12' : pointsTo_u32 ((frame + 8) + 4) oldResult12 $$
+      [Hresult12]
+  · rw [hresult12]
+    iexact Hresult12
+  have Hparse := parseByte_call_twp (α := α)
+    (frame + 8) byte 10 frame
+    oldInner4 oldInner8 oldInner12 oldResult8 oldResult12
+    (by decide) (by decide) hbyteNumeric hdigit hinnerRoom hresultRoom
+    (callerLocals :=
+      ⟨fromAsciiRadixParams resultPtr textPtr textLength 10,
+        decimalDigitLocals frame nextPtr nextLength byte
+          oldTemporary oldFinal, []⟩)
+    (stack := []) (code := decimalDigitCallSegment.drop 6 ++ code)
+    (arity := arity) (remainder := remainder)
+    (controls := controls) (calls := calls)
+    (s := s) (E := E) (Φ := Φ)
+  simp only [decimalDigitCallSegment, List.drop, List.append_nil,
+    List.cons_append, List.nil_append] at Hparse
+  iapply Hparse
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hglobal]
+  · iexact Hglobal
+  isplitl [Hinner4]
+  · iexact Hinner4
+  isplitl [Hinner8]
+  · iexact Hinner8
+  isplitl [Hinner12]
+  · iexact Hinner12
+  isplitl [Hresult8]
+  · iexact Hresult8
+  isplitl [Hresult12']
+  · iexact Hresult12'
+  iintro Hpost
+  icases Hpost with ⟨Hruntime, Hglobal, Hinner4, Hinner8, Hinner12,
+    Hresult8, Hresult12'⟩
+  ihave Hresult12 : pointsTo_u32 (frame + 12) (byte - 48) $$
+      [Hresult12']
+  · rw [← hresult12]
+    iexact Hresult12'
+  iapply twp_localGet rfl
+  iapply twp_load32 (byte - 48) h120 h121 h122 h123 $$ Hresult12
+  iintro Hresult12
+  iapply twp_localSet rfl
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_load32 1 h80 h81 h82 h83 $$ Hresult8
+  iintro Hresult8
+  iapply twp_store32 oldCopy56 h560 h561 h562 h563 $$ Hcopy56
+  iintro Hcopy56
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_store32 oldCopy60 h600 h601 h602 h603 $$ Hcopy60
+  iintro Hcopy60
+  iapply twp_block
+  simp only [decimalDigitResultBody]
+  iapply twp_localGet rfl
+  iapply twp_load32 1 h560 h561 h562 h563 $$ Hcopy56
+  iintro Hcopy56
+  iapply twp_const
+  iapply twp_and
+  rw [show (1 : UInt32) &&& 1 = 1 by decide]
+  iapply twp_eqz (result := 0) (by decide)
+  iapply twp_brIfZero
+  iapply twp_localGet rfl
+  iapply twp_load32 (byte - 48) h600 h601 h602 h603 $$ Hcopy60
+  iintro Hcopy60
+  iapply twp_localSet rfl
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply Wasm.SmallStep.twp_load64
+    (acc * UInt64.ofNat 10) h1120 h1121 h1122 h1123 h1124 h1125
+      h1126 h1127 $$ Hacc
+  iintro Hacc
+  iapply twp_localGet rfl
+  iapply twp_extendUI32
+  iapply twp_addI64
+  rw [hnextMachine]
+  iapply Wasm.SmallStep.twp_store64
+    (acc * UInt64.ofNat 10) h1120 h1121 h1122 h1123 h1124 h1125
+      h1126 h1127 $$ Hacc
+  iintro Hacc
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_store32 oldPointer h480 h481 h482 h483 $$ Hpointer
+  iintro Hpointer
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_store32 oldLength h520 h521 h522 h523 $$ Hlength
+  iintro Hlength
+  simp only [fromAsciiRadixParams, decimalDigitLocals,
+    fromAsciiRadixFramedLocals, fromAsciiRadixZeroLocals, func51Def,
+    List.map_cons, List.map_nil, ValueType.zero, List.length_cons,
+    List.length_nil, Nat.reduceAdd, Nat.reduceSub, List.set,
+    List.drop_zero]
+  iapply Hcont
+  isplit
+  · ipureintro
+    exact hnextInvariant
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hglobal]
+  · iexact Hglobal
+  isplitl [Hinner4]
+  · iexact Hinner4
+  isplitl [Hinner8]
+  · iexact Hinner8
+  isplitl [Hinner12]
+  · iexact Hinner12
+  isplitl [Hresult8]
+  · iexact Hresult8
+  isplitl [Hresult12]
+  · iexact Hresult12
+  isplitl [Hcopy56]
+  · iexact Hcopy56
+  isplitl [Hcopy60]
+  · iexact Hcopy60
+  isplitl [Hacc]
+  · iexact Hacc
+  isplitl [Hpointer]
+  · iexact Hpointer
+  iexact Hlength
 
 /-- Exact total prologue rule for generated `func51`.  It owns precisely the
 two frame words overwritten by the prologue and exposes the radix-validation

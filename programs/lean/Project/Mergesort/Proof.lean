@@ -4,9 +4,11 @@ import Project.Mergesort.RangeProof
 import Project.Mergesort.MemoryCopyProof
 import Project.Mergesort.CopySliceProof
 import Project.Mergesort.SplitAtProof
+import Project.Mergesort.VectorProof
 import Project.Mergesort.MergeFunctionProof
 import Project.Mergesort.SortFunctionProof
 import Project.Mergesort.TextProof
+import Project.Mergesort.ParseByteProof
 import Project.Mergesort.ParseProof
 
 /-!

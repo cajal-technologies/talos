@@ -35,6 +35,7 @@ def cloneFromSliceFunction : Wasm.Function := func94Def
 def specCloneFromFunction : Wasm.Function := func95Def
 def splitAtUncheckedFunction : Wasm.Function := func96Def
 def splitAtFunction : Wasm.Function := func97Def
+def parseByteFunction : Wasm.Function := func52Def
 
 theorem merge_body : mergeFunction.body = func125 := rfl
 theorem sort_body : sortFunction.body = func126 := rfl
@@ -48,6 +49,7 @@ theorem cloneFromSlice_body : cloneFromSliceFunction.body = func94 := rfl
 theorem specCloneFrom_body : specCloneFromFunction.body = func95 := rfl
 theorem splitAtUnchecked_body : splitAtUncheckedFunction.body = func96 := rfl
 theorem splitAt_body : splitAtFunction.body = func97 := rfl
+theorem parseByte_body : parseByteFunction.body = func52 := rfl
 
 theorem merge_index : «module».funcs[125]? = some mergeFunction := by
   rfl
@@ -68,6 +70,8 @@ theorem splitAtUnchecked_index :
     «module».funcs[96]? = some splitAtUncheckedFunction := by rfl
 theorem splitAt_index :
     «module».funcs[97]? = some splitAtFunction := by rfl
+theorem parseByte_index :
+    «module».funcs[52]? = some parseByteFunction := by rfl
 
 /-! ## Direct callees of the exported text driver
 

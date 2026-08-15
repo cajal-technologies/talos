@@ -48,6 +48,57 @@ def mergeMainLoopBody : Program :=
 /-- The main-loop body after both nonempty guards and `local 7 := i`. -/
 def mergeMainAfterGuards : Program := mergeMainLoopBody.drop 19
 
+/-- Generated code following the main-loop block. -/
+def mergeAfterMain : Program := mergeAfterInit.drop 1
+
+/-- Body of the outer remainder loop, which first tests/copies the left slice
+and then enters the nested right remainder loop. -/
+def mergeLeftLoopBody : Program :=
+  match mergeAfterMain with
+  | .loop 0 0 body :: _ => body
+  | _ => []
+
+def mergeLeftGuardBody : Program :=
+  match mergeLeftLoopBody with
+  | .block 0 0 body :: _ => body
+  | _ => []
+
+/-- Left-copy step reached by taking the generated depth-zero guard branch. -/
+def mergeLeftRemainderStep : Program := mergeLeftLoopBody.drop 1
+
+/-- Body installed in the control frame after entering the generated left
+copy/update block. -/
+def mergeLeftUpdateBody : Program :=
+  match mergeLeftRemainderStep.drop 3 with
+  | .block 0 0 body :: _ => body
+  | _ => []
+
+/-- Nested right-loop program reached when the left slice is exhausted. -/
+def mergeAfterLeftGuard : Program := mergeLeftGuardBody.drop 7
+
+def mergeRightLoopBody : Program :=
+  match mergeAfterLeftGuard with
+  | .loop 0 0 body :: _ => body
+  | _ => []
+
+def mergeRightGuardBody : Program :=
+  match mergeRightLoopBody with
+  | .block 0 0 body :: _ => body
+  | _ => []
+
+/-- Right-copy step reached by taking the nested guard branch. -/
+def mergeRightRemainderStep : Program := mergeRightLoopBody.drop 1
+
+/-- Body installed in the control frame after entering the generated right
+copy/update block. -/
+def mergeRightUpdateBody : Program :=
+  match mergeRightRemainderStep.drop 3 with
+  | .block 0 0 body :: _ => body
+  | _ => []
+
+/-- Generated stack restoration and return after both slices are exhausted. -/
+def mergeEpilogue : Program := mergeRightGuardBody.drop 7
+
 private theorem slotFacts (base : UInt32) (offset : Nat)
     (hroom : base.toNat + 16 ≤ UInt32.size)
     (hoffset : offset ≤ 12) :
@@ -620,6 +671,161 @@ def mergeLoopFrame (afterLoop : Program) : ControlFrame :=
     continuation := afterLoop
     belowStack := [] }
 
+private theorem twp_loop_wf_family_from
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    {ι : Type} (measure : ι → Nat)
+    (locals : ι → Locals) (I : ι → IProp WasmHeapGF)
+    (initial : ι) (initialLocals : Locals)
+    {paramArity resultArity arity : Nat}
+    {body code : Program} {remainder belowStack : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    (hinitial : locals initial = initialLocals)
+    (hbelow : belowStack = (locals initial).values.drop paramArity)
+    (body_closes : ∀ current,
+      ⊢@{IProp WasmHeapGF} (iprop%
+        (∀ (next : ι), ⌜measure next < measure current⌝ -∗ I next -∗
+          WP (loopBodyExpr (α := α) (locals next)
+            paramArity resultArity arity body code remainder belowStack
+            controls calls) @ s; E [{ Φ }]) -∗
+        I current -∗
+          WP (loopBodyExpr (α := α) (locals current)
+            paramArity resultArity arity body code remainder belowStack
+            controls calls) @ s; E [{ Φ }])) :
+    I initial ⊢
+      WP (.running
+        ⟨initialLocals, .loop paramArity resultArity body :: code,
+          arity, remainder, controls, calls⟩ : Expr α)
+        @ s; E [{ Φ }] := by
+  have closes : ∀ current,
+      I current ⊢
+        WP (loopBodyExpr (α := α) (locals current)
+          paramArity resultArity arity body code remainder belowStack
+          controls calls) @ s; E [{ Φ }] := by
+    intro current
+    induction hmeasure : measure current using Nat.strongRecOn
+        generalizing current with
+    | ind n ih =>
+      subst n
+      iintro HI
+      iapply body_closes current
+      · iintro %next %hnext Hnext
+        ihave Hih := ih (measure next) hnext next rfl $$ Hnext
+        iexact Hih
+      · iexact HI
+  simp only [loopBodyExpr] at closes
+  subst initialLocals
+  iintro HI
+  iapply twp_loop (α := α)
+  rw [← hbelow]
+  ihave Hbody := closes initial $$ HI
+  iexact Hbody
+
+private theorem u32_ofNat_succ {n : Nat}
+    (h : n + 1 < UInt32.size) :
+    UInt32.ofNat n + 1 = UInt32.ofNat (n + 1) := by
+  apply UInt32.toNat.inj
+  rw [UInt32.toNat_add]
+  have hn : n < UInt32.size := by omega
+  rw [UInt32.toNat_ofNat_of_lt' hn]
+  have hone : (1 : UInt32).toNat = 1 := by decide
+  rw [hone, Nat.mod_eq_of_lt]
+  · symm
+    exact UInt32.toNat_ofNat_of_lt' h
+  · simpa only [UInt32.size] using h
+
+/-- Runtime data needed to describe the generated locals at a main-loop
+backedge.  The merge data and all compiler temporaries travel together so the
+well-founded family exactly matches the machine state. -/
+structure MergeMainRuntimeState where
+  scratch : List UInt64
+  i : Nat
+  j : Nat
+  k : Nat
+  emitted : List UInt64
+  l7 : UInt32
+  l8 : UInt32
+  l9 : UInt32
+  l10 : UInt32
+  l11 : UInt32
+  l12 : UInt32
+  l13 : UInt64
+  l14 : UInt32
+  l15 : UInt64
+  l16 : UInt32
+  l17 : UInt32
+  l18 : UInt64
+  l19 : UInt32
+  l20 : UInt32
+  l21 : UInt64
+  l22 : UInt32
+
+def mergeMainRuntimeLocals
+    (leftPtr rightPtr scratchPtr frame : UInt32)
+    (left right : List UInt64) (state : MergeMainRuntimeState) : Locals :=
+  ⟨mergeParams leftPtr (UInt32.ofNat left.length)
+      rightPtr (UInt32.ofNat right.length) scratchPtr
+      (UInt32.ofNat (left.length + right.length)),
+    mergeSelectionLocals frame state.l7 state.l8 state.l9 state.l10
+      state.l11 state.l12 state.l13 state.l14 state.l15 state.l16
+      state.l17 state.l18 state.l19 state.l20 state.l21 state.l22,
+    []⟩
+
+def MergeMainRuntimeState.takeLeft
+    (leftPtr rightPtr : UInt32) (x : UInt64)
+    (state : MergeMainRuntimeState) : MergeMainRuntimeState :=
+  { state with
+    scratch := state.scratch.set state.k x
+    i := state.i + 1
+    k := state.k + 1
+    emitted := state.emitted ++ [x]
+    l7 := UInt32.ofNat state.i
+    l8 := leftPtr + 8 * UInt32.ofNat state.i
+    l9 := UInt32.ofNat state.j
+    l10 := rightPtr + 8 * UInt32.ofNat state.j
+    l12 := UInt32.ofNat state.i
+    l15 := x
+    l16 := UInt32.ofNat state.k }
+
+def MergeMainRuntimeState.takeRight
+    (leftPtr rightPtr : UInt32) (y : UInt64)
+    (state : MergeMainRuntimeState) : MergeMainRuntimeState :=
+  { state with
+    scratch := state.scratch.set state.k y
+    j := state.j + 1
+    k := state.k + 1
+    emitted := state.emitted ++ [y]
+    l7 := UInt32.ofNat state.i
+    l8 := leftPtr + 8 * UInt32.ofNat state.i
+    l9 := UInt32.ofNat state.j
+    l10 := rightPtr + 8 * UInt32.ofNat state.j
+    l11 := UInt32.ofNat state.j
+    l13 := y
+    l14 := UInt32.ofNat state.k }
+
+def MergeMainRuntimeState.takeRemainingLeft
+    (x : UInt64) (state : MergeMainRuntimeState) : MergeMainRuntimeState :=
+  { state with
+    scratch := state.scratch.set state.k x
+    i := state.i + 1
+    k := state.k + 1
+    emitted := state.emitted ++ [x]
+    l20 := UInt32.ofNat state.i
+    l21 := x
+    l22 := UInt32.ofNat state.k }
+
+def MergeMainRuntimeState.takeRemainingRight
+    (y : UInt64) (state : MergeMainRuntimeState) : MergeMainRuntimeState :=
+  { state with
+    scratch := state.scratch.set state.k y
+    j := state.j + 1
+    k := state.k + 1
+    emitted := state.emitted ++ [y]
+    l17 := UInt32.ofNat state.j
+    l18 := y
+    l19 := UInt32.ofNat state.k }
+
 /- One complete generated main-loop iteration, from the nested selection
 blocks through the comparison, selected-value safety checks, scratch write,
 counter updates, and loop backedge. -/
@@ -1050,5 +1256,489 @@ theorem merge_main_iteration_twp
     isplitl [Hj]
     · iexact Hj
     · iexact Hk
+
+/- Total well-founded composition of the generated main merge loop.  Each
+backedge consumes one element, so the sum of the two remaining slice lengths
+strictly decreases. -/
+set_option maxHeartbeats 12000000 in
+theorem merge_main_loop_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (leftPtr rightPtr scratchPtr frame : UInt32)
+    (left right : List UInt64) (initial : MergeMainRuntimeState)
+    (hinitial : MergeSlicesInvariant left right initial.scratch
+      initial.i initial.j initial.k initial.emitted)
+    (hleftFit : leftPtr.toNat + 8 * left.length ≤ UInt32.size)
+    (hrightFit : rightPtr.toNat + 8 * right.length ≤ UInt32.size)
+    (hscratchFit : scratchPtr.toNat +
+      8 * (left.length + right.length) ≤ UInt32.size)
+    (hframeRoom : frame.toNat + 16 ≤ UInt32.size)
+    {arity : Nat} {remainder : List Value} {afterLoop : Program}
+    {outerControls : List ControlFrame} {calls : List CallFrame} :
+    array64At leftPtr left ∗ array64At rightPtr right ∗
+      array64At scratchPtr initial.scratch ∗
+      pointsTo_u32 (frame + 4) (UInt32.ofNat initial.i) ∗
+      pointsTo_u32 (frame + 8) (UInt32.ofNat initial.j) ∗
+      pointsTo_u32 (frame + 12) (UInt32.ofNat initial.k) ∗
+      (∀ (final : MergeMainRuntimeState),
+        ⌜MergeSlicesInvariant left right final.scratch
+          final.i final.j final.k final.emitted⌝ -∗
+        ⌜final.i = left.length ∨ final.j = right.length⌝ -∗
+        array64At leftPtr left -∗ array64At rightPtr right -∗
+        array64At scratchPtr final.scratch -∗
+        pointsTo_u32 (frame + 4) (UInt32.ofNat final.i) -∗
+        pointsTo_u32 (frame + 8) (UInt32.ofNat final.j) -∗
+        pointsTo_u32 (frame + 12) (UInt32.ofNat final.k) -∗
+        WP (.running
+          ⟨mergeMainRuntimeLocals leftPtr rightPtr scratchPtr frame
+              left right final,
+            afterLoop, arity, remainder, outerControls, calls⟩ : Expr α)
+          @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨mergeMainRuntimeLocals leftPtr rightPtr scratchPtr frame
+          left right initial,
+        .block 0 0 [.loop 0 0 mergeMainLoopBody] :: afterLoop,
+        arity, remainder, outerControls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] := by
+  let Finish : IProp WasmHeapGF := iprop%
+    ∀ (final : MergeMainRuntimeState),
+      ⌜MergeSlicesInvariant left right final.scratch
+        final.i final.j final.k final.emitted⌝ -∗
+      ⌜final.i = left.length ∨ final.j = right.length⌝ -∗
+      array64At leftPtr left -∗ array64At rightPtr right -∗
+      array64At scratchPtr final.scratch -∗
+      pointsTo_u32 (frame + 4) (UInt32.ofNat final.i) -∗
+      pointsTo_u32 (frame + 8) (UInt32.ofNat final.j) -∗
+      pointsTo_u32 (frame + 12) (UInt32.ofNat final.k) -∗
+      WP (.running
+        ⟨mergeMainRuntimeLocals leftPtr rightPtr scratchPtr frame
+            left right final,
+          afterLoop, arity, remainder, outerControls, calls⟩ : Expr α)
+        @ s; E [{ Φ }]
+  let Inv : MergeMainRuntimeState → IProp WasmHeapGF := fun state => iprop%
+    ⌜MergeSlicesInvariant left right state.scratch
+      state.i state.j state.k state.emitted⌝ ∗
+    array64At leftPtr left ∗ array64At rightPtr right ∗
+    array64At scratchPtr state.scratch ∗
+    pointsTo_u32 (frame + 4) (UInt32.ofNat state.i) ∗
+    pointsTo_u32 (frame + 8) (UInt32.ofNat state.j) ∗
+    pointsTo_u32 (frame + 12) (UInt32.ofNat state.k) ∗ Finish
+  let mainBlockFrame : ControlFrame :=
+    { kind := .block
+      paramArity := 0
+      resultArity := 0
+      body := [.loop 0 0 mergeMainLoopBody]
+      continuation := afterLoop
+      belowStack := [] }
+  iintro ⟨Hleft, Hright, Hscratch, Hi, Hj, Hk, Hfinish⟩
+  iapply twp_block
+  iapply twp_loop_wf_family_from (α := α)
+    (ι := MergeMainRuntimeState)
+    (measure := fun state =>
+      (left.length - state.i) + (right.length - state.j))
+    (locals := mergeMainRuntimeLocals leftPtr rightPtr scratchPtr frame
+      left right)
+    (I := Inv) (initial := initial)
+    (initialLocals := mergeMainRuntimeLocals leftPtr rightPtr scratchPtr frame
+      left right initial)
+    (body := mergeMainLoopBody) (code := []) (belowStack := [])
+    rfl rfl
+  · intro state
+    simp only [Inv, loopBodyExpr]
+    iintro Hrec Hinv
+    icases Hinv with
+      ⟨%hstate, Hleft, Hright, Hscratch, Hi, Hj, Hk, Hfinish⟩
+    have hdata := hstate
+    unfold MergeSlicesInvariant at hdata
+    have hleftLength : left.length < UInt32.size := by
+      simp only [UInt32.size] at hleftFit ⊢
+      omega
+    have hrightLength : right.length < UInt32.size := by
+      simp only [UInt32.size] at hrightFit ⊢
+      omega
+    have hiSize : state.i < UInt32.size := by omega
+    have hjSize : state.j < UInt32.size := by omega
+    have hkSize : state.k < UInt32.size := by
+      simp only [UInt32.size] at hscratchFit ⊢
+      omega
+    have hiCmp :
+        (UInt32.ofNat state.i < UInt32.ofNat left.length) ↔
+          state.i < left.length := by
+      rw [UInt32.lt_iff_toNat_lt,
+        UInt32.toNat_ofNat_of_lt' hiSize,
+        UInt32.toNat_ofNat_of_lt' hleftLength]
+    have hjCmp :
+        (UInt32.ofNat state.j < UInt32.ofNat right.length) ↔
+          state.j < right.length := by
+      rw [UInt32.lt_iff_toNat_lt,
+        UInt32.toNat_ofNat_of_lt' hjSize,
+        UInt32.toNat_ofNat_of_lt' hrightLength]
+    have hstateScratchFit :
+        scratchPtr.toNat + 8 * state.scratch.length ≤ UInt32.size := by
+      rw [hdata.2.2.1]
+      exact hscratchFit
+    obtain ⟨hi0, hi1, hi2, hi3⟩ :=
+      slotFacts frame 4 hframeRoom (by decide)
+    obtain ⟨hj0, hj1, hj2, hj3⟩ :=
+      slotFacts frame 8 hframeRoom (by decide)
+    by_cases hi : state.i < left.length
+    · by_cases hj : state.j < right.length
+      · let x := left[state.i]
+        let y := right[state.j]
+        have hx : left[state.i]? = some x := by
+          dsimp only [x]
+          exact List.getElem?_eq_getElem hi
+        have hy : right[state.j]? = some y := by
+          dsimp only [y]
+          exact List.getElem?_eq_getElem hj
+        have hiSucc : state.i + 1 < UInt32.size := by omega
+        have hjSucc : state.j + 1 < UInt32.size := by omega
+        have hkSucc : state.k + 1 < UInt32.size := by
+          simp only [UInt32.size] at hscratchFit ⊢
+          omega
+        have hiValue :
+            UInt32.ofNat state.i + 1 = UInt32.ofNat (state.i + 1) := by
+          rw [u32_ofNat_succ hiSucc]
+        have hjValue :
+            UInt32.ofNat state.j + 1 = UInt32.ofNat (state.j + 1) := by
+          rw [u32_ofNat_succ hjSucc]
+        have hkValue :
+            UInt32.ofNat state.k + 1 = UInt32.ofNat (state.k + 1) := by
+          rw [u32_ofNat_succ hkSucc]
+        simp only [mergeMainRuntimeLocals]
+        iapply merge_main_guards_twp leftPtr (UInt32.ofNat left.length)
+          rightPtr (UInt32.ofNat right.length) scratchPtr
+          (UInt32.ofNat (left.length + right.length)) frame
+          (UInt32.ofNat state.i) (UInt32.ofNat state.j)
+          (mergeSelectionLocals frame state.l7 state.l8 state.l9 state.l10
+            state.l11 state.l12 state.l13 state.l14 state.l15 state.l16
+            state.l17 state.l18 state.l19 state.l20 state.l21 state.l22)
+          (⟨mergeParams leftPtr (UInt32.ofNat left.length) rightPtr
+              (UInt32.ofNat right.length) scratchPtr
+              (UInt32.ofNat (left.length + right.length)),
+            mergeSelectionLocals frame (UInt32.ofNat state.i) state.l8
+              state.l9 state.l10 state.l11 state.l12 state.l13 state.l14
+              state.l15 state.l16 state.l17 state.l18 state.l19 state.l20
+              state.l21 state.l22,
+            [.i32 (UInt32.ofNat state.i)]⟩ : Locals)
+          (by simpa [hiCmp]) (by simpa [hjCmp]) hframeRoom rfl rfl
+        isplitl [Hi]
+        · iexact Hi
+        isplitl [Hj]
+        · iexact Hj
+        iintro ⟨Hi, Hj⟩
+        simp only [List.drop_zero]
+        rw [← hdata.2.2.1]
+        have Hiter := merge_main_iteration_twp
+          (α := α) (s := s) (E := E) (Φ := Φ)
+          leftPtr rightPtr scratchPtr frame
+          left right state.scratch state.i state.j state.k state.emitted x y
+          state.l8 state.l9 state.l10 state.l11 state.l12 state.l14
+          state.l16 state.l17 state.l19 state.l20 state.l22
+          state.l13 state.l15 state.l18 state.l21
+          hstate hi hj hx hy hleftFit hrightFit hstateScratchFit hframeRoom
+          (arity := arity) (remainder := remainder) (afterLoop := [])
+          (outerControls := mainBlockFrame :: outerControls) (calls := calls)
+        simp only [mergeLoopFrame, mainBlockFrame] at Hiter
+        iapply Hiter
+        isplitl [Hleft]
+        · iexact Hleft
+        isplitl [Hright]
+        · iexact Hright
+        isplitl [Hscratch]
+        · iexact Hscratch
+        isplitl [Hi]
+        · iexact Hi
+        isplitl [Hj]
+        · iexact Hj
+        isplitl [Hk]
+        · iexact Hk
+        isplit
+        · iintro ⟨%_hxy, %hnext, Hleft, Hright, Hscratch, Hi, Hj, Hk⟩
+          ispecialize Hrec $$
+            %(MergeMainRuntimeState.takeLeft leftPtr rightPtr x state)
+          isimp only [MergeMainRuntimeState.takeLeft,
+            mergeMainRuntimeLocals] at Hrec
+          iapply Hrec
+          · ipureintro
+            omega
+          isplitr
+          · ipureintro
+            exact hnext
+          isplitl [Hleft]
+          · iexact Hleft
+          isplitl [Hright]
+          · iexact Hright
+          isplitl [Hscratch]
+          · iexact Hscratch
+          isplitl [Hi]
+          · rw [← hiValue]
+            iexact Hi
+          isplitl [Hj]
+          · iexact Hj
+          isplitl [Hk]
+          · rw [← hkValue]
+            iexact Hk
+          · iexact Hfinish
+        · iintro ⟨%_hxy, %hnext, Hleft, Hright, Hscratch, Hi, Hj, Hk⟩
+          ispecialize Hrec $$
+            %(MergeMainRuntimeState.takeRight leftPtr rightPtr y state)
+          isimp only [MergeMainRuntimeState.takeRight,
+            mergeMainRuntimeLocals] at Hrec
+          iapply Hrec
+          · ipureintro
+            omega
+          isplitr
+          · ipureintro
+            exact hnext
+          isplitl [Hleft]
+          · iexact Hleft
+          isplitl [Hright]
+          · iexact Hright
+          isplitl [Hscratch]
+          · iexact Hscratch
+          isplitl [Hi]
+          · iexact Hi
+          isplitl [Hj]
+          · rw [← hjValue]
+            iexact Hj
+          isplitl [Hk]
+          · rw [← hkValue]
+            iexact Hk
+          · iexact Hfinish
+      · have hjEq : state.j = right.length := by omega
+        simp only [mergeMainRuntimeLocals, mergeMainLoopBody,
+          mergeAfterInit, func125, List.drop]
+        iapply twp_localGet rfl
+        iapply twp_load32 (UInt32.ofNat state.i) hi0 hi1 hi2 hi3 $$ Hi
+        iintro Hi
+        iapply twp_localGet rfl
+        iapply twp_ltU (result := 1) (by simp [hiCmp, hi])
+        iapply twp_const
+        iapply twp_and
+        rw [show (1 : UInt32) &&& 1 = 1 by decide]
+        iapply twp_eqz (result := 0) (by decide)
+        iapply twp_brIfZero
+        iapply twp_localGet rfl
+        iapply twp_load32 (UInt32.ofNat state.j) hj0 hj1 hj2 hj3 $$ Hj
+        iintro Hj
+        iapply twp_localGet rfl
+        iapply twp_ltU (result := 0) (by simp [hjCmp, hj])
+        iapply twp_const
+        iapply twp_and
+        rw [show (0 : UInt32) &&& 1 = 0 by decide]
+        iapply twp_eqz (result := 1) (by decide)
+        iapply twp_brIf (by decide) (by rfl)
+        simp only [List.take_zero, List.nil_append]
+        isimp only [Finish] at Hfinish
+        ihave Hdone := Hfinish $$ %state %hstate %(Or.inr hjEq)
+          Hleft Hright Hscratch Hi Hj Hk
+        isimp only [mergeMainRuntimeLocals] at Hdone
+        iexact Hdone
+    · have hiEq : state.i = left.length := by omega
+      simp only [mergeMainRuntimeLocals, mergeMainLoopBody,
+        mergeAfterInit, func125, List.drop]
+      iapply twp_localGet rfl
+      iapply twp_load32 (UInt32.ofNat state.i) hi0 hi1 hi2 hi3 $$ Hi
+      iintro Hi
+      iapply twp_localGet rfl
+      iapply twp_ltU (result := 0) (by simp [hiCmp, hi])
+      iapply twp_const
+      iapply twp_and
+      rw [show (0 : UInt32) &&& 1 = 0 by decide]
+      iapply twp_eqz (result := 1) (by decide)
+      iapply twp_brIf (by decide) (by rfl)
+      simp only [List.take_zero, List.nil_append]
+      isimp only [Finish] at Hfinish
+      ihave Hdone := Hfinish $$ %state %hstate %(Or.inl hiEq)
+        Hleft Hright Hscratch Hi Hj Hk
+      isimp only [mergeMainRuntimeLocals] at Hdone
+      iexact Hdone
+  · simp only [Inv, Finish]
+    isplitr
+    · ipureintro
+      exact hinitial
+    iframe
+
+/- Exact generated step for copying one remaining left element after the main
+loop has established that the right slice is exhausted. -/
+set_option maxHeartbeats 4000000 in
+theorem merge_left_remainder_step_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (leftPtr rightPtr scratchPtr frame : UInt32)
+    (left right : List UInt64) (state : MergeMainRuntimeState)
+    (x : UInt64)
+    (hinv : MergeSlicesInvariant left right state.scratch
+      state.i right.length state.k state.emitted)
+    (hi : state.i < left.length) (hx : left[state.i]? = some x)
+    (hleftFit : leftPtr.toNat + 8 * left.length ≤ UInt32.size)
+    (hscratchFit : scratchPtr.toNat +
+      8 * state.scratch.length ≤ UInt32.size)
+    (hframeRoom : frame.toNat + 16 ≤ UInt32.size)
+    {arity : Nat} {remainder : List Value} {code : Program}
+    {controls targetControls : List ControlFrame}
+    {targetCode : Program} {targetValues : List Value}
+    {calls : List CallFrame}
+    (htarget : branchTarget? arity 0 controls [] =
+      some (targetCode, targetControls, targetValues)) :
+    array64At leftPtr left ∗ array64At scratchPtr state.scratch ∗
+      pointsTo_u32 (frame + 4) (UInt32.ofNat state.i) ∗
+      pointsTo_u32 (frame + 12) (UInt32.ofNat state.k) ∗
+      ((⌜MergeSlicesInvariant left right
+          (state.scratch.set state.k x) (state.i + 1) right.length
+          (state.k + 1) (state.emitted ++ [x])⌝ ∗
+        array64At leftPtr left ∗
+        array64At scratchPtr (state.scratch.set state.k x) ∗
+        pointsTo_u32 (frame + 4) (UInt32.ofNat state.i + 1) ∗
+        pointsTo_u32 (frame + 12) (UInt32.ofNat state.k + 1)) -∗
+        WP (.running
+          ⟨{ mergeMainRuntimeLocals leftPtr rightPtr scratchPtr frame
+                left right (state.takeRemainingLeft x) with
+              values := targetValues },
+            targetCode, arity, remainder, targetControls, calls⟩ : Expr α)
+          @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨mergeMainRuntimeLocals leftPtr rightPtr scratchPtr frame left right state,
+        mergeLeftRemainderStep ++ code, arity, remainder, controls, calls⟩ :
+        Expr α) @ s; E [{ Φ }] := by
+  have hk : state.k < state.scratch.length := hinv.k_lt hi
+  have hnext := hinv.takeRemainingLeft hi hx
+  let updateFrame : ControlFrame :=
+    { kind := .block
+      paramArity := 0
+      resultArity := 0
+      body := mergeLeftUpdateBody
+      continuation := code
+      belowStack := [] }
+  have hscratchEq :
+      state.scratch.length = left.length + right.length := by
+    unfold MergeSlicesInvariant at hinv
+    exact hinv.2.2.1
+  have hleftLength : left.length < UInt32.size := by
+    simp only [UInt32.size] at hleftFit ⊢
+    omega
+  have hiSize : state.i < UInt32.size := by omega
+  have hiU : UInt32.ofNat state.i < UInt32.ofNat left.length := by
+    rw [UInt32.lt_iff_toNat_lt,
+      UInt32.toNat_ofNat_of_lt' hiSize,
+      UInt32.toNat_ofNat_of_lt' hleftLength]
+    exact hi
+  have hscratchLength : state.scratch.length < UInt32.size := by
+    simp only [UInt32.size] at hscratchFit ⊢
+    omega
+  have hkSize : state.k < UInt32.size := by omega
+  have hkU : UInt32.ofNat state.k <
+      UInt32.ofNat state.scratch.length := by
+    rw [UInt32.lt_iff_toNat_lt,
+      UInt32.toNat_ofNat_of_lt' hkSize,
+      UInt32.toNat_ofNat_of_lt' hscratchLength]
+    exact hk
+  obtain ⟨hi0, hi1, hi2, hi3⟩ :=
+    slotFacts frame 4 hframeRoom (by decide)
+  obtain ⟨hk0, hk1, hk2, hk3⟩ :=
+    slotFacts frame 12 hframeRoom (by decide)
+  iintro ⟨Hleft, Hscratch, Hi, Hk, Hcont⟩
+  simp only [mergeLeftRemainderStep, mergeLeftLoopBody, mergeAfterMain,
+    mergeAfterInit, func125, List.drop, List.cons_append, List.nil_append]
+  iapply twp_localGet rfl
+  iapply twp_load32 (UInt32.ofNat state.i) hi0 hi1 hi2 hi3 $$ Hi
+  iintro Hi
+  iapply twp_localSet rfl
+  simp only [mergeMainRuntimeLocals, mergeSelectionLocals, mergeParams,
+    List.set, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub]
+  iapply twp_block
+  iapply twp_block
+  iapply twp_block
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_ltU (result := 1) (by simp [hiU])
+  iapply twp_const
+  iapply twp_and
+  rw [show (1 : UInt32) &&& 1 = 1 by decide]
+  iapply twp_eqz (result := 0) (by decide)
+  iapply twp_brIfZero
+  iapply twp_load64AtShift_raw hi hleftFit rfl rfl
+  isplitl [Hleft]
+  · iexact Hleft
+  iintro Hleft
+  have hxElem : left[state.i] = x := by
+    have hxOption := hx
+    rw [List.getElem?_eq_getElem hi] at hxOption
+    exact Option.some.inj hxOption
+  rw [hxElem]
+  iapply twp_localSet rfl
+  simp only [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
+  iapply twp_localGet rfl
+  iapply twp_load32 (UInt32.ofNat state.k) hk0 hk1 hk2 hk3 $$ Hk
+  iintro Hk
+  iapply twp_localSet rfl
+  simp only [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_ltU (result := 1) (by simpa [hscratchEq] using hkU)
+  iapply twp_const
+  iapply twp_and
+  rw [show (1 : UInt32) &&& 1 = 1 by decide]
+  iapply twp_brIf (by decide) (by rfl)
+  simp only [List.take_zero, List.nil_append]
+  iapply twp_store64AtShift_raw hk hscratchFit rfl rfl rfl
+  isplitl [Hscratch]
+  · iexact Hscratch
+  iintro Hscratch
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_load32 (UInt32.ofNat state.i) hi0 hi1 hi2 hi3 $$ Hi
+  iintro Hi
+  iapply twp_const
+  iapply twp_add
+  rw [UInt32.add_comm 1]
+  iapply twp_store32 (UInt32.ofNat state.i) hi0 hi1 hi2 hi3 $$ Hi
+  iintro Hi
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_load32 (UInt32.ofNat state.k) hk0 hk1 hk2 hk3 $$ Hk
+  iintro Hk
+  iapply twp_const
+  iapply twp_add
+  rw [UInt32.add_comm 1]
+  iapply twp_store32 (UInt32.ofNat state.k) hk0 hk1 hk2 hk3 $$ Hk
+  iintro Hk
+  simp only [List.drop_zero]
+  have Hbr := twp_br
+    (α := α) (s := s) (E := E) (Φ := Φ)
+    (params := mergeParams leftPtr (UInt32.ofNat left.length) rightPtr
+      (UInt32.ofNat right.length) scratchPtr
+      (UInt32.ofNat (left.length + right.length)))
+    (localValues := mergeSelectionLocals frame state.l7 state.l8 state.l9
+      state.l10 state.l11 state.l12 state.l13 state.l14 state.l15 state.l16
+      state.l17 state.l18 state.l19 (UInt32.ofNat state.i) x
+      (UInt32.ofNat state.k))
+    (values := []) (targetValues := targetValues) (depth := 1)
+    (arity := arity) (code := []) (targetCode := targetCode)
+    (remainder := remainder) (controls := updateFrame :: controls)
+    (targetControl := targetControls) (calls := calls)
+    (by simpa only [branchTarget?] using htarget)
+  simp only [updateFrame, mergeLeftUpdateBody, mergeLeftRemainderStep, mergeLeftLoopBody,
+    mergeAfterMain, mergeAfterInit, func125, mergeParams,
+    mergeSelectionLocals, List.drop] at Hbr
+  iapply Hbr
+  isimp only [mergeMainRuntimeLocals,
+    MergeMainRuntimeState.takeRemainingLeft] at Hcont
+  iapply Hcont
+  isplitr
+  · ipureintro
+    exact hnext
+  isplitl [Hleft]
+  · iexact Hleft
+  isplitl [Hscratch]
+  · iexact Hscratch
+  isplitl [Hi]
+  · iexact Hi
+  · iexact Hk
 
 end Project.Mergesort.MergeFunctionProof
