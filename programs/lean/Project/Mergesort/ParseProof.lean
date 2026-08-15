@@ -598,6 +598,24 @@ private theorem twp_mulI64
       @ s; E [{ Φ }] :=
   twp_pureStep _ _ _ (fun _ => Step.mulI64)
 
+private theorem twp_geU
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    {params localValues values : List Value}
+    {lhs rhs result : UInt32} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame}
+    (hresult : result = if lhs ≥ rhs then 1 else 0) :
+    WP (.running
+      ⟨⟨params, localValues, .i32 result :: values⟩,
+        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }] ⊢
+    WP (.running
+      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
+        .geU :: code, arity, remainder, controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] :=
+  twp_pureStep _ _ _ (fun _ => Step.geU hresult)
+
 /-- Total counterpart of the generic partial `i32.load8_u` rule. -/
 private theorem twp_load8U
     [WasmSmallStepGS hlc]
@@ -1193,6 +1211,141 @@ theorem decimalSimpleLoop_backedge_twp
   isplitl [Hpointer]
   · iexact Hpointer
   iexact Hlength
+
+/-- Empty-remaining branch of the exact generated simple-loop guard.  The
+depth-three target is supplied explicitly because it belongs to `func51`'s
+surrounding nested blocks, not to the loop itself. -/
+theorem decimalSimpleLoop_empty_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (resultPtr textPtr textLength frame : UInt32)
+    (localValues : List Value)
+    (hframeLocal :
+      (⟨fromAsciiRadixParams resultPtr textPtr textLength 10,
+          localValues, []⟩ : Locals).get 4 = some (.i32 frame))
+    (hframeRoom : frame.toNat + 120 ≤ UInt32.size)
+    {code targetCode : Program} {arity : Nat}
+    {remainder targetValues : List Value}
+    {controls targetControls : List ControlFrame}
+    {calls : List CallFrame}
+    (htarget : branchTarget? arity 3
+      ({ kind := .loop
+         paramArity := 0
+         resultArity := 0
+         body := decimalSimpleLoopBody
+         continuation := code
+         belowStack := [] } :: controls) [] =
+      some (targetCode, targetControls, targetValues)) :
+    pointsTo_u32 (frame + 52) 0 ∗
+      (pointsTo_u32 (frame + 52) 0 -∗
+        WP (.running
+          ⟨⟨fromAsciiRadixParams resultPtr textPtr textLength 10,
+              localValues, targetValues⟩,
+            targetCode, arity, remainder, targetControls, calls⟩ : Expr α)
+          @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨⟨fromAsciiRadixParams resultPtr textPtr textLength 10,
+          localValues, []⟩,
+        decimalSimpleLoopBody, arity, remainder,
+        { kind := .loop
+          paramArity := 0
+          resultArity := 0
+          body := decimalSimpleLoopBody
+          continuation := code
+          belowStack := [] } :: controls,
+        calls⟩ : Expr α) @ s; E [{ Φ }] := by
+  obtain ⟨h520, h521, h522, h523⟩ :=
+    parserWideSlotFacts frame 52 hframeRoom (by decide)
+  iintro ⟨Hlength, Hfinish⟩
+  simp only [decimalSimpleLoopBody, List.cons_append, List.nil_append]
+  iapply twp_localGet hframeLocal
+  iapply twp_load32 0 h520 h521 h522 h523 $$ Hlength
+  iintro Hlength
+  iapply twp_const
+  iapply twp_geU (result := 0) (by decide)
+  iapply twp_const
+  iapply twp_and
+  rw [show (0 : UInt32) &&& 1 = 0 by decide]
+  iapply twp_eqz (result := 1) (by decide)
+  have Hbranch := twp_brIf (α := α) (s := s) (E := E) (Φ := Φ)
+    (params := fromAsciiRadixParams resultPtr textPtr textLength 10)
+    (localValues := localValues) (values := []) (condition := 1)
+    (depth := 3) (arity := arity) (code := decimalSimpleLoopAfterGuard)
+    (targetCode := targetCode) (remainder := remainder)
+    (controls :=
+      { kind := .loop, paramArity := 0, resultArity := 0
+        body := decimalSimpleLoopBody, continuation := code
+        belowStack := [] } :: controls)
+    (targetControl := targetControls) (targetValues := targetValues)
+    (calls := calls) (by decide) htarget
+  simp only [decimalSimpleLoopBody, List.cons_append, List.nil_append] at Hbranch
+  iapply Hbranch
+  iapply Hfinish $$ Hlength
+
+/-- Total well-founded wrapper for the exact generated simple decimal loop.
+The nonempty premise is designed to be discharged by
+`decimalSimpleLoop_backedge_twp`; the empty premise is discharged by
+`decimalSimpleLoop_empty_twp`. -/
+theorem decimalSimpleLoop_wf
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (locals : List Char → Locals)
+    (I : List Char → IProp WasmHeapGF)
+    (initial : List Char)
+    {code : Program} {arity : Nat} {remainder belowStack : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    (hbelow : belowStack = (locals initial).values.drop 0)
+    (empty_closes :
+      ⊢@{IProp WasmHeapGF} (iprop%
+        I [] -∗
+          WP (loopBodyExpr (α := α) (locals []) 0 0 arity
+            decimalSimpleLoopBody code remainder belowStack controls calls)
+          @ s; E [{ Φ }]))
+    (nonempty_closes : ∀ c rest,
+      ⊢@{IProp WasmHeapGF} (iprop%
+        (I rest -∗
+          WP (loopBodyExpr (α := α) (locals rest) 0 0 arity
+            decimalSimpleLoopBody code remainder belowStack controls calls)
+          @ s; E [{ Φ }]) -∗
+        I (c :: rest) -∗
+          WP (loopBodyExpr (α := α) (locals (c :: rest)) 0 0 arity
+            decimalSimpleLoopBody code remainder belowStack controls calls)
+          @ s; E [{ Φ }])) :
+    I initial ⊢
+      WP (.running
+        ⟨locals initial,
+          .loop 0 0 decimalSimpleLoopBody :: code,
+          arity, remainder, controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] := by
+  iapply Wasm.SmallStep.twp_loop_wf_family
+    (measure := fun remaining : List Char => remaining.length)
+    (locals := locals) (I := I) (initial := initial)
+    (initialLocals := locals initial)
+    (paramArity := 0) (resultArity := 0)
+    (body := decimalSimpleLoopBody) (code := code)
+    (belowStack := belowStack) rfl hbelow
+  · intro remaining
+    cases remaining with
+    | nil =>
+        iintro _ Hinv
+        iapply empty_closes
+        iexact Hinv
+    | cons c rest =>
+        iintro Hrec Hinv
+        ispecialize Hrec $$ %rest
+        ihave Hnext :
+            (I rest -∗
+              WP (loopBodyExpr (α := α) (locals rest) 0 0 arity
+                decimalSimpleLoopBody code remainder belowStack
+                controls calls) @ s; E [{ Φ }]) $$ [Hrec]
+        · iintro Hrest
+          iapply Hrec
+          · ipureintro
+            simp
+          · iexact Hrest
+        iapply nonempty_closes c rest $$ Hnext Hinv
 
 /-- Exact total prologue rule for generated `func51`.  It owns precisely the
 two frame words overwritten by the prologue and exposes the radix-validation
