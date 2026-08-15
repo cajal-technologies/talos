@@ -159,6 +159,15 @@ The `@[spec_of]` and `@[proves]` attributes are defined in
 truth for their semantics is this document and the extractor that
 reads them.
 
+That file also defines `@[rust_ref "crate::fn"]` and
+`@[equiv_of model]`, which tag a hand-written Lean model of a Rust
+function and the equivalence that model owes to the compiled code. The
+extractor does not read them: they reach no artifact field and raise no
+diagnostic, and a `def` carrying only `@[rust_ref]` is not a
+`FormalSpec`. Recording them is a schema change — new artifact entries
+and a `schema_version` bump — and is deliberately not part of the change
+that defined the attributes.
+
 ---
 
 ## Top-level artifact

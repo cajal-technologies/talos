@@ -16,4 +16,4 @@ rev = "27f05563f6f65993056c44da95be8a474dc9e57f"
 
 [[lean_lib]]
 name = "CodeLib"
-roots = ["CodeLib", "CodeLib.Examples.Quicksort.Proof"]
+roots = ["CodeLib", "CodeLib.Attrs.Check", "CodeLib.Examples.Quicksort.Proof"]
