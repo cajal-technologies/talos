@@ -17,6 +17,25 @@ open Wasm.SepLogic Wasm.SmallStep
 open Project.Mergesort.FunctionSpecs
 open Project.Mergesort.RangeProof
 open Project.Mergesort.FormatProof
+open Project.Mergesort.Machine
+
+private theorem twp_eq
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    {params localValues values : List Value}
+    {lhs rhs result : UInt32} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame}
+    (hresult : result = if lhs = rhs then 1 else 0) :
+    WP (.running
+      ⟨⟨params, localValues, .i32 result :: values⟩,
+        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }] ⊢
+    WP (.running
+      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
+        .eq :: code, arity, remainder, controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] :=
+  Wasm.SmallStep.twp_pureStep _ _ _ (fun _ => Step.eq hresult)
 
 def writeFmtAtPrepare : Program := func33.drop 18
 def writeFmtAfterPrepare : Program := func33.drop 19
@@ -47,6 +66,28 @@ def formatPrepareOuterFrame : ControlFrame :=
     continuation := formatPrepareAfterOuter
     belowStack := [] }
 
+def formatPrepareMiddleBody : Program :=
+  match formatPrepareOuterBody with
+  | .block _ _ body :: _ => body
+  | _ => []
+
+def formatPrepareAfterMiddle : Program := formatPrepareOuterBody.drop 1
+
+def formatPrepareInnerBody : Program :=
+  match formatPrepareMiddleBody with
+  | .block _ _ body :: _ => body
+  | _ => []
+
+def formatPrepareStaticPath : Program := formatPrepareMiddleBody.drop 1
+
+def formatPrepareMiddleFrame : ControlFrame :=
+  { kind := .block
+    paramArity := 0
+    resultArity := 0
+    body := formatPrepareMiddleBody
+    continuation := formatPrepareAfterMiddle
+    belowStack := [] }
+
 theorem writeFmtAtPrepare_eq :
     writeFmtAtPrepare = .call 36 :: writeFmtAfterPrepare := by
   rfl
@@ -54,6 +95,23 @@ theorem writeFmtAtPrepare_eq :
 theorem formatPrepare_at_outer_eq :
     func34.drop 7 =
       .block 0 0 formatPrepareOuterBody :: formatPrepareAfterOuter := by
+  rfl
+
+theorem formatPrepare_outer_shape :
+    formatPrepareOuterBody =
+      .block 0 0 formatPrepareMiddleBody :: formatPrepareAfterMiddle := by
+  rfl
+
+theorem formatPrepare_middle_shape :
+    formatPrepareMiddleBody =
+      .block 0 0 formatPrepareInnerBody :: formatPrepareStaticPath := by
+  rfl
+
+theorem formatPrepare_inner_shape :
+    formatPrepareInnerBody =
+      [.localGet 3, .const 1, .and, .const 1, .eq, .const 1, .and,
+       .eqz, .br_if 0, .localGet 1, .load32 0, .localSet 4,
+       .localGet 3, .const 1, .shrU, .localSet 5, .br 1] := by
   rfl
 
 /-! Exact prefix of local `func34` (absolute 36).  It computes the 16-byte
@@ -104,6 +162,54 @@ theorem formatPrepare_prefix_twp
   isimp only [formatPrepareLocals, formatPrepareOuterBody,
     formatPrepareOuterFrame, formatPrepareAfterOuter, func34, List.drop] at Hdone
   iapply Hdone $$ Hglobal Hsecond
+
+/-! The driver passes an aligned argument pointer as the second word.  This
+exact pure-control rule follows the generated low-bit test through its two
+nested blocks and lands at the static fallback loads. -/
+theorem formatPrepare_aligned_dispatch_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (resultPtr inputPtr frame second : UInt32)
+    (heven : second &&& 1 = 0)
+    {R : IProp WasmHeapGF}
+    {controls : List ControlFrame} {calls : List CallFrame} :
+    R ∗
+      (R -∗
+        WP (.running
+          ⟨⟨[.i32 resultPtr, .i32 inputPtr],
+              formatPrepareLocals frame second, []⟩,
+            formatPrepareStaticPath, 0, [],
+            formatPrepareMiddleFrame :: formatPrepareOuterFrame :: controls,
+            calls⟩ : Expr α) @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨⟨[.i32 resultPtr, .i32 inputPtr],
+          formatPrepareLocals frame second, []⟩,
+        formatPrepareOuterBody, 0, [],
+        formatPrepareOuterFrame :: controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] := by
+  simp only [formatPrepareLocals, formatPrepareMiddleFrame,
+    formatPrepareOuterFrame, formatPrepareMiddleBody,
+    formatPrepareStaticPath, formatPrepareAfterMiddle,
+    formatPrepareAfterOuter, formatPrepareOuterBody, func34, List.drop]
+  iintro ⟨HR, Hdone⟩
+  iapply twp_block
+  simp only [List.drop_zero]
+  iapply twp_block
+  simp only [List.drop_zero]
+  iapply twp_localGet rfl
+  iapply twp_const
+  iapply twp_and
+  rw [heven]
+  iapply twp_const
+  iapply twp_eq (result := 0) (by decide)
+  iapply twp_const
+  iapply twp_and
+  rw [show (0 : UInt32) &&& 1 = 0 by decide]
+  iapply twp_eqz (value := 0) (result := 1) (by decide)
+  iapply twp_brIf (by decide) (by rfl)
+  simp only [List.take_zero, List.nil_append]
+  iapply Hdone $$ HR
 
 /-! Exact generated prologue of local `func33`, through both saved argument
 stores and both operands for absolute call 36. -/
