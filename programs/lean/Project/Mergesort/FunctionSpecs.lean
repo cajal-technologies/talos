@@ -1,90 +1,75 @@
 import Project.Mergesort.Program
 import Project.Mergesort.Pure
-import Interpreter.Wasm.Host.StdIO
 
 /-!
-# Function-level specifications for the generated merge-sort module
+# Function map and contracts for the original generated merge-sort module
 
-The generated module has seven local functions: four sorting helpers, the
-driver, and two StdIO shims.  This file gives the boundary shims their
-fuel-free contract; proofs are kept beside the corresponding contract and are
-composed by the exported-driver proof.
+The unchanged Rust program compiles to 255 local functions. The proof is
+layered around the small subset that lies on the successful exported path:
 
-The four host-independent function contracts live in `CoreProof`, next to
-their proofs: `twp_mergeInto`, `twp_mergesortRaw`, `twp_mergeRaw`, and
-`twp_copyBack`.  Keeping those contextual Iris contracts out of this file
-avoids importing the separation-logic layer just to state the two ABI specs.
+* `func125` is the monomorphised `merge::<u64>` body;
+* `func126` is the monomorphised recursive `mergesort::<u64>` body;
+* `func127` is the exported text-IO driver;
+* `func7`--`func9`, `func93`--`func97` are slice splitting and copying;
+* the remaining driver callees implement buffered IO, decimal parsing,
+  allocation, iteration, decimal formatting, and destruction.
+
+Call immediates use the Wasm function index space, which starts with the two
+StdIO imports. Thus local `func125` is called with index `127`, local
+`func126` with index `128`, and local `func127` is exported at index `129`.
 -/
 
 namespace Project.Mergesort.FunctionSpecs
 
-open Wasm Wasm.SmallStep
+open Wasm
 
-/-- Start one generated local function in the concrete StdIO runtime.  The
-error branch is definitionally unreachable for the indices used below. -/
-def callConfig (entry : Nat) (store : Store Wasm.StdIO.State)
-    (args : List Value) : Config Wasm.StdIO.State :=
-  match initConfig { module := «module», host := Wasm.StdIO.env }
-      entry store args with
-  | .ok config => config
-  | .error _ =>
-      { expr := .trapped (.host "initialization failed")
-        store := { runtime := { module := «module», host := Wasm.StdIO.env }
-                   wasm := store } }
+def mergeFunction : Wasm.Function := func125Def
+def sortFunction : Wasm.Function := func126Def
+def exportFunction : Wasm.Function := func127Def
 
-/-! ## `talos_stdio` ABI shims -/
+def rangeFunction : Wasm.Function := func7Def
+def rangeToFunction : Wasm.Function := func8Def
+def rangeFromFunction : Wasm.Function := func9Def
+def copySliceImplFunction : Wasm.Function := func93Def
+def cloneFromSliceFunction : Wasm.Function := func94Def
+def specCloneFromFunction : Wasm.Function := func95Def
+def splitAtUncheckedFunction : Wasm.Function := func96Def
+def splitAtFunction : Wasm.Function := func97Def
 
-@[spec_of "rust-internal" "talos_stdio::read_raw"]
-def ReadRawSpec : Prop :=
-  ∀ (store final : Store Wasm.StdIO.State) (pointer length count : UInt32),
-    Wasm.StdIO.readHost.invoke store [.i32 length, .i32 pointer] =
-      .Return [.i32 count] final →
-    TerminatesWith (callConfig 7 store [.i32 pointer, .i32 length])
-      (fun values result =>
-        values = [.i32 count] ∧ result.wasm = final)
+theorem merge_body : mergeFunction.body = func125 := rfl
+theorem sort_body : sortFunction.body = func126 := rfl
+theorem export_body : exportFunction.body = func127 := rfl
 
-@[proves Project.Mergesort.FunctionSpecs.ReadRawSpec]
-theorem read_raw_correct : ReadRawSpec := by
-  intro store final pointer length count hinvoke
-  simp only [callConfig, initConfig, «module», func5Def, func5,
-    Function.toLocals, Function.numParams]
-  apply TerminatesWith.prepend (Step.localGet rfl)
-  apply TerminatesWith.prepend (Step.localGet rfl)
-  apply TerminatesWith.prepend
-    (Step.callHostReturn
-      (imp := Wasm.StdIO.imports[0])
-      (hostFunction := Wasm.StdIO.readHost)
-      (by simp)
-      (by rfl)
-      (by rfl)
-      (by simpa [Wasm.StdIO.imports] using hinvoke))
-  apply TerminatesWith.prepend Step.returnFromFunction
-  exact TerminatesWith.done ⟨rfl, rfl⟩
+theorem range_body : rangeFunction.body = func7 := rfl
+theorem rangeTo_body : rangeToFunction.body = func8 := rfl
+theorem rangeFrom_body : rangeFromFunction.body = func9 := rfl
+theorem copySliceImpl_body : copySliceImplFunction.body = func93 := rfl
+theorem cloneFromSlice_body : cloneFromSliceFunction.body = func94 := rfl
+theorem specCloneFrom_body : specCloneFromFunction.body = func95 := rfl
+theorem splitAtUnchecked_body : splitAtUncheckedFunction.body = func96 := rfl
+theorem splitAt_body : splitAtFunction.body = func97 := rfl
 
-@[spec_of "rust-internal" "talos_stdio::write_raw"]
-def WriteRawSpec : Prop :=
-  ∀ (store final : Store Wasm.StdIO.State) (pointer length : UInt32),
-    Wasm.StdIO.writeHost.invoke store [.i32 length, .i32 pointer] =
-      .Return [] final →
-    TerminatesWith (callConfig 8 store [.i32 pointer, .i32 length])
-      (fun values result => values = [] ∧ result.wasm = final)
+theorem merge_index : «module».funcs[125]? = some mergeFunction := by
+  rfl
 
-@[proves Project.Mergesort.FunctionSpecs.WriteRawSpec]
-theorem write_raw_correct : WriteRawSpec := by
-  intro store final pointer length hinvoke
-  simp only [callConfig, initConfig, «module», func6Def, func6,
-    Function.toLocals, Function.numParams]
-  apply TerminatesWith.prepend (Step.localGet rfl)
-  apply TerminatesWith.prepend (Step.localGet rfl)
-  apply TerminatesWith.prepend
-    (Step.callHostReturn
-      (imp := Wasm.StdIO.imports[1])
-      (hostFunction := Wasm.StdIO.writeHost)
-      (by simp)
-      (by rfl)
-      (by rfl)
-      (by simpa [Wasm.StdIO.imports] using hinvoke))
-  apply TerminatesWith.prepend Step.returnFromFunction
-  exact TerminatesWith.done ⟨rfl, rfl⟩
+theorem sort_index : «module».funcs[126]? = some sortFunction := by
+  rfl
+
+theorem range_index : «module».funcs[7]? = some rangeFunction := by rfl
+theorem rangeTo_index : «module».funcs[8]? = some rangeToFunction := by rfl
+theorem rangeFrom_index : «module».funcs[9]? = some rangeFromFunction := by rfl
+theorem copySliceImpl_index :
+    «module».funcs[93]? = some copySliceImplFunction := by rfl
+theorem cloneFromSlice_index :
+    «module».funcs[94]? = some cloneFromSliceFunction := by rfl
+theorem specCloneFrom_index :
+    «module».funcs[95]? = some specCloneFromFunction := by rfl
+theorem splitAtUnchecked_index :
+    «module».funcs[96]? = some splitAtUncheckedFunction := by rfl
+theorem splitAt_index :
+    «module».funcs[97]? = some splitAtFunction := by rfl
+
+theorem export_index : «module».exports =
+    [{ name := "mergesort", funcIdx := 129 }] := rfl
 
 end Project.Mergesort.FunctionSpecs

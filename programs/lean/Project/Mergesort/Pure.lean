@@ -10,32 +10,15 @@ invariants are reusable for other integer widths.
 
 namespace Project.Mergesort.Pure
 
-/-! ## Packed little-endian stream format -/
+/-! ## Text stream format -/
 
-/-- The eight little-endian bytes of an unsigned 64-bit word. -/
-def encodeWord (value : UInt64) : List UInt8 :=
-  [ (value &&& 0xff).toUInt8
-  , ((value >>> 8) &&& 0xff).toUInt8
-  , ((value >>> 16) &&& 0xff).toUInt8
-  , ((value >>> 24) &&& 0xff).toUInt8
-  , ((value >>> 32) &&& 0xff).toUInt8
-  , ((value >>> 40) &&& 0xff).toUInt8
-  , ((value >>> 48) &&& 0xff).toUInt8
-  , ((value >>> 56) &&& 0xff).toUInt8 ]
-
-/-- Packed little-endian encoding used by the StdIO entry point. -/
+/-- The exact byte encoding used by the unchanged Rust entry point: decimal
+`u64` values separated by one ASCII space, with no trailing delimiter. -/
 def encodeValues (values : List UInt64) : List UInt8 :=
-  values.flatMap encodeWord
+  (String.intercalate " " (values.map toString)).toUTF8.toList
 
-@[simp] theorem encodeValues_length (values : List UInt64) :
-    (encodeValues values).length = 8 * values.length := by
-  induction values with
-  | nil => rfl
-  | cons value values ih =>
-      change (List.flatMap encodeWord values).length = 8 * values.length at ih
-      simp only [encodeValues, List.flatMap_cons, encodeWord, List.cons_append,
-        List.nil_append, List.length_cons, Nat.mul_add]
-      omega
+@[simp] theorem encodeValues_nil : encodeValues [] = [] := by
+  simp [encodeValues]
 
 /-- A list is sorted in nondecreasing order. -/
 def Sorted [LE α] (values : List α) : Prop :=
