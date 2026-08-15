@@ -17,6 +17,7 @@ import Project.Mergesort.TextProof
 import Project.Mergesort.ParseByteProof
 import Project.Mergesort.ParseProof
 import Project.Mergesort.DriverProof
+import Project.Mergesort.StdIOWrapperProof
 
 /-!
 # Correctness proof for the original generated merge sort
