@@ -2602,4 +2602,1942 @@ theorem allocatorForward_singleton_call_twp
   simp only [List.take, List.singleton_append]
   iapply Hdone $$ Hruntime Hzeroed
 
+/-! ## Local `func143`: the allocator-result core on the singleton path
+
+Local `func143` (absolute index 145) reserves a 32-byte frame, dispatches on
+its nonzero-size and zeroed-request flags, forwards the request to local
+`func131` at absolute index 133, and copies the resulting `(data, size)` pair
+into its caller-supplied result slot. -/
+
+def allocatorResultTail : Program :=
+  [.localGet 4, .load32 8, .localSet 8,
+    .localGet 0, .localGet 4, .load32 12, .store32 4,
+    .localGet 0, .localGet 8, .store32 0,
+    .localGet 4, .const 32, .add, .globalSet 0, .ret]
+
+def allocatorResultCheckBody : Program :=
+  [.localGet 4, .load32 16, .br_if 0,
+    .localGet 4, .const 0, .store32 28,
+    .localGet 4, .const 0, .store32 24,
+    .const 0, .load32 1050408, .localSet 5,
+    .const 0, .load32 1050412, .localSet 6,
+    .localGet 4, .localGet 5, .store32 8,
+    .localGet 4, .localGet 6, .store32 12,
+    .br 1]
+
+def allocatorResultSuccessStores : Program :=
+  [.localGet 4, .localGet 4, .load32 16, .store32 28,
+    .localGet 4, .localGet 4, .load32 28, .store32 24,
+    .localGet 4, .localGet 4, .load32 24, .store32 20,
+    .localGet 4, .load32 20, .localSet 7,
+    .localGet 4, .localGet 7, .store32 8,
+    .localGet 4, .localGet 2, .store32 12]
+
+def allocatorResultFlagBody : Program :=
+  [.localGet 2, .br_if 0, .br 1]
+
+def allocatorResultZeroedFlagBody : Program :=
+  [.block 0 0 allocatorResultFlagBody, .localGet 3, .br_if 2, .br 1]
+
+def allocatorResultZeroSizeBody : Program :=
+  .block 0 0 allocatorResultZeroedFlagBody ::
+    [.localGet 4, .localGet 1, .store32 8,
+      .localGet 4, .const 0, .store32 12, .br 3]
+
+def allocatorResultUninitBody : Program :=
+  .block 0 0 allocatorResultZeroSizeBody ::
+    [.call 134, .localGet 4, .localGet 2, .localGet 1, .call 130,
+      .store32 16, .br 1]
+
+def allocatorResultForwardBody : Program :=
+  .block 0 0 allocatorResultUninitBody ::
+    [.call 134, .localGet 4, .localGet 2, .localGet 1, .call 133,
+      .store32 16]
+
+def allocatorResultOuterBody : Program :=
+  .block 0 0 allocatorResultForwardBody ::
+    .block 0 0 allocatorResultCheckBody ::
+    allocatorResultSuccessStores
+
+private theorem func143_shape :
+    func143 =
+      [.globalGet 0, .const 32, .sub, .localSet 4,
+        .localGet 4, .globalSet 0,
+        .block 0 0 allocatorResultOuterBody] ++ allocatorResultTail := by
+  rfl
+
+def allocatorResultOuterFrame : ControlFrame :=
+  { kind := .block
+    paramArity := 0
+    resultArity := 0
+    body := allocatorResultOuterBody
+    continuation := allocatorResultTail
+    belowStack := [] }
+
+def allocatorResultForwardFrame : ControlFrame :=
+  { kind := .block
+    paramArity := 0
+    resultArity := 0
+    body := allocatorResultForwardBody
+    continuation :=
+      .block 0 0 allocatorResultCheckBody :: allocatorResultSuccessStores
+    belowStack := [] }
+
+/- Pure prefix of local `func143`: reserve the 32-byte frame, take the
+generated nonzero-size/zeroed-request branch, cross the no-op guard at
+absolute index 134, and stop exactly at the absolute-index-133 forwarding
+call. -/
+theorem allocatorResult_to_forward_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (R : IProp WasmHeapGF)
+    (resultPtr align size flag stackTop : UInt32)
+    (hsize : size ≠ 0) (hflag : flag ≠ 0)
+    {calls : List CallFrame} :
+    runtimeModuleOwn «module» ∗ globalPointsTo 0 (.i32 stackTop) ∗ R ∗
+      (runtimeModuleOwn «module» -∗
+        globalPointsTo 0 (.i32 (stackTop - 32)) -∗ R -∗
+        WP (.running
+          ⟨⟨[.i32 resultPtr, .i32 align, .i32 size, .i32 flag],
+              [.i32 (stackTop - 32), .i32 0, .i32 0, .i32 0, .i32 0],
+              [.i32 align, .i32 size, .i32 (stackTop - 32)]⟩,
+            .call 133 :: [.store32 16], 0, [],
+            [allocatorResultForwardFrame, allocatorResultOuterFrame],
+            calls⟩ : Expr α) @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨⟨[.i32 resultPtr, .i32 align, .i32 size, .i32 flag],
+          [.i32 0, .i32 0, .i32 0, .i32 0, .i32 0], []⟩,
+        func143, 0, [], [], calls⟩ : Expr α) @ s; E [{ Φ }] := by
+  iintro ⟨Hruntime, Hglobal, HR, Hdone⟩
+  rw [func143_shape]
+  simp only [List.cons_append, List.nil_append]
+  iapply twp_globalGet0
+  isplitl [Hglobal]
+  · iexact Hglobal
+  iintro Hglobal
+  iapply twp_const
+  iapply twp_sub
+  iapply twp_localSet rfl
+  simp only [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
+  iapply twp_localGet rfl
+  iapply twp_globalSet0
+  isplitl [Hglobal]
+  · iexact Hglobal
+  iintro Hglobal
+  iapply twp_block
+  simp only [allocatorResultOuterBody]
+  iapply twp_block
+  simp only [allocatorResultForwardBody]
+  iapply twp_block
+  simp only [allocatorResultUninitBody]
+  iapply twp_block
+  simp only [allocatorResultZeroSizeBody]
+  iapply twp_block
+  simp only [allocatorResultZeroedFlagBody]
+  iapply twp_block
+  simp only [allocatorResultFlagBody]
+  iapply twp_localGet rfl
+  iapply twp_brIf hsize (by rfl)
+  iapply twp_localGet rfl
+  iapply twp_brIf hflag (by rfl)
+  simp only [List.drop_zero, List.take_zero, List.nil_append]
+  iapply Wasm.SmallStep.twp_call (α := α) «module» 134 func132Def
+      (by decide) (by rfl) $$ Hruntime
+  iintro Hruntime
+  simp [func132Def, func132, Function.toLocals, Function.numParams]
+  iapply Wasm.SmallStep.twp_returnFromCallExplicit (α := α)
+  simp only [List.take, List.nil_append]
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  isimp only [allocatorResultForwardFrame, allocatorResultOuterFrame,
+    allocatorResultForwardBody, allocatorResultOuterBody,
+    allocatorResultUninitBody, allocatorResultZeroSizeBody,
+    allocatorResultZeroedFlagBody, allocatorResultFlagBody] at Hdone
+  iapply Hdone $$ Hruntime Hglobal HR
+
+/- Exact successful suffix of local `func143` after the forwarding call has
+left a nonzero data pointer on the operand stack: record it throughout the
+frame's bookkeeping words and store the final `(data, size)` pair into the
+caller-supplied result slot. -/
+set_option maxHeartbeats 4000000 in
+theorem allocatorResult_success_suffix_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (resultPtr align size flag frame data : UInt32)
+    (old8 old12 old16 old20 old24 old28 : UInt32)
+    (oldResultData oldResultSize : UInt32)
+    (hframeRoom : frame.toNat + 32 ≤ UInt32.size)
+    (hresultRoom : resultPtr.toNat + 8 ≤ UInt32.size)
+    (hdata : data ≠ 0)
+    {calls : List CallFrame} :
+    globalPointsTo 0 (.i32 frame) ∗
+      pointsTo_u32 (frame + 8) old8 ∗
+      pointsTo_u32 (frame + 12) old12 ∗
+      pointsTo_u32 (frame + 16) old16 ∗
+      pointsTo_u32 (frame + 20) old20 ∗
+      pointsTo_u32 (frame + 24) old24 ∗
+      pointsTo_u32 (frame + 28) old28 ∗
+      allocationPairAt resultPtr oldResultData oldResultSize ∗
+      (globalPointsTo 0 (.i32 (frame + 32)) -∗
+        pointsTo_u32 (frame + 8) data -∗
+        pointsTo_u32 (frame + 12) size -∗
+        pointsTo_u32 (frame + 16) data -∗
+        pointsTo_u32 (frame + 20) data -∗
+        pointsTo_u32 (frame + 24) data -∗
+        pointsTo_u32 (frame + 28) data -∗
+        allocationPairAt resultPtr data size -∗
+        WP (.running
+          ⟨⟨[.i32 resultPtr, .i32 align, .i32 size, .i32 flag],
+              [.i32 frame, .i32 0, .i32 0, .i32 data, .i32 data], []⟩,
+            [.ret], 0, [], [], calls⟩ : Expr α) @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨⟨[.i32 resultPtr, .i32 align, .i32 size, .i32 flag],
+          [.i32 frame, .i32 0, .i32 0, .i32 0, .i32 0],
+          [.i32 data, .i32 frame]⟩,
+        [.store32 16], 0, [],
+        [allocatorResultForwardFrame, allocatorResultOuterFrame],
+        calls⟩ : Expr α) @ s; E [{ Φ }] := by
+  obtain ⟨hf80, hf81, hf82, hf83⟩ :=
+    descriptorSlot32Facts frame 8 32 hframeRoom (by decide)
+  obtain ⟨hf120, hf121, hf122, hf123⟩ :=
+    descriptorSlot32Facts frame 12 32 hframeRoom (by decide)
+  obtain ⟨hf160, hf161, hf162, hf163⟩ :=
+    descriptorSlot32Facts frame 16 32 hframeRoom (by decide)
+  obtain ⟨hf200, hf201, hf202, hf203⟩ :=
+    descriptorSlot32Facts frame 20 32 hframeRoom (by decide)
+  obtain ⟨hf240, hf241, hf242, hf243⟩ :=
+    descriptorSlot32Facts frame 24 32 hframeRoom (by decide)
+  obtain ⟨hf280, hf281, hf282, hf283⟩ :=
+    descriptorSlot32Facts frame 28 32 hframeRoom (by decide)
+  obtain ⟨hr0, hr1, hr2, hr3⟩ :=
+    descriptorSlot32Facts resultPtr 0 8 hresultRoom (by decide)
+  obtain ⟨hr40, hr41, hr42, hr43⟩ :=
+    descriptorSlot32Facts resultPtr 4 8 hresultRoom (by decide)
+  iintro ⟨Hglobal, H8, H12, H16, H20, H24, H28, Hresult, Hdone⟩
+  isimp only [allocationPairAt] at Hresult
+  icases Hresult with ⟨Hr0, Hr4⟩
+  iapply twp_store32 old16 hf160 hf161 hf162 hf163 $$ H16
+  iintro H16
+  iapply twp_exitControl (by rfl)
+  simp only [allocatorResultForwardFrame, List.take_zero, List.nil_append]
+  iapply twp_block
+  simp only [allocatorResultCheckBody]
+  iapply twp_localGet rfl
+  iapply twp_load32 data hf160 hf161 hf162 hf163 $$ H16
+  iintro H16
+  iapply twp_brIf hdata (by rfl)
+  simp only [List.drop_zero, List.take_zero, List.nil_append]
+  simp only [allocatorResultSuccessStores]
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_load32 data hf160 hf161 hf162 hf163 $$ H16
+  iintro H16
+  iapply twp_store32 old28 hf280 hf281 hf282 hf283 $$ H28
+  iintro H28
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_load32 data hf280 hf281 hf282 hf283 $$ H28
+  iintro H28
+  iapply twp_store32 old24 hf240 hf241 hf242 hf243 $$ H24
+  iintro H24
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_load32 data hf240 hf241 hf242 hf243 $$ H24
+  iintro H24
+  iapply twp_store32 old20 hf200 hf201 hf202 hf203 $$ H20
+  iintro H20
+  iapply twp_localGet rfl
+  iapply twp_load32 data hf200 hf201 hf202 hf203 $$ H20
+  iintro H20
+  iapply twp_localSet rfl
+  simp only [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_store32 old8 hf80 hf81 hf82 hf83 $$ H8
+  iintro H8
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_store32 old12 hf120 hf121 hf122 hf123 $$ H12
+  iintro H12
+  iapply twp_exitControl (by rfl)
+  simp only [allocatorResultOuterFrame, List.take_zero, List.nil_append]
+  simp only [allocatorResultTail]
+  iapply twp_localGet rfl
+  iapply twp_load32 data hf80 hf81 hf82 hf83 $$ H8
+  iintro H8
+  iapply twp_localSet rfl
+  simp only [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_load32 size hf120 hf121 hf122 hf123 $$ H12
+  iintro H12
+  iapply twp_store32 oldResultSize hr40 hr41 hr42 hr43 $$ Hr4
+  iintro Hr4
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  ihave Hr0At : pointsTo_u32 (resultPtr + 0) oldResultData $$ [Hr0]
+  · iapply pointsTo_u32_add_zero
+    iexact Hr0
+  iapply twp_store32 oldResultData hr0 hr1 hr2 hr3 $$ Hr0At
+  iintro Hr0At
+  iapply twp_localGet rfl
+  iapply twp_const
+  iapply twp_add
+  rw [UInt32.add_comm (32 : UInt32) frame]
+  iapply twp_globalSet0
+  isplitl [Hglobal]
+  · iexact Hglobal
+  iintro Hglobal
+  ihave Hr0 : pointsTo_u32 resultPtr data $$ [Hr0At]
+  · rw [show UInt32.ofNat 0 = 0 by rfl, UInt32.add_zero]
+    iexact Hr0At
+  ihave Hresult : allocationPairAt resultPtr data size $$ [Hr0 Hr4]
+  · isimp only [allocationPairAt]
+    iframe
+  iapply Hdone $$ Hglobal H8 H12 H16 H20 H24 H28 Hresult
+
+/- Allocator-internal state left over by the verified singleton path, with
+the stack global and the zero-filled payload split off so that callers can
+consume them directly. -/
+def allocatorCoreResidueAt [WasmHeapGS]
+    (size smallMap chunk data nextHeader : UInt32) : IProp WasmHeapGF :=
+  iprop% pointsTo_u32 1056608 (smallAllocatorClearedSmallMap size smallMap) ∗
+    pointsTo_u32 (smallAllocatorBinHeadAddress size smallMap) chunk ∗
+    headerWordTailAt (data + 4294967292)
+      (smallAllocatorAllocatedHeader size smallMap) ∗
+    pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+      (data + 4294967292) (DFrac.own 1)
+      (some (u32Byte (smallAllocatorAllocatedHeader size smallMap) 0)) ∗
+    pointsTo_u32 (smallAllocatorNextChunk size smallMap chunk + 4)
+      (nextHeader ||| 1)
+
+/- Complete singleton-path body rule for local `func143`.  The allocator
+package is threaded to the absolute-index-133 call and comes back as the
+zeroed payload, the fresh result pair, and the opaque allocator residue. -/
+set_option maxHeartbeats 4000000 in
+theorem allocatorResult_singleton_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (resultPtr flag stackTop : UInt32)
+    (size align smallMap chunk previous data oldHeader nextHeader : UInt32)
+    (headerByte : UInt8) (tail : List UInt64)
+    (old8 old12 old16 old20 old24 old28 : UInt32)
+    (oldResultData oldResultSize : UInt32)
+    (hflag : flag ≠ 0)
+    (halign : align < 9) (hsmall : size < 245)
+    (havailable : smallAllocatorShiftedMap size smallMap &&& 3 ≠ 0)
+    (hnonzero : headerByte.toUInt32 &&& 3 ≠ 0)
+    (hheaderByte : headerByte = u32Byte oldHeader 0)
+    (hdata : data = chunk + 8) (hdataNonzero : data ≠ 0)
+    (hsize : size ≠ 0)
+    (hlength : size.toNat =
+      8 * (packU32 (smallAllocatorBinSentinel size smallMap) previous :: tail).length)
+    (hpayloadRoom : data.toNat +
+      8 * (packU32 (smallAllocatorBinSentinel size smallMap) previous :: tail).length ≤
+      UInt32.size)
+    (hheadRoom : (smallAllocatorBinHeadAddress size smallMap).toNat + 4 ≤
+      UInt32.size)
+    (hchunkLinksRoom : chunk.toNat + 12 ≤ UInt32.size)
+    (hchunkRoom : chunk.toNat + 8 ≤ UInt32.size)
+    (hnextRoom : (smallAllocatorNextChunk size smallMap chunk).toNat + 8 ≤
+      UInt32.size)
+    (hframeRoom : (stackTop - 32).toNat + 32 ≤ UInt32.size)
+    (hresultRoom : resultPtr.toNat + 8 ≤ UInt32.size)
+    {calls : List CallFrame} :
+    runtimeModuleOwn «module» ∗
+      globalPointsTo 0 (.i32 stackTop) ∗
+      pointsTo_u32 ((stackTop - 32) + 8) old8 ∗
+      pointsTo_u32 ((stackTop - 32) + 12) old12 ∗
+      pointsTo_u32 ((stackTop - 32) + 16) old16 ∗
+      pointsTo_u32 ((stackTop - 32) + 20) old20 ∗
+      pointsTo_u32 ((stackTop - 32) + 24) old24 ∗
+      pointsTo_u32 ((stackTop - 32) + 28) old28 ∗
+      allocationPairAt resultPtr oldResultData oldResultSize ∗
+      pointsTo_u32 1056608 smallMap ∗
+      pointsTo_u32 (smallAllocatorBinHeadAddress size smallMap) chunk ∗
+      headerWordTailAt (data + 4294967292) oldHeader ∗
+      dlmallocOwnedResult data headerByte
+        (packU32 (smallAllocatorBinSentinel size smallMap) previous :: tail) ∗
+      pointsTo_u32 (smallAllocatorNextChunk size smallMap chunk + 4)
+        nextHeader ∗
+      (runtimeModuleOwn «module» -∗
+        globalPointsTo 0 (.i32 stackTop) -∗
+        pointsTo_u32 ((stackTop - 32) + 8) data -∗
+        pointsTo_u32 ((stackTop - 32) + 12) size -∗
+        pointsTo_u32 ((stackTop - 32) + 16) data -∗
+        pointsTo_u32 ((stackTop - 32) + 20) data -∗
+        pointsTo_u32 ((stackTop - 32) + 24) data -∗
+        pointsTo_u32 ((stackTop - 32) + 28) data -∗
+        allocationPairAt resultPtr data size -∗
+        allocatorCoreResidueAt size smallMap chunk data nextHeader -∗
+        array64At data
+          (List.replicate
+            (packU32 (smallAllocatorBinSentinel size smallMap) previous ::
+              tail).length 0) -∗
+        WP (.running
+          ⟨⟨[.i32 resultPtr, .i32 align, .i32 size, .i32 flag],
+              [.i32 (stackTop - 32), .i32 0, .i32 0, .i32 data, .i32 data],
+              []⟩,
+            [.ret], 0, [], [], calls⟩ : Expr α) @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨⟨[.i32 resultPtr, .i32 align, .i32 size, .i32 flag],
+          [.i32 0, .i32 0, .i32 0, .i32 0, .i32 0], []⟩,
+        func143, 0, [], [], calls⟩ : Expr α) @ s; E [{ Φ }] := by
+  iintro ⟨Hruntime, Hglobal, H8, H12, H16, H20, H24, H28, Hresult,
+    Hmap, Hhead, HheaderTail, Howned, HnextHeader, Hdone⟩
+  have Hprefix := allocatorResult_to_forward_twp (α := α)
+    (iprop% pointsTo_u32 ((stackTop - 32) + 8) old8 ∗
+      pointsTo_u32 ((stackTop - 32) + 12) old12 ∗
+      pointsTo_u32 ((stackTop - 32) + 16) old16 ∗
+      pointsTo_u32 ((stackTop - 32) + 20) old20 ∗
+      pointsTo_u32 ((stackTop - 32) + 24) old24 ∗
+      pointsTo_u32 ((stackTop - 32) + 28) old28 ∗
+      allocationPairAt resultPtr oldResultData oldResultSize)
+    resultPtr align size flag stackTop hsize hflag
+    (s := s) (E := E) (Φ := Φ) (calls := calls)
+  iapply Hprefix
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hglobal]
+  · iexact Hglobal
+  isplitl [H8 H12 H16 H20 H24 H28 Hresult]
+  · iframe
+  iintro Hruntime Hglobal HR
+  icases HR with ⟨H8, H12, H16, H20, H24, H28, Hresult⟩
+  have Hforward := allocatorForward_singleton_call_twp (α := α)
+    size align (stackTop - 32) smallMap chunk previous data oldHeader
+    nextHeader headerByte tail halign hsmall havailable hnonzero
+    hheaderByte hdata hdataNonzero hsize hlength hpayloadRoom hheadRoom
+    hchunkLinksRoom hchunkRoom hnextRoom
+    (s := s) (E := E) (Φ := Φ)
+    (callerLocals :=
+      ⟨[.i32 resultPtr, .i32 align, .i32 size, .i32 flag],
+        [.i32 (stackTop - 32), .i32 0, .i32 0, .i32 0, .i32 0], []⟩)
+    (stack := [.i32 (stackTop - 32)])
+    (code := [.store32 16]) (arity := 0) (remainder := [])
+    (controls := [allocatorResultForwardFrame, allocatorResultOuterFrame])
+    (calls := calls)
+  simp only [List.cons_append, List.nil_append] at Hforward
+  iapply Hforward
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hglobal]
+  · iexact Hglobal
+  isplitl [Hmap]
+  · iexact Hmap
+  isplitl [Hhead]
+  · iexact Hhead
+  isplitl [HheaderTail]
+  · iexact HheaderTail
+  isplitl [Howned]
+  · iexact Howned
+  isplitl [HnextHeader]
+  · iexact HnextHeader
+  iintro Hruntime Hzeroed
+  isimp only [dlmallocSingletonZeroedAt] at Hzeroed
+  icases Hzeroed with ⟨HglobalA, Hmap, Hhead, HheaderTail, Hheader,
+    Harray, HnextHeader⟩
+  ihave Hglobal : globalPointsTo 0 (.i32 (stackTop - 32)) $$ [HglobalA]
+  · rw [show (stackTop - 32) - 16 + 16 = stackTop - 32 by bv_decide]
+    iexact HglobalA
+  have Hsuffix := allocatorResult_success_suffix_twp (α := α)
+    resultPtr align size flag (stackTop - 32) data
+    old8 old12 old16 old20 old24 old28 oldResultData oldResultSize
+    hframeRoom hresultRoom hdataNonzero
+    (s := s) (E := E) (Φ := Φ) (calls := calls)
+  iapply Hsuffix
+  isplitl [Hglobal]
+  · iexact Hglobal
+  isplitl [H8]
+  · iexact H8
+  isplitl [H12]
+  · iexact H12
+  isplitl [H16]
+  · iexact H16
+  isplitl [H20]
+  · iexact H20
+  isplitl [H24]
+  · iexact H24
+  isplitl [H28]
+  · iexact H28
+  isplitl [Hresult]
+  · iexact Hresult
+  iintro Hglobal H8 H12 H16 H20 H24 H28 Hresult
+  ihave HglobalTop : globalPointsTo 0 (.i32 stackTop) $$ [Hglobal]
+  · rw [show (stackTop - 32) + 32 = stackTop by bv_decide]
+    iexact Hglobal
+  ihave Hresidue : allocatorCoreResidueAt size smallMap chunk data
+      nextHeader $$ [Hmap Hhead HheaderTail Hheader HnextHeader]
+  · isimp only [allocatorCoreResidueAt]
+    iframe
+  iapply Hdone $$ Hruntime HglobalTop H8 H12 H16 H20 H24 H28 Hresult
+    Hresidue Harray
+
+/- Absolute-index-145 call rule for the allocator-result core, preserving an
+arbitrary caller frame. -/
+set_option maxHeartbeats 4000000 in
+theorem allocatorResult_singleton_call_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (resultPtr flag stackTop : UInt32)
+    (size align smallMap chunk previous data oldHeader nextHeader : UInt32)
+    (headerByte : UInt8) (tail : List UInt64)
+    (old8 old12 old16 old20 old24 old28 : UInt32)
+    (oldResultData oldResultSize : UInt32)
+    (hflag : flag ≠ 0)
+    (halign : align < 9) (hsmall : size < 245)
+    (havailable : smallAllocatorShiftedMap size smallMap &&& 3 ≠ 0)
+    (hnonzero : headerByte.toUInt32 &&& 3 ≠ 0)
+    (hheaderByte : headerByte = u32Byte oldHeader 0)
+    (hdata : data = chunk + 8) (hdataNonzero : data ≠ 0)
+    (hsize : size ≠ 0)
+    (hlength : size.toNat =
+      8 * (packU32 (smallAllocatorBinSentinel size smallMap) previous :: tail).length)
+    (hpayloadRoom : data.toNat +
+      8 * (packU32 (smallAllocatorBinSentinel size smallMap) previous :: tail).length ≤
+      UInt32.size)
+    (hheadRoom : (smallAllocatorBinHeadAddress size smallMap).toNat + 4 ≤
+      UInt32.size)
+    (hchunkLinksRoom : chunk.toNat + 12 ≤ UInt32.size)
+    (hchunkRoom : chunk.toNat + 8 ≤ UInt32.size)
+    (hnextRoom : (smallAllocatorNextChunk size smallMap chunk).toNat + 8 ≤
+      UInt32.size)
+    (hframeRoom : (stackTop - 32).toNat + 32 ≤ UInt32.size)
+    (hresultRoom : resultPtr.toNat + 8 ≤ UInt32.size)
+    {callerLocals : Locals} {stack : List Value}
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame} :
+    runtimeModuleOwn «module» ∗
+      globalPointsTo 0 (.i32 stackTop) ∗
+      pointsTo_u32 ((stackTop - 32) + 8) old8 ∗
+      pointsTo_u32 ((stackTop - 32) + 12) old12 ∗
+      pointsTo_u32 ((stackTop - 32) + 16) old16 ∗
+      pointsTo_u32 ((stackTop - 32) + 20) old20 ∗
+      pointsTo_u32 ((stackTop - 32) + 24) old24 ∗
+      pointsTo_u32 ((stackTop - 32) + 28) old28 ∗
+      allocationPairAt resultPtr oldResultData oldResultSize ∗
+      pointsTo_u32 1056608 smallMap ∗
+      pointsTo_u32 (smallAllocatorBinHeadAddress size smallMap) chunk ∗
+      headerWordTailAt (data + 4294967292) oldHeader ∗
+      dlmallocOwnedResult data headerByte
+        (packU32 (smallAllocatorBinSentinel size smallMap) previous :: tail) ∗
+      pointsTo_u32 (smallAllocatorNextChunk size smallMap chunk + 4)
+        nextHeader ∗
+      (runtimeModuleOwn «module» -∗
+        globalPointsTo 0 (.i32 stackTop) -∗
+        pointsTo_u32 ((stackTop - 32) + 8) data -∗
+        pointsTo_u32 ((stackTop - 32) + 12) size -∗
+        pointsTo_u32 ((stackTop - 32) + 16) data -∗
+        pointsTo_u32 ((stackTop - 32) + 20) data -∗
+        pointsTo_u32 ((stackTop - 32) + 24) data -∗
+        pointsTo_u32 ((stackTop - 32) + 28) data -∗
+        allocationPairAt resultPtr data size -∗
+        allocatorCoreResidueAt size smallMap chunk data nextHeader -∗
+        array64At data
+          (List.replicate
+            (packU32 (smallAllocatorBinSentinel size smallMap) previous ::
+              tail).length 0) -∗
+        WP (.running
+          ⟨{ callerLocals with values := stack },
+            code, arity, remainder, controls, calls⟩ : Expr α)
+          @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨{ callerLocals with values :=
+          [.i32 flag, .i32 size, .i32 align, .i32 resultPtr] ++ stack },
+        .call 145 :: code, arity, remainder, controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] := by
+  iintro ⟨Hruntime, Hglobal, H8, H12, H16, H20, H24, H28, Hresult,
+    Hmap, Hhead, HheaderTail, Howned, HnextHeader, Hdone⟩
+  iapply Wasm.SmallStep.twp_call (α := α) «module» 145 func143Def
+      (by decide) allocatorResult_index $$ Hruntime
+  iintro Hruntime
+  simp [func143Def, Function.toLocals, Function.numParams, ValueType.zero]
+  have Hbody := allocatorResult_singleton_twp (α := α)
+    resultPtr flag stackTop size align smallMap chunk previous data
+    oldHeader nextHeader headerByte tail old8 old12 old16 old20 old24
+    old28 oldResultData oldResultSize hflag halign hsmall havailable
+    hnonzero hheaderByte hdata hdataNonzero hsize hlength hpayloadRoom
+    hheadRoom hchunkLinksRoom hchunkRoom hnextRoom hframeRoom hresultRoom
+    (s := s) (E := E) (Φ := Φ)
+    (calls :=
+      { locals := { callerLocals with values := stack }
+        continuation := code
+        resultArity := arity
+        callerRemainder := remainder
+        control := controls } :: calls)
+  iapply Hbody
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hglobal]
+  · iexact Hglobal
+  isplitl [H8]
+  · iexact H8
+  isplitl [H12]
+  · iexact H12
+  isplitl [H16]
+  · iexact H16
+  isplitl [H20]
+  · iexact H20
+  isplitl [H24]
+  · iexact H24
+  isplitl [H28]
+  · iexact H28
+  isplitl [Hresult]
+  · iexact Hresult
+  isplitl [Hmap]
+  · iexact Hmap
+  isplitl [Hhead]
+  · iexact Hhead
+  isplitl [HheaderTail]
+  · iexact HheaderTail
+  isplitl [Howned]
+  · iexact Howned
+  isplitl [HnextHeader]
+  · iexact HnextHeader
+  iintro Hruntime Hglobal H8 H12 H16 H20 H24 H28 Hresult Hresidue Harray
+  iapply Wasm.SmallStep.twp_returnFromCallExplicit (α := α)
+  simp only [List.take, List.nil_append]
+  iapply Hdone $$ Hruntime Hglobal H8 H12 H16 H20 H24 H28 Hresult
+    Hresidue Harray
+
+/- Complete singleton-path body rule for local `func145`: the pure wrapper
+prefix, the verified local-`func143` core, and the wrapper's result-copy
+suffix, composed into one closed contract. -/
+set_option maxHeartbeats 4000000 in
+theorem zeroedAllocatorWrapper_singleton_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (resultPtr metaPtr stackTop : UInt32)
+    (size align smallMap chunk previous data oldHeader nextHeader : UInt32)
+    (headerByte : UInt8) (tail : List UInt64)
+    (old8 old12 old16 old20 old24 old28 : UInt32)
+    (oldPairData oldPairSize oldResultData oldResultSize : UInt32)
+    (halign : align < 9) (hsmall : size < 245)
+    (havailable : smallAllocatorShiftedMap size smallMap &&& 3 ≠ 0)
+    (hnonzero : headerByte.toUInt32 &&& 3 ≠ 0)
+    (hheaderByte : headerByte = u32Byte oldHeader 0)
+    (hdata : data = chunk + 8) (hdataNonzero : data ≠ 0)
+    (hsize : size ≠ 0)
+    (hlength : size.toNat =
+      8 * (packU32 (smallAllocatorBinSentinel size smallMap) previous :: tail).length)
+    (hpayloadRoom : data.toNat +
+      8 * (packU32 (smallAllocatorBinSentinel size smallMap) previous :: tail).length ≤
+      UInt32.size)
+    (hheadRoom : (smallAllocatorBinHeadAddress size smallMap).toNat + 4 ≤
+      UInt32.size)
+    (hchunkLinksRoom : chunk.toNat + 12 ≤ UInt32.size)
+    (hchunkRoom : chunk.toNat + 8 ≤ UInt32.size)
+    (hnextRoom : (smallAllocatorNextChunk size smallMap chunk).toNat + 8 ≤
+      UInt32.size)
+    (hwrapRoom : (stackTop - 16).toNat + 16 ≤ UInt32.size)
+    (hcoreRoom : (stackTop - 48).toNat + 32 ≤ UInt32.size)
+    (hresultRoom : resultPtr.toNat + 8 ≤ UInt32.size)
+    {calls : List CallFrame} :
+    runtimeModuleOwn «module» ∗
+      globalPointsTo 0 (.i32 stackTop) ∗
+      pointsTo_u32 ((stackTop - 48) + 8) old8 ∗
+      pointsTo_u32 ((stackTop - 48) + 12) old12 ∗
+      pointsTo_u32 ((stackTop - 48) + 16) old16 ∗
+      pointsTo_u32 ((stackTop - 48) + 20) old20 ∗
+      pointsTo_u32 ((stackTop - 48) + 24) old24 ∗
+      pointsTo_u32 ((stackTop - 48) + 28) old28 ∗
+      allocationPairAt ((stackTop - 16) + 8) oldPairData oldPairSize ∗
+      allocationPairAt resultPtr oldResultData oldResultSize ∗
+      pointsTo_u32 1056608 smallMap ∗
+      pointsTo_u32 (smallAllocatorBinHeadAddress size smallMap) chunk ∗
+      headerWordTailAt (data + 4294967292) oldHeader ∗
+      dlmallocOwnedResult data headerByte
+        (packU32 (smallAllocatorBinSentinel size smallMap) previous :: tail) ∗
+      pointsTo_u32 (smallAllocatorNextChunk size smallMap chunk + 4)
+        nextHeader ∗
+      (runtimeModuleOwn «module» -∗
+        globalPointsTo 0 (.i32 stackTop) -∗
+        pointsTo_u32 ((stackTop - 48) + 8) data -∗
+        pointsTo_u32 ((stackTop - 48) + 12) size -∗
+        pointsTo_u32 ((stackTop - 48) + 16) data -∗
+        pointsTo_u32 ((stackTop - 48) + 20) data -∗
+        pointsTo_u32 ((stackTop - 48) + 24) data -∗
+        pointsTo_u32 ((stackTop - 48) + 28) data -∗
+        allocationPairAt ((stackTop - 16) + 8) data size -∗
+        allocationPairAt resultPtr data size -∗
+        allocatorCoreResidueAt size smallMap chunk data nextHeader -∗
+        array64At data
+          (List.replicate
+            (packU32 (smallAllocatorBinSentinel size smallMap) previous ::
+              tail).length 0) -∗
+        WP (.running
+          ⟨⟨[.i32 resultPtr, .i32 metaPtr, .i32 align, .i32 size],
+              [.i32 (stackTop - 16), .i32 1, .i32 data], []⟩,
+            [.ret], 0, [], [], calls⟩ : Expr α) @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨⟨[.i32 resultPtr, .i32 metaPtr, .i32 align, .i32 size],
+          [.i32 0, .i32 0, .i32 0], []⟩,
+        func145, 0, [], [], calls⟩ : Expr α) @ s; E [{ Φ }] := by
+  obtain ⟨hw80, hw81, hw82, hw83⟩ :=
+    descriptorSlot32Facts (stackTop - 16) 8 16 hwrapRoom (by decide)
+  iintro ⟨Hruntime, Hglobal, H8, H12, H16, H20, H24, H28, Hpair,
+    Hresult, Hmap, Hhead, HheaderTail, Howned, HnextHeader, Hdone⟩
+  have Hprefix := zeroedAllocatorWrapper_to_core_twp (α := α)
+    (iprop% runtimeModuleOwn «module» ∗
+      pointsTo_u32 ((stackTop - 48) + 8) old8 ∗
+      pointsTo_u32 ((stackTop - 48) + 12) old12 ∗
+      pointsTo_u32 ((stackTop - 48) + 16) old16 ∗
+      pointsTo_u32 ((stackTop - 48) + 20) old20 ∗
+      pointsTo_u32 ((stackTop - 48) + 24) old24 ∗
+      pointsTo_u32 ((stackTop - 48) + 28) old28 ∗
+      allocationPairAt ((stackTop - 16) + 8) oldPairData oldPairSize ∗
+      allocationPairAt resultPtr oldResultData oldResultSize ∗
+      pointsTo_u32 1056608 smallMap ∗
+      pointsTo_u32 (smallAllocatorBinHeadAddress size smallMap) chunk ∗
+      headerWordTailAt (data + 4294967292) oldHeader ∗
+      dlmallocOwnedResult data headerByte
+        (packU32 (smallAllocatorBinSentinel size smallMap) previous :: tail) ∗
+      pointsTo_u32 (smallAllocatorNextChunk size smallMap chunk + 4)
+        nextHeader)
+    resultPtr metaPtr align size stackTop
+    (s := s) (E := E) (Φ := Φ) (calls := calls)
+  iapply Hprefix
+  isplitl [Hglobal]
+  · iexact Hglobal
+  isplitl [Hruntime H8 H12 H16 H20 H24 H28 Hpair Hresult Hmap Hhead
+    HheaderTail Howned HnextHeader]
+  · iframe
+  iintro Hglobal HR
+  icases HR with ⟨Hruntime, H8, H12, H16, H20, H24, H28, Hpair, Hresult,
+    Hmap, Hhead, HheaderTail, Howned, HnextHeader⟩
+  have Hcore := allocatorResult_singleton_call_twp (α := α)
+    ((stackTop - 16) + 8) 1 (stackTop - 16) size align smallMap chunk
+    previous data oldHeader nextHeader headerByte tail
+    old8 old12 old16 old20 old24 old28 oldPairData oldPairSize
+    (by decide) halign hsmall havailable hnonzero hheaderByte hdata
+    hdataNonzero hsize hlength hpayloadRoom hheadRoom hchunkLinksRoom
+    hchunkRoom hnextRoom
+    (by rw [show (stackTop - 16) - 32 = stackTop - 48 by bv_decide]
+        exact hcoreRoom)
+    (by have h := hw80
+        rw [show UInt32.ofNat 8 = (8 : UInt32) from rfl] at h
+        rw [h]
+        simp only [UInt32.size] at hwrapRoom ⊢
+        omega)
+    (s := s) (E := E) (Φ := Φ)
+    (callerLocals :=
+      ⟨[.i32 resultPtr, .i32 metaPtr, .i32 align, .i32 size],
+        [.i32 (stackTop - 16), .i32 1, .i32 0], []⟩)
+    (stack := [])
+    (code := zeroedAllocatorWrapperAfterCall) (arity := 0)
+    (remainder := []) (controls := []) (calls := calls)
+  rw [show (stackTop - 16) - 32 = stackTop - 48 by bv_decide] at Hcore
+  simp only [List.cons_append, List.nil_append] at Hcore
+  iapply Hcore
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hglobal]
+  · iexact Hglobal
+  isplitl [H8]
+  · iexact H8
+  isplitl [H12]
+  · iexact H12
+  isplitl [H16]
+  · iexact H16
+  isplitl [H20]
+  · iexact H20
+  isplitl [H24]
+  · iexact H24
+  isplitl [H28]
+  · iexact H28
+  isplitl [Hpair]
+  · isimp only [allocationPairAt]
+    isimp only [allocationPairAt] at Hpair
+    iexact Hpair
+  isplitl [Hmap]
+  · iexact Hmap
+  isplitl [Hhead]
+  · iexact Hhead
+  isplitl [HheaderTail]
+  · iexact HheaderTail
+  isplitl [Howned]
+  · iexact Howned
+  isplitl [HnextHeader]
+  · iexact HnextHeader
+  iintro Hruntime Hglobal H8 H12 H16 H20 H24 H28 Hpair Hresidue Harray
+  have Hsuffix := zeroedAllocatorWrapper_success_suffix_twp (α := α)
+    resultPtr metaPtr align size (stackTop - 16) data
+    oldResultData oldResultSize
+    (List.replicate
+      (packU32 (smallAllocatorBinSentinel size smallMap) previous ::
+        tail).length 0)
+    hwrapRoom hresultRoom
+    (s := s) (E := E) (Φ := Φ) (calls := calls)
+  iapply Hsuffix
+  isplitl [Hglobal]
+  · iexact Hglobal
+  isplitl [Hpair]
+  · iexact Hpair
+  isplitl [Hresult]
+  · iexact Hresult
+  isplitl [Harray]
+  · iexact Harray
+  iintro Hglobal Hpair Hresult Harray
+  ihave HglobalTop : globalPointsTo 0 (.i32 stackTop) $$ [Hglobal]
+  · rw [show (stackTop - 16) + 16 = stackTop by bv_decide]
+    iexact Hglobal
+  iapply Hdone $$ Hruntime HglobalTop H8 H12 H16 H20 H24 H28 Hpair
+    Hresult Hresidue Harray
+
+/- Absolute-index-147 call rule for the zeroed-allocation wrapper on the
+verified singleton path, preserving an arbitrary caller frame. -/
+set_option maxHeartbeats 4000000 in
+theorem zeroedAllocatorWrapper_singleton_call_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (resultPtr metaPtr stackTop : UInt32)
+    (size align smallMap chunk previous data oldHeader nextHeader : UInt32)
+    (headerByte : UInt8) (tail : List UInt64)
+    (old8 old12 old16 old20 old24 old28 : UInt32)
+    (oldPairData oldPairSize oldResultData oldResultSize : UInt32)
+    (halign : align < 9) (hsmall : size < 245)
+    (havailable : smallAllocatorShiftedMap size smallMap &&& 3 ≠ 0)
+    (hnonzero : headerByte.toUInt32 &&& 3 ≠ 0)
+    (hheaderByte : headerByte = u32Byte oldHeader 0)
+    (hdata : data = chunk + 8) (hdataNonzero : data ≠ 0)
+    (hsize : size ≠ 0)
+    (hlength : size.toNat =
+      8 * (packU32 (smallAllocatorBinSentinel size smallMap) previous :: tail).length)
+    (hpayloadRoom : data.toNat +
+      8 * (packU32 (smallAllocatorBinSentinel size smallMap) previous :: tail).length ≤
+      UInt32.size)
+    (hheadRoom : (smallAllocatorBinHeadAddress size smallMap).toNat + 4 ≤
+      UInt32.size)
+    (hchunkLinksRoom : chunk.toNat + 12 ≤ UInt32.size)
+    (hchunkRoom : chunk.toNat + 8 ≤ UInt32.size)
+    (hnextRoom : (smallAllocatorNextChunk size smallMap chunk).toNat + 8 ≤
+      UInt32.size)
+    (hwrapRoom : (stackTop - 16).toNat + 16 ≤ UInt32.size)
+    (hcoreRoom : (stackTop - 48).toNat + 32 ≤ UInt32.size)
+    (hresultRoom : resultPtr.toNat + 8 ≤ UInt32.size)
+    {callerLocals : Locals} {stack : List Value}
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame} :
+    runtimeModuleOwn «module» ∗
+      globalPointsTo 0 (.i32 stackTop) ∗
+      pointsTo_u32 ((stackTop - 48) + 8) old8 ∗
+      pointsTo_u32 ((stackTop - 48) + 12) old12 ∗
+      pointsTo_u32 ((stackTop - 48) + 16) old16 ∗
+      pointsTo_u32 ((stackTop - 48) + 20) old20 ∗
+      pointsTo_u32 ((stackTop - 48) + 24) old24 ∗
+      pointsTo_u32 ((stackTop - 48) + 28) old28 ∗
+      allocationPairAt ((stackTop - 16) + 8) oldPairData oldPairSize ∗
+      allocationPairAt resultPtr oldResultData oldResultSize ∗
+      pointsTo_u32 1056608 smallMap ∗
+      pointsTo_u32 (smallAllocatorBinHeadAddress size smallMap) chunk ∗
+      headerWordTailAt (data + 4294967292) oldHeader ∗
+      dlmallocOwnedResult data headerByte
+        (packU32 (smallAllocatorBinSentinel size smallMap) previous :: tail) ∗
+      pointsTo_u32 (smallAllocatorNextChunk size smallMap chunk + 4)
+        nextHeader ∗
+      (runtimeModuleOwn «module» -∗
+        globalPointsTo 0 (.i32 stackTop) -∗
+        pointsTo_u32 ((stackTop - 48) + 8) data -∗
+        pointsTo_u32 ((stackTop - 48) + 12) size -∗
+        pointsTo_u32 ((stackTop - 48) + 16) data -∗
+        pointsTo_u32 ((stackTop - 48) + 20) data -∗
+        pointsTo_u32 ((stackTop - 48) + 24) data -∗
+        pointsTo_u32 ((stackTop - 48) + 28) data -∗
+        allocationPairAt ((stackTop - 16) + 8) data size -∗
+        allocationPairAt resultPtr data size -∗
+        allocatorCoreResidueAt size smallMap chunk data nextHeader -∗
+        array64At data
+          (List.replicate
+            (packU32 (smallAllocatorBinSentinel size smallMap) previous ::
+              tail).length 0) -∗
+        WP (.running
+          ⟨{ callerLocals with values := stack },
+            code, arity, remainder, controls, calls⟩ : Expr α)
+          @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨{ callerLocals with values :=
+          [.i32 size, .i32 align, .i32 metaPtr, .i32 resultPtr] ++ stack },
+        .call 147 :: code, arity, remainder, controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] := by
+  iintro ⟨Hruntime, Hglobal, H8, H12, H16, H20, H24, H28, Hpair, Hresult,
+    Hmap, Hhead, HheaderTail, Howned, HnextHeader, Hdone⟩
+  iapply Wasm.SmallStep.twp_call (α := α) «module» 147 func145Def
+      (by decide) zeroedAllocatorWrapper_index $$ Hruntime
+  iintro Hruntime
+  simp [func145Def, Function.toLocals, Function.numParams, ValueType.zero]
+  have Hbody := zeroedAllocatorWrapper_singleton_twp (α := α)
+    resultPtr metaPtr stackTop size align smallMap chunk previous data
+    oldHeader nextHeader headerByte tail old8 old12 old16 old20 old24
+    old28 oldPairData oldPairSize oldResultData oldResultSize
+    halign hsmall havailable hnonzero hheaderByte hdata hdataNonzero
+    hsize hlength hpayloadRoom hheadRoom hchunkLinksRoom hchunkRoom
+    hnextRoom hwrapRoom hcoreRoom hresultRoom
+    (s := s) (E := E) (Φ := Φ)
+    (calls :=
+      { locals := { callerLocals with values := stack }
+        continuation := code
+        resultArity := arity
+        callerRemainder := remainder
+        control := controls } :: calls)
+  iapply Hbody
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hglobal]
+  · iexact Hglobal
+  isplitl [H8]
+  · iexact H8
+  isplitl [H12]
+  · iexact H12
+  isplitl [H16]
+  · iexact H16
+  isplitl [H20]
+  · iexact H20
+  isplitl [H24]
+  · iexact H24
+  isplitl [H28]
+  · iexact H28
+  isplitl [Hpair]
+  · iexact Hpair
+  isplitl [Hresult]
+  · iexact Hresult
+  isplitl [Hmap]
+  · iexact Hmap
+  isplitl [Hhead]
+  · iexact Hhead
+  isplitl [HheaderTail]
+  · iexact HheaderTail
+  isplitl [Howned]
+  · iexact Howned
+  isplitl [HnextHeader]
+  · iexact HnextHeader
+  iintro Hruntime Hglobal H8 H12 H16 H20 H24 H28 Hpair Hresult Hresidue
+    Harray
+  iapply Wasm.SmallStep.twp_returnFromCallExplicit (α := α)
+  simp only [List.take, List.nil_append]
+  iapply Hdone $$ Hruntime Hglobal H8 H12 H16 H20 H24 H28 Hpair Hresult
+    Hresidue Harray
+
+/-! ## Local `func144`: the zeroed-allocation entry point
+
+Local `func144` (absolute index 146) computes the byte size `count * elemSize`
+in 64-bit arithmetic, rejects overflow and over-large requests, and forwards
+zeroed requests to the wrapper at absolute index 147. -/
+
+private theorem twp_constI64
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    {params localValues values : List Value}
+    {value : UInt64} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame} :
+    WP (.running
+      ⟨⟨params, localValues, .i64 value :: values⟩,
+        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }] ⊢
+    WP (.running
+      ⟨⟨params, localValues, values⟩,
+        .constI64 value :: code, arity, remainder, controls, calls⟩ :
+        Expr α) @ s; E [{ Φ }] :=
+  twp_pureStep _ _ _ (fun _ => Step.constI64)
+
+private theorem twp_extendUI32
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    {params localValues values : List Value}
+    {value : UInt32} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame} :
+    WP (.running
+      ⟨⟨params, localValues,
+          .i64 (UInt64.ofNat value.toNat) :: values⟩,
+        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }] ⊢
+    WP (.running
+      ⟨⟨params, localValues, .i32 value :: values⟩,
+        .extendUI32 :: code, arity, remainder, controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] :=
+  twp_pureStep _ _ _ (fun _ => Step.extendUI32)
+
+private theorem twp_mulI64
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    {params localValues values : List Value}
+    {lhs rhs : UInt64} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame} :
+    WP (.running
+      ⟨⟨params, localValues, .i64 (lhs * rhs) :: values⟩,
+        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }] ⊢
+    WP (.running
+      ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
+        .mulI64 :: code, arity, remainder, controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] :=
+  twp_pureStep _ _ _ (fun _ => Step.mulI64)
+
+private theorem twp_shrUI64
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    {params localValues values : List Value}
+    {lhs rhs : UInt64} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame} :
+    WP (.running
+      ⟨⟨params, localValues, .i64 (lhs >>> (rhs % 64)) :: values⟩,
+        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }] ⊢
+    WP (.running
+      ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
+        .shrUI64 :: code, arity, remainder, controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] :=
+  twp_pureStep _ _ _ (fun _ => Step.shrUI64)
+
+private theorem twp_ne_i32
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    {params localValues values : List Value}
+    {lhs rhs result : UInt32} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame}
+    (hresult : result = if lhs ≠ rhs then 1 else 0) :
+    WP (.running
+      ⟨⟨params, localValues, .i32 result :: values⟩,
+        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }] ⊢
+    WP (.running
+      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
+        .ne :: code, arity, remainder, controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] :=
+  twp_pureStep _ _ _ (fun _ => Step.ne hresult)
+
+def zeroedAllocatorEpilogue : Program :=
+  [.localGet 5, .const 48, .add, .globalSet 0, .ret]
+
+def zeroedAllocatorResultSeg : Program :=
+  [.localGet 5, .load32 40, .localSet 17,
+    .localGet 0, .localGet 1, .store32 4,
+    .localGet 0, .localGet 17, .store32 8,
+    .localGet 0, .const 0, .store32 0,
+    .br 1]
+
+def zeroedAllocatorSelectBody : Program :=
+  [.const 0, .localGet 16, .localGet 15, .select,
+    .const 1, .and, .eqz, .br_if 0,
+    .localGet 0, .localGet 9, .store32 4,
+    .localGet 0, .localGet 10, .store32 8,
+    .localGet 0, .const 1, .store32 0,
+    .br 1]
+
+def zeroedAllocatorSelectSeg : Program :=
+  [.localGet 5, .load32 40, .localSet 15,
+    .const 1, .localSet 16,
+    .block 0 0 zeroedAllocatorSelectBody] ++ zeroedAllocatorResultSeg
+
+def zeroedAllocatorAfterWrapperCall : Program :=
+  [.localGet 5, .load32 12, .localSet 13,
+    .localGet 5, .localGet 5, .load32 8, .store32 40,
+    .localGet 5, .localGet 13, .store32 44,
+    .br 1]
+
+def zeroedAllocatorUninitSeg : Program :=
+  [.localGet 5, .const 16, .add,
+    .localGet 5, .const 27, .add,
+    .localGet 9, .localGet 10, .call 148,
+    .localGet 5, .load32 20, .localSet 14,
+    .localGet 5, .localGet 5, .load32 16, .store32 40,
+    .localGet 5, .localGet 14, .store32 44]
+
+def zeroedAllocatorZeroedBody : Program :=
+  [.localGet 2, .const 1, .and, .eqz, .br_if 0,
+    .localGet 5, .const 8, .add,
+    .localGet 5, .const 27, .add,
+    .localGet 9, .localGet 10, .call 147] ++
+    zeroedAllocatorAfterWrapperCall
+
+def zeroedAllocatorInnerAllocBody : Program :=
+  .block 0 0 zeroedAllocatorZeroedBody :: zeroedAllocatorUninitSeg
+
+def zeroedAllocatorAllocSeg : Program :=
+  .block 0 0 zeroedAllocatorInnerAllocBody :: zeroedAllocatorSelectSeg
+
+def zeroedAllocatorZeroSizeSeg : Program :=
+  [.localGet 0, .const 0, .store32 4,
+    .localGet 0, .localGet 3, .store32 8,
+    .localGet 0, .const 0, .store32 0,
+    .br 2]
+
+def zeroedAllocatorErrorSeg : Program :=
+  [.const 0, .load32 1050408, .localSet 11,
+    .const 0, .load32 1050412, .localSet 12,
+    .localGet 0, .localGet 11, .store32 4,
+    .localGet 0, .localGet 12, .store32 8,
+    .localGet 0, .const 1, .store32 0,
+    .br 2]
+
+def zeroedAllocatorFitsSeg : Program :=
+  [.localGet 5, .localGet 3, .store32 32,
+    .localGet 5, .localGet 8, .store32 36,
+    .localGet 5, .const 0, .store32 28,
+    .localGet 5, .load32 32, .localSet 9,
+    .localGet 5, .load32 36, .localSet 10,
+    .localGet 10, .eqz, .br_if 1, .br 2]
+
+def zeroedAllocatorGuardBody : Program :=
+  [.localGet 7, .const 1, .and, .br_if 0,
+    .localGet 8, .const 2147483648, .localGet 3, .sub, .leU,
+    .const 1, .and, .br_if 2, .br 1]
+
+def zeroedAllocatorGuardOuter1 : Program :=
+  [.block 0 0 zeroedAllocatorGuardBody, .br 2]
+
+def zeroedAllocatorGuardOuter2 : Program :=
+  [.block 0 0 zeroedAllocatorGuardOuter1, .br 1]
+
+def zeroedAllocatorFitsBody : Program :=
+  .block 0 0 zeroedAllocatorGuardOuter2 :: zeroedAllocatorFitsSeg
+
+def zeroedAllocatorErrorBody : Program :=
+  .block 0 0 zeroedAllocatorFitsBody :: zeroedAllocatorErrorSeg
+
+def zeroedAllocatorZeroSizeBody : Program :=
+  .block 0 0 zeroedAllocatorErrorBody :: zeroedAllocatorZeroSizeSeg
+
+def zeroedAllocatorMainBody : Program :=
+  .block 0 0 zeroedAllocatorZeroSizeBody :: zeroedAllocatorAllocSeg
+
+def zeroedAllocatorTopBody : Program :=
+  [.block 0 0 zeroedAllocatorMainBody]
+
+private theorem func144_shape :
+    func144 =
+      [.globalGet 0, .const 48, .sub, .localSet 5,
+        .localGet 5, .globalSet 0,
+        .localGet 1, .extendUI32, .localGet 4, .extendUI32, .mulI64,
+        .localSet 6,
+        .localGet 6, .constI64 32, .shrUI64, .wrapI64, .const 0, .ne,
+        .localSet 7,
+        .localGet 6, .wrapI64, .localSet 8,
+        .block 0 0 zeroedAllocatorTopBody] ++ zeroedAllocatorEpilogue := by
+  rfl
+
+def zeroedAllocatorFrameLocals
+    (frame : UInt32) (prod : UInt64) (size align : UInt32) : List Value :=
+  [.i32 frame, .i64 prod, .i32 0, .i32 size, .i32 align, .i32 size,
+    .i32 0, .i32 0, .i32 0, .i32 0, .i32 0, .i32 0, .i32 0]
+
+def zeroedAllocatorZeroedFrame : ControlFrame :=
+  { kind := .block
+    paramArity := 0
+    resultArity := 0
+    body := zeroedAllocatorZeroedBody
+    continuation := zeroedAllocatorUninitSeg
+    belowStack := [] }
+
+def zeroedAllocatorInnerAllocFrame : ControlFrame :=
+  { kind := .block
+    paramArity := 0
+    resultArity := 0
+    body := zeroedAllocatorInnerAllocBody
+    continuation := zeroedAllocatorSelectSeg
+    belowStack := [] }
+
+def zeroedAllocatorMainFrame : ControlFrame :=
+  { kind := .block
+    paramArity := 0
+    resultArity := 0
+    body := zeroedAllocatorMainBody
+    continuation := []
+    belowStack := [] }
+
+def zeroedAllocatorTopFrame : ControlFrame :=
+  { kind := .block
+    paramArity := 0
+    resultArity := 0
+    body := zeroedAllocatorTopBody
+    continuation := zeroedAllocatorEpilogue
+    belowStack := [] }
+
+/- Pure prefix of local `func144`: reserve the 48-byte frame, perform the
+64-bit size computation, pass the generated overflow and size-class guards,
+record the accepted request in the frame, and stop exactly at the
+absolute-index-147 wrapper call of the zeroed branch. -/
+set_option maxHeartbeats 4000000 in
+theorem zeroedAllocator_to_wrapper_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (R : IProp WasmHeapGF)
+    (resultPtr count flags align elemSize size stackTop : UInt32)
+    (prod : UInt64)
+    (old28 old32 old36 : UInt32)
+    (hprod : UInt64.ofNat count.toNat * UInt64.ofNat elemSize.toNat = prod)
+    (hlow : UInt32.ofNat (prod.toNat % 2 ^ 32) = size)
+    (hhigh : UInt32.ofNat
+      ((prod >>> ((32 : UInt64) % 64)).toNat % 2 ^ 32) = 0)
+    (hfits : size ≤ 2147483648 - align)
+    (hsizeNonzero : size ≠ 0)
+    (hflags : flags &&& 1 ≠ 0)
+    (hframeRoom : (stackTop - 48).toNat + 48 ≤ UInt32.size)
+    {calls : List CallFrame} :
+    globalPointsTo 0 (.i32 stackTop) ∗
+      pointsTo_u32 ((stackTop - 48) + 28) old28 ∗
+      pointsTo_u32 ((stackTop - 48) + 32) old32 ∗
+      pointsTo_u32 ((stackTop - 48) + 36) old36 ∗ R ∗
+      (globalPointsTo 0 (.i32 (stackTop - 48)) -∗
+        pointsTo_u32 ((stackTop - 48) + 28) 0 -∗
+        pointsTo_u32 ((stackTop - 48) + 32) align -∗
+        pointsTo_u32 ((stackTop - 48) + 36) size -∗ R -∗
+        WP (.running
+          ⟨⟨[.i32 resultPtr, .i32 count, .i32 flags, .i32 align,
+              .i32 elemSize],
+              zeroedAllocatorFrameLocals (stackTop - 48) prod size align,
+              [.i32 size, .i32 align, .i32 ((stackTop - 48) + 27),
+                .i32 ((stackTop - 48) + 8)]⟩,
+            .call 147 :: zeroedAllocatorAfterWrapperCall, 0, [],
+            [zeroedAllocatorZeroedFrame, zeroedAllocatorInnerAllocFrame,
+              zeroedAllocatorMainFrame, zeroedAllocatorTopFrame],
+            calls⟩ : Expr α) @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨⟨[.i32 resultPtr, .i32 count, .i32 flags, .i32 align,
+          .i32 elemSize],
+          [.i32 0, .i64 0, .i32 0, .i32 0, .i32 0, .i32 0, .i32 0,
+            .i32 0, .i32 0, .i32 0, .i32 0, .i32 0, .i32 0], []⟩,
+        func144, 0, [], [], calls⟩ : Expr α) @ s; E [{ Φ }] := by
+  obtain ⟨hf280, hf281, hf282, hf283⟩ :=
+    descriptorSlot32Facts (stackTop - 48) 28 48 hframeRoom (by decide)
+  obtain ⟨hf320, hf321, hf322, hf323⟩ :=
+    descriptorSlot32Facts (stackTop - 48) 32 48 hframeRoom (by decide)
+  obtain ⟨hf360, hf361, hf362, hf363⟩ :=
+    descriptorSlot32Facts (stackTop - 48) 36 48 hframeRoom (by decide)
+  iintro ⟨Hglobal, H28, H32, H36, HR, Hdone⟩
+  rw [func144_shape]
+  simp only [List.cons_append, List.nil_append]
+  iapply twp_globalGet0
+  isplitl [Hglobal]
+  · iexact Hglobal
+  iintro Hglobal
+  iapply twp_const
+  iapply twp_sub
+  iapply twp_localSet rfl
+  simp only [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
+  iapply twp_localGet rfl
+  iapply twp_globalSet0
+  isplitl [Hglobal]
+  · iexact Hglobal
+  iintro Hglobal
+  iapply twp_localGet rfl
+  iapply twp_extendUI32
+  iapply twp_localGet rfl
+  iapply twp_extendUI32
+  iapply twp_mulI64
+  rw [hprod]
+  iapply twp_localSet rfl
+  simp only [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
+  iapply twp_localGet rfl
+  iapply twp_constI64
+  iapply twp_shrUI64
+  iapply twp_wrapI64
+  rw [hhigh]
+  iapply twp_const
+  iapply twp_ne_i32 (result := 0) (by simp)
+  iapply twp_localSet rfl
+  simp only [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
+  iapply twp_localGet rfl
+  iapply twp_wrapI64
+  rw [hlow]
+  iapply twp_localSet rfl
+  simp only [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
+  iapply twp_block
+  simp only [zeroedAllocatorTopBody]
+  iapply twp_block
+  simp only [zeroedAllocatorMainBody]
+  iapply twp_block
+  simp only [zeroedAllocatorZeroSizeBody]
+  iapply twp_block
+  simp only [zeroedAllocatorErrorBody]
+  iapply twp_block
+  simp only [zeroedAllocatorFitsBody]
+  iapply twp_block
+  simp only [zeroedAllocatorGuardOuter2]
+  iapply twp_block
+  simp only [zeroedAllocatorGuardOuter1]
+  iapply twp_block
+  simp only [zeroedAllocatorGuardBody]
+  iapply twp_localGet rfl
+  iapply twp_const
+  iapply twp_and
+  rw [show (0 : UInt32) &&& 1 = 0 by decide]
+  iapply twp_brIfZero
+  iapply twp_localGet rfl
+  iapply twp_const
+  iapply twp_localGet rfl
+  iapply twp_sub
+  iapply twp_leU (result := 1) (by simp [hfits])
+  iapply twp_const
+  iapply twp_and
+  rw [show (1 : UInt32) &&& 1 = 1 by decide]
+  iapply twp_brIf (by decide) (by rfl)
+  simp only [List.take_zero, List.nil_append]
+  simp only [zeroedAllocatorFitsSeg]
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_store32 old32 hf320 hf321 hf322 hf323 $$ H32
+  iintro H32
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_store32 old36 hf360 hf361 hf362 hf363 $$ H36
+  iintro H36
+  iapply twp_localGet rfl
+  iapply twp_const
+  iapply twp_store32 old28 hf280 hf281 hf282 hf283 $$ H28
+  iintro H28
+  iapply twp_localGet rfl
+  iapply twp_load32 align hf320 hf321 hf322 hf323 $$ H32
+  iintro H32
+  iapply twp_localSet rfl
+  simp only [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
+  iapply twp_localGet rfl
+  iapply twp_load32 size hf360 hf361 hf362 hf363 $$ H36
+  iintro H36
+  iapply twp_localSet rfl
+  simp only [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
+  iapply twp_localGet rfl
+  iapply twp_eqz (result := 0) (by simp [hsizeNonzero])
+  iapply twp_brIfZero
+  iapply twp_br (by rfl)
+  simp only [List.drop_zero, List.take_zero, List.nil_append]
+  simp only [zeroedAllocatorAllocSeg]
+  iapply twp_block
+  simp only [zeroedAllocatorInnerAllocBody]
+  iapply twp_block
+  simp only [zeroedAllocatorZeroedBody]
+  simp only [List.cons_append, List.nil_append]
+  iapply twp_localGet rfl
+  iapply twp_const
+  iapply twp_and
+  iapply twp_eqz (result := 0) (by simp [hflags])
+  iapply twp_brIfZero
+  iapply twp_localGet rfl
+  iapply twp_const
+  iapply twp_add
+  rw [UInt32.add_comm (8 : UInt32) (stackTop - 48)]
+  iapply twp_localGet rfl
+  iapply twp_const
+  iapply twp_add
+  rw [UInt32.add_comm (27 : UInt32) (stackTop - 48)]
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  isimp only [zeroedAllocatorZeroedFrame, zeroedAllocatorInnerAllocFrame,
+    zeroedAllocatorMainFrame, zeroedAllocatorTopFrame,
+    zeroedAllocatorZeroedBody, zeroedAllocatorInnerAllocBody,
+    zeroedAllocatorMainBody, zeroedAllocatorTopBody,
+    zeroedAllocatorZeroSizeBody, zeroedAllocatorErrorBody,
+    zeroedAllocatorFitsBody, zeroedAllocatorGuardOuter2,
+    zeroedAllocatorGuardOuter1, zeroedAllocatorGuardBody,
+    zeroedAllocatorFitsSeg, zeroedAllocatorErrorSeg,
+    zeroedAllocatorZeroSizeSeg, zeroedAllocatorAllocSeg,
+    zeroedAllocatorSelectSeg, zeroedAllocatorSelectBody,
+    zeroedAllocatorResultSeg, zeroedAllocatorUninitSeg,
+    zeroedAllocatorAfterWrapperCall, zeroedAllocatorEpilogue,
+    zeroedAllocatorFrameLocals,
+    List.cons_append, List.nil_append] at Hdone
+  simp only [zeroedAllocatorErrorSeg, zeroedAllocatorZeroSizeSeg,
+    zeroedAllocatorSelectSeg, zeroedAllocatorSelectBody,
+    zeroedAllocatorResultSeg, zeroedAllocatorUninitSeg,
+    zeroedAllocatorAfterWrapperCall, zeroedAllocatorEpilogue,
+    List.cons_append, List.nil_append, List.drop_zero]
+  iapply Hdone $$ Hglobal H28 H32 H36 HR
+
+/- Exact successful suffix of local `func144` after the wrapper has returned
+the `(data, size)` pair in the frame: publish the pair through the frame's
+result words, pass the generated null check, and write the three-word success
+descriptor `(0, count, data)` into the caller-supplied result slot. -/
+set_option maxHeartbeats 4000000 in
+theorem zeroedAllocator_success_suffix_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (resultPtr count flags align elemSize size frame data : UInt32)
+    (prod : UInt64)
+    (old40 old44 oldR0 oldR4 oldR8 : UInt32)
+    (hframeRoom : frame.toNat + 48 ≤ UInt32.size)
+    (hresultRoom : resultPtr.toNat + 12 ≤ UInt32.size)
+    (hdataNonzero : data ≠ 0)
+    {calls : List CallFrame} :
+    globalPointsTo 0 (.i32 frame) ∗
+      allocationPairAt (frame + 8) data size ∗
+      pointsTo_u32 (frame + 40) old40 ∗
+      pointsTo_u32 (frame + 44) old44 ∗
+      pointsTo_u32 resultPtr oldR0 ∗
+      pointsTo_u32 (resultPtr + 4) oldR4 ∗
+      pointsTo_u32 (resultPtr + 8) oldR8 ∗
+      (globalPointsTo 0 (.i32 (frame + 48)) -∗
+        allocationPairAt (frame + 8) data size -∗
+        pointsTo_u32 (frame + 40) data -∗
+        pointsTo_u32 (frame + 44) size -∗
+        pointsTo_u32 resultPtr 0 -∗
+        pointsTo_u32 (resultPtr + 4) count -∗
+        pointsTo_u32 (resultPtr + 8) data -∗
+        WP (.running
+          ⟨⟨[.i32 resultPtr, .i32 count, .i32 flags, .i32 align,
+              .i32 elemSize],
+              [.i32 frame, .i64 prod, .i32 0, .i32 size, .i32 align,
+                .i32 size, .i32 0, .i32 0, .i32 size, .i32 0, .i32 data,
+                .i32 1, .i32 data], []⟩,
+            [.ret], 0, [], [], calls⟩ : Expr α) @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨⟨[.i32 resultPtr, .i32 count, .i32 flags, .i32 align,
+          .i32 elemSize],
+          zeroedAllocatorFrameLocals frame prod size align, []⟩,
+        zeroedAllocatorAfterWrapperCall, 0, [],
+        [zeroedAllocatorZeroedFrame, zeroedAllocatorInnerAllocFrame,
+          zeroedAllocatorMainFrame, zeroedAllocatorTopFrame],
+        calls⟩ : Expr α) @ s; E [{ Φ }] := by
+  obtain ⟨hf80, hf81, hf82, hf83⟩ :=
+    descriptorSlot32Facts frame 8 48 hframeRoom (by decide)
+  obtain ⟨hf120, hf121, hf122, hf123⟩ :=
+    descriptorSlot32Facts frame 12 48 hframeRoom (by decide)
+  obtain ⟨hf400, hf401, hf402, hf403⟩ :=
+    descriptorSlot32Facts frame 40 48 hframeRoom (by decide)
+  obtain ⟨hf440, hf441, hf442, hf443⟩ :=
+    descriptorSlot32Facts frame 44 48 hframeRoom (by decide)
+  obtain ⟨hr0, hr1, hr2, hr3⟩ :=
+    descriptorSlot32Facts resultPtr 0 12 hresultRoom (by decide)
+  obtain ⟨hr40, hr41, hr42, hr43⟩ :=
+    descriptorSlot32Facts resultPtr 4 12 hresultRoom (by decide)
+  obtain ⟨hr80, hr81, hr82, hr83⟩ :=
+    descriptorSlot32Facts resultPtr 8 12 hresultRoom (by decide)
+  iintro ⟨Hglobal, Hpair, H40, H44, Hr0, Hr4, Hr8, Hdone⟩
+  isimp only [allocationPairAt] at Hpair
+  icases Hpair with ⟨Hp8, Hp12⟩
+  simp only [zeroedAllocatorAfterWrapperCall, zeroedAllocatorFrameLocals]
+  iapply twp_localGet rfl
+  ihave Hp12At : pointsTo_u32 (frame + 12) size $$ [Hp12]
+  · rw [show (frame + 8) + 4 = frame + 12 by bv_decide]
+    iexact Hp12
+  iapply twp_load32 size hf120 hf121 hf122 hf123 $$ Hp12At
+  iintro Hp12At
+  iapply twp_localSet rfl
+  simp only [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_load32 data hf80 hf81 hf82 hf83 $$ Hp8
+  iintro Hp8
+  iapply twp_store32 old40 hf400 hf401 hf402 hf403 $$ H40
+  iintro H40
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_store32 old44 hf440 hf441 hf442 hf443 $$ H44
+  iintro H44
+  iapply twp_br (by rfl)
+  simp only [zeroedAllocatorInnerAllocFrame, zeroedAllocatorSelectSeg,
+    List.take_zero, List.nil_append, List.cons_append]
+  iapply twp_localGet rfl
+  iapply twp_load32 data hf400 hf401 hf402 hf403 $$ H40
+  iintro H40
+  iapply twp_localSet rfl
+  simp only [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
+  iapply twp_const
+  iapply twp_localSet rfl
+  simp only [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
+  iapply twp_block
+  simp only [zeroedAllocatorSelectBody]
+  iapply twp_const
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_selectI32 (selected := 0) (by simp [hdataNonzero])
+  iapply twp_const
+  iapply twp_and
+  rw [show (0 : UInt32) &&& 1 = 0 by decide]
+  iapply twp_eqz (result := 1) (by decide)
+  iapply twp_brIf (by decide) (by rfl)
+  simp only [List.drop_zero, List.take_zero, List.nil_append]
+  simp only [zeroedAllocatorResultSeg]
+  iapply twp_localGet rfl
+  iapply twp_load32 data hf400 hf401 hf402 hf403 $$ H40
+  iintro H40
+  iapply twp_localSet rfl
+  simp only [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_store32 oldR4 hr40 hr41 hr42 hr43 $$ Hr4
+  iintro Hr4
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_store32 oldR8 hr80 hr81 hr82 hr83 $$ Hr8
+  iintro Hr8
+  iapply twp_localGet rfl
+  iapply twp_const
+  ihave Hr0At : pointsTo_u32 (resultPtr + 0) oldR0 $$ [Hr0]
+  · iapply pointsTo_u32_add_zero
+    iexact Hr0
+  iapply twp_store32 oldR0 hr0 hr1 hr2 hr3 $$ Hr0At
+  iintro Hr0At
+  iapply twp_br (by rfl)
+  simp only [zeroedAllocatorTopFrame, zeroedAllocatorEpilogue,
+    List.take_zero, List.nil_append]
+  iapply twp_localGet rfl
+  iapply twp_const
+  iapply twp_add
+  rw [UInt32.add_comm (48 : UInt32) frame]
+  iapply twp_globalSet0
+  isplitl [Hglobal]
+  · iexact Hglobal
+  iintro Hglobal
+  ihave Hr0 : pointsTo_u32 resultPtr 0 $$ [Hr0At]
+  · rw [show UInt32.ofNat 0 = 0 by rfl, UInt32.add_zero]
+    iexact Hr0At
+  ihave Hpair : allocationPairAt (frame + 8) data size $$ [Hp8 Hp12At]
+  · isimp only [allocationPairAt]
+    isplitl [Hp8]
+    · iexact Hp8
+    · rw [show (frame + 8) + 4 = frame + 12 by bv_decide]
+      iexact Hp12At
+  iapply Hdone $$ Hglobal Hpair H40 H44 Hr0 Hr4 Hr8
+
+/- Complete singleton-path body rule for local `func144`: size computation,
+guards, the verified wrapper chain at absolute index 147, and the success
+descriptor suffix, composed into one closed contract. -/
+set_option maxHeartbeats 4000000 in
+theorem zeroedAllocator_singleton_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (resultPtr count flags align elemSize stackTop : UInt32)
+    (prod : UInt64)
+    (size smallMap chunk previous data oldHeader nextHeader : UInt32)
+    (headerByte : UInt8) (tail : List UInt64)
+    (old28 old32 old36 old40 old44 : UInt32)
+    (oldPair8 oldPair12 oldWrap8 oldWrap12 : UInt32)
+    (oldCore8 oldCore12 oldCore16 oldCore20 oldCore24 oldCore28 : UInt32)
+    (oldR0 oldR4 oldR8 : UInt32)
+    (hprod : UInt64.ofNat count.toNat * UInt64.ofNat elemSize.toNat = prod)
+    (hlow : UInt32.ofNat (prod.toNat % 2 ^ 32) = size)
+    (hhigh : UInt32.ofNat
+      ((prod >>> ((32 : UInt64) % 64)).toNat % 2 ^ 32) = 0)
+    (hfits : size ≤ 2147483648 - align)
+    (hflags : flags &&& 1 ≠ 0)
+    (halign : align < 9) (hsmall : size < 245)
+    (havailable : smallAllocatorShiftedMap size smallMap &&& 3 ≠ 0)
+    (hnonzero : headerByte.toUInt32 &&& 3 ≠ 0)
+    (hheaderByte : headerByte = u32Byte oldHeader 0)
+    (hdata : data = chunk + 8) (hdataNonzero : data ≠ 0)
+    (hsize : size ≠ 0)
+    (hlength : size.toNat =
+      8 * (packU32 (smallAllocatorBinSentinel size smallMap) previous :: tail).length)
+    (hpayloadRoom : data.toNat +
+      8 * (packU32 (smallAllocatorBinSentinel size smallMap) previous :: tail).length ≤
+      UInt32.size)
+    (hheadRoom : (smallAllocatorBinHeadAddress size smallMap).toNat + 4 ≤
+      UInt32.size)
+    (hchunkLinksRoom : chunk.toNat + 12 ≤ UInt32.size)
+    (hchunkRoom : chunk.toNat + 8 ≤ UInt32.size)
+    (hnextRoom : (smallAllocatorNextChunk size smallMap chunk).toNat + 8 ≤
+      UInt32.size)
+    (hframeRoom : (stackTop - 48).toNat + 48 ≤ UInt32.size)
+    (hwrapRoom : (stackTop - 64).toNat + 16 ≤ UInt32.size)
+    (hcoreRoom : (stackTop - 96).toNat + 32 ≤ UInt32.size)
+    (hresultRoom : resultPtr.toNat + 12 ≤ UInt32.size)
+    {calls : List CallFrame} :
+    runtimeModuleOwn «module» ∗
+      globalPointsTo 0 (.i32 stackTop) ∗
+      pointsTo_u32 ((stackTop - 48) + 28) old28 ∗
+      pointsTo_u32 ((stackTop - 48) + 32) old32 ∗
+      pointsTo_u32 ((stackTop - 48) + 36) old36 ∗
+      pointsTo_u32 ((stackTop - 48) + 40) old40 ∗
+      pointsTo_u32 ((stackTop - 48) + 44) old44 ∗
+      allocationPairAt ((stackTop - 48) + 8) oldPair8 oldPair12 ∗
+      allocationPairAt ((stackTop - 64) + 8) oldWrap8 oldWrap12 ∗
+      pointsTo_u32 ((stackTop - 96) + 8) oldCore8 ∗
+      pointsTo_u32 ((stackTop - 96) + 12) oldCore12 ∗
+      pointsTo_u32 ((stackTop - 96) + 16) oldCore16 ∗
+      pointsTo_u32 ((stackTop - 96) + 20) oldCore20 ∗
+      pointsTo_u32 ((stackTop - 96) + 24) oldCore24 ∗
+      pointsTo_u32 ((stackTop - 96) + 28) oldCore28 ∗
+      pointsTo_u32 resultPtr oldR0 ∗
+      pointsTo_u32 (resultPtr + 4) oldR4 ∗
+      pointsTo_u32 (resultPtr + 8) oldR8 ∗
+      pointsTo_u32 1056608 smallMap ∗
+      pointsTo_u32 (smallAllocatorBinHeadAddress size smallMap) chunk ∗
+      headerWordTailAt (data + 4294967292) oldHeader ∗
+      dlmallocOwnedResult data headerByte
+        (packU32 (smallAllocatorBinSentinel size smallMap) previous :: tail) ∗
+      pointsTo_u32 (smallAllocatorNextChunk size smallMap chunk + 4)
+        nextHeader ∗
+      (runtimeModuleOwn «module» -∗
+        globalPointsTo 0 (.i32 stackTop) -∗
+        pointsTo_u32 ((stackTop - 48) + 28) 0 -∗
+        pointsTo_u32 ((stackTop - 48) + 32) align -∗
+        pointsTo_u32 ((stackTop - 48) + 36) size -∗
+        pointsTo_u32 ((stackTop - 48) + 40) data -∗
+        pointsTo_u32 ((stackTop - 48) + 44) size -∗
+        allocationPairAt ((stackTop - 48) + 8) data size -∗
+        allocationPairAt ((stackTop - 64) + 8) data size -∗
+        pointsTo_u32 ((stackTop - 96) + 8) data -∗
+        pointsTo_u32 ((stackTop - 96) + 12) size -∗
+        pointsTo_u32 ((stackTop - 96) + 16) data -∗
+        pointsTo_u32 ((stackTop - 96) + 20) data -∗
+        pointsTo_u32 ((stackTop - 96) + 24) data -∗
+        pointsTo_u32 ((stackTop - 96) + 28) data -∗
+        pointsTo_u32 resultPtr 0 -∗
+        pointsTo_u32 (resultPtr + 4) count -∗
+        pointsTo_u32 (resultPtr + 8) data -∗
+        allocatorCoreResidueAt size smallMap chunk data nextHeader -∗
+        array64At data
+          (List.replicate
+            (packU32 (smallAllocatorBinSentinel size smallMap) previous ::
+              tail).length 0) -∗
+        WP (.running
+          ⟨⟨[.i32 resultPtr, .i32 count, .i32 flags, .i32 align,
+              .i32 elemSize],
+              [.i32 (stackTop - 48), .i64 prod, .i32 0, .i32 size,
+                .i32 align, .i32 size, .i32 0, .i32 0, .i32 size, .i32 0,
+                .i32 data, .i32 1, .i32 data], []⟩,
+            [.ret], 0, [], [], calls⟩ : Expr α) @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨⟨[.i32 resultPtr, .i32 count, .i32 flags, .i32 align,
+          .i32 elemSize],
+          [.i32 0, .i64 0, .i32 0, .i32 0, .i32 0, .i32 0, .i32 0,
+            .i32 0, .i32 0, .i32 0, .i32 0, .i32 0, .i32 0], []⟩,
+        func144, 0, [], [], calls⟩ : Expr α) @ s; E [{ Φ }] := by
+  obtain ⟨hp80, hp81, hp82, hp83⟩ :=
+    descriptorSlot32Facts (stackTop - 48) 8 48 hframeRoom (by decide)
+  iintro ⟨Hruntime, Hglobal, H28, H32, H36, H40, H44, Hpair, Hwrap,
+    Hc8, Hc12, Hc16, Hc20, Hc24, Hc28, Hr0, Hr4, Hr8,
+    Hmap, Hhead, HheaderTail, Howned, HnextHeader, Hdone⟩
+  have Hprefix := zeroedAllocator_to_wrapper_twp (α := α)
+    (iprop% runtimeModuleOwn «module» ∗
+      pointsTo_u32 ((stackTop - 48) + 40) old40 ∗
+      pointsTo_u32 ((stackTop - 48) + 44) old44 ∗
+      allocationPairAt ((stackTop - 48) + 8) oldPair8 oldPair12 ∗
+      allocationPairAt ((stackTop - 64) + 8) oldWrap8 oldWrap12 ∗
+      pointsTo_u32 ((stackTop - 96) + 8) oldCore8 ∗
+      pointsTo_u32 ((stackTop - 96) + 12) oldCore12 ∗
+      pointsTo_u32 ((stackTop - 96) + 16) oldCore16 ∗
+      pointsTo_u32 ((stackTop - 96) + 20) oldCore20 ∗
+      pointsTo_u32 ((stackTop - 96) + 24) oldCore24 ∗
+      pointsTo_u32 ((stackTop - 96) + 28) oldCore28 ∗
+      pointsTo_u32 resultPtr oldR0 ∗
+      pointsTo_u32 (resultPtr + 4) oldR4 ∗
+      pointsTo_u32 (resultPtr + 8) oldR8 ∗
+      pointsTo_u32 1056608 smallMap ∗
+      pointsTo_u32 (smallAllocatorBinHeadAddress size smallMap) chunk ∗
+      headerWordTailAt (data + 4294967292) oldHeader ∗
+      dlmallocOwnedResult data headerByte
+        (packU32 (smallAllocatorBinSentinel size smallMap) previous :: tail) ∗
+      pointsTo_u32 (smallAllocatorNextChunk size smallMap chunk + 4)
+        nextHeader)
+    resultPtr count flags align elemSize size stackTop prod
+    old28 old32 old36 hprod hlow hhigh hfits hsize hflags hframeRoom
+    (s := s) (E := E) (Φ := Φ) (calls := calls)
+  iapply Hprefix
+  isplitl [Hglobal]
+  · iexact Hglobal
+  isplitl [H28]
+  · iexact H28
+  isplitl [H32]
+  · iexact H32
+  isplitl [H36]
+  · iexact H36
+  isplitl [Hruntime H40 H44 Hpair Hwrap Hc8 Hc12 Hc16 Hc20 Hc24 Hc28
+    Hr0 Hr4 Hr8 Hmap Hhead HheaderTail Howned HnextHeader]
+  · iframe
+  iintro Hglobal H28 H32 H36 HR
+  icases HR with ⟨Hruntime, H40, H44, Hpair, Hwrap, Hc8, Hc12, Hc16,
+    Hc20, Hc24, Hc28, Hr0, Hr4, Hr8, Hmap, Hhead, HheaderTail, Howned,
+    HnextHeader⟩
+  have Hwrapper := zeroedAllocatorWrapper_singleton_call_twp (α := α)
+    ((stackTop - 48) + 8) ((stackTop - 48) + 27) (stackTop - 48)
+    size align smallMap chunk previous data oldHeader nextHeader
+    headerByte tail oldCore8 oldCore12 oldCore16 oldCore20 oldCore24
+    oldCore28 oldWrap8 oldWrap12 oldPair8 oldPair12
+    halign hsmall havailable hnonzero hheaderByte hdata hdataNonzero
+    hsize hlength hpayloadRoom hheadRoom hchunkLinksRoom hchunkRoom
+    hnextRoom
+    (by rw [show (stackTop - 48) - 16 = stackTop - 64 by bv_decide]
+        exact hwrapRoom)
+    (by rw [show (stackTop - 48) - 48 = stackTop - 96 by bv_decide]
+        exact hcoreRoom)
+    (by have h := hp80
+        rw [show UInt32.ofNat 8 = (8 : UInt32) from rfl] at h
+        rw [h]
+        simp only [UInt32.size] at hframeRoom ⊢
+        omega)
+    (s := s) (E := E) (Φ := Φ)
+    (callerLocals :=
+      ⟨[.i32 resultPtr, .i32 count, .i32 flags, .i32 align,
+          .i32 elemSize],
+        zeroedAllocatorFrameLocals (stackTop - 48) prod size align, []⟩)
+    (stack := [])
+    (code := zeroedAllocatorAfterWrapperCall) (arity := 0)
+    (remainder := [])
+    (controls :=
+      [zeroedAllocatorZeroedFrame, zeroedAllocatorInnerAllocFrame,
+        zeroedAllocatorMainFrame, zeroedAllocatorTopFrame])
+    (calls := calls)
+  rw [show (stackTop - 48) - 16 = stackTop - 64 by bv_decide,
+    show (stackTop - 48) - 48 = stackTop - 96 by bv_decide] at Hwrapper
+  simp only [List.cons_append, List.nil_append] at Hwrapper
+  iapply Hwrapper
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hglobal]
+  · iexact Hglobal
+  isplitl [Hc8]
+  · iexact Hc8
+  isplitl [Hc12]
+  · iexact Hc12
+  isplitl [Hc16]
+  · iexact Hc16
+  isplitl [Hc20]
+  · iexact Hc20
+  isplitl [Hc24]
+  · iexact Hc24
+  isplitl [Hc28]
+  · iexact Hc28
+  isplitl [Hwrap]
+  · iexact Hwrap
+  isplitl [Hpair]
+  · iexact Hpair
+  isplitl [Hmap]
+  · iexact Hmap
+  isplitl [Hhead]
+  · iexact Hhead
+  isplitl [HheaderTail]
+  · iexact HheaderTail
+  isplitl [Howned]
+  · iexact Howned
+  isplitl [HnextHeader]
+  · iexact HnextHeader
+  iintro Hruntime Hglobal Hc8 Hc12 Hc16 Hc20 Hc24 Hc28 Hwrap Hpair
+    Hresidue Harray
+  have Hsuffix := zeroedAllocator_success_suffix_twp (α := α)
+    resultPtr count flags align elemSize size (stackTop - 48) data prod
+    old40 old44 oldR0 oldR4 oldR8 hframeRoom hresultRoom hdataNonzero
+    (s := s) (E := E) (Φ := Φ) (calls := calls)
+  iapply Hsuffix
+  isplitl [Hglobal]
+  · iexact Hglobal
+  isplitl [Hpair]
+  · iexact Hpair
+  isplitl [H40]
+  · iexact H40
+  isplitl [H44]
+  · iexact H44
+  isplitl [Hr0]
+  · iexact Hr0
+  isplitl [Hr4]
+  · iexact Hr4
+  isplitl [Hr8]
+  · iexact Hr8
+  iintro Hglobal Hpair H40 H44 Hr0 Hr4 Hr8
+  ihave HglobalTop : globalPointsTo 0 (.i32 stackTop) $$ [Hglobal]
+  · rw [show (stackTop - 48) + 48 = stackTop by bv_decide]
+    iexact Hglobal
+  iapply Hdone $$ Hruntime HglobalTop H28 H32 H36 H40 H44 Hpair Hwrap
+    Hc8 Hc12 Hc16 Hc20 Hc24 Hc28 Hr0 Hr4 Hr8 Hresidue Harray
+
+/- Absolute-index-146 call rule for the zeroed-allocation entry point on the
+verified singleton path, preserving an arbitrary caller frame.  This is the
+call boundary consumed by `Vec<u64>::from_elem` and by the iterator
+collection chain. -/
+set_option maxHeartbeats 4000000 in
+theorem zeroedAllocator_singleton_call_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (resultPtr count flags align elemSize stackTop : UInt32)
+    (prod : UInt64)
+    (size smallMap chunk previous data oldHeader nextHeader : UInt32)
+    (headerByte : UInt8) (tail : List UInt64)
+    (old28 old32 old36 old40 old44 : UInt32)
+    (oldPair8 oldPair12 oldWrap8 oldWrap12 : UInt32)
+    (oldCore8 oldCore12 oldCore16 oldCore20 oldCore24 oldCore28 : UInt32)
+    (oldR0 oldR4 oldR8 : UInt32)
+    (hprod : UInt64.ofNat count.toNat * UInt64.ofNat elemSize.toNat = prod)
+    (hlow : UInt32.ofNat (prod.toNat % 2 ^ 32) = size)
+    (hhigh : UInt32.ofNat
+      ((prod >>> ((32 : UInt64) % 64)).toNat % 2 ^ 32) = 0)
+    (hfits : size ≤ 2147483648 - align)
+    (hflags : flags &&& 1 ≠ 0)
+    (halign : align < 9) (hsmall : size < 245)
+    (havailable : smallAllocatorShiftedMap size smallMap &&& 3 ≠ 0)
+    (hnonzero : headerByte.toUInt32 &&& 3 ≠ 0)
+    (hheaderByte : headerByte = u32Byte oldHeader 0)
+    (hdata : data = chunk + 8) (hdataNonzero : data ≠ 0)
+    (hsize : size ≠ 0)
+    (hlength : size.toNat =
+      8 * (packU32 (smallAllocatorBinSentinel size smallMap) previous :: tail).length)
+    (hpayloadRoom : data.toNat +
+      8 * (packU32 (smallAllocatorBinSentinel size smallMap) previous :: tail).length ≤
+      UInt32.size)
+    (hheadRoom : (smallAllocatorBinHeadAddress size smallMap).toNat + 4 ≤
+      UInt32.size)
+    (hchunkLinksRoom : chunk.toNat + 12 ≤ UInt32.size)
+    (hchunkRoom : chunk.toNat + 8 ≤ UInt32.size)
+    (hnextRoom : (smallAllocatorNextChunk size smallMap chunk).toNat + 8 ≤
+      UInt32.size)
+    (hframeRoom : (stackTop - 48).toNat + 48 ≤ UInt32.size)
+    (hwrapRoom : (stackTop - 64).toNat + 16 ≤ UInt32.size)
+    (hcoreRoom : (stackTop - 96).toNat + 32 ≤ UInt32.size)
+    (hresultRoom : resultPtr.toNat + 12 ≤ UInt32.size)
+    {callerLocals : Locals} {stack : List Value}
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame} :
+    runtimeModuleOwn «module» ∗
+      globalPointsTo 0 (.i32 stackTop) ∗
+      pointsTo_u32 ((stackTop - 48) + 28) old28 ∗
+      pointsTo_u32 ((stackTop - 48) + 32) old32 ∗
+      pointsTo_u32 ((stackTop - 48) + 36) old36 ∗
+      pointsTo_u32 ((stackTop - 48) + 40) old40 ∗
+      pointsTo_u32 ((stackTop - 48) + 44) old44 ∗
+      allocationPairAt ((stackTop - 48) + 8) oldPair8 oldPair12 ∗
+      allocationPairAt ((stackTop - 64) + 8) oldWrap8 oldWrap12 ∗
+      pointsTo_u32 ((stackTop - 96) + 8) oldCore8 ∗
+      pointsTo_u32 ((stackTop - 96) + 12) oldCore12 ∗
+      pointsTo_u32 ((stackTop - 96) + 16) oldCore16 ∗
+      pointsTo_u32 ((stackTop - 96) + 20) oldCore20 ∗
+      pointsTo_u32 ((stackTop - 96) + 24) oldCore24 ∗
+      pointsTo_u32 ((stackTop - 96) + 28) oldCore28 ∗
+      pointsTo_u32 resultPtr oldR0 ∗
+      pointsTo_u32 (resultPtr + 4) oldR4 ∗
+      pointsTo_u32 (resultPtr + 8) oldR8 ∗
+      pointsTo_u32 1056608 smallMap ∗
+      pointsTo_u32 (smallAllocatorBinHeadAddress size smallMap) chunk ∗
+      headerWordTailAt (data + 4294967292) oldHeader ∗
+      dlmallocOwnedResult data headerByte
+        (packU32 (smallAllocatorBinSentinel size smallMap) previous :: tail) ∗
+      pointsTo_u32 (smallAllocatorNextChunk size smallMap chunk + 4)
+        nextHeader ∗
+      (runtimeModuleOwn «module» -∗
+        globalPointsTo 0 (.i32 stackTop) -∗
+        pointsTo_u32 ((stackTop - 48) + 28) 0 -∗
+        pointsTo_u32 ((stackTop - 48) + 32) align -∗
+        pointsTo_u32 ((stackTop - 48) + 36) size -∗
+        pointsTo_u32 ((stackTop - 48) + 40) data -∗
+        pointsTo_u32 ((stackTop - 48) + 44) size -∗
+        allocationPairAt ((stackTop - 48) + 8) data size -∗
+        allocationPairAt ((stackTop - 64) + 8) data size -∗
+        pointsTo_u32 ((stackTop - 96) + 8) data -∗
+        pointsTo_u32 ((stackTop - 96) + 12) size -∗
+        pointsTo_u32 ((stackTop - 96) + 16) data -∗
+        pointsTo_u32 ((stackTop - 96) + 20) data -∗
+        pointsTo_u32 ((stackTop - 96) + 24) data -∗
+        pointsTo_u32 ((stackTop - 96) + 28) data -∗
+        pointsTo_u32 resultPtr 0 -∗
+        pointsTo_u32 (resultPtr + 4) count -∗
+        pointsTo_u32 (resultPtr + 8) data -∗
+        allocatorCoreResidueAt size smallMap chunk data nextHeader -∗
+        array64At data
+          (List.replicate
+            (packU32 (smallAllocatorBinSentinel size smallMap) previous ::
+              tail).length 0) -∗
+        WP (.running
+          ⟨{ callerLocals with values := stack },
+            code, arity, remainder, controls, calls⟩ : Expr α)
+          @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨{ callerLocals with values :=
+          [.i32 elemSize, .i32 align, .i32 flags, .i32 count,
+            .i32 resultPtr] ++ stack },
+        .call 146 :: code, arity, remainder, controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] := by
+  iintro ⟨Hruntime, Hglobal, H28, H32, H36, H40, H44, Hpair, Hwrap,
+    Hc8, Hc12, Hc16, Hc20, Hc24, Hc28, Hr0, Hr4, Hr8,
+    Hmap, Hhead, HheaderTail, Howned, HnextHeader, Hdone⟩
+  iapply Wasm.SmallStep.twp_call (α := α) «module» 146 func144Def
+      (by decide) zeroedAllocator_index $$ Hruntime
+  iintro Hruntime
+  simp [func144Def, Function.toLocals, Function.numParams, ValueType.zero]
+  have Hbody := zeroedAllocator_singleton_twp (α := α)
+    resultPtr count flags align elemSize stackTop prod size smallMap
+    chunk previous data oldHeader nextHeader headerByte tail
+    old28 old32 old36 old40 old44 oldPair8 oldPair12 oldWrap8 oldWrap12
+    oldCore8 oldCore12 oldCore16 oldCore20 oldCore24 oldCore28
+    oldR0 oldR4 oldR8
+    hprod hlow hhigh hfits hflags halign hsmall havailable hnonzero
+    hheaderByte hdata hdataNonzero hsize hlength hpayloadRoom hheadRoom
+    hchunkLinksRoom hchunkRoom hnextRoom hframeRoom hwrapRoom hcoreRoom
+    hresultRoom
+    (s := s) (E := E) (Φ := Φ)
+    (calls :=
+      { locals := { callerLocals with values := stack }
+        continuation := code
+        resultArity := arity
+        callerRemainder := remainder
+        control := controls } :: calls)
+  iapply Hbody
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hglobal]
+  · iexact Hglobal
+  isplitl [H28]
+  · iexact H28
+  isplitl [H32]
+  · iexact H32
+  isplitl [H36]
+  · iexact H36
+  isplitl [H40]
+  · iexact H40
+  isplitl [H44]
+  · iexact H44
+  isplitl [Hpair]
+  · iexact Hpair
+  isplitl [Hwrap]
+  · iexact Hwrap
+  isplitl [Hc8]
+  · iexact Hc8
+  isplitl [Hc12]
+  · iexact Hc12
+  isplitl [Hc16]
+  · iexact Hc16
+  isplitl [Hc20]
+  · iexact Hc20
+  isplitl [Hc24]
+  · iexact Hc24
+  isplitl [Hc28]
+  · iexact Hc28
+  isplitl [Hr0]
+  · iexact Hr0
+  isplitl [Hr4]
+  · iexact Hr4
+  isplitl [Hr8]
+  · iexact Hr8
+  isplitl [Hmap]
+  · iexact Hmap
+  isplitl [Hhead]
+  · iexact Hhead
+  isplitl [HheaderTail]
+  · iexact HheaderTail
+  isplitl [Howned]
+  · iexact Howned
+  isplitl [HnextHeader]
+  · iexact HnextHeader
+  iintro Hruntime Hglobal H28 H32 H36 H40 H44 Hpair Hwrap Hc8 Hc12 Hc16
+    Hc20 Hc24 Hc28 Hr0 Hr4 Hr8 Hresidue Harray
+  iapply Wasm.SmallStep.twp_returnFromCallExplicit (α := α)
+  simp only [List.take, List.nil_append]
+  iapply Hdone $$ Hruntime Hglobal H28 H32 H36 H40 H44 Hpair Hwrap Hc8
+    Hc12 Hc16 Hc20 Hc24 Hc28 Hr0 Hr4 Hr8 Hresidue Harray
+
 end Project.Mergesort.AllocatorProof
