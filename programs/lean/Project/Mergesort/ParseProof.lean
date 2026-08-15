@@ -532,6 +532,20 @@ def decimalDigitPrepareSegment : Program := [
   .localGet 3, .extendUI32, .mulI64, .store64 112,
   .localGet 30, .load8U 0, .const 255, .and, .localSet 35]
 
+/-- Nonempty portion of the generated simple decimal loop, beginning just
+after its length guard. -/
+def decimalSimpleLoopAfterGuard : Program := [
+  .localGet 4, .load32 48, .localSet 30,
+  .localGet 4, .load32 48, .localSet 31,
+  .localGet 4, .load32 52, .localSet 32,
+  .localGet 31, .const 1, .add, .localSet 33,
+  .localGet 32, .const 1, .sub, .localSet 34] ++
+  decimalDigitPrepareSegment ++ decimalDigitCallSegment
+
+def decimalSimpleLoopBody : Program := [
+  .localGet 4, .load32 52, .const 1, .geU,
+  .const 1, .and, .eqz, .br_if 3] ++ decimalSimpleLoopAfterGuard
+
 private theorem twp_extendUI32
     [WasmSmallStepGS hlc]
     {s : Stuckness} {E : CoPset}
@@ -955,6 +969,211 @@ theorem decimalDigitCallSegment_twp
   · iexact Hruntime
   isplitl [Hglobal]
   · iexact Hglobal
+  isplitl [Hinner4]
+  · iexact Hinner4
+  isplitl [Hinner8]
+  · iexact Hinner8
+  isplitl [Hinner12]
+  · iexact Hinner12
+  isplitl [Hresult8]
+  · iexact Hresult8
+  isplitl [Hresult12]
+  · iexact Hresult12
+  isplitl [Hcopy56]
+  · iexact Hcopy56
+  isplitl [Hcopy60]
+  · iexact Hcopy60
+  isplitl [Hacc]
+  · iexact Hacc
+  isplitl [Hpointer]
+  · iexact Hpointer
+  iexact Hlength
+
+set_option maxHeartbeats 2000000 in
+/-- Exact nonempty iteration and backedge of the generated simple decimal
+loop.  The recursive continuation is exposed only after the canonical
+remaining-length measure has strictly decreased. -/
+theorem decimalSimpleLoop_backedge_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (resultPtr textPtr textLength frame currentPtr currentLength : UInt32)
+    (value acc : UInt64) (consumed rest : List Char) (c : Char)
+    (oldCurrentPtr oldCurrentLength oldNextPtr oldNextLength : UInt32)
+    (oldByte oldTemporary oldFinal : UInt32)
+    (oldInner4 oldInner8 oldInner12 : UInt32)
+    (oldResult8 oldResult12 oldCopy56 oldCopy60 : UInt32)
+    (hinnerRoom : (frame - 16).toNat + 16 ≤ UInt32.size)
+    (hframeRoom : frame.toNat + 120 ≤ UInt32.size)
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame} :
+    let loopFrame : ControlFrame :=
+      { kind := .loop
+        paramArity := 0
+        resultArity := 0
+        body := decimalSimpleLoopBody
+        continuation := code
+        belowStack := [] }
+    ⌜DecimalMachineLoopInvariant
+        (toString value) consumed (c :: rest) acc⌝ ∗
+      runtimeModuleOwn «module» ∗
+      globalPointsTo 0 (.i32 frame) ∗
+      (currentPtr ↦w (UInt8.ofNat c.toNat)) ∗
+      pointsTo_u32 ((frame - 16) + 4) oldInner4 ∗
+      pointsTo_u32 ((frame - 16) + 8) oldInner8 ∗
+      pointsTo_u32 ((frame - 16) + 12) oldInner12 ∗
+      pointsTo_u32 (frame + 8) oldResult8 ∗
+      pointsTo_u32 (frame + 12) oldResult12 ∗
+      pointsTo_u32 (frame + 56) oldCopy56 ∗
+      pointsTo_u32 (frame + 60) oldCopy60 ∗
+      pointsTo_u64 (frame + 112) acc ∗
+      pointsTo_u32 (frame + 48) currentPtr ∗
+      pointsTo_u32 (frame + 52) currentLength ∗
+      ((⌜rest.length < (c :: rest).length⌝ ∗
+        ⌜DecimalMachineLoopInvariant (toString value)
+          (consumed ++ [c]) rest (machineNextAccumulator acc c)⌝ ∗
+        runtimeModuleOwn «module» ∗
+        globalPointsTo 0 (.i32 frame) ∗
+        (currentPtr + 0 ↦w (UInt8.ofNat c.toNat)) ∗
+        pointsTo_u32 ((frame - 16) + 4) 1 ∗
+        pointsTo_u32 ((frame - 16) + 8) (asciiByte32 c - 48) ∗
+        pointsTo_u32 ((frame - 16) + 12) (asciiByte32 c - 48) ∗
+        pointsTo_u32 (frame + 8) 1 ∗
+        pointsTo_u32 (frame + 12) (asciiByte32 c - 48) ∗
+        pointsTo_u32 (frame + 56) 1 ∗
+        pointsTo_u32 (frame + 60) (asciiByte32 c - 48) ∗
+        pointsTo_u64 (frame + 112) (machineNextAccumulator acc c) ∗
+        pointsTo_u32 (frame + 48) (1 + currentPtr) ∗
+        pointsTo_u32 (frame + 52) (currentLength - 1)) -∗
+        WP (.running
+          ⟨⟨fromAsciiRadixParams resultPtr textPtr textLength 10,
+              decimalDigitLocals frame currentPtr currentLength
+                (1 + currentPtr) (currentLength - 1) (asciiByte32 c)
+                (asciiByte32 c - 48) (asciiByte32 c - 48), []⟩,
+            decimalSimpleLoopBody, arity, remainder,
+            loopFrame :: controls, calls⟩ : Expr α) @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨⟨fromAsciiRadixParams resultPtr textPtr textLength 10,
+          decimalDigitLocals frame oldCurrentPtr oldCurrentLength
+            oldNextPtr oldNextLength oldByte oldTemporary oldFinal, []⟩,
+        decimalSimpleLoopAfterGuard, arity, remainder,
+        loopFrame :: controls, calls⟩ : Expr α) @ s; E [{ Φ }] := by
+  dsimp only
+  obtain ⟨h480, h481, h482, h483⟩ :=
+    parserWideSlotFacts frame 48 hframeRoom (by decide)
+  obtain ⟨h520, h521, h522, h523⟩ :=
+    parserWideSlotFacts frame 52 hframeRoom (by decide)
+  iintro ⟨%hinvariant, Hruntime, Hglobal, Hbyte,
+    Hinner4, Hinner8, Hinner12, Hresult8, Hresult12,
+    Hcopy56, Hcopy60, Hacc, Hpointer, Hlength, Hrec⟩
+  simp only [decimalSimpleLoopAfterGuard, List.cons_append, List.nil_append]
+  iapply twp_localGet rfl
+  iapply twp_load32 currentPtr h480 h481 h482 h483 $$ Hpointer
+  iintro Hpointer
+  iapply twp_localSet rfl
+  iapply twp_localGet rfl
+  iapply twp_load32 currentPtr h480 h481 h482 h483 $$ Hpointer
+  iintro Hpointer
+  iapply twp_localSet rfl
+  iapply twp_localGet rfl
+  iapply twp_load32 currentLength h520 h521 h522 h523 $$ Hlength
+  iintro Hlength
+  iapply twp_localSet rfl
+  iapply twp_localGet rfl
+  iapply twp_const
+  iapply twp_add
+  iapply twp_localSet rfl
+  iapply twp_localGet rfl
+  iapply twp_const
+  iapply twp_sub
+  iapply twp_localSet rfl
+  simp only [fromAsciiRadixParams, decimalDigitLocals,
+    fromAsciiRadixFramedLocals, fromAsciiRadixZeroLocals, func51Def,
+    List.map_cons, List.map_nil, ValueType.zero, List.length_cons,
+    List.length_nil, Nat.reduceAdd, Nat.reduceSub, List.set]
+  have Hprepare := decimalDigitPrepareSegment_twp (α := α)
+    resultPtr textPtr textLength frame currentPtr currentLength
+    (1 + currentPtr) (currentLength - 1) value acc consumed rest c
+    oldByte oldTemporary oldFinal hinvariant hframeRoom
+    (code := []) (arity := arity) (remainder := remainder)
+    (controls :=
+      { kind := .loop, paramArity := 0, resultArity := 0
+        body := decimalSimpleLoopBody, continuation := code
+        belowStack := [] } :: controls)
+    (calls := calls) (s := s) (E := E) (Φ := Φ)
+  simp only [List.append_nil] at Hprepare
+  simp only [fromAsciiRadixParams, decimalDigitLocals,
+    fromAsciiRadixFramedLocals, fromAsciiRadixZeroLocals, func51Def,
+    List.map_cons, List.map_nil, ValueType.zero, List.set] at Hprepare
+  iapply Hprepare
+  isplitl [Hacc]
+  · iexact Hacc
+  isplitl [Hbyte]
+  · iexact Hbyte
+  iintro Hacc Hbyte
+  have hbyteFacts := canonicalDigitByteFacts hinvariant
+  have Hcall := decimalDigitCallSegment_twp (α := α)
+    resultPtr textPtr textLength frame currentPtr currentLength
+    (1 + currentPtr) (currentLength - 1) (asciiByte32 c)
+    value acc consumed rest c oldTemporary oldFinal
+    oldInner4 oldInner8 oldInner12 oldResult8 oldResult12
+    oldCopy56 oldCopy60 currentPtr currentLength
+    hbyteFacts.1 hbyteFacts.2.1 hbyteFacts.2.2 hinvariant
+    hinnerRoom hframeRoom
+    (code := []) (arity := arity) (remainder := remainder)
+    (controls :=
+      { kind := .loop, paramArity := 0, resultArity := 0
+        body := decimalSimpleLoopBody, continuation := code
+        belowStack := [] } :: controls)
+    (calls := calls) (s := s) (E := E) (Φ := Φ)
+  simp only [List.append_nil] at Hcall
+  simp only [fromAsciiRadixParams, decimalDigitLocals,
+    fromAsciiRadixFramedLocals, fromAsciiRadixZeroLocals, func51Def,
+    List.map_cons, List.map_nil, ValueType.zero, List.set] at Hcall
+  iapply Hcall
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hglobal]
+  · iexact Hglobal
+  isplitl [Hinner4]
+  · iexact Hinner4
+  isplitl [Hinner8]
+  · iexact Hinner8
+  isplitl [Hinner12]
+  · iexact Hinner12
+  isplitl [Hresult8]
+  · iexact Hresult8
+  isplitl [Hresult12]
+  · iexact Hresult12
+  isplitl [Hcopy56]
+  · iexact Hcopy56
+  isplitl [Hcopy60]
+  · iexact Hcopy60
+  isplitl [Hacc]
+  · iexact Hacc
+  isplitl [Hpointer]
+  · iexact Hpointer
+  isplitl [Hlength]
+  · iexact Hlength
+  iintro Hpost
+  icases Hpost with ⟨%hnextInvariant, Hruntime, Hglobal,
+    Hinner4, Hinner8, Hinner12, Hresult8, Hresult12,
+    Hcopy56, Hcopy60, Hacc, Hpointer, Hlength⟩
+  iapply twp_br rfl
+  simp only [List.take_zero, List.nil_append]
+  iapply Hrec
+  isplit
+  · ipureintro
+    simp
+  isplit
+  · ipureintro
+    exact hnextInvariant
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hglobal]
+  · iexact Hglobal
+  isplitl [Hbyte]
+  · iexact Hbyte
   isplitl [Hinner4]
   · iexact Hinner4
   isplitl [Hinner8]
