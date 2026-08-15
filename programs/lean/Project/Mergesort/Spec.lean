@@ -33,6 +33,13 @@ nonempty condition is semantic: `"".split(' ')` yields an empty token, whose
 def Fits (input : List UInt64) : Prop :=
   input ≠ [] ∧ input.length ≤ 4096
 
+theorem Fits.nonempty {input : List UInt64} (h : Fits input) : input ≠ [] :=
+  h.1
+
+theorem Fits.length_le {input : List UInt64} (h : Fits input) :
+    input.length ≤ 4096 :=
+  h.2
+
 def SortedPermutation (input output : List UInt64) : Prop :=
   Pure.SortedPermutation input output
 

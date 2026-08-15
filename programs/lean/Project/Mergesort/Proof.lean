@@ -1,5 +1,12 @@
 import Project.Mergesort.Spec
-import Project.Mergesort.SliceProof
+import Project.Mergesort.CoreProof
+import Project.Mergesort.RangeProof
+import Project.Mergesort.MemoryCopyProof
+import Project.Mergesort.CopySliceProof
+import Project.Mergesort.MergeFunctionProof
+import Project.Mergesort.SortFunctionProof
+import Project.Mergesort.TextProof
+import Project.Mergesort.ParseProof
 
 /-!
 # Correctness proof for the original generated merge sort
@@ -21,5 +28,12 @@ theorem merged_halves_are_sorted_permutation [LinearOrder α]
     (hmerge : MergeRel left right output) :
     SortedPermutation (left ++ right) output :=
   sortedPermutation_of_mergeRel hmerge hleft hright
+
+/-- Once the generated recursive body has established `SortRel`, no Wasm or
+memory details remain in the public mathematical correctness argument. -/
+theorem sort_execution_is_correct {input output : List UInt64}
+    (hsort : Pure.SortRel input output) :
+    Spec.SortedPermutation input output :=
+  Pure.sortedPermutation_of_sortRel hsort
 
 end Project.Mergesort.Proof

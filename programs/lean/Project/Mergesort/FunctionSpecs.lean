@@ -69,6 +69,43 @@ theorem splitAtUnchecked_index :
 theorem splitAt_index :
     «module».funcs[97]? = some splitAtFunction := by rfl
 
+/-! ## Direct callees of the exported text driver
+
+These names turn the otherwise opaque generated numbers into stable proof
+boundaries.  Indices here are local-module indices; the corresponding Wasm
+call immediate is two larger because the module has two StdIO imports. -/
+
+theorem intoIterNext_index : «module».funcs[5]? = some func5Def := by rfl
+theorem mapNext_index : «module».funcs[0]? = some func0Def := by rfl
+theorem splitNext_index : «module».funcs[1]? = some func1Def := by rfl
+theorem parseClosure_index : «module».funcs[2]? = some func2Def := by rfl
+theorem writeFmt_index : «module».funcs[33]? = some func33Def := by rfl
+theorem readLine_index : «module».funcs[37]? = some func37Def := by rfl
+theorem displayArgument_index : «module».funcs[43]? = some func43Def := by rfl
+theorem argumentsNew_index : «module».funcs[49]? = some func49Def := by rfl
+theorem argumentsFromStr_index : «module».funcs[50]? = some func50Def := by rfl
+theorem dropString_index : «module».funcs[62]? = some func62Def := by rfl
+theorem dropVecU64_index : «module».funcs[68]? = some func68Def := by rfl
+theorem dropIntoIterU64_index : «module».funcs[74]? = some func74Def := by rfl
+theorem dropBufReader_index : «module».funcs[78]? = some func78Def := by rfl
+theorem dropBufWriter_index : «module».funcs[79]? = some func79Def := by rfl
+theorem stringSplit_index : «module».funcs[82]? = some func82Def := by rfl
+theorem stringParse_index : «module».funcs[81]? = some func81Def := by rfl
+theorem u64FromAsciiRadix_index : «module».funcs[51]? = some func51Def := by rfl
+theorem u64FromStr_index : «module».funcs[53]? = some func53Def := by rfl
+theorem splitInternalNext_index : «module».funcs[84]? = some func84Def := by rfl
+theorem charSearcherNextMatch_index : «module».funcs[86]? = some func86Def := by rfl
+theorem iteratorMap_index : «module».funcs[90]? = some func90Def := by rfl
+theorem iteratorCollect_index : «module».funcs[91]? = some func91Def := by rfl
+theorem vecLen_index : «module».funcs[103]? = some func103Def := by rfl
+theorem vecFromElem_index : «module».funcs[105]? = some func105Def := by rfl
+theorem stringNew_index : «module».funcs[110]? = some func110Def := by rfl
+theorem stringDeref_index : «module».funcs[119]? = some func119Def := by rfl
+theorem vecDerefMut_index : «module».funcs[122]? = some func122Def := by rfl
+theorem vecIntoIter_index : «module».funcs[123]? = some func123Def := by rfl
+theorem buffered_index : «module».funcs[135]? = some func135Def := by rfl
+theorem allocator_index : «module».funcs[160]? = some func160Def := by rfl
+
 theorem export_index : «module».exports =
     [{ name := "mergesort", funcIdx := 129 }] := rfl
 

@@ -10,6 +10,35 @@ invariants are reusable for other integer widths.
 
 namespace Project.Mergesort.Pure
 
+/- `UInt64` exposes its computational unsigned `LE`/`LT` operations but does
+not come with a bundled `LinearOrder`.  The generated merge, recursive sort,
+and their pure specifications must all use exactly this one shared instance. -/
+instance uint64LinearOrder : LinearOrder UInt64 where
+  le := @LE.le UInt64 instLEUInt64
+  lt := @LT.lt UInt64 instLTUInt64
+  le_refl := by intro a; rw [UInt64.le_iff_toNat_le]
+  le_trans := by
+    intro a b c hab hbc
+    rw [UInt64.le_iff_toNat_le] at hab hbc ⊢
+    omega
+  le_antisymm := by
+    intro a b hab hba
+    apply UInt64.toNat.inj
+    rw [UInt64.le_iff_toNat_le] at hab hba
+    omega
+  lt_iff_le_not_ge := by
+    intro a b
+    rw [UInt64.lt_iff_toNat_lt, UInt64.le_iff_toNat_le,
+      UInt64.le_iff_toNat_le]
+    omega
+  le_total := by
+    intro a b
+    rw [UInt64.le_iff_toNat_le, UInt64.le_iff_toNat_le]
+    omega
+  toDecidableLE := UInt64.decLe
+  toDecidableEq := instDecidableEqUInt64
+  toDecidableLT := UInt64.decLt
+
 /-! ## Text stream format -/
 
 /-- The exact byte encoding used by the unchanged Rust entry point: decimal
@@ -481,6 +510,41 @@ theorem sorted_of_length_le_one {values : List α}
     cases tail with
     | nil => simp
     | cons next rest => simp at hlength
+
+/-- Declarative recursive merge-sort execution.  The split constructor is
+deliberately parameterized by the split point: the generated Wasm proof will
+instantiate it with `input.length / 2`, while the mathematical argument only
+needs the standard `take`/`drop` decomposition. -/
+inductive SortRel : List α → List α → Prop where
+  | small {input : List α} (hlength : input.length ≤ 1) :
+      SortRel input input
+  | split {input left right output : List α} (mid : Nat)
+      (leftSort : SortRel (input.take mid) left)
+      (rightSort : SortRel (input.drop mid) right)
+      (merged : MergeRel left right output) :
+      SortRel input output
+
+/-- Every declarative recursive merge-sort execution produces a sorted
+permutation of its input. -/
+theorem sortedPermutation_of_sortRel {input output : List α}
+    (hsort : SortRel input output) :
+    SortedPermutation input output := by
+  induction hsort with
+  | small hlength =>
+      exact ⟨sorted_of_length_le_one hlength, List.Perm.refl _⟩
+  | split mid leftSort rightSort merged leftIH rightIH =>
+      exact sortedPermutation_of_split_merge _ _ _ _ mid
+        leftIH rightIH merged
+
+theorem SortRel.perm {input output : List α}
+    (hsort : SortRel input output) :
+    List.Perm input output :=
+  (sortedPermutation_of_sortRel hsort).2
+
+theorem SortRel.length_eq {input output : List α}
+    (hsort : SortRel input output) :
+    output.length = input.length :=
+  hsort.perm.length_eq.symm
 
 end ListInvariants
 
