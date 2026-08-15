@@ -39,6 +39,63 @@ def sortFramedLocals (frame : UInt32) : List Value :=
 /-- The generated body after its six-instruction shadow-stack prologue. -/
 def sortAfterFrame : Program := func126.drop 6
 
+/-- Instructions nested in `func126`'s generated outer block. -/
+def sortRecursiveBody : Program :=
+  match sortAfterFrame with
+  | .block 0 0 body :: _ => body
+  | _ => []
+
+/-- The recursive path after the guard and `local 5 := length >> 1`. -/
+def sortAfterMid : Program := sortRecursiveBody.drop 10
+
+/-- Generated restoration/return suffix after the recursive outer block. -/
+def sortAfterOuterBlock : Program := sortAfterFrame.drop 1
+
+def sortOuterFrame : ControlFrame :=
+  { kind := .block
+    paramArity := 0
+    resultArity := 0
+    body := sortRecursiveBody
+    continuation := sortAfterOuterBlock
+    belowStack := [] }
+
+/-- Locals at the first slice-range call on the recursive path. -/
+def sortMidLocals (frame mid : UInt32) : List Value :=
+  [.i32 frame, .i32 mid, .i32 0, .i32 0, .i32 0, .i32 0,
+    .i32 0, .i32 0, .i32 0, .i32 0, .i32 0]
+
+@[simp] theorem midpoint_toNat (length : UInt32) :
+    (length >>> (1 % 32)).toNat = length.toNat / 2 := by
+  rw [UInt32.toNat_shiftRight]
+  rw [show (1 % 32 : UInt32).toNat % 32 = 1 by decide]
+  simp [Nat.shiftRight_eq_div_pow]
+
+theorem midpoint_input_length {input : List UInt64} {length : UInt32}
+    (hlength : input.length = length.toNat) :
+    (length >>> (1 % 32)).toNat = input.length / 2 := by
+  rw [midpoint_toNat, hlength]
+
+theorem midpoint_pos {length : UInt32} (hlarge : 1 < length) :
+    0 < (length >>> (1 % 32)).toNat := by
+  rw [midpoint_toNat]
+  rw [UInt32.lt_iff_toNat_lt] at hlarge
+  rw [show (1 : UInt32).toNat = 1 by decide] at hlarge
+  omega
+
+theorem midpoint_lt_length {length : UInt32} (hlarge : 1 < length) :
+    (length >>> (1 % 32)).toNat < length.toNat := by
+  rw [midpoint_toNat]
+  rw [UInt32.lt_iff_toNat_lt] at hlarge
+  rw [show (1 : UInt32).toNat = 1 by decide] at hlarge
+  omega
+
+theorem suffix_length_lt {length : UInt32} (hlarge : 1 < length) :
+    length.toNat - (length >>> (1 % 32)).toNat < length.toNat := by
+  rw [midpoint_toNat]
+  rw [UInt32.lt_iff_toNat_lt] at hlarge
+  rw [show (1 : UInt32).toNat = 1 by decide] at hlarge
+  omega
+
 theorem sortRel_base {input : List UInt64} (hlength : input.length ≤ 1) :
     SortRel input input :=
   .small hlength
@@ -46,6 +103,99 @@ theorem sortRel_base {input : List UInt64} (hlength : input.length ≤ 1) :
 theorem sortPost_base {input : List UInt64} (hlength : input.length ≤ 1) :
     SortPost input input := by
   exact sortedPermutation_of_sortRel (.small hlength)
+
+/-- Exact recursive-branch prefix inside the generated outer block.  When
+`length > 1`, the early branch is not taken and local 5 receives the unsigned
+half length used by both recursive calls. -/
+theorem sort_recursive_guard_mid_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (dataPtr length scratchPtr scratchLength frame : UInt32)
+    (hlarge : 1 < length)
+    {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame} :
+    WP (.running
+      ⟨⟨sortParams dataPtr length scratchPtr scratchLength,
+          sortMidLocals frame (length >>> (1 % 32)), []⟩,
+        sortAfterMid, arity, remainder, controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] ⊢
+    WP (.running
+      ⟨⟨sortParams dataPtr length scratchPtr scratchLength,
+          sortFramedLocals frame, []⟩,
+        sortRecursiveBody, arity, remainder, controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] := by
+  have hnot : ¬length ≤ 1 := by
+    rw [UInt32.lt_iff_toNat_lt] at hlarge
+    rw [UInt32.le_iff_toNat_le]
+    omega
+  simp [sortAfterMid, sortRecursiveBody, sortAfterFrame, func126]
+  iintro Hcont
+  iapply twp_localGet rfl
+  iapply twp_const
+  iapply twp_leU (result := 0) (by simp [hnot])
+  iapply twp_const
+  iapply twp_and
+  rw [show (0 : UInt32) &&& 1 = 0 by decide]
+  iapply twp_brIfZero
+  iapply twp_localGet rfl
+  iapply twp_const
+  iapply twp_shrU
+  iapply twp_localSet rfl
+  simp [sortParams, sortFramedLocals, sortMidLocals]
+  iapply Hcont
+
+/-- Exact full-function prefix for the recursive branch, including the
+forty-eight-byte shadow-frame installation and entry into the generated outer
+block.  The continuation begins at the first `RangeTo` call preparation. -/
+theorem sort_recursive_prefix_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (dataPtr length scratchPtr scratchLength stackTop : UInt32)
+    (hlarge : 1 < length)
+    {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame} :
+    globalPointsTo 0 (.i32 stackTop) ∗
+      (globalPointsTo 0 (.i32 (stackTop - 48)) -∗
+        WP (.running
+          ⟨⟨sortParams dataPtr length scratchPtr scratchLength,
+              sortMidLocals (stackTop - 48) (length >>> (1 % 32)), []⟩,
+            sortAfterMid, arity, remainder, sortOuterFrame :: controls,
+            calls⟩ : Expr α) @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨⟨sortParams dataPtr length scratchPtr scratchLength,
+          sortZeroLocals, []⟩,
+        func126, arity, remainder, controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] := by
+  simp only [sortParams, sortZeroLocals, sortMidLocals, sortAfterMid,
+    sortOuterFrame, sortRecursiveBody, sortAfterFrame, sortAfterOuterBlock,
+    func126]
+  iintro ⟨Hglobal, Hcont⟩
+  iapply twp_globalGet0
+  isplitl [Hglobal]
+  · iexact Hglobal
+  iintro Hglobal
+  iapply twp_const
+  iapply twp_sub
+  iapply twp_localSet rfl
+  iapply twp_localGet rfl
+  iapply twp_globalSet0
+  isplitl [Hglobal]
+  · iexact Hglobal
+  iintro Hglobal
+  iapply twp_block
+  simp
+  have Hguard := sort_recursive_guard_mid_twp (α := α)
+    dataPtr length scratchPtr scratchLength (stackTop - 48) hlarge
+    (s := s) (E := E) (Φ := Φ) (arity := arity) (remainder := remainder)
+    (controls := sortOuterFrame :: controls) (calls := calls)
+  simp [sortParams, sortFramedLocals, sortMidLocals,
+    sortRecursiveBody, sortAfterFrame, sortAfterMid, sortAfterOuterBlock,
+    sortOuterFrame, func126] at Hguard
+  iapply Hguard
+  ispecialize Hcont $$ Hglobal
+  iapply Hcont
 
 /-- Exact total rule for the generated base-case path of `func126`.
 

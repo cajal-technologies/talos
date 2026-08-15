@@ -314,4 +314,117 @@ theorem twp_call_specCloneFrom [WasmSmallStepGS hlc]
   · iintro Hruntime Hsource Hdestination
     iapply Hdone $$ Hruntime Hsource Hdestination
 
+/-- Exact body contract for `func94`, Rust's outer `clone_from_slice`
+forwarder. The body delegates to `func95` at absolute index `97`. -/
+theorem twp_cloneFromSlice_body [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (destination source length metadata : UInt32)
+    (sourceValues destinationValues : List UInt64)
+    (hnonempty : sourceValues ≠ [])
+    (hlengthValue : length.toNat = sourceValues.length)
+    (hlength : sourceValues.length = destinationValues.length)
+    (hsourceRoom : source.toNat + 8 * sourceValues.length ≤ UInt32.size)
+    (hdestinationRoom :
+      destination.toNat + 8 * destinationValues.length ≤ UInt32.size)
+    (hbytes : 8 * sourceValues.length < UInt32.size)
+    (caller : CallFrame) {calls : List CallFrame} :
+    runtimeModuleOwn «module» ∗
+      array64At source sourceValues ∗ array64At destination destinationValues ∗
+      (runtimeModuleOwn «module» -∗
+        array64At source sourceValues -∗
+        array64At destination sourceValues -∗
+        WP (.running
+          ⟨{ caller.locals with values := caller.locals.values },
+            caller.continuation, caller.resultArity, caller.callerRemainder,
+            caller.control, calls⟩ : Expr α) @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨forwardLocals destination length source metadata,
+        func94, 0, [], [], caller :: calls⟩ : Expr α)
+      @ s; E [{ Φ }] := by
+  iintro ⟨Hruntime, Hsource, Hdestination, Hdone⟩
+  simp only [func94]
+  iapply Wasm.SmallStep.twp_localGet rfl
+  iapply Wasm.SmallStep.twp_localGet rfl
+  iapply Wasm.SmallStep.twp_localGet rfl
+  iapply Wasm.SmallStep.twp_localGet rfl
+  iapply Wasm.SmallStep.twp_localGet rfl
+  ihave Hafter : runtimeModuleOwn «module» -∗
+      array64At source sourceValues -∗
+      array64At destination sourceValues -∗
+      WP (.running
+        ⟨forwardLocals destination length source metadata,
+          [.ret], 0, [], [], caller :: calls⟩ : Expr α)
+        @ s; E [{ Φ }] $$ [Hdone]
+  · iintro Hruntime Hsource Hdestination
+    iapply Wasm.SmallStep.twp_returnFromCallExplicit
+    simp only [List.take_zero, List.nil_append]
+    iapply Hdone $$ Hruntime Hsource Hdestination
+  iapply twp_call_specCloneFrom destination source length metadata
+      sourceValues destinationValues hnonempty hlengthValue hlength
+      hsourceRoom hdestinationRoom hbytes $$
+      [Hruntime Hsource Hdestination Hafter]
+  iframe
+
+/-- Composable call rule for absolute index `96` (`func94`). This is the
+copy-back rule consumed by generated recursive merge sort (`func126`). -/
+theorem twp_call_cloneFromSlice [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (destination source length metadata : UInt32)
+    (sourceValues destinationValues : List UInt64)
+    (hnonempty : sourceValues ≠ [])
+    (hlengthValue : length.toNat = sourceValues.length)
+    (hlength : sourceValues.length = destinationValues.length)
+    (hsourceRoom : source.toNat + 8 * sourceValues.length ≤ UInt32.size)
+    (hdestinationRoom :
+      destination.toNat + 8 * destinationValues.length ≤ UInt32.size)
+    (hbytes : 8 * sourceValues.length < UInt32.size)
+    {params localValues stack : List Value}
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame} :
+    runtimeModuleOwn «module» ∗
+      array64At source sourceValues ∗ array64At destination destinationValues ∗
+      (runtimeModuleOwn «module» -∗
+        array64At source sourceValues -∗
+        array64At destination sourceValues -∗
+        WP (.running
+          ⟨⟨params, localValues, stack⟩,
+            code, arity, remainder, controls, calls⟩ : Expr α)
+          @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨⟨params, localValues,
+          .i32 metadata :: .i32 length :: .i32 source ::
+            .i32 length :: .i32 destination :: stack⟩,
+        .call 96 :: code, arity, remainder, controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] := by
+  iintro ⟨Hruntime, Hsource, Hdestination, Hdone⟩
+  ihave HruntimeLater : runtimeModuleOwn «module» $$ [Hruntime]
+  · iexact Hruntime
+  iapply Wasm.SmallStep.twp_call (α := α) «module» 96 func94Def
+      (by decide) (by rfl) $$ HruntimeLater
+  iintro Hruntime
+  simp [func94Def, Function.toLocals, Function.numParams]
+  let caller : CallFrame :=
+    { locals := ⟨params, localValues, stack⟩
+      continuation := code
+      resultArity := arity
+      callerRemainder := remainder
+      control := controls }
+  have Hbody := twp_cloneFromSlice_body (α := α)
+      (s := s) (E := E) (Φ := Φ)
+      destination source length metadata sourceValues destinationValues
+      hnonempty hlengthValue hlength hsourceRoom hdestinationRoom hbytes
+      caller (calls := calls)
+  simp only [forwardLocals, caller] at Hbody
+  iapply Hbody
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hsource]
+  · iexact Hsource
+  isplitl [Hdestination]
+  · iexact Hdestination
+  · iintro Hruntime Hsource Hdestination
+    iapply Hdone $$ Hruntime Hsource Hdestination
+
 end Project.Mergesort.CopySliceProof

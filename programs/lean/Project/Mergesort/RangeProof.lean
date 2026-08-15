@@ -677,4 +677,96 @@ theorem rangeTo_body_twp
   ispecialize Hcont $$ %_
   iapply Hcont
 
+/-- Total call rule for `func8` (`RangeTo`) at its generated absolute function
+index.  The rule preserves the caller state and exposes both stack frames used
+by the wrapper and its nested `func7` call. -/
+theorem rangeTo_call_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (resultPtr dataPtr stop length sourceLoc stackTop : UInt32)
+    (oldResultPtr oldResultLength oldOuter8 oldOuter12
+      oldInner8 oldInner12 : UInt32)
+    (hstopLength : stop ≤ length)
+    (houterRoom : (stackTop - 16).toNat + 16 ≤ UInt32.size)
+    (hinnerRoom : ((stackTop - 16) - 16).toNat + 16 ≤ UInt32.size)
+    (hresultRoom : resultPtr.toNat + 8 ≤ UInt32.size)
+    {callerLocals : Locals} {stack : List Value}
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame} :
+    runtimeModuleOwn «module» ∗
+      globalPointsTo 0 (.i32 stackTop) ∗
+      pointsTo_u32 ((stackTop - 16) + 8) oldOuter8 ∗
+      pointsTo_u32 ((stackTop - 16) + 12) oldOuter12 ∗
+      pointsTo_u32 (((stackTop - 16) - 16) + 8) oldInner8 ∗
+      pointsTo_u32 (((stackTop - 16) - 16) + 12) oldInner12 ∗
+      pointsTo_u32 resultPtr oldResultPtr ∗
+      pointsTo_u32 (resultPtr + 4) oldResultLength ∗
+      (runtimeModuleOwn «module» -∗
+        globalPointsTo 0 (.i32 stackTop) -∗
+        pointsTo_u32 ((stackTop - 16) + 8) dataPtr -∗
+        pointsTo_u32 ((stackTop - 16) + 12) stop -∗
+        pointsTo_u32 (((stackTop - 16) - 16) + 8) 1 -∗
+        pointsTo_u32 (((stackTop - 16) - 16) + 12) stop -∗
+        pointsTo_u32 resultPtr dataPtr -∗
+        pointsTo_u32 (resultPtr + 4) stop -∗
+        WP (.running
+          ⟨{ callerLocals with values := stack }, code,
+            arity, remainder, controls, calls⟩ : Expr α)
+          @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨{ callerLocals with values :=
+          [.i32 sourceLoc, .i32 length, .i32 dataPtr, .i32 stop,
+            .i32 resultPtr] ++ stack },
+        .call 10 :: code, arity, remainder, controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] := by
+  iintro ⟨Hruntime, Hglobal, Houter8, Houter12, Hinner8, Hinner12,
+    HresultPtr, HresultLength, Hcont⟩
+  iapply Wasm.SmallStep.twp_call (α := α) «module» 10 rangeToFunction
+      (by decide) rangeTo_index $$ Hruntime
+  iintro Hruntime
+  simp [rangeToFunction, func8Def, Function.toLocals, Function.numParams,
+    ValueType.zero]
+  have Hbody := rangeTo_body_twp (α := α)
+    resultPtr dataPtr stop length sourceLoc stackTop
+    oldResultPtr oldResultLength oldOuter8 oldOuter12 oldInner8 oldInner12
+    hstopLength houterRoom hinnerRoom hresultRoom
+    (s := s) (E := E) (Φ := Φ)
+    (calls :=
+      { locals := { callerLocals with values := stack }
+        continuation := code
+        resultArity := arity
+        callerRemainder := remainder
+        control := controls } :: calls)
+  simp only [rangeToParams, rangeToLocals] at Hbody
+  iapply Hbody
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hglobal]
+  · iexact Hglobal
+  isplitl [Houter8]
+  · iexact Houter8
+  isplitl [Houter12]
+  · iexact Houter12
+  isplitl [Hinner8]
+  · iexact Hinner8
+  isplitl [Hinner12]
+  · iexact Hinner12
+  isplitl [HresultPtr]
+  · iexact HresultPtr
+  isplitl [HresultLength]
+  · iexact HresultLength
+  iintro Hpost
+  iintro %calleeControls
+  icases Hpost with ⟨Hruntime, Hglobal, Houter8, Houter12, Hinner8,
+    Hinner12, HresultPtr, HresultLength⟩
+  iapply Wasm.SmallStep.twp_returnFromCallExplicit (α := α)
+  simp only [List.take_zero, List.nil_append,
+    List.drop_eq_nil_of_le (by decide : 5 ≤
+      [.i32 resultPtr, .i32 stop, .i32 dataPtr, .i32 length,
+        .i32 sourceLoc].length)]
+  ispecialize Hcont $$ Hruntime Hglobal Houter8 Houter12 Hinner8 Hinner12
+    HresultPtr HresultLength
+  iapply Hcont
+
 end Project.Mergesort.RangeProof

@@ -3,6 +3,7 @@ import Project.Mergesort.CoreProof
 import Project.Mergesort.RangeProof
 import Project.Mergesort.MemoryCopyProof
 import Project.Mergesort.CopySliceProof
+import Project.Mergesort.SplitAtProof
 import Project.Mergesort.MergeFunctionProof
 import Project.Mergesort.SortFunctionProof
 import Project.Mergesort.TextProof
