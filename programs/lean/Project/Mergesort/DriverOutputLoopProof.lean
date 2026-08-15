@@ -65,6 +65,13 @@ def driverOutputAtWriteFmt : Program :=
 def driverOutputAfterWriteFmt : Program :=
   driverOutputCommonCode.drop 38
 
+def driverOutputWriteLocals
+    (frame sortLength inputLength dataPtr scratchLength : UInt32) :
+    List Value :=
+  (((driverSortCallLocals frame sortLength inputLength dataPtr scratchLength).set
+      18 (.i32 1050388)).set 19 (.i32 (frame + 344))).set 20
+        (.i32 1050388)
+
 theorem driverAtOutputLoop_exact :
     driverAtOutputLoop = [.loop 0 0 driverOutputLoopBody] := by
   rfl
@@ -364,6 +371,171 @@ theorem driver_output_display_argument_twp
   · iexact Hresult4
   iintro Hruntime Hglobal Hhelper Hresult
   iapply Hdone $$ Hruntime Hglobal Hhelper Hresult
+
+/-! Exact generated code from the display-argument return through construction
+of the `fmt::Arguments` pair.  The theorem stops with the four operands for
+absolute call 35 on the stack, so the buffered-writer/host boundary remains
+explicit. -/
+set_option maxHeartbeats 4000000 in
+theorem driver_output_prepare_write_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (frame sortLength inputLength dataPtr scratchLength : UInt32)
+    (oldDestination : UInt64) (oldArg0 oldArg4 : UInt32)
+    (hframeRoom : frame.toNat + 360 ≤ UInt32.size)
+    {controls : List ControlFrame} {calls : List CallFrame} :
+    runtimeModuleOwn «module» ∗
+      sliceDescriptorAt (frame + 352) (frame + 320) 1 ∗
+      pointsTo_u64 (frame + 344) oldDestination ∗
+      pointsTo_u32 (frame + 8) oldArg0 ∗
+      pointsTo_u32 (frame + 12) oldArg4 ∗
+      (runtimeModuleOwn «module» -∗
+        sliceDescriptorAt (frame + 352) (frame + 320) 1 -∗
+        sliceDescriptorAt (frame + 344) (frame + 320) 1 -∗
+        argumentsAt (frame + 8) 1050388 (frame + 344) -∗
+        WP (.running
+          ⟨⟨[], driverOutputWriteLocals frame sortLength inputLength dataPtr
+                scratchLength,
+              [.i32 (frame + 344), .i32 1050388,
+               .i32 (frame + 72), .i32 (frame + 336)]⟩,
+            driverOutputAtWriteFmt, 0, [], controls, calls⟩ : Expr α)
+          @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨⟨[], driverSortCallLocals frame sortLength inputLength dataPtr
+            scratchLength, []⟩,
+        driverOutputAfterDisplayArgument, 0, [], controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] := by
+  obtain ⟨h80, h81, h82, h83⟩ :=
+    descriptorSlot32Facts frame 8 360 hframeRoom (by decide)
+  obtain ⟨h120, h121, h122, h123⟩ :=
+    descriptorSlot32Facts frame 12 360 hframeRoom (by decide)
+  obtain ⟨h3520, h3521, h3522, h3523, h3524, h3525, h3526, h3527⟩ :=
+    descriptorSlot64Facts frame 352 360 hframeRoom (by decide)
+  have hdestRoom : (frame + 344).toNat + 8 ≤ UInt32.size := by
+    have h344 := (descriptorSlot64Facts frame 344 360 hframeRoom
+      (by decide)).1
+    change (frame + UInt32.ofNat 344).toNat + 8 ≤ UInt32.size
+    rw [h344]
+    omega
+  obtain ⟨hd0, hd1, hd2, hd3, hd4, hd5, hd6, hd7⟩ :=
+    descriptorSlot64Facts (frame + 344) 0 8 hdestRoom (by decide)
+  have hargsRoom : (frame + 8).toNat + 8 ≤ UInt32.size := by
+    change (frame + UInt32.ofNat 8).toNat + 8 ≤ UInt32.size
+    rw [h80]
+    omega
+  have hframeLocal :
+      (⟨[], driverSortCallLocals frame sortLength inputLength dataPtr
+          scratchLength, []⟩ : Locals).get 0 = some (.i32 frame) := by
+    rfl
+  iintro ⟨Hruntime, Hsource, Hdestination, Harg0, Harg4, Hdone⟩
+  ihave HsourceWord : pointsTo_u64 (frame + 352)
+      (packU32 (frame + 320) 1) $$ [Hsource]
+  · iapply (sliceDescriptorAt_eq_u64 (frame + 352) (frame + 320) 1).mp
+    iexact Hsource
+  rw [driverOutputAfterDisplayArgument_eq]
+  simp only [List.cons_append, List.nil_append]
+  iapply twp_localGet hframeLocal
+  iapply twp_const
+  iapply twp_add
+  rw [UInt32.add_comm 344 frame]
+  iapply twp_localGet rfl
+  iapply twp_load64 (packU32 (frame + 320) 1)
+    h3520 h3521 h3522 h3523 h3524 h3525 h3526 h3527 $$ HsourceWord
+  iintro HsourceWord
+  ihave HdestinationAt : pointsTo_u64 ((frame + 344) + 0) oldDestination $$
+      [Hdestination]
+  · rw [UInt32.add_zero]
+    iexact Hdestination
+  iapply twp_store64 oldDestination hd0 hd1 hd2 hd3 hd4 hd5 hd6 hd7 $$
+    HdestinationAt
+  iintro HdestinationAt
+  ihave HdestinationWord : pointsTo_u64 (frame + 344)
+      (packU32 (frame + 320) 1) $$ [HdestinationAt]
+  · rw [show UInt32.ofNat 0 = (0 : UInt32) by decide, UInt32.add_zero]
+    iexact HdestinationAt
+  iapply twp_const
+  iapply twp_localSet rfl
+  simp only [List.length, Nat.sub_zero]
+  iapply twp_localGet rfl
+  iapply twp_const
+  iapply twp_add
+  rw [UInt32.add_comm 8 frame]
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_const
+  iapply twp_add
+  rw [UInt32.add_comm 344 frame]
+  have HargsCall := argumentsNew_call_twp (α := α)
+    (frame + 8) 1050388 (frame + 344) oldArg0 oldArg4 hargsRoom
+    (s := s) (E := E) (Φ := Φ)
+    (callerLocals :=
+      ⟨[],
+        (driverSortCallLocals frame sortLength inputLength dataPtr
+          scratchLength).set 18 (.i32 1050388), []⟩)
+    (stack := [])
+    (code :=
+      [.localGet 0, .load32 12, .localSet 19,
+       .localGet 0, .load32 8, .localSet 20,
+       .localGet 0, .const 336, .add,
+       .localGet 0, .const 72, .add,
+       .localGet 20, .localGet 19] ++ driverOutputAtWriteFmt)
+    (arity := 0) (remainder := []) (controls := controls) (calls := calls)
+  simp only [List.append_nil, List.cons_append, List.nil_append] at HargsCall
+  ihave Harg0At : pointsTo_u32 ((frame + 8) + 0) oldArg0 $$ [Harg0]
+  · rw [UInt32.add_zero]
+    iexact Harg0
+  iapply HargsCall
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Harg0At]
+  · iexact Harg0At
+  isplitl [Harg4]
+  · rw [show (frame + 8) + 4 = frame + 12 by bv_decide]
+    iexact Harg4
+  iintro Hruntime Hargs
+  isimp only [argumentsAt] at Hargs
+  icases Hargs with ⟨Harg0, Harg4⟩
+  iapply twp_localGet rfl
+  ihave Harg12 : pointsTo_u32 (frame + 12) (frame + 344) $$ [Harg4]
+  · rw [← show (frame + 8) + 4 = frame + 12 by bv_decide]
+    iexact Harg4
+  iapply twp_load32 (frame + 344) h120 h121 h122 h123 $$ Harg12
+  iintro Harg12
+  iapply twp_localSet rfl
+  simp only [List.length, Nat.sub_zero]
+  iapply twp_localGet rfl
+  iapply twp_load32 1050388 h80 h81 h82 h83 $$ Harg0
+  iintro Harg0
+  iapply twp_localSet rfl
+  simp only [List.length, Nat.sub_zero]
+  iapply twp_localGet rfl
+  iapply twp_const
+  iapply twp_add
+  rw [UInt32.add_comm 336 frame]
+  iapply twp_localGet rfl
+  iapply twp_const
+  iapply twp_add
+  rw [UInt32.add_comm 72 frame]
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  ihave Hsource : sliceDescriptorAt (frame + 352) (frame + 320) 1 $$
+      [HsourceWord]
+  · iapply (sliceDescriptorAt_eq_u64 (frame + 352) (frame + 320) 1).mpr
+    iexact HsourceWord
+  ihave Hdestination : sliceDescriptorAt (frame + 344) (frame + 320) 1 $$
+      [HdestinationWord]
+  · iapply (sliceDescriptorAt_eq_u64 (frame + 344) (frame + 320) 1).mpr
+    iexact HdestinationWord
+  ihave Hargs : argumentsAt (frame + 8) 1050388 (frame + 344) $$
+      [Harg0 Harg12]
+  · isimp only [argumentsAt]
+    isplitl [Harg0]
+    · iexact Harg0
+    rw [show (frame + 8) + 4 = frame + 12 by bv_decide]
+    iexact Harg12
+  isimp only [driverOutputWriteLocals] at Hdone
+  iapply Hdone $$ Hruntime Hsource Hdestination Hargs
 
 /-! The exact nonempty iterator-next prefix of one generated output-loop
 iteration.  Formatting and delimiter emission begin at
