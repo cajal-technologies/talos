@@ -2,6 +2,7 @@ import Project.Mergesort.Spec
 import Project.Mergesort.CoreProof
 import Project.Mergesort.RangeProof
 import Project.Mergesort.MemoryCopyProof
+import Project.Mergesort.MemoryFillProof
 import Project.Mergesort.CopySliceProof
 import Project.Mergesort.SplitAtProof
 import Project.Mergesort.VectorProof

@@ -300,7 +300,8 @@ private theorem Mem.writeBytes_cons (mem : Mem) (base : UInt32)
         rw [← haddr, Mem.writeBytes_singleton]]
   congr 1
 
-private def writeBytesStore (store : MachineStore α) (offset : Nat)
+/-- Store update shared by owned-range bulk-memory rules. -/
+def writeBytesStore (store : MachineStore α) (offset : Nat)
     (bytes : List UInt8) : MachineStore α :=
   { store with wasm :=
       { store.wasm with mem := store.wasm.mem.writeBytes offset bytes } }
