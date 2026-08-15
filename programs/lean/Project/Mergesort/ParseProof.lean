@@ -278,6 +278,68 @@ theorem canonicalDigitIteration_exact
     simp
     omega
 
+/-- The concrete `i32` value produced by the generated `load8_u` for an
+ASCII character in the canonical token. -/
+def asciiByte32 (c : Char) : UInt32 :=
+  (UInt8.ofNat c.toNat).toUInt32
+
+/-- All arithmetic side conditions needed by the `func52` call in one
+canonical digit iteration. -/
+theorem canonicalDigitByteFacts
+    {value acc : UInt64} {consumed rest : List Char} {c : Char}
+    (h : DecimalMachineLoopInvariant
+      (toString value) consumed (c :: rest) acc) :
+    asciiByte32 c ≤ 57 ∧ asciiByte32 c - 48 < 10 ∧
+      UInt64.ofNat (asciiByte32 c - 48).toNat =
+        UInt64.ofNat (digitNat c) := by
+  have hdigit : c.isDigit :=
+    (show DecimalLoopInvariant
+      (toString value) consumed (c :: rest) acc.toNat from h).head_isDigit
+  have hc := Char.isDigit_iff_toNat.mp hdigit
+  have hzero : '0'.toNat = 48 := by decide
+  have hnine : '9'.toNat = 57 := by decide
+  have hcsmall : c.toNat < 256 := by omega
+  have hbyte : (UInt8.ofNat c.toNat).toNat = c.toNat := by
+    rw [show (UInt8.ofNat c.toNat).toNat = c.toNat % 256 by rfl,
+      Nat.mod_eq_of_lt hcsmall]
+  have hsubNat : (asciiByte32 c - 48).toNat = digitNat c := by
+    simp only [asciiByte32, UInt32.toNat_sub,
+      UInt8.toUInt32_toNat, hbyte]
+    rw [show (48 : UInt32).toNat = 48 by decide]
+    simp only [digitNat, hzero]
+    have heq : 2 ^ 32 - 48 + c.toNat =
+        (c.toNat - 48) + 2 ^ 32 := by omega
+    rw [heq, Nat.add_mod_right]
+    rw [Nat.mod_eq_of_lt (show c.toNat - 48 < 2 ^ 32 by omega)]
+  refine ⟨?_, ?_, by rw [hsubNat]⟩
+  · rw [UInt32.le_iff_toNat_le]
+    simp only [asciiByte32, UInt8.toUInt32_toNat, hbyte]
+    rw [show (57 : UInt32).toNat = 57 by decide]
+    omega
+  · rw [UInt32.lt_iff_toNat_lt, hsubNat]
+    rw [show (10 : UInt32).toNat = 10 by decide]
+    simp only [digitNat, hzero]
+    omega
+
+theorem canonicalDigitByte_mask
+    {value acc : UInt64} {consumed rest : List Char} {c : Char}
+    (h : DecimalMachineLoopInvariant
+      (toString value) consumed (c :: rest) acc) :
+    asciiByte32 c &&& 255 = asciiByte32 c := by
+  have hdigit : c.isDigit :=
+    (show DecimalLoopInvariant
+      (toString value) consumed (c :: rest) acc.toNat from h).head_isDigit
+  have hc := Char.isDigit_iff_toNat.mp hdigit
+  have hzero : '0'.toNat = 48 := by decide
+  have hnine : '9'.toNat = 57 := by decide
+  have hcases : c.toNat = 48 ∨ c.toNat = 49 ∨ c.toNat = 50 ∨
+      c.toNat = 51 ∨ c.toNat = 52 ∨ c.toNat = 53 ∨
+      c.toNat = 54 ∨ c.toNat = 55 ∨ c.toNat = 56 ∨
+      c.toNat = 57 := by
+    omega
+  rcases hcases with h | h | h | h | h | h | h | h | h | h <;>
+    simp [asciiByte32, h] <;> decide
+
 /-- Consume all remaining canonical decimal digits.  The termination measure
 is the generated loop's semantic counterpart: token length minus the number
 of already consumed characters.  The result packages the final machine
@@ -435,10 +497,11 @@ private theorem parserWideSlot64Facts (base : UInt32) (offset : Nat)
     by simpa using hstep 6 (by omega), by simpa using hstep 7 (by omega)⟩
 
 private def decimalDigitLocals
-    (frame nextPtr nextLength byte temporaryDigit finalDigit : UInt32) :
-    List Value :=
-  (((((fromAsciiRadixFramedLocals frame).set 29 (.i32 nextPtr)).set 30
-    (.i32 nextLength)).set 31 (.i32 byte)).set 32
+    (frame currentPtr currentLength nextPtr nextLength byte
+      temporaryDigit finalDigit : UInt32) : List Value :=
+  ((((((((fromAsciiRadixFramedLocals frame).set 26 (.i32 currentPtr)).set 27
+    (.i32 currentPtr)).set 28 (.i32 currentLength)).set 29
+    (.i32 nextPtr)).set 30 (.i32 nextLength)).set 31 (.i32 byte)).set 32
     (.i32 temporaryDigit)).set 33 (.i32 finalDigit)
 
 /-- Successful result block entered after `func52` has decoded a decimal
@@ -461,6 +524,13 @@ def decimalDigitCallSegment : Program := [
   .localGet 4, .localGet 4, .load32 8, .store32 56,
   .localGet 4, .localGet 36, .store32 60,
   .block 0 0 decimalDigitResultBody]
+
+/-- Generated multiply-and-load prefix immediately before the decoder call
+segment. -/
+def decimalDigitPrepareSegment : Program := [
+  .localGet 4, .localGet 4, .load64 112,
+  .localGet 3, .extendUI32, .mulI64, .store64 112,
+  .localGet 30, .load8U 0, .const 255, .and, .localSet 35]
 
 private theorem twp_extendUI32
     [WasmSmallStepGS hlc]
@@ -497,6 +567,179 @@ private theorem twp_addI64
       @ s; E [{ Φ }] :=
   twp_pureStep _ _ _ (fun _ => Step.addI64)
 
+private theorem twp_mulI64
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    {params localValues values : List Value}
+    {lhs rhs : UInt64} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame} :
+    WP (.running
+      ⟨⟨params, localValues, .i64 (lhs * rhs) :: values⟩,
+        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }] ⊢
+    WP (.running
+      ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
+        .mulI64 :: code, arity, remainder, controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] :=
+  twp_pureStep _ _ _ (fun _ => Step.mulI64)
+
+/-- Total counterpart of the generic partial `i32.load8_u` rule. -/
+private theorem twp_load8U
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    {params localValues values : List Value}
+    {address offset : UInt32} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame} (byte : UInt8)
+    (hnowrap : (address + offset).toNat =
+      address.toNat + offset.toNat) :
+    let current : ThreadState α :=
+      ⟨⟨params, localValues, .i32 address :: values⟩,
+        .load8U offset :: code, arity, remainder, controls, calls⟩
+    let next : ThreadState α :=
+      ⟨⟨params, localValues, .i32 byte.toUInt32 :: values⟩,
+        code, arity, remainder, controls, calls⟩
+    pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+        (address + offset) (DFrac.own 1) (some byte) -∗
+    (pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+        (address + offset) (DFrac.own 1) (some byte) -∗
+      WP (Expr.running next : Expr α) @ s; E [{ Φ }]) -∗
+      WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
+  dsimp only
+  iintro Hpt Htwp
+  iapply twp_lift_step_no_fork rfl
+  iintro %store %ns %obs %nt Hσ
+  ihave %Hfacts : ⌜store.wasm.mem.read8 (address + offset) = byte ∧
+      (address + offset).toNat < store.wasm.mem.pages * 65536⌝ $$
+      [Hσ Hpt]
+  · imod stateInterp_pointsTo_facts store ns obs nt
+      (address + offset) byte $$ [$Hσ $Hpt] with %Hfacts
+    ipureintro
+    exact Hfacts
+  have hbound : address.toNat + offset.toNat + 1 ≤
+      store.wasm.mem.pages * 65536 := by
+    rw [← hnowrap]
+    omega
+  iapply fupd_mask_intro Std.LawfulSet.empty_subset
+  iintro Hclose
+  isplitr
+  · ipureintro
+    cases s <;> simp only [Stuckness.MaybeReducibleNoObs]
+    exact ⟨.running
+        ⟨⟨params, localValues, .i32 byte.toUInt32 :: values⟩,
+          code, arity, remainder, controls, calls⟩,
+      store, [], ⟨rfl, .instruction (.load8U offset), rfl,
+        by simpa [Hfacts.1] using
+          (Step.load8U (α := α) (address := address) hbound)⟩⟩
+  iintro %κ %e₂ %store₂ %forks %Hstep
+  rcases Hstep with ⟨hforks, _kind, _hobs, wasmStep⟩
+  change forks = [] at hforks
+  subst forks
+  subst κ
+  have expectedStep : Step
+      ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
+        .load8U offset :: code, arity, remainder, controls, calls⟩, store⟩
+      (.instruction (.load8U offset))
+      ⟨.running ⟨⟨params, localValues, .i32 byte.toUInt32 :: values⟩,
+        code, arity, remainder, controls, calls⟩, store⟩ := by
+    simpa [Hfacts.1] using
+      (Step.load8U (α := α) (address := address) hbound)
+  obtain ⟨rfl, hconfig⟩ := step_deterministic expectedStep wasmStep
+  have parts := Config.mk.inj hconfig
+  have hexpr := parts.1
+  have hstore := parts.2
+  simp only at hexpr hstore
+  subst e₂
+  subst store₂
+  imod Hclose
+  imodintro
+  isplit
+  · ipureintro; rfl
+  isplit
+  · ipureintro; rfl
+  isplitl [Hσ]
+  · iexact Hσ
+  · iapply Htwp
+    iexact Hpt
+
+set_option maxHeartbeats 600000 in
+/-- Exact preparation prefix for one canonical decimal digit.  It multiplies
+the accumulator by ten and loads/masks the current ASCII byte, preserving the
+owned source byte for the loop invariant. -/
+theorem decimalDigitPrepareSegment_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (resultPtr textPtr textLength frame : UInt32)
+    (currentPtr currentLength nextPtr nextLength : UInt32)
+    (value acc : UInt64) (consumed rest : List Char) (c : Char)
+    (oldByte oldTemporary oldFinal : UInt32)
+    (hinvariant : DecimalMachineLoopInvariant
+      (toString value) consumed (c :: rest) acc)
+    (hframeRoom : frame.toNat + 120 ≤ UInt32.size)
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame} :
+    pointsTo_u64 (frame + 112) acc ∗
+      (currentPtr ↦w (UInt8.ofNat c.toNat)) ∗
+      (pointsTo_u64 (frame + 112) (acc * UInt64.ofNat 10) -∗
+        (currentPtr + 0 ↦w (UInt8.ofNat c.toNat)) -∗
+        WP (.running
+          ⟨⟨fromAsciiRadixParams resultPtr textPtr textLength 10,
+              decimalDigitLocals frame currentPtr currentLength
+                nextPtr nextLength (asciiByte32 c)
+                oldTemporary oldFinal, []⟩,
+            decimalDigitCallSegment ++ code,
+            arity, remainder, controls, calls⟩ : Expr α)
+          @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨⟨fromAsciiRadixParams resultPtr textPtr textLength 10,
+          decimalDigitLocals frame currentPtr currentLength
+            nextPtr nextLength oldByte oldTemporary oldFinal, []⟩,
+        decimalDigitPrepareSegment ++ decimalDigitCallSegment ++ code,
+        arity, remainder, controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] := by
+  obtain ⟨h1120, h1121, h1122, h1123, h1124, h1125, h1126, h1127⟩ :=
+    parserWideSlot64Facts frame 112 hframeRoom (by decide)
+  have hmask := canonicalDigitByte_mask hinvariant
+  iintro ⟨Hacc, Hbyte, Hcont⟩
+  simp only [decimalDigitPrepareSegment, List.cons_append, List.nil_append]
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply Wasm.SmallStep.twp_load64 acc h1120 h1121 h1122 h1123 h1124
+      h1125 h1126 h1127 $$ Hacc
+  iintro Hacc
+  iapply twp_localGet rfl
+  iapply twp_extendUI32
+  iapply twp_mulI64
+  iapply Wasm.SmallStep.twp_store64 acc h1120 h1121 h1122 h1123 h1124
+      h1125 h1126 h1127 $$ Hacc
+  iintro Hacc
+  iapply twp_localGet rfl
+  ihave Hbyte' :
+      (currentPtr + 0 ↦w (UInt8.ofNat c.toNat)) $$ [Hbyte]
+  · rw [UInt32.add_zero]
+    iexact Hbyte
+  iapply twp_load8U (UInt8.ofNat c.toNat) (by simp) $$ Hbyte'
+  iintro Hbyte
+  iapply twp_const
+  iapply twp_and
+  rw [show (UInt8.ofNat c.toNat).toUInt32 = asciiByte32 c by rfl]
+  rw [hmask]
+  iapply twp_localSet rfl
+  simp only [fromAsciiRadixParams, decimalDigitLocals,
+    fromAsciiRadixFramedLocals, fromAsciiRadixZeroLocals, func51Def,
+    List.map_cons, List.map_nil, ValueType.zero, List.length_cons,
+    List.length_nil, Nat.reduceAdd, Nat.reduceSub, List.set]
+  ihave Hacc' :
+      pointsTo_u64 (frame + 112) (acc * UInt64.ofNat 10) $$ [Hacc]
+  · rw [show UInt32.ofNat 112 = 112 by decide,
+      show (10 : UInt32).toNat = 10 by decide]
+    iexact Hacc
+  iapply Hcont $$ Hacc' Hbyte
+
+set_option maxHeartbeats 1000000 in
 /-- One exact successful canonical-digit segment of generated `func51`.
 
 The byte and the already-multiplied accumulator are the values prepared by
@@ -510,7 +753,7 @@ theorem decimalDigitCallSegment_twp
     {s : Stuckness} {E : CoPset}
     {Φ : List Value → IProp WasmHeapGF}
     (resultPtr textPtr textLength frame : UInt32)
-    (nextPtr nextLength byte : UInt32)
+    (currentPtr currentLength nextPtr nextLength byte : UInt32)
     (value acc : UInt64) (consumed rest : List Char) (c : Char)
     (oldTemporary oldFinal : UInt32)
     (oldInner4 oldInner8 oldInner12 : UInt32)
@@ -554,7 +797,8 @@ theorem decimalDigitCallSegment_twp
         pointsTo_u32 (frame + 52) nextLength) -∗
         WP (.running
           ⟨⟨fromAsciiRadixParams resultPtr textPtr textLength 10,
-              decimalDigitLocals frame nextPtr nextLength byte
+              decimalDigitLocals frame currentPtr currentLength
+                nextPtr nextLength byte
                 (byte - 48) (byte - 48), []⟩,
             [.br 1], arity, remainder,
             { kind := .block
@@ -566,8 +810,8 @@ theorem decimalDigitCallSegment_twp
             calls⟩ : Expr α) @ s; E [{ Φ }]) ⊢
     WP (.running
       ⟨⟨fromAsciiRadixParams resultPtr textPtr textLength 10,
-          decimalDigitLocals frame nextPtr nextLength byte
-            oldTemporary oldFinal, []⟩,
+          decimalDigitLocals frame currentPtr currentLength
+            nextPtr nextLength byte oldTemporary oldFinal, []⟩,
         decimalDigitCallSegment ++ code, arity, remainder, controls, calls⟩ :
         Expr α) @ s; E [{ Φ }] := by
   obtain ⟨h80, h81, h82, h83⟩ :=
@@ -618,8 +862,8 @@ theorem decimalDigitCallSegment_twp
     (by decide) (by decide) hbyteNumeric hdigit hinnerRoom hresultRoom
     (callerLocals :=
       ⟨fromAsciiRadixParams resultPtr textPtr textLength 10,
-        decimalDigitLocals frame nextPtr nextLength byte
-          oldTemporary oldFinal, []⟩)
+        decimalDigitLocals frame currentPtr currentLength
+          nextPtr nextLength byte oldTemporary oldFinal, []⟩)
     (stack := []) (code := decimalDigitCallSegment.drop 6 ++ code)
     (arity := arity) (remainder := remainder)
     (controls := controls) (calls := calls)

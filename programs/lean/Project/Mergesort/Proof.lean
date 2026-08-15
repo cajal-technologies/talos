@@ -5,6 +5,7 @@ import Project.Mergesort.MemoryCopyProof
 import Project.Mergesort.CopySliceProof
 import Project.Mergesort.SplitAtProof
 import Project.Mergesort.VectorProof
+import Project.Mergesort.IteratorProof
 import Project.Mergesort.MergeFunctionProof
 import Project.Mergesort.SortFunctionProof
 import Project.Mergesort.TextProof

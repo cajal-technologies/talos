@@ -80,6 +80,7 @@ boundaries.  Indices here are local-module indices; the corresponding Wasm
 call immediate is two larger because the module has two StdIO imports. -/
 
 theorem intoIterNext_index : «module».funcs[5]? = some func5Def := by rfl
+theorem intoIterLen_index : «module».funcs[6]? = some func6Def := by rfl
 theorem mapNext_index : «module».funcs[0]? = some func0Def := by rfl
 theorem splitNext_index : «module».funcs[1]? = some func1Def := by rfl
 theorem parseClosure_index : «module».funcs[2]? = some func2Def := by rfl

@@ -1,6 +1,7 @@
 import Project.Mergesort.CoreProof
 import Project.Mergesort.RangeProof
 import Project.Mergesort.SplitAtProof
+import Project.Mergesort.CopySliceProof
 
 /-!
 # Generated `mergesort::<u64>` function proof
@@ -23,6 +24,7 @@ open Project.Mergesort.FunctionSpecs
 open Project.Mergesort.Machine
 open Project.Mergesort.RangeProof
 open Project.Mergesort.SplitAtProof
+open Project.Mergesort.CopySliceProof
 
 def sortParams
     (dataPtr length scratchPtr scratchLength : UInt32) : List Value :=
@@ -114,6 +116,12 @@ def sortSecondCallLocals
     .i32 scratchSuffixLength]
 
 def sortAtSecondRecursiveCall : Program := sortAfterDataSuffix.drop 18
+
+def sortAfterSecondRecursiveCall : Program := sortAtSecondRecursiveCall.drop 1
+
+def sortAtMergeCall : Program := sortAfterSecondRecursiveCall.drop 18
+
+def sortAfterMerge : Program := sortAtMergeCall.drop 1
 
 private def sortRangeFromParams
     (resultPtr start dataPtr length sourceLoc : UInt32) : List Value :=
@@ -213,11 +221,49 @@ private theorem sortWideFrameSlotFacts (base : UInt32) (offset : Nat)
   · simpa using hstep 2 (by omega)
   · simpa using hstep 3 (by omega)
 
+private theorem sortFullFrameSlotFacts (base : UInt32) (offset : Nat)
+    (hroom : base.toNat + 48 ≤ UInt32.size)
+    (hoffset : offset ≤ 44) :
+    (base + UInt32.ofNat offset).toNat = base.toNat + offset ∧
+    ((base + UInt32.ofNat offset) + 1).toNat =
+      (base + UInt32.ofNat offset).toNat + 1 ∧
+    ((base + UInt32.ofNat offset) + 2).toNat =
+      (base + UInt32.ofNat offset).toNat + 2 ∧
+    ((base + UInt32.ofNat offset) + 3).toNat =
+      (base + UInt32.ofNat offset).toNat + 3 := by
+  have hoff : offset < UInt32.size := by
+    simp only [UInt32.size] at hoffset ⊢
+    omega
+  have hbaseOffset : base.toNat + offset < UInt32.size := by
+    simp only [UInt32.size] at hroom ⊢
+    omega
+  have h0 := UInt32.add_ofNat_toNat_noWrap base offset hoff hbaseOffset
+  have hstep (n : Nat) (hn : n ≤ 3) :
+      ((base + UInt32.ofNat offset) + UInt32.ofNat n).toNat =
+        (base + UInt32.ofNat offset).toNat + n := by
+    apply UInt32.add_ofNat_toNat_noWrap
+    · omega
+    · rw [h0]
+      simp only [UInt32.size] at hroom ⊢
+      omega
+  refine ⟨h0, ?_, ?_, ?_⟩
+  · simpa using hstep 1 (by omega)
+  · simpa using hstep 2 (by omega)
+  · simpa using hstep 3 (by omega)
+
 private theorem sort_pointsTo_u32_at_eq
     [WasmSmallStepGS hlc] {left right value : UInt32}
     (h : left = right) :
     pointsTo_u32 left value ⊢ pointsTo_u32 right value := by
   rw [h]
+
+private theorem sort_sliceDescriptorAt_elim
+    [WasmSmallStepGS hlc] (base data length : UInt32) :
+    sliceDescriptorAt base data length ⊢
+      pointsTo_u32 base data ∗ pointsTo_u32 (base + 4) length := by
+  simp only [sliceDescriptorAt]
+  iintro H
+  iexact H
 
 /-- Total non-panicking body rule for generated `func9` (`RangeFrom`). -/
 theorem sort_rangeFrom_body_twp
@@ -932,6 +978,284 @@ theorem sort_scratch_suffix_to_second_recursive_call_twp
     sortAfterFirstRange, sortAfterMid, sortRecursiveBody, sortAfterFrame,
     func126, List.drop]
   iapply Hcont $$ Hruntime HscratchSuffixPtr HscratchSuffixLength28
+
+/-- After the second recursive call, invoke generated `split_at` on the data
+slice, load both returned descriptors, and stop exactly at merge `.call 127`.
+No semantic property of either recursive call or of merge is assumed here. -/
+theorem sort_split_to_merge_call_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (dataPtr length scratchPtr scratchLength frame mid : UInt32)
+    (oldFrame0 oldFrame4 oldFrame8 oldFrame12
+      oldFrame16 oldFrame20 oldFrame24 oldFrame28
+      oldResult0 oldResult4 oldResult8 oldResult12 : UInt32)
+    (hmid : mid ≤ length)
+    (hsplitFrameRoom : (frame - 32).toNat + 32 ≤ UInt32.size)
+    (hfuncFrameRoom : frame.toNat + 48 ≤ UInt32.size)
+    (hresultRoom : (frame + 32).toNat + 16 ≤ UInt32.size)
+    {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame} :
+    runtimeModuleOwn «module» ∗
+      globalPointsTo 0 (.i32 frame) ∗
+      pointsTo_u32 ((frame - 32) + 0) oldFrame0 ∗
+      pointsTo_u32 ((frame - 32) + 4) oldFrame4 ∗
+      pointsTo_u32 ((frame - 32) + 8) oldFrame8 ∗
+      pointsTo_u32 ((frame - 32) + 12) oldFrame12 ∗
+      pointsTo_u32 ((frame - 32) + 16) oldFrame16 ∗
+      pointsTo_u32 ((frame - 32) + 20) oldFrame20 ∗
+      pointsTo_u32 ((frame - 32) + 24) oldFrame24 ∗
+      pointsTo_u32 ((frame - 32) + 28) oldFrame28 ∗
+      pointsTo_u32 (frame + 32) oldResult0 ∗
+      pointsTo_u32 (frame + 36) oldResult4 ∗
+      pointsTo_u32 (frame + 40) oldResult8 ∗
+      pointsTo_u32 (frame + 44) oldResult12 ∗
+      ((runtimeModuleOwn «module» ∗
+        globalPointsTo 0 (.i32 frame) ∗
+        sliceDescriptorAt ((frame - 32) + 0) dataPtr mid ∗
+        sliceDescriptorAt ((frame - 32) + 8)
+          (dataPtr + (mid <<< 3)) (length - mid) ∗
+        sliceDescriptorAt ((frame - 32) + 16) dataPtr mid ∗
+        sliceDescriptorAt ((frame - 32) + 24)
+          (dataPtr + (mid <<< 3)) (length - mid) ∗
+        sliceDescriptorAt (frame + 32) dataPtr mid ∗
+        sliceDescriptorAt (frame + 40)
+          (dataPtr + (mid <<< 3)) (length - mid)) -∗
+        WP (.running
+          ⟨⟨sortParams dataPtr length scratchPtr scratchLength,
+              sortSecondCallLocals frame mid dataPtr mid mid
+                (dataPtr + (mid <<< 3)) (length - mid)
+                (scratchLength - mid),
+              [.i32 scratchLength, .i32 scratchPtr,
+                .i32 (length - mid), .i32 (dataPtr + (mid <<< 3)),
+                .i32 mid, .i32 dataPtr]⟩,
+            sortAtMergeCall, arity, remainder, controls, calls⟩ : Expr α)
+          @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨⟨sortParams dataPtr length scratchPtr scratchLength,
+          sortSecondCallLocals frame mid dataPtr mid mid
+            (dataPtr + (mid <<< 3)) (length - mid) (scratchLength - mid), []⟩,
+        sortAfterSecondRecursiveCall, arity, remainder, controls, calls⟩ :
+        Expr α) @ s; E [{ Φ }] := by
+  obtain ⟨h320, h321, h322, h323⟩ :=
+    sortFullFrameSlotFacts frame 32 hfuncFrameRoom (by decide)
+  obtain ⟨h360, h361, h362, h363⟩ :=
+    sortFullFrameSlotFacts frame 36 hfuncFrameRoom (by decide)
+  obtain ⟨h400, h401, h402, h403⟩ :=
+    sortFullFrameSlotFacts frame 40 hfuncFrameRoom (by decide)
+  obtain ⟨h440, h441, h442, h443⟩ :=
+    sortFullFrameSlotFacts frame 44 hfuncFrameRoom (by decide)
+  iintro ⟨Hruntime, Hglobal, Hf0, Hf4, Hf8, Hf12, Hf16, Hf20,
+    Hf24, Hf28, Hr0, Hr4, Hr8, Hr12, Hcont⟩
+  simp only [sortAfterSecondRecursiveCall, sortAtSecondRecursiveCall,
+    sortAfterDataSuffix, sortAfterFirstRecursiveCall,
+    sortAtFirstRecursiveCall, sortAfterFirstRange, sortAfterMid,
+    sortRecursiveBody, sortAfterFrame, func126, List.drop]
+  iapply twp_localGet rfl
+  iapply twp_const
+  iapply twp_add
+  rw [UInt32.add_comm (32 : UInt32) frame]
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_const
+  have Hsplit := splitAt_call_twp (α := α)
+    (frame + 32) dataPtr length mid 1050320 frame
+    oldFrame0 oldFrame4 oldFrame8 oldFrame12
+    oldFrame16 oldFrame20 oldFrame24 oldFrame28
+    oldResult0 oldResult4 oldResult8 oldResult12
+    hmid hsplitFrameRoom hresultRoom
+    (callerLocals :=
+      ⟨sortParams dataPtr length scratchPtr scratchLength,
+        sortSecondCallLocals frame mid dataPtr mid mid
+          (dataPtr + (mid <<< 3)) (length - mid) (scratchLength - mid), []⟩)
+    (stack := []) (code := sortAfterSecondRecursiveCall.drop 8)
+    (arity := arity) (remainder := remainder)
+    (controls := controls) (calls := calls)
+    (s := s) (E := E) (Φ := Φ)
+  simp only [sortAfterSecondRecursiveCall, sortAtSecondRecursiveCall,
+    sortAfterDataSuffix, sortAfterFirstRecursiveCall,
+    sortAtFirstRecursiveCall, sortAfterFirstRange, sortAfterMid,
+    sortRecursiveBody, sortAfterFrame, func126,
+    List.drop, List.append_nil] at Hsplit
+  ihave Hr4At : pointsTo_u32 ((frame + 32) + 4) oldResult4 $$ [Hr4]
+  · rw [show (frame + 32) + 4 = frame + 36 by bv_decide]
+    iexact Hr4
+  ihave Hr8At : pointsTo_u32 ((frame + 32) + 8) oldResult8 $$ [Hr8]
+  · rw [show (frame + 32) + 8 = frame + 40 by bv_decide]
+    iexact Hr8
+  ihave Hr12At : pointsTo_u32 ((frame + 32) + 12) oldResult12 $$ [Hr12]
+  · rw [show (frame + 32) + 12 = frame + 44 by bv_decide]
+    iexact Hr12
+  iapply Hsplit
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hglobal]
+  · iexact Hglobal
+  isplitl [Hf0]
+  · iexact Hf0
+  isplitl [Hf4]
+  · iexact Hf4
+  isplitl [Hf8]
+  · iexact Hf8
+  isplitl [Hf12]
+  · iexact Hf12
+  isplitl [Hf16]
+  · iexact Hf16
+  isplitl [Hf20]
+  · iexact Hf20
+  isplitl [Hf24]
+  · iexact Hf24
+  isplitl [Hf28]
+  · iexact Hf28
+  isplitl [Hr0]
+  · iexact Hr0
+  isplitl [Hr4At]
+  · iexact Hr4At
+  isplitl [Hr8At]
+  · iexact Hr8At
+  isplitl [Hr12At]
+  · iexact Hr12At
+  iintro Hpost
+  icases Hpost with ⟨Hruntime, Hglobal, Hf0, Hf8, Hf16, Hf24,
+    Hr0Desc, Hr8Desc⟩
+  ihave Hr0Pair : pointsTo_u32 (frame + 32) dataPtr ∗
+      pointsTo_u32 ((frame + 32) + 4) mid $$ [Hr0Desc]
+  · iapply sort_sliceDescriptorAt_elim
+    iexact Hr0Desc
+  ihave Hr8Pair : pointsTo_u32 ((frame + 32) + 8)
+      (dataPtr + (mid <<< 3)) ∗
+      pointsTo_u32 (((frame + 32) + 8) + 4) (length - mid) $$ [Hr8Desc]
+  · iapply sort_sliceDescriptorAt_elim
+    iexact Hr8Desc
+  icases Hr0Pair with ⟨Hr0, Hr4⟩
+  icases Hr8Pair with ⟨Hr8, Hr12⟩
+  iapply twp_localGet rfl
+  iapply twp_load32 dataPtr h320 h321 h322 h323 $$ Hr0
+  iintro Hr0
+  iapply twp_localGet rfl
+  ihave Hr4Plain : pointsTo_u32 (frame + 36) mid $$ [Hr4]
+  · iapply sort_pointsTo_u32_at_eq
+      (show (frame + 32) + 4 = frame + 36 by bv_decide)
+    iexact Hr4
+  iapply twp_load32 mid h360 h361 h362 h363 $$ Hr4Plain
+  iintro Hr4
+  iapply twp_localGet rfl
+  ihave Hr8Plain : pointsTo_u32 (frame + 40)
+      (dataPtr + (mid <<< 3)) $$ [Hr8]
+  · iapply sort_pointsTo_u32_at_eq
+      (show (frame + 32) + 8 = frame + 40 by bv_decide)
+    iexact Hr8
+  iapply twp_load32 (dataPtr + (mid <<< 3)) h400 h401 h402 h403 $$ Hr8Plain
+  iintro Hr8
+  iapply twp_localGet rfl
+  ihave Hr12Plain : pointsTo_u32 (frame + 44) (length - mid) $$ [Hr12]
+  · iapply sort_pointsTo_u32_at_eq
+      (show ((frame + 32) + 8) + 4 = frame + 44 by bv_decide)
+    iexact Hr12
+  iapply twp_load32 (length - mid) h440 h441 h442 h443 $$ Hr12Plain
+  iintro Hr12
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  simp only [sortAtMergeCall, sortAfterSecondRecursiveCall,
+    sortAtSecondRecursiveCall, sortAfterDataSuffix,
+    sortAfterFirstRecursiveCall, sortAtFirstRecursiveCall,
+    sortAfterFirstRange, sortAfterMid, sortRecursiveBody, sortAfterFrame,
+    func126, List.drop]
+  ihave Hr4Back : pointsTo_u32 ((frame + 32) + 4) mid $$ [Hr4]
+  · iapply sort_pointsTo_u32_at_eq
+      (show frame + 36 = (frame + 32) + 4 by bv_decide)
+    iexact Hr4
+  ihave Hr12Back : pointsTo_u32 ((frame + 40) + 4)
+      (length - mid) $$ [Hr12]
+  · iapply sort_pointsTo_u32_at_eq
+      (show frame + 44 = (frame + 40) + 4 by bv_decide)
+    iexact Hr12
+  ispecialize Hcont $$
+    [Hruntime Hglobal Hf0 Hf8 Hf16 Hf24 Hr0 Hr4Back Hr8 Hr12Back]
+  · simp only [sliceDescriptorAt]
+    iframe
+  iapply Hcont
+
+/-- Exact post-merge suffix.  The theorem does not assert what merge
+produced: it receives arbitrary `merged` ownership at the scratch slice.
+From there it executes generated clone-from-slice call 96, exits the outer
+block, restores the shadow-stack global, and reaches the final `ret`. -/
+theorem sort_copy_back_epilogue_twp
+    [WasmSmallStepGS hlc]
+    {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp WasmHeapGF}
+    (dataPtr length scratchPtr scratchLength frame stackTop mid : UInt32)
+    (merged destination : List UInt64)
+    (hscratchLength : scratchLength = length)
+    (hnonempty : merged ≠ [])
+    (hlengthValue : length.toNat = merged.length)
+    (hlength : merged.length = destination.length)
+    (hsourceRoom : scratchPtr.toNat + 8 * merged.length ≤ UInt32.size)
+    (hdestinationRoom :
+      dataPtr.toNat + 8 * destination.length ≤ UInt32.size)
+    (hbytes : 8 * merged.length < UInt32.size)
+    (hrestore : (48 : UInt32) + frame = stackTop)
+    {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame} :
+    runtimeModuleOwn «module» ∗
+      globalPointsTo 0 (.i32 frame) ∗
+      array64At scratchPtr merged ∗
+      array64At dataPtr destination ∗
+      (runtimeModuleOwn «module» -∗
+        globalPointsTo 0 (.i32 stackTop) -∗
+        array64At scratchPtr merged -∗
+        array64At dataPtr merged -∗
+        WP (.running
+          ⟨⟨sortParams dataPtr length scratchPtr scratchLength,
+              sortSecondCallLocals frame mid dataPtr mid mid
+                (dataPtr + (mid <<< 3)) (length - mid)
+                (scratchLength - mid), []⟩,
+            [.ret], arity, remainder, controls, calls⟩ : Expr α)
+          @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨⟨sortParams dataPtr length scratchPtr scratchLength,
+          sortSecondCallLocals frame mid dataPtr mid mid
+            (dataPtr + (mid <<< 3)) (length - mid)
+            (scratchLength - mid), []⟩,
+        sortAfterMerge, arity, remainder, sortOuterFrame :: controls, calls⟩ :
+        Expr α) @ s; E [{ Φ }] := by
+  subst scratchLength
+  iintro ⟨Hruntime, Hglobal, Hscratch, Hdata, Hcont⟩
+  simp only [sortAfterMerge, sortAtMergeCall,
+    sortAfterSecondRecursiveCall, sortAtSecondRecursiveCall,
+    sortAfterDataSuffix, sortAfterFirstRecursiveCall,
+    sortAtFirstRecursiveCall, sortAfterFirstRange, sortAfterMid,
+    sortRecursiveBody, sortAfterFrame, func126, List.drop]
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_const
+  iapply twp_call_cloneFromSlice dataPtr scratchPtr length 1050336
+    merged destination hnonempty hlengthValue hlength hsourceRoom
+    hdestinationRoom hbytes
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hscratch]
+  · iexact Hscratch
+  isplitl [Hdata]
+  · iexact Hdata
+  iintro Hruntime Hscratch Hdata
+  iapply twp_exitControl (by decide)
+  simp only [sortOuterFrame, sortAfterOuterBlock, sortAfterFrame,
+    sortRecursiveBody, func126, List.take_zero, List.nil_append,
+    List.drop]
+  iapply twp_localGet rfl
+  iapply twp_const
+  iapply twp_add
+  rw [hrestore]
+  iapply twp_globalSet0
+  isplitl [Hglobal]
+  · iexact Hglobal
+  iintro Hglobal
+  simp only [sortParams, sortSecondCallLocals]
+  iapply Hcont $$ Hruntime Hglobal Hscratch Hdata
 
 /-- Exact total rule for the generated base-case path of `func126`.
 
