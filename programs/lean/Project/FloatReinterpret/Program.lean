@@ -18,7 +18,7 @@ def func0 : Wasm.Program :=
 ]
 
 def func0Def : Wasm.Function :=
-  { params := [.f32], locals := [], body := func0, results := [.f32] }
+  { params := [.f32], locals := [], body := func0, results := [.f32], typeIdx := some 0 }
 
 def func1 : Wasm.Program :=
   [
@@ -36,7 +36,7 @@ def func1 : Wasm.Program :=
 ]
 
 def func1Def : Wasm.Function :=
-  { params := [.f32], locals := [.i32], body := func1, results := [.f32] }
+  { params := [.f32], locals := [.i32], body := func1, results := [.f32], typeIdx := some 0 }
 
 def func2 : Wasm.Program :=
   [
@@ -48,7 +48,7 @@ def func2 : Wasm.Program :=
 ]
 
 def func2Def : Wasm.Function :=
-  { params := [.f32], locals := [], body := func2, results := [.f32] }
+  { params := [.f32], locals := [], body := func2, results := [.f32], typeIdx := some 0 }
 
 def func3 : Wasm.Program :=
   [
@@ -66,7 +66,7 @@ def func3 : Wasm.Program :=
 ]
 
 def func3Def : Wasm.Function :=
-  { params := [.f64], locals := [.i32], body := func3, results := [.f64] }
+  { params := [.f64], locals := [.i32], body := func3, results := [.f64], typeIdx := some 1 }
 
 def func4 : Wasm.Program :=
   [
@@ -84,7 +84,7 @@ def func4 : Wasm.Program :=
 ]
 
 def func4Def : Wasm.Function :=
-  { params := [.f32, .f32], locals := [], body := func4, results := [.f32] }
+  { params := [.f32, .f32], locals := [], body := func4, results := [.f32], typeIdx := some 2 }
 
 def func5 : Wasm.Program :=
   [
@@ -94,7 +94,7 @@ def func5 : Wasm.Program :=
 ]
 
 def func5Def : Wasm.Function :=
-  { params := [.f32], locals := [], body := func5, results := [.i32] }
+  { params := [.f32], locals := [], body := func5, results := [.i32], typeIdx := some 3 }
 
 def func6 : Wasm.Program :=
   [
@@ -104,7 +104,7 @@ def func6 : Wasm.Program :=
 ]
 
 def func6Def : Wasm.Function :=
-  { params := [.i32], locals := [], body := func6, results := [.f32] }
+  { params := [.i32], locals := [], body := func6, results := [.f32], typeIdx := some 4 }
 
 def func7 : Wasm.Program :=
   [
@@ -115,7 +115,7 @@ def func7 : Wasm.Program :=
 ]
 
 def func7Def : Wasm.Function :=
-  { params := [.f32, .f32], locals := [], body := func7, results := [.f32] }
+  { params := [.f32, .f32], locals := [], body := func7, results := [.f32], typeIdx := some 2 }
 
 def func8 : Wasm.Program :=
   [
@@ -134,7 +134,7 @@ def func8 : Wasm.Program :=
 ]
 
 def func8Def : Wasm.Function :=
-  { params := [.f32, .f32], locals := [.i32], body := func8, results := [.f32] }
+  { params := [.f32, .f32], locals := [.i32], body := func8, results := [.f32], typeIdx := some 2 }
 
 def func9 : Wasm.Program :=
   [
@@ -147,9 +147,9 @@ def func9 : Wasm.Program :=
 ]
 
 def func9Def : Wasm.Function :=
-  { params := [.f32], locals := [], body := func9, results := [.f32] }
+  { params := [.f32], locals := [], body := func9, results := [.f32], typeIdx := some 0 }
 
-/-- export: check_abs -/
+/-- Exported function. -/
 def func10 : Wasm.Program :=
   [
   .globalGet 0,
@@ -182,11 +182,11 @@ def func10 : Wasm.Program :=
       .const (1 : UInt32),
       .store32 (12 : UInt32),
       .br 1
-    ],
+    ] [] [],
     .localGet 1,
     .const (0 : UInt32),
     .store32 (12 : UInt32)
-  ],
+  ] [] [],
   .localGet 1,
   .load32 (12 : UInt32),
   .localSet 2,
@@ -199,9 +199,9 @@ def func10 : Wasm.Program :=
 ]
 
 def func10Def : Wasm.Function :=
-  { params := [.f32], locals := [.i32, .i32], body := func10, results := [.i32] }
+  { params := [.f32], locals := [.i32, .i32], body := func10, results := [.i32], typeIdx := some 3 }
 
-/-- export: check_copysign -/
+/-- Exported function. -/
 def func11 : Wasm.Program :=
   [
   .globalGet 0,
@@ -226,11 +226,11 @@ def func11 : Wasm.Program :=
       .const (0 : UInt32),
       .store32 (12 : UInt32),
       .br 1
-    ],
+    ] [] [],
     .localGet 2,
     .const (1 : UInt32),
     .store32 (12 : UInt32)
-  ],
+  ] [] [],
   .localGet 2,
   .load32 (12 : UInt32),
   .localSet 3,
@@ -243,7 +243,7 @@ def func11 : Wasm.Program :=
 ]
 
 def func11Def : Wasm.Function :=
-  { params := [.f32, .f32], locals := [.i32, .i32], body := func11, results := [.i32] }
+  { params := [.f32, .f32], locals := [.i32, .i32], body := func11, results := [.i32], typeIdx := some 5 }
 
 def «module» : Wasm.Module :=
 {
@@ -266,12 +266,21 @@ def «module» : Wasm.Module :=
     { name := "check_abs", funcIdx := 10 },
     { name := "check_copysign", funcIdx := 11 }
   ],
-  memory := some { pagesMin := (16 : UInt32), pagesMax := none, data := [] },
+  memory := some (Wasm.MemDecl.mk (16 : UInt32) (none) ([]) false),
+  extraMemories := [],
+  dataWithoutMemory := false,
   globals := [
-    { init := .i32 (1048576 : UInt32) },
-    { init := .i32 (1048576 : UInt32) },
-    { init := .i32 (1048576 : UInt32) }
+    { init := .i32 (1048576 : UInt32), declaredType := some (.i32), isMut := true, sourceInit := some ([
+        .const (1048576 : UInt32)
+      ]), initExpr := [] },
+    { init := .i32 (1048576 : UInt32), declaredType := some (.i32), isMut := false, sourceInit := some ([
+        .const (1048576 : UInt32)
+      ]), initExpr := [] },
+    { init := .i32 (1048576 : UInt32), declaredType := some (.i32), isMut := false, sourceInit := some ([
+        .const (1048576 : UInt32)
+      ]), initExpr := [] }
   ],
+  startFunc := none,
   types := [
     { params := [.f32], results := [.f32] },
     { params := [.f64], results := [.f64] },
@@ -280,10 +289,47 @@ def «module» : Wasm.Module :=
     { params := [.i32], results := [.f32] },
     { params := [.f32, .f32], results := [.i32] }
   ],
-  tables := [
-    { min := 1, max := some 1, elemType := .funcref }
+  gcTypes := [
+    { comp := .func ({ params := [.f32], results := [.f32] }), sourceName := none, super := none, «final» := true, recGroup := none },
+    { comp := .func ({ params := [.f64], results := [.f64] }), sourceName := none, super := none, «final» := true, recGroup := none },
+    { comp := .func ({ params := [.f32, .f32], results := [.f32] }), sourceName := none, super := none, «final» := true, recGroup := none },
+    { comp := .func ({ params := [.f32], results := [.i32] }), sourceName := none, super := none, «final» := true, recGroup := none },
+    { comp := .func ({ params := [.i32], results := [.f32] }), sourceName := none, super := none, «final» := true, recGroup := none },
+    { comp := .func ({ params := [.f32, .f32], results := [.i32] }), sourceName := none, super := none, «final» := true, recGroup := none }
   ],
-  elements := []
+  tables := [
+    { min := 1, max := some 1, elemType := .funcref, is64 := false }
+  ],
+  elements := [],
+  importedGlobals := [],
+  importedTables := [],
+  importedMemories := [],
+  importedTags := [],
+  globalExports := [
+    ("__data_end", 1),
+    ("__heap_base", 2)
+  ],
+  tableExports := [],
+  memoryExports := [
+    ("memory", 0)
+  ],
+  tagExports := [],
+  tags := []
 }
+
+/-- Exact source of `module.wat` captured when `verifier emit` last ran. -/
+private def expectedWatSource : String := "(module $float_reinterpret.wasm\n  (type (;0;) (func (param f32) (result f32)))\n  (type (;1;) (func (param f64) (result f64)))\n  (type (;2;) (func (param f32 f32) (result f32)))\n  (type (;3;) (func (param f32) (result i32)))\n  (type (;4;) (func (param i32) (result f32)))\n  (type (;5;) (func (param f32 f32) (result i32)))\n  (table (;0;) 1 1 funcref)\n  (memory (;0;) 16)\n  (global $__stack_pointer (;0;) (mut i32) i32.const 1048576)\n  (global (;1;) i32 i32.const 1048576)\n  (global (;2;) i32 i32.const 1048576)\n  (export \"memory\" (memory 0))\n  (export \"check_abs\" (func $check_abs))\n  (export \"check_copysign\" (func $check_copysign))\n  (export \"__data_end\" (global 1))\n  (export \"__heap_base\" (global 2))\n  (func $_ZN17float_reinterpret7exports10abs_native17h9d7df0633dcded59E (;0;) (type 0) (param f32) (result f32)\n    local.get 0\n    call $_ZN4core3f3221_$LT$impl$u20$f32$GT$3abs17h524f1c72d643fd62E\n    return\n  )\n  (func $_ZN4core3f3221_$LT$impl$u20$f32$GT$3abs17h524f1c72d643fd62E (;1;) (type 0) (param f32) (result f32)\n    (local i32)\n    global.get $__stack_pointer\n    i32.const 16\n    i32.sub\n    local.set 1\n    local.get 1\n    local.get 0\n    f32.abs\n    f32.store offset=12\n    local.get 1\n    f32.load offset=12\n    return\n  )\n  (func $_ZN17float_reinterpret7exports11abs_promote17h959a5f31d7dc02d5E (;2;) (type 0) (param f32) (result f32)\n    local.get 0\n    f64.promote_f32\n    call $_ZN4core3f6421_$LT$impl$u20$f64$GT$3abs17hfb0892e1c88a7906E\n    f32.demote_f64\n    return\n  )\n  (func $_ZN4core3f6421_$LT$impl$u20$f64$GT$3abs17hfb0892e1c88a7906E (;3;) (type 1) (param f64) (result f64)\n    (local i32)\n    global.get $__stack_pointer\n    i32.const 16\n    i32.sub\n    local.set 1\n    local.get 1\n    local.get 0\n    f64.abs\n    f64.store offset=8\n    local.get 1\n    f64.load offset=8\n    return\n  )\n  (func $_ZN17float_reinterpret7exports13copysign_bits17hff26e5865e56ed9eE (;4;) (type 2) (param f32 f32) (result f32)\n    local.get 1\n    call $_ZN4core3f3221_$LT$impl$u20$f32$GT$7to_bits17h630f17f060e337ccE\n    i32.const -2147483648\n    i32.and\n    local.get 0\n    call $_ZN4core3f3221_$LT$impl$u20$f32$GT$7to_bits17h630f17f060e337ccE\n    i32.const 2147483647\n    i32.and\n    i32.or\n    call $_ZN4core3f3221_$LT$impl$u20$f32$GT$9from_bits17h2c9ac7f966580d9fE\n    return\n  )\n  (func $_ZN4core3f3221_$LT$impl$u20$f32$GT$7to_bits17h630f17f060e337ccE (;5;) (type 3) (param f32) (result i32)\n    local.get 0\n    i32.reinterpret_f32\n    return\n  )\n  (func $_ZN4core3f3221_$LT$impl$u20$f32$GT$9from_bits17h2c9ac7f966580d9fE (;6;) (type 4) (param i32) (result f32)\n    local.get 0\n    f32.reinterpret_i32\n    return\n  )\n  (func $_ZN17float_reinterpret7exports15copysign_native17he2699e2c01f9266cE (;7;) (type 2) (param f32 f32) (result f32)\n    local.get 0\n    local.get 1\n    call $_ZN4core3f3221_$LT$impl$u20$f32$GT$8copysign17h23abec4e2dc175cbE\n    return\n  )\n  (func $_ZN4core3f3221_$LT$impl$u20$f32$GT$8copysign17h23abec4e2dc175cbE (;8;) (type 2) (param f32 f32) (result f32)\n    (local i32)\n    global.get $__stack_pointer\n    i32.const 16\n    i32.sub\n    local.set 2\n    local.get 2\n    local.get 0\n    local.get 1\n    f32.copysign\n    f32.store offset=12\n    local.get 2\n    f32.load offset=12\n    return\n  )\n  (func $_ZN17float_reinterpret7exports8abs_bits17h90b880d6ce00a535E (;9;) (type 0) (param f32) (result f32)\n    local.get 0\n    call $_ZN4core3f3221_$LT$impl$u20$f32$GT$7to_bits17h630f17f060e337ccE\n    i32.const 2147483647\n    i32.and\n    call $_ZN4core3f3221_$LT$impl$u20$f32$GT$9from_bits17h2c9ac7f966580d9fE\n    return\n  )\n  (func $check_abs (;10;) (type 3) (param f32) (result i32)\n    (local i32 i32)\n    global.get $__stack_pointer\n    i32.const 16\n    i32.sub\n    local.set 1\n    local.get 1\n    global.set $__stack_pointer\n    block ;; label = @1\n      block ;; label = @2\n        local.get 0\n        call $_ZN17float_reinterpret7exports10abs_native17h9d7df0633dcded59E\n        local.get 0\n        call $_ZN17float_reinterpret7exports8abs_bits17h90b880d6ce00a535E\n        f32.eq\n        i32.const 1\n        i32.and\n        i32.eqz\n        br_if 0 (;@2;)\n        local.get 0\n        call $_ZN17float_reinterpret7exports10abs_native17h9d7df0633dcded59E\n        local.get 0\n        call $_ZN17float_reinterpret7exports11abs_promote17h959a5f31d7dc02d5E\n        f32.eq\n        i32.const 1\n        i32.and\n        i32.eqz\n        br_if 0 (;@2;)\n        local.get 1\n        i32.const 1\n        i32.store offset=12\n        br 1 (;@1;)\n      end\n      local.get 1\n      i32.const 0\n      i32.store offset=12\n    end\n    local.get 1\n    i32.load offset=12\n    local.set 2\n    local.get 1\n    i32.const 16\n    i32.add\n    global.set $__stack_pointer\n    local.get 2\n    return\n  )\n  (func $check_copysign (;11;) (type 5) (param f32 f32) (result i32)\n    (local i32 i32)\n    global.get $__stack_pointer\n    i32.const 16\n    i32.sub\n    local.set 2\n    local.get 2\n    global.set $__stack_pointer\n    block ;; label = @1\n      block ;; label = @2\n        local.get 0\n        local.get 1\n        call $_ZN17float_reinterpret7exports15copysign_native17he2699e2c01f9266cE\n        local.get 0\n        local.get 1\n        call $_ZN17float_reinterpret7exports13copysign_bits17hff26e5865e56ed9eE\n        f32.eq\n        i32.const 1\n        i32.and\n        br_if 0 (;@2;)\n        local.get 2\n        i32.const 0\n        i32.store offset=12\n        br 1 (;@1;)\n      end\n      local.get 2\n      i32.const 1\n      i32.store offset=12\n    end\n    local.get 2\n    i32.load offset=12\n    local.set 3\n    local.get 2\n    i32.const 16\n    i32.add\n    global.set $__stack_pointer\n    local.get 3\n    return\n  )\n)\n"
+
+-- Compile-time drift check: errors if `module.wat` is absent or has changed.
+#guard_msgs (drop info) in
+#eval show IO Unit from do
+  let path : System.FilePath := "../rust/build/float_reinterpret/program.wat"
+  unless ← path.pathExists do
+    throw <| IO.userError
+      s!"{path} is missing; cannot validate Program.lean provenance."
+  let actual ← IO.FS.readFile path
+  if actual ≠ expectedWatSource then
+    throw <| IO.userError
+      s!"{path} has drifted from Program.lean; re-run `lake exe verifier emit`."
 
 end Project.FloatReinterpret

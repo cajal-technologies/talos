@@ -17,7 +17,7 @@ def func0 : Wasm.Program :=
 ]
 
 def func0Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [], body := func0, results := [.i32] }
+  { params := [.i32, .i32], locals := [], body := func0, results := [.i32], typeIdx := some 0 }
 
 def func1 : Wasm.Program :=
   [
@@ -30,7 +30,7 @@ def func1 : Wasm.Program :=
 ]
 
 def func1Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [], body := func1, results := [.i32] }
+  { params := [.i32, .i32], locals := [], body := func1, results := [.i32], typeIdx := some 0 }
 
 def func2 : Wasm.Program :=
   [
@@ -43,9 +43,9 @@ def func2 : Wasm.Program :=
 ]
 
 def func2Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [], body := func2, results := [.i32] }
+  { params := [.i32, .i32], locals := [], body := func2, results := [.i32], typeIdx := some 0 }
 
-/-- export: entrypoint -/
+/-- Exported function. -/
 def func3 : Wasm.Program :=
   [
   .globalGet 0,
@@ -94,9 +94,9 @@ def func3 : Wasm.Program :=
 ]
 
 def func3Def : Wasm.Function :=
-  { params := [.i32], locals := [.i32, .i32, .i32, .i32, .i32], body := func3, results := [] }
+  { params := [.i32], locals := [.i32, .i32, .i32, .i32, .i32], body := func3, results := [], typeIdx := some 1 }
 
-/-- export: len -/
+/-- Exported function. -/
 def func4 : Wasm.Program :=
   [
   .localGet 0,
@@ -108,9 +108,9 @@ def func4 : Wasm.Program :=
 ]
 
 def func4Def : Wasm.Function :=
-  { params := [.i32], locals := [], body := func4, results := [.i32] }
+  { params := [.i32], locals := [], body := func4, results := [.i32], typeIdx := some 2 }
 
-/-- export: is_empty -/
+/-- Exported function. -/
 def func5 : Wasm.Program :=
   [
   .localGet 0,
@@ -124,7 +124,7 @@ def func5 : Wasm.Program :=
 ]
 
 def func5Def : Wasm.Function :=
-  { params := [.i32], locals := [], body := func5, results := [.i32] }
+  { params := [.i32], locals := [], body := func5, results := [.i32], typeIdx := some 2 }
 
 def «module» : Wasm.Module :=
 {
@@ -142,21 +142,64 @@ def «module» : Wasm.Module :=
     { name := "len", funcIdx := 4 },
     { name := "is_empty", funcIdx := 5 }
   ],
-  memory := some { pagesMin := (16 : UInt32), pagesMax := none, data := [] },
+  memory := some (Wasm.MemDecl.mk (16 : UInt32) (none) ([]) false),
+  extraMemories := [],
+  dataWithoutMemory := false,
   globals := [
-    { init := .i32 (1048576 : UInt32) },
-    { init := .i32 (1048576 : UInt32) },
-    { init := .i32 (1048576 : UInt32) }
+    { init := .i32 (1048576 : UInt32), declaredType := some (.i32), isMut := true, sourceInit := some ([
+        .const (1048576 : UInt32)
+      ]), initExpr := [] },
+    { init := .i32 (1048576 : UInt32), declaredType := some (.i32), isMut := false, sourceInit := some ([
+        .const (1048576 : UInt32)
+      ]), initExpr := [] },
+    { init := .i32 (1048576 : UInt32), declaredType := some (.i32), isMut := false, sourceInit := some ([
+        .const (1048576 : UInt32)
+      ]), initExpr := [] }
   ],
+  startFunc := none,
   types := [
     { params := [.i32, .i32], results := [.i32] },
     { params := [.i32], results := [] },
     { params := [.i32], results := [.i32] }
   ],
-  tables := [
-    { min := 1, max := some 1, elemType := .funcref }
+  gcTypes := [
+    { comp := .func ({ params := [.i32, .i32], results := [.i32] }), sourceName := none, super := none, «final» := true, recGroup := none },
+    { comp := .func ({ params := [.i32], results := [] }), sourceName := none, super := none, «final» := true, recGroup := none },
+    { comp := .func ({ params := [.i32], results := [.i32] }), sourceName := none, super := none, «final» := true, recGroup := none }
   ],
-  elements := []
+  tables := [
+    { min := 1, max := some 1, elemType := .funcref, is64 := false }
+  ],
+  elements := [],
+  importedGlobals := [],
+  importedTables := [],
+  importedMemories := [],
+  importedTags := [],
+  globalExports := [
+    ("__data_end", 1),
+    ("__heap_base", 2)
+  ],
+  tableExports := [],
+  memoryExports := [
+    ("memory", 0)
+  ],
+  tagExports := [],
+  tags := []
 }
+
+/-- Exact source of `module.wat` captured when `verifier emit` last ran. -/
+private def expectedWatSource : String := "(module $rust_array.wasm\n  (type (;0;) (func (param i32 i32) (result i32)))\n  (type (;1;) (func (param i32)))\n  (type (;2;) (func (param i32) (result i32)))\n  (table (;0;) 1 1 funcref)\n  (memory (;0;) 16)\n  (global $__stack_pointer (;0;) (mut i32) i32.const 1048576)\n  (global (;1;) i32 i32.const 1048576)\n  (global (;2;) i32 i32.const 1048576)\n  (export \"memory\" (memory 0))\n  (export \"entrypoint\" (func $entrypoint))\n  (export \"len\" (func $len))\n  (export \"is_empty\" (func $is_empty))\n  (export \"__data_end\" (global 1))\n  (export \"__heap_base\" (global 2))\n  (func $_ZN10rust_array3len17h0d2317ff986fb38fE (;0;) (type 0) (param i32 i32) (result i32)\n    local.get 1\n    return\n  )\n  (func $_ZN10rust_array8is_empty17h1cf23f5922eb0d5aE (;1;) (type 0) (param i32 i32) (result i32)\n    local.get 0\n    local.get 1\n    call $_ZN4core5slice29_$LT$impl$u20$$u5b$T$u5d$$GT$8is_empty17h966f65bc0db19aa8E\n    i32.const 1\n    i32.and\n    return\n  )\n  (func $_ZN4core5slice29_$LT$impl$u20$$u5b$T$u5d$$GT$8is_empty17h966f65bc0db19aa8E (;2;) (type 0) (param i32 i32) (result i32)\n    local.get 1\n    i32.const 0\n    i32.eq\n    i32.const 1\n    i32.and\n    return\n  )\n  (func $entrypoint (;3;) (type 1) (param i32)\n    (local i32 i32 i32 i32 i32)\n    global.get $__stack_pointer\n    i32.const 16\n    i32.sub\n    local.set 1\n    local.get 1\n    global.set $__stack_pointer\n    local.get 0\n    i32.load\n    local.set 2\n    local.get 0\n    i32.load offset=4\n    local.set 3\n    local.get 1\n    local.get 2\n    i32.store\n    local.get 1\n    local.get 3\n    i32.store offset=4\n    local.get 1\n    call $len\n    drop\n    local.get 0\n    i32.load\n    local.set 4\n    local.get 0\n    i32.load offset=4\n    local.set 5\n    local.get 1\n    local.get 4\n    i32.store offset=8\n    local.get 1\n    local.get 5\n    i32.store offset=12\n    local.get 1\n    i32.const 8\n    i32.add\n    call $is_empty\n    drop\n    local.get 1\n    i32.const 16\n    i32.add\n    global.set $__stack_pointer\n    return\n  )\n  (func $len (;4;) (type 2) (param i32) (result i32)\n    local.get 0\n    i32.load\n    local.get 0\n    i32.load offset=4\n    call $_ZN10rust_array3len17h0d2317ff986fb38fE\n    return\n  )\n  (func $is_empty (;5;) (type 2) (param i32) (result i32)\n    local.get 0\n    i32.load\n    local.get 0\n    i32.load offset=4\n    call $_ZN10rust_array8is_empty17h1cf23f5922eb0d5aE\n    i32.const 1\n    i32.and\n    return\n  )\n)\n"
+
+-- Compile-time drift check: errors if `module.wat` is absent or has changed.
+#guard_msgs (drop info) in
+#eval show IO Unit from do
+  let path : System.FilePath := "../rust/build/rust_array/program.wat"
+  unless ← path.pathExists do
+    throw <| IO.userError
+      s!"{path} is missing; cannot validate Program.lean provenance."
+  let actual ← IO.FS.readFile path
+  if actual ≠ expectedWatSource then
+    throw <| IO.userError
+      s!"{path} has drifted from Program.lean; re-run `lake exe verifier emit`."
 
 end Project.RustArray

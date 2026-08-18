@@ -10,7 +10,7 @@ namespace Project.NumIntegerOpt3
 
 open Wasm
 
-/-- export: gcd_u64 -/
+/-- Exported function. -/
 def func0 : Wasm.Program :=
   [
   .localGet 1,
@@ -62,7 +62,7 @@ def func0 : Wasm.Program :=
           .eqI64,
           .br_if 2,
           .br 1
-        ],
+        ] [] [],
         .localGet 0,
         .localGet 1,
         .subI64,
@@ -76,20 +76,20 @@ def func0 : Wasm.Program :=
         .localGet 1,
         .neI64,
         .br_if 0
-      ],
+      ] [] [],
       .localGet 1,
       .localSet 0
-    ],
+    ] [] [],
     .localGet 0,
     .localGet 2,
     .shlI64,
     .localSet 2
-  ],
+  ] [] [],
   .localGet 2
 ]
 
 def func0Def : Wasm.Function :=
-  { params := [.i64, .i64], locals := [.i64], body := func0, results := [.i64] }
+  { params := [.i64, .i64], locals := [.i64], body := func0, results := [.i64], typeIdx := some 0 }
 
 def «module» : Wasm.Module :=
 {
@@ -100,19 +100,60 @@ def «module» : Wasm.Module :=
   exports := [
     { name := "gcd_u64", funcIdx := 0 }
   ],
-  memory := some { pagesMin := (16 : UInt32), pagesMax := none, data := [] },
+  memory := some (Wasm.MemDecl.mk (16 : UInt32) (none) ([]) false),
+  extraMemories := [],
+  dataWithoutMemory := false,
   globals := [
-    { init := .i32 (1048576 : UInt32) },
-    { init := .i32 (1048576 : UInt32) },
-    { init := .i32 (1048576 : UInt32) }
+    { init := .i32 (1048576 : UInt32), declaredType := some (.i32), isMut := true, sourceInit := some ([
+        .const (1048576 : UInt32)
+      ]), initExpr := [] },
+    { init := .i32 (1048576 : UInt32), declaredType := some (.i32), isMut := false, sourceInit := some ([
+        .const (1048576 : UInt32)
+      ]), initExpr := [] },
+    { init := .i32 (1048576 : UInt32), declaredType := some (.i32), isMut := false, sourceInit := some ([
+        .const (1048576 : UInt32)
+      ]), initExpr := [] }
   ],
+  startFunc := none,
   types := [
     { params := [.i64, .i64], results := [.i64] }
   ],
-  tables := [
-    { min := 1, max := some 1, elemType := .funcref }
+  gcTypes := [
+    { comp := .func ({ params := [.i64, .i64], results := [.i64] }), sourceName := none, super := none, «final» := true, recGroup := none }
   ],
-  elements := []
+  tables := [
+    { min := 1, max := some 1, elemType := .funcref, is64 := false }
+  ],
+  elements := [],
+  importedGlobals := [],
+  importedTables := [],
+  importedMemories := [],
+  importedTags := [],
+  globalExports := [
+    ("__data_end", 1),
+    ("__heap_base", 2)
+  ],
+  tableExports := [],
+  memoryExports := [
+    ("memory", 0)
+  ],
+  tagExports := [],
+  tags := []
 }
+
+/-- Exact source of `module.wat` captured when `verifier emit` last ran. -/
+private def expectedWatSource : String := "(module $num_integer_opt3.wasm\n  (type (;0;) (func (param i64 i64) (result i64)))\n  (table (;0;) 1 1 funcref)\n  (memory (;0;) 16)\n  (global $__stack_pointer (;0;) (mut i32) i32.const 1048576)\n  (global (;1;) i32 i32.const 1048576)\n  (global (;2;) i32 i32.const 1048576)\n  (export \"memory\" (memory 0))\n  (export \"gcd_u64\" (func $_ZN16num_integer_opt37gcd_u6417hf1d9917ca260e024E))\n  (export \"__data_end\" (global 1))\n  (export \"__heap_base\" (global 2))\n  (func $_ZN16num_integer_opt37gcd_u6417hf1d9917ca260e024E (;0;) (type 0) (param i64 i64) (result i64)\n    (local i64)\n    local.get 1\n    local.get 0\n    i64.or\n    local.set 2\n    block ;; label = @1\n      local.get 0\n      i64.eqz\n      br_if 0 (;@1;)\n      local.get 1\n      i64.eqz\n      br_if 0 (;@1;)\n      local.get 2\n      i64.ctz\n      local.set 2\n      block ;; label = @2\n        local.get 0\n        local.get 0\n        i64.ctz\n        i64.shr_u\n        local.tee 0\n        local.get 1\n        local.get 1\n        i64.ctz\n        i64.shr_u\n        local.tee 1\n        i64.eq\n        br_if 0 (;@2;)\n        loop ;; label = @3\n          block ;; label = @4\n            local.get 0\n            local.get 1\n            i64.gt_u\n            br_if 0 (;@4;)\n            local.get 0\n            local.get 1\n            local.get 0\n            i64.sub\n            local.tee 1\n            local.get 1\n            i64.ctz\n            i64.shr_u\n            local.tee 1\n            i64.eq\n            br_if 2 (;@2;)\n            br 1 (;@3;)\n          end\n          local.get 0\n          local.get 1\n          i64.sub\n          local.tee 0\n          local.get 0\n          i64.ctz\n          i64.shr_u\n          local.tee 0\n          local.get 1\n          i64.ne\n          br_if 0 (;@3;)\n        end\n        local.get 1\n        local.set 0\n      end\n      local.get 0\n      local.get 2\n      i64.shl\n      local.set 2\n    end\n    local.get 2\n  )\n)\n"
+
+-- Compile-time drift check: errors if `module.wat` is absent or has changed.
+#guard_msgs (drop info) in
+#eval show IO Unit from do
+  let path : System.FilePath := "../rust/build/num_integer_opt3/program.wat"
+  unless ← path.pathExists do
+    throw <| IO.userError
+      s!"{path} is missing; cannot validate Program.lean provenance."
+  let actual ← IO.FS.readFile path
+  if actual ≠ expectedWatSource then
+    throw <| IO.userError
+      s!"{path} has drifted from Program.lean; re-run `lake exe verifier emit`."
 
 end Project.NumIntegerOpt3

@@ -42,23 +42,23 @@ def func0 : Wasm.Program :=
           .and,
           .br_if 2,
           .br 1
-        ],
+        ] [] [],
         .localGet 1,
         .localGet 2,
         .call 2,
         .f32Store (12 : UInt32),
         .br 2
-      ],
+      ] [] [],
       .localGet 1,
       .localGet 2,
       .f32Store (12 : UInt32),
       .br 1
-    ],
+    ] [] [],
     .localGet 1,
     .localGet 2,
     .call 3,
     .f32Store (12 : UInt32)
-  ],
+  ] [] [],
   .localGet 1,
   .f32Load (12 : UInt32),
   .localSet 4,
@@ -71,7 +71,7 @@ def func0 : Wasm.Program :=
 ]
 
 def func0Def : Wasm.Function :=
-  { params := [.f32], locals := [.i32, .f32, .f32, .f32], body := func0, results := [.f32] }
+  { params := [.f32], locals := [.i32, .f32, .f32, .f32], body := func0, results := [.f32], typeIdx := some 0 }
 
 def func1 : Wasm.Program :=
   [
@@ -89,7 +89,7 @@ def func1 : Wasm.Program :=
 ]
 
 def func1Def : Wasm.Function :=
-  { params := [.f32], locals := [.i32], body := func1, results := [.f32] }
+  { params := [.f32], locals := [.i32], body := func1, results := [.f32], typeIdx := some 0 }
 
 def func2 : Wasm.Program :=
   [
@@ -107,7 +107,7 @@ def func2 : Wasm.Program :=
 ]
 
 def func2Def : Wasm.Function :=
-  { params := [.f32], locals := [.i32], body := func2, results := [.f32] }
+  { params := [.f32], locals := [.i32], body := func2, results := [.f32], typeIdx := some 0 }
 
 def func3 : Wasm.Program :=
   [
@@ -125,7 +125,7 @@ def func3 : Wasm.Program :=
 ]
 
 def func3Def : Wasm.Function :=
-  { params := [.f32], locals := [.i32], body := func3, results := [.f32] }
+  { params := [.f32], locals := [.i32], body := func3, results := [.f32], typeIdx := some 0 }
 
 def func4 : Wasm.Program :=
   [
@@ -135,7 +135,7 @@ def func4 : Wasm.Program :=
 ]
 
 def func4Def : Wasm.Function :=
-  { params := [.f32], locals := [], body := func4, results := [.f32] }
+  { params := [.f32], locals := [], body := func4, results := [.f32], typeIdx := some 0 }
 
 def func5 : Wasm.Program :=
   [
@@ -153,9 +153,9 @@ def func5 : Wasm.Program :=
 ]
 
 def func5Def : Wasm.Function :=
-  { params := [.f32], locals := [.i32], body := func5, results := [.f32] }
+  { params := [.f32], locals := [.i32], body := func5, results := [.f32], typeIdx := some 0 }
 
-/-- export: check_round -/
+/-- Exported function. -/
 def func6 : Wasm.Program :=
   [
   .globalGet 0,
@@ -178,11 +178,11 @@ def func6 : Wasm.Program :=
       .const (0 : UInt32),
       .store32 (12 : UInt32),
       .br 1
-    ],
+    ] [] [],
     .localGet 1,
     .const (1 : UInt32),
     .store32 (12 : UInt32)
-  ],
+  ] [] [],
   .localGet 1,
   .load32 (12 : UInt32),
   .localSet 2,
@@ -195,7 +195,7 @@ def func6 : Wasm.Program :=
 ]
 
 def func6Def : Wasm.Function :=
-  { params := [.f32], locals := [.i32, .i32], body := func6, results := [.i32] }
+  { params := [.f32], locals := [.i32, .i32], body := func6, results := [.i32], typeIdx := some 1 }
 
 def «module» : Wasm.Module :=
 {
@@ -212,20 +212,62 @@ def «module» : Wasm.Module :=
   exports := [
     { name := "check_round", funcIdx := 6 }
   ],
-  memory := some { pagesMin := (16 : UInt32), pagesMax := none, data := [] },
+  memory := some (Wasm.MemDecl.mk (16 : UInt32) (none) ([]) false),
+  extraMemories := [],
+  dataWithoutMemory := false,
   globals := [
-    { init := .i32 (1048576 : UInt32) },
-    { init := .i32 (1048576 : UInt32) },
-    { init := .i32 (1048576 : UInt32) }
+    { init := .i32 (1048576 : UInt32), declaredType := some (.i32), isMut := true, sourceInit := some ([
+        .const (1048576 : UInt32)
+      ]), initExpr := [] },
+    { init := .i32 (1048576 : UInt32), declaredType := some (.i32), isMut := false, sourceInit := some ([
+        .const (1048576 : UInt32)
+      ]), initExpr := [] },
+    { init := .i32 (1048576 : UInt32), declaredType := some (.i32), isMut := false, sourceInit := some ([
+        .const (1048576 : UInt32)
+      ]), initExpr := [] }
   ],
+  startFunc := none,
   types := [
     { params := [.f32], results := [.f32] },
     { params := [.f32], results := [.i32] }
   ],
-  tables := [
-    { min := 1, max := some 1, elemType := .funcref }
+  gcTypes := [
+    { comp := .func ({ params := [.f32], results := [.f32] }), sourceName := none, super := none, «final» := true, recGroup := none },
+    { comp := .func ({ params := [.f32], results := [.i32] }), sourceName := none, super := none, «final» := true, recGroup := none }
   ],
-  elements := []
+  tables := [
+    { min := 1, max := some 1, elemType := .funcref, is64 := false }
+  ],
+  elements := [],
+  importedGlobals := [],
+  importedTables := [],
+  importedMemories := [],
+  importedTags := [],
+  globalExports := [
+    ("__data_end", 1),
+    ("__heap_base", 2)
+  ],
+  tableExports := [],
+  memoryExports := [
+    ("memory", 0)
+  ],
+  tagExports := [],
+  tags := []
 }
+
+/-- Exact source of `module.wat` captured when `verifier emit` last ran. -/
+private def expectedWatSource : String := "(module $float_round.wasm\n  (type (;0;) (func (param f32) (result f32)))\n  (type (;1;) (func (param f32) (result i32)))\n  (table (;0;) 1 1 funcref)\n  (memory (;0;) 16)\n  (global $__stack_pointer (;0;) (mut i32) i32.const 1048576)\n  (global (;1;) i32 i32.const 1048576)\n  (global (;2;) i32 i32.const 1048576)\n  (export \"memory\" (memory 0))\n  (export \"check_round\" (func $check_round))\n  (export \"__data_end\" (global 1))\n  (export \"__heap_base\" (global 2))\n  (func $_ZN11float_round7exports11naive_round17hd0c8630895f0f35dE (;0;) (type 0) (param f32) (result f32)\n    (local i32 f32 f32 f32)\n    global.get $__stack_pointer\n    i32.const 16\n    i32.sub\n    local.set 1\n    local.get 1\n    global.set $__stack_pointer\n    local.get 0\n    call $_ZN3std3f3221_$LT$impl$u20$f32$GT$5trunc17h7e49a0e1d730ec23E\n    local.set 2\n    local.get 0\n    local.get 2\n    f32.sub\n    local.set 3\n    block ;; label = @1\n      block ;; label = @2\n        block ;; label = @3\n          block ;; label = @4\n            local.get 3\n            f32.const 0x1p-1 (;=0.5;)\n            f32.ge\n            i32.const 1\n            i32.and\n            br_if 0 (;@4;)\n            local.get 3\n            f32.const -0x1p-1 (;=-0.5;)\n            f32.le\n            i32.const 1\n            i32.and\n            br_if 2 (;@2;)\n            br 1 (;@3;)\n          end\n          local.get 1\n          local.get 2\n          call $_ZN3std3f3221_$LT$impl$u20$f32$GT$4ceil17h9948cc22b2aa55f4E\n          f32.store offset=12\n          br 2 (;@1;)\n        end\n        local.get 1\n        local.get 2\n        f32.store offset=12\n        br 1 (;@1;)\n      end\n      local.get 1\n      local.get 2\n      call $_ZN3std3f3221_$LT$impl$u20$f32$GT$5floor17hf9d6d1ca8b3e83d1E\n      f32.store offset=12\n    end\n    local.get 1\n    f32.load offset=12\n    local.set 4\n    local.get 1\n    i32.const 16\n    i32.add\n    global.set $__stack_pointer\n    local.get 4\n    return\n  )\n  (func $_ZN3std3f3221_$LT$impl$u20$f32$GT$5trunc17h7e49a0e1d730ec23E (;1;) (type 0) (param f32) (result f32)\n    (local i32)\n    global.get $__stack_pointer\n    i32.const 16\n    i32.sub\n    local.set 1\n    local.get 1\n    local.get 0\n    f32.trunc\n    f32.store offset=12\n    local.get 1\n    f32.load offset=12\n    return\n  )\n  (func $_ZN3std3f3221_$LT$impl$u20$f32$GT$4ceil17h9948cc22b2aa55f4E (;2;) (type 0) (param f32) (result f32)\n    (local i32)\n    global.get $__stack_pointer\n    i32.const 16\n    i32.sub\n    local.set 1\n    local.get 1\n    local.get 0\n    f32.ceil\n    f32.store offset=12\n    local.get 1\n    f32.load offset=12\n    return\n  )\n  (func $_ZN3std3f3221_$LT$impl$u20$f32$GT$5floor17hf9d6d1ca8b3e83d1E (;3;) (type 0) (param f32) (result f32)\n    (local i32)\n    global.get $__stack_pointer\n    i32.const 16\n    i32.sub\n    local.set 1\n    local.get 1\n    local.get 0\n    f32.floor\n    f32.store offset=12\n    local.get 1\n    f32.load offset=12\n    return\n  )\n  (func $_ZN11float_round7exports9opt_round17h236bc0525949d536E (;4;) (type 0) (param f32) (result f32)\n    local.get 0\n    call $_ZN3std3f3221_$LT$impl$u20$f32$GT$15round_ties_even17h86a5a5882aa116c0E\n    return\n  )\n  (func $_ZN3std3f3221_$LT$impl$u20$f32$GT$15round_ties_even17h86a5a5882aa116c0E (;5;) (type 0) (param f32) (result f32)\n    (local i32)\n    global.get $__stack_pointer\n    i32.const 16\n    i32.sub\n    local.set 1\n    local.get 1\n    local.get 0\n    f32.nearest\n    f32.store offset=12\n    local.get 1\n    f32.load offset=12\n    return\n  )\n  (func $check_round (;6;) (type 1) (param f32) (result i32)\n    (local i32 i32)\n    global.get $__stack_pointer\n    i32.const 16\n    i32.sub\n    local.set 1\n    local.get 1\n    global.set $__stack_pointer\n    block ;; label = @1\n      block ;; label = @2\n        local.get 0\n        call $_ZN11float_round7exports11naive_round17hd0c8630895f0f35dE\n        local.get 0\n        call $_ZN11float_round7exports9opt_round17h236bc0525949d536E\n        f32.eq\n        i32.const 1\n        i32.and\n        br_if 0 (;@2;)\n        local.get 1\n        i32.const 0\n        i32.store offset=12\n        br 1 (;@1;)\n      end\n      local.get 1\n      i32.const 1\n      i32.store offset=12\n    end\n    local.get 1\n    i32.load offset=12\n    local.set 2\n    local.get 1\n    i32.const 16\n    i32.add\n    global.set $__stack_pointer\n    local.get 2\n    return\n  )\n)\n"
+
+-- Compile-time drift check: errors if `module.wat` is absent or has changed.
+#guard_msgs (drop info) in
+#eval show IO Unit from do
+  let path : System.FilePath := "../rust/build/float_round/program.wat"
+  unless ← path.pathExists do
+    throw <| IO.userError
+      s!"{path} is missing; cannot validate Program.lean provenance."
+  let actual ← IO.FS.readFile path
+  if actual ≠ expectedWatSource then
+    throw <| IO.userError
+      s!"{path} has drifted from Program.lean; re-run `lake exe verifier emit`."
 
 end Project.FloatRound

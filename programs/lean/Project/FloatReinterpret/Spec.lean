@@ -24,8 +24,8 @@ def func5Config (x : UInt32) : Config Unit :=
         wasm := «module».initialStore } }
 
 theorem func5_body_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
     (x : UInt32) (calls : List CallFrame) :
     ▷ WP (.running
       ⟨⟨[.f32 x], [], [.i32 x]⟩,
@@ -62,8 +62,8 @@ def func6Config (x : UInt32) : Config Unit :=
         wasm := «module».initialStore } }
 
 theorem func6_body_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
     (x : UInt32) (calls : List CallFrame) :
     ▷ WP (.running
       ⟨⟨[.i32 x], [], [.f32 x]⟩,
@@ -103,7 +103,7 @@ def func9Config (x : UInt32) : Config Unit :=
 `f32.abs`. The two reinterpret calls are composed through their actual saved
 call frames. -/
 theorem func9_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
     (x : UInt32) :
     runtimeModuleOwn «module» ⊢
     WP (.running
@@ -166,7 +166,7 @@ def func4Config (x y : UInt32) : Config Unit :=
 /-- Complete small-step Iris proof for the bit-manipulation implementation of
 `f32.copysign`. -/
 theorem func4_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
     (x y : UInt32) :
     runtimeModuleOwn «module» ⊢
     WP (.running
@@ -299,9 +299,9 @@ theorem func1Globals_agree :
   · rw [get?_insert_ne (Ne.symm hindex), get?_empty] at hget
     contradiction
 
-theorem func1Heap_pointsTo [WasmHeapGS] :
+theorem func1Heap_pointsTo [WasmHeapGS Unit] :
     ([∗map] address ↦ value ∈ func1Heap,
-      pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+      pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
         address (DFrac.own 1) value) ⊢
       pointsTo_u32 1048572 0 := by
   unfold func1Heap
@@ -311,7 +311,7 @@ theorem func1Heap_pointsTo [WasmHeapGS] :
       (get?_empty _) (get?_empty _) (get?_empty _) (get?_empty _)
       (by decide) (by decide) (by decide))
 
-theorem func1Globals_pointsTo [WasmGlobalGS] :
+theorem func1Globals_pointsTo [WasmGlobalGS Unit] :
     ([∗map] index ↦ value ∈ func1Globals,
       globalPointsTo index value) ⊢
       globalPointsTo 0 (.i32 1048576) := by
@@ -320,9 +320,9 @@ theorem func1Globals_pointsTo [WasmGlobalGS] :
     BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
 
 theorem func1_body_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF) (x oldWord : UInt32)
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit)) (x oldWord : UInt32)
     (calls : List CallFrame)
     (hreturn :
       R ∗ globalPointsTo 0 (.i32 1048576) ∗
@@ -418,7 +418,7 @@ def func0Config (x : UInt32) : Config Unit :=
 /-- Small-step Iris proof for the generated wrapper around the frame-backed
 `f32.abs` implementation. -/
 theorem func0_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
     (x oldWord : UInt32) :
     runtimeModuleOwn «module» ∗
       globalPointsTo 0 (.i32 1048576) ∗
@@ -509,17 +509,17 @@ theorem func3Heap_inBounds :
     (emptyHeap_inBounds _)
   decide
 
-theorem func3Heap_pointsTo [WasmHeapGS] :
+theorem func3Heap_pointsTo [WasmHeapGS Unit] :
     ([∗map] address ↦ value ∈ func3Heap,
-      pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+      pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
         address (DFrac.own 1) value) ⊢
       pointsTo_u64 1048568 0 := by
   exact Wasm.RustStd.U64.absDiffHeap_pointsTo 0
 
 theorem func3_body_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF) (x oldWord : UInt64)
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit)) (x oldWord : UInt64)
     (calls : List CallFrame)
     (hreturn :
       R ∗ globalPointsTo 0 (.i32 1048576) ∗
@@ -619,7 +619,7 @@ def func2Config (x : UInt32) : Config Unit :=
 
 /-- Small-step Iris proof for the generated promote/`f64.abs`/demote wrapper. -/
 theorem func2_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
     (x : UInt32) (oldWord : UInt64) :
     runtimeModuleOwn «module» ∗
       globalPointsTo 0 (.i32 1048576) ∗
@@ -682,9 +682,9 @@ def func8Config (x y : UInt32) : Config Unit :=
         wasm := «module».initialStore } }
 
 theorem func8_body_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF) (x y oldWord : UInt32)
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit)) (x y oldWord : UInt32)
     (calls : List CallFrame)
     (hreturn :
       R ∗ globalPointsTo 0 (.i32 1048576) ∗
@@ -781,7 +781,7 @@ def func7Config (x y : UInt32) : Config Unit :=
         wasm := «module».initialStore } }
 
 theorem func7_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
     (x y oldWord : UInt32) :
     runtimeModuleOwn «module» ∗
       globalPointsTo 0 (.i32 1048576) ∗
@@ -869,9 +869,9 @@ theorem exportHeap_inBounds :
     · exact emptyHeap_inBounds _
     · decide
 
-theorem exportHeap_pointsTo [WasmHeapGS] :
+theorem exportHeap_pointsTo [WasmHeapGS Unit] :
     ([∗map] address ↦ value ∈ exportHeap,
-      pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+      pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
         address (DFrac.own 1) value) ⊢
       pointsTo_u64 1048552 0 ∗ pointsTo_u32 1048572 0 := by
   unfold exportHeap
@@ -891,7 +891,7 @@ theorem exportHeap_pointsTo [WasmHeapGS] :
 def packUpper32 (upper : UInt32) : UInt64 :=
   upper.toUInt64 <<< 32
 
-theorem innerScratch_split_zero [WasmHeapGS] :
+theorem innerScratch_split_zero [WasmHeapGS Unit] :
     pointsTo_u64 1048552 0 ⊢
       pointsTo_u32 1048552 0 ∗ pointsTo_u32 1048556 0 := by
   have h0 : u64Byte 0 0 = u32Byte 0 0 := rfl
@@ -912,7 +912,7 @@ theorem innerScratch_split_zero [WasmHeapGS] :
   icases Hbytes with ⟨H0, H1, H2, H3, H4, H5, H6, H7⟩
   iframe
 
-theorem innerScratch_merge_upper [WasmHeapGS] (upper : UInt32) :
+theorem innerScratch_merge_upper [WasmHeapGS Unit] (upper : UInt32) :
     pointsTo_u32 1048552 0 ∗ pointsTo_u32 1048556 upper ⊢
       pointsTo_u64 1048552 (packUpper32 upper) := by
   have h0 : u64Byte (packUpper32 upper) 0 = u32Byte 0 0 := by
@@ -954,9 +954,9 @@ theorem innerScratch_merge_upper [WasmHeapGS] (upper : UInt32) :
 /-- `func1` under an export's already-lowered stack pointer. The upper half of
 the owned `u64` scratch range is exposed as the `u32` word at `1048556`. -/
 theorem func1_lowered_body_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF) (x oldWord : UInt32)
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit)) (x oldWord : UInt32)
     (calls : List CallFrame)
     (hreturn :
       R ∗ globalPointsTo 0 (.i32 1048560) ∗
@@ -1019,9 +1019,9 @@ theorem func1_lowered_body_smallStep_wp
   iframe
 
 theorem func0_lowered_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF) (x oldWord : UInt32)
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit)) (x oldWord : UInt32)
     (calls : List CallFrame)
     (hreturn :
       R ∗ runtimeModuleOwn «module» ∗
@@ -1057,9 +1057,9 @@ theorem func0_lowered_smallStep_wp
 
 /-- `func3` under an export's already-lowered stack pointer. -/
 theorem func3_lowered_body_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF) (x oldWord : UInt64)
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit)) (x oldWord : UInt64)
     (calls : List CallFrame)
     (hreturn :
       R ∗ globalPointsTo 0 (.i32 1048560) ∗
@@ -1124,9 +1124,9 @@ theorem func3_lowered_body_smallStep_wp
   iframe
 
 theorem func2_lowered_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF) (x : UInt32) (oldWord : UInt64)
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit)) (x : UInt32) (oldWord : UInt64)
     (calls : List CallFrame)
     (hreturn :
       R ∗ runtimeModuleOwn «module» ∗
@@ -1168,9 +1168,9 @@ theorem func2_lowered_smallStep_wp
 
 /-- `func8` under an export's already-lowered stack pointer. -/
 theorem func8_lowered_body_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF) (x y oldWord : UInt32)
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit)) (x y oldWord : UInt32)
     (calls : List CallFrame)
     (hreturn :
       R ∗ globalPointsTo 0 (.i32 1048560) ∗
@@ -1236,9 +1236,9 @@ theorem func8_lowered_body_smallStep_wp
   iframe
 
 theorem func7_lowered_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF) (x y oldWord : UInt32)
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit)) (x y oldWord : UInt32)
     (calls : List CallFrame)
     (hreturn :
       R ∗ runtimeModuleOwn «module» ∗
@@ -1275,9 +1275,9 @@ theorem func7_lowered_smallStep_wp
   · iframe
 
 theorem func9_context_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF) (x : UInt32)
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit)) (x : UInt32)
     (calls : List CallFrame)
     (hreturn :
       R ∗ runtimeModuleOwn «module» ⊢
@@ -1321,9 +1321,9 @@ theorem func9_context_smallStep_wp
   iframe
 
 theorem func4_context_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF) (x y : UInt32)
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit)) (x y : UInt32)
     (calls : List CallFrame)
     (hreturn :
       R ∗ runtimeModuleOwn «module» ⊢
@@ -1393,9 +1393,9 @@ def checkAbsTailProg : Program :=
     .localGet 2, .ret ]
 
 theorem checkAbs_tail_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF) (x result : UInt32)
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit)) (x result : UInt32)
     (calls : List CallFrame)
     (hreturn :
       R ∗ globalPointsTo 0 (.i32 1048576) ∗
@@ -1481,9 +1481,9 @@ def checkAbsInnerFrame : ControlFrame :=
     belowStack := [] }
 
 theorem checkAbs_zeroPath_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF) (x oldResult : UInt32)
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit)) (x oldResult : UInt32)
     (hcontinue :
       R ∗ globalPointsTo 0 (.i32 1048560) ∗
         pointsTo_u32 1048572 0 ⊢
@@ -1526,9 +1526,9 @@ theorem checkAbs_zeroPath_smallStep_wp
   iframe
 
 theorem checkAbs_onePath_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF) (x oldResult : UInt32)
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit)) (x oldResult : UInt32)
     (hcontinue :
       R ∗ globalPointsTo 0 (.i32 1048560) ∗
         pointsTo_u32 1048572 1 ⊢
@@ -1576,8 +1576,8 @@ def checkAbsSecondProg : Program :=
     .localGet 1, .const 1, .store32 12, .br 1 ]
 
 theorem checkAbs_secondComparison_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
     (x upper oldResult : UInt32)
     (hzero :
       pointsTo_u64 1048552 (f64Abs (f64PromoteF32 x)) ∗
@@ -1690,8 +1690,8 @@ def checkAbsFirstTailProg : Program :=
   [ .f32Eq, .const 1, .and, .eqz, .br_if 0 ] ++ checkAbsSecondProg
 
 theorem checkAbs_firstComparisonTail_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
     (x oldResult : UInt32)
     (hzeroFirst :
       pointsTo_u64 1048552 (packUpper32 (f32Abs x)) ∗
@@ -1778,8 +1778,8 @@ theorem checkAbs_firstComparisonTail_smallStep_wp
     · iframe
 
 theorem checkAbs_firstComparison_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
     (x upper oldResult : UInt32)
     (hzeroFirst :
       pointsTo_u64 1048552 (packUpper32 (f32Abs x)) ∗
@@ -1858,8 +1858,8 @@ theorem checkAbs_firstComparison_smallStep_wp
   · iframe
 
 theorem checkAbs_tail_result_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
-    (R : IProp WasmHeapGF) (x result : UInt32) :
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
+    (R : IProp (WasmHeapGF Unit)) (x result : UInt32) :
     R ∗ globalPointsTo 0 (.i32 1048560) ∗
       pointsTo_u32 1048572 result ⊢
     WP (.running
@@ -1876,7 +1876,7 @@ theorem checkAbs_tail_result_smallStep_wp
   exact ⟨result, rfl⟩
 
 theorem func10_body_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset} :
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset} :
     pointsTo_u64 1048552 0 ∗ pointsTo_u32 1048572 0 ∗
       runtimeModuleOwn «module» ∗ globalPointsTo 0 (.i32 1048576) ⊢
     WP (.running
@@ -2027,8 +2027,8 @@ def checkCopysignInnerFrame : ControlFrame :=
     belowStack := [] }
 
 theorem checkCopysign_tail_result_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
-    (R : IProp WasmHeapGF) (x y result : UInt32) :
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
+    (R : IProp (WasmHeapGF Unit)) (x y result : UInt32) :
     R ∗ globalPointsTo 0 (.i32 1048560) ∗
       pointsTo_u32 1048572 result ⊢
     WP (.running
@@ -2076,8 +2076,8 @@ theorem checkCopysign_tail_result_smallStep_wp
   exact ⟨result, rfl⟩
 
 theorem checkCopysign_comparison_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
     (x y upper oldResult : UInt32)
     (hzero :
       pointsTo_u32 1048552 0 ∗
@@ -2224,7 +2224,7 @@ theorem checkCopysign_comparison_smallStep_wp
   · iframe
 
 theorem func11_body_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset} :
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset} :
     pointsTo_u64 1048552 0 ∗ pointsTo_u32 1048572 0 ∗
       runtimeModuleOwn «module» ∗ globalPointsTo 0 (.i32 1048576) ⊢
     WP (.running
@@ -2359,7 +2359,7 @@ private theorem func1_term (env : HostEnv Unit) (st : Store Unit) (sp x : UInt32
     TerminatesWith env «module» 1 st ([.f32 x] ++ tail)
       (fun st' rs => ∃ v : UInt32, rs = [.f32 v] ++ tail ∧
         st'.globals.globals[0]? = some (.i32 sp) ∧ st'.mem.pages = 16) := by
-  apply TerminatesWith.of_wp_entry_for (f := ⟨[.f32], [.i32], func1, [.f32], none⟩) rfl
+  apply TerminatesWith.of_wp_entry_for (f := ⟨[.f32], [.i32], func1, [.f32], some 0⟩) rfl
   unfold func1; wp_run
   simp [hg, hp]
   have hle : (16 : UInt32) ≤ sp := UInt32.le_iff_toNat_le.mpr h16
@@ -2375,7 +2375,7 @@ private theorem func3_term (env : HostEnv Unit) (st : Store Unit) (sp : UInt32) 
     TerminatesWith env «module» 3 st ([.f64 x] ++ tail)
       (fun st' rs => ∃ v : UInt64, rs = [.f64 v] ++ tail ∧
         st'.globals.globals[0]? = some (.i32 sp) ∧ st'.mem.pages = 16) := by
-  apply TerminatesWith.of_wp_entry_for (f := ⟨[.f64], [.i32], func3, [.f64], none⟩) rfl
+  apply TerminatesWith.of_wp_entry_for (f := ⟨[.f64], [.i32], func3, [.f64], some 1⟩) rfl
   unfold func3; wp_run
   simp [hg, hp]
   have hle : (16 : UInt32) ≤ sp := UInt32.le_iff_toNat_le.mpr h16
@@ -2391,7 +2391,7 @@ private theorem func5_term (env : HostEnv Unit) (st : Store Unit) (sp x : UInt32
     TerminatesWith env «module» 5 st ([.f32 x] ++ tail)
       (fun st' rs => ∃ v : UInt32, rs = [.i32 v] ++ tail ∧
         st'.globals.globals[0]? = some (.i32 sp) ∧ st'.mem.pages = 16) := by
-  apply TerminatesWith.of_wp_entry_for (f := ⟨[.f32], [], func5, [.i32], none⟩) rfl
+  apply TerminatesWith.of_wp_entry_for (f := ⟨[.f32], [], func5, [.i32], some 3⟩) rfl
   unfold func5; wp_run
   exact ⟨x, rfl, hg, hp⟩
 
@@ -2404,7 +2404,7 @@ private theorem func6_term (env : HostEnv Unit) (st : Store Unit) (sp x : UInt32
     TerminatesWith env «module» 6 st ([.i32 x] ++ tail)
       (fun st' rs => ∃ v : UInt32, rs = [.f32 v] ++ tail ∧
         st'.globals.globals[0]? = some (.i32 sp) ∧ st'.mem.pages = 16) := by
-  apply TerminatesWith.of_wp_entry_for (f := ⟨[.i32], [], func6, [.f32], none⟩) rfl
+  apply TerminatesWith.of_wp_entry_for (f := ⟨[.i32], [], func6, [.f32], some 4⟩) rfl
   unfold func6; wp_run
   exact ⟨x, rfl, hg, hp⟩
 
@@ -2417,7 +2417,7 @@ private theorem func0_term (env : HostEnv Unit) (st : Store Unit) (sp x : UInt32
     TerminatesWith env «module» 0 st ([.f32 x] ++ tail)
       (fun st' rs => ∃ v : UInt32, rs = [.f32 v] ++ tail ∧
         st'.globals.globals[0]? = some (.i32 sp) ∧ st'.mem.pages = 16) := by
-  apply TerminatesWith.of_wp_entry_for (f := ⟨[.f32], [], func0, [.f32], none⟩) rfl
+  apply TerminatesWith.of_wp_entry_for (f := ⟨[.f32], [], func0, [.f32], some 0⟩) rfl
   unfold func0; wp_run
   apply wp_call_tw (func1_term env st sp x [] hg hp h16 hb)
   rintro st1 vs1 ⟨v1, rfl, hg1, hp1⟩
@@ -2433,7 +2433,7 @@ private theorem func2_term (env : HostEnv Unit) (st : Store Unit) (sp x : UInt32
     TerminatesWith env «module» 2 st ([.f32 x] ++ tail)
       (fun st' rs => ∃ v : UInt32, rs = [.f32 v] ++ tail ∧
         st'.globals.globals[0]? = some (.i32 sp) ∧ st'.mem.pages = 16) := by
-  apply TerminatesWith.of_wp_entry_for (f := ⟨[.f32], [], func2, [.f32], none⟩) rfl
+  apply TerminatesWith.of_wp_entry_for (f := ⟨[.f32], [], func2, [.f32], some 0⟩) rfl
   unfold func2; wp_run
   apply wp_call_tw (func3_term env st sp (f64PromoteF32 x) [] hg hp h16 hb)
   rintro st3 vs3 ⟨v3, rfl, hg3, hp3⟩
@@ -2449,7 +2449,7 @@ private theorem func8_term (env : HostEnv Unit) (st : Store Unit) (sp x y : UInt
     TerminatesWith env «module» 8 st ([.f32 y, .f32 x] ++ tail)
       (fun st' rs => ∃ v : UInt32, rs = [.f32 v] ++ tail ∧
         st'.globals.globals[0]? = some (.i32 sp) ∧ st'.mem.pages = 16) := by
-  apply TerminatesWith.of_wp_entry_for (f := ⟨[.f32, .f32], [.i32], func8, [.f32], none⟩) rfl
+  apply TerminatesWith.of_wp_entry_for (f := ⟨[.f32, .f32], [.i32], func8, [.f32], some 2⟩) rfl
   unfold func8; wp_run
   simp [hg, hp]
   have hle : (16 : UInt32) ≤ sp := UInt32.le_iff_toNat_le.mpr h16
@@ -2465,7 +2465,7 @@ private theorem func7_term (env : HostEnv Unit) (st : Store Unit) (sp x y : UInt
     TerminatesWith env «module» 7 st ([.f32 y, .f32 x] ++ tail)
       (fun st' rs => ∃ v : UInt32, rs = [.f32 v] ++ tail ∧
         st'.globals.globals[0]? = some (.i32 sp) ∧ st'.mem.pages = 16) := by
-  apply TerminatesWith.of_wp_entry_for (f := ⟨[.f32, .f32], [], func7, [.f32], none⟩) rfl
+  apply TerminatesWith.of_wp_entry_for (f := ⟨[.f32, .f32], [], func7, [.f32], some 2⟩) rfl
   unfold func7; wp_run
   apply wp_call_tw (func8_term env st sp x y [] hg hp h16 hb)
   rintro st8 vs8 ⟨v8, rfl, hg8, hp8⟩
@@ -2481,7 +2481,7 @@ private theorem func9_term (env : HostEnv Unit) (st : Store Unit) (sp x : UInt32
     TerminatesWith env «module» 9 st ([.f32 x] ++ tail)
       (fun st' rs => ∃ v : UInt32, rs = [.f32 v] ++ tail ∧
         st'.globals.globals[0]? = some (.i32 sp) ∧ st'.mem.pages = 16) := by
-  apply TerminatesWith.of_wp_entry_for (f := ⟨[.f32], [], func9, [.f32], none⟩) rfl
+  apply TerminatesWith.of_wp_entry_for (f := ⟨[.f32], [], func9, [.f32], some 0⟩) rfl
   unfold func9; wp_run
   apply wp_call_tw (func5_term env st sp x [] hg hp)
   rintro st5 vs5 ⟨v5, rfl, hg5, hp5⟩
@@ -2500,7 +2500,7 @@ private theorem func4_term (env : HostEnv Unit) (st : Store Unit) (sp x y : UInt
     TerminatesWith env «module» 4 st ([.f32 y, .f32 x] ++ tail)
       (fun st' rs => ∃ v : UInt32, rs = [.f32 v] ++ tail ∧
         st'.globals.globals[0]? = some (.i32 sp) ∧ st'.mem.pages = 16) := by
-  apply TerminatesWith.of_wp_entry_for (f := ⟨[.f32, .f32], [], func4, [.f32], none⟩) rfl
+  apply TerminatesWith.of_wp_entry_for (f := ⟨[.f32, .f32], [], func4, [.f32], some 2⟩) rfl
   unfold func4; wp_run
   apply wp_call_tw (func5_term env st sp y [] hg hp)
   rintro st5 vs5 ⟨v5, rfl, hg5, hp5⟩
@@ -2532,7 +2532,7 @@ theorem check_terminates : FloatReinterpretSpec := by
     intro env x
     have hg : («module».initialStore : Store Unit).globals.globals[0]? = some (.i32 1048576) := rfl
     have hp : («module».initialStore : Store Unit).mem.pages = 16 := rfl
-    apply TerminatesWith.of_wp_entry_for (f := ⟨[.f32], [.i32, .i32], func10, [.i32], none⟩) rfl
+    apply TerminatesWith.of_wp_entry_for (f := ⟨[.f32], [.i32, .i32], func10, [.i32], some 3⟩) rfl
     unfold func10; wp_run; simp only [hg]
     have hg10 : ({«module».initialStore with globals := {globals := «module».initialStore.globals.globals.set 0 (.i32 (1048576 - 16))}} : Store Unit).globals.globals[0]? = some (.i32 (1048576 - 16)) :=
       globals_set0 (1048576 - 16) hg
@@ -2572,7 +2572,7 @@ theorem check_terminates : FloatReinterpretSpec := by
     intro env x y
     have hg : («module».initialStore : Store Unit).globals.globals[0]? = some (.i32 1048576) := rfl
     have hp : («module».initialStore : Store Unit).mem.pages = 16 := rfl
-    apply TerminatesWith.of_wp_entry_for (f := ⟨[.f32, .f32], [.i32, .i32], func11, [.i32], none⟩) rfl
+    apply TerminatesWith.of_wp_entry_for (f := ⟨[.f32, .f32], [.i32, .i32], func11, [.i32], some 5⟩) rfl
     unfold func11; wp_run; simp only [hg]
     have hg11 : ({«module».initialStore with globals := {globals := «module».initialStore.globals.globals.set 0 (.i32 (1048576 - 16))}} : Store Unit).globals.globals[0]? = some (.i32 (1048576 - 16)) :=
       globals_set0 (1048576 - 16) hg

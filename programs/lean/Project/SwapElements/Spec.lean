@@ -90,7 +90,7 @@ theorem func2_swap (env : HostEnv Unit) (st : Store Unit) (pi pj : UInt32)
   have e2 : ((st.mem.write64 1048552 (st.mem.read64 pi)).write64 pi
               (st.mem.read64 pj)).read64 1048552 = st.mem.read64 pi := by
     rw [Mem.read64_write64_disjoint _ _ _ _ (Or.inl (by omega)), Mem.read64_write64_same]
-  apply TerminatesWith.of_wp_entry_for (f := ⟨[.i32, .i32], [.i32], func2, [], none⟩) rfl
+  apply TerminatesWith.of_wp_entry_for (f := ⟨[.i32, .i32], [.i32], func2, [], some 0⟩) rfl
   unfold func2
   wp_run
   rw [hg]
@@ -129,7 +129,7 @@ theorem func1_swap (env : HostEnv Unit) (st1 : Store Unit) (ptr len i j loc : UI
     rw [elemAddr_toNat ptr j hwj]
     have hlj : j.toNat < len.toNat := hj; omega
   apply TerminatesWith.of_wp_entry_for
-    (f := ⟨[.i32, .i32, .i32, .i32, .i32], [.i32], func1, [], none⟩) rfl
+    (f := ⟨[.i32, .i32, .i32, .i32, .i32], [.i32], func1, [], some 4⟩) rfl
   unfold func1
   apply wp_block_cons
   apply wp_block_cons
@@ -169,7 +169,7 @@ theorem func0_swap (env : HostEnv Unit) (st0 : Store Unit) (ptr len i j : UInt32
               (st0.mem.read64 (elemAddr ptr j))).write64 (elemAddr ptr j)
               (st0.mem.read64 (elemAddr ptr i))) := by
   apply TerminatesWith.of_wp_entry_for
-    (f := ⟨[.i32, .i32, .i32, .i32], [], func0, [], none⟩) rfl
+    (f := ⟨[.i32, .i32, .i32, .i32], [], func0, [], some 3⟩) rfl
   unfold func0
   wp_run
   apply wp_call_tw (func1_swap env st0 ptr len i j 1048604 [] hg hi hj hptr hbound hpages)
@@ -190,7 +190,7 @@ theorem func3_writes (env : HostEnv Unit) (st : Store Unit) (dest a b c : UInt32
   have g1 : ¬ (st.mem.pages * 65536 < dest.toNat + 4 + 4) := by omega
   have g2 : ¬ (st.mem.pages * 65536 < dest.toNat + 4) := by omega
   apply TerminatesWith.of_wp_entry_for
-    (f := ⟨[.i32, .i32, .i32, .i32], [], func3, [], none⟩) rfl
+    (f := ⟨[.i32, .i32, .i32, .i32], [], func3, [], some 3⟩) rfl
   unfold func3
   wp_run
   simp [g1, g2]
@@ -233,7 +233,7 @@ theorem func4_swap (env : HostEnv Unit) (st : Store Unit) (ptr len i j : UInt32)
   have hpjN : 1048576 ≤ (elemAddr ptr j).toNat := by rw [elemAddr_toNat ptr j hwj]; omega
   obtain ⟨hlen, -⟩ := List.getElem?_eq_some_iff.mp hsp
   apply TerminatesWith.of_wp_entry_for
-    (f := ⟨[.i32, .i32, .i32, .i32], [.i32, .i32, .i32], func4, [], none⟩) rfl
+    (f := ⟨[.i32, .i32, .i32, .i32], [.i32, .i32, .i32], func4, [], some 3⟩) rfl
   unfold func4
   wp_run
   rw [hsp]

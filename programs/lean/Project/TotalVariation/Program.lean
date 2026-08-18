@@ -30,22 +30,22 @@ def func0 : Wasm.Program :=
       .subI64,
       .store64 (8 : UInt32),
       .br 1
-    ],
+    ] [] [],
     .localGet 2,
     .localGet 1,
     .localGet 0,
     .subI64,
     .store64 (8 : UInt32)
-  ],
+  ] [] [],
   .localGet 2,
   .load64 (8 : UInt32),
   .ret
 ]
 
 def func0Def : Wasm.Function :=
-  { params := [.i64, .i64], locals := [.i32], body := func0, results := [.i64] }
+  { params := [.i64, .i64], locals := [.i32], body := func0, results := [.i64], typeIdx := some 0 }
 
-/-- export: total_variation -/
+/-- Exported function. -/
 def func1 : Wasm.Program :=
   [
   .localGet 0,
@@ -59,7 +59,7 @@ def func1 : Wasm.Program :=
 ]
 
 def func1Def : Wasm.Function :=
-  { params := [.i64, .i64, .i64], locals := [], body := func1, results := [.i64] }
+  { params := [.i64, .i64, .i64], locals := [], body := func1, results := [.i64], typeIdx := some 1 }
 
 def «module» : Wasm.Module :=
 {
@@ -71,20 +71,62 @@ def «module» : Wasm.Module :=
   exports := [
     { name := "total_variation", funcIdx := 1 }
   ],
-  memory := some { pagesMin := (16 : UInt32), pagesMax := none, data := [] },
+  memory := some (Wasm.MemDecl.mk (16 : UInt32) (none) ([]) false),
+  extraMemories := [],
+  dataWithoutMemory := false,
   globals := [
-    { init := .i32 (1048576 : UInt32) },
-    { init := .i32 (1048576 : UInt32) },
-    { init := .i32 (1048576 : UInt32) }
+    { init := .i32 (1048576 : UInt32), declaredType := some (.i32), isMut := true, sourceInit := some ([
+        .const (1048576 : UInt32)
+      ]), initExpr := [] },
+    { init := .i32 (1048576 : UInt32), declaredType := some (.i32), isMut := false, sourceInit := some ([
+        .const (1048576 : UInt32)
+      ]), initExpr := [] },
+    { init := .i32 (1048576 : UInt32), declaredType := some (.i32), isMut := false, sourceInit := some ([
+        .const (1048576 : UInt32)
+      ]), initExpr := [] }
   ],
+  startFunc := none,
   types := [
     { params := [.i64, .i64], results := [.i64] },
     { params := [.i64, .i64, .i64], results := [.i64] }
   ],
-  tables := [
-    { min := 1, max := some 1, elemType := .funcref }
+  gcTypes := [
+    { comp := .func ({ params := [.i64, .i64], results := [.i64] }), sourceName := none, super := none, «final» := true, recGroup := none },
+    { comp := .func ({ params := [.i64, .i64, .i64], results := [.i64] }), sourceName := none, super := none, «final» := true, recGroup := none }
   ],
-  elements := []
+  tables := [
+    { min := 1, max := some 1, elemType := .funcref, is64 := false }
+  ],
+  elements := [],
+  importedGlobals := [],
+  importedTables := [],
+  importedMemories := [],
+  importedTags := [],
+  globalExports := [
+    ("__data_end", 1),
+    ("__heap_base", 2)
+  ],
+  tableExports := [],
+  memoryExports := [
+    ("memory", 0)
+  ],
+  tagExports := [],
+  tags := []
 }
+
+/-- Exact source of `module.wat` captured when `verifier emit` last ran. -/
+private def expectedWatSource : String := "(module $total_variation.wasm\n  (type (;0;) (func (param i64 i64) (result i64)))\n  (type (;1;) (func (param i64 i64 i64) (result i64)))\n  (table (;0;) 1 1 funcref)\n  (memory (;0;) 16)\n  (global $__stack_pointer (;0;) (mut i32) i32.const 1048576)\n  (global (;1;) i32 i32.const 1048576)\n  (global (;2;) i32 i32.const 1048576)\n  (export \"memory\" (memory 0))\n  (export \"total_variation\" (func $total_variation))\n  (export \"__data_end\" (global 1))\n  (export \"__heap_base\" (global 2))\n  (func $_ZN4core3num21_$LT$impl$u20$u64$GT$8abs_diff17h12e17998bba23c2eE (;0;) (type 0) (param i64 i64) (result i64)\n    (local i32)\n    global.get $__stack_pointer\n    i32.const 16\n    i32.sub\n    local.set 2\n    block ;; label = @1\n      block ;; label = @2\n        local.get 0\n        local.get 1\n        i64.lt_u\n        i32.const 1\n        i32.and\n        br_if 0 (;@2;)\n        local.get 2\n        local.get 0\n        local.get 1\n        i64.sub\n        i64.store offset=8\n        br 1 (;@1;)\n      end\n      local.get 2\n      local.get 1\n      local.get 0\n      i64.sub\n      i64.store offset=8\n    end\n    local.get 2\n    i64.load offset=8\n    return\n  )\n  (func $total_variation (;1;) (type 1) (param i64 i64 i64) (result i64)\n    local.get 0\n    local.get 1\n    call $_ZN4core3num21_$LT$impl$u20$u64$GT$8abs_diff17h12e17998bba23c2eE\n    local.get 1\n    local.get 2\n    call $_ZN4core3num21_$LT$impl$u20$u64$GT$8abs_diff17h12e17998bba23c2eE\n    i64.add\n    return\n  )\n)\n"
+
+-- Compile-time drift check: errors if `module.wat` is absent or has changed.
+#guard_msgs (drop info) in
+#eval show IO Unit from do
+  let path : System.FilePath := "../rust/build/total_variation/program.wat"
+  unless ← path.pathExists do
+    throw <| IO.userError
+      s!"{path} is missing; cannot validate Program.lean provenance."
+  let actual ← IO.FS.readFile path
+  if actual ≠ expectedWatSource then
+    throw <| IO.userError
+      s!"{path} has drifted from Program.lean; re-run `lake exe verifier emit`."
 
 end Project.TotalVariation

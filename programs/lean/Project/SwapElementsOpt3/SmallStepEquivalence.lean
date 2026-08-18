@@ -23,7 +23,7 @@ set_option maxHeartbeats 4000000 in
 addresses. Both bounds checks, both address calculations, and both physical
 loads/stores execute through the authoritative small-step semantics. -/
 theorem opt3_func0_distinct_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
     (ptr len i j : UInt32) (oldA oldB : UInt64)
     (hi : i < len) (hj : j < len)
@@ -212,9 +212,9 @@ theorem opt3_func0_distinct_store_partiallyMeets
     (hagree : heapAgreesWithMem σ wasm.mem)
     (hinBounds : heapAddressesInBounds σ wasm.mem)
     (hglobals : globalHeapAgrees globalσ wasm.globals)
-    (hresources : ∀ [WasmHeapGS],
+    (hresources : ∀ [WasmHeapGS Unit],
       ([∗map] address ↦ value ∈ σ,
-        pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+        pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
           address (DFrac.own 1) value) ⊢
       pointsTo_u64 ((i <<< (3 % 32)) + ptr) oldA ∗
       pointsTo_u64 ((j <<< (3 % 32)) + ptr) oldB) :
@@ -273,7 +273,7 @@ theorem opt3_func0_distinct_store_partiallyMeets
           pointsTo_u64 addressI oldB ∗ pointsTo_u64 addressJ oldA) ⊢
         (iprop% ∀ (store : Wasm.SmallStep.MachineStore Unit)
             (_observations : List Wasm.SmallStep.StepKind),
-          stateInterp (GF := WasmHeapGF) store 0 [] 0 -∗
+          stateInterp (GF := WasmHeapGF Unit) store 0 [] 0 -∗
           ⌜values = [] ∧ store.wasm.mem.read64 addressI = oldB ∧
             store.wasm.mem.read64 addressJ = oldA⌝) := by
       intro values
@@ -389,9 +389,9 @@ theorem opt3_func0_distinct_store_terminatesWith
     (hagree : heapAgreesWithMem σ wasm.mem)
     (hinBounds : heapAddressesInBounds σ wasm.mem)
     (hglobals : globalHeapAgrees globalσ wasm.globals)
-    (hresources : ∀ [WasmHeapGS],
+    (hresources : ∀ [WasmHeapGS Unit],
       ([∗map] address ↦ value ∈ σ,
-        pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+        pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
           address (DFrac.own 1) value) ⊢
       pointsTo_u64 ((i <<< (3 % 32)) + ptr) oldA ∗
       pointsTo_u64 ((j <<< (3 % 32)) + ptr) oldB) :

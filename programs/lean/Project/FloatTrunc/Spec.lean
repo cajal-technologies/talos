@@ -120,8 +120,8 @@ def func1Config (x : UInt32) : Config Unit :=
 stops immediately before the generated `ret`, so the same rule works both at
 top level and beneath an arbitrary saved call stack. -/
 theorem func1_body_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp Wasm.SepLogic.WasmHeapGF}
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp (Wasm.SepLogic.WasmHeapGF Unit)}
     (x : UInt32) (calls : List CallFrame) :
     ▷ WP (.running
       ⟨⟨[.f32 x], [], [.i32 (i32TruncSatF32S x)]⟩,
@@ -216,9 +216,9 @@ theorem func0Globals_agree :
   · rw [get?_insert_ne (Ne.symm hindex), get?_empty] at hget
     contradiction
 
-theorem func0Heap_pointsTo [WasmHeapGS] :
+theorem func0Heap_pointsTo [WasmHeapGS Unit] :
     ([∗map] address ↦ value ∈ func0Heap,
-      pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+      pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
         address (DFrac.own 1) value) ⊢
       pointsTo_u32 1048572 0 := by
   unfold func0Heap
@@ -228,7 +228,7 @@ theorem func0Heap_pointsTo [WasmHeapGS] :
       (get?_empty _) (get?_empty _) (get?_empty _) (get?_empty _)
       (by decide) (by decide) (by decide))
 
-theorem func0Globals_pointsTo [WasmGlobalGS] :
+theorem func0Globals_pointsTo [WasmGlobalGS Unit] :
     ([∗map] index ↦ value ∈ func0Globals,
       globalPointsTo index value) ⊢
       globalPointsTo 0 (.i32 1048576) := by
@@ -240,9 +240,9 @@ theorem func0Globals_pointsTo [WasmGlobalGS] :
 all unrelated ownership, and the continuation decides whether the generated
 `ret` returns from a nested call or from the top-level invocation. -/
 theorem func0_tail_to_ret_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF) (x word : UInt32) (calls : List CallFrame) :
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit)) (x word : UInt32) (calls : List CallFrame) :
     R ∗ pointsTo_u32 1048572 word ∗
       ▷ (R ∗ pointsTo_u32 1048572 word -∗
         WP (.running
@@ -274,7 +274,7 @@ theorem func0_tail_to_ret_smallStep_wp
 /-- Common load-and-return tail after one of `naive_trunc`'s four branches
 has written the authoritative scratch word. -/
 theorem func0_tail_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
     (x word : UInt32) :
     pointsTo_u32 1048572 word ⊢
       WP (.running
@@ -300,8 +300,8 @@ theorem func0_tail_smallStep_wp
 /-- Specialized authoritative store rule for `func0`'s concrete
 `1048560 + 12 = 1048572` scratch address. -/
 theorem func0_store32_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
     {params localValues values : List Value}
     {code : Program} {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame}
@@ -336,9 +336,9 @@ theorem func0_store32_smallStep_wp
 control-flow paths write the same value as Rust's saturating cast and join
 immediately before the generated `ret`. -/
 theorem func0_body_to_ret_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF) (x : UInt32) (calls : List CallFrame)
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit)) (x : UInt32) (calls : List CallFrame)
     (hreturn : ∀ word : UInt32,
       word = i32TruncSatF32S x →
       R ∗ globalPointsTo 0 (.i32 1048576) ∗ pointsTo_u32 1048572 word ⊢
@@ -350,7 +350,7 @@ theorem func0_body_to_ret_smallStep_wp
         ⟨⟨[.f32 x], [.i32 0], []⟩, func0, 1, [], [], calls⟩ :
           Expr Unit) @ s; E {{ Φ }} := by
     iintro ⟨HR, Hglobal, Hword⟩
-    let Rglobal : IProp WasmHeapGF :=
+    let Rglobal : IProp (WasmHeapGF Unit) :=
       iprop(R ∗ globalPointsTo 0 (.i32 1048576))
     simp only [func0]
     iapply wp_globalGet $$ Hglobal
@@ -600,7 +600,7 @@ theorem func1_terminates (env : HostEnv Unit) (st : Store Unit) (x : UInt32)
     (tail : List Value) :
     TerminatesWith env «module» 1 st ([.f32 x] ++ tail)
       (fun _ rs => rs = [.i32 (i32TruncSatF32S x)] ++ tail) := by
-  apply TerminatesWith.of_wp_entry_for (f := ⟨[.f32], [], func1, [.i32], none⟩) rfl
+  apply TerminatesWith.of_wp_entry_for (f := ⟨[.f32], [], func1, [.i32], some 3⟩) rfl
   unfold func1
   wp_run
   simp
@@ -612,7 +612,7 @@ theorem func0_terminates (env : HostEnv Unit) (x : UInt32) :
   have hg : («module».initialStore : Store Unit).globals.globals[0]? =
       some (.i32 1048576) := rfl
   have hp : («module».initialStore : Store Unit).mem.pages = 17 := rfl
-  apply TerminatesWith.of_wp_entry_for (f := ⟨[.f32], [.i32], func0, [.i32], none⟩) rfl
+  apply TerminatesWith.of_wp_entry_for (f := ⟨[.f32], [.i32], func0, [.i32], some 3⟩) rfl
   unfold func0; wp_run
   simp only [hg]
   apply wp_block_cons; apply wp_block_cons; apply wp_block_cons
@@ -717,7 +717,7 @@ def FloatTruncSpec : Prop :=
 theorem check_correct : FloatTruncSpec := by
   intro env initial x hinit
   subst hinit
-  apply TerminatesWith.of_wp_entry_for (f := ⟨[.f32], [], func2, [], none⟩) rfl
+  apply TerminatesWith.of_wp_entry_for (f := ⟨[.f32], [], func2, [], some 4⟩) rfl
   unfold func2
   apply wp_block_cons
   wp_run

@@ -35,12 +35,12 @@ def func0 : Wasm.Program :=
               .and,
               .br_if 2,
               .br 1
-            ],
+            ] [] [],
             .localGet 1,
             .const (0 : UInt32),
             .store32 (12 : UInt32),
             .br 4
-          ],
+          ] [] [],
           .localGet 0,
           .f32Const (3472883712 : UInt32),
           .f32Lt,
@@ -48,29 +48,29 @@ def func0 : Wasm.Program :=
           .and,
           .br_if 2,
           .br 1
-        ],
+        ] [] [],
         .localGet 1,
         .const (2147483647 : UInt32),
         .store32 (12 : UInt32),
         .br 2
-      ],
+      ] [] [],
       .localGet 1,
       .localGet 0,
       .i32TruncSatF32S,
       .store32 (12 : UInt32),
       .br 1
-    ],
+    ] [] [],
     .localGet 1,
     .const (2147483648 : UInt32),
     .store32 (12 : UInt32)
-  ],
+  ] [] [],
   .localGet 1,
   .load32 (12 : UInt32),
   .ret
 ]
 
 def func0Def : Wasm.Function :=
-  { params := [.f32], locals := [.i32], body := func0, results := [.i32] }
+  { params := [.f32], locals := [.i32], body := func0, results := [.i32], typeIdx := some 3 }
 
 def func1 : Wasm.Program :=
   [
@@ -80,9 +80,9 @@ def func1 : Wasm.Program :=
 ]
 
 def func1Def : Wasm.Function :=
-  { params := [.f32], locals := [], body := func1, results := [.i32] }
+  { params := [.f32], locals := [], body := func1, results := [.i32], typeIdx := some 3 }
 
-/-- export: check -/
+/-- Exported function. -/
 def func2 : Wasm.Program :=
   [
   .block 0 0 [
@@ -95,7 +95,7 @@ def func2 : Wasm.Program :=
     .and,
     .br_if 0,
     .ret
-  ],
+  ] [] [],
   .const (1048576 : UInt32),
   .const (40 : UInt32),
   .const (1048644 : UInt32),
@@ -104,7 +104,7 @@ def func2 : Wasm.Program :=
 ]
 
 def func2Def : Wasm.Function :=
-  { params := [.f32], locals := [], body := func2, results := [] }
+  { params := [.f32], locals := [], body := func2, results := [], typeIdx := some 4 }
 
 def func3 : Wasm.Program :=
   [
@@ -115,7 +115,7 @@ def func3 : Wasm.Program :=
 ]
 
 def func3Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [], body := func3, results := [.i32] }
+  { params := [.i32, .i32], locals := [], body := func3, results := [.i32], typeIdx := some 2 }
 
 def func4 : Wasm.Program :=
   [
@@ -127,7 +127,7 @@ def func4 : Wasm.Program :=
 ]
 
 def func4Def : Wasm.Function :=
-  { params := [.i32, .i32, .i32], locals := [], body := func4, results := [] }
+  { params := [.i32, .i32, .i32], locals := [], body := func4, results := [], typeIdx := some 5 }
 
 def func5 : Wasm.Program :=
   [
@@ -140,7 +140,7 @@ def func5 : Wasm.Program :=
 ]
 
 def func5Def : Wasm.Function :=
-  { params := [.i32, .i32, .i32, .i32], locals := [], body := func5, results := [.i32] }
+  { params := [.i32, .i32, .i32, .i32], locals := [], body := func5, results := [.i32], typeIdx := some 6 }
 
 def func6 : Wasm.Program :=
   [
@@ -148,7 +148,7 @@ def func6 : Wasm.Program :=
 ]
 
 def func6Def : Wasm.Function :=
-  { params := [], locals := [], body := func6, results := [] }
+  { params := [], locals := [], body := func6, results := [], typeIdx := some 7 }
 
 def func7 : Wasm.Program :=
   [
@@ -157,7 +157,7 @@ def func7 : Wasm.Program :=
 ]
 
 def func7Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [], body := func7, results := [.i32] }
+  { params := [.i32, .i32], locals := [], body := func7, results := [.i32], typeIdx := some 2 }
 
 def func8 : Wasm.Program :=
   [
@@ -180,7 +180,7 @@ def func8 : Wasm.Program :=
     .const (0 : UInt32),
     .call 48,
     .unreachable
-  ],
+  ] [] [],
   .localGet 5,
   .const (4 : UInt32),
   .add,
@@ -231,7 +231,7 @@ def func8 : Wasm.Program :=
     .load32 (12 : UInt32),
     .call 48,
     .unreachable
-  ],
+  ] [] [],
   .localGet 5,
   .load32 (8 : UInt32),
   .localSet 4,
@@ -248,7 +248,7 @@ def func8 : Wasm.Program :=
 ]
 
 def func8Def : Wasm.Function :=
-  { params := [.i32, .i32, .i32, .i32, .i32], locals := [.i32], body := func8, results := [] }
+  { params := [.i32, .i32, .i32, .i32, .i32], locals := [.i32], body := func8, results := [], typeIdx := some 8 }
 
 def func9 : Wasm.Program :=
   [
@@ -263,11 +263,11 @@ def func9 : Wasm.Program :=
     .localGet 0,
     .const (1 : UInt32),
     .call 4
-  ]
+  ] [] []
 ]
 
 def func9Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [], body := func9, results := [] }
+  { params := [.i32, .i32], locals := [], body := func9, results := [], typeIdx := some 0 }
 
 def func10 : Wasm.Program :=
   [
@@ -283,11 +283,11 @@ def func10 : Wasm.Program :=
     .localGet 1,
     .const (1 : UInt32),
     .call 4
-  ]
+  ] [] []
 ]
 
 def func10Def : Wasm.Function :=
-  { params := [.i32], locals := [.i32], body := func10, results := [] }
+  { params := [.i32], locals := [.i32], body := func10, results := [], typeIdx := some 9 }
 
 def func11 : Wasm.Program :=
   [
@@ -304,11 +304,11 @@ def func11 : Wasm.Program :=
     .localGet 1,
     .const (1 : UInt32),
     .call 4
-  ]
+  ] [] []
 ]
 
 def func11Def : Wasm.Function :=
-  { params := [.i32], locals := [.i32], body := func11, results := [] }
+  { params := [.i32], locals := [.i32], body := func11, results := [], typeIdx := some 9 }
 
 def func12 : Wasm.Program :=
   [
@@ -318,7 +318,7 @@ def func12 : Wasm.Program :=
 ]
 
 def func12Def : Wasm.Function :=
-  { params := [.i32], locals := [], body := func12, results := [] }
+  { params := [.i32], locals := [], body := func12, results := [], typeIdx := some 9 }
 
 def func13 : Wasm.Program :=
   [
@@ -338,7 +338,7 @@ def func13 : Wasm.Program :=
 ]
 
 def func13Def : Wasm.Function :=
-  { params := [.i32], locals := [], body := func13, results := [] }
+  { params := [.i32], locals := [], body := func13, results := [], typeIdx := some 9 }
 
 def func14 : Wasm.Program :=
   [
@@ -348,7 +348,7 @@ def func14 : Wasm.Program :=
 ]
 
 def func14Def : Wasm.Function :=
-  { params := [.i32], locals := [], body := func14, results := [] }
+  { params := [.i32], locals := [], body := func14, results := [], typeIdx := some 9 }
 
 def func15 : Wasm.Program :=
   [
@@ -394,7 +394,7 @@ def func15 : Wasm.Program :=
     .load8U (9 : UInt32),
     .call 17,
     .unreachable
-  ],
+  ] [] [],
   .localGet 1,
   .const (2147483648 : UInt32),
   .store32 (0 : UInt32),
@@ -417,7 +417,7 @@ def func15 : Wasm.Program :=
 ]
 
 def func15Def : Wasm.Function :=
-  { params := [.i32], locals := [.i32, .i32, .i32], body := func15, results := [] }
+  { params := [.i32], locals := [.i32, .i32, .i32], body := func15, results := [], typeIdx := some 9 }
 
 def func16 : Wasm.Program :=
   [
@@ -442,7 +442,7 @@ def func16 : Wasm.Program :=
       .const (0 : UInt32),
       .localSet 3,
       .br 1
-    ],
+    ] [] [],
     .block 0 0 [
       .localGet 8,
       .wrapI64,
@@ -456,7 +456,7 @@ def func16 : Wasm.Program :=
       .const (0 : UInt32),
       .localSet 3,
       .br 1
-    ],
+    ] [] [],
     .block 0 0 [
       .block 0 0 [
         .block 0 0 [
@@ -473,36 +473,36 @@ def func16 : Wasm.Program :=
             .call 5,
             .localSet 7,
             .br 1
-          ],
+          ] [] [],
           .block 0 0 [
             .localGet 3,
             .br_if 0,
             .localGet 4,
             .localSet 7,
             .br 2
-          ],
+          ] [] [],
           .call 6,
           .localGet 3,
           .localGet 4,
           .call 3,
           .localSet 7
-        ],
+        ] [] [],
         .localGet 7,
         .br_if 0,
         .localGet 0,
         .localGet 4,
         .store32 (4 : UInt32),
         .br 1
-      ],
+      ] [] [],
       .localGet 0,
       .localGet 7,
       .store32 (4 : UInt32),
       .const (0 : UInt32),
       .localSet 6
-    ],
+    ] [] [],
     .const (8 : UInt32),
     .localSet 7
-  ],
+  ] [] [],
   .localGet 0,
   .localGet 7,
   .add,
@@ -514,7 +514,7 @@ def func16 : Wasm.Program :=
 ]
 
 def func16Def : Wasm.Function :=
-  { params := [.i32, .i32, .i32, .i32, .i32, .i32], locals := [.i32, .i32, .i64], body := func16, results := [] }
+  { params := [.i32, .i32, .i32, .i32, .i32, .i32], locals := [.i32, .i32, .i64], body := func16, results := [], typeIdx := some 10 }
 
 def func17 : Wasm.Program :=
   [
@@ -534,7 +534,7 @@ def func17 : Wasm.Program :=
             .const (255 : UInt32),
             .and,
             .brTable [4, 1, 0] 1
-          ],
+          ] [] [],
           .const (0 : UInt32),
           .load32 (1049104 : UInt32),
           .localSet 6,
@@ -581,18 +581,18 @@ def func17 : Wasm.Program :=
           .load32 (20 : UInt32),
           .callIndirect 0 0,
           .br 2
-        ],
+        ] [] [],
         .localGet 5,
         .localGet 0,
         .localGet 1,
         .load32 (24 : UInt32),
         .callIndirect 0 0,
         .br 2
-      ],
+      ] [] [],
       .const (2147483648 : UInt32),
       .localGet 5,
       .call 9
-    ],
+    ] [] [],
     .const (0 : UInt32),
     .const (0 : UInt32),
     .load32 (1049104 : UInt32),
@@ -609,12 +609,12 @@ def func17 : Wasm.Program :=
     .localGet 1,
     .call 19,
     .unreachable
-  ],
+  ] [] [],
   .unreachable
 ]
 
 def func17Def : Wasm.Function :=
-  { params := [.i32, .i32, .i32, .i32, .i32], locals := [.i32, .i32], body := func17, results := [] }
+  { params := [.i32, .i32, .i32, .i32, .i32], locals := [.i32, .i32], body := func17, results := [], typeIdx := some 8 }
 
 def func18 : Wasm.Program :=
   [
@@ -624,7 +624,7 @@ def func18 : Wasm.Program :=
 ]
 
 def func18Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [], body := func18, results := [] }
+  { params := [.i32, .i32], locals := [], body := func18, results := [], typeIdx := some 0 }
 
 def func19 : Wasm.Program :=
   [
@@ -636,7 +636,7 @@ def func19 : Wasm.Program :=
 ]
 
 def func19Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [], body := func19, results := [] }
+  { params := [.i32, .i32], locals := [], body := func19, results := [], typeIdx := some 0 }
 
 def func20 : Wasm.Program :=
   [
@@ -649,13 +649,13 @@ def func20 : Wasm.Program :=
     .localGet 0,
     .call 21,
     .ret
-  ],
+  ] [] [],
   .localGet 0,
   .call 22
 ]
 
 def func20Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [], body := func20, results := [.i32] }
+  { params := [.i32, .i32], locals := [], body := func20, results := [.i32], typeIdx := some 2 }
 
 def func21 : Wasm.Program :=
   [
@@ -713,7 +713,7 @@ def func21 : Wasm.Program :=
         .localGet 2,
         .localSet 0,
         .br 1
-      ],
+      ] [] [],
       .localGet 1,
       .const (4294967292 : UInt32),
       .add,
@@ -802,7 +802,7 @@ def func21 : Wasm.Program :=
         .localGet 1,
         .call 28,
         .br 1
-      ],
+      ] [] [],
       .localGet 2,
       .load32 (0 : UInt32),
       .localSet 2,
@@ -814,7 +814,7 @@ def func21 : Wasm.Program :=
       .localGet 1,
       .add,
       .store32 (0 : UInt32)
-    ],
+    ] [] [],
     .block 0 0 [
       .localGet 0,
       .load32 (4 : UInt32),
@@ -869,17 +869,17 @@ def func21 : Wasm.Program :=
       .localGet 1,
       .localGet 3,
       .call 28
-    ],
+    ] [] [],
     .localGet 0,
     .const (8 : UInt32),
     .add,
     .localSet 2
-  ],
+  ] [] [],
   .localGet 2
 ]
 
 def func21Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32], body := func21, results := [.i32] }
+  { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32], body := func21, results := [.i32], typeIdx := some 2 }
 
 def func22 : Wasm.Program :=
   [
@@ -905,7 +905,7 @@ def func22 : Wasm.Program :=
             .const (0 : UInt32),
             .localSet 0,
             .br 4
-          ],
+          ] [] [],
           .localGet 0,
           .const (11 : UInt32),
           .add,
@@ -946,7 +946,7 @@ def func22 : Wasm.Program :=
           .add,
           .localSet 5,
           .br 1
-        ],
+        ] [] [],
         .block 0 0 [
           .block 0 0 [
             .block 0 0 [
@@ -1015,7 +1015,7 @@ def func22 : Wasm.Program :=
                     .localGet 8,
                     .store32 (8 : UInt32),
                     .br 2
-                  ],
+                  ] [] [],
                   .localGet 3,
                   .const (0 : UInt32),
                   .load32 (1049536 : UInt32),
@@ -1087,7 +1087,7 @@ def func22 : Wasm.Program :=
                             .const (0 : UInt32),
                             .localSet 0,
                             .br 2
-                          ],
+                          ] [] [],
                           .localGet 6,
                           .load32 (8 : UInt32),
                           .localSet 8,
@@ -1098,7 +1098,7 @@ def func22 : Wasm.Program :=
                           .localGet 8,
                           .store32 (8 : UInt32),
                           .br 1
-                        ],
+                        ] [] [],
                         .localGet 6,
                         .const (20 : UInt32),
                         .add,
@@ -1135,11 +1135,11 @@ def func22 : Wasm.Program :=
                           .localSet 8,
                           .localGet 8,
                           .br_if 0
-                        ],
+                        ] [] [],
                         .localGet 9,
                         .const (0 : UInt32),
                         .store32 (0 : UInt32)
-                      ],
+                      ] [] [],
                       .localGet 5,
                       .eqz,
                       .br_if 6,
@@ -1169,21 +1169,21 @@ def func22 : Wasm.Program :=
                             .localGet 0,
                             .br_if 2,
                             .br 9
-                          ],
+                          ] [] [],
                           .localGet 5,
                           .localGet 0,
                           .store32 (16 : UInt32),
                           .localGet 0,
                           .br_if 1,
                           .br 8
-                        ],
+                        ] [] [],
                         .localGet 8,
                         .localGet 0,
                         .store32 (0 : UInt32),
                         .localGet 0,
                         .eqz,
                         .br_if 6
-                      ],
+                      ] [] [],
                       .localGet 0,
                       .localGet 5,
                       .store32 (24 : UInt32),
@@ -1200,7 +1200,7 @@ def func22 : Wasm.Program :=
                         .localGet 8,
                         .localGet 0,
                         .store32 (24 : UInt32)
-                      ],
+                      ] [] [],
                       .localGet 6,
                       .load32 (20 : UInt32),
                       .localSet 8,
@@ -1214,7 +1214,7 @@ def func22 : Wasm.Program :=
                       .localGet 0,
                       .store32 (24 : UInt32),
                       .br 6
-                    ],
+                    ] [] [],
                     .localGet 0,
                     .load32 (4 : UInt32),
                     .const (4294967288 : UInt32),
@@ -1239,8 +1239,8 @@ def func22 : Wasm.Program :=
                     .localGet 0,
                     .localSet 8,
                     .br 0
-                  ]
-                ],
+                  ] [] []
+                ] [] [],
                 .const (0 : UInt32),
                 .localGet 6,
                 .const (4294967294 : UInt32),
@@ -1248,7 +1248,7 @@ def func22 : Wasm.Program :=
                 .rotl,
                 .and,
                 .store32 (1049528 : UInt32)
-              ],
+              ] [] [],
               .localGet 2,
               .const (8 : UInt32),
               .add,
@@ -1269,7 +1269,7 @@ def func22 : Wasm.Program :=
               .or,
               .store32 (4 : UInt32),
               .br 5
-            ],
+            ] [] [],
             .block 0 0 [
               .block 0 0 [
                 .localGet 0,
@@ -1314,7 +1314,7 @@ def func22 : Wasm.Program :=
                 .localGet 7,
                 .store32 (8 : UInt32),
                 .br 1
-              ],
+              ] [] [],
               .const (0 : UInt32),
               .localGet 6,
               .const (4294967294 : UInt32),
@@ -1322,7 +1322,7 @@ def func22 : Wasm.Program :=
               .rotl,
               .and,
               .store32 (1049528 : UInt32)
-            ],
+            ] [] [],
             .localGet 0,
             .localGet 3,
             .const (3 : UInt32),
@@ -1385,7 +1385,7 @@ def func22 : Wasm.Program :=
                   .localGet 2,
                   .localSet 7,
                   .br 1
-                ],
+                ] [] [],
                 .localGet 2,
                 .const (4294967288 : UInt32),
                 .and,
@@ -1399,7 +1399,7 @@ def func22 : Wasm.Program :=
                 .add,
                 .load32 (0 : UInt32),
                 .localSet 2
-              ],
+              ] [] [],
               .localGet 7,
               .localGet 3,
               .store32 (8 : UInt32),
@@ -1412,7 +1412,7 @@ def func22 : Wasm.Program :=
               .localGet 3,
               .localGet 2,
               .store32 (8 : UInt32)
-            ],
+            ] [] [],
             .localGet 0,
             .const (8 : UInt32),
             .add,
@@ -1424,7 +1424,7 @@ def func22 : Wasm.Program :=
             .localGet 8,
             .store32 (1049536 : UInt32),
             .br 4
-          ],
+          ] [] [],
           .const (0 : UInt32),
           .const (0 : UInt32),
           .load32 (1049532 : UInt32),
@@ -1434,7 +1434,7 @@ def func22 : Wasm.Program :=
           .rotl,
           .and,
           .store32 (1049532 : UInt32)
-        ],
+        ] [] [],
         .block 0 0 [
           .block 0 0 [
             .block 0 0 [
@@ -1499,7 +1499,7 @@ def func22 : Wasm.Program :=
                   .localGet 7,
                   .localSet 9,
                   .br 1
-                ],
+                ] [] [],
                 .localGet 7,
                 .const (4294967288 : UInt32),
                 .and,
@@ -1513,7 +1513,7 @@ def func22 : Wasm.Program :=
                 .add,
                 .load32 (0 : UInt32),
                 .localSet 7
-              ],
+              ] [] [],
               .localGet 9,
               .localGet 0,
               .store32 (8 : UInt32),
@@ -1527,7 +1527,7 @@ def func22 : Wasm.Program :=
               .localGet 7,
               .store32 (8 : UInt32),
               .br 1
-            ],
+            ] [] [],
             .localGet 6,
             .localGet 2,
             .localGet 3,
@@ -1548,14 +1548,14 @@ def func22 : Wasm.Program :=
             .or,
             .store32 (4 : UInt32),
             .br 1
-          ],
+          ] [] [],
           .const (0 : UInt32),
           .localGet 8,
           .store32 (1049544 : UInt32),
           .const (0 : UInt32),
           .localGet 2,
           .store32 (1049536 : UInt32)
-        ],
+        ] [] [],
         .localGet 6,
         .const (8 : UInt32),
         .add,
@@ -1564,7 +1564,7 @@ def func22 : Wasm.Program :=
         .eqz,
         .br_if 1,
         .br 2
-      ],
+      ] [] [],
       .const (0 : UInt32),
       .localGet 3,
       .sub,
@@ -1587,7 +1587,7 @@ def func22 : Wasm.Program :=
               .const (0 : UInt32),
               .localSet 0,
               .br 1
-            ],
+            ] [] [],
             .const (0 : UInt32),
             .localSet 8,
             .localGet 3,
@@ -1639,7 +1639,7 @@ def func22 : Wasm.Program :=
                 .localGet 6,
                 .localSet 8,
                 .br 3
-              ],
+              ] [] [],
               .localGet 6,
               .load32 (20 : UInt32),
               .localSet 9,
@@ -1668,8 +1668,8 @@ def func22 : Wasm.Program :=
               .localSet 7,
               .localGet 6,
               .br_if 0
-            ]
-          ],
+            ] [] []
+          ] [] [],
           .block 0 0 [
             .localGet 0,
             .localGet 8,
@@ -1700,11 +1700,11 @@ def func22 : Wasm.Program :=
             .add,
             .load32 (0 : UInt32),
             .localSet 0
-          ],
+          ] [] [],
           .localGet 0,
           .eqz,
           .br_if 1
-        ],
+        ] [] [],
         .loop 0 0 [
           .localGet 0,
           .load32 (4 : UInt32),
@@ -1742,7 +1742,7 @@ def func22 : Wasm.Program :=
             .localGet 0,
             .load32 (20 : UInt32),
             .localSet 6
-          ],
+          ] [] [],
           .localGet 2,
           .localGet 5,
           .localGet 7,
@@ -1757,8 +1757,8 @@ def func22 : Wasm.Program :=
           .localSet 0,
           .localGet 6,
           .br_if 0
-        ]
-      ],
+        ] [] []
+      ] [] [],
       .localGet 8,
       .eqz,
       .br_if 0,
@@ -1776,7 +1776,7 @@ def func22 : Wasm.Program :=
         .sub,
         .geU,
         .br_if 1
-      ],
+      ] [] [],
       .localGet 8,
       .load32 (24 : UInt32),
       .localSet 5,
@@ -1806,7 +1806,7 @@ def func22 : Wasm.Program :=
             .const (0 : UInt32),
             .localSet 0,
             .br 2
-          ],
+          ] [] [],
           .localGet 8,
           .load32 (8 : UInt32),
           .localSet 6,
@@ -1817,7 +1817,7 @@ def func22 : Wasm.Program :=
           .localGet 6,
           .store32 (8 : UInt32),
           .br 1
-        ],
+        ] [] [],
         .localGet 8,
         .const (20 : UInt32),
         .add,
@@ -1854,11 +1854,11 @@ def func22 : Wasm.Program :=
           .localSet 6,
           .localGet 6,
           .br_if 0
-        ],
+        ] [] [],
         .localGet 9,
         .const (0 : UInt32),
         .store32 (0 : UInt32)
-      ],
+      ] [] [],
       .block 0 0 [
         .localGet 5,
         .eqz,
@@ -1890,21 +1890,21 @@ def func22 : Wasm.Program :=
                 .localGet 0,
                 .br_if 2,
                 .br 4
-              ],
+              ] [] [],
               .localGet 5,
               .localGet 0,
               .store32 (16 : UInt32),
               .localGet 0,
               .br_if 1,
               .br 3
-            ],
+            ] [] [],
             .localGet 6,
             .localGet 0,
             .store32 (0 : UInt32),
             .localGet 0,
             .eqz,
             .br_if 1
-          ],
+          ] [] [],
           .localGet 0,
           .localGet 5,
           .store32 (24 : UInt32),
@@ -1921,7 +1921,7 @@ def func22 : Wasm.Program :=
             .localGet 6,
             .localGet 0,
             .store32 (24 : UInt32)
-          ],
+          ] [] [],
           .localGet 8,
           .load32 (20 : UInt32),
           .localSet 6,
@@ -1935,7 +1935,7 @@ def func22 : Wasm.Program :=
           .localGet 0,
           .store32 (24 : UInt32),
           .br 1
-        ],
+        ] [] [],
         .const (0 : UInt32),
         .const (0 : UInt32),
         .load32 (1049532 : UInt32),
@@ -1945,7 +1945,7 @@ def func22 : Wasm.Program :=
         .rotl,
         .and,
         .store32 (1049532 : UInt32)
-      ],
+      ] [] [],
       .block 0 0 [
         .block 0 0 [
           .localGet 2,
@@ -1980,7 +1980,7 @@ def func22 : Wasm.Program :=
             .localGet 2,
             .call 32,
             .br 2
-          ],
+          ] [] [],
           .block 0 0 [
             .block 0 0 [
               .const (0 : UInt32),
@@ -2010,7 +2010,7 @@ def func22 : Wasm.Program :=
               .localGet 2,
               .localSet 6,
               .br 1
-            ],
+            ] [] [],
             .localGet 2,
             .const (248 : UInt32),
             .and,
@@ -2024,7 +2024,7 @@ def func22 : Wasm.Program :=
             .add,
             .load32 (0 : UInt32),
             .localSet 2
-          ],
+          ] [] [],
           .localGet 6,
           .localGet 0,
           .store32 (8 : UInt32),
@@ -2038,7 +2038,7 @@ def func22 : Wasm.Program :=
           .localGet 2,
           .store32 (8 : UInt32),
           .br 1
-        ],
+        ] [] [],
         .localGet 8,
         .localGet 2,
         .localGet 3,
@@ -2058,14 +2058,14 @@ def func22 : Wasm.Program :=
         .const (1 : UInt32),
         .or,
         .store32 (4 : UInt32)
-      ],
+      ] [] [],
       .localGet 8,
       .const (8 : UInt32),
       .add,
       .localSet 0,
       .localGet 0,
       .br_if 1
-    ],
+    ] [] [],
     .block 0 0 [
       .block 0 0 [
         .block 0 0 [
@@ -2106,7 +2106,7 @@ def func22 : Wasm.Program :=
                     .const (0 : UInt32),
                     .localSet 0,
                     .br 8
-                  ],
+                  ] [] [],
                   .localGet 1,
                   .load32 (12 : UInt32),
                   .localSet 5,
@@ -2162,8 +2162,8 @@ def func22 : Wasm.Program :=
                           .localGet 0,
                           .br_if 0,
                           .br 3
-                        ]
-                      ],
+                        ] [] []
+                      ] [] [],
                       .block 0 0 [
                         .block 0 0 [
                           .const (0 : UInt32),
@@ -2176,11 +2176,11 @@ def func22 : Wasm.Program :=
                           .localGet 0,
                           .geU,
                           .br_if 1
-                        ],
+                        ] [] [],
                         .const (0 : UInt32),
                         .localGet 6,
                         .store32 (1049564 : UInt32)
-                      ],
+                      ] [] [],
                       .const (0 : UInt32),
                       .const (4095 : UInt32),
                       .store32 (1049568 : UInt32),
@@ -2427,7 +2427,7 @@ def func22 : Wasm.Program :=
                       .const (2097152 : UInt32),
                       .store32 (1049560 : UInt32),
                       .br 8
-                    ],
+                    ] [] [],
                     .localGet 2,
                     .localGet 6,
                     .geU,
@@ -2449,7 +2449,7 @@ def func22 : Wasm.Program :=
                     .localGet 5,
                     .eq,
                     .br_if 3
-                  ],
+                  ] [] [],
                   .const (0 : UInt32),
                   .const (0 : UInt32),
                   .load32 (1049564 : UInt32),
@@ -2484,8 +2484,8 @@ def func22 : Wasm.Program :=
                           .localGet 0,
                           .br_if 0,
                           .br 2
-                        ]
-                      ],
+                        ] [] []
+                      ] [] [],
                       .localGet 0,
                       .load32 (12 : UInt32),
                       .localSet 8,
@@ -2499,7 +2499,7 @@ def func22 : Wasm.Program :=
                       .localGet 5,
                       .eq,
                       .br_if 1
-                    ],
+                    ] [] [],
                     .const (1049248 : UInt32),
                     .localSet 0,
                     .block 0 0 [
@@ -2521,13 +2521,13 @@ def func22 : Wasm.Program :=
                           .localGet 8,
                           .ltU,
                           .br_if 2
-                        ],
+                        ] [] [],
                         .localGet 0,
                         .load32 (8 : UInt32),
                         .localSet 0,
                         .br 0
-                      ]
-                    ],
+                      ] [] []
+                    ] [] [],
                     .const (0 : UInt32),
                     .localGet 6,
                     .const (15 : UInt32),
@@ -2633,7 +2633,7 @@ def func22 : Wasm.Program :=
                       .localGet 8,
                       .ltU,
                       .br_if 0
-                    ],
+                    ] [] [],
                     .localGet 7,
                     .localGet 2,
                     .eq,
@@ -2665,7 +2665,7 @@ def func22 : Wasm.Program :=
                       .localGet 0,
                       .call 32,
                       .br 8
-                    ],
+                    ] [] [],
                     .block 0 0 [
                       .block 0 0 [
                         .const (0 : UInt32),
@@ -2695,7 +2695,7 @@ def func22 : Wasm.Program :=
                         .localGet 0,
                         .localSet 8,
                         .br 1
-                      ],
+                      ] [] [],
                       .localGet 0,
                       .const (248 : UInt32),
                       .and,
@@ -2709,7 +2709,7 @@ def func22 : Wasm.Program :=
                       .add,
                       .load32 (0 : UInt32),
                       .localSet 0
-                    ],
+                    ] [] [],
                     .localGet 8,
                     .localGet 2,
                     .store32 (8 : UInt32),
@@ -2723,7 +2723,7 @@ def func22 : Wasm.Program :=
                     .localGet 0,
                     .store32 (8 : UInt32),
                     .br 7
-                  ],
+                  ] [] [],
                   .localGet 0,
                   .localGet 6,
                   .store32 (0 : UInt32),
@@ -2800,7 +2800,7 @@ def func22 : Wasm.Program :=
                     .localGet 2,
                     .load32 (4 : UInt32),
                     .localSet 6
-                  ],
+                  ] [] [],
                   .localGet 2,
                   .localGet 6,
                   .const (4294967294 : UInt32),
@@ -2825,7 +2825,7 @@ def func22 : Wasm.Program :=
                     .localGet 3,
                     .call 32,
                     .br 6
-                  ],
+                  ] [] [],
                   .block 0 0 [
                     .block 0 0 [
                       .const (0 : UInt32),
@@ -2855,7 +2855,7 @@ def func22 : Wasm.Program :=
                       .localGet 3,
                       .localSet 2,
                       .br 1
-                    ],
+                    ] [] [],
                     .localGet 3,
                     .const (248 : UInt32),
                     .and,
@@ -2869,7 +2869,7 @@ def func22 : Wasm.Program :=
                     .add,
                     .load32 (0 : UInt32),
                     .localSet 3
-                  ],
+                  ] [] [],
                   .localGet 2,
                   .localGet 0,
                   .store32 (8 : UInt32),
@@ -2883,7 +2883,7 @@ def func22 : Wasm.Program :=
                   .localGet 3,
                   .store32 (8 : UInt32),
                   .br 5
-                ],
+                ] [] [],
                 .const (0 : UInt32),
                 .localGet 0,
                 .localGet 3,
@@ -2916,7 +2916,7 @@ def func22 : Wasm.Program :=
                 .add,
                 .localSet 0,
                 .br 6
-              ],
+              ] [] [],
               .const (0 : UInt32),
               .load32 (1049544 : UInt32),
               .localSet 2,
@@ -2952,7 +2952,7 @@ def func22 : Wasm.Program :=
                   .or,
                   .store32 (4 : UInt32),
                   .br 1
-                ],
+                ] [] [],
                 .const (0 : UInt32),
                 .localGet 8,
                 .store32 (1049536 : UInt32),
@@ -2978,13 +2978,13 @@ def func22 : Wasm.Program :=
                 .const (3 : UInt32),
                 .or,
                 .store32 (4 : UInt32)
-              ],
+              ] [] [],
               .localGet 2,
               .const (8 : UInt32),
               .add,
               .localSet 0,
               .br 5
-            ],
+            ] [] [],
             .localGet 0,
             .localGet 7,
             .localGet 9,
@@ -3036,7 +3036,7 @@ def func22 : Wasm.Program :=
             .const (2097152 : UInt32),
             .store32 (1049560 : UInt32),
             .br 3
-          ],
+          ] [] [],
           .const (0 : UInt32),
           .localGet 0,
           .store32 (1049548 : UInt32),
@@ -3054,7 +3054,7 @@ def func22 : Wasm.Program :=
           .or,
           .store32 (4 : UInt32),
           .br 1
-        ],
+        ] [] [],
         .const (0 : UInt32),
         .localGet 0,
         .store32 (1049544 : UInt32),
@@ -3076,13 +3076,13 @@ def func22 : Wasm.Program :=
         .add,
         .localGet 3,
         .store32 (0 : UInt32)
-      ],
+      ] [] [],
       .localGet 8,
       .const (8 : UInt32),
       .add,
       .localSet 0,
       .br 1
-    ],
+    ] [] [],
     .const (0 : UInt32),
     .localSet 0,
     .const (0 : UInt32),
@@ -3123,7 +3123,7 @@ def func22 : Wasm.Program :=
     .const (8 : UInt32),
     .add,
     .localSet 0
-  ],
+  ] [] [],
   .localGet 1,
   .const (16 : UInt32),
   .add,
@@ -3132,7 +3132,7 @@ def func22 : Wasm.Program :=
 ]
 
 def func22Def : Wasm.Function :=
-  { params := [.i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i64], body := func22, results := [.i32] }
+  { params := [.i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i64], body := func22, results := [.i32], typeIdx := some 11 }
 
 def func23 : Wasm.Program :=
   [
@@ -3140,7 +3140,7 @@ def func23 : Wasm.Program :=
 ]
 
 def func23Def : Wasm.Function :=
-  { params := [], locals := [], body := func23, results := [] }
+  { params := [], locals := [], body := func23, results := [], typeIdx := some 7 }
 
 def func24 : Wasm.Program :=
   [
@@ -3178,17 +3178,17 @@ def func24 : Wasm.Program :=
         .add,
         .gtU,
         .br_if 2
-      ],
+      ] [] [],
       .localGet 0,
       .call 25,
       .ret
-    ],
+    ] [] [],
     .const (1048815 : UInt32),
     .const (46 : UInt32),
     .const (1048864 : UInt32),
     .call 51,
     .unreachable
-  ],
+  ] [] [],
   .const (1048880 : UInt32),
   .const (46 : UInt32),
   .const (1048928 : UInt32),
@@ -3197,7 +3197,7 @@ def func24 : Wasm.Program :=
 ]
 
 def func24Def : Wasm.Function :=
-  { params := [.i32, .i32, .i32], locals := [.i32, .i32], body := func24, results := [] }
+  { params := [.i32, .i32, .i32], locals := [.i32, .i32], body := func24, results := [], typeIdx := some 5 }
 
 def func25 : Wasm.Program :=
   [
@@ -3271,11 +3271,11 @@ def func25 : Wasm.Program :=
         .localGet 0,
         .store32 (0 : UInt32),
         .ret
-      ],
+      ] [] [],
       .localGet 1,
       .localGet 2,
       .call 27
-    ],
+    ] [] [],
     .block 0 0 [
       .block 0 0 [
         .block 0 0 [
@@ -3331,7 +3331,7 @@ def func25 : Wasm.Program :=
                     .localGet 0,
                     .store32 (1049536 : UInt32),
                     .ret
-                  ],
+                  ] [] [],
                   .localGet 3,
                   .localGet 2,
                   .const (4294967294 : UInt32),
@@ -3347,7 +3347,7 @@ def func25 : Wasm.Program :=
                   .add,
                   .localGet 0,
                   .store32 (0 : UInt32)
-                ],
+                ] [] [],
                 .localGet 0,
                 .const (256 : UInt32),
                 .ltU,
@@ -3373,7 +3373,7 @@ def func25 : Wasm.Program :=
                 .const (4095 : UInt32),
                 .localSet 1,
                 .br 3
-              ],
+              ] [] [],
               .const (0 : UInt32),
               .localGet 1,
               .store32 (1049548 : UInt32),
@@ -3402,7 +3402,7 @@ def func25 : Wasm.Program :=
                 .const (0 : UInt32),
                 .const (0 : UInt32),
                 .store32 (1049544 : UInt32)
-              ],
+              ] [] [],
               .localGet 0,
               .const (0 : UInt32),
               .load32 (1049560 : UInt32),
@@ -3441,13 +3441,13 @@ def func25 : Wasm.Program :=
                   .add,
                   .ltU,
                   .br_if 6
-                ],
+                ] [] [],
                 .localGet 1,
                 .load32 (8 : UInt32),
                 .localSet 1,
                 .br 0
-              ]
-            ],
+              ] [] []
+            ] [] [],
             .const (0 : UInt32),
             .localGet 1,
             .store32 (1049544 : UInt32),
@@ -3470,7 +3470,7 @@ def func25 : Wasm.Program :=
             .localGet 0,
             .store32 (0 : UInt32),
             .ret
-          ],
+          ] [] [],
           .const (0 : UInt32),
           .localSet 1,
           .loop 0 0 [
@@ -3483,7 +3483,7 @@ def func25 : Wasm.Program :=
             .localSet 0,
             .localGet 0,
             .br_if 0
-          ],
+          ] [] [],
           .localGet 1,
           .const (4095 : UInt32),
           .localGet 1,
@@ -3491,12 +3491,12 @@ def func25 : Wasm.Program :=
           .gtU,
           .select,
           .localSet 1
-        ],
+        ] [] [],
         .const (0 : UInt32),
         .localGet 1,
         .store32 (1049568 : UInt32),
         .ret
-      ],
+      ] [] [],
       .block 0 0 [
         .block 0 0 [
           .const (0 : UInt32),
@@ -3526,7 +3526,7 @@ def func25 : Wasm.Program :=
           .localGet 0,
           .localSet 3,
           .br 1
-        ],
+        ] [] [],
         .localGet 0,
         .const (248 : UInt32),
         .and,
@@ -3540,7 +3540,7 @@ def func25 : Wasm.Program :=
         .add,
         .load32 (0 : UInt32),
         .localSet 0
-      ],
+      ] [] [],
       .localGet 3,
       .localGet 1,
       .store32 (8 : UInt32),
@@ -3554,7 +3554,7 @@ def func25 : Wasm.Program :=
       .localGet 0,
       .store32 (8 : UInt32),
       .ret
-    ],
+    ] [] [],
     .block 0 0 [
       .block 0 0 [
         .const (0 : UInt32),
@@ -3565,7 +3565,7 @@ def func25 : Wasm.Program :=
         .const (4095 : UInt32),
         .localSet 1,
         .br 1
-      ],
+      ] [] [],
       .const (0 : UInt32),
       .localSet 1,
       .loop 0 0 [
@@ -3578,7 +3578,7 @@ def func25 : Wasm.Program :=
         .localSet 0,
         .localGet 0,
         .br_if 0
-      ],
+      ] [] [],
       .localGet 1,
       .const (4095 : UInt32),
       .localGet 1,
@@ -3586,7 +3586,7 @@ def func25 : Wasm.Program :=
       .gtU,
       .select,
       .localSet 1
-    ],
+    ] [] [],
     .const (0 : UInt32),
     .localGet 1,
     .store32 (1049568 : UInt32),
@@ -3597,11 +3597,11 @@ def func25 : Wasm.Program :=
     .const (0 : UInt32),
     .const (4294967295 : UInt32),
     .store32 (1049560 : UInt32)
-  ]
+  ] [] []
 ]
 
 def func25Def : Wasm.Function :=
-  { params := [.i32], locals := [.i32, .i32, .i32, .i32], body := func25, results := [] }
+  { params := [.i32], locals := [.i32, .i32, .i32, .i32], body := func25, results := [], typeIdx := some 9 }
 
 def func26 : Wasm.Program :=
   [
@@ -3649,7 +3649,7 @@ def func26 : Wasm.Program :=
                     .localGet 8,
                     .gtU,
                     .br_if 2
-                  ],
+                  ] [] [],
                   .block 0 0 [
                     .block 0 0 [
                       .localGet 2,
@@ -3664,7 +3664,7 @@ def func26 : Wasm.Program :=
                       .br_if 1,
                       .const (0 : UInt32),
                       .ret
-                    ],
+                    ] [] [],
                     .const (0 : UInt32),
                     .localSet 2,
                     .localGet 3,
@@ -3708,7 +3708,7 @@ def func26 : Wasm.Program :=
                       .br_if 7,
                       .localGet 0,
                       .ret
-                    ],
+                    ] [] [],
                     .localGet 8,
                     .localGet 6,
                     .add,
@@ -3794,7 +3794,7 @@ def func26 : Wasm.Program :=
                             .localGet 7,
                             .call 28,
                             .br 9
-                          ],
+                          ] [] [],
                           .localGet 4,
                           .localGet 5,
                           .localGet 4,
@@ -3816,7 +3816,7 @@ def func26 : Wasm.Program :=
                           .or,
                           .store32 (4 : UInt32),
                           .br 8
-                        ],
+                        ] [] [],
                         .const (0 : UInt32),
                         .load32 (1049536 : UInt32),
                         .localGet 6,
@@ -3860,7 +3860,7 @@ def func26 : Wasm.Program :=
                             .const (0 : UInt32),
                             .localSet 1,
                             .br 1
-                          ],
+                          ] [] [],
                           .localGet 4,
                           .localGet 1,
                           .localGet 5,
@@ -3892,7 +3892,7 @@ def func26 : Wasm.Program :=
                           .const (4294967294 : UInt32),
                           .and,
                           .store32 (4 : UInt32)
-                        ],
+                        ] [] [],
                         .const (0 : UInt32),
                         .localGet 1,
                         .store32 (1049544 : UInt32),
@@ -3900,7 +3900,7 @@ def func26 : Wasm.Program :=
                         .localGet 6,
                         .store32 (1049536 : UInt32),
                         .br 7
-                      ],
+                      ] [] [],
                       .localGet 6,
                       .localGet 1,
                       .sub,
@@ -3937,7 +3937,7 @@ def func26 : Wasm.Program :=
                       .localGet 6,
                       .call 28,
                       .br 6
-                    ],
+                    ] [] [],
                     .const (0 : UInt32),
                     .load32 (1049540 : UInt32),
                     .localGet 6,
@@ -3948,7 +3948,7 @@ def func26 : Wasm.Program :=
                     .gtU,
                     .br_if 4,
                     .br 6
-                  ],
+                  ] [] [],
                   .block 0 0 [
                     .localGet 3,
                     .localGet 1,
@@ -3964,7 +3964,7 @@ def func26 : Wasm.Program :=
                     .localGet 0,
                     .localGet 3,
                     .memoryCopy
-                  ],
+                  ] [] [],
                   .localGet 4,
                   .load32 (0 : UInt32),
                   .localSet 3,
@@ -3997,25 +3997,25 @@ def func26 : Wasm.Program :=
                   .const (1048928 : UInt32),
                   .call 51,
                   .unreachable
-                ],
+                ] [] [],
                 .const (1048815 : UInt32),
                 .const (46 : UInt32),
                 .const (1048864 : UInt32),
                 .call 51,
                 .unreachable
-              ],
+              ] [] [],
               .const (1048880 : UInt32),
               .const (46 : UInt32),
               .const (1048928 : UInt32),
               .call 51,
               .unreachable
-            ],
+            ] [] [],
             .const (1048815 : UInt32),
             .const (46 : UInt32),
             .const (1048864 : UInt32),
             .call 51,
             .unreachable
-          ],
+          ] [] [],
           .localGet 4,
           .localGet 1,
           .localGet 5,
@@ -4044,13 +4044,13 @@ def func26 : Wasm.Program :=
           .const (0 : UInt32),
           .localGet 5,
           .store32 (1049548 : UInt32)
-        ],
+        ] [] [],
         .localGet 8,
         .eqz,
         .br_if 0,
         .localGet 0,
         .ret
-      ],
+      ] [] [],
       .localGet 3,
       .call 22,
       .localSet 1,
@@ -4086,18 +4086,18 @@ def func26 : Wasm.Program :=
         .localGet 0,
         .localGet 3,
         .memoryCopy
-      ],
+      ] [] [],
       .localGet 1,
       .localSet 2
-    ],
+    ] [] [],
     .localGet 0,
     .call 25
-  ],
+  ] [] [],
   .localGet 2
 ]
 
 def func26Def : Wasm.Function :=
-  { params := [.i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32], body := func26, results := [.i32] }
+  { params := [.i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32], body := func26, results := [.i32], typeIdx := some 6 }
 
 def func27 : Wasm.Program :=
   [
@@ -4138,7 +4138,7 @@ def func27 : Wasm.Program :=
                 .const (0 : UInt32),
                 .localSet 2,
                 .br 2
-              ],
+              ] [] [],
               .localGet 0,
               .load32 (8 : UInt32),
               .localSet 1,
@@ -4149,7 +4149,7 @@ def func27 : Wasm.Program :=
               .localGet 1,
               .store32 (8 : UInt32),
               .br 1
-            ],
+            ] [] [],
             .localGet 0,
             .const (20 : UInt32),
             .add,
@@ -4186,11 +4186,11 @@ def func27 : Wasm.Program :=
               .localSet 1,
               .localGet 1,
               .br_if 0
-            ],
+            ] [] [],
             .localGet 5,
             .const (0 : UInt32),
             .store32 (0 : UInt32)
-          ],
+          ] [] [],
           .localGet 3,
           .eqz,
           .br_if 2,
@@ -4219,7 +4219,7 @@ def func27 : Wasm.Program :=
               .localGet 2,
               .br_if 3,
               .br 4
-            ],
+            ] [] [],
             .localGet 1,
             .localGet 2,
             .store32 (0 : UInt32),
@@ -4227,14 +4227,14 @@ def func27 : Wasm.Program :=
             .eqz,
             .br_if 4,
             .br 2
-          ],
+          ] [] [],
           .localGet 3,
           .localGet 2,
           .store32 (16 : UInt32),
           .localGet 2,
           .br_if 1,
           .br 2
-        ],
+        ] [] [],
         .block 0 0 [
           .localGet 2,
           .localGet 0,
@@ -4250,7 +4250,7 @@ def func27 : Wasm.Program :=
           .localGet 4,
           .store32 (8 : UInt32),
           .ret
-        ],
+        ] [] [],
         .const (0 : UInt32),
         .const (0 : UInt32),
         .load32 (1049528 : UInt32),
@@ -4262,7 +4262,7 @@ def func27 : Wasm.Program :=
         .and,
         .store32 (1049528 : UInt32),
         .ret
-      ],
+      ] [] [],
       .localGet 2,
       .localGet 3,
       .store32 (24 : UInt32),
@@ -4279,7 +4279,7 @@ def func27 : Wasm.Program :=
         .localGet 1,
         .localGet 2,
         .store32 (24 : UInt32)
-      ],
+      ] [] [],
       .localGet 0,
       .load32 (20 : UInt32),
       .localSet 1,
@@ -4293,9 +4293,9 @@ def func27 : Wasm.Program :=
       .localGet 2,
       .store32 (24 : UInt32),
       .ret
-    ],
+    ] [] [],
     .ret
-  ],
+  ] [] [],
   .const (0 : UInt32),
   .const (0 : UInt32),
   .load32 (1049532 : UInt32),
@@ -4308,7 +4308,7 @@ def func27 : Wasm.Program :=
 ]
 
 def func27Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32], body := func27, results := [] }
+  { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32], body := func27, results := [], typeIdx := some 0 }
 
 def func28 : Wasm.Program :=
   [
@@ -4372,11 +4372,11 @@ def func28 : Wasm.Program :=
         .localGet 1,
         .store32 (0 : UInt32),
         .br 2
-      ],
+      ] [] [],
       .localGet 0,
       .localGet 3,
       .call 27
-    ],
+    ] [] [],
     .block 0 0 [
       .block 0 0 [
         .block 0 0 [
@@ -4428,7 +4428,7 @@ def func28 : Wasm.Program :=
             .localGet 1,
             .store32 (1049536 : UInt32),
             .ret
-          ],
+          ] [] [],
           .localGet 2,
           .localGet 3,
           .const (4294967294 : UInt32),
@@ -4444,7 +4444,7 @@ def func28 : Wasm.Program :=
           .add,
           .localGet 1,
           .store32 (0 : UInt32)
-        ],
+        ] [] [],
         .block 0 0 [
           .localGet 1,
           .const (256 : UInt32),
@@ -4454,7 +4454,7 @@ def func28 : Wasm.Program :=
           .localGet 1,
           .call 32,
           .ret
-        ],
+        ] [] [],
         .block 0 0 [
           .block 0 0 [
             .const (0 : UInt32),
@@ -4484,7 +4484,7 @@ def func28 : Wasm.Program :=
             .localGet 1,
             .localSet 2,
             .br 1
-          ],
+          ] [] [],
           .localGet 1,
           .const (248 : UInt32),
           .and,
@@ -4498,7 +4498,7 @@ def func28 : Wasm.Program :=
           .add,
           .load32 (0 : UInt32),
           .localSet 1
-        ],
+        ] [] [],
         .localGet 2,
         .localGet 0,
         .store32 (8 : UInt32),
@@ -4512,7 +4512,7 @@ def func28 : Wasm.Program :=
         .localGet 1,
         .store32 (8 : UInt32),
         .ret
-      ],
+      ] [] [],
       .const (0 : UInt32),
       .localGet 0,
       .store32 (1049548 : UInt32),
@@ -4541,7 +4541,7 @@ def func28 : Wasm.Program :=
       .const (0 : UInt32),
       .store32 (1049544 : UInt32),
       .ret
-    ],
+    ] [] [],
     .const (0 : UInt32),
     .localGet 0,
     .store32 (1049544 : UInt32),
@@ -4564,11 +4564,11 @@ def func28 : Wasm.Program :=
     .localGet 1,
     .store32 (0 : UInt32),
     .ret
-  ]
+  ] [] []
 ]
 
 def func28Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [.i32, .i32], body := func28, results := [] }
+  { params := [.i32, .i32], locals := [.i32, .i32], body := func28, results := [], typeIdx := some 0 }
 
 def func29 : Wasm.Program :=
   [
@@ -4595,7 +4595,7 @@ def func29 : Wasm.Program :=
 ]
 
 def func29Def : Wasm.Function :=
-  { params := [.i32], locals := [.i32, .i64], body := func29, results := [] }
+  { params := [.i32], locals := [.i32, .i64], body := func29, results := [], typeIdx := some 9 }
 
 def func30 : Wasm.Program :=
   [
@@ -4606,7 +4606,7 @@ def func30 : Wasm.Program :=
 ]
 
 def func30Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [], body := func30, results := [] }
+  { params := [.i32, .i32], locals := [], body := func30, results := [], typeIdx := some 0 }
 
 def func31 : Wasm.Program :=
   [
@@ -4630,7 +4630,7 @@ def func31 : Wasm.Program :=
 ]
 
 def func31Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [.i32], body := func31, results := [] }
+  { params := [.i32, .i32], locals := [.i32], body := func31, results := [], typeIdx := some 0 }
 
 def func32 : Wasm.Program :=
   [
@@ -4667,7 +4667,7 @@ def func32 : Wasm.Program :=
     .const (62 : UInt32),
     .xor,
     .localSet 2
-  ],
+  ] [] [],
   .localGet 0,
   .constI64 (0 : UInt64),
   .store64 (16 : UInt32),
@@ -4709,7 +4709,7 @@ def func32 : Wasm.Program :=
     .or,
     .store32 (1049532 : UInt32),
     .ret
-  ],
+  ] [] [],
   .block 0 0 [
     .block 0 0 [
       .block 0 0 [
@@ -4726,7 +4726,7 @@ def func32 : Wasm.Program :=
         .localGet 4,
         .localSet 2,
         .br 1
-      ],
+      ] [] [],
       .localGet 1,
       .const (0 : UInt32),
       .const (25 : UInt32),
@@ -4768,8 +4768,8 @@ def func32 : Wasm.Program :=
         .localGet 1,
         .ne,
         .br_if 0
-      ]
-    ],
+      ] [] []
+    ] [] [],
     .localGet 2,
     .load32 (8 : UInt32),
     .localSet 3,
@@ -4789,7 +4789,7 @@ def func32 : Wasm.Program :=
     .localGet 3,
     .store32 (8 : UInt32),
     .ret
-  ],
+  ] [] [],
   .localGet 5,
   .const (16 : UInt32),
   .add,
@@ -4807,7 +4807,7 @@ def func32 : Wasm.Program :=
 ]
 
 def func32Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32], body := func32, results := [] }
+  { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32], body := func32, results := [], typeIdx := some 0 }
 
 def func33 : Wasm.Program :=
   [
@@ -4842,12 +4842,12 @@ def func33 : Wasm.Program :=
     .store32 (1049092 : UInt32),
     .const (2 : UInt32),
     .localSet 1
-  ],
+  ] [] [],
   .localGet 1
 ]
 
 def func33Def : Wasm.Function :=
-  { params := [.i32], locals := [.i32, .i32], body := func33, results := [.i32] }
+  { params := [.i32], locals := [.i32, .i32], body := func33, results := [.i32], typeIdx := some 11 }
 
 def func34 : Wasm.Program :=
   [
@@ -4862,7 +4862,7 @@ def func34 : Wasm.Program :=
 ]
 
 def func34Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [], body := func34, results := [] }
+  { params := [.i32, .i32], locals := [], body := func34, results := [], typeIdx := some 0 }
 
 def func35 : Wasm.Program :=
   [
@@ -4877,7 +4877,7 @@ def func35 : Wasm.Program :=
 ]
 
 def func35Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [], body := func35, results := [] }
+  { params := [.i32, .i32], locals := [], body := func35, results := [], typeIdx := some 0 }
 
 def func36 : Wasm.Program :=
   [
@@ -4894,7 +4894,7 @@ def func36 : Wasm.Program :=
     .load32 (8 : UInt32),
     .call 54,
     .ret
-  ],
+  ] [] [],
   .localGet 1,
   .load32 (0 : UInt32),
   .localGet 1,
@@ -4911,7 +4911,7 @@ def func36 : Wasm.Program :=
 ]
 
 def func36Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [], body := func36, results := [.i32] }
+  { params := [.i32, .i32], locals := [], body := func36, results := [.i32], typeIdx := some 2 }
 
 def func37 : Wasm.Program :=
   [
@@ -4924,7 +4924,7 @@ def func37 : Wasm.Program :=
 ]
 
 def func37Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [], body := func37, results := [] }
+  { params := [.i32, .i32], locals := [], body := func37, results := [], typeIdx := some 0 }
 
 def func38 : Wasm.Program :=
   [
@@ -4935,7 +4935,7 @@ def func38 : Wasm.Program :=
 ]
 
 def func38Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [], body := func38, results := [] }
+  { params := [.i32, .i32], locals := [], body := func38, results := [], typeIdx := some 0 }
 
 def func39 : Wasm.Program :=
   [
@@ -4957,7 +4957,7 @@ def func39 : Wasm.Program :=
     .const (8 : UInt32),
     .call 49,
     .unreachable
-  ],
+  ] [] [],
   .localGet 1,
   .localGet 2,
   .store32 (4 : UInt32),
@@ -4973,7 +4973,7 @@ def func39 : Wasm.Program :=
 ]
 
 def func39Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [.i32, .i32], body := func39, results := [] }
+  { params := [.i32, .i32], locals := [.i32, .i32], body := func39, results := [], typeIdx := some 0 }
 
 def func40 : Wasm.Program :=
   [
@@ -4986,7 +4986,7 @@ def func40 : Wasm.Program :=
 ]
 
 def func40Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [], body := func40, results := [.i32] }
+  { params := [.i32, .i32], locals := [], body := func40, results := [.i32], typeIdx := some 2 }
 
 def func41 : Wasm.Program :=
   [
@@ -5002,7 +5002,7 @@ def func41 : Wasm.Program :=
       .const (1 : UInt32),
       .localSet 3,
       .br 1
-    ],
+    ] [] [],
     .block 0 0 [
       .localGet 1,
       .const (2048 : UInt32),
@@ -5011,7 +5011,7 @@ def func41 : Wasm.Program :=
       .const (2 : UInt32),
       .localSet 3,
       .br 1
-    ],
+    ] [] [],
     .const (3 : UInt32),
     .const (4 : UInt32),
     .localGet 1,
@@ -5019,7 +5019,7 @@ def func41 : Wasm.Program :=
     .ltU,
     .select,
     .localSet 3
-  ],
+  ] [] [],
   .localGet 2,
   .localSet 4,
   .block 0 0 [
@@ -5039,7 +5039,7 @@ def func41 : Wasm.Program :=
     .localGet 0,
     .load32 (8 : UInt32),
     .localSet 4
-  ],
+  ] [] [],
   .localGet 0,
   .load32 (4 : UInt32),
   .localGet 4,
@@ -5075,7 +5075,7 @@ def func41 : Wasm.Program :=
         .or,
         .store8 (0 : UInt32),
         .br 2
-      ],
+      ] [] [],
       .localGet 1,
       .const (12 : UInt32),
       .shrU,
@@ -5103,7 +5103,7 @@ def func41 : Wasm.Program :=
         .or,
         .store8 (0 : UInt32),
         .br 2
-      ],
+      ] [] [],
       .localGet 4,
       .localGet 5,
       .store8 (3 : UInt32),
@@ -5125,11 +5125,11 @@ def func41 : Wasm.Program :=
       .or,
       .store8 (0 : UInt32),
       .br 1
-    ],
+    ] [] [],
     .localGet 4,
     .localGet 1,
     .store8 (0 : UInt32)
-  ],
+  ] [] [],
   .localGet 0,
   .localGet 3,
   .localGet 2,
@@ -5139,7 +5139,7 @@ def func41 : Wasm.Program :=
 ]
 
 def func41Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32], body := func41, results := [.i32] }
+  { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32], body := func41, results := [.i32], typeIdx := some 2 }
 
 def func42 : Wasm.Program :=
   [
@@ -5166,11 +5166,11 @@ def func42 : Wasm.Program :=
         .load32 (8 : UInt32),
         .localSet 3,
         .br 1
-      ],
+      ] [] [],
       .localGet 2,
       .eqz,
       .br_if 1
-    ],
+    ] [] [],
     .localGet 2,
     .eqz,
     .br_if 0,
@@ -5181,7 +5181,7 @@ def func42 : Wasm.Program :=
     .localGet 1,
     .localGet 2,
     .memoryCopy
-  ],
+  ] [] [],
   .localGet 0,
   .localGet 3,
   .localGet 2,
@@ -5191,7 +5191,7 @@ def func42 : Wasm.Program :=
 ]
 
 def func42Def : Wasm.Function :=
-  { params := [.i32, .i32, .i32], locals := [.i32], body := func42, results := [.i32] }
+  { params := [.i32, .i32, .i32], locals := [.i32], body := func42, results := [.i32], typeIdx := some 1 }
 
 def func43 : Wasm.Program :=
   [
@@ -5247,7 +5247,7 @@ def func43 : Wasm.Program :=
     .localGet 1,
     .localGet 4,
     .store64 (0 : UInt32)
-  ],
+  ] [] [],
   .localGet 0,
   .const (1048960 : UInt32),
   .store32 (4 : UInt32),
@@ -5261,7 +5261,7 @@ def func43 : Wasm.Program :=
 ]
 
 def func43Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [.i32, .i32, .i64], body := func43, results := [] }
+  { params := [.i32, .i32], locals := [.i32, .i32, .i64], body := func43, results := [], typeIdx := some 0 }
 
 def func44 : Wasm.Program :=
   [
@@ -5317,7 +5317,7 @@ def func44 : Wasm.Program :=
     .localGet 1,
     .localGet 4,
     .store64 (0 : UInt32)
-  ],
+  ] [] [],
   .localGet 1,
   .load32 (8 : UInt32),
   .localSet 3,
@@ -5348,7 +5348,7 @@ def func44 : Wasm.Program :=
     .const (12 : UInt32),
     .call 49,
     .unreachable
-  ],
+  ] [] [],
   .localGet 1,
   .localGet 2,
   .load32 (16 : UInt32),
@@ -5370,7 +5370,7 @@ def func44 : Wasm.Program :=
 ]
 
 def func44Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [.i32, .i32, .i64], body := func44, results := [] }
+  { params := [.i32, .i32], locals := [.i32, .i32, .i64], body := func44, results := [], typeIdx := some 0 }
 
 def func45 : Wasm.Program :=
   [
@@ -5380,7 +5380,7 @@ def func45 : Wasm.Program :=
 ]
 
 def func45Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [], body := func45, results := [] }
+  { params := [.i32, .i32], locals := [], body := func45, results := [], typeIdx := some 0 }
 
 def func46 : Wasm.Program :=
   [
@@ -5392,7 +5392,7 @@ def func46 : Wasm.Program :=
 ]
 
 def func46Def : Wasm.Function :=
-  { params := [.i32, .i32, .i32], locals := [], body := func46, results := [.i32] }
+  { params := [.i32, .i32, .i32], locals := [], body := func46, results := [.i32], typeIdx := some 1 }
 
 def func47 : Wasm.Program :=
   [
@@ -5420,7 +5420,7 @@ def func47 : Wasm.Program :=
       .const (0 : UInt32),
       .localSet 4,
       .br 1
-    ],
+    ] [] [],
     .localGet 2,
     .const (16 : UInt32),
     .shl,
@@ -5440,7 +5440,7 @@ def func47 : Wasm.Program :=
     .eq,
     .select,
     .localSet 4
-  ],
+  ] [] [],
   .localGet 0,
   .const (0 : UInt32),
   .store32 (8 : UInt32),
@@ -5453,7 +5453,7 @@ def func47 : Wasm.Program :=
 ]
 
 def func47Def : Wasm.Function :=
-  { params := [.i32, .i32, .i32], locals := [.i32, .i32], body := func47, results := [] }
+  { params := [.i32, .i32, .i32], locals := [.i32, .i32], body := func47, results := [], typeIdx := some 5 }
 
 def func48 : Wasm.Program :=
   [
@@ -5465,13 +5465,13 @@ def func48 : Wasm.Program :=
     .localGet 1,
     .call 49,
     .unreachable
-  ],
+  ] [] [],
   .call 50,
   .unreachable
 ]
 
 def func48Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [], body := func48, results := [] }
+  { params := [.i32, .i32], locals := [], body := func48, results := [], typeIdx := some 0 }
 
 def func49 : Wasm.Program :=
   [
@@ -5482,7 +5482,7 @@ def func49 : Wasm.Program :=
 ]
 
 def func49Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [], body := func49, results := [] }
+  { params := [.i32, .i32], locals := [], body := func49, results := [], typeIdx := some 0 }
 
 def func50 : Wasm.Program :=
   [
@@ -5494,7 +5494,7 @@ def func50 : Wasm.Program :=
 ]
 
 def func50Def : Wasm.Function :=
-  { params := [], locals := [], body := func50, results := [] }
+  { params := [], locals := [], body := func50, results := [], typeIdx := some 7 }
 
 def func51 : Wasm.Program :=
   [
@@ -5510,7 +5510,7 @@ def func51 : Wasm.Program :=
 ]
 
 def func51Def : Wasm.Function :=
-  { params := [.i32, .i32, .i32], locals := [], body := func51, results := [] }
+  { params := [.i32, .i32, .i32], locals := [], body := func51, results := [], typeIdx := some 5 }
 
 def func52 : Wasm.Program :=
   [
@@ -5545,7 +5545,7 @@ def func52 : Wasm.Program :=
 ]
 
 def func52Def : Wasm.Function :=
-  { params := [.i32, .i32, .i32], locals := [.i32], body := func52, results := [] }
+  { params := [.i32, .i32, .i32], locals := [.i32], body := func52, results := [], typeIdx := some 5 }
 
 def func53 : Wasm.Program :=
   [
@@ -5570,7 +5570,7 @@ def func53 : Wasm.Program :=
         .const (0 : UInt32),
         .localSet 5,
         .br 2
-      ],
+      ] [] [],
       .localGet 0,
       .localGet 2,
       .localGet 3,
@@ -5581,7 +5581,7 @@ def func53 : Wasm.Program :=
       .callIndirect 1 0,
       .localSet 5,
       .br 1
-    ],
+    ] [] [],
     .localGet 1,
     .load32 (12 : UInt32),
     .localSet 6,
@@ -5640,7 +5640,7 @@ def func53 : Wasm.Program :=
                 .const (1 : UInt32),
                 .localSet 5,
                 .br 6
-              ],
+              ] [] [],
               .block 0 0 [
                 .localGet 0,
                 .localGet 8,
@@ -5657,11 +5657,11 @@ def func53 : Wasm.Program :=
                 .add,
                 .localSet 2,
                 .br 4
-              ],
+              ] [] [],
               .const (1 : UInt32),
               .localSet 5,
               .br 5
-            ],
+            ] [] [],
             .block 0 0 [
               .localGet 0,
               .localGet 2,
@@ -5681,11 +5681,11 @@ def func53 : Wasm.Program :=
               .add,
               .localSet 2,
               .br 3
-            ],
+            ] [] [],
             .const (1 : UInt32),
             .localSet 5,
             .br 4
-          ],
+          ] [] [],
           .localGet 7,
           .const (1 : UInt32),
           .add,
@@ -5693,7 +5693,7 @@ def func53 : Wasm.Program :=
           .localGet 8,
           .localSet 2,
           .br 1
-        ],
+        ] [] [],
         .const (1610612768 : UInt32),
         .localSet 10,
         .block 0 0 [
@@ -5709,7 +5709,7 @@ def func53 : Wasm.Program :=
           .localGet 2,
           .load32 (1 : UInt32),
           .localSet 10
-        ],
+        ] [] [],
         .const (0 : UInt32),
         .localSet 9,
         .block 0 0 [
@@ -5723,7 +5723,7 @@ def func53 : Wasm.Program :=
             .localGet 8,
             .localSet 2,
             .br 1
-          ],
+          ] [] [],
           .localGet 8,
           .const (2 : UInt32),
           .add,
@@ -5731,7 +5731,7 @@ def func53 : Wasm.Program :=
           .localGet 8,
           .load16U (0 : UInt32),
           .localSet 11
-        ],
+        ] [] [],
         .block 0 0 [
           .block 0 0 [
             .localGet 5,
@@ -5741,7 +5741,7 @@ def func53 : Wasm.Program :=
             .localGet 2,
             .localSet 8,
             .br 1
-          ],
+          ] [] [],
           .localGet 2,
           .const (2 : UInt32),
           .add,
@@ -5749,7 +5749,7 @@ def func53 : Wasm.Program :=
           .localGet 2,
           .load16U (0 : UInt32),
           .localSet 9
-        ],
+        ] [] [],
         .block 0 0 [
           .block 0 0 [
             .localGet 5,
@@ -5759,7 +5759,7 @@ def func53 : Wasm.Program :=
             .localGet 8,
             .localSet 2,
             .br 1
-          ],
+          ] [] [],
           .localGet 8,
           .const (2 : UInt32),
           .add,
@@ -5767,7 +5767,7 @@ def func53 : Wasm.Program :=
           .localGet 8,
           .load16U (0 : UInt32),
           .localSet 7
-        ],
+        ] [] [],
         .block 0 0 [
           .localGet 5,
           .const (16 : UInt32),
@@ -5783,7 +5783,7 @@ def func53 : Wasm.Program :=
           .add,
           .load16U (4 : UInt32),
           .localSet 11
-        ],
+        ] [] [],
         .block 0 0 [
           .localGet 5,
           .const (32 : UInt32),
@@ -5799,7 +5799,7 @@ def func53 : Wasm.Program :=
           .add,
           .load16U (4 : UInt32),
           .localSet 9
-        ],
+        ] [] [],
         .localGet 4,
         .localGet 9,
         .store16 (14 : UInt32),
@@ -5833,21 +5833,21 @@ def func53 : Wasm.Program :=
           .const (1 : UInt32),
           .localSet 5,
           .br 3
-        ],
+        ] [] [],
         .localGet 7,
         .const (1 : UInt32),
         .add,
         .localSet 7
-      ],
+      ] [] [],
       .localGet 2,
       .load8U (0 : UInt32),
       .localSet 5,
       .localGet 5,
       .br_if 0
-    ],
+    ] [] [],
     .const (0 : UInt32),
     .localSet 5
-  ],
+  ] [] [],
   .localGet 4,
   .const (16 : UInt32),
   .add,
@@ -5856,7 +5856,7 @@ def func53 : Wasm.Program :=
 ]
 
 def func53Def : Wasm.Function :=
-  { params := [.i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32], body := func53, results := [.i32] }
+  { params := [.i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32], body := func53, results := [.i32], typeIdx := some 6 }
 
 def func54 : Wasm.Program :=
   [
@@ -5871,7 +5871,7 @@ def func54 : Wasm.Program :=
 ]
 
 def func54Def : Wasm.Function :=
-  { params := [.i32, .i32, .i32], locals := [], body := func54, results := [.i32] }
+  { params := [.i32, .i32, .i32], locals := [], body := func54, results := [.i32], typeIdx := some 1 }
 
 def «module» : Wasm.Module :=
 {
@@ -5936,14 +5936,23 @@ def «module» : Wasm.Module :=
   exports := [
     { name := "check", funcIdx := 2 }
   ],
-  memory := some { pagesMin := (17 : UInt32), pagesMax := none, data := [
-    { offset := some (1048576 : UInt32), bytes := [(105 : UInt8), (110 : UInt8), (116 : UInt8), (101 : UInt8), (114 : UInt8), (110 : UInt8), (97 : UInt8), (108 : UInt8), (32 : UInt8), (101 : UInt8), (114 : UInt8), (114 : UInt8), (111 : UInt8), (114 : UInt8), (58 : UInt8), (32 : UInt8), (101 : UInt8), (110 : UInt8), (116 : UInt8), (101 : UInt8), (114 : UInt8), (101 : UInt8), (100 : UInt8), (32 : UInt8), (117 : UInt8), (110 : UInt8), (114 : UInt8), (101 : UInt8), (97 : UInt8), (99 : UInt8), (104 : UInt8), (97 : UInt8), (98 : UInt8), (108 : UInt8), (101 : UInt8), (32 : UInt8), (99 : UInt8), (111 : UInt8), (100 : UInt8), (101 : UInt8), (102 : UInt8), (108 : UInt8), (111 : UInt8), (97 : UInt8), (116 : UInt8), (95 : UInt8), (116 : UInt8), (114 : UInt8), (117 : UInt8), (110 : UInt8), (99 : UInt8), (47 : UInt8), (115 : UInt8), (114 : UInt8), (99 : UInt8), (47 : UInt8), (101 : UInt8), (120 : UInt8), (112 : UInt8), (111 : UInt8), (114 : UInt8), (116 : UInt8), (115 : UInt8), (46 : UInt8), (114 : UInt8), (115 : UInt8), (0 : UInt8), (0 : UInt8), (40 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (26 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (20 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (9 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (2 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (12 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (3 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (5 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (8 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (6 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (7 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (8 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (9 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (10 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (11 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (12 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (13 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (14 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (109 : UInt8), (93 : UInt8), (203 : UInt8), (214 : UInt8), (44 : UInt8), (80 : UInt8), (235 : UInt8), (99 : UInt8), (120 : UInt8), (65 : UInt8), (166 : UInt8), (87 : UInt8), (113 : UInt8), (27 : UInt8), (139 : UInt8), (185 : UInt8), (21 : UInt8), (162 : UInt8), (92 : UInt8), (85 : UInt8), (52 : UInt8), (85 : UInt8), (7 : UInt8), (212 : UInt8), (83 : UInt8), (120 : UInt8), (173 : UInt8), (129 : UInt8), (81 : UInt8), (240 : UInt8), (163 : UInt8), (247 : UInt8), (47 : UInt8), (114 : UInt8), (117 : UInt8), (115 : UInt8), (116 : UInt8), (47 : UInt8), (100 : UInt8), (101 : UInt8), (112 : UInt8), (115 : UInt8), (47 : UInt8), (100 : UInt8), (108 : UInt8), (109 : UInt8), (97 : UInt8), (108 : UInt8), (108 : UInt8), (111 : UInt8), (99 : UInt8), (45 : UInt8), (48 : UInt8), (46 : UInt8), (50 : UInt8), (46 : UInt8), (49 : UInt8), (49 : UInt8), (47 : UInt8), (115 : UInt8), (114 : UInt8), (99 : UInt8), (47 : UInt8), (100 : UInt8), (108 : UInt8), (109 : UInt8), (97 : UInt8), (108 : UInt8), (108 : UInt8), (111 : UInt8), (99 : UInt8), (46 : UInt8), (114 : UInt8), (115 : UInt8), (0 : UInt8), (97 : UInt8), (115 : UInt8), (115 : UInt8), (101 : UInt8), (114 : UInt8), (116 : UInt8), (105 : UInt8), (111 : UInt8), (110 : UInt8), (32 : UInt8), (102 : UInt8), (97 : UInt8), (105 : UInt8), (108 : UInt8), (101 : UInt8), (100 : UInt8), (58 : UInt8), (32 : UInt8), (112 : UInt8), (115 : UInt8), (105 : UInt8), (122 : UInt8), (101 : UInt8), (32 : UInt8), (62 : UInt8), (61 : UInt8), (32 : UInt8), (115 : UInt8), (105 : UInt8), (122 : UInt8), (101 : UInt8), (32 : UInt8), (43 : UInt8), (32 : UInt8), (109 : UInt8), (105 : UInt8), (110 : UInt8), (95 : UInt8), (111 : UInt8), (118 : UInt8), (101 : UInt8), (114 : UInt8), (104 : UInt8), (101 : UInt8), (97 : UInt8), (100 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (196 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (42 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (177 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (9 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (97 : UInt8), (115 : UInt8), (115 : UInt8), (101 : UInt8), (114 : UInt8), (116 : UInt8), (105 : UInt8), (111 : UInt8), (110 : UInt8), (32 : UInt8), (102 : UInt8), (97 : UInt8), (105 : UInt8), (108 : UInt8), (101 : UInt8), (100 : UInt8), (58 : UInt8), (32 : UInt8), (112 : UInt8), (115 : UInt8), (105 : UInt8), (122 : UInt8), (101 : UInt8), (32 : UInt8), (60 : UInt8), (61 : UInt8), (32 : UInt8), (115 : UInt8), (105 : UInt8), (122 : UInt8), (101 : UInt8), (32 : UInt8), (43 : UInt8), (32 : UInt8), (109 : UInt8), (97 : UInt8), (120 : UInt8), (95 : UInt8), (111 : UInt8), (118 : UInt8), (101 : UInt8), (114 : UInt8), (104 : UInt8), (101 : UInt8), (97 : UInt8), (100 : UInt8), (0 : UInt8), (0 : UInt8), (196 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (42 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (183 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (13 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (8 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (15 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (2 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (12 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (47 : UInt8), (114 : UInt8), (117 : UInt8), (115 : UInt8), (116 : UInt8), (99 : UInt8), (47 : UInt8), (53 : UInt8), (57 : UInt8), (56 : UInt8), (48 : UInt8), (55 : UInt8), (54 : UInt8), (49 : UInt8), (54 : UInt8), (101 : UInt8), (49 : UInt8), (102 : UInt8), (97 : UInt8), (50 : UInt8), (53 : UInt8), (52 : UInt8), (48 : UInt8), (55 : UInt8), (50 : UInt8), (52 : UInt8), (98 : UInt8), (102 : UInt8), (98 : UInt8), (97 : UInt8), (99 : UInt8), (49 : UInt8), (52 : UInt8), (100 : UInt8), (55 : UInt8), (57 : UInt8), (55 : UInt8), (54 : UInt8), (100 : UInt8), (55 : UInt8), (101 : UInt8), (52 : UInt8), (97 : UInt8), (51 : UInt8), (56 : UInt8), (54 : UInt8), (48 : UInt8), (47 : UInt8), (108 : UInt8), (105 : UInt8), (98 : UInt8), (114 : UInt8), (97 : UInt8), (114 : UInt8), (121 : UInt8), (47 : UInt8), (97 : UInt8), (108 : UInt8), (108 : UInt8), (111 : UInt8), (99 : UInt8), (47 : UInt8), (115 : UInt8), (114 : UInt8), (99 : UInt8), (47 : UInt8), (114 : UInt8), (97 : UInt8), (119 : UInt8), (95 : UInt8), (118 : UInt8), (101 : UInt8), (99 : UInt8), (47 : UInt8), (109 : UInt8), (111 : UInt8), (100 : UInt8), (46 : UInt8), (114 : UInt8), (115 : UInt8), (0 : UInt8), (99 : UInt8), (97 : UInt8), (112 : UInt8), (97 : UInt8), (99 : UInt8), (105 : UInt8), (116 : UInt8), (121 : UInt8), (32 : UInt8), (111 : UInt8), (118 : UInt8), (101 : UInt8), (114 : UInt8), (102 : UInt8), (108 : UInt8), (111 : UInt8), (119 : UInt8), (0 : UInt8), (0 : UInt8), (144 : UInt8), (1 : UInt8), (16 : UInt8), (0 : UInt8), (80 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (28 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (5 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8)] }
-  ] },
+  memory := some (Wasm.MemDecl.mk (17 : UInt32) (none) ([
+      { offset := some (1048576 : UInt32), bytes := [(105 : UInt8), (110 : UInt8), (116 : UInt8), (101 : UInt8), (114 : UInt8), (110 : UInt8), (97 : UInt8), (108 : UInt8), (32 : UInt8), (101 : UInt8), (114 : UInt8), (114 : UInt8), (111 : UInt8), (114 : UInt8), (58 : UInt8), (32 : UInt8), (101 : UInt8), (110 : UInt8), (116 : UInt8), (101 : UInt8), (114 : UInt8), (101 : UInt8), (100 : UInt8), (32 : UInt8), (117 : UInt8), (110 : UInt8), (114 : UInt8), (101 : UInt8), (97 : UInt8), (99 : UInt8), (104 : UInt8), (97 : UInt8), (98 : UInt8), (108 : UInt8), (101 : UInt8), (32 : UInt8), (99 : UInt8), (111 : UInt8), (100 : UInt8), (101 : UInt8), (102 : UInt8), (108 : UInt8), (111 : UInt8), (97 : UInt8), (116 : UInt8), (95 : UInt8), (116 : UInt8), (114 : UInt8), (117 : UInt8), (110 : UInt8), (99 : UInt8), (47 : UInt8), (115 : UInt8), (114 : UInt8), (99 : UInt8), (47 : UInt8), (101 : UInt8), (120 : UInt8), (112 : UInt8), (111 : UInt8), (114 : UInt8), (116 : UInt8), (115 : UInt8), (46 : UInt8), (114 : UInt8), (115 : UInt8), (0 : UInt8), (0 : UInt8), (40 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (26 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (20 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (9 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (2 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (12 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (3 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (5 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (8 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (6 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (7 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (8 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (9 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (10 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (11 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (12 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (13 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (14 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (109 : UInt8), (93 : UInt8), (203 : UInt8), (214 : UInt8), (44 : UInt8), (80 : UInt8), (235 : UInt8), (99 : UInt8), (120 : UInt8), (65 : UInt8), (166 : UInt8), (87 : UInt8), (113 : UInt8), (27 : UInt8), (139 : UInt8), (185 : UInt8), (21 : UInt8), (162 : UInt8), (92 : UInt8), (85 : UInt8), (52 : UInt8), (85 : UInt8), (7 : UInt8), (212 : UInt8), (83 : UInt8), (120 : UInt8), (173 : UInt8), (129 : UInt8), (81 : UInt8), (240 : UInt8), (163 : UInt8), (247 : UInt8), (47 : UInt8), (114 : UInt8), (117 : UInt8), (115 : UInt8), (116 : UInt8), (47 : UInt8), (100 : UInt8), (101 : UInt8), (112 : UInt8), (115 : UInt8), (47 : UInt8), (100 : UInt8), (108 : UInt8), (109 : UInt8), (97 : UInt8), (108 : UInt8), (108 : UInt8), (111 : UInt8), (99 : UInt8), (45 : UInt8), (48 : UInt8), (46 : UInt8), (50 : UInt8), (46 : UInt8), (49 : UInt8), (49 : UInt8), (47 : UInt8), (115 : UInt8), (114 : UInt8), (99 : UInt8), (47 : UInt8), (100 : UInt8), (108 : UInt8), (109 : UInt8), (97 : UInt8), (108 : UInt8), (108 : UInt8), (111 : UInt8), (99 : UInt8), (46 : UInt8), (114 : UInt8), (115 : UInt8), (0 : UInt8), (97 : UInt8), (115 : UInt8), (115 : UInt8), (101 : UInt8), (114 : UInt8), (116 : UInt8), (105 : UInt8), (111 : UInt8), (110 : UInt8), (32 : UInt8), (102 : UInt8), (97 : UInt8), (105 : UInt8), (108 : UInt8), (101 : UInt8), (100 : UInt8), (58 : UInt8), (32 : UInt8), (112 : UInt8), (115 : UInt8), (105 : UInt8), (122 : UInt8), (101 : UInt8), (32 : UInt8), (62 : UInt8), (61 : UInt8), (32 : UInt8), (115 : UInt8), (105 : UInt8), (122 : UInt8), (101 : UInt8), (32 : UInt8), (43 : UInt8), (32 : UInt8), (109 : UInt8), (105 : UInt8), (110 : UInt8), (95 : UInt8), (111 : UInt8), (118 : UInt8), (101 : UInt8), (114 : UInt8), (104 : UInt8), (101 : UInt8), (97 : UInt8), (100 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (196 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (42 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (177 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (9 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (97 : UInt8), (115 : UInt8), (115 : UInt8), (101 : UInt8), (114 : UInt8), (116 : UInt8), (105 : UInt8), (111 : UInt8), (110 : UInt8), (32 : UInt8), (102 : UInt8), (97 : UInt8), (105 : UInt8), (108 : UInt8), (101 : UInt8), (100 : UInt8), (58 : UInt8), (32 : UInt8), (112 : UInt8), (115 : UInt8), (105 : UInt8), (122 : UInt8), (101 : UInt8), (32 : UInt8), (60 : UInt8), (61 : UInt8), (32 : UInt8), (115 : UInt8), (105 : UInt8), (122 : UInt8), (101 : UInt8), (32 : UInt8), (43 : UInt8), (32 : UInt8), (109 : UInt8), (97 : UInt8), (120 : UInt8), (95 : UInt8), (111 : UInt8), (118 : UInt8), (101 : UInt8), (114 : UInt8), (104 : UInt8), (101 : UInt8), (97 : UInt8), (100 : UInt8), (0 : UInt8), (0 : UInt8), (196 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (42 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (183 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (13 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (8 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (15 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (2 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (12 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (4 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (16 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (47 : UInt8), (114 : UInt8), (117 : UInt8), (115 : UInt8), (116 : UInt8), (99 : UInt8), (47 : UInt8), (53 : UInt8), (57 : UInt8), (56 : UInt8), (48 : UInt8), (55 : UInt8), (54 : UInt8), (49 : UInt8), (54 : UInt8), (101 : UInt8), (49 : UInt8), (102 : UInt8), (97 : UInt8), (50 : UInt8), (53 : UInt8), (52 : UInt8), (48 : UInt8), (55 : UInt8), (50 : UInt8), (52 : UInt8), (98 : UInt8), (102 : UInt8), (98 : UInt8), (97 : UInt8), (99 : UInt8), (49 : UInt8), (52 : UInt8), (100 : UInt8), (55 : UInt8), (57 : UInt8), (55 : UInt8), (54 : UInt8), (100 : UInt8), (55 : UInt8), (101 : UInt8), (52 : UInt8), (97 : UInt8), (51 : UInt8), (56 : UInt8), (54 : UInt8), (48 : UInt8), (47 : UInt8), (108 : UInt8), (105 : UInt8), (98 : UInt8), (114 : UInt8), (97 : UInt8), (114 : UInt8), (121 : UInt8), (47 : UInt8), (97 : UInt8), (108 : UInt8), (108 : UInt8), (111 : UInt8), (99 : UInt8), (47 : UInt8), (115 : UInt8), (114 : UInt8), (99 : UInt8), (47 : UInt8), (114 : UInt8), (97 : UInt8), (119 : UInt8), (95 : UInt8), (118 : UInt8), (101 : UInt8), (99 : UInt8), (47 : UInt8), (109 : UInt8), (111 : UInt8), (100 : UInt8), (46 : UInt8), (114 : UInt8), (115 : UInt8), (0 : UInt8), (99 : UInt8), (97 : UInt8), (112 : UInt8), (97 : UInt8), (99 : UInt8), (105 : UInt8), (116 : UInt8), (121 : UInt8), (32 : UInt8), (111 : UInt8), (118 : UInt8), (101 : UInt8), (114 : UInt8), (102 : UInt8), (108 : UInt8), (111 : UInt8), (119 : UInt8), (0 : UInt8), (0 : UInt8), (144 : UInt8), (1 : UInt8), (16 : UInt8), (0 : UInt8), (80 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (28 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8), (5 : UInt8), (0 : UInt8), (0 : UInt8), (0 : UInt8)], memIdx := 0, offsetType := some (.i32), offsetExprPresent := false, offsetExpr := [] }
+    ]) false),
+  extraMemories := [],
+  dataWithoutMemory := false,
   globals := [
-    { init := .i32 (1048576 : UInt32) },
-    { init := .i32 (1049573 : UInt32) },
-    { init := .i32 (1049584 : UInt32) }
+    { init := .i32 (1048576 : UInt32), declaredType := some (.i32), isMut := true, sourceInit := some ([
+        .const (1048576 : UInt32)
+      ]), initExpr := [] },
+    { init := .i32 (1049573 : UInt32), declaredType := some (.i32), isMut := false, sourceInit := some ([
+        .const (1049573 : UInt32)
+      ]), initExpr := [] },
+    { init := .i32 (1049584 : UInt32), declaredType := some (.i32), isMut := false, sourceInit := some ([
+        .const (1049584 : UInt32)
+      ]), initExpr := [] }
   ],
+  startFunc := none,
   types := [
     { params := [.i32, .i32], results := [] },
     { params := [.i32, .i32, .i32], results := [.i32] },
@@ -5958,12 +5967,55 @@ def «module» : Wasm.Module :=
     { params := [.i32, .i32, .i32, .i32, .i32, .i32], results := [] },
     { params := [.i32], results := [.i32] }
   ],
+  gcTypes := [
+    { comp := .func ({ params := [.i32, .i32], results := [] }), sourceName := none, super := none, «final» := true, recGroup := none },
+    { comp := .func ({ params := [.i32, .i32, .i32], results := [.i32] }), sourceName := none, super := none, «final» := true, recGroup := none },
+    { comp := .func ({ params := [.i32, .i32], results := [.i32] }), sourceName := none, super := none, «final» := true, recGroup := none },
+    { comp := .func ({ params := [.f32], results := [.i32] }), sourceName := none, super := none, «final» := true, recGroup := none },
+    { comp := .func ({ params := [.f32], results := [] }), sourceName := none, super := none, «final» := true, recGroup := none },
+    { comp := .func ({ params := [.i32, .i32, .i32], results := [] }), sourceName := none, super := none, «final» := true, recGroup := none },
+    { comp := .func ({ params := [.i32, .i32, .i32, .i32], results := [.i32] }), sourceName := none, super := none, «final» := true, recGroup := none },
+    { comp := .func ({ params := [], results := [] }), sourceName := none, super := none, «final» := true, recGroup := none },
+    { comp := .func ({ params := [.i32, .i32, .i32, .i32, .i32], results := [] }), sourceName := none, super := none, «final» := true, recGroup := none },
+    { comp := .func ({ params := [.i32], results := [] }), sourceName := none, super := none, «final» := true, recGroup := none },
+    { comp := .func ({ params := [.i32, .i32, .i32, .i32, .i32, .i32], results := [] }), sourceName := none, super := none, «final» := true, recGroup := none },
+    { comp := .func ({ params := [.i32], results := [.i32] }), sourceName := none, super := none, «final» := true, recGroup := none }
+  ],
   tables := [
-    { min := 17, max := some 17, elemType := .funcref }
+    { min := 17, max := some 17, elemType := .funcref, is64 := false }
   ],
   elements := [
-    { tableIdx := some 0, offset := some 1, funcs := [some 18, some 10, some 42, some 41, some 46, some 40, some 39, some 37, some 38, some 11, some 36, some 44, some 43, some 45, some 35, some 34] }
-  ]
+    { tableIdx := some 0, offset := some 1, offsetType := some (.i32), offsetExprPresent := false, elemType := some (.funcref), declarative := false, funcs := [some 18, some 10, some 42, some 41, some 46, some 40, some 39, some 37, some 38, some 11, some 36, some 44, some 43, some 45, some 35, some 34], exprs := [], offsetExpr := [] }
+  ],
+  importedGlobals := [],
+  importedTables := [],
+  importedMemories := [],
+  importedTags := [],
+  globalExports := [
+    ("__data_end", 1),
+    ("__heap_base", 2)
+  ],
+  tableExports := [],
+  memoryExports := [
+    ("memory", 0)
+  ],
+  tagExports := [],
+  tags := []
 }
+
+/-- Exact source of `module.wat` captured when `verifier emit` last ran. -/
+private def expectedWatSource : String := "(module $float_trunc.wasm\n  (type (;0;) (func (param i32 i32)))\n  (type (;1;) (func (param i32 i32 i32) (result i32)))\n  (type (;2;) (func (param i32 i32) (result i32)))\n  (type (;3;) (func (param f32) (result i32)))\n  (type (;4;) (func (param f32)))\n  (type (;5;) (func (param i32 i32 i32)))\n  (type (;6;) (func (param i32 i32 i32 i32) (result i32)))\n  (type (;7;) (func))\n  (type (;8;) (func (param i32 i32 i32 i32 i32)))\n  (type (;9;) (func (param i32)))\n  (type (;10;) (func (param i32 i32 i32 i32 i32 i32)))\n  (type (;11;) (func (param i32) (result i32)))\n  (table (;0;) 17 17 funcref)\n  (memory (;0;) 17)\n  (global $__stack_pointer (;0;) (mut i32) i32.const 1048576)\n  (global (;1;) i32 i32.const 1049573)\n  (global (;2;) i32 i32.const 1049584)\n  (export \"memory\" (memory 0))\n  (export \"check\" (func $check))\n  (export \"__data_end\" (global 1))\n  (export \"__heap_base\" (global 2))\n  (elem (;0;) (i32.const 1) func $_RNvNtCsebHcaeoSrxy_3std5alloc24default_alloc_error_hook $_RINvNtCsgXGp5Oqx2Ny_4core3ptr13drop_in_placeNtNtCs5cOc02OMXlo_5alloc6string6StringECsebHcaeoSrxy_3std $_RNvXsZ_NtCs5cOc02OMXlo_5alloc6stringNtB5_6StringNtNtCsgXGp5Oqx2Ny_4core3fmt5Write9write_str $_RNvXsZ_NtCs5cOc02OMXlo_5alloc6stringNtB5_6StringNtNtCsgXGp5Oqx2Ny_4core3fmt5Write10write_char $_RNvYNtNtCs5cOc02OMXlo_5alloc6string6StringNtNtCsgXGp5Oqx2Ny_4core3fmt5Write9write_fmtCsebHcaeoSrxy_3std $_RNvXs2_NvNtCsebHcaeoSrxy_3std9panicking13panic_handlerNtB5_16StaticStrPayloadNtNtCsgXGp5Oqx2Ny_4core3fmt7Display3fmt $_RNvXs1_NvNtCsebHcaeoSrxy_3std9panicking13panic_handlerNtB5_16StaticStrPayloadNtNtCsgXGp5Oqx2Ny_4core5panic12PanicPayload8take_box $_RNvXs1_NvNtCsebHcaeoSrxy_3std9panicking13panic_handlerNtB5_16StaticStrPayloadNtNtCsgXGp5Oqx2Ny_4core5panic12PanicPayload3get $_RNvXs1_NvNtCsebHcaeoSrxy_3std9panicking13panic_handlerNtB5_16StaticStrPayloadNtNtCsgXGp5Oqx2Ny_4core5panic12PanicPayload6as_str $_RINvNtCsgXGp5Oqx2Ny_4core3ptr13drop_in_placeNtNvNtCsebHcaeoSrxy_3std9panicking13panic_handler19FormatStringPayloadEBM_ $_RNvXs0_NvNtCsebHcaeoSrxy_3std9panicking13panic_handlerNtB5_19FormatStringPayloadNtNtCsgXGp5Oqx2Ny_4core3fmt7Display3fmt $_RNvXs_NvNtCsebHcaeoSrxy_3std9panicking13panic_handlerNtB4_19FormatStringPayloadNtNtCsgXGp5Oqx2Ny_4core5panic12PanicPayload8take_box $_RNvXs_NvNtCsebHcaeoSrxy_3std9panicking13panic_handlerNtB4_19FormatStringPayloadNtNtCsgXGp5Oqx2Ny_4core5panic12PanicPayload3get $_RNvYINtNvNtCsebHcaeoSrxy_3std9panicking11begin_panic7PayloadReENtNtCsgXGp5Oqx2Ny_4core5panic12PanicPayload6as_strB9_ $_RNvXNtCsgXGp5Oqx2Ny_4core3anyReNtB2_3Any7type_idCsebHcaeoSrxy_3std $_RNvXNtCsgXGp5Oqx2Ny_4core3anyNtNtCs5cOc02OMXlo_5alloc6string6StringNtB2_3Any7type_idCsebHcaeoSrxy_3std)\n  (func $_ZN11float_trunc7exports11naive_trunc17hd9bb3ea90dd386fdE (;0;) (type 3) (param f32) (result i32)\n    (local i32)\n    global.get $__stack_pointer\n    i32.const 16\n    i32.sub\n    local.set 1\n    block ;; label = @1\n      block ;; label = @2\n        block ;; label = @3\n          block ;; label = @4\n            block ;; label = @5\n              block ;; label = @6\n                local.get 0\n                local.get 0\n                f32.ne\n                i32.const 1\n                i32.and\n                br_if 0 (;@6;)\n                local.get 0\n                f32.const 0x1p+31 (;=2147483600;)\n                f32.ge\n                i32.const 1\n                i32.and\n                br_if 2 (;@4;)\n                br 1 (;@5;)\n              end\n              local.get 1\n              i32.const 0\n              i32.store offset=12\n              br 4 (;@1;)\n            end\n            local.get 0\n            f32.const -0x1p+31 (;=-2147483600;)\n            f32.lt\n            i32.const 1\n            i32.and\n            br_if 2 (;@2;)\n            br 1 (;@3;)\n          end\n          local.get 1\n          i32.const 2147483647\n          i32.store offset=12\n          br 2 (;@1;)\n        end\n        local.get 1\n        local.get 0\n        i32.trunc_sat_f32_s\n        i32.store offset=12\n        br 1 (;@1;)\n      end\n      local.get 1\n      i32.const -2147483648\n      i32.store offset=12\n    end\n    local.get 1\n    i32.load offset=12\n    return\n  )\n  (func $_ZN11float_trunc7exports9sat_trunc17h94e580b04bf89762E (;1;) (type 3) (param f32) (result i32)\n    local.get 0\n    i32.trunc_sat_f32_s\n    return\n  )\n  (func $check (;2;) (type 4) (param f32)\n    block ;; label = @1\n      local.get 0\n      call $_ZN11float_trunc7exports11naive_trunc17hd9bb3ea90dd386fdE\n      local.get 0\n      call $_ZN11float_trunc7exports9sat_trunc17h94e580b04bf89762E\n      i32.ne\n      i32.const 1\n      i32.and\n      br_if 0 (;@1;)\n      return\n    end\n    i32.const 1048576\n    i32.const 40\n    i32.const 1048644\n    call $_RNvNtCsgXGp5Oqx2Ny_4core9panicking5panic\n    unreachable\n  )\n  (func $_RNvCsfLfy6EI15iL_7___rustc12___rust_alloc (;3;) (type 2) (param i32 i32) (result i32)\n    local.get 0\n    local.get 1\n    call $_RNvCsfLfy6EI15iL_7___rustc11___rdl_alloc\n    return\n  )\n  (func $_RNvCsfLfy6EI15iL_7___rustc14___rust_dealloc (;4;) (type 5) (param i32 i32 i32)\n    local.get 0\n    local.get 1\n    local.get 2\n    call $_RNvCsfLfy6EI15iL_7___rustc13___rdl_dealloc\n    return\n  )\n  (func $_RNvCsfLfy6EI15iL_7___rustc14___rust_realloc (;5;) (type 6) (param i32 i32 i32 i32) (result i32)\n    local.get 0\n    local.get 1\n    local.get 2\n    local.get 3\n    call $_RNvCsfLfy6EI15iL_7___rustc13___rdl_realloc\n    return\n  )\n  (func $_RNvCsfLfy6EI15iL_7___rustc35___rust_no_alloc_shim_is_unstable_v2 (;6;) (type 7)\n    return\n  )\n  (func $_RNvCsfLfy6EI15iL_7___rustc18___rust_start_panic (;7;) (type 2) (param i32 i32) (result i32)\n    call $_RNvCsfLfy6EI15iL_7___rustc12___rust_abort\n    unreachable\n  )\n  (func $_RINvNvMs2_NtCs5cOc02OMXlo_5alloc7raw_vecINtB8_11RawVecInnerpE7reserve21do_reserve_and_handleNtNtBa_5alloc6GlobalECsebHcaeoSrxy_3std (;8;) (type 8) (param i32 i32 i32 i32 i32)\n    (local i32)\n    global.get $__stack_pointer\n    i32.const 16\n    i32.sub\n    local.tee 5\n    global.set $__stack_pointer\n    block ;; label = @1\n      local.get 2\n      local.get 1\n      i32.add\n      local.tee 1\n      local.get 2\n      i32.ge_u\n      br_if 0 (;@1;)\n      i32.const 0\n      i32.const 0\n      call $_RNvNtCs5cOc02OMXlo_5alloc7raw_vec12handle_error\n      unreachable\n    end\n    local.get 5\n    i32.const 4\n    i32.add\n    local.get 0\n    i32.load\n    local.tee 2\n    local.get 0\n    i32.load offset=4\n    local.get 1\n    local.get 2\n    i32.const 1\n    i32.shl\n    local.tee 2\n    local.get 1\n    local.get 2\n    i32.gt_u\n    select\n    local.tee 2\n    i32.const 8\n    i32.const 4\n    local.get 4\n    i32.const 1\n    i32.eq\n    select\n    local.tee 1\n    local.get 2\n    local.get 1\n    i32.gt_u\n    select\n    local.tee 2\n    local.get 3\n    local.get 4\n    call $_RNvMs4_NtCs5cOc02OMXlo_5alloc7raw_vecNtB5_11RawVecInner11finish_growCsebHcaeoSrxy_3std\n    block ;; label = @1\n      local.get 5\n      i32.load offset=4\n      i32.const 1\n      i32.ne\n      br_if 0 (;@1;)\n      local.get 5\n      i32.load offset=8\n      local.get 5\n      i32.load offset=12\n      call $_RNvNtCs5cOc02OMXlo_5alloc7raw_vec12handle_error\n      unreachable\n    end\n    local.get 5\n    i32.load offset=8\n    local.set 4\n    local.get 0\n    local.get 2\n    i32.store\n    local.get 0\n    local.get 4\n    i32.store offset=4\n    local.get 5\n    i32.const 16\n    i32.add\n    global.set $__stack_pointer\n  )\n  (func $_RINvNtCsgXGp5Oqx2Ny_4core3ptr13drop_in_placeINtNtB4_6option6OptionINtNtCs5cOc02OMXlo_5alloc3vec3VechEEECsebHcaeoSrxy_3std (;9;) (type 0) (param i32 i32)\n    block ;; label = @1\n      local.get 0\n      i32.const -2147483648\n      i32.or\n      i32.const -2147483648\n      i32.eq\n      br_if 0 (;@1;)\n      local.get 1\n      local.get 0\n      i32.const 1\n      call $_RNvCsfLfy6EI15iL_7___rustc14___rust_dealloc\n    end\n  )\n  (func $_RINvNtCsgXGp5Oqx2Ny_4core3ptr13drop_in_placeNtNtCs5cOc02OMXlo_5alloc6string6StringECsebHcaeoSrxy_3std (;10;) (type 9) (param i32)\n    (local i32)\n    block ;; label = @1\n      local.get 0\n      i32.load\n      local.tee 1\n      i32.eqz\n      br_if 0 (;@1;)\n      local.get 0\n      i32.load offset=4\n      local.get 1\n      i32.const 1\n      call $_RNvCsfLfy6EI15iL_7___rustc14___rust_dealloc\n    end\n  )\n  (func $_RINvNtCsgXGp5Oqx2Ny_4core3ptr13drop_in_placeNtNvNtCsebHcaeoSrxy_3std9panicking13panic_handler19FormatStringPayloadEBM_ (;11;) (type 9) (param i32)\n    (local i32)\n    block ;; label = @1\n      local.get 0\n      i32.load\n      local.tee 1\n      i32.const 1\n      i32.lt_s\n      br_if 0 (;@1;)\n      local.get 0\n      i32.load offset=4\n      local.get 1\n      i32.const 1\n      call $_RNvCsfLfy6EI15iL_7___rustc14___rust_dealloc\n    end\n  )\n  (func $_RINvNtNtCsebHcaeoSrxy_3std3sys9backtrace26___rust_end_short_backtraceNCNvNtB6_5alloc8rust_oom0zEB6_ (;12;) (type 9) (param i32)\n    local.get 0\n    call $_RNCNvNtCsebHcaeoSrxy_3std5alloc8rust_oom0B5_\n    unreachable\n  )\n  (func $_RNCNvNtCsebHcaeoSrxy_3std5alloc8rust_oom0B5_ (;13;) (type 9) (param i32)\n    local.get 0\n    i32.load\n    local.get 0\n    i32.load offset=4\n    i32.const 0\n    i32.load offset=1049100\n    local.tee 0\n    i32.const 1\n    local.get 0\n    select\n    call_indirect (type 0)\n    unreachable\n  )\n  (func $_RINvNtNtCsebHcaeoSrxy_3std3sys9backtrace26___rust_end_short_backtraceNCNvNtB6_9panicking13panic_handler0zEB6_ (;14;) (type 9) (param i32)\n    local.get 0\n    call $_RNCNvNtCsebHcaeoSrxy_3std9panicking13panic_handler0B5_\n    unreachable\n  )\n  (func $_RNCNvNtCsebHcaeoSrxy_3std9panicking13panic_handler0B5_ (;15;) (type 9) (param i32)\n    (local i32 i32 i32)\n    global.get $__stack_pointer\n    i32.const 16\n    i32.sub\n    local.tee 1\n    global.set $__stack_pointer\n    block ;; label = @1\n      local.get 0\n      i32.load\n      local.tee 2\n      i32.load offset=4\n      local.tee 3\n      i32.const 1\n      i32.and\n      i32.eqz\n      br_if 0 (;@1;)\n      local.get 2\n      i32.load\n      local.set 2\n      local.get 1\n      local.get 3\n      i32.const 1\n      i32.shr_u\n      i32.store offset=4\n      local.get 1\n      local.get 2\n      i32.store\n      local.get 1\n      i32.const 1048684\n      local.get 0\n      i32.load offset=4\n      local.get 0\n      i32.load offset=8\n      local.tee 0\n      i32.load8_u offset=8\n      local.get 0\n      i32.load8_u offset=9\n      call $_RNvNtCsebHcaeoSrxy_3std9panicking15panic_with_hook\n      unreachable\n    end\n    local.get 1\n    i32.const -2147483648\n    i32.store\n    local.get 1\n    local.get 0\n    i32.store offset=12\n    local.get 1\n    i32.const 1048712\n    local.get 0\n    i32.load offset=4\n    local.get 0\n    i32.load offset=8\n    local.tee 0\n    i32.load8_u offset=8\n    local.get 0\n    i32.load8_u offset=9\n    call $_RNvNtCsebHcaeoSrxy_3std9panicking15panic_with_hook\n    unreachable\n  )\n  (func $_RNvMs4_NtCs5cOc02OMXlo_5alloc7raw_vecNtB5_11RawVecInner11finish_growCsebHcaeoSrxy_3std (;16;) (type 10) (param i32 i32 i32 i32 i32 i32)\n    (local i32 i32 i64)\n    i32.const 1\n    local.set 6\n    i32.const 4\n    local.set 7\n    block ;; label = @1\n      block ;; label = @2\n        local.get 5\n        i64.extend_i32_u\n        local.get 3\n        i64.extend_i32_u\n        i64.mul\n        local.tee 8\n        i64.const 32\n        i64.shr_u\n        i32.wrap_i64\n        i32.eqz\n        br_if 0 (;@2;)\n        i32.const 0\n        local.set 3\n        br 1 (;@1;)\n      end\n      block ;; label = @2\n        local.get 8\n        i32.wrap_i64\n        local.tee 3\n        i32.const -2147483648\n        local.get 4\n        i32.sub\n        i32.le_u\n        br_if 0 (;@2;)\n        i32.const 0\n        local.set 3\n        br 1 (;@1;)\n      end\n      block ;; label = @2\n        block ;; label = @3\n          block ;; label = @4\n            block ;; label = @5\n              local.get 1\n              i32.eqz\n              br_if 0 (;@5;)\n              local.get 2\n              local.get 5\n              local.get 1\n              i32.mul\n              local.get 4\n              local.get 3\n              call $_RNvCsfLfy6EI15iL_7___rustc14___rust_realloc\n              local.set 7\n              br 1 (;@4;)\n            end\n            block ;; label = @5\n              local.get 3\n              br_if 0 (;@5;)\n              local.get 4\n              local.set 7\n              br 2 (;@3;)\n            end\n            call $_RNvCsfLfy6EI15iL_7___rustc35___rust_no_alloc_shim_is_unstable_v2\n            local.get 3\n            local.get 4\n            call $_RNvCsfLfy6EI15iL_7___rustc12___rust_alloc\n            local.set 7\n          end\n          local.get 7\n          br_if 0 (;@3;)\n          local.get 0\n          local.get 4\n          i32.store offset=4\n          br 1 (;@2;)\n        end\n        local.get 0\n        local.get 7\n        i32.store offset=4\n        i32.const 0\n        local.set 6\n      end\n      i32.const 8\n      local.set 7\n    end\n    local.get 0\n    local.get 7\n    i32.add\n    local.get 3\n    i32.store\n    local.get 0\n    local.get 6\n    i32.store\n  )\n  (func $_RNvNtCsebHcaeoSrxy_3std9panicking15panic_with_hook (;17;) (type 8) (param i32 i32 i32 i32 i32)\n    (local i32 i32)\n    global.get $__stack_pointer\n    i32.const 32\n    i32.sub\n    local.tee 5\n    global.set $__stack_pointer\n    block ;; label = @1\n      block ;; label = @2\n        block ;; label = @3\n          block ;; label = @4\n            block ;; label = @5\n              i32.const 1\n              call $_RNvNtNtCsebHcaeoSrxy_3std9panicking11panic_count8increase\n              i32.const 255\n              i32.and\n              br_table 4 (;@1;) 1 (;@4;) 0 (;@5;) 1 (;@4;)\n            end\n            i32.const 0\n            i32.load offset=1049104\n            local.tee 6\n            i32.const -1\n            i32.le_s\n            br_if 3 (;@1;)\n            i32.const 0\n            local.get 6\n            i32.const 1\n            i32.add\n            i32.store offset=1049104\n            i32.const 0\n            i32.load offset=1049108\n            i32.eqz\n            br_if 1 (;@3;)\n            local.get 5\n            i32.const 8\n            i32.add\n            local.get 0\n            local.get 1\n            i32.load offset=20\n            call_indirect (type 0)\n            local.get 5\n            local.get 4\n            i32.store8 offset=29\n            local.get 5\n            local.get 3\n            i32.store8 offset=28\n            local.get 5\n            local.get 2\n            i32.store offset=24\n            local.get 5\n            local.get 5\n            i64.load offset=8\n            i64.store offset=16 align=4\n            i32.const 0\n            i32.load offset=1049108\n            local.get 5\n            i32.const 16\n            i32.add\n            i32.const 0\n            i32.load offset=1049112\n            i32.load offset=20\n            call_indirect (type 0)\n            br 2 (;@2;)\n          end\n          local.get 5\n          local.get 0\n          local.get 1\n          i32.load offset=24\n          call_indirect (type 0)\n          br 2 (;@1;)\n        end\n        i32.const -2147483648\n        local.get 5\n        call $_RINvNtCsgXGp5Oqx2Ny_4core3ptr13drop_in_placeINtNtB4_6option6OptionINtNtCs5cOc02OMXlo_5alloc3vec3VechEEECsebHcaeoSrxy_3std\n      end\n      i32.const 0\n      i32.const 0\n      i32.load offset=1049104\n      i32.const -1\n      i32.add\n      i32.store offset=1049104\n      i32.const 0\n      i32.const 0\n      i32.store8 offset=1049096\n      local.get 3\n      i32.eqz\n      br_if 0 (;@1;)\n      local.get 0\n      local.get 1\n      call $_RNvCsfLfy6EI15iL_7___rustc10rust_panic\n      unreachable\n    end\n    unreachable\n  )\n  (func $_RNvNtCsebHcaeoSrxy_3std5alloc24default_alloc_error_hook (;18;) (type 0) (param i32 i32)\n    i32.const 0\n    i32.const 1\n    i32.store8 offset=1049572\n  )\n  (func $_RNvCsfLfy6EI15iL_7___rustc10rust_panic (;19;) (type 0) (param i32 i32)\n    local.get 0\n    local.get 1\n    call $_RNvCsfLfy6EI15iL_7___rustc18___rust_start_panic\n    drop\n    unreachable\n  )\n  (func $_RNvCsfLfy6EI15iL_7___rustc11___rdl_alloc (;20;) (type 2) (param i32 i32) (result i32)\n    block ;; label = @1\n      local.get 1\n      i32.const 9\n      i32.lt_u\n      br_if 0 (;@1;)\n      local.get 1\n      local.get 0\n      call $_RNvMs0_NtCsjqx8TIyZbP9_8dlmalloc8dlmallocINtB5_8DlmallocNtNtB7_3sys6SystemE8memalignCsebHcaeoSrxy_3std\n      return\n    end\n    local.get 0\n    call $_RNvMs0_NtCsjqx8TIyZbP9_8dlmalloc8dlmallocINtB5_8DlmallocNtNtB7_3sys6SystemE6mallocCsebHcaeoSrxy_3std\n  )\n  (func $_RNvMs0_NtCsjqx8TIyZbP9_8dlmalloc8dlmallocINtB5_8DlmallocNtNtB7_3sys6SystemE8memalignCsebHcaeoSrxy_3std (;21;) (type 2) (param i32 i32) (result i32)\n    (local i32 i32 i32 i32 i32)\n    i32.const 0\n    local.set 2\n    block ;; label = @1\n      local.get 1\n      i32.const -65587\n      local.get 0\n      i32.const 16\n      local.get 0\n      i32.const 16\n      i32.gt_u\n      select\n      local.tee 0\n      i32.sub\n      i32.ge_u\n      br_if 0 (;@1;)\n      local.get 0\n      i32.const 16\n      local.get 1\n      i32.const 11\n      i32.add\n      i32.const -8\n      i32.and\n      local.get 1\n      i32.const 11\n      i32.lt_u\n      select\n      local.tee 3\n      i32.add\n      i32.const 12\n      i32.add\n      call $_RNvMs0_NtCsjqx8TIyZbP9_8dlmalloc8dlmallocINtB5_8DlmallocNtNtB7_3sys6SystemE6mallocCsebHcaeoSrxy_3std\n      local.tee 1\n      i32.eqz\n      br_if 0 (;@1;)\n      local.get 1\n      i32.const -8\n      i32.add\n      local.set 2\n      block ;; label = @2\n        block ;; label = @3\n          local.get 0\n          i32.const -1\n          i32.add\n          local.tee 4\n          local.get 1\n          i32.and\n          br_if 0 (;@3;)\n          local.get 2\n          local.set 0\n          br 1 (;@2;)\n        end\n        local.get 1\n        i32.const -4\n        i32.add\n        local.tee 5\n        i32.load\n        local.tee 6\n        i32.const -8\n        i32.and\n        local.get 4\n        local.get 1\n        i32.add\n        i32.const 0\n        local.get 0\n        i32.sub\n        i32.and\n        i32.const -8\n        i32.add\n        local.tee 1\n        i32.const 0\n        local.get 0\n        local.get 1\n        local.get 2\n        i32.sub\n        i32.const 16\n        i32.gt_u\n        select\n        i32.add\n        local.tee 0\n        local.get 2\n        i32.sub\n        local.tee 1\n        i32.sub\n        local.set 4\n        block ;; label = @3\n          local.get 6\n          i32.const 3\n          i32.and\n          i32.eqz\n          br_if 0 (;@3;)\n          local.get 0\n          local.get 4\n          local.get 0\n          i32.load offset=4\n          i32.const 1\n          i32.and\n          i32.or\n          i32.const 2\n          i32.or\n          i32.store offset=4\n          local.get 0\n          local.get 4\n          i32.add\n          local.tee 4\n          local.get 4\n          i32.load offset=4\n          i32.const 1\n          i32.or\n          i32.store offset=4\n          local.get 5\n          local.get 1\n          local.get 5\n          i32.load\n          i32.const 1\n          i32.and\n          i32.or\n          i32.const 2\n          i32.or\n          i32.store\n          local.get 2\n          local.get 1\n          i32.add\n          local.tee 4\n          local.get 4\n          i32.load offset=4\n          i32.const 1\n          i32.or\n          i32.store offset=4\n          local.get 2\n          local.get 1\n          call $_RNvMs0_NtCsjqx8TIyZbP9_8dlmalloc8dlmallocINtB5_8DlmallocNtNtB7_3sys6SystemE13dispose_chunkCsebHcaeoSrxy_3std\n          br 1 (;@2;)\n        end\n        local.get 2\n        i32.load\n        local.set 2\n        local.get 0\n        local.get 4\n        i32.store offset=4\n        local.get 0\n        local.get 2\n        local.get 1\n        i32.add\n        i32.store\n      end\n      block ;; label = @2\n        local.get 0\n        i32.load offset=4\n        local.tee 1\n        i32.const 3\n        i32.and\n        i32.eqz\n        br_if 0 (;@2;)\n        local.get 1\n        i32.const -8\n        i32.and\n        local.tee 2\n        local.get 3\n        i32.const 16\n        i32.add\n        i32.le_u\n        br_if 0 (;@2;)\n        local.get 0\n        local.get 3\n        local.get 1\n        i32.const 1\n        i32.and\n        i32.or\n        i32.const 2\n        i32.or\n        i32.store offset=4\n        local.get 0\n        local.get 3\n        i32.add\n        local.tee 1\n        local.get 2\n        local.get 3\n        i32.sub\n        local.tee 3\n        i32.const 3\n        i32.or\n        i32.store offset=4\n        local.get 0\n        local.get 2\n        i32.add\n        local.tee 2\n        local.get 2\n        i32.load offset=4\n        i32.const 1\n        i32.or\n        i32.store offset=4\n        local.get 1\n        local.get 3\n        call $_RNvMs0_NtCsjqx8TIyZbP9_8dlmalloc8dlmallocINtB5_8DlmallocNtNtB7_3sys6SystemE13dispose_chunkCsebHcaeoSrxy_3std\n      end\n      local.get 0\n      i32.const 8\n      i32.add\n      local.set 2\n    end\n    local.get 2\n  )\n  (func $_RNvMs0_NtCsjqx8TIyZbP9_8dlmalloc8dlmallocINtB5_8DlmallocNtNtB7_3sys6SystemE6mallocCsebHcaeoSrxy_3std (;22;) (type 11) (param i32) (result i32)\n    (local i32 i32 i32 i32 i32 i32 i32 i32 i32 i64)\n    global.get $__stack_pointer\n    i32.const 16\n    i32.sub\n    local.tee 1\n    global.set $__stack_pointer\n    block ;; label = @1\n      block ;; label = @2\n        block ;; label = @3\n          block ;; label = @4\n            local.get 0\n            i32.const 245\n            i32.lt_u\n            br_if 0 (;@4;)\n            block ;; label = @5\n              local.get 0\n              i32.const -65588\n              i32.le_u\n              br_if 0 (;@5;)\n              i32.const 0\n              local.set 0\n              br 4 (;@1;)\n            end\n            local.get 0\n            i32.const 11\n            i32.add\n            local.tee 2\n            i32.const -8\n            i32.and\n            local.set 3\n            i32.const 0\n            i32.load offset=1049532\n            local.tee 4\n            i32.eqz\n            br_if 2 (;@2;)\n            i32.const 31\n            local.set 5\n            local.get 0\n            i32.const 16777205\n            i32.ge_u\n            br_if 1 (;@3;)\n            local.get 3\n            i32.const 38\n            local.get 2\n            i32.const 8\n            i32.shr_u\n            i32.clz\n            local.tee 0\n            i32.sub\n            i32.shr_u\n            i32.const 1\n            i32.and\n            local.get 0\n            i32.const 1\n            i32.shl\n            i32.sub\n            i32.const 62\n            i32.add\n            local.set 5\n            br 1 (;@3;)\n          end\n          block ;; label = @4\n            block ;; label = @5\n              block ;; label = @6\n                block ;; label = @7\n                  block ;; label = @8\n                    block ;; label = @9\n                      i32.const 0\n                      i32.load offset=1049528\n                      local.tee 6\n                      i32.const 16\n                      local.get 0\n                      i32.const 11\n                      i32.add\n                      i32.const 504\n                      i32.and\n                      local.get 0\n                      i32.const 11\n                      i32.lt_u\n                      select\n                      local.tee 3\n                      i32.const 3\n                      i32.shr_u\n                      local.tee 2\n                      i32.shr_u\n                      local.tee 0\n                      i32.const 3\n                      i32.and\n                      i32.eqz\n                      br_if 0 (;@9;)\n                      local.get 0\n                      i32.const -1\n                      i32.xor\n                      i32.const 1\n                      i32.and\n                      local.get 2\n                      i32.add\n                      local.tee 7\n                      i32.const 3\n                      i32.shl\n                      local.tee 3\n                      i32.const 1049264\n                      i32.add\n                      local.tee 0\n                      local.get 3\n                      i32.const 1049272\n                      i32.add\n                      i32.load\n                      local.tee 2\n                      i32.load offset=8\n                      local.tee 8\n                      i32.eq\n                      br_if 1 (;@8;)\n                      local.get 8\n                      local.get 0\n                      i32.store offset=12\n                      local.get 0\n                      local.get 8\n                      i32.store offset=8\n                      br 2 (;@7;)\n                    end\n                    local.get 3\n                    i32.const 0\n                    i32.load offset=1049536\n                    i32.le_u\n                    br_if 6 (;@2;)\n                    local.get 0\n                    br_if 2 (;@6;)\n                    i32.const 0\n                    i32.load offset=1049532\n                    local.tee 0\n                    i32.eqz\n                    br_if 6 (;@2;)\n                    local.get 0\n                    i32.ctz\n                    i32.const 2\n                    i32.shl\n                    i32.const 1049120\n                    i32.add\n                    i32.load\n                    local.tee 8\n                    i32.load offset=4\n                    i32.const -8\n                    i32.and\n                    local.get 3\n                    i32.sub\n                    local.set 2\n                    local.get 8\n                    local.set 6\n                    loop ;; label = @9\n                      block ;; label = @10\n                        local.get 8\n                        i32.load offset=16\n                        local.tee 0\n                        br_if 0 (;@10;)\n                        local.get 8\n                        i32.load offset=20\n                        local.tee 0\n                        br_if 0 (;@10;)\n                        local.get 6\n                        i32.load offset=24\n                        local.set 5\n                        block ;; label = @11\n                          block ;; label = @12\n                            block ;; label = @13\n                              local.get 6\n                              i32.load offset=12\n                              local.tee 0\n                              local.get 6\n                              i32.ne\n                              br_if 0 (;@13;)\n                              local.get 6\n                              i32.const 20\n                              i32.const 16\n                              local.get 6\n                              i32.load offset=20\n                              local.tee 0\n                              select\n                              i32.add\n                              i32.load\n                              local.tee 8\n                              br_if 1 (;@12;)\n                              i32.const 0\n                              local.set 0\n                              br 2 (;@11;)\n                            end\n                            local.get 6\n                            i32.load offset=8\n                            local.tee 8\n                            local.get 0\n                            i32.store offset=12\n                            local.get 0\n                            local.get 8\n                            i32.store offset=8\n                            br 1 (;@11;)\n                          end\n                          local.get 6\n                          i32.const 20\n                          i32.add\n                          local.get 6\n                          i32.const 16\n                          i32.add\n                          local.get 0\n                          select\n                          local.set 7\n                          loop ;; label = @12\n                            local.get 7\n                            local.set 9\n                            local.get 8\n                            local.tee 0\n                            i32.const 20\n                            i32.add\n                            local.get 0\n                            i32.const 16\n                            i32.add\n                            local.get 0\n                            i32.load offset=20\n                            local.tee 8\n                            select\n                            local.set 7\n                            local.get 0\n                            i32.const 20\n                            i32.const 16\n                            local.get 8\n                            select\n                            i32.add\n                            i32.load\n                            local.tee 8\n                            br_if 0 (;@12;)\n                          end\n                          local.get 9\n                          i32.const 0\n                          i32.store\n                        end\n                        local.get 5\n                        i32.eqz\n                        br_if 6 (;@4;)\n                        block ;; label = @11\n                          block ;; label = @12\n                            local.get 6\n                            local.get 6\n                            i32.load offset=28\n                            i32.const 2\n                            i32.shl\n                            i32.const 1049120\n                            i32.add\n                            local.tee 8\n                            i32.load\n                            i32.eq\n                            br_if 0 (;@12;)\n                            block ;; label = @13\n                              local.get 5\n                              i32.load offset=16\n                              local.get 6\n                              i32.eq\n                              br_if 0 (;@13;)\n                              local.get 5\n                              local.get 0\n                              i32.store offset=20\n                              local.get 0\n                              br_if 2 (;@11;)\n                              br 9 (;@4;)\n                            end\n                            local.get 5\n                            local.get 0\n                            i32.store offset=16\n                            local.get 0\n                            br_if 1 (;@11;)\n                            br 8 (;@4;)\n                          end\n                          local.get 8\n                          local.get 0\n                          i32.store\n                          local.get 0\n                          i32.eqz\n                          br_if 6 (;@5;)\n                        end\n                        local.get 0\n                        local.get 5\n                        i32.store offset=24\n                        block ;; label = @11\n                          local.get 6\n                          i32.load offset=16\n                          local.tee 8\n                          i32.eqz\n                          br_if 0 (;@11;)\n                          local.get 0\n                          local.get 8\n                          i32.store offset=16\n                          local.get 8\n                          local.get 0\n                          i32.store offset=24\n                        end\n                        local.get 6\n                        i32.load offset=20\n                        local.tee 8\n                        i32.eqz\n                        br_if 6 (;@4;)\n                        local.get 0\n                        local.get 8\n                        i32.store offset=20\n                        local.get 8\n                        local.get 0\n                        i32.store offset=24\n                        br 6 (;@4;)\n                      end\n                      local.get 0\n                      i32.load offset=4\n                      i32.const -8\n                      i32.and\n                      local.get 3\n                      i32.sub\n                      local.tee 8\n                      local.get 2\n                      local.get 8\n                      local.get 2\n                      i32.lt_u\n                      local.tee 8\n                      select\n                      local.set 2\n                      local.get 0\n                      local.get 6\n                      local.get 8\n                      select\n                      local.set 6\n                      local.get 0\n                      local.set 8\n                      br 0 (;@9;)\n                    end\n                  end\n                  i32.const 0\n                  local.get 6\n                  i32.const -2\n                  local.get 7\n                  i32.rotl\n                  i32.and\n                  i32.store offset=1049528\n                end\n                local.get 2\n                i32.const 8\n                i32.add\n                local.set 0\n                local.get 2\n                local.get 3\n                i32.const 3\n                i32.or\n                i32.store offset=4\n                local.get 2\n                local.get 3\n                i32.add\n                local.tee 3\n                local.get 3\n                i32.load offset=4\n                i32.const 1\n                i32.or\n                i32.store offset=4\n                br 5 (;@1;)\n              end\n              block ;; label = @6\n                block ;; label = @7\n                  local.get 0\n                  local.get 2\n                  i32.shl\n                  i32.const 2\n                  local.get 2\n                  i32.shl\n                  local.tee 0\n                  i32.const 0\n                  local.get 0\n                  i32.sub\n                  i32.or\n                  i32.and\n                  i32.ctz\n                  local.tee 9\n                  i32.const 3\n                  i32.shl\n                  local.tee 2\n                  i32.const 1049264\n                  i32.add\n                  local.tee 8\n                  local.get 2\n                  i32.const 1049272\n                  i32.add\n                  i32.load\n                  local.tee 0\n                  i32.load offset=8\n                  local.tee 7\n                  i32.eq\n                  br_if 0 (;@7;)\n                  local.get 7\n                  local.get 8\n                  i32.store offset=12\n                  local.get 8\n                  local.get 7\n                  i32.store offset=8\n                  br 1 (;@6;)\n                end\n                i32.const 0\n                local.get 6\n                i32.const -2\n                local.get 9\n                i32.rotl\n                i32.and\n                i32.store offset=1049528\n              end\n              local.get 0\n              local.get 3\n              i32.const 3\n              i32.or\n              i32.store offset=4\n              local.get 0\n              local.get 3\n              i32.add\n              local.tee 6\n              local.get 2\n              local.get 3\n              i32.sub\n              local.tee 8\n              i32.const 1\n              i32.or\n              i32.store offset=4\n              local.get 0\n              local.get 2\n              i32.add\n              local.get 8\n              i32.store\n              block ;; label = @6\n                i32.const 0\n                i32.load offset=1049536\n                local.tee 2\n                i32.eqz\n                br_if 0 (;@6;)\n                i32.const 0\n                i32.load offset=1049544\n                local.set 3\n                block ;; label = @7\n                  block ;; label = @8\n                    i32.const 0\n                    i32.load offset=1049528\n                    local.tee 7\n                    i32.const 1\n                    local.get 2\n                    i32.const 3\n                    i32.shr_u\n                    i32.shl\n                    local.tee 9\n                    i32.and\n                    br_if 0 (;@8;)\n                    i32.const 0\n                    local.get 7\n                    local.get 9\n                    i32.or\n                    i32.store offset=1049528\n                    local.get 2\n                    i32.const -8\n                    i32.and\n                    i32.const 1049264\n                    i32.add\n                    local.tee 2\n                    local.set 7\n                    br 1 (;@7;)\n                  end\n                  local.get 2\n                  i32.const -8\n                  i32.and\n                  local.tee 2\n                  i32.const 1049264\n                  i32.add\n                  local.set 7\n                  local.get 2\n                  i32.const 1049272\n                  i32.add\n                  i32.load\n                  local.set 2\n                end\n                local.get 7\n                local.get 3\n                i32.store offset=8\n                local.get 2\n                local.get 3\n                i32.store offset=12\n                local.get 3\n                local.get 7\n                i32.store offset=12\n                local.get 3\n                local.get 2\n                i32.store offset=8\n              end\n              local.get 0\n              i32.const 8\n              i32.add\n              local.set 0\n              i32.const 0\n              local.get 6\n              i32.store offset=1049544\n              i32.const 0\n              local.get 8\n              i32.store offset=1049536\n              br 4 (;@1;)\n            end\n            i32.const 0\n            i32.const 0\n            i32.load offset=1049532\n            i32.const -2\n            local.get 6\n            i32.load offset=28\n            i32.rotl\n            i32.and\n            i32.store offset=1049532\n          end\n          block ;; label = @4\n            block ;; label = @5\n              block ;; label = @6\n                local.get 2\n                i32.const 16\n                i32.lt_u\n                br_if 0 (;@6;)\n                local.get 6\n                local.get 3\n                i32.const 3\n                i32.or\n                i32.store offset=4\n                local.get 6\n                local.get 3\n                i32.add\n                local.tee 8\n                local.get 2\n                i32.const 1\n                i32.or\n                i32.store offset=4\n                local.get 8\n                local.get 2\n                i32.add\n                local.get 2\n                i32.store\n                i32.const 0\n                i32.load offset=1049536\n                local.tee 7\n                i32.eqz\n                br_if 1 (;@5;)\n                i32.const 0\n                i32.load offset=1049544\n                local.set 0\n                block ;; label = @7\n                  block ;; label = @8\n                    i32.const 0\n                    i32.load offset=1049528\n                    local.tee 9\n                    i32.const 1\n                    local.get 7\n                    i32.const 3\n                    i32.shr_u\n                    i32.shl\n                    local.tee 5\n                    i32.and\n                    br_if 0 (;@8;)\n                    i32.const 0\n                    local.get 9\n                    local.get 5\n                    i32.or\n                    i32.store offset=1049528\n                    local.get 7\n                    i32.const -8\n                    i32.and\n                    i32.const 1049264\n                    i32.add\n                    local.tee 7\n                    local.set 9\n                    br 1 (;@7;)\n                  end\n                  local.get 7\n                  i32.const -8\n                  i32.and\n                  local.tee 7\n                  i32.const 1049264\n                  i32.add\n                  local.set 9\n                  local.get 7\n                  i32.const 1049272\n                  i32.add\n                  i32.load\n                  local.set 7\n                end\n                local.get 9\n                local.get 0\n                i32.store offset=8\n                local.get 7\n                local.get 0\n                i32.store offset=12\n                local.get 0\n                local.get 9\n                i32.store offset=12\n                local.get 0\n                local.get 7\n                i32.store offset=8\n                br 1 (;@5;)\n              end\n              local.get 6\n              local.get 2\n              local.get 3\n              i32.add\n              local.tee 0\n              i32.const 3\n              i32.or\n              i32.store offset=4\n              local.get 6\n              local.get 0\n              i32.add\n              local.tee 0\n              local.get 0\n              i32.load offset=4\n              i32.const 1\n              i32.or\n              i32.store offset=4\n              br 1 (;@4;)\n            end\n            i32.const 0\n            local.get 8\n            i32.store offset=1049544\n            i32.const 0\n            local.get 2\n            i32.store offset=1049536\n          end\n          local.get 6\n          i32.const 8\n          i32.add\n          local.tee 0\n          i32.eqz\n          br_if 1 (;@2;)\n          br 2 (;@1;)\n        end\n        i32.const 0\n        local.get 3\n        i32.sub\n        local.set 2\n        block ;; label = @3\n          block ;; label = @4\n            block ;; label = @5\n              block ;; label = @6\n                local.get 5\n                i32.const 2\n                i32.shl\n                i32.const 1049120\n                i32.add\n                i32.load\n                local.tee 6\n                br_if 0 (;@6;)\n                i32.const 0\n                local.set 8\n                i32.const 0\n                local.set 0\n                br 1 (;@5;)\n              end\n              i32.const 0\n              local.set 8\n              local.get 3\n              i32.const 0\n              i32.const 25\n              local.get 5\n              i32.const 1\n              i32.shr_u\n              i32.sub\n              local.get 5\n              i32.const 31\n              i32.eq\n              select\n              i32.shl\n              local.set 7\n              i32.const 0\n              local.set 0\n              loop ;; label = @6\n                block ;; label = @7\n                  local.get 6\n                  local.tee 6\n                  i32.load offset=4\n                  i32.const -8\n                  i32.and\n                  local.tee 9\n                  local.get 3\n                  i32.lt_u\n                  br_if 0 (;@7;)\n                  local.get 9\n                  local.get 3\n                  i32.sub\n                  local.tee 9\n                  local.get 2\n                  i32.ge_u\n                  br_if 0 (;@7;)\n                  local.get 6\n                  local.set 8\n                  local.get 9\n                  local.set 2\n                  local.get 9\n                  br_if 0 (;@7;)\n                  i32.const 0\n                  local.set 2\n                  local.get 6\n                  local.set 0\n                  local.get 6\n                  local.set 8\n                  br 3 (;@4;)\n                end\n                local.get 6\n                i32.load offset=20\n                local.tee 9\n                local.get 0\n                local.get 9\n                local.get 6\n                local.get 7\n                i32.const 29\n                i32.shr_u\n                i32.const 4\n                i32.and\n                i32.add\n                i32.load offset=16\n                local.tee 6\n                i32.ne\n                select\n                local.get 0\n                local.get 9\n                select\n                local.set 0\n                local.get 7\n                i32.const 1\n                i32.shl\n                local.set 7\n                local.get 6\n                br_if 0 (;@6;)\n              end\n            end\n            block ;; label = @5\n              local.get 0\n              local.get 8\n              i32.or\n              br_if 0 (;@5;)\n              i32.const 0\n              local.set 8\n              i32.const 2\n              local.get 5\n              i32.shl\n              local.tee 0\n              i32.const 0\n              local.get 0\n              i32.sub\n              i32.or\n              local.get 4\n              i32.and\n              local.tee 0\n              i32.eqz\n              br_if 3 (;@2;)\n              local.get 0\n              i32.ctz\n              i32.const 2\n              i32.shl\n              i32.const 1049120\n              i32.add\n              i32.load\n              local.set 0\n            end\n            local.get 0\n            i32.eqz\n            br_if 1 (;@3;)\n          end\n          loop ;; label = @4\n            local.get 0\n            i32.load offset=4\n            i32.const -8\n            i32.and\n            local.tee 6\n            local.get 3\n            i32.sub\n            local.tee 7\n            local.get 2\n            local.get 7\n            local.get 2\n            i32.lt_u\n            local.tee 9\n            select\n            local.set 5\n            local.get 6\n            local.get 3\n            i32.lt_u\n            local.set 7\n            local.get 0\n            local.get 8\n            local.get 9\n            select\n            local.set 9\n            block ;; label = @5\n              local.get 0\n              i32.load offset=16\n              local.tee 6\n              br_if 0 (;@5;)\n              local.get 0\n              i32.load offset=20\n              local.set 6\n            end\n            local.get 2\n            local.get 5\n            local.get 7\n            select\n            local.set 2\n            local.get 8\n            local.get 9\n            local.get 7\n            select\n            local.set 8\n            local.get 6\n            local.set 0\n            local.get 6\n            br_if 0 (;@4;)\n          end\n        end\n        local.get 8\n        i32.eqz\n        br_if 0 (;@2;)\n        block ;; label = @3\n          i32.const 0\n          i32.load offset=1049536\n          local.tee 0\n          local.get 3\n          i32.lt_u\n          br_if 0 (;@3;)\n          local.get 2\n          local.get 0\n          local.get 3\n          i32.sub\n          i32.ge_u\n          br_if 1 (;@2;)\n        end\n        local.get 8\n        i32.load offset=24\n        local.set 5\n        block ;; label = @3\n          block ;; label = @4\n            block ;; label = @5\n              local.get 8\n              i32.load offset=12\n              local.tee 0\n              local.get 8\n              i32.ne\n              br_if 0 (;@5;)\n              local.get 8\n              i32.const 20\n              i32.const 16\n              local.get 8\n              i32.load offset=20\n              local.tee 0\n              select\n              i32.add\n              i32.load\n              local.tee 6\n              br_if 1 (;@4;)\n              i32.const 0\n              local.set 0\n              br 2 (;@3;)\n            end\n            local.get 8\n            i32.load offset=8\n            local.tee 6\n            local.get 0\n            i32.store offset=12\n            local.get 0\n            local.get 6\n            i32.store offset=8\n            br 1 (;@3;)\n          end\n          local.get 8\n          i32.const 20\n          i32.add\n          local.get 8\n          i32.const 16\n          i32.add\n          local.get 0\n          select\n          local.set 7\n          loop ;; label = @4\n            local.get 7\n            local.set 9\n            local.get 6\n            local.tee 0\n            i32.const 20\n            i32.add\n            local.get 0\n            i32.const 16\n            i32.add\n            local.get 0\n            i32.load offset=20\n            local.tee 6\n            select\n            local.set 7\n            local.get 0\n            i32.const 20\n            i32.const 16\n            local.get 6\n            select\n            i32.add\n            i32.load\n            local.tee 6\n            br_if 0 (;@4;)\n          end\n          local.get 9\n          i32.const 0\n          i32.store\n        end\n        block ;; label = @3\n          local.get 5\n          i32.eqz\n          br_if 0 (;@3;)\n          block ;; label = @4\n            block ;; label = @5\n              block ;; label = @6\n                local.get 8\n                local.get 8\n                i32.load offset=28\n                i32.const 2\n                i32.shl\n                i32.const 1049120\n                i32.add\n                local.tee 6\n                i32.load\n                i32.eq\n                br_if 0 (;@6;)\n                block ;; label = @7\n                  local.get 5\n                  i32.load offset=16\n                  local.get 8\n                  i32.eq\n                  br_if 0 (;@7;)\n                  local.get 5\n                  local.get 0\n                  i32.store offset=20\n                  local.get 0\n                  br_if 2 (;@5;)\n                  br 4 (;@3;)\n                end\n                local.get 5\n                local.get 0\n                i32.store offset=16\n                local.get 0\n                br_if 1 (;@5;)\n                br 3 (;@3;)\n              end\n              local.get 6\n              local.get 0\n              i32.store\n              local.get 0\n              i32.eqz\n              br_if 1 (;@4;)\n            end\n            local.get 0\n            local.get 5\n            i32.store offset=24\n            block ;; label = @5\n              local.get 8\n              i32.load offset=16\n              local.tee 6\n              i32.eqz\n              br_if 0 (;@5;)\n              local.get 0\n              local.get 6\n              i32.store offset=16\n              local.get 6\n              local.get 0\n              i32.store offset=24\n            end\n            local.get 8\n            i32.load offset=20\n            local.tee 6\n            i32.eqz\n            br_if 1 (;@3;)\n            local.get 0\n            local.get 6\n            i32.store offset=20\n            local.get 6\n            local.get 0\n            i32.store offset=24\n            br 1 (;@3;)\n          end\n          i32.const 0\n          i32.const 0\n          i32.load offset=1049532\n          i32.const -2\n          local.get 8\n          i32.load offset=28\n          i32.rotl\n          i32.and\n          i32.store offset=1049532\n        end\n        block ;; label = @3\n          block ;; label = @4\n            local.get 2\n            i32.const 16\n            i32.lt_u\n            br_if 0 (;@4;)\n            local.get 8\n            local.get 3\n            i32.const 3\n            i32.or\n            i32.store offset=4\n            local.get 8\n            local.get 3\n            i32.add\n            local.tee 0\n            local.get 2\n            i32.const 1\n            i32.or\n            i32.store offset=4\n            local.get 0\n            local.get 2\n            i32.add\n            local.get 2\n            i32.store\n            block ;; label = @5\n              local.get 2\n              i32.const 256\n              i32.lt_u\n              br_if 0 (;@5;)\n              local.get 0\n              local.get 2\n              call $_RNvMs0_NtCsjqx8TIyZbP9_8dlmalloc8dlmallocINtB5_8DlmallocNtNtB7_3sys6SystemE18insert_large_chunkCsebHcaeoSrxy_3std\n              br 2 (;@3;)\n            end\n            block ;; label = @5\n              block ;; label = @6\n                i32.const 0\n                i32.load offset=1049528\n                local.tee 6\n                i32.const 1\n                local.get 2\n                i32.const 3\n                i32.shr_u\n                i32.shl\n                local.tee 7\n                i32.and\n                br_if 0 (;@6;)\n                i32.const 0\n                local.get 6\n                local.get 7\n                i32.or\n                i32.store offset=1049528\n                local.get 2\n                i32.const 248\n                i32.and\n                i32.const 1049264\n                i32.add\n                local.tee 2\n                local.set 6\n                br 1 (;@5;)\n              end\n              local.get 2\n              i32.const 248\n              i32.and\n              local.tee 2\n              i32.const 1049264\n              i32.add\n              local.set 6\n              local.get 2\n              i32.const 1049272\n              i32.add\n              i32.load\n              local.set 2\n            end\n            local.get 6\n            local.get 0\n            i32.store offset=8\n            local.get 2\n            local.get 0\n            i32.store offset=12\n            local.get 0\n            local.get 6\n            i32.store offset=12\n            local.get 0\n            local.get 2\n            i32.store offset=8\n            br 1 (;@3;)\n          end\n          local.get 8\n          local.get 2\n          local.get 3\n          i32.add\n          local.tee 0\n          i32.const 3\n          i32.or\n          i32.store offset=4\n          local.get 8\n          local.get 0\n          i32.add\n          local.tee 0\n          local.get 0\n          i32.load offset=4\n          i32.const 1\n          i32.or\n          i32.store offset=4\n        end\n        local.get 8\n        i32.const 8\n        i32.add\n        local.tee 0\n        br_if 1 (;@1;)\n      end\n      block ;; label = @2\n        block ;; label = @3\n          block ;; label = @4\n            block ;; label = @5\n              block ;; label = @6\n                block ;; label = @7\n                  i32.const 0\n                  i32.load offset=1049536\n                  local.tee 0\n                  local.get 3\n                  i32.ge_u\n                  br_if 0 (;@7;)\n                  block ;; label = @8\n                    i32.const 0\n                    i32.load offset=1049540\n                    local.tee 0\n                    local.get 3\n                    i32.gt_u\n                    br_if 0 (;@8;)\n                    local.get 1\n                    i32.const 4\n                    i32.add\n                    i32.const 1049572\n                    local.get 3\n                    i32.const 65583\n                    i32.add\n                    i32.const -65536\n                    i32.and\n                    call $_RNvXs_NtCsjqx8TIyZbP9_8dlmalloc3sysNtB4_6SystemNtB6_9Allocator5alloc\n                    block ;; label = @9\n                      local.get 1\n                      i32.load offset=4\n                      local.tee 6\n                      br_if 0 (;@9;)\n                      i32.const 0\n                      local.set 0\n                      br 8 (;@1;)\n                    end\n                    local.get 1\n                    i32.load offset=12\n                    local.set 5\n                    i32.const 0\n                    i32.const 0\n                    i32.load offset=1049552\n                    local.get 1\n                    i32.load offset=8\n                    local.tee 9\n                    i32.add\n                    local.tee 0\n                    i32.store offset=1049552\n                    i32.const 0\n                    local.get 0\n                    i32.const 0\n                    i32.load offset=1049556\n                    local.tee 2\n                    local.get 0\n                    local.get 2\n                    i32.gt_u\n                    select\n                    i32.store offset=1049556\n                    block ;; label = @9\n                      block ;; label = @10\n                        block ;; label = @11\n                          i32.const 0\n                          i32.load offset=1049548\n                          local.tee 2\n                          i32.eqz\n                          br_if 0 (;@11;)\n                          i32.const 1049248\n                          local.set 0\n                          loop ;; label = @12\n                            local.get 6\n                            local.get 0\n                            i32.load\n                            local.tee 8\n                            local.get 0\n                            i32.load offset=4\n                            local.tee 7\n                            i32.add\n                            i32.eq\n                            br_if 2 (;@10;)\n                            local.get 0\n                            i32.load offset=8\n                            local.tee 0\n                            br_if 0 (;@12;)\n                            br 3 (;@9;)\n                          end\n                        end\n                        block ;; label = @11\n                          block ;; label = @12\n                            i32.const 0\n                            i32.load offset=1049564\n                            local.tee 0\n                            i32.eqz\n                            br_if 0 (;@12;)\n                            local.get 6\n                            local.get 0\n                            i32.ge_u\n                            br_if 1 (;@11;)\n                          end\n                          i32.const 0\n                          local.get 6\n                          i32.store offset=1049564\n                        end\n                        i32.const 0\n                        i32.const 4095\n                        i32.store offset=1049568\n                        i32.const 0\n                        local.get 5\n                        i32.store offset=1049260\n                        i32.const 0\n                        local.get 9\n                        i32.store offset=1049252\n                        i32.const 0\n                        local.get 6\n                        i32.store offset=1049248\n                        i32.const 0\n                        i32.const 1049264\n                        i32.store offset=1049276\n                        i32.const 0\n                        i32.const 1049272\n                        i32.store offset=1049284\n                        i32.const 0\n                        i32.const 1049264\n                        i32.store offset=1049272\n                        i32.const 0\n                        i32.const 1049280\n                        i32.store offset=1049292\n                        i32.const 0\n                        i32.const 1049272\n                        i32.store offset=1049280\n                        i32.const 0\n                        i32.const 1049288\n                        i32.store offset=1049300\n                        i32.const 0\n                        i32.const 1049280\n                        i32.store offset=1049288\n                        i32.const 0\n                        i32.const 1049296\n                        i32.store offset=1049308\n                        i32.const 0\n                        i32.const 1049288\n                        i32.store offset=1049296\n                        i32.const 0\n                        i32.const 1049304\n                        i32.store offset=1049316\n                        i32.const 0\n                        i32.const 1049296\n                        i32.store offset=1049304\n                        i32.const 0\n                        i32.const 1049312\n                        i32.store offset=1049324\n                        i32.const 0\n                        i32.const 1049304\n                        i32.store offset=1049312\n                        i32.const 0\n                        i32.const 1049320\n                        i32.store offset=1049332\n                        i32.const 0\n                        i32.const 1049312\n                        i32.store offset=1049320\n                        i32.const 0\n                        i32.const 1049328\n                        i32.store offset=1049340\n                        i32.const 0\n                        i32.const 1049320\n                        i32.store offset=1049328\n                        i32.const 0\n                        i32.const 1049328\n                        i32.store offset=1049336\n                        i32.const 0\n                        i32.const 1049336\n                        i32.store offset=1049348\n                        i32.const 0\n                        i32.const 1049336\n                        i32.store offset=1049344\n                        i32.const 0\n                        i32.const 1049344\n                        i32.store offset=1049356\n                        i32.const 0\n                        i32.const 1049344\n                        i32.store offset=1049352\n                        i32.const 0\n                        i32.const 1049352\n                        i32.store offset=1049364\n                        i32.const 0\n                        i32.const 1049352\n                        i32.store offset=1049360\n                        i32.const 0\n                        i32.const 1049360\n                        i32.store offset=1049372\n                        i32.const 0\n                        i32.const 1049360\n                        i32.store offset=1049368\n                        i32.const 0\n                        i32.const 1049368\n                        i32.store offset=1049380\n                        i32.const 0\n                        i32.const 1049368\n                        i32.store offset=1049376\n                        i32.const 0\n                        i32.const 1049376\n                        i32.store offset=1049388\n                        i32.const 0\n                        i32.const 1049376\n                        i32.store offset=1049384\n                        i32.const 0\n                        i32.const 1049384\n                        i32.store offset=1049396\n                        i32.const 0\n                        i32.const 1049384\n                        i32.store offset=1049392\n                        i32.const 0\n                        i32.const 1049392\n                        i32.store offset=1049404\n                        i32.const 0\n                        i32.const 1049400\n                        i32.store offset=1049412\n                        i32.const 0\n                        i32.const 1049392\n                        i32.store offset=1049400\n                        i32.const 0\n                        i32.const 1049408\n                        i32.store offset=1049420\n                        i32.const 0\n                        i32.const 1049400\n                        i32.store offset=1049408\n                        i32.const 0\n                        i32.const 1049416\n                        i32.store offset=1049428\n                        i32.const 0\n                        i32.const 1049408\n                        i32.store offset=1049416\n                        i32.const 0\n                        i32.const 1049424\n                        i32.store offset=1049436\n                        i32.const 0\n                        i32.const 1049416\n                        i32.store offset=1049424\n                        i32.const 0\n                        i32.const 1049432\n                        i32.store offset=1049444\n                        i32.const 0\n                        i32.const 1049424\n                        i32.store offset=1049432\n                        i32.const 0\n                        i32.const 1049440\n                        i32.store offset=1049452\n                        i32.const 0\n                        i32.const 1049432\n                        i32.store offset=1049440\n                        i32.const 0\n                        i32.const 1049448\n                        i32.store offset=1049460\n                        i32.const 0\n                        i32.const 1049440\n                        i32.store offset=1049448\n                        i32.const 0\n                        i32.const 1049456\n                        i32.store offset=1049468\n                        i32.const 0\n                        i32.const 1049448\n                        i32.store offset=1049456\n                        i32.const 0\n                        i32.const 1049464\n                        i32.store offset=1049476\n                        i32.const 0\n                        i32.const 1049456\n                        i32.store offset=1049464\n                        i32.const 0\n                        i32.const 1049472\n                        i32.store offset=1049484\n                        i32.const 0\n                        i32.const 1049464\n                        i32.store offset=1049472\n                        i32.const 0\n                        i32.const 1049480\n                        i32.store offset=1049492\n                        i32.const 0\n                        i32.const 1049472\n                        i32.store offset=1049480\n                        i32.const 0\n                        i32.const 1049488\n                        i32.store offset=1049500\n                        i32.const 0\n                        i32.const 1049480\n                        i32.store offset=1049488\n                        i32.const 0\n                        i32.const 1049496\n                        i32.store offset=1049508\n                        i32.const 0\n                        i32.const 1049488\n                        i32.store offset=1049496\n                        i32.const 0\n                        i32.const 1049504\n                        i32.store offset=1049516\n                        i32.const 0\n                        i32.const 1049496\n                        i32.store offset=1049504\n                        i32.const 0\n                        i32.const 1049512\n                        i32.store offset=1049524\n                        i32.const 0\n                        i32.const 1049504\n                        i32.store offset=1049512\n                        i32.const 0\n                        local.get 6\n                        i32.const 15\n                        i32.add\n                        i32.const -8\n                        i32.and\n                        local.tee 0\n                        i32.const -8\n                        i32.add\n                        local.tee 2\n                        i32.store offset=1049548\n                        i32.const 0\n                        i32.const 1049512\n                        i32.store offset=1049520\n                        i32.const 0\n                        local.get 6\n                        local.get 0\n                        i32.sub\n                        local.get 9\n                        i32.const -40\n                        i32.add\n                        local.tee 0\n                        i32.add\n                        i32.const 8\n                        i32.add\n                        local.tee 8\n                        i32.store offset=1049540\n                        local.get 2\n                        local.get 8\n                        i32.const 1\n                        i32.or\n                        i32.store offset=4\n                        local.get 6\n                        local.get 0\n                        i32.add\n                        i32.const 40\n                        i32.store offset=4\n                        i32.const 0\n                        i32.const 2097152\n                        i32.store offset=1049560\n                        br 8 (;@2;)\n                      end\n                      local.get 2\n                      local.get 6\n                      i32.ge_u\n                      br_if 0 (;@9;)\n                      local.get 8\n                      local.get 2\n                      i32.gt_u\n                      br_if 0 (;@9;)\n                      local.get 0\n                      i32.load offset=12\n                      local.tee 8\n                      i32.const 1\n                      i32.and\n                      br_if 0 (;@9;)\n                      local.get 8\n                      i32.const 1\n                      i32.shr_u\n                      local.get 5\n                      i32.eq\n                      br_if 3 (;@6;)\n                    end\n                    i32.const 0\n                    i32.const 0\n                    i32.load offset=1049564\n                    local.tee 0\n                    local.get 6\n                    local.get 0\n                    local.get 6\n                    i32.lt_u\n                    select\n                    i32.store offset=1049564\n                    local.get 6\n                    local.get 9\n                    i32.add\n                    local.set 8\n                    i32.const 1049248\n                    local.set 0\n                    block ;; label = @9\n                      block ;; label = @10\n                        block ;; label = @11\n                          loop ;; label = @12\n                            local.get 0\n                            i32.load\n                            local.tee 7\n                            local.get 8\n                            i32.eq\n                            br_if 1 (;@11;)\n                            local.get 0\n                            i32.load offset=8\n                            local.tee 0\n                            br_if 0 (;@12;)\n                            br 2 (;@10;)\n                          end\n                        end\n                        local.get 0\n                        i32.load offset=12\n                        local.tee 8\n                        i32.const 1\n                        i32.and\n                        br_if 0 (;@10;)\n                        local.get 8\n                        i32.const 1\n                        i32.shr_u\n                        local.get 5\n                        i32.eq\n                        br_if 1 (;@9;)\n                      end\n                      i32.const 1049248\n                      local.set 0\n                      block ;; label = @10\n                        loop ;; label = @11\n                          block ;; label = @12\n                            local.get 0\n                            i32.load\n                            local.tee 8\n                            local.get 2\n                            i32.gt_u\n                            br_if 0 (;@12;)\n                            local.get 2\n                            local.get 8\n                            local.get 0\n                            i32.load offset=4\n                            i32.add\n                            local.tee 8\n                            i32.lt_u\n                            br_if 2 (;@10;)\n                          end\n                          local.get 0\n                          i32.load offset=8\n                          local.set 0\n                          br 0 (;@11;)\n                        end\n                      end\n                      i32.const 0\n                      local.get 6\n                      i32.const 15\n                      i32.add\n                      i32.const -8\n                      i32.and\n                      local.tee 0\n                      i32.const -8\n                      i32.add\n                      local.tee 7\n                      i32.store offset=1049548\n                      i32.const 0\n                      local.get 6\n                      local.get 0\n                      i32.sub\n                      local.get 9\n                      i32.const -40\n                      i32.add\n                      local.tee 0\n                      i32.add\n                      i32.const 8\n                      i32.add\n                      local.tee 4\n                      i32.store offset=1049540\n                      local.get 7\n                      local.get 4\n                      i32.const 1\n                      i32.or\n                      i32.store offset=4\n                      local.get 6\n                      local.get 0\n                      i32.add\n                      i32.const 40\n                      i32.store offset=4\n                      i32.const 0\n                      i32.const 2097152\n                      i32.store offset=1049560\n                      local.get 2\n                      local.get 8\n                      i32.const -32\n                      i32.add\n                      i32.const -8\n                      i32.and\n                      i32.const -8\n                      i32.add\n                      local.tee 0\n                      local.get 0\n                      local.get 2\n                      i32.const 16\n                      i32.add\n                      i32.lt_u\n                      select\n                      local.tee 7\n                      i32.const 27\n                      i32.store offset=4\n                      i32.const 0\n                      i64.load offset=1049248 align=4\n                      local.set 10\n                      local.get 7\n                      i32.const 16\n                      i32.add\n                      i32.const 0\n                      i64.load offset=1049256 align=4\n                      i64.store align=4\n                      local.get 7\n                      i32.const 8\n                      i32.add\n                      local.tee 0\n                      local.get 10\n                      i64.store align=4\n                      i32.const 0\n                      local.get 5\n                      i32.store offset=1049260\n                      i32.const 0\n                      local.get 9\n                      i32.store offset=1049252\n                      i32.const 0\n                      local.get 6\n                      i32.store offset=1049248\n                      i32.const 0\n                      local.get 0\n                      i32.store offset=1049256\n                      local.get 7\n                      i32.const 28\n                      i32.add\n                      local.set 0\n                      loop ;; label = @10\n                        local.get 0\n                        i32.const 7\n                        i32.store\n                        local.get 0\n                        i32.const 4\n                        i32.add\n                        local.tee 0\n                        local.get 8\n                        i32.lt_u\n                        br_if 0 (;@10;)\n                      end\n                      local.get 7\n                      local.get 2\n                      i32.eq\n                      br_if 7 (;@2;)\n                      local.get 7\n                      local.get 7\n                      i32.load offset=4\n                      i32.const -2\n                      i32.and\n                      i32.store offset=4\n                      local.get 2\n                      local.get 7\n                      local.get 2\n                      i32.sub\n                      local.tee 0\n                      i32.const 1\n                      i32.or\n                      i32.store offset=4\n                      local.get 7\n                      local.get 0\n                      i32.store\n                      block ;; label = @10\n                        local.get 0\n                        i32.const 256\n                        i32.lt_u\n                        br_if 0 (;@10;)\n                        local.get 2\n                        local.get 0\n                        call $_RNvMs0_NtCsjqx8TIyZbP9_8dlmalloc8dlmallocINtB5_8DlmallocNtNtB7_3sys6SystemE18insert_large_chunkCsebHcaeoSrxy_3std\n                        br 8 (;@2;)\n                      end\n                      block ;; label = @10\n                        block ;; label = @11\n                          i32.const 0\n                          i32.load offset=1049528\n                          local.tee 8\n                          i32.const 1\n                          local.get 0\n                          i32.const 3\n                          i32.shr_u\n                          i32.shl\n                          local.tee 6\n                          i32.and\n                          br_if 0 (;@11;)\n                          i32.const 0\n                          local.get 8\n                          local.get 6\n                          i32.or\n                          i32.store offset=1049528\n                          local.get 0\n                          i32.const 248\n                          i32.and\n                          i32.const 1049264\n                          i32.add\n                          local.tee 0\n                          local.set 8\n                          br 1 (;@10;)\n                        end\n                        local.get 0\n                        i32.const 248\n                        i32.and\n                        local.tee 0\n                        i32.const 1049264\n                        i32.add\n                        local.set 8\n                        local.get 0\n                        i32.const 1049272\n                        i32.add\n                        i32.load\n                        local.set 0\n                      end\n                      local.get 8\n                      local.get 2\n                      i32.store offset=8\n                      local.get 0\n                      local.get 2\n                      i32.store offset=12\n                      local.get 2\n                      local.get 8\n                      i32.store offset=12\n                      local.get 2\n                      local.get 0\n                      i32.store offset=8\n                      br 7 (;@2;)\n                    end\n                    local.get 0\n                    local.get 6\n                    i32.store\n                    local.get 0\n                    local.get 0\n                    i32.load offset=4\n                    local.get 9\n                    i32.add\n                    i32.store offset=4\n                    local.get 6\n                    i32.const 15\n                    i32.add\n                    i32.const -8\n                    i32.and\n                    i32.const -8\n                    i32.add\n                    local.tee 8\n                    local.get 3\n                    i32.const 3\n                    i32.or\n                    i32.store offset=4\n                    local.get 7\n                    i32.const 15\n                    i32.add\n                    i32.const -8\n                    i32.and\n                    i32.const -8\n                    i32.add\n                    local.tee 2\n                    local.get 8\n                    local.get 3\n                    i32.add\n                    local.tee 0\n                    i32.sub\n                    local.set 3\n                    local.get 2\n                    i32.const 0\n                    i32.load offset=1049548\n                    i32.eq\n                    br_if 3 (;@5;)\n                    local.get 2\n                    i32.const 0\n                    i32.load offset=1049544\n                    i32.eq\n                    br_if 4 (;@4;)\n                    block ;; label = @9\n                      local.get 2\n                      i32.load offset=4\n                      local.tee 6\n                      i32.const 3\n                      i32.and\n                      i32.const 1\n                      i32.ne\n                      br_if 0 (;@9;)\n                      local.get 2\n                      local.get 6\n                      i32.const -8\n                      i32.and\n                      local.tee 6\n                      call $_RNvMs0_NtCsjqx8TIyZbP9_8dlmalloc8dlmallocINtB5_8DlmallocNtNtB7_3sys6SystemE12unlink_chunkCsebHcaeoSrxy_3std\n                      local.get 6\n                      local.get 3\n                      i32.add\n                      local.set 3\n                      local.get 2\n                      local.get 6\n                      i32.add\n                      local.tee 2\n                      i32.load offset=4\n                      local.set 6\n                    end\n                    local.get 2\n                    local.get 6\n                    i32.const -2\n                    i32.and\n                    i32.store offset=4\n                    local.get 0\n                    local.get 3\n                    i32.const 1\n                    i32.or\n                    i32.store offset=4\n                    local.get 0\n                    local.get 3\n                    i32.add\n                    local.get 3\n                    i32.store\n                    block ;; label = @9\n                      local.get 3\n                      i32.const 256\n                      i32.lt_u\n                      br_if 0 (;@9;)\n                      local.get 0\n                      local.get 3\n                      call $_RNvMs0_NtCsjqx8TIyZbP9_8dlmalloc8dlmallocINtB5_8DlmallocNtNtB7_3sys6SystemE18insert_large_chunkCsebHcaeoSrxy_3std\n                      br 6 (;@3;)\n                    end\n                    block ;; label = @9\n                      block ;; label = @10\n                        i32.const 0\n                        i32.load offset=1049528\n                        local.tee 2\n                        i32.const 1\n                        local.get 3\n                        i32.const 3\n                        i32.shr_u\n                        i32.shl\n                        local.tee 6\n                        i32.and\n                        br_if 0 (;@10;)\n                        i32.const 0\n                        local.get 2\n                        local.get 6\n                        i32.or\n                        i32.store offset=1049528\n                        local.get 3\n                        i32.const 248\n                        i32.and\n                        i32.const 1049264\n                        i32.add\n                        local.tee 3\n                        local.set 2\n                        br 1 (;@9;)\n                      end\n                      local.get 3\n                      i32.const 248\n                      i32.and\n                      local.tee 3\n                      i32.const 1049264\n                      i32.add\n                      local.set 2\n                      local.get 3\n                      i32.const 1049272\n                      i32.add\n                      i32.load\n                      local.set 3\n                    end\n                    local.get 2\n                    local.get 0\n                    i32.store offset=8\n                    local.get 3\n                    local.get 0\n                    i32.store offset=12\n                    local.get 0\n                    local.get 2\n                    i32.store offset=12\n                    local.get 0\n                    local.get 3\n                    i32.store offset=8\n                    br 5 (;@3;)\n                  end\n                  i32.const 0\n                  local.get 0\n                  local.get 3\n                  i32.sub\n                  local.tee 2\n                  i32.store offset=1049540\n                  i32.const 0\n                  i32.const 0\n                  i32.load offset=1049548\n                  local.tee 0\n                  local.get 3\n                  i32.add\n                  local.tee 8\n                  i32.store offset=1049548\n                  local.get 8\n                  local.get 2\n                  i32.const 1\n                  i32.or\n                  i32.store offset=4\n                  local.get 0\n                  local.get 3\n                  i32.const 3\n                  i32.or\n                  i32.store offset=4\n                  local.get 0\n                  i32.const 8\n                  i32.add\n                  local.set 0\n                  br 6 (;@1;)\n                end\n                i32.const 0\n                i32.load offset=1049544\n                local.set 2\n                block ;; label = @7\n                  block ;; label = @8\n                    local.get 0\n                    local.get 3\n                    i32.sub\n                    local.tee 8\n                    i32.const 15\n                    i32.gt_u\n                    br_if 0 (;@8;)\n                    i32.const 0\n                    i32.const 0\n                    i32.store offset=1049544\n                    i32.const 0\n                    i32.const 0\n                    i32.store offset=1049536\n                    local.get 2\n                    local.get 0\n                    i32.const 3\n                    i32.or\n                    i32.store offset=4\n                    local.get 2\n                    local.get 0\n                    i32.add\n                    local.tee 0\n                    local.get 0\n                    i32.load offset=4\n                    i32.const 1\n                    i32.or\n                    i32.store offset=4\n                    br 1 (;@7;)\n                  end\n                  i32.const 0\n                  local.get 8\n                  i32.store offset=1049536\n                  i32.const 0\n                  local.get 2\n                  local.get 3\n                  i32.add\n                  local.tee 6\n                  i32.store offset=1049544\n                  local.get 6\n                  local.get 8\n                  i32.const 1\n                  i32.or\n                  i32.store offset=4\n                  local.get 2\n                  local.get 0\n                  i32.add\n                  local.get 8\n                  i32.store\n                  local.get 2\n                  local.get 3\n                  i32.const 3\n                  i32.or\n                  i32.store offset=4\n                end\n                local.get 2\n                i32.const 8\n                i32.add\n                local.set 0\n                br 5 (;@1;)\n              end\n              local.get 0\n              local.get 7\n              local.get 9\n              i32.add\n              i32.store offset=4\n              i32.const 0\n              i32.const 0\n              i32.load offset=1049548\n              local.tee 0\n              i32.const 15\n              i32.add\n              i32.const -8\n              i32.and\n              local.tee 2\n              i32.const -8\n              i32.add\n              local.tee 8\n              i32.store offset=1049548\n              i32.const 0\n              local.get 0\n              local.get 2\n              i32.sub\n              i32.const 0\n              i32.load offset=1049540\n              local.get 9\n              i32.add\n              local.tee 2\n              i32.add\n              i32.const 8\n              i32.add\n              local.tee 6\n              i32.store offset=1049540\n              local.get 8\n              local.get 6\n              i32.const 1\n              i32.or\n              i32.store offset=4\n              local.get 0\n              local.get 2\n              i32.add\n              i32.const 40\n              i32.store offset=4\n              i32.const 0\n              i32.const 2097152\n              i32.store offset=1049560\n              br 3 (;@2;)\n            end\n            i32.const 0\n            local.get 0\n            i32.store offset=1049548\n            i32.const 0\n            i32.const 0\n            i32.load offset=1049540\n            local.get 3\n            i32.add\n            local.tee 3\n            i32.store offset=1049540\n            local.get 0\n            local.get 3\n            i32.const 1\n            i32.or\n            i32.store offset=4\n            br 1 (;@3;)\n          end\n          i32.const 0\n          local.get 0\n          i32.store offset=1049544\n          i32.const 0\n          i32.const 0\n          i32.load offset=1049536\n          local.get 3\n          i32.add\n          local.tee 3\n          i32.store offset=1049536\n          local.get 0\n          local.get 3\n          i32.const 1\n          i32.or\n          i32.store offset=4\n          local.get 0\n          local.get 3\n          i32.add\n          local.get 3\n          i32.store\n        end\n        local.get 8\n        i32.const 8\n        i32.add\n        local.set 0\n        br 1 (;@1;)\n      end\n      i32.const 0\n      local.set 0\n      i32.const 0\n      i32.load offset=1049540\n      local.tee 2\n      local.get 3\n      i32.le_u\n      br_if 0 (;@1;)\n      i32.const 0\n      local.get 2\n      local.get 3\n      i32.sub\n      local.tee 2\n      i32.store offset=1049540\n      i32.const 0\n      i32.const 0\n      i32.load offset=1049548\n      local.tee 0\n      local.get 3\n      i32.add\n      local.tee 8\n      i32.store offset=1049548\n      local.get 8\n      local.get 2\n      i32.const 1\n      i32.or\n      i32.store offset=4\n      local.get 0\n      local.get 3\n      i32.const 3\n      i32.or\n      i32.store offset=4\n      local.get 0\n      i32.const 8\n      i32.add\n      local.set 0\n    end\n    local.get 1\n    i32.const 16\n    i32.add\n    global.set $__stack_pointer\n    local.get 0\n  )\n  (func $_RNvCsfLfy6EI15iL_7___rustc12___rust_abort (;23;) (type 7)\n    unreachable\n  )\n  (func $_RNvCsfLfy6EI15iL_7___rustc13___rdl_dealloc (;24;) (type 5) (param i32 i32 i32)\n    (local i32 i32)\n    block ;; label = @1\n      block ;; label = @2\n        local.get 0\n        i32.const -4\n        i32.add\n        i32.load\n        local.tee 3\n        i32.const -8\n        i32.and\n        local.tee 4\n        i32.const 4\n        i32.const 8\n        local.get 3\n        i32.const 3\n        i32.and\n        local.tee 3\n        select\n        local.get 1\n        i32.add\n        i32.lt_u\n        br_if 0 (;@2;)\n        block ;; label = @3\n          local.get 3\n          i32.eqz\n          br_if 0 (;@3;)\n          local.get 4\n          local.get 1\n          i32.const 39\n          i32.add\n          i32.gt_u\n          br_if 2 (;@1;)\n        end\n        local.get 0\n        call $_RNvMs0_NtCsjqx8TIyZbP9_8dlmalloc8dlmallocINtB5_8DlmallocNtNtB7_3sys6SystemE4freeCsebHcaeoSrxy_3std\n        return\n      end\n      i32.const 1048815\n      i32.const 46\n      i32.const 1048864\n      call $_RNvNtCsgXGp5Oqx2Ny_4core9panicking5panic\n      unreachable\n    end\n    i32.const 1048880\n    i32.const 46\n    i32.const 1048928\n    call $_RNvNtCsgXGp5Oqx2Ny_4core9panicking5panic\n    unreachable\n  )\n  (func $_RNvMs0_NtCsjqx8TIyZbP9_8dlmalloc8dlmallocINtB5_8DlmallocNtNtB7_3sys6SystemE4freeCsebHcaeoSrxy_3std (;25;) (type 9) (param i32)\n    (local i32 i32 i32 i32)\n    local.get 0\n    i32.const -8\n    i32.add\n    local.tee 1\n    local.get 0\n    i32.const -4\n    i32.add\n    i32.load\n    local.tee 2\n    i32.const -8\n    i32.and\n    local.tee 0\n    i32.add\n    local.set 3\n    block ;; label = @1\n      block ;; label = @2\n        local.get 2\n        i32.const 1\n        i32.and\n        br_if 0 (;@2;)\n        local.get 2\n        i32.const 2\n        i32.and\n        i32.eqz\n        br_if 1 (;@1;)\n        local.get 1\n        i32.load\n        local.tee 2\n        local.get 0\n        i32.add\n        local.set 0\n        block ;; label = @3\n          local.get 1\n          local.get 2\n          i32.sub\n          local.tee 1\n          i32.const 0\n          i32.load offset=1049544\n          i32.ne\n          br_if 0 (;@3;)\n          local.get 3\n          i32.load offset=4\n          i32.const 3\n          i32.and\n          i32.const 3\n          i32.ne\n          br_if 1 (;@2;)\n          i32.const 0\n          local.get 0\n          i32.store offset=1049536\n          local.get 3\n          local.get 3\n          i32.load offset=4\n          i32.const -2\n          i32.and\n          i32.store offset=4\n          local.get 1\n          local.get 0\n          i32.const 1\n          i32.or\n          i32.store offset=4\n          local.get 3\n          local.get 0\n          i32.store\n          return\n        end\n        local.get 1\n        local.get 2\n        call $_RNvMs0_NtCsjqx8TIyZbP9_8dlmalloc8dlmallocINtB5_8DlmallocNtNtB7_3sys6SystemE12unlink_chunkCsebHcaeoSrxy_3std\n      end\n      block ;; label = @2\n        block ;; label = @3\n          block ;; label = @4\n            block ;; label = @5\n              block ;; label = @6\n                block ;; label = @7\n                  block ;; label = @8\n                    block ;; label = @9\n                      local.get 3\n                      i32.load offset=4\n                      local.tee 2\n                      i32.const 2\n                      i32.and\n                      br_if 0 (;@9;)\n                      local.get 3\n                      i32.const 0\n                      i32.load offset=1049548\n                      i32.eq\n                      br_if 2 (;@7;)\n                      local.get 3\n                      i32.const 0\n                      i32.load offset=1049544\n                      i32.eq\n                      br_if 3 (;@6;)\n                      local.get 3\n                      local.get 2\n                      i32.const -8\n                      i32.and\n                      local.tee 2\n                      call $_RNvMs0_NtCsjqx8TIyZbP9_8dlmalloc8dlmallocINtB5_8DlmallocNtNtB7_3sys6SystemE12unlink_chunkCsebHcaeoSrxy_3std\n                      local.get 1\n                      local.get 2\n                      local.get 0\n                      i32.add\n                      local.tee 0\n                      i32.const 1\n                      i32.or\n                      i32.store offset=4\n                      local.get 1\n                      local.get 0\n                      i32.add\n                      local.get 0\n                      i32.store\n                      local.get 1\n                      i32.const 0\n                      i32.load offset=1049544\n                      i32.ne\n                      br_if 1 (;@8;)\n                      i32.const 0\n                      local.get 0\n                      i32.store offset=1049536\n                      return\n                    end\n                    local.get 3\n                    local.get 2\n                    i32.const -2\n                    i32.and\n                    i32.store offset=4\n                    local.get 1\n                    local.get 0\n                    i32.const 1\n                    i32.or\n                    i32.store offset=4\n                    local.get 1\n                    local.get 0\n                    i32.add\n                    local.get 0\n                    i32.store\n                  end\n                  local.get 0\n                  i32.const 256\n                  i32.lt_u\n                  br_if 4 (;@3;)\n                  local.get 1\n                  local.get 0\n                  call $_RNvMs0_NtCsjqx8TIyZbP9_8dlmalloc8dlmallocINtB5_8DlmallocNtNtB7_3sys6SystemE18insert_large_chunkCsebHcaeoSrxy_3std\n                  i32.const 0\n                  i32.const 0\n                  i32.load offset=1049568\n                  i32.const -1\n                  i32.add\n                  local.tee 1\n                  i32.store offset=1049568\n                  local.get 1\n                  br_if 6 (;@1;)\n                  i32.const 0\n                  i32.load offset=1049256\n                  local.tee 0\n                  br_if 2 (;@5;)\n                  i32.const 4095\n                  local.set 1\n                  br 3 (;@4;)\n                end\n                i32.const 0\n                local.get 1\n                i32.store offset=1049548\n                i32.const 0\n                i32.const 0\n                i32.load offset=1049540\n                local.get 0\n                i32.add\n                local.tee 0\n                i32.store offset=1049540\n                local.get 1\n                local.get 0\n                i32.const 1\n                i32.or\n                i32.store offset=4\n                block ;; label = @7\n                  local.get 1\n                  i32.const 0\n                  i32.load offset=1049544\n                  i32.ne\n                  br_if 0 (;@7;)\n                  i32.const 0\n                  i32.const 0\n                  i32.store offset=1049536\n                  i32.const 0\n                  i32.const 0\n                  i32.store offset=1049544\n                end\n                local.get 0\n                i32.const 0\n                i32.load offset=1049560\n                local.tee 2\n                i32.le_u\n                br_if 5 (;@1;)\n                i32.const 0\n                i32.load offset=1049548\n                local.tee 0\n                i32.eqz\n                br_if 5 (;@1;)\n                i32.const 0\n                i32.load offset=1049540\n                local.tee 4\n                i32.const 41\n                i32.lt_u\n                br_if 4 (;@2;)\n                i32.const 1049248\n                local.set 1\n                loop ;; label = @7\n                  block ;; label = @8\n                    local.get 1\n                    i32.load\n                    local.tee 3\n                    local.get 0\n                    i32.gt_u\n                    br_if 0 (;@8;)\n                    local.get 0\n                    local.get 3\n                    local.get 1\n                    i32.load offset=4\n                    i32.add\n                    i32.lt_u\n                    br_if 6 (;@2;)\n                  end\n                  local.get 1\n                  i32.load offset=8\n                  local.set 1\n                  br 0 (;@7;)\n                end\n              end\n              i32.const 0\n              local.get 1\n              i32.store offset=1049544\n              i32.const 0\n              i32.const 0\n              i32.load offset=1049536\n              local.get 0\n              i32.add\n              local.tee 0\n              i32.store offset=1049536\n              local.get 1\n              local.get 0\n              i32.const 1\n              i32.or\n              i32.store offset=4\n              local.get 1\n              local.get 0\n              i32.add\n              local.get 0\n              i32.store\n              return\n            end\n            i32.const 0\n            local.set 1\n            loop ;; label = @5\n              local.get 1\n              i32.const 1\n              i32.add\n              local.set 1\n              local.get 0\n              i32.load offset=8\n              local.tee 0\n              br_if 0 (;@5;)\n            end\n            local.get 1\n            i32.const 4095\n            local.get 1\n            i32.const 4095\n            i32.gt_u\n            select\n            local.set 1\n          end\n          i32.const 0\n          local.get 1\n          i32.store offset=1049568\n          return\n        end\n        block ;; label = @3\n          block ;; label = @4\n            i32.const 0\n            i32.load offset=1049528\n            local.tee 3\n            i32.const 1\n            local.get 0\n            i32.const 3\n            i32.shr_u\n            i32.shl\n            local.tee 2\n            i32.and\n            br_if 0 (;@4;)\n            i32.const 0\n            local.get 3\n            local.get 2\n            i32.or\n            i32.store offset=1049528\n            local.get 0\n            i32.const 248\n            i32.and\n            i32.const 1049264\n            i32.add\n            local.tee 0\n            local.set 3\n            br 1 (;@3;)\n          end\n          local.get 0\n          i32.const 248\n          i32.and\n          local.tee 0\n          i32.const 1049264\n          i32.add\n          local.set 3\n          local.get 0\n          i32.const 1049272\n          i32.add\n          i32.load\n          local.set 0\n        end\n        local.get 3\n        local.get 1\n        i32.store offset=8\n        local.get 0\n        local.get 1\n        i32.store offset=12\n        local.get 1\n        local.get 3\n        i32.store offset=12\n        local.get 1\n        local.get 0\n        i32.store offset=8\n        return\n      end\n      block ;; label = @2\n        block ;; label = @3\n          i32.const 0\n          i32.load offset=1049256\n          local.tee 0\n          br_if 0 (;@3;)\n          i32.const 4095\n          local.set 1\n          br 1 (;@2;)\n        end\n        i32.const 0\n        local.set 1\n        loop ;; label = @3\n          local.get 1\n          i32.const 1\n          i32.add\n          local.set 1\n          local.get 0\n          i32.load offset=8\n          local.tee 0\n          br_if 0 (;@3;)\n        end\n        local.get 1\n        i32.const 4095\n        local.get 1\n        i32.const 4095\n        i32.gt_u\n        select\n        local.set 1\n      end\n      i32.const 0\n      local.get 1\n      i32.store offset=1049568\n      local.get 4\n      local.get 2\n      i32.le_u\n      br_if 0 (;@1;)\n      i32.const 0\n      i32.const -1\n      i32.store offset=1049560\n    end\n  )\n  (func $_RNvCsfLfy6EI15iL_7___rustc13___rdl_realloc (;26;) (type 6) (param i32 i32 i32 i32) (result i32)\n    (local i32 i32 i32 i32 i32 i32)\n    block ;; label = @1\n      block ;; label = @2\n        block ;; label = @3\n          block ;; label = @4\n            block ;; label = @5\n              block ;; label = @6\n                block ;; label = @7\n                  block ;; label = @8\n                    local.get 0\n                    i32.const -4\n                    i32.add\n                    local.tee 4\n                    i32.load\n                    local.tee 5\n                    i32.const -8\n                    i32.and\n                    local.tee 6\n                    i32.const 4\n                    i32.const 8\n                    local.get 5\n                    i32.const 3\n                    i32.and\n                    local.tee 7\n                    select\n                    local.get 1\n                    i32.add\n                    i32.lt_u\n                    br_if 0 (;@8;)\n                    local.get 1\n                    i32.const 39\n                    i32.add\n                    local.set 8\n                    block ;; label = @9\n                      local.get 7\n                      i32.eqz\n                      br_if 0 (;@9;)\n                      local.get 6\n                      local.get 8\n                      i32.gt_u\n                      br_if 2 (;@7;)\n                    end\n                    block ;; label = @9\n                      block ;; label = @10\n                        local.get 2\n                        i32.const 9\n                        i32.lt_u\n                        br_if 0 (;@10;)\n                        local.get 2\n                        local.get 3\n                        call $_RNvMs0_NtCsjqx8TIyZbP9_8dlmalloc8dlmallocINtB5_8DlmallocNtNtB7_3sys6SystemE8memalignCsebHcaeoSrxy_3std\n                        local.tee 2\n                        br_if 1 (;@9;)\n                        i32.const 0\n                        return\n                      end\n                      i32.const 0\n                      local.set 2\n                      local.get 3\n                      i32.const -65588\n                      i32.gt_u\n                      br_if 8 (;@1;)\n                      i32.const 16\n                      local.get 3\n                      i32.const 11\n                      i32.add\n                      i32.const -8\n                      i32.and\n                      local.get 3\n                      i32.const 11\n                      i32.lt_u\n                      select\n                      local.set 1\n                      local.get 0\n                      i32.const -8\n                      i32.add\n                      local.set 8\n                      block ;; label = @10\n                        local.get 7\n                        br_if 0 (;@10;)\n                        local.get 1\n                        i32.const 256\n                        i32.lt_u\n                        br_if 7 (;@3;)\n                        local.get 8\n                        i32.eqz\n                        br_if 7 (;@3;)\n                        local.get 6\n                        local.get 1\n                        i32.le_u\n                        br_if 7 (;@3;)\n                        local.get 6\n                        local.get 1\n                        i32.sub\n                        i32.const 131072\n                        i32.gt_u\n                        br_if 7 (;@3;)\n                        local.get 0\n                        return\n                      end\n                      local.get 8\n                      local.get 6\n                      i32.add\n                      local.set 7\n                      block ;; label = @10\n                        block ;; label = @11\n                          local.get 6\n                          local.get 1\n                          i32.ge_u\n                          br_if 0 (;@11;)\n                          local.get 7\n                          i32.const 0\n                          i32.load offset=1049548\n                          i32.eq\n                          br_if 1 (;@10;)\n                          block ;; label = @12\n                            local.get 7\n                            i32.const 0\n                            i32.load offset=1049544\n                            i32.eq\n                            br_if 0 (;@12;)\n                            local.get 7\n                            i32.load offset=4\n                            local.tee 5\n                            i32.const 2\n                            i32.and\n                            br_if 9 (;@3;)\n                            local.get 5\n                            i32.const -8\n                            i32.and\n                            local.tee 9\n                            local.get 6\n                            i32.add\n                            local.tee 5\n                            local.get 1\n                            i32.lt_u\n                            br_if 9 (;@3;)\n                            local.get 7\n                            local.get 9\n                            call $_RNvMs0_NtCsjqx8TIyZbP9_8dlmalloc8dlmallocINtB5_8DlmallocNtNtB7_3sys6SystemE12unlink_chunkCsebHcaeoSrxy_3std\n                            block ;; label = @13\n                              local.get 5\n                              local.get 1\n                              i32.sub\n                              local.tee 7\n                              i32.const 16\n                              i32.lt_u\n                              br_if 0 (;@13;)\n                              local.get 4\n                              local.get 1\n                              local.get 4\n                              i32.load\n                              i32.const 1\n                              i32.and\n                              i32.or\n                              i32.const 2\n                              i32.or\n                              i32.store\n                              local.get 8\n                              local.get 1\n                              i32.add\n                              local.tee 1\n                              local.get 7\n                              i32.const 3\n                              i32.or\n                              i32.store offset=4\n                              local.get 8\n                              local.get 5\n                              i32.add\n                              local.tee 5\n                              local.get 5\n                              i32.load offset=4\n                              i32.const 1\n                              i32.or\n                              i32.store offset=4\n                              local.get 1\n                              local.get 7\n                              call $_RNvMs0_NtCsjqx8TIyZbP9_8dlmalloc8dlmallocINtB5_8DlmallocNtNtB7_3sys6SystemE13dispose_chunkCsebHcaeoSrxy_3std\n                              br 9 (;@4;)\n                            end\n                            local.get 4\n                            local.get 5\n                            local.get 4\n                            i32.load\n                            i32.const 1\n                            i32.and\n                            i32.or\n                            i32.const 2\n                            i32.or\n                            i32.store\n                            local.get 8\n                            local.get 5\n                            i32.add\n                            local.tee 1\n                            local.get 1\n                            i32.load offset=4\n                            i32.const 1\n                            i32.or\n                            i32.store offset=4\n                            br 8 (;@4;)\n                          end\n                          i32.const 0\n                          i32.load offset=1049536\n                          local.get 6\n                          i32.add\n                          local.tee 7\n                          local.get 1\n                          i32.lt_u\n                          br_if 8 (;@3;)\n                          block ;; label = @12\n                            block ;; label = @13\n                              local.get 7\n                              local.get 1\n                              i32.sub\n                              local.tee 6\n                              i32.const 15\n                              i32.gt_u\n                              br_if 0 (;@13;)\n                              local.get 4\n                              local.get 5\n                              i32.const 1\n                              i32.and\n                              local.get 7\n                              i32.or\n                              i32.const 2\n                              i32.or\n                              i32.store\n                              local.get 8\n                              local.get 7\n                              i32.add\n                              local.tee 1\n                              local.get 1\n                              i32.load offset=4\n                              i32.const 1\n                              i32.or\n                              i32.store offset=4\n                              i32.const 0\n                              local.set 6\n                              i32.const 0\n                              local.set 1\n                              br 1 (;@12;)\n                            end\n                            local.get 4\n                            local.get 1\n                            local.get 5\n                            i32.const 1\n                            i32.and\n                            i32.or\n                            i32.const 2\n                            i32.or\n                            i32.store\n                            local.get 8\n                            local.get 1\n                            i32.add\n                            local.tee 1\n                            local.get 6\n                            i32.const 1\n                            i32.or\n                            i32.store offset=4\n                            local.get 8\n                            local.get 7\n                            i32.add\n                            local.tee 7\n                            local.get 6\n                            i32.store\n                            local.get 7\n                            local.get 7\n                            i32.load offset=4\n                            i32.const -2\n                            i32.and\n                            i32.store offset=4\n                          end\n                          i32.const 0\n                          local.get 1\n                          i32.store offset=1049544\n                          i32.const 0\n                          local.get 6\n                          i32.store offset=1049536\n                          br 7 (;@4;)\n                        end\n                        local.get 6\n                        local.get 1\n                        i32.sub\n                        local.tee 6\n                        i32.const 15\n                        i32.le_u\n                        br_if 6 (;@4;)\n                        local.get 4\n                        local.get 1\n                        local.get 5\n                        i32.const 1\n                        i32.and\n                        i32.or\n                        i32.const 2\n                        i32.or\n                        i32.store\n                        local.get 8\n                        local.get 1\n                        i32.add\n                        local.tee 1\n                        local.get 6\n                        i32.const 3\n                        i32.or\n                        i32.store offset=4\n                        local.get 7\n                        local.get 7\n                        i32.load offset=4\n                        i32.const 1\n                        i32.or\n                        i32.store offset=4\n                        local.get 1\n                        local.get 6\n                        call $_RNvMs0_NtCsjqx8TIyZbP9_8dlmalloc8dlmallocINtB5_8DlmallocNtNtB7_3sys6SystemE13dispose_chunkCsebHcaeoSrxy_3std\n                        br 6 (;@4;)\n                      end\n                      i32.const 0\n                      i32.load offset=1049540\n                      local.get 6\n                      i32.add\n                      local.tee 7\n                      local.get 1\n                      i32.gt_u\n                      br_if 4 (;@5;)\n                      br 6 (;@3;)\n                    end\n                    block ;; label = @9\n                      local.get 3\n                      local.get 1\n                      local.get 3\n                      local.get 1\n                      i32.lt_u\n                      select\n                      local.tee 3\n                      i32.eqz\n                      br_if 0 (;@9;)\n                      local.get 2\n                      local.get 0\n                      local.get 3\n                      memory.copy\n                    end\n                    local.get 4\n                    i32.load\n                    local.tee 3\n                    i32.const -8\n                    i32.and\n                    local.tee 7\n                    i32.const 4\n                    i32.const 8\n                    local.get 3\n                    i32.const 3\n                    i32.and\n                    local.tee 3\n                    select\n                    local.get 1\n                    i32.add\n                    i32.lt_u\n                    br_if 2 (;@6;)\n                    local.get 3\n                    i32.eqz\n                    br_if 6 (;@2;)\n                    local.get 7\n                    local.get 8\n                    i32.le_u\n                    br_if 6 (;@2;)\n                    i32.const 1048880\n                    i32.const 46\n                    i32.const 1048928\n                    call $_RNvNtCsgXGp5Oqx2Ny_4core9panicking5panic\n                    unreachable\n                  end\n                  i32.const 1048815\n                  i32.const 46\n                  i32.const 1048864\n                  call $_RNvNtCsgXGp5Oqx2Ny_4core9panicking5panic\n                  unreachable\n                end\n                i32.const 1048880\n                i32.const 46\n                i32.const 1048928\n                call $_RNvNtCsgXGp5Oqx2Ny_4core9panicking5panic\n                unreachable\n              end\n              i32.const 1048815\n              i32.const 46\n              i32.const 1048864\n              call $_RNvNtCsgXGp5Oqx2Ny_4core9panicking5panic\n              unreachable\n            end\n            local.get 4\n            local.get 1\n            local.get 5\n            i32.const 1\n            i32.and\n            i32.or\n            i32.const 2\n            i32.or\n            i32.store\n            local.get 8\n            local.get 1\n            i32.add\n            local.tee 5\n            local.get 7\n            local.get 1\n            i32.sub\n            local.tee 1\n            i32.const 1\n            i32.or\n            i32.store offset=4\n            i32.const 0\n            local.get 1\n            i32.store offset=1049540\n            i32.const 0\n            local.get 5\n            i32.store offset=1049548\n          end\n          local.get 8\n          i32.eqz\n          br_if 0 (;@3;)\n          local.get 0\n          return\n        end\n        local.get 3\n        call $_RNvMs0_NtCsjqx8TIyZbP9_8dlmalloc8dlmallocINtB5_8DlmallocNtNtB7_3sys6SystemE6mallocCsebHcaeoSrxy_3std\n        local.tee 1\n        i32.eqz\n        br_if 1 (;@1;)\n        block ;; label = @3\n          local.get 3\n          i32.const -4\n          i32.const -8\n          local.get 4\n          i32.load\n          local.tee 2\n          i32.const 3\n          i32.and\n          select\n          local.get 2\n          i32.const -8\n          i32.and\n          i32.add\n          local.tee 2\n          local.get 3\n          local.get 2\n          i32.lt_u\n          select\n          local.tee 3\n          i32.eqz\n          br_if 0 (;@3;)\n          local.get 1\n          local.get 0\n          local.get 3\n          memory.copy\n        end\n        local.get 1\n        local.set 2\n      end\n      local.get 0\n      call $_RNvMs0_NtCsjqx8TIyZbP9_8dlmalloc8dlmallocINtB5_8DlmallocNtNtB7_3sys6SystemE4freeCsebHcaeoSrxy_3std\n    end\n    local.get 2\n  )\n  (func $_RNvMs0_NtCsjqx8TIyZbP9_8dlmalloc8dlmallocINtB5_8DlmallocNtNtB7_3sys6SystemE12unlink_chunkCsebHcaeoSrxy_3std (;27;) (type 0) (param i32 i32)\n    (local i32 i32 i32 i32)\n    local.get 0\n    i32.load offset=12\n    local.set 2\n    block ;; label = @1\n      block ;; label = @2\n        block ;; label = @3\n          block ;; label = @4\n            local.get 1\n            i32.const 256\n            i32.lt_u\n            br_if 0 (;@4;)\n            local.get 0\n            i32.load offset=24\n            local.set 3\n            block ;; label = @5\n              block ;; label = @6\n                block ;; label = @7\n                  local.get 2\n                  local.get 0\n                  i32.ne\n                  br_if 0 (;@7;)\n                  local.get 0\n                  i32.const 20\n                  i32.const 16\n                  local.get 0\n                  i32.load offset=20\n                  local.tee 2\n                  select\n                  i32.add\n                  i32.load\n                  local.tee 1\n                  br_if 1 (;@6;)\n                  i32.const 0\n                  local.set 2\n                  br 2 (;@5;)\n                end\n                local.get 0\n                i32.load offset=8\n                local.tee 1\n                local.get 2\n                i32.store offset=12\n                local.get 2\n                local.get 1\n                i32.store offset=8\n                br 1 (;@5;)\n              end\n              local.get 0\n              i32.const 20\n              i32.add\n              local.get 0\n              i32.const 16\n              i32.add\n              local.get 2\n              select\n              local.set 4\n              loop ;; label = @6\n                local.get 4\n                local.set 5\n                local.get 1\n                local.tee 2\n                i32.const 20\n                i32.add\n                local.get 2\n                i32.const 16\n                i32.add\n                local.get 2\n                i32.load offset=20\n                local.tee 1\n                select\n                local.set 4\n                local.get 2\n                i32.const 20\n                i32.const 16\n                local.get 1\n                select\n                i32.add\n                i32.load\n                local.tee 1\n                br_if 0 (;@6;)\n              end\n              local.get 5\n              i32.const 0\n              i32.store\n            end\n            local.get 3\n            i32.eqz\n            br_if 2 (;@2;)\n            block ;; label = @5\n              block ;; label = @6\n                local.get 0\n                local.get 0\n                i32.load offset=28\n                i32.const 2\n                i32.shl\n                i32.const 1049120\n                i32.add\n                local.tee 1\n                i32.load\n                i32.eq\n                br_if 0 (;@6;)\n                local.get 3\n                i32.load offset=16\n                local.get 0\n                i32.eq\n                br_if 1 (;@5;)\n                local.get 3\n                local.get 2\n                i32.store offset=20\n                local.get 2\n                br_if 3 (;@3;)\n                br 4 (;@2;)\n              end\n              local.get 1\n              local.get 2\n              i32.store\n              local.get 2\n              i32.eqz\n              br_if 4 (;@1;)\n              br 2 (;@3;)\n            end\n            local.get 3\n            local.get 2\n            i32.store offset=16\n            local.get 2\n            br_if 1 (;@3;)\n            br 2 (;@2;)\n          end\n          block ;; label = @4\n            local.get 2\n            local.get 0\n            i32.load offset=8\n            local.tee 4\n            i32.eq\n            br_if 0 (;@4;)\n            local.get 4\n            local.get 2\n            i32.store offset=12\n            local.get 2\n            local.get 4\n            i32.store offset=8\n            return\n          end\n          i32.const 0\n          i32.const 0\n          i32.load offset=1049528\n          i32.const -2\n          local.get 1\n          i32.const 3\n          i32.shr_u\n          i32.rotl\n          i32.and\n          i32.store offset=1049528\n          return\n        end\n        local.get 2\n        local.get 3\n        i32.store offset=24\n        block ;; label = @3\n          local.get 0\n          i32.load offset=16\n          local.tee 1\n          i32.eqz\n          br_if 0 (;@3;)\n          local.get 2\n          local.get 1\n          i32.store offset=16\n          local.get 1\n          local.get 2\n          i32.store offset=24\n        end\n        local.get 0\n        i32.load offset=20\n        local.tee 1\n        i32.eqz\n        br_if 0 (;@2;)\n        local.get 2\n        local.get 1\n        i32.store offset=20\n        local.get 1\n        local.get 2\n        i32.store offset=24\n        return\n      end\n      return\n    end\n    i32.const 0\n    i32.const 0\n    i32.load offset=1049532\n    i32.const -2\n    local.get 0\n    i32.load offset=28\n    i32.rotl\n    i32.and\n    i32.store offset=1049532\n  )\n  (func $_RNvMs0_NtCsjqx8TIyZbP9_8dlmalloc8dlmallocINtB5_8DlmallocNtNtB7_3sys6SystemE13dispose_chunkCsebHcaeoSrxy_3std (;28;) (type 0) (param i32 i32)\n    (local i32 i32)\n    local.get 0\n    local.get 1\n    i32.add\n    local.set 2\n    block ;; label = @1\n      block ;; label = @2\n        local.get 0\n        i32.load offset=4\n        local.tee 3\n        i32.const 1\n        i32.and\n        br_if 0 (;@2;)\n        local.get 3\n        i32.const 2\n        i32.and\n        i32.eqz\n        br_if 1 (;@1;)\n        local.get 0\n        i32.load\n        local.tee 3\n        local.get 1\n        i32.add\n        local.set 1\n        block ;; label = @3\n          local.get 0\n          local.get 3\n          i32.sub\n          local.tee 0\n          i32.const 0\n          i32.load offset=1049544\n          i32.ne\n          br_if 0 (;@3;)\n          local.get 2\n          i32.load offset=4\n          i32.const 3\n          i32.and\n          i32.const 3\n          i32.ne\n          br_if 1 (;@2;)\n          i32.const 0\n          local.get 1\n          i32.store offset=1049536\n          local.get 2\n          local.get 2\n          i32.load offset=4\n          i32.const -2\n          i32.and\n          i32.store offset=4\n          local.get 0\n          local.get 1\n          i32.const 1\n          i32.or\n          i32.store offset=4\n          local.get 2\n          local.get 1\n          i32.store\n          br 2 (;@1;)\n        end\n        local.get 0\n        local.get 3\n        call $_RNvMs0_NtCsjqx8TIyZbP9_8dlmalloc8dlmallocINtB5_8DlmallocNtNtB7_3sys6SystemE12unlink_chunkCsebHcaeoSrxy_3std\n      end\n      block ;; label = @2\n        block ;; label = @3\n          block ;; label = @4\n            block ;; label = @5\n              local.get 2\n              i32.load offset=4\n              local.tee 3\n              i32.const 2\n              i32.and\n              br_if 0 (;@5;)\n              local.get 2\n              i32.const 0\n              i32.load offset=1049548\n              i32.eq\n              br_if 2 (;@3;)\n              local.get 2\n              i32.const 0\n              i32.load offset=1049544\n              i32.eq\n              br_if 3 (;@2;)\n              local.get 2\n              local.get 3\n              i32.const -8\n              i32.and\n              local.tee 3\n              call $_RNvMs0_NtCsjqx8TIyZbP9_8dlmalloc8dlmallocINtB5_8DlmallocNtNtB7_3sys6SystemE12unlink_chunkCsebHcaeoSrxy_3std\n              local.get 0\n              local.get 3\n              local.get 1\n              i32.add\n              local.tee 1\n              i32.const 1\n              i32.or\n              i32.store offset=4\n              local.get 0\n              local.get 1\n              i32.add\n              local.get 1\n              i32.store\n              local.get 0\n              i32.const 0\n              i32.load offset=1049544\n              i32.ne\n              br_if 1 (;@4;)\n              i32.const 0\n              local.get 1\n              i32.store offset=1049536\n              return\n            end\n            local.get 2\n            local.get 3\n            i32.const -2\n            i32.and\n            i32.store offset=4\n            local.get 0\n            local.get 1\n            i32.const 1\n            i32.or\n            i32.store offset=4\n            local.get 0\n            local.get 1\n            i32.add\n            local.get 1\n            i32.store\n          end\n          block ;; label = @4\n            local.get 1\n            i32.const 256\n            i32.lt_u\n            br_if 0 (;@4;)\n            local.get 0\n            local.get 1\n            call $_RNvMs0_NtCsjqx8TIyZbP9_8dlmalloc8dlmallocINtB5_8DlmallocNtNtB7_3sys6SystemE18insert_large_chunkCsebHcaeoSrxy_3std\n            return\n          end\n          block ;; label = @4\n            block ;; label = @5\n              i32.const 0\n              i32.load offset=1049528\n              local.tee 2\n              i32.const 1\n              local.get 1\n              i32.const 3\n              i32.shr_u\n              i32.shl\n              local.tee 3\n              i32.and\n              br_if 0 (;@5;)\n              i32.const 0\n              local.get 2\n              local.get 3\n              i32.or\n              i32.store offset=1049528\n              local.get 1\n              i32.const 248\n              i32.and\n              i32.const 1049264\n              i32.add\n              local.tee 1\n              local.set 2\n              br 1 (;@4;)\n            end\n            local.get 1\n            i32.const 248\n            i32.and\n            local.tee 1\n            i32.const 1049264\n            i32.add\n            local.set 2\n            local.get 1\n            i32.const 1049272\n            i32.add\n            i32.load\n            local.set 1\n          end\n          local.get 2\n          local.get 0\n          i32.store offset=8\n          local.get 1\n          local.get 0\n          i32.store offset=12\n          local.get 0\n          local.get 2\n          i32.store offset=12\n          local.get 0\n          local.get 1\n          i32.store offset=8\n          return\n        end\n        i32.const 0\n        local.get 0\n        i32.store offset=1049548\n        i32.const 0\n        i32.const 0\n        i32.load offset=1049540\n        local.get 1\n        i32.add\n        local.tee 1\n        i32.store offset=1049540\n        local.get 0\n        local.get 1\n        i32.const 1\n        i32.or\n        i32.store offset=4\n        local.get 0\n        i32.const 0\n        i32.load offset=1049544\n        i32.ne\n        br_if 1 (;@1;)\n        i32.const 0\n        i32.const 0\n        i32.store offset=1049536\n        i32.const 0\n        i32.const 0\n        i32.store offset=1049544\n        return\n      end\n      i32.const 0\n      local.get 0\n      i32.store offset=1049544\n      i32.const 0\n      i32.const 0\n      i32.load offset=1049536\n      local.get 1\n      i32.add\n      local.tee 1\n      i32.store offset=1049536\n      local.get 0\n      local.get 1\n      i32.const 1\n      i32.or\n      i32.store offset=4\n      local.get 0\n      local.get 1\n      i32.add\n      local.get 1\n      i32.store\n      return\n    end\n  )\n  (func $_RNvCsfLfy6EI15iL_7___rustc17rust_begin_unwind (;29;) (type 9) (param i32)\n    (local i32 i64)\n    global.get $__stack_pointer\n    i32.const 16\n    i32.sub\n    local.tee 1\n    global.set $__stack_pointer\n    local.get 0\n    i64.load align=4\n    local.set 2\n    local.get 1\n    local.get 0\n    i32.store offset=12\n    local.get 1\n    local.get 2\n    i64.store offset=4 align=4\n    local.get 1\n    i32.const 4\n    i32.add\n    call $_RINvNtNtCsebHcaeoSrxy_3std3sys9backtrace26___rust_end_short_backtraceNCNvNtB6_9panicking13panic_handler0zEB6_\n    unreachable\n  )\n  (func $_RNvCsfLfy6EI15iL_7___rustc26___rust_alloc_error_handler (;30;) (type 0) (param i32 i32)\n    local.get 1\n    local.get 0\n    call $_RNvNtCsebHcaeoSrxy_3std5alloc8rust_oom\n    unreachable\n  )\n  (func $_RNvNtCsebHcaeoSrxy_3std5alloc8rust_oom (;31;) (type 0) (param i32 i32)\n    (local i32)\n    global.get $__stack_pointer\n    i32.const 16\n    i32.sub\n    local.tee 2\n    global.set $__stack_pointer\n    local.get 2\n    local.get 1\n    i32.store offset=12\n    local.get 2\n    local.get 0\n    i32.store offset=8\n    local.get 2\n    i32.const 8\n    i32.add\n    call $_RINvNtNtCsebHcaeoSrxy_3std3sys9backtrace26___rust_end_short_backtraceNCNvNtB6_5alloc8rust_oom0zEB6_\n    unreachable\n  )\n  (func $_RNvMs0_NtCsjqx8TIyZbP9_8dlmalloc8dlmallocINtB5_8DlmallocNtNtB7_3sys6SystemE18insert_large_chunkCsebHcaeoSrxy_3std (;32;) (type 0) (param i32 i32)\n    (local i32 i32 i32 i32)\n    i32.const 0\n    local.set 2\n    block ;; label = @1\n      local.get 1\n      i32.const 8\n      i32.shr_u\n      local.tee 3\n      i32.eqz\n      br_if 0 (;@1;)\n      i32.const 31\n      local.set 2\n      local.get 1\n      i32.const 16777216\n      i32.ge_u\n      br_if 0 (;@1;)\n      local.get 1\n      i32.const 38\n      local.get 3\n      i32.clz\n      local.tee 2\n      i32.sub\n      i32.shr_u\n      i32.const 1\n      i32.and\n      local.get 2\n      i32.const 1\n      i32.shl\n      i32.or\n      i32.const 62\n      i32.xor\n      local.set 2\n    end\n    local.get 0\n    i64.const 0\n    i64.store offset=16 align=4\n    local.get 0\n    local.get 2\n    i32.store offset=28\n    local.get 2\n    i32.const 2\n    i32.shl\n    i32.const 1049120\n    i32.add\n    local.set 3\n    block ;; label = @1\n      i32.const 0\n      i32.load offset=1049532\n      i32.const 1\n      local.get 2\n      i32.shl\n      local.tee 4\n      i32.and\n      br_if 0 (;@1;)\n      local.get 3\n      local.get 0\n      i32.store\n      local.get 0\n      local.get 3\n      i32.store offset=24\n      local.get 0\n      local.get 0\n      i32.store offset=12\n      local.get 0\n      local.get 0\n      i32.store offset=8\n      i32.const 0\n      i32.const 0\n      i32.load offset=1049532\n      local.get 4\n      i32.or\n      i32.store offset=1049532\n      return\n    end\n    block ;; label = @1\n      block ;; label = @2\n        block ;; label = @3\n          local.get 3\n          i32.load\n          local.tee 4\n          i32.load offset=4\n          i32.const -8\n          i32.and\n          local.get 1\n          i32.ne\n          br_if 0 (;@3;)\n          local.get 4\n          local.set 2\n          br 1 (;@2;)\n        end\n        local.get 1\n        i32.const 0\n        i32.const 25\n        local.get 2\n        i32.const 1\n        i32.shr_u\n        i32.sub\n        local.get 2\n        i32.const 31\n        i32.eq\n        select\n        i32.shl\n        local.set 3\n        loop ;; label = @3\n          local.get 4\n          local.get 3\n          i32.const 29\n          i32.shr_u\n          i32.const 4\n          i32.and\n          i32.add\n          local.tee 5\n          i32.load offset=16\n          local.tee 2\n          i32.eqz\n          br_if 2 (;@1;)\n          local.get 3\n          i32.const 1\n          i32.shl\n          local.set 3\n          local.get 2\n          local.set 4\n          local.get 2\n          i32.load offset=4\n          i32.const -8\n          i32.and\n          local.get 1\n          i32.ne\n          br_if 0 (;@3;)\n        end\n      end\n      local.get 2\n      i32.load offset=8\n      local.tee 3\n      local.get 0\n      i32.store offset=12\n      local.get 2\n      local.get 0\n      i32.store offset=8\n      local.get 0\n      i32.const 0\n      i32.store offset=24\n      local.get 0\n      local.get 2\n      i32.store offset=12\n      local.get 0\n      local.get 3\n      i32.store offset=8\n      return\n    end\n    local.get 5\n    i32.const 16\n    i32.add\n    local.get 0\n    i32.store\n    local.get 0\n    local.get 4\n    i32.store offset=24\n    local.get 0\n    local.get 0\n    i32.store offset=12\n    local.get 0\n    local.get 0\n    i32.store offset=8\n  )\n  (func $_RNvNtNtCsebHcaeoSrxy_3std9panicking11panic_count8increase (;33;) (type 11) (param i32) (result i32)\n    (local i32 i32)\n    i32.const 0\n    local.set 1\n    i32.const 0\n    i32.const 0\n    i32.load offset=1049116\n    local.tee 2\n    i32.const 1\n    i32.add\n    i32.store offset=1049116\n    block ;; label = @1\n      local.get 2\n      i32.const 0\n      i32.lt_s\n      br_if 0 (;@1;)\n      i32.const 1\n      local.set 1\n      i32.const 0\n      i32.load8_u offset=1049096\n      br_if 0 (;@1;)\n      i32.const 0\n      local.get 0\n      i32.store8 offset=1049096\n      i32.const 0\n      i32.const 0\n      i32.load offset=1049092\n      i32.const 1\n      i32.add\n      i32.store offset=1049092\n      i32.const 2\n      local.set 1\n    end\n    local.get 1\n  )\n  (func $_RNvXNtCsgXGp5Oqx2Ny_4core3anyNtNtCs5cOc02OMXlo_5alloc6string6StringNtB2_3Any7type_idCsebHcaeoSrxy_3std (;34;) (type 0) (param i32 i32)\n    local.get 0\n    i32.const 0\n    i64.load offset=1048764 align=4\n    i64.store offset=8 align=4\n    local.get 0\n    i32.const 0\n    i64.load offset=1048756 align=4\n    i64.store align=4\n  )\n  (func $_RNvXNtCsgXGp5Oqx2Ny_4core3anyReNtB2_3Any7type_idCsebHcaeoSrxy_3std (;35;) (type 0) (param i32 i32)\n    local.get 0\n    i32.const 0\n    i64.load offset=1048748 align=4\n    i64.store offset=8 align=4\n    local.get 0\n    i32.const 0\n    i64.load offset=1048740 align=4\n    i64.store align=4\n  )\n  (func $_RNvXs0_NvNtCsebHcaeoSrxy_3std9panicking13panic_handlerNtB5_19FormatStringPayloadNtNtCsgXGp5Oqx2Ny_4core3fmt7Display3fmt (;36;) (type 2) (param i32 i32) (result i32)\n    block ;; label = @1\n      local.get 0\n      i32.load\n      i32.const -2147483648\n      i32.eq\n      br_if 0 (;@1;)\n      local.get 1\n      local.get 0\n      i32.load offset=4\n      local.get 0\n      i32.load offset=8\n      call $_RNvMsa_NtCsgXGp5Oqx2Ny_4core3fmtNtB5_9Formatter9write_str\n      return\n    end\n    local.get 1\n    i32.load\n    local.get 1\n    i32.load offset=4\n    local.get 0\n    i32.load offset=12\n    i32.load\n    local.tee 0\n    i32.load\n    local.get 0\n    i32.load offset=4\n    call $_RNvNtCsgXGp5Oqx2Ny_4core3fmt5write\n  )\n  (func $_RNvXs1_NvNtCsebHcaeoSrxy_3std9panicking13panic_handlerNtB5_16StaticStrPayloadNtNtCsgXGp5Oqx2Ny_4core5panic12PanicPayload3get (;37;) (type 0) (param i32 i32)\n    local.get 0\n    i32.const 1048944\n    i32.store offset=4\n    local.get 0\n    local.get 1\n    i32.store\n  )\n  (func $_RNvXs1_NvNtCsebHcaeoSrxy_3std9panicking13panic_handlerNtB5_16StaticStrPayloadNtNtCsgXGp5Oqx2Ny_4core5panic12PanicPayload6as_str (;38;) (type 0) (param i32 i32)\n    local.get 0\n    local.get 1\n    i64.load align=4\n    i64.store\n  )\n  (func $_RNvXs1_NvNtCsebHcaeoSrxy_3std9panicking13panic_handlerNtB5_16StaticStrPayloadNtNtCsgXGp5Oqx2Ny_4core5panic12PanicPayload8take_box (;39;) (type 0) (param i32 i32)\n    (local i32 i32)\n    local.get 1\n    i32.load offset=4\n    local.set 2\n    local.get 1\n    i32.load\n    local.set 3\n    call $_RNvCsfLfy6EI15iL_7___rustc35___rust_no_alloc_shim_is_unstable_v2\n    block ;; label = @1\n      i32.const 8\n      i32.const 4\n      call $_RNvCsfLfy6EI15iL_7___rustc12___rust_alloc\n      local.tee 1\n      br_if 0 (;@1;)\n      i32.const 4\n      i32.const 8\n      call $_RNvNtCs5cOc02OMXlo_5alloc5alloc18handle_alloc_error\n      unreachable\n    end\n    local.get 1\n    local.get 2\n    i32.store offset=4\n    local.get 1\n    local.get 3\n    i32.store\n    local.get 0\n    i32.const 1048944\n    i32.store offset=4\n    local.get 0\n    local.get 1\n    i32.store\n  )\n  (func $_RNvXs2_NvNtCsebHcaeoSrxy_3std9panicking13panic_handlerNtB5_16StaticStrPayloadNtNtCsgXGp5Oqx2Ny_4core3fmt7Display3fmt (;40;) (type 2) (param i32 i32) (result i32)\n    local.get 1\n    local.get 0\n    i32.load\n    local.get 0\n    i32.load offset=4\n    call $_RNvMsa_NtCsgXGp5Oqx2Ny_4core3fmtNtB5_9Formatter9write_str\n  )\n  (func $_RNvXsZ_NtCs5cOc02OMXlo_5alloc6stringNtB5_6StringNtNtCsgXGp5Oqx2Ny_4core3fmt5Write10write_char (;41;) (type 2) (param i32 i32) (result i32)\n    (local i32 i32 i32 i32 i32 i32)\n    local.get 0\n    i32.load offset=8\n    local.set 2\n    block ;; label = @1\n      block ;; label = @2\n        local.get 1\n        i32.const 128\n        i32.ge_u\n        br_if 0 (;@2;)\n        i32.const 1\n        local.set 3\n        br 1 (;@1;)\n      end\n      block ;; label = @2\n        local.get 1\n        i32.const 2048\n        i32.ge_u\n        br_if 0 (;@2;)\n        i32.const 2\n        local.set 3\n        br 1 (;@1;)\n      end\n      i32.const 3\n      i32.const 4\n      local.get 1\n      i32.const 65536\n      i32.lt_u\n      select\n      local.set 3\n    end\n    local.get 2\n    local.set 4\n    block ;; label = @1\n      local.get 3\n      local.get 0\n      i32.load\n      local.get 2\n      i32.sub\n      i32.le_u\n      br_if 0 (;@1;)\n      local.get 0\n      local.get 2\n      local.get 3\n      i32.const 1\n      i32.const 1\n      call $_RINvNvMs2_NtCs5cOc02OMXlo_5alloc7raw_vecINtB8_11RawVecInnerpE7reserve21do_reserve_and_handleNtNtBa_5alloc6GlobalECsebHcaeoSrxy_3std\n      local.get 0\n      i32.load offset=8\n      local.set 4\n    end\n    local.get 0\n    i32.load offset=4\n    local.get 4\n    i32.add\n    local.set 4\n    block ;; label = @1\n      block ;; label = @2\n        local.get 1\n        i32.const 128\n        i32.lt_u\n        br_if 0 (;@2;)\n        local.get 1\n        i32.const 63\n        i32.and\n        i32.const -128\n        i32.or\n        local.set 5\n        local.get 1\n        i32.const 6\n        i32.shr_u\n        local.set 6\n        block ;; label = @3\n          local.get 1\n          i32.const 2048\n          i32.ge_u\n          br_if 0 (;@3;)\n          local.get 4\n          local.get 5\n          i32.store8 offset=1\n          local.get 4\n          local.get 6\n          i32.const 192\n          i32.or\n          i32.store8\n          br 2 (;@1;)\n        end\n        local.get 1\n        i32.const 12\n        i32.shr_u\n        local.set 7\n        local.get 6\n        i32.const 63\n        i32.and\n        i32.const -128\n        i32.or\n        local.set 6\n        block ;; label = @3\n          local.get 1\n          i32.const 65535\n          i32.gt_u\n          br_if 0 (;@3;)\n          local.get 4\n          local.get 5\n          i32.store8 offset=2\n          local.get 4\n          local.get 6\n          i32.store8 offset=1\n          local.get 4\n          local.get 7\n          i32.const 224\n          i32.or\n          i32.store8\n          br 2 (;@1;)\n        end\n        local.get 4\n        local.get 5\n        i32.store8 offset=3\n        local.get 4\n        local.get 6\n        i32.store8 offset=2\n        local.get 4\n        local.get 7\n        i32.const 63\n        i32.and\n        i32.const -128\n        i32.or\n        i32.store8 offset=1\n        local.get 4\n        local.get 1\n        i32.const 18\n        i32.shr_u\n        i32.const -16\n        i32.or\n        i32.store8\n        br 1 (;@1;)\n      end\n      local.get 4\n      local.get 1\n      i32.store8\n    end\n    local.get 0\n    local.get 3\n    local.get 2\n    i32.add\n    i32.store offset=8\n    i32.const 0\n  )\n  (func $_RNvXsZ_NtCs5cOc02OMXlo_5alloc6stringNtB5_6StringNtNtCsgXGp5Oqx2Ny_4core3fmt5Write9write_str (;42;) (type 1) (param i32 i32 i32) (result i32)\n    (local i32)\n    block ;; label = @1\n      block ;; label = @2\n        block ;; label = @3\n          local.get 2\n          local.get 0\n          i32.load\n          local.get 0\n          i32.load offset=8\n          local.tee 3\n          i32.sub\n          i32.le_u\n          br_if 0 (;@3;)\n          local.get 0\n          local.get 3\n          local.get 2\n          i32.const 1\n          i32.const 1\n          call $_RINvNvMs2_NtCs5cOc02OMXlo_5alloc7raw_vecINtB8_11RawVecInnerpE7reserve21do_reserve_and_handleNtNtBa_5alloc6GlobalECsebHcaeoSrxy_3std\n          local.get 0\n          i32.load offset=8\n          local.set 3\n          br 1 (;@2;)\n        end\n        local.get 2\n        i32.eqz\n        br_if 1 (;@1;)\n      end\n      local.get 2\n      i32.eqz\n      br_if 0 (;@1;)\n      local.get 0\n      i32.load offset=4\n      local.get 3\n      i32.add\n      local.get 1\n      local.get 2\n      memory.copy\n    end\n    local.get 0\n    local.get 3\n    local.get 2\n    i32.add\n    i32.store offset=8\n    i32.const 0\n  )\n  (func $_RNvXs_NvNtCsebHcaeoSrxy_3std9panicking13panic_handlerNtB4_19FormatStringPayloadNtNtCsgXGp5Oqx2Ny_4core5panic12PanicPayload3get (;43;) (type 0) (param i32 i32)\n    (local i32 i32 i64)\n    global.get $__stack_pointer\n    i32.const 32\n    i32.sub\n    local.tee 2\n    global.set $__stack_pointer\n    block ;; label = @1\n      local.get 1\n      i32.load\n      i32.const -2147483648\n      i32.ne\n      br_if 0 (;@1;)\n      local.get 1\n      i32.load offset=12\n      local.set 3\n      local.get 2\n      i32.const 0\n      i32.store offset=28\n      local.get 2\n      i64.const 4294967296\n      i64.store offset=20 align=4\n      local.get 2\n      i32.const 20\n      i32.add\n      i32.const 1048660\n      local.get 3\n      i32.load\n      local.tee 3\n      i32.load\n      local.get 3\n      i32.load offset=4\n      call $_RNvNtCsgXGp5Oqx2Ny_4core3fmt5write\n      drop\n      local.get 2\n      local.get 2\n      i32.load offset=28\n      local.tee 3\n      i32.store offset=16\n      local.get 2\n      local.get 2\n      i64.load offset=20 align=4\n      local.tee 4\n      i64.store offset=8\n      local.get 1\n      local.get 3\n      i32.store offset=8\n      local.get 1\n      local.get 4\n      i64.store align=4\n    end\n    local.get 0\n    i32.const 1048960\n    i32.store offset=4\n    local.get 0\n    local.get 1\n    i32.store\n    local.get 2\n    i32.const 32\n    i32.add\n    global.set $__stack_pointer\n  )\n  (func $_RNvXs_NvNtCsebHcaeoSrxy_3std9panicking13panic_handlerNtB4_19FormatStringPayloadNtNtCsgXGp5Oqx2Ny_4core5panic12PanicPayload8take_box (;44;) (type 0) (param i32 i32)\n    (local i32 i32 i64)\n    global.get $__stack_pointer\n    i32.const 48\n    i32.sub\n    local.tee 2\n    global.set $__stack_pointer\n    block ;; label = @1\n      local.get 1\n      i32.load\n      i32.const -2147483648\n      i32.ne\n      br_if 0 (;@1;)\n      local.get 1\n      i32.load offset=12\n      local.set 3\n      local.get 2\n      i32.const 0\n      i32.store offset=44\n      local.get 2\n      i64.const 4294967296\n      i64.store offset=36 align=4\n      local.get 2\n      i32.const 36\n      i32.add\n      i32.const 1048660\n      local.get 3\n      i32.load\n      local.tee 3\n      i32.load\n      local.get 3\n      i32.load offset=4\n      call $_RNvNtCsgXGp5Oqx2Ny_4core3fmt5write\n      drop\n      local.get 2\n      local.get 2\n      i32.load offset=44\n      local.tee 3\n      i32.store offset=32\n      local.get 2\n      local.get 2\n      i64.load offset=36 align=4\n      local.tee 4\n      i64.store offset=24\n      local.get 1\n      local.get 3\n      i32.store offset=8\n      local.get 1\n      local.get 4\n      i64.store align=4\n    end\n    local.get 1\n    i32.load offset=8\n    local.set 3\n    local.get 1\n    i32.const 0\n    i32.store offset=8\n    local.get 1\n    i64.load align=4\n    local.set 4\n    local.get 1\n    i64.const 4294967296\n    i64.store align=4\n    local.get 2\n    local.get 3\n    i32.store offset=16\n    local.get 2\n    local.get 4\n    i64.store offset=8\n    call $_RNvCsfLfy6EI15iL_7___rustc35___rust_no_alloc_shim_is_unstable_v2\n    block ;; label = @1\n      i32.const 12\n      i32.const 4\n      call $_RNvCsfLfy6EI15iL_7___rustc12___rust_alloc\n      local.tee 1\n      br_if 0 (;@1;)\n      i32.const 4\n      i32.const 12\n      call $_RNvNtCs5cOc02OMXlo_5alloc5alloc18handle_alloc_error\n      unreachable\n    end\n    local.get 1\n    local.get 2\n    i32.load offset=16\n    i32.store offset=8\n    local.get 1\n    local.get 2\n    i64.load offset=8\n    i64.store align=4\n    local.get 0\n    i32.const 1048960\n    i32.store offset=4\n    local.get 0\n    local.get 1\n    i32.store\n    local.get 2\n    i32.const 48\n    i32.add\n    global.set $__stack_pointer\n  )\n  (func $_RNvYINtNvNtCsebHcaeoSrxy_3std9panicking11begin_panic7PayloadReENtNtCsgXGp5Oqx2Ny_4core5panic12PanicPayload6as_strB9_ (;45;) (type 0) (param i32 i32)\n    local.get 0\n    i32.const 0\n    i32.store\n  )\n  (func $_RNvYNtNtCs5cOc02OMXlo_5alloc6string6StringNtNtCsgXGp5Oqx2Ny_4core3fmt5Write9write_fmtCsebHcaeoSrxy_3std (;46;) (type 1) (param i32 i32 i32) (result i32)\n    local.get 0\n    i32.const 1048660\n    local.get 1\n    local.get 2\n    call $_RNvNtCsgXGp5Oqx2Ny_4core3fmt5write\n  )\n  (func $_RNvXs_NtCsjqx8TIyZbP9_8dlmalloc3sysNtB4_6SystemNtB6_9Allocator5alloc (;47;) (type 5) (param i32 i32 i32)\n    (local i32 i32)\n    block ;; label = @1\n      block ;; label = @2\n        local.get 2\n        i32.const 16\n        i32.shr_u\n        local.get 2\n        i32.const 65535\n        i32.and\n        i32.const 0\n        i32.ne\n        i32.add\n        local.tee 2\n        memory.grow\n        local.tee 3\n        i32.const -1\n        i32.ne\n        br_if 0 (;@2;)\n        i32.const 0\n        local.set 2\n        i32.const 0\n        local.set 4\n        br 1 (;@1;)\n      end\n      local.get 2\n      i32.const 16\n      i32.shl\n      local.tee 4\n      i32.const -16\n      i32.add\n      local.get 4\n      local.get 3\n      i32.const 16\n      i32.shl\n      local.tee 2\n      i32.const 0\n      local.get 4\n      i32.sub\n      i32.eq\n      select\n      local.set 4\n    end\n    local.get 0\n    i32.const 0\n    i32.store offset=8\n    local.get 0\n    local.get 4\n    i32.store offset=4\n    local.get 0\n    local.get 2\n    i32.store\n  )\n  (func $_RNvNtCs5cOc02OMXlo_5alloc7raw_vec12handle_error (;48;) (type 0) (param i32 i32)\n    block ;; label = @1\n      local.get 0\n      i32.eqz\n      br_if 0 (;@1;)\n      local.get 0\n      local.get 1\n      call $_RNvNtCs5cOc02OMXlo_5alloc5alloc18handle_alloc_error\n      unreachable\n    end\n    call $_RNvNtCs5cOc02OMXlo_5alloc7raw_vec17capacity_overflow\n    unreachable\n  )\n  (func $_RNvNtCs5cOc02OMXlo_5alloc5alloc18handle_alloc_error (;49;) (type 0) (param i32 i32)\n    local.get 1\n    local.get 0\n    call $_RNvCsfLfy6EI15iL_7___rustc26___rust_alloc_error_handler\n    unreachable\n  )\n  (func $_RNvNtCs5cOc02OMXlo_5alloc7raw_vec17capacity_overflow (;50;) (type 7)\n    i32.const 1049057\n    i32.const 35\n    i32.const 1049076\n    call $_RNvNtCsgXGp5Oqx2Ny_4core9panicking9panic_fmt\n    unreachable\n  )\n  (func $_RNvNtCsgXGp5Oqx2Ny_4core9panicking5panic (;51;) (type 5) (param i32 i32 i32)\n    local.get 0\n    local.get 1\n    i32.const 1\n    i32.shl\n    i32.const 1\n    i32.or\n    local.get 2\n    call $_RNvNtCsgXGp5Oqx2Ny_4core9panicking9panic_fmt\n    unreachable\n  )\n  (func $_RNvNtCsgXGp5Oqx2Ny_4core9panicking9panic_fmt (;52;) (type 5) (param i32 i32 i32)\n    (local i32)\n    global.get $__stack_pointer\n    i32.const 32\n    i32.sub\n    local.tee 3\n    global.set $__stack_pointer\n    local.get 3\n    local.get 1\n    i32.store offset=16\n    local.get 3\n    local.get 0\n    i32.store offset=12\n    local.get 3\n    i32.const 1\n    i32.store16 offset=28\n    local.get 3\n    local.get 2\n    i32.store offset=24\n    local.get 3\n    local.get 3\n    i32.const 12\n    i32.add\n    i32.store offset=20\n    local.get 3\n    i32.const 20\n    i32.add\n    call $_RNvCsfLfy6EI15iL_7___rustc17rust_begin_unwind\n    unreachable\n  )\n  (func $_RNvNtCsgXGp5Oqx2Ny_4core3fmt5write (;53;) (type 6) (param i32 i32 i32 i32) (result i32)\n    (local i32 i32 i32 i32 i32 i32 i32 i32)\n    global.get $__stack_pointer\n    i32.const 16\n    i32.sub\n    local.tee 4\n    global.set $__stack_pointer\n    block ;; label = @1\n      block ;; label = @2\n        block ;; label = @3\n          local.get 3\n          i32.const 1\n          i32.and\n          br_if 0 (;@3;)\n          local.get 2\n          i32.load8_u\n          local.tee 5\n          br_if 1 (;@2;)\n          i32.const 0\n          local.set 5\n          br 2 (;@1;)\n        end\n        local.get 0\n        local.get 2\n        local.get 3\n        i32.const 1\n        i32.shr_u\n        local.get 1\n        i32.load offset=12\n        call_indirect (type 1)\n        local.set 5\n        br 1 (;@1;)\n      end\n      local.get 1\n      i32.load offset=12\n      local.set 6\n      i32.const 0\n      local.set 7\n      loop ;; label = @2\n        local.get 2\n        i32.const 1\n        i32.add\n        local.set 8\n        block ;; label = @3\n          block ;; label = @4\n            block ;; label = @5\n              block ;; label = @6\n                block ;; label = @7\n                  local.get 5\n                  i32.extend8_s\n                  i32.const -1\n                  i32.gt_s\n                  br_if 0 (;@7;)\n                  local.get 5\n                  i32.const 255\n                  i32.and\n                  local.tee 9\n                  i32.const 128\n                  i32.eq\n                  br_if 1 (;@6;)\n                  local.get 9\n                  i32.const 192\n                  i32.ne\n                  br_if 3 (;@4;)\n                  local.get 4\n                  local.get 1\n                  i32.store offset=4\n                  local.get 4\n                  local.get 0\n                  i32.store\n                  local.get 4\n                  i64.const 1610612768\n                  i64.store offset=8 align=4\n                  local.get 3\n                  local.get 7\n                  i32.const 3\n                  i32.shl\n                  i32.add\n                  local.tee 5\n                  i32.load\n                  local.get 4\n                  local.get 5\n                  i32.load offset=4\n                  call_indirect (type 2)\n                  i32.eqz\n                  br_if 2 (;@5;)\n                  i32.const 1\n                  local.set 5\n                  br 6 (;@1;)\n                end\n                block ;; label = @7\n                  local.get 0\n                  local.get 8\n                  local.get 5\n                  i32.const 255\n                  i32.and\n                  local.tee 5\n                  local.get 6\n                  call_indirect (type 1)\n                  br_if 0 (;@7;)\n                  local.get 8\n                  local.get 5\n                  i32.add\n                  local.set 2\n                  br 4 (;@3;)\n                end\n                i32.const 1\n                local.set 5\n                br 5 (;@1;)\n              end\n              block ;; label = @6\n                local.get 0\n                local.get 2\n                i32.const 3\n                i32.add\n                local.tee 5\n                local.get 2\n                i32.load16_u offset=1 align=1\n                local.tee 2\n                local.get 6\n                call_indirect (type 1)\n                br_if 0 (;@6;)\n                local.get 5\n                local.get 2\n                i32.add\n                local.set 2\n                br 3 (;@3;)\n              end\n              i32.const 1\n              local.set 5\n              br 4 (;@1;)\n            end\n            local.get 7\n            i32.const 1\n            i32.add\n            local.set 7\n            local.get 8\n            local.set 2\n            br 1 (;@3;)\n          end\n          i32.const 1610612768\n          local.set 10\n          block ;; label = @4\n            local.get 5\n            i32.const 1\n            i32.and\n            i32.eqz\n            br_if 0 (;@4;)\n            local.get 2\n            i32.const 5\n            i32.add\n            local.set 8\n            local.get 2\n            i32.load offset=1 align=1\n            local.set 10\n          end\n          i32.const 0\n          local.set 9\n          block ;; label = @4\n            block ;; label = @5\n              local.get 5\n              i32.const 2\n              i32.and\n              br_if 0 (;@5;)\n              i32.const 0\n              local.set 11\n              local.get 8\n              local.set 2\n              br 1 (;@4;)\n            end\n            local.get 8\n            i32.const 2\n            i32.add\n            local.set 2\n            local.get 8\n            i32.load16_u align=1\n            local.set 11\n          end\n          block ;; label = @4\n            block ;; label = @5\n              local.get 5\n              i32.const 4\n              i32.and\n              br_if 0 (;@5;)\n              local.get 2\n              local.set 8\n              br 1 (;@4;)\n            end\n            local.get 2\n            i32.const 2\n            i32.add\n            local.set 8\n            local.get 2\n            i32.load16_u align=1\n            local.set 9\n          end\n          block ;; label = @4\n            block ;; label = @5\n              local.get 5\n              i32.const 8\n              i32.and\n              br_if 0 (;@5;)\n              local.get 8\n              local.set 2\n              br 1 (;@4;)\n            end\n            local.get 8\n            i32.const 2\n            i32.add\n            local.set 2\n            local.get 8\n            i32.load16_u align=1\n            local.set 7\n          end\n          block ;; label = @4\n            local.get 5\n            i32.const 16\n            i32.and\n            i32.eqz\n            br_if 0 (;@4;)\n            local.get 3\n            local.get 11\n            i32.const 65535\n            i32.and\n            i32.const 3\n            i32.shl\n            i32.add\n            i32.load16_u offset=4\n            local.set 11\n          end\n          block ;; label = @4\n            local.get 5\n            i32.const 32\n            i32.and\n            i32.eqz\n            br_if 0 (;@4;)\n            local.get 3\n            local.get 9\n            i32.const 65535\n            i32.and\n            i32.const 3\n            i32.shl\n            i32.add\n            i32.load16_u offset=4\n            local.set 9\n          end\n          local.get 4\n          local.get 9\n          i32.store16 offset=14\n          local.get 4\n          local.get 11\n          i32.store16 offset=12\n          local.get 4\n          local.get 10\n          i32.store offset=8\n          local.get 4\n          local.get 1\n          i32.store offset=4\n          local.get 4\n          local.get 0\n          i32.store\n          block ;; label = @4\n            local.get 3\n            local.get 7\n            i32.const 3\n            i32.shl\n            i32.add\n            local.tee 5\n            i32.load\n            local.get 4\n            local.get 5\n            i32.load offset=4\n            call_indirect (type 2)\n            i32.eqz\n            br_if 0 (;@4;)\n            i32.const 1\n            local.set 5\n            br 3 (;@1;)\n          end\n          local.get 7\n          i32.const 1\n          i32.add\n          local.set 7\n        end\n        local.get 2\n        i32.load8_u\n        local.tee 5\n        br_if 0 (;@2;)\n      end\n      i32.const 0\n      local.set 5\n    end\n    local.get 4\n    i32.const 16\n    i32.add\n    global.set $__stack_pointer\n    local.get 5\n  )\n  (func $_RNvMsa_NtCsgXGp5Oqx2Ny_4core3fmtNtB5_9Formatter9write_str (;54;) (type 1) (param i32 i32 i32) (result i32)\n    local.get 0\n    i32.load\n    local.get 1\n    local.get 2\n    local.get 0\n    i32.load offset=4\n    i32.load offset=12\n    call_indirect (type 1)\n  )\n  (data $.rodata (;0;) (i32.const 1048576) \"internal error: entered unreachable codefloat_trunc/src/exports.rs\\00\\00(\\00\\10\\00\\1a\\00\\00\\00\\14\\00\\00\\00\\09\\00\\00\\00\\02\\00\\00\\00\\0c\\00\\00\\00\\04\\00\\00\\00\\03\\00\\00\\00\\04\\00\\00\\00\\05\\00\\00\\00\\00\\00\\00\\00\\08\\00\\00\\00\\04\\00\\00\\00\\06\\00\\00\\00\\07\\00\\00\\00\\08\\00\\00\\00\\09\\00\\00\\00\\0a\\00\\00\\00\\10\\00\\00\\00\\04\\00\\00\\00\\0b\\00\\00\\00\\0c\\00\\00\\00\\0d\\00\\00\\00\\0e\\00\\00\\00m]\\cb\\d6,P\\ebcxA\\a6Wq\\1b\\8b\\b9\\15\\a2\\5cU4U\\07\\d4Sx\\ad\\81Q\\f0\\a3\\f7/rust/deps/dlmalloc-0.2.11/src/dlmalloc.rs\\00assertion failed: psize >= size + min_overhead\\00\\00\\00\\c4\\00\\10\\00*\\00\\00\\00\\b1\\04\\00\\00\\09\\00\\00\\00assertion failed: psize <= size + max_overhead\\00\\00\\c4\\00\\10\\00*\\00\\00\\00\\b7\\04\\00\\00\\0d\\00\\00\\00\\00\\00\\00\\00\\08\\00\\00\\00\\04\\00\\00\\00\\0f\\00\\00\\00\\02\\00\\00\\00\\0c\\00\\00\\00\\04\\00\\00\\00\\10\\00\\00\\00/rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/alloc/src/raw_vec/mod.rs\\00capacity overflow\\00\\00\\90\\01\\10\\00P\\00\\00\\00\\1c\\00\\00\\00\\05\\00\\00\\00\")\n)\n"
+
+-- Compile-time drift check: errors if `module.wat` is absent or has changed.
+#guard_msgs (drop info) in
+#eval show IO Unit from do
+  let path : System.FilePath := "../rust/build/float_trunc/program.wat"
+  unless ← path.pathExists do
+    throw <| IO.userError
+      s!"{path} is missing; cannot validate Program.lean provenance."
+  let actual ← IO.FS.readFile path
+  if actual ≠ expectedWatSource then
+    throw <| IO.userError
+      s!"{path} has drifted from Program.lean; re-run `lake exe verifier emit`."
 
 end Project.FloatTrunc

@@ -71,9 +71,9 @@ twenty-eight instruction-level transitions, `i < len` and `j < len` select the
 outward branch to the real `call 2` continuation and leave `&arr[i]` in local
 slot five and `&arr[j]` on the operand stack. -/
 theorem func1_happyPrefix_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
     (ptr len i j : UInt32) (hi : i < len) (hj : j < len)
     (calls : List Wasm.SmallStep.CallFrame) :
     let addressI := (i <<< (3 % 32)) + ptr
@@ -159,9 +159,9 @@ theorem func1_happyPrefix_smallStep_wp
 two is the concrete generated `func2Def`, and the installed call frame retains
 the outer bounds-check frame and `func1`'s final return continuation. -/
 theorem func1_call2_entry_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
     (ptr len i j : UInt32) (calls : List Wasm.SmallStep.CallFrame) :
     let addressI := (i <<< (3 % 32)) + ptr
     let addressJ := (j <<< (3 % 32)) + ptr
@@ -201,10 +201,10 @@ theorem func1_call2_entry_smallStep_wp
 frame. Its final `ret` resumes `func1`, whose own final `ret` then completes
 the top-level invocation. -/
 theorem func2_in_func1_context_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
     (ptr len i j : UInt32) (oldScratch oldA oldB : UInt64)
     (hroomI : ((i <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296)
     (hroomJ : ((j <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296)
@@ -256,10 +256,10 @@ theorem func2_in_func1_context_smallStep_wp
 callee receives the same pointer twice, so one array-word owner is threaded
 sequentially through both loads and stores. -/
 theorem func2Alias_in_func1_context_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
     (ptr len i : UInt32) (oldScratch oldValue : UInt64)
     (hroom : ((i <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296)
     (calls : List Wasm.SmallStep.CallFrame)
@@ -303,10 +303,10 @@ theorem func2Alias_in_func1_context_smallStep_wp
 
 /-- Successful equal-index path of the generated bounds-checking wrapper. -/
 theorem func1_alias_context_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
     (ptr len i : UInt32) (oldScratch oldValue : UInt64)
     (hi : i < len)
     (hroom : ((i <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296)
@@ -348,10 +348,10 @@ theorem func1_alias_context_smallStep_wp
 at `func1`'s own final return, allowing callers to choose whether that return
 completes the execution or resumes another generated frame. -/
 theorem func1_happy_context_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
     (ptr len i j : UInt32) (oldScratch oldA oldB : UInt64)
     (hi : i < len) (hj : j < len)
     (hroomI : ((i <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296)
@@ -397,7 +397,7 @@ theorem func1_happy_context_smallStep_wp
 the physical-runtime-checked direct call enters `func2`, the three words are
 exchanged, and both administrative returns are discharged. -/
 theorem func1_happy_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
     (ptr len i j : UInt32) (oldScratch oldA oldB : UInt64)
     (hi : i < len) (hj : j < len)
@@ -438,10 +438,10 @@ theorem func1_happy_smallStep_wp
 call frame. This remains contextual so the exported wrapper can suspend above
 it without duplicating any semantics. -/
 theorem func0_happy_context_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
     (ptr len i j : UInt32) (oldScratch oldA oldB : UInt64)
     (hi : i < len) (hj : j < len)
     (hroomI : ((i <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296)
@@ -498,10 +498,10 @@ theorem func0_happy_context_smallStep_wp
 
 /-- Equal-index path of the generated forwarding wrapper. -/
 theorem func0_alias_context_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
     (ptr len i : UInt32) (oldScratch oldValue : UInt64)
     (hi : i < len)
     (hroom : ((i <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296)
@@ -555,7 +555,7 @@ theorem func0_alias_context_smallStep_wp
 
 /-- Top-level equal-index forwarding-wrapper contract. -/
 theorem func0_alias_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
     (ptr len i : UInt32) (oldScratch oldValue : UInt64)
     (hi : i < len)
@@ -590,7 +590,7 @@ theorem func0_alias_smallStep_wp
 
 /-- Closed-WP form of the generated forwarding wrapper. -/
 theorem func0_happy_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
     (ptr len i j : UInt32) (oldScratch oldA oldB : UInt64)
     (hi : i < len) (hj : j < len)
@@ -630,7 +630,7 @@ theorem func0_happy_smallStep_wp
 selects its scratch frame, while authoritative eight-byte ownership connects
 all three physical words to the operational `load64`/`store64` steps. -/
 theorem func2_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
     (ptrA ptrB : UInt32) (oldScratch oldA oldB : UInt64)
     (hroomA : ptrA.toNat + 8 ≤ 4294967296)
@@ -655,10 +655,10 @@ downstream swap proof that uses iris-lean's `WP` over `Wasm.SmallStep.Step`;
 the legacy theorem below remains temporarily because it additionally proves
 total termination and a large physical framing postcondition. -/
 theorem func3_context_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
     (oldPtr oldLen ptr len : UInt32)
     (calls : List Wasm.SmallStep.CallFrame)
     (hreturn :
@@ -704,7 +704,7 @@ theorem func3_context_smallStep_wp
   iframe
 
 theorem func3_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
     (oldPtr oldLen ptr len : UInt32) :
     pointsTo_u32 1048568 oldPtr ∗ pointsTo_u32 1048572 oldLen ⊢
@@ -722,7 +722,7 @@ forwarding wrapper, bounds checks, and exchange leaf. The postcondition keeps
 the complete touched footprint so the subsequent adequacy theorem can connect
 every ghost cell back to physical Wasm memory. -/
 theorem func4_happy_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
     (ptr len i j oldSpillPtr oldSpillLen : UInt32)
     (oldScratch oldA oldB : UInt64)
@@ -878,7 +878,7 @@ theorem func4_happy_smallStep_wp
 identical to `func4_happy_smallStep_wp`, but the nested exchange uses the
 one-cell alias contract. -/
 theorem func4_alias_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
     (ptr len i oldSpillPtr oldSpillLen : UInt32)
     (oldScratch oldValue : UInt64)
@@ -1053,16 +1053,16 @@ theorem func4_distinct_store_partiallyMeets
     (hagree : heapAgreesWithMem σ wasm.mem)
     (hinBounds : heapAddressesInBounds σ wasm.mem)
     (hglobals : globalHeapAgrees globalσ wasm.globals)
-    (hresources : ∀ [WasmHeapGS],
+    (hresources : ∀ [WasmHeapGS Unit],
       ([∗map] address ↦ value ∈ σ,
-        pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+        pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
           address (DFrac.own 1) value) ⊢
       pointsTo_u64 1048552 oldScratch ∗
       pointsTo_u32 1048568 oldSpillPtr ∗
       pointsTo_u32 1048572 oldSpillLen ∗
       pointsTo_u64 ((i <<< (3 % 32)) + ptr) oldA ∗
       pointsTo_u64 ((j <<< (3 % 32)) + ptr) oldB)
-    (hglobalOwn : ∀ [WasmGlobalGS],
+    (hglobalOwn : ∀ [WasmGlobalGS Unit],
       ([∗map] index ↦ value ∈ globalσ,
         globalPointsTo index value) ⊢
       globalPointsTo 0 (.i32 1048576)) :
@@ -1127,7 +1127,7 @@ theorem func4_distinct_store_partiallyMeets
           pointsTo_u64 addressI oldB ∗ pointsTo_u64 addressJ oldA) ⊢
         (iprop% ∀ (store : Wasm.SmallStep.MachineStore Unit)
             (_observations : List Wasm.SmallStep.StepKind),
-          stateInterp (GF := WasmHeapGF) store 0 [] 0 -∗
+          stateInterp (GF := WasmHeapGF Unit) store 0 [] 0 -∗
           ⌜values = [] ∧ store.wasm.mem.read64 addressI = oldB ∧
             store.wasm.mem.read64 addressJ = oldA⌝) := by
       intro values
@@ -1163,15 +1163,15 @@ theorem func4_alias_store_partiallyMeets
     (hagree : heapAgreesWithMem σ wasm.mem)
     (hinBounds : heapAddressesInBounds σ wasm.mem)
     (hglobals : globalHeapAgrees globalσ wasm.globals)
-    (hresources : ∀ [WasmHeapGS],
+    (hresources : ∀ [WasmHeapGS Unit],
       ([∗map] address ↦ value ∈ σ,
-        pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+        pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
           address (DFrac.own 1) value) ⊢
       pointsTo_u64 1048552 oldScratch ∗
       pointsTo_u32 1048568 oldSpillPtr ∗
       pointsTo_u32 1048572 oldSpillLen ∗
       pointsTo_u64 ((i <<< (3 % 32)) + ptr) oldValue)
-    (hglobalOwn : ∀ [WasmGlobalGS],
+    (hglobalOwn : ∀ [WasmGlobalGS Unit],
       ([∗map] index ↦ value ∈ globalσ,
         globalPointsTo index value) ⊢
       globalPointsTo 0 (.i32 1048576)) :
@@ -1217,7 +1217,7 @@ theorem func4_alias_store_partiallyMeets
           pointsTo_u64 address oldValue) ⊢
         (iprop% ∀ (store : Wasm.SmallStep.MachineStore Unit)
             (_observations : List Wasm.SmallStep.StepKind),
-          stateInterp (GF := WasmHeapGF) store 0 [] 0 -∗
+          stateInterp (GF := WasmHeapGF Unit) store 0 [] 0 -∗
           ⌜values = [] ∧
             store.wasm.mem.read64 address = oldValue⌝) := by
       intro values
@@ -1293,9 +1293,9 @@ theorem func3Heap_inBounds (ptr len : UInt32) :
     · decide
   · decide
 
-theorem func3Heap_pointsTo [WasmHeapGS] :
+theorem func3Heap_pointsTo [WasmHeapGS Unit] :
     ([∗map] address ↦ value ∈ func3Heap,
-      pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+      pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
         address (DFrac.own 1) value) ⊢
       pointsTo_u32 1048568 0 ∗ pointsTo_u32 1048572 0 := by
   unfold func3Heap
@@ -1409,9 +1409,9 @@ theorem func4ExampleGlobals_agree :
   · rw [get?_insert_ne (Ne.symm hindex), get?_empty] at hget
     contradiction
 
-theorem func4ExampleHeap_pointsTo [WasmHeapGS] :
+theorem func4ExampleHeap_pointsTo [WasmHeapGS Unit] :
     ([∗map] address ↦ value ∈ func4ExampleHeap,
-      pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+      pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
         address (DFrac.own 1) value) ⊢
       pointsTo_u64 1048552 0 ∗
       pointsTo_u32 1048568 0 ∗ pointsTo_u32 1048572 0 ∗
@@ -1441,7 +1441,7 @@ theorem func4ExampleHeap_pointsTo [WasmHeapGS] :
   icases Hscratch with ⟨Hscratch, Hempty⟩
   iframe
 
-theorem func4ExampleGlobals_pointsTo [WasmGlobalGS] :
+theorem func4ExampleGlobals_pointsTo [WasmGlobalGS Unit] :
     ([∗map] index ↦ value ∈ func4ExampleGlobals,
       globalPointsTo index value) ⊢
       globalPointsTo 0 (.i32 1048576) := by
@@ -1516,7 +1516,7 @@ theorem func4Example_store_smallStep :
           pointsTo_u64 0 22 ∗ pointsTo_u64 8 11) ⊢
         (iprop% ∀ (store : Wasm.SmallStep.MachineStore Unit)
             (_observations : List Wasm.SmallStep.StepKind),
-          stateInterp (GF := WasmHeapGF) store 0 [] 0 -∗
+          stateInterp (GF := WasmHeapGF Unit) store 0 [] 0 -∗
           ⌜values = [] ∧ store.wasm.mem.read64 0 = 22 ∧
             store.wasm.mem.read64 8 = 11⌝) := by
       intro values
@@ -1600,9 +1600,9 @@ theorem func4AliasHeap_inBounds :
     · decide
   · decide
 
-theorem func4AliasHeap_pointsTo [WasmHeapGS] :
+theorem func4AliasHeap_pointsTo [WasmHeapGS Unit] :
     ([∗map] address ↦ value ∈ func4AliasHeap,
-      pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+      pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
         address (DFrac.own 1) value) ⊢
       pointsTo_u64 1048552 0 ∗
       pointsTo_u32 1048568 0 ∗ pointsTo_u32 1048572 0 ∗
@@ -1692,7 +1692,7 @@ theorem func4Alias_store_smallStep :
           pointsTo_u64 0 42) ⊢
         (iprop% ∀ (store : Wasm.SmallStep.MachineStore Unit)
             (_observations : List Wasm.SmallStep.StepKind),
-          stateInterp (GF := WasmHeapGF) store 0 [] 0 -∗
+          stateInterp (GF := WasmHeapGF Unit) store 0 [] 0 -∗
           ⌜values = [] ∧ store.wasm.mem.read64 0 = 42⌝) := by
       intro values
       iintro ⟨%hvalues, _Hglobal, _Hscratch,
@@ -1773,9 +1773,9 @@ theorem func0AliasGlobals_agree :
   · rw [get?_insert_ne (Ne.symm hindex), get?_empty] at hget
     contradiction
 
-theorem func0AliasHeap_pointsTo [WasmHeapGS] :
+theorem func0AliasHeap_pointsTo [WasmHeapGS Unit] :
     ([∗map] address ↦ value ∈ func0AliasHeap,
-      pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+      pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
         address (DFrac.own 1) value) ⊢
       pointsTo_u64 1048552 0 ∗ pointsTo_u64 0 42 := by
   unfold func0AliasHeap
@@ -1791,7 +1791,7 @@ theorem func0AliasHeap_pointsTo [WasmHeapGS] :
   icases Hscratch with ⟨Hscratch, Hempty⟩
   iframe
 
-theorem func0AliasGlobals_pointsTo [WasmGlobalGS] :
+theorem func0AliasGlobals_pointsTo [WasmGlobalGS Unit] :
     ([∗map] index ↦ value ∈ func0AliasGlobals,
       globalPointsTo index value) ⊢
       globalPointsTo 0 (.i32 1048560) := by

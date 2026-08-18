@@ -121,13 +121,13 @@ theorem gcdFrameHeap_inBounds
 
 set_option linter.unusedSimpArgs false in
 theorem gcdFrameHeap_pointsTo
-    [WasmHeapGS]
+    [WasmHeapGS Unit]
     (result x y : UInt64)
     (shiftXY shiftX shiftY nextY nextX : UInt32)
     (outerA outerB : UInt64) :
     ([∗map] address ↦ byte ∈
         gcdFrameHeap result x y shiftXY shiftX shiftY nextY nextX outerA outerB,
-      pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+      pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
         address (DFrac.own 1) byte) ⊢
       pointsTo_u64 1048512 result ∗
       pointsTo_u64 1048520 x ∗
@@ -210,10 +210,10 @@ callee's own frame. This is the first reusable Iris slice of opt0 `func1`:
 the caller words remain owned, while the two scratch words are updated to the
 loaded operands and all unrelated resources are framed by `R`. -/
 theorem func1_spillPrefix_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
     (calls : List Wasm.SmallStep.CallFrame)
     (a b oldX oldY : UInt64)
     (hcontinue :
@@ -321,9 +321,9 @@ theorem func1_spillPrefix_smallStep_wp
 finite authoritative heap used by adequacy to the typed resources used by
 instruction rules, without exposing individual byte ownership to clients. -/
 theorem func1_spillPrefix_frame_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
     (calls : List Wasm.SmallStep.CallFrame)
     (result oldX oldY : UInt64)
     (shiftXY shiftX shiftY nextY nextX : UInt32)
@@ -343,7 +343,7 @@ theorem func1_spillPrefix_frame_smallStep_wp
     globalPointsTo 0 (.i32 1048560) ∗
       ([∗map] address ↦ byte ∈
         gcdFrameHeap result oldX oldY shiftXY shiftX shiftY nextY nextX a b,
-        pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+        pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
           address (DFrac.own 1) byte) ⊢
     WP (Wasm.SmallStep.Expr.running
       ⟨⟨[.i32 1048560, .i32 1048568], func1InitialLocals, []⟩,
@@ -373,10 +373,10 @@ theorem func1_spillPrefix_frame_smallStep_wp
 /-- Complete left-zero path of the memory-backed GCD core. The result is
 written through the callee frame, read back, and returned as an Iris value. -/
 theorem func1_leftZero_core_smallStep_wp_to_return
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
     (calls : List Wasm.SmallStep.CallFrame)
     (result b : UInt64)
     (hreturn :
@@ -515,9 +515,9 @@ theorem func1_leftZero_core_smallStep_wp_to_return
 
 /-- Closed top-level corollary of the contextual left-zero core. -/
 theorem func1_leftZero_core_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    (R : IProp WasmHeapGF)
+    (R : IProp (WasmHeapGF Unit))
     (result b : UInt64) :
     R ∗ globalPointsTo 0 (.i32 1048560) ∗
       pointsTo_u64 1048560 0 ∗ pointsTo_u64 1048568 b ∗
@@ -548,10 +548,10 @@ theorem func1_leftZero_core_smallStep_wp
 /-- Contextual end-to-end left-zero rule, retaining the caller's call stack
 until the explicit return transition. -/
 theorem func1_leftZero_smallStep_wp_to_return
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
     (calls : List Wasm.SmallStep.CallFrame)
     (result oldX oldY b : UInt64)
     (hreturn :
@@ -588,9 +588,9 @@ theorem func1_leftZero_smallStep_wp_to_return
 allocation, pointer loads, spills, structured control, result memory, and the
 top-level return transition. -/
 theorem func1_leftZero_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    (R : IProp WasmHeapGF)
+    (R : IProp (WasmHeapGF Unit))
     (result oldX oldY b : UInt64) :
     R ∗ globalPointsTo 0 (.i32 1048560) ∗
       pointsTo_u64 1048560 0 ∗ pointsTo_u64 1048568 b ∗
@@ -620,10 +620,10 @@ theorem func1_leftZero_smallStep_wp
 /-- Complete right-zero path of the memory-backed GCD core. The nonzero
 left operand is preserved as the result. -/
 theorem func1_rightZero_core_smallStep_wp_to_return
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
     (calls : List Wasm.SmallStep.CallFrame)
     (result a : UInt64) (ha : a ≠ 0)
     (hreturn :
@@ -787,9 +787,9 @@ theorem func1_rightZero_core_smallStep_wp_to_return
 
 /-- Closed top-level corollary of the contextual right-zero core. -/
 theorem func1_rightZero_core_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    (R : IProp WasmHeapGF)
+    (R : IProp (WasmHeapGF Unit))
     (result a : UInt64) (ha : a ≠ 0) :
     R ∗ globalPointsTo 0 (.i32 1048560) ∗
       pointsTo_u64 1048560 a ∗ pointsTo_u64 1048568 0 ∗
@@ -820,10 +820,10 @@ theorem func1_rightZero_core_smallStep_wp
 /-- Contextual end-to-end right-zero rule, retaining the caller's call stack
 until the explicit return transition. -/
 theorem func1_rightZero_smallStep_wp_to_return
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
     (calls : List Wasm.SmallStep.CallFrame)
     (result oldX oldY a : UInt64) (ha : a ≠ 0)
     (hreturn :
@@ -859,9 +859,9 @@ theorem func1_rightZero_smallStep_wp_to_return
 /-- End-to-end `func1` theorem for a nonzero left operand and zero right
 operand, including the memory spill prologue. -/
 theorem func1_rightZero_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    (R : IProp WasmHeapGF)
+    (R : IProp (WasmHeapGF Unit))
     (result oldX oldY a : UInt64) (ha : a ≠ 0) :
     R ∗ globalPointsTo 0 (.i32 1048560) ∗
       pointsTo_u64 1048560 a ∗ pointsTo_u64 1048568 0 ∗
@@ -891,9 +891,9 @@ theorem func1_rightZero_smallStep_wp
 /-- Public zero-case rule for `func1`, phrased using the mathematical GCD
 result rather than the compiler's two control-flow branches. -/
 theorem func1_zero_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    (R : IProp WasmHeapGF)
+    (R : IProp (WasmHeapGF Unit))
     (result oldX oldY a b : UInt64) (hz : a = 0 ∨ b = 0) :
     R ∗ globalPointsTo 0 (.i32 1048560) ∗
       pointsTo_u64 1048560 a ∗ pointsTo_u64 1048568 b ∗
@@ -921,7 +921,7 @@ theorem func1_zero_smallStep_wp
 /-- Finite-heap form of the complete zero-case rule. This is the shape needed
 by the authoritative heap adequacy theorem. -/
 theorem func1_zero_frame_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
     (result oldX oldY : UInt64)
     (shiftXY shiftX shiftY nextY nextX : UInt32)
@@ -929,7 +929,7 @@ theorem func1_zero_frame_smallStep_wp
     globalPointsTo 0 (.i32 1048560) ∗
       ([∗map] address ↦ byte ∈
         gcdFrameHeap result oldX oldY shiftXY shiftX shiftY nextY nextX a b,
-        pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+        pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
           address (DFrac.own 1) byte) ⊢
     WP (Wasm.SmallStep.Expr.running
       ⟨⟨[.i32 1048560, .i32 1048568], func1InitialLocals, []⟩,
@@ -974,7 +974,7 @@ theorem func1GlobalHeap_agrees :
   · rw [get?_insert_ne (Ne.symm hindex), get?_empty] at hget
     contradiction
 
-theorem func1GlobalHeap_pointsTo [WasmGlobalGS] :
+theorem func1GlobalHeap_pointsTo [WasmGlobalGS Unit] :
     ([∗map] index ↦ value ∈ func1GlobalHeap,
       globalPointsTo index value) ⊢
       globalPointsTo 0 (.i32 1048560) := by
@@ -1152,10 +1152,10 @@ def func1SharedShiftLocals (a b : UInt64) : List Value :=
 /-- First nonzero normalization slice: compute `ctz (a | b)`, narrow it,
 store/reload it through scratch offset 44, and install it in local 3. -/
 theorem func1_sharedShift_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
     (controls : List Wasm.SmallStep.ControlFrame)
     (calls : List Wasm.SmallStep.CallFrame)
     (a b : UInt64) (oldShift : UInt32)
@@ -1278,10 +1278,10 @@ def func1XShiftLocals (a b : UInt64) : List Value :=
 /-- Normalize the first nonzero operand to its odd part through scratch offset
 40, preserving the shared shift count installed by the preceding slice. -/
 theorem func1_normalizeX_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
     (controls : List Wasm.SmallStep.ControlFrame)
     (calls : List Wasm.SmallStep.CallFrame)
     (a b : UInt64) (ha : a ≠ 0) (oldShiftX : UInt32)
@@ -1425,10 +1425,10 @@ def func1NormalizedLocals (a b : UInt64) : List Value :=
 /-- Normalize the second nonzero operand through scratch offset 36 and hand
 off with both frame operands reduced to their odd parts. -/
 theorem func1_normalizeY_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
     (controls : List Wasm.SmallStep.ControlFrame)
     (calls : List Wasm.SmallStep.CallFrame)
     (a b : UInt64) (hb : b ≠ 0) (oldShiftY : UInt32)
@@ -1565,10 +1565,10 @@ theorem func1_normalizeY_smallStep_wp
 /-- Complete nonzero normalization prefix, composed from the three physical
 scratch-memory slices. The next instruction is the generated Stein loop. -/
 theorem func1_normalization_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
     (controls : List Wasm.SmallStep.ControlFrame)
     (calls : List Wasm.SmallStep.CallFrame)
     (a b : UInt64) (ha : a ≠ 0) (hb : b ≠ 0)
@@ -1654,10 +1654,10 @@ value is recombined with the shared power of two and written to result slot
 zero; the administrative `br 2` is deliberately left to the surrounding
 control-frame theorem. -/
 theorem func1_equalRecombine_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
     (controls : List Wasm.SmallStep.ControlFrame)
     (calls : List Wasm.SmallStep.CallFrame)
     (a b g oldResult : UInt64)
@@ -1748,10 +1748,10 @@ theorem func1_equalRecombine_smallStep_wp
 operands agree, the guard falls through to `func1_equalRecombine_smallStep_wp`.
 The final `br 2` remains visible to the enclosing loop/control proof. -/
 theorem func1_equalBlock_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
     (controls : List Wasm.SmallStep.ControlFrame)
     (calls : List Wasm.SmallStep.CallFrame)
     (a b g oldResult : UInt64)
@@ -1867,10 +1867,10 @@ def func1LoopYNormalizedLocals
 `y := oddPart (y - x)` arm. This owns exactly the mutable operand and its
 scratch shift-count slot and exposes the arm's `br 1` to its block proof. -/
 theorem func1_loopNormalizeY_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
     (controls : List Wasm.SmallStep.ControlFrame)
     (calls : List Wasm.SmallStep.CallFrame)
     (a b x d : UInt64) (hd : d ≠ 0) (oldShift : UInt32)
@@ -2015,10 +2015,10 @@ def loopDecreaseYProg : Program :=
 handling. It computes `y - x` through the physical frame, then delegates its
 odd-part normalization to `func1_loopNormalizeY_smallStep_wp`. -/
 theorem func1_loopDecreaseY_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
     (controls : List Wasm.SmallStep.ControlFrame)
     (calls : List Wasm.SmallStep.CallFrame)
     (a b x y : UInt64) (hsub : y - x ≠ 0)
@@ -2151,10 +2151,10 @@ def func1LoopXNormalizedLocals
 `x := oddPart (x - y)` arm. The exact `fp+28` scratch word is kept distinct
 from the right-arm scratch word at `fp+32`. -/
 theorem func1_loopNormalizeX_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
     (controls : List Wasm.SmallStep.ControlFrame)
     (calls : List Wasm.SmallStep.CallFrame)
     (a b y d : UInt64) (hd : d ≠ 0) (oldShift : UInt32)
@@ -2299,10 +2299,10 @@ def loopDecreaseXProg : Program :=
 handling. It computes `x - y` through the physical frame and then normalizes
 that result through the dedicated `fp+28` scratch word. -/
 theorem func1_loopDecreaseX_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
     (controls : List Wasm.SmallStep.ControlFrame)
     (calls : List Wasm.SmallStep.CallFrame)
     (a b x y : UInt64) (hsub : x - y ≠ 0)
@@ -2453,10 +2453,10 @@ def func1EqualityFrame : Wasm.SmallStep.ControlFrame :=
 the recombination tail; inequality takes the block branch into the comparison
 block's concrete continuation. -/
 theorem func1_loopEqualityDispatch_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
     (outerControls : List Wasm.SmallStep.ControlFrame)
     (calls : List Wasm.SmallStep.CallFrame)
     (a b x y oldResult : UInt64)
@@ -2564,10 +2564,10 @@ theorem func1_loopEqualityDispatch_smallStep_wp
 falls through to the right-decreasing arm. Both paths retain the real loop
 frame so their final branch is an actual back-edge. -/
 theorem func1_loopDecreaseDispatch_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
     (outerControls : List Wasm.SmallStep.ControlFrame)
     (calls : List Wasm.SmallStep.CallFrame)
     (a b x y : UInt64)
@@ -2747,11 +2747,11 @@ theorem func1_loopDecreaseDispatch_smallStep_wp
 administration exposed only at its three semantic exits: final `br 2`, the
 left-arm loop back-edge, and the right-arm loop back-edge. -/
 theorem func1_loopBodyDispatch_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
-    (K : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
+    (K : IProp (WasmHeapGF Unit))
     (outerControls : List Wasm.SmallStep.ControlFrame)
     (calls : List Wasm.SmallStep.CallFrame)
     (a b x y oldResult : UInt64)
@@ -2861,10 +2861,10 @@ theorem func1_loopBodyDispatch_smallStep_wp
 legacy total proof, Iris Löb induction only needs preservation of nonzeroness,
 oddness, and mathematical GCD at the two real loop back-edges. -/
 theorem func1_loop_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
     (outerControls : List Wasm.SmallStep.ControlFrame)
     (calls : List Wasm.SmallStep.CallFrame)
     (a b x y expected oldResult : UInt64)
@@ -2901,7 +2901,7 @@ theorem func1_loop_smallStep_wp
   iloeb as IH generalizing
     %x %y %oldResult %oldShiftX %oldShiftY %c6 %c8 %c7 %c9
     %hxne %hyne %hxodd %hyodd %hgcd
-  let Kloop : IProp WasmHeapGF := iprop(
+  let Kloop : IProp (WasmHeapGF Unit) := iprop(
     ▷ ∀ (x y oldResult : UInt64)
         (oldShiftX oldShiftY : UInt32)
         (c6 c8 : UInt64) (c7 c9 : UInt32),
@@ -3012,10 +3012,10 @@ def func1LoopEntryProg : Program :=
 with the two odd parts and returns the GCD of the original operands through
 its `br 2` exit. -/
 theorem func1_loopEntry_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
     (outerControls : List Wasm.SmallStep.ControlFrame)
     (calls : List Wasm.SmallStep.CallFrame)
     (a b oldResult : UInt64) (ha : a ≠ 0) (hb : b ≠ 0)
@@ -3078,10 +3078,10 @@ theorem func1_loopEntry_smallStep_wp
 physical scratch frame, enter the real loop, and expose only the final
 `br 2` control transfer. -/
 theorem func1_nonzeroCore_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
     (outerControls : List Wasm.SmallStep.ControlFrame)
     (calls : List Wasm.SmallStep.CallFrame)
     (a b oldResult : UInt64) (ha : a ≠ 0) (hb : b ≠ 0)
@@ -3170,10 +3170,10 @@ theorem func1_afterSpill_shape :
 and middle blocks and transfer control to `meatLoopProg` under the one
 remaining outer frame. -/
 theorem func1_nonzeroGuards_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
     (calls : List Wasm.SmallStep.CallFrame)
     (a b : UInt64) (ha : a ≠ 0) (hb : b ≠ 0)
     (hcontinue :
@@ -3270,10 +3270,10 @@ theorem func1_nonzeroGuards_smallStep_wp
 That branch exposes the epilogue, which reloads the result slot and returns it
 from a top-level invocation of `func1`. -/
 theorem func1_nonzeroFinish_smallStep_wp_to_return
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
     (outerBody : Program)
     (calls : List Wasm.SmallStep.CallFrame)
     (a b g d6 d8 : UInt64) (shiftX shiftY d7 d9 : UInt32)
@@ -3334,9 +3334,9 @@ theorem func1_nonzeroFinish_smallStep_wp_to_return
 
 /-- Closed top-level corollary of the contextual nonzero finish rule. -/
 theorem func1_nonzeroFinish_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    (R : IProp WasmHeapGF)
+    (R : IProp (WasmHeapGF Unit))
     (outerBody : Program)
     (a b g d6 d8 : UInt64) (shiftX shiftY d7 d9 : UInt32)
     (hgcd : g.toNat = Nat.gcd (oddPart64 a).toNat (oddPart64 b).toNat) :
@@ -3372,10 +3372,10 @@ theorem func1_nonzeroFinish_smallStep_wp
 /-- Contextual form of the complete nonzero core. Its final explicit return is
 left to the caller, so the same proof can be used beneath a Wasm call frame. -/
 theorem func1_nonzeroOuterCore_smallStep_wp_to_return
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
     (outerBody : Program)
     (calls : List Wasm.SmallStep.CallFrame)
     (a b oldResult : UInt64) (ha : a ≠ 0) (hb : b ≠ 0)
@@ -3425,9 +3425,9 @@ theorem func1_nonzeroOuterCore_smallStep_wp_to_return
 /-- Run the complete nonzero Stein core underneath the generated outer block
 and discharge its equality exit through `func1`'s epilogue. -/
 theorem func1_nonzeroOuterCore_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    (R : IProp WasmHeapGF)
+    (R : IProp (WasmHeapGF Unit))
     (outerBody : Program)
     (a b oldResult : UInt64) (ha : a ≠ 0) (hb : b ≠ 0)
     (oldShared oldNormX oldNormY oldLoopX oldLoopY : UInt32) :
@@ -3507,10 +3507,10 @@ theorem func1_nonzeroOuterCore_smallStep_wp
 /-- Contextual end-to-end nonzero `func1` rule, stopping immediately before
 the explicit return so a caller-provided call frame can resume. -/
 theorem func1_nonzero_smallStep_wp_to_return
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
     (calls : List Wasm.SmallStep.CallFrame)
     (result oldX oldY a b : UInt64) (ha : a ≠ 0) (hb : b ≠ 0)
     (oldShared oldNormX oldNormY oldLoopX oldLoopY : UInt32)
@@ -3591,9 +3591,9 @@ theorem func1_nonzero_smallStep_wp_to_return
 guards, run the Stein loop, leave the outer block, reload the result, and
 return. -/
 theorem func1_nonzero_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    (R : IProp WasmHeapGF)
+    (R : IProp (WasmHeapGF Unit))
     (result oldX oldY a b : UInt64) (ha : a ≠ 0) (hb : b ≠ 0)
     (oldShared oldNormX oldNormY oldLoopX oldLoopY : UInt32) :
     R ∗ globalPointsTo 0 (.i32 1048560) ∗
@@ -3665,7 +3665,7 @@ theorem func1_nonzero_smallStep_wp
 
 /-- Finite authoritative-frame form of the complete nonzero `func1` rule. -/
 theorem func1_nonzero_frame_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
     (result oldX oldY : UInt64)
     (shiftXY shiftX shiftY nextY nextX : UInt32)
@@ -3673,7 +3673,7 @@ theorem func1_nonzero_frame_smallStep_wp
     globalPointsTo 0 (.i32 1048560) ∗
       ([∗map] address ↦ byte ∈
         gcdFrameHeap result oldX oldY shiftXY shiftX shiftY nextY nextX a b,
-        pointsTo (GF := WasmHeapGF) (H := WasmHeapMap)
+        pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
           address (DFrac.own 1) byte) ⊢
     WP (Wasm.SmallStep.Expr.running
       ⟨⟨[.i32 1048560, .i32 1048568], func1InitialLocals, []⟩,
@@ -3967,7 +3967,7 @@ theorem func1_terminates (env : HostEnv Unit) (st1 : Store Unit) (a b : UInt64)
       (fun st' vs => st'.globals = st1.globals ∧
         vs = .i64 (UInt64.ofNat (Nat.gcd a.toNat b.toNat)) :: tail) := by
   apply TerminatesWith.of_wp_entry_for
-    (f := ⟨[.i32, .i32], [.i32, .i32, .i32, .i32, .i64, .i32, .i64, .i32], func1, [.i64], none⟩) rfl
+    (f := ⟨[.i32, .i32], [.i32, .i32, .i32, .i32, .i64, .i32, .i64, .i32], func1, [.i64], some 1⟩) rfl
   unfold func1
   wp_run
   rw [hg0]
@@ -4071,10 +4071,10 @@ def func0CallerFrame (a b : UInt64) : Wasm.SmallStep.CallFrame :=
 of `func1`. The stack-pointer global and both caller-frame words are updated
 through authoritative physical ownership. -/
 theorem func0_callPrefix_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
     (calls : List Wasm.SmallStep.CallFrame)
     (a b oldOuterA oldOuterB : UInt64)
     (hcontinue :
@@ -4169,10 +4169,10 @@ theorem func0_callPrefix_smallStep_wp
 /-- Resume `func0` after `func1` returns: save the result, restore the stack
 pointer global, and return the GCD from the top-level invocation. -/
 theorem func0_afterCall_smallStep_wp_to_return
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
     (calls : List Wasm.SmallStep.CallFrame)
     (a b : UInt64)
     (hreturn :
@@ -4213,9 +4213,9 @@ theorem func0_afterCall_smallStep_wp_to_return
 
 /-- Closed top-level corollary of the contextual `func0` epilogue. -/
 theorem func0_afterCall_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    (R : IProp WasmHeapGF)
+    (R : IProp (WasmHeapGF Unit))
     (a b : UInt64) :
     R ∗ globalPointsTo 0 (.i32 1048560) ⊢
     WP (Wasm.SmallStep.Expr.running
@@ -4240,9 +4240,9 @@ theorem func0_afterCall_smallStep_wp
   · iexact Hresources
 
 def func0FramePost
-    [WasmHeapGS] [WasmGlobalGS]
-    (R : IProp WasmHeapGF) (a b : UInt64) (rs : List Value) :
-    IProp WasmHeapGF :=
+    [WasmHeapGS Unit] [WasmGlobalGS Unit]
+    (R : IProp (WasmHeapGF Unit)) (a b : UInt64) (rs : List Value) :
+    IProp (WasmHeapGF Unit) :=
   iprop(
     ⌜rs = [.i64 (UInt64.ofNat (Nat.gcd a.toNat b.toNat))]⌝ ∗
     ∃ result x y outerA outerB : UInt64,
@@ -4258,8 +4258,8 @@ def func0FramePost
 /-- Package one exact physical frame into the branch-independent existential
 postcondition used by callers of `func0`. -/
 theorem func0_exactFrame_entails_post
-    [WasmHeapGS] [WasmGlobalGS]
-    (R : IProp WasmHeapGF)
+    [WasmHeapGS Unit] [WasmGlobalGS Unit]
+    (R : IProp (WasmHeapGF Unit))
     (a b result x y outerA outerB : UInt64)
     (shiftXY shiftX shiftY nextY nextX : UInt32) :
     R ∗ globalPointsTo 0 (.i32 1048576) ∗
@@ -4293,9 +4293,9 @@ theorem func0_exactFrame_entails_post
 /-- Branch-independent `func0` epilogue: all exact frame contents are retained
 under existential ownership in the shared caller postcondition. -/
 theorem func0_afterCall_frame_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    (R : IProp WasmHeapGF)
+    (R : IProp (WasmHeapGF Unit))
     (a b returned result x y outerA outerB : UInt64)
     (shiftXY shiftX shiftY nextY nextX : UInt32)
     (hreturned :
@@ -4369,10 +4369,10 @@ theorem func0_afterCall_frame_smallStep_wp
 state, run the contextual epilogue, and package the exact frame for the outer
 caller. -/
 theorem func0_resumeCaller_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
     (calls : List Wasm.SmallStep.CallFrame)
     (calleeLocals : Locals)
     (a b returned result x y outerA outerB : UInt64)
@@ -4437,10 +4437,10 @@ theorem func0_resumeCaller_smallStep_wp
 /-- Contextual `func0` rule. It executes the complete wrapper but leaves its
 final explicit return to an arbitrary outer call stack. -/
 theorem func0_smallStep_wp_to_return
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp WasmHeapGF}
-    (R : IProp WasmHeapGF)
+    {Φ : List Value → IProp (WasmHeapGF Unit)}
+    (R : IProp (WasmHeapGF Unit))
     (calls : List Wasm.SmallStep.CallFrame)
     (a b result oldX oldY oldOuterA oldOuterB : UInt64)
     (shiftXY shiftX shiftY nextY nextX : UInt32)
@@ -4574,9 +4574,9 @@ theorem func0_smallStep_wp_to_return
 `func1`, contextual callee return, stack-pointer restoration, and final
 top-level return. -/
 theorem func0_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    (R : IProp WasmHeapGF)
+    (R : IProp (WasmHeapGF Unit))
     (a b result oldX oldY oldOuterA oldOuterB : UInt64)
     (shiftXY shiftX shiftY nextY nextX : UInt32) :
     R ∗ runtimeModuleOwn «module» ∗
@@ -4708,9 +4708,9 @@ def func2CallerFrame (a b : UInt64) : Wasm.SmallStep.CallFrame :=
 
 /-- Complete small-step Iris rule for the exported `func2` wrapper. -/
 theorem func2_smallStep_wp
-    [Wasm.SmallStep.WasmSmallStepGS hlc]
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
-    (R : IProp WasmHeapGF)
+    (R : IProp (WasmHeapGF Unit))
     (a b result oldX oldY oldOuterA oldOuterB : UInt64)
     (shiftXY shiftX shiftY nextY nextX : UInt32) :
     R ∗ runtimeModuleOwn «module» ∗
@@ -4804,7 +4804,7 @@ theorem func0GlobalHeap_agrees :
   · rw [get?_insert_ne (Ne.symm hindex), get?_empty] at hget
     contradiction
 
-theorem func0GlobalHeap_pointsTo [WasmGlobalGS] :
+theorem func0GlobalHeap_pointsTo [WasmGlobalGS Unit] :
     ([∗map] index ↦ value ∈ func0GlobalHeap,
       globalPointsTo index value) ⊢
       globalPointsTo 0 (.i32 1048576) := by
@@ -4928,7 +4928,7 @@ theorem func0_terminates (env : HostEnv Unit) (a b : UInt64) :
   have hg : («module».initialStore : Store Unit).globals.globals[0]? = some (.i32 1048576) := by rfl
   have hp : («module».initialStore : Store Unit).mem.pages = 16 := by rfl
   apply TerminatesWith.of_wp_entry_for
-    (f := ⟨[.i64, .i64], [.i32, .i64], func0, [.i64], none⟩) rfl
+    (f := ⟨[.i64, .i64], [.i32, .i64], func0, [.i64], some 0⟩) rfl
   unfold func0
   wp_run
   rw [hg]
@@ -4980,7 +4980,7 @@ theorem gcd_u64_legacy_correct : LegacyGcdU64Spec := by
   intro env initial a b hinit
   subst hinit
   -- `func2` is the exported wrapper: pushes both args and calls `func0`.
-  apply TerminatesWith.of_wp_entry_for (f := ⟨[.i64, .i64], [], func2, [.i64], none⟩) rfl
+  apply TerminatesWith.of_wp_entry_for (f := ⟨[.i64, .i64], [], func2, [.i64], some 0⟩) rfl
   unfold func2
   wp_run
   apply wp_call_tw (func0_terminates env a b)

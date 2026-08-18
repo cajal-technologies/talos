@@ -39,7 +39,7 @@ def func0 : Wasm.Program :=
 ]
 
 def func0Def : Wasm.Function :=
-  { params := [.i64, .i64], locals := [.i32, .i64], body := func0, results := [.i64] }
+  { params := [.i64, .i64], locals := [.i32, .i64], body := func0, results := [.i64], typeIdx := some 0 }
 
 def func1 : Wasm.Program :=
   [
@@ -73,7 +73,7 @@ def func1 : Wasm.Program :=
         .and,
         .eqz,
         .br_if 1
-      ],
+      ] [] [],
       .localGet 2,
       .localGet 2,
       .load64 (8 : UInt32),
@@ -82,7 +82,7 @@ def func1 : Wasm.Program :=
       .orI64,
       .store64 (0 : UInt32),
       .br 1
-    ],
+    ] [] [],
     .localGet 2,
     .localGet 2,
     .load64 (8 : UInt32),
@@ -151,7 +151,7 @@ def func1 : Wasm.Program :=
         .shlI64,
         .store64 (0 : UInt32),
         .br 2
-      ],
+      ] [] [],
       .block 0 0 [
         .localGet 2,
         .load64 (8 : UInt32),
@@ -189,7 +189,7 @@ def func1 : Wasm.Program :=
         .shrUI64,
         .store64 (16 : UInt32),
         .br 1
-      ],
+      ] [] [],
       .localGet 2,
       .load64 (16 : UInt32),
       .localSet 8,
@@ -218,17 +218,17 @@ def func1 : Wasm.Program :=
       .shrUI64,
       .store64 (8 : UInt32),
       .br 0
-    ]
-  ],
+    ] [] []
+  ] [] [],
   .localGet 2,
   .load64 (0 : UInt32),
   .ret
 ]
 
 def func1Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32, .i64, .i32, .i64, .i32], body := func1, results := [.i64] }
+  { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32, .i64, .i32, .i64, .i32], body := func1, results := [.i64], typeIdx := some 1 }
 
-/-- export: gcd_u64 -/
+/-- Exported function. -/
 def func2 : Wasm.Program :=
   [
   .localGet 0,
@@ -238,7 +238,7 @@ def func2 : Wasm.Program :=
 ]
 
 def func2Def : Wasm.Function :=
-  { params := [.i64, .i64], locals := [], body := func2, results := [.i64] }
+  { params := [.i64, .i64], locals := [], body := func2, results := [.i64], typeIdx := some 0 }
 
 def «module» : Wasm.Module :=
 {
@@ -251,20 +251,62 @@ def «module» : Wasm.Module :=
   exports := [
     { name := "gcd_u64", funcIdx := 2 }
   ],
-  memory := some { pagesMin := (16 : UInt32), pagesMax := none, data := [] },
+  memory := some (Wasm.MemDecl.mk (16 : UInt32) (none) ([]) false),
+  extraMemories := [],
+  dataWithoutMemory := false,
   globals := [
-    { init := .i32 (1048576 : UInt32) },
-    { init := .i32 (1048576 : UInt32) },
-    { init := .i32 (1048576 : UInt32) }
+    { init := .i32 (1048576 : UInt32), declaredType := some (.i32), isMut := true, sourceInit := some ([
+        .const (1048576 : UInt32)
+      ]), initExpr := [] },
+    { init := .i32 (1048576 : UInt32), declaredType := some (.i32), isMut := false, sourceInit := some ([
+        .const (1048576 : UInt32)
+      ]), initExpr := [] },
+    { init := .i32 (1048576 : UInt32), declaredType := some (.i32), isMut := false, sourceInit := some ([
+        .const (1048576 : UInt32)
+      ]), initExpr := [] }
   ],
+  startFunc := none,
   types := [
     { params := [.i64, .i64], results := [.i64] },
     { params := [.i32, .i32], results := [.i64] }
   ],
-  tables := [
-    { min := 1, max := some 1, elemType := .funcref }
+  gcTypes := [
+    { comp := .func ({ params := [.i64, .i64], results := [.i64] }), sourceName := none, super := none, «final» := true, recGroup := none },
+    { comp := .func ({ params := [.i32, .i32], results := [.i64] }), sourceName := none, super := none, «final» := true, recGroup := none }
   ],
-  elements := []
+  tables := [
+    { min := 1, max := some 1, elemType := .funcref, is64 := false }
+  ],
+  elements := [],
+  importedGlobals := [],
+  importedTables := [],
+  importedMemories := [],
+  importedTags := [],
+  globalExports := [
+    ("__data_end", 1),
+    ("__heap_base", 2)
+  ],
+  tableExports := [],
+  memoryExports := [
+    ("memory", 0)
+  ],
+  tagExports := [],
+  tags := []
 }
+
+/-- Exact source of `module.wat` captured when `verifier emit` last ran. -/
+private def expectedWatSource : String := "(module $num_integer.wasm\n  (type (;0;) (func (param i64 i64) (result i64)))\n  (type (;1;) (func (param i32 i32) (result i64)))\n  (table (;0;) 1 1 funcref)\n  (memory (;0;) 16)\n  (global $__stack_pointer (;0;) (mut i32) i32.const 1048576)\n  (global (;1;) i32 i32.const 1048576)\n  (global (;2;) i32 i32.const 1048576)\n  (export \"memory\" (memory 0))\n  (export \"gcd_u64\" (func $gcd_u64))\n  (export \"__data_end\" (global 1))\n  (export \"__heap_base\" (global 2))\n  (func $_ZN11num_integer7gcd_u6417h3f09b8438edfbf01E (;0;) (type 0) (param i64 i64) (result i64)\n    (local i32 i64)\n    global.get $__stack_pointer\n    i32.const 16\n    i32.sub\n    local.set 2\n    local.get 2\n    global.set $__stack_pointer\n    local.get 2\n    local.get 0\n    i64.store\n    local.get 2\n    local.get 1\n    i64.store offset=8\n    local.get 2\n    local.get 2\n    i32.const 8\n    i32.add\n    call $_ZN44_$LT$u64$u20$as$u20$num_integer..Integer$GT$3gcd17he42903512d49e6b2E\n    local.set 3\n    local.get 2\n    i32.const 16\n    i32.add\n    global.set $__stack_pointer\n    local.get 3\n    return\n  )\n  (func $_ZN44_$LT$u64$u20$as$u20$num_integer..Integer$GT$3gcd17he42903512d49e6b2E (;1;) (type 1) (param i32 i32) (result i64)\n    (local i32 i32 i32 i32 i64 i32 i64 i32)\n    global.get $__stack_pointer\n    i32.const 48\n    i32.sub\n    local.set 2\n    local.get 2\n    local.get 0\n    i64.load\n    i64.store offset=8\n    local.get 2\n    local.get 1\n    i64.load\n    i64.store offset=16\n    block ;; label = @1\n      block ;; label = @2\n        block ;; label = @3\n          local.get 2\n          i64.load offset=8\n          i64.const 0\n          i64.eq\n          i32.const 1\n          i32.and\n          br_if 0 (;@3;)\n          local.get 2\n          i64.load offset=16\n          i64.const 0\n          i64.eq\n          i32.const 1\n          i32.and\n          i32.eqz\n          br_if 1 (;@2;)\n        end\n        local.get 2\n        local.get 2\n        i64.load offset=8\n        local.get 2\n        i64.load offset=16\n        i64.or\n        i64.store\n        br 1 (;@1;)\n      end\n      local.get 2\n      local.get 2\n      i64.load offset=8\n      local.get 2\n      i64.load offset=16\n      i64.or\n      i64.ctz\n      i32.wrap_i64\n      i32.store offset=44\n      local.get 2\n      i32.load offset=44\n      local.set 3\n      local.get 2\n      local.get 2\n      i64.load offset=8\n      i64.ctz\n      i32.wrap_i64\n      i32.store offset=40\n      local.get 2\n      i32.load offset=40\n      local.set 4\n      local.get 2\n      local.get 2\n      i64.load offset=8\n      local.get 4\n      i32.const 63\n      i32.and\n      i64.extend_i32_u\n      i64.shr_u\n      i64.store offset=8\n      local.get 2\n      local.get 2\n      i64.load offset=16\n      i64.ctz\n      i32.wrap_i64\n      i32.store offset=36\n      local.get 2\n      i32.load offset=36\n      local.set 5\n      local.get 2\n      local.get 2\n      i64.load offset=16\n      local.get 5\n      i32.const 63\n      i32.and\n      i64.extend_i32_u\n      i64.shr_u\n      i64.store offset=16\n      loop ;; label = @2\n        block ;; label = @3\n          local.get 2\n          i64.load offset=8\n          local.get 2\n          i64.load offset=16\n          i64.ne\n          i32.const 1\n          i32.and\n          br_if 0 (;@3;)\n          local.get 2\n          local.get 2\n          i64.load offset=8\n          local.get 3\n          i32.const 63\n          i32.and\n          i64.extend_i32_u\n          i64.shl\n          i64.store\n          br 2 (;@1;)\n        end\n        block ;; label = @3\n          local.get 2\n          i64.load offset=8\n          local.get 2\n          i64.load offset=16\n          i64.gt_u\n          i32.const 1\n          i32.and\n          br_if 0 (;@3;)\n          local.get 2\n          i64.load offset=8\n          local.set 6\n          local.get 2\n          local.get 2\n          i64.load offset=16\n          local.get 6\n          i64.sub\n          i64.store offset=16\n          local.get 2\n          local.get 2\n          i64.load offset=16\n          i64.ctz\n          i32.wrap_i64\n          i32.store offset=32\n          local.get 2\n          i32.load offset=32\n          local.set 7\n          local.get 2\n          local.get 2\n          i64.load offset=16\n          local.get 7\n          i32.const 63\n          i32.and\n          i64.extend_i32_u\n          i64.shr_u\n          i64.store offset=16\n          br 1 (;@2;)\n        end\n        local.get 2\n        i64.load offset=16\n        local.set 8\n        local.get 2\n        local.get 2\n        i64.load offset=8\n        local.get 8\n        i64.sub\n        i64.store offset=8\n        local.get 2\n        local.get 2\n        i64.load offset=8\n        i64.ctz\n        i32.wrap_i64\n        i32.store offset=28\n        local.get 2\n        i32.load offset=28\n        local.set 9\n        local.get 2\n        local.get 2\n        i64.load offset=8\n        local.get 9\n        i32.const 63\n        i32.and\n        i64.extend_i32_u\n        i64.shr_u\n        i64.store offset=8\n        br 0 (;@2;)\n      end\n    end\n    local.get 2\n    i64.load\n    return\n  )\n  (func $gcd_u64 (;2;) (type 0) (param i64 i64) (result i64)\n    local.get 0\n    local.get 1\n    call $_ZN11num_integer7gcd_u6417h3f09b8438edfbf01E\n    return\n  )\n)\n"
+
+-- Compile-time drift check: errors if `module.wat` is absent or has changed.
+#guard_msgs (drop info) in
+#eval show IO Unit from do
+  let path : System.FilePath := "../rust/build/num_integer/program.wat"
+  unless ← path.pathExists do
+    throw <| IO.userError
+      s!"{path} is missing; cannot validate Program.lean provenance."
+  let actual ← IO.FS.readFile path
+  if actual ≠ expectedWatSource then
+    throw <| IO.userError
+      s!"{path} has drifted from Program.lean; re-run `lake exe verifier emit`."
 
 end Project.NumInteger

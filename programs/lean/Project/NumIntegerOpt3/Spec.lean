@@ -31,17 +31,17 @@ def gcdOuterFrame (body : Program) : ControlFrame :=
     continuation := [.localGet 2]
     belowStack := [] }
 
-local instance instGcdIrisGS [WasmSmallStepGS hlc] :
-    IrisGS_gen hlc (Expr Unit) WasmHeapGF :=
+local instance instGcdIrisGS [WasmSmallStepGS hlc Unit] :
+    IrisGS_gen hlc (Expr Unit) (WasmHeapGF Unit) :=
   Wasm.SmallStep.instIrisGS (α := Unit)
 
 /-- Execute the common recombination tail after the odd-part loop has selected
 its surviving value. -/
 theorem finishGcd_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
     (outerBody : Program) (g gy shared expected : UInt64)
     (hrecombine : g <<< (shared % 64) = expected) :
-    (iprop(True) : IProp WasmHeapGF) ⊢ WP (.running
+    (iprop(True) : IProp (WasmHeapGF Unit)) ⊢ WP (.running
       ⟨⟨[.i64 g, .i64 gy], [.i64 shared], []⟩,
         [.localGet 0, .localGet 2, .shlI64, .localSet 2],
         1, [], [gcdOuterFrame outerBody], []⟩ : Expr Unit) @ s; E
@@ -208,7 +208,7 @@ def gcdLoopFrame : ControlFrame :=
 kernel.  Löb induction is sufficient: unlike the legacy total-correctness
 proof, Iris does not need the decreasing `x+y` variant. -/
 theorem gcdLoopBody_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
     (outerBody : Program) (ao bo x y shared expected : UInt64)
     (hxne : x ≠ 0) (hyne : y ≠ 0)
     (hxodd : x.toNat % 2 = 1) (hyodd : y.toNat % 2 = 1)
@@ -217,7 +217,7 @@ theorem gcdLoopBody_smallStep_wp
     (hrecombine : ∀ g : UInt64,
       g.toNat = Nat.gcd ao.toNat bo.toNat →
       g <<< (shared % 64) = expected) :
-    (iprop(True) : IProp WasmHeapGF) ⊢
+    (iprop(True) : IProp (WasmHeapGF Unit)) ⊢
       WP (.running
         ⟨⟨[.i64 x, .i64 y], [.i64 shared], []⟩,
           loopBody, 1, [],
@@ -392,7 +392,7 @@ theorem gcdLoopBody_smallStep_wp
 /-- The generated odd-part setup and equality fast path, followed by the
 Löb-inductive Stein loop when the odd parts differ. -/
 theorem gcdInner_smallStep_wp
-    [WasmSmallStepGS hlc] {s : Stuckness} {E : CoPset}
+    [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
     (outerBody : Program) (p0 p1 shared expected : UInt64)
     (hp0 : p0 ≠ 0) (hp1 : p1 ≠ 0)
     (hrecombine : ∀ g : UInt64,
@@ -401,7 +401,7 @@ theorem gcdInner_smallStep_wp
           (p0 >>> (UInt64.ofNat (ctz64 64 p0) % 64)).toNat
           (p1 >>> (UInt64.ofNat (ctz64 64 p1) % 64)).toNat →
       g <<< (shared % 64) = expected) :
-    (iprop(True) : IProp WasmHeapGF) ⊢
+    (iprop(True) : IProp (WasmHeapGF Unit)) ⊢
       WP (.running
         ⟨⟨[.i64 p0, .i64 p1], [.i64 shared], []⟩,
           innerBody, 1, [],
