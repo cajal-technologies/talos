@@ -1,0 +1,120 @@
+2	<core::num::error::ParseIntError as core::fmt::Debug>::fmt
+3	<core::iter::adapters::map::Map<I,F> as core::iter::traits::iterator::Iterator>::next
+4	std::io::buffered::bufwriter::BufWriter<W>::write_all_cold
+5	std::io::buffered::bufwriter::BufWriter<W>::flush_buf
+6	<&T as core::fmt::Debug>::fmt
+7	core::fmt::Write::write_char
+8	<std::io::default_write_fmt::Adapter<T> as core::fmt::Write>::write_str
+9	core::fmt::Write::write_fmt
+10	core::ptr::drop_in_place<std::io::default_write_fmt::Adapter<std::io::buffered::bufwriter::BufWriter<talos_stdio::ExtIO>>>
+11	core::ptr::drop_in_place<std::io::error::Error>
+12	alloc::raw_vec::RawVecInner<A>::finish_grow
+13	alloc::raw_vec::RawVecInner<A>::reserve::do_reserve_and_handle
+14	mergesort::mergesort
+15	mergesort
+16	__rustc::__rust_alloc
+17	__rustc::__rust_dealloc
+18	__rustc::__rust_realloc
+19	__rustc::__rust_alloc_zeroed
+20	__rustc::__rust_no_alloc_shim_is_unstable_v2
+21	talos_stdio::ExtIO::buffered
+22	<talos_stdio::ExtIO as std::io::Read>::read
+23	<talos_stdio::ExtIO as std::io::Write>::write
+24	__rustc::__rust_start_panic
+25	<alloc::raw_vec::RawVecInner<_>>::reserve::do_reserve_and_handle::<alloc::alloc::Global>
+26	core::ptr::drop_in_place::<core::option::Option<alloc::vec::Vec<u8>>>
+27	core::ptr::drop_in_place::<alloc::string::String>
+28	core::ptr::drop_in_place::<std::panicking::panic_handler::FormatStringPayload>
+29	std::sys::backtrace::__rust_end_short_backtrace::<std::alloc::rust_oom::{closure#0}, !>
+30	std::alloc::rust_oom::{closure#0}
+31	std::sys::backtrace::__rust_end_short_backtrace::<std::panicking::panic_handler::{closure#0}, !>
+32	std::panicking::panic_handler::{closure#0}
+33	<alloc::raw_vec::RawVecInner>::finish_grow
+34	std::panicking::panic_with_hook
+35	std::alloc::default_alloc_error_hook
+36	__rustc::rust_panic
+37	__rustc::__rdl_alloc
+38	<dlmalloc::dlmalloc::Dlmalloc<dlmalloc::sys::System>>::memalign
+39	<dlmalloc::dlmalloc::Dlmalloc<dlmalloc::sys::System>>::malloc
+40	__rustc::__rust_abort
+41	__rustc::__rdl_dealloc
+42	<dlmalloc::dlmalloc::Dlmalloc<dlmalloc::sys::System>>::free
+43	__rustc::__rdl_realloc
+44	<dlmalloc::dlmalloc::Dlmalloc<dlmalloc::sys::System>>::unlink_chunk
+45	<dlmalloc::dlmalloc::Dlmalloc<dlmalloc::sys::System>>::dispose_chunk
+46	__rustc::rust_begin_unwind
+47	__rustc::__rdl_alloc_zeroed
+48	__rustc::__rust_alloc_error_handler
+49	std::alloc::rust_oom
+50	<<std::io::buffered::bufwriter::BufWriter<_>>::flush_buf::BufGuard>::remaining
+51	<dlmalloc::dlmalloc::Dlmalloc<dlmalloc::sys::System>>::insert_large_chunk
+52	std::panicking::panic_count::increase
+53	<std::io::Guard as core::ops::drop::Drop>::drop
+54	<alloc::string::String as core::any::Any>::type_id
+55	<&str as core::any::Any>::type_id
+56	<std::io::error::Error as core::fmt::Debug>::fmt
+57	<std::io::error::repr_unpacked::Repr as core::fmt::Debug>::fmt
+58	<std::panicking::panic_handler::FormatStringPayload as core::fmt::Display>::fmt
+59	<std::panicking::panic_handler::StaticStrPayload as core::panic::PanicPayload>::get
+60	<std::panicking::panic_handler::StaticStrPayload as core::panic::PanicPayload>::as_str
+61	<std::panicking::panic_handler::StaticStrPayload as core::panic::PanicPayload>::take_box
+62	<&alloc::boxed::Box<dyn core::error::Error + core::marker::Sync + core::marker::Send> as core::fmt::Debug>::fmt
+63	<&str as core::fmt::Debug>::fmt
+64	<std::panicking::panic_handler::StaticStrPayload as core::fmt::Display>::fmt
+65	<i32 as core::fmt::Debug>::fmt
+66	<alloc::string::String as core::fmt::Write>::write_char
+67	<alloc::string::String as core::fmt::Write>::write_str
+68	<<std::io::buffered::bufwriter::BufWriter<_>>::flush_buf::BufGuard as core::ops::drop::Drop>::drop
+69	<std::panicking::panic_handler::FormatStringPayload as core::panic::PanicPayload>::get
+70	<std::panicking::panic_handler::FormatStringPayload as core::panic::PanicPayload>::take_box
+71	<std::io::error::ErrorKind as core::fmt::Debug>::fmt
+72	<alloc::string::String as core::fmt::Debug>::fmt
+73	<std::panicking::begin_panic::Payload<&str> as core::panic::PanicPayload>::as_str
+74	<alloc::string::String as core::fmt::Write>::write_fmt
+75	<dlmalloc::sys::System as dlmalloc::Allocator>::alloc
+76	alloc::raw_vec::handle_error
+77	alloc::alloc::handle_alloc_error
+78	alloc::raw_vec::capacity_overflow
+79	core::panicking::panic
+80	core::slice::index::slice_index_fail
+81	core::panicking::panic_fmt
+82	<u64 as core::fmt::Display>::fmt
+83	<&str as core::fmt::Display>::fmt
+84	core::fmt::write
+85	<char>::escape_debug_ext
+86	core::str::converts::from_utf8
+87	core::unicode::unicode_data::grapheme_extend::lookup_slow
+88	core::unicode::printable::is_printable
+89	core::panicking::panic_bounds_check
+90	<core::fmt::builders::PadAdapter as core::fmt::Write>::write_str
+91	<core::fmt::builders::DebugStruct>::field
+92	<core::fmt::builders::DebugStruct>::finish
+93	<core::fmt::builders::DebugTuple>::field
+94	<core::fmt::builders::DebugTuple>::finish
+95	<core::fmt::Formatter>::debug_tuple
+96	<core::fmt::Formatter>::debug_struct
+97	<core::fmt::Formatter>::pad_integral
+98	core::str::count::do_count_chars
+99	<core::fmt::Formatter>::pad_integral::write_prefix
+100	<core::fmt::Formatter>::debug_struct_field1_finish
+101	<core::fmt::Formatter>::debug_struct_field2_finish
+102	<core::fmt::Formatter>::pad
+103	<core::fmt::Formatter>::write_str
+104	<u32 as core::fmt::Display>::fmt
+105	core::str::slice_error_fail
+106	core::str::slice_error_fail_rt
+107	<core::ops::range::Range<usize> as core::fmt::Debug>::fmt
+108	<char as core::fmt::Debug>::fmt
+109	core::option::unwrap_failed
+110	core::result::unwrap_failed
+111	<&dyn core::fmt::Debug as core::fmt::Debug>::fmt
+112	core::slice::memchr::memchr_aligned
+113	core::slice::copy_from_slice_impl::len_mismatch_fail
+114	<core::fmt::builders::PadAdapter as core::fmt::Write>::write_char
+115	<i32 as core::fmt::Display>::fmt
+116	<str as core::fmt::Debug>::fmt
+117	<isize as core::fmt::LowerHex>::fmt
+118	<isize as core::fmt::UpperHex>::fmt
+119	<core::fmt::builders::PadAdapter as core::fmt::Write>::write_fmt
+120	memcmp
+121	__multi3
