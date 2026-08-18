@@ -28,13 +28,20 @@ jobs:
         working-directory: programs/rust
         run: rustup show active-toolchain || rustup toolchain install
 
-      # wasm-tools is needed by `verifier check` (wat printer).
+      # wasm-tools is needed by `verifier check` (wat printer). The emitted
+      # Program.lean embeds the printed wat verbatim (driftCheck), so the
+      # printer version is part of the reproducible pipeline — keep this pin
+      # in sync with WASM_TOOLS_VERSION in the justfile.
       - name: Install wasm-tools
         uses: taiki-e/install-action@v2
         with:
-          tool: wasm-tools
+          tool: wasm-tools@1.251.0
 
       # Re-emit every Program.lean from the committed wasm sources.
+      # How each crate is compiled is configured in programs/rust/Cargo.toml:
+      # the workspace default is opt-level 0, and individual programs opt in
+      # to other levels via [profile.release.package.<crate>] overrides
+      # (e.g. mergesort builds at opt-level 3 for minimal binary size).
       # `--no-prove` skips the final `lake build` — proof correctness is
       # covered by the main CI job; here we only check for drift.
       - name: Regenerate programs

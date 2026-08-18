@@ -340,6 +340,23 @@ private def reproducibleRustflags (rustDir : FilePath) : IO String := do
     remaps := remaps.push s!"--remap-path-prefix={cargoHome}=/cargo-home"
   if !sysroot.isEmpty then
     remaps := remaps.push s!"--remap-path-prefix={sysroot}=/rustc-sysroot"
+    -- With the `rust-src` component installed, rustc resolves core/std panic
+    -- locations to `<sysroot>/lib/rustlib/src/rust/…` instead of the
+    -- precompiled `/rustc/<commit-hash>/…`. The two prefixes have different
+    -- lengths, so the wasm data section (and every address into it) shifts
+    -- depending on whether the building machine has `rust-src` — breaking
+    -- the freshness CI at optimization levels that inline enough of std for
+    -- those paths to appear. Remap the src tree onto the precompiled prefix;
+    -- a later remap wins over the plain sysroot one above when both match.
+    let versionOut ← IO.Process.output
+      { cmd := "rustc", args := #["-vV"], cwd := some rustDir }
+    if versionOut.exitCode = 0 then
+      for line in versionOut.stdout.splitOn "\n" do
+        if line.startsWith "commit-hash: " then
+          let hash := (line.drop "commit-hash: ".length).trimAscii
+          if !hash.isEmpty && hash != "unknown" then
+            remaps := remaps.push
+              s!"--remap-path-prefix={sysroot}/lib/rustlib/src/rust=/rustc/{hash}"
   pure (String.intercalate " " remaps.toList)
 
 private def buildWasm (projectDir : FilePath) (crates : Array Crate) : IO Unit := do
@@ -359,8 +376,13 @@ private def buildWasm (projectDir : FilePath) (crates : Array Crate) : IO Unit :
       die s!"expected {src} after cargo build-wasm but it is missing"
     let wasmDst := outDir / "program.wasm"
     let tmpWasm := outDir / "program.wasm.tmp"
+    -- `--all` also drops the `name` section (kept by default): the mangled
+    -- symbol names it carries embed cargo's per-unit hash, which is seeded by
+    -- machine-specific inputs (the remap source paths in RUSTFLAGS, registry
+    -- dependency metadata), and the printed wat — embedded in Program.lean's
+    -- drift check — would otherwise differ between machines.
     runOrDie "wasm-tools"
-      #["strip", "-o", tmpWasm.toString, src.toString]
+      #["strip", "--all", "-o", tmpWasm.toString, src.toString]
     let bytes ← IO.FS.readBinFile tmpWasm
     let needWrite ← do
       if ← System.FilePath.pathExists wasmDst then

@@ -42,10 +42,12 @@ jobs:
       - name: Install pinned Rust toolchain
         working-directory: programs/rust
         run: rustup show active-toolchain || rustup toolchain install
+      # Keep this pin in sync with WASM_TOOLS_VERSION in the justfile — the
+      # wat this prints is embedded verbatim in the emitted Program.lean.
       - name: Install wasm-tools
         uses: taiki-e/install-action@v2
         with:
-          tool: wasm-tools
+          tool: wasm-tools@1.251.0
       - name: Build wasm
         working-directory: programs
         run: lake -d ../verifier exe verifier build

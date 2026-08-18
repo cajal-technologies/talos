@@ -33,3 +33,14 @@ opt-level = 3
 # two builds are related by a *memory-aware* observational equivalence.
 [profile.release.package.swap_elements_opt3]
 opt-level = 3
+
+# `mergesort` (and its only dependency, `talos-stdio`, which no other crate
+# uses) is compiled for the shortest wasm binary. Counterintuitively the
+# nominal size-first levels lose to plain 3 on this crate (rustc 1.95.0,
+# fully stripped build/mergesort/program.wasm): opt-level 0 = 55 865 B,
+# "z" = 40 807 B, "s" = 40 423 B, 3 = 40 416 B.
+[profile.release.package.mergesort]
+opt-level = 3
+
+[profile.release.package.talos-stdio]
+opt-level = 3
