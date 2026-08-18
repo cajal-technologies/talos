@@ -24,11 +24,47 @@ jobs:
           build-args: "--wfail"
           use-mathlib-cache: true
 
+  # Emitted Program.lean modules embed a compile-time provenance check that
+  # reads ../rust/build/<crate>/program.wat, so the proofs job needs the wasm
+  # build outputs. They are built once here — on ubuntu, the canonical
+  # environment the Verifier Freshness workflow also uses — and handed to the
+  # macOS proofs job as an artifact, so both jobs see identical bytes.
+  wasm:
+    name: Build program wasm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: leanprover/lean-action@v1
+        with:
+          lake-package-directory: verifier
+          build-args: verifier
+          use-mathlib-cache: false
+      - name: Install pinned Rust toolchain
+        working-directory: programs/rust
+        run: rustup show active-toolchain || rustup toolchain install
+      - name: Install wasm-tools
+        uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-tools
+      - name: Build wasm
+        working-directory: programs
+        run: lake -d ../verifier exe verifier build
+      - uses: actions/upload-artifact@v6
+        with:
+          name: program-wasm
+          path: programs/rust/build/
+          if-no-files-found: error
+
   programs:
     name: Build program proofs
     runs-on: macos-latest
+    needs: wasm
     steps:
       - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v7
+        with:
+          name: program-wasm
+          path: programs/rust/build/
       - uses: actions/cache@v5
         with:
           path: .lake/packages
