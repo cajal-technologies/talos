@@ -428,7 +428,7 @@ theorem absDiff_smallStep_partiallyMeets_of_store
       (absDiffBodyConfig runtimeModule initial a b oldScratch)
       (fun result _store =>
         result = [.i64 (if a < b then b - a else a - b)]) := by
-  apply Wasm.SmallStep.wasm_smallStep_heap_globals_partiallyMeets.{0}
+  apply Wasm.SmallStep.wasm_smallStep_heap_globals_partiallyMeets
       (α := Unit)
       (σ := absDiffHeap oldScratch)
       (globalσ := absDiffGlobals)

@@ -68,7 +68,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.AddChainSpec]
 theorem add_chain_correct : AddChainSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets.{0} (α := Unit)
+  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [ternaryConfig, func0]
   iapply SmallStep.wp_localGet rfl
@@ -95,7 +95,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.AddThenMulSpec]
 theorem add_then_mul_correct : AddThenMulSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets.{0} (α := Unit)
+  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [ternaryConfig, func1]
   iapply SmallStep.wp_localGet rfl
@@ -123,7 +123,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.SubChainSpec]
 theorem sub_chain_correct : SubChainSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets.{0} (α := Unit)
+  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [ternaryConfig, func18]
   iapply SmallStep.wp_localGet rfl
@@ -150,7 +150,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.SubThenAddSpec]
 theorem sub_then_add_correct : SubThenAddSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets.{0} (α := Unit)
+  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [ternaryConfig, func19]
   iapply SmallStep.wp_localGet rfl
@@ -178,7 +178,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.MulChainSpec]
 theorem mul_chain_correct : MulChainSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets.{0} (α := Unit)
+  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [ternaryConfig, func6]
   iapply SmallStep.wp_localGet rfl
@@ -205,7 +205,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.MulThenAddSpec]
 theorem mul_then_add_correct : MulThenAddSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets.{0} (α := Unit)
+  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [ternaryConfig, func7]
   iapply SmallStep.wp_localGet rfl
@@ -233,7 +233,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.AndChainSpec]
 theorem and_chain_correct : AndChainSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets.{0} (α := Unit)
+  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [ternaryConfig, func2]
   iapply SmallStep.wp_localGet rfl
@@ -260,7 +260,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.AndThenOrSpec]
 theorem and_then_or_correct : AndThenOrSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets.{0} (α := Unit)
+  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [ternaryConfig, func3]
   iapply SmallStep.wp_localGet rfl
@@ -288,7 +288,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.OrChainSpec]
 theorem or_chain_correct : OrChainSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets.{0} (α := Unit)
+  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [ternaryConfig, func10]
   iapply SmallStep.wp_localGet rfl
@@ -315,7 +315,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.OrThenXorSpec]
 theorem or_then_xor_correct : OrThenXorSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets.{0} (α := Unit)
+  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [ternaryConfig, func11]
   iapply SmallStep.wp_localGet rfl
@@ -343,7 +343,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.XorChainSpec]
 theorem xor_chain_correct : XorChainSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets.{0} (α := Unit)
+  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [ternaryConfig, func20]
   iapply SmallStep.wp_localGet rfl
@@ -370,7 +370,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.XorThenAndSpec]
 theorem xor_then_and_correct : XorThenAndSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets.{0} (α := Unit)
+  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [ternaryConfig, func21]
   iapply SmallStep.wp_localGet rfl
@@ -398,7 +398,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.NotTwiceSpec]
 theorem not_twice_correct : NotTwiceSpec := by
   intro a
-  apply SmallStep.wasm_smallStep_partiallyMeets.{0} (α := Unit)
+  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [unaryConfig, func9]
   iapply SmallStep.wp_localGet rfl
@@ -428,7 +428,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.NotThenXorSpec]
 theorem not_then_xor_correct : NotThenXorSpec := by
   intro a b
-  apply SmallStep.wasm_smallStep_partiallyMeets.{0} (α := Unit)
+  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [binaryConfig, func8]
   iapply SmallStep.wp_localGet rfl
@@ -457,7 +457,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.DivThenAddSpec]
 theorem div_then_add_correct : DivThenAddSpec := by
   intro a b c hb
-  apply SmallStep.wasm_smallStep_partiallyMeets.{0} (α := Unit)
+  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [ternaryConfig, func4]
   iapply SmallStep.wp_block
@@ -499,7 +499,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.DivThenMulSpec]
 theorem div_then_mul_correct : DivThenMulSpec := by
   intro a b c hb
-  apply SmallStep.wasm_smallStep_partiallyMeets.{0} (α := Unit)
+  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [ternaryConfig, func5]
   iapply SmallStep.wp_block
@@ -542,7 +542,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.RemThenAddSpec]
 theorem rem_then_add_correct : RemThenAddSpec := by
   intro a b c hb
-  apply SmallStep.wasm_smallStep_partiallyMeets.{0} (α := Unit)
+  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [ternaryConfig, func12]
   iapply SmallStep.wp_block
@@ -584,7 +584,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.RemThenMulSpec]
 theorem rem_then_mul_correct : RemThenMulSpec := by
   intro a b c hb
-  apply SmallStep.wasm_smallStep_partiallyMeets.{0} (α := Unit)
+  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [ternaryConfig, func13]
   iapply SmallStep.wp_block
@@ -627,7 +627,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.ShlThenAddSpec]
 theorem shl_then_add_correct : ShlThenAddSpec := by
   intro a n b
-  apply SmallStep.wasm_smallStep_partiallyMeets.{0} (α := Unit)
+  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [shiftValueConfig, func14]
   iapply SmallStep.wp_localGet rfl
@@ -663,7 +663,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.ShlTwiceSpec]
 theorem shl_twice_correct : ShlTwiceSpec := by
   intro a n m
-  apply SmallStep.wasm_smallStep_partiallyMeets.{0} (α := Unit)
+  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [shiftTwiceConfig, func15]
   iapply SmallStep.wp_localGet rfl
@@ -706,7 +706,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.ShrThenSubSpec]
 theorem shr_then_sub_correct : ShrThenSubSpec := by
   intro a n b
-  apply SmallStep.wasm_smallStep_partiallyMeets.{0} (α := Unit)
+  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [shiftValueConfig, func16]
   iapply SmallStep.wp_localGet rfl
@@ -742,7 +742,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.ShrTwiceSpec]
 theorem shr_twice_correct : ShrTwiceSpec := by
   intro a n m
-  apply SmallStep.wasm_smallStep_partiallyMeets.{0} (α := Unit)
+  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [shiftTwiceConfig, func17]
   iapply SmallStep.wp_localGet rfl

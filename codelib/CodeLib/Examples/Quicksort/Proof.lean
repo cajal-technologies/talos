@@ -246,8 +246,6 @@ theorem wp_partitionScanLoop
         · ipureintro
           exact hstate.skipStep (by omega) (by rwa [getElem!_pos state.values state.j hjLen])
         iframe
-        simp only [Finish, partitionLocals]
-        iexact Hfinish
       · iintro ⟨%hlt, Harray⟩
         iapply Wasm.SmallStep.wp_br rfl
         inext
@@ -260,14 +258,13 @@ theorem wp_partitionScanLoop
         · ipureintro
           exact hstate.swapStep (by omega) (by rwa [getElem!_pos state.values state.j hjLen])
         iframe
-        simp only [Finish, partitionLocals]
-        iexact Hfinish
     · have hlt := mt hjCmp.mp hj
       simp only [if_neg hlt]
       have hjEq : state.j = hiMinusOne := by omega
       iapply Wasm.SmallStep.wp_brIf (by decide) rfl
       inext
       simp only [partitionLocals, List.take_zero, List.nil_append, List.drop_zero]
+      isimp only [Finish, partitionLocals] at Hfinish
       iapply Hfinish $$ %state.values %state.i %state.j %state.tmp %hstate %hjEq Harray
   · simp only [Inv]
     isplitr
@@ -776,7 +773,7 @@ theorem quicksort_partiallyMeets (arr : UInt32) (input : List UInt32)
           output.length = input.length ∧ Sorted output ∧
           List.Perm input output ∧
           readWordArray store.wasm.mem arr input.length = output) := by
-  apply wasm_smallStep_heap_globals_runtime_store_partiallyMeets.{0}
+  apply wasm_smallStep_heap_globals_runtime_store_partiallyMeets
     (α := Unit) (σ := quicksortHeap arr input) (globalσ := ∅)
   · exact quicksortHeap_agrees arr input hfit
   · exact quicksortHeap_inBounds arr input hfit hmem

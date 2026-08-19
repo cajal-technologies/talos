@@ -259,7 +259,7 @@ theorem opt3_func0_distinct_store_partiallyMeets
   have hj7 : (addressJ + 7).toNat = addressJ.toNat + 7 := by
     simpa using UInt32.add_ofNat_toNat_noWrap addressJ 7 (by omega) (by omega)
   apply
-    Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_store_partiallyMeets.{0}
+    Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_store_partiallyMeets
       (α := Unit) (σ := σ) (globalσ := globalσ)
   · exact hagree
   · exact hinBounds

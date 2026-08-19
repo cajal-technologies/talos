@@ -10,6 +10,75 @@ small-step semantics.  Unlike the legacy `wasm_heap_adequacy`, it refers only
 to `Wasm.SmallStep.Step` through the iris-lean `Language` instance.
 -/
 
+/-! ### Compatibility layer for merged iris-lean#554
+
+`StronglyNormalizing` moved upstream to `Relation.StronglyNormalizing`
+(an abbrev for `Acc (flip step)`), and its helpers plus the no-fork
+single-expression adequacy bridge were dropped when the PR merged.
+Ported verbatim below. -/
+
+namespace Relation.StronglyNormalizing
+
+theorem intro {α : Type _} {step : α → α → Prop} {x : α}
+    (H : ∀ y, step x y → Relation.StronglyNormalizing step y) :
+    Relation.StronglyNormalizing step x :=
+  Acc.intro x H
+
+theorem map {α β : Type _} {stepα : α → α → Prop}
+    {stepβ : β → β → Prop} (f : β → α)
+    (Hlift : ∀ x y, stepβ x y → stepα (f x) (f y))
+    {x : β} (H : Relation.StronglyNormalizing stepα (f x)) :
+    Relation.StronglyNormalizing stepβ x := by
+  unfold Relation.StronglyNormalizing at H ⊢
+  generalize hx : f x = z at H
+  induction H generalizing x with
+  | intro z Hz IH =>
+      subst z
+      apply Acc.intro
+      intro y Hy
+      exact IH (f y) (Hlift x y Hy) rfl
+
+end Relation.StronglyNormalizing
+
+namespace Iris.ProgramLogic
+
+export Relation (StronglyNormalizing)
+
+section
+open Iris Language Language.Notation
+
+variable {Expr State Obs Val : Type _} [Λ : Language Expr State Obs Val]
+
+/-- Erased single-expression reduction. -/
+def ExprErasedStep : Expr × State → Expr × State → Prop
+  | (e₁, σ₁), (e₂, σ₂) =>
+      ∃ (κ : List Obs) (efs : List Expr), (e₁, σ₁) -<κ>-> (e₂, σ₂, efs)
+
+/-- A language whose primitive steps do not fork. -/
+class LanguageNoFork (Expr State Obs Val : Type _)
+    [Language Expr State Obs Val] : Prop where
+  no_fork {e₁ e₂ : Expr} {σ₁ σ₂ : State} {κ : List Obs} {efs : List Expr} :
+    (e₁, σ₁) -<κ>-> (e₂, σ₂, efs) → efs = []
+
+/-- Derive single-expression normalization from thread-pool normalization. -/
+theorem stronglyNormalizing_expr_of_threadPool
+    [LanguageNoFork Expr State Obs Val] {e : Expr} {σ : State}
+    (H : StronglyNormalizing
+      (Language.ErasedStep (Expr := Expr) (State := State) (Obs := Obs))
+      ([e], σ)) :
+    StronglyNormalizing
+      (ExprErasedStep (Expr := Expr) (State := State) (Obs := Obs))
+      (e, σ) := by
+  apply Relation.StronglyNormalizing.map (fun ρ : Expr × State => ([ρ.1], ρ.2)) ?_ H
+  rintro ⟨e₁, σ₁⟩ ⟨e₂, σ₂⟩ ⟨κ, efs, Hstep⟩
+  have hefs : efs = [] := LanguageNoFork.no_fork Hstep
+  subst efs
+  exact ⟨κ, .atomic Hstep [] []⟩
+
+end
+
+end Iris.ProgramLogic
+
 namespace Wasm.SmallStep
 
 open Iris OFE COFE BI Iris.BI Iris.Algebra Iris.ProgramLogic
@@ -2096,7 +2165,7 @@ theorem globalGet_adequate :
     adequate Stuckness.NotStuck
       globalGetAdequacyConfig.expr globalGetAdequacyConfig.store
       (fun values _ => values = [.i32 42]) := by
-  apply wasm_smallStep_heap_globals_adequacy.{0} (α := Unit)
+  apply wasm_smallStep_heap_globals_adequacy (α := Unit)
     (σ := (∅ : WasmHeapMap (Option UInt8)))
     (globalσ := global0Heap)
     (φ := fun values => values = [.i32 42])
@@ -2140,7 +2209,7 @@ premise detached from the physical `MachineStore`. -/
 theorem noopCall_adequate :
     adequate Stuckness.NotStuck noopCallConfig.expr noopCallConfig.store
       (fun values _ => values = []) := by
-  apply wasm_smallStep_runtime_adequacy.{0} (α := Unit)
+  apply wasm_smallStep_runtime_adequacy (α := Unit)
     (φ := fun values => values = [])
   intro gs
   simp only [noopCallConfig]
@@ -2242,7 +2311,7 @@ theorem wordRoundtrip_adequate (oldWord : UInt32) :
       (wordRoundtripAdequacyConfig oldWord).expr
       (wordRoundtripAdequacyConfig oldWord).store
       (fun values _ => values = [.i32 0x12345678]) := by
-  apply wasm_smallStep_heap_adequacy.{0} (α := Unit)
+  apply wasm_smallStep_heap_adequacy (α := Unit)
     (σ := word16Heap oldWord)
     (φ := fun values => values = [.i32 0x12345678])
   · unfold word16Heap
@@ -2280,7 +2349,7 @@ theorem wordRoundtrip_store_partiallyMeets (oldWord : UInt32) :
       (fun values store =>
         values = [.i32 0x12345678] ∧
           store.wasm.mem.read32 16 = 0x12345678) := by
-  apply wasm_smallStep_heap_globals_runtime_store_partiallyMeets.{0}
+  apply wasm_smallStep_heap_globals_runtime_store_partiallyMeets
     (α := Unit)
     (σ := word16Heap oldWord)
     (globalσ := (∅ : WasmGlobalMap Value))
@@ -2425,7 +2494,7 @@ theorem swapWords_adequate :
     adequate Stuckness.NotStuck
       swapWordsAdequacyConfig.expr swapWordsAdequacyConfig.store
       (fun values _ => values = [.i32 11, .i32 22]) := by
-  apply wasm_smallStep_heap_adequacy.{0} (α := Unit)
+  apply wasm_smallStep_heap_adequacy (α := Unit)
     (σ := swapWordsHeap)
     (φ := fun values => values = [.i32 11, .i32 22])
   · apply swapWordsHeap_agrees
@@ -2456,7 +2525,7 @@ theorem swapWords_store_partiallyMeets :
         values = [.i32 11, .i32 22] ∧
           store.wasm.mem.read32 0 = 22 ∧
           store.wasm.mem.read32 4 = 11) := by
-  apply wasm_smallStep_heap_globals_runtime_store_partiallyMeets.{0}
+  apply wasm_smallStep_heap_globals_runtime_store_partiallyMeets
     (α := Unit)
     (σ := swapWordsHeap)
     (globalσ := (∅ : WasmGlobalMap Value))
@@ -2585,7 +2654,7 @@ theorem reverseThreeWords_store_partiallyMeets :
           store.wasm.mem.read32 0 = 33 ∧
           store.wasm.mem.read32 4 = 22 ∧
           store.wasm.mem.read32 8 = 11) := by
-  apply wasm_smallStep_heap_globals_runtime_store_partiallyMeets.{0}
+  apply wasm_smallStep_heap_globals_runtime_store_partiallyMeets
     (α := Unit)
     (σ := reverseThreeWordsHeap)
     (globalσ := (∅ : WasmGlobalMap Value))
@@ -2750,7 +2819,7 @@ theorem partitionThreeWords_store_partiallyMeets :
           store.wasm.mem.read32 8 = 33 ∧
           store.wasm.mem.read32 0 ≤ store.wasm.mem.read32 4 ∧
           store.wasm.mem.read32 4 ≤ store.wasm.mem.read32 8) := by
-  apply wasm_smallStep_heap_globals_runtime_store_partiallyMeets.{0}
+  apply wasm_smallStep_heap_globals_runtime_store_partiallyMeets
     (α := Unit)
     (σ := partitionThreeWordsHeap)
     (globalσ := (∅ : WasmGlobalMap Value))
@@ -2903,7 +2972,7 @@ theorem mergeTwoWords_store_partiallyMeets :
           store.wasm.mem.read32 0 = 4 ∧
           store.wasm.mem.read32 4 = 9 ∧
           store.wasm.mem.read32 0 ≤ store.wasm.mem.read32 4) := by
-  apply wasm_smallStep_heap_globals_runtime_store_partiallyMeets.{0}
+  apply wasm_smallStep_heap_globals_runtime_store_partiallyMeets
     (α := Unit)
     (σ := mergeTwoWordsHeap)
     (globalσ := (∅ : WasmGlobalMap Value))
@@ -3055,7 +3124,7 @@ theorem fillFourBytes_store_partiallyMeets (oldWord : UInt32) :
         values = [.i32 0x12345678, .i32 0xABABABAB] ∧
           store.wasm.mem.read32 16 = 0xABABABAB ∧
           store.wasm.mem.read32 32 = 0x12345678) := by
-  apply wasm_smallStep_heap_globals_runtime_store_partiallyMeets.{0}
+  apply wasm_smallStep_heap_globals_runtime_store_partiallyMeets
     (α := Unit)
     (σ := fillFourBytesHeap oldWord)
     (globalσ := (∅ : WasmGlobalMap Value))
@@ -3193,7 +3262,7 @@ theorem copyWord_store_partiallyMeets (oldDestination : UInt32) :
         values = [.i32 0x04030201] ∧
           store.wasm.mem.read32 0 = 0x04030201 ∧
           store.wasm.mem.read32 8 = 0x04030201) := by
-  apply wasm_smallStep_heap_globals_runtime_store_partiallyMeets.{0}
+  apply wasm_smallStep_heap_globals_runtime_store_partiallyMeets
     (α := Unit)
     (σ := copyWordHeap oldDestination)
     (globalσ := (∅ : WasmGlobalMap Value))
@@ -3301,7 +3370,7 @@ theorem copyOverlapWord_store_partiallyMeets :
       (fun values store =>
         values = [.i64 0x8877443322112211] ∧
           store.wasm.mem.read64 0 = 0x8877443322112211) := by
-  apply wasm_smallStep_heap_globals_runtime_store_partiallyMeets.{0}
+  apply wasm_smallStep_heap_globals_runtime_store_partiallyMeets
     (α := Unit)
     (σ := copyOverlapWordHeap)
     (globalσ := (∅ : WasmGlobalMap Value))
@@ -3430,7 +3499,7 @@ theorem memoryInitDrop_store_partiallyMeets :
           store.wasm.mem.read32 16 = 0x04030201 ∧
           store.wasm.dataSegments[0]? = some none) := by
   apply
-    wasm_smallStep_heap_globals_segments_runtime_store_partiallyMeets.{0}
+    wasm_smallStep_heap_globals_segments_runtime_store_partiallyMeets
       (α := Unit)
       (σ := memoryInitDropHeap)
       (globalσ := (∅ : WasmGlobalMap Value))
@@ -3531,7 +3600,7 @@ theorem tableSetGet_store_partiallyMeets :
         values = [.i32 0] ∧
           store.wasm.tables[0]? = some [.funcref (some 1)]) := by
   apply
-    wasm_smallStep_heap_globals_segments_tables_runtime_store_partiallyMeets.{0}
+    wasm_smallStep_heap_globals_segments_tables_runtime_store_partiallyMeets
       (α := Unit)
       (σ := (∅ : WasmHeapMap (Option UInt8)))
       (globalσ := (∅ : WasmGlobalMap Value))
@@ -3630,7 +3699,7 @@ theorem tableGrowFill_store_partiallyMeets :
             some [.funcref (some 1), .funcref (some 1),
               .funcref (some 1)]) := by
   apply
-    wasm_smallStep_heap_globals_segments_tables_runtime_store_partiallyMeets.{0}
+    wasm_smallStep_heap_globals_segments_tables_runtime_store_partiallyMeets
       (α := Unit)
       (σ := (∅ : WasmHeapMap (Option UInt8)))
       (globalσ := (∅ : WasmGlobalMap Value))
@@ -3752,7 +3821,7 @@ theorem tableGrow64Failure_store_partiallyMeets :
             some [.funcref none, .funcref (some 0),
               .funcref (some 0)]) := by
   apply
-    wasm_smallStep_heap_globals_segments_tables_runtime_store_partiallyMeets.{0}
+    wasm_smallStep_heap_globals_segments_tables_runtime_store_partiallyMeets
       (α := Unit)
       (σ := (∅ : WasmHeapMap (Option UInt8)))
       (globalσ := (∅ : WasmGlobalMap Value))
@@ -3880,7 +3949,7 @@ theorem tableCopyOverlap_store_partiallyMeets :
             some [.funcref none, .funcref none, .funcref (some 0),
               .funcref (some 1)]) := by
   apply
-    wasm_smallStep_heap_globals_segments_tables_runtime_store_partiallyMeets.{0}
+    wasm_smallStep_heap_globals_segments_tables_runtime_store_partiallyMeets
       (α := Unit)
       (σ := (∅ : WasmHeapMap (Option UInt8)))
       (globalσ := (∅ : WasmGlobalMap Value))
@@ -4033,7 +4102,7 @@ theorem tableCopyDistinct_store_partiallyMeets :
             some [.funcref (some 0), .funcref (some 1),
               .funcref (some 2)]) := by
   apply
-    wasm_smallStep_heap_globals_segments_tables_runtime_store_partiallyMeets.{0}
+    wasm_smallStep_heap_globals_segments_tables_runtime_store_partiallyMeets
       (α := Unit)
       (σ := (∅ : WasmHeapMap (Option UInt8)))
       (globalσ := (∅ : WasmGlobalMap Value))
@@ -4232,7 +4301,7 @@ theorem tableInitDrop_store_partiallyMeets :
               .funcref (some 0)] ∧
           store.wasm.elementSegments[0]? = some none) := by
   apply
-    wasm_smallStep_heap_globals_segments_tables_runtime_store_partiallyMeets.{0}
+    wasm_smallStep_heap_globals_segments_tables_runtime_store_partiallyMeets
       (α := Unit)
       (σ := (∅ : WasmHeapMap (Option UInt8)))
       (globalσ := (∅ : WasmGlobalMap Value))

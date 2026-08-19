@@ -808,7 +808,7 @@ theorem recursive_sort_stronglyNormalizing
         (State := MachineStore Unit) (Obs := StepKind))
       ((concreteSortConfig recursive input).expr,
         (concreteSortConfig recursive input).store) := by
-  apply Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_stronglyNormalizing.{0}
+  apply Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_stronglyNormalizing
     (concreteSortConfig recursive input) (inputHeap input) ∅
     (fun _values => iprop(True))
   · exact inputHeap_agrees recursive input hfit
@@ -828,7 +828,7 @@ theorem recursive_sort_terminatesWith
   apply Wasm.SmallStep.stronglyNormalizing_adequate_terminates
     (concreteSortConfig recursive input) (SortPost input)
     (recursive_sort_stronglyNormalizing input hfit)
-  apply wasm_smallStep_heap_globals_runtime_store_adequacy.{0}
+  apply wasm_smallStep_heap_globals_runtime_store_adequacy
     (concreteSortConfig recursive input) (inputHeap input) ∅ (SortPost input)
   · exact inputHeap_agrees recursive input hfit
   · exact inputHeap_inBounds recursive input hfit
@@ -846,7 +846,7 @@ theorem loop_sort_stronglyNormalizing
         (State := MachineStore Unit) (Obs := StepKind))
       ((concreteSortConfig loop input).expr,
         (concreteSortConfig loop input).store) := by
-  apply Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_stronglyNormalizing.{0}
+  apply Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_stronglyNormalizing
     (concreteSortConfig loop input) (inputHeap input) ∅
     (fun _values => iprop(True))
   · exact inputHeap_agrees loop input hfit
@@ -866,7 +866,7 @@ theorem loop_sort_terminatesWith
   apply Wasm.SmallStep.stronglyNormalizing_adequate_terminates
     (concreteSortConfig loop input) (SortPost input)
     (loop_sort_stronglyNormalizing input hfit)
-  apply wasm_smallStep_heap_globals_runtime_store_adequacy.{0}
+  apply wasm_smallStep_heap_globals_runtime_store_adequacy
     (concreteSortConfig loop input) (inputHeap input) ∅ (SortPost input)
   · exact inputHeap_agrees loop input hfit
   · exact inputHeap_inBounds loop input hfit

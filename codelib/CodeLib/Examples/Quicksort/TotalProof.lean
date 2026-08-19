@@ -736,7 +736,7 @@ theorem quicksort_terminatesWith (arr : UInt32) (input : List UInt32)
           output.length = input.length ∧ Sorted output ∧
           List.Perm input output ∧
           readWordArray store.wasm.mem arr input.length = output) :=
-  wasm_smallStep_heap_store_terminates.{0}
+  wasm_smallStep_heap_store_terminates
     (quicksortConfig arr input) (quicksortHeap arr input)
     (fun values store =>
       values = [] ∧ ∃ output : List UInt32,

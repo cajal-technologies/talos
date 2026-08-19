@@ -1040,7 +1040,7 @@ theorem twp_sort [WasmSmallStepGS hlc Unit]
 
 theorem sort_partiallyMeets (input : List UInt32) (hfit : Fits input) :
     SmallStep.PartiallyMeets (sortConfig input) (SortPost input) := by
-  apply wasm_smallStep_heap_globals_runtime_store_partiallyMeets.{0}
+  apply wasm_smallStep_heap_globals_runtime_store_partiallyMeets
     (sortConfig input) (sortHeap input) ∅ (SortPost input)
   · exact sortHeap_agrees input hfit
   · exact sortHeap_inBounds input hfit
@@ -1056,7 +1056,7 @@ theorem sort_stronglyNormalizing (input : List UInt32) (hfit : Fits input) :
       (Iris.ProgramLogic.ExprErasedStep (Expr := Expr Unit)
         (State := MachineStore Unit) (Obs := StepKind))
       ((sortConfig input).expr, (sortConfig input).store) := by
-  apply Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_stronglyNormalizing.{0}
+  apply Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_stronglyNormalizing
     (sortConfig input) (sortHeap input) ∅
     (fun _values => iprop(True))
   · exact sortHeap_agrees input hfit
@@ -1073,7 +1073,7 @@ theorem sort_terminatesWith (input : List UInt32) (hfit : Fits input) :
     SmallStep.TerminatesWith (sortConfig input) (SortPost input) := by
   apply Wasm.SmallStep.stronglyNormalizing_adequate_terminates
     (sortConfig input) (SortPost input) (sort_stronglyNormalizing input hfit)
-  apply wasm_smallStep_heap_globals_runtime_store_adequacy.{0}
+  apply wasm_smallStep_heap_globals_runtime_store_adequacy
     (sortConfig input) (sortHeap input) ∅ (SortPost input)
   · exact sortHeap_agrees input hfit
   · exact sortHeap_inBounds input hfit

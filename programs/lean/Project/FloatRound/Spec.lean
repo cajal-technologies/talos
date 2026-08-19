@@ -1294,7 +1294,7 @@ def checkRoundConfig (x : UInt32) : Config Unit :=
 theorem checkRound_smallStep (x : UInt32) :
     PartiallyMeets (checkRoundConfig x)
       (fun values _store => ∃ b : UInt32, values = [.i32 b]) := by
-  apply wasm_smallStep_heap_globals_runtime_partiallyMeets.{0}
+  apply wasm_smallStep_heap_globals_runtime_partiallyMeets
       (α := Unit) (σ := roundHeap) (globalσ := roundGlobals)
       (φ := fun values => ∃ b : UInt32, values = [.i32 b])
   · simpa [checkRoundConfig] using roundHeap_agrees

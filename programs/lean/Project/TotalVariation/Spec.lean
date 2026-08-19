@@ -34,7 +34,7 @@ set_option maxHeartbeats 8000000 in
 @[proves Project.TotalVariation.Spec.TotalVariationSpec]
 theorem total_variation_correct : TotalVariationSpec := by
   intro a b c
-  apply wasm_smallStep_heap_globals_runtime_partiallyMeets.{0}
+  apply wasm_smallStep_heap_globals_runtime_partiallyMeets
       (α := Unit)
       (σ := absDiffHeap 0)
       (globalσ := absDiffGlobals)

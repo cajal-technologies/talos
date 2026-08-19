@@ -87,7 +87,7 @@ attribute [instance] WasmElementSegmentGS.toGhostMapG
 
 class WasmRuntimeModuleGS (α : outParam Type) where
   runtimeElem :
-    ElemG (WasmHeapGF.{0} α) (constOF (Agree (DiscreteO Module)))
+    ElemG (WasmHeapGF α) (constOF (Agree (DiscreteO Module)))
   runtimeName : GName
 
 attribute [reducible, instance] WasmRuntimeModuleGS.runtimeElem
@@ -95,7 +95,7 @@ attribute [reducible, instance] WasmRuntimeModuleGS.runtimeElem
 /-- The authoritative host-state ghost variable. `StateInterp` owns the
 authority while specifications own the exclusive fragment below. -/
 class WasmHostGS (α : outParam Type) where
-  hostElem : ElemG (WasmHeapGF.{0} α)
+  hostElem : ElemG (WasmHeapGF α)
     (ExclAuth.ExclAuthURF (constOF (DiscreteO α)))
   hostName : GName
 
@@ -272,7 +272,7 @@ theorem elementSegmentPointsTo_update [gs : WasmElementSegmentGS α]
 the copy held by `StateInterp` lets call rules justify function-table lookups
 against the actual machine runtime. -/
 def runtimeModuleOwn [gs : WasmRuntimeModuleGS α] (m : Module) :
-    IProp (WasmHeapGF.{0} α) :=
+    IProp (WasmHeapGF α) :=
   iOwn (E := gs.runtimeElem) gs.runtimeName (toAgree ⟨m⟩)
 
 instance [WasmRuntimeModuleGS α] (m : Module) :

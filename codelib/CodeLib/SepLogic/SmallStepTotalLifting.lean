@@ -11,6 +11,45 @@ total lifting layer over the same authoritative `Wasm.SmallStep.Step`
 relation.
 -/
 
+namespace Iris.ProgramLogic
+
+open Iris Language Language.Notation BI
+
+section
+variable {hlc : outParam HasLC} {Expr State Obs Val}
+variable [Λ : Language Expr State Obs Val]
+variable {GF : BundledGFunctors} [ι : IrisGS_gen hlc Expr GF]
+variable {s : Stuckness} {E : CoPset}
+variable {e₁ : Expr} {Φ : Val → IProp GF}
+
+/-- Total lifting for steps that fork no threads. Lived in iris-lean's
+`TotalLifting` until iris-lean#554 was merged without it; ported verbatim
+(modulo the upstream rename `twp_lift_step` → `twp.lift_step`). -/
+theorem twp_lift_step_no_fork (h : toVal e₁ = none) :
+    (∀ σ₁ ns obs nt, stateInterp σ₁ ns obs nt ={E,∅}=∗
+      ⌜s.MaybeReducibleNoObs (e₁, σ₁)⌝ ∗
+      ∀ κ e₂ σ₂ eₜ, ⌜(e₁, σ₁) -<κ>-> (e₂, σ₂, eₜ)⌝ ={∅,E}=∗
+        ⌜κ = []⌝ ∗ ⌜eₜ = []⌝ ∗
+        stateInterp σ₂ (ns + 1) obs nt ∗
+        WP e₂ @ s; E [{ Φ }])
+    ⊢ WP e₁ @ s; E [{ Φ }] := by
+  iintro H
+  iapply twp.lift_step h
+  iintro %σ₁ %ns %obs %nt Hσ
+  imod H $$ Hσ with ⟨%Hred, H⟩
+  imodintro
+  iframe %Hred
+  iintro %κ %e₂ %σ₂ %eₜ %Hstep
+  imod H $$ %κ %e₂ %σ₂ %eₜ %Hstep with ⟨%hκ, %heₜ, Hσ, Hwp⟩
+  subst heₜ
+  imodintro
+  simp only [List.length_nil, Nat.add_zero, Algebra.BigOpL.bigOpL_nil]
+  iframe %hκ Hσ Hwp
+
+end
+
+end Iris.ProgramLogic
+
 namespace Wasm.SmallStep
 
 open Iris Iris.ProgramLogic Language.Notation

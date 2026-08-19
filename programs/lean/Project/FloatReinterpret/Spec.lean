@@ -43,7 +43,7 @@ theorem func5_body_smallStep_wp
 theorem func5_smallStep (x : UInt32) :
     PartiallyMeets (func5Config x)
       (fun rs _store => rs = [.i32 x]) := by
-  apply wasm_smallStep_partiallyMeets.{0} (α := Unit)
+  apply wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [func5Config]
   iapply func5_body_smallStep_wp x []
@@ -81,7 +81,7 @@ theorem func6_body_smallStep_wp
 theorem func6_smallStep (x : UInt32) :
     PartiallyMeets (func6Config x)
       (fun rs _store => rs = [.f32 x]) := by
-  apply wasm_smallStep_partiallyMeets.{0} (α := Unit)
+  apply wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [func6Config]
   iapply func6_body_smallStep_wp x []
@@ -148,7 +148,7 @@ theorem func9_smallStep_wp
 theorem func9_smallStep (x : UInt32) :
     PartiallyMeets (func9Config x)
       (fun rs _store => rs = [.f32 (2147483647 &&& x)]) := by
-  apply wasm_smallStep_runtime_partiallyMeets.{0} (α := Unit)
+  apply wasm_smallStep_runtime_partiallyMeets (α := Unit)
   intro gs
   simp only [func9Config]
   iapply func9_smallStep_wp
@@ -231,7 +231,7 @@ theorem func4_smallStep_wp
 theorem func4_smallStep (x y : UInt32) :
     PartiallyMeets (func4Config x y)
       (fun rs _store => rs = [.f32 (func4Result x y)]) := by
-  apply wasm_smallStep_runtime_partiallyMeets.{0} (α := Unit)
+  apply wasm_smallStep_runtime_partiallyMeets (α := Unit)
   intro gs
   simp only [func4Config]
   iapply func4_smallStep_wp
@@ -387,7 +387,7 @@ theorem func1_body_smallStep_wp
 theorem func1_smallStep (x : UInt32) :
     PartiallyMeets (func1Config x)
       (fun rs _store => rs = [.f32 (f32Abs x)]) := by
-  apply wasm_smallStep_heap_globals_partiallyMeets.{0}
+  apply wasm_smallStep_heap_globals_partiallyMeets
     (α := Unit) (σ := func1Heap) (globalσ := func1Globals)
     (φ := fun rs => rs = [.f32 (f32Abs x)])
   · simpa [func1Config] using func1Heap_agrees
@@ -452,7 +452,7 @@ theorem func0_smallStep_wp
 theorem func0_smallStep (x : UInt32) :
     PartiallyMeets (func0Config x)
       (fun rs _store => rs = [.f32 (f32Abs x)]) := by
-  apply wasm_smallStep_heap_globals_runtime_partiallyMeets.{0}
+  apply wasm_smallStep_heap_globals_runtime_partiallyMeets
     (α := Unit) (σ := func1Heap) (globalσ := func1Globals)
     (φ := fun rs => rs = [.f32 (f32Abs x)])
   · simpa [func0Config, func1Config] using func1Heap_agrees
@@ -586,7 +586,7 @@ theorem func3_body_smallStep_wp
 theorem func3_smallStep (x : UInt64) :
     PartiallyMeets (func3Config x)
       (fun rs _store => rs = [.f64 (f64Abs x)]) := by
-  apply wasm_smallStep_heap_globals_partiallyMeets.{0}
+  apply wasm_smallStep_heap_globals_partiallyMeets
     (α := Unit) (σ := func3Heap) (globalσ := func1Globals)
     (φ := fun rs => rs = [.f64 (f64Abs x)])
   · simpa [func3Config] using func3Heap_agrees
@@ -658,7 +658,7 @@ theorem func2_smallStep_wp
 theorem func2_smallStep (x : UInt32) :
     PartiallyMeets (func2Config x)
       (fun rs _store => rs = [.f32 (func2Result x)]) := by
-  apply wasm_smallStep_heap_globals_runtime_partiallyMeets.{0}
+  apply wasm_smallStep_heap_globals_runtime_partiallyMeets
     (α := Unit) (σ := func3Heap) (globalσ := func1Globals)
     (φ := fun rs => rs = [.f32 (func2Result x)])
   · simpa [func2Config, func3Config] using func3Heap_agrees
@@ -752,7 +752,7 @@ theorem func8_body_smallStep_wp
 theorem func8_smallStep (x y : UInt32) :
     PartiallyMeets (func8Config x y)
       (fun rs _store => rs = [.f32 (f32Copysign x y)]) := by
-  apply wasm_smallStep_heap_globals_partiallyMeets.{0}
+  apply wasm_smallStep_heap_globals_partiallyMeets
     (α := Unit) (σ := func1Heap) (globalσ := func1Globals)
     (φ := fun rs => rs = [.f32 (f32Copysign x y)])
   · simpa [func8Config, func1Config] using func1Heap_agrees
@@ -817,7 +817,7 @@ theorem func7_smallStep_wp
 theorem func7_smallStep (x y : UInt32) :
     PartiallyMeets (func7Config x y)
       (fun rs _store => rs = [.f32 (f32Copysign x y)]) := by
-  apply wasm_smallStep_heap_globals_runtime_partiallyMeets.{0}
+  apply wasm_smallStep_heap_globals_runtime_partiallyMeets
     (α := Unit) (σ := func1Heap) (globalσ := func1Globals)
     (φ := fun rs => rs = [.f32 (f32Copysign x y)])
   · simpa [func7Config, func1Config] using func1Heap_agrees
@@ -1976,7 +1976,7 @@ def checkAbsConfig (x : UInt32) : Config Unit :=
 theorem checkAbs_smallStep (x : UInt32) :
     PartiallyMeets (checkAbsConfig x)
       (fun values _store => ∃ b : UInt32, values = [.i32 b]) := by
-  apply wasm_smallStep_heap_globals_runtime_partiallyMeets.{0}
+  apply wasm_smallStep_heap_globals_runtime_partiallyMeets
       (α := Unit) (σ := exportHeap) (globalσ := func1Globals)
       (φ := fun values => ∃ b : UInt32, values = [.i32 b])
   · simpa [checkAbsConfig] using exportHeap_agrees
@@ -2319,7 +2319,7 @@ def checkCopysignConfig (x y : UInt32) : Config Unit :=
 theorem checkCopysign_smallStep (x y : UInt32) :
     PartiallyMeets (checkCopysignConfig x y)
       (fun values _store => ∃ b : UInt32, values = [.i32 b]) := by
-  apply wasm_smallStep_heap_globals_runtime_partiallyMeets.{0}
+  apply wasm_smallStep_heap_globals_runtime_partiallyMeets
       (α := Unit) (σ := exportHeap) (globalσ := func1Globals)
       (φ := fun values => ∃ b : UInt32, values = [.i32 b])
   · simpa [checkCopysignConfig] using exportHeap_agrees

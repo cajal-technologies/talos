@@ -9,10 +9,10 @@ path = "../interpreter"
 
 [[require]]
 name = "iris"
-git.url = "https://github.com/mfornet/iris-lean.git"
+git.url = "https://github.com/leanprover-community/iris-lean.git"
 git.subDir = "Iris"
-# Total weakest preconditions from iris-lean#554; pin the PR head commit.
-rev = "27f05563f6f65993056c44da95be8a474dc9e57f"
+# Pin upstream master (total weakest preconditions from iris-lean#554 now merged).
+rev = "e7a0a43814c4f1154ca0c8049883ca56c2288b86"
 
 [[lean_lib]]
 name = "CodeLib"

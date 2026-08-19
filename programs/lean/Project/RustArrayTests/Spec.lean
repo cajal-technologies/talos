@@ -41,7 +41,7 @@ def LenPlusOneSpec : Prop := ∀ (ptr len : UInt32),
 @[proves Project.RustArrayTests.Spec.LenPlusOneSpec]
 theorem len_plus_one_correct : LenPlusOneSpec := by
   intro ptr len
-  apply SmallStep.wasm_smallStep_partiallyMeets.{0} (α := Unit)
+  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [bodyConfig, func1]
   iapply SmallStep.wp_localGet rfl
@@ -66,7 +66,7 @@ def LenPlusArgSpec : Prop := ∀ (ptr len n : UInt32),
 @[proves Project.RustArrayTests.Spec.LenPlusArgSpec]
 theorem len_plus_arg_correct : LenPlusArgSpec := by
   intro ptr len n
-  apply SmallStep.wasm_smallStep_partiallyMeets.{0} (α := Unit)
+  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [bodyConfig, func0]
   iapply SmallStep.wp_localGet rfl
@@ -91,7 +91,7 @@ def EmptyPlusThreeSpec : Prop := ∀ (ptr len : UInt32),
 @[proves Project.RustArrayTests.Spec.EmptyPlusThreeSpec]
 theorem empty_plus_three_correct : EmptyPlusThreeSpec := by
   intro ptr len
-  apply SmallStep.wasm_smallStep_runtime_partiallyMeets.{0} (α := Unit)
+  apply SmallStep.wasm_smallStep_runtime_partiallyMeets (α := Unit)
   intro gs
   simp only [bodyConfig, func4]
   iintro Hruntime
@@ -147,7 +147,7 @@ def EmptyXorFlagSpec : Prop := ∀ (ptr len flag : UInt32),
 @[proves Project.RustArrayTests.Spec.EmptyXorFlagSpec]
 theorem empty_xor_flag_correct : EmptyXorFlagSpec := by
   intro ptr len flag
-  apply SmallStep.wasm_smallStep_runtime_partiallyMeets.{0} (α := Unit)
+  apply SmallStep.wasm_smallStep_runtime_partiallyMeets (α := Unit)
   intro gs
   simp only [bodyConfig, func2]
   iintro Hruntime
@@ -215,7 +215,7 @@ def LenPlusOneExportSpec : Prop :=
 @[proves Project.RustArrayTests.Spec.LenPlusOneExportSpec]
 theorem len_plus_one_export_correct : LenPlusOneExportSpec := by
   intro env st p dataPtr len hfat
-  apply SmallStep.wasm_smallStep_heap_runtime_partiallyMeets.{0} (α := Unit)
+  apply SmallStep.wasm_smallStep_heap_runtime_partiallyMeets (α := Unit)
       (σ := fatPtrHeap p dataPtr len)
       (φ := fun rs => rs = [.i32 (len + 1)])
   · exact fatPtrHeap_agrees hfat
@@ -267,7 +267,7 @@ def LenPlusArgExportSpec : Prop :=
 @[proves Project.RustArrayTests.Spec.LenPlusArgExportSpec]
 theorem len_plus_arg_export_correct : LenPlusArgExportSpec := by
   intro env st p dataPtr len n hfat
-  apply SmallStep.wasm_smallStep_heap_runtime_partiallyMeets.{0} (α := Unit)
+  apply SmallStep.wasm_smallStep_heap_runtime_partiallyMeets (α := Unit)
       (σ := fatPtrHeap p dataPtr len)
       (φ := fun rs => rs = [.i32 (len + n)])
   · exact fatPtrHeap_agrees hfat
@@ -321,7 +321,7 @@ def EmptyPlusThreeExportSpec : Prop :=
 @[proves Project.RustArrayTests.Spec.EmptyPlusThreeExportSpec]
 theorem empty_plus_three_export_correct : EmptyPlusThreeExportSpec := by
   intro env st p dataPtr len hfat
-  apply SmallStep.wasm_smallStep_heap_runtime_partiallyMeets.{0} (α := Unit)
+  apply SmallStep.wasm_smallStep_heap_runtime_partiallyMeets (α := Unit)
       (σ := fatPtrHeap p dataPtr len)
       (φ := fun rs => rs = [.i32 (isEmptyValue len + 3)])
   · exact fatPtrHeap_agrees hfat
@@ -403,7 +403,7 @@ def EmptyXorFlagExportSpec : Prop :=
 @[proves Project.RustArrayTests.Spec.EmptyXorFlagExportSpec]
 theorem empty_xor_flag_export_correct : EmptyXorFlagExportSpec := by
   intro env st p dataPtr len flag hfat
-  apply SmallStep.wasm_smallStep_heap_runtime_partiallyMeets.{0} (α := Unit)
+  apply SmallStep.wasm_smallStep_heap_runtime_partiallyMeets (α := Unit)
       (σ := fatPtrHeap p dataPtr len)
       (φ := fun rs => rs = [.i32 (isEmptyValue len ^^^ flag)])
   · exact fatPtrHeap_agrees hfat

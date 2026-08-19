@@ -1009,7 +1009,7 @@ theorem func1_zero_smallStep_partiallyMeets
       (func1ZeroConfig result oldX oldY shiftXY shiftX shiftY nextY nextX a b)
       (fun rs _store =>
         rs = [.i64 (UInt64.ofNat (Nat.gcd a.toNat b.toNat))]) := by
-  apply Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_partiallyMeets.{0}
+  apply Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_partiallyMeets
     (α := Unit)
     (σ := gcdFrameHeap result oldX oldY
       shiftXY shiftX shiftY nextY nextX a b)
@@ -3718,7 +3718,7 @@ theorem func1_nonzero_smallStep_partiallyMeets
       (func1ZeroConfig result oldX oldY shiftXY shiftX shiftY nextY nextX a b)
       (fun rs _store =>
         rs = [.i64 (UInt64.ofNat (Nat.gcd a.toNat b.toNat))]) := by
-  apply Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_partiallyMeets.{0}
+  apply Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_partiallyMeets
     (α := Unit)
     (σ := gcdFrameHeap result oldX oldY
       shiftXY shiftX shiftY nextY nextX a b)
@@ -4837,7 +4837,7 @@ theorem func0_smallStep_partiallyMeets (a b : UInt64) :
       (func0Config a b)
       (fun rs _store =>
         rs = [.i64 (UInt64.ofNat (Nat.gcd a.toNat b.toNat))]) := by
-  apply Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_partiallyMeets.{0}
+  apply Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_partiallyMeets
     (α := Unit)
     (σ := func0InitialHeap)
     (globalσ := func0GlobalHeap)
@@ -4881,7 +4881,7 @@ theorem func2_smallStep_partiallyMeets (a b : UInt64) :
       (func2Config a b)
       (fun rs _store =>
         rs = [.i64 (UInt64.ofNat (Nat.gcd a.toNat b.toNat))]) := by
-  apply Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_partiallyMeets.{0}
+  apply Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_partiallyMeets
     (α := Unit)
     (σ := func0InitialHeap)
     (globalσ := func0GlobalHeap)

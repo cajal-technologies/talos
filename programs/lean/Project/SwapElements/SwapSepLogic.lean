@@ -1108,7 +1108,7 @@ theorem func4_distinct_store_partiallyMeets
   have hj7 : (addressJ + 7).toNat = addressJ.toNat + 7 := by
     simpa using UInt32.add_ofNat_toNat_noWrap addressJ 7 (by omega) (by omega)
   apply
-    Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_store_partiallyMeets.{0}
+    Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_store_partiallyMeets
       (α := Unit) (σ := σ) (globalσ := globalσ)
   · exact hagree
   · exact hinBounds
@@ -1198,7 +1198,7 @@ theorem func4_alias_store_partiallyMeets
   have h7 : (address + 7).toNat = address.toNat + 7 := by
     simpa using UInt32.add_ofNat_toNat_noWrap address 7 (by omega) (by omega)
   apply
-    Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_store_partiallyMeets.{0}
+    Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_store_partiallyMeets
       (α := Unit) (σ := σ) (globalσ := globalσ)
   · exact hagree
   · exact hinBounds
@@ -1318,7 +1318,7 @@ theorem func3_smallStep (ptr len : UInt32) :
     Wasm.SmallStep.PartiallyMeets (func3Config ptr len)
       (fun values _store => values = []) := by
   apply Wasm.SmallStep.adequate_to_partiallyMeets
-  apply Wasm.SmallStep.wasm_smallStep_heap_adequacy.{0}
+  apply Wasm.SmallStep.wasm_smallStep_heap_adequacy
     (α := Unit) (σ := func3Heap)
     (φ := fun values => values = [])
   · exact func3Heap_agrees ptr len
@@ -1454,7 +1454,7 @@ semantics on a concrete two-element array and returns normally. -/
 theorem func4Example_smallStep :
     Wasm.SmallStep.PartiallyMeets func4ExampleConfig
       (fun values _store => values = []) := by
-  apply Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_partiallyMeets.{0}
+  apply Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_partiallyMeets
     (α := Unit) (σ := func4ExampleHeap)
     (globalσ := func4ExampleGlobals)
     (φ := fun values => values = [])
@@ -1497,7 +1497,7 @@ theorem func4Example_store_smallStep :
         values = [] ∧ store.wasm.mem.read64 0 = 22 ∧
           store.wasm.mem.read64 8 = 11) := by
   apply
-    Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_store_partiallyMeets.{0}
+    Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_store_partiallyMeets
       (α := Unit) (σ := func4ExampleHeap)
       (globalσ := func4ExampleGlobals)
   · exact func4ExampleHeap_agrees
@@ -1633,7 +1633,7 @@ word of authoritative ownership. -/
 theorem func4Alias_smallStep :
     Wasm.SmallStep.PartiallyMeets func4AliasConfig
       (fun values _store => values = []) := by
-  apply Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_partiallyMeets.{0}
+  apply Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_partiallyMeets
     (α := Unit) (σ := func4AliasHeap)
     (globalσ := func4ExampleGlobals)
     (φ := fun values => values = [])
@@ -1673,7 +1673,7 @@ theorem func4Alias_store_smallStep :
       (fun values store =>
         values = [] ∧ store.wasm.mem.read64 0 = 42) := by
   apply
-    Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_store_partiallyMeets.{0}
+    Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_store_partiallyMeets
       (α := Unit) (σ := func4AliasHeap)
       (globalσ := func4ExampleGlobals)
   · exact func4AliasHeap_agrees
@@ -1804,7 +1804,7 @@ that duplicates exclusive ownership. -/
 theorem func0Alias_smallStep :
     Wasm.SmallStep.PartiallyMeets func0AliasConfig
       (fun values _store => values = []) := by
-  apply Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_partiallyMeets.{0}
+  apply Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_partiallyMeets
     (α := Unit) (σ := func0AliasHeap)
     (globalσ := func0AliasGlobals)
     (φ := fun values => values = [])

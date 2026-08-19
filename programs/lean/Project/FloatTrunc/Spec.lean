@@ -141,7 +141,7 @@ theorem func1_body_smallStep_wp
 theorem func1_smallStep (x : UInt32) :
     PartiallyMeets (func1Config x)
       (fun rs _store => rs = [.i32 (i32TruncSatF32S x)]) := by
-  apply wasm_smallStep_partiallyMeets.{0} (α := Unit)
+  apply wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [func1Config]
   iapply func1_body_smallStep_wp x []
@@ -564,7 +564,7 @@ theorem func0_body_to_ret_smallStep_wp
 theorem func0_smallStep (x : UInt32) :
     PartiallyMeets (func0Config x)
       (fun rs _store => rs = [.i32 (i32TruncSatF32S x)]) := by
-  apply wasm_smallStep_heap_globals_partiallyMeets.{0}
+  apply wasm_smallStep_heap_globals_partiallyMeets
       (α := Unit)
       (σ := func0Heap)
       (globalσ := func0Globals)
@@ -651,7 +651,7 @@ def checkConfig (x : UInt32) : Config Unit :=
 /-- Iris partial-correctness proof for the exported agreement check. -/
 theorem check_smallStep (x : UInt32) :
     PartiallyMeets (checkConfig x) (fun rs _store => rs = []) := by
-  apply wasm_smallStep_heap_globals_runtime_partiallyMeets.{0}
+  apply wasm_smallStep_heap_globals_runtime_partiallyMeets
       (α := Unit) (σ := func0Heap) (globalσ := func0Globals)
       (φ := fun rs => rs = [])
   · simpa [checkConfig, func0Config] using func0Heap_agrees

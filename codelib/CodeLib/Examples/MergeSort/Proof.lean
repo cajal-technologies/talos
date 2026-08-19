@@ -381,8 +381,6 @@ theorem wp_mergeMainLoop
               (List.getElem?_eq_getElem hiLen)
               (List.getElem?_eq_getElem hjLen) hxy
           iframe
-          simp only [Finish, mergeLocals]
-          iexact Hfinish
         · iintro ⟨%hxy, Hsource, Htemporary⟩
           iapply Wasm.SmallStep.wp_br rfl
           inext
@@ -398,8 +396,6 @@ theorem wp_mergeMainLoop
               (List.getElem?_eq_getElem hiLen)
               (List.getElem?_eq_getElem hjLen) hxy
           iframe
-          simp only [Finish, mergeLocals]
-          iexact Hfinish
       · simp only [hiCmp, hjCmp, if_pos hi, if_neg hj]
         have hjEq : state.j = right := by omega
         simp only [UInt32.zero_mul]
@@ -407,6 +403,7 @@ theorem wp_mergeMainLoop
         inext
         simp only [mergeLocals, List.take_zero, List.nil_append,
           List.drop_zero]
+        isimp only [Finish, mergeLocals] at Hfinish
         iapply Hfinish $$ %state.scratch %state.i %state.j
           %state.k %state.emitted %hstate %(Or.inr hjEq)
           Hsource Htemporary
@@ -417,6 +414,7 @@ theorem wp_mergeMainLoop
       inext
       simp only [mergeLocals, List.take_zero, List.nil_append,
         List.drop_zero]
+      isimp only [Finish, mergeLocals] at Hfinish
       iapply Hfinish $$ %state.scratch %state.i %state.j
         %state.k %state.emitted %hstate %(Or.inl hiEq)
         Hsource Htemporary
@@ -745,8 +743,6 @@ theorem wp_mergeLeftLoop
       · ipureintro
         exact Or.inr hjEq
       iframe
-      simp only [Finish, mergeLocals]
-      iexact Hfinish
     · simp only [hiCmp, if_neg hi]
       have hiEq : state.i = mid := by omega
       subst mid
@@ -754,6 +750,7 @@ theorem wp_mergeLeftLoop
       inext
       simp only [mergeLocals, List.take_zero, List.nil_append,
         List.drop_zero]
+      isimp only [Finish, mergeLocals] at Hfinish
       iapply Hfinish $$ %state.scratch %state.j %state.k
         %state.emitted %hstate Hsource Htemporary
   · simp only [Inv]
@@ -883,8 +880,6 @@ theorem wp_mergeRightLoop
         exact hstate.takeRemainingRight hj
           (List.getElem?_eq_getElem hjLen)
       iframe
-      simp only [Finish, mergeLocals]
-      iexact Hfinish
     · simp only [hjCmp, if_neg hj]
       have hjEq : state.j = right := by omega
       subst right
@@ -892,6 +887,7 @@ theorem wp_mergeRightLoop
       inext
       simp only [mergeLocals, List.take_zero, List.nil_append,
         List.drop_zero]
+      isimp only [Finish, mergeLocals] at Hfinish
       iapply Hfinish $$ %state.scratch %state.k
         %state.emitted %hstate Hsource Htemporary
   · simp only [Inv]
@@ -1102,8 +1098,6 @@ theorem wp_mergeCopyLoop
             state.k + 1 - left = (state.k - left) + 1 := by omega
         rw [hsub, take_succ_eq_append_getElem hkMerged]
       iframe
-      simp only [Finish, mergeLocals]
-      iexact Hfinish
     · simp only [hkCmp, if_neg hk]
       have hkEq : state.k = right := by omega
       have hcopiedEq : state.copied = merged := by
@@ -1116,6 +1110,7 @@ theorem wp_mergeCopyLoop
       inext
       simp only [mergeLocals, List.take_zero, List.nil_append,
         List.drop_zero]
+      isimp only [Finish, mergeLocals] at Hfinish
       iapply Hfinish $$ %state.current %hcopyFinished
         Hsource Htemporary
   · simp only [Inv]
@@ -1952,8 +1947,6 @@ theorem wp_mergeSortInnerLoop
         rw [← hnextPass]
         exact hrightCandidate
       iframe
-      simp only [Finish, sortLocals]
-      iexact Hfinish
     · have hcmp :
           ¬UInt32.ofNat (state.pass * (2 * width)) <
             UInt32.ofNat count := by
@@ -1963,6 +1956,7 @@ theorem wp_mergeSortInnerLoop
       inext
       simp only [List.take_zero, List.nil_append,
         List.drop_zero]
+      isimp only [Finish, sortLocals] at Hfinish
       iapply Hfinish $$ %state.current %state.scratch %state.pass
         %state.mid %state.right %hpass %hvaluesLength
         %hscratchLength %(by
@@ -2209,8 +2203,6 @@ theorem wp_mergeSortOuterLoop
       · ipureintro
         exact hdoubleSize
       iframe
-      simp only [Finish, sortLocals]
-      iexact Hfinish
     · have hcmp :
           ¬UInt32.ofNat state.width < UInt32.ofNat count :=
         mt hwidthCmp.mp hwidthCount'
@@ -2219,6 +2211,7 @@ theorem wp_mergeSortOuterLoop
       inext
       simp only [List.take_zero, List.nil_append,
         List.drop_zero]
+      isimp only [Finish, sortLocals] at Hfinish
       iapply Hfinish $$ %state.current %state.scratch %state.width
         %state.left %state.mid %state.right %hruns' %hperm'
         %hvaluesLength %hscratchLength

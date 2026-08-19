@@ -317,7 +317,7 @@ theorem gcd_terminatesWith (a b : UInt32) :
       (fun values _store =>
         values =
           [.i32 (UInt32.ofNat (Nat.gcd a.toNat b.toNat))]) := by
-  apply wasm_smallStep_terminates.{0} (gcdConfig a b)
+  apply wasm_smallStep_terminates (gcdConfig a b)
     (fun values =>
       values =
         [.i32 (UInt32.ofNat (Nat.gcd a.toNat b.toNat))])

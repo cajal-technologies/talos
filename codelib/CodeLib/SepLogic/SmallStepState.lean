@@ -18,11 +18,11 @@ open Iris Iris.ProgramLogic Std
 open Wasm.SepLogic
 
 class WasmSmallStepGS (hlc : outParam HasLC) (α : outParam Type) extends
-    InvGS_gen hlc (WasmHeapGF.{0} α), WasmHeapGS.{0} α where
-  global : WasmGlobalGS.{0} α
-  dataSegment : WasmDataSegmentGS.{0} α
-  table : WasmTableGS.{0} α
-  elementSegment : WasmElementSegmentGS.{0} α
+    InvGS_gen hlc (WasmHeapGF α), WasmHeapGS α where
+  global : WasmGlobalGS α
+  dataSegment : WasmDataSegmentGS α
+  table : WasmTableGS α
+  elementSegment : WasmElementSegmentGS α
   runtime : WasmRuntimeModuleGS α
   host : WasmHostGS α
 
