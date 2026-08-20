@@ -5,17 +5,17 @@ use std::io::{BufReader, BufWriter, Read, Write};
 mod sys {
     #[link(wasm_import_module = "stdio")]
     unsafe extern "C" {
-        pub fn read(buf: *mut u8, count: usize) -> usize;
-        pub fn write(buf: *const u8, count: usize);
+        pub fn read(count: usize, buf: *mut u8) -> usize;
+        pub fn write(count: usize, buf: *const u8);
     }
 }
 
 fn read(buf: &mut [u8]) -> usize {
-    unsafe { sys::read(buf.as_mut_ptr(), buf.len()) }
+    unsafe { sys::read(buf.len(), buf.as_mut_ptr()) }
 }
 
 fn write(buf: &[u8]) {
-    unsafe { sys::write(buf.as_ptr(), buf.len()) }
+    unsafe { sys::write(buf.len(), buf.as_ptr()) }
 }
 
 /// An unbuffered byte stream backed by Talos host imports.
