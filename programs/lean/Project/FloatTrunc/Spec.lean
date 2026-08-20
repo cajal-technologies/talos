@@ -887,7 +887,7 @@ theorem twp_check
 theorem check_terminatesWith (x : UInt32) :
     Wasm.SmallStep.TerminatesWith (checkConfig x)
       (fun rs _store => rs = []) := by
-  apply wasm_smallStep_heap_globals_runtime_store_terminates.{0}
+  apply wasm_smallStep_heap_globals_runtime_store_terminates
     (α := Unit)
     (σ := func0Heap) (globalσ := func0Globals)
     (post := fun rs _store => rs = [])

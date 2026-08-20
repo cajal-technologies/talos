@@ -328,7 +328,7 @@ theorem mergesort_partiallyMeets
     PartiallyMeets (mergeSortConfig source temporary input scratch)
       (fun _values store => ∃ output, SortedPermutation input output ∧
         readWordArray store.wasm.mem source input.length = output) := by
-  apply wasm_smallStep_heap_globals_runtime_store_partiallyMeets.{0}
+  apply wasm_smallStep_heap_globals_runtime_store_partiallyMeets
     (α := Unit)
     (σ := mergeSortHeap source temporary input scratch)
     (globalσ := (∅ : WasmGlobalMap Value))
@@ -367,7 +367,7 @@ theorem mergesort_terminatesWith
     TerminatesWith (mergeSortConfig source temporary input scratch)
       (fun _values store => ∃ output, SortedPermutation input output ∧
         readWordArray store.wasm.mem source input.length = output) := by
-  apply wasm_smallStep_heap_store_terminates.{0}
+  apply wasm_smallStep_heap_store_terminates
     (α := Unit)
     (σ := mergeSortHeap source temporary input scratch)
   · exact mergeSortHeap_agrees source temporary input scratch hbound_s hbound_t

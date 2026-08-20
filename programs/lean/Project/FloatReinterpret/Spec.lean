@@ -3427,7 +3427,7 @@ theorem twp_func11_body_smallStep_wp
 theorem check_abs_terminatesWith (x : UInt32) :
     Wasm.SmallStep.TerminatesWith (checkAbsConfig x)
       (fun rs _store => ∃ b : UInt32, rs = [.i32 b]) := by
-  apply wasm_smallStep_heap_globals_runtime_store_terminates.{0}
+  apply wasm_smallStep_heap_globals_runtime_store_terminates
     (α := Unit)
     (σ := exportHeap) (globalσ := func1Globals)
     (post := fun rs _store => ∃ b : UInt32, rs = [.i32 b])
@@ -3446,7 +3446,7 @@ theorem check_abs_terminatesWith (x : UInt32) :
 theorem check_copysign_terminatesWith (x y : UInt32) :
     Wasm.SmallStep.TerminatesWith (checkCopysignConfig x y)
       (fun rs _store => ∃ b : UInt32, rs = [.i32 b]) := by
-  apply wasm_smallStep_heap_globals_runtime_store_terminates.{0}
+  apply wasm_smallStep_heap_globals_runtime_store_terminates
     (α := Unit)
     (σ := exportHeap) (globalσ := func1Globals)
     (post := fun rs _store => ∃ b : UInt32, rs = [.i32 b])

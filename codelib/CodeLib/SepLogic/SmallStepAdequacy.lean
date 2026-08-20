@@ -1609,7 +1609,7 @@ theorem wasm_smallStep_heap_globals_runtime_store_terminates
   · apply wasm_smallStep_heap_globals_runtime_store_adequacy
       config σ globalσ post hagree hinBounds hglobals
     intro gs
-    exact (htwp .hasLC).trans twp.to_wp
+    exact (htwp .hasLC).trans (wand_entails twp.to_wp)
 
 /-- Relational partial-correctness form of state-sensitive authoritative
 adequacy. -/
