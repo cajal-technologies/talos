@@ -2202,7 +2202,7 @@ theorem twp_func6_body_smallStep_wp
 theorem check_round_terminatesWith (x : UInt32) :
     Wasm.SmallStep.TerminatesWith (checkRoundConfig x)
       (fun rs _store => ∃ b : UInt32, rs = [.i32 b]) := by
-  apply wasm_smallStep_heap_globals_runtime_store_terminates.{0}
+  apply wasm_smallStep_heap_globals_runtime_store_terminates
     (α := Unit)
     (σ := roundHeap) (globalσ := roundGlobals)
     (post := fun rs _store => ∃ b : UInt32, rs = [.i32 b])

@@ -7957,7 +7957,7 @@ theorem func2_terminatesWith :
         (fun rs _store =>
           rs = [.i64 (UInt64.ofNat (Nat.gcd a.toNat b.toNat))]) := by
   intro a b
-  apply Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_store_terminates.{0}
+  apply Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_store_terminates
     (α := Unit)
     (σ := func0InitialHeap)
     (globalσ := func0GlobalHeap)

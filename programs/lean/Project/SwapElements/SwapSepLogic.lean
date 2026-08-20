@@ -2090,7 +2090,7 @@ theorem func4_distinct_store_terminatesWith
   have hj7 : (addressJ + 7).toNat = addressJ.toNat + 7 := by
     simpa using UInt32.add_ofNat_toNat_noWrap addressJ 7 (by omega) (by omega)
   apply
-    Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_store_terminates.{0}
+    Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_store_terminates
       (α := Unit) (σ := σ) (globalσ := globalσ)
   · exact hagree
   · exact hinBounds
@@ -2177,7 +2177,7 @@ theorem func4_alias_store_terminatesWith
   have h7 : (address + 7).toNat = address.toNat + 7 := by
     simpa using UInt32.add_ofNat_toNat_noWrap address 7 (by omega) (by omega)
   apply
-    Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_store_terminates.{0}
+    Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_store_terminates
       (α := Unit) (σ := σ) (globalσ := globalσ)
   · exact hagree
   · exact hinBounds
