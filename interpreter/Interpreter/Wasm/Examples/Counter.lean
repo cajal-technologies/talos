@@ -130,7 +130,7 @@ def counterConfig (env : HostEnv HostState)
         code := counterBody
         resultArity := 0
         callerRemainder := [] }
-    store := { runtime := { module := counterModule, host := env }, wasm := st } }
+    store := { runtime := { instances := #[{ module := counterModule, host := env }], entry := ⟨0⟩ }, wasm := st } }
 
 theorem counter_steps
     {env : HostEnv HostState}

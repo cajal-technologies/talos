@@ -40,180 +40,6 @@ theorem twp_ltUI64
       [{ Φ }] :=
   twp_pureStep _ _ _ (fun _ => Step.ltUI64 hresult)
 
-theorem twp_load64
-    {params localValues values : List Value}
-    {address offset : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (word : UInt64)
-    (hnowrap : (address + offset).toNat = address.toNat + offset.toNat)
-    (h1 : ((address + offset) + 1).toNat = (address + offset).toNat + 1)
-    (h2 : ((address + offset) + 2).toNat = (address + offset).toNat + 2)
-    (h3 : ((address + offset) + 3).toNat = (address + offset).toNat + 3)
-    (h4 : ((address + offset) + 4).toNat = (address + offset).toNat + 4)
-    (h5 : ((address + offset) + 5).toNat = (address + offset).toNat + 5)
-    (h6 : ((address + offset) + 6).toNat = (address + offset).toNat + 6)
-    (h7 : ((address + offset) + 7).toNat = (address + offset).toNat + 7) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i32 address :: values⟩,
-        .load64 offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, .i64 word :: values⟩,
-        code, arity, remainder, controls, calls⟩
-    pointsTo_u64 (address + offset) word -∗
-    (pointsTo_u64 (address + offset) word -∗
-      WP (Expr.running next : Expr α) @ s; E [{ Φ }]) -∗
-      WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
-  dsimp only
-  iintro Hword Htwp
-  iapply twp_lift_step_no_fork rfl
-  iintro %store %ns %obs %nt Hσ
-  ihave %Hfacts :
-      ⌜store.wasm.mem.read64 (address + offset) = word ∧
-        (address + offset).toNat + 8 ≤ store.wasm.mem.pages * 65536⌝ $$
-      [Hσ Hword]
-  · imod stateInterp_pointsTo_u64_facts store ns obs nt
-      (address + offset) word h1 h2 h3 h4 h5 h6 h7 $$
-      [$Hσ $Hword] with %Hfacts
-    ipureintro
-    exact Hfacts
-  obtain ⟨Hread, HinBounds⟩ := Hfacts
-  have hbound : address.toNat + offset.toNat + 8 ≤
-      store.wasm.mem.pages * 65536 := by
-    simpa only [hnowrap] using HinBounds
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducibleNoObs]
-    exact ⟨.running
-        ⟨⟨params, localValues, .i64 word :: values⟩,
-          code, arity, remainder, controls, calls⟩,
-      store, [], ⟨rfl, .instruction (.load64 offset), rfl,
-        by simpa [Hread] using
-          Step.load64 (α := α) (address := Value.i32 address) rfl hbound⟩⟩
-  iintro %κ %e₂ %store₂ %forks %Hstep
-  rcases Hstep with ⟨hforks, _kind, _hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst κ
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, .i32 address :: values⟩,
-          .load64 offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.load64 offset))
-      ⟨.running
-        ⟨⟨params, localValues, .i64 word :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩ := by
-    simpa [Hread] using
-      (Step.load64 (α := α) (address := Value.i32 address) rfl hbound)
-  obtain ⟨rfl, hconfig⟩ := step_deterministic expectedStep wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  imod Hclose
-  imodintro
-  isplit
-  · ipureintro; rfl
-  isplit
-  · ipureintro; rfl
-  isplitl [Hσ]
-  · iexact Hσ
-  · iapply Htwp
-    iexact Hword
-
-theorem twp_store64
-    {params localValues values : List Value}
-    {address offset : UInt32} {value : UInt64}
-    {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (oldWord : UInt64)
-    (hnowrap : (address + offset).toNat = address.toNat + offset.toNat)
-    (h1 : ((address + offset) + 1).toNat = (address + offset).toNat + 1)
-    (h2 : ((address + offset) + 2).toNat = (address + offset).toNat + 2)
-    (h3 : ((address + offset) + 3).toNat = (address + offset).toNat + 3)
-    (h4 : ((address + offset) + 4).toNat = (address + offset).toNat + 4)
-    (h5 : ((address + offset) + 5).toNat = (address + offset).toNat + 5)
-    (h6 : ((address + offset) + 6).toNat = (address + offset).toNat + 6)
-    (h7 : ((address + offset) + 7).toNat = (address + offset).toNat + 7) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i64 value :: .i32 address :: values⟩,
-        .store64 offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, values⟩,
-        code, arity, remainder, controls, calls⟩
-    pointsTo_u64 (address + offset) oldWord -∗
-    (pointsTo_u64 (address + offset) value -∗
-      WP (Expr.running next : Expr α) @ s; E [{ Φ }]) -∗
-      WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
-  dsimp only
-  iintro Hword Htwp
-  iapply twp_lift_step_no_fork rfl
-  iintro %store %ns %obs %nt Hσ
-  ihave %Hfacts :
-      ⌜store.wasm.mem.read64 (address + offset) = oldWord ∧
-        (address + offset).toNat + 8 ≤ store.wasm.mem.pages * 65536⌝ $$
-      [Hσ Hword]
-  · imod stateInterp_pointsTo_u64_facts store ns obs nt
-      (address + offset) oldWord h1 h2 h3 h4 h5 h6 h7 $$
-      [$Hσ $Hword] with %Hfacts
-    ipureintro
-    exact Hfacts
-  have hbound : address.toNat + offset.toNat + 8 ≤
-      store.wasm.mem.pages * 65536 := by
-    simpa only [hnowrap] using Hfacts.2
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducibleNoObs]
-    exact ⟨.running
-        ⟨⟨params, localValues, values⟩,
-          code, arity, remainder, controls, calls⟩,
-      { store with wasm :=
-          { store.wasm with
-            mem := store.wasm.mem.write64 (address + offset) value } },
-      [], ⟨rfl, .instruction (.store64 offset), rfl,
-        Step.store64 (α := α) (address := Value.i32 address) rfl hbound⟩⟩
-  iintro %κ %e₂ %store₂ %forks %Hstep
-  rcases Hstep with ⟨hforks, _kind, _hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst κ
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, .i64 value :: .i32 address :: values⟩,
-          .store64 offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.store64 offset))
-      ⟨.running
-        ⟨⟨params, localValues, values⟩,
-          code, arity, remainder, controls, calls⟩,
-        { store with wasm :=
-            { store.wasm with
-              mem := store.wasm.mem.write64 (address + offset) value } }⟩ :=
-    Step.store64 (α := α) (address := Value.i32 address) rfl hbound
-  obtain ⟨rfl, hconfig⟩ := step_deterministic expectedStep wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  imod stateInterp_store64 store ns obs nt
-      (address + offset) oldWord value h1 h2 h3 h4 h5 h6 h7 Hfacts.2 $$
-      [$Hσ $Hword] with ⟨Hσ, Hword⟩
-  imod Hclose
-  imodintro
-  isplit
-  · ipureintro; rfl
-  isplit
-  · ipureintro; rfl
-  isplitl [Hσ]
-  · iexact Hσ
-  · iapply Htwp
-    iexact Hword
 
 end Wasm.SmallStep
 
@@ -307,8 +133,8 @@ theorem twp_loadAt64
       some (.i32 base))
     (helement : (⟨params, localValues, stack⟩ : Locals).get elementIndex =
       some (.i32 (UInt32.ofNat k))) :
-    array64At base input ∗
-      (array64At base input -∗
+    array64At 0 base input ∗
+      (array64At 0 base input -∗
         WP (.running
           ⟨⟨params, localValues, .i64 input[k] :: stack⟩,
             code, arity, remainder, controls, calls⟩ : Expr Unit)
@@ -325,14 +151,14 @@ theorem twp_loadAt64
   have hroom : address.toNat + 8 ≤ UInt32.size := by rw [hslot]; omega
   obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := address64_steps address hroom
   iintro ⟨Harray, Hcont⟩
-  ihave Hfocus := array64At_get base input k hk $$ Harray
+  ihave Hfocus := array64At_get 0 base input k hk $$ Harray
   icases Hfocus with ⟨Hword, Hclose⟩
   simp only [loadAt, List.append_assoc, List.cons_append, List.nil_append]
   iapply twp_address64 hbase helement
   have haddress : 8 * UInt32.ofNat k + base = address := by
     dsimp [address]; exact UInt32.add_comm _ _
   rw [haddress]
-  ihave Hword' : pointsTo_u64 (address + 0) input[k] $$ [Hword]
+  ihave Hword' : pointsTo_u64 0 (address + 0) input[k] $$ [Hword]
   · rw [UInt32.add_zero]
     iexact Hword
   iapply Wasm.SmallStep.twp_load64 (address := address) (offset := 0)
@@ -355,8 +181,8 @@ private theorem twp_store64_cell
     {code : Program} {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame}
     (hroom : address.toNat + 8 ≤ UInt32.size) :
-    pointsTo_u64 address oldWord ∗
-      (pointsTo_u64 address newWord -∗
+    pointsTo_u64 0 address oldWord ∗
+      (pointsTo_u64 0 address newWord -∗
         WP (.running
           ⟨⟨params, localValues, stack⟩,
             code, arity, remainder, controls, calls⟩ : Expr Unit)
@@ -367,7 +193,7 @@ private theorem twp_store64_cell
       @ s; E [{ Φ }] := by
   obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := address64_steps address hroom
   iintro ⟨Hword, Hcont⟩
-  ihave Hword' : pointsTo_u64 (address + 0) oldWord $$ [Hword]
+  ihave Hword' : pointsTo_u64 0 (address + 0) oldWord $$ [Hword]
   · rw [UInt32.add_zero]
     iexact Hword
   iapply Wasm.SmallStep.twp_store64 (address := address) (offset := 0)
@@ -402,8 +228,8 @@ theorem twp_swapAt64
     (ha_after : updated.get aIndex = some (.i32 (UInt32.ofNat a)))
     (hb_after : updated.get bIndex = some (.i32 (UInt32.ofNat b)))
     (htmp_after : updated.get tmpIndex = some (.i64 input[a])) :
-    array64At base input ∗
-      (array64At base (swapElems input a b) -∗
+    array64At 0 base input ∗
+      (array64At 0 base (swapElems input a b) -∗
         WP (.running ⟨{ updated with values := stack },
           code, arity, remainder, controls, calls⟩ : Expr Unit)
           @ s; E [{ Φ }]) ⊢
@@ -437,7 +263,7 @@ theorem twp_swapAt64
   isplitl [Harray]
   · iexact Harray
   iintro Harray
-  ihave HfocusA := array64At_set base input a input[b] ha $$ Harray
+  ihave HfocusA := array64At_set 0 base input a input[b] ha $$ Harray
   icases HfocusA with ⟨HcellA, HcloseA⟩
   iapply twp_store64_cell hroomA
   isplitl [HcellA]
@@ -445,7 +271,7 @@ theorem twp_swapAt64
     rw [UInt32.add_comm]
     iexact HcellA
   iintro HcellA
-  ihave Harray2 : array64At base (input.set a input[b]) $$ [HcellA HcloseA]
+  ihave Harray2 : array64At 0 base (input.set a input[b]) $$ [HcellA HcloseA]
   · iapply HcloseA
     dsimp [addrA]
     rw [UInt32.add_comm]
@@ -453,7 +279,7 @@ theorem twp_swapAt64
   iapply twp_address64 (by simpa using hbase_after) (by simpa using hb_after)
   iapply Wasm.SmallStep.twp_localGet (by simpa using htmp_after)
   have hb2 : b < (input.set a input[b]).length := by simpa
-  ihave HfocusB := array64At_set base (input.set a input[b]) b input[a] hb2 $$ Harray2
+  ihave HfocusB := array64At_set 0 base (input.set a input[b]) b input[a] hb2 $$ Harray2
   icases HfocusB with ⟨HcellB, HcloseB⟩
   iapply twp_store64_cell hroomB
   isplitl [HcellB]
@@ -495,12 +321,12 @@ private theorem twp_findMin_aux
     {callerLocals : Locals} {stack : List Value}
     {code : Program} {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame} :
-    runtimeModuleOwn runtimeModule ∗ array64At arr input ∗
+    runtimeModuleOwn ⟨0⟩ runtimeModule ∗ array64At 0 arr input ∗
       (∀ finalBest : Nat,
         ⌜start ≤ finalBest ∧ finalBest < input.length ∧
           ∀ k, start ≤ k → k < input.length →
             input[finalBest]! ≤ input[k]!⌝ -∗
-        runtimeModuleOwn runtimeModule -∗ array64At arr input -∗
+        runtimeModuleOwn ⟨0⟩ runtimeModule -∗ array64At 0 arr input -∗
         WP (.running ⟨{ callerLocals with
           values := .i32 (UInt32.ofNat finalBest) :: stack },
           code, arity, remainder, controls, calls⟩ : Expr Unit)
@@ -514,7 +340,7 @@ private theorem twp_findMin_aux
   | zero =>
       have hscan : input.length ≤ scan := by omega
       iintro ⟨Hruntime, Harray, Hcont⟩
-      ihave HruntimeLater : runtimeModuleOwn runtimeModule $$ [Hruntime]
+      ihave HruntimeLater : runtimeModuleOwn ⟨0⟩ runtimeModule $$ [Hruntime]
       · iexact Hruntime
       iapply Wasm.SmallStep.twp_call runtimeModule findIndex
         (findMinRecursiveFunction findIndex) himports hfunction $$ HruntimeLater
@@ -538,7 +364,8 @@ private theorem twp_findMin_aux
       iapply Wasm.SmallStep.twp_iff
         (selectedBody := [.localGet 2, .ret]) (by simp)
       iapply Wasm.SmallStep.twp_localGet rfl
-      iapply Wasm.SmallStep.twp_returnFromCallExplicit
+      iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
+      iintro Hruntime
       simp only [List.take_succ_cons, List.take_zero, List.singleton_append]
       have hpure : start ≤ best ∧ best < input.length ∧
           ∀ k, start ≤ k → k < input.length →
@@ -556,8 +383,9 @@ private theorem twp_findMin_aux
           continuation := code
           resultArity := arity
           callerRemainder := remainder
-          control := controls }
-      ihave HruntimeLater : runtimeModuleOwn runtimeModule $$ [Hruntime]
+          control := controls
+          returningInstance := ⟨0⟩ }
+      ihave HruntimeLater : runtimeModuleOwn ⟨0⟩ runtimeModule $$ [Hruntime]
       · iexact Hruntime
       iapply Wasm.SmallStep.twp_call runtimeModule findIndex
         (findMinRecursiveFunction findIndex) himports hfunction $$ HruntimeLater
@@ -634,9 +462,9 @@ private theorem twp_findMin_aux
           isplitl [Harray]
           · iexact Harray
           iintro %finalBest %hpure Hruntime Harray
-          iapply Wasm.SmallStep.twp_returnFromCallExplicit
-          simp only [List.take_succ_cons, List.take_zero, List.nil_append,
-            List.cons_append]
+          iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
+          iintro Hruntime
+          simp only [List.take_succ_cons, List.take_zero, List.nil_append, List.cons_append]
           have hpure' : start ≤ finalBest ∧ finalBest < input.length ∧
               ∀ k, start ≤ k → k < input.length →
                 input[finalBest]?.getD default ≤ input[k]?.getD default := by
@@ -678,9 +506,9 @@ private theorem twp_findMin_aux
           isplitl [Harray]
           · iexact Harray
           iintro %finalBest %hpure Hruntime Harray
-          iapply Wasm.SmallStep.twp_returnFromCallExplicit
-          simp only [List.take_succ_cons, List.take_zero, List.nil_append,
-            List.cons_append]
+          iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
+          iintro Hruntime
+          simp only [List.take_succ_cons, List.take_zero, List.nil_append, List.cons_append]
           have hpure' : start ≤ finalBest ∧ finalBest < input.length ∧
               ∀ k, start ≤ k → k < input.length →
                 input[finalBest]?.getD default ≤ input[k]?.getD default := by
@@ -693,9 +521,9 @@ private theorem twp_findMin_aux
         iapply Wasm.SmallStep.twp_iff
           (selectedBody := [.localGet 2, .ret]) (by simp)
         iapply Wasm.SmallStep.twp_localGet rfl
-        iapply Wasm.SmallStep.twp_returnFromCallExplicit
-        simp only [List.take_succ_cons, List.take_zero,
-          List.singleton_append]
+        iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
+        iintro Hruntime
+        simp only [List.take_succ_cons, List.take_zero, List.singleton_append]
         have hpure : start ≤ best ∧ best < input.length ∧
             ∀ k, start ≤ k → k < input.length →
               input[best]?.getD default ≤ input[k]?.getD default := by
@@ -720,12 +548,12 @@ theorem twp_findMin
     {callerLocals : Locals} {stack : List Value}
     {code : Program} {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame} :
-    runtimeModuleOwn runtimeModule ∗ array64At arr input ∗
+    runtimeModuleOwn ⟨0⟩ runtimeModule ∗ array64At 0 arr input ∗
       (∀ finalBest : Nat,
         ⌜start ≤ finalBest ∧ finalBest < input.length ∧
           ∀ k, start ≤ k → k < input.length →
             input[finalBest]! ≤ input[k]!⌝ -∗
-        runtimeModuleOwn runtimeModule -∗ array64At arr input -∗
+        runtimeModuleOwn ⟨0⟩ runtimeModule -∗ array64At 0 arr input -∗
         WP (.running ⟨{ callerLocals with
           values := .i32 (UInt32.ofNat finalBest) :: stack },
           code, arity, remainder, controls, calls⟩ : Expr Unit)
@@ -766,10 +594,10 @@ private theorem twp_recursiveSort_aux
     {callerLocals : Locals} {stack : List Value}
     {code : Program} {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame} :
-    runtimeModuleOwn runtimeModule ∗ array64At arr input ∗
+    runtimeModuleOwn ⟨0⟩ runtimeModule ∗ array64At 0 arr input ∗
       (∀ output : List UInt64,
         ⌜List.Perm input output ∧ Sorted output⌝ -∗
-        runtimeModuleOwn runtimeModule -∗ array64At arr output -∗
+        runtimeModuleOwn ⟨0⟩ runtimeModule -∗ array64At 0 arr output -∗
         WP (.running ⟨{ callerLocals with values := stack },
           code, arity, remainder, controls, calls⟩ : Expr Unit)
           @ s; E [{ Φ }]) ⊢
@@ -784,7 +612,7 @@ private theorem twp_recursiveSort_aux
         omega
       subst input
       iintro ⟨Hruntime, Harray, Hcont⟩
-      ihave HruntimeLater : runtimeModuleOwn runtimeModule $$ [Hruntime]
+      ihave HruntimeLater : runtimeModuleOwn ⟨0⟩ runtimeModule $$ [Hruntime]
       · iexact Hruntime
       iapply Wasm.SmallStep.twp_call runtimeModule sortIndex
         (recursiveSelectionSortFunction findIndex sortIndex)
@@ -797,7 +625,8 @@ private theorem twp_recursiveSort_aux
       iapply Wasm.SmallStep.twp_const
       iapply Wasm.SmallStep.twp_ltU (result := 1) (by simp)
       iapply Wasm.SmallStep.twp_iff (selectedBody := [.ret]) (by simp)
-      iapply Wasm.SmallStep.twp_returnFromCallExplicit
+      iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
+      iintro Hruntime
       simp only [List.take_zero, List.nil_append]
       have hpure : ([] : List UInt64) = [] ∧ Sorted [] :=
         ⟨rfl, List.Pairwise.nil⟩
@@ -809,8 +638,9 @@ private theorem twp_recursiveSort_aux
           continuation := code
           resultArity := arity
           callerRemainder := remainder
-          control := controls }
-      ihave HruntimeLater : runtimeModuleOwn runtimeModule $$ [Hruntime]
+          control := controls
+          returningInstance := ⟨0⟩ }
+      ihave HruntimeLater : runtimeModuleOwn ⟨0⟩ runtimeModule $$ [Hruntime]
       · iexact Hruntime
       iapply Wasm.SmallStep.twp_call runtimeModule sortIndex
         (recursiveSelectionSortFunction findIndex sortIndex)
@@ -832,7 +662,8 @@ private theorem twp_recursiveSort_aux
           simp [hlt])
         iapply Wasm.SmallStep.twp_iff
           (selectedBody := [.ret]) (by simp)
-        iapply Wasm.SmallStep.twp_returnFromCallExplicit
+        iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
+        iintro Hruntime
         simp only [List.take_zero, List.nil_append]
         have hpure : List.Perm input input ∧ Sorted input :=
           ⟨List.Perm.refl _, sorted_of_length_lt_two input hbase⟩
@@ -888,7 +719,7 @@ private theorem twp_recursiveSort_aux
               omega
           | cons head tail => simp
         ihave Hupdated' :
-            array64At arr (updated[0]! :: updated.drop 1) $$ [Hupdated]
+            array64At 0 arr (updated[0]! :: updated.drop 1) $$ [Hupdated]
         · rw [← hdecomp]
           iexact Hupdated
         isimp only [array64At] at Hupdated'
@@ -936,7 +767,8 @@ private theorem twp_recursiveSort_aux
         isplitl [Htail]
         · iexact Htail
         iintro %tailOutput %htailPure Hruntime HtailOutput
-        iapply Wasm.SmallStep.twp_returnFromCallExplicit
+        iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
+        iintro Hruntime
         simp only [List.take_zero, List.nil_append]
         let output := updated[0]! :: tailOutput
         have hpure : List.Perm input output ∧ Sorted output := by
@@ -946,7 +778,7 @@ private theorem twp_recursiveSort_aux
             exact hminimum.2.2 k (Nat.zero_le _) hk
           · simpa only [updated] using htailPure.1
           · exact htailPure.2
-        ihave Houtput : array64At arr output $$ [Hhead HtailOutput]
+        ihave Houtput : array64At 0 arr output $$ [Hhead HtailOutput]
         · dsimp only [output]
           simp only [array64At]
           isplitl [Hhead]
@@ -970,10 +802,10 @@ theorem twp_recursiveSort
     {callerLocals : Locals} {stack : List Value}
     {code : Program} {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame} :
-    runtimeModuleOwn runtimeModule ∗ array64At arr input ∗
+    runtimeModuleOwn ⟨0⟩ runtimeModule ∗ array64At 0 arr input ∗
       (∀ output : List UInt64,
         ⌜List.Perm input output ∧ Sorted output⌝ -∗
-        runtimeModuleOwn runtimeModule -∗ array64At arr output -∗
+        runtimeModuleOwn ⟨0⟩ runtimeModule -∗ array64At 0 arr output -∗
         WP (.running ⟨{ callerLocals with values := stack },
           code, arity, remainder, controls, calls⟩ : Expr Unit)
           @ s; E [{ Φ }]) ⊢
@@ -1010,12 +842,12 @@ private theorem twp_innerLoop
     {stack : List Value} {code : Program} {arity : Nat}
     {remainder : List Value} {controls : List ControlFrame}
     {calls : List CallFrame} :
-    array64At arr current ∗
+    array64At 0 arr current ∗
       (∀ finalBest : Nat,
         ⌜outer ≤ finalBest ∧ finalBest < current.length ∧
           ∀ k, outer ≤ k → k < current.length →
             current[finalBest]! ≤ current[k]!⌝ -∗
-        array64At arr current -∗
+        array64At 0 arr current -∗
         WP (.running ⟨loopSortLocals arr length outer finalBest
             length temporary stack,
           code, arity, remainder, controls, calls⟩ : Expr Unit)
@@ -1029,14 +861,14 @@ private theorem twp_innerLoop
       ⌜outer ≤ finalBest ∧ finalBest < current.length ∧
         ∀ k, outer ≤ k → k < current.length →
           current[finalBest]! ≤ current[k]!⌝ -∗
-      array64At arr current -∗
+      array64At 0 arr current -∗
       WP (.running ⟨loopSortLocals arr length outer finalBest
           length temporary stack,
         code, arity, remainder, controls, calls⟩ : Expr Unit)
         @ s; E [{ Φ }]
   let Inv : InnerState → IProp (WasmHeapGF Unit) := fun state => iprop%
     ⌜MinScan current outer state.best state.scan⌝ ∗
-      array64At arr current ∗ Finish
+      array64At 0 arr current ∗ Finish
   iintro ⟨Harray, Hfinish⟩
   simp only [whileDo, List.cons_append, List.nil_append]
   iapply Wasm.SmallStep.twp_block
@@ -1208,11 +1040,11 @@ private theorem twp_outerLoop
     {stack : List Value} {code : Program} {arity : Nat}
     {remainder : List Value} {controls : List ControlFrame}
     {calls : List CallFrame} :
-    array64At arr current ∗
+    array64At 0 arr current ∗
       (∀ (output : List UInt64) (outer' best' scan' : Nat)
           (temporary' : UInt64),
         ⌜List.Perm input output ∧ Sorted output⌝ -∗
-        array64At arr output -∗
+        array64At 0 arr output -∗
         WP (.running ⟨loopSortLocals arr input.length outer' best' scan'
             temporary' stack,
           code, arity, remainder, controls, calls⟩ : Expr Unit)
@@ -1225,14 +1057,14 @@ private theorem twp_outerLoop
     ∀ (output : List UInt64) (outer' best' scan' : Nat)
         (temporary' : UInt64),
       ⌜List.Perm input output ∧ Sorted output⌝ -∗
-      array64At arr output -∗
+      array64At 0 arr output -∗
       WP (.running ⟨loopSortLocals arr input.length outer' best' scan'
           temporary' stack,
         code, arity, remainder, controls, calls⟩ : Expr Unit)
         @ s; E [{ Φ }]
   let Inv : OuterState → IProp (WasmHeapGF Unit) := fun state => iprop%
     ⌜OuterInvariant input state.current state.outer⌝ ∗
-      array64At arr state.current ∗ Finish
+      array64At 0 arr state.current ∗ Finish
   iintro ⟨Harray, Hfinish⟩
   simp only [whileDo, List.cons_append, List.nil_append]
   iapply Wasm.SmallStep.twp_block
@@ -1423,10 +1255,10 @@ theorem twp_loopSort
     {callerLocals : Locals} {stack : List Value}
     {code : Program} {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame} :
-    runtimeModuleOwn runtimeModule ∗ array64At arr input ∗
+    runtimeModuleOwn ⟨0⟩ runtimeModule ∗ array64At 0 arr input ∗
       (∀ output : List UInt64,
         ⌜List.Perm input output ∧ Sorted output⌝ -∗
-        runtimeModuleOwn runtimeModule -∗ array64At arr output -∗
+        runtimeModuleOwn ⟨0⟩ runtimeModule -∗ array64At 0 arr output -∗
         WP (.running ⟨{ callerLocals with values := stack },
           code, arity, remainder, controls, calls⟩ : Expr Unit)
           @ s; E [{ Φ }]) ⊢
@@ -1440,8 +1272,9 @@ theorem twp_loopSort
       continuation := code
       resultArity := arity
       callerRemainder := remainder
-      control := controls }
-  ihave HruntimeLater : runtimeModuleOwn runtimeModule $$ [Hruntime]
+      control := controls
+      returningInstance := ⟨0⟩ }
+  ihave HruntimeLater : runtimeModuleOwn ⟨0⟩ runtimeModule $$ [Hruntime]
   · iexact Hruntime
   iapply Wasm.SmallStep.twp_call runtimeModule sortIndex
     loopSelectionSortFunction himports hfunction $$ HruntimeLater
@@ -1467,7 +1300,8 @@ theorem twp_loopSort
   isplitl [Harray]
   · iexact Harray
   iintro %output %outer %best %scan %temporary %hpure Harray
-  iapply Wasm.SmallStep.twp_returnFromCallExplicit
+  iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
+  iintro Hruntime
   simp only [List.take_zero, List.nil_append]
   iapply Hcont $$ %output %hpure Hruntime Harray
 

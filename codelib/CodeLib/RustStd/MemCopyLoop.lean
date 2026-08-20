@@ -106,14 +106,14 @@ theorem copyWords_loadStoreIteration_wp
     (hdstRoom : dst.toNat + 4 * (i.toNat + 1) ≤ 4294967296)
     (hsrcRoom : src.toNat + 4 * (i.toNat + 1) ≤ 4294967296)
     (hcontinue :
-      R ∗ arrayAt dst (pre ++ value :: dstSuffix) ∗
-          arrayAt src (pre ++ value :: srcSuffix) ⊢
+      R ∗ arrayAt 0 dst (pre ++ value :: dstSuffix) ∗
+          arrayAt 0 src (pre ++ value :: srcSuffix) ⊢
         WP (Wasm.SmallStep.Expr.running
           ⟨⟨[.i32 dst, .i32 src, .i32 n], [.i32 i], []⟩,
             code, arity, remainder, controls, calls⟩ :
           Wasm.SmallStep.Expr α) @ s; E {{ Φ }}) :
-    R ∗ arrayAt dst (pre ++ oldDst :: dstSuffix) ∗
-        arrayAt src (pre ++ value :: srcSuffix) ⊢
+    R ∗ arrayAt 0 dst (pre ++ oldDst :: dstSuffix) ∗
+        arrayAt 0 src (pre ++ value :: srcSuffix) ⊢
       WP (Wasm.SmallStep.Expr.running
         ⟨⟨[.i32 dst, .i32 src, .i32 n], [.i32 i], []⟩,
           CopyWordsLoadStoreIteration ++ code,
@@ -157,21 +157,21 @@ theorem copyWords_loadStoreIteration_wp
     addressSteps srcAddress (by rw [hsrcNat]; omega)
   iintro ⟨HR, Hdst, Hsrc⟩
   ihave Hfocused :
-      pointsTo_u32 (src + 4 * UInt32.ofNat pre.length) value ∗
-      pointsTo_u32 (dst + 4 * UInt32.ofNat pre.length) oldDst ∗
-      (pointsTo_u32 (src + 4 * UInt32.ofNat pre.length) value ∗
-        pointsTo_u32 (dst + 4 * UInt32.ofNat pre.length) value -∗
-        arrayAt dst (pre ++ value :: dstSuffix) ∗
-          arrayAt src (pre ++ value :: srcSuffix)) $$ [Hdst Hsrc]
-  · iapply arrayAt_copy_next dst src pre oldDst value dstSuffix srcSuffix
+      pointsTo_u32 0 (src + 4 * UInt32.ofNat pre.length) value ∗
+      pointsTo_u32 0 (dst + 4 * UInt32.ofNat pre.length) oldDst ∗
+      (pointsTo_u32 0 (src + 4 * UInt32.ofNat pre.length) value ∗
+        pointsTo_u32 0 (dst + 4 * UInt32.ofNat pre.length) value -∗
+        arrayAt 0 dst (pre ++ value :: dstSuffix) ∗
+          arrayAt 0 src (pre ++ value :: srcSuffix)) $$ [Hdst Hsrc]
+  · iapply arrayAt_copy_next 0 dst src pre oldDst value dstSuffix srcSuffix
     iframe
   icases Hfocused with ⟨HsrcCell, Hrest⟩
   icases Hrest with ⟨HdstCell, Hreassemble⟩
-  ihave HsrcCell' : pointsTo_u32 srcAddress value $$ [HsrcCell]
+  ihave HsrcCell' : pointsTo_u32 0 srcAddress value $$ [HsrcCell]
   · simp only [srcAddress]
     rw [← hpre]
     iexact HsrcCell
-  ihave HdstCell' : pointsTo_u32 dstAddress oldDst $$ [HdstCell]
+  ihave HdstCell' : pointsTo_u32 0 dstAddress oldDst $$ [HdstCell]
   · simp only [dstAddress]
     rw [← hpre]
     iexact HdstCell
@@ -198,7 +198,7 @@ theorem copyWords_loadStoreIteration_wp
   iapply Wasm.SmallStep.wp_add
   inext
   rw [hsrcAddress]
-  ihave HsrcLater : ▷ pointsTo_u32 (srcAddress + 0) value $$ [HsrcCell']
+  ihave HsrcLater : ▷ pointsTo_u32 0 (srcAddress + 0) value $$ [HsrcCell']
   · inext
     simp only [UInt32.add_zero]
     iexact HsrcCell'
@@ -208,7 +208,7 @@ theorem copyWords_loadStoreIteration_wp
       (by simpa using hs3) $$ HsrcLater
   inext
   iintro HsrcCell
-  ihave HdstLater : ▷ pointsTo_u32 (dstAddress + 0) oldDst $$ [HdstCell']
+  ihave HdstLater : ▷ pointsTo_u32 0 (dstAddress + 0) oldDst $$ [HdstCell']
   · inext
     simp only [UInt32.add_zero]
     iexact HdstCell'
@@ -219,20 +219,20 @@ theorem copyWords_loadStoreIteration_wp
   inext
   iintro HdstCell
   ihave HsrcCell'' :
-      pointsTo_u32 (src + 4 * UInt32.ofNat pre.length) value $$
+      pointsTo_u32 0 (src + 4 * UInt32.ofNat pre.length) value $$
       [HsrcCell]
   · simp only [UInt32.add_zero, srcAddress]
     rw [hpre]
     iexact HsrcCell
   ihave HdstCell'' :
-      pointsTo_u32 (dst + 4 * UInt32.ofNat pre.length) value $$
+      pointsTo_u32 0 (dst + 4 * UInt32.ofNat pre.length) value $$
       [HdstCell]
   · simp only [UInt32.add_zero, dstAddress]
     rw [hpre]
     iexact HdstCell
   ihave Harrays :
-      arrayAt dst (pre ++ value :: dstSuffix) ∗
-        arrayAt src (pre ++ value :: srcSuffix) $$
+      arrayAt 0 dst (pre ++ value :: dstSuffix) ∗
+        arrayAt 0 src (pre ++ value :: srcSuffix) $$
       [Hreassemble HsrcCell'' HdstCell'']
   · iapply Hreassemble
     iframe
@@ -290,15 +290,15 @@ theorem copyWords_bodyTail_wp
     (hdstRoom : dst.toNat + 4 * (i.toNat + 1) ≤ 4294967296)
     (hsrcRoom : src.toNat + 4 * (i.toNat + 1) ≤ 4294967296)
     (hback :
-      R ∗ arrayAt dst (pre ++ value :: dstSuffix) ∗
-          arrayAt src (pre ++ value :: srcSuffix) ⊢
+      R ∗ arrayAt 0 dst (pre ++ value :: dstSuffix) ∗
+          arrayAt 0 src (pre ++ value :: srcSuffix) ⊢
         ▷ WP (Wasm.SmallStep.Expr.running
           ⟨⟨[.i32 dst, .i32 src, .i32 n], [.i32 (i + 1)], []⟩,
             CopyWordsLoopBody, arity, remainder,
             copyWordsLoopFrame afterLoop :: outerControls, calls⟩ :
           Wasm.SmallStep.Expr α) @ s; E {{ Φ }}) :
-    R ∗ arrayAt dst (pre ++ oldDst :: dstSuffix) ∗
-        arrayAt src (pre ++ value :: srcSuffix) ⊢
+    R ∗ arrayAt 0 dst (pre ++ oldDst :: dstSuffix) ∗
+        arrayAt 0 src (pre ++ value :: srcSuffix) ⊢
       WP (Wasm.SmallStep.Expr.running
         ⟨⟨[.i32 dst, .i32 src, .i32 n], [.i32 i], []⟩,
           CopyWordsLoadStoreIteration ++ CopyWordsIncrementBackedge,
@@ -398,13 +398,13 @@ theorem copyWords_loopBody_invariant_wp
     (hdstInv : pre.length + dstSuffix.length = n.toNat)
     (hsource : source = pre ++ srcSuffix)
     (hfinish :
-      R ∗ arrayAt dst source ∗ arrayAt src source ⊢
+      R ∗ arrayAt 0 dst source ∗ arrayAt 0 src source ⊢
         WP (Wasm.SmallStep.Expr.running
           ⟨⟨[.i32 dst, .i32 src, .i32 n], [.i32 n], []⟩,
             afterLoop, arity, remainder, outerControls, calls⟩ :
           Wasm.SmallStep.Expr α) @ s; E {{ Φ }}) :
-    R ∗ arrayAt dst (pre ++ dstSuffix) ∗
-        arrayAt src (pre ++ srcSuffix) ⊢
+    R ∗ arrayAt 0 dst (pre ++ dstSuffix) ∗
+        arrayAt 0 src (pre ++ srcSuffix) ⊢
       WP (Wasm.SmallStep.Expr.running
         ⟨⟨[.i32 dst, .i32 src, .i32 n], [.i32 i], []⟩,
           CopyWordsLoopBody, arity, remainder,
@@ -417,8 +417,8 @@ theorem copyWords_loopBody_invariant_wp
       ⌜copied.length = j.toNat⌝ -∗
       ⌜copied.length + dstTail.length = n.toNat⌝ -∗
       ⌜source = copied ++ srcTail⌝ -∗
-      R ∗ arrayAt dst (copied ++ dstTail) ∗
-          arrayAt src (copied ++ srcTail) -∗
+      R ∗ arrayAt 0 dst (copied ++ dstTail) ∗
+          arrayAt 0 src (copied ++ srcTail) -∗
       WP (Wasm.SmallStep.Expr.running
         ⟨⟨[.i32 dst, .i32 src, .i32 n], [.i32 j], []⟩,
           CopyWordsLoopBody, arity, remainder,
@@ -428,8 +428,8 @@ theorem copyWords_loopBody_invariant_wp
   · simp only [Kloop]
     iexact IH
   let P : IProp (WasmHeapGF α) :=
-    iprop% □ Kloop ∗ R ∗ arrayAt dst (pre ++ dstSuffix) ∗
-      arrayAt src (pre ++ srcSuffix)
+    iprop% □ Kloop ∗ R ∗ arrayAt 0 dst (pre ++ dstSuffix) ∗
+      arrayAt 0 src (pre ++ srcSuffix)
   iintro ⟨HR, Harrays⟩
   icases Harrays with ⟨Hdst, Hsrc⟩
   iapply copyWords_guard_wp P dst src n i afterLoop arity remainder
@@ -480,8 +480,8 @@ theorem copyWords_loopBody_invariant_wp
         · iintro Hresources
           ihave Hexpanded :
               (□ Kloop ∗ R) ∗
-                arrayAt dst (pre ++ value :: dstTail) ∗
-                arrayAt src (pre ++ value :: srcTail) $$ [Hresources]
+                arrayAt 0 dst (pre ++ value :: dstTail) ∗
+                arrayAt 0 src (pre ++ value :: srcTail) $$ [Hresources]
           · simp only [Rloop]
             iexact Hresources
           icases Hexpanded with ⟨Hloop, Harrays'⟩
@@ -556,12 +556,12 @@ theorem copyWords_loop_wp
     (hdstTotal : dst.toNat + 4 * n.toNat ≤ 4294967296)
     (hsrcTotal : src.toNat + 4 * n.toNat ≤ 4294967296)
     (hfinish :
-      R ∗ arrayAt dst source ∗ arrayAt src source ⊢
+      R ∗ arrayAt 0 dst source ∗ arrayAt 0 src source ⊢
         WP (Wasm.SmallStep.Expr.running
           ⟨⟨[.i32 dst, .i32 src, .i32 n], [.i32 n], []⟩,
             afterLoop, arity, remainder, outerControls, calls⟩ :
           Wasm.SmallStep.Expr α) @ s; E {{ Φ }}) :
-    R ∗ arrayAt dst destination ∗ arrayAt src source ⊢
+    R ∗ arrayAt 0 dst destination ∗ arrayAt 0 src source ⊢
       WP (Wasm.SmallStep.Expr.running
         ⟨⟨[.i32 dst, .i32 src, .i32 n], [.i32 0], []⟩,
           [.loop 0 0 CopyWordsLoopBody] ++ afterLoop,
@@ -608,12 +608,12 @@ theorem copyWords_smallStep_wp
     (hdstTotal : dst.toNat + 4 * n.toNat ≤ 4294967296)
     (hsrcTotal : src.toNat + 4 * n.toNat ≤ 4294967296)
     (hfinish :
-      R ∗ arrayAt dst source ∗ arrayAt src source ⊢
+      R ∗ arrayAt 0 dst source ∗ arrayAt 0 src source ⊢
         WP (Wasm.SmallStep.Expr.running
           ⟨⟨[.i32 dst, .i32 src, .i32 n], [.i32 n], []⟩,
             afterLoop, arity, remainder, controls, calls⟩ :
           Wasm.SmallStep.Expr α) @ s; E {{ Φ }}) :
-    R ∗ arrayAt dst destination ∗ arrayAt src source ⊢
+    R ∗ arrayAt 0 dst destination ∗ arrayAt 0 src source ⊢
       WP (Wasm.SmallStep.Expr.running
         ⟨⟨[.i32 dst, .i32 src, .i32 n],
             [.i32 initialIndex], []⟩,
@@ -666,14 +666,14 @@ theorem copyWords_loadStoreIteration_twp
     (hdstRoom : dst.toNat + 4 * (i.toNat + 1) ≤ 4294967296)
     (hsrcRoom : src.toNat + 4 * (i.toNat + 1) ≤ 4294967296)
     (hcontinue :
-      R ∗ arrayAt dst (pre ++ value :: dstSuffix) ∗
-          arrayAt src (pre ++ value :: srcSuffix) ⊢
+      R ∗ arrayAt 0 dst (pre ++ value :: dstSuffix) ∗
+          arrayAt 0 src (pre ++ value :: srcSuffix) ⊢
         WP (Wasm.SmallStep.Expr.running
           ⟨⟨[.i32 dst, .i32 src, .i32 n], [.i32 i], []⟩,
             code, arity, remainder, controls, calls⟩ :
           Wasm.SmallStep.Expr α) @ s; E [{ Φ }]) :
-    R ∗ arrayAt dst (pre ++ oldDst :: dstSuffix) ∗
-        arrayAt src (pre ++ value :: srcSuffix) ⊢
+    R ∗ arrayAt 0 dst (pre ++ oldDst :: dstSuffix) ∗
+        arrayAt 0 src (pre ++ value :: srcSuffix) ⊢
       WP (Wasm.SmallStep.Expr.running
         ⟨⟨[.i32 dst, .i32 src, .i32 n], [.i32 i], []⟩,
           CopyWordsLoadStoreIteration ++ code,
@@ -717,21 +717,21 @@ theorem copyWords_loadStoreIteration_twp
     addressSteps srcAddress (by rw [hsrcNat]; omega)
   iintro ⟨HR, Hdst, Hsrc⟩
   ihave Hfocused :
-      pointsTo_u32 (src + 4 * UInt32.ofNat pre.length) value ∗
-      pointsTo_u32 (dst + 4 * UInt32.ofNat pre.length) oldDst ∗
-      (pointsTo_u32 (src + 4 * UInt32.ofNat pre.length) value ∗
-        pointsTo_u32 (dst + 4 * UInt32.ofNat pre.length) value -∗
-        arrayAt dst (pre ++ value :: dstSuffix) ∗
-          arrayAt src (pre ++ value :: srcSuffix)) $$ [Hdst Hsrc]
-  · iapply arrayAt_copy_next dst src pre oldDst value dstSuffix srcSuffix
+      pointsTo_u32 0 (src + 4 * UInt32.ofNat pre.length) value ∗
+      pointsTo_u32 0 (dst + 4 * UInt32.ofNat pre.length) oldDst ∗
+      (pointsTo_u32 0 (src + 4 * UInt32.ofNat pre.length) value ∗
+        pointsTo_u32 0 (dst + 4 * UInt32.ofNat pre.length) value -∗
+        arrayAt 0 dst (pre ++ value :: dstSuffix) ∗
+          arrayAt 0 src (pre ++ value :: srcSuffix)) $$ [Hdst Hsrc]
+  · iapply arrayAt_copy_next 0 dst src pre oldDst value dstSuffix srcSuffix
     iframe
   icases Hfocused with ⟨HsrcCell, Hrest⟩
   icases Hrest with ⟨HdstCell, Hreassemble⟩
-  ihave HsrcCell' : pointsTo_u32 srcAddress value $$ [HsrcCell]
+  ihave HsrcCell' : pointsTo_u32 0 srcAddress value $$ [HsrcCell]
   · simp only [srcAddress]
     rw [← hpre]
     iexact HsrcCell
-  ihave HdstCell' : pointsTo_u32 dstAddress oldDst $$ [HdstCell]
+  ihave HdstCell' : pointsTo_u32 0 dstAddress oldDst $$ [HdstCell]
   · simp only [dstAddress]
     rw [← hpre]
     iexact HdstCell
@@ -748,7 +748,7 @@ theorem copyWords_loadStoreIteration_twp
   iapply Wasm.SmallStep.twp_shl
   iapply Wasm.SmallStep.twp_add
   rw [hsrcAddress]
-  ihave HsrcAt : pointsTo_u32 (srcAddress + 0) value $$ [HsrcCell']
+  ihave HsrcAt : pointsTo_u32 0 (srcAddress + 0) value $$ [HsrcCell']
   · simp only [UInt32.add_zero]
     iexact HsrcCell'
   iapply Wasm.SmallStep.twp_load32
@@ -756,7 +756,7 @@ theorem copyWords_loadStoreIteration_twp
       (by simp) (by simpa using hs1) (by simpa using hs2)
       (by simpa using hs3) $$ HsrcAt
   iintro HsrcCell
-  ihave HdstAt : pointsTo_u32 (dstAddress + 0) oldDst $$ [HdstCell']
+  ihave HdstAt : pointsTo_u32 0 (dstAddress + 0) oldDst $$ [HdstCell']
   · simp only [UInt32.add_zero]
     iexact HdstCell'
   iapply Wasm.SmallStep.twp_store32
@@ -765,20 +765,20 @@ theorem copyWords_loadStoreIteration_twp
       (by simpa using hd3) $$ HdstAt
   iintro HdstCell
   ihave HsrcCell'' :
-      pointsTo_u32 (src + 4 * UInt32.ofNat pre.length) value $$
+      pointsTo_u32 0 (src + 4 * UInt32.ofNat pre.length) value $$
       [HsrcCell]
   · simp only [UInt32.add_zero, srcAddress]
     rw [hpre]
     iexact HsrcCell
   ihave HdstCell'' :
-      pointsTo_u32 (dst + 4 * UInt32.ofNat pre.length) value $$
+      pointsTo_u32 0 (dst + 4 * UInt32.ofNat pre.length) value $$
       [HdstCell]
   · simp only [UInt32.add_zero, dstAddress]
     rw [hpre]
     iexact HdstCell
   ihave Harrays :
-      arrayAt dst (pre ++ value :: dstSuffix) ∗
-        arrayAt src (pre ++ value :: srcSuffix) $$
+      arrayAt 0 dst (pre ++ value :: dstSuffix) ∗
+        arrayAt 0 src (pre ++ value :: srcSuffix) $$
       [Hreassemble HsrcCell'' HdstCell'']
   · iapply Hreassemble
     iframe
@@ -833,15 +833,15 @@ theorem copyWords_bodyTail_twp
     (hdstRoom : dst.toNat + 4 * (i.toNat + 1) ≤ 4294967296)
     (hsrcRoom : src.toNat + 4 * (i.toNat + 1) ≤ 4294967296)
     (hback :
-      R ∗ arrayAt dst (pre ++ value :: dstSuffix) ∗
-          arrayAt src (pre ++ value :: srcSuffix) ⊢
+      R ∗ arrayAt 0 dst (pre ++ value :: dstSuffix) ∗
+          arrayAt 0 src (pre ++ value :: srcSuffix) ⊢
         WP (Wasm.SmallStep.Expr.running
           ⟨⟨[.i32 dst, .i32 src, .i32 n], [.i32 (i + 1)], []⟩,
             CopyWordsLoopBody, arity, remainder,
             copyWordsLoopFrame afterLoop :: outerControls, calls⟩ :
           Wasm.SmallStep.Expr α) @ s; E [{ Φ }]) :
-    R ∗ arrayAt dst (pre ++ oldDst :: dstSuffix) ∗
-        arrayAt src (pre ++ value :: srcSuffix) ⊢
+    R ∗ arrayAt 0 dst (pre ++ oldDst :: dstSuffix) ∗
+        arrayAt 0 src (pre ++ value :: srcSuffix) ⊢
       WP (Wasm.SmallStep.Expr.running
         ⟨⟨[.i32 dst, .i32 src, .i32 n], [.i32 i], []⟩,
           CopyWordsLoadStoreIteration ++ CopyWordsIncrementBackedge,
@@ -930,12 +930,12 @@ theorem copyWords_loop_twp
     (hdstTotal : dst.toNat + 4 * n.toNat ≤ 4294967296)
     (hsrcTotal : src.toNat + 4 * n.toNat ≤ 4294967296)
     (hfinish :
-      R ∗ arrayAt dst source ∗ arrayAt src source ⊢
+      R ∗ arrayAt 0 dst source ∗ arrayAt 0 src source ⊢
         WP (Wasm.SmallStep.Expr.running
           ⟨⟨[.i32 dst, .i32 src, .i32 n], [.i32 n], []⟩,
             afterLoop, arity, remainder, outerControls, calls⟩ :
           Wasm.SmallStep.Expr α) @ s; E [{ Φ }]) :
-    R ∗ arrayAt dst destination ∗ arrayAt src source ⊢
+    R ∗ arrayAt 0 dst destination ∗ arrayAt 0 src source ⊢
       WP (Wasm.SmallStep.Expr.running
         ⟨⟨[.i32 dst, .i32 src, .i32 n], [.i32 0], []⟩,
           [.loop 0 0 CopyWordsLoopBody] ++ afterLoop,
@@ -945,8 +945,8 @@ theorem copyWords_loop_twp
     ⌜state.copied.length = state.index.toNat⌝ ∗
     ⌜state.copied.length + state.dstTail.length = n.toNat⌝ ∗
     ⌜source = state.copied ++ state.srcTail⌝ ∗
-    R ∗ arrayAt dst (state.copied ++ state.dstTail) ∗
-      arrayAt src (state.copied ++ state.srcTail)
+    R ∗ arrayAt 0 dst (state.copied ++ state.dstTail) ∗
+      arrayAt 0 src (state.copied ++ state.srcTail)
   simp only [List.cons_append, List.nil_append]
   iintro ⟨HR, Hdst, Hsrc⟩
   iapply Wasm.SmallStep.twp_loop_wf_family
@@ -983,8 +983,8 @@ theorem copyWords_loop_twp
               CopyWordsLoopBody, arity, remainder,
               copyWordsLoopFrame afterLoop :: outerControls, calls⟩ :
             Wasm.SmallStep.Expr α) @ s; E [{ Φ }]) ∗
-        R ∗ arrayAt dst (state.copied ++ state.dstTail) ∗
-          arrayAt src (state.copied ++ state.srcTail))
+        R ∗ arrayAt 0 dst (state.copied ++ state.dstTail) ∗
+          arrayAt 0 src (state.copied ++ state.srcTail))
       dst src n state.index afterLoop arity remainder outerControls calls
     · intro hlt
       have hltNat : state.index.toNat < n.toNat := hlt
@@ -1131,12 +1131,12 @@ theorem copyWords_smallStep_twp
     (hdstTotal : dst.toNat + 4 * n.toNat ≤ 4294967296)
     (hsrcTotal : src.toNat + 4 * n.toNat ≤ 4294967296)
     (hfinish :
-      R ∗ arrayAt dst source ∗ arrayAt src source ⊢
+      R ∗ arrayAt 0 dst source ∗ arrayAt 0 src source ⊢
         WP (Wasm.SmallStep.Expr.running
           ⟨⟨[.i32 dst, .i32 src, .i32 n], [.i32 n], []⟩,
             afterLoop, arity, remainder, controls, calls⟩ :
           Wasm.SmallStep.Expr α) @ s; E [{ Φ }]) :
-    R ∗ arrayAt dst destination ∗ arrayAt src source ⊢
+    R ∗ arrayAt 0 dst destination ∗ arrayAt 0 src source ⊢
       WP (Wasm.SmallStep.Expr.running
         ⟨⟨[.i32 dst, .i32 src, .i32 n],
             [.i32 initialIndex], []⟩,

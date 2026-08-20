@@ -27,7 +27,7 @@ private def initializedConfig (module : Module) : Config Unit :=
         resultArity := module.funcs[0]!.results.length
         callerRemainder := [] }
     store :=
-      { runtime := { module, host := {} }
+      { runtime := { instances := #[{ module, host := {} }], entry := ⟨0⟩ }
         wasm := initializedStore module } }
 
 def globalInitExprWat : String := "

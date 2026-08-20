@@ -48,7 +48,7 @@ def i64MemModule : Module :=
     memory := some { pagesMin := 1, data := [{ offset := some 0, bytes := initBytes }] } }
 
 def i64MemStore : MachineStore Unit :=
-  { runtime := { module := i64MemModule, host := {} }
+  { runtime := { instances := #[{ module := i64MemModule, host := {} }], entry := ⟨0⟩ }
     wasm := i64MemModule.initialStore }
 
 def i64MemConfig (index : Nat) : Config Unit :=

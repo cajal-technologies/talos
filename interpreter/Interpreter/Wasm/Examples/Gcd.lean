@@ -47,7 +47,7 @@ def gcdConfig (a b : UInt32) : Config Unit :=
         resultArity := 1
         callerRemainder := [] }
     store :=
-      { runtime := { module := gcdModule, host := {} }
+      { runtime := { instances := #[{ module := gcdModule, host := {} }], entry := ⟨0⟩ }
         wasm := gcdModule.initialStore } }
 
 private def gcdBlockBody : Program := [

@@ -17,7 +17,7 @@ def gcdConfig (a b : UInt64) : Config Unit :=
       ⟨⟨[.i64 a, .i64 b], [.i64 0], []⟩,
         func0, 1, [], [], []⟩
     store :=
-      { runtime := { module := «module», host := {} }
+      { runtime := { instances := #[{ module := «module», host := {} }], entry := ⟨0⟩ }
         wasm := «module».initialStore } }
 
 /-- Control frame installed by the outer generated block.  Naming it keeps

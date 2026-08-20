@@ -55,7 +55,7 @@ def gcdConfig (a b : UInt32) : Config Unit :=
   { expr :=
       .running ⟨gcdLocals a b 0, gcdBody, 1, [], [], []⟩
     store :=
-      { runtime := { module := gcdModule, host := {} }
+      { runtime := { instances := #[{ module := gcdModule, host := {} }], entry := ⟨0⟩ }
         wasm := gcdModule.initialStore } }
 
 private def gcdInvariant (a₀ b₀ : UInt32)

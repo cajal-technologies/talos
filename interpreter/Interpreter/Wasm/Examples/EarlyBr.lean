@@ -21,7 +21,7 @@ def earlyBrConfig (x : UInt32) : Config Unit :=
         resultArity := 1
         callerRemainder := [] }
     store :=
-      { runtime := { module := earlyBrModule, host := {} }
+      { runtime := { instances := #[{ module := earlyBrModule, host := {} }], entry := ⟨0⟩ }
         wasm := earlyBrModule.initialStore } }
 
 theorem earlyBr_steps (x : UInt32) :

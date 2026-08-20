@@ -113,6 +113,7 @@ structure Executable where
   imports_eq : module.imports = Wasm.StdIO.imports
   memory_pages :
     (module.initialStore (α := Wasm.StdIO.State)).mem.pages = 1
+  extraMemories_empty : module.extraMemories = []
 
 def recursive : Executable :=
   { module :=
@@ -125,7 +126,8 @@ def recursive : Executable :=
     entry := 4
     sortEntry := 3
     imports_eq := rfl
-    memory_pages := rfl }
+    memory_pages := rfl
+    extraMemories_empty := rfl }
 
 def loop : Executable :=
   { module :=
@@ -135,7 +137,8 @@ def loop : Executable :=
     entry := 3
     sortEntry := 2
     imports_eq := rfl
-    memory_pages := rfl }
+    memory_pages := rfl
+    extraMemories_empty := rfl }
 
 def initialStore (program : Executable) (input : List UInt8) :
     Store Wasm.StdIO.State :=
@@ -164,7 +167,7 @@ def sortConfig (program : Executable) (store : Store Wasm.StdIO.State)
   { expr := .running
       ⟨⟨[], [], args⟩, [.call program.sortEntry], 0, [], [], []⟩
     store :=
-      { runtime := { module := program.module, host := ({} : HostEnv Unit) }
+      { runtime := { instances := #[{ module := program.module, host := ({} : HostEnv Unit) }], entry := ⟨0⟩ }
         wasm := replaceHost store () } }
 
 /-- The sort functions cannot call an import. Running them with an inert host

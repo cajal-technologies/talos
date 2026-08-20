@@ -184,7 +184,7 @@ def ValidLayout (source temporary : UInt32) (length : Nat) : Prop :=
 def mergeSortPre [WasmHeapGS α]
     (source temporary : UInt32)
     (input scratch : List UInt32) : IProp (WasmHeapGF α) :=
-  iprop% arrayAt source input ∗ arrayAt temporary scratch ∗
+  iprop% arrayAt 0 source input ∗ arrayAt 0 temporary scratch ∗
     ⌜scratch.length = input.length⌝ ∗
     ⌜ValidLayout source temporary input.length⌝
 
@@ -194,7 +194,7 @@ def mergeSortPost [WasmHeapGS α]
   iprop% ∃ output scratch : List UInt32,
     ⌜SortedPermutation input output⌝ ∗
     ⌜scratch.length = input.length⌝ ∗
-    arrayAt source output ∗ arrayAt temporary scratch
+    arrayAt 0 source output ∗ arrayAt 0 temporary scratch
 
 def mergeSortArguments
     (source temporary : UInt32) (length : Nat)
@@ -204,7 +204,7 @@ def mergeSortArguments
 def mergePre [WasmHeapGS α]
     (source temporary : UInt32) (input scratch : List UInt32)
     (left mid right : Nat) : IProp (WasmHeapGF α) :=
-  iprop% arrayAt source input ∗ arrayAt temporary scratch ∗
+  iprop% arrayAt 0 source input ∗ arrayAt 0 temporary scratch ∗
     ⌜scratch.length = input.length⌝ ∗
     ⌜ValidLayout source temporary input.length⌝ ∗
     ⌜left ≤ mid ∧ mid ≤ right ∧ right ≤ input.length⌝
@@ -248,7 +248,7 @@ def mergePost [WasmHeapGS α]
   iprop% ∃ output scratch : List UInt32,
     ⌜MergeRange input output left mid right⌝ ∗
     ⌜scratch.length = input.length⌝ ∗
-    arrayAt source output ∗ arrayAt temporary scratch
+    arrayAt 0 source output ∗ arrayAt 0 temporary scratch
 
 /-! ## Executable regressions
 

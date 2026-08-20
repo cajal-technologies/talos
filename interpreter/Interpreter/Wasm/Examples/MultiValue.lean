@@ -74,7 +74,7 @@ def multiValueModule : Module :=
         { params  := [],           body := CallsSwap, results := [.i32] } ] }
 
 def multiValueStore : MachineStore Unit :=
-  { runtime := { module := multiValueModule, host := {} }
+  { runtime := { instances := #[{ module := multiValueModule, host := {} }], entry := ⟨0⟩ }
     wasm := multiValueModule.initialStore }
 
 def swapConfig (a b : UInt32) : Config Unit :=

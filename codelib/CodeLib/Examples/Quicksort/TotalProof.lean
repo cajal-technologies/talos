@@ -28,14 +28,14 @@ theorem twp_partitionScanStep
     (hfit : arr.toNat + 4 * current.length ≤ UInt32.size)
     {code : Program} {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame} :
-    arrayAt arr current ∗
+    arrayAt 0 arr current ∗
       ((⌜pivot < current[j]'hjLen⌝ ∗
-          arrayAt arr current -∗
+          arrayAt 0 arr current -∗
           WP (.running ⟨partitionLocals arr lo hi pivot i (j + 1) hiMinusOne tmp [],
             code, arity, remainder, controls, calls⟩ : Expr Unit)
             @ s; E [{ Φ }]) ∧
        (⌜¬ pivot < current[j]'hjLen⌝ ∗
-          arrayAt arr (swapElems current i j) -∗
+          arrayAt 0 arr (swapElems current i j) -∗
           WP (.running ⟨partitionLocals arr lo hi pivot (i + 1) (j + 1) hiMinusOne
               (current[i]'hiLen) [],
             code, arity, remainder, controls, calls⟩ : Expr Unit)
@@ -135,11 +135,11 @@ theorem twp_partitionScanLoop
     (hfit : arr.toNat + 4 * input.length ≤ UInt32.size)
     {code : Program} {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame} :
-    arrayAt arr current ∗
+    arrayAt 0 arr current ∗
       (∀ (current' : List UInt32) (i' j' : Nat) (tmp' : UInt32),
         ⌜PartitionLoopInvariant input current' lo hi i' j' pivot⌝ -∗
         ⌜j' = hiMinusOne⌝ -∗
-        arrayAt arr current' -∗
+        arrayAt 0 arr current' -∗
         WP (.running ⟨partitionLocals arr lo hi pivot i' j' hiMinusOne tmp' [],
           code, arity, remainder, controls, calls⟩ : Expr Unit)
           @ s; E [{ Φ }]) ⊢
@@ -151,13 +151,13 @@ theorem twp_partitionScanLoop
     ∀ (current' : List UInt32) (i' j' : Nat) (tmp' : UInt32),
       ⌜PartitionLoopInvariant input current' lo hi i' j' pivot⌝ -∗
       ⌜j' = hiMinusOne⌝ -∗
-      arrayAt arr current' -∗
+      arrayAt 0 arr current' -∗
       WP (.running ⟨partitionLocals arr lo hi pivot i' j' hiMinusOne tmp' [],
         code, arity, remainder, controls, calls⟩ : Expr Unit)
         @ s; E [{ Φ }]
   let Inv : PartitionState → IProp (WasmHeapGF Unit) := fun state => iprop%
     ⌜PartitionLoopInvariant input state.values lo hi state.i state.j pivot⌝ ∗
-    arrayAt arr state.values ∗ Finish
+    arrayAt 0 arr state.values ∗ Finish
   iintro ⟨Harray, Hfinish⟩
   simp only [whileDo, List.cons_append, List.nil_append]
   iapply Wasm.SmallStep.twp_block
@@ -264,10 +264,10 @@ theorem twp_partitionBody
     (hbounds : lo < hi ∧ hi ≤ input.length)
     (hfit : arr.toNat + 4 * input.length ≤ UInt32.size)
     {calls : List CallFrame} :
-    arrayAt arr input ∗
+    arrayAt 0 arr input ∗
       (∀ (output : List UInt32) (pivotIdx : Nat) (tmp : UInt32),
         ⌜PartitionRange input output lo hi pivotIdx⌝ -∗
-        arrayAt arr output -∗
+        arrayAt 0 arr output -∗
         WP (.running ⟨partitionLocals arr lo hi (input[hi - 1]!) pivotIdx (hi - 1) (hi - 1) tmp
               [.i32 (UInt32.ofNat pivotIdx)],
             [.ret], 1, [], [], calls⟩ : Expr Unit)
@@ -383,10 +383,10 @@ theorem twp_partitionBody_from
     (hlocals : actualLocals = ⟨[.i32 arr, .i32 (UInt32.ofNat lo), .i32 (UInt32.ofNat hi)],
         [.i32 0, .i32 0, .i32 0, .i32 0, .i32 0], []⟩)
     {calls : List CallFrame} :
-    arrayAt arr input ∗
+    arrayAt 0 arr input ∗
       (∀ (output : List UInt32) (pivotIdx : Nat) (tmp : UInt32),
         ⌜PartitionRange input output lo hi pivotIdx⌝ -∗
-        arrayAt arr output -∗
+        arrayAt 0 arr output -∗
         WP (.running ⟨partitionLocals arr lo hi (input[hi - 1]!) pivotIdx (hi - 1) (hi - 1) tmp
               [.i32 (UInt32.ofNat pivotIdx)],
             [.ret], 1, [], [], calls⟩ : Expr Unit)
@@ -412,12 +412,12 @@ theorem twp_partition
     {code : Program} {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame}
     {stack : List Value} :
-    runtimeModuleOwn runtimeModule ∗
-      arrayAt arr input ∗
+    runtimeModuleOwn ⟨0⟩ runtimeModule ∗
+      arrayAt 0 arr input ∗
       (∀ (output : List UInt32) (pivotIdx : Nat),
-        runtimeModuleOwn runtimeModule -∗
+        runtimeModuleOwn ⟨0⟩ runtimeModule -∗
         ⌜PartitionRange input output lo hi pivotIdx⌝ -∗
-        arrayAt arr output -∗
+        arrayAt 0 arr output -∗
         WP (.running ⟨{ callerLocals with values := .i32 (UInt32.ofNat pivotIdx) :: stack },
           code, arity, remainder, controls, calls⟩ : Expr Unit)
           @ s; E [{ Φ }]) ⊢
@@ -426,7 +426,7 @@ theorem twp_partition
         .call partitionIdx :: code, arity, remainder, controls, calls⟩ : Expr Unit)
         @ s; E [{ Φ }] := by
   iintro ⟨Hruntime, Harray, Hcont⟩
-  ihave HruntimeLater : runtimeModuleOwn runtimeModule $$ [Hruntime]
+  ihave HruntimeLater : runtimeModuleOwn ⟨0⟩ runtimeModule $$ [Hruntime]
   · iexact Hruntime
   iapply Wasm.SmallStep.twp_call runtimeModule partitionIdx partitionFunction
     himports hfunction $$ HruntimeLater
@@ -439,9 +439,9 @@ theorem twp_partition
   isplitl [Harray]
   · iexact Harray
   iintro %output %pivotIdx %tmp %hrange Harray
-  iapply Wasm.SmallStep.twp_returnFromCallExplicit
-  simp only [partitionLocals, List.take_succ_cons, List.take_zero, List.nil_append,
-    List.cons_append]
+  iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
+  iintro Hruntime
+  simp only [partitionLocals, List.take_succ_cons, List.take_zero, List.singleton_append]
   iapply Hcont $$ %output %pivotIdx Hruntime %hrange Harray
 
 set_option maxHeartbeats 8000000 in
@@ -465,14 +465,14 @@ private theorem twp_quicksortBody_aux
     {code : Program} {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame}
     {stack : List Value} :
-    runtimeModuleOwn runtimeModule ∗
-      arrayAt arr input ∗
+    runtimeModuleOwn ⟨0⟩ runtimeModule ∗
+      arrayAt 0 arr input ∗
       (∀ (output : List UInt32),
-        runtimeModuleOwn runtimeModule -∗
+        runtimeModuleOwn ⟨0⟩ runtimeModule -∗
         ⌜output.length = input.length ∧ output.take lo = input.take lo ∧
           output.drop hi = input.drop hi ∧ Sorted (segment output lo hi) ∧
           List.Perm (segment input lo hi) (segment output lo hi)⌝ -∗
-        arrayAt arr output -∗
+        arrayAt 0 arr output -∗
         WP (.running ⟨{ callerLocals with values := stack },
               code, arity, remainder, controls, calls⟩ : Expr Unit)
             @ s; E [{ Φ }]) ⊢
@@ -485,7 +485,7 @@ private theorem twp_quicksortBody_aux
     have heq : hi = lo := by omega
     subst heq
     iintro ⟨Hruntime, Harray, Hcont⟩
-    ihave HruntimeLater : runtimeModuleOwn runtimeModule $$ [Hruntime]
+    ihave HruntimeLater : runtimeModuleOwn ⟨0⟩ runtimeModule $$ [Hruntime]
     · iexact Hruntime
     iapply Wasm.SmallStep.twp_call runtimeModule quicksortIdx
         (quicksortFunction partitionIdx quicksortIdx)
@@ -504,7 +504,8 @@ private theorem twp_quicksortBody_aux
     simp only [if_pos (by decide : (0 : UInt32) < 2)]
     iapply Wasm.SmallStep.twp_iff rfl
     simp only [if_pos (by decide : (1 : UInt32) ≠ 0)]
-    iapply Wasm.SmallStep.twp_returnFromCallExplicit
+    iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
+    iintro Hruntime
     simp only [List.take_zero, List.nil_append]
     have hpure0 : input.length = input.length ∧ input.take hi = input.take hi ∧
         input.drop hi = input.drop hi ∧ Sorted (segment input hi hi) ∧
@@ -524,7 +525,7 @@ private theorem twp_quicksortBody_aux
       have := (UInt32.ofNat hi).toNat_lt
       rw [UInt32.toNat_ofNat_of_lt' hiSize] at this
       omega
-    ihave HruntimeLater : runtimeModuleOwn runtimeModule $$ [Hruntime]
+    ihave HruntimeLater : runtimeModuleOwn ⟨0⟩ runtimeModule $$ [Hruntime]
     · iexact Hruntime
     iapply Wasm.SmallStep.twp_call runtimeModule quicksortIdx
         (quicksortFunction partitionIdx quicksortIdx)
@@ -546,7 +547,8 @@ private theorem twp_quicksortBody_aux
       simp only [if_pos h_lt_u32]
       iapply Wasm.SmallStep.twp_iff rfl
       simp only [if_pos (by decide : (1 : UInt32) ≠ 0)]
-      iapply Wasm.SmallStep.twp_returnFromCallExplicit
+      iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
+      iintro Hruntime
       simp only [List.take_zero, List.nil_append]
       have hpure_base : input.length = input.length ∧ input.take lo = input.take lo ∧
           input.drop hi = input.drop hi ∧ Sorted (segment input lo hi) ∧
@@ -565,7 +567,7 @@ private theorem twp_quicksortBody_aux
       iapply Wasm.SmallStep.twp_localGet rfl
       iapply Wasm.SmallStep.twp_localGet rfl
       iapply Wasm.SmallStep.twp_localGet rfl
-      ihave HruntimeLater_p : runtimeModuleOwn runtimeModule $$ [Hruntime]
+      ihave HruntimeLater_p : runtimeModuleOwn ⟨0⟩ runtimeModule $$ [Hruntime]
       · iexact Hruntime
       iapply Wasm.SmallStep.twp_call runtimeModule partitionIdx partitionFunction himports_p
           hfunction_p $$ HruntimeLater_p
@@ -579,9 +581,9 @@ private theorem twp_quicksortBody_aux
       · iexact Harray
       iintro %output_p %pivotIdx %tmp %hpart Harray_p
       obtain ⟨hlo, hphi, hhilen_p, hlen_p, htake_p, hdrop_p, hperm_p, hleft_p, hright_p⟩ := hpart
-      iapply Wasm.SmallStep.twp_returnFromCallExplicit
-      simp only [partitionLocals, List.take_succ_cons, List.take_zero, List.nil_append,
-        List.cons_append]
+      iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime_p
+      iintro Hruntime_p
+      simp only [partitionLocals, List.take_succ_cons, List.take_zero, List.singleton_append]
       have hset_piv :
           (⟨[.i32 arr, .i32 (UInt32.ofNat lo), .i32 (UInt32.ofNat hi)], [.i32 0],
             [.i32 (UInt32.ofNat pivotIdx)]⟩ : Locals).set?
@@ -626,7 +628,8 @@ private theorem twp_quicksortBody_aux
       · iexact Harray_l
       iintro %out_r Hruntime_r %hpure_r Harray_r
       obtain ⟨hlen_r, htake_r, hdrop_r, hsorted_r, hperm_r⟩ := hpure_r
-      iapply Wasm.SmallStep.twp_returnFromCallExplicit
+      iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime_r
+      iintro Hruntime_r
       simp only [List.take_zero, List.nil_append]
       have hpart_final : PartitionRange input out_r lo hi pivotIdx :=
         partitionRange_after_sorts
@@ -671,14 +674,14 @@ theorem twp_quicksortBody
     {code : Program} {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame}
     {stack : List Value} :
-    runtimeModuleOwn runtimeModule ∗
-      arrayAt arr input ∗
+    runtimeModuleOwn ⟨0⟩ runtimeModule ∗
+      arrayAt 0 arr input ∗
       (∀ (output : List UInt32),
-        runtimeModuleOwn runtimeModule -∗
+        runtimeModuleOwn ⟨0⟩ runtimeModule -∗
         ⌜output.length = input.length ∧ output.take lo = input.take lo ∧
           output.drop hi = input.drop hi ∧ Sorted (segment output lo hi) ∧
           List.Perm (segment input lo hi) (segment output lo hi)⌝ -∗
-        arrayAt arr output -∗
+        arrayAt 0 arr output -∗
         WP (.running ⟨{ callerLocals with values := stack },
               code, arity, remainder, controls, calls⟩ : Expr Unit)
             @ s; E [{ Φ }]) ⊢
@@ -709,14 +712,14 @@ theorem twp_quicksort
     {code : Program} {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame}
     {stack : List Value} :
-    runtimeModuleOwn runtimeModule ∗
-      arrayAt arr input ∗
+    runtimeModuleOwn ⟨0⟩ runtimeModule ∗
+      arrayAt 0 arr input ∗
       (∀ (output : List UInt32),
-        runtimeModuleOwn runtimeModule -∗
+        runtimeModuleOwn ⟨0⟩ runtimeModule -∗
         ⌜output.length = input.length ∧ output.take lo = input.take lo ∧
           output.drop hi = input.drop hi ∧ Sorted (segment output lo hi) ∧
           List.Perm (segment input lo hi) (segment output lo hi)⌝ -∗
-        arrayAt arr output -∗
+        arrayAt 0 arr output -∗
         WP (.running ⟨{ callerLocals with values := stack },
               code, arity, remainder, controls, calls⟩ : Expr Unit)
             @ s; E [{ Φ }]) ⊢
@@ -745,7 +748,12 @@ theorem quicksort_terminatesWith (arr : UInt32) (input : List UInt32)
         readWordArray store.wasm.mem arr input.length = output)
     (quicksortHeap_agrees arr input hfit)
     (quicksortHeap_inBounds arr input hfit hmem)
+    (by simp [quicksortConfig])
     (fun hlc gs => by
+      have hentry : (quicksortConfig arr input).store.runtime.entry = ⟨0⟩ := rfl
+      have hmod : (quicksortConfig arr input).store.runtime.currentModule = quicksortModule := by
+        simp [quicksortConfig, RuntimeEnv.currentModule_mk1]
+      rw [hentry, hmod]
       iintro ⟨Hbytes, Hruntime⟩
       have hfitStrict : arr.toNat + 4 * input.length < UInt32.size := by
         simp only [UInt32.size]; omega

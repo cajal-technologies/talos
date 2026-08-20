@@ -21,7 +21,7 @@ def tableProbeConfig (m : Module) (st : Store Unit) : Config Unit :=
         code := TableProbe
         resultArity := 2
         callerRemainder := [] }
-    store := { runtime := { module := m, host := {} }, wasm := st } }
+    store := { runtime := { instances := #[{ module := m, host := {} }], entry := ⟨0⟩ }, wasm := st } }
 
 theorem tableProbe_steps (m : Module) (st : Store Unit)
     (htbl :
@@ -42,7 +42,8 @@ theorem tableProbe_steps (m : Module) (st : Store Unit)
     (table := [.funcref (some 0), .funcref (some 1), .funcref none])
     (by simp [htbl]))
   apply Steps.cons .finish
-  simpa [tableProbeConfig, h64, sizeValue] using
+  simpa [tableProbeConfig, h64, sizeValue,
+         RuntimeEnv.currentModule, RuntimeEnv.currentInstance] using
     (Steps.refl
       (⟨.done [.i32 3, .i32 1],
         (tableProbeConfig m st).store⟩ : Config Unit))
@@ -90,7 +91,7 @@ private def decodedConfig (index : Nat)
         resultArity := decoded.funcs[index]!.results.length
         callerRemainder := [] }
     store :=
-      { runtime := { module := decoded, host := {} }
+      { runtime := { instances := #[{ module := decoded, host := {} }], entry := ⟨0⟩ }
         wasm := decoded.initialStore } }
 
 private def runVals (index : Nat)

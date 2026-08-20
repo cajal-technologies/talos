@@ -90,7 +90,7 @@ def callConfig : Config Unit :=
         code := F
         resultArity := 1
         callerRemainder := [] }
-    store := { runtime := { module := m, host := {} }, wasm := m.initialStore } }
+    store := { runtime := { instances := #[{ module := m, host := {} }], entry := ⟨0⟩ }, wasm := m.initialStore } }
 
 def returnCallConfig : Config Unit :=
   { expr := .running
@@ -98,7 +98,7 @@ def returnCallConfig : Config Unit :=
         code := G
         resultArity := 1
         callerRemainder := [] }
-    store := { runtime := { module := m, host := {} }, wasm := m.initialStore } }
+    store := { runtime := { instances := #[{ module := m, host := {} }], entry := ⟨0⟩ }, wasm := m.initialStore } }
 
 /-- `call_indirect (type $sub)` against `$impl : $super` traps: `$super` is
 not a subtype of `$sub` (`super_not_subtype_sub`). Before #95 this returned

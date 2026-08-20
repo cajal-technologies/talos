@@ -103,7 +103,7 @@ def callerConfig : Config Unit :=
         resultArity := decoded.funcs[0]!.results.length
         callerRemainder := [] }
     store :=
-      { runtime := { module := decoded, host := incEnv }
+      { runtime := { instances := #[{ module := decoded, host := incEnv }], entry := ⟨0⟩ }
         wasm := decoded.initialStore } }
 
 /-- Calling `caller(41)` against `incEnv` returns `[42]` through the

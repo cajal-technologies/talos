@@ -21,7 +21,7 @@ def sumI64Config (x : UInt32) : Config Unit :=
         resultArity := 1
         callerRemainder := [] }
     store :=
-      { runtime := { module := sumI64Module, host := {} }
+      { runtime := { instances := #[{ module := sumI64Module, host := {} }], entry := ⟨0⟩ }
         wasm := sumI64Module.initialStore } }
 
 def sumI64Result (x : UInt32) : UInt32 :=

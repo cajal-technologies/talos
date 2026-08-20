@@ -20,7 +20,7 @@ def selectAbsConfig (n : UInt32) : Config Unit :=
         resultArity := 1
         callerRemainder := [] }
     store :=
-      { runtime := { module := selectAbsModule, host := {} }
+      { runtime := { instances := #[{ module := selectAbsModule, host := {} }], entry := ⟨0⟩ }
         wasm := selectAbsModule.initialStore } }
 
 def selectAbsResult (n : UInt32) : UInt32 :=

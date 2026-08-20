@@ -131,7 +131,7 @@ def PartitionRange (input output : List UInt32) (lo hi pivotIndex : Nat) : Prop 
 
 def quicksortPre [WasmHeapGS α]
     (arr : UInt32) (values : List UInt32) (lo hi : Nat) : IProp (WasmHeapGF α) :=
-  iprop% arrayAt arr values ∗
+  iprop% arrayAt 0 arr values ∗
     ⌜lo ≤ hi ∧ hi ≤ values.length ∧ ValidQuicksortLayout arr values.length⌝
 
 def quicksortPost [WasmHeapGS α]
@@ -142,7 +142,7 @@ def quicksortPost [WasmHeapGS α]
      output.drop hi = input.drop hi ∧
      Sorted (segment output lo hi) ∧
      List.Perm (segment input lo hi) (segment output lo hi)⌝ ∗
-    arrayAt arr output
+    arrayAt 0 arr output
 
 /-! ## Executable regressions -/
 
@@ -199,7 +199,7 @@ theorem quicksort_exec_sorted :
 private def configDefault : Config Unit :=
   { expr := .done []
     store :=
-      { runtime := { module := default, host := {} }
+      { runtime := { instances := #[{ module := default, host := {} }], entry := ⟨0⟩ }
         wasm := { globals := default, mem := default, host := () } } }
 
 private def quicksortExampleConfig (arr : UInt32) (input : List UInt32) : Config Unit :=
@@ -418,7 +418,7 @@ theorem quicksort_oracle_sorted :
 def quicksortHeapAux (σ : WasmHeapMap (Option UInt8)) (base : UInt32) :
     List UInt32 → WasmHeapMap (Option UInt8)
   | [] => σ
-  | x :: xs => quicksortHeapAux (store32Heap σ base x) (base + 4) xs
+  | x :: xs => quicksortHeapAux (store32Heap σ 0 base x) (base + 4) xs
 
 def quicksortHeap (arr : UInt32) (input : List UInt32) :
     WasmHeapMap (Option UInt8) :=
@@ -430,14 +430,15 @@ def quicksortConfig (arr : UInt32) (input : List UInt32) : Config Unit :=
       ⟨⟨[], [], [.i32 (UInt32.ofNat input.length), .i32 0, .i32 arr]⟩,
         [.call 1], 0, [], [], []⟩
     store :=
-      { runtime := { module := quicksortModule, host := {} }
+      { runtime := { instances := #[{ module := quicksortModule, host := {} }], entry := ⟨0⟩ }
         wasm := { initial with mem := writeWordArray initial.mem arr input } } }
 
 theorem quicksortHeapAux_agrees
     (σ : WasmHeapMap (Option UInt8)) (mem : Mem) (base : UInt32) (xs : List UInt32)
-    (hagree : heapAgreesWithMem σ mem)
+    (hagree : heapAgreesWithMem σ (fun id => if id = 0 then some mem else none))
     (hfit : base.toNat + 4 * xs.length ≤ UInt32.size) :
-    heapAgreesWithMem (quicksortHeapAux σ base xs) (writeWordArray mem base xs) := by
+    heapAgreesWithMem (quicksortHeapAux σ base xs)
+      (fun id => if id = 0 then some (writeWordArray mem base xs) else none) := by
   induction xs generalizing σ mem base with
   | nil => simpa [quicksortHeapAux, writeWordArray]
   | cons x xs ih =>
@@ -448,7 +449,7 @@ theorem quicksortHeapAux_agrees
       simp only [show (4 : UInt32).toNat = 4 from by decide] at h
       rw [h]; exact Nat.mod_le _ _
     apply ih
-    · apply store32_sound
+    · apply store32_sound0
       · exact UInt32.add_ofNat_toNat_noWrap base 1 (by decide) (by omega)
       · exact UInt32.add_ofNat_toNat_noWrap base 2 (by decide) (by omega)
       · exact UInt32.add_ofNat_toNat_noWrap base 3 (by decide) (by omega)
@@ -458,18 +459,28 @@ theorem quicksortHeapAux_agrees
 theorem quicksortHeap_agrees (arr : UInt32) (input : List UInt32)
     (hfit : arr.toNat + 4 * input.length ≤ UInt32.size) :
     heapAgreesWithMem (quicksortHeap arr input)
-      (writeWordArray (quicksortModule.initialStore (α := Unit)).mem arr input) := by
+      (storeResolve (quicksortConfig arr input).store) := by
   unfold quicksortHeap
-  apply quicksortHeapAux_agrees
-  · intro addr byte hget; simp [get?_empty] at hget
-  · exact hfit
+  have h := quicksortHeapAux_agrees ∅ (quicksortModule.initialStore (α := Unit)).mem
+    arr input
+    (by intro key value hget; simp [get?_empty] at hget)
+    hfit
+  have heq : (fun id => if id = 0 then
+      some (writeWordArray (quicksortModule.initialStore (α := Unit)).mem arr input)
+      else none) = storeResolve (quicksortConfig arr input).store := by
+    funext id; by_cases hid : id = 0
+    · subst hid; simp [storeResolve, quicksortConfig]
+    · have hext : (quicksortModule.initialStore (α := Unit)).extraMems = [] := by native_decide
+      simp [hid, storeResolve, quicksortConfig, hext]
+  rw [heq] at h; exact h
 
 theorem quicksortHeapAux_inBounds
     (σ : WasmHeapMap (Option UInt8)) (mem : Mem) (base : UInt32) (xs : List UInt32)
-    (hinBounds : heapAddressesInBounds σ mem)
+    (hinBounds : heapAddressesInBounds σ (fun id => if id = 0 then some mem else none))
     (hfit : base.toNat + 4 * xs.length ≤ UInt32.size)
     (hmem : base.toNat + 4 * xs.length ≤ mem.pages * 65536) :
-    heapAddressesInBounds (quicksortHeapAux σ base xs) (writeWordArray mem base xs) := by
+    heapAddressesInBounds (quicksortHeapAux σ base xs)
+      (fun id => if id = 0 then some (writeWordArray mem base xs) else none) := by
   induction xs generalizing σ mem base with
   | nil => simpa [quicksortHeapAux, writeWordArray]
   | cons x xs ih =>
@@ -481,12 +492,12 @@ theorem quicksortHeapAux_inBounds
       rw [h]; exact Nat.mod_le _ _
     have hpages : (mem.write32 base x).pages = mem.pages := by simp [Mem.write32]
     apply ih
-    · apply store32_inBounds
+    · apply store32_inBounds0
       · exact UInt32.add_ofNat_toNat_noWrap base 1 (by decide) (by omega)
       · exact UInt32.add_ofNat_toNat_noWrap base 2 (by decide) (by omega)
       · exact UInt32.add_ofNat_toNat_noWrap base 3 (by decide) (by omega)
-      · exact hinBounds
       · omega
+      · exact hinBounds
     · simp only [UInt32.size]; omega
     · rw [hpages]; omega
 
@@ -494,22 +505,30 @@ theorem quicksortHeap_inBounds (arr : UInt32) (input : List UInt32)
     (hfit : arr.toNat + 4 * input.length ≤ UInt32.size)
     (hmem : arr.toNat + 4 * input.length ≤ 65536) :
     heapAddressesInBounds (quicksortHeap arr input)
-      (writeWordArray (quicksortModule.initialStore (α := Unit)).mem arr input) := by
+      (storeResolve (quicksortConfig arr input).store) := by
   unfold quicksortHeap
-  apply quicksortHeapAux_inBounds
-  · intro a b hget; simp [get?_empty] at hget
-  · exact hfit
-  · have hpages : (quicksortModule.initialStore (α := Unit)).mem.pages = 1 := by decide
-    simp only [hpages]
-    exact hmem
+  have h := quicksortHeapAux_inBounds ∅ (quicksortModule.initialStore (α := Unit)).mem
+    arr input
+    (by intro key hget; simp [get?_empty] at hget)
+    hfit
+    (by have hpages : (quicksortModule.initialStore (α := Unit)).mem.pages = 1 := by decide
+        simp only [hpages]; exact hmem)
+  have heq : (fun id => if id = 0 then
+      some (writeWordArray (quicksortModule.initialStore (α := Unit)).mem arr input)
+      else none) = storeResolve (quicksortConfig arr input).store := by
+    funext id; by_cases hid : id = 0
+    · subst hid; simp [storeResolve, quicksortConfig]
+    · have hext : (quicksortModule.initialStore (α := Unit)).extraMems = [] := by native_decide
+      simp [hid, storeResolve, quicksortConfig, hext]
+  rw [heq] at h; exact h
 
 theorem quicksortHeapAux_pointsTo [WasmHeapGS α]
     (σ : WasmHeapMap (Option UInt8)) (base : UInt32) (xs : List UInt32)
-    (hdisjoint : ∀ a b, get? σ a = some b → a.toNat < base.toNat)
+    (hdisjoint : ∀ a b, get? σ a = some b → a.addr.toNat < base.toNat)
     (hfit : base.toNat + 4 * xs.length < UInt32.size) :
     ([∗map] address ↦ value ∈ quicksortHeapAux σ base xs,
         pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap) address (DFrac.own 1) value) ⊢
-      arrayAt base xs ∗
+      arrayAt 0 base xs ∗
       ([∗map] address ↦ value ∈ σ,
           pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap) address (DFrac.own 1) value) := by
   induction xs generalizing σ base with
@@ -529,38 +548,42 @@ theorem quicksortHeapAux_pointsTo [WasmHeapGS α]
       UInt32.add_ofNat_toNat_noWrap base 2 (by decide) (by omega)
     have hn3 : (base + 3).toNat = base.toNat + 3 :=
       UInt32.add_ofNat_toNat_noWrap base 3 (by decide) (by omega)
-    have hget0 : get? σ base = none := by
-      by_contra h; obtain ⟨_, hget⟩ := Option.ne_none_iff_exists.mp h
-      exact absurd (hdisjoint _ _ hget.symm) (by omega)
-    have hget1 : get? σ (base + 1) = none := by
-      by_contra h; obtain ⟨_, hget⟩ := Option.ne_none_iff_exists.mp h
-      exact absurd (hdisjoint _ _ hget.symm) (by rw [hn1]; omega)
-    have hget2 : get? σ (base + 2) = none := by
-      by_contra h; obtain ⟨_, hget⟩ := Option.ne_none_iff_exists.mp h
-      exact absurd (hdisjoint _ _ hget.symm) (by rw [hn2]; omega)
-    have hget3 : get? σ (base + 3) = none := by
-      by_contra h; obtain ⟨_, hget⟩ := Option.ne_none_iff_exists.mp h
-      exact absurd (hdisjoint _ _ hget.symm) (by rw [hn3]; omega)
-    have hdisjoint' : ∀ a b, get? (store32Heap σ base x) a = some b →
-        a.toNat < (base + 4).toNat := by
+    have hget0 : get? σ ⟨0, base⟩ = none := by
+      by_contra h; obtain ⟨v, hget⟩ := Option.ne_none_iff_exists.mp h
+      have hlt := hdisjoint (⟨0, base⟩ : MemoryKey) v hget.symm
+      change base.toNat < base.toNat at hlt; exact absurd hlt (Nat.lt_irrefl _)
+    have hget1 : get? σ ⟨0, base + 1⟩ = none := by
+      by_contra h; obtain ⟨v, hget⟩ := Option.ne_none_iff_exists.mp h
+      have hlt := hdisjoint (⟨0, base + 1⟩ : MemoryKey) v hget.symm
+      change (base + 1).toNat < base.toNat at hlt; rw [hn1] at hlt; omega
+    have hget2 : get? σ ⟨0, base + 2⟩ = none := by
+      by_contra h; obtain ⟨v, hget⟩ := Option.ne_none_iff_exists.mp h
+      have hlt := hdisjoint (⟨0, base + 2⟩ : MemoryKey) v hget.symm
+      change (base + 2).toNat < base.toNat at hlt; rw [hn2] at hlt; omega
+    have hget3 : get? σ ⟨0, base + 3⟩ = none := by
+      by_contra h; obtain ⟨v, hget⟩ := Option.ne_none_iff_exists.mp h
+      have hlt := hdisjoint (⟨0, base + 3⟩ : MemoryKey) v hget.symm
+      change (base + 3).toNat < base.toNat at hlt; rw [hn3] at hlt; omega
+    have hdisjoint' : ∀ a b, get? (store32Heap σ 0 base x) a = some b →
+        a.addr.toNat < (base + 4).toNat := by
       rw [h4]
       intro a b hget
-      by_cases h3 : a = base + 3
-      · subst h3; rw [hn3]; omega
-      by_cases h2 : a = base + 2
-      · subst h2; rw [hn2]; omega
-      by_cases h1 : a = base + 1
-      · subst h1; rw [hn1]; omega
-      by_cases h0 : a = base
-      · subst h0; omega
+      by_cases h3 : a = ⟨0, base + 3⟩
+      · subst h3; change (base + 3).toNat < base.toNat + 4; rw [hn3]; omega
+      by_cases h2 : a = ⟨0, base + 2⟩
+      · subst h2; change (base + 2).toNat < base.toNat + 4; rw [hn2]; omega
+      by_cases h1 : a = ⟨0, base + 1⟩
+      · subst h1; change (base + 1).toNat < base.toNat + 4; rw [hn1]; omega
+      by_cases h0 : a = ⟨0, base⟩
+      · subst h0; change base.toNat < base.toNat + 4; omega
       · simp only [store32Heap, get?_insert_ne (Ne.symm h3), get?_insert_ne (Ne.symm h2),
             get?_insert_ne (Ne.symm h1), get?_insert_ne (Ne.symm h0)] at hget
         have hlt := hdisjoint a b hget; omega
     iintro Hheap
-    ihave Hsplit := ih (store32Heap σ base x) (base + 4) hdisjoint' hfit' $$ Hheap
+    ihave Hsplit := ih (store32Heap σ 0 base x) (base + 4) hdisjoint' hfit' $$ Hheap
     icases Hsplit with ⟨Hxs, Hstore32⟩
     ihave Hdecomp :=
-      store32Heap_pointsTo σ base x hget0 hget1 hget2 hget3 hn1 hn2 hn3 $$ Hstore32
+      store32Heap_pointsTo σ 0 base x hget0 hget1 hget2 hget3 hn1 hn2 hn3 $$ Hstore32
     icases Hdecomp with ⟨Hword, Hσ⟩
     simp only [arrayAt]
     isplitl [Hword Hxs]
@@ -572,7 +595,7 @@ theorem quicksortHeap_pointsTo [WasmHeapGS α]
     (hfit : arr.toNat + 4 * input.length < UInt32.size) :
     ([∗map] address ↦ value ∈ quicksortHeap arr input,
         pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap) address (DFrac.own 1) value) ⊢
-      arrayAt arr input := by
+      arrayAt 0 arr input := by
   unfold quicksortHeap
   iintro Hheap
   ihave Hsplit := quicksortHeapAux_pointsTo ∅ arr input
@@ -584,8 +607,8 @@ theorem arrayAt_readWordArray [WasmSmallStepGS hlc α]
     (store : MachineStore α) (steps : Nat) (obs : List StepKind) (threads : Nat)
     (arr : UInt32) (output : List UInt32)
     (hfit : arr.toNat + 4 * output.length ≤ UInt32.size) :
-    stateInterp (GF := WasmHeapGF α) store steps obs threads ∗ arrayAt arr output ==∗
-      stateInterp (GF := WasmHeapGF α) store steps obs threads ∗ arrayAt arr output ∗
+    stateInterp (GF := WasmHeapGF α) store steps obs threads ∗ arrayAt 0 arr output ==∗
+      stateInterp (GF := WasmHeapGF α) store steps obs threads ∗ arrayAt 0 arr output ∗
       ⌜readWordArray store.wasm.mem arr output.length = output⌝ := by
   induction output generalizing arr with
   | nil =>

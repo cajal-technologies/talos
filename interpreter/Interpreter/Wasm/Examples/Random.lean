@@ -38,7 +38,7 @@ def config (oracle : Oracle) : Config State :=
   | .error error =>
       { expr := .trapped (.host error.message)
         store :=
-          { runtime := { module, host := Wasm.Random.env }
+          { runtime := { instances := #[⟨module, Wasm.Random.env, #[]⟩], entry := ⟨0⟩ }
             wasm := initialStore oracle } }
 
 /-- Functional, pathwise semantics: for any fixed oracle, the Wasm function

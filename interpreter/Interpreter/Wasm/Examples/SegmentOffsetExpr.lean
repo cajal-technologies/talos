@@ -44,7 +44,7 @@ private def store0 : Store Unit :=
     (module.runConstGlobals 64 (module.initialStore (α := Unit)) {}) {}
 
 def segmentMachineStore : MachineStore Unit :=
-  { runtime := { module := decoded, host := {} }
+  { runtime := { instances := #[{ module := decoded, host := {} }], entry := ⟨0⟩ }
     wasm := store0 }
 
 private def functionConfig (index : Nat) : Config Unit :=

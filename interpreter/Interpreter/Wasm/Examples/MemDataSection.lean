@@ -21,7 +21,7 @@ theorem memDataSection_read32_zero :
   native_decide
 
 def memDataStore : MachineStore Unit :=
-  { runtime := { module := memModule, host := {} }
+  { runtime := { instances := #[{ module := memModule, host := {} }], entry := ⟨0⟩ }
     wasm := memModule.initialStore }
 
 def memDataConfig : Config Unit :=

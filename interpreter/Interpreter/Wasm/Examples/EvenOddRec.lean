@@ -48,7 +48,7 @@ def evenOddModule : Module :=
       { params := [.i32], body := IsOddRec, results := [.i32] }] }
 
 private def parityStore : MachineStore Unit :=
-  { runtime := { module := evenOddModule, host := {} }
+  { runtime := { instances := #[{ module := evenOddModule, host := {} }], entry := ⟨0⟩ }
     wasm := evenOddModule.initialStore }
 
 private def evenValue (n : UInt32) : UInt32 :=
@@ -104,7 +104,8 @@ private def parityReturn
         store := parityStore }
 
 private theorem parity_complete_steps
-    (parameter result : UInt32) (calls : List CallFrame) :
+    (parameter result : UInt32) (calls : List CallFrame)
+    (h_ret : ∀ c ∈ calls, c.returningInstance = parityStore.runtime.entry) :
     ∃ trace,
       Steps (parityCompleted parameter result calls) trace
         (parityReturn result calls) := by
@@ -112,8 +113,9 @@ private theorem parity_complete_steps
   | nil =>
       exact ⟨[.administrative .finish], Steps.single .finish⟩
   | cons caller rest =>
+      have hcaller := h_ret caller List.mem_cons_self
       exact ⟨[.administrative .returnFromCall],
-        Steps.single .returnFromCallFallthrough⟩
+        Steps.single (.returnFromCallFallthrough hcaller)⟩
 
 private def evenBlockBody : Program := [
   .localGet 0,
@@ -159,14 +161,16 @@ private def evenCaller (n : UInt32) : CallFrame :=
     continuation := [.eqz, .localSet 0]
     resultArity := 1
     callerRemainder := []
-    control := [evenBlockFrame] }
+    control := [evenBlockFrame]
+    returningInstance := ⟨0⟩ }
 
 private def oddCaller (n : UInt32) : CallFrame :=
   { locals := { params := [.i32 n] }
     continuation := [.localSet 0]
     resultArity := 1
     callerRemainder := []
-    control := [oddBlockFrame] }
+    control := [oddBlockFrame]
+    returningInstance := ⟨0⟩ }
 
 private theorem even_zero_prefix (calls : List CallFrame) :
     ∃ trace,
@@ -285,10 +289,10 @@ private theorem odd_after_call
   exact Steps.single (.localGet rfl)
 
 private theorem evenOdd_contextual_steps : ∀ n : UInt32,
-    (∀ calls, ∃ trace,
+    (∀ calls, (∀ c ∈ calls, c.returningInstance = parityStore.runtime.entry) → ∃ trace,
       Steps (parityCallee IsEvenRec n calls) trace
         (parityReturn (evenValue n) calls)) ∧
-    (∀ calls, ∃ trace,
+    (∀ calls, (∀ c ∈ calls, c.returningInstance = parityStore.runtime.entry) → ∃ trace,
       Steps (parityCallee IsOddRec n calls) trace
         (parityReturn (oddValue n) calls)) := by
   intro n
@@ -298,14 +302,14 @@ private theorem evenOdd_contextual_steps : ∀ n : UInt32,
     by_cases hn : n = 0
     · subst n
       constructor
-      · intro calls
+      · intro calls h_ret
         obtain ⟨initialTrace, hinitial⟩ := even_zero_prefix calls
-        obtain ⟨suffix, hsuffix⟩ := parity_complete_steps 0 1 calls
+        obtain ⟨suffix, hsuffix⟩ := parity_complete_steps 0 1 calls h_ret
         simpa [evenValue] using
           ⟨initialTrace ++ suffix, Steps.trans hinitial hsuffix⟩
-      · intro calls
+      · intro calls h_ret
         obtain ⟨initialTrace, hinitial⟩ := odd_zero_prefix calls
-        obtain ⟨suffix, hsuffix⟩ := parity_complete_steps 0 0 calls
+        obtain ⟨suffix, hsuffix⟩ := parity_complete_steps 0 0 calls h_ret
         simpa [oddValue] using
           ⟨initialTrace ++ suffix, Steps.trans hinitial hsuffix⟩
     · have hnn : n.toNat ≠ 0 := by
@@ -315,16 +319,17 @@ private theorem evenOdd_contextual_steps : ∀ n : UInt32,
         UInt32.toNat_sub_one_lt hnn
       have ihpair := ih (n - 1).toNat hpred (n - 1) rfl
       constructor
-      · intro calls
+      · intro calls h_ret
         obtain ⟨prefixTrace, hprefix⟩ :=
           even_nonzero_prefix n calls hn
         obtain ⟨calleeTrace, hcallee⟩ :=
           ihpair.2 (evenCaller n :: calls)
+            (List.forall_mem_cons.mpr ⟨rfl, h_ret⟩)
         obtain ⟨resumeTrace, hresume⟩ :=
           even_after_call n (oddValue (n - 1)) calls
         obtain ⟨returnTrace, hreturn⟩ :=
           parity_complete_steps (boolNot (oddValue (n - 1)))
-            (boolNot (boolNot (oddValue (n - 1)))) calls
+            (boolNot (boolNot (oddValue (n - 1)))) calls h_ret
         have hnsub := UInt32.toNat_sub_one_eq hnn
         have hresult :
             boolNot (boolNot (oddValue (n - 1))) = evenValue n := by
@@ -336,16 +341,17 @@ private theorem evenOdd_contextual_steps : ∀ n : UInt32,
             hreturn
         rw [hresult] at execution
         exact ⟨_, execution⟩
-      · intro calls
+      · intro calls h_ret
         obtain ⟨prefixTrace, hprefix⟩ :=
           odd_nonzero_prefix n calls hn
         obtain ⟨calleeTrace, hcallee⟩ :=
           ihpair.1 (oddCaller n :: calls)
+            (List.forall_mem_cons.mpr ⟨rfl, h_ret⟩)
         obtain ⟨resumeTrace, hresume⟩ :=
           odd_after_call n (evenValue (n - 1)) calls
         obtain ⟨returnTrace, hreturn⟩ :=
           parity_complete_steps (evenValue (n - 1))
-            (evenValue (n - 1)) calls
+            (evenValue (n - 1)) calls h_ret
         have hnsub := UInt32.toNat_sub_one_eq hnn
         have hresult : evenValue (n - 1) = oddValue n := by
           unfold evenValue oddValue
@@ -362,14 +368,14 @@ theorem even_steps (n : UInt32) :
       Steps (evenConfig n) trace
         ⟨.done [.i32 (evenValue n)], parityStore⟩ := by
   simpa [evenConfig, parityReturn] using
-    (evenOdd_contextual_steps n).1 []
+    (evenOdd_contextual_steps n).1 [] (by simp)
 
 theorem odd_steps (n : UInt32) :
     ∃ trace,
       Steps (oddConfig n) trace
         ⟨.done [.i32 (oddValue n)], parityStore⟩ := by
   simpa [oddConfig, parityReturn] using
-    (evenOdd_contextual_steps n).2 []
+    (evenOdd_contextual_steps n).2 [] (by simp)
 
 theorem evenSpec (n : UInt32) :
     TerminatesWith (evenConfig n)

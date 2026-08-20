@@ -24,7 +24,7 @@ def trapDivZeroConfig (a b : UInt32) : Config Unit :=
         resultArity := 1
         callerRemainder := [] }
     store :=
-      { runtime := { module := trapDivZeroModule, host := {} }
+      { runtime := { instances := #[{ module := trapDivZeroModule, host := {} }], entry := ⟨0⟩ }
         wasm := trapDivZeroModule.initialStore } }
 
 theorem trapDivZero_steps_success (a b : UInt32) (hb : b ≠ 0) :

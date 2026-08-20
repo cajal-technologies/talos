@@ -78,8 +78,8 @@ theorem wp_loadAt_cell
     (h1 : (addr + 1).toNat = addr.toNat + 1)
     (h2 : (addr + 2).toNat = addr.toNat + 2)
     (h3 : (addr + 3).toNat = addr.toNat + 3) :
-    pointsTo_u32 addr word ∗
-      (pointsTo_u32 addr word -∗
+    pointsTo_u32 0 addr word ∗
+      (pointsTo_u32 0 addr word -∗
         WP (.running
           ⟨⟨params, localValues, .i32 word :: stack⟩,
             code, arity, remainder, controls, calls⟩ : Expr Unit)
@@ -97,7 +97,7 @@ theorem wp_loadAt_cell
   iapply wp_address hbase helement
   inext
   rw [haddress]
-  ihave HwordLater : ▷ pointsTo_u32 (addr + 0) word $$ [Hword]
+  ihave HwordLater : ▷ pointsTo_u32 0 (addr + 0) word $$ [Hword]
   · inext
     rw [UInt32.add_zero]
     iexact Hword
@@ -125,8 +125,8 @@ theorem wp_loadAt
       some (.i32 base))
     (helement : (⟨params, localValues, stack⟩ : Locals).get elementIndex =
       some (.i32 (UInt32.ofNat k))) :
-    arrayAt base input ∗
-      (arrayAt base input -∗
+    arrayAt 0 base input ∗
+      (arrayAt 0 base input -∗
         WP (.running
           ⟨⟨params, localValues, .i32 input[k] :: stack⟩,
             code, arity, remainder, controls, calls⟩ : Expr Unit)
@@ -155,7 +155,7 @@ theorem wp_loadAt
     simpa using UInt32.add_ofNat_toNat_noWrap
       (base + 4 * UInt32.ofNat k) 3 (by decide) (by omega)
   iintro ⟨Harray, Hcont⟩
-  ihave Hfocus := arrayAt_get base input k hk $$ Harray
+  ihave Hfocus := arrayAt_get 0 base input k hk $$ Harray
   icases Hfocus with ⟨Hword, Hclose⟩
   iapply wp_loadAt_cell hbase helement
     (by rw [UInt32.add_comm])
@@ -178,8 +178,8 @@ private theorem wp_store32_cell
     (h1 : (address + 1).toNat = address.toNat + 1)
     (h2 : (address + 2).toNat = address.toNat + 2)
     (h3 : (address + 3).toNat = address.toNat + 3) :
-    pointsTo_u32 address oldWord ∗
-      (pointsTo_u32 address newWord -∗
+    pointsTo_u32 0 address oldWord ∗
+      (pointsTo_u32 0 address newWord -∗
         WP (.running
           ⟨⟨params, localValues, stack⟩,
             code, arity, remainder, controls, calls⟩ : Expr Unit)
@@ -192,7 +192,7 @@ private theorem wp_store32_cell
   have h2' : ((address + 0) + 2).toNat = (address + 0).toNat + 2 := by simpa using h2
   have h3' : ((address + 0) + 3).toNat = (address + 0).toNat + 3 := by simpa using h3
   iintro ⟨Hword, Hcont⟩
-  ihave HwordLater : ▷ pointsTo_u32 (address + 0) oldWord $$ [Hword]
+  ihave HwordLater : ▷ pointsTo_u32 0 (address + 0) oldWord $$ [Hword]
   · inext
     rw [UInt32.add_zero]
     iexact Hword
@@ -201,7 +201,7 @@ private theorem wp_store32_cell
     (by simp) h1' h2' h3' $$ HwordLater
   inext
   iintro Hword
-  ihave Hword' : pointsTo_u32 address newWord $$ [Hword]
+  ihave Hword' : pointsTo_u32 0 address newWord $$ [Hword]
   · rw [UInt32.add_zero]
     iexact Hword
   iapply Hcont
@@ -230,8 +230,8 @@ theorem wp_swapAt
     (ha_after : updated.get aIndex = some (.i32 (UInt32.ofNat a)))
     (hb_after : updated.get bIndex = some (.i32 (UInt32.ofNat b)))
     (htmp_after : updated.get tmpIndex = some (.i32 input[a])) :
-    arrayAt base input ∗
-      (arrayAt base (swapElems input a b) -∗
+    arrayAt 0 base input ∗
+      (arrayAt 0 base (swapElems input a b) -∗
         WP (.running
           ⟨{ updated with values := stack },
             code, arity, remainder, controls, calls⟩ : Expr Unit)
@@ -310,9 +310,9 @@ theorem wp_swapAt
   · iexact Harray
   iintro Harray
   -- focus on cell a for the first store
-  ihave Hfocus := arrayAt_set base input a input[b] ha $$ Harray
+  ihave Hfocus := arrayAt_set 0 base input a input[b] ha $$ Harray
   icases Hfocus with ⟨Hcell_a, Hclose_a⟩
-  ihave Hcell_a' : pointsTo_u32 addr_a input[a] $$ [Hcell_a]
+  ihave Hcell_a' : pointsTo_u32 0 addr_a input[a] $$ [Hcell_a]
   · dsimp [addr_a]
     rw [UInt32.add_comm]
     iexact Hcell_a
@@ -322,7 +322,7 @@ theorem wp_swapAt
   · iexact Hcell_a'
   iintro Hcell_a
   -- rebuild intermediate array
-  ihave Harray2 : arrayAt base (input.set a input[b]) $$ [Hcell_a Hclose_a]
+  ihave Harray2 : arrayAt 0 base (input.set a input[b]) $$ [Hcell_a Hclose_a]
   · iapply Hclose_a
     rw [UInt32.add_comm]
     iexact Hcell_a
@@ -334,9 +334,9 @@ theorem wp_swapAt
   inext
   -- focus on cell b for the second store
   have hb' : b < (input.set a input[b]).length := by rw [List.length_set]; exact hb
-  ihave Hfocus := arrayAt_set base (input.set a input[b]) b input[a] hb' $$ Harray2
+  ihave Hfocus := arrayAt_set 0 base (input.set a input[b]) b input[a] hb' $$ Harray2
   icases Hfocus with ⟨Hcell_b, Hclose_b⟩
-  ihave Hcell_b' : pointsTo_u32 addr_b (input.set a input[b])[b] $$ [Hcell_b]
+  ihave Hcell_b' : pointsTo_u32 0 addr_b (input.set a input[b])[b] $$ [Hcell_b]
   · dsimp [addr_b]
     rw [UInt32.add_comm]
     iexact Hcell_b
@@ -513,8 +513,8 @@ theorem twp_loadAt_cell
     (h1 : (addr + 1).toNat = addr.toNat + 1)
     (h2 : (addr + 2).toNat = addr.toNat + 2)
     (h3 : (addr + 3).toNat = addr.toNat + 3) :
-    pointsTo_u32 addr word ∗
-      (pointsTo_u32 addr word -∗
+    pointsTo_u32 0 addr word ∗
+      (pointsTo_u32 0 addr word -∗
         WP (.running
           ⟨⟨params, localValues, .i32 word :: stack⟩,
             code, arity, remainder, controls, calls⟩ : Expr Unit)
@@ -531,7 +531,7 @@ theorem twp_loadAt_cell
   simp only [loadAt, List.append_assoc, List.cons_append, List.nil_append]
   iapply twp_address hbase helement
   rw [haddress]
-  ihave HwordLater : pointsTo_u32 (addr + 0) word $$ [Hword]
+  ihave HwordLater : pointsTo_u32 0 (addr + 0) word $$ [Hword]
   · rw [UInt32.add_zero]
     iexact Hword
   iapply Wasm.SmallStep.twp_load32
@@ -557,8 +557,8 @@ theorem twp_loadAt
       some (.i32 base))
     (helement : (⟨params, localValues, stack⟩ : Locals).get elementIndex =
       some (.i32 (UInt32.ofNat k))) :
-    arrayAt base input ∗
-      (arrayAt base input -∗
+    arrayAt 0 base input ∗
+      (arrayAt 0 base input -∗
         WP (.running
           ⟨⟨params, localValues, .i32 input[k] :: stack⟩,
             code, arity, remainder, controls, calls⟩ : Expr Unit)
@@ -587,7 +587,7 @@ theorem twp_loadAt
     simpa using UInt32.add_ofNat_toNat_noWrap
       (base + 4 * UInt32.ofNat k) 3 (by decide) (by omega)
   iintro ⟨Harray, Hcont⟩
-  ihave Hfocus := arrayAt_get base input k hk $$ Harray
+  ihave Hfocus := arrayAt_get 0 base input k hk $$ Harray
   icases Hfocus with ⟨Hword, Hclose⟩
   iapply twp_loadAt_cell hbase helement
     (by rw [UInt32.add_comm])
@@ -610,8 +610,8 @@ private theorem twp_store32_cell
     (h1 : (address + 1).toNat = address.toNat + 1)
     (h2 : (address + 2).toNat = address.toNat + 2)
     (h3 : (address + 3).toNat = address.toNat + 3) :
-    pointsTo_u32 address oldWord ∗
-      (pointsTo_u32 address newWord -∗
+    pointsTo_u32 0 address oldWord ∗
+      (pointsTo_u32 0 address newWord -∗
         WP (.running
           ⟨⟨params, localValues, stack⟩,
             code, arity, remainder, controls, calls⟩ : Expr Unit)
@@ -624,14 +624,14 @@ private theorem twp_store32_cell
   have h2' : ((address + 0) + 2).toNat = (address + 0).toNat + 2 := by simpa using h2
   have h3' : ((address + 0) + 3).toNat = (address + 0).toNat + 3 := by simpa using h3
   iintro ⟨Hword, Hcont⟩
-  ihave HwordLater : pointsTo_u32 (address + 0) oldWord $$ [Hword]
+  ihave HwordLater : pointsTo_u32 0 (address + 0) oldWord $$ [Hword]
   · rw [UInt32.add_zero]
     iexact Hword
   iapply Wasm.SmallStep.twp_store32
     (address := address) (offset := 0) oldWord
     (by simp) h1' h2' h3' $$ HwordLater
   iintro Hword
-  ihave Hword' : pointsTo_u32 address newWord $$ [Hword]
+  ihave Hword' : pointsTo_u32 0 address newWord $$ [Hword]
   · rw [UInt32.add_zero]
     iexact Hword
   iapply Hcont
@@ -660,8 +660,8 @@ theorem twp_swapAt
     (ha_after : updated.get aIndex = some (.i32 (UInt32.ofNat a)))
     (hb_after : updated.get bIndex = some (.i32 (UInt32.ofNat b)))
     (htmp_after : updated.get tmpIndex = some (.i32 input[a])) :
-    arrayAt base input ∗
-      (arrayAt base (swapElems input a b) -∗
+    arrayAt 0 base input ∗
+      (arrayAt 0 base (swapElems input a b) -∗
         WP (.running
           ⟨{ updated with values := stack },
             code, arity, remainder, controls, calls⟩ : Expr Unit)
@@ -738,9 +738,9 @@ theorem twp_swapAt
   · iexact Harray
   iintro Harray
   -- focus on cell a for the first store
-  ihave Hfocus := arrayAt_set base input a input[b] ha $$ Harray
+  ihave Hfocus := arrayAt_set 0 base input a input[b] ha $$ Harray
   icases Hfocus with ⟨Hcell_a, Hclose_a⟩
-  ihave Hcell_a' : pointsTo_u32 addr_a input[a] $$ [Hcell_a]
+  ihave Hcell_a' : pointsTo_u32 0 addr_a input[a] $$ [Hcell_a]
   · dsimp [addr_a]
     rw [UInt32.add_comm]
     iexact Hcell_a
@@ -750,7 +750,7 @@ theorem twp_swapAt
   · iexact Hcell_a'
   iintro Hcell_a
   -- rebuild intermediate array
-  ihave Harray2 : arrayAt base (input.set a input[b]) $$ [Hcell_a Hclose_a]
+  ihave Harray2 : arrayAt 0 base (input.set a input[b]) $$ [Hcell_a Hclose_a]
   · iapply Hclose_a
     rw [UInt32.add_comm]
     iexact Hcell_a
@@ -760,9 +760,9 @@ theorem twp_swapAt
   iapply Wasm.SmallStep.twp_localGet (by exact htmp_after)
   -- focus on cell b for the second store
   have hb' : b < (input.set a input[b]).length := by rw [List.length_set]; exact hb
-  ihave Hfocus := arrayAt_set base (input.set a input[b]) b input[a] hb' $$ Harray2
+  ihave Hfocus := arrayAt_set 0 base (input.set a input[b]) b input[a] hb' $$ Harray2
   icases Hfocus with ⟨Hcell_b, Hclose_b⟩
-  ihave Hcell_b' : pointsTo_u32 addr_b (input.set a input[b])[b] $$ [Hcell_b]
+  ihave Hcell_b' : pointsTo_u32 0 addr_b (input.set a input[b])[b] $$ [Hcell_b]
   · dsimp [addr_b]
     rw [UInt32.add_comm]
     iexact Hcell_b

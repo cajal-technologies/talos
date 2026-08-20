@@ -272,8 +272,8 @@ def runOnce (a : Args) : IO UInt32 := do
   -- Data/elem segments whose offset is itself a const-expr are deferred
   -- by `initialStore`; write them now that the globals are evaluated.
   let store0 := m.runActiveSegments a.fuel store0 {}
-  let runtime : Wasm.SmallStep.RuntimeEnv Unit := { module := m, host := {} }
-  let config ← match Wasm.SmallStep.initConfig runtime idx store0 vs.reverse with
+  let instance_ : Wasm.SmallStep.ModuleInstance Unit := { module := m, host := {} }
+  let config ← match Wasm.SmallStep.initConfig instance_ idx store0 vs.reverse with
     | .ok config => pure config
     | .error error =>
       IO.eprintln s!"error: small-step initialization error: {error.message}"

@@ -27,7 +27,7 @@ def infiniteOuterConfig (m : Module) (st : Store α)
         code := InfiniteLoop
         resultArity := 0
         callerRemainder := [] }
-    store := { runtime := { module := m, host := {} }, wasm := st } }
+    store := { runtime := { instances := #[{ module := m, host := {} }], entry := ⟨0⟩ }, wasm := st } }
 
 def infiniteInnerConfig (m : Module) (st : Store α)
     (locals : Locals) : Config α :=
@@ -37,7 +37,7 @@ def infiniteInnerConfig (m : Module) (st : Store α)
         resultArity := 0
         callerRemainder := []
         control := [infiniteFrame locals.values] }
-    store := { runtime := { module := m, host := {} }, wasm := st } }
+    store := { runtime := { instances := #[{ module := m, host := {} }], entry := ⟨0⟩ }, wasm := st } }
 
 private theorem infinite_outer_step (m : Module) (st : Store α)
     (locals : Locals) :

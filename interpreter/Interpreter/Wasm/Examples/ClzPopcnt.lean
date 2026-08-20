@@ -43,7 +43,7 @@ def bitCountConfig (body : Program) (a : UInt32) : Config Unit :=
         resultArity := 1
         callerRemainder := [] }
     store :=
-      { runtime := { module := clzPopcntModule, host := {} }
+      { runtime := { instances := #[{ module := clzPopcntModule, host := {} }], entry := ⟨0⟩ }
         wasm := clzPopcntModule.initialStore } }
 
 def clzConfig (a : UInt32) : Config Unit := bitCountConfig ClzBody a

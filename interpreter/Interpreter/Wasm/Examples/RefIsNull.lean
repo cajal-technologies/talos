@@ -22,7 +22,7 @@ def refReflectConfig (m : Module) (st : Store α) : Config α :=
         code := RefReflect
         resultArity := 2
         callerRemainder := [] }
-    store := { runtime := { module := m, host := {} }, wasm := st } }
+    store := { runtime := { instances := #[{ module := m, host := {} }], entry := ⟨0⟩ }, wasm := st } }
 
 theorem refReflect_steps (m : Module) (st : Store α) :
     Steps (refReflectConfig m st)
@@ -91,7 +91,7 @@ private def decodedConfig (index : Nat) : Config Unit :=
         resultArity := decoded.funcs[index]!.results.length
         callerRemainder := [] }
     store :=
-      { runtime := { module := decoded, host := {} }
+      { runtime := { instances := #[{ module := decoded, host := {} }], entry := ⟨0⟩ }
         wasm := initializedStore } }
 
 private def runVals (index : Nat) : Option (List Value) :=

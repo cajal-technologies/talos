@@ -26,7 +26,7 @@ def ifAbsConfig (x : UInt32) : Config Unit :=
         resultArity := 1
         callerRemainder := [] }
     store :=
-      { runtime := { module := ifAbsModule, host := {} }
+      { runtime := { instances := #[{ module := ifAbsModule, host := {} }], entry := ⟨0⟩ }
         wasm := ifAbsModule.initialStore } }
 
 def ifAbsResult (x : UInt32) : UInt32 :=

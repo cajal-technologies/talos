@@ -108,13 +108,13 @@ theorem fillWords_storeIteration_wp
     (calls : List Wasm.SmallStep.CallFrame)
     (hroom : base.toNat + 8 * (i.toNat + 1) ≤ 4294967296)
     (hcontinue :
-      R ∗ array64At base
+      R ∗ array64At 0 base
           (List.replicate (i.toNat + 1) value ++ suffix) ⊢
         WP (Wasm.SmallStep.Expr.running
           ⟨⟨[.i32 base, .i32 n, .i64 value], [.i32 i], []⟩,
             code, arity, remainder, controls, calls⟩ :
           Wasm.SmallStep.Expr α) @ s; E {{ Φ }}) :
-    R ∗ array64At base
+    R ∗ array64At 0 base
         (List.replicate i.toNat value ++ old :: suffix) ⊢
       WP (Wasm.SmallStep.Expr.running
         ⟨⟨[.i32 base, .i32 n, .i64 value], [.i32 i], []⟩,
@@ -151,7 +151,7 @@ theorem fillWords_storeIteration_wp
   have h7 : (address + 7).toNat = address.toNat + 7 := by
     simpa using hstep 7 (by decide) (by omega)
   iintro ⟨HR, Harray⟩
-  icases array64At_fill_next base i.toNat value old suffix $$ Harray with
+  icases array64At_fill_next 0 base i.toNat value old suffix $$ Harray with
     ⟨Hold, Hreassemble⟩
   simp only [FillWordsStoreIteration, List.cons_append, List.nil_append]
   iapply Wasm.SmallStep.wp_localGet rfl
@@ -167,7 +167,7 @@ theorem fillWords_storeIteration_wp
   rw [haddr]
   iapply Wasm.SmallStep.wp_localGet rfl
   inext
-  ihave HoldLater : ▷ pointsTo_u64 (address + 0) old $$ [Hold]
+  ihave HoldLater : ▷ pointsTo_u64 0 (address + 0) old $$ [Hold]
   · inext
     simp only [UInt32.add_zero, address]
     iexact Hold
@@ -179,11 +179,11 @@ theorem fillWords_storeIteration_wp
   inext
   iintro Hnew
   ihave Hnew' :
-      pointsTo_u64 (base + 8 * UInt32.ofNat i.toNat) value $$ [Hnew]
+      pointsTo_u64 0 (base + 8 * UInt32.ofNat i.toNat) value $$ [Hnew]
   · simp only [UInt32.add_zero, address]
     iexact Hnew
   ihave Harray' :
-      array64At base
+      array64At 0 base
         (List.replicate (i.toNat + 1) value ++ suffix) $$
       [Hreassemble Hnew']
   · iapply Hreassemble
@@ -244,14 +244,14 @@ theorem fillWords_bodyTail_wp
     (calls : List Wasm.SmallStep.CallFrame)
     (hroom : base.toNat + 8 * (i.toNat + 1) ≤ 4294967296)
     (hback :
-      R ∗ array64At base
+      R ∗ array64At 0 base
           (List.replicate (i.toNat + 1) value ++ suffix) ⊢
         ▷ WP (Wasm.SmallStep.Expr.running
           ⟨⟨[.i32 base, .i32 n, .i64 value], [.i32 (i + 1)], []⟩,
             FillWordsLoopBody, arity, remainder,
             fillWordsLoopFrame afterLoop :: outerControls, calls⟩ :
           Wasm.SmallStep.Expr α) @ s; E {{ Φ }}) :
-    R ∗ array64At base
+    R ∗ array64At 0 base
         (List.replicate i.toNat value ++ old :: suffix) ⊢
       WP (Wasm.SmallStep.Expr.running
         ⟨⟨[.i32 base, .i32 n, .i64 value], [.i32 i], []⟩,
@@ -350,12 +350,12 @@ theorem fillWords_loopBody_invariant_wp
     (htotal : base.toNat + 8 * n.toNat ≤ 4294967296)
     (hinv : i.toNat + suffix.length = n.toNat)
     (hfinish :
-      R ∗ array64At base (List.replicate n.toNat value) ⊢
+      R ∗ array64At 0 base (List.replicate n.toNat value) ⊢
         WP (Wasm.SmallStep.Expr.running
           ⟨⟨[.i32 base, .i32 n, .i64 value], [.i32 n], []⟩,
             afterLoop, arity, remainder, outerControls, calls⟩ :
           Wasm.SmallStep.Expr α) @ s; E {{ Φ }}) :
-    R ∗ array64At base
+    R ∗ array64At 0 base
         (List.replicate i.toNat value ++ suffix) ⊢
       WP (Wasm.SmallStep.Expr.running
         ⟨⟨[.i32 base, .i32 n, .i64 value], [.i32 i], []⟩,
@@ -366,7 +366,7 @@ theorem fillWords_loopBody_invariant_wp
   let Kloop : IProp (WasmHeapGF α) := iprop(
     ▷ ∀ (j : UInt32) (tail : List UInt64),
       ⌜j.toNat + tail.length = n.toNat⌝ -∗
-      R ∗ array64At base
+      R ∗ array64At 0 base
           (List.replicate j.toNat value ++ tail) -∗
       WP (Wasm.SmallStep.Expr.running
         ⟨⟨[.i32 base, .i32 n, .i64 value], [.i32 j], []⟩,
@@ -377,7 +377,7 @@ theorem fillWords_loopBody_invariant_wp
   · simp only [Kloop]
     iexact IH
   let P : IProp (WasmHeapGF α) :=
-    iprop% □ Kloop ∗ R ∗ array64At base
+    iprop% □ Kloop ∗ R ∗ array64At 0 base
       (List.replicate i.toNat value ++ suffix)
   iintro ⟨HR, Harray⟩
   iapply fillWords_guard_wp P
@@ -411,7 +411,7 @@ theorem fillWords_loopBody_invariant_wp
         · iintro Hresources
           ihave Hexpanded :
               (□ Kloop ∗ R) ∗
-                array64At base
+                array64At 0 base
                   (List.replicate ((i + 1).toNat) value ++ tail) $$
               [Hresources]
           · simp only [Rloop]
@@ -462,12 +462,12 @@ theorem fillWords_loop_wp
     (hlength : original.length = n.toNat)
     (htotal : base.toNat + 8 * n.toNat ≤ 4294967296)
     (hfinish :
-      R ∗ array64At base (List.replicate n.toNat value) ⊢
+      R ∗ array64At 0 base (List.replicate n.toNat value) ⊢
         WP (Wasm.SmallStep.Expr.running
           ⟨⟨[.i32 base, .i32 n, .i64 value], [.i32 n], []⟩,
             afterLoop, arity, remainder, outerControls, calls⟩ :
           Wasm.SmallStep.Expr α) @ s; E {{ Φ }}) :
-    R ∗ array64At base original ⊢
+    R ∗ array64At 0 base original ⊢
       WP (Wasm.SmallStep.Expr.running
         ⟨⟨[.i32 base, .i32 n, .i64 value], [.i32 0], []⟩,
           [.loop 0 0 FillWordsLoopBody] ++ afterLoop,
@@ -512,12 +512,12 @@ theorem fillWords_smallStep_wp
     (hlength : original.length = n.toNat)
     (htotal : base.toNat + 8 * n.toNat ≤ 4294967296)
     (hfinish :
-      R ∗ array64At base (List.replicate n.toNat value) ⊢
+      R ∗ array64At 0 base (List.replicate n.toNat value) ⊢
         WP (Wasm.SmallStep.Expr.running
           ⟨⟨[.i32 base, .i32 n, .i64 value], [.i32 n], []⟩,
             afterLoop, arity, remainder, controls, calls⟩ :
           Wasm.SmallStep.Expr α) @ s; E {{ Φ }}) :
-    R ∗ array64At base original ⊢
+    R ∗ array64At 0 base original ⊢
       WP (Wasm.SmallStep.Expr.running
         ⟨⟨[.i32 base, .i32 n, .i64 value],
             [.i32 initialIndex], []⟩,

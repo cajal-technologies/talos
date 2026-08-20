@@ -232,12 +232,12 @@ theorem quicksortHeapAux_addresses_lt
     (σ : WasmHeapMap (Option UInt8)) (base : UInt32)
     (values : List UInt32) (limit : Nat)
     (hσ : ∀ address byte, get? σ address = some byte →
-      address.toNat < base.toNat)
+      address.addr.toNat < base.toNat)
     (hfit : base.toNat + 4 * values.length ≤ limit)
     (hlimit : limit < UInt32.size) :
     ∀ address byte,
       get? (Quicksort.quicksortHeapAux σ base values) address = some byte →
-      address.toNat < limit := by
+      address.addr.toNat < limit := by
   induction values generalizing σ base with
   | nil =>
       intro address byte hget
@@ -260,24 +260,17 @@ theorem quicksortHeapAux_addresses_lt
         UInt32.add_ofNat_toNat_noWrap base 3 (by decide) (by
           simp only [UInt32.size] at hlimit
           omega)
-      apply ih (store32Heap σ base value) (base + 4)
+      apply ih (store32Heap σ 0 base value) (base + 4)
       · intro address byte hget
         rw [h4]
-        by_cases h3 : address = base + 3
-        · subst h3
-          rw [hn3]
-          omega
-        by_cases h2 : address = base + 2
-        · subst h2
-          rw [hn2]
-          omega
-        by_cases h1 : address = base + 1
-        · subst h1
-          rw [hn1]
-          omega
-        by_cases h0 : address = base
-        · subst h0
-          omega
+        by_cases h3 : address = (⟨0, base + 3⟩ : MemoryKey)
+        · subst h3; change (base + 3).toNat < base.toNat + 4; rw [hn3]; omega
+        by_cases h2 : address = (⟨0, base + 2⟩ : MemoryKey)
+        · subst h2; change (base + 2).toNat < base.toNat + 4; rw [hn2]; omega
+        by_cases h1 : address = (⟨0, base + 1⟩ : MemoryKey)
+        · subst h1; change (base + 1).toNat < base.toNat + 4; rw [hn1]; omega
+        by_cases h0 : address = (⟨0, base⟩ : MemoryKey)
+        · subst h0; change base.toNat < base.toNat + 4; omega
         · simp only [store32Heap,
               get?_insert_ne (Ne.symm h3), get?_insert_ne (Ne.symm h2),
               get?_insert_ne (Ne.symm h1), get?_insert_ne (Ne.symm h0)] at hget
@@ -322,7 +315,7 @@ def config (input : List UInt8) : Config Wasm.StdIO.State :=
       -- Definitionally unreachable: local function index 4 is `mainFunction`.
       { expr := .trapped (.host "invalid StdIO merge-sort entry")
         store :=
-          { runtime := { module, host := Wasm.StdIO.env }
+          { runtime := { instances := #[{ module, host := Wasm.StdIO.env }], entry := ⟨0⟩ }
             wasm := initialStore input } }
 
 /-- Execute one exported or imported function with the authoritative
@@ -384,7 +377,7 @@ theorem execute_read (store wasm : Store Wasm.StdIO.State)
     execute 2 0 store [.i32 pointer, .i32 length] =
       some ([.i32 count], wasm) := by
   let machine : MachineStore Wasm.StdIO.State :=
-    { runtime := { module, host := Wasm.StdIO.env }, wasm := store }
+    { runtime := { instances := #[{ module, host := Wasm.StdIO.env }], entry := ⟨0⟩ }, wasm := store }
   let initial : Config Wasm.StdIO.State :=
     { expr := .running
         ⟨⟨[], [], [.i32 pointer, .i32 length]⟩, [.call 0], 1, [], [], []⟩
@@ -424,7 +417,7 @@ theorem execute_read_trap (store wasm : Store Wasm.StdIO.State)
       [.i32 length, .i32 pointer] = .Trap wasm message) :
     execute 2 0 store [.i32 pointer, .i32 length] = none := by
   let machine : MachineStore Wasm.StdIO.State :=
-    { runtime := { module, host := Wasm.StdIO.env }, wasm := store }
+    { runtime := { instances := #[{ module, host := Wasm.StdIO.env }], entry := ⟨0⟩ }, wasm := store }
   let initial : Config Wasm.StdIO.State :=
     { expr := .running
         ⟨⟨[], [], [.i32 pointer, .i32 length]⟩, [.call 0], 1, [], [], []⟩
@@ -457,7 +450,7 @@ theorem execute_write (store wasm : Store Wasm.StdIO.State)
       [.i32 length, .i32 pointer] = .Return [] wasm) :
     execute 2 1 store [.i32 pointer, .i32 length] = some ([], wasm) := by
   let machine : MachineStore Wasm.StdIO.State :=
-    { runtime := { module, host := Wasm.StdIO.env }, wasm := store }
+    { runtime := { instances := #[{ module, host := Wasm.StdIO.env }], entry := ⟨0⟩ }, wasm := store }
   let initial : Config Wasm.StdIO.State :=
     { expr := .running
         ⟨⟨[], [], [.i32 pointer, .i32 length]⟩, [.call 1], 0, [], [], []⟩
@@ -565,7 +558,7 @@ def sortConfig (input : List UInt32) : Config Unit :=
       ⟨sortLocals source scratch input.length 0 0 0 0 [],
         mergeSortBody 3, 0, [], [], []⟩
     store :=
-      { runtime := { module, host := {} }
+      { runtime := { instances := #[{ module, host := {} }], entry := ⟨0⟩ }
         wasm := replaceHost (afterRead input) () } }
 
 theorem initConfig_sort (input : List UInt32) :
@@ -739,17 +732,17 @@ theorem afterRead_mem_eq (input : List UInt32) (hfit : Fits input) :
   omega
 
 theorem sortHeap_agrees (input : List UInt32) (hfit : Fits input) :
-    heapAgreesWithMem (sortHeap input) (afterRead input).mem := by
+    heapAgreesWithMem (sortHeap input) (storeResolve (sortConfig input).store) := by
   let initialMem := (initialStore (serialize input)).mem
   let sourceHeap := Quicksort.quicksortHeapAux ∅ source input
-  have hempty : heapAgreesWithMem (∅ : WasmHeapMap (Option UInt8)) initialMem := by
-    intro address byte hget
-    have hemptyGet : Iris.Std.get? (∅ : WasmHeapMap (Option UInt8)) address = none :=
-      Iris.Std.get?_empty address
-    rw [hemptyGet] at hget
+  have hempty : heapAgreesWithMem (∅ : WasmHeapMap (Option UInt8))
+      (fun id => if id = 0 then some initialMem else none) := by
+    intro key v hget
+    rw [Iris.Std.get?_empty] at hget
     contradiction
-  have hsource : heapAgreesWithMem sourceHeap (afterRead input).mem := by
-    rw [afterRead_mem_eq input hfit]
+  have hsource : heapAgreesWithMem sourceHeap
+      (fun id => if id = 0 then some (afterRead input).mem else none) := by
+    simp only [afterRead_mem_eq input hfit]
     simpa only [sourceHeap, initialMem, quicksort_writeWordArray_eq] using
       Quicksort.quicksortHeapAux_agrees ∅ initialMem source input hempty
       (by
@@ -768,22 +761,31 @@ theorem sortHeap_agrees (input : List UInt32) (hfit : Fits input) :
       change 4 * input.length ≤ 32768 at hfit
       omega)
   rw [quicksort_writeWordArray_eq] at hscratch
-  simpa only [sortHeap, sourceHeap, scratchValues,
-    writeWordArray_readWordArray] using hscratch
+  have h : heapAgreesWithMem (sortHeap input)
+      (fun id => if id = 0 then some (afterRead input).mem else none) := by
+    simpa only [sortHeap, sourceHeap, scratchValues,
+      writeWordArray_readWordArray] using hscratch
+  have heq : (fun id : Nat => if id = 0 then some (afterRead input).mem else none) =
+      storeResolve (sortConfig input).store := by
+    funext id; by_cases hid : id = 0
+    · subst hid; simp [storeResolve, sortConfig, replaceHost]
+    · have hext : (sortConfig input).store.wasm.extraMems = [] := by
+        change (module.initialStore (α := Wasm.StdIO.State)).extraMems = []
+        native_decide
+      simp [hid, storeResolve, hext]
+  rw [heq] at h; exact h
 
 theorem sortHeap_inBounds (input : List UInt32) (hfit : Fits input) :
-    heapAddressesInBounds (sortHeap input) (afterRead input).mem := by
+    heapAddressesInBounds (sortHeap input) (storeResolve (sortConfig input).store) := by
   let initialMem := (initialStore (serialize input)).mem
   let sourceHeap := Quicksort.quicksortHeapAux ∅ source input
   have hempty : heapAddressesInBounds
-      (∅ : WasmHeapMap (Option UInt8)) initialMem := by
-    intro address byte hget
-    have hemptyGet : Iris.Std.get? (∅ : WasmHeapMap (Option UInt8)) address = none :=
-      Iris.Std.get?_empty address
-    rw [hemptyGet] at hget
-    contradiction
-  have hsource : heapAddressesInBounds sourceHeap (afterRead input).mem := by
-    rw [afterRead_mem_eq input hfit]
+      (∅ : WasmHeapMap (Option UInt8)) (fun id => if id = 0 then some initialMem else none) := by
+    intro key hne
+    exact absurd (Iris.Std.get?_empty key) hne
+  have hsource : heapAddressesInBounds sourceHeap
+      (fun id => if id = 0 then some (afterRead input).mem else none) := by
+    simp only [afterRead_mem_eq input hfit]
     simpa only [sourceHeap, initialMem, quicksort_writeWordArray_eq] using
       Quicksort.quicksortHeapAux_inBounds ∅ initialMem source input hempty
       (by
@@ -820,19 +822,30 @@ theorem sortHeap_inBounds (input : List UInt32) (hfit : Fits input) :
       change 4 * input.length ≤ 32768 at hfit
       omega)
   rw [quicksort_writeWordArray_eq] at hscratch
-  simpa only [sortHeap, sourceHeap, scratchValues,
-    writeWordArray_readWordArray] using hscratch
+  have h : heapAddressesInBounds (sortHeap input)
+      (fun id => if id = 0 then some (afterRead input).mem else none) := by
+    simpa only [sortHeap, sourceHeap, scratchValues,
+      writeWordArray_readWordArray] using hscratch
+  have heq : (fun id : Nat => if id = 0 then some (afterRead input).mem else none) =
+      storeResolve (sortConfig input).store := by
+    funext id; by_cases hid : id = 0
+    · subst hid; simp [storeResolve, sortConfig, replaceHost]
+    · have hext : (sortConfig input).store.wasm.extraMems = [] := by
+        change (module.initialStore (α := Wasm.StdIO.State)).extraMems = []
+        native_decide
+      simp [hid, storeResolve, hext]
+  rw [heq] at h; exact h
 
 theorem sortHeap_pointsTo [WasmHeapGS Unit]
     (input : List UInt32) (hfit : Fits input) :
     ([∗map] address ↦ value ∈ sortHeap input,
       pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
         address (DFrac.own 1) value) ⊢
-      arrayAt source input ∗ arrayAt scratch (scratchValues input) := by
+      arrayAt 0 source input ∗ arrayAt 0 scratch (scratchValues input) := by
   let sourceHeap := Quicksort.quicksortHeapAux ∅ source input
   have hempty : ∀ address byte,
       get? (∅ : WasmHeapMap (Option UInt8)) address = some byte →
-      address.toNat < source.toNat := by
+      address.addr.toNat < source.toNat := by
     intro address byte hget
     have hemptyGet : get? (∅ : WasmHeapMap (Option UInt8)) address = none :=
       get?_empty address
@@ -853,7 +866,7 @@ theorem sortHeap_pointsTo [WasmHeapGS Unit]
     change 4 * input.length ≤ 32768 at hfit
     omega
   have hdisjoint : ∀ address byte, get? sourceHeap address = some byte →
-      address.toNat < scratch.toNat := by
+      address.addr.toNat < scratch.toNat := by
     apply quicksortHeapAux_addresses_lt ∅ source input scratch.toNat hempty
     · rw [fits_iff] at hfit
       have hscratchNat : scratch.toNat = 32768 := by decide
@@ -884,9 +897,9 @@ theorem arrayAt_capacity [WasmSmallStepGS hlc Unit]
     (hfit : base.toNat + 4 * values.length < UInt32.size)
     (hbaseBound : base.toNat ≤ store.wasm.mem.pages * 65536) :
     stateInterp (GF := WasmHeapGF Unit) store steps observations threads ∗
-      arrayAt base values ==∗
+      arrayAt 0 base values ==∗
     stateInterp (GF := WasmHeapGF Unit) store steps observations threads ∗
-      arrayAt base values ∗
+      arrayAt 0 base values ∗
       ⌜base.toNat + 4 * values.length ≤ store.wasm.mem.pages * 65536⌝ := by
   by_cases hempty : values = []
   · subst values
@@ -925,7 +938,7 @@ theorem arrayAt_capacity [WasmSmallStepGS hlc Unit]
         rw [haddress]
         omega)
     iintro ⟨Hstate, Harray⟩
-    ihave Hfocus := arrayAt_get base values k hk $$ Harray
+    ihave Hfocus := arrayAt_get 0 base values k hk $$ Harray
     icases Hfocus with ⟨Hword, Hrestore⟩
     imod stateInterp_pointsTo_u32_facts_frame store steps observations threads
       address values[k] h1 h2 h3 $$ [$Hstate $Hword] with
@@ -964,7 +977,7 @@ private theorem mergeSortPost_elim [WasmHeapGS Unit]
       (iprop% ∃ output scratchFinal : List UInt32,
         ⌜SortedPermutation input output⌝ ∗
         ⌜scratchFinal.length = input.length⌝ ∗
-        arrayAt source output ∗ arrayAt scratch scratchFinal) := by
+        arrayAt 0 source output ∗ arrayAt 0 scratch scratchFinal) := by
   unfold mergeSortPost
   iintro Hpost
   iexact Hpost
@@ -977,7 +990,7 @@ theorem twp_sort [WasmSmallStepGS hlc Unit]
           address (DFrac.own 1) value) ∗
       ([∗map] index ↦ value ∈ (∅ : WasmGlobalMap Value),
         globalPointsTo index value) ∗
-      runtimeModuleOwn (sortConfig input).store.runtime.module) ⊢
+      runtimeModuleOwn ⟨0⟩ module) ⊢
       WP (sortConfig input).expr @ Stuckness.NotStuck; ⊤
         [{ values,
           ∀ (store : MachineStore Unit) (_observations : List StepKind),
@@ -1045,11 +1058,20 @@ theorem sort_partiallyMeets (input : List UInt32) (hfit : Fits input) :
   · exact sortHeap_agrees input hfit
   · exact sortHeap_inBounds input hfit
   · exact globalHeapAgrees_empty _
+  · simp [sortConfig]
   · intro _
-    iintro Hresources
+    have hentry : (sortConfig input).store.runtime.entry = ⟨0⟩ := rfl
+    have hmod : (sortConfig input).store.runtime.currentModule = module := by
+      simp [sortConfig, RuntimeEnv.currentModule_mk1]
+    rw [hentry, hmod]
+    iintro ⟨Hheap, Hglobals, Hruntime, _Hhost⟩
     iapply twp.to_wp
     iapply twp_sort input hfit
-    iexact Hresources
+    isplitl [Hheap]
+    · iexact Hheap
+    isplitl [Hglobals]
+    · iexact Hglobals
+    iexact Hruntime
 
 theorem sort_stronglyNormalizing (input : List UInt32) (hfit : Fits input) :
     Relation.StronglyNormalizing Iris.ProgramLogic.Language.ErasedStep
@@ -1060,12 +1082,20 @@ theorem sort_stronglyNormalizing (input : List UInt32) (hfit : Fits input) :
   · exact sortHeap_agrees input hfit
   · exact sortHeap_inBounds input hfit
   · exact globalHeapAgrees_empty _
+  · simp [sortConfig]
   · intro _
-    iintro Hresources
-    ihave Hsort := twp_sort input hfit $$ Hresources
-    iapply twp.mono (fun _values => ?_) $$ Hsort
-    iintro _Hpost
-    itrivial
+    have hentry : (sortConfig input).store.runtime.entry = ⟨0⟩ := rfl
+    have hmod : (sortConfig input).store.runtime.currentModule = module := by
+      simp [sortConfig, RuntimeEnv.currentModule_mk1]
+    rw [hentry, hmod]
+    iintro ⟨Hheap, Hglobals, Hruntime⟩
+    iapply (twp.mono (fun _ => BI.true_intro))
+    iapply twp_sort input hfit
+    isplitl [Hheap]
+    · iexact Hheap
+    isplitl [Hglobals]
+    · iexact Hglobals
+    iexact Hruntime
 
 theorem sort_terminatesWith (input : List UInt32) (hfit : Fits input) :
     SmallStep.TerminatesWith (sortConfig input) (SortPost input) := by
@@ -1076,11 +1106,20 @@ theorem sort_terminatesWith (input : List UInt32) (hfit : Fits input) :
   · exact sortHeap_agrees input hfit
   · exact sortHeap_inBounds input hfit
   · exact globalHeapAgrees_empty _
+  · simp [sortConfig]
   · intro _
-    iintro Hresources
+    have hentry : (sortConfig input).store.runtime.entry = ⟨0⟩ := rfl
+    have hmod : (sortConfig input).store.runtime.currentModule = module := by
+      simp [sortConfig, RuntimeEnv.currentModule_mk1]
+    rw [hentry, hmod]
+    iintro ⟨Hheap, Hglobals, Hruntime, _Hhost⟩
     iapply twp.to_wp
     iapply twp_sort input hfit
-    iexact Hresources
+    isplitl [Hheap]
+    · iexact Hheap
+    isplitl [Hglobals]
+    · iexact Hglobals
+    iexact Hruntime
 
 theorem runSteps_sort_correct (fuel : Nat) (input : List UInt32)
     (hfit : Fits input) (values : List Value)
@@ -1100,7 +1139,7 @@ theorem execute_sort_correct (fuel : Nat) (input : List UInt32)
       (mergeSortArguments source scratch input.length []) =
       some (values, store)) :
     SortPost input values
-      { runtime := { module, host := Wasm.StdIO.env }, wasm := store } := by
+      { runtime := { instances := #[{ module, host := Wasm.StdIO.env }], entry := ⟨0⟩ }, wasm := store } := by
   simp only [executeSort, initConfig_sort] at hexecute
   generalize hresult : (runSteps fuel (sortConfig input)).result = result at hexecute
   cases result with
@@ -1127,7 +1166,7 @@ theorem execute_sort_complete (input : List UInt32) (hfit : Fits input) :
         (mergeSortArguments source scratch input.length []) =
           some (values, store) ∧
       SortPost input values
-        { runtime := { module, host := Wasm.StdIO.env }, wasm := store } := by
+        { runtime := { instances := #[{ module, host := Wasm.StdIO.env }], entry := ⟨0⟩ }, wasm := store } := by
   rcases sort_terminatesWith input hfit with
     ⟨trace, values, finalStore, hsteps, hpost⟩
   let store : Store Wasm.StdIO.State :=

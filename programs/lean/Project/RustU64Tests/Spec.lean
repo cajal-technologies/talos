@@ -22,7 +22,7 @@ private def ternaryConfig (body : Program)
       ⟨⟨[.i64 a, .i64 b, .i64 c], [], []⟩,
         body, 1, [], [], []⟩
     store :=
-      { runtime := { module := «module», host := {} }
+      { runtime := { instances := #[{ module := «module», host := {} }], entry := ⟨0⟩ }
         wasm := «module».initialStore } }
 
 private def binaryConfig (body : Program)
@@ -30,7 +30,7 @@ private def binaryConfig (body : Program)
   { expr := .running
       ⟨⟨[.i64 a, .i64 b], [], []⟩, body, 1, [], [], []⟩
     store :=
-      { runtime := { module := «module», host := {} }
+      { runtime := { instances := #[{ module := «module», host := {} }], entry := ⟨0⟩ }
         wasm := «module».initialStore } }
 
 private def unaryConfig (body : Program)
@@ -38,7 +38,7 @@ private def unaryConfig (body : Program)
   { expr := .running
       ⟨⟨[.i64 a], [], []⟩, body, 1, [], [], []⟩
     store :=
-      { runtime := { module := «module», host := {} }
+      { runtime := { instances := #[{ module := «module», host := {} }], entry := ⟨0⟩ }
         wasm := «module».initialStore } }
 
 private def shiftValueConfig (body : Program)
@@ -47,7 +47,7 @@ private def shiftValueConfig (body : Program)
       ⟨⟨[.i64 a, .i32 n, .i64 b], [], []⟩,
         body, 1, [], [], []⟩
     store :=
-      { runtime := { module := «module», host := {} }
+      { runtime := { instances := #[{ module := «module», host := {} }], entry := ⟨0⟩ }
         wasm := «module».initialStore } }
 
 private def shiftTwiceConfig (body : Program)
@@ -56,7 +56,7 @@ private def shiftTwiceConfig (body : Program)
       ⟨⟨[.i64 a, .i32 n, .i32 m], [], []⟩,
         body, 1, [], [], []⟩
     store :=
-      { runtime := { module := «module», host := {} }
+      { runtime := { instances := #[{ module := «module», host := {} }], entry := ⟨0⟩ }
         wasm := «module».initialStore } }
 
 /-! ## add -/

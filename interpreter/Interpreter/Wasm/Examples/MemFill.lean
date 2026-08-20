@@ -31,7 +31,7 @@ def fillModule : Module :=
     memory := some { pagesMin := 1 } }
 
 def fillStore : MachineStore Unit :=
-  { runtime := { module := fillModule, host := {} }
+  { runtime := { instances := #[{ module := fillModule, host := {} }], entry := ⟨0⟩ }
     wasm := fillModule.initialStore }
 
 def fillThenReadConfig : Config Unit :=

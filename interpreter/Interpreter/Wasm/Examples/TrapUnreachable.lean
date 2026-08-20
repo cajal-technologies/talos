@@ -20,7 +20,7 @@ def trapUnreachableConfig : Config Unit :=
         resultArity := 0
         callerRemainder := [] }
     store :=
-      { runtime := { module := trapUnreachableModule, host := {} }
+      { runtime := { instances := #[{ module := trapUnreachableModule, host := {} }], entry := ⟨0⟩ }
         wasm := trapUnreachableModule.initialStore } }
 
 theorem trapUnreachableSpec :

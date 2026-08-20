@@ -68,7 +68,7 @@ def floatConfig (index : Nat) : Config Unit :=
         resultArity := floatModule.funcs[index]!.results.length
         callerRemainder := [] }
     store :=
-      { runtime := { module := floatModule, host := {} }
+      { runtime := { instances := #[{ module := floatModule, host := {} }], entry := ⟨0⟩ }
         wasm := floatModule.initialStore } }
 
 theorem f64_arith :

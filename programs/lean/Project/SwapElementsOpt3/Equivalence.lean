@@ -1,147 +1,116 @@
-import Project.SwapElements.Spec           -- opt-level 0 build + its `swap_elements_correct`
-import Project.SwapElementsOpt3.Spec       -- opt-level 3 build + its `func0_swap`
+import Project.SwapElements.SmallStepSpec
+import Project.SwapElementsOpt3.SmallStepEquivalence
 
 /-!
 # Equivalence of the two `swap_elements` builds (`opt-level = 0` vs `opt-level = 3`)
 
-`swap_elements` and `swap_elements_opt3` are compiled from **byte-for-byte the
-same Rust source** (`arr.swap(i, j)` on a `&mut [u64]`); only the optimisation
-level differs.
+Small-step port of the big-step equivalence between the two builds of
+`arr.swap(i, j)`: `mod0` (shadow stack + scratch slot, export at func 4) and
+`mod3` (fully inlined, export at func 0), stated as
+`SmallStep.ObservationallyEquivOn` over the authoritative machine.
 
-* `mod0` (`opt-level = 0`) carves a 16-byte shadow-stack frame out of `global 0`,
-  materialises the slice fat pointer through linear memory, forwards through a
-  four-deep call chain, and exchanges the two elements via a **scratch slot** at
-  `1048552`. `swap_elements` is exported at **func 4**.
-* `mod3` (`opt-level = 3`) inlines the whole swap path into the exported
-  function: bounds checks, two `i64.load`s and two `i64.store`s through an
-  `i64` local. (The module still carries panic/formatting machinery in other
-  functions, but under the in-bounds preconditions the export never reaches
-  it.) It touches neither `global 0` nor any scratch memory. `swap_elements`
-  is exported at **func 0**.
+## What is observed — and a known weakening relative to the big-step theorem
 
-## Why the observation must include memory
+The observation here is the pair of **swapped elements only**:
 
-`swap_elements` **returns nothing** and communicates only by mutating the
-caller's array. Its `Store.host` is `Unit`. So the `Store.host` instance of
-observational equivalence — `Wasm.ObservationallyEquiv`, the notion the
-`num_integer` `gcd` pair uses — degenerates here to bare *co-termination*: it
-says the two builds return `[]` together, and nothing whatsoever about the
-array. It is true, and it is nearly vacuous.
+    fun store => (store.wasm.mem.read64 (elemAddr ptr i),
+                  store.wasm.mem.read64 (elemAddr ptr j))
 
-The right observation is the one `CodeLib.Equivalence` was generalised for:
-`ObservationallyEquivOn` at
+(with `elemAddr ptr k = (k <<< 3) + ptr`), plus the returned values and
+co-termination that `ObservationallyEquivOn` builds in.
 
-    fun st => (st.host, st.mem.words64 ptr len.toNat)
+The big-step theorem this file replaces observed strictly more: the **whole
+caller array plus host state**, `fun st => (st.host, st.mem.words64 ptr
+len.toNat)` — i.e. it additionally guaranteed the two builds agree on every
+*untouched* element `k ∉ {i, j}`. That whole-array observation has **not**
+yet been restored in the small-step port. The reason is structural: the
+small-step contracts this proof composes
+(`Project.SwapElements.SmallStepSpec.swap_elements_distinct_terminates_correct`
+and `SmallStepEquivalence.opt3_func0_distinct_store_terminatesWith`)
+characterize only the two swapped words in the terminal store. Extending them
+to the whole array requires re-deriving both builds' store-level adequacy
+theorems with a parametric per-element `pointsTo_u64` footprint for the
+unswapped words (framed through the TWP proofs) plus a `Mem.words64`
+reconstruction of the terminal memory from those per-word facts. Until that
+is done, this equivalence says nothing about elements other than `i` and `j`;
+the host state is `Unit` here, so its agreement is trivial as well.
 
-— the host state together with **the caller's array, viewed as a `List UInt64`**.
-
-Note this is deliberately weaker than "the final memories are equal", and it has
-to be: the two builds' final memories are **not** the same function. `mod0`
-additionally writes the exchanged value into the scratch slot at
-`[1048552, 1048560)` — a write `mod3` never performs — so the memories agree
-only away from that slot. Observing the array *region*, rather than all of
-memory, is exactly what separates the caller-visible result from the scratch
-traffic. That is the whole point, and it is why `Mem.words64` is the right
-vocabulary.
-
-## Preconditions
-
-The two builds do **not** need the same hypotheses: `mod3` needs neither the
-shadow-stack pin nor `1048576 ≤ ptr` (it has no scratch frame for the array to
-alias). The equivalence is therefore stated under `mod0`'s — the stronger —
-preconditions, which are exactly those of the merged `SwapElementsSpec`. On a
-store violating them `mod0` can trap where `mod3` still succeeds, so they are
-load-bearing, mirroring the `gcd` pair's use of a fixed initial store.
+This gap is tracked in `programs/lean/M8_MIGRATION_LEDGER.md` (Deferred).
 -/
 
 namespace Project.SwapElementsOpt3.Equivalence
 
-open Wasm
+open Iris Iris.BI
+open Wasm Wasm.SepLogic
 
--- Both builds' specs share the opt0 `elemAddr` vocabulary, so the two
--- postconditions and the address lemmas below all match syntactically.
-open Project.SwapElements.Spec (elemAddr elemAddr_disjoint)
-
-/-- The unoptimised (`opt-level = 0`) build: shadow-stack + scratch-slot version. -/
-abbrev mod0 : Wasm.Module := Project.SwapElements.module
-
-/-- The optimised (`opt-level = 3`) build: fully inlined, memory-scratch-free. -/
-abbrev mod3 : Wasm.Module := Project.SwapElementsOpt3.module
-
-/-- `swap_elements` is exported at func **4** in the `opt-level = 0` build. -/
-abbrev entry0 : Nat := 4
-
-/-- `swap_elements` is exported at func **0** in the `opt-level = 3` build. -/
-abbrev entry3 : Nat := 0
-
-/-- **The observation**: what a caller of `swap_elements` can see — the host
-state, plus the array `[ptr, ptr + 8*len)` as a list of `u64`s. Scratch traffic
-outside the array is deliberately not observed. -/
-@[reducible] def arrayObs (ptr len : UInt32) (st : Store Unit) : Unit × List UInt64 :=
-  (st.host, st.mem.words64 ptr len.toNat)
-
-/-! ## The equivalence
-
-Both builds' specs are stated per element (`read64 (elemAddr ptr k)`);
-`Mem.words64_swap'` is the shared bridge to the `Mem.words64` view, so each
-side reaches the *same* observation and `of_common_outcome` applies. -/
-
-/-- **Program equivalence of the two `swap_elements` builds.**
-
-For every in-bounds call, the two builds are `Wasm.ObservationallyEquivOn` at
-the array observation: they agree on the returned values (`[]`), on the host
-state, and on **the caller's array** — while the scratch slot `mod0` dirties,
-and which `mod3` never touches, is left unobserved. -/
+/-- **Program equivalence of the two `swap_elements` builds**, observed at the
+two swapped elements. NOTE: this is deliberately documented as weaker than the
+retired big-step theorem, which observed the whole caller array
+(`Mem.words64 ptr len.toNat`); see the module docstring for what would be
+needed to restore that. -/
 def SwapOptEquiv : Prop :=
-  ∀ (env : HostEnv Unit) (st : Store Unit) (ptr len i j : UInt32),
+  ∀ (wasm : Store Unit) (ptr len i j : UInt32)
+    (oldSpillPtr oldSpillLen : UInt32)
+    (oldScratch oldA oldB : UInt64)
+    (σ : WasmHeapMap (Option UInt8))
+    (globalσ : WasmGlobalMap Value),
     i < len → j < len →
-    ptr.toNat + 8 * len.toNat ≤ st.mem.pages * 65536 →
-    1048576 ≤ ptr.toNat →
-    st.mem.pages ≤ 65536 →
-    st.globals.globals[0]? = some (.i32 1048576) →
-    ObservationallyEquivOn env mod0 entry0 mod3 entry3 st
-      [.i32 j, .i32 i, .i32 len, .i32 ptr] (arrayObs ptr len)
+    ((i <<< (3 % 32)) + ptr).toNat + 8 ≤ wasm.mem.pages * 65536 →
+    ((j <<< (3 % 32)) + ptr).toNat + 8 ≤ wasm.mem.pages * 65536 →
+    wasm.mem.pages ≤ 65536 →
+    heapAgreesWithMem σ
+      (Wasm.SmallStep.storeResolve
+        (SmallStepEquivalence.opt3ConfigFromStore wasm ptr len i j).store) →
+    heapAddressesInBounds σ
+      (Wasm.SmallStep.storeResolve
+        (SmallStepEquivalence.opt3ConfigFromStore wasm ptr len i j).store) →
+    globalHeapAgrees globalσ wasm.globals →
+    (∀ [WasmHeapGS Unit],
+      ([∗map] address ↦ value ∈ σ,
+        pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
+          address (DFrac.own 1) value) ⊢
+      pointsTo_u64 0 1048552 oldScratch ∗
+      pointsTo_u32 0 1048568 oldSpillPtr ∗
+      pointsTo_u32 0 1048572 oldSpillLen ∗
+      pointsTo_u64 0 ((i <<< (3 % 32)) + ptr) oldA ∗
+      pointsTo_u64 0 ((j <<< (3 % 32)) + ptr) oldB) →
+    (∀ [WasmGlobalGS Unit],
+      ([∗map] index ↦ value ∈ globalσ,
+        globalPointsTo index value) ⊢
+      globalPointsToAt 0 0 (.i32 1048576)) →
+    SmallStep.ObservationallyEquivOn
+      (Project.SwapElements.SwapSepLogic.func4ConfigFromStore wasm ptr len i j)
+      (SmallStepEquivalence.opt3ConfigFromStore wasm ptr len i j)
+      (fun store =>
+        (store.wasm.mem.read64 ((i <<< (3 % 32)) + ptr),
+         store.wasm.mem.read64 ((j <<< (3 % 32)) + ptr)))
 
-/-- The common outcome is the array with `i` and `j` exchanged. The opt0 side
-reuses the merged `Project.SwapElements.Spec.swap_elements_correct`; the opt3
-side uses `Project.SwapElementsOpt3.Spec.func0_swap`. Both are routed through
-`Mem.words64_swap'`, so they land on the *same* observation. -/
 theorem swap_opt_equiv : SwapOptEquiv := by
-  intro env st ptr len i j hi hj hbound hptr hpages hsp
-  refine ObservationallyEquivOn.of_common_outcome
-    (r := [])
-    (o := ((), ((st.mem.words64 ptr len.toNat).set i.toNat
-              (st.mem.read64 (elemAddr ptr j))).set j.toNat
-              (st.mem.read64 (elemAddr ptr i)))) ?_ ?_
-  · -- opt0: the merged total-correctness spec, per element.
-    refine (Project.SwapElements.Spec.swap_elements_correct
-      env st ptr len i j hi hj hbound hptr hpages hsp).mono ?_
-    rintro st' vs ⟨rfl, h_i, h_j, h_k⟩
-    exact ⟨rfl, Prod.ext rfl (Mem.words64_swap' hi hj h_i h_j h_k)⟩
-  · -- opt3: the inlined build writes the two elements directly.
-    refine (Project.SwapElementsOpt3.Spec.func0_swap
-      env st ptr len i j hi hj hbound hpages).mono ?_
-    rintro st' vs ⟨rfl, hmem⟩
-    have hli : i.toNat < len.toNat := hi
-    have hlj : j.toNat < len.toNat := hj
-    refine ⟨rfl, Prod.ext rfl (Mem.words64_swap' hi hj ?_ ?_ ?_)⟩
-    · -- `i = j` is permitted: the two stores then coincide.
-      show st'.mem.read64 (elemAddr ptr i) = st.mem.read64 (elemAddr ptr j)
-      by_cases hij : i = j
-      · subst hij; rw [hmem, Mem.read64_write64_same]
-      · rw [hmem,
-            Mem.read64_write64_disjoint _ _ _ _
-              (elemAddr_disjoint ptr i j (by omega) (by omega) hij),
-            Mem.read64_write64_same]
-    · show st'.mem.read64 (elemAddr ptr j) = st.mem.read64 (elemAddr ptr i)
-      rw [hmem, Mem.read64_write64_same]
-    · intro k hk hki hkj
-      show st'.mem.read64 (elemAddr ptr k) = st.mem.read64 (elemAddr ptr k)
-      have hlk : k.toNat < len.toNat := hk
-      rw [hmem,
-          Mem.read64_write64_disjoint _ _ _ _
-            (elemAddr_disjoint ptr k j (by omega) (by omega) hkj),
-          Mem.read64_write64_disjoint _ _ _ _
-            (elemAddr_disjoint ptr k i (by omega) (by omega) hki)]
+  intro wasm ptr len i j oldSpillPtr oldSpillLen oldScratch oldA oldB
+    σ globalσ hi hj hboundI hboundJ hpages hagree hinBounds hglobals
+    hresources hglobalOwn
+  have hroomI : ((i <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296 := by
+    have := Nat.mul_le_mul_right 65536 hpages; omega
+  have hroomJ : ((j <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296 := by
+    have := Nat.mul_le_mul_right 65536 hpages; omega
+  have hresources' : ∀ [WasmHeapGS Unit],
+      ([∗map] address ↦ value ∈ σ,
+        pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
+          address (DFrac.own 1) value) ⊢
+      pointsTo_u64 0 ((i <<< (3 % 32)) + ptr) oldA ∗
+      pointsTo_u64 0 ((j <<< (3 % 32)) + ptr) oldB :=
+    fun [WasmHeapGS Unit] => hresources.trans (by iintro ⟨_, _, _, HA, HB⟩; iframe)
+  apply SmallStep.ObservationallyEquivOn.of_common_outcome (o := (oldB, oldA))
+  · refine (Project.SwapElements.SmallStepSpec.swap_elements_distinct_terminates_correct
+      wasm ptr len i j oldSpillPtr oldSpillLen oldScratch oldA oldB
+      σ globalσ hi hj hroomI hroomJ hagree hinBounds hglobals
+      hresources hglobalOwn).mono ?_
+    rintro values store ⟨hv, hA, hB⟩
+    exact ⟨hv, Prod.ext hA hB⟩
+  · refine (SmallStepEquivalence.opt3_func0_distinct_store_terminatesWith
+      wasm ptr len i j oldA oldB σ globalσ hi hj hboundI hboundJ hroomI hroomJ
+      hagree hinBounds hglobals hresources').mono ?_
+    rintro values store ⟨hv, hA, hB⟩
+    exact ⟨hv, Prod.ext hA hB⟩
 
 end Project.SwapElementsOpt3.Equivalence

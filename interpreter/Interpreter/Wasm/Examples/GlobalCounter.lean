@@ -27,7 +27,7 @@ theorem tickModule_initial_global :
   native_decide
 
 def tickStore (st : Store Unit) : MachineStore Unit :=
-  { runtime := { module := tickModule, host := {} }
+  { runtime := { instances := #[{ module := tickModule, host := {} }], entry := ⟨0⟩ }
     wasm := st }
 
 def tickConfig (st : Store Unit) : Config Unit :=

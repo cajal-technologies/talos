@@ -31,7 +31,7 @@ theorem replaceModule_init_mem :
   native_decide
 
 def replaceStore (st : Store Unit) : MachineStore Unit :=
-  { runtime := { module := replaceModule, host := {} }
+  { runtime := { instances := #[{ module := replaceModule, host := {} }], entry := ⟨0⟩ }
     wasm := st }
 
 def replaceConfig (st : Store Unit) (new : UInt32) : Config Unit :=

@@ -17,6 +17,7 @@ namespace Project.SwapElementsOpt3.SmallStepEquivalence
 open Iris Iris.ProgramLogic Language.Notation Std
 open Wasm
 open Wasm.SepLogic
+open Wasm.SmallStep
 
 set_option maxHeartbeats 4000000 in
 /-- Universal Iris rule for the optimized inlined export on distinct element
@@ -31,13 +32,13 @@ theorem opt3_func0_distinct_smallStep_wp
     (hroomJ : ((j <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296) :
     let addressI := (i <<< (3 % 32)) + ptr
     let addressJ := (j <<< (3 % 32)) + ptr
-    pointsTo_u64 addressI oldA ∗ pointsTo_u64 addressJ oldB ⊢
+    pointsTo_u64 0 addressI oldA ∗ pointsTo_u64 0 addressJ oldB ⊢
     WP (Wasm.SmallStep.Expr.running
       ⟨⟨[.i32 ptr, .i32 len, .i32 i, .i32 j], [.i64 0], []⟩,
         Project.SwapElementsOpt3.func0, 0, [], [], []⟩ :
         Wasm.SmallStep.Expr Unit) @ s; E
       {{ values, ⌜values = []⌝ ∗
-        pointsTo_u64 addressI oldB ∗ pointsTo_u64 addressJ oldA }} := by
+        pointsTo_u64 0 addressI oldB ∗ pointsTo_u64 0 addressJ oldA }} := by
   dsimp only
   let addressI := (i <<< (3 % 32)) + ptr
   let addressJ := (j <<< (3 % 32)) + ptr
@@ -112,7 +113,7 @@ theorem opt3_func0_distinct_smallStep_wp
   simp only [List.set]
   iapply Wasm.SmallStep.wp_localGet rfl
   inext
-  ihave HALater : ▷ pointsTo_u64 (addressI + 0) oldA $$ [HA]
+  ihave HALater : ▷ pointsTo_u64 0 (addressI + 0) oldA $$ [HA]
   · inext
     rw [UInt32.add_zero]
     iexact HA
@@ -143,7 +144,7 @@ theorem opt3_func0_distinct_smallStep_wp
   simp only [List.set]
   iapply Wasm.SmallStep.wp_localGet rfl
   inext
-  ihave HBLater : ▷ pointsTo_u64 (addressJ + 0) oldB $$ [HB]
+  ihave HBLater : ▷ pointsTo_u64 0 (addressJ + 0) oldB $$ [HB]
   · inext
     rw [UInt32.add_zero]
     iexact HB
@@ -153,7 +154,7 @@ theorem opt3_func0_distinct_smallStep_wp
     (by simpa using hj7) $$ HBLater
   inext
   iintro HB
-  ihave HALater : ▷ pointsTo_u64 (addressI + 0) oldA $$ [HA]
+  ihave HALater : ▷ pointsTo_u64 0 (addressI + 0) oldA $$ [HA]
   · inext
     rw [UInt32.add_zero]
     iexact HA
@@ -167,7 +168,7 @@ theorem opt3_func0_distinct_smallStep_wp
   inext
   iapply Wasm.SmallStep.wp_localGet rfl
   inext
-  ihave HBLater : ▷ pointsTo_u64 (addressJ + 0) oldB $$ [HB]
+  ihave HBLater : ▷ pointsTo_u64 0 (addressJ + 0) oldB $$ [HB]
   · inext
     rw [UInt32.add_zero]
     iexact HB
@@ -195,7 +196,7 @@ def opt3ConfigFromStore (wasm : Store Unit)
       ⟨⟨[.i32 ptr, .i32 len, .i32 i, .i32 j], [.i64 0], []⟩,
         Project.SwapElementsOpt3.func0, 0, [], [], []⟩
     store :=
-      { runtime := { module := Project.SwapElementsOpt3.module, host := {} }
+      { runtime := { instances := #[{ module := Project.SwapElementsOpt3.module, host := {} }], entry := ⟨0⟩ }
         wasm := wasm } }
 
 /-- Universal physical-store partial correctness for the optimized export.
@@ -209,15 +210,15 @@ theorem opt3_func0_distinct_store_partiallyMeets
     (hi : i < len) (hj : j < len)
     (hroomI : ((i <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296)
     (hroomJ : ((j <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296)
-    (hagree : heapAgreesWithMem σ wasm.mem)
-    (hinBounds : heapAddressesInBounds σ wasm.mem)
+    (hagree : heapAgreesWithMem σ (storeResolve (opt3ConfigFromStore wasm ptr len i j).store))
+    (hinBounds : heapAddressesInBounds σ (storeResolve (opt3ConfigFromStore wasm ptr len i j).store))
     (hglobals : globalHeapAgrees globalσ wasm.globals)
     (hresources : ∀ [WasmHeapGS Unit],
       ([∗map] address ↦ value ∈ σ,
         pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
           address (DFrac.own 1) value) ⊢
-      pointsTo_u64 ((i <<< (3 % 32)) + ptr) oldA ∗
-      pointsTo_u64 ((j <<< (3 % 32)) + ptr) oldB) :
+      pointsTo_u64 0 ((i <<< (3 % 32)) + ptr) oldA ∗
+      pointsTo_u64 0 ((j <<< (3 % 32)) + ptr) oldB) :
     Wasm.SmallStep.PartiallyMeets
       (opt3ConfigFromStore wasm ptr len i j)
       (fun values store =>
@@ -264,13 +265,14 @@ theorem opt3_func0_distinct_store_partiallyMeets
   · exact hagree
   · exact hinBounds
   · exact hglobals
+  · simp only [opt3ConfigFromStore]; decide
   · intro gs
-    iintro ⟨Hheap, Hglobals, Hruntime⟩
+    iintro ⟨Hheap, Hglobals, Hruntime, _Henv⟩
     ihave Hwords := hresources $$ Hheap
     icases Hwords with ⟨HA, HB⟩
     have hpost : ∀ values : List Value,
         (iprop% ⌜values = []⌝ ∗
-          pointsTo_u64 addressI oldB ∗ pointsTo_u64 addressJ oldA) ⊢
+          pointsTo_u64 0 addressI oldB ∗ pointsTo_u64 0 addressJ oldA) ⊢
         (iprop% ∀ (store : Wasm.SmallStep.MachineStore Unit)
             (_observations : List Wasm.SmallStep.StepKind),
           stateInterp (GF := WasmHeapGF Unit) store 0 [] 0 -∗
@@ -386,15 +388,15 @@ theorem opt3_func0_distinct_store_terminatesWith
       ((j <<< (3 % 32)) + ptr).toNat + 8 ≤ wasm.mem.pages * 65536)
     (hroomI : ((i <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296)
     (hroomJ : ((j <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296)
-    (hagree : heapAgreesWithMem σ wasm.mem)
-    (hinBounds : heapAddressesInBounds σ wasm.mem)
+    (hagree : heapAgreesWithMem σ (storeResolve (opt3ConfigFromStore wasm ptr len i j).store))
+    (hinBounds : heapAddressesInBounds σ (storeResolve (opt3ConfigFromStore wasm ptr len i j).store))
     (hglobals : globalHeapAgrees globalσ wasm.globals)
     (hresources : ∀ [WasmHeapGS Unit],
       ([∗map] address ↦ value ∈ σ,
         pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
           address (DFrac.own 1) value) ⊢
-      pointsTo_u64 ((i <<< (3 % 32)) + ptr) oldA ∗
-      pointsTo_u64 ((j <<< (3 % 32)) + ptr) oldB) :
+      pointsTo_u64 0 ((i <<< (3 % 32)) + ptr) oldA ∗
+      pointsTo_u64 0 ((j <<< (3 % 32)) + ptr) oldB) :
     Wasm.SmallStep.TerminatesWith
       (opt3ConfigFromStore wasm ptr len i j)
       (fun values store =>
@@ -419,8 +421,8 @@ def opt3ExampleConfig : Wasm.SmallStep.Config Unit :=
         Project.SwapElementsOpt3.func0, 0, [], [], []⟩
     store :=
       { runtime :=
-          { module := Project.SwapElementsOpt3.module
-            host := {} }
+          { instances := #[{ module := Project.SwapElementsOpt3.module, host := {} }]
+            entry := ⟨0⟩ }
         wasm := opt0ExampleConfig.store.wasm } }
 
 /-- Caller-visible array observation. Private scratch and spill locations are

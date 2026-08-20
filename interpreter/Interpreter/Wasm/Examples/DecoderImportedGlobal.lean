@@ -60,7 +60,7 @@ def getDConfig : Config Unit :=
         resultArity := decoded.funcs[0]!.results.length
         callerRemainder := [] }
     store :=
-      { runtime := { module := decoded, host := {} }
+      { runtime := { instances := #[{ module := decoded, host := {} }], entry := ⟨0⟩ }
         wasm := decoded.initialStore } }
 
 /-- End-to-end: small-step execution reads declared global index `1`. -/

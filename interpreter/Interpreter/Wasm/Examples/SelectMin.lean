@@ -21,7 +21,7 @@ def selectMinConfig (x y : UInt32) : Config Unit :=
         resultArity := 1
         callerRemainder := [] }
     store :=
-      { runtime := { module := selectMinModule, host := {} }
+      { runtime := { instances := #[{ module := selectMinModule, host := {} }], entry := ⟨0⟩ }
         wasm := selectMinModule.initialStore } }
 
 theorem selectMin_runs (x y : UInt32) :

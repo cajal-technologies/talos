@@ -32,7 +32,7 @@ def earlyReturnConfig (x : UInt32) : Config Unit :=
         resultArity := 1
         callerRemainder := [] }
     store :=
-      { runtime := { module := earlyReturnModule, host := {} }
+      { runtime := { instances := #[{ module := earlyReturnModule, host := {} }], entry := ⟨0⟩ }
         wasm := earlyReturnModule.initialStore } }
 
 theorem earlyReturn_steps (x : UInt32) :

@@ -19,7 +19,7 @@ def totalVariationConfig (a b c : UInt64) : Config Unit :=
       ⟨⟨[.i64 a, .i64 b, .i64 c], [], []⟩,
         func1, 1, [], [], []⟩
     store :=
-      { runtime := { module := «module», host := {} }
+      { runtime := { instances := #[{ module := «module», host := {} }], entry := ⟨0⟩ }
         wasm := { initial with mem := initial.mem.write64 1048568 0 } } }
 
 @[spec_of "rust-exported" "total_variation::total_variation"]
@@ -47,11 +47,13 @@ theorem total_variation_correct : TotalVariationSpec := by
     decide
   · simpa [totalVariationConfig, absDiffBodyConfig] using
       absDiffBodyGlobals_agree «module» «module».initialStore a b 0 rfl
+  · simp only [totalVariationConfig]; decide
   · intro gs
+    simp only [totalVariationConfig, RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, Hglobals, Hruntime⟩
     ihave Hscratch := absDiffHeap_pointsTo 0 $$ Hbytes
     ihave Hglobal := absDiffGlobals_pointsTo $$ Hglobals
-    simp only [totalVariationConfig, func1]
+    simp only [func1]
     iapply wp_localGet rfl
     inext
     iapply wp_localGet rfl
@@ -63,10 +65,11 @@ theorem total_variation_correct : TotalVariationSpec := by
     simp [func0Def, Function.toLocals, Function.numParams, ValueType.zero]
     rw [show func0 = absDiffBody by rfl]
     iapply absDiff_smallStep_wp_to_return
-      (runtimeModuleOwn «module») _ 1048576 a b 0 (by decide) (by decide)
+      (runtimeModuleOwn ⟨0⟩ «module») _ 1048576 a b 0 (by decide) (by decide)
     · iintro ⟨Hruntime, Hglobal, Hscratch⟩
-      iapply wp_returnFromCallExplicit
+      iapply wp_returnFromCallExplicit' $$ Hruntime
       inext
+      iintro Hruntime
       iapply wp_localGet rfl
       inext
       iapply wp_localGet rfl
@@ -79,10 +82,10 @@ theorem total_variation_correct : TotalVariationSpec := by
       simp [func0Def, Function.toLocals, Function.numParams, ValueType.zero]
       rw [show func0 = absDiffBody by rfl]
       iapply absDiff_smallStep_wp_to_return
-        (runtimeModuleOwn «module») _ 1048576 b c
+        (runtimeModuleOwn ⟨0⟩ «module») _ 1048576 b c
         (if a < b then b - a else a - b) (by decide) (by decide)
       · iintro ⟨Hruntime, Hglobal, Hscratch⟩
-        iapply wp_returnFromCallExplicit
+        iapply wp_returnFromCallExplicit $$ Hruntime
         inext
         simp only [List.take, List.singleton_append]
         iapply wp_addI64

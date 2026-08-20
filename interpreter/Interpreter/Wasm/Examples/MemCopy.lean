@@ -39,7 +39,7 @@ def copyModule : Module :=
     memory := some { pagesMin := 1, data := [{ offset := some 0, bytes := initBytes }] } }
 
 def copyStore : MachineStore Unit :=
-  { runtime := { module := copyModule, host := {} }
+  { runtime := { instances := #[{ module := copyModule, host := {} }], entry := ⟨0⟩ }
     wasm := copyModule.initialStore }
 
 private def copyConfig (body : Program) (arity : Nat) : Config Unit :=

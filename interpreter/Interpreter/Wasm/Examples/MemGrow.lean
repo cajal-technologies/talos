@@ -36,7 +36,7 @@ def growInitialWasmStore : Store Unit :=
     mem := (growModule.initialStore (α := Unit)).mem.write32 64 0xC0DEC0DE }
 
 def growStore : MachineStore Unit :=
-  { runtime := { module := growModule, host := {} }
+  { runtime := { instances := #[{ module := growModule, host := {} }], entry := ⟨0⟩ }
     wasm := growInitialWasmStore }
 
 private def growConfig (body : Program) (arity : Nat) : Config Unit :=
@@ -136,7 +136,7 @@ def importedLimitConfig : Config Unit :=
         resultArity := 1
         callerRemainder := [] }
     store :=
-      { runtime := { module := importingGrowthModule, host := {} }
+      { runtime := { instances := #[{ module := importingGrowthModule, host := {} }], entry := ⟨0⟩ }
         wasm := importedLimitStore } }
 
 theorem imported_memory_retains_exporter_limit :

@@ -52,7 +52,7 @@ def simpleLoopConfig (n : UInt32) : Config Unit :=
         resultArity := 1
         callerRemainder := [] }
     store :=
-      { runtime := { module := simpleLoopModule, host := {} }
+      { runtime := { instances := #[{ module := simpleLoopModule, host := {} }], entry := ⟨0⟩ }
         wasm := simpleLoopModule.initialStore } }
 
 private def simpleInnerBody : Program :=

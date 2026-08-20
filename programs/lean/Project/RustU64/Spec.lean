@@ -20,7 +20,7 @@ private def pureBinaryConfig (body : Program)
   { expr := .running
       ⟨⟨[.i64 a, .i64 b], [], []⟩, body, 1, [], [], []⟩
     store :=
-      { runtime := { module := «module», host := {} }
+      { runtime := { instances := #[{ module := «module», host := {} }], entry := ⟨0⟩ }
         wasm := «module».initialStore } }
 
 private def shiftConfig (body : Program)
@@ -28,7 +28,7 @@ private def shiftConfig (body : Program)
   { expr := .running
       ⟨⟨[.i64 a, .i32 b], [], []⟩, body, 1, [], [], []⟩
     store :=
-      { runtime := { module := «module», host := {} }
+      { runtime := { instances := #[{ module := «module», host := {} }], entry := ⟨0⟩ }
         wasm := «module».initialStore } }
 
 private def unaryConfig (body : Program)
@@ -36,7 +36,7 @@ private def unaryConfig (body : Program)
   { expr := .running
       ⟨⟨[.i64 a], [], []⟩, body, 1, [], [], []⟩
     store :=
-      { runtime := { module := «module», host := {} }
+      { runtime := { instances := #[{ module := «module», host := {} }], entry := ⟨0⟩ }
         wasm := «module».initialStore } }
 
 @[spec_of "rust-internal" "core::num::abs_diff"]

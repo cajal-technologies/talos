@@ -67,7 +67,7 @@ def incrConfig (st : Store Unit) (n : UInt32) : Config Unit :=
         resultArity := 1
         callerRemainder := [] }
     store :=
-      { runtime := { module := callIndirectModule, host := {} }
+      { runtime := { instances := #[{ module := callIndirectModule, host := {} }], entry := ⟨0⟩ }
         wasm := st } }
 
 def dispatchConfig (n : UInt32) : Config Unit :=
@@ -77,7 +77,7 @@ def dispatchConfig (n : UInt32) : Config Unit :=
         resultArity := 1
         callerRemainder := [] }
     store :=
-      { runtime := { module := callIndirectModule, host := {} }
+      { runtime := { instances := #[{ module := callIndirectModule, host := {} }], entry := ⟨0⟩ }
         wasm := callIndirectModule.initialStore } }
 
 theorem incr_steps (st : Store Unit) (n : UInt32) :
@@ -114,7 +114,7 @@ theorem dispatch_steps (n : UInt32) :
   apply Steps.cons (.localGet rfl)
   apply Steps.cons .const
   apply Steps.cons .add
-  apply Steps.cons .returnFromCallFallthrough
+  apply Steps.cons (.returnFromCallFallthrough rfl)
   apply Steps.cons .finish
   simpa [dispatchConfig, Incr, Function.numParams, Function.toLocals,
     UInt32.add_comm] using

@@ -107,7 +107,7 @@ private def internalConfig (m : Module) (env : HostEnv Unit)
         resultArity := m.funcs[0]!.results.length
         callerRemainder := [] }
     store :=
-      { runtime := { module := m, host := env }
+      { runtime := { instances := #[{ module := m, host := env }], entry := ⟨0⟩ }
         wasm := m.initialStore } }
 
 def incConfig : Config Unit :=
@@ -195,7 +195,7 @@ def incCallConfig (env : HostEnv Unit) (st : Store Unit)
         code := [.call 0]
         resultArity := 1
         callerRemainder := [] }
-    store := { runtime := { module := incModule, host := env }, wasm := st } }
+    store := { runtime := { instances := #[{ module := incModule, host := env }], entry := ⟨0⟩ }, wasm := st } }
 
 def incContract : HostContract Unit :=
   fun st args result =>

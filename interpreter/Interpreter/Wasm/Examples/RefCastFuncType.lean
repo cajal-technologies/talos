@@ -134,7 +134,7 @@ def castSuperConfig : Config Unit :=
         resultArity := 1
         callerRemainder := [] }
     store :=
-      { runtime := { module := m, host := {} }
+      { runtime := { instances := #[{ module := m, host := {} }], entry := ⟨0⟩ }
         wasm := m.initialStore } }
 
 theorem cast_super_trapsWith :

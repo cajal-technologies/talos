@@ -1,5 +1,6 @@
 import Project.SwapElementsOpt3.Program
 import Project.SwapElements.Address
+import Project.SwapElementsOpt3.SmallStepEquivalence
 
 /-!
 # Specification and proof for `swap_elements_opt3`
@@ -38,6 +39,7 @@ array itself. Relating them is the subject of
 namespace Project.SwapElementsOpt3.Spec
 
 open Wasm
+open Iris Iris.BI Wasm.SepLogic
 
 -- The element-address vocabulary (`elemAddr` and its arithmetic lemmas) is
 -- shared with the opt0 build's spec, so the two postconditions match
@@ -83,5 +85,44 @@ theorem func0_swap (env : HostEnv Unit) (st : Store Unit) (ptr len i j : UInt32)
     UInt32.reduceToNat, UInt32.add_zero, Mem.write64_pages,
     hgi, hgj, elemAddr_of_shl, gpi, gpj]
   exact ⟨trivial, trivial⟩
+
+/-- Small-step total correctness for the distinct-index case of the optimized
+export.  Fewer preconditions than the opt0 spec: no global-0 pin and no
+shadow-stack alignment requirement. -/
+@[spec_of "rust-exported" "swap_elements_opt3::swap_elements"]
+def SwapElementsOpt3Spec : Prop :=
+  ∀ (wasm : Store Unit) (ptr len i j : UInt32)
+    (oldA oldB : UInt64)
+    (σ : WasmHeapMap (Option UInt8))
+    (globalσ : WasmGlobalMap Value),
+    i < len →
+    j < len →
+    ((i <<< (3 % 32)) + ptr).toNat + 8 ≤ wasm.mem.pages * 65536 →
+    ((j <<< (3 % 32)) + ptr).toNat + 8 ≤ wasm.mem.pages * 65536 →
+    ((i <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296 →
+    ((j <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296 →
+    heapAgreesWithMem σ
+      (Wasm.SmallStep.storeResolve
+        (SmallStepEquivalence.opt3ConfigFromStore wasm ptr len i j).store) →
+    heapAddressesInBounds σ
+      (Wasm.SmallStep.storeResolve
+        (SmallStepEquivalence.opt3ConfigFromStore wasm ptr len i j).store) →
+    globalHeapAgrees globalσ wasm.globals →
+    (∀ [WasmHeapGS Unit],
+      ([∗map] address ↦ value ∈ σ,
+        pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
+          address (DFrac.own 1) value) ⊢
+      pointsTo_u64 0 ((i <<< (3 % 32)) + ptr) oldA ∗
+      pointsTo_u64 0 ((j <<< (3 % 32)) + ptr) oldB) →
+    Wasm.SmallStep.TerminatesWith
+      (SmallStepEquivalence.opt3ConfigFromStore wasm ptr len i j)
+      (fun values store =>
+        values = [] ∧
+          store.wasm.mem.read64 ((i <<< (3 % 32)) + ptr) = oldB ∧
+          store.wasm.mem.read64 ((j <<< (3 % 32)) + ptr) = oldA)
+
+@[proves SwapElementsOpt3Spec]
+theorem swap_elements_opt3_correct : SwapElementsOpt3Spec :=
+  SmallStepEquivalence.opt3_func0_distinct_store_terminatesWith
 
 end Project.SwapElementsOpt3.Spec

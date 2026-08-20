@@ -42,7 +42,7 @@ def factorialConfig (n : UInt32) : Config Unit :=
         resultArity := 1
         callerRemainder := [] }
     store :=
-      { runtime := { module := factorialModule, host := {} }
+      { runtime := { instances := #[{ module := factorialModule, host := {} }], entry := ⟨0⟩ }
         wasm := factorialModule.initialStore } }
 
 private def factorialBlockBody : Program := [

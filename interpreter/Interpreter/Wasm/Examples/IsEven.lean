@@ -15,7 +15,7 @@ def isEvenConfig (value : UInt32) : Config Unit :=
         resultArity := 1
         callerRemainder := [] }
     store :=
-      { runtime := { module := isEvenModule, host := {} }
+      { runtime := { instances := #[{ module := isEvenModule, host := {} }], entry := ⟨0⟩ }
         wasm := isEvenModule.initialStore } }
 
 def isEvenResult (value : UInt32) : UInt32 :=

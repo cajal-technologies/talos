@@ -31,8 +31,8 @@ private def runSmallStep
     (fuel : Nat) (m : Wasm.Module) (idx : Nat)
     (store : Wasm.Store Unit) (args : List Wasm.Value)
     (env : Wasm.HostEnv Unit) : Wasm.Result Unit :=
-  let runtime : Wasm.SmallStep.RuntimeEnv Unit := { module := m, host := env }
-  match Wasm.SmallStep.initConfig runtime idx store args with
+  let instance_ : Wasm.SmallStep.ModuleInstance Unit := { module := m, host := env }
+  match Wasm.SmallStep.initConfig instance_ idx store args with
   | .error error => .Invalid s!"small-step initialization error: {error.message}"
   | .ok config =>
     match (Wasm.SmallStep.runSteps (min fuel 15_000_000) config).result with

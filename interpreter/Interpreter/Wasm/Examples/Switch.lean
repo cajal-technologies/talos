@@ -37,7 +37,7 @@ def switchConfig (i : UInt32) : Config Unit :=
         resultArity := 1
         callerRemainder := [] }
     store :=
-      { runtime := { module := switchModule, host := {} }
+      { runtime := { instances := #[{ module := switchModule, host := {} }], entry := ⟨0⟩ }
         wasm := switchModule.initialStore } }
 
 def switchResult (i : UInt32) : UInt32 :=

@@ -21,7 +21,7 @@ theorem execute_read (program : Executable)
     execute program 2 0 store [.i32 pointer, .i32 length] =
       some ([.i32 count], wasm) := by
   let machine : MachineStore Wasm.StdIO.State :=
-    { runtime := { module := program.module, host := Wasm.StdIO.env }, wasm := store }
+    { runtime := { instances := #[{ module := program.module, host := Wasm.StdIO.env }], entry := ⟨0⟩ }, wasm := store }
   let initial : Config Wasm.StdIO.State :=
     { expr := .running
         ⟨⟨[], [], [.i32 pointer, .i32 length]⟩, [.call 0], 1, [], [], []⟩
@@ -62,7 +62,7 @@ theorem execute_write (program : Executable)
     execute program 2 1 store [.i32 pointer, .i32 length] =
       some ([], wasm) := by
   let machine : MachineStore Wasm.StdIO.State :=
-    { runtime := { module := program.module, host := Wasm.StdIO.env }, wasm := store }
+    { runtime := { instances := #[{ module := program.module, host := Wasm.StdIO.env }], entry := ⟨0⟩ }, wasm := store }
   let initial : Config Wasm.StdIO.State :=
     { expr := .running
         ⟨⟨[], [], [.i32 pointer, .i32 length]⟩, [.call 1], 0, [], [], []⟩
@@ -198,7 +198,7 @@ def writeWordArray64 (mem : Mem) (base : UInt32) : List UInt64 → Mem
 def heap64Aux (heap : WasmHeapMap (Option UInt8)) (base : UInt32) :
     List UInt64 → WasmHeapMap (Option UInt8)
   | [] => heap
-  | value :: values => heap64Aux (store64Heap heap base value) (base + 8) values
+  | value :: values => heap64Aux (store64Heap heap 0 base value) (base + 8) values
 
 def inputHeap (input : List UInt64) : WasmHeapMap (Option UInt8) :=
   heap64Aux ∅ array input
@@ -259,17 +259,18 @@ theorem writeBytes_serialize (mem : Mem) (base : UInt32)
 
 theorem heap64Aux_agrees
     (heap : WasmHeapMap (Option UInt8)) (mem : Mem) (base : UInt32)
-    (values : List UInt64) (hagree : heapAgreesWithMem heap mem)
+    (values : List UInt64)
+    (hagree : heapAgreesWithMem heap (fun id => if id = 0 then some mem else none))
     (hfit : base.toNat + 8 * values.length < UInt32.size) :
     heapAgreesWithMem (heap64Aux heap base values)
-      (writeWordArray64 mem base values) := by
+      (fun id => if id = 0 then some (writeWordArray64 mem base values) else none) := by
   induction values generalizing heap mem base with
   | nil => simpa [heap64Aux, writeWordArray64]
   | cons value values ih =>
       simp only [heap64Aux, writeWordArray64, List.length_cons] at *
       simp only [UInt32.size] at hfit
       apply ih
-      · apply store64_sound
+      · apply store64_sound0
         · exact UInt32.add_ofNat_toNat_noWrap base 1 (by decide) (by omega)
         · exact UInt32.add_ofNat_toNat_noWrap base 2 (by decide) (by omega)
         · exact UInt32.add_ofNat_toNat_noWrap base 3 (by decide) (by omega)
@@ -286,11 +287,12 @@ theorem heap64Aux_agrees
 
 theorem heap64Aux_inBounds
     (heap : WasmHeapMap (Option UInt8)) (mem : Mem) (base : UInt32)
-    (values : List UInt64) (hinBounds : heapAddressesInBounds heap mem)
+    (values : List UInt64)
+    (hinBounds : heapAddressesInBounds heap (fun id => if id = 0 then some mem else none))
     (hfit : base.toNat + 8 * values.length < UInt32.size)
     (hmem : base.toNat + 8 * values.length ≤ mem.pages * 65536) :
     heapAddressesInBounds (heap64Aux heap base values)
-      (writeWordArray64 mem base values) := by
+      (fun id => if id = 0 then some (writeWordArray64 mem base values) else none) := by
   induction values generalizing heap mem base with
   | nil => simpa [heap64Aux, writeWordArray64]
   | cons value values ih =>
@@ -299,7 +301,7 @@ theorem heap64Aux_inBounds
       have h8 : (base + 8 : UInt32).toNat = base.toNat + 8 :=
         UInt32.add_ofNat_toNat_noWrap base 8 (by decide) (by omega)
       apply ih
-      · apply store64_inBounds
+      · apply store64_inBounds0
         · exact UInt32.add_ofNat_toNat_noWrap base 1 (by decide) (by omega)
         · exact UInt32.add_ofNat_toNat_noWrap base 2 (by decide) (by omega)
         · exact UInt32.add_ofNat_toNat_noWrap base 3 (by decide) (by omega)
@@ -307,26 +309,24 @@ theorem heap64Aux_inBounds
         · exact UInt32.add_ofNat_toNat_noWrap base 5 (by decide) (by omega)
         · exact UInt32.add_ofNat_toNat_noWrap base 6 (by decide) (by omega)
         · exact UInt32.add_ofNat_toNat_noWrap base 7 (by decide) (by omega)
-        · exact hinBounds
         · omega
+        · exact hinBounds
       · rw [h8]
         simp only [UInt32.size]
         omega
-      · simp only [Mem.write64]
-        rw [h8]
+      · have : (mem.write64 base value).pages = mem.pages := rfl
+        rw [h8, this]
         omega
 
 private theorem empty_agrees (mem : Mem) :
-    heapAgreesWithMem (∅ : WasmHeapMap (Option UInt8)) mem := by
-  intro address byte hget
-  rw [get?_empty] at hget
-  contradiction
+    heapAgreesWithMem (∅ : WasmHeapMap (Option UInt8))
+      (fun id => if id = 0 then some mem else none) :=
+  heapAgreesWithMem_empty _
 
 private theorem empty_inBounds (mem : Mem) :
-    heapAddressesInBounds (∅ : WasmHeapMap (Option UInt8)) mem := by
-  intro address byte hget
-  rw [get?_empty] at hget
-  contradiction
+    heapAddressesInBounds (∅ : WasmHeapMap (Option UInt8))
+      (fun id => if id = 0 then some mem else none) :=
+  heapAddressesInBounds_empty _
 
 theorem afterRead_mem_eq (program : Executable) (input : List UInt64)
     (hfit : Fits input) :
@@ -339,24 +339,50 @@ theorem afterRead_mem_eq (program : Executable) (input : List UInt64)
     Fits, serialize_length, bufferBytes] at hfit ⊢
   omega
 
+def sortArguments (input : List UInt64) : List Value :=
+  [.i32 (UInt32.ofNat input.length), .i32 array]
+
+def concreteSortConfig (program : Executable) (input : List UInt64) : Config Unit :=
+  sortConfig program (afterRead program input) (sortArguments input)
+
 theorem inputHeap_agrees (program : Executable) (input : List UInt64)
     (hfit : Fits input) :
-    heapAgreesWithMem (inputHeap input) (afterRead program input).mem := by
-  rw [afterRead_mem_eq program input hfit]
+    heapAgreesWithMem (inputHeap input) (storeResolve (concreteSortConfig program input).store) := by
+  have hext : (afterRead program input).extraMems = [] := by
+    show program.module.extraMemories.zipIdx.map _ = []
+    simp [program.extraMemories_empty]
+  have hresolve : storeResolve (concreteSortConfig program input).store =
+      fun id => if id = 0 then some (afterRead program input).mem else none := by
+    funext id
+    unfold storeResolve concreteSortConfig sortConfig replaceHost
+    by_cases hid : id = 0
+    · simp [hid]
+    · simp [hid, hext]
+  rw [hresolve, afterRead_mem_eq program input hfit]
   unfold inputHeap
   apply heap64Aux_agrees
-  · apply empty_agrees
+  · exact empty_agrees _
   · simp only [array, UInt32.reduceToNat, Nat.zero_add, UInt32.size,
       Fits, serialize_length, bufferBytes] at hfit ⊢
     omega
 
 theorem inputHeap_inBounds (program : Executable) (input : List UInt64)
     (hfit : Fits input) :
-    heapAddressesInBounds (inputHeap input) (afterRead program input).mem := by
-  rw [afterRead_mem_eq program input hfit]
+    heapAddressesInBounds (inputHeap input) (storeResolve (concreteSortConfig program input).store) := by
+  have hext : (afterRead program input).extraMems = [] := by
+    show program.module.extraMemories.zipIdx.map _ = []
+    simp [program.extraMemories_empty]
+  have hresolve : storeResolve (concreteSortConfig program input).store =
+      fun id => if id = 0 then some (afterRead program input).mem else none := by
+    funext id
+    unfold storeResolve concreteSortConfig sortConfig replaceHost
+    by_cases hid : id = 0
+    · simp [hid]
+    · simp [hid, hext]
+  rw [hresolve, afterRead_mem_eq program input hfit]
   unfold inputHeap
   apply heap64Aux_inBounds
-  · apply empty_inBounds
+  · exact empty_inBounds _
   · simp only [array, UInt32.reduceToNat, Nat.zero_add, UInt32.size,
       Fits, serialize_length, bufferBytes] at hfit ⊢
     omega
@@ -373,20 +399,19 @@ theorem heap64Aux_pointsTo [WasmHeapGS Unit]
     (heap : WasmHeapMap (Option UInt8)) (base : UInt32)
     (values : List UInt64)
     (hdisjoint : ∀ address byte, get? heap address = some byte →
-      address.toNat < base.toNat)
+      address.addr.toNat < base.toNat)
     (hfit : base.toNat + 8 * values.length < UInt32.size) :
     ([∗map] address ↦ value ∈ heap64Aux heap base values,
       pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
         address (DFrac.own 1) value) ⊢
-      array64At base values ∗
+      array64At 0 base values ∗
       ([∗map] address ↦ value ∈ heap,
         pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
           address (DFrac.own 1) value) := by
   induction values generalizing heap base with
   | nil =>
       simp only [heap64Aux, array64At, BI.emp_sep.to_eq]
-      iintro Hheap
-      iexact Hheap
+      iintro Hheap; iexact Hheap
   | cons value values ih =>
       simp only [heap64Aux, List.length_cons] at *
       simp only [UInt32.size] at hfit
@@ -428,14 +453,14 @@ theorem heap64Aux_pointsTo [WasmHeapGS Unit]
         apply UInt32.add_ofNat_toNat_noWrap base 8 (by decide)
         omega
       have hget (n : Nat) (hnle : n < 8) :
-          get? heap (base + UInt32.ofNat n) = none := by
+          get? heap ⟨0, base + UInt32.ofNat n⟩ = none := by
         by_contra h
         obtain ⟨byte, hbyte⟩ := Option.ne_none_iff_exists.mp h
         have hlt := hdisjoint _ _ hbyte.symm
+        simp only [] at hlt
         rw [hn n (by omega)] at hlt
         omega
-      have hget0 : get? heap base = none := by
-        simpa using hget 0 (by omega)
+      have hget0 : get? heap ⟨0, base⟩ = none := by simpa using hget 0 (by omega)
       have hget1 := hget 1 (by omega)
       have hget2 := hget 2 (by omega)
       have hget3 := hget 3 (by omega)
@@ -443,52 +468,54 @@ theorem heap64Aux_pointsTo [WasmHeapGS Unit]
       have hget5 := hget 5 (by omega)
       have hget6 := hget 6 (by omega)
       have hget7 := hget 7 (by omega)
-      have hgetL1 : get? heap (base + 1) = none := by simpa using hget1
-      have hgetL2 : get? heap (base + 2) = none := by simpa using hget2
-      have hgetL3 : get? heap (base + 3) = none := by simpa using hget3
-      have hgetL4 : get? heap (base + 4) = none := by simpa using hget4
-      have hgetL5 : get? heap (base + 5) = none := by simpa using hget5
-      have hgetL6 : get? heap (base + 6) = none := by simpa using hget6
-      have hgetL7 : get? heap (base + 7) = none := by simpa using hget7
+      have hgetL1 : get? heap ⟨0, base + 1⟩ = none := by simpa using hget1
+      have hgetL2 : get? heap ⟨0, base + 2⟩ = none := by simpa using hget2
+      have hgetL3 : get? heap ⟨0, base + 3⟩ = none := by simpa using hget3
+      have hgetL4 : get? heap ⟨0, base + 4⟩ = none := by simpa using hget4
+      have hgetL5 : get? heap ⟨0, base + 5⟩ = none := by simpa using hget5
+      have hgetL6 : get? heap ⟨0, base + 6⟩ = none := by simpa using hget6
+      have hgetL7 : get? heap ⟨0, base + 7⟩ = none := by simpa using hget7
       have hne (i j : Nat) (hi : i ≤ 7) (hj : j ≤ 7) (hij : i ≠ j) :
-          base + UInt32.ofNat i ≠ base + UInt32.ofNat j := by
+          (⟨0, base + UInt32.ofNat i⟩ : MemoryKey) ≠ ⟨0, base + UInt32.ofNat j⟩ := by
         intro heq
-        have heq' := congrArg UInt32.toNat heq
-        rw [hn i (by omega), hn j (by omega)] at heq'
+        have heq' := congrArg MemoryKey.addr heq
+        simp only [] at heq'
+        have heq'' := congrArg UInt32.toNat heq'
+        rw [hn i (by omega), hn j (by omega)] at heq''
         omega
       have hneU (i j : UInt32) (hi : i.toNat ≤ 7) (hj : j.toNat ≤ 7)
-          (hij : i ≠ j) : base + i ≠ base + j := by
+          (hij : i ≠ j) : (⟨0, base + i⟩ : MemoryKey) ≠ ⟨0, base + j⟩ := by
         simpa only [UInt32.ofNat_toNat] using
           hne i.toNat j.toNat hi hj (fun h => hij (UInt32.toNat_inj.mp h))
       have hbaseNe (n : UInt32) (hn : n.toNat ≤ 7) (hpos : 0 < n.toNat) :
-          base ≠ base + n := by
+          (⟨0, base⟩ : MemoryKey) ≠ ⟨0, base + n⟩ := by
         have h := hneU 0 n (by decide) hn (by
           intro heq
           have := congrArg UInt32.toNat heq
           exact hpos.ne' this.symm)
         simpa using h
       have hdisjoint' : ∀ address byte,
-          get? (store64Heap heap base value) address = some byte →
-          address.toNat < (base + 8).toNat := by
+          get? (store64Heap heap 0 base value) address = some byte →
+          address.addr.toNat < (base + 8).toNat := by
         intro address byte haddress
-        change address.toNat < (base + UInt32.ofNat 8).toNat
+        change address.addr.toNat < (base + UInt32.ofNat 8).toNat
         rw [hn8]
-        by_cases h7 : address = base + 7
-        · subst address; rw [hl7]; omega
-        by_cases h6 : address = base + 6
-        · subst address; rw [hl6]; omega
-        by_cases h5 : address = base + 5
-        · subst address; rw [hl5]; omega
-        by_cases h4 : address = base + 4
-        · subst address; rw [hl4]; omega
-        by_cases h3 : address = base + 3
-        · subst address; rw [hl3]; omega
-        by_cases h2 : address = base + 2
-        · subst address; rw [hl2]; omega
-        by_cases h1 : address = base + 1
-        · subst address; rw [hl1]; omega
-        by_cases h0 : address = base
-        · subst address; omega
+        by_cases h7 : address = ⟨0, base + 7⟩
+        · subst address; simp only []; rw [hl7]; omega
+        by_cases h6 : address = ⟨0, base + 6⟩
+        · subst address; simp only []; rw [hl6]; omega
+        by_cases h5 : address = ⟨0, base + 5⟩
+        · subst address; simp only []; rw [hl5]; omega
+        by_cases h4 : address = ⟨0, base + 4⟩
+        · subst address; simp only []; rw [hl4]; omega
+        by_cases h3 : address = ⟨0, base + 3⟩
+        · subst address; simp only []; rw [hl3]; omega
+        by_cases h2 : address = ⟨0, base + 2⟩
+        · subst address; simp only []; rw [hl2]; omega
+        by_cases h1 : address = ⟨0, base + 1⟩
+        · subst address; simp only []; rw [hl1]; omega
+        by_cases h0 : address = ⟨0, base⟩
+        · subst address; simp only []; omega
         simp only [store64Heap, get?_insert_ne (Ne.symm h7),
           get?_insert_ne (Ne.symm h6), get?_insert_ne (Ne.symm h5),
           get?_insert_ne (Ne.symm h4), get?_insert_ne (Ne.symm h3),
@@ -502,10 +529,10 @@ theorem heap64Aux_pointsTo [WasmHeapGS Unit]
         simp only [UInt32.size]
         omega
       iintro Hheap
-      ihave Hsplit := ih (store64Heap heap base value) (base + 8)
+      ihave Hsplit := ih (store64Heap heap 0 base value) (base + 8)
         hdisjoint' hfit' $$ Hheap
       icases Hsplit with ⟨Hvalues, Hstored⟩
-      ihave Hword := store64Heap_pointsTo heap base value
+      ihave Hword := store64Heap_pointsTo heap 0 base value
         hget0
         (by simpa only [get?_insert_ne (hbaseNe 1 (by decide) (by decide))]
           using hgetL1)
@@ -560,7 +587,7 @@ theorem inputHeap_pointsTo [WasmHeapGS Unit] (input : List UInt64)
     (hfit : Fits input) :
     ([∗map] address ↦ value ∈ inputHeap input,
       pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
-        address (DFrac.own 1) value) ⊢ array64At array input := by
+        address (DFrac.own 1) value) ⊢ array64At 0 array input := by
   unfold inputHeap
   iintro Hheap
   ihave Hsplit := heap64Aux_pointsTo ∅ array input
@@ -581,9 +608,9 @@ theorem array64At_words [WasmSmallStepGS hlc α]
     (threads : Nat) (base : UInt32) (output : List UInt64)
     (hfit : base.toNat + 8 * output.length < UInt32.size) :
     stateInterp (GF := WasmHeapGF α) store steps obs threads ∗
-      array64At base output ==∗
+      array64At 0 base output ==∗
     stateInterp (GF := WasmHeapGF α) store steps obs threads ∗
-      array64At base output ∗
+      array64At 0 base output ∗
       ⌜readWordArray64 store.wasm.mem base output.length = output⌝ := by
   induction output generalizing base with
   | nil =>
@@ -634,9 +661,9 @@ theorem array64At_capacity [WasmSmallStepGS hlc α]
     (hfit : base.toNat + 8 * values.length < UInt32.size)
     (hbaseBound : base.toNat ≤ store.wasm.mem.pages * 65536) :
     stateInterp (GF := WasmHeapGF α) store steps observations threads ∗
-      array64At base values ==∗
+      array64At 0 base values ==∗
     stateInterp (GF := WasmHeapGF α) store steps observations threads ∗
-      array64At base values ∗
+      array64At 0 base values ∗
       ⌜base.toNat + 8 * values.length ≤
         store.wasm.mem.pages * 65536⌝ := by
   by_cases hempty : values = []
@@ -668,7 +695,7 @@ theorem array64At_capacity [WasmSmallStepGS hlc α]
         rw [haddress]
         omega
     iintro ⟨Hstate, Harray⟩
-    ihave Hfocus := array64At_get base values k hk $$ Harray
+    ihave Hfocus := array64At_get 0 base values k hk $$ Harray
     icases Hfocus with ⟨Hword, Hrestore⟩
     imod stateInterp_pointsTo_u64_facts_frame
       store steps observations threads address values[k]
@@ -689,12 +716,6 @@ theorem array64At_capacity [WasmSmallStepGS hlc α]
 
 /-! ## Adequacy of the two host-independent sort calls -/
 
-def sortArguments (input : List UInt64) : List Value :=
-  [.i32 (UInt32.ofNat input.length), .i32 array]
-
-def concreteSortConfig (program : Executable) (input : List UInt64) : Config Unit :=
-  sortConfig program (afterRead program input) (sortArguments input)
-
 def SortPost (input : List UInt64)
     (_values : List Value) (store : MachineStore α) : Prop :=
   ∃ output,
@@ -710,7 +731,7 @@ theorem twp_recursiveSortCall [WasmSmallStepGS hlc Unit]
           address (DFrac.own 1) value) ∗
       ([∗map] index ↦ value ∈ (∅ : WasmGlobalMap Value),
         globalPointsTo index value) ∗
-      runtimeModuleOwn (concreteSortConfig recursive input).store.runtime.module) ⊢
+      runtimeModuleOwn ⟨0⟩ recursive.module) ⊢
       WP (concreteSortConfig recursive input).expr @ Stuckness.NotStuck; ⊤
         [{ values,
           ∀ (store : MachineStore Unit) (_observations : List StepKind),
@@ -760,7 +781,7 @@ theorem twp_loopSortCall [WasmSmallStepGS hlc Unit]
           address (DFrac.own 1) value) ∗
       ([∗map] index ↦ value ∈ (∅ : WasmGlobalMap Value),
         globalPointsTo index value) ∗
-      runtimeModuleOwn (concreteSortConfig loop input).store.runtime.module) ⊢
+      runtimeModuleOwn ⟨0⟩ loop.module) ⊢
       WP (concreteSortConfig loop input).expr @ Stuckness.NotStuck; ⊤
         [{ values,
           ∀ (store : MachineStore Unit) (_observations : List StepKind),
@@ -812,7 +833,12 @@ theorem recursive_sort_stronglyNormalizing
   · exact inputHeap_agrees recursive input hfit
   · exact inputHeap_inBounds recursive input hfit
   · exact globalHeapAgrees_empty _
+  · simp [concreteSortConfig, sortConfig]
   · intro _
+    have hentry : (concreteSortConfig recursive input).store.runtime.entry = ⟨0⟩ := rfl
+    have hmod : (concreteSortConfig recursive input).store.runtime.currentModule = recursive.module := by
+      simp [concreteSortConfig, sortConfig, RuntimeEnv.currentModule_mk1]
+    rw [hentry, hmod]
     iintro Hresources
     ihave Hsort := twp_recursiveSortCall input hfit $$ Hresources
     iapply twp.mono (fun _values => ?_) $$ Hsort
@@ -831,11 +857,20 @@ theorem recursive_sort_terminatesWith
   · exact inputHeap_agrees recursive input hfit
   · exact inputHeap_inBounds recursive input hfit
   · exact globalHeapAgrees_empty _
+  · simp [concreteSortConfig, sortConfig]
   · intro _
-    iintro Hresources
+    have hentry : (concreteSortConfig recursive input).store.runtime.entry = ⟨0⟩ := rfl
+    have hmod : (concreteSortConfig recursive input).store.runtime.currentModule = recursive.module := by
+      simp [concreteSortConfig, sortConfig, RuntimeEnv.currentModule_mk1]
+    rw [hentry, hmod]
+    iintro ⟨Hheap, Hglobals, Hruntime, _Hhost⟩
     iapply twp.to_wp
     iapply twp_recursiveSortCall input hfit
-    iexact Hresources
+    isplitl [Hheap]
+    · iexact Hheap
+    isplitl [Hglobals]
+    · iexact Hglobals
+    iexact Hruntime
 
 theorem loop_sort_stronglyNormalizing
     (input : List UInt64) (hfit : Fits input) :
@@ -848,7 +883,12 @@ theorem loop_sort_stronglyNormalizing
   · exact inputHeap_agrees loop input hfit
   · exact inputHeap_inBounds loop input hfit
   · exact globalHeapAgrees_empty _
+  · simp [concreteSortConfig, sortConfig]
   · intro _
+    have hentry : (concreteSortConfig loop input).store.runtime.entry = ⟨0⟩ := rfl
+    have hmod : (concreteSortConfig loop input).store.runtime.currentModule = loop.module := by
+      simp [concreteSortConfig, sortConfig, RuntimeEnv.currentModule_mk1]
+    rw [hentry, hmod]
     iintro Hresources
     ihave Hsort := twp_loopSortCall input hfit $$ Hresources
     iapply twp.mono (fun _values => ?_) $$ Hsort
@@ -867,11 +907,20 @@ theorem loop_sort_terminatesWith
   · exact inputHeap_agrees loop input hfit
   · exact inputHeap_inBounds loop input hfit
   · exact globalHeapAgrees_empty _
+  · simp [concreteSortConfig, sortConfig]
   · intro _
-    iintro Hresources
+    have hentry : (concreteSortConfig loop input).store.runtime.entry = ⟨0⟩ := rfl
+    have hmod : (concreteSortConfig loop input).store.runtime.currentModule = loop.module := by
+      simp [concreteSortConfig, sortConfig, RuntimeEnv.currentModule_mk1]
+    rw [hentry, hmod]
+    iintro ⟨Hheap, Hglobals, Hruntime, _Hhost⟩
     iapply twp.to_wp
     iapply twp_loopSortCall input hfit
-    iexact Hresources
+    isplitl [Hheap]
+    · iexact Hheap
+    isplitl [Hglobals]
+    · iexact Hglobals
+    iexact Hruntime
 
 theorem executeSort_host (program : Executable) (fuel : Nat)
     (initial final : Store Wasm.StdIO.State) (args values : List Value)
@@ -893,7 +942,7 @@ private theorem execute_sort_complete_of_terminates
       executeSort program fuel (afterRead program input) (sortArguments input) =
         some (values, store) ∧
       SortPost input values
-        { runtime := { module := program.module, host := Wasm.StdIO.env }
+        { runtime := { instances := #[{ module := program.module, host := Wasm.StdIO.env }], entry := ⟨0⟩ }
           wasm := store } := by
   rcases hterminates with ⟨trace, values, finalStore, hsteps, hpost⟩
   let store : Store Wasm.StdIO.State :=
@@ -915,7 +964,7 @@ theorem recursive_execute_sort_complete
       executeSort recursive fuel (afterRead recursive input) (sortArguments input) =
         some (values, store) ∧
       SortPost input values
-        { runtime := { module := recursive.module, host := Wasm.StdIO.env }
+        { runtime := { instances := #[{ module := recursive.module, host := Wasm.StdIO.env }], entry := ⟨0⟩ }
           wasm := store } :=
   execute_sort_complete_of_terminates recursive input
     (recursive_sort_terminatesWith input hfit)
@@ -926,7 +975,7 @@ theorem loop_execute_sort_complete
       executeSort loop fuel (afterRead loop input) (sortArguments input) =
         some (values, store) ∧
       SortPost input values
-        { runtime := { module := loop.module, host := Wasm.StdIO.env }
+        { runtime := { instances := #[{ module := loop.module, host := Wasm.StdIO.env }], entry := ⟨0⟩ }
           wasm := store } :=
   execute_sort_complete_of_terminates loop input
     (loop_sort_terminatesWith input hfit)
@@ -995,7 +1044,7 @@ private theorem correct_of_sort_complete
         executeSort program fuel (afterRead program input) (sortArguments input) =
           some (values, store) ∧
         SortPost input values
-          { runtime := { module := program.module, host := Wasm.StdIO.env }
+          { runtime := { instances := #[{ module := program.module, host := Wasm.StdIO.env }], entry := ⟨0⟩ }
             wasm := store }) :
     Correct program := by
   intro input hfit

@@ -65,16 +65,16 @@ theorem absDiff_smallStep_wp_to_return
     (hlo : 16 ≤ sp.toNat)
     (hroom : (sp - 16).toNat + 16 ≤ 4294967296)
     (hreturn :
-      R ∗ globalPointsTo 0 (.i32 sp) ∗
-        pointsTo_u64 ((sp - 16) + 8)
+      R ∗ globalPointsToAt 0 0 (.i32 sp) ∗
+        pointsTo_u64 0 ((sp - 16) + 8)
           (if a < b then b - a else a - b) ⊢
       WP (Wasm.SmallStep.Expr.running
         ⟨⟨[.i64 a, .i64 b], [.i32 (sp - 16)],
             [.i64 (if a < b then b - a else a - b)]⟩,
           [.ret], 1, [], [], calls⟩ :
           Wasm.SmallStep.Expr Unit) @ s; E {{ Φ }}) :
-    R ∗ globalPointsTo 0 (.i32 sp) ∗
-      pointsTo_u64 ((sp - 16) + 8) oldScratch ⊢
+    R ∗ globalPointsToAt 0 0 (.i32 sp) ∗
+      pointsTo_u64 0 ((sp - 16) + 8) oldScratch ⊢
     WP (Wasm.SmallStep.Expr.running
       ⟨⟨[.i64 a, .i64 b], [.i32 0], []⟩,
         absDiffBody, 1, [], [], calls⟩ :
@@ -156,7 +156,7 @@ theorem absDiff_smallStep_wp_to_return
     iapply Wasm.SmallStep.wp_subI64
     inext
     ihave HscratchLater :
-        ▷ pointsTo_u64 ((sp - 16) + 8) oldScratch $$ [Hscratch]
+        ▷ pointsTo_u64 0 ((sp - 16) + 8) oldScratch $$ [Hscratch]
     · inext
       iexact Hscratch
     iapply Wasm.SmallStep.wp_store64 oldScratch h8 h9 h10 h11 h12 h13 h14 h15 $$
@@ -168,7 +168,7 @@ theorem absDiff_smallStep_wp_to_return
     iapply Wasm.SmallStep.wp_localGet rfl
     inext
     ihave HscratchLater :
-        ▷ pointsTo_u64 ((sp - 16) + 8) (b - a) $$ [Hscratch]
+        ▷ pointsTo_u64 0 ((sp - 16) + 8) (b - a) $$ [Hscratch]
     · inext
       iexact Hscratch
     iapply Wasm.SmallStep.wp_load64 (b - a) h8 h9 h10 h11 h12 h13 h14 h15 $$
@@ -197,7 +197,7 @@ theorem absDiff_smallStep_wp_to_return
     iapply Wasm.SmallStep.wp_subI64
     inext
     ihave HscratchLater :
-        ▷ pointsTo_u64 ((sp - 16) + 8) oldScratch $$ [Hscratch]
+        ▷ pointsTo_u64 0 ((sp - 16) + 8) oldScratch $$ [Hscratch]
     · inext
       iexact Hscratch
     iapply Wasm.SmallStep.wp_store64 oldScratch h8 h9 h10 h11 h12 h13 h14 h15 $$
@@ -210,7 +210,7 @@ theorem absDiff_smallStep_wp_to_return
     iapply Wasm.SmallStep.wp_localGet rfl
     inext
     ihave HscratchLater :
-        ▷ pointsTo_u64 ((sp - 16) + 8) (a - b) $$ [Hscratch]
+        ▷ pointsTo_u64 0 ((sp - 16) + 8) (a - b) $$ [Hscratch]
     · inext
       iexact Hscratch
     iapply Wasm.SmallStep.wp_load64 (a - b) h8 h9 h10 h11 h12 h13 h14 h15 $$
@@ -229,16 +229,16 @@ theorem absDiff_smallStep_wp
     (sp : UInt32) (a b oldScratch : UInt64)
     (hlo : 16 ≤ sp.toNat)
     (hroom : (sp - 16).toNat + 16 ≤ 4294967296) :
-    globalPointsTo 0 (.i32 sp) ∗
-      pointsTo_u64 ((sp - 16) + 8) oldScratch ⊢
+    globalPointsToAt 0 0 (.i32 sp) ∗
+      pointsTo_u64 0 ((sp - 16) + 8) oldScratch ⊢
     WP (Wasm.SmallStep.Expr.running
       ⟨⟨[.i64 a, .i64 b], [.i32 0], []⟩,
         absDiffBody, 1, [], [], []⟩ :
         Wasm.SmallStep.Expr Unit) @ s; E
       {{ result,
         ⌜result = [.i64 (if a < b then b - a else a - b)]⌝ ∗
-        globalPointsTo 0 (.i32 sp) ∗
-        pointsTo_u64 ((sp - 16) + 8)
+        globalPointsToAt 0 0 (.i32 sp) ∗
+        pointsTo_u64 0 ((sp - 16) + 8)
           (if a < b then b - a else a - b) }} := by
   iintro Hresources
   iapply absDiff_smallStep_wp_to_return (iprop(True)) [] sp a b oldScratch hlo hroom
@@ -272,7 +272,7 @@ def absDiffBodyConfig (runtimeModule : Module) (initial : Store Unit)
       ⟨⟨[.i64 a, .i64 b], [.i32 0], []⟩,
         absDiffBody, 1, [], [], []⟩
     store :=
-      { runtime := { module := runtimeModule, host := {} }
+      { runtime := { instances := #[{ module := runtimeModule, host := {} }], entry := ⟨0⟩ }
         wasm :=
           { initial with
             mem := initial.mem.write64 1048568 oldScratch } } }
@@ -284,49 +284,49 @@ def absDiffAdequacyConfig (a b oldScratch : UInt64) :
 
 def absDiffHeap (oldScratch : UInt64) :
     WasmHeapMap (Option UInt8) :=
-  store64Heap ∅ 1048568 oldScratch
+  store64Heap ∅ 0 1048568 oldScratch
 
 def absDiffGlobals : WasmGlobalMap Value :=
-  insert ∅ 0 (.i32 1048576)
+  insert ∅ ⟨0, 0⟩ (.i32 1048576)
 
 theorem absDiffHeap_pointsTo (oldScratch : UInt64) [WasmHeapGS Unit] :
     ([∗map] address ↦ value ∈ absDiffHeap oldScratch,
       pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
         address (DFrac.own 1) value) ⊢
-      pointsTo_u64 1048568 oldScratch := by
+      pointsTo_u64 0 1048568 oldScratch := by
   let σ0 : WasmHeapMap (Option UInt8) := ∅
-  let σ1 := insert σ0 1048568 (some (u64Byte oldScratch 0))
-  let σ2 := insert σ1 1048569 (some (u64Byte oldScratch 1))
-  let σ3 := insert σ2 1048570 (some (u64Byte oldScratch 2))
-  let σ4 := insert σ3 1048571 (some (u64Byte oldScratch 3))
-  let σ5 := insert σ4 1048572 (some (u64Byte oldScratch 4))
-  let σ6 := insert σ5 1048573 (some (u64Byte oldScratch 5))
-  let σ7 := insert σ6 1048574 (some (u64Byte oldScratch 6))
-  have h1 : get? σ1 1048569 = none := by
+  let σ1 := insert σ0 (⟨0, 1048568⟩ : MemoryKey) (some (u64Byte oldScratch 0))
+  let σ2 := insert σ1 (⟨0, 1048569⟩ : MemoryKey) (some (u64Byte oldScratch 1))
+  let σ3 := insert σ2 (⟨0, 1048570⟩ : MemoryKey) (some (u64Byte oldScratch 2))
+  let σ4 := insert σ3 (⟨0, 1048571⟩ : MemoryKey) (some (u64Byte oldScratch 3))
+  let σ5 := insert σ4 (⟨0, 1048572⟩ : MemoryKey) (some (u64Byte oldScratch 4))
+  let σ6 := insert σ5 (⟨0, 1048573⟩ : MemoryKey) (some (u64Byte oldScratch 5))
+  let σ7 := insert σ6 (⟨0, 1048574⟩ : MemoryKey) (some (u64Byte oldScratch 6))
+  have h1 : get? σ1 (⟨0, 1048569⟩ : MemoryKey) = none := by
     dsimp [σ1, σ0]
     rw [get?_insert_ne (by decide), get?_empty]
-  have h2 : get? σ2 1048570 = none := by
+  have h2 : get? σ2 (⟨0, 1048570⟩ : MemoryKey) = none := by
     dsimp [σ2, σ1, σ0]
     rw [get?_insert_ne (by decide), get?_insert_ne (by decide), get?_empty]
-  have h3 : get? σ3 1048571 = none := by
+  have h3 : get? σ3 (⟨0, 1048571⟩ : MemoryKey) = none := by
     dsimp [σ3, σ2, σ1, σ0]
     rw [get?_insert_ne (by decide), get?_insert_ne (by decide),
       get?_insert_ne (by decide), get?_empty]
-  have h4 : get? σ4 1048572 = none := by
+  have h4 : get? σ4 (⟨0, 1048572⟩ : MemoryKey) = none := by
     dsimp [σ4, σ3, σ2, σ1, σ0]
     rw [get?_insert_ne (by decide), get?_insert_ne (by decide),
       get?_insert_ne (by decide), get?_insert_ne (by decide), get?_empty]
-  have h5 : get? σ5 1048573 = none := by
+  have h5 : get? σ5 (⟨0, 1048573⟩ : MemoryKey) = none := by
     dsimp [σ5, σ4, σ3, σ2, σ1, σ0]
     rw [get?_insert_ne (by decide), get?_insert_ne (by decide),
       get?_insert_ne (by decide), get?_insert_ne (by decide),
       get?_insert_ne (by decide), get?_empty]
-  have h6 : get? σ6 1048574 = none := by
+  have h6 : get? σ6 (⟨0, 1048574⟩ : MemoryKey) = none := by
     dsimp [σ6, σ5, σ4, σ3, σ2, σ1, σ0]
     rw [get?_insert_ne (by decide), get?_insert_ne (by decide),
       get?_insert_ne (by decide), get?_insert_ne (by decide),
       get?_insert_ne (by decide), get?_insert_ne (by decide), get?_empty]
-  have h7 : get? σ7 1048575 = none := by
+  have h7 : get? σ7 (⟨0, 1048575⟩ : MemoryKey) = none := by
     dsimp [σ7, σ6, σ5, σ4, σ3, σ2, σ1, σ0]
     rw [get?_insert_ne (by decide), get?_insert_ne (by decide),
       get?_insert_ne (by decide), get?_insert_ne (by decide),
@@ -334,10 +334,10 @@ theorem absDiffHeap_pointsTo (oldScratch : UInt64) [WasmHeapGS Unit] :
       get?_insert_ne (by decide), get?_empty]
   change
     ([∗map] address ↦ value ∈
-      insert σ7 1048575 (some (u64Byte oldScratch 7)),
+      insert σ7 (⟨0, 1048575⟩ : MemoryKey) (some (u64Byte oldScratch 7)),
       pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
         address (DFrac.own 1) value) ⊢
-      pointsTo_u64 1048568 oldScratch
+      pointsTo_u64 0 1048568 oldScratch
   rw [(BI.BigSepM.bigSepM_insert h7).to_eq]
   rw [(BI.BigSepM.bigSepM_insert h6).to_eq]
   rw [(BI.BigSepM.bigSepM_insert h5).to_eq]
@@ -345,7 +345,7 @@ theorem absDiffHeap_pointsTo (oldScratch : UInt64) [WasmHeapGS Unit] :
   rw [(BI.BigSepM.bigSepM_insert h3).to_eq]
   rw [(BI.BigSepM.bigSepM_insert h2).to_eq]
   rw [(BI.BigSepM.bigSepM_insert h1).to_eq]
-  rw [(BI.BigSepM.bigSepM_insert (get?_empty 1048568)).to_eq]
+  rw [(BI.BigSepM.bigSepM_insert (get?_empty (⟨0, 1048568⟩ : MemoryKey))).to_eq]
   rw [BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
   unfold pointsTo_u64
   simp only [UInt32.reduceAdd]
@@ -355,48 +355,58 @@ theorem absDiffHeap_pointsTo (oldScratch : UInt64) [WasmHeapGS Unit] :
 theorem absDiffGlobals_pointsTo [WasmGlobalGS Unit] :
     ([∗map] index ↦ value ∈ absDiffGlobals,
       globalPointsTo index value) ⊢
-      globalPointsTo 0 (.i32 1048576) := by
+      globalPointsToAt 0 0 (.i32 1048576) := by
   unfold absDiffGlobals
-  rw [(BI.BigSepM.bigSepM_insert (get?_empty 0)).to_eq,
+  rw [(BI.BigSepM.bigSepM_insert (get?_empty (⟨0, 0⟩ : GlobalKey))).to_eq,
     BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
+  unfold globalPointsToAt
+  iintro h; iexact h
 
 theorem absDiffBodyHeap_agrees
     (runtimeModule : Module) (initial : Store Unit)
     (a b oldScratch : UInt64) :
     heapAgreesWithMem (absDiffHeap oldScratch)
-      (absDiffBodyConfig runtimeModule initial a b oldScratch).store.wasm.mem := by
-  unfold absDiffHeap absDiffBodyConfig
-  have hempty :
-      heapAgreesWithMem (∅ : WasmHeapMap (Option UInt8)) initial.mem := by
-    intro address value hget
-    rw [get?_empty] at hget
-    contradiction
-  exact store64_sound
-      (σ := (∅ : WasmHeapMap (Option UInt8)))
-      (mem := initial.mem) (addr := 1048568) (value := oldScratch)
-      (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide)
-      (by decide) hempty
+      (Wasm.SmallStep.storeResolve (absDiffBodyConfig runtimeModule initial a b oldScratch).store) := by
+  have hempty : heapAgreesWithMem (∅ : WasmHeapMap (Option UInt8))
+      (fun id : Nat => if id = 0 then some initial.mem else initial.extraMems[id - 1]?) := by
+    intro key value hget; rw [get?_empty] at hget; contradiction
+  have h := store64_sound (∅ : WasmHeapMap (Option UInt8))
+      (fun id : Nat => if id = 0 then some initial.mem else initial.extraMems[id - 1]?)
+      0 initial.mem 1048568 oldScratch
+      (by simp) (by decide) (by decide) (by decide)
+      (by decide) (by decide) (by decide) (by decide) hempty
+  have heq : (fun id => if id = 0 then some (initial.mem.write64 1048568 oldScratch)
+      else (fun id' : Nat => if id' = 0 then some initial.mem else initial.extraMems[id' - 1]?) id) =
+      Wasm.SmallStep.storeResolve (absDiffBodyConfig runtimeModule initial a b oldScratch).store := by
+    funext id
+    by_cases hid : id = 0 <;> simp [hid, Wasm.SmallStep.storeResolve, absDiffBodyConfig]
+  unfold absDiffHeap
+  rw [heq] at h
+  exact h
 
 theorem absDiffBodyHeap_inBounds
     (runtimeModule : Module) (initial : Store Unit)
     (a b oldScratch : UInt64)
     (hpages : 1048576 ≤ initial.mem.pages * 65536) :
     heapAddressesInBounds (absDiffHeap oldScratch)
-      (absDiffBodyConfig runtimeModule initial a b oldScratch).store.wasm.mem := by
-  unfold absDiffHeap absDiffBodyConfig
-  have hempty :
-      heapAddressesInBounds (∅ : WasmHeapMap (Option UInt8)) initial.mem := by
-    intro address value hget
-    rw [get?_empty] at hget
-    contradiction
-  apply store64_inBounds
-      (σ := (∅ : WasmHeapMap (Option UInt8)))
-      (mem := initial.mem) (addr := 1048568) (value := oldScratch)
-      (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide)
-      (by decide) hempty
-  simpa using hpages
+      (Wasm.SmallStep.storeResolve (absDiffBodyConfig runtimeModule initial a b oldScratch).store) := by
+  have hempty : heapAddressesInBounds (∅ : WasmHeapMap (Option UInt8))
+      (fun id : Nat => if id = 0 then some initial.mem else initial.extraMems[id - 1]?) := by
+    intro key hget; rw [get?_empty] at hget; contradiction
+  have h := store64_inBounds (∅ : WasmHeapMap (Option UInt8))
+      (fun id : Nat => if id = 0 then some initial.mem else initial.extraMems[id - 1]?)
+      0 initial.mem 1048568 oldScratch
+      (by simp) (by decide) (by decide) (by decide)
+      (by decide) (by decide) (by decide) (by decide) hempty
+      (by simpa using hpages)
+  have heq : (fun id => if id = 0 then some (initial.mem.write64 1048568 oldScratch)
+      else (fun id' : Nat => if id' = 0 then some initial.mem else initial.extraMems[id' - 1]?) id) =
+      Wasm.SmallStep.storeResolve (absDiffBodyConfig runtimeModule initial a b oldScratch).store := by
+    funext id
+    by_cases hid : id = 0 <;> simp [hid, Wasm.SmallStep.storeResolve, absDiffBodyConfig]
+  unfold absDiffHeap
+  rw [heq] at h
+  exact h
 
 theorem absDiffBodyGlobals_agree
     (runtimeModule : Module) (initial : Store Unit)
@@ -407,11 +417,11 @@ theorem absDiffBodyGlobals_agree
   intro index value hget
   simp only [absDiffGlobals] at hget
   by_cases hindex : index = 0
-  · subst index
+  · subst hindex
     simp only [get?_insert_eq rfl] at hget
     obtain rfl := Option.some.inj hget
     exact hglobal
-  · rw [get?_insert_ne (Ne.symm hindex), get?_empty] at hget
+  · rw [get?_insert_ne (fun h => hindex (congrArg GlobalKey.index h).symm), get?_empty] at hget
     contradiction
 
 set_option maxHeartbeats 4000000 in
@@ -437,6 +447,7 @@ theorem absDiff_smallStep_partiallyMeets_of_store
   · exact absDiffBodyHeap_agrees runtimeModule initial a b oldScratch
   · exact absDiffBodyHeap_inBounds runtimeModule initial a b oldScratch hpages
   · exact absDiffBodyGlobals_agree runtimeModule initial a b oldScratch hglobal
+  · simp [absDiffBodyConfig]
   · intro gs
     iintro ⟨Hbytes, Hglobals⟩
     ihave Hscratch := absDiffHeap_pointsTo oldScratch $$ Hbytes
@@ -444,8 +455,8 @@ theorem absDiff_smallStep_partiallyMeets_of_store
     have hpost : ∀ result : List Value,
         (iprop%
           ⌜result = [.i64 (if a < b then b - a else a - b)]⌝ ∗
-          globalPointsTo 0 (.i32 1048576) ∗
-          pointsTo_u64 1048568
+          globalPointsToAt 0 0 (.i32 1048576) ∗
+          pointsTo_u64 0 1048568
             (if a < b then b - a else a - b)) ⊢
         (iprop% ⌜result =
           [.i64 (if a < b then b - a else a - b)]⌝) := by

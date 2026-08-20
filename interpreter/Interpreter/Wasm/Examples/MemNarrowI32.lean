@@ -34,7 +34,7 @@ def narrowI32Module : Module :=
     memory := some { pagesMin := 1, data := [{ offset := some 0, bytes := initBytes }] } }
 
 def narrowI32Store : MachineStore Unit :=
-  { runtime := { module := narrowI32Module, host := {} }
+  { runtime := { instances := #[{ module := narrowI32Module, host := {} }], entry := ⟨0⟩ }
     wasm := narrowI32Module.initialStore }
 
 def narrowI32Config (index : Nat) : Config Unit :=
