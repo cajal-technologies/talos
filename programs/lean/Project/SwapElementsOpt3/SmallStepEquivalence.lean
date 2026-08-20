@@ -108,11 +108,9 @@ theorem opt3_func0_distinct_smallStep_wp
   inext
   iapply Wasm.SmallStep.wp_add
   inext
-  iapply Wasm.SmallStep.wp_localSet rfl
+  iapply Wasm.SmallStep.wp_localTee rfl
   inext
   simp only [List.set]
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
   ihave HALater : ▷ pointsTo_u64 0 (addressI + 0) oldA $$ [HA]
   · inext
     rw [UInt32.add_zero]
@@ -139,11 +137,9 @@ theorem opt3_func0_distinct_smallStep_wp
   inext
   iapply Wasm.SmallStep.wp_add
   inext
-  iapply Wasm.SmallStep.wp_localSet rfl
+  iapply Wasm.SmallStep.wp_localTee rfl
   inext
   simp only [List.set]
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
   ihave HBLater : ▷ pointsTo_u64 0 (addressJ + 0) oldB $$ [HB]
   · inext
     rw [UInt32.add_zero]
@@ -333,10 +329,8 @@ theorem opt3_func0_terminates
   apply Wasm.SmallStep.TerminatesWith.prepend Wasm.SmallStep.Step.shl
   apply Wasm.SmallStep.TerminatesWith.prepend Wasm.SmallStep.Step.add
   apply Wasm.SmallStep.TerminatesWith.prepend
-    (Wasm.SmallStep.Step.localSet rfl)
+    (Wasm.SmallStep.Step.localTee rfl)
   simp only [List.set]
-  apply Wasm.SmallStep.TerminatesWith.prepend
-    (Wasm.SmallStep.Step.localGet rfl)
   apply Wasm.SmallStep.TerminatesWith.prepend
     (Wasm.SmallStep.Step.load64 rfl (by simpa using hboundI))
   apply Wasm.SmallStep.TerminatesWith.prepend
@@ -353,10 +347,8 @@ theorem opt3_func0_terminates
   apply Wasm.SmallStep.TerminatesWith.prepend Wasm.SmallStep.Step.shl
   apply Wasm.SmallStep.TerminatesWith.prepend Wasm.SmallStep.Step.add
   apply Wasm.SmallStep.TerminatesWith.prepend
-    (Wasm.SmallStep.Step.localSet rfl)
+    (Wasm.SmallStep.Step.localTee rfl)
   simp only [List.set]
-  apply Wasm.SmallStep.TerminatesWith.prepend
-    (Wasm.SmallStep.Step.localGet rfl)
   apply Wasm.SmallStep.TerminatesWith.prepend
     (Wasm.SmallStep.Step.load64 rfl (by simpa using hboundJ))
   apply Wasm.SmallStep.TerminatesWith.prepend

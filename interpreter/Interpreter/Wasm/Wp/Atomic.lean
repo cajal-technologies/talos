@@ -45,6 +45,16 @@ macro "wp_atomic" : tactic => `(tactic|
      | _ => Q (.Invalid "localSet with empty stack")) := by
   wp_atomic
 
+@[simp, wp_simp] theorem wp_localTee_cons :
+    wp m (.localTee i :: rest) Q st s env ↔
+    (match s.values with
+     | v :: _ =>
+        (match s.set? i v with
+         | some s' => wp m rest Q st s' env
+         | none    => Q (.Invalid "localTee index out of bounds"))
+     | _ => Q (.Invalid "localTee with empty stack")) := by
+  wp_atomic
+
 @[simp, wp_simp] theorem wp_const_cons :
     wp m (.const v :: rest) Q st s env ↔
     wp m rest Q st { s with values := .i32 v :: s.values } env := by
