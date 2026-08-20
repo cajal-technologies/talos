@@ -8,7 +8,7 @@ pub extern "C" fn mergesort() {
     let mut string = String::new();
     reader.read_line(&mut string).unwrap();
     let mut list = string
-        .split(' ')
+        .split_whitespace()
         .map(|x| x.parse::<u64>().unwrap())
         .collect::<Vec<u64>>();
 
