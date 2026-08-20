@@ -1,6 +1,7 @@
 import CodeLib.Examples.MergeSort.TotalProof
 import CodeLib.Examples.Quicksort
 import CodeLib.RustStd.MemArray
+import CodeLib.WordCodec
 import Interpreter.Wasm.Host.StdIO
 
 /-!
@@ -36,47 +37,66 @@ def decodeWord (b₀ b₁ b₂ b₃ : UInt8) : UInt32 :=
   b₀.toUInt32 ||| (b₁.toUInt32 <<< 8) |||
     (b₂.toUInt32 <<< 16) ||| (b₃.toUInt32 <<< 24)
 
+/-- `decodeWord` on the four-byte chunks `WordCodec.deserialize` hands it. The
+fallback case is unreachable: chunks are always exactly `width` bytes long. -/
+def decodeChunk : List UInt8 → UInt32
+  | b₀ :: b₁ :: b₂ :: b₃ :: _ => decodeWord b₀ b₁ b₂ b₃
+  | _ => 0
+
+/-- The packed little-endian codec for 32-bit words. Everything below the word
+level — `serialize`, `deserialize`, and the round trip between them — comes
+from `Wasm.WordCodec`; only this four-byte round trip is proved here, because
+`bv_decide` decides a concrete bit width. -/
+def codec : WordCodec UInt32 where
+  width := 4
+  encode := encodeWord
+  decode := decodeChunk
+  width_pos := by decide
+  encode_length := fun _ => rfl
+  decode_encode := by
+    intro value
+    simp only [encodeWord, decodeChunk, decodeWord]
+    bv_decide
+
 /-- Packed little-endian serialization of a list of 32-bit words. -/
 def serialize (values : List UInt32) : List UInt8 :=
-  values.flatMap encodeWord
+  codec.serialize values
 
 /-- Decode a packed little-endian byte sequence. A trailing partial word is
 rejected rather than silently ignored. -/
-def deserialize : List UInt8 → Option (List UInt32)
-  | [] => some []
-  | b₀ :: b₁ :: b₂ :: b₃ :: rest =>
-      (deserialize rest).map (decodeWord b₀ b₁ b₂ b₃ :: ·)
-  | _ => none
+def deserialize (bytes : List UInt8) : Option (List UInt32) :=
+  codec.deserialize bytes
 
 @[simp] theorem decode_encode (value : UInt32) :
     decodeWord
       (value &&& 0xff).toUInt8
       (((value >>> 8) &&& 0xff).toUInt8)
       (((value >>> 16) &&& 0xff).toUInt8)
-      (((value >>> 24) &&& 0xff).toUInt8) = value := by
-  simp only [decodeWord]
-  bv_decide
+      (((value >>> 24) &&& 0xff).toUInt8) = value :=
+  codec.decode_encode value
+
+theorem serialize_nil : serialize [] = [] := rfl
+
+theorem serialize_cons (value : UInt32) (values : List UInt32) :
+    serialize (value :: values) = encodeWord value ++ serialize values := rfl
+
+theorem deserialize_nil : deserialize [] = some [] :=
+  codec.deserialize_nil
+
+/-- The defining equation this example used to carry for its own `deserialize`,
+recovered from the generic codec at width four. -/
+theorem deserialize_cons (b₀ b₁ b₂ b₃ : UInt8) (rest : List UInt8) :
+    deserialize (b₀ :: b₁ :: b₂ :: b₃ :: rest) =
+      (deserialize rest).map (decodeWord b₀ b₁ b₂ b₃ :: ·) :=
+  codec.deserialize_append [b₀, b₁, b₂, b₃] rest rfl
 
 @[simp] theorem deserialize_serialize (values : List UInt32) :
-    deserialize (serialize values) = some values := by
-  induction values with
-  | nil => rfl
-  | cons value values ih =>
-      simp only [serialize, List.flatMap_cons, encodeWord, List.cons_append,
-        List.nil_append, deserialize, decode_encode]
-      change (deserialize (serialize values)).map (value :: ·) = some (value :: values)
-      rw [ih]
-      rfl
+    deserialize (serialize values) = some values :=
+  codec.deserialize_serialize values
 
 @[simp] theorem serialize_length (values : List UInt32) :
-    (serialize values).length = 4 * values.length := by
-  induction values with
-  | nil => rfl
-  | cons value values ih =>
-      change (List.flatMap encodeWord values).length = 4 * values.length at ih
-      simp only [serialize, List.flatMap_cons, encodeWord, List.cons_append,
-        List.nil_append, List.length_cons, Nat.mul_add]
-      omega
+    (serialize values).length = 4 * values.length :=
+  codec.serialize_length values
 
 theorem writeBytes_encodeWord (mem : Mem) (base value : UInt32) :
     mem.writeBytes base.toNat (encodeWord value) = mem.write32 base value := by
@@ -110,14 +130,14 @@ theorem writeBytes_serialize (mem : Mem) (base : UInt32)
       writeWordArray mem base values := by
   induction values generalizing mem base with
   | nil =>
-      simp only [serialize, List.flatMap_nil, writeWordArray]
+      simp only [serialize_nil, writeWordArray]
       cases mem
       simp only [Mem.writeBytes, List.length_nil, Nat.add_zero]
       congr
       funext i
       rw [dif_neg (by omega)]
   | cons value values ih =>
-      simp only [serialize, List.flatMap_cons, writeWordArray]
+      simp only [serialize_cons, writeWordArray]
       rw [Mem.writeBytes_append, writeBytes_encodeWord]
       simp only [List.length_cons, Nat.mul_add] at hfit
       have hbase : (base + 4).toNat = base.toNat + 4 := by
@@ -153,11 +173,11 @@ theorem deserialize_readBytes (mem : Mem) (base : UInt32) (count : Nat)
       some (readWordArray mem base count) := by
   induction count generalizing base with
   | zero =>
-      rfl
+      exact deserialize_nil
   | succ count ih =>
       rw [show 4 * (count + 1) = 4 + 4 * count by omega]
       rw [readBytes_four_add]
-      simp only [List.cons_append, List.nil_append, deserialize]
+      simp only [List.cons_append, List.nil_append, deserialize_cons]
       have hbase : (base + 4).toNat = base.toNat + 4 := by
         simp only [UInt32.toNat_add, UInt32.reduceToNat]
         rw [Nat.mod_eq_of_lt]

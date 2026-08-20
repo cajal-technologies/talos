@@ -237,14 +237,14 @@ theorem writeBytes_serialize (mem : Mem) (base : UInt32)
       writeWordArray64 mem base values := by
   induction values generalizing mem base with
   | nil =>
-      simp only [serialize, List.flatMap_nil, writeWordArray64]
+      simp only [serialize_nil, writeWordArray64]
       cases mem
       simp only [Mem.writeBytes, List.length_nil, Nat.add_zero]
       congr
       funext i
       rw [dif_neg (by omega)]
   | cons value values ih =>
-      simp only [serialize, List.flatMap_cons, writeWordArray64]
+      simp only [serialize_cons, writeWordArray64]
       rw [Mem.writeBytes_append, writeBytes_encodeWord]
       simp only [List.length_cons, Nat.mul_add] at hfit
       have hbase : (base + 8).toNat = base.toNat + 8 :=
@@ -1005,11 +1005,11 @@ theorem deserialize_readBytes64 (mem : Mem) (base : UInt32) (count : Nat)
     deserialize (mem.readBytes base.toNat (8 * count)) =
       some (readWordArray64 mem base count) := by
   induction count generalizing base with
-  | zero => rfl
+  | zero => exact deserialize_nil
   | succ count ih =>
       rw [show 8 * (count + 1) = 8 + 8 * count by omega]
       rw [readBytes_eight_add]
-      simp only [List.cons_append, List.nil_append, deserialize]
+      simp only [List.cons_append, List.nil_append, deserialize_cons]
       have hbase : (base + 8).toNat = base.toNat + 8 := by
         apply UInt32.add_ofNat_toNat_noWrap base 8 (by decide)
         simp only [UInt32.size] at hfit ⊢
