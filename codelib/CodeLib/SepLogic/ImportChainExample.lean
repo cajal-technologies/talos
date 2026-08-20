@@ -103,7 +103,7 @@ private theorem logTransfer (v : UInt32) (n : List UInt32)
   icases (stateInterp_eq store ns obs nt).mp $$ Hσ with
     ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
       Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep,
-      HruntimeInstances, HinstanceAuth, Henv, Hauth, %Hfacts⟩
+      HruntimeInstances, HinstanceAuth, Henv, Hauth, %Hfacts, Hexc⟩
   ihave %heq : ⌜store.wasm.host = n⌝ $$ [Hauth HP]
   · iapply (hostStateOwn_agree store.wasm.host n); iframe Hauth HP
   rw [heq]
@@ -117,7 +117,7 @@ private theorem logTransfer (v : UInt32) (n : List UInt32)
     iexists σ; iexists globalσ; iexists dataSegmentσ
     iexists tableσ; iexists elementSegmentσ; iexists runtimeModuleσ; iexists hostEnvσ
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep
-      HruntimeInstances HinstanceAuth Henv Hauth'
+      HruntimeInstances HinstanceAuth Henv Hauth' Hexc
     ipureintro
     exact Hfacts
 

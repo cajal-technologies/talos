@@ -262,6 +262,16 @@ private def resumeExceptionCaller
     control := throwingFrame :: caller.control
     calls }
 
+theorem resumeExceptionCaller_eq {α : Type} (throwingFrame : ControlFrame) (caller : CallFrame)
+    (calls : List CallFrame) :
+    (resumeExceptionCaller throwingFrame caller calls : ThreadState α) =
+    { locals := caller.locals
+      code := []
+      resultArity := caller.resultArity
+      callerRemainder := caller.callerRemainder
+      control := throwingFrame :: caller.control
+      calls } := rfl
+
 def canonicalGlobalIndex (store : MachineStore α) : Nat → Nat
   | 0 => 0
   | index + 1 =>
@@ -279,6 +289,12 @@ private def canonicalTagIndex (store : MachineStore α) (index : Nat) : Nat :=
   match store.wasm.tagIds[index]? with
   | some id => (store.wasm.tagIds.findIdx? (· = id)).getD index
   | none => index
+
+theorem canonicalTagIndex_eq (store : MachineStore α) (index : Nat) :
+    canonicalTagIndex store index =
+    match store.wasm.tagIds[index]? with
+    | some id => (store.wasm.tagIds.findIdx? (· = id)).getD index
+    | none => index := rfl
 
 private def setGlobal (store : MachineStore α) (index : Nat) (value : Value) :
     MachineStore α :=
@@ -413,45 +429,86 @@ private def rotateLeft32 (value count : UInt32) : UInt32 :=
   if count = 0 then value
   else (value <<< count) ||| (value >>> (32 - count))
 
+theorem rotateLeft32_eq (value count : UInt32) : rotateLeft32 value count =
+    let count := count % 32
+    if count = 0 then value
+    else (value <<< count) ||| (value >>> (32 - count)) := rfl
+
 private def rotateRight32 (value count : UInt32) : UInt32 :=
   let count := count % 32
   if count = 0 then value
   else (value >>> count) ||| (value <<< (32 - count))
+
+theorem rotateRight32_eq (value count : UInt32) : rotateRight32 value count =
+    let count := count % 32
+    if count = 0 then value
+    else (value >>> count) ||| (value <<< (32 - count)) := rfl
 
 private def rotateLeft64 (value count : UInt64) : UInt64 :=
   let count := count % 64
   if count = 0 then value
   else (value <<< count) ||| (value >>> (64 - count))
 
+theorem rotateLeft64_eq (value count : UInt64) : rotateLeft64 value count =
+    let count := count % 64
+    if count = 0 then value
+    else (value <<< count) ||| (value >>> (64 - count)) := rfl
+
 private def rotateRight64 (value count : UInt64) : UInt64 :=
   let count := count % 64
   if count = 0 then value
   else (value >>> count) ||| (value <<< (64 - count))
 
+theorem rotateRight64_eq (value count : UInt64) : rotateRight64 value count =
+    let count := count % 64
+    if count = 0 then value
+    else (value >>> count) ||| (value <<< (64 - count)) := rfl
+
 private def signedDiv32 (dividend divisor : UInt32) : UInt32 :=
   (Int32.ofInt
     (Int.tdiv dividend.toInt32.toInt divisor.toInt32.toInt)).toUInt32
+
+theorem signedDiv32_eq (dividend divisor : UInt32) : signedDiv32 dividend divisor =
+    (Int32.ofInt (Int.tdiv dividend.toInt32.toInt divisor.toInt32.toInt)).toUInt32 := rfl
 
 private def signedRem32 (dividend divisor : UInt32) : UInt32 :=
   (Int32.ofInt
     (Int.tmod dividend.toInt32.toInt divisor.toInt32.toInt)).toUInt32
 
+theorem signedRem32_eq (dividend divisor : UInt32) : signedRem32 dividend divisor =
+    (Int32.ofInt (Int.tmod dividend.toInt32.toInt divisor.toInt32.toInt)).toUInt32 := rfl
+
 private def signedDiv64 (dividend divisor : UInt64) : UInt64 :=
   (Int64.ofInt
     (Int.tdiv dividend.toInt64.toInt divisor.toInt64.toInt)).toUInt64
+
+theorem signedDiv64_eq (dividend divisor : UInt64) : signedDiv64 dividend divisor =
+    (Int64.ofInt (Int.tdiv dividend.toInt64.toInt divisor.toInt64.toInt)).toUInt64 := rfl
 
 private def signedRem64 (dividend divisor : UInt64) : UInt64 :=
   (Int64.ofInt
     (Int.tmod dividend.toInt64.toInt divisor.toInt64.toInt)).toUInt64
 
+theorem signedRem64_eq (dividend divisor : UInt64) : signedRem64 dividend divisor =
+    (Int64.ofInt (Int.tmod dividend.toInt64.toInt divisor.toInt64.toInt)).toUInt64 := rfl
+
 private def wrap64To32 (value : UInt64) : UInt32 :=
   UInt32.ofNat (value.toNat % 2 ^ 32)
+
+theorem wrap64To32_eq (value : UInt64) : wrap64To32 value =
+    UInt32.ofNat (value.toNat % 2 ^ 32) := rfl
 
 private def extendSigned32To64 (value : UInt32) : UInt64 :=
   (Int64.ofInt value.toInt32.toInt).toUInt64
 
+theorem extendSigned32To64_eq (value : UInt32) : extendSigned32To64 value =
+    (Int64.ofInt value.toInt32.toInt).toUInt64 := rfl
+
 private def extendUnsigned32To64 (value : UInt32) : UInt64 :=
   UInt64.ofNat value.toNat
+
+theorem extendUnsigned32To64_eq (value : UInt32) : extendUnsigned32To64 value =
+    UInt64.ofNat value.toNat := rfl
 
 private def extend8To32 (value : UInt32) : UInt32 :=
   (Int32.ofInt (signExtend (value.toNat % 256) 8)).toUInt32
@@ -468,11 +525,20 @@ theorem extend16To32_eq (value : UInt32) :
 private def extend8To64 (value : UInt64) : UInt64 :=
   (Int64.ofInt (signExtend (value.toNat % 256) 8)).toUInt64
 
+theorem extend8To64_eq (value : UInt64) : extend8To64 value =
+    (Int64.ofInt (signExtend (value.toNat % 256) 8)).toUInt64 := rfl
+
 private def extend16To64 (value : UInt64) : UInt64 :=
   (Int64.ofInt (signExtend (value.toNat % 65536) 16)).toUInt64
 
+theorem extend16To64_eq (value : UInt64) : extend16To64 value =
+    (Int64.ofInt (signExtend (value.toNat % 65536) 16)).toUInt64 := rfl
+
 private def extend32To64 (value : UInt64) : UInt64 :=
   (Int64.ofInt (signExtend (value.toNat % 2 ^ 32) 32)).toUInt64
+
+theorem extend32To64_eq (value : UInt64) : extend32To64 value =
+    (Int64.ofInt (signExtend (value.toNat % 2 ^ 32) 32)).toUInt64 := rfl
 
 /-- The mathematical address used for bounds checks and the current reference
 memory's physical UInt32 index. Memory64 addresses above the implementation
@@ -481,6 +547,10 @@ private def memoryAddress? : Value → Option (Nat × UInt32)
   | .i32 address => some (address.toNat, address)
   | .i64 address => some (address.toNat, address.toUInt32)
   | _ => none
+
+theorem memoryAddress?_i32_eq (a : UInt32) : memoryAddress? (.i32 a) = some (a.toNat, a) := rfl
+
+theorem memoryAddress?_i64_eq (a : UInt64) : memoryAddress? (.i64 a) = some (a.toNat, a.toUInt32) := rfl
 
 def evalScalarFloat0? : Instruction → Option Value
   | .f32Const value => some (.f32 value)
@@ -586,10 +656,30 @@ private def simdExtractLane
   | .f32x4 => .f32 (UInt32.ofNat laneValue)
   | .f64x2 => .f64 (UInt64.ofNat laneValue)
 
+theorem simdExtractLane_eq (shape : Simd.Shape) (signed : Bool) (lane : Nat)
+    (value : BitVec 128) : simdExtractLane shape signed lane value =
+    let laneValue := Simd.getLane shape.laneBits lane value
+    match shape with
+    | .i8x16 => .i32 (if signed then
+        UInt32.ofNat (Simd.toU 32 (Simd.sx 8 laneValue))
+      else UInt32.ofNat laneValue)
+    | .i16x8 => .i32 (if signed then
+        UInt32.ofNat (Simd.toU 32 (Simd.sx 16 laneValue))
+      else UInt32.ofNat laneValue)
+    | .i32x4 => .i32 (UInt32.ofNat laneValue)
+    | .i64x2 => .i64 (UInt64.ofNat laneValue)
+    | .f32x4 => .f32 (UInt32.ofNat laneValue)
+    | .f64x2 => .f64 (UInt64.ofNat laneValue) := rfl
+
 private def readV128 (memory : Mem) (address : UInt32) : BitVec 128 :=
   let lo := memory.read64 address
   let hi := memory.read64 (address + 8)
   BitVec.ofNat 128 (lo.toNat + hi.toNat * 2 ^ 64)
+
+theorem readV128_eq (memory : Mem) (address : UInt32) : readV128 memory address =
+    let lo := memory.read64 address
+    let hi := memory.read64 (address + 8)
+    BitVec.ofNat 128 (lo.toNat + hi.toNat * 2 ^ 64) := rfl
 
 private def writeV128
     (memory : Mem) (address : UInt32) (value : BitVec 128) : Mem :=
@@ -597,12 +687,26 @@ private def writeV128
   let hi := UInt64.ofNat (value.toNat / 2 ^ 64)
   (memory.write64 address lo).write64 (address + 8) hi
 
+theorem writeV128_eq (memory : Mem) (address : UInt32) (value : BitVec 128) :
+    writeV128 memory address value =
+    let lo := UInt64.ofNat (value.toNat % 2 ^ 64)
+    let hi := UInt64.ofNat (value.toNat / 2 ^ 64)
+    (memory.write64 address lo).write64 (address + 8) hi := rfl
+
 private def readLaneNat (memory : Mem) (address : UInt32) (bits : Nat) : Nat :=
   match bits with
   | 8 => (memory.read8 address).toNat
   | 16 => (memory.read16 address).toNat
   | 32 => (memory.read32 address).toNat
   | _ => (memory.read64 address).toNat
+
+theorem readLaneNat_eq (memory : Mem) (address : UInt32) (bits : Nat) :
+    readLaneNat memory address bits =
+    match bits with
+    | 8 => (memory.read8 address).toNat
+    | 16 => (memory.read16 address).toNat
+    | 32 => (memory.read32 address).toNat
+    | _ => (memory.read64 address).toNat := rfl
 
 private def writeLaneNat
     (memory : Mem) (address : UInt32) (bits value : Nat) : Mem :=
@@ -634,6 +738,16 @@ private def loadV128Ext
     let value := (word.toNat >>> (i * srcBits)) % 2 ^ srcBits
     if signed then Simd.toU dstBits (Simd.sx srcBits value) else value
   Simd.ofLanes dstBits lanes
+
+theorem loadV128Ext_eq (memory : Mem) (address : UInt32) (srcBits : Nat) (signed : Bool) :
+    loadV128Ext memory address srcBits signed =
+    let word := memory.read64 address
+    let dstBits := srcBits * 2
+    let count := 64 / srcBits
+    let lanes := (List.range count).map fun i =>
+      let value := (word.toNat >>> (i * srcBits)) % 2 ^ srcBits
+      if signed then Simd.toU dstBits (Simd.sx srcBits value) else value
+    Simd.ofLanes dstBits lanes := rfl
 
 def evalScalarFloat2? : Instruction → Value → Value → Option Value
   | .f32Add, .f32 lhs, .f32 rhs => some (.f32 (f32Add lhs rhs))
@@ -696,7 +810,7 @@ def branchTarget? (functionArity : Nat) : Nat → List ControlFrame → List Val
   | depth + 1, _ :: outer, values =>
       branchTarget? functionArity depth outer values
 
-private def matchingCatch? (tag : Nat) :
+def matchingCatch? (tag : Nat) :
     List CatchClause → Option CatchClause
   | [] => none
   | clause :: clauses =>
@@ -706,11 +820,26 @@ private def matchingCatch? (tag : Nat) :
         | .catchAll _ | .catchAllRef _ => true
       if doesMatch then some clause else matchingCatch? tag clauses
 
-private def catchLabel : CatchClause → Nat
+theorem matchingCatch?_nil (tag : Nat) : matchingCatch? tag [] = none := rfl
+
+theorem matchingCatch?_cons (tag : Nat) (clause : CatchClause) (clauses : List CatchClause) :
+    matchingCatch? tag (clause :: clauses) =
+    let doesMatch : Bool :=
+      match clause with
+      | .catch expected _ | .catchRef expected _ => expected == tag
+      | .catchAll _ | .catchAllRef _ => true
+    if doesMatch then some clause else matchingCatch? tag clauses := rfl
+
+def catchLabel : CatchClause → Nat
   | .catch _ label | .catchRef _ label
   | .catchAll label | .catchAllRef label => label
 
-private def prepareCatch
+theorem catchLabel_eq (clause : CatchClause) : catchLabel clause =
+    match clause with
+    | .catch _ label | .catchRef _ label
+    | .catchAll label | .catchAllRef label => label := rfl
+
+def prepareCatch
     (tag : Nat) (arguments : List Value) (clause : CatchClause)
     (store : MachineStore α) : List Value × MachineStore α :=
   match clause with
@@ -730,6 +859,20 @@ private def prepareCatch
           wasm :=
             { store.wasm with
               exns := store.wasm.exns ++ [(tag, arguments)] } })
+
+theorem prepareCatch_eq (tag : Nat) (arguments : List Value) (clause : CatchClause)
+    (store : MachineStore α) : prepareCatch tag arguments clause store =
+    match clause with
+    | .catch _ _ => (arguments, store)
+    | .catchAll _ => ([], store)
+    | .catchRef _ _ =>
+        let index := store.wasm.exns.length
+        (.exnref (some index) :: arguments,
+          { store with wasm := { store.wasm with exns := store.wasm.exns ++ [(tag, arguments)] } })
+    | .catchAllRef _ =>
+        let index := store.wasm.exns.length
+        ([.exnref (some index)],
+          { store with wasm := { store.wasm with exns := store.wasm.exns ++ [(tag, arguments)] } }) := rfl
 
 /-- Checked executable presentation. Unsupported and malformed configurations
 remain diagnostic errors until validation and the corresponding `Step`

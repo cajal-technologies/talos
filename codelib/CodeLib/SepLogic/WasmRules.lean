@@ -105,6 +105,26 @@ theorem elementSegmentHeapAgrees_empty
   rw [LawfulPartialMap.get?_empty] at hget
   contradiction
 
+def exceptionHeapAgrees
+    (σ : WasmExceptionMap (Nat × List Value))
+    (exns : List (Nat × List Value)) : Prop :=
+  ∀ (k : Nat) (v : Nat × List Value),
+    get? σ k = some v → exns[k]? = some v
+
+theorem exceptionHeapAgrees_empty (exns : List (Nat × List Value)) :
+    exceptionHeapAgrees (∅ : WasmExceptionMap (Nat × List Value)) exns := by
+  intro k v hget
+  rw [LawfulPartialMap.get?_empty] at hget
+  contradiction
+
+theorem exceptionHeapAgrees_append {σ : WasmExceptionMap (Nat × List Value)}
+    {exns : List (Nat × List Value)} {entry : Nat × List Value}
+    (h : exceptionHeapAgrees σ exns) : exceptionHeapAgrees σ (exns ++ [entry]) := by
+  intro k v hget
+  have hv := h k v hget
+  obtain ⟨hlt, _⟩ := getElem?_eq_some_iff.mp hv
+  rwa [List.getElem?_append_left hlt]
+
 /-- Updating an owned global in both the authoritative ghost map and the
 physical global array preserves their agreement. All owned entries use
 `instanceId = 0`, so index equality is the only collision condition. -/

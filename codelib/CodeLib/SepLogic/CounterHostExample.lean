@@ -72,7 +72,7 @@ private theorem incrTransfer (n : Nat) [WasmSmallStepGS .hasLC Nat]
   icases (stateInterp_eq store ns obs nt).mp $$ Hσ with
     ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
       Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep,
-      HruntimeInstances, HinstanceAuth, Henv, Hauth, %Hfacts⟩
+      HruntimeInstances, HinstanceAuth, Henv, Hauth, %Hfacts, Hexc⟩
   -- auth and frag: derive store.wasm.host = n; specialize_dup_context retains Hauth HP
   ihave %heq : ⌜store.wasm.host = n⌝ $$ [Hauth HP]
   · iapply (hostStateOwn_agree store.wasm.host n); iframe Hauth HP
@@ -90,7 +90,7 @@ private theorem incrTransfer (n : Nat) [WasmSmallStepGS .hasLC Nat]
     iexists σ; iexists globalσ; iexists dataSegmentσ
     iexists tableσ; iexists elementSegmentσ; iexists runtimeModuleσ; iexists hostEnvσ
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep
-      HruntimeInstances HinstanceAuth Henv Hauth'
+      HruntimeInstances HinstanceAuth Henv Hauth' Hexc
     ipureintro
     exact Hfacts
 
@@ -111,7 +111,7 @@ private theorem readTransfer (initial : Nat) [WasmSmallStepGS .hasLC Nat]
   icases (stateInterp_eq store ns obs nt).mp $$ Hσ with
     ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
       Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep,
-      HruntimeInstances, HinstanceAuth, Henv, Hauth, %Hfacts⟩
+      HruntimeInstances, HinstanceAuth, Henv, Hauth, %Hfacts, Hexc⟩
   -- derive store.wasm.host = initial + 3; retains Hauth HP (pure conclusion)
   ihave %heq : ⌜store.wasm.host = initial + 3⌝ $$ [Hauth HP]
   · iapply (hostStateOwn_agree store.wasm.host (initial + 3)); iframe Hauth HP
@@ -124,7 +124,7 @@ private theorem readTransfer (initial : Nat) [WasmSmallStepGS .hasLC Nat]
     iexists σ; iexists globalσ; iexists dataSegmentσ
     iexists tableσ; iexists elementSegmentσ; iexists runtimeModuleσ; iexists hostEnvσ
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep
-      HruntimeInstances HinstanceAuth Henv Hauth
+      HruntimeInstances HinstanceAuth Henv Hauth Hexc
     ipureintro; exact Hfacts
 
 theorem counter_partiallyMeets (initial : Nat) (_hbound : initial + 3 < 2 ^ 32) :

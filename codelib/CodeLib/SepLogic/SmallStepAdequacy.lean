@@ -1,6 +1,8 @@
 import CodeLib.SepLogic.SmallStepLifting
+import CodeLib.SepLogic.SmallStepTotalLifting
 import Iris.ProgramLogic.Adequacy
 import Iris.ProgramLogic.TotalAdequacy
+import Interpreter.Wasm.Decoder.Wat
 
 /-!
 # Adequacy for the Wasm small-step Iris language
@@ -301,6 +303,25 @@ theorem wasm_smallStep_adequacy
   letI runtimeInstancesGS : WasmRuntimeInstancesGS α :=
     { runtimeInstancesElem
       runtimeInstancesName }
+  letI exceptionMapG :
+      GhostMapG (WasmHeapGF α) Nat (Nat × List Value) WasmExceptionMap := by
+    constructor
+    exists 16
+  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
+      (V := Nat × List Value) (H := WasmExceptionMap)) with
+    ⟨%exceptionName, Hexceptions⟩
+  letI wasmExceptionGS : WasmExceptionGS α :=
+    { toGhostMapG := exceptionMapG
+      exceptionName := exceptionName }
+  letI tagTableElem : ElemG (WasmHeapGF α)
+      (constOF (Agree (DiscreteO (List Nat)))) := by
+    exists 17
+  imod (iOwn_alloc (E := tagTableElem)
+      (toAgree ⟨config.store.wasm.tagIds⟩) (fun _ => trivial)) with
+    ⟨%tagTableName, HtagTable⟩
+  letI tagTableGS : WasmTagTableGS α :=
+    { tagTableElem
+      tagTableName }
   letI gs : WasmSmallStepGS .hasLC α :=
     { toInvGS_gen := inv
       toWasmHeapGS := wasmHeapGS
@@ -308,6 +329,8 @@ theorem wasm_smallStep_adequacy
       dataSegment := wasmDataSegmentGS
       table := wasmTableGS
       elementSegment := wasmElementSegmentGS
+      exception := wasmExceptionGS
+      tagTable := tagTableGS
       runtime := runtimeGS
       hostEnv := hostEnvGS
       hostState := hostStateGS
@@ -319,7 +342,21 @@ theorem wasm_smallStep_adequacy
     stateInterp (GF := WasmHeapGF α) store 0 [] 0)
   iexists (fun _ => iprop(True))
   dsimp only
-  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeInstances HinstanceState HhostEnvAuth HhostState]
+  ihave Hexc : exceptionInterp config.store.wasm.exns config.store.wasm.tagIds $$
+      [Hexceptions HtagTable]
+  · unfold exceptionInterp tagTableOwn
+    isplitl [Hexceptions]
+    · iexists (∅ : WasmExceptionMap (Nat × List Value))
+      isplitl [Hexceptions]
+      · iexact Hexceptions
+      · ipureintro
+        exact exceptionHeapAgrees_empty _
+    · iexists config.store.wasm.tagIds
+      isplitl [HtagTable]
+      · iexact HtagTable
+      · ipureintro
+        exact List.prefix_rfl
+  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
     iexists (∅ : WasmHeapMap (Option UInt8))
     iexists (∅ : WasmGlobalMap Value)
@@ -330,7 +367,7 @@ theorem wasm_smallStep_adequacy
     iexists (∅ : WasmHostEnvMap (HostEnv α))
     unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
     simp only [BI.BigSepM.bigSepM_empty.to_eq, BI.emp_sep.to_eq]
-    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeInstances HinstanceState HhostEnvAuth HhostState
+    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
     ipureintro
     exact ⟨heapAgreesWithMem_empty _,
       heapAddressesInBounds_empty _,
@@ -478,6 +515,25 @@ theorem wasm_smallStep_stronglyNormalizing
   letI runtimeInstancesGS : WasmRuntimeInstancesGS α :=
     { runtimeInstancesElem
       runtimeInstancesName }
+  letI exceptionMapG :
+      GhostMapG (WasmHeapGF α) Nat (Nat × List Value) WasmExceptionMap := by
+    constructor
+    exists 16
+  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
+      (V := Nat × List Value) (H := WasmExceptionMap)) with
+    ⟨%exceptionName, Hexceptions⟩
+  letI wasmExceptionGS : WasmExceptionGS α :=
+    { toGhostMapG := exceptionMapG
+      exceptionName := exceptionName }
+  letI tagTableElem : ElemG (WasmHeapGF α)
+      (constOF (Agree (DiscreteO (List Nat)))) := by
+    exists 17
+  imod (iOwn_alloc (E := tagTableElem)
+      (toAgree ⟨config.store.wasm.tagIds⟩) (fun _ => trivial)) with
+    ⟨%tagTableName, HtagTable⟩
+  letI tagTableGS : WasmTagTableGS α :=
+    { tagTableElem
+      tagTableName }
   letI gs : WasmSmallStepGS .hasNoLC α :=
     { toInvGS_gen := inv
       toWasmHeapGS := wasmHeapGS
@@ -485,6 +541,8 @@ theorem wasm_smallStep_stronglyNormalizing
       dataSegment := wasmDataSegmentGS
       table := wasmTableGS
       elementSegment := wasmElementSegmentGS
+      exception := wasmExceptionGS
+      tagTable := tagTableGS
       runtime := runtimeGS
       hostEnv := hostEnvGS
       hostState := hostStateGS
@@ -501,7 +559,21 @@ theorem wasm_smallStep_stronglyNormalizing
       imodintro
       iexact Hstate)
   dsimp only
-  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeInstances HinstanceState HhostEnvAuth HhostState]
+  ihave Hexc : exceptionInterp config.store.wasm.exns config.store.wasm.tagIds $$
+      [Hexceptions HtagTable]
+  · unfold exceptionInterp tagTableOwn
+    isplitl [Hexceptions]
+    · iexists (∅ : WasmExceptionMap (Nat × List Value))
+      isplitl [Hexceptions]
+      · iexact Hexceptions
+      · ipureintro
+        exact exceptionHeapAgrees_empty _
+    · iexists config.store.wasm.tagIds
+      isplitl [HtagTable]
+      · iexact HtagTable
+      · ipureintro
+        exact List.prefix_rfl
+  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
     iexists (∅ : WasmHeapMap (Option UInt8))
     iexists (∅ : WasmGlobalMap Value)
@@ -512,7 +584,7 @@ theorem wasm_smallStep_stronglyNormalizing
     iexists (∅ : WasmHostEnvMap (HostEnv α))
     unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
     simp only [BI.BigSepM.bigSepM_empty.to_eq, BI.emp_sep.to_eq]
-    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeInstances HinstanceState HhostEnvAuth HhostState
+    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
     ipureintro
     exact ⟨heapAgreesWithMem_empty _,
       heapAddressesInBounds_empty _,
@@ -528,7 +600,7 @@ theorem wasm_smallStep_stronglyNormalizing
 /-- Total-WP strong normalization with authoritative initial memory, globals,
 and runtime-module ownership. This is the termination counterpart of
 `wasm_smallStep_heap_globals_runtime_store_adequacy`. -/
-theorem wasm_smallStep_heap_globals_runtime_stronglyNormalizing
+theorem wasm_smallStep_heap_globals_runtime_tags_stronglyNormalizing
     [WasmSmallStepGpreS α]
     (config : Config α)
     (σ : WasmHeapMap (Option UInt8))
@@ -544,7 +616,9 @@ theorem wasm_smallStep_heap_globals_runtime_stronglyNormalizing
             address (DFrac.own 1) value) ∗
         ([∗map] index ↦ value ∈ globalσ,
           globalPointsTo index value) ∗
-        runtimeModuleOwn config.store.runtime.entry config.store.runtime.currentModule) ⊢
+        runtimeModuleOwn config.store.runtime.entry
+          config.store.runtime.currentModule ∗
+        tagTableOwn config.store.wasm.tagIds) ⊢
         WP config.expr @ Stuckness.NotStuck; ⊤
           [{ Φ }]) :
     StronglyNormalizing
@@ -664,6 +738,29 @@ theorem wasm_smallStep_heap_globals_runtime_stronglyNormalizing
   letI runtimeInstancesGS : WasmRuntimeInstancesGS α :=
     { runtimeInstancesElem
       runtimeInstancesName }
+  letI exceptionMapG :
+      GhostMapG (WasmHeapGF α) Nat (Nat × List Value) WasmExceptionMap := by
+    constructor
+    exists 16
+  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
+      (V := Nat × List Value) (H := WasmExceptionMap)) with
+    ⟨%exceptionName, Hexceptions⟩
+  letI wasmExceptionGS : WasmExceptionGS α :=
+    { toGhostMapG := exceptionMapG
+      exceptionName := exceptionName }
+  letI tagTableElem : ElemG (WasmHeapGF α)
+      (constOF (Agree (DiscreteO (List Nat)))) := by
+    exists 17
+  imod (iOwn_alloc (E := tagTableElem)
+      (toAgree ⟨config.store.wasm.tagIds⟩) (fun _ => trivial)) with
+    ⟨%tagTableName, HtagTable⟩
+  letI tagTableGS : WasmTagTableGS α :=
+    { tagTableElem
+      tagTableName }
+  ihave HtagTableOwn : tagTableOwn config.store.wasm.tagIds $$ [HtagTable]
+  · unfold tagTableOwn
+    iexact HtagTable
+  iintuitionistic HtagTableOwn
   letI gs : WasmSmallStepGS .hasNoLC α :=
     { toInvGS_gen := inv
       toWasmHeapGS := wasmHeapGS
@@ -671,6 +768,8 @@ theorem wasm_smallStep_heap_globals_runtime_stronglyNormalizing
       dataSegment := wasmDataSegmentGS
       table := wasmTableGS
       elementSegment := wasmElementSegmentGS
+      exception := wasmExceptionGS
+      tagTable := tagTableGS
       runtime := runtimeGS
       hostEnv := hostEnvGS
       hostState := hostStateGS
@@ -687,7 +786,21 @@ theorem wasm_smallStep_heap_globals_runtime_stronglyNormalizing
       imodintro
       iexact Hstate)
   dsimp only
-  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState]
+  ihave Hexc : exceptionInterp config.store.wasm.exns config.store.wasm.tagIds $$
+      [Hexceptions]
+  · unfold exceptionInterp
+    isplitl [Hexceptions]
+    · iexists (∅ : WasmExceptionMap (Nat × List Value))
+      isplitl [Hexceptions]
+      · iexact Hexceptions
+      · ipureintro
+        exact exceptionHeapAgrees_empty _
+    · iexists config.store.wasm.tagIds
+      isplitl []
+      · iexact HtagTableOwn
+      · ipureintro
+        exact List.prefix_rfl
+  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
     iexists σ
     iexists globalσ
@@ -699,7 +812,7 @@ theorem wasm_smallStep_heap_globals_runtime_stronglyNormalizing
     iexists (∅ : WasmHostEnvMap (HostEnv α))
     unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
-    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState
+    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
     ipureintro
     exact ⟨hagree, hinBounds, hglobals,
       dataSegmentHeapAgrees_empty _,
@@ -720,10 +833,49 @@ theorem wasm_smallStep_heap_globals_runtime_stronglyNormalizing
     isplitl [HglobalPoints]
     · unfold globalPointsTo
       iexact HglobalPoints
+    isplitl [HruntimeWP HinstanceFrag]
     · unfold runtimeModuleOwn
       isplitl [HruntimeWP]
       · unfold runtimeModuleElem; iexact HruntimeWP
       · unfold currentInstanceOwnN; iexact HinstanceFrag
+    · iexact HtagTableOwn
+
+/-- Tag-free specialization of
+`wasm_smallStep_heap_globals_runtime_tags_stronglyNormalizing`. -/
+theorem wasm_smallStep_heap_globals_runtime_stronglyNormalizing
+    [WasmSmallStepGpreS α]
+    (config : Config α)
+    (σ : WasmHeapMap (Option UInt8))
+    (globalσ : WasmGlobalMap Value)
+    (Φ : List Value → IProp (WasmHeapGF α))
+    (hagree : heapAgreesWithMem σ (storeResolve config.store))
+    (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
+    (hglobals : globalHeapAgrees globalσ config.store.wasm.globals)
+    (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
+    (htwp : ∀ [WasmSmallStepGS .hasNoLC α],
+      (([∗map] address ↦ value ∈ σ,
+          pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
+            address (DFrac.own 1) value) ∗
+        ([∗map] index ↦ value ∈ globalσ,
+          globalPointsTo index value) ∗
+        runtimeModuleOwn config.store.runtime.entry config.store.runtime.currentModule) ⊢
+        WP config.expr @ Stuckness.NotStuck; ⊤
+          [{ Φ }]) :
+    StronglyNormalizing
+      (ExprErasedStep (Expr := Expr α)
+        (State := MachineStore α) (Obs := StepKind))
+      (config.expr, config.store) := by
+  apply wasm_smallStep_heap_globals_runtime_tags_stronglyNormalizing
+    config σ globalσ Φ hagree hinBounds hglobals hwf
+  intro gs
+  iintro ⟨Hpoints, Hglobals, Hruntime, Htags⟩
+  iclear Htags
+  iapply htwp
+  isplitl [Hpoints]
+  · iexact Hpoints
+  isplitl [Hglobals]
+  · iexact Hglobals
+  · iexact Hruntime
 
 private theorem stronglyNormalizing_reaches_irreducible
     {β : Type _} {step : β → β → Prop} {start : β}
@@ -815,15 +967,20 @@ theorem wasm_smallStep_terminates
   iapply twp.to_wp
   exact htwp .hasLC
 
-/-- Closed adequacy with persistent knowledge of the concrete runtime module.
-This is the call-capable counterpart of `wasm_smallStep_adequacy`. -/
-theorem wasm_smallStep_runtime_adequacy
+/-- Closed adequacy with persistent knowledge of the concrete runtime module
+*and* of the entry instance's tag-identity table.  This is the call-capable
+counterpart of `wasm_smallStep_adequacy`, and the only entry point that hands
+out `tagTableOwn`, which the exception rules need.  `tagTableOwn` is
+persistent, so handing out the initial table costs the state interpretation
+nothing. -/
+theorem wasm_smallStep_runtime_tags_adequacy
     [WasmSmallStepGpreS α]
     (config : Config α) (φ : List Value → Prop)
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
     (hwp : ∀ [WasmSmallStepGS .hasLC α],
       runtimeModuleOwn config.store.runtime.entry
-        config.store.runtime.currentModule ⊢
+        config.store.runtime.currentModule ∗
+        tagTableOwn config.store.wasm.tagIds ⊢
         WP config.expr @ Stuckness.NotStuck; ⊤
           {{ values, ⌜φ values⌝ }}) :
     adequate Stuckness.NotStuck config.expr config.store
@@ -938,6 +1095,29 @@ theorem wasm_smallStep_runtime_adequacy
   letI runtimeInstancesGS : WasmRuntimeInstancesGS α :=
     { runtimeInstancesElem
       runtimeInstancesName }
+  letI exceptionMapG :
+      GhostMapG (WasmHeapGF α) Nat (Nat × List Value) WasmExceptionMap := by
+    constructor
+    exists 16
+  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
+      (V := Nat × List Value) (H := WasmExceptionMap)) with
+    ⟨%exceptionName, Hexceptions⟩
+  letI wasmExceptionGS : WasmExceptionGS α :=
+    { toGhostMapG := exceptionMapG
+      exceptionName := exceptionName }
+  letI tagTableElem : ElemG (WasmHeapGF α)
+      (constOF (Agree (DiscreteO (List Nat)))) := by
+    exists 17
+  imod (iOwn_alloc (E := tagTableElem)
+      (toAgree ⟨config.store.wasm.tagIds⟩) (fun _ => trivial)) with
+    ⟨%tagTableName, HtagTable⟩
+  letI tagTableGS : WasmTagTableGS α :=
+    { tagTableElem
+      tagTableName }
+  ihave HtagTableOwn : tagTableOwn config.store.wasm.tagIds $$ [HtagTable]
+  · unfold tagTableOwn
+    iexact HtagTable
+  iintuitionistic HtagTableOwn
   letI gs : WasmSmallStepGS .hasLC α :=
     { toInvGS_gen := inv
       toWasmHeapGS := wasmHeapGS
@@ -945,6 +1125,8 @@ theorem wasm_smallStep_runtime_adequacy
       dataSegment := wasmDataSegmentGS
       table := wasmTableGS
       elementSegment := wasmElementSegmentGS
+      exception := wasmExceptionGS
+      tagTable := tagTableGS
       runtime := runtimeGS
       hostEnv := hostEnvGS
       hostState := hostStateGS
@@ -956,7 +1138,21 @@ theorem wasm_smallStep_runtime_adequacy
     stateInterp (GF := WasmHeapGF α) store 0 [] 0)
   iexists (fun _ => iprop(True))
   dsimp only
-  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState]
+  ihave Hexc : exceptionInterp config.store.wasm.exns config.store.wasm.tagIds $$
+      [Hexceptions]
+  · unfold exceptionInterp
+    isplitl [Hexceptions]
+    · iexists (∅ : WasmExceptionMap (Nat × List Value))
+      isplitl [Hexceptions]
+      · iexact Hexceptions
+      · ipureintro
+        exact exceptionHeapAgrees_empty _
+    · iexists config.store.wasm.tagIds
+      isplitl []
+      · iexact HtagTableOwn
+      · ipureintro
+        exact List.prefix_rfl
+  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
     iexists (∅ : WasmHeapMap (Option UInt8))
     iexists (∅ : WasmGlobalMap Value)
@@ -968,7 +1164,7 @@ theorem wasm_smallStep_runtime_adequacy
     iexists (∅ : WasmHostEnvMap (HostEnv α))
     unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
-    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState
+    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
     ipureintro
     exact ⟨heapAgreesWithMem_empty _,
       heapAddressesInBounds_empty _,
@@ -985,10 +1181,33 @@ theorem wasm_smallStep_runtime_adequacy
         · simp [PartialMap.singleton, get?_insert_ne (Ne.symm h), get?_empty] at hm,
       fun id env hm => by simp [get?_empty] at hm⟩
   · iapply hwp
-    unfold runtimeModuleOwn
-    isplitl [HruntimeWP]
-    · unfold runtimeModuleElem; iexact HruntimeWP
-    · unfold currentInstanceOwnN; iexact HinstanceFrag
+    isplitl [HruntimeWP HinstanceFrag]
+    · unfold runtimeModuleOwn
+      isplitl [HruntimeWP]
+      · unfold runtimeModuleElem; iexact HruntimeWP
+      · unfold currentInstanceOwnN; iexact HinstanceFrag
+    · iexact HtagTableOwn
+
+/-- Closed adequacy with persistent knowledge of the concrete runtime module.
+This is the call-capable counterpart of `wasm_smallStep_adequacy`; it is the
+tag-free specialization of `wasm_smallStep_runtime_tags_adequacy`. -/
+theorem wasm_smallStep_runtime_adequacy
+    [WasmSmallStepGpreS α]
+    (config : Config α) (φ : List Value → Prop)
+    (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
+    (hwp : ∀ [WasmSmallStepGS .hasLC α],
+      runtimeModuleOwn config.store.runtime.entry
+        config.store.runtime.currentModule ⊢
+        WP config.expr @ Stuckness.NotStuck; ⊤
+          {{ values, ⌜φ values⌝ }}) :
+    adequate Stuckness.NotStuck config.expr config.store
+      (fun values _ => φ values) := by
+  apply wasm_smallStep_runtime_tags_adequacy config φ hwf
+  intro gs
+  iintro ⟨Hruntime, Htags⟩
+  iclear Htags
+  iapply hwp
+  iexact Hruntime
 
 /-- Relational partial-correctness form of call-capable runtime adequacy. -/
 theorem wasm_smallStep_runtime_partiallyMeets
@@ -1137,6 +1356,25 @@ theorem wasm_smallStep_runtime_host_store_adequacy
   letI runtimeInstancesGS : WasmRuntimeInstancesGS α :=
     { runtimeInstancesElem
       runtimeInstancesName }
+  letI exceptionMapG :
+      GhostMapG (WasmHeapGF α) Nat (Nat × List Value) WasmExceptionMap := by
+    constructor
+    exists 16
+  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
+      (V := Nat × List Value) (H := WasmExceptionMap)) with
+    ⟨%exceptionName, Hexceptions⟩
+  letI wasmExceptionGS : WasmExceptionGS α :=
+    { toGhostMapG := exceptionMapG
+      exceptionName := exceptionName }
+  letI tagTableElem : ElemG (WasmHeapGF α)
+      (constOF (Agree (DiscreteO (List Nat)))) := by
+    exists 17
+  imod (iOwn_alloc (E := tagTableElem)
+      (toAgree ⟨config.store.wasm.tagIds⟩) (fun _ => trivial)) with
+    ⟨%tagTableName, HtagTable⟩
+  letI tagTableGS : WasmTagTableGS α :=
+    { tagTableElem
+      tagTableName }
   letI gs : WasmSmallStepGS .hasLC α :=
     { toInvGS_gen := inv
       toWasmHeapGS := wasmHeapGS
@@ -1144,6 +1382,8 @@ theorem wasm_smallStep_runtime_host_store_adequacy
       dataSegment := wasmDataSegmentGS
       table := wasmTableGS
       elementSegment := wasmElementSegmentGS
+      exception := wasmExceptionGS
+      tagTable := tagTableGS
       runtime := runtimeGS
       hostEnv := hostEnvGS
       hostState := hostStateGS
@@ -1155,7 +1395,21 @@ theorem wasm_smallStep_runtime_host_store_adequacy
     stateInterp (GF := WasmHeapGF α) store 0 [] 0)
   iexists (fun _ => iprop(True))
   dsimp only
-  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth' HhostState]
+  ihave Hexc : exceptionInterp config.store.wasm.exns config.store.wasm.tagIds $$
+      [Hexceptions HtagTable]
+  · unfold exceptionInterp tagTableOwn
+    isplitl [Hexceptions]
+    · iexists (∅ : WasmExceptionMap (Nat × List Value))
+      isplitl [Hexceptions]
+      · iexact Hexceptions
+      · ipureintro
+        exact exceptionHeapAgrees_empty _
+    · iexists config.store.wasm.tagIds
+      isplitl [HtagTable]
+      · iexact HtagTable
+      · ipureintro
+        exact List.prefix_rfl
+  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth' HhostState Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
     iexists (∅ : WasmHeapMap (Option UInt8))
     iexists (∅ : WasmGlobalMap Value)
@@ -1168,7 +1422,7 @@ theorem wasm_smallStep_runtime_host_store_adequacy
       config.store.runtime.currentHost)
     unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
-    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth' HhostState
+    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth' HhostState Hexc
     ipureintro
     exact ⟨heapAgreesWithMem_empty _,
       heapAddressesInBounds_empty _,
@@ -1343,6 +1597,25 @@ theorem wasm_smallStep_runtime_instance_adequacy
   letI runtimeInstancesGS : WasmRuntimeInstancesGS α :=
     { runtimeInstancesElem
       runtimeInstancesName }
+  letI exceptionMapG :
+      GhostMapG (WasmHeapGF α) Nat (Nat × List Value) WasmExceptionMap := by
+    constructor
+    exists 16
+  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
+      (V := Nat × List Value) (H := WasmExceptionMap)) with
+    ⟨%exceptionName, Hexceptions⟩
+  letI wasmExceptionGS : WasmExceptionGS α :=
+    { toGhostMapG := exceptionMapG
+      exceptionName := exceptionName }
+  letI tagTableElem : ElemG (WasmHeapGF α)
+      (constOF (Agree (DiscreteO (List Nat)))) := by
+    exists 17
+  imod (iOwn_alloc (E := tagTableElem)
+      (toAgree ⟨config.store.wasm.tagIds⟩) (fun _ => trivial)) with
+    ⟨%tagTableName, HtagTable⟩
+  letI tagTableGS : WasmTagTableGS α :=
+    { tagTableElem
+      tagTableName }
   letI gs : WasmSmallStepGS .hasLC α :=
     { toInvGS_gen := inv
       toWasmHeapGS := wasmHeapGS
@@ -1350,6 +1623,8 @@ theorem wasm_smallStep_runtime_instance_adequacy
       dataSegment := wasmDataSegmentGS
       table := wasmTableGS
       elementSegment := wasmElementSegmentGS
+      exception := wasmExceptionGS
+      tagTable := tagTableGS
       runtime := runtimeGS
       hostEnv := hostEnvGS
       hostState := hostStateGS
@@ -1363,7 +1638,21 @@ theorem wasm_smallStep_runtime_instance_adequacy
     stateInterp (GF := WasmHeapGF α) store 0 [] 0)
   iexists (fun _ => iprop(True))
   dsimp only
-  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstancesState HinstanceState HhostEnvAuth HhostState]
+  ihave Hexc : exceptionInterp config.store.wasm.exns config.store.wasm.tagIds $$
+      [Hexceptions HtagTable]
+  · unfold exceptionInterp tagTableOwn
+    isplitl [Hexceptions]
+    · iexists (∅ : WasmExceptionMap (Nat × List Value))
+      isplitl [Hexceptions]
+      · iexact Hexceptions
+      · ipureintro
+        exact exceptionHeapAgrees_empty _
+    · iexists config.store.wasm.tagIds
+      isplitl [HtagTable]
+      · iexact HtagTable
+      · ipureintro
+        exact List.prefix_rfl
+  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstancesState HinstanceState HhostEnvAuth HhostState Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
     iexists (∅ : WasmHeapMap (Option UInt8))
     iexists (∅ : WasmGlobalMap Value)
@@ -1375,7 +1664,7 @@ theorem wasm_smallStep_runtime_instance_adequacy
     iexists (∅ : WasmHostEnvMap (HostEnv α))
     unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
-    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstancesState HinstanceState HhostEnvAuth HhostState
+    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstancesState HinstanceState HhostEnvAuth HhostState Hexc
     ipureintro
     exact ⟨heapAgreesWithMem_empty _,
       heapAddressesInBounds_empty _,
@@ -1557,6 +1846,25 @@ theorem wasm_smallStep_instance_host_state_adequacy
   letI runtimeInstancesGS : WasmRuntimeInstancesGS α :=
     { runtimeInstancesElem
       runtimeInstancesName }
+  letI exceptionMapG :
+      GhostMapG (WasmHeapGF α) Nat (Nat × List Value) WasmExceptionMap := by
+    constructor
+    exists 16
+  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
+      (V := Nat × List Value) (H := WasmExceptionMap)) with
+    ⟨%exceptionName, Hexceptions⟩
+  letI wasmExceptionGS : WasmExceptionGS α :=
+    { toGhostMapG := exceptionMapG
+      exceptionName := exceptionName }
+  letI tagTableElem : ElemG (WasmHeapGF α)
+      (constOF (Agree (DiscreteO (List Nat)))) := by
+    exists 17
+  imod (iOwn_alloc (E := tagTableElem)
+      (toAgree ⟨config.store.wasm.tagIds⟩) (fun _ => trivial)) with
+    ⟨%tagTableName, HtagTable⟩
+  letI tagTableGS : WasmTagTableGS α :=
+    { tagTableElem
+      tagTableName }
   letI gs : WasmSmallStepGS .hasLC α :=
     { toInvGS_gen := inv
       toWasmHeapGS := wasmHeapGS
@@ -1564,6 +1872,8 @@ theorem wasm_smallStep_instance_host_state_adequacy
       dataSegment := wasmDataSegmentGS
       table := wasmTableGS
       elementSegment := wasmElementSegmentGS
+      exception := wasmExceptionGS
+      tagTable := tagTableGS
       runtime := runtimeGS
       hostEnv := hostEnvGS
       hostState := hostStateGS
@@ -1577,7 +1887,21 @@ theorem wasm_smallStep_instance_host_state_adequacy
     stateInterp (GF := WasmHeapGF α) store 0 [] 0)
   iexists (fun _ => iprop(True))
   dsimp only
-  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstancesState HinstanceState HhostEnvAuth' HhostState]
+  ihave Hexc : exceptionInterp config.store.wasm.exns config.store.wasm.tagIds $$
+      [Hexceptions HtagTable]
+  · unfold exceptionInterp tagTableOwn
+    isplitl [Hexceptions]
+    · iexists (∅ : WasmExceptionMap (Nat × List Value))
+      isplitl [Hexceptions]
+      · iexact Hexceptions
+      · ipureintro
+        exact exceptionHeapAgrees_empty _
+    · iexists config.store.wasm.tagIds
+      isplitl [HtagTable]
+      · iexact HtagTable
+      · ipureintro
+        exact List.prefix_rfl
+  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstancesState HinstanceState HhostEnvAuth' HhostState Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
     iexists (∅ : WasmHeapMap (Option UInt8))
     iexists (∅ : WasmGlobalMap Value)
@@ -1590,7 +1914,7 @@ theorem wasm_smallStep_instance_host_state_adequacy
       config.store.runtime.currentHost)
     unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
-    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstancesState HinstanceState HhostEnvAuth' HhostState
+    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstancesState HinstanceState HhostEnvAuth' HhostState Hexc
     ipureintro
     exact ⟨heapAgreesWithMem_empty _,
       heapAddressesInBounds_empty _,
@@ -1759,6 +2083,25 @@ theorem wasm_smallStep_heap_adequacy
   letI runtimeInstancesGS : WasmRuntimeInstancesGS α :=
     { runtimeInstancesElem
       runtimeInstancesName }
+  letI exceptionMapG :
+      GhostMapG (WasmHeapGF α) Nat (Nat × List Value) WasmExceptionMap := by
+    constructor
+    exists 16
+  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
+      (V := Nat × List Value) (H := WasmExceptionMap)) with
+    ⟨%exceptionName, Hexceptions⟩
+  letI wasmExceptionGS : WasmExceptionGS α :=
+    { toGhostMapG := exceptionMapG
+      exceptionName := exceptionName }
+  letI tagTableElem : ElemG (WasmHeapGF α)
+      (constOF (Agree (DiscreteO (List Nat)))) := by
+    exists 17
+  imod (iOwn_alloc (E := tagTableElem)
+      (toAgree ⟨config.store.wasm.tagIds⟩) (fun _ => trivial)) with
+    ⟨%tagTableName, HtagTable⟩
+  letI tagTableGS : WasmTagTableGS α :=
+    { tagTableElem
+      tagTableName }
   letI gs : WasmSmallStepGS .hasLC α :=
     { toInvGS_gen := inv
       toWasmHeapGS := wasmHeapGS
@@ -1766,6 +2109,8 @@ theorem wasm_smallStep_heap_adequacy
       dataSegment := wasmDataSegmentGS
       table := wasmTableGS
       elementSegment := wasmElementSegmentGS
+      exception := wasmExceptionGS
+      tagTable := tagTableGS
       runtime := runtimeGS
       hostEnv := hostEnvGS
       hostState := hostStateGS
@@ -1777,7 +2122,21 @@ theorem wasm_smallStep_heap_adequacy
     stateInterp (GF := WasmHeapGF α) store 0 [] 0)
   iexists (fun _ => iprop(True))
   dsimp only
-  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeInstances HinstanceState HhostEnvAuth HhostState]
+  ihave Hexc : exceptionInterp config.store.wasm.exns config.store.wasm.tagIds $$
+      [Hexceptions HtagTable]
+  · unfold exceptionInterp tagTableOwn
+    isplitl [Hexceptions]
+    · iexists (∅ : WasmExceptionMap (Nat × List Value))
+      isplitl [Hexceptions]
+      · iexact Hexceptions
+      · ipureintro
+        exact exceptionHeapAgrees_empty _
+    · iexists config.store.wasm.tagIds
+      isplitl [HtagTable]
+      · iexact HtagTable
+      · ipureintro
+        exact List.prefix_rfl
+  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
     iexists σ
     iexists (∅ : WasmGlobalMap Value)
@@ -1788,7 +2147,7 @@ theorem wasm_smallStep_heap_adequacy
     iexists (∅ : WasmHostEnvMap (HostEnv α))
     unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
     simp only [BI.BigSepM.bigSepM_empty.to_eq, BI.emp_sep.to_eq]
-    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeInstances HinstanceState HhostEnvAuth HhostState
+    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
     ipureintro
     exact ⟨hagree, hinBounds,
       globalHeapAgrees_empty _,
@@ -1937,6 +2296,25 @@ theorem wasm_smallStep_heap_globals_runtime_adequacy
   letI runtimeInstancesGS : WasmRuntimeInstancesGS α :=
     { runtimeInstancesElem
       runtimeInstancesName }
+  letI exceptionMapG :
+      GhostMapG (WasmHeapGF α) Nat (Nat × List Value) WasmExceptionMap := by
+    constructor
+    exists 16
+  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
+      (V := Nat × List Value) (H := WasmExceptionMap)) with
+    ⟨%exceptionName, Hexceptions⟩
+  letI wasmExceptionGS : WasmExceptionGS α :=
+    { toGhostMapG := exceptionMapG
+      exceptionName := exceptionName }
+  letI tagTableElem : ElemG (WasmHeapGF α)
+      (constOF (Agree (DiscreteO (List Nat)))) := by
+    exists 17
+  imod (iOwn_alloc (E := tagTableElem)
+      (toAgree ⟨config.store.wasm.tagIds⟩) (fun _ => trivial)) with
+    ⟨%tagTableName, HtagTable⟩
+  letI tagTableGS : WasmTagTableGS α :=
+    { tagTableElem
+      tagTableName }
   letI gs : WasmSmallStepGS .hasLC α :=
     { toInvGS_gen := inv
       toWasmHeapGS := wasmHeapGS
@@ -1944,6 +2322,8 @@ theorem wasm_smallStep_heap_globals_runtime_adequacy
       dataSegment := wasmDataSegmentGS
       table := wasmTableGS
       elementSegment := wasmElementSegmentGS
+      exception := wasmExceptionGS
+      tagTable := tagTableGS
       runtime := runtimeGS
       hostEnv := hostEnvGS
       hostState := hostStateGS
@@ -1955,7 +2335,21 @@ theorem wasm_smallStep_heap_globals_runtime_adequacy
     stateInterp (GF := WasmHeapGF α) store 0 [] 0)
   iexists (fun _ => iprop(True))
   dsimp only
-  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState]
+  ihave Hexc : exceptionInterp config.store.wasm.exns config.store.wasm.tagIds $$
+      [Hexceptions HtagTable]
+  · unfold exceptionInterp tagTableOwn
+    isplitl [Hexceptions]
+    · iexists (∅ : WasmExceptionMap (Nat × List Value))
+      isplitl [Hexceptions]
+      · iexact Hexceptions
+      · ipureintro
+        exact exceptionHeapAgrees_empty _
+    · iexists config.store.wasm.tagIds
+      isplitl [HtagTable]
+      · iexact HtagTable
+      · ipureintro
+        exact List.prefix_rfl
+  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
     iexists σ
     iexists globalσ
@@ -1967,7 +2361,7 @@ theorem wasm_smallStep_heap_globals_runtime_adequacy
     iexists (∅ : WasmHostEnvMap (HostEnv α))
     unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
-    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState
+    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
     ipureintro
     exact ⟨hagree, hinBounds, hglobals,
       dataSegmentHeapAgrees_empty _,
@@ -2142,6 +2536,25 @@ theorem wasm_smallStep_heap_globals_runtime_store_adequacy
   letI runtimeInstancesGS : WasmRuntimeInstancesGS α :=
     { runtimeInstancesElem
       runtimeInstancesName }
+  letI exceptionMapG :
+      GhostMapG (WasmHeapGF α) Nat (Nat × List Value) WasmExceptionMap := by
+    constructor
+    exists 16
+  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
+      (V := Nat × List Value) (H := WasmExceptionMap)) with
+    ⟨%exceptionName, Hexceptions⟩
+  letI wasmExceptionGS : WasmExceptionGS α :=
+    { toGhostMapG := exceptionMapG
+      exceptionName := exceptionName }
+  letI tagTableElem : ElemG (WasmHeapGF α)
+      (constOF (Agree (DiscreteO (List Nat)))) := by
+    exists 17
+  imod (iOwn_alloc (E := tagTableElem)
+      (toAgree ⟨config.store.wasm.tagIds⟩) (fun _ => trivial)) with
+    ⟨%tagTableName, HtagTable⟩
+  letI tagTableGS : WasmTagTableGS α :=
+    { tagTableElem
+      tagTableName }
   letI gs : WasmSmallStepGS .hasLC α :=
     { toInvGS_gen := inv
       toWasmHeapGS := wasmHeapGS
@@ -2149,6 +2562,8 @@ theorem wasm_smallStep_heap_globals_runtime_store_adequacy
       dataSegment := wasmDataSegmentGS
       table := wasmTableGS
       elementSegment := wasmElementSegmentGS
+      exception := wasmExceptionGS
+      tagTable := tagTableGS
       runtime := runtimeGS
       hostEnv := hostEnvGS
       hostState := hostStateGS
@@ -2160,7 +2575,21 @@ theorem wasm_smallStep_heap_globals_runtime_store_adequacy
     stateInterp (GF := WasmHeapGF α) store 0 [] 0)
   iexists (fun _ => iprop(True))
   dsimp only
-  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth' HhostState]
+  ihave Hexc : exceptionInterp config.store.wasm.exns config.store.wasm.tagIds $$
+      [Hexceptions HtagTable]
+  · unfold exceptionInterp tagTableOwn
+    isplitl [Hexceptions]
+    · iexists (∅ : WasmExceptionMap (Nat × List Value))
+      isplitl [Hexceptions]
+      · iexact Hexceptions
+      · ipureintro
+        exact exceptionHeapAgrees_empty _
+    · iexists config.store.wasm.tagIds
+      isplitl [HtagTable]
+      · iexact HtagTable
+      · ipureintro
+        exact List.prefix_rfl
+  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth' HhostState Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
     iexists σ
     iexists globalσ
@@ -2173,7 +2602,7 @@ theorem wasm_smallStep_heap_globals_runtime_store_adequacy
       config.store.runtime.currentHost)
     unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
-    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth' HhostState
+    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth' HhostState Hexc
     ipureintro
     exact ⟨hagree, hinBounds, hglobals,
       dataSegmentHeapAgrees_empty _,
@@ -2347,6 +2776,25 @@ theorem wasm_smallStep_heap_globals_runtime_store_terminates
     letI runtimeInstancesGS : WasmRuntimeInstancesGS α :=
       { runtimeInstancesElem
         runtimeInstancesName }
+    letI exceptionMapG :
+        GhostMapG (WasmHeapGF α) Nat (Nat × List Value) WasmExceptionMap := by
+      constructor
+      exists 16
+    imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
+        (V := Nat × List Value) (H := WasmExceptionMap)) with
+      ⟨%exceptionName, Hexceptions⟩
+    letI wasmExceptionGS : WasmExceptionGS α :=
+      { toGhostMapG := exceptionMapG
+        exceptionName := exceptionName }
+    letI tagTableElem : ElemG (WasmHeapGF α)
+        (constOF (Agree (DiscreteO (List Nat)))) := by
+      exists 17
+    imod (iOwn_alloc (E := tagTableElem)
+        (toAgree ⟨config.store.wasm.tagIds⟩) (fun _ => trivial)) with
+      ⟨%tagTableName, HtagTable⟩
+    letI tagTableGS : WasmTagTableGS α :=
+      { tagTableElem
+        tagTableName }
     letI gs : WasmSmallStepGS .hasNoLC α :=
       { toInvGS_gen := inv
         toWasmHeapGS := wasmHeapGS
@@ -2354,6 +2802,8 @@ theorem wasm_smallStep_heap_globals_runtime_store_terminates
         dataSegment := wasmDataSegmentGS
         table := wasmTableGS
         elementSegment := wasmElementSegmentGS
+        exception := wasmExceptionGS
+        tagTable := tagTableGS
         runtime := runtimeGS
         hostEnv := hostEnvGS
         hostState := hostStateGS
@@ -2370,7 +2820,21 @@ theorem wasm_smallStep_heap_globals_runtime_store_terminates
         imodintro
         iexact Hstate)
     dsimp only
-    isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState]
+    ihave Hexc : exceptionInterp config.store.wasm.exns config.store.wasm.tagIds $$
+        [Hexceptions HtagTable]
+    · unfold exceptionInterp tagTableOwn
+      isplitl [Hexceptions]
+      · iexists (∅ : WasmExceptionMap (Nat × List Value))
+        isplitl [Hexceptions]
+        · iexact Hexceptions
+        · ipureintro
+          exact exceptionHeapAgrees_empty _
+      · iexists config.store.wasm.tagIds
+        isplitl [HtagTable]
+        · iexact HtagTable
+        · ipureintro
+          exact List.prefix_rfl
+    isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
     · iapply (stateInterp_eq config.store 0 [] 0).mpr
       iexists σ
       iexists globalσ
@@ -2382,7 +2846,7 @@ theorem wasm_smallStep_heap_globals_runtime_store_terminates
       iexists (∅ : WasmHostEnvMap (HostEnv α))
       unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
       simp only [BI.BigSepM.bigSepM_singleton.to_eq]
-      iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState
+      iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
       ipureintro
       exact ⟨hagree, hinBounds, hglobals,
         dataSegmentHeapAgrees_empty _,
@@ -2586,6 +3050,25 @@ theorem wasm_smallStep_heap_store_terminates
     letI runtimeInstancesGS : WasmRuntimeInstancesGS α :=
       { runtimeInstancesElem
         runtimeInstancesName }
+    letI exceptionMapG :
+        GhostMapG (WasmHeapGF α) Nat (Nat × List Value) WasmExceptionMap := by
+      constructor
+      exists 16
+    imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
+        (V := Nat × List Value) (H := WasmExceptionMap)) with
+      ⟨%exceptionName, Hexceptions⟩
+    letI wasmExceptionGS : WasmExceptionGS α :=
+      { toGhostMapG := exceptionMapG
+        exceptionName := exceptionName }
+    letI tagTableElem : ElemG (WasmHeapGF α)
+        (constOF (Agree (DiscreteO (List Nat)))) := by
+      exists 17
+    imod (iOwn_alloc (E := tagTableElem)
+        (toAgree ⟨config.store.wasm.tagIds⟩) (fun _ => trivial)) with
+      ⟨%tagTableName, HtagTable⟩
+    letI tagTableGS : WasmTagTableGS α :=
+      { tagTableElem
+        tagTableName }
     letI gs : WasmSmallStepGS .hasNoLC α :=
       { toInvGS_gen := inv
         toWasmHeapGS := wasmHeapGS
@@ -2593,6 +3076,8 @@ theorem wasm_smallStep_heap_store_terminates
         dataSegment := wasmDataSegmentGS
         table := wasmTableGS
         elementSegment := wasmElementSegmentGS
+        exception := wasmExceptionGS
+        tagTable := tagTableGS
         runtime := runtimeGS
         hostEnv := hostEnvGS
         hostState := hostStateGS
@@ -2609,7 +3094,21 @@ theorem wasm_smallStep_heap_store_terminates
         imodintro
         iexact Hstate)
     dsimp only
-    isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState]
+    ihave Hexc : exceptionInterp config.store.wasm.exns config.store.wasm.tagIds $$
+        [Hexceptions HtagTable]
+    · unfold exceptionInterp tagTableOwn
+      isplitl [Hexceptions]
+      · iexists (∅ : WasmExceptionMap (Nat × List Value))
+        isplitl [Hexceptions]
+        · iexact Hexceptions
+        · ipureintro
+          exact exceptionHeapAgrees_empty _
+      · iexists config.store.wasm.tagIds
+        isplitl [HtagTable]
+        · iexact HtagTable
+        · ipureintro
+          exact List.prefix_rfl
+    isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
     · iapply (stateInterp_eq config.store 0 [] 0).mpr
       iexists σ
       iexists (∅ : WasmGlobalMap Value)
@@ -2621,7 +3120,7 @@ theorem wasm_smallStep_heap_store_terminates
       iexists (∅ : WasmHostEnvMap (HostEnv α))
       unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
       simp only [BI.BigSepM.bigSepM_singleton.to_eq]
-      iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState
+      iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
       ipureintro
       exact ⟨hagree, hinBounds, globalHeapAgrees_empty _,
         dataSegmentHeapAgrees_empty _,
@@ -2654,6 +3153,90 @@ theorem wasm_smallStep_heap_store_terminates
     isplitl [Hpoints]
     · iexact Hpoints
     · iexact HruntimeModule
+
+/-- Total-correctness runtime entry point that also hands out the entry
+instance's tag table.  This is the entry point the exception rules need: they
+consume `tagTableOwn` to learn that their tag index is canonical. -/
+theorem wasm_smallStep_runtime_tags_terminates
+    [WasmSmallStepGpreS α]
+    (config : Config α) (φ : List Value → Prop)
+    (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
+    (htwp : ∀ (hlc : HasLC) [WasmSmallStepGS hlc α],
+      runtimeModuleOwn config.store.runtime.entry
+          config.store.runtime.currentModule ∗
+        tagTableOwn config.store.wasm.tagIds ⊢
+        WP config.expr @ Stuckness.NotStuck; ⊤
+          [{ values, ⌜φ values⌝ }]) :
+    TerminatesWith config (fun values _store => φ values) := by
+  apply stronglyNormalizing_adequate_terminates config
+    (fun values _store => φ values)
+  · apply wasm_smallStep_heap_globals_runtime_tags_stronglyNormalizing
+      config ∅ ∅ (fun values => iprop(⌜φ values⌝))
+      (heapAgreesWithMem_empty _) (heapAddressesInBounds_empty _)
+      (globalHeapAgrees_empty _) hwf
+    intro gs
+    simp only [BI.BigSepM.bigSepM_empty.to_eq]
+    iintro ⟨_Hheap, _Hglobals, Hruntime, Htags⟩
+    iapply htwp .hasNoLC
+    isplitl [Hruntime]
+    · iexact Hruntime
+    · iexact Htags
+  · apply wasm_smallStep_runtime_tags_adequacy config φ hwf
+    intro gs
+    iintro Hboth
+    iapply twp.to_wp
+    iapply htwp .hasLC
+    iexact Hboth
+
+/-- Total-correctness runtime entry point without tag knowledge. -/
+theorem wasm_smallStep_runtime_terminates
+    [WasmSmallStepGpreS α]
+    (config : Config α) (φ : List Value → Prop)
+    (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
+    (htwp : ∀ (hlc : HasLC) [WasmSmallStepGS hlc α],
+      runtimeModuleOwn config.store.runtime.entry
+          config.store.runtime.currentModule ⊢
+        WP config.expr @ Stuckness.NotStuck; ⊤
+          [{ values, ⌜φ values⌝ }]) :
+    TerminatesWith config (fun values _store => φ values) := by
+  apply wasm_smallStep_runtime_tags_terminates config φ hwf
+  intro hlc _
+  iintro ⟨Hruntime, Htags⟩
+  iclear Htags
+  iapply htwp hlc
+  iexact Hruntime
+
+/-- Total-correctness entry point owning only the physical memory bytes, with a
+value-only postcondition. -/
+theorem wasm_smallStep_heap_terminates
+    [WasmSmallStepGpreS α]
+    (config : Config α) (σ : WasmHeapMap (Option UInt8))
+    (φ : List Value → Prop)
+    (hagree : heapAgreesWithMem σ (storeResolve config.store))
+    (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
+    (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
+    (htwp : ∀ (hlc : HasLC) [WasmSmallStepGS hlc α],
+      ([∗map] address ↦ value ∈ σ,
+        pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
+          address (DFrac.own 1) value) ⊢
+        WP config.expr @ Stuckness.NotStuck; ⊤
+          [{ values, ⌜φ values⌝ }]) :
+    TerminatesWith config (fun values _store => φ values) := by
+  apply wasm_smallStep_heap_store_terminates config σ
+    (fun values _store => φ values) hagree hinBounds hwf
+  intro hlc _
+  iintro ⟨Hpoints, Hruntime⟩
+  iclear Hruntime
+  iapply (twp.mono (Φ := fun values => iprop(⌜φ values⌝)) ?hmono)
+  case hmono =>
+    intro values
+    iintro %hφ
+    iintro %store %observations Hstate
+    iclear Hstate
+    ipureintro
+    exact hφ
+  iapply htwp hlc
+  iexact Hpoints
 
 /-- State-sensitive adequacy with explicit authoritative ownership of passive
 data-segment status in addition to memory, globals, and the runtime module. -/
@@ -2799,6 +3382,25 @@ theorem wasm_smallStep_heap_globals_segments_runtime_store_adequacy
   letI runtimeInstancesGS : WasmRuntimeInstancesGS α :=
     { runtimeInstancesElem
       runtimeInstancesName }
+  letI exceptionMapG :
+      GhostMapG (WasmHeapGF α) Nat (Nat × List Value) WasmExceptionMap := by
+    constructor
+    exists 16
+  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
+      (V := Nat × List Value) (H := WasmExceptionMap)) with
+    ⟨%exceptionName, Hexceptions⟩
+  letI wasmExceptionGS : WasmExceptionGS α :=
+    { toGhostMapG := exceptionMapG
+      exceptionName := exceptionName }
+  letI tagTableElem : ElemG (WasmHeapGF α)
+      (constOF (Agree (DiscreteO (List Nat)))) := by
+    exists 17
+  imod (iOwn_alloc (E := tagTableElem)
+      (toAgree ⟨config.store.wasm.tagIds⟩) (fun _ => trivial)) with
+    ⟨%tagTableName, HtagTable⟩
+  letI tagTableGS : WasmTagTableGS α :=
+    { tagTableElem
+      tagTableName }
   letI gs : WasmSmallStepGS .hasLC α :=
     { toInvGS_gen := inv
       toWasmHeapGS := wasmHeapGS
@@ -2806,6 +3408,8 @@ theorem wasm_smallStep_heap_globals_segments_runtime_store_adequacy
       dataSegment := wasmDataSegmentGS
       table := wasmTableGS
       elementSegment := wasmElementSegmentGS
+      exception := wasmExceptionGS
+      tagTable := tagTableGS
       runtime := runtimeGS
       hostEnv := hostEnvGS
       hostState := hostStateGS
@@ -2817,7 +3421,21 @@ theorem wasm_smallStep_heap_globals_segments_runtime_store_adequacy
     stateInterp (GF := WasmHeapGF α) store 0 [] 0)
   iexists (fun _ => iprop(True))
   dsimp only
-  isplitl [Hheap Hglobals HsegmentsAuth Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState]
+  ihave Hexc : exceptionInterp config.store.wasm.exns config.store.wasm.tagIds $$
+      [Hexceptions HtagTable]
+  · unfold exceptionInterp tagTableOwn
+    isplitl [Hexceptions]
+    · iexists (∅ : WasmExceptionMap (Nat × List Value))
+      isplitl [Hexceptions]
+      · iexact Hexceptions
+      · ipureintro
+        exact exceptionHeapAgrees_empty _
+    · iexists config.store.wasm.tagIds
+      isplitl [HtagTable]
+      · iexact HtagTable
+      · ipureintro
+        exact List.prefix_rfl
+  isplitl [Hheap Hglobals HsegmentsAuth Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
     iexists σ
     iexists globalσ
@@ -3049,6 +3667,25 @@ theorem wasm_smallStep_heap_globals_segments_tables_runtime_store_adequacy
   letI runtimeInstancesGS : WasmRuntimeInstancesGS α :=
     { runtimeInstancesElem
       runtimeInstancesName }
+  letI exceptionMapG :
+      GhostMapG (WasmHeapGF α) Nat (Nat × List Value) WasmExceptionMap := by
+    constructor
+    exists 16
+  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
+      (V := Nat × List Value) (H := WasmExceptionMap)) with
+    ⟨%exceptionName, Hexceptions⟩
+  letI wasmExceptionGS : WasmExceptionGS α :=
+    { toGhostMapG := exceptionMapG
+      exceptionName := exceptionName }
+  letI tagTableElem : ElemG (WasmHeapGF α)
+      (constOF (Agree (DiscreteO (List Nat)))) := by
+    exists 17
+  imod (iOwn_alloc (E := tagTableElem)
+      (toAgree ⟨config.store.wasm.tagIds⟩) (fun _ => trivial)) with
+    ⟨%tagTableName, HtagTable⟩
+  letI tagTableGS : WasmTagTableGS α :=
+    { tagTableElem
+      tagTableName }
   letI gs : WasmSmallStepGS .hasLC α :=
     { toInvGS_gen := inv
       toWasmHeapGS := wasmHeapGS
@@ -3056,6 +3693,8 @@ theorem wasm_smallStep_heap_globals_segments_tables_runtime_store_adequacy
       dataSegment := wasmDataSegmentGS
       table := wasmTableGS
       elementSegment := wasmElementSegmentGS
+      exception := wasmExceptionGS
+      tagTable := tagTableGS
       runtime := runtimeGS
       hostEnv := hostEnvGS
       hostState := hostStateGS
@@ -3067,8 +3706,22 @@ theorem wasm_smallStep_heap_globals_segments_tables_runtime_store_adequacy
     stateInterp (GF := WasmHeapGF α) store 0 [] 0)
   iexists (fun _ => iprop(True))
   dsimp only
+  ihave Hexc : exceptionInterp config.store.wasm.exns config.store.wasm.tagIds $$
+      [Hexceptions HtagTable]
+  · unfold exceptionInterp tagTableOwn
+    isplitl [Hexceptions]
+    · iexists (∅ : WasmExceptionMap (Nat × List Value))
+      isplitl [Hexceptions]
+      · iexact Hexceptions
+      · ipureintro
+        exact exceptionHeapAgrees_empty _
+    · iexists config.store.wasm.tagIds
+      isplitl [HtagTable]
+      · iexact HtagTable
+      · ipureintro
+        exact List.prefix_rfl
   isplitl [Hheap Hglobals HsegmentsAuth HtablesAuth
-      HelementSegmentsAuth HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState]
+      HelementSegmentsAuth HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
     iexists σ
     iexists globalσ
@@ -3399,6 +4052,25 @@ theorem wasm_smallStep_heap_runtime_instance_adequacy
   letI runtimeInstancesGS : WasmRuntimeInstancesGS α :=
     { runtimeInstancesElem
       runtimeInstancesName }
+  letI exceptionMapG :
+      GhostMapG (WasmHeapGF α) Nat (Nat × List Value) WasmExceptionMap := by
+    constructor
+    exists 16
+  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
+      (V := Nat × List Value) (H := WasmExceptionMap)) with
+    ⟨%exceptionName, Hexceptions⟩
+  letI wasmExceptionGS : WasmExceptionGS α :=
+    { toGhostMapG := exceptionMapG
+      exceptionName := exceptionName }
+  letI tagTableElem : ElemG (WasmHeapGF α)
+      (constOF (Agree (DiscreteO (List Nat)))) := by
+    exists 17
+  imod (iOwn_alloc (E := tagTableElem)
+      (toAgree ⟨config.store.wasm.tagIds⟩) (fun _ => trivial)) with
+    ⟨%tagTableName, HtagTable⟩
+  letI tagTableGS : WasmTagTableGS α :=
+    { tagTableElem
+      tagTableName }
   letI gs : WasmSmallStepGS .hasLC α :=
     { toInvGS_gen := inv
       toWasmHeapGS := wasmHeapGS
@@ -3406,6 +4078,8 @@ theorem wasm_smallStep_heap_runtime_instance_adequacy
       dataSegment := wasmDataSegmentGS
       table := wasmTableGS
       elementSegment := wasmElementSegmentGS
+      exception := wasmExceptionGS
+      tagTable := tagTableGS
       runtime := runtimeGS
       hostEnv := hostEnvGS
       hostState := hostStateGS
@@ -3417,7 +4091,21 @@ theorem wasm_smallStep_heap_runtime_instance_adequacy
     stateInterp (GF := WasmHeapGF α) store 0 [] 0)
   iexists (fun _ => iprop(True))
   dsimp only
-  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState]
+  ihave Hexc : exceptionInterp config.store.wasm.exns config.store.wasm.tagIds $$
+      [Hexceptions HtagTable]
+  · unfold exceptionInterp tagTableOwn
+    isplitl [Hexceptions]
+    · iexists (∅ : WasmExceptionMap (Nat × List Value))
+      isplitl [Hexceptions]
+      · iexact Hexceptions
+      · ipureintro
+        exact exceptionHeapAgrees_empty _
+    · iexists config.store.wasm.tagIds
+      isplitl [HtagTable]
+      · iexact HtagTable
+      · ipureintro
+        exact List.prefix_rfl
+  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
     iexists σ
     iexists (∅ : WasmGlobalMap Value)
@@ -3429,7 +4117,7 @@ theorem wasm_smallStep_heap_runtime_instance_adequacy
     iexists (∅ : WasmHostEnvMap (HostEnv α))
     unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
-    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState
+    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
     ipureintro
     exact ⟨hagree, hinBounds, globalHeapAgrees_empty _,
       dataSegmentHeapAgrees_empty _,
@@ -3587,6 +4275,25 @@ theorem wasm_smallStep_heap_runtime_instances_adequacy
   letI runtimeInstancesGS : WasmRuntimeInstancesGS α :=
     { runtimeInstancesElem
       runtimeInstancesName }
+  letI exceptionMapG :
+      GhostMapG (WasmHeapGF α) Nat (Nat × List Value) WasmExceptionMap := by
+    constructor
+    exists 16
+  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
+      (V := Nat × List Value) (H := WasmExceptionMap)) with
+    ⟨%exceptionName, Hexceptions⟩
+  letI wasmExceptionGS : WasmExceptionGS α :=
+    { toGhostMapG := exceptionMapG
+      exceptionName := exceptionName }
+  letI tagTableElem : ElemG (WasmHeapGF α)
+      (constOF (Agree (DiscreteO (List Nat)))) := by
+    exists 17
+  imod (iOwn_alloc (E := tagTableElem)
+      (toAgree ⟨config.store.wasm.tagIds⟩) (fun _ => trivial)) with
+    ⟨%tagTableName, HtagTable⟩
+  letI tagTableGS : WasmTagTableGS α :=
+    { tagTableElem
+      tagTableName }
   letI gs : WasmSmallStepGS .hasLC α :=
     { toInvGS_gen := inv
       toWasmHeapGS := wasmHeapGS
@@ -3594,6 +4301,8 @@ theorem wasm_smallStep_heap_runtime_instances_adequacy
       dataSegment := wasmDataSegmentGS
       table := wasmTableGS
       elementSegment := wasmElementSegmentGS
+      exception := wasmExceptionGS
+      tagTable := tagTableGS
       runtime := runtimeGS
       hostEnv := hostEnvGS
       hostState := hostStateGS
@@ -3607,7 +4316,21 @@ theorem wasm_smallStep_heap_runtime_instances_adequacy
     stateInterp (GF := WasmHeapGF α) store 0 [] 0)
   iexists (fun _ => iprop(True))
   dsimp only
-  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstancesState HinstanceState HhostEnvAuth HhostState]
+  ihave Hexc : exceptionInterp config.store.wasm.exns config.store.wasm.tagIds $$
+      [Hexceptions HtagTable]
+  · unfold exceptionInterp tagTableOwn
+    isplitl [Hexceptions]
+    · iexists (∅ : WasmExceptionMap (Nat × List Value))
+      isplitl [Hexceptions]
+      · iexact Hexceptions
+      · ipureintro
+        exact exceptionHeapAgrees_empty _
+    · iexists config.store.wasm.tagIds
+      isplitl [HtagTable]
+      · iexact HtagTable
+      · ipureintro
+        exact List.prefix_rfl
+  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstancesState HinstanceState HhostEnvAuth HhostState Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
     iexists σ
     iexists (∅ : WasmGlobalMap Value)
@@ -3619,7 +4342,7 @@ theorem wasm_smallStep_heap_runtime_instances_adequacy
     iexists (∅ : WasmHostEnvMap (HostEnv α))
     unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
-    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstancesState HinstanceState HhostEnvAuth HhostState
+    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstancesState HinstanceState HhostEnvAuth HhostState Hexc
     ipureintro
     exact ⟨hagree, hinBounds, globalHeapAgrees_empty _,
       dataSegmentHeapAgrees_empty _,
@@ -5938,5 +6661,339 @@ theorem tableInitDrop_store_partiallyMeets :
     iapply wp_value'
     ipureintro
     rfl
+
+/-! ## Parametric total-correctness examples
+
+Three small modules exercised end to end: a signed branch (pure control flow),
+a bulk fill followed by a load (memory), and a `try_table` that catches a
+thrown exception (tags).  Each is stated for *symbolic* inputs, and each is
+paired with a `.wat` source whose decoded module is checked to agree with the
+hand-written one on a spread of concrete inputs. -/
+
+def signedBranchModule : Module :=
+  { funcs := [{ params := [.i32, .i32],
+                body := [.block 0 0 [.localGet 0, .localGet 1, .geS, .br_if 0, .const 0, .ret],
+                          .const 1, .ret]
+                results := [.i32] }] }
+
+def signedBranchConfig (a b : UInt32) : Config Unit :=
+  { expr := .running ⟨⟨[.i32 a, .i32 b], [], []⟩,
+      signedBranchModule.funcs[0]!.body, 1, [], [], []⟩
+    store :=
+      { runtime := { instances := #[{ module := signedBranchModule, host := {} }], entry := ⟨0⟩ }
+        wasm := signedBranchModule.initialStore } }
+
+/-- `i32.ge_s` on the two parameters: returns 1 if `a ≥ b` as signed 32-bit
+integers, 0 otherwise. -/
+theorem signedBranch_terminatesWith (a b : UInt32) :
+    TerminatesWith (signedBranchConfig a b)
+      (fun values _store => values = [.i32 (if a.toInt32 ≥ b.toInt32 then 1 else 0)]) := by
+  apply wasm_smallStep_terminates (signedBranchConfig a b)
+    (fun values => values = [.i32 (if a.toInt32 ≥ b.toInt32 then 1 else 0)])
+  intro hlc gs
+  simp only [signedBranchConfig,
+    show signedBranchModule.funcs[0]!.body =
+        [.block 0 0 [.localGet 0, .localGet 1, .geS, .br_if 0, .const 0, .ret],
+          .const 1, .ret] from rfl]
+  iapply twp_block
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  by_cases h : a.toInt32 ≥ b.toInt32
+  · iapply twp_geS (result := 1) (by simp [h])
+    iapply twp_brIf (condition := 1) (by decide) rfl
+    iapply twp_const
+    iapply twp_returnFromFunction
+    iapply twp.value rfl
+    ipureintro
+    simp [h]
+  · iapply twp_geS (result := 0) (by simp [h])
+    iapply twp_brIfZero
+    iapply twp_const
+    iapply twp_returnFromFunction
+    iapply twp.value rfl
+    ipureintro
+    simp [h]
+
+/-- Splat conversion for the fill-then-read example: after `memory.fill`
+writes `b` into four bytes at address 0, the byte range is the little-endian
+layout of the 32-bit word with all four bytes equal to `b`. -/
+private theorem splat_bytes_as_u32 [WasmHeapGS Unit] (b : UInt8) :
+    pointsToBytes (α := Unit) 0 0 (List.replicate 4 b) ⊢
+      pointsTo_u32 0 0
+        (b.toUInt32 ||| (b.toUInt32 <<< 8) ||| (b.toUInt32 <<< 16) ||| (b.toUInt32 <<< 24)) := by
+  have hb0 : u32Byte (b.toUInt32 ||| (b.toUInt32 <<< 8) |||
+      (b.toUInt32 <<< 16) ||| (b.toUInt32 <<< 24)) 0 = b := by
+    simp only [u32Byte]; bv_decide
+  have hb1 : u32Byte (b.toUInt32 ||| (b.toUInt32 <<< 8) |||
+      (b.toUInt32 <<< 16) ||| (b.toUInt32 <<< 24)) 1 = b := by
+    simp only [u32Byte]; bv_decide
+  have hb2 : u32Byte (b.toUInt32 ||| (b.toUInt32 <<< 8) |||
+      (b.toUInt32 <<< 16) ||| (b.toUInt32 <<< 24)) 2 = b := by
+    simp only [u32Byte]; bv_decide
+  have hb3 : u32Byte (b.toUInt32 ||| (b.toUInt32 <<< 8) |||
+      (b.toUInt32 <<< 16) ||| (b.toUInt32 <<< 24)) 3 = b := by
+    simp only [u32Byte]; bv_decide
+  have hl : List.replicate 4 b =
+      [u32Byte (b.toUInt32 ||| (b.toUInt32 <<< 8) |||
+          (b.toUInt32 <<< 16) ||| (b.toUInt32 <<< 24)) 0,
+       u32Byte (b.toUInt32 ||| (b.toUInt32 <<< 8) |||
+          (b.toUInt32 <<< 16) ||| (b.toUInt32 <<< 24)) 1,
+       u32Byte (b.toUInt32 ||| (b.toUInt32 <<< 8) |||
+          (b.toUInt32 <<< 16) ||| (b.toUInt32 <<< 24)) 2,
+       u32Byte (b.toUInt32 ||| (b.toUInt32 <<< 8) |||
+          (b.toUInt32 <<< 16) ||| (b.toUInt32 <<< 24)) 3] := by
+    rw [hb0, hb1, hb2, hb3]
+    rfl
+  rw [hl]
+  exact (pointsTo_u32_as_bytes 0 0 _).mpr
+
+def fillThenReadModule : Module :=
+  { funcs := [{ params := [.i32],
+                body := [.const 0, .localGet 0, .const 4, .memoryFill,
+                         .const 0, .load32 0],
+                results := [.i32] }]
+    memory := some { pagesMin := 1 } }
+
+def fillThenReadConfig (val : UInt32) : Config Unit :=
+  let initial := fillThenReadModule.initialStore
+  { expr := .running ⟨⟨[.i32 val], [], []⟩,
+      fillThenReadModule.funcs[0]!.body, 1, [], [], []⟩
+    store :=
+      { runtime := { instances := #[{ module := fillThenReadModule, host := {} }], entry := ⟨0⟩ }
+        wasm := { initial with mem := initial.mem.write32 0 0 } } }
+
+private def fillThenReadInitialHeap : WasmHeapMap (Option UInt8) :=
+  store32Heap ∅ 0 0 0
+
+/-- The store the example starts from before the pre-written zero word. -/
+private def fillThenReadBaseStore : MachineStore Unit :=
+  { runtime := { instances := #[{ module := fillThenReadModule, host := {} }], entry := ⟨0⟩ }
+    wasm := fillThenReadModule.initialStore }
+
+private theorem fillThenRead_resolve (val : UInt32) :
+    storeResolve (fillThenReadConfig val).store =
+      (fun id : Nat =>
+        if id = 0 then some ((fillThenReadModule.initialStore : Store Unit).mem.write32 0 0)
+        else storeResolve fillThenReadBaseStore id) := by
+  funext id
+  by_cases h : id = 0 <;>
+    simp [h, storeResolve, fillThenReadConfig, fillThenReadBaseStore]
+
+private theorem fillThenReadBase_resolve_zero :
+    storeResolve fillThenReadBaseStore 0 =
+      some (fillThenReadModule.initialStore : Store Unit).mem := by
+  simp [storeResolve, fillThenReadBaseStore]
+
+private theorem fillThenReadInitialHeap_agrees (val : UInt32) :
+    heapAgreesWithMem fillThenReadInitialHeap
+      (storeResolve (fillThenReadConfig val).store) := by
+  rw [fillThenRead_resolve val]
+  exact store32_sound ∅ (storeResolve fillThenReadBaseStore) 0
+    (fillThenReadModule.initialStore : Store Unit).mem 0 0 fillThenReadBase_resolve_zero
+    rfl rfl rfl (heapAgreesWithMem_empty _)
+
+private theorem fillThenReadInitialHeap_inBounds (val : UInt32)
+    (hpages : 1 ≤ (fillThenReadModule.initialStore : Store Unit).mem.pages) :
+    heapAddressesInBounds fillThenReadInitialHeap
+      (storeResolve (fillThenReadConfig val).store) := by
+  rw [fillThenRead_resolve val]
+  refine store32_inBounds ∅ (storeResolve fillThenReadBaseStore) 0
+    (fillThenReadModule.initialStore : Store Unit).mem 0 0 fillThenReadBase_resolve_zero
+    rfl rfl rfl (heapAddressesInBounds_empty _) ?_
+  simp only [UInt32.toNat_zero, Nat.zero_add]
+  have : 65536 ≤ (fillThenReadModule.initialStore : Store Unit).mem.pages * 65536 :=
+    Nat.mul_le_mul_right 65536 hpages
+  omega
+
+private theorem fillThenReadInitialHeap_pointsTo [WasmHeapGS Unit] :
+    ([∗map] address ↦ value ∈ fillThenReadInitialHeap,
+      pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
+        address (DFrac.own 1) value) ⊢
+      pointsTo_u32 0 0 0 := by
+  unfold fillThenReadInitialHeap
+  iintro Hheap
+  ihave H0 := store32Heap_pointsTo
+    (∅ : WasmHeapMap (Option UInt8)) 0 0 0
+    (by simp [get?_empty]) (by simp [get?_empty])
+    (by simp [get?_empty]) (by simp [get?_empty])
+    (by decide) (by decide) (by decide) $$ Hheap
+  icases H0 with ⟨H0, _⟩
+  iexact H0
+
+/-- `memory.fill` of four bytes with the low byte of the parameter, then
+`i32.load` of the filled word: the result is the parameter's low byte splatted
+across all four byte positions. -/
+theorem fillThenRead_terminatesWith (val : UInt32) :
+    TerminatesWith (fillThenReadConfig val)
+      (fun values _store =>
+        values = [.i32 (val.toUInt8.toUInt32 ||| (val.toUInt8.toUInt32 <<< 8) |||
+                        (val.toUInt8.toUInt32 <<< 16) ||| (val.toUInt8.toUInt32 <<< 24))]) := by
+  apply wasm_smallStep_heap_terminates (fillThenReadConfig val)
+    fillThenReadInitialHeap
+    (fun values =>
+      values = [.i32 (val.toUInt8.toUInt32 ||| (val.toUInt8.toUInt32 <<< 8) |||
+                      (val.toUInt8.toUInt32 <<< 16) ||| (val.toUInt8.toUInt32 <<< 24))])
+  · apply fillThenReadInitialHeap_agrees
+  · apply fillThenReadInitialHeap_inBounds
+    native_decide
+  · simp [fillThenReadConfig]
+  · intro hlc gs
+    simp only [fillThenReadConfig,
+      show fillThenReadModule.funcs[0]!.body =
+          [.const 0, .localGet 0, .const 4, .memoryFill, .const 0, .load32 0] from rfl]
+    iintro Hbytes
+    ihave H0 := fillThenReadInitialHeap_pointsTo $$ Hbytes
+    ihave Hb := (pointsTo_u32_as_bytes 0 0 0).mp $$ H0
+    iapply twp_const
+    iapply twp_localGet rfl
+    iapply twp_const
+    iapply twp_memoryFill32
+        [u32Byte 0 0, u32Byte 0 1, u32Byte 0 2, u32Byte 0 3]
+        rfl (by decide) (by decide) $$ Hb
+    iintro Hb
+    ihave H0 := splat_bytes_as_u32 val.toUInt8 $$ Hb
+    iapply twp_const
+    iapply twp_load32_addr _ rfl rfl rfl $$ H0
+    iintro H0
+    iapply twp_finish
+        (locals := { params := [.i32 val], locals := [], values := [] })
+        (values := [.i32 (val.toUInt8.toUInt32 ||| (val.toUInt8.toUInt32 <<< 8) |||
+                          (val.toUInt8.toUInt32 <<< 16) ||| (val.toUInt8.toUInt32 <<< 24))])
+        (arity := 1) (remainder := [])
+    iapply twp.value rfl
+    ipureintro
+    rfl
+
+def exceptionLifecycleModule : Module :=
+  { tags := [{ params := [.i32] }]
+    funcs := [{ params := [.i32],
+                body := [.tryTable 0 1 [.catch 0 0] [.localGet 0, .throwI 0],
+                          .const 99]
+                results := [.i32] }] }
+
+def exceptionLifecycleConfig (arg : UInt32) : Config Unit :=
+  { expr := .running
+      ⟨⟨[.i32 arg], [], []⟩, exceptionLifecycleModule.funcs[0]!.body, 1, [], [], []⟩
+    store :=
+      { runtime :=
+          { instances := #[{ module := exceptionLifecycleModule, host := {} }], entry := ⟨0⟩ }
+        wasm := exceptionLifecycleModule.initialStore } }
+
+/-- Tag 0 is the first entry of the entry module's tag table, so the
+interpreter's tag canonicalisation is the identity on it. -/
+private theorem exceptionLifecycle_tagCanonical :
+    TagIndexCanonical
+      (exceptionLifecycleModule.initialStore : Store Unit).tagIds 0 :=
+  ⟨0, by decide, by decide⟩
+
+/-- `try_table` with a `catch` clause catches a `throw` of the same tag and
+receives the thrown value, parametric in the thrown argument. -/
+theorem exceptionLifecycle_terminatesWith (arg : UInt32) :
+    TerminatesWith (exceptionLifecycleConfig arg)
+      (fun values _store => values = [.i32 arg]) := by
+  apply wasm_smallStep_runtime_tags_terminates (exceptionLifecycleConfig arg)
+    (fun values => values = [.i32 arg])
+  · simp [exceptionLifecycleConfig]
+  intro hlc gs
+  simp only [exceptionLifecycleConfig, RuntimeEnv.currentModule_mk1,
+    show exceptionLifecycleModule.funcs[0]!.body =
+        [.tryTable 0 1 [.catch 0 0] [.localGet 0, .throwI 0], .const 99] from rfl]
+  iintro ⟨Hruntime, Htags⟩
+  iapply twp_tryTable
+  iapply twp_localGet rfl
+  iapply (twp_throwI exceptionLifecycleModule ⟨0⟩ 0
+    (tagType := { params := [.i32] }) (htag := rfl)
+    (tagIds := (exceptionLifecycleModule.initialStore : Store Unit).tagIds)
+    (hcanonical := exceptionLifecycle_tagCanonical)
+    (hargs := by simp)) $$ Hruntime Htags
+  iintro Hruntime'
+  iapply twp_catchException
+    (clause := .catch 0 0) (targetCode := []) (targetControl := [])
+    (targetValues := [.i32 arg])
+    (hclause := Or.inl ⟨0, 0, rfl⟩)
+    (htarget := fun _ => rfl) (hthrow := rfl) (hmatch := by decide)
+  iapply twp_finish
+  iapply twp.value rfl
+  ipureintro
+  rfl
+
+/-! ### Decoder agreement
+
+Each example's `.wat` source decodes to a module that behaves identically to
+the hand-written one on a spread of concrete inputs. -/
+
+private def signedBranchWat : String := include_str "signed_branch.wat"
+
+private def signedBranchModuleDecoded : Module :=
+  match Wasm.Decoder.Wat.decode signedBranchWat with
+  | .ok m => m
+  | .error _ => default
+
+private def runSignedBranch (fuel : Nat) (m : Module) (a b : UInt32) : Option (List Value) :=
+  match initConfig { module := m, host := (default : HostEnv Unit) } 0
+      m.initialStore [.i32 a, .i32 b] with
+  | .error _ => none
+  | .ok config => (runSteps fuel config).result.values?
+
+/-- Exercises both branch outcomes across varied inputs. -/
+theorem signedBranch_decoded_agrees :
+    runSignedBranch 10 signedBranchModule 5 3 = runSignedBranch 10 signedBranchModuleDecoded 5 3 ∧
+    runSignedBranch 15 signedBranchModule 0 1 = runSignedBranch 15 signedBranchModuleDecoded 0 1 ∧
+    runSignedBranch 20 signedBranchModule 100 100 =
+      runSignedBranch 20 signedBranchModuleDecoded 100 100 ∧
+    runSignedBranch 50 signedBranchModule 4294967295 0 =
+      runSignedBranch 50 signedBranchModuleDecoded 4294967295 0 ∧
+    runSignedBranch 100 signedBranchModule 42 43 =
+      runSignedBranch 100 signedBranchModuleDecoded 42 43 := by
+  native_decide
+
+private def fillThenReadWat : String := include_str "fill_then_read.wat"
+
+private def fillThenReadModuleDecoded : Module :=
+  match Wasm.Decoder.Wat.decode fillThenReadWat with
+  | .ok m => m
+  | .error _ => default
+
+private def runFillThenRead (fuel : Nat) (m : Module) (val : UInt32) : Option (List Value) :=
+  match initConfig { module := m, host := (default : HostEnv Unit) } 0
+      m.initialStore [.i32 val] with
+  | .error _ => none
+  | .ok config => (runSteps fuel config).result.values?
+
+theorem fillThenRead_decoded_agrees :
+    runFillThenRead 10 fillThenReadModule 0 = runFillThenRead 10 fillThenReadModuleDecoded 0 ∧
+    runFillThenRead 15 fillThenReadModule 5 = runFillThenRead 15 fillThenReadModuleDecoded 5 ∧
+    runFillThenRead 20 fillThenReadModule 255 = runFillThenRead 20 fillThenReadModuleDecoded 255 ∧
+    runFillThenRead 50 fillThenReadModule 171 = runFillThenRead 50 fillThenReadModuleDecoded 171 ∧
+    runFillThenRead 100 fillThenReadModule 1000 =
+      runFillThenRead 100 fillThenReadModuleDecoded 1000 := by
+  native_decide
+
+private def exceptionLifecycleWat : String := include_str "exception_lifecycle.wat"
+
+private def exceptionLifecycleModuleDecoded : Module :=
+  match Wasm.Decoder.Wat.decode exceptionLifecycleWat with
+  | .ok m => m
+  | .error _ => default
+
+private def runExceptionLifecycle (fuel : Nat) (m : Module) (arg : UInt32) :
+    Option (List Value) :=
+  match initConfig { module := m, host := (default : HostEnv Unit) } 0
+      m.initialStore [.i32 arg] with
+  | .error _ => none
+  | .ok config => (runSteps fuel config).result.values?
+
+theorem exceptionLifecycle_decoded_agrees :
+    runExceptionLifecycle 10 exceptionLifecycleModule 0 =
+      runExceptionLifecycle 10 exceptionLifecycleModuleDecoded 0 ∧
+    runExceptionLifecycle 15 exceptionLifecycleModule 5 =
+      runExceptionLifecycle 15 exceptionLifecycleModuleDecoded 5 ∧
+    runExceptionLifecycle 20 exceptionLifecycleModule 100 =
+      runExceptionLifecycle 20 exceptionLifecycleModuleDecoded 100 ∧
+    runExceptionLifecycle 50 exceptionLifecycleModule 255 =
+      runExceptionLifecycle 50 exceptionLifecycleModuleDecoded 255 ∧
+    runExceptionLifecycle 100 exceptionLifecycleModule 1000 =
+      runExceptionLifecycle 100 exceptionLifecycleModuleDecoded 1000 := by
+  native_decide
 
 end Wasm.SmallStep

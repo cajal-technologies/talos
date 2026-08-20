@@ -124,6 +124,37 @@ def Mem.fill (m : Mem) (offset len : Nat) (val : UInt8) : Mem :=
       if offset ≤ i ∧ i < offset + len then val
       else m.bytes i }
 
+theorem Mem.fill_zero (m : Mem) (offset : Nat) (val : UInt8) :
+    m.fill offset 0 val = m := by
+  cases m with
+  | mk pages bytes =>
+    simp only [Mem.fill, Nat.add_zero]
+    congr 1; funext i
+    exact if_neg (by omega)
+
+theorem Mem.fill_read8_in (m : Mem) (offset len : Nat) (val : UInt8) (i : UInt32)
+    (h : offset ≤ i.toNat ∧ i.toNat < offset + len) :
+    (m.fill offset len val).read8 i = val := by
+  simp [Mem.fill, Mem.read8, h]
+
+theorem Mem.fill_read8_out (m : Mem) (offset len : Nat) (val : UInt8) (i : UInt32)
+    (h : ¬(offset ≤ i.toNat ∧ i.toNat < offset + len)) :
+    (m.fill offset len val).read8 i = m.read8 i := by
+  simp [Mem.fill, Mem.read8, h]
+
+theorem Mem.fill_pages (m : Mem) (offset len : Nat) (val : UInt8) :
+    (m.fill offset len val).pages = m.pages := rfl
+
+theorem Mem.write8_fill_eq (m : Mem) (addr : UInt32) (n : Nat) (val : UInt8) :
+    (m.write8 addr val).fill (addr.toNat + 1) n val = m.fill addr.toNat (n + 1) val := by
+  cases m; simp only [Mem.fill, Mem.write8]; congr 1; funext i
+  by_cases h1 : addr.toNat + 1 ≤ i ∧ i < addr.toNat + 1 + n
+  · rw [if_pos h1, if_pos ⟨by omega, by omega⟩]
+  · rw [if_neg h1]
+    by_cases h2 : i = addr.toNat
+    · subst h2; rw [if_pos rfl, if_pos (by omega)]
+    · rw [if_neg h2, if_neg (fun ⟨h3, h4⟩ => h1 ⟨by omega, by omega⟩)]
+
 /-- Copy `len` bytes from `[src, src+len)` to `[dst, dst+len)`. The
 result is defined pointwise — for an address `i` in the destination
 range, the new byte is the *original* `m.bytes (src + (i - dst))`.
@@ -136,6 +167,19 @@ def Mem.copy (m : Mem) (dst src len : Nat) : Mem :=
   { m with bytes := fun i =>
       if dst ≤ i ∧ i < dst + len then m.bytes (src + (i - dst))
       else m.bytes i }
+
+theorem Mem.copy_pages (m : Mem) (dst src len : Nat) :
+    (m.copy dst src len).pages = m.pages := rfl
+
+theorem Mem.copy_read8_in (m : Mem) (dst src len : Nat) (i : UInt32)
+    (h : dst ≤ i.toNat ∧ i.toNat < dst + len) :
+    (m.copy dst src len).read8 i = m.bytes (src + (i.toNat - dst)) := by
+  simp [Mem.copy, Mem.read8, h]
+
+theorem Mem.copy_read8_out (m : Mem) (dst src len : Nat) (i : UInt32)
+    (h : ¬(dst ≤ i.toNat ∧ i.toNat < dst + len)) :
+    (m.copy dst src len).read8 i = m.read8 i := by
+  simp [Mem.copy, Mem.read8, h]
 
 /-- Attempt to grow `m` by `delta` pages, accepting only if the resulting
 page count stays within `cap`. On success returns the new memory paired
@@ -208,5 +252,23 @@ def Mem.writeBytesFrom (m : Mem) (dst : Nat) (src : List UInt8)
       if dst ≤ i ∧ i < dst + len then
         (src[srcOff + (i - dst)]?).getD (m.bytes i)
       else m.bytes i }
+
+theorem Mem.writeBytesFrom_pages (m : Mem) (dst : Nat) (src : List UInt8)
+    (srcOff len : Nat) :
+    (m.writeBytesFrom dst src srcOff len).pages = m.pages := rfl
+
+theorem Mem.writeBytesFrom_read8_in (m : Mem) (dst : Nat) (src : List UInt8)
+    (srcOff len : Nat) (i : UInt32)
+    (hin : dst ≤ i.toNat ∧ i.toNat < dst + len)
+    (hbound : srcOff + (i.toNat - dst) < src.length) :
+    (m.writeBytesFrom dst src srcOff len).read8 i = src[srcOff + (i.toNat - dst)] := by
+  simp only [Mem.writeBytesFrom, Mem.read8, if_pos hin,
+             List.getElem?_eq_getElem hbound, Option.getD_some]
+
+theorem Mem.writeBytesFrom_read8_out (m : Mem) (dst : Nat) (src : List UInt8)
+    (srcOff len : Nat) (i : UInt32)
+    (h : ¬(dst ≤ i.toNat ∧ i.toNat < dst + len)) :
+    (m.writeBytesFrom dst src srcOff len).read8 i = m.read8 i := by
+  simp [Mem.writeBytesFrom, Mem.read8, h]
 
 end Wasm
