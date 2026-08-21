@@ -6197,7 +6197,7 @@ theorem wp_memoryCopy32
       (by rw [hlen_dst]; exact hbound_dst)
       (by rw [hlen_dst]; exact hnowrap_dst)
       (by rw [hlen_src]; exact hbound_src)
-      (by rw [hlen_src]; exact hnowrap_src)
+      (by rw [hlen_src]; exact Nat.le_of_lt hnowrap_src)
       $$ [$Hσ $Hsrc $Hdst] with ⟨Hσ, Hsrc, Hdst⟩
   imod Hclose
   imodintro
@@ -6302,7 +6302,7 @@ theorem wp_memoryCopy64
       (by rw [hdst, hlen_dst]; exact hbound_dst)
       (by rw [hdst, hlen_dst]; exact hnowrap_dst)
       (by rw [hsrc_nat, hlen_src]; exact hbound_src)
-      (by rw [hsrc_nat, hlen_src]; exact hnowrap_src)
+      (by rw [hsrc_nat, hlen_src]; exact Nat.le_of_lt hnowrap_src)
       $$ [$Hσ $Hsrc $Hdst] with ⟨Hσ, Hsrc, Hdst⟩
   imod Hclose
   imodintro

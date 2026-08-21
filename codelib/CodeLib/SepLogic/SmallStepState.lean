@@ -436,7 +436,7 @@ theorem pointsToBytes_facts_bound {addr : UInt32} {bytes : List UInt8}
         mem.read8 (addr + UInt32.ofNat i) = b ∧
         (addr + UInt32.ofNat i).toNat < mem.pages * 65536)
     (hpos : 0 < bytes.length)
-    (hnowrap : addr.toNat + bytes.length < 4294967296) :
+    (hnowrap : addr.toNat + bytes.length ≤ 4294967296) :
     addr.toNat + bytes.length ≤ mem.pages * 65536 := by
   have hidx : bytes.length - 1 < bytes.length := by omega
   obtain ⟨-, hb⟩ :=
@@ -830,7 +830,7 @@ theorem stateInterp_copy_bytes [WasmSmallStepGS hlc α]
     (hdst_bound : dst.toNat + oldDstBytes.length ≤ store.wasm.mem.pages * 65536)
     (hdst_nowrap : dst.toNat + oldDstBytes.length < 4294967296)
     (_hsrc_bound : src.toNat + srcBytes.length ≤ store.wasm.mem.pages * 65536)
-    (hsrc_nowrap : src.toNat + srcBytes.length < 4294967296) :
+    (hsrc_nowrap : src.toNat + srcBytes.length ≤ 4294967296) :
     stateInterp (GF := WasmHeapGF α) store steps observations threads ∗
       pointsToBytes 0 src srcBytes ∗
       pointsToBytes 0 dst oldDstBytes ==∗
