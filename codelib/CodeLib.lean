@@ -4,6 +4,7 @@ import CodeLib.Entry
 import CodeLib.Equivalence
 import CodeLib.UInt32
 import CodeLib.UInt64
+import CodeLib.WordCodec
 import CodeLib.RustStd.Frame
 import CodeLib.RustStd.Region
 import CodeLib.RustStd.MemArray
