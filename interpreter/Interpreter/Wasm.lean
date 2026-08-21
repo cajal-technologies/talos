@@ -5,8 +5,10 @@ import Interpreter.Wasm.Continuation
 import Interpreter.Wasm.Semantics
 import Interpreter.Wasm.Semantics.Lemmas
 import Interpreter.Wasm.SmallStep
+import Interpreter.Wasm.Host.Registry
 import Interpreter.Wasm.Host.StdIO
 import Interpreter.Wasm.Host.Random.Probability
+import Interpreter.Wasm.Host.Universal
 import Interpreter.Wasm.MeasureTermination
 import Interpreter.Wasm.Wp.Defs
 import Interpreter.Wasm.Wp.Atomic
@@ -32,6 +34,13 @@ split into:
 * `Wasm.Wp.*`              — `wp` framework: definitions, atomic
                                  equations, block / loop / call rules, and
                                  the `wp_run` / `wp_done` tactics
+* `Wasm.Host.Registry`     — name-keyed host registries: resolve a
+                                 module's own imports, in its own order,
+                                 into the positional `HostEnv` the
+                                 interpreter expects
+* `Wasm.Host.Universal`    — one host offering every host function; the
+                                 default for specifications, so a proof
+                                 never has to choose a host
 * `Wasm.Spec.Termination`  — fuel-free `TerminatesWith` /
                                  `PartiallyMeets` predicates (user-facing
                                  spec API)
