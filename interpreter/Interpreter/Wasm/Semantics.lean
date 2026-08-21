@@ -491,6 +491,11 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
         | some s => .Fallthrough st { s with values := vs }
         | none   => .Invalid "localSet index out of bounds"
       | _ => .Invalid "localSet with empty stack"
+    | _, Instruction.localTee i => match s.values with
+      | v :: _ => match s.set? i v with
+        | some s => .Fallthrough st s
+        | none   => .Invalid "localTee index out of bounds"
+      | _ => .Invalid "localTee with empty stack"
 
     -- Globals
     | _, Instruction.globalGet i => match st.globals.globals[i]? with

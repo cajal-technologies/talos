@@ -270,6 +270,10 @@ inductive Instruction where
   -- Constants / locals
   | localGet : Nat → Instruction
   | localSet : Nat → Instruction
+  /-- Set a local while retaining the consumed value on the operand stack.
+  Kept as a first-class instruction so decoded ASTs preserve WAT instruction
+  boundaries instead of expanding one source instruction into two. -/
+  | localTee : Nat → Instruction
   | const    : UInt32 → Instruction
   | constI64 : UInt64 → Instruction
 
