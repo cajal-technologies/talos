@@ -33,8 +33,7 @@ floats, and SIMD are all modelled and decode to real instructions.
 Instructions from proposals the interpreter still doesn't model (e.g.
 atomics/threads) are accepted lexically but lowered to
 `Wasm.Instruction.unreachable` so the surrounding function still
-type-checks. Supported instructions, including `local.tee`, retain one AST
-node per source instruction. -/
+type-checks. `local.tee i` is desugared to `[local.set i; local.get i]`. -/
 
 namespace Wasm.Decoder.Wat
 
@@ -469,9 +468,6 @@ deriving Inhabited
 structure Ctx where
   funcIds          : Std.HashMap String Nat
   localIds         : Std.HashMap String Nat
-  /-- Verification/generation mode rejects instructions which the permissive
-  testsuite decoder would replace with `unreachable`. -/
-  rejectUnsupported : Bool := false
   globalIds        : Std.HashMap String Nat := {}
   labelNames       : List (Option String) := []
   /-- All `(type (func …))` declarations collected at module level, in
@@ -549,7 +545,7 @@ private def resolveLabel (ctx : Ctx) (s : String) : Except Err Nat :=
   else parseNat s
 
 /-- Parse a single bare-op atom (no immediate, no folded operands). -/
-private def parsePlainOp (rejectUnsupported : Bool) : String → Except Err Wasm.Instruction
+private def parsePlainOp : String → Except Err Wasm.Instruction
   | "i32.add"   => .ok .add
   | "i32.sub"   => .ok .sub
   | "i32.mul"   => .ok .mul
@@ -714,8 +710,7 @@ private def parsePlainOp (rejectUnsupported : Bool) : String → Except Err Wasm
     -- touch these features still decode; a function that actually executes
     -- such an instruction traps with "unreachable" instead of failing to
     -- decode at all, which would cascade to every assert in the file.
-    if !rejectUnsupported &&
-       (op.startsWith "f32." || op.startsWith "f64." || op.startsWith "v128."
+    if op.startsWith "f32." || op.startsWith "f64." || op.startsWith "v128."
        || op.startsWith "i8x16." || op.startsWith "i16x8." || op.startsWith "i32x4."
        || op.startsWith "i64x2." || op.startsWith "f32x4." || op.startsWith "f64x2."
        || op.startsWith "ref." || op.startsWith "table." || op.startsWith "elem."
@@ -726,7 +721,7 @@ private def parsePlainOp (rejectUnsupported : Bool) : String → Except Err Wasm
        || op == "return_call" || op == "return_call_indirect" || op == "return_call_ref"
        || op == "call_ref" || op == "any.convert_extern"
        || op == "memory.atomic.notify" || op.startsWith "memory.atomic."
-       || op.startsWith "atomic.") then
+       || op.startsWith "atomic." then
       .ok .unreachable
     else
       .error s!"unsupported instruction: {op}"
@@ -1383,7 +1378,7 @@ private partial def parseInstr (ctx : Ctx) (toks : List Sexpr)
         match simdOp? op with
         | some i => .ok ([i], rest)
         | none =>
-        match parsePlainOp ctx.rejectUnsupported op with
+        match parsePlainOp op with
         | .error e => .error e
         -- Ops reaching this fallback are lowered to `unreachable` and carry
         -- no immediates we track, so the token stream stays aligned with
@@ -1421,8 +1416,9 @@ private partial def parseFolded (ctx : Ctx) (xs : List Sexpr)
     | "local.set" =>
       foldedWithImmediate ctx (resolveNamed ctx.localIds "local") (fun i => [.localSet i]) rest
     | "local.tee" =>
+      -- Desugar: `local.tee i` ≡ `local.set i; local.get i`.
       foldedWithImmediate ctx (resolveNamed ctx.localIds "local")
-        (fun i => [.localTee i]) rest
+        (fun i => [.localSet i, .localGet i]) rest
     | "global.get" =>
       match rest with
       | [.atom n] => do .ok [.globalGet (← resolveNamed ctx.globalIds "global" n)]
@@ -1646,7 +1642,7 @@ private partial def parseLocalTee (ctx : Ctx) (toks : List Sexpr)
   match toks with
   | .atom n :: rest => do
     let i ← resolveNamed ctx.localIds "local" n
-    .ok ([.localTee i], rest)
+    .ok ([.localSet i, .localGet i], rest)
   | _ => .error "local.tee expects an immediate"
 
 private partial def parseImmediateConst {α} (mk : α → Wasm.Instruction)
@@ -2042,7 +2038,7 @@ private def parseFunc (funcIds : Std.HashMap String Nat)
     (elemNames : Std.HashMap String Nat)
     (memNames : Std.HashMap String Nat)
     (tagNames : Std.HashMap String Nat)
-    (types : Array TypeEntry) (rejectUnsupported : Bool) (xs : List Sexpr)
+    (types : Array TypeEntry) (xs : List Sexpr)
     : Except Err FuncDecl := do
   let mut paramTypes : List Wasm.ValueType := []
   let mut resultTypes : List Wasm.ValueType := []
@@ -2160,7 +2156,7 @@ private def parseFunc (funcIds : Std.HashMap String Nat)
     | .ok sig  => some sig
     | .error _ => none
   let ctx : Ctx := { funcIds, localIds, globalIds, types, tableNames, elemNames,
-                     memNames, tagNames, resolveBlockType, rejectUnsupported }
+                     memNames, tagNames, resolveBlockType }
   let instrs ← parseInstrSeq ctx rest
   return { symId, inlineExports,
            func := {
@@ -2982,8 +2978,7 @@ Function imports occupy the low end of the unified function index space
 are collected by `collectEntityImports` into placeholder decls at the low
 end of the global/table/memory index spaces and recorded in
 `importedGlobals`/`importedTables`/`importedMemories`. -/
-private def parseModuleWith (rejectUnsupported : Bool)
-    (xs : List Sexpr) : Except Err Wasm.Module := do
+def parseModule (xs : List Sexpr) : Except Err Wasm.Module := do
   let mut rest := xs
   match rest with
   | .atom a :: r =>
@@ -3064,8 +3059,7 @@ private def parseModuleWith (rejectUnsupported : Bool)
     match f with
     | .list (.atom "func" :: body) =>
       decls := decls.push
-        (← parseFunc funcIds globalIds tableNames elemNames memNames tagNames types
-          rejectUnsupported body)
+        (← parseFunc funcIds globalIds tableNames elemNames memNames tagNames types body)
     | .list (.atom "export" :: tail) =>
       match tail with
       | [.atom name, .list [.atom "func", .atom ref]] =>
@@ -3091,7 +3085,7 @@ private def parseModuleWith (rejectUnsupported : Bool)
         globalExports := globalExports.push (n, globImps.length + globalDecls.size)
       let gResolveBlockType : BlockTypeResolver := fun ref =>
         (match resolveTypeRef types ref with | .ok sig => some sig | .error _ => none)
-      let gctx : Ctx := { Ctx.empty with funcIds := funcIds, globalIds := globalIds, types := types, tableNames := tableNames, elemNames := elemNames, memNames := memNames, tagNames := tagNames, resolveBlockType := gResolveBlockType, rejectUnsupported }
+      let gctx : Ctx := { Ctx.empty with funcIds := funcIds, globalIds := globalIds, types := types, tableNames := tableNames, elemNames := elemNames, memNames := memNames, tagNames := tagNames, resolveBlockType := gResolveBlockType }
       globalDecls := globalDecls.push (← parseGlobalDecl gctx body)
     | .list (.atom "memory" :: body) =>
       -- Multi-memory: declared memories follow the imported ones in the
@@ -3104,7 +3098,7 @@ private def parseModuleWith (rejectUnsupported : Bool)
       | none   => memDecl := some (← parseMemDecl body)
       | some _ => extraMemDecls := extraMemDecls.push (← parseMemDecl body)
     | .list (.atom "data" :: body) =>
-      let dctx : Ctx := { Ctx.empty with funcIds := funcIds, globalIds := globalIds, types := types, tableNames := tableNames, elemNames := elemNames, memNames := memNames, tagNames := tagNames, rejectUnsupported }
+      let dctx : Ctx := { Ctx.empty with funcIds := funcIds, globalIds := globalIds, types := types, tableNames := tableNames, elemNames := elemNames, memNames := memNames, tagNames := tagNames }
       dataSegs := dataSegs.push (← parseDataSegment dctx body)
     | .list (.atom "table" :: body) =>
       for n in inlineExportsOf body do
@@ -3122,7 +3116,7 @@ private def parseModuleWith (rejectUnsupported : Bool)
     | .list (.atom "elem" :: body) =>
       let eResolveBlockType : BlockTypeResolver := fun ref =>
         (match resolveTypeRef types ref with | .ok sig => some sig | .error _ => none)
-      let ectx : Ctx := { Ctx.empty with funcIds := funcIds, globalIds := globalIds, types := types, tableNames := tableNames, elemNames := elemNames, memNames := memNames, tagNames := tagNames, resolveBlockType := eResolveBlockType, rejectUnsupported }
+      let ectx : Ctx := { Ctx.empty with funcIds := funcIds, globalIds := globalIds, types := types, tableNames := tableNames, elemNames := elemNames, memNames := memNames, tagNames := tagNames, resolveBlockType := eResolveBlockType }
       elemSegs := elemSegs.push (← parseElemSegment ectx body)
     | .list [.atom "start", .atom ref] =>
       if startFunc.isSome then throw "duplicate (start ...) declaration"
@@ -3237,27 +3231,13 @@ private def parseModuleWith (rejectUnsupported : Bool)
            tagExports := tagExports.toList
            tags := tags.toList }
 
-/-- Parse an already-tokenized module with the permissive testsuite policy. -/
-def parseModule (xs : List Sexpr) : Except Err Wasm.Module :=
-  parseModuleWith false xs
-
-private def decodeWith (rejectUnsupported : Bool) (s : String) : Except Err Wasm.Module := do
+/-- Public entry point. Parses one top-level `(module …)` form. -/
+def decode (s : String) : Except Err Wasm.Module := do
   let xs ← parseAll s
   match xs with
-  | [.list (.atom "module" :: body)] => parseModuleWith rejectUnsupported body
+  | [.list (.atom "module" :: body)] => parseModule body
   | [_] => .error "top-level form is not (module ...)"
   | [] => .error "empty input"
   | _ => .error "expected exactly one top-level (module ...) form"
-
-/-- Public testsuite entry point. This retains the historical permissive
-behavior for proposal instructions that are parsed but not yet executable. -/
-def decode (s : String) : Except Err Wasm.Module :=
-  decodeWith false s
-
-/-- Generation entry point. Unlike `decode`, this fails if an instruction
-would have been silently replaced by `unreachable`, so a checked generated
-module cannot conceal an unsupported source mnemonic. -/
-def decodeForVerification (s : String) : Except Err Wasm.Module :=
-  decodeWith true s
 
 end Wasm.Decoder.Wat

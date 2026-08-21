@@ -474,7 +474,7 @@ theorem Instruction.checkGlobalRefs_set_mutable
 
 def Instruction.checkLocalRefs
     (localCount : Nat) : Instruction → Except String Unit
-  | .localGet index | .localSet index | .localTee index =>
+  | .localGet index | .localSet index =>
       if index ≥ localCount then .error "unknown local" else .ok ()
   | _ => .ok ()
 
@@ -942,7 +942,6 @@ def Instruction.straightSig (m : Module) (locals : List ValueType)
   | .f64Const _ => some ([], [.f64])
   | .localGet i => (locals[i]?).map fun t => ([], [t])
   | .localSet i => (locals[i]?).map fun t => ([t], [])
-  | .localTee i => (locals[i]?).map fun t => ([t], [t])
   | .globalGet i => (m.globals[i]?).map fun g => ([], [g.valueType])
   | .globalSet i => (m.globals[i]?).map fun g => ([g.valueType], [])
   | .drop => none   -- polymorphic operand; skip rather than guess

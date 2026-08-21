@@ -1,4 +1,4 @@
-import Interpreter.Wasm.LeanSyntax
+import Interpreter.Wasm.Syntax
 
 /-!
 # Emit Wasm AST as literal Lean source
@@ -18,24 +18,12 @@ namespace Verifier.Emit
 
 open Wasm
 
-/- Keep the top-level list contents at two spaces, then add only one space per
-nesting level. Bracketed Lean syntax does not need two-space indentation, and
-large compiler-generated functions otherwise spend a surprising amount of
-their source size on whitespace alone. -/
-private def indent (n : Nat) : String := "".pushn ' ' (n + 1)
+private def indent (n : Nat) : String := "".pushn ' ' (n * 2)
+
+private def parens (s : String) : String := "(" ++ s ++ ")"
 
 private def list (xs : List String) : String :=
   "[" ++ String.intercalate ", " xs ++ "]"
-
-private def field (name value : String) : String := s!"{name} := {value}"
-
-private def fieldIf (keep : Bool) (name value : String) : List String :=
-  if keep then [field name value] else []
-
-private def record (fields : List String) : String :=
-  match fields with
-  | [] => "{}"
-  | _ => "{ " ++ String.intercalate ", " fields ++ " }"
 
 /-- Pretty-print pre-rendered records as a multi-line list at depth `ind`. -/
 private def recordListAt (ind : Nat) (items : List String) : String :=
@@ -56,19 +44,11 @@ private def emitOptionNat : Option Nat → String
   | none   => "none"
   | some n => s!"some {emitNat n}"
 
-private def emitUnsignedShortest (n modulus : Nat) : String :=
-  let unsigned := toString n
-  let signed := if modulus / 2 ≤ n then s!"(-{modulus - n})" else unsigned
-  if signed.length < unsigned.length then signed else unsigned
-
-/- Constructor and record-field types determine the numeral type, so explicit
-`UInt32`/`UInt64` ascriptions are redundant. For high bit-patterns, use the
-shorter signed spelling when it saves bytes (`4294967295` becomes `(-1)`). -/
 private def emitU32 (n : UInt32) : String :=
-  emitUnsignedShortest n.toNat 4294967296
+  parens s!"{n.toNat} : UInt32"
 
 private def emitU64 (n : UInt64) : String :=
-  emitUnsignedShortest n.toNat 18446744073709551616
+  parens s!"{n.toNat} : UInt64"
 
 private def emitHeapType : Wasm.GcHeapType → String
   | .any => ".any"
@@ -102,10 +82,6 @@ private def emitValueType : Wasm.ValueType → String
 private def emitValueTypes (xs : List Wasm.ValueType) : String :=
   list (xs.map emitValueType)
 
-private def emitControlTypes (paramTypes resultTypes : List Wasm.ValueType) : String :=
-  if paramTypes.isEmpty && resultTypes.isEmpty then ""
-  else s!" {emitValueTypes paramTypes} {emitValueTypes resultTypes}"
-
 private def emitOptionValueType : Option Wasm.ValueType → String
   | none => "none"
   | some valueType => s!"some ({emitValueType valueType})"
@@ -119,7 +95,6 @@ private def emitInstrShort : Wasm.Instruction → String
   | .constI64 v     => ".constI64 " ++ emitU64 v
   | .localGet i     => s!".localGet {emitNat i}"
   | .localSet i     => s!".localSet {emitNat i}"
-  | .localTee i     => s!".localTee {emitNat i}"
   -- i32 arithmetic
   | .add            => ".add"
   | .sub            => ".sub"
@@ -333,14 +308,14 @@ private def emitInstrShort : Wasm.Instruction → String
   -- one-line form so this function remains total.
   | .block pa ra body paramTypes resultTypes =>
       s!".block {emitNat pa} {emitNat ra} " ++ list (body.map emitInstrShort) ++
-        emitControlTypes paramTypes resultTypes
+        s!" {emitValueTypes paramTypes} {emitValueTypes resultTypes}"
   | .loop pa ra body paramTypes resultTypes  =>
       s!".loop {emitNat pa} {emitNat ra} " ++ list (body.map emitInstrShort) ++
-        emitControlTypes paramTypes resultTypes
+        s!" {emitValueTypes paramTypes} {emitValueTypes resultTypes}"
   | .iff pa ra thn els paramTypes resultTypes =>
       s!".iff {emitNat pa} {emitNat ra} " ++
         list (thn.map emitInstrShort) ++ " " ++ list (els.map emitInstrShort) ++
-        emitControlTypes paramTypes resultTypes
+        s!" {emitValueTypes paramTypes} {emitValueTypes resultTypes}"
   -- Reference / table (wasm 2.0+)
   | .refNullExtern staticType => s!".refNullExtern ({emitValueType staticType})"
   | .refNullExn staticType    => s!".refNullExn ({emitValueType staticType})"
@@ -365,7 +340,7 @@ private def emitInstrShort : Wasm.Instruction → String
   | .tryTable pa ra cs body paramTypes resultTypes =>
       s!".tryTable {emitNat pa} {emitNat ra} {reprStr cs} " ++
         list (body.map emitInstrShort) ++
-        emitControlTypes paramTypes resultTypes
+        s!" {emitValueTypes paramTypes} {emitValueTypes resultTypes}"
   -- Multi-memory
   | .memOp k i            => s!".memOp {emitNat k} (" ++ emitInstrShort i ++ ")"
   | .memoryCopyBetween d s => s!".memoryCopyBetween {emitNat d} {emitNat s}"
@@ -402,18 +377,18 @@ mutual
   private partial def emitInstr (ind : Nat) : Wasm.Instruction → String
     | .block pa ra body paramTypes resultTypes =>
         indent ind ++ s!".block {emitNat pa} {emitNat ra} " ++ emitInstrList ind body ++
-          emitControlTypes paramTypes resultTypes
+          s!" {emitValueTypes paramTypes} {emitValueTypes resultTypes}"
     | .loop pa ra body paramTypes resultTypes =>
         indent ind ++ s!".loop {emitNat pa} {emitNat ra} " ++ emitInstrList ind body ++
-          emitControlTypes paramTypes resultTypes
+          s!" {emitValueTypes paramTypes} {emitValueTypes resultTypes}"
     | .iff pa ra thn els paramTypes resultTypes =>
         indent ind ++ s!".iff {emitNat pa} {emitNat ra} " ++
           emitInstrList ind thn ++ " " ++ emitInstrList ind els ++
-          emitControlTypes paramTypes resultTypes
+          s!" {emitValueTypes paramTypes} {emitValueTypes resultTypes}"
     | .tryTable pa ra cs body paramTypes resultTypes =>
         indent ind ++ s!".tryTable {emitNat pa} {emitNat ra} {reprStr cs} " ++
           emitInstrList ind body ++
-          emitControlTypes paramTypes resultTypes
+          s!" {emitValueTypes paramTypes} {emitValueTypes resultTypes}"
     | other =>
         indent ind ++ emitInstrShort other
 
@@ -447,26 +422,20 @@ private def emitFuncBodyDef (es : List Wasm.Export) (importCount idx : Nat)
   s!"{exportDocComment es (importCount + idx)}def {funcBodyName idx} : Wasm.Program :=\n  {body}"
 
 private def emitFunc (idx : Nat) (f : Wasm.Function) : String :=
-  record <|
-    fieldIf (!f.params.isEmpty) "params" (emitValueTypes f.params) ++
-    fieldIf (!f.locals.isEmpty) "locals" (emitValueTypes f.locals) ++
-    [field "body" (funcBodyName idx)] ++
-    fieldIf (!f.results.isEmpty) "results" (emitValueTypes f.results) ++
-    fieldIf f.typeIdx.isSome "typeIdx" (emitOptionNat f.typeIdx)
+  s!"\{ params := {emitValueTypes f.params}, locals := {emitValueTypes f.locals}" ++
+  s!", body := {funcBodyName idx}, results := {emitValueTypes f.results}" ++
+  s!", typeIdx := {emitOptionNat f.typeIdx} }"
 
-/-- Render one named function record, referring to the corresponding `funcN`
-body definition. Used by both expanded and compact generated files. -/
-def funcDef (idx : Nat) (f : Wasm.Function) : String :=
+private def emitFuncDef (idx : Nat) (f : Wasm.Function) : String :=
   s!"def {funcDefName idx} : Wasm.Function :=\n  {emitFunc idx f}"
 
 private def emitExport (e : Wasm.Export) : String :=
   s!"\{ name := {repr e.name}, funcIdx := {emitNat e.funcIdx} }"
 
 private def emitImport (i : Wasm.ImportDecl) : String :=
-  record <|
-    [field "«module»" (reprStr i.«module»), field "name" (reprStr i.name)] ++
-    fieldIf (!i.params.isEmpty) "params" (emitValueTypes i.params) ++
-    fieldIf (!i.results.isEmpty) "results" (emitValueTypes i.results)
+  s!"\{ «module» := {repr i.«module»}, name := {repr i.name}" ++
+  s!", params := {emitValueTypes i.params}" ++
+  s!", results := {emitValueTypes i.results} }"
 
 private def emitValue : Wasm.Value → String
   | .i32 n              => s!".i32 {emitU32 n}"
@@ -488,55 +457,37 @@ private def emitGlobalDecl (g : Wasm.GlobalDecl) : String :=
   let sourceInit := match g.sourceInit with
     | none => "none"
     | some program => "some (" ++ emitInstrList 3 program ++ ")"
-  record <|
-    [field "init" (emitValue g.init)] ++
-    fieldIf g.declaredType.isSome "declaredType" declaredType ++
-    fieldIf (!g.isMut) "isMut" (reprStr g.isMut) ++
-    fieldIf g.sourceInit.isSome "sourceInit" sourceInit ++
-    fieldIf (!g.initExpr.isEmpty) "initExpr" (emitInstrList 3 g.initExpr)
+  s!"\{ init := {emitValue g.init}, declaredType := {declaredType}" ++
+    s!", isMut := {repr g.isMut}, sourceInit := {sourceInit}" ++
+    s!", initExpr := {emitInstrList 3 g.initExpr} }"
 
-private def emitByte (b : UInt8) : String := toString b.toNat
-
-private def emitHexDigit (n : Nat) : Char :=
-  if n < 10 then Char.ofNat ('0'.toNat + n)
-  else Char.ofNat ('a'.toNat + n - 10)
-
-private def emitHexByte (b : UInt8) : String :=
-  let n := b.toNat
-  String.ofList [emitHexDigit (n / 16), emitHexDigit (n % 16)]
+private def emitByte (b : UInt8) : String := s!"({b.toNat} : UInt8)"
 
 private def emitByteList (bs : List UInt8) : String :=
-  let decimal := list (bs.map emitByte)
-  let hex := s!"hexBytes% {repr (String.join (bs.map emitHexByte))}"
-  if hex.length < decimal.length then hex else decimal
+  list (bs.map emitByte)
 
 private def emitOptionU32 : Option UInt32 → String
   | none   => "none"
   | some n => s!"some {emitU32 n}"
 
 private def emitDataSegment (d : Wasm.DataSegment) : String :=
-  record <|
-    [field "offset" (emitOptionU32 d.offset), field "bytes" (emitByteList d.bytes)] ++
-    fieldIf (d.memIdx != 0) "memIdx" (emitNat d.memIdx) ++
-    fieldIf d.offsetType.isSome "offsetType" (emitOptionValueType d.offsetType) ++
-    fieldIf d.offsetExprPresent "offsetExprPresent" (reprStr d.offsetExprPresent) ++
-    fieldIf (!d.offsetExpr.isEmpty) "offsetExpr" (emitInstrList 4 d.offsetExpr)
+  s!"\{ offset := {emitOptionU32 d.offset}, bytes := {emitByteList d.bytes}" ++
+    s!", memIdx := {emitNat d.memIdx}, offsetType := {emitOptionValueType d.offsetType}" ++
+    s!", offsetExprPresent := {repr d.offsetExprPresent}" ++
+    s!", offsetExpr := {emitInstrList 4 d.offsetExpr} }"
 
 private def emitMemDecl (m : Wasm.MemDecl) : String :=
-  record <|
-    [field "pagesMin" (emitU32 m.pagesMin)] ++
-    fieldIf m.pagesMax.isSome "pagesMax" (emitOptionU32 m.pagesMax) ++
-    fieldIf (!m.data.isEmpty) "data" (recordListAt 2 (m.data.map emitDataSegment)) ++
-    fieldIf m.is64 "is64" (reprStr m.is64)
+  let pagesMin := emitU32 m.pagesMin
+  let pagesMax := emitOptionU32 m.pagesMax
+  let data := recordListAt 2 (m.data.map emitDataSegment)
+  s!"Wasm.MemDecl.mk {pagesMin} ({pagesMax}) ({data}) {repr m.is64}"
 
 private def emitOptionMem : Option Wasm.MemDecl → String
   | none   => "none"
   | some m => s!"some ({emitMemDecl m})"
 
 private def emitFuncType (t : Wasm.FuncType) : String :=
-  record <|
-    fieldIf (!t.params.isEmpty) "params" (emitValueTypes t.params) ++
-    fieldIf (!t.results.isEmpty) "results" (emitValueTypes t.results)
+  s!"\{ params := {emitValueTypes t.params}, results := {emitValueTypes t.results} }"
 
 private def emitStorageType : Wasm.StorageType → String
   | .val valueType => s!".val ({emitValueType valueType})"
@@ -555,35 +506,29 @@ private def emitOptionString : Option String → String
   | some value => s!"some {repr value}"
 
 private def emitGcTypeDef (typeDef : Wasm.GcTypeDef) : String :=
-  record <|
-    [field "comp" (emitCompositeType typeDef.comp)] ++
-    fieldIf typeDef.sourceName.isSome "sourceName" (emitOptionString typeDef.sourceName) ++
-    fieldIf typeDef.super.isSome "super" (emitOptionNat typeDef.super) ++
-    fieldIf (!typeDef.final) "«final»" (reprStr typeDef.final) ++
-    fieldIf typeDef.recGroup.isSome "recGroup" (emitOptionNat typeDef.recGroup)
+  s!"\{ comp := {emitCompositeType typeDef.comp}" ++
+    s!", sourceName := {emitOptionString typeDef.sourceName}" ++
+    s!", super := {emitOptionNat typeDef.super}, «final» := {repr typeDef.final}" ++
+    s!", recGroup := {emitOptionNat typeDef.recGroup} }"
 
 private def emitTableDecl (t : Wasm.TableDecl) : String :=
-  record <|
-    [field "min" (emitNat t.min)] ++
-    fieldIf t.max.isSome "max" (emitOptionNat t.max) ++
-    fieldIf (t.elemType != .funcref) "elemType" (emitValueType t.elemType) ++
-    fieldIf t.is64 "is64" (reprStr t.is64)
+  s!"\{ min := {emitNat t.min}, max := {emitOptionNat t.max}" ++
+  s!", elemType := {emitValueType t.elemType}, is64 := {repr t.is64} }"
 
 private def emitFuncrefSlot : Option Nat → String
   | none   => "none"
   | some i => s!"some {emitNat i}"
 
 private def emitElementSegment (e : Wasm.ElementSegment) : String :=
-  record <|
-    fieldIf e.tableIdx.isSome "tableIdx" (emitOptionNat e.tableIdx) ++
-    fieldIf e.offset.isSome "offset" (emitOptionNat e.offset) ++
-    fieldIf e.offsetType.isSome "offsetType" (emitOptionValueType e.offsetType) ++
-    fieldIf e.offsetExprPresent "offsetExprPresent" (reprStr e.offsetExprPresent) ++
-    fieldIf e.elemType.isSome "elemType" (emitOptionValueType e.elemType) ++
-    fieldIf e.declarative "declarative" (reprStr e.declarative) ++
-    fieldIf (!e.funcs.isEmpty) "funcs" (list (e.funcs.map emitFuncrefSlot)) ++
-    fieldIf (!e.exprs.isEmpty) "exprs" (recordListAt 3 (e.exprs.map (emitInstrList 4))) ++
-    fieldIf (!e.offsetExpr.isEmpty) "offsetExpr" (emitInstrList 3 e.offsetExpr)
+  s!"\{ tableIdx := {emitOptionNat e.tableIdx}" ++
+  s!", offset := {emitOptionNat e.offset}" ++
+  s!", offsetType := {emitOptionValueType e.offsetType}" ++
+  s!", offsetExprPresent := {repr e.offsetExprPresent}" ++
+  s!", elemType := {emitOptionValueType e.elemType}" ++
+  s!", declarative := {repr e.declarative}" ++
+  s!", funcs := {list (e.funcs.map emitFuncrefSlot)}" ++
+  s!", exprs := {recordListAt 3 (e.exprs.map (emitInstrList 4))}" ++
+  s!", offsetExpr := {emitInstrList 3 e.offsetExpr} }"
 
 private def emitStringPair (entry : String × String) : String :=
   s!"({repr entry.1}, {repr entry.2})"
@@ -595,7 +540,7 @@ private def emitStringNatPair (entry : String × Nat) : String :=
 def funcBodies (m : Wasm.Module) : String :=
   String.intercalate "\n\n" <|
     m.funcs.mapIdx (fun i f =>
-      emitFuncBodyDef m.exports m.imports.length i f ++ "\n\n" ++ funcDef i f)
+      emitFuncBodyDef m.exports m.imports.length i f ++ "\n\n" ++ emitFuncDef i f)
 
 /-- The module record, pretty-printed across multiple lines. -/
 def «module» (m : Wasm.Module) : String :=
@@ -618,39 +563,37 @@ def «module» (m : Wasm.Module) : String :=
   let memoryExports := recordList (m.memoryExports.map emitStringNatPair)
   let tagExports := recordList (m.tagExports.map emitStringNatPair)
   let tags := recordList (m.tags.map emitFuncType)
-  let fields :=
-    fieldIf (!m.imports.isEmpty) "imports" imports ++
-    [field "funcs" funcs] ++
-    fieldIf (!m.exports.isEmpty) "exports" exports ++
-    fieldIf m.memory.isSome "memory" memory ++
-    fieldIf (!m.extraMemories.isEmpty) "extraMemories" extraMemories ++
-    fieldIf m.dataWithoutMemory "dataWithoutMemory" (reprStr m.dataWithoutMemory) ++
-    fieldIf (!m.globals.isEmpty) "globals" globals ++
-    fieldIf m.startFunc.isSome "startFunc" (emitOptionNat m.startFunc) ++
-    fieldIf (!m.types.isEmpty) "types" types ++
-    fieldIf (!m.gcTypes.isEmpty) "gcTypes" gcTypes ++
-    fieldIf (!m.tables.isEmpty) "tables" tables ++
-    fieldIf (!m.elements.isEmpty) "elements" elements ++
-    fieldIf (!m.importedGlobals.isEmpty) "importedGlobals" importedGlobals ++
-    fieldIf (!m.importedTables.isEmpty) "importedTables" importedTables ++
-    fieldIf (!m.importedMemories.isEmpty) "importedMemories" importedMemories ++
-    fieldIf (!m.importedTags.isEmpty) "importedTags" importedTags ++
-    fieldIf (!m.globalExports.isEmpty) "globalExports" globalExports ++
-    fieldIf (!m.tableExports.isEmpty) "tableExports" tableExports ++
-    fieldIf (!m.memoryExports.isEmpty) "memoryExports" memoryExports ++
-    fieldIf (!m.tagExports.isEmpty) "tagExports" tagExports ++
-    fieldIf (!m.tags.isEmpty) "tags" tags
-  "{\n  " ++ String.intercalate ",\n  " fields ++ "\n}"
+  s!"\{\n  imports := {imports},\n  funcs := {funcs},\n  exports := {exports}" ++
+  s!",\n  memory := {memory},\n  extraMemories := {extraMemories}" ++
+  s!",\n  dataWithoutMemory := {repr m.dataWithoutMemory},\n  globals := {globals}" ++
+  s!",\n  startFunc := {emitOptionNat m.startFunc},\n  types := {types}" ++
+  s!",\n  gcTypes := {gcTypes},\n  tables := {tables},\n  elements := {elements}" ++
+  s!",\n  importedGlobals := {importedGlobals},\n  importedTables := {importedTables}" ++
+  s!",\n  importedMemories := {importedMemories},\n  importedTags := {importedTags}" ++
+  s!",\n  globalExports := {globalExports},\n  tableExports := {tableExports}" ++
+  s!",\n  memoryExports := {memoryExports},\n  tagExports := {tagExports}" ++
+  s!",\n  tags := {tags}\n}"
 
-/-- Emit a fail-closed structural fidelity check. The generated `#eval`
-re-decodes the current WAT and compares the complete module AST with the Lean
-literal, so an edited instruction on either side is detected without embedding
-a second full copy of the WAT source. -/
-def driftCheck (relWatPath : String) : String :=
+/-- Emit a fail-closed drift check that pins the exact `module.wat` source.
+The generated `#eval` re-reads the sibling file during elaboration and rejects
+both a missing file and any byte-for-byte text mismatch. The path is resolved
+relative to the lake-project root (lake's elaboration cwd). -/
+def driftCheck (relWatPath watSource : String) : String :=
   String.intercalate "\n" [
-    "-- Compile-time fidelity check: errors if WAT and generated Lean AST differ.",
+    "/-- Exact source of `module.wat` captured when `verifier emit` last ran. -/",
+    s!"private def expectedWatSource : String := {repr watSource}",
+    "",
+    "-- Compile-time drift check: errors if `module.wat` is absent or has changed.",
     "#guard_msgs (drop info) in",
-    s!"#eval Wasm.checkWatFidelity {repr relWatPath} «module»"
+    "#eval show IO Unit from do",
+    s!"  let path : System.FilePath := {repr relWatPath}",
+    "  unless ← path.pathExists do",
+    "    throw <| IO.userError",
+    s!"      s!\"\{path} is missing; cannot validate Program.lean provenance.\"",
+    "  let actual ← IO.FS.readFile path",
+    "  if actual ≠ expectedWatSource then",
+    "    throw <| IO.userError",
+    s!"      s!\"\{path} has drifted from Program.lean; re-run `lake exe verifier emit`.\""
   ]
 
 /-! ## CodeLib scaffolding (`lift`)

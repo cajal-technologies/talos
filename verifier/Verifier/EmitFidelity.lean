@@ -1,5 +1,4 @@
 import Verifier.Emit
-import Interpreter.Wasm.Decoder.Wat
 
 namespace Verifier.EmitFidelity
 
@@ -11,7 +10,6 @@ def fidelityModule : Wasm.Module := {
     locals := [.i64]
     body := [
       .block 1 1 [.refNull (.ref true .func)] [.i32] [.i64],
-      .localTee 0,
       .loop 1 0 [] [.i64] [],
       .iff 0 1 [] [] [] [.i32],
       .tryTable 0 0 [.catchAll 0] [] [] [],
@@ -96,7 +94,6 @@ private def emittedCommentSafetyFunctions :=
 
 #guard emittedFunctions.contains "typeIdx := some 3"
 #guard emittedFunctions.contains ".block 1 1"
-#guard emittedFunctions.contains ".localTee 0"
 #guard emittedFunctions.contains "[.i32] [.i64]"
 #guard emittedFunctions.contains ".refNullExtern (.ref false (.extern))"
 #guard emittedFunctions.contains ".gc (Wasm.GcOp.refCast true (Wasm.GcHeapType.named \"Node\"))"
@@ -121,23 +118,5 @@ private def emittedCommentSafetyFunctions :=
 #guard emittedModule.contains "tags := ["
 #guard emittedCommentSafetyFunctions.contains "/-- Exported function. -/"
 #guard !(emittedCommentSafetyFunctions.contains "break -/")
-
-private def localTeeWat :=
-  "(module (func (param i32) local.get 0 local.tee 0))"
-
-private def unsupportedWat :=
-  "(module (func memory.atomic.notify))"
-
-#guard reprStr ((Wasm.Decoder.Wat.decodeForVerification localTeeWat).toOption.map
-  (fun module => module.funcs.head!.body)) =
-  "some [Wasm.Instruction.localGet 0, Wasm.Instruction.localTee 0]"
-
-#guard match Wasm.Decoder.Wat.decodeForVerification unsupportedWat with
-  | .error _ => true
-  | .ok _ => false
-
-#guard reprStr ((Wasm.Decoder.Wat.decode unsupportedWat).toOption.map
-  (fun module => module.funcs.head!.body)) =
-  "some [Wasm.Instruction.unreachable]"
 
 end Verifier.EmitFidelity

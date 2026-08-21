@@ -1887,13 +1887,6 @@ private def stepPlainChecked?
           | some locals => next { locals with values := values }
           | none => .error ⟨s!"local.set index {index} is invalid"⟩
         | _ => .error ⟨"local.set requires one operand"⟩
-      | .localTee index =>
-        match thread.locals.values with
-        | value :: _ =>
-          match thread.locals.set? index value with
-          | some locals => next locals
-          | none => .error ⟨s!"local.tee index {index} is invalid"⟩
-        | _ => .error ⟨"local.tee requires one operand"⟩
       | .globalGet index =>
         match globalAt? store index with
         | some value => next { thread.locals with values := value :: thread.locals.values }
@@ -4885,13 +4878,6 @@ inductive Step : Config α → StepKind → Config α → Prop where
           .localSet index :: code, arity, remainder, controls, calls⟩, store⟩
         (.instruction (.localSet index))
         ⟨.running ⟨{ locals' with values := values }, code, arity, remainder, controls, calls⟩, store⟩
-  | localTee {locals' : Locals} {index : Nat} {value : Value}
-      (h : (⟨params, localValues, value :: values⟩ : Locals).set? index value =
-        some locals') :
-      Step ⟨.running ⟨⟨params, localValues, value :: values⟩,
-          .localTee index :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction (.localTee index))
-        ⟨.running ⟨locals', code, arity, remainder, controls, calls⟩, store⟩
   | globalGet {store : MachineStore α} {index : Nat} {value : Value}
       (h : globalAt? store index = some value) :
       Step ⟨.running ⟨⟨params, localValues, values⟩,
@@ -6657,7 +6643,6 @@ by
             first | assumption | omega)
         | apply Step.localGet <;> simp_all [Locals.get]
         | apply Step.localSet <;> simp_all [Locals.set?]
-        | apply Step.localTee <;> simp_all [Locals.set?]
         | apply Step.globalGet <;> simp_all
         | apply Step.globalSet <;> simp_all
         | (apply Step.divU; simp_all)

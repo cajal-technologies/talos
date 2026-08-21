@@ -1779,54 +1779,6 @@ theorem wp_localSet
   · iexact Hwp
   · itrivial
 
-theorem wp_localTee
-    {params localValues values : List Value}
-    {index : Nat} {value : Value} {locals' : Locals}
-    {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hset : (⟨params, localValues, value :: values⟩ : Locals).set? index value =
-      some locals') :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, value :: values⟩, .localTee index :: code,
-        arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨locals', code, arity, remainder, controls, calls⟩
-    ▷ WP (Expr.running next : Expr α) @ s; E {{ Φ }} ⊢
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
-  dsimp only
-  iintro Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[], .running ⟨locals', code, arity, remainder, controls, calls⟩,
-      store, [], ⟨rfl, _, rfl, Step.localTee hset⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ :=
-    step_deterministic (Step.localTee (α := α) hset) wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp]
-  · iexact Hwp
-  · itrivial
-
 
 theorem wp_tryTable
     {locals : Locals} {paramArity resultArity arity : Nat}

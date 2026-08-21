@@ -468,24 +468,6 @@ theorem twp_localSet
   dsimp only
   exact twp_pureStep _ _ _ (fun _ => Step.localSet hset)
 
-theorem twp_localTee
-    {params localValues values : List Value}
-    {index : Nat} {value : Value} {locals' : Locals}
-    {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hset : (⟨params, localValues, value :: values⟩ : Locals).set? index value =
-      some locals') :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, value :: values⟩, .localTee index :: code,
-        arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨locals', code, arity, remainder, controls, calls⟩
-    WP (Expr.running next : Expr α) @ s; E [{ Φ }] ⊢
-      WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
-  dsimp only
-  exact twp_pureStep _ _ _ (fun _ => Step.localTee hset)
-
 /-- Total entry rule for a defined Wasm function. -/
 theorem twp_call
     (runtimeModule : Module) (functionIndex : Nat) (fn : Function)
