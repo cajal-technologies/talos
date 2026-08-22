@@ -5759,16 +5759,21 @@ theorem wp_memoryGrow
     {code : Program} {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame}
     (runtimeModule : Module) (instanceId : ModuleInstanceId)
-    (Hwp : ∀ result : UInt32,
-        runtimeModuleOwn instanceId runtimeModule -∗
+    (layout : MemoryLayout)
+    (Hwp : ∀ (result : UInt32) (nextLayout : MemoryLayout),
+        memoryLayoutOwn nextLayout -∗ runtimeModuleOwn instanceId runtimeModule -∗
         WP (.running ⟨⟨params, localValues, .i32 result :: values⟩,
           code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }}) :
-    ▷ runtimeModuleOwn instanceId runtimeModule -∗
+    ▷ (memoryLayoutOwn layout ∗ runtimeModuleOwn instanceId runtimeModule) -∗
     WP (.running ⟨⟨params, localValues, .i32 delta :: values⟩,
         .memoryGrow :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} := by
-  iintro >Hruntime
+  iintro >⟨Hlayout, Hruntime⟩
   iapply wp_lift_step rfl
   iintro %store %ns %obs %obs' %nt Hσ
+  imod stateInterp_memoryLayout_agree
+      store ns (obs ++ obs') nt layout $$ [$Hσ $Hlayout] with
+      ⟨Hσ, Hlayout, %hlayout⟩
+  subst layout
   cases hg : store.wasm.mem.grow delta
       (store.wasm.memoryCap store.runtime.currentModule 0) with
   | none =>
@@ -5795,9 +5800,8 @@ theorem wp_memoryGrow
     imodintro
     isplitl [Hσ]
     · iexact Hσ
-    isplitl [Hruntime]
-    · iapply (Hwp (0xFFFFFFFF : UInt32))
-      iexact Hruntime
+    isplitl [Hlayout Hruntime]
+    · iapply (Hwp (0xFFFFFFFF : UInt32) (storeMemoryLayout store)) $$ Hlayout Hruntime
     · itrivial
   | some grown =>
     obtain ⟨memory, previousPages⟩ := grown
@@ -5833,15 +5837,17 @@ theorem wp_memoryGrow
     subst e₂
     subst store₂
     simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_memoryGrow store ns obs' nt delta
+        (store.wasm.memoryCap store.runtime.currentModule 0) memory previousPages hg $$
+        [$Hσ $Hlayout] with ⟨Hσ, Hlayout⟩
     imod Hclose
     imodintro
     isplitl [Hσ]
-    · iapply (stateInterp_memoryGrow store ns obs' nt delta
-        (store.wasm.memoryCap store.runtime.currentModule 0) memory previousPages hg)
-      iexact Hσ
-    isplitl [Hruntime]
-    · iapply (Hwp previousPages.toUInt32)
-      iexact Hruntime
+    · iexact Hσ
+    isplitl [Hlayout Hruntime]
+    · iapply (Hwp previousPages.toUInt32
+        (storeMemoryLayout { store with wasm := { store.wasm with mem := memory } })) $$
+        Hlayout Hruntime
     · itrivial
 
 /-- Rule for `memory.grow` with an i64 delta below `2 ^ 32` (the too-large
@@ -5855,16 +5861,21 @@ theorem wp_memoryGrow64
     {controls : List ControlFrame} {calls : List CallFrame}
     (runtimeModule : Module) (instanceId : ModuleInstanceId)
     (hsmall : delta.toNat < 2 ^ 32)
-    (Hwp : ∀ result : UInt64,
-        runtimeModuleOwn instanceId runtimeModule -∗
+    (layout : MemoryLayout)
+    (Hwp : ∀ (result : UInt64) (nextLayout : MemoryLayout),
+        memoryLayoutOwn nextLayout -∗ runtimeModuleOwn instanceId runtimeModule -∗
         WP (.running ⟨⟨params, localValues, .i64 result :: values⟩,
           code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }}) :
-    ▷ runtimeModuleOwn instanceId runtimeModule -∗
+    ▷ (memoryLayoutOwn layout ∗ runtimeModuleOwn instanceId runtimeModule) -∗
     WP (.running ⟨⟨params, localValues, .i64 delta :: values⟩,
         .memoryGrow :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} := by
-  iintro >Hruntime
+  iintro >⟨Hlayout, Hruntime⟩
   iapply wp_lift_step rfl
   iintro %store %ns %obs %obs' %nt Hσ
+  imod stateInterp_memoryLayout_agree
+      store ns (obs ++ obs') nt layout $$ [$Hσ $Hlayout] with
+      ⟨Hσ, Hlayout, %hlayout⟩
+  subst layout
   cases hg : store.wasm.mem.grow delta.toUInt32
       (store.wasm.memoryCap store.runtime.currentModule 0) with
   | none =>
@@ -5892,9 +5903,8 @@ theorem wp_memoryGrow64
     imodintro
     isplitl [Hσ]
     · iexact Hσ
-    isplitl [Hruntime]
-    · iapply (Hwp (0xFFFFFFFFFFFFFFFF : UInt64))
-      iexact Hruntime
+    isplitl [Hlayout Hruntime]
+    · iapply (Hwp (0xFFFFFFFFFFFFFFFF : UInt64) (storeMemoryLayout store)) $$ Hlayout Hruntime
     · itrivial
   | some grown =>
     obtain ⟨memory, previousPages⟩ := grown
@@ -5931,15 +5941,17 @@ theorem wp_memoryGrow64
     subst e₂
     subst store₂
     simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_memoryGrow store ns obs' nt delta.toUInt32
+        (store.wasm.memoryCap store.runtime.currentModule 0) memory previousPages hg $$
+        [$Hσ $Hlayout] with ⟨Hσ, Hlayout⟩
     imod Hclose
     imodintro
     isplitl [Hσ]
-    · iapply (stateInterp_memoryGrow store ns obs' nt delta.toUInt32
-        (store.wasm.memoryCap store.runtime.currentModule 0) memory previousPages hg)
-      iexact Hσ
-    isplitl [Hruntime]
-    · iapply (Hwp previousPages.toUInt64)
-      iexact Hruntime
+    · iexact Hσ
+    isplitl [Hlayout Hruntime]
+    · iapply (Hwp previousPages.toUInt64
+        (storeMemoryLayout { store with wasm := { store.wasm with mem := memory } })) $$
+        Hlayout Hruntime
     · itrivial
 
 /-- Primitive rule for `memory.fill` with i32 operands (non-trapping). `oldBytes`

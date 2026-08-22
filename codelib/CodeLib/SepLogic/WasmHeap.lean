@@ -395,6 +395,21 @@ class WasmHostStateGS (α : outParam Type) where
 
 attribute [reducible, instance] WasmHostStateGS.hostStateElem
 
+/-- The physical facts controlling `memory.grow`.  They are tracked
+authoritatively because byte ownership alone only bounds memory from below. -/
+structure MemoryLayout where
+  pages : Nat
+  memoryCaps : List Nat
+  deriving DecidableEq
+
+class WasmMemoryLayoutGS (α : outParam Type) where
+  memoryLayoutElem :
+    ElemG (WasmHeapGF α)
+      (Auth.AuthRF (OptionOF (Excl.ExclOF (constOF (DiscreteO MemoryLayout)))))
+  memoryLayoutName : GName
+
+attribute [reducible, instance] WasmMemoryLayoutGS.memoryLayoutElem
+
 /-- Authoritative ghost cell for the current module instance id (`runtime.entry`).
 Uses ExclAuth so it can be updated on cross-instance call/return. -/
 class WasmInstanceGS (α : outParam Type) where
@@ -716,6 +731,53 @@ theorem hostStateOwn_update {α : Type} [gs : WasmHostStateGS α]
   iintro ⟨Hauth, Hfrag⟩
   imod iOwn_update_op (E := gs.hostStateElem)
       (ExclAuth.update (A := DiscreteO α) (a := (⟨old⟩ : DiscreteO α))
+        (b := ⟨old⟩) (a' := ⟨new'⟩))
+      $$ [Hauth Hfrag] with Hboth
+  · iframe
+  imodintro
+  icases iOwn_op $$ Hboth with ⟨H1, H2⟩
+  iframe
+
+def memoryLayoutAuth {α : Type} [gs : WasmMemoryLayoutGS α]
+    (layout : MemoryLayout) : IProp (WasmHeapGF α) :=
+  iOwn (E := gs.memoryLayoutElem) gs.memoryLayoutName
+    (ExclAuth.auth (⟨layout⟩ : DiscreteO MemoryLayout))
+
+def memoryLayoutOwn {α : Type} [gs : WasmMemoryLayoutGS α]
+    (layout : MemoryLayout) : IProp (WasmHeapGF α) :=
+  iOwn (E := gs.memoryLayoutElem) gs.memoryLayoutName
+    (ExclAuth.frag (⟨layout⟩ : DiscreteO MemoryLayout))
+
+instance {α : Type} [WasmMemoryLayoutGS α] (layout : MemoryLayout) :
+    BI.Timeless (memoryLayoutAuth (α := α) layout) := by
+  unfold memoryLayoutAuth
+  infer_instance
+
+instance {α : Type} [WasmMemoryLayoutGS α] (layout : MemoryLayout) :
+    BI.Timeless (memoryLayoutOwn (α := α) layout) := by
+  unfold memoryLayoutOwn
+  infer_instance
+
+theorem memoryLayoutOwn_agree {α : Type} [gs : WasmMemoryLayoutGS α]
+    (actual expected : MemoryLayout) :
+    memoryLayoutAuth (α := α) actual ∗ memoryLayoutOwn expected ⊢
+      iprop(⌜actual = expected⌝) := by
+  unfold memoryLayoutAuth memoryLayoutOwn
+  iintro ⟨Hauth, Hfrag⟩
+  icombine Hauth Hfrag gives %Hvalid
+  ipureintro
+  exact congrArg DiscreteO.car
+    (ExclAuth.agree (A := DiscreteO MemoryLayout) Hvalid)
+
+theorem memoryLayoutOwn_update {α : Type} [gs : WasmMemoryLayoutGS α]
+    (old new' : MemoryLayout) :
+    memoryLayoutAuth (α := α) old ∗ memoryLayoutOwn old ==∗
+      memoryLayoutAuth new' ∗ memoryLayoutOwn new' := by
+  unfold memoryLayoutAuth memoryLayoutOwn
+  iintro ⟨Hauth, Hfrag⟩
+  imod iOwn_update_op (E := gs.memoryLayoutElem)
+      (ExclAuth.update (A := DiscreteO MemoryLayout)
+        (a := (⟨old⟩ : DiscreteO MemoryLayout))
         (b := ⟨old⟩) (a' := ⟨new'⟩))
       $$ [Hauth Hfrag] with Hboth
   · iframe
