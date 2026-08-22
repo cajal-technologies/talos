@@ -996,6 +996,76 @@ theorem stateInterp_init_bytes [WasmSmallStepGS hlc α]
     · iexact Hseg
     · iexact Hdst
 
+/-- Ghost update for an arbitrary same-length `Mem.writeBytes`.  This is the
+host-call analogue of `stateInterp_fill_bytes`: the caller owns the complete
+destination range and receives ownership of the replacement bytes. -/
+theorem stateInterp_writeBytes [WasmSmallStepGS hlc α]
+    (store : MachineStore α) (steps : Nat)
+    (observations : List StepKind) (threads : Nat)
+    (dst : UInt32) (oldBytes newBytes : List UInt8)
+    (hlen : newBytes.length = oldBytes.length)
+    (hbound : dst.toNat + oldBytes.length ≤ store.wasm.mem.pages * 65536)
+    (hnowrap : dst.toNat + oldBytes.length < 4294967296) :
+    stateInterp (GF := WasmHeapGF α) store steps observations threads ∗
+      pointsToBytes 0 dst oldBytes ==∗
+      stateInterp (GF := WasmHeapGF α)
+        { store with wasm :=
+            { store.wasm with mem :=
+                store.wasm.mem.writeBytes dst.toNat newBytes } }
+        steps observations threads ∗
+      pointsToBytes 0 dst newBytes := by
+  iintro ⟨Hstate, Hdst⟩
+  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
+    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ,
+      %runtimeModuleσ, %hostEnvσ, Hheap, Hglobals, Hsegments, Htables,
+      HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep,
+      HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
+  imod copySigma_ghost σ dst oldBytes newBytes hlen $$
+      [$Hheap $Hdst] with ⟨Hheap, Hdst⟩
+  imodintro
+  isplitl [Hheap Hglobals Hsegments Htables HelementSegments
+      HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth
+      HhostEnvAuth Hstate_auth Hexc]
+  · iapply (stateInterp_eq
+        { store with wasm :=
+            { store.wasm with mem :=
+                store.wasm.mem.writeBytes dst.toNat newBytes } }
+        steps observations threads).mpr
+    iexists copySigma σ dst oldBytes newBytes
+    iexists globalσ; iexists dataSegmentσ; iexists tableσ
+    iexists elementSegmentσ; iexists runtimeModuleσ; iexists hostEnvσ
+    iframe Hheap Hglobals Hsegments Htables HelementSegments
+      HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth
+      HhostEnvAuth Hstate_auth Hexc
+    ipureintro
+    have h_ag :=
+      copySigma_agrees_of_read_eq σ (storeResolve store) store.wasm.mem
+        (store.wasm.mem.writeBytes dst.toNat newBytes)
+        dst oldBytes newBytes hlen (storeResolve_zero store) Hfacts.1 hnowrap
+        (fun k b hget => by
+          have hk : k < newBytes.length := by
+            suffices h : ¬ newBytes.length ≤ k by omega
+            intro hle
+            simp [List.getElem?_eq_none hle] at hget
+          have hadd := add_ofNat_toNat dst k (by rw [hlen] at hk; omega)
+          have hb : newBytes[k]'hk = b := by
+            exact Option.some.inj ((List.getElem?_eq_getElem hk).symm.trans hget)
+          simp only [Mem.read8, Mem.writeBytes, hadd]
+          rw [dif_pos (by omega)]
+          simpa [hb])
+        (fun addr hout => by
+          simp only [Mem.read8, Mem.writeBytes]
+          rw [dif_neg (by omega)])
+    rw [storeResolve_update_mem0] at h_ag
+    have h_bn :=
+      copySigma_inBounds σ (storeResolve store) store.wasm.mem
+        (store.wasm.mem.writeBytes dst.toNat newBytes)
+        dst oldBytes newBytes hlen (storeResolve_zero store) Hfacts.2.1
+        hbound hnowrap rfl
+    rw [storeResolve_update_mem0] at h_bn
+    exact ⟨h_ag, h_bn, Hfacts.2.2⟩
+  · iexact Hdst
+
 /-- Changing `Store.host` requires exchanging `hostStateOwn` because
 `stateInterp` holds the authoritative `hostStateAuth`. The caller supplies
 the old fragment and receives the new one. -/
