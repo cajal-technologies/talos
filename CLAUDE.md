@@ -55,6 +55,42 @@ Three layers, kept deliberately small:
 
 When writing or updating a spec theorem (tagged `@[spec_of …]` / `@[proves …]`; see `codelib/CodeLib/Attrs.lean`), reach for these — the fuel value belongs inside the proof, not the statement.
 
+## Hosts: default to the universal one
+
+Host imports are resolved **positionally** — `call i` looks up `env.funcs[i]`, matching `m.imports[i]`. A hand-built `HostEnv` therefore serves exactly one import list, in one order, which is why each per-host `env_satisfies` carries the hypothesis `m.imports = thatHost.imports`.
+
+Don't choose a host. Use `Wasm.Universal` (`Interpreter/Wasm/Host/Universal.lean`), which offers every host function the interpreter knows and resolves a module's imports **by name**, in that module's own order:
+
+- `Universal.envFor m` / `Universal.specFor m` — the environment and spec for any module, whatever it imports (a subset, a mixture of hosts, or nothing).
+- `Universal.envFor_satisfies m` — holds for **every** module, with no hypothesis on its imports. Prefer it over the per-host `env_satisfies`.
+- `Universal.Runs` / `Universal.RunsBytes` — user-facing run predicates; specs name `Universal.State` directly.
+- `Universal.covers m` — smoke test that every import is implemented. Resolution is total: an unimplemented import traps rather than failing to resolve, so carry this check in the spec.
+
+Unused host functions are harmless — they sit in the state, unreachable, because no `call` resolves to them. Import-free modules get `HostEnv.empty` definitionally, so they pay nothing.
+
+**Adding a host** (`Interpreter/Wasm/Host/<Name>.lean`): write it exactly the way `Host/StdIO.lean` and `Host/Random.lean` are written — a `State`, the `HostFn`s, an `imports` list, and an `env` whose `funcs` line up with it positionally. **A host file never mentions registries, lenses, composition, or any other host.** There is one way to write a host, and the universal host did not change it.
+
+Then in `Host/Universal.lean` — the only file that knows hosts get composed — one field on `State` (with a default) and one `component` term:
+
+```lean
+structure State where
+  stdio : StdIO.State := default
+  clock : Clock.State := default
+deriving Inhabited
+
+def registry : HostRegistry State :=
+  .component StdIO.imports StdIO.env.funcs
+      State.stdio (fun whole part => { whole with stdio := part })
+  ++ .component Clock.imports Clock.env.funcs
+      State.clock (fun whole part => { whole with clock := part })
+```
+
+`component` asks a host for nothing it does not already have. It takes the field's getter and setter; the lens laws are auto-params that close by `rfl` for any record field, so no `HostLens` is ever named. Contracts and their soundness proofs default to the exact ones, so nobody writes a `HostContract` or a `Satisfies` proof for the universal path.
+
+That is the whole cost. Nothing else, anywhere, needs to change: every existing spec keeps compiling, because adding a defaulted field leaves construction sites and theorem statements valid.
+
+Prefer new host state to be a record of defaulted fields, and never tag `HostFn.lift` or `HostEntry.lift` `@[simp]` — unfolding a lift expands a whole `Store` update at every host call. Use the `HostFn.lift_invoke_*` inversion lemmas instead.
+
 ## Examples
 
 Examples live in `interpreter/Interpreter/Wasm/Examples/`. Each file defines a hand-built Wasm module and proves theorems about it using the WP tactic layer. The standard pattern: state the property, apply `wp_run` to reduce to a concrete computation, then close with `simp` / `omega` / domain lemmas. New examples should follow this pattern; browse the existing examples directory to find one close to what you are doing and mirror its structure.
