@@ -322,6 +322,25 @@ theorem wasm_smallStep_adequacy
   letI tagTableGS : WasmTagTableGS α :=
     { tagTableElem
       tagTableName }
+  letI memoryLayoutElem :
+      ElemG (WasmHeapGF α)
+        (Auth.AuthRF (OptionOF (Excl.ExclOF
+          (constOF (DiscreteO MemoryLayout))))) := by
+    exists 18
+  imod (iOwn_alloc (E := memoryLayoutElem)
+      (ExclAuth.auth
+          (⟨storeMemoryLayout config.store⟩ : DiscreteO MemoryLayout) •
+       ExclAuth.frag
+          (⟨storeMemoryLayout config.store⟩ : DiscreteO MemoryLayout))
+      ExclAuth.valid) with
+    ⟨%memoryLayoutName, HmemoryLayoutAll⟩
+  ihave HmemoryLayoutPair := iOwn_op.mp $$ HmemoryLayoutAll
+  icases HmemoryLayoutPair with
+    ⟨HmemoryLayoutAuth, HmemoryLayoutFrag⟩
+  letI memoryLayoutGS : WasmMemoryLayoutGS α :=
+    { memoryLayoutElem
+      memoryLayoutName }
+  iclear HmemoryLayoutFrag
   letI gs : WasmSmallStepGS .hasLC α :=
     { toInvGS_gen := inv
       toWasmHeapGS := wasmHeapGS
@@ -331,6 +350,7 @@ theorem wasm_smallStep_adequacy
       elementSegment := wasmElementSegmentGS
       exception := wasmExceptionGS
       tagTable := tagTableGS
+      memoryLayout := memoryLayoutGS
       runtime := runtimeGS
       hostEnv := hostEnvGS
       hostState := hostStateGS
@@ -356,7 +376,7 @@ theorem wasm_smallStep_adequacy
       · iexact HtagTable
       · ipureintro
         exact List.prefix_rfl
-  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
+  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeInstances HinstanceState HhostEnvAuth HhostState HmemoryLayoutAuth Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
     iexists (∅ : WasmHeapMap (Option UInt8))
     iexists (∅ : WasmGlobalMap Value)
@@ -365,9 +385,9 @@ theorem wasm_smallStep_adequacy
     iexists (∅ : WasmElementSegmentMap (Option (List (Option Nat))))
     iexists (∅ : WasmRuntimeModuleMap Module)
     iexists (∅ : WasmHostEnvMap (HostEnv α))
-    unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
+    unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN memoryLayoutAuth
     simp only [BI.BigSepM.bigSepM_empty.to_eq, BI.emp_sep.to_eq]
-    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
+    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeInstances HinstanceState HhostEnvAuth HhostState HmemoryLayoutAuth Hexc
     ipureintro
     exact ⟨heapAgreesWithMem_empty _,
       heapAddressesInBounds_empty _,
@@ -534,6 +554,25 @@ theorem wasm_smallStep_stronglyNormalizing
   letI tagTableGS : WasmTagTableGS α :=
     { tagTableElem
       tagTableName }
+  letI memoryLayoutElem :
+      ElemG (WasmHeapGF α)
+        (Auth.AuthRF (OptionOF (Excl.ExclOF
+          (constOF (DiscreteO MemoryLayout))))) := by
+    exists 18
+  imod (iOwn_alloc (E := memoryLayoutElem)
+      (ExclAuth.auth
+          (⟨storeMemoryLayout config.store⟩ : DiscreteO MemoryLayout) •
+       ExclAuth.frag
+          (⟨storeMemoryLayout config.store⟩ : DiscreteO MemoryLayout))
+      ExclAuth.valid) with
+    ⟨%memoryLayoutName, HmemoryLayoutAll⟩
+  ihave HmemoryLayoutPair := iOwn_op.mp $$ HmemoryLayoutAll
+  icases HmemoryLayoutPair with
+    ⟨HmemoryLayoutAuth, HmemoryLayoutFrag⟩
+  letI memoryLayoutGS : WasmMemoryLayoutGS α :=
+    { memoryLayoutElem
+      memoryLayoutName }
+  iclear HmemoryLayoutFrag
   letI gs : WasmSmallStepGS .hasNoLC α :=
     { toInvGS_gen := inv
       toWasmHeapGS := wasmHeapGS
@@ -543,6 +582,7 @@ theorem wasm_smallStep_stronglyNormalizing
       elementSegment := wasmElementSegmentGS
       exception := wasmExceptionGS
       tagTable := tagTableGS
+      memoryLayout := memoryLayoutGS
       runtime := runtimeGS
       hostEnv := hostEnvGS
       hostState := hostStateGS
@@ -573,7 +613,7 @@ theorem wasm_smallStep_stronglyNormalizing
       · iexact HtagTable
       · ipureintro
         exact List.prefix_rfl
-  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
+  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeInstances HinstanceState HhostEnvAuth HhostState HmemoryLayoutAuth Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
     iexists (∅ : WasmHeapMap (Option UInt8))
     iexists (∅ : WasmGlobalMap Value)
@@ -582,9 +622,9 @@ theorem wasm_smallStep_stronglyNormalizing
     iexists (∅ : WasmElementSegmentMap (Option (List (Option Nat))))
     iexists (∅ : WasmRuntimeModuleMap Module)
     iexists (∅ : WasmHostEnvMap (HostEnv α))
-    unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
+    unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN memoryLayoutAuth
     simp only [BI.BigSepM.bigSepM_empty.to_eq, BI.emp_sep.to_eq]
-    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
+    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeInstances HinstanceState HhostEnvAuth HhostState HmemoryLayoutAuth Hexc
     ipureintro
     exact ⟨heapAgreesWithMem_empty _,
       heapAddressesInBounds_empty _,
@@ -761,6 +801,25 @@ theorem wasm_smallStep_heap_globals_runtime_tags_stronglyNormalizing
   · unfold tagTableOwn
     iexact HtagTable
   iintuitionistic HtagTableOwn
+  letI memoryLayoutElem :
+      ElemG (WasmHeapGF α)
+        (Auth.AuthRF (OptionOF (Excl.ExclOF
+          (constOF (DiscreteO MemoryLayout))))) := by
+    exists 18
+  imod (iOwn_alloc (E := memoryLayoutElem)
+      (ExclAuth.auth
+          (⟨storeMemoryLayout config.store⟩ : DiscreteO MemoryLayout) •
+       ExclAuth.frag
+          (⟨storeMemoryLayout config.store⟩ : DiscreteO MemoryLayout))
+      ExclAuth.valid) with
+    ⟨%memoryLayoutName, HmemoryLayoutAll⟩
+  ihave HmemoryLayoutPair := iOwn_op.mp $$ HmemoryLayoutAll
+  icases HmemoryLayoutPair with
+    ⟨HmemoryLayoutAuth, HmemoryLayoutFrag⟩
+  letI memoryLayoutGS : WasmMemoryLayoutGS α :=
+    { memoryLayoutElem
+      memoryLayoutName }
+  iclear HmemoryLayoutFrag
   letI gs : WasmSmallStepGS .hasNoLC α :=
     { toInvGS_gen := inv
       toWasmHeapGS := wasmHeapGS
@@ -770,6 +829,7 @@ theorem wasm_smallStep_heap_globals_runtime_tags_stronglyNormalizing
       elementSegment := wasmElementSegmentGS
       exception := wasmExceptionGS
       tagTable := tagTableGS
+      memoryLayout := memoryLayoutGS
       runtime := runtimeGS
       hostEnv := hostEnvGS
       hostState := hostStateGS
@@ -800,7 +860,7 @@ theorem wasm_smallStep_heap_globals_runtime_tags_stronglyNormalizing
       · iexact HtagTableOwn
       · ipureintro
         exact List.prefix_rfl
-  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
+  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState HmemoryLayoutAuth Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
     iexists σ
     iexists globalσ
@@ -810,9 +870,9 @@ theorem wasm_smallStep_heap_globals_runtime_tags_stronglyNormalizing
     iexists (PartialMap.singleton config.store.runtime.entry.id
       config.store.runtime.currentModule)
     iexists (∅ : WasmHostEnvMap (HostEnv α))
-    unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
+    unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN memoryLayoutAuth
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
-    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
+    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState HmemoryLayoutAuth Hexc
     ipureintro
     exact ⟨hagree, hinBounds, hglobals,
       dataSegmentHeapAgrees_empty _,
@@ -1118,6 +1178,25 @@ theorem wasm_smallStep_runtime_tags_adequacy
   · unfold tagTableOwn
     iexact HtagTable
   iintuitionistic HtagTableOwn
+  letI memoryLayoutElem :
+      ElemG (WasmHeapGF α)
+        (Auth.AuthRF (OptionOF (Excl.ExclOF
+          (constOF (DiscreteO MemoryLayout))))) := by
+    exists 18
+  imod (iOwn_alloc (E := memoryLayoutElem)
+      (ExclAuth.auth
+          (⟨storeMemoryLayout config.store⟩ : DiscreteO MemoryLayout) •
+       ExclAuth.frag
+          (⟨storeMemoryLayout config.store⟩ : DiscreteO MemoryLayout))
+      ExclAuth.valid) with
+    ⟨%memoryLayoutName, HmemoryLayoutAll⟩
+  ihave HmemoryLayoutPair := iOwn_op.mp $$ HmemoryLayoutAll
+  icases HmemoryLayoutPair with
+    ⟨HmemoryLayoutAuth, HmemoryLayoutFrag⟩
+  letI memoryLayoutGS : WasmMemoryLayoutGS α :=
+    { memoryLayoutElem
+      memoryLayoutName }
+  iclear HmemoryLayoutFrag
   letI gs : WasmSmallStepGS .hasLC α :=
     { toInvGS_gen := inv
       toWasmHeapGS := wasmHeapGS
@@ -1127,6 +1206,7 @@ theorem wasm_smallStep_runtime_tags_adequacy
       elementSegment := wasmElementSegmentGS
       exception := wasmExceptionGS
       tagTable := tagTableGS
+      memoryLayout := memoryLayoutGS
       runtime := runtimeGS
       hostEnv := hostEnvGS
       hostState := hostStateGS
@@ -1152,7 +1232,7 @@ theorem wasm_smallStep_runtime_tags_adequacy
       · iexact HtagTableOwn
       · ipureintro
         exact List.prefix_rfl
-  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
+  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState HmemoryLayoutAuth Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
     iexists (∅ : WasmHeapMap (Option UInt8))
     iexists (∅ : WasmGlobalMap Value)
@@ -1162,9 +1242,9 @@ theorem wasm_smallStep_runtime_tags_adequacy
     iexists (PartialMap.singleton config.store.runtime.entry.id
       config.store.runtime.currentModule)
     iexists (∅ : WasmHostEnvMap (HostEnv α))
-    unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
+    unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN memoryLayoutAuth
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
-    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
+    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState HmemoryLayoutAuth Hexc
     ipureintro
     exact ⟨heapAgreesWithMem_empty _,
       heapAddressesInBounds_empty _,
@@ -1375,6 +1455,25 @@ theorem wasm_smallStep_runtime_host_store_adequacy
   letI tagTableGS : WasmTagTableGS α :=
     { tagTableElem
       tagTableName }
+  letI memoryLayoutElem :
+      ElemG (WasmHeapGF α)
+        (Auth.AuthRF (OptionOF (Excl.ExclOF
+          (constOF (DiscreteO MemoryLayout))))) := by
+    exists 18
+  imod (iOwn_alloc (E := memoryLayoutElem)
+      (ExclAuth.auth
+          (⟨storeMemoryLayout config.store⟩ : DiscreteO MemoryLayout) •
+       ExclAuth.frag
+          (⟨storeMemoryLayout config.store⟩ : DiscreteO MemoryLayout))
+      ExclAuth.valid) with
+    ⟨%memoryLayoutName, HmemoryLayoutAll⟩
+  ihave HmemoryLayoutPair := iOwn_op.mp $$ HmemoryLayoutAll
+  icases HmemoryLayoutPair with
+    ⟨HmemoryLayoutAuth, HmemoryLayoutFrag⟩
+  letI memoryLayoutGS : WasmMemoryLayoutGS α :=
+    { memoryLayoutElem
+      memoryLayoutName }
+  iclear HmemoryLayoutFrag
   letI gs : WasmSmallStepGS .hasLC α :=
     { toInvGS_gen := inv
       toWasmHeapGS := wasmHeapGS
@@ -1384,6 +1483,7 @@ theorem wasm_smallStep_runtime_host_store_adequacy
       elementSegment := wasmElementSegmentGS
       exception := wasmExceptionGS
       tagTable := tagTableGS
+      memoryLayout := memoryLayoutGS
       runtime := runtimeGS
       hostEnv := hostEnvGS
       hostState := hostStateGS
@@ -1409,7 +1509,7 @@ theorem wasm_smallStep_runtime_host_store_adequacy
       · iexact HtagTable
       · ipureintro
         exact List.prefix_rfl
-  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth' HhostState Hexc]
+  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth' HhostState HmemoryLayoutAuth Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
     iexists (∅ : WasmHeapMap (Option UInt8))
     iexists (∅ : WasmGlobalMap Value)
@@ -1420,9 +1520,9 @@ theorem wasm_smallStep_runtime_host_store_adequacy
       config.store.runtime.currentModule)
     iexists (PartialMap.singleton config.store.runtime.entry.id
       config.store.runtime.currentHost)
-    unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
+    unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN memoryLayoutAuth
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
-    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth' HhostState Hexc
+    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth' HhostState HmemoryLayoutAuth Hexc
     ipureintro
     exact ⟨heapAgreesWithMem_empty _,
       heapAddressesInBounds_empty _,
@@ -1616,6 +1716,25 @@ theorem wasm_smallStep_runtime_instance_adequacy
   letI tagTableGS : WasmTagTableGS α :=
     { tagTableElem
       tagTableName }
+  letI memoryLayoutElem :
+      ElemG (WasmHeapGF α)
+        (Auth.AuthRF (OptionOF (Excl.ExclOF
+          (constOF (DiscreteO MemoryLayout))))) := by
+    exists 18
+  imod (iOwn_alloc (E := memoryLayoutElem)
+      (ExclAuth.auth
+          (⟨storeMemoryLayout config.store⟩ : DiscreteO MemoryLayout) •
+       ExclAuth.frag
+          (⟨storeMemoryLayout config.store⟩ : DiscreteO MemoryLayout))
+      ExclAuth.valid) with
+    ⟨%memoryLayoutName, HmemoryLayoutAll⟩
+  ihave HmemoryLayoutPair := iOwn_op.mp $$ HmemoryLayoutAll
+  icases HmemoryLayoutPair with
+    ⟨HmemoryLayoutAuth, HmemoryLayoutFrag⟩
+  letI memoryLayoutGS : WasmMemoryLayoutGS α :=
+    { memoryLayoutElem
+      memoryLayoutName }
+  iclear HmemoryLayoutFrag
   letI gs : WasmSmallStepGS .hasLC α :=
     { toInvGS_gen := inv
       toWasmHeapGS := wasmHeapGS
@@ -1625,6 +1744,7 @@ theorem wasm_smallStep_runtime_instance_adequacy
       elementSegment := wasmElementSegmentGS
       exception := wasmExceptionGS
       tagTable := tagTableGS
+      memoryLayout := memoryLayoutGS
       runtime := runtimeGS
       hostEnv := hostEnvGS
       hostState := hostStateGS
@@ -1652,7 +1772,7 @@ theorem wasm_smallStep_runtime_instance_adequacy
       · iexact HtagTable
       · ipureintro
         exact List.prefix_rfl
-  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstancesState HinstanceState HhostEnvAuth HhostState Hexc]
+  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstancesState HinstanceState HhostEnvAuth HhostState HmemoryLayoutAuth Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
     iexists (∅ : WasmHeapMap (Option UInt8))
     iexists (∅ : WasmGlobalMap Value)
@@ -1662,9 +1782,9 @@ theorem wasm_smallStep_runtime_instance_adequacy
     iexists (PartialMap.singleton config.store.runtime.entry.id
       config.store.runtime.currentModule)
     iexists (∅ : WasmHostEnvMap (HostEnv α))
-    unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
+    unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN memoryLayoutAuth
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
-    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstancesState HinstanceState HhostEnvAuth HhostState Hexc
+    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstancesState HinstanceState HhostEnvAuth HhostState HmemoryLayoutAuth Hexc
     ipureintro
     exact ⟨heapAgreesWithMem_empty _,
       heapAddressesInBounds_empty _,
@@ -1865,6 +1985,25 @@ theorem wasm_smallStep_instance_host_state_adequacy
   letI tagTableGS : WasmTagTableGS α :=
     { tagTableElem
       tagTableName }
+  letI memoryLayoutElem :
+      ElemG (WasmHeapGF α)
+        (Auth.AuthRF (OptionOF (Excl.ExclOF
+          (constOF (DiscreteO MemoryLayout))))) := by
+    exists 18
+  imod (iOwn_alloc (E := memoryLayoutElem)
+      (ExclAuth.auth
+          (⟨storeMemoryLayout config.store⟩ : DiscreteO MemoryLayout) •
+       ExclAuth.frag
+          (⟨storeMemoryLayout config.store⟩ : DiscreteO MemoryLayout))
+      ExclAuth.valid) with
+    ⟨%memoryLayoutName, HmemoryLayoutAll⟩
+  ihave HmemoryLayoutPair := iOwn_op.mp $$ HmemoryLayoutAll
+  icases HmemoryLayoutPair with
+    ⟨HmemoryLayoutAuth, HmemoryLayoutFrag⟩
+  letI memoryLayoutGS : WasmMemoryLayoutGS α :=
+    { memoryLayoutElem
+      memoryLayoutName }
+  iclear HmemoryLayoutFrag
   letI gs : WasmSmallStepGS .hasLC α :=
     { toInvGS_gen := inv
       toWasmHeapGS := wasmHeapGS
@@ -1874,6 +2013,7 @@ theorem wasm_smallStep_instance_host_state_adequacy
       elementSegment := wasmElementSegmentGS
       exception := wasmExceptionGS
       tagTable := tagTableGS
+      memoryLayout := memoryLayoutGS
       runtime := runtimeGS
       hostEnv := hostEnvGS
       hostState := hostStateGS
@@ -1901,7 +2041,7 @@ theorem wasm_smallStep_instance_host_state_adequacy
       · iexact HtagTable
       · ipureintro
         exact List.prefix_rfl
-  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstancesState HinstanceState HhostEnvAuth' HhostState Hexc]
+  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstancesState HinstanceState HhostEnvAuth' HhostState HmemoryLayoutAuth Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
     iexists (∅ : WasmHeapMap (Option UInt8))
     iexists (∅ : WasmGlobalMap Value)
@@ -1912,9 +2052,9 @@ theorem wasm_smallStep_instance_host_state_adequacy
       config.store.runtime.currentModule)
     iexists (PartialMap.singleton config.store.runtime.entry.id
       config.store.runtime.currentHost)
-    unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
+    unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN memoryLayoutAuth
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
-    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstancesState HinstanceState HhostEnvAuth' HhostState Hexc
+    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstancesState HinstanceState HhostEnvAuth' HhostState HmemoryLayoutAuth Hexc
     ipureintro
     exact ⟨heapAgreesWithMem_empty _,
       heapAddressesInBounds_empty _,
@@ -2102,6 +2242,25 @@ theorem wasm_smallStep_heap_adequacy
   letI tagTableGS : WasmTagTableGS α :=
     { tagTableElem
       tagTableName }
+  letI memoryLayoutElem :
+      ElemG (WasmHeapGF α)
+        (Auth.AuthRF (OptionOF (Excl.ExclOF
+          (constOF (DiscreteO MemoryLayout))))) := by
+    exists 18
+  imod (iOwn_alloc (E := memoryLayoutElem)
+      (ExclAuth.auth
+          (⟨storeMemoryLayout config.store⟩ : DiscreteO MemoryLayout) •
+       ExclAuth.frag
+          (⟨storeMemoryLayout config.store⟩ : DiscreteO MemoryLayout))
+      ExclAuth.valid) with
+    ⟨%memoryLayoutName, HmemoryLayoutAll⟩
+  ihave HmemoryLayoutPair := iOwn_op.mp $$ HmemoryLayoutAll
+  icases HmemoryLayoutPair with
+    ⟨HmemoryLayoutAuth, HmemoryLayoutFrag⟩
+  letI memoryLayoutGS : WasmMemoryLayoutGS α :=
+    { memoryLayoutElem
+      memoryLayoutName }
+  iclear HmemoryLayoutFrag
   letI gs : WasmSmallStepGS .hasLC α :=
     { toInvGS_gen := inv
       toWasmHeapGS := wasmHeapGS
@@ -2111,6 +2270,7 @@ theorem wasm_smallStep_heap_adequacy
       elementSegment := wasmElementSegmentGS
       exception := wasmExceptionGS
       tagTable := tagTableGS
+      memoryLayout := memoryLayoutGS
       runtime := runtimeGS
       hostEnv := hostEnvGS
       hostState := hostStateGS
@@ -2136,7 +2296,7 @@ theorem wasm_smallStep_heap_adequacy
       · iexact HtagTable
       · ipureintro
         exact List.prefix_rfl
-  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
+  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeInstances HinstanceState HhostEnvAuth HhostState HmemoryLayoutAuth Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
     iexists σ
     iexists (∅ : WasmGlobalMap Value)
@@ -2145,9 +2305,9 @@ theorem wasm_smallStep_heap_adequacy
     iexists (∅ : WasmElementSegmentMap (Option (List (Option Nat))))
     iexists (∅ : WasmRuntimeModuleMap Module)
     iexists (∅ : WasmHostEnvMap (HostEnv α))
-    unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
+    unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN memoryLayoutAuth
     simp only [BI.BigSepM.bigSepM_empty.to_eq, BI.emp_sep.to_eq]
-    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
+    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeInstances HinstanceState HhostEnvAuth HhostState HmemoryLayoutAuth Hexc
     ipureintro
     exact ⟨hagree, hinBounds,
       globalHeapAgrees_empty _,
@@ -2315,6 +2475,25 @@ theorem wasm_smallStep_heap_globals_runtime_adequacy
   letI tagTableGS : WasmTagTableGS α :=
     { tagTableElem
       tagTableName }
+  letI memoryLayoutElem :
+      ElemG (WasmHeapGF α)
+        (Auth.AuthRF (OptionOF (Excl.ExclOF
+          (constOF (DiscreteO MemoryLayout))))) := by
+    exists 18
+  imod (iOwn_alloc (E := memoryLayoutElem)
+      (ExclAuth.auth
+          (⟨storeMemoryLayout config.store⟩ : DiscreteO MemoryLayout) •
+       ExclAuth.frag
+          (⟨storeMemoryLayout config.store⟩ : DiscreteO MemoryLayout))
+      ExclAuth.valid) with
+    ⟨%memoryLayoutName, HmemoryLayoutAll⟩
+  ihave HmemoryLayoutPair := iOwn_op.mp $$ HmemoryLayoutAll
+  icases HmemoryLayoutPair with
+    ⟨HmemoryLayoutAuth, HmemoryLayoutFrag⟩
+  letI memoryLayoutGS : WasmMemoryLayoutGS α :=
+    { memoryLayoutElem
+      memoryLayoutName }
+  iclear HmemoryLayoutFrag
   letI gs : WasmSmallStepGS .hasLC α :=
     { toInvGS_gen := inv
       toWasmHeapGS := wasmHeapGS
@@ -2324,6 +2503,7 @@ theorem wasm_smallStep_heap_globals_runtime_adequacy
       elementSegment := wasmElementSegmentGS
       exception := wasmExceptionGS
       tagTable := tagTableGS
+      memoryLayout := memoryLayoutGS
       runtime := runtimeGS
       hostEnv := hostEnvGS
       hostState := hostStateGS
@@ -2349,7 +2529,7 @@ theorem wasm_smallStep_heap_globals_runtime_adequacy
       · iexact HtagTable
       · ipureintro
         exact List.prefix_rfl
-  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
+  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState HmemoryLayoutAuth Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
     iexists σ
     iexists globalσ
@@ -2359,9 +2539,9 @@ theorem wasm_smallStep_heap_globals_runtime_adequacy
     iexists (PartialMap.singleton config.store.runtime.entry.id
       config.store.runtime.currentModule)
     iexists (∅ : WasmHostEnvMap (HostEnv α))
-    unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
+    unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN memoryLayoutAuth
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
-    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
+    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState HmemoryLayoutAuth Hexc
     ipureintro
     exact ⟨hagree, hinBounds, hglobals,
       dataSegmentHeapAgrees_empty _,
@@ -2555,6 +2735,25 @@ theorem wasm_smallStep_heap_globals_runtime_store_adequacy
   letI tagTableGS : WasmTagTableGS α :=
     { tagTableElem
       tagTableName }
+  letI memoryLayoutElem :
+      ElemG (WasmHeapGF α)
+        (Auth.AuthRF (OptionOF (Excl.ExclOF
+          (constOF (DiscreteO MemoryLayout))))) := by
+    exists 18
+  imod (iOwn_alloc (E := memoryLayoutElem)
+      (ExclAuth.auth
+          (⟨storeMemoryLayout config.store⟩ : DiscreteO MemoryLayout) •
+       ExclAuth.frag
+          (⟨storeMemoryLayout config.store⟩ : DiscreteO MemoryLayout))
+      ExclAuth.valid) with
+    ⟨%memoryLayoutName, HmemoryLayoutAll⟩
+  ihave HmemoryLayoutPair := iOwn_op.mp $$ HmemoryLayoutAll
+  icases HmemoryLayoutPair with
+    ⟨HmemoryLayoutAuth, HmemoryLayoutFrag⟩
+  letI memoryLayoutGS : WasmMemoryLayoutGS α :=
+    { memoryLayoutElem
+      memoryLayoutName }
+  iclear HmemoryLayoutFrag
   letI gs : WasmSmallStepGS .hasLC α :=
     { toInvGS_gen := inv
       toWasmHeapGS := wasmHeapGS
@@ -2564,6 +2763,7 @@ theorem wasm_smallStep_heap_globals_runtime_store_adequacy
       elementSegment := wasmElementSegmentGS
       exception := wasmExceptionGS
       tagTable := tagTableGS
+      memoryLayout := memoryLayoutGS
       runtime := runtimeGS
       hostEnv := hostEnvGS
       hostState := hostStateGS
@@ -2589,7 +2789,7 @@ theorem wasm_smallStep_heap_globals_runtime_store_adequacy
       · iexact HtagTable
       · ipureintro
         exact List.prefix_rfl
-  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth' HhostState Hexc]
+  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth' HhostState HmemoryLayoutAuth Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
     iexists σ
     iexists globalσ
@@ -2600,9 +2800,9 @@ theorem wasm_smallStep_heap_globals_runtime_store_adequacy
       config.store.runtime.currentModule)
     iexists (PartialMap.singleton config.store.runtime.entry.id
       config.store.runtime.currentHost)
-    unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
+    unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN memoryLayoutAuth
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
-    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth' HhostState Hexc
+    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth' HhostState HmemoryLayoutAuth Hexc
     ipureintro
     exact ⟨hagree, hinBounds, hglobals,
       dataSegmentHeapAgrees_empty _,
@@ -2795,6 +2995,25 @@ theorem wasm_smallStep_heap_globals_runtime_store_terminates
     letI tagTableGS : WasmTagTableGS α :=
       { tagTableElem
         tagTableName }
+    letI memoryLayoutElem :
+        ElemG (WasmHeapGF α)
+          (Auth.AuthRF (OptionOF (Excl.ExclOF
+            (constOF (DiscreteO MemoryLayout))))) := by
+      exists 18
+    imod (iOwn_alloc (E := memoryLayoutElem)
+        (ExclAuth.auth
+            (⟨storeMemoryLayout config.store⟩ : DiscreteO MemoryLayout) •
+         ExclAuth.frag
+            (⟨storeMemoryLayout config.store⟩ : DiscreteO MemoryLayout))
+        ExclAuth.valid) with
+      ⟨%memoryLayoutName, HmemoryLayoutAll⟩
+    ihave HmemoryLayoutPair := iOwn_op.mp $$ HmemoryLayoutAll
+    icases HmemoryLayoutPair with
+      ⟨HmemoryLayoutAuth, HmemoryLayoutFrag⟩
+    letI memoryLayoutGS : WasmMemoryLayoutGS α :=
+      { memoryLayoutElem
+        memoryLayoutName }
+    iclear HmemoryLayoutFrag
     letI gs : WasmSmallStepGS .hasNoLC α :=
       { toInvGS_gen := inv
         toWasmHeapGS := wasmHeapGS
@@ -2804,6 +3023,7 @@ theorem wasm_smallStep_heap_globals_runtime_store_terminates
         elementSegment := wasmElementSegmentGS
         exception := wasmExceptionGS
         tagTable := tagTableGS
+        memoryLayout := memoryLayoutGS
         runtime := runtimeGS
         hostEnv := hostEnvGS
         hostState := hostStateGS
@@ -2834,7 +3054,7 @@ theorem wasm_smallStep_heap_globals_runtime_store_terminates
         · iexact HtagTable
         · ipureintro
           exact List.prefix_rfl
-    isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
+    isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState HmemoryLayoutAuth Hexc]
     · iapply (stateInterp_eq config.store 0 [] 0).mpr
       iexists σ
       iexists globalσ
@@ -2844,9 +3064,9 @@ theorem wasm_smallStep_heap_globals_runtime_store_terminates
       iexists (PartialMap.singleton config.store.runtime.entry.id
         config.store.runtime.currentModule)
       iexists (∅ : WasmHostEnvMap (HostEnv α))
-      unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
+      unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN memoryLayoutAuth
       simp only [BI.BigSepM.bigSepM_singleton.to_eq]
-      iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
+      iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState HmemoryLayoutAuth Hexc
       ipureintro
       exact ⟨hagree, hinBounds, hglobals,
         dataSegmentHeapAgrees_empty _,
@@ -3069,6 +3289,25 @@ theorem wasm_smallStep_heap_store_terminates
     letI tagTableGS : WasmTagTableGS α :=
       { tagTableElem
         tagTableName }
+    letI memoryLayoutElem :
+        ElemG (WasmHeapGF α)
+          (Auth.AuthRF (OptionOF (Excl.ExclOF
+            (constOF (DiscreteO MemoryLayout))))) := by
+      exists 18
+    imod (iOwn_alloc (E := memoryLayoutElem)
+        (ExclAuth.auth
+            (⟨storeMemoryLayout config.store⟩ : DiscreteO MemoryLayout) •
+         ExclAuth.frag
+            (⟨storeMemoryLayout config.store⟩ : DiscreteO MemoryLayout))
+        ExclAuth.valid) with
+      ⟨%memoryLayoutName, HmemoryLayoutAll⟩
+    ihave HmemoryLayoutPair := iOwn_op.mp $$ HmemoryLayoutAll
+    icases HmemoryLayoutPair with
+      ⟨HmemoryLayoutAuth, HmemoryLayoutFrag⟩
+    letI memoryLayoutGS : WasmMemoryLayoutGS α :=
+      { memoryLayoutElem
+        memoryLayoutName }
+    iclear HmemoryLayoutFrag
     letI gs : WasmSmallStepGS .hasNoLC α :=
       { toInvGS_gen := inv
         toWasmHeapGS := wasmHeapGS
@@ -3078,6 +3317,7 @@ theorem wasm_smallStep_heap_store_terminates
         elementSegment := wasmElementSegmentGS
         exception := wasmExceptionGS
         tagTable := tagTableGS
+        memoryLayout := memoryLayoutGS
         runtime := runtimeGS
         hostEnv := hostEnvGS
         hostState := hostStateGS
@@ -3108,7 +3348,7 @@ theorem wasm_smallStep_heap_store_terminates
         · iexact HtagTable
         · ipureintro
           exact List.prefix_rfl
-    isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
+    isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState HmemoryLayoutAuth Hexc]
     · iapply (stateInterp_eq config.store 0 [] 0).mpr
       iexists σ
       iexists (∅ : WasmGlobalMap Value)
@@ -3118,9 +3358,9 @@ theorem wasm_smallStep_heap_store_terminates
       iexists (PartialMap.singleton config.store.runtime.entry.id
         config.store.runtime.currentModule)
       iexists (∅ : WasmHostEnvMap (HostEnv α))
-      unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
+      unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN memoryLayoutAuth
       simp only [BI.BigSepM.bigSepM_singleton.to_eq]
-      iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
+      iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState HmemoryLayoutAuth Hexc
       ipureintro
       exact ⟨hagree, hinBounds, globalHeapAgrees_empty _,
         dataSegmentHeapAgrees_empty _,
@@ -3401,6 +3641,25 @@ theorem wasm_smallStep_heap_globals_segments_runtime_store_adequacy
   letI tagTableGS : WasmTagTableGS α :=
     { tagTableElem
       tagTableName }
+  letI memoryLayoutElem :
+      ElemG (WasmHeapGF α)
+        (Auth.AuthRF (OptionOF (Excl.ExclOF
+          (constOF (DiscreteO MemoryLayout))))) := by
+    exists 18
+  imod (iOwn_alloc (E := memoryLayoutElem)
+      (ExclAuth.auth
+          (⟨storeMemoryLayout config.store⟩ : DiscreteO MemoryLayout) •
+       ExclAuth.frag
+          (⟨storeMemoryLayout config.store⟩ : DiscreteO MemoryLayout))
+      ExclAuth.valid) with
+    ⟨%memoryLayoutName, HmemoryLayoutAll⟩
+  ihave HmemoryLayoutPair := iOwn_op.mp $$ HmemoryLayoutAll
+  icases HmemoryLayoutPair with
+    ⟨HmemoryLayoutAuth, HmemoryLayoutFrag⟩
+  letI memoryLayoutGS : WasmMemoryLayoutGS α :=
+    { memoryLayoutElem
+      memoryLayoutName }
+  iclear HmemoryLayoutFrag
   letI gs : WasmSmallStepGS .hasLC α :=
     { toInvGS_gen := inv
       toWasmHeapGS := wasmHeapGS
@@ -3410,6 +3669,7 @@ theorem wasm_smallStep_heap_globals_segments_runtime_store_adequacy
       elementSegment := wasmElementSegmentGS
       exception := wasmExceptionGS
       tagTable := tagTableGS
+      memoryLayout := memoryLayoutGS
       runtime := runtimeGS
       hostEnv := hostEnvGS
       hostState := hostStateGS
@@ -3435,7 +3695,7 @@ theorem wasm_smallStep_heap_globals_segments_runtime_store_adequacy
       · iexact HtagTable
       · ipureintro
         exact List.prefix_rfl
-  isplitl [Hheap Hglobals HsegmentsAuth Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
+  isplitl [Hheap Hglobals HsegmentsAuth Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState HmemoryLayoutAuth Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
     iexists σ
     iexists globalσ
@@ -3445,7 +3705,7 @@ theorem wasm_smallStep_heap_globals_segments_runtime_store_adequacy
     iexists (PartialMap.singleton config.store.runtime.entry.id
       config.store.runtime.currentModule)
     iexists (∅ : WasmHostEnvMap (HostEnv α))
-    unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
+    unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN memoryLayoutAuth
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
     iframe ∗ #
     ipureintro
@@ -3686,6 +3946,25 @@ theorem wasm_smallStep_heap_globals_segments_tables_runtime_store_adequacy
   letI tagTableGS : WasmTagTableGS α :=
     { tagTableElem
       tagTableName }
+  letI memoryLayoutElem :
+      ElemG (WasmHeapGF α)
+        (Auth.AuthRF (OptionOF (Excl.ExclOF
+          (constOF (DiscreteO MemoryLayout))))) := by
+    exists 18
+  imod (iOwn_alloc (E := memoryLayoutElem)
+      (ExclAuth.auth
+          (⟨storeMemoryLayout config.store⟩ : DiscreteO MemoryLayout) •
+       ExclAuth.frag
+          (⟨storeMemoryLayout config.store⟩ : DiscreteO MemoryLayout))
+      ExclAuth.valid) with
+    ⟨%memoryLayoutName, HmemoryLayoutAll⟩
+  ihave HmemoryLayoutPair := iOwn_op.mp $$ HmemoryLayoutAll
+  icases HmemoryLayoutPair with
+    ⟨HmemoryLayoutAuth, HmemoryLayoutFrag⟩
+  letI memoryLayoutGS : WasmMemoryLayoutGS α :=
+    { memoryLayoutElem
+      memoryLayoutName }
+  iclear HmemoryLayoutFrag
   letI gs : WasmSmallStepGS .hasLC α :=
     { toInvGS_gen := inv
       toWasmHeapGS := wasmHeapGS
@@ -3695,6 +3974,7 @@ theorem wasm_smallStep_heap_globals_segments_tables_runtime_store_adequacy
       elementSegment := wasmElementSegmentGS
       exception := wasmExceptionGS
       tagTable := tagTableGS
+      memoryLayout := memoryLayoutGS
       runtime := runtimeGS
       hostEnv := hostEnvGS
       hostState := hostStateGS
@@ -3721,7 +4001,7 @@ theorem wasm_smallStep_heap_globals_segments_tables_runtime_store_adequacy
       · ipureintro
         exact List.prefix_rfl
   isplitl [Hheap Hglobals HsegmentsAuth HtablesAuth
-      HelementSegmentsAuth HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
+      HelementSegmentsAuth HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState HmemoryLayoutAuth Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
     iexists σ
     iexists globalσ
@@ -3731,7 +4011,7 @@ theorem wasm_smallStep_heap_globals_segments_tables_runtime_store_adequacy
     iexists (PartialMap.singleton config.store.runtime.entry.id
       config.store.runtime.currentModule)
     iexists (∅ : WasmHostEnvMap (HostEnv α))
-    unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
+    unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN memoryLayoutAuth
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
     iframe ∗ #
     ipureintro
@@ -4071,6 +4351,25 @@ theorem wasm_smallStep_heap_runtime_instance_adequacy
   letI tagTableGS : WasmTagTableGS α :=
     { tagTableElem
       tagTableName }
+  letI memoryLayoutElem :
+      ElemG (WasmHeapGF α)
+        (Auth.AuthRF (OptionOF (Excl.ExclOF
+          (constOF (DiscreteO MemoryLayout))))) := by
+    exists 18
+  imod (iOwn_alloc (E := memoryLayoutElem)
+      (ExclAuth.auth
+          (⟨storeMemoryLayout config.store⟩ : DiscreteO MemoryLayout) •
+       ExclAuth.frag
+          (⟨storeMemoryLayout config.store⟩ : DiscreteO MemoryLayout))
+      ExclAuth.valid) with
+    ⟨%memoryLayoutName, HmemoryLayoutAll⟩
+  ihave HmemoryLayoutPair := iOwn_op.mp $$ HmemoryLayoutAll
+  icases HmemoryLayoutPair with
+    ⟨HmemoryLayoutAuth, HmemoryLayoutFrag⟩
+  letI memoryLayoutGS : WasmMemoryLayoutGS α :=
+    { memoryLayoutElem
+      memoryLayoutName }
+  iclear HmemoryLayoutFrag
   letI gs : WasmSmallStepGS .hasLC α :=
     { toInvGS_gen := inv
       toWasmHeapGS := wasmHeapGS
@@ -4080,6 +4379,7 @@ theorem wasm_smallStep_heap_runtime_instance_adequacy
       elementSegment := wasmElementSegmentGS
       exception := wasmExceptionGS
       tagTable := tagTableGS
+      memoryLayout := memoryLayoutGS
       runtime := runtimeGS
       hostEnv := hostEnvGS
       hostState := hostStateGS
@@ -4105,7 +4405,7 @@ theorem wasm_smallStep_heap_runtime_instance_adequacy
       · iexact HtagTable
       · ipureintro
         exact List.prefix_rfl
-  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
+  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState HmemoryLayoutAuth Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
     iexists σ
     iexists (∅ : WasmGlobalMap Value)
@@ -4115,9 +4415,9 @@ theorem wasm_smallStep_heap_runtime_instance_adequacy
     iexists (PartialMap.singleton config.store.runtime.entry.id
       config.store.runtime.currentModule)
     iexists (∅ : WasmHostEnvMap (HostEnv α))
-    unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
+    unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN memoryLayoutAuth
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
-    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
+    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState HmemoryLayoutAuth Hexc
     ipureintro
     exact ⟨hagree, hinBounds, globalHeapAgrees_empty _,
       dataSegmentHeapAgrees_empty _,
@@ -4294,6 +4594,25 @@ theorem wasm_smallStep_heap_runtime_instances_adequacy
   letI tagTableGS : WasmTagTableGS α :=
     { tagTableElem
       tagTableName }
+  letI memoryLayoutElem :
+      ElemG (WasmHeapGF α)
+        (Auth.AuthRF (OptionOF (Excl.ExclOF
+          (constOF (DiscreteO MemoryLayout))))) := by
+    exists 18
+  imod (iOwn_alloc (E := memoryLayoutElem)
+      (ExclAuth.auth
+          (⟨storeMemoryLayout config.store⟩ : DiscreteO MemoryLayout) •
+       ExclAuth.frag
+          (⟨storeMemoryLayout config.store⟩ : DiscreteO MemoryLayout))
+      ExclAuth.valid) with
+    ⟨%memoryLayoutName, HmemoryLayoutAll⟩
+  ihave HmemoryLayoutPair := iOwn_op.mp $$ HmemoryLayoutAll
+  icases HmemoryLayoutPair with
+    ⟨HmemoryLayoutAuth, HmemoryLayoutFrag⟩
+  letI memoryLayoutGS : WasmMemoryLayoutGS α :=
+    { memoryLayoutElem
+      memoryLayoutName }
+  iclear HmemoryLayoutFrag
   letI gs : WasmSmallStepGS .hasLC α :=
     { toInvGS_gen := inv
       toWasmHeapGS := wasmHeapGS
@@ -4303,6 +4622,7 @@ theorem wasm_smallStep_heap_runtime_instances_adequacy
       elementSegment := wasmElementSegmentGS
       exception := wasmExceptionGS
       tagTable := tagTableGS
+      memoryLayout := memoryLayoutGS
       runtime := runtimeGS
       hostEnv := hostEnvGS
       hostState := hostStateGS
@@ -4330,7 +4650,7 @@ theorem wasm_smallStep_heap_runtime_instances_adequacy
       · iexact HtagTable
       · ipureintro
         exact List.prefix_rfl
-  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstancesState HinstanceState HhostEnvAuth HhostState Hexc]
+  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstancesState HinstanceState HhostEnvAuth HhostState HmemoryLayoutAuth Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
     iexists σ
     iexists (∅ : WasmGlobalMap Value)
@@ -4340,9 +4660,9 @@ theorem wasm_smallStep_heap_runtime_instances_adequacy
     iexists (PartialMap.singleton config.store.runtime.entry.id
       config.store.runtime.currentModule)
     iexists (∅ : WasmHostEnvMap (HostEnv α))
-    unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
+    unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN memoryLayoutAuth
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
-    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstancesState HinstanceState HhostEnvAuth HhostState Hexc
+    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstancesState HinstanceState HhostEnvAuth HhostState HmemoryLayoutAuth Hexc
     ipureintro
     exact ⟨hagree, hinBounds, globalHeapAgrees_empty _,
       dataSegmentHeapAgrees_empty _,

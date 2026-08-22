@@ -268,6 +268,13 @@ abbrev WasmElementSegmentMap := fun V => ExtTreeMap ElementSegmentKey V compare
 abbrev WasmRuntimeModuleMap := fun V => ExtTreeMap Nat V compare
 abbrev WasmHostEnvMap := fun V => ExtTreeMap Nat V compare
 abbrev WasmExceptionMap := fun V => ExtTreeMap Nat V compare
+/-- The physical facts controlling `memory.grow`.  They are tracked
+authoritatively because byte ownership alone only bounds memory from below. -/
+structure MemoryLayout where
+  pages : Nat
+  memoryCaps : List Nat
+  deriving DecidableEq
+
 abbrev WasmHeapGF (α : Type 0) : BundledGFunctors
   | 0 => ⟨InvMapF, by infer_instance⟩
   | 1 => ⟨constOF (DisjointLeibnizSet CoPset), by infer_instance⟩
@@ -297,6 +304,8 @@ abbrev WasmHeapGF (α : Type 0) : BundledGFunctors
       (HeapView Nat (Agree (DiscreteO (Nat × List Value)))
         WasmExceptionMap), by infer_instance⟩
   | 17 => ⟨constOF (Agree (DiscreteO (List Nat))), by infer_instance⟩
+  | 18 => ⟨Auth.AuthRF
+      (OptionOF (Excl.ExclOF (constOF (DiscreteO MemoryLayout)))), by infer_instance⟩
   | _ => ⟨constOF Unit, by infer_instance⟩
 -- Wire genHeapPreS (following HeapLang's instHeapLangGS_HeapLangS)
 instance instWasmHeapPreS (α : Type) :
@@ -394,13 +403,6 @@ class WasmHostStateGS (α : outParam Type) where
   hostStateName : GName
 
 attribute [reducible, instance] WasmHostStateGS.hostStateElem
-
-/-- The physical facts controlling `memory.grow`.  They are tracked
-authoritatively because byte ownership alone only bounds memory from below. -/
-structure MemoryLayout where
-  pages : Nat
-  memoryCaps : List Nat
-  deriving DecidableEq
 
 class WasmMemoryLayoutGS (α : outParam Type) where
   memoryLayoutElem :
