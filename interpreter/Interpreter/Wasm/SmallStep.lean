@@ -7600,6 +7600,397 @@ theorem safe_of_steps_to_done
   · obtain ⟨suffix, hdone⟩ := towardDone
     exact checked_ok_of_steps_to_done hdone
 
+/-! ### Frames with no normal exit left
+
+Every theorem above compares two executions that somebody has already
+exhibited. Nothing above says anything about a configuration no execution has
+been exhibited from — yet that is exactly what is needed to *refute* a
+specification: a callee may diverge, so there is no trapping trace to compare
+against, and determinism has nothing to work with.
+
+`Config.CannotComplete` is the invariant that fills the gap. It holds of a
+configuration whose outermost frame can no longer return normally, it is
+preserved by `Step`, and it is false of `⟨.done _, _⟩` — so by `Steps.invariant`
+no execution from such a configuration ever completes normally, whatever
+happens in between.
+
+The outermost frame is the one that decides: `finish` and `returnFromFunction`
+are the only two ways to produce `.done`, and both require an empty call stack.
+So the invariant tracks the last entry of `ThreadState.calls` when there is one
+and the running thread itself when there is not.
+
+Two side conditions are unavoidable, and each has a witness below rather than an
+assertion. `unreachable` has to be the *next* instruction the outermost frame
+will run, not merely present in its remaining code, because a branch jumps over
+it — `terminatesWith_of_branch_past_unreachable`. And the outermost frame's
+control stack has to be `PlainControl`, because `unwindExceptionCall` discards
+the caller's continuation outright, so a handler there can carry the machine
+past a pending `unreachable` — `terminatesWith_of_catch_past_unreachable`.
+-/
+
+/-- A control frame that can neither divert an exception nor be one: an
+ordinary block or loop. The counterpart of `ControlKind.isThrowing` — a
+`tryTable` may catch, and a `throwing` frame is an exception already in
+flight. -/
+def ControlKind.isPlain : ControlKind → Bool
+  | .block | .loop => true
+  | .tryTable _ => false
+  | .throwing _ _ => false
+
+/-- A control stack carrying no handler and no in-flight exception. -/
+def PlainControl : List ControlFrame → Prop
+  | [] => True
+  | frame :: outer => frame.kind.isPlain = true ∧ PlainControl outer
+
+@[simp] theorem PlainControl.nil : PlainControl ([] : List ControlFrame) := trivial
+
+/-- The frame that is currently executing has no normal exit left: either
+`unreachable` is the next instruction it will run, or an exception is already
+propagating out of it past a stack that cannot catch it. -/
+def FrameCannotComplete (code : Program) (control : List ControlFrame) : Prop :=
+  (∃ rest, code = .unreachable :: rest) ∨
+    (code = [] ∧ ∃ frame outer, control = frame :: outer ∧
+      frame.kind.isThrowing = true ∧ PlainControl outer)
+
+/-- The outermost suspended caller resumes into `unreachable`, behind a control
+stack that cannot divert an exception away from it. Only the last entry is
+constrained: everything nearer the top may return, trap or diverge freely. -/
+def CallsCannotComplete : List CallFrame → Prop
+  | [] => False
+  | [outermost] =>
+      (∃ rest, outermost.continuation = .unreachable :: rest) ∧
+        PlainControl outermost.control
+  | _ :: caller :: callers => CallsCannotComplete (caller :: callers)
+
+/-- The outermost frame of a thread has no normal exit left. -/
+def ThreadCannotComplete (thread : ThreadState α) : Prop :=
+  CallsCannotComplete thread.calls ∨
+    (thread.calls = [] ∧ FrameCannotComplete thread.code thread.control)
+
+/-- A configuration whose outermost frame has no normal exit left. A trapped
+configuration qualifies vacuously; a normally completed one never does. -/
+def Config.CannotComplete (config : Config α) : Prop :=
+  match config.expr with
+  | .running thread => ThreadCannotComplete thread
+  | .done _ => False
+  | .trapped _ => True
+
+/-- Entering a callee leaves the outermost frame where it was. -/
+theorem CallsCannotComplete.push (caller : CallFrame) {callers : List CallFrame}
+    (h : CallsCannotComplete callers) :
+    CallsCannotComplete (caller :: callers) := by
+  cases callers with
+  | nil => exact False.elim h
+  | cons _ _ => exact h
+
+/-- Returning either uncovers a still-suspended outermost caller, or reaches
+the outermost caller itself. -/
+theorem CallsCannotComplete.pop {caller : CallFrame} {callers : List CallFrame}
+    (h : CallsCannotComplete (caller :: callers)) :
+    CallsCannotComplete callers ∨
+      (callers = [] ∧ (∃ rest, caller.continuation = .unreachable :: rest) ∧
+        PlainControl caller.control) := by
+  cases callers with
+  | nil => exact .inr ⟨rfl, h.1, h.2⟩
+  | cons _ _ => exact .inl h
+
+/-- Resuming a caller installs its continuation, possibly with a suffix — the
+`memOp` administrative step resumes with the rest of the wrapped code appended,
+and `unreachable` at the head survives that. -/
+private theorem cannotComplete_resume {caller : CallFrame}
+    {callers : List CallFrame} (h : CallsCannotComplete (caller :: callers))
+    {code : Program} (suffix : Program)
+    (hcode : code = caller.continuation ++ suffix)
+    (locals : Locals) (arity : Nat) (remainder : List Value)
+    (store : MachineStore α) :
+    Config.CannotComplete
+      (⟨.running ⟨locals, code, arity, remainder, caller.control, callers⟩,
+        store⟩ : Config α) := by
+  subst hcode
+  rcases h.pop with hrest | ⟨rfl, ⟨rest, hcont⟩, -⟩
+  · exact .inl hrest
+  · exact .inr ⟨rfl, .inl ⟨rest ++ suffix, by rw [hcont]; rfl⟩⟩
+
+/-- An exception propagating out of the outermost callee throws the caller's
+continuation away, but lands on a stack with nothing left to catch it. -/
+private theorem cannotComplete_resumeException {caller : CallFrame}
+    {callers : List CallFrame} (h : CallsCannotComplete (caller :: callers))
+    {throwingFrame : ControlFrame}
+    (hthrow : throwingFrame.kind.isThrowing = true)
+    (locals : Locals) (arity : Nat) (remainder : List Value)
+    (store : MachineStore α) :
+    Config.CannotComplete
+      (⟨.running ⟨locals, [], arity, remainder,
+        throwingFrame :: caller.control, callers⟩, store⟩ : Config α) := by
+  rcases h.pop with hrest | ⟨rfl, _, hplain⟩
+  · exact .inl hrest
+  · exact .inr ⟨rfl, .inr ⟨rfl, throwingFrame, caller.control, rfl, hthrow, hplain⟩⟩
+
+/-- A thread whose next instruction is not `unreachable` can only be blocked by
+its call stack. -/
+private theorem callsCannotComplete_of_head {instruction : Instruction}
+    {locals : Locals} {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    {store : MachineStore α}
+    (blocked : Config.CannotComplete
+      (⟨.running ⟨locals, instruction :: code, arity, remainder, controls,
+        calls⟩, store⟩ : Config α))
+    (hne : instruction = .unreachable → False) :
+    CallsCannotComplete calls := by
+  rcases blocked with hcalls | ⟨-, hframe⟩
+  · exact hcalls
+  · rcases hframe with ⟨rest, hcode⟩ | ⟨hnil, -⟩
+    · injection hcode with hinstr htail
+      exact absurd hinstr hne
+    · exact absurd hnil (by simp)
+
+/-- Every step preserves the invariant. Most constructors leave the call stack
+alone and cannot be running `unreachable`; the ones that matter are the five
+that enter a callee, the five that leave one, the exception machinery, and
+`memOp`, whose nested step is decided by a second case analysis. -/
+theorem Config.CannotComplete.of_step {config next : Config α} {kind : StepKind}
+    (blocked : config.CannotComplete) (step : Step config kind next) :
+    next.CannotComplete := by
+  cases step
+  case unwindExceptionCall hthrow =>
+    rcases blocked with hcalls | ⟨hnil, -⟩
+    · exact cannotComplete_resumeException hcalls
+        (by rw [hthrow]; rfl) _ _ _ _
+    · exact absurd hnil (by simp)
+  case returnFromCallFallthrough =>
+    rcases blocked with hcalls | ⟨hnil, -⟩
+    · exact cannotComplete_resume hcalls [] (List.append_nil _).symm _ _ _ _
+    · exact absurd hnil (by simp)
+  case returnFromCallExplicit =>
+    rcases blocked with hcalls | ⟨hnil, -⟩
+    · exact cannotComplete_resume hcalls [] (List.append_nil _).symm _ _ _ _
+    · exact absurd hnil (by simp)
+  case returnFromCallCrossInstanceFallthrough =>
+    rcases blocked with hcalls | ⟨hnil, -⟩
+    · exact cannotComplete_resume hcalls [] (List.append_nil _).symm _ _ _ _
+    · exact absurd hnil (by simp)
+  case returnFromCallCrossInstanceExplicit =>
+    rcases blocked with hcalls | ⟨hnil, -⟩
+    · exact cannotComplete_resume hcalls [] (List.append_nil _).symm _ _ _ _
+    · exact absurd hnil (by simp)
+  case memOp =>
+    rename_i hinner _ hstep
+    rcases blocked with hcalls | ⟨-, hframe⟩
+    · cases hstep
+      case returnFromCallExplicit =>
+        exact cannotComplete_resume hcalls _ rfl _ _ _ _
+      case returnFromCallCrossInstanceExplicit =>
+        exact cannotComplete_resume hcalls _ rfl _ _ _ _
+      case call => exact .inl (CallsCannotComplete.push _ hcalls)
+      case callCrossInstance => exact .inl (CallsCannotComplete.push _ hcalls)
+      case callIndirect => exact .inl (CallsCannotComplete.push _ hcalls)
+      case callIndirectCrossInstance =>
+        exact .inl (CallsCannotComplete.push _ hcalls)
+      case callRef => exact .inl (CallsCannotComplete.push _ hcalls)
+      case memOp => exact Bool.noConfusion hinner
+      all_goals first
+        | trivial
+        | exact .inl hcalls
+    · exact absurd hframe (by simp [FrameCannotComplete])
+  case call => exact .inl (CallsCannotComplete.push _
+      (by simpa [Config.CannotComplete, ThreadCannotComplete,
+        FrameCannotComplete] using blocked))
+  case callCrossInstance => exact .inl (CallsCannotComplete.push _
+      (by simpa [Config.CannotComplete, ThreadCannotComplete,
+        FrameCannotComplete] using blocked))
+  case callIndirect => exact .inl (CallsCannotComplete.push _
+      (by simpa [Config.CannotComplete, ThreadCannotComplete,
+        FrameCannotComplete] using blocked))
+  case callIndirectCrossInstance => exact .inl (CallsCannotComplete.push _
+      (by simpa [Config.CannotComplete, ThreadCannotComplete,
+        FrameCannotComplete] using blocked))
+  case callRef => exact .inl (CallsCannotComplete.push _
+      (by simpa [Config.CannotComplete, ThreadCannotComplete,
+        FrameCannotComplete] using blocked))
+  case exitControl =>
+    rename_i hkind
+    refine .inl ?_
+    rcases blocked with hcalls | ⟨-, hframe⟩
+    · exact hcalls
+    · rcases hframe with ⟨rest, hcode⟩ | ⟨-, f, o, hctrl, hthrow, -⟩
+      · exact absurd hcode (by simp)
+      · injection hctrl with hf htail
+        subst hf
+        exact absurd hthrow (by simp [hkind])
+  case unwindExceptionFrame =>
+    rename_i hthrow hhandler
+    rcases blocked with hcalls | ⟨hnil, hframe⟩
+    · exact .inl hcalls
+    · refine .inr ⟨hnil, .inr ⟨rfl, _, _, rfl,
+        by simp [hthrow, ControlKind.isThrowing], ?_⟩⟩
+      rcases hframe with ⟨rest, hcode⟩ | ⟨-, f, o, hctrl, -, hplain⟩
+      · exact absurd hcode (by simp)
+      · injection hctrl with hf ho
+        subst ho
+        exact hplain.2
+  case unwindNestedException =>
+    rename_i hthrow hhandler
+    rcases blocked with hcalls | ⟨-, hframe⟩
+    · exact .inl hcalls
+    · exfalso
+      rcases hframe with ⟨rest, hcode⟩ | ⟨-, f, o, hctrl, -, hplain⟩
+      · exact absurd hcode (by simp)
+      · injection hctrl with hf ho
+        subst ho
+        exact absurd hplain.1 (by simp [hhandler, ControlKind.isPlain])
+  case catchException =>
+    rcases blocked with hcalls | ⟨-, hframe⟩
+    · exact .inl hcalls
+    · exfalso
+      rcases hframe with ⟨rest, hcode⟩ | ⟨-, f, o, hctrl, -, hplain⟩
+      · exact absurd hcode (by simp)
+      · injection hctrl with hf ho
+        subst ho
+        exact absurd hplain.1 (by simp [ControlKind.isPlain])
+  case scalarFloat0 =>
+    rename_i heval
+    exact .inl (callsCannotComplete_of_head blocked
+      (fun h => by subst h; exact absurd heval (by simp [evalScalarFloat0?])))
+  case scalarFloat1 =>
+    rename_i heval hresult
+    exact .inl (callsCannotComplete_of_head blocked
+      (fun h => by subst h; exact absurd hresult (by simp [evalScalarFloat1?])))
+  case scalarFloat2 =>
+    rename_i heval hunary hresult
+    exact .inl (callsCannotComplete_of_head blocked
+      (fun h => by subst h; exact absurd hresult (by simp [evalScalarFloat2?])))
+  case scalarTruncSuccess =>
+    rename_i hresult
+    exact .inl (callsCannotComplete_of_head blocked
+      (fun h => by subst h; exact absurd hresult (by simp [evalScalarTrunc?])))
+  all_goals first
+    | trivial
+    | exact .inl (by
+        simpa [Config.CannotComplete, ThreadCannotComplete, FrameCannotComplete]
+          using blocked)
+    | simp_all [Config.CannotComplete, ThreadCannotComplete, FrameCannotComplete,
+        CallsCannotComplete, ControlKind.isThrowing]
+
+/-- An invariant preserved by every step survives a whole finite trace. -/
+theorem Steps.invariant {P : Config α → Prop}
+    (preserved : ∀ {config next : Config α} {kind : StepKind},
+      P config → Step config kind next → P next)
+    {config final : Config α} {trace : List StepKind}
+    (execution : Steps config trace final) : P config → P final := by
+  induction execution with
+  | refl => exact id
+  | cons head _ ih => exact fun holds => ih (preserved holds head)
+
+/-- No execution from a configuration whose outermost frame has lost its normal
+exit ever completes normally. Unlike the determinism results above, this needs
+no second execution to compare against: the callee may diverge. -/
+theorem Config.CannotComplete.not_steps_to_done {config : Config α}
+    {trace : List StepKind} {values : List Value} {store : MachineStore α}
+    (blocked : config.CannotComplete)
+    (execution : Steps config trace ⟨.done values, store⟩) : False :=
+  Steps.invariant Config.CannotComplete.of_step execution blocked
+
+/-- Stepping the `call` of `call; unreachable` leaves the machine with no
+normal exit: a wasm callee is entered with the outermost caller resuming into
+`unreachable`, a returning host callee lands straight on it, a trapping host
+callee has already trapped, and a throwing one meets no handler. -/
+theorem cannotComplete_call_unreachable
+    {locals : Locals} {functionIndex arity : Nat} {remainder : List Value}
+    {rest : Program} {controls : List ControlFrame} {store : MachineStore α}
+    {kind : StepKind} {next : Config α}
+    (plain : PlainControl controls)
+    (step : Step
+      (⟨.running ⟨locals, .call functionIndex :: .unreachable :: rest,
+        arity, remainder, controls, []⟩, store⟩ : Config α) kind next) :
+    next.CannotComplete := by
+  cases step
+  case call => exact .inl ⟨⟨rest, rfl⟩, plain⟩
+  case callCrossInstance => exact .inl ⟨⟨rest, rfl⟩, plain⟩
+  case callHostReturn => exact .inr ⟨rfl, .inl ⟨rest, rfl⟩⟩
+  case callHostThrow =>
+    exact .inr ⟨rfl, .inr ⟨rfl, _, controls, rfl, rfl, plain⟩⟩
+  case callHostTrap => trivial
+  all_goals first
+    | trivial
+    | exact .inr ⟨rfl, .inl ⟨rest, rfl⟩⟩
+
+/-- `call` followed by `unreachable` in the outermost frame: no execution from
+there completes normally, whatever the callee does. The callee is not analysed
+at all — it may return, trap, throw, or run forever. -/
+theorem not_steps_to_done_of_call_unreachable
+    {locals : Locals} {functionIndex arity : Nat} {remainder : List Value}
+    {rest : Program} {controls : List ControlFrame} {store : MachineStore α}
+    {trace : List StepKind} {values : List Value} {doneStore : MachineStore α}
+    (plain : PlainControl controls)
+    (execution : Steps
+      (⟨.running ⟨locals, .call functionIndex :: .unreachable :: rest,
+        arity, remainder, controls, []⟩, store⟩ : Config α)
+      trace ⟨.done values, doneStore⟩) : False := by
+  cases execution with
+  | cons head tail =>
+      exact (cannotComplete_call_unreachable plain head).not_steps_to_done tail
+
+/-- A machine that reaches `call; unreachable` in its outermost frame satisfies
+no total-correctness specification at all. -/
+theorem not_terminatesWith_of_steps_to_call_unreachable
+    {initial : Config α} {trace : List StepKind}
+    {locals : Locals} {functionIndex arity : Nat} {remainder : List Value}
+    {rest : Program} {controls : List ControlFrame} {store : MachineStore α}
+    {post : List Value → MachineStore α → Prop}
+    (plain : PlainControl controls)
+    (reaches : Steps initial trace
+      ⟨.running ⟨locals, .call functionIndex :: .unreachable :: rest,
+        arity, remainder, controls, []⟩, store⟩) :
+    ¬ TerminatesWith initial post := by
+  rintro ⟨doneTrace, values, doneStore, execution, -⟩
+  rcases steps_comparable execution reaches with ⟨suffix, hsuffix⟩ | ⟨suffix, hsuffix⟩
+  · exact absurd (steps_from_done_eq hsuffix) (by simp)
+  · exact not_steps_to_done_of_call_unreachable plain hsuffix
+
+/-- The control-stack side condition is not decoration. `unwindExceptionCall`
+*discards* the caller's continuation, so a handler in the outermost frame can
+steer the machine past a pending `unreachable` and on to normal completion.
+This is the configuration reached by
+
+    (func (try_table (catch_all 0) (call $throws) (unreachable)))
+
+one step after `$throws` throws: the outermost caller's continuation is
+`[unreachable]`, and it is never executed. -/
+theorem terminatesWith_of_catch_past_unreachable
+    (store : MachineStore α) (locals : Locals) (tag : Nat)
+    (arguments : List Value) :
+    TerminatesWith
+      (⟨.running
+        ⟨locals, [], 0, [],
+          [{ kind := .throwing tag arguments, paramArity := 0, resultArity := 0,
+             body := [], continuation := [], belowStack := [] }],
+          [{ locals := ⟨[], [], []⟩, continuation := [.unreachable],
+             resultArity := 0, callerRemainder := [],
+             control :=
+               [{ kind := .tryTable [.catchAll 0], paramArity := 0,
+                  resultArity := 0, body := [], continuation := [],
+                  belowStack := [] }],
+             returningInstance := ⟨0⟩ }]⟩,
+        store⟩ : Config α)
+      (fun values _ => values = []) :=
+  ⟨_, _, _,
+    .cons (.unwindExceptionCall rfl)
+      (.cons (.catchException rfl rfl rfl) (.single .finish)),
+    rfl⟩
+
+/-- The other side condition, and why the first disjunct of
+`FrameCannotComplete` asks for `unreachable` at the *head* of the code rather
+than anywhere in it: a branch jumps over the rest of the frame, `unreachable`
+included, and lands on the function's normal exit. -/
+theorem terminatesWith_of_branch_past_unreachable
+    (store : MachineStore α) (params localValues values : List Value)
+    (remainder : List Value) (rest : Program) :
+    TerminatesWith
+      (⟨.running ⟨⟨params, localValues, values⟩, .br 0 :: .unreachable :: rest,
+        0, remainder, [], []⟩, store⟩ : Config α)
+      (fun results _ => results = remainder) :=
+  ⟨_, _, _, .cons (.br rfl) (.single .finish), rfl⟩
+
 theorem runSteps_success_partiallyMeets {fuel : Nat} {config : Config α}
     {values : List Value} {store : MachineStore α}
     (h : (runSteps fuel config).result = .success values store)
