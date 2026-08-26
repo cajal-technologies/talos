@@ -5,6 +5,7 @@ import Interpreter.Wasm.Continuation
 import Interpreter.Wasm.Semantics
 import Interpreter.Wasm.Semantics.Lemmas
 import Interpreter.Wasm.SmallStep
+import Interpreter.Wasm.Trace
 import Interpreter.Wasm.Host.Registry
 import Interpreter.Wasm.Host.StdIO
 import Interpreter.Wasm.Host.Random.Probability
