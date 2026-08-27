@@ -3290,6 +3290,8 @@ theorem twp_func3_allocate_scratch
     (final1 final3 final6 final5 final8 aux10 : UInt32)
     (hpositive : 0 < original.length)
     (hbyteBound : 4 * original.length < 2147483648)
+    (hfrontier : heapBase.toNat ≤ frontier)
+    (hvaluesEnd : valuesPtr.toNat + 4 * original.length ≤ frontier)
     {code : Program} {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame}
     {s : Stuckness} {E : CoPset}
@@ -3322,6 +3324,9 @@ theorem twp_func3_allocate_scratch
           LiveBlock heapId history.nextId scratch layout
             (List.replicate layout.size 0) -∗
           Streams [] [] false -∗
+          ⌜MemRegion.Disjoint
+            ⟨valuesPtr, 4 * original.length⟩
+            ⟨scratch, 4 * original.length⟩⌝ -∗
           ResumeWP [.i32 scratch] callerLocals [] code arity remainder controls
             calls s E Φ) ∧
         (DriverScratchOOM heapId original -∗
@@ -3419,11 +3424,19 @@ theorem twp_func3_allocate_scratch
         exact hpositive
       iframe
   | success scratch finish =>
+      have hscratchStart : frontier ≤ scratch.toNat :=
+        (classifyBump_success_reachable frontier layout scratch finish
+          hfrontier hlayoutValid (Or.inr rfl) hdecision).1
+      have hdisjoint : MemRegion.Disjoint
+          ⟨valuesPtr, 4 * original.length⟩
+          ⟨scratch, 4 * original.length⟩ :=
+        wordRegions_disjoint_of_order valuesPtr scratch original original
+          (Nat.le_trans hvaluesEnd hscratchStart)
       isplit
       · iintro Hruntime Hbump Hscratch Hstreams
         ihave Hnormal := BI.and_elim_l $$ Hcont
         ihave Hresume := Hnormal $$ %scratch %finish %rfl Hruntime Hsp Hreserve
-          Hframe Hvalues Hbump Hscratch Hstreams
+          Hframe Hvalues Hbump Hscratch Hstreams %hdisjoint
         iunfold ResumeWP
         simp only [resumeExpr, List.cons_append, List.nil_append]
         iexact Hresume
@@ -3437,6 +3450,116 @@ theorem twp_func3_allocate_scratch
         · ipureintro
           exact hpositive
         iframe
+
+/-- Frame both allocation tokens around the single generated `func2` call.
+The sort contract supplies the sorted-permutation fact and the precise
+piecewise scratch contents needed to reseal both complete live blocks. -/
+theorem twp_func3_sort
+    [WasmSmallStepGS hlc Universal.State]
+    (heapId : GName) (valuesId scratchId : Nat)
+    (valuesPtr scratchPtr source : UInt32)
+    (original : List UInt32)
+    (final1 final3 final6 final5 aux10 : UInt32)
+    (hdisjoint : MemRegion.Disjoint
+      ⟨valuesPtr, 4 * original.length⟩
+      ⟨scratchPtr, 4 * original.length⟩)
+    (hbyteBound : 4 * original.length < UInt32.size)
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → HeapIProp} :
+    let layout : AllocLayout :=
+      { size := 4 * original.length, alignment := 4 }
+    let scratchInitial := List.replicate original.length (0 : UInt32)
+    let scratchResult := fun sorted : List UInt32 =>
+      if original.length ≤ 1 then scratchInitial else sorted
+    iprop(
+      RuntimeContext ∗
+      LiveWordBlock heapId valuesId valuesPtr original ∗
+      LiveBlock heapId scratchId scratchPtr layout
+        (List.replicate layout.size 0) ∗
+      (∀ sorted : List UInt32,
+        RuntimeContext -∗
+        LiveWordBlock heapId valuesId valuesPtr sorted -∗
+        LiveWordBlock heapId scratchId scratchPtr (scratchResult sorted) -∗
+        ⌜SortedPermutation original sorted⌝ -∗
+        WP (.running
+          ⟨func3AppendLocals final1 final3 final6 valuesPtr source final5
+              (UInt32.ofNat (4 * original.length)) scratchPtr
+              (UInt32.ofNat original.length) aux10 [],
+            code, arity, remainder, controls, calls⟩ : Expr Universal.State)
+          @ s; E [{ Φ }])) ⊢
+      WP (.running
+        ⟨func3AppendLocals final1 final3 final6 valuesPtr source final5
+            (UInt32.ofNat (4 * original.length)) scratchPtr
+            (UInt32.ofNat original.length) aux10 [],
+          [.localGet 2, .localGet 9, .localGet 8, .localGet 9, .call 5] ++
+            code,
+          arity, remainder, controls, calls⟩ : Expr Universal.State)
+        @ s; E [{ Φ }] := by
+  dsimp only
+  let layout : AllocLayout :=
+    { size := 4 * original.length, alignment := 4 }
+  let scratchInitial := List.replicate original.length (0 : UInt32)
+  let scratchResult := fun sorted : List UInt32 =>
+    if original.length ≤ 1 then scratchInitial else sorted
+  iintro ⟨Hruntime, Hvalues, Hscratch, Hcont⟩
+  ihave HscratchWords :
+      LiveWordBlock heapId scratchId scratchPtr scratchInitial $$ [Hscratch]
+  · iapply (zeroLiveBlock_as_liveWordBlock heapId scratchId original.length
+      scratchPtr).mp $$ Hscratch
+  ihave Hfocus := LiveWordBlocks_sortFocus heapId valuesId scratchId valuesPtr
+    scratchPtr original scratchInitial (by simp [scratchInitial])
+    (by simpa [scratchInitial] using hdisjoint) $$ [Hvalues HscratchWords]
+  · iframe
+  icases Hfocus with ⟨Hbuffers, HcloseBuffers⟩
+  simp only [List.cons_append, List.nil_append, func3AppendLocals]
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  have Hsort := Project.Mergesort.ContractProofs.func2_correct
+    (hlc := hlc) (source := valuesPtr)
+    (n := UInt32.ofNat original.length) (scratch := scratchPtr)
+    (scratchN := UInt32.ofNat original.length)
+    (input := original) (scratchInput := scratchInitial)
+    (callerLocals := func3AppendLocals final1 final3 final6 valuesPtr source
+      final5 (UInt32.ofNat (4 * original.length)) scratchPtr
+      (UInt32.ofNat original.length) aux10 [])
+    (stack := []) (code := code) (arity := arity) (remainder := remainder)
+    (controls := controls) (calls := calls) (s := s) (E := E) (Φ := Φ)
+  unfold Func2Spec CallContract callExpr at Hsort
+  simp only [List.cons_append, List.nil_append, func3AppendLocals] at Hsort
+  iapply Hsort
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hbuffers]
+  · iexact Hbuffers
+  isplitl []
+  · ipureintro
+    have hcountBound : original.length < UInt32.size := by omega
+    simp [scratchInitial, UInt32.toNat_ofNat_of_lt' hcountBound]
+  iintro %sorted Hruntime Hresult
+  isimp only [SortResultBuffers] at Hresult
+  icases Hresult with ⟨Hbuffers, %hsorted⟩
+  have hsortedLength : sorted.length = original.length :=
+    hsorted.2.length_eq.symm
+  have hscratchLength : (scratchResult sorted).length = scratchInitial.length := by
+    simp only [scratchResult]
+    split
+    · rfl
+    · simp [scratchInitial, hsortedLength]
+  have hresultLengths :
+      sorted.length = original.length ∧
+        (scratchResult sorted).length = scratchInitial.length :=
+    ⟨hsortedLength, hscratchLength⟩
+  ihave Hblocks := HcloseBuffers $$ %sorted %(scratchResult sorted)
+    %hresultLengths Hbuffers
+  icases Hblocks with ⟨Hvalues, Hscratch⟩
+  ihave Hresume := Hcont $$ %sorted Hruntime Hvalues Hscratch %hsorted
+  iunfold ResumeWP
+  simp only [resumeExpr, List.nil_append]
+  iexact Hresume
 
 /-- All dynamic ownership and ghost state carried across a read-loop
 back-edge. -/
