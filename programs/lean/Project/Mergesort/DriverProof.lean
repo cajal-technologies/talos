@@ -114,6 +114,228 @@ private theorem twp_store64_zero
       (by simpa using h3) (by simpa using h4) (by simpa using h5)
       (by simpa using h6) (by simpa using h7))
 
+/-- Execute one generated chunk read through the proved `func10` contract.
+The surrounding driver loop keeps the Vec and output-slot ownership framed;
+only the stream and the 256-byte chunk region change. -/
+theorem twp_func3_read_chunk
+    [WasmSmallStepGS hlc Universal.State]
+    (heapId : GName) (capacity ptr : UInt32)
+    (initialized chunkBytes outputBytes input output : List UInt8)
+    (raised : Bool)
+    (params localValues : List Value)
+    {stack : List Value} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame} {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → HeapIProp}
+    (hlocal0 : (⟨params, localValues, stack⟩ : Locals).get 0 =
+      some (.i32 driverBase)) :
+    let count := min 256 input.length
+    iprop(
+      RuntimeContext ∗
+      Streams input output raised ∗
+      ExportFrame heapId capacity ptr initialized chunkBytes outputBytes ∗
+      (RuntimeContext -∗
+        Streams (input.drop count) output raised -∗
+        ExportFrame heapId capacity ptr initialized
+          (input.take count ++ chunkBytes.drop count) outputBytes -∗
+        ⌜count ≤ 256⌝ -∗
+        WP (.running
+          ⟨⟨params, localValues,
+              .i32 (UInt32.ofNat count) :: stack⟩,
+            code, arity, remainder, controls, calls⟩ : Expr Universal.State)
+          @ s; E [{ Φ }])) ⊢
+      WP (.running
+        ⟨⟨params, localValues, stack⟩,
+          [.localGet 0, .const 12, .add, .const 256, .call 13] ++ code,
+          arity, remainder, controls, calls⟩ : Expr Universal.State)
+        @ s; E [{ Φ }] := by
+  dsimp only
+  let count := min 256 input.length
+  iintro ⟨Hruntime, Hstreams, Hframe, Hcont⟩
+  isimp only [ExportFrame] at Hframe
+  icases Hframe with ⟨Hvec, Hchunk, Houtput, %hframeLengths⟩
+  simp only [List.cons_append, List.nil_append]
+  iapply twp_localGet hlocal0
+  iapply twp_const
+  iapply twp_add
+  rw [show 12 + driverBase = driverBase + 12 by decide]
+  iapply twp_const
+  have Hread := Project.Mergesort.ContractProofs.func10_correct (hlc := hlc)
+      (ptr := driverBase + 12) (requested := 256)
+      (buffer := chunkBytes) (input := input) (output := output)
+      (raised := raised)
+      (callerLocals := ⟨params, localValues, stack⟩) (stack := stack)
+      (code := code) (arity := arity) (remainder := remainder)
+      (controls := controls) (calls := calls) (s := s) (E := E) (Φ := Φ)
+  dsimp only at Hread
+  unfold CallContract callExpr at Hread
+  simp only [UInt32.reduceToNat, List.cons_append, List.nil_append] at Hread
+  iapply Hread
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hstreams]
+  · iexact Hstreams
+  isplitl [Hchunk]
+  · iexact Hchunk
+  isplitl []
+  · ipureintro
+    exact ⟨by simpa using hframeLengths.1.symm, by decide⟩
+  iintro Hruntime Hstreams Hchunk %hcount
+  ihave Hframe : ExportFrame heapId capacity ptr initialized
+      (input.take count ++ chunkBytes.drop count) outputBytes $$
+      [Hvec Hchunk Houtput]
+  · unfold ExportFrame
+    isplitl [Hvec]
+    · iexact Hvec
+    isplitl [Hchunk]
+    · iexact Hchunk
+    isplitl [Houtput]
+    · iexact Houtput
+    ipureintro
+    constructor
+    · have htake := List.length_take_le count input
+      simp [count, hframeLengths.1]
+    · exact hframeLengths.2
+  unfold ResumeWP resumeExpr
+  simp only [List.cons_append, List.nil_append]
+  iapply Hcont $$ Hruntime Hstreams Hframe
+  · ipureintro
+    exact hcount
+
+/-- Locals relevant to the read-loop append path.  The auxiliary slots are
+threaded explicitly so the lemma applies at every loop iteration. -/
+private def func3AppendLocals
+    (dataPtr current length aux2 aux4 aux5 aux7 aux8 aux9 aux10 : UInt32)
+    (values : List Value) : Locals :=
+  { locals :=
+      [.i32 driverBase, .i32 dataPtr, .i32 aux2, .i32 current,
+        .i32 aux4, .i32 aux5, .i32 length, .i32 aux7, .i32 aux8,
+        .i32 aux9, .i32 aux10]
+    values := values }
+
+/-- Copy a nonempty chunk into already-available Vec spare capacity and
+commit the new Vec length.  This is the success branch below the generated
+capacity guard; the reserve branch is handled separately through `Func1Spec`.
+-/
+theorem twp_func3_append_without_reserve
+    [WasmSmallStepGS hlc Universal.State]
+    (heapId : GName) (capacity dataPtr : UInt32)
+    (initialized current chunkTail outputBytes : List UInt8)
+    (hcurrent : 0 < current.length)
+    (hfits : current.length ≤ capacity.toNat - initialized.length)
+    (hnewLength : initialized.length + current.length < UInt32.size)
+    (aux2 aux4 aux5 aux7 aux8 aux9 aux10 : UInt32)
+    {stack : List Value} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame} {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → HeapIProp} :
+    iprop(
+      ExportFrame heapId capacity dataPtr initialized
+          (current ++ chunkTail) outputBytes ∗
+      (ExportFrame heapId capacity dataPtr (initialized ++ current)
+          (current ++ chunkTail) outputBytes -∗
+        WP (.running
+          ⟨func3AppendLocals dataPtr (UInt32.ofNat current.length)
+              (UInt32.ofNat (initialized ++ current).length)
+              aux2 aux4 aux5 aux7 aux8 aux9 aux10 stack,
+            code, arity, remainder, controls, calls⟩ : Expr Universal.State)
+          @ s; E [{ Φ }])) ⊢
+      WP (.running
+        ⟨func3AppendLocals dataPtr (UInt32.ofNat current.length)
+            (UInt32.ofNat initialized.length)
+            aux2 aux4 aux5 aux7 aux8 aux9 aux10 stack,
+          [.localGet 1, .localGet 6, .add,
+            .localGet 0, .const 12, .add,
+            .localGet 3, .memoryCopy,
+            .localGet 0, .localGet 6, .localGet 3, .add,
+            .localTee 6, .store32 8] ++ code,
+          arity, remainder, controls, calls⟩ : Expr Universal.State)
+        @ s; E [{ Φ }] := by
+  iintro ⟨Hframe, Hcont⟩
+  isimp only [ExportFrame] at Hframe
+  icases Hframe with ⟨Hvec, Hchunk, Houtput, %hframeLengths⟩
+  ihave Happend := VecU8_appendFocus heapId driverBase capacity dataPtr
+      initialized current hcurrent hfits $$ Hvec
+  icases Happend with
+    ⟨%oldChunk, %holdChunkLength, HoldChunk, HoldLength, HcloseVec⟩
+  icases (ByteSlice_append (driverBase + 12) current chunkTail).mp $$
+      Hchunk with ⟨Hcurrent, HchunkTail⟩
+  isimp only [Project.Mergesort.Representations.ByteSlice] at HoldChunk
+  icases HoldChunk with ⟨%holdChunkNowrap, HoldChunkBytes⟩
+  isimp only [Project.Mergesort.Representations.ByteSlice] at Hcurrent
+  icases Hcurrent with ⟨%hcurrentNowrap, HcurrentBytes⟩
+  simp only [List.cons_append, List.nil_append, func3AppendLocals]
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_add
+  iapply twp_localGet rfl
+  iapply twp_const
+  iapply twp_add
+  rw [show 12 + driverBase = driverBase + 12 by decide]
+  iapply twp_localGet rfl
+  have hcurrentWord : (UInt32.ofNat current.length).toNat = current.length :=
+    UInt32.toNat_ofNat_of_lt' (by omega)
+  rw [show UInt32.ofNat initialized.length + dataPtr =
+    dataPtr + UInt32.ofNat initialized.length by ac_rfl]
+  iapply twp_memoryCopy32 oldChunk current
+      (by simpa [hcurrentWord] using holdChunkLength)
+      (by simp [hcurrentWord])
+      (by simpa [hcurrentWord])
+      (by
+        rw [hcurrentWord, ← holdChunkLength]
+        exact holdChunkNowrap)
+      (by simpa [hcurrentWord] using hcurrentNowrap) $$
+      HcurrentBytes HoldChunkBytes
+  iintro HcurrentBytes HoldChunkBytes
+  ihave Hcurrent : Project.Mergesort.Representations.ByteSlice
+      (driverBase + 12) current $$ [HcurrentBytes]
+  · unfold Project.Mergesort.Representations.ByteSlice
+    iframe
+    ipureintro
+    exact hcurrentNowrap
+  ihave Hchunk : Project.Mergesort.Representations.ByteSlice
+      (driverBase + 12) (current ++ chunkTail) $$ [Hcurrent HchunkTail]
+  · iapply (ByteSlice_append (driverBase + 12) current chunkTail).mpr
+    iframe
+  ihave HnewBytes : Project.Mergesort.Representations.ByteSlice
+      (dataPtr + UInt32.ofNat initialized.length) current $$
+      [HoldChunkBytes]
+  · unfold Project.Mergesort.Representations.ByteSlice
+    iframe
+    ipureintro
+    rw [holdChunkLength] at holdChunkNowrap
+    exact holdChunkNowrap
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_add
+  have hlengthWord :
+      UInt32.ofNat current.length + UInt32.ofNat initialized.length =
+        UInt32.ofNat (initialized ++ current).length := by
+    rw [UInt32.add_comm,
+      Wasm.Examples.MergeSort.u32_ofNat_add hnewLength]
+    simp
+  rw [hlengthWord]
+  iapply twp_localTee
+      (locals' := func3AppendLocals dataPtr (UInt32.ofNat current.length)
+        (UInt32.ofNat (initialized ++ current).length)
+        aux2 aux4 aux5 aux7 aux8 aux9 aux10
+        (.i32 (UInt32.ofNat (initialized ++ current).length) ::
+          .i32 driverBase :: stack)) (by simp [func3AppendLocals])
+  simp only [func3AppendLocals]
+  iapply twp_store32 (UInt32.ofNat initialized.length)
+      (by decide) (by decide) (by decide) (by decide) $$ HoldLength
+  iintro HnewLength
+  ihave Hvec := HcloseVec $$ HnewBytes HnewLength
+  ihave Hframe : ExportFrame heapId capacity dataPtr
+      (initialized ++ current) (current ++ chunkTail) outputBytes $$
+      [Hvec Hchunk Houtput]
+  · unfold ExportFrame
+    iframe
+    ipureintro
+    exact hframeLengths
+  iapply Hcont $$ Hframe
+
 /-- Execute the generated `func3` prologue from raw entry ownership to the
 reviewed initialized-frame representation.  No allocator, host call, or
 driver semantic assumption is used here. -/
