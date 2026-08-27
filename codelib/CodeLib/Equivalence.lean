@@ -197,17 +197,6 @@ legacy `run` function. -/
 
 namespace SmallStep
 
-/-- Terminal outcomes observed by equivalence.  Traps remain structural and
-are not collapsed into divergence. -/
-inductive ObservableOutcome where
-  | done (values : List Value)
-  | trapped (reason : TrapReason)
-  deriving BEq, Repr
-
-def ObservableOutcome.toExpr : ObservableOutcome → Expr α
-  | .done values => .done values
-  | .trapped reason => .trapped reason
-
 /-- A finite authoritative trace reaches a particular terminal outcome. -/
 def Reaches (config : Config α)
     (outcome : ObservableOutcome) (store : MachineStore α) : Prop :=

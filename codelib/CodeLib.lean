@@ -39,7 +39,10 @@ import CodeLib.SepLogic.SmallStepLanguage
 import CodeLib.SepLogic.SmallStepState
 import CodeLib.SepLogic.SmallStepLifting
 import CodeLib.SepLogic.SmallStepTotalLifting
+import CodeLib.SepLogic.SmallStepOutcomeLanguage
+import CodeLib.SepLogic.SmallStepOutcomeExample
 import CodeLib.SepLogic.SmallStepAdequacy
+import CodeLib.SepLogic.SmallStepOutcomeAdequacy
 import CodeLib.Examples.MergeSort.TotalProof
 import CodeLib.Examples.Quicksort.TotalProof
 import CodeLib.Examples.SelectionSort.StdIOProof
