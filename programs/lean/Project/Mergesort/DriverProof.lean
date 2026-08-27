@@ -4263,6 +4263,8 @@ theorem twp_func3_deallocate_input
           initialized.length ≤ capacity.toNat ∧
           allBytes = initialized ++ spare ∧
           spare.length = capacity.toNat - initialized.length ∧
+          (exportFrameBytes capacity inputPtr initialized chunkBytes
+            outputBytes).length = 272 ∧
           get? history.records allocationId =
             some (liveMeta inputPtr layout)⌝ -∗
         RuntimeContext -∗
@@ -4384,7 +4386,7 @@ theorem twp_func3_deallocate_input
     ispecialize Hcont $$ %allocationId %allBytes %spare
     ispecialize Hcont $$
       %⟨hstorage.1, hstorage.2.1, hstorage.2.2.1,
-        hstorage.2.2.2, hlookup⟩
+        hstorage.2.2.2, _hframeLength, hlookup⟩
     iapply Hcont $$ Hruntime Hbump HframeBytes
 
 /-- Exact generated epilogue restoring the exported shadow-stack pointer. -/
@@ -4593,6 +4595,215 @@ private theorem completedDriverHistory_allRetired
         rw [get?_insert_ne hscratchId] at hlookup
         rw [get?_insert_ne hvaluesId] at hlookup
         exact hothers allocationId metadata hlookup (Ne.symm hinputId)
+
+/-- Exact cleanup sequence following the generated output block. -/
+private def func3NonemptyCleanup : Program :=
+  [.block 0 0 func3ValuesDeallocBlockBody,
+    .block 0 0 func3ScratchDeallocBlockBody] ++ func3InputDeallocTail
+
+private def func3CleanupOuterFrame (driverBody : Program) : ControlFrame :=
+  { kind := .block, paramArity := 0, resultArity := 0,
+    body := driverBody, continuation := func3RestoreStackTail,
+    belowStack := [] }
+
+/-- Compose all three logical retirements with shadow-stack restoration on a
+normal nonempty execution.  The result is exactly `DriverSuccess`; allocator
+identities and the final `AllRetired` fact are derived from the concrete
+history transitions performed by the three proved deallocation calls. -/
+theorem twp_func3_finish_nonempty
+    [WasmSmallStepGS hlc Universal.State]
+    (heapId : GName) (original sorted scratchValues : List UInt32)
+    (capacity inputPtr valuesPtr scratchPtr : UInt32)
+    (valuesId scratchId : Nat)
+    (chunkBytes outputBytes reserveBytes : List UInt8)
+    (storedCursor : UInt32) (frontier : Nat)
+    (inputHistory : AllocationHistory)
+    (outputCursor : UInt32)
+    (hsorted : SortedPermutation original sorted)
+    (hpositive : 0 < original.length)
+    (hscratchLength : scratchValues.length = sorted.length)
+    (hgeo : GeometricVecFacts (serialize original).length
+      (serialize original).length 0 capacity inputPtr frontier inputHistory)
+    (hvaluesId : valuesId = inputHistory.nextId)
+    (hscratchId : scratchId = inputHistory.nextId + 1)
+    (hbyteBound : 4 * original.length < UInt32.size)
+    (driverBody : Program)
+    {calls : List CallFrame} {s : Stuckness} {E : CoPset}
+    {Phi : ObservableOutcome → HeapIProp} :
+    let workLayout : AllocLayout :=
+      { size := 4 * original.length, alignment := 4 }
+    let scratchHistory :=
+      (inputHistory.allocate valuesPtr workLayout).allocate scratchPtr workLayout
+    let locals :=
+      func3AppendLocals (UInt32.ofNat sorted.length) outputCursor 0 valuesPtr
+        inputPtr 0 (UInt32.ofNat (4 * sorted.length)) scratchPtr
+        (UInt32.ofNat sorted.length) (UInt32.ofNat (4 * sorted.length)) []
+    iprop(
+      RuntimeContext ∗
+      StackPointer driverBase ∗
+      StackReserve reserveBase reserveBytes ∗
+      ExportFrame heapId capacity inputPtr (serialize original) chunkBytes
+        outputBytes ∗
+      LiveWordBlock heapId valuesId valuesPtr sorted ∗
+      LiveWordBlock heapId scratchId scratchPtr scratchValues ∗
+      BumpHeap heapId storedCursor frontier scratchHistory ∗
+      Streams [] (serialize sorted) false ∗
+      (RuntimeContext -∗
+        DriverSuccess heapId original -∗
+        WP (.running
+          ⟨func3AppendLocals (UInt32.ofNat sorted.length) capacity 0
+              valuesPtr inputPtr 0 (UInt32.ofNat (4 * sorted.length))
+              scratchPtr (UInt32.ofNat sorted.length)
+              (UInt32.ofNat (4 * sorted.length)) [],
+            [], 0, [], [], calls⟩ : Expr Universal.State)
+          @ s; E [{ Phi }])) ⊢
+      WP (.running
+        ⟨locals, func3NonemptyCleanup, 0, [],
+          [func3CleanupOuterFrame driverBody],
+          calls⟩ : Expr Universal.State) @ s; E [{ Phi }] := by
+  dsimp only
+  let workLayout : AllocLayout :=
+    { size := 4 * original.length, alignment := 4 }
+  let valuesHistory := inputHistory.allocate valuesPtr workLayout
+  let scratchHistory := valuesHistory.allocate scratchPtr workLayout
+  let afterValues := scratchHistory.retire valuesId valuesPtr workLayout
+  let beforeInput := afterValues.retire scratchId scratchPtr workLayout
+  let locals :=
+    func3AppendLocals (UInt32.ofNat sorted.length) outputCursor 0 valuesPtr
+      inputPtr 0 (UInt32.ofNat (4 * sorted.length)) scratchPtr
+      (UInt32.ofNat sorted.length) (UInt32.ofNat (4 * sorted.length)) []
+  have hsortedLength : sorted.length = original.length :=
+    hsorted.2.length_eq.symm
+  have hsortedPositive : 0 < sorted.length := by
+    rw [hsortedLength]
+    exact hpositive
+  have hcapacityPositive : 0 < capacity.toNat := by
+    rcases hgeo with hempty | hshort | hlarge
+    · have hzero := hempty.2.2.1
+      rw [serialize_length] at hzero
+      omega
+    · rcases hshort with ⟨_, _, _, hcapacity, _, _, _⟩
+      rw [hcapacity]
+      omega
+    · rcases hlarge with ⟨exponent, _, _, hcapacity, _, _, _, _, _⟩
+      rw [hcapacity]
+      exact Nat.pow_pos (by omega)
+  have hsortedByteBound : 4 * sorted.length < UInt32.size := by
+    simpa only [hsortedLength] using hbyteBound
+  have hscratchId' : scratchId = valuesHistory.nextId := by
+    simp [valuesHistory, AllocationHistory.allocate, hscratchId]
+  have hscratchHistory : scratchHistory =
+      (inputHistory.allocate valuesPtr workLayout).allocate scratchPtr
+        workLayout := rfl
+  have hbeforeInput : beforeInput =
+      completedDriverBeforeInputHistory inputHistory valuesPtr scratchPtr
+        workLayout := by
+    simp [beforeInput, afterValues, scratchHistory, valuesHistory,
+      completedDriverBeforeInputHistory, hvaluesId, hscratchId]
+  iintro ⟨Hruntime, Hsp, Hreserve, Hframe, Hvalues, Hscratch, Hbump,
+    Hstreams, Hcont⟩
+  have HvaluesCleanup := twp_func3_deallocate_values
+    (hlc := hlc) heapId valuesId valuesPtr sorted storedCursor frontier
+    scratchHistory outputCursor 0 inputPtr 0
+    (UInt32.ofNat (4 * sorted.length)) scratchPtr
+    (UInt32.ofNat (4 * sorted.length)) hsortedPositive hsortedByteBound
+    (afterValues :=
+      [.block 0 0 func3ScratchDeallocBlockBody] ++ func3InputDeallocTail)
+    (arity := 0) (remainder := [])
+    (controls := [func3CleanupOuterFrame driverBody])
+    (calls := calls) (s := s) (E := E) (Φ := Phi)
+  simp only [func3NonemptyCleanup, func3AppendLocals,
+    List.cons_append, List.nil_append] at HvaluesCleanup ⊢
+  iapply HvaluesCleanup
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hbump]
+  · iexact Hbump
+  isplitl [Hvalues]
+  · iexact Hvalues
+  iintro Hruntime Hbump
+  have HscratchCleanup := twp_func3_deallocate_scratch
+    (hlc := hlc) heapId scratchId scratchPtr valuesPtr sorted scratchValues
+    storedCursor frontier afterValues outputCursor 0 inputPtr
+    (UInt32.ofNat (4 * sorted.length)) hscratchLength hsortedByteBound
+    (afterScratch := func3InputDeallocTail) (arity := 0) (remainder := [])
+    (controls := [func3CleanupOuterFrame driverBody])
+    (calls := calls) (s := s) (E := E) (Φ := Phi)
+  simp only [func3AppendLocals, List.cons_append, List.nil_append]
+    at HscratchCleanup ⊢
+  iapply HscratchCleanup
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hbump]
+  · isimp only [afterValues, workLayout, hsortedLength] at Hbump
+    iexact Hbump
+  isplitl [Hscratch]
+  · iexact Hscratch
+  iintro Hruntime Hbump
+  have HinputCleanup := twp_func3_deallocate_input
+    (hlc := hlc) heapId capacity inputPtr (serialize original) chunkBytes
+    outputBytes storedCursor frontier beforeInput
+    (UInt32.ofNat sorted.length) outputCursor 0 valuesPtr 0
+    (UInt32.ofNat (4 * sorted.length)) scratchPtr
+    (UInt32.ofNat sorted.length) (UInt32.ofNat (4 * sorted.length))
+    hcapacityPositive driverBody func3RestoreStackTail
+    (arity := 0) (remainder := []) (controls := []) (calls := calls)
+    (s := s) (E := E) (Phi := Phi)
+  simp only [func3AppendLocals, func3CleanupOuterFrame] at HinputCleanup ⊢
+  iapply HinputCleanup
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hframe]
+  · iexact Hframe
+  isplitl [Hbump]
+  · isimp only [beforeInput, afterValues, workLayout, hsortedLength]
+      at Hbump
+    iexact Hbump
+  iintro %inputId %allBytes %spare %hinput Hruntime Hbump HframeBytes
+  have hallRetired : AllRetired
+      (beforeInput.retire inputId inputPtr
+        { size := capacity.toNat, alignment := 1 }) := by
+    rw [hbeforeInput]
+    apply completedDriverHistory_allRetired
+      (serialize original).length capacity inputPtr valuesPtr scratchPtr
+      frontier inputHistory inputId workLayout
+    · rw [serialize_length]
+      omega
+    · exact hgeo
+    · rw [← hbeforeInput]
+      exact hinput.2.2.2.2.2
+  have Hrestore := twp_func3_restore_stack reserveBytes
+    (exportFrameBytes capacity inputPtr (serialize original) chunkBytes
+      outputBytes)
+    (UInt32.ofNat sorted.length) capacity 0 valuesPtr inputPtr 0
+    (UInt32.ofNat (4 * sorted.length)) scratchPtr
+    (UInt32.ofNat sorted.length) (UInt32.ofNat (4 * sorted.length))
+    hinput.2.2.2.2.1
+    [] (arity := 0) (remainder := []) (controls := []) (calls := calls)
+    (s := s) (E := E) (Phi := Phi)
+  simp only [List.append_nil, func3AppendLocals] at Hrestore ⊢
+  iapply Hrestore
+  isplitl [Hsp]
+  · iexact Hsp
+  isplitl [Hreserve]
+  · iexact Hreserve
+  isplitl [HframeBytes]
+  · iexact HframeBytes
+  iintro Hsp Hstack %hstackLength
+  ihave Hsuccess : DriverSuccess heapId original $$
+      [Hsp Hstack Hbump Hstreams]
+  · unfold DriverSuccess
+    iexists sorted, reserveBytes ++
+      exportFrameBytes capacity inputPtr (serialize original) chunkBytes
+        outputBytes,
+      storedCursor, frontier,
+      beforeInput.retire inputId inputPtr
+        { size := capacity.toNat, alignment := 1 }
+    isplitl []
+    · ipureintro
+      exact ⟨hsorted, hstackLength, hallRetired⟩
+    · iframe
+  iapply Hcont $$ Hruntime Hsuccess
 
 /-- All dynamic ownership and ghost state carried across a read-loop
 back-edge. -/
