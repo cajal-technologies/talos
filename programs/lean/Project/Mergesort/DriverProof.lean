@@ -3704,6 +3704,211 @@ theorem twp_func3_write_one
   simp only [resumeExpr, List.nil_append]
   iexact Hresume
 
+/-- Exact body of the generated loop which serializes each sorted word through
+the reusable four-byte output slot. -/
+private def func3OutputLoopBody : Program :=
+  [.localGet 0, .localGet 3, .load32 0, .store32 268,
+    .localGet 0, .const 268, .add, .const 4, .call 14,
+    .localGet 3, .const 4, .add, .localSet 3,
+    .localGet 6, .const 4294967292, .add, .localTee 6, .br_if 0]
+
+/-- Exact driver locals at the head of an output-loop iteration.  `emitted`
+determines both the source cursor and the byte countdown; all other generated
+temporaries are threaded unchanged. -/
+private def func3OutputLocals
+    (valuesPtr : UInt32) (sorted : List UInt32)
+    (aux1 aux4 aux5 aux7 aux8 aux10 : UInt32) (emitted : Nat) : Locals :=
+  func3AppendLocals aux1
+    (valuesPtr + 4 * UInt32.ofNat emitted)
+    (UInt32.ofNat (4 * (sorted.length - emitted)))
+    valuesPtr aux4 aux5 aux7 aux8 (UInt32.ofNat sorted.length) aux10 []
+
+private theorem func3_output_countdown_step
+    {length emitted : Nat} (hemitted : emitted < length) :
+    UInt32.ofNat (4 * (length - emitted)) + 4294967292 =
+      UInt32.ofNat (4 * (length - (emitted + 1))) := by
+  have hsub := func3_decode_sub_four (length - emitted) (by omega)
+  rw [show 4 * (length - emitted) - 4 =
+      4 * (length - (emitted + 1)) by omega] at hsub
+  exact hsub
+
+/-- The generated output loop emits precisely the canonical serialization of
+the sorted array.  This is a partial-correctness loop rule: it identifies the
+normal state after the loop without asserting that execution terminates. -/
+theorem twp_func3_output_loop
+    [WasmSmallStepGS hlc Universal.State]
+    (heapId : GName) (valuesId : Nat)
+    (capacity inputPtr valuesPtr : UInt32)
+    (input chunkBytes outputBytes : List UInt8)
+    (sorted : List UInt32)
+    (aux1 aux4 aux5 aux7 aux8 aux10 : UInt32)
+    (hpositive : 0 < sorted.length)
+    (hbyteBound : 4 * sorted.length < UInt32.size)
+    {afterLoop : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → HeapIProp} :
+    iprop(
+      RuntimeContext ∗
+      ExportFrame heapId capacity inputPtr input chunkBytes outputBytes ∗
+      LiveWordBlock heapId valuesId valuesPtr sorted ∗
+      Streams [] [] false ∗
+      (∀ finalOutput : List UInt8,
+        RuntimeContext -∗
+        ExportFrame heapId capacity inputPtr input chunkBytes finalOutput -∗
+        LiveWordBlock heapId valuesId valuesPtr sorted -∗
+        Streams [] (serialize sorted) false -∗
+        WP (.running
+          ⟨func3OutputLocals valuesPtr sorted aux1 aux4 aux5 aux7 aux8 aux10
+              sorted.length,
+            afterLoop, arity, remainder, controls, calls⟩ :
+              Expr Universal.State)
+          @ s; E [{ Φ }])) ⊢
+      WP (.running
+        ⟨func3OutputLocals valuesPtr sorted aux1 aux4 aux5 aux7 aux8 aux10 0,
+          [.loop 0 0 func3OutputLoopBody] ++ afterLoop,
+          arity, remainder, controls, calls⟩ : Expr Universal.State)
+        @ s; E [{ Φ }] := by
+  let Finish : HeapIProp := iprop(
+    ∀ finalOutput : List UInt8,
+      RuntimeContext -∗
+      ExportFrame heapId capacity inputPtr input chunkBytes finalOutput -∗
+      LiveWordBlock heapId valuesId valuesPtr sorted -∗
+      Streams [] (serialize sorted) false -∗
+      WP (.running
+        ⟨func3OutputLocals valuesPtr sorted aux1 aux4 aux5 aux7 aux8 aux10
+            sorted.length,
+          afterLoop, arity, remainder, controls, calls⟩ :
+            Expr Universal.State)
+        @ s; E [{ Φ }])
+  let Inv : Nat → HeapIProp := fun emitted => iprop(
+    ⌜emitted < sorted.length⌝ ∗
+    ∃ frameOutput : List UInt8,
+      RuntimeContext ∗
+      ExportFrame heapId capacity inputPtr input chunkBytes frameOutput ∗
+      LiveWordBlock heapId valuesId valuesPtr sorted ∗
+      Streams [] (serialize (sorted.take emitted)) false ∗
+      Finish)
+  iintro ⟨Hruntime, Hframe, Hvalues, Hstreams, Hfinish⟩
+  simp only [List.cons_append, List.nil_append]
+  iapply Project.Mergesort.SortProof.twp_loop_wf_family_from_terminal
+    (ι := Nat)
+    (measure := fun emitted => sorted.length - emitted)
+    (locals := func3OutputLocals valuesPtr sorted aux1 aux4 aux5 aux7 aux8
+      aux10)
+    (I := Inv) (initial := 0)
+    (initialLocals := func3OutputLocals valuesPtr sorted aux1 aux4 aux5 aux7
+      aux8 aux10 0)
+    (body := func3OutputLoopBody) (code := afterLoop)
+    (belowStack := []) rfl rfl
+  · intro emitted
+    simp only [Inv, Wasm.SmallStep.loopBodyExpr]
+    iintro Hrec Hinv
+    icases Hinv with
+      ⟨%hemitted, %frameOutput, Hruntime, Hframe, Hvalues, Hstreams, Hfinish⟩
+    isimp only [LiveWordBlock] at Hvalues
+    icases Hvalues with ⟨Htoken, Hwords, %hnonnull⟩
+    have hcountdown := func3_output_countdown_step hemitted
+    have hstreamStep :
+        serialize (sorted.take emitted) ++ serialize [sorted[emitted]] =
+          serialize (sorted.take (emitted + 1)) := by
+      rw [← serialize_append,
+        ← Wasm.Examples.MergeSort.take_succ_eq_append_getElem hemitted]
+    have Hwrite := twp_func3_write_one
+      (hlc := hlc) heapId capacity inputPtr valuesPtr input chunkBytes
+      frameOutput sorted emitted aux1
+      (UInt32.ofNat (4 * (sorted.length - emitted))) aux4 aux5 aux7 aux8
+      aux10 hemitted
+      (code := func3OutputLoopBody.drop 9)
+      (arity := arity) (remainder := remainder)
+      (controls :=
+        { kind := .loop, paramArity := 0, resultArity := 0,
+          body := func3OutputLoopBody, continuation := afterLoop,
+          belowStack := [] } :: controls)
+      (calls := calls) (s := s) (E := E) (Φ := Φ)
+    simp only [func3OutputLoopBody, func3OutputLocals, func3AppendLocals,
+      List.drop, List.cons_append, List.nil_append] at Hwrite ⊢
+    iapply Hwrite
+    isplitl [Hruntime]
+    · iexact Hruntime
+    isplitl [Hframe]
+    · iexact Hframe
+    isplitl [Hwords]
+    · iexact Hwords
+    isplitl [Hstreams]
+    · iexact Hstreams
+    iintro Hruntime Hframe Hwords Hstreams
+    iapply twp_localGet rfl
+    iapply twp_const
+    iapply twp_add
+    rw [UInt32.add_comm (4 : UInt32), func3_decode_next_address]
+    iapply twp_localSet rfl
+    simp only [List.length, List.set]
+    iapply twp_localGet rfl
+    iapply twp_const
+    iapply twp_add
+    rw [UInt32.add_comm (4294967292 : UInt32), hcountdown]
+    iapply twp_localTee rfl
+    simp only [List.length, List.set]
+    ihave Hvalues : LiveWordBlock heapId valuesId valuesPtr sorted $$
+        [Htoken Hwords]
+    · unfold LiveWordBlock
+      iframe
+      ipureintro
+      exact hnonnull
+    by_cases hmore : emitted + 1 < sorted.length
+    · have hnonzero :
+          UInt32.ofNat (4 * (sorted.length - (emitted + 1))) ≠ 0 := by
+        intro hzero
+        have hzeroNat := congrArg UInt32.toNat hzero
+        rw [UInt32.toNat_ofNat_of_lt' (by omega)] at hzeroNat
+        simp only [UInt32.toNat_zero] at hzeroNat
+        omega
+      iapply twp_brIf
+        (condition := UInt32.ofNat (4 * (sorted.length - (emitted + 1))))
+        (depth := 0) (arity := arity) (code := [])
+        (targetCode := func3OutputLoopBody)
+        (targetControl :=
+          { kind := .loop, paramArity := 0, resultArity := 0,
+            body := func3OutputLoopBody, continuation := afterLoop,
+            belowStack := [] } :: controls)
+        (targetValues := []) hnonzero (by rfl)
+      ispecialize Hrec $$ %(emitted + 1)
+      simp only [func3OutputLoopBody]
+      iapply Hrec
+      · ipureintro
+        omega
+      isplitr
+      · ipureintro
+        exact hmore
+      iexists (serialize [sorted[emitted]])
+      isimp only [hstreamStep] at Hstreams
+      iframe
+    · have hdone : emitted + 1 = sorted.length := by omega
+      have hzero :
+          UInt32.ofNat (4 * (sorted.length - (emitted + 1))) = 0 := by
+        simp [hdone]
+      rw [hzero]
+      iapply twp_brIfZero
+      iapply twp_exitControl rfl
+      simp only [List.take_zero, List.nil_append]
+      have hfinalCountdown :
+          UInt32.ofNat (4 * (sorted.length - sorted.length)) = 0 := by
+        simp
+      isimp only [Finish, func3OutputLocals, func3AppendLocals] at Hfinish
+      isimp only [hfinalCountdown] at Hfinish
+      isimp only [hstreamStep, hdone, List.take_length] at Hstreams
+      rw [hdone]
+      iapply Hfinish $$ %(serialize [sorted[emitted]]) Hruntime Hframe Hvalues
+        Hstreams
+  · simp only [Inv, Finish, List.take_zero, serialize, WordCodec.serialize,
+      List.flatMap_nil]
+    isplitr
+    · ipureintro
+      exact hpositive
+    iexists outputBytes
+    iframe
+
 /-- All dynamic ownership and ghost state carried across a read-loop
 back-edge. -/
 private structure Func3ReadLoopState where
