@@ -3561,6 +3561,149 @@ theorem twp_func3_sort
   simp only [resumeExpr, List.nil_append]
   iexact Hresume
 
+/-- Emit one sorted word through the driver's reusable four-byte frame slot.
+The source read is justified by the loop index, the slot is reassembled with
+the singleton canonical serialization, and `func11` appends exactly it. -/
+theorem twp_func3_write_one
+    [WasmSmallStepGS hlc Universal.State]
+    (heapId : GName) (capacity inputPtr valuesPtr : UInt32)
+    (input chunkBytes outputBytes : List UInt8)
+    (sorted : List UInt32) (emitted : Nat)
+    (aux1 aux6 aux4 aux5 aux7 aux8 aux10 : UInt32)
+    (hemitted : emitted < sorted.length)
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → HeapIProp} :
+    iprop(
+      RuntimeContext ∗
+      ExportFrame heapId capacity inputPtr input chunkBytes outputBytes ∗
+      WordSlice valuesPtr sorted ∗
+      Streams [] (serialize (sorted.take emitted)) false ∗
+      (RuntimeContext -∗
+        ExportFrame heapId capacity inputPtr input chunkBytes
+          (serialize [sorted[emitted]]) -∗
+        WordSlice valuesPtr sorted -∗
+        Streams []
+          (serialize (sorted.take emitted) ++ serialize [sorted[emitted]])
+          false -∗
+        WP (.running
+          ⟨func3AppendLocals aux1
+              (valuesPtr + 4 * UInt32.ofNat emitted) aux6 valuesPtr aux4 aux5
+              aux7 aux8 (UInt32.ofNat sorted.length) aux10 [],
+            code, arity, remainder, controls, calls⟩ : Expr Universal.State)
+          @ s; E [{ Φ }])) ⊢
+      WP (.running
+        ⟨func3AppendLocals aux1
+            (valuesPtr + 4 * UInt32.ofNat emitted) aux6 valuesPtr aux4 aux5
+            aux7 aux8 (UInt32.ofNat sorted.length) aux10 [],
+          [.localGet 0, .localGet 3, .load32 0, .store32 268,
+            .localGet 0, .const 268, .add, .const 4, .call 14] ++ code,
+          arity, remainder, controls, calls⟩ : Expr Universal.State)
+        @ s; E [{ Φ }] := by
+  iintro ⟨Hruntime, Hframe, Hvalues, Hstreams, Hcont⟩
+  isimp only [ExportFrame] at Hframe
+  icases Hframe with ⟨Hvec, Hchunk, Houtput, %hframeLengths⟩
+  ihave HvalueFacts := WordSlice_facts valuesPtr sorted $$ Hvalues
+  icases HvalueFacts with ⟨Hvalues, %hvalueFacts⟩
+  have haddress :
+      (valuesPtr + 4 * UInt32.ofNat emitted).toNat =
+        valuesPtr.toNat + 4 * emitted :=
+    wordOffset_toNat valuesPtr emitted (by omega)
+  have hroom :
+      (valuesPtr + 4 * UInt32.ofNat emitted).toNat + 4 ≤ UInt32.size := by
+    rw [haddress]
+    omega
+  have h1 :
+      (valuesPtr + 4 * UInt32.ofNat emitted + 1).toNat =
+        (valuesPtr + 4 * UInt32.ofNat emitted).toNat + 1 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap
+      (valuesPtr + 4 * UInt32.ofNat emitted) 1 (by decide)
+      (by norm_num [UInt32.size] at hroom ⊢; omega)
+  have h2 :
+      (valuesPtr + 4 * UInt32.ofNat emitted + 2).toNat =
+        (valuesPtr + 4 * UInt32.ofNat emitted).toNat + 2 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap
+      (valuesPtr + 4 * UInt32.ofNat emitted) 2 (by decide)
+      (by norm_num [UInt32.size] at hroom ⊢; omega)
+  have h3 :
+      (valuesPtr + 4 * UInt32.ofNat emitted + 3).toNat =
+        (valuesPtr + 4 * UInt32.ofNat emitted).toNat + 3 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap
+      (valuesPtr + 4 * UInt32.ofNat emitted) 3 (by decide)
+      (by norm_num [UInt32.size] at hroom ⊢; omega)
+  ihave HvalueFocus := WordSlice_get valuesPtr sorted emitted hemitted $$ Hvalues
+  icases HvalueFocus with ⟨Hvalue, HcloseValue⟩
+  ihave HoutputFocus := ByteSlice_storeWordFocus (driverBase + 268)
+    outputBytes sorted[emitted] hframeLengths.2 (by decide) $$ Houtput
+  icases HoutputFocus with ⟨HoldOutput, HcloseOutput⟩
+  ihave Hvalue' : pointsTo_u32 0
+      (valuesPtr + 4 * UInt32.ofNat emitted + 0) sorted[emitted] $$ [Hvalue]
+  · simp only [UInt32.add_zero]
+    iexact Hvalue
+  simp only [List.cons_append, List.nil_append, func3AppendLocals]
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_load32
+    (address := valuesPtr + 4 * UInt32.ofNat emitted) (offset := 0)
+    sorted[emitted] (by simp)
+    (by simpa only [UInt32.add_zero] using h1)
+    (by simpa only [UInt32.add_zero] using h2)
+    (by simpa only [UInt32.add_zero] using h3) $$ Hvalue'
+  iintro HvalueLoaded
+  ihave Hvalue : pointsTo_u32 0
+      (valuesPtr + 4 * UInt32.ofNat emitted) sorted[emitted] $$ [HvalueLoaded]
+  · simp only [UInt32.add_zero]
+    iexact HvalueLoaded
+  ihave Hvalues := HcloseValue $$ Hvalue
+  iapply twp_store32 (address := driverBase) (offset := 268)
+      (Spec.decodeWord outputBytes) (by decide) (by decide) (by decide)
+      (by decide) $$ HoldOutput
+  iintro Houtput
+  ihave Houtput := HcloseOutput $$ Houtput
+  iapply twp_localGet rfl
+  iapply twp_const
+  iapply twp_add
+  rw [UInt32.add_comm (268 : UInt32)]
+  iapply twp_const
+  have Hwrite := Project.Mergesort.ContractProofs.func11_correct
+    (hlc := hlc) (ptr := driverBase + 268) (requested := 4)
+    (bytes := serialize [sorted[emitted]]) (input := [])
+    (output := serialize (sorted.take emitted)) (raised := false)
+    (callerLocals := func3AppendLocals aux1
+      (valuesPtr + 4 * UInt32.ofNat emitted) aux6 valuesPtr aux4 aux5 aux7
+      aux8 (UInt32.ofNat sorted.length) aux10 [])
+    (stack := []) (code := code) (arity := arity) (remainder := remainder)
+    (controls := controls) (calls := calls) (s := s) (E := E) (Φ := Φ)
+  unfold CallContract callExpr at Hwrite
+  simp only [List.cons_append, List.nil_append, func3AppendLocals] at Hwrite
+  iapply Hwrite
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hstreams]
+  · iexact Hstreams
+  isplitl [Houtput]
+  · iexact Houtput
+  isplitl []
+  · ipureintro
+    constructor
+    · change 4 = (Spec.u32Codec.encode sorted[emitted]).length
+      exact (Spec.u32Codec.encode_length sorted[emitted]).symm
+    · decide
+  iintro Hruntime Hstreams Houtput
+  ihave Hframe : ExportFrame heapId capacity inputPtr input chunkBytes
+      (serialize [sorted[emitted]]) $$ [Hvec Hchunk Houtput]
+  · unfold ExportFrame
+    iframe
+    ipureintro
+    refine ⟨hframeLengths.1, ?_⟩
+    change (Spec.u32Codec.encode sorted[emitted]).length = 4
+    exact Spec.u32Codec.encode_length sorted[emitted]
+  ihave Hresume := Hcont $$ Hruntime Hframe Hvalues Hstreams
+  iunfold ResumeWP
+  simp only [resumeExpr, List.nil_append]
+  iexact Hresume
+
 /-- All dynamic ownership and ghost state carried across a read-loop
 back-edge. -/
 private structure Func3ReadLoopState where
