@@ -1434,6 +1434,270 @@ private def func3ReadPhaseFrame (afterLoop : Program) : ControlFrame :=
     continuation := afterLoop,
     belowStack := [] }
 
+/-! ## Completed-read dispatch -/
+
+/-- Exact reload of the completed Vec's data pointer. -/
+private def func3CompletedPtrReload : Program :=
+  [.localGet 0, .load32 4, .localSet 4]
+
+/-- The generated partial-word guard.  Public entry bytes are a canonical
+serialization, so this branch condition is always zero. -/
+private def func3CompletedLengthGuard : Program :=
+  [.localGet 6, .const 3, .and, .br_if 0]
+
+/-- The generated empty/nonempty split after the partial-word guard.  The
+nonempty arm branches out of this block with local 7 holding the complete
+byte length; the remaining instructions are the empty-input arm. -/
+private def func3AlignedLengthBlockBody : Program :=
+  [.localGet 6, .const 2147483644, .and, .localTee 7, .br_if 0,
+    .const 1, .localSet 5, .const 0, .localSet 1, .br 4]
+
+/-- Reload the completed Vec data pointer from its authoritative frame header.
+The read loop already carries the length in local 6, so the generated body
+reloads only the pointer into local 4 at this point. -/
+theorem twp_func3_reload_completed_ptr
+    [WasmSmallStepGS hlc Universal.State]
+    (heapId : GName) (capacity dataPtr : UInt32)
+    (completed chunkBytes outputBytes : List UInt8)
+    (current aux2 oldPtr aux5 aux7 aux8 aux9 aux10 : UInt32)
+    {stack : List Value} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame} {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → HeapIProp} :
+    iprop(
+      ExportFrame heapId capacity dataPtr completed chunkBytes outputBytes ∗
+      (ExportFrame heapId capacity dataPtr completed chunkBytes outputBytes -∗
+        WP (.running
+          ⟨func3AppendLocals dataPtr current
+              (UInt32.ofNat completed.length)
+              aux2 dataPtr aux5 aux7 aux8 aux9 aux10 stack,
+            code, arity, remainder, controls, calls⟩ : Expr Universal.State)
+          @ s; E [{ Φ }])) ⊢
+      WP (.running
+        ⟨func3AppendLocals dataPtr current
+            (UInt32.ofNat completed.length)
+            aux2 oldPtr aux5 aux7 aux8 aux9 aux10 stack,
+          func3CompletedPtrReload ++ code,
+          arity, remainder, controls, calls⟩ : Expr Universal.State)
+        @ s; E [{ Φ }] := by
+  iintro ⟨Hframe, Hcont⟩
+  isimp only [ExportFrame, VecU8, RawVecHeader] at Hframe
+  icases Hframe with
+    ⟨⟨⟨Hcapacity, Hpointer⟩, Hlength, Hstorage⟩,
+      Hchunk, Houtput, %hframeLengths⟩
+  simp only [func3CompletedPtrReload, List.cons_append, List.nil_append,
+    func3AppendLocals]
+  iapply twp_localGet rfl
+  iapply twp_load32 dataPtr (by decide) (by decide) (by decide) (by decide) $$
+    Hpointer
+  iintro Hpointer
+  iapply twp_localSet rfl
+  simp only [List.length, List.set]
+  ihave Hframe : ExportFrame heapId capacity dataPtr completed
+      chunkBytes outputBytes $$
+      [Hcapacity Hpointer Hlength Hstorage Hchunk Houtput]
+  · unfold ExportFrame VecU8 RawVecHeader
+    iframe
+    ipureintro
+    exact hframeLengths
+  iapply Hcont $$ Hframe
+
+/-- Canonical serialized input makes the compiler's partial-word branch
+unreachable at its originating guard.  No specification is assigned to the
+panic continuation targeted by a nonzero branch. -/
+theorem twp_func3_completed_length_guard
+    [WasmSmallStepGS hlc Universal.State]
+    (original : List UInt32) (completed : List UInt8)
+    (hcompleted : serialize original = completed)
+    (hbound : completed.length < 2147483648)
+    (dataPtr current aux2 aux4 aux5 aux7 aux8 aux9 aux10 : UInt32)
+    {stack : List Value} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame} {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → HeapIProp} :
+    WP (.running
+      ⟨func3AppendLocals dataPtr current (UInt32.ofNat completed.length)
+          aux2 aux4 aux5 aux7 aux8 aux9 aux10 stack,
+        code, arity, remainder, controls, calls⟩ : Expr Universal.State)
+      @ s; E [{ Φ }] ⊢
+    WP (.running
+      ⟨func3AppendLocals dataPtr current (UInt32.ofNat completed.length)
+          aux2 aux4 aux5 aux7 aux8 aux9 aux10 stack,
+        func3CompletedLengthGuard ++ code,
+        arity, remainder, controls, calls⟩ : Expr Universal.State)
+      @ s; E [{ Φ }] := by
+  iintro Hcont
+  have halign : completed.length % 4 = 0 := by
+    rw [← hcompleted, serialize_length]
+    omega
+  have hlengthWord :
+      (UInt32.ofNat completed.length).toNat = completed.length := by
+    apply UInt32.toNat_ofNat_of_lt'
+    norm_num [UInt32.size] at hbound ⊢
+    omega
+  have hlowMask : UInt32.ofNat completed.length &&& 3 = 0 := by
+    apply UInt32.toNat.inj
+    rw [UInt32.toNat_and, hlengthWord]
+    have hthree : (3 : UInt32).toNat = 3 := by decide
+    rw [hthree]
+    change completed.length &&& 3 = 0
+    rw [show (3 : Nat) = 2 ^ 2 - 1 by norm_num,
+      Nat.and_two_pow_sub_one_eq_mod]
+    exact halign
+  simp only [func3CompletedLengthGuard, List.cons_append, List.nil_append,
+    func3AppendLocals]
+  iapply twp_localGet rfl
+  iapply twp_const
+  iapply twp_and
+  rw [hlowMask]
+  iapply twp_brIfZero
+  iexact Hcont
+
+/-- On nonempty public input, execute both post-read length tests and enter
+the allocation/decode continuation with local 7 equal to the complete byte
+length.  `completed_lt_signed` is what makes the signed mask exact; without
+the read-loop lineage this theorem is intentionally unavailable. -/
+theorem twp_func3_enter_nonempty_decode
+    [WasmSmallStepGS hlc Universal.State]
+    (original : List UInt32) (completed : List UInt8)
+    (capacity dataPtr : UInt32) (frontier : Nat)
+    (history : AllocationHistory)
+    (horiginal : original ≠ [])
+    (hcompleted : serialize original = completed)
+    (hgeo : GeometricVecFacts (serialize original).length completed.length 0
+      capacity dataPtr frontier history)
+    (current aux2 aux4 aux5 aux7 aux8 aux9 aux10 : UInt32)
+    {stack : List Value} {afterBlock : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame} {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → HeapIProp} :
+    WP (.running
+      ⟨func3AppendLocals dataPtr current (UInt32.ofNat completed.length)
+          aux2 aux4 aux5 (UInt32.ofNat completed.length) aux8 aux9 aux10 stack,
+        afterBlock, arity, remainder, controls, calls⟩ : Expr Universal.State)
+      @ s; E [{ Φ }] ⊢
+    WP (.running
+      ⟨func3AppendLocals dataPtr current (UInt32.ofNat completed.length)
+          aux2 aux4 aux5 aux7 aux8 aux9 aux10 stack,
+        func3CompletedLengthGuard ++
+          [.block 0 0 func3AlignedLengthBlockBody] ++ afterBlock,
+        arity, remainder, controls, calls⟩ : Expr Universal.State)
+      @ s; E [{ Φ }] := by
+  iintro Hcont
+  have hboundTotal := GeometricVecFacts.completed_lt_signed
+    (serialize original).length completed.length 0 capacity dataPtr frontier
+    history hgeo rfl
+  have hbound : completed.length < 2147483648 := by
+    simpa [hcompleted] using hboundTotal
+  have halign : completed.length % 4 = 0 := by
+    rw [← hcompleted, serialize_length]
+    omega
+  have hmask := align4_signedMask_eq completed.length hbound halign
+  have hlengthWord :
+      (UInt32.ofNat completed.length).toNat = completed.length := by
+    apply UInt32.toNat_ofNat_of_lt'
+    norm_num [UInt32.size] at hbound ⊢
+    omega
+  have hpositive : 0 < completed.length := by
+    rw [← hcompleted, serialize_length]
+    have := List.length_pos_iff_ne_nil.mpr horiginal
+    omega
+  have hnonzero : UInt32.ofNat completed.length ≠ 0 := by
+    intro hzero
+    have hzeroNat := congrArg UInt32.toNat hzero
+    rw [hlengthWord] at hzeroNat
+    simp only [UInt32.toNat_zero] at hzeroNat
+    omega
+  have Hguard := twp_func3_completed_length_guard
+    (hlc := hlc) original completed hcompleted hbound dataPtr current
+    aux2 aux4 aux5 aux7 aux8 aux9 aux10
+    (stack := stack)
+    (code := [.block 0 0 func3AlignedLengthBlockBody] ++ afterBlock)
+    (arity := arity) (remainder := remainder) (controls := controls)
+    (calls := calls) (s := s) (E := E) (Φ := Φ)
+  simp only [func3CompletedLengthGuard, List.cons_append, List.nil_append]
+    at Hguard ⊢
+  iapply Hguard
+  iapply twp_block
+  simp only [func3AlignedLengthBlockBody, func3AppendLocals]
+  iapply twp_localGet rfl
+  iapply twp_const
+  iapply twp_and
+  rw [hmask]
+  iapply twp_localTee
+      (locals' := func3AppendLocals dataPtr current
+        (UInt32.ofNat completed.length) aux2 aux4 aux5
+        (UInt32.ofNat completed.length) aux8 aux9 aux10
+        (.i32 (UInt32.ofNat completed.length) :: stack))
+      (by simp [func3AppendLocals])
+  simp only [func3AppendLocals]
+  iapply twp_brIf (condition := UInt32.ofNat completed.length) (depth := 0)
+    (arity := arity) (targetCode := afterBlock) (targetControl := controls)
+    (targetValues := stack) hnonzero (by rfl)
+  iexact Hcont
+
+/-- Compose the authoritative header reload with both generated length tests.
+This is the exact handoff supplied by the read-loop normal continuation for a
+nonempty input once the surrounding driver blocks have been entered. -/
+theorem twp_func3_dispatch_completed_nonempty
+    [WasmSmallStepGS hlc Universal.State]
+    (heapId : GName) (original : List UInt32)
+    (capacity dataPtr : UInt32)
+    (completed chunkBytes outputBytes : List UInt8)
+    (frontier : Nat) (history : AllocationHistory)
+    (horiginal : original ≠ [])
+    (hcompleted : serialize original = completed)
+    (hgeo : GeometricVecFacts (serialize original).length completed.length 0
+      capacity dataPtr frontier history)
+    (current aux2 oldPtr aux5 aux7 aux8 aux9 aux10 : UInt32)
+    {stack : List Value} {afterBlock : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame} {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → HeapIProp} :
+    iprop(
+      ExportFrame heapId capacity dataPtr completed chunkBytes outputBytes ∗
+      (ExportFrame heapId capacity dataPtr completed chunkBytes outputBytes -∗
+        WP (.running
+          ⟨func3AppendLocals dataPtr current
+              (UInt32.ofNat completed.length)
+              aux2 dataPtr aux5 (UInt32.ofNat completed.length)
+              aux8 aux9 aux10 stack,
+            afterBlock, arity, remainder, controls, calls⟩ :
+              Expr Universal.State) @ s; E [{ Φ }])) ⊢
+      WP (.running
+        ⟨func3AppendLocals dataPtr current
+            (UInt32.ofNat completed.length)
+            aux2 oldPtr aux5 aux7 aux8 aux9 aux10 stack,
+          func3CompletedPtrReload ++ func3CompletedLengthGuard ++
+            [.block 0 0 func3AlignedLengthBlockBody] ++ afterBlock,
+          arity, remainder, controls, calls⟩ : Expr Universal.State)
+        @ s; E [{ Φ }] := by
+  iintro ⟨Hframe, Hcont⟩
+  have Hreload := twp_func3_reload_completed_ptr
+    (hlc := hlc) heapId capacity dataPtr completed chunkBytes outputBytes
+    current aux2 oldPtr aux5 aux7 aux8 aux9 aux10
+    (stack := stack)
+    (code := func3CompletedLengthGuard ++
+      [.block 0 0 func3AlignedLengthBlockBody] ++ afterBlock)
+    (arity := arity) (remainder := remainder) (controls := controls)
+    (calls := calls) (s := s) (E := E) (Φ := Φ)
+  simp only [func3CompletedPtrReload, func3CompletedLengthGuard,
+    List.cons_append, List.nil_append] at Hreload ⊢
+  iapply Hreload
+  isplitl [Hframe]
+  · iexact Hframe
+  iintro Hframe
+  have Hdispatch := twp_func3_enter_nonempty_decode
+    (hlc := hlc) original completed capacity dataPtr frontier history
+    horiginal hcompleted hgeo current aux2 dataPtr aux5 aux7 aux8 aux9 aux10
+    (stack := stack) (afterBlock := afterBlock)
+    (arity := arity) (remainder := remainder) (controls := controls)
+    (calls := calls) (s := s) (E := E) (Φ := Φ)
+  simp only [func3CompletedLengthGuard, List.cons_append, List.nil_append]
+    at Hdispatch
+  iapply Hdispatch
+  iapply Hcont $$ Hframe
+
 /-- All dynamic ownership and ghost state carried across a read-loop
 back-edge. -/
 private structure Func3ReadLoopState where
