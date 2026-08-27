@@ -4387,6 +4387,74 @@ theorem twp_func3_deallocate_input
         hstorage.2.2.2, hlookup⟩
     iapply Hcont $$ Hruntime Hbump HframeBytes
 
+/-- Exact generated epilogue restoring the exported shadow-stack pointer. -/
+private def func3RestoreStackTail : Program :=
+  [.localGet 0, .const 272, .add, .globalSet 0]
+
+/-- Restore the public 288-byte entry stack from the untouched 16-byte reserve
+and the raw 272-byte driver frame.  This theorem deliberately stops before
+the administrative return-from-call step, so the body proof and the public
+call contract remain separate composition layers. -/
+theorem twp_func3_restore_stack
+    [WasmSmallStepGS hlc Universal.State]
+    (reserveBytes frameBytes : List UInt8)
+    (aux1 aux3 aux6 aux2 aux4 aux5 aux7 aux8 aux9 aux10 : UInt32)
+    (hframeLength : frameBytes.length = 272)
+    (afterRestore : Program)
+    {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    {s : Stuckness} {E : CoPset}
+    {Phi : ObservableOutcome → HeapIProp} :
+    iprop(
+      StackPointer driverBase ∗
+      StackReserve reserveBase reserveBytes ∗
+      ByteSlice driverBase frameBytes ∗
+      (StackPointer entryStackTop -∗
+        StackRegion entryStackLow (reserveBytes ++ frameBytes) -∗
+        ⌜(reserveBytes ++ frameBytes).length = 288⌝ -∗
+        WP (.running
+          ⟨func3AppendLocals aux1 aux3 aux6 aux2 aux4 aux5 aux7 aux8 aux9
+              aux10 [],
+            afterRestore, arity, remainder, controls, calls⟩ :
+              Expr Universal.State) @ s; E [{ Phi }])) ⊢
+      WP (.running
+        ⟨func3AppendLocals aux1 aux3 aux6 aux2 aux4 aux5 aux7 aux8 aux9
+            aux10 [],
+          func3RestoreStackTail ++ afterRestore,
+          arity, remainder, controls, calls⟩ : Expr Universal.State)
+        @ s; E [{ Phi }] := by
+  iintro ⟨Hsp, Hreserve, Hframe, Hcont⟩
+  ihave Hfinish : iprop(
+      StackPointer entryStackTop -∗
+        WP (.running
+          ⟨func3AppendLocals aux1 aux3 aux6 aux2 aux4 aux5 aux7 aux8 aux9
+              aux10 [],
+            afterRestore, arity, remainder, controls, calls⟩ :
+              Expr Universal.State) @ s; E [{ Phi }]) $$
+      [Hreserve Hframe Hcont]
+  · iintro Hsp'
+    ihave Hcombined : iprop(
+        StackRegion entryStackLow (reserveBytes ++ frameBytes) ∗
+          ⌜(reserveBytes ++ frameBytes).length = 288⌝) $$
+        [Hreserve Hframe]
+    · iapply StackReserve_combineFrame reserveBytes frameBytes hframeLength
+      iframe
+    icases Hcombined with ⟨Hstack, %hstackLength⟩
+    iapply Hcont $$ Hsp' Hstack %hstackLength
+  isimp only [StackPointer] at Hsp
+  simp only [func3RestoreStackTail, func3AppendLocals,
+    List.cons_append, List.nil_append]
+  iapply twp_localGet rfl
+  iapply twp_const
+  iapply twp_add
+  rw [show 272 + driverBase = entryStackTop by decide]
+  iapply twp_globalSet $$ Hsp
+  iintro Hsp
+  ihave Hsp' : StackPointer entryStackTop $$ [Hsp]
+  · unfold StackPointer
+    iexact Hsp
+  iapply Hfinish $$ Hsp'
+
 /-- All dynamic ownership and ghost state carried across a read-loop
 back-edge. -/
 private structure Func3ReadLoopState where
