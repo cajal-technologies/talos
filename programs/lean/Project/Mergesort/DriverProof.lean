@@ -3275,6 +3275,169 @@ theorem twp_func3_decode_allocated
     exact hnonnull
   iapply Hcont $$ %final1 %final3 %final6 %final5 %final8 Hframe Hvalues
 
+/-- Execute the allocation marker and zeroing scratch allocation after decode.
+The valid layout follows from the same signed byte bound used by the decode;
+the allocator's only exceptional result is repackaged as `.scratch` OOM. -/
+theorem twp_func3_allocate_scratch
+    [WasmSmallStepGS hlc Universal.State]
+    (hfunc9 : Func9Spec (hlc := hlc))
+    (heapId : GName) (valuesId : Nat)
+    (capacity source valuesPtr : UInt32)
+    (original : List UInt32)
+    (chunkBytes outputBytes shadow : List UInt8)
+    (storedCursor : UInt32) (frontier : Nat)
+    (history : AllocationHistory)
+    (final1 final3 final6 final5 final8 aux10 : UInt32)
+    (hpositive : 0 < original.length)
+    (hbyteBound : 4 * original.length < 2147483648)
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → HeapIProp} :
+    let layout : AllocLayout :=
+      { size := 4 * original.length, alignment := 4 }
+    let callerLocals :=
+      func3AppendLocals final1 final3 final6 valuesPtr source final5
+        (UInt32.ofNat (4 * original.length)) final8
+        (UInt32.ofNat original.length) (UInt32.ofNat (4 * original.length)) []
+    iprop(
+      RuntimeContext ∗
+      StackPointer driverBase ∗
+      StackReserve reserveBase shadow ∗
+      ExportFrame heapId capacity source (serialize original) chunkBytes
+        outputBytes ∗
+      LiveWordBlock heapId valuesId valuesPtr original ∗
+      BumpHeap heapId storedCursor frontier history ∗
+      Streams [] [] false ∗
+      ((∀ scratch : UInt32, ∀ finish : UInt32,
+          ⌜classifyBump frontier layout = .success scratch finish⌝ -∗
+          RuntimeContext -∗
+          StackPointer driverBase -∗
+          StackReserve reserveBase shadow -∗
+          ExportFrame heapId capacity source (serialize original) chunkBytes
+            outputBytes -∗
+          LiveWordBlock heapId valuesId valuesPtr original -∗
+          BumpHeap heapId finish finish.toNat
+            (history.allocate scratch layout) -∗
+          LiveBlock heapId history.nextId scratch layout
+            (List.replicate layout.size 0) -∗
+          Streams [] [] false -∗
+          ResumeWP [.i32 scratch] callerLocals [] code arity remainder controls
+            calls s E Φ) ∧
+        (DriverScratchOOM heapId original -∗
+          Φ (.trapped (.host OOM.trapMessage))))) ⊢
+      WP (.running
+        ⟨func3AppendLocals final1 final3 final6 valuesPtr source final5
+            (UInt32.ofNat (4 * original.length)) final8
+            (UInt32.ofNat original.length) aux10 [],
+          [.call 7, .localGet 9, .const 2, .shl, .localTee 10,
+            .const 4, .call 12] ++ code,
+          arity, remainder, controls, calls⟩ : Expr Universal.State)
+        @ s; E [{ Φ }] := by
+  dsimp only
+  let layout : AllocLayout :=
+    { size := 4 * original.length, alignment := 4 }
+  let callerLocals :=
+    func3AppendLocals final1 final3 final6 valuesPtr source final5
+      (UInt32.ofNat (4 * original.length)) final8
+      (UInt32.ofNat original.length) (UInt32.ofNat (4 * original.length)) []
+  have hwordBound : 4 * original.length < UInt32.size := by
+    norm_num [UInt32.size] at hbyteBound ⊢
+    omega
+  have hsizeWord :
+      (UInt32.ofNat (4 * original.length)).toNat = 4 * original.length :=
+    UInt32.toNat_ofNat_of_lt' hwordBound
+  have hlayoutValid : layout.Valid := by
+    exact align4Layout_valid_of_bounds (4 * original.length)
+      (by omega) hbyteBound (by omega)
+  have hlayoutMatches :
+      layout.Matches (UInt32.ofNat (4 * original.length)) 4 := by
+    unfold AllocLayout.Matches layout
+    simp only [hsizeWord]
+    decide
+  iintro ⟨Hruntime, Hsp, Hreserve, Hframe, Hvalues, Hbump, Hstreams, Hcont⟩
+  simp only [List.cons_append, List.nil_append]
+  have Hmarker := Project.Mergesort.ContractProofs.func4_correct
+    (hlc := hlc)
+    (callerLocals := func3AppendLocals final1 final3 final6 valuesPtr source
+      final5 (UInt32.ofNat (4 * original.length)) final8
+      (UInt32.ofNat original.length) aux10 [])
+    (stack := [])
+    (code := [.localGet 9, .const 2, .shl, .localTee 10,
+      .const 4, .call 12] ++ code)
+    (arity := arity) (remainder := remainder) (controls := controls)
+    (calls := calls) (s := s) (E := E) (Φ := Φ)
+  unfold Func4Spec CallContract callExpr at Hmarker
+  simp only [List.cons_append, List.nil_append] at Hmarker
+  simp only [func3AppendLocals] at Hmarker ⊢
+  iapply Hmarker
+  isplitl [Hruntime]
+  · iexact Hruntime
+  iintro Hruntime
+  unfold ResumeWP resumeExpr
+  simp only [List.cons_append, List.nil_append]
+  iapply twp_localGet rfl
+  iapply twp_const
+  iapply twp_shl
+  rw [MemRegion.shl2_eq_mul4, ← func3_decode_byte_offset]
+  iapply twp_localTee rfl
+  simp only [List.length, List.set]
+  iapply twp_const
+  have Halloc := hfunc9
+    (size := UInt32.ofNat (4 * original.length)) (alignment := 4)
+    (layout := layout) (heapId := heapId) (storedCursor := storedCursor)
+    (frontier := frontier) (history := history)
+    (input := []) (output := []) (raised := false)
+    (callerLocals := callerLocals) (stack := []) (code := code)
+    (arity := arity) (remainder := remainder) (controls := controls)
+    (calls := calls) (s := s) (E := E) (Φ := Φ)
+  unfold Func9Spec CallContract callExpr at Halloc
+  simp only [List.cons_append, List.nil_append] at Halloc
+  dsimp only [callerLocals] at Halloc
+  simp only [func3AppendLocals] at Halloc
+  iapply Halloc
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hbump]
+  · iexact Hbump
+  isplitl [Hstreams]
+  · iexact Hstreams
+  isplitl []
+  · ipureintro
+    exact ⟨hlayoutMatches, hlayoutValid, rfl⟩
+  unfold ZeroAllocContinuation
+  cases hdecision : classifyBump frontier layout with
+  | oom =>
+      iintro Hbump Hstreams
+      ihave Hoom := BI.and_elim_r $$ Hcont
+      iapply Hoom
+      unfold DriverScratchOOM
+      iexists capacity, source, valuesPtr, valuesId, chunkBytes, outputBytes,
+        shadow, storedCursor, frontier, history
+      isplitl []
+      · ipureintro
+        exact hpositive
+      iframe
+  | success scratch finish =>
+      isplit
+      · iintro Hruntime Hbump Hscratch Hstreams
+        ihave Hnormal := BI.and_elim_l $$ Hcont
+        ihave Hresume := Hnormal $$ %scratch %finish %rfl Hruntime Hsp Hreserve
+          Hframe Hvalues Hbump Hscratch Hstreams
+        iunfold ResumeWP
+        simp only [resumeExpr, List.cons_append, List.nil_append]
+        iexact Hresume
+      · iintro Hbump Hstreams
+        ihave Hoom := BI.and_elim_r $$ Hcont
+        iapply Hoom
+        unfold DriverScratchOOM
+        iexists capacity, source, valuesPtr, valuesId, chunkBytes, outputBytes,
+          shadow, storedCursor, frontier, history
+        isplitl []
+        · ipureintro
+          exact hpositive
+        iframe
+
 /-- All dynamic ownership and ghost state carried across a read-loop
 back-edge. -/
 private structure Func3ReadLoopState where
