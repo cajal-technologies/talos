@@ -2819,6 +2819,335 @@ theorem twp_func3_decode_setup
   simp only [List.length, List.set]
   iexact Hcont
 
+/-- Instructions common to the small-input and post-bulk scalar tails. -/
+private def func3DecodeTailContinuation : Program :=
+  [.localGet 9, .localGet 8, .add, .localSet 1,
+    .localGet 2, .localGet 9, .const 2, .shl, .add, .localSet 6,
+    .loop 0 0 func3DecodeTailLoopBody,
+    .localGet 1, .localSet 9]
+
+/-- Inner generated block: select the bulk path, execute it, and either leave
+the outer block for a zero tail or prepare the scalar source cursor. -/
+private def func3DecodeBulkBlockBody : Program :=
+  [.localGet 6, .const 12, .ltU, .br_if 0,
+    .localGet 1, .const 2147483644, .and, .localSet 5,
+    .const 0, .localSet 9, .const 0, .localSet 3,
+    .loop 0 0 func3DecodeBulkLoopBody,
+    .localGet 8, .eqz, .br_if 1,
+    .localGet 4, .localGet 3, .add, .localSet 3]
+
+private def func3DecodeOuterBlockBody : Program :=
+  [.block 0 0 func3DecodeBulkBlockBody] ++ func3DecodeTailContinuation
+
+private def func3DecodeOuterFrame (afterDecode : Program) : ControlFrame :=
+  { kind := .block, paramArity := 0, resultArity := 0,
+    body := func3DecodeOuterBlockBody, continuation := afterDecode,
+    belowStack := [] }
+
+private def func3DecodeBulkFrame : ControlFrame :=
+  { kind := .block, paramArity := 0, resultArity := 0,
+    body := func3DecodeBulkBlockBody,
+    continuation := func3DecodeTailContinuation, belowStack := [] }
+
+/-- Execute the common positive scalar tail, set local 9 to the total decoded
+length, and leave the surrounding generated decode block. -/
+theorem twp_func3_decode_positive_tail
+    [WasmSmallStepGS hlc Universal.State]
+    (source destination : UInt32)
+    (original initial : List UInt32) (bulk tail : Nat)
+    (aux1 aux6 aux10 : UInt32)
+    (hlength : original.length = initial.length)
+    (hpartition : bulk + tail = original.length)
+    (htailPositive : 0 < tail)
+    (hlengthBound : original.length < UInt32.size)
+    {afterDecode : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → HeapIProp} :
+    iprop(
+      WordSlice source original ∗
+      WordSlice destination (overwritePrefix original initial bulk) ∗
+      (WordSlice source original -∗
+        WordSlice destination original -∗
+        WP (.running
+          ⟨func3AppendLocals (UInt32.ofNat original.length)
+              (source + 4 * UInt32.ofNat original.length)
+              (destination + 4 * UInt32.ofNat original.length)
+              destination source (UInt32.ofNat bulk)
+              (UInt32.ofNat (4 * original.length)) 0
+              (UInt32.ofNat original.length) aux10 [],
+            afterDecode, arity, remainder, controls, calls⟩ :
+              Expr Universal.State)
+          @ s; E [{ Φ }])) ⊢
+      WP (.running
+        ⟨func3AppendLocals aux1
+            (source + 4 * UInt32.ofNat bulk) aux6 destination source
+            (UInt32.ofNat bulk) (UInt32.ofNat (4 * original.length))
+            (UInt32.ofNat tail) (UInt32.ofNat bulk) aux10 [],
+          func3DecodeTailContinuation,
+          arity, remainder, func3DecodeOuterFrame afterDecode :: controls,
+          calls⟩ : Expr Universal.State) @ s; E [{ Φ }] := by
+  iintro ⟨Hsource, Hdestination, Hcont⟩
+  have htotal :
+      UInt32.ofNat tail + UInt32.ofNat bulk =
+        UInt32.ofNat original.length := by
+    calc
+      UInt32.ofNat tail + UInt32.ofNat bulk =
+          UInt32.ofNat bulk + UInt32.ofNat tail := UInt32.add_comm _ _
+      _ = UInt32.ofNat (bulk + tail) := (UInt32.ofNat_add _ _).symm
+      _ = UInt32.ofNat original.length := by rw [hpartition]
+  simp only [func3DecodeTailContinuation, func3AppendLocals]
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_add
+  rw [htotal]
+  iapply twp_localSet rfl
+  simp only [List.length, List.set]
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_const
+  iapply twp_shl
+  rw [MemRegion.shl2_eq_mul4]
+  iapply twp_add
+  rw [UInt32.add_comm (4 * UInt32.ofNat bulk)]
+  iapply twp_localSet rfl
+  simp only [List.length, List.set]
+  have Htail := twp_func3_decode_tail_loop
+    (hlc := hlc) source destination original initial bulk tail aux10 hlength
+    hpartition htailPositive hlengthBound
+    (afterLoop := [.localGet 1, .localSet 9])
+    (arity := arity) (remainder := remainder)
+    (controls := func3DecodeOuterFrame afterDecode :: controls)
+    (calls := calls) (s := s) (E := E) (Φ := Φ)
+  simp only [func3DecodeTailLoopBody, func3DecodeTailLocals,
+    func3AppendLocals, List.cons_append, List.nil_append] at Htail
+  simp only [func3DecodeTailLoopBody]
+  iapply Htail
+  isplitl [Hsource]
+  · iexact Hsource
+  isplitl [Hdestination]
+  · iexact Hdestination
+  iintro Hsource Hdestination
+  iapply twp_localGet rfl
+  iapply twp_localSet rfl
+  simp only [List.length, List.set]
+  iapply twp_exitControl rfl
+  simp only [func3DecodeOuterFrame, List.take_zero, List.nil_append]
+  iapply Hcont $$ Hsource Hdestination
+
+/-- Compose the generated bulk/tail dispatcher.  The postcondition hides the
+compiler's dead address temporaries but fixes local 9 to the authoritative
+decoded word count and the destination contents to `original`. -/
+theorem twp_func3_decode_blocks
+    [WasmSmallStepGS hlc Universal.State]
+    (source destination : UInt32)
+    (original initial : List UInt32) (aux10 : UInt32)
+    (hlength : original.length = initial.length)
+    (hpositive : 0 < original.length)
+    (hbyteBound : 4 * original.length < 2147483648)
+    {afterDecode : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → HeapIProp} :
+    iprop(
+      WordSlice source original ∗ WordSlice destination initial ∗
+      ((∀ final1 : UInt32, ∀ final3 : UInt32, ∀ final6 : UInt32,
+        ∀ final5 : UInt32, ∀ final8 : UInt32,
+          WordSlice source original -∗ WordSlice destination original -∗
+          WP (.running
+            ⟨func3AppendLocals final1 final3 final6 destination source final5
+                (UInt32.ofNat (4 * original.length)) final8
+                (UInt32.ofNat original.length) aux10 [],
+              afterDecode, arity, remainder, controls, calls⟩ :
+                Expr Universal.State)
+            @ s; E [{ Φ }]))) ⊢
+      WP (.running
+        ⟨func3AppendLocals (UInt32.ofNat original.length) source
+            (UInt32.ofNat (4 * original.length - 4)) destination source 0
+            (UInt32.ofNat (4 * original.length))
+            (UInt32.ofNat (original.length % 4)) 0 aux10 [],
+          [.block 0 0 func3DecodeOuterBlockBody] ++ afterDecode,
+          arity, remainder, controls, calls⟩ : Expr Universal.State)
+        @ s; E [{ Φ }] := by
+  let bulk := 4 * (original.length / 4)
+  let tail := original.length % 4
+  have hpartition : bulk + tail = original.length := by
+    dsimp only [bulk, tail]
+    exact bulk4_add_tail original.length
+  have hlengthBound : original.length < UInt32.size := by
+    norm_num [UInt32.size] at hbyteBound ⊢
+    omega
+  have hcountBound : original.length < 2147483648 := by omega
+  have hbyteWordBound : 4 * original.length - 4 < UInt32.size := by
+    norm_num [UInt32.size]
+    omega
+  have hbyteWord :
+      (UInt32.ofNat (4 * original.length - 4)).toNat =
+        4 * original.length - 4 :=
+    UInt32.toNat_ofNat_of_lt' hbyteWordBound
+  iintro ⟨Hsource, Hdestination, Hcont⟩
+  simp only [List.cons_append, List.nil_append]
+  iapply twp_block
+  simp only [func3DecodeOuterBlockBody, List.cons_append, List.nil_append]
+  iapply twp_block
+  simp only [func3DecodeBulkBlockBody, func3AppendLocals]
+  iapply twp_localGet rfl
+  iapply twp_const
+  by_cases hsmall : original.length < 4
+  · have htail : tail = original.length := by
+      dsimp only [tail]
+      exact Nat.mod_eq_of_lt hsmall
+    dsimp only [tail] at htail
+    have hlt : UInt32.ofNat (4 * original.length - 4) < (12 : UInt32) := by
+      rw [UInt32.lt_iff_toNat_lt, hbyteWord]
+      have h12 : (12 : UInt32).toNat = 12 := by decide
+      rw [h12]
+      omega
+    iapply twp_ltU (result := 1) (by simp [hlt])
+    iapply twp_brIf (condition := 1) (depth := 0) (arity := arity)
+      (targetCode := func3DecodeTailContinuation)
+      (targetControl := func3DecodeOuterFrame afterDecode :: controls)
+      (targetValues := []) (by decide) (by rfl)
+    rw [htail]
+    have Htail := twp_func3_decode_positive_tail
+      (hlc := hlc) source destination original initial 0 original.length
+      (UInt32.ofNat original.length)
+      (UInt32.ofNat (4 * original.length - 4)) aux10 hlength
+      (by simp) hpositive hlengthBound
+      (afterDecode := afterDecode) (arity := arity) (remainder := remainder)
+      (controls := controls) (calls := calls) (s := s) (E := E) (Φ := Φ)
+    simp only [func3DecodeTailContinuation, func3DecodeOuterFrame,
+      func3AppendLocals, overwritePrefix_zero] at Htail ⊢
+    simp only [show UInt32.ofNat 0 = 0 by decide, UInt32.mul_zero,
+      UInt32.add_zero] at Htail
+    iapply Htail
+    isplitl [Hsource]
+    · iexact Hsource
+    isplitl [Hdestination]
+    · iexact Hdestination
+    iintro Hsource Hdestination
+    ihave Hfinal := Hcont $$
+      %(UInt32.ofNat original.length)
+      %(source + 4 * UInt32.ofNat original.length)
+      %(destination + 4 * UInt32.ofNat original.length) %(0 : UInt32)
+      %(0 : UInt32) Hsource Hdestination
+    iexact Hfinal
+  · have hbulkPositive : 4 ≤ bulk := by
+      dsimp only [bulk]
+      omega
+    have hbulkMod : bulk % 4 = 0 := by
+      dsimp only [bulk]
+      omega
+    have hnotLt : ¬UInt32.ofNat (4 * original.length - 4) <
+        (12 : UInt32) := by
+      rw [UInt32.lt_iff_toNat_lt, hbyteWord]
+      have h12 : (12 : UInt32).toNat = 12 := by decide
+      rw [h12]
+      omega
+    iapply twp_ltU (result := 0) (by simp [hnotLt])
+    iapply twp_brIfZero
+    iapply twp_localGet rfl
+    iapply twp_const
+    iapply twp_and
+    rw [bulk4_signedMask_eq original.length hcountBound]
+    iapply twp_localSet rfl
+    simp only [List.length, List.set]
+    iapply twp_const
+    iapply twp_localSet rfl
+    simp only [List.length, List.set]
+    iapply twp_const
+    iapply twp_localSet rfl
+    simp only [List.length, List.set]
+    have Hbulk := twp_func3_decode_bulk_loop
+      (hlc := hlc) source destination original initial bulk tail
+      (UInt32.ofNat original.length)
+      (UInt32.ofNat (4 * original.length - 4)) aux10 hlength hpartition
+      hbulkPositive hbulkMod hlengthBound
+      (afterLoop := [.localGet 8, .eqz, .br_if 1,
+        .localGet 4, .localGet 3, .add, .localSet 3])
+      (arity := arity) (remainder := remainder)
+      (controls := func3DecodeBulkFrame ::
+        func3DecodeOuterFrame afterDecode :: controls)
+      (calls := calls) (s := s) (E := E) (Φ := Φ)
+    simp only [func3DecodeBulkLoopBody, func3DecodeBulkLocals,
+      func3AppendLocals, List.cons_append, List.nil_append] at Hbulk
+    simp only [func3DecodeBulkFrame, func3DecodeOuterFrame,
+      func3DecodeBulkBlockBody, func3DecodeOuterBlockBody,
+      func3DecodeBulkLoopBody, List.cons_append, List.nil_append,
+      show UInt32.ofNat 0 = 0 by decide] at Hbulk
+    simp only [func3DecodeBulkLoopBody]
+    simp only [List.drop_zero]
+    iapply Hbulk
+    isplitl [Hsource]
+    · iexact Hsource
+    isplitl [Hdestination]
+    · iexact Hdestination
+    iintro Hsource Hdestination
+    iapply twp_localGet rfl
+    by_cases htailZero : tail = 0
+    · rw [htailZero]
+      iapply twp_eqz (result := 1) (by simp)
+      iapply twp_brIf (condition := 1) (depth := 1) (arity := arity)
+        (targetCode := afterDecode) (targetControl := controls)
+        (targetValues := []) (by decide) (by rfl)
+      have hbulkAll : bulk = original.length := by omega
+      have hoverwrite :
+          overwritePrefix original initial bulk = original := by
+        rw [hbulkAll]
+        exact overwritePrefix_all original initial hlength
+      isimp only [hoverwrite] at Hdestination
+      rw [hbulkAll]
+      ihave Hfinal := Hcont $$
+        %(source + 4 * UInt32.ofNat (original.length - 4))
+        %(UInt32.ofNat (4 * original.length))
+        %(destination + 4 * UInt32.ofNat (original.length - 4))
+        %(UInt32.ofNat original.length) %(0 : UInt32)
+        Hsource Hdestination
+      iexact Hfinal
+    · have htailPositive : 0 < tail := by omega
+      have htailNonzero : UInt32.ofNat tail ≠ 0 := by
+        intro hzero
+        have hnat := congrArg UInt32.toNat hzero
+        rw [UInt32.toNat_ofNat_of_lt' (by omega)] at hnat
+        simp only [UInt32.toNat_zero] at hnat
+        omega
+      dsimp only [tail] at htailNonzero
+      iapply twp_eqz (result := 0) (by simpa using htailNonzero)
+      iapply twp_brIfZero
+      iapply twp_localGet rfl
+      iapply twp_localGet rfl
+      iapply twp_add
+      simp only [func3_decode_byte_offset]
+      rw [UInt32.add_comm (4 * UInt32.ofNat bulk) source]
+      iapply twp_localSet rfl
+      simp only [List.length, List.set]
+      iapply twp_exitControl rfl
+      simp only [List.take_zero, List.nil_append]
+      have Htail := twp_func3_decode_positive_tail
+        (hlc := hlc) source destination original initial bulk tail
+        (source + 4 * UInt32.ofNat (bulk - 4))
+        (destination + 4 * UInt32.ofNat (bulk - 4)) aux10 hlength
+        hpartition htailPositive hlengthBound
+        (afterDecode := afterDecode) (arity := arity)
+        (remainder := remainder) (controls := controls) (calls := calls)
+        (s := s) (E := E) (Φ := Φ)
+      simp only [func3DecodeTailContinuation, func3DecodeOuterFrame,
+        func3DecodeOuterBlockBody, func3DecodeBulkBlockBody,
+        func3DecodeBulkLoopBody, func3AppendLocals,
+        func3_decode_byte_offset, List.cons_append, List.nil_append] at Htail ⊢
+      iapply Htail
+      isplitl [Hsource]
+      · iexact Hsource
+      isplitl [Hdestination]
+      · iexact Hdestination
+      iintro Hsource Hdestination
+      ihave Hfinal := Hcont $$
+        %(UInt32.ofNat original.length)
+        %(source + 4 * UInt32.ofNat original.length)
+        %(destination + 4 * UInt32.ofNat original.length)
+        %(UInt32.ofNat bulk) %(0 : UInt32) Hsource Hdestination
+      iexact Hfinal
+
 /-- All dynamic ownership and ghost state carried across a read-loop
 back-edge. -/
 private structure Func3ReadLoopState where
