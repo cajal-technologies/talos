@@ -1864,6 +1864,51 @@ theorem twp_func3_allocate_values
           exact ⟨List.length_pos_iff_ne_nil.mpr horiginal, hgeoOriginal⟩
         iframe
 
+/-- Discharge the generated null check immediately following a normal values
+allocation.  Non-nullness comes from the allocator-owned `LiveBlock`; the
+depth-one compiler allocation-error target is therefore unreachable. -/
+theorem twp_func3_values_nonnull_guard
+    [WasmSmallStepGS hlc Universal.State]
+    (heapId : GName) (allocationId : Nat)
+    (base : UInt32) (layout : AllocLayout) (bytes : List UInt8)
+    (dataPtr current length aux2 aux4 aux5 aux7 aux8 aux9 aux10 : UInt32)
+    {stack : List Value} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame} {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → HeapIProp} :
+    iprop(
+      LiveBlock heapId allocationId base layout bytes ∗
+      (LiveBlock heapId allocationId base layout bytes -∗
+        WP (.running
+          ⟨func3AppendLocals dataPtr current length base aux4 aux5 aux7 aux8
+              aux9 aux10 stack,
+            code, arity, remainder, controls, calls⟩ : Expr Universal.State)
+          @ s; E [{ Φ }])) ⊢
+      WP (.running
+        ⟨func3AppendLocals dataPtr current length aux2 aux4 aux5 aux7 aux8
+            aux9 aux10 (.i32 base :: stack),
+          [.localTee 2, .eqz, .br_if 1] ++ code,
+          arity, remainder, controls, calls⟩ : Expr Universal.State)
+        @ s; E [{ Φ }] := by
+  iintro ⟨Hblock, Hcont⟩
+  isimp only [LiveBlock] at Hblock
+  icases Hblock with ⟨Htoken, Hbytes, %hfacts⟩
+  simp only [List.cons_append, List.nil_append, func3AppendLocals]
+  iapply twp_localTee
+      (locals' := func3AppendLocals dataPtr current length base aux4 aux5 aux7
+        aux8 aux9 aux10 (.i32 base :: stack))
+      (by simp [func3AppendLocals])
+  simp only [func3AppendLocals]
+  iapply twp_eqz (result := 0) (by simp [hfacts.2.1])
+  iapply twp_brIfZero
+  ihave Hblock : LiveBlock heapId allocationId base layout bytes $$
+      [Htoken Hbytes]
+  · unfold LiveBlock
+    iframe
+    ipureintro
+    exact hfacts
+  iapply Hcont $$ Hblock
+
 /-- All dynamic ownership and ghost state carried across a read-loop
 back-edge. -/
 private structure Func3ReadLoopState where
