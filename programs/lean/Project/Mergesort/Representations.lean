@@ -2991,6 +2991,21 @@ theorem align4_signedMask_eq (byteLength : Nat)
   have hmod := Nat.mod_add_div byteLength 4
   omega
 
+/-- A positive four-aligned size below the signed address boundary is a valid
+layout for the generated values and scratch allocators.  Four-alignment is
+what sharpens the strict signed bound to the allocator's `2^31 - 4` limit. -/
+theorem align4Layout_valid_of_bounds (size : Nat)
+    (hpositive : 0 < size) (hbound : size < 2147483648)
+    (halign : size % 4 = 0) :
+    ({ size := size, alignment := 4 } : AllocLayout).Valid := by
+  unfold AllocLayout.Valid
+  dsimp only
+  refine ⟨hpositive, by decide, ⟨2, by norm_num⟩, by norm_num, ?_, ?_,
+    by norm_num⟩
+  · omega
+  · norm_num [UInt32.size] at hbound ⊢
+    omega
+
 private theorem align1Layout_valid_of_bounds (size : Nat)
     (hsizeLower : 8 ≤ size) (hsizeUpper : size ≤ 1073741824) :
     ({ size := size, alignment := 1 } : AllocLayout).Valid := by

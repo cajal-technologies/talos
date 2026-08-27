@@ -1698,6 +1698,172 @@ theorem twp_func3_dispatch_completed_nonempty
   iapply Hdispatch
   iapply Hcont $$ Hframe
 
+/-! ## Values allocation -/
+
+/-- Execute the generated allocation marker and values allocation call for a
+completed nonempty input.  The only terminal allocator result is repackaged as
+the exact `.values` driver OOM state; a normal result retains the stack/frame
+resources and exposes the fresh complete live block. -/
+theorem twp_func3_allocate_values
+    [WasmSmallStepGS hlc Universal.State]
+    (hfunc5 : Func5Spec (hlc := hlc))
+    (heapId : GName) (original : List UInt32)
+    (capacity dataPtr : UInt32)
+    (completed chunkBytes outputBytes shadow : List UInt8)
+    (storedCursor : UInt32) (frontier : Nat)
+    (history : AllocationHistory)
+    (horiginal : original ≠ [])
+    (hcompleted : serialize original = completed)
+    (hgeo : GeometricVecFacts (serialize original).length completed.length 0
+      capacity dataPtr frontier history)
+    (callerLocals : Locals)
+    (hlocal7 : callerLocals.get 7 =
+      some (.i32 (UInt32.ofNat completed.length)))
+    {stack : List Value} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame} {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → HeapIProp} :
+    let layout : AllocLayout :=
+      { size := completed.length, alignment := 4 }
+    iprop(
+      RuntimeContext ∗
+      StackPointer driverBase ∗
+      StackReserve reserveBase shadow ∗
+      ExportFrame heapId capacity dataPtr completed chunkBytes outputBytes ∗
+      BumpHeap heapId storedCursor frontier history ∗
+      Streams [] [] false ∗
+      ((∀ base : UInt32, ∀ finish : UInt32, ∀ bytes : List UInt8,
+          ⌜classifyBump frontier layout = .success base finish⌝ -∗
+          RuntimeContext -∗
+          StackPointer driverBase -∗
+          StackReserve reserveBase shadow -∗
+          ExportFrame heapId capacity dataPtr completed chunkBytes
+            outputBytes -∗
+          BumpHeap heapId finish finish.toNat
+            (history.allocate base layout) -∗
+          LiveBlock heapId history.nextId base layout bytes -∗
+          Streams [] [] false -∗
+          ResumeWP [.i32 base] callerLocals stack code arity remainder controls
+            calls s E Φ) ∧
+        (DriverValuesOOM heapId original -∗
+          Φ (.trapped (.host OOM.trapMessage))))) ⊢
+      WP (.running
+        ⟨{ callerLocals with values := stack },
+          [.call 7, .localGet 7, .const 4, .call 8] ++ code,
+          arity, remainder, controls, calls⟩ : Expr Universal.State)
+        @ s; E [{ Φ }] := by
+  dsimp only
+  let layout : AllocLayout :=
+    { size := completed.length, alignment := 4 }
+  have hboundTotal := GeometricVecFacts.completed_lt_signed
+    (serialize original).length completed.length 0 capacity dataPtr frontier
+    history hgeo rfl
+  have hbound : completed.length < 2147483648 := by
+    simpa [hcompleted] using hboundTotal
+  have halign : completed.length % 4 = 0 := by
+    rw [← hcompleted, serialize_length]
+    omega
+  have hpositive : 0 < completed.length := by
+    rw [← hcompleted, serialize_length]
+    have := List.length_pos_iff_ne_nil.mpr horiginal
+    omega
+  have hlengthWord :
+      (UInt32.ofNat completed.length).toNat = completed.length := by
+    apply UInt32.toNat_ofNat_of_lt'
+    norm_num [UInt32.size] at hbound ⊢
+    omega
+  have hlayoutValid : layout.Valid := by
+    exact Project.Mergesort.Representations.align4Layout_valid_of_bounds
+      completed.length hpositive hbound halign
+  have hlayoutMatches :
+      layout.Matches (UInt32.ofNat completed.length) 4 := by
+    unfold AllocLayout.Matches layout
+    simp only [hlengthWord]
+    decide
+  have hgeoOriginal : GeometricVecFacts (serialize original).length
+      (serialize original).length 0 capacity dataPtr frontier history := by
+    simpa only [hcompleted] using hgeo
+  iintro ⟨Hruntime, Hsp, Hreserve, Hframe, Hbump, Hstreams, Hcont⟩
+  simp only [List.cons_append, List.nil_append]
+  have Hmarker := Project.Mergesort.ContractProofs.func4_correct
+      (hlc := hlc) (callerLocals := callerLocals) (stack := stack)
+      (code := [.localGet 7, .const 4, .call 8] ++ code)
+      (arity := arity) (remainder := remainder) (controls := controls)
+      (calls := calls) (s := s) (E := E) (Φ := Φ)
+  unfold Func4Spec CallContract callExpr at Hmarker
+  simp only [List.cons_append, List.nil_append] at Hmarker
+  iapply Hmarker
+  isplitl [Hruntime]
+  · iexact Hruntime
+  iintro Hruntime
+  unfold ResumeWP resumeExpr
+  simp only [List.cons_append, List.nil_append]
+  have hlocal7' : ({ callerLocals with values := stack } : Locals).get 7 =
+      some (.i32 (UInt32.ofNat completed.length)) := by
+    simpa using hlocal7
+  iapply twp_localGet hlocal7'
+  iapply twp_const
+  have Halloc := hfunc5
+      (size := UInt32.ofNat completed.length) (alignment := 4)
+      (layout := layout) (heapId := heapId) (storedCursor := storedCursor)
+      (frontier := frontier) (history := history)
+      (input := []) (output := []) (raised := false)
+      (callerLocals := callerLocals) (stack := stack) (code := code)
+      (arity := arity) (remainder := remainder) (controls := controls)
+      (calls := calls) (s := s) (E := E) (Φ := Φ)
+  unfold CallContract callExpr at Halloc
+  simp only [List.cons_append, List.nil_append] at Halloc
+  iapply Halloc
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hbump]
+  · iexact Hbump
+  isplitl [Hstreams]
+  · iexact Hstreams
+  isplitl []
+  · ipureintro
+    exact ⟨hlayoutMatches, hlayoutValid, Or.inr rfl⟩
+  unfold AllocContinuation
+  cases hdecision : classifyBump frontier layout with
+  | oom =>
+      iintro Hbump Hstreams
+      ihave Hoom := BI.and_elim_r $$ Hcont
+      iapply Hoom
+      ihave HframeOriginal : ExportFrame heapId capacity dataPtr
+          (serialize original) chunkBytes outputBytes $$ [Hframe]
+      · rw [hcompleted]
+        iexact Hframe
+      unfold DriverValuesOOM
+      iexists capacity, dataPtr, chunkBytes, outputBytes, shadow,
+        storedCursor, frontier, history
+      isplitl []
+      · ipureintro
+        exact ⟨List.length_pos_iff_ne_nil.mpr horiginal, hgeoOriginal⟩
+      iframe
+  | success base finish =>
+      isplit
+      · iintro %bytes Hruntime Hbump Hblock Hstreams
+        ihave Hnormal := BI.and_elim_l $$ Hcont
+        ihave Hresume := Hnormal $$ %base %finish %bytes %rfl Hruntime Hsp
+          Hreserve Hframe Hbump Hblock Hstreams
+        iunfold ResumeWP
+        simp only [resumeExpr, List.cons_append, List.nil_append]
+        iexact Hresume
+      · iintro Hbump Hstreams
+        ihave Hoom := BI.and_elim_r $$ Hcont
+        iapply Hoom
+        ihave HframeOriginal : ExportFrame heapId capacity dataPtr
+            (serialize original) chunkBytes outputBytes $$ [Hframe]
+        · rw [hcompleted]
+          iexact Hframe
+        unfold DriverValuesOOM
+        iexists capacity, dataPtr, chunkBytes, outputBytes, shadow,
+          storedCursor, frontier, history
+        isplitl []
+        · ipureintro
+          exact ⟨List.length_pos_iff_ne_nil.mpr horiginal, hgeoOriginal⟩
+        iframe
+
 /-- All dynamic ownership and ghost state carried across a read-loop
 back-edge. -/
 private structure Func3ReadLoopState where
