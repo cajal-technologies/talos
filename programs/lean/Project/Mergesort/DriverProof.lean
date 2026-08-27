@@ -4455,6 +4455,145 @@ theorem twp_func3_restore_stack
     iexact Hsp
   iapply Hfinish $$ Hsp'
 
+/-- A completed nonempty input lineage has no live metadata except the Vec
+storage identified by its authoritative allocation token. -/
+private theorem completedHistory_other_records_retired
+    (total : Nat) (capacity inputPtr : UInt32)
+    (frontier : Nat) (history : AllocationHistory)
+    (inputId : Nat)
+    (hpositive : 0 < total)
+    (hgeo : GeometricVecFacts total total 0 capacity inputPtr frontier history)
+    (hinput : get? history.records inputId =
+      some (liveMeta inputPtr
+        { size := capacity.toNat, alignment := 1 })) :
+    ∀ allocationId metadata,
+      get? history.records allocationId = some metadata →
+      allocationId ≠ inputId → metadata.status = .retired := by
+  rcases hgeo with hempty | hshort | hlarge
+  · omega
+  · rcases hshort with
+      ⟨_remaining, _length, _totalBound, _capacity, _ptr, _frontier,
+        hhistory⟩
+    subst history
+    have hinputId : inputId = 0 := by
+      by_contra hne
+      unfold shortHistory at hinput
+      rw [get?_insert_ne (Ne.symm hne)] at hinput
+      simp [LawfulPartialMap.get?_empty] at hinput
+    intro allocationId metadata hlookup hne
+    subst inputId
+    unfold shortHistory at hlookup
+    by_cases hid : 0 = allocationId
+    · exact False.elim (hne hid.symm)
+    · rw [get?_insert_ne hid] at hlookup
+      simp [LawfulPartialMap.get?_empty] at hlookup
+  · rcases hlarge with
+      ⟨exponent, hexponentLower, _hexponentUpper, hcapacity, _hlength,
+        _htotal, hptr, _hfrontier, hhistory⟩
+    have hptrExact :
+        inputPtr = UInt32.ofNat (vectorBlockBase exponent) := by
+      rw [← UInt32.ofNat_toNat (x := inputPtr), hptr]
+    have hinputId : inputId = exponent - 8 := by
+      apply geometricHistory_live_unique exponent inputId hexponentLower
+      simpa only [hhistory, hptrExact, hcapacity] using hinput
+    intro allocationId metadata hlookup hne
+    subst history
+    unfold geometricHistory at hlookup
+    rw [geometricRecords_lookup] at hlookup
+    split at hlookup
+    · rename_i hidBound
+      injection hlookup with hmetadata
+      subst metadata
+      have hnotTop : allocationId + 8 ≠ exponent := by
+        intro hlive
+        apply hne
+        rw [hinputId]
+        omega
+      simp [geometricMetadata, hnotTop]
+    · contradiction
+
+/-- Allocation history immediately before the completed input Vec is
+retired: both same-sized driver word arrays have already been retired. -/
+private def completedDriverBeforeInputHistory
+    (history : AllocationHistory) (valuesPtr scratchPtr : UInt32)
+    (workLayout : AllocLayout) : AllocationHistory :=
+  (((history.allocate valuesPtr workLayout).allocate scratchPtr workLayout).retire
+      history.nextId valuesPtr workLayout).retire
+    (history.nextId + 1) scratchPtr workLayout
+
+/-- Retiring the two driver-owned word arrays and then the unique completed
+input Vec leaves an allocation history with no live entries. -/
+private theorem completedDriverHistory_allRetired
+    (total : Nat) (capacity inputPtr valuesPtr scratchPtr : UInt32)
+    (frontier : Nat) (history : AllocationHistory)
+    (inputId : Nat) (workLayout : AllocLayout)
+    (hpositive : 0 < total)
+    (hgeo : GeometricVecFacts total total 0 capacity inputPtr frontier history)
+    (hinput :
+      get? (completedDriverBeforeInputHistory history valuesPtr scratchPtr
+          workLayout).records inputId =
+        some (liveMeta inputPtr
+          { size := capacity.toNat, alignment := 1 })) :
+    AllRetired
+      ((completedDriverBeforeInputHistory history valuesPtr scratchPtr
+        workLayout).retire
+          inputId inputPtr { size := capacity.toNat, alignment := 1 }) := by
+  let inputLayout : AllocLayout :=
+    { size := capacity.toNat, alignment := 1 }
+  have hinputNeValues : inputId ≠ history.nextId := by
+    intro heq
+    subst inputId
+    simp only [completedDriverBeforeInputHistory, AllocationHistory.allocate,
+      AllocationHistory.retire] at hinput
+    rw [get?_insert_ne (by omega)] at hinput
+    rw [get?_insert_eq rfl] at hinput
+    have hstatus := congrArg AllocationMeta.status (Option.some.inj hinput)
+    simp [liveMeta, retiredMeta] at hstatus
+  have hinputNeScratch : inputId ≠ history.nextId + 1 := by
+    intro heq
+    subst inputId
+    simp only [completedDriverBeforeInputHistory, AllocationHistory.allocate,
+      AllocationHistory.retire] at hinput
+    rw [get?_insert_eq rfl] at hinput
+    have hstatus := congrArg AllocationMeta.status (Option.some.inj hinput)
+    simp [liveMeta, retiredMeta] at hstatus
+  have hinputBase : get? history.records inputId =
+      some (liveMeta inputPtr inputLayout) := by
+    simp only [completedDriverBeforeInputHistory, AllocationHistory.allocate,
+      AllocationHistory.retire] at hinput
+    rw [get?_insert_ne (Ne.symm hinputNeScratch)] at hinput
+    rw [get?_insert_ne (Ne.symm hinputNeValues)] at hinput
+    rw [get?_insert_ne (Ne.symm hinputNeScratch)] at hinput
+    rw [get?_insert_ne (Ne.symm hinputNeValues)] at hinput
+    simpa only [inputLayout] using hinput
+  have hothers := completedHistory_other_records_retired total capacity
+    inputPtr frontier history inputId hpositive hgeo hinputBase
+  unfold AllRetired
+  intro allocationId metadata hlookup
+  simp only [completedDriverBeforeInputHistory, AllocationHistory.allocate,
+    AllocationHistory.retire] at hlookup
+  by_cases hinputId : inputId = allocationId
+  · rw [get?_insert_eq hinputId] at hlookup
+    injection hlookup with hmetadata
+    subst metadata
+    rfl
+  · rw [get?_insert_ne hinputId] at hlookup
+    by_cases hscratchId : history.nextId + 1 = allocationId
+    · rw [get?_insert_eq hscratchId] at hlookup
+      injection hlookup with hmetadata
+      subst metadata
+      rfl
+    · rw [get?_insert_ne hscratchId] at hlookup
+      by_cases hvaluesId : history.nextId = allocationId
+      · rw [get?_insert_eq hvaluesId] at hlookup
+        injection hlookup with hmetadata
+        subst metadata
+        rfl
+      · rw [get?_insert_ne hvaluesId] at hlookup
+        rw [get?_insert_ne hscratchId] at hlookup
+        rw [get?_insert_ne hvaluesId] at hlookup
+        exact hothers allocationId metadata hlookup (Ne.symm hinputId)
+
 /-- All dynamic ownership and ghost state carried across a read-loop
 back-edge. -/
 private structure Func3ReadLoopState where
