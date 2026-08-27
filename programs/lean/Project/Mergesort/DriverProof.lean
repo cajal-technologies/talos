@@ -710,6 +710,158 @@ theorem twp_func3_count_guard
   iapply twp_brIfZero
   iexact Hcont
 
+/-- Splitting a canonical byte stream at the driver's 256-byte read size
+preserves four-byte word boundaries on both sides. -/
+private theorem readChunk_mod_four (input : List UInt8)
+    (hmod : input.length % 4 = 0) :
+    let count := min 256 input.length
+    (input.take count).length = count ∧
+      count % 4 = 0 ∧
+      (input.drop count).length % 4 = 0 := by
+  dsimp only
+  by_cases hshort : input.length ≤ 256
+  · have hcount : min 256 input.length = input.length :=
+      min_eq_right hshort
+    rw [hcount]
+    simp [hmod]
+  · have hcount : min 256 input.length = 256 :=
+      min_eq_left (Nat.le_of_not_ge hshort)
+    rw [hcount]
+    have hlength : 256 ≤ input.length := by omega
+    simp only [List.length_take, min_eq_left hlength, List.length_drop]
+    exact ⟨trivial, by decide, by omega⟩
+
+/-- Execute the generated next-chunk read, update local 3, and classify the
+zero/nonzero result.  The nonzero arm exposes the exact next loop partition
+and its word-alignment facts; the zero arm preserves the completed frame. -/
+theorem twp_func3_read_and_classify
+    [WasmSmallStepGS hlc Universal.State]
+    (heapId : GName) (capacity dataPtr : UInt32)
+    (initialized chunkBytes outputBytes input output : List UInt8)
+    (hinputMod : input.length % 4 = 0)
+    (previousCurrent : UInt32)
+    (aux2 aux4 aux5 aux7 aux8 aux9 aux10 : UInt32)
+    {stack : List Value} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame} {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → HeapIProp} :
+    let count := min 256 input.length
+    let nextCurrent := input.take count
+    let nextRemaining := input.drop count
+    let nextTail := chunkBytes.drop count
+    iprop(
+      RuntimeContext ∗
+      Streams input output false ∗
+      ExportFrame heapId capacity dataPtr initialized chunkBytes outputBytes ∗
+      ((RuntimeContext -∗
+          Streams [] output false -∗
+          ExportFrame heapId capacity dataPtr initialized
+            chunkBytes outputBytes -∗
+          WP (.running
+            ⟨func3AppendLocals dataPtr 0
+                (UInt32.ofNat initialized.length)
+                aux2 aux4 aux5 aux7 aux8 aux9 aux10 (.i32 1 :: stack),
+              code, arity, remainder, controls, calls⟩ : Expr Universal.State)
+            @ s; E [{ Φ }]) ∧
+        (RuntimeContext -∗
+          Streams nextRemaining output false -∗
+          ExportFrame heapId capacity dataPtr initialized
+            (nextCurrent ++ nextTail) outputBytes -∗
+          ⌜input ≠ [] ∧ nextCurrent.length = count ∧
+            0 < count ∧ count ≤ 256 ∧
+            count % 4 = 0 ∧ nextRemaining.length % 4 = 0 ∧
+            input = nextCurrent ++ nextRemaining⌝ -∗
+          WP (.running
+            ⟨func3AppendLocals dataPtr (UInt32.ofNat count)
+                (UInt32.ofNat initialized.length)
+                aux2 aux4 aux5 aux7 aux8 aux9 aux10 (.i32 0 :: stack),
+              code, arity, remainder, controls, calls⟩ : Expr Universal.State)
+            @ s; E [{ Φ }]))) ⊢
+      WP (.running
+        ⟨func3AppendLocals dataPtr previousCurrent
+            (UInt32.ofNat initialized.length)
+            aux2 aux4 aux5 aux7 aux8 aux9 aux10 stack,
+          [.localGet 0, .const 12, .add, .const 256, .call 13,
+            .localTee 3, .eqz] ++ code,
+          arity, remainder, controls, calls⟩ : Expr Universal.State)
+        @ s; E [{ Φ }] := by
+  dsimp only
+  let count := min 256 input.length
+  let nextCurrent := input.take count
+  let nextRemaining := input.drop count
+  let nextTail := chunkBytes.drop count
+  have hsplit := readChunk_mod_four input hinputMod
+  dsimp only at hsplit
+  have hcountBound : count ≤ 256 := min_le_left _ _
+  iintro ⟨Hruntime, Hstreams, Hframe, Hcont⟩
+  simp only [List.cons_append, List.nil_append, func3AppendLocals]
+  have Hread := twp_func3_read_chunk heapId capacity dataPtr initialized chunkBytes
+    outputBytes input output false []
+    [.i32 driverBase, .i32 dataPtr, .i32 aux2, .i32 previousCurrent,
+      .i32 aux4, .i32 aux5, .i32 (UInt32.ofNat initialized.length),
+      .i32 aux7, .i32 aux8, .i32 aux9, .i32 aux10]
+    rfl
+    (stack := stack) (code := [.localTee 3, .eqz] ++ code)
+    (arity := arity) (remainder := remainder) (controls := controls)
+    (calls := calls) (s := s) (E := E) (Φ := Φ)
+  simp only [List.cons_append, List.nil_append] at Hread
+  iapply Hread
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hstreams]
+  · iexact Hstreams
+  isplitl [Hframe]
+  · iexact Hframe
+  iintro Hruntime Hstreams Hframe %_hcountBound
+  iapply twp_localTee
+      (locals' := func3AppendLocals dataPtr (UInt32.ofNat count)
+        (UInt32.ofNat initialized.length)
+        aux2 aux4 aux5 aux7 aux8 aux9 aux10
+        (.i32 (UInt32.ofNat count) :: stack))
+      (by simp [func3AppendLocals, count])
+  simp only [func3AppendLocals]
+  by_cases hempty : input = []
+  · have hcountZero : count = 0 := by simp [count, hempty]
+    have hremainingEmpty : input.drop count = [] := by
+      simp [hempty, hcountZero]
+    ihave HstreamsEmpty : Streams [] output false $$ [Hstreams]
+    · rw [← hremainingEmpty]
+      iexact Hstreams
+    ihave HframeEmpty : ExportFrame heapId capacity dataPtr initialized
+        chunkBytes outputBytes $$ [Hframe]
+    · isimp only [hempty, List.length_nil, min_zero, List.take_zero,
+        List.drop_zero, List.nil_append] at Hframe
+      iexact Hframe
+    iapply twp_eqz (result := 1) (by simp [hcountZero])
+    simp only [hcountZero, UInt32.reduceOfNat]
+    ihave Hempty := BI.and_elim_l $$ Hcont
+    iapply Hempty $$ Hruntime HstreamsEmpty HframeEmpty
+  · have hinputPositive : 0 < input.length := by
+      by_contra hnot
+      apply hempty
+      exact List.eq_nil_of_length_eq_zero (by omega)
+    have hcountPositive : 0 < count := by
+      dsimp only [count]
+      omega
+    have hcountSize : count < UInt32.size := by
+      norm_num [UInt32.size]
+      omega
+    have hcountWord : (UInt32.ofNat count).toNat = count :=
+      UInt32.toNat_ofNat_of_lt' hcountSize
+    have hcountNonzero : UInt32.ofNat count ≠ 0 := by
+      intro hzero
+      have hzeroNat := congrArg UInt32.toNat hzero
+      rw [hcountWord] at hzeroNat
+      simp only [UInt32.toNat_zero] at hzeroNat
+      omega
+    iapply twp_eqz (result := 0) (by simp [hcountNonzero])
+    ihave Hnonempty := BI.and_elim_r $$ Hcont
+    iapply Hnonempty $$ Hruntime Hstreams Hframe
+    · ipureintro
+      exact ⟨hempty, hsplit.1, hcountPositive, hcountBound,
+        hsplit.2.1, hsplit.2.2,
+        (List.take_append_drop count input).symm⟩
+
 /-- Execute the generated capacity block and append one nonempty read chunk.
 The fitting branch performs no allocation.  The non-fitting branch derives
 all of `Func1Spec`'s valid-input premises from `GeometricVecFacts`, reloads
