@@ -23,27 +23,27 @@ def func1Def : Wasm.Function :=
 def func2 : Wasm.Program := watFunctionBody% "../rust/build/byte_echo/program.wat" 2
 
 def func2Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [.i32, .i32, .i32], body := func2, results := [.i32], typeIdx := some 1 }
+  { params := [.i32, .i32], locals := [.i32, .i32], body := func2, results := [.i32], typeIdx := some 1 }
 
 def func3 : Wasm.Program := watFunctionBody% "../rust/build/byte_echo/program.wat" 3
 
 def func3Def : Wasm.Function :=
-  { params := [.i32, .i32, .i32], body := func3, typeIdx := some 3 }
+  { body := func3, typeIdx := some 2 }
 
 def func4 : Wasm.Program := watFunctionBody% "../rust/build/byte_echo/program.wat" 4
 
 def func4Def : Wasm.Function :=
-  { params := [.i32, .i32], body := func4, results := [.i32], typeIdx := some 1 }
+  { params := [.i32, .i32, .i32], body := func4, typeIdx := some 3 }
 
 def func5 : Wasm.Program := watFunctionBody% "../rust/build/byte_echo/program.wat" 5
 
 def func5Def : Wasm.Function :=
-  { params := [.i32, .i32], body := func5, typeIdx := some 0 }
+  { params := [.i32, .i32], body := func5, results := [.i32], typeIdx := some 1 }
 
 def func6 : Wasm.Program := watFunctionBody% "../rust/build/byte_echo/program.wat" 6
 
 def func6Def : Wasm.Function :=
-  { params := [.i32], body := func6, typeIdx := some 4 }
+  { params := [.i32, .i32], body := func6, typeIdx := some 0 }
 
 def func7 : Wasm.Program := watFunctionBody% "../rust/build/byte_echo/program.wat" 7
 
@@ -53,7 +53,7 @@ def func7Def : Wasm.Function :=
 def func8 : Wasm.Program := watFunctionBody% "../rust/build/byte_echo/program.wat" 8
 
 def func8Def : Wasm.Function :=
-  { params := [.i32, .i32], body := func8, typeIdx := some 0 }
+  { params := [.i32], body := func8, typeIdx := some 4 }
 
 def func9 : Wasm.Program := watFunctionBody% "../rust/build/byte_echo/program.wat" 9
 
@@ -63,15 +63,20 @@ def func9Def : Wasm.Function :=
 def func10 : Wasm.Program := watFunctionBody% "../rust/build/byte_echo/program.wat" 10
 
 def func10Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [.i32], body := func10, typeIdx := some 0 }
+  { params := [.i32, .i32], body := func10, typeIdx := some 0 }
 
 def func11 : Wasm.Program := watFunctionBody% "../rust/build/byte_echo/program.wat" 11
 
 def func11Def : Wasm.Function :=
-  { params := [.i32, .i32], body := func11, typeIdx := some 0 }
+  { params := [.i32, .i32], locals := [.i32], body := func11, typeIdx := some 0 }
+
+def func12 : Wasm.Program := watFunctionBody% "../rust/build/byte_echo/program.wat" 12
+
+def func12Def : Wasm.Function :=
+  { params := [.i32, .i32], body := func12, typeIdx := some 0 }
 
 def «module» : Wasm.Module :=
-  { (watModuleMetadata% "../rust/build/byte_echo/program.wat") with funcs := [func0Def, func1Def, func2Def, func3Def, func4Def, func5Def, func6Def, func7Def, func8Def, func9Def, func10Def, func11Def] }
+  { (watModuleMetadata% "../rust/build/byte_echo/program.wat") with funcs := [func0Def, func1Def, func2Def, func3Def, func4Def, func5Def, func6Def, func7Def, func8Def, func9Def, func10Def, func11Def, func12Def] }
 
 -- Compile-time fidelity check: errors if WAT and generated Lean AST differ.
 #guard_msgs (drop info) in

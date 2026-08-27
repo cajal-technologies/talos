@@ -1,5 +1,5 @@
 import Project.ByteEcho.Program
-import Interpreter.Wasm.Host.StdIO
+import Interpreter.Wasm.Host.Universal
 
 /-!
 # Specification for `byte_echo`
@@ -12,19 +12,20 @@ namespace Project.ByteEcho.Spec
 
 open Wasm
 
-/-- The generated module is linked against Talos's canonical two-function
-standard-I/O ABI. -/
-theorem module_imports : «module».imports = StdIO.imports := by
-  rfl
+/-- The generated module imports standard I/O plus the allocator's terminal
+OOM notification. -/
+theorem module_imports : «module».imports = StdIO.imports ++ OOM.imports := by
+  native_decide
 
-/-- Consequently the deterministic StdIO environment implements every host
-operation required by the generated module. -/
-theorem stdio_env_satisfies : StdIO.env.Satisfies «module» StdIO.spec :=
-  StdIO.env_satisfies «module» module_imports
+/-- The universal host implements every operation required by the generated
+module. -/
+theorem universal_env_satisfies :
+    (Universal.envFor «module»).Satisfies «module» (Universal.specFor «module») :=
+  Universal.envFor_satisfies «module»
 
 /-- Fuel-free relational execution of the exported byte-stream program. -/
 def RunsBytes (input output : List UInt8) : Prop :=
-  StdIO.Runs «module» "byte_echo" input output
+  Universal.RunsBytes «module» "byte_echo" input output
 
 /-- For every byte, running the program with that singleton input terminates
 with exactly the same singleton output. -/
