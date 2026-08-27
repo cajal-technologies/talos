@@ -4126,6 +4126,104 @@ theorem twp_func3_deallocate_values
   simp only [List.take_zero, List.nil_append]
   iapply Hcont $$ Hruntime Hbump
 
+/-- Exact generated block which retires the scratch allocation. -/
+private def func3ScratchDeallocBlockBody : Program :=
+  [.localGet 5, .br_if 0,
+    .localGet 8, .localGet 10, .const 4, .call 10]
+
+/-- Retire the complete scratch block.  The successful allocation path fixes
+local 5 to zero, so the generated skip edge is unreachable; local 10 carries
+the exact four-byte word-array layout consumed by `func7`. -/
+theorem twp_func3_deallocate_scratch
+    [WasmSmallStepGS hlc Universal.State]
+    (heapId : GName) (scratchId : Nat) (scratchPtr valuesPtr : UInt32)
+    (sorted scratchValues : List UInt32)
+    (storedCursor : UInt32) (frontier : Nat)
+    (history : AllocationHistory)
+    (aux3 aux6 aux4 aux7 : UInt32)
+    (hscratchLength : scratchValues.length = sorted.length)
+    (hbyteBound : 4 * sorted.length < UInt32.size)
+    {afterScratch : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → HeapIProp} :
+    let layout : AllocLayout :=
+      { size := 4 * sorted.length, alignment := 4 }
+    iprop(
+      RuntimeContext ∗
+      BumpHeap heapId storedCursor frontier history ∗
+      LiveWordBlock heapId scratchId scratchPtr scratchValues ∗
+      (RuntimeContext -∗
+        BumpHeap heapId storedCursor frontier
+          (history.retire scratchId scratchPtr layout) -∗
+        WP (.running
+          ⟨func3AppendLocals (UInt32.ofNat sorted.length) aux3 aux6 valuesPtr
+              aux4 0 aux7 scratchPtr (UInt32.ofNat sorted.length)
+              (UInt32.ofNat (4 * sorted.length)) [],
+            afterScratch, arity, remainder, controls, calls⟩ :
+              Expr Universal.State)
+          @ s; E [{ Φ }])) ⊢
+      WP (.running
+        ⟨func3AppendLocals (UInt32.ofNat sorted.length) aux3 aux6 valuesPtr
+            aux4 0 aux7 scratchPtr (UInt32.ofNat sorted.length)
+            (UInt32.ofNat (4 * sorted.length)) [],
+          [.block 0 0 func3ScratchDeallocBlockBody] ++ afterScratch,
+          arity, remainder, controls, calls⟩ : Expr Universal.State)
+        @ s; E [{ Φ }] := by
+  dsimp only
+  let layout : AllocLayout :=
+    { size := 4 * sorted.length, alignment := 4 }
+  have hsizeWord :
+      (UInt32.ofNat (4 * sorted.length)).toNat = 4 * sorted.length :=
+    UInt32.toNat_ofNat_of_lt' hbyteBound
+  have hfour : (4 : UInt32).toNat = 4 := by decide
+  iintro ⟨Hruntime, Hbump, Hscratch, Hcont⟩
+  ihave Hblock := (LiveWordBlock_as_liveBlock heapId scratchId scratchPtr
+    scratchValues).mp $$ Hscratch
+  isimp only [hscratchLength] at Hblock
+  simp only [List.cons_append, List.nil_append]
+  iapply twp_block
+  simp only [func3ScratchDeallocBlockBody, func3AppendLocals, List.drop_zero]
+  iapply twp_localGet rfl
+  iapply twp_brIfZero
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_const
+  have Hdealloc := Project.Mergesort.ContractProofs.func7_correct
+    (hlc := hlc)
+    (ptr := scratchPtr) (size := UInt32.ofNat (4 * sorted.length))
+    (alignment := 4) (layout := layout) (heapId := heapId)
+    (allocationId := scratchId) (bytes := serialize scratchValues)
+    (storedCursor := storedCursor) (frontier := frontier)
+    (history := history)
+    (callerLocals := func3AppendLocals (UInt32.ofNat sorted.length) aux3
+      aux6 valuesPtr aux4 0 aux7 scratchPtr (UInt32.ofNat sorted.length)
+      (UInt32.ofNat (4 * sorted.length)) [])
+    (stack := []) (code := []) (arity := arity) (remainder := remainder)
+    (controls :=
+      { kind := .block, paramArity := 0, resultArity := 0,
+        body := func3ScratchDeallocBlockBody, continuation := afterScratch,
+        belowStack := [] } :: controls)
+    (calls := calls) (s := s) (E := E) (Φ := Φ)
+  unfold Func7Spec CallContract callExpr at Hdealloc
+  simp only [List.cons_append, List.nil_append, func3AppendLocals,
+    func3ScratchDeallocBlockBody] at Hdealloc
+  iapply Hdealloc
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hbump]
+  · iexact Hbump
+  isplitl [Hblock]
+  · iexact Hblock
+  isplitl []
+  · ipureintro
+    exact ⟨hsizeWord, hfour, Or.inr rfl⟩
+  iintro Hruntime Hbump
+  unfold ResumeWP resumeExpr
+  iapply twp_exitControl rfl
+  simp only [List.take_zero, List.nil_append]
+  iapply Hcont $$ Hruntime Hbump
+
 /-- All dynamic ownership and ghost state carried across a read-loop
 back-edge. -/
 private structure Func3ReadLoopState where
