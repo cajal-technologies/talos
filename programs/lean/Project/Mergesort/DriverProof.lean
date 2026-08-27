@@ -336,6 +336,207 @@ theorem twp_func3_append_without_reserve
     exact hframeLengths
   iapply Hcont $$ Hframe
 
+/-- Driver-level view of `Func1Spec`'s continuation.  It frames the read
+chunk and output slot into the complete `ExportFrame` on both success and
+reserve-phase OOM. -/
+def Func3ReserveContinuation
+    [WasmSmallStepGS hlc Universal.State]
+    (totalBytes : Nat) (current : List UInt8)
+    (capacity dataPtr : UInt32) (initialized chunkBytes outputBytes shadow : List UInt8)
+    (heapId : GName) (storedCursor : UInt32) (frontier : Nat)
+    (history : AllocationHistory)
+    (remaining output : List UInt8) (raised : Bool)
+    (callerLocals : Locals) (stack : List Value)
+    (code : Program) (arity : Nat) (remainder : List Value)
+    (controls : List ControlFrame) (calls : List CallFrame)
+    (s : Stuckness) (E : CoPset)
+    (Φ : ObservableOutcome → HeapIProp) : HeapIProp :=
+  let newCapacityNat :=
+    selectedCapacity initialized.length current.length capacity.toNat
+  let newCapacity := UInt32.ofNat newCapacityNat
+  let newLayout : AllocLayout :=
+    { size := newCapacityNat, alignment := 1 }
+  match classifyBump frontier newLayout with
+  | .success newPtr finish => iprop(
+      (∀ finalHistory : AllocationHistory,
+          RuntimeContext -∗
+          StackPointer driverBase -∗
+          StackReserve reserveBase
+            (reserveSuccessShadow shadow newPtr newCapacity) -∗
+          ExportFrame heapId newCapacity newPtr initialized
+            chunkBytes outputBytes -∗
+          BumpHeap heapId finish finish.toNat finalHistory -∗
+          ⌜VecReserveHistory history finalHistory capacity dataPtr newPtr
+              newLayout ∧
+            GeometricVecFacts totalBytes
+              (initialized.length + current.length) remaining.length
+              newCapacity newPtr finish.toNat finalHistory⌝ -∗
+          Streams remaining output raised -∗
+          ResumeWP [] callerLocals stack code arity remainder controls calls
+            s E Φ) ∧
+        (StackPointer reserveBase -∗
+          StackReserve reserveBase shadow -∗
+          ExportFrame heapId capacity dataPtr initialized
+            chunkBytes outputBytes -∗
+          BumpHeap heapId storedCursor frontier history -∗
+          Streams remaining output true -∗
+          Φ (.trapped (.host OOM.trapMessage))))
+  | .oom => iprop(
+      StackPointer reserveBase -∗
+      StackReserve reserveBase shadow -∗
+      ExportFrame heapId capacity dataPtr initialized chunkBytes outputBytes -∗
+      BumpHeap heapId storedCursor frontier history -∗
+      Streams remaining output true -∗
+      Φ (.trapped (.host OOM.trapMessage)))
+
+/-- Execute the generated reserve call after the capacity guard has proved
+that the current nonempty chunk does not fit.  All excluded RawVec error
+edges are discharged by the explicit valid-input facts passed to
+`Func1Spec`; its only terminal branch is repackaged as the precise driver
+reserve OOM state. -/
+theorem twp_func3_reserve
+    [WasmSmallStepGS hlc Universal.State]
+    (hfunc1 : Func1Spec (hlc := hlc))
+    (totalBytes : Nat) (current remaining : List UInt8)
+    (capacity dataPtr : UInt32)
+    (initialized chunkBytes outputBytes shadow : List UInt8)
+    (heapId : GName) (storedCursor : UInt32) (frontier : Nat)
+    (history : AllocationHistory)
+    (output : List UInt8) (raised : Bool)
+    (aux2 aux4 aux5 aux7 aux8 aux9 aux10 : UInt32)
+    (hfacts :
+      current.length = min 256 (current.length + remaining.length) ∧
+      0 < current.length ∧ current.length % 4 = 0 ∧
+      capacity.toNat - initialized.length < current.length ∧
+      totalBytes = initialized.length + current.length + remaining.length ∧
+      GeometricVecFacts totalBytes initialized.length
+        (current.length + remaining.length) capacity dataPtr frontier history ∧
+      initialized.length + current.length < UInt32.size ∧
+      selectedCapacity initialized.length current.length capacity.toNat <
+        UInt32.size ∧
+      ({ size := selectedCapacity initialized.length current.length
+          capacity.toNat, alignment := 1 } : AllocLayout).Valid)
+    {stack : List Value} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame} {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → HeapIProp} :
+    let callerLocals := func3AppendLocals dataPtr
+      (UInt32.ofNat current.length) (UInt32.ofNat initialized.length)
+      aux2 aux4 aux5 aux7 aux8 aux9 aux10 stack
+    iprop(
+      RuntimeContext ∗
+      StackPointer driverBase ∗
+      StackReserve reserveBase shadow ∗
+      ExportFrame heapId capacity dataPtr initialized chunkBytes outputBytes ∗
+      BumpHeap heapId storedCursor frontier history ∗
+      Streams remaining output raised ∗
+      Func3ReserveContinuation totalBytes current capacity dataPtr initialized
+        chunkBytes outputBytes shadow heapId storedCursor frontier history
+        remaining output raised callerLocals stack code arity remainder
+        controls calls s E Φ) ⊢
+      WP (.running
+        ⟨callerLocals,
+          [.localGet 0, .localGet 6, .localGet 3,
+            .const 1, .const 1, .call 4] ++ code,
+          arity, remainder, controls, calls⟩ : Expr Universal.State)
+        @ s; E [{ Φ }] := by
+  dsimp only
+  let callerLocals := func3AppendLocals dataPtr
+    (UInt32.ofNat current.length) (UInt32.ofNat initialized.length)
+    aux2 aux4 aux5 aux7 aux8 aux9 aux10 stack
+  let newCapacityNat :=
+    selectedCapacity initialized.length current.length capacity.toNat
+  let newCapacity := UInt32.ofNat newCapacityNat
+  let newLayout : AllocLayout := { size := newCapacityNat, alignment := 1 }
+  have hinitializedWord :
+      (UInt32.ofNat initialized.length).toNat = initialized.length :=
+    UInt32.toNat_ofNat_of_lt' (by omega)
+  have hcurrentWord :
+      (UInt32.ofNat current.length).toNat = current.length :=
+    UInt32.toNat_ofNat_of_lt' (by omega)
+  iintro ⟨Hruntime, Hsp, Hreserve, Hframe, Hbump, Hstreams, Hcont⟩
+  isimp only [ExportFrame] at Hframe
+  icases Hframe with ⟨Hvec, Hchunk, Houtput, %hframeLengths⟩
+  simp only [List.cons_append, List.nil_append, func3AppendLocals]
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_const
+  iapply twp_const
+  have HreserveCall := hfunc1 (header := driverBase)
+      (length := UInt32.ofNat initialized.length)
+      (additional := UInt32.ofNat current.length)
+      (alignment := 1) (elementSize := 1)
+      (totalBytes := totalBytes) (current := current)
+      (remaining := remaining) (capacity := capacity) (ptr := dataPtr)
+      (initialized := initialized) (shadow := shadow) (heapId := heapId)
+      (storedCursor := storedCursor) (frontier := frontier)
+      (history := history) (output := output) (raised := raised)
+      (callerLocals := callerLocals) (stack := stack) (code := code)
+      (arity := arity) (remainder := remainder) (controls := controls)
+      (calls := calls) (s := s) (E := E) (Φ := Φ)
+  dsimp only at HreserveCall
+  unfold CallContract callExpr at HreserveCall
+  simp only [List.cons_append, List.nil_append, callerLocals,
+    func3AppendLocals] at HreserveCall
+  iapply HreserveCall
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hsp]
+  · iexact Hsp
+  isplitl [Hreserve]
+  · iexact Hreserve
+  isplitl [Hvec]
+  · iexact Hvec
+  isplitl [Hbump]
+  · iexact Hbump
+  isplitl [Hstreams]
+  · iexact Hstreams
+  isplitl []
+  · ipureintro
+    exact ⟨True.intro, True.intro, True.intro,
+      hinitializedWord, hcurrentWord,
+      hfacts.1, hfacts.2.1, hfacts.2.2.1, hfacts.2.2.2.1,
+      hfacts.2.2.2.2.1, hfacts.2.2.2.2.2.1,
+      hfacts.2.2.2.2.2.2.1, hfacts.2.2.2.2.2.2.2.1,
+      hfacts.2.2.2.2.2.2.2.2⟩
+  isimp only [Func3ReserveContinuation] at Hcont
+  unfold ReserveContinuation
+  dsimp only
+  cases hdecision : classifyBump frontier newLayout with
+  | oom =>
+      isimp only [hdecision] at Hcont
+      iintro Hsp Hreserve Hvec Hbump Hstreams
+      ihave Hframe : ExportFrame heapId capacity dataPtr initialized
+          chunkBytes outputBytes $$ [Hvec Hchunk Houtput]
+      · unfold ExportFrame
+        iframe
+        ipureintro
+        exact hframeLengths
+      iapply Hcont $$ Hsp Hreserve Hframe Hbump Hstreams
+  | success newPtr finish =>
+      isimp only [hdecision] at Hcont
+      isplit
+      · iintro %finalHistory Hruntime Hsp Hreserve Hvec Hbump %hpure Hstreams
+        ihave Hframe : ExportFrame heapId newCapacity newPtr initialized
+            chunkBytes outputBytes $$ [Hvec Hchunk Houtput]
+        · unfold ExportFrame
+          iframe
+          ipureintro
+          exact hframeLengths
+        ihave Hnormal := BI.and_elim_l $$ Hcont
+        iapply Hnormal $$ %finalHistory Hruntime Hsp Hreserve Hframe Hbump
+          %hpure Hstreams
+      · iintro Hsp Hreserve Hvec Hbump Hstreams
+        ihave Hframe : ExportFrame heapId capacity dataPtr initialized
+            chunkBytes outputBytes $$ [Hvec Hchunk Houtput]
+        · unfold ExportFrame
+          iframe
+          ipureintro
+          exact hframeLengths
+        ihave Hoom := BI.and_elim_r $$ Hcont
+        iapply Hoom $$ Hsp Hreserve Hframe Hbump Hstreams
+
 /-- Execute the generated `func3` prologue from raw entry ownership to the
 reviewed initialized-frame representation.  No allocator, host call, or
 driver semantic assumption is used here. -/
