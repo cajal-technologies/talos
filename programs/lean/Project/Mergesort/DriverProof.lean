@@ -665,6 +665,51 @@ def Func3AppendContinuation
     Streams remaining output true -∗
     Φ (.trapped (.host OOM.trapMessage))))
 
+/-- Discharge the generated `count ≥ 257` panic edge at its originating
+guard.  The only premise is the `count ≤ 256` fact returned by `func10`; no
+specification for the compiler-generated panic target is introduced. -/
+theorem twp_func3_count_guard
+    [WasmSmallStepGS hlc Universal.State]
+    (dataPtr : UInt32) (currentLength initializedLength : Nat)
+    (aux2 aux4 aux5 aux7 aux8 aux9 aux10 : UInt32)
+    (hcurrentBound : currentLength ≤ 256)
+    {stack : List Value} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame} {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → HeapIProp} :
+    iprop(
+      WP (.running
+        ⟨func3AppendLocals dataPtr (UInt32.ofNat currentLength)
+            (UInt32.ofNat initializedLength)
+            aux2 aux4 aux5 aux7 aux8 aux9 aux10 stack,
+          code, arity, remainder, controls, calls⟩ : Expr Universal.State)
+        @ s; E [{ Φ }]) ⊢
+      WP (.running
+        ⟨func3AppendLocals dataPtr (UInt32.ofNat currentLength)
+            (UInt32.ofNat initializedLength)
+            aux2 aux4 aux5 aux7 aux8 aux9 aux10 stack,
+          [.localGet 3, .const 257, .geU, .br_if 1] ++ code,
+          arity, remainder, controls, calls⟩ : Expr Universal.State)
+        @ s; E [{ Φ }] := by
+  have hcurrentSize : currentLength < UInt32.size := by
+    norm_num [UInt32.size]
+    omega
+  have hcurrentWord :
+      (UInt32.ofNat currentLength).toNat = currentLength :=
+    UInt32.toNat_ofNat_of_lt' hcurrentSize
+  have hlt : UInt32.ofNat currentLength < (257 : UInt32) := by
+    rw [UInt32.lt_iff_toNat_lt, hcurrentWord,
+      show (257 : UInt32).toNat = 257 by decide]
+    omega
+  iintro Hcont
+  simp only [List.cons_append, List.nil_append, func3AppendLocals]
+  iapply twp_localGet rfl
+  iapply twp_const
+  iapply twp_geU (result := 0)
+    (by simp [UInt32.not_le.mpr hlt])
+  iapply twp_brIfZero
+  iexact Hcont
+
 /-- Execute the generated capacity block and append one nonempty read chunk.
 The fitting branch performs no allocation.  The non-fitting branch derives
 all of `Func1Spec`'s valid-input premises from `GeometricVecFacts`, reloads
