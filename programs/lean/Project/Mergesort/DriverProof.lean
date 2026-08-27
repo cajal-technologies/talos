@@ -4224,6 +4224,169 @@ theorem twp_func3_deallocate_scratch
   simp only [List.take_zero, List.nil_append]
   iapply Hcont $$ Hruntime Hbump
 
+/-- Exact generated tail which either skips empty Vec storage or retires its
+complete allocation.  This is still inside the driver's outermost block. -/
+private def func3InputDeallocTail : Program :=
+  [.localGet 0, .load32 0, .localTee 3, .eqz, .br_if 0,
+    .localGet 4, .localGet 3, .const 1, .call 10]
+
+/-- Retire a completed nonempty input Vec and expose the raw stack-frame bytes.
+The allocation identity is obtained from `VecStorage`, while its membership in
+the current allocator history is obtained from authoritative ghost agreement.
+Keeping that lookup explicit is what later makes `AllRetired` provable without
+assuming which allocation ID the Vec happened to receive. -/
+theorem twp_func3_deallocate_input
+    [WasmSmallStepGS hlc Universal.State]
+    (heapId : GName) (capacity inputPtr : UInt32)
+    (initialized chunkBytes outputBytes : List UInt8)
+    (storedCursor : UInt32) (frontier : Nat)
+    (history : AllocationHistory)
+    (aux1 aux3 aux6 aux2 aux5 aux7 aux8 aux9 aux10 : UInt32)
+    (hcapacity : 0 < capacity.toNat)
+    (driverBody afterDriver : Program)
+    {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    {s : Stuckness} {E : CoPset}
+    {Phi : ObservableOutcome → HeapIProp} :
+    let layout : AllocLayout :=
+      { size := capacity.toNat, alignment := 1 }
+    let finalLocals :=
+      func3AppendLocals aux1 capacity aux6 aux2 inputPtr aux5 aux7 aux8 aux9
+        aux10 []
+    iprop(
+      RuntimeContext ∗
+      ExportFrame heapId capacity inputPtr initialized chunkBytes outputBytes ∗
+      BumpHeap heapId storedCursor frontier history ∗
+      (∀ allocationId : Nat, ∀ allBytes : List UInt8,
+        ∀ spare : List UInt8,
+        ⌜0 < capacity.toNat ∧
+          initialized.length ≤ capacity.toNat ∧
+          allBytes = initialized ++ spare ∧
+          spare.length = capacity.toNat - initialized.length ∧
+          get? history.records allocationId =
+            some (liveMeta inputPtr layout)⌝ -∗
+        RuntimeContext -∗
+        BumpHeap heapId storedCursor frontier
+          (history.retire allocationId inputPtr layout) -∗
+        ByteSlice driverBase
+          (exportFrameBytes capacity inputPtr initialized chunkBytes
+            outputBytes) -∗
+        WP (.running
+          ⟨finalLocals, afterDriver, arity, remainder, controls, calls⟩ :
+            Expr Universal.State) @ s; E [{ Phi }])) ⊢
+      WP (.running
+        ⟨func3AppendLocals aux1 aux3 aux6 aux2 inputPtr aux5 aux7 aux8
+            aux9 aux10 [],
+          func3InputDeallocTail, arity, remainder,
+          { kind := .block, paramArity := 0, resultArity := 0,
+            body := driverBody, continuation := afterDriver,
+            belowStack := [] } :: controls,
+          calls⟩ : Expr Universal.State) @ s; E [{ Phi }] := by
+  dsimp only
+  let layout : AllocLayout :=
+    { size := capacity.toNat, alignment := 1 }
+  let finalLocals :=
+    func3AppendLocals aux1 capacity aux6 aux2 inputPtr aux5 aux7 aux8 aux9
+      aux10 []
+  have hcapacityNonzero : capacity ≠ 0 := by
+    intro hzero
+    have := congrArg UInt32.toNat hzero
+    simp only [UInt32.toNat_zero] at this
+    omega
+  have hone : (1 : UInt32).toNat = 1 := by decide
+  iintro ⟨Hruntime, Hframe, Hbump, Hcont⟩
+  isimp only [ExportFrame, VecU8, RawVecHeader] at Hframe
+  icases Hframe with
+    ⟨⟨⟨Hcapacity, Hpointer⟩, Hlength, Hstorage⟩,
+      Hchunk, Houtput, %hframeLengths⟩
+  simp only [func3InputDeallocTail, func3AppendLocals]
+  iapply twp_localGet rfl
+  ihave Hcapacity' : pointsTo_u32 0 (driverBase + 0) capacity $$ [Hcapacity]
+  · simp only [UInt32.add_zero]
+    iexact Hcapacity
+  iapply twp_load32 (address := driverBase) (offset := 0) capacity
+      (by decide) (by decide) (by decide) (by decide) $$ Hcapacity'
+  iintro Hcapacity
+  isimp only [UInt32.add_zero] at Hcapacity
+  iapply twp_localTee rfl
+  simp only [List.length, List.set]
+  iapply twp_eqz (result := 0) (by simp [hcapacityNonzero])
+  iapply twp_brIfZero
+  ihave Hframe : ExportFrame heapId capacity inputPtr initialized chunkBytes
+      outputBytes $$ [Hcapacity Hpointer Hlength Hstorage Hchunk Houtput]
+  · unfold ExportFrame VecU8 RawVecHeader
+    iframe
+    ipureintro
+    exact hframeLengths
+  ihave Hreleased := ExportFrame_releaseStorage heapId capacity inputPtr
+    initialized chunkBytes outputBytes $$ Hframe
+  icases Hreleased with ⟨Hstorage, HframeBytes, %_hframeLength⟩
+  isimp only [VecStorage] at Hstorage
+  icases Hstorage with (%hempty | Hlive)
+  ·
+    have hzero := congrArg UInt32.toNat hempty.1
+    simp only [UInt32.toNat_zero] at hzero
+    omega
+  · icases Hlive with
+      ⟨%allocationId, %allBytes, %spare, %hstorage, Hblock⟩
+    isimp only [BumpHeap] at Hbump
+    icases Hbump with
+      ⟨Hcursor, Hfrontier, Hauth, Hretired, %hheap⟩
+    isimp only [LiveBlock] at Hblock
+    icases Hblock with ⟨Htoken, Hbytes, %hblock⟩
+    ihave %hlookup : ⌜get? history.records allocationId =
+        some (liveMeta inputPtr layout)⌝ $$ [Hauth Htoken]
+    · iapply AllocMetaAuth_token_agree
+      iframe
+    ihave Hbump : BumpHeap heapId storedCursor frontier history $$
+        [Hcursor Hfrontier Hauth Hretired]
+    · unfold BumpHeap
+      iframe
+      ipureintro
+      exact hheap
+    ihave Hblock : LiveBlock heapId allocationId inputPtr layout allBytes $$
+        [Htoken Hbytes]
+    · unfold LiveBlock
+      iframe
+      ipureintro
+      exact hblock
+    iapply twp_localGet rfl
+    iapply twp_localGet rfl
+    iapply twp_const
+    have Hdealloc := Project.Mergesort.ContractProofs.func7_correct
+      (hlc := hlc) (ptr := inputPtr) (size := capacity) (alignment := 1)
+      (layout := layout) (heapId := heapId) (allocationId := allocationId)
+      (bytes := allBytes) (storedCursor := storedCursor) (frontier := frontier)
+      (history := history) (callerLocals := finalLocals) (stack := [])
+      (code := []) (arity := arity) (remainder := remainder)
+      (controls :=
+        { kind := .block, paramArity := 0, resultArity := 0,
+          body := driverBody, continuation := afterDriver,
+          belowStack := [] } :: controls)
+      (calls := calls) (s := s) (E := E) (Φ := Phi)
+    unfold Func7Spec CallContract callExpr at Hdealloc
+    simp only [List.cons_append, List.nil_append, finalLocals,
+      func3AppendLocals] at Hdealloc
+    iapply Hdealloc
+    isplitl [Hruntime]
+    · iexact Hruntime
+    isplitl [Hbump]
+    · iexact Hbump
+    isplitl [Hblock]
+    · iexact Hblock
+    isplitl []
+    · ipureintro
+      exact ⟨rfl, hone, Or.inl rfl⟩
+    iintro Hruntime Hbump
+    unfold ResumeWP resumeExpr
+    iapply twp_exitControl rfl
+    simp only [List.take_zero, List.nil_append]
+    ispecialize Hcont $$ %allocationId %allBytes %spare
+    ispecialize Hcont $$
+      %⟨hstorage.1, hstorage.2.1, hstorage.2.2.1,
+        hstorage.2.2.2, hlookup⟩
+    iapply Hcont $$ Hruntime Hbump HframeBytes
+
 /-- All dynamic ownership and ghost state carried across a read-loop
 back-edge. -/
 private structure Func3ReadLoopState where
