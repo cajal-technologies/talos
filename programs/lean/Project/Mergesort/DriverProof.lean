@@ -3148,6 +3148,133 @@ theorem twp_func3_decode_blocks
         %(UInt32.ofNat bulk) %(0 : UInt32) Hsource Hdestination
       iexact Hfinal
 
+/-- From a normal values-allocation result, exclude the generated null edge,
+open the completed input Vec and fresh allocation as word arrays, execute the
+entire decode, and reseal the values allocation with contents `original`.
+All compiler address temporaries remain hidden behind the continuation. -/
+theorem twp_func3_decode_allocated
+    [WasmSmallStepGS hlc Universal.State]
+    (heapId : GName) (valuesId : Nat)
+    (capacity source destination : UInt32)
+    (original : List UInt32)
+    (chunkBytes outputBytes bytes : List UInt8)
+    (frontier : Nat) (history : AllocationHistory)
+    (current aux2 aux8 aux9 aux10 : UInt32)
+    (horiginal : original ≠ [])
+    (hgeo : GeometricVecFacts (serialize original).length
+      (serialize original).length 0 capacity source frontier history)
+    {afterDecode : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → HeapIProp} :
+    let layout : AllocLayout :=
+      { size := 4 * original.length, alignment := 4 }
+    iprop(
+      ExportFrame heapId capacity source (serialize original) chunkBytes
+          outputBytes ∗
+      LiveBlock heapId valuesId destination layout bytes ∗
+      ((∀ final1 : UInt32, ∀ final3 : UInt32, ∀ final6 : UInt32,
+        ∀ final5 : UInt32, ∀ final8 : UInt32,
+          ExportFrame heapId capacity source (serialize original) chunkBytes
+              outputBytes -∗
+          LiveWordBlock heapId valuesId destination original -∗
+          WP (.running
+            ⟨func3AppendLocals final1 final3 final6 destination source final5
+                (UInt32.ofNat (4 * original.length)) final8
+                (UInt32.ofNat original.length) aux10 [],
+              afterDecode, arity, remainder, controls, calls⟩ :
+                Expr Universal.State)
+            @ s; E [{ Φ }]))) ⊢
+      WP (.running
+        ⟨func3AppendLocals source current
+            (UInt32.ofNat (4 * original.length)) aux2 source 0
+            (UInt32.ofNat (4 * original.length)) aux8 aux9 aux10
+            [.i32 destination],
+          [.localTee 2, .eqz, .br_if 1] ++ func3DecodeSetup ++
+            [.block 0 0 func3DecodeOuterBlockBody] ++ afterDecode,
+          arity, remainder, controls, calls⟩ : Expr Universal.State)
+        @ s; E [{ Φ }] := by
+  dsimp only
+  let layout : AllocLayout :=
+    { size := 4 * original.length, alignment := 4 }
+  have hpositive : 0 < original.length :=
+    List.length_pos_iff_ne_nil.mpr horiginal
+  have hbyteBound : 4 * original.length < 2147483648 := by
+    have htotal := GeometricVecFacts.completed_lt_signed
+      (serialize original).length (serialize original).length 0 capacity
+      source frontier history hgeo rfl
+    simpa only [serialize_length] using htotal
+  iintro ⟨Hframe, Hblock, Hcont⟩
+  have Hguard := twp_func3_values_nonnull_guard
+    (hlc := hlc) heapId valuesId destination layout bytes source current
+    (UInt32.ofNat (4 * original.length)) aux2 source 0
+    (UInt32.ofNat (4 * original.length)) aux8 aux9 aux10
+    (stack := [])
+    (code := func3DecodeSetup ++
+      [.block 0 0 func3DecodeOuterBlockBody] ++ afterDecode)
+    (arity := arity) (remainder := remainder) (controls := controls)
+    (calls := calls) (s := s) (E := E) (Φ := Φ)
+  simp only [List.cons_append, List.nil_append] at Hguard ⊢
+  iapply Hguard
+  isplitl [Hblock]
+  · iexact Hblock
+  iintro Hblock
+  isimp only [LiveBlock] at Hblock
+  icases Hblock with ⟨HallocationToken, HallocationBytes, %hblockFacts⟩
+  have hbytes : bytes.length = 4 * original.length := by
+    simpa only [layout] using hblockFacts.1
+  have hdecodedLength : (decodeWords bytes).length = original.length :=
+    (serialize_decodeWords_of_length bytes original.length hbytes).2
+  ihave Hblock : LiveBlock heapId valuesId destination layout bytes $$
+      [HallocationToken HallocationBytes]
+  · unfold LiveBlock
+    iframe
+    ipureintro
+    exact hblockFacts
+  ihave Hbuffers := DriverDecodeBuffers_open heapId capacity source destination
+    valuesId original chunkBytes outputBytes bytes frontier history horiginal
+    hgeo $$ [Hframe Hblock]
+  · iframe
+  icases Hbuffers with ⟨Hsource, HcloseSource, Hvalues⟩
+  isimp only [LiveWordBlock] at Hvalues
+  icases Hvalues with ⟨Htoken, Hdestination, %hnonnull⟩
+  isimp only [hdecodedLength] at Htoken
+  have Hsetup := twp_func3_decode_setup
+    (hlc := hlc) source destination original.length current 0 aux8 aux9
+    aux10 hpositive hbyteBound
+    (code := [.block 0 0 func3DecodeOuterBlockBody] ++ afterDecode)
+    (arity := arity) (remainder := remainder) (controls := controls)
+    (calls := calls) (s := s) (E := E) (Φ := Φ)
+  simp only [func3DecodeSetup, List.cons_append, List.nil_append] at Hsetup ⊢
+  iapply Hsetup
+  have Hdecode := twp_func3_decode_blocks
+    (hlc := hlc) source destination original (decodeWords bytes) aux10
+    hdecodedLength.symm
+    hpositive hbyteBound
+    (afterDecode := afterDecode) (arity := arity) (remainder := remainder)
+    (controls := controls) (calls := calls) (s := s) (E := E) (Φ := Φ)
+  simp only [func3DecodeOuterBlockBody, List.cons_append, List.nil_append]
+    at Hdecode ⊢
+  iapply Hdecode
+  isplitl [Hsource]
+  · iexact Hsource
+  isplitl [Hdestination]
+  · iexact Hdestination
+  iintro %final1
+  iintro %final3
+  iintro %final6
+  iintro %final5
+  iintro %final8
+  iintro Hsource Hdestination
+  ihave Hframe := HcloseSource $$ Hsource
+  ihave Hvalues : LiveWordBlock heapId valuesId destination original $$
+      [Htoken Hdestination]
+  · unfold LiveWordBlock
+    iframe
+    ipureintro
+    exact hnonnull
+  iapply Hcont $$ %final1 %final3 %final6 %final5 %final8 Hframe Hvalues
+
 /-- All dynamic ownership and ghost state carried across a read-loop
 back-edge. -/
 private structure Func3ReadLoopState where
