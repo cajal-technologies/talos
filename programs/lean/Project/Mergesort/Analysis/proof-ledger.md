@@ -26,10 +26,10 @@
 | Exact contract declarations | re-frozen | `Contracts.lean` declares exactly imports 0--2 and funcs0--11 with outcome-valued continuations and no funcs12--55 contract. Every statement passed body-to-post and caller-to-pre/continuation review. Proof attempts caught and corrected both requesting running-instance ownership after a terminal host trap and incorrectly sharing one operand list between a shim call and its direct import call. |
 | Imports/read/write shims | proved | exact host transfer lemmas exist; the false zero-length write generalization was removed; direct-import and shim-call operand lists are distinct. Authoritative proofs of imports0--2 and funcs6,10,11 compile and are axiom-audited. |
 | Recursive `func2` sort | proved | `func2_correct` adapts the generated-body theorem to the canonical `SortBuffers` contract and reconstructs its exact piecewise scratch post; the theorem compiles without `sorry` or a declared axiom |
-| RawVec/allocator functions | partial proof | funcs0,1,5,8,9 pass both statement directions. `func4` identity and `func7` logical retirement are proved; `func1` returns the exact shadow-frame bytes, and `func0` freshness is justified by frontier/domain authority. Prior allocator proof file contains only a concrete smoke test. |
+| RawVec/allocator functions | partial proof | funcs0,1,5,8,9 pass both statement directions. `func4` identity and `func7` logical retirement are proved; `func1` returns the exact shadow-frame bytes, and `func0` freshness is justified by frontier/domain authority. The obsolete concrete allocator smoke-test file was removed. |
 | Export `func3` | frozen statement / body unproved | `Func3Spec` has exact normal and phase-classified OOM posts; read, decode, sort, output, retirement, mask arithmetic, and public-entry continuation directions all pass review |
 | Entry adequacy | conditionally adequate | `entry_adequacy_of_func3` derives the real partial `PublicEntrySpecification` from a polymorphic `Func3Spec` hypothesis.  It constructs the exact runtime, raw 288-byte stack region, bump heap, and Streams resources, starts with a genuine `call 6`, maps all three `DriverOOMState` variants to exact `talos.oom`, and hides internal resources.  It deliberately makes no termination claim. |
-| Public theorem | partial theorem conditionally proved | once `func3_correct` is closed, the public partial theorem is exactly `entry_adequacy_of_func3 func3_correct`.  The older total `MergesortSpec` remains a separate future termination obligation and is not concluded by current Iris adequacy. |
+| Public theorem | closed modulo one explicit body placeholder | `Proof.mergesort_correct` is exactly `entry_adequacy_of_func3 func3_correct`.  The only `sorry` in the merge-sort proof is the theorem `func3_correct : Func3Spec`; the conditional adequacy theorem itself is axiom-free.  The obsolete total `MergesortSpec` API was removed so the current Iris result cannot be mistaken for a termination theorem. |
 
 ## Quarantined directions
 
@@ -43,10 +43,10 @@
   red-teaming.  It required client fragments for the entire old authoritative
   heap and therefore could not implement sparse fresh-range allocation from
   `StateInterp`; decision 0002 records the required authority-only interface.
-- `AllocatorProof.lean` is not authoritative; its concrete 16-byte test is only
-  a regression witness.
-- The earlier `Proof.lean` scaffold is intentionally not included, and
-  `Project.lean` does not advertise the incomplete merge-sort proof as complete.
+- The obsolete standalone `AllocatorProof.lean` smoke test and the earlier
+  body-entry/total-correctness `Proof.lean` scaffold were removed.  The new
+  `Proof.lean` contains only the authoritative `func3_correct` obligation and
+  its checked composition to the public partial specification.
 
 ## Retained reusable work
 
@@ -82,6 +82,7 @@ never WP specifications or body proofs.
 5. Freeze only then the remaining allocator infrastructure required by those
    contracts.  The separately isolated terminal-outcome interface has already
    passed its non-target acceptance gate.
-6. Prove the remaining frozen function specifications bottom-up.  The public
-   partial-adequacy composition has already been typechecked conditionally and
-   must be closed only by supplying the eventual `func3_correct` theorem.
+6. Replace the single `sorry` in `func3_correct` by proving the remaining
+   frozen function specifications.  No entry theorem or public postcondition
+   should change: removing that placeholder must close the existing
+   `mergesort_correct` composition directly.

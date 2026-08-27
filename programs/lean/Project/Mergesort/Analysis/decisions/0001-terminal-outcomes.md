@@ -229,4 +229,6 @@ The choice is implementation-validated: the closed flag/host-trap caller and
 frontend theorem pass, and the real conditional entry theorem typechecks using
 store-sensitive partial adequacy and the exact host-import contract.  The
 generated `Func3Spec` is frozen by the representation and two-sided call-site
-reviews; its body proof remains the hypothesis needed to close the bridge.
+reviews.  The public theorem now applies the bridge directly, with its sole
+temporary `sorry` isolated in `func3_correct : Func3Spec`; no body-entry or
+total-correctness scaffold remains.

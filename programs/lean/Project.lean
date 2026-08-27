@@ -23,4 +23,4 @@ import Project.Mergesort.Representations
 import Project.Mergesort.Contracts
 import Project.Mergesort.OutcomeInfrastructure
 import Project.Mergesort.ContractProofs
-import Project.Mergesort.Adequacy
+import Project.Mergesort.Proof

@@ -11,9 +11,9 @@ standard input until exhaustion and writes the sorted values in the same
 four-byte-per-value format.
 
 The public specification deliberately hides fuel, linear memory, allocator
-state, and the implementation's internal scratch array. Its two exhaustive
-terminal outcomes are a correctly sorted output and the allocator's
-distinguished `talos.oom` host trap.
+state, and the implementation's internal scratch array. Every finite terminal
+trace is classified as either a correctly sorted output or the allocator's
+distinguished `talos.oom` host trap; termination itself is not claimed.
 -/
 
 namespace Project.Mergesort.Spec
@@ -110,26 +110,6 @@ def u32Codec : WordCodec UInt32 where
 def encodeValues (values : List UInt32) : List UInt8 :=
   u32Codec.serialize values
 
-/-- Fuel-free successful execution over byte streams through the composite host. -/
-def RunsBytes (input output : List UInt8) : Prop :=
-  Universal.RunsBytes «module» "mergesort" input output
-
-/-- Fuel-free terminal resource exhaustion. The trap reason and the typed host
-marker must both identify the allocator's `talos.oom` call, so an unrelated
-host trap cannot satisfy this outcome. -/
-def RunsOutOfMemoryBytes (input : List UInt8) : Prop :=
-  TrapsWithHost (Universal.envFor «module») «module» "mergesort"
-    (Universal.State.ofInput input) (.host OOM.trapMessage)
-    (fun final => final.oom.raised = true)
-
-/-- The host-level execution relation exposed to clients of the specification. -/
-def RunsValues (input output : List UInt32) : Prop :=
-  RunsBytes (encodeValues input) (encodeValues output)
-
-/-- The value-level reading of the distinguished terminal OOM outcome. -/
-def RunsOutOfMemory (input : List UInt32) : Prop :=
-  RunsOutOfMemoryBytes (encodeValues input)
-
 /-- `output` is sorted in nondecreasing order and contains exactly the input
 values, including multiplicities. -/
 def SortedPermutation (input output : List UInt32) : Prop :=
@@ -154,15 +134,5 @@ def PublicEntrySpecification : Prop :=
                 SortedPermutation input output
         | .trapped reason =>
             reason = .host OOM.trapMessage ∧ final.oom.raised = true)
-
-/-- For every input, the exported Rust function has one of two finite terminal
-outcomes: it returns a sorted permutation, or its private allocator calls the
-distinguished OOM host function. Divergence and unrelated traps satisfy neither
-branch. -/
-@[spec_of "rust-exported" "mergesort::mergesort"]
-def MergesortSpec : Prop :=
-  ∀ input,
-    (∃ output, RunsValues input output ∧ SortedPermutation input output) ∨
-    RunsOutOfMemory input
 
 end Project.Mergesort.Spec

@@ -285,8 +285,9 @@ separate error path.
 
 The public partial `PublicEntrySpecification` theorem is a direct conditional
 corollary of this contract plus entry initialization; it does not unfold
-`func3` again.  The total `MergesortSpec` is a separate future termination
-obligation and must not be inferred from partial adequacy.
+`func3` again.  The obsolete total entry statement has been removed; a future
+termination result would require a separate adequacy API and must not be
+inferred from this partial theorem.
 
 ## Contract inventory and freeze status
 

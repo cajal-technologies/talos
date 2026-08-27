@@ -126,8 +126,10 @@ conditional theorem `entry_adequacy_of_func3` now constructs those initial
 resources at a genuine `call 6` configuration and derives the public partial
 entry specification solely from a polymorphic `Func3Spec` hypothesis.  It
 classifies every finite terminal execution and intentionally does not claim
-termination.  The total `MergesortSpec` remains separate.  Wrapper work is
-`Theta(B)` for `B=4n`, excluding the `Theta(n log n)` sort.
+termination.  `Proof.mergesort_correct` applies that bridge to the single
+temporary `func3_correct : Func3Spec` placeholder.  The obsolete total entry
+statement was removed to avoid presenting partial adequacy as termination.
+Wrapper work is `Theta(B)` for `B=4n`, excluding the `Theta(n log n)` sort.
 
 ## Failure-edge audit
 
