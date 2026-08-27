@@ -3909,6 +3909,116 @@ theorem twp_func3_output_loop
     iexists outputBytes
     iframe
 
+/-- Exact enclosing block for the generated output phase.  The guard is the
+ordinary empty/nonempty split; only the nonempty arm initializes and enters
+`func3OutputLoopBody`. -/
+private def func3OutputBlockBody : Program :=
+  [.localGet 9, .eqz, .br_if 0,
+    .localGet 9, .const 2, .shl, .localSet 6,
+    .localGet 2, .localSet 3,
+    .loop 0 0 func3OutputLoopBody]
+
+/-- Compose the output guard, countdown setup, and full output loop.  Locals 3
+and 6 are dead after this phase, so the continuation quantifies over their
+branch-dependent final values while retaining every authoritative resource. -/
+theorem twp_func3_output
+    [WasmSmallStepGS hlc Universal.State]
+    (heapId : GName) (valuesId : Nat)
+    (capacity inputPtr valuesPtr : UInt32)
+    (input chunkBytes outputBytes : List UInt8)
+    (sorted : List UInt32)
+    (aux1 aux3 aux6 aux4 aux5 aux7 aux8 aux10 : UInt32)
+    (hbyteBound : 4 * sorted.length < UInt32.size)
+    {afterOutput : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → HeapIProp} :
+    iprop(
+      RuntimeContext ∗
+      ExportFrame heapId capacity inputPtr input chunkBytes outputBytes ∗
+      LiveWordBlock heapId valuesId valuesPtr sorted ∗
+      Streams [] [] false ∗
+      (∀ final3 : UInt32, ∀ final6 : UInt32,
+        ∀ finalOutput : List UInt8,
+          RuntimeContext -∗
+          ExportFrame heapId capacity inputPtr input chunkBytes finalOutput -∗
+          LiveWordBlock heapId valuesId valuesPtr sorted -∗
+          Streams [] (serialize sorted) false -∗
+          WP (.running
+            ⟨func3AppendLocals aux1 final3 final6 valuesPtr aux4 aux5 aux7
+                aux8 (UInt32.ofNat sorted.length) aux10 [],
+              afterOutput, arity, remainder, controls, calls⟩ :
+                Expr Universal.State)
+            @ s; E [{ Φ }])) ⊢
+      WP (.running
+        ⟨func3AppendLocals aux1 aux3 aux6 valuesPtr aux4 aux5 aux7 aux8
+            (UInt32.ofNat sorted.length) aux10 [],
+          [.block 0 0 func3OutputBlockBody] ++ afterOutput,
+          arity, remainder, controls, calls⟩ : Expr Universal.State)
+        @ s; E [{ Φ }] := by
+  iintro ⟨Hruntime, Hframe, Hvalues, Hstreams, Hcont⟩
+  simp only [List.cons_append, List.nil_append]
+  iapply twp_block
+  simp only [func3OutputBlockBody, func3AppendLocals]
+  iapply twp_localGet rfl
+  by_cases hempty : sorted.length = 0
+  · have hzero : UInt32.ofNat sorted.length = 0 := by simp [hempty]
+    iapply twp_eqz (result := 1) (by simp [hzero])
+    iapply twp_brIf (condition := 1) (depth := 0) (arity := arity)
+      (targetCode := afterOutput) (targetControl := controls)
+      (targetValues := []) (by decide) (by rfl)
+    have hserialize : serialize sorted = [] := by
+      rw [List.length_eq_zero_iff.mp hempty]
+      rfl
+    ihave Hstreams' : Streams [] (serialize sorted) false $$ [Hstreams]
+    · isimp only [hserialize]
+      iexact Hstreams
+    iapply Hcont $$ %aux3 %aux6 %outputBytes Hruntime Hframe Hvalues Hstreams'
+  · have hpositive : 0 < sorted.length := Nat.pos_of_ne_zero hempty
+    have hnonzero : UInt32.ofNat sorted.length ≠ 0 := by
+      intro hzero
+      have hzeroNat := congrArg UInt32.toNat hzero
+      rw [UInt32.toNat_ofNat_of_lt' (by omega)] at hzeroNat
+      simp only [UInt32.toNat_zero] at hzeroNat
+      omega
+    iapply twp_eqz (result := 0) (by simp [hnonzero])
+    iapply twp_brIfZero
+    iapply twp_localGet rfl
+    iapply twp_const
+    iapply twp_shl
+    rw [MemRegion.shl2_eq_mul4, ← func3_decode_byte_offset]
+    iapply twp_localSet rfl
+    simp only [List.length, List.set]
+    iapply twp_localGet rfl
+    iapply twp_localSet rfl
+    simp only [List.length, List.set]
+    have Hloop := twp_func3_output_loop
+      (hlc := hlc) heapId valuesId capacity inputPtr valuesPtr input
+      chunkBytes outputBytes sorted aux1 aux4 aux5 aux7 aux8 aux10 hpositive
+      hbyteBound
+      (afterLoop := []) (arity := arity) (remainder := remainder)
+      (controls :=
+        { kind := .block, paramArity := 0, resultArity := 0,
+          body := func3OutputBlockBody, continuation := afterOutput,
+          belowStack := [] } :: controls)
+      (calls := calls) (s := s) (E := E) (Φ := Φ)
+    simp [func3OutputLocals, func3AppendLocals, func3OutputBlockBody]
+      at Hloop ⊢
+    iapply Hloop
+    isplitl [Hruntime]
+    · iexact Hruntime
+    isplitl [Hframe]
+    · iexact Hframe
+    isplitl [Hvalues]
+    · iexact Hvalues
+    isplitl [Hstreams]
+    · iexact Hstreams
+    iintro %finalOutput Hruntime Hframe Hvalues Hstreams
+    iapply twp_exitControl rfl
+    simp only [List.take_zero, List.nil_append]
+    iapply Hcont $$ %(valuesPtr + 4 * UInt32.ofNat sorted.length)
+      %(0 : UInt32) %finalOutput Hruntime Hframe Hvalues Hstreams
+
 /-- All dynamic ownership and ghost state carried across a read-loop
 back-edge. -/
 private structure Func3ReadLoopState where
