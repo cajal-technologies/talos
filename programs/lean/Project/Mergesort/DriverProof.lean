@@ -2041,6 +2041,63 @@ theorem twp_func3_copy_decoded_word
     iexact Hdestination
   iapply Hcont $$ Hsource Hnext
 
+/-- The local-address form used by the generated tail loop (and by each
+unrolled bulk store after its address arithmetic). -/
+theorem twp_func3_copy_decoded_word_from_locals
+    [WasmSmallStepGS hlc Universal.State]
+    (source destination : UInt32)
+    (original initial : List UInt32) (copied : Nat)
+    (hlength : original.length = initial.length)
+    (hcopied : copied < original.length)
+    (destinationIndex sourceIndex : Nat)
+    (params localValues stack : List Value)
+    (hdestinationGet :
+      (⟨params, localValues, stack⟩ : Locals).get destinationIndex =
+        some (.i32 (destination + 4 * UInt32.ofNat copied)))
+    (hsourceGet :
+      (⟨params, localValues, stack⟩ : Locals).get sourceIndex =
+        some (.i32 (source + 4 * UInt32.ofNat copied)))
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → HeapIProp} :
+    let current := overwritePrefix original initial copied
+    let next := overwritePrefix original initial (copied + 1)
+    iprop(
+      WordSlice source original ∗
+      WordSlice destination current ∗
+      (WordSlice source original -∗
+        WordSlice destination next -∗
+        WP (.running
+          ⟨⟨params, localValues, stack⟩,
+            code, arity, remainder, controls, calls⟩ : Expr Universal.State)
+          @ s; E [{ Φ }])) ⊢
+      WP (.running
+        ⟨⟨params, localValues, stack⟩,
+          [.localGet destinationIndex, .localGet sourceIndex,
+            .load32 0, .store32 0] ++ code,
+          arity, remainder, controls, calls⟩ : Expr Universal.State)
+        @ s; E [{ Φ }] := by
+  dsimp only
+  iintro Hresources
+  simp only [List.cons_append, List.nil_append]
+  iapply twp_localGet hdestinationGet
+  have hsourceGet' :
+      (⟨params, localValues,
+        .i32 (destination + 4 * UInt32.ofNat copied) :: stack⟩ : Locals).get
+          sourceIndex =
+        some (.i32 (source + 4 * UInt32.ofNat copied)) := by
+    simpa using hsourceGet
+  iapply twp_localGet hsourceGet'
+  have Hcopy := twp_func3_copy_decoded_word
+    (hlc := hlc) source destination original initial copied hlength hcopied
+    (params := params) (localValues := localValues) (stack := stack)
+    (code := code) (arity := arity) (remainder := remainder)
+    (controls := controls) (calls := calls) (s := s) (E := E) (Φ := Φ)
+  simp only [List.cons_append, List.nil_append] at Hcopy
+  iapply Hcopy
+  iexact Hresources
+
 /-- All dynamic ownership and ghost state carried across a read-loop
 back-edge. -/
 private structure Func3ReadLoopState where
