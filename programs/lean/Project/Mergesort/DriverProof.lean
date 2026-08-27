@@ -757,6 +757,7 @@ theorem twp_func3_read_and_classify
           Streams [] output false -∗
           ExportFrame heapId capacity dataPtr initialized
             chunkBytes outputBytes -∗
+          ⌜input = []⌝ -∗
           WP (.running
             ⟨func3AppendLocals dataPtr 0
                 (UInt32.ofNat initialized.length)
@@ -836,6 +837,8 @@ theorem twp_func3_read_and_classify
     simp only [hcountZero, UInt32.reduceOfNat]
     ihave Hempty := BI.and_elim_l $$ Hcont
     iapply Hempty $$ Hruntime HstreamsEmpty HframeEmpty
+    · ipureintro
+      exact hempty
   · have hinputPositive : 0 < input.length := by
       by_contra hnot
       apply hempty
@@ -1119,6 +1122,254 @@ theorem twp_func3_append_current
         · iintro Hsp Hreserve Hframe Hbump Hstreams
           ihave Hoom := BI.and_elim_r $$ Hcont
           iapply Hoom $$ Hsp Hreserve Hframe Hbump Hstreams
+
+/-- The generated read/categorize suffix of one active loop iteration. -/
+private def func3ReadClassifyBody : Program :=
+  [.localGet 0, .const 12, .add, .const 256, .call 13,
+    .localTee 3, .eqz]
+
+/-- Postcondition of one complete active read-loop iteration, immediately
+before the generated `br_if 2; br 0` pair. -/
+def Func3IterationContinuation
+    [WasmSmallStepGS hlc Universal.State]
+    (totalBytes : Nat) (current remaining : List UInt8)
+    (capacity dataPtr : UInt32)
+    (initialized chunkBytes outputBytes shadow : List UInt8)
+    (heapId : GName) (storedCursor : UInt32) (frontier : Nat)
+    (history : AllocationHistory)
+    (output : List UInt8)
+    (aux2 aux4 aux5 aux7 aux8 aux9 aux10 : UInt32)
+    (stack : List Value) (code : Program) (arity : Nat)
+    (remainder : List Value) (controls : List ControlFrame)
+    (calls : List CallFrame) (s : Stuckness) (E : CoPset)
+    (Φ : ObservableOutcome → HeapIProp) : HeapIProp :=
+  let count := min 256 remaining.length
+  let nextCurrent := remaining.take count
+  let nextRemaining := remaining.drop count
+  let nextTail := chunkBytes.drop count
+  iprop(
+    ((∀ finalCapacity : UInt32, ∀ finalPtr : UInt32,
+      ∀ finalStoredCursor : UInt32, ∀ finalFrontier : Nat,
+      ∀ finalHistory : AllocationHistory, ∀ finalShadow : List UInt8,
+        RuntimeContext -∗
+        StackPointer driverBase -∗
+        StackReserve reserveBase finalShadow -∗
+        ExportFrame heapId finalCapacity finalPtr
+          (initialized ++ current) chunkBytes outputBytes -∗
+        BumpHeap heapId finalStoredCursor finalFrontier finalHistory -∗
+        Streams [] output false -∗
+        ⌜GeometricVecFacts totalBytes
+          (initialized.length + current.length) 0 finalCapacity finalPtr
+          finalFrontier finalHistory⌝ -∗
+        WP (.running
+          ⟨func3AppendLocals finalPtr 0
+              (UInt32.ofNat (initialized ++ current).length)
+              aux2 aux4 aux5 aux7 aux8 aux9 aux10 (.i32 1 :: stack),
+            code, arity, remainder, controls, calls⟩ : Expr Universal.State)
+          @ s; E [{ Φ }]) ∧
+      (∀ finalCapacity : UInt32, ∀ finalPtr : UInt32,
+        ∀ finalStoredCursor : UInt32, ∀ finalFrontier : Nat,
+        ∀ finalHistory : AllocationHistory, ∀ finalShadow : List UInt8,
+          RuntimeContext -∗
+          StackPointer driverBase -∗
+          StackReserve reserveBase finalShadow -∗
+          ExportFrame heapId finalCapacity finalPtr
+            (initialized ++ current) (nextCurrent ++ nextTail) outputBytes -∗
+          BumpHeap heapId finalStoredCursor finalFrontier finalHistory -∗
+          Streams nextRemaining output false -∗
+          ⌜nextCurrent.length = min 256
+                (nextCurrent.length + nextRemaining.length) ∧
+            0 < nextCurrent.length ∧ nextCurrent.length ≤ 256 ∧
+            nextCurrent.length % 4 = 0 ∧
+            nextRemaining.length % 4 = 0 ∧
+            totalBytes = (initialized ++ current).length +
+              nextCurrent.length + nextRemaining.length ∧
+            GeometricVecFacts totalBytes
+              (initialized.length + current.length)
+              (nextCurrent.length + nextRemaining.length)
+              finalCapacity finalPtr finalFrontier finalHistory ∧
+            nextCurrent.length + nextRemaining.length <
+              current.length + remaining.length⌝ -∗
+          WP (.running
+            ⟨func3AppendLocals finalPtr (UInt32.ofNat count)
+                (UInt32.ofNat (initialized ++ current).length)
+                aux2 aux4 aux5 aux7 aux8 aux9 aux10 (.i32 0 :: stack),
+              code, arity, remainder, controls, calls⟩ : Expr Universal.State)
+            @ s; E [{ Φ }])) ∧
+    (StackPointer reserveBase -∗
+      StackReserve reserveBase shadow -∗
+      ExportFrame heapId capacity dataPtr initialized chunkBytes outputBytes -∗
+      BumpHeap heapId storedCursor frontier history -∗
+      Streams remaining output true -∗
+      Φ (.trapped (.host OOM.trapMessage))))
+
+/-- One exact active iteration: exclude the oversized-read panic edge,
+append the current chunk (reserving if needed), then read and classify the
+next chunk. -/
+theorem twp_func3_read_loop_iteration
+    [WasmSmallStepGS hlc Universal.State]
+    (hfunc1 : Func1Spec (hlc := hlc))
+    (totalBytes : Nat) (current remaining : List UInt8)
+    (capacity dataPtr : UInt32)
+    (initialized chunkTail outputBytes shadow : List UInt8)
+    (heapId : GName) (storedCursor : UInt32) (frontier : Nat)
+    (history : AllocationHistory)
+    (output : List UInt8)
+    (aux2 aux4 aux5 aux7 aux8 aux9 aux10 : UInt32)
+    (hfacts :
+      current.length = min 256 (current.length + remaining.length) ∧
+      0 < current.length ∧ current.length ≤ 256 ∧
+      current.length % 4 = 0 ∧ remaining.length % 4 = 0 ∧
+      totalBytes = initialized.length + current.length + remaining.length ∧
+      GeometricVecFacts totalBytes initialized.length
+        (current.length + remaining.length) capacity dataPtr frontier history)
+    {stack : List Value} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame} {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → HeapIProp} :
+    iprop(
+      RuntimeContext ∗
+      StackPointer driverBase ∗
+      StackReserve reserveBase shadow ∗
+      ExportFrame heapId capacity dataPtr initialized
+        (current ++ chunkTail) outputBytes ∗
+      BumpHeap heapId storedCursor frontier history ∗
+      Streams remaining output false ∗
+      Func3IterationContinuation totalBytes current remaining capacity dataPtr
+        initialized (current ++ chunkTail) outputBytes shadow heapId
+        storedCursor frontier history output aux2 aux4 aux5 aux7 aux8 aux9
+        aux10 stack code arity remainder controls calls s E Φ) ⊢
+      WP (.running
+        ⟨func3AppendLocals dataPtr (UInt32.ofNat current.length)
+            (UInt32.ofNat initialized.length)
+            aux2 aux4 aux5 aux7 aux8 aux9 aux10 stack,
+          [.localGet 3, .const 257, .geU, .br_if 1,
+            .block 0 0 func3CapacityBody] ++ func3AppendBody ++
+              func3ReadClassifyBody ++ code,
+          arity, remainder, controls, calls⟩ : Expr Universal.State)
+        @ s; E [{ Φ }] := by
+  iintro ⟨Hruntime, Hsp, Hreserve, Hframe, Hbump, Hstreams, Hcont⟩
+  isimp only [Func3IterationContinuation] at Hcont
+  have Hguard := twp_func3_count_guard dataPtr current.length
+    initialized.length aux2 aux4 aux5 aux7 aux8 aux9 aux10 hfacts.2.2.1
+    (stack := stack)
+    (code := [.block 0 0 func3CapacityBody] ++ func3AppendBody ++
+      func3ReadClassifyBody ++ code)
+    (arity := arity) (remainder := remainder) (controls := controls)
+    (calls := calls) (s := s) (E := E) (Φ := Φ)
+  simp only [List.cons_append, List.nil_append] at Hguard ⊢
+  iapply Hguard
+  have Happend := twp_func3_append_current hfunc1 totalBytes current remaining
+    capacity dataPtr initialized chunkTail outputBytes shadow heapId
+    storedCursor frontier history output aux2 aux4 aux5 aux7 aux8 aux9 aux10
+    ⟨hfacts.1, hfacts.2.1, hfacts.2.2.2.1, hfacts.2.2.2.2.2.1,
+      hfacts.2.2.2.2.2.2⟩
+    (stack := stack) (code := func3ReadClassifyBody ++ code)
+    (arity := arity) (remainder := remainder) (controls := controls)
+    (calls := calls) (s := s) (E := E) (Φ := Φ)
+  rw [List.append_assoc func3AppendBody func3ReadClassifyBody code]
+  iapply Happend
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hsp]
+  · iexact Hsp
+  isplitl [Hreserve]
+  · iexact Hreserve
+  isplitl [Hframe]
+  · iexact Hframe
+  isplitl [Hbump]
+  · iexact Hbump
+  isplitl [Hstreams]
+  · iexact Hstreams
+  unfold Func3AppendContinuation
+  isplit
+  · iintro %finalCapacity %finalPtr %finalStoredCursor %finalFrontier
+      %finalHistory %finalShadow Hruntime Hsp Hreserve Hframe Hbump Hstreams
+      %hgeo
+    have Hread := twp_func3_read_and_classify heapId finalCapacity finalPtr
+      (initialized ++ current) (current ++ chunkTail) outputBytes remaining
+      output hfacts.2.2.2.2.1 (UInt32.ofNat current.length)
+      aux2 aux4 aux5 aux7 aux8 aux9 aux10
+      (stack := stack) (code := code) (arity := arity)
+      (remainder := remainder) (controls := controls) (calls := calls)
+      (s := s) (E := E) (Φ := Φ)
+    simp only [List.cons_append, List.nil_append] at Hread
+    simp only [func3ReadClassifyBody, List.cons_append, List.nil_append]
+    iapply Hread
+    isplitl [Hruntime]
+    · iexact Hruntime
+    isplitl [Hstreams]
+    · iexact Hstreams
+    isplitl [Hframe]
+    · iexact Hframe
+    isplit
+    · iintro Hruntime Hstreams Hframe %hremainingEmpty
+      ihave HdonePair := BI.and_elim_l $$ Hcont
+      ihave Hdone := BI.and_elim_l $$ HdonePair
+      iapply Hdone $$ %finalCapacity %finalPtr %finalStoredCursor
+        %finalFrontier %finalHistory %finalShadow Hruntime Hsp Hreserve Hframe
+        Hbump Hstreams
+      · ipureintro
+        simpa [hremainingEmpty] using hgeo
+    · iintro Hruntime Hstreams Hframe %hnext
+      have hremainingLength :
+          remaining.length =
+            (remaining.take (min 256 remaining.length)).length +
+              (remaining.drop (min 256 remaining.length)).length := by
+        rw [← List.length_append,
+          List.take_append_drop (min 256 remaining.length) remaining]
+      have hgeoNext :
+          GeometricVecFacts totalBytes
+            (initialized.length + current.length)
+            ((remaining.take (min 256 remaining.length)).length +
+              (remaining.drop (min 256 remaining.length)).length)
+            finalCapacity finalPtr finalFrontier finalHistory := by
+        rw [← hremainingLength]
+        exact hgeo
+      have htotalNext :
+          totalBytes = (initialized ++ current).length +
+            (remaining.take (min 256 remaining.length)).length +
+            (remaining.drop (min 256 remaining.length)).length := by
+        have htotal := hfacts.2.2.2.2.2.1
+        simp only [List.length_append]
+        omega
+      have hreadShape :
+          (remaining.take (min 256 remaining.length)).length =
+            min 256
+              ((remaining.take (min 256 remaining.length)).length +
+                (remaining.drop (min 256 remaining.length)).length) := by
+        rw [← hremainingLength]
+        exact hnext.2.1
+      have hmeasure :
+          (remaining.take (min 256 remaining.length)).length +
+              (remaining.drop (min 256 remaining.length)).length <
+            current.length + remaining.length := by
+        rw [← hremainingLength]
+        omega
+      have hnextPositive :
+          0 < (remaining.take (min 256 remaining.length)).length := by
+        rw [hnext.2.1]
+        exact hnext.2.2.1
+      have hnextBound :
+          (remaining.take (min 256 remaining.length)).length ≤ 256 := by
+        rw [hnext.2.1]
+        exact hnext.2.2.2.1
+      have hnextMod :
+          (remaining.take (min 256 remaining.length)).length % 4 = 0 := by
+        rw [hnext.2.1]
+        exact hnext.2.2.2.2.1
+      ihave HnextPair := BI.and_elim_l $$ Hcont
+      ihave Hnext := BI.and_elim_r $$ HnextPair
+      iapply Hnext $$ %finalCapacity %finalPtr %finalStoredCursor
+        %finalFrontier %finalHistory %finalShadow Hruntime Hsp Hreserve Hframe
+        Hbump Hstreams
+      · ipureintro
+        exact ⟨hreadShape, hnextPositive, hnextBound,
+          hnextMod, hnext.2.2.2.2.2.1, htotalNext,
+          hgeoNext, hmeasure⟩
+  · iintro Hsp Hreserve Hframe Hbump Hstreams
+    ihave Hoom := BI.and_elim_r $$ Hcont
+    iapply Hoom $$ Hsp Hreserve Hframe Hbump Hstreams
 
 /-- Execute the generated `func3` prologue from raw entry ownership to the
 reviewed initialized-frame representation.  No allocator, host call, or
