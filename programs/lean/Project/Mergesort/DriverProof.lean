@@ -4019,6 +4019,113 @@ theorem twp_func3_output
     iapply Hcont $$ %(valuesPtr + 4 * UInt32.ofNat sorted.length)
       %(0 : UInt32) %finalOutput Hruntime Hframe Hvalues Hstreams
 
+/-- Exact generated block which retires the sorted values allocation. -/
+private def func3ValuesDeallocBlockBody : Program :=
+  [.localGet 1, .eqz, .br_if 0,
+    .localGet 2, .localGet 1, .const 2, .shl, .const 4, .call 10]
+
+/-- Retire the complete sorted values block through the proved no-op physical
+deallocator.  The nonzero guard is discharged from the allocation-path
+invariant, and the logical allocation token and bytes move into `BumpHeap`. -/
+theorem twp_func3_deallocate_values
+    [WasmSmallStepGS hlc Universal.State]
+    (heapId : GName) (valuesId : Nat) (valuesPtr : UInt32)
+    (sorted : List UInt32)
+    (storedCursor : UInt32) (frontier : Nat)
+    (history : AllocationHistory)
+    (aux3 aux6 aux4 aux5 aux7 aux8 aux10 : UInt32)
+    (hpositive : 0 < sorted.length)
+    (hbyteBound : 4 * sorted.length < UInt32.size)
+    {afterValues : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → HeapIProp} :
+    let layout : AllocLayout :=
+      { size := 4 * sorted.length, alignment := 4 }
+    iprop(
+      RuntimeContext ∗
+      BumpHeap heapId storedCursor frontier history ∗
+      LiveWordBlock heapId valuesId valuesPtr sorted ∗
+      (RuntimeContext -∗
+        BumpHeap heapId storedCursor frontier
+          (history.retire valuesId valuesPtr layout) -∗
+        WP (.running
+          ⟨func3AppendLocals (UInt32.ofNat sorted.length) aux3 aux6 valuesPtr
+              aux4 aux5 aux7 aux8 (UInt32.ofNat sorted.length) aux10 [],
+            afterValues, arity, remainder, controls, calls⟩ :
+              Expr Universal.State)
+          @ s; E [{ Φ }])) ⊢
+      WP (.running
+        ⟨func3AppendLocals (UInt32.ofNat sorted.length) aux3 aux6 valuesPtr
+            aux4 aux5 aux7 aux8 (UInt32.ofNat sorted.length) aux10 [],
+          [.block 0 0 func3ValuesDeallocBlockBody] ++ afterValues,
+          arity, remainder, controls, calls⟩ : Expr Universal.State)
+        @ s; E [{ Φ }] := by
+  dsimp only
+  let layout : AllocLayout :=
+    { size := 4 * sorted.length, alignment := 4 }
+  have hcountBound : sorted.length < UInt32.size := by omega
+  have hcountNonzero : UInt32.ofNat sorted.length ≠ 0 := by
+    intro hzero
+    have hzeroNat := congrArg UInt32.toNat hzero
+    rw [UInt32.toNat_ofNat_of_lt' hcountBound] at hzeroNat
+    simp only [UInt32.toNat_zero] at hzeroNat
+    omega
+  have hsizeWord :
+      (UInt32.ofNat (4 * sorted.length)).toNat = 4 * sorted.length :=
+    UInt32.toNat_ofNat_of_lt' hbyteBound
+  have hfour : (4 : UInt32).toNat = 4 := by decide
+  iintro ⟨Hruntime, Hbump, Hvalues, Hcont⟩
+  ihave Hblock := (LiveWordBlock_as_liveBlock heapId valuesId valuesPtr
+    sorted).mp $$ Hvalues
+  simp only [List.cons_append, List.nil_append]
+  iapply twp_block
+  simp only [func3ValuesDeallocBlockBody, func3AppendLocals, List.drop_zero]
+  iapply twp_localGet rfl
+  iapply twp_eqz (result := 0) (by simp [hcountNonzero])
+  iapply twp_brIfZero
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_const
+  iapply twp_shl
+  rw [MemRegion.shl2_eq_mul4, ← func3_decode_byte_offset]
+  iapply twp_const
+  have Hdealloc := Project.Mergesort.ContractProofs.func7_correct
+    (hlc := hlc)
+    (ptr := valuesPtr) (size := UInt32.ofNat (4 * sorted.length))
+    (alignment := 4) (layout := layout) (heapId := heapId)
+    (allocationId := valuesId) (bytes := serialize sorted)
+    (storedCursor := storedCursor) (frontier := frontier)
+    (history := history)
+    (callerLocals := func3AppendLocals (UInt32.ofNat sorted.length) aux3
+      aux6 valuesPtr aux4 aux5 aux7 aux8 (UInt32.ofNat sorted.length)
+      aux10 [])
+    (stack := []) (code := []) (arity := arity) (remainder := remainder)
+    (controls :=
+      { kind := .block, paramArity := 0, resultArity := 0,
+        body := func3ValuesDeallocBlockBody, continuation := afterValues,
+        belowStack := [] } :: controls)
+    (calls := calls) (s := s) (E := E) (Φ := Φ)
+  unfold Func7Spec CallContract callExpr at Hdealloc
+  simp only [List.cons_append, List.nil_append,
+    func3AppendLocals, func3ValuesDeallocBlockBody]
+    at Hdealloc
+  iapply Hdealloc
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hbump]
+  · iexact Hbump
+  isplitl [Hblock]
+  · iexact Hblock
+  isplitl []
+  · ipureintro
+    exact ⟨hsizeWord, hfour, Or.inr rfl⟩
+  iintro Hruntime Hbump
+  unfold ResumeWP resumeExpr
+  iapply twp_exitControl rfl
+  simp only [List.take_zero, List.nil_append]
+  iapply Hcont $$ Hruntime Hbump
+
 /-- All dynamic ownership and ghost state carried across a read-loop
 back-edge. -/
 private structure Func3ReadLoopState where
