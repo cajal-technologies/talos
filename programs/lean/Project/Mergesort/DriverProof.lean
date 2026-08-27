@@ -221,12 +221,17 @@ private def func3CapacityBody : Program :=
     .localGet 0, .load32 4, .localSet 1,
     .localGet 0, .load32 8, .localSet 6]
 
-/-- Exact nonempty-chunk append sequence immediately following the capacity
-block. -/
-private def func3AppendBody : Program :=
-  [.localGet 1, .localGet 6, .add,
+/-- Exact generated block which skips the copy for a zero-length read and
+otherwise copies the current chunk into Vec spare capacity. -/
+private def func3AppendCopyBody : Program :=
+  [.localGet 3, .eqz, .br_if 0,
+    .localGet 1, .localGet 6, .add,
     .localGet 0, .const 12, .add,
-    .localGet 3, .memoryCopy,
+    .localGet 3, .memoryCopy]
+
+/-- Exact append block plus the length commit which follows that block. -/
+private def func3AppendBody : Program :=
+  [.block 0 0 func3AppendCopyBody,
     .localGet 0, .localGet 6, .localGet 3, .add,
     .localTee 6, .store32 8]
 
@@ -261,11 +266,7 @@ theorem twp_func3_append_without_reserve
         ⟨func3AppendLocals dataPtr (UInt32.ofNat current.length)
             (UInt32.ofNat initialized.length)
             aux2 aux4 aux5 aux7 aux8 aux9 aux10 stack,
-          [.localGet 1, .localGet 6, .add,
-            .localGet 0, .const 12, .add,
-            .localGet 3, .memoryCopy,
-            .localGet 0, .localGet 6, .localGet 3, .add,
-            .localTee 6, .store32 8] ++ code,
+          func3AppendBody ++ code,
           arity, remainder, controls, calls⟩ : Expr Universal.State)
         @ s; E [{ Φ }] := by
   iintro ⟨Hframe, Hcont⟩
@@ -281,7 +282,20 @@ theorem twp_func3_append_without_reserve
   icases HoldChunk with ⟨%holdChunkNowrap, HoldChunkBytes⟩
   isimp only [Project.Mergesort.Representations.ByteSlice] at Hcurrent
   icases Hcurrent with ⟨%hcurrentNowrap, HcurrentBytes⟩
-  simp only [List.cons_append, List.nil_append, func3AppendLocals]
+  have hcurrentWord : (UInt32.ofNat current.length).toNat = current.length :=
+    UInt32.toNat_ofNat_of_lt' (by omega)
+  have hcurrentNonzero : UInt32.ofNat current.length ≠ 0 := by
+    intro hzero
+    have hzeroNat := congrArg UInt32.toNat hzero
+    rw [hcurrentWord] at hzeroNat
+    simp only [UInt32.toNat_zero] at hzeroNat
+    omega
+  simp only [func3AppendBody, List.cons_append, List.nil_append]
+  iapply twp_block
+  simp only [func3AppendCopyBody, func3AppendLocals]
+  iapply twp_localGet rfl
+  iapply twp_eqz (result := 0) (by simp [hcurrentNonzero])
+  iapply twp_brIfZero
   iapply twp_localGet rfl
   iapply twp_localGet rfl
   iapply twp_add
@@ -290,8 +304,6 @@ theorem twp_func3_append_without_reserve
   iapply twp_add
   rw [show 12 + driverBase = driverBase + 12 by decide]
   iapply twp_localGet rfl
-  have hcurrentWord : (UInt32.ofNat current.length).toNat = current.length :=
-    UInt32.toNat_ofNat_of_lt' (by omega)
   rw [show UInt32.ofNat initialized.length + dataPtr =
     dataPtr + UInt32.ofNat initialized.length by ac_rfl]
   iapply twp_memoryCopy32 oldChunk current
@@ -322,6 +334,8 @@ theorem twp_func3_append_without_reserve
     ipureintro
     rw [holdChunkLength] at holdChunkNowrap
     exact holdChunkNowrap
+  iapply twp_exitControl (by rfl)
+  simp only [List.take_zero, List.drop_zero, List.nil_append]
   iapply twp_localGet rfl
   iapply twp_localGet rfl
   iapply twp_localGet rfl
@@ -750,8 +764,8 @@ theorem twp_func3_append_current
           exact hfits
         simp [hfitsWord])
     iapply twp_brIf (by decide) (by rfl)
-    simp only [func3AppendBody, List.take_zero, List.drop_zero,
-      List.nil_append]
+    simp only [func3AppendBody, func3AppendLocals, List.take_zero,
+      List.drop_zero, List.nil_append]
     ihave Hframe : ExportFrame heapId capacity dataPtr initialized
         (current ++ chunkTail) outputBytes $$
         [Hcapacity Hpointer Hlength Hstorage Hchunk Houtput]
@@ -759,9 +773,14 @@ theorem twp_func3_append_current
       iframe
       ipureintro
       exact hframeLengths
-    iapply twp_func3_append_without_reserve heapId capacity dataPtr
+    have Happend := twp_func3_append_without_reserve heapId capacity dataPtr
       initialized current chunkTail outputBytes hfacts.2.1 hfits hlayout.1
       aux2 aux4 aux5 aux7 aux8 aux9 aux10
+      (stack := stack) (code := code) (arity := arity)
+      (remainder := remainder) (controls := controls) (calls := calls)
+      (s := s) (E := E) (Φ := Φ)
+    simp only [func3AppendLocals, func3AppendBody] at Happend
+    iapply Happend
     isplitl [Hframe]
     · iexact Hframe
     iintro Hframe
@@ -859,8 +878,7 @@ theorem twp_func3_append_current
           · iexact Hframe
           iintro Hframe
           iapply twp_exitControl (by rfl)
-          simp only [List.take_zero, List.nil_append, func3AppendBody,
-            List.cons_append]
+          simp only [List.take_zero, List.nil_append]
           have hnewCapacityWord :
               (UInt32.ofNat
                 (selectedCapacity initialized.length current.length
@@ -885,8 +903,7 @@ theorem twp_func3_append_current
             (stack := stack) (code := code) (arity := arity)
             (remainder := remainder) (controls := controls) (calls := calls)
             (s := s) (E := E) (Φ := Φ)
-          simp only [func3AppendLocals, List.cons_append,
-            List.nil_append] at Happend
+          simp only [func3AppendLocals] at Happend
           iapply Happend
           isplitl [Hframe]
           · iexact Hframe
