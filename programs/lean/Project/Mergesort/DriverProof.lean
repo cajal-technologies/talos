@@ -3451,6 +3451,83 @@ theorem twp_func3_allocate_scratch
           exact hpositive
         iframe
 
+/-- Exact success tail following the generated zeroed scratch allocation. -/
+private def func3ScratchSuccessTail : Program :=
+  [.localTee 8, .eqz, .br_if 2,
+    .localGet 7, .const 2, .shrU, .localSet 1,
+    .const 0, .localSet 5, .br 4]
+
+private theorem func3_scratch_count_shift
+    (length : Nat) (hbound : 4 * length < UInt32.size) :
+    UInt32.ofNat (4 * length) >>> (2 : UInt32) = UInt32.ofNat length := by
+  apply UInt32.toNat.inj
+  have hlengthBound : length < UInt32.size := by omega
+  rw [UInt32.toNat_shiftRight,
+    UInt32.toNat_ofNat_of_lt' hbound,
+    UInt32.toNat_ofNat_of_lt' hlengthBound]
+  rw [show (2 : UInt32).toNat % 32 = 2 by decide,
+    Nat.shiftRight_eq_div_pow]
+  norm_num
+
+/-- Discharge the scratch allocator's generated null check from the returned
+live block, restore the element count, clear the scratch-skip flag, and take
+the real depth-four branch to the shared sort/output continuation. -/
+theorem twp_func3_scratch_success_tail
+    [WasmSmallStepGS hlc Universal.State]
+    (heapId : GName) (scratchId : Nat) (scratch : UInt32)
+    (layout : AllocLayout) (bytes : List UInt8)
+    (length : Nat)
+    (final1 final3 final6 valuesPtr source final5 final8 : UInt32)
+    (hbyteBound : 4 * length < UInt32.size)
+    {arity : Nat} {remainder : List Value}
+    {controls targetControls : List ControlFrame}
+    {targetCode : Program} {calls : List CallFrame}
+    {s : Stuckness} {E : CoPset}
+    {Phi : ObservableOutcome → HeapIProp}
+    (hbranch : branchTarget? arity 4 controls [] =
+      some (targetCode, targetControls, [])) :
+    iprop(
+      LiveBlock heapId scratchId scratch layout bytes ∗
+      (LiveBlock heapId scratchId scratch layout bytes -∗
+        WP (.running
+          ⟨func3AppendLocals (UInt32.ofNat length) final3 final6 valuesPtr
+              source 0 (UInt32.ofNat (4 * length)) scratch
+              (UInt32.ofNat length) (UInt32.ofNat (4 * length)) [],
+            targetCode, arity, remainder, targetControls, calls⟩ :
+              Expr Universal.State) @ s; E [{ Phi }])) ⊢
+      WP (.running
+        ⟨func3AppendLocals final1 final3 final6 valuesPtr source final5
+            (UInt32.ofNat (4 * length)) final8 (UInt32.ofNat length)
+            (UInt32.ofNat (4 * length)) [.i32 scratch],
+          func3ScratchSuccessTail, arity, remainder, controls, calls⟩ :
+            Expr Universal.State) @ s; E [{ Phi }] := by
+  iintro ⟨Hscratch, Hcont⟩
+  isimp only [LiveBlock] at Hscratch
+  icases Hscratch with ⟨Htoken, Hbytes, %hfacts⟩
+  simp only [func3ScratchSuccessTail, func3AppendLocals]
+  iapply twp_localTee rfl
+  simp only [List.length, List.set]
+  iapply twp_eqz (result := 0) (by simp [hfacts.2.1])
+  iapply twp_brIfZero
+  iapply twp_localGet rfl
+  iapply twp_const
+  iapply twp_shrU
+  rw [show (2 : UInt32) % 32 = 2 by decide,
+    func3_scratch_count_shift length hbyteBound]
+  iapply twp_localSet rfl
+  simp only [List.length, List.set]
+  iapply twp_const
+  iapply twp_localSet rfl
+  simp only [List.length, List.set]
+  iapply twp_br hbranch
+  ihave Hscratch : LiveBlock heapId scratchId scratch layout bytes $$
+      [Htoken Hbytes]
+  · unfold LiveBlock
+    iframe
+    ipureintro
+    exact hfacts
+  iapply Hcont $$ Hscratch
+
 /-- Frame both allocation tokens around the single generated `func2` call.
 The sort contract supplies the sorted-permutation fact and the precise
 piecewise scratch contents needed to reseal both complete live blocks. -/
