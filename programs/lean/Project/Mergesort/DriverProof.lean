@@ -2693,6 +2693,132 @@ theorem twp_func3_decode_bulk_loop
       exact ⟨hbulkPositive, by simp⟩
     iframe
 
+/-- Arithmetic and local initialization immediately following the values
+null check. -/
+private def func3DecodeSetup : Program :=
+  [.localGet 7, .const 4294967292, .add, .localTee 6,
+    .const 2, .shrU, .const 1, .add, .localTee 1,
+    .const 3, .and, .localSet 8,
+    .const 0, .localSet 9, .localGet 4, .localSet 3]
+
+private theorem func3_decode_sub_four (length : Nat)
+    (hpositive : 0 < length) :
+    UInt32.ofNat (4 * length) + 4294967292 =
+      UInt32.ofNat (4 * length - 4) := by
+  have hsplit : 4 * length - 4 + 4 = 4 * length := by omega
+  have hmax : (4294967292 : UInt32) = 0 - 4 := by decide
+  calc
+    UInt32.ofNat (4 * length) + 4294967292 =
+        (UInt32.ofNat (4 * length - 4) + 4) + (0 - 4) := by
+      rw [← hsplit, UInt32.ofNat_add, hmax]
+      rfl
+    _ = UInt32.ofNat (4 * length - 4) := by
+      calc
+        (UInt32.ofNat (4 * length - 4) + 4) + (0 - 4) =
+            UInt32.ofNat (4 * length - 4) + ((0 - 4) + 4) := by ac_rfl
+        _ = UInt32.ofNat (4 * length - 4) := by
+          rw [UInt32.sub_add_cancel, UInt32.add_zero]
+
+private theorem func3_decode_shift_two (length : Nat)
+    (hpositive : 0 < length)
+    (hbound : 4 * length < UInt32.size) :
+    UInt32.ofNat (4 * length - 4) >>> (2 : UInt32) =
+      UInt32.ofNat (length - 1) := by
+  apply UInt32.toNat.inj
+  have hsubBound : 4 * length - 4 < UInt32.size := by omega
+  have hpredBound : length - 1 < UInt32.size := by omega
+  rw [UInt32.toNat_shiftRight,
+    UInt32.toNat_ofNat_of_lt' hsubBound,
+    UInt32.toNat_ofNat_of_lt' hpredBound]
+  rw [show (2 : UInt32).toNat % 32 = 2 by decide,
+    Nat.shiftRight_eq_div_pow]
+  have hshape : 4 * length - 4 = 4 * (length - 1) := by omega
+  rw [hshape]
+  norm_num
+
+private theorem func3_decode_tail_mask (length : Nat)
+    (hbound : length < UInt32.size) :
+    UInt32.ofNat length &&& (3 : UInt32) =
+      UInt32.ofNat (length % 4) := by
+  apply UInt32.toNat.inj
+  rw [UInt32.toNat_and,
+    UInt32.toNat_ofNat_of_lt' hbound]
+  have hthree : (3 : UInt32).toNat = 3 := by decide
+  rw [hthree]
+  have htailBound : length % 4 < UInt32.size := by
+    have := Nat.mod_lt length (by decide : 0 < 4)
+    norm_num [UInt32.size]
+    omega
+  rw [UInt32.toNat_ofNat_of_lt' htailBound]
+  rw [show (3 : Nat) = 2 ^ 2 - 1 by norm_num,
+    Nat.and_two_pow_sub_one_eq_mod]
+
+/-- Execute the generated decode arithmetic and establish the exact bulk/tail
+locals consumed by the two decode-loop proofs. -/
+theorem twp_func3_decode_setup
+    [WasmSmallStepGS hlc Universal.State]
+    (source destination : UInt32) (length : Nat)
+    (current aux5 aux8 aux9 aux10 : UInt32)
+    (hpositive : 0 < length)
+    (hbyteBound : 4 * length < 2147483648)
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → HeapIProp} :
+    WP (.running
+      ⟨func3AppendLocals (UInt32.ofNat length) source
+          (UInt32.ofNat (4 * length - 4)) destination source aux5
+          (UInt32.ofNat (4 * length)) (UInt32.ofNat (length % 4)) 0 aux10 [],
+        code, arity, remainder, controls, calls⟩ : Expr Universal.State)
+      @ s; E [{ Φ }] ⊢
+    WP (.running
+      ⟨func3AppendLocals source current (UInt32.ofNat (4 * length))
+          destination source aux5 (UInt32.ofNat (4 * length)) aux8 aux9
+          aux10 [],
+        func3DecodeSetup ++ code,
+        arity, remainder, controls, calls⟩ : Expr Universal.State)
+      @ s; E [{ Φ }] := by
+  iintro Hcont
+  have hwordBound : 4 * length < UInt32.size := by
+    norm_num [UInt32.size] at hbyteBound ⊢
+    omega
+  have hlengthBound : length < UInt32.size := by omega
+  have hsub := func3_decode_sub_four length hpositive
+  have hshift := func3_decode_shift_two length hpositive hwordBound
+  have hsucc : UInt32.ofNat (length - 1) + 1 = UInt32.ofNat length := by
+    have hpred : length - 1 + 1 = length := by omega
+    have hpredBound : length - 1 + 1 < UInt32.size := by omega
+    rw [Wasm.Examples.MergeSort.u32_ofNat_succ hpredBound, hpred]
+  have htail := func3_decode_tail_mask length hlengthBound
+  simp only [func3DecodeSetup, func3AppendLocals,
+    List.cons_append, List.nil_append]
+  iapply twp_localGet rfl
+  iapply twp_const
+  iapply twp_add
+  rw [UInt32.add_comm (4294967292 : UInt32), hsub]
+  iapply twp_localTee rfl
+  simp only [List.length, List.set]
+  iapply twp_const
+  iapply twp_shrU
+  rw [show (2 % 32 : UInt32) = 2 by decide, hshift]
+  iapply twp_const
+  iapply twp_add
+  rw [UInt32.add_comm (1 : UInt32), hsucc]
+  iapply twp_localTee rfl
+  simp only [List.length, List.set]
+  iapply twp_const
+  iapply twp_and
+  rw [htail]
+  iapply twp_localSet rfl
+  simp only [List.length, List.set]
+  iapply twp_const
+  iapply twp_localSet rfl
+  simp only [List.length, List.set]
+  iapply twp_localGet rfl
+  iapply twp_localSet rfl
+  simp only [List.length, List.set]
+  iexact Hcont
+
 /-- All dynamic ownership and ghost state carried across a read-loop
 back-edge. -/
 private structure Func3ReadLoopState where
