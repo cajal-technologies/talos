@@ -1392,6 +1392,28 @@ private def func3ReadLoopBlockBody : Program :=
 private def func3ReadPhaseBody : Program :=
   [.block 0 0 func3ReadLoopBlockBody] ++ func3OversizedReadPanic
 
+private def func3InitialReadPrefix : Program :=
+  [.localGet 0, .const 12, .add, .const 256, .call 13,
+    .localTee 3, .br_if 0]
+
+private def func3EmptyInputSuffix : Program :=
+  [.const 1, .localSet 4, .const 1, .localSet 5, .br 1]
+
+/-- Exact initial-read block.  The suffix is the generated empty-input arm;
+the nonempty arm branches to the block continuation before reaching it. -/
+private def func3InitialReadBody : Program :=
+  func3InitialReadPrefix ++ func3EmptyInputSuffix
+
+private def func3AfterInitialRead (afterLoop : Program) : Program :=
+  [.const 0, .localSet 6, .const 1, .localSet 1,
+    .block 0 0 func3ReadPhaseBody] ++ afterLoop
+
+private def func3InitialReadFrame (afterLoop : Program) : ControlFrame :=
+  { kind := .block, paramArity := 0, resultArity := 0,
+    body := func3InitialReadBody,
+    continuation := func3AfterInitialRead afterLoop,
+    belowStack := [] }
+
 private def func3ReadInnerFrame : ControlFrame :=
   { kind := .block, paramArity := 0, resultArity := 0,
     body := func3ReadLoopBlockBody,
@@ -1698,6 +1720,251 @@ theorem twp_func3_read_loop
       isplitl [Hbump]
       · iexact Hbump
       · iexact Hstreams
+
+/-- Enter the two generated blocks surrounding the read loop.  This theorem
+fixes the control-frame layout used by the loop proof: the inner block's
+continuation is precisely the excluded oversized-read panic tail, while the
+outer phase block continues with `afterLoop`. -/
+theorem twp_func3_read_phase
+    [WasmSmallStepGS hlc Universal.State]
+    (hfunc1 : Func1Spec (hlc := hlc))
+    (heapId : GName) (original : List UInt32) (outputBytes : List UInt8)
+    (aux2 aux4 aux5 aux7 aux8 aux9 aux10 : UInt32)
+    (initial : Func3ReadLoopState)
+    {afterLoop : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → HeapIProp} :
+    Func3ReadLoopInv heapId original outputBytes
+        aux2 aux4 aux5 aux7 aux8 aux9 aux10 afterLoop arity remainder controls
+        calls s E Φ initial ⊢
+      WP (.running
+        ⟨func3ReadLoopLocals aux2 aux4 aux5 aux7 aux8 aux9 aux10 initial,
+          .block 0 0 func3ReadPhaseBody :: afterLoop,
+          arity, remainder, controls, calls⟩ : Expr Universal.State)
+        @ s; E [{ Φ }] := by
+  iintro Hinv
+  iapply twp_block
+  simp only [func3ReadPhaseBody, List.cons_append, List.nil_append]
+  iapply twp_block
+  simp only [func3ReadLoopBlockBody]
+  have Hloop := twp_func3_read_loop hfunc1 heapId original outputBytes
+    aux2 aux4 aux5 aux7 aux8 aux9 aux10 initial
+    (afterLoop := afterLoop) (arity := arity) (remainder := remainder)
+    (controls := controls) (calls := calls) (s := s) (E := E) (Φ := Φ)
+  simp only [func3ReadInnerFrame, func3ReadPhaseFrame, func3ReadPhaseBody,
+    func3ReadLoopBlockBody, func3ReadLoopLocals, func3AppendLocals,
+    List.cons_append, List.nil_append] at Hloop
+  simp only [func3ReadLoopLocals, func3AppendLocals, List.drop_zero]
+  iapply Hloop
+  iexact Hinv
+
+/-- Execute a nonempty public input's first generated read, take the actual
+`br_if 0` edge out of the initial-read block, initialize the Vec cursor
+locals, and enter the proved read phase. -/
+theorem twp_func3_first_read_nonempty
+    [WasmSmallStepGS hlc Universal.State]
+    (hfunc1 : Func1Spec (hlc := hlc))
+    (heapId : GName) (original : List UInt32) (outputBytes shadow : List UInt8)
+    (horiginal : original ≠ [])
+    {afterLoop : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → HeapIProp} :
+    iprop(
+      RuntimeContext ∗
+      StackPointer driverBase ∗
+      StackReserve reserveBase shadow ∗
+      ExportFrame heapId 0 1 [] (List.replicate 256 0) outputBytes ∗
+      BumpHeap heapId 0 heapBase.toNat AllocationHistory.empty ∗
+      Streams (serialize original) [] false ∗
+      Func3ReadLoopContinuation heapId original outputBytes
+        4 0 0 0 0 0 0 afterLoop arity remainder controls calls s E Φ) ⊢
+      WP (.running
+        ⟨func3InitializedLocals, func3InitialReadBody,
+          arity, remainder, func3InitialReadFrame afterLoop :: controls,
+          calls⟩ : Expr Universal.State) @ s; E [{ Φ }] := by
+  let input := serialize original
+  let count := min 256 input.length
+  let current := input.take count
+  let remaining := input.drop count
+  let chunkTail := (List.replicate 256 (0 : UInt8)).drop count
+  have hinputLength : input.length = 4 * original.length := by
+    dsimp only [input]
+    exact serialize_length original
+  have hinputPositive : 0 < input.length := by
+    have horiginalPositive : 0 < original.length := by
+      by_contra hzero
+      apply horiginal
+      exact List.eq_nil_of_length_eq_zero (by omega)
+    omega
+  have hinputMod : input.length % 4 = 0 := by
+    rw [hinputLength]
+    omega
+  have hsplit := readChunk_mod_four input hinputMod
+  dsimp only at hsplit
+  have hcountPositive : 0 < count := by
+    dsimp only [count]
+    omega
+  have hcountSize : count < UInt32.size := by
+    norm_num [UInt32.size]
+    omega
+  have hcountWord : (UInt32.ofNat count).toNat = count :=
+    UInt32.toNat_ofNat_of_lt' hcountSize
+  have hcountNonzero : UInt32.ofNat count ≠ 0 := by
+    intro hzero
+    have hzeroNat := congrArg UInt32.toNat hzero
+    rw [hcountWord] at hzeroNat
+    simp only [UInt32.toNat_zero] at hzeroNat
+    omega
+  have hremainingLength :
+      input.length = current.length + remaining.length := by
+    dsimp only [current, remaining]
+    rw [← List.length_append, List.take_append_drop count input]
+  have hcurrentLength : current.length = count := by
+    exact hsplit.1
+  have hcurrentShape :
+      current.length = min 256 (current.length + remaining.length) := by
+    rw [← hremainingLength]
+    exact hsplit.1
+  have hcurrentPositive : 0 < current.length := by
+    rw [hcurrentLength]
+    exact hcountPositive
+  have hcurrentBound : current.length ≤ 256 := by
+    rw [hcurrentLength]
+    exact min_le_left 256 input.length
+  have hcurrentMod : current.length % 4 = 0 := by
+    rw [hcurrentLength]
+    exact hsplit.2.1
+  have hserializeSplit :
+      serialize original = [] ++ current ++ remaining := by
+    calc
+      serialize original = input := rfl
+      _ = current ++ remaining := by
+        exact (List.take_append_drop count input).symm
+      _ = [] ++ current ++ remaining := by simp
+  have hgeo :
+      GeometricVecFacts input.length 0
+        (current.length + remaining.length) 0 1 heapBase.toNat
+        AllocationHistory.empty := by
+    left
+    exact ⟨rfl, rfl, rfl, hremainingLength.symm, rfl, rfl⟩
+  iintro ⟨Hruntime, Hsp, Hreserve, Hframe, Hbump, Hstreams, Hfinish⟩
+  have Hread := twp_func3_read_chunk heapId 0 1 []
+    (List.replicate 256 0) outputBytes input [] false []
+    [.i32 driverBase, .i32 0, .i32 4, .i32 0, .i32 0, .i32 0,
+      .i32 0, .i32 0, .i32 0, .i32 0, .i32 0]
+    rfl
+    (stack := [])
+    (code := [.localTee 3, .br_if 0] ++ func3EmptyInputSuffix)
+    (arity := arity) (remainder := remainder)
+    (controls := func3InitialReadFrame afterLoop :: controls)
+    (calls := calls) (s := s) (E := E) (Φ := Φ)
+  simp only [func3InitialReadBody, func3InitialReadPrefix,
+    func3EmptyInputSuffix, func3InitializedLocals,
+    List.cons_append, List.nil_append] at Hread ⊢
+  iapply Hread
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hstreams]
+  · iexact Hstreams
+  isplitl [Hframe]
+  · iexact Hframe
+  iintro Hruntime Hstreams Hframe %_hcountBound
+  iapply twp_localTee
+      (locals' := func3AppendLocals 0 (UInt32.ofNat count) 0
+        4 0 0 0 0 0 0 [.i32 (UInt32.ofNat count)])
+      (by simp [func3AppendLocals, count])
+  simp only [func3AppendLocals]
+  iapply twp_brIf (condition := UInt32.ofNat count) (depth := 0)
+    (arity := arity)
+    (code := [.const 1, .localSet 4, .const 1, .localSet 5, .br 1])
+    (targetCode := func3AfterInitialRead afterLoop)
+    (targetControl := controls) (targetValues := []) hcountNonzero (by rfl)
+  simp only [func3AfterInitialRead, List.cons_append, List.nil_append]
+  iapply twp_const
+  iapply twp_localSet rfl
+  simp only [List.length, List.set]
+  iapply twp_const
+  iapply twp_localSet rfl
+  simp only [List.length, List.set]
+  let initial : Func3ReadLoopState :=
+    { capacity := 0
+      dataPtr := 1
+      initialized := []
+      current := current
+      remaining := remaining
+      chunkTail := chunkTail
+      shadow := shadow
+      storedCursor := 0
+      frontier := heapBase.toNat
+      history := AllocationHistory.empty }
+  have Hphase := twp_func3_read_phase hfunc1 heapId original outputBytes
+    4 0 0 0 0 0 0 initial
+    (afterLoop := afterLoop) (arity := arity) (remainder := remainder)
+    (controls := controls) (calls := calls) (s := s) (E := E) (Φ := Φ)
+  simp only [initial, func3ReadLoopLocals, func3AppendLocals,
+    hcurrentLength, List.length_nil, UInt32.reduceOfNat] at Hphase
+  iapply Hphase
+  unfold Func3ReadLoopInv
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hsp]
+  · iexact Hsp
+  isplitl [Hreserve]
+  · iexact Hreserve
+  isplitl [Hframe]
+  · iexact Hframe
+  isplitl [Hbump]
+  · iexact Hbump
+  isplitl [Hstreams]
+  · iexact Hstreams
+  isplitl []
+  · ipureintro
+    exact ⟨hserializeSplit, hcurrentShape, hcurrentPositive,
+      hcurrentBound, hcurrentMod, hsplit.2.2, by
+        change GeometricVecFacts input.length 0
+          (current.length + remaining.length) 0 1 heapBase.toNat
+          AllocationHistory.empty
+        exact hgeo⟩
+  · iexact Hfinish
+
+/-- Enter the exact generated initial-read block for a nonempty public input.
+The block body still contains the empty-input suffix, but the preceding theorem
+proves the nonzero read count takes the block branch before that suffix. -/
+theorem twp_func3_initial_read_block_nonempty
+    [WasmSmallStepGS hlc Universal.State]
+    (hfunc1 : Func1Spec (hlc := hlc))
+    (heapId : GName) (original : List UInt32) (outputBytes shadow : List UInt8)
+    (horiginal : original ≠ [])
+    {afterLoop : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → HeapIProp} :
+    iprop(
+      RuntimeContext ∗
+      StackPointer driverBase ∗
+      StackReserve reserveBase shadow ∗
+      ExportFrame heapId 0 1 [] (List.replicate 256 0) outputBytes ∗
+      BumpHeap heapId 0 heapBase.toNat AllocationHistory.empty ∗
+      Streams (serialize original) [] false ∗
+      Func3ReadLoopContinuation heapId original outputBytes
+        4 0 0 0 0 0 0 afterLoop arity remainder controls calls s E Φ) ⊢
+      WP (.running
+        ⟨func3InitializedLocals,
+          .block 0 0 func3InitialReadBody :: func3AfterInitialRead afterLoop,
+          arity, remainder, controls, calls⟩ : Expr Universal.State)
+        @ s; E [{ Φ }] := by
+  iintro Hresources
+  iapply twp_block
+  have Hread := twp_func3_first_read_nonempty hfunc1 heapId original
+    outputBytes shadow horiginal
+    (afterLoop := afterLoop) (arity := arity) (remainder := remainder)
+    (controls := controls) (calls := calls) (s := s) (E := E) (Φ := Φ)
+  simp only [func3InitialReadFrame, func3InitializedLocals] at Hread
+  simp only [func3InitializedLocals, List.drop_zero]
+  iapply Hread
+  iexact Hresources
 
 /-- Execute the generated `func3` prologue from raw entry ownership to the
 reviewed initialized-frame representation.  No allocator, host call, or
