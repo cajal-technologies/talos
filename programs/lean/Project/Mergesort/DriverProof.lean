@@ -4389,6 +4389,80 @@ theorem twp_func3_deallocate_input
         hstorage.2.2.2, _hframeLength, hlookup⟩
     iapply Hcont $$ Hruntime Hbump HframeBytes
 
+/-- The empty Vec owns no allocation.  Its zero-capacity guard exits the
+driver's outer block before the syntactically following deallocator call. -/
+theorem twp_func3_skip_empty_input
+    [WasmSmallStepGS hlc Universal.State]
+    (heapId : GName) (chunkBytes outputBytes : List UInt8)
+    (storedCursor : UInt32) (frontier : Nat)
+    (history : AllocationHistory)
+    (aux1 aux3 aux6 aux2 aux5 aux7 aux8 aux9 aux10 : UInt32)
+    (driverBody afterDriver : Program)
+    {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    {s : Stuckness} {E : CoPset}
+    {Phi : ObservableOutcome → HeapIProp} :
+    let finalLocals :=
+      func3AppendLocals aux1 0 aux6 aux2 1 aux5 aux7 aux8 aux9 aux10 []
+    iprop(
+      RuntimeContext ∗
+      ExportFrame heapId 0 1 [] chunkBytes outputBytes ∗
+      BumpHeap heapId storedCursor frontier history ∗
+      (RuntimeContext -∗
+        BumpHeap heapId storedCursor frontier history -∗
+        ByteSlice driverBase
+          (exportFrameBytes 0 1 [] chunkBytes outputBytes) -∗
+        ⌜(exportFrameBytes 0 1 [] chunkBytes outputBytes).length = 272⌝ -∗
+        WP (.running
+          ⟨finalLocals, afterDriver, arity, remainder, controls, calls⟩ :
+            Expr Universal.State) @ s; E [{ Phi }])) ⊢
+      WP (.running
+        ⟨func3AppendLocals aux1 aux3 aux6 aux2 1 aux5 aux7 aux8 aux9
+            aux10 [],
+          func3InputDeallocTail, arity, remainder,
+          { kind := .block, paramArity := 0, resultArity := 0,
+            body := driverBody, continuation := afterDriver,
+            belowStack := [] } :: controls,
+          calls⟩ : Expr Universal.State) @ s; E [{ Phi }] := by
+  dsimp only
+  let finalLocals :=
+    func3AppendLocals aux1 0 aux6 aux2 1 aux5 aux7 aux8 aux9 aux10 []
+  iintro ⟨Hruntime, Hframe, Hbump, Hcont⟩
+  isimp only [ExportFrame, VecU8, RawVecHeader] at Hframe
+  icases Hframe with
+    ⟨⟨⟨Hcapacity, Hpointer⟩, Hlength, Hstorage⟩,
+      Hchunk, Houtput, %hframeLengths⟩
+  simp only [func3InputDeallocTail, func3AppendLocals]
+  iapply twp_localGet rfl
+  ihave Hcapacity' : pointsTo_u32 0 (driverBase + 0) 0 $$ [Hcapacity]
+  · simp only [UInt32.add_zero]
+    iexact Hcapacity
+  iapply twp_load32 (address := driverBase) (offset := 0) 0
+      (by decide) (by decide) (by decide) (by decide) $$ Hcapacity'
+  iintro Hcapacity
+  isimp only [UInt32.add_zero] at Hcapacity
+  iapply twp_localTee rfl
+  simp only [List.length, List.set]
+  iapply twp_eqz (result := 1) (by simp)
+  ihave Hframe : ExportFrame heapId 0 1 [] chunkBytes outputBytes $$
+      [Hcapacity Hpointer Hlength Hstorage Hchunk Houtput]
+  · unfold ExportFrame VecU8 RawVecHeader
+    iframe
+    ipureintro
+    exact hframeLengths
+  ihave Hreleased := ExportFrame_releaseStorage heapId 0 1 [] chunkBytes
+    outputBytes $$ Hframe
+  icases Hreleased with ⟨Hstorage, HframeBytes, %hframeLength⟩
+  isimp only [VecStorage] at Hstorage
+  icases Hstorage with (%_hempty | Hlive)
+  · iapply twp_brIf (condition := 1) (depth := 0) (arity := arity)
+      (targetCode := afterDriver) (targetControl := controls)
+      (targetValues := []) (by decide) (by rfl)
+    iapply Hcont $$ Hruntime Hbump HframeBytes %hframeLength
+  · icases Hlive with
+      ⟨%_allocationId, %_allBytes, %_spare, %hlive, _Hblock⟩
+    norm_num at hlive
+
 /-- Exact generated epilogue restoring the exported shadow-stack pointer. -/
 private def func3RestoreStackTail : Program :=
   [.localGet 0, .const 272, .add, .globalSet 0]
@@ -4802,6 +4876,176 @@ theorem twp_func3_finish_nonempty
     isplitl []
     · ipureintro
       exact ⟨hsorted, hstackLength, hallRetired⟩
+    · iframe
+  iapply Hcont $$ Hruntime Hsuccess
+
+private def func3EmptyAfterReadSetup : Program :=
+  [.const 0, .localSet 10, .const 0, .localSet 9,
+    .const 4, .localSet 8]
+
+private def func3SortAndCleanup : Program :=
+  [.localGet 2, .localGet 9, .localGet 8, .localGet 9, .call 5,
+    .block 0 0 func3OutputBlockBody] ++ func3NonemptyCleanup
+
+private def func3EmptyMiddleFrame (body : Program) : ControlFrame :=
+  { kind := .block, paramArity := 0, resultArity := 0,
+    body := body, continuation := func3SortAndCleanup,
+    belowStack := [] }
+
+private def func3EmptyReadyLocals : Locals :=
+  func3AppendLocals 0 0 0 4 1 1 0 4 0 0 []
+
+/-- Complete the valid empty-input arm.  The generated sorter is called with
+its aligned dangling pointer at length zero; output, values retirement,
+scratch retirement, and input retirement then take their explicit skip edges.
+No dynamic allocation is introduced, so the empty history already satisfies
+`AllRetired`. -/
+theorem twp_func3_finish_empty
+    [WasmSmallStepGS hlc Universal.State]
+    (heapId : GName) (chunkBytes outputBytes reserveBytes : List UInt8)
+    (middleBody driverBody : Program)
+    {calls : List CallFrame} {s : Stuckness} {E : CoPset}
+    {Phi : ObservableOutcome → HeapIProp} :
+    iprop(
+      RuntimeContext ∗
+      StackPointer driverBase ∗
+      StackReserve reserveBase reserveBytes ∗
+      ExportFrame heapId 0 1 [] chunkBytes outputBytes ∗
+      BumpHeap heapId 0 heapBase.toNat AllocationHistory.empty ∗
+      Streams [] [] false ∗
+      (RuntimeContext -∗
+        DriverSuccess heapId [] -∗
+        WP (.running
+          ⟨func3AppendLocals 0 0 0 4 1 1 0 4 0 0 [],
+            [], 0, [], [], calls⟩ : Expr Universal.State)
+          @ s; E [{ Phi }])) ⊢
+      WP (.running
+        ⟨func3EmptyLocals, func3EmptyAfterReadSetup, 0, [],
+          [func3EmptyMiddleFrame middleBody,
+            func3CleanupOuterFrame driverBody],
+          calls⟩ : Expr Universal.State) @ s; E [{ Phi }] := by
+  iintro ⟨Hruntime, Hsp, Hreserve, Hframe, Hbump, Hstreams, Hcont⟩
+  simp only [func3EmptyAfterReadSetup, func3EmptyLocals, func3AppendLocals]
+  iapply twp_const
+  iapply twp_localSet rfl
+  simp only [List.length, List.set]
+  iapply twp_const
+  iapply twp_localSet rfl
+  simp only [List.length, List.set]
+  iapply twp_const
+  iapply twp_localSet rfl
+  simp only [List.length, List.set]
+  iapply twp_exitControl rfl
+  simp only [func3EmptyMiddleFrame, List.take_zero, List.nil_append,
+    func3SortAndCleanup, List.cons_append]
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  have Hsort := Project.Mergesort.ContractProofs.func2_correct
+    (hlc := hlc) (source := 4) (n := 0) (scratch := 4) (scratchN := 0)
+    (input := []) (scratchInput := [])
+    (callerLocals := func3EmptyReadyLocals) (stack := [])
+    (code := [.block 0 0 func3OutputBlockBody] ++ func3NonemptyCleanup)
+    (arity := 0) (remainder := [])
+    (controls := [func3CleanupOuterFrame driverBody]) (calls := calls)
+    (s := s) (E := E) (Φ := Phi)
+  unfold Func2Spec CallContract callExpr at Hsort
+  simp only [List.cons_append, List.nil_append, func3EmptyReadyLocals,
+    func3AppendLocals] at Hsort
+  iapply Hsort
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl []
+  · iapply SortBuffers_empty 4 (by decide)
+    itrivial
+  isplitl []
+  · ipureintro
+    decide
+  iintro %sorted Hruntime Hresult
+  isimp only [SortResultBuffers] at Hresult
+  icases Hresult with ⟨Hbuffers, %hsorted⟩
+  have hsortedLength := hsorted.2.length_eq
+  have hsortedNil : sorted = [] := by
+    apply List.eq_nil_of_length_eq_zero
+    simpa using hsortedLength.symm
+  subst sorted
+  isimp only [SortBuffers, WordSlice,
+    Project.Mergesort.Representations.ByteSlice, List.length_nil,
+    List.replicate_zero, List.nil_append] at Hbuffers
+  iclear Hbuffers
+  unfold ResumeWP resumeExpr
+  simp only [List.nil_append]
+  iapply twp_block
+  simp only [func3OutputBlockBody]
+  iapply twp_localGet rfl
+  iapply twp_eqz (result := 1) (by simp)
+  iapply twp_brIf (condition := 1) (depth := 0) (arity := 0)
+    (targetCode := func3NonemptyCleanup)
+    (targetControl := [func3CleanupOuterFrame driverBody])
+    (targetValues := []) (by decide) (by rfl)
+  simp only [func3NonemptyCleanup, List.cons_append, List.nil_append]
+  iapply twp_block
+  simp only [func3ValuesDeallocBlockBody]
+  iapply twp_localGet rfl
+  iapply twp_eqz (result := 1) (by simp)
+  iapply twp_brIf (condition := 1) (depth := 0) (arity := 0)
+    (targetCode :=
+      [.block 0 0 func3ScratchDeallocBlockBody] ++ func3InputDeallocTail)
+    (targetControl := [func3CleanupOuterFrame driverBody])
+    (targetValues := []) (by decide) (by rfl)
+  simp only [List.cons_append, List.nil_append]
+  iapply twp_block
+  simp only [func3ScratchDeallocBlockBody]
+  iapply twp_localGet rfl
+  iapply twp_brIf (condition := 1) (depth := 0) (arity := 0)
+    (targetCode := func3InputDeallocTail)
+    (targetControl := [func3CleanupOuterFrame driverBody])
+    (targetValues := []) (by decide) (by rfl)
+  have Hinput := twp_func3_skip_empty_input
+    (hlc := hlc) heapId chunkBytes outputBytes 0 heapBase.toNat
+    AllocationHistory.empty 0 0 0 4 1 0 4 0 0
+    driverBody func3RestoreStackTail (arity := 0) (remainder := [])
+    (controls := []) (calls := calls) (s := s) (E := E) (Phi := Phi)
+  simp only [func3AppendLocals, func3CleanupOuterFrame] at Hinput ⊢
+  iapply Hinput
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hframe]
+  · iexact Hframe
+  isplitl [Hbump]
+  · iexact Hbump
+  iintro Hruntime Hbump HframeBytes %hframeLength
+  have Hrestore := twp_func3_restore_stack reserveBytes
+    (exportFrameBytes 0 1 [] chunkBytes outputBytes)
+    0 0 0 4 1 1 0 4 0 0 hframeLength []
+    (arity := 0) (remainder := []) (controls := []) (calls := calls)
+    (s := s) (E := E) (Phi := Phi)
+  simp only [List.append_nil, func3AppendLocals] at Hrestore ⊢
+  iapply Hrestore
+  isplitl [Hsp]
+  · iexact Hsp
+  isplitl [Hreserve]
+  · iexact Hreserve
+  isplitl [HframeBytes]
+  · iexact HframeBytes
+  iintro Hsp Hstack %hstackLength
+  have hallRetired : AllRetired AllocationHistory.empty := by
+    intro allocationId metadata hlookup
+    simp [AllocationHistory.empty, LawfulPartialMap.get?_empty] at hlookup
+  have hserializeEmpty : serialize ([] : List UInt32) = [] := rfl
+  ihave Hstreams' : Streams [] (serialize ([] : List UInt32)) false $$
+      [Hstreams]
+  · isimp only [hserializeEmpty]
+    iexact Hstreams
+  ihave Hsuccess : DriverSuccess heapId [] $$ [Hsp Hstack Hbump Hstreams']
+  · unfold DriverSuccess
+    iexists [], reserveBytes ++ exportFrameBytes 0 1 [] chunkBytes outputBytes,
+      0, heapBase.toNat, AllocationHistory.empty
+    isplitl []
+    · ipureintro
+      exact ⟨⟨by simp, by simp⟩,
+        hstackLength, hallRetired⟩
     · iframe
   iapply Hcont $$ Hruntime Hsuccess
 
