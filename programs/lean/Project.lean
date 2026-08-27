@@ -16,4 +16,6 @@ import Project.FloatTrunc.Spec
 import Project.FloatRound.Spec
 import Project.FloatReinterpret.Spec
 import Project.FloatMinmax.Spec
+import Project.ByteEcho.Spec
+import Project.Xor.Spec
 import Project.Mergesort.Spec

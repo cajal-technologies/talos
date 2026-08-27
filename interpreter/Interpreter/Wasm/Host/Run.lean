@@ -41,4 +41,16 @@ def RunsWith [Inhabited α] (env : HostEnv α) (m : Module) (op : String)
     SmallStep.TerminatesWith config (fun values final =>
       values = [] ∧ post final.wasm.host)
 
+/-- Export `op` of `m`, started under `env` in host state `initial`, reaches
+the structural trap `reason` with a host state satisfying `post`.
+
+This is the exceptional-outcome analogue of `RunsWith`: both predicates hide
+linear memory and administrative machine state while retaining a finite-trace
+termination claim. -/
+def TrapsWithHost [Inhabited α] (env : HostEnv α) (m : Module) (op : String)
+    (initial : α) (reason : SmallStep.TrapReason) (post : α → Prop) : Prop :=
+  ∃ config,
+    startConfig? env m op initial = some config ∧
+    SmallStep.TrapsWith config reason (fun final => post final.wasm.host)
+
 end Wasm

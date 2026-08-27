@@ -7,6 +7,7 @@ import Interpreter.Wasm.Semantics.Lemmas
 import Interpreter.Wasm.SmallStep
 import Interpreter.Wasm.Host.Registry
 import Interpreter.Wasm.Host.StdIO
+import Interpreter.Wasm.Host.OOM
 import Interpreter.Wasm.Host.Random.Probability
 import Interpreter.Wasm.Host.Universal
 import Interpreter.Wasm.MeasureTermination
@@ -38,6 +39,8 @@ split into:
                                  module's own imports, in its own order,
                                  into the positional `HostEnv` the
                                  interpreter expects
+* `Wasm.Host.OOM`          — terminal `talos.oom` notification used only by
+                                 the tiny Rust allocator
 * `Wasm.Host.Universal`    — one host offering every host function; the
                                  default for specifications, so a proof
                                  never has to choose a host
