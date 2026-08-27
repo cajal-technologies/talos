@@ -2098,6 +2098,236 @@ theorem twp_func3_copy_decoded_word_from_locals
   iapply Hcopy
   iexact Hresources
 
+/-! ## Generated decode loops -/
+
+/-- Exact body of the generated scalar decode loop.  The loop is entered only
+when local 8 is positive, copies one word, advances both byte cursors, and
+decrements local 8 before taking its back edge. -/
+private def func3DecodeTailLoopBody : Program :=
+  [.localGet 6, .localGet 3, .load32 0, .store32 0,
+    .localGet 6, .const 4, .add, .localSet 6,
+    .localGet 3, .const 4, .add, .localSet 3,
+    .localGet 8, .const 4294967295, .add, .localTee 8, .br_if 0]
+
+private structure Func3DecodeTailState where
+  copied : Nat
+  remaining : Nat
+
+/-- Exact locals carried by the generated scalar decode loop.  `bulk` is kept
+in local 9 until the loop has finished; the generated continuation then
+replaces it with the total decoded length held in local 1. -/
+private def func3DecodeTailLocals
+    (source destination : UInt32) (length bulk : Nat)
+    (aux10 : UInt32) (state : Func3DecodeTailState) : Locals :=
+  func3AppendLocals (UInt32.ofNat length)
+    (source + 4 * UInt32.ofNat state.copied)
+    (destination + 4 * UInt32.ofNat state.copied)
+    destination source (UInt32.ofNat bulk) (UInt32.ofNat (4 * length))
+    (UInt32.ofNat state.remaining) (UInt32.ofNat bulk) aux10 []
+
+private theorem func3_decode_next_address (base : UInt32) (index : Nat) :
+    base + 4 * UInt32.ofNat index + 4 =
+      base + 4 * UInt32.ofNat (index + 1) := by
+  rw [UInt32.ofNat_add, UInt32.mul_add]
+  simp
+  ac_rfl
+
+private theorem func3_decode_decrement {remaining : Nat}
+    (hpositive : 0 < remaining)
+    (hbound : remaining < UInt32.size) :
+    UInt32.ofNat remaining + 4294967295 =
+      UInt32.ofNat (remaining - 1) := by
+  have hpred : remaining - 1 + 1 = remaining := by omega
+  have hpredBound : remaining - 1 + 1 < UInt32.size := by omega
+  have hremaining :
+      UInt32.ofNat remaining = UInt32.ofNat (remaining - 1) + 1 := by
+    rw [Wasm.Examples.MergeSort.u32_ofNat_succ hpredBound, hpred]
+  have hmax : (4294967295 : UInt32) = 0 - 1 := by decide
+  rw [hremaining, hmax]
+  calc
+    (UInt32.ofNat (remaining - 1) + 1) + (0 - 1) =
+        UInt32.ofNat (remaining - 1) + ((0 - 1) + 1) := by ac_rfl
+    _ = UInt32.ofNat (remaining - 1) := by
+      rw [UInt32.sub_add_cancel, UInt32.add_zero]
+
+/-- The generated scalar loop copies the final one to three decoded words.
+The proof follows the actual loop back edge, with `remaining` as its
+well-founded measure, and exposes the exact post-loop locals needed by the
+subsequent scratch-allocation sequence. -/
+theorem twp_func3_decode_tail_loop
+    [WasmSmallStepGS hlc Universal.State]
+    (source destination : UInt32)
+    (original initial : List UInt32) (bulk remaining : Nat)
+    (aux10 : UInt32)
+    (hlength : original.length = initial.length)
+    (hpartition : bulk + remaining = original.length)
+    (hremaining : 0 < remaining)
+    (hlengthBound : original.length < UInt32.size)
+    {afterLoop : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → HeapIProp} :
+    let initialState : Func3DecodeTailState :=
+      { copied := bulk, remaining := remaining }
+    let finalState : Func3DecodeTailState :=
+      { copied := original.length, remaining := 0 }
+    iprop(
+      WordSlice source original ∗
+      WordSlice destination (overwritePrefix original initial bulk) ∗
+      (WordSlice source original -∗
+        WordSlice destination original -∗
+        WP (.running
+          ⟨func3DecodeTailLocals source destination original.length bulk
+              aux10 finalState,
+            afterLoop, arity, remainder, controls, calls⟩ :
+              Expr Universal.State)
+          @ s; E [{ Φ }])) ⊢
+      WP (.running
+        ⟨func3DecodeTailLocals source destination original.length bulk aux10
+            initialState,
+          [.loop 0 0 func3DecodeTailLoopBody] ++ afterLoop,
+          arity, remainder, controls, calls⟩ : Expr Universal.State)
+        @ s; E [{ Φ }] := by
+  dsimp only
+  let Finish : HeapIProp := iprop(
+    WordSlice source original -∗
+    WordSlice destination original -∗
+    WP (.running
+      ⟨func3DecodeTailLocals source destination original.length bulk aux10
+          { copied := original.length, remaining := 0 },
+        afterLoop, arity, remainder, controls, calls⟩ : Expr Universal.State)
+      @ s; E [{ Φ }])
+  let Inv : Func3DecodeTailState → HeapIProp := fun state => iprop(
+    ⌜state.copied + state.remaining = original.length ∧
+      0 < state.remaining⌝ ∗
+    WordSlice source original ∗
+    WordSlice destination
+      (overwritePrefix original initial state.copied) ∗
+    Finish)
+  iintro ⟨Hsource, Hdestination, Hfinish⟩
+  simp only [List.cons_append, List.nil_append]
+  iapply Project.Mergesort.SortProof.twp_loop_wf_family_from_terminal
+    (ι := Func3DecodeTailState)
+    (measure := fun state => state.remaining)
+    (locals := func3DecodeTailLocals source destination original.length bulk
+      aux10)
+    (I := Inv)
+    (initial := { copied := bulk, remaining := remaining })
+    (initialLocals := func3DecodeTailLocals source destination
+      original.length bulk aux10 { copied := bulk, remaining := remaining })
+    (body := func3DecodeTailLoopBody) (code := afterLoop)
+    (belowStack := []) rfl rfl
+  · intro state
+    simp only [Inv, Wasm.SmallStep.loopBodyExpr]
+    iintro Hrec Hinv
+    icases Hinv with ⟨%hstate, Hsource, Hdestination, Hfinish⟩
+    have hcopied : state.copied < original.length := by omega
+    have hremainingBound : state.remaining < UInt32.size := by omega
+    have hdecrement :
+        UInt32.ofNat state.remaining + 4294967295 =
+          UInt32.ofNat (state.remaining - 1) :=
+      func3_decode_decrement hstate.2 hremainingBound
+    let next : Func3DecodeTailState :=
+      { copied := state.copied + 1,
+        remaining := state.remaining - 1 }
+    have hnextPartition :
+        next.copied + next.remaining = original.length := by
+      dsimp only [next]
+      omega
+    have Hcopy := twp_func3_copy_decoded_word_from_locals
+      (hlc := hlc) source destination original initial state.copied hlength
+      hcopied 6 3 []
+      (func3DecodeTailLocals source destination original.length bulk aux10
+        state).locals []
+      (by simp [func3DecodeTailLocals, func3AppendLocals])
+      (by simp [func3DecodeTailLocals, func3AppendLocals])
+      (code := func3DecodeTailLoopBody.drop 4)
+      (arity := arity) (remainder := remainder)
+      (controls :=
+        { kind := .loop, paramArity := 0, resultArity := 0,
+          body := func3DecodeTailLoopBody, continuation := afterLoop,
+          belowStack := [] } :: controls)
+      (calls := calls) (s := s) (E := E) (Φ := Φ)
+    simp only [func3DecodeTailLoopBody, func3DecodeTailLocals,
+      func3AppendLocals, List.cons_append, List.nil_append, List.drop]
+      at Hcopy ⊢
+    iapply Hcopy
+    isplitl [Hsource]
+    · iexact Hsource
+    isplitl [Hdestination]
+    · iexact Hdestination
+    iintro Hsource Hdestination
+    iapply twp_localGet rfl
+    iapply twp_const
+    iapply twp_add
+    rw [UInt32.add_comm (4 : UInt32), func3_decode_next_address]
+    iapply twp_localSet rfl
+    simp only [List.length, List.set]
+    iapply twp_localGet rfl
+    iapply twp_const
+    iapply twp_add
+    rw [UInt32.add_comm (4 : UInt32), func3_decode_next_address]
+    iapply twp_localSet rfl
+    simp only [List.length, List.set]
+    iapply twp_localGet rfl
+    iapply twp_const
+    iapply twp_add
+    rw [UInt32.add_comm (4294967295 : UInt32), hdecrement]
+    iapply twp_localTee rfl
+    simp only [List.length, List.set]
+    by_cases hmore : 0 < next.remaining
+    · have hnonzero : UInt32.ofNat next.remaining ≠ 0 := by
+        intro hzero
+        have hzeroNat := congrArg UInt32.toNat hzero
+        rw [UInt32.toNat_ofNat_of_lt' (by omega)] at hzeroNat
+        simp only [UInt32.toNat_zero] at hzeroNat
+        omega
+      iapply twp_brIf (condition := UInt32.ofNat next.remaining)
+        (depth := 0) (arity := arity) (code := [])
+        (targetCode := func3DecodeTailLoopBody)
+        (targetControl :=
+          { kind := .loop, paramArity := 0, resultArity := 0,
+            body := func3DecodeTailLoopBody, continuation := afterLoop,
+            belowStack := [] } :: controls)
+        (targetValues := []) hnonzero (by rfl)
+      simp only [func3DecodeTailLoopBody]
+      ispecialize Hrec $$ %next
+      isimp only [func3DecodeTailLoopBody, func3DecodeTailLocals,
+        func3AppendLocals, next] at Hrec
+      iapply Hrec
+      · ipureintro
+        omega
+      isplitr
+      · ipureintro
+        exact ⟨hnextPartition, hmore⟩
+      iframe
+    · have hzero : next.remaining = 0 := by omega
+      have hcondition : UInt32.ofNat next.remaining = 0 := by simp [hzero]
+      rw [hcondition]
+      iapply twp_brIfZero
+      iapply twp_exitControl rfl
+      simp only [List.take_zero, List.nil_append]
+      have hcopiedFinal : next.copied = original.length := by omega
+      have hcopiedFinal' : state.copied + 1 = original.length := by
+        simpa only [next] using hcopiedFinal
+      have hoverwriteFinal :
+          overwritePrefix original initial (state.copied + 1) = original := by
+        rw [hcopiedFinal']
+        exact overwritePrefix_all original initial hlength
+      isimp only [Finish] at Hfinish
+      ihave Hfinish' := Hfinish $$ Hsource
+      isimp only [hoverwriteFinal] at Hdestination
+      ihave Hdestination' : WordSlice destination original $$ [Hdestination]
+      · iexact Hdestination
+      rw [hcopiedFinal']
+      isimp only [func3DecodeTailLocals, func3AppendLocals] at Hfinish'
+      iapply Hfinish' $$ Hdestination'
+  · simp only [Inv, Finish]
+    isplitr
+    · ipureintro
+      exact ⟨hpartition, hremaining⟩
+    iframe
+
 /-- All dynamic ownership and ghost state carried across a read-loop
 back-edge. -/
 private structure Func3ReadLoopState where
