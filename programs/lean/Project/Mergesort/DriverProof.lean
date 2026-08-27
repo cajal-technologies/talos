@@ -4767,14 +4767,15 @@ theorem twp_func3_finish_nonempty
     (capacity inputPtr valuesPtr scratchPtr : UInt32)
     (valuesId scratchId : Nat)
     (chunkBytes outputBytes reserveBytes : List UInt8)
-    (storedCursor : UInt32) (frontier : Nat)
+    (storedCursor : UInt32) (frontier inputFrontier : Nat)
     (inputHistory : AllocationHistory)
-    (outputCursor : UInt32)
+    (outputCursor final6 : UInt32)
     (hsorted : SortedPermutation original sorted)
     (hpositive : 0 < original.length)
     (hscratchLength : scratchValues.length = sorted.length)
     (hgeo : GeometricVecFacts (serialize original).length
-      (serialize original).length 0 capacity inputPtr frontier inputHistory)
+      (serialize original).length 0 capacity inputPtr inputFrontier
+        inputHistory)
     (hvaluesId : valuesId = inputHistory.nextId)
     (hscratchId : scratchId = inputHistory.nextId + 1)
     (hbyteBound : 4 * original.length < UInt32.size)
@@ -4786,8 +4787,8 @@ theorem twp_func3_finish_nonempty
     let scratchHistory :=
       (inputHistory.allocate valuesPtr workLayout).allocate scratchPtr workLayout
     let locals :=
-      func3AppendLocals (UInt32.ofNat sorted.length) outputCursor 0 valuesPtr
-        inputPtr 0 (UInt32.ofNat (4 * sorted.length)) scratchPtr
+      func3AppendLocals (UInt32.ofNat sorted.length) outputCursor final6
+        valuesPtr inputPtr 0 (UInt32.ofNat (4 * sorted.length)) scratchPtr
         (UInt32.ofNat sorted.length) (UInt32.ofNat (4 * sorted.length)) []
     iprop(
       RuntimeContext ∗
@@ -4802,7 +4803,7 @@ theorem twp_func3_finish_nonempty
       (RuntimeContext -∗
         DriverSuccess heapId original -∗
         WP (.running
-          ⟨func3AppendLocals (UInt32.ofNat sorted.length) capacity 0
+          ⟨func3AppendLocals (UInt32.ofNat sorted.length) capacity final6
               valuesPtr inputPtr 0 (UInt32.ofNat (4 * sorted.length))
               scratchPtr (UInt32.ofNat sorted.length)
               (UInt32.ofNat (4 * sorted.length)) [],
@@ -4820,7 +4821,7 @@ theorem twp_func3_finish_nonempty
   let afterValues := scratchHistory.retire valuesId valuesPtr workLayout
   let beforeInput := afterValues.retire scratchId scratchPtr workLayout
   let locals :=
-    func3AppendLocals (UInt32.ofNat sorted.length) outputCursor 0 valuesPtr
+    func3AppendLocals (UInt32.ofNat sorted.length) outputCursor final6 valuesPtr
       inputPtr 0 (UInt32.ofNat (4 * sorted.length)) scratchPtr
       (UInt32.ofNat sorted.length) (UInt32.ofNat (4 * sorted.length)) []
   have hsortedLength : sorted.length = original.length :=
@@ -4855,7 +4856,7 @@ theorem twp_func3_finish_nonempty
     Hstreams, Hcont⟩
   have HvaluesCleanup := twp_func3_deallocate_values
     (hlc := hlc) heapId valuesId valuesPtr sorted storedCursor frontier
-    scratchHistory outputCursor 0 inputPtr 0
+    scratchHistory outputCursor final6 inputPtr 0
     (UInt32.ofNat (4 * sorted.length)) scratchPtr
     (UInt32.ofNat (4 * sorted.length)) hsortedPositive hsortedByteBound
     (afterValues :=
@@ -4875,7 +4876,7 @@ theorem twp_func3_finish_nonempty
   iintro Hruntime Hbump
   have HscratchCleanup := twp_func3_deallocate_scratch
     (hlc := hlc) heapId scratchId scratchPtr valuesPtr sorted scratchValues
-    storedCursor frontier afterValues outputCursor 0 inputPtr
+    storedCursor frontier afterValues outputCursor final6 inputPtr
     (UInt32.ofNat (4 * sorted.length)) hscratchLength hsortedByteBound
     (afterScratch := func3InputDeallocTail) (arity := 0) (remainder := [])
     (controls := [func3CleanupOuterFrame driverBody])
@@ -4894,7 +4895,7 @@ theorem twp_func3_finish_nonempty
   have HinputCleanup := twp_func3_deallocate_input
     (hlc := hlc) heapId capacity inputPtr (serialize original) chunkBytes
     outputBytes storedCursor frontier beforeInput
-    (UInt32.ofNat sorted.length) outputCursor 0 valuesPtr 0
+    (UInt32.ofNat sorted.length) outputCursor final6 valuesPtr 0
     (UInt32.ofNat (4 * sorted.length)) scratchPtr
     (UInt32.ofNat sorted.length) (UInt32.ofNat (4 * sorted.length))
     hcapacityPositive driverBody func3RestoreStackTail
@@ -4917,7 +4918,7 @@ theorem twp_func3_finish_nonempty
     rw [hbeforeInput]
     apply completedDriverHistory_allRetired
       (serialize original).length capacity inputPtr valuesPtr scratchPtr
-      frontier inputHistory inputId workLayout
+      inputFrontier inputHistory inputId workLayout
     · rw [serialize_length]
       omega
     · exact hgeo
@@ -4926,7 +4927,7 @@ theorem twp_func3_finish_nonempty
   have Hrestore := twp_func3_restore_stack reserveBytes
     (exportFrameBytes capacity inputPtr (serialize original) chunkBytes
       outputBytes)
-    (UInt32.ofNat sorted.length) capacity 0 valuesPtr inputPtr 0
+    (UInt32.ofNat sorted.length) capacity final6 valuesPtr inputPtr 0
     (UInt32.ofNat (4 * sorted.length)) scratchPtr
     (UInt32.ofNat sorted.length) (UInt32.ofNat (4 * sorted.length))
     hinput.2.2.2.2.1
@@ -5948,5 +5949,766 @@ theorem twp_func3_initialize
     ValueType.zero] at Hdone
   isimp only [ValueType.zero]
   iexact Hdone
+
+/-! ## Exact whole-driver control structure -/
+
+/-- Values-allocation, decode, and scratch-allocation code in the innermost
+generated nonempty block. -/
+private def func3AllocationBody : Program :=
+  [.call 7, .localGet 7, .const 4, .call 8,
+    .localTee 2, .eqz, .br_if 1] ++ func3DecodeSetup ++
+    [.block 0 0 func3DecodeOuterBlockBody,
+      .call 7, .localGet 9, .const 2, .shl, .localTee 10,
+      .const 4, .call 12] ++ func3ScratchSuccessTail
+
+/-- Complete body of the innermost nonempty block, including the two guards
+which establish whole-word, nonempty input before allocation. -/
+private def func3DecodeAllocationBody : Program :=
+  func3CompletedLengthGuard ++
+    [.block 0 0 func3AlignedLengthBlockBody] ++ func3AllocationBody
+
+/-- Cleanup edge retained by the compiler for a null values result.  The
+allocator contract makes this edge unreachable on a normal return. -/
+private def func3EarlyInputCleanup : Program :=
+  [.localGet 0, .load32 0, .localTee 3, .eqz, .br_if 4,
+    .localGet 4, .localGet 3, .const 1, .call 10, .br 4]
+
+private def func3ValuesAllocationPanic : Program :=
+  [.const 4, .localGet 7, .call 46, .unreachable]
+
+private def func3ScratchAllocationPanic : Program :=
+  [.const 4, .localGet 10, .call 46, .unreachable]
+
+private def func3ValuesOuterBody : Program :=
+  [.block 0 0 func3DecodeAllocationBody] ++ func3EarlyInputCleanup
+
+private def func3ScratchOuterBody : Program :=
+  [.block 0 0 func3ValuesOuterBody] ++ func3ValuesAllocationPanic
+
+/-- Body of the block containing the initial read, the read loop, and the
+complete nonempty allocation/decode dispatch. -/
+private def func3ReadAndDispatchBody : Program :=
+  [.block 0 0 func3InitialReadBody] ++
+    func3AfterInitialRead
+      (func3CompletedPtrReload ++
+        [.block 0 0 func3ScratchOuterBody] ++
+        func3ScratchAllocationPanic)
+
+/-- Body of the block whose fallthrough is the valid empty-input setup. -/
+private def func3MiddleBody : Program :=
+  [.block 0 0 func3ReadAndDispatchBody] ++ func3EmptyAfterReadSetup
+
+/-- Exact body of the outermost generated driver block. -/
+private def func3DriverBody : Program :=
+  [.block 0 0 func3MiddleBody] ++ func3SortAndCleanup
+
+private def func3DecodeAllocationFrame : ControlFrame :=
+  { kind := .block, paramArity := 0, resultArity := 0,
+    body := func3DecodeAllocationBody,
+    continuation := func3EarlyInputCleanup, belowStack := [] }
+
+private def func3ValuesOuterFrame : ControlFrame :=
+  { kind := .block, paramArity := 0, resultArity := 0,
+    body := func3ValuesOuterBody,
+    continuation := func3ValuesAllocationPanic, belowStack := [] }
+
+private def func3ScratchOuterFrame : ControlFrame :=
+  { kind := .block, paramArity := 0, resultArity := 0,
+    body := func3ScratchOuterBody,
+    continuation := func3ScratchAllocationPanic, belowStack := [] }
+
+private def func3ReadAndDispatchFrame : ControlFrame :=
+  func3EnclosingDriverFrame func3ReadAndDispatchBody func3EmptyAfterReadSetup
+
+/-- The six exact frames surrounding the successful scratch-allocation tail. -/
+private def func3ScratchSuccessControls : List ControlFrame :=
+  [func3DecodeAllocationFrame,
+    func3ValuesOuterFrame,
+    func3ScratchOuterFrame,
+    func3ReadAndDispatchFrame,
+    func3EmptyMiddleFrame func3MiddleBody,
+    func3CleanupOuterFrame func3DriverBody]
+
+private theorem func3_scratch_success_branch :
+    branchTarget? 0 4 func3ScratchSuccessControls [] =
+      some (func3SortAndCleanup,
+        [func3CleanupOuterFrame func3DriverBody], []) := by
+  rfl
+
+private theorem geometricVec_frontier_ge_heapBase
+    (total length remaining : Nat) (capacity ptr : UInt32)
+    (frontier : Nat) (history : AllocationHistory)
+    (hgeo : GeometricVecFacts total length remaining capacity ptr frontier
+      history) :
+    heapBase.toNat ≤ frontier := by
+  rcases hgeo with hinitial | hshort | hlarge
+  · rw [hinitial.2.2.2.2.1]
+  · rw [hshort.2.2.2.2.2.1]
+    omega
+  · rcases hlarge with
+      ⟨exponent, hexponent, _hexponentUpper, _hcapacity, _hlength,
+        _htotal, _hptr, hfrontier, _hhistory⟩
+    rw [hfrontier]
+    unfold vectorBlockBase
+    have hpow : 256 ≤ 2 ^ exponent := by
+      rw [show 256 = 2 ^ 8 by norm_num]
+      exact Nat.pow_le_pow_right (by decide) hexponent
+    omega
+
+/-- Compose the complete valid nonempty allocation/decode/sort/output path.
+The only terminal alternatives admitted by the two allocator contracts are
+the phase-indexed `talos.oom` outcomes. -/
+theorem twp_func3_complete_nonempty
+    [WasmSmallStepGS hlc Universal.State]
+    (hfunc5 : Func5Spec (hlc := hlc))
+    (hfunc9 : Func9Spec (hlc := hlc))
+    (heapId : GName) (original : List UInt32)
+    (capacity inputPtr : UInt32)
+    (chunkBytes outputBytes reserveBytes : List UInt8)
+    (storedCursor : UInt32) (frontier : Nat)
+    (history : AllocationHistory)
+    (horiginal : original ≠ [])
+    (hgeo : GeometricVecFacts (serialize original).length
+      (serialize original).length 0 capacity inputPtr frontier history)
+    {calls : List CallFrame} {s : Stuckness} {E : CoPset}
+    {Phi : ObservableOutcome → HeapIProp} :
+    iprop(
+      RuntimeContext ∗
+      StackPointer driverBase ∗
+      StackReserve reserveBase reserveBytes ∗
+      ExportFrame heapId capacity inputPtr (serialize original) chunkBytes
+        outputBytes ∗
+      BumpHeap heapId storedCursor frontier history ∗
+      Streams [] [] false ∗
+      (∀ finalLocals : Locals,
+        RuntimeContext -∗ DriverSuccess heapId original -∗
+        WP (.running
+          ⟨finalLocals, [], 0, [], [], calls⟩ : Expr Universal.State)
+          @ s; E [{ Phi }]) ∗
+      ((∃ phase : DriverOOMPhase, DriverOOMState heapId original phase) -∗
+        Phi (.trapped (.host OOM.trapMessage)))) ⊢
+      WP (.running
+        ⟨func3AppendLocals inputPtr 0
+            (UInt32.ofNat (4 * original.length)) 4 inputPtr 0
+            (UInt32.ofNat (4 * original.length)) 0 0 0 [],
+          func3AllocationBody, 0, [], func3ScratchSuccessControls, calls⟩ :
+            Expr Universal.State) @ s; E [{ Phi }] := by
+  let layout : AllocLayout :=
+    { size := 4 * original.length, alignment := 4 }
+  have hpositive : 0 < original.length :=
+    List.length_pos_iff_ne_nil.mpr horiginal
+  have hbyteBoundSigned : 4 * original.length < 2147483648 := by
+    have htotal := GeometricVecFacts.completed_lt_signed
+      (serialize original).length (serialize original).length 0 capacity
+      inputPtr frontier history hgeo rfl
+    simpa only [serialize_length] using htotal
+  have hbyteBound : 4 * original.length < UInt32.size := by
+    norm_num [UInt32.size] at hbyteBoundSigned ⊢
+    omega
+  have hlayoutValid : layout.Valid := by
+    exact align4Layout_valid_of_bounds (4 * original.length)
+      (by omega) hbyteBoundSigned (by omega)
+  have hfrontier : heapBase.toNat ≤ frontier :=
+    geometricVec_frontier_ge_heapBase _ _ _ _ _ _ _ hgeo
+  iintro ⟨Hruntime, Hsp, Hreserve, Hframe, Hbump, Hstreams, Hdone, Hoom⟩
+  have HvaluesAlloc := twp_func3_allocate_values hfunc5 heapId original
+    capacity inputPtr (serialize original) chunkBytes outputBytes reserveBytes
+    storedCursor frontier history horiginal rfl hgeo
+    (func3AppendLocals inputPtr 0 (UInt32.ofNat (4 * original.length)) 4
+      inputPtr 0 (UInt32.ofNat (4 * original.length)) 0 0 0 [])
+    (by
+      simp [func3AppendLocals, U32Codec, Spec.u32Codec])
+    (stack := [])
+    (code := [.localTee 2, .eqz, .br_if 1] ++ func3DecodeSetup ++
+      [.block 0 0 func3DecodeOuterBlockBody,
+        .call 7, .localGet 9, .const 2, .shl, .localTee 10,
+        .const 4, .call 12] ++ func3ScratchSuccessTail)
+    (arity := 0) (remainder := [])
+    (controls := func3ScratchSuccessControls) (calls := calls)
+    (s := s) (E := E) (Φ := Phi)
+  simp only [func3AllocationBody, func3AppendLocals, List.cons_append,
+    List.nil_append]
+    at HvaluesAlloc ⊢
+  iapply HvaluesAlloc
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hsp]
+  · iexact Hsp
+  isplitl [Hreserve]
+  · iexact Hreserve
+  isplitl [Hframe]
+  · iexact Hframe
+  isplitl [Hbump]
+  · iexact Hbump
+  isplitl [Hstreams]
+  · iexact Hstreams
+  isplit
+  · iintro %valuesPtr %valuesFinish %valuesBytes %hvaluesClassify
+      Hruntime Hsp Hreserve Hframe Hbump Hvalues Hstreams
+    have hvaluesFacts := classifyBump_success_reachable frontier layout
+      valuesPtr valuesFinish hfrontier hlayoutValid (Or.inr rfl)
+      (by simpa only [layout, serialize_length] using hvaluesClassify)
+    have hvaluesEnd :
+        valuesPtr.toNat + 4 * original.length ≤ valuesFinish.toNat := by
+      rw [hvaluesFacts.2.2.2.2.2.1]
+    have hvaluesFrontier : heapBase.toNat ≤ valuesFinish.toNat := by
+      exact Nat.le_trans hfrontier
+        (Nat.le_trans hvaluesFacts.1 (by omega))
+    unfold ResumeWP resumeExpr
+    have Hdecode := twp_func3_decode_allocated heapId history.nextId capacity
+      inputPtr valuesPtr original chunkBytes outputBytes valuesBytes frontier
+      history 0 4 0 0 0 horiginal hgeo
+      (afterDecode := [.call 7, .localGet 9, .const 2, .shl,
+        .localTee 10, .const 4, .call 12] ++ func3ScratchSuccessTail)
+      (arity := 0) (remainder := [])
+      (controls := func3ScratchSuccessControls) (calls := calls)
+      (s := s) (E := E) (Φ := Phi)
+    simp only [func3AppendLocals, List.append_assoc, List.cons_append,
+      List.nil_append]
+      at Hdecode ⊢
+    iapply Hdecode
+    isplitl [Hframe]
+    · iexact Hframe
+    isplitl [Hvalues]
+    · isimp only [serialize_length] at Hvalues
+      iexact Hvalues
+    iintro %final1 %final3 %final6 %final5 %final8 Hframe Hvalues
+    have HscratchAlloc := twp_func3_allocate_scratch hfunc9 heapId
+      history.nextId capacity inputPtr valuesPtr original chunkBytes outputBytes
+      reserveBytes valuesFinish valuesFinish.toNat
+      (history.allocate valuesPtr layout) final1 final3 final6 final5 final8 0
+      hpositive hbyteBoundSigned hvaluesFrontier hvaluesEnd
+      (code := func3ScratchSuccessTail) (arity := 0) (remainder := [])
+      (controls := func3ScratchSuccessControls) (calls := calls)
+      (s := s) (E := E) (Φ := Phi)
+    simp only [func3AppendLocals, List.cons_append, List.nil_append]
+      at HscratchAlloc ⊢
+    iapply HscratchAlloc
+    isplitl [Hruntime]
+    · iexact Hruntime
+    isplitl [Hsp]
+    · iexact Hsp
+    isplitl [Hreserve]
+    · iexact Hreserve
+    isplitl [Hframe]
+    · iexact Hframe
+    isplitl [Hvalues]
+    · iexact Hvalues
+    isplitl [Hbump]
+    · isimp only [serialize_length] at Hbump
+      iexact Hbump
+    isplitl [Hstreams]
+    · iexact Hstreams
+    isplit
+    · iintro %scratchPtr %scratchFinish %hscratchClassify
+        Hruntime Hsp Hreserve Hframe Hvalues Hbump Hscratch Hstreams
+        %hdisjoint
+      unfold ResumeWP resumeExpr
+      have HscratchTail := twp_func3_scratch_success_tail heapId
+        (history.allocate valuesPtr layout).nextId scratchPtr layout
+        (List.replicate layout.size 0) original.length final1 final3 final6
+        valuesPtr inputPtr final5 final8 hbyteBound
+        func3_scratch_success_branch
+        (arity := 0) (remainder := [])
+        (controls := func3ScratchSuccessControls)
+        (targetControls := [func3CleanupOuterFrame func3DriverBody])
+        (targetCode := func3SortAndCleanup) (calls := calls)
+        (s := s) (E := E) (Phi := Phi)
+      simp only [func3AppendLocals, List.append_nil] at HscratchTail ⊢
+      iapply HscratchTail
+      isplitl [Hscratch]
+      · iexact Hscratch
+      iintro Hscratch
+      have Hsort := twp_func3_sort heapId history.nextId
+        (history.allocate valuesPtr layout).nextId valuesPtr scratchPtr inputPtr
+        original (UInt32.ofNat original.length) final3 final6 0
+        (UInt32.ofNat (4 * original.length)) hdisjoint hbyteBound
+        (code := [.block 0 0 func3OutputBlockBody] ++ func3NonemptyCleanup)
+        (arity := 0) (remainder := [])
+        (controls := [func3CleanupOuterFrame func3DriverBody])
+        (calls := calls) (s := s) (E := E) (Φ := Phi)
+      simp only [func3SortAndCleanup, func3AppendLocals, List.cons_append,
+        List.nil_append] at Hsort ⊢
+      iapply Hsort
+      isplitl [Hruntime]
+      · iexact Hruntime
+      isplitl [Hvalues]
+      · iexact Hvalues
+      isplitl [Hscratch]
+      · iexact Hscratch
+      iintro %sorted Hruntime Hvalues Hscratch %hsorted
+      have hsortedLength : sorted.length = original.length :=
+        hsorted.2.length_eq.symm
+      have hsortedByteBound : 4 * sorted.length < UInt32.size := by
+        simpa only [hsortedLength] using hbyteBound
+      let scratchValues : List UInt32 :=
+        if original.length ≤ 1 then List.replicate original.length 0
+        else sorted
+      have hscratchLength : scratchValues.length = sorted.length := by
+        dsimp only [scratchValues]
+        split <;> simp [hsortedLength]
+      have Houtput := twp_func3_output heapId history.nextId capacity inputPtr
+        valuesPtr (serialize original) chunkBytes outputBytes sorted
+        (UInt32.ofNat original.length) final3 final6 inputPtr 0
+        (UInt32.ofNat (4 * original.length)) scratchPtr
+        (UInt32.ofNat (4 * original.length)) hsortedByteBound
+        (afterOutput := func3NonemptyCleanup) (arity := 0) (remainder := [])
+        (controls := [func3CleanupOuterFrame func3DriverBody])
+        (calls := calls) (s := s) (E := E) (Φ := Phi)
+      simp only [func3AppendLocals, hsortedLength, List.cons_append,
+        List.nil_append] at Houtput ⊢
+      iapply Houtput
+      isplitl [Hruntime]
+      · iexact Hruntime
+      isplitl [Hframe]
+      · iexact Hframe
+      isplitl [Hvalues]
+      · iexact Hvalues
+      isplitl [Hstreams]
+      · iexact Hstreams
+      iintro %outputCursor %final6' %finalOutput Hruntime Hframe Hvalues
+        Hstreams
+      have Hfinish := twp_func3_finish_nonempty heapId original sorted
+        scratchValues capacity inputPtr valuesPtr scratchPtr history.nextId
+        (history.allocate valuesPtr layout).nextId chunkBytes finalOutput
+        reserveBytes scratchFinish scratchFinish.toNat frontier history
+        outputCursor final6' hsorted hpositive hscratchLength hgeo rfl
+        (by simp [AllocationHistory.allocate]) hbyteBound func3DriverBody
+        (calls := calls) (s := s) (E := E) (Phi := Phi)
+      simp only [func3AppendLocals, hsortedLength] at Hfinish ⊢
+      iapply Hfinish
+      isplitl [Hruntime]
+      · iexact Hruntime
+      isplitl [Hsp]
+      · iexact Hsp
+      isplitl [Hreserve]
+      · iexact Hreserve
+      isplitl [Hframe]
+      · iexact Hframe
+      isplitl [Hvalues]
+      · iexact Hvalues
+      isplitl [Hscratch]
+      · isimp only [scratchValues]
+        iexact Hscratch
+      isplitl [Hbump]
+      · isimp only [layout] at Hbump
+        iexact Hbump
+      isplitl [Hstreams]
+      · iexact Hstreams
+      iintro Hruntime Hsuccess
+      iapply Hdone $$ Hruntime Hsuccess
+    · iintro HscratchOOM
+      iapply Hoom
+      iexists DriverOOMPhase.scratch
+      isimp only [DriverOOMState]
+      iexact HscratchOOM
+  · iintro HvaluesOOM
+    iapply Hoom
+    iexists DriverOOMPhase.values
+    isimp only [DriverOOMState]
+    iexact HvaluesOOM
+
+/-- Enter the three generated allocation-error blocks after the completed
+read, discharge the canonical whole-word/nonempty guards, and hand the exact
+innermost continuation to `twp_func3_complete_nonempty`. -/
+theorem twp_func3_completed_nonempty
+    [WasmSmallStepGS hlc Universal.State]
+    (hfunc5 : Func5Spec (hlc := hlc))
+    (hfunc9 : Func9Spec (hlc := hlc))
+    (heapId : GName) (original : List UInt32)
+    (capacity inputPtr : UInt32)
+    (chunkBytes outputBytes reserveBytes : List UInt8)
+    (storedCursor : UInt32) (frontier : Nat)
+    (history : AllocationHistory)
+    (horiginal : original ≠ [])
+    (hgeo : GeometricVecFacts (serialize original).length
+      (serialize original).length 0 capacity inputPtr frontier history)
+    {calls : List CallFrame} {s : Stuckness} {E : CoPset}
+    {Phi : ObservableOutcome → HeapIProp} :
+    iprop(
+      RuntimeContext ∗
+      StackPointer driverBase ∗
+      StackReserve reserveBase reserveBytes ∗
+      ExportFrame heapId capacity inputPtr (serialize original) chunkBytes
+        outputBytes ∗
+      BumpHeap heapId storedCursor frontier history ∗
+      Streams [] [] false ∗
+      (∀ finalLocals : Locals,
+        RuntimeContext -∗ DriverSuccess heapId original -∗
+        WP (.running
+          ⟨finalLocals, [], 0, [], [], calls⟩ : Expr Universal.State)
+          @ s; E [{ Phi }]) ∗
+      ((∃ phase : DriverOOMPhase, DriverOOMState heapId original phase) -∗
+        Phi (.trapped (.host OOM.trapMessage)))) ⊢
+      WP (.running
+        ⟨func3AppendLocals inputPtr 0
+            (UInt32.ofNat (4 * original.length)) 4 0 0 0 0 0 0 [],
+          func3CompletedPtrReload ++
+            [.block 0 0 func3ScratchOuterBody] ++
+            func3ScratchAllocationPanic,
+          0, [],
+          [func3ReadAndDispatchFrame,
+            func3EmptyMiddleFrame func3MiddleBody,
+            func3CleanupOuterFrame func3DriverBody],
+          calls⟩ : Expr Universal.State) @ s; E [{ Phi }] := by
+  iintro ⟨Hruntime, Hsp, Hreserve, Hframe, Hbump, Hstreams, Hdone, Hoom⟩
+  have Hreload := twp_func3_reload_completed_ptr heapId capacity inputPtr
+    (serialize original) chunkBytes outputBytes 0 4 0 0 0 0 0 0
+    (stack := [])
+    (code := [.block 0 0 func3ScratchOuterBody] ++
+      func3ScratchAllocationPanic)
+    (arity := 0) (remainder := [])
+    (controls := [func3ReadAndDispatchFrame,
+      func3EmptyMiddleFrame func3MiddleBody,
+      func3CleanupOuterFrame func3DriverBody])
+    (calls := calls) (s := s) (E := E) (Φ := Phi)
+  simp only [func3CompletedPtrReload, func3AppendLocals, serialize_length,
+    List.cons_append, List.nil_append] at Hreload ⊢
+  iapply Hreload
+  isplitl [Hframe]
+  · iexact Hframe
+  iintro Hframe
+  iapply twp_block
+  simp only [func3ScratchOuterBody, List.cons_append, List.nil_append]
+  iapply twp_block
+  simp only [func3ValuesOuterBody, List.cons_append, List.nil_append]
+  iapply twp_block
+  simp only [func3DecodeAllocationBody]
+  have Hguards := twp_func3_enter_nonempty_decode original
+    (serialize original) capacity inputPtr frontier history horiginal rfl hgeo
+    0 4 inputPtr 0 0 0 0 0
+    (stack := []) (afterBlock := func3AllocationBody)
+    (arity := 0) (remainder := [])
+    (controls := func3ScratchSuccessControls) (calls := calls)
+    (s := s) (E := E) (Φ := Phi)
+  simp only [func3CompletedLengthGuard, func3AppendLocals, serialize_length,
+    func3ScratchSuccessControls, func3DecodeAllocationFrame,
+    func3ValuesOuterFrame, func3ScratchOuterFrame, List.drop_zero,
+    func3DecodeAllocationBody, func3ValuesOuterBody, func3ScratchOuterBody,
+    List.cons_append, List.nil_append] at Hguards ⊢
+  iapply Hguards
+  have Hcomplete := twp_func3_complete_nonempty hfunc5 hfunc9 heapId original
+    capacity inputPtr chunkBytes outputBytes reserveBytes storedCursor frontier
+    history horiginal hgeo (calls := calls) (s := s) (E := E) (Phi := Phi)
+  simp only [func3AppendLocals, func3ScratchSuccessControls,
+    func3DecodeAllocationFrame, func3ValuesOuterFrame,
+    func3ScratchOuterFrame, func3DecodeAllocationBody,
+    func3ValuesOuterBody, func3ScratchOuterBody,
+    func3CompletedLengthGuard, List.cons_append, List.nil_append]
+    at Hcomplete ⊢
+  iapply Hcomplete
+  iframe
+
+/-- Execute the exact initial-read block and well-founded read loop for a
+nonempty public input, then compose its authoritative completed-Vec result
+with the full nonempty suffix. -/
+theorem twp_func3_read_dispatch_nonempty
+    [WasmSmallStepGS hlc Universal.State]
+    (hfunc1 : Func1Spec (hlc := hlc))
+    (hfunc5 : Func5Spec (hlc := hlc))
+    (hfunc9 : Func9Spec (hlc := hlc))
+    (heapId : GName) (original : List UInt32)
+    (outputBytes reserveBytes : List UInt8)
+    (horiginal : original ≠ [])
+    {calls : List CallFrame} {s : Stuckness} {E : CoPset}
+    {Phi : ObservableOutcome → HeapIProp} :
+    iprop(
+      RuntimeContext ∗
+      StackPointer driverBase ∗
+      StackReserve reserveBase reserveBytes ∗
+      ExportFrame heapId 0 1 [] (List.replicate 256 0) outputBytes ∗
+      BumpHeap heapId 0 heapBase.toNat AllocationHistory.empty ∗
+      Streams (serialize original) [] false ∗
+      (∀ finalLocals : Locals,
+        RuntimeContext -∗ DriverSuccess heapId original -∗
+        WP (.running
+          ⟨finalLocals, [], 0, [], [], calls⟩ : Expr Universal.State)
+          @ s; E [{ Phi }]) ∗
+      ((∃ phase : DriverOOMPhase, DriverOOMState heapId original phase) -∗
+        Phi (.trapped (.host OOM.trapMessage)))) ⊢
+      WP (.running
+        ⟨func3InitializedLocals, func3ReadAndDispatchBody, 0, [],
+          [func3ReadAndDispatchFrame,
+            func3EmptyMiddleFrame func3MiddleBody,
+            func3CleanupOuterFrame func3DriverBody],
+          calls⟩ : Expr Universal.State) @ s; E [{ Phi }] := by
+  iintro ⟨Hruntime, Hsp, Hreserve, Hframe, Hbump, Hstreams, Hdone, Hoom⟩
+  have Hread := twp_func3_initial_read_block_nonempty hfunc1 heapId original
+    outputBytes reserveBytes horiginal
+    (afterLoop := func3CompletedPtrReload ++
+      [.block 0 0 func3ScratchOuterBody] ++
+      func3ScratchAllocationPanic)
+    (arity := 0) (remainder := [])
+    (controls := [func3ReadAndDispatchFrame,
+      func3EmptyMiddleFrame func3MiddleBody,
+      func3CleanupOuterFrame func3DriverBody])
+    (calls := calls) (s := s) (E := E) (Φ := Phi)
+  simp only [func3ReadAndDispatchBody, func3AfterInitialRead,
+    func3InitializedLocals, List.cons_append, List.nil_append] at Hread ⊢
+  iapply Hread
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hsp]
+  · iexact Hsp
+  isplitl [Hreserve]
+  · iexact Hreserve
+  isplitl [Hframe]
+  · iexact Hframe
+  isplitl [Hbump]
+  · iexact Hbump
+  isplitl [Hstreams]
+  · iexact Hstreams
+  isimp only [Func3ReadLoopContinuation]
+  isplit
+  · iintro %completed %chunkBytes %finalShadow %finalCapacity %finalPtr
+      %finalStoredCursor %finalFrontier %finalHistory Hruntime Hsp Hreserve
+      Hframe Hbump Hstreams %hfacts
+    have hgeo : GeometricVecFacts (serialize original).length
+        (serialize original).length 0 finalCapacity finalPtr finalFrontier
+        finalHistory := by
+      simpa only [← hfacts.1] using hfacts.2
+    isimp only [← hfacts.1] at Hframe
+    have Hcompleted := twp_func3_completed_nonempty hfunc5 hfunc9 heapId
+      original finalCapacity finalPtr chunkBytes outputBytes finalShadow
+      finalStoredCursor finalFrontier finalHistory horiginal hgeo
+      (calls := calls) (s := s) (E := E) (Phi := Phi)
+    simp only [← hfacts.1, func3AppendLocals, serialize_length]
+      at Hcompleted ⊢
+    iapply Hcompleted
+    iframe
+  · iintro HOOM
+    iapply Hoom
+    iexact HOOM
+
+/-- Audited decomposition of the generated body following its 21-instruction
+prologue. -/
+private theorem func3_after_init_exact :
+    func3AfterInit =
+      [.block 0 0 func3DriverBody] ++ func3RestoreStackTail := by
+  simp [func3AfterInit, func3DriverBody, func3MiddleBody,
+    func3ReadAndDispatchBody, func3AfterInitialRead, func3ReadPhaseBody,
+    func3ReadLoopBlockBody, func3ReadLoopBody, func3AppendBody,
+    func3ReadClassifyBody, func3InitialReadBody, func3InitialReadPrefix,
+    func3EmptyInputSuffix, func3CapacityBody, func3AppendCopyBody,
+    func3OversizedReadPanic, func3ScratchOuterBody, func3ValuesOuterBody,
+    func3DecodeAllocationBody, func3AllocationBody, func3EarlyInputCleanup,
+    func3CompletedPtrReload, func3CompletedLengthGuard,
+    func3AlignedLengthBlockBody, func3DecodeSetup, func3DecodeOuterBlockBody,
+    func3DecodeBulkBlockBody, func3DecodeTailContinuation,
+    func3DecodeBulkLoopBody, func3DecodeTailLoopBody,
+    func3ScratchSuccessTail, func3ValuesAllocationPanic,
+    func3ScratchAllocationPanic,
+    func3SortAndCleanup, func3NonemptyCleanup, func3InputDeallocTail,
+    func3EmptyAfterReadSetup, func3OutputBlockBody, func3OutputLoopBody,
+    func3ValuesDeallocBlockBody, func3ScratchDeallocBlockBody,
+    func3RestoreStackTail, Project.Mergesort.func3]
+
+/-- Compose the exact nested driver blocks.  The public input is split once:
+the empty arm takes the compiler's early branch, while the nonempty arm uses
+the read-loop and allocation composition above. -/
+theorem twp_func3_after_initialize
+    [WasmSmallStepGS hlc Universal.State]
+    (hfunc1 : Func1Spec (hlc := hlc))
+    (hfunc5 : Func5Spec (hlc := hlc))
+    (hfunc9 : Func9Spec (hlc := hlc))
+    (heapId : GName) (original : List UInt32)
+    (outputBytes reserveBytes : List UInt8)
+    {calls : List CallFrame} {s : Stuckness} {E : CoPset}
+    {Phi : ObservableOutcome → HeapIProp} :
+    iprop(
+      RuntimeContext ∗
+      StackPointer driverBase ∗
+      StackReserve reserveBase reserveBytes ∗
+      ExportFrame heapId 0 1 [] (List.replicate 256 0) outputBytes ∗
+      BumpHeap heapId 0 heapBase.toNat AllocationHistory.empty ∗
+      Streams (serialize original) [] false ∗
+      (∀ finalLocals : Locals,
+        RuntimeContext -∗ DriverSuccess heapId original -∗
+        WP (.running
+          ⟨finalLocals, [], 0, [], [], calls⟩ : Expr Universal.State)
+          @ s; E [{ Phi }]) ∗
+      ((∃ phase : DriverOOMPhase, DriverOOMState heapId original phase) -∗
+        Phi (.trapped (.host OOM.trapMessage)))) ⊢
+      WP (.running
+        ⟨func3InitializedLocals, func3AfterInit, 0, [], [], calls⟩ :
+          Expr Universal.State) @ s; E [{ Phi }] := by
+  iintro ⟨Hruntime, Hsp, Hreserve, Hframe, Hbump, Hstreams, Hdone, Hoom⟩
+  rw [func3_after_init_exact]
+  simp only [List.cons_append, List.nil_append]
+  iapply twp_block
+  simp only [func3DriverBody, List.cons_append, List.nil_append]
+  iapply twp_block
+  simp only [func3MiddleBody, List.cons_append, List.nil_append]
+  iapply twp_block
+  simp only [func3InitializedLocals, List.drop_zero]
+  by_cases horiginal : original = []
+  · subst original
+    have Hread := twp_func3_initial_read_block_empty heapId outputBytes
+      reserveBytes
+      (func3CompletedPtrReload ++ [.block 0 0 func3ScratchOuterBody] ++
+        func3ScratchAllocationPanic)
+      func3ReadAndDispatchBody func3EmptyAfterReadSetup
+      (arity := 0) (remainder := [])
+      (controls := [func3EmptyMiddleFrame func3MiddleBody,
+        func3CleanupOuterFrame func3DriverBody])
+      (calls := calls) (s := s) (E := E) (Φ := Phi)
+    simp only [func3ReadAndDispatchBody, func3AfterInitialRead,
+      func3InitializedLocals, func3EnclosingDriverFrame,
+      func3EmptyMiddleFrame, func3CleanupOuterFrame, func3MiddleBody,
+      func3DriverBody, func3SortAndCleanup,
+      List.cons_append, List.nil_append] at Hread ⊢
+    iapply Hread
+    isplitl [Hruntime]
+    · iexact Hruntime
+    isplitl [Hsp]
+    · iexact Hsp
+    isplitl [Hreserve]
+    · iexact Hreserve
+    isplitl [Hframe]
+    · iexact Hframe
+    isplitl [Hbump]
+    · iexact Hbump
+    isplitl [Hstreams]
+    · isimp only [serialize, WordCodec.serialize, List.flatMap_nil] at Hstreams
+      iexact Hstreams
+    iintro Hruntime Hsp Hreserve Hframe Hbump Hstreams
+    have Hempty := twp_func3_finish_empty heapId
+      (List.replicate 256 0) outputBytes reserveBytes func3MiddleBody
+      func3DriverBody (calls := calls) (s := s) (E := E) (Phi := Phi)
+    simp only [func3EmptyLocals, func3AppendLocals,
+      func3EmptyMiddleFrame, func3CleanupOuterFrame, func3MiddleBody,
+      func3DriverBody, func3ReadAndDispatchBody, func3AfterInitialRead,
+      func3SortAndCleanup, List.cons_append, List.nil_append] at Hempty ⊢
+    iapply Hempty
+    isplitl [Hruntime]
+    · iexact Hruntime
+    isplitl [Hsp]
+    · iexact Hsp
+    isplitl [Hreserve]
+    · iexact Hreserve
+    isplitl [Hframe]
+    · iexact Hframe
+    isplitl [Hbump]
+    · iexact Hbump
+    isplitl [Hstreams]
+    · iexact Hstreams
+    iintro Hruntime Hsuccess
+    iapply Hdone $$ Hruntime Hsuccess
+  · have Hnonempty := twp_func3_read_dispatch_nonempty hfunc1 hfunc5
+      hfunc9 heapId original outputBytes reserveBytes horiginal
+      (calls := calls) (s := s) (E := E) (Phi := Phi)
+    simp only [func3InitializedLocals, func3ReadAndDispatchFrame,
+      func3EnclosingDriverFrame, func3EmptyMiddleFrame,
+      func3CleanupOuterFrame, func3MiddleBody, func3DriverBody,
+      func3SortAndCleanup, List.cons_append,
+      List.nil_append] at Hnonempty ⊢
+    iapply Hnonempty
+    iframe
+
+/-- Execute the generated prologue and the complete reviewed driver body,
+stopping at the administrative return boundary. -/
+theorem twp_func3_body
+    [WasmSmallStepGS hlc Universal.State]
+    (hfunc1 : Func1Spec (hlc := hlc))
+    (hfunc5 : Func5Spec (hlc := hlc))
+    (hfunc9 : Func9Spec (hlc := hlc))
+    (heapId : GName) (original : List UInt32) (entryBytes : List UInt8)
+    (hentryLength : entryBytes.length = 288)
+    {calls : List CallFrame} {s : Stuckness} {E : CoPset}
+    {Phi : ObservableOutcome → HeapIProp} :
+    iprop(
+      RuntimeContext ∗
+      StackPointer entryStackTop ∗
+      StackRegion entryStackLow entryBytes ∗
+      BumpHeap heapId 0 heapBase.toNat AllocationHistory.empty ∗
+      Streams (serialize original) [] false ∗
+      (∀ finalLocals : Locals,
+        RuntimeContext -∗ DriverSuccess heapId original -∗
+        WP (.running
+          ⟨finalLocals, [], 0, [], [], calls⟩ : Expr Universal.State)
+          @ s; E [{ Phi }]) ∗
+      ((∃ phase : DriverOOMPhase, DriverOOMState heapId original phase) -∗
+        Phi (.trapped (.host OOM.trapMessage)))) ⊢
+      WP (.running
+        ⟨Project.Mergesort.func3Def.toLocals [], Project.Mergesort.func3,
+          0, [], [], calls⟩ : Expr Universal.State) @ s; E [{ Phi }] := by
+  iintro ⟨Hruntime, Hsp, Hstack, Hbump, Hstreams, Hdone, Hoom⟩
+  have Hinitialize := twp_func3_initialize heapId entryBytes
+    (calls := calls) (s := s) (E := E) (Φ := Phi)
+  iapply Hinitialize
+  isplitl [Hsp]
+  · iexact Hsp
+  isplitl [Hstack]
+  · iexact Hstack
+  isplitl []
+  · ipureintro
+    exact hentryLength
+  iintro %reserveBytes %outputBytes Hsp Hreserve Hframe
+  have Hbody := twp_func3_after_initialize hfunc1 hfunc5 hfunc9 heapId
+    original outputBytes reserveBytes (calls := calls) (s := s) (E := E)
+    (Phi := Phi)
+  iapply Hbody
+  iframe
+
+private theorem func3_index :
+    Project.Mergesort.module.funcs[3]? =
+      some Project.Mergesort.func3Def := by
+  rfl
+
+/-- The authoritative `func3` call contract, conditional only on the three
+reachable allocator/Vec contracts that are proved in their own files. -/
+theorem func3_correct_of
+    [WasmSmallStepGS hlc Universal.State]
+    (hfunc1 : Func1Spec (hlc := hlc))
+    (hfunc5 : Func5Spec (hlc := hlc))
+    (hfunc9 : Func9Spec (hlc := hlc)) :
+    Func3Spec (hlc := hlc) := by
+  unfold Func3Spec CallContract callExpr
+  intro heapId original entryBytes callerLocals stack code arity remainder
+    controls calls s E Phi
+  iintro ⟨Hruntime, Hsp, Hstack, Hbump, Hstreams, %hentryLength,
+    Hnormal, Hoom⟩
+  isimp only [RuntimeContext] at Hruntime
+  icases Hruntime with ⟨Hmodule, Henv⟩
+  iapply Wasm.SmallStep.twp_call Project.Mergesort.module 6
+      Project.Mergesort.func3Def (by decide) func3_index $$ Hmodule
+  iintro Hmodule
+  simp [Project.Mergesort.func3Def, Function.toLocals, Function.numParams]
+  let callerFrame : CallFrame :=
+    { locals := { callerLocals with values := stack }
+      continuation := code
+      resultArity := arity
+      callerRemainder := remainder
+      control := controls
+      returningInstance := ⟨0⟩ }
+  have Hbody := twp_func3_body hfunc1 hfunc5 hfunc9 heapId original
+    entryBytes hentryLength (calls := callerFrame :: calls)
+    (s := s) (E := E) (Phi := Phi)
+  simp [Project.Mergesort.func3Def, Function.toLocals, callerFrame] at Hbody
+  iapply Hbody
+  isplitl [Hmodule Henv]
+  · unfold RuntimeContext
+    iframe
+  isplitl [Hsp]
+  · iexact Hsp
+  isplitl [Hstack]
+  · iexact Hstack
+  isplitl [Hbump]
+  · iexact Hbump
+  isplitl [Hstreams]
+  · iexact Hstreams
+  isplitl [Hnormal]
+  · iintro %finalLocals Hruntime Hsuccess
+    isimp only [RuntimeContext] at Hruntime
+    icases Hruntime with ⟨Hmodule, Henv⟩
+    iapply Wasm.SmallStep.twp_returnFromCallFallthrough $$ Hmodule
+    iintro Hmodule
+    simp only [List.take_zero, List.nil_append]
+    isimp only [ResumeWP, resumeExpr, List.nil_append] at Hnormal
+    ihave Hruntime : RuntimeContext $$ [Hmodule Henv]
+    · unfold RuntimeContext
+      iframe
+    iapply Hnormal $$ Hruntime Hsuccess
+  · iexact Hoom
 
 end Project.Mergesort.DriverProof
