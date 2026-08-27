@@ -2519,6 +2519,41 @@ def ExportFrame [WasmHeapGS Universal.State]
     ByteSlice (driverBase + 268) outputBytes ∗
     ⌜chunkBytes.length = 256 ∧ outputBytes.length = 4⌝
 
+/-- Focus a completed nonempty input Vec as its canonical source word array
+without losing the allocation token, spare capacity, header, chunk, or output
+slot needed to reseal the exact `ExportFrame`. -/
+theorem ExportFrame_completedWordsFocus
+    [WasmHeapGS Universal.State]
+    (heapId : GName) (capacity ptr : UInt32)
+    (original : List UInt32) (chunkBytes outputBytes : List UInt8)
+    (horiginal : original ≠ []) (halign : ptr.toNat % 4 = 0) :
+    ExportFrame heapId capacity ptr (serialize original) chunkBytes
+        outputBytes ⊢
+      iprop(WordSlice ptr original ∗
+        (WordSlice ptr original -∗
+          ExportFrame heapId capacity ptr (serialize original) chunkBytes
+            outputBytes)) := by
+  have hpositive : 0 < (serialize original).length := by
+    rw [serialize_length]
+    have := List.length_pos_iff_ne_nil.mpr horiginal
+    omega
+  unfold ExportFrame
+  iintro ⟨Hvec, Hchunk, Houtput, %hframeLengths⟩
+  ihave Hfocus := VecU8_initializedFocus heapId driverBase capacity ptr
+    (serialize original) hpositive $$ Hvec
+  icases Hfocus with ⟨Hbytes, Hclose⟩
+  ihave Hwords := (ByteSlice_serialize_as_WordSlice ptr original halign).mp $$
+    Hbytes
+  isplitl [Hwords]
+  · iexact Hwords
+  · iintro Hwords
+    ihave Hbytes := (ByteSlice_serialize_as_WordSlice ptr original halign).mpr $$
+      Hwords
+    ihave Hvec := Hclose $$ Hbytes
+    iframe Hvec Hchunk Houtput
+    ipureintro
+    exact hframeLengths
+
 /-- Exact raw byte list left in the visible driver frame once the Vec's
 separate allocation-storage ownership is removed. -/
 def exportFrameBytes (capacity ptr : UInt32)
@@ -2890,6 +2925,52 @@ theorem GeometricVecFacts.completed_ptr_align4
       Nat.mod_eq_zero_of_dvd hdiv
     have hbaseMod : heapBase.toNat % 4 = 0 := by decide
     omega
+
+/-- Establish the two word-array views used by the generated decode loop.
+The source remains focused out of the completed `ExportFrame`, while the
+arbitrary fresh values allocation becomes the canonical decoded initial word
+list with its allocation token retained. -/
+theorem DriverDecodeBuffers_open
+    [WasmHeapGS Universal.State]
+    (heapId : GName) (capacity source valuesPtr : UInt32)
+    (valuesId : Nat) (original : List UInt32)
+    (chunkBytes outputBytes bytes : List UInt8)
+    (frontier : Nat) (history : AllocationHistory)
+    (horiginal : original ≠ [])
+    (hgeo : GeometricVecFacts (serialize original).length
+      (serialize original).length 0 capacity source frontier history) :
+    ExportFrame heapId capacity source (serialize original) chunkBytes
+        outputBytes ∗
+      LiveBlock heapId valuesId valuesPtr
+        { size := 4 * original.length, alignment := 4 } bytes ⊢
+      iprop(WordSlice source original ∗
+        (WordSlice source original -∗
+          ExportFrame heapId capacity source (serialize original) chunkBytes
+            outputBytes) ∗
+        LiveWordBlock heapId valuesId valuesPtr (decodeWords bytes)) := by
+  iintro ⟨Hframe, Hblock⟩
+  have hpositive : 0 < (serialize original).length := by
+    rw [serialize_length]
+    have := List.length_pos_iff_ne_nil.mpr horiginal
+    omega
+  have hsourceAlign := GeometricVecFacts.completed_ptr_align4
+    (serialize original).length (serialize original).length 0 capacity source
+    frontier history hgeo rfl hpositive
+  ihave HsourceFocus := ExportFrame_completedWordsFocus heapId capacity source
+    original chunkBytes outputBytes horiginal hsourceAlign $$ Hframe
+  icases HsourceFocus with ⟨Hsource, HcloseSource⟩
+  isimp only [LiveBlock] at Hblock
+  icases Hblock with ⟨Htoken, Hbytes, %hblockFacts⟩
+  ihave Hblock : LiveBlock heapId valuesId valuesPtr
+      { size := 4 * original.length, alignment := 4 } bytes $$
+      [Htoken Hbytes]
+  · unfold LiveBlock
+    iframe
+    ipureintro
+    exact hblockFacts
+  ihave Hvalues := (LiveBlock_as_decodedWordBlock heapId valuesId
+    original.length valuesPtr bytes hblockFacts.1).mp $$ Hblock
+  iframe
 
 /-- The driver's second `0x7ffffffc` use computes the largest four-word
 prefix of the decoded element count.  The remaining `count % 4` words are
