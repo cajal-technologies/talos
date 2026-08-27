@@ -1414,6 +1414,14 @@ private def func3InitialReadFrame (afterLoop : Program) : ControlFrame :=
     continuation := func3AfterInitialRead afterLoop,
     belowStack := [] }
 
+private def func3EmptyLocals : Locals :=
+  func3AppendLocals 0 0 0 4 1 1 0 0 0 0 []
+
+private def func3EnclosingDriverFrame
+    (body afterEmpty : Program) : ControlFrame :=
+  { kind := .block, paramArity := 0, resultArity := 0,
+    body := body, continuation := afterEmpty, belowStack := [] }
+
 private def func3ReadInnerFrame : ControlFrame :=
   { kind := .block, paramArity := 0, resultArity := 0,
     body := func3ReadLoopBlockBody,
@@ -1961,6 +1969,126 @@ theorem twp_func3_initial_read_block_nonempty
     outputBytes shadow horiginal
     (afterLoop := afterLoop) (arity := arity) (remainder := remainder)
     (controls := controls) (calls := calls) (s := s) (E := E) (Φ := Φ)
+  simp only [func3InitialReadFrame, func3InitializedLocals] at Hread
+  simp only [func3InitializedLocals, List.drop_zero]
+  iapply Hread
+  iexact Hresources
+
+/-- Execute the disjoint empty-input arm of the exact initial-read block.
+The zero read falls through `br_if 0`, sets the two generated empty-case
+flags, and `br 1` exits the enclosing driver block without entering any
+allocator or sorting path. -/
+theorem twp_func3_first_read_empty
+    [WasmSmallStepGS hlc Universal.State]
+    (heapId : GName) (outputBytes shadow : List UInt8)
+    (afterLoop enclosingBody afterEmpty : Program)
+    {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → HeapIProp} :
+    iprop(
+      RuntimeContext ∗
+      StackPointer driverBase ∗
+      StackReserve reserveBase shadow ∗
+      ExportFrame heapId 0 1 [] (List.replicate 256 0) outputBytes ∗
+      BumpHeap heapId 0 heapBase.toNat AllocationHistory.empty ∗
+      Streams [] [] false ∗
+      (RuntimeContext -∗
+        StackPointer driverBase -∗
+        StackReserve reserveBase shadow -∗
+        ExportFrame heapId 0 1 [] (List.replicate 256 0) outputBytes -∗
+        BumpHeap heapId 0 heapBase.toNat AllocationHistory.empty -∗
+        Streams [] [] false -∗
+        WP (.running
+          ⟨func3EmptyLocals, afterEmpty, arity, remainder, controls, calls⟩ :
+            Expr Universal.State) @ s; E [{ Φ }])) ⊢
+      WP (.running
+        ⟨func3InitializedLocals, func3InitialReadBody,
+          arity, remainder,
+          func3InitialReadFrame afterLoop ::
+            func3EnclosingDriverFrame enclosingBody afterEmpty :: controls,
+          calls⟩ : Expr Universal.State) @ s; E [{ Φ }] := by
+  iintro ⟨Hruntime, Hsp, Hreserve, Hframe, Hbump, Hstreams, Hcont⟩
+  have Hread := twp_func3_read_chunk heapId 0 1 []
+    (List.replicate 256 0) outputBytes [] [] false []
+    [.i32 driverBase, .i32 0, .i32 4, .i32 0, .i32 0, .i32 0,
+      .i32 0, .i32 0, .i32 0, .i32 0, .i32 0]
+    rfl
+    (stack := [])
+    (code := [.localTee 3, .br_if 0] ++ func3EmptyInputSuffix)
+    (arity := arity) (remainder := remainder)
+    (controls := func3InitialReadFrame afterLoop ::
+      func3EnclosingDriverFrame enclosingBody afterEmpty :: controls)
+    (calls := calls) (s := s) (E := E) (Φ := Φ)
+  simp only [func3InitialReadBody, func3InitialReadPrefix,
+    func3EmptyInputSuffix, func3InitializedLocals,
+    List.cons_append, List.nil_append] at Hread ⊢
+  iapply Hread
+  isplitl [Hruntime]
+  · iexact Hruntime
+  isplitl [Hstreams]
+  · iexact Hstreams
+  isplitl [Hframe]
+  · iexact Hframe
+  iintro Hruntime Hstreams Hframe %_hcountBound
+  iapply twp_localTee
+      (locals' := func3AppendLocals 0 0 0 4 0 0 0 0 0 0 [.i32 0])
+      (by simp [func3AppendLocals])
+  simp only [func3AppendLocals]
+  iapply twp_brIfZero (depth := 0) (arity := arity)
+  iapply twp_const
+  iapply twp_localSet rfl
+  simp only [List.length, List.set]
+  iapply twp_const
+  iapply twp_localSet rfl
+  simp only [List.length, List.set]
+  iapply twp_br (depth := 1) (arity := arity) (code := [])
+    (targetCode := afterEmpty) (targetControl := controls)
+    (targetValues := []) (by rfl)
+  simp only [func3EmptyLocals, func3AppendLocals]
+  isimp only [List.length_nil, min_zero, List.take_zero, List.drop_zero,
+    List.nil_append] at Hframe
+  isimp only [List.length_nil, min_zero, List.drop_zero] at Hstreams
+  iapply Hcont $$ Hruntime Hsp Hreserve Hframe Hbump Hstreams
+
+/-- Enter the exact initial-read block on empty input, with the enclosing
+driver frame made explicit so the generated `br 1` target is checked. -/
+theorem twp_func3_initial_read_block_empty
+    [WasmSmallStepGS hlc Universal.State]
+    (heapId : GName) (outputBytes shadow : List UInt8)
+    (afterLoop enclosingBody afterEmpty : Program)
+    {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → HeapIProp} :
+    iprop(
+      RuntimeContext ∗
+      StackPointer driverBase ∗
+      StackReserve reserveBase shadow ∗
+      ExportFrame heapId 0 1 [] (List.replicate 256 0) outputBytes ∗
+      BumpHeap heapId 0 heapBase.toNat AllocationHistory.empty ∗
+      Streams [] [] false ∗
+      (RuntimeContext -∗
+        StackPointer driverBase -∗
+        StackReserve reserveBase shadow -∗
+        ExportFrame heapId 0 1 [] (List.replicate 256 0) outputBytes -∗
+        BumpHeap heapId 0 heapBase.toNat AllocationHistory.empty -∗
+        Streams [] [] false -∗
+        WP (.running
+          ⟨func3EmptyLocals, afterEmpty, arity, remainder, controls, calls⟩ :
+            Expr Universal.State) @ s; E [{ Φ }])) ⊢
+      WP (.running
+        ⟨func3InitializedLocals,
+          .block 0 0 func3InitialReadBody :: func3AfterInitialRead afterLoop,
+          arity, remainder,
+          func3EnclosingDriverFrame enclosingBody afterEmpty :: controls,
+          calls⟩ : Expr Universal.State) @ s; E [{ Φ }] := by
+  iintro Hresources
+  iapply twp_block
+  have Hread := twp_func3_first_read_empty heapId outputBytes shadow
+    afterLoop enclosingBody afterEmpty
+    (arity := arity) (remainder := remainder) (controls := controls)
+    (calls := calls) (s := s) (E := E) (Φ := Φ)
   simp only [func3InitialReadFrame, func3InitializedLocals] at Hread
   simp only [func3InitializedLocals, List.drop_zero]
   iapply Hread
