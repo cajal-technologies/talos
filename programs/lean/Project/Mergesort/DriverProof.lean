@@ -2328,6 +2328,371 @@ theorem twp_func3_decode_tail_loop
       exact ⟨hpartition, hremaining⟩
     iframe
 
+/-- Exact body of the generated four-word unrolled decode loop. -/
+private def func3DecodeBulkLoopBody : Program :=
+  [.localGet 2, .localGet 3, .add, .localTee 6,
+    .localGet 4, .localGet 3, .add, .localTee 1,
+    .load32 0, .store32 0,
+    .localGet 6, .const 4, .add,
+    .localGet 1, .const 4, .add, .load32 0, .store32 0,
+    .localGet 6, .const 8, .add,
+    .localGet 1, .const 8, .add, .load32 0, .store32 0,
+    .localGet 6, .const 12, .add,
+    .localGet 1, .const 12, .add, .load32 0, .store32 0,
+    .localGet 3, .const 16, .add, .localSet 3,
+    .localGet 5, .localGet 9, .const 4, .add, .localTee 9,
+    .ne, .br_if 0]
+
+private structure Func3DecodeBulkState where
+  copied : Nat
+  aux1 : UInt32
+  aux6 : UInt32
+
+/-- Exact locals at the head of the generated unrolled loop.  Locals 1 and 6
+are scratch address temporaries: their initial values are irrelevant, and
+every back edge records the base addresses of the previous four-word group. -/
+private def func3DecodeBulkLocals
+    (source destination : UInt32) (length bulk tail : Nat)
+    (aux10 : UInt32) (state : Func3DecodeBulkState) : Locals :=
+  func3AppendLocals state.aux1 (UInt32.ofNat (4 * state.copied)) state.aux6
+    destination source (UInt32.ofNat bulk) (UInt32.ofNat (4 * length))
+    (UInt32.ofNat tail) (UInt32.ofNat state.copied) aux10 []
+
+private theorem func3_decode_byte_offset (index : Nat) :
+    UInt32.ofNat (4 * index) = 4 * UInt32.ofNat index := by
+  rw [UInt32.ofNat_mul]
+  rfl
+
+private theorem func3_decode_address_increment
+    (base : UInt32) (index increment : Nat) :
+    base + 4 * UInt32.ofNat index + 4 * UInt32.ofNat increment =
+      base + 4 * UInt32.ofNat (index + increment) := by
+  rw [UInt32.ofNat_add, UInt32.mul_add]
+  ac_rfl
+
+private theorem func3_decode_address_add4 (base : UInt32) (index : Nat) :
+    base + 4 * UInt32.ofNat index + 4 =
+      base + 4 * UInt32.ofNat (index + 1) := by
+  simpa only [show 4 * UInt32.ofNat 1 = (4 : UInt32) by decide] using
+    func3_decode_address_increment base index 1
+
+private theorem func3_decode_address_add8 (base : UInt32) (index : Nat) :
+    base + 4 * UInt32.ofNat index + 8 =
+      base + 4 * UInt32.ofNat (index + 2) := by
+  simpa only [show 4 * UInt32.ofNat 2 = (8 : UInt32) by decide] using
+    func3_decode_address_increment base index 2
+
+private theorem func3_decode_address_add12 (base : UInt32) (index : Nat) :
+    base + 4 * UInt32.ofNat index + 12 =
+      base + 4 * UInt32.ofNat (index + 3) := by
+  simpa only [show 4 * UInt32.ofNat 3 = (12 : UInt32) by decide] using
+    func3_decode_address_increment base index 3
+
+private theorem func3_decode_byte_offset_step (index : Nat) :
+    4 * UInt32.ofNat index + 16 =
+      UInt32.ofNat (4 * (index + 4)) := by
+  rw [← func3_decode_byte_offset]
+  rw [show 4 * (index + 4) = 4 * index + 16 by omega,
+    UInt32.ofNat_add]
+  rfl
+
+private theorem func3_decode_count_step (index : Nat) :
+    UInt32.ofNat index + 4 = UInt32.ofNat (index + 4) := by
+  rw [UInt32.ofNat_add]
+  rfl
+
+/-- The generated unrolled loop copies exactly the largest multiple-of-four
+prefix.  Its back edge advances by four words, and its terminating comparison
+is justified from the same masked bulk count used by the generated code. -/
+theorem twp_func3_decode_bulk_loop
+    [WasmSmallStepGS hlc Universal.State]
+    (source destination : UInt32)
+    (original initial : List UInt32) (bulk tail : Nat)
+    (initialAux1 initialAux6 aux10 : UInt32)
+    (hlength : original.length = initial.length)
+    (hpartition : bulk + tail = original.length)
+    (hbulkPositive : 4 ≤ bulk)
+    (hbulkMod : bulk % 4 = 0)
+    (hlengthBound : original.length < UInt32.size)
+    {afterLoop : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → HeapIProp} :
+    let initialState : Func3DecodeBulkState :=
+      { copied := 0, aux1 := initialAux1, aux6 := initialAux6 }
+    let finalState : Func3DecodeBulkState :=
+      { copied := bulk,
+        aux1 := source + 4 * UInt32.ofNat (bulk - 4),
+        aux6 := destination + 4 * UInt32.ofNat (bulk - 4) }
+    iprop(
+      WordSlice source original ∗ WordSlice destination initial ∗
+      (WordSlice source original -∗
+        WordSlice destination (overwritePrefix original initial bulk) -∗
+        WP (.running
+          ⟨func3DecodeBulkLocals source destination original.length bulk tail
+              aux10 finalState,
+            afterLoop, arity, remainder, controls, calls⟩ :
+              Expr Universal.State)
+          @ s; E [{ Φ }])) ⊢
+      WP (.running
+        ⟨func3DecodeBulkLocals source destination original.length bulk tail
+            aux10 initialState,
+          [.loop 0 0 func3DecodeBulkLoopBody] ++ afterLoop,
+          arity, remainder, controls, calls⟩ : Expr Universal.State)
+        @ s; E [{ Φ }] := by
+  dsimp only
+  let Finish : HeapIProp := iprop(
+    WordSlice source original -∗
+    WordSlice destination (overwritePrefix original initial bulk) -∗
+    WP (.running
+      ⟨func3DecodeBulkLocals source destination original.length bulk tail
+          aux10
+          { copied := bulk,
+            aux1 := source + 4 * UInt32.ofNat (bulk - 4),
+            aux6 := destination + 4 * UInt32.ofNat (bulk - 4) },
+        afterLoop, arity, remainder, controls, calls⟩ : Expr Universal.State)
+      @ s; E [{ Φ }])
+  let Inv : Func3DecodeBulkState → HeapIProp := fun state => iprop(
+    ⌜state.copied + 4 ≤ bulk ∧ state.copied % 4 = 0⌝ ∗
+    WordSlice source original ∗
+    WordSlice destination
+      (overwritePrefix original initial state.copied) ∗
+    Finish)
+  iintro ⟨Hsource, Hdestination, Hfinish⟩
+  simp only [List.cons_append, List.nil_append]
+  iapply Project.Mergesort.SortProof.twp_loop_wf_family_from_terminal
+    (ι := Func3DecodeBulkState)
+    (measure := fun state => bulk - state.copied)
+    (locals := func3DecodeBulkLocals source destination original.length bulk
+      tail aux10)
+    (I := Inv)
+    (initial := { copied := 0, aux1 := initialAux1, aux6 := initialAux6 })
+    (initialLocals := func3DecodeBulkLocals source destination
+      original.length bulk tail aux10
+      { copied := 0, aux1 := initialAux1, aux6 := initialAux6 })
+    (body := func3DecodeBulkLoopBody) (code := afterLoop)
+    (belowStack := []) rfl rfl
+  · intro state
+    simp only [Inv, Wasm.SmallStep.loopBodyExpr]
+    iintro Hrec Hinv
+    icases Hinv with ⟨%hstate, Hsource, Hdestination, Hfinish⟩
+    have hbulkLe : bulk ≤ original.length := by omega
+    have hcopy0 : state.copied < original.length := by omega
+    have hcopy1 : state.copied + 1 < original.length := by omega
+    have hcopy2 : state.copied + 2 < original.length := by omega
+    have hcopy3 : state.copied + 3 < original.length := by omega
+    let next : Func3DecodeBulkState :=
+      { copied := state.copied + 4,
+        aux1 := source + 4 * UInt32.ofNat state.copied,
+        aux6 := destination + 4 * UInt32.ofNat state.copied }
+    let addressedState : Func3DecodeBulkState :=
+      { copied := state.copied,
+        aux1 := source + 4 * UInt32.ofNat state.copied,
+        aux6 := destination + 4 * UInt32.ofNat state.copied }
+    simp only [func3DecodeBulkLoopBody, func3DecodeBulkLocals,
+      func3AppendLocals]
+    simp only [func3_decode_byte_offset]
+    iapply twp_localGet rfl
+    iapply twp_localGet rfl
+    iapply twp_add
+    rw [UInt32.add_comm (4 * UInt32.ofNat state.copied)]
+    iapply twp_localTee rfl
+    simp only [List.length, List.set]
+    iapply twp_localGet rfl
+    iapply twp_localGet rfl
+    iapply twp_add
+    rw [UInt32.add_comm (4 * UInt32.ofNat state.copied)]
+    iapply twp_localTee rfl
+    simp only [List.length, List.set]
+    have Hcopy0 := twp_func3_copy_decoded_word
+      (hlc := hlc) source destination original initial state.copied hlength
+      hcopy0 (params := [])
+      (localValues := (func3DecodeBulkLocals source destination
+        original.length bulk tail aux10 addressedState).locals)
+      (stack := []) (code := func3DecodeBulkLoopBody.drop 10)
+      (arity := arity) (remainder := remainder)
+      (controls :=
+        { kind := .loop, paramArity := 0, resultArity := 0,
+          body := func3DecodeBulkLoopBody, continuation := afterLoop,
+          belowStack := [] } :: controls)
+      (calls := calls) (s := s) (E := E) (Φ := Φ)
+    simp only [func3DecodeBulkLoopBody, func3DecodeBulkLocals,
+      func3AppendLocals, addressedState, func3_decode_byte_offset,
+      List.drop, List.cons_append, List.nil_append] at Hcopy0
+    iapply Hcopy0
+    isplitl [Hsource]
+    · iexact Hsource
+    isplitl [Hdestination]
+    · iexact Hdestination
+    iintro Hsource Hdestination
+    iapply twp_localGet rfl
+    iapply twp_const
+    iapply twp_add
+    rw [UInt32.add_comm (4 : UInt32), func3_decode_address_add4]
+    iapply twp_localGet rfl
+    iapply twp_const
+    iapply twp_add
+    rw [UInt32.add_comm (4 : UInt32), func3_decode_address_add4]
+    have Hcopy1 := twp_func3_copy_decoded_word
+      (hlc := hlc) source destination original initial (state.copied + 1)
+      hlength hcopy1 (params := [])
+      (localValues := (func3DecodeBulkLocals source destination
+        original.length bulk tail aux10 addressedState).locals)
+      (stack := []) (code := func3DecodeBulkLoopBody.drop 18)
+      (arity := arity) (remainder := remainder)
+      (controls :=
+        { kind := .loop, paramArity := 0, resultArity := 0,
+          body := func3DecodeBulkLoopBody, continuation := afterLoop,
+          belowStack := [] } :: controls)
+      (calls := calls) (s := s) (E := E) (Φ := Φ)
+    simp only [func3DecodeBulkLoopBody, func3DecodeBulkLocals,
+      func3AppendLocals, addressedState, func3_decode_byte_offset,
+      List.drop, List.cons_append, List.nil_append] at Hcopy1
+    iapply Hcopy1
+    isplitl [Hsource]
+    · iexact Hsource
+    isplitl [Hdestination]
+    · iexact Hdestination
+    iintro Hsource Hdestination
+    iapply twp_localGet rfl
+    iapply twp_const
+    iapply twp_add
+    rw [UInt32.add_comm (8 : UInt32), func3_decode_address_add8]
+    iapply twp_localGet rfl
+    iapply twp_const
+    iapply twp_add
+    rw [UInt32.add_comm (8 : UInt32), func3_decode_address_add8]
+    have Hcopy2 := twp_func3_copy_decoded_word
+      (hlc := hlc) source destination original initial (state.copied + 2)
+      hlength hcopy2 (params := [])
+      (localValues := (func3DecodeBulkLocals source destination
+        original.length bulk tail aux10 addressedState).locals)
+      (stack := []) (code := func3DecodeBulkLoopBody.drop 26)
+      (arity := arity) (remainder := remainder)
+      (controls :=
+        { kind := .loop, paramArity := 0, resultArity := 0,
+          body := func3DecodeBulkLoopBody, continuation := afterLoop,
+          belowStack := [] } :: controls)
+      (calls := calls) (s := s) (E := E) (Φ := Φ)
+    simp only [func3DecodeBulkLoopBody, func3DecodeBulkLocals,
+      func3AppendLocals, addressedState, func3_decode_byte_offset,
+      List.drop, List.cons_append, List.nil_append] at Hcopy2
+    iapply Hcopy2
+    isplitl [Hsource]
+    · iexact Hsource
+    isplitl [Hdestination]
+    · iexact Hdestination
+    iintro Hsource Hdestination
+    iapply twp_localGet rfl
+    iapply twp_const
+    iapply twp_add
+    rw [UInt32.add_comm (12 : UInt32), func3_decode_address_add12]
+    iapply twp_localGet rfl
+    iapply twp_const
+    iapply twp_add
+    rw [UInt32.add_comm (12 : UInt32), func3_decode_address_add12]
+    have Hcopy3 := twp_func3_copy_decoded_word
+      (hlc := hlc) source destination original initial (state.copied + 3)
+      hlength hcopy3 (params := [])
+      (localValues := (func3DecodeBulkLocals source destination
+        original.length bulk tail aux10 addressedState).locals)
+      (stack := []) (code := func3DecodeBulkLoopBody.drop 34)
+      (arity := arity) (remainder := remainder)
+      (controls :=
+        { kind := .loop, paramArity := 0, resultArity := 0,
+          body := func3DecodeBulkLoopBody, continuation := afterLoop,
+          belowStack := [] } :: controls)
+      (calls := calls) (s := s) (E := E) (Φ := Φ)
+    simp only [func3DecodeBulkLoopBody, func3DecodeBulkLocals,
+      func3AppendLocals, addressedState, func3_decode_byte_offset,
+      List.drop, List.cons_append, List.nil_append] at Hcopy3
+    iapply Hcopy3
+    isplitl [Hsource]
+    · iexact Hsource
+    isplitl [Hdestination]
+    · iexact Hdestination
+    iintro Hsource Hdestination
+    have hcopiedFour : state.copied + 3 + 1 = state.copied + 4 := by omega
+    isimp only [hcopiedFour] at Hdestination
+    iapply twp_localGet rfl
+    iapply twp_const
+    iapply twp_add
+    rw [UInt32.add_comm (16 : UInt32), func3_decode_byte_offset_step]
+    iapply twp_localSet rfl
+    simp only [List.length, List.set]
+    iapply twp_localGet rfl
+    iapply twp_localGet rfl
+    iapply twp_const
+    iapply twp_add
+    rw [UInt32.add_comm (4 : UInt32), func3_decode_count_step]
+    iapply twp_localTee rfl
+    simp only [List.length, List.set]
+    by_cases hmore : state.copied + 4 < bulk
+    · have hnextBound : state.copied + 8 ≤ bulk := by
+        omega
+      have hnextMod : (state.copied + 4) % 4 = 0 := by omega
+      have hnextLtSize : state.copied + 4 < UInt32.size := by omega
+      have hbulkLtSize : bulk < UInt32.size := by omega
+      have hne : UInt32.ofNat (state.copied + 4) ≠
+          UInt32.ofNat bulk := by
+        intro heq
+        have hnat := congrArg UInt32.toNat heq
+        rw [UInt32.toNat_ofNat_of_lt' hnextLtSize,
+          UInt32.toNat_ofNat_of_lt' hbulkLtSize] at hnat
+        omega
+      have hcounterNe :
+          ¬UInt32.ofNat bulk = UInt32.ofNat state.copied + 4 := by
+        rw [func3_decode_count_step]
+        exact fun heq => hne heq.symm
+      iapply twp_ne (result := 1) (by simp [hcounterNe])
+      iapply twp_brIf (condition := 1) (depth := 0) (arity := arity)
+        (code := []) (targetCode := func3DecodeBulkLoopBody)
+        (targetControl :=
+          { kind := .loop, paramArity := 0, resultArity := 0,
+            body := func3DecodeBulkLoopBody, continuation := afterLoop,
+            belowStack := [] } :: controls)
+        (targetValues := []) (by decide) (by rfl)
+      simp only [func3DecodeBulkLoopBody]
+      simp only [func3_decode_byte_offset]
+      ispecialize Hrec $$ %next
+      isimp only [func3DecodeBulkLoopBody, func3DecodeBulkLocals,
+        func3AppendLocals, next] at Hrec
+      iapply Hrec
+      · ipureintro
+        omega
+      isplitr
+      · ipureintro
+        exact ⟨hnextBound, hnextMod⟩
+      iframe
+    · have hdone : state.copied + 4 = bulk := by omega
+      have heq : UInt32.ofNat (state.copied + 4) = UInt32.ofNat bulk := by
+        rw [hdone]
+      iapply twp_ne (result := 0) (by simp [heq])
+      iapply twp_brIfZero
+      iapply twp_exitControl rfl
+      simp only [List.take_zero, List.nil_append]
+      have hprevious : state.copied = bulk - 4 := by omega
+      isimp only [Finish] at Hfinish
+      ihave Hfinish' := Hfinish $$ Hsource
+      have hoverwrite :
+          overwritePrefix original initial (state.copied + 4) =
+            overwritePrefix original initial bulk := by rw [hdone]
+      isimp only [hoverwrite] at Hdestination
+      ihave Hdestination' :
+          WordSlice destination (overwritePrefix original initial bulk) $$
+          [Hdestination]
+      · iexact Hdestination
+      rw [hdone, hprevious]
+      simp only [func3_decode_byte_offset]
+      isimp only [func3DecodeBulkLocals, func3AppendLocals,
+        func3_decode_byte_offset] at Hfinish'
+      iapply Hfinish' $$ Hdestination'
+  · simp only [Inv, Finish, overwritePrefix_zero]
+    isplitr
+    · ipureintro
+      exact ⟨hbulkPositive, by simp⟩
+    iframe
+
 /-- All dynamic ownership and ghost state carried across a read-loop
 back-edge. -/
 private structure Func3ReadLoopState where
