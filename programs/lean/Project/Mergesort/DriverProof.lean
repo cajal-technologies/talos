@@ -1909,6 +1909,138 @@ theorem twp_func3_values_nonnull_guard
     exact hfacts
   iapply Hcont $$ Hblock
 
+/-- Copy one already-addressed word from the completed input slice into the
+decode destination.  The loop index premise justifies both memory accesses,
+and `overwritePrefix_set_next` records the exact logical progress. -/
+theorem twp_func3_copy_decoded_word
+    [WasmSmallStepGS hlc Universal.State]
+    (source destination : UInt32)
+    (original initial : List UInt32) (copied : Nat)
+    (hlength : original.length = initial.length)
+    (hcopied : copied < original.length)
+    {params localValues stack : List Value}
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → HeapIProp} :
+    let current := overwritePrefix original initial copied
+    let next := overwritePrefix original initial (copied + 1)
+    let sourceAddress := source + 4 * UInt32.ofNat copied
+    let destinationAddress := destination + 4 * UInt32.ofNat copied
+    iprop(
+      WordSlice source original ∗
+      WordSlice destination current ∗
+      (WordSlice source original -∗
+        WordSlice destination next -∗
+        WP (.running
+          ⟨⟨params, localValues, stack⟩,
+            code, arity, remainder, controls, calls⟩ : Expr Universal.State)
+          @ s; E [{ Φ }])) ⊢
+      WP (.running
+        ⟨⟨params, localValues,
+            .i32 sourceAddress :: .i32 destinationAddress :: stack⟩,
+          [.load32 0, .store32 0] ++ code,
+          arity, remainder, controls, calls⟩ : Expr Universal.State)
+        @ s; E [{ Φ }] := by
+  dsimp only
+  let current := overwritePrefix original initial copied
+  let next := overwritePrefix original initial (copied + 1)
+  let sourceAddress := source + 4 * UInt32.ofNat copied
+  let destinationAddress := destination + 4 * UInt32.ofNat copied
+  have hcurrentLength : current.length = original.length :=
+    overwritePrefix_length original initial copied hlength
+  have hsourceIndex : copied < original.length := hcopied
+  have hdestinationIndex : copied < current.length := by
+    rw [hcurrentLength]
+    exact hcopied
+  iintro ⟨Hsource, Hdestination, Hcont⟩
+  ihave HsourceFacts := WordSlice_facts source original $$ Hsource
+  icases HsourceFacts with ⟨Hsource, %hsourceFacts⟩
+  ihave HdestinationFacts := WordSlice_facts destination current $$
+    Hdestination
+  icases HdestinationFacts with ⟨Hdestination, %hdestinationFacts⟩
+  have hsourceAddress : sourceAddress.toNat = source.toNat + 4 * copied := by
+    dsimp only [sourceAddress]
+    exact wordOffset_toNat source copied (by omega)
+  have hdestinationAddress :
+      destinationAddress.toNat = destination.toNat + 4 * copied := by
+    dsimp only [destinationAddress]
+    exact wordOffset_toNat destination copied (by
+      rw [hcurrentLength] at hdestinationFacts
+      omega)
+  have hsourceRoom : sourceAddress.toNat + 4 ≤ UInt32.size := by
+    rw [hsourceAddress]
+    omega
+  have hdestinationRoom : destinationAddress.toNat + 4 ≤ UInt32.size := by
+    rw [hdestinationAddress]
+    rw [hcurrentLength] at hdestinationFacts
+    omega
+  have hsource1 : (sourceAddress + 1).toNat = sourceAddress.toNat + 1 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap sourceAddress 1
+      (by decide) (by norm_num [UInt32.size] at hsourceRoom ⊢; omega)
+  have hsource2 : (sourceAddress + 2).toNat = sourceAddress.toNat + 2 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap sourceAddress 2
+      (by decide) (by norm_num [UInt32.size] at hsourceRoom ⊢; omega)
+  have hsource3 : (sourceAddress + 3).toNat = sourceAddress.toNat + 3 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap sourceAddress 3
+      (by decide) (by norm_num [UInt32.size] at hsourceRoom ⊢; omega)
+  have hdestination1 :
+      (destinationAddress + 1).toNat = destinationAddress.toNat + 1 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap destinationAddress 1
+      (by decide) (by norm_num [UInt32.size] at hdestinationRoom ⊢; omega)
+  have hdestination2 :
+      (destinationAddress + 2).toNat = destinationAddress.toNat + 2 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap destinationAddress 2
+      (by decide) (by norm_num [UInt32.size] at hdestinationRoom ⊢; omega)
+  have hdestination3 :
+      (destinationAddress + 3).toNat = destinationAddress.toNat + 3 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap destinationAddress 3
+      (by decide) (by norm_num [UInt32.size] at hdestinationRoom ⊢; omega)
+  ihave HsourceFocus := WordSlice_get source original copied hsourceIndex $$
+    Hsource
+  icases HsourceFocus with ⟨HsourceWord, HcloseSource⟩
+  ihave HdestinationFocus := WordSlice_set destination current copied
+    original[copied] hdestinationIndex $$ Hdestination
+  icases HdestinationFocus with ⟨HdestinationWord, HcloseDestination⟩
+  ihave HsourceWord' : pointsTo_u32 0 (sourceAddress + 0)
+      original[copied] $$ [HsourceWord]
+  · simp only [UInt32.add_zero, sourceAddress]
+    iexact HsourceWord
+  ihave HdestinationWord' : pointsTo_u32 0 (destinationAddress + 0)
+      current[copied] $$ [HdestinationWord]
+  · simp only [UInt32.add_zero, destinationAddress]
+    iexact HdestinationWord
+  simp only [List.cons_append, List.nil_append]
+  iapply twp_load32 (address := sourceAddress) (offset := 0)
+      original[copied] (by simp)
+      (by simpa only [UInt32.add_zero] using hsource1)
+      (by simpa only [UInt32.add_zero] using hsource2)
+      (by simpa only [UInt32.add_zero] using hsource3) $$ HsourceWord'
+  iintro HsourceLoaded
+  ihave HsourceWord : pointsTo_u32 0
+      (source + 4 * UInt32.ofNat copied) original[copied] $$ [HsourceLoaded]
+  · simp only [UInt32.add_zero, sourceAddress]
+    iexact HsourceLoaded
+  iapply twp_store32 (address := destinationAddress) (offset := 0)
+      current[copied] (by simp)
+      (by simpa only [UInt32.add_zero] using hdestination1)
+      (by simpa only [UInt32.add_zero] using hdestination2)
+      (by simpa only [UInt32.add_zero] using hdestination3) $$ HdestinationWord'
+  iintro HdestinationStored
+  ihave HdestinationWord : pointsTo_u32 0
+      (destination + 4 * UInt32.ofNat copied) original[copied] $$
+      [HdestinationStored]
+  · simp only [UInt32.add_zero, destinationAddress]
+    iexact HdestinationStored
+  ihave Hsource := HcloseSource $$ HsourceWord
+  ihave Hdestination := HcloseDestination $$ HdestinationWord
+  have hnext : current.set copied original[copied] = next := by
+    exact overwritePrefix_set_next original initial copied hlength hcopied
+  ihave Hnext : WordSlice destination next $$ [Hdestination]
+  · rw [← hnext]
+    iexact Hdestination
+  iapply Hcont $$ Hsource Hnext
+
 /-- All dynamic ownership and ghost state carried across a read-loop
 back-edge. -/
 private structure Func3ReadLoopState where
