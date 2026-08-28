@@ -5,11 +5,14 @@ import HexDecodeStdio.Helpers
 import HexDecodeStdio.Proof
 
 /-!
-**This is the only file you edit.** Replace `sorry` below with your proof.
+# `hex_stdio` decode — public total correctness
 
-Do not change the statement: it must stay identical to `Challenge.lean`, and
-comparator rejects the submission if it differs. You may use `Mathlib`,
-`CodeLib`, and anything you add under `Submission/`.
+`hex_decode_stdio_correct` establishes the exported `decode` entry point's total
+OOM-disjunction specification `Project.HexStdio.Spec.DecodeSpec`: for every
+input, `decode` writes the reference decoding (a status byte followed, on
+acceptance, by the decoded bytes), or its private allocator reaches the
+`talos.oom` terminal trap. A terminal outcome is always reached. See
+`Project/HexStdio/Analysis/`.
 -/
 
 theorem hex_decode_stdio_correct : Project.HexStdio.Spec.DecodeSpec := by

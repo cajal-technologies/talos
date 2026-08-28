@@ -5,11 +5,13 @@ import HexEncodeStdio.Helpers
 import HexEncodeStdio.Blueprint
 
 /-!
-**This is the only file you edit.** Replace `sorry` below with your proof.
+# `hex_stdio` encode — public total correctness
 
-Do not change the statement: it must stay identical to `Challenge.lean`, and
-comparator rejects the submission if it differs. You may use `Mathlib`,
-`CodeLib`, and anything you add under `Submission/`.
+`hex_encode_stdio_correct` establishes the exported `encode` entry point's total
+OOM-disjunction specification `Project.HexStdio.Spec.EncodeSpec`: for every
+input, `encode` writes the lowercase hexadecimal encoding of the bytes it reads,
+or its private allocator reaches the `talos.oom` terminal trap. A terminal
+outcome is always reached. See `Project/HexStdio/Analysis/`.
 -/
 
 theorem hex_encode_stdio_correct : Project.HexStdio.Spec.EncodeSpec := by
