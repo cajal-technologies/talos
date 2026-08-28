@@ -20,5 +20,5 @@ roots = [
   "CodeLib",
   "CodeLib.Examples.Gcd",
   "CodeLib.Examples.MergeSort.StdIO",
-  "CodeLib.Examples.Quicksort.Proof",
+  "CodeLib.Examples.Quicksort.TotalProof",
 ]
