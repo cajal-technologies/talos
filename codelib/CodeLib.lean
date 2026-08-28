@@ -32,7 +32,6 @@ import CodeLib.RustStd.Option
 import CodeLib.Near.State
 import CodeLib.Near.Env
 import CodeLib.Near.Proof
-import CodeLib.IEEE32.Exec
 import CodeLib.SepLogic.WasmHeap
 import CodeLib.SepLogic.WasmRules
 import CodeLib.SepLogic.SmallStepLanguage

@@ -3,7 +3,21 @@ import Std.Tactic.BVDecide
 
 open Wasm
 
-/-! Pure bitvector IEEE 754 f32 operations and bridge axioms for `float_trunc` proofs. -/
+/-!
+Pure bitvector IEEE 754 f32 operations and bridge axioms for `float_trunc` proofs.
+
+**These bridge axioms are trusted, not proved.** The five `axiom` declarations
+below (`beq_ax`, `isNaN_ax`, `ble_ax`, `blt_ax`, `satI32S_eq`) assert that Lean's
+opaque `Float32`/`Float` externs agree with the bitvector model defined here;
+they are the only axioms in this repository beyond Lean's own. Anything that
+imports this module and uses them — including everything proved further down
+this file — is therefore *not* axiom-free. Check what a given result rests on
+with `#print axioms <name>`.
+
+For that reason the `CodeLib` umbrella does **not** import this module: import
+`CodeLib.IEEE32.Exec` explicitly in the (few) files that need the bridge, so the
+axioms stay out of the ambient environment of everything else.
+-/
 
 namespace IEEE32Exec
 
