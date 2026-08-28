@@ -2,7 +2,7 @@ import HexDecodeStdio.DecodeSpec
 import HexDecodeStdio.TotalLifting
 import HexDecodeStdio.DecodeIterator
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio
 open Iris Iris.ProgramLogic Language.Notation
@@ -330,4 +330,4 @@ theorem twp_decode_empty
   iapply Hcont
   iframe
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

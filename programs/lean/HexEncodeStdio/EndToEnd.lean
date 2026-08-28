@@ -5,7 +5,7 @@ import HexEncodeStdio.TotalMain
 import HexEncodeStdio.TotalEncodeFunction
 import HexEncodeStdio.OutcomeBridge
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexEncodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -96,7 +96,7 @@ theorem encodeOutputStore_preserves_read32
 theorem encode_allocation_capacity (input : List UInt8)
     (hpos : input ≠ []) (hsmall : 2 * input.length < 2 ^ 31) :
     reserveNewCapacity 0 (UInt32.ofNat input.length <<< 1) 0 =
-      UInt32.ofNat (Submission.TotalEncodeLoop.encodeCapacityNat input) := by
+      UInt32.ofNat (Project.HexEncodeStdio.TotalEncodeLoop.encodeCapacityNat input) := by
   have hlen : input.length < UInt32.size := by
     norm_num [UInt32.size] at hsmall ⊢
     omega
@@ -334,7 +334,7 @@ theorem encode_reserve_after_read
       rw [hnewCapacity]
       apply UInt32.toInt32_not_negative_of_small
       rw [UInt32.toNat_ofNat_of_lt']
-      · simp [Submission.TotalEncodeLoop.encodeCapacityNat]
+      · simp [Project.HexEncodeStdio.TotalEncodeLoop.encodeCapacityNat]
         omega
       · change max 8 (2 * input.length) < UInt32.size
         norm_num [UInt32.size]
@@ -413,7 +413,7 @@ private theorem main_after_encode_finishes {hlc : HasLC}
       pointsToBytes 0 inputPtr input ∗
       pointsToBytes 0 output (encode input) ∗
       (⟨0, (1048544 : UInt32) - 16⟩ ↦w
-        u32Byte Submission.TotalIterator.sentinel 0) ∗
+        u32Byte Project.HexEncodeStdio.TotalIterator.sentinel 0) ∗
       pointsTo_u32 0 (((1048544 : UInt32) - 16) + 4)
         (inputPtr + UInt32.ofNat input.length) ⊢
     WP (.running
@@ -426,14 +426,14 @@ private theorem main_after_encode_finishes {hlc : HasLC}
           ⌜values = [] ∧ final.wasm.host.stdio.output = encode input⌝ }] := by
   iintro ⟨Hruntime, Henv, Hhost, Hglobal, Hcap, Hptr, Hlen,
     HinputCap, HinputPtr, HinputLen, Hinput, Hencoded, HwriteTag, Hcursor⟩
-  iapply (Submission.TotalMain.func10_after_encode_nonempty
+  iapply (Project.HexEncodeStdio.TotalMain.func10_after_encode_nonempty
     (s := Stuckness.NotStuck) (E := ⊤)
     (Φ := fun values => iprop% ∀ (final : MachineStore Universal.State)
       (_observations : List StepKind),
       stateInterp (GF := WasmHeapGF Universal.State) final 0 [] 0 -∗
         ⌜values = [] ∧ final.wasm.host.stdio.output = encode input⌝)
     1048544 inputPtr inputCapacity output outputCapacity input (encode input)
-    store.wasm.host (u32Byte Submission.TotalIterator.sentinel 0)
+    store.wasm.host (u32Byte Project.HexEncodeStdio.TotalIterator.sentinel 0)
     (inputPtr + UInt32.ofNat input.length)
     rfl (List.length_pos_iff.mpr hinput)
     (by
@@ -459,15 +459,15 @@ private theorem main_after_encode_finishes {hlc : HasLC}
     (values := []) (arity := 0) (remainder := [])
   iapply twp.value rfl
   iintro %doneStore %observations Hstate
-  imod Submission.TotalHost.stateInterp_host_set_expected doneStore 0 [] 0
-    (Submission.TotalWrite.afterWrite store.wasm.host (encode input))
-    (Submission.TotalWrite.afterWrite store.wasm.host (encode input)) $$
+  imod Project.HexEncodeStdio.TotalHost.stateInterp_host_set_expected doneStore 0 [] 0
+    (Project.HexEncodeStdio.TotalWrite.afterWrite store.wasm.host (encode input))
+    (Project.HexEncodeStdio.TotalWrite.afterWrite store.wasm.host (encode input)) $$
     [$Hstate $Hhost] with ⟨%hhostPhysical, Hstate, Hhost⟩
   ipureintro
   constructor
   · rfl
   · rw [hhostPhysical]
-    simp [Submission.TotalWrite.afterWrite, hhostOutput]
+    simp [Project.HexEncodeStdio.TotalWrite.afterWrite, hhostOutput]
 
 set_option maxHeartbeats 2000000 in
 set_option maxRecDepth 100000000 in
@@ -481,7 +481,7 @@ private theorem encode_function_finishes {hlc : HasLC}
     (hentry : store.runtime.entry = ⟨0⟩)
     (hhostOutput : store.wasm.host.stdio.output = [])
     (hcapacityEq : outputCapacity =
-      UInt32.ofNat (Submission.TotalEncodeLoop.encodeCapacityNat input))
+      UInt32.ofNat (Project.HexEncodeStdio.TotalEncodeLoop.encodeCapacityNat input))
     (hcapacityNat : outputCapacity.toNat = max 8 (2 * input.length))
     (hlimitSmall : output.toNat + 2 * input.length < UInt32.size)
     (hinputEnd : inputPtr.toNat + input.length ≤ output.toNat)
@@ -496,7 +496,7 @@ private theorem encode_function_finishes {hlc : HasLC}
       runtimeModuleOwn ⟨0⟩ Project.HexStdio.«module» ∗
       globalPointsToAt 0 0 (.i32 1048512) ∗
       pointsTo_u32 0 (1048512 + 4)
-        (UInt32.ofNat (Submission.TotalEncodeLoop.encodeCapacityNat input)) ∗
+        (UInt32.ofNat (Project.HexEncodeStdio.TotalEncodeLoop.encodeCapacityNat input)) ∗
       pointsTo_u32 0 (1048512 + 8) output ∗
       pointsTo_u32 0 (1048512 + 12) 0 ∗
       pointsTo_u32 0 (1048512 + 16)
@@ -513,7 +513,7 @@ private theorem encode_function_finishes {hlc : HasLC}
       pointsTo_u32 0 (1048552 + 8)
         (finalStore.wasm.mem.read32 1048560) ∗
       pointsToBytes 0 inputPtr input ∗
-      pointsToBytes 0 1048576 Submission.Hex.asciiTable ∗
+      pointsToBytes 0 1048576 Project.HexEncodeStdio.Hex.asciiTable ∗
       pointsToBytes 0 output out ⊢
     WP (.running
       ⟨⟨[.i32 1048552, .i32 inputPtr, .i32 (UInt32.ofNat input.length)],
@@ -538,7 +538,7 @@ private theorem encode_function_finishes {hlc : HasLC}
   iintro ⟨HR, Hruntime0, HglobalAt, HcapCall, HoutputPtrCall, HzeroCall,
     H3Call, H4Call, H5Call, H6Call, HresultPairCall, HresultLenCall,
     Hinput, Htable, Hout⟩
-  iapply (Submission.TotalEncodeFunction.func6_after_alloc_nonempty
+  iapply (Project.HexEncodeStdio.TotalEncodeFunction.func6_after_alloc_nonempty
     (s := Stuckness.NotStuck) (E := ⊤)
     (Φ := fun values => iprop% ∀ (final : MachineStore Universal.State)
       (_observations : List StepKind),
@@ -566,11 +566,11 @@ private theorem encode_function_finishes {hlc : HasLC}
   icases HR with ⟨Henv, Hhost, H7, H8, HinputCap, HinputPtr, HinputLen⟩
   simp only [encodeMainCalls]
   rw [hentry]
-  iapply Submission.TotalIterator.hdtwp_returnFromCallFallthrough' $$ Hruntime
+  iapply Project.HexEncodeStdio.TotalIterator.hdtwp_returnFromCallFallthrough' $$ Hruntime
   iintro Hruntime
   simp only [List.take_zero, List.nil_append]
   ihave HsentinelAt : pointsTo_u32 0 ((1048544 : UInt32) - 16)
-      Submission.TotalIterator.sentinel $$ [Hsentinel]
+      Project.HexEncodeStdio.TotalIterator.sentinel $$ [Hsentinel]
   · rw [show (1048544 : UInt32) - 16 = 1048512 + 16 by decide]
     iexact Hsentinel
   ihave HcursorAt : pointsTo_u32 0 (((1048544 : UInt32) - 16) + 4)
@@ -578,7 +578,7 @@ private theorem encode_function_finishes {hlc : HasLC}
   · rw [show ((1048544 : UInt32) - 16) + 4 = 1048512 + 20 by decide]
     iexact Hcursor
   ihave HsentinelBytes := (pointsTo_u32_as_bytes 0
-    ((1048544 : UInt32) - 16) Submission.TotalIterator.sentinel).mp $$ HsentinelAt
+    ((1048544 : UInt32) - 16) Project.HexEncodeStdio.TotalIterator.sentinel).mp $$ HsentinelAt
   isimp only [pointsToBytes] at HsentinelBytes
   icases HsentinelBytes with ⟨HwriteTag, _HsentinelRest⟩
   ihave HglobalMain : globalPointsToAt 0 0 (.i32 1048544) $$ [Hglobal]
@@ -625,48 +625,48 @@ private theorem split_output_memory {hlc : HasLC}
     (output : UInt32)
     (hlimitSmall : output.toNat + 2 * input.length < UInt32.size) :
     pointsToBytes 0 0
-        (Submission.Grow.bytesAt finalStore.wasm.mem 0
+        (Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem 0
           (output.toNat + 2 * input.length)) ⊢
       pointsToBytes 0 0
-          (Submission.Grow.bytesAt finalStore.wasm.mem 0 output.toNat) ∗
+          (Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem 0 output.toNat) ∗
         pointsToBytes 0 output
-          (Submission.Grow.bytesAt finalStore.wasm.mem output
+          (Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem output
             (2 * input.length)) := by
   iintro Hbytes
   ihave HoutputDecomp : pointsToBytes 0 0
-      (Submission.Grow.bytesAt finalStore.wasm.mem 0 output.toNat ++
-        (Submission.Grow.bytesAt finalStore.wasm.mem output
+      (Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem 0 output.toNat ++
+        (Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem output
             (2 * input.length) ++
-          Submission.Grow.bytesAt finalStore.wasm.mem
+          Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem
             (output + UInt32.ofNat (2 * input.length)) 0)) $$ [Hbytes]
-  · have heq : Submission.Grow.bytesAt finalStore.wasm.mem 0
+  · have heq : Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem 0
         (output.toNat + 2 * input.length) =
-        Submission.Grow.bytesAt finalStore.wasm.mem 0 output.toNat ++
-          (Submission.Grow.bytesAt finalStore.wasm.mem output
+        Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem 0 output.toNat ++
+          (Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem output
               (2 * input.length) ++
-            Submission.Grow.bytesAt finalStore.wasm.mem
+            Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem
               (output + UInt32.ofNat (2 * input.length)) 0) := by
-        simpa using Submission.FullMemory.full_bytes_decompose
+        simpa using Project.HexEncodeStdio.FullMemory.full_bytes_decompose
           finalStore.wasm.mem output (2 * input.length)
           (output.toNat + 2 * input.length) (by omega) hlimitSmall
     rw [← heq]
     iexact Hbytes
   ihave HoutputSplit := (pointsToBytes_append 0 0
-      (Submission.Grow.bytesAt finalStore.wasm.mem 0 output.toNat)
-      (Submission.Grow.bytesAt finalStore.wasm.mem output (2 * input.length) ++
-        Submission.Grow.bytesAt finalStore.wasm.mem
+      (Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem 0 output.toNat)
+      (Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem output (2 * input.length) ++
+        Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem
           (output + UInt32.ofNat (2 * input.length)) 0)).mp $$ HoutputDecomp
   icases HoutputSplit with ⟨HbeforeOutput, HoutputRest⟩
   ihave HoutputRest' : pointsToBytes 0 output
-      (Submission.Grow.bytesAt finalStore.wasm.mem output (2 * input.length) ++
-        Submission.Grow.bytesAt finalStore.wasm.mem
+      (Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem output (2 * input.length) ++
+        Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem
           (output + UInt32.ofNat (2 * input.length)) 0) $$ [HoutputRest]
-  · simp only [Submission.Grow.bytesAt_length, UInt32.ofNat_toNat,
+  · simp only [Project.HexEncodeStdio.Grow.bytesAt_length, UInt32.ofNat_toNat,
       UInt32.zero_add]
     iexact HoutputRest
   ihave HoutputSplit := (pointsToBytes_append 0 output
-      (Submission.Grow.bytesAt finalStore.wasm.mem output (2 * input.length))
-      (Submission.Grow.bytesAt finalStore.wasm.mem
+      (Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem output (2 * input.length))
+      (Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem
         (output + UInt32.ofNat (2 * input.length)) 0)).mp $$ HoutputRest'
   icases HoutputSplit with ⟨HoutputBytes, _HafterOutput⟩
   isplitl [HbeforeOutput]
@@ -681,40 +681,40 @@ private theorem split_input_memory {hlc : HasLC}
     (hlimitSmall : output.toNat + 2 * input.length < UInt32.size)
     (hinputEnd : inputPtr.toNat + input.length ≤ output.toNat) :
     pointsToBytes 0 0
-        (Submission.Grow.bytesAt finalStore.wasm.mem 0 output.toNat) ⊢
+        (Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem 0 output.toNat) ⊢
       pointsToBytes 0 0
-          (Submission.Grow.bytesAt finalStore.wasm.mem 0 inputPtr.toNat) ∗
+          (Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem 0 inputPtr.toNat) ∗
         pointsToBytes 0 inputPtr
-          (Submission.Grow.bytesAt finalStore.wasm.mem inputPtr input.length) := by
+          (Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem inputPtr input.length) := by
   iintro HbeforeOutput
   ihave HinputDecomp : pointsToBytes 0 0
-      (Submission.Grow.bytesAt finalStore.wasm.mem 0 inputPtr.toNat ++
-        (Submission.Grow.bytesAt finalStore.wasm.mem inputPtr input.length ++
-          Submission.Grow.bytesAt finalStore.wasm.mem
+      (Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem 0 inputPtr.toNat ++
+        (Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem inputPtr input.length ++
+          Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem
             (inputPtr + UInt32.ofNat input.length)
             (output.toNat - (inputPtr.toNat + input.length)))) $$ [HbeforeOutput]
-  · rw [← Submission.FullMemory.full_bytes_decompose finalStore.wasm.mem
+  · rw [← Project.HexEncodeStdio.FullMemory.full_bytes_decompose finalStore.wasm.mem
       inputPtr input.length output.toNat hinputEnd
       (lt_of_le_of_lt (Nat.le_add_right _ _) hlimitSmall)]
     iexact HbeforeOutput
   ihave HinputSplit := (pointsToBytes_append 0 0
-      (Submission.Grow.bytesAt finalStore.wasm.mem 0 inputPtr.toNat)
-      (Submission.Grow.bytesAt finalStore.wasm.mem inputPtr input.length ++
-        Submission.Grow.bytesAt finalStore.wasm.mem
+      (Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem 0 inputPtr.toNat)
+      (Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem inputPtr input.length ++
+        Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem
           (inputPtr + UInt32.ofNat input.length)
           (output.toNat - (inputPtr.toNat + input.length)))).mp $$ HinputDecomp
   icases HinputSplit with ⟨HbeforeInput, HinputRest⟩
   ihave HinputRest' : pointsToBytes 0 inputPtr
-      (Submission.Grow.bytesAt finalStore.wasm.mem inputPtr input.length ++
-        Submission.Grow.bytesAt finalStore.wasm.mem
+      (Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem inputPtr input.length ++
+        Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem
           (inputPtr + UInt32.ofNat input.length)
           (output.toNat - (inputPtr.toNat + input.length))) $$ [HinputRest]
-  · simp only [Submission.Grow.bytesAt_length, UInt32.ofNat_toNat,
+  · simp only [Project.HexEncodeStdio.Grow.bytesAt_length, UInt32.ofNat_toNat,
       UInt32.zero_add]
     iexact HinputRest
   ihave HinputSplit := (pointsToBytes_append 0 inputPtr
-      (Submission.Grow.bytesAt finalStore.wasm.mem inputPtr input.length)
-      (Submission.Grow.bytesAt finalStore.wasm.mem
+      (Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem inputPtr input.length)
+      (Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem
         (inputPtr + UInt32.ofNat input.length)
         (output.toNat - (inputPtr.toNat + input.length)))).mp $$ HinputRest'
   icases HinputSplit with ⟨HinputBytes, _Hgap⟩
@@ -728,34 +728,34 @@ private theorem split_memory_segment {hlc : HasLC}
     (mem : Mem) (limit start : UInt32) (len : Nat)
     (hsegment : start.toNat + len ≤ limit.toNat) :
     pointsToBytes 0 0
-        (Submission.Grow.bytesAt mem 0 limit.toNat) ⊢
+        (Project.HexEncodeStdio.Grow.bytesAt mem 0 limit.toNat) ⊢
       pointsToBytes 0 start
-        (Submission.Grow.bytesAt mem start len) := by
+        (Project.HexEncodeStdio.Grow.bytesAt mem start len) := by
   iintro Hbytes
   ihave Hdecomp : pointsToBytes 0 0
-      (Submission.Grow.bytesAt mem 0 start.toNat ++
-        (Submission.Grow.bytesAt mem start len ++
-          Submission.Grow.bytesAt mem (start + UInt32.ofNat len)
+      (Project.HexEncodeStdio.Grow.bytesAt mem 0 start.toNat ++
+        (Project.HexEncodeStdio.Grow.bytesAt mem start len ++
+          Project.HexEncodeStdio.Grow.bytesAt mem (start + UInt32.ofNat len)
             (limit.toNat - (start.toNat + len)))) $$ [Hbytes]
-  · rw [← Submission.FullMemory.full_bytes_decompose mem start len
+  · rw [← Project.HexEncodeStdio.FullMemory.full_bytes_decompose mem start len
       limit.toNat hsegment (UInt32.toNat_lt_size limit)]
     iexact Hbytes
   ihave Hsplit := (pointsToBytes_append 0 0
-      (Submission.Grow.bytesAt mem 0 start.toNat)
-      (Submission.Grow.bytesAt mem start len ++
-        Submission.Grow.bytesAt mem (start + UInt32.ofNat len)
+      (Project.HexEncodeStdio.Grow.bytesAt mem 0 start.toNat)
+      (Project.HexEncodeStdio.Grow.bytesAt mem start len ++
+        Project.HexEncodeStdio.Grow.bytesAt mem (start + UInt32.ofNat len)
           (limit.toNat - (start.toNat + len)))).mp $$ Hdecomp
   icases Hsplit with ⟨_Hbefore, Hrest⟩
   ihave Hrest' : pointsToBytes 0 start
-      (Submission.Grow.bytesAt mem start len ++
-        Submission.Grow.bytesAt mem (start + UInt32.ofNat len)
+      (Project.HexEncodeStdio.Grow.bytesAt mem start len ++
+        Project.HexEncodeStdio.Grow.bytesAt mem (start + UInt32.ofNat len)
           (limit.toNat - (start.toNat + len))) $$ [Hrest]
-  · simp only [Submission.Grow.bytesAt_length, UInt32.ofNat_toNat,
+  · simp only [Project.HexEncodeStdio.Grow.bytesAt_length, UInt32.ofNat_toNat,
       UInt32.zero_add]
     iexact Hrest
   ihave Hsplit := (pointsToBytes_append 0 start
-      (Submission.Grow.bytesAt mem start len)
-      (Submission.Grow.bytesAt mem (start + UInt32.ofNat len)
+      (Project.HexEncodeStdio.Grow.bytesAt mem start len)
+      (Project.HexEncodeStdio.Grow.bytesAt mem (start + UInt32.ofNat len)
         (limit.toNat - (start.toNat + len)))).mp $$ Hrest'
   icases Hsplit with ⟨Hsegment, _Hafter⟩
   iexact Hsegment
@@ -770,14 +770,14 @@ private theorem split_encode_memory {hlc : HasLC}
     (hinputEnd : inputPtr.toNat + input.length ≤ output.toNat)
     (hstackEnd : 1048516 + 76 ≤ inputPtr.toNat) :
     pointsToBytes 0 0
-        (Submission.Grow.bytesAt finalStore.wasm.mem 0
+        (Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem 0
           (output.toNat + 2 * input.length)) ⊢
       pointsToBytes 0 1048516
-          (Submission.Grow.bytesAt finalStore.wasm.mem 1048516 76) ∗
+          (Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem 1048516 76) ∗
         pointsToBytes 0 inputPtr
-          (Submission.Grow.bytesAt finalStore.wasm.mem inputPtr input.length) ∗
+          (Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem inputPtr input.length) ∗
         pointsToBytes 0 output
-          (Submission.Grow.bytesAt finalStore.wasm.mem output
+          (Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem output
             (2 * input.length)) := by
   iintro Hbytes
   ihave HoutputSplit := split_output_memory input finalStore output
@@ -804,7 +804,7 @@ private theorem encode_prefix_finishes {hlc : HasLC}
     (hentry : store.runtime.entry = ⟨0⟩)
     (hhostOutput : store.wasm.host.stdio.output = [])
     (hcapacityEq : outputCapacity =
-      UInt32.ofNat (Submission.TotalEncodeLoop.encodeCapacityNat input))
+      UInt32.ofNat (Project.HexEncodeStdio.TotalEncodeLoop.encodeCapacityNat input))
     (hcapacityNat : outputCapacity.toNat = max 8 (2 * input.length))
     (hlimitSmall : output.toNat + 2 * input.length < UInt32.size)
     (hfinalRuntimeEq : finalStore.runtime = store.runtime)
@@ -813,7 +813,7 @@ private theorem encode_prefix_finishes {hlc : HasLC}
     (hfinalEnv : finalStore.runtime.currentHost = Universal.envFor «module»)
     (hfinalHost : finalStore.wasm.host = store.wasm.host)
     (hfinalTable : finalStore.wasm.mem.readBytes 1048576 16 =
-      Submission.Hex.asciiTable)
+      Project.HexEncodeStdio.Hex.asciiTable)
     (hfinalInput :
       finalStore.wasm.mem.readBytes inputPtr.toNat input.length = input)
     (hfinalCapacity : finalStore.wasm.mem.read32 1048516 = outputCapacity)
@@ -827,7 +827,7 @@ private theorem encode_prefix_finishes {hlc : HasLC}
     (hinputEnd : inputPtr.toNat + input.length ≤ output.toNat)
     (hstackEnd : 1048516 + 76 ≤ inputPtr.toNat) :
     pointsToBytes 0 0
-        (Submission.Grow.bytesAt finalStore.wasm.mem 0
+        (Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem 0
           (output.toNat + 2 * input.length)) ∗
       ([∗map] index ↦ value ∈
         (insert (∅ : WasmGlobalMap Value)
@@ -869,28 +869,28 @@ private theorem encode_prefix_finishes {hlc : HasLC}
   ihave Hmemory := split_encode_memory input finalStore inputPtr output
     hlimitSmall hinputEnd hstackEnd $$ Hbytes
   icases Hmemory with ⟨HstackTable, HinputBytes, HoutputBytes⟩
-  ihave HstackTableSplit := (Submission.PrefixMemory.bytesAt_split
+  ihave HstackTableSplit := (Project.HexEncodeStdio.PrefixMemory.bytesAt_split
       finalStore.wasm.mem 1048516 60 16 (by decide)).mp $$ HstackTable
   icases HstackTableSplit with ⟨Hstack, HtableBytes⟩
-  ihave Htable : pointsToBytes 0 1048576 Submission.Hex.asciiTable $$ [HtableBytes]
+  ihave Htable : pointsToBytes 0 1048576 Project.HexEncodeStdio.Hex.asciiTable $$ [HtableBytes]
   · rw [show (1048516 : UInt32) + UInt32.ofNat 60 = 1048576 by decide]
-    rw [Submission.FullMemory.bytesAt_eq_readBytes finalStore.wasm.mem
+    rw [Project.HexEncodeStdio.FullMemory.bytesAt_eq_readBytes finalStore.wasm.mem
       1048576 16 (by decide),
       show (1048576 : UInt32).toNat = 1048576 by decide, hfinalTable]
     iexact HtableBytes
   ihave Hinput : pointsToBytes 0 inputPtr input $$ [HinputBytes]
-  · rw [Submission.FullMemory.bytesAt_eq_readBytes finalStore.wasm.mem
+  · rw [Project.HexEncodeStdio.FullMemory.bytesAt_eq_readBytes finalStore.wasm.mem
       inputPtr input.length (by omega), hfinalInput]
     iexact HinputBytes
-  let out := Submission.Grow.bytesAt finalStore.wasm.mem output
+  let out := Project.HexEncodeStdio.Grow.bytesAt finalStore.wasm.mem output
     (2 * input.length)
   ihave Hout : pointsToBytes 0 output out $$ [HoutputBytes]
   · iexact HoutputBytes
   have houtLen : out.length = 2 * input.length := by
     simp [out]
-  ihave Hwords := Submission.PrefixMemory.bytesAt_words
+  ihave Hwords := Project.HexEncodeStdio.PrefixMemory.bytesAt_words
     finalStore.wasm.mem 1048516 15 (by decide) $$ Hstack
-  isimp only [Submission.PrefixMemory.wordsAt, arrayAt] at Hwords
+  isimp only [Project.HexEncodeStdio.PrefixMemory.wordsAt, arrayAt] at Hwords
   isimp only [UInt32.reduceAdd] at Hwords
   icases Hwords with ⟨H0, H1, H2, H3, H4, H5, H6, H7, H8, H9,
     H10, H11, H12, H13, H14⟩
@@ -922,7 +922,7 @@ private theorem encode_prefix_finishes {hlc : HasLC}
     · iexact H9
     · rw [show (1048552 : UInt32) + 4 = 1048556 by decide]
       iexact H10
-  ihave HresultPair := Submission.Helpers.pointsTo_u64_pair_join
+  ihave HresultPair := Project.HexEncodeStdio.Helpers.pointsTo_u64_pair_join
     0 1048552 (finalStore.wasm.mem.read32 1048552)
       (finalStore.wasm.mem.read32 1048556) $$ HpairCells
   let R : IProp (WasmHeapGF Universal.State) := iprop(
@@ -956,7 +956,7 @@ private theorem encode_prefix_finishes {hlc : HasLC}
       rw [hfinalRuntimeEq]]
     iexact Hruntime
   ihave HcapCall : pointsTo_u32 0 ((1048512 : UInt32) + 4)
-      (UInt32.ofNat (Submission.TotalEncodeLoop.encodeCapacityNat input)) $$ [Hcap]
+      (UInt32.ofNat (Project.HexEncodeStdio.TotalEncodeLoop.encodeCapacityNat input)) $$ [Hcap]
   · rw [show (1048512 : UInt32) + 4 = 1048516 by decide,
       ← hcapacityEq]
     iexact Hcap
@@ -1009,7 +1009,7 @@ private theorem encode_after_alloc_finish
     (hentry : store.runtime.entry = ⟨0⟩)
     (hhostOutput : store.wasm.host.stdio.output = [])
     (hcapacityEq : outputCapacity =
-      UInt32.ofNat (Submission.TotalEncodeLoop.encodeCapacityNat input))
+      UInt32.ofNat (Project.HexEncodeStdio.TotalEncodeLoop.encodeCapacityNat input))
     (hcapacityNat : outputCapacity.toNat = max 8 (2 * input.length))
     (hlimitSmall : output.toNat + 2 * input.length < UInt32.size)
     (hlimitBound :
@@ -1025,7 +1025,7 @@ private theorem encode_after_alloc_finish
       finalStore.runtime.currentHost = Universal.envFor «module»)
     (hfinalHost : finalStore.wasm.host = store.wasm.host)
     (hfinalTable : finalStore.wasm.mem.readBytes 1048576 16 =
-      Submission.Hex.asciiTable)
+      Project.HexEncodeStdio.Hex.asciiTable)
     (hfinalInput :
       finalStore.wasm.mem.readBytes inputPtr.toNat input.length = input)
     (hfinalCapacity :
@@ -1063,7 +1063,7 @@ private theorem encode_after_alloc_finish
     insert ∅ (⟨0, 0⟩ : GlobalKey) (.i32 1048512)
   have hglobalAgree : globalHeapAgrees globalσ finalStore.wasm.globals := by
     simpa [globalσ] using hglobalAgreeArg
-  apply Submission.PrefixMemory.terminates body
+  apply Project.HexEncodeStdio.PrefixMemory.terminates body
     (output.toNat + 2 * input.length) globalσ
     (fun values final => values = [] ∧
       final.wasm.host.stdio.output = encode input)
@@ -1160,7 +1160,7 @@ theorem encode_after_alloc_terminates
     omega
   have houtput : output = inputBump := allocatorPtr_one_eq _ hinputBumpNe
   have hcapacityEq : outputCapacity =
-      UInt32.ofNat (Submission.TotalEncodeLoop.encodeCapacityNat input) :=
+      UInt32.ofNat (Project.HexEncodeStdio.TotalEncodeLoop.encodeCapacityNat input) :=
     encode_allocation_capacity input hinput (by omega)
   have hcapacityNat : outputCapacity.toNat =
       max 8 (2 * input.length) := by
@@ -1272,7 +1272,7 @@ theorem encode_after_alloc_terminates
       (default : ModuleInstance Universal.State).module.funcs.length ≠
         Project.HexStdio.«module».funcs.length) hlenmod
   have hfinalTable : finalStore.wasm.mem.readBytes 1048576 16 =
-      Submission.Hex.asciiTable := by
+      Project.HexEncodeStdio.Hex.asciiTable := by
     rw [encodeOutputStore_preserves_bytes allocStore output outputCapacity
       1048576 16 (by decide)]
     rw [halloc.fresh_preserves_bytes 1048576 16 (Or.inl (by decide))]
@@ -1359,4 +1359,4 @@ theorem encode_after_alloc_terminates
       hwfStore hfinalRuntime hfinalEnv hfinalHost hfinalTable hfinalInput
       hfinalCapacity hfinalOutput hfinalZero hfinalInputCapacity hfinalInputPtr
       hfinalInputLen hinputEnd hstackEnd
-end Submission.HexDecodeStdio
+end Project.HexEncodeStdio

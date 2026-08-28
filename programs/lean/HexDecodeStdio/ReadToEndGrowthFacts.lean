@@ -1,6 +1,6 @@
 import HexDecodeStdio.ReadToEndRecursive
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -527,4 +527,4 @@ theorem ByteGrowSuccess.grown_invariant
       growResultOkStore, Mem.write32_pages, hinv.finish_toNat] using
         h.finish_bound hinv hfinishSmall
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

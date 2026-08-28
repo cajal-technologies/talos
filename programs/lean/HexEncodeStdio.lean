@@ -14,4 +14,4 @@ comparator rejects the submission if it differs. You may use `Mathlib`,
 
 theorem hex_encode_stdio_correct : Project.HexStdio.Spec.EncodeSpec := by
   intro input
-  exact Submission.Blueprint.encode_export_outcome input
+  exact Project.HexEncodeStdio.Blueprint.encode_export_outcome input

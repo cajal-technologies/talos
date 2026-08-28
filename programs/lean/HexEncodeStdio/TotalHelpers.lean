@@ -1,7 +1,7 @@
 import Mathlib
 import CodeLib
 
-namespace Submission.TotalHelpers
+namespace Project.HexEncodeStdio.TotalHelpers
 
 open Wasm
 open Iris Iris.BI Iris.ProgramLogic Language.Notation Iris.Std
@@ -84,4 +84,4 @@ theorem twp_store8_zero {hlc : HasLC} {α : Type}
   · iapply Hnext
     iexact Hpt
 
-end Submission.TotalHelpers
+end Project.HexEncodeStdio.TotalHelpers

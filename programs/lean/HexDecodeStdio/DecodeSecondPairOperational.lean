@@ -2,7 +2,7 @@ import HexDecodeStdio.DecodeIteratorInvalidLow
 import HexDecodeStdio.StoreFacts
 import HexDecodeStdio.HexMath
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -547,4 +547,4 @@ theorem decodeSecondPair_valid_reaches
         HexRoute.nibble, Mem.write32]
       exact ⟨[], .refl _⟩
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

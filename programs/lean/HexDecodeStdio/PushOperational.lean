@@ -1,7 +1,7 @@
 import HexDecodeStdio.ReserveOperational
 import HexDecodeStdio.DecodeCore
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -637,4 +637,4 @@ theorem push_reserve_initial_outcome
     exact TrapsWith.prependReaches hprefix (by
       simpa [base, frame, out] using htrap)
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

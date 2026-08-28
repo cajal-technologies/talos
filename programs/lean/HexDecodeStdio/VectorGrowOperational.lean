@@ -1,6 +1,6 @@
 import HexDecodeStdio.ReallocatorOperational
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -698,4 +698,4 @@ theorem grow_result_realloc_outcome
       simpa [growResultReallocatorCall] using htrap)
     simpa [initial] using hfull
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

@@ -1,6 +1,6 @@
 import HexDecodeStdio.DecodeOperational
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -370,4 +370,4 @@ def ReadToEndSuccess (input : List UInt8)
     bump.toNat < 2 ^ 31 ∧
     data.toNat + capacity.toNat ≤ store.wasm.mem.pages * 65536
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

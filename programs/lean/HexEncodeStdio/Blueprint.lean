@@ -45,7 +45,7 @@ Lemma DAG (dependencies point upward):
 * entry adequacy and Universal host satisfaction -> `encode_export_outcome`
 -/
 
-namespace Submission.Blueprint
+namespace Project.HexEncodeStdio.Blueprint
 
 open Wasm
 open Project.HexStdio.Spec
@@ -56,24 +56,24 @@ theorem func10_export_run_cons (byte : UInt8) (bytes : List UInt8) :
       startConfig? (Universal.envFor Project.HexStdio.«module»)
           Project.HexStdio.«module» "encode"
           (Universal.State.ofInput (byte :: bytes)) = some config ∧
-      Submission.Outcome.EncodesOrOOM (byte :: bytes)
+      Project.HexEncodeStdio.Outcome.EncodesOrOOM (byte :: bytes)
         (SmallStep.runSteps fuel config).result := by
   let input := byte :: bytes
   have hinput : input ≠ [] := by simp [input]
-  have hread := Submission.HexDecodeStdio.read_to_end_nonempty_outcome
+  have hread := Project.HexEncodeStdio.read_to_end_nonempty_outcome
     input hinput
-  have houtcome : Submission.HexDecodeStdio.ReachesOrOOM
-      (Submission.HexDecodeStdio.encodeInitialConfig input)
-      (Submission.HexDecodeStdio.EncodesConfig input) := by
-    apply Submission.HexDecodeStdio.ReachesOrOOM.bind hread
+  have houtcome : Project.HexEncodeStdio.ReachesOrOOM
+      (Project.HexEncodeStdio.encodeInitialConfig input)
+      (Project.HexEncodeStdio.EncodesConfig input) := by
+    apply Project.HexEncodeStdio.ReachesOrOOM.bind hread
     intro readConfig hreadSuccess
-    have hreserve := Submission.HexDecodeStdio.encode_reserve_after_read
+    have hreserve := Project.HexEncodeStdio.encode_reserve_after_read
       input readConfig hinput hreadSuccess
-    apply Submission.HexDecodeStdio.ReachesOrOOM.bind hreserve
+    apply Project.HexEncodeStdio.ReachesOrOOM.bind hreserve
     intro final hfinal
     rcases hfinal with ⟨store, inputCapacity, inputPtr, inputBump, allocStore,
       hread', hcapacity, hptr, hbump, halloc, rfl⟩
-    have hterm := Submission.HexDecodeStdio.encode_after_alloc_terminates
+    have hterm := Project.HexEncodeStdio.encode_after_alloc_terminates
       input store inputCapacity inputPtr inputBump allocStore hinput
       hcapacity hptr hbump hread' halloc
     rcases hterm with ⟨trace, values, finalStore, hsteps, hpost⟩
@@ -82,10 +82,10 @@ theorem func10_export_run_cons (byte : UInt8) (bytes : List UInt8) :
     rcases hpost with ⟨rfl, hout⟩
     exact ⟨finalStore, rfl, hout⟩
   obtain ⟨fuel, hrun⟩ :=
-    Submission.HexDecodeStdio.reachesOrOOM_to_runner input
-      (Submission.HexDecodeStdio.encodeInitialConfig input) houtcome
-  exact ⟨Submission.HexDecodeStdio.encodeInitialConfig input, fuel,
-    Submission.HexDecodeStdio.encode_start_config input, hrun⟩
+    Project.HexEncodeStdio.reachesOrOOM_to_runner input
+      (Project.HexEncodeStdio.encodeInitialConfig input) houtcome
+  exact ⟨Project.HexEncodeStdio.encodeInitialConfig input, fuel,
+    Project.HexEncodeStdio.encode_start_config input, hrun⟩
 
 /-- Executable form of the whole function-level proof. All loop and callee
 specifications below are assembled to establish this statement. -/
@@ -94,16 +94,16 @@ theorem func10_export_run (input : List UInt8) :
       startConfig? (Universal.envFor Project.HexStdio.«module»)
           Project.HexStdio.«module» "encode" (Universal.State.ofInput input) =
         some config ∧
-      Submission.Outcome.EncodesOrOOM input
+      Project.HexEncodeStdio.Outcome.EncodesOrOOM input
         (SmallStep.runSteps fuel config).result := by
   cases input with
-  | nil => exact Submission.Concrete.func10_export_run_nil
+  | nil => exact Project.HexEncodeStdio.Concrete.func10_export_run_nil
   | cons byte bytes => exact func10_export_run_cons byte bytes
 
 /-- The top-level anchor implemented after the function-level specifications. -/
 theorem encode_export_outcome (input : List UInt8) :
     RunsEncode input (encode input) ∨ RunsOutOfMemory input := by
   obtain ⟨config, fuel, hstart, hrun⟩ := func10_export_run input
-  exact Submission.Outcome.run_result_to_spec input config hstart fuel hrun
+  exact Project.HexEncodeStdio.Outcome.run_result_to_spec input config hstart fuel hrun
 
-end Submission.Blueprint
+end Project.HexEncodeStdio.Blueprint

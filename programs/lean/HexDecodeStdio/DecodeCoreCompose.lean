@@ -1,6 +1,6 @@
 import HexDecodeStdio.DecodeLoopRecursive
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -1938,4 +1938,4 @@ theorem decode_core_outcome (input : List UInt8) :
   intro config hsuccess
   exact decode_after_read_success_outcome input config hsuccess
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

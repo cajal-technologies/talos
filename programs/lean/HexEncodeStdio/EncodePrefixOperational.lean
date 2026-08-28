@@ -1,6 +1,6 @@
 import HexEncodeStdio.ReadToEndFirst
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexEncodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -51,4 +51,4 @@ theorem encode_to_read_to_end (input : List UInt8) :
   simp [encodeFrameStore]
   exact ⟨[], .refl _⟩
 
-end Submission.HexDecodeStdio
+end Project.HexEncodeStdio

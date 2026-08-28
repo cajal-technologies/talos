@@ -1,7 +1,7 @@
 import HexDecodeStdio.DecodePairOperational
 
 open Wasm Project.HexStdio Wasm.SmallStep
-open Submission.HexDecodeStdio
+open Project.HexDecodeStdio
 
 def pairStore (bytes : List UInt8) : MachineStore Universal.State :=
   let initial : Store Universal.State := «module».initialStore

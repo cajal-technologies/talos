@@ -1,6 +1,6 @@
 import HexDecodeStdio.ReadChunk
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Iris Iris.ProgramLogic Language.Notation
@@ -277,4 +277,4 @@ theorem twp_read_to_end_empty
   iapply Hcont
   iframe
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

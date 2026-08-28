@@ -3,7 +3,7 @@ import HexDecodeStdio.DecodeIteratorInvalid
 import HexDecodeStdio.DecodeIteratorInvalidLow
 import HexDecodeStdio.HexMath
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Iris Iris.ProgramLogic Language.Notation
@@ -484,4 +484,4 @@ theorem twp_decode_invalid_low_first
   iframe
 
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

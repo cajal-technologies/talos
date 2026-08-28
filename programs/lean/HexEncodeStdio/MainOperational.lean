@@ -1,6 +1,6 @@
 import HexEncodeStdio.EncodePrefixOperational
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexEncodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -39,4 +39,4 @@ theorem main_after_read_to_encode_call
   simp [Locals.set?, Locals.set, UInt32.add_comm]
   exact ⟨[], .refl _⟩
 
-end Submission.HexDecodeStdio
+end Project.HexEncodeStdio

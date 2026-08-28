@@ -1,7 +1,7 @@
 import HexDecodeStdio.DecodeLoopReserveArithmetic
 import HexDecodeStdio.DecodeLoopReserveOperational
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -457,4 +457,4 @@ theorem DecodeLoopInv.after_valid_pair_reserve
     omega
   exact hreserved.after_valid_pair_no_grow hiRoute loRoute hspare hhi hlo
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

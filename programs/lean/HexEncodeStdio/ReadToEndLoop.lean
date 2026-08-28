@@ -1,7 +1,7 @@
 import HexEncodeStdio.ReadToEndRecursive
 import HexEncodeStdio.ReadToEndTransition
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexEncodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -709,4 +709,4 @@ theorem read_to_end_loop_outcome
     exact read_to_end_initial_direct_outcome input consumed remaining store
       capacity data length bump chunk hinv hchunk hfull
 
-end Submission.HexDecodeStdio
+end Project.HexEncodeStdio

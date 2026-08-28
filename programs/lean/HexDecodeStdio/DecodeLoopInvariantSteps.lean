@@ -1,6 +1,6 @@
 import HexDecodeStdio.DecodeLoopInvariant
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -483,4 +483,4 @@ theorem DecodeLoopInv.after_valid_pair_no_grow
   · change store.wasm.host.oom.raised = false
     exact h.oom_eq
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

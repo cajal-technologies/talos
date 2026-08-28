@@ -1,7 +1,7 @@
 import Project.HexStdio.Program
 import HexEncodeStdio.Helpers
 import HexEncodeStdio.Outcome
-#check Submission.Helpers.pointsToBytes_focus
+#check Project.HexEncodeStdio.Helpers.pointsToBytes_focus
 
 example : ¬ 21 < Project.HexStdio.«module».imports.length := by decide
 example : Project.HexStdio.«module».funcs[21 - Project.HexStdio.«module».imports.length]? =
@@ -28,10 +28,10 @@ example (a b : UInt8) : ∃ config fuel,
     Wasm.startConfig? (Wasm.Universal.envFor Project.HexStdio.«module»)
         Project.HexStdio.«module» "encode" (Wasm.Universal.State.ofInput [a,b]) =
       some config ∧
-    Submission.Outcome.EncodesOrOOM [a,b]
+    Project.HexEncodeStdio.Outcome.EncodesOrOOM [a,b]
       (Wasm.SmallStep.runSteps fuel config).result := by
   refine ⟨_, 1100, rfl, ?_⟩
-  apply Submission.Outcome.checkEncodesOrOOM_sound
+  apply Project.HexEncodeStdio.Outcome.checkEncodesOrOOM_sound
   rfl
 
 #check UInt32.toNat_lt_size

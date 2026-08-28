@@ -1,6 +1,6 @@
 import HexEncodeStdio.ReadToEndGrowthFacts
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexEncodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -490,7 +490,7 @@ theorem ReadToEndInv.after_read
     · decide
   · change (readToEndLengthStore readStore readToEndStack
       (UInt32.ofNat bytes.length) length).wasm.mem.readBytes 1048576 16 =
-        Submission.Hex.asciiTable
+        Project.HexEncodeStdio.Hex.asciiTable
     rw [readToEndLengthStore_preserves_table readStore readToEndStack
         (UInt32.ofNat bytes.length) length (by decide),
       hreadTable, hfilledTable, h.table_eq]
@@ -626,4 +626,4 @@ theorem read_to_end_return_success
   simpa [finalStore, updated, vectorWord, encodeAfterReadConfig, encodeLocals]
     using hinv.finished_success
 
-end Submission.HexDecodeStdio
+end Project.HexEncodeStdio

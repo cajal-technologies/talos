@@ -1,7 +1,7 @@
 import HexDecodeStdio.DecodeLoopMath
 import HexDecodeStdio.ReadToEndGrowthFacts
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -292,4 +292,4 @@ theorem DecodeLoopInv.capacity_allocator_small_when_full
   rw [hfull] at hout
   omega
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

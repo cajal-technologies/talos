@@ -1,6 +1,6 @@
 import HexDecodeStdio.HostIO
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Iris Iris.ProgramLogic Language.Notation
@@ -131,4 +131,4 @@ theorem twp_write_all_nonempty
   iapply Hcont
   iframe
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

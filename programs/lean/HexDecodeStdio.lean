@@ -14,4 +14,4 @@ comparator rejects the submission if it differs. You may use `Mathlib`,
 
 theorem hex_decode_stdio_correct : Project.HexStdio.Spec.DecodeSpec := by
   intro input
-  exact Submission.HexDecodeStdio.decode_export_outcome input
+  exact Project.HexDecodeStdio.decode_export_outcome input

@@ -1,7 +1,7 @@
 import HexDecodeStdio.DecodeSpec
 import HexDecodeStdio.TotalLifting
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio
 open Iris Iris.ProgramLogic Language.Notation Std
@@ -215,4 +215,4 @@ theorem stateInterp_writeBytes
   exact stateInterp_write_bytes store steps observations threads addr
     oldBytes newBytes hlen hbound hnowrap
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

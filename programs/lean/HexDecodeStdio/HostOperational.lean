@@ -1,7 +1,7 @@
 import HexDecodeStdio.HostIO
 import HexDecodeStdio.AllocatorOperational
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -65,7 +65,7 @@ theorem read_adapter_reaches
     (houtBound : out.toNat + 1 ≤ store.wasm.mem.pages * 65536)
     (hout4Bound : out.toNat + 4 + 4 ≤
       store.wasm.mem.pages * 65536) :
-    Submission.HexDecodeStdio.Reaches
+    Project.HexDecodeStdio.Reaches
       ({ expr := .running
           ⟨⟨outerParams, outerLocalValues,
               [.i32 length, .i32 pointer, .i32 ignored, .i32 out] ++ stack⟩,
@@ -292,4 +292,4 @@ theorem write_adapter_reaches
   simp [writeAdapterResultStore, universalWriteStore, resumeCaller]
   exact ⟨[], .refl _⟩
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

@@ -6,7 +6,7 @@ import HexEncodeStdio.Hex
 import HexEncodeStdio.TotalIterator
 import HexEncodeStdio.TotalEncodeLoop
 
-namespace Submission.TotalEncodeFunction
+namespace Project.HexEncodeStdio.TotalEncodeFunction
 
 open Wasm
 open Iris Iris.BI Iris.ProgramLogic Language.Notation Iris.Std
@@ -26,7 +26,7 @@ private theorem func6_drop16_eq : Project.HexStdio.func6.drop 16 =
     .localGet 3 :: .localGet 4 :: .store32 24 ::
     .localGet 3 :: .localGet 1 :: .store32 20 ::
     .localGet 3 :: .const 1114112 :: .store32 16 ::
-    .block 0 0 Submission.TotalEncodeLoop.encodeOuterBody [] [] ::
+    .block 0 0 Project.HexEncodeStdio.TotalEncodeLoop.encodeOuterBody [] [] ::
     func6FinishCode := by
   rfl
 
@@ -60,11 +60,11 @@ theorem func6_finish {hlc : HasLC} {α : Type}
           func6FinishCode, arity, remainder, controls, calls⟩ : Expr α) @ s; E
         [{ Φ }] := by
   obtain ⟨s12, s13, s14, s15⟩ :=
-    Submission.Helpers.wordAccessFacts stackPtr 12 (by omega)
+    Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 12 (by omega)
   obtain ⟨s4, s5, s6, s7⟩ :=
-    Submission.Helpers.wordAccessFacts stackPtr 4 (by omega)
+    Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 4 (by omega)
   obtain ⟨s8, s9, s10, s11⟩ :=
-    Submission.Helpers.wordAccessFacts stackPtr 8 (by omega)
+    Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 8 (by omega)
   have s8' : ((stackPtr + 4) + 4).toNat =
       (stackPtr + 4).toNat + 4 := by
     calc
@@ -104,9 +104,9 @@ theorem func6_finish {hlc : HasLC} {α : Type}
         rw [show (stackPtr + 4).toNat = stackPtr.toNat + 4 by
           simpa using s4]
   obtain ⟨r8, r9, r10, r11⟩ :=
-    Submission.Helpers.wordAccessFacts result 8 (by omega)
+    Project.HexEncodeStdio.Helpers.wordAccessFacts result 8 (by omega)
   obtain ⟨r0, r1, r2, r3⟩ :=
-    Submission.Helpers.wordAccessFacts result 0 (by
+    Project.HexEncodeStdio.Helpers.wordAccessFacts result 0 (by
       norm_num [UInt32.size] at hresult ⊢
       omega)
   have r4 : ((result + 0) + 4).toNat = (result + 0).toNat + 4 := by
@@ -143,7 +143,7 @@ theorem func6_finish {hlc : HasLC} {α : Type}
   ihave Hptr' : pointsTo_u32 0 ((stackPtr + 4) + 4) output $$ [Hptr]
   · rw [show (stackPtr + 4) + 4 = stackPtr + 8 by bv_decide]
     iexact Hptr
-  ihave Hpair := Submission.Helpers.pointsTo_u64_pair_join
+  ihave Hpair := Project.HexEncodeStdio.Helpers.pointsTo_u64_pair_join
     0 (stackPtr + 4) capacity output $$ [$Hcap $Hptr']
   iapply twp_load64
     (capacity.toUInt64 ||| (output.toUInt64 <<< 32))
@@ -164,7 +164,7 @@ theorem func6_finish {hlc : HasLC} {α : Type}
   ihave HresultPair' : pointsTo_u64 0 (result + 0)
       (capacity.toUInt64 ||| (output.toUInt64 <<< 32)) $$ [HresultPair]
   · iexact HresultPair
-  ihave Hpair := Submission.Helpers.pointsTo_u64_pair_split
+  ihave Hpair := Project.HexEncodeStdio.Helpers.pointsTo_u64_pair_split
     0 (result + 0) capacity output $$ HresultPair'
   icases Hpair with ⟨HcapResult, HptrResult⟩
   ihave HcapResult' : pointsTo_u32 0 result capacity $$ [HcapResult]
@@ -196,7 +196,7 @@ theorem func6_after_alloc_nonempty {hlc : HasLC} {α : Type}
     R ∗ runtimeModuleOwn ⟨0⟩ Project.HexStdio.«module» ∗
       globalPointsToAt 0 0 (.i32 stackPtr) ∗
       pointsTo_u32 0 (stackPtr + 4)
-        (UInt32.ofNat (Submission.TotalEncodeLoop.encodeCapacityNat input)) ∗
+        (UInt32.ofNat (Project.HexEncodeStdio.TotalEncodeLoop.encodeCapacityNat input)) ∗
       pointsTo_u32 0 (stackPtr + 8) output ∗
       pointsTo_u32 0 (stackPtr + 12) 0 ∗
       pointsTo_u32 0 (stackPtr + 16) old16 ∗
@@ -206,20 +206,20 @@ theorem func6_after_alloc_nonempty {hlc : HasLC} {α : Type}
       pointsTo_u64 0 (result + 0) oldResultPair ∗
       pointsTo_u32 0 (result + 8) oldResultLen ∗
       pointsToBytes 0 source input ∗
-      pointsToBytes 0 1048576 Submission.Hex.asciiTable ∗
+      pointsToBytes 0 1048576 Project.HexEncodeStdio.Hex.asciiTable ∗
       pointsToBytes 0 output out ∗
       (R -∗ runtimeModuleOwn ⟨0⟩ Project.HexStdio.«module» -∗
         globalPointsToAt 0 0 (.i32 (stackPtr + 32)) -∗
         pointsTo_u32 0 result
-          (UInt32.ofNat (Submission.TotalEncodeLoop.encodeCapacityNat input)) -∗
+          (UInt32.ofNat (Project.HexEncodeStdio.TotalEncodeLoop.encodeCapacityNat input)) -∗
         pointsTo_u32 0 (result + 4) output -∗
         pointsTo_u32 0 (result + 8)
           (UInt32.ofNat (Project.HexStdio.Spec.encode input).length) -∗
-        pointsTo_u32 0 (stackPtr + 16) Submission.TotalIterator.sentinel -∗
+        pointsTo_u32 0 (stackPtr + 16) Project.HexEncodeStdio.TotalIterator.sentinel -∗
         pointsTo_u32 0 (stackPtr + 20)
           (source + UInt32.ofNat input.length) -∗
         pointsToBytes 0 source input -∗
-        pointsToBytes 0 1048576 Submission.Hex.asciiTable -∗
+        pointsToBytes 0 1048576 Project.HexEncodeStdio.Hex.asciiTable -∗
         pointsToBytes 0 output (Project.HexStdio.Spec.encode input) -∗
         ∀ finalLocals : Locals,
         WP (.running
@@ -231,13 +231,13 @@ theorem func6_after_alloc_nonempty {hlc : HasLC} {α : Type}
           Project.HexStdio.func6.drop 16, arity, remainder, controls, calls⟩ :
           Expr α) @ s; E [{ Φ }] := by
   obtain ⟨p16, p17, p18, p19⟩ :=
-    Submission.Helpers.wordAccessFacts stackPtr 16 (by omega)
+    Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 16 (by omega)
   obtain ⟨p20, p21, p22, p23⟩ :=
-    Submission.Helpers.wordAccessFacts stackPtr 20 (by omega)
+    Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 20 (by omega)
   obtain ⟨p24, p25, p26, p27⟩ :=
-    Submission.Helpers.wordAccessFacts stackPtr 24 (by omega)
+    Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 24 (by omega)
   obtain ⟨p28, p29, p30, p31⟩ :=
-    Submission.Helpers.wordAccessFacts stackPtr 28 (by omega)
+    Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 28 (by omega)
   have hzero : 0 < input.length := by
     simpa only [List.length_pos_iff] using hinput
   iintro ⟨HR, Hruntime, Hglobal, Hcap, HoutputPtr, Hlength, H16, H20, H24, H28,
@@ -260,12 +260,12 @@ theorem func6_after_alloc_nonempty {hlc : HasLC} {α : Type}
   iapply twp_store32 old16 p16 p17 p18 p19 $$ H16
   iintro Hcurrent
   iapply twp_block
-  rw [Submission.TotalEncodeLoop.encodeOuterBody_eq]
+  rw [Project.HexEncodeStdio.TotalEncodeLoop.encodeOuterBody_eq]
   iapply twp_localGet rfl
   iapply twp_const
   iapply twp_add
   simp only [UInt32.add_comm (16 : UInt32) stackPtr]
-  iapply Submission.TotalIterator.twp_call_func18_high_at
+  iapply Project.HexEncodeStdio.TotalIterator.twp_call_func18_high_at
     (stackPtr + 16) source input 0 (by omega)
     (by
       have hs16 : (stackPtr + UInt32.ofNat 16).toNat =
@@ -301,20 +301,20 @@ theorem func6_after_alloc_nonempty {hlc : HasLC} {α : Type}
   iintro Hruntime Hcurrent Hcursor Hend HtablePtr Hsource Htable
   iapply twp_localTee rfl
   iapply twp_const
-  iapply Submission.TotalIterator.hdtwp_eq (result := 0)
-    (by simp [Submission.Hex.hexDigit_toUInt32_ne_sentinel])
+  iapply Project.HexEncodeStdio.TotalIterator.hdtwp_eq (result := 0)
+    (by simp [Project.HexEncodeStdio.Hex.hexDigit_toUInt32_ne_sentinel])
   iapply twp_brIfZero
   iapply twp_localGet rfl
   iapply twp_load32 0
     (show (stackPtr + 12).toNat = stackPtr.toNat + 12 by
-      simpa using (Submission.Helpers.wordAccessFacts stackPtr 12 (by omega)).1)
-    (Submission.Helpers.wordAccessFacts stackPtr 12 (by omega)).2.1
-    (Submission.Helpers.wordAccessFacts stackPtr 12 (by omega)).2.2.1
-    (Submission.Helpers.wordAccessFacts stackPtr 12 (by omega)).2.2.2
+      simpa using (Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 12 (by omega)).1)
+    (Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 12 (by omega)).2.1
+    (Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 12 (by omega)).2.2.1
+    (Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 12 (by omega)).2.2.2
     $$ Hlength
   iintro Hlength
   iapply twp_localSet rfl
-  let initial : Submission.TotalEncodeLoop.EncodeLoopState input :=
+  let initial : Project.HexEncodeStdio.TotalEncodeLoop.EncodeLoopState input :=
     ⟨0, by omega, false, 0, source + UInt32.ofNat input.length, 0⟩
   simp only [func6Locals, List.set]
   have hlocals :
@@ -323,10 +323,10 @@ theorem func6_after_alloc_nonempty {hlc : HasLC} {α : Type}
             (input[0].toNat / 16)).toUInt32],
         [.i32 stackPtr, .i32 (source + UInt32.ofNat input.length), .i32 0,
           .i32 0, .i32 0, .i32 0], []⟩ : Locals) =
-        Submission.TotalEncodeLoop.loopLocals result stackPtr output initial := by
+        Project.HexEncodeStdio.TotalEncodeLoop.loopLocals result stackPtr output initial := by
     rfl
   rw [hlocals]
-  iapply Submission.TotalEncodeLoop.func6_encode_loop result stackPtr output source
+  iapply Project.HexEncodeStdio.TotalEncodeLoop.func6_encode_loop result stackPtr output source
     input initial
     (iprop% R ∗ globalPointsToAt 0 0 (.i32 stackPtr) ∗
       pointsTo_u64 0 (result + 0) oldResultPair ∗
@@ -334,15 +334,15 @@ theorem func6_after_alloc_nonempty {hlc : HasLC} {α : Type}
       (R -∗ runtimeModuleOwn ⟨0⟩ Project.HexStdio.«module» -∗
         globalPointsToAt 0 0 (.i32 (stackPtr + 32)) -∗
         pointsTo_u32 0 result
-          (UInt32.ofNat (Submission.TotalEncodeLoop.encodeCapacityNat input)) -∗
+          (UInt32.ofNat (Project.HexEncodeStdio.TotalEncodeLoop.encodeCapacityNat input)) -∗
         pointsTo_u32 0 (result + 4) output -∗
         pointsTo_u32 0 (result + 8)
           (UInt32.ofNat (Project.HexStdio.Spec.encode input).length) -∗
-        pointsTo_u32 0 (stackPtr + 16) Submission.TotalIterator.sentinel -∗
+        pointsTo_u32 0 (stackPtr + 16) Project.HexEncodeStdio.TotalIterator.sentinel -∗
         pointsTo_u32 0 (stackPtr + 20)
           (source + UInt32.ofNat input.length) -∗
         pointsToBytes 0 source input -∗
-        pointsToBytes 0 1048576 Submission.Hex.asciiTable -∗
+        pointsToBytes 0 1048576 Project.HexEncodeStdio.Hex.asciiTable -∗
         pointsToBytes 0 output (Project.HexStdio.Spec.encode input) -∗
         ∀ finalLocals : Locals,
         WP (.running
@@ -355,13 +355,13 @@ theorem func6_after_alloc_nonempty {hlc : HasLC} {α : Type}
         body := [.localGet 3, .const 16, .add, .call 21, .localTee 2,
           .const 1114112, .eq, .br_if 0, .localGet 3, .load32 12,
           .localSet 1,
-          .loop 0 0 Submission.TotalEncodeLoop.encodeLoopBody [] []],
+          .loop 0 0 Project.HexEncodeStdio.TotalEncodeLoop.encodeLoopBody [] []],
         continuation := func6FinishCode,
         belowStack := List.drop 0 [] } :: controls) (calls := calls)
   · intro state finalOut hphase hlast hfinalLen hprefix
-    have hposition : Submission.TotalEncodeLoop.loopPosition state + 1 =
+    have hposition : Project.HexEncodeStdio.TotalEncodeLoop.loopPosition state + 1 =
         2 * input.length := by
-      simp only [Submission.TotalEncodeLoop.loopPosition, hphase]
+      simp only [Project.HexEncodeStdio.TotalEncodeLoop.loopPosition, hphase]
       omega
     have houtEq : finalOut = Project.HexStdio.Spec.encode input := by
       have hp := hprefix
@@ -371,15 +371,15 @@ theorem func6_after_alloc_nonempty {hlc : HasLC} {α : Type}
           rw [← hfinalLen, List.take_length]
         _ = (Project.HexStdio.Spec.encode input).take (2 * input.length) := hp
         _ = Project.HexStdio.Spec.encode input := by
-          rw [← Submission.Hex.encode_length, List.take_length]
+          rw [← Project.HexEncodeStdio.Hex.encode_length, List.take_length]
     have hlenWord : UInt32.ofNat (2 * state.byteIndex + 1) + 1 =
         UInt32.ofNat (Project.HexStdio.Spec.encode input).length := by
-      rw [Submission.Hex.encode_length]
-      rw [Submission.TotalEncodeLoop.u32_ofNat_succ (by
+      rw [Project.HexEncodeStdio.Hex.encode_length]
+      rw [Project.HexEncodeStdio.TotalEncodeLoop.u32_ofNat_succ (by
         have := hcapacity
         omega)]
       congr 1
-      simpa only [Submission.TotalEncodeLoop.loopPosition, hphase] using hposition
+      simpa only [Project.HexEncodeStdio.TotalEncodeLoop.loopPosition, hphase] using hposition
     subst finalOut
     iintro Hruntime Hcap HoutputPtr Hlength Hcurrent Hcursor Hend HtablePtr
       Hsource Htable Hout Hfinish
@@ -388,9 +388,9 @@ theorem func6_after_alloc_nonempty {hlc : HasLC} {α : Type}
     simp only [List.take_zero, List.drop_zero, List.nil_append]
     iapply func6_finish result
       (UInt32.ofNat (2 * state.byteIndex + 1) + 1)
-      Submission.TotalIterator.sentinel stackPtr 1 1
+      Project.HexEncodeStdio.TotalIterator.sentinel stackPtr 1 1
       (output + UInt32.ofNat (2 * state.byteIndex + 1)) 0 0
-      (UInt32.ofNat (Submission.TotalEncodeLoop.encodeCapacityNat input)) output
+      (UInt32.ofNat (Project.HexEncodeStdio.TotalEncodeLoop.encodeCapacityNat input)) output
       (Project.HexStdio.Spec.encode input) oldResultPair oldResultLen hstack
       hresult
     isplitl [Hglobal]
@@ -407,18 +407,18 @@ theorem func6_after_alloc_nonempty {hlc : HasLC} {α : Type}
     isplitl [HresultLen]
     · iexact HresultLen
     iintro Hglobal HcapResult HptrResult HlenResult
-    simp only [Submission.Hex.encode_length]
+    simp only [Project.HexEncodeStdio.Hex.encode_length]
     ispecialize Hpost $$ HR Hruntime Hglobal HcapResult HptrResult HlenResult
       Hcurrent
     ispecialize Hpost $$ Hcursor Hsource Htable Hout
     ispecialize Hpost $$ %(func6Locals result
       (UInt32.ofNat (2 * state.byteIndex + 1) + 1)
-      Submission.TotalIterator.sentinel stackPtr 1 1
+      Project.HexEncodeStdio.TotalIterator.sentinel stackPtr 1 1
       (output + UInt32.ofNat (2 * state.byteIndex + 1)) 0 0)
     iexact Hpost
-  simp only [Submission.TotalEncodeLoop.encodeLoopInvariant,
-    Submission.TotalEncodeLoop.loopLocals, Submission.TotalEncodeLoop.loopPosition,
-    Submission.TotalEncodeLoop.loopDigit, Submission.TotalEncodeLoop.loopSaved, initial,
+  simp only [Project.HexEncodeStdio.TotalEncodeLoop.encodeLoopInvariant,
+    Project.HexEncodeStdio.TotalEncodeLoop.loopLocals, Project.HexEncodeStdio.TotalEncodeLoop.loopPosition,
+    Project.HexEncodeStdio.TotalEncodeLoop.loopDigit, Project.HexEncodeStdio.TotalEncodeLoop.loopSaved, initial,
     func6Locals]
   isplitl [Hruntime]
   · iexact Hruntime
@@ -500,13 +500,13 @@ theorem func6_after_empty {hlc : HasLC} {α : Type}
           Project.HexStdio.func6.drop 16, arity, remainder, controls, calls⟩ :
           Expr α) @ s; E [{ Φ }] := by
   obtain ⟨p16, p17, p18, p19⟩ :=
-    Submission.Helpers.wordAccessFacts stackPtr 16 (by omega)
+    Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 16 (by omega)
   obtain ⟨p20, p21, p22, p23⟩ :=
-    Submission.Helpers.wordAccessFacts stackPtr 20 (by omega)
+    Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 20 (by omega)
   obtain ⟨p24, p25, p26, p27⟩ :=
-    Submission.Helpers.wordAccessFacts stackPtr 24 (by omega)
+    Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 24 (by omega)
   obtain ⟨p28, p29, p30, p31⟩ :=
-    Submission.Helpers.wordAccessFacts stackPtr 28 (by omega)
+    Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 28 (by omega)
   have hiter : (stackPtr + 16).toNat + 12 < UInt32.size := by
     have hs16 : (stackPtr + UInt32.ofNat 16).toNat =
         stackPtr.toNat + 16 := by
@@ -535,12 +535,12 @@ theorem func6_after_empty {hlc : HasLC} {α : Type}
   iapply twp_store32 old16 p16 p17 p18 p19 $$ H16
   iintro Hcurrent
   iapply twp_block
-  rw [Submission.TotalEncodeLoop.encodeOuterBody_eq]
+  rw [Project.HexEncodeStdio.TotalEncodeLoop.encodeOuterBody_eq]
   iapply twp_localGet rfl
   iapply twp_const
   iapply twp_add
   simp only [UInt32.add_comm (16 : UInt32) stackPtr]
-  iapply Submission.TotalIterator.twp_call_func18_end (stackPtr + 16) source hiter
+  iapply Project.HexEncodeStdio.TotalIterator.twp_call_func18_end (stackPtr + 16) source hiter
     (callerLocals := func6Locals result source 0 stackPtr source 0 0 0 0)
     (stack := [])
   isplitl [Hruntime]
@@ -556,12 +556,12 @@ theorem func6_after_empty {hlc : HasLC} {α : Type}
   iintro Hruntime Hcurrent Hcursor Hend
   iapply twp_localTee rfl
   iapply twp_const
-  iapply Submission.TotalIterator.hdtwp_eq (result := 1)
-    (by simp [Submission.TotalIterator.sentinel])
+  iapply Project.HexEncodeStdio.TotalIterator.hdtwp_eq (result := 1)
+    (by simp [Project.HexEncodeStdio.TotalIterator.sentinel])
   iapply twp_brIf (by decide) rfl
   simp only [List.take_zero, List.drop_zero, List.nil_append]
   simp only [func6Locals, List.set]
-  iapply func6_finish result source Submission.TotalIterator.sentinel stackPtr
+  iapply func6_finish result source Project.HexEncodeStdio.TotalIterator.sentinel stackPtr
     source 0 0 0 0 0 1 [] oldResultPair oldResultLen hstack hresult
   isplitl [Hglobal]
   · iexact Hglobal
@@ -578,7 +578,7 @@ theorem func6_after_empty {hlc : HasLC} {α : Type}
   iintro Hglobal HcapResult HptrResult HlenResult
   ispecialize Hpost $$ Hruntime Hglobal HcapResult HptrResult HlenResult
   ispecialize Hpost $$ %(func6Locals result source
-    Submission.TotalIterator.sentinel stackPtr source 0 0 0 0)
+    Project.HexEncodeStdio.TotalIterator.sentinel stackPtr source 0 0 0 0)
   iexact Hpost
 
-end Submission.TotalEncodeFunction
+end Project.HexEncodeStdio.TotalEncodeFunction

@@ -2,7 +2,7 @@ import HexDecodeStdio.DecodePairInvalidLowOperational
 import HexDecodeStdio.DecodeAllocatorFacts
 import HexDecodeStdio.ReadToEndInitial
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -1178,4 +1178,4 @@ theorem decode_core_empty_reaches
     decodeEvenPreparedStore, decodePostReadLocals]
   exact ⟨[], .refl _⟩
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

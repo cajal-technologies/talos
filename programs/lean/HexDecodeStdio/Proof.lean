@@ -26,7 +26,7 @@ proof each placeholder is replaced by function- and loop-level Iris lemmas;
 the target theorem itself stays a one-line application of the root lemma.
 -/
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm
 open Project.HexStdio
@@ -95,4 +95,4 @@ theorem decode_export_outcome (input : List UInt8) :
   · right
     exact ⟨decodeConfig input, startConfig_decode input, hoom⟩
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

@@ -1,6 +1,6 @@
 import HexDecodeStdio.DecodeWrapperStatus
 
-open Wasm Project.HexStdio Submission.HexDecodeStdio
+open Wasm Project.HexStdio Project.HexDecodeStdio
 
 #eval IO.println "SUCCESS_AFTER_ALLOC"
 #eval IO.println (repr decodeSuccessAfterAlloc)

@@ -1,7 +1,7 @@
 import HexDecodeStdio.DecodeLoopPairInvalidLowOperational
 import HexDecodeStdio.ReadToEndInitial
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -183,4 +183,4 @@ theorem allocator_eight_call_outcome
         simpa [allocatorFinish, allocatorPtr, allocatorBase, hbump] using
           hnegative)
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

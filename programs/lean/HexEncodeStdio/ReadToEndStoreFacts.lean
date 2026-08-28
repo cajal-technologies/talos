@@ -1,6 +1,6 @@
 import HexEncodeStdio.ReadToEndOperational
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexEncodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -331,4 +331,4 @@ theorem ByteGrowSuccess.preserves_bytes_before
             rw [Mem.grow_success_bytes_eq store.wasm.mem memory _ _ _ hgrow]
         · exact hdest
 
-end Submission.HexDecodeStdio
+end Project.HexEncodeStdio

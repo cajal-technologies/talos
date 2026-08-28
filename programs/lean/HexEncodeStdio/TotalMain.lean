@@ -2,7 +2,7 @@ import HexEncodeStdio.TotalWrite
 import HexEncodeStdio.HDAllocator
 import HexEncodeStdio.Helpers
 
-namespace Submission.TotalMain
+namespace Project.HexEncodeStdio.TotalMain
 
 open Wasm
 open Iris Iris.BI Iris.ProgramLogic Language.Notation Iris.Std
@@ -33,7 +33,7 @@ private theorem twp_call_func8_nonempty_frame {hlc : HasLC}
       pointsTo_u32 0 (stackPtr + 4) oldLength ∗
       (R ∗ runtimeModuleOwn ⟨0⟩ Project.HexStdio.«module» -∗
         hostEnvOwn 0 (Universal.envFor Project.HexStdio.«module») -∗
-        hostStateOwn (Submission.TotalWrite.afterWrite host bytes) -∗
+        hostStateOwn (Project.HexEncodeStdio.TotalWrite.afterWrite host bytes) -∗
         globalPointsToAt 0 0 (.i32 (stackPtr + 16)) -∗
         pointsToBytes 0 ptr bytes -∗ (⟨0, stackPtr⟩ ↦w (4 : UInt8)) -∗
         pointsTo_u32 0 (stackPtr + 4) length -∗
@@ -56,7 +56,7 @@ private theorem twp_call_func8_nonempty_frame {hlc : HasLC}
   ihave Hcont :
       (runtimeModuleOwn ⟨0⟩ Project.HexStdio.«module» -∗
         hostEnvOwn 0 (Universal.envFor Project.HexStdio.«module») -∗
-        hostStateOwn (Submission.TotalWrite.afterWrite host bytes) -∗
+        hostStateOwn (Project.HexEncodeStdio.TotalWrite.afterWrite host bytes) -∗
         globalPointsToAt 0 0 (.i32 (stackPtr + 16)) -∗
         pointsToBytes 0 ptr bytes -∗ (⟨0, stackPtr⟩ ↦w (4 : UInt8)) -∗
         pointsTo_u32 0 (stackPtr + 4) length -∗
@@ -65,7 +65,7 @@ private theorem twp_call_func8_nonempty_frame {hlc : HasLC}
           @ s; E [{ Φ }]) $$ [HR Hnext]
   · iintro Hruntime Henv Hhost Hglobal Hbytes Htag Hlength
     iapply Hnext $$ [$HR $Hruntime] Henv Hhost Hglobal Hbytes Htag Hlength
-  iapply Submission.TotalWrite.twp_call_func8_nonempty ptr length stackPtr
+  iapply Project.HexEncodeStdio.TotalWrite.twp_call_func8_nonempty ptr length stackPtr
       bytes host oldTag oldLength hlen hpos hptr hstack $$
     [$Hruntime $Henv $Hhost $Hglobal $Hbytes $Htag $Hlength $Hcont]
 
@@ -104,7 +104,7 @@ theorem func10_after_encode_nonempty {hlc : HasLC}
       pointsTo_u32 0 ((sp - 16) + 4) oldWriteLength -∗
     (runtimeModuleOwn ⟨0⟩ Project.HexStdio.«module» -∗
       hostEnvOwn 0 (Universal.envFor Project.HexStdio.«module») -∗
-      hostStateOwn (Submission.TotalWrite.afterWrite host encoded) -∗
+      hostStateOwn (Project.HexEncodeStdio.TotalWrite.afterWrite host encoded) -∗
       globalPointsToAt 0 0 (.i32 (sp + 32)) -∗
       WP (.running ⟨mainLocals sp inputPtr inputCapacity outputCapacity,
           [], 0, [], [], []⟩ : Expr Universal.State) @ s; E [{ Φ }]) -∗
@@ -118,18 +118,18 @@ theorem func10_after_encode_nonempty {hlc : HasLC}
   simp only [Project.HexStdio.func10, List.drop_succ_cons, List.drop_zero]
   iapply twp_localGet rfl
   iapply twp_load32 outputPtr
-      (Submission.Helpers.wordAccessFacts sp 12 (by omega)).1
-      (Submission.Helpers.wordAccessFacts sp 12 (by omega)).2.1
-      (Submission.Helpers.wordAccessFacts sp 12 (by omega)).2.2.1
-      (Submission.Helpers.wordAccessFacts sp 12 (by omega)).2.2.2 $$ HoutPtr
+      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 12 (by omega)).1
+      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 12 (by omega)).2.1
+      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 12 (by omega)).2.2.1
+      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 12 (by omega)).2.2.2 $$ HoutPtr
   iintro HoutPtr
   iapply twp_localTee rfl
   iapply twp_localGet rfl
   iapply twp_load32 (UInt32.ofNat encoded.length)
-      (Submission.Helpers.wordAccessFacts sp 16 (by omega)).1
-      (Submission.Helpers.wordAccessFacts sp 16 (by omega)).2.1
-      (Submission.Helpers.wordAccessFacts sp 16 (by omega)).2.2.1
-      (Submission.Helpers.wordAccessFacts sp 16 (by omega)).2.2.2 $$ HoutLen
+      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 16 (by omega)).1
+      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 16 (by omega)).2.1
+      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 16 (by omega)).2.2.1
+      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 16 (by omega)).2.2.2 $$ HoutLen
   iintro HoutLen
   simp [mainLocals, List.set]
   ihave HglobalWrite : globalPointsToAt 0 0 (.i32 ((sp - 16) + 16)) $$ [Hglobal]
@@ -145,7 +145,7 @@ theorem func10_after_encode_nonempty {hlc : HasLC}
       pointsToBytes 0 inputPtr input ∗
       (runtimeModuleOwn ⟨0⟩ Project.HexStdio.«module» -∗
         hostEnvOwn 0 (Universal.envFor Project.HexStdio.«module») -∗
-        hostStateOwn (Submission.TotalWrite.afterWrite host encoded) -∗
+        hostStateOwn (Project.HexEncodeStdio.TotalWrite.afterWrite host encoded) -∗
         globalPointsToAt 0 0 (.i32 (sp + 32)) -∗
         WP (.running ⟨mainLocals sp inputPtr inputCapacity outputCapacity,
           [], 0, [], [], []⟩ : Expr Universal.State) @ s; E [{ Φ }]))
@@ -169,10 +169,10 @@ theorem func10_after_encode_nonempty {hlc : HasLC}
   iapply twp_block
   iapply twp_localGet rfl
   iapply twp_load32 outputCapacity
-      (Submission.Helpers.wordAccessFacts sp 8 (by omega)).1
-      (Submission.Helpers.wordAccessFacts sp 8 (by omega)).2.1
-      (Submission.Helpers.wordAccessFacts sp 8 (by omega)).2.2.1
-      (Submission.Helpers.wordAccessFacts sp 8 (by omega)).2.2.2 $$
+      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 8 (by omega)).1
+      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 8 (by omega)).2.1
+      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 8 (by omega)).2.2.1
+      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 8 (by omega)).2.2.2 $$
       HoutputCapacityMem
   iintro HoutCapLoaded
   iapply twp_localTee rfl
@@ -190,7 +190,7 @@ theorem func10_after_encode_nonempty {hlc : HasLC}
         .localGet 2, .localGet 3, .const 1, .call 17]
       continuation := Project.HexStdio.func10.drop 25
       belowStack := [] }
-  have hdealloc := Submission.HexDecodeStdio.twp_dealloc_noop
+  have hdealloc := Project.HexEncodeStdio.twp_dealloc_noop
       (s := s) (E := E) (Φ := Φ) outputPtr outputCapacity 1
       (⟨[], [.i32 sp, .i32 inputPtr, .i32 outputPtr, .i32 outputCapacity], []⟩)
       [] [] 0 []
@@ -209,10 +209,10 @@ theorem func10_after_encode_nonempty {hlc : HasLC}
   iapply twp_block
   iapply twp_localGet rfl
   iapply twp_load32 inputCapacity
-      (Submission.Helpers.wordAccessFacts sp 20 (by omega)).1
-      (Submission.Helpers.wordAccessFacts sp 20 (by omega)).2.1
-      (Submission.Helpers.wordAccessFacts sp 20 (by omega)).2.2.1
-      (Submission.Helpers.wordAccessFacts sp 20 (by omega)).2.2.2 $$
+      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 20 (by omega)).1
+      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 20 (by omega)).2.1
+      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 20 (by omega)).2.2.1
+      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 20 (by omega)).2.2.2 $$
       HinputCap
   iintro HinputCapLoaded
   iapply twp_localTee rfl
@@ -222,7 +222,7 @@ theorem func10_after_encode_nonempty {hlc : HasLC}
   iapply twp_localGet rfl
   iapply twp_localGet rfl
   iapply twp_const
-  have hdeallocInput := Submission.HexDecodeStdio.twp_dealloc_noop
+  have hdeallocInput := Project.HexEncodeStdio.twp_dealloc_noop
       (s := s) (E := E) (Φ := Φ) inputPtr inputCapacity 1
       (⟨[], [.i32 sp, .i32 inputPtr, .i32 inputCapacity, .i32 outputCapacity], []⟩)
       [] [] 0 []
@@ -249,4 +249,4 @@ theorem func10_after_encode_nonempty {hlc : HasLC}
   simp [mainLocals]
   iapply Hnext $$ HruntimeAfterInputDealloc Henv Hhost Hglobal'
 
-end Submission.TotalMain
+end Project.HexEncodeStdio.TotalMain

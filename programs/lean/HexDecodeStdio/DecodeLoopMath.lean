@@ -1,7 +1,7 @@
 import Mathlib
 import HexDecodeStdio.DecodeLoopReserveOperational
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Project.HexStdio.Spec
 
@@ -103,4 +103,4 @@ theorem decode_some_length (input output : List UInt8)
                   simp
                   omega
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

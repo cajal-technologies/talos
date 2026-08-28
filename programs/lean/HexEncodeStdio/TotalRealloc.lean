@@ -1,6 +1,6 @@
 import HexEncodeStdio.TotalAllocator
 
-namespace Submission.TotalRealloc
+namespace Project.HexEncodeStdio.TotalRealloc
 
 open Wasm Project.HexStdio
 open Iris Iris.BI Iris.ProgramLogic Language.Notation Iris.Std
@@ -46,10 +46,10 @@ theorem func15_realloc_outcome {hlc : HasLC}
     (hlenNew : newArena.length = newSize.toNat)
     (hpos : 0 < oldSize.toNat)
     (hle : oldSize.toNat ≤ newSize.toNat)
-    (hfinish : (Submission.TotalAllocator.allocPtr 1 oldBump).toNat +
+    (hfinish : (Project.HexEncodeStdio.TotalAllocator.allocPtr 1 oldBump).toNat +
         newSize.toNat < 2147483648)
     (hnegative : ¬ (newSize +
-        Submission.TotalAllocator.allocPtr 1 oldBump).toInt32 <
+        Project.HexEncodeStdio.TotalAllocator.allocPtr 1 oldBump).toInt32 <
         UInt32.toInt32 0)
     (hnowrapOld : oldPtr.toNat + oldSize.toNat < UInt32.size)
     (callerLocals : Locals) (stack : List Value) (code : Program)
@@ -60,19 +60,19 @@ theorem func15_realloc_outcome {hlc : HasLC}
       hostStateOwn host ∗
       pointsTo_u32 0 1053960 oldBump ∗
       pointsToBytes 0 oldPtr oldBytes ∗
-      pointsToBytes 0 (Submission.TotalAllocator.allocPtr 1 oldBump)
+      pointsToBytes 0 (Project.HexEncodeStdio.TotalAllocator.allocPtr 1 oldBump)
         newArena -∗
     (runtimeModuleOwn ⟨0⟩ «module» ∗
       hostEnvOwn 0 (Universal.envFor «module») ∗
       hostStateOwn host ∗
       pointsTo_u32 0 1053960
-        (newSize + Submission.TotalAllocator.allocPtr 1 oldBump) ∗
+        (newSize + Project.HexEncodeStdio.TotalAllocator.allocPtr 1 oldBump) ∗
       pointsToBytes 0 oldPtr oldBytes ∗
-      pointsToBytes 0 (Submission.TotalAllocator.allocPtr 1 oldBump)
+      pointsToBytes 0 (Project.HexEncodeStdio.TotalAllocator.allocPtr 1 oldBump)
         (oldBytes ++ newArena.drop oldSize.toNat) -∗
       WP (.running
         ⟨{ callerLocals with values :=
-            (Value.i32 (Submission.TotalAllocator.allocPtr 1 oldBump) :: stack) },
+            (Value.i32 (Project.HexEncodeStdio.TotalAllocator.allocPtr 1 oldBump) :: stack) },
           code, arity, remainder, controls, calls⟩ : Expr Universal.State) @
           Stuckness.MaybeStuck; E [{ Φ }]) -∗
     WP (.running
@@ -80,7 +80,7 @@ theorem func15_realloc_outcome {hlc : HasLC}
           [.i32 newSize, .i32 1, .i32 oldSize, .i32 oldPtr] ++ stack },
         [.call 18] ++ code, arity, remainder, controls, calls⟩ :
         Expr Universal.State) @ Stuckness.MaybeStuck; E [{ Φ }] := by
-  let ptr := Submission.TotalAllocator.allocPtr 1 oldBump
+  let ptr := Project.HexEncodeStdio.TotalAllocator.allocPtr 1 oldBump
   have hptr : ptr = if oldBump = 0 then 1054000 else oldBump := by
     simp [ptr]
   have hptrNe : ptr ≠ 0 := by
@@ -205,7 +205,7 @@ theorem func15_realloc_outcome {hlc : HasLC}
     · iintro Hruntime Hold Hnew ⟨Henv, Hhost, Hbump⟩
       iapply Hnext
       iframe
-    iapply Submission.TotalAllocator.func15_copy_return oldPtr oldSize ptr
+    iapply Project.HexEncodeStdio.TotalAllocator.func15_copy_return oldPtr oldSize ptr
       newSize (newSize + ptr) ((65535 + (newSize + ptr)) >>> 16)
       (UInt32.ofNat pages) oldBytes newArena hlenOld hlenNew hpos hle hptrNe
       hnowrapOld hnowrapNew callerLocals stack code arity remainder controls
@@ -240,7 +240,7 @@ theorem func15_realloc_outcome {hlc : HasLC}
     · simp only [hgrow, ↓reduceIte]
       iapply twp_brIf (by decide) rfl
       simp
-      iapply Submission.HexDecodeStdio.twp_oom_wrapper_locals host
+      iapply Project.HexEncodeStdio.twp_oom_wrapper_locals host
         (stack := []) (code := [.unreachable])
       iframe
     · simp only [hgrow, ↓reduceIte]
@@ -265,7 +265,7 @@ theorem func15_realloc_outcome {hlc : HasLC}
       · iintro Hruntime Hold Hnew ⟨Henv, Hhost, Hbump⟩
         iapply Hnext
         iframe
-      iapply Submission.TotalAllocator.func15_copy_return oldPtr oldSize ptr
+      iapply Project.HexEncodeStdio.TotalAllocator.func15_copy_return oldPtr oldSize ptr
         newSize (newSize + ptr) ((65535 + (newSize + ptr)) >>> 16)
         (UInt32.ofNat pages) oldBytes newArena hlenOld hlenNew hpos hle hptrNe
         hnowrapOld hnowrapNew callerLocals stack code arity remainder controls
@@ -273,4 +273,4 @@ theorem func15_realloc_outcome {hlc : HasLC}
           hostStateOwn host ∗ pointsTo_u32 0 1053960 (newSize + ptr))
         $$ [$Hruntime $Hold $Hnew $Henv $Hhost $Hbump $HcopyNext]
 
-end Submission.TotalRealloc
+end Project.HexEncodeStdio.TotalRealloc

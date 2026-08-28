@@ -2,7 +2,7 @@ import HexEncodeStdio.ReadToEndStoreFacts
 import HexEncodeStdio.EncodePrefixOperational
 import HexEncodeStdio.Hex
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexEncodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -238,7 +238,7 @@ structure ReadToEndInv (input consumed remaining : List UInt8)
   data_eq : store.wasm.mem.read32 (readToEndStack + 8) = data
   length_eq : store.wasm.mem.read32 (readToEndStack + 12) = length
   bump_eq : store.wasm.mem.read32 1053960 = bump
-  table_eq : store.wasm.mem.readBytes 1048576 16 = Submission.Hex.asciiTable
+  table_eq : store.wasm.mem.readBytes 1048576 16 = Project.HexEncodeStdio.Hex.asciiTable
   bytes_eq : store.wasm.mem.readBytes data.toNat consumed.length = consumed
   length_nat : length.toNat = consumed.length
   length_le_capacity : length.toNat ≤ capacity.toNat
@@ -367,7 +367,7 @@ def ReadToEndSuccess (input : List UInt8)
     store.wasm.mem.read32 (1048564 + 8) =
       UInt32.ofNat input.length ∧
     store.wasm.mem.read32 1053960 = bump ∧
-    store.wasm.mem.readBytes 1048576 16 = Submission.Hex.asciiTable ∧
+    store.wasm.mem.readBytes 1048576 16 = Project.HexEncodeStdio.Hex.asciiTable ∧
     store.wasm.mem.readBytes data.toNat input.length = input ∧
     input.length ≤ capacity.toNat ∧
     8 ≤ capacity.toNat ∧
@@ -377,4 +377,4 @@ def ReadToEndSuccess (input : List UInt8)
     bump.toNat < 2 ^ 31 ∧
     data.toNat + capacity.toNat ≤ store.wasm.mem.pages * 65536
 
-end Submission.HexDecodeStdio
+end Project.HexEncodeStdio

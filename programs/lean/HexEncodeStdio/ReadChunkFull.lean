@@ -1,6 +1,6 @@
 import HexEncodeStdio.StoreFacts
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexEncodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -314,4 +314,4 @@ theorem read_chunk_first_outcome
           omega)
       hsuccessFacts
 
-end Submission.HexDecodeStdio
+end Project.HexEncodeStdio

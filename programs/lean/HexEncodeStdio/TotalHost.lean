@@ -1,7 +1,7 @@
 import Mathlib
 import CodeLib
 
-namespace Submission.TotalHost
+namespace Project.HexEncodeStdio.TotalHost
 
 open Wasm
 open Iris Iris.BI Iris.ProgramLogic Language.Notation Iris.Std
@@ -306,4 +306,4 @@ theorem twp_callHost_return_fupd {hlc : HasLC} {α : Type}
         · iexact HinstanceOwn
       · iexact Henv
 
-end Submission.TotalHost
+end Project.HexEncodeStdio.TotalHost

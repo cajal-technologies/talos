@@ -1,7 +1,7 @@
 import HexEncodeStdio.ReachOutcome
 import HexEncodeStdio.Outcome
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexEncodeStdio
 
 open Wasm Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -15,7 +15,7 @@ required by the submission's runner-level interface. -/
 theorem reachesOrOOM_to_runner
     (input : List UInt8) (initial : Config Universal.State)
     (h : ReachesOrOOM initial (EncodesConfig input)) :
-    ∃ fuel, Submission.Outcome.EncodesOrOOM input
+    ∃ fuel, Project.HexEncodeStdio.Outcome.EncodesOrOOM input
       (runSteps fuel initial).result := by
   rcases h with ⟨final, ⟨trace, hsteps⟩, hfinal⟩ | htrap
   · rcases hfinal with ⟨store, rfl, hout⟩
@@ -27,4 +27,4 @@ theorem reachesOrOOM_to_runner
     rw [runSteps_finalConfig_of_steps hsteps]
     exact ⟨rfl, hoom⟩
 
-end Submission.HexDecodeStdio
+end Project.HexEncodeStdio

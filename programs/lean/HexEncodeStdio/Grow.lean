@@ -1,7 +1,7 @@
 import Mathlib
 import CodeLib
 
-namespace Submission.Grow
+namespace Project.HexEncodeStdio.Grow
 
 open Wasm
 open Iris Iris.BI Iris.ProgramLogic Language.Notation Iris.Std
@@ -446,4 +446,4 @@ theorem wp_memoryGrow_owned {hlc : HasLC} {α : Type}
     · iapply Hsuccess memory previousPages $$ Hnew Hruntime HheapFrontierOwn
     · itrivial
 
-end Submission.Grow
+end Project.HexEncodeStdio.Grow

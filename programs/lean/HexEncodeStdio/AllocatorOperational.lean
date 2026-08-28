@@ -1,6 +1,6 @@
 import HexEncodeStdio.OperationalOutcome
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexEncodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -797,4 +797,4 @@ theorem allocator_call_outcome
           hmod hread hbound hboundGrown hfirst hsecond hnegative henough hgrow
           hresult
 
-end Submission.HexDecodeStdio
+end Project.HexEncodeStdio

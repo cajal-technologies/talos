@@ -2,7 +2,7 @@ import HexDecodeStdio.DecodeSpec
 import HexDecodeStdio.MemoryBytes
 import HexDecodeStdio.DecodeIterator
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Iris Iris.ProgramLogic Language.Notation Std
@@ -812,4 +812,4 @@ theorem twp_read_adapter_no_stack
       hnowrap houtCount ⟨params, localValues, []⟩ [] code arity remainder
       controls calls)
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

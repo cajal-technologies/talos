@@ -1,7 +1,7 @@
 import HexDecodeStdio.DecodePairOperational
 import HexDecodeStdio.HexMath
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -49,7 +49,7 @@ theorem decodePair_invalid_high_reaches
   let hi := store.wasm.mem.read8 inputPtr
   let lo := store.wasm.mem.read8 (inputPtr + 1)
   obtain ⟨hhiUpper, hhiLower, hhiDigit⟩ :=
-    Submission.HexDecodeStdio.hexValue_none_tests hi hhi
+    Project.HexDecodeStdio.hexValue_none_tests hi hhi
   simp only [hi, Mem.read8] at hhiUpper hhiLower hhiDigit
   have hlenA : 2 ≤ len.toNat := by simpa only [len] using hlen
   change 2 ≤ (store.wasm.mem.read32 1048476).toNat at hlenA
@@ -332,4 +332,4 @@ theorem decodePair_invalid_high_reaches
   simp [decodePairInvalidStore, decodePairBaseStore, Mem.write32]
   exact ⟨[], .refl _⟩
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

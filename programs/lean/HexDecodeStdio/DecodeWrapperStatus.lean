@@ -3,7 +3,7 @@ import HexDecodeStdio.DecodeWrapperCommon
 import HexDecodeStdio.ReserveOutcome
 import HexDecodeStdio.PushOperational
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -536,4 +536,4 @@ theorem decode_invalid_wrapper_outcome
   · right
     exact TrapsWith.prependReaches hprefix htrap
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

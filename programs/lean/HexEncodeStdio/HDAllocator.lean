@@ -1,7 +1,7 @@
 import Project.HexStdio.Spec
 import HexEncodeStdio.HDTotalLifting
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexEncodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Iris Iris.ProgramLogic Language.Notation
@@ -484,4 +484,4 @@ theorem twp_allocator
               (code := [.unreachable])
             iframe
 
-end Submission.HexDecodeStdio
+end Project.HexEncodeStdio

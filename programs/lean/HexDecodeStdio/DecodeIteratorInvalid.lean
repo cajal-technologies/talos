@@ -1,6 +1,6 @@
 import HexDecodeStdio.DecodeIterator
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio
 open Iris Iris.ProgramLogic Language.Notation
@@ -245,4 +245,4 @@ theorem twp_decodePair_invalid_high
   iframe
 
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

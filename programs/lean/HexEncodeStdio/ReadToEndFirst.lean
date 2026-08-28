@@ -1,6 +1,6 @@
 import HexEncodeStdio.ReadToEndOperational
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexEncodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -114,4 +114,4 @@ theorem read_to_end_first_outcome
     · right; decide
     · right; decide
 
-end Submission.HexDecodeStdio
+end Project.HexEncodeStdio

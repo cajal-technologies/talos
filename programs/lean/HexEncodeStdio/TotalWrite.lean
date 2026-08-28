@@ -6,7 +6,7 @@ import HexEncodeStdio.TotalHost
 import HexEncodeStdio.TotalHelpers
 import HexEncodeStdio.TotalIterator
 
-namespace Submission.TotalWrite
+namespace Project.HexEncodeStdio.TotalWrite
 
 open Wasm
 open Iris Iris.BI Iris.ProgramLogic Language.Notation Iris.Std
@@ -74,7 +74,7 @@ theorem twp_universal_write {hlc : HasLC}
       ⟨⟨params, localValues, .i32 ptr :: .i32 length :: values⟩,
         .call 1 :: code, arity, remainder, controls, calls⟩ :
           Expr Universal.State) @ s; E [{ Φ }] := by
-  obtain ⟨hostFn, hhostFn, hresolve⟩ := Submission.Host.universal_write_resolver
+  obtain ⟨hostFn, hhostFn, hresolve⟩ := Project.HexEncodeStdio.Host.universal_write_resolver
   have htransfer : ∀ (store : MachineStore Universal.State) ns obs nt,
       store.runtime.currentModule = Project.HexStdio.«module» →
       store.runtime.currentHost =
@@ -107,13 +107,13 @@ theorem twp_universal_write {hlc : HasLC}
       readBytes_eq_of_facts store.wasm.mem ptr bytes Hfacts hnowrap
     let newHost := afterWrite host bytes
     let newWasm : Store Universal.State := { store.wasm with host := newHost }
-    imod Submission.TotalHost.stateInterp_host_set_expected
+    imod Project.HexEncodeStdio.TotalHost.stateInterp_host_set_expected
         store ns obs nt host newHost $$ [$Hσ $Hhost] with
       ⟨%HhostPhysical, Hσ, Hhost⟩
     have hinvoke : hostFn.invoke store.wasm [.i32 length, .i32 ptr] =
         .Return [] newWasm := by
       rw [hresolve]
-      simp only [Submission.Host.universalWriteHost, HostFn.lift]
+      simp only [Project.HexEncodeStdio.Host.universalWriteHost, HostFn.lift]
       simp only [StdIO.writeHost, StdIO.writeResult]
       rw [if_pos]
       · simp [Store.focus, Store.mapHost, Store.unfocus, newWasm, newHost,
@@ -133,7 +133,7 @@ theorem twp_universal_write {hlc : HasLC}
       · iexact Hhost
     · iexact Hσ
   iintro Hbytes Hhost Hruntime Henv Hnext
-  iapply Submission.TotalHost.twp_callHost_return_fupd
+  iapply Project.HexEncodeStdio.TotalHost.twp_callHost_return_fupd
     Project.HexStdio.«module» 1 Project.HexStdio.«module».imports[1]
     hostFn (by decide) rfl
     (Universal.envFor Project.HexStdio.«module») hhostFn
@@ -154,10 +154,10 @@ theorem twp_universal_write {hlc : HasLC}
           { get := Universal.State.stdio
             set := fun whole part => { whole with stdio := part } })
         ptr.toNat length.toNat
-    · simp [Submission.Host.universalWriteHost, HostFn.lift,
+    · simp [Project.HexEncodeStdio.Host.universalWriteHost, HostFn.lift,
         StdIO.writeHost, StdIO.writeResult, hb] at hinvoke
       exact hinvoke.1
-    · simp [Submission.Host.universalWriteHost, HostFn.lift,
+    · simp [Project.HexEncodeStdio.Host.universalWriteHost, HostFn.lift,
         StdIO.writeHost, StdIO.writeResult, hb] at hinvoke
   subst results
   icases HQ with ⟨Hbytes, Hhost⟩
@@ -207,7 +207,7 @@ theorem func17_body {hlc : HasLC}
           Project.HexStdio.func17, arity, remainder, controls, calls⟩ :
             Expr Universal.State) @ s; E [{ Φ }] := by
   obtain ⟨r4, r5, r6, r7⟩ :=
-    Submission.Helpers.wordAccessFacts result 4 (by
+    Project.HexEncodeStdio.Helpers.wordAccessFacts result 4 (by
       norm_num [UInt32.size] at hresult ⊢
       omega)
   iintro ⟨Hruntime, Henv, Hhost, Hbytes, Htag, Hlength, Hnext⟩
@@ -223,7 +223,7 @@ theorem func17_body {hlc : HasLC}
   iintro Hbytes Hhost Hruntime Henv
   iapply twp_localGet rfl
   iapply twp_const
-  iapply Submission.TotalHelpers.twp_store8_zero oldTag $$ Htag
+  iapply Project.HexEncodeStdio.TotalHelpers.twp_store8_zero oldTag $$ Htag
   iintro Htag
   ihave Htag' : (⟨0, result⟩ ↦w (4 : UInt8)) $$ [Htag]
   · norm_num
@@ -291,7 +291,7 @@ theorem twp_call_func17 {hlc : HasLC}
   isplitl [Hlength]
   · iexact Hlength
   iintro Hruntime Henv Hhost Hbytes Htag Hlength
-  iapply Submission.TotalIterator.hdtwp_returnFromCallFallthrough' $$ Hruntime
+  iapply Project.HexEncodeStdio.TotalIterator.hdtwp_returnFromCallFallthrough' $$ Hruntime
   iintro Hruntime
   simp only [List.take_zero, List.nil_append]
   iapply Hnext $$ Hruntime Henv Hhost Hbytes Htag Hlength
@@ -439,7 +439,7 @@ theorem func8_after_prologue_nonempty {hlc : HasLC}
           arity, remainder, controls, calls⟩ : Expr Universal.State)
         @ s; E [{ Φ }] := by
   obtain ⟨p4, p5, p6, p7⟩ :=
-    Submission.Helpers.wordAccessFacts stackPtr 4 (by
+    Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 4 (by
       norm_num [UInt32.size] at hstack ⊢
       omega)
   iintro ⟨Hruntime, Henv, Hhost, Hglobal, Hbytes, Htag, Hlength, Hnext⟩
@@ -497,11 +497,11 @@ theorem func8_after_prologue_nonempty {hlc : HasLC}
   iapply twp_block
   rw [writeBlock6_eq]
   iapply twp_localGet rfl
-  iapply Submission.TotalIterator.twp_load8U_zero (4 : UInt8) $$ Htag
+  iapply Project.HexEncodeStdio.TotalIterator.twp_load8U_zero (4 : UInt8) $$ Htag
   iintro Htag
   iapply twp_localTee rfl
   iapply twp_const
-  iapply Submission.TotalIterator.hdtwp_eq (result := 1) (by simp)
+  iapply Project.HexEncodeStdio.TotalIterator.hdtwp_eq (result := 1) (by simp)
   iapply twp_brIf (by decide) rfl
   rw [writeBlock5Tail_eq]
   iapply twp_block
@@ -611,9 +611,9 @@ theorem twp_call_func8_nonempty {hlc : HasLC}
   isplitl [Hlength]
   · iexact Hlength
   iintro Hruntime Henv Hhost Hglobal Hbytes Htag Hlength
-  iapply Submission.TotalIterator.hdtwp_returnFromCallFallthrough' $$ Hruntime
+  iapply Project.HexEncodeStdio.TotalIterator.hdtwp_returnFromCallFallthrough' $$ Hruntime
   iintro Hruntime
   simp only [List.take_zero, List.nil_append]
   iapply Hnext $$ Hruntime Henv Hhost Hglobal Hbytes Htag Hlength
 
-end Submission.TotalWrite
+end Project.HexEncodeStdio.TotalWrite

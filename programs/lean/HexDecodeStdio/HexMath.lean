@@ -1,7 +1,7 @@
 import HexDecodeStdio.DecodeSpec
 import HexDecodeStdio.DecodeIterator
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Project.HexStdio.Spec
 
@@ -129,4 +129,4 @@ theorem route_pair_byte (hi lo : UInt8) (hiNibble loNibble : Nat)
       nibble_or_eq_ofNat _ _ (hlo.symm ▸ hloLt) (hhi.symm ▸ hhiLt)
     _ = _ := by rw [hhi, hlo]
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

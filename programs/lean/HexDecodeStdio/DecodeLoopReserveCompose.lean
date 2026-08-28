@@ -1,7 +1,7 @@
 import HexDecodeStdio.DecodeLoopReserveInvariant
 import HexDecodeStdio.ReserveOutcome
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -120,4 +120,4 @@ theorem DecodeLoopInv.reserve_reachesOrOOM
         simpa [reserveFrameStore] using hm)) hptrRead hwrite)
   exact ⟨allocStore, hfinish, hsuccess, rfl⟩
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

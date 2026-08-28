@@ -1,6 +1,6 @@
 import HexDecodeStdio.DecodeLoopInvariantSteps
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -332,4 +332,4 @@ theorem DecodeLoopInv.reserve_grown_copy_bounds
     rw [hfinish] at hceil
     exact le_trans (by omega) (Nat.mul_le_mul_right 65536 hcover)
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

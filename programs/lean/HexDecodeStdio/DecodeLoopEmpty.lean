@@ -1,6 +1,6 @@
 import HexDecodeStdio.DecodeLoopResult
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -303,4 +303,4 @@ theorem DecodeLoopInv.empty_reachesOrOOM
       returningInstance hreturn
     exact ReachesOrOOM.of_reaches (hprefix.trans hdone.1) hdone.2
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

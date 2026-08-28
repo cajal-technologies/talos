@@ -1,7 +1,7 @@
 import HexEncodeStdio.MainOperational
 import HexEncodeStdio.ReserveOutcome
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexEncodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -101,4 +101,4 @@ theorem encode_call_to_reserve
     encodeMainCalls, setMemory_eq, UInt32.add_comm]
   exact ⟨[], .refl _⟩
 
-end Submission.HexDecodeStdio
+end Project.HexEncodeStdio

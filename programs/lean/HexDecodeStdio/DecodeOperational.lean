@@ -1,6 +1,6 @@
 import HexDecodeStdio.ReadToEndStoreFacts
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -229,4 +229,4 @@ theorem decode_to_first_chunk_outcome (input : List UInt8) :
   exact ReachesOrOOM.prependReaches hprefix (by
     simpa [entryStore, framed, bytes] using hchunk)
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

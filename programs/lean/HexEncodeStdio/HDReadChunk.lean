@@ -1,7 +1,7 @@
 import HexEncodeStdio.HDMemoryLayout
 import HexEncodeStdio.HDHostIO
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexEncodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Iris Iris.ProgramLogic Language.Notation
@@ -543,4 +543,4 @@ theorem twp_read_chunk_nonempty_fits
   iapply Hcont
   iframe
 
-end Submission.HexDecodeStdio
+end Project.HexEncodeStdio

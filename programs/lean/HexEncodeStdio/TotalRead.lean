@@ -7,7 +7,7 @@ import HexEncodeStdio.Helpers
 import HexEncodeStdio.TotalHelpers
 import HexEncodeStdio.TotalIterator
 
-namespace Submission.TotalRead
+namespace Project.HexEncodeStdio.TotalRead
 
 open Wasm
 open Iris Iris.BI Iris.ProgramLogic Language.Notation Iris.Std
@@ -173,7 +173,7 @@ theorem twp_universal_read {hlc : HasLC}
     omega
   have htakeLen : (old.take read.length).length = read.length :=
     List.length_take_of_le hread_le
-  obtain ⟨hostFn, hhostFn, hresolve⟩ := Submission.Host.universal_read_resolver
+  obtain ⟨hostFn, hhostFn, hresolve⟩ := Project.HexEncodeStdio.Host.universal_read_resolver
   have htransfer : ∀ (store : MachineStore Universal.State) ns obs nt,
       store.runtime.currentModule = Project.HexStdio.«module» →
       store.runtime.currentHost = Universal.envFor Project.HexStdio.«module» →
@@ -201,7 +201,7 @@ theorem twp_universal_read {hlc : HasLC}
       exact Hfacts
     have hbound : ptr.toNat + old.length ≤ store.wasm.mem.pages * 65536 :=
       pointsToBytes_facts_bound Hfacts hpos hnowrap
-    ihave Hold := Submission.Helpers.pointsToBytes_take_drop 0 ptr old
+    ihave Hold := Project.HexEncodeStdio.Helpers.pointsToBytes_take_drop 0 ptr old
       read.length hread_le $$ Hold
     icases Hold with ⟨Hprefix, Hsuffix⟩
     imod stateInterp_writeBytes_exact store ns obs nt ptr (old.take read.length)
@@ -209,7 +209,7 @@ theorem twp_universal_read {hlc : HasLC}
           rw [List.length_take_of_le hread_le]
           omega) $$ [$Hσ $Hprefix] with ⟨Hσ, Hprefix⟩
     let newHost := afterRead host read
-    imod Submission.TotalHost.stateInterp_host_set_expected
+    imod Project.HexEncodeStdio.TotalHost.stateInterp_host_set_expected
         { store with wasm :=
             { store.wasm with mem := store.wasm.mem.writeBytes ptr.toNat read } }
         ns obs nt host newHost $$ [$Hσ $Hhost] with
@@ -224,7 +224,7 @@ theorem twp_universal_read {hlc : HasLC}
             mem := store.wasm.mem.writeBytes ptr.toNat read
             host := newHost } := by
       rw [hresolve]
-      simp only [Submission.Host.universalReadHost, HostFn.lift,
+      simp only [Project.HexEncodeStdio.Host.universalReadHost, HostFn.lift,
         StdIO.readHost, StdIO.readResult]
       simp only [Store.focus, Store.mapHost]
       rw [hhostActual]
@@ -253,7 +253,7 @@ theorem twp_universal_read {hlc : HasLC}
       · iexact Hhost
     · iexact Hσ
   iintro Hold Hhost Hruntime Henv Hnext
-  iapply Submission.TotalHost.twp_callHost_return_fupd
+  iapply Project.HexEncodeStdio.TotalHost.twp_callHost_return_fupd
     Project.HexStdio.«module» 0 Project.HexStdio.«module».imports[0]
     hostFn (by decide) rfl (Universal.envFor Project.HexStdio.«module»)
     hhostFn (iprop(pointsToBytes 0 ptr old ∗ hostStateOwn host))
@@ -314,7 +314,7 @@ theorem func16_body {hlc : HasLC}
           Project.HexStdio.func16, arity, remainder, controls, calls⟩ :
             Expr Universal.State) @ s; E [{ Φ }] := by
   obtain ⟨r4, r5, r6, r7⟩ :=
-    Submission.Helpers.wordAccessFacts result 4 (by
+    Project.HexEncodeStdio.Helpers.wordAccessFacts result 4 (by
       norm_num [UInt32.size] at hresult ⊢
       omega)
   iintro ⟨Hruntime, Henv, Hhost, Hbytes, Htag, Hlength, Hnext⟩
@@ -331,7 +331,7 @@ theorem func16_body {hlc : HasLC}
   iapply twp_localSet rfl
   iapply twp_localGet rfl
   iapply twp_const
-  iapply Submission.TotalHelpers.twp_store8_zero oldTag $$ Htag
+  iapply Project.HexEncodeStdio.TotalHelpers.twp_store8_zero oldTag $$ Htag
   iintro Htag
   ihave Htag' : (⟨0, result⟩ ↦w (4 : UInt8)) $$ [Htag]
   · norm_num
@@ -402,9 +402,9 @@ theorem twp_call_func16 {hlc : HasLC}
   isplitl [Hlength]
   · iexact Hlength
   iintro Hruntime Henv Hhost Hbytes Htag Hlength
-  iapply Submission.TotalIterator.hdtwp_returnFromCallFallthrough' $$ Hruntime
+  iapply Project.HexEncodeStdio.TotalIterator.hdtwp_returnFromCallFallthrough' $$ Hruntime
   iintro Hruntime
   simp only [List.take_zero, List.nil_append]
   iapply Hnext $$ Hruntime Henv Hhost Hbytes Htag Hlength
 
-end Submission.TotalRead
+end Project.HexEncodeStdio.TotalRead

@@ -1,6 +1,6 @@
 import HexDecodeStdio.VectorGrowOperational
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -715,4 +715,4 @@ theorem reserve_call_outcome
     have hfull := TrapsWith.prependReaches hprefix hcallTrap
     simpa [initial] using hfull
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

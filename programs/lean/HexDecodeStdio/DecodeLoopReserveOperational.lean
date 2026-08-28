@@ -1,6 +1,6 @@
 import HexDecodeStdio.DecodeSecondPairCompose
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -193,4 +193,4 @@ theorem decode_loop_after_reserve_append
     coreBlockControl]
   exact ⟨[], .refl _⟩
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

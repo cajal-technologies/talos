@@ -1,6 +1,6 @@
 import HexEncodeStdio.ReadToEndLoop
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexEncodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -287,11 +287,11 @@ theorem first_nonempty_read_invariant
       growResultOkStore, base] at ⊢ hb
     exact hb
   · have hentryTable : entryStore.wasm.mem.readBytes 1048576 16 =
-        Submission.Hex.asciiTable := by
+        Project.HexEncodeStdio.Hex.asciiTable := by
       simp [entryStore, encodeFrameStore, encodeInitialStore, Mem.readBytes]
       decide
     have hframedTable : framed.wasm.mem.readBytes 1048576 16 =
-        Submission.Hex.asciiTable := by
+        Project.HexEncodeStdio.Hex.asciiTable := by
       simp only [framed, readToEndFrameStore]
       rw [Mem.readBytes_write64_disjoint,
         Mem.readBytes_write32_disjoint]
@@ -299,14 +299,14 @@ theorem first_nonempty_read_invariant
       all_goals right <;> decide
     have hchunkTable :
         (readChunkFrameStore framed firstChunkFrame).wasm.mem.readBytes
-          1048576 16 = Submission.Hex.asciiTable := by
+          1048576 16 = Project.HexEncodeStdio.Hex.asciiTable := by
       simp only [readChunkFrameStore]
       rw [Mem.readBytes_write64_disjoint, Mem.readBytes_write64_disjoint,
         Mem.readBytes_write64_disjoint, Mem.readBytes_write64_disjoint]
       · exact hframedTable
       all_goals right <;> decide
     have hafterTable : after.wasm.mem.readBytes 1048576 16 =
-        Submission.Hex.asciiTable := by
+        Project.HexEncodeStdio.Hex.asciiTable := by
       simp only [after, readAdapterResultStore, universalReadStore]
       rw [Mem.readBytes_write32_disjoint, Mem.readBytes_write8_disjoint,
         Mem.readBytes_writeBytes_disjoint]
@@ -317,7 +317,7 @@ theorem first_nonempty_read_invariant
       · right; decide
       · right; decide
     have hallocTable : allocStore.wasm.mem.readBytes 1048576 16 =
-        Submission.Hex.asciiTable := by
+        Project.HexEncodeStdio.Hex.asciiTable := by
       exact (hsuccess.fresh_preserves_bytes 1048576 16
         (Or.inl (by decide))).trans (by simpa [base] using hafterTable)
     simp only [finalStore, readChunkFinishedStore, copied,
@@ -386,4 +386,4 @@ theorem first_nonempty_read_invariant
     have hp := hpagesMono
     omega
 
-end Submission.HexDecodeStdio
+end Project.HexEncodeStdio

@@ -1,6 +1,6 @@
 import HexDecodeStdio.ReadToEndInvariant
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -71,4 +71,4 @@ theorem read_to_end_grow_signed_oom
       using htrap)
   simpa [readToEndGrowCallConfig, params, localValues, growthCalls] using hfull
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

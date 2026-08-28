@@ -1,7 +1,7 @@
 import HexEncodeStdio.ReserveOperational
 import HexEncodeStdio.ReachOutcome
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexEncodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -87,4 +87,4 @@ theorem reserve_call_reachesOrOOM
     exact ⟨_, hreach, allocStore, hsuccess, rfl⟩
   · exact Or.inr htrap
 
-end Submission.HexDecodeStdio
+end Project.HexEncodeStdio

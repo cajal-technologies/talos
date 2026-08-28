@@ -1,7 +1,7 @@
 import HexDecodeStdio.DecodeWrapperStatus
 import HexDecodeStdio.DecodeLoopReserveInvariant
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -1481,4 +1481,4 @@ theorem decode_success_wrapper_outcome
       capacity source outLen bump hdecode htag hpointer hlengthField hlength
       hfits hcapacitySigned hsourceBound hsourceRead hfacts hplacement (by omega)
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

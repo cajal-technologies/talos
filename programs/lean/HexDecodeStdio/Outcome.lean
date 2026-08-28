@@ -1,6 +1,6 @@
 import HexDecodeStdio.AllocatorOperational
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -58,4 +58,4 @@ theorem ReachesOrOOM.of_reaches
     ReachesOrOOM initial post := by
   exact Or.inl ⟨final, hreach, hpost⟩
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

@@ -2,7 +2,7 @@ import Mathlib
 import CodeLib
 import Project.HexStdio.Spec
 
-namespace Submission.OOM
+namespace Project.HexEncodeStdio.OOM
 
 open Wasm
 
@@ -51,4 +51,4 @@ theorem func13_traps (st : Store Universal.State) : ∃ config final,
     final.wasm.host.oom.raised = true := by
   refine ⟨_, _, rfl, rfl, rfl⟩
 
-end Submission.OOM
+end Project.HexEncodeStdio.OOM

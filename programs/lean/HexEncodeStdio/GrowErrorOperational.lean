@@ -1,6 +1,6 @@
 import HexEncodeStdio.VectorGrowOperational
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexEncodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -58,4 +58,4 @@ theorem grow_result_negative
   simp [growResultFinal, growResultErrStore, resumeCaller]
   exact ⟨[], .refl _⟩
 
-end Submission.HexDecodeStdio
+end Project.HexEncodeStdio

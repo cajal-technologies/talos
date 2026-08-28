@@ -1,7 +1,7 @@
 import HexDecodeStdio.WriteAllOperational
 import HexDecodeStdio.DecodeLoopReturnOperational
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -268,4 +268,4 @@ theorem decode_common_terminates
     · simpa using hpages
     · simp [writeAllResultStore_output, houtput]
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

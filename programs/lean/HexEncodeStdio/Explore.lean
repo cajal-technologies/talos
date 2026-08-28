@@ -49,10 +49,10 @@ example : ∃ config fuel,
     startConfig? (Universal.envFor Project.HexStdio.«module»)
         Project.HexStdio.«module» "encode" (Universal.State.ofInput []) =
       some config ∧
-    Submission.Outcome.EncodesOrOOM []
+    Project.HexEncodeStdio.Outcome.EncodesOrOOM []
       (SmallStep.runSteps fuel config).result := by
   refine ⟨_, 260, rfl, ?_⟩
-  apply Submission.Outcome.checkEncodesOrOOM_sound
+  apply Project.HexEncodeStdio.Outcome.checkEncodesOrOOM_sound
   rfl
 
 set_option maxHeartbeats 5000000 in
@@ -61,8 +61,8 @@ example (b : UInt8) : ∃ config fuel,
     startConfig? (Universal.envFor Project.HexStdio.«module»)
         Project.HexStdio.«module» "encode" (Universal.State.ofInput [b]) =
       some config ∧
-    Submission.Outcome.EncodesOrOOM [b]
+    Project.HexEncodeStdio.Outcome.EncodesOrOOM [b]
       (SmallStep.runSteps fuel config).result := by
   refine ⟨_, 896, rfl, ?_⟩
-  apply Submission.Outcome.checkEncodesOrOOM_sound
+  apply Project.HexEncodeStdio.Outcome.checkEncodesOrOOM_sound
   rfl

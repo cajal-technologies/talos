@@ -1,6 +1,6 @@
 import HexEncodeStdio.HDMemoryBytes
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexEncodeStdio
 
 open Wasm
 
@@ -19,4 +19,4 @@ structure Address64Facts (address : UInt32) : Prop where
   six : (address + 6).toNat = address.toNat + 6
   seven : (address + 7).toNat = address.toNat + 7
 
-end Submission.HexDecodeStdio
+end Project.HexEncodeStdio

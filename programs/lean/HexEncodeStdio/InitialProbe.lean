@@ -1,6 +1,6 @@
 import HexEncodeStdio.ReadToEndLoop
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexEncodeStdio
 open Wasm Project.HexStdio Project.HexStdio.Spec Wasm.SmallStep
 
 set_option maxRecDepth 100000 in
@@ -18,7 +18,7 @@ example (input : List UInt8) :
 set_option maxRecDepth 100000 in
 example (input : List UInt8) :
     (encodeFrameStore input).wasm.mem.readBytes 1048576 16 =
-      Submission.Hex.asciiTable := by
+      Project.HexEncodeStdio.Hex.asciiTable := by
   simp [encodeFrameStore, encodeInitialStore, Mem.readBytes]
   decide
 
@@ -32,4 +32,4 @@ example (input : List UInt8) :
     (encodeFrameStore input).wasm.memoryCap
       (encodeFrameStore input).runtime.currentModule 0 = 65536 := by rfl
 
-end Submission.HexDecodeStdio
+end Project.HexEncodeStdio

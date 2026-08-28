@@ -1,6 +1,6 @@
 import HexDecodeStdio.DecodeLoopReturnOperational
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -275,4 +275,4 @@ theorem decode_second_pair_invalid_low_to_post
     exact hpages
   · simp [paired, decodeSecondPairInvalidStore, Mem.read8, Mem.write8]
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

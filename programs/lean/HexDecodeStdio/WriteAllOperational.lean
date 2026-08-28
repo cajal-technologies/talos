@@ -1,7 +1,7 @@
 import HexDecodeStdio.HostOperational
 import HexDecodeStdio.DecodeCoreOperational
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -156,7 +156,7 @@ theorem write_all_nonempty_reaches
     rfl
   have hwrittenTag : written.wasm.mem.read8 frame = 4 := by
     simp only [written, writeAdapterResultStore]
-    rw [Submission.HexDecodeStdio.Mem.read8_write32_disjoint_core _
+    rw [Project.HexDecodeStdio.Mem.read8_write32_disjoint_core _
       (frame + 4) frame length (Or.inl (by
         change frame.toNat < (frame + 4).toNat
         simpa only [frame, hframe4] using
@@ -235,4 +235,4 @@ theorem write_all_nonempty_reaches
     writeAdapterResultStore, resumeCaller]
   exact ⟨[], .refl _⟩
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

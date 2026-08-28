@@ -1,6 +1,6 @@
 import HexDecodeStdio.ReadToEndLoop
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -840,4 +840,4 @@ theorem decode_read_to_end_outcome (input : List UInt8) :
     simpa [entryStore, framed, bytes, after, count, readChunkCallerFrame] using
       first_nonempty_read_outcome input bytes allocStore rfl hempty hsuccess
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

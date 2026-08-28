@@ -1,6 +1,6 @@
 import HexEncodeStdio.AllocatorOperational
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexEncodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -869,4 +869,4 @@ theorem reallocator_call_outcome
           code arity remainder controls calls oldPtr oldSize align newSize
           oldBump memory previousPages hmod hread hbound hboundGrown hfirst
           hsecond hnegative henough hgrow hresult hb.1 hb.2
-end Submission.HexDecodeStdio
+end Project.HexEncodeStdio

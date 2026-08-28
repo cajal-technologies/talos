@@ -1,6 +1,6 @@
 import HexDecodeStdio.Allocator
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -103,4 +103,4 @@ theorem oom_wrapper_traps
       calls hmod henv)
   simp [oomFinalStore]
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

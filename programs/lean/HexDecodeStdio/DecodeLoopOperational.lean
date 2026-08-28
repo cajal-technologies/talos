@@ -1,7 +1,7 @@
 import HexDecodeStdio.DecodeCoreOperational
 import HexDecodeStdio.ReserveOutcome
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -483,4 +483,4 @@ theorem decode_loop_pair_invalid_low_exit
   · simp [paired, decodeLoopPairInvalidStore, Mem.read8, Mem.write8]
   · simp [paired, decodeLoopPairInvalidStore, Mem.read8, Mem.write8]
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

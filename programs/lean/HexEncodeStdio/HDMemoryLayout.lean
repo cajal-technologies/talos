@@ -1,6 +1,6 @@
 import HexEncodeStdio.HDFacts
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexEncodeStdio
 
 open Wasm
 open Iris Iris.ProgramLogic
@@ -218,4 +218,4 @@ theorem four_u64_zero_as_bytes [WasmSmallStepGS hlc α] (addr : UInt32) :
     ihave H24 := (pointsTo_u64_zero_as_bytes (addr + 24)).mpr $$ H24
     iframe
 
-end Submission.HexDecodeStdio
+end Project.HexEncodeStdio

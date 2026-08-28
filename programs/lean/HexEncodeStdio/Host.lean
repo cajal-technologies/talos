@@ -2,7 +2,7 @@ import Mathlib
 import CodeLib
 import Project.HexStdio.Spec
 
-namespace Submission.Host
+namespace Project.HexEncodeStdio.Host
 
 open Wasm
 
@@ -69,4 +69,4 @@ theorem universal_oom_resolver : ∃ hf,
   simpa [universalOOMHost, HostFn.lift, Store.focus, Store.unfocus,
     Store.mapHost, OOM.oomHost, OOM.oomResult] using h
 
-end Submission.Host
+end Project.HexEncodeStdio.Host

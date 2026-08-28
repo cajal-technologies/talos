@@ -2,7 +2,7 @@ import HexDecodeStdio.DecodeLoopReserveCompose
 import HexDecodeStdio.DecodeLoopInvariantSteps
 import HexDecodeStdio.DecodeLoopReturnOperational
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -229,4 +229,4 @@ theorem decodeLoopSuccessStore_result_fields
     · right; decide
     · right; decide
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

@@ -1,7 +1,7 @@
 import Project.HexStdio.Spec
 import HexEncodeStdio.HDTotalLifting
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexEncodeStdio
 
 open Wasm Project.HexStdio
 open Iris Iris.ProgramLogic Language.Notation Std
@@ -398,4 +398,4 @@ theorem twp_memoryGrow_fresh
     · iapply Hsuccess store memory previousPages hg
       iframe
 
-end Submission.HexDecodeStdio
+end Project.HexEncodeStdio

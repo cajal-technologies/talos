@@ -1,7 +1,7 @@
 import CodeLib
 import Project.HexStdio.Spec
 
-namespace Submission.Outcome
+namespace Project.HexEncodeStdio.Outcome
 
 open Wasm Wasm.SmallStep
 open Project.HexStdio.Spec
@@ -59,4 +59,4 @@ theorem run_result_to_spec (input : List UInt8) (config : Config Universal.State
   | outOfFuel final => simp [EncodesOrOOM, hrun] at houtcome
   | internalError error final => simp [EncodesOrOOM, hrun] at houtcome
 
-end Submission.Outcome
+end Project.HexEncodeStdio.Outcome

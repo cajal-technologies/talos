@@ -1,6 +1,6 @@
 import HexEncodeStdio.ReadChunkFull
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexEncodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -1983,4 +1983,4 @@ theorem read_to_end_after_first_eof
   simp [readToEndFinishedStore, resumeCaller]
   exact ⟨[], .refl _⟩
 
-end Submission.HexDecodeStdio
+end Project.HexEncodeStdio

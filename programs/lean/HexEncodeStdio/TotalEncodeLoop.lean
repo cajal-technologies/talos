@@ -6,7 +6,7 @@ import HexEncodeStdio.TotalHelpers
 import HexEncodeStdio.Hex
 import HexEncodeStdio.TotalIterator
 
-namespace Submission.TotalEncodeLoop
+namespace Project.HexEncodeStdio.TotalEncodeLoop
 
 open Wasm
 open Iris Iris.BI Iris.ProgramLogic Language.Notation Iris.Std
@@ -88,7 +88,7 @@ abbrev loopSaved {input : List UInt8} (state : EncodeLoopState input) : UInt32 :
   match state.lowPhase with
   | false => (Project.HexStdio.Spec.hexDigit
       ((input[state.byteIndex]'state.byteIndex_lt).toNat % 16)).toUInt32
-  | true => Submission.TotalIterator.sentinel
+  | true => Project.HexEncodeStdio.TotalIterator.sentinel
 
 abbrev loopLocals (result stackPtr output : UInt32)
     {input : List UInt8} (state : EncodeLoopState input) : Locals :=
@@ -118,7 +118,7 @@ abbrev encodeLoopInvariant {hlc : HasLC} {α : Type}
     (source + UInt32.ofNat input.length) ∗
   pointsTo_u32 0 (stackPtr + 28) 1048576 ∗
   pointsToBytes 0 source input ∗
-  pointsToBytes 0 1048576 Submission.Hex.asciiTable ∗
+  pointsToBytes 0 1048576 Project.HexEncodeStdio.Hex.asciiTable ∗
   ∃ out : List UInt8,
     pointsToBytes 0 output out ∗
     ⌜out.length = 2 * input.length⌝ ∗
@@ -147,9 +147,9 @@ theorem update_prefix_high (input out : List UInt8) (i : Nat)
         (Project.HexStdio.Spec.hexDigit (input[i].toNat / 16))).take
       (2 * i + 1) =
       (Project.HexStdio.Spec.encode input).take (2 * i + 1) := by
-  rw [Submission.Hex.take_set_succ]
-  · rw [hprefix, Submission.Hex.encode_take_twice input i hi.le]
-    exact (Submission.Hex.encode_take_high input i hi).symm
+  rw [Project.HexEncodeStdio.Hex.take_set_succ]
+  · rw [hprefix, Project.HexEncodeStdio.Hex.encode_take_twice input i hi.le]
+    exact (Project.HexEncodeStdio.Hex.encode_take_high input i hi).symm
   · omega
 
 theorem update_prefix_low (input out : List UInt8) (i : Nat)
@@ -160,11 +160,11 @@ theorem update_prefix_low (input out : List UInt8) (i : Nat)
         (Project.HexStdio.Spec.hexDigit (input[i].toNat % 16))).take
       (2 * i + 2) =
       (Project.HexStdio.Spec.encode input).take (2 * i + 2) := by
-  rw [Submission.Hex.take_set_succ]
-  · rw [hprefix, Submission.Hex.encode_take_high input i hi]
-    rw [Submission.Hex.encode_take_low input i hi]
+  rw [Project.HexEncodeStdio.Hex.take_set_succ]
+  · rw [hprefix, Project.HexEncodeStdio.Hex.encode_take_high input i hi]
+    rw [Project.HexEncodeStdio.Hex.encode_take_low input i hi]
     simpa only [List.append_assoc, List.cons_append, List.nil_append] using
-      Submission.Hex.encode_prefix_low input i hi
+      Project.HexEncodeStdio.Hex.encode_prefix_low input i hi
   · omega
 
 /-- Every hexadecimal digit takes the one-byte UTF-8 fast path. This lemma
@@ -196,7 +196,7 @@ theorem func6_ascii_classify {hlc : HasLC} {α : Type}
   iapply twp_localGet rfl
   iapply twp_const
   iapply twp_ltU (result := 1) (by
-    simp [Submission.Hex.hexDigit_toUInt32_lt_128 n hn])
+    simp [Project.HexEncodeStdio.Hex.hexDigit_toUInt32_lt_128 n hn])
   iapply twp_localTee rfl
   iapply twp_eqz (result := 0) (by decide)
   iapply twp_brIfZero
@@ -242,11 +242,11 @@ theorem func6_ascii_store {hlc : HasLC} {α : Type}
           encodeLoopBody, arity, remainder, controls, calls⟩ : Expr α)
         @ s; E [{ Φ }] := by
   obtain ⟨p4, p5, p6, p7⟩ :=
-    Submission.Helpers.wordAccessFacts stackPtr 4 (by omega)
+    Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 4 (by omega)
   obtain ⟨p8, p9, p10, p11⟩ :=
-    Submission.Helpers.wordAccessFacts stackPtr 8 (by omega)
+    Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 8 (by omega)
   obtain ⟨p12, p13, p14, p15⟩ :=
-    Submission.Helpers.wordAccessFacts stackPtr 12 (by omega)
+    Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 12 (by omega)
   iintro ⟨Hcap, HoutputPtr, Hlength, Hout, Hfinish⟩
   iapply func6_ascii_classify result position stackPtr oldLen oldAscii oldDest
     tmp1 tmp2 digit n
@@ -279,12 +279,12 @@ theorem func6_ascii_store {hlc : HasLC} {α : Type}
     simpa [hposition] using hnext
   rw [hposition]
   simp only [encodeLocals, List.set, UInt32.add_comm (UInt32.ofNat i) output]
-  ihave Hfocus := Submission.Helpers.pointsToBytes_focus_update
+  ihave Hfocus := Project.HexEncodeStdio.Helpers.pointsToBytes_focus_update
     (0 : Nat) output out i hpos $$ Hout
   icases Hfocus with ⟨%actual, Hbyte, Hput, %hactual⟩
   iapply twp_localGet rfl
   iapply twp_localGet rfl
-  iapply Submission.TotalHelpers.twp_store8_zero actual $$ Hbyte
+  iapply Project.HexEncodeStdio.TotalHelpers.twp_store8_zero actual $$ Hbyte
   iintro Hbyte
   have hdigit8 : digit.toUInt32.toUInt8 = digit := by
     apply UInt8.toNat_inj.mp
@@ -326,7 +326,7 @@ theorem func6_encode_loop_step_even {hlc : HasLC} {α : Type}
     (hnext : position + 1 = UInt32.ofNat (i + 1))
     (hroom : (1 : UInt32) ≤ capacity - position)
     (hstack : stackPtr.toNat + 20 < UInt32.size)
-    (hsaved : saved ≠ Submission.TotalIterator.sentinel)
+    (hsaved : saved ≠ Project.HexEncodeStdio.TotalIterator.sentinel)
     {arity : Nat} {remainder : List Value}
     {afterLoop : Program} {controls : List ControlFrame} {calls : List CallFrame}
     {Frame : IProp (WasmHeapGF α)} :
@@ -341,7 +341,7 @@ theorem func6_encode_loop_step_even {hlc : HasLC} {α : Type}
         pointsTo_u32 0 (stackPtr + 4) capacity -∗
         pointsTo_u32 0 (stackPtr + 8) output -∗
         pointsTo_u32 0 (stackPtr + 12) (position + 1) -∗
-        pointsTo_u32 0 (stackPtr + 16) Submission.TotalIterator.sentinel -∗
+        pointsTo_u32 0 (stackPtr + 16) Project.HexEncodeStdio.TotalIterator.sentinel -∗
         pointsToBytes 0 output (out.set i digit) -∗
         Frame -∗
         WP (.running
@@ -370,7 +370,7 @@ theorem func6_encode_loop_step_even {hlc : HasLC} {α : Type}
   simp only [encodeLoopCallTail, encodeLoopBody, encodeOuterBody,
     Project.HexStdio.func6, List.getElem?_cons_zero,
     List.getElem?_cons_succ, List.drop_succ_cons, List.drop_zero]
-  iapply Submission.TotalIterator.twp_call_func18_low (stackPtr + 16) saved hsaved
+  iapply Project.HexEncodeStdio.TotalIterator.twp_call_func18_low (stackPtr + 16) saved hsaved
     (by
       rw [show (16 : UInt32) = UInt32.ofNat 16 by rfl,
         UInt32.add_ofNat_toNat_noWrap stackPtr 16 (by decide) (by
@@ -387,7 +387,7 @@ theorem func6_encode_loop_step_even {hlc : HasLC} {α : Type}
   iintro Hruntime Hiter
   iapply twp_localTee rfl
   iapply twp_const
-  iapply twp_ne (result := 1) (by simpa [Submission.TotalIterator.sentinel] using hsaved)
+  iapply twp_ne (result := 1) (by simpa [Project.HexEncodeStdio.TotalIterator.sentinel] using hsaved)
   iapply twp_brIf (by decide) rfl
   simp only [encodeLocals, encodeLoopFrame, List.set, List.take_zero,
     List.nil_append]
@@ -421,14 +421,14 @@ theorem func6_encode_loop_step_odd_more {hlc : HasLC} {α : Type}
       pointsTo_u32 0 (stackPtr + 4) capacity ∗
       pointsTo_u32 0 (stackPtr + 8) output ∗
       pointsTo_u32 0 (stackPtr + 12) position ∗
-      pointsTo_u32 0 (stackPtr + 16) Submission.TotalIterator.sentinel ∗
+      pointsTo_u32 0 (stackPtr + 16) Project.HexEncodeStdio.TotalIterator.sentinel ∗
       pointsTo_u32 0 (stackPtr + 20)
         (source + UInt32.ofNat (inputIndex + 1)) ∗
       pointsTo_u32 0 (stackPtr + 24)
         (source + UInt32.ofNat input.length) ∗
       pointsTo_u32 0 (stackPtr + 28) 1048576 ∗
       pointsToBytes 0 source input ∗
-      pointsToBytes 0 1048576 Submission.Hex.asciiTable ∗
+      pointsToBytes 0 1048576 Project.HexEncodeStdio.Hex.asciiTable ∗
       pointsToBytes 0 output out ∗
       Frame ∗
       (runtimeModuleOwn ⟨0⟩ Project.HexStdio.«module» -∗
@@ -444,7 +444,7 @@ theorem func6_encode_loop_step_odd_more {hlc : HasLC} {α : Type}
           (source + UInt32.ofNat input.length) -∗
         pointsTo_u32 0 (stackPtr + 28) 1048576 -∗
         pointsToBytes 0 source input -∗
-        pointsToBytes 0 1048576 Submission.Hex.asciiTable -∗
+        pointsToBytes 0 1048576 Project.HexEncodeStdio.Hex.asciiTable -∗
         pointsToBytes 0 output (out.set outIndex digit) -∗
         Frame -∗
         WP (.running
@@ -480,7 +480,7 @@ theorem func6_encode_loop_step_odd_more {hlc : HasLC} {α : Type}
   simp only [encodeLoopCallTail, encodeLoopBody, encodeOuterBody,
     Project.HexStdio.func6, List.getElem?_cons_zero,
     List.getElem?_cons_succ, List.drop_succ_cons, List.drop_zero]
-  iapply Submission.TotalIterator.twp_call_func18_high_at (stackPtr + 16) source
+  iapply Project.HexEncodeStdio.TotalIterator.twp_call_func18_high_at (stackPtr + 16) source
     input (inputIndex + 1) hmore
     (by
       rw [show (16 : UInt32) = UInt32.ofNat 16 by rfl,
@@ -513,7 +513,7 @@ theorem func6_encode_loop_step_odd_more {hlc : HasLC} {α : Type}
   iapply twp_localTee rfl
   iapply twp_const
   iapply twp_ne (result := 1) (by
-    simp [Submission.Hex.hexDigit_toUInt32_ne_sentinel])
+    simp [Project.HexEncodeStdio.Hex.hexDigit_toUInt32_ne_sentinel])
   iapply twp_brIf (by decide) rfl
   simp only [encodeLocals, encodeLoopFrame, List.set, List.take_zero,
     List.nil_append]
@@ -556,26 +556,26 @@ theorem func6_encode_loop_step_odd_end {hlc : HasLC} {α : Type}
       pointsTo_u32 0 (stackPtr + 4) capacity ∗
       pointsTo_u32 0 (stackPtr + 8) output ∗
       pointsTo_u32 0 (stackPtr + 12) position ∗
-      pointsTo_u32 0 (stackPtr + 16) Submission.TotalIterator.sentinel ∗
+      pointsTo_u32 0 (stackPtr + 16) Project.HexEncodeStdio.TotalIterator.sentinel ∗
       pointsTo_u32 0 (stackPtr + 20) finish ∗
       pointsTo_u32 0 (stackPtr + 24) finish ∗
       pointsTo_u32 0 (stackPtr + 28) 1048576 ∗
       pointsToBytes 0 source input ∗
-      pointsToBytes 0 1048576 Submission.Hex.asciiTable ∗
+      pointsToBytes 0 1048576 Project.HexEncodeStdio.Hex.asciiTable ∗
       pointsToBytes 0 output out ∗
       (runtimeModuleOwn ⟨0⟩ Project.HexStdio.«module» -∗
         pointsTo_u32 0 (stackPtr + 4) capacity -∗
         pointsTo_u32 0 (stackPtr + 8) output -∗
         pointsTo_u32 0 (stackPtr + 12) (position + 1) -∗
-        pointsTo_u32 0 (stackPtr + 16) Submission.TotalIterator.sentinel -∗
+        pointsTo_u32 0 (stackPtr + 16) Project.HexEncodeStdio.TotalIterator.sentinel -∗
         pointsTo_u32 0 (stackPtr + 20) finish -∗
         pointsTo_u32 0 (stackPtr + 24) finish -∗
         pointsTo_u32 0 (stackPtr + 28) 1048576 -∗
         pointsToBytes 0 source input -∗
-        pointsToBytes 0 1048576 Submission.Hex.asciiTable -∗
+        pointsToBytes 0 1048576 Project.HexEncodeStdio.Hex.asciiTable -∗
         pointsToBytes 0 output (out.set outIndex digit) -∗
         WP (.running
-          ⟨encodeLocals result (position + 1) Submission.TotalIterator.sentinel
+          ⟨encodeLocals result (position + 1) Project.HexEncodeStdio.TotalIterator.sentinel
               stackPtr 1 1 (output + position) tmp1 tmp2,
             afterLoop, arity, remainder, controls, calls⟩ : Expr α)
           @ s; E [{ Φ }]) ⊢
@@ -604,7 +604,7 @@ theorem func6_encode_loop_step_odd_end {hlc : HasLC} {α : Type}
   simp only [encodeLoopCallTail, encodeLoopBody, encodeOuterBody,
     Project.HexStdio.func6, List.getElem?_cons_zero,
     List.getElem?_cons_succ, List.drop_succ_cons, List.drop_zero]
-  iapply Submission.TotalIterator.twp_call_func18_end (stackPtr + 16) finish
+  iapply Project.HexEncodeStdio.TotalIterator.twp_call_func18_end (stackPtr + 16) finish
     (by
       rw [show (16 : UInt32) = UInt32.ofNat 16 by rfl,
         UInt32.add_ofNat_toNat_noWrap stackPtr 16 (by decide) (by
@@ -667,19 +667,19 @@ theorem func6_encode_loop {hlc : HasLC} {α : Type}
         pointsTo_u32 0 (stackPtr + 8) output -∗
         pointsTo_u32 0 (stackPtr + 12)
           (UInt32.ofNat (2 * state.byteIndex + 1) + 1) -∗
-        pointsTo_u32 0 (stackPtr + 16) Submission.TotalIterator.sentinel -∗
+        pointsTo_u32 0 (stackPtr + 16) Project.HexEncodeStdio.TotalIterator.sentinel -∗
         pointsTo_u32 0 (stackPtr + 20)
           (source + UInt32.ofNat input.length) -∗
         pointsTo_u32 0 (stackPtr + 24)
           (source + UInt32.ofNat input.length) -∗
         pointsTo_u32 0 (stackPtr + 28) 1048576 -∗
         pointsToBytes 0 source input -∗
-        pointsToBytes 0 1048576 Submission.Hex.asciiTable -∗
+        pointsToBytes 0 1048576 Project.HexEncodeStdio.Hex.asciiTable -∗
         pointsToBytes 0 output out -∗ Finish -∗
         WP (.running
           ⟨encodeLocals result
               (UInt32.ofNat (2 * state.byteIndex + 1) + 1)
-              Submission.TotalIterator.sentinel stackPtr 1 1
+              Project.HexEncodeStdio.TotalIterator.sentinel stackPtr 1 1
               (output + UInt32.ofNat (2 * state.byteIndex + 1)) 0 0,
             afterLoop, arity, remainder, controls, calls⟩ : Expr α)
           @ s; E [{ Φ }])) :
@@ -738,9 +738,9 @@ theorem func6_encode_loop {hlc : HasLC} {α : Type}
         (Project.HexStdio.Spec.hexDigit (input[byteIndex].toNat / 16))
         (input[byteIndex].toNat / 16)
         (Project.HexStdio.Spec.hexDigit (input[byteIndex].toNat % 16)).toUInt32
-        out (2 * byteIndex) rfl (Submission.Hex.nibble_high_lt _)
+        out (2 * byteIndex) rfl (Project.HexEncodeStdio.Hex.nibble_high_lt _)
         hpos rfl hnextU hroom (by omega)
-        (Submission.Hex.hexDigit_toUInt32_ne_sentinel _)
+        (Project.HexEncodeStdio.Hex.hexDigit_toUInt32_ne_sentinel _)
         (s := s) (E := E) (Φ := Φ) (arity := arity)
         (remainder := remainder) (afterLoop := afterLoop)
         (controls := controls) (calls := calls)
@@ -829,7 +829,7 @@ theorem func6_encode_loop {hlc : HasLC} {α : Type}
           oldLen oldAscii dest 0 0
           (Project.HexStdio.Spec.hexDigit (input[byteIndex].toNat % 16))
           (input[byteIndex].toNat % 16) out input (2 * byteIndex + 1)
-          byteIndex rfl (Submission.Hex.nibble_low_lt _) hpos rfl hnextU
+          byteIndex rfl (Project.HexEncodeStdio.Hex.nibble_low_lt _) hpos rfl hnextU
           hroom hstack hsource hmore
           (s := s) (E := E) (Φ := Φ) (arity := arity)
           (remainder := remainder) (afterLoop := afterLoop)
@@ -921,7 +921,7 @@ theorem func6_encode_loop {hlc : HasLC} {α : Type}
           oldLen oldAscii dest 0 0
           (Project.HexStdio.Spec.hexDigit (input[byteIndex].toNat % 16))
           (input[byteIndex].toNat % 16) out input (2 * byteIndex + 1)
-          rfl (Submission.Hex.nibble_low_lt _) hpos rfl hnextU hroom hstack
+          rfl (Project.HexEncodeStdio.Hex.nibble_low_lt _) hpos rfl hnextU hroom hstack
           (s := s) (E := E) (Φ := Φ) (arity := arity)
           (remainder := remainder) (afterLoop := afterLoop)
           (controls := controls) (calls := calls)
@@ -960,9 +960,9 @@ theorem func6_encode_loop {hlc : HasLC} {α : Type}
             have hp := update_prefix_low input out byteIndex hbyteIndex
               houtLen hprefix
             simpa [loopPosition, hendIndex,
-              Submission.Hex.encode_length] using hp)
+              Project.HexEncodeStdio.Hex.encode_length] using hp)
           $$ Hruntime Hcap HoutputPtr Hlength Hcurrent Hcursor Hend HtablePtr
             Hsource Htable Hout Hfinish
   iexact Hinitial
 
-end Submission.TotalEncodeLoop
+end Project.HexEncodeStdio.TotalEncodeLoop

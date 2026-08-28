@@ -4,7 +4,7 @@ import Project.HexStdio.Program
 import HexEncodeStdio.Helpers
 import HexEncodeStdio.Hex
 
-namespace Submission.Iterator
+namespace Project.HexEncodeStdio.Iterator
 
 open Wasm
 open Iris Iris.BI Iris.ProgramLogic Language.Notation Iris.Std
@@ -223,13 +223,13 @@ theorem func18_high_body {hlc : HasLC} {α : Type} [WasmSmallStepGS hlc α]
       pointsTo_u32 0 (ptr + 8) finish ∗
       pointsTo_u32 0 (ptr + 12) 1048576 ∗
       (⟨0, index⟩ ↦w byte) ∗
-      pointsToBytes 0 1048576 Submission.Hex.asciiTable ∗
+      pointsToBytes 0 1048576 Project.HexEncodeStdio.Hex.asciiTable ∗
       (pointsTo_u32 0 ptr (hexDigit (byte.toNat % 16)).toUInt32 -∗
         pointsTo_u32 0 (ptr + 4) (index + 1) -∗
         pointsTo_u32 0 (ptr + 8) finish -∗
         pointsTo_u32 0 (ptr + 12) 1048576 -∗
         (⟨0, index⟩ ↦w byte) -∗
-        pointsToBytes 0 1048576 Submission.Hex.asciiTable -∗
+        pointsToBytes 0 1048576 Project.HexEncodeStdio.Hex.asciiTable -∗
         WP (.running
           ⟨⟨[.i32 ptr],
               [.i32 (hexDigit (byte.toNat / 16)).toUInt32, .i32 byte.toUInt32],
@@ -258,15 +258,15 @@ theorem func18_high_body {hlc : HasLC} {α : Type} [WasmSmallStepGS hlc α]
   ihave Hinput0 : (⟨0, index + 0⟩ ↦w byte) $$ [Hinput]
   · rw [UInt32.add_zero]
     iexact Hinput
-  ihave HlowFocus := Submission.Helpers.pointsToBytes_focus
-    (0 : Nat) (1048576 : UInt32) Submission.Hex.asciiTable
-    (byte.toNat % 16) (Submission.Hex.nibble_low_lt byte) $$ Htable
+  ihave HlowFocus := Project.HexEncodeStdio.Helpers.pointsToBytes_focus
+    (0 : Nat) (1048576 : UInt32) Project.HexEncodeStdio.Hex.asciiTable
+    (byte.toNat % 16) (Project.HexEncodeStdio.Hex.nibble_low_lt byte) $$ Htable
   icases HlowFocus with ⟨%lowByte, Hlow, HputLow, %hlowGet⟩
   have hlowByte : lowByte = hexDigit (byte.toNat % 16) := by
     exact Option.some.inj
       (hlowGet.symm.trans
-        (Submission.Hex.asciiTable_getElem?_hexDigit _
-          (Submission.Hex.nibble_low_lt byte)))
+        (Project.HexEncodeStdio.Hex.asciiTable_getElem?_hexDigit _
+          (Project.HexEncodeStdio.Hex.nibble_low_lt byte)))
   subst lowByte
   simp only [Project.HexStdio.func18]
   iapply wp_localGet rfl
@@ -344,7 +344,7 @@ theorem func18_high_body {hlc : HasLC} {α : Type} [WasmSmallStepGS hlc α]
   inext
   iapply wp_and
   inext
-  rw [Submission.Hex.low_nibble_u32 byte]
+  rw [Project.HexEncodeStdio.Hex.low_nibble_u32 byte]
   iapply wp_add
   inext
   simp [iterLocals, List.set]
@@ -369,15 +369,15 @@ theorem func18_high_body {hlc : HasLC} {α : Type} [WasmSmallStepGS hlc α]
   · rw [UInt32.add_comm 1048576 (UInt32.ofNat (byte.toNat % 16))]
     iexact Hlow
   ihave Htable := HputLow $$ HlowCanonical
-  ihave HhighFocus := Submission.Helpers.pointsToBytes_focus
-    (0 : Nat) (1048576 : UInt32) Submission.Hex.asciiTable
-    (byte.toNat / 16) (Submission.Hex.nibble_high_lt byte) $$ Htable
+  ihave HhighFocus := Project.HexEncodeStdio.Helpers.pointsToBytes_focus
+    (0 : Nat) (1048576 : UInt32) Project.HexEncodeStdio.Hex.asciiTable
+    (byte.toNat / 16) (Project.HexEncodeStdio.Hex.nibble_high_lt byte) $$ Htable
   icases HhighFocus with ⟨%highByte, Hhigh, HputHigh, %hhighGet⟩
   have hhighByte : highByte = hexDigit (byte.toNat / 16) := by
     exact Option.some.inj
       (hhighGet.symm.trans
-        (Submission.Hex.asciiTable_getElem?_hexDigit _
-          (Submission.Hex.nibble_high_lt byte)))
+        (Project.HexEncodeStdio.Hex.asciiTable_getElem?_hexDigit _
+          (Project.HexEncodeStdio.Hex.nibble_high_lt byte)))
   subst highByte
   iapply wp_localGet rfl
   inext
@@ -388,7 +388,7 @@ theorem func18_high_body {hlc : HasLC} {α : Type} [WasmSmallStepGS hlc α]
   iapply wp_shrU32
   inext
   rw [show (4 : UInt32) % 32 = 4 by decide]
-  rw [Submission.Hex.high_nibble_u32 byte]
+  rw [Project.HexEncodeStdio.Hex.high_nibble_u32 byte]
   iapply wp_add
   inext
   simp [iterLocals, List.set]
@@ -557,14 +557,14 @@ theorem wp_call_func18_high {hlc : HasLC} {α : Type}
       pointsTo_u32 0 (ptr + 8) finish ∗
       pointsTo_u32 0 (ptr + 12) 1048576 ∗
       (⟨0, index⟩ ↦w byte) ∗
-      pointsToBytes 0 1048576 Submission.Hex.asciiTable ∗
+      pointsToBytes 0 1048576 Project.HexEncodeStdio.Hex.asciiTable ∗
       (runtimeModuleOwn ⟨0⟩ Project.HexStdio.«module» -∗
         pointsTo_u32 0 ptr (hexDigit (byte.toNat % 16)).toUInt32 -∗
         pointsTo_u32 0 (ptr + 4) (index + 1) -∗
         pointsTo_u32 0 (ptr + 8) finish -∗
         pointsTo_u32 0 (ptr + 12) 1048576 -∗
         (⟨0, index⟩ ↦w byte) -∗
-        pointsToBytes 0 1048576 Submission.Hex.asciiTable -∗
+        pointsToBytes 0 1048576 Project.HexEncodeStdio.Hex.asciiTable -∗
         WP (.running
           ⟨{ callerLocals with
               values := .i32 (hexDigit (byte.toNat / 16)).toUInt32 :: stack },
@@ -683,7 +683,7 @@ theorem wp_call_func18_high_at {hlc : HasLC} {α : Type}
       pointsTo_u32 0 (iter + 8) (source + UInt32.ofNat input.length) ∗
       pointsTo_u32 0 (iter + 12) 1048576 ∗
       pointsToBytes 0 source input ∗
-      pointsToBytes 0 1048576 Submission.Hex.asciiTable ∗
+      pointsToBytes 0 1048576 Project.HexEncodeStdio.Hex.asciiTable ∗
       (runtimeModuleOwn ⟨0⟩ Project.HexStdio.«module» -∗
         pointsTo_u32 0 iter
           (hexDigit (input[i].toNat % 16)).toUInt32 -∗
@@ -691,7 +691,7 @@ theorem wp_call_func18_high_at {hlc : HasLC} {α : Type}
         pointsTo_u32 0 (iter + 8) (source + UInt32.ofNat input.length) -∗
         pointsTo_u32 0 (iter + 12) 1048576 -∗
         pointsToBytes 0 source input -∗
-        pointsToBytes 0 1048576 Submission.Hex.asciiTable -∗
+        pointsToBytes 0 1048576 Project.HexEncodeStdio.Hex.asciiTable -∗
         WP (.running
           ⟨{ callerLocals with
               values := .i32 (hexDigit (input[i].toNat / 16)).toUInt32 :: stack },
@@ -738,7 +738,7 @@ theorem wp_call_func18_high_at {hlc : HasLC} {α : Type}
     rw [hl, hiNat, hr]
     omega
   iintro ⟨Hruntime, Hcurrent, Hindex, Hend, HtablePtr, Hsource, Htable, Hcont⟩
-  ihave Hfocus := Submission.Helpers.pointsToBytes_focus
+  ihave Hfocus := Project.HexEncodeStdio.Helpers.pointsToBytes_focus
     (0 : Nat) source input i hi $$ Hsource
   icases Hfocus with ⟨%byte, Hbyte, Hput, %hbyte⟩
   have hbyteEq : byte = input[i] := by
@@ -768,4 +768,4 @@ theorem wp_call_func18_high_at {hlc : HasLC} {α : Type}
     iexact Hindex
   iapply Hcont $$ Hruntime Hcurrent HindexNext Hend HtablePtr Hsource Htable
 
-end Submission.Iterator
+end Project.HexEncodeStdio.Iterator

@@ -2,7 +2,7 @@ import HexEncodeStdio.HDAllocator
 import HexEncodeStdio.HDGrow
 import HexEncodeStdio.Helpers
 
-namespace Submission.TotalAllocator
+namespace Project.HexEncodeStdio.TotalAllocator
 
 open Wasm Project.HexStdio
 open Iris Iris.BI Iris.ProgramLogic Language.Notation
@@ -65,7 +65,7 @@ theorem memoryGrow_alloc_outcome {hlc : HasLC} {α : Type}
     WP (.running ⟨⟨params, localValues, .i32 delta :: values⟩,
         .memoryGrow :: code, arity, remainder, controls, calls⟩ : Expr α) @
       s; E [{ Φ }] := by
-  exact Submission.HexDecodeStdio.twp_memoryGrow_fresh runtimeModule
+  exact Project.HexEncodeStdio.twp_memoryGrow_fresh runtimeModule
     instanceId R hpages Hfail Hsuccess
 
 /-- Caller-facing total contract for generated function 12 (Wasm index 15).
@@ -102,7 +102,7 @@ theorem func12_alloc_outcome {hlc : HasLC}
         [.call 15] ++ code, arity, remainder, controls, calls⟩ :
         Expr Universal.State) @ Stuckness.MaybeStuck; E [{ Φ }] := by
   iintro ⟨Hruntime, Henv, Hhost, Hbump, Howned⟩ Hnext
-  iapply Submission.HexDecodeStdio.twp_allocator size align oldBump host
+  iapply Project.HexEncodeStdio.twp_allocator size align oldBump host
     callerLocals stack code arity remainder controls calls $$
       [$Hruntime $Henv $Hhost $Hbump]
   iintro ⟨Hruntime, Henv, Hhost, Hbump⟩
@@ -151,7 +151,7 @@ theorem func12_alloc_from_arena {hlc : HasLC}
       code arity remainder controls calls $$
     [$Hruntime $Henv $Hhost $Hbump $Harena]
   iintro ⟨Hruntime, Henv, Hhost, Hbump, Harena⟩
-  ihave Harena := Submission.Helpers.pointsToBytes_take_drop 0
+  ihave Harena := Project.HexEncodeStdio.Helpers.pointsToBytes_take_drop 0
     (allocPtr align oldBump) arena size.toNat hsize $$ Harena
   icases Harena with ⟨Hallocated, Hfree⟩
   iapply Hnext
@@ -241,7 +241,7 @@ theorem func15_copy_return {hlc : HasLC}
   iapply twp_localGet rfl
   iapply twp_localGet rfl
   iapply twp_localGet rfl
-  ihave Hnew := Submission.Helpers.pointsToBytes_take_drop 0 newPtr
+  ihave Hnew := Project.HexEncodeStdio.Helpers.pointsToBytes_take_drop 0 newPtr
     newArena oldSize.toNat (by rw [hlenNew]; exact hle) $$ Hnew
   icases Hnew with ⟨HnewPrefix, HnewSuffix⟩
   iapply hdtwp_memoryCopy32 (len := oldSize)
@@ -263,4 +263,4 @@ theorem func15_copy_return {hlc : HasLC}
     iframe
   iapply Hnext $$ Hruntime Hold Hnew HR
 
-end Submission.TotalAllocator
+end Project.HexEncodeStdio.TotalAllocator

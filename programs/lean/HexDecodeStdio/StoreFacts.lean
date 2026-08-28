@@ -1,6 +1,6 @@
 import HexDecodeStdio.ReadChunkOperational
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -206,4 +206,4 @@ theorem readChunkFrameStore_global_zero
   simpa [readChunkFrameStore] using
     (List.getElem?_set_eq_of_lt (.i32 frame) hzero)
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

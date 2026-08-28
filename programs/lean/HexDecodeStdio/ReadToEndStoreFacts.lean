@@ -1,6 +1,6 @@
 import HexDecodeStdio.ReadToEndOperational
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -211,4 +211,4 @@ theorem ByteGrowSuccess.realloc_preserves_bytes
     simpa only [Mem.readBytes, List.getElem_map, List.getElem_range, Mem.read8]
       using hbyte
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

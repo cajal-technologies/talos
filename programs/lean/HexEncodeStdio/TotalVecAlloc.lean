@@ -1,6 +1,6 @@
 import HexEncodeStdio.TotalRealloc
 
-namespace Submission.TotalVecAlloc
+namespace Project.HexEncodeStdio.TotalVecAlloc
 
 open Wasm Project.HexStdio
 open Iris Iris.BI Iris.ProgramLogic Language.Notation Iris.Std
@@ -82,21 +82,21 @@ private theorem func12_alloc_outcome_explicit {hlc : HasLC}
     runtimeModuleOwn ⟨0⟩ «module» ∗
       hostEnvOwn 0 (Universal.envFor «module») ∗ hostStateOwn host ∗
       pointsTo_u32 0 1053960 oldBump ∗
-      pointsToBytes 0 (Submission.TotalAllocator.allocPtr align oldBump) owned -∗
+      pointsToBytes 0 (Project.HexEncodeStdio.TotalAllocator.allocPtr align oldBump) owned -∗
     (runtimeModuleOwn ⟨0⟩ «module» ∗
       hostEnvOwn 0 (Universal.envFor «module») ∗ hostStateOwn host ∗
       pointsTo_u32 0 1053960
-        (size + Submission.TotalAllocator.allocPtr align oldBump) ∗
-      pointsToBytes 0 (Submission.TotalAllocator.allocPtr align oldBump) owned -∗
+        (size + Project.HexEncodeStdio.TotalAllocator.allocPtr align oldBump) ∗
+      pointsToBytes 0 (Project.HexEncodeStdio.TotalAllocator.allocPtr align oldBump) owned -∗
       WP (.running ⟨⟨params, localValues,
-          .i32 (Submission.TotalAllocator.allocPtr align oldBump) :: stack⟩,
+          .i32 (Project.HexEncodeStdio.TotalAllocator.allocPtr align oldBump) :: stack⟩,
         code, arity, remainder, controls, calls⟩ : Expr Universal.State) @
         Stuckness.MaybeStuck; E [{ Φ }]) -∗
     WP (.running ⟨⟨params, localValues,
         [.i32 align, .i32 size] ++ stack⟩,
       [.call 15] ++ code, arity, remainder, controls, calls⟩ :
       Expr Universal.State) @ Stuckness.MaybeStuck; E [{ Φ }] := by
-  simpa using Submission.TotalAllocator.func12_alloc_outcome size align oldBump
+  simpa using Project.HexEncodeStdio.TotalAllocator.func12_alloc_outcome size align oldBump
     host owned ⟨params, localValues, []⟩ stack code arity remainder controls
     calls
 
@@ -118,17 +118,17 @@ theorem func4_alloc_fresh {hlc : HasLC}
     R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
       hostEnvOwn 0 (Universal.envFor «module») ∗ hostStateOwn host ∗
       pointsTo_u32 0 1053960 oldBump ∗
-      pointsToBytes 0 (Submission.TotalAllocator.allocPtr 1 oldBump) arena ∗
+      pointsToBytes 0 (Project.HexEncodeStdio.TotalAllocator.allocPtr 1 oldBump) arena ∗
       pointsTo_u32 0 result old0 ∗ pointsTo_u32 0 (result + 4) old4 ∗
       pointsTo_u32 0 (result + 8) old8 -∗
     (R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
       hostEnvOwn 0 (Universal.envFor «module») ∗ hostStateOwn host ∗
       pointsTo_u32 0 1053960
-        (newSize + Submission.TotalAllocator.allocPtr 1 oldBump) ∗
-      pointsToBytes 0 (Submission.TotalAllocator.allocPtr 1 oldBump) arena ∗
+        (newSize + Project.HexEncodeStdio.TotalAllocator.allocPtr 1 oldBump) ∗
+      pointsToBytes 0 (Project.HexEncodeStdio.TotalAllocator.allocPtr 1 oldBump) arena ∗
       pointsTo_u32 0 result 0 ∗
       pointsTo_u32 0 (result + 4)
-        (Submission.TotalAllocator.allocPtr 1 oldBump) ∗
+        (Project.HexEncodeStdio.TotalAllocator.allocPtr 1 oldBump) ∗
       pointsTo_u32 0 (result + 8) newSize -∗
       WP (.running ⟨{ callerLocals with values := stack }, code, arity,
         remainder, controls, calls⟩ : Expr Universal.State) @
@@ -138,18 +138,18 @@ theorem func4_alloc_fresh {hlc : HasLC}
           [.i32 newSize, .i32 ignored, .i32 0, .i32 result] ++ stack },
         .call 7 :: code, arity, remainder, controls, calls⟩ :
         Expr Universal.State) @ Stuckness.MaybeStuck; E [{ Φ }] := by
-  let ptr := Submission.TotalAllocator.allocPtr 1 oldBump
+  let ptr := Project.HexEncodeStdio.TotalAllocator.allocPtr 1 oldBump
   have hptrNe : ptr ≠ 0 := by
     simp [ptr]
     by_cases h : oldBump = 0 <;> simp [h]
   obtain ⟨r0, r1, r2, r3⟩ :=
-    Submission.Helpers.wordAccessFacts result 0 (by
+    Project.HexEncodeStdio.Helpers.wordAccessFacts result 0 (by
       norm_num [UInt32.size] at hresult ⊢
       omega)
   obtain ⟨r4, r5, r6, r7⟩ :=
-    Submission.Helpers.wordAccessFacts result 4 (by omega)
+    Project.HexEncodeStdio.Helpers.wordAccessFacts result 4 (by omega)
   obtain ⟨r8, r9, r10, r11⟩ :=
-    Submission.Helpers.wordAccessFacts result 8 (by omega)
+    Project.HexEncodeStdio.Helpers.wordAccessFacts result 8 (by omega)
   iintro ⟨HR, Hruntime, Henv, Hhost, Hbump, Harena, H0, H4, H8⟩ Hnext
   iapply twp_call «module» 7 func4Def (by decide) rfl ⟨0⟩ $$ Hruntime
   iintro Hruntime
@@ -175,7 +175,7 @@ theorem func4_alloc_fresh {hlc : HasLC}
   simp
   iapply twp_localGet rfl
   iapply twp_const
-  isimp only [← Submission.TotalAllocator.allocPtr_align_one] at Harena
+  isimp only [← Project.HexEncodeStdio.TotalAllocator.allocPtr_align_one] at Harena
   iapply func12_alloc_outcome_explicit newSize 1 oldBump host arena
       [.i32 result, .i32 0, .i32 ignored, .i32 newSize] [] [] [.localSet 1]
       0 [] (func4AllocControls result 0 ignored newSize)
@@ -211,4 +211,4 @@ theorem func4_alloc_fresh {hlc : HasLC}
   iapply Hnext
   iframe
 
-end Submission.TotalVecAlloc
+end Project.HexEncodeStdio.TotalVecAlloc

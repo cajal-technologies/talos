@@ -4,10 +4,10 @@ import CodeLib
 /-!
 Local helper module for the submission. Solvers may add lemmas and definitions
 here (and in sibling modules under `Submission/`) and import them from
-`Submission.lean`.
+`Project.HexEncodeStdio.lean`.
 -/
 
-namespace Submission.Helpers
+namespace Project.HexEncodeStdio.Helpers
 
 open Wasm
 open Iris Iris.BI Iris.ProgramLogic Language.Notation Iris.Std
@@ -300,4 +300,4 @@ theorem wp_store8_zero {hlc : HasLC} {α : Type}
     (Wasm.SmallStep.wp_store8 (α := α) (s := s) (E := E) (Φ := Φ)
       (address := address) (offset := 0) (value := value) oldByte (by simp))
 
-end Submission.Helpers
+end Project.HexEncodeStdio.Helpers

@@ -1,7 +1,7 @@
 import Mathlib
 import Project.HexStdio.Spec
 
-namespace Submission.Hex
+namespace Project.HexEncodeStdio.Hex
 
 open Project.HexStdio.Spec
 
@@ -174,4 +174,4 @@ theorem hexDigit_toUInt32_toUInt8 (n : Nat) :
   apply UInt8.toNat_inj.mp
   simp
 
-end Submission.Hex
+end Project.HexEncodeStdio.Hex

@@ -1,7 +1,7 @@
 import HexDecodeStdio.DecodeLoopOperational
 import HexDecodeStdio.DecodeSecondPairInvalidLowOperational
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -257,4 +257,4 @@ theorem decode_post_loop_invalid_reaches
     decodePostReadLocals]
   exact ⟨[], .refl _⟩
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

@@ -1,6 +1,6 @@
 import HexDecodeStdio.DecodeLoopInvalid
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -203,4 +203,4 @@ theorem DecodeLoopInv.outcome
                     decodeLoopAppendStore] using hreturn
                 exact ih hstep.2 hreturn'
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

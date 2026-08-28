@@ -1,7 +1,7 @@
 import HexDecodeStdio.DecodeSecondPairInvalidOperational
 import HexDecodeStdio.HexMath
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -51,7 +51,7 @@ theorem decodeSecondPair_invalid_low_reaches
   let hi := store.wasm.mem.read8 inputPtr
   let lo := store.wasm.mem.read8 (inputPtr + 1)
   obtain ⟨hloUpper, hloLower, hloDigit⟩ :=
-    Submission.HexDecodeStdio.hexValue_none_tests lo hlo
+    Project.HexDecodeStdio.hexValue_none_tests lo hlo
   have hlenA : 2 ≤ len.toNat := by simpa only [len] using hlen
   change 2 ≤ (store.wasm.mem.read32 1048508).toNat at hlenA
   have hinputA : inputPtr.toNat + 2 ≤ store.wasm.mem.pages * 65536 := by
@@ -417,4 +417,4 @@ theorem decodeSecondPair_invalid_low_reaches
     simp [decodeSecondPairInvalidStore, Mem.write32]
     exact ⟨[], .refl _⟩
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

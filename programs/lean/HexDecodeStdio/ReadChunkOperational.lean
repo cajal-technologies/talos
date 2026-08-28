@@ -4,7 +4,7 @@ import HexDecodeStdio.DecodeCore
 import HexDecodeStdio.Outcome
 import HexDecodeStdio.ReserveOutcome
 
-namespace Submission.HexDecodeStdio
+namespace Project.HexDecodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
@@ -686,4 +686,4 @@ theorem read_chunk_after_read_reserve
   simp [reserved, readChunkCopiedStore, readChunkFinishedStore,
     resumeCaller]
 
-end Submission.HexDecodeStdio
+end Project.HexDecodeStdio

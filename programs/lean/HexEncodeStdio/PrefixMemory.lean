@@ -1,6 +1,6 @@
 import HexEncodeStdio.FullMemory
 
-namespace Submission.PrefixMemory
+namespace Project.HexEncodeStdio.PrefixMemory
 
 open Wasm
 open Iris Iris.BI Iris.ProgramLogic Language.Notation Iris.Std FromMathlib
@@ -12,14 +12,14 @@ variable {α : Type}
 materializing the inaccessible final byte when a memory has the full 65536
 pages. -/
 def heap (store : MachineStore α) (n : Nat) : WasmHeapMap (Option UInt8) :=
-  Submission.Grow.insertBytes ∅ 0
-    (Submission.Grow.bytesAt store.wasm.mem 0 n)
+  Project.HexEncodeStdio.Grow.insertBytes ∅ 0
+    (Project.HexEncodeStdio.Grow.bytesAt store.wasm.mem 0 n)
 
 theorem heap_agrees (store : MachineStore α) (n : Nat)
     (hn : n < UInt32.size) :
     heapAgreesWithMem (heap store n) (storeResolve store) := by
   unfold heap
-  apply Submission.Grow.insertBytes_agrees
+  apply Project.HexEncodeStdio.Grow.insertBytes_agrees
   · simp [storeResolve]
   · simpa using hn
   · exact heapAgreesWithMem_empty _
@@ -29,7 +29,7 @@ theorem heap_inBounds (store : MachineStore α) (n : Nat)
     (hbound : n ≤ store.wasm.mem.pages * 65536) :
     heapAddressesInBounds (heap store n) (storeResolve store) := by
   unfold heap
-  apply Submission.Grow.insertBytes_inBounds
+  apply Project.HexEncodeStdio.Grow.insertBytes_inBounds
   · simp [storeResolve]
   · simpa using hn
   · simpa using hbound
@@ -40,11 +40,11 @@ theorem heap_pointsTo {hlc : HasLC} [WasmSmallStepGS hlc α]
     ([∗map] address ↦ value ∈ heap store n,
       pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
         address (DFrac.own 1) value) ⊢
-      pointsToBytes 0 0 (Submission.Grow.bytesAt store.wasm.mem 0 n) := by
+      pointsToBytes 0 0 (Project.HexEncodeStdio.Grow.bytesAt store.wasm.mem 0 n) := by
   unfold heap
   iintro Hheap
-  ihave Hsplit := Submission.FullMemory.insertBytes_pointsTo
-    (α := α) ∅ 0 (Submission.Grow.bytesAt store.wasm.mem 0 n)
+  ihave Hsplit := Project.HexEncodeStdio.FullMemory.insertBytes_pointsTo
+    (α := α) ∅ 0 (Project.HexEncodeStdio.Grow.bytesAt store.wasm.mem 0 n)
     (by simpa using hn)
     (by intro i hi; simp [get?_empty]) $$ Hheap
   icases Hsplit with ⟨Hbytes, _⟩
@@ -54,22 +54,22 @@ theorem bytesAt_split {hlc : HasLC} [WasmSmallStepGS hlc α]
     (mem : Mem) (addr : UInt32) (m n : Nat)
     (hnowrap : addr.toNat + m + n < UInt32.size) :
     pointsToBytes (α := α) 0 addr
-        (Submission.Grow.bytesAt mem addr (m + n)) ⊣⊢
-      (pointsToBytes 0 addr (Submission.Grow.bytesAt mem addr m) ∗
+        (Project.HexEncodeStdio.Grow.bytesAt mem addr (m + n)) ⊣⊢
+      (pointsToBytes 0 addr (Project.HexEncodeStdio.Grow.bytesAt mem addr m) ∗
         pointsToBytes 0 (addr + UInt32.ofNat m)
-          (Submission.Grow.bytesAt mem (addr + UInt32.ofNat m) n)) := by
-  rw [Submission.FullMemory.bytesAt_append mem addr m n hnowrap]
+          (Project.HexEncodeStdio.Grow.bytesAt mem (addr + UInt32.ofNat m) n)) := by
+  rw [Project.HexEncodeStdio.FullMemory.bytesAt_append mem addr m n hnowrap]
   simpa using (pointsToBytes_append (α := α) 0 addr
-    (Submission.Grow.bytesAt mem addr m)
-    (Submission.Grow.bytesAt mem (addr + UInt32.ofNat m) n))
+    (Project.HexEncodeStdio.Grow.bytesAt mem addr m)
+    (Project.HexEncodeStdio.Grow.bytesAt mem (addr + UInt32.ofNat m) n))
 
 theorem bytesAt_drop {hlc : HasLC} [WasmSmallStepGS hlc α]
     (mem : Mem) (addr : UInt32) (m n : Nat)
     (hnowrap : addr.toNat + m + n < UInt32.size) :
     pointsToBytes (α := α) 0 addr
-        (Submission.Grow.bytesAt mem addr (m + n)) ⊢
+        (Project.HexEncodeStdio.Grow.bytesAt mem addr (m + n)) ⊢
       pointsToBytes 0 (addr + UInt32.ofNat m)
-        (Submission.Grow.bytesAt mem (addr + UInt32.ofNat m) n) := by
+        (Project.HexEncodeStdio.Grow.bytesAt mem (addr + UInt32.ofNat m) n) := by
   iintro H
   ihave Hsplit := (bytesAt_split mem addr m n hnowrap).mp $$ H
   icases Hsplit with ⟨_Hprefix, Hsuffix⟩
@@ -79,16 +79,16 @@ theorem bytesAt_word_split {hlc : HasLC} [WasmSmallStepGS hlc α]
     (mem : Mem) (addr : UInt32) (n : Nat)
     (hnowrap : addr.toNat + 4 + n < UInt32.size) :
     pointsToBytes (α := α) 0 addr
-        (Submission.Grow.bytesAt mem addr (4 + n)) ⊢
+        (Project.HexEncodeStdio.Grow.bytesAt mem addr (4 + n)) ⊢
       pointsTo_u32 0 addr (mem.read32 addr) ∗
         pointsToBytes 0 (addr + 4)
-          (Submission.Grow.bytesAt mem (addr + 4) n) := by
+          (Project.HexEncodeStdio.Grow.bytesAt mem (addr + 4) n) := by
   iintro H
   ihave Hsplit := (bytesAt_split mem addr 4 n hnowrap).mp $$ H
   icases Hsplit with ⟨Hword, Hrest⟩
   isplitl [Hword]
   · iapply (pointsTo_u32_as_bytes 0 addr (mem.read32 addr)).mpr
-    rw [← Submission.FullMemory.bytesAt_four mem addr (by omega)]
+    rw [← Project.HexEncodeStdio.FullMemory.bytesAt_four mem addr (by omega)]
     iexact Hword
   · iexact Hrest
 
@@ -100,7 +100,7 @@ theorem bytesAt_words {hlc : HasLC} [WasmSmallStepGS hlc α]
     (mem : Mem) (addr : UInt32) (n : Nat)
     (hnowrap : addr.toNat + 4 * n < UInt32.size) :
     pointsToBytes (α := α) 0 addr
-        (Submission.Grow.bytesAt mem addr (4 * n)) ⊢
+        (Project.HexEncodeStdio.Grow.bytesAt mem addr (4 * n)) ⊢
       arrayAt 0 addr (wordsAt mem addr n) := by
   induction n generalizing addr with
   | zero =>
@@ -134,7 +134,7 @@ theorem terminates
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
     (htwp : ∀ (hlc : HasLC) [WasmSmallStepGS hlc α],
       (pointsToBytes 0 0
-          (Submission.Grow.bytesAt config.store.wasm.mem 0 n) ∗
+          (Project.HexEncodeStdio.Grow.bytesAt config.store.wasm.mem 0 n) ∗
         ([∗map] index ↦ value ∈ globalσ, globalPointsTo index value) ∗
         runtimeModuleOwn config.store.runtime.entry
           config.store.runtime.currentModule ∗
@@ -159,4 +159,4 @@ theorem terminates
     iapply htwp hlc
     iframe
 
-end Submission.PrefixMemory
+end Project.HexEncodeStdio.PrefixMemory
