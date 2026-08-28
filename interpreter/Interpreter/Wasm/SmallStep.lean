@@ -7579,6 +7579,30 @@ theorem steps_done_deterministic
   have parts := Config.mk.inj hconfig
   exact ⟨Expr.done.inj parts.1, parts.2⟩
 
+/-- A terminating execution already pins down the result, so total correctness
+implies partial correctness: `Step` is deterministic, so any other terminal
+trace from the same machine ends in the same values and store.
+
+This is the small-step twin of `Wasm.TerminatesWith.toPartiallyMeets`
+(`Spec/Defs.lean`). Without it every `PartiallyMeets` theorem has to restate
+its total-correctness twin's proof. -/
+theorem TerminatesWith.toPartiallyMeets
+    {initial : Config α} {post : List Value → MachineStore α → Prop}
+    (execution : TerminatesWith initial post) :
+    PartiallyMeets initial post := by
+  obtain ⟨_, _, _, steps, hpost⟩ := execution
+  intro _ _ _ observed
+  obtain ⟨rfl, rfl⟩ := steps_done_deterministic steps observed
+  exact hpost
+
+/-- Weaken the postcondition of a partial-correctness result. -/
+theorem PartiallyMeets.mono
+    {initial : Config α} {post post' : List Value → MachineStore α → Prop}
+    (h : PartiallyMeets initial post)
+    (himp : ∀ values store, post values store → post' values store) :
+    PartiallyMeets initial post' :=
+  fun _ _ _ steps => himp _ _ (h _ _ _ steps)
+
 /-- Determinism rules out a normally completed and a trapped terminal trace
 from the same initial machine. -/
 theorem steps_done_ne_trapped
@@ -7654,28 +7678,15 @@ theorem runSteps_success_partiallyMeets {fuel : Nat} {config : Config α}
     (h : (runSteps fuel config).result = .success values store)
     (post : List Value → MachineStore α → Prop)
     (hp : post values store) :
-    PartiallyMeets config post := by
-  intro trace values' store' htrace
-  have executed : Steps config (runSteps fuel config).trace ⟨.done values, store⟩ := by
-    apply runSteps_sound
-    simp [h, RunnerResult.finalConfig?]
-  obtain ⟨rfl, rfl⟩ := steps_done_deterministic executed htrace
-  exact hp
+    PartiallyMeets config post :=
+  (runSteps_success_terminates h post hp).toPartiallyMeets
 
 /-- Partial-correctness companion to `runSteps_values_terminates`. -/
 theorem runSteps_values_partiallyMeets {fuel : Nat} {config : Config α}
     {values : List Value}
     (h : (runSteps fuel config).result.values? = some values) :
-    PartiallyMeets config (fun actual _ => actual = values) := by
-  cases hr : (runSteps fuel config).result with
-  | success actual store =>
-    have : actual = values := by
-      simpa [RunnerResult.values?, hr] using h
-    subst actual
-    apply runSteps_success_partiallyMeets hr
-    rfl
-  | trapped | outOfFuel | internalError =>
-    simp [RunnerResult.values?, hr] at h
+    PartiallyMeets config (fun actual _ => actual = values) :=
+  (runSteps_values_terminates h).toPartiallyMeets
 
 theorem safe_of_runSteps_success {fuel : Nat} {config : Config α}
     {values : List Value} {store : MachineStore α}
