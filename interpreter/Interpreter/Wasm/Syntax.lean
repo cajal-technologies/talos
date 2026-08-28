@@ -1047,6 +1047,20 @@ def Module.memoryCap (m : Module) : Nat :=
     | none   => Module.memoryHardCap
   | none => Module.memoryHardCap
 
+/-- The address type of a declared memory: `i64` for a memory64 memory,
+`i32` otherwise. This is the type of the operands and results the memory
+instructions of that memory speak — addresses, and the page counts of
+`memory.size` / `memory.grow`. -/
+def MemDecl.addressType (d : MemDecl) : ValueType :=
+  if d.is64 then .i64 else .i32
+
+/-- The address type of a declared table: `i64` for a table64 table, `i32`
+otherwise. This is the type of the operands and results the table
+instructions of that table speak — element indices, and the sizes of
+`table.size` / `table.grow`. -/
+def TableDecl.addressType (d : TableDecl) : ValueType :=
+  if d.is64 then .i64 else .i32
+
 /-- Whether the module's memory is 64-bit-addressed (memory64). -/
 def Module.memIs64 (m : Module) : Bool :=
   match m.memory with
