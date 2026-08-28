@@ -653,7 +653,6 @@ theorem wp_geU
       {{ Φ }} :=
   wp_pureStep _ _ _ (fun _ => Step.geU hresult)
 
-
 theorem wp_leU
     {params localValues values : List Value}
     {lhs rhs result : UInt32} {code : Program} {arity : Nat}
@@ -1295,7 +1294,6 @@ theorem wp_brOnNonNullFallthrough
       {{ Φ }} :=
   wp_pureStep _ _ _ (fun _ => Step.brOnNonNullFallthrough hnull)
 
-
 theorem wp_ltUI64
     {params localValues values : List Value}
     {lhs rhs : UInt64} {result : UInt32}
@@ -1442,46 +1440,6 @@ theorem wp_loop
         arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   exact wp_pureStep _ _ _ (fun _ => Step.loop)
-
-/-- Löb-induction wrapper for a Wasm loop body.
-
-The premise is the reusable loop-body proof: assuming the guarded recursive
-call, ownership of `I` establishes the WP at the top of the administrative
-loop frame.  The conclusion packages the Löb argument and the initial
-`.loop` transition.  Concrete loop proofs can therefore concentrate on
-showing that their body either exits or re-establishes `I` before `br 0`.
--/
-theorem wp_loop_löb
-    {locals : Locals} {paramArity resultArity arity : Nat}
-    {body code : Program} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame}
-    (I : IProp (WasmHeapGF α))
-    (body_closes :
-        (▷ (I -∗
-          WP (.running
-            ⟨locals, body, arity, remainder,
-              { kind := .loop, paramArity, resultArity, body,
-                continuation := code,
-                belowStack := locals.values.drop paramArity } :: controls,
-              calls⟩ : Expr α) @ s; E {{ Φ }})) ⊢@{IProp (WasmHeapGF α)}
-        (I -∗
-          WP (.running
-            ⟨locals, body, arity, remainder,
-              { kind := .loop, paramArity, resultArity, body,
-                continuation := code,
-                belowStack := locals.values.drop paramArity } :: controls,
-              calls⟩ : Expr α) @ s; E {{ Φ }})) :
-    I ⊢
-      WP (.running
-        ⟨locals, .loop paramArity resultArity body :: code,
-          arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} := by
-  iintro HI
-  iapply wp_loop
-  inext
-  iloeb as Hrec generalizing HI
-  iapply body_closes
-  · iexact Hrec
-  · iexact HI
 
 /-- Family-indexed Löb rule for loops whose locals and owned invariant change
 at each back-edge.
@@ -1826,7 +1784,6 @@ theorem wp_localTee
   isplitl [Hwp]
   · iexact Hwp
   · itrivial
-
 
 theorem wp_tryTable
     {locals : Locals} {paramArity resultArity arity : Nat}
@@ -2195,7 +2152,6 @@ theorem wp_catchException
   isplitl [Hwp]
   · iexact Hwp
   · itrivial
-
 
 /-- Enter a defined Wasm function. Immutable runtime-module ownership ties the
 function lookup used by the rule to the actual `MachineStore` seen by
@@ -3937,7 +3893,6 @@ theorem wp_load8UI64
     iexact Hpt
   · itrivial
 
-
 theorem wp_load8S
     {params localValues values : List Value}
     {address offset : UInt32} {code : Program} {arity : Nat}
@@ -4554,7 +4509,6 @@ theorem wp_load32SI64
     iexact Hword
   · itrivial
 
-
 /-- Primitive rule for `i32.store8`. The physical `Mem.write8` transition and
 the authoritative GenHeap update happen in the same Iris step. -/
 theorem wp_store8
@@ -4713,7 +4667,6 @@ theorem wp_store8I64
   · iapply Hwp
     iexact Hpt
   · itrivial
-
 
 theorem wp_store16
     {params localValues values : List Value}
@@ -4961,7 +4914,6 @@ theorem wp_store32I64
   · iapply Hwp
     iexact Hword
   · itrivial
-
 
 theorem wp_load32
     {params localValues values : List Value}
@@ -5623,7 +5575,6 @@ theorem wp_f64Store
   · iapply Hwp
     iexact Hword
   · itrivial
-
 
 theorem wp_memoryGrow64TooLarge
     {params localValues values : List Value}
@@ -7714,7 +7665,6 @@ theorem wp_vExtractLane
         arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} :=
   wp_pureStep _ _ _ (fun _ => Step.vExtractLane)
 
-
 /-- Primitive Iris rule for the concrete four-byte fill used by the manual
 example. The caller owns the complete affected range; disjoint ownership is
 framed by ordinary separation logic. -/
@@ -8725,53 +8675,6 @@ theorem wp_swapElementsFunc3
     · rw [← show (1048568 : UInt32) + 4 = 1048572 from rfl]
       iexact Hlen
 
-/-- End-to-end Iris contract for the hand-written byte-memory roundtrip used
-by `Interpreter.Wasm.Examples.SmallStep`. -/
-theorem wp_byteRoundtrip (oldByte : UInt8) :
-    pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
-      ⟨0, 24⟩ (DFrac.own 1) (some oldByte) ⊢
-    WP (.running
-      ⟨⟨[], [], []⟩,
-        [ .const 24, .const 0x1234AB, .store8 0,
-          .const 24, .load8U 0 ],
-        1, [], [], []⟩ : Expr α) @ s; E
-      {{ result, ⌜result = [.i32 0xAB]⌝ ∗
-        pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
-          ⟨0, 24⟩ (DFrac.own 1) (some (0xAB : UInt8)) }} := by
-  iintro Hpt
-  iapply wp_const
-  inext
-  iapply wp_const
-  inext
-  ihave HptLater :
-      ▷ pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
-        ⟨0, 24 + 0⟩ (DFrac.own 1) (some oldByte) $$ [Hpt]
-  · inext
-    rw [UInt32.add_zero]
-    iexact Hpt
-  iapply wp_store8 oldByte rfl $$ HptLater
-  inext
-  iintro Hpt
-  iapply wp_const
-  inext
-  ihave HptLater :
-      ▷ pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
-        ⟨0, 24 + 0⟩ (DFrac.own 1) (some (0xAB : UInt8)) $$ [Hpt]
-  · inext
-    rw [show (0x1234AB : UInt32).toUInt8 = (0xAB : UInt8) by decide]
-    iexact Hpt
-  iapply wp_load8U (0xAB : UInt8) rfl $$ HptLater
-  inext
-  iintro Hpt
-  iapply wp_finish
-  inext
-  iapply wp_value'
-  isplitr
-  · ipureintro
-    rfl
-  · rw [UInt32.add_zero]
-    iexact Hpt
-
 /-- End-to-end Iris contract for the hand-written 32-bit memory roundtrip.
 The physical word and its four authoritative ghost bytes are updated by the
 same `store32` transition. -/
@@ -9394,7 +9297,6 @@ theorem wp_mergeTwoWords :
       iexact H0
     · rw [UInt32.add_zero]
       iexact H4
-
 
 -- Load 16 bytes and push a v128. Ownership of the two 8-byte halves pins the
 -- loaded value and puts the 16-byte range in bounds.
@@ -10218,7 +10120,6 @@ theorem wp_store32Memory64
     iexact Hword
   · itrivial
 
-
 /-- Call an imported function that crosses module-instance boundaries.
 `callerId` and `calleeId` index into `instances`; `hhost` asserts the callee
 has the same host as the caller so the `hostEnvOwn` resource stays valid.
@@ -10544,6 +10445,5 @@ theorem wp_callIndirect
     · iexact Hruntime
     · iexact Htable
   · itrivial
-
 
 end Wasm.SmallStep

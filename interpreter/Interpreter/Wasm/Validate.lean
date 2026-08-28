@@ -146,142 +146,6 @@ def Instruction.checkSimdImmediates : Instruction → Except String Unit
         .ok ()
   | _ => .ok ()
 
-theorem Instruction.checkBulkMemoryRefs_memoryFill_ok
-    (m : Module)
-    (h : Instruction.memoryFill.checkBulkMemoryRefs m = .ok ()) :
-    (m.memoryDecl? 0).isSome = true := by
-  simp only [Instruction.checkBulkMemoryRefs] at h
-  split at h <;>
-    simp_all [Option.isSome_iff_ne_none, Option.isNone_iff_eq_none]
-
-theorem Instruction.checkBulkMemoryRefs_memorySize_ok
-    (m : Module)
-    (h : Instruction.memorySize.checkBulkMemoryRefs m = .ok ()) :
-    (m.memoryDecl? 0).isSome = true := by
-  simp only [Instruction.checkBulkMemoryRefs] at h
-  split at h <;>
-    simp_all [Option.isSome_iff_ne_none, Option.isNone_iff_eq_none]
-
-theorem Instruction.checkBulkMemoryRefs_memoryGrow_ok
-    (m : Module)
-    (h : Instruction.memoryGrow.checkBulkMemoryRefs m = .ok ()) :
-    (m.memoryDecl? 0).isSome = true := by
-  simp only [Instruction.checkBulkMemoryRefs] at h
-  split at h <;>
-    simp_all [Option.isSome_iff_ne_none, Option.isNone_iff_eq_none]
-
-theorem Instruction.checkBulkMemoryRefs_memoryCopy_ok
-    (m : Module)
-    (h : Instruction.memoryCopy.checkBulkMemoryRefs m = .ok ()) :
-    (m.memoryDecl? 0).isSome = true := by
-  simp only [Instruction.checkBulkMemoryRefs] at h
-  split at h <;>
-    simp_all [Option.isSome_iff_ne_none, Option.isNone_iff_eq_none]
-
-theorem Instruction.checkBulkMemoryRefs_memoryInit_ok
-    (m : Module) (dataIndex : Nat)
-    (h : (Instruction.memoryInit dataIndex).checkBulkMemoryRefs m = .ok ()) :
-    (m.memoryDecl? 0).isSome = true ∧
-      dataIndex < m.dataSegmentCount := by
-  simp only [Instruction.checkBulkMemoryRefs] at h
-  split at h <;>
-    simp_all [Option.isSome_iff_ne_none, Option.isNone_iff_eq_none]
-
-theorem Instruction.checkBulkMemoryRefs_dataDrop_ok
-    (m : Module) (dataIndex : Nat)
-    (h : (Instruction.dataDrop dataIndex).checkBulkMemoryRefs m = .ok ()) :
-    dataIndex < m.dataSegmentCount := by
-  simp only [Instruction.checkBulkMemoryRefs] at h
-  split at h <;> simp_all
-
-theorem Instruction.checkBulkMemoryRefs_indexedMemoryInit_ok
-    (m : Module) (memoryIndex dataIndex : Nat)
-    (h : Instruction.checkBulkMemoryRefs m
-      (.memOp memoryIndex (.memoryInit dataIndex)) = .ok ()) :
-    (m.memoryDecl? memoryIndex).isSome = true ∧
-      dataIndex < m.dataSegmentCount := by
-  simp only [Instruction.checkBulkMemoryRefs] at h
-  split at h <;>
-    simp_all [Option.isSome_iff_ne_none, Option.isNone_iff_eq_none]
-
-theorem Instruction.checkBulkMemoryRefs_indexedMemoryFill_ok
-    (m : Module) (memoryIndex : Nat)
-    (h : Instruction.checkBulkMemoryRefs m
-      (.memOp memoryIndex .memoryFill) = .ok ()) :
-    (m.memoryDecl? memoryIndex).isSome = true := by
-  simp only [Instruction.checkBulkMemoryRefs] at h
-  split at h <;>
-    simp_all [Option.isSome_iff_ne_none, Option.isNone_iff_eq_none]
-
-theorem Instruction.checkBulkMemoryRefs_indexedMemoryCopy_ok
-    (m : Module) (memoryIndex : Nat)
-    (h : Instruction.checkBulkMemoryRefs m
-      (.memOp memoryIndex .memoryCopy) = .ok ()) :
-    (m.memoryDecl? memoryIndex).isSome = true := by
-  simp only [Instruction.checkBulkMemoryRefs] at h
-  split at h <;>
-    simp_all [Option.isSome_iff_ne_none, Option.isNone_iff_eq_none]
-
-theorem Instruction.checkBulkMemoryRefs_indexedMemorySize_ok
-    (m : Module) (memoryIndex : Nat)
-    (h : Instruction.checkBulkMemoryRefs m
-      (.memOp memoryIndex .memorySize) = .ok ()) :
-    (m.memoryDecl? memoryIndex).isSome = true := by
-  simp only [Instruction.checkBulkMemoryRefs] at h
-  split at h <;>
-    simp_all [Option.isSome_iff_ne_none, Option.isNone_iff_eq_none]
-
-theorem Instruction.checkBulkMemoryRefs_indexedMemoryGrow_ok
-    (m : Module) (memoryIndex : Nat)
-    (h : Instruction.checkBulkMemoryRefs m
-      (.memOp memoryIndex .memoryGrow) = .ok ()) :
-    (m.memoryDecl? memoryIndex).isSome = true := by
-  simp only [Instruction.checkBulkMemoryRefs] at h
-  split at h <;>
-    simp_all [Option.isSome_iff_ne_none, Option.isNone_iff_eq_none]
-
-theorem Instruction.checkBulkMemoryRefs_scalar_ok
-    (m : Module) (operation : Instruction)
-    (hscalar : operation.isScalarMemoryAccess = true)
-    (h : operation.checkBulkMemoryRefs m = .ok ()) :
-    (m.memoryDecl? 0).isSome = true := by
-  cases operation <;>
-    simp_all [Instruction.isScalarMemoryAccess,
-      Instruction.checkBulkMemoryRefs, Option.isSome_iff_ne_none,
-      Option.isNone_iff_eq_none]
-
-theorem Instruction.checkBulkMemoryRefs_indexedScalar_ok
-    (m : Module) (memoryIndex : Nat) (operation : Instruction)
-    (hscalar : operation.isScalarMemoryAccess = true)
-    (h : (Instruction.memOp memoryIndex operation).checkBulkMemoryRefs m =
-      .ok ()) :
-    (m.memoryDecl? memoryIndex).isSome = true := by
-  cases operation <;>
-    simp_all [Instruction.isScalarMemoryAccess,
-      Instruction.checkBulkMemoryRefs, Option.isSome_iff_ne_none,
-      Option.isNone_iff_eq_none]
-
-/-- Instantiation preserves exactly one runtime status entry per declared data
-segment. This is the bridge from validator index bounds to the lookup required
-by `stepChecked?`. -/
-theorem Module.initialStore_dataSegments_length [Inhabited α] (m : Module) :
-    (m.initialStore : Store α).dataSegments.length = m.dataSegmentCount := by
-  cases hmemory : m.memory with
-  | none =>
-      simp [Module.initialStore, Module.dataSegmentCount, hmemory]
-  | some memory =>
-      simp [Module.initialStore, Module.dataSegmentCount, hmemory]
-
-theorem Module.initialStore_dataSegment_exists [Inhabited α]
-    (m : Module) (index : Nat) (hindex : index < m.dataSegmentCount) :
-    ∃ segment,
-      (m.initialStore : Store α).dataSegments[index]? = some segment := by
-  have hinBounds :
-      index < (m.initialStore : Store α).dataSegments.length := by
-    rw [m.initialStore_dataSegments_length]
-    exact hindex
-  exact ⟨_, List.getElem?_eq_getElem hinBounds⟩
-
 /-! ### Table/element-segment reference validation -/
 
 def Module.tableDecl? (m : Module) (index : Nat) : Option TableDecl :=
@@ -313,124 +177,6 @@ def Instruction.checkTableSegmentRefs
       else .ok ()
   | _ => .ok ()
 
-theorem Instruction.checkTableSegmentRefs_table_ok
-    (m : Module) (tableIndex : Nat) (operation : Instruction)
-    (hoperation :
-      operation = .tableGet tableIndex ∨
-      operation = .tableSet tableIndex ∨
-      operation = .tableSize tableIndex ∨
-      operation = .tableGrow tableIndex ∨
-      operation = .tableFill tableIndex)
-    (h : operation.checkTableSegmentRefs m = .ok ()) :
-    (m.tableDecl? tableIndex).isSome = true := by
-  rcases hoperation with rfl | rfl | rfl | rfl | rfl <;>
-    simp only [Instruction.checkTableSegmentRefs] at h <;>
-    split at h <;>
-    simp_all [Option.isSome_iff_ne_none, Option.isNone_iff_eq_none]
-
-theorem Instruction.checkTableSegmentRefs_tableCopy_ok
-    (m : Module) (destinationTableIndex sourceTableIndex : Nat)
-    (h : Instruction.checkTableSegmentRefs m
-      (.tableCopy destinationTableIndex sourceTableIndex) = .ok ()) :
-    (m.tableDecl? destinationTableIndex).isSome = true ∧
-      (m.tableDecl? sourceTableIndex).isSome = true := by
-  grind [Instruction.checkTableSegmentRefs, Option.isSome_iff_ne_none,
-    Option.isNone_iff_eq_none]
-
-theorem Instruction.checkTableSegmentRefs_tableInit_ok
-    (m : Module) (tableIndex elementIndex : Nat)
-    (h : Instruction.checkTableSegmentRefs m
-      (.tableInit tableIndex elementIndex) = .ok ()) :
-    (m.tableDecl? tableIndex).isSome = true ∧
-      elementIndex < m.elementSegmentCount := by
-  simp only [Instruction.checkTableSegmentRefs] at h
-  split at h <;>
-    simp_all [Option.isSome_iff_ne_none, Option.isNone_iff_eq_none]
-
-theorem Instruction.checkTableSegmentRefs_elemDrop_ok
-    (m : Module) (elementIndex : Nat)
-    (h : (Instruction.elemDrop elementIndex).checkTableSegmentRefs m =
-      .ok ()) :
-    elementIndex < m.elementSegmentCount := by
-  simp only [Instruction.checkTableSegmentRefs] at h
-  split at h <;> simp_all
-
-theorem listSetAt_length (values : List α) (index : Nat) (value : α) :
-    (listSetAt values index value).length = values.length := by
-  induction values generalizing index with
-  | nil => simp [listSetAt]
-  | cons head tail ih =>
-      cases index with
-      | zero => simp [listSetAt]
-      | succ index => simp [listSetAt, ih]
-
-theorem Module.initialStore_elementSegments_length [Inhabited α]
-    (m : Module) :
-    (m.initialStore : Store α).elementSegments.length =
-      m.elementSegmentCount := by
-  simp [Module.initialStore, Module.elementSegmentCount]
-
-theorem Module.initialStore_elementSegment_exists [Inhabited α]
-    (m : Module) (index : Nat)
-    (hindex : index < m.elementSegmentCount) :
-    ∃ segment,
-      (m.initialStore : Store α).elementSegments[index]? = some segment := by
-  have hinBounds :
-      index < (m.initialStore : Store α).elementSegments.length := by
-    rw [m.initialStore_elementSegments_length]
-    exact hindex
-  exact ⟨_, List.getElem?_eq_getElem hinBounds⟩
-
-theorem Module.initialStore_tables_length [Inhabited α] (m : Module) :
-    (m.initialStore : Store α).tables.length = m.tables.length := by
-  simp only [Module.initialStore]
-  let updateTable : List TableInst → ElementSegment → List TableInst :=
-    fun tables segment =>
-      match segment.tableIdx, segment.offset with
-      | some tableIndex, some offset =>
-        if segment.offsetExpr.isEmpty then
-          match tables[tableIndex]? with
-          | some table =>
-            if offset + segment.plainValues.length ≤ table.length then
-              listSetAt tables tableIndex
-                (listWriteAt table offset segment.plainValues)
-            else tables
-          | none => tables
-        else tables
-      | _, _ => tables
-  have hupdate (tables : List TableInst) (segment : ElementSegment) :
-      (updateTable tables segment).length = tables.length := by
-    unfold updateTable
-    grind [listSetAt_length]
-  have hfold (segments : List ElementSegment) (tables : List TableInst) :
-      (segments.foldl updateTable tables).length = tables.length := by
-    induction segments generalizing tables with
-    | nil => rfl
-    | cons segment rest ih =>
-        simp only [List.foldl_cons]
-        rw [ih, hupdate]
-  change
-    (m.elements.foldl updateTable
-      (m.tables.map fun table =>
-        (List.replicate table.min table.elemType.zero : TableInst))).length =
-      m.tables.length
-  rw [hfold]
-  simp
-
-theorem Module.initialStore_table_exists [Inhabited α]
-    (m : Module) (index : Nat)
-    (hindex : (m.tableDecl? index).isSome = true) :
-    ∃ table, (m.initialStore : Store α).tables[index]? = some table := by
-  have hdeclared : index < m.tables.length := by
-    cases htable : m.tables[index]? with
-    | none => simp [Module.tableDecl?, htable] at hindex
-    | some table =>
-        exact (List.getElem?_eq_some_iff.mp htable).1
-  have hinBounds : index < (m.initialStore : Store α).tables.length := by
-    rw [m.initialStore_tables_length]
-    exact hdeclared
-  exact ⟨_, List.getElem?_eq_getElem hinBounds⟩
-
 /-! ### Global reference validation -/
 
 def Instruction.checkGlobalRefs
@@ -444,32 +190,6 @@ def Instruction.checkGlobalRefs
         if global.isMut then .ok () else .error "immutable global"
   | _ => .ok ()
 
-theorem Instruction.checkGlobalRefs_get_ok
-    (m : Module) (index : Nat)
-    (h : (Instruction.globalGet index).checkGlobalRefs m = .ok ()) :
-    ∃ global, m.globals[index]? = some global := by
-  cases hglobal : m.globals[index]? with
-  | none => simp [Instruction.checkGlobalRefs, hglobal] at h
-  | some global => exact ⟨global, rfl⟩
-
-theorem Instruction.checkGlobalRefs_set_ok
-    (m : Module) (index : Nat)
-    (h : (Instruction.globalSet index).checkGlobalRefs m = .ok ()) :
-    ∃ global, m.globals[index]? = some global := by
-  cases hglobal : m.globals[index]? with
-  | none => simp [Instruction.checkGlobalRefs, hglobal] at h
-  | some global => exact ⟨global, rfl⟩
-
-theorem Instruction.checkGlobalRefs_set_mutable
-    (m : Module) (index : Nat)
-    (h : (Instruction.globalSet index).checkGlobalRefs m = .ok ()) :
-    ∃ global, m.globals[index]? = some global ∧ global.isMut = true := by
-  cases hglobal : m.globals[index]? with
-  | none => simp [Instruction.checkGlobalRefs, hglobal] at h
-  | some global =>
-      simp [Instruction.checkGlobalRefs, hglobal] at h
-      exact ⟨global, rfl, h⟩
-
 /-! ### Local reference validation -/
 
 def Instruction.checkLocalRefs
@@ -477,17 +197,6 @@ def Instruction.checkLocalRefs
   | .localGet index | .localSet index | .localTee index =>
       if index ≥ localCount then .error "unknown local" else .ok ()
   | _ => .ok ()
-
-theorem Instruction.checkLocalRefs_ok
-    (localCount index : Nat) (operation : Instruction)
-    (hoperation :
-      operation = .localGet index ∨ operation = .localSet index)
-    (h : operation.checkLocalRefs localCount = .ok ()) :
-    index < localCount := by
-  rcases hoperation with rfl | rfl <;>
-    simp [Instruction.checkLocalRefs] at h ⊢
-  · omega
-  · omega
 
 /-! ### Function and call-immediate validation -/
 
@@ -524,36 +233,6 @@ def Instruction.checkFunctionRefs
       else .ok ()
   | _ => .ok ()
 
-theorem Instruction.checkFunctionRefs_direct_ok
-    (m : Module) (functionIndex : Nat) (operation : Instruction)
-    (hoperation :
-      operation = .call functionIndex ∨
-      operation = .returnCall functionIndex ∨
-      operation = .refFunc functionIndex)
-    (h : operation.checkFunctionRefs m = .ok ()) :
-    ∃ signature, m.funcSig? functionIndex = some signature := by
-  rcases hoperation with rfl | rfl | rfl <;>
-    cases hsignature : m.funcSig? functionIndex with
-    | none => simp [Instruction.checkFunctionRefs, hsignature] at h
-    | some signature => exact ⟨signature, rfl⟩
-
-theorem Instruction.checkFunctionRefs_indirect_ok
-    (m : Module) (typeIndex tableIndex : Nat) (operation : Instruction)
-    (hoperation :
-      operation = .callIndirect typeIndex tableIndex ∨
-      operation = .returnCallIndirect typeIndex tableIndex)
-    (h : operation.checkFunctionRefs m = .ok ()) :
-    (∃ signature, m.types[typeIndex]? = some signature) ∧
-      (∃ table, m.tableDecl? tableIndex = some table) := by
-  rcases hoperation with rfl | rfl <;>
-    cases hsignature : m.types[typeIndex]? with
-    | none => simp [Instruction.checkFunctionRefs, hsignature] at h
-    | some signature =>
-      cases htable : m.tableDecl? tableIndex with
-      | none =>
-        simp [Instruction.checkFunctionRefs, hsignature, htable] at h
-      | some table => exact ⟨⟨signature, rfl⟩, ⟨table, rfl⟩⟩
-
 /-! ### Module interface validation -/
 
 def Module.checkStart (m : Module) : Except String Unit :=
@@ -585,19 +264,6 @@ def Module.checkInterface (m : Module) : Except String Unit := do
   if _h : names.Nodup then pure () else throw "duplicate export name"
   m.checkStart
 
-theorem Module.checkStart_ok
-    (m : Module) (index : Nat)
-    (hstart : m.startFunc = some index)
-    (h : m.checkStart = .ok ()) :
-    ∃ signature, m.funcSig? index = some signature ∧
-      signature.params = [] ∧ signature.results = [] := by
-  simp only [Module.checkStart, hstart] at h
-  cases hsignature : m.funcSig? index with
-  | none => simp [hsignature] at h
-  | some signature =>
-      simp [hsignature] at h
-      exact ⟨signature, rfl, h⟩
-
 /-! ### Active segment resource validation -/
 
 def DataSegment.checkMemoryRef
@@ -608,16 +274,6 @@ def DataSegment.checkMemoryRef
       if (m.memoryDecl? segment.memIdx).isNone then .error "unknown memory"
       else .ok ()
 
-theorem DataSegment.checkMemoryRef_active_ok
-    (m : Module) (segment : DataSegment) (offset : UInt32)
-    (hoffset : segment.offset = some offset)
-    (h : segment.checkMemoryRef m = .ok ()) :
-    ∃ memory, m.memoryDecl? segment.memIdx = some memory := by
-  simp only [DataSegment.checkMemoryRef, hoffset] at h
-  cases hmemory : m.memoryDecl? segment.memIdx with
-  | none => simp [hmemory] at h
-  | some memory => exact ⟨memory, rfl⟩
-
 def ElementSegment.checkTableRef
     (m : Module) (segment : ElementSegment) : Except String Unit :=
   match segment.offset with
@@ -627,17 +283,6 @@ def ElementSegment.checkTableRef
       | none => .error "unknown table"
       | some index =>
           if (m.tableDecl? index).isNone then .error "unknown table" else .ok ()
-
-theorem ElementSegment.checkTableRef_active_ok
-    (m : Module) (segment : ElementSegment) (offset tableIndex : Nat)
-    (hoffset : segment.offset = some offset)
-    (htableIndex : segment.tableIdx = some tableIndex)
-    (h : segment.checkTableRef m = .ok ()) :
-    ∃ table, m.tableDecl? tableIndex = some table := by
-  simp only [ElementSegment.checkTableRef, hoffset, htableIndex] at h
-  cases htable : m.tableDecl? tableIndex with
-  | none => simp [htable] at h
-  | some table => exact ⟨table, rfl⟩
 
 /-- Whether a constant-expression program uses only constant instructions
 (the forms a global / element initializer may contain). -/

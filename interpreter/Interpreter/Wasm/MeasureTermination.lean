@@ -41,33 +41,6 @@ a `.running` configuration is normal exactly when it is stuck. -/
 def Config.Normal (config : Config α) : Prop :=
   ∀ kind next, ¬ Step config kind next
 
-theorem done_normal {values : List Value} {store : MachineStore α} :
-    Config.Normal ⟨.done values, store⟩ :=
-  fun _ _ => done_terminal
-
-theorem trapped_normal {reason : TrapReason} {store : MachineStore α} :
-    Config.Normal ⟨.trapped reason, store⟩ :=
-  fun _ _ => trapped_terminal
-
-/-- Determinism lifts to normal forms: a configuration reaches at most one.
-`Step` is deterministic (`step_deterministic`), so the trace out of a
-configuration is unique up to its length. -/
-theorem normal_unique {config final₁ final₂ : Config α} {trace₁ trace₂}
-    (h₁ : Steps config trace₁ final₁) (hn₁ : Config.Normal final₁)
-    (h₂ : Steps config trace₂ final₂) (hn₂ : Config.Normal final₂) :
-    final₁ = final₂ := by
-  induction h₁ generalizing trace₂ final₂ with
-  | refl config =>
-    cases h₂ with
-    | refl => rfl
-    | cons head _ => exact absurd head (hn₁ _ _)
-  | cons head _ ih =>
-    cases h₂ with
-    | refl => exact absurd head (hn₂ _ _)
-    | cons head' tail' =>
-      obtain ⟨_, rfl⟩ := step_deterministic head head'
-      exact ih hn₁ tail' hn₂
-
 /-- **The termination principle.** A measure into a well-founded order that
 strictly decreases along every step forces a finite trace to a normal form.
 The invariant `I` is carried along the trace so the caller can use it to

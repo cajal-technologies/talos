@@ -94,25 +94,4 @@ def imports : List ImportDecl :=
 /-- Executable environment for a fixed oracle stored in `Store.host`. -/
 def env : HostEnv State := { funcs := [getHost] }
 
-/-- Pathwise contract for `random.get`.  It fixes how the selected oracle
-bytes affect memory while remaining parametric in the oracle itself. -/
-def getContract : HostContract State :=
-  fun store args result => result = getResult store args
-
-/-- Relational specification corresponding to `Random.imports`. -/
-def spec : HostSpec State := { contracts := [getContract] }
-
-/-- The concrete environment satisfies the pathwise specification for every
-module whose import list is exactly `Random.imports`. -/
-theorem env_satisfies (module : Module) (himports : module.imports = imports) :
-    env.Satisfies module spec := by
-  intro index hindex
-  rw [himports] at hindex
-  have hzero : index = 0 := by
-    simpa [imports] using hindex
-  subst index
-  refine ⟨getHost, getContract, rfl, rfl, ?_⟩
-  intro store args
-  rfl
-
 end Wasm.Random
