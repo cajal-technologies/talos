@@ -1043,14 +1043,11 @@ def nearImports : List ImportDecl := nearHostFns.map Prod.fst
 `nearImports`. -/
 def nearEnv : HostEnv NearState := { funcs := nearHostFns.map Prod.snd }
 
-/-- Import declarations match by module, name, params, and results. -/
-def importMatches (a b : ImportDecl) : Bool :=
-  a.«module» == b.«module» && a.name == b.name &&
-    a.params == b.params && a.results == b.results
-
-/-- Resolve one declared import to its NEAR host function. -/
+/-- Resolve one declared import to its NEAR host function. Matching is the
+interpreter's own `ImportDecl.matches` — module, name and signature all
+agree — so NEAR resolves imports by exactly the rule host registries use. -/
 def resolveImport? (decl : ImportDecl) : Option (HostFn NearState) :=
-  (nearHostFns.find? (fun p => importMatches p.fst decl)).map Prod.snd
+  (nearHostFns.find? (fun p => ImportDecl.matches p.fst decl)).map Prod.snd
 
 /-- Resolve the exact subset/order of imports declared by a real module into
 a positional `HostEnv`. Returns `none` when an import is not a known NEAR

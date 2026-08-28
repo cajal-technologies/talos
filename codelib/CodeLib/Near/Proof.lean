@@ -273,28 +273,34 @@ staged ahead of a full NEAR-contract verification, and meanwhile double as
 *build-time sync checks* — because this file is in the `CodeLib` build, any
 change to a `HostFn` that desyncs it from its relational contract breaks the
 corresponding proof here. Keep them until a NEAR example consumes the contracts.
--/
+
+Most of them are the same proof: introduce the state and the argument list,
+unfold the contract and the host function down to the branches they share, then
+close every branch. `near_contract` is that proof; the only thing a call site
+supplies is which definitions have to come apart first. -/
+
+/-- Introduce `st`/`args`, unfold the named definitions — the contract, the host
+function, the helpers between them, and `trapResult` last so the trap branches
+reduce to their `∃ msg, …` form — then split every `match`/`if` scrutinee this
+exposes and close each branch with `simp_all`. -/
+local macro "near_contract" defs:(ppSpace colGt ident)+ : tactic =>
+  `(tactic|
+      (intro st args
+       unfold $defs*
+       repeat split
+       all_goals simp_all))
 
 theorem inputFn_satisfies_rel :
     ∀ st args, inputRelContract st args (inputFn.invoke st args) := by
-  intro st args
-  unfold inputRelContract inputFn writeRegisterResult trapResult
-  repeat split
-  all_goals simp_all
+  near_contract inputRelContract inputFn writeRegisterResult trapResult
 
 theorem readRegisterFn_satisfies_rel :
     ∀ st args, readRegisterRelContract st args (readRegisterFn.invoke st args) := by
-  intro st args
-  unfold readRegisterRelContract readRegisterFn trapResult
-  repeat split
-  all_goals simp_all
+  near_contract readRegisterRelContract readRegisterFn trapResult
 
 theorem registerLenFn_satisfies_rel :
     ∀ st args, registerLenRelContract st args (registerLenFn.invoke st args) := by
-  intro st args
-  unfold registerLenRelContract registerLenFn trapResult
-  repeat split
-  all_goals simp_all
+  near_contract registerLenRelContract registerLenFn trapResult
 
 theorem writeRegisterFn_satisfies_rel :
     ∀ st args, writeRegisterRelContract st args (writeRegisterFn.invoke st args) := by
@@ -305,20 +311,14 @@ theorem writeRegisterFn_satisfies_rel :
 
 theorem valueReturnFn_satisfies_rel :
     ∀ st args, valueReturnRelContract st args (valueReturnFn.invoke st args) := by
-  intro st args
-  unfold valueReturnRelContract valueReturnFn checkDataLimit trapResult
-  repeat split
-  all_goals simp_all
+  near_contract valueReturnRelContract valueReturnFn checkDataLimit trapResult
 
 theorem contextRegisterFn_satisfies_rel (name : String)
     (select : NearContext → List UInt8) :
     ∀ st args,
       contextRegisterRelContract select st args
         ((contextRegisterFn name select).invoke st args) := by
-  intro st args
-  unfold contextRegisterRelContract contextRegisterFn writeRegisterResult trapResult
-  repeat split
-  all_goals simp_all
+  near_contract contextRegisterRelContract contextRegisterFn writeRegisterResult trapResult
 
 theorem accountIdRegisterFn_satisfies_rel (name : String)
     (select : NearContext → List UInt8) :
@@ -410,24 +410,15 @@ theorem digestFn_satisfies_rel (name : String)
     ∀ st args,
       digestRelContract hash st args
         ((digestFn name hash).invoke st args) := by
-  intro st args
-  unfold digestRelContract digestFn writeRegisterResult trapResult
-  repeat split
-  all_goals simp_all
+  near_contract digestRelContract digestFn writeRegisterResult trapResult
 
 theorem logUtf8Fn_satisfies_rel :
     ∀ st args, logRelContract st args (logUtf8Fn.invoke st args) := by
-  intro st args
-  unfold logRelContract logUtf8Fn appendLogResult checkDataLimit trapResult
-  repeat split
-  all_goals simp_all
+  near_contract logRelContract logUtf8Fn appendLogResult checkDataLimit trapResult
 
 theorem logUtf16Fn_satisfies_rel :
     ∀ st args, logRelContract st args (logUtf16Fn.invoke st args) := by
-  intro st args
-  unfold logRelContract logUtf16Fn appendLogResult checkDataLimit trapResult
-  repeat split
-  all_goals simp_all
+  near_contract logRelContract logUtf16Fn appendLogResult checkDataLimit trapResult
 
 theorem storageWriteFn_satisfies_rel :
     ∀ st args, storageWriteRelContract st args (storageWriteFn.invoke st args) := by
@@ -440,10 +431,7 @@ theorem storageWriteFn_satisfies_rel :
 
 theorem storageReadFn_satisfies_rel :
     ∀ st args, storageReadRelContract st args (storageReadFn.invoke st args) := by
-  intro st args
-  unfold storageReadRelContract storageReadFn checkDataLimit writeRegisterResult trapResult
-  repeat split
-  all_goals simp_all
+  near_contract storageReadRelContract storageReadFn checkDataLimit writeRegisterResult trapResult
 
 theorem storageRemoveFn_satisfies_rel :
     ∀ st args, storageRemoveRelContract st args (storageRemoveFn.invoke st args) := by
@@ -456,10 +444,7 @@ theorem storageRemoveFn_satisfies_rel :
 
 theorem storageHasKeyFn_satisfies_rel :
     ∀ st args, storageHasKeyRelContract st args (storageHasKeyFn.invoke st args) := by
-  intro st args
-  unfold storageHasKeyRelContract storageHasKeyFn checkDataLimit trapResult
-  repeat split
-  all_goals simp_all
+  near_contract storageHasKeyRelContract storageHasKeyFn checkDataLimit trapResult
 
 theorem promiseResultFn_satisfies_rel :
     ∀ st args, promiseResultRelContract st args (promiseResultFn.invoke st args) := by
@@ -497,8 +482,15 @@ def resolveSpec? (m : Module) : Option (HostSpec NearState) :=
 
 /-- The reference NEAR host environment satisfies the canonical proof spec for
 any module whose imports are exactly `nearImports`. Hand-built examples can use
-this directly; real compiled modules resolved through `resolveEnv?` will need a
-subset/order variant. -/
+this directly.
+
+The subset/order variant this theorem's hypothesis rules out already exists:
+`HostRegistry.envFor_satisfies` builds the environment and the spec by the same
+walk over a module's own imports, so it holds for *every* module — a subset of
+the NEAR imports, a different order, or a mixture with another host — with no
+hypothesis at all. Note that registry resolution is total where `resolveEnv?`
+is partial: an import no entry claims resolves to a trapping stub rather than
+making resolution fail. -/
 theorem nearEnv_satisfies_canonical (m : Module) (himports : m.imports = nearImports) :
     nearEnv.Satisfies m nearSpec := by
   intro i hi
