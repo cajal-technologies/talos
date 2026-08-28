@@ -391,18 +391,12 @@ theorem oddSpec (n : UInt32) :
 
 theorem evenPartial (n : UInt32) :
     PartiallyMeets (evenConfig n)
-      (fun values _ => values = [.i32 (evenValue n)]) := by
-  intro trace values store observed
-  obtain ⟨expectedTrace, expected⟩ := even_steps n
-  obtain ⟨rfl, rfl⟩ := steps_done_deterministic expected observed
-  rfl
+      (fun values _ => values = [.i32 (evenValue n)]) :=
+  (evenSpec n).toPartiallyMeets
 
 theorem oddPartial (n : UInt32) :
     PartiallyMeets (oddConfig n)
-      (fun values _ => values = [.i32 (oddValue n)]) := by
-  intro trace values store observed
-  obtain ⟨expectedTrace, expected⟩ := odd_steps n
-  obtain ⟨rfl, rfl⟩ := steps_done_deterministic expected observed
-  rfl
+      (fun values _ => values = [.i32 (oddValue n)]) :=
+  (oddSpec n).toPartiallyMeets
 
 end Wasm
