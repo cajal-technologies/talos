@@ -12,8 +12,11 @@ It is deliberately run **only** on modules an `assert_invalid` /
 `assert_malformed` command already declares ill-formed (see the testsuite
 harness), so it never rejects a module a normal `(module …)` command would
 accept — a too-aggressive check can only make an already-invalid module
-pass for a slightly different reason, never break a valid one. A full
-operand-stack type checker (for the `type mismatch` cases) is future work.
+pass for a slightly different reason, never break a valid one. The
+`type mismatch` cases are covered by an operand-stack type checker
+(`Program.checkTypes`, run per function body by `Module.checkFuncStraight`
+as `Module.validate`'s last step), itself partial: it gives up and accepts
+the function as soon as it meets an instruction it does not model.
 -/
 
 namespace Wasm
@@ -874,9 +877,10 @@ def StorageType.vt : StorageType → ValueType
   | .val vt   => vt
   | .packed _ => .i32
 
-/-- The static value type a global exposes. The `type` field was dropped
-from `GlobalDecl` (it was unused at runtime), so recover the declared type
-from the initializer value the decoder stored. -/
+/-- The value type of a runtime value, as seen by the stack checker. Used
+to recover a global's static type when `GlobalDecl.declaredType` is absent
+— decoded modules always retain the source declaration, but hand-built
+ones leave it `none`. -/
 def Value.toValueType : Value → ValueType
   | .i32 _       => .i32
   | .i64 _       => .i64

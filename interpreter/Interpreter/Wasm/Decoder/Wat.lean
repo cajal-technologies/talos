@@ -307,15 +307,13 @@ def parseF32Lit (s : String) : Except Err UInt32 := do
     let base : UInt32 := 0x7F800000 ||| UInt32.ofNat (p % 0x800000)
     .ok (if neg then base ||| 0x80000000 else base)
 
-/-- Decode a value-type atom. Numeric types and the two reference types
-of wasm 2.0 (`funcref`, `externref`) are modelled directly. Types from
-proposals the interpreter doesn't yet model (SIMD, GC) are accepted at
-the decoder level — silently normalised to `i32` — so that modules
-which include such types in *signatures* still decode. Functions whose
-bodies actually touch those types will hit `unreachable` (because the
-corresponding instructions are also lowered to `unreachable`), giving
-the testsuite runner a chance to run any supported exports declared in
-the same module. -/
+/-- Decode a value-type atom. Numeric types, the two reference types of
+wasm 2.0 (`funcref`, `externref`), `exnref` and the SIMD `v128` map to
+their own constructor; the GC abstract reference types (`anyref`,
+`eqref`, `i31ref`, `structref`, `arrayref`, `nullref`) map to the
+nullable `ValueType.ref` form over the matching `GcHeapType`.
+`nullfuncref` / `nullexternref` collapse onto `funcref` / `externref`,
+which already carry their own null. -/
 private def atomToValueType? : String → Option Wasm.ValueType
   | "i32"       => some .i32
   | "i64"       => some .i64
@@ -341,11 +339,11 @@ private def isNullFuncrefHeapType (ht : String) : Bool :=
 private def isNullExternrefHeapType (ht : String) : Bool :=
   ht == "extern" || ht == "noextern"
 
-/-- Decode a reference value-type written in list form, e.g.
-`(ref func)`, `(ref null extern)`, `(ref $t)`. Symbolic and numeric heap
-types refer to the type table — pre-GC those are function types, so they
-map to `funcref`; GC heap types keep the `i32` placeholder used for
-unmodelled proposals. -/
+/-- Decode a heap-type atom: the `func` of `(ref func)`, the `extern` of
+`(ref null extern)`, the `$t` of `(ref $t)`. The abstract heap types each
+map to their own `GcHeapType` constructor; symbolic (`$t`) and numeric
+atoms refer to the module's type table and become `.named` / `.concrete`,
+resolved to an index during validation. -/
 private def atomToHeapType (ht : String) : Wasm.GcHeapType :=
   if ht == "any" then .any
   else if ht == "eq" then .eq

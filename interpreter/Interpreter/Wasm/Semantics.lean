@@ -6,7 +6,7 @@ import Interpreter.Wasm.Host
 
 namespace Wasm
 
-/-! ## Numeric helpers (carried over from `Interpreter.Core.Interp`). -/
+/-! ## Numeric helpers. -/
 
 /-- Number of leading zero bits in a 32-bit word; 32 if zero. -/
 def clz32 : Nat → UInt32 → Nat

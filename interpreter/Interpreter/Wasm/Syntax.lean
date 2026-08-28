@@ -8,9 +8,10 @@ namespace Wasm
 Wasm's numeric types `i32`, `i64`, `f32`, `f64`, plus the `funcref`
 reference type needed for tables and `call_indirect`. Floats are carried
 by their IEEE-754 bit pattern (`f32` as `UInt32`, `f64` as `UInt64`); the
-operations live in `Interpreter.Wasm.Float`. Other reference types remain
-out of scope. Memory loads/stores, globals, tables, and indirect calls are
-supported. -/
+operations live in `Interpreter.Wasm.Float`. The remaining wasm 3.0 types
+are modelled too: `externref`, `exnref`, the SIMD `v128`, the managed
+`anyref`, and the precise `ref nullable heap` form validation uses.
+Memory loads/stores, globals, tables, and indirect calls are supported. -/
 
 /-- A heap type used by both static reference types and GC cast/test
 instructions. `named` preserves a symbolic source reference until module
@@ -260,11 +261,12 @@ deriving Repr, Inhabited, DecidableEq
 
 /-! ## Instructions
 
-The instruction set mirrors `Interpreter.Core.Ast.Instr` minus the
-features that require a `Store` (tables, `call_indirect`).
-Naming follows Core where applicable; the two historical Wasm differences
-(`and`, `br_if`) are kept for backward compatibility with the existing
-examples. -/
+One constructor per modelled Wasm instruction, including the ones that
+reach into the `Store` (memories, globals, tables, `call_indirect`).
+Constructor names are the Wasm mnemonics in camelCase: the `i32` arms are
+unsuffixed (`add`, `load32`), their `i64` counterparts carry an `I64`
+suffix (`addI64`, `load64`), and the float arms keep their type prefix
+(`f32Add`). `br_if` retains its underscore. -/
 
 inductive Instruction where
   -- Constants / locals
@@ -640,8 +642,9 @@ structure DataSegment where
   offsetExpr : Program := []
 deriving Repr, Inhabited
 
-/-- Declaration of a single linear memory. Wasm allows at most one
-memory per module. -/
+/-- Declaration of a single linear memory. `Module.memory` holds the
+default memory; the multi-memory proposal's further memories live in
+`Module.extraMemories`. -/
 structure MemDecl where
   pagesMin : UInt32
   pagesMax : Option UInt32 := none
@@ -714,9 +717,10 @@ structure GcTypeDef where
   recGroup : Option Nat := none
 deriving Repr, Inhabited
 
-/-- Declaration of a single table. The interpreter only models
-`funcref` tables; the size bounds are the declared minimum and (optional)
-declared maximum. A freshly instantiated table has `min` null refs. -/
+/-- Declaration of a single table. `elemType` is the declared element
+type, defaulting to `funcref`; the size bounds are the declared minimum
+and (optional) declared maximum. A freshly instantiated table holds `min`
+copies of `elemType`'s zero value. -/
 structure TableDecl where
   min      : Nat
   max      : Option Nat := none

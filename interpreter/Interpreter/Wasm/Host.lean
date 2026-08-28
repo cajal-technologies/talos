@@ -15,9 +15,9 @@ runtime data, not Wasm-visible program state. Keeping it separate means
 existing `Store` invariants don't need to mention the host.
 
 For reasoning, programs are stated parametric over any `HostEnv`
-satisfying a `HostSpec` (introduced in a later milestone) — the
-contracts in a `HostSpec` constrain what the host is *allowed* to do,
-without committing to a particular implementation.
+satisfying a `HostSpec` (defined below) — the contracts in a `HostSpec`
+constrain what the host is *allowed* to do, without committing to a
+particular implementation.
 -/
 
 namespace Wasm
