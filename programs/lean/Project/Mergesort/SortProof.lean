@@ -578,9 +578,6 @@ def emptyLoopFrame (body continuation : Program) : ControlFrame :=
   { kind := .loop, paramArity := 0, resultArity := 0,
     body, continuation, belowStack := [] }
 
-def mergeMainLoopFrame : ControlFrame :=
-  emptyLoopFrame mergeMainLoopBody []
-
 def sortRecursiveBodyFrame : ControlFrame :=
   emptyBlockFrame sortRecursiveBody (sortRecursiveGuard.drop 1)
 
@@ -728,17 +725,6 @@ theorem mergeMainChoiceBody_shape :
         .unreachable] := by
   rfl
 
-theorem mergeMainCompareBody_shape :
-    mergeMainCompareBody =
-      [.localGet 0, .localGet 9, .const 2, .shl, .add, .load32 0,
-       .localTee 11,
-       .localGet 6, .localGet 10, .const 2, .shl, .add, .load32 0,
-       .localTee 12, .leU, .br_if 0,
-       .localGet 5, .localGet 3, .geU, .br_if 1,
-       .localGet 8, .localGet 12, .store32 0,
-       .localGet 10, .const 1, .add, .localSet 10, .br 2] := by
-  rfl
-
 theorem mergeMainCompareBody_load1 :
     mergeMainCompareBody =
       [.localGet 0, .localGet 9, .const 2, .shl, .add, .load32 0] ++
@@ -761,24 +747,10 @@ theorem mergeMainCompareBody_afterLoad2 :
       .localTee 12 :: .leU :: .br_if 0 :: mergeMainCompareBody.drop 16 := by
   rfl
 
-theorem mergeMainCompareBody_right :
-    mergeMainCompareBody.drop 16 =
-      [.localGet 5, .localGet 3, .geU, .br_if 1,
-       .localGet 8, .localGet 12, .store32 0,
-       .localGet 10, .const 1, .add, .localSet 10, .br 2] := by
-  rfl
-
 theorem mergeMainCompareBody_rightGuard :
     mergeMainCompareBody.drop 16 =
       [.localGet 5, .localGet 3, .geU, .br_if 1] ++
         mergeMainCompareBody.drop 20 := by
-  rfl
-
-theorem mergeMainLeftBody_shape :
-    mergeMainLeftBody =
-      [.localGet 5, .localGet 3, .geU, .br_if 0,
-       .localGet 8, .localGet 11, .store32 0,
-       .localGet 9, .const 1, .add, .localSet 9, .br 2] := by
   rfl
 
 theorem mergeMainLeftBody_guard :
