@@ -344,6 +344,38 @@ theorem wp_swapElementsFunc2
       rfl
     · iexact Hresources
 
+/-- Top-level one-cell specialization for equal exchange pointers. -/
+theorem wp_swapElementsFunc2Alias
+    (ptr : UInt32) (oldScratch oldValue : UInt64)
+    (hroom : ptr.toNat + 8 ≤ 4294967296) :
+    globalPointsToAt 0 0 (.i32 1048560) ∗
+      pointsTo_u64 0 1048552 oldScratch ∗ pointsTo_u64 0 ptr oldValue ⊢
+    WP (.running
+      ⟨⟨[.i32 ptr, .i32 ptr], [.i32 0], []⟩,
+        [ .globalGet 0, .const 16, .sub, .localSet 2,
+          .localGet 2, .localGet 0, .load64 0, .store64 8,
+          .localGet 0, .localGet 1, .load64 0, .store64 0,
+          .localGet 1, .localGet 2, .load64 8, .store64 0, .ret ],
+        0, [], [], []⟩ : Expr α) @ s; E
+      {{ result, ⌜result = []⌝ ∗
+        globalPointsToAt 0 0 (.i32 1048560) ∗
+        pointsTo_u64 0 1048552 oldValue ∗
+        pointsTo_u64 0 ptr oldValue }} := by
+  iintro Hresources
+  iapply wp_swapElementsFunc2AliasPrefix ptr oldScratch oldValue
+    hroom (calls := [])
+  isplitl [Hresources]
+  · iexact Hresources
+  · inext
+    iintro Hresources
+    iapply wp_returnFromFunction
+    inext
+    iapply wp_value'
+    isplitr
+    · ipureintro
+      rfl
+    · iexact Hresources
+
 /-- Small-step Iris contract for the exact generated body of
 `Project.SwapElements.func3`. It spills `len` and `ptr` into two adjacent
 32-bit words and returns no Wasm values. -/
@@ -647,6 +679,36 @@ theorem twp_swapElementsFunc2
   iintro Hresources
   iapply twp_swapElementsFunc2Prefix ptrA ptrB oldScratch oldA oldB
     hroomA hroomB (calls := [])
+  isplitl [Hresources]
+  · iexact Hresources
+  · iintro Hresources
+    iapply twp_returnFromFunction
+    simp only [List.take, List.nil_append]
+    iapply twp.value rfl
+    isplitr
+    · ipureintro
+      rfl
+    · iexact Hresources
+
+theorem twp_swapElementsFunc2Alias
+    (ptr : UInt32) (oldScratch oldValue : UInt64)
+    (hroom : ptr.toNat + 8 ≤ 4294967296) :
+    globalPointsToAt 0 0 (.i32 1048560) ∗
+      pointsTo_u64 0 1048552 oldScratch ∗ pointsTo_u64 0 ptr oldValue ⊢
+    WP (.running
+      ⟨⟨[.i32 ptr, .i32 ptr], [.i32 0], []⟩,
+        [ .globalGet 0, .const 16, .sub, .localSet 2,
+          .localGet 2, .localGet 0, .load64 0, .store64 8,
+          .localGet 0, .localGet 1, .load64 0, .store64 0,
+          .localGet 1, .localGet 2, .load64 8, .store64 0, .ret ],
+        0, [], [], []⟩ : Expr α) @ s; E
+      [{ result, ⌜result = []⌝ ∗
+        globalPointsToAt 0 0 (.i32 1048560) ∗
+        pointsTo_u64 0 1048552 oldValue ∗
+        pointsTo_u64 0 ptr oldValue }] := by
+  iintro Hresources
+  iapply twp_swapElementsFunc2AliasPrefix ptr oldScratch oldValue hroom
+    (calls := [])
   isplitl [Hresources]
   · iexact Hresources
   · iintro Hresources
