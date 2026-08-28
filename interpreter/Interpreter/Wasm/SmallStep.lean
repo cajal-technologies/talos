@@ -2547,146 +2547,134 @@ private def stepPlainChecked?
         | _ => .error ⟨"i64.extend32_s requires one i64 operand"⟩
       | .load8U offset =>
         match thread.locals.values with
-        | .i32 address :: values =>
-          if address.toNat + offset.toNat + 1 > store.wasm.mem.pages * 65536 then
-            .ok (some (.instruction instr, ⟨.trapped .outOfBoundsMemory, store⟩))
-          else
-            next { thread.locals with
-              values := .i32
-                (store.wasm.mem.read8 (address + offset)).toUInt32 :: values }
-        | .i64 address :: values =>
-          if address.toNat + offset.toNat + 1 > store.wasm.mem.pages * 65536 then
-            .ok (some (.instruction instr, ⟨.trapped .outOfBoundsMemory, store⟩))
-          else
-            next { thread.locals with
-              values := .i32
-                (store.wasm.mem.read8
-                  (address.toUInt32 + offset)).toUInt32 :: values }
+        | address :: values =>
+          match memoryAddress? address with
+          | some (logicalAddress, physicalAddress) =>
+            if logicalAddress + offset.toNat + 1 >
+                store.wasm.mem.pages * 65536 then
+              .ok (some
+                (.instruction instr, ⟨.trapped .outOfBoundsMemory, store⟩))
+            else
+              next { thread.locals with
+                values := .i32
+                  (store.wasm.mem.read8
+                    (physicalAddress + offset)).toUInt32 :: values }
+          | none => .error ⟨"i32.load8_u requires one i32 address operand"⟩
         | _ => .error ⟨"i32.load8_u requires one i32 address operand"⟩
       | .load8S offset =>
         match thread.locals.values with
-        | .i32 address :: values =>
-          if address.toNat + offset.toNat + 1 > store.wasm.mem.pages * 65536 then
-            .ok (some (.instruction instr, ⟨.trapped .outOfBoundsMemory, store⟩))
-          else
-            next { thread.locals with
-              values := .i32
-                (extend8To32
-                  (store.wasm.mem.read8 (address + offset)).toUInt32) :: values }
-        | .i64 address :: values =>
-          if address.toNat + offset.toNat + 1 > store.wasm.mem.pages * 65536 then
-            .ok (some (.instruction instr, ⟨.trapped .outOfBoundsMemory, store⟩))
-          else
-            next { thread.locals with
-              values := .i32
-                (extend8To32
-                  (store.wasm.mem.read8
-                    (address.toUInt32 + offset)).toUInt32) :: values }
+        | address :: values =>
+          match memoryAddress? address with
+          | some (logicalAddress, physicalAddress) =>
+            if logicalAddress + offset.toNat + 1 >
+                store.wasm.mem.pages * 65536 then
+              .ok (some
+                (.instruction instr, ⟨.trapped .outOfBoundsMemory, store⟩))
+            else
+              next { thread.locals with
+                values := .i32
+                  (extend8To32
+                    (store.wasm.mem.read8
+                      (physicalAddress + offset)).toUInt32) :: values }
+          | none => .error ⟨"i32.load8_s requires one i32 address operand"⟩
         | _ => .error ⟨"i32.load8_s requires one i32 address operand"⟩
       | .load16U offset =>
         match thread.locals.values with
-        | .i32 address :: values =>
-          if address.toNat + offset.toNat + 2 > store.wasm.mem.pages * 65536 then
-            .ok (some (.instruction instr, ⟨.trapped .outOfBoundsMemory, store⟩))
-          else
-            next { thread.locals with
-              values := .i32
-                (store.wasm.mem.read16 (address + offset)) :: values }
-        | .i64 address :: values =>
-          if address.toNat + offset.toNat + 2 > store.wasm.mem.pages * 65536 then
-            .ok (some (.instruction instr, ⟨.trapped .outOfBoundsMemory, store⟩))
-          else
-            next { thread.locals with
-              values := .i32
-                (store.wasm.mem.read16 (address.toUInt32 + offset)) :: values }
+        | address :: values =>
+          match memoryAddress? address with
+          | some (logicalAddress, physicalAddress) =>
+            if logicalAddress + offset.toNat + 2 >
+                store.wasm.mem.pages * 65536 then
+              .ok (some
+                (.instruction instr, ⟨.trapped .outOfBoundsMemory, store⟩))
+            else
+              next { thread.locals with
+                values := .i32
+                  (store.wasm.mem.read16
+                    (physicalAddress + offset)) :: values }
+          | none => .error ⟨"i32.load16_u requires one i32 address operand"⟩
         | _ => .error ⟨"i32.load16_u requires one i32 address operand"⟩
       | .load16S offset =>
         match thread.locals.values with
-        | .i32 address :: values =>
-          if address.toNat + offset.toNat + 2 > store.wasm.mem.pages * 65536 then
-            .ok (some (.instruction instr, ⟨.trapped .outOfBoundsMemory, store⟩))
-          else
-            next { thread.locals with
-              values := .i32
-                (extend16To32
-                  (store.wasm.mem.read16 (address + offset))) :: values }
-        | .i64 address :: values =>
-          if address.toNat + offset.toNat + 2 > store.wasm.mem.pages * 65536 then
-            .ok (some (.instruction instr, ⟨.trapped .outOfBoundsMemory, store⟩))
-          else
-            next { thread.locals with
-              values := .i32
-                (extend16To32
-                  (store.wasm.mem.read16
-                    (address.toUInt32 + offset))) :: values }
+        | address :: values =>
+          match memoryAddress? address with
+          | some (logicalAddress, physicalAddress) =>
+            if logicalAddress + offset.toNat + 2 >
+                store.wasm.mem.pages * 65536 then
+              .ok (some
+                (.instruction instr, ⟨.trapped .outOfBoundsMemory, store⟩))
+            else
+              next { thread.locals with
+                values := .i32
+                  (extend16To32
+                    (store.wasm.mem.read16
+                      (physicalAddress + offset))) :: values }
+          | none => .error ⟨"i32.load16_s requires one i32 address operand"⟩
         | _ => .error ⟨"i32.load16_s requires one i32 address operand"⟩
       | .store8 offset =>
         match thread.locals.values with
-        | .i32 value :: .i32 address :: values =>
-          if address.toNat + offset.toNat + 1 > store.wasm.mem.pages * 65536 then
-            .ok (some (.instruction instr, ⟨.trapped .outOfBoundsMemory, store⟩))
-          else
-            next { thread.locals with values := values }
-              (setMemory store
-                (store.wasm.mem.write8 (address + offset) value.toUInt8))
-        | .i32 value :: .i64 address :: values =>
-          if address.toNat + offset.toNat + 1 > store.wasm.mem.pages * 65536 then
-            .ok (some (.instruction instr, ⟨.trapped .outOfBoundsMemory, store⟩))
-          else
-            next { thread.locals with values := values }
-              (setMemory store
-                (store.wasm.mem.write8
-                  (address.toUInt32 + offset) value.toUInt8))
+        | .i32 value :: address :: values =>
+          match memoryAddress? address with
+          | some (logicalAddress, physicalAddress) =>
+            if logicalAddress + offset.toNat + 1 >
+                store.wasm.mem.pages * 65536 then
+              .ok (some
+                (.instruction instr, ⟨.trapped .outOfBoundsMemory, store⟩))
+            else
+              next { thread.locals with values }
+                (setMemory store
+                  (store.wasm.mem.write8
+                    (physicalAddress + offset) value.toUInt8))
+          | none =>
+            .error ⟨"i32.store8 requires i32 value and address operands"⟩
         | _ => .error ⟨"i32.store8 requires i32 value and address operands"⟩
       | .store16 offset =>
         match thread.locals.values with
-        | .i32 value :: .i32 address :: values =>
-          if address.toNat + offset.toNat + 2 > store.wasm.mem.pages * 65536 then
-            .ok (some (.instruction instr, ⟨.trapped .outOfBoundsMemory, store⟩))
-          else
-            next { thread.locals with values }
-              (setMemory store
-                (store.wasm.mem.write16 (address + offset) value))
-        | .i32 value :: .i64 address :: values =>
-          if address.toNat + offset.toNat + 2 > store.wasm.mem.pages * 65536 then
-            .ok (some (.instruction instr, ⟨.trapped .outOfBoundsMemory, store⟩))
-          else
-            next { thread.locals with values }
-              (setMemory store
-                (store.wasm.mem.write16
-                  (address.toUInt32 + offset) value))
+        | .i32 value :: address :: values =>
+          match memoryAddress? address with
+          | some (logicalAddress, physicalAddress) =>
+            if logicalAddress + offset.toNat + 2 >
+                store.wasm.mem.pages * 65536 then
+              .ok (some
+                (.instruction instr, ⟨.trapped .outOfBoundsMemory, store⟩))
+            else
+              next { thread.locals with values }
+                (setMemory store
+                  (store.wasm.mem.write16 (physicalAddress + offset) value))
+          | none =>
+            .error ⟨"i32.store16 requires i32 value and address operands"⟩
         | _ => .error ⟨"i32.store16 requires i32 value and address operands"⟩
       | .load32 offset =>
         match thread.locals.values with
-        | .i32 address :: values =>
-          if address.toNat + offset.toNat + 4 > store.wasm.mem.pages * 65536 then
-            .ok (some (.instruction instr, ⟨.trapped .outOfBoundsMemory, store⟩))
-          else
-            next { thread.locals with
-              values := .i32 (store.wasm.mem.read32 (address + offset)) :: values }
-        | .i64 address :: values =>
-          if address.toNat + offset.toNat + 4 > store.wasm.mem.pages * 65536 then
-            .ok (some (.instruction instr, ⟨.trapped .outOfBoundsMemory, store⟩))
-          else
-            next { thread.locals with
-              values := .i32
-                (store.wasm.mem.read32 (address.toUInt32 + offset)) :: values }
+        | address :: values =>
+          match memoryAddress? address with
+          | some (logicalAddress, physicalAddress) =>
+            if logicalAddress + offset.toNat + 4 >
+                store.wasm.mem.pages * 65536 then
+              .ok (some
+                (.instruction instr, ⟨.trapped .outOfBoundsMemory, store⟩))
+            else
+              next { thread.locals with
+                values := .i32
+                  (store.wasm.mem.read32
+                    (physicalAddress + offset)) :: values }
+          | none => .error ⟨"i32.load requires one i32 address operand"⟩
         | _ => .error ⟨"i32.load requires one i32 address operand"⟩
       | .store32 offset =>
         match thread.locals.values with
-        | .i32 value :: .i32 address :: values =>
-          if address.toNat + offset.toNat + 4 > store.wasm.mem.pages * 65536 then
-            .ok (some (.instruction instr, ⟨.trapped .outOfBoundsMemory, store⟩))
-          else
-            next { thread.locals with values := values }
-              (setMemory store (store.wasm.mem.write32 (address + offset) value))
-        | .i32 value :: .i64 address :: values =>
-          if address.toNat + offset.toNat + 4 > store.wasm.mem.pages * 65536 then
-            .ok (some (.instruction instr, ⟨.trapped .outOfBoundsMemory, store⟩))
-          else
-            next { thread.locals with values := values }
-              (setMemory store
-                (store.wasm.mem.write32 (address.toUInt32 + offset) value))
+        | .i32 value :: address :: values =>
+          match memoryAddress? address with
+          | some (logicalAddress, physicalAddress) =>
+            if logicalAddress + offset.toNat + 4 >
+                store.wasm.mem.pages * 65536 then
+              .ok (some
+                (.instruction instr, ⟨.trapped .outOfBoundsMemory, store⟩))
+            else
+              next { thread.locals with values }
+                (setMemory store
+                  (store.wasm.mem.write32 (physicalAddress + offset) value))
+          | none =>
+            .error ⟨"i32.store requires i32 value and address operands"⟩
         | _ => .error ⟨"i32.store requires i32 value and address operands"⟩
       | .load64 offset =>
         match thread.locals.values with
@@ -5398,240 +5386,158 @@ inductive Step : Config α → StepKind → Config α → Prop where
         ⟨.running ⟨⟨params, localValues, .i64 (extend32To64 value) :: values⟩,
           code, arity, remainder, controls, calls⟩, store⟩
   | load8UTrap
-      (h : address.toNat + offset.toNat + 1 > store.wasm.mem.pages * 65536) :
-      Step ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
+      (haddress : memoryAddress? address = some (logicalAddress, physicalAddress))
+      (h : logicalAddress + offset.toNat + 1 >
+        store.wasm.mem.pages * 65536) :
+      Step ⟨.running ⟨⟨params, localValues, address :: values⟩,
           .load8U offset :: code, arity, remainder, controls, calls⟩, store⟩
         (.instruction (.load8U offset)) ⟨.trapped .outOfBoundsMemory, store⟩
   | load8U
-      (h : address.toNat + offset.toNat + 1 ≤ store.wasm.mem.pages * 65536) :
-      Step ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
-          .load8U offset :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction (.load8U offset))
-        ⟨.running ⟨⟨params, localValues,
-          .i32 (store.wasm.mem.read8 (address + offset)).toUInt32 :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | load8STrap
-      (h : address.toNat + offset.toNat + 1 > store.wasm.mem.pages * 65536) :
-      Step ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
-          .load8S offset :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction (.load8S offset)) ⟨.trapped .outOfBoundsMemory, store⟩
-  | load8S
-      (h : address.toNat + offset.toNat + 1 ≤ store.wasm.mem.pages * 65536) :
-      Step ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
-          .load8S offset :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction (.load8S offset))
-        ⟨.running ⟨⟨params, localValues,
-          .i32 (extend8To32
-            (store.wasm.mem.read8 (address + offset)).toUInt32) :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | load16UTrap
-      (h : address.toNat + offset.toNat + 2 > store.wasm.mem.pages * 65536) :
-      Step ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
-          .load16U offset :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction (.load16U offset)) ⟨.trapped .outOfBoundsMemory, store⟩
-  | load16U
-      (h : address.toNat + offset.toNat + 2 ≤ store.wasm.mem.pages * 65536) :
-      Step ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
-          .load16U offset :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction (.load16U offset))
-        ⟨.running ⟨⟨params, localValues,
-          .i32 (store.wasm.mem.read16 (address + offset)) :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | load16STrap
-      (h : address.toNat + offset.toNat + 2 > store.wasm.mem.pages * 65536) :
-      Step ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
-          .load16S offset :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction (.load16S offset)) ⟨.trapped .outOfBoundsMemory, store⟩
-  | load16S
-      (h : address.toNat + offset.toNat + 2 ≤ store.wasm.mem.pages * 65536) :
-      Step ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
-          .load16S offset :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction (.load16S offset))
-        ⟨.running ⟨⟨params, localValues,
-          .i32 (extend16To32
-            (store.wasm.mem.read16 (address + offset))) :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | store8Trap
-      (h : address.toNat + offset.toNat + 1 > store.wasm.mem.pages * 65536) :
-      Step ⟨.running ⟨⟨params, localValues,
-          .i32 value :: .i32 address :: values⟩,
-          .store8 offset :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction (.store8 offset)) ⟨.trapped .outOfBoundsMemory, store⟩
-  | store8
-      (h : address.toNat + offset.toNat + 1 ≤ store.wasm.mem.pages * 65536) :
-      Step ⟨.running ⟨⟨params, localValues,
-          .i32 value :: .i32 address :: values⟩,
-          .store8 offset :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction (.store8 offset))
-        ⟨.running ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
-          setMemory store
-            (store.wasm.mem.write8 (address + offset) value.toUInt8)⟩
-  | store16Trap
-      (h : address.toNat + offset.toNat + 2 > store.wasm.mem.pages * 65536) :
-      Step ⟨.running ⟨⟨params, localValues,
-          .i32 value :: .i32 address :: values⟩,
-          .store16 offset :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction (.store16 offset)) ⟨.trapped .outOfBoundsMemory, store⟩
-  | store16
-      (h : address.toNat + offset.toNat + 2 ≤ store.wasm.mem.pages * 65536) :
-      Step ⟨.running ⟨⟨params, localValues,
-          .i32 value :: .i32 address :: values⟩,
-          .store16 offset :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction (.store16 offset))
-        ⟨.running ⟨⟨params, localValues, values⟩,
-          code, arity, remainder, controls, calls⟩,
-          setMemory store
-            (store.wasm.mem.write16 (address + offset) value)⟩
-  | load32Trap
-      (h : address.toNat + offset.toNat + 4 > store.wasm.mem.pages * 65536) :
-      Step ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
-          .load32 offset :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction (.load32 offset)) ⟨.trapped .outOfBoundsMemory, store⟩
-  | load32
-      (h : address.toNat + offset.toNat + 4 ≤ store.wasm.mem.pages * 65536) :
-      Step ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
-          .load32 offset :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction (.load32 offset))
-        ⟨.running ⟨⟨params, localValues,
-          .i32 (store.wasm.mem.read32 (address + offset)) :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | store32Trap
-      (h : address.toNat + offset.toNat + 4 > store.wasm.mem.pages * 65536) :
-      Step ⟨.running ⟨⟨params, localValues,
-          .i32 value :: .i32 address :: values⟩,
-          .store32 offset :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction (.store32 offset)) ⟨.trapped .outOfBoundsMemory, store⟩
-  | store32
-      (h : address.toNat + offset.toNat + 4 ≤ store.wasm.mem.pages * 65536) :
-      Step ⟨.running ⟨⟨params, localValues,
-          .i32 value :: .i32 address :: values⟩,
-          .store32 offset :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction (.store32 offset))
-        ⟨.running ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
-          setMemory store (store.wasm.mem.write32 (address + offset) value)⟩
-  | load8UMemory64Trap
-      (h : address.toNat + offset.toNat + 1 > store.wasm.mem.pages * 65536) :
-      Step ⟨.running ⟨⟨params, localValues, .i64 address :: values⟩,
-          .load8U offset :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction (.load8U offset)) ⟨.trapped .outOfBoundsMemory, store⟩
-  | load8UMemory64
-      (h : address.toNat + offset.toNat + 1 ≤ store.wasm.mem.pages * 65536) :
-      Step ⟨.running ⟨⟨params, localValues, .i64 address :: values⟩,
+      (haddress : memoryAddress? address = some (logicalAddress, physicalAddress))
+      (h : logicalAddress + offset.toNat + 1 ≤
+        store.wasm.mem.pages * 65536) :
+      Step ⟨.running ⟨⟨params, localValues, address :: values⟩,
           .load8U offset :: code, arity, remainder, controls, calls⟩, store⟩
         (.instruction (.load8U offset))
         ⟨.running ⟨⟨params, localValues,
           .i32 (store.wasm.mem.read8
-            (address.toUInt32 + offset)).toUInt32 :: values⟩,
+            (physicalAddress + offset)).toUInt32 :: values⟩,
           code, arity, remainder, controls, calls⟩, store⟩
-  | load8SMemory64Trap
-      (h : address.toNat + offset.toNat + 1 > store.wasm.mem.pages * 65536) :
-      Step ⟨.running ⟨⟨params, localValues, .i64 address :: values⟩,
+  | load8STrap
+      (haddress : memoryAddress? address = some (logicalAddress, physicalAddress))
+      (h : logicalAddress + offset.toNat + 1 >
+        store.wasm.mem.pages * 65536) :
+      Step ⟨.running ⟨⟨params, localValues, address :: values⟩,
           .load8S offset :: code, arity, remainder, controls, calls⟩, store⟩
         (.instruction (.load8S offset)) ⟨.trapped .outOfBoundsMemory, store⟩
-  | load8SMemory64
-      (h : address.toNat + offset.toNat + 1 ≤ store.wasm.mem.pages * 65536) :
-      Step ⟨.running ⟨⟨params, localValues, .i64 address :: values⟩,
+  | load8S
+      (haddress : memoryAddress? address = some (logicalAddress, physicalAddress))
+      (h : logicalAddress + offset.toNat + 1 ≤
+        store.wasm.mem.pages * 65536) :
+      Step ⟨.running ⟨⟨params, localValues, address :: values⟩,
           .load8S offset :: code, arity, remainder, controls, calls⟩, store⟩
         (.instruction (.load8S offset))
         ⟨.running ⟨⟨params, localValues,
           .i32 (extend8To32
             (store.wasm.mem.read8
-              (address.toUInt32 + offset)).toUInt32) :: values⟩,
+              (physicalAddress + offset)).toUInt32) :: values⟩,
           code, arity, remainder, controls, calls⟩, store⟩
-  | load16UMemory64Trap
-      (h : address.toNat + offset.toNat + 2 > store.wasm.mem.pages * 65536) :
-      Step ⟨.running ⟨⟨params, localValues, .i64 address :: values⟩,
+  | load16UTrap
+      (haddress : memoryAddress? address = some (logicalAddress, physicalAddress))
+      (h : logicalAddress + offset.toNat + 2 >
+        store.wasm.mem.pages * 65536) :
+      Step ⟨.running ⟨⟨params, localValues, address :: values⟩,
           .load16U offset :: code, arity, remainder, controls, calls⟩, store⟩
         (.instruction (.load16U offset)) ⟨.trapped .outOfBoundsMemory, store⟩
-  | load16UMemory64
-      (h : address.toNat + offset.toNat + 2 ≤ store.wasm.mem.pages * 65536) :
-      Step ⟨.running ⟨⟨params, localValues, .i64 address :: values⟩,
+  | load16U
+      (haddress : memoryAddress? address = some (logicalAddress, physicalAddress))
+      (h : logicalAddress + offset.toNat + 2 ≤
+        store.wasm.mem.pages * 65536) :
+      Step ⟨.running ⟨⟨params, localValues, address :: values⟩,
           .load16U offset :: code, arity, remainder, controls, calls⟩, store⟩
         (.instruction (.load16U offset))
         ⟨.running ⟨⟨params, localValues,
           .i32 (store.wasm.mem.read16
-            (address.toUInt32 + offset)) :: values⟩,
+            (physicalAddress + offset)) :: values⟩,
           code, arity, remainder, controls, calls⟩, store⟩
-  | load16SMemory64Trap
-      (h : address.toNat + offset.toNat + 2 > store.wasm.mem.pages * 65536) :
-      Step ⟨.running ⟨⟨params, localValues, .i64 address :: values⟩,
+  | load16STrap
+      (haddress : memoryAddress? address = some (logicalAddress, physicalAddress))
+      (h : logicalAddress + offset.toNat + 2 >
+        store.wasm.mem.pages * 65536) :
+      Step ⟨.running ⟨⟨params, localValues, address :: values⟩,
           .load16S offset :: code, arity, remainder, controls, calls⟩, store⟩
         (.instruction (.load16S offset)) ⟨.trapped .outOfBoundsMemory, store⟩
-  | load16SMemory64
-      (h : address.toNat + offset.toNat + 2 ≤ store.wasm.mem.pages * 65536) :
-      Step ⟨.running ⟨⟨params, localValues, .i64 address :: values⟩,
+  | load16S
+      (haddress : memoryAddress? address = some (logicalAddress, physicalAddress))
+      (h : logicalAddress + offset.toNat + 2 ≤
+        store.wasm.mem.pages * 65536) :
+      Step ⟨.running ⟨⟨params, localValues, address :: values⟩,
           .load16S offset :: code, arity, remainder, controls, calls⟩, store⟩
         (.instruction (.load16S offset))
         ⟨.running ⟨⟨params, localValues,
           .i32 (extend16To32
             (store.wasm.mem.read16
-              (address.toUInt32 + offset))) :: values⟩,
+              (physicalAddress + offset))) :: values⟩,
           code, arity, remainder, controls, calls⟩, store⟩
-  | store8Memory64Trap
-      (h : address.toNat + offset.toNat + 1 > store.wasm.mem.pages * 65536) :
+  | store8Trap
+      (haddress : memoryAddress? address = some (logicalAddress, physicalAddress))
+      (h : logicalAddress + offset.toNat + 1 >
+        store.wasm.mem.pages * 65536) :
       Step ⟨.running ⟨⟨params, localValues,
-          .i32 value :: .i64 address :: values⟩,
+          .i32 value :: address :: values⟩,
           .store8 offset :: code, arity, remainder, controls, calls⟩, store⟩
         (.instruction (.store8 offset)) ⟨.trapped .outOfBoundsMemory, store⟩
-  | store8Memory64
-      (h : address.toNat + offset.toNat + 1 ≤ store.wasm.mem.pages * 65536) :
+  | store8
+      (haddress : memoryAddress? address = some (logicalAddress, physicalAddress))
+      (h : logicalAddress + offset.toNat + 1 ≤
+        store.wasm.mem.pages * 65536) :
       Step ⟨.running ⟨⟨params, localValues,
-          .i32 value :: .i64 address :: values⟩,
+          .i32 value :: address :: values⟩,
           .store8 offset :: code, arity, remainder, controls, calls⟩, store⟩
         (.instruction (.store8 offset))
         ⟨.running ⟨⟨params, localValues, values⟩,
           code, arity, remainder, controls, calls⟩,
           setMemory store
             (store.wasm.mem.write8
-              (address.toUInt32 + offset) value.toUInt8)⟩
-  | store16Memory64Trap
-      (h : address.toNat + offset.toNat + 2 > store.wasm.mem.pages * 65536) :
+              (physicalAddress + offset) value.toUInt8)⟩
+  | store16Trap
+      (haddress : memoryAddress? address = some (logicalAddress, physicalAddress))
+      (h : logicalAddress + offset.toNat + 2 >
+        store.wasm.mem.pages * 65536) :
       Step ⟨.running ⟨⟨params, localValues,
-          .i32 value :: .i64 address :: values⟩,
+          .i32 value :: address :: values⟩,
           .store16 offset :: code, arity, remainder, controls, calls⟩, store⟩
         (.instruction (.store16 offset)) ⟨.trapped .outOfBoundsMemory, store⟩
-  | store16Memory64
-      (h : address.toNat + offset.toNat + 2 ≤ store.wasm.mem.pages * 65536) :
+  | store16
+      (haddress : memoryAddress? address = some (logicalAddress, physicalAddress))
+      (h : logicalAddress + offset.toNat + 2 ≤
+        store.wasm.mem.pages * 65536) :
       Step ⟨.running ⟨⟨params, localValues,
-          .i32 value :: .i64 address :: values⟩,
+          .i32 value :: address :: values⟩,
           .store16 offset :: code, arity, remainder, controls, calls⟩, store⟩
         (.instruction (.store16 offset))
         ⟨.running ⟨⟨params, localValues, values⟩,
           code, arity, remainder, controls, calls⟩,
           setMemory store
-            (store.wasm.mem.write16
-              (address.toUInt32 + offset) value)⟩
-  | load32Memory64Trap
-      (h : address.toNat + offset.toNat + 4 > store.wasm.mem.pages * 65536) :
-      Step ⟨.running ⟨⟨params, localValues, .i64 address :: values⟩,
+            (store.wasm.mem.write16 (physicalAddress + offset) value)⟩
+  | load32Trap
+      (haddress : memoryAddress? address = some (logicalAddress, physicalAddress))
+      (h : logicalAddress + offset.toNat + 4 >
+        store.wasm.mem.pages * 65536) :
+      Step ⟨.running ⟨⟨params, localValues, address :: values⟩,
           .load32 offset :: code, arity, remainder, controls, calls⟩, store⟩
         (.instruction (.load32 offset)) ⟨.trapped .outOfBoundsMemory, store⟩
-  | load32Memory64
-      (h : address.toNat + offset.toNat + 4 ≤ store.wasm.mem.pages * 65536) :
-      Step ⟨.running ⟨⟨params, localValues, .i64 address :: values⟩,
+  | load32
+      (haddress : memoryAddress? address = some (logicalAddress, physicalAddress))
+      (h : logicalAddress + offset.toNat + 4 ≤
+        store.wasm.mem.pages * 65536) :
+      Step ⟨.running ⟨⟨params, localValues, address :: values⟩,
           .load32 offset :: code, arity, remainder, controls, calls⟩, store⟩
         (.instruction (.load32 offset))
         ⟨.running ⟨⟨params, localValues,
           .i32 (store.wasm.mem.read32
-            (address.toUInt32 + offset)) :: values⟩,
+            (physicalAddress + offset)) :: values⟩,
           code, arity, remainder, controls, calls⟩, store⟩
-  | store32Memory64Trap
-      (h : address.toNat + offset.toNat + 4 > store.wasm.mem.pages * 65536) :
+  | store32Trap
+      (haddress : memoryAddress? address = some (logicalAddress, physicalAddress))
+      (h : logicalAddress + offset.toNat + 4 >
+        store.wasm.mem.pages * 65536) :
       Step ⟨.running ⟨⟨params, localValues,
-          .i32 value :: .i64 address :: values⟩,
+          .i32 value :: address :: values⟩,
           .store32 offset :: code, arity, remainder, controls, calls⟩, store⟩
         (.instruction (.store32 offset)) ⟨.trapped .outOfBoundsMemory, store⟩
-  | store32Memory64
-      (h : address.toNat + offset.toNat + 4 ≤ store.wasm.mem.pages * 65536) :
+  | store32
+      (haddress : memoryAddress? address = some (logicalAddress, physicalAddress))
+      (h : logicalAddress + offset.toNat + 4 ≤
+        store.wasm.mem.pages * 65536) :
       Step ⟨.running ⟨⟨params, localValues,
-          .i32 value :: .i64 address :: values⟩,
+          .i32 value :: address :: values⟩,
           .store32 offset :: code, arity, remainder, controls, calls⟩, store⟩
         (.instruction (.store32 offset))
         ⟨.running ⟨⟨params, localValues, values⟩,
           code, arity, remainder, controls, calls⟩,
           setMemory store
-            (store.wasm.mem.write32
-              (address.toUInt32 + offset) value)⟩
+            (store.wasm.mem.write32 (physicalAddress + offset) value)⟩
   | load64Trap
       (haddress : memoryAddress? address = some (logicalAddress, physicalAddress))
       (h : logicalAddress + offset.toNat + 8 >
@@ -6577,38 +6483,22 @@ by
         | exact Step.extend8SI64
         | exact Step.extend16SI64
         | exact Step.extend32SI64
-        | apply Step.load8UTrap <;> omega
-        | apply Step.load8U <;> omega
-        | apply Step.load8STrap <;> omega
-        | apply Step.load8S <;> omega
-        | apply Step.load16UTrap <;> omega
-        | apply Step.load16U <;> omega
-        | apply Step.load16STrap <;> omega
-        | apply Step.load16S <;> omega
-        | apply Step.store8Trap <;> omega
-        | apply Step.store8 <;> omega
-        | apply Step.store16Trap <;> omega
-        | apply Step.store16 <;> omega
-        | apply Step.load32Trap <;> omega
-        | apply Step.load32 <;> omega
-        | apply Step.store32Trap <;> omega
-        | apply Step.store32 <;> omega
-        | apply Step.load8UMemory64Trap <;> omega
-        | apply Step.load8UMemory64 <;> omega
-        | apply Step.load8SMemory64Trap <;> omega
-        | apply Step.load8SMemory64 <;> omega
-        | apply Step.load16UMemory64Trap <;> omega
-        | apply Step.load16UMemory64 <;> omega
-        | apply Step.load16SMemory64Trap <;> omega
-        | apply Step.load16SMemory64 <;> omega
-        | apply Step.store8Memory64Trap <;> omega
-        | apply Step.store8Memory64 <;> omega
-        | apply Step.store16Memory64Trap <;> omega
-        | apply Step.store16Memory64 <;> omega
-        | apply Step.load32Memory64Trap <;> omega
-        | apply Step.load32Memory64 <;> omega
-        | apply Step.store32Memory64Trap <;> omega
-        | apply Step.store32Memory64 <;> omega
+        | apply Step.load8UTrap <;> first | rfl | assumption | omega
+        | apply Step.load8U <;> first | rfl | assumption | omega
+        | apply Step.load8STrap <;> first | rfl | assumption | omega
+        | apply Step.load8S <;> first | rfl | assumption | omega
+        | apply Step.load16UTrap <;> first | rfl | assumption | omega
+        | apply Step.load16U <;> first | rfl | assumption | omega
+        | apply Step.load16STrap <;> first | rfl | assumption | omega
+        | apply Step.load16S <;> first | rfl | assumption | omega
+        | apply Step.store8Trap <;> first | rfl | assumption | omega
+        | apply Step.store8 <;> first | rfl | assumption | omega
+        | apply Step.store16Trap <;> first | rfl | assumption | omega
+        | apply Step.store16 <;> first | rfl | assumption | omega
+        | apply Step.load32Trap <;> first | rfl | assumption | omega
+        | apply Step.load32 <;> first | rfl | assumption | omega
+        | apply Step.store32Trap <;> first | rfl | assumption | omega
+        | apply Step.store32 <;> first | rfl | assumption | omega
         | apply Step.load64Trap <;> first | rfl | omega
         | apply Step.load64 <;> first | rfl | omega
         | apply Step.store64Trap <;> first | rfl | omega
