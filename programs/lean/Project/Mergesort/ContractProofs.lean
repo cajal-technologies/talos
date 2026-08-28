@@ -33,6 +33,7 @@ theorem twp_const_alloc_freshRange_owned
     {remainder : List Value} {controls : List ControlFrame}
     {calls : List CallFrame} {s : Stuckness} {E : CoPset}
     {Φ : ObservableOutcome → HeapIProp}
+    {P : HeapIProp}
     (frontier ownedPages : Nat) (base : UInt32) (size : Nat)
     (hbase : frontier ≤ base.toNat)
     (hbound : base.toNat + size ≤ ownedPages * 65536)
@@ -42,10 +43,12 @@ theorem twp_const_alloc_freshRange_owned
       heapFrontierOwn (base.toNat + size) -∗
       memoryPagesOwn ownedPages -∗
       Project.Mergesort.Representations.ByteSlice base bytes -∗
+      P -∗
       WP (.running
         ⟨⟨params, localValues, .i32 value :: values⟩,
           code, arity, remainder, controls, calls⟩ : Expr Universal.State)
         @ s; E [{ Φ }]) :
+    P -∗
     heapFrontierOwn frontier -∗
     memoryPagesOwn ownedPages -∗
     WP (.running
@@ -53,7 +56,7 @@ theorem twp_const_alloc_freshRange_owned
         .const value :: code, arity, remainder, controls, calls⟩ :
           Expr Universal.State)
         @ s; E [{ Φ }] := by
-  iintro Hfrontier Hpages
+  iintro HP Hfrontier Hpages
   iapply twp_lift_step_no_fork
       (@TerminalView.running_not_val Universal.State ObservableOutcome _ _)
   iintro %store %ns %obs %nt Hσ
@@ -69,7 +72,7 @@ theorem twp_const_alloc_freshRange_owned
     ipureintro
     simpa [bytes] using hnowrap
   ihave Hnext := Hwp bytes
-  ispecialize Hnext $$ %(by simp [bytes]) Hfrontier Hpages Hslice
+  ispecialize Hnext $$ %(by simp [bytes]) Hfrontier Hpages Hslice HP
   iapply fupd_mask_intro Std.LawfulSet.empty_subset
   iintro Hclose
   isplitr
