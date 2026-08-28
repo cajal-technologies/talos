@@ -226,38 +226,7 @@ theorem wp_const
     ▷ WP (Expr.running next : Expr α) @ s; E {{ Φ }} ⊢
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
-  iintro Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
-      .running ⟨⟨params, localValues, .i32 value :: values⟩,
-        code, arity, remainder, controls, calls⟩,
-      store, [], ⟨rfl, _, rfl, Step.const⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ := step_deterministic Step.const wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp]
-  · iexact Hwp
-  · itrivial
+  exact wp_pureStep _ _ _ (fun _ => Step.const)
 
 /-- Pure primitive rule for wrapping i32 subtraction. -/
 theorem wp_sub
@@ -274,40 +243,7 @@ theorem wp_sub
     ▷ WP (Expr.running next : Expr α) @ s; E {{ Φ }} ⊢
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
-  iintro Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
-      .running
-        ⟨⟨params, localValues, .i32 (lhs - rhs) :: values⟩,
-          code, arity, remainder, controls, calls⟩,
-      store, [], ⟨rfl, _, rfl, Step.sub⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ := step_deterministic Step.sub wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero,
-    Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp]
-  · iexact Hwp
-  · itrivial
+  exact wp_pureStep _ _ _ (fun _ => Step.sub)
 
 theorem wp_add
     {params localValues values : List Value}
@@ -1695,39 +1631,7 @@ theorem wp_localGet
     ▷ WP (Expr.running next : Expr α) @ s; E {{ Φ }} ⊢
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
-  iintro Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
-      .running ⟨⟨params, localValues, value :: values⟩,
-        code, arity, remainder, controls, calls⟩,
-      store, [], ⟨rfl, _, rfl, Step.localGet hget⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ :=
-    step_deterministic (Step.localGet (α := α) hget) wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp]
-  · iexact Hwp
-  · itrivial
+  exact wp_pureStep _ _ _ (fun _ => Step.localGet hget)
 
 theorem wp_localSet
     {params localValues values : List Value}
@@ -1745,39 +1649,7 @@ theorem wp_localSet
     ▷ WP (Expr.running next : Expr α) @ s; E {{ Φ }} ⊢
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
-  iintro Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
-      .running ⟨{ locals' with values },
-        code, arity, remainder, controls, calls⟩,
-      store, [], ⟨rfl, _, rfl, Step.localSet hset⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ :=
-    step_deterministic (Step.localSet (α := α) hset) wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp]
-  · iexact Hwp
-  · itrivial
+  exact wp_pureStep _ _ _ (fun _ => Step.localSet hset)
 
 theorem wp_localTee
     {params localValues values : List Value}
@@ -1795,37 +1667,7 @@ theorem wp_localTee
     ▷ WP (Expr.running next : Expr α) @ s; E {{ Φ }} ⊢
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
-  iintro Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[], .running ⟨locals', code, arity, remainder, controls, calls⟩,
-      store, [], ⟨rfl, _, rfl, Step.localTee hset⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ :=
-    step_deterministic (Step.localTee (α := α) hset) wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp]
-  · iexact Hwp
-  · itrivial
+  exact wp_pureStep _ _ _ (fun _ => Step.localTee hset)
 
 
 theorem wp_tryTable
