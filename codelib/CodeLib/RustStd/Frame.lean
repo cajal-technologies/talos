@@ -69,13 +69,8 @@ building blocks for the word-level disjointness lemmas below (and for the
 store-commutation lemmas in `CodeLib.RustStd.Region`), and are
 occasionally useful on their own when a proof descends to `Mem.bytes`.
 
-Per width there are two facts: outside its footprint a store leaves the
-byte unchanged (`write*_bytes_of_disjoint`), and inside its footprint the
-byte depends only on the address and value, not the underlying memory
-(`write*_bytes_in`). Together with `Mem.ext_bytes` and page preservation,
-these are exactly the ingredients `Mem.write_write_comm_of_footprints`
-needs, so adding a new width to the commutation family costs only the two
-byte lemmas. -/
+Per width there is one fact: outside its footprint a store leaves the byte
+unchanged (`write*_bytes_of_disjoint`). -/
 
 /-- A byte outside the 8-byte footprint of a `write64` is unchanged. -/
 theorem Mem.write64_bytes_of_disjoint (m : Mem) (a : UInt32) (v : UInt64) (i : Nat)

@@ -3,24 +3,48 @@ import CodeLib.RustStd.Region
 /-!
 # `CodeLib.RustStd.MemArray`
 
-The address bridge between a `u64`/`u32` array slot index and its wasm address:
-the `k`-th slot of an array based at `base` lives at `base + 8 * k` (resp.
-`base + 4 * k`), and as long as that does not wrap it denotes the integer
-`base.toNat + 8 * k` (resp. `base.toNat + 4 * k`).
+A `List UInt64` *view* of a `u64` array in linear memory (issue #68, spec
+readability). `Mem.words64 base n` is the length-`n` list of words at
+`base, base+8, …, base+8(n−1)`, so a spec can say `m.words64 base n = vs`
+instead of `∀ k < n, m.read64 (base + 8*k) = vs[k]`.
 
-This file used to also carry a `List UInt64` *view* of an array in linear memory
-(`Mem.words64 base n` and a 32-bit twin, plus their `length`/`getElem`/`ext`
-lemmas and their interaction with `write64`). That view had no consumers: it was
-written for a merge_sort `wordsAt` view that never landed, and every array proof
-in the tree works directly through `MemRegion` framing instead. Only the two
-address lemmas below were ever used, so the view has been removed.
+The view is defined via `List.range`/`map`, so its length is a `simp`-lemma
+(`length_words64`) and indexing rewrites through `getElem_words64` (kept off
+`simp` because of its bounds side-goal). Its interaction with `write64` factors
+through the `MemRegion` framing algebra: a write disjoint from the array leaves
+the view unchanged (`words64_write64_outside`), writing `v` to the next slot
+past a `v`-filled prefix extends the fill by one (`words64_write64_extend`),
+and a per-element swap postcondition collapses to a two-`set` view equation
+(`words64_swap`; `words64_swap'` is the same fact at the `UInt32` indices a
+wasm spec naturally produces).
 -/
 
 namespace Wasm
 
+/-- The `List UInt64` view of the `u64` array `[base, base + 8*n)`. -/
+def Mem.words64 (m : Mem) (base : UInt32) (n : Nat) : List UInt64 :=
+  (List.range n).map fun k => m.read64 (base + 8 * (UInt32.ofNat k))
+
+@[simp] theorem Mem.length_words64 (m : Mem) (base : UInt32) (n : Nat) :
+    (m.words64 base n).length = n := by
+  simp [Mem.words64]
+
+theorem Mem.getElem_words64 (m : Mem) (base : UInt32) (n k : Nat) (h : k < n) :
+    (m.words64 base n)[k]'(by simpa using h) = m.read64 (base + 8 * UInt32.ofNat k) := by
+  simp [Mem.words64]
+
+/-- Two array views agree iff their words agree pointwise. -/
+theorem Mem.words64_ext {m m' : Mem} {base : UInt32} {n : Nat}
+    (h : ∀ k < n, m.read64 (base + 8 * UInt32.ofNat k) = m'.read64 (base + 8 * UInt32.ofNat k)) :
+    m.words64 base n = m'.words64 base n := by
+  apply List.ext_getElem (by simp)
+  intro k hk _
+  simp only [length_words64] at hk
+  rw [getElem_words64 m base n k hk, getElem_words64 m' base n k hk, h k hk]
+
 /-- The wasm address of the `k`-th `u64` slot, `base + 8 * k`, is the integer
 `base.toNat + 8 * k` as long as it does not wrap. Shared address bridge for the
-`u64` array loops. -/
+framing lemmas below (and their loop consumers). -/
 theorem Mem.words64_slotAddr_toNat (base : UInt32) (k : Nat)
     (h : base.toNat + 8 * k < 4294967296) :
     (base + 8 * UInt32.ofNat k).toNat = base.toNat + 8 * k := by
@@ -30,8 +54,141 @@ theorem Mem.words64_slotAddr_toNat (base : UInt32) (k : Nat)
   have := MemRegion.slot64_base_toNat base (UInt32.ofNat k) (by rw [hkn]; omega)
   rw [hkn] at this; exact this
 
+/-- Under no address wraparound, a `write64` whose target slot `j` is `≥ n`
+(i.e. outside the array `[base, base+8n)`) leaves the view unchanged. -/
+theorem Mem.words64_write64_outside (m : Mem) (base : UInt32) (n : Nat) (a : UInt32) (v : UInt64)
+    (hbnd : base.toNat + 8 * n ≤ 4294967296)
+    (hout : a.toNat + 8 ≤ base.toNat ∨ base.toNat + 8 * n ≤ a.toNat) :
+    (m.write64 a v).words64 base n = m.words64 base n := by
+  apply words64_ext
+  intro k hk
+  have haddr := Mem.words64_slotAddr_toNat base k (by omega)
+  exact Mem.read64_write64_disjoint m a _ v (by rw [haddr]; omega)
+
+/-- Exchanging two array elements, as a view equation: if `m'` reads back `m`'s
+`j`-th word at slot `i`, `m`'s `i`-th word at slot `j`, and agrees with `m` at
+every other slot of the array, then `m'`'s view is `m`'s view with positions `i`
+and `j` swapped.
+
+This is the view-level counterpart of the per-element postcondition a `swap`
+proof naturally produces, and it is what lets such a proof be *composed* — e.g.
+two builds of the same swap can be compared by observing this one list, rather
+than their (genuinely different) whole memories.
+
+Everything is stated at the slot addresses `base + 8*k`, so no no-wrap
+hypothesis is needed; `i = j` is allowed (both sides then degenerate to `m`'s
+view). -/
+theorem Mem.words64_swap {m m' : Mem} {base : UInt32} {n i j : Nat}
+    (hi : i < n) (hj : j < n)
+    (h_i : m'.read64 (base + 8 * UInt32.ofNat i) = m.read64 (base + 8 * UInt32.ofNat j))
+    (h_j : m'.read64 (base + 8 * UInt32.ofNat j) = m.read64 (base + 8 * UInt32.ofNat i))
+    (h_k : ∀ k < n, k ≠ i → k ≠ j →
+      m'.read64 (base + 8 * UInt32.ofNat k) = m.read64 (base + 8 * UInt32.ofNat k)) :
+    m'.words64 base n =
+      ((m.words64 base n).set i (m.read64 (base + 8 * UInt32.ofNat j))).set j
+        (m.read64 (base + 8 * UInt32.ofNat i)) := by
+  apply List.ext_getElem (by simp)
+  intro k hk _
+  simp only [Mem.length_words64] at hk
+  rw [Mem.getElem_words64 m' base n k hk]
+  by_cases hkj : k = j
+  · subst hkj
+    rw [List.getElem_set_self]
+    exact h_j
+  · rw [List.getElem_set_ne (Ne.symm hkj)]
+    by_cases hki : k = i
+    · subst hki
+      rw [List.getElem_set_self]
+      exact h_i
+    · rw [List.getElem_set_ne (Ne.symm hki), Mem.getElem_words64 m base n k hk]
+      exact h_k k hk hki hkj
+
+/-- `words64_swap`, restated at `UInt32` indices — the form a wasm spec
+naturally produces (the indices arrive as `i32` arguments, the slot addresses
+as `base + 8 * i`). All the `UInt32 ↔ Nat` index bridging lives here, so a
+per-element swap postcondition converts to the view equation in one step. -/
+theorem Mem.words64_swap' {m m' : Mem} {base : UInt32} {len i j : UInt32}
+    (hi : i < len) (hj : j < len)
+    (h_i : m'.read64 (base + 8 * i) = m.read64 (base + 8 * j))
+    (h_j : m'.read64 (base + 8 * j) = m.read64 (base + 8 * i))
+    (h_k : ∀ k : UInt32, k < len → k ≠ i → k ≠ j →
+      m'.read64 (base + 8 * k) = m.read64 (base + 8 * k)) :
+    m'.words64 base len.toNat =
+      ((m.words64 base len.toNat).set i.toNat (m.read64 (base + 8 * j))).set j.toNat
+        (m.read64 (base + 8 * i)) := by
+  have hsize : (UInt32.size : Nat) = 4294967296 := rfl
+  have hlen : len.toNat < UInt32.size := len.toNat_lt
+  refine Mem.words64_swap (m := m) (m' := m') (base := base) (n := len.toNat)
+    (i := i.toNat) (j := j.toNat) hi hj ?_ ?_ ?_ |>.trans ?_
+  · simpa [UInt32.ofNat_toNat] using h_i
+  · simpa [UInt32.ofNat_toNat] using h_j
+  · intro k hk hki hkj
+    have hkn : (UInt32.ofNat k).toNat = k := UInt32.toNat_ofNat_of_lt' (by omega)
+    have hklt : (UInt32.ofNat k) < len := by show (UInt32.ofNat k).toNat < len.toNat; omega
+    have hkine : (UInt32.ofNat k) ≠ i := by intro h; exact hki (by rw [← h, hkn])
+    have hkjne : (UInt32.ofNat k) ≠ j := by intro h; exact hkj (by rw [← h, hkn])
+    exact h_k (UInt32.ofNat k) hklt hkine hkjne
+  · simp [UInt32.ofNat_toNat]
+
+/-- One more word: `words64 base (n+1)` is `words64 base n` with the `n`-th
+word appended. -/
+theorem Mem.words64_succ (m : Mem) (base : UInt32) (n : Nat) :
+    m.words64 base (n + 1) = m.words64 base n ++ [m.read64 (base + 8 * UInt32.ofNat n)] := by
+  simp [Mem.words64, List.range_succ, List.map_append]
+
+/-- Writing the `n`-th slot with `w` appends `w` to the length-`n` view (the
+earlier words are framed away). The store-into-a-fresh-slot step shared by
+copy/fill loops over a `u64` array; the 64-bit twin of
+`Mem.words32_write32_snoc`. -/
+theorem Mem.words64_write64_snoc (m : Mem) (base : UInt32) (n : Nat) (w : UInt64)
+    (hbnd : base.toNat + 8 * (n + 1) ≤ 4294967296) :
+    (m.write64 (base + 8 * UInt32.ofNat n) w).words64 base (n + 1)
+      = m.words64 base n ++ [w] := by
+  have haddr := Mem.words64_slotAddr_toNat base n (by omega)
+  rw [Mem.words64_succ,
+      Mem.words64_write64_outside m base n _ w (by omega) (Or.inr (by rw [haddr])),
+      Mem.read64_write64_same]
+
+/-- The fill step, as a view equation: if the first `n` words are already `v`
+and slot `n` is written with `v`, the first `n+1` words are `v`. This is the
+loop invariant's inductive step; the `replicate`-specialised corollary of
+`Mem.words64_write64_snoc`. -/
+theorem Mem.words64_write64_extend (m : Mem) (base : UInt32) (n : Nat) (v : UInt64)
+    (hbnd : base.toNat + 8 * (n + 1) ≤ 4294967296)
+    (hfill : m.words64 base n = List.replicate n v) :
+    (m.write64 (base + 8 * UInt32.ofNat n) v).words64 base (n + 1) = List.replicate (n + 1) v := by
+  rw [Mem.words64_write64_snoc m base n v hbnd, hfill, List.replicate_succ']
+
+/-! ## 32-bit twin
+
+`Mem.words32` is the `u32` array view, matching the element stride of
+`MemRegion.slot32` (and of the `wordsAt` view carried by the merge_sort work
+in PR #106, so that file can become an import — `wordsAt` is not in-tree yet). -/
+
+/-- The `List UInt32` view of the `u32` array `[base, base + 4*n)`. -/
+def Mem.words32 (m : Mem) (base : UInt32) (n : Nat) : List UInt32 :=
+  (List.range n).map fun k => m.read32 (base + 4 * (UInt32.ofNat k))
+
+@[simp] theorem Mem.length_words32 (m : Mem) (base : UInt32) (n : Nat) :
+    (m.words32 base n).length = n := by
+  simp [Mem.words32]
+
+theorem Mem.getElem_words32 (m : Mem) (base : UInt32) (n k : Nat) (h : k < n) :
+    (m.words32 base n)[k]'(by simpa using h) = m.read32 (base + 4 * UInt32.ofNat k) := by
+  simp [Mem.words32]
+
+/-- Two `u32` array views agree iff their words agree pointwise. -/
+theorem Mem.words32_ext {m m' : Mem} {base : UInt32} {n : Nat}
+    (h : ∀ k < n, m.read32 (base + 4 * UInt32.ofNat k) = m'.read32 (base + 4 * UInt32.ofNat k)) :
+    m.words32 base n = m'.words32 base n := by
+  apply List.ext_getElem (by simp)
+  intro k hk _
+  simp only [length_words32] at hk
+  rw [getElem_words32 m base n k hk, getElem_words32 m' base n k hk, h k hk]
+
 /-- The wasm address of the `k`-th `u32` slot, `base + 4 * k`, is the integer
-`base.toNat + 4 * k` as long as it does not wrap. The 32-bit twin of
+`base.toNat + 4 * k` as long as it does not wrap. Shared address bridge for the
+framing lemmas below (and their loop consumers); the 32-bit twin of
 `Mem.words64_slotAddr_toNat`. -/
 theorem Mem.words32_slotAddr_toNat (base : UInt32) (k : Nat)
     (h : base.toNat + 4 * k < 4294967296) :
@@ -42,4 +199,31 @@ theorem Mem.words32_slotAddr_toNat (base : UInt32) (k : Nat)
   have := MemRegion.slot32_base_toNat base (UInt32.ofNat k) (by rw [hkn]; omega)
   rw [hkn] at this; exact this
 
-end Wasm
+/-- A `write32` disjoint from the whole `[base, base+4n)` region leaves the
+view unchanged. -/
+theorem Mem.words32_write32_outside (m : Mem) (base : UInt32) (n : Nat) (a v : UInt32)
+    (hbnd : base.toNat + 4 * n ≤ 4294967296)
+    (hout : a.toNat + 4 ≤ base.toNat ∨ base.toNat + 4 * n ≤ a.toNat) :
+    (m.write32 a v).words32 base n = m.words32 base n := by
+  apply words32_ext
+  intro k hk
+  have haddr := Mem.words32_slotAddr_toNat base k (by omega)
+  exact Mem.read32_write32_disjoint m a _ v (by rw [haddr]; omega)
+
+/-- One more word: `words32 base (n+1)` is `words32 base n` with the `n`-th
+word appended. -/
+theorem Mem.words32_succ (m : Mem) (base : UInt32) (n : Nat) :
+    m.words32 base (n + 1) = m.words32 base n ++ [m.read32 (base + 4 * UInt32.ofNat n)] := by
+  simp [Mem.words32, List.range_succ, List.map_append]
+
+/-- Writing the `n`-th slot with `w` appends `w` to the length-`n` view (the
+earlier words are framed away). The store-into-a-fresh-slot step shared by
+copy/fill loops over a `u32` array. -/
+theorem Mem.words32_write32_snoc (m : Mem) (base : UInt32) (n : Nat) (w : UInt32)
+    (hbnd : base.toNat + 4 * (n + 1) ≤ 4294967296) :
+    (m.write32 (base + 4 * UInt32.ofNat n) w).words32 base (n + 1)
+      = m.words32 base n ++ [w] := by
+  have haddr := Mem.words32_slotAddr_toNat base n (by omega)
+  rw [Mem.words32_succ,
+      Mem.words32_write32_outside m base n _ w (by omega) (Or.inr (by rw [haddr])),
+      Mem.read32_write32_same]

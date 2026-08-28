@@ -12,15 +12,6 @@ framing lemmas in `CodeLib.RustStd.Frame`.
   disjunction is the same load-bearing shape the `Frame` lemmas consume, so
   `omega` / `decide` keep discharging side conditions on concrete frame slots
   and symbolic array addresses alike.
-* Bridges from `Disjoint` facts to the `Frame` read/write lemmas
-  (`Mem.read64_write64_of_region`, …): thin one-liners, so proofs can carry a
-  single region fact instead of re-shaping `Or`s at every call site. All four
-  take the **written region first**; flip with `Disjoint.symm` if a fact
-  arrives in the other orientation.
-* **Disjoint stores commute** (`Mem.write64_write64_comm`, 32/32 and mixed
-  widths): requested in #68 and previously missing everywhere. Each width pair
-  is a one-line instance of `Mem.write_write_comm_of_footprints` (Frame), so a
-  new width costs only its two byte-level footprint lemmas there.
 * `slot64` — the `k`-th 8-byte element slot of a `u64` array region, with the
   no-wrap and pairwise-disjointness lemmas array proofs otherwise re-derive
   (first consumer: `Project.SwapElements.Spec`).
@@ -55,19 +46,6 @@ theorem Disjoint.symm {r₁ r₂ : MemRegion} (h : r₁.Disjoint r₂) : r₂.Di
   h.elim Or.inr Or.inl
 
 end MemRegion
-
-/-! ## Bridging `Disjoint` to the `Frame` read/write lemmas
-
-The `Frame` lemmas each take a raw interval disjunction whose orientation is
-an artifact of their statements; these wrappers hide that behind one uniform
-convention: the `Disjoint` fact always names the **written** region first and
-the read region second. A fact oriented the other way flips with
-`Disjoint.symm`. -/
-
-/-! ## Disjoint stores commute
-
-One-line instances of `Mem.write_write_comm_of_footprints` (Frame): each
-width supplies page preservation plus its two byte-level footprint facts. -/
 
 /-! ## Array element slots -/
 

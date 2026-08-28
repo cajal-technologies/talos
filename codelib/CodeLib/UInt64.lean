@@ -415,6 +415,27 @@ private theorem _aux_recombine_core (a b o : UInt64) (ha : a ≠ 0) (hb : b ≠ 
   linarith [h_stein, Nat.mul_comm (2 ^ min (ctz64 64 a) (ctz64 64 b))
     ((a.toNat / 2 ^ ctz64 64 a).gcd (b.toNat / 2 ^ ctz64 64 b))]
 
+/-- Recombine when both operands' odd parts are *equal* (the `INNER.br 1`
+exit of Stein's binary GCD). -/
+theorem UInt64.recombine_eq (a b : UInt64) (ha : a ≠ 0) (hb : b ≠ 0)
+    (hEq : a >>> (UInt64.ofNat (ctz64 64 a) % 64)
+         = b >>> (UInt64.ofNat (ctz64 64 b) % 64)) :
+    a >>> (UInt64.ofNat (ctz64 64 a) % 64)
+        <<< (UInt64.ofNat (ctz64 64 (b ||| a)) % 64)
+      = UInt64.ofNat (a.toNat.gcd b.toNat) := by
+  set o := a >>> (UInt64.ofNat (ctz64 64 a) % 64) with ho_def
+  apply _aux_recombine_core a b o ha hb
+  -- Need: o.toNat = (a.toNat / 2^ctz a).gcd (b.toNat / 2^ctz b)
+  rw [ho_def, UInt64.shr_ctz_toNat a ha]
+  -- Goal: a.toNat / 2^ctz a = (a.toNat / 2^ctz a).gcd (b.toNat / 2^ctz b)
+  -- From hEq: a >>> ... = b >>> ..., so a_odd.toNat = b_odd.toNat.
+  have h_eq_nat : a.toNat / 2 ^ ctz64 64 a = b.toNat / 2 ^ ctz64 64 b := by
+    have h := congrArg UInt64.toNat hEq
+    rw [UInt64.shr_ctz_toNat a ha, UInt64.shr_ctz_toNat b hb] at h
+    exact h
+  rw [← h_eq_nat]
+  exact (Nat.gcd_self _).symm
+
 /-- Recombine after the main loop. -/
 theorem UInt64.recombine_loop (a b o : UInt64) (ha : a ≠ 0) (hb : b ≠ 0)
     (h : o.toNat.gcd o.toNat

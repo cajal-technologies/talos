@@ -212,4 +212,46 @@ theorem wp_loop_cons {ps rs : Nat} {body rest : Program} {Q : Assertion α}
         simp only
         exact hQ_at
 
+/-- For any fuel, executing a single `.br 0` is either `OutOfFuel` (when fuel = 0)
+    or `Break 0 st s` (when fuel ≥ 1). -/
+private theorem exec_br0 (f : Nat) (m : Module) (st : Store α) (s : Locals) :
+    exec f m st s [.br 0] = (match f with | 0 => .OutOfFuel | _ + 1 => .Break 0 st s) := by
+  cases f <;> simp [exec, execOne.eq_def]
+
+/-- A loop with body `[.br 0]` always runs out of fuel: no amount of fuel
+    suffices, since each iteration consumes one and returns to the same state. -/
+private theorem execOne_loop_br0 (f : Nat) (m : Module) (st : Store α) (s : Locals) :
+    execOne f m st s (.loop 0 0 [.br 0]) = .OutOfFuel := by
+  induction f generalizing st s with
+  | zero => simp [execOne.eq_def]
+  | succ f' ih =>
+    simp only [execOne_loop_succ]
+    rw [exec_br0]
+    cases f' with
+    | zero => rfl
+    | succ f'' => simpa using ih st s
+
+/-- Therefore the entire `.loop 0 0 [.br 0] :: rest` program always runs out of fuel. -/
+private theorem exec_loop_br0_cons (f : Nat) (m : Module) (st : Store α) (s : Locals)
+    (rest : Program) :
+    exec f m st s (.loop 0 0 [.br 0] :: rest) = .OutOfFuel := by
+  cases f with
+  | zero => simp [exec, execOne.eq_def]
+  | succ f' =>
+    simp only [exec]
+    rw [execOne_loop_br0]
+
+/-- A loop whose body is just `.br 0` never terminates: any `wp` for it forces
+    `Q .OutOfFuel`. This is the framework-level statement that makes infinite
+    loops unprovable for non-trivial posts. -/
+theorem wp_loop_br0_cons (m : Module) (rest : Program) (Q : Assertion α) (st : Store α) (s : Locals) :
+    wp m (.loop 0 0 [.br 0] :: rest) Q st s ↔ Q .OutOfFuel := by
+  unfold wp
+  constructor
+  · rintro ⟨N, h⟩
+    have := h N le_rfl
+    rwa [exec_loop_br0_cons] at this
+  · intro hQ
+    exact ⟨0, fun fuel _ => by rw [exec_loop_br0_cons]; exact hQ⟩
+
 end Wasm
