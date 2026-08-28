@@ -55,10 +55,10 @@ def simpleLoopConfig (n : UInt32) : Config Unit :=
       { runtime := { instances := #[{ module := simpleLoopModule, host := {} }], entry := ⟨0⟩ }
         wasm := simpleLoopModule.initialStore } }
 
-private def simpleInnerBody : Program :=
+def simpleInnerBody : Program :=
   [.localGet 0, .br_if 0, .br 1]
 
-private def simpleOuterBody : Program := [
+def simpleOuterBody : Program := [
   .block 0 0 simpleInnerBody,
   .localGet 1,
   .const 1,
@@ -71,10 +71,10 @@ private def simpleOuterBody : Program := [
   .br 1
 ]
 
-private def simpleLoopBody : Program :=
+def simpleLoopBody : Program :=
   [.block 0 0 simpleOuterBody]
 
-private def simpleLoopFrame : ControlFrame :=
+def simpleLoopFrame : ControlFrame :=
   { kind := .loop
     paramArity := 0
     resultArity := 0
@@ -82,7 +82,7 @@ private def simpleLoopFrame : ControlFrame :=
     continuation := [.localGet 1]
     belowStack := [] }
 
-private def simpleLoopHead (x y : UInt32) : Config Unit :=
+def simpleLoopHead (x y : UInt32) : Config Unit :=
   { expr := .running
       { locals :=
           { params := [.i32 x]
@@ -93,7 +93,7 @@ private def simpleLoopHead (x y : UInt32) : Config Unit :=
         control := [simpleLoopFrame] }
     store := (simpleLoopConfig x).store }
 
-private theorem simpleLoop_zero_steps (y : UInt32) :
+theorem simpleLoop_zero_steps (y : UInt32) :
     ∃ trace,
       Steps (simpleLoopHead 0 y) trace
         ⟨.done [.i32 y], (simpleLoopConfig 0).store⟩ := by
@@ -115,7 +115,7 @@ private theorem simpleLoop_zero_steps (y : UInt32) :
   apply Steps.cons (.localGet rfl)
   exact Steps.single .finish
 
-private theorem simpleLoop_iteration_steps (x y : UInt32)
+theorem simpleLoop_iteration_steps (x y : UInt32)
     (hx : x ≠ 0) :
     ∃ trace,
       Steps (simpleLoopHead x y) trace
@@ -150,7 +150,7 @@ private theorem simpleLoop_iteration_steps (x y : UInt32)
   simp
   exact Steps.single (.br rfl)
 
-private theorem simpleLoopHead_steps (x y : UInt32) :
+theorem simpleLoopHead_steps (x y : UInt32) :
     ∃ trace,
       Steps (simpleLoopHead x y) trace
         ⟨.done [.i32 (x + y)], (simpleLoopConfig x).store⟩ := by
@@ -177,7 +177,7 @@ private theorem simpleLoopHead_steps (x y : UInt32) :
       rw [hvalue] at hsuffix
       exact ⟨initialTrace ++ suffix, Steps.trans hinitial hsuffix⟩
 
-private theorem simpleLoop_initial_steps (n : UInt32) :
+theorem simpleLoop_initial_steps (n : UInt32) :
     Steps (simpleLoopConfig n)
       [.instruction (.const 0), .instruction (.localSet 1),
         .instruction (.loop 0 0 simpleLoopBody)]

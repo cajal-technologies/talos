@@ -1,5 +1,5 @@
-import Interpreter.Wasm.Decoder.Wat
 import Interpreter.Wasm.SmallStep
+import Interpreter.Wasm.Examples.Harness
 
 /-! ## Example: const-expression data/element segment offsets
 
@@ -29,9 +29,7 @@ def segmentOffsetWat : String := "
 "
 
 private def decoded : Wasm.Module :=
-  match Wasm.Decoder.Wat.decode segmentOffsetWat with
-  | .ok module => module
-  | .error _ => default
+  Wasm.Examples.decodeOrDefault segmentOffsetWat
 
 theorem decoded_segments_keep_offsetExpr :
     ((decoded.memory.bind (·.data[0]?)).map (·.offsetExpr.isEmpty)).getD true = false
