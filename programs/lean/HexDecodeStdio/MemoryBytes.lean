@@ -1,5 +1,5 @@
 import HexDecodeStdio.DecodeSpec
-import CodeLib.SepLogic.SmallStepTotalLiftingAux
+import CodeLib.SepLogic.SmallStepTotalLiftingBytes
 
 namespace Project.HexDecodeStdio
 

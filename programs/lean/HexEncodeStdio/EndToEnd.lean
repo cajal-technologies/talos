@@ -566,7 +566,7 @@ private theorem encode_function_finishes {hlc : HasLC}
   icases HR with ⟨Henv, Hhost, H7, H8, HinputCap, HinputPtr, HinputLen⟩
   simp only [encodeMainCalls]
   rw [hentry]
-  iapply Project.HexEncodeStdio.TotalIterator.hdtwp_returnFromCallFallthrough' $$ Hruntime
+  iapply Project.HexEncodeStdio.TotalIterator.twp_returnFromCallFallthrough' $$ Hruntime
   iintro Hruntime
   simp only [List.take_zero, List.nil_append]
   ihave HsentinelAt : pointsTo_u32 0 ((1048544 : UInt32) - 16)

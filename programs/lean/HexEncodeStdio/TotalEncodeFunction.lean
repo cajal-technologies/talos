@@ -300,7 +300,7 @@ theorem func6_after_alloc_nonempty {hlc : HasLC} {α : Type}
   iintro Hruntime Hcurrent Hcursor Hend HtablePtr Hsource Htable
   iapply twp_localTee rfl
   iapply twp_const
-  iapply Project.HexEncodeStdio.TotalIterator.hdtwp_eq (result := 0)
+  iapply Project.HexEncodeStdio.TotalIterator.twp_eq (result := 0)
     (by simp [Project.HexEncodeStdio.Hex.hexDigit_toUInt32_ne_sentinel])
   iapply twp_brIfZero
   iapply twp_localGet rfl
@@ -555,7 +555,7 @@ theorem func6_after_empty {hlc : HasLC} {α : Type}
   iintro Hruntime Hcurrent Hcursor Hend
   iapply twp_localTee rfl
   iapply twp_const
-  iapply Project.HexEncodeStdio.TotalIterator.hdtwp_eq (result := 1)
+  iapply Project.HexEncodeStdio.TotalIterator.twp_eq (result := 1)
     (by simp [Project.HexEncodeStdio.TotalIterator.sentinel])
   iapply twp_brIf (by decide) rfl
   simp only [List.take_zero, List.drop_zero, List.nil_append]

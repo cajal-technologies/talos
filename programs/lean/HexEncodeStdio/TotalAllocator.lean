@@ -232,7 +232,7 @@ theorem func15_copy_return {hlc : HasLC}
   iapply twp_localGet rfl
   iapply twp_ltU rfl
   simp only [hnotlt, ↓reduceIte]
-  iapply hdtwp_select rfl
+  iapply twp_select rfl
   simp
   iapply twp_localTee rfl
   iapply twp_eqz rfl
@@ -244,7 +244,7 @@ theorem func15_copy_return {hlc : HasLC}
   ihave Hnew := Project.HexEncodeStdio.Helpers.pointsToBytes_take_drop 0 newPtr
     newArena oldSize.toNat (by rw [hlenNew]; exact hle) $$ Hnew
   icases Hnew with ⟨HnewPrefix, HnewSuffix⟩
-  iapply hdtwp_memoryCopy32 (len := oldSize)
+  iapply twp_memoryCopy32 (len := oldSize)
       (newArena.take oldSize.toNat) oldBytes
       (by simpa [hlenTake]) (by simpa [hlenOld]) hpos
       (by omega) hnowrapOld $$ Hold HnewPrefix

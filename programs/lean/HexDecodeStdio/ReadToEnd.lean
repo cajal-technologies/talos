@@ -253,7 +253,7 @@ theorem twp_read_to_end_empty
   rw [hrestore]
   iapply twp_globalSet $$ HframeSp
   iintro Hsp
-  iapply hdtwp_returnFromCallFallthrough $$ Hruntime
+  iapply twp_returnFromCallFallthrough $$ Hruntime
   iintro Hruntime
   simp
   ihave Hread : pointsTo_u64 0 ((sp - 32) + 16) (ioWord oldRead 4 0) $$

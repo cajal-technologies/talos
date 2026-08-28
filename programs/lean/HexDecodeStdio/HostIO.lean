@@ -441,7 +441,7 @@ theorem twp_write_adapter
     ValueType.zero, func17]
   iapply twp_localGet rfl
   iapply twp_localGet rfl
-  iapply hdtwp_callHost «module» 1
+  iapply twp_callHost «module» 1
       { module := "stdio", name := "write", params := [.i32, .i32],
         results := [] }
       (StdIO.writeHost.lift universalStdIOLens)
@@ -527,7 +527,7 @@ theorem twp_write_adapter
     iapply twp_store32 oldCount houtCount.noWrap houtCount.one
       houtCount.two houtCount.three $$ Hcount
     iintro Hcount
-    iapply hdtwp_returnFromCallFallthrough $$ Hruntime
+    iapply twp_returnFromCallFallthrough $$ Hruntime
     iintro Hruntime
     simp
     iapply Hcont
@@ -624,7 +624,7 @@ theorem twp_read_adapter
     ValueType.zero, func16]
   iapply twp_localGet rfl
   iapply twp_localGet rfl
-  iapply hdtwp_callHost «module» 0
+  iapply twp_callHost «module» 0
       { module := "stdio", name := "read", params := [.i32, .i32],
         results := [.i32] }
       (StdIO.readHost.lift universalStdIOLens)
@@ -758,7 +758,7 @@ theorem twp_read_adapter
     iapply twp_store32 oldCount houtCount.noWrap houtCount.one
       houtCount.two houtCount.three $$ Hcount
     iintro Hcount
-    iapply hdtwp_returnFromCallFallthrough $$ Hruntime
+    iapply twp_returnFromCallFallthrough $$ Hruntime
     iintro Hruntime
     simp
     iapply Hcont

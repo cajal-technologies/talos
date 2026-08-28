@@ -44,10 +44,13 @@ disjunction remains exhaustive.
 
 ## Reusable machinery added to CodeLib
 
-The general total weakest-precondition instruction lemmas both examples need but
-CodeLib did not yet provide are factored into
-`CodeLib/SepLogic/SmallStepTotalLiftingAux.lean` — byte-granular load/store rules
-and lighter-weight, resource-minimal variants of a few `SmallStepTotalLifting`
-rules — so the encode and decode proofs share one copy rather than each carrying
-its own. Both example libraries import only `CodeLib` (no `Mathlib`), matching
-the mergesort example's dependency footprint.
+`CodeLib/SepLogic/SmallStepTotalLiftingBytes.lean` adds ten program-agnostic
+total-WP instruction rules the examples needed but `SmallStepTotalLifting` did
+not provide: byte-granular loads/stores (`twp_load8U`, `twp_load8U_addr`,
+`twp_store8`, `twp_store8_addr`, `twp_store32_addr`, `twp_store64_addr`), the
+signed comparison `twp_ltS`, `twp_drop`, and two `memory.size` / `memory.grow`
+rules (`twp_memorySize_framed`, `twp_memoryGrow_framed`) that thread an arbitrary
+owned resource through the instruction. Nine further instruction rules the proofs
+originally carried were dropped in favour of the existing `twp_*` lemmas in
+`SmallStepTotalLifting`. Both example libraries import only `CodeLib` (no
+`Mathlib`), matching the mergesort example's dependency footprint.

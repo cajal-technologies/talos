@@ -204,7 +204,7 @@ theorem twp_decode_invalid_high_first
   iapply twp_localTee rfl
   iapply twp_const
   have hnotMarker : hi.toUInt32 &&& 255 ≠ 1114114 := by bv_decide
-  iapply hdtwp_eq (result := 0) (by simp [hnotMarker])
+  iapply twp_eq (result := 0) (by simp [hnotMarker])
   iapply twp_brIfZero
   iapply twp_localGet rfl
   iapply twp_localGet rfl
@@ -440,7 +440,7 @@ theorem twp_decode_invalid_low_first
   iapply twp_localTee rfl
   iapply twp_const
   have hnotMarker : lo.toUInt32 &&& 255 ≠ 1114114 := by bv_decide
-  iapply hdtwp_eq (result := 0) (by simp [hnotMarker])
+  iapply twp_eq (result := 0) (by simp [hnotMarker])
   iapply twp_brIfZero
   iapply twp_localGet rfl
   iapply twp_localGet rfl

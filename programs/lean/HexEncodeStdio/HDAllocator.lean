@@ -1,5 +1,5 @@
 import Project.HexStdio.Spec
-import CodeLib.SepLogic.SmallStepTotalLiftingAux
+import CodeLib.SepLogic.SmallStepTotalLiftingBytes
 
 namespace Project.HexEncodeStdio
 
@@ -107,7 +107,7 @@ theorem twp_oom_wrapper
   iintro Hruntime
   simp [func13Def, Function.toLocals, Function.numParams,
     ValueType.zero, func13]
-  iapply hdtwp_callHost «module» 2
+  iapply twp_callHost «module» 2
       { module := "talos", name := "oom", params := [], results := [] }
       (OOM.oomHost.lift universalOOMLens)
       (by decide) rfl (Universal.envFor «module»)
@@ -180,7 +180,7 @@ theorem twp_dealloc_noop
   iapply twp_call «module» 17 func14Def (by decide) rfl ⟨0⟩ $$ Hruntime
   iintro Hruntime
   simp [func14Def, Function.toLocals, Function.numParams, func14]
-  iapply hdtwp_returnFromCallFallthrough $$ Hruntime
+  iapply twp_returnFromCallFallthrough $$ Hruntime
   iintro Hruntime
   simp
   iapply Hcont
@@ -283,7 +283,7 @@ theorem twp_allocator
   iapply twp_localTee rfl
   iapply twp_const
   iapply twp_localGet rfl
-  iapply hdtwp_select rfl
+  iapply twp_select rfl
   simp [Locals.set?, Locals.set]
   rw [show (if oldBump = 0 then Value.i32 1054000 else Value.i32 oldBump) =
       Value.i32 (if oldBump = 0 then 1054000 else oldBump) by
@@ -383,14 +383,14 @@ theorem twp_allocator
         iapply twp_const
         iapply twp_add
         iapply twp_const
-        iapply hdtwp_shrU
+        iapply twp_shrU
         iapply twp_localTee rfl
         ihave HmemorySize : runtimeModuleOwn ⟨0⟩ «module» ∗
             (hostEnvOwn 0 (Universal.envFor «module») ∗
               hostStateOwn host ∗ pointsTo_u32 0 1053960 oldBump ∗ Finish) $$
             [Hruntime₃ Henv₃ Hhost₃ Hbump₃ Hcont₃]
         · iframe
-        iapply hdtwp_memorySize «module» ⟨0⟩
+        iapply twp_memorySize_framed «module» ⟨0⟩
             (iprop(hostEnvOwn 0 (Universal.envFor «module») ∗
               hostStateOwn host ∗ pointsTo_u32 0 1053960 oldBump ∗ Finish)) $$
           HmemorySize
@@ -398,7 +398,7 @@ theorem twp_allocator
         rw [module_memIs64]
         simp only [sizeValue, Bool.false_eq_true, if_false]
         iapply twp_localTee rfl
-        iapply hdtwp_leU rfl
+        iapply twp_leU rfl
         ihave Henough :
             (runtimeModuleOwn ⟨0⟩ «module» ∗
                 hostEnvOwn 0 (Universal.envFor «module») ∗
@@ -423,7 +423,7 @@ theorem twp_allocator
           iintro Hbump
           iapply twp_localGet rfl
           simp
-          iapply hdtwp_returnFromCallFallthrough $$ Hruntime₅
+          iapply twp_returnFromCallFallthrough $$ Hruntime₅
           iintro Hruntime₆
           simp
           isimp only [Finish, zero_sub] at Hcont₅
@@ -441,7 +441,7 @@ theorem twp_allocator
                 hostStateOwn host ∗ pointsTo_u32 0 1053960 oldBump ∗ Finish) $$
               [Hruntime₅ Henv₅ Hhost₅ Hbump₅ Hcont₅]
           · iframe
-          iapply hdtwp_memoryGrow «module» ⟨0⟩
+          iapply twp_memoryGrow_framed «module» ⟨0⟩
               (iprop(hostEnvOwn 0 (Universal.envFor «module») ∗
                 hostStateOwn host ∗ pointsTo_u32 0 1053960 oldBump ∗ Finish)) $$
             HmemoryGrow
@@ -468,7 +468,7 @@ theorem twp_allocator
             iintro Hbump
             iapply twp_localGet rfl
             simp
-            iapply hdtwp_returnFromCallFallthrough $$ Hruntime₇
+            iapply twp_returnFromCallFallthrough $$ Hruntime₇
             iintro Hruntime₈
             simp
             isimp only [Finish, zero_sub] at Hcont₇

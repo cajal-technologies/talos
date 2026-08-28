@@ -290,7 +290,7 @@ theorem twp_call_func17 {hlc : HasLC}
   isplitl [Hlength]
   · iexact Hlength
   iintro Hruntime Henv Hhost Hbytes Htag Hlength
-  iapply Project.HexEncodeStdio.TotalIterator.hdtwp_returnFromCallFallthrough' $$ Hruntime
+  iapply Project.HexEncodeStdio.TotalIterator.twp_returnFromCallFallthrough' $$ Hruntime
   iintro Hruntime
   simp only [List.take_zero, List.nil_append]
   iapply Hnext $$ Hruntime Henv Hhost Hbytes Htag Hlength
@@ -500,7 +500,7 @@ theorem func8_after_prologue_nonempty {hlc : HasLC}
   iintro Htag
   iapply twp_localTee rfl
   iapply twp_const
-  iapply Project.HexEncodeStdio.TotalIterator.hdtwp_eq (result := 1) (by simp)
+  iapply Project.HexEncodeStdio.TotalIterator.twp_eq (result := 1) (by simp)
   iapply twp_brIf (by decide) rfl
   rw [writeBlock5Tail_eq]
   iapply twp_block
@@ -610,7 +610,7 @@ theorem twp_call_func8_nonempty {hlc : HasLC}
   isplitl [Hlength]
   · iexact Hlength
   iintro Hruntime Henv Hhost Hglobal Hbytes Htag Hlength
-  iapply Project.HexEncodeStdio.TotalIterator.hdtwp_returnFromCallFallthrough' $$ Hruntime
+  iapply Project.HexEncodeStdio.TotalIterator.twp_returnFromCallFallthrough' $$ Hruntime
   iintro Hruntime
   simp only [List.take_zero, List.nil_append]
   iapply Hnext $$ Hruntime Henv Hhost Hglobal Hbytes Htag Hlength

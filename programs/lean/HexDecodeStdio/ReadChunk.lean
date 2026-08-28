@@ -153,7 +153,7 @@ theorem twp_read_chunk_eof
   iintro Htag
   iapply twp_localTee rfl
   iapply twp_const
-  iapply hdtwp_eq rfl
+  iapply twp_eq rfl
   iapply twp_brIf (by decide) rfl
   simp
   ihave Hcount44 : pointsTo_u32 0 ((sp - 48) + 44) 0 $$ [Hcount]
@@ -164,7 +164,7 @@ theorem twp_read_chunk_eof
   iintro Hcount44
   iapply twp_localTee rfl
   iapply twp_const
-  iapply hdtwp_geU rfl
+  iapply twp_geU rfl
   simp
   iapply twp_brIfZero
   iapply twp_block
@@ -184,7 +184,7 @@ theorem twp_read_chunk_eof
   iintro Hlength
   iapply twp_localTee rfl
   iapply twp_sub
-  iapply hdtwp_leU rfl
+  iapply twp_leU rfl
   simp
   iapply twp_brIf (by decide) rfl
   iapply twp_localGet rfl
@@ -408,7 +408,7 @@ theorem twp_read_chunk_nonempty_fits
   iintro Htag
   iapply twp_localTee rfl
   iapply twp_const
-  iapply hdtwp_eq rfl
+  iapply twp_eq rfl
   iapply twp_brIf (by decide) rfl
   simp only [List.length_cons, List.length_nil, zero_add, Nat.reduceAdd,
     tsub_self, List.set_cons_zero, Nat.reduceSub, Nat.reduceLT,
@@ -424,7 +424,7 @@ theorem twp_read_chunk_nonempty_fits
   iintro Hcount44
   iapply twp_localTee rfl
   iapply twp_const
-  iapply hdtwp_geU rfl
+  iapply twp_geU rfl
   have hcountNge :
       ¬ (33 : UInt32) ≤ UInt32.ofNat chunk.length :=
     UInt32.not_le.mpr hcountLt
@@ -447,7 +447,7 @@ theorem twp_read_chunk_nonempty_fits
   iintro Hlength
   iapply twp_localTee rfl
   iapply twp_sub
-  iapply hdtwp_leU rfl
+  iapply twp_leU rfl
   simp only [hfits, ↓reduceIte]
   iapply twp_brIf (by decide) rfl
   iapply twp_localGet rfl
@@ -479,7 +479,7 @@ theorem twp_read_chunk_nonempty_fits
       UInt32.size := by omega
   rw [show 8 + (sp - 48) = (sp - 48) + 8 by bv_decide,
     show length + data = data + length by bv_decide]
-  iapply hdtwp_memoryCopy32 (len := UInt32.ofNat chunk.length)
+  iapply twp_memoryCopy32 (len := UInt32.ofNat chunk.length)
       oldDst chunk (by simpa [hcountToNat] using hdstLen)
       (by simpa [hcountToNat]) (by simpa [hcountToNat] using hchunkPos)
       (by simpa [hcountToNat] using hdstNowrap)

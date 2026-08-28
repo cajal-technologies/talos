@@ -91,7 +91,7 @@ theorem twp_write_all_nonempty
   iintro Htag
   iapply twp_localTee rfl
   iapply twp_const
-  iapply hdtwp_eq rfl
+  iapply twp_eq rfl
   iapply twp_brIf (by decide) rfl
   simp
   iapply twp_block
@@ -125,7 +125,7 @@ theorem twp_write_all_nonempty
   rw [hrestore]
   iapply twp_globalSet $$ HframeSp
   iintro Hsp
-  iapply hdtwp_returnFromCallFallthrough $$ Hruntime
+  iapply twp_returnFromCallFallthrough $$ Hruntime
   iintro Hruntime
   simp
   iapply Hcont

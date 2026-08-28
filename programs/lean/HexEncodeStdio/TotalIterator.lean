@@ -31,7 +31,7 @@ private theorem twp_shrU32 {hlc : HasLC} {α : Type} [WasmSmallStepGS hlc α]
       [{ Φ }] :=
   twp_pureStep _ _ _ (fun _ => Step.shrU)
 
-theorem hdtwp_eq {hlc : HasLC} {α : Type} [WasmSmallStepGS hlc α]
+theorem twp_eq {hlc : HasLC} {α : Type} [WasmSmallStepGS hlc α]
     {s : Stuckness} {E : CoPset}
     {Φ : List Value → IProp (WasmHeapGF α)}
     {params localValues values : List Value}
@@ -138,7 +138,7 @@ theorem twp_load8U_zero {hlc : HasLC} {α : Type}
 /-- The CodeLib release has the explicit-return lifting rule but not the
 fallthrough twin. This is the same framed rule for a callee whose body reaches
 the empty instruction list. -/
-theorem hdtwp_returnFromCallFallthrough' {hlc : HasLC} {α : Type}
+theorem twp_returnFromCallFallthrough' {hlc : HasLC} {α : Type}
     [WasmSmallStepGS hlc α] {s : Stuckness} {E : CoPset}
     {Φ : List Value → IProp (WasmHeapGF α)}
     {calleeLocals callerLocals : Locals} {callerCode : Program}
@@ -367,7 +367,7 @@ theorem func18_high_body {hlc : HasLC} {α : Type} [WasmSmallStepGS hlc α]
   iapply twp_localGet rfl
   iapply twp_load32 finish p8 p9 p10 p11 $$ Hend
   iintro Hend
-  iapply hdtwp_eq (result := 0) (by simp [hne])
+  iapply twp_eq (result := 0) (by simp [hne])
   iapply twp_brIfZero
   iapply twp_localGet rfl
   iapply twp_localGet rfl
@@ -498,7 +498,7 @@ theorem func18_end_body {hlc : HasLC} {α : Type} [WasmSmallStepGS hlc α]
   iapply twp_localGet rfl
   iapply twp_load32 finish p8 p9 p10 p11 $$ Hend
   iintro Hend
-  iapply hdtwp_eq (result := 1) (by simp)
+  iapply twp_eq (result := 1) (by simp)
   iapply twp_brIf (by decide) rfl
   iapply twp_localGet rfl
   simp [iterLocals, List.set]
@@ -536,7 +536,7 @@ theorem twp_call_func18_low {hlc : HasLC} {α : Type}
   isplitl [Hstate]
   · iexact Hstate
   iintro Hstate
-  iapply hdtwp_returnFromCallFallthrough' $$ Hruntime
+  iapply twp_returnFromCallFallthrough' $$ Hruntime
   iintro Hruntime
   simp only [List.take_succ_cons, List.take_zero, List.nil_append,
     List.cons_append]
@@ -598,7 +598,7 @@ theorem twp_call_func18_high {hlc : HasLC} {α : Type}
   isplitl [Htable]
   · iexact Htable
   iintro Hcurrent Hindex Hend HtablePtr Hinput Htable
-  iapply hdtwp_returnFromCallFallthrough' $$ Hruntime
+  iapply twp_returnFromCallFallthrough' $$ Hruntime
   iintro Hruntime
   simp only [List.take_succ_cons, List.take_zero, List.nil_append,
     List.cons_append]
@@ -644,7 +644,7 @@ theorem twp_call_func18_end {hlc : HasLC} {α : Type}
   isplitl [Hend]
   · iexact Hend
   iintro Hcurrent Hindex Hend
-  iapply hdtwp_returnFromCallFallthrough' $$ Hruntime
+  iapply twp_returnFromCallFallthrough' $$ Hruntime
   iintro Hruntime
   simp only [List.take_succ_cons, List.take_zero, List.nil_append,
     List.cons_append]

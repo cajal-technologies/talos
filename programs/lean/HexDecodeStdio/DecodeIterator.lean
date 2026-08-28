@@ -1,5 +1,5 @@
 import HexDecodeStdio.DecodeSpec
-import CodeLib.SepLogic.SmallStepTotalLiftingAux
+import CodeLib.SepLogic.SmallStepTotalLiftingBytes
 
 namespace Project.HexDecodeStdio
 
@@ -99,7 +99,7 @@ theorem twp_decodePair_empty
   simp [Locals.set?, Locals.set]
   iapply twp_store8_addr (address := out) (value := 0) oldTag $$ Htag
   iintro Htag'
-  iapply hdtwp_returnFromCallFallthrough
+  iapply twp_returnFromCallFallthrough
     (module := «module») (returningInstance := ⟨0⟩) $$ Hruntime'
   iintro Hruntime''
   simp only [func0Def, List.take_zero, List.nil_append,
@@ -200,7 +200,7 @@ theorem twp_decodePair_valid
   iapply twp_localGet rfl
   iapply twp_localGet rfl
   iapply twp_ltU rfl
-  iapply hdtwp_select (selected := .i32 2) (by
+  iapply twp_select (selected := .i32 2) (by
     by_cases h : (2 : UInt32) < len
     · simp [h]
     · have htwo : (2 : UInt32).toNat = 2 := by decide
@@ -320,7 +320,7 @@ theorem twp_decodePair_valid
   all_goals
     iapply twp_localGet rfl
     iapply twp_const
-    iapply hdtwp_eq rfl
+    iapply twp_eq rfl
     simp
     iapply twp_brIfZero
     iapply twp_localGet rfl
@@ -415,7 +415,7 @@ theorem twp_decodePair_valid
       simp
       iapply twp_store8_addr (address := out) (value := 1) oldTag $$ Htag
       iintro Htag'
-      iapply hdtwp_returnFromCallFallthrough
+      iapply twp_returnFromCallFallthrough
           (module := «module») (returningInstance := ⟨0⟩) $$ Hruntime'
       iintro Hruntime''
       simp

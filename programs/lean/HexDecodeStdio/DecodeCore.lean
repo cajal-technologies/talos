@@ -1,5 +1,5 @@
 import HexDecodeStdio.DecodeSpec
-import CodeLib.SepLogic.SmallStepTotalLiftingAux
+import CodeLib.SepLogic.SmallStepTotalLiftingBytes
 import HexDecodeStdio.DecodeIterator
 
 namespace Project.HexDecodeStdio
@@ -297,7 +297,7 @@ theorem twp_decode_empty
   iintro Hmarker
   iapply twp_localTee rfl
   iapply twp_const
-  iapply hdtwp_eq rfl
+  iapply twp_eq rfl
   iapply twp_brIf (by decide) rfl
   iapply twp_localGet rfl
   iapply twp_localGet rfl

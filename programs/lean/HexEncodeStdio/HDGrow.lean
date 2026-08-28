@@ -1,5 +1,5 @@
 import Project.HexStdio.Spec
-import CodeLib.SepLogic.SmallStepTotalLiftingAux
+import CodeLib.SepLogic.SmallStepTotalLiftingBytes
 
 namespace Project.HexEncodeStdio
 

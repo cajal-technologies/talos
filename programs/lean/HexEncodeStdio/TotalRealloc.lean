@@ -124,7 +124,7 @@ theorem func15_realloc_outcome {hlc : HasLC}
   iapply twp_localTee rfl
   iapply twp_const
   iapply twp_localGet rfl
-  iapply hdtwp_select rfl
+  iapply twp_select rfl
   simp
   rw [show (if oldBump = 0 then Value.i32 1054000 else Value.i32 oldBump) =
       Value.i32 ptr by rw [hptr]; by_cases h : oldBump = 0 <;> simp [h]]
@@ -158,7 +158,7 @@ theorem func15_realloc_outcome {hlc : HasLC}
   iapply twp_const
   iapply twp_add
   iapply twp_const
-  iapply hdtwp_shrU
+  iapply twp_shrU
   iapply twp_localTee rfl
   isimp only [← hptr] at Hnew Hnext
   ihave HmemorySize : runtimeModuleOwn ⟨0⟩ «module» ∗
@@ -176,12 +176,12 @@ theorem func15_realloc_outcome {hlc : HasLC}
               Stuckness.MaybeStuck; E [{ Φ }])) $$
       [Hruntime Henv Hhost HbumpNorm Hold Hnew Hnext]
   · iframe
-  iapply hdtwp_memorySize «module» ⟨0⟩ _ $$ HmemorySize
+  iapply twp_memorySize_framed «module» ⟨0⟩ _ $$ HmemorySize
   iintro %pages ⟨Hruntime, Henv, Hhost, Hbump, Hold, Hnew, Hnext⟩
   rw [module_memIs64]
   simp only [sizeValue, Bool.false_eq_true, if_false]
   iapply twp_localTee rfl
-  iapply hdtwp_leU rfl
+  iapply twp_leU rfl
   by_cases henough :
       ((65535 + (newSize + ptr)) >>> (16 % 32)) ≤ UInt32.ofNat pages
   · rw [if_pos henough]
@@ -232,10 +232,10 @@ theorem func15_realloc_outcome {hlc : HasLC}
                 Stuckness.MaybeStuck; E [{ Φ }])) $$
         [Hruntime Henv Hhost Hbump Hold Hnew Hnext]
     · iframe
-    iapply hdtwp_memoryGrow «module» ⟨0⟩ _ $$ HmemoryGrow
+    iapply twp_memoryGrow_framed «module» ⟨0⟩ _ $$ HmemoryGrow
     iintro %growResult ⟨Hruntime, Henv, Hhost, Hbump, Hold, Hnew, Hnext⟩
     iapply twp_const
-    iapply hdtwp_eq rfl
+    iapply twp_eq rfl
     by_cases hgrow : growResult = (0xffffffff : UInt32)
     · simp only [hgrow, ↓reduceIte]
       iapply twp_brIf (by decide) rfl

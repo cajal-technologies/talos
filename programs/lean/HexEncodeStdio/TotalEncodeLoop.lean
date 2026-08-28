@@ -11,7 +11,7 @@ open Wasm
 open Iris Iris.BI Iris.ProgramLogic Language.Notation Iris.Std
 open Wasm.SepLogic Wasm.SmallStep
 
-private theorem hdtwp_leU {hlc : HasLC} {α : Type} [WasmSmallStepGS hlc α]
+private theorem twp_leU {hlc : HasLC} {α : Type} [WasmSmallStepGS hlc α]
     {s : Stuckness} {E : CoPset}
     {Φ : List Value → IProp (WasmHeapGF α)}
     {params localValues values : List Value}
@@ -262,7 +262,7 @@ theorem func6_ascii_store {hlc : HasLC} {α : Type}
   iintro Hcap
   iapply twp_localGet rfl
   iapply twp_sub
-  iapply hdtwp_leU (result := 1) (by simp [hroom])
+  iapply twp_leU (result := 1) (by simp [hroom])
   iapply twp_brIf (by decide) rfl
   iapply twp_localGet rfl
   iapply twp_load32 output p8 p9 p10 p11 $$ HoutputPtr
