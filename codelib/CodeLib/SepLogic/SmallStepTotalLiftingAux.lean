@@ -1,6 +1,25 @@
 import CodeLib.SepLogic.SmallStepTotalLifting
 
 /-!
+# Additional total weakest-precondition instruction lemmas
+
+Convenience total-WP rules on top of `SmallStepTotalLifting`, factored out of the
+`hex_stdio` worked examples so both the encode and decode proofs share one copy.
+Two kinds appear here:
+
+* byte-granular load/store rules not otherwise provided
+  (`hdtwp_load8U`, `hdtwp_load8U_addr`, `hdtwp_store8`, `hdtwp_store8_addr`,
+  `hdtwp_store32_addr`, `hdtwp_store64_addr`), and small stack rules
+  (`hdtwp_ltS`, `hdtwp_drop`); and
+* lighter-weight, resource-minimal variants of a few rules in
+  `SmallStepTotalLifting` (`hdtwp_memoryGrow`, `hdtwp_callHost`,
+  `hdtwp_memorySize`, `hdtwp_memoryCopy32`, and the comparison/return rules).
+
+The `hdtwp_` prefix keeps these distinct from the `twp_*` family so both can be
+in scope together; the lemmas are program-agnostic.
+-/
+
+/-!
 Total-WP rules missing from the public lifting layer but needed by the
 byte-oriented Rust code in this challenge.  They are the total counterparts
 of CodeLib's `wp_load8U` and `wp_store8`: the physical step and ghost-memory

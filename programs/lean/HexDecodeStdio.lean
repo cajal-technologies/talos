@@ -1,4 +1,3 @@
-import Mathlib
 import CodeLib
 import HexDecodeStdio.DecodeSpec
 import HexDecodeStdio.Helpers

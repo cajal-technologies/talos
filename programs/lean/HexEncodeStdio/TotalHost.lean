@@ -1,4 +1,3 @@
-import Mathlib
 import CodeLib
 
 namespace Project.HexEncodeStdio.TotalHost
