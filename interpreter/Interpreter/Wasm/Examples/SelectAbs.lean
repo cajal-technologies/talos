@@ -47,7 +47,7 @@ theorem selectAbs_runs (n : UInt32) :
     all_goals exact Steps.refl _
   exact congrArg RunnerResult.values? (runSteps_eq_success_of_steps hsteps)
 
-theorem selectAbsSpec (n : UInt32) :
+theorem selectAbs_terminates (n : UInt32) :
     TerminatesWith (selectAbsConfig n)
       (fun values _ => values = [.i32 (selectAbsResult n)]) :=
   runSteps_values_terminates (selectAbs_runs n)

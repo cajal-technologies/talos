@@ -64,7 +64,7 @@ theorem store16_roundtrip :
     (runSteps 8 (narrowI32Config 5)).result.values? = some [.i32 0xABCD] := by
   native_decide
 
-theorem narrowI32_contracts :
+theorem narrowI32_terminates :
     TerminatesWith (narrowI32Config 0) (fun vs _ => vs = [.i32 0x42]) ∧
     TerminatesWith (narrowI32Config 1) (fun vs _ => vs = [.i32 0xFFFFFFFF]) ∧
     TerminatesWith (narrowI32Config 2) (fun vs _ => vs = [.i32 0xABCD]) ∧
@@ -78,7 +78,7 @@ theorem narrowI32_contracts :
     runSteps_values_terminates store8_roundtrip,
     runSteps_values_terminates store16_roundtrip⟩
 
-theorem narrowI32_partial_contracts :
+theorem narrowI32_partial :
     PartiallyMeets (narrowI32Config 0) (fun vs _ => vs = [.i32 0x42]) ∧
     PartiallyMeets (narrowI32Config 1) (fun vs _ => vs = [.i32 0xFFFFFFFF]) ∧
     PartiallyMeets (narrowI32Config 2) (fun vs _ => vs = [.i32 0xABCD]) ∧

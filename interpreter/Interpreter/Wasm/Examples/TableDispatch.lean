@@ -48,7 +48,7 @@ theorem tableProbe_steps (m : Module) (st : Store Unit)
       (⟨.done [.i32 3, .i32 1],
         (tableProbeConfig m st).store⟩ : Config Unit))
 
-theorem tableProbeSpec (m : Module) (st : Store Unit)
+theorem tableProbe_terminates (m : Module) (st : Store Unit)
     (htbl :
       st.tables =
         [[.funcref (some 0), .funcref (some 1), .funcref none]])
@@ -119,7 +119,7 @@ theorem dispatch_slot0_runs :
 theorem dispatch_slot1_runs :
     runVals 4 [.i32 1] = some [.i32 20] := by native_decide
 
-theorem dispatch_slot0_spec :
+theorem dispatch_slot0_terminates :
     TerminatesWith (decodedConfig 4 [.i32 0])
       (fun values _ => values = [.i32 10]) :=
   runSteps_values_terminates dispatch_slot0_runs

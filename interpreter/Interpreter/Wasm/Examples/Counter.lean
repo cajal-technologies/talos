@@ -14,7 +14,7 @@ import Interpreter.Wasm.SmallStep
     3. A small wasm function `counter` reads slot `0`, adds `1`,
        writes back.
     4. A `HostSpec` describes the storage interface *relationally*.
-    5. `counter_correct` is proved **parametric over any `HostEnv`**
+    5. `counter_terminates` is proved **parametric over any `HostEnv`**
        that satisfies the spec — the proof reads no host code, only
        the contracts.
 
@@ -173,7 +173,7 @@ theorem counter_steps
   apply Steps.cons (.callHostReturn counter_import1 rfl hwriteHost hwrite)
   exact Steps.cons .finish (Steps.refl _)
 
-theorem counter_correct
+theorem counter_terminates
     {env : HostEnv HostState}
     (hSat : env.Satisfies counterModule counterSpec)
     (st : Store HostState) :

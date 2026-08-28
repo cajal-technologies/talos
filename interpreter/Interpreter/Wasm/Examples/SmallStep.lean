@@ -138,13 +138,13 @@ theorem memory_valid_step_is_relational {kind} {next : ValidConfig Unit}
 
 /-- A manual memory specification: the function returns the word it stored,
 and the final physical memory contains that same word at address 16. -/
-theorem memory_roundtrip_spec :
+theorem memory_roundtrip_result_matches :
     memoryResultMatches (runSteps 6 memoryRoundtripConfig).result = true := by
   native_decide
 
 /-- The same contract stated over the authoritative relational semantics,
 rather than only over the executable iterator. -/
-theorem memory_roundtrip_relational :
+theorem memory_roundtrip_terminates :
     TerminatesWith memoryRoundtripConfig (fun values store =>
       values = [.i32 0x12345678] ∧ store.wasm.mem.read32 16 = 0x12345678) := by
   apply runSteps_success_terminates memory_roundtrip_run
@@ -210,7 +210,7 @@ theorem memory_growth_run :
   rfl
 /-- Growth returns the old size, respects the declared cap, and failed growth
 leaves the physical memory size unchanged. -/
-theorem memory_growth_relational :
+theorem memory_growth_terminates :
     TerminatesWith memoryGrowthConfig (fun values store =>
       values = [.i32 2, .i32 0xFFFFFFFF, .i32 2, .i32 1, .i32 1] ∧
       store.wasm.mem.pages = 2) := by
@@ -255,7 +255,7 @@ theorem memory64_growth_run :
   rfl
 /-- Memory64 growth uses i64 operands/results, preserves the cap on ordinary
 deltas, and deterministically rejects deltas of at least 2^32 pages. -/
-theorem memory64_growth_relational :
+theorem memory64_growth_terminates :
     TerminatesWith memory64GrowthConfig (fun values store =>
       values =
         [.i64 2, .i64 0xFFFFFFFFFFFFFFFF, .i64 2,
@@ -304,7 +304,7 @@ theorem memory_fill_run :
   rfl
 /-- Filling four bytes produces the expected little-endian word and frames a
 disjoint word at address 32. -/
-theorem memory_fill_relational :
+theorem memory_fill_terminates :
     TerminatesWith memoryFillConfig (fun values store =>
       values = [.i32 0x12345678, .i32 0xABABABAB] ∧
       store.wasm.mem.read32 16 = 0xABABABAB ∧
@@ -361,7 +361,7 @@ theorem memory64_fill_run :
     (runSteps 6 memory64FillConfig).result =
       .success [.i64 1] memory64FillFinalStore := by
   rfl
-theorem memory64_fill_relational :
+theorem memory64_fill_terminates :
     TerminatesWith memory64FillConfig (fun values store =>
       values = [.i64 1] ∧
       store.wasm.mem.read8 20 = 0xCD ∧
@@ -415,7 +415,7 @@ theorem overlapping_copy_run :
   rfl
 /-- Overlap reads from the pre-copy byte function, giving `memmove` rather
 than forward-loop semantics. -/
-theorem overlapping_copy_relational :
+theorem overlapping_copy_terminates :
     TerminatesWith overlappingCopyConfig (fun values store =>
       values = [.i32 0x04030201, .i32 0x02010201] ∧
       store.wasm.mem.read32 0 = 0x02010201 ∧
@@ -478,7 +478,7 @@ theorem memory64_copy_run :
     (runSteps 6 memory64CopyConfig).result =
       .success [.i64 1] memory64CopyFinalStore := by
   rfl
-theorem memory64_copy_relational :
+theorem memory64_copy_terminates :
     TerminatesWith memory64CopyConfig (fun values store =>
       values = [.i64 1] ∧
       store.wasm.mem.read32 0 = 0x12345678 ∧
@@ -528,7 +528,7 @@ theorem memory_init_run :
   rfl
 /-- A passive segment initializes memory once, `data.drop` consumes it, and a
 zero-length initialization remains valid after the drop. -/
-theorem memory_init_relational :
+theorem memory_init_terminates :
     TerminatesWith memoryInitConfig (fun values store =>
       values = [.i32 0x04030201] ∧
       store.wasm.mem.read32 16 = 0x04030201 ∧
@@ -1546,7 +1546,7 @@ theorem memory64_init_run :
     (runSteps 6 memory64InitConfig).result =
       .success [.i64 1] memory64InitFinalStore := by
   rfl
-theorem memory64_init_relational :
+theorem memory64_init_terminates :
     TerminatesWith memory64InitConfig (fun values store =>
       values = [.i64 1] ∧
       store.wasm.mem.read8 20 = 0xBB ∧
@@ -1583,7 +1583,7 @@ theorem byte_roundtrip_run :
       .success [.i32 0xAB] byteFinalStore := by
   rfl
 /-- Narrow stores retain the low byte, and `load8_u` returns its zero extension. -/
-theorem byte_roundtrip_relational :
+theorem byte_roundtrip_terminates :
     TerminatesWith byteRoundtripConfig (fun values store =>
       values = [.i32 0xAB] ∧ store.wasm.mem.read8 24 = 0xAB) := by
   apply runSteps_success_terminates byte_roundtrip_run
@@ -1630,7 +1630,7 @@ theorem narrow_memory_run :
   rfl
 /-- Signed and unsigned narrow loads agree on the stored low bits and differ
 only in their extension to the i32 result width. -/
-theorem narrow_memory_relational :
+theorem narrow_memory_terminates :
     TerminatesWith narrowMemoryConfig (fun values store =>
       values = [.i32 0xFFFF8001, .i32 0x8001, .i32 0xFFFFFF80] ∧
       store.wasm.mem.read8 24 = 0x80 ∧
@@ -1684,7 +1684,7 @@ theorem i64_memory64_run :
   rfl
 /-- Full-width i64 store/load has the same byte-level effect for memory32 and
 memory64 addressing; only the operand type used to form the address differs. -/
-theorem i64_memory_relational (is64 : Bool) :
+theorem i64_memory_terminates (is64 : Bool) :
     TerminatesWith (i64MemoryConfig is64) (fun values store =>
       values = [.i64 0x0123456789ABCDEF] ∧
       store.wasm.mem.read64 32 = 0x0123456789ABCDEF) := by
@@ -1732,7 +1732,7 @@ theorem i32_memory64_run :
 
 /-- Ordinary i32 loads and stores consume i64 addresses for a memory64
 instance while retaining their i32 value type. -/
-theorem i32_memory64_relational :
+theorem i32_memory64_terminates :
     TerminatesWith i32Memory64Config (fun values store =>
       values = [.i32 0x12345678] ∧
       store.wasm.mem.read32 24 = 0x12345678) := by
@@ -1852,7 +1852,7 @@ theorem i64_narrow_store_memory64_run :
   rfl
 /-- Narrow i64 stores retain exactly the low 8/16/32 bits, independently of
 whether the memory uses i32 or i64 addresses. -/
-theorem i64_narrow_store_relational (is64 : Bool) :
+theorem i64_narrow_store_terminates (is64 : Bool) :
     TerminatesWith (i64NarrowStoreConfig is64) (fun values store =>
       values = [.i64 0x89ABCDEF, .i64 0xCDEF, .i64 0xEF] ∧
       store.wasm.mem.read8 40 = 0xEF ∧
@@ -1919,7 +1919,7 @@ def swapValidConfig : ValidConfig Unit :=
   ⟨swapConfig, safe_of_runSteps_success swap_run⟩
 
 /-- Relational contract for a hand-written two-word memory swap. -/
-theorem swap_relational :
+theorem swap_terminates :
     TerminatesWith swapConfig (fun values store =>
       values = [.i32 11, .i32 22] ∧
       store.wasm.mem.read32 0 = 22 ∧
@@ -1987,7 +1987,7 @@ theorem reverse_three_run :
       .success [.i32 11, .i32 33] reverseThreeFinalStore := by
   rfl
 /-- Reversing three words swaps the endpoints and frames the middle word. -/
-theorem reverse_three_relational :
+theorem reverse_three_terminates :
     TerminatesWith reverseThreeConfig (fun values store =>
       values = [.i32 11, .i32 33] ∧
       store.wasm.mem.read32 0 = 33 ∧
@@ -2072,7 +2072,7 @@ theorem partition_three_run :
 /-- The concrete partition kernel preserves the three input words, places the
 pivot at address four, and establishes the left/right unsigned partition
 inequalities. -/
-theorem partition_three_relational :
+theorem partition_three_terminates :
     TerminatesWith partitionThreeConfig (fun values store =>
       values = [] ∧
       store.wasm.mem.read32 0 = 11 ∧
@@ -2152,7 +2152,7 @@ theorem merge_two_run :
 
 /-- The two singleton runs are merged in ascending unsigned order, while the
 output remains a permutation of the two input words. -/
-theorem merge_two_relational :
+theorem merge_two_terminates :
     TerminatesWith mergeTwoConfig (fun values store =>
       values = [] ∧
       store.wasm.mem.read32 0 = 4 ∧
@@ -2261,7 +2261,7 @@ theorem if_small_step :
     (runSteps 5 ifConfig).result.values? = some [.i32 42] := by
   native_decide
 
-theorem block_branch_relational :
+theorem block_branch_terminates :
     TerminatesWith blockBranchConfig (fun values _ => values = [.i32 106]) := by
   apply runSteps_success_terminates
     (fuel := 7) (store := blockBranchConfig.store)
@@ -2301,7 +2301,7 @@ theorem branch_through_block_to_function_label :
       some [.i32 42] := by
   native_decide
 
-theorem function_label_branch_relational :
+theorem function_label_branch_terminates :
     TerminatesWith (functionLabelBranchConfig 1)
       (fun values _ => values = [.i32 42]) := by
   apply runSteps_success_terminates
@@ -2369,7 +2369,7 @@ theorem factorial_small_step :
     (runSteps 61 factorialConfig).result.values? = some [.i32 120] := by
   native_decide
 
-theorem factorial_relational :
+theorem factorial_terminates :
     TerminatesWith factorialConfig (fun values _ => values = [.i32 120]) := by
   apply runSteps_success_terminates
     (fuel := 61) (store := factorialConfig.store)
@@ -2696,7 +2696,7 @@ theorem reference_values_small_step :
       some [.i32 1, .i32 1, .i32 0, .i32 1] := by
   native_decide
 
-theorem reference_values_relational :
+theorem reference_values_terminates :
     TerminatesWith (referenceConfig 0 4)
       (fun values _ => values = [.i32 1, .i32 1, .i32 0, .i32 1]) := by
   apply runSteps_success_terminates
@@ -2751,7 +2751,7 @@ theorem table_read_write_small_step :
       some [.i32 2, .i32 1, .i32 0] := by
   native_decide
 
-theorem table_read_write_relational :
+theorem table_read_write_terminates :
     TerminatesWith (tableConfig 0 3)
       (fun values store =>
         values = [.i32 2, .i32 1, .i32 0] ∧
@@ -2813,7 +2813,7 @@ theorem table_bulk_small_step :
     (runSteps 13 (tableBulkConfig 0 2)).result =
       .success [.i32 6, .i32 4] tableBulkFinalStore := by
   rfl
-theorem table_bulk_relational :
+theorem table_bulk_terminates :
     TerminatesWith (tableBulkConfig 0 2)
       (fun values store =>
         values = [.i32 6, .i32 4] ∧
@@ -2892,7 +2892,7 @@ theorem element_init_table64_run :
     (runSteps 12 (elementInitConfig true 0 2)).result =
       .success [.i32 1, .i32 0] (elementInitFinalStore true) := by
   rfl
-theorem element_init_relational (is64 : Bool) :
+theorem element_init_terminates (is64 : Bool) :
     TerminatesWith (elementInitConfig is64 0 2)
       (fun values store =>
         values = [.i32 1, .i32 0] ∧
@@ -2967,7 +2967,7 @@ theorem return_call_ref_run :
       some [.i32 42] := by
   native_decide
 
-theorem call_indirect_relational :
+theorem call_indirect_terminates :
     TerminatesWith (indirectCallConfig 2)
       (fun values _ => values = [.i32 42]) := by
   apply runSteps_success_terminates
@@ -3128,7 +3128,7 @@ theorem scalar_float_overflow_trapsWith :
   apply runSteps_trapReason_trapsWith (fuel := 3)
   native_decide
 
-theorem scalar_float_relational :
+theorem scalar_float_terminates :
     TerminatesWith (scalarFloatConfig 0 4)
       (fun values _ =>
         values =
@@ -3210,7 +3210,7 @@ theorem float_memory_roundtrip_run :
 
 /-- A clean physical-memory contract for scalar floating-point accesses:
 loads preserve the exact IEEE bit patterns written by both stores. -/
-theorem float_memory_roundtrip_relational :
+theorem float_memory_roundtrip_terminates :
     TerminatesWith floatMemoryConfig (fun values store =>
       values =
         [ .f64 (-7.5 : Float).toBits, .f32 (1.25 : Float32).toBits ] ∧
@@ -3259,7 +3259,7 @@ theorem float_memory_roundtrip_partial :
       store.wasm.mem.read64 40 = (-7.5 : Float).toBits) := by
   intro trace values store execution
   obtain ⟨runTrace, runValues, runStore, runExecution, hpost⟩ :=
-    float_memory_roundtrip_relational
+    float_memory_roundtrip_terminates
   obtain ⟨rfl, rfl⟩ :=
     steps_done_deterministic runExecution execution
   exact hpost
@@ -3515,11 +3515,11 @@ def indexedMemoryResultMatches : RunnerResult Unit → Bool
 
 /-- The indexed instruction updates only memory 1; stable memory identities
 are restored before the transition becomes observable. -/
-theorem indexed_memory_roundtrip_spec :
+theorem indexed_memory_roundtrip_result_matches :
     indexedMemoryResultMatches (runSteps 6 indexedMemoryConfig).result = true := by
   native_decide
 
-theorem indexed_memory_roundtrip_relational :
+theorem indexed_memory_roundtrip_terminates :
     TerminatesWith indexedMemoryConfig
       (fun values store =>
         values = [.i32 0xA1B2C3D4] ∧
@@ -3607,7 +3607,7 @@ theorem host_call_returns_and_updates_memory :
 
 /-- A host call may update physical memory atomically; the relational contract
 records both its returned value and the committed store effect. -/
-theorem host_call_relational :
+theorem host_call_terminates :
     TerminatesWith smallStepHostConfig (fun values store =>
       values = [.i32 42] ∧ store.wasm.mem.read32 200 = 41) := by
   apply runSteps_success_terminates host_call_run
@@ -3777,7 +3777,7 @@ theorem gc_struct_allocation_and_read :
       (runSteps 6 (smallStepGcConfig 1)).result = true := by
   native_decide
 
-theorem gc_struct_relational :
+theorem gc_struct_terminates :
     TerminatesWith (smallStepGcConfig 1) (fun values store =>
       values = [.i32 7] ∧ store.wasm.gcHeap.length = 1) := by
   apply runSteps_success_terminates
@@ -3860,7 +3860,7 @@ theorem exception_is_caught_with_arguments :
       some [.i32 42] := by
   native_decide
 
-theorem caught_exception_relational :
+theorem caught_exception_terminates :
     TerminatesWith (smallStepExceptionConfig 0)
       (fun values _ => values = [.i32 42]) := by
   apply runSteps_success_terminates

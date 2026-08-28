@@ -60,7 +60,7 @@ theorem fill_then_load_returns_repeated_byte :
   rfl
 
 /-- Fuel-free total contract: the returned word and all affected bytes agree. -/
-theorem fill_then_load_spec :
+theorem fill_then_load_terminates :
     TerminatesWith fillThenReadConfig (fun values store =>
       values = [.i64 0xABABABABABABABAB] ∧
       store.wasm.mem.read64 0 = 0xABABABABABABABAB ∧

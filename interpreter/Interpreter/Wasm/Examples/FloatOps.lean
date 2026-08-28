@@ -109,7 +109,7 @@ theorem mem_roundtrip :
       some [.f64 (3.5 : Float).toBits] := by
   native_decide
 
-theorem mem_roundtrip_spec :
+theorem mem_roundtrip_terminates :
     TerminatesWith (floatConfig 7)
       (fun values _ => values = [.f64 (3.5 : Float).toBits]) :=
   runSteps_values_terminates mem_roundtrip

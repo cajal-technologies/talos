@@ -37,7 +37,7 @@ theorem memDataSection_runs :
       .success [.i32 7] memDataStore := by
   rfl
 
-theorem memDataSection_spec :
+theorem memDataSection_terminates :
     TerminatesWith memDataConfig (fun values store =>
       values = [.i32 7] ∧
       store.wasm.mem.read32 0 = 0x45444342) := by

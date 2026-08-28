@@ -33,7 +33,7 @@ theorem sumI64_runs (x : UInt32) :
       some [.i32 (sumI64Result x)] := by
   rfl
 
-theorem sumI64Spec (x : UInt32) :
+theorem sumI64_terminates (x : UInt32) :
     TerminatesWith (sumI64Config x)
       (fun values _ => values = [.i32 (sumI64Result x)]) :=
   runSteps_values_terminates (sumI64_runs x)

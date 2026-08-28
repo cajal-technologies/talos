@@ -62,7 +62,7 @@ theorem memorySize_reads_pagesMin :
       .success [.i32 1] growStore := by
   rfl
 
-theorem memorySize_spec :
+theorem memorySize_terminates :
     TerminatesWith sizeConfig (fun values store =>
       values = [.i32 1] ∧ store = growStore) := by
   apply runSteps_success_terminates memorySize_reads_pagesMin
@@ -74,7 +74,7 @@ theorem memoryGrow_bumps_size :
   rfl
 
 /-- Growth changes only the page count and frames the pre-existing word. -/
-theorem memoryGrow_spec :
+theorem memoryGrow_terminates :
     TerminatesWith growThenSizeConfig (fun values store =>
       values = [.i32 3] ∧
       store.wasm.mem.pages = 3 ∧
@@ -101,7 +101,7 @@ theorem memoryGrow_oversize_returns_neg_one :
       .success [.i32 1, .i32 0xFFFFFFFF] growStore := by
   rfl
 
-theorem memoryGrow_failure_spec :
+theorem memoryGrow_failure_terminates :
     TerminatesWith growFailConfig (fun values store =>
       values = [.i32 1, .i32 0xFFFFFFFF] ∧ store = growStore) := by
   apply runSteps_success_terminates memoryGrow_oversize_returns_neg_one

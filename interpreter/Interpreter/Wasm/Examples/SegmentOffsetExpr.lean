@@ -73,7 +73,7 @@ theorem readByte4_returns_65 :
       some [.i32 65] := by
   native_decide
 
-theorem readByte4_spec :
+theorem readByte4_terminates :
     TerminatesWith readByte4Config (fun values store =>
       values = [.i32 65] ∧
       store.wasm.mem.read8 4 = 65 ∧
@@ -120,7 +120,7 @@ theorem callAt2_returns_42 :
       some [.i32 42] := by
   native_decide
 
-theorem callAt2_spec :
+theorem callAt2_terminates :
     TerminatesWith callAt2Config (fun values _ =>
       values = [.i32 42]) := by
   have hvalues := callAt2_returns_42

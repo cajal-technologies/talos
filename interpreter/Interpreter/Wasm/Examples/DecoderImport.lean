@@ -112,7 +112,7 @@ theorem caller_against_incEnv :
     (runSteps 3 callerConfig).result.values? = some [.i32 42] := by
   native_decide
 
-theorem caller_against_incEnv_spec :
+theorem caller_against_incEnv_terminates :
     TerminatesWith callerConfig (fun values _ => values = [.i32 42]) :=
   runSteps_values_terminates caller_against_incEnv
 

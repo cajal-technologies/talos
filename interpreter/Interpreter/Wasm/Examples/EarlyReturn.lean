@@ -53,7 +53,7 @@ theorem earlyReturn_runs (x : UInt32) :
   congrArg RunnerResult.values?
     (runSteps_eq_success_of_steps (earlyReturn_steps x))
 
-theorem earlyReturnSpec (x : UInt32) :
+theorem earlyReturn_terminates (x : UInt32) :
     TerminatesWith (earlyReturnConfig x)
       (fun values _ => values = [.i32 x]) :=
   runSteps_values_terminates (earlyReturn_runs x)

@@ -82,7 +82,7 @@ theorem store32I64_roundtrip :
 theorem store64_roundtrip :
     (runSteps 8 (i64MemConfig 10)).result.values? = some [.i64 0x1122334455667788] := by native_decide
 
-theorem i64Mem_contracts :
+theorem i64Mem_terminates :
     TerminatesWith (i64MemConfig 0) (fun vs _ => vs = [.i64 0xFF2233445566FF88]) ∧
     TerminatesWith (i64MemConfig 1) (fun vs _ => vs = [.i64 0xFF]) ∧
     TerminatesWith (i64MemConfig 2) (fun vs _ => vs = [.i64 0xFFFFFFFFFFFFFFFF]) ∧
@@ -106,7 +106,7 @@ theorem i64Mem_contracts :
     runSteps_values_terminates store32I64_roundtrip,
     runSteps_values_terminates store64_roundtrip⟩
 
-theorem i64Mem_partial_contracts :
+theorem i64Mem_partial :
     PartiallyMeets (i64MemConfig 0) (fun vs _ => vs = [.i64 0xFF2233445566FF88]) ∧
     PartiallyMeets (i64MemConfig 1) (fun vs _ => vs = [.i64 0xFF]) ∧
     PartiallyMeets (i64MemConfig 2) (fun vs _ => vs = [.i64 0xFFFFFFFFFFFFFFFF]) ∧

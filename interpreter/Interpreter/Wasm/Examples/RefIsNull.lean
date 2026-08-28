@@ -36,7 +36,7 @@ theorem refReflect_steps (m : Module) (st : Store α) :
   apply Steps.cons (.refIsNullFalse rfl)
   exact Steps.cons .finish (Steps.refl _)
 
-theorem refReflectSpec (m : Module) (st : Store α) :
+theorem refReflect_terminates (m : Module) (st : Store α) :
     TerminatesWith (refReflectConfig m st)
       (fun values store =>
         values = [.i32 0, .i32 1] ∧ store.wasm = st) := by
@@ -109,11 +109,11 @@ theorem global_func_is_null_runs : runVals 4 = some [.i32 0] := by native_decide
 
 theorem global_null_is_null_runs : runVals 5 = some [.i32 1] := by native_decide
 
-theorem null_is_null_spec :
+theorem null_is_null_terminates :
     TerminatesWith (decodedConfig 1) (fun values _ => values = [.i32 1]) :=
   runSteps_values_terminates null_is_null_runs
 
-theorem func_is_null_spec :
+theorem func_is_null_terminates :
     TerminatesWith (decodedConfig 2) (fun values _ => values = [.i32 0]) :=
   runSteps_values_terminates func_is_null_runs
 

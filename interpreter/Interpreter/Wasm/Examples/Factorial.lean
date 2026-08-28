@@ -178,14 +178,14 @@ theorem factorial_steps (n : UInt32) :
   exact ⟨_ ++ suffix,
     Steps.trans (factorial_initial_steps n) (by simpa using hsuffix)⟩
 
-theorem factorialSpec (n : UInt32) :
+theorem factorial_terminates (n : UInt32) :
     TerminatesWith (factorialConfig n)
       (fun values _ =>
         values = [.i32 (UInt32.ofNat n.toNat.factorial)]) := by
   obtain ⟨trace, execution⟩ := factorial_steps n
   exact ⟨trace, _, _, execution, rfl⟩
 
-theorem factorialPartial (n : UInt32) :
+theorem factorial_partial (n : UInt32) :
     PartiallyMeets (factorialConfig n)
       (fun values _ =>
         values = [.i32 (UInt32.ofNat n.toNat.factorial)]) := by

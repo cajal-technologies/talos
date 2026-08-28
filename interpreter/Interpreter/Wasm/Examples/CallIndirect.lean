@@ -93,7 +93,7 @@ theorem incr_steps (st : Store Unit) (n : UInt32) :
     (Steps.refl
       (⟨.done [.i32 (n + 1)], (incrConfig st n).store⟩ : Config Unit))
 
-theorem incrSpec (st : Store Unit) (n : UInt32) :
+theorem incr_terminates (st : Store Unit) (n : UInt32) :
     TerminatesWith (incrConfig st n)
       (fun values store =>
         values = [.i32 (n + 1)] ∧ store.wasm = st) := by
@@ -127,7 +127,7 @@ theorem dispatch_runs (n : UInt32) :
   congrArg RunnerResult.values?
     (runSteps_eq_success_of_steps (dispatch_steps n))
 
-theorem dispatchSpec (n : UInt32) :
+theorem dispatch_terminates (n : UInt32) :
     TerminatesWith (dispatchConfig n)
       (fun values _ => values = [.i32 (n + 1)]) :=
   runSteps_values_terminates (dispatch_runs n)

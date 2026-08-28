@@ -78,7 +78,7 @@ theorem ifAbs_runs (x : UInt32) :
   congrArg RunnerResult.values?
     (runSteps_eq_success_of_steps (ifAbs_steps x))
 
-theorem ifAbsSpec (x : UInt32) :
+theorem ifAbs_terminates (x : UInt32) :
     TerminatesWith (ifAbsConfig x)
       (fun values _ => values = [.i32 (ifAbsResult x)]) :=
   runSteps_values_terminates (ifAbs_runs x)

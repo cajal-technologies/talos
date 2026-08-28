@@ -63,7 +63,7 @@ theorem trapDivZero_traps (a : UInt32) :
   apply runSteps_trapped_trapsWith (trapDivZero_runs_trap a)
   rfl
 
-theorem trapDivZeroSpec (a b : UInt32) (hb : b ≠ 0) :
+theorem trapDivZero_terminates (a b : UInt32) (hb : b ≠ 0) :
     TerminatesWith (trapDivZeroConfig a b)
       (fun values _ => values = [.i32 (a / b)]) := by
   apply runSteps_success_terminates

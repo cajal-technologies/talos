@@ -145,7 +145,7 @@ theorem switch_runs (i : UInt32) :
   congrArg RunnerResult.values?
     (runSteps_eq_success_of_steps (switch_steps i))
 
-theorem switchSpec (i : UInt32) :
+theorem switch_terminates (i : UInt32) :
     TerminatesWith (switchConfig i)
       (fun values _ => values = [.i32 (switchResult i)]) :=
   runSteps_values_terminates (switch_runs i)

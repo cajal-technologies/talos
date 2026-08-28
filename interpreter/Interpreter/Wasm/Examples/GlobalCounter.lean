@@ -80,7 +80,7 @@ theorem tick_runs (st : Store Unit) (n : UInt32)
     runSteps_eq_success_of_steps (tick_steps st n hg)
 
 /-- One call returns the old global and stores its successor. -/
-theorem tick_spec (st : Store Unit) (n : UInt32)
+theorem tick_terminates (st : Store Unit) (n : UInt32)
     (hg : st.globals.globals[0]? = some (.i32 n)) :
     TerminatesWith (tickConfig st) (fun values store =>
       values = [.i32 n] ∧

@@ -84,7 +84,7 @@ theorem replace_runs (st : Store Unit) (new old : UInt32)
     SmallStep.runSteps_eq_success_of_steps
       (replace_steps st new old hpages hmem)
 
-theorem replace_spec (st : Store Unit) (new old : UInt32)
+theorem replace_terminates (st : Store Unit) (new old : UInt32)
     (hpages : 1 ≤ st.mem.pages) (hmem : st.mem.read32 0 = old) :
     TerminatesWith (replaceConfig st new) (fun values store =>
       values = [.i32 old] ∧
