@@ -1149,25 +1149,28 @@ theorem twp_memorySize
     iapply Hwp store.wasm.mem.pages
     iexact Hruntime
 
-/-- Total `memory.size` rule that additionally returns an exact, persistent
-snapshot of the physical page count observed by the instruction. -/
+/-- Total `memory.size` rule that returns an exact persistent snapshot of the
+observed physical page count while preserving an arbitrary caller frame. -/
 theorem twp_memorySize_tracked
     {params localValues values : List Value}
     {code : Program} {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame}
+    {P : IProp (WasmHeapGF α)}
     (runtimeModule : Module) (instanceId : ModuleInstanceId)
     (Hwp : ∀ pages : Nat,
+        P -∗
         runtimeModuleOwn instanceId runtimeModule -∗
         memoryPagesOwn pages -∗
         WP (.running ⟨⟨params, localValues,
             sizeValue runtimeModule.memIs64 pages :: values⟩,
           code, arity, remainder, controls, calls⟩ : Expr α)
           @ s; E [{ Φ }]) :
+    P -∗
     runtimeModuleOwn instanceId runtimeModule -∗
     WP (.running ⟨⟨params, localValues, values⟩,
         .memorySize :: code, arity, remainder, controls, calls⟩ : Expr α)
       @ s; E [{ Φ }] := by
-  iintro Hruntime
+  iintro HP Hruntime
   iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
   iintro %store %ns %obs %nt Hσ
   ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$
@@ -1176,13 +1179,14 @@ theorem twp_memorySize_tracked
         instanceId runtimeModule $$ [$Hσ $Hruntime] with %Hmodule
     ipureintro
     exact Hmodule
-  icombine Hσ Hruntime as Hinput
+  icombine HP Hruntime as Hclient
+  icombine Hσ Hclient as Hinput
   imod (stateInterp_memoryPages_snapshot_frame store ns obs nt
-      (P := runtimeModuleOwn instanceId runtimeModule)) $$
+      (P := iprop(P ∗ runtimeModuleOwn instanceId runtimeModule))) $$
       Hinput with Hout
-  icases Hout with ⟨⟨Hσ, #Hpages⟩, Hruntime'⟩
+  icases Hout with ⟨⟨Hσ, #Hpages⟩, HP, Hruntime'⟩
   ihave Hcont := Hwp store.wasm.mem.pages
-  ispecialize Hcont $$ Hruntime' Hpages
+  ispecialize Hcont $$ HP Hruntime' Hpages
   iapply fupd_mask_intro Std.LawfulSet.empty_subset
   iintro Hclose
   isplitr
@@ -1325,49 +1329,59 @@ theorem twp_memoryGrow
     · iapply Hwp previousPages.toUInt32
       iexact Hruntime
 
-/-- Tracked total `memory.grow` rule. Failure preserves and returns the exact
-current page snapshot. Success returns exact old and new snapshots together
-with the concrete old/new equations established by `Mem.grow`. -/
+/-- Tracked total `memory.grow` rule.  A snapshot previously issued by
+`memory.size` is threaded through an arbitrary caller frame.  Both outcomes
+relate that measurement to the actual pre-grow count; success additionally
+returns an exact new-page snapshot and the equations established by
+`Mem.grow`. -/
 theorem twp_memoryGrow_tracked
     {params localValues values : List Value}
     {delta : UInt32}
     {code : Program} {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame}
+    {P : IProp (WasmHeapGF α)}
     (runtimeModule : Module) (instanceId : ModuleInstanceId)
-    (Hfailure : ∀ pages : Nat,
+    (measuredPages : Nat)
+    (Hfailure : ∀ pages : Nat, measuredPages ≤ pages →
+        P -∗
         runtimeModuleOwn instanceId runtimeModule -∗
-        memoryPagesOwn pages -∗
+        memoryPagesOwn measuredPages -∗
         WP (.running ⟨⟨params, localValues,
             .i32 (0xFFFFFFFF : UInt32) :: values⟩,
           code, arity, remainder, controls, calls⟩ : Expr α)
           @ s; E [{ Φ }])
     (Hsuccess : ∀ oldPages previousPages newPages : Nat,
-        ⌜previousPages = oldPages ∧
-          newPages = previousPages + delta.toNat⌝ -∗
+        previousPages = oldPages ∧
+          newPages = previousPages + delta.toNat →
+        measuredPages ≤ oldPages →
+        P -∗
         runtimeModuleOwn instanceId runtimeModule -∗
-        memoryPagesOwn oldPages -∗
+        memoryPagesOwn measuredPages -∗
         memoryPagesOwn newPages -∗
         WP (.running ⟨⟨params, localValues,
             .i32 previousPages.toUInt32 :: values⟩,
           code, arity, remainder, controls, calls⟩ : Expr α)
           @ s; E [{ Φ }]) :
+    P -∗
     runtimeModuleOwn instanceId runtimeModule -∗
+    memoryPagesOwn measuredPages -∗
     WP (.running ⟨⟨params, localValues, .i32 delta :: values⟩,
         .memoryGrow :: code, arity, remainder, controls, calls⟩ : Expr α)
       @ s; E [{ Φ }] := by
-  iintro Hruntime
+  iintro HP Hruntime HmeasuredPages
   iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
   iintro %store %ns %obs %nt Hσ
+  ihave %hmeasuredPages : ⌜measuredPages ≤ store.wasm.mem.pages⌝ $$
+      [Hσ HmeasuredPages]
+  · imod (stateInterp_memoryPages_agree store ns obs nt measuredPages) $$
+        [$Hσ $HmeasuredPages] with ⟨_, _, %hle⟩
+    ipureintro
+    exact hle
   cases hg : store.wasm.mem.grow delta
       (store.wasm.memoryCap store.runtime.currentModule 0) with
   | none =>
-    icombine Hσ Hruntime as Hinput
-    imod (stateInterp_memoryPages_snapshot_frame store ns obs nt
-        (P := runtimeModuleOwn instanceId runtimeModule)) $$
-        Hinput with Hout
-    icases Hout with ⟨⟨Hσ, #Hpages⟩, Hruntime'⟩
-    ihave Hcont := Hfailure store.wasm.mem.pages
-    ispecialize Hcont $$ Hruntime' Hpages
+    ihave Hcont := Hfailure store.wasm.mem.pages hmeasuredPages
+    ispecialize Hcont $$ HP Hruntime HmeasuredPages
     iapply fupd_mask_intro Std.LawfulSet.empty_subset
     iintro Hclose
     isplitr
@@ -1410,13 +1424,9 @@ theorem twp_memoryGrow_tracked
           (congrArg (fun result : Mem => result.pages) hinj.1).symm.trans
             (by rw [hinj.2])⟩
       · contradiction
-    icombine Hσ Hruntime as Hinput
-    imod (stateInterp_memoryPages_snapshot_frame store ns obs nt
-        (P := runtimeModuleOwn instanceId runtimeModule)) $$
-        Hinput with Hout
-    icases Hout with ⟨⟨Hσ, #HoldPages⟩, Hruntime'⟩
     ihave HcontNew := Hsuccess store.wasm.mem.pages previousPages memory.pages
-    ispecialize HcontNew $$ %hfacts Hruntime' HoldPages
+      hfacts hmeasuredPages
+    ispecialize HcontNew $$ HP Hruntime HmeasuredPages
     iapply fupd_mask_intro Std.LawfulSet.empty_subset
     iintro Hclose
     isplitr
@@ -3189,6 +3199,25 @@ theorem twp_swapElementsFunc3
     · rw [← show (1048568 : UInt32) + 4 = 1048572 from rfl]
       iexact Hlen
 
+end successOnlyHelpers
+
+section terminalGenericHelpers
+
+variable [WasmSmallStepGS hlc α]
+variable {Terminal : Type}
+variable [view : TerminalView α Terminal]
+local instance (priority := high) activeTerminalLanguageHelpers :
+    Language (Expr α) (MachineStore α) StepKind Terminal :=
+  TerminalView.canonicalLanguage
+local instance (priority := high) activeTerminalIrisGSHelpers :
+    @IrisGS_gen hlc (Expr α) Terminal (MachineStore α) StepKind
+      activeTerminalLanguageHelpers (WasmHeapGF α) :=
+  { numLatersPerStep _ := 0
+    forkPost _ := iprop(True)
+    stateInterp_mono _ _ _ _ := by iintro $ }
+variable {s : Stuckness} {E : CoPset}
+variable {Φ : Terminal → IProp (WasmHeapGF α)}
+
 theorem twp_subI64
     {params localValues values : List Value}
     {lhs rhs : UInt64} {code : Program} {arity : Nat}
@@ -3399,7 +3428,8 @@ theorem twp_load32_addr
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
   iintro Hword Htwp
-  iapply twp_lift_step_no_fork rfl
+  iapply twp_lift_step_no_fork
+    (@TerminalView.running_not_val α Terminal view _)
   iintro %store %ns %obs %nt Hσ
   ihave %Hfacts :
       ⌜store.wasm.mem.read32 addr = word ∧
@@ -3461,6 +3491,6 @@ theorem twp_load32_addr
   · iapply Htwp
     iexact Hword
 
-end successOnlyHelpers
+end terminalGenericHelpers
 
 end Wasm.SmallStep
