@@ -42,13 +42,12 @@ status byte (`1` odd length, `2` non-hex character) with no decoded output — s
 the reference function `Spec.decodeOutput` is total on all inputs and the
 disjunction remains exhaustive.
 
-## Follow-ups (not in this change)
+## Reusable machinery added to CodeLib
 
-- The ~8 general Wasm instruction total-WP lemmas used here but not yet in
-  CodeLib (`load8U`, `load8U_addr`, `store8`, `store8_addr`, `store32_addr`,
-  `store64_addr`, `ltS`, `drop`) are currently carried per-example
-  (`Wasm.SmallStep` namespace). They are program-agnostic and are natural
-  additions to `CodeLib/SepLogic/SmallStepTotalLifting`, which would let both
-  examples drop their private copies.
-- Top files still `import Mathlib`; a dependency-slimming pass could reduce this
-  to CodeLib, matching mergesort.
+The general total weakest-precondition instruction lemmas both examples need but
+CodeLib did not yet provide are factored into
+`CodeLib/SepLogic/SmallStepTotalLiftingAux.lean` — byte-granular load/store rules
+and lighter-weight, resource-minimal variants of a few `SmallStepTotalLifting`
+rules — so the encode and decode proofs share one copy rather than each carrying
+its own. Both example libraries import only `CodeLib` (no `Mathlib`), matching
+the mergesort example's dependency footprint.
