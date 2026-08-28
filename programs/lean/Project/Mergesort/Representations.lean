@@ -1550,22 +1550,26 @@ def RetiredBytes {host : Type} [WasmHeapGS host]
 `LiveBlock`; this predicate owns only cursor/frontier/metadata authority and
 bytes whose records are retired. -/
 def BumpHeap {host : Type} [WasmHeapGS host] [WasmHeapDomainGS host]
+    [WasmMemoryPagesGS host]
     (heapId : GName) (storedCursor : UInt32) (frontier : Nat)
     (history : AllocationHistory) : IProp (WasmHeapGF host) := iprop%
   pointsTo_u32 0 allocatorCursor storedCursor ∗
     heapFrontierOwn frontier ∗
     AllocMetaAuth heapId history ∗
     RetiredBytes heapId history ∗
-    ⌜heapBase.toNat ≤ frontier ∧
-      frontier < 2147483648 ∧
-      (storedCursor = 0 ↔
-        history.nextId = 0 ∧ frontier = heapBase.toNat) ∧
-      (storedCursor ≠ 0 → storedCursor.toNat = frontier) ∧
-      HistoryWellFormed frontier history⌝
+    ∃ ownedPages : Nat,
+      memoryPagesOwn ownedPages ∗
+      ⌜heapBase.toNat ≤ frontier ∧
+        frontier < 2147483648 ∧
+        (storedCursor = 0 ↔
+          history.nextId = 0 ∧ frontier = heapBase.toNat) ∧
+        (storedCursor ≠ 0 → storedCursor.toNat = frontier) ∧
+        HistoryWellFormed frontier history ∧
+        frontier ≤ ownedPages * 65536⌝
 
 /-- Expose every component of `BumpHeap` without changing ownership. -/
 theorem BumpHeap_open {host : Type} [WasmHeapGS host]
-    [WasmHeapDomainGS host]
+    [WasmHeapDomainGS host] [WasmMemoryPagesGS host]
     (heapId : GName) (storedCursor : UInt32) (frontier : Nat)
     (history : AllocationHistory) :
     BumpHeap (host := host) heapId storedCursor frontier history ⊣⊢
@@ -1573,12 +1577,15 @@ theorem BumpHeap_open {host : Type} [WasmHeapGS host]
         heapFrontierOwn frontier ∗
         AllocMetaAuth heapId history ∗
         RetiredBytes heapId history ∗
-        ⌜heapBase.toNat ≤ frontier ∧
-          frontier < 2147483648 ∧
-          (storedCursor = 0 ↔
-            history.nextId = 0 ∧ frontier = heapBase.toNat) ∧
-          (storedCursor ≠ 0 → storedCursor.toNat = frontier) ∧
-          HistoryWellFormed frontier history⌝) :=
+        ∃ ownedPages : Nat,
+          memoryPagesOwn ownedPages ∗
+          ⌜heapBase.toNat ≤ frontier ∧
+            frontier < 2147483648 ∧
+            (storedCursor = 0 ↔
+              history.nextId = 0 ∧ frontier = heapBase.toNat) ∧
+            (storedCursor ≠ 0 → storedCursor.toNat = frontier) ∧
+            HistoryWellFormed frontier history ∧
+            frontier ≤ ownedPages * 65536⌝) :=
   .rfl
 
 /-- Allocate empty metadata authority; its ghost name is the logical heap
@@ -1602,19 +1609,26 @@ theorem historyWellFormed_empty :
 /-- Assemble the initial allocator authority from the physical zero cursor,
 the tight frontier fragment, and empty metadata. -/
 theorem BumpHeap_empty {host : Type} [WasmHeapGS host]
-    [WasmHeapDomainGS host] (heapId : GName) :
+    [WasmHeapDomainGS host] [WasmMemoryPagesGS host]
+    (heapId : GName) (ownedPages : Nat)
+    (hphysical : heapBase.toNat ≤ ownedPages * 65536) :
     pointsTo_u32 0 allocatorCursor 0 ∗
       heapFrontierOwn heapBase.toNat ∗
-      AllocMetaAuth heapId AllocationHistory.empty ⊢
+      AllocMetaAuth heapId AllocationHistory.empty ∗
+      memoryPagesOwn ownedPages ⊢
       BumpHeap (host := host) heapId 0 heapBase.toNat
         AllocationHistory.empty := by
   unfold BumpHeap RetiredBytes
   simp only [AllocationHistory.empty, BI.BigSepM.bigSepM_empty.to_eq]
-  iintro ⟨Hcursor, Hfrontier, Hmetadata⟩
+  iintro ⟨Hcursor, Hfrontier, Hmetadata, Hpages⟩
   iframe Hcursor Hfrontier Hmetadata
-  ipureintro
-  exact ⟨trivial, ⟨by decide, ⟨by decide, ⟨by decide,
-    ⟨by decide, historyWellFormed_empty⟩⟩⟩⟩⟩
+  isplitl []
+  · itrivial
+  · iexists ownedPages
+    iframe Hpages
+    ipureintro
+    exact ⟨Nat.le_refl _, by decide, by decide, by decide,
+      historyWellFormed_empty, hphysical⟩
 
 /-- A token agrees with the unique live metadata entry in the named heap. -/
 theorem AllocMetaAuth_token_agree {host : Type}
@@ -1738,19 +1752,22 @@ the cursor word and frontier fragment *after* the Wasm store and sparse-range
 state update; this lemma performs only the metadata update and representation
 reassembly. -/
 theorem BumpHeap_commit {host : Type} [WasmHeapGS host]
-    [WasmHeapDomainGS host]
+    [WasmHeapDomainGS host] [WasmMemoryPagesGS host]
     (heapId : GName) (frontier : Nat) (history : AllocationHistory)
     (base finish : UInt32) (layout : AllocLayout) (bytes : List UInt8)
+    (ownedPages : Nat)
     (hheapBase : heapBase.toNat ≤ frontier)
     (hwf : HistoryWellFormed frontier history)
     (hvalid : layout.Valid)
     (halignment : layout.alignment = 1 ∨ layout.alignment = 4)
     (hclassify : classifyBump frontier layout = .success base finish)
-    (hbytesLength : bytes.length = layout.size) :
+    (hbytesLength : bytes.length = layout.size)
+    (hphysical : finish.toNat ≤ ownedPages * 65536) :
     pointsTo_u32 0 allocatorCursor finish ∗
       heapFrontierOwn finish.toNat ∗
       AllocMetaAuth heapId history ∗
       RetiredBytes heapId history ∗
+      memoryPagesOwn ownedPages ∗
       ByteSlice base bytes ==∗
       BumpHeap heapId finish finish.toNat
           (history.allocate base layout) ∗
@@ -1782,16 +1799,16 @@ theorem BumpHeap_commit {host : Type} [WasmHeapGS host]
     have hzeroNat := congrArg UInt32.toNat hzero
     simp only [UInt32.toNat_zero] at hzeroNat
     omega
-  iintro ⟨Hcursor, Hfrontier, Hauth, Hretired, Hbytes⟩
+  iintro ⟨Hcursor, Hfrontier, Hauth, Hretired, Hpages, Hbytes⟩
   imod AllocatorResources_insert heapId history base layout hfresh $$
       [Hauth Hretired] with ⟨Hauth, Hretired, Htoken⟩
   · iframe
   imodintro
-  isplitl [Hcursor Hfrontier Hauth Hretired]
+  isplitl [Hcursor Hfrontier Hauth Hretired Hpages]
   · unfold BumpHeap
     iframe
     ipureintro
-    refine ⟨by omega, hfinishSigned, ?_, ?_, hwfNew⟩
+    refine ⟨by omega, hfinishSigned, ?_, ?_, hwfNew, hphysical⟩
     · constructor
       · intro hzero
         exact (hfinishNonzero hzero).elim
@@ -1857,7 +1874,7 @@ theorem AllocatorResources_retire {host : Type} [WasmHeapGS host]
 and frontier stay fixed, while the live token and bytes move exactly once into
 the retired portion of `BumpHeap`. -/
 theorem BumpHeap_retire {host : Type} [WasmHeapGS host]
-    [WasmHeapDomainGS host]
+    [WasmHeapDomainGS host] [WasmMemoryPagesGS host]
     (heapId : GName) (storedCursor : UInt32) (frontier : Nat)
     (history : AllocationHistory)
     (allocationId : Nat) (ptr : UInt32) (layout : AllocLayout)
@@ -1869,7 +1886,7 @@ theorem BumpHeap_retire {host : Type} [WasmHeapGS host]
   iintro ⟨Hbump, Hblock⟩
   isimp only [BumpHeap] at Hbump
   icases Hbump with
-    ⟨Hcursor, Hfrontier, Hauth, Hretired, %hheap⟩
+    ⟨Hcursor, Hfrontier, Hauth, Hretired, %ownedPages, Hpages, %hheap⟩
   isimp only [LiveBlock] at Hblock
   icases Hblock with ⟨Htoken, Hbytes, %hblock⟩
   ihave %hlookup : ⌜get? history.records allocationId =
@@ -1877,7 +1894,7 @@ theorem BumpHeap_retire {host : Type} [WasmHeapGS host]
   · iapply AllocMetaAuth_token_agree
     iframe
   have hwfNew := HistoryWellFormed.retire frontier history allocationId ptr
-    layout hheap.2.2.2.2 hlookup
+    layout hheap.2.2.2.2.1 hlookup
   imod AllocatorResources_retire heapId history allocationId ptr layout bytes
       $$ [Hauth Hretired Htoken Hbytes] with ⟨Hauth, Hretired⟩
   · unfold LiveBlock
@@ -1890,7 +1907,7 @@ theorem BumpHeap_retire {host : Type} [WasmHeapGS host]
   ipureintro
   exact ⟨hheap.1, hheap.2.1, by
       simpa only [AllocationHistory.retire] using hheap.2.2.1,
-    hheap.2.2.2.1, hwfNew⟩
+    hheap.2.2.2.1, hwfNew, hheap.2.2.2.2.2⟩
 
 /-! ## Stack, host, and runtime ownership -/
 
@@ -3386,6 +3403,7 @@ inductive DriverOOMPhase where
 /-- Resources returned by the normal driver outcome. -/
 def DriverSuccess [WasmHeapGS Universal.State]
     [WasmHeapDomainGS Universal.State]
+    [WasmMemoryPagesGS Universal.State]
     [WasmGlobalGS Universal.State]
     [WasmHostStateGS Universal.State]
     (heapId : GName) (original : List UInt32) :
@@ -3404,6 +3422,7 @@ def DriverSuccess [WasmHeapGS Universal.State]
 in the frame and has already been removed from the host input. -/
 def DriverReserveOOM [WasmHeapGS Universal.State]
     [WasmHeapDomainGS Universal.State]
+    [WasmMemoryPagesGS Universal.State]
     [WasmGlobalGS Universal.State]
     [WasmHostStateGS Universal.State]
     (heapId : GName) (original : List UInt32) :
@@ -3429,6 +3448,7 @@ def DriverReserveOOM [WasmHeapGS Universal.State]
 /-- Exact values-allocation OOM resources. -/
 def DriverValuesOOM [WasmHeapGS Universal.State]
     [WasmHeapDomainGS Universal.State]
+    [WasmMemoryPagesGS Universal.State]
     [WasmGlobalGS Universal.State]
     [WasmHostStateGS Universal.State]
     (heapId : GName) (original : List UInt32) :
@@ -3451,6 +3471,7 @@ def DriverValuesOOM [WasmHeapGS Universal.State]
 still live; no scratch allocation has been committed. -/
 def DriverScratchOOM [WasmHeapGS Universal.State]
     [WasmHeapDomainGS Universal.State]
+    [WasmMemoryPagesGS Universal.State]
     [WasmGlobalGS Universal.State]
     [WasmHostStateGS Universal.State]
     (heapId : GName) (original : List UInt32) :
@@ -3471,6 +3492,7 @@ def DriverScratchOOM [WasmHeapGS Universal.State]
 
 def DriverOOMState [WasmHeapGS Universal.State]
     [WasmHeapDomainGS Universal.State]
+    [WasmMemoryPagesGS Universal.State]
     [WasmGlobalGS Universal.State]
     [WasmHostStateGS Universal.State]
     (heapId : GName) (original : List UInt32) :

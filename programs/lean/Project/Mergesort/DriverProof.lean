@@ -4410,7 +4410,7 @@ theorem twp_func3_deallocate_input
       ⟨%allocationId, %allBytes, %spare, %hstorage, Hblock⟩
     isimp only [BumpHeap] at Hbump
     icases Hbump with
-      ⟨Hcursor, Hfrontier, Hauth, Hretired, %hheap⟩
+      ⟨Hcursor, Hfrontier, Hauth, Hretired, %ownedPages, Hpages, %hheap⟩
     isimp only [LiveBlock] at Hblock
     icases Hblock with ⟨Htoken, Hbytes, %hblock⟩
     ihave %hlookup : ⌜get? history.records allocationId =
@@ -4418,7 +4418,7 @@ theorem twp_func3_deallocate_input
     · iapply AllocMetaAuth_token_agree
       iframe
     ihave Hbump : BumpHeap heapId storedCursor frontier history $$
-        [Hcursor Hfrontier Hauth Hretired]
+        [Hcursor Hfrontier Hauth Hretired Hpages]
     · unfold BumpHeap
       iframe
       ipureintro

@@ -124,7 +124,8 @@ theorem wasm_smallStep_heap_globals_runtime_host_store_adequacy_outcome_at
         hostEnvOwn config.store.runtime.entry.id
             config.store.runtime.currentHost ∗
         hostStateOwn config.store.wasm.host ∗
-        heapFrontierOwn frontier) ⊢
+        heapFrontierOwn frontier ∗
+        memoryPagesOwn config.store.wasm.mem.pages) ⊢
         WP config.expr @ Stuckness.NotStuck; ⊤
           {{ outcome,
             ∀ (store : MachineStore α) (_observations : List StepKind),
@@ -141,6 +142,9 @@ theorem wasm_smallStep_heap_globals_runtime_host_store_adequacy_outcome_at
   imod heapDomain_init_at (α := α) σ frontier hbelow with
     ⟨%heapDomainGS, HheapDomain, HheapFrontier⟩
   letI _ : WasmHeapDomainGS α := heapDomainGS
+  imod memoryPages_init (α := α) config.store.wasm.mem.pages with
+    ⟨%memoryPagesGS, HmemoryPagesAuth, HmemoryPagesOwn⟩
+  letI _ : WasmMemoryPagesGS α := memoryPagesGS
   letI globalMapG : GhostMapG (WasmHeapGF α) GlobalKey Value WasmGlobalMap := by
     constructor
     exists 7
@@ -277,6 +281,7 @@ theorem wasm_smallStep_heap_globals_runtime_host_store_adequacy_outcome_at
     { toInvGS_gen := inv
       toWasmHeapGS := wasmHeapGS
       heapDomain := heapDomainGS
+      memoryPages := memoryPagesGS
       global := wasmGlobalGS
       dataSegment := wasmDataSegmentGS
       table := wasmTableGS
@@ -308,10 +313,11 @@ theorem wasm_smallStep_heap_globals_runtime_host_store_adequacy_outcome_at
       · iexact HtagTable
       · ipureintro
         exact List.prefix_rfl -- The ordinary frontier is installed below.
-  ihave Hexc : machineAuxInterp _
-      config.store.wasm.exns config.store.wasm.tagIds $$ [HheapDomain HexceptionInterp]
+  ihave Hexc : machineAuxInterp _ config.store.wasm.mem.pages
+      config.store.wasm.exns config.store.wasm.tagIds $$
+      [HmemoryPagesAuth HheapDomain HexceptionInterp]
   · unfold machineAuxInterp
-    iframe HheapDomain HexceptionInterp
+    iframe HmemoryPagesAuth HheapDomain HexceptionInterp
   isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth' HhostState Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
     iexists σ
@@ -362,7 +368,9 @@ theorem wasm_smallStep_heap_globals_runtime_host_store_adequacy_outcome_at
           · isplitl [HhostStateFrag]
             · unfold hostStateOwn
               iexact HhostStateFrag
-            · iexact HheapFrontier
+            · isplitl [HheapFrontier]
+              · iexact HheapFrontier
+              · iexact HmemoryPagesOwn
 
 /-- Backwards-compatible outcome adequacy with the maximally permissive heap
 frontier.  Allocator-aware clients should use the `_at` theorem and retain the
@@ -398,7 +406,7 @@ theorem wasm_smallStep_heap_globals_runtime_host_store_adequacy_outcome
       config σ globalσ UInt32.size post hagree hinBounds
       (heapBelow_uint32Size σ) hglobals hwf
   intro gs
-  iintro ⟨Hheap, Hglobals, Hruntime, Henv, Hhost, _Hfrontier⟩
+  iintro ⟨Hheap, Hglobals, Hruntime, Henv, Hhost, _Hfrontier, _Hpages⟩
   iapply hwp
   iframe Hheap Hglobals Hruntime Henv Hhost
 
@@ -442,6 +450,10 @@ theorem wasm_smallStep_heap_globals_runtime_host_stronglyNormalizing_outcome
   imod heapDomain_init (α := α) σ with
     ⟨%heapDomainGS, HheapDomain⟩
   letI _ : WasmHeapDomainGS α := heapDomainGS
+  imod memoryPages_init_authority (α := α)
+      config.store.wasm.mem.pages with
+    ⟨%memoryPagesGS, HmemoryPagesAuth⟩
+  letI _ : WasmMemoryPagesGS α := memoryPagesGS
   letI globalMapG : GhostMapG (WasmHeapGF α) GlobalKey Value WasmGlobalMap := by
     constructor
     exists 7
@@ -577,6 +589,7 @@ theorem wasm_smallStep_heap_globals_runtime_host_stronglyNormalizing_outcome
     { toInvGS_gen := inv
       toWasmHeapGS := wasmHeapGS
       heapDomain := heapDomainGS
+      memoryPages := memoryPagesGS
       global := wasmGlobalGS
       dataSegment := wasmDataSegmentGS
       table := wasmTableGS
@@ -613,10 +626,11 @@ theorem wasm_smallStep_heap_globals_runtime_host_stronglyNormalizing_outcome
       · iexact HtagTable
       · ipureintro
         exact List.prefix_rfl -- The ordinary frontier is installed below.
-  ihave Hexc : machineAuxInterp _
-      config.store.wasm.exns config.store.wasm.tagIds $$ [HheapDomain HexceptionInterp]
+  ihave Hexc : machineAuxInterp _ config.store.wasm.mem.pages
+      config.store.wasm.exns config.store.wasm.tagIds $$
+      [HmemoryPagesAuth HheapDomain HexceptionInterp]
   · unfold machineAuxInterp
-    iframe HheapDomain HexceptionInterp
+    iframe HmemoryPagesAuth HheapDomain HexceptionInterp
   isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth' HhostState Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
     iexists σ

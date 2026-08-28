@@ -1,6 +1,7 @@
 import Iris.ProofMode
 import Iris.Instances.Lib.FUpd
 import Iris.BI.Lib.GenHeap
+import Iris.BI.Lib.MonoNat
 import Iris.Algebra.Lib.ExclAuth
 import Interpreter.Wasm.Mem
 import Interpreter.Wasm.Syntax
@@ -383,6 +384,7 @@ abbrev WasmHeapGF (α : Type 0) : BundledGFunctors
   | 19 => ⟨constOF
       (HeapView Nat (Agree (DiscreteO AllocationMeta))
         WasmAllocationMap), by infer_instance⟩
+  | 20 => ⟨MonoNatRF, by infer_instance⟩
   | _ => ⟨constOF Unit, by infer_instance⟩
 -- Wire genHeapPreS (following HeapLang's instHeapLangGS_HeapLangS)
 instance instWasmHeapPreS (α : Type) :
@@ -499,6 +501,18 @@ class WasmHeapDomainGS (α : outParam Type) where
   heapFrontierName : GName
 
 attribute [reducible, instance] WasmHeapDomainGS.heapFrontierElem
+
+/-- Monotone authority for the number of pages in the primary memory.
+
+The authority records the exact physical page count held by `stateInterp`.
+Client snapshots are persistent lower bounds: they remain sound across an
+unobserved successful `memory.grow`, while `memory.size` and the tracked grow
+rules can issue a fresh snapshot at the exact current count. -/
+class WasmMemoryPagesGS (α : outParam Type) where
+  memoryPagesElem : ElemG (WasmHeapGF α) MonoNatRF
+  memoryPagesName : GName
+
+attribute [reducible, instance] WasmMemoryPagesGS.memoryPagesElem
 
 /-- Authoritative ghost cell for the current module instance id (`runtime.entry`).
 Uses ExclAuth so it can be updated on cross-instance call/return. -/
@@ -866,6 +880,118 @@ theorem heapFrontierOwn_update {α : Type} [gs : WasmHeapDomainGS α]
   imodintro
   icases iOwn_op $$ Hboth with ⟨H1, H2⟩
   iframe
+
+/-- Exact authoritative primary-memory page count, held inside `stateInterp`. -/
+def memoryPagesAuth {α : Type} [gs : WasmMemoryPagesGS α]
+    (pages : Nat) : IProp (WasmHeapGF α) :=
+  iOwn (E := gs.memoryPagesElem) gs.memoryPagesName
+    (MonoNat.auth (DFrac.own 1) (MaxNat.ofNat pages))
+
+/-- Persistent knowledge that the primary memory has at least `pages` pages. -/
+def memoryPagesOwn {α : Type} [gs : WasmMemoryPagesGS α]
+    (pages : Nat) : IProp (WasmHeapGF α) :=
+  iOwn (E := gs.memoryPagesElem) gs.memoryPagesName
+    (MonoNat.lb (MaxNat.ofNat pages))
+
+instance {α : Type} [WasmMemoryPagesGS α] (pages : Nat) :
+    BI.Timeless (memoryPagesAuth (α := α) pages) := by
+  unfold memoryPagesAuth
+  infer_instance
+
+instance {α : Type} [WasmMemoryPagesGS α] (pages : Nat) :
+    BI.Timeless (memoryPagesOwn (α := α) pages) := by
+  unfold memoryPagesOwn
+  infer_instance
+
+instance {α : Type} [WasmMemoryPagesGS α] (pages : Nat) :
+    BI.Persistent (memoryPagesOwn (α := α) pages) := by
+  unfold memoryPagesOwn
+  infer_instance
+
+/-- A page snapshot is a lower bound on the exact authoritative count. -/
+theorem memoryPagesOwn_agree {α : Type} [gs : WasmMemoryPagesGS α]
+    (actual expected : Nat) :
+    memoryPagesAuth (α := α) actual ∗ memoryPagesOwn expected ⊢
+      iprop(⌜expected ≤ actual⌝) := by
+  unfold memoryPagesAuth memoryPagesOwn
+  iintro ⟨Hauth, Hsnapshot⟩
+  icombine Hauth Hsnapshot gives %Hvalid
+  ipureintro
+  exact (MonoNat.both_valid
+    (MaxNat.ofNat actual) (MaxNat.ofNat expected)).mp Hvalid
+
+/-- Obtain an exact persistent snapshot from the page-count authority. -/
+theorem memoryPagesOwn_snapshot {α : Type} [gs : WasmMemoryPagesGS α]
+    (pages : Nat) :
+    memoryPagesAuth (α := α) pages ⊢ memoryPagesOwn pages := by
+  unfold memoryPagesAuth memoryPagesOwn
+  iintro Hauth
+  iapply iOwn_mono $$ Hauth
+  exact MonoNat.included _ _
+
+/-- Advance the exact page-count authority and issue an exact new snapshot. -/
+theorem memoryPagesAuth_update {α : Type} [gs : WasmMemoryPagesGS α]
+    (old new' : Nat) (hmono : old ≤ new') :
+    memoryPagesAuth (α := α) old ==∗
+      memoryPagesAuth new' ∗ memoryPagesOwn new' := by
+  unfold memoryPagesAuth memoryPagesOwn
+  iintro Hauth
+  imod iOwn_update $$ Hauth with Hauth
+  · exact MonoNat.update (MaxNat.ofNat new') hmono
+  imodintro
+  iunfold MonoNat.auth at Hauth
+  iunfold MonoNat.auth
+  iunfold MonoNat.lb
+  icases iOwn_op $$ Hauth with ⟨Hauthority, #Hsnapshot⟩
+  isplitl [Hauthority Hsnapshot]
+  · icombine Hauthority Hsnapshot as Hauth
+    iexact Hauth
+  · iexact Hsnapshot
+
+/-- Allocate only the page-count authority.  Legacy adequacy frontends that
+do not expose page snapshots use this form. -/
+theorem memoryPages_init_authority {α : Type} (pages : Nat) :
+    ⊢@{IProp (WasmHeapGF α)} |==>
+      ∃ gs : WasmMemoryPagesGS α,
+        @memoryPagesAuth α gs pages := by
+  letI memoryPagesElem : ElemG (WasmHeapGF α) MonoNatRF := by
+    exists 20
+  imod (iOwn_alloc (E := memoryPagesElem)
+      (MonoNat.auth (DFrac.own 1) (MaxNat.ofNat pages))
+      (MonoNat.auth_valid (MaxNat.ofNat pages))) with
+    ⟨%memoryPagesName, Hauth⟩
+  let gs : WasmMemoryPagesGS α :=
+    { memoryPagesElem
+      memoryPagesName }
+  imodintro
+  iexists gs
+  unfold memoryPagesAuth
+  iexact Hauth
+
+/-- Allocate page-count authority together with an exact persistent snapshot.
+Allocator-aware adequacy frontends expose the snapshot to their client proof. -/
+theorem memoryPages_init {α : Type} (pages : Nat) :
+    ⊢@{IProp (WasmHeapGF α)} |==>
+      ∃ gs : WasmMemoryPagesGS α,
+        @memoryPagesAuth α gs pages ∗
+          @memoryPagesOwn α gs pages := by
+  letI memoryPagesElem : ElemG (WasmHeapGF α) MonoNatRF := by
+    exists 20
+  imod (iOwn_alloc (E := memoryPagesElem)
+      (MonoNat.auth (DFrac.own 1) (MaxNat.ofNat pages) •
+        MonoNat.lb (MaxNat.ofNat pages))
+      (by simpa using
+        (MonoNat.both_valid
+          (MaxNat.ofNat pages) (MaxNat.ofNat pages)).mpr (Nat.le_refl pages))) with
+    ⟨%memoryPagesName, Hboth⟩
+  icases iOwn_op $$ Hboth with ⟨Hauth, Hsnapshot⟩
+  let gs : WasmMemoryPagesGS α :=
+    { memoryPagesElem
+      memoryPagesName }
+  imodintro
+  iexists gs
+  unfold memoryPagesAuth memoryPagesOwn
+  iframe Hauth Hsnapshot
 
 def currentInstanceAuthN {α : Type} [gs : WasmInstanceGS α] (n : Nat) :
     IProp (WasmHeapGF α) :=

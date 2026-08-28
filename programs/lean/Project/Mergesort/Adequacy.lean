@@ -225,14 +225,15 @@ theorem initialResources [WasmSmallStepGS hlc Universal.State]
       runtimeModuleOwn ⟨0⟩ Project.Mergesort.module ∗
       hostEnvOwn 0 (Universal.envFor Project.Mergesort.module) ∗
       hostStateOwn (Universal.State.ofInput (serialize input)) ∗
-      heapFrontierOwn heapBase.toNat) ==∗
+      heapFrontierOwn heapBase.toNat ∗
+      memoryPagesOwn entryMemory.pages) ==∗
       ∃ heapId : GName,
         RuntimeContext ∗
         StackPointer entryStackTop ∗
         StackRegion entryStackLow entryStackBytes ∗
         BumpHeap heapId 0 heapBase.toNat AllocationHistory.empty ∗
         Streams (serialize input) [] false := by
-  iintro ⟨Hheap, Hglobals, Hruntime, Henv, Hhost, Hfrontier⟩
+  iintro ⟨Hheap, Hglobals, Hruntime, Henv, Hhost, Hfrontier, Hpages⟩
   ihave HcursorSplit :=
     insertFreshBytes_bigSep_pointsToBytes entryStackHeap allocatorCursor
       entryCursorBytes entryStackHeap_below_cursor (by
@@ -261,10 +262,12 @@ theorem initialResources [WasmSmallStepGS hlc Universal.State]
   ihave HbumpResources :
       pointsTo_u32 0 allocatorCursor 0 ∗
         heapFrontierOwn heapBase.toNat ∗
-        AllocMetaAuth heapId AllocationHistory.empty $$
-      [Hcursor Hfrontier Hmetadata]
-  · iframe Hcursor Hfrontier Hmetadata
-  ihave Hbump := BumpHeap_empty heapId $$ HbumpResources
+        AllocMetaAuth heapId AllocationHistory.empty ∗
+        memoryPagesOwn entryMemory.pages $$
+      [Hcursor Hfrontier Hmetadata Hpages]
+  · iframe Hcursor Hfrontier Hmetadata Hpages
+  ihave Hbump := BumpHeap_empty heapId entryMemory.pages (by decide) $$
+    HbumpResources
   imodintro
   iexists heapId
   isplitl [Hruntime Henv]
@@ -378,7 +381,8 @@ theorem twp_entry_of_func3
       runtimeModuleOwn ⟨0⟩ Project.Mergesort.module ∗
       hostEnvOwn 0 (Universal.envFor Project.Mergesort.module) ∗
       hostStateOwn (Universal.State.ofInput (serialize input)) ∗
-      heapFrontierOwn heapBase.toNat) ⊢
+      heapFrontierOwn heapBase.toNat ∗
+      memoryPagesOwn entryMemory.pages) ⊢
       WP (entryConfig input).expr @ Stuckness.NotStuck; ⊤
         [{ irisEntryPost input }] := by
   iintro Hinitial
@@ -424,7 +428,7 @@ theorem entry_partiallyMeets_of_func3
   · exact entryGlobals_agree input
   · simp
   · intro gs
-    iintro ⟨Hheap, Hglobals, Hruntime, Henv, Hhost, Hfrontier⟩
+    iintro ⟨Hheap, Hglobals, Hruntime, Henv, Hhost, Hfrontier, Hpages⟩
     ihave Hruntime' :
         runtimeModuleOwn ⟨0⟩ Project.Mergesort.module $$ [Hruntime]
     · rw [← entryConfig_entry input, ← entryConfig_currentModule input]
@@ -439,7 +443,11 @@ theorem entry_partiallyMeets_of_func3
       iexact Hhost
     iapply twp.to_wp
     iapply twp_entry_of_func3 (hfunc3 := hfunc3) input
-    iframe Hheap Hglobals Hruntime' Henv' Hhost' Hfrontier
+    ihave Hpages' : memoryPagesOwn entryMemory.pages $$ [Hpages]
+    · rw [show entryMemory.pages =
+          (entryConfig input).store.wasm.mem.pages by rfl]
+      iexact Hpages
+    iframe Hheap Hglobals Hruntime' Henv' Hhost' Hfrontier Hpages'
 
 /-- Conditional final adequacy.  Once `func3_correct` is available, the final
 public proof is exactly `entry_adequacy_of_func3 func3_correct`. -/
