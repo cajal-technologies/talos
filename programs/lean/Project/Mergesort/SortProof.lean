@@ -1240,7 +1240,7 @@ theorem twp_mergeMainChoice
   by_cases hle : input[i] ≤ input[j]
   · iapply twp_leU (result := 1) (by simp [hle])
     iapply twp_brIf (by decide) (by rfl)
-    simp only [List.drop_zero, List.take_nil, List.nil_append]
+    simp only [List.take_nil, List.nil_append]
     iapply twp_block
     rw [mergeMainLeftBody_guard]
     simp only [List.cons_append, List.nil_append]
@@ -1458,13 +1458,13 @@ theorem twp_mergeMainLoop
       iapply twp_add
       rw [UInt32.add_comm (4 : UInt32), next_slot_address]
       iapply twp_localSet rfl
-      simp only [List.length, List.set]
+      simp only
       iapply twp_localGet rfl
       iapply twp_const
       iapply twp_add
       rw [hkValue]
       iapply twp_localSet rfl
-      simp only [List.length, List.set]
+      simp only
       iapply twp_localGet rfl
       iapply twp_localGet rfl
       by_cases hiNext : state.i + 1 < mid
@@ -1480,7 +1480,7 @@ theorem twp_mergeMainLoop
         iapply twp_geU (result := 0)
           (by rw [if_neg (UInt32.not_le.mpr hiNextU)])
         iapply twp_localTee rfl
-        simp only [List.length, List.set]
+        simp only
         iapply twp_brIfZero
         iapply twp_localGet rfl
         iapply twp_localGet rfl
@@ -1521,7 +1521,7 @@ theorem twp_mergeMainLoop
           exact le_refl (UInt32.ofNat mid)
         iapply twp_geU (result := 1) (by rw [if_pos hge])
         iapply twp_localTee rfl
-        simp only [List.length, List.set]
+        simp only
         iapply twp_brIf (by decide) (by rfl)
         simp only [sortLocals, List.length, List.set, List.take_zero,
           List.nil_append, sortRecursiveGuardFrame, emptyBlockFrame]
@@ -1555,13 +1555,13 @@ theorem twp_mergeMainLoop
       iapply twp_add
       rw [UInt32.add_comm (4 : UInt32), next_slot_address]
       iapply twp_localSet rfl
-      simp only [List.length, List.set]
+      simp only
       iapply twp_localGet rfl
       iapply twp_const
       iapply twp_add
       rw [hkValue]
       iapply twp_localSet rfl
-      simp only [List.length, List.set]
+      simp only
       iapply twp_localGet rfl
       iapply twp_localGet rfl
       have hmidSize : mid < UInt32.size := by
@@ -1575,7 +1575,7 @@ theorem twp_mergeMainLoop
       iapply twp_geU (result := 0)
         (by rw [if_neg (UInt32.not_le.mpr hiU)])
       iapply twp_localTee rfl
-      simp only [List.length, List.set]
+      simp only
       iapply twp_brIfZero
       iapply twp_localGet rfl
       iapply twp_localGet rfl
@@ -1721,7 +1721,7 @@ theorem twp_mergeLeftRemainder
     iapply twp_localGet rfl
     iapply twp_sub
     iapply twp_localSet rfl
-    simp only [List.length, List.set]
+    simp only
     iapply twp_localGet rfl
     iapply twp_localGet rfl
     iapply twp_const
@@ -1729,7 +1729,7 @@ theorem twp_mergeLeftRemainder
     iapply twp_add
     rw [MemRegion.shl2_eq_mul4, UInt32.add_comm]
     iapply twp_localSet rfl
-    simp only [List.length, List.set]
+    simp only
     iapply twp_localGet rfl
     iapply twp_localGet rfl
     iapply twp_localGet rfl
@@ -1746,7 +1746,7 @@ theorem twp_mergeLeftRemainder
       (by simp)
     iapply twp_sub
     iapply twp_localSet rfl
-    simp only [List.length, List.set]
+    simp only
     iapply twp_const
     iapply twp_localSet rfl
     simp only [sortLocals, List.length, List.set, hjEq]
@@ -1914,7 +1914,7 @@ theorem twp_mergeLeftRemainder
             4 * UInt32.ofNat (i + (state.r + 1)) + source := by
         rw [UInt32.add_comm (4 * UInt32.ofNat (i + state.r)) source,
           next_slot_address, UInt32.add_comm source]
-        congr 3 <;> omega
+        congr 3
       have hleftCounterEq :
           UInt32.ofNat i - UInt32.ofNat mid =
               0 - UInt32.ofNat (state.r + 1) ↔
@@ -2151,7 +2151,7 @@ theorem twp_mergeRightRemainder
       exact h
     rw [hsourceAddress]
     iapply twp_localSet rfl
-    simp only [sortLocals, List.length, List.set]
+    simp only
     iapply twp_localGet rfl
     iapply twp_localGet rfl
     iapply twp_localGet rfl
@@ -2166,7 +2166,7 @@ theorem twp_mergeRightRemainder
     iapply twp_select (selected := .i32 (UInt32.ofNat input.length))
       (by simp)
     iapply twp_localSet rfl
-    simp only [sortLocals, List.length, List.set]
+    simp only
     iapply twp_localGet rfl
     iapply twp_localGet rfl
     iapply twp_const
@@ -2175,7 +2175,7 @@ theorem twp_mergeRightRemainder
     iapply twp_add
     rw [UInt32.add_comm]
     iapply twp_localSet rfl
-    simp only [sortLocals, List.length, List.set]
+    simp only
     iapply twp_localGet rfl
     iapply twp_localGet rfl
     iapply twp_sub
@@ -2343,13 +2343,13 @@ theorem twp_mergeRightRemainder
             4 * UInt32.ofNat (j + (state.r + 1)) + source := by
         rw [UInt32.add_comm (4 * UInt32.ofNat (j + state.r)) source,
           next_slot_address, UInt32.add_comm source]
-        congr 3 <;> omega
+        congr 3
       have hdestinationNext :
           4 * UInt32.ofNat (k + state.r) + scratch + 4 =
             4 * UInt32.ofNat (k + (state.r + 1)) + scratch := by
         rw [UInt32.add_comm (4 * UInt32.ofNat (k + state.r)) scratch,
           next_slot_address, UInt32.add_comm scratch]
-        congr 3 <;> omega
+        congr 3
       have hkStep :
           UInt32.ofNat (k + state.r) + 1 =
             UInt32.ofNat (k + (state.r + 1)) := by
@@ -2358,7 +2358,7 @@ theorem twp_mergeRightRemainder
             k + state.r + 1 ≤ input.length := Nat.succ_le_of_lt hkCurrent
             _ < UInt32.size := hlayout.length_lt
         rw [Wasm.Examples.MergeSort.u32_ofNat_succ hkSuccSize]
-        congr 1 <;> omega
+        congr 1
       have hq : 0 < n - state.r := by omega
       have hqSize : n - state.r < UInt32.size := by
         dsimp only [n]
@@ -2602,7 +2602,7 @@ theorem twp_sort_base
     (source scratch : UInt32) (length scratchLength : Nat)
     (hbase : length < 2)
     (hlength : length < UInt32.size)
-    (hscratchLength : scratchLength < UInt32.size)
+    (_hscratchLength : scratchLength < UInt32.size)
     {callerLocals : Locals}
     {code : Program} {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame}
@@ -2625,7 +2625,7 @@ theorem twp_sort_base
   iapply Wasm.SmallStep.twp_call Project.Mergesort.module 5
     Project.Mergesort.func2Def (by decide) (by rfl) $$ HruntimeLater
   iintro Hruntime
-  simp [Project.Mergesort.func2Def, sortArguments, Function.toLocals,
+  simp [Project.Mergesort.func2Def, Function.toLocals,
     Function.numParams, ValueType.zero]
   have hlt : UInt32.ofNat length < 2 := by
     rw [UInt32.lt_iff_toNat_lt, UInt32.toNat_ofNat_of_lt' hlength]
@@ -2709,7 +2709,7 @@ theorem twp_sort
     iapply Wasm.SmallStep.twp_call Project.Mergesort.module 5
       Project.Mergesort.func2Def (by decide) (by rfl) $$ HruntimeLater
     iintro Hruntime
-    simp [Project.Mergesort.func2Def, sortArguments, Function.toLocals,
+    simp [Project.Mergesort.func2Def, Function.toLocals,
       Function.numParams, ValueType.zero]
     simp only [Project.Mergesort.func2]
     iapply twp_block
@@ -2775,7 +2775,7 @@ theorem twp_sort
     rw [show (1 % 32 : UInt32) = 1 by decide,
       ofNat_shr_one hlengthSize]
     iapply twp_localTee rfl
-    simp only [List.length, List.set]
+    simp only [List.length]
     have hscratchNotLt :
         ¬UInt32.ofNat input.length < UInt32.ofNat mid := by
       rw [UInt32.lt_iff_toNat_lt,
@@ -2831,17 +2831,17 @@ theorem twp_sort
     iapply twp_shl
     rw [MemRegion.shl2_eq_mul4]
     iapply twp_localTee rfl
-    simp only [List.length, List.set]
+    simp only [List.length]
     iapply twp_add
     rw [UInt32.add_comm]
     iapply twp_localTee rfl
-    simp only [List.length, List.set]
+    simp only [List.length]
     iapply twp_localGet rfl
     iapply twp_localGet rfl
     iapply twp_sub
     rw [u32_ofNat_sub (Nat.le_of_lt hleftLt) hlengthSize]
     iapply twp_localTee rfl
-    simp only [List.length, List.set]
+    simp only [List.length]
     iapply twp_localGet rfl
     iapply twp_localGet rfl
     iapply twp_add
@@ -2935,16 +2935,16 @@ theorem twp_sort
       iexact HscratchRight
     iapply twp_const
     iapply twp_localSet rfl
-    simp only [List.length, List.set]
+    simp only [List.length]
     iapply twp_localGet rfl
     iapply twp_localSet rfl
-    simp only [List.length, List.set]
+    simp only [List.length]
     iapply twp_const
     iapply twp_localSet rfl
-    simp only [List.length, List.set]
+    simp only [List.length]
     iapply twp_const
     iapply twp_localSet rfl
-    simp only [List.length, List.set]
+    simp only [List.length]
     have hleftPositive : 0 < left.length := by
       rw [hleftLength]
       exact hmidPos
@@ -2956,7 +2956,7 @@ theorem twp_sort
       rw [hcombinedLength]
       exact hrightLengthLeft
     rw [← hcombinedLength, hrightCombined]
-    simp [sortLocals]
+    simp
     ihave HmergeStart :
         WP (.running
           ⟨⟨[.i32 source, .i32 (UInt32.ofNat combined.length),
@@ -3022,7 +3022,7 @@ theorem twp_sort
       iapply twp_shl
       rw [MemRegion.shl2_eq_mul4]
       iapply twp_localTee rfl
-      simp only [List.length, List.set]
+      simp only
       have hfourFits : 4 * combined.length < UInt32.size := by
         rw [hcombinedLength]
         omega

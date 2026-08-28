@@ -250,7 +250,7 @@ private theorem twp_func0_success_tail
     (input output : List UInt8) (raised : Bool)
     (hresultLength : growBefore.length = 12)
     (hresultNowrap : result.toNat + growBefore.length < UInt32.size)
-    (hnewPtr : newPtr ≠ 0)
+    (_hnewPtr : newPtr ≠ 0)
     (hcopied : growCopied source oldCapacity newBytes ∧
       newBytes.take initialized.length = initialized)
     (callerLocals : Locals) (stack : List Value)
@@ -362,12 +362,12 @@ private theorem twp_func0_success_tail
   iintro Hpointer
   iapply twp_const
   iapply twp_localSet rfl
-  simp only [func0Locals, List.length, List.set]
+  simp only [List.length]
   iapply twp_exitControl (by rfl)
   simp only [List.take_zero, List.nil_append]
   iapply twp_const
   iapply twp_localSet rfl
-  simp only [func0Locals, List.length, List.set]
+  simp only [List.length]
   iapply twp_exitControl (by rfl)
   simp only [func0FinalCode, List.take_zero, List.nil_append]
   iapply twp_localGet rfl
@@ -382,7 +382,7 @@ private theorem twp_func0_success_tail
     iexact Hcapacity
   iapply twp_store32 (address := 8 + result) (offset := 0)
       oldResultCapacity
-      (by simpa [hresult8Comm] using hresult8)
+      (by simp)
       (by simpa [hresult8Comm] using h8_1)
       (by simpa [hresult8Comm] using h8_2)
       (by simpa [hresult8Comm] using h8_3) $$ Hcapacity'
@@ -461,10 +461,10 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
     simp
   iapply twp_const
   iapply twp_localSet rfl
-  simp only [func0Locals, List.length, List.set]
+  simp only [List.length]
   iapply twp_const
   iapply twp_localSet rfl
-  simp only [func0Locals, List.length, List.set]
+  simp only [List.length]
   iapply twp_block
   iapply twp_block
   iapply twp_localGet rfl
@@ -478,7 +478,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
     simp
   rw [hproduct]
   iapply twp_localTee rfl
-  simp only [func0Locals, List.length, List.set]
+  simp only [List.length]
   iapply twp_constI64
   iapply twp_shrUI64
   rw [show (32 : UInt64) % 64 = 32 by decide, hhigh]
@@ -486,19 +486,18 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
   norm_num
   iapply twp_eqz rfl
   iapply twp_brIf (by decide) (by rfl)
-  simp only [List.take_zero, List.drop_zero, List.nil_append]
+  simp only [List.take_zero, List.nil_append]
   iapply twp_block
   iapply twp_localGet rfl
   iapply twp_wrapI64
   rw [hwrap]
   iapply twp_localTee rfl
-  simp only [func0Locals, List.length, List.set]
+  simp only [List.set]
   iapply twp_const
   iapply twp_localGet rfl
   iapply twp_sub
   have hcapacityGuard : newCapacity ≤ (2147483648 : UInt32) - 1 := by
     rw [UInt32.le_iff_toNat_le_toNat]
-    norm_num
     exact hnewUpper
   iapply twp_leU (result := 1) (by rw [if_pos hcapacityGuard])
   iapply twp_brIf (by decide) (by rfl)
@@ -599,7 +598,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
               isimp only [ResumeWP, resumeExpr, List.nil_append,
                 List.append_nil]
               iapply twp_localSet rfl
-              simp only [func0Locals, List.length, List.set]
+              simp only [List.length, List.set]
               iapply twp_exitControl (by rfl)
               simp only [List.take_zero, List.nil_append]
               ihave HblockFacts := LiveBlock_with_nonnull heapId
@@ -607,7 +606,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
               icases HblockFacts with ⟨Hblock, %hnewPtrNonzero⟩
               iapply twp_localGet rfl
               iapply twp_brIf hnewPtrNonzero (by rfl)
-              simp only [List.take_zero, List.drop_zero, List.nil_append]
+              simp only [List.take_zero, List.nil_append]
               ihave Hnormal := BI.and_elim_l $$ Hcont
               ihave Hnormal := Hnormal $$ %newBytes
               have Htail := twp_func0_success_tail
@@ -754,7 +753,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
             isimp only [ResumeWP, resumeExpr, List.nil_append,
               List.append_nil]
             iapply twp_localSet rfl
-            simp only [func0Locals, List.length, List.set]
+            simp only [List.length, List.set]
             iapply twp_br (by rfl)
             simp only [List.take_zero, List.nil_append]
             ihave HblockFacts := LiveBlock_with_nonnull heapId
