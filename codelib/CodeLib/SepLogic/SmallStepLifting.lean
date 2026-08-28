@@ -61,6 +61,73 @@ theorem wp_pureStep
   · iexact Hwp
   · itrivial
 
+/-- Generic lifting rule for a deterministic Wasm step that may also update the
+store. `wp_pureStep` is the degenerate store-preserving case; the stateful
+rules below differ from one another only in the resource they consume, the
+store fact that resource pins down, and the state-interpretation update the
+step performs.
+
+`P` is the timeless resource owned before the step and `Q` the one handed to
+the continuation. `hfact` reads the store fact `StoreOk` off `P` together with
+the state interpretation, `hstep` turns that fact into the primitive
+transition, and `hupdate` carries the state interpretation across the store
+update. -/
+theorem wp_liftDetStep
+    (kind : StepKind) (current : ThreadState α) (next : Expr α)
+    (nextStore : MachineStore α → MachineStore α)
+    (StoreOk : MachineStore α → Prop)
+    (P Q : IProp (WasmHeapGF α)) [BI.Timeless P]
+    (hfact : ∀ (store : MachineStore α) (steps : Nat)
+        (observations : List StepKind) (threads : Nat),
+      stateInterp (GF := WasmHeapGF α) store steps observations threads ∗ P ==∗
+        ⌜StoreOk store⌝)
+    (hstep : ∀ store : MachineStore α, StoreOk store →
+      Step ⟨.running current, store⟩ kind ⟨next, nextStore store⟩)
+    (hupdate : ∀ (store : MachineStore α) (steps : Nat)
+        (observations : List StepKind) (threads : Nat),
+      stateInterp (GF := WasmHeapGF α) store steps observations threads ∗ P ==∗
+        stateInterp (GF := WasmHeapGF α) (nextStore store) steps observations
+            threads ∗ Q) :
+    ▷ P -∗ ▷ (Q -∗ WP (next : Expr α) @ s; E {{ Φ }}) -∗
+      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  iintro >HP Hwp
+  iapply wp_lift_step rfl
+  iintro %store %ns %obs %obs' %nt Hσ
+  ihave %Hok : ⌜StoreOk store⌝ $$ [Hσ HP]
+  · imod hfact store ns (obs ++ obs') nt $$ [$Hσ $HP] with %Hok
+    ipureintro
+    exact Hok
+  iapply fupd_mask_intro Std.LawfulSet.empty_subset
+  iintro Hclose
+  isplitr
+  · ipureintro
+    cases s <;> simp only [Stuckness.MaybeReducible]
+    exact ⟨[], next, nextStore store, [],
+      ⟨rfl, _, rfl, hstep store Hok⟩⟩
+  iintro !> %e₂ %store₂ %forks %Hprim Hcredit
+  rcases Hprim with ⟨hforks, actualKind, hobs, wasmStep⟩
+  change forks = [] at hforks
+  subst forks
+  subst obs
+  obtain ⟨rfl, hconfig⟩ :=
+    step_deterministic (hstep store Hok) wasmStep
+  have parts := Config.mk.inj hconfig
+  have hexpr := parts.1
+  have hstore := parts.2
+  simp only at hexpr hstore
+  subst e₂
+  subst store₂
+  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+  imod hupdate store ns obs' nt $$ [$Hσ $HP] with ⟨Hσ, HQ⟩
+  imod Hclose
+  imodintro
+  isplitl [Hσ]
+  · iexact Hσ
+  isplitl [Hwp HQ]
+  · iapply Hwp
+    iexact HQ
+  · itrivial
+
 /-! ## Generic scalar numeric rules
 
 The float/conversion family is exposed through the evaluator functions used
@@ -2682,50 +2749,26 @@ theorem wp_globalGet_of_canonical
       WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
-  simp only [globalPointsToAt]
-  iintro >Hglobal Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  simp only [← globalPointsToAt_eq]
-  ihave %Hget :
-      ⌜store.wasm.globals.globals[index]? = some value⌝ $$ [Hσ Hglobal]
-  · imod stateInterp_global_facts store ns (obs ++ obs') nt index value $$
-        [$Hσ $Hglobal] with %Hget
-    ipureintro
-    exact Hget
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
-      .running ⟨⟨params, localValues, value :: values⟩,
-        code, arity, remainder, controls, calls⟩,
-      store, [], ⟨rfl, _, rfl, Step.globalGet (by
-        simpa [globalAt?, hcanonical] using Hget)⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ :=
-    step_deterministic (Step.globalGet (α := α) (by
-      simpa [globalAt?, hcanonical] using Hget)) wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hglobal]
-  · iapply Hwp
-    iexact Hglobal
-  · itrivial
+  exact wp_liftDetStep
+    (kind := .instruction (.globalGet index))
+    (current := ⟨⟨params, localValues, values⟩, .globalGet index :: code,
+      arity, remainder, controls, calls⟩)
+    (next := .running ⟨⟨params, localValues, value :: values⟩, code,
+      arity, remainder, controls, calls⟩)
+    (nextStore := fun store => store)
+    (StoreOk := fun store => store.wasm.globals.globals[index]? = some value)
+    (P := globalPointsTo ⟨0, index⟩ value)
+    (Q := globalPointsTo ⟨0, index⟩ value)
+    (hfact := fun store steps observations threads =>
+      stateInterp_global_facts store steps observations threads index value)
+    (hstep := fun store hget =>
+      Step.globalGet (by
+        have hget' : store.wasm.globals.globals[index]? = some value := hget
+        simpa [globalAt?, hcanonical] using hget'))
+    (hupdate := fun _ _ _ _ => by
+      iintro Hstate
+      imodintro
+      iexact Hstate)
 
 /-- Primitive rule for `global.set`. Exclusive authoritative ownership is
 updated together with the physical instantiated global in `StateInterp`. -/
@@ -2748,78 +2791,42 @@ theorem wp_globalSet_of_canonical
       WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
-  simp only [globalPointsToAt]
-  iintro >Hglobal Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  simp only [← globalPointsToAt_eq]
-  ihave %Hget :
-      ⌜store.wasm.globals.globals[index]? = some oldValue⌝ $$
-      [Hσ Hglobal]
-  · imod stateInterp_global_facts store ns (obs ++ obs') nt
-        index oldValue $$ [$Hσ $Hglobal] with %Hget
-    ipureintro
-    exact Hget
-  have hsome :
-      (globalAt? store index).isSome = true := by
-    simp [globalAt?, hcanonical, Hget]
-  let updatedStore : MachineStore α :=
-    { store with wasm :=
-        { store.wasm with globals :=
-            { globals := store.wasm.globals.globals.set index newValue } } }
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
-      .running ⟨⟨params, localValues, values⟩,
-        code, arity, remainder, controls, calls⟩,
-      updatedStore, [], ⟨rfl, _, rfl, by
-        dsimp [updatedStore]
-        rw [← setGlobal_eq_of_canonical store index newValue
-          (hcanonical store)]
-        exact Step.globalSet hsome⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, newValue :: values⟩,
-          .globalSet index :: code, arity, remainder, controls, calls⟩,
-        store⟩
-      (.instruction (.globalSet index))
-      ⟨.running
-        ⟨⟨params, localValues, values⟩,
-          code, arity, remainder, controls, calls⟩,
-        updatedStore⟩ :=
-    by
-      dsimp [updatedStore]
-      rw [← setGlobal_eq_of_canonical store index newValue
-        (hcanonical store)]
-      exact Step.globalSet hsome
-  obtain ⟨rfl, hconfig⟩ := step_deterministic expectedStep wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero,
-    Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_global_set store ns
-      obs' nt
-      index oldValue newValue $$ [$Hσ $Hglobal] with ⟨Hσ, Hglobal⟩
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hglobal]
-  · iapply Hwp
-    iexact Hglobal
-  · itrivial
+  exact wp_liftDetStep
+    (kind := .instruction (.globalSet index))
+    (current := ⟨⟨params, localValues, newValue :: values⟩,
+      .globalSet index :: code, arity, remainder, controls, calls⟩)
+    (next := .running ⟨⟨params, localValues, values⟩, code,
+      arity, remainder, controls, calls⟩)
+    (nextStore := fun store =>
+      { store with wasm :=
+          { store.wasm with globals :=
+              { globals := store.wasm.globals.globals.set index newValue } } })
+    (StoreOk := fun store =>
+      store.wasm.globals.globals[index]? = some oldValue)
+    (P := globalPointsTo ⟨0, index⟩ oldValue)
+    (Q := globalPointsTo ⟨0, index⟩ newValue)
+    (hfact := fun store steps observations threads =>
+      stateInterp_global_facts store steps observations threads index oldValue)
+    (hstep := fun store hget => by
+      have hget' : store.wasm.globals.globals[index]? = some oldValue := hget
+      have hsome : (globalAt? store index).isSome = true := by
+        simp [globalAt?, hcanonical, hget']
+      show Step
+        ⟨.running ⟨⟨params, localValues, newValue :: values⟩,
+            .globalSet index :: code, arity, remainder, controls, calls⟩,
+          store⟩
+        (.instruction (.globalSet index))
+        ⟨.running ⟨⟨params, localValues, values⟩,
+            code, arity, remainder, controls, calls⟩,
+          { store with wasm :=
+              { store.wasm with globals :=
+                  { globals :=
+                      store.wasm.globals.globals.set index newValue } } }⟩
+      rw [← setGlobal_eq_of_canonical store index newValue (hcanonical store)]
+      exact Step.globalSet hsome)
+    (hupdate := fun store steps observations threads =>
+      stateInterp_global_set store steps observations threads index oldValue
+        newValue)
 
 /-- Common non-aliased rule for the distinguished global at index zero.
 Index zero is definitionally canonical even when other local indices alias
