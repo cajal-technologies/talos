@@ -1,12 +1,17 @@
 import Project.Mergesort.Adequacy
+import Project.Mergesort.DriverProof
+import Project.Mergesort.Func1Proof
+import Project.Mergesort.Func5Proof
+import Project.Mergesort.Func8Proof
+import Project.Mergesort.Func9Proof
 
 /-!
 # Public correctness composition for merge sort
 
-This file intentionally contains the formalization's only temporary proof
-gap.  `func3_correct` is the authoritative body-level obligation; everything
-below it is the checked partial-adequacy composition from the real exported
-call to `PublicEntrySpecification`.
+`func3_correct` composes the authoritative body contracts for the reachable
+driver, Vec, and allocator functions.  `mergesort_correct` then applies the
+checked partial-adequacy bridge from the real exported call to
+`PublicEntrySpecification`.
 
 The entry configuration is defined in `Adequacy` using `.call 6`.  No theorem
 in this path starts execution at `func3Def.body`, and no theorem claims
@@ -20,13 +25,18 @@ open Wasm Universal
 open Wasm.SepLogic Wasm.SmallStep
 open Project.Mergesort.Contracts
 
-/-- The sole temporary proof obligation.  Replacing this proof closes the
-entire public merge-sort theorem without changing its pre/postconditions or
-adequacy layer. -/
+/-- The generated driver satisfies its authoritative call contract by
+composition of all reachable local-function correctness theorems. -/
 theorem func3_correct
     {hlc : HasLC} [WasmSmallStepGS hlc Universal.State] :
     Func3Spec (hlc := hlc) := by
-  sorry
+  exact Project.Mergesort.DriverProof.func3_correct_of
+    (Project.Mergesort.Func1Proof.func1_correct_of
+      (Project.Mergesort.Func0Proof.func0_correct_of
+        Project.Mergesort.Func5Proof.func5_correct
+        Project.Mergesort.Func8Proof.func8_correct))
+    Project.Mergesort.Func5Proof.func5_correct
+    Project.Mergesort.Func9Proof.func9_correct
 
 /-- Public outcome-sensitive partial correctness for the exported
 `mergesort` call. -/
