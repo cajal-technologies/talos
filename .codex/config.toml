@@ -1,3 +1,0 @@
-[mcp_servers.lean-lsp]
-command = "uvx"
-args = ["lean-lsp-mcp"]
