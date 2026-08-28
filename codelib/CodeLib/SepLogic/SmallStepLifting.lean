@@ -5881,12 +5881,13 @@ theorem wp_memoryGrow
     subst e₂
     subst store₂
     simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod (stateInterp_memoryGrow store ns obs' nt delta
+        (store.wasm.memoryCap store.runtime.currentModule 0) memory previousPages hg) $$
+        Hσ with Hσ
     imod Hclose
     imodintro
     isplitl [Hσ]
-    · iapply (stateInterp_memoryGrow store ns obs' nt delta
-        (store.wasm.memoryCap store.runtime.currentModule 0) memory previousPages hg)
-      iexact Hσ
+    · iexact Hσ
     isplitl [Hruntime]
     · iapply (Hwp previousPages.toUInt32)
       iexact Hruntime
@@ -5979,12 +5980,13 @@ theorem wp_memoryGrow64
     subst e₂
     subst store₂
     simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod (stateInterp_memoryGrow store ns obs' nt delta.toUInt32
+        (store.wasm.memoryCap store.runtime.currentModule 0) memory previousPages hg) $$
+        Hσ with Hσ
     imod Hclose
     imodintro
     isplitl [Hσ]
-    · iapply (stateInterp_memoryGrow store ns obs' nt delta.toUInt32
-        (store.wasm.memoryCap store.runtime.currentModule 0) memory previousPages hg)
-      iexact Hσ
+    · iexact Hσ
     isplitl [Hruntime]
     · iapply (Hwp previousPages.toUInt64)
       iexact Hruntime

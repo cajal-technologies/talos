@@ -1,6 +1,7 @@
 import Interpreter.Wasm.Host.Registry
 import Interpreter.Wasm.Host.StdIO
 import Interpreter.Wasm.Host.Random
+import Interpreter.Wasm.Host.OOM
 
 /-!
 # The universal host
@@ -32,6 +33,7 @@ a host later leaves existing construction sites untouched. -/
 structure State where
   stdio : StdIO.State := default
   random : Random.State := default
+  oom : OOM.State := default
 deriving Inhabited
 
 /-- Every host function the interpreter knows, over the composite state.
@@ -45,6 +47,8 @@ def registry : HostRegistry State :=
       State.stdio (fun whole part => { whole with stdio := part })
   ++ .component Random.imports Random.env.funcs
       State.random (fun whole part => { whole with random := part })
+  ++ .component OOM.imports OOM.env.funcs
+      State.oom (fun whole part => { whole with oom := part })
 
 /-- The environment `m` sees: its own imports, resolved by name, in its own
 order. -/
