@@ -41,36 +41,64 @@ private theorem pointsTo_u32_pair_as_u64
         (lo.toUInt64 ||| (hi.toUInt64 <<< 32)) := by
   let combined : UInt64 := lo.toUInt64 ||| (hi.toUInt64 <<< 32)
   have h0 : u64Byte combined 0 = u32Byte lo 0 := by
+    apply UInt8.toBitVec_inj.mp
     simp [combined, u64Byte, u32Byte]
-    bv_decide
   have h1 : u64Byte combined 1 = u32Byte lo 1 := by
+    apply UInt8.toBitVec_inj.mp
     simp [combined, u64Byte, u32Byte]
-    bv_decide
+    apply BitVec.eq_of_getLsbD_eq
+    intro i
+    simp
+    grind
   have h2 : u64Byte combined 2 = u32Byte lo 2 := by
+    apply UInt8.toBitVec_inj.mp
     simp [combined, u64Byte, u32Byte]
-    bv_decide
+    apply BitVec.eq_of_getLsbD_eq
+    intro i
+    simp
+    grind
   have h3 : u64Byte combined 3 = u32Byte lo 3 := by
+    apply UInt8.toBitVec_inj.mp
     simp [combined, u64Byte, u32Byte]
-    bv_decide
+    apply BitVec.eq_of_getLsbD_eq
+    intro i
+    simp
+    grind
   have h4 : u64Byte combined 4 = u32Byte hi 0 := by
+    apply UInt8.toBitVec_inj.mp
     simp [combined, u64Byte, u32Byte]
-    bv_decide
+    apply BitVec.eq_of_getLsbD_eq
+    intro i
+    simp
+    grind
   have h5 : u64Byte combined 5 = u32Byte hi 1 := by
+    apply UInt8.toBitVec_inj.mp
     simp [combined, u64Byte, u32Byte]
-    bv_decide
+    apply BitVec.eq_of_getLsbD_eq
+    intro i
+    simp
+    grind
   have h6 : u64Byte combined 6 = u32Byte hi 2 := by
+    apply UInt8.toBitVec_inj.mp
     simp [combined, u64Byte, u32Byte]
-    bv_decide
+    apply BitVec.eq_of_getLsbD_eq
+    intro i
+    simp
+    grind
   have h7 : u64Byte combined 7 = u32Byte hi 3 := by
+    apply UInt8.toBitVec_inj.mp
     simp [combined, u64Byte, u32Byte]
-    bv_decide
+    apply BitVec.eq_of_getLsbD_eq
+    intro i
+    simp
+    grind
   change iprop(pointsTo_u32 0 ptr lo ∗ pointsTo_u32 0 (ptr + 4) hi) ⊣⊢
     pointsTo_u64 0 ptr combined
   unfold pointsTo_u32 pointsTo_u64
   rw [h0, h1, h2, h3, h4, h5, h6, h7]
-  rw [show ptr + 4 + 1 = ptr + 5 by bv_decide]
-  rw [show ptr + 4 + 2 = ptr + 6 by bv_decide]
-  rw [show ptr + 4 + 3 = ptr + 7 by bv_decide]
+  rw [show ptr + 4 + 1 = ptr + 5 by simp [UInt32.add_assoc]]
+  rw [show ptr + 4 + 2 = ptr + 6 by simp [UInt32.add_assoc]]
+  rw [show ptr + 4 + 3 = ptr + 7 by simp [UInt32.add_assoc]]
   constructor
   · iintro H
     icases H with ⟨Hlo, Hhi⟩

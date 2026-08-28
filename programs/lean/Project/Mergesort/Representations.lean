@@ -85,7 +85,29 @@ theorem encodeWord_decodeWord_of_length
   · simp at hlength
   rcases bytes with _ | ⟨extra, bytes⟩
   · simp [Spec.encodeWord, Spec.decodeWord]
-    bv_decide
+    constructor
+    · apply UInt8.toBitVec_inj.mp
+      simp
+    constructor
+    · apply UInt8.toBitVec_inj.mp
+      simp
+      apply BitVec.eq_of_getLsbD_eq
+      intro i
+      simp
+      grind
+    constructor
+    · apply UInt8.toBitVec_inj.mp
+      simp
+      apply BitVec.eq_of_getLsbD_eq
+      intro i
+      simp
+      grind
+    · apply UInt8.toBitVec_inj.mp
+      simp
+      apply BitVec.eq_of_getLsbD_eq
+      intro i
+      simp
+      grind
   · simp at hlength
 
 /-- Deterministic word view of an arbitrary complete four-byte-chunk list.
@@ -2408,7 +2430,7 @@ theorem VecU8_as_headerBytes_storage {host : Type} [WasmHeapGS host]
       iprop(ByteSlice header (vecHeaderBytes capacity ptr initialized) ∗
         VecStorage heapId capacity ptr initialized) := by
   have haddress : (header + 4) + 4 = header + 8 := by
-    bv_decide
+    simp [UInt32.add_assoc]
   constructor
   · iintro Hvec
     isimp only [VecU8, RawVecHeader] at Hvec
