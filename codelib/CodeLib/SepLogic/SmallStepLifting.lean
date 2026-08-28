@@ -137,16 +137,18 @@ set_option hygiene false in
 macro "wasm_wp_pure_rule " name:ident binders:bracketedBinder* " : "
     instruction:term ", " before:term " => " after:term " := "
     step:term : command => do
-  let isValueBinder (b : Lean.Syntax) : Bool :=
-    b.getKind == `Lean.Parser.Term.implicitBinder
-  let isSideCondition (b : Lean.Syntax) : Bool :=
-    b.getKind == `Lean.Parser.Term.explicitBinder
+  -- Keep these as `TSyntax`, not raw `Syntax`: the `$xs:bracketedBinder*`
+  -- antiquotations below only accept a typed array.
+  let isValueBinder (b : Lean.TSyntax ``Lean.Parser.Term.bracketedBinder) : Bool :=
+    b.raw.getKind == ``Lean.Parser.Term.implicitBinder
+  let isSideCondition (b : Lean.TSyntax ``Lean.Parser.Term.bracketedBinder) : Bool :=
+    b.raw.getKind == ``Lean.Parser.Term.explicitBinder
   for b in binders do
     unless isValueBinder b || isSideCondition b do
       Lean.Macro.throwErrorAt b
         "wasm_wp_pure_rule takes implicit value binders and explicit side conditions"
-  let valueBinders := binders.filter (fun b => isValueBinder b)
-  let sideConditions := binders.filter (fun b => isSideCondition b)
+  let valueBinders := binders.filter isValueBinder
+  let sideConditions := binders.filter isSideCondition
   `(command|
     theorem $name:ident
         {params localValues values : List Value}
