@@ -14,11 +14,15 @@ gates have now passed for imports 0--2 and local functions 0--11:
    proved from the body, and every call site can establish its precondition and
    continue from every postcondition.
 
-The authoritative statement set is therefore frozen and bottom-up body proofs
-are authorized.  Existing Lean proofs remain implementation evidence only;
-they must be rebased onto these contracts and do not define or weaken them.
-Functions 12--55 remain outside proof scope, with obligations discharged only
-at the originating guards in reachable callers.
+The authoritative statement set is frozen, and the bottom-up body proofs and
+public partial-adequacy composition are complete.  The Lean proofs are stated
+against these reviewed contracts rather than redefining or weakening them:
+`func2`, `func4`, and the import/shim contracts are closed in
+`ContractProofs`; allocators in `Func5Proof`, `Func8Proof`, and `Func9Proof`;
+RawVec growth/reserve in `Func0Proof` and `Func1Proof`; the driver in
+`DriverProof`; and the final composition in `Proof`.  Functions 12--55 remain
+outside proof scope, with obligations discharged only at the originating
+guards in reachable callers.
 
 - [Frozen target](target.md)
 - [Module inventory](module.md)
@@ -139,7 +143,7 @@ disjunction for arbitrary finite value lists.
   export region after body initialization.
 - one aggregate `Streams(input, output, oom)` Universal host-state view.
 
-These interfaces must be audited at every call site before any new proof is
-attempted.  In particular, allocator/outcome proof-infrastructure spikes are
-downstream of the contract review: the reviewed contracts determine what that
-infrastructure must support.
+These interfaces have been audited at every reachable call site and remain the
+maintenance boundary for any later change.  In particular, allocator/outcome
+infrastructure is downstream of the contract review: the reviewed contracts
+determine what that infrastructure supports.

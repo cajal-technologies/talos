@@ -1,6 +1,7 @@
 # Mergesort `func3` (absolute 6, exported `mergesort`)
 
-Status: **authoritative `Func3Spec` frozen; generated body proof pending**.
+Status: **authoritative `Func3Spec`, generated body proof, modular composition,
+and public partial-adequacy theorem complete**.
 
 ## Interface
 
@@ -121,15 +122,20 @@ pieces/live blocks and `Streams remaining [] true`.
 
 The principal entry WP spec assumes `encodeValues input`, the exact initial
 runtime/stack/heap/host predicates, and concludes either exact sorted encoded
-output with restored stack or the distinguished OOM terminal outcome.  The
-conditional theorem `entry_adequacy_of_func3` now constructs those initial
-resources at a genuine `call 6` configuration and derives the public partial
-entry specification solely from a polymorphic `Func3Spec` hypothesis.  It
+output with restored stack or the distinguished OOM terminal outcome.
+`DriverProof.func3_correct_of` proves the generated body conditionally from the
+three reachable Vec/allocation contracts.  `Proof.func3_correct` closes that
+composition using the completed `func1`, `func5`, and `func9` theorems (and,
+transitively, `func0` and `func8`).
+
+The theorem `entry_adequacy_of_func3` constructs the initial resources at a
+genuine `call 6` configuration and derives the public partial entry
+specification solely from the polymorphic `Func3Spec` theorem.
+`Proof.mergesort_correct` applies that bridge to the completed theorem.  It
 classifies every finite terminal execution and intentionally does not claim
-termination.  `Proof.mergesort_correct` applies that bridge to the single
-temporary `func3_correct : Func3Spec` placeholder.  The obsolete total entry
-statement was removed to avoid presenting partial adequacy as termination.
-Wrapper work is `Theta(B)` for `B=4n`, excluding the `Theta(n log n)` sort.
+termination.  The obsolete total entry statement was removed to avoid
+presenting partial adequacy as termination.  Wrapper work is `Theta(B)` for
+`B=4n`, excluding the `Theta(n log n)` sort.
 
 ## Failure-edge audit
 
@@ -148,6 +154,6 @@ Wrapper work is `Theta(B)` for `B=4n`, excluding the `Theta(n log n)` sort.
 
 The first contract audit failed on stack reserve, allocation ownership, and OOM
 post-state precision.  Those defects are repaired in the authoritative
-contract.  The body-side path audit above and the sole public-entry
-caller/adequacy audit both pass; proof work must preserve this statement rather
-than weakening it around implementation difficulties.
+contract.  The completed body proof and sole public-entry caller/adequacy
+composition preserve that statement without weakening its resource or outcome
+claims.  Future maintenance must retain the same boundary.

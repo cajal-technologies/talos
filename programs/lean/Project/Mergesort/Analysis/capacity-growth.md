@@ -1,8 +1,8 @@
 # Input Vec growth and pre-overflow OOM analysis
 
-Status: **binary arithmetic, reserve layout, no-reserve append, normal
-successful-reserve lineage, and the allocator continuation audit are
-implemented; whole-loop control/spatial composition remains pending**.
+Status: **binary arithmetic, reserve layout, no-reserve append, successful
+reserve lineage, allocator continuations, and whole-loop control/spatial
+composition are implemented and used by the completed `func1`/`func3` proofs**.
 
 This analysis supplies the named lineage required by the `func1` and `func3`
 contracts.  It is not an informal excuse to omit the RawVec error edges.
@@ -99,7 +99,7 @@ At the failing `2^30` reserve, `length <= 2^29` and `count <= 256`; therefore
 `length+count` and `2*oldCapacity` are also exact unsigned i32 computations.
 This rules out the earlier addition-overflow `func43` edge.
 
-## Implemented transition and remaining loop theorem
+## Implemented transition and completed loop composition
 
 `GeometricVecFacts.reserveLayout` now proves the exact addition, selected
 capacity bound, and valid alignment-one layout needed at an active reserve.
@@ -119,20 +119,22 @@ both the empty and completed-short variants.
 Because `RuntimeContext` does not own the physical store's instantiated cap
 metadata, the authoritative contracts accept exact `talos.oom` on
 `memory.grow=-1` even in a successful arithmetic classification.  The hard-cap
-result supports a later initial-store strengthening; it is not an unlinked
+result supports an optional initial-store strengthening; it is not an unlinked
 precondition of the modular specs.
 
-The remaining whole-read-loop statement must be phrased as a
-preservation/progress lemma for
-`GeometricVecFacts`, not merely the closed-form arithmetic above.  Its premise
-must name a remaining byte count divisible by four and the exact read equation
-`count = min(256, remaining)`; the weaker fact `count <= 256` is not enough.
-Given those facts and the current Vec/heap descriptors, it must establish
-exactly one of:
+The completed read-loop proof in `DriverProof` phrases the loop invariant as a
+preservation/progress statement for `GeometricVecFacts`, not merely the closed-
+form arithmetic above.  Its premise names a remaining byte count divisible by
+four and the exact read equation `count = min(256, remaining)`; the weaker fact
+`count <= 256` is used only for the separate oversized-read guard.  Given those
+facts and the current Vec/heap descriptors, the proof establishes exactly one
+of:
 
 1. `GeometricVecFacts.appendWithoutReserve` supplies the no-reserve arm;
 2. reserve layout is valid and `GeometricVecFacts.reserveSuccess` supplies the
    normal continuation; or
 3. the allocator reaches exact OOM before either call to `func43` is reachable.
 
-The theorem must also cover the zero final read without changing the lineage.
+The zero final read is covered without changing the lineage.  These cases feed
+`Func1Proof.func1_correct_of`, then `DriverProof.func3_correct_of`, and finally
+the closed `Proof.func3_correct` composition.

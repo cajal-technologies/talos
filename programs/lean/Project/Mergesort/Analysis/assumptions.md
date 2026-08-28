@@ -4,8 +4,10 @@
 
 The public input is an arbitrary finite `List UInt32`.  Its byte stream is the
 canonical packed little-endian serialization, so its length is exactly four
-times the list length.  This is not a size bound: the theorem must handle very
-large finite lists by the OOM branch.
+times the list length.  This is not a size bound: for every finite execution
+that reaches an observable terminal outcome, the theorem classifies that
+outcome as normal sorted return or exact OOM.  It does not prove that execution
+terminates, including for very large finite inputs.
 
 ## Fixed initial machine
 

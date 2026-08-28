@@ -14,22 +14,22 @@
 
 | Component | Status | Evidence / blocker |
 | --- | --- | --- |
-| Frozen artifact and module | discovered | hashes and inventories recorded |
-| All 56 function cards | first pass | one card per generated definition, but completeness and exact call-site preparation are not yet audited |
+| Frozen artifact and module | frozen | hashes, inventories, function identities, and entry configuration recorded and used by the completed proof |
+| All 56 function cards | frozen | one audited card per generated definition; reachable call-site preparation and excluded incoming edges are recorded |
 | Public-path dossier review | frozen | cards 0--11 record ABI, ownership, effects, control flow, valid call sites, terminal outcomes, loop measures, and originating exclusion guards |
 | Excluded panic/error-support documentation | frozen | all funcs12--55 cards are documentation-only; direct and indirect subgraphs were audited without introducing callee specs |
 | Call-site matrix | frozen | every valid edge has exact operands/resources/outcomes; unreachable edges remain caller-guard obligations |
 | Valid-input exclusion boundary | frozen | all 11 frozen-WAT calls from funcs0--11 into funcs12--55 are assigned to exact originating guard obligations; independent red-team recheck passed |
 | Codec and sorting vocabulary | frozen for current contracts | canonical `U32Codec`, serialization, byte-array equivalence, zero-fill serialization, aligned and arbitrary-four-byte word views, output-slot store reconstruction, empty dangling-pointer buffers, live-word token framing/resealing, allocator-order disjointness, exact byte/word offset and append arithmetic, `WordSlice_get`/`WordSlice_set`, `SortBuffers_append`, element-copy focus, and final whole-buffer copy-back focus compile; the exact merge/remainder inequalities are recorded at their originating guards |
 | Terminal outcome bridge | proved | canonical outcome view, generic lifting, exact import-2 WP, store-sensitive partial outcome adequacy, and both arms of the closed non-target caller/frontend acceptance theorem are closed and axiom-audited |
-| Allocator ownership | frozen interface / body proof pending | map-native history, live/retired tokens, retired-byte ownership, pure transition preservation, frontier authority, sparse physical fresh-range insertion, post-store `BumpHeap_commit`, complete `BumpHeap_retire`, reachable align-1/4 `BumpDecision` arithmetic, signed page-target bound, hard-cap grow success, unique live geometric lookup, exact reallocation-history progression, no-reserve append, and normal `GeometricVecFacts.reserveSuccess` are proved; allocator continuations accept exact OOM on physical grow failure instead of assuming an unlinked cap fact, while instruction-level cursor/store/domain/metadata composition remains implementation work |
+| Allocator ownership | proved | map-native history, live/retired tokens, retired-byte ownership, frontier authority, tracked page ownership, sparse physical fresh-range insertion, cursor commit, complete retirement, reachable align-1/4 arithmetic, reallocation, and exact physical-grow OOM handling are composed by the compiled allocator proofs |
 | Exact contract declarations | re-frozen | `Contracts.lean` declares exactly imports 0--2 and funcs0--11 with outcome-valued continuations and no funcs12--55 contract. Every statement passed body-to-post and caller-to-pre/continuation review. Proof attempts caught and corrected both requesting running-instance ownership after a terminal host trap and incorrectly sharing one operand list between a shim call and its direct import call. |
 | Imports/read/write shims | proved | exact host transfer lemmas exist; the false zero-length write generalization was removed; direct-import and shim-call operand lists are distinct. Authoritative proofs of imports0--2 and funcs6,10,11 compile and are axiom-audited. |
 | Recursive `func2` sort | proved | `func2_correct` adapts the generated-body theorem to the canonical `SortBuffers` contract and reconstructs its exact piecewise scratch post; the theorem compiles without `sorry` or a declared axiom |
-| RawVec/allocator functions | partial proof | funcs0,1,5,8,9 pass both statement directions. `func4` identity and `func7` logical retirement are proved; `func1` returns the exact shadow-frame bytes, and `func0` freshness is justified by frontier/domain authority. The obsolete concrete allocator smoke-test file was removed. |
-| Export `func3` | frozen statement / body unproved | `Func3Spec` has exact normal and phase-classified OOM posts; read, decode, sort, output, retirement, mask arithmetic, and public-entry continuation directions all pass review |
-| Entry adequacy | conditionally adequate | `entry_adequacy_of_func3` derives the real partial `PublicEntrySpecification` from a polymorphic `Func3Spec` hypothesis.  It constructs the exact runtime, raw 288-byte stack region, bump heap, and Streams resources, starts with a genuine `call 6`, maps all three `DriverOOMState` variants to exact `talos.oom`, and hides internal resources.  It deliberately makes no termination claim. |
-| Public theorem | closed modulo one explicit body placeholder | `Proof.mergesort_correct` is exactly `entry_adequacy_of_func3 func3_correct`.  The only `sorry` in the merge-sort proof is the theorem `func3_correct : Func3Spec`; the conditional adequacy theorem itself is axiom-free.  The obsolete total `MergesortSpec` API was removed so the current Iris result cannot be mistaken for a termination theorem. |
+| RawVec/allocator functions | proved | funcs0,1,4,5,7,8,9 have compiled authoritative proofs.  The normal paths preserve the exact shadow/header/block resources, and every allocator arithmetic or physical-grow failure routes to the exact pre-commit OOM continuation. |
+| Export `func3` | proved | the compiled `func3_correct` proof covers read, reserve, decode, sort, output, retirement, both mask computations, all originating exclusion guards, and the three phase-classified OOM posts |
+| Entry adequacy | proved (partial) | the reusable `entry_adequacy_of_func3` bridge derives partial `PublicEntrySpecification` from `Func3Spec`; the completed proof instantiates it with `func3_correct`.  It constructs the exact runtime, raw 288-byte stack region, bump heap, and Streams resources, starts with a genuine `call 6`, maps all three `DriverOOMState` variants to exact `talos.oom`, hides internal resources, and deliberately makes no termination claim. |
+| Public theorem | proved | `Proof.mergesort_correct` is the completed composition `entry_adequacy_of_func3 func3_correct`, with no merge-sort proof placeholder.  The obsolete total `MergesortSpec` API remains removed so the partial Iris result cannot be mistaken for a termination theorem. |
 
 ## Quarantined directions
 
@@ -45,8 +45,8 @@
   `StateInterp`; decision 0002 records the required authority-only interface.
 - The obsolete standalone `AllocatorProof.lean` smoke test and the earlier
   body-entry/total-correctness `Proof.lean` scaffold were removed.  The new
-  `Proof.lean` contains only the authoritative `func3_correct` obligation and
-  its checked composition to the public partial specification.
+  `Proof.lean` exposes the completed `func3_correct` theorem and its checked
+  composition to the public partial specification.
 
 ## Retained reusable work
 
@@ -60,13 +60,13 @@
 
 ## Hard phase gate
 
-**Passed for imports 0--2 and local functions 0--11 after corrective
+**Completed for imports 0--2 and local functions 0--11 after corrective
 re-audits.**  One proof attempt exposed that terminal host traps consume the
 exclusive current-running-instance token; another exposed that shim calls and
 their direct import calls have different top-first operand lists.  The affected
 statements were corrected and proved compositionally before larger body proofs
-resumed.  Steps 1--5 below are complete at the statement/interface level, so
-bottom-up target body proofs may continue.  Local functions 12--55 remain
+resumed.  All six steps below are complete, including the public partial-
+adequacy composition.  Local functions 12--55 remain
 permanently documentation-only: they receive incoming-edge classification,
 never WP specifications or body proofs.
 
@@ -82,7 +82,6 @@ never WP specifications or body proofs.
 5. Freeze only then the remaining allocator infrastructure required by those
    contracts.  The separately isolated terminal-outcome interface has already
    passed its non-target acceptance gate.
-6. Replace the single `sorry` in `func3_correct` by proving the remaining
-   frozen function specifications.  No entry theorem or public postcondition
-   should change: removing that placeholder must close the existing
-   `mergesort_correct` composition directly.
+6. Prove the frozen function specifications and instantiate the conditional
+   entry bridge with `func3_correct`, closing `mergesort_correct` without
+   changing the entry theorem or public postcondition.

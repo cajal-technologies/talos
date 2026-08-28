@@ -26,6 +26,7 @@ and updates the frontier/metadata.  Normal success preserves Streams.  On OOM
 it returns the old live block and unchanged allocator state with only the
 Streams OOM field raised.  Any logical initialized prefix a
 caller wants preserved must fit within the copied minimum.  Time is linear in
-the copied minimum; allocation arithmetic is constant-time.  The statement now
-passes the exact body-effect and sole valid-caller reviews and is frozen; its
-instruction proof remains gated.
+the copied minimum; allocation arithmetic is constant-time.  The statement
+passes the exact body-effect and sole valid-caller reviews, is frozen, and is
+proved by `Func8Proof.func8_correct`, including allocation, tracked growth,
+copy, retirement, and all exact pre-commit OOM arms.

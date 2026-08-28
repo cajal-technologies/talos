@@ -232,3 +232,12 @@ generated `Func3Spec` is frozen by the representation and two-sided call-site
 reviews.  The public theorem now applies the bridge directly, with its sole
 temporary `sorry` isolated in `func3_correct : Func3Spec`; no body-entry or
 total-correctness scaffold remains.
+
+## Implementation follow-up
+
+The milestone above is retained as the historical acceptance record for the
+conditional bridge.  The generated `func3_correct : Func3Spec` proof is now
+complete, and `Proof.mergesort_correct` instantiates
+`entry_adequacy_of_func3` without a merge-sort proof placeholder.  The result
+remains outcome-sensitive partial correctness and still makes no termination
+claim.

@@ -283,11 +283,12 @@ After the read loop the proof must derive the exact computation
 completion.  The following branch is the ordinary empty/nonempty split, not a
 separate error path.
 
-The public partial `PublicEntrySpecification` theorem is a direct conditional
-corollary of this contract plus entry initialization; it does not unfold
-`func3` again.  The obsolete total entry statement has been removed; a future
-termination result would require a separate adequacy API and must not be
-inferred from this partial theorem.
+The reusable `entry_adequacy_of_func3` theorem is a conditional corollary of
+this contract plus entry initialization; it does not unfold `func3` again.
+The completed public `mergesort_correct` theorem instantiates that bridge with
+the proved `func3_correct`.  The obsolete total entry statement has been
+removed; a future termination result would require a separate adequacy API and
+must not be inferred from this partial theorem.
 
 ## Contract inventory and freeze status
 
@@ -301,24 +302,23 @@ laws; it does not mean a Lean theorem is frozen.
 | import 0 | exact Universal read update checked, including replaced prefix, untouched suffix, and direct-import top-first operands `[pointer,length]` | sole valid caller `func10` supplies a positive exact-size owned buffer through the corrected permutation | none | re-frozen statement; authoritative proof compiled |
 | import 1 | exact Universal write update checked; false zero-length generalization removed; direct-import top-first operands are `[pointer,length]` | sole valid caller `func11` supplies a positive exact-size readable slice through the corrected permutation | none | re-frozen statement; authoritative proof compiled |
 | import 2 | exact trap reason and marker-only host update checked | sole valid caller `func6` supplies Streams and frames all other program resources; terminal ownership correctly omits the consumed current-instance token | none; outcome-valued host lifting and acceptance spike already pass | re-frozen statement; authoritative proof compiled |
-| `func0` | positive-layout branch, exact result writes, fresh/realloc effects, and OOM preservation checked | sole `func1` use supplies the split 12-byte result, exact `GrowSourceOwn`, valid positive byte layout, and both continuations | none at statement level; freshness follows from frontier authority plus the sparse heap domain, rather than an extra pure premise | frozen statement, proof pending |
-| `func1` | ABI, exact selected-capacity computation, exact normal/terminal stack states, and both `func43` guards checked | `func3` frames the chunk bytes and supplies the length/read relation, reserve state, and both continuations | none at statement level; `reserveSuccessShadow`, `VecStorage_as_growSource`, and `GeometricVecFacts.reserveSuccess` close the exact normal interface | frozen statement, proof pending |
+| `func0` | positive-layout branch, exact result writes, fresh/realloc effects, and OOM preservation checked | sole `func1` use supplies the split 12-byte result, exact `GrowSourceOwn`, valid positive byte layout, and both continuations | none; freshness follows from frontier authority plus the sparse heap domain, rather than an extra pure premise | authoritative proof compiled |
+| `func1` | ABI, exact selected-capacity computation, exact normal/terminal stack states, and both `func43` guards checked | `func3` frames the chunk bytes and supplies the length/read relation, reserve state, and both continuations | none; `reserveSuccessShadow`, `VecStorage_as_growSource`, and `GeometricVecFacts.reserveSuccess` close the exact normal interface | authoritative proof compiled |
 | `func2` | base identity and nontrivial equal-output effect checked; exact loop inequalities assign every excluded bounds edge to its originating guard | `SortBuffers_append` closes both recursive call directions and the driver consumes the same piecewise post | none; `func2_correct` adapts the generated-body theorem through the canonical word representation and reconstructs the exact scratch post | authoritative proof compiled |
-| `func3` | all phases, both exact `0x7ffffffc` uses, decode/output loop invariants, deallocations, and three OOM states checked | exact entry initialization supplies raw stack/heap/Streams; normal and exact-OOM continuations feed outcome adequacy without reopening the body | body proof pending; the conditional partial entry bridge already compiles and accepts only a polymorphic `Func3Spec` theorem | frozen statement, proof pending; conditional adequacy compiled |
+| `func3` | all phases, both exact `0x7ffffffc` uses, decode/output loop invariants, deallocations, and three OOM states checked | exact entry initialization supplies raw stack/heap/Streams; normal and exact-OOM continuations feed outcome adequacy without reopening the body | none; the conditional partial entry bridge is instantiated only with the proved polymorphic `Func3Spec` theorem | authoritative proof and public partial-adequacy composition compiled |
 | `func4` | exact body is a single return with no state effect | valid callers `func0`,`func3` require only the returned `RuntimeContext` and continuation | none | authoritative proof compiled |
-| `func5` | exact checked arithmetic, pre-commit failures, optional growth, cursor commit, and fresh full-block post reviewed | `func0`,`func3` supply valid align-1/4 layouts, Streams, and both normal/exact-OOM continuations; complete-block focus covers subsequent copy | none at statement level; instruction-level cursor/store/domain/metadata composition is proof work | frozen statement, proof pending |
+| `func5` | exact checked arithmetic, pre-commit failures, optional growth, cursor commit, and fresh full-block post reviewed | `func0`,`func3` supply valid align-1/4 layouts, Streams, and both normal/exact-OOM continuations; complete-block focus covers subsequent copy | none; tracked page ownership connects `memory.size`/`memory.grow` to sparse range insertion and commit | authoritative proof compiled |
 | `func6` | exact body calls import 2, whose trap makes the following `unreachable` dead | valid failure sites in `func5`,`func8`,`func9` supply Streams and retain all explicitly framed allocator resources; terminal ownership omits `RuntimeContext` | none at statement level | re-frozen statement; authoritative proof compiled |
 | `func7` | empty physical body permits exactly one logical retirement update | valid `func3` deallocations can reseal complete values, scratch, and input blocks; excluded destructor calls are outside this theorem | none; `BumpHeap_retire` proves the exact token/bytes transfer used by the post | authoritative proof compiled |
-| `func8` | exact allocation checks, commit, `min(oldSize,newSize)` copy, retirement, and pre-commit failure preservation reviewed | sole valid `func0` use has align 1, complete old block, and `newSize>oldSize`; copied-prefix post is exactly what grow reassembly consumes | none at statement level; instruction proof must compose allocation, copy, and retirement | frozen statement, proof pending |
-| `func9` | exact allocation checks, commit, positive-size zero fill, and pre-commit failure preservation reviewed | sole valid `func3` use has positive `4*n`, align 4; zero/word and token views close its continuation | none at statement level | frozen statement, proof pending |
+| `func8` | exact allocation checks, commit, `min(oldSize,newSize)` copy, retirement, and pre-commit failure preservation reviewed | sole valid `func0` use has align 1, complete old block, and `newSize>oldSize`; copied-prefix post is exactly what grow reassembly consumes | none; the proof composes allocation, copy, and retirement | authoritative proof compiled |
+| `func9` | exact allocation checks, commit, positive-size zero fill, and pre-commit failure preservation reviewed | sole valid `func3` use has positive `4*n`, align 4; zero/word and token views close its continuation | none | authoritative proof compiled |
 | `func10` | exact body changes top-first `[length,pointer]` at the shim call into `[pointer,length]` at import 0 | sole driver use supplies the positive 256-byte chunk and consumes the exact read post | none | re-frozen statement; authoritative composition proof compiled |
 | `func11` | exact body performs the same shim/direct-import permutation for import 1 | sole driver use supplies a positive canonical four-byte word and consumes the exact write post | none | re-frozen statement; authoritative composition proof compiled |
 | `func12`--`func55` | bodies intentionally out of proof scope | every incoming public edge assigned to its caller guard | none: no WP specs by design | excluded |
 
-Every in-scope row has completed both statement reviews, so the global
-specification gate is open and bottom-up body proofs are now authorized.
-`func2_correct` has completed the rebase onto the stronger frozen contract;
-the allocator functions and exported driver remain body-proof work.
+Every in-scope row has completed both statement reviews and its authoritative
+proof.  The global specification gate, bottom-up body proofs, and final public
+partial-adequacy composition are complete.
 
 ## Excluded panic, formatting, bounds-error, and allocation-error component
 

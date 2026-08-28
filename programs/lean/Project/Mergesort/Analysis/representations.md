@@ -1,8 +1,8 @@
 # Canonical representation design
 
 Status: **frozen for the authoritative contracts.  The canonical vocabulary,
-including the `func3` decode and mask laws, compiles and has passed call-site
-review.  This does not claim that any generated body has been proved**.
+including the `func2` merge laws and `func3` decode/mask laws, is used by the
+completed generated-body proofs and public partial-adequacy composition**.
 
 The purpose of these predicates is to make ownership transfers explicit and
 prevent function contracts from passing raw byte lists with no semantic role.
@@ -15,11 +15,11 @@ explicit equations to the i32 arguments at every function boundary.
 
 The single canonical codec maps a `UInt32` to its four little-endian bytes.
 Public stream encoding, `WordSlice`, decode-loop facts, output-slot bytes, and
-all array lemmas use this definition.  `Spec.encodeWord`,
-`SortProof.wordBytes`, and example-specific serializers must be replaced by or
-proved definitionally equal to it before contracts freeze.
+all array lemmas use this definition.  Earlier `Spec.encodeWord`,
+`SortProof.wordBytes`, and example-specific serializers were replaced by or
+proved definitionally equal to it before the contracts were frozen.
 
-Required pure laws:
+The completed proofs use the following pure laws:
 
 - encoded word length is four;
 - encoded list length is `4 * values.length`;
@@ -84,8 +84,9 @@ law requires the exact logical index bound, so it supports proving the four
 edges in the representation.  `SortBuffers_copyBackFocus` exposes both full
 serialized ranges for the final `memory.copy` and reseals the exact nontrivial
 post in which both arrays contain the same output.  The loop-invariant
-arithmetic using these laws is frozen in the `func2` dossier; its body proof
-remains pending.
+arithmetic using these laws is frozen in the `func2` dossier and implemented in
+`SortProof.twp_sort`; `ContractProofs.func2_correct` closes the authoritative
+buffer contract.
 
 The driver obtains a four-aligned word view of its completed input Vec from
 `GeometricVecFacts.completed_ptr_align4`; this follows from the concrete
@@ -132,7 +133,7 @@ and valid live metadata from every successful classification.
 The authoritative allocator continuations do not pretend that exact module
 identity determines the current physical store's instantiated cap: even in a
 `.success` classification they offer both normal allocation and exact
-`talos.oom` continuations.  The hard-cap theorem is retained for a later
+`talos.oom` continuations.  The hard-cap theorem is retained for an optional
 initial-store strengthening corollary, not assumed by the main contracts.
 
 ### `LiveBlock heapId allocationId ptr layout bytes`
@@ -321,19 +322,19 @@ It does not falsely promise stack restoration or full input consumption in
 all OOM states.  The public theorem may existentially hide this resource state
 after adequacy, but the principal function contract may not discard it.
 
-## Laws required before contract freeze
+## Reusable laws used by the completed proofs
 
-Implemented and checked so far are the canonical serialization laws,
-`arrayAt`/canonical-byte equivalence, `LiveBlock` open/reseal, empty allocator
-initialization, metadata/token agreement, fresh live insertion, retirement,
-retired-resource transfer, pure history preservation for both transitions,
-and the authoritative sparse fresh-range state update.  These laws remain
-reviewable draft infrastructure until the two-sided contract audit completes.
+The canonical serialization laws, `arrayAt`/canonical-byte equivalence,
+`LiveBlock` open/reseal, empty allocator initialization, metadata/token
+agreement, fresh live insertion, retirement, retired-resource transfer, pure
+history preservation for both transitions, and the authoritative sparse fresh-
+range state update are implemented, checked, and used by the completed body
+proofs.  The two-sided contract and caller audits are complete.
 
-1. Additional ByteSlice take/drop views as needed; exact append/split and
-   no-wrap recombination are implemented by `ByteSlice_append`.
-2. Additional WordSlice/ByteSlice conversions needed by the driver; aligned
-   canonical bytes are identified by `ByteSlice_serialize_as_WordSlice`,
+1. ByteSlice take/drop views, exact append/split, and no-wrap recombination are
+   implemented by `ByteSlice_append` and its focused variants.
+2. WordSlice/ByteSlice conversions used by the driver identify aligned
+   canonical bytes through `ByteSlice_serialize_as_WordSlice`,
    zero-filled allocations by `serialize_replicate_zero` and
    `zeroLiveBlock_as_liveWordBlock`, the empty dangling-pointer path by
    `WordSlice_nil`/`SortBuffers_empty`, arbitrary four-byte output-slot stores
@@ -341,32 +342,34 @@ reviewable draft infrastructure until the two-sided contract audit completes.
    focus/update by `WordSlice_get`/`WordSlice_set`.  Arbitrary fresh values
    bytes use the `decodeWords` and `overwritePrefix` laws above; no fabricated
    initialization premise is introduced.
-3. Freeze the merge-loop invariant arithmetic on top of the implemented
-   `SortBuffers_append` and `SortBuffers_copyFocus` laws.
-4. Additional LiveBlock views as needed; fresh-block-to-Vec packaging and
+3. The merge-loop invariant arithmetic is implemented on top of
+   `SortBuffers_append` and `SortBuffers_copyFocus` in `SortProof`.
+4. LiveBlock views support fresh-block-to-Vec packaging and
    spare-capacity focus preserve the allocation handle in
    `LiveBlock_to_VecStorage` and `VecStorage_appendFocus`.  Whole-block
    overwrite through copy/fill retains the token via `LiveBlock_bytesFocus`,
    while `VecStorage_initializedFocus`/`VecU8_initializedFocus` expose only the
    nonempty logical prefix as the driver's copy source.
-5. LiveBlock open/reseal into `AllocToken * ByteSlice`, plus exact
-   ByteSlice/WordSlice codec conversions that frame the token.
+5. LiveBlock open/reseal into `AllocToken * ByteSlice` and exact
+   ByteSlice/WordSlice codec conversions frame the token.
    `LiveWordBlocks_sortFocus` now packages both word arrays for `func2`, keeps
    their tokens out of the callee footprint, and reseals equal-length results;
    `wordRegions_disjoint_of_order` connects chronological allocation order to
    the required cross-buffer disjointness.
-6. Complete the remaining VecU8 reserve/realloc/dealloc compositions;
-   transparent decomposition and exact driver append reconstruction are
-   implemented by `VecU8_open` and `VecU8_appendFocus`.
-7. Additional instruction-facing allocator conveniences as needed; exact
-   post-store allocation assembly is implemented by `BumpHeap_commit`, and
-   complete live-to-retired transfer by `BumpHeap_retire`.
-8. Compose both physical `memory.grow` branches with the normal/exact-OOM
-   continuations selected by the allocator contracts; use the hard-cap theorem
-   only for an optional initial-store strengthening.
-9. Raw 288-byte StackRegion split into StackReserve/RawExportRegion, one-way
-   initialization into the disjoint ExportFrame composition, frame slot
-   splits, and normal consume/restore laws.  `EntryStack_split`,
+6. VecU8 reserve/realloc/dealloc composition is complete; transparent
+   decomposition and exact driver append reconstruction are implemented by
+   `VecU8_open` and `VecU8_appendFocus` and used by the `func0`, `func1`, and
+   `func3` proofs.
+7. Instruction-facing allocator laws include exact post-store allocation
+   assembly through `BumpHeap_commit` and complete live-to-retired transfer
+   through `BumpHeap_retire`.
+8. Both physical `memory.grow` branches are composed with the normal/exact-OOM
+   continuations selected by the allocator contracts; the hard-cap theorem is
+   used only as optional initial-store strengthening evidence.
+9. The raw 288-byte StackRegion split into StackReserve/RawExportRegion,
+   one-way initialization into the disjoint ExportFrame composition, frame
+   slot splits, and normal consume/restore laws are implemented by
+   `EntryStack_split`,
    `DriverFrame_split`, `emptyVecHeaderBytes_to_VecU8`, and
    `ExportFrame_empty` implement the raw split and initialized frame assembly;
    the active 16-byte reserve has exact 4+12 decomposition through
@@ -374,9 +377,10 @@ reviewable draft infrastructure until the two-sided contract audit completes.
    `ExportFrame_releaseStorage` separate the deallocated Vec storage from the
    still-owned stack bytes, and `StackReserve_combineFrame` performs the final
    raw 288-byte recombination.
-10. Exact read, write, and OOM host-state transitions.
+10. Exact read, write, and OOM host-state transitions close the three import
+    contracts used by the driver.
 
 The numbered items record reusable proof interfaces and possible convenience
-lemmas, not unresolved contract assumptions.  The representations and
-contracts have passed review, so subsequent additions must preserve these
-frozen meanings while body proofs proceed bottom-up.
+lemmas, not unresolved contract assumptions.  The representations, contracts,
+generated-body proofs, and public composition have passed review; subsequent
+additions must preserve these frozen meanings.

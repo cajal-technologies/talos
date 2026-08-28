@@ -17,5 +17,6 @@ grow-at-hard-cap theorem are already proved.  The
 zero-valued `WordSlice` of length `n` is a
 codec corollary requiring the caller's exact facts `size=4*n`, alignment four,
 and no wrap.  Time is linear in `size` due to `memory.fill`.  With the canonical
-zero/live-word conversion proved, the statement passes both review directions
-and is frozen; its instruction proof remains gated.
+zero/live-word conversion proved, the statement passes both review directions,
+is frozen, and is proved by `Func9Proof.func9_correct`, including tracked
+growth, exact zero fill, and all pre-commit OOM arms.

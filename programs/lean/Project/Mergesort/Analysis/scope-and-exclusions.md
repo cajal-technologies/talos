@@ -1,6 +1,7 @@
 # Valid-input scope and exclusion obligations
 
-Status: **frozen hard formalization boundary**.
+Status: **frozen hard formalization boundary; all listed originating-guard
+obligations are discharged by the completed reachable-function proofs**.
 
 The proof covers only functions and control-flow paths reachable from the
 export under the public input and fixed-machine assumptions.  Imports 0--2 and
@@ -40,10 +41,12 @@ The line numbers below refer to the frozen
 | `X-F3-VALUES-NULL` | 774 | `func3`, values allocation null check | `func3 -> func43` | normal `func5` return is nonzero; failure terminates through `talos.oom` |
 | `X-F3-SCRATCH-NULL` | 779 | `func3`, scratch allocation null check | `func3 -> func43` | normal `func9` return is nonzero; failure terminates through `talos.oom` |
 
-Once these roots are false, every direct or indirect panic, formatting,
-bounds-error, generic allocation-error, abort, and unwinding function below
-them is unreachable.  The decoded function cards, direct call graph, and table
-map remain review evidence for that transitive classification only.
+The completed `func1`, `func2`, and `func3` proofs derive each root false at the
+listed originating guard.  Consequently every direct or indirect panic,
+formatting, bounds-error, generic allocation-error, abort, and unwinding
+function below them is unreachable.  The decoded function cards, direct call
+graph, and table map remain review evidence for that transitive classification
+only.
 
 ## Other irrelevant branches inside reachable functions
 
@@ -62,12 +65,12 @@ the same rule and are proved at their own guards:
   the excluded panic/error-support boundary.  They call the in-scope `func6 ->
   talos.oom` path, and the modular allocator specs provide that exact OOM
   continuation even when arithmetic classification succeeds.  Initial-store
-  cap arithmetic can later strengthen this branch away without affecting the
-  main public theorem.
+  cap arithmetic supports an optional stronger corollary excluding this branch
+  without affecting the main public theorem.
 
-These facts belong in the authoritative specifications and later body proofs
-of the reachable functions.  They do not justify contracts for error-support
-code.
+These facts are present in the authoritative specifications and discharged in
+the completed body proofs of the reachable functions.  They do not justify
+contracts for error-support code.
 
 ## The `talos.oom` exception
 

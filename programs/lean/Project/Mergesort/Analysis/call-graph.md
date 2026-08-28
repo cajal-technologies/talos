@@ -87,17 +87,22 @@ classification only.  They receive no WP specifications and their bodies are
 not unfolded or proved.  The direct `func6 -> talos.oom` path remains in the
 closure because it is a valid terminal outcome.
 
-## Proof order
+## Completed proof order
 
-1. Freeze dossiers, representations, authoritative contracts, and the
-   reachable call-site matrix for imports 0--2 and funcs0--11.
-2. Implement only the outcome/adequacy and allocator ownership infrastructure
-   required by those frozen contracts.
-3. Prove imports 0--2 and shims 10, 11, 6.
-4. Prove allocation marker/deallocator 4, 7 and allocators 5, 8, 9.
-5. Prove RawVec grow/reserve 0, 1.
-6. Prove recursive sort 2 once, reusing its contract recursively.
-7. Prove driver 3 and derive public adequacy only from its contract.
+The implementation followed the reviewed dependency order:
 
-The allocator interface is first because it is the highest-risk dependency and
-is used by both the read loop and the values/scratch setup.
+1. dossiers, representations, authoritative contracts, and the reachable
+   call-site matrix were frozen for imports 0--2 and funcs0--11;
+2. the exact-outcome adequacy and allocator ownership infrastructure was
+   implemented against those contracts;
+3. imports 0--2 and shims 10, 11, and 6 were proved;
+4. allocation marker/deallocator 4 and 7, followed by allocators 5, 8, and 9,
+   were proved;
+5. RawVec grow/reserve 0 and 1 were proved compositionally;
+6. recursive sort 2 was proved once and reused through `Func2Spec`; and
+7. driver 3 was proved from its callee contracts, then
+   `Proof.mergesort_correct` derived the public specification exclusively via
+   `entry_adequacy_of_func3`.
+
+The allocator interface was handled first because it was the highest-risk
+dependency and is used by both the read loop and the values/scratch setup.

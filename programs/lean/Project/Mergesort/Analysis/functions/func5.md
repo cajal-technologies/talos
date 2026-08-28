@@ -44,6 +44,7 @@ Constant instruction count apart from one possible successful `memory.grow`.
 
 The first contract audit failed because “uninitialized ByteSlice” was
 ill-formed and freshness was unprovable from page bounds.  Decision 0002 records
-the revised interface.  The corrected full-block/outcome statement now passes
-both body and valid-caller reviews and is frozen; its instruction proof remains
-behind the global phase gate.
+the revised interface.  The corrected full-block/outcome statement passes both
+body and valid-caller reviews, is frozen, and is proved instruction-by-
+instruction by `Func5Proof.func5_correct`, including both tracked
+`memory.grow` outcomes and the exact pre-commit OOM continuation.

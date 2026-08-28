@@ -10,5 +10,5 @@ The authoritative theorem is continuation-passing and preserves every framed
 resource and operand-stack suffix exactly.  There are no failure modes or
 hidden memory inputs.  Its call sites need no facts beyond function resolution.
 The common outcome-valued WP signature is settled, and this exact identity
-contract has passed both statement directions.  It is frozen; its trivial body
-proof remains behind the global phase gate.
+contract has passed both statement directions.  It is frozen and proved by
+`ContractProofs.func4_correct`.

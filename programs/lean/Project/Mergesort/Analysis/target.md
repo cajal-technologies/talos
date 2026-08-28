@@ -29,12 +29,16 @@ between the stripped and unstripped artifacts before transferring names.
 ## Public meaning
 
 The export `mergesort` reads a finite byte stream that is the packed
-little-endian encoding of a `List UInt32`.  It must reach exactly one of two
-finite terminal outcomes:
+little-endian encoding of a `List UInt32`.  The proved partial-correctness
+statement classifies every finite terminal execution as exactly one of two
+outcomes:
 
 1. normal return with a packed output that is sorted and a permutation of the
    input; or
 2. the distinguished `talos.oom` host trap with the OOM host marker raised.
+
+The current Iris adequacy API does not establish that a terminal execution
+exists.  In particular, this is not a termination theorem.
 
 Fuel, linear-memory addresses, the bump allocator, compiler stack frames, and
 the scratch array are not part of the public statement.

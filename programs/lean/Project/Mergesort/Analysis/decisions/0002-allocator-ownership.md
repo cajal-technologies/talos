@@ -171,3 +171,12 @@ postcondition must own only those 96 requested bytes, preserve an old sentinel,
 and expose the updated cursor/frontier.  This distinguishes the required
 interface from both rejected page-materialization and grow-only ownership
 schemes.
+
+## Implementation follow-up
+
+The review state recorded above is historical.  The sparse frontier model now
+includes tracked memory-page ownership linking `memory.size` and
+`memory.grow` to fresh-range insertion and `BumpHeap_commit`.  The authoritative
+proofs of `func5`, `func8`, and `func9` compile with both normal allocation and
+exact pre-commit `talos.oom` outcomes; no page-materialization fallback or
+uncoupled cap assumption was introduced.

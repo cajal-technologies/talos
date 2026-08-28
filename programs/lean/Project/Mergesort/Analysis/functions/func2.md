@@ -80,7 +80,7 @@ There exists `output` such that source contains `output` and
 also contains `output`.
 Time is `Theta(n log n)`, recursion depth `Theta(log n)`, and each nontrivial
 call performs one linear merge and one linear final copy.  This function's
-main WP contract should be the sole implementation proof used at recursive and
+main WP contract is the sole implementation theorem used at recursive and
 entry call sites.
 
 ## Call-site preparation
@@ -93,11 +93,13 @@ split-at-mid and recombination laws, plus pointer-addition/no-wrap facts.
 
 ## Contract audit status
 
-The authoritative statement is frozen.  `SortBuffers_append` prepares and
-reassembles both recursive calls while retaining full-range disjointness;
-`SortBuffers_copyFocus` supports each loop load/store; and
-`SortBuffers_copyBackFocus` exposes the exact final `memory.copy` and reseals
-both arrays as the output.  The retained older body theorem proves only scratch
-length at its outer interface even though an inner proof point reconstructs
-the exact contents; it is evidence, not the authoritative theorem, and must be
-rebased onto this stronger frozen contract before being used.
+The authoritative statement is frozen and proved by
+`ContractProofs.func2_correct`.  `SortProof.twp_sort` proves the generated body
+recursively, including the exact non-base scratch contents, and the final
+adapter reconstructs `SortBuffers` at the reviewed boundary.
+`SortBuffers_append` prepares and reassembles both recursive calls while
+retaining full-range disjointness; `SortBuffers_copyFocus` supports each loop
+load/store; and `SortBuffers_copyBackFocus` exposes the exact final
+`memory.copy` and reseals both arrays as the output.  The earlier weaker outer
+interface served as implementation evidence during the audit; the completed
+proof now establishes the stronger frozen contract directly.
