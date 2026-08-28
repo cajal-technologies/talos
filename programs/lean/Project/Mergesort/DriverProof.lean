@@ -1636,68 +1636,6 @@ theorem twp_func3_enter_nonempty_decode
     (targetValues := stack) hnonzero (by rfl)
   iexact Hcont
 
-/-- Compose the authoritative header reload with both generated length tests.
-This is the exact handoff supplied by the read-loop normal continuation for a
-nonempty input once the surrounding driver blocks have been entered. -/
-theorem twp_func3_dispatch_completed_nonempty
-    [WasmSmallStepGS hlc Universal.State]
-    (heapId : GName) (original : List UInt32)
-    (capacity dataPtr : UInt32)
-    (completed chunkBytes outputBytes : List UInt8)
-    (frontier : Nat) (history : AllocationHistory)
-    (horiginal : original ≠ [])
-    (hcompleted : serialize original = completed)
-    (hgeo : GeometricVecFacts (serialize original).length completed.length 0
-      capacity dataPtr frontier history)
-    (current aux2 oldPtr aux5 aux7 aux8 aux9 aux10 : UInt32)
-    {stack : List Value} {afterBlock : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} {s : Stuckness} {E : CoPset}
-    {Φ : ObservableOutcome → HeapIProp} :
-    iprop(
-      ExportFrame heapId capacity dataPtr completed chunkBytes outputBytes ∗
-      (ExportFrame heapId capacity dataPtr completed chunkBytes outputBytes -∗
-        WP (.running
-          ⟨func3AppendLocals dataPtr current
-              (UInt32.ofNat completed.length)
-              aux2 dataPtr aux5 (UInt32.ofNat completed.length)
-              aux8 aux9 aux10 stack,
-            afterBlock, arity, remainder, controls, calls⟩ :
-              Expr Universal.State) @ s; E [{ Φ }])) ⊢
-      WP (.running
-        ⟨func3AppendLocals dataPtr current
-            (UInt32.ofNat completed.length)
-            aux2 oldPtr aux5 aux7 aux8 aux9 aux10 stack,
-          func3CompletedPtrReload ++ func3CompletedLengthGuard ++
-            [.block 0 0 func3AlignedLengthBlockBody] ++ afterBlock,
-          arity, remainder, controls, calls⟩ : Expr Universal.State)
-        @ s; E [{ Φ }] := by
-  iintro ⟨Hframe, Hcont⟩
-  have Hreload := twp_func3_reload_completed_ptr
-    (hlc := hlc) heapId capacity dataPtr completed chunkBytes outputBytes
-    current aux2 oldPtr aux5 aux7 aux8 aux9 aux10
-    (stack := stack)
-    (code := func3CompletedLengthGuard ++
-      [.block 0 0 func3AlignedLengthBlockBody] ++ afterBlock)
-    (arity := arity) (remainder := remainder) (controls := controls)
-    (calls := calls) (s := s) (E := E) (Φ := Φ)
-  simp only [func3CompletedPtrReload, func3CompletedLengthGuard,
-    List.cons_append, List.nil_append] at Hreload ⊢
-  iapply Hreload
-  isplitl [Hframe]
-  · iexact Hframe
-  iintro Hframe
-  have Hdispatch := twp_func3_enter_nonempty_decode
-    (hlc := hlc) original completed capacity dataPtr frontier history
-    horiginal hcompleted hgeo current aux2 dataPtr aux5 aux7 aux8 aux9 aux10
-    (stack := stack) (afterBlock := afterBlock)
-    (arity := arity) (remainder := remainder) (controls := controls)
-    (calls := calls) (s := s) (E := E) (Φ := Φ)
-  simp only [func3CompletedLengthGuard, List.cons_append, List.nil_append]
-    at Hdispatch
-  iapply Hdispatch
-  iapply Hcont $$ Hframe
-
 /-! ## Values allocation -/
 
 /-- Execute the generated allocation marker and values allocation call for a
