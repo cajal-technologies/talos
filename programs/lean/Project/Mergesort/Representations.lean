@@ -1070,6 +1070,34 @@ paths after their signed-end guard. -/
 def allocatorRequiredPages (finish : UInt32) : UInt32 :=
   (finish + 65535) >>> (16 : UInt32)
 
+/-- Below the allocator's signed-end limit, its generated shift computes the
+ordinary ceiling page count without wrapping the preceding addition. -/
+theorem allocatorRequiredPages_toNat (finish : UInt32)
+    (hfinish : finish.toNat < 2147483648) :
+    (allocatorRequiredPages finish).toNat =
+      (finish.toNat + 65535) / 65536 := by
+  have hsum : finish.toNat + 65535 < 2 ^ 32 := by omega
+  unfold allocatorRequiredPages
+  rw [UInt32.toNat_shiftRight,
+    show (16 : UInt32).toNat % 32 = 16 by decide,
+    Nat.shiftRight_eq_div_pow]
+  norm_num
+  rw [show (65535 : UInt32).toNat = 65535 by decide]
+  norm_num at hsum
+  rw [Nat.mod_eq_of_lt hsum]
+
+/-- The generated ceiling page count physically covers every byte through the
+accepted allocation finish. -/
+theorem allocatorRequiredPages_covers (finish : UInt32)
+    (hfinish : finish.toNat < 2147483648) :
+    finish.toNat ≤ (allocatorRequiredPages finish).toNat * 65536 := by
+  rw [allocatorRequiredPages_toNat finish hfinish]
+  have hself : (finish.toNat + 65535) / 65536 ≤
+      (finish.toNat + 65535) / 65536 := Nat.le_refl _
+  have hceil :=
+    (Nat.div_le_iff_le_mul (by norm_num : 0 < 65536)).mp hself
+  omega
+
 /-- A successful signed-end check bounds the allocator's target by 2 GiB, or
 32768 Wasm pages.  This also justifies that the `finish + 65535` computation
 used for ceiling division cannot wrap. -/

@@ -22,6 +22,84 @@ open Project.Mergesort.Contracts
 open Project.Mergesort.Representations
 open scoped Wasm.SmallStep.Outcome
 
+/-- Claim a fresh physical range while taking a generated constant step.
+The claim is a ghost-only update, so the Wasm store and the instruction's
+ordinary transition are unchanged.  All reachable allocator bodies share
+this boundary between page-capacity reasoning and sparse byte ownership. -/
+theorem twp_const_alloc_freshRange_owned
+    [WasmSmallStepGS hlc Universal.State]
+    {params localValues values : List Value}
+    {value : UInt32} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame} {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → HeapIProp}
+    (frontier ownedPages : Nat) (base : UInt32) (size : Nat)
+    (hbase : frontier ≤ base.toNat)
+    (hbound : base.toNat + size ≤ ownedPages * 65536)
+    (hnowrap : base.toNat + size < UInt32.size)
+    (Hwp : ∀ bytes : List UInt8,
+      ⌜bytes.length = size⌝ -∗
+      heapFrontierOwn (base.toNat + size) -∗
+      memoryPagesOwn ownedPages -∗
+      Project.Mergesort.Representations.ByteSlice base bytes -∗
+      WP (.running
+        ⟨⟨params, localValues, .i32 value :: values⟩,
+          code, arity, remainder, controls, calls⟩ : Expr Universal.State)
+        @ s; E [{ Φ }]) :
+    heapFrontierOwn frontier -∗
+    memoryPagesOwn ownedPages -∗
+    WP (.running
+      ⟨⟨params, localValues, values⟩,
+        .const value :: code, arity, remainder, controls, calls⟩ :
+          Expr Universal.State)
+        @ s; E [{ Φ }] := by
+  iintro Hfrontier Hpages
+  iapply twp_lift_step_no_fork
+      (@TerminalView.running_not_val Universal.State ObservableOutcome _ _)
+  iintro %store %ns %obs %nt Hσ
+  imod stateInterp_alloc_freshRange_owned store ns obs nt
+      frontier ownedPages base size hbase hbound hnowrap $$
+      [Hσ Hfrontier Hpages] with ⟨Hσ, Hfrontier, Hpages, Hbytes⟩
+  · iframe
+  let bytes := physicalBytes store.wasm.mem base size
+  ihave Hslice : Project.Mergesort.Representations.ByteSlice base bytes $$
+      [Hbytes]
+  · unfold Project.Mergesort.Representations.ByteSlice
+    iframe Hbytes
+    ipureintro
+    simpa [bytes] using hnowrap
+  ihave Hnext := Hwp bytes
+  ispecialize Hnext $$ %(by simp [bytes]) Hfrontier Hpages Hslice
+  iapply fupd_mask_intro Std.LawfulSet.empty_subset
+  iintro Hclose
+  isplitr
+  · ipureintro
+    cases s <;> simp only [Stuckness.MaybeReducibleNoObs]
+    exact ⟨_, store, [], ⟨rfl, _, rfl, Step.const⟩⟩
+  iintro %κ %e₂ %store₂ %forks %Hstep
+  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
+  change forks = [] at hforks
+  subst forks
+  subst κ
+  obtain ⟨rfl, hconfig⟩ := step_deterministic Step.const wasmStep
+  have parts := Config.mk.inj hconfig
+  have hexpr := parts.1
+  have hstore := parts.2
+  simp only at hexpr hstore
+  subst e₂
+  subst store₂
+  imod Hclose
+  imodintro
+  isplit
+  · ipureintro
+    rfl
+  isplit
+  · ipureintro
+    rfl
+  isplitl [Hσ]
+  · iexact Hσ
+  · iexact Hnext
+
 private abbrev readImport : ImportDecl :=
   { module := "stdio", name := "read",
     params := [.i32, .i32], results := [.i32] }
