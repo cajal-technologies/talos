@@ -32,6 +32,28 @@ def startConfig? [Inhabited α] (env : HostEnv α) (m : Module) (op : String)
     { module := m, host := env }
     entry { (m.initialStore : Store α) with host := initial } []).toOption
 
+/-- Initialize a zero-argument export as an actual Wasm `call` instruction.
+Unlike `startConfig?`, which enters a local function body directly, this shape
+is suitable for applying a call-site contract to the exported function.  The
+callee's result arity is recovered from the ordinary initializer so this
+remains faithful to the selected export. -/
+def startCallConfig? [Inhabited α] (env : HostEnv α) (m : Module)
+    (op : String) (initial : α) : Option (SmallStep.Config α) := do
+  let entry ← m.findExport op
+  let direct ← (SmallStep.initConfig
+    { module := m, host := env }
+    entry { (m.initialStore : Store α) with host := initial } []).toOption
+  let resultArity ← match direct.expr with
+    | .running thread => some thread.resultArity
+    | _ => none
+  some
+    { expr := .running
+        { locals := {}
+          code := [.call entry]
+          resultArity
+          callerRemainder := [] }
+      store := direct.store }
+
 /-- Export `op` of `m`, started under `env` in host state `initial`, terminates
 having returned no values and left a host state satisfying `post`. -/
 def RunsWith [Inhabited α] (env : HostEnv α) (m : Module) (op : String)
@@ -52,5 +74,16 @@ def TrapsWithHost [Inhabited α] (env : HostEnv α) (m : Module) (op : String)
   ∃ config,
     startConfig? env m op initial = some config ∧
     SmallStep.TrapsWith config reason (fun final => post final.wasm.host)
+
+/-- Partial correctness of a zero-argument exported call, observing both
+normal completion and structural traps while hiding the final machine store.
+This predicate intentionally makes no termination claim. -/
+def PartiallyRunsWithOutcome [Inhabited α]
+    (env : HostEnv α) (m : Module) (op : String)
+    (initial : α) (post : SmallStep.ObservableOutcome → α → Prop) : Prop :=
+  ∃ config,
+    startCallConfig? env m op initial = some config ∧
+    SmallStep.PartiallyMeetsOutcome config
+      (fun outcome final => post outcome final.wasm.host)
 
 end Wasm

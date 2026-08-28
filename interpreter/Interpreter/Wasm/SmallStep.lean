@@ -216,6 +216,20 @@ inductive Expr (α : Type) where
   | done (values : List Value)
   | trapped (reason : TrapReason)
 
+/-- Terminal outcomes observed by outcome-sensitive Iris proofs and by
+relational equivalence.  This is a view of the authoritative `Expr`; it does
+not introduce a second transition system. -/
+inductive ObservableOutcome where
+  | done (values : List Value)
+  | trapped (reason : TrapReason)
+  deriving BEq, Repr
+
+/-- Embed an observable terminal outcome back into the authoritative
+expression type. -/
+def ObservableOutcome.toExpr : ObservableOutcome → Expr α
+  | .done values => .done values
+  | .trapped reason => .trapped reason
+
 structure Config (α : Type) where
   expr : Expr α
   store : MachineStore α
@@ -7149,6 +7163,15 @@ def PartiallyMeets (initial : Config α)
     (post : List Value → MachineStore α → Prop) : Prop :=
   ∀ trace values store, Steps initial trace ⟨.done values, store⟩ → post values store
 
+/-- Outcome-sensitive partial correctness for the small-step semantics.  Every
+finite observable terminal trace must satisfy `post`; divergence is not ruled
+out.  Unlike `PartiallyMeets`, this predicate also constrains structural traps,
+which is required by public APIs with a distinguished terminal failure. -/
+def PartiallyMeetsOutcome (initial : Config α)
+    (post : ObservableOutcome → MachineStore α → Prop) : Prop :=
+  ∀ trace outcome store,
+    Steps initial trace ⟨outcome.toExpr, store⟩ → post outcome store
+
 /-- Finite-trace total correctness, used to preserve termination results which
 already have a concrete terminating execution argument. -/
 def TerminatesWith (initial : Config α)
@@ -7161,6 +7184,32 @@ have a separate specification rather than being folded into
 def TrapsWith (initial : Config α) (reason : TrapReason)
     (post : MachineStore α → Prop) : Prop :=
   ∃ trace store, Steps initial trace ⟨.trapped reason, store⟩ ∧ post store
+
+/-- Finite-trace total correctness with both normal return and structural
+trapping as observable terminal outcomes.  This is the common target of an
+outcome-valued total WP; clients can recover `TerminatesWith` or `TrapsWith`
+by case analysis on the witnessed outcome. -/
+def TerminatesWithOutcome (initial : Config α)
+    (post : ObservableOutcome → MachineStore α → Prop) : Prop :=
+  ∃ trace outcome store,
+    Steps initial trace ⟨outcome.toExpr, store⟩ ∧ post outcome store
+
+/-- A normal `TerminatesWith` execution is an outcome-valued execution. -/
+theorem TerminatesWith.toOutcome
+    (execution : TerminatesWith initial post) :
+    TerminatesWithOutcome initial
+      (fun outcome store =>
+        ∃ values, outcome = .done values ∧ post values store) := by
+  obtain ⟨trace, values, store, steps, hpost⟩ := execution
+  exact ⟨trace, .done values, store, steps, values, rfl, hpost⟩
+
+/-- A structural `TrapsWith` execution is an outcome-valued execution. -/
+theorem TrapsWith.toOutcome
+    (execution : TrapsWith initial reason post) :
+    TerminatesWithOutcome initial
+      (fun outcome store => outcome = .trapped reason ∧ post store) := by
+  obtain ⟨trace, store, steps, hpost⟩ := execution
+  exact ⟨trace, .trapped reason, store, steps, rfl, hpost⟩
 
 /-- Package an explicit finite trapping execution and its postcondition. -/
 theorem TrapsWith.of_steps

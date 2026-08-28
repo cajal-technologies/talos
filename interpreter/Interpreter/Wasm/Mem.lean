@@ -235,10 +235,45 @@ theorem Mem.writeBytes_append (m : Mem) (offset : Nat) (xs ys : List UInt8) :
           omega
         rw [dif_neg hall]
 
+/-- Writing an empty byte list leaves memory unchanged. -/
+@[simp] theorem Mem.writeBytes_nil (m : Mem) (offset : Nat) :
+    m.writeBytes offset [] = m := by
+  cases m with
+  | mk pages bytes =>
+      simp only [Mem.writeBytes, List.length_nil, Nat.add_zero]
+      congr
+      funext i
+      rw [dif_neg (by omega)]
+
+/-- Writing a nonempty byte list is a single-byte write followed by the tail.
+The bound identifies the natural offset with its `UInt32` address. -/
+theorem Mem.writeBytes_cons (m : Mem) (offset : Nat) (b : UInt8)
+    (bs : List UInt8) (h : offset < UInt32.size) :
+    m.writeBytes offset (b :: bs) =
+      (m.write8 (UInt32.ofNat offset) b).writeBytes (offset + 1) bs := by
+  rw [show b :: bs = [b] ++ bs by rfl, Mem.writeBytes_append]
+  congr 1
+  cases m with
+  | mk pages bytes =>
+      simp only [Mem.writeBytes, Mem.write8, List.length_cons, List.length_nil]
+      congr
+      funext i
+      rw [UInt32.toNat_ofNat_of_lt' h]
+      by_cases hi : i = offset
+      · subst i
+        simp
+      · simp only [hi, ↓reduceIte]
+        rw [dif_neg (by omega)]
+
 /-- Read `len` bytes starting at byte offset `offset`. Used by the
 cross-memory `memory.copy`; the caller checks bounds. -/
 def Mem.readBytes (m : Mem) (offset len : Nat) : List UInt8 :=
   (List.range len).map fun i => m.bytes (offset + i)
+
+theorem Mem.readBytes_getElem? (m : Mem) (offset len i : Nat)
+    (hi : i < len) :
+    (m.readBytes offset len)[i]? = some (m.bytes (offset + i)) := by
+  simp [Mem.readBytes, hi]
 
 /-- Write a slice of `src` into memory at `dst`. The byte at address
 `dst + k` (for `0 ≤ k < len`) is `src[srcOff + k]`. The caller is

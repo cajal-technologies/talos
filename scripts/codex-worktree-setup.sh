@@ -88,6 +88,12 @@ if [[ "${source_tree}" != "${worktree}" ]]; then
     # Third-party sources and their cached oleans (Mathlib, Iris, and transitives).
     clone_tree "${source_tree}/.lake/packages" "${worktree}/.lake/packages"
 
+    # Generated Lean modules read these WAT files at compile time. Seed them as
+    # a cache; the verifier build below refreshes them for the selected commit.
+    clone_tree \
+        "${source_tree}/programs/rust/build" \
+        "${worktree}/programs/rust/build"
+
     # Project-owned Lake artifacts. Keep these worktree-local so simultaneous
     # builds cannot overwrite one another.
     package_dirs=(
@@ -119,5 +125,14 @@ if [[ "${seeded_artifacts}" == true && "${dependency_manifests_differ}" == true 
     lake -d "${worktree}/programs/lean" exe cache get
 fi
 
+echo "Building the Rust-to-Wasm inputs required by generated Lean modules..."
+(
+    cd "${worktree}/programs"
+    lake -d ../verifier exe verifier build
+)
+
 echo "Reconciling the cloned artifacts with this worktree..."
-lake -d "${worktree}/programs/lean" build
+(
+    cd "${worktree}/programs/lean"
+    lake build
+)

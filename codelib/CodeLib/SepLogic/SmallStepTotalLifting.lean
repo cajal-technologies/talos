@@ -18,7 +18,8 @@ open Iris Language Language.Notation BI
 section
 variable {hlc : outParam HasLC} {Expr State Obs Val}
 variable [Λ : Language Expr State Obs Val]
-variable {GF : BundledGFunctors} [ι : IrisGS_gen hlc Expr GF]
+variable {GF : BundledGFunctors}
+variable [ι : @IrisGS_gen hlc Expr Val State Obs Λ GF]
 variable {s : Stuckness} {E : CoPset}
 variable {e₁ : Expr} {Φ : Val → IProp GF}
 /-- Total lifting for steps that fork no threads. Lived in iris-lean's
@@ -54,12 +55,22 @@ namespace Wasm.SmallStep
 open Iris Iris.ProgramLogic Language.Notation
 open Wasm.SepLogic
 
+section terminalGeneric
+
 variable [WasmSmallStepGS hlc α]
-local instance instWasmTotalIrisGS :
-    IrisGS_gen hlc (Expr α) (WasmHeapGF α) :=
-  instIrisGS
+variable {Terminal : Type}
+variable [view : TerminalView α Terminal]
+local instance (priority := high) activeTerminalLanguage :
+    Language (Expr α) (MachineStore α) StepKind Terminal :=
+  TerminalView.canonicalLanguage
+local instance (priority := high) activeTerminalIrisGS :
+    @IrisGS_gen hlc (Expr α) Terminal (MachineStore α) StepKind
+      activeTerminalLanguage (WasmHeapGF α) :=
+  { numLatersPerStep _ := 0
+    forkPost _ := iprop(True)
+    stateInterp_mono _ _ _ _ := by iintro $ }
 variable {s : Stuckness} {E : CoPset}
-variable {Φ : List Value → IProp (WasmHeapGF α)}
+variable {Φ : Terminal → IProp (WasmHeapGF α)}
 
 /-- Generic total lifting rule for a store-preserving deterministic Wasm
 step. Unlike `wp_pureStep`, its continuation is not guarded by a later. -/
@@ -70,7 +81,7 @@ theorem twp_pureStep
     WP (Expr.running next : Expr α) @ s; E [{ Φ }] ⊢
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   iintro Htwp
-  iapply twp_lift_step_no_fork rfl
+  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
   iintro %store %ns %obs %nt Hσ
   iapply fupd_mask_intro Std.LawfulSet.empty_subset
   iintro Hclose
@@ -112,7 +123,7 @@ theorem twp_finish
         ⟨{ locals with values }, [], arity, remainder, [], []⟩ :
           Expr α) @ s; E [{ Φ }] := by
   iintro Htwp
-  iapply twp_lift_step_no_fork rfl
+  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
   iintro %store %ns %obs %nt Hσ
   iapply fupd_mask_intro Std.LawfulSet.empty_subset
   iintro Hclose
@@ -153,7 +164,7 @@ theorem twp_returnFromFunction
         ⟨locals, .ret :: code, arity, remainder, controls, []⟩ : Expr α) @
         s; E [{ Φ }] := by
   iintro Htwp
-  iapply twp_lift_step_no_fork rfl
+  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
   iintro %store %ns %obs %nt Hσ
   iapply fupd_mask_intro Std.LawfulSet.empty_subset
   iintro Hclose
@@ -294,6 +305,21 @@ theorem twp_shl
       [{ Φ }] :=
   twp_pureStep _ _ _ (fun _ => Step.shl)
 
+theorem twp_shrU
+    {params localValues values : List Value}
+    {lhs rhs : UInt32} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame} :
+    WP (.running
+      ⟨⟨params, localValues, .i32 (lhs >>> (rhs % 32)) :: values⟩,
+        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
+        [{ Φ }] ⊢
+    WP (.running
+      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
+        .shrU :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
+      [{ Φ }] :=
+  twp_pureStep _ _ _ (fun _ => Step.shrU)
+
 theorem twp_ltU
     {params localValues values : List Value}
     {lhs rhs result : UInt32} {code : Program} {arity : Nat}
@@ -309,6 +335,87 @@ theorem twp_ltU
         .ltU :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
       [{ Φ }] :=
   twp_pureStep _ _ _ (fun _ => Step.ltU hresult)
+
+theorem twp_eq
+    {params localValues values : List Value}
+    {lhs rhs result : UInt32} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame}
+    (hresult : result = if lhs = rhs then 1 else 0) :
+    WP (.running
+      ⟨⟨params, localValues, .i32 result :: values⟩,
+        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
+        [{ Φ }] ⊢
+    WP (.running
+      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
+        .eq :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
+      [{ Φ }] :=
+  twp_pureStep _ _ _ (fun _ => Step.eq hresult)
+
+theorem twp_geU
+    {params localValues values : List Value}
+    {lhs rhs result : UInt32} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame}
+    (hresult : result = if lhs ≥ rhs then 1 else 0) :
+    WP (.running
+      ⟨⟨params, localValues, .i32 result :: values⟩,
+        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
+        [{ Φ }] ⊢
+    WP (.running
+      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
+        .geU :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
+      [{ Φ }] :=
+  twp_pureStep _ _ _ (fun _ => Step.geU hresult)
+
+theorem twp_leU
+    {params localValues values : List Value}
+    {lhs rhs result : UInt32} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame}
+    (hresult : result = if lhs ≤ rhs then 1 else 0) :
+    WP (.running
+      ⟨⟨params, localValues, .i32 result :: values⟩,
+        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
+        [{ Φ }] ⊢
+    WP (.running
+      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
+        .leU :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
+      [{ Φ }] :=
+  twp_pureStep _ _ _ (fun _ => Step.leU hresult)
+
+theorem twp_gtU
+    {params localValues values : List Value}
+    {lhs rhs result : UInt32} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame}
+    (hresult : result = if lhs > rhs then 1 else 0) :
+    WP (.running
+      ⟨⟨params, localValues, .i32 result :: values⟩,
+        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
+        [{ Φ }] ⊢
+    WP (.running
+      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
+        .gtU :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
+      [{ Φ }] :=
+  twp_pureStep _ _ _ (fun _ => Step.gtU hresult)
+
+theorem twp_select
+    {params localValues values : List Value}
+    {first second selected : Value} {condition : UInt32}
+    {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame}
+    (h : selected = if condition ≠ 0 then first else second) :
+    WP (.running
+      ⟨⟨params, localValues, selected :: values⟩,
+        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
+        [{ Φ }] ⊢
+    WP (.running
+      ⟨⟨params, localValues, .i32 condition :: second :: first :: values⟩,
+        .select :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
+      [{ Φ }] :=
+  twp_pureStep _ _ _ (fun _ => Step.select h)
 
 theorem twp_iff
     {params localValues values : List Value}
@@ -515,7 +622,7 @@ theorem twp_call
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
   iintro Hruntime Htwp
-  iapply twp_lift_step_no_fork rfl
+  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
   iintro %store %ns %obs %nt Hσ
   ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$
       [Hσ Hruntime]
@@ -582,6 +689,330 @@ theorem twp_call
     · iexact HruntimeElem
     · iexact HinstanceOwn
 
+/-- Total execution of an imported host function.  The resource-transfer
+premises are shared with `wp_callHost`; only the recursive continuations lose
+their later guards. -/
+theorem twp_callHost
+    (runtimeModule : Module) (functionIndex : Nat) (imp : ImportDecl)
+    (hostFn : HostFn α)
+    (himports : functionIndex < runtimeModule.imports.length)
+    (himp : runtimeModule.imports[functionIndex] = imp)
+    (hostEnv : HostEnv α)
+    (hfuncs : hostEnv.funcs[functionIndex]? = some hostFn)
+    {params localValues values : List Value}
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    (P : IProp (WasmHeapGF α))
+    (QRet : List Value → IProp (WasmHeapGF α))
+    (QTrap : IProp (WasmHeapGF α))
+    (QThrow : IProp (WasmHeapGF α))
+    (callerId : ModuleInstanceId)
+    (hRetTransfer : ∀ (store : MachineStore α) (ns : Nat)
+        (obs : List StepKind) (nt : Nat),
+        store.runtime.currentModule = runtimeModule →
+        ∀ results postWasm,
+        hostFn.invoke store.wasm (values.take imp.params.length).reverse =
+          .Return results postWasm →
+        P ∗ stateInterp (GF := WasmHeapGF α) store ns obs nt ==∗
+        QRet results ∗
+        stateInterp (GF := WasmHeapGF α)
+          { store with wasm := postWasm } ns obs nt)
+    (hTrapTransfer : ∀ (store : MachineStore α) (ns : Nat)
+        (obs : List StepKind) (nt : Nat),
+        store.runtime.currentModule = runtimeModule →
+        ∀ postWasm msg,
+        hostFn.invoke store.wasm (values.take imp.params.length).reverse =
+          .Trap postWasm msg →
+        P ∗ stateInterp (GF := WasmHeapGF α) store ns obs nt ==∗
+        QTrap ∗
+        stateInterp (GF := WasmHeapGF α)
+          { store with wasm := postWasm } ns obs nt)
+    (hThrowTransfer : ∀ (store : MachineStore α) (ns : Nat)
+        (obs : List StepKind) (nt : Nat),
+        store.runtime.currentModule = runtimeModule →
+        ∀ postWasm tag xs,
+        hostFn.invoke store.wasm (values.take imp.params.length).reverse =
+          .Throw postWasm tag xs →
+        P ∗ stateInterp (GF := WasmHeapGF α) store ns obs nt ==∗
+        QThrow ∗
+        stateInterp (GF := WasmHeapGF α)
+          { store with wasm := postWasm } ns obs nt) :
+    let current : ThreadState α :=
+      ⟨⟨params, localValues, values⟩, .call functionIndex :: code,
+        arity, remainder, controls, calls⟩
+    P -∗
+    runtimeModuleOwn callerId runtimeModule -∗
+    hostEnvOwn callerId.id hostEnv -∗
+    (∀ preWasm results postWasm
+          (_h : hostFn.invoke preWasm
+            (values.take imp.params.length).reverse =
+            .Return results postWasm),
+        QRet results ∗ runtimeModuleOwn callerId runtimeModule -∗
+        WP (Expr.running
+            ⟨⟨params, localValues,
+                results.take imp.results.length ++
+                  values.drop imp.params.length⟩,
+              code, arity, remainder, controls, calls⟩ : Expr α)
+          @ s; E [{ Φ }]) -∗
+    (∀ preWasm postWasm msg
+          (_h : hostFn.invoke preWasm
+            (values.take imp.params.length).reverse =
+            .Trap postWasm msg),
+        QTrap -∗
+        WP (Expr.trapped (.host msg) : Expr α) @ s; E [{ Φ }]) -∗
+    (∀ preWasm postWasm tag xs
+          (_h : hostFn.invoke preWasm
+            (values.take imp.params.length).reverse =
+            .Throw postWasm tag xs),
+        QThrow -∗
+        WP (Expr.running
+            ⟨⟨params, localValues, values.drop imp.params.length⟩,
+              [], arity, remainder,
+              [{ kind := .throwing tag xs
+                 paramArity := 0
+                 resultArity := 0
+                 body := []
+                 continuation := []
+                 belowStack := [] }] ++ controls,
+              calls⟩ : Expr α)
+          @ s; E [{ Φ }]) -∗
+    WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
+  dsimp only
+  iintro HP Hruntime Henv HwpRet HwpTrap HwpThrow
+  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
+  iintro %store %ns %obs %nt Hσ
+  ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$
+      [Hσ Hruntime]
+  · imod stateInterp_runtimeModule_agree store ns obs nt
+      callerId runtimeModule $$ [$Hσ $Hruntime] with %Hmodule
+    ipureintro
+    exact Hmodule
+  simp only [runtimeModuleOwn]
+  icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩
+  have himports' : functionIndex <
+      store.runtime.currentModule.imports.length := by
+    simpa only [Hmodule] using himports
+  have himp' : store.runtime.currentModule.imports[functionIndex] = imp := by
+    simpa only [Hmodule] using himp
+  ihave %Hhost : ⌜store.runtime.currentHost = hostEnv⌝ $$
+      [Hσ HinstanceOwn Henv]
+  · imod stateInterp_hostEnv store ns obs nt callerId.id hostEnv $$
+      [$Hσ $HinstanceOwn $Henv] with %Hhost
+    ipureintro
+    exact Hhost
+  have hhost' : store.runtime.currentHost.funcs[functionIndex]? =
+      some hostFn := by
+    rw [Hhost]
+    exact hfuncs
+  match h : hostFn.invoke store.wasm
+      (values.take imp.params.length).reverse with
+  | .Return results newWasm =>
+    iapply fupd_mask_intro Std.LawfulSet.empty_subset
+    iintro Hclose
+    isplitr
+    · ipureintro
+      cases s <;> simp only [Stuckness.MaybeReducibleNoObs]
+      exact ⟨.running ⟨⟨params, localValues,
+          results.take imp.results.length ++
+            values.drop imp.params.length⟩,
+        code, arity, remainder, controls, calls⟩,
+        { store with wasm := newWasm }, [],
+        ⟨rfl, _, rfl, Step.callHostReturn himports' himp' hhost' h⟩⟩
+    iintro %κ %e₂ %store₂ %forks %Hstep
+    rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
+    change forks = [] at hforks
+    subst forks
+    subst κ
+    obtain ⟨rfl, hconfig⟩ :=
+      step_deterministic
+        (Step.callHostReturn (α := α) himports' himp' hhost' h) wasmStep
+    have parts := Config.mk.inj hconfig
+    have hexpr := parts.1
+    have hstore := parts.2
+    simp only at hexpr hstore
+    subst e₂
+    subst store₂
+    imod hRetTransfer store ns obs nt Hmodule results newWasm h $$
+      [$HP $Hσ] with ⟨HQ, Hσ⟩
+    imod Hclose
+    imodintro
+    isplit
+    · ipureintro
+      rfl
+    isplit
+    · ipureintro
+      rfl
+    isplitl [Hσ]
+    · iexact Hσ
+    · ispecialize HwpRet $$ %(store.wasm) %results %newWasm %h
+      iapply HwpRet
+      isplitl [HQ]
+      · iexact HQ
+      · isplitl [HruntimeElem]
+        · iexact HruntimeElem
+        · iexact HinstanceOwn
+  | .Trap newWasm msg =>
+    iclear HinstanceOwn HruntimeElem
+    iapply fupd_mask_intro Std.LawfulSet.empty_subset
+    iintro Hclose
+    isplitr
+    · ipureintro
+      cases s <;> simp only [Stuckness.MaybeReducibleNoObs]
+      exact ⟨.trapped (.host msg), { store with wasm := newWasm }, [],
+        ⟨rfl, _, rfl, Step.callHostTrap himports' himp' hhost' h⟩⟩
+    iintro %κ %e₂ %store₂ %forks %Hstep
+    rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
+    change forks = [] at hforks
+    subst forks
+    subst κ
+    obtain ⟨rfl, hconfig⟩ :=
+      step_deterministic
+        (Step.callHostTrap (α := α) himports' himp' hhost' h) wasmStep
+    have parts := Config.mk.inj hconfig
+    have hexpr := parts.1
+    have hstore := parts.2
+    simp only at hexpr hstore
+    subst e₂
+    subst store₂
+    imod hTrapTransfer store ns obs nt Hmodule newWasm msg h $$
+      [$HP $Hσ] with ⟨HQ, Hσ⟩
+    imod Hclose
+    imodintro
+    isplit
+    · ipureintro
+      rfl
+    isplit
+    · ipureintro
+      rfl
+    isplitl [Hσ]
+    · iexact Hσ
+    · ispecialize HwpTrap $$ %(store.wasm) %newWasm %msg %h
+      iapply HwpTrap
+      iexact HQ
+  | .Throw newWasm tag xs =>
+    iclear HinstanceOwn HruntimeElem
+    iapply fupd_mask_intro Std.LawfulSet.empty_subset
+    iintro Hclose
+    isplitr
+    · ipureintro
+      cases s <;> simp only [Stuckness.MaybeReducibleNoObs]
+      exact ⟨.running
+          ⟨⟨params, localValues, values.drop imp.params.length⟩,
+            [], arity, remainder,
+            [{ kind := .throwing tag xs
+               paramArity := 0
+               resultArity := 0
+               body := []
+               continuation := []
+               belowStack := [] }] ++ controls,
+            calls⟩,
+        { store with wasm := newWasm }, [],
+        ⟨rfl, _, rfl, Step.callHostThrow himports' himp' hhost' h⟩⟩
+    iintro %κ %e₂ %store₂ %forks %Hstep
+    rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
+    change forks = [] at hforks
+    subst forks
+    subst κ
+    obtain ⟨rfl, hconfig⟩ :=
+      step_deterministic
+        (Step.callHostThrow (α := α) himports' himp' hhost' h) wasmStep
+    have parts := Config.mk.inj hconfig
+    have hexpr := parts.1
+    have hstore := parts.2
+    simp only at hexpr hstore
+    subst e₂
+    subst store₂
+    imod hThrowTransfer store ns obs nt Hmodule newWasm tag xs h $$
+      [$HP $Hσ] with ⟨HQ, Hσ⟩
+    imod Hclose
+    imodintro
+    isplit
+    · ipureintro
+      rfl
+    isplit
+    · ipureintro
+      rfl
+    isplitl [Hσ]
+    · iexact Hσ
+    · ispecialize HwpThrow $$ %(store.wasm) %newWasm %tag %xs %h
+      iapply HwpThrow
+      iexact HQ
+
+theorem twp_returnFromCallFallthrough
+    {calleeLocals callerLocals : Locals}
+    {callerCode : Program}
+    {calleeArity callerArity : Nat}
+    {calleeRemainder callerRemainder : List Value}
+    {callerControls : List ControlFrame}
+    {returningInstance : ModuleInstanceId}
+    {module : Module}
+    {calls : List CallFrame} :
+    let caller : CallFrame :=
+      { locals := callerLocals
+        continuation := callerCode
+        resultArity := callerArity
+        callerRemainder := callerRemainder
+        control := callerControls
+        returningInstance := returningInstance }
+    let current : ThreadState α :=
+      ⟨calleeLocals, [], calleeArity, calleeRemainder, [], caller :: calls⟩
+    let next : ThreadState α :=
+      ⟨{ callerLocals with
+          values :=
+            calleeLocals.values.take calleeArity ++ callerLocals.values },
+        callerCode, callerArity, callerRemainder, callerControls, calls⟩
+    runtimeModuleOwn returningInstance module -∗
+    (runtimeModuleOwn returningInstance module -∗
+      WP (Expr.running next : Expr α) @ s; E [{ Φ }]) -∗
+      WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
+  dsimp only
+  iintro Hruntime Hwp
+  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
+  iintro %store %ns %obs %nt Hσ
+  simp only [runtimeModuleOwn]
+  icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩
+  ihave %Hentry : ⌜store.runtime.entry = returningInstance⌝ $$ [Hσ HinstanceOwn]
+  · imod stateInterp_currentInstance_agree store ns obs nt returningInstance $$
+        [$Hσ $HinstanceOwn] with %Hentry
+    ipureintro
+    exact Hentry
+  have hsame : returningInstance = store.runtime.entry := Hentry.symm
+  iapply fupd_mask_intro Std.LawfulSet.empty_subset
+  iintro Hclose
+  isplitr
+  · ipureintro
+    cases s <;> simp only [Stuckness.MaybeReducibleNoObs]
+    exact ⟨_, store, [],
+      ⟨rfl, _, rfl, Step.returnFromCallFallthrough hsame⟩⟩
+  iintro %κ %e₂ %store₂ %forks %Hstep
+  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
+  change forks = [] at hforks
+  subst forks
+  subst κ
+  obtain ⟨rfl, hconfig⟩ :=
+    step_deterministic (Step.returnFromCallFallthrough (α := α) hsame) wasmStep
+  have parts := Config.mk.inj hconfig
+  have hexpr := parts.1
+  have hstore := parts.2
+  simp only at hexpr hstore
+  subst e₂
+  subst store₂
+  imod Hclose
+  imodintro
+  isplit
+  · ipureintro
+    rfl
+  isplit
+  · ipureintro
+    rfl
+  isplitl [Hσ]
+  · iexact Hσ
+  · simp only [resumeCaller]
+    iapply Hwp
+    isplitl [HruntimeElem]
+    · iexact HruntimeElem
+    · iexact HinstanceOwn
+
 theorem twp_returnFromCallExplicit
     {calleeLocals callerLocals : Locals}
     {calleeCode callerCode : Program}
@@ -612,7 +1043,7 @@ theorem twp_returnFromCallExplicit
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
   iintro Hruntime Hwp
-  iapply twp_lift_step_no_fork rfl
+  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
   iintro %store %ns %obs %nt Hσ
   simp only [runtimeModuleOwn]
   icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩
@@ -658,6 +1089,396 @@ theorem twp_returnFromCallExplicit
     · iexact HruntimeElem
     · iexact HinstanceOwn
 
+theorem twp_memorySize
+    {params localValues values : List Value}
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    (runtimeModule : Module) (instanceId : ModuleInstanceId)
+    (Hwp : ∀ pages : Nat,
+        runtimeModuleOwn instanceId runtimeModule -∗
+        WP (.running ⟨⟨params, localValues,
+            sizeValue runtimeModule.memIs64 pages :: values⟩,
+          code, arity, remainder, controls, calls⟩ : Expr α)
+          @ s; E [{ Φ }]) :
+    runtimeModuleOwn instanceId runtimeModule -∗
+    WP (.running ⟨⟨params, localValues, values⟩,
+        .memorySize :: code, arity, remainder, controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] := by
+  iintro Hruntime
+  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
+  iintro %store %ns %obs %nt Hσ
+  ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$
+      [Hσ Hruntime]
+  · imod stateInterp_runtimeModule_agree store ns obs nt
+        instanceId runtimeModule $$ [$Hσ $Hruntime] with %Hmodule
+    ipureintro
+    exact Hmodule
+  iapply fupd_mask_intro Std.LawfulSet.empty_subset
+  iintro Hclose
+  isplitr
+  · ipureintro
+    cases s <;> simp only [Stuckness.MaybeReducibleNoObs]
+    exact ⟨.running ⟨⟨params, localValues,
+        sizeValue store.runtime.currentModule.memIs64
+          store.wasm.mem.pages :: values⟩,
+      code, arity, remainder, controls, calls⟩,
+      store, [], ⟨rfl, _, rfl, Step.memorySize⟩⟩
+  iintro %κ %e₂ %store₂ %forks %Hstep
+  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
+  change forks = [] at hforks
+  subst forks
+  subst κ
+  obtain ⟨rfl, hconfig⟩ := step_deterministic Step.memorySize wasmStep
+  have parts := Config.mk.inj hconfig
+  have hexpr := parts.1
+  have hstore := parts.2
+  simp only at hexpr hstore
+  subst e₂
+  subst store₂
+  imod Hclose
+  imodintro
+  isplit
+  · ipureintro
+    rfl
+  isplit
+  · ipureintro
+    rfl
+  isplitl [Hσ]
+  · iexact Hσ
+  · simp only [Hmodule]
+    iapply Hwp store.wasm.mem.pages
+    iexact Hruntime
+
+/-- Total `memory.size` rule that returns an exact persistent snapshot of the
+observed physical page count while preserving an arbitrary caller frame. -/
+theorem twp_memorySize_tracked
+    {params localValues values : List Value}
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    {P : IProp (WasmHeapGF α)}
+    (runtimeModule : Module) (instanceId : ModuleInstanceId)
+    (Hwp : ∀ pages : Nat,
+        P -∗
+        runtimeModuleOwn instanceId runtimeModule -∗
+        memoryPagesOwn pages -∗
+        WP (.running ⟨⟨params, localValues,
+            sizeValue runtimeModule.memIs64 pages :: values⟩,
+          code, arity, remainder, controls, calls⟩ : Expr α)
+          @ s; E [{ Φ }]) :
+    P -∗
+    runtimeModuleOwn instanceId runtimeModule -∗
+    WP (.running ⟨⟨params, localValues, values⟩,
+        .memorySize :: code, arity, remainder, controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] := by
+  iintro HP Hruntime
+  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
+  iintro %store %ns %obs %nt Hσ
+  ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$
+      [Hσ Hruntime]
+  · imod stateInterp_runtimeModule_agree store ns obs nt
+        instanceId runtimeModule $$ [$Hσ $Hruntime] with %Hmodule
+    ipureintro
+    exact Hmodule
+  icombine HP Hruntime as Hclient
+  icombine Hσ Hclient as Hinput
+  imod (stateInterp_memoryPages_snapshot_frame store ns obs nt
+      (P := iprop(P ∗ runtimeModuleOwn instanceId runtimeModule))) $$
+      Hinput with Hout
+  icases Hout with ⟨⟨Hσ, #Hpages⟩, HP, Hruntime'⟩
+  ihave Hcont := Hwp store.wasm.mem.pages
+  ispecialize Hcont $$ HP Hruntime' Hpages
+  iapply fupd_mask_intro Std.LawfulSet.empty_subset
+  iintro Hclose
+  isplitr
+  · ipureintro
+    cases s <;> simp only [Stuckness.MaybeReducibleNoObs]
+    exact ⟨.running ⟨⟨params, localValues,
+        sizeValue store.runtime.currentModule.memIs64
+          store.wasm.mem.pages :: values⟩,
+      code, arity, remainder, controls, calls⟩,
+      store, [], ⟨rfl, _, rfl, Step.memorySize⟩⟩
+  iintro %κ %e₂ %store₂ %forks %Hstep
+  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
+  change forks = [] at hforks
+  subst forks
+  subst κ
+  obtain ⟨rfl, hconfig⟩ := step_deterministic Step.memorySize wasmStep
+  have parts := Config.mk.inj hconfig
+  have hexpr := parts.1
+  have hstore := parts.2
+  simp only at hexpr hstore
+  subst e₂
+  subst store₂
+  imod Hclose
+  imodintro
+  isplit
+  · ipureintro
+    rfl
+  isplit
+  · ipureintro
+    rfl
+  isplitl [Hσ]
+  · iexact Hσ
+  · simp only [Hmodule]
+    iexact Hcont
+
+/-- Total `memory.grow` rule. The continuation handles both the physical
+success result (the previous page count) and the standard failure sentinel. -/
+theorem twp_memoryGrow
+    {params localValues values : List Value}
+    {delta : UInt32}
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    (runtimeModule : Module) (instanceId : ModuleInstanceId)
+    (Hwp : ∀ result : UInt32,
+        runtimeModuleOwn instanceId runtimeModule -∗
+        WP (.running ⟨⟨params, localValues, .i32 result :: values⟩,
+          code, arity, remainder, controls, calls⟩ : Expr α)
+          @ s; E [{ Φ }]) :
+    runtimeModuleOwn instanceId runtimeModule -∗
+    WP (.running ⟨⟨params, localValues, .i32 delta :: values⟩,
+        .memoryGrow :: code, arity, remainder, controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] := by
+  iintro Hruntime
+  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
+  iintro %store %ns %obs %nt Hσ
+  cases hg : store.wasm.mem.grow delta
+      (store.wasm.memoryCap store.runtime.currentModule 0) with
+  | none =>
+    iapply fupd_mask_intro Std.LawfulSet.empty_subset
+    iintro Hclose
+    isplitr
+    · ipureintro
+      cases s <;> simp only [Stuckness.MaybeReducibleNoObs]
+      exact ⟨_, store, [],
+        ⟨rfl, _, rfl, Step.memoryGrowFailure hg⟩⟩
+    iintro %κ %e₂ %store₂ %forks %Hstep
+    rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
+    change forks = [] at hforks
+    subst forks
+    subst κ
+    obtain ⟨rfl, hconfig⟩ :=
+      step_deterministic (Step.memoryGrowFailure hg) wasmStep
+    have parts := Config.mk.inj hconfig
+    have hexpr := parts.1
+    have hstore := parts.2
+    simp only at hexpr hstore
+    subst e₂
+    subst store₂
+    imod Hclose
+    imodintro
+    isplit
+    · ipureintro
+      rfl
+    isplit
+    · ipureintro
+      rfl
+    isplitl [Hσ]
+    · iexact Hσ
+    · iapply Hwp (0xFFFFFFFF : UInt32)
+      iexact Hruntime
+  | some grown =>
+    obtain ⟨memory, previousPages⟩ := grown
+    iapply fupd_mask_intro Std.LawfulSet.empty_subset
+    iintro Hclose
+    isplitr
+    · ipureintro
+      cases s <;> simp only [Stuckness.MaybeReducibleNoObs]
+      exact ⟨.running ⟨⟨params, localValues,
+          .i32 previousPages.toUInt32 :: values⟩,
+        code, arity, remainder, controls, calls⟩,
+        { store with wasm := { store.wasm with mem := memory } }, [],
+        ⟨rfl, _, rfl, by
+          simpa only [Wasm.SmallStep.setMemory_eq] using
+            Step.memoryGrowSuccess hg⟩⟩
+    iintro %κ %e₂ %store₂ %forks %Hstep
+    rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
+    change forks = [] at hforks
+    subst forks
+    subst κ
+    have expectedStep : Step
+        ⟨.running ⟨⟨params, localValues, .i32 delta :: values⟩,
+          .memoryGrow :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .memoryGrow)
+        ⟨.running ⟨⟨params, localValues,
+            .i32 previousPages.toUInt32 :: values⟩,
+          code, arity, remainder, controls, calls⟩,
+          { store with wasm := { store.wasm with mem := memory } }⟩ := by
+      simpa only [Wasm.SmallStep.setMemory_eq] using
+        Step.memoryGrowSuccess hg
+    obtain ⟨rfl, hconfig⟩ := step_deterministic expectedStep wasmStep
+    have parts := Config.mk.inj hconfig
+    have hexpr := parts.1
+    have hstore := parts.2
+    simp only at hexpr hstore
+    subst e₂
+    subst store₂
+    imod (stateInterp_memoryGrow store ns obs nt delta
+        (store.wasm.memoryCap store.runtime.currentModule 0)
+        memory previousPages hg) $$ Hσ with Hσ
+    imod Hclose
+    imodintro
+    isplit
+    · ipureintro
+      rfl
+    isplit
+    · ipureintro
+      rfl
+    isplitl [Hσ]
+    · iexact Hσ
+    · iapply Hwp previousPages.toUInt32
+      iexact Hruntime
+
+/-- Tracked total `memory.grow` rule.  A snapshot previously issued by
+`memory.size` is threaded through an arbitrary caller frame.  Both outcomes
+relate that measurement to the actual pre-grow count; success additionally
+returns an exact new-page snapshot and the equations established by
+`Mem.grow`. -/
+theorem twp_memoryGrow_tracked
+    {params localValues values : List Value}
+    {delta : UInt32}
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    {P : IProp (WasmHeapGF α)}
+    (runtimeModule : Module) (instanceId : ModuleInstanceId)
+    (measuredPages : Nat)
+    (Hfailure : ∀ pages : Nat, measuredPages ≤ pages →
+        P -∗
+        runtimeModuleOwn instanceId runtimeModule -∗
+        memoryPagesOwn measuredPages -∗
+        WP (.running ⟨⟨params, localValues,
+            .i32 (0xFFFFFFFF : UInt32) :: values⟩,
+          code, arity, remainder, controls, calls⟩ : Expr α)
+          @ s; E [{ Φ }])
+    (Hsuccess : ∀ oldPages previousPages newPages : Nat,
+        previousPages = oldPages ∧
+          newPages = previousPages + delta.toNat →
+        measuredPages ≤ oldPages →
+        P -∗
+        runtimeModuleOwn instanceId runtimeModule -∗
+        memoryPagesOwn measuredPages -∗
+        memoryPagesOwn newPages -∗
+        WP (.running ⟨⟨params, localValues,
+            .i32 previousPages.toUInt32 :: values⟩,
+          code, arity, remainder, controls, calls⟩ : Expr α)
+          @ s; E [{ Φ }]) :
+    P -∗
+    runtimeModuleOwn instanceId runtimeModule -∗
+    memoryPagesOwn measuredPages -∗
+    WP (.running ⟨⟨params, localValues, .i32 delta :: values⟩,
+        .memoryGrow :: code, arity, remainder, controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] := by
+  iintro HP Hruntime HmeasuredPages
+  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
+  iintro %store %ns %obs %nt Hσ
+  ihave %hmeasuredPages : ⌜measuredPages ≤ store.wasm.mem.pages⌝ $$
+      [Hσ HmeasuredPages]
+  · imod (stateInterp_memoryPages_agree store ns obs nt measuredPages) $$
+        [$Hσ $HmeasuredPages] with ⟨_, _, %hle⟩
+    ipureintro
+    exact hle
+  cases hg : store.wasm.mem.grow delta
+      (store.wasm.memoryCap store.runtime.currentModule 0) with
+  | none =>
+    ihave Hcont := Hfailure store.wasm.mem.pages hmeasuredPages
+    ispecialize Hcont $$ HP Hruntime HmeasuredPages
+    iapply fupd_mask_intro Std.LawfulSet.empty_subset
+    iintro Hclose
+    isplitr
+    · ipureintro
+      cases s <;> simp only [Stuckness.MaybeReducibleNoObs]
+      exact ⟨_, store, [],
+        ⟨rfl, _, rfl, Step.memoryGrowFailure hg⟩⟩
+    iintro %κ %e₂ %store₂ %forks %Hstep
+    rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
+    change forks = [] at hforks
+    subst forks
+    subst κ
+    obtain ⟨rfl, hconfig⟩ :=
+      step_deterministic (Step.memoryGrowFailure hg) wasmStep
+    have parts := Config.mk.inj hconfig
+    have hexpr := parts.1
+    have hstore := parts.2
+    simp only at hexpr hstore
+    subst e₂
+    subst store₂
+    imod Hclose
+    imodintro
+    isplit
+    · ipureintro
+      rfl
+    isplit
+    · ipureintro
+      rfl
+    isplitl [Hσ]
+    · iexact Hσ
+    · iexact Hcont
+  | some grown =>
+    obtain ⟨memory, previousPages⟩ := grown
+    have hfacts : previousPages = store.wasm.mem.pages ∧
+        memory.pages = previousPages + delta.toNat := by
+      simp only [Mem.grow] at hg
+      split at hg
+      · have hinj := Prod.mk.inj (Option.some.inj hg)
+        exact ⟨hinj.2.symm,
+          (congrArg (fun result : Mem => result.pages) hinj.1).symm.trans
+            (by rw [hinj.2])⟩
+      · contradiction
+    ihave HcontNew := Hsuccess store.wasm.mem.pages previousPages memory.pages
+      hfacts hmeasuredPages
+    ispecialize HcontNew $$ HP Hruntime HmeasuredPages
+    iapply fupd_mask_intro Std.LawfulSet.empty_subset
+    iintro Hclose
+    isplitr
+    · ipureintro
+      cases s <;> simp only [Stuckness.MaybeReducibleNoObs]
+      exact ⟨.running ⟨⟨params, localValues,
+          .i32 previousPages.toUInt32 :: values⟩,
+        code, arity, remainder, controls, calls⟩,
+        { store with wasm := { store.wasm with mem := memory } }, [],
+        ⟨rfl, _, rfl, by
+          simpa only [Wasm.SmallStep.setMemory_eq] using
+            Step.memoryGrowSuccess hg⟩⟩
+    iintro %κ %e₂ %store₂ %forks %Hstep
+    rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
+    change forks = [] at hforks
+    subst forks
+    subst κ
+    have expectedStep : Step
+        ⟨.running ⟨⟨params, localValues, .i32 delta :: values⟩,
+          .memoryGrow :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .memoryGrow)
+        ⟨.running ⟨⟨params, localValues,
+            .i32 previousPages.toUInt32 :: values⟩,
+          code, arity, remainder, controls, calls⟩,
+          { store with wasm := { store.wasm with mem := memory } }⟩ := by
+      simpa only [Wasm.SmallStep.setMemory_eq] using
+        Step.memoryGrowSuccess hg
+    obtain ⟨rfl, hconfig⟩ := step_deterministic expectedStep wasmStep
+    have parts := Config.mk.inj hconfig
+    have hexpr := parts.1
+    have hstore := parts.2
+    simp only at hexpr hstore
+    subst e₂
+    subst store₂
+    icombine Hσ HcontNew as Hinput
+    imod (stateInterp_memoryGrow_tracked_frame store ns obs nt delta
+        (store.wasm.memoryCap store.runtime.currentModule 0)
+        memory previousPages hg) $$ Hinput with Hout
+    icases Hout with ⟨⟨Hσ, HnewPages, %_⟩, HcontNew⟩
+    ispecialize HcontNew $$ HnewPages
+    imod Hclose
+    imodintro
+    isplit
+    · ipureintro
+      rfl
+    isplit
+    · ipureintro
+      rfl
+    isplitl [Hσ]
+    · iexact Hσ
+    · iexact HcontNew
+
 theorem twp_load32
     {params localValues values : List Value}
     {address offset : UInt32} {code : Program} {arity : Nat}
@@ -683,7 +1504,7 @@ theorem twp_load32
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
   iintro Hword Htwp
-  iapply twp_lift_step_no_fork rfl
+  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
   iintro %store %ns %obs %nt Hσ
   ihave %Hfacts :
       ⌜store.wasm.mem.read32 (address + offset) = word ∧
@@ -768,7 +1589,7 @@ theorem twp_store32
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
   iintro Hword Htwp
-  iapply twp_lift_step_no_fork rfl
+  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
   iintro %store %ns %obs %nt Hσ
   ihave %Hfacts :
       ⌜store.wasm.mem.read32 (address + offset) = oldWord ∧
@@ -870,7 +1691,7 @@ theorem twp_memoryFill32
         .i32 len :: .i32 value :: .i32 destination :: values⟩,
         .memoryFill :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }] := by
   iintro Hbytes Htwp
-  iapply twp_lift_step_no_fork rfl
+  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
   iintro %store %ns %obs %nt Hσ
   ihave %Hpb : ⌜∀ i b, oldBytes[i]? = some b →
       store.wasm.mem.read8 (destination + UInt32.ofNat i) = b ∧
@@ -935,6 +1756,111 @@ theorem twp_memoryFill32
   · iapply Htwp
     iexact Hbytes
 
+theorem twp_memoryCopy32
+    {params localValues values : List Value}
+    {destination source len : UInt32}
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    (oldDstBytes srcBytes : List UInt8)
+    (hlen_dst : oldDstBytes.length = len.toNat)
+    (hlen_src : srcBytes.length = len.toNat)
+    (hpos : 0 < len.toNat)
+    (hnowrap_dst : destination.toNat + len.toNat < 4294967296)
+    (hnowrap_src : source.toNat + len.toNat < 4294967296) :
+    pointsToBytes 0 source srcBytes -∗
+    pointsToBytes 0 destination oldDstBytes -∗
+    (pointsToBytes 0 source srcBytes -∗
+      pointsToBytes 0 destination srcBytes -∗
+      WP (Expr.running ⟨⟨params, localValues, values⟩,
+        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }]) -∗
+    WP (Expr.running ⟨⟨params, localValues,
+        .i32 len :: .i32 source :: .i32 destination :: values⟩,
+        .memoryCopy :: code, arity, remainder, controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] := by
+  iintro Hsrc Hdst Htwp
+  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
+  iintro %store %ns %obs %nt Hσ
+  ihave %Hpbsrc : ⌜∀ i b, srcBytes[i]? = some b →
+      store.wasm.mem.read8 (source + UInt32.ofNat i) = b ∧
+      (source + UInt32.ofNat i).toNat < store.wasm.mem.pages * 65536⌝ $$
+      [Hσ Hsrc]
+  · imod stateInterp_pointsToBytes_agree store ns obs nt
+        source srcBytes $$ [$Hσ $Hsrc] with %Hpbsrc
+    ipureintro
+    exact Hpbsrc
+  ihave %Hpbdst : ⌜∀ i b, oldDstBytes[i]? = some b →
+      store.wasm.mem.read8 (destination + UInt32.ofNat i) = b ∧
+      (destination + UInt32.ofNat i).toNat < store.wasm.mem.pages * 65536⌝ $$
+      [Hσ Hdst]
+  · imod stateInterp_pointsToBytes_agree store ns obs nt
+        destination oldDstBytes $$ [$Hσ $Hdst] with %Hpbdst
+    ipureintro
+    exact Hpbdst
+  have hbound_src :
+      source.toNat + len.toNat ≤ store.wasm.mem.pages * 65536 := by
+    have := pointsToBytes_facts_bound Hpbsrc (by omega) (by omega)
+    omega
+  have hbound_dst :
+      destination.toNat + len.toNat ≤ store.wasm.mem.pages * 65536 := by
+    have := pointsToBytes_facts_bound Hpbdst (by omega) (by omega)
+    omega
+  iapply fupd_mask_intro Std.LawfulSet.empty_subset
+  iintro Hclose
+  isplitr
+  · ipureintro
+    cases s <;> simp only [Stuckness.MaybeReducibleNoObs]
+    exact ⟨.running ⟨⟨params, localValues, values⟩,
+        code, arity, remainder, controls, calls⟩,
+      { store with wasm :=
+          { store.wasm with mem :=
+              store.wasm.mem.copy destination.toNat source.toNat len.toNat } },
+      [], ⟨rfl, .instruction .memoryCopy, rfl,
+        by simpa only [setMemory_eq] using
+          (Step.memoryCopy32 hbound_dst hbound_src)⟩⟩
+  iintro %κ %e₂ %store₂ %forks %Hstep
+  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
+  change forks = [] at hforks
+  subst forks
+  subst κ
+  have expectedStep : Step
+      ⟨.running ⟨⟨params, localValues,
+          .i32 len :: .i32 source :: .i32 destination :: values⟩,
+          .memoryCopy :: code, arity, remainder, controls, calls⟩, store⟩
+      (.instruction .memoryCopy)
+      ⟨.running ⟨⟨params, localValues, values⟩,
+          code, arity, remainder, controls, calls⟩,
+        { store with wasm :=
+            { store.wasm with mem :=
+                store.wasm.mem.copy destination.toNat source.toNat oldDstBytes.length } }⟩ := by
+    rw [hlen_dst]
+    simpa only [setMemory_eq] using Step.memoryCopy32 hbound_dst hbound_src
+  obtain ⟨rfl, hconfig⟩ := step_deterministic expectedStep wasmStep
+  have parts := Config.mk.inj hconfig
+  have hexpr := parts.1
+  have hstore := parts.2
+  simp only at hexpr hstore
+  subst e₂
+  subst store₂
+  imod stateInterp_copy_bytes store ns obs nt
+      destination source oldDstBytes srcBytes
+      (hlen_src.trans hlen_dst.symm)
+      (by rw [hlen_dst]; exact hbound_dst)
+      (by rw [hlen_dst]; exact hnowrap_dst)
+      (by rw [hlen_src]; exact hbound_src)
+      (by rw [hlen_src]; exact hnowrap_src)
+      $$ [$Hσ $Hsrc $Hdst] with ⟨Hσ, Hsrc, Hdst⟩
+  imod Hclose
+  imodintro
+  isplit
+  · ipureintro
+    rfl
+  isplit
+  · ipureintro
+    rfl
+  isplitl [Hσ]
+  · iexact Hσ
+  · iapply Htwp $$ Hsrc Hdst
+
 /-- `throw` instruction (total form).  Tag identity is supplied by the
 persistent `tagTableOwn` fragment handed out at adequacy setup, not by an
 invariant of the state interpretation: the rule only needs `tagIndex` to be
@@ -967,7 +1893,7 @@ theorem twp_throwI
         .throwI tagIndex :: code, arity, remainder, controls, calls⟩ :
         Expr α) @ s; E [{ Φ }] := by
   iintro Hruntime Htags Hwp
-  iapply twp_lift_step_no_fork rfl
+  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
   iintro %store %ns %obs %nt Hσ
   ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$ [Hσ Hruntime]
   · imod stateInterp_runtimeModule_agree store ns obs nt
@@ -1051,7 +1977,7 @@ theorem twp_catchException
                 continuation := handlerContinuation, belowStack } :: outer,
             calls⟩ : Expr α) @ s; E [{ Φ }] := by
   iintro Hwp
-  iapply twp_lift_step_no_fork rfl
+  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
   iintro %store %ns %obs %nt Hσ
   iapply fupd_mask_intro Std.LawfulSet.empty_subset
   iintro Hclose
@@ -1173,7 +2099,7 @@ theorem twp_globalGet
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
   iintro Hglobal Htwp
-  iapply twp_lift_step_no_fork rfl
+  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
   iintro %store %ns %obs %nt Hσ
   have hcanonical : ∀ s : MachineStore α,
       canonicalGlobalIndex s 0 = 0 := fun _ => rfl
@@ -1295,7 +2221,7 @@ theorem twp_f32Load
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
   iintro Hword Htwp
-  iapply twp_lift_step_no_fork rfl
+  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
   iintro %store %ns %obs %nt Hσ
   ihave %Hfacts :
       ⌜store.wasm.mem.read32 (address + offset) = word ∧
@@ -1382,7 +2308,7 @@ theorem twp_f32Store
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
   iintro Hword Htwp
-  iapply twp_lift_step_no_fork rfl
+  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
   iintro %store %ns %obs %nt Hσ
   ihave %Hfacts :
       ⌜store.wasm.mem.read32 (address + offset) = oldWord ∧
@@ -1469,7 +2395,7 @@ theorem twp_globalSet
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
   iintro Hglobal Htwp
-  iapply twp_lift_step_no_fork rfl
+  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
   iintro %store %ns %obs %nt Hσ
   have hcanonical : ∀ s : MachineStore α,
       canonicalGlobalIndex s 0 = 0 := fun _ => rfl
@@ -1587,7 +2513,7 @@ theorem twp_f64Load
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
   iintro Hword Htwp
-  iapply twp_lift_step_no_fork rfl
+  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
   iintro %store %ns %obs %nt Hσ
   ihave %Hfacts :
       ⌜store.wasm.mem.read64 (address + offset) = word ∧
@@ -1683,7 +2609,7 @@ theorem twp_f64Store
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
   iintro Hword Htwp
-  iapply twp_lift_step_no_fork rfl
+  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
   iintro %store %ns %obs %nt Hσ
   ihave %Hfacts :
       ⌜store.wasm.mem.read64 (address + offset) = oldWord ∧
@@ -1786,7 +2712,7 @@ theorem twp_load64
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
   iintro Hword Htwp
-  iapply twp_lift_step_no_fork rfl
+  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
   iintro %store %ns %obs %nt Hσ
   ihave %Hfacts :
       ⌜store.wasm.mem.read64 (address + offset) = word ∧
@@ -1882,7 +2808,7 @@ theorem twp_store64
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
   iintro Hword Htwp
-  iapply twp_lift_step_no_fork rfl
+  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
   iintro %store %ns %obs %nt Hσ
   ihave %Hfacts :
       ⌜store.wasm.mem.read64 (address + offset) = oldWord ∧
@@ -2161,6 +3087,17 @@ theorem twp_swapElementsFunc2AliasPrefix
   simp only [UInt32.add_zero, UInt32.reduceAdd]
   iframe
 
+end terminalGeneric
+
+section successOnlyHelpers
+
+variable [WasmSmallStepGS hlc α]
+local instance instWasmTotalIrisGS :
+    IrisGS_gen hlc (Expr α) (WasmHeapGF α) :=
+  instIrisGS
+variable {s : Stuckness} {E : CoPset}
+variable {Φ : List Value → IProp (WasmHeapGF α)}
+
 theorem twp_swapElementsFunc2
     (ptrA ptrB : UInt32) (oldScratch oldA oldB : UInt64)
     (hroomA : ptrA.toNat + 8 ≤ 4294967296)
@@ -2262,6 +3199,25 @@ theorem twp_swapElementsFunc3
     · rw [← show (1048568 : UInt32) + 4 = 1048572 from rfl]
       iexact Hlen
 
+end successOnlyHelpers
+
+section terminalGenericHelpers
+
+variable [WasmSmallStepGS hlc α]
+variable {Terminal : Type}
+variable [view : TerminalView α Terminal]
+local instance (priority := high) activeTerminalLanguageHelpers :
+    Language (Expr α) (MachineStore α) StepKind Terminal :=
+  TerminalView.canonicalLanguage
+local instance (priority := high) activeTerminalIrisGSHelpers :
+    @IrisGS_gen hlc (Expr α) Terminal (MachineStore α) StepKind
+      activeTerminalLanguageHelpers (WasmHeapGF α) :=
+  { numLatersPerStep _ := 0
+    forkPost _ := iprop(True)
+    stateInterp_mono _ _ _ _ := by iintro $ }
+variable {s : Stuckness} {E : CoPset}
+variable {Φ : Terminal → IProp (WasmHeapGF α)}
+
 theorem twp_subI64
     {params localValues values : List Value}
     {lhs rhs : UInt64} {code : Program} {arity : Nat}
@@ -2276,6 +3232,20 @@ theorem twp_subI64
         .subI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
       [{ Φ }] :=
   twp_pureStep _ _ _ (fun _ => Step.subI64)
+
+theorem twp_mulI64
+    {params localValues values : List Value}
+    {lhs rhs : UInt64} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame} :
+    WP (.running
+      ⟨⟨params, localValues, .i64 (lhs * rhs) :: values⟩,
+        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }] ⊢
+    WP (.running
+      ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
+        .mulI64 :: code, arity, remainder, controls, calls⟩ : Expr α)
+      @ s; E [{ Φ }] :=
+  twp_pureStep _ _ _ (fun _ => Step.mulI64)
 
 theorem twp_constI64
     {params localValues values : List Value}
@@ -2458,7 +3428,8 @@ theorem twp_load32_addr
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
   iintro Hword Htwp
-  iapply twp_lift_step_no_fork rfl
+  iapply twp_lift_step_no_fork
+    (@TerminalView.running_not_val α Terminal view _)
   iintro %store %ns %obs %nt Hσ
   ihave %Hfacts :
       ⌜store.wasm.mem.read32 addr = word ∧
@@ -2519,5 +3490,7 @@ theorem twp_load32_addr
   · iexact Hσ
   · iapply Htwp
     iexact Hword
+
+end terminalGenericHelpers
 
 end Wasm.SmallStep
