@@ -61,6 +61,49 @@ theorem wp_pureStep
   · iexact Hwp
   · itrivial
 
+/-- Generic lifting rule for a store-preserving deterministic Wasm step that
+traps. Every trapping operand, reference, and arithmetic rule below is a thin
+specialization of this theorem. -/
+theorem wp_trapStep
+    (kind : StepKind) (current : ThreadState α) (reason : TrapReason)
+    (hstep : ∀ store : MachineStore α,
+      Step ⟨.running current, store⟩ kind ⟨.trapped reason, store⟩) :
+    True ⊢ WP (Expr.running current : Expr α) @ E ?{{ Φ }} := by
+  iintro -
+  iapply wp_lift_step rfl
+  iintro %store %ns %obs %obs' %nt Hσ
+  iapply fupd_mask_intro Std.LawfulSet.empty_subset
+  iintro Hclose
+  isplitr
+  · ipureintro; trivial
+  iintro !> %e₂ %store₂ %forks %Hprim Hcredit
+  rcases Hprim with ⟨hforks, actualKind, hobs, wasmStep⟩
+  change forks = [] at hforks
+  subst forks
+  subst obs
+  obtain ⟨rfl, hconfig⟩ :=
+    step_deterministic (hstep store) wasmStep
+  have parts := Config.mk.inj hconfig
+  have hexpr := parts.1
+  have hstore := parts.2
+  simp only at hexpr hstore
+  subst e₂
+  subst store₂
+  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+  imod Hclose
+  imodintro
+  isplitl [Hσ]
+  · iexact Hσ
+  isplitl []
+  · iapply wp_lift_stuck rfl
+    iintro %_ %_ %_ %_ -
+    iapply fupd_mask_intro Std.LawfulSet.empty_subset
+    iintro -
+    ipureintro
+    exact ⟨rfl, fun _ _ _ _ h => by
+      rcases h with ⟨-, ⟨_, -, htrapped⟩⟩; exact trapped_terminal htrapped⟩
+  · itrivial
+
 /-! ## Generic scalar numeric rules
 
 The float/conversion family is exposed through the evaluator functions used
@@ -7149,40 +7192,8 @@ theorem wp_unreachable
     {controls : List ControlFrame} {calls : List CallFrame} :
     True ⊢ WP (.running
       ⟨⟨params, localValues, values⟩,
-        .unreachable :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} := by
-  iintro -
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro; trivial
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ := step_deterministic Step.unreachable wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl []
-  · iapply wp_lift_stuck rfl
-    iintro %_ %_ %_ %_ -
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro -
-    ipureintro
-    exact ⟨rfl, fun _ _ _ _ h => by
-      rcases h with ⟨-, ⟨_, -, hstep⟩⟩; exact trapped_terminal hstep⟩
-  · itrivial
+        .unreachable :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
+  wp_trapStep _ _ _ (fun _ => Step.unreachable)
 
 theorem wp_refAsNonNullTrap
     {params localValues values : List Value} {value : Value}
@@ -7191,40 +7202,8 @@ theorem wp_refAsNonNullTrap
     (h : value.isNullRef? = some true) :
     True ⊢ WP (.running
       ⟨⟨params, localValues, value :: values⟩,
-        .refAsNonNull :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} := by
-  iintro -
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro; trivial
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ := step_deterministic (Step.refAsNonNullTrap h) wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl []
-  · iapply wp_lift_stuck rfl
-    iintro %_ %_ %_ %_ -
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro -
-    ipureintro
-    exact ⟨rfl, fun _ _ _ _ h => by
-      rcases h with ⟨-, ⟨_, -, hstep⟩⟩; exact trapped_terminal hstep⟩
-  · itrivial
+        .refAsNonNull :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
+  wp_trapStep _ _ _ (fun _ => Step.refAsNonNullTrap h)
 
 theorem wp_divUZero
     {params localValues values : List Value} {dividend : UInt32}
@@ -7232,40 +7211,8 @@ theorem wp_divUZero
     {controls : List ControlFrame} {calls : List CallFrame} :
     True ⊢ WP (.running
       ⟨⟨params, localValues, .i32 0 :: .i32 dividend :: values⟩,
-        .divU :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} := by
-  iintro -
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro; trivial
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ := step_deterministic Step.divUZero wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl []
-  · iapply wp_lift_stuck rfl
-    iintro %_ %_ %_ %_ -
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro -
-    ipureintro
-    exact ⟨rfl, fun _ _ _ _ h => by
-      rcases h with ⟨-, ⟨_, -, hstep⟩⟩; exact trapped_terminal hstep⟩
-  · itrivial
+        .divU :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
+  wp_trapStep _ _ _ (fun _ => Step.divUZero)
 
 theorem wp_divSZero
     {params localValues values : List Value} {dividend : UInt32}
@@ -7273,40 +7220,8 @@ theorem wp_divSZero
     {controls : List ControlFrame} {calls : List CallFrame} :
     True ⊢ WP (.running
       ⟨⟨params, localValues, .i32 0 :: .i32 dividend :: values⟩,
-        .divS :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} := by
-  iintro -
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro; trivial
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ := step_deterministic Step.divSZero wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl []
-  · iapply wp_lift_stuck rfl
-    iintro %_ %_ %_ %_ -
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro -
-    ipureintro
-    exact ⟨rfl, fun _ _ _ _ h => by
-      rcases h with ⟨-, ⟨_, -, hstep⟩⟩; exact trapped_terminal hstep⟩
-  · itrivial
+        .divS :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
+  wp_trapStep _ _ _ (fun _ => Step.divSZero)
 
 theorem wp_divSOverflow
     {params localValues values : List Value}
@@ -7314,40 +7229,8 @@ theorem wp_divSOverflow
     {controls : List ControlFrame} {calls : List CallFrame} :
     True ⊢ WP (.running
       ⟨⟨params, localValues, .i32 0xFFFFFFFF :: .i32 0x80000000 :: values⟩,
-        .divS :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} := by
-  iintro -
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro; trivial
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ := step_deterministic Step.divSOverflow wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl []
-  · iapply wp_lift_stuck rfl
-    iintro %_ %_ %_ %_ -
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro -
-    ipureintro
-    exact ⟨rfl, fun _ _ _ _ h => by
-      rcases h with ⟨-, ⟨_, -, hstep⟩⟩; exact trapped_terminal hstep⟩
-  · itrivial
+        .divS :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
+  wp_trapStep _ _ _ (fun _ => Step.divSOverflow)
 
 theorem wp_remUZero
     {params localValues values : List Value} {dividend : UInt32}
@@ -7355,40 +7238,8 @@ theorem wp_remUZero
     {controls : List ControlFrame} {calls : List CallFrame} :
     True ⊢ WP (.running
       ⟨⟨params, localValues, .i32 0 :: .i32 dividend :: values⟩,
-        .remU :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} := by
-  iintro -
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro; trivial
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ := step_deterministic Step.remUZero wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl []
-  · iapply wp_lift_stuck rfl
-    iintro %_ %_ %_ %_ -
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro -
-    ipureintro
-    exact ⟨rfl, fun _ _ _ _ h => by
-      rcases h with ⟨-, ⟨_, -, hstep⟩⟩; exact trapped_terminal hstep⟩
-  · itrivial
+        .remU :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
+  wp_trapStep _ _ _ (fun _ => Step.remUZero)
 
 theorem wp_remSZero
     {params localValues values : List Value} {dividend : UInt32}
@@ -7396,40 +7247,8 @@ theorem wp_remSZero
     {controls : List ControlFrame} {calls : List CallFrame} :
     True ⊢ WP (.running
       ⟨⟨params, localValues, .i32 0 :: .i32 dividend :: values⟩,
-        .remS :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} := by
-  iintro -
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro; trivial
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ := step_deterministic Step.remSZero wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl []
-  · iapply wp_lift_stuck rfl
-    iintro %_ %_ %_ %_ -
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro -
-    ipureintro
-    exact ⟨rfl, fun _ _ _ _ h => by
-      rcases h with ⟨-, ⟨_, -, hstep⟩⟩; exact trapped_terminal hstep⟩
-  · itrivial
+        .remS :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
+  wp_trapStep _ _ _ (fun _ => Step.remSZero)
 
 theorem wp_divUI64Zero
     {params localValues values : List Value} {dividend : UInt64}
@@ -7437,40 +7256,8 @@ theorem wp_divUI64Zero
     {controls : List ControlFrame} {calls : List CallFrame} :
     True ⊢ WP (.running
       ⟨⟨params, localValues, .i64 0 :: .i64 dividend :: values⟩,
-        .divUI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} := by
-  iintro -
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro; trivial
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ := step_deterministic Step.divUI64Zero wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl []
-  · iapply wp_lift_stuck rfl
-    iintro %_ %_ %_ %_ -
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro -
-    ipureintro
-    exact ⟨rfl, fun _ _ _ _ h => by
-      rcases h with ⟨-, ⟨_, -, hstep⟩⟩; exact trapped_terminal hstep⟩
-  · itrivial
+        .divUI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
+  wp_trapStep _ _ _ (fun _ => Step.divUI64Zero)
 
 theorem wp_divSI64Zero
     {params localValues values : List Value} {dividend : UInt64}
@@ -7478,40 +7265,8 @@ theorem wp_divSI64Zero
     {controls : List ControlFrame} {calls : List CallFrame} :
     True ⊢ WP (.running
       ⟨⟨params, localValues, .i64 0 :: .i64 dividend :: values⟩,
-        .divSI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} := by
-  iintro -
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro; trivial
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ := step_deterministic Step.divSI64Zero wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl []
-  · iapply wp_lift_stuck rfl
-    iintro %_ %_ %_ %_ -
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro -
-    ipureintro
-    exact ⟨rfl, fun _ _ _ _ h => by
-      rcases h with ⟨-, ⟨_, -, hstep⟩⟩; exact trapped_terminal hstep⟩
-  · itrivial
+        .divSI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
+  wp_trapStep _ _ _ (fun _ => Step.divSI64Zero)
 
 theorem wp_divSI64Overflow
     {params localValues values : List Value}
@@ -7520,40 +7275,8 @@ theorem wp_divSI64Overflow
     True ⊢ WP (.running
       ⟨⟨params, localValues,
           .i64 0xFFFFFFFFFFFFFFFF :: .i64 0x8000000000000000 :: values⟩,
-        .divSI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} := by
-  iintro -
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro; trivial
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ := step_deterministic Step.divSI64Overflow wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl []
-  · iapply wp_lift_stuck rfl
-    iintro %_ %_ %_ %_ -
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro -
-    ipureintro
-    exact ⟨rfl, fun _ _ _ _ h => by
-      rcases h with ⟨-, ⟨_, -, hstep⟩⟩; exact trapped_terminal hstep⟩
-  · itrivial
+        .divSI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
+  wp_trapStep _ _ _ (fun _ => Step.divSI64Overflow)
 
 theorem wp_remUI64Zero
     {params localValues values : List Value} {dividend : UInt64}
@@ -7561,40 +7284,8 @@ theorem wp_remUI64Zero
     {controls : List ControlFrame} {calls : List CallFrame} :
     True ⊢ WP (.running
       ⟨⟨params, localValues, .i64 0 :: .i64 dividend :: values⟩,
-        .remUI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} := by
-  iintro -
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro; trivial
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ := step_deterministic Step.remUI64Zero wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl []
-  · iapply wp_lift_stuck rfl
-    iintro %_ %_ %_ %_ -
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro -
-    ipureintro
-    exact ⟨rfl, fun _ _ _ _ h => by
-      rcases h with ⟨-, ⟨_, -, hstep⟩⟩; exact trapped_terminal hstep⟩
-  · itrivial
+        .remUI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
+  wp_trapStep _ _ _ (fun _ => Step.remUI64Zero)
 
 theorem wp_remSI64Zero
     {params localValues values : List Value} {dividend : UInt64}
@@ -7602,40 +7293,8 @@ theorem wp_remSI64Zero
     {controls : List ControlFrame} {calls : List CallFrame} :
     True ⊢ WP (.running
       ⟨⟨params, localValues, .i64 0 :: .i64 dividend :: values⟩,
-        .remSI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} := by
-  iintro -
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro; trivial
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ := step_deterministic Step.remSI64Zero wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl []
-  · iapply wp_lift_stuck rfl
-    iintro %_ %_ %_ %_ -
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro -
-    ipureintro
-    exact ⟨rfl, fun _ _ _ _ h => by
-      rcases h with ⟨-, ⟨_, -, hstep⟩⟩; exact trapped_terminal hstep⟩
-  · itrivial
+        .remSI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
+  wp_trapStep _ _ _ (fun _ => Step.remSI64Zero)
 
 theorem wp_brTable
     {params localValues values targetValues : List Value}
