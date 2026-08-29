@@ -210,6 +210,81 @@ theorem heap_range {hlc : HasLC} {α : Type}
   icases Hsplit with ⟨Hrange, _Hsuffix⟩
   iexact Hrange
 
+private theorem reassemble32_bytes (b0 b1 b2 b3 : UInt8) :
+    let word := b0.toUInt32 ||| (b1.toUInt32 <<< 8) |||
+      (b2.toUInt32 <<< 16) ||| (b3.toUInt32 <<< 24)
+    b0 = word.toUInt8 ∧ b1 = (word >>> 8).toUInt8 ∧
+      b2 = (word >>> 16).toUInt8 ∧ b3 = (word >>> 24).toUInt8 := by
+  dsimp only
+  have hbit (b : UInt8) (j : Nat) (hj : 8 ≤ j) : b.toNat.testBit j = false :=
+    Nat.testBit_eq_false_of_lt
+      (lt_of_lt_of_le (UInt8.toNat_lt b)
+        (Nat.pow_le_pow_right (by norm_num) hj))
+  constructor
+  · apply UInt8.toNat_inj.mp
+    simp only [UInt32.toNat_toUInt8, UInt32.toNat_or,
+      UInt32.toNat_shiftLeft, UInt8.toNat_toUInt32,
+      UInt32.toNat_ofNat, Nat.reduceMod, Nat.reducePow]
+    simp only [show (256 : Nat) = 2 ^ 8 by norm_num,
+      show (4294967296 : Nat) = 2 ^ 32 by norm_num]
+    apply Nat.eq_of_testBit_eq
+    intro k
+    simp only [Nat.testBit_mod_two_pow, Nat.testBit_or,
+      Nat.testBit_shiftLeft]
+    by_cases hk : k < 8
+    · simp [hk, show k < 32 by omega, show ¬k ≥ 8 by omega,
+        show ¬k ≥ 16 by omega, show ¬k ≥ 24 by omega]
+    · simp [hk, hbit b0 k (by omega)]
+  constructor
+  · apply UInt8.toNat_inj.mp
+    simp only [UInt32.toNat_toUInt8, UInt32.toNat_shiftRight,
+      UInt32.toNat_or, UInt32.toNat_shiftLeft, UInt8.toNat_toUInt32,
+      UInt32.toNat_ofNat, Nat.reduceMod, Nat.reducePow]
+    simp only [show (256 : Nat) = 2 ^ 8 by norm_num,
+      show (4294967296 : Nat) = 2 ^ 32 by norm_num]
+    apply Nat.eq_of_testBit_eq
+    intro k
+    simp only [Nat.testBit_mod_two_pow, Nat.testBit_shiftRight,
+      Nat.testBit_or, Nat.testBit_shiftLeft]
+    by_cases hk : k < 8
+    · simp [hk, show 8 + k < 32 by omega, show 8 + k ≥ 8 by omega,
+        show 8 + k - 8 = k by omega, show ¬8 + k ≥ 16 by omega,
+        show ¬8 + k ≥ 24 by omega, hbit b0 (8 + k) (by omega)]
+    · simp [hk, hbit b1 k (by omega)]
+  constructor
+  · apply UInt8.toNat_inj.mp
+    simp only [UInt32.toNat_toUInt8, UInt32.toNat_shiftRight,
+      UInt32.toNat_or, UInt32.toNat_shiftLeft, UInt8.toNat_toUInt32,
+      UInt32.toNat_ofNat, Nat.reduceMod, Nat.reducePow]
+    simp only [show (256 : Nat) = 2 ^ 8 by norm_num,
+      show (4294967296 : Nat) = 2 ^ 32 by norm_num]
+    apply Nat.eq_of_testBit_eq
+    intro k
+    simp only [Nat.testBit_mod_two_pow, Nat.testBit_shiftRight,
+      Nat.testBit_or, Nat.testBit_shiftLeft]
+    by_cases hk : k < 8
+    · simp [hk, show 16 + k < 32 by omega, show 16 + k ≥ 8 by omega,
+        show 16 + k ≥ 16 by omega, show 16 + k - 16 = k by omega,
+        show ¬16 + k ≥ 24 by omega, hbit b0 (16 + k) (by omega),
+        hbit b1 (16 + k - 8) (by omega)]
+    · simp [hk, hbit b2 k (by omega)]
+  · apply UInt8.toNat_inj.mp
+    simp only [UInt32.toNat_toUInt8, UInt32.toNat_shiftRight,
+      UInt32.toNat_or, UInt32.toNat_shiftLeft, UInt8.toNat_toUInt32,
+      UInt32.toNat_ofNat, Nat.reduceMod, Nat.reducePow]
+    simp only [show (256 : Nat) = 2 ^ 8 by norm_num,
+      show (4294967296 : Nat) = 2 ^ 32 by norm_num]
+    apply Nat.eq_of_testBit_eq
+    intro k
+    simp only [Nat.testBit_mod_two_pow, Nat.testBit_shiftRight,
+      Nat.testBit_or, Nat.testBit_shiftLeft]
+    by_cases hk : k < 8
+    · simp [hk, show 24 + k < 32 by omega, show 24 + k ≥ 8 by omega,
+        show 24 + k ≥ 16 by omega, show 24 + k ≥ 24 by omega,
+        show 24 + k - 24 = k by omega, hbit b0 (24 + k) (by omega),
+        hbit b1 (24 + k - 8) (by omega), hbit b2 (24 + k - 16) (by omega)]
+    · simp [hk, hbit b3 k (by omega)]
+
 theorem bytesAt_four (mem : Mem) (addr : UInt32)
     (hfit : addr.toNat + 4 < UInt32.size) :
     Project.HexEncodeStdio.Grow.bytesAt mem addr 4 =
@@ -220,11 +295,20 @@ theorem bytesAt_four (mem : Mem) (addr : UInt32)
   have h2' : (addr + 2).toNat = addr.toNat + 2 := by simpa using h2
   have h3' : (addr + 3).toNat = addr.toNat + 3 := by simpa using h3
   simp only [Project.HexEncodeStdio.Grow.bytesAt]
-  rw [show addr + 1 + 1 = addr + 2 by bv_decide,
-    show addr + 2 + 1 = addr + 3 by bv_decide]
+  rw [show addr + 1 + 1 = addr + 2 by
+      calc
+        addr + 1 + 1 = addr + (1 + 1) := UInt32.add_assoc _ _ _
+        _ = addr + 2 := by rfl,
+    show addr + 2 + 1 = addr + 3 by
+      calc
+        addr + 2 + 1 = addr + (2 + 1) := UInt32.add_assoc _ _ _
+        _ = addr + 3 := by rfl]
   simp only [Mem.read32, Mem.read8, u32Byte,
     h1', h2', h3']
-  congr <;> bv_decide
+  obtain ⟨hb0, hb1, hb2, hb3⟩ := reassemble32_bytes
+    (mem.bytes addr.toNat) (mem.bytes (addr.toNat + 1))
+    (mem.bytes (addr.toNat + 2)) (mem.bytes (addr.toNat + 3))
+  congr <;> assumption
 
 theorem bytesAt_eq_readBytes (mem : Mem) (addr : UInt32) (n : Nat)
     (hnowrap : addr.toNat + n < UInt32.size) :

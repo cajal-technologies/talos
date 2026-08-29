@@ -434,21 +434,47 @@ theorem decode_core_invalid_high_first_reaches
   apply hprefix.trans
   let prepared := decodeEvenPreparedStore store data len
   have hlenRead : prepared.wasm.mem.read32 (coreIterator + 4) = len := by
-    simp [prepared, decodeEvenPreparedStore, Mem.read32, Mem.write32,
-      Mem.write64] <;> bv_decide
+    simp only [prepared, decodeEvenPreparedStore]
+    rw [Mem.read32_write32_disjoint, Mem.read32_write32_disjoint]
+    · simpa using (Mem.read32_write32_same
+        (((store.wasm.mem.write32 coreError 1114114).write64
+          (coreFrame + 48) 2)) (coreFrame + 44) len)
+    all_goals norm_num [UInt32.toNat_add, UInt32.toNat_ofNat]
   have herrorRead : prepared.wasm.mem.read32 (coreIterator + 16) =
       coreError := by
-    simp [prepared, decodeEvenPreparedStore, Mem.read32, Mem.write32,
-      Mem.write64] <;> bv_decide
+    simp only [prepared, decodeEvenPreparedStore]
+    simpa using (Mem.read32_write32_same
+      ((((store.wasm.mem.write32 coreError 1114114).write64
+        (coreFrame + 48) 2).write32 (coreFrame + 44) len).write32
+          (coreFrame + 40) data) (coreFrame + 56) coreError)
   have hchunkRead : prepared.wasm.mem.read32 (coreIterator + 8) = 2 := by
-    simp [prepared, decodeEvenPreparedStore, Mem.read32, Mem.write32,
-      Mem.write64] <;> bv_decide
+    simp only [prepared, decodeEvenPreparedStore]
+    rw [Mem.read32_write32_disjoint, Mem.read32_write32_disjoint,
+      Mem.read32_write32_disjoint]
+    · simpa using (Mem.read32_write64_low
+        (store.wasm.mem.write32 coreError 1114114) (coreFrame + 48) 2)
+    all_goals norm_num [UInt32.toNat_add, UInt32.toNat_ofNat]
   have hptrRead : prepared.wasm.mem.read32 coreIterator = data := by
-    simp [prepared, decodeEvenPreparedStore, Mem.read32, Mem.write32,
-      Mem.write64] <;> bv_decide
+    simp only [prepared, decodeEvenPreparedStore]
+    rw [Mem.read32_write32_disjoint]
+    · simpa using (Mem.read32_write32_same
+        (((store.wasm.mem.write32 coreError 1114114).write64
+          (coreFrame + 48) 2).write32 (coreFrame + 44) len)
+        (coreFrame + 40) data)
+    all_goals norm_num [UInt32.toNat_add, UInt32.toNat_ofNat]
   have hindexRead : prepared.wasm.mem.read32 (coreIterator + 12) = 0 := by
-    simp [prepared, decodeEvenPreparedStore, Mem.read32, Mem.write32,
-      Mem.write64] <;> bv_decide
+    simp only [prepared, decodeEvenPreparedStore]
+    rw [Mem.read32_write32_disjoint, Mem.read32_write32_disjoint,
+      Mem.read32_write32_disjoint]
+    · have hhigh : ((2 : UInt64) >>> 32).toUInt32 = 0 := by
+        apply UInt32.toNat_inj.mp
+        simp only [UInt64.toNat_toUInt32, UInt64.toNat_shiftRight,
+          UInt64.toNat_ofNat, UInt32.toNat_ofNat]
+        rw [Nat.shiftRight_eq_div_pow]
+      simpa [hhigh] using (Mem.read32_write64_high
+        (store.wasm.mem.write32 coreError 1114114) (coreFrame + 48) 2
+        (by norm_num [UInt32.toNat_add, UInt32.toNat_ofNat]))
+    all_goals norm_num [UInt32.toNat_add, UInt32.toNat_ofNat]
   have hhiPrepared : prepared.wasm.mem.read8 data = hi := by
     rw [decodeEvenPreparedStore_read8_of_lower store data len data hdataLower,
       hhiRead]
@@ -491,30 +517,40 @@ theorem decode_core_invalid_high_first_reaches
     simp [paired, decodePairInvalidStore, Mem.read8, Mem.write8]
   have hmarker : paired.wasm.mem.read32 coreError = hi.toUInt32 &&& 255 := by
     simp only [paired, decodePairInvalidStore]
-    rw [Mem.read32_write8_disjoint _ corePairOut coreError _ (by decide)]
+    rw [Mem.read32_write8_disjoint _ corePairOut coreError _ (by
+      norm_num [UInt32.toNat_add, UInt32.toNat_ofNat])]
     rw [Mem.read32_write8_disjoint _ (corePairOut + 1) coreError _
-      (by decide)]
+      (by norm_num [UInt32.toNat_add, UInt32.toNat_ofNat])]
     rw [Mem.read32_write32_disjoint _ (coreIterator + 12) coreError _
-      (by decide)]
+      (by norm_num [UInt32.toNat_add, UInt32.toNat_ofNat])]
     rw [Mem.read32_write32_disjoint _ (coreError + 4) coreError _
-      (by decide)]
-    simp [Mem.read32, Mem.write32]
-    bv_decide
+      (by norm_num [UInt32.toNat_add, UInt32.toNat_ofNat])]
+    rw [Mem.read32_write32_same]
   have hindex : paired.wasm.mem.read32 (coreError + 4) = 0 := by
     simp only [paired, decodePairInvalidStore]
     rw [Mem.read32_write8_disjoint _ corePairOut (coreError + 4) _
-      (by decide)]
+      (by norm_num [UInt32.toNat_add, UInt32.toNat_ofNat])]
     rw [Mem.read32_write8_disjoint _ (corePairOut + 1) (coreError + 4) _
-      (by decide)]
+      (by norm_num [UInt32.toNat_add, UInt32.toNat_ofNat])]
     rw [Mem.read32_write32_disjoint _ (coreIterator + 12) (coreError + 4) _
-      (by decide)]
+      (by norm_num [UInt32.toNat_add, UInt32.toNat_ofNat])]
     simp [Mem.read32, Mem.write32]
   exact decode_core_invalid_suffix paired data len (hi.toUInt32 &&& 255) 0
     (by change 17 ≤ store.wasm.mem.pages; exact hpages)
     (by
       change globalAt? prepared 0 = some (.i32 coreFrame)
       exact decodeEvenPreparedStore_global_zero store data len hglobal)
-    htag hmarker (by bv_decide) hindex
+    htag hmarker (by
+      intro heq
+      have heqNat := congrArg UInt32.toNat heq
+      simp only [UInt32.toNat_and, UInt8.toNat_toUInt32,
+        UInt32.toNat_ofNat] at heqNat
+      norm_num only [Nat.reducePow, Nat.reduceMod] at heqNat
+      rw [show 255 = 2 ^ 8 - 1 by norm_num,
+        Nat.and_two_pow_sub_one_eq_mod,
+        Nat.mod_eq_of_lt (UInt8.toNat_lt hi)] at heqNat
+      have hiBound := UInt8.toNat_lt hi
+      omega) hindex
 
 set_option maxRecDepth 100000 in
 theorem decode_core_invalid_low_first_reaches
@@ -543,21 +579,47 @@ theorem decode_core_invalid_low_first_reaches
   apply hprefix.trans
   let prepared := decodeEvenPreparedStore store data len
   have hlenRead : prepared.wasm.mem.read32 (coreIterator + 4) = len := by
-    simp [prepared, decodeEvenPreparedStore, Mem.read32, Mem.write32,
-      Mem.write64] <;> bv_decide
+    simp only [prepared, decodeEvenPreparedStore]
+    rw [Mem.read32_write32_disjoint, Mem.read32_write32_disjoint]
+    · simpa using (Mem.read32_write32_same
+        (((store.wasm.mem.write32 coreError 1114114).write64
+          (coreFrame + 48) 2)) (coreFrame + 44) len)
+    all_goals norm_num [UInt32.toNat_add, UInt32.toNat_ofNat]
   have herrorRead : prepared.wasm.mem.read32 (coreIterator + 16) =
       coreError := by
-    simp [prepared, decodeEvenPreparedStore, Mem.read32, Mem.write32,
-      Mem.write64] <;> bv_decide
+    simp only [prepared, decodeEvenPreparedStore]
+    simpa using (Mem.read32_write32_same
+      ((((store.wasm.mem.write32 coreError 1114114).write64
+        (coreFrame + 48) 2).write32 (coreFrame + 44) len).write32
+          (coreFrame + 40) data) (coreFrame + 56) coreError)
   have hchunkRead : prepared.wasm.mem.read32 (coreIterator + 8) = 2 := by
-    simp [prepared, decodeEvenPreparedStore, Mem.read32, Mem.write32,
-      Mem.write64] <;> bv_decide
+    simp only [prepared, decodeEvenPreparedStore]
+    rw [Mem.read32_write32_disjoint, Mem.read32_write32_disjoint,
+      Mem.read32_write32_disjoint]
+    · simpa using (Mem.read32_write64_low
+        (store.wasm.mem.write32 coreError 1114114) (coreFrame + 48) 2)
+    all_goals norm_num [UInt32.toNat_add, UInt32.toNat_ofNat]
   have hptrRead : prepared.wasm.mem.read32 coreIterator = data := by
-    simp [prepared, decodeEvenPreparedStore, Mem.read32, Mem.write32,
-      Mem.write64] <;> bv_decide
+    simp only [prepared, decodeEvenPreparedStore]
+    rw [Mem.read32_write32_disjoint]
+    · simpa using (Mem.read32_write32_same
+        (((store.wasm.mem.write32 coreError 1114114).write64
+          (coreFrame + 48) 2).write32 (coreFrame + 44) len)
+        (coreFrame + 40) data)
+    all_goals norm_num [UInt32.toNat_add, UInt32.toNat_ofNat]
   have hindexRead : prepared.wasm.mem.read32 (coreIterator + 12) = 0 := by
-    simp [prepared, decodeEvenPreparedStore, Mem.read32, Mem.write32,
-      Mem.write64] <;> bv_decide
+    simp only [prepared, decodeEvenPreparedStore]
+    rw [Mem.read32_write32_disjoint, Mem.read32_write32_disjoint,
+      Mem.read32_write32_disjoint]
+    · have hhigh : ((2 : UInt64) >>> 32).toUInt32 = 0 := by
+        apply UInt32.toNat_inj.mp
+        simp only [UInt64.toNat_toUInt32, UInt64.toNat_shiftRight,
+          UInt64.toNat_ofNat, UInt32.toNat_ofNat]
+        rw [Nat.shiftRight_eq_div_pow]
+      simpa [hhigh] using (Mem.read32_write64_high
+        (store.wasm.mem.write32 coreError 1114114) (coreFrame + 48) 2
+        (by norm_num [UInt32.toNat_add, UInt32.toNat_ofNat]))
+    all_goals norm_num [UInt32.toNat_add, UInt32.toNat_ofNat]
   have hhiPrepared : prepared.wasm.mem.read8 data = hi := by
     rw [decodeEvenPreparedStore_read8_of_lower store data len data hdataLower,
       hhiRead]
@@ -588,7 +650,13 @@ theorem decode_core_invalid_low_first_reaches
        control := []
        returningInstance := store.runtime.entry }]
   have hone : ((((0 : UInt32) <<< (1 : UInt32)) ||| 1) &&& 255 |||
-      ((0 : UInt32) <<< (1 : UInt32)) &&& 4294967040) = 1 := by decide
+      ((0 : UInt32) <<< (1 : UInt32)) &&& 4294967040) = 1 := by
+    norm_num
+    apply UInt32.toNat_inj.mp
+    simp only [UInt32.toNat_and, UInt32.toNat_ofNat]
+    norm_num only [Nat.reducePow, Nat.reduceMod]
+    rw [show 255 = 2 ^ 8 - 1 by norm_num,
+      Nat.and_two_pow_sub_one_eq_mod]
   rw [hone] at hpair
   have hpair' : Reaches (decodeFirstPairConfig store data len)
       (decodeAfterFirstPairConfig
@@ -603,31 +671,40 @@ theorem decode_core_invalid_low_first_reaches
     simp [paired, decodePairInvalidStore, Mem.read8, Mem.write8]
   have hmarker : paired.wasm.mem.read32 coreError = lo.toUInt32 &&& 255 := by
     simp only [paired, decodePairInvalidStore]
-    rw [Mem.read32_write8_disjoint _ corePairOut coreError _ (by decide)]
+    rw [Mem.read32_write8_disjoint _ corePairOut coreError _ (by
+      norm_num [UInt32.toNat_add, UInt32.toNat_ofNat])]
     rw [Mem.read32_write8_disjoint _ (corePairOut + 1) coreError _
-      (by decide)]
+      (by norm_num [UInt32.toNat_add, UInt32.toNat_ofNat])]
     rw [Mem.read32_write32_disjoint _ (coreIterator + 12) coreError _
-      (by decide)]
+      (by norm_num [UInt32.toNat_add, UInt32.toNat_ofNat])]
     rw [Mem.read32_write32_disjoint _ (coreError + 4) coreError _
-      (by decide)]
-    simp [Mem.read32, Mem.write32]
-    bv_decide
+      (by norm_num [UInt32.toNat_add, UInt32.toNat_ofNat])]
+    rw [Mem.read32_write32_same]
   have hindex : paired.wasm.mem.read32 (coreError + 4) = 1 := by
     simp only [paired, decodePairInvalidStore]
     rw [Mem.read32_write8_disjoint _ corePairOut (coreError + 4) _
-      (by decide)]
+      (by norm_num [UInt32.toNat_add, UInt32.toNat_ofNat])]
     rw [Mem.read32_write8_disjoint _ (corePairOut + 1) (coreError + 4) _
-      (by decide)]
+      (by norm_num [UInt32.toNat_add, UInt32.toNat_ofNat])]
     rw [Mem.read32_write32_disjoint _ (coreIterator + 12) (coreError + 4) _
-      (by decide)]
-    simp [Mem.read32, Mem.write32]
-    bv_decide
+      (by norm_num [UInt32.toNat_add, UInt32.toNat_ofNat])]
+    rw [Mem.read32_write32_same]
   exact decode_core_invalid_suffix paired data len (lo.toUInt32 &&& 255) 1
     (by change 17 ≤ store.wasm.mem.pages; exact hpages)
     (by
       change globalAt? prepared 0 = some (.i32 coreFrame)
       exact decodeEvenPreparedStore_global_zero store data len hglobal)
-    htag hmarker (by bv_decide) hindex
+    htag hmarker (by
+      intro heq
+      have heqNat := congrArg UInt32.toNat heq
+      simp only [UInt32.toNat_and, UInt8.toNat_toUInt32,
+        UInt32.toNat_ofNat] at heqNat
+      norm_num only [Nat.reducePow, Nat.reduceMod] at heqNat
+      rw [show 255 = 2 ^ 8 - 1 by norm_num,
+        Nat.and_two_pow_sub_one_eq_mod,
+        Nat.mod_eq_of_lt (UInt8.toNat_lt lo)] at heqNat
+      have loBound := UInt8.toNat_lt lo
+      omega) hindex
 
 def decodeCoreFirstResultBody : Program :=
   coreStructuredBody (coreFirstInstruction (decodeCoreAfterFirstPair.drop 4))
@@ -775,21 +852,47 @@ theorem decode_core_valid_first_to_alloc_reaches
   let byte := (loRoute.nibble lo).toUInt8 |||
     (hiRoute.nibble hi).toUInt8 <<< (4 : UInt8)
   have hlenRead : prepared.wasm.mem.read32 (coreIterator + 4) = len := by
-    simp [prepared, decodeEvenPreparedStore, Mem.read32, Mem.write32,
-      Mem.write64] <;> bv_decide
+    simp only [prepared, decodeEvenPreparedStore]
+    rw [Mem.read32_write32_disjoint, Mem.read32_write32_disjoint]
+    · simpa using (Mem.read32_write32_same
+        (((store.wasm.mem.write32 coreError 1114114).write64
+          (coreFrame + 48) 2)) (coreFrame + 44) len)
+    all_goals norm_num [UInt32.toNat_add, UInt32.toNat_ofNat]
   have herrorRead : prepared.wasm.mem.read32 (coreIterator + 16) =
       coreError := by
-    simp [prepared, decodeEvenPreparedStore, Mem.read32, Mem.write32,
-      Mem.write64] <;> bv_decide
+    simp only [prepared, decodeEvenPreparedStore]
+    simpa using (Mem.read32_write32_same
+      ((((store.wasm.mem.write32 coreError 1114114).write64
+        (coreFrame + 48) 2).write32 (coreFrame + 44) len).write32
+          (coreFrame + 40) data) (coreFrame + 56) coreError)
   have hchunkRead : prepared.wasm.mem.read32 (coreIterator + 8) = 2 := by
-    simp [prepared, decodeEvenPreparedStore, Mem.read32, Mem.write32,
-      Mem.write64] <;> bv_decide
+    simp only [prepared, decodeEvenPreparedStore]
+    rw [Mem.read32_write32_disjoint, Mem.read32_write32_disjoint,
+      Mem.read32_write32_disjoint]
+    · simpa using (Mem.read32_write64_low
+        (store.wasm.mem.write32 coreError 1114114) (coreFrame + 48) 2)
+    all_goals norm_num [UInt32.toNat_add, UInt32.toNat_ofNat]
   have hptrRead : prepared.wasm.mem.read32 coreIterator = data := by
-    simp [prepared, decodeEvenPreparedStore, Mem.read32, Mem.write32,
-      Mem.write64] <;> bv_decide
+    simp only [prepared, decodeEvenPreparedStore]
+    rw [Mem.read32_write32_disjoint]
+    · simpa using (Mem.read32_write32_same
+        (((store.wasm.mem.write32 coreError 1114114).write64
+          (coreFrame + 48) 2).write32 (coreFrame + 44) len)
+        (coreFrame + 40) data)
+    all_goals norm_num [UInt32.toNat_add, UInt32.toNat_ofNat]
   have hindexRead : prepared.wasm.mem.read32 (coreIterator + 12) = 0 := by
-    simp [prepared, decodeEvenPreparedStore, Mem.read32, Mem.write32,
-      Mem.write64] <;> bv_decide
+    simp only [prepared, decodeEvenPreparedStore]
+    rw [Mem.read32_write32_disjoint, Mem.read32_write32_disjoint,
+      Mem.read32_write32_disjoint]
+    · have hhigh : ((2 : UInt64) >>> 32).toUInt32 = 0 := by
+        apply UInt32.toNat_inj.mp
+        simp only [UInt64.toNat_toUInt32, UInt64.toNat_shiftRight,
+          UInt64.toNat_ofNat, UInt32.toNat_ofNat]
+        rw [Nat.shiftRight_eq_div_pow]
+      simpa [hhigh] using (Mem.read32_write64_high
+        (store.wasm.mem.write32 coreError 1114114) (coreFrame + 48) 2
+        (by norm_num [UInt32.toNat_add, UInt32.toNat_ofNat]))
+    all_goals norm_num [UInt32.toNat_add, UInt32.toNat_ofNat]
   have hhiPrepared : prepared.wasm.mem.read8 data = hi := by
     rw [decodeEvenPreparedStore_read8_of_lower store data len data hdataLower,
       hhiRead]
@@ -834,53 +937,62 @@ theorem decode_core_valid_first_to_alloc_reaches
   have herrorPtr' : paired.wasm.mem.read32 (coreIterator + 16) = coreError := by
     simp only [paired, decodePairValidStore, decodePairBaseStore]
     rw [Mem.read32_write8_disjoint _ corePairOut (coreIterator + 16) _
-      (by decide)]
+      (by norm_num [UInt32.toNat_add, UInt32.toNat_ofNat])]
     rw [Mem.read32_write8_disjoint _ (corePairOut + 1)
-      (coreIterator + 16) _ (by decide)]
+      (coreIterator + 16) _ (by
+        norm_num [UInt32.toNat_add, UInt32.toNat_ofNat])]
     rw [Mem.read32_write32_disjoint _ (coreIterator + 12)
-      (coreIterator + 16) _ (by decide)]
+      (coreIterator + 16) _ (by
+        norm_num [UInt32.toNat_add, UInt32.toNat_ofNat])]
     rw [Mem.read32_write32_disjoint _ coreIterator (coreIterator + 16) _
-      (by decide)]
+      (by norm_num [UInt32.toNat_add, UInt32.toNat_ofNat])]
     rw [Mem.read32_write32_disjoint _ (coreIterator + 4)
-      (coreIterator + 16) _ (by decide)]
+      (coreIterator + 16) _ (by
+        norm_num [UInt32.toNat_add, UInt32.toNat_ofNat])]
     exact herrorRead
   have hmarker' : paired.wasm.mem.read32 coreError = 1114114 := by
     simp only [paired, decodePairValidStore, decodePairBaseStore]
-    rw [Mem.read32_write8_disjoint _ corePairOut coreError _ (by decide)]
+    rw [Mem.read32_write8_disjoint _ corePairOut coreError _ (by
+      norm_num [UInt32.toNat_add, UInt32.toNat_ofNat])]
     rw [Mem.read32_write8_disjoint _ (corePairOut + 1) coreError _
-      (by decide)]
+      (by norm_num [UInt32.toNat_add, UInt32.toNat_ofNat])]
     rw [Mem.read32_write32_disjoint _ (coreIterator + 12) coreError _
-      (by decide)]
-    rw [Mem.read32_write32_disjoint _ coreIterator coreError _ (by decide)]
+      (by norm_num [UInt32.toNat_add, UInt32.toNat_ofNat])]
+    rw [Mem.read32_write32_disjoint _ coreIterator coreError _ (by
+      norm_num [UInt32.toNat_add, UInt32.toNat_ofNat])]
     rw [Mem.read32_write32_disjoint _ (coreIterator + 4) coreError _
-      (by decide)]
-    simp [prepared, decodeEvenPreparedStore, Mem.read32, Mem.write32,
-      Mem.write64]
-    bv_decide
+      (by norm_num [UInt32.toNat_add, UInt32.toNat_ofNat])]
+    simp only [prepared, decodeEvenPreparedStore]
+    rw [Mem.read32_write32_disjoint, Mem.read32_write32_disjoint,
+      Mem.read32_write32_disjoint, Mem.read32_write64_disjoint,
+      Mem.read32_write32_same]
+    all_goals norm_num [UInt32.toNat_add, UInt32.toNat_ofNat]
   have hremaining : paired.wasm.mem.read32 (coreIterator + 4) = len - 2 := by
     simp only [paired, decodePairValidStore, decodePairBaseStore]
     rw [Mem.read32_write8_disjoint _ corePairOut (coreIterator + 4) _
-      (by decide)]
+      (by norm_num [UInt32.toNat_add, UInt32.toNat_ofNat])]
     rw [Mem.read32_write8_disjoint _ (corePairOut + 1) (coreIterator + 4) _
-      (by decide)]
+      (by norm_num [UInt32.toNat_add, UInt32.toNat_ofNat])]
     rw [Mem.read32_write32_disjoint _ (coreIterator + 12)
-      (coreIterator + 4) _ (by decide)]
+      (coreIterator + 4) _ (by
+        norm_num [UInt32.toNat_add, UInt32.toNat_ofNat])]
     rw [Mem.read32_write32_disjoint _ coreIterator (coreIterator + 4) _
-      (by decide)]
-    simp [Mem.read32, Mem.write32]
-    bv_decide
+      (by norm_num [UInt32.toNat_add, UInt32.toNat_ofNat])]
+    rw [Mem.read32_write32_same]
   have hchunk' : paired.wasm.mem.read32 (coreIterator + 8) = 2 := by
     simp only [paired, decodePairValidStore, decodePairBaseStore]
     rw [Mem.read32_write8_disjoint _ corePairOut (coreIterator + 8) _
-      (by decide)]
+      (by norm_num [UInt32.toNat_add, UInt32.toNat_ofNat])]
     rw [Mem.read32_write8_disjoint _ (corePairOut + 1) (coreIterator + 8) _
-      (by decide)]
+      (by norm_num [UInt32.toNat_add, UInt32.toNat_ofNat])]
     rw [Mem.read32_write32_disjoint _ (coreIterator + 12)
-      (coreIterator + 8) _ (by decide)]
+      (coreIterator + 8) _ (by
+        norm_num [UInt32.toNat_add, UInt32.toNat_ofNat])]
     rw [Mem.read32_write32_disjoint _ coreIterator (coreIterator + 8) _
-      (by decide)]
+      (by norm_num [UInt32.toNat_add, UInt32.toNat_ofNat])]
     rw [Mem.read32_write32_disjoint _ (coreIterator + 4)
-      (coreIterator + 8) _ (by decide)]
+      (coreIterator + 8) _ (by
+        norm_num [UInt32.toNat_add, UInt32.toNat_ofNat])]
     exact hchunkRead
   exact decode_after_first_valid_to_alloc paired data len byte
     (by simpa [paired, prepared, decodePairValidStore,

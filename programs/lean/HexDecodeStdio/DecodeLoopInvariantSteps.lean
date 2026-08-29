@@ -198,28 +198,32 @@ theorem decodeLoopPairValidStore_remaining
     (store : MachineStore Universal.State)
     (inputPtr len chunkIndex : UInt32) (byte : UInt8) :
     (decodeLoopPairValidStore store inputPtr len chunkIndex byte).wasm.mem.read32
-        (loopIterator + 4) = len - 2 := by
-  simp [decodeLoopPairValidStore, decodeLoopPairBaseStore, Mem.read32,
-    Mem.write32, Mem.write8]
-  bv_decide
+      (loopIterator + 4) = len - 2 := by
+  simp only [decodeLoopPairValidStore, decodeLoopPairBaseStore]
+  rw [Mem.read32_write8_disjoint_loop, Mem.read32_write8_disjoint_loop,
+    Mem.read32_write32_disjoint, Mem.read32_write32_disjoint,
+    Mem.read32_write32_same]
+  all_goals norm_num [UInt32.toNat_add, UInt32.toNat_ofNat]
 
 theorem decodeLoopPairValidStore_pointer
     (store : MachineStore Universal.State)
     (inputPtr len chunkIndex : UInt32) (byte : UInt8) :
     (decodeLoopPairValidStore store inputPtr len chunkIndex byte).wasm.mem.read32
-        loopIterator = 2 + inputPtr := by
-  simp [decodeLoopPairValidStore, decodeLoopPairBaseStore, Mem.read32,
-    Mem.write32, Mem.write8]
-  bv_decide
+      loopIterator = 2 + inputPtr := by
+  simp only [decodeLoopPairValidStore, decodeLoopPairBaseStore]
+  rw [Mem.read32_write8_disjoint_loop, Mem.read32_write8_disjoint_loop,
+    Mem.read32_write32_disjoint, Mem.read32_write32_same]
+  all_goals norm_num [UInt32.toNat_add, UInt32.toNat_ofNat]
 
 theorem decodeLoopPairValidStore_index
     (store : MachineStore Universal.State)
     (inputPtr len chunkIndex : UInt32) (byte : UInt8) :
     (decodeLoopPairValidStore store inputPtr len chunkIndex byte).wasm.mem.read32
-        (loopIterator + 12) = 1 + chunkIndex := by
-  simp [decodeLoopPairValidStore, decodeLoopPairBaseStore, Mem.read32,
-    Mem.write32, Mem.write8]
-  bv_decide
+      (loopIterator + 12) = 1 + chunkIndex := by
+  simp only [decodeLoopPairValidStore, decodeLoopPairBaseStore]
+  rw [Mem.read32_write8_disjoint_loop, Mem.read32_write8_disjoint_loop,
+    Mem.read32_write32_same]
+  all_goals norm_num [UInt32.toNat_add, UInt32.toNat_ofNat]
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 5000000 in

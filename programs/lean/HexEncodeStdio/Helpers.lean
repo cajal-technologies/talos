@@ -12,13 +12,51 @@ open Wasm
 open Iris Iris.BI Iris.ProgramLogic Language.Notation Iris.Std
 open Wasm.SepLogic Wasm.SmallStep
 
+private theorem byte_high_nat (lo hi i : Nat) (hlo : lo < 2 ^ 32) (hi4 : i < 4) :
+    ((lo ||| ((hi <<< 32) % 2 ^ 64)) >>> (32 + 8 * i)) % 2 ^ 8 = (hi >>> (8 * i)) % 2 ^ 8 := by
+  apply Nat.eq_of_testBit_eq
+  intro k
+  simp only [Nat.testBit_mod_two_pow, Nat.testBit_shiftRight, Nat.testBit_or,
+    Nat.testBit_shiftLeft]
+  by_cases hk : k < 8
+  · have hlofalse : lo.testBit (32 + 8 * i + k) = false :=
+      Nat.testBit_lt_two_pow (Nat.lt_of_lt_of_le hlo (Nat.pow_le_pow_right (by decide) (by omega)))
+    simp only [hk, hlofalse, Bool.false_or, decide_true, Bool.true_and,
+      show 32 ≤ 32 + 8 * i + k by omega, show 32 + 8 * i + k < 64 by omega]
+    congr 1
+    omega
+  · simp only [hk, decide_false, Bool.false_and]
+
+private theorem byte_low_nat (lo hi i : Nat) (hi4 : i < 4) :
+    ((lo ||| ((hi <<< 32) % 2 ^ 64)) >>> (8 * i)) % 2 ^ 8 = (lo >>> (8 * i)) % 2 ^ 8 := by
+  apply Nat.eq_of_testBit_eq
+  intro k
+  simp only [Nat.testBit_mod_two_pow, Nat.testBit_shiftRight, Nat.testBit_or,
+    Nat.testBit_shiftLeft]
+  by_cases hk : k < 8
+  · simp only [hk, decide_true, Bool.true_and, show ¬ (32 ≤ 8 * i + k) by omega,
+      decide_false, Bool.false_and, Bool.and_false, Bool.or_false]
+  · simp only [hk, decide_false, Bool.false_and]
+
 private theorem packed_u64Byte_low (lo hi : UInt32) (i : Nat) (hi4 : i < 4) :
     u64Byte (lo.toUInt64 ||| (hi.toUInt64 <<< 32)) i = u32Byte lo i := by
-  interval_cases i <;> simp only [u64Byte, u32Byte] <;> bv_decide
+  interval_cases i <;>
+    (apply UInt8.toNat_inj.mp
+     simp only [u64Byte, u32Byte, UInt64.toNat_toUInt8, UInt32.toNat_toUInt8,
+       UInt64.toNat_shiftRight, UInt64.toNat_or, UInt64.toNat_shiftLeft,
+       UInt32.toNat_toUInt64, UInt32.toNat_shiftRight, UInt64.toNat_ofNat,
+       UInt32.toNat_ofNat, Nat.reduceMod, Nat.reducePow]
+     exact byte_low_nat lo.toNat hi.toNat _ (by omega))
 
 private theorem packed_u64Byte_high (lo hi : UInt32) (i : Nat) (hi4 : i < 4) :
     u64Byte (lo.toUInt64 ||| (hi.toUInt64 <<< 32)) (i + 4) = u32Byte hi i := by
-  interval_cases i <;> simp only [u64Byte, u32Byte] <;> bv_decide
+  interval_cases i <;>
+    (apply UInt8.toNat_inj.mp
+     simp only [u64Byte, u32Byte, UInt64.toNat_toUInt8, UInt32.toNat_toUInt8,
+       UInt64.toNat_shiftRight, UInt64.toNat_or, UInt64.toNat_shiftLeft,
+       UInt32.toNat_toUInt64, UInt32.toNat_shiftRight, UInt64.toNat_ofNat,
+       UInt32.toNat_ofNat, Nat.reduceMod, Nat.reducePow]
+     exact byte_high_nat lo.toNat hi.toNat _ (UInt32.toNat_lt lo) (by omega))
 
 /-- Split a little-endian 64-bit cell into its low and high 32-bit halves. -/
 theorem pointsTo_u64_pair_split {hlc : HasLC} {α : Type}

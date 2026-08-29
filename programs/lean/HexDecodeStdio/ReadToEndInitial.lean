@@ -777,11 +777,25 @@ theorem first_nonempty_read_outcome
     rw [hcountNat] at hn
     exact hnil (List.eq_nil_of_length_eq_zero (by simpa using hn))
   have htag : firstStore.wasm.mem.read8 (readToEndStack + 16) = 4 := by
-    simp [firstStore, readChunkFinishedStore, Mem.read8, Mem.write32,
-      Mem.write8] <;> bv_decide
+    simp only [firstStore, readChunkFinishedStore]
+    simp only [Mem.read8]
+    rw [Mem.write32_bytes_of_disjoint]
+    · simp [Mem.write8]
+    · right
+      change 1048508 + 4 ≤ 1048512
+      omega
   have hcount : firstStore.wasm.mem.read32 (readToEndStack + 20) = count := by
-    simp [firstStore, readChunkFinishedStore, Mem.read32, Mem.write32,
-      Mem.write8] <;> bv_decide
+    simp only [firstStore, readChunkFinishedStore]
+    rw [Mem.read32_write32_disjoint _ _ _ _ (Or.inr (by
+          change 1048508 + 4 ≤ 1048516
+          omega)),
+      Mem.read32_write8_disjoint _ _ _ _ (Or.inr (by
+          change 1048512 + 1 ≤ 1048516
+          omega))]
+    change
+      ((readChunkCopiedStore reserved data firstChunkBuffer count).wasm.mem.write32
+        (readToEndResult + 4) count).read32 (readToEndResult + 4) = count
+    exact Mem.read32_write32_same _ _ _
   have hprefix := read_to_end_after_first_nonempty_to_loop firstStore []
     decodeLocals [] decodeAfterRead 0 [] [] [] decodeInputVector readToEndStack
     capacity data count htag hcount hcountNe hinv.capacity_eq hinv.data_eq

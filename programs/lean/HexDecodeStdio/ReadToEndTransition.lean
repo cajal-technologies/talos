@@ -90,10 +90,90 @@ theorem Mem.read32_fill_disjoint (m : Mem) (destination count : Nat)
   rw [if_neg, if_neg, if_neg, if_neg]
   all_goals rcases h with hbefore | hafter <;> omega
 
+private theorem reassemble_low_nat (v : Nat) :
+    v % 4294967296 % 256 &&& 255 |||
+      (v >>> 8 % 4294967296 % 256 &&& 255) <<< 8 % 4294967296 |||
+      (v >>> 16 % 4294967296 % 256 &&& 255) <<< 16 % 4294967296 |||
+      (v >>> 24 % 4294967296 % 256 &&& 255) <<< 24 % 4294967296 = v % 4294967296 := by
+  simp only [show (256:Nat) = 2^8 by norm_num, show (4294967296:Nat) = 2^32 by norm_num,
+    show (255:Nat) = 2^8 - 1 by norm_num, Nat.and_two_pow_sub_one_eq_mod,
+    Nat.mod_mod_of_dvd _ (by norm_num : (2:Nat)^8 ∣ 2^32)]
+  apply Nat.eq_of_testBit_eq
+  intro i
+  simp only [Nat.testBit_or, Nat.testBit_mod_two_pow, Nat.testBit_shiftLeft, Nat.testBit_shiftRight]
+  by_cases hi8 : i < 8
+  · simp [hi8, show i < 32 by omega, show ¬ i ≥ 8 by omega, show ¬ i ≥ 16 by omega, show ¬ i ≥ 24 by omega]
+  by_cases hi16 : i < 16
+  · have heq : 8 + (i - 8) = i := by omega
+    simp [hi8, heq, show i ≥ 8 by omega, show i < 32 by omega, show i - 8 < 8 by omega,
+      show ¬ i ≥ 16 by omega, show ¬ i ≥ 24 by omega]
+  by_cases hi24 : i < 24
+  · have heq : 16 + (i - 16) = i := by omega
+    simp [hi8, heq, show i ≥ 16 by omega, show i < 32 by omega, show ¬ i - 8 < 8 by omega,
+      show i - 16 < 8 by omega, show ¬ i ≥ 24 by omega]
+  by_cases hi32 : i < 32
+  · have heq : 24 + (i - 24) = i := by omega
+    simp [hi8, heq, show i ≥ 24 by omega, hi32, show ¬ i - 8 < 8 by omega,
+      show ¬ i - 16 < 8 by omega, show i - 24 < 8 by omega]
+  · simp [hi8, show ¬ i < 32 by omega, show ¬ i - 8 < 8 by omega,
+      show ¬ i - 16 < 8 by omega, show ¬ i - 24 < 8 by omega]
+
 theorem Mem.read64_low (m : Mem) (address : UInt32) :
     (m.read64 address).toUInt32 = m.read32 address := by
   simp [Mem.read64, Mem.read32]
   bv_decide
+
+private theorem hbit (b j : Nat) (hb : b < 2^8) (hj : 8 ≤ j) : b.testBit j = false :=
+  Nat.testBit_eq_false_of_lt (lt_of_lt_of_le hb (Nat.pow_le_pow_right (by norm_num) hj))
+
+private theorem reassemble_high_nat (b0 b1 b2 b3 b4 b5 b6 b7 : Nat)
+    (h0 : b0 < 2^8) (h1 : b1 < 2^8) (h2 : b2 < 2^8) (h3 : b3 < 2^8)
+    (h4 : b4 < 2^8) (h5 : b5 < 2^8) (h6 : b6 < 2^8) (h7 : b7 < 2^8) :
+    (b0 ||| b1 <<< 8 % 2^64 ||| b2 <<< 16 % 2^64 ||| b3 <<< 24 % 2^64 ||| b4 <<< 32 % 2^64 |||
+      b5 <<< 40 % 2^64 ||| b6 <<< 48 % 2^64 ||| b7 <<< 56 % 2^64) >>> 32 % 2^32
+      = b4 ||| b5 <<< 8 % 2^32 ||| b6 <<< 16 % 2^32 ||| b7 <<< 24 % 2^32 := by
+  apply Nat.eq_of_testBit_eq
+  intro i
+  simp only [Nat.testBit_mod_two_pow, Nat.testBit_shiftRight, Nat.testBit_or,
+    Nat.testBit_shiftLeft]
+  by_cases hi : i < 32
+  · rcases Nat.lt_or_ge i 8 with h | h
+    · rw [hbit b0 (32+i) h0 (by omega), hbit b1 (32+i-8) h1 (by omega),
+        hbit b2 (32+i-16) h2 (by omega), hbit b3 (32+i-24) h3 (by omega)]
+      simp only [show (32 + i < 64) by omega, show 32+i-32 = i by omega, show ¬ (40 ≤ 32+i) by omega,
+        show ¬ (48 ≤ 32+i) by omega, show ¬ (56 ≤ 32+i) by omega, show ¬ (8 ≤ i) by omega,
+        show ¬ (16 ≤ i) by omega, show ¬ (24 ≤ i) by omega, hi, h,
+        decide_true, decide_false, Bool.false_and, Bool.and_false, Bool.or_false,
+        Bool.false_or, Bool.true_and, show (32:Nat) ≤ 32+i by omega]
+    rcases Nat.lt_or_ge i 16 with h2i | h2i
+    · rw [hbit b0 (32+i) h0 (by omega), hbit b1 (32+i-8) h1 (by omega),
+        hbit b2 (32+i-16) h2 (by omega), hbit b3 (32+i-24) h3 (by omega),
+        hbit b4 (32+i-32) h4 (by omega), hbit b4 i h4 (by omega)]
+      simp only [show (32 + i < 64) by omega, show 32+i-40 = i-8 by omega, show ¬ (48 ≤ 32+i) by omega,
+        show ¬ (56 ≤ 32+i) by omega, show ¬ (16 ≤ i) by omega, show ¬ (24 ≤ i) by omega,
+        hi, h, h2i, decide_true, decide_false, Bool.false_and, Bool.and_false, Bool.or_false,
+        Bool.false_or, Bool.true_and, show (40:Nat) ≤ 32+i by omega, show (8:Nat) ≤ i by omega]
+    rcases Nat.lt_or_ge i 24 with h3i | h3i
+    · rw [hbit b0 (32+i) h0 (by omega), hbit b1 (32+i-8) h1 (by omega),
+        hbit b2 (32+i-16) h2 (by omega), hbit b3 (32+i-24) h3 (by omega),
+        hbit b4 (32+i-32) h4 (by omega), hbit b5 (32+i-40) h5 (by omega),
+        hbit b4 i h4 (by omega), hbit b5 (i-8) h5 (by omega)]
+      simp only [show (32 + i < 64) by omega, show 32+i-48 = i-16 by omega, show ¬ (56 ≤ 32+i) by omega,
+        show ¬ (24 ≤ i) by omega, hi, decide_true, decide_false, Bool.false_and, Bool.and_false,
+        Bool.or_false, Bool.false_or, Bool.true_and, show (48:Nat) ≤ 32+i by omega,
+        show (8:Nat) ≤ i by omega, show (16:Nat) ≤ i by omega]
+    · rw [hbit b0 (32+i) h0 (by omega), hbit b1 (32+i-8) h1 (by omega),
+        hbit b2 (32+i-16) h2 (by omega), hbit b3 (32+i-24) h3 (by omega),
+        hbit b4 (32+i-32) h4 (by omega), hbit b5 (32+i-40) h5 (by omega),
+        hbit b6 (32+i-48) h6 (by omega), hbit b4 i h4 (by omega),
+        hbit b5 (i-8) h5 (by omega), hbit b6 (i-16) h6 (by omega)]
+      simp only [show (32 + i < 64) by omega, show 32+i-56 = i-24 by omega, hi, decide_true, decide_false, Bool.false_and,
+        Bool.and_false, Bool.or_false, Bool.false_or, Bool.true_and,
+        show (56:Nat) ≤ 32+i by omega, show (8:Nat) ≤ i by omega, show (16:Nat) ≤ i by omega,
+        show (24:Nat) ≤ i by omega]
+  · rw [hbit b4 i h4 (by omega), hbit b5 (i-8) h5 (by omega),
+      hbit b6 (i-16) h6 (by omega), hbit b7 (i-24) h7 (by omega)]
+    simp only [hi, decide_false, Bool.false_and, Bool.and_false, Bool.or_false, Bool.false_or]
 
 theorem Mem.read64_high (m : Mem) (address : UInt32)
     (hnext : (address + 4).toNat = address.toNat + 4) :
@@ -102,12 +182,21 @@ theorem Mem.read64_high (m : Mem) (address : UInt32)
     show address.toNat + 4 + 1 = address.toNat + 5 by omega,
     show address.toNat + 4 + 2 = address.toNat + 6 by omega,
     show address.toNat + 4 + 3 = address.toNat + 7 by omega]
-  bv_decide
+  apply UInt32.toNat_inj.mp
+  simp only [UInt64.toNat_toUInt32, UInt64.toNat_shiftRight, UInt64.toNat_or,
+    UInt64.toNat_shiftLeft, UInt8.toNat_toUInt64, UInt32.toNat_or, UInt32.toNat_shiftLeft,
+    UInt8.toNat_toUInt32, UInt64.toNat_ofNat, UInt32.toNat_ofNat, Nat.reducePow, Nat.reduceMod]
+  refine reassemble_high_nat _ _ _ _ _ _ _ _ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ <;>
+    exact UInt8.toNat_lt _
 
 theorem Mem.read32_write64_low (m : Mem) (address : UInt32) (value : UInt64) :
     (m.write64 address value).read32 address = value.toUInt32 := by
   simp [Mem.write64, Mem.read32]
-  bv_decide
+  apply UInt32.toNat_inj.mp
+  simp only [UInt32.toNat_or, UInt32.toNat_shiftLeft, UInt32.toNat_and, UInt32.toNat_mod,
+    UInt32.toNat_ofNat, UInt64.toNat_toUInt32, UInt64.toNat_shiftRight, UInt64.toNat_ofNat,
+    Nat.reducePow, Nat.reduceMod]
+  exact reassemble_low_nat value.toNat
 
 theorem Mem.read32_write64_high (m : Mem) (address : UInt32) (value : UInt64)
     (hnext : (address + 4).toNat = address.toNat + 4) :
@@ -117,7 +206,13 @@ theorem Mem.read32_write64_high (m : Mem) (address : UInt32) (value : UInt64)
     show address.toNat + 4 + 1 = address.toNat + 5 by omega,
     show address.toNat + 4 + 2 = address.toNat + 6 by omega,
     show address.toNat + 4 + 3 = address.toNat + 7 by omega]
-  bv_decide
+  apply UInt32.toNat_inj.mp
+  simp only [UInt32.toNat_or, UInt32.toNat_shiftLeft, UInt32.toNat_and, UInt32.toNat_mod,
+    UInt32.toNat_ofNat, UInt64.toNat_toUInt32, UInt64.toNat_shiftRight, UInt64.toNat_ofNat,
+    Nat.reducePow, Nat.reduceMod,
+    show (40:Nat) = 32 + 8 by norm_num, show (48:Nat) = 32 + 16 by norm_num,
+    show (56:Nat) = 32 + 24 by norm_num]
+  exact reassemble_low_nat (value.toNat >>> 32)
 
 theorem Mem.readBytes_write64_disjoint (m : Mem) (off len : Nat)
     (address : UInt32) (value : UInt64)

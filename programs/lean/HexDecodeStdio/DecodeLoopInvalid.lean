@@ -215,13 +215,13 @@ theorem decodeLoopPairInvalidStore_vector_fields
       Mem.read32_write32_disjoint, Mem.read32_write32_disjoint,
       Mem.read32_write32_disjoint]
     · exact hptr
-    all_goals decide
+    all_goals norm_num [UInt32.toNat_add, UInt32.toNat_ofNat]
   · rw [Mem.read32_write8_disjoint_loop, Mem.read32_write8_disjoint_loop,
       Mem.read32_write32_disjoint, Mem.read32_write32_disjoint,
       Mem.read32_write32_disjoint, Mem.read32_write32_disjoint,
       Mem.read32_write32_disjoint]
     · exact hcapacity
-    all_goals decide
+    all_goals norm_num [UInt32.toNat_add, UInt32.toNat_ofNat]
 
 set_option maxRecDepth 100000 in
 set_option maxHeartbeats 5000000 in
@@ -344,13 +344,16 @@ theorem DecodeLoopInv.invalid_high_call_reaches
   have hpost := decode_loop_exit_to_post paired data inputLen ptr capacity
     outLen seed hi returningInstance h.pages_lower hv.1 hv.2
   have hmarker : paired.wasm.mem.read32 coreError = hi.toUInt32 &&& 255 := by
-    simp [paired, decodeLoopPairInvalidStore, decodeLoopPairBaseStore,
-      Mem.read32, Mem.write32, Mem.write8]
-    bv_decide
+    simp only [paired, decodeLoopPairInvalidStore]
+    rw [Mem.read32_write8_disjoint_loop, Mem.read32_write8_disjoint_loop,
+      Mem.read32_write32_disjoint, Mem.read32_write32_disjoint,
+      Mem.read32_write32_same]
+    all_goals decide
   have hidx : paired.wasm.mem.read32 (coreError + 4) = index := by
-    simp [paired, decodeLoopPairInvalidStore, decodeLoopPairBaseStore,
-      Mem.read32, Mem.write32, Mem.write8]
-    bv_decide
+    simp only [paired, decodeLoopPairInvalidStore]
+    rw [Mem.read32_write8_disjoint_loop, Mem.read32_write8_disjoint_loop,
+      Mem.read32_write32_disjoint, Mem.read32_write32_same]
+    all_goals decide
   have hreturn' : returningInstance = paired.runtime.entry := by
     simpa [paired, appended, decodeLoopPairInvalidStore,
       decodeLoopPairBaseStore, decodeLoopAppendStore] using hreturn
@@ -358,7 +361,17 @@ theorem DecodeLoopInv.invalid_high_call_reaches
     capacity (1 + outLen) (hi.toUInt32 &&& 255) index seed returningInstance
     h.runtime_module h.pages_lower (by
       change globalAt? store 0 = some (.i32 coreFrame); exact h.global_eq)
-    hmarker (by bv_decide) hidx (by
+    hmarker (by
+      intro heq
+      have hle : (hi.toUInt32 &&& 255).toNat ≤ 255 := by
+        simp only [UInt32.toNat_and, UInt8.toUInt32_toNat,
+          UInt32.toNat_ofNat]
+        exact Nat.and_le_right
+      have hnat := congrArg UInt32.toNat heq
+      have hlarge : (1114114 : UInt32).toNat = 1114114 := by
+        norm_num [UInt32.toNat_ofNat]
+      rw [hlarge] at hnat
+      omega) hidx (by
       intro hz; have hc := h.capacity_pos; simp [hz] at hc) hreturn'
   constructor
   · exact hpair.trans (hpost.trans hinvalid)
@@ -435,42 +448,47 @@ theorem DecodeLoopInv.invalid_low_call_reaches
     · exact h.remaining_length
     · have hp := h.input_before_output
       have hd := h.data_lower
-      have ha : (loopIterator + 4).toNat + 4 = 1048512 := by decide
+      have ha : (loopIterator + 4).toNat + 4 = 1048512 := by
+        norm_num [UInt32.toNat_add, UInt32.toNat_ofNat, UInt32.size]
       rw [ha]; omega
-    · decide
+    · norm_num [UInt32.toNat_add, UInt32.toNat_ofNat, UInt32.size]
   have herr : appended.wasm.mem.read32 (loopIterator + 16) = loopError := by
     rw [h.appended_read32_scratch]
     · exact h.iterator_error
     · have hp := h.input_before_output
       have hd := h.data_lower
-      have ha : (loopIterator + 16).toNat + 4 = 1048524 := by decide
+      have ha : (loopIterator + 16).toNat + 4 = 1048524 := by
+        norm_num [UInt32.toNat_add, UInt32.toNat_ofNat, UInt32.size]
       rw [ha]; omega
-    · decide
+    · norm_num [UInt32.toNat_add, UInt32.toNat_ofNat, UInt32.size]
   have hchunk : appended.wasm.mem.read32 (loopIterator + 8) = 2 := by
     rw [h.appended_read32_scratch]
     · exact h.iterator_chunk
     · have hp := h.input_before_output
       have hd := h.data_lower
-      have ha : (loopIterator + 8).toNat + 4 = 1048516 := by decide
+      have ha : (loopIterator + 8).toNat + 4 = 1048516 := by
+        norm_num [UInt32.toNat_add, UInt32.toNat_ofNat, UInt32.size]
       rw [ha]; omega
-    · decide
+    · norm_num [UInt32.toNat_add, UInt32.toNat_ofNat, UInt32.size]
   have hptrRead : appended.wasm.mem.read32 loopIterator = inputPtr := by
     rw [h.appended_read32_scratch]
     · exact h.iterator_pointer
     · have hp := h.input_before_output
       have hd := h.data_lower
-      have ha : loopIterator.toNat + 4 = 1048508 := by decide
+      have ha : loopIterator.toNat + 4 = 1048508 := by
+        norm_num [UInt32.toNat_ofNat]
       rw [ha]; omega
-    · decide
+    · norm_num [UInt32.toNat_add, UInt32.toNat_ofNat, UInt32.size]
   have hindexRead : appended.wasm.mem.read32 (loopIterator + 12) =
       chunkIndex := by
     rw [h.appended_read32_scratch]
     · exact h.iterator_index
     · have hp := h.input_before_output
       have hd := h.data_lower
-      have ha : (loopIterator + 12).toNat + 4 = 1048520 := by decide
+      have ha : (loopIterator + 12).toNat + 4 = 1048520 := by
+        norm_num [UInt32.toNat_add, UInt32.toNat_ofNat, UInt32.size]
       rw [ha]; omega
-    · decide
+    · norm_num [UInt32.toNat_add, UInt32.toNat_ofNat, UInt32.size]
   have hreads := h.appended_pair_reads
   have hpair := decode_loop_pair_invalid_low_exit appended data inputLen ptr
     outLen inputPtr remainingWord chunkIndex seed pending hi lo hiRoute
@@ -483,23 +501,34 @@ theorem DecodeLoopInv.invalid_low_call_reaches
     (h.appended_read32_scratch (by
       have hp := h.input_before_output
       have hd := h.data_lower
-      have ha : (coreFrame + 64).toNat + 4 = 1048500 := by decide
-      rw [ha]; omega) (by decide) |>.trans h.vector_pointer)
+      have ha : (coreFrame + 64).toNat + 4 = 1048500 := by
+        norm_num [UInt32.toNat_add, UInt32.toNat_ofNat, UInt32.size]
+      rw [ha]; omega) (by
+        norm_num [UInt32.toNat_add, UInt32.toNat_ofNat, UInt32.size])
+      |>.trans h.vector_pointer)
     (h.appended_read32_scratch (by
       have hp := h.input_before_output
       have hd := h.data_lower
-      have ha : (coreFrame + 60).toNat + 4 = 1048496 := by decide
-      rw [ha]; omega) (by decide) |>.trans h.vector_capacity)
+      have ha : (coreFrame + 60).toNat + 4 = 1048496 := by
+        norm_num [UInt32.toNat_add, UInt32.toNat_ofNat, UInt32.size]
+      rw [ha]; omega) (by
+        norm_num [UInt32.toNat_add, UInt32.toNat_ofNat, UInt32.size])
+      |>.trans h.vector_capacity)
   have hpost := decode_loop_exit_to_post paired data inputLen ptr capacity
     outLen seed lo returningInstance h.pages_lower hv.1 hv.2
   have hmarker : paired.wasm.mem.read32 coreError = lo.toUInt32 &&& 255 := by
-    simp [paired, decodeLoopPairInvalidStore, decodeLoopPairBaseStore,
-      Mem.read32, Mem.write32, Mem.write8]
-    bv_decide
+    simp only [paired, decodeLoopPairInvalidStore]
+    rw [Mem.read32_write8_disjoint_loop, Mem.read32_write8_disjoint_loop,
+      Mem.read32_write32_disjoint, Mem.read32_write32_disjoint,
+      Mem.read32_write32_same]
+    all_goals
+      norm_num [UInt32.toNat_add, UInt32.toNat_ofNat, UInt32.size]
   have hidx : paired.wasm.mem.read32 (coreError + 4) = index := by
-    simp [paired, decodeLoopPairInvalidStore, decodeLoopPairBaseStore,
-      Mem.read32, Mem.write32, Mem.write8]
-    bv_decide
+    simp only [paired, decodeLoopPairInvalidStore]
+    rw [Mem.read32_write8_disjoint_loop, Mem.read32_write8_disjoint_loop,
+      Mem.read32_write32_disjoint, Mem.read32_write32_same]
+    all_goals
+      norm_num [UInt32.toNat_add, UInt32.toNat_ofNat, UInt32.size]
   have hreturn' : returningInstance = paired.runtime.entry := by
     simpa [paired, appended, decodeLoopPairInvalidStore,
       decodeLoopPairBaseStore, decodeLoopAppendStore] using hreturn
@@ -507,7 +536,17 @@ theorem DecodeLoopInv.invalid_low_call_reaches
     capacity (1 + outLen) (lo.toUInt32 &&& 255) index seed returningInstance
     h.runtime_module h.pages_lower (by
       change globalAt? store 0 = some (.i32 coreFrame); exact h.global_eq)
-    hmarker (by bv_decide) hidx (by
+    hmarker (by
+      intro heq
+      have hle : (lo.toUInt32 &&& 255).toNat ≤ 255 := by
+        simp only [UInt32.toNat_and, UInt8.toUInt32_toNat,
+          UInt32.toNat_ofNat]
+        exact Nat.and_le_right
+      have hnat := congrArg UInt32.toNat heq
+      have hlarge : (1114114 : UInt32).toNat = 1114114 := by
+        norm_num [UInt32.toNat_ofNat]
+      rw [hlarge] at hnat
+      omega) hidx (by
       intro hz; have hc := h.capacity_pos; simp [hz] at hc) hreturn'
   constructor
   · exact hpair.trans (hpost.trans hinvalid)
