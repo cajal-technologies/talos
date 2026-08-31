@@ -139,22 +139,10 @@ theorem copyWords_loadStoreIteration_wp
     Mem.words32_slotAddr_toNat dst i.toNat (by omega)
   have hsrcNat : srcAddress.toNat = src.toNat + 4 * i.toNat :=
     Mem.words32_slotAddr_toNat src i.toNat (by omega)
-  have addressSteps (address : UInt32)
-      (hroom : address.toNat + 4 ≤ 4294967296) :
-      (address + 1).toNat = address.toNat + 1 ∧
-      (address + 2).toNat = address.toNat + 2 ∧
-      (address + 3).toNat = address.toNat + 3 := by
-    have step (k : Nat) (hk : k < 4294967296)
-        (hfit : address.toNat + k < 4294967296) :
-        (address + UInt32.ofNat k).toNat = address.toNat + k :=
-      UInt32.add_ofNat_toNat_noWrap address k hk hfit
-    exact ⟨by simpa using step 1 (by decide) (by omega),
-      by simpa using step 2 (by decide) (by omega),
-      by simpa using step 3 (by decide) (by omega)⟩
   obtain ⟨hd1, hd2, hd3⟩ :=
-    addressSteps dstAddress (by rw [hdstNat]; omega)
+    UInt32.addSteps4 dstAddress (by rw [hdstNat]; omega)
   obtain ⟨hs1, hs2, hs3⟩ :=
-    addressSteps srcAddress (by rw [hsrcNat]; omega)
+    UInt32.addSteps4 srcAddress (by rw [hsrcNat]; omega)
   iintro ⟨HR, Hdst, Hsrc⟩
   ihave Hfocused :
       pointsTo_u32 0 (src + 4 * UInt32.ofNat pre.length) value ∗
@@ -699,22 +687,10 @@ theorem copyWords_loadStoreIteration_twp
     Mem.words32_slotAddr_toNat dst i.toNat (by omega)
   have hsrcNat : srcAddress.toNat = src.toNat + 4 * i.toNat :=
     Mem.words32_slotAddr_toNat src i.toNat (by omega)
-  have addressSteps (address : UInt32)
-      (hroom : address.toNat + 4 ≤ 4294967296) :
-      (address + 1).toNat = address.toNat + 1 ∧
-      (address + 2).toNat = address.toNat + 2 ∧
-      (address + 3).toNat = address.toNat + 3 := by
-    have step (k : Nat) (hk : k < 4294967296)
-        (hfit : address.toNat + k < 4294967296) :
-        (address + UInt32.ofNat k).toNat = address.toNat + k :=
-      UInt32.add_ofNat_toNat_noWrap address k hk hfit
-    exact ⟨by simpa using step 1 (by decide) (by omega),
-      by simpa using step 2 (by decide) (by omega),
-      by simpa using step 3 (by decide) (by omega)⟩
   obtain ⟨hd1, hd2, hd3⟩ :=
-    addressSteps dstAddress (by rw [hdstNat]; omega)
+    UInt32.addSteps4 dstAddress (by rw [hdstNat]; omega)
   obtain ⟨hs1, hs2, hs3⟩ :=
-    addressSteps srcAddress (by rw [hsrcNat]; omega)
+    UInt32.addSteps4 srcAddress (by rw [hsrcNat]; omega)
   iintro ⟨HR, Hdst, Hsrc⟩
   ihave Hfocused :
       pointsTo_u32 0 (src + 4 * UInt32.ofNat pre.length) value ∗

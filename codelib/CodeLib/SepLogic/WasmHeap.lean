@@ -1170,6 +1170,39 @@ theorem UInt32.add_ofNat_toNat_noWrap (addr : UInt32) (n : Nat)
     UInt32.toNat_ofNat_of_lt' (by simpa only [UInt32.size] using hn)]
   omega
 
+omit inst in
+/-- Address ladder for a 4-byte access at `addr`: given room for the whole
+word, none of `addr + 1 … addr + 3` wraps, so each `toNat` is the obvious sum.
+Stated with numerals (`addr + 1`, not `addr + UInt32.ofNat 1`) because that is
+the shape the `load32` / `store32` rules and their callers write. -/
+theorem UInt32.addSteps4 (addr : UInt32) (hroom : addr.toNat + 4 ≤ 4294967296) :
+    (addr + 1).toNat = addr.toNat + 1 ∧
+    (addr + 2).toNat = addr.toNat + 2 ∧
+    (addr + 3).toNat = addr.toNat + 3 :=
+  ⟨by simpa using UInt32.add_ofNat_toNat_noWrap addr 1 (by decide) (by omega),
+    by simpa using UInt32.add_ofNat_toNat_noWrap addr 2 (by decide) (by omega),
+    by simpa using UInt32.add_ofNat_toNat_noWrap addr 3 (by decide) (by omega)⟩
+
+omit inst in
+/-- Address ladder for an 8-byte access at `addr`: given room for the whole
+word, none of `addr + 1 … addr + 7` wraps. The numeral form matches the
+`load64` / `store64` premises. -/
+theorem UInt32.addSteps8 (addr : UInt32) (hroom : addr.toNat + 8 ≤ 4294967296) :
+    (addr + 1).toNat = addr.toNat + 1 ∧
+    (addr + 2).toNat = addr.toNat + 2 ∧
+    (addr + 3).toNat = addr.toNat + 3 ∧
+    (addr + 4).toNat = addr.toNat + 4 ∧
+    (addr + 5).toNat = addr.toNat + 5 ∧
+    (addr + 6).toNat = addr.toNat + 6 ∧
+    (addr + 7).toNat = addr.toNat + 7 :=
+  ⟨by simpa using UInt32.add_ofNat_toNat_noWrap addr 1 (by decide) (by omega),
+    by simpa using UInt32.add_ofNat_toNat_noWrap addr 2 (by decide) (by omega),
+    by simpa using UInt32.add_ofNat_toNat_noWrap addr 3 (by decide) (by omega),
+    by simpa using UInt32.add_ofNat_toNat_noWrap addr 4 (by decide) (by omega),
+    by simpa using UInt32.add_ofNat_toNat_noWrap addr 5 (by decide) (by omega),
+    by simpa using UInt32.add_ofNat_toNat_noWrap addr 6 (by decide) (by omega),
+    by simpa using UInt32.add_ofNat_toNat_noWrap addr 7 (by decide) (by omega)⟩
+
 /-- The `n`th little-endian byte of a 32-bit word. -/
 def u32Byte (v : UInt32) (n : Nat) : UInt8 :=
   match n with

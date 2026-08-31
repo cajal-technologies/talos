@@ -87,34 +87,8 @@ theorem absDiff_smallStep_wp_to_return
   have h8 : ((sp - 16) + 8).toNat = (sp - 16).toNat + 8 := by
     simpa using UInt32.add_ofNat_toNat_noWrap (sp - 16) 8
       (by omega) (by omega)
-  have h9 : (((sp - 16) + 8) + 1).toNat =
-      ((sp - 16) + 8).toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ((sp - 16) + 8) 1
-      (by omega) (by omega)
-  have h10 : (((sp - 16) + 8) + 2).toNat =
-      ((sp - 16) + 8).toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ((sp - 16) + 8) 2
-      (by omega) (by omega)
-  have h11 : (((sp - 16) + 8) + 3).toNat =
-      ((sp - 16) + 8).toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ((sp - 16) + 8) 3
-      (by omega) (by omega)
-  have h12 : (((sp - 16) + 8) + 4).toNat =
-      ((sp - 16) + 8).toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ((sp - 16) + 8) 4
-      (by omega) (by omega)
-  have h13 : (((sp - 16) + 8) + 5).toNat =
-      ((sp - 16) + 8).toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ((sp - 16) + 8) 5
-      (by omega) (by omega)
-  have h14 : (((sp - 16) + 8) + 6).toNat =
-      ((sp - 16) + 8).toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ((sp - 16) + 8) 6
-      (by omega) (by omega)
-  have h15 : (((sp - 16) + 8) + 7).toNat =
-      ((sp - 16) + 8).toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ((sp - 16) + 8) 7
-      (by omega) (by omega)
+  obtain ⟨h9, h10, h11, h12, h13, h14, h15⟩ :=
+    UInt32.addSteps8 ((sp - 16) + 8) (by omega)
   iintro ⟨HR, Hglobal, Hscratch⟩
   simp only [absDiffBody]
   iapply Wasm.SmallStep.wp_globalGet $$ Hglobal
