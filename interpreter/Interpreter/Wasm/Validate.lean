@@ -1026,28 +1026,27 @@ def Instruction.straightSig (m : Module) (locals : List ValueType)
   | .vShuffle _ => some ([.v128, .v128], [.v128])
   | .tableGet tableIndex =>
     (m.tableDecl? tableIndex).map fun table =>
-      ([if table.is64 then .i64 else .i32], [table.elemType])
+      ([table.addressType], [table.elemType])
   | .tableSet tableIndex =>
     (m.tableDecl? tableIndex).map fun table =>
-      ([table.elemType, if table.is64 then .i64 else .i32], [])
+      ([table.elemType, table.addressType], [])
   | .tableSize tableIndex =>
     (m.tableDecl? tableIndex).map fun table =>
-      ([], [if table.is64 then .i64 else .i32])
+      ([], [table.addressType])
   | .tableGrow tableIndex =>
     (m.tableDecl? tableIndex).map fun table =>
-      let addressType := if table.is64 then .i64 else .i32
+      let addressType := table.addressType
       ([addressType, table.elemType], [addressType])
   | .tableFill tableIndex =>
     (m.tableDecl? tableIndex).map fun table =>
-      let addressType := if table.is64 then .i64 else .i32
+      let addressType := table.addressType
       ([addressType, table.elemType, addressType], [])
   | .tableCopy destinationTableIndex sourceTableIndex =>
     (m.tableDecl? destinationTableIndex).bind fun destinationTable =>
       (m.tableDecl? sourceTableIndex).map fun sourceTable =>
-        let destinationType :=
-          if destinationTable.is64 then .i64 else .i32
-        let sourceType := if sourceTable.is64 then .i64 else .i32
-        let lengthType :=
+        let destinationType := destinationTable.addressType
+        let sourceType := sourceTable.addressType
+        let lengthType : ValueType :=
           if destinationTable.is64 && sourceTable.is64 then .i64 else .i32
         ([lengthType, sourceType, destinationType], [])
   | .call functionIndex =>
@@ -1056,7 +1055,7 @@ def Instruction.straightSig (m : Module) (locals : List ValueType)
   | .callIndirect typeIndex tableIndex =>
     (m.types[typeIndex]?).bind fun signature =>
       (m.tableDecl? tableIndex).map fun table =>
-        let selectorType := if table.is64 then .i64 else .i32
+        let selectorType := table.addressType
         (selectorType :: signature.params.reverse, signature.results)
   | .callRef typeIndex =>
     (m.types[typeIndex]?).map fun signature =>
@@ -1072,50 +1071,50 @@ def Instruction.straightSig (m : Module) (locals : List ValueType)
         | none => .funcref])
   | .tableInit tableIndex _ =>
     (m.tableDecl? tableIndex).map fun table =>
-      ([.i32, .i32, if table.is64 then .i64 else .i32], [])
+      ([.i32, .i32, table.addressType], [])
   | .elemDrop _ => some ([], [])
   | .memorySize =>
     m.memory.map fun memory =>
-      let addressType := if memory.is64 then .i64 else .i32
+      let addressType := memory.addressType
       ([], [addressType])
   | .memoryGrow =>
     m.memory.map fun memory =>
-      let addressType := if memory.is64 then .i64 else .i32
+      let addressType := memory.addressType
       ([addressType], [addressType])
   | .memoryFill =>
     m.memory.map fun memory =>
-      let addressType := if memory.is64 then .i64 else .i32
+      let addressType := memory.addressType
       ([addressType, .i32, addressType], [])
   | .memoryCopy =>
     m.memory.map fun memory =>
-      let addressType := if memory.is64 then .i64 else .i32
+      let addressType := memory.addressType
       ([addressType, addressType, addressType], [])
   | .memoryInit _ =>
     m.memory.map fun memory =>
-      ([.i32, .i32, if memory.is64 then .i64 else .i32], [])
+      ([.i32, .i32, memory.addressType], [])
   | .dataDrop _ => some ([], [])
   | .memOp memoryIndex (.memoryInit _) =>
     (m.memoryDecl? memoryIndex).map fun memory =>
-      ([.i32, .i32, if memory.is64 then .i64 else .i32], [])
+      ([.i32, .i32, memory.addressType], [])
   | .memOp memoryIndex .memoryFill =>
     (m.memoryDecl? memoryIndex).map fun memory =>
-      let addressType := if memory.is64 then .i64 else .i32
+      let addressType := memory.addressType
       ([addressType, .i32, addressType], [])
   | .memOp memoryIndex .memoryCopy =>
     (m.memoryDecl? memoryIndex).map fun memory =>
-      let addressType := if memory.is64 then .i64 else .i32
+      let addressType := memory.addressType
       ([addressType, addressType, addressType], [])
   | .memOp memoryIndex .memorySize =>
     (m.memoryDecl? memoryIndex).map fun memory =>
-      let addressType := if memory.is64 then .i64 else .i32
+      let addressType := memory.addressType
       ([], [addressType])
   | .memOp memoryIndex .memoryGrow =>
     (m.memoryDecl? memoryIndex).map fun memory =>
-      let addressType := if memory.is64 then .i64 else .i32
+      let addressType := memory.addressType
       ([addressType], [addressType])
   | .memOp memoryIndex operation =>
     (m.memoryDecl? memoryIndex).bind fun memory =>
-      let addressType := if memory.is64 then .i64 else .i32
+      let addressType := memory.addressType
       (operation.scalarMemorySig addressType).orElse fun _ =>
         operation.simdMemorySig addressType
   | .gc op => match op with
@@ -1155,7 +1154,7 @@ def Instruction.straightSig (m : Module) (locals : List ValueType)
     | _ => none
   | operation =>
     m.memory.bind fun memory =>
-      let addressType := if memory.is64 then .i64 else .i32
+      let addressType := memory.addressType
       (operation.scalarMemorySig addressType).orElse fun _ =>
         operation.simdMemorySig addressType
 
@@ -1434,7 +1433,7 @@ partial def Program.checkTypes
             | throw "unknown table"
           if !resultTypesCompat m signature.results functionResults then
             throw "type mismatch"
-          let selectorType := if table.is64 then .i64 else .i32
+          let selectorType := table.addressType
           let next ← state.applySig m
             (selectorType :: signature.params.reverse, [])
           pure (some
@@ -1507,7 +1506,7 @@ def Module.validate (m : Module) : Except String Unit := do
         | some _ =>
             let some selectedMemory := m.memoryDecl? segment.memIdx
               | throw "unknown memory"
-            let addressType := if selectedMemory.is64 then .i64 else .i32
+            let addressType := selectedMemory.addressType
             match segment.offsetType with
             | some sourceType =>
                 if !m.vtCompat sourceType addressType then throw "type mismatch"
@@ -1532,7 +1531,7 @@ def Module.validate (m : Module) : Except String Unit := do
         let some table := m.tableDecl? tableIndex
           | throw "unknown table"
         if !m.vtCompat segmentType table.elemType then throw "type mismatch"
-        let addressType := if table.is64 then .i64 else .i32
+        let addressType := table.addressType
         match segment.offsetType with
         | some sourceType =>
             if !m.vtCompat sourceType addressType then throw "type mismatch"

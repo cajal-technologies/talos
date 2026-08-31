@@ -1448,25 +1448,13 @@ private partial def parseFolded (ctx : Ctx) (xs : List Sexpr)
       -- Reuse the linear parsers for the immediates, then treat the
       -- remaining forms as folded operand sub-expressions.
       let (instr, leftover) ← parseInstr ctx (.atom op :: rest)
-      let mut acc : List Wasm.Instruction := []
-      for s in leftover do
-        match s with
-        | .list ys =>
-          let sub ← parseFolded ctx ys
-          acc := acc ++ sub
-        | .atom a => .error s!"folded {op}: unexpected atom operand '{a}'"
+      let acc ← foldedOperands ctx s!"folded {op}" leftover
       .ok (acc ++ instr)
     | "call_indirect" | "return_call_indirect" => do
       let mk : Nat → Nat → Wasm.Instruction :=
         if op == "call_indirect" then .callIndirect else .returnCallIndirect
       let (instr, leftover) ← parseCallIndirect ctx mk rest
-      let mut acc : List Wasm.Instruction := []
-      for sx in leftover do
-        match sx with
-        | .list ys =>
-          let sub ← parseFolded ctx ys
-          acc := acc ++ sub
-        | .atom a => .error s!"folded {op}: unexpected atom operand '{a}'"
+      let acc ← foldedOperands ctx s!"folded {op}" leftover
       .ok (acc ++ instr)
     | "return_call" =>
       foldedWithImmediate ctx (resolveNamed ctx.funcIds "function")
@@ -1495,15 +1483,25 @@ private partial def parseFolded (ctx : Ctx) (xs : List Sexpr)
       -- immediate parsing to the linear parser, then treat the remaining
       -- `(...)` forms as folded operand sub-expressions.
       let (heads, rest') ← parseInstr ctx (.atom op :: rest)
-      let mut acc : List Wasm.Instruction := []
-      for s in rest' do
-        match s with
-        | .list ys =>
-          let sub ← parseFolded ctx ys
-          acc := acc ++ sub
-        | .atom a => .error s!"folded {op}: unexpected atom operand '{a}'"
+      let acc ← foldedOperands ctx s!"folded {op}" rest'
       .ok (acc ++ heads)
   | _ => .error "malformed folded form"
+
+/-- Parse the folded *operand* sub-expressions of a folded form. Every
+element of `ops` must be a `(...)` form; each is parsed as a nested folded
+form and the results are concatenated in source order, yielding the operand
+prefix that precedes the folded head instruction. `what` names the form
+being parsed in the error message for a stray atom operand. -/
+private partial def foldedOperands (ctx : Ctx) (what : String)
+    (ops : List Sexpr) : Except Err (List Wasm.Instruction) := do
+  let mut acc : List Wasm.Instruction := []
+  for s in ops do
+    match s with
+    | .list ys =>
+      let sub ← parseFolded ctx ys
+      acc := acc ++ sub
+    | .atom a => .error s!"{what}: unexpected atom operand '{a}'"
+  .ok acc
 
 private partial def foldedStructured (ctx : Ctx)
     (mk : List Wasm.ValueType → List Wasm.ValueType →
@@ -1548,13 +1546,7 @@ private partial def foldedWithImmediate (ctx : Ctx)
     (mkInstrs : Nat → List Wasm.Instruction)
     : List Sexpr → Except Err (List Wasm.Instruction)
   | .atom n :: ops => do
-    let mut acc : List Wasm.Instruction := []
-    for s in ops do
-      match s with
-      | .list ys =>
-        let sub ← parseFolded ctx ys
-        acc := acc ++ sub
-      | .atom a => .error s!"folded form: unexpected atom operand '{a}'"
+    let acc ← foldedOperands ctx "folded form" ops
     .ok (acc ++ mkInstrs (← resolve n))
   | _ => .error "folded form: missing immediate"
 
@@ -1570,13 +1562,7 @@ private partial def foldedOptTableIdx (ctx : Ctx) (mk : Nat → Wasm.Instruction
           pure ((← resolveNamed ctx.tableNames "table" a), rest)
         else .error s!"folded table op: unexpected atom operand '{a}'"
       | _ => pure (0, xs)
-    let mut acc : List Wasm.Instruction := []
-    for s in ops do
-      match s with
-      | .list ys =>
-        let sub ← parseFolded ctx ys
-        acc := acc ++ sub
-      | .atom a => .error s!"folded table op: unexpected atom operand '{a}'"
+    let acc ← foldedOperands ctx "folded table op" ops
     .ok (acc ++ [mk tableIdx])
 
 private partial def parseBrTable (ctx : Ctx) (toks : List Sexpr)
@@ -1616,13 +1602,7 @@ private partial def foldedBrTable (ctx : Ctx) (xs : List Sexpr)
   let targets := match revLabels with
     | _ :: rest => rest.reverse
     | [] => []
-  let mut acc : List Wasm.Instruction := []
-  for s in cur do
-    match s with
-    | .list ys =>
-      let sub ← parseFolded ctx ys
-      acc := acc ++ sub
-    | .atom a => .error s!"folded br_table: unexpected atom operand '{a}'"
+  let acc ← foldedOperands ctx "folded br_table" cur
   .ok (acc ++ [.brTable targets dflt])
 
 private partial def foldedSelect (ctx : Ctx) (xs : List Sexpr)
@@ -1630,13 +1610,7 @@ private partial def foldedSelect (ctx : Ctx) (xs : List Sexpr)
   let xs' := xs.filter fun
     | .list (.atom "result" :: _) => false
     | _ => true
-  let mut acc : List Wasm.Instruction := []
-  for s in xs' do
-    match s with
-    | .list ys =>
-      let sub ← parseFolded ctx ys
-      acc := acc ++ sub
-    | .atom a => .error s!"folded select: unexpected atom operand '{a}'"
+  let acc ← foldedOperands ctx "folded select" xs'
   .ok (acc ++ [.select])
 
 private partial def parseLocalTee (ctx : Ctx) (toks : List Sexpr)
