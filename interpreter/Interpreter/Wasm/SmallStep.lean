@@ -5,15 +5,14 @@ set_option maxHeartbeats 2000000
 /-!
 # Small-step WebAssembly machine
 
-This file is the first vertical slice of the Iris migration.  The existing
-fuel-bounded interpreter remains available as a regression oracle, but none of
-the definitions below call `execOne`, `exec`, or `run`.
+This machine is the authoritative semantics.  The fuel-bounded big-step
+interpreter remains available as a regression oracle, but none of the
+definitions below call `execOne`, `exec`, or `run`.
 
 The relational `Step` relation is the semantic interface.  `stepChecked?` is
-its deterministic executable presentation for the instruction families ported
-so far.  An `InternalError` denotes a configuration which validation should
-have ruled out, or an instruction family which has not yet been migrated; it is
-not a Wasm trap.
+its deterministic executable presentation.  An `InternalError` denotes a
+configuration which validation should have ruled out — a malformed operand
+stack, an out-of-range index, an unresolved import; it is not a Wasm trap.
 -/
 
 namespace Wasm
