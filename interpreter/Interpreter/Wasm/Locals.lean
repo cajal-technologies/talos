@@ -28,10 +28,6 @@ def Function.toLocals (f : Function) (args : List Value) : Locals :=
     values := [] }
 
 @[simp]
-def Locals.validIndex (s : Locals) (i : Nat) : Prop :=
-  i < s.params.length + s.locals.length
-
-@[simp]
 def Locals.get (s : Locals) (i : Nat) : Option Value :=
   if i < s.params.length then s.params[i]?
   else if i < s.params.length + s.locals.length then s.locals[i - s.params.length]?
@@ -42,10 +38,5 @@ def Locals.set? (s : Locals) (i : Nat) (v : Value) : Option Locals :=
   if i < s.params.length then some { s with params := s.params.set i v }
   else if i < s.params.length + s.locals.length then some { s with locals := s.locals.set (i - s.params.length) v }
   else none
-
-@[simp]
-def Locals.set (s : Locals) (i : Nat) (v : Value) (_ : s.validIndex i) : Locals :=
-  if i < s.params.length then { s with params := s.params.set i v }
-  else { s with locals := s.locals.set (i - s.params.length) v }
 
 end Wasm

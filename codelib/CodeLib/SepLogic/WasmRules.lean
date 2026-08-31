@@ -117,14 +117,6 @@ theorem exceptionHeapAgrees_empty (exns : List (Nat × List Value)) :
   rw [LawfulPartialMap.get?_empty] at hget
   contradiction
 
-theorem exceptionHeapAgrees_append {σ : WasmExceptionMap (Nat × List Value)}
-    {exns : List (Nat × List Value)} {entry : Nat × List Value}
-    (h : exceptionHeapAgrees σ exns) : exceptionHeapAgrees σ (exns ++ [entry]) := by
-  intro k v hget
-  have hv := h k v hget
-  obtain ⟨hlt, _⟩ := getElem?_eq_some_iff.mp hv
-  rwa [List.getElem?_append_left hlt]
-
 /-- Updating an owned global in both the authoritative ghost map and the
 physical global array preserves their agreement. All owned entries use
 `instanceId = 0`, so index equality is the only collision condition. -/
@@ -248,13 +240,6 @@ theorem table_store_listSetAt_sound
 /-! Soundness of load:
 If GenHeap says key ↦ v and σ agrees with resolve,
 then the memory for key.memId reads v at key.addr. -/
-
-theorem load_sound (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Option Mem)
-    (key : MemoryKey) (v : UInt8)
-    (h_agree : heapAgreesWithMem σ resolve)
-    (h_own : get? σ key = some (some v)) :
-    ∃ mem, resolve key.memId = some mem ∧ mem.read8 key.addr = v :=
-  h_agree key v h_own
 
 /-! Soundness of store:
 After Mem.write8, the updated σ still agrees with the updated resolver. -/
