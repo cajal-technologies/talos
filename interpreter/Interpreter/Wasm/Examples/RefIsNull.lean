@@ -1,5 +1,5 @@
-import Interpreter.Wasm.Decoder.Wat
 import Interpreter.Wasm.SmallStep
+import Interpreter.Wasm.Examples.Harness
 
 /-! ## Example: reference instructions (`ref.null`, `ref.func`, `ref.is_null`)
 
@@ -76,10 +76,7 @@ def refWat : String := "
     ref.is_null))
 "
 
-private def decoded : Wasm.Module :=
-  match Wasm.Decoder.Wat.decode refWat with
-  | .ok module => module
-  | .error _ => default
+private def decoded : Wasm.Module := Wasm.Examples.decodeOrDefault refWat
 
 private def initializedStore : Store Unit :=
   decoded.runConstGlobals 64 (decoded.initialStore (α := Unit)) {}

@@ -43,12 +43,9 @@ theorem arithmetic_matches_big_step :
       some (runValues 4 arithmeticModule 0 arithmeticModule.initialStore []) := by
   native_decide
 
-def isDivideByZero : RunnerResult α → Bool
-  | .trapped .integerDivideByZero _ => true
-  | _ => false
-
 theorem divide_by_zero_is_structured :
-    isDivideByZero (runSteps 3 divideByZeroConfig).result = true := by
+    ((runSteps 3 divideByZeroConfig).result.trapReason? ==
+      some .integerDivideByZero) = true := by
   native_decide
 
 def comparisonModule : Module :=
@@ -171,13 +168,11 @@ theorem memory_roundtrip_matches_big_step :
       some (runValues 6 memoryModule 0 memoryModule.initialStore []) := by
   native_decide
 
-def isOutOfBoundsMemory : RunnerResult α → Bool
-  | .trapped .outOfBoundsMemory _ => true
-  | _ => false
-
 theorem memory_out_of_bounds_is_structured :
-    isDivideByZero (runSteps 3 memoryTrapConfig).result = false ∧
-      isOutOfBoundsMemory (runSteps 3 memoryTrapConfig).result = true := by
+    ((runSteps 3 memoryTrapConfig).result.trapReason? ==
+        some .integerDivideByZero) = false ∧
+      ((runSteps 3 memoryTrapConfig).result.trapReason? ==
+        some .outOfBoundsMemory) = true := by
   native_decide
 
 def memoryGrowthModule : Module :=
@@ -1608,22 +1603,18 @@ theorem division_matches_big_step :
         some (runValues 20 divisionModule 1 divisionModule.initialStore []) := by
   native_decide
 
-def trapReason? : RunnerResult α → Option TrapReason
-  | .trapped reason _ => some reason
-  | _ => none
-
 theorem remainder_by_zero_traps :
-    trapReason? (runSteps 4 (divisionConfig 2 1)).result =
+    (runSteps 4 (divisionConfig 2 1)).result.trapReason? =
       some .integerDivideByZero := by
   native_decide
 
 theorem signed_i32_overflow_traps :
-    trapReason? (runSteps 4 (divisionConfig 3 1)).result =
+    (runSteps 4 (divisionConfig 3 1)).result.trapReason? =
       some .integerOverflow := by
   native_decide
 
 theorem signed_i64_overflow_traps :
-    trapReason? (runSteps 4 (divisionConfig 4 1)).result =
+    (runSteps 4 (divisionConfig 4 1)).result.trapReason? =
       some .integerOverflow := by
   native_decide
 
@@ -1752,7 +1743,7 @@ theorem reference_values_relational :
   rfl
   native_decide
 theorem null_as_non_null_traps :
-    trapReason? (runSteps 2 (referenceConfig 1 1)).result =
+    (runSteps 2 (referenceConfig 1 1)).result.trapReason? =
       some .nullReference := by
   native_decide
 
@@ -1811,7 +1802,7 @@ theorem table_read_write_relational :
   · constructor <;> rfl
 
 theorem table_get_out_of_bounds_traps :
-    trapReason? (runSteps 2 (tableConfig 1 1)).result =
+    (runSteps 2 (tableConfig 1 1)).result.trapReason? =
       some .outOfBoundsTable := by
   native_decide
 
@@ -2023,22 +2014,22 @@ theorem call_indirect_relational :
   · rfl
   · rfl
 theorem call_indirect_undefined_traps :
-    trapReason? (runSteps 2 (indirectCallConfig 6)).result =
+    (runSteps 2 (indirectCallConfig 6)).result.trapReason? =
       some .undefinedElement := by
   native_decide
 
 theorem call_indirect_uninitialized_traps :
-    trapReason? (runSteps 2 (indirectCallConfig 7)).result =
+    (runSteps 2 (indirectCallConfig 7)).result.trapReason? =
       some (.uninitializedElement 2) := by
   native_decide
 
 theorem call_indirect_type_mismatch_traps :
-    trapReason? (runSteps 2 (indirectCallConfig 8)).result =
+    (runSteps 2 (indirectCallConfig 8)).result.trapReason? =
       some .indirectCallTypeMismatch := by
   native_decide
 
 theorem call_ref_null_traps :
-    trapReason? (runSteps 2 (indirectCallConfig 9)).result =
+    (runSteps 2 (indirectCallConfig 9)).result.trapReason? =
       some .nullFunctionReference := by
   native_decide
 
@@ -2850,12 +2841,9 @@ def smallStepGcNullI31Config : Config Unit :=
       { runtime := { instances := #[{ module := smallStepGcModule, host := {} }], entry := ⟨0⟩ },
         wasm := smallStepGcModule.initialStore } }
 
-def isNullI31Trap : RunnerResult α → Bool
-  | .trapped .nullI31Reference _ => true
-  | _ => false
-
 theorem gc_null_i31_structured_trap :
-    isNullI31Trap (runSteps 2 smallStepGcNullI31Config).result = true := by
+    ((runSteps 2 smallStepGcNullI31Config).result.trapReason? ==
+      some .nullI31Reference) = true := by
   native_decide
 
 theorem gc_null_i31_trapsWith :

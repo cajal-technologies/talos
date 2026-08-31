@@ -1,5 +1,5 @@
-import Interpreter.Wasm.Decoder.Wat
 import Interpreter.Wasm.SmallStep
+import Interpreter.Wasm.Examples.Harness
 
 /-! ## Example: decoding a WAT module with imports (M9)
 
@@ -30,10 +30,7 @@ def importWat : String := "
 shape of its `imports`, `funcs` body, and `exports`. We project each
 field rather than comparing whole `Module`s because `Module` has no
 `DecidableEq` instance. -/
-private def decoded : Wasm.Module :=
-  match Wasm.Decoder.Wat.decode importWat with
-  | .ok module => module
-  | .error _ => default
+private def decoded : Wasm.Module := Wasm.Examples.decodeOrDefault importWat
 
 /-- The single import is `env.inc : i32 → i32`. -/
 theorem importWat_imports :
@@ -66,9 +63,7 @@ def typedStructuredWat : String := "
 "
 
 private def typedStructuredDecoded : Wasm.Module :=
-  match Wasm.Decoder.Wat.decode typedStructuredWat with
-  | .ok module => module
-  | .error _ => default
+  Wasm.Examples.decodeOrDefault typedStructuredWat
 
 def decodedBlockSignature :
     Option (Nat × Nat × List ValueType × List ValueType) :=
