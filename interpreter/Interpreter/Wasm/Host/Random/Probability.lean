@@ -37,28 +37,10 @@ theorem Oracle.ofPrefix_apply {count index : Nat} (bytes : Prefix count)
     Oracle.ofPrefix bytes index = bytes ⟨index, hindex⟩ := by
   simp [Oracle.ofPrefix, hindex]
 
-/-- The uniform distribution over all byte strings of length `count`. -/
-noncomputable def uniformPrefix (count : Nat) : PMF (Prefix count) :=
-  PMF.uniformOfFintype (Prefix count)
-
-/-- Lift any deterministic oracle-parametric evaluator—such as a projection
-of the fuel-bounded Wasm runner—to a discrete distribution of results. -/
-noncomputable def evalWithUniformPrefix (count : Nat)
-    (eval : Oracle → β) : PMF β :=
-  (uniformPrefix count).map fun bytes => eval (Oracle.ofPrefix bytes)
-
 /-- Probability of an event under a discrete distribution. -/
 noncomputable def probability (distribution : PMF α) (event : Set α) :
     ℝ≥0∞ :=
   distribution.toOuterMeasure event
-
-/-- Uniform-prefix events reduce to finite counting.  This is the main bridge
-for exact probability theorems about bounded randomized programs. -/
-theorem uniformPrefix_probability (count : Nat)
-    (event : Set (Prefix count)) [Fintype event] :
-    probability (uniformPrefix count) event =
-      Fintype.card event / Fintype.card (Prefix count) := by
-  exact PMF.toOuterMeasure_uniformOfFintype_apply event
 
 /-- A uniformly sampled oracle byte. -/
 noncomputable def uniformByte : PMF Byte := PMF.uniformOfFintype Byte

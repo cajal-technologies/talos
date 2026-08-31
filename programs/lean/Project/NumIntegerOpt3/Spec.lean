@@ -131,7 +131,7 @@ theorem mod3_gcd_zero_smallStep (a b : UInt64) (hz : a = 0 ∨ b = 0) :
 lemmas plus list/`Nat` reductions (no memory lemmas — this build never
 touches linear memory). -/
 local macro "drive" : tactic => `(tactic|
-  simp only [wp_simp, Locals.get, Locals.set?, Locals.validIndex,
+  simp only [wp_simp, Locals.get, Locals.set?,
     Function.toLocals, Function.numParams, Function.numLocals,
     List.length_cons, List.length_nil,
     List.getElem?_cons_zero, List.getElem?_cons_succ, List.set_cons_zero, List.set_cons_succ,

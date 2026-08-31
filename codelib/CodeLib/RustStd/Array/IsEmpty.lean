@@ -10,11 +10,6 @@ open Iris Iris.ProgramLogic Language.Notation
 abbrev isEmptyValue (len : UInt32) : UInt32 :=
   if len = 0 then 1 else 0
 
-theorem isEmptyValue_and_one (len : UInt32) :
-    1 &&& isEmptyValue len = isEmptyValue len := by
-  unfold isEmptyValue
-  by_cases h : len = 0 <;> simp [h]
-
 /-- The emitted zero-test and bool mask compute the canonical `0`/`1` result
 and resume an arbitrary iris-lean continuation. -/
 theorem isEmpty_chunk :

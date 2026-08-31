@@ -11,6 +11,7 @@ import CodeLib.RustStd.MemArray
 import CodeLib.RustStd.MemFillLoop
 import CodeLib.RustStd.MemCopyLoop
 import CodeLib.RustStd.UInt
+import CodeLib.RustStd.Option
 import CodeLib.RustStd.U64.Basic
 import CodeLib.RustStd.U64.AbsDiff
 import CodeLib.RustStd.U64.Add
@@ -28,11 +29,9 @@ import CodeLib.RustStd.Array.Basic
 import CodeLib.RustStd.Array.Len
 import CodeLib.RustStd.Array.IsEmpty
 import CodeLib.RustStd.Array.SmallStep
-import CodeLib.RustStd.Option
 import CodeLib.Near.State
 import CodeLib.Near.Env
 import CodeLib.Near.Proof
-import CodeLib.IEEE32.Exec
 import CodeLib.SepLogic.WasmHeap
 import CodeLib.SepLogic.WasmRules
 import CodeLib.SepLogic.SmallStepLanguage
