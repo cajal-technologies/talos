@@ -29,6 +29,7 @@ import CodeLib.RustStd.Array.Basic
 import CodeLib.RustStd.Array.Len
 import CodeLib.RustStd.Array.IsEmpty
 import CodeLib.RustStd.Array.SmallStep
+import CodeLib.RustStd.Vec.Basic
 import CodeLib.Near.State
 import CodeLib.Near.Env
 import CodeLib.Near.Proof
