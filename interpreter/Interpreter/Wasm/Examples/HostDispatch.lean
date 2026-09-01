@@ -244,12 +244,8 @@ theorem inc_call_partial_abstract
     (st : Store Unit) (n : UInt32) :
     PartiallyMeets (incCallConfig env st n)
       (fun values store =>
-        values = [.i32 (n + 1)] ∧ store.wasm = st) := by
-  intro trace values store execution
-  obtain ⟨rfl, rfl⟩ :=
-    steps_done_deterministic
-      (inc_call_steps_abstract env hSat st n) execution
-  exact ⟨rfl, rfl⟩
+        values = [.i32 (n + 1)] ∧ store.wasm = st) :=
+  (inc_call_terminates_abstract env hSat st n).toPartiallyMeets
 
 end HostDispatch
 end Wasm

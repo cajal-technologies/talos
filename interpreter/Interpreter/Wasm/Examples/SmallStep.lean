@@ -151,11 +151,8 @@ theorem memory_roundtrip_relational :
 
 theorem memory_roundtrip_partial :
     PartiallyMeets memoryRoundtripConfig (fun values store =>
-      values = [.i32 0x12345678] ∧ store.wasm.mem.read32 16 = 0x12345678) := by
-  apply runSteps_success_partiallyMeets memory_roundtrip_run
-  constructor
-  native_decide
-  · native_decide
+      values = [.i32 0x12345678] ∧ store.wasm.mem.read32 16 = 0x12345678) :=
+  memory_roundtrip_relational.toPartiallyMeets
 
 /-- A disjoint address remains unchanged by the store at address 16. -/
 theorem memory_roundtrip_frames_disjoint_word :
@@ -976,11 +973,8 @@ theorem swap_partial :
     PartiallyMeets swapConfig (fun values store =>
       values = [.i32 11, .i32 22] ∧
       store.wasm.mem.read32 0 = 22 ∧
-      store.wasm.mem.read32 4 = 11) := by
-  apply runSteps_success_partiallyMeets swap_run
-  constructor
-  native_decide
-  constructor <;> native_decide
+      store.wasm.mem.read32 4 = 11) :=
+  swap_relational.toPartiallyMeets
 
 theorem swap_matches_big_step :
     (runSteps 17 swapConfig).result.values? =
@@ -1048,13 +1042,8 @@ theorem reverse_three_partial :
       values = [.i32 11, .i32 33] ∧
       store.wasm.mem.read32 0 = 33 ∧
       store.wasm.mem.read32 4 = 22 ∧
-      store.wasm.mem.read32 8 = 11) := by
-  apply runSteps_success_partiallyMeets reverse_three_run
-  constructor
-  native_decide
-  constructor
-  · native_decide
-  constructor <;> native_decide
+      store.wasm.mem.read32 8 = 11) :=
+  reverse_three_relational.toPartiallyMeets
 
 theorem reverse_three_matches_big_step :
     (runSteps 17 reverseThreeConfig).result.values? =
@@ -1133,9 +1122,8 @@ theorem partition_three_partial :
       store.wasm.mem.read32 4 = 22 ∧
       store.wasm.mem.read32 8 = 33 ∧
       store.wasm.mem.read32 0 ≤ store.wasm.mem.read32 4 ∧
-      store.wasm.mem.read32 4 ≤ store.wasm.mem.read32 8) := by
-  apply runSteps_success_partiallyMeets partition_three_run
-  native_decide
+      store.wasm.mem.read32 4 ≤ store.wasm.mem.read32 8) :=
+  partition_three_relational.toPartiallyMeets
 
 theorem partition_three_matches_big_step :
     (runSteps 19 partitionThreeConfig).result.values? =
@@ -1209,9 +1197,8 @@ theorem merge_two_partial :
       values = [] ∧
       store.wasm.mem.read32 0 = 4 ∧
       store.wasm.mem.read32 4 = 9 ∧
-      store.wasm.mem.read32 0 ≤ store.wasm.mem.read32 4) := by
-  apply runSteps_success_partiallyMeets merge_two_run
-  native_decide
+      store.wasm.mem.read32 0 ≤ store.wasm.mem.read32 4) :=
+  merge_two_relational.toPartiallyMeets
 
 theorem merge_two_matches_big_step :
     (runSteps 18 mergeTwoConfig).result.values? =
@@ -2295,13 +2282,8 @@ theorem float_memory_roundtrip_partial :
       values =
         [ .f64 (-7.5 : Float).toBits, .f32 (1.25 : Float32).toBits ] ∧
       store.wasm.mem.read32 32 = (1.25 : Float32).toBits ∧
-      store.wasm.mem.read64 40 = (-7.5 : Float).toBits) := by
-  intro trace values store execution
-  obtain ⟨runTrace, runValues, runStore, runExecution, hpost⟩ :=
-    float_memory_roundtrip_relational
-  obtain ⟨rfl, rfl⟩ :=
-    steps_done_deterministic runExecution execution
-  exact hpost
+      store.wasm.mem.read64 40 = (-7.5 : Float).toBits) :=
+  float_memory_roundtrip_relational.toPartiallyMeets
 
 theorem float_memory_matches_big_step :
     (runSteps 11 floatMemoryConfig).result.values? =
@@ -2656,11 +2638,8 @@ theorem host_call_relational :
 
 theorem host_call_partial :
     PartiallyMeets smallStepHostConfig (fun values store =>
-      values = [.i32 42] ∧ store.wasm.mem.read32 200 = 41) := by
-  apply runSteps_success_partiallyMeets host_call_run
-  constructor
-  native_decide
-  · native_decide
+      values = [.i32 42] ∧ store.wasm.mem.read32 200 = 41) :=
+  host_call_relational.toPartiallyMeets
 
 theorem host_call_matches_big_step :
     (runSteps 4 smallStepHostConfig).result.values? =

@@ -78,11 +78,8 @@ theorem readByte4_spec :
 deterministic, so the trace witnessed by `readByte4_spec` is the only one. -/
 theorem readByte4_partial :
     PartiallyMeets readByte4Config (fun values store =>
-      values = [.i32 65] ∧ store.wasm.mem.read8 4 = 65) := by
-  intro trace values store htrace
-  obtain ⟨_, expected, expectedStore, execution, hpost⟩ := readByte4_spec
-  obtain ⟨rfl, rfl⟩ := steps_done_deterministic execution htrace
-  exact ⟨hpost.1, hpost.2.1⟩
+      values = [.i32 65] ∧ store.wasm.mem.read8 4 = 65) :=
+  readByte4_spec.toPartiallyMeets.mono fun _ _ post => ⟨post.1, post.2.1⟩
 
 theorem callAt2_returns_42 :
     (runSteps 16 callAt2Config).result.values? =
@@ -97,7 +94,7 @@ theorem callAt2_spec :
 theorem callAt2_partial :
     PartiallyMeets callAt2Config (fun values _ =>
       values = [.i32 42]) :=
-  runSteps_values_partiallyMeets callAt2_returns_42
+  callAt2_spec.toPartiallyMeets
 
 theorem byte0_still_zero : store0.mem.read8 0 = 0 := by
   native_decide

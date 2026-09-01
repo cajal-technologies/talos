@@ -1,5 +1,6 @@
 import Project.SwapElements.Program
 import CodeLib.SepLogic.SmallStepLifting
+import CodeLib.SepLogic.SmallStepTotalLifting
 import CodeLib.SepLogic.SmallStepAdequacy
 
 /-! # Swap Elements — iris-lean small-step proof
@@ -24,6 +25,743 @@ Key memory facts after the swap:
 The spec's global0 and pages-bound preconditions are load-bearing here:
 without `global 0 = 1048576` on entry, func4's scratch frame (`global 0 −
 16`) could alias the array and the swap postcondition would be false. -/
+
+/-! ## Program-specific small-step lifting rules
+
+These rules are stated in the `Wasm.SmallStep` namespace, over the same `WP`
+and total-`WP` layers as the generic lifting library, but they are proofs about
+*this* program: every address, local index, and instruction below is the code
+emitted for `func2` and `func3`. They therefore live next to the program they
+describe rather than in `CodeLib`'s rule library.
+-/
+
+namespace Wasm.SmallStep
+
+open Iris Iris.ProgramLogic Language.Notation
+open Wasm.SepLogic
+
+section swapElementsPartial
+
+variable {α : Type}
+variable [WasmSmallStepGS hlc α]
+attribute [local instance] instWasmIrisGS
+variable {s : Stuckness} {E : CoPset}
+variable {Φ : List Value → IProp (WasmHeapGF α)}
+
+set_option maxHeartbeats 4000000 in
+/-- Call-stack-polymorphic proof of the sixteen instructions before
+`Project.SwapElements.func2`'s final `ret`. The continuation receives the
+updated ownership and decides whether `ret` finishes a top-level invocation or
+resumes a suspended caller. -/
+theorem wp_swapElementsFunc2Prefix
+    (ptrA ptrB : UInt32) (oldScratch oldA oldB : UInt64)
+    (hroomA : ptrA.toNat + 8 ≤ 4294967296)
+    (hroomB : ptrB.toNat + 8 ≤ 4294967296)
+    {calls : List CallFrame} :
+    (globalPointsToAt 0 0 (.i32 1048560) ∗
+      pointsTo_u64 0 1048552 oldScratch ∗
+      pointsTo_u64 0 ptrA oldA ∗ pointsTo_u64 0 ptrB oldB) ∗
+    ▷^[16] ((globalPointsToAt 0 0 (.i32 1048560) ∗
+      pointsTo_u64 0 1048552 oldA ∗
+      pointsTo_u64 0 ptrA oldB ∗ pointsTo_u64 0 ptrB oldA) -∗
+      WP (.running
+        ⟨⟨[.i32 ptrA, .i32 ptrB], [.i32 1048544], []⟩,
+          [.ret], 0, [], [], calls⟩ : Expr α) @ s; E {{ Φ }}) ⊢
+    WP (.running
+      ⟨⟨[.i32 ptrA, .i32 ptrB], [.i32 0], []⟩,
+        [ .globalGet 0, .const 16, .sub, .localSet 2,
+          .localGet 2, .localGet 0, .load64 0, .store64 8,
+          .localGet 0, .localGet 1, .load64 0, .store64 0,
+          .localGet 1, .localGet 2, .load64 8, .store64 0, .ret ],
+        0, [], [], calls⟩ : Expr α) @ s; E {{ Φ }} := by
+  have ha1 : (ptrA + 1).toNat = ptrA.toNat + 1 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 1 (by omega) (by omega)
+  have ha2 : (ptrA + 2).toNat = ptrA.toNat + 2 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 2 (by omega) (by omega)
+  have ha3 : (ptrA + 3).toNat = ptrA.toNat + 3 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 3 (by omega) (by omega)
+  have ha4 : (ptrA + 4).toNat = ptrA.toNat + 4 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 4 (by omega) (by omega)
+  have ha5 : (ptrA + 5).toNat = ptrA.toNat + 5 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 5 (by omega) (by omega)
+  have ha6 : (ptrA + 6).toNat = ptrA.toNat + 6 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 6 (by omega) (by omega)
+  have ha7 : (ptrA + 7).toNat = ptrA.toNat + 7 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 7 (by omega) (by omega)
+  have hb1 : (ptrB + 1).toNat = ptrB.toNat + 1 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 1 (by omega) (by omega)
+  have hb2 : (ptrB + 2).toNat = ptrB.toNat + 2 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 2 (by omega) (by omega)
+  have hb3 : (ptrB + 3).toNat = ptrB.toNat + 3 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 3 (by omega) (by omega)
+  have hb4 : (ptrB + 4).toNat = ptrB.toNat + 4 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 4 (by omega) (by omega)
+  have hb5 : (ptrB + 5).toNat = ptrB.toNat + 5 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 5 (by omega) (by omega)
+  have hb6 : (ptrB + 6).toNat = ptrB.toNat + 6 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 6 (by omega) (by omega)
+  have hb7 : (ptrB + 7).toNat = ptrB.toNat + 7 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 7 (by omega) (by omega)
+  iintro ⟨⟨Hglobal, Hscratch, HA, HB⟩, Hdone⟩
+  iapply wp_globalGet $$ Hglobal
+  inext
+  iintro Hglobal
+  iapply wp_const
+  inext
+  iapply wp_sub
+  inext
+  iapply wp_localSet rfl
+  inext
+  simp only [UInt32.reduceSub, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub, List.set]
+  iapply wp_localGet rfl
+  inext
+  iapply wp_localGet rfl
+  inext
+  ihave HALater : ▷ pointsTo_u64 0 (ptrA + 0) oldA $$ [HA]
+  · inext
+    rw [UInt32.add_zero]
+    iexact HA
+  iapply wp_load64 oldA (by simp)
+    (by simpa using ha1) (by simpa using ha2) (by simpa using ha3)
+    (by simpa using ha4) (by simpa using ha5) (by simpa using ha6)
+    (by simpa using ha7) $$ HALater
+  inext
+  iintro HA
+  ihave HscratchLater :
+      ▷ pointsTo_u64 0 ((1048544 : UInt32) + 8) oldScratch $$ [Hscratch]
+  · inext
+    rw [show (1048544 : UInt32) + 8 = 1048552 from rfl]
+    iexact Hscratch
+  iapply wp_store64 oldScratch rfl rfl rfl rfl rfl rfl rfl rfl $$
+    HscratchLater
+  inext
+  iintro Hscratch
+  iapply wp_localGet rfl
+  inext
+  iapply wp_localGet rfl
+  inext
+  ihave HBLater : ▷ pointsTo_u64 0 (ptrB + 0) oldB $$ [HB]
+  · inext
+    rw [UInt32.add_zero]
+    iexact HB
+  iapply wp_load64 oldB (by simp)
+    (by simpa using hb1) (by simpa using hb2) (by simpa using hb3)
+    (by simpa using hb4) (by simpa using hb5) (by simpa using hb6)
+    (by simpa using hb7) $$ HBLater
+  inext
+  iintro HB
+  ihave HALater : ▷ pointsTo_u64 0 (ptrA + 0) oldA $$ [HA]
+  · inext
+    rw [UInt32.add_zero]
+    iexact HA
+  iapply wp_store64 oldA (by simp)
+    (by simpa using ha1) (by simpa using ha2) (by simpa using ha3)
+    (by simpa using ha4) (by simpa using ha5) (by simpa using ha6)
+    (by simpa using ha7) $$ HALater
+  inext
+  iintro HA
+  iapply wp_localGet rfl
+  inext
+  iapply wp_localGet rfl
+  inext
+  ihave HscratchLater :
+      ▷ pointsTo_u64 0 ((1048544 : UInt32) + 8) oldA $$ [Hscratch]
+  · inext
+    rw [show (1048544 : UInt32) + 8 = 1048552 from rfl]
+    iexact Hscratch
+  iapply wp_load64 oldA rfl rfl rfl rfl rfl rfl rfl rfl $$
+    HscratchLater
+  inext
+  iintro Hscratch
+  ihave HBLater : ▷ pointsTo_u64 0 (ptrB + 0) oldB $$ [HB]
+  · inext
+    rw [UInt32.add_zero]
+    iexact HB
+  iapply wp_store64 oldB (by simp)
+    (by simpa using hb1) (by simpa using hb2) (by simpa using hb3)
+    (by simpa using hb4) (by simpa using hb5) (by simpa using hb6)
+    (by simpa using hb7) $$ HBLater
+  inext
+  iintro HB
+  iapply Hdone
+  simp only [UInt32.add_zero, UInt32.reduceAdd]
+  iframe
+
+/-- Aliasing specialization of the generated exchange leaf. When both
+pointers are equal there is only one exclusive eight-byte ownership token;
+the two stores leave that word unchanged while the scratch word receives its
+value. -/
+theorem wp_swapElementsFunc2AliasPrefix
+    (ptr : UInt32) (oldScratch oldValue : UInt64)
+    (hroom : ptr.toNat + 8 ≤ 4294967296)
+    {calls : List CallFrame} :
+    (globalPointsToAt 0 0 (.i32 1048560) ∗
+      pointsTo_u64 0 1048552 oldScratch ∗ pointsTo_u64 0 ptr oldValue) ∗
+    ▷^[16] ((globalPointsToAt 0 0 (.i32 1048560) ∗
+      pointsTo_u64 0 1048552 oldValue ∗ pointsTo_u64 0 ptr oldValue) -∗
+      WP (.running
+        ⟨⟨[.i32 ptr, .i32 ptr], [.i32 1048544], []⟩,
+          [.ret], 0, [], [], calls⟩ : Expr α) @ s; E {{ Φ }}) ⊢
+    WP (.running
+      ⟨⟨[.i32 ptr, .i32 ptr], [.i32 0], []⟩,
+        [ .globalGet 0, .const 16, .sub, .localSet 2,
+          .localGet 2, .localGet 0, .load64 0, .store64 8,
+          .localGet 0, .localGet 1, .load64 0, .store64 0,
+          .localGet 1, .localGet 2, .load64 8, .store64 0, .ret ],
+        0, [], [], calls⟩ : Expr α) @ s; E {{ Φ }} := by
+  have h1 : (ptr + 1).toNat = ptr.toNat + 1 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptr 1 (by omega) (by omega)
+  have h2 : (ptr + 2).toNat = ptr.toNat + 2 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptr 2 (by omega) (by omega)
+  have h3 : (ptr + 3).toNat = ptr.toNat + 3 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptr 3 (by omega) (by omega)
+  have h4 : (ptr + 4).toNat = ptr.toNat + 4 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptr 4 (by omega) (by omega)
+  have h5 : (ptr + 5).toNat = ptr.toNat + 5 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptr 5 (by omega) (by omega)
+  have h6 : (ptr + 6).toNat = ptr.toNat + 6 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptr 6 (by omega) (by omega)
+  have h7 : (ptr + 7).toNat = ptr.toNat + 7 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptr 7 (by omega) (by omega)
+  iintro ⟨⟨Hglobal, Hscratch, Hcell⟩, Hdone⟩
+  iapply wp_globalGet $$ Hglobal
+  inext
+  iintro Hglobal
+  iapply wp_const
+  inext
+  iapply wp_sub
+  inext
+  iapply wp_localSet rfl
+  inext
+  simp only [UInt32.reduceSub, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub, List.set]
+  iapply wp_localGet rfl
+  inext
+  iapply wp_localGet rfl
+  inext
+  ihave HcellLater : ▷ pointsTo_u64 0 (ptr + 0) oldValue $$ [Hcell]
+  · inext
+    rw [UInt32.add_zero]
+    iexact Hcell
+  iapply wp_load64 oldValue (by simp)
+    (by simpa using h1) (by simpa using h2) (by simpa using h3)
+    (by simpa using h4) (by simpa using h5) (by simpa using h6)
+    (by simpa using h7) $$ HcellLater
+  inext
+  iintro Hcell
+  ihave HscratchLater :
+      ▷ pointsTo_u64 0 ((1048544 : UInt32) + 8) oldScratch $$ [Hscratch]
+  · inext
+    rw [show (1048544 : UInt32) + 8 = 1048552 from rfl]
+    iexact Hscratch
+  iapply wp_store64 oldScratch rfl rfl rfl rfl rfl rfl rfl rfl $$
+    HscratchLater
+  inext
+  iintro Hscratch
+  iapply wp_localGet rfl
+  inext
+  iapply wp_localGet rfl
+  inext
+  ihave HcellLater : ▷ pointsTo_u64 0 (ptr + 0) oldValue $$ [Hcell]
+  · inext
+    rw [UInt32.add_zero]
+    iexact Hcell
+  iapply wp_load64 oldValue (by simp)
+    (by simpa using h1) (by simpa using h2) (by simpa using h3)
+    (by simpa using h4) (by simpa using h5) (by simpa using h6)
+    (by simpa using h7) $$ HcellLater
+  inext
+  iintro Hcell
+  ihave HcellLater : ▷ pointsTo_u64 0 (ptr + 0) oldValue $$ [Hcell]
+  · inext
+    rw [UInt32.add_zero]
+    iexact Hcell
+  iapply wp_store64 oldValue (by simp)
+    (by simpa using h1) (by simpa using h2) (by simpa using h3)
+    (by simpa using h4) (by simpa using h5) (by simpa using h6)
+    (by simpa using h7) $$ HcellLater
+  inext
+  iintro Hcell
+  iapply wp_localGet rfl
+  inext
+  iapply wp_localGet rfl
+  inext
+  ihave HscratchLater :
+      ▷ pointsTo_u64 0 ((1048544 : UInt32) + 8) oldValue $$ [Hscratch]
+  · inext
+    rw [show (1048544 : UInt32) + 8 = 1048552 from rfl]
+    iexact Hscratch
+  iapply wp_load64 oldValue rfl rfl rfl rfl rfl rfl rfl rfl $$
+    HscratchLater
+  inext
+  iintro Hscratch
+  ihave HcellLater : ▷ pointsTo_u64 0 (ptr + 0) oldValue $$ [Hcell]
+  · inext
+    rw [UInt32.add_zero]
+    iexact Hcell
+  iapply wp_store64 oldValue (by simp)
+    (by simpa using h1) (by simpa using h2) (by simpa using h3)
+    (by simpa using h4) (by simpa using h5) (by simpa using h6)
+    (by simpa using h7) $$ HcellLater
+  inext
+  iintro Hcell
+  iapply Hdone
+  simp only [UInt32.add_zero, UInt32.reduceAdd]
+  iframe
+
+/-- Top-level specialization of `wp_swapElementsFunc2Prefix`. -/
+theorem wp_swapElementsFunc2
+    (ptrA ptrB : UInt32) (oldScratch oldA oldB : UInt64)
+    (hroomA : ptrA.toNat + 8 ≤ 4294967296)
+    (hroomB : ptrB.toNat + 8 ≤ 4294967296) :
+    globalPointsToAt 0 0 (.i32 1048560) ∗
+      pointsTo_u64 0 1048552 oldScratch ∗
+      pointsTo_u64 0 ptrA oldA ∗ pointsTo_u64 0 ptrB oldB ⊢
+    WP (.running
+      ⟨⟨[.i32 ptrA, .i32 ptrB], [.i32 0], []⟩,
+        [ .globalGet 0, .const 16, .sub, .localSet 2,
+          .localGet 2, .localGet 0, .load64 0, .store64 8,
+          .localGet 0, .localGet 1, .load64 0, .store64 0,
+          .localGet 1, .localGet 2, .load64 8, .store64 0, .ret ],
+        0, [], [], []⟩ : Expr α) @ s; E
+      {{ result, ⌜result = []⌝ ∗
+        globalPointsToAt 0 0 (.i32 1048560) ∗
+        pointsTo_u64 0 1048552 oldA ∗
+        pointsTo_u64 0 ptrA oldB ∗ pointsTo_u64 0 ptrB oldA }} := by
+  iintro Hresources
+  iapply wp_swapElementsFunc2Prefix ptrA ptrB oldScratch oldA oldB
+    hroomA hroomB (calls := [])
+  isplitl [Hresources]
+  · iexact Hresources
+  · inext
+    iintro Hresources
+    iapply wp_returnFromFunction
+    inext
+    iapply wp_value'
+    isplitr
+    · ipureintro
+      rfl
+    · iexact Hresources
+
+/-- Top-level one-cell specialization for equal exchange pointers. -/
+theorem wp_swapElementsFunc2Alias
+    (ptr : UInt32) (oldScratch oldValue : UInt64)
+    (hroom : ptr.toNat + 8 ≤ 4294967296) :
+    globalPointsToAt 0 0 (.i32 1048560) ∗
+      pointsTo_u64 0 1048552 oldScratch ∗ pointsTo_u64 0 ptr oldValue ⊢
+    WP (.running
+      ⟨⟨[.i32 ptr, .i32 ptr], [.i32 0], []⟩,
+        [ .globalGet 0, .const 16, .sub, .localSet 2,
+          .localGet 2, .localGet 0, .load64 0, .store64 8,
+          .localGet 0, .localGet 1, .load64 0, .store64 0,
+          .localGet 1, .localGet 2, .load64 8, .store64 0, .ret ],
+        0, [], [], []⟩ : Expr α) @ s; E
+      {{ result, ⌜result = []⌝ ∗
+        globalPointsToAt 0 0 (.i32 1048560) ∗
+        pointsTo_u64 0 1048552 oldValue ∗
+        pointsTo_u64 0 ptr oldValue }} := by
+  iintro Hresources
+  iapply wp_swapElementsFunc2AliasPrefix ptr oldScratch oldValue
+    hroom (calls := [])
+  isplitl [Hresources]
+  · iexact Hresources
+  · inext
+    iintro Hresources
+    iapply wp_returnFromFunction
+    inext
+    iapply wp_value'
+    isplitr
+    · ipureintro
+      rfl
+    · iexact Hresources
+
+/-- Small-step Iris contract for the exact generated body of
+`Project.SwapElements.func3`. It spills `len` and `ptr` into two adjacent
+32-bit words and returns no Wasm values. -/
+theorem wp_swapElementsFunc3
+    (oldPtr oldLen ptr len : UInt32) :
+    pointsTo_u32 0 1048568 oldPtr ∗ pointsTo_u32 0 1048572 oldLen ⊢
+    WP (.running
+      ⟨⟨[.i32 1048568, .i32 ptr, .i32 len, .i32 1048652], [], []⟩,
+        [ .localGet 0, .localGet 2, .store32 4,
+          .localGet 0, .localGet 1, .store32 0, .ret ],
+        0, [], [], []⟩ : Expr α) @ s; E
+      {{ result, ⌜result = []⌝ ∗
+        pointsTo_u32 0 1048568 ptr ∗ pointsTo_u32 0 1048572 len }} := by
+  iintro ⟨Hptr, Hlen⟩
+  iapply wp_localGet rfl
+  inext
+  iapply wp_localGet rfl
+  inext
+  ihave HlenLater :
+      ▷ pointsTo_u32 0 ((1048568 : UInt32) + 4) oldLen $$ [Hlen]
+  · inext
+    rw [show (1048568 : UInt32) + 4 = 1048572 from rfl]
+    iexact Hlen
+  iapply wp_store32 oldLen rfl rfl rfl rfl $$ HlenLater
+  inext
+  iintro Hlen
+  iapply wp_localGet rfl
+  inext
+  iapply wp_localGet rfl
+  inext
+  ihave HptrLater :
+      ▷ pointsTo_u32 0 ((1048568 : UInt32) + 0) oldPtr $$ [Hptr]
+  · inext
+    rw [UInt32.add_zero]
+    iexact Hptr
+  iapply wp_store32 oldPtr rfl rfl rfl rfl $$ HptrLater
+  inext
+  iintro Hptr
+  iapply wp_returnFromFunction
+  inext
+  iapply wp_value'
+  isplitr
+  · ipureintro
+    rfl
+  · isplitl [Hptr]
+    · rw [UInt32.add_zero]
+      iexact Hptr
+    · rw [← show (1048568 : UInt32) + 4 = 1048572 from rfl]
+      iexact Hlen
+
+end swapElementsPartial
+
+section swapElementsTotalPrefix
+
+variable [WasmSmallStepGS hlc α]
+variable {Terminal : Type}
+variable [view : TerminalView α Terminal]
+attribute [local instance high] activeTerminalLanguage
+attribute [local instance high] activeTerminalIrisGS
+variable {s : Stuckness} {E : CoPset}
+variable {Φ : Terminal → IProp (WasmHeapGF α)}
+
+theorem twp_swapElementsFunc2Prefix
+    (ptrA ptrB : UInt32) (oldScratch oldA oldB : UInt64)
+    (hroomA : ptrA.toNat + 8 ≤ 4294967296)
+    (hroomB : ptrB.toNat + 8 ≤ 4294967296)
+    {calls : List CallFrame} :
+    (globalPointsToAt 0 0 (.i32 1048560) ∗
+      pointsTo_u64 0 1048552 oldScratch ∗
+      pointsTo_u64 0 ptrA oldA ∗ pointsTo_u64 0 ptrB oldB) ∗
+    ((globalPointsToAt 0 0 (.i32 1048560) ∗
+      pointsTo_u64 0 1048552 oldA ∗
+      pointsTo_u64 0 ptrA oldB ∗ pointsTo_u64 0 ptrB oldA) -∗
+      WP (.running
+        ⟨⟨[.i32 ptrA, .i32 ptrB], [.i32 1048544], []⟩,
+          [.ret], 0, [], [], calls⟩ : Expr α) @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨⟨[.i32 ptrA, .i32 ptrB], [.i32 0], []⟩,
+        [ .globalGet 0, .const 16, .sub, .localSet 2,
+          .localGet 2, .localGet 0, .load64 0, .store64 8,
+          .localGet 0, .localGet 1, .load64 0, .store64 0,
+          .localGet 1, .localGet 2, .load64 8, .store64 0, .ret ],
+        0, [], [], calls⟩ : Expr α) @ s; E [{ Φ }] := by
+  have ha1 : (ptrA + 1).toNat = ptrA.toNat + 1 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 1 (by omega) (by omega)
+  have ha2 : (ptrA + 2).toNat = ptrA.toNat + 2 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 2 (by omega) (by omega)
+  have ha3 : (ptrA + 3).toNat = ptrA.toNat + 3 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 3 (by omega) (by omega)
+  have ha4 : (ptrA + 4).toNat = ptrA.toNat + 4 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 4 (by omega) (by omega)
+  have ha5 : (ptrA + 5).toNat = ptrA.toNat + 5 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 5 (by omega) (by omega)
+  have ha6 : (ptrA + 6).toNat = ptrA.toNat + 6 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 6 (by omega) (by omega)
+  have ha7 : (ptrA + 7).toNat = ptrA.toNat + 7 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 7 (by omega) (by omega)
+  have hb1 : (ptrB + 1).toNat = ptrB.toNat + 1 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 1 (by omega) (by omega)
+  have hb2 : (ptrB + 2).toNat = ptrB.toNat + 2 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 2 (by omega) (by omega)
+  have hb3 : (ptrB + 3).toNat = ptrB.toNat + 3 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 3 (by omega) (by omega)
+  have hb4 : (ptrB + 4).toNat = ptrB.toNat + 4 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 4 (by omega) (by omega)
+  have hb5 : (ptrB + 5).toNat = ptrB.toNat + 5 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 5 (by omega) (by omega)
+  have hb6 : (ptrB + 6).toNat = ptrB.toNat + 6 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 6 (by omega) (by omega)
+  have hb7 : (ptrB + 7).toNat = ptrB.toNat + 7 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 7 (by omega) (by omega)
+  iintro ⟨⟨Hglobal, Hscratch, HA, HB⟩, Hdone⟩
+  iapply twp_globalGet $$ Hglobal
+  iintro Hglobal
+  iapply twp_const
+  iapply twp_sub
+  iapply twp_localSet rfl
+  simp only [UInt32.reduceSub, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub, List.set]
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  ihave HA' : pointsTo_u64 0 (ptrA + 0) oldA $$ [HA]
+  · rw [UInt32.add_zero]
+    iexact HA
+  iapply twp_load64 oldA (by simp)
+    (by simpa using ha1) (by simpa using ha2) (by simpa using ha3)
+    (by simpa using ha4) (by simpa using ha5) (by simpa using ha6)
+    (by simpa using ha7) $$ HA'
+  iintro HA
+  ihave Hscratch' :
+      pointsTo_u64 0 ((1048544 : UInt32) + 8) oldScratch $$ [Hscratch]
+  · rw [show (1048544 : UInt32) + 8 = 1048552 from rfl]
+    iexact Hscratch
+  iapply twp_store64 oldScratch rfl rfl rfl rfl rfl rfl rfl rfl $$
+    Hscratch'
+  iintro Hscratch
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  ihave HB' : pointsTo_u64 0 (ptrB + 0) oldB $$ [HB]
+  · rw [UInt32.add_zero]
+    iexact HB
+  iapply twp_load64 oldB (by simp)
+    (by simpa using hb1) (by simpa using hb2) (by simpa using hb3)
+    (by simpa using hb4) (by simpa using hb5) (by simpa using hb6)
+    (by simpa using hb7) $$ HB'
+  iintro HB
+  ihave HA' : pointsTo_u64 0 (ptrA + 0) oldA $$ [HA]
+  · rw [UInt32.add_zero]
+    iexact HA
+  iapply twp_store64 oldA (by simp)
+    (by simpa using ha1) (by simpa using ha2) (by simpa using ha3)
+    (by simpa using ha4) (by simpa using ha5) (by simpa using ha6)
+    (by simpa using ha7) $$ HA'
+  iintro HA
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  ihave Hscratch' :
+      pointsTo_u64 0 ((1048544 : UInt32) + 8) oldA $$ [Hscratch]
+  · rw [show (1048544 : UInt32) + 8 = 1048552 from rfl]
+    iexact Hscratch
+  iapply twp_load64 oldA rfl rfl rfl rfl rfl rfl rfl rfl $$
+    Hscratch'
+  iintro Hscratch
+  ihave HB' : pointsTo_u64 0 (ptrB + 0) oldB $$ [HB]
+  · rw [UInt32.add_zero]
+    iexact HB
+  iapply twp_store64 oldB (by simp)
+    (by simpa using hb1) (by simpa using hb2) (by simpa using hb3)
+    (by simpa using hb4) (by simpa using hb5) (by simpa using hb6)
+    (by simpa using hb7) $$ HB'
+  iintro HB
+  iapply Hdone
+  simp only [UInt32.add_zero, UInt32.reduceAdd]
+  iframe
+
+theorem twp_swapElementsFunc2AliasPrefix
+    (ptr : UInt32) (oldScratch oldValue : UInt64)
+    (hroom : ptr.toNat + 8 ≤ 4294967296)
+    {calls : List CallFrame} :
+    (globalPointsToAt 0 0 (.i32 1048560) ∗
+      pointsTo_u64 0 1048552 oldScratch ∗ pointsTo_u64 0 ptr oldValue) ∗
+    ((globalPointsToAt 0 0 (.i32 1048560) ∗
+      pointsTo_u64 0 1048552 oldValue ∗ pointsTo_u64 0 ptr oldValue) -∗
+      WP (.running
+        ⟨⟨[.i32 ptr, .i32 ptr], [.i32 1048544], []⟩,
+          [.ret], 0, [], [], calls⟩ : Expr α) @ s; E [{ Φ }]) ⊢
+    WP (.running
+      ⟨⟨[.i32 ptr, .i32 ptr], [.i32 0], []⟩,
+        [ .globalGet 0, .const 16, .sub, .localSet 2,
+          .localGet 2, .localGet 0, .load64 0, .store64 8,
+          .localGet 0, .localGet 1, .load64 0, .store64 0,
+          .localGet 1, .localGet 2, .load64 8, .store64 0, .ret ],
+        0, [], [], calls⟩ : Expr α) @ s; E [{ Φ }] := by
+  have h1 : (ptr + 1).toNat = ptr.toNat + 1 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptr 1 (by omega) (by omega)
+  have h2 : (ptr + 2).toNat = ptr.toNat + 2 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptr 2 (by omega) (by omega)
+  have h3 : (ptr + 3).toNat = ptr.toNat + 3 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptr 3 (by omega) (by omega)
+  have h4 : (ptr + 4).toNat = ptr.toNat + 4 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptr 4 (by omega) (by omega)
+  have h5 : (ptr + 5).toNat = ptr.toNat + 5 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptr 5 (by omega) (by omega)
+  have h6 : (ptr + 6).toNat = ptr.toNat + 6 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptr 6 (by omega) (by omega)
+  have h7 : (ptr + 7).toNat = ptr.toNat + 7 := by
+    simpa using UInt32.add_ofNat_toNat_noWrap ptr 7 (by omega) (by omega)
+  iintro ⟨⟨Hglobal, Hscratch, Hcell⟩, Hdone⟩
+  iapply twp_globalGet $$ Hglobal
+  iintro Hglobal
+  iapply twp_const
+  iapply twp_sub
+  iapply twp_localSet rfl
+  simp only [UInt32.reduceSub, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub, List.set]
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  ihave Hcell' : pointsTo_u64 0 (ptr + 0) oldValue $$ [Hcell]
+  · rw [UInt32.add_zero]
+    iexact Hcell
+  iapply twp_load64 oldValue (by simp)
+    (by simpa using h1) (by simpa using h2) (by simpa using h3)
+    (by simpa using h4) (by simpa using h5) (by simpa using h6)
+    (by simpa using h7) $$ Hcell'
+  iintro Hcell
+  ihave Hscratch' :
+      pointsTo_u64 0 ((1048544 : UInt32) + 8) oldScratch $$ [Hscratch]
+  · rw [show (1048544 : UInt32) + 8 = 1048552 from rfl]
+    iexact Hscratch
+  iapply twp_store64 oldScratch rfl rfl rfl rfl rfl rfl rfl rfl $$
+    Hscratch'
+  iintro Hscratch
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  ihave Hcell' : pointsTo_u64 0 (ptr + 0) oldValue $$ [Hcell]
+  · rw [UInt32.add_zero]
+    iexact Hcell
+  iapply twp_load64 oldValue (by simp)
+    (by simpa using h1) (by simpa using h2) (by simpa using h3)
+    (by simpa using h4) (by simpa using h5) (by simpa using h6)
+    (by simpa using h7) $$ Hcell'
+  iintro Hcell
+  ihave Hcell' : pointsTo_u64 0 (ptr + 0) oldValue $$ [Hcell]
+  · rw [UInt32.add_zero]
+    iexact Hcell
+  iapply twp_store64 oldValue (by simp)
+    (by simpa using h1) (by simpa using h2) (by simpa using h3)
+    (by simpa using h4) (by simpa using h5) (by simpa using h6)
+    (by simpa using h7) $$ Hcell'
+  iintro Hcell
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  ihave Hscratch' :
+      pointsTo_u64 0 ((1048544 : UInt32) + 8) oldValue $$ [Hscratch]
+  · rw [show (1048544 : UInt32) + 8 = 1048552 from rfl]
+    iexact Hscratch
+  iapply twp_load64 oldValue rfl rfl rfl rfl rfl rfl rfl rfl $$
+    Hscratch'
+  iintro Hscratch
+  ihave Hcell' : pointsTo_u64 0 (ptr + 0) oldValue $$ [Hcell]
+  · rw [UInt32.add_zero]
+    iexact Hcell
+  iapply twp_store64 oldValue (by simp)
+    (by simpa using h1) (by simpa using h2) (by simpa using h3)
+    (by simpa using h4) (by simpa using h5) (by simpa using h6)
+    (by simpa using h7) $$ Hcell'
+  iintro Hcell
+  iapply Hdone
+  simp only [UInt32.add_zero, UInt32.reduceAdd]
+  iframe
+
+end swapElementsTotalPrefix
+
+section swapElementsTotal
+
+variable [WasmSmallStepGS hlc α]
+local instance instWasmSwapTotalIrisGS :
+    IrisGS_gen hlc (Expr α) (WasmHeapGF α) :=
+  instIrisGS
+variable {s : Stuckness} {E : CoPset}
+variable {Φ : List Value → IProp (WasmHeapGF α)}
+
+theorem twp_swapElementsFunc2
+    (ptrA ptrB : UInt32) (oldScratch oldA oldB : UInt64)
+    (hroomA : ptrA.toNat + 8 ≤ 4294967296)
+    (hroomB : ptrB.toNat + 8 ≤ 4294967296) :
+    globalPointsToAt 0 0 (.i32 1048560) ∗
+      pointsTo_u64 0 1048552 oldScratch ∗
+      pointsTo_u64 0 ptrA oldA ∗ pointsTo_u64 0 ptrB oldB ⊢
+    WP (.running
+      ⟨⟨[.i32 ptrA, .i32 ptrB], [.i32 0], []⟩,
+        [ .globalGet 0, .const 16, .sub, .localSet 2,
+          .localGet 2, .localGet 0, .load64 0, .store64 8,
+          .localGet 0, .localGet 1, .load64 0, .store64 0,
+          .localGet 1, .localGet 2, .load64 8, .store64 0, .ret ],
+        0, [], [], []⟩ : Expr α) @ s; E
+      [{ result, ⌜result = []⌝ ∗
+        globalPointsToAt 0 0 (.i32 1048560) ∗
+        pointsTo_u64 0 1048552 oldA ∗
+        pointsTo_u64 0 ptrA oldB ∗ pointsTo_u64 0 ptrB oldA }] := by
+  iintro Hresources
+  iapply twp_swapElementsFunc2Prefix ptrA ptrB oldScratch oldA oldB
+    hroomA hroomB (calls := [])
+  isplitl [Hresources]
+  · iexact Hresources
+  · iintro Hresources
+    iapply twp_returnFromFunction
+    simp only [List.take, List.nil_append]
+    iapply twp.value rfl
+    isplitr
+    · ipureintro
+      rfl
+    · iexact Hresources
+
+theorem twp_swapElementsFunc2Alias
+    (ptr : UInt32) (oldScratch oldValue : UInt64)
+    (hroom : ptr.toNat + 8 ≤ 4294967296) :
+    globalPointsToAt 0 0 (.i32 1048560) ∗
+      pointsTo_u64 0 1048552 oldScratch ∗ pointsTo_u64 0 ptr oldValue ⊢
+    WP (.running
+      ⟨⟨[.i32 ptr, .i32 ptr], [.i32 0], []⟩,
+        [ .globalGet 0, .const 16, .sub, .localSet 2,
+          .localGet 2, .localGet 0, .load64 0, .store64 8,
+          .localGet 0, .localGet 1, .load64 0, .store64 0,
+          .localGet 1, .localGet 2, .load64 8, .store64 0, .ret ],
+        0, [], [], []⟩ : Expr α) @ s; E
+      [{ result, ⌜result = []⌝ ∗
+        globalPointsToAt 0 0 (.i32 1048560) ∗
+        pointsTo_u64 0 1048552 oldValue ∗
+        pointsTo_u64 0 ptr oldValue }] := by
+  iintro Hresources
+  iapply twp_swapElementsFunc2AliasPrefix ptr oldScratch oldValue hroom
+    (calls := [])
+  isplitl [Hresources]
+  · iexact Hresources
+  · iintro Hresources
+    iapply twp_returnFromFunction
+    simp only [List.take, List.nil_append]
+    iapply twp.value rfl
+    isplitr
+    · ipureintro
+      rfl
+    · iexact Hresources
+
+theorem twp_swapElementsFunc3
+    (oldPtr oldLen ptr len : UInt32) :
+    pointsTo_u32 0 1048568 oldPtr ∗ pointsTo_u32 0 1048572 oldLen ⊢
+    WP (.running
+      ⟨⟨[.i32 1048568, .i32 ptr, .i32 len, .i32 1048652], [], []⟩,
+        [ .localGet 0, .localGet 2, .store32 4,
+          .localGet 0, .localGet 1, .store32 0, .ret ],
+        0, [], [], []⟩ : Expr α) @ s; E
+      [{ result, ⌜result = []⌝ ∗
+        pointsTo_u32 0 1048568 ptr ∗ pointsTo_u32 0 1048572 len }] := by
+  iintro ⟨Hptr, Hlen⟩
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  ihave Hlen' :
+      pointsTo_u32 0 ((1048568 : UInt32) + 4) oldLen $$ [Hlen]
+  · rw [show (1048568 : UInt32) + 4 = 1048572 from rfl]
+    iexact Hlen
+  iapply twp_store32 oldLen rfl rfl rfl rfl $$ Hlen'
+  iintro Hlen
+  iapply twp_localGet rfl
+  iapply twp_localGet rfl
+  ihave Hptr' :
+      pointsTo_u32 0 ((1048568 : UInt32) + 0) oldPtr $$ [Hptr]
+  · rw [UInt32.add_zero]
+    iexact Hptr
+  iapply twp_store32 oldPtr rfl rfl rfl rfl $$ Hptr'
+  iintro Hptr
+  iapply twp_returnFromFunction
+  simp only [List.take, List.nil_append]
+  iapply twp.value rfl
+  isplitr
+  · ipureintro
+    rfl
+  · isplitl [Hptr]
+    · rw [UInt32.add_zero]
+      iexact Hptr
+    · rw [← show (1048568 : UInt32) + 4 = 1048572 from rfl]
+      iexact Hlen
+
+end swapElementsTotal
+
+end Wasm.SmallStep
 
 namespace Project.SwapElements.SwapSepLogic
 

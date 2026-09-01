@@ -88,11 +88,8 @@ theorem memoryGrow_partial :
     PartiallyMeets growThenSizeConfig (fun values store =>
       values = [.i32 3] ∧
       store.wasm.mem.pages = 3 ∧
-      store.wasm.mem.read32 64 = 0xC0DEC0DE) := by
-  apply runSteps_success_partiallyMeets memoryGrow_bumps_size
-  constructor
-  · rfl
-  constructor <;> native_decide
+      store.wasm.mem.read32 64 = 0xC0DEC0DE) :=
+  memoryGrow_spec.toPartiallyMeets
 
 /-- An oversized request returns `-1`, reports the unchanged size, and does
 not mutate any component of the machine store. -/
@@ -109,9 +106,8 @@ theorem memoryGrow_failure_spec :
 
 theorem memoryGrow_failure_partial :
     PartiallyMeets growFailConfig (fun values store =>
-      values = [.i32 1, .i32 0xFFFFFFFF] ∧ store = growStore) := by
-  apply runSteps_success_partiallyMeets memoryGrow_oversize_returns_neg_one
-  exact ⟨rfl, rfl⟩
+      values = [.i32 1, .i32 0xFFFFFFFF] ∧ store = growStore) :=
+  memoryGrow_failure_spec.toPartiallyMeets
 
 /-! ### Imported-resource limit ownership
 
