@@ -76,21 +76,6 @@ instance instTerminalView : TerminalView α (List Value) where
   primStep_eq := rfl
   running_not_val _ := rfl
 
-@[simp] theorem primStep_no_forks
-    {source : Expr α × MachineStore α} {observation : List StepKind}
-    {target : Expr α × MachineStore α × List (Expr α)}
-    (h : PrimStep.primStep source observation target) :
-    target.2.2 = [] :=
-  h.1
-
-theorem primStep_iff
-    {e e' : Expr α} {store store' : MachineStore α}
-    {observation : List StepKind} {forks} :
-    Iff (PrimStep.primStep (e, store) observation (e', store', forks))
-      (forks = [] ∧ ∃ kind, observation = [] ∧
-        Step ⟨e, store⟩ kind ⟨e', store'⟩) :=
-  Iff.rfl
-
 section terminalGeneric
 
 variable {Terminal : Type} [view : TerminalView α Terminal]

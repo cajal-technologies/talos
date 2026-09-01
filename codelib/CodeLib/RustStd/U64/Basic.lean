@@ -37,12 +37,6 @@ theorem shiftAmount_norm (b : UInt32) :
     UInt64.ofNat (shiftMask &&& b).toNat % 64 = b.toUInt64 % 64 := by
   simp; bv_decide
 
-/-- The emitted nonzero-divisor guard prefix used before unsigned division and
-remainder. Contextual small-step proofs consume its instructions with the
-primitive iris-lean lifting rules. -/
-abbrev nonzeroGuard (i : Nat) : Program :=
-  [.localGet i, .constI64 0, .eqI64, .const 1, .and, .br_if 0]
-
 end U64
 
 end Wasm.RustStd

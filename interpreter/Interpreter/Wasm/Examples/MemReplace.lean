@@ -99,11 +99,7 @@ theorem replace_partial (st : Store Unit) (new old : UInt32)
     (hpages : 1 ≤ st.mem.pages) (hmem : st.mem.read32 0 = old) :
     PartiallyMeets (replaceConfig st new) (fun values store =>
       values = [.i32 old] ∧
-      store.wasm.mem.read32 0 = new) := by
-  apply runSteps_success_partiallyMeets (replace_runs st new old hpages hmem)
-  constructor
-  · rfl
-  simp [replaceFinalStore, replaceStore, Mem.read32, Mem.write32]
-  bv_decide
+      store.wasm.mem.read32 0 = new) :=
+  (replace_spec st new old hpages hmem).toPartiallyMeets
 
 end Wasm

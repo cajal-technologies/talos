@@ -26,25 +26,9 @@ theorem fatPtrArithmetic {α} {st : Store α} {p dataPtr len : UInt32}
     ((p + 4) + 2).toNat = (p + 4).toNat + 2 ∧
     ((p + 4) + 3).toNat = (p + 4).toNat + 3 := by
   have hroom := h.noWrap
-  have step (n : Nat) (hn : n < 4294967296)
-      (hroom : p.toNat + n < 4294967296) :
-      (p + UInt32.ofNat n).toNat = p.toNat + n :=
-    UInt32.add_ofNat_toNat_noWrap p n hn hroom
-  have hp1 := step 1 (by decide) (by omega)
-  have hp2 := step 2 (by decide) (by omega)
-  have hp3 := step 3 (by decide) (by omega)
-  have hp4 := step 4 (by decide) (by omega)
-  have hp5 := step 5 (by decide) (by omega)
-  have hp6 := step 6 (by decide) (by omega)
-  have hp7 := step 7 (by decide) (by omega)
-  have hp4' : (p + 4).toNat = p.toNat + 4 := by simpa using hp4
-  have hp5' : (p + 5).toNat = p.toNat + 5 := by simpa using hp5
-  have hp6' : (p + 6).toNat = p.toNat + 6 := by simpa using hp6
-  have hp7' : (p + 7).toNat = p.toNat + 7 := by simpa using hp7
-  refine ⟨hp1, hp2, hp3, hp4, ?_, ?_, ?_⟩
-  · rw [UInt32.add_assoc, show (4 + 1 : UInt32) = 5 by decide, hp5', hp4']
-  · rw [UInt32.add_assoc, show (4 + 2 : UInt32) = 6 by decide, hp6', hp4']
-  · rw [UInt32.add_assoc, show (4 + 3 : UInt32) = 7 by decide, hp7', hp4']
+  obtain ⟨hp1, hp2, hp3, hp4, _hp5, _hp6, _hp7⟩ := UInt32.addSteps8 p hroom
+  obtain ⟨h41, h42, h43⟩ := UInt32.addSteps4 (p + 4) (by omega)
+  exact ⟨hp1, hp2, hp3, hp4, h41, h42, h43⟩
 
 theorem fatPtrHeap_agrees {α} {st : Store α} {p dataPtr len : UInt32}
     (resolve : Nat → Option Mem)
@@ -102,30 +86,8 @@ theorem fatPtrHeap_pointsTo
       pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
         address (DFrac.own 1) byte) ⊢
       pointsTo_u32 0 p dataPtr ∗ pointsTo_u32 0 (p + 4) len := by
-  have hp (n : Nat) (hn : n < 4294967296)
-      (hr : p.toNat + n < 4294967296) :
-      (p + UInt32.ofNat n).toNat = p.toNat + n :=
-    UInt32.add_ofNat_toNat_noWrap p n hn hr
-  have hp1 := hp 1 (by decide) (by omega)
-  have hp2 := hp 2 (by decide) (by omega)
-  have hp3 := hp 3 (by decide) (by omega)
-  have hp4 := hp 4 (by decide) (by omega)
-  have hp5 := hp 5 (by decide) (by omega)
-  have hp6 := hp 6 (by decide) (by omega)
-  have hp7 := hp 7 (by decide) (by omega)
-  have hp1' : (p + 1).toNat = p.toNat + 1 := by simpa using hp1
-  have hp2' : (p + 2).toNat = p.toNat + 2 := by simpa using hp2
-  have hp3' : (p + 3).toNat = p.toNat + 3 := by simpa using hp3
-  have hp4' : (p + 4).toNat = p.toNat + 4 := by simpa using hp4
-  have hp5' : (p + 5).toNat = p.toNat + 5 := by simpa using hp5
-  have hp6' : (p + 6).toNat = p.toNat + 6 := by simpa using hp6
-  have hp7' : (p + 7).toNat = p.toNat + 7 := by simpa using hp7
-  have h41 : ((p + 4) + 1).toNat = (p + 4).toNat + 1 := by
-    rw [UInt32.add_assoc, show (4 + 1 : UInt32) = 5 by decide, hp5', hp4']
-  have h42 : ((p + 4) + 2).toNat = (p + 4).toNat + 2 := by
-    rw [UInt32.add_assoc, show (4 + 2 : UInt32) = 6 by decide, hp6', hp4']
-  have h43 : ((p + 4) + 3).toNat = (p + 4).toNat + 3 := by
-    rw [UInt32.add_assoc, show (4 + 3 : UInt32) = 7 by decide, hp7', hp4']
+  obtain ⟨hp1, hp2, hp3, hp4', _hp5, _hp6, _hp7⟩ := UInt32.addSteps8 p hroom
+  obtain ⟨h41, h42, h43⟩ := UInt32.addSteps4 (p + 4) (by omega)
   have fresh (q : MemoryKey) (hq : p.toNat + 4 ≤ q.addr.toNat) :
       get? (store32Heap ∅ 0 p dataPtr) q = none := by
     unfold store32Heap
@@ -188,30 +150,8 @@ theorem wp_loadFatPtr
         .localGet index :: .load32 0 :: .localGet index :: .load32 4 :: code,
         arity, remainder, controls, calls⟩ :
         Wasm.SmallStep.Expr α) @ s; E {{ Φ }} := by
-  have hp (n : Nat) (hn : n < 4294967296)
-      (hr : p.toNat + n < 4294967296) :
-      (p + UInt32.ofNat n).toNat = p.toNat + n :=
-    UInt32.add_ofNat_toNat_noWrap p n hn hr
-  have hp1 : (p + 1).toNat = p.toNat + 1 := by
-    simpa using hp 1 (by decide) (by omega)
-  have hp2 : (p + 2).toNat = p.toNat + 2 := by
-    simpa using hp 2 (by decide) (by omega)
-  have hp3 : (p + 3).toNat = p.toNat + 3 := by
-    simpa using hp 3 (by decide) (by omega)
-  have hp4 : (p + 4).toNat = p.toNat + 4 := by
-    simpa using hp 4 (by decide) (by omega)
-  have hp5 : ((p + 4) + 1).toNat = (p + 4).toNat + 1 := by
-    have h5 : (p + 5).toNat = p.toNat + 5 := by
-      simpa using hp 5 (by decide) (by omega)
-    rw [UInt32.add_assoc, show (4 + 1 : UInt32) = 5 by decide, h5, hp4]
-  have hp6 : ((p + 4) + 2).toNat = (p + 4).toNat + 2 := by
-    have h6 : (p + 6).toNat = p.toNat + 6 := by
-      simpa using hp 6 (by decide) (by omega)
-    rw [UInt32.add_assoc, show (4 + 2 : UInt32) = 6 by decide, h6, hp4]
-  have hp7 : ((p + 4) + 3).toNat = (p + 4).toNat + 3 := by
-    have h7 : (p + 7).toNat = p.toNat + 7 := by
-      simpa using hp 7 (by decide) (by omega)
-    rw [UInt32.add_assoc, show (4 + 3 : UInt32) = 7 by decide, h7, hp4]
+  obtain ⟨hp1, hp2, hp3, hp4, _h5, _h6, _h7⟩ := UInt32.addSteps8 p hroom
+  obtain ⟨hp5, hp6, hp7⟩ := UInt32.addSteps4 (p + 4) (by omega)
   iintro >Hdata >Hlen Hwp
   iapply Wasm.SmallStep.wp_localGet hget
   inext

@@ -78,11 +78,6 @@ traps, and this check says so up front rather than letting the trap masquerade
 as program behaviour. -/
 def covers (m : Module) : Bool := registry.covers m
 
-/-- An import-free module sees the empty environment. -/
-@[simp] theorem envFor_of_no_imports (m : Module) (h : m.imports = []) :
-    envFor m = HostEnv.empty :=
-  registry.envFor_nil m h
-
 /-! ## Starting a run -/
 
 /-- Start with `input` readable on `stdio` and no entropy consumed. -/
