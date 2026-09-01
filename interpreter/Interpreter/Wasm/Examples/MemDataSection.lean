@@ -47,8 +47,7 @@ theorem memDataSection_spec :
 theorem memDataSection_partial :
     PartiallyMeets memDataConfig (fun values store =>
       values = [.i32 7] ∧
-      store.wasm.mem.read32 0 = 0x45444342) := by
-  apply runSteps_success_partiallyMeets memDataSection_runs
-  constructor <;> native_decide
+      store.wasm.mem.read32 0 = 0x45444342) :=
+  memDataSection_spec.toPartiallyMeets
 
 end Wasm

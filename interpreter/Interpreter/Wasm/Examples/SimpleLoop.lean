@@ -201,10 +201,7 @@ theorem simpleLoopSpec (n : UInt32) :
 
 theorem simpleLoopPartial (n : UInt32) :
     PartiallyMeets (simpleLoopConfig n)
-      (fun values _ => values = [.i32 n]) := by
-  intro trace values store observed
-  obtain ⟨expectedTrace, expected⟩ := simpleLoop_steps n
-  obtain ⟨rfl, rfl⟩ := steps_done_deterministic expected observed
-  rfl
+      (fun values _ => values = [.i32 n]) :=
+  (simpleLoopSpec n).toPartiallyMeets
 
 end Wasm

@@ -95,12 +95,8 @@ theorem tick_partial (st : Store Unit) (n : UInt32)
     (hg : st.globals.globals[0]? = some (.i32 n)) :
     PartiallyMeets (tickConfig st) (fun values store =>
       values = [.i32 n] ∧
-      store.wasm.globals.globals[0]? = some (.i32 (1 + n))) := by
-  apply runSteps_success_partiallyMeets (tick_runs st n hg)
-  constructor
-  · rfl
-  simp [tickFinalStore, tickStore]
-  grind
+      store.wasm.globals.globals[0]? = some (.i32 (1 + n))) :=
+  (tick_spec st n hg).toPartiallyMeets
 
 def tickInitialStore : Store Unit := tickModule.initialStore
 def tickAfterZero : Store Unit := (tickFinalStore tickInitialStore 0).wasm

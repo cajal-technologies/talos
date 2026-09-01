@@ -46,11 +46,8 @@ theorem refReflectSpec (m : Module) (st : Store α) :
 theorem refReflect_partial (m : Module) (st : Store α) :
     PartiallyMeets (refReflectConfig m st)
       (fun values store =>
-        values = [.i32 0, .i32 1] ∧ store.wasm = st) := by
-  intro trace values store execution
-  obtain ⟨rfl, rfl⟩ :=
-    steps_done_deterministic (refReflect_steps m st) execution
-  exact ⟨rfl, rfl⟩
+        values = [.i32 0, .i32 1] ∧ store.wasm = st) :=
+  (refReflectSpec m st).toPartiallyMeets
 
 namespace Decoded
 
