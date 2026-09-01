@@ -123,11 +123,8 @@ theorem swapSpec (a b : UInt32) :
 
 theorem swap_partial (a b : UInt32) :
     PartiallyMeets (swapConfig a b)
-      (fun values _ => values = [.i32 a, .i32 b]) := by
-  apply runSteps_success_partiallyMeets (fuel := 3)
-    (values := [.i32 a, .i32 b])
-  · rfl
-  · rfl
+      (fun values _ => values = [.i32 a, .i32 b]) :=
+  (swapSpec a b).toPartiallyMeets
 
 /-! ### Check 3 — multi-value block -/
 
@@ -141,11 +138,8 @@ theorem pairBlockSpec (x : UInt32) :
 
 theorem pairBlock_partial (x : UInt32) :
     PartiallyMeets (pairBlockConfig x)
-      (fun values _ => values = [.i32 (x - 1), .i32 (1 + x)]) := by
-  apply runSteps_success_partiallyMeets (fuel := 9)
-    (values := [.i32 (x - 1), .i32 (1 + x)])
-  · rfl
-  · rfl
+      (fun values _ => values = [.i32 (x - 1), .i32 (1 + x)]) :=
+  (pairBlockSpec x).toPartiallyMeets
 
 /-! ### Check 4 — caller that consumes both results of a multi-value call -/
 
@@ -162,11 +156,8 @@ theorem callsSwapSpec :
 
 theorem callsSwap_partial :
     PartiallyMeets callsSwapConfig
-      (fun values _ => values = [.i32 8]) := by
-  apply runSteps_success_partiallyMeets (fuel := 8)
-    (values := [.i32 8])
-  · rfl
-  · rfl
+      (fun values _ => values = [.i32 8]) :=
+  callsSwapSpec.toPartiallyMeets
 
 /-! ### Check 5 — decoder: `block (type $sig)` resolves to the right arity
 

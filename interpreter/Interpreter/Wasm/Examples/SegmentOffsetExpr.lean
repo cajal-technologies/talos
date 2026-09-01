@@ -1,5 +1,5 @@
-import Interpreter.Wasm.Decoder.Wat
 import Interpreter.Wasm.SmallStep
+import Interpreter.Wasm.Examples.Harness
 
 /-! ## Example: const-expression data/element segment offsets
 
@@ -29,9 +29,7 @@ def segmentOffsetWat : String := "
 "
 
 private def decoded : Wasm.Module :=
-  match Wasm.Decoder.Wat.decode segmentOffsetWat with
-  | .ok module => module
-  | .error _ => default
+  Wasm.Examples.decodeOrDefault segmentOffsetWat
 
 theorem decoded_segments_keep_offsetExpr :
     ((decoded.memory.bind (·.data[0]?)).map (·.offsetExpr.isEmpty)).getD true = false
@@ -58,16 +56,6 @@ private def functionConfig (index : Nat) : Config Unit :=
 def readByte4Config : Config Unit := functionConfig 1
 def callAt2Config : Config Unit := functionConfig 2
 
-private def readByte4StoreOK : RunnerResult Unit → Bool
-  | .success _ store =>
-      store.wasm.mem.read8 4 == 65 &&
-      store.wasm.mem.read8 0 == 0
-  | _ => false
-
-private theorem readByte4_store_ok :
-    readByte4StoreOK (runSteps 3 readByte4Config).result = true := by
-  native_decide
-
 theorem readByte4_returns_65 :
     (runSteps 3 readByte4Config).result.values? =
       some [.i32 65] := by
@@ -78,42 +66,20 @@ theorem readByte4_spec :
       values = [.i32 65] ∧
       store.wasm.mem.read8 4 = 65 ∧
       store.wasm.mem.read8 0 = 0) := by
-  have hcheck := readByte4_store_ok
-  have hvalues := readByte4_returns_65
-  generalize hr : (runSteps 3 readByte4Config).result = result at hcheck
-  rw [hr] at hvalues
-  cases result with
-  | success values store =>
-    apply runSteps_success_terminates hr
-    have hv : values = [.i32 65] := by
-      simpa [RunnerResult.values?] using hvalues
-    have hs :
+  apply runSteps_checked_terminates (fuel := 3)
+    (fun values store =>
+      decide (values = [.i32 65] ∧
         store.wasm.mem.read8 4 = 65 ∧
-        store.wasm.mem.read8 0 = 0 := by
-      simpa [readByte4StoreOK] using hcheck
-    exact ⟨hv, hs⟩
-  | trapped | outOfFuel | internalError =>
-    simp [RunnerResult.values?] at hvalues
+        store.wasm.mem.read8 0 = 0))
+  · native_decide
+  · exact fun _ _ h => of_decide_eq_true h
 
+/-- Partial correctness reuses the terminating run: normal completion is
+deterministic, so the trace witnessed by `readByte4_spec` is the only one. -/
 theorem readByte4_partial :
     PartiallyMeets readByte4Config (fun values store =>
-      values = [.i32 65] ∧ store.wasm.mem.read8 4 = 65) := by
-  have hcheck := readByte4_store_ok
-  have hvalues := readByte4_returns_65
-  generalize hr : (runSteps 3 readByte4Config).result = result at hcheck
-  rw [hr] at hvalues
-  cases result with
-  | success values store =>
-    apply runSteps_success_partiallyMeets hr
-    constructor
-    · simpa [RunnerResult.values?] using hvalues
-    · have hs :
-          store.wasm.mem.read8 4 = 65 ∧
-          store.wasm.mem.read8 0 = 0 := by
-        simpa [readByte4StoreOK] using hcheck
-      exact hs.1
-  | trapped | outOfFuel | internalError =>
-    simp [RunnerResult.values?] at hvalues
+      values = [.i32 65] ∧ store.wasm.mem.read8 4 = 65) :=
+  readByte4_spec.toPartiallyMeets.mono fun _ _ post => ⟨post.1, post.2.1⟩
 
 theorem callAt2_returns_42 :
     (runSteps 16 callAt2Config).result.values? =
@@ -122,29 +88,13 @@ theorem callAt2_returns_42 :
 
 theorem callAt2_spec :
     TerminatesWith callAt2Config (fun values _ =>
-      values = [.i32 42]) := by
-  have hvalues := callAt2_returns_42
-  generalize hr : (runSteps 16 callAt2Config).result = result
-  rw [hr] at hvalues
-  cases result with
-  | success values store =>
-    apply runSteps_success_terminates hr
-    simpa [RunnerResult.values?] using hvalues
-  | trapped | outOfFuel | internalError =>
-    simp [RunnerResult.values?] at hvalues
+      values = [.i32 42]) :=
+  runSteps_values_terminates callAt2_returns_42
 
 theorem callAt2_partial :
     PartiallyMeets callAt2Config (fun values _ =>
-      values = [.i32 42]) := by
-  have hvalues := callAt2_returns_42
-  generalize hr : (runSteps 16 callAt2Config).result = result
-  rw [hr] at hvalues
-  cases result with
-  | success values store =>
-    apply runSteps_success_partiallyMeets hr
-    simpa [RunnerResult.values?] using hvalues
-  | trapped | outOfFuel | internalError =>
-    simp [RunnerResult.values?] at hvalues
+      values = [.i32 42]) :=
+  callAt2_spec.toPartiallyMeets
 
 theorem byte0_still_zero : store0.mem.read8 0 = 0 := by
   native_decide

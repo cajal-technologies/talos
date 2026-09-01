@@ -193,10 +193,6 @@ def HostRegistry.envFor (reg : HostRegistry α) (m : Module) : HostEnv α :=
 def HostRegistry.specFor (reg : HostRegistry α) (m : Module) : HostSpec α :=
   { contracts := m.imports.map fun decl => (reg.entryFor decl).contract }
 
-@[simp] theorem HostRegistry.envFor_nil (reg : HostRegistry α)
-    (m : Module) (h : m.imports = []) : reg.envFor m = HostEnv.empty := by
-  simp [HostRegistry.envFor, HostEnv.empty, h]
-
 theorem HostRegistry.envFor_getElem? (reg : HostRegistry α) (m : Module)
     {i : Nat} (hi : i < m.imports.length) :
     (reg.envFor m).funcs[i]? = some (reg.entryFor m.imports[i]).fn := by

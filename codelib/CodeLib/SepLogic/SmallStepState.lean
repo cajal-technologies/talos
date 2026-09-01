@@ -122,16 +122,13 @@ multi-memory heapAgreesWithMem API. -/
 def storeResolve (store : MachineStore α) : Nat → Option Mem :=
   fun i => if i = 0 then some store.wasm.mem else store.wasm.extraMems[i - 1]?
 
-
 private theorem storeResolve_zero (store : MachineStore α) :
     storeResolve store 0 = some store.wasm.mem := by simp [storeResolve]
-
 
 private theorem storeResolve_update_mem0 (store : MachineStore α) (newMem : Mem) :
     (fun id => if id = 0 then some newMem else storeResolve store id) =
     storeResolve { store with wasm := { store.wasm with mem := newMem } } := by
   funext id; simp only [storeResolve]; by_cases h : id = 0 <;> simp [h]
-
 
 private theorem fromResolver (store : MachineStore α) {σ : WasmHeapMap (Option UInt8)}
     (hag : heapAgreesWithMem σ (storeResolve store))
@@ -140,7 +137,6 @@ private theorem fromResolver (store : MachineStore α) {σ : WasmHeapMap (Option
     store.wasm.mem.read8 addr = v := by
   obtain ⟨m, hm, hr⟩ := hag ⟨0, addr⟩ v hl
   exact (Option.some.inj ((storeResolve_zero store).symm.trans hm)) ▸ hr
-
 
 private theorem fromResolverBounds (store : MachineStore α) {σ : WasmHeapMap (Option UInt8)}
     (hbn : heapAddressesInBounds σ (storeResolve store))
@@ -2254,69 +2250,6 @@ theorem stateInterp_currentInstance_update_of_any [WasmSmallStepGS hlc α]
   · ipureintro; exact heq
 
 -- push doesn't affect elements before the pushed index
-private theorem currentInstance_push_lt (re : RuntimeEnv α) (inst : ModuleInstance α)
-    (h : re.entry.id < re.instances.size) :
-    ({ re with instances := re.instances.push inst } : RuntimeEnv α).currentInstance =
-        re.currentInstance := by
-  simp only [RuntimeEnv.currentInstance]
-  unfold GetElem?.getElem!
-  show (re.instances.push inst).getD re.entry.id default = re.instances.getD re.entry.id default
-  unfold Array.getD
-  have h2 : re.entry.id < (re.instances.push inst).size := by
-    simp only [Array.size_push]; omega
-  rw [dif_pos h2, dif_pos h]
-  exact Array.getElem_push_lt h
-
-/-- Adding a new instance to the runtime table preserves stateInterp given
-ownership of the new instances array. `runtimeInstancesOwn` is Agree-based
-(frozen snapshot), so the caller must supply ownership of the pushed array;
-`currentInstance_push_lt` ensures the current module and host are unchanged. -/
-theorem instantiate_preserves_stateInterp [WasmSmallStepGS hlc α]
-    (config : Config α) (newInst : ModuleInstance α)
-    (hvalid : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (steps : Nat) (obs : List StepKind) (threads : Nat) :
-    stateInterp (GF := WasmHeapGF α) config.store steps obs threads ∗
-      runtimeInstancesOwn (config.store.runtime.instances.push newInst) ⊢
-      stateInterp (GF := WasmHeapGF α)
-        { config.store with runtime := { config.store.runtime with
-            instances := config.store.runtime.instances.push newInst } }
-        steps obs threads := by
-  have hci := currentInstance_push_lt config.store.runtime newInst hvalid
-  have hch := congrArg (·.host) hci
-  have hres : storeResolve { config.store with runtime := { config.store.runtime with
-        instances := config.store.runtime.instances.push newInst } } =
-      storeResolve config.store := rfl
-  iintro ⟨Hstate, HruntimeInstances'⟩
-  icases (stateInterp_eq config.store steps obs threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
-  iclear HruntimeInstances
-  iapply (stateInterp_eq { config.store with runtime := { config.store.runtime with
-      instances := config.store.runtime.instances.push newInst } } steps obs threads).mpr
-  iexists σ; iexists globalσ; iexists dataSegmentσ; iexists tableσ; iexists elementSegmentσ; iexists runtimeModuleσ; iexists hostEnvσ
-  simp only [hres]
-  iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances' HinstanceAuth HhostEnvAuth Hstate_auth Hexc
-  ipureintro
-  refine ⟨Hfacts.1, Hfacts.2.1, Hfacts.2.2.1, Hfacts.2.2.2.1, Hfacts.2.2.2.2.1, Hfacts.2.2.2.2.2.1,
-    fun id m hlookup => ?_, fun id env hlookup => ?_⟩
-  · have hold := Hfacts.2.2.2.2.2.2.1 id m hlookup
-    rw [Array.getElem?_push]
-    by_cases h_eq : id = config.store.runtime.instances.size
-    · rw [h_eq] at hold; simp at hold
-    · rw [if_neg h_eq]; exact hold
-  · have hold := Hfacts.2.2.2.2.2.2.2 id env hlookup
-    rw [Array.getElem?_push]
-    by_cases h_eq : id = config.store.runtime.instances.size
-    · rw [h_eq] at hold; simp at hold
-    · rw [if_neg h_eq]; exact hold
-
-/-- pointsTo is ghost state — adding an instance doesn't affect existing
-byte ownership. Stated explicitly to document the design invariant. -/
-theorem instantiate_pointsTo_preserved [WasmSmallStepGS hlc α]
-    (key : MemoryKey) (dfrac : DFrac) (value : Option UInt8) :
-    (pointsTo (GF := WasmHeapGF α) key dfrac value) ⊢
-    (pointsTo (GF := WasmHeapGF α) key dfrac value) := by
-  iintro H; iexact H
 
 /-- Four-byte ownership determines the physical little-endian word and proves
 the complete access is in bounds. The address equalities exclude UInt32
