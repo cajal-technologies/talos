@@ -1,6 +1,7 @@
 import Iris.ProofMode
 import Iris.Instances.Lib.FUpd
 import Iris.BI.Lib.GenHeap
+import Iris.BI.Lib.MonoNat
 import Iris.Algebra.Lib.ExclAuth
 import Interpreter.Wasm.Mem
 import Interpreter.Wasm.Syntax
@@ -268,6 +269,87 @@ abbrev WasmElementSegmentMap := fun V => ExtTreeMap ElementSegmentKey V compare
 abbrev WasmRuntimeModuleMap := fun V => ExtTreeMap Nat V compare
 abbrev WasmHostEnvMap := fun V => ExtTreeMap Nat V compare
 abbrev WasmExceptionMap := fun V => ExtTreeMap Nat V compare
+
+/-- Generic metadata carried by allocator ghost maps.  It intentionally
+contains only representation-independent allocation facts; project-specific
+histories may refine it with additional pure invariants. -/
+inductive AllocationMetaStatus where
+  | live
+  | retired
+  deriving Repr, DecidableEq
+
+structure AllocationMeta where
+  ptr : UInt32
+  size : Nat
+  alignment : Nat
+  status : AllocationMetaStatus
+  deriving Repr, DecidableEq
+
+abbrev WasmAllocationMap := fun V => ExtTreeMap Nat V compare
+
+/-- Every authoritative byte in primary memory lies strictly below a logical
+frontier.  Other memories are deliberately outside this allocator-domain
+invariant. -/
+def HeapBelow (σ : WasmHeapMap (Option UInt8)) (frontier : Nat) : Prop :=
+  ∀ key value, get? σ key = some value → key.memId = 0 →
+    key.addr.toNat < frontier
+
+theorem heapBelow_uint32Size (σ : WasmHeapMap (Option UInt8)) :
+    HeapBelow σ UInt32.size := by
+  intro key value _ _
+  simpa only [UInt32.size] using key.addr.toNat_lt
+
+/-- Raising a sparse-domain frontier preserves the domain invariant. -/
+theorem HeapBelow.mono {σ : WasmHeapMap (Option UInt8)}
+    {frontier frontier' : Nat} (hbelow : HeapBelow σ frontier)
+    (hle : frontier ≤ frontier') : HeapBelow σ frontier' := by
+  intro key value hget hmemory
+  exact Nat.lt_of_lt_of_le (hbelow key value hget hmemory) hle
+
+/-- A primary-memory key at or above the frontier is absent from the
+authoritative sparse heap. -/
+theorem HeapBelow.get?_eq_none_of_le
+    {σ : WasmHeapMap (Option UInt8)} {frontier : Nat}
+    (hbelow : HeapBelow σ frontier) (key : MemoryKey)
+    (hmemory : key.memId = 0) (hle : frontier ≤ key.addr.toNat) :
+    get? σ key = none := by
+  cases hget : get? σ key with
+  | none => rfl
+  | some value =>
+      have := hbelow key value hget hmemory
+      omega
+
+/-- Updating the value of an existing authoritative byte preserves every
+sparse-domain frontier bound. -/
+theorem HeapBelow.insert_existing
+    {σ : WasmHeapMap (Option UInt8)} {frontier : Nat}
+    (hbelow : HeapBelow σ frontier) (key : MemoryKey)
+    (value : Option UInt8)
+    (hexists : ∃ oldValue, get? σ key = some oldValue) :
+    HeapBelow (insert σ key value) frontier := by
+  intro query queryValue hquery hmemory
+  by_cases hkey : query = key
+  · subst query
+    obtain ⟨oldValue, hold⟩ := hexists
+    exact hbelow key oldValue hold hmemory
+  · apply hbelow query queryValue _ hmemory
+    rwa [get?_insert_ne (Ne.symm hkey)] at hquery
+
+/-- Inserting a genuinely fresh key preserves the frontier invariant exactly
+when that key is itself below the frontier (for primary memory). -/
+theorem HeapBelow.insert_fresh
+    {σ : WasmHeapMap (Option UInt8)} {frontier : Nat}
+    (hbelow : HeapBelow σ frontier) (key : MemoryKey)
+    (value : Option UInt8)
+    (hkey : key.memId = 0 → key.addr.toNat < frontier) :
+    HeapBelow (insert σ key value) frontier := by
+  intro query queryValue hquery hmemory
+  by_cases heq : query = key
+  · subst query
+    exact hkey hmemory
+  · apply hbelow query queryValue _ hmemory
+    rwa [get?_insert_ne (Ne.symm heq)] at hquery
+
 abbrev WasmHeapGF (α : Type 0) : BundledGFunctors
   | 0 => ⟨InvMapF, by infer_instance⟩
   | 1 => ⟨constOF (DisjointLeibnizSet CoPset), by infer_instance⟩
@@ -297,6 +379,12 @@ abbrev WasmHeapGF (α : Type 0) : BundledGFunctors
       (HeapView Nat (Agree (DiscreteO (Nat × List Value)))
         WasmExceptionMap), by infer_instance⟩
   | 17 => ⟨constOF (Agree (DiscreteO (List Nat))), by infer_instance⟩
+  | 18 => ⟨Auth.AuthRF
+      (OptionOF (Excl.ExclOF (constOF (DiscreteO Nat)))), by infer_instance⟩
+  | 19 => ⟨constOF
+      (HeapView Nat (Agree (DiscreteO AllocationMeta))
+        WasmAllocationMap), by infer_instance⟩
+  | 20 => ⟨MonoNatRF, by infer_instance⟩
   | _ => ⟨constOF Unit, by infer_instance⟩
 -- Wire genHeapPreS (following HeapLang's instHeapLangGS_HeapLangS)
 instance instWasmHeapPreS (α : Type) :
@@ -304,6 +392,14 @@ instance instWasmHeapPreS (α : Type) :
   heap := by constructor; exists 4
   metaInfo := by constructor; exists 5
   metaData := by exists 6
+
+/-- Allocator metadata uses explicit ghost names as heap identities, so the
+GF slot can be provided globally without adding another name to
+`WasmSmallStepGS`. -/
+instance instWasmAllocationGhostMapG (α : Type) :
+    GhostMapG (WasmHeapGF α) Nat AllocationMeta WasmAllocationMap := by
+  constructor
+  exists 19
 -- The full genHeap instance with ghost names
 class WasmHeapGS (α : outParam Type) extends
     genHeapGS MemoryKey (Option UInt8) (WasmHeapGF α) WasmHeapMap
@@ -394,6 +490,29 @@ class WasmHostStateGS (α : outParam Type) where
   hostStateName : GName
 
 attribute [reducible, instance] WasmHostStateGS.hostStateElem
+
+/-- Exclusive authoritative agreement on the upper bound of the sparse
+primary-memory heap domain.  The authority is held by `stateInterp`; allocator
+clients receive the fragment. -/
+class WasmHeapDomainGS (α : outParam Type) where
+  heapFrontierElem :
+    ElemG (WasmHeapGF α)
+      (Auth.AuthRF (OptionOF (Excl.ExclOF (constOF (DiscreteO Nat)))))
+  heapFrontierName : GName
+
+attribute [reducible, instance] WasmHeapDomainGS.heapFrontierElem
+
+/-- Monotone authority for the number of pages in the primary memory.
+
+The authority records the exact physical page count held by `stateInterp`.
+Client snapshots are persistent lower bounds: they remain sound across an
+unobserved successful `memory.grow`, while `memory.size` and the tracked grow
+rules can issue a fresh snapshot at the exact current count. -/
+class WasmMemoryPagesGS (α : outParam Type) where
+  memoryPagesElem : ElemG (WasmHeapGF α) MonoNatRF
+  memoryPagesName : GName
+
+attribute [reducible, instance] WasmMemoryPagesGS.memoryPagesElem
 
 /-- Authoritative ghost cell for the current module instance id (`runtime.entry`).
 Uses ExclAuth so it can be updated on cross-instance call/return. -/
@@ -723,6 +842,157 @@ theorem hostStateOwn_update {α : Type} [gs : WasmHostStateGS α]
   icases iOwn_op $$ Hboth with ⟨H1, H2⟩
   iframe
 
+/-- Authoritative sparse-heap frontier, held inside `stateInterp`. -/
+def heapFrontierAuth {α : Type} [gs : WasmHeapDomainGS α]
+    (frontier : Nat) : IProp (WasmHeapGF α) :=
+  iOwn (E := gs.heapFrontierElem) gs.heapFrontierName
+    (ExclAuth.auth (⟨frontier⟩ : DiscreteO Nat))
+
+/-- Exclusive allocator-client fragment agreeing with the sparse-heap
+frontier protected by `stateInterp`. -/
+def heapFrontierOwn {α : Type} [gs : WasmHeapDomainGS α]
+    (frontier : Nat) : IProp (WasmHeapGF α) :=
+  iOwn (E := gs.heapFrontierElem) gs.heapFrontierName
+    (ExclAuth.frag (⟨frontier⟩ : DiscreteO Nat))
+
+theorem heapFrontierOwn_agree {α : Type} [gs : WasmHeapDomainGS α]
+    (actual expected : Nat) :
+    heapFrontierAuth (α := α) actual ∗ heapFrontierOwn expected ⊢
+      iprop(⌜actual = expected⌝) := by
+  unfold heapFrontierAuth heapFrontierOwn
+  iintro ⟨Hauth, Hfrag⟩
+  icombine Hauth Hfrag gives %Hvalid
+  ipureintro
+  exact congrArg DiscreteO.car
+    (ExclAuth.agree (A := DiscreteO Nat) Hvalid)
+
+theorem heapFrontierOwn_update {α : Type} [gs : WasmHeapDomainGS α]
+    (old new' : Nat) :
+    heapFrontierAuth (α := α) old ∗ heapFrontierOwn old ==∗
+      heapFrontierAuth new' ∗ heapFrontierOwn new' := by
+  unfold heapFrontierAuth heapFrontierOwn
+  iintro ⟨Hauth, Hfrag⟩
+  imod iOwn_update_op (E := gs.heapFrontierElem)
+      (ExclAuth.update (A := DiscreteO Nat)
+        (a := (⟨old⟩ : DiscreteO Nat)) (b := ⟨old⟩) (a' := ⟨new'⟩))
+      $$ [Hauth Hfrag] with Hboth
+  · iframe
+  imodintro
+  icases iOwn_op $$ Hboth with ⟨H1, H2⟩
+  iframe
+
+/-- Exact authoritative primary-memory page count, held inside `stateInterp`. -/
+def memoryPagesAuth {α : Type} [gs : WasmMemoryPagesGS α]
+    (pages : Nat) : IProp (WasmHeapGF α) :=
+  iOwn (E := gs.memoryPagesElem) gs.memoryPagesName
+    (MonoNat.auth (DFrac.own 1) (MaxNat.ofNat pages))
+
+/-- Persistent knowledge that the primary memory has at least `pages` pages. -/
+def memoryPagesOwn {α : Type} [gs : WasmMemoryPagesGS α]
+    (pages : Nat) : IProp (WasmHeapGF α) :=
+  iOwn (E := gs.memoryPagesElem) gs.memoryPagesName
+    (MonoNat.lb (MaxNat.ofNat pages))
+
+instance {α : Type} [WasmMemoryPagesGS α] (pages : Nat) :
+    BI.Timeless (memoryPagesAuth (α := α) pages) := by
+  unfold memoryPagesAuth
+  infer_instance
+
+instance {α : Type} [WasmMemoryPagesGS α] (pages : Nat) :
+    BI.Timeless (memoryPagesOwn (α := α) pages) := by
+  unfold memoryPagesOwn
+  infer_instance
+
+instance {α : Type} [WasmMemoryPagesGS α] (pages : Nat) :
+    BI.Persistent (memoryPagesOwn (α := α) pages) := by
+  unfold memoryPagesOwn
+  infer_instance
+
+/-- A page snapshot is a lower bound on the exact authoritative count. -/
+theorem memoryPagesOwn_agree {α : Type} [gs : WasmMemoryPagesGS α]
+    (actual expected : Nat) :
+    memoryPagesAuth (α := α) actual ∗ memoryPagesOwn expected ⊢
+      iprop(⌜expected ≤ actual⌝) := by
+  unfold memoryPagesAuth memoryPagesOwn
+  iintro ⟨Hauth, Hsnapshot⟩
+  icombine Hauth Hsnapshot gives %Hvalid
+  ipureintro
+  exact (MonoNat.both_valid
+    (MaxNat.ofNat actual) (MaxNat.ofNat expected)).mp Hvalid
+
+/-- Obtain an exact persistent snapshot from the page-count authority. -/
+theorem memoryPagesOwn_snapshot {α : Type} [gs : WasmMemoryPagesGS α]
+    (pages : Nat) :
+    memoryPagesAuth (α := α) pages ⊢ memoryPagesOwn pages := by
+  unfold memoryPagesAuth memoryPagesOwn
+  iintro Hauth
+  iapply iOwn_mono $$ Hauth
+  exact MonoNat.included _ _
+
+/-- Advance the exact page-count authority and issue an exact new snapshot. -/
+theorem memoryPagesAuth_update {α : Type} [gs : WasmMemoryPagesGS α]
+    (old new' : Nat) (hmono : old ≤ new') :
+    memoryPagesAuth (α := α) old ==∗
+      memoryPagesAuth new' ∗ memoryPagesOwn new' := by
+  unfold memoryPagesAuth memoryPagesOwn
+  iintro Hauth
+  imod iOwn_update $$ Hauth with Hauth
+  · exact MonoNat.update (MaxNat.ofNat new') hmono
+  imodintro
+  iunfold MonoNat.auth at Hauth
+  iunfold MonoNat.auth
+  iunfold MonoNat.lb
+  icases iOwn_op $$ Hauth with ⟨Hauthority, #Hsnapshot⟩
+  isplitl [Hauthority Hsnapshot]
+  · icombine Hauthority Hsnapshot as Hauth
+    iexact Hauth
+  · iexact Hsnapshot
+
+/-- Allocate only the page-count authority.  Legacy adequacy frontends that
+do not expose page snapshots use this form. -/
+theorem memoryPages_init_authority {α : Type} (pages : Nat) :
+    ⊢@{IProp (WasmHeapGF α)} |==>
+      ∃ gs : WasmMemoryPagesGS α,
+        @memoryPagesAuth α gs pages := by
+  letI memoryPagesElem : ElemG (WasmHeapGF α) MonoNatRF := by
+    exists 20
+  imod (iOwn_alloc (E := memoryPagesElem)
+      (MonoNat.auth (DFrac.own 1) (MaxNat.ofNat pages))
+      (MonoNat.auth_valid (MaxNat.ofNat pages))) with
+    ⟨%memoryPagesName, Hauth⟩
+  let gs : WasmMemoryPagesGS α :=
+    { memoryPagesElem
+      memoryPagesName }
+  imodintro
+  iexists gs
+  unfold memoryPagesAuth
+  iexact Hauth
+
+/-- Allocate page-count authority together with an exact persistent snapshot.
+Allocator-aware adequacy frontends expose the snapshot to their client proof. -/
+theorem memoryPages_init {α : Type} (pages : Nat) :
+    ⊢@{IProp (WasmHeapGF α)} |==>
+      ∃ gs : WasmMemoryPagesGS α,
+        @memoryPagesAuth α gs pages ∗
+          @memoryPagesOwn α gs pages := by
+  letI memoryPagesElem : ElemG (WasmHeapGF α) MonoNatRF := by
+    exists 20
+  imod (iOwn_alloc (E := memoryPagesElem)
+      (MonoNat.auth (DFrac.own 1) (MaxNat.ofNat pages) •
+        MonoNat.lb (MaxNat.ofNat pages))
+      (by simpa using
+        (MonoNat.both_valid
+          (MaxNat.ofNat pages) (MaxNat.ofNat pages)).mpr (Nat.le_refl pages))) with
+    ⟨%memoryPagesName, Hboth⟩
+  icases iOwn_op $$ Hboth with ⟨Hauth, Hsnapshot⟩
+  let gs : WasmMemoryPagesGS α :=
+    { memoryPagesElem
+      memoryPagesName }
+  imodintro
+  iexists gs
+  unfold memoryPagesAuth memoryPagesOwn
+  iframe Hauth Hsnapshot
+
 def currentInstanceAuthN {α : Type} [gs : WasmInstanceGS α] (n : Nat) :
     IProp (WasmHeapGF α) :=
   iOwn (E := gs.instanceElem) gs.instanceName
@@ -899,6 +1169,39 @@ theorem UInt32.add_ofNat_toNat_noWrap (addr : UInt32) (n : Nat)
   rw [UInt32.toNat_add,
     UInt32.toNat_ofNat_of_lt' (by simpa only [UInt32.size] using hn)]
   omega
+
+omit inst in
+/-- Address ladder for a 4-byte access at `addr`: given room for the whole
+word, none of `addr + 1 … addr + 3` wraps, so each `toNat` is the obvious sum.
+Stated with numerals (`addr + 1`, not `addr + UInt32.ofNat 1`) because that is
+the shape the `load32` / `store32` rules and their callers write. -/
+theorem UInt32.addSteps4 (addr : UInt32) (hroom : addr.toNat + 4 ≤ 4294967296) :
+    (addr + 1).toNat = addr.toNat + 1 ∧
+    (addr + 2).toNat = addr.toNat + 2 ∧
+    (addr + 3).toNat = addr.toNat + 3 :=
+  ⟨by simpa using UInt32.add_ofNat_toNat_noWrap addr 1 (by decide) (by omega),
+    by simpa using UInt32.add_ofNat_toNat_noWrap addr 2 (by decide) (by omega),
+    by simpa using UInt32.add_ofNat_toNat_noWrap addr 3 (by decide) (by omega)⟩
+
+omit inst in
+/-- Address ladder for an 8-byte access at `addr`: given room for the whole
+word, none of `addr + 1 … addr + 7` wraps. The numeral form matches the
+`load64` / `store64` premises. -/
+theorem UInt32.addSteps8 (addr : UInt32) (hroom : addr.toNat + 8 ≤ 4294967296) :
+    (addr + 1).toNat = addr.toNat + 1 ∧
+    (addr + 2).toNat = addr.toNat + 2 ∧
+    (addr + 3).toNat = addr.toNat + 3 ∧
+    (addr + 4).toNat = addr.toNat + 4 ∧
+    (addr + 5).toNat = addr.toNat + 5 ∧
+    (addr + 6).toNat = addr.toNat + 6 ∧
+    (addr + 7).toNat = addr.toNat + 7 :=
+  ⟨by simpa using UInt32.add_ofNat_toNat_noWrap addr 1 (by decide) (by omega),
+    by simpa using UInt32.add_ofNat_toNat_noWrap addr 2 (by decide) (by omega),
+    by simpa using UInt32.add_ofNat_toNat_noWrap addr 3 (by decide) (by omega),
+    by simpa using UInt32.add_ofNat_toNat_noWrap addr 4 (by decide) (by omega),
+    by simpa using UInt32.add_ofNat_toNat_noWrap addr 5 (by decide) (by omega),
+    by simpa using UInt32.add_ofNat_toNat_noWrap addr 6 (by decide) (by omega),
+    by simpa using UInt32.add_ofNat_toNat_noWrap addr 7 (by decide) (by omega)⟩
 
 /-- The `n`th little-endian byte of a 32-bit word. -/
 def u32Byte (v : UInt32) (n : Nat) : UInt8 :=

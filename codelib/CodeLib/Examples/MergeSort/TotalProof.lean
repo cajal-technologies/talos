@@ -1,12 +1,13 @@
-import CodeLib.Examples.MergeSort.Proof
+import CodeLib.Examples.MergeSort.Laws
 import CodeLib.SepLogic.SmallStepTotalLifting
 
 /-!
 # Total Iris verification of the handwritten merge sort
 
-The functional invariants and partial-WP proof remain in `Proof`. This module
-replays the same local reasoning with total lifting rules; its loop proofs use
-well-founded variants instead of guarded Löb induction.
+The functional invariants live in `Pure` and the derived laws in `Laws`. This
+module connects them to the small-step Wasm rules with total lifting; its loop
+proofs use well-founded variants instead of guarded Löb induction. Partial
+correctness is obtained from these total proofs through `twp.to_wp`.
 -/
 
 namespace Wasm.Examples.MergeSort
@@ -15,6 +16,81 @@ open Wasm
 open Iris Iris.ProgramLogic Language.Notation
 open Wasm.SepLogic
 open Wasm.SmallStep
+
+def mergeLocals
+    (source temporary : UInt32) (left mid right i j k : Nat)
+    (stack : List Value := []) : Locals :=
+  ⟨[.i32 source, .i32 temporary, .i32 (UInt32.ofNat left),
+      .i32 (UInt32.ofNat mid), .i32 (UInt32.ofNat right)],
+    [.i32 (UInt32.ofNat i), .i32 (UInt32.ofNat j),
+      .i32 (UInt32.ofNat k)],
+    stack⟩
+
+def sortLocals
+    (source temporary : UInt32) (count width left mid right : Nat)
+    (stack : List Value := []) : Locals :=
+  ⟨[.i32 source, .i32 temporary, .i32 (UInt32.ofNat count)],
+    [.i32 (UInt32.ofNat width), .i32 (UInt32.ofNat left),
+      .i32 (UInt32.ofNat mid), .i32 (UInt32.ofNat right)],
+    stack⟩
+
+def mergeArguments
+    (source temporary : UInt32) (left mid right : Nat)
+    (stack : List Value) : List Value :=
+  [.i32 (UInt32.ofNat right), .i32 (UInt32.ofNat mid),
+    .i32 (UInt32.ofNat left), .i32 temporary, .i32 source] ++ stack
+
+structure MergeLoopState where
+  scratch : List UInt32
+  i : Nat
+  j : Nat
+  k : Nat
+  emitted : List UInt32
+
+structure CopyLoopState where
+  current : List UInt32
+  copied : List UInt32
+  k : Nat
+
+structure SortInnerState where
+  current : List UInt32
+  scratch : List UInt32
+  pass : Nat
+  mid : Nat
+  right : Nat
+
+structure SortOuterState where
+  current : List UInt32
+  scratch : List UInt32
+  width : Nat
+  left : Nat
+  mid : Nat
+  right : Nat
+
+theorem mergePost_elim
+    [WasmHeapGS α]
+    (source temporary : UInt32) (input : List UInt32)
+    (left mid right : Nat) :
+    mergePost source temporary input left mid right ⊢
+      (iprop% ∃ output scratch : List UInt32,
+        ⌜MergeRange input output left mid right⌝ ∗
+        ⌜scratch.length = input.length⌝ ∗
+        arrayAt 0 source output ∗ arrayAt 0 temporary scratch) := by
+  unfold mergePost
+  iintro Hpost
+  iexact Hpost
+
+theorem mergeSortPre_elim
+    [WasmHeapGS α]
+    (source temporary : UInt32)
+    (input scratch : List UInt32) :
+    mergeSortPre source temporary input scratch ⊢
+      (iprop% arrayAt 0 source input ∗ arrayAt 0 temporary scratch ∗
+        ⌜scratch.length = input.length⌝ ∗
+        ⌜ValidLayout source temporary input.length⌝) := by
+  unfold mergeSortPre
+  iintro Hpre
+  iexact Hpre
 
 /-- Well-founded family rule for total Wasm loops. The recursive hypothesis is
 available only at strictly smaller measures, reflecting TWP's inductive

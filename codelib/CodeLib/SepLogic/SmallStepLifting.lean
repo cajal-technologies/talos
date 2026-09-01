@@ -61,6 +61,111 @@ theorem wp_pureStep
   · iexact Hwp
   · itrivial
 
+/-- Generic lifting rule for a store-preserving deterministic Wasm step that
+traps. Every trapping operand, reference, and arithmetic rule below is a thin
+specialization of this theorem. -/
+theorem wp_trapStep
+    (kind : StepKind) (current : ThreadState α) (reason : TrapReason)
+    (hstep : ∀ store : MachineStore α,
+      Step ⟨.running current, store⟩ kind ⟨.trapped reason, store⟩) :
+    True ⊢ WP (Expr.running current : Expr α) @ E ?{{ Φ }} := by
+  iintro -
+  iapply wp_lift_step rfl
+  iintro %store %ns %obs %obs' %nt Hσ
+  iapply fupd_mask_intro Std.LawfulSet.empty_subset
+  iintro Hclose
+  isplitr
+  · ipureintro; trivial
+  iintro !> %e₂ %store₂ %forks %Hprim Hcredit
+  rcases Hprim with ⟨hforks, actualKind, hobs, wasmStep⟩
+  change forks = [] at hforks
+  subst forks
+  subst obs
+  obtain ⟨rfl, hconfig⟩ :=
+    step_deterministic (hstep store) wasmStep
+  have parts := Config.mk.inj hconfig
+  have hexpr := parts.1
+  have hstore := parts.2
+  simp only at hexpr hstore
+  subst e₂
+  subst store₂
+  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+  imod Hclose
+  imodintro
+  isplitl [Hσ]
+  · iexact Hσ
+  isplitl []
+  · iapply wp_lift_stuck rfl
+    iintro %_ %_ %_ %_ -
+    iapply fupd_mask_intro Std.LawfulSet.empty_subset
+    iintro -
+    ipureintro
+    exact ⟨rfl, fun _ _ _ _ h => by
+      rcases h with ⟨-, ⟨_, -, htrapped⟩⟩; exact trapped_terminal htrapped⟩
+  · itrivial
+/-! ## Generating the pure rules
+
+Most of the rules below say the same thing: one instruction is retired, the
+operand stack is rewritten, nothing else moves, and a single `Step`
+constructor justifies the transition. `wasm_wp_pure_rule` writes the theorem
+out from that description. Read its payload as
+`instruction, stack before => stack after := justifying step`:
+
+    wasm_wp_pure_rule wp_add {lhs rhs : UInt32} :
+      .add, .i32 rhs :: .i32 lhs :: values => .i32 (rhs + lhs) :: values := Step.add
+
+The generated theorem binds `params localValues values`, then the rule's own
+`{…}` value binders, then the frame binders
+`code arity remainder controls calls`, then the rule's `(…)` side conditions —
+exactly the binder block, in exactly the order, that the hand-written rules
+used — and is closed by `wp_pureStep _ _ _ (fun _ => step)`.
+
+`set_option hygiene false` is not decoration: downstream proofs supply these
+binders by name (`(params := …)`, `(localValues := …)`, `(values := …)`), and
+macro scopes on the generated names would break every such call site.
+
+`SmallStepTotalLifting.lean` carries a sibling macro for the `twp_` rules.
+The two are deliberately separate and unaware of each other: each has to be
+elaborated inside its own file's `Language`/`IrisGS_gen` instances, and
+`IrisGS_gen`'s out-params mean no single scope can serve both modalities.
+
+Rules whose proof is more than that one line, and rules whose thread state
+this shape does not cover — the branch, control-frame and unwinding rules —
+stay hand-written below.
+-/
+set_option hygiene false in
+macro "wasm_wp_pure_rule " name:ident binders:bracketedBinder* " : "
+    instruction:term ", " before:term " => " after:term " := "
+    step:term : command => do
+  -- Keep these as `TSyntax`, not raw `Syntax`: the `$xs:bracketedBinder*`
+  -- antiquotations below only accept a typed array.
+  let isValueBinder (b : Lean.TSyntax ``Lean.Parser.Term.bracketedBinder) : Bool :=
+    b.raw.getKind == ``Lean.Parser.Term.implicitBinder
+  let isSideCondition (b : Lean.TSyntax ``Lean.Parser.Term.bracketedBinder) : Bool :=
+    b.raw.getKind == ``Lean.Parser.Term.explicitBinder
+  for b in binders do
+    unless isValueBinder b || isSideCondition b do
+      Lean.Macro.throwErrorAt b
+        "wasm_wp_pure_rule takes implicit value binders and explicit side conditions"
+  let valueBinders := binders.filter isValueBinder
+  let sideConditions := binders.filter isSideCondition
+  `(command|
+    theorem $name:ident
+        {params localValues values : List Value}
+        $valueBinders:bracketedBinder*
+        {code : Program} {arity : Nat}
+        {remainder : List Value} {controls : List ControlFrame}
+        {calls : List CallFrame}
+        $sideConditions:bracketedBinder* :
+        ▷ WP (.running
+          ⟨⟨params, localValues, $after⟩,
+            code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
+        WP (.running
+          ⟨⟨params, localValues, $before⟩,
+            $instruction :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
+          {{ Φ }} :=
+      wp_pureStep _ _ _ (fun _ => $step))
+
 /-! ## Generic scalar numeric rules
 
 The float/conversion family is exposed through the evaluator functions used
@@ -68,68 +173,28 @@ by `Step`, so generated proofs can specialize results by reduction without a
 separate lifting theorem for every opcode.
 -/
 
-theorem wp_scalarFloat0
-    {params localValues values : List Value}
+wasm_wp_pure_rule wp_scalarFloat0
     {instruction : Instruction} {value : Value}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame}
     (heval : evalScalarFloat0? instruction = some value) :
-    ▷ WP (.running
-      ⟨⟨params, localValues, value :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, values⟩,
-        instruction :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.scalarFloat0 heval)
+  instruction, values => value :: values := Step.scalarFloat0 heval
 
-theorem wp_scalarFloat1
-    {params localValues values : List Value}
+wasm_wp_pure_rule wp_scalarFloat1
     {instruction : Instruction} {operand value : Value}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame}
     (hzero : evalScalarFloat0? instruction = none)
     (heval : evalScalarFloat1? instruction operand = some value) :
-    ▷ WP (.running
-      ⟨⟨params, localValues, value :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, operand :: values⟩,
-        instruction :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.scalarFloat1 hzero heval)
+  instruction, operand :: values => value :: values := Step.scalarFloat1 hzero heval
 
-theorem wp_scalarFloat2
-    {params localValues values : List Value}
+wasm_wp_pure_rule wp_scalarFloat2
     {instruction : Instruction} {lhs rhs value : Value}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame}
     (hzero : evalScalarFloat0? instruction = none)
     (hunary : evalScalarFloat1? instruction rhs = none)
     (heval : evalScalarFloat2? instruction lhs rhs = some value) :
-    ▷ WP (.running
-      ⟨⟨params, localValues, value :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, rhs :: lhs :: values⟩,
-        instruction :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.scalarFloat2 hzero hunary heval)
+  instruction, rhs :: lhs :: values => value :: values := Step.scalarFloat2 hzero hunary heval
 
-theorem wp_scalarTruncSuccess
-    {params localValues values : List Value}
+wasm_wp_pure_rule wp_scalarTruncSuccess
     {instruction : Instruction} {operand value : Value}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame}
     (heval : evalScalarTrunc? instruction operand = some (.ok value)) :
-    ▷ WP (.running
-      ⟨⟨params, localValues, value :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, operand :: values⟩,
-        instruction :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.scalarTruncSuccess heval)
+  instruction, operand :: values => value :: values := Step.scalarTruncSuccess heval
 
 theorem wp_finish
     {params localValues values remainder : List Value} {arity : Nat} :
@@ -226,38 +291,7 @@ theorem wp_const
     ▷ WP (Expr.running next : Expr α) @ s; E {{ Φ }} ⊢
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
-  iintro Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
-      .running ⟨⟨params, localValues, .i32 value :: values⟩,
-        code, arity, remainder, controls, calls⟩,
-      store, [], ⟨rfl, _, rfl, Step.const⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ := step_deterministic Step.const wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp]
-  · iexact Hwp
-  · itrivial
+  exact wp_pureStep _ _ _ (fun _ => Step.const)
 
 /-- Pure primitive rule for wrapping i32 subtraction. -/
 theorem wp_sub
@@ -274,1134 +308,292 @@ theorem wp_sub
     ▷ WP (Expr.running next : Expr α) @ s; E {{ Φ }} ⊢
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
-  iintro Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
-      .running
-        ⟨⟨params, localValues, .i32 (lhs - rhs) :: values⟩,
-          code, arity, remainder, controls, calls⟩,
-      store, [], ⟨rfl, _, rfl, Step.sub⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ := step_deterministic Step.sub wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero,
-    Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp]
-  · iexact Hwp
-  · itrivial
+  exact wp_pureStep _ _ _ (fun _ => Step.sub)
 
-theorem wp_add
-    {params localValues values : List Value}
-    {lhs rhs : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i32 (rhs + lhs) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-        .add :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.add)
+wasm_wp_pure_rule wp_add {lhs rhs : UInt32} :
+  .add, .i32 rhs :: .i32 lhs :: values => .i32 (rhs + lhs) :: values := Step.add
 
-theorem wp_mul
-    {params localValues values : List Value}
-    {lhs rhs : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i32 (rhs * lhs) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-        .mul :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.mul)
+wasm_wp_pure_rule wp_mul {lhs rhs : UInt32} :
+  .mul, .i32 rhs :: .i32 lhs :: values => .i32 (rhs * lhs) :: values := Step.mul
 
-theorem wp_remU
-    {params localValues values : List Value}
-    {dividend divisor : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hdivisor : divisor ≠ 0) :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i32 (dividend % divisor) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 divisor :: .i32 dividend :: values⟩,
-        .remU :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.remU hdivisor)
+wasm_wp_pure_rule wp_remU {dividend divisor : UInt32} (hdivisor : divisor ≠ 0) :
+  .remU, .i32 divisor :: .i32 dividend :: values =>
+    .i32 (dividend % divisor) :: values := Step.remU hdivisor
 
-theorem wp_addI64
-    {params localValues values : List Value}
-    {lhs rhs : UInt64} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i64 (lhs + rhs) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-        .addI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.addI64)
+wasm_wp_pure_rule wp_addI64 {lhs rhs : UInt64} :
+  .addI64, .i64 rhs :: .i64 lhs :: values => .i64 (lhs + rhs) :: values := Step.addI64
 
-theorem wp_subI64
-    {params localValues values : List Value}
-    {lhs rhs : UInt64} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i64 (lhs - rhs) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-        .subI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.subI64)
+wasm_wp_pure_rule wp_subI64 {lhs rhs : UInt64} :
+  .subI64, .i64 rhs :: .i64 lhs :: values => .i64 (lhs - rhs) :: values := Step.subI64
 
-theorem wp_mulI64
-    {params localValues values : List Value}
-    {lhs rhs : UInt64} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i64 (lhs * rhs) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-        .mulI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.mulI64)
+wasm_wp_pure_rule wp_mulI64 {lhs rhs : UInt64} :
+  .mulI64, .i64 rhs :: .i64 lhs :: values => .i64 (lhs * rhs) :: values := Step.mulI64
 
-theorem wp_constI64
-    {params localValues values : List Value}
-    {value : UInt64} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i64 value :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, values⟩,
-        .constI64 value :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.constI64)
+wasm_wp_pure_rule wp_constI64 {value : UInt64} :
+  .constI64 value, values => .i64 value :: values := Step.constI64
 
-theorem wp_andI64
-    {params localValues values : List Value}
-    {lhs rhs : UInt64} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i64 (lhs &&& rhs) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-        .andI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.andI64)
+wasm_wp_pure_rule wp_andI64 {lhs rhs : UInt64} :
+  .andI64, .i64 rhs :: .i64 lhs :: values => .i64 (lhs &&& rhs) :: values := Step.andI64
 
-theorem wp_orI64
-    {params localValues values : List Value}
-    {lhs rhs : UInt64} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i64 (lhs ||| rhs) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-        .orI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.orI64)
+wasm_wp_pure_rule wp_orI64 {lhs rhs : UInt64} :
+  .orI64, .i64 rhs :: .i64 lhs :: values => .i64 (lhs ||| rhs) :: values := Step.orI64
 
-theorem wp_xorI64
-    {params localValues values : List Value}
-    {lhs rhs : UInt64} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i64 (lhs ^^^ rhs) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-        .xorI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.xorI64)
+wasm_wp_pure_rule wp_xorI64 {lhs rhs : UInt64} :
+  .xorI64, .i64 rhs :: .i64 lhs :: values => .i64 (lhs ^^^ rhs) :: values := Step.xorI64
 
-theorem wp_shlI64
-    {params localValues values : List Value}
-    {lhs rhs : UInt64} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i64 (lhs <<< (rhs % 64)) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-        .shlI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.shlI64)
+wasm_wp_pure_rule wp_shlI64 {lhs rhs : UInt64} :
+  .shlI64, .i64 rhs :: .i64 lhs :: values => .i64 (lhs <<< (rhs % 64)) :: values := Step.shlI64
 
-theorem wp_shrUI64
-    {params localValues values : List Value}
-    {lhs rhs : UInt64} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i64 (lhs >>> (rhs % 64)) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-        .shrUI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.shrUI64)
+wasm_wp_pure_rule wp_shrUI64 {lhs rhs : UInt64} :
+  .shrUI64, .i64 rhs :: .i64 lhs :: values => .i64 (lhs >>> (rhs % 64)) :: values := Step.shrUI64
 
-theorem wp_ctzI64
-    {params localValues values : List Value}
-    {value : UInt64} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues,
-          .i64 (UInt64.ofNat (ctz64 64 value)) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 value :: values⟩,
-        .ctzI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.ctzI64)
+wasm_wp_pure_rule wp_ctzI64 {value : UInt64} :
+  .ctzI64, .i64 value :: values => .i64 (UInt64.ofNat (ctz64 64 value)) :: values := Step.ctzI64
 
-theorem wp_wrapI64
-    {params localValues values : List Value}
-    {value : UInt64} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues,
-          .i32 (UInt32.ofNat (value.toNat % 2 ^ 32)) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 value :: values⟩,
-        .wrapI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.wrapI64)
+wasm_wp_pure_rule wp_wrapI64 {value : UInt64} :
+  .wrapI64, .i64 value :: values =>
+    .i32 (UInt32.ofNat (value.toNat % 2 ^ 32)) :: values := Step.wrapI64
 
-theorem wp_extendUI32
-    {params localValues values : List Value}
-    {value : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i64 (UInt64.ofNat value.toNat) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 value :: values⟩,
-        .extendUI32 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.extendUI32)
+wasm_wp_pure_rule wp_extendUI32 {value : UInt32} :
+  .extendUI32, .i32 value :: values =>
+    .i64 (UInt64.ofNat value.toNat) :: values := Step.extendUI32
 
-theorem wp_and
-    {params localValues values : List Value}
-    {lhs rhs : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i32 (lhs &&& rhs) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-        .and :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.and)
+wasm_wp_pure_rule wp_and {lhs rhs : UInt32} :
+  .and, .i32 rhs :: .i32 lhs :: values => .i32 (lhs &&& rhs) :: values := Step.and
 
-theorem wp_or
-    {params localValues values : List Value}
-    {lhs rhs : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i32 (lhs ||| rhs) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-        .or :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.or)
+wasm_wp_pure_rule wp_or {lhs rhs : UInt32} :
+  .or, .i32 rhs :: .i32 lhs :: values => .i32 (lhs ||| rhs) :: values := Step.or
 
-theorem wp_xor
-    {params localValues values : List Value}
-    {lhs rhs : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i32 (lhs ^^^ rhs) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-        .xor :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.xor)
+wasm_wp_pure_rule wp_xor {lhs rhs : UInt32} :
+  .xor, .i32 rhs :: .i32 lhs :: values => .i32 (lhs ^^^ rhs) :: values := Step.xor
 
-theorem wp_shl
-    {params localValues values : List Value}
-    {lhs rhs : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i32 (lhs <<< (rhs % 32)) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-        .shl :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.shl)
+wasm_wp_pure_rule wp_shl {lhs rhs : UInt32} :
+  .shl, .i32 rhs :: .i32 lhs :: values => .i32 (lhs <<< (rhs % 32)) :: values := Step.shl
 
-theorem wp_eqz
-    {params localValues values : List Value}
-    {value result : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hresult : result = if value = 0 then 1 else 0) :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i32 result :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 value :: values⟩,
-        .eqz :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.eqz hresult)
+wasm_wp_pure_rule wp_eqz {value result : UInt32} (hresult : result = if value = 0 then 1 else 0) :
+  .eqz, .i32 value :: values => .i32 result :: values := Step.eqz hresult
 
-theorem wp_eq
-    {params localValues values : List Value}
-    {lhs rhs result : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hresult : result = if lhs = rhs then 1 else 0) :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i32 result :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-        .eq :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.eq hresult)
+wasm_wp_pure_rule wp_eq
+    {lhs rhs result : UInt32} (hresult : result = if lhs = rhs then 1 else 0) :
+  .eq, .i32 rhs :: .i32 lhs :: values => .i32 result :: values := Step.eq hresult
 
-theorem wp_ne
-    {params localValues values : List Value}
-    {lhs rhs result : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hresult : result = if lhs ≠ rhs then 1 else 0) :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i32 result :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-        .ne :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.ne hresult)
+wasm_wp_pure_rule wp_ne
+    {lhs rhs result : UInt32} (hresult : result = if lhs ≠ rhs then 1 else 0) :
+  .ne, .i32 rhs :: .i32 lhs :: values => .i32 result :: values := Step.ne hresult
 
-theorem wp_ltU
-    {params localValues values : List Value}
-    {lhs rhs result : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hresult : result = if lhs < rhs then 1 else 0) :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i32 result :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-        .ltU :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.ltU hresult)
+wasm_wp_pure_rule wp_ltU
+    {lhs rhs result : UInt32} (hresult : result = if lhs < rhs then 1 else 0) :
+  .ltU, .i32 rhs :: .i32 lhs :: values => .i32 result :: values := Step.ltU hresult
 
-theorem wp_geU
-    {params localValues values : List Value}
-    {lhs rhs result : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hresult : result = if lhs ≥ rhs then 1 else 0) :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i32 result :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-        .geU :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.geU hresult)
+wasm_wp_pure_rule wp_geU
+    {lhs rhs result : UInt32} (hresult : result = if lhs ≥ rhs then 1 else 0) :
+  .geU, .i32 rhs :: .i32 lhs :: values => .i32 result :: values := Step.geU hresult
 
+wasm_wp_pure_rule wp_leU
+    {lhs rhs result : UInt32} (hresult : result = if lhs ≤ rhs then 1 else 0) :
+  .leU, .i32 rhs :: .i32 lhs :: values => .i32 result :: values := Step.leU hresult
 
-theorem wp_leU
-    {params localValues values : List Value}
-    {lhs rhs result : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hresult : result = if lhs ≤ rhs then 1 else 0) :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i32 result :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-        .leU :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.leU hresult)
+wasm_wp_pure_rule wp_gtU
+    {lhs rhs result : UInt32} (hresult : result = if lhs > rhs then 1 else 0) :
+  .gtU, .i32 rhs :: .i32 lhs :: values => .i32 result :: values := Step.gtU hresult
 
-theorem wp_gtU
-    {params localValues values : List Value}
-    {lhs rhs result : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hresult : result = if lhs > rhs then 1 else 0) :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i32 result :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-        .gtU :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.gtU hresult)
+wasm_wp_pure_rule wp_ltS
+    {lhs rhs result : UInt32} (hresult : result = if lhs.toInt32 < rhs.toInt32 then 1 else 0) :
+  .ltS, .i32 rhs :: .i32 lhs :: values => .i32 result :: values := Step.ltS hresult
 
-theorem wp_ltS
-    {params localValues values : List Value}
-    {lhs rhs result : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hresult : result = if lhs.toInt32 < rhs.toInt32 then 1 else 0) :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i32 result :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-        .ltS :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.ltS hresult)
+wasm_wp_pure_rule wp_leS
+    {lhs rhs result : UInt32} (hresult : result = if lhs.toInt32 ≤ rhs.toInt32 then 1 else 0) :
+  .leS, .i32 rhs :: .i32 lhs :: values => .i32 result :: values := Step.leS hresult
 
-theorem wp_leS
-    {params localValues values : List Value}
-    {lhs rhs result : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hresult : result = if lhs.toInt32 ≤ rhs.toInt32 then 1 else 0) :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i32 result :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-        .leS :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.leS hresult)
+wasm_wp_pure_rule wp_gtS
+    {lhs rhs result : UInt32} (hresult : result = if lhs.toInt32 > rhs.toInt32 then 1 else 0) :
+  .gtS, .i32 rhs :: .i32 lhs :: values => .i32 result :: values := Step.gtS hresult
 
-theorem wp_gtS
-    {params localValues values : List Value}
-    {lhs rhs result : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hresult : result = if lhs.toInt32 > rhs.toInt32 then 1 else 0) :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i32 result :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-        .gtS :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.gtS hresult)
+wasm_wp_pure_rule wp_geS
+    {lhs rhs result : UInt32} (hresult : result = if lhs.toInt32 ≥ rhs.toInt32 then 1 else 0) :
+  .geS, .i32 rhs :: .i32 lhs :: values => .i32 result :: values := Step.geS hresult
 
-theorem wp_geS
-    {params localValues values : List Value}
-    {lhs rhs result : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hresult : result = if lhs.toInt32 ≥ rhs.toInt32 then 1 else 0) :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i32 result :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-        .geS :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.geS hresult)
+wasm_wp_pure_rule wp_leUI64
+    {lhs rhs : UInt64} {result : UInt32} (hresult : result = if lhs ≤ rhs then 1 else 0) :
+  .leUI64, .i64 rhs :: .i64 lhs :: values => .i32 result :: values := Step.leUI64 hresult
 
-theorem wp_leUI64
-    {params localValues values : List Value}
-    {lhs rhs : UInt64} {result : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hresult : result = if lhs ≤ rhs then 1 else 0) :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i32 result :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-        .leUI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.leUI64 hresult)
-
-theorem wp_gtSI64
-    {params localValues values : List Value}
-    {lhs rhs : UInt64} {result : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
+wasm_wp_pure_rule wp_gtSI64
+    {lhs rhs : UInt64} {result : UInt32}
     (hresult : result = if lhs.toInt64 > rhs.toInt64 then 1 else 0) :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i32 result :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-        .gtSI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.gtSI64 hresult)
+  .gtSI64, .i64 rhs :: .i64 lhs :: values => .i32 result :: values := Step.gtSI64 hresult
 
-theorem wp_leSI64
-    {params localValues values : List Value}
-    {lhs rhs : UInt64} {result : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
+wasm_wp_pure_rule wp_leSI64
+    {lhs rhs : UInt64} {result : UInt32}
     (hresult : result = if lhs.toInt64 ≤ rhs.toInt64 then 1 else 0) :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i32 result :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-        .leSI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.leSI64 hresult)
+  .leSI64, .i64 rhs :: .i64 lhs :: values => .i32 result :: values := Step.leSI64 hresult
 
-theorem wp_geSI64
-    {params localValues values : List Value}
-    {lhs rhs : UInt64} {result : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
+wasm_wp_pure_rule wp_geSI64
+    {lhs rhs : UInt64} {result : UInt32}
     (hresult : result = if lhs.toInt64 ≥ rhs.toInt64 then 1 else 0) :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i32 result :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-        .geSI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.geSI64 hresult)
+  .geSI64, .i64 rhs :: .i64 lhs :: values => .i32 result :: values := Step.geSI64 hresult
 
-theorem wp_shrS
-    {params localValues values : List Value}
-    {lhs rhs : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues,
-        .i32 (UInt32.ofNat
-          (BitVec.sshiftRight lhs.toBitVec (rhs % 32).toNat).toNat) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-        .shrS :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.shrS)
+wasm_wp_pure_rule wp_shrS {lhs rhs : UInt32} :
+  .shrS, .i32 rhs :: .i32 lhs :: values =>
+    .i32 (UInt32.ofNat (BitVec.sshiftRight lhs.toBitVec (rhs % 32).toNat).toNat) :: values :=
+      Step.shrS
 
-theorem wp_rotl
-    {params localValues values : List Value}
-    {lhs rhs : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues,
-        .i32 (if rhs % 32 = 0 then lhs
-              else (lhs <<< (rhs % 32)) ||| (lhs >>> (32 - rhs % 32))) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-        .rotl :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.rotl)
+wasm_wp_pure_rule wp_rotl {lhs rhs : UInt32} :
+  .rotl, .i32 rhs :: .i32 lhs :: values =>
+    .i32 (if rhs % 32 = 0 then lhs
+          else (lhs <<< (rhs % 32)) ||| (lhs >>> (32 - rhs % 32))) :: values := Step.rotl
 
-theorem wp_rotr
-    {params localValues values : List Value}
-    {lhs rhs : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues,
-        .i32 (if rhs % 32 = 0 then lhs
-              else (lhs >>> (rhs % 32)) ||| (lhs <<< (32 - rhs % 32))) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-        .rotr :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.rotr)
+wasm_wp_pure_rule wp_rotr {lhs rhs : UInt32} :
+  .rotr, .i32 rhs :: .i32 lhs :: values =>
+    .i32 (if rhs % 32 = 0 then lhs
+          else (lhs >>> (rhs % 32)) ||| (lhs <<< (32 - rhs % 32))) :: values := Step.rotr
 
-theorem wp_shrSI64
-    {params localValues values : List Value}
-    {lhs rhs : UInt64} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues,
-        .i64 (UInt64.ofNat
-          (BitVec.sshiftRight lhs.toBitVec (rhs % 64).toNat).toNat) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-        .shrSI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.shrSI64)
+wasm_wp_pure_rule wp_shrSI64 {lhs rhs : UInt64} :
+  .shrSI64, .i64 rhs :: .i64 lhs :: values =>
+    .i64 (UInt64.ofNat (BitVec.sshiftRight lhs.toBitVec (rhs % 64).toNat).toNat) :: values :=
+      Step.shrSI64
 
-theorem wp_rotlI64
-    {params localValues values : List Value}
-    {lhs rhs : UInt64} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues,
-        .i64 (if rhs % 64 = 0 then lhs
-              else (lhs <<< (rhs % 64)) ||| (lhs >>> (64 - rhs % 64))) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-        .rotlI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.rotlI64)
+wasm_wp_pure_rule wp_rotlI64 {lhs rhs : UInt64} :
+  .rotlI64, .i64 rhs :: .i64 lhs :: values =>
+    .i64 (if rhs % 64 = 0 then lhs
+          else (lhs <<< (rhs % 64)) ||| (lhs >>> (64 - rhs % 64))) :: values := Step.rotlI64
 
-theorem wp_rotrI64
-    {params localValues values : List Value}
-    {lhs rhs : UInt64} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues,
-        .i64 (if rhs % 64 = 0 then lhs
-              else (lhs >>> (rhs % 64)) ||| (lhs <<< (64 - rhs % 64))) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-        .rotrI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.rotrI64)
+wasm_wp_pure_rule wp_rotrI64 {lhs rhs : UInt64} :
+  .rotrI64, .i64 rhs :: .i64 lhs :: values =>
+    .i64 (if rhs % 64 = 0 then lhs
+          else (lhs >>> (rhs % 64)) ||| (lhs <<< (64 - rhs % 64))) :: values := Step.rotrI64
 
-theorem wp_divU
-    {params localValues values : List Value}
-    {dividend divisor : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hdivisor : divisor ≠ 0) :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i32 (dividend / divisor) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 divisor :: .i32 dividend :: values⟩,
-        .divU :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.divU hdivisor)
+wasm_wp_pure_rule wp_divU {dividend divisor : UInt32} (hdivisor : divisor ≠ 0) :
+  .divU, .i32 divisor :: .i32 dividend :: values =>
+    .i32 (dividend / divisor) :: values := Step.divU hdivisor
 
-theorem wp_divS
-    {params localValues values : List Value}
-    {dividend divisor : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hzero : divisor ≠ 0)
+wasm_wp_pure_rule wp_divS
+    {dividend divisor : UInt32} (hzero : divisor ≠ 0)
     (hoverflow : divisor = 0xFFFFFFFF → dividend ≠ 0x80000000) :
-    ▷ WP (.running
-      ⟨⟨params, localValues,
-        .i32 (Int32.ofInt
-          (Int.tdiv dividend.toInt32.toInt divisor.toInt32.toInt)).toUInt32 :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 divisor :: .i32 dividend :: values⟩,
-        .divS :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.divS hzero hoverflow)
+  .divS, .i32 divisor :: .i32 dividend :: values =>
+    .i32 (Int32.ofInt (Int.tdiv dividend.toInt32.toInt divisor.toInt32.toInt)).toUInt32 :: values :=
+      Step.divS hzero hoverflow
 
-theorem wp_remS
-    {params localValues values : List Value}
-    {dividend divisor : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hdivisor : divisor ≠ 0) :
-    ▷ WP (.running
-      ⟨⟨params, localValues,
-        .i32 (Int32.ofInt
-          (Int.tmod dividend.toInt32.toInt divisor.toInt32.toInt)).toUInt32 :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 divisor :: .i32 dividend :: values⟩,
-        .remS :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.remS hdivisor)
+wasm_wp_pure_rule wp_remS {dividend divisor : UInt32} (hdivisor : divisor ≠ 0) :
+  .remS, .i32 divisor :: .i32 dividend :: values =>
+    .i32 (Int32.ofInt (Int.tmod dividend.toInt32.toInt divisor.toInt32.toInt)).toUInt32 :: values :=
+      Step.remS hdivisor
 
-theorem wp_divSI64
-    {params localValues values : List Value}
-    {dividend divisor : UInt64} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hzero : divisor ≠ 0)
+wasm_wp_pure_rule wp_divSI64
+    {dividend divisor : UInt64} (hzero : divisor ≠ 0)
     (hoverflow : divisor = 0xFFFFFFFFFFFFFFFF → dividend ≠ 0x8000000000000000) :
-    ▷ WP (.running
-      ⟨⟨params, localValues,
-        .i64 (Int64.ofInt
-          (Int.tdiv dividend.toInt64.toInt divisor.toInt64.toInt)).toUInt64 :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 divisor :: .i64 dividend :: values⟩,
-        .divSI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.divSI64 hzero hoverflow)
+  .divSI64, .i64 divisor :: .i64 dividend :: values =>
+    .i64 (Int64.ofInt (Int.tdiv dividend.toInt64.toInt divisor.toInt64.toInt)).toUInt64 :: values :=
+      Step.divSI64 hzero hoverflow
 
-theorem wp_remSI64
-    {params localValues values : List Value}
-    {dividend divisor : UInt64} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hdivisor : divisor ≠ 0) :
-    ▷ WP (.running
-      ⟨⟨params, localValues,
-        .i64 (Int64.ofInt
-          (Int.tmod dividend.toInt64.toInt divisor.toInt64.toInt)).toUInt64 :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 divisor :: .i64 dividend :: values⟩,
-        .remSI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.remSI64 hdivisor)
+wasm_wp_pure_rule wp_remSI64 {dividend divisor : UInt64} (hdivisor : divisor ≠ 0) :
+  .remSI64, .i64 divisor :: .i64 dividend :: values =>
+    .i64 (Int64.ofInt (Int.tmod dividend.toInt64.toInt divisor.toInt64.toInt)).toUInt64 :: values :=
+      Step.remSI64 hdivisor
 
-theorem wp_clz
-    {params localValues values : List Value}
-    {value : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues,
-        .i32 (UInt32.ofNat (clz32 32 value)) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 value :: values⟩,
-        .clz :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.clz)
+wasm_wp_pure_rule wp_clz {value : UInt32} :
+  .clz, .i32 value :: values => .i32 (UInt32.ofNat (clz32 32 value)) :: values := Step.clz
 
-theorem wp_ctz
-    {params localValues values : List Value}
-    {value : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues,
-        .i32 (UInt32.ofNat (ctz32 32 value)) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 value :: values⟩,
-        .ctz :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.ctz)
+wasm_wp_pure_rule wp_ctz {value : UInt32} :
+  .ctz, .i32 value :: values => .i32 (UInt32.ofNat (ctz32 32 value)) :: values := Step.ctz
 
-theorem wp_popcnt
-    {params localValues values : List Value}
-    {value : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues,
-        .i32 (UInt32.ofNat (popcnt32 32 value 0)) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 value :: values⟩,
-        .popcnt :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.popcnt)
+wasm_wp_pure_rule wp_popcnt {value : UInt32} :
+  .popcnt, .i32 value :: values =>
+    .i32 (UInt32.ofNat (popcnt32 32 value 0)) :: values := Step.popcnt
 
-theorem wp_clzI64
-    {params localValues values : List Value}
-    {value : UInt64} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues,
-        .i64 (UInt64.ofNat (clz64 64 value)) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 value :: values⟩,
-        .clzI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.clzI64)
+wasm_wp_pure_rule wp_clzI64 {value : UInt64} :
+  .clzI64, .i64 value :: values => .i64 (UInt64.ofNat (clz64 64 value)) :: values := Step.clzI64
 
-theorem wp_popcntI64
-    {params localValues values : List Value}
-    {value : UInt64} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues,
-        .i64 (UInt64.ofNat (popcnt64 64 value 0)) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 value :: values⟩,
-        .popcntI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.popcntI64)
+wasm_wp_pure_rule wp_popcntI64 {value : UInt64} :
+  .popcntI64, .i64 value :: values =>
+    .i64 (UInt64.ofNat (popcnt64 64 value 0)) :: values := Step.popcntI64
 
-theorem wp_extendSI32
-    {params localValues values : List Value}
-    {value : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues,
-        .i64 (Int64.ofInt value.toInt32.toInt).toUInt64 :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 value :: values⟩,
-        .extendSI32 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.extendSI32)
+wasm_wp_pure_rule wp_extendSI32 {value : UInt32} :
+  .extendSI32, .i32 value :: values =>
+    .i64 (Int64.ofInt value.toInt32.toInt).toUInt64 :: values := Step.extendSI32
 
-theorem wp_extend8S
-    {params localValues values : List Value}
-    {value : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues,
-        .i32 (Int32.ofInt (signExtend (value.toNat % 256) 8)).toUInt32 :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 value :: values⟩,
-        .extend8S :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.extend8S)
+wasm_wp_pure_rule wp_extend8S {value : UInt32} :
+  .extend8S, .i32 value :: values =>
+    .i32 (Int32.ofInt (signExtend (value.toNat % 256) 8)).toUInt32 :: values := Step.extend8S
 
-theorem wp_extend16S
-    {params localValues values : List Value}
-    {value : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues,
-        .i32 (Int32.ofInt (signExtend (value.toNat % 65536) 16)).toUInt32 :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 value :: values⟩,
-        .extend16S :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.extend16S)
+wasm_wp_pure_rule wp_extend16S {value : UInt32} :
+  .extend16S, .i32 value :: values =>
+    .i32 (Int32.ofInt (signExtend (value.toNat % 65536) 16)).toUInt32 :: values := Step.extend16S
 
-theorem wp_extend8SI64
-    {params localValues values : List Value}
-    {value : UInt64} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues,
-        .i64 (Int64.ofInt (signExtend (value.toNat % 256) 8)).toUInt64 :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 value :: values⟩,
-        .extend8SI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.extend8SI64)
+wasm_wp_pure_rule wp_extend8SI64 {value : UInt64} :
+  .extend8SI64, .i64 value :: values =>
+    .i64 (Int64.ofInt (signExtend (value.toNat % 256) 8)).toUInt64 :: values := Step.extend8SI64
 
-theorem wp_extend16SI64
-    {params localValues values : List Value}
-    {value : UInt64} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues,
-        .i64 (Int64.ofInt (signExtend (value.toNat % 65536) 16)).toUInt64 :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 value :: values⟩,
-        .extend16SI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.extend16SI64)
+wasm_wp_pure_rule wp_extend16SI64 {value : UInt64} :
+  .extend16SI64, .i64 value :: values =>
+    .i64 (Int64.ofInt (signExtend (value.toNat % 65536) 16)).toUInt64 :: values :=
+      Step.extend16SI64
 
-theorem wp_extend32SI64
-    {params localValues values : List Value}
-    {value : UInt64} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues,
-        .i64 (Int64.ofInt (signExtend (value.toNat % 2 ^ 32) 32)).toUInt64 :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 value :: values⟩,
-        .extend32SI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.extend32SI64)
+wasm_wp_pure_rule wp_extend32SI64 {value : UInt64} :
+  .extend32SI64, .i64 value :: values =>
+    .i64 (Int64.ofInt (signExtend (value.toNat % 2 ^ 32) 32)).toUInt64 :: values :=
+      Step.extend32SI64
 
-theorem wp_nop
-    {params localValues values : List Value}
-    {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues, values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, values⟩,
-        .nop :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.nop)
+wasm_wp_pure_rule wp_nop :
+  .nop, values => values := Step.nop
 
-theorem wp_drop
-    {params localValues values : List Value}
-    {value : Value} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues, values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, value :: values⟩,
-        .drop :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.drop)
+wasm_wp_pure_rule wp_drop {value : Value} :
+  .drop, value :: values => values := Step.drop
 
-theorem wp_select
-    {params localValues values : List Value}
+wasm_wp_pure_rule wp_select
     {first second selected : Value} {condition : UInt32}
-    {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
     (h : selected = if condition ≠ 0 then first else second) :
-    ▷ WP (.running
-      ⟨⟨params, localValues, selected :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 condition :: second :: first :: values⟩,
-        .select :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.select h)
+  .select, .i32 condition :: second :: first :: values => selected :: values := Step.select h
 
-theorem wp_refNull
-    {params localValues values : List Value}
-    {staticType : ValueType} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .funcref none :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, values⟩,
-        .refNull staticType :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.refNull)
+wasm_wp_pure_rule wp_refNull {staticType : ValueType} :
+  .refNull staticType, values => .funcref none :: values := Step.refNull
 
-theorem wp_refNullExtern
-    {params localValues values : List Value}
-    {staticType : ValueType} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .externref none :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, values⟩,
-        .refNullExtern staticType :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.refNullExtern)
+wasm_wp_pure_rule wp_refNullExtern {staticType : ValueType} :
+  .refNullExtern staticType, values => .externref none :: values := Step.refNullExtern
 
-theorem wp_refNullExn
-    {params localValues values : List Value}
-    {staticType : ValueType} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .exnref none :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, values⟩,
-        .refNullExn staticType :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.refNullExn)
+wasm_wp_pure_rule wp_refNullExn {staticType : ValueType} :
+  .refNullExn staticType, values => .exnref none :: values := Step.refNullExn
 
-theorem wp_refFunc
-    {params localValues values : List Value}
-    {functionIndex : Nat} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .funcref (some functionIndex) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, values⟩,
-        .refFunc functionIndex :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.refFunc)
+wasm_wp_pure_rule wp_refFunc {functionIndex : Nat} :
+  .refFunc functionIndex, values => .funcref (some functionIndex) :: values := Step.refFunc
 
-theorem wp_refAsNonNull
-    {params localValues values : List Value}
-    {value : Value} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (h : value.isNullRef? = some false) :
-    ▷ WP (.running
-      ⟨⟨params, localValues, value :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, value :: values⟩,
-        .refAsNonNull :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.refAsNonNull h)
+wasm_wp_pure_rule wp_refAsNonNull {value : Value} (h : value.isNullRef? = some false) :
+  .refAsNonNull, value :: values => value :: values := Step.refAsNonNull h
 
-theorem wp_brOnNullFallthrough
-    {params localValues values : List Value}
-    {value : Value} {depth : Nat} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hnull : value.isNullRef? = some false) :
-    ▷ WP (.running
-      ⟨⟨params, localValues, value :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, value :: values⟩,
-        .brOnNull depth :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.brOnNullFallthrough hnull)
+wasm_wp_pure_rule wp_brOnNullFallthrough
+    {value : Value} {depth : Nat} (hnull : value.isNullRef? = some false) :
+  .brOnNull depth, value :: values => value :: values := Step.brOnNullFallthrough hnull
 
-theorem wp_brOnNonNullFallthrough
-    {params localValues values : List Value}
-    {value : Value} {depth : Nat} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hnull : value.isNullRef? = some true) :
-    ▷ WP (.running
-      ⟨⟨params, localValues, values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, value :: values⟩,
-        .brOnNonNull depth :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.brOnNonNullFallthrough hnull)
+wasm_wp_pure_rule wp_brOnNonNullFallthrough
+    {value : Value} {depth : Nat} (hnull : value.isNullRef? = some true) :
+  .brOnNonNull depth, value :: values => values := Step.brOnNonNullFallthrough hnull
 
+wasm_wp_pure_rule wp_ltUI64
+    {lhs rhs : UInt64} {result : UInt32} (hresult : result = if lhs < rhs then 1 else 0) :
+  .ltUI64, .i64 rhs :: .i64 lhs :: values => .i32 result :: values := Step.ltUI64 hresult
 
-theorem wp_ltUI64
-    {params localValues values : List Value}
-    {lhs rhs : UInt64} {result : UInt32}
-    {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hresult : result = if lhs < rhs then 1 else 0) :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i32 result :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-        .ltUI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.ltUI64 hresult)
+wasm_wp_pure_rule wp_eqI64
+    {lhs rhs : UInt64} {result : UInt32} (hresult : result = if lhs = rhs then 1 else 0) :
+  .eqI64, .i64 rhs :: .i64 lhs :: values => .i32 result :: values := Step.eqI64 hresult
 
-theorem wp_eqI64
-    {params localValues values : List Value}
-    {lhs rhs : UInt64} {result : UInt32}
-    {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hresult : result = if lhs = rhs then 1 else 0) :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i32 result :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-        .eqI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.eqI64 hresult)
+wasm_wp_pure_rule wp_eqzI64
+    {value : UInt64} {result : UInt32} (hresult : result = if value = 0 then 1 else 0) :
+  .eqzI64, .i64 value :: values => .i32 result :: values := Step.eqzI64 hresult
 
-theorem wp_eqzI64
-    {params localValues values : List Value}
-    {value : UInt64} {result : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hresult : result = if value = 0 then 1 else 0) :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i32 result :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 value :: values⟩,
-        .eqzI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.eqzI64 hresult)
+wasm_wp_pure_rule wp_neI64
+    {lhs rhs : UInt64} {result : UInt32} (hresult : result = if lhs ≠ rhs then 1 else 0) :
+  .neI64, .i64 rhs :: .i64 lhs :: values => .i32 result :: values := Step.neI64 hresult
 
-theorem wp_neI64
-    {params localValues values : List Value}
-    {lhs rhs : UInt64} {result : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hresult : result = if lhs ≠ rhs then 1 else 0) :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i32 result :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-        .neI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.neI64 hresult)
+wasm_wp_pure_rule wp_gtUI64
+    {lhs rhs : UInt64} {result : UInt32} (hresult : result = if lhs > rhs then 1 else 0) :
+  .gtUI64, .i64 rhs :: .i64 lhs :: values => .i32 result :: values := Step.gtUI64 hresult
 
-theorem wp_gtUI64
-    {params localValues values : List Value}
-    {lhs rhs : UInt64} {result : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hresult : result = if lhs > rhs then 1 else 0) :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i32 result :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-        .gtUI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.gtUI64 hresult)
+wasm_wp_pure_rule wp_divUI64 {dividend divisor : UInt64} (hdivisor : divisor ≠ 0) :
+  .divUI64, .i64 divisor :: .i64 dividend :: values =>
+    .i64 (dividend / divisor) :: values := Step.divUI64 hdivisor
 
-theorem wp_divUI64
-    {params localValues values : List Value}
-    {dividend divisor : UInt64} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hdivisor : divisor ≠ 0) :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i64 (dividend / divisor) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 divisor :: .i64 dividend :: values⟩,
-        .divUI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.divUI64 hdivisor)
-
-theorem wp_remUI64
-    {params localValues values : List Value}
-    {dividend divisor : UInt64} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hdivisor : divisor ≠ 0) :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i64 (dividend % divisor) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 divisor :: .i64 dividend :: values⟩,
-        .remUI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.remUI64 hdivisor)
+wasm_wp_pure_rule wp_remUI64 {dividend divisor : UInt64} (hdivisor : divisor ≠ 0) :
+  .remUI64, .i64 divisor :: .i64 dividend :: values =>
+    .i64 (dividend % divisor) :: values := Step.remUI64 hdivisor
 
 theorem wp_block
     {locals : Locals} {paramArity resultArity arity : Nat}
@@ -1442,46 +634,6 @@ theorem wp_loop
         arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   exact wp_pureStep _ _ _ (fun _ => Step.loop)
-
-/-- Löb-induction wrapper for a Wasm loop body.
-
-The premise is the reusable loop-body proof: assuming the guarded recursive
-call, ownership of `I` establishes the WP at the top of the administrative
-loop frame.  The conclusion packages the Löb argument and the initial
-`.loop` transition.  Concrete loop proofs can therefore concentrate on
-showing that their body either exits or re-establishes `I` before `br 0`.
--/
-theorem wp_loop_löb
-    {locals : Locals} {paramArity resultArity arity : Nat}
-    {body code : Program} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame}
-    (I : IProp (WasmHeapGF α))
-    (body_closes :
-        (▷ (I -∗
-          WP (.running
-            ⟨locals, body, arity, remainder,
-              { kind := .loop, paramArity, resultArity, body,
-                continuation := code,
-                belowStack := locals.values.drop paramArity } :: controls,
-              calls⟩ : Expr α) @ s; E {{ Φ }})) ⊢@{IProp (WasmHeapGF α)}
-        (I -∗
-          WP (.running
-            ⟨locals, body, arity, remainder,
-              { kind := .loop, paramArity, resultArity, body,
-                continuation := code,
-                belowStack := locals.values.drop paramArity } :: controls,
-              calls⟩ : Expr α) @ s; E {{ Φ }})) :
-    I ⊢
-      WP (.running
-        ⟨locals, .loop paramArity resultArity body :: code,
-          arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} := by
-  iintro HI
-  iapply wp_loop
-  inext
-  iloeb as Hrec generalizing HI
-  iapply body_closes
-  · iexact Hrec
-  · iexact HI
 
 /-- Family-indexed Löb rule for loops whose locals and owned invariant change
 at each back-edge.
@@ -1695,39 +847,7 @@ theorem wp_localGet
     ▷ WP (Expr.running next : Expr α) @ s; E {{ Φ }} ⊢
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
-  iintro Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
-      .running ⟨⟨params, localValues, value :: values⟩,
-        code, arity, remainder, controls, calls⟩,
-      store, [], ⟨rfl, _, rfl, Step.localGet hget⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ :=
-    step_deterministic (Step.localGet (α := α) hget) wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp]
-  · iexact Hwp
-  · itrivial
+  exact wp_pureStep _ _ _ (fun _ => Step.localGet hget)
 
 theorem wp_localSet
     {params localValues values : List Value}
@@ -1745,39 +865,7 @@ theorem wp_localSet
     ▷ WP (Expr.running next : Expr α) @ s; E {{ Φ }} ⊢
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
-  iintro Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
-      .running ⟨{ locals' with values },
-        code, arity, remainder, controls, calls⟩,
-      store, [], ⟨rfl, _, rfl, Step.localSet hset⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ :=
-    step_deterministic (Step.localSet (α := α) hset) wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp]
-  · iexact Hwp
-  · itrivial
+  exact wp_pureStep _ _ _ (fun _ => Step.localSet hset)
 
 theorem wp_localTee
     {params localValues values : List Value}
@@ -1795,38 +883,7 @@ theorem wp_localTee
     ▷ WP (Expr.running next : Expr α) @ s; E {{ Φ }} ⊢
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
-  iintro Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[], .running ⟨locals', code, arity, remainder, controls, calls⟩,
-      store, [], ⟨rfl, _, rfl, Step.localTee hset⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ :=
-    step_deterministic (Step.localTee (α := α) hset) wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp]
-  · iexact Hwp
-  · itrivial
-
+  exact wp_pureStep _ _ _ (fun _ => Step.localTee hset)
 
 theorem wp_tryTable
     {locals : Locals} {paramArity resultArity arity : Nat}
@@ -2195,7 +1252,6 @@ theorem wp_catchException
   isplitl [Hwp]
   · iexact Hwp
   · itrivial
-
 
 /-- Enter a defined Wasm function. Immutable runtime-module ownership ties the
 function lookup used by the rule to the actual `MachineStore` seen by
@@ -3937,7 +2993,6 @@ theorem wp_load8UI64
     iexact Hpt
   · itrivial
 
-
 theorem wp_load8S
     {params localValues values : List Value}
     {address offset : UInt32} {code : Program} {arity : Nat}
@@ -4554,7 +3609,6 @@ theorem wp_load32SI64
     iexact Hword
   · itrivial
 
-
 /-- Primitive rule for `i32.store8`. The physical `Mem.write8` transition and
 the authoritative GenHeap update happen in the same Iris step. -/
 theorem wp_store8
@@ -4713,7 +3767,6 @@ theorem wp_store8I64
   · iapply Hwp
     iexact Hpt
   · itrivial
-
 
 theorem wp_store16
     {params localValues values : List Value}
@@ -4961,7 +4014,6 @@ theorem wp_store32I64
   · iapply Hwp
     iexact Hword
   · itrivial
-
 
 theorem wp_load32
     {params localValues values : List Value}
@@ -5624,7 +4676,6 @@ theorem wp_f64Store
     iexact Hword
   · itrivial
 
-
 theorem wp_memoryGrow64TooLarge
     {params localValues values : List Value}
     {delta : UInt64}
@@ -5881,12 +4932,13 @@ theorem wp_memoryGrow
     subst e₂
     subst store₂
     simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod (stateInterp_memoryGrow store ns obs' nt delta
+        (store.wasm.memoryCap store.runtime.currentModule 0) memory previousPages hg) $$
+        Hσ with Hσ
     imod Hclose
     imodintro
     isplitl [Hσ]
-    · iapply (stateInterp_memoryGrow store ns obs' nt delta
-        (store.wasm.memoryCap store.runtime.currentModule 0) memory previousPages hg)
-      iexact Hσ
+    · iexact Hσ
     isplitl [Hruntime]
     · iapply (Hwp previousPages.toUInt32)
       iexact Hruntime
@@ -5979,12 +5031,13 @@ theorem wp_memoryGrow64
     subst e₂
     subst store₂
     simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod (stateInterp_memoryGrow store ns obs' nt delta.toUInt32
+        (store.wasm.memoryCap store.runtime.currentModule 0) memory previousPages hg) $$
+        Hσ with Hσ
     imod Hclose
     imodintro
     isplitl [Hσ]
-    · iapply (stateInterp_memoryGrow store ns obs' nt delta.toUInt32
-        (store.wasm.memoryCap store.runtime.currentModule 0) memory previousPages hg)
-      iexact Hσ
+    · iexact Hσ
     isplitl [Hruntime]
     · iapply (Hwp previousPages.toUInt64)
       iexact Hruntime
@@ -6978,168 +6031,48 @@ theorem wp_memoryInit64Trap
       rcases h with ⟨-, ⟨_, -, hstep⟩⟩; exact trapped_terminal hstep⟩
   · itrivial
 
-theorem wp_vConst
-    {params localValues values : List Value}
-    {bits : BitVec 128} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .v128 bits :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, values⟩,
-        .vConst bits :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.vConst)
+wasm_wp_pure_rule wp_vConst {bits : BitVec 128} :
+  .vConst bits, values => .v128 bits :: values := Step.vConst
 
-theorem wp_vUnOp
-    {params localValues values : List Value}
-    {op : Simd.UnOp} {value : BitVec 128} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .v128 (op.eval value) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .v128 value :: values⟩,
-        .vUnOp op :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.vUnOp)
+wasm_wp_pure_rule wp_vUnOp {op : Simd.UnOp} {value : BitVec 128} :
+  .vUnOp op, .v128 value :: values => .v128 (op.eval value) :: values := Step.vUnOp
 
-theorem wp_vBinOp
-    {params localValues values : List Value}
-    {op : Simd.BinOp} {lhs rhs : BitVec 128} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .v128 (op.eval lhs rhs) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .v128 rhs :: .v128 lhs :: values⟩,
-        .vBinOp op :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.vBinOp)
+wasm_wp_pure_rule wp_vBinOp {op : Simd.BinOp} {lhs rhs : BitVec 128} :
+  .vBinOp op, .v128 rhs :: .v128 lhs :: values => .v128 (op.eval lhs rhs) :: values := Step.vBinOp
 
-theorem wp_vBitselect
-    {params localValues values : List Value}
-    {lhs rhs mask : BitVec 128} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues,
-        .v128 ((lhs &&& mask) ||| (rhs &&& ~~~mask)) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .v128 mask :: .v128 rhs :: .v128 lhs :: values⟩,
-        .vBitselect :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.vBitselect)
+wasm_wp_pure_rule wp_vBitselect {lhs rhs mask : BitVec 128} :
+  .vBitselect, .v128 mask :: .v128 rhs :: .v128 lhs :: values =>
+    .v128 ((lhs &&& mask) ||| (rhs &&& ~~~mask)) :: values := Step.vBitselect
 
-theorem wp_vTestOp
-    {params localValues values : List Value}
-    {op : Simd.TestOp} {value : BitVec 128} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .i32 (op.eval value) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .v128 value :: values⟩,
-        .vTestOp op :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.vTestOp)
+wasm_wp_pure_rule wp_vTestOp {op : Simd.TestOp} {value : BitVec 128} :
+  .vTestOp op, .v128 value :: values => .i32 (op.eval value) :: values := Step.vTestOp
 
-theorem wp_vShiftOp
-    {params localValues values : List Value}
-    {op : Simd.ShiftOp} {value : BitVec 128} {amount : UInt32}
-    {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .v128 (op.eval value amount) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 amount :: .v128 value :: values⟩,
-        .vShiftOp op :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.vShiftOp)
+wasm_wp_pure_rule wp_vShiftOp {op : Simd.ShiftOp} {value : BitVec 128} {amount : UInt32} :
+  .vShiftOp op, .i32 amount :: .v128 value :: values =>
+    .v128 (op.eval value amount) :: values := Step.vShiftOp
 
-theorem wp_vSplat
-    {params localValues values : List Value}
+wasm_wp_pure_rule wp_vSplat
     {shape : Simd.Shape} {value : Value} {bits : Nat}
-    {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
     (hbits : value.scalarBitsFor? shape = some bits) :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .v128 (Simd.splat shape bits) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, value :: values⟩,
-        .vSplat shape :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.vSplat hbits)
+  .vSplat shape, value :: values => .v128 (Simd.splat shape bits) :: values := Step.vSplat hbits
 
-theorem wp_vReplaceLane
-    {params localValues values : List Value}
-    {shape : Simd.Shape} {lane : Nat}
-    {replacement : Value} {value : BitVec 128} {bits : Nat}
-    {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
+wasm_wp_pure_rule wp_vReplaceLane
+    {shape : Simd.Shape} {lane : Nat} {replacement : Value} {value : BitVec 128} {bits : Nat}
     (hbits : replacement.scalarBitsFor? shape = some bits) :
-    ▷ WP (.running
-      ⟨⟨params, localValues,
-        .v128 (Simd.setLane shape.laneBits lane value bits) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, replacement :: .v128 value :: values⟩,
-        .vReplaceLane shape lane :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.vReplaceLane hbits)
+  .vReplaceLane shape lane, replacement :: .v128 value :: values =>
+    .v128 (Simd.setLane shape.laneBits lane value bits) :: values := Step.vReplaceLane hbits
 
-theorem wp_vShuffle
-    {params localValues values : List Value}
-    {indices : List Nat} {lhs rhs : BitVec 128} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .v128 (Simd.shuffle indices lhs rhs) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .v128 rhs :: .v128 lhs :: values⟩,
-        .vShuffle indices :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.vShuffle)
+wasm_wp_pure_rule wp_vShuffle {indices : List Nat} {lhs rhs : BitVec 128} :
+  .vShuffle indices, .v128 rhs :: .v128 lhs :: values =>
+    .v128 (Simd.shuffle indices lhs rhs) :: values := Step.vShuffle
 
-theorem wp_vFma
-    {params localValues values : List Value}
-    {shape : Simd.Shape} {neg : Bool}
-    {lhs rhs addend : BitVec 128} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .v128 (Simd.fma shape neg lhs rhs addend) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .v128 addend :: .v128 rhs :: .v128 lhs :: values⟩,
-        .vFma shape neg :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.vFma)
+wasm_wp_pure_rule wp_vFma {shape : Simd.Shape} {neg : Bool} {lhs rhs addend : BitVec 128} :
+  .vFma shape neg, .v128 addend :: .v128 rhs :: .v128 lhs :: values =>
+    .v128 (Simd.fma shape neg lhs rhs addend) :: values := Step.vFma
 
-theorem wp_vDotAdd
-    {params localValues values : List Value}
-    {lhs rhs addend : BitVec 128} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues, .v128 (Simd.dotAdd lhs rhs addend) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .v128 addend :: .v128 rhs :: .v128 lhs :: values⟩,
-        .vDotAdd :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.vDotAdd)
+wasm_wp_pure_rule wp_vDotAdd {lhs rhs addend : BitVec 128} :
+  .vDotAdd, .v128 addend :: .v128 rhs :: .v128 lhs :: values =>
+    .v128 (Simd.dotAdd lhs rhs addend) :: values := Step.vDotAdd
 
 theorem wp_unreachable
     {params localValues values : List Value}
@@ -7147,40 +6080,8 @@ theorem wp_unreachable
     {controls : List ControlFrame} {calls : List CallFrame} :
     True ⊢ WP (.running
       ⟨⟨params, localValues, values⟩,
-        .unreachable :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} := by
-  iintro -
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro; trivial
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ := step_deterministic Step.unreachable wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl []
-  · iapply wp_lift_stuck rfl
-    iintro %_ %_ %_ %_ -
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro -
-    ipureintro
-    exact ⟨rfl, fun _ _ _ _ h => by
-      rcases h with ⟨-, ⟨_, -, hstep⟩⟩; exact trapped_terminal hstep⟩
-  · itrivial
+        .unreachable :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
+  wp_trapStep _ _ _ (fun _ => Step.unreachable)
 
 theorem wp_refAsNonNullTrap
     {params localValues values : List Value} {value : Value}
@@ -7189,40 +6090,8 @@ theorem wp_refAsNonNullTrap
     (h : value.isNullRef? = some true) :
     True ⊢ WP (.running
       ⟨⟨params, localValues, value :: values⟩,
-        .refAsNonNull :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} := by
-  iintro -
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro; trivial
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ := step_deterministic (Step.refAsNonNullTrap h) wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl []
-  · iapply wp_lift_stuck rfl
-    iintro %_ %_ %_ %_ -
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro -
-    ipureintro
-    exact ⟨rfl, fun _ _ _ _ h => by
-      rcases h with ⟨-, ⟨_, -, hstep⟩⟩; exact trapped_terminal hstep⟩
-  · itrivial
+        .refAsNonNull :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
+  wp_trapStep _ _ _ (fun _ => Step.refAsNonNullTrap h)
 
 theorem wp_divUZero
     {params localValues values : List Value} {dividend : UInt32}
@@ -7230,40 +6099,8 @@ theorem wp_divUZero
     {controls : List ControlFrame} {calls : List CallFrame} :
     True ⊢ WP (.running
       ⟨⟨params, localValues, .i32 0 :: .i32 dividend :: values⟩,
-        .divU :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} := by
-  iintro -
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro; trivial
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ := step_deterministic Step.divUZero wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl []
-  · iapply wp_lift_stuck rfl
-    iintro %_ %_ %_ %_ -
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro -
-    ipureintro
-    exact ⟨rfl, fun _ _ _ _ h => by
-      rcases h with ⟨-, ⟨_, -, hstep⟩⟩; exact trapped_terminal hstep⟩
-  · itrivial
+        .divU :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
+  wp_trapStep _ _ _ (fun _ => Step.divUZero)
 
 theorem wp_divSZero
     {params localValues values : List Value} {dividend : UInt32}
@@ -7271,40 +6108,8 @@ theorem wp_divSZero
     {controls : List ControlFrame} {calls : List CallFrame} :
     True ⊢ WP (.running
       ⟨⟨params, localValues, .i32 0 :: .i32 dividend :: values⟩,
-        .divS :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} := by
-  iintro -
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro; trivial
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ := step_deterministic Step.divSZero wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl []
-  · iapply wp_lift_stuck rfl
-    iintro %_ %_ %_ %_ -
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro -
-    ipureintro
-    exact ⟨rfl, fun _ _ _ _ h => by
-      rcases h with ⟨-, ⟨_, -, hstep⟩⟩; exact trapped_terminal hstep⟩
-  · itrivial
+        .divS :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
+  wp_trapStep _ _ _ (fun _ => Step.divSZero)
 
 theorem wp_divSOverflow
     {params localValues values : List Value}
@@ -7312,40 +6117,8 @@ theorem wp_divSOverflow
     {controls : List ControlFrame} {calls : List CallFrame} :
     True ⊢ WP (.running
       ⟨⟨params, localValues, .i32 0xFFFFFFFF :: .i32 0x80000000 :: values⟩,
-        .divS :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} := by
-  iintro -
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro; trivial
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ := step_deterministic Step.divSOverflow wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl []
-  · iapply wp_lift_stuck rfl
-    iintro %_ %_ %_ %_ -
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro -
-    ipureintro
-    exact ⟨rfl, fun _ _ _ _ h => by
-      rcases h with ⟨-, ⟨_, -, hstep⟩⟩; exact trapped_terminal hstep⟩
-  · itrivial
+        .divS :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
+  wp_trapStep _ _ _ (fun _ => Step.divSOverflow)
 
 theorem wp_remUZero
     {params localValues values : List Value} {dividend : UInt32}
@@ -7353,40 +6126,8 @@ theorem wp_remUZero
     {controls : List ControlFrame} {calls : List CallFrame} :
     True ⊢ WP (.running
       ⟨⟨params, localValues, .i32 0 :: .i32 dividend :: values⟩,
-        .remU :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} := by
-  iintro -
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro; trivial
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ := step_deterministic Step.remUZero wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl []
-  · iapply wp_lift_stuck rfl
-    iintro %_ %_ %_ %_ -
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro -
-    ipureintro
-    exact ⟨rfl, fun _ _ _ _ h => by
-      rcases h with ⟨-, ⟨_, -, hstep⟩⟩; exact trapped_terminal hstep⟩
-  · itrivial
+        .remU :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
+  wp_trapStep _ _ _ (fun _ => Step.remUZero)
 
 theorem wp_remSZero
     {params localValues values : List Value} {dividend : UInt32}
@@ -7394,40 +6135,8 @@ theorem wp_remSZero
     {controls : List ControlFrame} {calls : List CallFrame} :
     True ⊢ WP (.running
       ⟨⟨params, localValues, .i32 0 :: .i32 dividend :: values⟩,
-        .remS :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} := by
-  iintro -
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro; trivial
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ := step_deterministic Step.remSZero wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl []
-  · iapply wp_lift_stuck rfl
-    iintro %_ %_ %_ %_ -
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro -
-    ipureintro
-    exact ⟨rfl, fun _ _ _ _ h => by
-      rcases h with ⟨-, ⟨_, -, hstep⟩⟩; exact trapped_terminal hstep⟩
-  · itrivial
+        .remS :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
+  wp_trapStep _ _ _ (fun _ => Step.remSZero)
 
 theorem wp_divUI64Zero
     {params localValues values : List Value} {dividend : UInt64}
@@ -7435,40 +6144,8 @@ theorem wp_divUI64Zero
     {controls : List ControlFrame} {calls : List CallFrame} :
     True ⊢ WP (.running
       ⟨⟨params, localValues, .i64 0 :: .i64 dividend :: values⟩,
-        .divUI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} := by
-  iintro -
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro; trivial
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ := step_deterministic Step.divUI64Zero wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl []
-  · iapply wp_lift_stuck rfl
-    iintro %_ %_ %_ %_ -
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro -
-    ipureintro
-    exact ⟨rfl, fun _ _ _ _ h => by
-      rcases h with ⟨-, ⟨_, -, hstep⟩⟩; exact trapped_terminal hstep⟩
-  · itrivial
+        .divUI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
+  wp_trapStep _ _ _ (fun _ => Step.divUI64Zero)
 
 theorem wp_divSI64Zero
     {params localValues values : List Value} {dividend : UInt64}
@@ -7476,40 +6153,8 @@ theorem wp_divSI64Zero
     {controls : List ControlFrame} {calls : List CallFrame} :
     True ⊢ WP (.running
       ⟨⟨params, localValues, .i64 0 :: .i64 dividend :: values⟩,
-        .divSI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} := by
-  iintro -
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro; trivial
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ := step_deterministic Step.divSI64Zero wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl []
-  · iapply wp_lift_stuck rfl
-    iintro %_ %_ %_ %_ -
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro -
-    ipureintro
-    exact ⟨rfl, fun _ _ _ _ h => by
-      rcases h with ⟨-, ⟨_, -, hstep⟩⟩; exact trapped_terminal hstep⟩
-  · itrivial
+        .divSI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
+  wp_trapStep _ _ _ (fun _ => Step.divSI64Zero)
 
 theorem wp_divSI64Overflow
     {params localValues values : List Value}
@@ -7518,40 +6163,8 @@ theorem wp_divSI64Overflow
     True ⊢ WP (.running
       ⟨⟨params, localValues,
           .i64 0xFFFFFFFFFFFFFFFF :: .i64 0x8000000000000000 :: values⟩,
-        .divSI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} := by
-  iintro -
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro; trivial
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ := step_deterministic Step.divSI64Overflow wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl []
-  · iapply wp_lift_stuck rfl
-    iintro %_ %_ %_ %_ -
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro -
-    ipureintro
-    exact ⟨rfl, fun _ _ _ _ h => by
-      rcases h with ⟨-, ⟨_, -, hstep⟩⟩; exact trapped_terminal hstep⟩
-  · itrivial
+        .divSI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
+  wp_trapStep _ _ _ (fun _ => Step.divSI64Overflow)
 
 theorem wp_remUI64Zero
     {params localValues values : List Value} {dividend : UInt64}
@@ -7559,40 +6172,8 @@ theorem wp_remUI64Zero
     {controls : List ControlFrame} {calls : List CallFrame} :
     True ⊢ WP (.running
       ⟨⟨params, localValues, .i64 0 :: .i64 dividend :: values⟩,
-        .remUI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} := by
-  iintro -
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro; trivial
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ := step_deterministic Step.remUI64Zero wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl []
-  · iapply wp_lift_stuck rfl
-    iintro %_ %_ %_ %_ -
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro -
-    ipureintro
-    exact ⟨rfl, fun _ _ _ _ h => by
-      rcases h with ⟨-, ⟨_, -, hstep⟩⟩; exact trapped_terminal hstep⟩
-  · itrivial
+        .remUI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
+  wp_trapStep _ _ _ (fun _ => Step.remUI64Zero)
 
 theorem wp_remSI64Zero
     {params localValues values : List Value} {dividend : UInt64}
@@ -7600,40 +6181,8 @@ theorem wp_remSI64Zero
     {controls : List ControlFrame} {calls : List CallFrame} :
     True ⊢ WP (.running
       ⟨⟨params, localValues, .i64 0 :: .i64 dividend :: values⟩,
-        .remSI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} := by
-  iintro -
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro; trivial
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ := step_deterministic Step.remSI64Zero wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl []
-  · iapply wp_lift_stuck rfl
-    iintro %_ %_ %_ %_ -
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro -
-    ipureintro
-    exact ⟨rfl, fun _ _ _ _ h => by
-      rcases h with ⟨-, ⟨_, -, hstep⟩⟩; exact trapped_terminal hstep⟩
-  · itrivial
+        .remSI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
+  wp_trapStep _ _ _ (fun _ => Step.remSI64Zero)
 
 theorem wp_brTable
     {params localValues values targetValues : List Value}
@@ -7686,32 +6235,21 @@ theorem wp_brOnNonNullBranch
         arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} :=
   wp_pureStep _ _ _ (fun _ => Step.brOnNonNullBranch hnull htarget)
 
-theorem wp_vExtractLane
-    {params localValues values : List Value}
-    {shape : Simd.Shape} {signed : Bool} {lane : Nat} {value : BitVec 128}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame} :
-    ▷ WP (.running
-      ⟨⟨params, localValues,
-          (let laneValue := Simd.getLane shape.laneBits lane value
-           match shape with
-           | .i8x16 => .i32 (if signed
-               then UInt32.ofNat (Simd.toU 32 (Simd.sx 8 laneValue))
-               else UInt32.ofNat laneValue)
-           | .i16x8 => .i32 (if signed
-               then UInt32.ofNat (Simd.toU 32 (Simd.sx 16 laneValue))
-               else UInt32.ofNat laneValue)
-           | .i32x4 => .i32 (UInt32.ofNat laneValue)
-           | .i64x2 => .i64 (UInt64.ofNat laneValue)
-           | .f32x4 => .f32 (UInt32.ofNat laneValue)
-           | .f64x2 => .f64 (UInt64.ofNat laneValue)) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} ⊢
-    WP (.running
-      ⟨⟨params, localValues, .v128 value :: values⟩,
-        .vExtractLane shape signed lane :: code,
-        arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} :=
-  wp_pureStep _ _ _ (fun _ => Step.vExtractLane)
-
+wasm_wp_pure_rule wp_vExtractLane
+    {shape : Simd.Shape} {signed : Bool} {lane : Nat} {value : BitVec 128} :
+  .vExtractLane shape signed lane, .v128 value :: values =>
+    (let laneValue := Simd.getLane shape.laneBits lane value
+     match shape with
+     | .i8x16 => .i32 (if signed
+         then UInt32.ofNat (Simd.toU 32 (Simd.sx 8 laneValue))
+         else UInt32.ofNat laneValue)
+     | .i16x8 => .i32 (if signed
+         then UInt32.ofNat (Simd.toU 32 (Simd.sx 16 laneValue))
+         else UInt32.ofNat laneValue)
+     | .i32x4 => .i32 (UInt32.ofNat laneValue)
+     | .i64x2 => .i64 (UInt64.ofNat laneValue)
+     | .f32x4 => .f32 (UInt32.ofNat laneValue)
+     | .f64x2 => .f64 (UInt64.ofNat laneValue)) :: values := Step.vExtractLane
 
 /-- Primitive Iris rule for the concrete four-byte fill used by the manual
 example. The caller owns the complete affected range; disjoint ownership is
@@ -8345,431 +6883,6 @@ theorem wp_copy8_zero_four
     iframe
   · itrivial
 
-set_option maxHeartbeats 4000000 in
-/-- Call-stack-polymorphic proof of the sixteen instructions before
-`Project.SwapElements.func2`'s final `ret`. The continuation receives the
-updated ownership and decides whether `ret` finishes a top-level invocation or
-resumes a suspended caller. -/
-theorem wp_swapElementsFunc2Prefix
-    (ptrA ptrB : UInt32) (oldScratch oldA oldB : UInt64)
-    (hroomA : ptrA.toNat + 8 ≤ 4294967296)
-    (hroomB : ptrB.toNat + 8 ≤ 4294967296)
-    {calls : List CallFrame} :
-    (globalPointsToAt 0 0 (.i32 1048560) ∗
-      pointsTo_u64 0 1048552 oldScratch ∗
-      pointsTo_u64 0 ptrA oldA ∗ pointsTo_u64 0 ptrB oldB) ∗
-    ▷^[16] ((globalPointsToAt 0 0 (.i32 1048560) ∗
-      pointsTo_u64 0 1048552 oldA ∗
-      pointsTo_u64 0 ptrA oldB ∗ pointsTo_u64 0 ptrB oldA) -∗
-      WP (.running
-        ⟨⟨[.i32 ptrA, .i32 ptrB], [.i32 1048544], []⟩,
-          [.ret], 0, [], [], calls⟩ : Expr α) @ s; E {{ Φ }}) ⊢
-    WP (.running
-      ⟨⟨[.i32 ptrA, .i32 ptrB], [.i32 0], []⟩,
-        [ .globalGet 0, .const 16, .sub, .localSet 2,
-          .localGet 2, .localGet 0, .load64 0, .store64 8,
-          .localGet 0, .localGet 1, .load64 0, .store64 0,
-          .localGet 1, .localGet 2, .load64 8, .store64 0, .ret ],
-        0, [], [], calls⟩ : Expr α) @ s; E {{ Φ }} := by
-  have ha1 : (ptrA + 1).toNat = ptrA.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 1 (by omega) (by omega)
-  have ha2 : (ptrA + 2).toNat = ptrA.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 2 (by omega) (by omega)
-  have ha3 : (ptrA + 3).toNat = ptrA.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 3 (by omega) (by omega)
-  have ha4 : (ptrA + 4).toNat = ptrA.toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 4 (by omega) (by omega)
-  have ha5 : (ptrA + 5).toNat = ptrA.toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 5 (by omega) (by omega)
-  have ha6 : (ptrA + 6).toNat = ptrA.toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 6 (by omega) (by omega)
-  have ha7 : (ptrA + 7).toNat = ptrA.toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 7 (by omega) (by omega)
-  have hb1 : (ptrB + 1).toNat = ptrB.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 1 (by omega) (by omega)
-  have hb2 : (ptrB + 2).toNat = ptrB.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 2 (by omega) (by omega)
-  have hb3 : (ptrB + 3).toNat = ptrB.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 3 (by omega) (by omega)
-  have hb4 : (ptrB + 4).toNat = ptrB.toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 4 (by omega) (by omega)
-  have hb5 : (ptrB + 5).toNat = ptrB.toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 5 (by omega) (by omega)
-  have hb6 : (ptrB + 6).toNat = ptrB.toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 6 (by omega) (by omega)
-  have hb7 : (ptrB + 7).toNat = ptrB.toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 7 (by omega) (by omega)
-  iintro ⟨⟨Hglobal, Hscratch, HA, HB⟩, Hdone⟩
-  iapply wp_globalGet $$ Hglobal
-  inext
-  iintro Hglobal
-  iapply wp_const
-  inext
-  iapply wp_sub
-  inext
-  iapply wp_localSet rfl
-  inext
-  simp only [UInt32.reduceSub, List.length_cons, List.length_nil,
-    Nat.reduceAdd, Nat.reduceSub, List.set]
-  iapply wp_localGet rfl
-  inext
-  iapply wp_localGet rfl
-  inext
-  ihave HALater : ▷ pointsTo_u64 0 (ptrA + 0) oldA $$ [HA]
-  · inext
-    rw [UInt32.add_zero]
-    iexact HA
-  iapply wp_load64 oldA (by simp)
-    (by simpa using ha1) (by simpa using ha2) (by simpa using ha3)
-    (by simpa using ha4) (by simpa using ha5) (by simpa using ha6)
-    (by simpa using ha7) $$ HALater
-  inext
-  iintro HA
-  ihave HscratchLater :
-      ▷ pointsTo_u64 0 ((1048544 : UInt32) + 8) oldScratch $$ [Hscratch]
-  · inext
-    rw [show (1048544 : UInt32) + 8 = 1048552 from rfl]
-    iexact Hscratch
-  iapply wp_store64 oldScratch rfl rfl rfl rfl rfl rfl rfl rfl $$
-    HscratchLater
-  inext
-  iintro Hscratch
-  iapply wp_localGet rfl
-  inext
-  iapply wp_localGet rfl
-  inext
-  ihave HBLater : ▷ pointsTo_u64 0 (ptrB + 0) oldB $$ [HB]
-  · inext
-    rw [UInt32.add_zero]
-    iexact HB
-  iapply wp_load64 oldB (by simp)
-    (by simpa using hb1) (by simpa using hb2) (by simpa using hb3)
-    (by simpa using hb4) (by simpa using hb5) (by simpa using hb6)
-    (by simpa using hb7) $$ HBLater
-  inext
-  iintro HB
-  ihave HALater : ▷ pointsTo_u64 0 (ptrA + 0) oldA $$ [HA]
-  · inext
-    rw [UInt32.add_zero]
-    iexact HA
-  iapply wp_store64 oldA (by simp)
-    (by simpa using ha1) (by simpa using ha2) (by simpa using ha3)
-    (by simpa using ha4) (by simpa using ha5) (by simpa using ha6)
-    (by simpa using ha7) $$ HALater
-  inext
-  iintro HA
-  iapply wp_localGet rfl
-  inext
-  iapply wp_localGet rfl
-  inext
-  ihave HscratchLater :
-      ▷ pointsTo_u64 0 ((1048544 : UInt32) + 8) oldA $$ [Hscratch]
-  · inext
-    rw [show (1048544 : UInt32) + 8 = 1048552 from rfl]
-    iexact Hscratch
-  iapply wp_load64 oldA rfl rfl rfl rfl rfl rfl rfl rfl $$
-    HscratchLater
-  inext
-  iintro Hscratch
-  ihave HBLater : ▷ pointsTo_u64 0 (ptrB + 0) oldB $$ [HB]
-  · inext
-    rw [UInt32.add_zero]
-    iexact HB
-  iapply wp_store64 oldB (by simp)
-    (by simpa using hb1) (by simpa using hb2) (by simpa using hb3)
-    (by simpa using hb4) (by simpa using hb5) (by simpa using hb6)
-    (by simpa using hb7) $$ HBLater
-  inext
-  iintro HB
-  iapply Hdone
-  simp only [UInt32.add_zero, UInt32.reduceAdd]
-  iframe
-
-/-- Aliasing specialization of the generated exchange leaf. When both
-pointers are equal there is only one exclusive eight-byte ownership token;
-the two stores leave that word unchanged while the scratch word receives its
-value. -/
-theorem wp_swapElementsFunc2AliasPrefix
-    (ptr : UInt32) (oldScratch oldValue : UInt64)
-    (hroom : ptr.toNat + 8 ≤ 4294967296)
-    {calls : List CallFrame} :
-    (globalPointsToAt 0 0 (.i32 1048560) ∗
-      pointsTo_u64 0 1048552 oldScratch ∗ pointsTo_u64 0 ptr oldValue) ∗
-    ▷^[16] ((globalPointsToAt 0 0 (.i32 1048560) ∗
-      pointsTo_u64 0 1048552 oldValue ∗ pointsTo_u64 0 ptr oldValue) -∗
-      WP (.running
-        ⟨⟨[.i32 ptr, .i32 ptr], [.i32 1048544], []⟩,
-          [.ret], 0, [], [], calls⟩ : Expr α) @ s; E {{ Φ }}) ⊢
-    WP (.running
-      ⟨⟨[.i32 ptr, .i32 ptr], [.i32 0], []⟩,
-        [ .globalGet 0, .const 16, .sub, .localSet 2,
-          .localGet 2, .localGet 0, .load64 0, .store64 8,
-          .localGet 0, .localGet 1, .load64 0, .store64 0,
-          .localGet 1, .localGet 2, .load64 8, .store64 0, .ret ],
-        0, [], [], calls⟩ : Expr α) @ s; E {{ Φ }} := by
-  have h1 : (ptr + 1).toNat = ptr.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptr 1 (by omega) (by omega)
-  have h2 : (ptr + 2).toNat = ptr.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptr 2 (by omega) (by omega)
-  have h3 : (ptr + 3).toNat = ptr.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptr 3 (by omega) (by omega)
-  have h4 : (ptr + 4).toNat = ptr.toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptr 4 (by omega) (by omega)
-  have h5 : (ptr + 5).toNat = ptr.toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptr 5 (by omega) (by omega)
-  have h6 : (ptr + 6).toNat = ptr.toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptr 6 (by omega) (by omega)
-  have h7 : (ptr + 7).toNat = ptr.toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptr 7 (by omega) (by omega)
-  iintro ⟨⟨Hglobal, Hscratch, Hcell⟩, Hdone⟩
-  iapply wp_globalGet $$ Hglobal
-  inext
-  iintro Hglobal
-  iapply wp_const
-  inext
-  iapply wp_sub
-  inext
-  iapply wp_localSet rfl
-  inext
-  simp only [UInt32.reduceSub, List.length_cons, List.length_nil,
-    Nat.reduceAdd, Nat.reduceSub, List.set]
-  iapply wp_localGet rfl
-  inext
-  iapply wp_localGet rfl
-  inext
-  ihave HcellLater : ▷ pointsTo_u64 0 (ptr + 0) oldValue $$ [Hcell]
-  · inext
-    rw [UInt32.add_zero]
-    iexact Hcell
-  iapply wp_load64 oldValue (by simp)
-    (by simpa using h1) (by simpa using h2) (by simpa using h3)
-    (by simpa using h4) (by simpa using h5) (by simpa using h6)
-    (by simpa using h7) $$ HcellLater
-  inext
-  iintro Hcell
-  ihave HscratchLater :
-      ▷ pointsTo_u64 0 ((1048544 : UInt32) + 8) oldScratch $$ [Hscratch]
-  · inext
-    rw [show (1048544 : UInt32) + 8 = 1048552 from rfl]
-    iexact Hscratch
-  iapply wp_store64 oldScratch rfl rfl rfl rfl rfl rfl rfl rfl $$
-    HscratchLater
-  inext
-  iintro Hscratch
-  iapply wp_localGet rfl
-  inext
-  iapply wp_localGet rfl
-  inext
-  ihave HcellLater : ▷ pointsTo_u64 0 (ptr + 0) oldValue $$ [Hcell]
-  · inext
-    rw [UInt32.add_zero]
-    iexact Hcell
-  iapply wp_load64 oldValue (by simp)
-    (by simpa using h1) (by simpa using h2) (by simpa using h3)
-    (by simpa using h4) (by simpa using h5) (by simpa using h6)
-    (by simpa using h7) $$ HcellLater
-  inext
-  iintro Hcell
-  ihave HcellLater : ▷ pointsTo_u64 0 (ptr + 0) oldValue $$ [Hcell]
-  · inext
-    rw [UInt32.add_zero]
-    iexact Hcell
-  iapply wp_store64 oldValue (by simp)
-    (by simpa using h1) (by simpa using h2) (by simpa using h3)
-    (by simpa using h4) (by simpa using h5) (by simpa using h6)
-    (by simpa using h7) $$ HcellLater
-  inext
-  iintro Hcell
-  iapply wp_localGet rfl
-  inext
-  iapply wp_localGet rfl
-  inext
-  ihave HscratchLater :
-      ▷ pointsTo_u64 0 ((1048544 : UInt32) + 8) oldValue $$ [Hscratch]
-  · inext
-    rw [show (1048544 : UInt32) + 8 = 1048552 from rfl]
-    iexact Hscratch
-  iapply wp_load64 oldValue rfl rfl rfl rfl rfl rfl rfl rfl $$
-    HscratchLater
-  inext
-  iintro Hscratch
-  ihave HcellLater : ▷ pointsTo_u64 0 (ptr + 0) oldValue $$ [Hcell]
-  · inext
-    rw [UInt32.add_zero]
-    iexact Hcell
-  iapply wp_store64 oldValue (by simp)
-    (by simpa using h1) (by simpa using h2) (by simpa using h3)
-    (by simpa using h4) (by simpa using h5) (by simpa using h6)
-    (by simpa using h7) $$ HcellLater
-  inext
-  iintro Hcell
-  iapply Hdone
-  simp only [UInt32.add_zero, UInt32.reduceAdd]
-  iframe
-
-/-- Top-level specialization of `wp_swapElementsFunc2Prefix`. -/
-theorem wp_swapElementsFunc2
-    (ptrA ptrB : UInt32) (oldScratch oldA oldB : UInt64)
-    (hroomA : ptrA.toNat + 8 ≤ 4294967296)
-    (hroomB : ptrB.toNat + 8 ≤ 4294967296) :
-    globalPointsToAt 0 0 (.i32 1048560) ∗
-      pointsTo_u64 0 1048552 oldScratch ∗
-      pointsTo_u64 0 ptrA oldA ∗ pointsTo_u64 0 ptrB oldB ⊢
-    WP (.running
-      ⟨⟨[.i32 ptrA, .i32 ptrB], [.i32 0], []⟩,
-        [ .globalGet 0, .const 16, .sub, .localSet 2,
-          .localGet 2, .localGet 0, .load64 0, .store64 8,
-          .localGet 0, .localGet 1, .load64 0, .store64 0,
-          .localGet 1, .localGet 2, .load64 8, .store64 0, .ret ],
-        0, [], [], []⟩ : Expr α) @ s; E
-      {{ result, ⌜result = []⌝ ∗
-        globalPointsToAt 0 0 (.i32 1048560) ∗
-        pointsTo_u64 0 1048552 oldA ∗
-        pointsTo_u64 0 ptrA oldB ∗ pointsTo_u64 0 ptrB oldA }} := by
-  iintro Hresources
-  iapply wp_swapElementsFunc2Prefix ptrA ptrB oldScratch oldA oldB
-    hroomA hroomB (calls := [])
-  isplitl [Hresources]
-  · iexact Hresources
-  · inext
-    iintro Hresources
-    iapply wp_returnFromFunction
-    inext
-    iapply wp_value'
-    isplitr
-    · ipureintro
-      rfl
-    · iexact Hresources
-
-/-- Top-level one-cell specialization for equal exchange pointers. -/
-theorem wp_swapElementsFunc2Alias
-    (ptr : UInt32) (oldScratch oldValue : UInt64)
-    (hroom : ptr.toNat + 8 ≤ 4294967296) :
-    globalPointsToAt 0 0 (.i32 1048560) ∗
-      pointsTo_u64 0 1048552 oldScratch ∗ pointsTo_u64 0 ptr oldValue ⊢
-    WP (.running
-      ⟨⟨[.i32 ptr, .i32 ptr], [.i32 0], []⟩,
-        [ .globalGet 0, .const 16, .sub, .localSet 2,
-          .localGet 2, .localGet 0, .load64 0, .store64 8,
-          .localGet 0, .localGet 1, .load64 0, .store64 0,
-          .localGet 1, .localGet 2, .load64 8, .store64 0, .ret ],
-        0, [], [], []⟩ : Expr α) @ s; E
-      {{ result, ⌜result = []⌝ ∗
-        globalPointsToAt 0 0 (.i32 1048560) ∗
-        pointsTo_u64 0 1048552 oldValue ∗
-        pointsTo_u64 0 ptr oldValue }} := by
-  iintro Hresources
-  iapply wp_swapElementsFunc2AliasPrefix ptr oldScratch oldValue
-    hroom (calls := [])
-  isplitl [Hresources]
-  · iexact Hresources
-  · inext
-    iintro Hresources
-    iapply wp_returnFromFunction
-    inext
-    iapply wp_value'
-    isplitr
-    · ipureintro
-      rfl
-    · iexact Hresources
-
-/-- Small-step Iris contract for the exact generated body of
-`Project.SwapElements.func3`. It spills `len` and `ptr` into two adjacent
-32-bit words and returns no Wasm values. -/
-theorem wp_swapElementsFunc3
-    (oldPtr oldLen ptr len : UInt32) :
-    pointsTo_u32 0 1048568 oldPtr ∗ pointsTo_u32 0 1048572 oldLen ⊢
-    WP (.running
-      ⟨⟨[.i32 1048568, .i32 ptr, .i32 len, .i32 1048652], [], []⟩,
-        [ .localGet 0, .localGet 2, .store32 4,
-          .localGet 0, .localGet 1, .store32 0, .ret ],
-        0, [], [], []⟩ : Expr α) @ s; E
-      {{ result, ⌜result = []⌝ ∗
-        pointsTo_u32 0 1048568 ptr ∗ pointsTo_u32 0 1048572 len }} := by
-  iintro ⟨Hptr, Hlen⟩
-  iapply wp_localGet rfl
-  inext
-  iapply wp_localGet rfl
-  inext
-  ihave HlenLater :
-      ▷ pointsTo_u32 0 ((1048568 : UInt32) + 4) oldLen $$ [Hlen]
-  · inext
-    rw [show (1048568 : UInt32) + 4 = 1048572 from rfl]
-    iexact Hlen
-  iapply wp_store32 oldLen rfl rfl rfl rfl $$ HlenLater
-  inext
-  iintro Hlen
-  iapply wp_localGet rfl
-  inext
-  iapply wp_localGet rfl
-  inext
-  ihave HptrLater :
-      ▷ pointsTo_u32 0 ((1048568 : UInt32) + 0) oldPtr $$ [Hptr]
-  · inext
-    rw [UInt32.add_zero]
-    iexact Hptr
-  iapply wp_store32 oldPtr rfl rfl rfl rfl $$ HptrLater
-  inext
-  iintro Hptr
-  iapply wp_returnFromFunction
-  inext
-  iapply wp_value'
-  isplitr
-  · ipureintro
-    rfl
-  · isplitl [Hptr]
-    · rw [UInt32.add_zero]
-      iexact Hptr
-    · rw [← show (1048568 : UInt32) + 4 = 1048572 from rfl]
-      iexact Hlen
-
-/-- End-to-end Iris contract for the hand-written byte-memory roundtrip used
-by `Interpreter.Wasm.Examples.SmallStep`. -/
-theorem wp_byteRoundtrip (oldByte : UInt8) :
-    pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
-      ⟨0, 24⟩ (DFrac.own 1) (some oldByte) ⊢
-    WP (.running
-      ⟨⟨[], [], []⟩,
-        [ .const 24, .const 0x1234AB, .store8 0,
-          .const 24, .load8U 0 ],
-        1, [], [], []⟩ : Expr α) @ s; E
-      {{ result, ⌜result = [.i32 0xAB]⌝ ∗
-        pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
-          ⟨0, 24⟩ (DFrac.own 1) (some (0xAB : UInt8)) }} := by
-  iintro Hpt
-  iapply wp_const
-  inext
-  iapply wp_const
-  inext
-  ihave HptLater :
-      ▷ pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
-        ⟨0, 24 + 0⟩ (DFrac.own 1) (some oldByte) $$ [Hpt]
-  · inext
-    rw [UInt32.add_zero]
-    iexact Hpt
-  iapply wp_store8 oldByte rfl $$ HptLater
-  inext
-  iintro Hpt
-  iapply wp_const
-  inext
-  ihave HptLater :
-      ▷ pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
-        ⟨0, 24 + 0⟩ (DFrac.own 1) (some (0xAB : UInt8)) $$ [Hpt]
-  · inext
-    rw [show (0x1234AB : UInt32).toUInt8 = (0xAB : UInt8) by decide]
-    iexact Hpt
-  iapply wp_load8U (0xAB : UInt8) rfl $$ HptLater
-  inext
-  iintro Hpt
-  iapply wp_finish
-  inext
-  iapply wp_value'
-  isplitr
-  · ipureintro
-    rfl
-  · rw [UInt32.add_zero]
-    iexact Hpt
-
 /-- End-to-end Iris contract for the hand-written 32-bit memory roundtrip.
 The physical word and its four authoritative ghost bytes are updated by the
 same `store32` transition. -/
@@ -9392,7 +7505,6 @@ theorem wp_mergeTwoWords :
       iexact H0
     · rw [UInt32.add_zero]
       iexact H4
-
 
 -- Load 16 bytes and push a v128. Ownership of the two 8-byte halves pins the
 -- loaded value and puts the 16-byte range in bounds.
@@ -10216,7 +8328,6 @@ theorem wp_store32Memory64
     iexact Hword
   · itrivial
 
-
 /-- Call an imported function that crosses module-instance boundaries.
 `callerId` and `calleeId` index into `instances`; `hhost` asserts the callee
 has the same host as the caller so the `hostEnvOwn` resource stays valid.
@@ -10542,6 +8653,5 @@ theorem wp_callIndirect
     · iexact Hruntime
     · iexact Htable
   · itrivial
-
 
 end Wasm.SmallStep

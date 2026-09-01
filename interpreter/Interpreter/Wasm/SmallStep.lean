@@ -5,15 +5,14 @@ set_option maxHeartbeats 2000000
 /-!
 # Small-step WebAssembly machine
 
-This file is the first vertical slice of the Iris migration.  The existing
-fuel-bounded interpreter remains available as a regression oracle, but none of
-the definitions below call `execOne`, `exec`, or `run`.
+This machine is the authoritative semantics.  The fuel-bounded big-step
+interpreter remains available as a regression oracle, but none of the
+definitions below call `execOne`, `exec`, or `run`.
 
 The relational `Step` relation is the semantic interface.  `stepChecked?` is
-its deterministic executable presentation for the instruction families ported
-so far.  An `InternalError` denotes a configuration which validation should
-have ruled out, or an instruction family which has not yet been migrated; it is
-not a Wasm trap.
+its deterministic executable presentation.  An `InternalError` denotes a
+configuration which validation should have ruled out — a malformed operand
+stack, an out-of-range index, an unresolved import; it is not a Wasm trap.
 -/
 
 namespace Wasm
@@ -215,6 +214,20 @@ inductive Expr (α : Type) where
   | running (thread : ThreadState α)
   | done (values : List Value)
   | trapped (reason : TrapReason)
+
+/-- Terminal outcomes observed by outcome-sensitive Iris proofs and by
+relational equivalence.  This is a view of the authoritative `Expr`; it does
+not introduce a second transition system. -/
+inductive ObservableOutcome where
+  | done (values : List Value)
+  | trapped (reason : TrapReason)
+  deriving BEq, Repr
+
+/-- Embed an observable terminal outcome back into the authoritative
+expression type. -/
+def ObservableOutcome.toExpr : ObservableOutcome → Expr α
+  | .done values => .done values
+  | .trapped reason => .trapped reason
 
 structure Config (α : Type) where
   expr : Expr α
@@ -7149,6 +7162,15 @@ def PartiallyMeets (initial : Config α)
     (post : List Value → MachineStore α → Prop) : Prop :=
   ∀ trace values store, Steps initial trace ⟨.done values, store⟩ → post values store
 
+/-- Outcome-sensitive partial correctness for the small-step semantics.  Every
+finite observable terminal trace must satisfy `post`; divergence is not ruled
+out.  Unlike `PartiallyMeets`, this predicate also constrains structural traps,
+which is required by public APIs with a distinguished terminal failure. -/
+def PartiallyMeetsOutcome (initial : Config α)
+    (post : ObservableOutcome → MachineStore α → Prop) : Prop :=
+  ∀ trace outcome store,
+    Steps initial trace ⟨outcome.toExpr, store⟩ → post outcome store
+
 /-- Finite-trace total correctness, used to preserve termination results which
 already have a concrete terminating execution argument. -/
 def TerminatesWith (initial : Config α)
@@ -7161,6 +7183,32 @@ have a separate specification rather than being folded into
 def TrapsWith (initial : Config α) (reason : TrapReason)
     (post : MachineStore α → Prop) : Prop :=
   ∃ trace store, Steps initial trace ⟨.trapped reason, store⟩ ∧ post store
+
+/-- Finite-trace total correctness with both normal return and structural
+trapping as observable terminal outcomes.  This is the common target of an
+outcome-valued total WP; clients can recover `TerminatesWith` or `TrapsWith`
+by case analysis on the witnessed outcome. -/
+def TerminatesWithOutcome (initial : Config α)
+    (post : ObservableOutcome → MachineStore α → Prop) : Prop :=
+  ∃ trace outcome store,
+    Steps initial trace ⟨outcome.toExpr, store⟩ ∧ post outcome store
+
+/-- A normal `TerminatesWith` execution is an outcome-valued execution. -/
+theorem TerminatesWith.toOutcome
+    (execution : TerminatesWith initial post) :
+    TerminatesWithOutcome initial
+      (fun outcome store =>
+        ∃ values, outcome = .done values ∧ post values store) := by
+  obtain ⟨trace, values, store, steps, hpost⟩ := execution
+  exact ⟨trace, .done values, store, steps, values, rfl, hpost⟩
+
+/-- A structural `TrapsWith` execution is an outcome-valued execution. -/
+theorem TrapsWith.toOutcome
+    (execution : TrapsWith initial reason post) :
+    TerminatesWithOutcome initial
+      (fun outcome store => outcome = .trapped reason ∧ post store) := by
+  obtain ⟨trace, store, steps, hpost⟩ := execution
+  exact ⟨trace, .trapped reason, store, steps, rfl, hpost⟩
 
 /-- Package an explicit finite trapping execution and its postcondition. -/
 theorem TrapsWith.of_steps
@@ -7530,6 +7578,30 @@ theorem steps_done_deterministic
   have parts := Config.mk.inj hconfig
   exact ⟨Expr.done.inj parts.1, parts.2⟩
 
+/-- A terminating execution already pins down the result, so total correctness
+implies partial correctness: `Step` is deterministic, so any other terminal
+trace from the same machine ends in the same values and store.
+
+This is the small-step twin of `Wasm.TerminatesWith.toPartiallyMeets`
+(`Spec/Defs.lean`). Without it every `PartiallyMeets` theorem has to restate
+its total-correctness twin's proof. -/
+theorem TerminatesWith.toPartiallyMeets
+    {initial : Config α} {post : List Value → MachineStore α → Prop}
+    (execution : TerminatesWith initial post) :
+    PartiallyMeets initial post := by
+  obtain ⟨_, _, _, steps, hpost⟩ := execution
+  intro _ _ _ observed
+  obtain ⟨rfl, rfl⟩ := steps_done_deterministic steps observed
+  exact hpost
+
+/-- Weaken the postcondition of a partial-correctness result. -/
+theorem PartiallyMeets.mono
+    {initial : Config α} {post post' : List Value → MachineStore α → Prop}
+    (h : PartiallyMeets initial post)
+    (himp : ∀ values store, post values store → post' values store) :
+    PartiallyMeets initial post' :=
+  fun _ _ _ steps => himp _ _ (h _ _ _ steps)
+
 /-- Determinism rules out a normally completed and a trapped terminal trace
 from the same initial machine. -/
 theorem steps_done_ne_trapped
@@ -7605,28 +7677,15 @@ theorem runSteps_success_partiallyMeets {fuel : Nat} {config : Config α}
     (h : (runSteps fuel config).result = .success values store)
     (post : List Value → MachineStore α → Prop)
     (hp : post values store) :
-    PartiallyMeets config post := by
-  intro trace values' store' htrace
-  have executed : Steps config (runSteps fuel config).trace ⟨.done values, store⟩ := by
-    apply runSteps_sound
-    simp [h, RunnerResult.finalConfig?]
-  obtain ⟨rfl, rfl⟩ := steps_done_deterministic executed htrace
-  exact hp
+    PartiallyMeets config post :=
+  (runSteps_success_terminates h post hp).toPartiallyMeets
 
 /-- Partial-correctness companion to `runSteps_values_terminates`. -/
 theorem runSteps_values_partiallyMeets {fuel : Nat} {config : Config α}
     {values : List Value}
     (h : (runSteps fuel config).result.values? = some values) :
-    PartiallyMeets config (fun actual _ => actual = values) := by
-  cases hr : (runSteps fuel config).result with
-  | success actual store =>
-    have : actual = values := by
-      simpa [RunnerResult.values?, hr] using h
-    subst actual
-    apply runSteps_success_partiallyMeets hr
-    rfl
-  | trapped | outOfFuel | internalError =>
-    simp [RunnerResult.values?, hr] at h
+    PartiallyMeets config (fun actual _ => actual = values) :=
+  (runSteps_values_terminates h).toPartiallyMeets
 
 theorem safe_of_runSteps_success {fuel : Nat} {config : Config α}
     {values : List Value} {store : MachineStore α}

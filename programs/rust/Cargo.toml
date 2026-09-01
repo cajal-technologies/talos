@@ -15,6 +15,8 @@ members = [
   "float_round",
   "float_reinterpret",
   "talos_stdio",
+  "byte_echo",
+  "xor",
   "mergesort",
 ]
 [profile.release]
@@ -34,13 +36,17 @@ opt-level = 3
 [profile.release.package.swap_elements_opt3]
 opt-level = 3
 
-# `mergesort` (and its only dependency, `talos-stdio`, which no other crate
-# uses) is compiled for the shortest wasm binary. Counterintuitively the
-# nominal size-first levels lose to plain 3 on this crate (rustc 1.95.0,
-# fully stripped build/mergesort/program.wasm): opt-level 0 = 55 865 B,
-# "z" = 40 807 B, "s" = 40 423 B, 3 = 40 416 B.
+# The host-I/O examples and their shared support crate use rustc's maximum
+# optimization level. `codegen-units = 1` is inherited from the release
+# profile above.
 [profile.release.package.mergesort]
 opt-level = 3
 
 [profile.release.package.talos-stdio]
+opt-level = 3
+
+[profile.release.package.byte_echo]
+opt-level = 3
+
+[profile.release.package.xor]
 opt-level = 3

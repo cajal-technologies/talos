@@ -195,11 +195,8 @@ theorem counter_partial
         values = [] ∧
         store.wasm.host =
           Counter.insert st.host 0
-            (1 + Counter.lookup st.host 0)) := by
-  intro trace values store execution
-  obtain ⟨rfl, rfl⟩ :=
-    steps_done_deterministic (counter_steps hSat st) execution
-  exact ⟨rfl, rfl⟩
+            (1 + Counter.lookup st.host 0)) :=
+  (counter_correct hSat st).toPartiallyMeets
 
 end Counter
 end Wasm

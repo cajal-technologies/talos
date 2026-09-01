@@ -9,6 +9,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
 
 [[package]]
+name = "byte_echo"
+version = "0.1.0"
+dependencies = [
+ "talos-stdio",
+]
+
+[[package]]
 name = "float_minmax"
 version = "0.1.0"
 
@@ -94,3 +101,10 @@ version = "0.1.0"
 [[package]]
 name = "total_variation"
 version = "0.1.0"
+
+[[package]]
+name = "xor"
+version = "0.1.0"
+dependencies = [
+ "talos-stdio",
+]

@@ -117,14 +117,6 @@ theorem exceptionHeapAgrees_empty (exns : List (Nat × List Value)) :
   rw [LawfulPartialMap.get?_empty] at hget
   contradiction
 
-theorem exceptionHeapAgrees_append {σ : WasmExceptionMap (Nat × List Value)}
-    {exns : List (Nat × List Value)} {entry : Nat × List Value}
-    (h : exceptionHeapAgrees σ exns) : exceptionHeapAgrees σ (exns ++ [entry]) := by
-  intro k v hget
-  have hv := h k v hget
-  obtain ⟨hlt, _⟩ := getElem?_eq_some_iff.mp hv
-  rwa [List.getElem?_append_left hlt]
-
 /-- Updating an owned global in both the authoritative ghost map and the
 physical global array preserves their agreement. All owned entries use
 `instanceId = 0`, so index equality is the only collision condition. -/
@@ -249,13 +241,6 @@ theorem table_store_listSetAt_sound
 If GenHeap says key ↦ v and σ agrees with resolve,
 then the memory for key.memId reads v at key.addr. -/
 
-theorem load_sound (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Option Mem)
-    (key : MemoryKey) (v : UInt8)
-    (h_agree : heapAgreesWithMem σ resolve)
-    (h_own : get? σ key = some (some v)) :
-    ∃ mem, resolve key.memId = some mem ∧ mem.read8 key.addr = v :=
-  h_agree key v h_own
-
 /-! Soundness of store:
 After Mem.write8, the updated σ still agrees with the updated resolver. -/
 
@@ -307,6 +292,42 @@ theorem store_inBounds (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Opti
       · simp [hid]
       · simpa [Mem.write8, hm_eq] using hlt
     · exact ⟨m, by simp [if_neg hid, hm], hlt⟩
+
+/-- Adding a sparse ghost key for an already-existing physical byte preserves
+heap/memory agreement.  Unlike `store_sound`, this changes no physical memory;
+it is the one-byte primitive used by allocator range commitment. -/
+theorem insert_physical_byte_sound
+    (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Option Mem)
+    (memId : Nat) (mem : Mem) (addr : UInt32) (value : UInt8)
+    (hresolve : resolve memId = some mem)
+    (hagree : heapAgreesWithMem σ resolve)
+    (hread : mem.read8 addr = value) :
+    heapAgreesWithMem (insert σ ⟨memId, addr⟩ (some value)) resolve := by
+  intro key other hget
+  by_cases heq : key = ⟨memId, addr⟩
+  · subst key
+    simp only [get?_insert_eq rfl, Option.some.injEq] at hget
+    subst other
+    exact ⟨mem, hresolve, hread⟩
+  · rw [get?_insert_ne (Ne.symm heq)] at hget
+    exact hagree key other hget
+
+/-- Adding a sparse ghost key whose physical address is allocated preserves
+the authoritative in-bounds invariant without changing physical memory. -/
+theorem insert_physical_byte_inBounds
+    (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Option Mem)
+    (memId : Nat) (mem : Mem) (addr : UInt32) (value : UInt8)
+    (hresolve : resolve memId = some mem)
+    (hinBounds : heapAddressesInBounds σ resolve)
+    (haddr : addr.toNat < mem.pages * 65536) :
+    heapAddressesInBounds
+      (insert σ ⟨memId, addr⟩ (some value)) resolve := by
+  intro key hget
+  by_cases heq : key = ⟨memId, addr⟩
+  · subst key
+    exact ⟨mem, hresolve, haddr⟩
+  · rw [get?_insert_ne (Ne.symm heq)] at hget
+    exact hinBounds key hget
 
 /-- `Mem.grow` preserves every physical byte, so the same authoritative
 ghost heap continues to agree with the grown memory under the updated resolver. -/

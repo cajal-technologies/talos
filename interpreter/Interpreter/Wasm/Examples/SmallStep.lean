@@ -43,12 +43,9 @@ theorem arithmetic_matches_big_step :
       some (runValues 4 arithmeticModule 0 arithmeticModule.initialStore []) := by
   native_decide
 
-def isDivideByZero : RunnerResult α → Bool
-  | .trapped .integerDivideByZero _ => true
-  | _ => false
-
 theorem divide_by_zero_is_structured :
-    isDivideByZero (runSteps 3 divideByZeroConfig).result = true := by
+    ((runSteps 3 divideByZeroConfig).result.trapReason? ==
+      some .integerDivideByZero) = true := by
   native_decide
 
 def comparisonModule : Module :=
@@ -154,11 +151,8 @@ theorem memory_roundtrip_relational :
 
 theorem memory_roundtrip_partial :
     PartiallyMeets memoryRoundtripConfig (fun values store =>
-      values = [.i32 0x12345678] ∧ store.wasm.mem.read32 16 = 0x12345678) := by
-  apply runSteps_success_partiallyMeets memory_roundtrip_run
-  constructor
-  native_decide
-  · native_decide
+      values = [.i32 0x12345678] ∧ store.wasm.mem.read32 16 = 0x12345678) :=
+  memory_roundtrip_relational.toPartiallyMeets
 
 /-- A disjoint address remains unchanged by the store at address 16. -/
 theorem memory_roundtrip_frames_disjoint_word :
@@ -171,13 +165,11 @@ theorem memory_roundtrip_matches_big_step :
       some (runValues 6 memoryModule 0 memoryModule.initialStore []) := by
   native_decide
 
-def isOutOfBoundsMemory : RunnerResult α → Bool
-  | .trapped .outOfBoundsMemory _ => true
-  | _ => false
-
 theorem memory_out_of_bounds_is_structured :
-    isDivideByZero (runSteps 3 memoryTrapConfig).result = false ∧
-      isOutOfBoundsMemory (runSteps 3 memoryTrapConfig).result = true := by
+    ((runSteps 3 memoryTrapConfig).result.trapReason? ==
+        some .integerDivideByZero) = false ∧
+      ((runSteps 3 memoryTrapConfig).result.trapReason? ==
+        some .outOfBoundsMemory) = true := by
   native_decide
 
 def memoryGrowthModule : Module :=
@@ -563,958 +555,6 @@ theorem dropped_memory_init_trapsWith :
       (fun store => store = droppedMemoryInitTrapConfig.store) := by
   apply runSteps_trapped_trapsWith dropped_memory_init_traps_atomically
   rfl
-
-def invalidDataDropModule : Module :=
-  { funcs := [{ body := [.dataDrop 0] }] }
-
-def invalidMemoryInitIndexModule : Module :=
-  { funcs :=
-      [{ body := [.const 0, .const 0, .const 0, .memoryInit 1] }]
-    memory := some
-      { pagesMin := 1
-        data := [{ offset := none, bytes := [1] }] } }
-
-def validMemoryInit64ValidationModule : Module :=
-  { funcs :=
-      [{ body := [.constI64 0, .const 0, .const 1, .memoryInit 0] }]
-    memory := some
-      { pagesMin := 1
-        is64 := true
-        data := [{ offset := none, bytes := [1] }] } }
-
-def invalidMemoryFillWithoutMemoryModule : Module :=
-  { funcs := [{ body := [.const 0, .const 0, .const 0, .memoryFill] }] }
-
-def validMemoryFill64ValidationModule : Module :=
-  { funcs :=
-      [{ body := [.constI64 0, .const 0, .constI64 1, .memoryFill] }]
-    memory := some { pagesMin := 1, is64 := true } }
-
-def invalidMemoryCopy64LengthModule : Module :=
-  { funcs :=
-      [{ body :=
-          [.constI64 0, .constI64 0, .const 1, .memoryCopy] }]
-    memory := some { pagesMin := 1, is64 := true } }
-
-def validMemoryCopy64ValidationModule : Module :=
-  { funcs :=
-      [{ body :=
-          [.constI64 0, .constI64 0, .constI64 1, .memoryCopy] }]
-    memory := some { pagesMin := 1, is64 := true } }
-
-def invalidLoadWithoutMemoryModule : Module :=
-  { funcs := [{ body := [.const 0, .load32 0], results := [.i32] }] }
-
-def invalidMemory64LoadAddressModule : Module :=
-  { funcs := [{ body := [.const 0, .load32 0], results := [.i32] }]
-    memory := some { pagesMin := 1, is64 := true } }
-
-def validMemory64LoadValidationModule : Module :=
-  { funcs := [{ body := [.constI64 0, .load32 0], results := [.i32] }]
-    memory := some { pagesMin := 1, is64 := true } }
-
-def validMemory64I64StoreValidationModule : Module :=
-  { funcs := [{ body := [.constI64 0, .constI64 1, .store64 0] }]
-    memory := some { pagesMin := 1, is64 := true } }
-
-def invalidMemorySizeWithoutMemoryModule : Module :=
-  { funcs := [{ body := [.memorySize], results := [.i32] }] }
-
-def validMemory64SizeValidationModule : Module :=
-  { funcs := [{ body := [.memorySize], results := [.i64] }]
-    memory := some { pagesMin := 1, is64 := true } }
-
-def invalidMemory64GrowDeltaModule : Module :=
-  { funcs := [{ body := [.const 1, .memoryGrow], results := [.i64] }]
-    memory := some { pagesMin := 1, is64 := true } }
-
-def validMemory64GrowValidationModule : Module :=
-  { funcs := [{ body := [.constI64 1, .memoryGrow], results := [.i64] }]
-    memory := some { pagesMin := 1, is64 := true } }
-
-def invalidGlobalGetIndexModule : Module :=
-  { funcs := [{ body := [.globalGet 0], results := [.i32] }] }
-
-def invalidGlobalSetIndexModule : Module :=
-  { funcs := [{ body := [.const 0, .globalSet 1] }]
-    globals := [{ init := .i32 0 }] }
-
-def invalidImmutableGlobalSetModule : Module :=
-  { funcs := [{ body := [.const 0, .globalSet 0] }]
-    globals :=
-      [{ init := .i32 0, declaredType := some .i32, isMut := false }] }
-
-def invalidGlobalInitializerTypeModule : Module :=
-  { funcs := []
-    globals :=
-      [{ init := .f32 0, declaredType := some .i32, isMut := false }] }
-
-def invalidGlobalInitializerInstructionModule : Module :=
-  { funcs := []
-    globals :=
-      [{ init := .i32 0, declaredType := some .i32, isMut := false,
-         sourceInit := some [.const 0, .nop] }] }
-
-def invalidForwardGlobalInitializerModule : Module :=
-  { funcs := []
-    globals :=
-      [ { init := .i32 0, declaredType := some .i32, isMut := false,
-          sourceInit := some [.globalGet 1] }
-      , { init := .i32 0, declaredType := some .i32, isMut := false,
-          sourceInit := some [.const 0] } ] }
-
-def invalidElemDropModule : Module :=
-  { funcs := [{ body := [.elemDrop 0] }] }
-
-def invalidTableInitTableModule : Module :=
-  { funcs :=
-      [{ body := [.const 0, .const 0, .const 0, .tableInit 0 0] }]
-    elements := [{ funcs := [some 0] }] }
-
-def invalidTableInitElementModule : Module :=
-  { funcs :=
-      [{ body := [.const 0, .const 0, .const 0, .tableInit 0 1] }]
-    tables := [{ min := 1 }]
-    elements := [{ funcs := [some 0] }] }
-
-def validTableInit64ValidationModule : Module :=
-  { funcs :=
-      [{ body := [.constI64 0, .const 0, .const 1, .tableInit 0 0] }]
-    tables := [{ min := 1, is64 := true }]
-    elements := [{ funcs := [some 0] }] }
-
-def invalidTableGetIndexModule : Module :=
-  { funcs := [{ body := [.const 0, .tableGet 0], results := [.funcref] }] }
-
-def validTable64FillValidationModule : Module :=
-  { funcs :=
-      [{ params := [.i64, .externref, .i64],
-         body := [.localGet 0, .localGet 1, .localGet 2, .tableFill 0] }]
-    tables := [{ min := 1, elemType := .externref, is64 := true }] }
-
-def validMixedTableCopyValidationModule : Module :=
-  { funcs :=
-      [{ params := [.i32, .i64, .i32],
-         body := [.localGet 0, .localGet 1, .localGet 2, .tableCopy 0 1] }]
-    tables :=
-      [ { min := 1, is64 := false }
-      , { min := 1, is64 := true } ] }
-
-def invalidMixedTableCopyLengthModule : Module :=
-  { funcs :=
-      [{ params := [.i32, .i64, .i64],
-         body := [.localGet 0, .localGet 1, .localGet 2, .tableCopy 0 1] }]
-    tables :=
-      [ { min := 1, is64 := false }
-      , { min := 1, is64 := true } ] }
-
-def invalidDirectCallIndexModule : Module :=
-  { funcs := [{ body := [.call 1] }] }
-
-def validImportedCallValidationModule : Module :=
-  { imports := [{ module := "host", name := "f",
-                  params := [.i32], results := [.i64] }]
-    funcs :=
-      [{ body := [.const 7, .call 0], results := [.i64] }] }
-
-def invalidIndirectCallTypeModule : Module :=
-  { funcs := [{ body := [.const 0, .callIndirect 0 0] }]
-    tables := [{ min := 1 }] }
-
-def validTable64IndirectCallValidationModule : Module :=
-  { funcs :=
-      [{ body := [.constI64 0, .callIndirect 0 0], results := [.i32] }]
-    types := [{ results := [.i32] }]
-    gcTypes := [{ comp := .func { results := [.i32] } }]
-    tables := [{ min := 1, is64 := true }] }
-
-def invalidRefFuncIndexModule : Module :=
-  { funcs := [{ body := [.refFunc 1], results := [.funcref] }] }
-
-def invalidStructuredBlockExtraValueModule : Module :=
-  { funcs := [{ body := [.block 0 0 [.const 1]] }] }
-
-def invalidStructuredBlockMissingResultModule : Module :=
-  { funcs := [{ body := [.block 0 1 []], results := [.i32] }] }
-
-def invalidStructuredIfResultMismatchModule : Module :=
-  { funcs :=
-      [{ body := [.const 0, .iff 0 1 [.const 1] [.constI64 1]],
-         results := [.i32] }] }
-
-def validStructuredBranchPolymorphicModule : Module :=
-  { funcs :=
-      [{ body := [.block 0 1 [.const 7, .br 0, .add]],
-         results := [.i32] }] }
-
-def invalidSimdExtractLaneModule : Module :=
-  { funcs :=
-      [{ body := [.vConst 0, .vExtractLane .i8x16 false 16],
-         results := [.i32] }] }
-
-def invalidSimdSplatOperandModule : Module :=
-  { funcs :=
-      [{ body := [.constI64 0, .vSplat .i32x4],
-         results := [.v128] }] }
-
-def validSimdSplatValidationModule : Module :=
-  { funcs :=
-      [{ body := [.const 0, .vSplat .i32x4],
-         results := [.v128] }] }
-
-def invalidSimdLoadWithoutMemoryModule : Module :=
-  { funcs :=
-      [{ body := [.const 0, .v128Load 0],
-         results := [.v128] }] }
-
-def validMemory64SimdLoadValidationModule : Module :=
-  { funcs :=
-      [{ body := [.constI64 0, .v128Load 0],
-         results := [.v128] }]
-    memory := some { pagesMin := 1, is64 := true } }
-
-def invalidLocalIndexValidationModule : Module :=
-  { funcs := [{ body := [.localGet 0] }] }
-
-def invalidUnreachableLocalIndexValidationModule : Module :=
-  { funcs := [{ body := [.unreachable, .localSet 0] }] }
-
-def validParamAndLocalIndexValidationModule : Module :=
-  { funcs :=
-      [{ params := [.i32], locals := [.i64],
-         body := [.localGet 0, .drop, .localGet 1],
-         results := [.i64] }] }
-
-def invalidFunctionExportValidationModule : Module :=
-  { funcs := [], exports := [{ name := "missing", funcIdx := 0 }] }
-
-def invalidDuplicateCrossKindExportValidationModule : Module :=
-  { funcs := [{ body := [] }]
-    exports := [{ name := "same", funcIdx := 0 }]
-    memory := some { pagesMin := 0 }
-    memoryExports := [("same", 0)] }
-
-def invalidStartSignatureValidationModule : Module :=
-  { funcs := [{ params := [.i32], body := [] }]
-    startFunc := some 0 }
-
-def invalidStartIndexValidationModule : Module :=
-  { funcs := [], startFunc := some 0 }
-
-def validImportedStartValidationModule : Module :=
-  { funcs := []
-    imports := [{ module := "host", name := "start" }]
-    startFunc := some 0 }
-
-def invalidSyntheticDataMemoryValidationModule : Module :=
-  { funcs := []
-    memory := some
-      { pagesMin := 0
-        data := [{ offset := some 0, bytes := [] }] }
-    dataWithoutMemory := true }
-
-def invalidDataOffsetTypeValidationModule : Module :=
-  { funcs := []
-    memory := some
-      { pagesMin := 1
-        data :=
-          [{ offset := some 0, offsetType := some .i64, bytes := [] }] } }
-
-def validMemory64DataOffsetValidationModule : Module :=
-  { funcs := []
-    memory := some
-      { pagesMin := 1
-        is64 := true
-        data :=
-          [{ offset := some 0, offsetType := some .i64, bytes := [] }] } }
-
-def invalidActiveElementTableValidationModule : Module :=
-  { funcs := []
-    elements :=
-      [{ tableIdx := some 0, offset := some 0,
-         offsetType := some .i32, elemType := some .funcref }] }
-
-def invalidActiveElementTypeValidationModule : Module :=
-  { funcs := []
-    tables := [{ min := 1, elemType := .externref }]
-    elements :=
-      [{ tableIdx := some 0, offset := some 0,
-         offsetType := some .i32, elemType := some .funcref }] }
-
-def validTable64ElementOffsetValidationModule : Module :=
-  { funcs := []
-    tables := [{ min := 1, is64 := true }]
-    elements :=
-      [{ tableIdx := some 0, offset := some 0,
-         offsetType := some .i64, elemType := some .funcref }] }
-
-def invalidDirectTailCallResultValidationModule : Module :=
-  { funcs :=
-      [{ body := [.returnCall 1], results := [.i32] },
-       { body := [.constI64 0], results := [.i64] }] }
-
-def validDirectTailCallValidationModule : Module :=
-  { funcs :=
-      [{ body := [.returnCall 1], results := [.i32] },
-       { body := [.const 0], results := [.i32] }] }
-
-def invalidIndirectTailCallResultValidationModule : Module :=
-  { funcs :=
-      [{ body := [.const 0, .returnCallIndirect 0 0], results := [.i32] }]
-    types := [{ results := [.i64] }]
-    gcTypes := [{ comp := .func { results := [.i64] } }]
-    tables := [{ min := 1 }] }
-
-def invalidReferenceTailCallResultValidationModule : Module :=
-  { funcs :=
-      [{ body := [.refNull, .returnCallRef 0], results := [.i32] }]
-    types := [{ results := [.i64] }]
-    gcTypes := [{ comp := .func { results := [.i64] } }] }
-
-def invalidRefAsNonNullPolymorphicResultValidationModule : Module :=
-  { funcs :=
-      [{ body := [.unreachable, .refAsNonNull, .f32Abs] }] }
-
-def invalidRefIsNullScalarValidationModule : Module :=
-  { funcs :=
-      [{ body := [.const 0, .refIsNull, .drop] }] }
-
-def validPolymorphicReferenceValidationModule : Module :=
-  { funcs :=
-      [{ body := [.unreachable, .refAsNonNull, .refIsNull, .drop] }] }
-
-def invalidImmutableArrayCopyValidationModule : Module :=
-  { funcs :=
-      [{ body :=
-          [.unreachable, .gc (.arrayCopy 0 1)] }]
-    gcTypes :=
-      [{ comp := .array { storage := .packed 8 } },
-       { comp := .array { storage := .packed 8, isMut := true } }] }
-
-def invalidMismatchedArrayCopyValidationModule : Module :=
-  { funcs :=
-      [{ body :=
-          [.unreachable, .gc (.arrayCopy 0 1)] }]
-    gcTypes :=
-      [{ comp := .array { storage := .packed 8, isMut := true } },
-       { comp := .array { storage := .packed 16 } }] }
-
-def validArrayCopyValidationModule : Module :=
-  { funcs :=
-      [{ params :=
-          [.ref false (.concrete 0), .ref false (.concrete 1)]
-         body :=
-          [.localGet 0, .const 0, .localGet 1, .const 0, .const 0,
-           .gc (.arrayCopy 0 1)] }]
-    gcTypes :=
-      [{ comp := .array { storage := .packed 8, isMut := true } },
-       { comp := .array { storage := .packed 8 } }] }
-
-def invalidTypedBlockResultValidationModule : Module :=
-  { funcs :=
-      [{ body :=
-          [.block 0 1 [.f32Const 0] [] [.i32], .drop] }] }
-
-def invalidTypedBlockBranchValidationModule : Module :=
-  { funcs :=
-      [{ body :=
-          [.block 0 1 [.f32Const 0, .br 0] [] [.i32], .drop] }] }
-
-def invalidTypedLoopParameterValidationModule : Module :=
-  { funcs :=
-      [{ body :=
-          [.f32Const 0,
-           .loop 1 0 [.br 0] [.i32] []] }] }
-
-def validTypedStructuredValidationModule : Module :=
-  { funcs :=
-      [{ body :=
-          [.const 7,
-           .block 1 1 [.br 0] [.i32] [.i32],
-           .drop] }] }
-
-def invalidUnknownThrowValidationModule : Module :=
-  { funcs := [{ body := [.throwI 0] }] }
-
-def invalidThrowArgumentValidationModule : Module :=
-  { tags := [{ params := [.i32] }]
-    funcs := [{ body := [.throwI 0] }] }
-
-def invalidThrowRefOperandValidationModule : Module :=
-  { funcs := [{ body := [.throwRef] }] }
-
-def invalidTryTableResultValidationModule : Module :=
-  { funcs :=
-      [{ body :=
-          [.tryTable 0 1 [] [] [] [.i32]],
-         results := [.i32] }] }
-
-def invalidCatchRefTargetValidationModule : Module :=
-  { tags := [{}]
-    funcs :=
-      [{ body :=
-          [.tryTable 0 0 [.catchRef 0 0] []] }] }
-
-def validTryTableCatchValidationModule : Module :=
-  { tags := [{}]
-    funcs :=
-      [{ body :=
-          [.tryTable 0 0 [.catch 0 0] [.throwI 0]] }] }
-
-def invalidBrOnNullScalarValidationModule : Module :=
-  { funcs := [{ body := [.const 0, .brOnNull 0] }] }
-
-def invalidBrOnNonNullTargetValidationModule : Module :=
-  { funcs :=
-      [{ body := [.refNullExtern, .brOnNonNull 0],
-         results := [.i32] }] }
-
-def validReferenceBranchValidationModule : Module :=
-  { funcs :=
-      [{ body := [.refNull, .brOnNull 0, .drop] }] }
-
-def invalidBroadReturnCallRefValidationModule : Module :=
-  { types := [{}]
-    gcTypes := [{ comp := .func {} }]
-    funcs :=
-      [{ params := [.funcref],
-         body := [.localGet 0, .returnCallRef 0] }] }
-
-def validPreciseReturnCallRefValidationModule : Module :=
-  { types := [{}]
-    gcTypes := [{ comp := .func {} }]
-    exports := [{ name := "callee", funcIdx := 1 }]
-    funcs :=
-      [{ body := [.refFunc 1, .returnCallRef 0] },
-       { body := [], typeIdx := some 0 }] }
-
-def invalidRefEqAnyValidationModule : Module :=
-  { funcs :=
-      [{ params := [.ref true .any],
-         body := [.localGet 0, .localGet 0, .gc .refEq, .drop] }] }
-
-def validationErrorIs (module : Module) (expected : String) : Bool :=
-  match module.validate with
-  | .error actual => actual == expected
-  | .ok () => false
-
-def validationSucceeds (module : Module) : Bool :=
-  match module.validate with
-  | .ok () => true
-  | .error _ => false
-
-def passiveDataWithoutMemoryModule : Module :=
-  decodeOrDefault "(module (data \"payload\"))"
-
-def activeDataWithoutMemoryModule : Module :=
-  decodeOrDefault "(module (data (i32.const 0) \"payload\"))"
-
-def floatConstantGlobalValidationModule : Module :=
-  decodeOrDefault "(module (global f32 (f32.const 1)))"
-
-def immutableArrayInitDataValidationModule : Module :=
-  decodeOrDefault
-    "(module
-       (type $a (array i8))
-       (data $d \"a\")
-       (func (param (ref $a))
-         (array.init_data $a 0
-           (local.get 0) (i32.const 0) (i32.const 0) (i32.const 0))))"
-
-def referenceArrayInitDataValidationModule : Module :=
-  decodeOrDefault
-    "(module
-       (type $a (array (mut funcref)))
-       (data $d \"a\")
-       (func (param (ref $a))
-         (array.init_data $a 0
-           (local.get 0) (i32.const 0) (i32.const 0) (i32.const 0))))"
-
-def preciseArrayConstructorValidationModule : Module :=
-  decodeOrDefault
-    "(module
-       (type $a (array f32))
-       (global (ref $a)
-         (array.new $a (f32.const 1) (i32.const 3))))"
-
-def crossTypedArrayGetValidationModule : Module :=
-  decodeOrDefault
-    "(module
-       (type $bytes (array i8))
-       (type $floats (array f32))
-       (func (param (ref $bytes))
-         (array.get $floats (local.get 0) (i32.const 0))
-         drop))"
-
-def declarativeFunctionReferenceValidationModule : Module :=
-  decodeOrDefault
-    "(module
-       (elem declare func $f)
-       (type $t (func))
-       (func $f (type $t))
-       (func (ref.func $f) drop))"
-
-def preciseFunctionReferenceGlobalValidationModule : Module :=
-  decodeOrDefault
-    "(module
-       (type $t (func))
-       (elem declare func $f)
-       (global (ref $t) (ref.func $f))
-       (func $f (type $t)))"
-
-def covariantElementTableValidationModule : Module :=
-  decodeOrDefault
-    "(module
-       (type $t (func))
-       (table 1 (ref null $t))
-       (elem (table 0) (i32.const 0)
-         (ref $t) (ref.func $f))
-       (func $f (type $t)))"
-
-def brOnNonNullRefinementValidationModule : Module :=
-  decodeOrDefault
-    "(module
-       (type $t (func))
-       (func (param (ref null $t))
-         (drop
-           (block (result (ref $t))
-             (br_on_non_null 0 (local.get 0))
-             unreachable))))"
-
-theorem validator_accepts_passive_data_without_linear_memory :
-    passiveDataWithoutMemoryModule.dataWithoutMemory = false ∧
-      validationSucceeds passiveDataWithoutMemoryModule = true := by
-  native_decide
-
-theorem validator_rejects_active_data_without_linear_memory :
-    activeDataWithoutMemoryModule.dataWithoutMemory = true ∧
-      validationErrorIs activeDataWithoutMemoryModule "unknown memory" = true := by
-  native_decide
-
-theorem validator_accepts_float_constant_global :
-    validationSucceeds floatConstantGlobalValidationModule = true := by
-  native_decide
-
-theorem validator_rejects_immutable_array_init_data :
-    validationErrorIs immutableArrayInitDataValidationModule
-      "immutable array" = true := by
-  native_decide
-
-theorem validator_rejects_reference_array_init_data :
-    validationErrorIs referenceArrayInitDataValidationModule
-      "array type is not numeric or vector" = true := by
-  native_decide
-
-theorem validator_accepts_precise_array_constructor_result :
-    validationSucceeds preciseArrayConstructorValidationModule = true := by
-  native_decide
-
-theorem validator_rejects_cross_typed_array_get :
-    validationErrorIs crossTypedArrayGetValidationModule
-      "type mismatch" = true := by
-  native_decide
-
-theorem validator_accepts_declarative_function_reference :
-    validationSucceeds declarativeFunctionReferenceValidationModule = true := by
-  native_decide
-
-theorem validator_accepts_precise_function_reference_global :
-    validationSucceeds preciseFunctionReferenceGlobalValidationModule = true := by
-  native_decide
-
-theorem validator_accepts_nonnull_element_for_nullable_table :
-    validationSucceeds covariantElementTableValidationModule = true := by
-  native_decide
-
-theorem validator_accepts_br_on_non_null_refinement :
-    validationSucceeds brOnNonNullRefinementValidationModule = true := by
-  native_decide
-
-theorem validator_rejects_unknown_data_drop :
-    validationErrorIs invalidDataDropModule "unknown data segment" = true := by
-  native_decide
-
-theorem validator_rejects_unknown_memory_init_segment :
-    validationErrorIs invalidMemoryInitIndexModule
-      "unknown data segment" = true := by
-  native_decide
-
-theorem validator_accepts_typed_memory64_init :
-    validationSucceeds validMemoryInit64ValidationModule = true := by
-  native_decide
-
-theorem validator_rejects_memory_fill_without_memory :
-    validationErrorIs invalidMemoryFillWithoutMemoryModule
-      "unknown memory" = true := by
-  native_decide
-
-theorem validator_accepts_typed_memory64_fill :
-    validationSucceeds validMemoryFill64ValidationModule = true := by
-  native_decide
-
-theorem validator_rejects_mistyped_memory64_copy_length :
-    validationErrorIs invalidMemoryCopy64LengthModule
-      "type mismatch" = true := by
-  native_decide
-
-theorem validator_accepts_typed_memory64_copy :
-    validationSucceeds validMemoryCopy64ValidationModule = true := by
-  native_decide
-
-theorem validator_rejects_load_without_memory :
-    validationErrorIs invalidLoadWithoutMemoryModule
-      "unknown memory" = true := by
-  native_decide
-
-theorem validator_rejects_mistyped_memory64_load_address :
-    validationErrorIs invalidMemory64LoadAddressModule
-      "type mismatch" = true := by
-  native_decide
-
-theorem validator_accepts_typed_memory64_load :
-    validationSucceeds validMemory64LoadValidationModule = true := by
-  native_decide
-
-theorem validator_accepts_typed_memory64_i64_store :
-    validationSucceeds validMemory64I64StoreValidationModule = true := by
-  native_decide
-
-theorem validator_rejects_memory_size_without_memory :
-    validationErrorIs invalidMemorySizeWithoutMemoryModule
-      "unknown memory" = true := by
-  native_decide
-
-theorem validator_accepts_typed_memory64_size :
-    validationSucceeds validMemory64SizeValidationModule = true := by
-  native_decide
-
-theorem validator_rejects_mistyped_memory64_grow_delta :
-    validationErrorIs invalidMemory64GrowDeltaModule
-      "type mismatch" = true := by
-  native_decide
-
-theorem validator_accepts_typed_memory64_grow :
-    validationSucceeds validMemory64GrowValidationModule = true := by
-  native_decide
-
-theorem validator_rejects_unknown_global_get :
-    validationErrorIs invalidGlobalGetIndexModule
-      "unknown global" = true := by
-  native_decide
-
-theorem validator_rejects_unknown_global_set :
-    validationErrorIs invalidGlobalSetIndexModule
-      "unknown global" = true := by
-  native_decide
-
-theorem validator_rejects_immutable_global_set :
-    validationErrorIs invalidImmutableGlobalSetModule
-      "immutable global" = true := by
-  native_decide
-
-theorem validator_rejects_mistyped_global_initializer :
-    validationErrorIs invalidGlobalInitializerTypeModule
-      "type mismatch" = true := by
-  native_decide
-
-theorem validator_rejects_nonconstant_global_initializer :
-    validationErrorIs invalidGlobalInitializerInstructionModule
-      "constant expression required" = true := by
-  native_decide
-
-theorem validator_rejects_forward_global_initializer :
-    validationErrorIs invalidForwardGlobalInitializerModule
-      "unknown global" = true := by
-  native_decide
-
-theorem validator_rejects_unknown_element_drop :
-    validationErrorIs invalidElemDropModule
-      "unknown element segment" = true := by
-  native_decide
-
-theorem validator_rejects_unknown_table_init_table :
-    validationErrorIs invalidTableInitTableModule "unknown table" = true := by
-  native_decide
-
-theorem validator_rejects_unknown_table_init_element :
-    validationErrorIs invalidTableInitElementModule
-      "unknown element segment" = true := by
-  native_decide
-
-theorem validator_accepts_typed_table64_init :
-    validationSucceeds validTableInit64ValidationModule = true := by
-  native_decide
-
-theorem validator_rejects_unknown_table_get :
-    validationErrorIs invalidTableGetIndexModule "unknown table" = true := by
-  native_decide
-
-theorem validator_accepts_typed_table64_fill :
-    validationSucceeds validTable64FillValidationModule = true := by
-  native_decide
-
-theorem validator_accepts_typed_mixed_table_copy :
-    validationSucceeds validMixedTableCopyValidationModule = true := by
-  native_decide
-
-theorem validator_rejects_mistyped_mixed_table_copy_length :
-    validationErrorIs invalidMixedTableCopyLengthModule
-      "type mismatch" = true := by
-  native_decide
-
-theorem validator_rejects_unknown_direct_call :
-    validationErrorIs invalidDirectCallIndexModule
-      "unknown function" = true := by
-  native_decide
-
-theorem validator_accepts_typed_imported_call :
-    validationSucceeds validImportedCallValidationModule = true := by
-  native_decide
-
-theorem validator_rejects_unknown_indirect_call_type :
-    validationErrorIs invalidIndirectCallTypeModule
-      "unknown type" = true := by
-  native_decide
-
-theorem validator_accepts_typed_table64_indirect_call :
-    validationSucceeds validTable64IndirectCallValidationModule = true := by
-  native_decide
-
-theorem validator_rejects_unknown_ref_func :
-    validationErrorIs invalidRefFuncIndexModule
-      "unknown function" = true := by
-  native_decide
-
-theorem validator_rejects_extra_block_value :
-    validationErrorIs invalidStructuredBlockExtraValueModule
-      "type mismatch" = true := by
-  native_decide
-
-theorem validator_rejects_missing_block_result :
-    validationErrorIs invalidStructuredBlockMissingResultModule
-      "type mismatch" = true := by
-  native_decide
-
-theorem validator_rejects_mismatched_if_results :
-    validationErrorIs invalidStructuredIfResultMismatchModule
-      "type mismatch" = true := by
-  native_decide
-
-theorem validator_accepts_branch_stack_polymorphism :
-    validationSucceeds validStructuredBranchPolymorphicModule = true := by
-  native_decide
-
-theorem validator_rejects_invalid_simd_lane :
-    validationErrorIs invalidSimdExtractLaneModule
-      "invalid lane index" = true := by
-  native_decide
-
-theorem validator_rejects_mistyped_simd_splat :
-    validationErrorIs invalidSimdSplatOperandModule
-      "type mismatch" = true := by
-  native_decide
-
-theorem validator_accepts_typed_simd_splat :
-    validationSucceeds validSimdSplatValidationModule = true := by
-  native_decide
-
-theorem validator_rejects_simd_load_without_memory :
-    validationErrorIs invalidSimdLoadWithoutMemoryModule
-      "unknown memory" = true := by
-  native_decide
-
-theorem validator_accepts_memory64_simd_load :
-    validationSucceeds validMemory64SimdLoadValidationModule = true := by
-  native_decide
-
-theorem validator_rejects_unknown_local :
-    validationErrorIs invalidLocalIndexValidationModule
-      "unknown local" = true := by
-  native_decide
-
-theorem validator_rejects_unknown_local_after_unreachable :
-    validationErrorIs invalidUnreachableLocalIndexValidationModule
-      "unknown local" = true := by
-  native_decide
-
-theorem validator_accepts_param_and_local_indices :
-    validationSucceeds validParamAndLocalIndexValidationModule = true := by
-  native_decide
-
-theorem validator_rejects_unknown_function_export :
-    validationErrorIs invalidFunctionExportValidationModule
-      "unknown function" = true := by
-  native_decide
-
-theorem validator_rejects_duplicate_cross_kind_export :
-    validationErrorIs invalidDuplicateCrossKindExportValidationModule
-      "duplicate export name" = true := by
-  native_decide
-
-theorem validator_rejects_start_signature :
-    validationErrorIs invalidStartSignatureValidationModule
-      "start function" = true := by
-  native_decide
-
-theorem validator_rejects_unknown_start_function :
-    validationErrorIs invalidStartIndexValidationModule
-      "unknown function" = true := by
-  native_decide
-
-theorem validator_accepts_imported_start_function :
-    validationSucceeds validImportedStartValidationModule = true := by
-  native_decide
-
-theorem validator_rejects_decoder_synthesized_data_memory :
-    validationErrorIs invalidSyntheticDataMemoryValidationModule
-      "unknown memory" = true := by
-  native_decide
-
-theorem validator_rejects_mistyped_data_offset :
-    validationErrorIs invalidDataOffsetTypeValidationModule
-      "type mismatch" = true := by
-  native_decide
-
-theorem validator_accepts_memory64_data_offset :
-    validationSucceeds validMemory64DataOffsetValidationModule = true := by
-  native_decide
-
-theorem validator_rejects_active_element_without_table :
-    validationErrorIs invalidActiveElementTableValidationModule
-      "unknown table" = true := by
-  native_decide
-
-theorem validator_rejects_active_element_type_mismatch :
-    validationErrorIs invalidActiveElementTypeValidationModule
-      "type mismatch" = true := by
-  native_decide
-
-theorem validator_accepts_table64_element_offset :
-    validationSucceeds validTable64ElementOffsetValidationModule = true := by
-  native_decide
-
-theorem validator_rejects_direct_tail_call_result_mismatch :
-    validationErrorIs invalidDirectTailCallResultValidationModule
-      "type mismatch" = true := by
-  native_decide
-
-theorem validator_accepts_direct_tail_call :
-    validationSucceeds validDirectTailCallValidationModule = true := by
-  native_decide
-
-theorem validator_rejects_indirect_tail_call_result_mismatch :
-    validationErrorIs invalidIndirectTailCallResultValidationModule
-      "type mismatch" = true := by
-  native_decide
-
-theorem validator_rejects_reference_tail_call_result_mismatch :
-    validationErrorIs invalidReferenceTailCallResultValidationModule
-      "type mismatch" = true := by
-  native_decide
-
-theorem validator_rejects_polymorphic_ref_as_non_null_result :
-    validationErrorIs invalidRefAsNonNullPolymorphicResultValidationModule
-      "type mismatch" = true := by
-  native_decide
-
-theorem validator_rejects_ref_is_null_on_scalar :
-    validationErrorIs invalidRefIsNullScalarValidationModule
-      "type mismatch" = true := by
-  native_decide
-
-theorem validator_accepts_polymorphic_reference_operations :
-    validationSucceeds validPolymorphicReferenceValidationModule = true := by
-  native_decide
-
-theorem validator_rejects_copy_into_immutable_array :
-    validationErrorIs invalidImmutableArrayCopyValidationModule
-      "immutable array" = true := by
-  native_decide
-
-theorem validator_rejects_mismatched_array_copy :
-    validationErrorIs invalidMismatchedArrayCopyValidationModule
-      "array types do not match" = true := by
-  native_decide
-
-theorem validator_accepts_matching_array_copy :
-    validationSucceeds validArrayCopyValidationModule = true := by
-  native_decide
-
-theorem validator_rejects_typed_block_result_mismatch :
-    validationErrorIs invalidTypedBlockResultValidationModule
-      "type mismatch" = true := by
-  native_decide
-
-theorem validator_rejects_typed_block_branch_mismatch :
-    validationErrorIs invalidTypedBlockBranchValidationModule
-      "type mismatch" = true := by
-  native_decide
-
-theorem validator_rejects_typed_loop_parameter_mismatch :
-    validationErrorIs invalidTypedLoopParameterValidationModule
-      "type mismatch" = true := by
-  native_decide
-
-theorem validator_accepts_typed_structured_control :
-    validationSucceeds validTypedStructuredValidationModule = true := by
-  native_decide
-
-theorem validator_rejects_unknown_throw_tag :
-    validationErrorIs invalidUnknownThrowValidationModule
-      "unknown tag" = true := by
-  native_decide
-
-theorem validator_rejects_missing_throw_argument :
-    validationErrorIs invalidThrowArgumentValidationModule
-      "type mismatch" = true := by
-  native_decide
-
-theorem validator_rejects_missing_throw_ref_operand :
-    validationErrorIs invalidThrowRefOperandValidationModule
-      "type mismatch" = true := by
-  native_decide
-
-theorem validator_rejects_try_table_result_mismatch :
-    validationErrorIs invalidTryTableResultValidationModule
-      "type mismatch" = true := by
-  native_decide
-
-theorem validator_rejects_catch_ref_target_mismatch :
-    validationErrorIs invalidCatchRefTargetValidationModule
-      "type mismatch" = true := by
-  native_decide
-
-theorem validator_accepts_typed_try_table_catch :
-    validationSucceeds validTryTableCatchValidationModule = true := by
-  native_decide
-
-theorem validator_rejects_br_on_null_scalar :
-    validationErrorIs invalidBrOnNullScalarValidationModule
-      "type mismatch" = true := by
-  native_decide
-
-theorem validator_rejects_br_on_non_null_target_mismatch :
-    validationErrorIs invalidBrOnNonNullTargetValidationModule
-      "type mismatch" = true := by
-  native_decide
-
-theorem validator_accepts_reference_branch :
-    validationSucceeds validReferenceBranchValidationModule = true := by
-  native_decide
-
-theorem validator_rejects_broad_return_call_ref :
-    validationErrorIs invalidBroadReturnCallRefValidationModule
-      "type mismatch" = true := by
-  native_decide
-
-theorem validator_accepts_precise_return_call_ref :
-    validationSucceeds validPreciseReturnCallRefValidationModule = true := by
-  native_decide
-
-theorem validator_rejects_ref_eq_on_anyref :
-    validationErrorIs invalidRefEqAnyValidationModule
-      "type mismatch" = true := by
-  native_decide
 
 def memory64InitModule : Module :=
   { funcs :=
@@ -1933,11 +973,8 @@ theorem swap_partial :
     PartiallyMeets swapConfig (fun values store =>
       values = [.i32 11, .i32 22] ∧
       store.wasm.mem.read32 0 = 22 ∧
-      store.wasm.mem.read32 4 = 11) := by
-  apply runSteps_success_partiallyMeets swap_run
-  constructor
-  native_decide
-  constructor <;> native_decide
+      store.wasm.mem.read32 4 = 11) :=
+  swap_relational.toPartiallyMeets
 
 theorem swap_matches_big_step :
     (runSteps 17 swapConfig).result.values? =
@@ -2005,13 +1042,8 @@ theorem reverse_three_partial :
       values = [.i32 11, .i32 33] ∧
       store.wasm.mem.read32 0 = 33 ∧
       store.wasm.mem.read32 4 = 22 ∧
-      store.wasm.mem.read32 8 = 11) := by
-  apply runSteps_success_partiallyMeets reverse_three_run
-  constructor
-  native_decide
-  constructor
-  · native_decide
-  constructor <;> native_decide
+      store.wasm.mem.read32 8 = 11) :=
+  reverse_three_relational.toPartiallyMeets
 
 theorem reverse_three_matches_big_step :
     (runSteps 17 reverseThreeConfig).result.values? =
@@ -2090,9 +1122,8 @@ theorem partition_three_partial :
       store.wasm.mem.read32 4 = 22 ∧
       store.wasm.mem.read32 8 = 33 ∧
       store.wasm.mem.read32 0 ≤ store.wasm.mem.read32 4 ∧
-      store.wasm.mem.read32 4 ≤ store.wasm.mem.read32 8) := by
-  apply runSteps_success_partiallyMeets partition_three_run
-  native_decide
+      store.wasm.mem.read32 4 ≤ store.wasm.mem.read32 8) :=
+  partition_three_relational.toPartiallyMeets
 
 theorem partition_three_matches_big_step :
     (runSteps 19 partitionThreeConfig).result.values? =
@@ -2166,9 +1197,8 @@ theorem merge_two_partial :
       values = [] ∧
       store.wasm.mem.read32 0 = 4 ∧
       store.wasm.mem.read32 4 = 9 ∧
-      store.wasm.mem.read32 0 ≤ store.wasm.mem.read32 4) := by
-  apply runSteps_success_partiallyMeets merge_two_run
-  native_decide
+      store.wasm.mem.read32 0 ≤ store.wasm.mem.read32 4) :=
+  merge_two_relational.toPartiallyMeets
 
 theorem merge_two_matches_big_step :
     (runSteps 18 mergeTwoConfig).result.values? =
@@ -2560,22 +1590,18 @@ theorem division_matches_big_step :
         some (runValues 20 divisionModule 1 divisionModule.initialStore []) := by
   native_decide
 
-def trapReason? : RunnerResult α → Option TrapReason
-  | .trapped reason _ => some reason
-  | _ => none
-
 theorem remainder_by_zero_traps :
-    trapReason? (runSteps 4 (divisionConfig 2 1)).result =
+    (runSteps 4 (divisionConfig 2 1)).result.trapReason? =
       some .integerDivideByZero := by
   native_decide
 
 theorem signed_i32_overflow_traps :
-    trapReason? (runSteps 4 (divisionConfig 3 1)).result =
+    (runSteps 4 (divisionConfig 3 1)).result.trapReason? =
       some .integerOverflow := by
   native_decide
 
 theorem signed_i64_overflow_traps :
-    trapReason? (runSteps 4 (divisionConfig 4 1)).result =
+    (runSteps 4 (divisionConfig 4 1)).result.trapReason? =
       some .integerOverflow := by
   native_decide
 
@@ -2704,7 +1730,7 @@ theorem reference_values_relational :
   rfl
   native_decide
 theorem null_as_non_null_traps :
-    trapReason? (runSteps 2 (referenceConfig 1 1)).result =
+    (runSteps 2 (referenceConfig 1 1)).result.trapReason? =
       some .nullReference := by
   native_decide
 
@@ -2763,7 +1789,7 @@ theorem table_read_write_relational :
   · constructor <;> rfl
 
 theorem table_get_out_of_bounds_traps :
-    trapReason? (runSteps 2 (tableConfig 1 1)).result =
+    (runSteps 2 (tableConfig 1 1)).result.trapReason? =
       some .outOfBoundsTable := by
   native_decide
 
@@ -2975,22 +2001,22 @@ theorem call_indirect_relational :
   · rfl
   · rfl
 theorem call_indirect_undefined_traps :
-    trapReason? (runSteps 2 (indirectCallConfig 6)).result =
+    (runSteps 2 (indirectCallConfig 6)).result.trapReason? =
       some .undefinedElement := by
   native_decide
 
 theorem call_indirect_uninitialized_traps :
-    trapReason? (runSteps 2 (indirectCallConfig 7)).result =
+    (runSteps 2 (indirectCallConfig 7)).result.trapReason? =
       some (.uninitializedElement 2) := by
   native_decide
 
 theorem call_indirect_type_mismatch_traps :
-    trapReason? (runSteps 2 (indirectCallConfig 8)).result =
+    (runSteps 2 (indirectCallConfig 8)).result.trapReason? =
       some .indirectCallTypeMismatch := by
   native_decide
 
 theorem call_ref_null_traps :
-    trapReason? (runSteps 2 (indirectCallConfig 9)).result =
+    (runSteps 2 (indirectCallConfig 9)).result.trapReason? =
       some .nullFunctionReference := by
   native_decide
 
@@ -3256,13 +2282,8 @@ theorem float_memory_roundtrip_partial :
       values =
         [ .f64 (-7.5 : Float).toBits, .f32 (1.25 : Float32).toBits ] ∧
       store.wasm.mem.read32 32 = (1.25 : Float32).toBits ∧
-      store.wasm.mem.read64 40 = (-7.5 : Float).toBits) := by
-  intro trace values store execution
-  obtain ⟨runTrace, runValues, runStore, runExecution, hpost⟩ :=
-    float_memory_roundtrip_relational
-  obtain ⟨rfl, rfl⟩ :=
-    steps_done_deterministic runExecution execution
-  exact hpost
+      store.wasm.mem.read64 40 = (-7.5 : Float).toBits) :=
+  float_memory_roundtrip_relational.toPartiallyMeets
 
 theorem float_memory_matches_big_step :
     (runSteps 11 floatMemoryConfig).result.values? =
@@ -3617,11 +2638,8 @@ theorem host_call_relational :
 
 theorem host_call_partial :
     PartiallyMeets smallStepHostConfig (fun values store =>
-      values = [.i32 42] ∧ store.wasm.mem.read32 200 = 41) := by
-  apply runSteps_success_partiallyMeets host_call_run
-  constructor
-  native_decide
-  · native_decide
+      values = [.i32 42] ∧ store.wasm.mem.read32 200 = 41) :=
+  host_call_relational.toPartiallyMeets
 
 theorem host_call_matches_big_step :
     (runSteps 4 smallStepHostConfig).result.values? =
@@ -3802,12 +2820,9 @@ def smallStepGcNullI31Config : Config Unit :=
       { runtime := { instances := #[{ module := smallStepGcModule, host := {} }], entry := ⟨0⟩ },
         wasm := smallStepGcModule.initialStore } }
 
-def isNullI31Trap : RunnerResult α → Bool
-  | .trapped .nullI31Reference _ => true
-  | _ => false
-
 theorem gc_null_i31_structured_trap :
-    isNullI31Trap (runSteps 2 smallStepGcNullI31Config).result = true := by
+    ((runSteps 2 smallStepGcNullI31Config).result.trapReason? ==
+      some .nullI31Reference) = true := by
   native_decide
 
 theorem gc_null_i31_trapsWith :

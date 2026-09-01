@@ -46,24 +46,48 @@ instance instLanguage :
     | done values => exact False.elim (done_terminal hstep)
     | trapped => rfl
 
-@[simp] theorem primStep_no_forks
-    {source : Expr α × MachineStore α} {observation : List StepKind}
-    {target : Expr α × MachineStore α × List (Expr α)}
-    (h : PrimStep.primStep source observation target) :
-    target.2.2 = [] :=
-  h.1
+/-- A terminal observation for the Wasm machine.  Its language must reuse the
+authoritative Wasm primitive-step relation; only the terminal-value view may
+change. -/
+class TerminalView (α : Type) (Terminal : outParam Type) where
+  language : Language (Expr α) (MachineStore α) StepKind Terminal
+  primStep_eq : language.toPrimStep = instPrimStep
+  running_not_val (thread : ThreadState α) :
+    @toVal (Expr α) Terminal language.toToVal
+      (Expr.running thread : Expr α) = none
 
-theorem primStep_iff
-    {e e' : Expr α} {store store' : MachineStore α}
-    {observation : List StepKind} {forks} :
-    Iff (PrimStep.primStep (e, store) observation (e', store', forks))
-      (forks = [] ∧ ∃ kind, observation = [] ∧
-        Step ⟨e, store⟩ kind ⟨e', store'⟩) :=
-  Iff.rfl
+/-- Repackage a terminal view with the canonical Wasm primitive-step
+instance.  This keeps primitive reductions definitionally transparent to the
+shared lifting proofs. -/
+@[implicit_reducible] def TerminalView.canonicalLanguage
+    [view : TerminalView α Terminal] :
+    Language (Expr α) (MachineStore α) StepKind Terminal where
+  toToVal := view.language.toToVal
+  toPrimStep := instPrimStep
+  val_stuck := by
+    intro e store observation e' store' forks hstep
+    apply @Language.val_stuck (Expr α) (MachineStore α) StepKind Terminal
+      view.language e store observation e' store' forks
+    rw [view.primStep_eq]
+    exact hstep
+
+instance instTerminalView : TerminalView α (List Value) where
+  language := instLanguage
+  primStep_eq := rfl
+  running_not_val _ := rfl
+
+section terminalGeneric
+
+variable {Terminal : Type} [view : TerminalView α Terminal]
+
+local instance (priority := high) traceTerminalLanguage :
+    Language (Expr α) (MachineStore α) StepKind Terminal :=
+  TerminalView.canonicalLanguage
 
 /-- A Talos relational trace induces a silent iris-lean thread-pool trace with
 a single expression and no forks. Step labels remain in the Talos trace. -/
 theorem Steps.to_languageNSteps
+    {config final : Config α} {trace : List StepKind}
     (steps : Steps config trace final) :
     Language.NSteps trace.length
       ([config.expr], config.store) []
@@ -82,10 +106,13 @@ theorem Steps.to_languageNSteps
 
 /-- Observation-erased iris-lean reachability induced by a Talos trace. -/
 theorem Steps.to_languageErasedSteps
+    {config final : Config α} {trace : List StepKind}
     (steps : Steps config trace final) :
     ([config.expr], config.store) -·->ₜₚ*
       ([final.expr], final.store) :=
   (Language.erasedStep_nSteps _ _).mpr
     ⟨trace.length, [], steps.to_languageNSteps⟩
+
+end terminalGeneric
 
 end Wasm.SmallStep

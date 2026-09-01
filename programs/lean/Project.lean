@@ -16,4 +16,12 @@ import Project.FloatTrunc.Spec
 import Project.FloatRound.Spec
 import Project.FloatReinterpret.Spec
 import Project.FloatMinmax.Spec
+import Project.ByteEcho.Spec
+import Project.Xor.Spec
 import Project.Mergesort.Spec
+import Project.Mergesort.Representations
+import Project.Mergesort.Contracts
+import Project.Mergesort.OutcomeInfrastructure
+import Project.Mergesort.ContractProofs
+import Project.Mergesort.DriverProof
+import Project.Mergesort.Proof
