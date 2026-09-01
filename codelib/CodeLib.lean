@@ -41,6 +41,7 @@ import CodeLib.SepLogic.SmallStepTotalLifting
 import CodeLib.SepLogic.SmallStepOutcomeLanguage
 import CodeLib.SepLogic.SmallStepOutcomeExample
 import CodeLib.SepLogic.SmallStepAdequacy
+import CodeLib.SepLogic.SmallStepAdequacyExamples
 import CodeLib.SepLogic.SmallStepOutcomeAdequacy
 import CodeLib.Examples.MergeSort.TotalProof
 import CodeLib.Examples.Quicksort.TotalProof

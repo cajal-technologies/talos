@@ -75,10 +75,7 @@ theorem func0_swap (env : HostEnv Unit) (st : Store Unit) (ptr len i j : UInt32)
   unfold func0Def func0
   apply wp_block_cons
   apply wp_block_cons
-  simp only [wp_simp, Locals.get, Locals.set?, Function.toLocals,
-    Function.numParams, List.take, List.drop,
-    List.length, List.map, ValueType.zero,
-    List.reverse_cons, List.reverse_nil, List.cons_append, List.nil_append, List.append_nil,
+  wp_run [List.reverse_cons, List.reverse_nil, List.cons_append, List.nil_append, List.append_nil,
     List.getElem?_cons_zero, List.getElem?_cons_succ,
     List.set_cons_zero, List.set_cons_succ,
     Nat.reduceLT, Nat.reduceAdd, Nat.reduceSub, reduceIte,
