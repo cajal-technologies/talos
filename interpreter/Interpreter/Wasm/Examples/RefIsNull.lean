@@ -1,5 +1,5 @@
-import Interpreter.Wasm.Decoder.Wat
 import Interpreter.Wasm.SmallStep
+import Interpreter.Wasm.Examples.Harness
 
 /-! ## Example: reference instructions (`ref.null`, `ref.func`, `ref.is_null`)
 
@@ -46,11 +46,8 @@ theorem refReflectSpec (m : Module) (st : Store α) :
 theorem refReflect_partial (m : Module) (st : Store α) :
     PartiallyMeets (refReflectConfig m st)
       (fun values store =>
-        values = [.i32 0, .i32 1] ∧ store.wasm = st) := by
-  intro trace values store execution
-  obtain ⟨rfl, rfl⟩ :=
-    steps_done_deterministic (refReflect_steps m st) execution
-  exact ⟨rfl, rfl⟩
+        values = [.i32 0, .i32 1] ∧ store.wasm = st) :=
+  (refReflectSpec m st).toPartiallyMeets
 
 namespace Decoded
 
@@ -76,10 +73,7 @@ def refWat : String := "
     ref.is_null))
 "
 
-private def decoded : Wasm.Module :=
-  match Wasm.Decoder.Wat.decode refWat with
-  | .ok module => module
-  | .error _ => default
+private def decoded : Wasm.Module := Wasm.Examples.decodeOrDefault refWat
 
 private def initializedStore : Store Unit :=
   decoded.runConstGlobals 64 (decoded.initialStore (α := Unit)) {}

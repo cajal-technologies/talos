@@ -134,11 +134,7 @@ theorem func1_swap (env : HostEnv Unit) (st1 : Store Unit) (ptr len i j loc : UI
   apply wp_block_cons
   apply wp_block_cons
   apply wp_block_cons
-  simp only [wp_simp, Locals.get, Locals.set?, Function.toLocals,
-    Function.numParams, List.take, List.drop, 
-    List.length, List.map, ValueType.zero, 
-    List.reverse_cons, List.reverse_nil, List.cons_append, List.nil_append, List.append_nil,
-    
+  wp_run [List.reverse_cons, List.reverse_nil, List.cons_append, List.nil_append, List.append_nil,
     List.getElem?_cons_zero, List.getElem?_cons_succ,
     List.set_cons_zero, List.set_cons_succ,
     Nat.reduceLT, Nat.reduceAdd, Nat.reduceSub, reduceIte,
@@ -237,15 +233,11 @@ theorem func4_swap (env : HostEnv Unit) (st : Store Unit) (ptr len i j : UInt32)
   unfold func4
   wp_run
   rw [hsp]
-  simp only [wp_simp, 
-    
-    List.length, 
-    List.reverse_cons, List.reverse_nil, List.cons_append, List.nil_append, List.append_nil,
-    List.length_cons, 
+  wp_run [List.reverse_cons, List.reverse_nil, List.cons_append, List.nil_append, List.append_nil,
+    List.length_cons,
     List.getElem?_cons_zero, List.getElem?_cons_succ,
     List.set_cons_zero, List.set_cons_succ,
-    UInt32.reduceSub, UInt32.reduceAdd, Nat.reduceAdd, Nat.reduceSub, Nat.reduceLT, reduceIte,
-    ]
+    UInt32.reduceSub, UInt32.reduceAdd, Nat.reduceAdd, Nat.reduceSub, Nat.reduceLT, reduceIte]
   apply wp_call_tw (func3_writes env _ 1048568 ptr len 1048652 []
     (by show (1048568 : UInt32).toNat + 8 ≤ st.mem.pages * 65536; rw [tn68]; omega))
   rintro sta vsa ⟨rfl, hga, hpa, hma⟩
@@ -257,12 +249,7 @@ theorem func4_swap (env : HostEnv Unit) (st : Store Unit) (ptr len i j : UInt32)
     rw [hma, Mem.read32_write32_disjoint _ _ _ _ (by rw [tn68, tn72]; omega),
         Mem.read32_write32_same]
   have hrptr : sta.mem.read32 1048568 = ptr := by rw [hma, Mem.read32_write32_same]
-  simp only [wp_simp, Locals.get, Locals.set?, 
-    
-    List.length, 
-    
-    
-    List.getElem?_cons_zero, List.getElem?_cons_succ,
+  wp_run [List.getElem?_cons_zero, List.getElem?_cons_succ,
     List.set_cons_zero, List.set_cons_succ,
     UInt32.reduceToNat, UInt32.reduceAdd, Nat.reduceAdd, Nat.reduceSub, Nat.reduceLT, reduceIte,
     hrlen, hrptr,

@@ -1,4 +1,4 @@
-import Interpreter.Wasm.Wp.Defs
+import Interpreter.Wasm.Wp.Structural
 import Interpreter.Wasm.Semantics.Lemmas
 
 /-! ### Loop with a variant.
@@ -78,139 +78,75 @@ theorem wp_loop_cons {ps rs : Nat} {body rest : Program} {Q : Assertion α}
             | other              => Q other)
           st s env) :
     wp m (.loop ps rs body :: rest) Q st s env := by
-  unfold wp
   suffices key : ∀ n, ∀ st s, Inv st s → μ st s = n →
-      ∃ N, ∀ fuel ≥ N, Q (exec fuel m st s (.loop ps rs body :: rest) env) by
+      wp m (.loop ps rs body :: rest) Q st s env by
     exact key _ st s hInit rfl
   intro n
   induction n using Nat.strong_induction_on with
   | _ n IH =>
     intro st s hInv hμ
-    have hBody := hStep st s hInv
-    unfold wp at hBody
-    obtain ⟨Nb, hNb⟩ := hBody
-    by_cases hOOF : ∀ f ≥ Nb, exec f m st s body env = .OutOfFuel
-    · refine ⟨Nb + 1, fun fuel hfuel => ?_⟩
+    refine wp_of_body_dispatch (hStep st s hInv) ?_ ?_ ?_ ?_ ?_
+    · -- Forwarded continuations: the loop is transparent to them.
+      intro f cont hcont hbody
+      cases cont <;>
+        first
+          | exact (hcont : False).elim
+          | rw [exec_loop_cons_unfold, hbody]
+    · intro cont hcont hQ
+      cases cont <;>
+        first
+          | exact (hcont : False).elim
+          | exact hQ
+    · -- Fall-through leaves the loop and carries on with `rest`.
+      intro N st' s' hQ hstable
+      refine wp_of_eventually_eq (N := N + 1) ?_ hQ
+      intro fuel hfuel
       obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-      have hbf : exec f m st s body env = .OutOfFuel := hOOF f (by omega)
-      have hpre := hNb f (by omega)
-      rw [hbf] at hpre
-      rw [exec_loop_cons_unfold, hbf]
-      exact hpre
-    · push Not at hOOF
-      obtain ⟨f₀, hf₀, hf₀_ne⟩ := hOOF
-      have hk_stable : ∀ f' ≥ f₀, exec f' m st s body env = exec f₀ m st s body env := fun f' hf' =>
-        exec_fuel_mono hf' hf₀_ne
-      have hQ_at := hNb f₀ hf₀
-      cases hk : exec f₀ m st s body env with
-      | OutOfFuel => exact absurd hk hf₀_ne
-      | Fallthrough st' s' =>
-        rw [hk] at hQ_at
-        simp only at hQ_at
-        obtain ⟨Nr, hNr⟩ := hQ_at
-        refine ⟨max (f₀ + 1) Nr, fun fuel hfuel => ?_⟩
-        obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-        have hbody : exec f m st s body env = .Fallthrough st' s' := by
-          rw [hk_stable f (by omega), hk]
-        rw [exec_loop_cons_unfold, hbody]
-        simp only
-        exact hNr _ (by omega)
-      | Break k' st' s' =>
-        cases k' with
-        | zero =>
-          rw [hk] at hQ_at
-          simp only at hQ_at
-          obtain ⟨hInv', hμ_lt⟩ := hQ_at
-          set trimmed : Locals :=
-            { s' with values := s'.values.take ps ++ s.values.drop ps } with htrimmed
-          have hμ_lt' : μ st' trimmed < n := by omega
-          obtain ⟨N_inner, hN_inner⟩ := IH (μ st' trimmed) hμ_lt' st' trimmed hInv' rfl
-          refine ⟨max (f₀ + 1) (N_inner + 1), fun fuel hfuel => ?_⟩
-          obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-          have hbody : exec f m st s body env = .Break 0 st' s' := by
-            rw [hk_stable f (by omega), hk]
-          rw [exec_loop_cons_unfold, hbody]
-          simp only
-          by_cases hOf : execOne f m st' trimmed (.loop ps rs body) env = .OutOfFuel
-          · rw [hOf]
-            have hf_eq : exec f m st' trimmed (.loop ps rs body :: rest) env = .OutOfFuel := by
-              simp only [exec, hOf]
-            have hIH := hN_inner f (by omega)
-            rw [hf_eq] at hIH
-            exact hIH
-          · have h_mono : execOne (f+1) m st' trimmed (.loop ps rs body) env = execOne f m st' trimmed (.loop ps rs body) env :=
-              execOne_fuel_mono (Nat.le_succ _) hOf
-            have h_unfold : exec (f+1) m st' trimmed (.loop ps rs body :: rest) env =
-                  (match execOne (f+1) m st' trimmed (.loop ps rs body) env with
-                   | .Fallthrough r s => exec (f+1) m r s rest env
-                   | other => other) := by
-              simp only [exec]; rfl
-            have h_eq : exec (f+1) m st' trimmed (.loop ps rs body :: rest) env =
-                  (match execOne f m st' trimmed (.loop ps rs body) env with
-                   | .Fallthrough r s => exec (f+1) m r s rest env
-                   | other => other) := by rw [h_unfold, h_mono]
-            rw [← h_eq]
-            exact hN_inner (f+1) (by omega)
-        | succ k' =>
-          rw [hk] at hQ_at
-          simp only at hQ_at
-          refine ⟨f₀ + 1, fun fuel hfuel => ?_⟩
-          obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-          have hbody : exec f m st s body env = .Break (k'+1) st' s' := by
-            rw [hk_stable f (by omega), hk]
-          rw [exec_loop_cons_unfold, hbody]
-          simp only
-          exact hQ_at
-      | Return st' vs =>
-        rw [hk] at hQ_at
-        simp only at hQ_at
-        refine ⟨f₀ + 1, fun fuel hfuel => ?_⟩
-        obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-        have hbody : exec f m st s body env = .Return st' vs := by
-          rw [hk_stable f (by omega), hk]
-        rw [exec_loop_cons_unfold, hbody]
-        simp only
-        exact hQ_at
-      | Trap st' msg =>
-        rw [hk] at hQ_at
-        simp only at hQ_at
-        refine ⟨f₀ + 1, fun fuel hfuel => ?_⟩
-        obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-        have hbody : exec f m st s body env = .Trap st' msg := by
-          rw [hk_stable f (by omega), hk]
-        rw [exec_loop_cons_unfold, hbody]
-        simp only
-        exact hQ_at
-      | Invalid msg =>
-        rw [hk] at hQ_at
-        simp only at hQ_at
-        refine ⟨f₀ + 1, fun fuel hfuel => ?_⟩
-        obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-        have hbody : exec f m st s body env = .Invalid msg := by
-          rw [hk_stable f (by omega), hk]
-        rw [exec_loop_cons_unfold, hbody]
-        simp only
-        exact hQ_at
-      | ReturnCall fid st' vs =>
-        rw [hk] at hQ_at
-        simp only at hQ_at
-        refine ⟨f₀ + 1, fun fuel hfuel => ?_⟩
-        obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-        have hbody : exec f m st s body env = .ReturnCall fid st' vs := by
-          rw [hk_stable f (by omega), hk]
-        rw [exec_loop_cons_unfold, hbody]
-        simp only
-        exact hQ_at
-      | Throwing tag targs st' s' =>
-        rw [hk] at hQ_at
-        simp only at hQ_at
-        refine ⟨f₀ + 1, fun fuel hfuel => ?_⟩
-        obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-        have hbody : exec f m st s body env = .Throwing tag targs st' s' := by
-          rw [hk_stable f (by omega), hk]
-        rw [exec_loop_cons_unfold, hbody]
-        simp only
-        exact hQ_at
+      rw [exec_loop_cons_unfold, hstable f (by omega)]
+    · -- `br 0` re-enters the loop: the invariant holds again on the trimmed
+      -- stack and the measure has dropped, so the induction hypothesis applies.
+      -- The re-entry is the one place where the two sides run at different
+      -- fuel: the inner `execOne` gets `f`, the recursive `exec` gets `f + 1`.
+      intro N st' s' hQ hstable
+      have hQ' : Inv st' { s' with values := s'.values.take ps ++ s.values.drop ps }
+          ∧ μ st' { s' with values := s'.values.take ps ++ s.values.drop ps } < μ st s := hQ
+      obtain ⟨hInv', hμ_lt⟩ := hQ'
+      set trimmed : Locals :=
+        { s' with values := s'.values.take ps ++ s.values.drop ps } with htrimmed
+      have hμ_lt' : μ st' trimmed < n := by omega
+      have hIH := IH (μ st' trimmed) hμ_lt' st' trimmed hInv' rfl
+      unfold wp at hIH ⊢
+      obtain ⟨N_inner, hN_inner⟩ := hIH
+      refine ⟨max (N + 1) (N_inner + 1), fun fuel hfuel => ?_⟩
+      obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
+      rw [exec_loop_cons_unfold, hstable f (by omega)]
+      simp only
+      by_cases hOf : execOne f m st' trimmed (.loop ps rs body) env = .OutOfFuel
+      · rw [hOf]
+        have hf_eq : exec f m st' trimmed (.loop ps rs body :: rest) env = .OutOfFuel := by
+          simp only [exec, hOf]
+        have hres := hN_inner f (by omega)
+        rw [hf_eq] at hres
+        exact hres
+      · have h_mono : execOne (f+1) m st' trimmed (.loop ps rs body) env = execOne f m st' trimmed (.loop ps rs body) env :=
+          execOne_fuel_mono (Nat.le_succ _) hOf
+        have h_unfold : exec (f+1) m st' trimmed (.loop ps rs body :: rest) env =
+              (match execOne (f+1) m st' trimmed (.loop ps rs body) env with
+               | .Fallthrough r s => exec (f+1) m r s rest env
+               | other => other) := by
+          simp only [exec]; rfl
+        have h_eq : exec (f+1) m st' trimmed (.loop ps rs body :: rest) env =
+              (match execOne f m st' trimmed (.loop ps rs body) env with
+               | .Fallthrough r s => exec (f+1) m r s rest env
+               | other => other) := by rw [h_unfold, h_mono]
+        rw [← h_eq]
+        exact hN_inner (f+1) (by omega)
+    · -- An outer break sheds one level and propagates.
+      intro N k st' s' hQ hstable
+      refine wp_of_eventually_const (N := N + 1) (cont := .Break k st' s') ?_ hQ
+      intro fuel hfuel
+      obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
+      rw [exec_loop_cons_unfold, hstable f (by omega)]
 
 /-- For any fuel, executing a single `.br 0` is either `OutOfFuel` (when fuel = 0)
     or `Break 0 st s` (when fuel ≥ 1). -/
