@@ -71,14 +71,9 @@ theorem startCallConfig_eq (input : List UInt32) :
 /-- Public postcondition before the final machine store is hidden. -/
 def entryPost (input : List UInt32) (outcome : ObservableOutcome)
     (store : MachineStore Universal.State) : Prop :=
-  match outcome with
-  | .done values =>
-      values = [] ∧
-        ∃ output : List UInt32,
-          store.wasm.host.stdio.output = serialize output ∧
-          SortedPermutation input output
-  | .trapped reason =>
-      reason = .host OOM.trapMessage ∧ store.wasm.host.oom.raised = true
+  let run : Project.Mergesort.Spec.RunOutcome := ⟨outcome, store.wasm.host⟩
+  Project.Mergesort.Spec.RanOutOfMemory run ∨
+    Project.Mergesort.Spec.Post input run
 
 /-- Public value inputs always produce a whole-word byte stream.  The
 body-level proof must use this fact at the `chunks_exact(4)` guard; the adequacy
@@ -309,7 +304,7 @@ private theorem DriverSuccess_public
   ispecialize Hfields $$ %store %observations
   ihave %hfields := Hfields $$ Hstate
   ipureintro
-  exact ⟨rfl, sorted, hfields.1, hfacts.1⟩
+  exact Or.inr ⟨sorted, ⟨rfl, hfields.1⟩, hfacts.1⟩
 
 /-- Every phase-classified OOM state contains the precise typed stream marker
 installed by the `talos.oom` host call. -/
@@ -366,7 +361,7 @@ private theorem DriverOOM_public
   ispecialize Hfields $$ %store %observations
   ihave %hfields := Hfields $$ Hstate
   ipureintro
-  exact ⟨rfl, hfields.2⟩
+  exact Or.inl ⟨rfl, hfields.2⟩
 
 /-- Apply the future main-function correctness theorem at the genuine exported
 call site.  This is the only bridge from entry resources to `Func3Spec`. -/
@@ -457,13 +452,13 @@ theorem entry_adequacy_of_func3
     Project.Mergesort.Spec.PublicEntrySpecification := by
   unfold Project.Mergesort.Spec.PublicEntrySpecification
   intro input
+  unfold Project.Mergesort.Spec.PartiallyRuns
   refine ⟨entryConfig input, ?_, ?_⟩
   · exact startCallConfig_eq input
   · intro trace outcome store hsteps
     have hpublic := entry_partiallyMeets_of_func3 hfunc3 input
       trace outcome store hsteps
-    cases outcome <;>
-      simpa [entryPost, serialize, U32Codec,
-        Project.Mergesort.Spec.encodeValues, SortedPermutation] using hpublic
+    simpa [entryPost, serialize, U32Codec,
+      Project.Mergesort.Spec.encodeValues, SortedPermutation] using hpublic
 
 end Project.Mergesort.Adequacy
