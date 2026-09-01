@@ -17,6 +17,7 @@ members = [
   "talos_stdio",
   "byte_echo",
   "xor",
+  "rust_vec",
   "mergesort",
 ]
 [profile.release]
@@ -49,4 +50,7 @@ opt-level = 3
 opt-level = 3
 
 [profile.release.package.xor]
+opt-level = 3
+
+[profile.release.package.rust_vec]
 opt-level = 3
