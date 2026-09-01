@@ -13,22 +13,22 @@ open Wasm
 def func0 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 0
 
 def func0Def : Wasm.Function :=
-  { params := [.i32], locals := [.i32], body := func0, typeIdx := some 4 }
+  { params := [.i32, .i32, .i32, .i32], body := func0, typeIdx := some 4 }
 
 def func1 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 1
 
 def func1Def : Wasm.Function :=
-  { params := [.i32, .i32, .i32], locals := [.i32, .i32], body := func1, typeIdx := some 5 }
+  { params := [.i32, .i32, .i32], locals := [.i32], body := func1, typeIdx := some 5 }
 
 def func2 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 2
 
 def func2Def : Wasm.Function :=
-  { params := [.i32, .i32, .i32, .i32], body := func2, typeIdx := some 6 }
+  { locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32], body := func2, typeIdx := some 3 }
 
 def func3 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 3
 
 def func3Def : Wasm.Function :=
-  { locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32], body := func3, typeIdx := some 3 }
+  { locals := [.i32, .i32, .i32, .i32, .i32], body := func3, typeIdx := some 3 }
 
 def func4 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 4
 
@@ -43,12 +43,12 @@ def func5Def : Wasm.Function :=
 def func6 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 6
 
 def func6Def : Wasm.Function :=
-  { locals := [.i32, .i32, .i32, .i32, .i32], body := func6, typeIdx := some 3 }
+  { locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32], body := func6, typeIdx := some 3 }
 
 def func7 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 7
 
 def func7Def : Wasm.Function :=
-  { locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32], body := func7, typeIdx := some 3 }
+  { body := func7, typeIdx := some 3 }
 
 def func8 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 8
 
@@ -78,92 +78,92 @@ def func12Def : Wasm.Function :=
 def func13 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 13
 
 def func13Def : Wasm.Function :=
-  { body := func13, typeIdx := some 3 }
+  { params := [.i32, .i32], locals := [.i32, .i32], body := func13, results := [.i32], typeIdx := some 2 }
 
 def func14 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 14
 
 def func14Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [.i32, .i32], body := func14, results := [.i32], typeIdx := some 2 }
+  { body := func14, typeIdx := some 3 }
 
 def func15 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 15
 
 def func15Def : Wasm.Function :=
-  { body := func15, typeIdx := some 3 }
+  { params := [.i32, .i32, .i32], body := func15, typeIdx := some 5 }
 
 def func16 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 16
 
 def func16Def : Wasm.Function :=
-  { params := [.i32, .i32, .i32], body := func16, typeIdx := some 5 }
+  { params := [.i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32], body := func16, results := [.i32], typeIdx := some 6 }
 
 def func17 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 17
 
 def func17Def : Wasm.Function :=
-  { params := [.i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32], body := func17, results := [.i32], typeIdx := some 7 }
+  { params := [.i32, .i32], body := func17, results := [.i32], typeIdx := some 2 }
 
 def func18 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 18
 
 def func18Def : Wasm.Function :=
-  { params := [.i32, .i32], body := func18, results := [.i32], typeIdx := some 2 }
+  { params := [.i32, .i32], body := func18, typeIdx := some 0 }
 
 def func19 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 19
 
 def func19Def : Wasm.Function :=
-  { params := [.i32, .i32], body := func19, typeIdx := some 0 }
+  { params := [.i32, .i32], body := func19, results := [.i32], typeIdx := some 2 }
 
 def func20 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 20
 
 def func20Def : Wasm.Function :=
-  { params := [.i32, .i32], body := func20, results := [.i32], typeIdx := some 2 }
+  { params := [.i32, .i32, .i32, .i32, .i32], locals := [.i32], body := func20, typeIdx := some 7 }
 
 def func21 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 21
 
 def func21Def : Wasm.Function :=
-  { params := [.i32, .i32, .i32, .i32, .i32], locals := [.i32], body := func21, typeIdx := some 8 }
+  { params := [.i32, .i32], body := func21, typeIdx := some 0 }
 
 def func22 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 22
 
 def func22Def : Wasm.Function :=
-  { params := [.i32, .i32], body := func22, typeIdx := some 0 }
+  { params := [.i32], locals := [.i32], body := func22, typeIdx := some 8 }
 
 def func23 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 23
 
 def func23Def : Wasm.Function :=
-  { params := [.i32], locals := [.i32], body := func23, typeIdx := some 4 }
+  { params := [.i32], locals := [.i32], body := func23, typeIdx := some 8 }
 
 def func24 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 24
 
 def func24Def : Wasm.Function :=
-  { params := [.i32], locals := [.i32], body := func24, typeIdx := some 4 }
+  { params := [.i32], body := func24, typeIdx := some 8 }
 
 def func25 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 25
 
 def func25Def : Wasm.Function :=
-  { params := [.i32], body := func25, typeIdx := some 4 }
+  { params := [.i32], body := func25, typeIdx := some 8 }
 
 def func26 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 26
 
 def func26Def : Wasm.Function :=
-  { params := [.i32], body := func26, typeIdx := some 4 }
+  { params := [.i32], body := func26, typeIdx := some 8 }
 
 def func27 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 27
 
 def func27Def : Wasm.Function :=
-  { params := [.i32], body := func27, typeIdx := some 4 }
+  { params := [.i32], locals := [.i32, .i32, .i32], body := func27, typeIdx := some 8 }
 
 def func28 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 28
 
 def func28Def : Wasm.Function :=
-  { params := [.i32], locals := [.i32, .i32, .i32], body := func28, typeIdx := some 4 }
+  { params := [.i32, .i32, .i32, .i32, .i32, .i32], locals := [.i32, .i32, .i64], body := func28, typeIdx := some 9 }
 
 def func29 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 29
 
 def func29Def : Wasm.Function :=
-  { params := [.i32, .i32, .i32, .i32, .i32, .i32], locals := [.i32, .i32, .i64], body := func29, typeIdx := some 9 }
+  { params := [.i32, .i32, .i32, .i32, .i32], locals := [.i32, .i32], body := func29, typeIdx := some 7 }
 
 def func30 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 30
 
 def func30Def : Wasm.Function :=
-  { params := [.i32, .i32, .i32, .i32, .i32], locals := [.i32, .i32], body := func30, typeIdx := some 8 }
+  { params := [.i32, .i32], body := func30, typeIdx := some 0 }
 
 def func31 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 31
 
@@ -173,32 +173,32 @@ def func31Def : Wasm.Function :=
 def func32 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 32
 
 def func32Def : Wasm.Function :=
-  { params := [.i32, .i32], body := func32, typeIdx := some 0 }
+  { body := func32, typeIdx := some 3 }
 
 def func33 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 33
 
 def func33Def : Wasm.Function :=
-  { body := func33, typeIdx := some 3 }
+  { params := [.i32], locals := [.i32, .i64], body := func33, typeIdx := some 8 }
 
 def func34 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 34
 
 def func34Def : Wasm.Function :=
-  { params := [.i32], locals := [.i32, .i64], body := func34, typeIdx := some 4 }
+  { params := [.i32, .i32], body := func34, typeIdx := some 0 }
 
 def func35 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 35
 
 def func35Def : Wasm.Function :=
-  { params := [.i32, .i32], body := func35, typeIdx := some 0 }
+  { params := [.i32, .i32], locals := [.i32], body := func35, typeIdx := some 0 }
 
 def func36 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 36
 
 def func36Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [.i32], body := func36, typeIdx := some 0 }
+  { params := [.i32], locals := [.i32, .i32], body := func36, results := [.i32], typeIdx := some 10 }
 
 def func37 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 37
 
 def func37Def : Wasm.Function :=
-  { params := [.i32], locals := [.i32, .i32], body := func37, results := [.i32], typeIdx := some 10 }
+  { params := [.i32, .i32], body := func37, typeIdx := some 0 }
 
 def func38 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 38
 
@@ -208,12 +208,12 @@ def func38Def : Wasm.Function :=
 def func39 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 39
 
 def func39Def : Wasm.Function :=
-  { params := [.i32, .i32], body := func39, typeIdx := some 0 }
+  { params := [.i32, .i32], body := func39, results := [.i32], typeIdx := some 2 }
 
 def func40 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 40
 
 def func40Def : Wasm.Function :=
-  { params := [.i32, .i32], body := func40, results := [.i32], typeIdx := some 2 }
+  { params := [.i32, .i32], body := func40, typeIdx := some 0 }
 
 def func41 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 41
 
@@ -223,27 +223,27 @@ def func41Def : Wasm.Function :=
 def func42 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 42
 
 def func42Def : Wasm.Function :=
-  { params := [.i32, .i32], body := func42, typeIdx := some 0 }
+  { params := [.i32, .i32], locals := [.i32, .i32], body := func42, typeIdx := some 0 }
 
 def func43 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 43
 
 def func43Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [.i32, .i32], body := func43, typeIdx := some 0 }
+  { params := [.i32, .i32], body := func43, results := [.i32], typeIdx := some 2 }
 
 def func44 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 44
 
 def func44Def : Wasm.Function :=
-  { params := [.i32, .i32], body := func44, results := [.i32], typeIdx := some 2 }
+  { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32], body := func44, results := [.i32], typeIdx := some 2 }
 
 def func45 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 45
 
 def func45Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32], body := func45, results := [.i32], typeIdx := some 2 }
+  { params := [.i32, .i32, .i32], locals := [.i32], body := func45, results := [.i32], typeIdx := some 1 }
 
 def func46 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 46
 
 def func46Def : Wasm.Function :=
-  { params := [.i32, .i32, .i32], locals := [.i32], body := func46, results := [.i32], typeIdx := some 1 }
+  { params := [.i32, .i32], locals := [.i32, .i32, .i64], body := func46, typeIdx := some 0 }
 
 def func47 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 47
 
@@ -253,65 +253,60 @@ def func47Def : Wasm.Function :=
 def func48 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 48
 
 def func48Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [.i32, .i32, .i64], body := func48, typeIdx := some 0 }
+  { params := [.i32, .i32], body := func48, typeIdx := some 0 }
 
 def func49 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 49
 
 def func49Def : Wasm.Function :=
-  { params := [.i32, .i32], body := func49, typeIdx := some 0 }
+  { params := [.i32, .i32, .i32], body := func49, results := [.i32], typeIdx := some 1 }
 
 def func50 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 50
 
 def func50Def : Wasm.Function :=
-  { params := [.i32, .i32, .i32], body := func50, results := [.i32], typeIdx := some 1 }
+  { params := [.i32, .i32], body := func50, typeIdx := some 0 }
 
 def func51 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 51
 
 def func51Def : Wasm.Function :=
-  { params := [.i32, .i32], body := func51, typeIdx := some 0 }
+  { params := [.i32, .i32, .i32, .i32], body := func51, typeIdx := some 4 }
 
 def func52 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 52
 
 def func52Def : Wasm.Function :=
-  { params := [.i32, .i32, .i32, .i32], body := func52, typeIdx := some 6 }
+  { params := [.i32], locals := [.i32, .i32, .i32], body := func52, typeIdx := some 8 }
 
 def func53 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 53
 
 def func53Def : Wasm.Function :=
-  { params := [.i32], locals := [.i32, .i32, .i32], body := func53, typeIdx := some 4 }
+  { params := [.i32, .i32], body := func53, typeIdx := some 0 }
 
 def func54 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 54
 
 def func54Def : Wasm.Function :=
-  { params := [.i32, .i32], body := func54, typeIdx := some 0 }
+  { body := func54, typeIdx := some 3 }
 
 def func55 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 55
 
 def func55Def : Wasm.Function :=
-  { body := func55, typeIdx := some 3 }
+  { params := [.i32, .i32, .i32], locals := [.i32], body := func55, typeIdx := some 5 }
 
 def func56 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 56
 
 def func56Def : Wasm.Function :=
-  { params := [.i32, .i32, .i32], locals := [.i32], body := func56, typeIdx := some 5 }
+  { params := [.i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32], body := func56, results := [.i32], typeIdx := some 6 }
 
 def func57 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 57
 
 def func57Def : Wasm.Function :=
-  { params := [.i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32, .i32, .i32, .i32], body := func57, results := [.i32], typeIdx := some 7 }
+  { params := [.i32, .i32, .i32], body := func57, results := [.i32], typeIdx := some 1 }
 
 def func58 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 58
 
 def func58Def : Wasm.Function :=
-  { params := [.i32, .i32, .i32], body := func58, results := [.i32], typeIdx := some 1 }
-
-def func59 : Wasm.Program := watFunctionBody% "../rust/build/rust_vec/program.wat" 59
-
-def func59Def : Wasm.Function :=
-  { params := [.i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32], body := func59, typeIdx := some 6 }
+  { params := [.i32, .i32, .i32, .i32], locals := [.i32, .i32, .i32, .i32, .i32], body := func58, typeIdx := some 4 }
 
 def «module» : Wasm.Module :=
-  { (watModuleMetadata% "../rust/build/rust_vec/program.wat") with funcs := [func0Def, func1Def, func2Def, func3Def, func4Def, func5Def, func6Def, func7Def, func8Def, func9Def, func10Def, func11Def, func12Def, func13Def, func14Def, func15Def, func16Def, func17Def, func18Def, func19Def, func20Def, func21Def, func22Def, func23Def, func24Def, func25Def, func26Def, func27Def, func28Def, func29Def, func30Def, func31Def, func32Def, func33Def, func34Def, func35Def, func36Def, func37Def, func38Def, func39Def, func40Def, func41Def, func42Def, func43Def, func44Def, func45Def, func46Def, func47Def, func48Def, func49Def, func50Def, func51Def, func52Def, func53Def, func54Def, func55Def, func56Def, func57Def, func58Def, func59Def] }
+  { (watModuleMetadata% "../rust/build/rust_vec/program.wat") with funcs := [func0Def, func1Def, func2Def, func3Def, func4Def, func5Def, func6Def, func7Def, func8Def, func9Def, func10Def, func11Def, func12Def, func13Def, func14Def, func15Def, func16Def, func17Def, func18Def, func19Def, func20Def, func21Def, func22Def, func23Def, func24Def, func25Def, func26Def, func27Def, func28Def, func29Def, func30Def, func31Def, func32Def, func33Def, func34Def, func35Def, func36Def, func37Def, func38Def, func39Def, func40Def, func41Def, func42Def, func43Def, func44Def, func45Def, func46Def, func47Def, func48Def, func49Def, func50Def, func51Def, func52Def, func53Def, func54Def, func55Def, func56Def, func57Def, func58Def] }
 
 -- Compile-time fidelity check: errors if WAT and generated Lean AST differ.
 #guard_msgs (drop info) in
