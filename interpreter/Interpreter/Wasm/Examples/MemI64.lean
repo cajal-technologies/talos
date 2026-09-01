@@ -118,16 +118,10 @@ theorem i64Mem_partial :
     PartiallyMeets (i64MemConfig 8) (fun vs _ => vs = [.i64 0xCDEF]) ∧
     PartiallyMeets (i64MemConfig 9) (fun vs _ => vs = [.i64 0xABCDEF01]) ∧
     PartiallyMeets (i64MemConfig 10) (fun vs _ => vs = [.i64 0x1122334455667788]) := by
-  exact ⟨runSteps_values_partiallyMeets load64_returns_word,
-    runSteps_values_partiallyMeets load8UI64_zero_extends,
-    runSteps_values_partiallyMeets load8SI64_sign_extends,
-    runSteps_values_partiallyMeets load16UI64_zero_extends,
-    runSteps_values_partiallyMeets load16SI64_sign_extends,
-    runSteps_values_partiallyMeets load32UI64_zero_extends,
-    runSteps_values_partiallyMeets load32SI64_sign_extends,
-    runSteps_values_partiallyMeets store8I64_roundtrip,
-    runSteps_values_partiallyMeets store16I64_roundtrip,
-    runSteps_values_partiallyMeets store32I64_roundtrip,
-    runSteps_values_partiallyMeets store64_roundtrip⟩
+  obtain ⟨h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10⟩ := i64Mem_contracts
+  exact ⟨h0.toPartiallyMeets, h1.toPartiallyMeets, h2.toPartiallyMeets,
+    h3.toPartiallyMeets, h4.toPartiallyMeets, h5.toPartiallyMeets,
+    h6.toPartiallyMeets, h7.toPartiallyMeets, h8.toPartiallyMeets,
+    h9.toPartiallyMeets, h10.toPartiallyMeets⟩
 
 end Wasm

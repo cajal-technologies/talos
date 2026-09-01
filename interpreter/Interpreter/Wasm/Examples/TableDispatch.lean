@@ -1,5 +1,5 @@
-import Interpreter.Wasm.Decoder.Wat
 import Interpreter.Wasm.SmallStep
+import Interpreter.Wasm.Examples.Harness
 
 /-! ## Example: table inspection and decoded indirect dispatch
 
@@ -78,10 +78,7 @@ def dispatchWat : String := "
     call_indirect (type $sig)))
 "
 
-private def decoded : Wasm.Module :=
-  match Wasm.Decoder.Wat.decode dispatchWat with
-  | .ok module => module
-  | .error _ => default
+private def decoded : Wasm.Module := Wasm.Examples.decodeOrDefault dispatchWat
 
 private def decodedConfig (index : Nat)
     (args : List Value) : Config Unit :=

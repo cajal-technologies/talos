@@ -198,7 +198,7 @@ Three layers, kept deliberately small:
 
 ## Public spec API: don't expose fuel
 
-`run` takes an explicit `fuel : Nat` so that it terminates syntactically, but fuel is a proof obligation, not part of what a wasm function "does". User-facing specs should never mention fuel — no `∃ fuel, run … fuel = some rs` and no fixed numeric fuel in the statement. Use the fuel-free predicates from `Interpreter/Wasm/Spec/Termination.lean` instead:
+`run` takes an explicit `fuel : Nat` so that it terminates syntactically, but fuel is a proof obligation, not part of what a wasm function "does". User-facing specs should never mention fuel — no `∃ fuel, run … fuel = some rs` and no fixed numeric fuel in the statement. Use the fuel-free predicates from `Interpreter/Wasm/Spec/Defs.lean` instead (`Spec/Termination.lean` re-exports them and adds the `FuncSpec` bridge):
 
 - `Wasm.TerminatesWith env m entry initial args P` — total correctness (some fuel succeeds, result satisfies `P`). Discharge via `TerminatesWith.of_run` / `of_run_eq` by exhibiting a concrete fuel internally.
 - `Wasm.PartiallyMeets env m entry initial args P` — partial correctness (every terminating fuel-bounded run satisfies `P`).
@@ -207,4 +207,9 @@ When writing or updating a spec theorem (tagged `@[spec_of …]` / `@[proves …
 
 ## Examples
 
-Examples live in `interpreter/Interpreter/Wasm/Examples/`. Each file defines a hand-built Wasm module and proves theorems about it using the WP tactic layer. The standard pattern: state the property, apply `wp_run` to reduce to a concrete computation, then close with `simp` / `omega` / domain lemmas. New examples should follow this pattern; browse the existing examples directory to find one close to what you are doing and mirror its structure.
+Examples live in `interpreter/Interpreter/Wasm/Examples/`. Each file defines a hand-built (or WAT-decoded) Wasm module plus the `SmallStep.Config` that starts it, and proves theorems against the small-step machine. The WP tactic layer is *not* used here — no example calls `wp_run`. Two idioms carry the directory:
+
+- **Concrete inputs.** Pin `(runSteps n config).result` with `rfl` or `native_decide`. The decoder-oriented examples go through the total projections in `Examples/Harness.lean` (`runValues` / `runTrapMsg` / `runInvalidMsg` / `decodeOrDefault`) so `native_decide` can evaluate them.
+- **Symbolic inputs.** Exhibit the trace explicitly: `apply Steps.cons` once per named `Step` constructor, closing side conditions with `decide` / `simp` / `omega` / domain lemmas. Loops state an invariant at an intermediate `Config` and are closed by `Nat.strong_induction_on` over a decreasing measure (see `Factorial.lean`, `SimpleLoop.lean`, `Gcd.lean`).
+
+The fuel-free statement comes last: lift the run with `runSteps_eq_success_of_steps` / `runSteps_values_terminates` / `runSteps_values_partiallyMeets` / `runSteps_trapped_trapsWith` into `SmallStep.TerminatesWith` / `PartiallyMeets` / `TrapsWith`. New examples should follow this pattern; browse the existing examples directory to find one close to what you are doing and mirror its structure.

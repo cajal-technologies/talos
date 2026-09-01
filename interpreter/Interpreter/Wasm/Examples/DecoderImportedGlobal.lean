@@ -1,5 +1,5 @@
-import Interpreter.Wasm.Decoder.Wat
 import Interpreter.Wasm.SmallStep
+import Interpreter.Wasm.Examples.Harness
 
 /-! ## Example: imported-global index offset in the WAT decoder
 
@@ -29,9 +29,7 @@ def importedGlobalWat : String := "
 "
 
 private def decoded : Wasm.Module :=
-  match Wasm.Decoder.Wat.decode importedGlobalWat with
-  | .ok module => module
-  | .error _ => default
+  Wasm.Examples.decodeOrDefault importedGlobalWat
 
 /-- One imported global at index `0`, one declared global at index `1`. -/
 theorem importedGlobalWat_global_layout :
@@ -74,7 +72,7 @@ theorem importedGlobalWat_getD_terminates :
 
 theorem importedGlobalWat_getD_partial :
     PartiallyMeets getDConfig (fun values _ => values = [.i32 99]) :=
-  runSteps_values_partiallyMeets importedGlobalWat_getD_returns_99
+  importedGlobalWat_getD_spec.toPartiallyMeets
 
 end DecoderImportedGlobal
 end Wasm

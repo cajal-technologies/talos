@@ -1,5 +1,5 @@
-import Interpreter.Wasm.Decoder.Wat
 import Interpreter.Wasm.SmallStep
+import Interpreter.Wasm.Examples.Harness
 
 /-! ## Example: constant-expression global initializers
 
@@ -11,11 +11,6 @@ import Interpreter.Wasm.SmallStep
 namespace Wasm
 open SmallStep
 namespace GlobalInitExpr
-
-private def decodeWat (wat : String) : Wasm.Module :=
-  match Wasm.Decoder.Wat.decode wat with
-  | .ok module => module
-  | .error _ => default
 
 private def initializedStore (module : Module) : Store Unit :=
   module.runConstGlobals 64 (module.initialStore (α := Unit)) {}
@@ -37,7 +32,8 @@ def globalInitExprWat : String := "
     global.get $g))
 "
 
-private def decoded : Wasm.Module := decodeWat globalInitExprWat
+private def decoded : Wasm.Module :=
+  Wasm.Examples.decodeOrDefault globalInitExprWat
 
 theorem decoded_global_keeps_initExpr :
     (decoded.globals[0]?.map (·.initExpr.isEmpty)).getD true = false := by
@@ -59,7 +55,7 @@ theorem getG_terminates :
 
 theorem getG_partial :
     PartiallyMeets getGConfig (fun values _ => values = [.i32 42]) :=
-  runSteps_values_partiallyMeets getG_returns_42
+  getG_spec.toPartiallyMeets
 
 /-! ### GC allocator initializers (issue #109) -/
 
@@ -79,8 +75,10 @@ def structGlobalArithWat : String := "
     (struct.get $s 0 (global.get $g))))
 "
 
-private def decodedLeaf : Wasm.Module := decodeWat structGlobalLeafWat
-private def decodedArith : Wasm.Module := decodeWat structGlobalArithWat
+private def decodedLeaf : Wasm.Module :=
+  Wasm.Examples.decodeOrDefault structGlobalLeafWat
+private def decodedArith : Wasm.Module :=
+  Wasm.Examples.decodeOrDefault structGlobalArithWat
 
 theorem leaf_struct_new_keeps_initExpr :
     (decodedLeaf.globals[0]?.map (·.initExpr.isEmpty)).getD true = false := by
@@ -102,7 +100,7 @@ theorem leaf_struct_new_terminates :
 theorem leaf_struct_new_partial :
     PartiallyMeets leafStructConfig
       (fun values _ => values = [.i32 100]) :=
-  runSteps_values_partiallyMeets leaf_struct_new_returns_100
+  leaf_struct_new_spec.toPartiallyMeets
 
 theorem arith_struct_new_returns_100 :
     (runSteps 4 arithStructConfig).result.values? =
@@ -117,7 +115,7 @@ theorem arith_struct_new_terminates :
 theorem arith_struct_new_partial :
     PartiallyMeets arithStructConfig
       (fun values _ => values = [.i32 100]) :=
-  runSteps_values_partiallyMeets arith_struct_new_returns_100
+  arith_struct_new_spec.toPartiallyMeets
 
 end GlobalInitExpr
 end Wasm

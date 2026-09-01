@@ -85,11 +85,8 @@ theorem narrowI32_partial :
     PartiallyMeets (narrowI32Config 3) (fun vs _ => vs = [.i32 0xFFFFFFCD]) ∧
     PartiallyMeets (narrowI32Config 4) (fun vs _ => vs = [.i32 0xAB]) ∧
     PartiallyMeets (narrowI32Config 5) (fun vs _ => vs = [.i32 0xABCD]) := by
-  exact ⟨runSteps_values_partiallyMeets load8U_returns_byte,
-    runSteps_values_partiallyMeets load8S_sign_extends,
-    runSteps_values_partiallyMeets load16U_returns_halfword,
-    runSteps_values_partiallyMeets load16S_sign_extends,
-    runSteps_values_partiallyMeets store8_roundtrip,
-    runSteps_values_partiallyMeets store16_roundtrip⟩
+  obtain ⟨h0, h1, h2, h3, h4, h5⟩ := narrowI32_contracts
+  exact ⟨h0.toPartiallyMeets, h1.toPartiallyMeets, h2.toPartiallyMeets,
+    h3.toPartiallyMeets, h4.toPartiallyMeets, h5.toPartiallyMeets⟩
 
 end Wasm

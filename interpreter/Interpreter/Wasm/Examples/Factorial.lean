@@ -188,10 +188,7 @@ theorem factorial_terminates (n : UInt32) :
 theorem factorial_partial (n : UInt32) :
     PartiallyMeets (factorialConfig n)
       (fun values _ =>
-        values = [.i32 (UInt32.ofNat n.toNat.factorial)]) := by
-  intro trace values store observed
-  obtain ⟨expectedTrace, expected⟩ := factorial_steps n
-  obtain ⟨rfl, rfl⟩ := steps_done_deterministic expected observed
-  rfl
+        values = [.i32 (UInt32.ofNat n.toNat.factorial)]) :=
+  (factorialSpec n).toPartiallyMeets
 
 end Wasm

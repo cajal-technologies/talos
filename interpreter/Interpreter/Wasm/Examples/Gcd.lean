@@ -199,10 +199,7 @@ theorem gcd_terminates (a b : UInt32) :
 theorem gcd_partial (a b : UInt32) :
     PartiallyMeets (gcdConfig a b)
       (fun values _ =>
-        values = [.i32 (UInt32.ofNat (Nat.gcd a.toNat b.toNat))]) := by
-  intro trace values store observed
-  obtain ⟨expectedTrace, expected⟩ := gcd_steps a b
-  obtain ⟨rfl, rfl⟩ := steps_done_deterministic expected observed
-  rfl
+        values = [.i32 (UInt32.ofNat (Nat.gcd a.toNat b.toNat))]) :=
+  (gcdSpec a b).toPartiallyMeets
 
 end Wasm

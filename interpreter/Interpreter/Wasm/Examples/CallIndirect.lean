@@ -135,6 +135,6 @@ theorem dispatch_terminates (n : UInt32) :
 theorem dispatch_partial (n : UInt32) :
     PartiallyMeets (dispatchConfig n)
       (fun values _ => values = [.i32 (n + 1)]) :=
-  runSteps_values_partiallyMeets (dispatch_runs n)
+  (dispatchSpec n).toPartiallyMeets
 
 end Wasm

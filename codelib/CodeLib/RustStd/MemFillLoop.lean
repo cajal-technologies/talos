@@ -132,24 +132,8 @@ theorem fillWords_storeIteration_wp
     exact UInt32.add_comm _ _
   have haddrNat : address.toNat = base.toNat + 8 * i.toNat := by
     exact Mem.words64_slotAddr_toNat base i.toNat (by omega)
-  have hstep (k : Nat) (hk : k < 4294967296)
-      (hfit : address.toNat + k < 4294967296) :
-      (address + UInt32.ofNat k).toNat = address.toNat + k :=
-    UInt32.add_ofNat_toNat_noWrap address k hk hfit
-  have h1 : (address + 1).toNat = address.toNat + 1 := by
-    simpa using hstep 1 (by decide) (by omega)
-  have h2 : (address + 2).toNat = address.toNat + 2 := by
-    simpa using hstep 2 (by decide) (by omega)
-  have h3 : (address + 3).toNat = address.toNat + 3 := by
-    simpa using hstep 3 (by decide) (by omega)
-  have h4 : (address + 4).toNat = address.toNat + 4 := by
-    simpa using hstep 4 (by decide) (by omega)
-  have h5 : (address + 5).toNat = address.toNat + 5 := by
-    simpa using hstep 5 (by decide) (by omega)
-  have h6 : (address + 6).toNat = address.toNat + 6 := by
-    simpa using hstep 6 (by decide) (by omega)
-  have h7 : (address + 7).toNat = address.toNat + 7 := by
-    simpa using hstep 7 (by decide) (by omega)
+  obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ :=
+    UInt32.addSteps8 address (by omega)
   iintro ⟨HR, Harray⟩
   icases array64At_fill_next 0 base i.toNat value old suffix $$ Harray with
     ⟨Hold, Hreassemble⟩

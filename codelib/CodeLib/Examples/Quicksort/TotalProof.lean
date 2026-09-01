@@ -1,10 +1,12 @@
-import CodeLib.Examples.Quicksort.Proof
+import CodeLib.Examples.Quicksort.Laws
 
 /-!
 # Total (TWP) Iris verification of the handwritten quicksort
 
-Replay of Proof.lean using total WP ([{ Φ }]) instead of partial WP ({{ Φ }}).
-Total-correctness TerminatesWith via wasm_smallStep_heap_store_terminates.
+Connects the pure list invariants to the small-step Wasm rules using total WP
+([{ Φ }]). Total correctness (`TerminatesWith`) comes from
+`wasm_smallStep_heap_store_terminates`; partial correctness (`PartiallyMeets`)
+reuses the same total proofs through `twp.to_wp`.
 -/
 
 namespace Wasm.Examples.Quicksort
@@ -13,6 +15,20 @@ open Wasm
 open Iris Iris.ProgramLogic Language.Notation Std
 open Wasm.SepLogic
 open Wasm.SmallStep
+
+def partitionLocals
+    (arr : UInt32) (lo hi : Nat) (pivot : UInt32) (i j hiMinusOne : Nat)
+    (tmp : UInt32) (stack : List Value := []) : Locals :=
+  ⟨[.i32 arr, .i32 (UInt32.ofNat lo), .i32 (UInt32.ofNat hi)],
+    [.i32 pivot, .i32 (UInt32.ofNat i), .i32 (UInt32.ofNat j),
+     .i32 (UInt32.ofNat hiMinusOne), .i32 tmp],
+    stack⟩
+
+structure PartitionState where
+  values : List UInt32
+  i : Nat
+  j : Nat
+  tmp : UInt32
 
 set_option maxHeartbeats 4000000 in
 theorem twp_partitionScanStep
@@ -788,5 +804,60 @@ theorem quicksort_terminatesWith (arr : UInt32) (input : List UInt32)
         hseq_out ▸ hpure.2.2.2.1,
         hseq_in ▸ hseq_out ▸ hpure.2.2.2.2,
         by rw [← hpure.1]; exact hread⟩)
+
+/-- Partial correctness, obtained from the total proof: `twp.to_wp` turns the
+total weakest precondition into the partial one, so there is no separate
+partial-WP chain to maintain. -/
+theorem quicksort_partiallyMeets (arr : UInt32) (input : List UInt32)
+    (hfit : arr.toNat + 4 * input.length ≤ UInt32.size)
+    (hmem : arr.toNat + 4 * input.length ≤ 65536) :
+    PartiallyMeets (quicksortConfig arr input)
+      (fun values store =>
+        values = [] ∧ ∃ output : List UInt32,
+          output.length = input.length ∧ Sorted output ∧
+          List.Perm input output ∧
+          readWordArray store.wasm.mem arr input.length = output) := by
+  apply wasm_smallStep_heap_globals_runtime_store_partiallyMeets
+    (α := Unit) (σ := quicksortHeap arr input) (globalσ := ∅)
+  · exact quicksortHeap_agrees arr input hfit
+  · exact quicksortHeap_inBounds arr input hfit hmem
+  · intro index value hget; simp [get?_empty] at hget
+  · simp [quicksortConfig]
+  · intro gs
+    simp only [BI.BigSepM.bigSepM_empty.to_eq, quicksortConfig, RuntimeEnv.currentModule_mk1]
+    iintro ⟨Hbytes, _Hemp, Hruntime, _Hhost⟩
+    have hfitStrict : arr.toNat + 4 * input.length < UInt32.size := by
+      simp only [UInt32.size]; omega
+    ihave Harray := quicksortHeap_pointsTo arr input hfitStrict $$ Hbytes
+    iapply twp.to_wp
+    iapply twp_quicksort quicksortModule 0 1
+      (himports_p := by decide) (hfunction_p := rfl)
+      (himports_q := by decide) (hfunction_q := rfl)
+      (arr := arr) (input := input) (lo := 0) (hi := input.length)
+      (hlohi := Nat.zero_le _) (hhilen := Nat.le_refl _) (hfit := hfit)
+      (callerLocals := ⟨[], [], []⟩) (stack := []) (code := [])
+      (arity := 0) (remainder := []) (controls := []) (calls := [])
+    isplitl [Hruntime]
+    · iexact Hruntime
+    isplitl [Harray]
+    · iexact Harray
+    iintro %output Hruntime_out %hpure Harray_out
+    iapply Wasm.SmallStep.twp_finish
+    iapply twp.value rfl
+    iintro %store %_obs Hstate
+    imod arrayAt_readWordArray store 0 [] 0 arr output
+      (by rw [hpure.1]; exact hfit) $$
+        [$Hstate $Harray_out] with ⟨_Hstate, _Harray_out, %hread⟩
+    ipureintro
+    have hseq_out : segment output 0 input.length = output := by
+      simp only [segment, List.drop_zero, Nat.sub_zero]
+      rw [← hpure.1]; exact List.take_length (l := output)
+    have hseq_in : segment input 0 input.length = input := by
+      simp only [segment, List.drop_zero, Nat.sub_zero]
+      exact List.take_length (l := input)
+    exact ⟨rfl, output, hpure.1,
+      hseq_out ▸ hpure.2.2.2.1,
+      hseq_in ▸ hseq_out ▸ hpure.2.2.2.2,
+      by rw [← hpure.1]; exact hread⟩
 
 end Wasm.Examples.Quicksort

@@ -41,6 +41,6 @@ theorem sumI64_terminates (x : UInt32) :
 theorem sumI64_partial (x : UInt32) :
     PartiallyMeets (sumI64Config x)
       (fun values _ => values = [.i32 (sumI64Result x)]) :=
-  runSteps_values_partiallyMeets (sumI64_runs x)
+  (sumI64Spec x).toPartiallyMeets
 
 end Wasm

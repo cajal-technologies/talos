@@ -115,24 +115,40 @@ values, including multiplicities. -/
 def SortedPermutation (input output : List UInt32) : Prop :=
   output.Pairwise (· ≤ ·) ∧ List.Perm input output
 
+/-- Everything publicly observable at the end of a finite execution. -/
+structure RunOutcome where
+  outcome : SmallStep.ObservableOutcome
+  final : Universal.State
+
+/-- The call returned normally and wrote `output` in the public stream format. -/
+def ReturnsOutput (run : RunOutcome) (output : List UInt32) : Prop :=
+  run.outcome = .done [] ∧
+    run.final.stdio.output = encodeValues output
+
+/-- The call terminated with the allocator's distinguished OOM outcome. -/
+def RanOutOfMemory (run : RunOutcome) : Prop :=
+  run.outcome = .trapped (.host OOM.trapMessage) ∧
+    run.final.oom.raised = true
+
+/-- Every finite terminal execution either satisfies `post` or terminates with
+the allocator's distinguished OOM outcome.  This does not assert termination. -/
+def PartiallyRuns (input : List UInt32) (post : RunOutcome → Prop) : Prop :=
+  PartiallyRunsWithOutcome (Universal.envFor «module») «module» "mergesort"
+    (Universal.State.ofInput (encodeValues input))
+    (fun outcome final =>
+      let run : RunOutcome := ⟨outcome, final⟩
+      RanOutOfMemory run ∨ post run)
+
+/-- A successful execution returns the encoding of a sorted permutation. -/
+def Post (input : List UInt32) (run : RunOutcome) : Prop :=
+  ∃ output : List UInt32,
+    ReturnsOutput run output ∧ SortedPermutation input output
+
 /-- Public partial-correctness contract for the exported call.  Every finite
-observable terminal execution either returns no Wasm values after writing a
-sorted permutation, or reaches precisely the allocator's `talos.oom` trap with
-the typed OOM marker set.  This statement intentionally does not assert that a
-terminal outcome is reached. -/
+terminal execution either reports OOM or satisfies `Post`. -/
 @[spec_of "rust-exported-partial" "mergesort::mergesort"]
 def PublicEntrySpecification : Prop :=
   ∀ input : List UInt32,
-    PartiallyRunsWithOutcome (Universal.envFor «module») «module» "mergesort"
-      (Universal.State.ofInput (encodeValues input))
-      (fun outcome final =>
-        match outcome with
-        | .done values =>
-            values = [] ∧
-              ∃ output : List UInt32,
-                final.stdio.output = encodeValues output ∧
-                SortedPermutation input output
-        | .trapped reason =>
-            reason = .host OOM.trapMessage ∧ final.oom.raised = true)
+    PartiallyRuns input (Post input)
 
 end Project.Mergesort.Spec

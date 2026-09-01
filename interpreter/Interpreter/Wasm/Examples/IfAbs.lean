@@ -86,6 +86,6 @@ theorem ifAbs_terminates (x : UInt32) :
 theorem ifAbs_partial (x : UInt32) :
     PartiallyMeets (ifAbsConfig x)
       (fun values _ => values = [.i32 (ifAbsResult x)]) :=
-  runSteps_values_partiallyMeets (ifAbs_runs x)
+  (ifAbsSpec x).toPartiallyMeets
 
 end Wasm
