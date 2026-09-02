@@ -38,9 +38,6 @@ def get (values : List W) (i : Nat) : Option W := values[i]?
 /-- `Vec::len`. -/
 def len (values : List W) : Nat := values.length
 
-/-- `Vec::is_empty`. -/
-def isEmpty (values : List W) : Bool := values.isEmpty
-
 /-- `<[T]>::contains`, reached through `Vec`'s slice deref. -/
 def contains [BEq W] (values : List W) (x : W) : Bool := values.contains x
 

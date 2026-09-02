@@ -32,6 +32,7 @@ import CodeLib.RustStd.Array.IsEmpty
 import CodeLib.RustStd.Array.SmallStep
 import CodeLib.RustStd.Vec.Basic
 import CodeLib.RustStd.Vec.Codec
+import CodeLib.RustStd.Borsh
 import CodeLib.Near.State
 import CodeLib.Near.Env
 import CodeLib.Near.Proof

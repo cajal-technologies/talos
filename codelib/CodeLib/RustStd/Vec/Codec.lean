@@ -15,9 +15,13 @@ That bound is a hypothesis on the round-trip theorem rather than something
 hidden inside a definition, because above it the header genuinely loses
 information.
 
-Consumer: `Project.RustVec.Spec`, whose `vec_sum32` contract is stated with
-`deserialize` and read back on well-formed input through
-`deserialize_serialize`.
+This length-prefixed layout is exactly borsh's encoding of a dynamic
+container, so `CodeLib.RustStd.Borsh` names `serialize` rather than defining a
+second format.
+
+Consumer: `CodeLib.RustStd.Borsh`, which names `serialize` and `deserialize`
+as the borsh container layout; `Project.RustVec.Spec` states its contracts
+through those names and reads them back through `deserialize_serialize`.
 -/
 
 namespace Wasm.RustStd.Vec
@@ -44,7 +48,7 @@ def deserialize (codec : WordCodec W) (bytes : List UInt8) : Option (List W) :=
         then some values
         else none
 
-@[simp] theorem serialize_length (codec : WordCodec W) (values : List W) :
+theorem serialize_length (codec : WordCodec W) (values : List W) :
     (serialize codec values).length = 4 + codec.width * values.length := by
   simp [serialize]
 
@@ -54,7 +58,8 @@ private theorem serialize_split (codec : WordCodec W) (values : List W) :
         = WordCodec.u32le.encode (UInt32.ofNat values.length)
       ∧ (serialize codec values).drop 4 = codec.serialize values := by
   have hlen :
-      (WordCodec.u32le.encode (UInt32.ofNat values.length)).length = 4 := rfl
+      (WordCodec.u32le.encode (UInt32.ofNat values.length)).length = 4 :=
+    WordCodec.u32le_encode_length _
   constructor
   · rw [serialize, ← hlen, List.take_left]
   · rw [serialize, ← hlen, List.drop_left]
@@ -72,7 +77,8 @@ theorem deserialize_serialize (codec : WordCodec W) (values : List W)
           (WordCodec.u32le.encode (UInt32.ofNat values.length))).toNat
     rw [WordCodec.u32le.decode_encode]
     exact (UInt32.toNat_ofNat_of_lt hbound).symm
-  rw [deserialize, if_neg (by simp), hdrop, codec.deserialize_serialize]
+  rw [deserialize, if_neg (by simp [serialize_length]), hdrop,
+    codec.deserialize_serialize]
   exact if_pos hcount
 
 end Wasm.RustStd.Vec
