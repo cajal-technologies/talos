@@ -2887,7 +2887,9 @@ theorem wp_load8U
     exact ⟨[],
       .running ⟨⟨params, localValues, .i32 byte.toUInt32 :: values⟩,
         code, arity, remainder, controls, calls⟩,
-      store, [], ⟨rfl, _, rfl, by simpa [Hread] using Step.load8U hbound⟩⟩
+      store, [], ⟨rfl, _, rfl,
+        by simpa [Hread] using
+          Step.load8U (α := α) (address := Value.i32 address) rfl hbound⟩⟩
   iintro !> %e₂ %store₂ %forks %Hstep Hcredit
   rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
   change forks = [] at hforks
@@ -2899,7 +2901,8 @@ theorem wp_load8U
       (.instruction (.load8U offset))
       ⟨.running ⟨⟨params, localValues, .i32 byte.toUInt32 :: values⟩,
         code, arity, remainder, controls, calls⟩, store⟩ := by
-    simpa [Hread] using (Step.load8U (α := α) hbound)
+    simpa [Hread] using
+      (Step.load8U (α := α) (address := Value.i32 address) rfl hbound)
   obtain ⟨rfl, hconfig⟩ := step_deterministic expectedStep wasmStep
   have parts := Config.mk.inj hconfig
   have hexpr := parts.1
@@ -3038,7 +3041,7 @@ theorem wp_load8S
         code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl, by
         rw [show byte = store.wasm.mem.read8 (address + offset) from Hread.symm]
-        exact Step.load8S hbound⟩⟩
+        exact Step.load8S (address := Value.i32 address) rfl hbound⟩⟩
   iintro !> %e₂ %store₂ %forks %Hstep Hcredit
   rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
   change forks = [] at hforks
@@ -3052,7 +3055,7 @@ theorem wp_load8S
         .i32 (Int32.ofInt (signExtend (byte.toUInt32.toNat % 256) 8)).toUInt32 :: values⟩,
         code, arity, remainder, controls, calls⟩, store⟩ := by
     rw [show byte = store.wasm.mem.read8 (address + offset) from Hread.symm]
-    exact Step.load8S (α := α) hbound
+    exact Step.load8S (α := α) (address := Value.i32 address) rfl hbound
   obtain ⟨rfl, hconfig⟩ := step_deterministic expectedStep wasmStep
   have parts := Config.mk.inj hconfig
   have hexpr := parts.1
@@ -3111,7 +3114,9 @@ theorem wp_load16U
     exact ⟨[],
       .running ⟨⟨params, localValues, .i32 (word &&& 0xFFFF) :: values⟩,
         code, arity, remainder, controls, calls⟩,
-      store, [], ⟨rfl, _, rfl, by simpa [Hread] using Step.load16U hbound⟩⟩
+      store, [], ⟨rfl, _, rfl,
+        by simpa [Hread] using
+          Step.load16U (α := α) (address := Value.i32 address) rfl hbound⟩⟩
   iintro !> %e₂ %store₂ %forks %Hstep Hcredit
   rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
   change forks = [] at hforks
@@ -3123,7 +3128,8 @@ theorem wp_load16U
       (.instruction (.load16U offset))
       ⟨.running ⟨⟨params, localValues, .i32 (word &&& 0xFFFF) :: values⟩,
         code, arity, remainder, controls, calls⟩, store⟩ := by
-    simpa [Hread] using (Step.load16U (α := α) hbound)
+    simpa [Hread] using
+      (Step.load16U (α := α) (address := Value.i32 address) rfl hbound)
   obtain ⟨rfl, hconfig⟩ := step_deterministic expectedStep wasmStep
   have parts := Config.mk.inj hconfig
   have hexpr := parts.1
@@ -3188,7 +3194,7 @@ theorem wp_load16S
         code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl, by
         rw [show word &&& 0xFFFF = store.wasm.mem.read16 (address + offset) from Hread.symm]
-        exact Step.load16S hbound⟩⟩
+        exact Step.load16S (address := Value.i32 address) rfl hbound⟩⟩
   iintro !> %e₂ %store₂ %forks %Hstep Hcredit
   rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
   change forks = [] at hforks
@@ -3202,7 +3208,7 @@ theorem wp_load16S
         .i32 (Int32.ofInt (signExtend ((word &&& 0xFFFF).toNat % 65536) 16)).toUInt32 :: values⟩,
         code, arity, remainder, controls, calls⟩, store⟩ := by
     rw [show word &&& 0xFFFF = store.wasm.mem.read16 (address + offset) from Hread.symm]
-    exact Step.load16S (α := α) hbound
+    exact Step.load16S (α := α) (address := Value.i32 address) rfl hbound
   obtain ⟨rfl, hconfig⟩ := step_deterministic expectedStep wasmStep
   have parts := Config.mk.inj hconfig
   have hexpr := parts.1
@@ -3652,7 +3658,8 @@ theorem wp_store8
       { store with wasm :=
           { store.wasm with
             mem := store.wasm.mem.write8 (address + offset) value.toUInt8 } },
-      [], ⟨rfl, _, rfl, Step.store8 hbound⟩⟩
+      [], ⟨rfl, _, rfl,
+        Step.store8 (α := α) (address := Value.i32 address) rfl hbound⟩⟩
   iintro !> %e₂ %store₂ %forks %Hstep Hcredit
   rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
   change forks = [] at hforks
@@ -3668,7 +3675,7 @@ theorem wp_store8
             { store.wasm with
               mem := store.wasm.mem.write8
                 (address + offset) value.toUInt8 } }⟩ :=
-    Step.store8 hbound
+    Step.store8 (α := α) (address := Value.i32 address) rfl hbound
   obtain ⟨rfl, hconfig⟩ := step_deterministic expectedStep wasmStep
   have parts := Config.mk.inj hconfig
   have hexpr := parts.1
@@ -3811,7 +3818,8 @@ theorem wp_store16
       { store with wasm :=
           { store.wasm with
             mem := store.wasm.mem.write16 (address + offset) value } },
-      [], ⟨rfl, _, rfl, Step.store16 hbound⟩⟩
+      [], ⟨rfl, _, rfl,
+        Step.store16 (α := α) (address := Value.i32 address) rfl hbound⟩⟩
   iintro !> %e₂ %store₂ %forks %Hstep Hcredit
   rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
   change forks = [] at hforks
@@ -3828,7 +3836,7 @@ theorem wp_store16
         { store with wasm :=
             { store.wasm with
               mem := store.wasm.mem.write16 (address + offset) value } }⟩ :=
-    Step.store16 hbound
+    Step.store16 (α := α) (address := Value.i32 address) rfl hbound
   obtain ⟨rfl, hconfig⟩ := step_deterministic expectedStep wasmStep
   have parts := Config.mk.inj hconfig
   have hexpr := parts.1
@@ -4058,7 +4066,9 @@ theorem wp_load32
     exact ⟨[],
       .running ⟨⟨params, localValues, .i32 word :: values⟩,
         code, arity, remainder, controls, calls⟩,
-      store, [], ⟨rfl, _, rfl, by simpa [Hread] using Step.load32 hbound⟩⟩
+      store, [], ⟨rfl, _, rfl,
+        by simpa [Hread] using
+          Step.load32 (α := α) (address := Value.i32 address) rfl hbound⟩⟩
   iintro !> %e₂ %store₂ %forks %Hstep Hcredit
   rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
   change forks = [] at hforks
@@ -4070,7 +4080,8 @@ theorem wp_load32
       (.instruction (.load32 offset))
       ⟨.running ⟨⟨params, localValues, .i32 word :: values⟩,
         code, arity, remainder, controls, calls⟩, store⟩ := by
-    simpa [Hread] using (Step.load32 (α := α) hbound)
+    simpa [Hread] using
+      (Step.load32 (α := α) (address := Value.i32 address) rfl hbound)
   obtain ⟨rfl, hconfig⟩ := step_deterministic expectedStep wasmStep
   have parts := Config.mk.inj hconfig
   have hexpr := parts.1
@@ -4133,7 +4144,8 @@ theorem wp_store32
       { store with wasm :=
           { store.wasm with
             mem := store.wasm.mem.write32 (address + offset) value } },
-      [], ⟨rfl, _, rfl, Step.store32 hbound⟩⟩
+      [], ⟨rfl, _, rfl,
+        Step.store32 (α := α) (address := Value.i32 address) rfl hbound⟩⟩
   iintro !> %e₂ %store₂ %forks %Hstep Hcredit
   rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
   change forks = [] at hforks
@@ -4150,7 +4162,7 @@ theorem wp_store32
         { store with wasm :=
             { store.wasm with
               mem := store.wasm.mem.write32 (address + offset) value } }⟩ :=
-    Step.store32 hbound
+    Step.store32 (α := α) (address := Value.i32 address) rfl hbound
   obtain ⟨rfl, hconfig⟩ := step_deterministic expectedStep wasmStep
   have parts := Config.mk.inj hconfig
   have hexpr := parts.1
@@ -7765,7 +7777,9 @@ theorem wp_load8UMemory64
     exact ⟨[],
       .running ⟨⟨params, localValues, .i32 byte.toUInt32 :: values⟩,
         code, arity, remainder, controls, calls⟩,
-      store, [], ⟨rfl, _, rfl, by simpa [Hread] using Step.load8UMemory64 hbound⟩⟩
+      store, [], ⟨rfl, _, rfl,
+        by simpa [Hread] using
+          Step.load8U (α := α) (address := Value.i64 address) rfl hbound⟩⟩
   iintro !> %e₂ %store₂ %forks %Hstep Hcredit
   rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
   change forks = [] at hforks
@@ -7777,7 +7791,8 @@ theorem wp_load8UMemory64
       (.instruction (.load8U offset))
       ⟨.running ⟨⟨params, localValues, .i32 byte.toUInt32 :: values⟩,
         code, arity, remainder, controls, calls⟩, store⟩ := by
-    simpa [Hread] using (Step.load8UMemory64 (α := α) hbound)
+    simpa [Hread] using
+      (Step.load8U (α := α) (address := Value.i64 address) rfl hbound)
   obtain ⟨rfl, hconfig⟩ := step_deterministic expectedStep wasmStep
   have parts := Config.mk.inj hconfig
   have hexpr := parts.1
@@ -7839,7 +7854,7 @@ theorem wp_load8SMemory64
         code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl, by
         rw [show byte = store.wasm.mem.read8 (address.toUInt32 + offset) from Hread.symm]
-        exact Step.load8SMemory64 hbound⟩⟩
+        exact Step.load8S (address := Value.i64 address) rfl hbound⟩⟩
   iintro !> %e₂ %store₂ %forks %Hstep Hcredit
   rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
   change forks = [] at hforks
@@ -7853,7 +7868,7 @@ theorem wp_load8SMemory64
         .i32 (Int32.ofInt (signExtend (byte.toUInt32.toNat % 256) 8)).toUInt32 :: values⟩,
         code, arity, remainder, controls, calls⟩, store⟩ := by
     rw [show byte = store.wasm.mem.read8 (address.toUInt32 + offset) from Hread.symm]
-    exact Step.load8SMemory64 hbound
+    exact Step.load8S (address := Value.i64 address) rfl hbound
   obtain ⟨rfl, hconfig⟩ := step_deterministic expectedStep wasmStep
   have parts := Config.mk.inj hconfig
   have hexpr := parts.1
@@ -7912,7 +7927,9 @@ theorem wp_load16UMemory64
     exact ⟨[],
       .running ⟨⟨params, localValues, .i32 (word &&& 0xFFFF) :: values⟩,
         code, arity, remainder, controls, calls⟩,
-      store, [], ⟨rfl, _, rfl, by simpa [Hread] using Step.load16UMemory64 hbound⟩⟩
+      store, [], ⟨rfl, _, rfl,
+        by simpa [Hread] using
+          Step.load16U (α := α) (address := Value.i64 address) rfl hbound⟩⟩
   iintro !> %e₂ %store₂ %forks %Hstep Hcredit
   rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
   change forks = [] at hforks
@@ -7924,7 +7941,8 @@ theorem wp_load16UMemory64
       (.instruction (.load16U offset))
       ⟨.running ⟨⟨params, localValues, .i32 (word &&& 0xFFFF) :: values⟩,
         code, arity, remainder, controls, calls⟩, store⟩ := by
-    simpa [Hread] using Step.load16UMemory64 hbound
+    simpa [Hread] using
+      Step.load16U (α := α) (address := Value.i64 address) rfl hbound
   obtain ⟨rfl, hconfig⟩ := step_deterministic expectedStep wasmStep
   have parts := Config.mk.inj hconfig
   have hexpr := parts.1
@@ -7988,7 +8006,7 @@ theorem wp_load16SMemory64
       store, [], ⟨rfl, _, rfl, by
         rw [show word &&& 0xFFFF = store.wasm.mem.read16 (address.toUInt32 + offset)
             from Hread.symm]
-        exact Step.load16SMemory64 hbound⟩⟩
+        exact Step.load16S (address := Value.i64 address) rfl hbound⟩⟩
   iintro !> %e₂ %store₂ %forks %Hstep Hcredit
   rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
   change forks = [] at hforks
@@ -8003,7 +8021,7 @@ theorem wp_load16SMemory64
         code, arity, remainder, controls, calls⟩, store⟩ := by
     rw [show word &&& 0xFFFF = store.wasm.mem.read16 (address.toUInt32 + offset)
         from Hread.symm]
-    exact Step.load16SMemory64 hbound
+    exact Step.load16S (address := Value.i64 address) rfl hbound
   obtain ⟨rfl, hconfig⟩ := step_deterministic expectedStep wasmStep
   have parts := Config.mk.inj hconfig
   have hexpr := parts.1
@@ -8062,7 +8080,8 @@ theorem wp_store8Memory64
           { store.wasm with
             mem := store.wasm.mem.write8 (address.toUInt32 + offset) value.toUInt8 } },
       [], ⟨rfl, _, rfl,
-        by simpa only [Wasm.SmallStep.setMemory_eq] using Step.store8Memory64 hbound⟩⟩
+        by simpa only [Wasm.SmallStep.setMemory_eq] using
+          Step.store8 (α := α) (address := Value.i64 address) rfl hbound⟩⟩
   iintro !> %e₂ %store₂ %forks %Hstep Hcredit
   rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
   change forks = [] at hforks
@@ -8076,7 +8095,8 @@ theorem wp_store8Memory64
         { store with wasm :=
             { store.wasm with
               mem := store.wasm.mem.write8 (address.toUInt32 + offset) value.toUInt8 } }⟩ := by
-    simpa only [Wasm.SmallStep.setMemory_eq] using Step.store8Memory64 hbound
+    simpa only [Wasm.SmallStep.setMemory_eq] using
+      Step.store8 (α := α) (address := Value.i64 address) rfl hbound
   obtain ⟨rfl, hconfig⟩ := step_deterministic expectedStep wasmStep
   have parts := Config.mk.inj hconfig
   have hexpr := parts.1
@@ -8140,7 +8160,8 @@ theorem wp_store16Memory64
           { store.wasm with
             mem := store.wasm.mem.write16 (address.toUInt32 + offset) value } },
       [], ⟨rfl, _, rfl,
-        by simpa only [Wasm.SmallStep.setMemory_eq] using Step.store16Memory64 hbound⟩⟩
+        by simpa only [Wasm.SmallStep.setMemory_eq] using
+          Step.store16 (α := α) (address := Value.i64 address) rfl hbound⟩⟩
   iintro !> %e₂ %store₂ %forks %Hstep Hcredit
   rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
   change forks = [] at hforks
@@ -8154,7 +8175,8 @@ theorem wp_store16Memory64
         { store with wasm :=
             { store.wasm with
               mem := store.wasm.mem.write16 (address.toUInt32 + offset) value } }⟩ := by
-    simpa only [Wasm.SmallStep.setMemory_eq] using Step.store16Memory64 hbound
+    simpa only [Wasm.SmallStep.setMemory_eq] using
+      Step.store16 (α := α) (address := Value.i64 address) rfl hbound
   obtain ⟨rfl, hconfig⟩ := step_deterministic expectedStep wasmStep
   have parts := Config.mk.inj hconfig
   have hexpr := parts.1
@@ -8218,7 +8240,9 @@ theorem wp_load32Memory64
     exact ⟨[],
       .running ⟨⟨params, localValues, .i32 word :: values⟩,
         code, arity, remainder, controls, calls⟩,
-      store, [], ⟨rfl, _, rfl, by simpa [Hread] using Step.load32Memory64 hbound⟩⟩
+      store, [], ⟨rfl, _, rfl,
+        by simpa [Hread] using
+          Step.load32 (α := α) (address := Value.i64 address) rfl hbound⟩⟩
   iintro !> %e₂ %store₂ %forks %Hstep Hcredit
   rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
   change forks = [] at hforks
@@ -8230,7 +8254,8 @@ theorem wp_load32Memory64
       (.instruction (.load32 offset))
       ⟨.running ⟨⟨params, localValues, .i32 word :: values⟩,
         code, arity, remainder, controls, calls⟩, store⟩ := by
-    simpa [Hread] using Step.load32Memory64 hbound
+    simpa [Hread] using
+      Step.load32 (α := α) (address := Value.i64 address) rfl hbound
   obtain ⟨rfl, hconfig⟩ := step_deterministic expectedStep wasmStep
   have parts := Config.mk.inj hconfig
   have hexpr := parts.1
@@ -8293,7 +8318,8 @@ theorem wp_store32Memory64
           { store.wasm with
             mem := store.wasm.mem.write32 (address.toUInt32 + offset) value } },
       [], ⟨rfl, _, rfl,
-        by simpa only [Wasm.SmallStep.setMemory_eq] using Step.store32Memory64 hbound⟩⟩
+        by simpa only [Wasm.SmallStep.setMemory_eq] using
+          Step.store32 (α := α) (address := Value.i64 address) rfl hbound⟩⟩
   iintro !> %e₂ %store₂ %forks %Hstep Hcredit
   rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
   change forks = [] at hforks
@@ -8307,7 +8333,8 @@ theorem wp_store32Memory64
         { store with wasm :=
             { store.wasm with
               mem := store.wasm.mem.write32 (address.toUInt32 + offset) value } }⟩ := by
-    simpa only [Wasm.SmallStep.setMemory_eq] using Step.store32Memory64 hbound
+    simpa only [Wasm.SmallStep.setMemory_eq] using
+      Step.store32 (α := α) (address := Value.i64 address) rfl hbound
   obtain ⟨rfl, hconfig⟩ := step_deterministic expectedStep wasmStep
   have parts := Config.mk.inj hconfig
   have hexpr := parts.1
