@@ -121,7 +121,7 @@ theorem len_export_correct : LenExportSpec := by
     ihave Hfat := fatPtrHeap_pointsTo p dataPtr len hfat.noWrap $$ Hbytes
     icases Hfat with ⟨Hdata, Hlen⟩
     obtain ⟨hp1, hp2, hp3, hp4, hp5, hp6, hp7⟩ :=
-      fatPtrArithmetic hfat
+      fatPtrArithmetic_of hfat
     simp only [func4]
     iapply SmallStep.wp_localGet rfl
     inext
@@ -182,7 +182,7 @@ theorem is_empty_export_correct : IsEmptyExportSpec := by
     ihave Hfat := fatPtrHeap_pointsTo p dataPtr len hfat.noWrap $$ Hbytes
     icases Hfat with ⟨Hdata, Hlen⟩
     obtain ⟨hp1, hp2, hp3, hp4, hp5, hp6, hp7⟩ :=
-      fatPtrArithmetic hfat
+      fatPtrArithmetic_of hfat
     simp only [func5]
     iapply SmallStep.wp_localGet rfl
     inext
