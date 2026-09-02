@@ -24,25 +24,42 @@ structure MemoryKey where
   addr  : UInt32
   deriving DecidableEq, Ord, BEq, Repr
 
-structure GlobalKey where
+/-- The key shape shared by every ghost map that is indexed by a module
+instance together with an index inside that instance: globals, data segments,
+tables and element segments.  Those four keys are the same pair of naturals,
+so there is one structure here and the `Ord` bundle below is proved once. -/
+structure InstanceIndexKey where
   instanceId : Nat
   index      : Nat
   deriving DecidableEq, Ord, BEq, Repr
 
-structure DataSegmentKey where
-  instanceId : Nat
-  index      : Nat
-  deriving DecidableEq, Ord, BEq, Repr
+/-- Key of the globals ghost map: instance id + global index. -/
+abbrev GlobalKey := InstanceIndexKey
+/-- Key of the passive-data-segment ghost map: instance id + segment index. -/
+abbrev DataSegmentKey := InstanceIndexKey
+/-- Key of the tables ghost map: instance id + table index. -/
+abbrev TableKey := InstanceIndexKey
+/-- Key of the element-segment ghost map: instance id + segment index. -/
+abbrev ElementSegmentKey := InstanceIndexKey
 
-structure TableKey where
-  instanceId : Nat
-  index      : Nat
-  deriving DecidableEq, Ord, BEq, Repr
+-- The projections are also used as bare constants (`congrArg GlobalKey.index h`),
+-- and a bare `GlobalKey.index` does not resolve through an `abbrev`.  These
+-- aliases keep every such spelling pointing at the one real projection.
+namespace GlobalKey
+export InstanceIndexKey (instanceId index)
+end GlobalKey
 
-structure ElementSegmentKey where
-  instanceId : Nat
-  index      : Nat
-  deriving DecidableEq, Ord, BEq, Repr
+namespace DataSegmentKey
+export InstanceIndexKey (instanceId index)
+end DataSegmentKey
+
+namespace TableKey
+export InstanceIndexKey (instanceId index)
+end TableKey
+
+namespace ElementSegmentKey
+export InstanceIndexKey (instanceId index)
+end ElementSegmentKey
 
 -- The derived Ord for a 2-field struct {f1 : α, f2 : β} gives
 --   compare a b = (compare a.f1 b.f1).then ((compare a.f2 b.f2).then .eq)
@@ -55,21 +72,9 @@ private theorem memKey_compare_eq (a b : MemoryKey) :
     compare a b = (compare a.memId b.memId).then (compare a.addr b.addr) := by
   simp only [compare, Ord.compare, instOrdMemoryKey.ord, ord_then_eq_self]
 
-private theorem globalKey_compare_eq (a b : GlobalKey) :
+private theorem instanceIndexKey_compare_eq (a b : InstanceIndexKey) :
     compare a b = (compare a.instanceId b.instanceId).then (compare a.index b.index) := by
-  simp only [compare, Ord.compare, instOrdGlobalKey.ord, ord_then_eq_self]
-
-private theorem dataSegKey_compare_eq (a b : DataSegmentKey) :
-    compare a b = (compare a.instanceId b.instanceId).then (compare a.index b.index) := by
-  simp only [compare, Ord.compare, instOrdDataSegmentKey.ord, ord_then_eq_self]
-
-private theorem tableKey_compare_eq (a b : TableKey) :
-    compare a b = (compare a.instanceId b.instanceId).then (compare a.index b.index) := by
-  simp only [compare, Ord.compare, instOrdTableKey.ord, ord_then_eq_self]
-
-private theorem elemSegKey_compare_eq (a b : ElementSegmentKey) :
-    compare a b = (compare a.instanceId b.instanceId).then (compare a.index b.index) := by
-  simp only [compare, Ord.compare, instOrdElementSegmentKey.ord, ord_then_eq_self]
+  simp only [compare, Ord.compare, instOrdInstanceIndexKey.ord, ord_then_eq_self]
 
 -- Concrete Ordering reductions (true by iota reduction, so rfl works).
 private theorem ord_gt_then (x : Ordering) : Ordering.gt.then x = .gt := rfl
@@ -165,94 +170,25 @@ instance instLawfulEqCmpMemoryKey : LawfulEqCmp (compare (α := MemoryKey)) wher
       cases a; cases b; simp_all
     · exact absurd h (by decide)
 
--- GlobalKey: OrientedCmp, TransCmp, LawfulEqCmp
-instance instOrientedCmpGlobalKey : OrientedCmp (compare (α := GlobalKey)) where
+-- InstanceIndexKey: OrientedCmp, TransCmp, LawfulEqCmp.  One bundle serves
+-- GlobalKey, DataSegmentKey, TableKey and ElementSegmentKey alike.
+instance instOrientedCmpInstanceIndexKey :
+    OrientedCmp (compare (α := InstanceIndexKey)) where
   eq_swap {a b} := by
-    rw [globalKey_compare_eq a b, globalKey_compare_eq b a]
+    rw [instanceIndexKey_compare_eq a b, instanceIndexKey_compare_eq b a]
     exact then_orient a.instanceId b.instanceId a.index b.index
 
-instance instTransCmpGlobalKey : TransCmp (compare (α := GlobalKey)) where
+instance instTransCmpInstanceIndexKey : TransCmp (compare (α := InstanceIndexKey)) where
   isLE_trans {a b c} hab hbc := by
-    rw [globalKey_compare_eq] at hab hbc ⊢
+    rw [instanceIndexKey_compare_eq] at hab hbc ⊢
     exact then_isLE_trans a.instanceId b.instanceId c.instanceId a.index b.index c.index hab hbc
 
-instance instLawfulEqCmpGlobalKey : LawfulEqCmp (compare (α := GlobalKey)) where
+instance instLawfulEqCmpInstanceIndexKey :
+    LawfulEqCmp (compare (α := InstanceIndexKey)) where
   compare_self {a} := by
-    rw [globalKey_compare_eq]; simp [ReflCmp.compare_self]
+    rw [instanceIndexKey_compare_eq]; simp [ReflCmp.compare_self]
   eq_of_compare {a b} h := by
-    rw [globalKey_compare_eq] at h
-    rcases h₁ : compare a.instanceId b.instanceId with _ | _ | _ <;>
-    simp only [h₁, ord_lt_then, ord_eq_then, ord_gt_then] at h
-    · exact absurd h (by decide)
-    · have hi := LawfulEqCmp.eq_of_compare (cmp := compare (α := Nat)) h₁
-      have hj := LawfulEqCmp.eq_of_compare (cmp := compare (α := Nat)) h
-      cases a; cases b; simp_all
-    · exact absurd h (by decide)
-
--- DataSegmentKey: OrientedCmp, TransCmp, LawfulEqCmp
-instance instOrientedCmpDataSegmentKey : OrientedCmp (compare (α := DataSegmentKey)) where
-  eq_swap {a b} := by
-    rw [dataSegKey_compare_eq a b, dataSegKey_compare_eq b a]
-    exact then_orient a.instanceId b.instanceId a.index b.index
-
-instance instTransCmpDataSegmentKey : TransCmp (compare (α := DataSegmentKey)) where
-  isLE_trans {a b c} hab hbc := by
-    rw [dataSegKey_compare_eq] at hab hbc ⊢
-    exact then_isLE_trans a.instanceId b.instanceId c.instanceId a.index b.index c.index hab hbc
-
-instance instLawfulEqCmpDataSegmentKey : LawfulEqCmp (compare (α := DataSegmentKey)) where
-  compare_self {a} := by
-    rw [dataSegKey_compare_eq]; simp [ReflCmp.compare_self]
-  eq_of_compare {a b} h := by
-    rw [dataSegKey_compare_eq] at h
-    rcases h₁ : compare a.instanceId b.instanceId with _ | _ | _ <;>
-    simp only [h₁, ord_lt_then, ord_eq_then, ord_gt_then] at h
-    · exact absurd h (by decide)
-    · have hi := LawfulEqCmp.eq_of_compare (cmp := compare (α := Nat)) h₁
-      have hj := LawfulEqCmp.eq_of_compare (cmp := compare (α := Nat)) h
-      cases a; cases b; simp_all
-    · exact absurd h (by decide)
-
--- TableKey: OrientedCmp, TransCmp, LawfulEqCmp
-instance instOrientedCmpTableKey : OrientedCmp (compare (α := TableKey)) where
-  eq_swap {a b} := by
-    rw [tableKey_compare_eq a b, tableKey_compare_eq b a]
-    exact then_orient a.instanceId b.instanceId a.index b.index
-
-instance instTransCmpTableKey : TransCmp (compare (α := TableKey)) where
-  isLE_trans {a b c} hab hbc := by
-    rw [tableKey_compare_eq] at hab hbc ⊢
-    exact then_isLE_trans a.instanceId b.instanceId c.instanceId a.index b.index c.index hab hbc
-
-instance instLawfulEqCmpTableKey : LawfulEqCmp (compare (α := TableKey)) where
-  compare_self {a} := by
-    rw [tableKey_compare_eq]; simp [ReflCmp.compare_self]
-  eq_of_compare {a b} h := by
-    rw [tableKey_compare_eq] at h
-    rcases h₁ : compare a.instanceId b.instanceId with _ | _ | _ <;>
-    simp only [h₁, ord_lt_then, ord_eq_then, ord_gt_then] at h
-    · exact absurd h (by decide)
-    · have hi := LawfulEqCmp.eq_of_compare (cmp := compare (α := Nat)) h₁
-      have hj := LawfulEqCmp.eq_of_compare (cmp := compare (α := Nat)) h
-      cases a; cases b; simp_all
-    · exact absurd h (by decide)
-
--- ElementSegmentKey: OrientedCmp, TransCmp, LawfulEqCmp
-instance instOrientedCmpElementSegmentKey : OrientedCmp (compare (α := ElementSegmentKey)) where
-  eq_swap {a b} := by
-    rw [elemSegKey_compare_eq a b, elemSegKey_compare_eq b a]
-    exact then_orient a.instanceId b.instanceId a.index b.index
-
-instance instTransCmpElementSegmentKey : TransCmp (compare (α := ElementSegmentKey)) where
-  isLE_trans {a b c} hab hbc := by
-    rw [elemSegKey_compare_eq] at hab hbc ⊢
-    exact then_isLE_trans a.instanceId b.instanceId c.instanceId a.index b.index c.index hab hbc
-
-instance instLawfulEqCmpElementSegmentKey : LawfulEqCmp (compare (α := ElementSegmentKey)) where
-  compare_self {a} := by
-    rw [elemSegKey_compare_eq]; simp [ReflCmp.compare_self]
-  eq_of_compare {a b} h := by
-    rw [elemSegKey_compare_eq] at h
+    rw [instanceIndexKey_compare_eq] at h
     rcases h₁ : compare a.instanceId b.instanceId with _ | _ | _ <;>
     simp only [h₁, ord_lt_then, ord_eq_then, ord_gt_then] at h
     · exact absurd h (by decide)
@@ -1129,6 +1065,93 @@ def u64Byte (v : UInt64) (n : Nat) : UInt8 :=
   | _ => (v >>> 56).toUInt8
 
 omit inst in
+private theorem reassemble32_nat (n : Nat) (h : n < 2 ^ 32) :
+    n % 2 ^ 8 ||| (((n >>> 8) % 2 ^ 8) <<< 8) % 2 ^ 32 |||
+      (((n >>> 16) % 2 ^ 8) <<< 16) % 2 ^ 32 |||
+      (((n >>> 24) % 2 ^ 8) <<< 24) % 2 ^ 32 = n := by
+  apply Nat.eq_of_testBit_eq
+  intro i
+  simp only [Nat.testBit_or, Nat.testBit_mod_two_pow,
+    Nat.testBit_shiftLeft, Nat.testBit_shiftRight]
+  by_cases hi8 : i < 8
+  · simp [hi8, show i < 32 by omega, show ¬i ≥ 8 by omega,
+      show ¬i ≥ 16 by omega, show ¬i ≥ 24 by omega]
+  by_cases hi16 : i < 16
+  · have heq : 8 + (i - 8) = i := by omega
+    simp [hi8, heq, show i ≥ 8 by omega, show i < 32 by omega,
+      show i - 8 < 8 by omega, show ¬i ≥ 16 by omega, show ¬i ≥ 24 by omega]
+  by_cases hi24 : i < 24
+  · have heq : 16 + (i - 16) = i := by omega
+    simp [hi8, heq, show i ≥ 16 by omega, show i < 32 by omega,
+      show ¬i - 8 < 8 by omega, show i - 16 < 8 by omega, show ¬i ≥ 24 by omega]
+  by_cases hi32 : i < 32
+  · have heq : 24 + (i - 24) = i := by omega
+    simp [hi8, hi32, heq, show i ≥ 24 by omega, show ¬i - 8 < 8 by omega,
+      show ¬i - 16 < 8 by omega, show i - 24 < 8 by omega]
+  · have hibound : n.testBit i = false :=
+      Nat.testBit_lt_two_pow
+        (Nat.lt_of_lt_of_le h (Nat.pow_le_pow_right (by decide) (by omega)))
+    simp [hi8, hibound, show ¬i < 32 by omega, show ¬i - 8 < 8 by omega,
+      show ¬i - 16 < 8 by omega, show ¬i - 24 < 8 by omega]
+
+private theorem reassemble64_nat (n : Nat) (h : n < 2 ^ 64) :
+    n % 2 ^ 8 ||| (((n >>> 8) % 2 ^ 8) <<< 8) % 2 ^ 64 |||
+      (((n >>> 16) % 2 ^ 8) <<< 16) % 2 ^ 64 |||
+      (((n >>> 24) % 2 ^ 8) <<< 24) % 2 ^ 64 |||
+      (((n >>> 32) % 2 ^ 8) <<< 32) % 2 ^ 64 |||
+      (((n >>> 40) % 2 ^ 8) <<< 40) % 2 ^ 64 |||
+      (((n >>> 48) % 2 ^ 8) <<< 48) % 2 ^ 64 |||
+      (((n >>> 56) % 2 ^ 8) <<< 56) % 2 ^ 64 = n := by
+  apply Nat.eq_of_testBit_eq
+  intro i
+  simp only [Nat.testBit_or, Nat.testBit_mod_two_pow,
+    Nat.testBit_shiftLeft, Nat.testBit_shiftRight]
+  by_cases h8 : i < 8
+  · simp [h8, show i < 64 by omega, show ¬ i ≥ 8 by omega, show ¬ i ≥ 16 by omega,
+      show ¬ i ≥ 24 by omega, show ¬ i ≥ 32 by omega, show ¬ i ≥ 40 by omega,
+      show ¬ i ≥ 48 by omega, show ¬ i ≥ 56 by omega]
+  by_cases h16 : i < 16
+  · have heq : 8 + (i - 8) = i := by omega
+    simp [h8, heq, show i ≥ 8 by omega, show i < 64 by omega, show i - 8 < 8 by omega,
+      show ¬ i ≥ 16 by omega, show ¬ i ≥ 24 by omega, show ¬ i ≥ 32 by omega,
+      show ¬ i ≥ 40 by omega, show ¬ i ≥ 48 by omega, show ¬ i ≥ 56 by omega]
+  by_cases h24 : i < 24
+  · have heq : 16 + (i - 16) = i := by omega
+    simp [h8, heq, show i ≥ 16 by omega, show i < 64 by omega, show ¬ i - 8 < 8 by omega,
+      show i - 16 < 8 by omega, show ¬ i ≥ 24 by omega, show ¬ i ≥ 32 by omega,
+      show ¬ i ≥ 40 by omega, show ¬ i ≥ 48 by omega, show ¬ i ≥ 56 by omega]
+  by_cases h32 : i < 32
+  · have heq : 24 + (i - 24) = i := by omega
+    simp [h8, heq, show i ≥ 24 by omega, show i < 64 by omega, show ¬ i - 8 < 8 by omega,
+      show ¬ i - 16 < 8 by omega, show i - 24 < 8 by omega, show ¬ i ≥ 32 by omega,
+      show ¬ i ≥ 40 by omega, show ¬ i ≥ 48 by omega, show ¬ i ≥ 56 by omega]
+  by_cases h40 : i < 40
+  · have heq : 32 + (i - 32) = i := by omega
+    simp [h8, heq, show i ≥ 32 by omega, show i < 64 by omega, show ¬ i - 8 < 8 by omega,
+      show ¬ i - 16 < 8 by omega, show ¬ i - 24 < 8 by omega, show i - 32 < 8 by omega,
+      show ¬ i ≥ 40 by omega, show ¬ i ≥ 48 by omega, show ¬ i ≥ 56 by omega]
+  by_cases h48 : i < 48
+  · have heq : 40 + (i - 40) = i := by omega
+    simp [h8, heq, show i ≥ 40 by omega, show i < 64 by omega, show ¬ i - 8 < 8 by omega,
+      show ¬ i - 16 < 8 by omega, show ¬ i - 24 < 8 by omega, show ¬ i - 32 < 8 by omega,
+      show i - 40 < 8 by omega, show ¬ i ≥ 48 by omega, show ¬ i ≥ 56 by omega]
+  by_cases h56 : i < 56
+  · have heq : 48 + (i - 48) = i := by omega
+    simp [h8, heq, show i ≥ 48 by omega, show i < 64 by omega, show ¬ i - 8 < 8 by omega,
+      show ¬ i - 16 < 8 by omega, show ¬ i - 24 < 8 by omega, show ¬ i - 32 < 8 by omega,
+      show ¬ i - 40 < 8 by omega, show i - 48 < 8 by omega, show ¬ i ≥ 56 by omega]
+  by_cases h64 : i < 64
+  · have heq : 56 + (i - 56) = i := by omega
+    simp [h8, heq, show i ≥ 56 by omega, show i < 64 by omega, show ¬ i - 8 < 8 by omega,
+      show ¬ i - 16 < 8 by omega, show ¬ i - 24 < 8 by omega, show ¬ i - 32 < 8 by omega,
+      show ¬ i - 40 < 8 by omega, show ¬ i - 48 < 8 by omega, show i - 56 < 8 by omega]
+  · have hibound : n.testBit i = false :=
+      Nat.testBit_lt_two_pow
+        (Nat.lt_of_lt_of_le h (Nat.pow_le_pow_right (by decide) (by omega)))
+    simp [h8, hibound, show ¬ i < 64 by omega, show ¬ i - 8 < 8 by omega,
+      show ¬ i - 16 < 8 by omega, show ¬ i - 24 < 8 by omega, show ¬ i - 32 < 8 by omega,
+      show ¬ i - 40 < 8 by omega, show ¬ i - 48 < 8 by omega, show ¬ i - 56 < 8 by omega]
+
 theorem u64Byte_reassemble (v : UInt64) :
     (u64Byte v 0).toUInt64 ||| ((u64Byte v 1).toUInt64 <<< 8) |||
       ((u64Byte v 2).toUInt64 <<< 16) |||
@@ -1137,8 +1160,11 @@ theorem u64Byte_reassemble (v : UInt64) :
       ((u64Byte v 5).toUInt64 <<< 40) |||
       ((u64Byte v 6).toUInt64 <<< 48) |||
       ((u64Byte v 7).toUInt64 <<< 56) = v := by
+  apply UInt64.toNat_inj.mp
   unfold u64Byte
-  bv_decide
+  simp only [UInt64.toNat_or, UInt64.toNat_shiftLeft,
+    UInt8.toNat_toUInt64, UInt64.toNat_toUInt8, UInt64.toNat_shiftRight]
+  exact reassemble64_nat v.toNat (UInt64.toNat_lt v)
 
 -- Multi-byte: u64 as 8 consecutive owned bytes (little-endian)
 def pointsTo_u64 (memId : Nat) (addr : UInt32) (v : UInt64) : IProp (WasmHeapGF α) :=
@@ -1216,8 +1242,11 @@ theorem u32Byte_reassemble (v : UInt32) :
     (u32Byte v 0).toUInt32 ||| ((u32Byte v 1).toUInt32 <<< 8) |||
       ((u32Byte v 2).toUInt32 <<< 16) |||
       ((u32Byte v 3).toUInt32 <<< 24) = v := by
+  apply UInt32.toNat_inj.mp
   unfold u32Byte
-  bv_decide
+  simp only [UInt32.toNat_or, UInt32.toNat_shiftLeft,
+    UInt8.toNat_toUInt32, UInt32.toNat_toUInt8, UInt32.toNat_shiftRight]
+  exact reassemble32_nat v.toNat (UInt32.toNat_lt v)
 
 -- Multi-byte: u32 as 4 consecutive owned bytes (little-endian)
 def pointsTo_u32 (memId : Nat) (addr : UInt32) (v : UInt32) : IProp (WasmHeapGF α) :=

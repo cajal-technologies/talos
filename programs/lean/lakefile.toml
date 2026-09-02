@@ -9,3 +9,10 @@ path = "../../codelib"
 
 [[lean_lib]]
 name = "Project"
+
+# --- hex examples ---
+[[lean_lib]]
+name = "HexEncodeStdio"
+
+[[lean_lib]]
+name = "HexDecodeStdio"
