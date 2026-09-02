@@ -65,12 +65,12 @@ theorem replace_steps (st : Store Unit) (new old : UInt32)
   rw [← hmem]
   have hbound : 4 ≤ st.mem.pages * 65536 := by omega
   refine .cons .const ?_
-  refine .cons (.load32 ?_) ?_
+  refine .cons (.load32 rfl ?_) ?_
   · simpa [replaceStore] using hbound
   refine .cons (.localSet (by rfl)) ?_
   refine .cons .const ?_
   refine .cons (.localGet (by rfl)) ?_
-  refine .cons (.store32 ?_) ?_
+  refine .cons (.store32 rfl ?_) ?_
   · simpa [replaceStore] using hbound
   refine .cons (.localGet (by rfl)) ?_
   exact .cons .finish (.refl _)
