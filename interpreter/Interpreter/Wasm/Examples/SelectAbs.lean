@@ -55,6 +55,6 @@ theorem selectAbs_terminates (n : UInt32) :
 theorem selectAbs_partial (n : UInt32) :
     PartiallyMeets (selectAbsConfig n)
       (fun values _ => values = [.i32 (selectAbsResult n)]) :=
-  (selectAbsSpec n).toPartiallyMeets
+  (selectAbs_terminates n).toPartiallyMeets
 
 end Wasm

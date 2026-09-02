@@ -117,6 +117,6 @@ theorem mem_roundtrip_terminates :
 theorem mem_roundtrip_partial :
     PartiallyMeets (floatConfig 7)
       (fun values _ => values = [.f64 (3.5 : Float).toBits]) :=
-  mem_roundtrip_spec.toPartiallyMeets
+  mem_roundtrip_terminates.toPartiallyMeets
 
 end Wasm

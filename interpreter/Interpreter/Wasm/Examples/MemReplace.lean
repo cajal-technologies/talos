@@ -100,6 +100,6 @@ theorem replace_partial (st : Store Unit) (new old : UInt32)
     PartiallyMeets (replaceConfig st new) (fun values store =>
       values = [.i32 old] ∧
       store.wasm.mem.read32 0 = new) :=
-  (replace_spec st new old hpages hmem).toPartiallyMeets
+  (replace_terminates st new old hpages hmem).toPartiallyMeets
 
 end Wasm

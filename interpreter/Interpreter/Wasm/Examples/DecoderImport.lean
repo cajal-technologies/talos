@@ -113,7 +113,7 @@ theorem caller_against_incEnv_terminates :
 
 theorem caller_against_incEnv_partial :
     PartiallyMeets callerConfig (fun values _ => values = [.i32 42]) :=
-  caller_against_incEnv_spec.toPartiallyMeets
+  caller_against_incEnv_terminates.toPartiallyMeets
 
 end DecoderImport
 end Wasm

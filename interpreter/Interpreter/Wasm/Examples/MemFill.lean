@@ -74,7 +74,7 @@ theorem fill_then_load_partial :
     PartiallyMeets fillThenReadConfig (fun values store =>
       values = [.i64 0xABABABABABABABAB] ∧
       store.wasm.mem.read64 0 = 0xABABABABABABABAB) :=
-  fill_then_load_spec.toPartiallyMeets.mono fun _ _ post => ⟨post.1, post.2.1⟩
+  fill_then_load_terminates.toPartiallyMeets.mono fun _ _ post => ⟨post.1, post.2.1⟩
 
 /-- The failing instruction is atomic: the trap retains the original store. -/
 theorem fill_out_of_bounds_traps :

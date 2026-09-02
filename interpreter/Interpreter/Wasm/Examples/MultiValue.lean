@@ -126,7 +126,7 @@ theorem swap_terminates (a b : UInt32) :
 theorem swap_partial (a b : UInt32) :
     PartiallyMeets (swapConfig a b)
       (fun values _ => values = [.i32 a, .i32 b]) :=
-  (swapSpec a b).toPartiallyMeets
+  (swap_terminates a b).toPartiallyMeets
 
 /-! ### Check 3 — multi-value block -/
 
@@ -141,7 +141,7 @@ theorem pairBlock_terminates (x : UInt32) :
 theorem pairBlock_partial (x : UInt32) :
     PartiallyMeets (pairBlockConfig x)
       (fun values _ => values = [.i32 (x - 1), .i32 (1 + x)]) :=
-  (pairBlockSpec x).toPartiallyMeets
+  (pairBlock_terminates x).toPartiallyMeets
 
 /-! ### Check 4 — caller that consumes both results of a multi-value call -/
 
@@ -159,7 +159,7 @@ theorem callsSwap_terminates :
 theorem callsSwap_partial :
     PartiallyMeets callsSwapConfig
       (fun values _ => values = [.i32 8]) :=
-  callsSwapSpec.toPartiallyMeets
+  callsSwap_terminates.toPartiallyMeets
 
 /-! ### Check 5 — decoder: `block (type $sig)` resolves to the right arity
 

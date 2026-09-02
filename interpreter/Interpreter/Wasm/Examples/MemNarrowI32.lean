@@ -85,7 +85,7 @@ theorem narrowI32_partial :
     PartiallyMeets (narrowI32Config 3) (fun vs _ => vs = [.i32 0xFFFFFFCD]) ∧
     PartiallyMeets (narrowI32Config 4) (fun vs _ => vs = [.i32 0xAB]) ∧
     PartiallyMeets (narrowI32Config 5) (fun vs _ => vs = [.i32 0xABCD]) := by
-  obtain ⟨h0, h1, h2, h3, h4, h5⟩ := narrowI32_contracts
+  obtain ⟨h0, h1, h2, h3, h4, h5⟩ := narrowI32_terminates
   exact ⟨h0.toPartiallyMeets, h1.toPartiallyMeets, h2.toPartiallyMeets,
     h3.toPartiallyMeets, h4.toPartiallyMeets, h5.toPartiallyMeets⟩
 

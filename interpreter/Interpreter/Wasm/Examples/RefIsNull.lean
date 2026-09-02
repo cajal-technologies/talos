@@ -47,7 +47,7 @@ theorem refReflect_partial (m : Module) (st : Store α) :
     PartiallyMeets (refReflectConfig m st)
       (fun values store =>
         values = [.i32 0, .i32 1] ∧ store.wasm = st) :=
-  (refReflectSpec m st).toPartiallyMeets
+  (refReflect_terminates m st).toPartiallyMeets
 
 namespace Decoded
 

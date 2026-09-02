@@ -200,6 +200,6 @@ theorem gcd_partial (a b : UInt32) :
     PartiallyMeets (gcdConfig a b)
       (fun values _ =>
         values = [.i32 (UInt32.ofNat (Nat.gcd a.toNat b.toNat))]) :=
-  (gcdSpec a b).toPartiallyMeets
+  (gcd_terminates a b).toPartiallyMeets
 
 end Wasm

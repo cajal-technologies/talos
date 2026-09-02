@@ -96,7 +96,7 @@ theorem tick_partial (st : Store Unit) (n : UInt32)
     PartiallyMeets (tickConfig st) (fun values store =>
       values = [.i32 n] ∧
       store.wasm.globals.globals[0]? = some (.i32 (1 + n))) :=
-  (tick_spec st n hg).toPartiallyMeets
+  (tick_terminates st n hg).toPartiallyMeets
 
 def tickInitialStore : Store Unit := tickModule.initialStore
 def tickAfterZero : Store Unit := (tickFinalStore tickInitialStore 0).wasm

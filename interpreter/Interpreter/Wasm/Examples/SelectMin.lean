@@ -58,6 +58,6 @@ theorem selectMin_terminates (x y : UInt32) :
 theorem selectMin_partial (x y : UInt32) :
     PartiallyMeets (selectMinConfig x y)
       (fun values _ => values = [.i32 (if x < y then x else y)]) :=
-  (selectMinSpec x y).toPartiallyMeets
+  (selectMin_terminates x y).toPartiallyMeets
 
 end Wasm

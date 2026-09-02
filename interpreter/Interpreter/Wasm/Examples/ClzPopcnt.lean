@@ -97,18 +97,18 @@ theorem clz_partial (a : UInt32) :
     PartiallyMeets (clzConfig a)
       (fun values _ =>
         values = [.i32 (UInt32.ofNat (clz32 32 a))]) :=
-  (clzSpec a).toPartiallyMeets
+  (clz_terminates a).toPartiallyMeets
 
 theorem ctz_partial (a : UInt32) :
     PartiallyMeets (ctzConfig a)
       (fun values _ =>
         values = [.i32 (UInt32.ofNat (ctz32 32 a))]) :=
-  (ctzSpec a).toPartiallyMeets
+  (ctz_terminates a).toPartiallyMeets
 
 theorem popcnt_partial (a : UInt32) :
     PartiallyMeets (popcntConfig a)
       (fun values _ =>
         values = [.i32 (UInt32.ofNat (popcnt32 32 a 0))]) :=
-  (popcntSpec a).toPartiallyMeets
+  (popcnt_terminates a).toPartiallyMeets
 
 end Wasm

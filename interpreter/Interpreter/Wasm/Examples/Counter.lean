@@ -196,7 +196,7 @@ theorem counter_partial
         store.wasm.host =
           Counter.insert st.host 0
             (1 + Counter.lookup st.host 0)) :=
-  (counter_correct hSat st).toPartiallyMeets
+  (counter_terminates hSat st).toPartiallyMeets
 
 end Counter
 end Wasm

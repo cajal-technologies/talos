@@ -61,6 +61,6 @@ theorem earlyReturn_terminates (x : UInt32) :
 theorem earlyReturn_partial (x : UInt32) :
     PartiallyMeets (earlyReturnConfig x)
       (fun values _ => values = [.i32 x]) :=
-  (earlyReturnSpec x).toPartiallyMeets
+  (earlyReturn_terminates x).toPartiallyMeets
 
 end Wasm

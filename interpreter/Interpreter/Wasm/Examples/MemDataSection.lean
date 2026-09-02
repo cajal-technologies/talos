@@ -48,6 +48,6 @@ theorem memDataSection_partial :
     PartiallyMeets memDataConfig (fun values store =>
       values = [.i32 7] ∧
       store.wasm.mem.read32 0 = 0x45444342) :=
-  memDataSection_spec.toPartiallyMeets
+  memDataSection_terminates.toPartiallyMeets
 
 end Wasm

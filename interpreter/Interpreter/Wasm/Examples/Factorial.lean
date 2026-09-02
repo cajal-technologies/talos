@@ -189,6 +189,6 @@ theorem factorial_partial (n : UInt32) :
     PartiallyMeets (factorialConfig n)
       (fun values _ =>
         values = [.i32 (UInt32.ofNat n.toNat.factorial)]) :=
-  (factorialSpec n).toPartiallyMeets
+  (factorial_terminates n).toPartiallyMeets
 
 end Wasm

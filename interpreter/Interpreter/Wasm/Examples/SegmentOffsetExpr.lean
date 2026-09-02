@@ -75,11 +75,11 @@ theorem readByte4_terminates :
   · exact fun _ _ h => of_decide_eq_true h
 
 /-- Partial correctness reuses the terminating run: normal completion is
-deterministic, so the trace witnessed by `readByte4_spec` is the only one. -/
+deterministic, so the trace witnessed by `readByte4_terminates` is the only one. -/
 theorem readByte4_partial :
     PartiallyMeets readByte4Config (fun values store =>
       values = [.i32 65] ∧ store.wasm.mem.read8 4 = 65) :=
-  readByte4_spec.toPartiallyMeets.mono fun _ _ post => ⟨post.1, post.2.1⟩
+  readByte4_terminates.toPartiallyMeets.mono fun _ _ post => ⟨post.1, post.2.1⟩
 
 theorem callAt2_returns_42 :
     (runSteps 16 callAt2Config).result.values? =
@@ -94,7 +94,7 @@ theorem callAt2_terminates :
 theorem callAt2_partial :
     PartiallyMeets callAt2Config (fun values _ =>
       values = [.i32 42]) :=
-  callAt2_spec.toPartiallyMeets
+  callAt2_terminates.toPartiallyMeets
 
 theorem byte0_still_zero : store0.mem.read8 0 = 0 := by
   native_decide

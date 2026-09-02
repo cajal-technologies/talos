@@ -72,7 +72,7 @@ theorem importedGlobalWat_getD_terminates :
 
 theorem importedGlobalWat_getD_partial :
     PartiallyMeets getDConfig (fun values _ => values = [.i32 99]) :=
-  importedGlobalWat_getD_spec.toPartiallyMeets
+  importedGlobalWat_getD_terminates.toPartiallyMeets
 
 end DecoderImportedGlobal
 end Wasm

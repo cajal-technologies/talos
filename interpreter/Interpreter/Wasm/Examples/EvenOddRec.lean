@@ -392,11 +392,11 @@ theorem odd_terminates (n : UInt32) :
 theorem even_partial (n : UInt32) :
     PartiallyMeets (evenConfig n)
       (fun values _ => values = [.i32 (evenValue n)]) :=
-  (evenSpec n).toPartiallyMeets
+  (even_terminates n).toPartiallyMeets
 
 theorem odd_partial (n : UInt32) :
     PartiallyMeets (oddConfig n)
       (fun values _ => values = [.i32 (oddValue n)]) :=
-  (oddSpec n).toPartiallyMeets
+  (odd_terminates n).toPartiallyMeets
 
 end Wasm

@@ -202,6 +202,6 @@ theorem simpleLoop_terminates (n : UInt32) :
 theorem simpleLoop_partial (n : UInt32) :
     PartiallyMeets (simpleLoopConfig n)
       (fun values _ => values = [.i32 n]) :=
-  (simpleLoopSpec n).toPartiallyMeets
+  (simpleLoop_terminates n).toPartiallyMeets
 
 end Wasm

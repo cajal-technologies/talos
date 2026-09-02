@@ -46,6 +46,6 @@ theorem earlyBr_terminates (x : UInt32) :
 theorem earlyBr_partial (x : UInt32) :
     PartiallyMeets (earlyBrConfig x)
       (fun values _ => values = [.i32 x]) :=
-  (earlyBrSpec x).toPartiallyMeets
+  (earlyBr_terminates x).toPartiallyMeets
 
 end Wasm

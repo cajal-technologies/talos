@@ -46,6 +46,6 @@ theorem isEven_terminates (value : UInt32) :
 theorem isEven_partial (value : UInt32) :
     PartiallyMeets (isEvenConfig value)
       (fun values _ => values = [.i32 (isEvenResult value)]) :=
-  (isEvenSpec value).toPartiallyMeets
+  (isEven_terminates value).toPartiallyMeets
 
 end Wasm

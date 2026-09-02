@@ -152,7 +152,7 @@ theorem memory_roundtrip_terminates :
 theorem memory_roundtrip_partial :
     PartiallyMeets memoryRoundtripConfig (fun values store =>
       values = [.i32 0x12345678] ∧ store.wasm.mem.read32 16 = 0x12345678) :=
-  memory_roundtrip_relational.toPartiallyMeets
+  memory_roundtrip_terminates.toPartiallyMeets
 
 /-- A disjoint address remains unchanged by the store at address 16. -/
 theorem memory_roundtrip_frames_disjoint_word :
@@ -974,7 +974,7 @@ theorem swap_partial :
       values = [.i32 11, .i32 22] ∧
       store.wasm.mem.read32 0 = 22 ∧
       store.wasm.mem.read32 4 = 11) :=
-  swap_relational.toPartiallyMeets
+  swap_terminates.toPartiallyMeets
 
 theorem swap_matches_big_step :
     (runSteps 17 swapConfig).result.values? =
@@ -1043,7 +1043,7 @@ theorem reverse_three_partial :
       store.wasm.mem.read32 0 = 33 ∧
       store.wasm.mem.read32 4 = 22 ∧
       store.wasm.mem.read32 8 = 11) :=
-  reverse_three_relational.toPartiallyMeets
+  reverse_three_terminates.toPartiallyMeets
 
 theorem reverse_three_matches_big_step :
     (runSteps 17 reverseThreeConfig).result.values? =
@@ -1123,7 +1123,7 @@ theorem partition_three_partial :
       store.wasm.mem.read32 8 = 33 ∧
       store.wasm.mem.read32 0 ≤ store.wasm.mem.read32 4 ∧
       store.wasm.mem.read32 4 ≤ store.wasm.mem.read32 8) :=
-  partition_three_relational.toPartiallyMeets
+  partition_three_terminates.toPartiallyMeets
 
 theorem partition_three_matches_big_step :
     (runSteps 19 partitionThreeConfig).result.values? =
@@ -1198,7 +1198,7 @@ theorem merge_two_partial :
       store.wasm.mem.read32 0 = 4 ∧
       store.wasm.mem.read32 4 = 9 ∧
       store.wasm.mem.read32 0 ≤ store.wasm.mem.read32 4) :=
-  merge_two_relational.toPartiallyMeets
+  merge_two_terminates.toPartiallyMeets
 
 theorem merge_two_matches_big_step :
     (runSteps 18 mergeTwoConfig).result.values? =
@@ -2639,7 +2639,7 @@ theorem host_call_terminates :
 theorem host_call_partial :
     PartiallyMeets smallStepHostConfig (fun values store =>
       values = [.i32 42] ∧ store.wasm.mem.read32 200 = 41) :=
-  host_call_relational.toPartiallyMeets
+  host_call_terminates.toPartiallyMeets
 
 theorem host_call_matches_big_step :
     (runSteps 4 smallStepHostConfig).result.values? =

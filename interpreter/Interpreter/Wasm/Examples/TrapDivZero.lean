@@ -73,6 +73,6 @@ theorem trapDivZero_terminates (a b : UInt32) (hb : b ≠ 0) :
 theorem trapDivZero_partial (a b : UInt32) (hb : b ≠ 0) :
     PartiallyMeets (trapDivZeroConfig a b)
       (fun values _ => values = [.i32 (a / b)]) :=
-  (trapDivZeroSpec a b hb).toPartiallyMeets
+  (trapDivZero_terminates a b hb).toPartiallyMeets
 
 end Wasm

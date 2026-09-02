@@ -153,6 +153,6 @@ theorem switch_terminates (i : UInt32) :
 theorem switch_partial (i : UInt32) :
     PartiallyMeets (switchConfig i)
       (fun values _ => values = [.i32 (switchResult i)]) :=
-  (switchSpec i).toPartiallyMeets
+  (switch_terminates i).toPartiallyMeets
 
 end Wasm
