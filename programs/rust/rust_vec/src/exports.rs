@@ -4,6 +4,11 @@ pub extern "C" fn vec_len() {
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn vec_push() {
+    crate::vec_push();
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn vec_pop() {
     crate::vec_pop();
 }

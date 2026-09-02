@@ -9,11 +9,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
 
 [[package]]
+name = "borsh"
+version = "1.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "553c5d846a6ba5150c65e3b1b8ec073bcf1abc20f9b7220de384a4443ea4e20a"
+dependencies = [
+ "cfg_aliases",
+]
+
+[[package]]
 name = "byte_echo"
 version = "0.1.0"
 dependencies = [
  "talos-stdio",
 ]
+
+[[package]]
+name = "cfg_aliases"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f079e83a288787bcd14a6aea84cee5c87a67c5a3e660c30f557a3d24761b3527"
 
 [[package]]
 name = "float_minmax"
@@ -90,6 +105,7 @@ version = "0.1.0"
 name = "rust_vec"
 version = "0.1.0"
 dependencies = [
+ "borsh",
  "talos-stdio",
 ]
 
