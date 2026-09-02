@@ -49,13 +49,13 @@ theorem getG_returns_42 :
     (runSteps 2 getGConfig).result.values? = some [.i32 42] := by
   native_decide
 
-theorem getG_spec :
+theorem getG_terminates :
     TerminatesWith getGConfig (fun values _ => values = [.i32 42]) :=
   runSteps_values_terminates getG_returns_42
 
 theorem getG_partial :
     PartiallyMeets getGConfig (fun values _ => values = [.i32 42]) :=
-  getG_spec.toPartiallyMeets
+  getG_terminates.toPartiallyMeets
 
 /-! ### GC allocator initializers (issue #109) -/
 
@@ -92,7 +92,7 @@ theorem leaf_struct_new_returns_100 :
       some [.i32 100] := by
   native_decide
 
-theorem leaf_struct_new_spec :
+theorem leaf_struct_new_terminates :
     TerminatesWith leafStructConfig
       (fun values _ => values = [.i32 100]) :=
   runSteps_values_terminates leaf_struct_new_returns_100
@@ -100,14 +100,14 @@ theorem leaf_struct_new_spec :
 theorem leaf_struct_new_partial :
     PartiallyMeets leafStructConfig
       (fun values _ => values = [.i32 100]) :=
-  leaf_struct_new_spec.toPartiallyMeets
+  leaf_struct_new_terminates.toPartiallyMeets
 
 theorem arith_struct_new_returns_100 :
     (runSteps 4 arithStructConfig).result.values? =
       some [.i32 100] := by
   native_decide
 
-theorem arith_struct_new_spec :
+theorem arith_struct_new_terminates :
     TerminatesWith arithStructConfig
       (fun values _ => values = [.i32 100]) :=
   runSteps_values_terminates arith_struct_new_returns_100
@@ -115,7 +115,7 @@ theorem arith_struct_new_spec :
 theorem arith_struct_new_partial :
     PartiallyMeets arithStructConfig
       (fun values _ => values = [.i32 100]) :=
-  arith_struct_new_spec.toPartiallyMeets
+  arith_struct_new_terminates.toPartiallyMeets
 
 end GlobalInitExpr
 end Wasm

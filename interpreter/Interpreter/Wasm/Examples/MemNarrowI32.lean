@@ -64,7 +64,7 @@ theorem store16_roundtrip :
     (runSteps 8 (narrowI32Config 5)).result.values? = some [.i32 0xABCD] := by
   native_decide
 
-theorem narrowI32_contracts :
+theorem narrowI32_terminates :
     TerminatesWith (narrowI32Config 0) (fun vs _ => vs = [.i32 0x42]) ∧
     TerminatesWith (narrowI32Config 1) (fun vs _ => vs = [.i32 0xFFFFFFFF]) ∧
     TerminatesWith (narrowI32Config 2) (fun vs _ => vs = [.i32 0xABCD]) ∧
@@ -78,14 +78,14 @@ theorem narrowI32_contracts :
     runSteps_values_terminates store8_roundtrip,
     runSteps_values_terminates store16_roundtrip⟩
 
-theorem narrowI32_partial_contracts :
+theorem narrowI32_partial :
     PartiallyMeets (narrowI32Config 0) (fun vs _ => vs = [.i32 0x42]) ∧
     PartiallyMeets (narrowI32Config 1) (fun vs _ => vs = [.i32 0xFFFFFFFF]) ∧
     PartiallyMeets (narrowI32Config 2) (fun vs _ => vs = [.i32 0xABCD]) ∧
     PartiallyMeets (narrowI32Config 3) (fun vs _ => vs = [.i32 0xFFFFFFCD]) ∧
     PartiallyMeets (narrowI32Config 4) (fun vs _ => vs = [.i32 0xAB]) ∧
     PartiallyMeets (narrowI32Config 5) (fun vs _ => vs = [.i32 0xABCD]) := by
-  obtain ⟨h0, h1, h2, h3, h4, h5⟩ := narrowI32_contracts
+  obtain ⟨h0, h1, h2, h3, h4, h5⟩ := narrowI32_terminates
   exact ⟨h0.toPartiallyMeets, h1.toPartiallyMeets, h2.toPartiallyMeets,
     h3.toPartiallyMeets, h4.toPartiallyMeets, h5.toPartiallyMeets⟩
 

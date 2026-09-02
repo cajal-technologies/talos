@@ -9,8 +9,8 @@ import Interpreter.Wasm.SmallStep
 
     * `clz_zero_runs` / `ctz_eight_runs` / `popcnt_nibble_runs` — concrete
       small-step traces on representative inputs.
-    * `clzSpec` / `ctzSpec` / `popcntSpec` — parametric, fuel-free
-      `TerminatesWith` contracts.
+    * `clz_terminates` / `ctz_terminates` / `popcnt_terminates` — parametric,
+      fuel-free `TerminatesWith` contracts.
     * matching `*_partial` theorems preserve partial-correctness intent for
       Iris clients.
 
@@ -66,7 +66,7 @@ theorem popcnt_nibble_runs :
 
 /-! ### Checks 4–6 — fuel-free small-step specifications -/
 
-theorem clzSpec (a : UInt32) :
+theorem clz_terminates (a : UInt32) :
     TerminatesWith (clzConfig a)
       (fun values _ =>
         values = [.i32 (UInt32.ofNat (clz32 32 a))]) := by
@@ -75,7 +75,7 @@ theorem clzSpec (a : UInt32) :
   · rfl
   · rfl
 
-theorem ctzSpec (a : UInt32) :
+theorem ctz_terminates (a : UInt32) :
     TerminatesWith (ctzConfig a)
       (fun values _ =>
         values = [.i32 (UInt32.ofNat (ctz32 32 a))]) := by
@@ -84,7 +84,7 @@ theorem ctzSpec (a : UInt32) :
   · rfl
   · rfl
 
-theorem popcntSpec (a : UInt32) :
+theorem popcnt_terminates (a : UInt32) :
     TerminatesWith (popcntConfig a)
       (fun values _ =>
         values = [.i32 (UInt32.ofNat (popcnt32 32 a 0))]) := by
@@ -97,18 +97,18 @@ theorem clz_partial (a : UInt32) :
     PartiallyMeets (clzConfig a)
       (fun values _ =>
         values = [.i32 (UInt32.ofNat (clz32 32 a))]) :=
-  (clzSpec a).toPartiallyMeets
+  (clz_terminates a).toPartiallyMeets
 
 theorem ctz_partial (a : UInt32) :
     PartiallyMeets (ctzConfig a)
       (fun values _ =>
         values = [.i32 (UInt32.ofNat (ctz32 32 a))]) :=
-  (ctzSpec a).toPartiallyMeets
+  (ctz_terminates a).toPartiallyMeets
 
 theorem popcnt_partial (a : UInt32) :
     PartiallyMeets (popcntConfig a)
       (fun values _ =>
         values = [.i32 (UInt32.ofNat (popcnt32 32 a 0))]) :=
-  (popcntSpec a).toPartiallyMeets
+  (popcnt_terminates a).toPartiallyMeets
 
 end Wasm

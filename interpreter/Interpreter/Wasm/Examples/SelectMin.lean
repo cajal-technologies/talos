@@ -50,7 +50,7 @@ theorem selectMin_runs (x y : UInt32) :
     all_goals exact Steps.refl _
   exact congrArg RunnerResult.values? (runSteps_eq_success_of_steps hsteps)
 
-theorem selectMinSpec (x y : UInt32) :
+theorem selectMin_terminates (x y : UInt32) :
     TerminatesWith (selectMinConfig x y)
       (fun values _ => values = [.i32 (if x < y then x else y)]) :=
   runSteps_values_terminates (selectMin_runs x y)
@@ -58,6 +58,6 @@ theorem selectMinSpec (x y : UInt32) :
 theorem selectMin_partial (x y : UInt32) :
     PartiallyMeets (selectMinConfig x y)
       (fun values _ => values = [.i32 (if x < y then x else y)]) :=
-  (selectMinSpec x y).toPartiallyMeets
+  (selectMin_terminates x y).toPartiallyMeets
 
 end Wasm

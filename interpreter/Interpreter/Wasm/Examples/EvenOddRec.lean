@@ -377,26 +377,26 @@ theorem odd_steps (n : UInt32) :
   simpa [oddConfig, parityReturn] using
     (evenOdd_contextual_steps n).2 [] (by simp)
 
-theorem evenSpec (n : UInt32) :
+theorem even_terminates (n : UInt32) :
     TerminatesWith (evenConfig n)
       (fun values _ => values = [.i32 (evenValue n)]) := by
   obtain ⟨trace, execution⟩ := even_steps n
   exact ⟨trace, _, _, execution, rfl⟩
 
-theorem oddSpec (n : UInt32) :
+theorem odd_terminates (n : UInt32) :
     TerminatesWith (oddConfig n)
       (fun values _ => values = [.i32 (oddValue n)]) := by
   obtain ⟨trace, execution⟩ := odd_steps n
   exact ⟨trace, _, _, execution, rfl⟩
 
-theorem evenPartial (n : UInt32) :
+theorem even_partial (n : UInt32) :
     PartiallyMeets (evenConfig n)
       (fun values _ => values = [.i32 (evenValue n)]) :=
-  (evenSpec n).toPartiallyMeets
+  (even_terminates n).toPartiallyMeets
 
-theorem oddPartial (n : UInt32) :
+theorem odd_partial (n : UInt32) :
     PartiallyMeets (oddConfig n)
       (fun values _ => values = [.i32 (oddValue n)]) :=
-  (oddSpec n).toPartiallyMeets
+  (odd_terminates n).toPartiallyMeets
 
 end Wasm

@@ -5,8 +5,8 @@ import Mathlib.Tactic
 
 /-! ## Demo: the countdown loop, terminated by `terminatesWith_of_loop`
 
-This reproves `Examples/SimpleLoop.lean`'s `simpleLoopSpec`, about the very
-same `simpleLoopConfig`, with one difference: where that file writes out a
+This reproves `Examples/SimpleLoop.lean`'s `simpleLoop_terminates`, about the
+very same `simpleLoopConfig`, with one difference: where that file writes out a
 `Nat.strong_induction_on` over `x.toNat` and reassembles the trace by hand,
 this one supplies the two branches and applies
 `SmallStep.terminatesWith_of_loop`.
@@ -165,9 +165,9 @@ private theorem initial_steps (n : UInt32) :
       (head n 0) :=
   Steps.cons .const (Steps.cons (.localSet rfl) (Steps.single .loop))
 
-/-- The specification, symbolic in the input: `SimpleLoop.simpleLoopSpec`
+/-- The specification, symbolic in the input: `SimpleLoop.simpleLoop_terminates`
 restated, proved through `terminatesWith_of_loop`. -/
-theorem spec (n : UInt32) :
+theorem simpleLoop_terminates (n : UInt32) :
     TerminatesWith (simpleLoopConfig n) (fun values _ => values = [.i32 n]) := by
   refine TerminatesWith.prependSteps (initial_steps n) ?_
   refine (head_terminates n 0).mono ?_

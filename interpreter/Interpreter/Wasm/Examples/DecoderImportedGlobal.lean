@@ -66,13 +66,13 @@ theorem importedGlobalWat_getD_returns_99 :
     (runSteps 2 getDConfig).result.values? = some [.i32 99] := by
   native_decide
 
-theorem importedGlobalWat_getD_spec :
+theorem importedGlobalWat_getD_terminates :
     TerminatesWith getDConfig (fun values _ => values = [.i32 99]) :=
   runSteps_values_terminates importedGlobalWat_getD_returns_99
 
 theorem importedGlobalWat_getD_partial :
     PartiallyMeets getDConfig (fun values _ => values = [.i32 99]) :=
-  importedGlobalWat_getD_spec.toPartiallyMeets
+  importedGlobalWat_getD_terminates.toPartiallyMeets
 
 end DecoderImportedGlobal
 end Wasm

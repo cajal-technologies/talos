@@ -38,7 +38,7 @@ theorem earlyBr_runs (x : UInt32) :
   congrArg RunnerResult.values?
     (runSteps_eq_success_of_steps (earlyBr_steps x))
 
-theorem earlyBrSpec (x : UInt32) :
+theorem earlyBr_terminates (x : UInt32) :
     TerminatesWith (earlyBrConfig x)
       (fun values _ => values = [.i32 x]) :=
   runSteps_values_terminates (earlyBr_runs x)
@@ -46,6 +46,6 @@ theorem earlyBrSpec (x : UInt32) :
 theorem earlyBr_partial (x : UInt32) :
     PartiallyMeets (earlyBrConfig x)
       (fun values _ => values = [.i32 x]) :=
-  (earlyBrSpec x).toPartiallyMeets
+  (earlyBr_terminates x).toPartiallyMeets
 
 end Wasm
