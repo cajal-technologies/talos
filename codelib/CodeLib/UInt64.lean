@@ -173,10 +173,6 @@ private theorem ntz_decompose (k n : Nat) (hk : k ≤ 64) (hpos : 0 < n) (hn : n
       · simp [h]; omega
       · simp [h]; exact hlt
 
-private theorem _aux_toNat_UInt64_ofNat (n : Nat) : (UInt64.ofNat n).toNat = n % 2^64 := by
-  show (BitVec.ofNat 64 n).toNat = n % 2^64
-  exact BitVec.toNat_ofNat _ _
-
 private theorem _aux_toNat_pos (a : UInt64) (ha : a ≠ 0) : 0 < a.toNat := by
   have h0 : (0 : UInt64).toNat = 0 := rfl
   by_contra hzero
@@ -291,7 +287,7 @@ theorem UInt64.ctz64_or_min (a b : UInt64) (ha : a ≠ 0) (hb : b ≠ 0) :
 theorem UInt64.toNat_ofNat_ctz_mod (a : UInt64) (ha : a ≠ 0) :
     (UInt64.ofNat (ctz64 64 a) % 64).toNat = ctz64 64 a := by
   have hlt : ctz64 64 a < 64 := UInt64.ctz64_lt a ha
-  rw [UInt64.toNat_mod, _aux_toNat_UInt64_ofNat]
+  rw [UInt64.toNat_mod, UInt64.toNat_ofNat']
   rw [Nat.mod_eq_of_lt (by omega : ctz64 64 a < 2^64)]
   show ctz64 64 a % (64 : UInt64).toNat = ctz64 64 a
   exact Nat.mod_eq_of_lt hlt
@@ -408,7 +404,7 @@ private theorem _aux_recombine_core (a b o : UInt64) (ha : a ≠ 0) (hb : b ≠ 
   have h_gcd_lt_64 : a.toNat.gcd b.toNat < 2^64 := lt_of_le_of_lt h_gcd_le_a a.toNat_lt
   -- Now compute toNat of LHS and RHS, then UInt64.toNat.inj.
   apply UInt64.toNat.inj
-  rw [UInt64.toNat_shiftLeft, _aux_toNat_UInt64_ofNat, h_or_mask,
+  rw [UInt64.toNat_shiftLeft, UInt64.toNat_ofNat', h_or_mask,
       Nat.mod_eq_of_lt h_ctz_or_lt, Nat.mod_eq_of_lt h_gcd_lt_64,
       Nat.shiftLeft_eq, h_o, h_ctz_or, Nat.min_comm, h_stein, Nat.mul_comm]
   refine Nat.mod_eq_of_lt (lt_of_le_of_lt (Nat.le_of_eq ?_) h_gcd_lt_64)
@@ -468,7 +464,7 @@ private theorem _aux_gcd_sub_div_pow2 (x y k : Nat) (hle : y ≤ x) (hy : y % 2 
 
 /-- One iteration in the `y < x` branch. -/
 theorem UInt64.stein_step_x (x y : UInt64) (_hxne : x ≠ 0) (hyne : y ≠ 0)
-    (hxodd : x.toNat % 2 = 1) (hyodd : y.toNat % 2 = 1) (hlt : y < x) :
+    (_hxodd : x.toNat % 2 = 1) (hyodd : y.toNat % 2 = 1) (hlt : y < x) :
     ¬ (x - y) >>> (UInt64.ofNat (ctz64 64 (x - y)) % 64) = 0
     ∧ (x - y).toNat >>> (ctz64 64 (x - y) % 64) % 2 = 1
     ∧ ((x - y).toNat >>> (ctz64 64 (x - y) % 64)).gcd y.toNat
@@ -505,7 +501,7 @@ theorem UInt64.stein_step_x (x y : UInt64) (_hxne : x ≠ 0) (hyne : y ≠ 0)
 
 /-- One iteration in the `x ≤ y, x ≠ y` branch. -/
 theorem UInt64.stein_step_y (x y : UInt64) (hxne : x ≠ 0) (_hyne : y ≠ 0)
-    (hxodd : x.toNat % 2 = 1) (hyodd : y.toNat % 2 = 1) (hle : ¬ y < x)
+    (hxodd : x.toNat % 2 = 1) (_hyodd : y.toNat % 2 = 1) (hle : ¬ y < x)
     (hne : x ≠ y) :
     ¬ (y - x) >>> (UInt64.ofNat (ctz64 64 (y - x)) % 64) = 0
     ∧ (y - x).toNat >>> (ctz64 64 (y - x) % 64) % 2 = 1
