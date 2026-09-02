@@ -32,6 +32,14 @@ name = "float_trunc"
 version = "0.1.0"
 
 [[package]]
+name = "gcd_stdio"
+version = "0.1.0"
+dependencies = [
+ "num-integer",
+ "talos-stdio",
+]
+
+[[package]]
 name = "mergesort"
 version = "0.1.0"
 dependencies = [
