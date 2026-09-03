@@ -1,5 +1,7 @@
 import Iris.ProofMode
 
+open Lean.Parser.Tactic
+
 /-! Small proof-mode patterns shared by CodeLib clients. -/
 
 /-- Split a separating conjunction, dedicate one spatial hypothesis to the
@@ -39,4 +41,12 @@ macro "iapply_frame " rule:pmTerm : tactic =>
 macro "ilater_exact " hypothesis:ident : tactic =>
   `(tactic|
     (inext
+     iexact $hypothesis))
+
+/-- Introduce one later, rewrite its goal, and discharge it with an existing
+spatial fact. -/
+macro "ilater_rw_exact " rules:rwRuleSeq " with " hypothesis:ident : tactic =>
+  `(tactic|
+    (inext
+     rw $rules:rwRuleSeq
      iexact $hypothesis))

@@ -59,9 +59,7 @@ theorem opt3_func0_distinct_smallStep_wp
   wasm_wp_pures [wp_brIfZero wp_localGet wp_localGet wp_const wp_shl wp_add wp_localTee]
   simp only [List.set]
   ihave HALater : ▷ pointsTo_u64 0 (addressI + 0) oldA $$ [HA]
-  · inext
-    rw [UInt32.add_zero]
-    iexact HA
+  · ilater_rw_exact [UInt32.add_zero] with HA
   wasm_wp_next Wasm.SmallStep.wp_load64 oldA (by simp)
     (by simpa using hi1) (by simpa using hi2) (by simpa using hi3)
     (by simpa using hi4) (by simpa using hi5) (by simpa using hi6)
@@ -73,18 +71,14 @@ theorem opt3_func0_distinct_smallStep_wp
   wasm_wp_pures [wp_localGet wp_localGet wp_localGet wp_const wp_shl wp_add wp_localTee]
   simp only [List.set]
   ihave HBLater : ▷ pointsTo_u64 0 (addressJ + 0) oldB $$ [HB]
-  · inext
-    rw [UInt32.add_zero]
-    iexact HB
+  · ilater_rw_exact [UInt32.add_zero] with HB
   wasm_wp_next Wasm.SmallStep.wp_load64 oldB (by simp)
     (by simpa using hj1) (by simpa using hj2) (by simpa using hj3)
     (by simpa using hj4) (by simpa using hj5) (by simpa using hj6)
     (by simpa using hj7) $$ HBLater
   iintro HB
   ihave HALater : ▷ pointsTo_u64 0 (addressI + 0) oldA $$ [HA]
-  · inext
-    rw [UInt32.add_zero]
-    iexact HA
+  · ilater_rw_exact [UInt32.add_zero] with HA
   wasm_wp_next Wasm.SmallStep.wp_store64 oldA (by simp)
     (by simpa using hi1) (by simpa using hi2) (by simpa using hi3)
     (by simpa using hi4) (by simpa using hi5) (by simpa using hi6)
@@ -92,9 +86,7 @@ theorem opt3_func0_distinct_smallStep_wp
   iintro HA
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HBLater : ▷ pointsTo_u64 0 (addressJ + 0) oldB $$ [HB]
-  · inext
-    rw [UInt32.add_zero]
-    iexact HB
+  · ilater_rw_exact [UInt32.add_zero] with HB
   wasm_wp_next Wasm.SmallStep.wp_store64 oldB (by simp)
     (by simpa using hj1) (by simpa using hj2) (by simpa using hj3)
     (by simpa using hj4) (by simpa using hj5) (by simpa using hj6)

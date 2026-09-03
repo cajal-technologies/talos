@@ -133,9 +133,7 @@ theorem sharedMem_partiallyMeets (v : UInt8) :
       ihave HptLater :
           ▷ pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
             ⟨0, 0 + 0⟩ (DFrac.own 1) (some 0) $$ [Hpt]
-      · inext
-        rw [UInt32.add_zero]
-        iexact Hpt
+      · ilater_rw_exact [UInt32.add_zero] with Hpt
       wasm_wp_next_bind wp_store8 (0 : UInt8) rfl with HptLater => Hpt'
       -- return from writeFn to instanceR
       iapply wp_returnFromCallCrossInstance ⟨0⟩ instanceW instanceR #[instanceW, instanceR]

@@ -303,9 +303,7 @@ theorem func1_body_smallStep_wp
   wasm_wp_next wp_scalarFloat1 rfl rfl
   ihave HwordLater :
       ▷ pointsTo_u32 0 ((1048560 : UInt32) + 12) oldWord $$ [Hword]
-  · inext
-    rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
-    iexact Hword
+  · ilater_rw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hword
   wasm_wp_next wp_f32Store oldWord
     (by decide) (by decide) (by decide) (by decide) $$ HwordLater
   iintro Hword
@@ -484,9 +482,7 @@ theorem func3_body_smallStep_wp
   wasm_wp_next wp_scalarFloat1 rfl rfl
   ihave HwordLater :
       ▷ pointsTo_u64 0 ((1048560 : UInt32) + 8) oldWord $$ [Hword]
-  · inext
-    rw [show (1048560 : UInt32) + 8 = 1048568 by decide]
-    iexact Hword
+  · ilater_rw_exact [show (1048560 : UInt32) + 8 = 1048568 by decide] with Hword
   wasm_wp_next wp_f64Store oldWord
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) (by decide) $$ HwordLater
@@ -625,9 +621,7 @@ theorem func8_body_smallStep_wp
   wasm_wp_next wp_scalarFloat2 rfl rfl rfl
   ihave HwordLater :
       ▷ pointsTo_u32 0 ((1048560 : UInt32) + 12) oldWord $$ [Hword]
-  · inext
-    rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
-    iexact Hword
+  · ilater_rw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hword
   wasm_wp_next wp_f32Store oldWord
     (by decide) (by decide) (by decide) (by decide) $$ HwordLater
   iintro Hword
@@ -895,9 +889,7 @@ theorem func1_lowered_body_smallStep_wp
   wasm_wp_next wp_scalarFloat1 rfl rfl
   ihave HwordLater :
       ▷ pointsTo_u32 0 ((1048544 : UInt32) + 12) oldWord $$ [Hword]
-  · inext
-    rw [show (1048544 : UInt32) + 12 = 1048556 by decide]
-    iexact Hword
+  · ilater_rw_exact [show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
   wasm_wp_next wp_f32Store oldWord
     (by decide) (by decide) (by decide) (by decide) $$ HwordLater
   iintro Hword
@@ -979,9 +971,7 @@ theorem func3_lowered_body_smallStep_wp
   wasm_wp_next wp_scalarFloat1 rfl rfl
   ihave HwordLater :
       ▷ pointsTo_u64 0 ((1048544 : UInt32) + 8) oldWord $$ [Hword]
-  · inext
-    rw [show (1048544 : UInt32) + 8 = 1048552 by decide]
-    iexact Hword
+  · ilater_rw_exact [show (1048544 : UInt32) + 8 = 1048552 by decide] with Hword
   wasm_wp_next wp_f64Store oldWord
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) (by decide) $$ HwordLater
@@ -1070,9 +1060,7 @@ theorem func8_lowered_body_smallStep_wp
   wasm_wp_next wp_scalarFloat2 rfl rfl rfl
   ihave HwordLater :
       ▷ pointsTo_u32 0 ((1048544 : UInt32) + 12) oldWord $$ [Hword]
-  · inext
-    rw [show (1048544 : UInt32) + 12 = 1048556 by decide]
-    iexact Hword
+  · ilater_rw_exact [show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
   wasm_wp_next wp_f32Store oldWord
     (by decide) (by decide) (by decide) (by decide) $$ HwordLater
   iintro Hword
@@ -1232,9 +1220,7 @@ theorem checkAbs_tail_smallStep_wp
   wasm_wp_pures [wp_localGet]
   ihave HresultLater :
       ▷ pointsTo_u32 0 ((1048560 : UInt32) + 12) result $$ [Hresult]
-  · inext
-    rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
-    iexact Hresult
+  · ilater_rw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
   wasm_wp_next wp_load32 result
     (by decide) (by decide) (by decide) (by decide) $$ HresultLater
   iintro Hresult
@@ -1308,9 +1294,7 @@ theorem checkAbs_zeroPath_smallStep_wp
   wasm_wp_pures [wp_localGet wp_const]
   ihave HresultLater :
       ▷ pointsTo_u32 0 ((1048560 : UInt32) + 12) oldResult $$ [Hresult]
-  · inext
-    rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
-    iexact Hresult
+  · ilater_rw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
   wasm_wp_next wp_store32 oldResult
     (by decide) (by decide) (by decide) (by decide) $$ HresultLater
   iintro Hresult
@@ -1347,9 +1331,7 @@ theorem checkAbs_onePath_smallStep_wp
   wasm_wp_pures [wp_localGet wp_const]
   ihave HresultLater :
       ▷ pointsTo_u32 0 ((1048560 : UInt32) + 12) oldResult $$ [Hresult]
-  · inext
-    rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
-    iexact Hresult
+  · ilater_rw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
   wasm_wp_next wp_store32 oldResult
     (by decide) (by decide) (by decide) (by decide) $$ HresultLater
   iintro Hresult
@@ -1782,9 +1764,7 @@ theorem checkCopysign_tail_result_smallStep_wp
   wasm_wp_pures [wp_localGet]
   ihave HresultLater :
       ▷ pointsTo_u32 0 ((1048560 : UInt32) + 12) result $$ [Hresult]
-  · inext
-    rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
-    iexact Hresult
+  · ilater_rw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
   wasm_wp_next wp_load32 result
     (by decide) (by decide) (by decide) (by decide) $$ HresultLater
   iintro Hresult
@@ -1873,9 +1853,7 @@ theorem checkCopysign_comparison_smallStep_wp
         wasm_wp_pures [wp_localGet wp_const]
         ihave HresultLater :
             ▷ pointsTo_u32 0 ((1048560 : UInt32) + 12) oldResult $$ [Hresult]
-        · inext
-          rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
-          iexact Hresult
+        · ilater_rw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
         wasm_wp_next wp_store32 oldResult
           (by decide) (by decide) (by decide) (by decide) $$ HresultLater
         iintro Hresult
@@ -1899,9 +1877,7 @@ theorem checkCopysign_comparison_smallStep_wp
         wasm_wp_pures [wp_brIfZero wp_localGet wp_const]
         ihave HresultLater :
             ▷ pointsTo_u32 0 ((1048560 : UInt32) + 12) oldResult $$ [Hresult]
-        · inext
-          rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
-          iexact Hresult
+        · ilater_rw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
         wasm_wp_next wp_store32 oldResult
           (by decide) (by decide) (by decide) (by decide) $$ HresultLater
         iintro Hresult

@@ -254,9 +254,7 @@ theorem func0_tail_to_ret_smallStep_wp
   have heffective : (1048560 : UInt32) + 12 = 1048572 := by decide
   ihave HwordLater :
       ▷ pointsTo_u32 0 ((1048560 : UInt32) + 12) word $$ [Hword]
-  · inext
-    rw [heffective]
-    iexact Hword
+  · ilater_rw_exact [heffective] with Hword
   wasm_wp_next wp_load32 word (by decide) (by decide) (by decide) (by decide) $$
     HwordLater
   iintro Hword
@@ -311,9 +309,7 @@ theorem func0_store32_smallStep_wp
   have heffective : (1048560 : UInt32) + 12 = 1048572 := by decide
   ihave HwordLater :
       ▷ pointsTo_u32 0 ((1048560 : UInt32) + 12) oldWord $$ [Hword]
-  · inext
-    rw [heffective]
-    iexact Hword
+  · ilater_rw_exact [heffective] with Hword
   wasm_wp_next wp_store32 oldWord (by decide) (by decide) (by decide) (by decide) $$
     HwordLater
   iintro Hword

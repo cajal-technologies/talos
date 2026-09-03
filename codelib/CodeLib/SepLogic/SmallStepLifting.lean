@@ -4210,15 +4210,11 @@ theorem wp_wordRoundtrip (oldWord : UInt32) :
   iintro Hword
   wasm_wp_pures [wp_const wp_const]
   ihave HwordLater : ▷ pointsTo_u32 0 (16 + 0) oldWord $$ [Hword]
-  · inext
-    rw [UInt32.add_zero]
-    iexact Hword
+  · ilater_rw_exact [UInt32.add_zero] with Hword
   wasm_wp_next_bind wp_store32 oldWord rfl rfl rfl rfl with HwordLater => Hword
   wasm_wp_pures [wp_const]
   ihave HwordLater : ▷ pointsTo_u32 0 (16 + 0) 0x12345678 $$ [Hword]
-  · inext
-    rw [UInt32.add_zero]
-    iexact Hword
+  · ilater_rw_exact [UInt32.add_zero] with Hword
   wasm_wp_next_bind wp_load32 0x12345678 rfl rfl rfl rfl with HwordLater => Hword
   wasm_wp_finish_value
   isplitr_pureexact rfl
@@ -4247,15 +4243,11 @@ theorem wp_fillFourBytes (oldWord : UInt32) :
   wasm_wp_next_bind wp_fill16_four_AB oldWord with H16Later => H16
   wasm_wp_pures [wp_const]
   ihave H16Later : ▷ pointsTo_u32 0 (16 + 0) 0xABABABAB $$ [H16]
-  · inext
-    rw [UInt32.add_zero]
-    iexact H16
+  · ilater_rw_exact [UInt32.add_zero] with H16
   wasm_wp_next_bind wp_load32 0xABABABAB rfl rfl rfl rfl with H16Later => H16
   wasm_wp_pures [wp_const]
   ihave H32Later : ▷ pointsTo_u32 0 (32 + 0) 0x12345678 $$ [H32]
-  · inext
-    rw [UInt32.add_zero]
-    iexact H32
+  · ilater_rw_exact [UInt32.add_zero] with H32
   wasm_wp_next_bind wp_load32 0x12345678 rfl rfl rfl rfl with H32Later => H32
   wasm_wp_finish_value
   isplitr_pureexact rfl
@@ -4291,9 +4283,7 @@ theorem wp_copyWord (oldDestination : UInt32) :
   wasm_wp_pures [wp_const]
   ihave HdestinationLater :
       ▷ pointsTo_u32 0 (8 + 0) 0x04030201 $$ [Hdestination]
-  · inext
-    rw [UInt32.add_zero]
-    iexact Hdestination
+  · ilater_rw_exact [UInt32.add_zero] with Hdestination
   wasm_wp_next_bind wp_load32 0x04030201 rfl rfl rfl rfl with HdestinationLater => Hdestination
   wasm_wp_finish_value
   isplitr_pureexact rfl
@@ -4332,9 +4322,7 @@ theorem wp_memoryInitDrop (oldWord : UInt32) :
   wasm_wp_pures [wp_const]
   ihave HwordLater :
       ▷ pointsTo_u32 0 (16 + 0) 0x04030201 $$ [Hword]
-  · inext
-    rw [UInt32.add_zero]
-    iexact Hword
+  · ilater_rw_exact [UInt32.add_zero] with Hword
   wasm_wp_next_bind wp_load32 0x04030201 rfl rfl rfl rfl with HwordLater => Hword
   wasm_wp_finish_value
   isplitr_pureexact rfl
@@ -4363,9 +4351,7 @@ theorem wp_copyOverlapWord :
   wasm_wp_pures [wp_const]
   ihave HwordLater :
       ▷ pointsTo_u64 0 (0 + 0) 0x8877443322112211 $$ [Hword]
-  · inext
-    rw [UInt32.add_zero]
-    iexact Hword
+  · ilater_rw_exact [UInt32.add_zero] with Hword
   wasm_wp_next wp_load64 0x8877443322112211
     rfl rfl rfl rfl rfl rfl rfl rfl $$ HwordLater
   iintro Hword
@@ -4392,39 +4378,27 @@ theorem wp_swapWords :
   iintro ⟨H0, H4⟩
   wasm_wp_pures [wp_const]
   ihave H0Later : ▷ pointsTo_u32 0 (0 + 0) 11 $$ [H0]
-  · inext
-    rw [UInt32.add_zero]
-    iexact H0
+  · ilater_rw_exact [UInt32.add_zero] with H0
   wasm_wp_next_bind wp_load32 11 rfl rfl rfl rfl with H0Later => H0
   wasm_wp_pures [wp_localSet wp_const]
   ihave H4Later : ▷ pointsTo_u32 0 (4 + 0) 22 $$ [H4]
-  · inext
-    rw [UInt32.add_zero]
-    iexact H4
+  · ilater_rw_exact [UInt32.add_zero] with H4
   wasm_wp_next_bind wp_load32 22 rfl rfl rfl rfl with H4Later => H4
   wasm_wp_pures [wp_localSet wp_const wp_localGet]
   ihave H0Later : ▷ pointsTo_u32 0 (0 + 0) 11 $$ [H0]
-  · inext
-    rw [UInt32.add_zero]
-    iexact H0
+  · ilater_rw_exact [UInt32.add_zero] with H0
   wasm_wp_next_bind wp_store32 11 rfl rfl rfl rfl with H0Later => H0
   wasm_wp_pures [wp_const wp_localGet]
   ihave H4Later : ▷ pointsTo_u32 0 (4 + 0) 22 $$ [H4]
-  · inext
-    rw [UInt32.add_zero]
-    iexact H4
+  · ilater_rw_exact [UInt32.add_zero] with H4
   wasm_wp_next_bind wp_store32 22 rfl rfl rfl rfl with H4Later => H4
   wasm_wp_pures [wp_const]
   ihave H0Later : ▷ pointsTo_u32 0 (0 + 0) 22 $$ [H0]
-  · inext
-    rw [UInt32.add_zero]
-    iexact H0
+  · ilater_rw_exact [UInt32.add_zero] with H0
   wasm_wp_next_bind wp_load32 22 rfl rfl rfl rfl with H0Later => H0
   wasm_wp_pures [wp_const]
   ihave H4Later : ▷ pointsTo_u32 0 (4 + 0) 11 $$ [H4]
-  · inext
-    rw [UInt32.add_zero]
-    iexact H4
+  · ilater_rw_exact [UInt32.add_zero] with H4
   wasm_wp_next_bind wp_load32 11 rfl rfl rfl rfl with H4Later => H4
   wasm_wp_finish_value
   isplitr_pureexact rfl
@@ -4453,39 +4427,27 @@ theorem wp_reverseThreeWords :
   iintro ⟨H0, H4, H8⟩
   wasm_wp_pures [wp_const]
   ihave H0Later : ▷ pointsTo_u32 0 (0 + 0) 11 $$ [H0]
-  · inext
-    rw [UInt32.add_zero]
-    iexact H0
+  · ilater_rw_exact [UInt32.add_zero] with H0
   wasm_wp_next_bind wp_load32 11 rfl rfl rfl rfl with H0Later => H0
   wasm_wp_pures [wp_localSet wp_const]
   ihave H8Later : ▷ pointsTo_u32 0 (8 + 0) 33 $$ [H8]
-  · inext
-    rw [UInt32.add_zero]
-    iexact H8
+  · ilater_rw_exact [UInt32.add_zero] with H8
   wasm_wp_next_bind wp_load32 33 rfl rfl rfl rfl with H8Later => H8
   wasm_wp_pures [wp_localSet wp_const wp_localGet]
   ihave H0Later : ▷ pointsTo_u32 0 (0 + 0) 11 $$ [H0]
-  · inext
-    rw [UInt32.add_zero]
-    iexact H0
+  · ilater_rw_exact [UInt32.add_zero] with H0
   wasm_wp_next_bind wp_store32 11 rfl rfl rfl rfl with H0Later => H0
   wasm_wp_pures [wp_const wp_localGet]
   ihave H8Later : ▷ pointsTo_u32 0 (8 + 0) 33 $$ [H8]
-  · inext
-    rw [UInt32.add_zero]
-    iexact H8
+  · ilater_rw_exact [UInt32.add_zero] with H8
   wasm_wp_next_bind wp_store32 33 rfl rfl rfl rfl with H8Later => H8
   wasm_wp_pures [wp_const]
   ihave H0Later : ▷ pointsTo_u32 0 (0 + 0) 33 $$ [H0]
-  · inext
-    rw [UInt32.add_zero]
-    iexact H0
+  · ilater_rw_exact [UInt32.add_zero] with H0
   wasm_wp_next_bind wp_load32 33 rfl rfl rfl rfl with H0Later => H0
   wasm_wp_pures [wp_const]
   ihave H8Later : ▷ pointsTo_u32 0 (8 + 0) 11 $$ [H8]
-  · inext
-    rw [UInt32.add_zero]
-    iexact H8
+  · ilater_rw_exact [UInt32.add_zero] with H8
   wasm_wp_next_bind wp_load32 11 rfl rfl rfl rfl with H8Later => H8
   wasm_wp_finish_value
   isplitr_pureexact rfl
@@ -4516,39 +4478,27 @@ theorem wp_partitionThreeWords :
   iintro ⟨H0, H4, H8⟩
   wasm_wp_pures [wp_const]
   ihave H0Later : ▷ pointsTo_u32 0 (0 + 0) 33 $$ [H0]
-  · inext
-    rw [UInt32.add_zero]
-    iexact H0
+  · ilater_rw_exact [UInt32.add_zero] with H0
   wasm_wp_next_bind wp_load32 33 rfl rfl rfl rfl with H0Later => H0
   wasm_wp_pures [wp_localSet wp_const]
   ihave H4Later : ▷ pointsTo_u32 0 (4 + 0) 11 $$ [H4]
-  · inext
-    rw [UInt32.add_zero]
-    iexact H4
+  · ilater_rw_exact [UInt32.add_zero] with H4
   wasm_wp_next_bind wp_load32 11 rfl rfl rfl rfl with H4Later => H4
   wasm_wp_pures [wp_localSet wp_const]
   ihave H8Later : ▷ pointsTo_u32 0 (8 + 0) 22 $$ [H8]
-  · inext
-    rw [UInt32.add_zero]
-    iexact H8
+  · ilater_rw_exact [UInt32.add_zero] with H8
   wasm_wp_next_bind wp_load32 22 rfl rfl rfl rfl with H8Later => H8
   wasm_wp_pures [wp_localSet wp_const wp_localGet]
   ihave H0Later : ▷ pointsTo_u32 0 (0 + 0) 33 $$ [H0]
-  · inext
-    rw [UInt32.add_zero]
-    iexact H0
+  · ilater_rw_exact [UInt32.add_zero] with H0
   wasm_wp_next_bind wp_store32 33 rfl rfl rfl rfl with H0Later => H0
   wasm_wp_pures [wp_const wp_localGet]
   ihave H4Later : ▷ pointsTo_u32 0 (4 + 0) 11 $$ [H4]
-  · inext
-    rw [UInt32.add_zero]
-    iexact H4
+  · ilater_rw_exact [UInt32.add_zero] with H4
   wasm_wp_next_bind wp_store32 11 rfl rfl rfl rfl with H4Later => H4
   wasm_wp_pures [wp_const wp_localGet]
   ihave H8Later : ▷ pointsTo_u32 0 (8 + 0) 22 $$ [H8]
-  · inext
-    rw [UInt32.add_zero]
-    iexact H8
+  · ilater_rw_exact [UInt32.add_zero] with H8
   wasm_wp_next_bind wp_store32 22 rfl rfl rfl rfl with H8Later => H8
   wasm_wp_finish_value
   isplitr_pureexact rfl
@@ -4582,15 +4532,11 @@ theorem wp_mergeTwoWords :
   iintro ⟨H0, H4⟩
   wasm_wp_pures [wp_const]
   ihave H0Later : ▷ pointsTo_u32 0 (0 + 0) 9 $$ [H0]
-  · inext
-    rw [UInt32.add_zero]
-    iexact H0
+  · ilater_rw_exact [UInt32.add_zero] with H0
   wasm_wp_next_bind wp_load32 9 rfl rfl rfl rfl with H0Later => H0
   wasm_wp_pures [wp_localSet wp_const]
   ihave H4Later : ▷ pointsTo_u32 0 (4 + 0) 4 $$ [H4]
-  · inext
-    rw [UInt32.add_zero]
-    iexact H4
+  · ilater_rw_exact [UInt32.add_zero] with H4
   wasm_wp_next_bind wp_load32 4 rfl rfl rfl rfl with H4Later => H4
   wasm_wp_pures [wp_localSet wp_localGet wp_localGet]
   wasm_wp_next wp_ltU (result := 0) (by decide)
@@ -4601,15 +4547,11 @@ theorem wp_mergeTwoWords :
     rfl
   wasm_wp_pures [wp_const wp_localGet]
   ihave H0Later : ▷ pointsTo_u32 0 (0 + 0) 9 $$ [H0]
-  · inext
-    rw [UInt32.add_zero]
-    iexact H0
+  · ilater_rw_exact [UInt32.add_zero] with H0
   wasm_wp_next_bind wp_store32 9 rfl rfl rfl rfl with H0Later => H0
   wasm_wp_pures [wp_const wp_localGet]
   ihave H4Later : ▷ pointsTo_u32 0 (4 + 0) 4 $$ [H4]
-  · inext
-    rw [UInt32.add_zero]
-    iexact H4
+  · ilater_rw_exact [UInt32.add_zero] with H4
   wasm_wp_next_bind wp_store32 4 rfl rfl rfl rfl with H4Later => H4
   wasm_wp_pures [wp_exitControl]
   wasm_wp_finish_value

@@ -248,34 +248,26 @@ theorem func1_spillPrefix_smallStep_wp
     List.set]
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HouterALater : ▷ pointsTo_u64 0 (1048560 + 0) a $$ [HouterA]
-  · inext
-    rw [show (1048560 : UInt32) + 0 = 1048560 by decide]
-    iexact HouterA
+  · ilater_rw_exact [show (1048560 : UInt32) + 0 = 1048560 by decide] with HouterA
   wasm_wp_next Wasm.SmallStep.wp_load64 a
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) $$ HouterALater
   iintro HouterA
   ihave HxLater : ▷ pointsTo_u64 0 (1048512 + 8) oldX $$ [Hx]
-  · inext
-    rw [show (1048512 : UInt32) + 8 = 1048520 by decide]
-    iexact Hx
+  · ilater_rw_exact [show (1048512 : UInt32) + 8 = 1048520 by decide] with Hx
   wasm_wp_next Wasm.SmallStep.wp_store64 oldX
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) $$ HxLater
   iintro Hx
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HouterBLater : ▷ pointsTo_u64 0 (1048568 + 0) b $$ [HouterB]
-  · inext
-    rw [show (1048568 : UInt32) + 0 = 1048568 by decide]
-    iexact HouterB
+  · ilater_rw_exact [show (1048568 : UInt32) + 0 = 1048568 by decide] with HouterB
   wasm_wp_next Wasm.SmallStep.wp_load64 b
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) $$ HouterBLater
   iintro HouterB
   ihave HyLater : ▷ pointsTo_u64 0 (1048512 + 16) oldY $$ [Hy]
-  · inext
-    rw [show (1048512 : UInt32) + 16 = 1048528 by decide]
-    iexact Hy
+  · ilater_rw_exact [show (1048512 : UInt32) + 16 = 1048528 by decide] with Hy
   wasm_wp_next Wasm.SmallStep.wp_store64 oldY
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) $$ HyLater
@@ -1132,9 +1124,7 @@ theorem func1_sharedShift_smallStep_wp
   wasm_wp_pures [wp_localGet]
   ihave HshiftLater :
       ▷ pointsTo_u32 0 (1048512 + 44) (sharedShiftWord a b) $$ [Hshift]
-  · inext
-    rw [sharedShiftWord]
-    iexact Hshift
+  · ilater_rw_exact [sharedShiftWord] with Hshift
   wasm_wp_next Wasm.SmallStep.wp_load32 (sharedShiftWord a b)
       (by decide) (by decide) (by decide) (by decide) $$ HshiftLater
   iintro Hshift
@@ -1228,9 +1218,7 @@ theorem func1_normalizeX_smallStep_wp
   wasm_wp_pures [wp_localGet]
   ihave HshiftXLater :
       ▷ pointsTo_u32 0 (1048512 + 40) (operandShiftWord a) $$ [HshiftX]
-  · inext
-    rw [operandShiftWord]
-    iexact HshiftX
+  · ilater_rw_exact [operandShiftWord] with HshiftX
   wasm_wp_next Wasm.SmallStep.wp_load32 (operandShiftWord a)
       (by decide) (by decide) (by decide) (by decide) $$ HshiftXLater
   iintro HshiftX
@@ -1347,9 +1335,7 @@ theorem func1_normalizeY_smallStep_wp
   wasm_wp_pures [wp_localGet]
   ihave HshiftYLater :
       ▷ pointsTo_u32 0 (1048512 + 36) (operandShiftWord b) $$ [HshiftY]
-  · inext
-    rw [operandShiftWord]
-    iexact HshiftY
+  · ilater_rw_exact [operandShiftWord] with HshiftY
   wasm_wp_next Wasm.SmallStep.wp_load32 (operandShiftWord b)
       (by decide) (by decide) (by decide) (by decide) $$ HshiftYLater
   iintro HshiftY
@@ -1734,9 +1720,7 @@ theorem func1_loopNormalizeY_smallStep_wp
   wasm_wp_pures [wp_localGet]
   ihave HshiftLater :
       ▷ pointsTo_u32 0 (1048512 + 32) (operandShiftWord d) $$ [Hshift]
-  · inext
-    rw [operandShiftWord]
-    iexact Hshift
+  · ilater_rw_exact [operandShiftWord] with Hshift
   wasm_wp_next Wasm.SmallStep.wp_load32 (operandShiftWord d)
       (by decide) (by decide) (by decide) (by decide) $$ HshiftLater
   iintro Hshift
@@ -1976,9 +1960,7 @@ theorem func1_loopNormalizeX_smallStep_wp
   wasm_wp_pures [wp_localGet]
   ihave HshiftLater :
       ▷ pointsTo_u32 0 (1048512 + 28) (operandShiftWord d) $$ [Hshift]
-  · inext
-    rw [operandShiftWord]
-    iexact Hshift
+  · ilater_rw_exact [operandShiftWord] with Hshift
   wasm_wp_next Wasm.SmallStep.wp_load32 (operandShiftWord d)
       (by decide) (by decide) (by decide) (by decide) $$ HshiftLater
   iintro Hshift
@@ -2886,9 +2868,7 @@ theorem func1_nonzeroGuards_smallStep_wp
     List.cons_append]
   wasm_wp_pures [wp_block wp_block wp_block wp_localGet]
   ihave HxLater : ▷ pointsTo_u64 0 (1048512 + 8) a $$ [Hx]
-  · inext
-    rw [show (1048512 : UInt32) + 8 = 1048520 from rfl]
-    iexact Hx
+  · ilater_rw_exact [show (1048512 : UInt32) + 8 = 1048520 from rfl] with Hx
   wasm_wp_next Wasm.SmallStep.wp_load64 a
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) $$ HxLater
@@ -2899,9 +2879,7 @@ theorem func1_nonzeroGuards_smallStep_wp
   rw [show (0 &&& 1 : UInt32) = 0 by decide]
   wasm_wp_pures [wp_brIfZero wp_localGet]
   ihave HyLater : ▷ pointsTo_u64 0 (1048512 + 16) b $$ [Hy]
-  · inext
-    rw [show (1048512 : UInt32) + 16 = 1048528 from rfl]
-    iexact Hy
+  · ilater_rw_exact [show (1048512 : UInt32) + 16 = 1048528 from rfl] with Hy
   wasm_wp_next Wasm.SmallStep.wp_load64 b
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) $$ HyLater
@@ -2972,9 +2950,7 @@ theorem func1_nonzeroFinish_smallStep_wp_to_return
   ihave HresultLater :
       ▷ pointsTo_u64 0 ((1048512 : UInt32) + 0)
         (UInt64.ofNat (Nat.gcd a.toNat b.toNat)) $$ [Hresult]
-  · inext
-    rw [show (1048512 : UInt32) + 0 = 1048512 from rfl]
-    iexact Hresult
+  · ilater_rw_exact [show (1048512 : UInt32) + 0 = 1048512 from rfl] with Hresult
   wasm_wp_next Wasm.SmallStep.wp_load64
       (UInt64.ofNat (Nat.gcd a.toNat b.toNat))
       (by decide) (by decide) (by decide) (by decide) (by decide)
@@ -3494,9 +3470,7 @@ theorem func0_callPrefix_smallStep_wp
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HouterALater :
       ▷ pointsTo_u64 0 ((1048560 : UInt32) + 0) oldOuterA $$ [HouterA]
-  · inext
-    rw [show (1048560 : UInt32) + 0 = 1048560 from rfl]
-    iexact HouterA
+  · ilater_rw_exact [show (1048560 : UInt32) + 0 = 1048560 from rfl] with HouterA
   wasm_wp_next Wasm.SmallStep.wp_store64 oldOuterA
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) $$ HouterALater
@@ -3504,9 +3478,7 @@ theorem func0_callPrefix_smallStep_wp
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HouterBLater :
       ▷ pointsTo_u64 0 ((1048560 : UInt32) + 8) oldOuterB $$ [HouterB]
-  · inext
-    rw [show (1048560 : UInt32) + 8 = 1048568 from rfl]
-    iexact HouterB
+  · ilater_rw_exact [show (1048560 : UInt32) + 8 = 1048568 from rfl] with HouterB
   wasm_wp_next Wasm.SmallStep.wp_store64 oldOuterB
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) $$ HouterBLater

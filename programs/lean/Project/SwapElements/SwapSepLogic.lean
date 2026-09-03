@@ -83,9 +83,7 @@ theorem wp_swapElementsFunc2Prefix
     Nat.reduceAdd, Nat.reduceSub, List.set]
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HALater : ▷ pointsTo_u64 0 (ptrA + 0) oldA $$ [HA]
-  · inext
-    rw [UInt32.add_zero]
-    iexact HA
+  · ilater_rw_exact [UInt32.add_zero] with HA
   wasm_wp_next wp_load64 oldA (by simp)
     (by simpa using ha1) (by simpa using ha2) (by simpa using ha3)
     (by simpa using ha4) (by simpa using ha5) (by simpa using ha6)
@@ -93,26 +91,20 @@ theorem wp_swapElementsFunc2Prefix
   iintro HA
   ihave HscratchLater :
       ▷ pointsTo_u64 0 ((1048544 : UInt32) + 8) oldScratch $$ [Hscratch]
-  · inext
-    rw [show (1048544 : UInt32) + 8 = 1048552 from rfl]
-    iexact Hscratch
+  · ilater_rw_exact [show (1048544 : UInt32) + 8 = 1048552 from rfl] with Hscratch
   wasm_wp_next wp_store64 oldScratch rfl rfl rfl rfl rfl rfl rfl rfl $$
     HscratchLater
   iintro Hscratch
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HBLater : ▷ pointsTo_u64 0 (ptrB + 0) oldB $$ [HB]
-  · inext
-    rw [UInt32.add_zero]
-    iexact HB
+  · ilater_rw_exact [UInt32.add_zero] with HB
   wasm_wp_next wp_load64 oldB (by simp)
     (by simpa using hb1) (by simpa using hb2) (by simpa using hb3)
     (by simpa using hb4) (by simpa using hb5) (by simpa using hb6)
     (by simpa using hb7) $$ HBLater
   iintro HB
   ihave HALater : ▷ pointsTo_u64 0 (ptrA + 0) oldA $$ [HA]
-  · inext
-    rw [UInt32.add_zero]
-    iexact HA
+  · ilater_rw_exact [UInt32.add_zero] with HA
   wasm_wp_next wp_store64 oldA (by simp)
     (by simpa using ha1) (by simpa using ha2) (by simpa using ha3)
     (by simpa using ha4) (by simpa using ha5) (by simpa using ha6)
@@ -121,16 +113,12 @@ theorem wp_swapElementsFunc2Prefix
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HscratchLater :
       ▷ pointsTo_u64 0 ((1048544 : UInt32) + 8) oldA $$ [Hscratch]
-  · inext
-    rw [show (1048544 : UInt32) + 8 = 1048552 from rfl]
-    iexact Hscratch
+  · ilater_rw_exact [show (1048544 : UInt32) + 8 = 1048552 from rfl] with Hscratch
   wasm_wp_next wp_load64 oldA rfl rfl rfl rfl rfl rfl rfl rfl $$
     HscratchLater
   iintro Hscratch
   ihave HBLater : ▷ pointsTo_u64 0 (ptrB + 0) oldB $$ [HB]
-  · inext
-    rw [UInt32.add_zero]
-    iexact HB
+  · ilater_rw_exact [UInt32.add_zero] with HB
   wasm_wp_next wp_store64 oldB (by simp)
     (by simpa using hb1) (by simpa using hb2) (by simpa using hb3)
     (by simpa using hb4) (by simpa using hb5) (by simpa using hb6)
@@ -170,9 +158,7 @@ theorem wp_swapElementsFunc2AliasPrefix
     Nat.reduceAdd, Nat.reduceSub, List.set]
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HcellLater : ▷ pointsTo_u64 0 (ptr + 0) oldValue $$ [Hcell]
-  · inext
-    rw [UInt32.add_zero]
-    iexact Hcell
+  · ilater_rw_exact [UInt32.add_zero] with Hcell
   wasm_wp_next wp_load64 oldValue (by simp)
     (by simpa using h1) (by simpa using h2) (by simpa using h3)
     (by simpa using h4) (by simpa using h5) (by simpa using h6)
@@ -180,26 +166,20 @@ theorem wp_swapElementsFunc2AliasPrefix
   iintro Hcell
   ihave HscratchLater :
       ▷ pointsTo_u64 0 ((1048544 : UInt32) + 8) oldScratch $$ [Hscratch]
-  · inext
-    rw [show (1048544 : UInt32) + 8 = 1048552 from rfl]
-    iexact Hscratch
+  · ilater_rw_exact [show (1048544 : UInt32) + 8 = 1048552 from rfl] with Hscratch
   wasm_wp_next wp_store64 oldScratch rfl rfl rfl rfl rfl rfl rfl rfl $$
     HscratchLater
   iintro Hscratch
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HcellLater : ▷ pointsTo_u64 0 (ptr + 0) oldValue $$ [Hcell]
-  · inext
-    rw [UInt32.add_zero]
-    iexact Hcell
+  · ilater_rw_exact [UInt32.add_zero] with Hcell
   wasm_wp_next wp_load64 oldValue (by simp)
     (by simpa using h1) (by simpa using h2) (by simpa using h3)
     (by simpa using h4) (by simpa using h5) (by simpa using h6)
     (by simpa using h7) $$ HcellLater
   iintro Hcell
   ihave HcellLater : ▷ pointsTo_u64 0 (ptr + 0) oldValue $$ [Hcell]
-  · inext
-    rw [UInt32.add_zero]
-    iexact Hcell
+  · ilater_rw_exact [UInt32.add_zero] with Hcell
   wasm_wp_next wp_store64 oldValue (by simp)
     (by simpa using h1) (by simpa using h2) (by simpa using h3)
     (by simpa using h4) (by simpa using h5) (by simpa using h6)
@@ -208,16 +188,12 @@ theorem wp_swapElementsFunc2AliasPrefix
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HscratchLater :
       ▷ pointsTo_u64 0 ((1048544 : UInt32) + 8) oldValue $$ [Hscratch]
-  · inext
-    rw [show (1048544 : UInt32) + 8 = 1048552 from rfl]
-    iexact Hscratch
+  · ilater_rw_exact [show (1048544 : UInt32) + 8 = 1048552 from rfl] with Hscratch
   wasm_wp_next wp_load64 oldValue rfl rfl rfl rfl rfl rfl rfl rfl $$
     HscratchLater
   iintro Hscratch
   ihave HcellLater : ▷ pointsTo_u64 0 (ptr + 0) oldValue $$ [Hcell]
-  · inext
-    rw [UInt32.add_zero]
-    iexact Hcell
+  · ilater_rw_exact [UInt32.add_zero] with Hcell
   wasm_wp_next wp_store64 oldValue (by simp)
     (by simpa using h1) (by simpa using h2) (by simpa using h3)
     (by simpa using h4) (by simpa using h5) (by simpa using h6)
@@ -296,16 +272,12 @@ theorem wp_swapElementsFunc3
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HlenLater :
       ▷ pointsTo_u32 0 ((1048568 : UInt32) + 4) oldLen $$ [Hlen]
-  · inext
-    rw [show (1048568 : UInt32) + 4 = 1048572 from rfl]
-    iexact Hlen
+  · ilater_rw_exact [show (1048568 : UInt32) + 4 = 1048572 from rfl] with Hlen
   wasm_wp_next_bind wp_store32 oldLen rfl rfl rfl rfl with HlenLater => Hlen
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HptrLater :
       ▷ pointsTo_u32 0 ((1048568 : UInt32) + 0) oldPtr $$ [Hptr]
-  · inext
-    rw [UInt32.add_zero]
-    iexact Hptr
+  · ilater_rw_exact [UInt32.add_zero] with Hptr
   wasm_wp_next_bind wp_store32 oldPtr rfl rfl rfl rfl with HptrLater => Hptr
   wasm_wp_return_value
   isplitr_pureexact rfl
@@ -1141,16 +1113,12 @@ theorem func3_context_smallStep_wp
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HlenLater :
       ▷ pointsTo_u32 0 ((1048568 : UInt32) + 4) oldLen $$ [Hlen]
-  · inext
-    rw [show (1048568 : UInt32) + 4 = 1048572 from rfl]
-    iexact Hlen
+  · ilater_rw_exact [show (1048568 : UInt32) + 4 = 1048572 from rfl] with Hlen
   wasm_wp_next_bind Wasm.SmallStep.wp_store32 oldLen rfl rfl rfl rfl with HlenLater => Hlen
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HptrLater :
       ▷ pointsTo_u32 0 ((1048568 : UInt32) + 0) oldPtr $$ [Hptr]
-  · inext
-    rw [UInt32.add_zero]
-    iexact Hptr
+  · ilater_rw_exact [UInt32.add_zero] with Hptr
   wasm_wp_next_bind Wasm.SmallStep.wp_store32 oldPtr rfl rfl rfl rfl with HptrLater => Hptr
   iapply hreturn
   rw [UInt32.add_zero,
@@ -1232,9 +1200,7 @@ theorem func4_happy_smallStep_wp
     wasm_wp_pures [wp_localGet]
     ihave HlenLater :
         ▷ pointsTo_u32 0 ((1048560 : UInt32) + 12) len $$ [HspillLen]
-    · inext
-      rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
-      iexact HspillLen
+    · ilater_rw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with HspillLen
     wasm_wp_next Wasm.SmallStep.wp_load32 len
       (by decide) (by decide) (by decide) (by decide) $$ HlenLater
     iintro HspillLen
@@ -1244,9 +1210,7 @@ theorem func4_happy_smallStep_wp
     wasm_wp_pures [wp_localGet]
     ihave HptrLater :
         ▷ pointsTo_u32 0 ((1048560 : UInt32) + 8) ptr $$ [HspillPtr]
-    · inext
-      rw [show (1048560 : UInt32) + 8 = 1048568 by decide]
-      iexact HspillPtr
+    · ilater_rw_exact [show (1048560 : UInt32) + 8 = 1048568 by decide] with HspillPtr
     wasm_wp_next Wasm.SmallStep.wp_load32 ptr
       (by decide) (by decide) (by decide) (by decide) $$ HptrLater
     iintro HspillPtr
@@ -1333,9 +1297,7 @@ theorem func4_alias_smallStep_wp
     wasm_wp_pures [wp_localGet]
     ihave HlenLater :
         ▷ pointsTo_u32 0 ((1048560 : UInt32) + 12) len $$ [HspillLen]
-    · inext
-      rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
-      iexact HspillLen
+    · ilater_rw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with HspillLen
     wasm_wp_next Wasm.SmallStep.wp_load32 len
       (by decide) (by decide) (by decide) (by decide) $$ HlenLater
     iintro HspillLen
@@ -1345,9 +1307,7 @@ theorem func4_alias_smallStep_wp
     wasm_wp_pures [wp_localGet]
     ihave HptrLater :
         ▷ pointsTo_u32 0 ((1048560 : UInt32) + 8) ptr $$ [HspillPtr]
-    · inext
-      rw [show (1048560 : UInt32) + 8 = 1048568 by decide]
-      iexact HspillPtr
+    · ilater_rw_exact [show (1048560 : UInt32) + 8 = 1048568 by decide] with HspillPtr
     wasm_wp_next Wasm.SmallStep.wp_load32 ptr
       (by decide) (by decide) (by decide) (by decide) $$ HptrLater
     iintro HspillPtr

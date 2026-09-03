@@ -178,9 +178,7 @@ theorem func5_lowered_body_smallStep_wp
   wasm_wp_next wp_scalarFloat1 rfl rfl
   ihave HwordLater :
       ▷ pointsTo_u32 0 ((1048544 : UInt32) + 12) oldWord $$ [Hword]
-  · inext
-    rw [show (1048544 : UInt32) + 12 = 1048556 by decide]
-    iexact Hword
+  · ilater_rw_exact [show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
   wasm_wp_next wp_f32Store oldWord
     (by decide) (by decide) (by decide) (by decide) $$ HwordLater
   iintro Hword
@@ -267,9 +265,7 @@ theorem deepFrameFloat_body_smallStep_wp
   wasm_wp_next wp_scalarFloat1 hzero heval
   ihave HwordLater :
       ▷ pointsTo_u32 0 ((1048528 : UInt32) + 12) oldWord $$ [Hword]
-  · inext
-    rw [show (1048528 : UInt32) + 12 = 1048540 by decide]
-    iexact Hword
+  · ilater_rw_exact [show (1048528 : UInt32) + 12 = 1048540 by decide] with Hword
   wasm_wp_next wp_f32Store oldWord
     (by decide) (by decide) (by decide) (by decide) $$ HwordLater
   iintro Hword
@@ -450,9 +446,7 @@ theorem naive_tail_smallStep_wp
   wasm_wp_pures [wp_localGet]
   ihave HwordLater :
       ▷ pointsTo_u32 0 ((1048544 : UInt32) + 12) result $$ [Hword]
-  · inext
-    rw [show (1048544 : UInt32) + 12 = 1048556 by decide]
-    iexact Hword
+  · ilater_rw_exact [show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
   wasm_wp_next wp_f32Load result
     (by decide) (by decide) (by decide) (by decide) $$ HwordLater
   iintro Hword
@@ -505,9 +499,7 @@ theorem naive_storeTrunc_smallStep_wp
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HwordLater :
       ▷ pointsTo_u32 0 ((1048544 : UInt32) + 12) oldWord $$ [Hword]
-  · inext
-    rw [show (1048544 : UInt32) + 12 = 1048556 by decide]
-    iexact Hword
+  · ilater_rw_exact [show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
   wasm_wp_next wp_f32Store oldWord
     (by decide) (by decide) (by decide) (by decide) $$ HwordLater
   iintro Hword
@@ -566,9 +558,7 @@ theorem naive_ceil_smallStep_wp
     simp only [List.take, List.singleton_append]
     ihave HwordLater :
         ▷ pointsTo_u32 0 ((1048544 : UInt32) + 12) oldWord $$ [Hword]
-    · inext
-      rw [show (1048544 : UInt32) + 12 = 1048556 by decide]
-      iexact Hword
+    · ilater_rw_exact [show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
     wasm_wp_next wp_f32Store oldWord
       (by decide) (by decide) (by decide) (by decide) $$ HwordLater
     iintro Hword
@@ -631,9 +621,7 @@ theorem naive_floor_smallStep_wp
     simp only [List.take, List.singleton_append]
     ihave HwordLater :
         ▷ pointsTo_u32 0 ((1048544 : UInt32) + 12) oldWord $$ [Hword]
-    · inext
-      rw [show (1048544 : UInt32) + 12 = 1048556 by decide]
-      iexact Hword
+    · ilater_rw_exact [show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
     wasm_wp_next wp_f32Store oldWord
       (by decide) (by decide) (by decide) (by decide) $$ HwordLater
     iintro Hword
@@ -939,9 +927,7 @@ theorem roundCheck_tail_result_smallStep_wp
   wasm_wp_pures [wp_localGet]
   ihave HresultLater :
       ▷ pointsTo_u32 0 ((1048560 : UInt32) + 12) result $$ [Hresult]
-  · inext
-    rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
-    iexact Hresult
+  · ilater_rw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
   wasm_wp_next wp_load32 result
     (by decide) (by decide) (by decide) (by decide) $$ HresultLater
   iintro Hresult
@@ -1025,9 +1011,7 @@ theorem roundCheck_comparison_smallStep_wp
         wasm_wp_pures [wp_localGet wp_const]
         ihave HresultLater :
             ▷ pointsTo_u32 0 ((1048560 : UInt32) + 12) oldResult $$ [Hresult]
-        · inext
-          rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
-          iexact Hresult
+        · ilater_rw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
         wasm_wp_next wp_store32 oldResult
           (by decide) (by decide) (by decide) (by decide) $$ HresultLater
         iintro Hresult
@@ -1050,9 +1034,7 @@ theorem roundCheck_comparison_smallStep_wp
         wasm_wp_pures [wp_brIfZero wp_localGet wp_const]
         ihave HresultLater :
             ▷ pointsTo_u32 0 ((1048560 : UInt32) + 12) oldResult $$ [Hresult]
-        · inext
-          rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
-          iexact Hresult
+        · ilater_rw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
         wasm_wp_next wp_store32 oldResult
           (by decide) (by decide) (by decide) (by decide) $$ HresultLater
         iintro Hresult
