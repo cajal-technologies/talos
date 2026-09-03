@@ -74,34 +74,8 @@ theorem wp_swapElementsFunc2Prefix
           .localGet 0, .localGet 1, .load64 0, .store64 0,
           .localGet 1, .localGet 2, .load64 8, .store64 0, .ret ],
         0, [], [], calls⟩ : Expr α) @ s; E {{ Φ }} := by
-  have ha1 : (ptrA + 1).toNat = ptrA.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 1 (by omega) (by omega)
-  have ha2 : (ptrA + 2).toNat = ptrA.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 2 (by omega) (by omega)
-  have ha3 : (ptrA + 3).toNat = ptrA.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 3 (by omega) (by omega)
-  have ha4 : (ptrA + 4).toNat = ptrA.toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 4 (by omega) (by omega)
-  have ha5 : (ptrA + 5).toNat = ptrA.toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 5 (by omega) (by omega)
-  have ha6 : (ptrA + 6).toNat = ptrA.toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 6 (by omega) (by omega)
-  have ha7 : (ptrA + 7).toNat = ptrA.toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 7 (by omega) (by omega)
-  have hb1 : (ptrB + 1).toNat = ptrB.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 1 (by omega) (by omega)
-  have hb2 : (ptrB + 2).toNat = ptrB.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 2 (by omega) (by omega)
-  have hb3 : (ptrB + 3).toNat = ptrB.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 3 (by omega) (by omega)
-  have hb4 : (ptrB + 4).toNat = ptrB.toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 4 (by omega) (by omega)
-  have hb5 : (ptrB + 5).toNat = ptrB.toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 5 (by omega) (by omega)
-  have hb6 : (ptrB + 6).toNat = ptrB.toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 6 (by omega) (by omega)
-  have hb7 : (ptrB + 7).toNat = ptrB.toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 7 (by omega) (by omega)
+  obtain ⟨ha1, ha2, ha3, ha4, ha5, ha6, ha7⟩ := UInt32.addSteps8 ptrA hroomA
+  obtain ⟨hb1, hb2, hb3, hb4, hb5, hb6, hb7⟩ := UInt32.addSteps8 ptrB hroomB
   iintro ⟨⟨Hglobal, Hscratch, HA, HB⟩, Hdone⟩
   iapply wp_globalGet $$ Hglobal
   inext
@@ -210,20 +184,7 @@ theorem wp_swapElementsFunc2AliasPrefix
           .localGet 0, .localGet 1, .load64 0, .store64 0,
           .localGet 1, .localGet 2, .load64 8, .store64 0, .ret ],
         0, [], [], calls⟩ : Expr α) @ s; E {{ Φ }} := by
-  have h1 : (ptr + 1).toNat = ptr.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptr 1 (by omega) (by omega)
-  have h2 : (ptr + 2).toNat = ptr.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptr 2 (by omega) (by omega)
-  have h3 : (ptr + 3).toNat = ptr.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptr 3 (by omega) (by omega)
-  have h4 : (ptr + 4).toNat = ptr.toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptr 4 (by omega) (by omega)
-  have h5 : (ptr + 5).toNat = ptr.toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptr 5 (by omega) (by omega)
-  have h6 : (ptr + 6).toNat = ptr.toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptr 6 (by omega) (by omega)
-  have h7 : (ptr + 7).toNat = ptr.toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptr 7 (by omega) (by omega)
+  obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := UInt32.addSteps8 ptr hroom
   iintro ⟨⟨Hglobal, Hscratch, Hcell⟩, Hdone⟩
   iapply wp_globalGet $$ Hglobal
   inext
@@ -459,34 +420,8 @@ theorem twp_swapElementsFunc2Prefix
           .localGet 0, .localGet 1, .load64 0, .store64 0,
           .localGet 1, .localGet 2, .load64 8, .store64 0, .ret ],
         0, [], [], calls⟩ : Expr α) @ s; E [{ Φ }] := by
-  have ha1 : (ptrA + 1).toNat = ptrA.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 1 (by omega) (by omega)
-  have ha2 : (ptrA + 2).toNat = ptrA.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 2 (by omega) (by omega)
-  have ha3 : (ptrA + 3).toNat = ptrA.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 3 (by omega) (by omega)
-  have ha4 : (ptrA + 4).toNat = ptrA.toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 4 (by omega) (by omega)
-  have ha5 : (ptrA + 5).toNat = ptrA.toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 5 (by omega) (by omega)
-  have ha6 : (ptrA + 6).toNat = ptrA.toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 6 (by omega) (by omega)
-  have ha7 : (ptrA + 7).toNat = ptrA.toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 7 (by omega) (by omega)
-  have hb1 : (ptrB + 1).toNat = ptrB.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 1 (by omega) (by omega)
-  have hb2 : (ptrB + 2).toNat = ptrB.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 2 (by omega) (by omega)
-  have hb3 : (ptrB + 3).toNat = ptrB.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 3 (by omega) (by omega)
-  have hb4 : (ptrB + 4).toNat = ptrB.toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 4 (by omega) (by omega)
-  have hb5 : (ptrB + 5).toNat = ptrB.toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 5 (by omega) (by omega)
-  have hb6 : (ptrB + 6).toNat = ptrB.toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 6 (by omega) (by omega)
-  have hb7 : (ptrB + 7).toNat = ptrB.toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 7 (by omega) (by omega)
+  obtain ⟨ha1, ha2, ha3, ha4, ha5, ha6, ha7⟩ := UInt32.addSteps8 ptrA hroomA
+  obtain ⟨hb1, hb2, hb3, hb4, hb5, hb6, hb7⟩ := UInt32.addSteps8 ptrB hroomB
   iintro ⟨⟨Hglobal, Hscratch, HA, HB⟩, Hdone⟩
   iapply twp_globalGet $$ Hglobal
   iintro Hglobal
@@ -569,20 +504,7 @@ theorem twp_swapElementsFunc2AliasPrefix
           .localGet 0, .localGet 1, .load64 0, .store64 0,
           .localGet 1, .localGet 2, .load64 8, .store64 0, .ret ],
         0, [], [], calls⟩ : Expr α) @ s; E [{ Φ }] := by
-  have h1 : (ptr + 1).toNat = ptr.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptr 1 (by omega) (by omega)
-  have h2 : (ptr + 2).toNat = ptr.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptr 2 (by omega) (by omega)
-  have h3 : (ptr + 3).toNat = ptr.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptr 3 (by omega) (by omega)
-  have h4 : (ptr + 4).toNat = ptr.toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptr 4 (by omega) (by omega)
-  have h5 : (ptr + 5).toNat = ptr.toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptr 5 (by omega) (by omega)
-  have h6 : (ptr + 6).toNat = ptr.toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptr 6 (by omega) (by omega)
-  have h7 : (ptr + 7).toNat = ptr.toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptr 7 (by omega) (by omega)
+  obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := UInt32.addSteps8 ptr hroom
   iintro ⟨⟨Hglobal, Hscratch, Hcell⟩, Hdone⟩
   iapply twp_globalGet $$ Hglobal
   iintro Hglobal
@@ -2623,35 +2545,8 @@ theorem func4_distinct_store_partiallyMeets
     simpa [addressI] using hroomI
   have hroomJ' : addressJ.toNat + 8 ≤ 4294967296 := by
     simpa [addressJ] using hroomJ
-  have hi1 : (addressI + 1).toNat = addressI.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 1
-      (by omega) (by omega)
-  have hi2 : (addressI + 2).toNat = addressI.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 2 (by omega) (by omega)
-  have hi3 : (addressI + 3).toNat = addressI.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 3 (by omega) (by omega)
-  have hi4 : (addressI + 4).toNat = addressI.toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 4 (by omega) (by omega)
-  have hi5 : (addressI + 5).toNat = addressI.toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 5 (by omega) (by omega)
-  have hi6 : (addressI + 6).toNat = addressI.toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 6 (by omega) (by omega)
-  have hi7 : (addressI + 7).toNat = addressI.toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 7 (by omega) (by omega)
-  have hj1 : (addressJ + 1).toNat = addressJ.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 1 (by omega) (by omega)
-  have hj2 : (addressJ + 2).toNat = addressJ.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 2 (by omega) (by omega)
-  have hj3 : (addressJ + 3).toNat = addressJ.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 3 (by omega) (by omega)
-  have hj4 : (addressJ + 4).toNat = addressJ.toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 4 (by omega) (by omega)
-  have hj5 : (addressJ + 5).toNat = addressJ.toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 5 (by omega) (by omega)
-  have hj6 : (addressJ + 6).toNat = addressJ.toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 6 (by omega) (by omega)
-  have hj7 : (addressJ + 7).toNat = addressJ.toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 7 (by omega) (by omega)
+  obtain ⟨hi1, hi2, hi3, hi4, hi5, hi6, hi7⟩ := UInt32.addSteps8 addressI hroomI'
+  obtain ⟨hj1, hj2, hj3, hj4, hj5, hj6, hj7⟩ := UInt32.addSteps8 addressJ hroomJ'
   apply
     Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_store_partiallyMeets
       (α := Unit) (σ := σ) (globalσ := globalσ)
@@ -2729,20 +2624,7 @@ theorem func4_alias_store_partiallyMeets
   let address := (i <<< (3 % 32)) + ptr
   have hroom' : address.toNat + 8 ≤ 4294967296 := by
     simpa [address] using hroom
-  have h1 : (address + 1).toNat = address.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap address 1 (by omega) (by omega)
-  have h2 : (address + 2).toNat = address.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap address 2 (by omega) (by omega)
-  have h3 : (address + 3).toNat = address.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap address 3 (by omega) (by omega)
-  have h4 : (address + 4).toNat = address.toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap address 4 (by omega) (by omega)
-  have h5 : (address + 5).toNat = address.toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap address 5 (by omega) (by omega)
-  have h6 : (address + 6).toNat = address.toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap address 6 (by omega) (by omega)
-  have h7 : (address + 7).toNat = address.toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap address 7 (by omega) (by omega)
+  obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := UInt32.addSteps8 address hroom'
   apply
     Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_store_partiallyMeets
       (α := Unit) (σ := σ) (globalσ := globalσ)
@@ -2821,35 +2703,8 @@ theorem func4_distinct_store_terminatesWith
     simpa [addressI] using hroomI
   have hroomJ' : addressJ.toNat + 8 ≤ 4294967296 := by
     simpa [addressJ] using hroomJ
-  have hi1 : (addressI + 1).toNat = addressI.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 1
-      (by omega) (by omega)
-  have hi2 : (addressI + 2).toNat = addressI.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 2 (by omega) (by omega)
-  have hi3 : (addressI + 3).toNat = addressI.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 3 (by omega) (by omega)
-  have hi4 : (addressI + 4).toNat = addressI.toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 4 (by omega) (by omega)
-  have hi5 : (addressI + 5).toNat = addressI.toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 5 (by omega) (by omega)
-  have hi6 : (addressI + 6).toNat = addressI.toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 6 (by omega) (by omega)
-  have hi7 : (addressI + 7).toNat = addressI.toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 7 (by omega) (by omega)
-  have hj1 : (addressJ + 1).toNat = addressJ.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 1 (by omega) (by omega)
-  have hj2 : (addressJ + 2).toNat = addressJ.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 2 (by omega) (by omega)
-  have hj3 : (addressJ + 3).toNat = addressJ.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 3 (by omega) (by omega)
-  have hj4 : (addressJ + 4).toNat = addressJ.toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 4 (by omega) (by omega)
-  have hj5 : (addressJ + 5).toNat = addressJ.toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 5 (by omega) (by omega)
-  have hj6 : (addressJ + 6).toNat = addressJ.toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 6 (by omega) (by omega)
-  have hj7 : (addressJ + 7).toNat = addressJ.toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 7 (by omega) (by omega)
+  obtain ⟨hi1, hi2, hi3, hi4, hi5, hi6, hi7⟩ := UInt32.addSteps8 addressI hroomI'
+  obtain ⟨hj1, hj2, hj3, hj4, hj5, hj6, hj7⟩ := UInt32.addSteps8 addressJ hroomJ'
   apply
     Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_store_terminates
       (α := Unit) (σ := σ) (globalσ := globalσ)
@@ -2926,20 +2781,7 @@ theorem func4_alias_store_terminatesWith
   let address := (i <<< (3 % 32)) + ptr
   have hroom' : address.toNat + 8 ≤ 4294967296 := by
     simpa [address] using hroom
-  have h1 : (address + 1).toNat = address.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap address 1 (by omega) (by omega)
-  have h2 : (address + 2).toNat = address.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap address 2 (by omega) (by omega)
-  have h3 : (address + 3).toNat = address.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap address 3 (by omega) (by omega)
-  have h4 : (address + 4).toNat = address.toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap address 4 (by omega) (by omega)
-  have h5 : (address + 5).toNat = address.toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap address 5 (by omega) (by omega)
-  have h6 : (address + 6).toNat = address.toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap address 6 (by omega) (by omega)
-  have h7 : (address + 7).toNat = address.toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap address 7 (by omega) (by omega)
+  obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := UInt32.addSteps8 address hroom'
   apply
     Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_store_terminates
       (α := Unit) (σ := σ) (globalσ := globalσ)
