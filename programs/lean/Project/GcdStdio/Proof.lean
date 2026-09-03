@@ -1,4 +1,4 @@
-import Project.GcdStdio.Spec
+import Project.GcdStdio.Adequacy
 
 /-!
 # Correctness of the compiled GCD kernel
@@ -23,5 +23,9 @@ theorem kernel_correct : Project.GcdStdio.Spec.KernelSpecification := by
     rw [Project.GcdStdio.Spec.kernel_body_eq]
   rw [hconfig]
   exact Project.NumIntegerOpt3.Spec.mod3_gcd_smallStep_total a b
+
+@[proves Project.GcdStdio.Spec.PublicEntrySpecification]
+theorem gcd_correct : Project.GcdStdio.Spec.PublicEntrySpecification :=
+  Project.GcdStdio.Adequacy.entry_adequacy
 
 end Project.GcdStdio.Proof

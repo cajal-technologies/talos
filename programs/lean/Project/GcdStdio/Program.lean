@@ -43,7 +43,7 @@ def func5Def : Wasm.Function :=
 def func6 : Wasm.Program := watFunctionBody% "../rust/build/gcd_stdio/program.wat" 6
 
 def func6Def : Wasm.Function :=
-  { params := [.i32, .i32], locals := [.i32, .i32, .i32], body := func6, results := [.i32], typeIdx := some 1 }
+  { params := [.i32, .i32], locals := [.i32, .i32], body := func6, results := [.i32], typeIdx := some 1 }
 
 def func7 : Wasm.Program := watFunctionBody% "../rust/build/gcd_stdio/program.wat" 7
 

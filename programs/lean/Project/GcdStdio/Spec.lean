@@ -8,8 +8,8 @@ import CodeLib.Examples.SelectionSort.StdIO
 
 The exported `gcd` function consumes two packed little-endian `UInt64` words
 and writes their greatest common divisor as one packed word. The implementation
-uses `talos-stdio`; its `Box<[u8; 16]>` is therefore allocated by the shared
-Talos allocator.
+uses a Talos stdio adapter with a fixed bump allocator specialized to its sole
+`Box<[u8; 16]>` allocation.
 -/
 
 namespace Project.GcdStdio.Spec

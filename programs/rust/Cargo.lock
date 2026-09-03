@@ -32,11 +32,15 @@ name = "float_trunc"
 version = "0.1.0"
 
 [[package]]
+name = "gcd-talos-stdio"
+version = "0.1.0"
+
+[[package]]
 name = "gcd_stdio"
 version = "0.1.0"
 dependencies = [
+ "gcd-talos-stdio",
  "num-integer",
- "talos-stdio",
 ]
 
 [[package]]
