@@ -706,8 +706,7 @@ theorem twp_recursiveSortCall [WasmSmallStepGS hlc Unit]
   isplitl [Harray]
   · iexact Harray
   · iintro %output %hpure Hruntime Harray
-    iapply Wasm.SmallStep.twp_finish
-    iapply twp.value rfl
+    wasm_twp_terminal_value Wasm.SmallStep.twp_finish
     iintro %store %observations Hstate
     have hlength := hpure.1.length_eq
     have houtFit : array.toNat + 8 * output.length < UInt32.size := by
@@ -755,8 +754,7 @@ theorem twp_loopSortCall [WasmSmallStepGS hlc Unit]
   isplitl [Harray]
   · iexact Harray
   · iintro %output %hpure Hruntime Harray
-    iapply Wasm.SmallStep.twp_finish
-    iapply twp.value rfl
+    wasm_twp_terminal_value Wasm.SmallStep.twp_finish
     iintro %store %observations Hstate
     have hlength := hpure.1.length_eq
     have houtFit : array.toNat + 8 * output.length < UInt32.size := by

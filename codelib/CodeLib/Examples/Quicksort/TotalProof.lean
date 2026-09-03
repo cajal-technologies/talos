@@ -772,8 +772,7 @@ theorem quicksort_terminatesWith (arr : UInt32) (input : List UInt32)
       isplitl [Harray]
       · iexact Harray
       iintro %output Hruntime_out %hpure Harray_out
-      iapply Wasm.SmallStep.twp_finish
-      iapply twp.value rfl
+      wasm_twp_terminal_value Wasm.SmallStep.twp_finish
       iintro %store %_obs Hstate
       imod arrayAt_readWordArray store 0 [] 0 arr output
         (by rw [hpure.1]; exact hfit) $$
@@ -827,8 +826,7 @@ theorem quicksort_partiallyMeets (arr : UInt32) (input : List UInt32)
     isplitl [Harray]
     · iexact Harray
     iintro %output Hruntime_out %hpure Harray_out
-    iapply Wasm.SmallStep.twp_finish
-    iapply twp.value rfl
+    wasm_twp_terminal_value Wasm.SmallStep.twp_finish
     iintro %store %_obs Hstate
     imod arrayAt_readWordArray store 0 [] 0 arr output
       (by rw [hpure.1]; exact hfit) $$

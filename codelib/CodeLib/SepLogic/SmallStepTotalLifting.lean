@@ -124,6 +124,12 @@ theorem twp_returnFromFunction
     wasm_twp_frame
       iexact Htwp
 
+/-- Take a terminal machine step and expose its result as a total Iris value. -/
+macro "wasm_twp_terminal_value " step:pmTerm : tactic =>
+  `(tactic|
+    (iapply $step
+     iapply twp.value rfl))
+
 theorem twp_remU
     {params localValues values : List Value}
     {dividend divisor : UInt32} {code : Program} {arity : Nat}

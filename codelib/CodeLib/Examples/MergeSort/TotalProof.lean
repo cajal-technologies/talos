@@ -2398,8 +2398,7 @@ theorem twp_mergeSort_total
   isplitl [Hpre]
   · iexact Hpre
   iintro Hruntime Hpost
-  iapply Wasm.SmallStep.twp_finish (α := α)
-  iapply twp.value rfl
+  wasm_twp_terminal_value Wasm.SmallStep.twp_finish (α := α)
   iexact Hpost
 
 

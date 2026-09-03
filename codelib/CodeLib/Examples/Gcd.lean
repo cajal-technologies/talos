@@ -164,8 +164,7 @@ theorem twp_gcd
   iapply twp_gcdBody a b []
   intro currentA currentB temporary hzero Hgcd
   subst currentB
-  iapply twp_returnFromFunction
-  iapply twp.value rfl
+  wasm_twp_terminal_value twp_returnFromFunction
   ipureintro
   simp
   have hcurrent :

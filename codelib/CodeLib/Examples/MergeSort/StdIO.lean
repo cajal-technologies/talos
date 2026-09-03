@@ -1021,8 +1021,7 @@ theorem twp_sort [WasmSmallStepGS hlc Unit]
     ihave Hpost' := mergeSortPost_elim source scratch input $$ Hpost
     icases Hpost' with ⟨%output, %scratchFinal, %hsorted, %_hscratchLength,
       Hsource, _Hscratch⟩
-    iapply Wasm.SmallStep.twp_returnFromFunction
-    iapply twp.value rfl
+    wasm_twp_terminal_value Wasm.SmallStep.twp_returnFromFunction
     iintro %store %observations Hstate
     imod Quicksort.arrayAt_readWordArray store 0 [] 0 source output
       (by

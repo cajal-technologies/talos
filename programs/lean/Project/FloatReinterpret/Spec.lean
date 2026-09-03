@@ -2963,8 +2963,7 @@ theorem twp_checkAbs_tail_result_smallStep_wp
           ⌜∃ b : UInt32, values = [.i32 b]⌝ }] := by
   iapply twp_checkAbs_tail_smallStep_wp R x result [] _
   iintro ⟨HR, Hglobal, Hresult⟩
-  iapply twp_returnFromFunction
-  iapply twp.value rfl
+  wasm_twp_terminal_value twp_returnFromFunction
   iintro %store %obs _Hstate
   iclear HR Hglobal Hresult
   ipureintro
@@ -3081,8 +3080,7 @@ theorem twp_checkCopysign_tail_result_smallStep_wp
   iapply twp_globalSet $$ Hglobal
   iintro Hglobal
   wasm_twp_pures [twp_localGet]
-  iapply twp_returnFromFunction
-  iapply twp.value rfl
+  wasm_twp_terminal_value twp_returnFromFunction
   iintro %store %obs _Hstate
   iclear HR Hglobal Hresult'
   ipureintro

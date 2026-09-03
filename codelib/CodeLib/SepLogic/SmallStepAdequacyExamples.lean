@@ -2301,14 +2301,12 @@ theorem signedBranch_terminatesWith (a b : UInt32) :
   · iapply twp_geS (result := 1) (by simp [h])
     iapply twp_brIf (condition := 1) (by decide) rfl
     wasm_twp_pures [twp_const]
-    iapply twp_returnFromFunction
-    iapply twp.value rfl
+    wasm_twp_terminal_value twp_returnFromFunction
     ipureintro
     simp [h]
   · iapply twp_geS (result := 0) (by simp [h])
     wasm_twp_pures [twp_brIfZero twp_const]
-    iapply twp_returnFromFunction
-    iapply twp.value rfl
+    wasm_twp_terminal_value twp_returnFromFunction
     ipureintro
     simp [h]
 
@@ -2508,8 +2506,7 @@ theorem exceptionLifecycle_terminatesWith (arg : UInt32) :
     (targetValues := [.i32 arg])
     (hclause := Or.inl ⟨0, 0, rfl⟩)
     (htarget := fun _ => rfl) (hthrow := rfl) (hmatch := by decide)
-  iapply twp_finish
-  iapply twp.value rfl
+  wasm_twp_terminal_value twp_finish
   ipureintro
   rfl
 

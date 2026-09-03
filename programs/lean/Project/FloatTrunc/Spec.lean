@@ -786,8 +786,7 @@ theorem twp_check
       wasm_twp_pures [twp_const twp_and]
       rw [show (0 &&& 1 : UInt32) = 0 by decide]
       wasm_twp_pures [twp_brIfZero]
-      iapply twp_returnFromFunction
-      iapply twp.value rfl
+      wasm_twp_terminal_value twp_returnFromFunction
       iintro %store %obs _Hstate
       iclear Hruntime Hglobal Hword
       ipureintro
