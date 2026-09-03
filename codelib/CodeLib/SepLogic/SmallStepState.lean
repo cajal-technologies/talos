@@ -712,6 +712,15 @@ macro_rules
          ipureintro
          exact $fact))
 
+/-- Extract a pure lookup from generic heap authority and ownership. -/
+syntax "ihave_heap_valid " ident " : " term " $$ " specPat : tactic
+
+macro_rules
+  | `(tactic| ihave_heap_valid $fact:ident : $claim:term
+        $$ $resources:specPat) =>
+    `(tactic|
+      ihave_pure $fact : $claim using genHeap_valid $$ $resources)
+
 /-- Derive physical byte facts for an owned range in a lifting proof. -/
 syntax "wasm_points_to_bytes_agree " ident ", " term ", " term ", " term
   " $$ " specPat : tactic
@@ -1177,11 +1186,8 @@ private theorem fillSigma_ghost [WasmSmallStepGS hlc α]
       iintro ⟨Hheap, Hbytes⟩
       ihave Hbytes := (pointsToBytes_cons 0 addr b rest).mp $$ Hbytes
       icases Hbytes with ⟨Hhead, Hrest⟩
-      ihave %hlookup :
+      ihave_heap_valid hlookup :
           ⌜get? σ ⟨0, addr⟩ = some (some b)⌝ $$ [Hheap Hhead]
-      · imod genHeap_valid $$ [$Hheap $Hhead] with %hlookup
-        ipureintro
-        exact hlookup
       imod genHeap_update (v₂ := some val) $$ [$Hheap $Hhead] with ⟨Hheap, Hhead⟩
       imod (ih (insert σ ⟨0, addr⟩ (some val)) (addr + 1)) $$ [$Hheap $Hrest] with
         ⟨Hheap, Hrest, %HbelowRest⟩
@@ -1458,11 +1464,8 @@ private theorem copySigma_ghost [WasmSmallStepGS hlc α]
           iintro ⟨Hheap, Hbytes⟩
           ihave Hbytes := (pointsToBytes_cons 0 dst b bRest).mp $$ Hbytes
           icases Hbytes with ⟨Hhead, Hrest⟩
-          ihave %hlookup :
+          ihave_heap_valid hlookup :
               ⌜get? σ ⟨0, dst⟩ = some (some b)⌝ $$ [Hheap Hhead]
-          · imod genHeap_valid $$ [$Hheap $Hhead] with %hlookup
-            ipureintro
-            exact hlookup
           imod genHeap_update (v₂ := some s) $$ [$Hheap $Hhead] with ⟨Hheap, Hhead⟩
           imod (ih (insert σ ⟨0, dst⟩ (some s)) (dst + 1) sRest
                   (by simpa [List.length_cons] using hlen)) $$
@@ -2357,26 +2360,14 @@ theorem stateInterp_pointsTo_u32_facts [WasmSmallStepGS hlc α]
   icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
     ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
       Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
-  ihave %hg0 :
+  ihave_heap_valid hg0 :
       ⌜get? σ ⟨0, address⟩ = some (some (u32Byte value 0))⌝ $$ [Hheap H0]
-  · imod genHeap_valid $$ [$Hheap $H0] with %hg0
-    ipureintro
-    exact hg0
-  ihave %hg1 :
+  ihave_heap_valid hg1 :
       ⌜get? σ ⟨0, address + 1⟩ = some (some (u32Byte value 1))⌝ $$ [Hheap H1]
-  · imod genHeap_valid $$ [$Hheap $H1] with %hg1
-    ipureintro
-    exact hg1
-  ihave %hg2 :
+  ihave_heap_valid hg2 :
       ⌜get? σ ⟨0, address + 2⟩ = some (some (u32Byte value 2))⌝ $$ [Hheap H2]
-  · imod genHeap_valid $$ [$Hheap $H2] with %hg2
-    ipureintro
-    exact hg2
-  ihave %hg3 :
+  ihave_heap_valid hg3 :
       ⌜get? σ ⟨0, address + 3⟩ = some (some (u32Byte value 3))⌝ $$ [Hheap H3]
-  · imod genHeap_valid $$ [$Hheap $H3] with %hg3
-    ipureintro
-    exact hg3
   have hr0 := fromResolver store Hfacts.1 address (u32Byte value 0) hg0
   have hr1 := fromResolver store Hfacts.1 (address + 1) (u32Byte value 1) hg1
   have hr2 := fromResolver store Hfacts.1 (address + 2) (u32Byte value 2) hg2
@@ -2442,38 +2433,22 @@ theorem stateInterp_pointsTo_u64_facts [WasmSmallStepGS hlc α]
   icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
     ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
       Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
-  ihave %hg0 :
+  ihave_heap_valid hg0 :
       ⌜get? σ ⟨0, address⟩ = some (some (u64Byte value 0))⌝ $$ [Hheap H0]
-  · imod genHeap_valid $$ [$Hheap $H0] with %hg0
-    ipureintro; exact hg0
-  ihave %hg1 :
+  ihave_heap_valid hg1 :
       ⌜get? σ ⟨0, address + 1⟩ = some (some (u64Byte value 1))⌝ $$ [Hheap H1]
-  · imod genHeap_valid $$ [$Hheap $H1] with %hg1
-    ipureintro; exact hg1
-  ihave %hg2 :
+  ihave_heap_valid hg2 :
       ⌜get? σ ⟨0, address + 2⟩ = some (some (u64Byte value 2))⌝ $$ [Hheap H2]
-  · imod genHeap_valid $$ [$Hheap $H2] with %hg2
-    ipureintro; exact hg2
-  ihave %hg3 :
+  ihave_heap_valid hg3 :
       ⌜get? σ ⟨0, address + 3⟩ = some (some (u64Byte value 3))⌝ $$ [Hheap H3]
-  · imod genHeap_valid $$ [$Hheap $H3] with %hg3
-    ipureintro; exact hg3
-  ihave %hg4 :
+  ihave_heap_valid hg4 :
       ⌜get? σ ⟨0, address + 4⟩ = some (some (u64Byte value 4))⌝ $$ [Hheap H4]
-  · imod genHeap_valid $$ [$Hheap $H4] with %hg4
-    ipureintro; exact hg4
-  ihave %hg5 :
+  ihave_heap_valid hg5 :
       ⌜get? σ ⟨0, address + 5⟩ = some (some (u64Byte value 5))⌝ $$ [Hheap H5]
-  · imod genHeap_valid $$ [$Hheap $H5] with %hg5
-    ipureintro; exact hg5
-  ihave %hg6 :
+  ihave_heap_valid hg6 :
       ⌜get? σ ⟨0, address + 6⟩ = some (some (u64Byte value 6))⌝ $$ [Hheap H6]
-  · imod genHeap_valid $$ [$Hheap $H6] with %hg6
-    ipureintro; exact hg6
-  ihave %hg7 :
+  ihave_heap_valid hg7 :
       ⌜get? σ ⟨0, address + 7⟩ = some (some (u64Byte value 7))⌝ $$ [Hheap H7]
-  · imod genHeap_valid $$ [$Hheap $H7] with %hg7
-    ipureintro; exact hg7
   have hr0 := fromResolver store Hfacts.1 address (u64Byte value 0) hg0
   have hr1 := fromResolver store Hfacts.1 (address + 1) (u64Byte value 1) hg1
   have hr2 := fromResolver store Hfacts.1 (address + 2) (u64Byte value 2) hg2
@@ -2542,11 +2517,8 @@ theorem stateInterp_store8 [WasmSmallStepGS hlc α]
   icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
     ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
       Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
-  ihave %hlookup :
+  ihave_heap_valid hlookup :
       ⌜get? σ ⟨0, address⟩ = some (some oldValue)⌝ $$ [Hheap Hpointsto]
-  · imod genHeap_valid $$ [$Hheap $Hpointsto] with %hlookup
-    ipureintro
-    exact hlookup
   imod genHeap_update (v₂ := some newValue) $$ [$Hheap $Hpointsto] with
     ⟨Hheap, Hpointsto⟩
   ihave Hexc' : machineAuxInterp (insert σ ⟨0, address⟩ (some newValue))
@@ -2685,16 +2657,10 @@ theorem stateInterp_pointsTo_u16_facts [WasmSmallStepGS hlc α]
   icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
     ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
       Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
-  ihave %hg0 :
+  ihave_heap_valid hg0 :
       ⌜get? σ ⟨0, address⟩ = some (some (u32Byte value 0))⌝ $$ [Hheap H0]
-  · imod genHeap_valid $$ [$Hheap $H0] with %hg0
-    ipureintro
-    exact hg0
-  ihave %hg1 :
+  ihave_heap_valid hg1 :
       ⌜get? σ ⟨0, address + 1⟩ = some (some (u32Byte value 1))⌝ $$ [Hheap H1]
-  · imod genHeap_valid $$ [$Hheap $H1] with %hg1
-    ipureintro
-    exact hg1
   have hr0 := fromResolver store Hfacts.1 address (u32Byte value 0) hg0
   have hr1 := fromResolver store Hfacts.1 (address + 1) (u32Byte value 1) hg1
   have hb1 := fromResolverBounds store Hfacts.2.1 (address + 1) (by simp [hg1])
@@ -2812,17 +2778,11 @@ theorem stateInterp_store16 [WasmSmallStepGS hlc α]
   icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
     ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
       Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
-  ihave %hg0 :
+  ihave_heap_valid hg0 :
       ⌜get? σ ⟨0, address⟩ = some (some (u32Byte oldValue 0))⌝ $$ [Hheap H0]
-  · imod genHeap_valid $$ [$Hheap $H0] with %hg0
-    ipureintro
-    exact hg0
-  ihave %hg1 :
+  ihave_heap_valid hg1 :
       ⌜get? σ ⟨0, address + 1⟩ = some (some (u32Byte oldValue 1))⌝ $$
         [Hheap H1]
-  · imod genHeap_valid $$ [$Hheap $H1] with %hg1
-    ipureintro
-    exact hg1
   imod genHeap_update (v₂ := some (u32Byte newValue 0)) $$
       [$Hheap $H0] with ⟨Hheap, H0⟩
   imod genHeap_update (v₂ := some (u32Byte newValue 1)) $$
@@ -2884,29 +2844,17 @@ theorem stateInterp_store32 [WasmSmallStepGS hlc α]
   icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
     ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
       Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
-  ihave %hg0 :
+  ihave_heap_valid hg0 :
       ⌜get? σ ⟨0, address⟩ = some (some (u32Byte oldValue 0))⌝ $$ [Hheap H0]
-  · imod genHeap_valid $$ [$Hheap $H0] with %hg0
-    ipureintro
-    exact hg0
-  ihave %hg1 :
+  ihave_heap_valid hg1 :
       ⌜get? σ ⟨0, address + 1⟩ = some (some (u32Byte oldValue 1))⌝ $$
         [Hheap H1]
-  · imod genHeap_valid $$ [$Hheap $H1] with %hg1
-    ipureintro
-    exact hg1
-  ihave %hg2 :
+  ihave_heap_valid hg2 :
       ⌜get? σ ⟨0, address + 2⟩ = some (some (u32Byte oldValue 2))⌝ $$
         [Hheap H2]
-  · imod genHeap_valid $$ [$Hheap $H2] with %hg2
-    ipureintro
-    exact hg2
-  ihave %hg3 :
+  ihave_heap_valid hg3 :
       ⌜get? σ ⟨0, address + 3⟩ = some (some (u32Byte oldValue 3))⌝ $$
         [Hheap H3]
-  · imod genHeap_valid $$ [$Hheap $H3] with %hg3
-    ipureintro
-    exact hg3
   imod genHeap_update (v₂ := some (u32Byte newValue 0)) $$
       [$Hheap $H0] with ⟨Hheap, H0⟩
   imod genHeap_update (v₂ := some (u32Byte newValue 1)) $$
@@ -2976,53 +2924,29 @@ theorem stateInterp_store64 [WasmSmallStepGS hlc α]
   icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
     ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
       Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
-  ihave %hg0 :
+  ihave_heap_valid hg0 :
       ⌜get? σ ⟨0, address⟩ = some (some (u64Byte oldValue 0))⌝ $$ [Hheap H0]
-  · imod genHeap_valid $$ [$Hheap $H0] with %hg0
-    ipureintro
-    exact hg0
-  ihave %hg1 :
+  ihave_heap_valid hg1 :
       ⌜get? σ ⟨0, address + 1⟩ = some (some (u64Byte oldValue 1))⌝ $$
         [Hheap H1]
-  · imod genHeap_valid $$ [$Hheap $H1] with %hg1
-    ipureintro
-    exact hg1
-  ihave %hg2 :
+  ihave_heap_valid hg2 :
       ⌜get? σ ⟨0, address + 2⟩ = some (some (u64Byte oldValue 2))⌝ $$
         [Hheap H2]
-  · imod genHeap_valid $$ [$Hheap $H2] with %hg2
-    ipureintro
-    exact hg2
-  ihave %hg3 :
+  ihave_heap_valid hg3 :
       ⌜get? σ ⟨0, address + 3⟩ = some (some (u64Byte oldValue 3))⌝ $$
         [Hheap H3]
-  · imod genHeap_valid $$ [$Hheap $H3] with %hg3
-    ipureintro
-    exact hg3
-  ihave %hg4 :
+  ihave_heap_valid hg4 :
       ⌜get? σ ⟨0, address + 4⟩ = some (some (u64Byte oldValue 4))⌝ $$
         [Hheap H4]
-  · imod genHeap_valid $$ [$Hheap $H4] with %hg4
-    ipureintro
-    exact hg4
-  ihave %hg5 :
+  ihave_heap_valid hg5 :
       ⌜get? σ ⟨0, address + 5⟩ = some (some (u64Byte oldValue 5))⌝ $$
         [Hheap H5]
-  · imod genHeap_valid $$ [$Hheap $H5] with %hg5
-    ipureintro
-    exact hg5
-  ihave %hg6 :
+  ihave_heap_valid hg6 :
       ⌜get? σ ⟨0, address + 6⟩ = some (some (u64Byte oldValue 6))⌝ $$
         [Hheap H6]
-  · imod genHeap_valid $$ [$Hheap $H6] with %hg6
-    ipureintro
-    exact hg6
-  ihave %hg7 :
+  ihave_heap_valid hg7 :
       ⌜get? σ ⟨0, address + 7⟩ = some (some (u64Byte oldValue 7))⌝ $$
         [Hheap H7]
-  · imod genHeap_valid $$ [$Hheap $H7] with %hg7
-    ipureintro
-    exact hg7
   imod genHeap_update (v₂ := some (u64Byte newValue 0)) $$
       [$Hheap $H0] with ⟨Hheap, H0⟩
   imod genHeap_update (v₂ := some (u64Byte newValue 1)) $$
