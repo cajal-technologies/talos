@@ -47,9 +47,7 @@ theorem wp_trapStep
   iintro -
   iapply wp_lift_step rfl
   iintro %store %ns %obs %obs' %nt Hσ
-  wasm_wp_allow_stuck =>
-    iintro !> %e₂ %store₂ %forks %Hprim Hcredit
-    wasm_wp_resolve_step Hprim using hstep store
+  wasm_wp_step hstep store =>
     wasm_wp_trap_frame
 /-! ## Generating the pure rules
 
@@ -3912,9 +3910,7 @@ theorem wp_memoryInit32DroppedTrap
   imod stateInterp_dataSegment_facts_frame store ns (obs ++ obs') nt
       segmentIndex none $$ [$Hσ $Hsegment] with
     ⟨Hσ, Hsegment, %hsegment⟩
-  wasm_wp_allow_stuck =>
-    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-    wasm_wp_resolve_step Hstep using Step.memoryInit32DroppedTrap hsegment (Or.inl hpos)
+  wasm_wp_step Step.memoryInit32DroppedTrap hsegment (Or.inl hpos) =>
     wasm_wp_trap_frame
 
 theorem wp_memoryInit64DroppedTrap
@@ -3936,9 +3932,7 @@ theorem wp_memoryInit64DroppedTrap
   imod stateInterp_dataSegment_facts_frame store ns (obs ++ obs') nt
       segmentIndex none $$ [$Hσ $Hsegment] with
     ⟨Hσ, Hsegment, %hsegment⟩
-  wasm_wp_allow_stuck =>
-    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-    wasm_wp_resolve_step Hstep using Step.memoryInit64DroppedTrap hsegment (Or.inl hpos)
+  wasm_wp_step Step.memoryInit64DroppedTrap hsegment (Or.inl hpos) =>
     wasm_wp_trap_frame
 
 theorem wp_memoryInit32Dropped
@@ -4038,9 +4032,7 @@ theorem wp_memoryInit32Trap
   imod stateInterp_dataSegment_facts_frame store ns (obs ++ obs') nt
       segmentIndex (some segmentBytes) $$ [$Hσ $Hsegment] with
     ⟨Hσ, Hsegment, %hsegment⟩
-  wasm_wp_allow_stuck =>
-    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-    wasm_wp_resolve_step Hstep using Step.memoryInit32Trap hsegment (Or.inl hsrc)
+  wasm_wp_step Step.memoryInit32Trap hsegment (Or.inl hsrc) =>
     wasm_wp_trap_frame
 
 theorem wp_memoryInit64Trap
@@ -4062,9 +4054,7 @@ theorem wp_memoryInit64Trap
   imod stateInterp_dataSegment_facts_frame store ns (obs ++ obs') nt
       segmentIndex (some segmentBytes) $$ [$Hσ $Hsegment] with
     ⟨Hσ, Hsegment, %hsegment⟩
-  wasm_wp_allow_stuck =>
-    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-    wasm_wp_resolve_step Hstep using Step.memoryInit64Trap hsegment (Or.inl hsrc)
+  wasm_wp_step Step.memoryInit64Trap hsegment (Or.inl hsrc) =>
     wasm_wp_trap_frame
 
 wasm_wp_pure_rule wp_vConst {bits : BitVec 128} :
