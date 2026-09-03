@@ -442,13 +442,7 @@ theorem wasm_smallStep_heap_globals_runtime_tags_stronglyNormalizing
       dataSegmentHeapAgrees_empty _,
       tableHeapAgrees_empty _,
       elementSegmentHeapAgrees_empty _,
-      fun id m hm => by
-        by_cases h : id = config.store.runtime.entry.id
-        · subst h; simp [PartialMap.singleton, get?_insert_eq rfl] at hm; subst hm
-          rw [Array.getElem?_eq_getElem hwf]
-          simp [RuntimeEnv.currentModule, RuntimeEnv.currentInstance]
-          rw [getElem!_pos config.store.runtime.instances config.store.runtime.entry.id hwf]
-        · simp [PartialMap.singleton, get?_insert_ne (Ne.symm h), get?_empty] at hm,
+      runtimeModuleSingletonAgrees config.store.runtime hwf,
       fun id env hm => by simp [get?_empty] at hm⟩
   · iintro _
     iapply htwp
@@ -683,13 +677,7 @@ theorem wasm_smallStep_runtime_tags_adequacy
       dataSegmentHeapAgrees_empty _,
       tableHeapAgrees_empty _,
       elementSegmentHeapAgrees_empty _,
-      fun id m hm => by
-        by_cases h : id = config.store.runtime.entry.id
-        · subst h; simp [PartialMap.singleton, get?_insert_eq rfl] at hm; subst hm
-          rw [Array.getElem?_eq_getElem hwf]
-          simp [RuntimeEnv.currentModule, RuntimeEnv.currentInstance]
-          rw [getElem!_pos config.store.runtime.instances config.store.runtime.entry.id hwf]
-        · simp [PartialMap.singleton, get?_insert_ne (Ne.symm h), get?_empty] at hm,
+      runtimeModuleSingletonAgrees config.store.runtime hwf,
       fun id env hm => by simp [get?_empty] at hm⟩
   · iapply hwp
     isplitl [HruntimeWP HinstanceFrag]
@@ -804,13 +792,7 @@ theorem wasm_smallStep_runtime_instance_adequacy
       dataSegmentHeapAgrees_empty _,
       tableHeapAgrees_empty _,
       elementSegmentHeapAgrees_empty _,
-      fun id m hm => by
-        by_cases h : id = config.store.runtime.entry.id
-        · subst h; simp [PartialMap.singleton, get?_insert_eq rfl] at hm; subst hm
-          rw [Array.getElem?_eq_getElem hwf]
-          simp [RuntimeEnv.currentModule, RuntimeEnv.currentInstance]
-          rw [getElem!_pos config.store.runtime.instances config.store.runtime.entry.id hwf]
-        · simp [PartialMap.singleton, get?_insert_ne (Ne.symm h), get?_empty] at hm,
+      runtimeModuleSingletonAgrees config.store.runtime hwf,
       fun id env hm => by simp [get?_empty] at hm⟩
   · iapply hwp
     isplitl [HruntimeWP HinstanceFrag]
@@ -912,13 +894,7 @@ theorem wasm_smallStep_instance_host_state_adequacy
       dataSegmentHeapAgrees_empty _,
       tableHeapAgrees_empty _,
       elementSegmentHeapAgrees_empty _,
-      fun id m hm => by
-        by_cases h : id = config.store.runtime.entry.id
-        · subst h; simp [PartialMap.singleton, get?_insert_eq rfl] at hm; subst hm
-          rw [Array.getElem?_eq_getElem hwf]
-          simp [RuntimeEnv.currentModule, RuntimeEnv.currentInstance]
-          rw [getElem!_pos config.store.runtime.instances config.store.runtime.entry.id hwf]
-        · simp [PartialMap.singleton, get?_insert_ne (Ne.symm h), get?_empty] at hm,
+      runtimeModuleSingletonAgrees config.store.runtime hwf,
       fun id env hm => by
         by_cases h : id = config.store.runtime.entry.id
         · subst h; simp [PartialMap.singleton, get?_insert_eq rfl] at hm; subst hm
@@ -1106,13 +1082,7 @@ theorem wasm_smallStep_heap_globals_runtime_adequacy
       dataSegmentHeapAgrees_empty _,
       tableHeapAgrees_empty _,
       elementSegmentHeapAgrees_empty _,
-      fun id m hm => by
-        by_cases h : id = config.store.runtime.entry.id
-        · subst h; simp [PartialMap.singleton, get?_insert_eq rfl] at hm; subst hm
-          rw [Array.getElem?_eq_getElem hwf]
-          simp [RuntimeEnv.currentModule, RuntimeEnv.currentInstance]
-          rw [getElem!_pos config.store.runtime.instances config.store.runtime.entry.id hwf]
-        · simp [PartialMap.singleton, get?_insert_ne (Ne.symm h), get?_empty] at hm,
+      runtimeModuleSingletonAgrees config.store.runtime hwf,
       fun id env hm => by simp [get?_empty] at hm⟩
   · iapply hwp
     isplitl [Hpoints]
@@ -1219,13 +1189,7 @@ theorem wasm_smallStep_heap_globals_runtime_store_adequacy
       dataSegmentHeapAgrees_empty _,
       tableHeapAgrees_empty _,
       elementSegmentHeapAgrees_empty _,
-      fun id m hm => by
-        by_cases h : id = config.store.runtime.entry.id
-        · subst h; simp [PartialMap.singleton, get?_insert_eq rfl] at hm; subst hm
-          rw [Array.getElem?_eq_getElem hwf]
-          simp [RuntimeEnv.currentModule, RuntimeEnv.currentInstance]
-          rw [getElem!_pos config.store.runtime.instances config.store.runtime.entry.id hwf]
-        · simp [PartialMap.singleton, get?_insert_ne (Ne.symm h), get?_empty] at hm,
+      runtimeModuleSingletonAgrees config.store.runtime hwf,
       fun id env hm => by
         by_cases h : id = config.store.runtime.entry.id
         · subst h; simp [PartialMap.singleton, get?_insert_eq rfl] at hm; subst hm
@@ -1437,13 +1401,7 @@ theorem wasm_smallStep_heap_globals_runtime_store_terminates
         dataSegmentHeapAgrees_empty _,
         tableHeapAgrees_empty _,
         elementSegmentHeapAgrees_empty _,
-        fun id m hm => by
-          by_cases h : id = config.store.runtime.entry.id
-          · subst h; simp [PartialMap.singleton, get?_insert_eq rfl] at hm; subst hm
-            rw [Array.getElem?_eq_getElem hwf]
-            simp [RuntimeEnv.currentModule, RuntimeEnv.currentInstance]
-            rw [getElem!_pos config.store.runtime.instances config.store.runtime.entry.id hwf]
-          · simp [PartialMap.singleton, get?_insert_ne (Ne.symm h), get?_empty] at hm,
+        runtimeModuleSingletonAgrees config.store.runtime hwf,
         fun id env hm => by simp [get?_empty] at hm⟩
     · iintro _
       iapply (twp.mono (fun _ => BI.true_intro))
@@ -1685,13 +1643,7 @@ theorem wasm_smallStep_heap_store_terminates
         dataSegmentHeapAgrees_empty _,
         tableHeapAgrees_empty _,
         elementSegmentHeapAgrees_empty _,
-        fun id m hm => by
-          by_cases h : id = config.store.runtime.entry.id
-          · subst h; simp [PartialMap.singleton, get?_insert_eq rfl] at hm; subst hm
-            rw [Array.getElem?_eq_getElem hwf]
-            simp [RuntimeEnv.currentModule, RuntimeEnv.currentInstance]
-            rw [getElem!_pos config.store.runtime.instances config.store.runtime.entry.id hwf]
-          · simp [PartialMap.singleton, get?_insert_ne (Ne.symm h), get?_empty] at hm,
+        runtimeModuleSingletonAgrees config.store.runtime hwf,
         fun id env hm => by simp [get?_empty] at hm⟩
     · iintro _
       iapply (twp.mono (fun _ => BI.true_intro))
@@ -1874,13 +1826,7 @@ theorem wasm_smallStep_heap_globals_segments_runtime_store_adequacy
     exact ⟨hagree, hinBounds, hglobals, hsegments,
       tableHeapAgrees_empty _,
       elementSegmentHeapAgrees_empty _,
-      fun id m hm => by
-        by_cases h : id = config.store.runtime.entry.id
-        · subst h; simp [PartialMap.singleton, get?_insert_eq rfl] at hm; subst hm
-          rw [Array.getElem?_eq_getElem hwf]
-          simp [RuntimeEnv.currentModule, RuntimeEnv.currentInstance]
-          rw [getElem!_pos config.store.runtime.instances config.store.runtime.entry.id hwf]
-        · simp [PartialMap.singleton, get?_insert_ne (Ne.symm h), get?_empty] at hm,
+      runtimeModuleSingletonAgrees config.store.runtime hwf,
       fun id env hm => by simp [get?_empty] at hm⟩
   · iapply hwp
     isplitl [Hpoints]
@@ -2041,13 +1987,7 @@ theorem wasm_smallStep_heap_globals_segments_tables_runtime_store_adequacy
     exact ⟨hagree, hinBounds, hglobals, hsegments,
       htables,
       helementSegments,
-      fun id m hm => by
-        by_cases h : id = config.store.runtime.entry.id
-        · subst h; simp [PartialMap.singleton, get?_insert_eq rfl] at hm; subst hm
-          rw [Array.getElem?_eq_getElem hwf]
-          simp [RuntimeEnv.currentModule, RuntimeEnv.currentInstance]
-          rw [getElem!_pos config.store.runtime.instances config.store.runtime.entry.id hwf]
-        · simp [PartialMap.singleton, get?_insert_ne (Ne.symm h), get?_empty] at hm,
+      runtimeModuleSingletonAgrees config.store.runtime hwf,
       fun id env hm => by simp [get?_empty] at hm⟩
   · iapply hwp
     isplitl [Hpoints]
@@ -2257,13 +2197,7 @@ theorem wasm_smallStep_heap_runtime_instance_adequacy
       dataSegmentHeapAgrees_empty _,
       tableHeapAgrees_empty _,
       elementSegmentHeapAgrees_empty _,
-      fun id m hm => by
-        by_cases h : id = config.store.runtime.entry.id
-        · subst h; simp [PartialMap.singleton, get?_insert_eq rfl] at hm; subst hm
-          rw [Array.getElem?_eq_getElem hwf]
-          simp [RuntimeEnv.currentModule, RuntimeEnv.currentInstance]
-          rw [getElem!_pos config.store.runtime.instances config.store.runtime.entry.id hwf]
-        · simp [PartialMap.singleton, get?_insert_ne (Ne.symm h), get?_empty] at hm,
+      runtimeModuleSingletonAgrees config.store.runtime hwf,
       fun id env hm => by simp [get?_empty] at hm⟩
   · iapply hwp
     isplitl [Hpoints]
@@ -2349,13 +2283,7 @@ theorem wasm_smallStep_heap_runtime_instances_adequacy
       dataSegmentHeapAgrees_empty _,
       tableHeapAgrees_empty _,
       elementSegmentHeapAgrees_empty _,
-      fun id m hm => by
-        by_cases h : id = config.store.runtime.entry.id
-        · subst h; simp [PartialMap.singleton, get?_insert_eq rfl] at hm; subst hm
-          rw [Array.getElem?_eq_getElem hwf]
-          simp [RuntimeEnv.currentModule, RuntimeEnv.currentInstance]
-          rw [getElem!_pos config.store.runtime.instances config.store.runtime.entry.id hwf]
-        · simp [PartialMap.singleton, get?_insert_ne (Ne.symm h), get?_empty] at hm,
+      runtimeModuleSingletonAgrees config.store.runtime hwf,
       fun id env hm => by simp [get?_empty] at hm⟩
   · iapply hwp
     isplitl [Hpoints]

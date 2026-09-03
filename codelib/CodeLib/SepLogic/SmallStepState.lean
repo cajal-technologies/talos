@@ -17,6 +17,24 @@ namespace Wasm.SmallStep
 open Iris Iris.ProgramLogic Std
 open Wasm.SepLogic
 
+/-- A singleton logical module map agrees with the entry runtime instance. -/
+theorem runtimeModuleSingletonAgrees
+    (runtime : RuntimeEnv α)
+    (hwf : runtime.entry.id < runtime.instances.size) :
+    ∀ (id : Nat) (m : Module),
+      get? (PartialMap.singleton runtime.entry.id runtime.currentModule :
+        WasmRuntimeModuleMap Module) id = some m →
+      runtime.instances[id]?.map (·.module) = some m := by
+  intro id m hm
+  by_cases h : id = runtime.entry.id
+  · subst h
+    simp [PartialMap.singleton, get?_insert_eq rfl] at hm
+    subst hm
+    rw [Array.getElem?_eq_getElem hwf]
+    simp [RuntimeEnv.currentModule, RuntimeEnv.currentInstance]
+    rw [getElem!_pos runtime.instances runtime.entry.id hwf]
+  · simp [PartialMap.singleton, get?_insert_ne (Ne.symm h), get?_empty] at hm
+
 /-- Authoritative ownership of the current module instance id.
 Wraps `currentInstanceAuthN` to take `ModuleInstanceId` directly. -/
 def currentInstanceAuth {α : Type} [gs : WasmInstanceGS α]
