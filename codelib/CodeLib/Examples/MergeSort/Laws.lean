@@ -279,18 +279,7 @@ theorem twp_loadAt
   have hroom' :
       (base + 4 * UInt32.ofNat k).toNat + 4 ≤ 4294967296 := by
     simpa only [UInt32.size] using hroom
-  have h1 : ((base + 4 * UInt32.ofNat k) + 1).toNat =
-      (base + 4 * UInt32.ofNat k).toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap
-      (base + 4 * UInt32.ofNat k) 1 (by decide) (by omega)
-  have h2 : ((base + 4 * UInt32.ofNat k) + 2).toNat =
-      (base + 4 * UInt32.ofNat k).toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap
-      (base + 4 * UInt32.ofNat k) 2 (by decide) (by omega)
-  have h3 : ((base + 4 * UInt32.ofNat k) + 3).toNat =
-      (base + 4 * UInt32.ofNat k).toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap
-      (base + 4 * UInt32.ofNat k) 3 (by decide) (by omega)
+  obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4 (base + 4 * UInt32.ofNat k) hroom'
   iintro ⟨Harray, Hcont⟩
   ihave Hfocus := arrayAt_get 0 base input k hk $$ Harray
   icases Hfocus with ⟨Hword, Hclose⟩
@@ -396,24 +385,8 @@ theorem twp_copyAt
   have hroom : destination.toNat + 4 ≤ UInt32.size := by
     rw [hslot]
     omega
-  have h1 : (destination + 1).toNat = destination.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap destination 1
-      (by decide) (by
-        have : destination.toNat + 4 ≤ 4294967296 := by
-          simpa only [UInt32.size] using hroom
-        omega)
-  have h2 : (destination + 2).toNat = destination.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap destination 2
-      (by decide) (by
-        have : destination.toNat + 4 ≤ 4294967296 := by
-          simpa only [UInt32.size] using hroom
-        omega)
-  have h3 : (destination + 3).toNat = destination.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap destination 3
-      (by decide) (by
-        have : destination.toNat + 4 ≤ 4294967296 := by
-          simpa only [UInt32.size] using hroom
-        omega)
+  obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4 destination (by
+    simpa only [UInt32.size] using hroom)
   iintro ⟨Hsource, Htemporary, Hcont⟩
   simp only [storeAt, List.append_assoc]
   iapply twp_address htemporary htemporaryElement

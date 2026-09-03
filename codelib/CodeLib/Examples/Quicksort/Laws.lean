@@ -146,18 +146,7 @@ theorem twp_loadAt
     rw [hslot]; omega
   have hroom' : (base + 4 * UInt32.ofNat k).toNat + 4 ≤ 4294967296 := by
     simpa only [UInt32.size] using hroom
-  have h1 : ((base + 4 * UInt32.ofNat k) + 1).toNat =
-      (base + 4 * UInt32.ofNat k).toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap
-      (base + 4 * UInt32.ofNat k) 1 (by decide) (by omega)
-  have h2 : ((base + 4 * UInt32.ofNat k) + 2).toNat =
-      (base + 4 * UInt32.ofNat k).toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap
-      (base + 4 * UInt32.ofNat k) 2 (by decide) (by omega)
-  have h3 : ((base + 4 * UInt32.ofNat k) + 3).toNat =
-      (base + 4 * UInt32.ofNat k).toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap
-      (base + 4 * UInt32.ofNat k) 3 (by decide) (by omega)
+  obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4 (base + 4 * UInt32.ofNat k) hroom'
   iintro ⟨Harray, Hcont⟩
   ihave Hfocus := arrayAt_get 0 base input k hk $$ Harray
   icases Hfocus with ⟨Hword, Hclose⟩
@@ -248,47 +237,15 @@ theorem twp_swapAt
     dsimp [addr_a]; rw [UInt32.add_comm]
     simpa [UInt32.mul_comm] using arrayAddress_toNat base hfit ha
   have hroom_a : addr_a.toNat + 4 ≤ UInt32.size := by rw [hslot_a]; omega
-  have h1_a : (addr_a + 1).toNat = addr_a.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addr_a 1
-      (by decide) (by
-        have : addr_a.toNat + 4 ≤ 4294967296 := by
-          simpa only [UInt32.size] using hroom_a
-        omega)
-  have h2_a : (addr_a + 2).toNat = addr_a.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addr_a 2
-      (by decide) (by
-        have : addr_a.toNat + 4 ≤ 4294967296 := by
-          simpa only [UInt32.size] using hroom_a
-        omega)
-  have h3_a : (addr_a + 3).toNat = addr_a.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addr_a 3
-      (by decide) (by
-        have : addr_a.toNat + 4 ≤ 4294967296 := by
-          simpa only [UInt32.size] using hroom_a
-        omega)
+  obtain ⟨h1_a, h2_a, h3_a⟩ := UInt32.addSteps4 addr_a (by
+    simpa only [UInt32.size] using hroom_a)
   let addr_b : UInt32 := 4 * UInt32.ofNat b + base
   have hslot_b : addr_b.toNat = base.toNat + 4 * b := by
     dsimp [addr_b]; rw [UInt32.add_comm]
     simpa [UInt32.mul_comm] using arrayAddress_toNat base hfit hb
   have hroom_b : addr_b.toNat + 4 ≤ UInt32.size := by rw [hslot_b]; omega
-  have h1_b : (addr_b + 1).toNat = addr_b.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addr_b 1
-      (by decide) (by
-        have : addr_b.toNat + 4 ≤ 4294967296 := by
-          simpa only [UInt32.size] using hroom_b
-        omega)
-  have h2_b : (addr_b + 2).toNat = addr_b.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addr_b 2
-      (by decide) (by
-        have : addr_b.toNat + 4 ≤ 4294967296 := by
-          simpa only [UInt32.size] using hroom_b
-        omega)
-  have h3_b : (addr_b + 3).toNat = addr_b.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addr_b 3
-      (by decide) (by
-        have : addr_b.toNat + 4 ≤ 4294967296 := by
-          simpa only [UInt32.size] using hroom_b
-        omega)
+  obtain ⟨h1_b, h2_b, h3_b⟩ := UInt32.addSteps4 addr_b (by
+    simpa only [UInt32.size] using hroom_b)
   have hswap : swapElems input a b = (input.set a input[b]).set b input[a] := by
     unfold swapElems
     rw [getElem!_pos input b hb, getElem!_pos input a ha]
