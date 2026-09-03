@@ -833,21 +833,8 @@ theorem wp_throwRefNull
     {controls : List ControlFrame} {calls : List CallFrame} :
     True ⊢ WP (.running
       ⟨⟨params, localValues, .exnref none :: values⟩,
-        .throwRef :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} := by
-  iintro -
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro; trivial
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  obtain ⟨rfl, hconfig⟩ :=
-    step_deterministic Step.throwRefNull wasmStep
-  simp only at hconfig
-  cases hconfig
-  wasm_wp_trap_frame
+        .throwRef :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
+  wp_trapStep _ _ _ (fun _ => Step.throwRefNull)
 
 /-- Trap step: an exception propagated through all control frames with no
 matching handler and no enclosing call frame traps. -/
@@ -856,21 +843,8 @@ theorem wp_uncaughtException
     {throwingFrame : ControlFrame} {arity : Nat} {remainder : List Value}
     (hthrow : throwingFrame.kind = .throwing tag arguments) :
     True ⊢ WP (.running
-      ⟨locals, [], arity, remainder, [throwingFrame], []⟩ : Expr α) @ E ?{{ Φ }} := by
-  iintro -
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro; trivial
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  obtain ⟨rfl, hconfig⟩ :=
-    step_deterministic (Step.uncaughtException hthrow) wasmStep
-  simp only at hconfig
-  cases hconfig
-  wasm_wp_trap_frame
+      ⟨locals, [], arity, remainder, [throwingFrame], []⟩ : Expr α) @ E ?{{ Φ }} :=
+  wp_trapStep _ _ _ (fun _ => Step.uncaughtException hthrow)
 
 /-- Step: `throw_ref` with a live exnref pushes a throwing frame, consuming
 fractional ownership of the exception ghost cell to witness tag and arguments. -/
