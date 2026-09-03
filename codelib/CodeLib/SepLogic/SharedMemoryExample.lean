@@ -129,10 +129,8 @@ theorem sharedMem_partiallyMeets (v : UInt8) :
       iintro ⟨HinstanceOwn', HruntimeInstances'⟩
       simp only [writeFn, Function.toLocals, List.map_nil]
       -- inside writeFn: [.const 0, .localGet 0, .store8 0, .ret]
-      iapply wp_const
-      inext
-      iapply wp_localGet rfl
-      inext
+      wasm_wp_pures [wp_const]
+      wasm_wp_pures [wp_localGet]
       ihave HptLater :
           ▷ pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
             ⟨0, 0 + 0⟩ (DFrac.own 1) (some 0) $$ [Hpt]
@@ -150,8 +148,7 @@ theorem sharedMem_partiallyMeets (v : UInt8) :
       · inext
         iintro _HinstanceCaller
         -- back in instanceR: [.const 0, .load8U 0, .ret]
-        iapply wp_const
-        inext
+        wasm_wp_pures [wp_const]
         ihave HptLater2 :
             ▷ pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
               ⟨0, 0 + 0⟩ (DFrac.own 1) (some v.toUInt32.toUInt8) $$ [Hpt']

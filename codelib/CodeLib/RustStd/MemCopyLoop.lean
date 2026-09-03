@@ -164,27 +164,17 @@ theorem copyWords_loadStoreIteration_wp
     rw [← hpre]
     iexact HdstCell
   simp only [CopyWordsLoadStoreIteration, List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_const
-  inext
-  iapply Wasm.SmallStep.wp_shl
-  inext
-  iapply Wasm.SmallStep.wp_add
-  inext
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_const]
+  wasm_wp_pures [wp_shl]
+  wasm_wp_pures [wp_add]
   rw [hdstAddress]
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_const
-  inext
-  iapply Wasm.SmallStep.wp_shl
-  inext
-  iapply Wasm.SmallStep.wp_add
-  inext
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_const]
+  wasm_wp_pures [wp_shl]
+  wasm_wp_pures [wp_add]
   rw [hsrcAddress]
   ihave HsrcLater : ▷ pointsTo_u32 0 (srcAddress + 0) value $$ [HsrcCell']
   · inext
@@ -248,15 +238,11 @@ theorem copyWords_incrementBackedge_wp
         calls⟩ : Wasm.SmallStep.Expr α) @ s; E {{ Φ }} := by
   iintro Hcontinue
   simp only [CopyWordsIncrementBackedge]
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_const
-  inext
-  iapply Wasm.SmallStep.wp_add
-  inext
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_const]
+  wasm_wp_pures [wp_add]
   rw [UInt32.add_comm 1 i]
-  iapply Wasm.SmallStep.wp_localSet rfl
-  inext
+  wasm_wp_pures [wp_localSet]
   iapply Wasm.SmallStep.wp_br (by rfl)
   inext
   simp only [copyWordsLoopFrame, List.length_cons, List.length_nil,
@@ -341,10 +327,8 @@ theorem copyWords_guard_wp
   iapply Wasm.SmallStep.wp_block
   inext
   simp only [CopyWordsInnerGuard]
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet]
   by_cases hlt : i < n
   · iapply Wasm.SmallStep.wp_ltU (result := 1) (by simp [hlt])
     inext
@@ -611,10 +595,8 @@ theorem copyWords_smallStep_wp
   iintro Hresources
   rw [CopyWords_eq_structured]
   simp only [List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.wp_const
-  inext
-  iapply Wasm.SmallStep.wp_localSet rfl
-  inext
+  wasm_wp_pures [wp_const]
+  wasm_wp_pures [wp_localSet]
   simp only [List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set]
   have hloop := copyWords_loop_wp R dst src n destination source

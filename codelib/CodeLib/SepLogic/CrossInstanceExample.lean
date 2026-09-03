@@ -72,12 +72,9 @@ theorem crossInstance_partiallyMeets (a b : UInt32) :
     · inext
       iintro ⟨HinstanceOwn', HruntimeInstances'⟩
       simp only [addLibFn, Function.toLocals, List.map_nil]
-      iapply wp_localGet rfl
-      inext
-      iapply wp_localGet rfl
-      inext
-      iapply wp_add
-      inext
+      wasm_wp_pures [wp_localGet]
+      wasm_wp_pures [wp_localGet]
+      wasm_wp_pures [wp_add]
       iapply wp_returnFromCallCrossInstance ⟨0⟩ instanceB instanceA #[instanceB, instanceA]
           (by decide) rfl rfl
           $$ [HinstanceOwn'] HruntimeInstances'

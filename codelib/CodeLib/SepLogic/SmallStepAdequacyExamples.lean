@@ -1497,16 +1497,14 @@ theorem tableSetGet_store_partiallyMeets :
       ipureintro
       exact ⟨hvalues, by simpa [listSetAt] using Hphysical⟩
     iapply wp_mono hpost
-    iapply wp_const
-    inext
+    wasm_wp_pures [wp_const]
     iapply wp_pureStep _ _ _ (fun _ => Step.refFunc)
     inext
     simp only [← tablePointsToAt_eq]
     iapply wp_tableSet rfl (by decide) $$ Htable
     inext
     iintro Htable
-    iapply wp_const
-    inext
+    wasm_wp_pures [wp_const]
     iapply wp_tableGet (value := .funcref (some 1))
       rfl (by simp [listSetAt]) $$ Htable
     inext
@@ -1618,12 +1616,10 @@ theorem tableGrowFill_store_partiallyMeets :
     simp only [tableGrowFillAdequacyModule]
     iapply wp_mono hpost
     simp only [← tablePointsToAt_eq]
-    iapply wp_const
-    inext
+    wasm_wp_pures [wp_const]
     iapply wp_pureStep _ _ _ (fun _ => Step.refFunc)
     inext
-    iapply wp_const
-    inext
+    wasm_wp_pures [wp_const]
     iapply wp_tableFill
       (tableIndex := 0) (destination := .i32 0) (length := .i32 3)
       (value := .funcref (some 1))
@@ -1633,8 +1629,7 @@ theorem tableGrowFill_store_partiallyMeets :
       rfl rfl (by decide) $$ Htable
     inext
     iintro Htable
-    iapply wp_const
-    inext
+    wasm_wp_pures [wp_const]
     iapply wp_tableGet (value := .funcref (some 1))
       rfl (by simp [listWriteAt]) $$ Htable
     inext

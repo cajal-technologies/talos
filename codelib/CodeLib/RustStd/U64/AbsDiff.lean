@@ -94,39 +94,29 @@ theorem absDiff_smallStep_wp_to_return
   iapply Wasm.SmallStep.wp_globalGet $$ Hglobal
   inext
   iintro Hglobal
-  iapply Wasm.SmallStep.wp_const
-  inext
-  iapply Wasm.SmallStep.wp_sub
-  inext
-  iapply Wasm.SmallStep.wp_localSet rfl
-  inext
+  wasm_wp_pures [wp_const]
+  wasm_wp_pures [wp_sub]
+  wasm_wp_pures [wp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
   iapply Wasm.SmallStep.wp_block
   inext
   iapply Wasm.SmallStep.wp_block
   inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet]
   by_cases hab : a < b
   · iapply Wasm.SmallStep.wp_ltUI64 (result := 1) (by simp [hab])
     inext
-    iapply Wasm.SmallStep.wp_const
-    inext
-    iapply Wasm.SmallStep.wp_and
-    inext
+    wasm_wp_pures [wp_const]
+    wasm_wp_pures [wp_and]
     rw [show (1 &&& 1 : UInt32) = 1 by decide]
     iapply Wasm.SmallStep.wp_brIf (by decide) rfl
     inext
     simp only [List.take_nil, List.drop_nil, List.nil_append]
-    iapply Wasm.SmallStep.wp_localGet rfl
-    inext
-    iapply Wasm.SmallStep.wp_localGet rfl
-    inext
-    iapply Wasm.SmallStep.wp_localGet rfl
-    inext
+    wasm_wp_pures [wp_localGet]
+    wasm_wp_pures [wp_localGet]
+    wasm_wp_pures [wp_localGet]
     iapply Wasm.SmallStep.wp_subI64
     inext
     ihave HscratchLater :
@@ -139,8 +129,7 @@ theorem absDiff_smallStep_wp_to_return
     iintro Hscratch
     iapply Wasm.SmallStep.wp_exitControl rfl
     inext
-    iapply Wasm.SmallStep.wp_localGet rfl
-    inext
+    wasm_wp_pures [wp_localGet]
     ihave HscratchLater :
         ▷ pointsTo_u64 0 ((sp - 16) + 8) (b - a) $$ [Hscratch]
     · inext
@@ -155,19 +144,14 @@ theorem absDiff_smallStep_wp_to_return
     iframe
   · iapply Wasm.SmallStep.wp_ltUI64 (result := 0) (by simp [hab])
     inext
-    iapply Wasm.SmallStep.wp_const
-    inext
-    iapply Wasm.SmallStep.wp_and
-    inext
+    wasm_wp_pures [wp_const]
+    wasm_wp_pures [wp_and]
     rw [show (0 &&& 1 : UInt32) = 0 by decide]
     iapply Wasm.SmallStep.wp_brIfZero
     inext
-    iapply Wasm.SmallStep.wp_localGet rfl
-    inext
-    iapply Wasm.SmallStep.wp_localGet rfl
-    inext
-    iapply Wasm.SmallStep.wp_localGet rfl
-    inext
+    wasm_wp_pures [wp_localGet]
+    wasm_wp_pures [wp_localGet]
+    wasm_wp_pures [wp_localGet]
     iapply Wasm.SmallStep.wp_subI64
     inext
     ihave HscratchLater :
@@ -181,8 +165,7 @@ theorem absDiff_smallStep_wp_to_return
     iapply Wasm.SmallStep.wp_br rfl
     inext
     simp only [List.take_nil, List.drop_nil, List.nil_append]
-    iapply Wasm.SmallStep.wp_localGet rfl
-    inext
+    wasm_wp_pures [wp_localGet]
     ihave HscratchLater :
         ▷ pointsTo_u64 0 ((sp - 16) + 8) (a - b) $$ [Hscratch]
     · inext

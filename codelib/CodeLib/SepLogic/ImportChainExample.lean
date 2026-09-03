@@ -152,8 +152,7 @@ theorem importChain_partiallyMeets (v : UInt32) (initial : List UInt32) :
         iintro HinstanceCaller
         simp only [List.length_nil, List.take_zero, List.drop_zero, List.nil_append]
         -- back in mainFn: [localGet 0, call 0, localGet 0, call 0, ret]
-        iapply wp_localGet rfl
-        inext
+        wasm_wp_pures [wp_localGet]
         -- first logHost call: rebuild runtimeModuleOwn from HruntimeElem + HinstanceCaller
         ihave Hruntime1 : runtimeModuleOwn ⟨0⟩ chainModuleA $$ [HinstanceCaller]
         · simp only [runtimeModuleOwn]
@@ -180,8 +179,7 @@ theorem importChain_partiallyMeets (v : UInt32) (initial : List UInt32) :
           simp only [List.take_nil, List.length_cons, List.length_nil, Nat.zero_add,
                      List.drop_succ_cons, List.drop_zero, List.nil_append]
           -- second logHost call
-          iapply wp_localGet rfl
-          inext
+          wasm_wp_pures [wp_localGet]
           iapply wp_callHost chainModuleA 0 logImp logHost
               (by decide) rfl chainHostEnv rfl
               (iprop(hostStateOwn (initial ++ [v])))

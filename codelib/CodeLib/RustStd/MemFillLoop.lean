@@ -138,19 +138,13 @@ theorem fillWords_storeIteration_wp
   icases array64At_fill_next 0 base i.toNat value old suffix $$ Harray with
     ⟨Hold, Hreassemble⟩
   simp only [FillWordsStoreIteration, List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_const
-  inext
-  iapply Wasm.SmallStep.wp_shl
-  inext
-  iapply Wasm.SmallStep.wp_add
-  inext
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_const]
+  wasm_wp_pures [wp_shl]
+  wasm_wp_pures [wp_add]
   rw [haddr]
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet]
   ihave HoldLater : ▷ pointsTo_u64 0 (address + 0) old $$ [Hold]
   · inext
     simp only [UInt32.add_zero, address]
@@ -198,15 +192,11 @@ theorem fillWords_incrementBackedge_wp
         calls⟩ : Wasm.SmallStep.Expr α) @ s; E {{ Φ }} := by
   iintro Hcontinue
   simp only [FillWordsIncrementBackedge]
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_const
-  inext
-  iapply Wasm.SmallStep.wp_add
-  inext
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_const]
+  wasm_wp_pures [wp_add]
   rw [UInt32.add_comm 1 i]
-  iapply Wasm.SmallStep.wp_localSet rfl
-  inext
+  wasm_wp_pures [wp_localSet]
   iapply Wasm.SmallStep.wp_br (by rfl)
   inext
   simp only [fillWordsLoopFrame, List.length_cons,
@@ -294,10 +284,8 @@ theorem fillWords_guard_wp
   iapply Wasm.SmallStep.wp_block
   inext
   simp only [FillWordsInnerGuard]
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet]
   by_cases hlt : i < n
   · iapply Wasm.SmallStep.wp_ltU (result := 1) (by simp [hlt])
     inext
@@ -511,10 +499,8 @@ theorem fillWords_smallStep_wp
   iintro Hresources
   rw [FillWords_eq_structured]
   simp only [List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.wp_const
-  inext
-  iapply Wasm.SmallStep.wp_localSet rfl
-  inext
+  wasm_wp_pures [wp_const]
+  wasm_wp_pures [wp_localSet]
   simp only [List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set]
   have hloop := fillWords_loop_wp R base n value original afterLoop arity
