@@ -470,8 +470,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
   rw [hproduct]
   iapply twp_localTee rfl
   simp only [List.length]
-  iapply twp_constI64
-  iapply twp_shrUI64
+  wasm_twp_pures [twp_constI64 twp_shrUI64]
   rw [show (32 : UInt64) % 64 = 32 by decide, hhigh]
   iapply twp_wrapI64
   norm_num

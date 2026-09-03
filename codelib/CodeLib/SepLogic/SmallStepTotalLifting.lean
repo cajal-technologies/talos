@@ -2055,6 +2055,18 @@ macro_rules
       `(tactic| iapply twp_shl; wasm_twp_pures [$rest:ident*])
   | `(tactic| wasm_twp_pures [twp_shrU $rest:ident*]) =>
       `(tactic| iapply twp_shrU; wasm_twp_pures [$rest:ident*])
+  | `(tactic| wasm_twp_pures [twp_constI64 $rest:ident*]) =>
+      `(tactic| iapply twp_constI64; wasm_twp_pures [$rest:ident*])
+  | `(tactic| wasm_twp_pures [twp_subI64 $rest:ident*]) =>
+      `(tactic| iapply twp_subI64; wasm_twp_pures [$rest:ident*])
+  | `(tactic| wasm_twp_pures [twp_mulI64 $rest:ident*]) =>
+      `(tactic| iapply twp_mulI64; wasm_twp_pures [$rest:ident*])
+  | `(tactic| wasm_twp_pures [twp_orI64 $rest:ident*]) =>
+      `(tactic| iapply twp_orI64; wasm_twp_pures [$rest:ident*])
+  | `(tactic| wasm_twp_pures [twp_shlI64 $rest:ident*]) =>
+      `(tactic| iapply twp_shlI64; wasm_twp_pures [$rest:ident*])
+  | `(tactic| wasm_twp_pures [twp_shrUI64 $rest:ident*]) =>
+      `(tactic| iapply twp_shrUI64; wasm_twp_pures [$rest:ident*])
 
 /-- `i32.load` at offset 0, phrased directly on `addr` rather than
 `addr + 0`, which keeps Iris's unifier from having to see through the

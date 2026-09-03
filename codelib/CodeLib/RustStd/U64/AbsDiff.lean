@@ -117,8 +117,7 @@ theorem absDiff_smallStep_wp_to_return
     wasm_wp_pures [wp_localGet]
     wasm_wp_pures [wp_localGet]
     wasm_wp_pures [wp_localGet]
-    iapply Wasm.SmallStep.wp_subI64
-    inext
+    wasm_wp_pures [wp_subI64]
     ihave HscratchLater :
         ▷ pointsTo_u64 0 ((sp - 16) + 8) oldScratch $$ [Hscratch]
     · inext
@@ -152,8 +151,7 @@ theorem absDiff_smallStep_wp_to_return
     wasm_wp_pures [wp_localGet]
     wasm_wp_pures [wp_localGet]
     wasm_wp_pures [wp_localGet]
-    iapply Wasm.SmallStep.wp_subI64
-    inext
+    wasm_wp_pures [wp_subI64]
     ihave HscratchLater :
         ▷ pointsTo_u64 0 ((sp - 16) + 8) oldScratch $$ [Hscratch]
     · inext

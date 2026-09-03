@@ -49,8 +49,7 @@ theorem finishGcd_smallStep_wp
   iintro Htrue
   wasm_wp_pures [wp_localGet]
   wasm_wp_pures [wp_localGet]
-  iapply wp_shlI64
-  inext
+  wasm_wp_pures [wp_shlI64]
   wasm_wp_pures [wp_localSet]
   iapply wp_exitControl rfl
   inext
@@ -76,8 +75,7 @@ theorem mod3_gcd_zero_smallStep (a b : UInt64) (hz : a = 0 ∨ b = 0) :
   simp only [gcdConfig, func0]
   wasm_wp_pures [wp_localGet]
   wasm_wp_pures [wp_localGet]
-  iapply wp_orI64
-  inext
+  wasm_wp_pures [wp_orI64]
   wasm_wp_pures [wp_localSet]
   iapply wp_block
   inext
@@ -224,14 +222,12 @@ theorem gcdLoopBody_smallStep_wp
     simp only [List.take_nil, List.drop_nil, List.nil_append]
     wasm_wp_pures [wp_localGet]
     wasm_wp_pures [wp_localGet]
-    iapply wp_subI64
-    inext
+    wasm_wp_pures [wp_subI64]
     wasm_wp_pures [wp_localTee]
     wasm_wp_pures [wp_localGet]
     iapply wp_ctzI64
     inext
-    iapply wp_shrUI64
-    inext
+    wasm_wp_pures [wp_shrUI64]
     wasm_wp_pures [wp_localTee]
     simp only [List.set]
     let x' := (x - y) >>> (UInt64.ofNat (ctz64 64 (x - y)) % 64)
@@ -291,14 +287,12 @@ theorem gcdLoopBody_smallStep_wp
     wasm_wp_pures [wp_localGet]
     wasm_wp_pures [wp_localGet]
     wasm_wp_pures [wp_localGet]
-    iapply wp_subI64
-    inext
+    wasm_wp_pures [wp_subI64]
     wasm_wp_pures [wp_localTee]
     wasm_wp_pures [wp_localGet]
     iapply wp_ctzI64
     inext
-    iapply wp_shrUI64
-    inext
+    wasm_wp_pures [wp_shrUI64]
     wasm_wp_pures [wp_localTee]
     simp only [List.set]
     let y' := (y - x) >>> (UInt64.ofNat (ctz64 64 (y - x)) % 64)
@@ -370,8 +364,7 @@ theorem gcdInner_smallStep_wp
   wasm_wp_pures [wp_localGet]
   iapply wp_ctzI64
   inext
-  iapply wp_shrUI64
-  inext
+  wasm_wp_pures [wp_shrUI64]
   wasm_wp_pures [wp_localTee]
   simp only [List.set]
   let ao := p0 >>> (UInt64.ofNat (ctz64 64 p0) % 64)
@@ -379,8 +372,7 @@ theorem gcdInner_smallStep_wp
   wasm_wp_pures [wp_localGet]
   iapply wp_ctzI64
   inext
-  iapply wp_shrUI64
-  inext
+  wasm_wp_pures [wp_shrUI64]
   wasm_wp_pures [wp_localTee]
   simp only [List.set]
   let bo := p1 >>> (UInt64.ofNat (ctz64 64 p1) % 64)
@@ -440,8 +432,7 @@ theorem mod3_gcd_smallStep (a b : UInt64) :
       .block 0 0 gcdOuterBody, .localGet 2] from rfl]
   wasm_wp_pures [wp_localGet]
   wasm_wp_pures [wp_localGet]
-  iapply wp_orI64
-  inext
+  wasm_wp_pures [wp_orI64]
   wasm_wp_pures [wp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]

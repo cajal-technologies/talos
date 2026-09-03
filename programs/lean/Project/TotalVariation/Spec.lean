@@ -84,8 +84,7 @@ theorem total_variation_correct : TotalVariationSpec := by
         iapply wp_returnFromCallExplicit $$ Hruntime
         inext
         simp only [List.take, List.singleton_append]
-        iapply wp_addI64
-        inext
+        wasm_wp_pures [wp_addI64]
         iapply wp_returnFromFunction
         inext
         iapply wp_value'

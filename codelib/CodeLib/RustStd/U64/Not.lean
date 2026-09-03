@@ -17,8 +17,7 @@ theorem not_chunk : UnChunk (T := UInt64) [.constI64 MAX_U64, .xorI64] (~~~ ·) 
     controls calls a vs
   simp only [toV_u64, List.cons_append, List.nil_append]
   iintro Hwp
-  iapply Wasm.SmallStep.wp_constI64
-  inext
+  wasm_wp_pures [wp_constI64]
   have hnot : a ^^^ MAX_U64 = ~~~a := by
     simp [MAX_U64]
     bv_decide

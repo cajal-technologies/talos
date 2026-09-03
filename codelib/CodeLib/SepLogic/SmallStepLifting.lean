@@ -766,6 +766,22 @@ macro_rules
       `(tactic| iapply wp_or; inext; wasm_wp_pures [$rest:ident*])
   | `(tactic| wasm_wp_pures [wp_shl $rest:ident*]) =>
       `(tactic| iapply wp_shl; inext; wasm_wp_pures [$rest:ident*])
+  | `(tactic| wasm_wp_pures [wp_constI64 $rest:ident*]) =>
+      `(tactic| iapply wp_constI64; inext; wasm_wp_pures [$rest:ident*])
+  | `(tactic| wasm_wp_pures [wp_addI64 $rest:ident*]) =>
+      `(tactic| iapply wp_addI64; inext; wasm_wp_pures [$rest:ident*])
+  | `(tactic| wasm_wp_pures [wp_subI64 $rest:ident*]) =>
+      `(tactic| iapply wp_subI64; inext; wasm_wp_pures [$rest:ident*])
+  | `(tactic| wasm_wp_pures [wp_mulI64 $rest:ident*]) =>
+      `(tactic| iapply wp_mulI64; inext; wasm_wp_pures [$rest:ident*])
+  | `(tactic| wasm_wp_pures [wp_andI64 $rest:ident*]) =>
+      `(tactic| iapply wp_andI64; inext; wasm_wp_pures [$rest:ident*])
+  | `(tactic| wasm_wp_pures [wp_orI64 $rest:ident*]) =>
+      `(tactic| iapply wp_orI64; inext; wasm_wp_pures [$rest:ident*])
+  | `(tactic| wasm_wp_pures [wp_shlI64 $rest:ident*]) =>
+      `(tactic| iapply wp_shlI64; inext; wasm_wp_pures [$rest:ident*])
+  | `(tactic| wasm_wp_pures [wp_shrUI64 $rest:ident*]) =>
+      `(tactic| iapply wp_shrUI64; inext; wasm_wp_pures [$rest:ident*])
 
 theorem wp_tryTable
     {locals : Locals} {paramArity resultArity arity : Nat}
