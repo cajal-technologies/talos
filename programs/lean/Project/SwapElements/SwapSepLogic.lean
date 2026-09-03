@@ -84,11 +84,10 @@ theorem wp_swapElementsFunc2Prefix
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HALater : ▷ pointsTo_u64 0 (ptrA + 0) oldA $$ [HA]
   · ilater_rw_exact [UInt32.add_zero] with HA
-  wasm_wp_next wp_load64 oldA (by simp)
+  wasm_wp_next_bind wp_load64 oldA (by simp)
     (by simpa using ha1) (by simpa using ha2) (by simpa using ha3)
     (by simpa using ha4) (by simpa using ha5) (by simpa using ha6)
-    (by simpa using ha7) $$ HALater
-  iintro HA
+    (by simpa using ha7) with HALater => HA
   ihave HscratchLater :
       ▷ pointsTo_u64 0 ((1048544 : UInt32) + 8) oldScratch $$ [Hscratch]
   · ilater_rw_exact [show (1048544 : UInt32) + 8 = 1048552 from rfl] with Hscratch
@@ -98,18 +97,16 @@ theorem wp_swapElementsFunc2Prefix
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HBLater : ▷ pointsTo_u64 0 (ptrB + 0) oldB $$ [HB]
   · ilater_rw_exact [UInt32.add_zero] with HB
-  wasm_wp_next wp_load64 oldB (by simp)
+  wasm_wp_next_bind wp_load64 oldB (by simp)
     (by simpa using hb1) (by simpa using hb2) (by simpa using hb3)
     (by simpa using hb4) (by simpa using hb5) (by simpa using hb6)
-    (by simpa using hb7) $$ HBLater
-  iintro HB
+    (by simpa using hb7) with HBLater => HB
   ihave HALater : ▷ pointsTo_u64 0 (ptrA + 0) oldA $$ [HA]
   · ilater_rw_exact [UInt32.add_zero] with HA
-  wasm_wp_next wp_store64 oldA (by simp)
+  wasm_wp_next_bind wp_store64 oldA (by simp)
     (by simpa using ha1) (by simpa using ha2) (by simpa using ha3)
     (by simpa using ha4) (by simpa using ha5) (by simpa using ha6)
-    (by simpa using ha7) $$ HALater
-  iintro HA
+    (by simpa using ha7) with HALater => HA
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HscratchLater :
       ▷ pointsTo_u64 0 ((1048544 : UInt32) + 8) oldA $$ [Hscratch]
@@ -119,11 +116,10 @@ theorem wp_swapElementsFunc2Prefix
   iintro Hscratch
   ihave HBLater : ▷ pointsTo_u64 0 (ptrB + 0) oldB $$ [HB]
   · ilater_rw_exact [UInt32.add_zero] with HB
-  wasm_wp_next wp_store64 oldB (by simp)
+  wasm_wp_next_bind wp_store64 oldB (by simp)
     (by simpa using hb1) (by simpa using hb2) (by simpa using hb3)
     (by simpa using hb4) (by simpa using hb5) (by simpa using hb6)
-    (by simpa using hb7) $$ HBLater
-  iintro HB
+    (by simpa using hb7) with HBLater => HB
   iapply Hdone
   simp only [UInt32.add_zero, UInt32.reduceAdd]
   iframe
@@ -159,11 +155,10 @@ theorem wp_swapElementsFunc2AliasPrefix
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HcellLater : ▷ pointsTo_u64 0 (ptr + 0) oldValue $$ [Hcell]
   · ilater_rw_exact [UInt32.add_zero] with Hcell
-  wasm_wp_next wp_load64 oldValue (by simp)
+  wasm_wp_next_bind wp_load64 oldValue (by simp)
     (by simpa using h1) (by simpa using h2) (by simpa using h3)
     (by simpa using h4) (by simpa using h5) (by simpa using h6)
-    (by simpa using h7) $$ HcellLater
-  iintro Hcell
+    (by simpa using h7) with HcellLater => Hcell
   ihave HscratchLater :
       ▷ pointsTo_u64 0 ((1048544 : UInt32) + 8) oldScratch $$ [Hscratch]
   · ilater_rw_exact [show (1048544 : UInt32) + 8 = 1048552 from rfl] with Hscratch
@@ -173,18 +168,16 @@ theorem wp_swapElementsFunc2AliasPrefix
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HcellLater : ▷ pointsTo_u64 0 (ptr + 0) oldValue $$ [Hcell]
   · ilater_rw_exact [UInt32.add_zero] with Hcell
-  wasm_wp_next wp_load64 oldValue (by simp)
+  wasm_wp_next_bind wp_load64 oldValue (by simp)
     (by simpa using h1) (by simpa using h2) (by simpa using h3)
     (by simpa using h4) (by simpa using h5) (by simpa using h6)
-    (by simpa using h7) $$ HcellLater
-  iintro Hcell
+    (by simpa using h7) with HcellLater => Hcell
   ihave HcellLater : ▷ pointsTo_u64 0 (ptr + 0) oldValue $$ [Hcell]
   · ilater_rw_exact [UInt32.add_zero] with Hcell
-  wasm_wp_next wp_store64 oldValue (by simp)
+  wasm_wp_next_bind wp_store64 oldValue (by simp)
     (by simpa using h1) (by simpa using h2) (by simpa using h3)
     (by simpa using h4) (by simpa using h5) (by simpa using h6)
-    (by simpa using h7) $$ HcellLater
-  iintro Hcell
+    (by simpa using h7) with HcellLater => Hcell
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HscratchLater :
       ▷ pointsTo_u64 0 ((1048544 : UInt32) + 8) oldValue $$ [Hscratch]
@@ -194,11 +187,10 @@ theorem wp_swapElementsFunc2AliasPrefix
   iintro Hscratch
   ihave HcellLater : ▷ pointsTo_u64 0 (ptr + 0) oldValue $$ [Hcell]
   · ilater_rw_exact [UInt32.add_zero] with Hcell
-  wasm_wp_next wp_store64 oldValue (by simp)
+  wasm_wp_next_bind wp_store64 oldValue (by simp)
     (by simpa using h1) (by simpa using h2) (by simpa using h3)
     (by simpa using h4) (by simpa using h5) (by simpa using h6)
-    (by simpa using h7) $$ HcellLater
-  iintro Hcell
+    (by simpa using h7) with HcellLater => Hcell
   iapply Hdone
   simp only [UInt32.add_zero, UInt32.reduceAdd]
   iframe

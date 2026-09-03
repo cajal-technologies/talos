@@ -451,10 +451,9 @@ theorem func6_correct [WasmSmallStepGS hlc Universal.State] :
     calls s E Φ
   iintro ⟨Hruntime, ⟨Hstreams, Hterminal⟩⟩
   iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
-  iapply Wasm.SmallStep.twp_call Project.Mergesort.module 9
+  wasm_twp_bind Wasm.SmallStep.twp_call Project.Mergesort.module 9
       Project.Mergesort.func6Def (by decide)
-      Project.Mergesort.WrapperProof.func6_index $$ Hmodule
-  iintro Hmodule
+      Project.Mergesort.WrapperProof.func6_index with Hmodule => Hmodule
   simp [Project.Mergesort.func6Def, Project.Mergesort.func6,
     Function.toLocals, Function.numParams]
   have Hoom := import2_correct (hlc := hlc)
@@ -483,10 +482,9 @@ theorem func4_correct [WasmSmallStepGS hlc Universal.State] :
   intro callerLocals stack code arity remainder controls calls s E Φ
   iintro ⟨Hruntime, Hcont⟩
   iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
-  iapply Wasm.SmallStep.twp_call Project.Mergesort.module 7
+  wasm_twp_bind Wasm.SmallStep.twp_call Project.Mergesort.module 7
       Project.Mergesort.func4Def (by decide)
-      Project.Mergesort.WrapperProof.func4_index $$ Hmodule
-  iintro Hmodule
+      Project.Mergesort.WrapperProof.func4_index with Hmodule => Hmodule
   simp [Project.Mergesort.func4Def, Project.Mergesort.func4,
     Function.toLocals, Function.numParams]
   wasm_twp_return_from_call Hmodule
@@ -509,10 +507,9 @@ theorem func7_correct [WasmSmallStepGS hlc Universal.State] :
   imod BumpHeap_retire heapId storedCursor frontier history allocationId ptr
       layout bytes $$ [Hbump Hblock] with Hbump
   · iframe
-  iapply Wasm.SmallStep.twp_call Project.Mergesort.module 10
+  wasm_twp_bind Wasm.SmallStep.twp_call Project.Mergesort.module 10
       Project.Mergesort.func7Def (by decide)
-      Project.Mergesort.WrapperProof.func7_index $$ Hmodule
-  iintro Hmodule
+      Project.Mergesort.WrapperProof.func7_index with Hmodule => Hmodule
   simp [Project.Mergesort.func7Def, Project.Mergesort.func7,
     Function.toLocals, Function.numParams]
   wasm_twp_rebind Wasm.SmallStep.twp_returnFromCallFallthrough with Hmodule
@@ -534,10 +531,9 @@ theorem func10_correct [WasmSmallStepGS hlc Universal.State] :
   iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   iintuitionistic Henv
   simp only [List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.twp_call Project.Mergesort.module 13
+  wasm_twp_bind Wasm.SmallStep.twp_call Project.Mergesort.module 13
       Project.Mergesort.func10Def (by decide)
-      Project.Mergesort.WrapperProof.func10_index $$ Hmodule
-  iintro Hmodule
+      Project.Mergesort.WrapperProof.func10_index with Hmodule => Hmodule
   simp [Project.Mergesort.func10Def, Project.Mergesort.func10,
     Function.toLocals, Function.numParams]
   wasm_twp_pures [twp_localGet twp_localGet]
@@ -588,10 +584,9 @@ theorem func11_correct [WasmSmallStepGS hlc Universal.State] :
   iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   iintuitionistic Henv
   simp only [List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.twp_call Project.Mergesort.module 14
+  wasm_twp_bind Wasm.SmallStep.twp_call Project.Mergesort.module 14
       Project.Mergesort.func11Def (by decide)
-      Project.Mergesort.WrapperProof.func11_index $$ Hmodule
-  iintro Hmodule
+      Project.Mergesort.WrapperProof.func11_index with Hmodule => Hmodule
   simp [Project.Mergesort.func11Def, Project.Mergesort.func11,
     Function.toLocals, Function.numParams]
   wasm_twp_pures [twp_localGet twp_localGet]

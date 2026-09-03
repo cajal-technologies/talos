@@ -475,18 +475,16 @@ theorem func3_body_smallStep_wp
   ihave HwordLater :
       ▷ pointsTo_u64 0 ((1048560 : UInt32) + 8) oldWord $$ [Hword]
   · ilater_rw_exact [show (1048560 : UInt32) + 8 = 1048568 by decide] with Hword
-  wasm_wp_next wp_f64Store oldWord
+  wasm_wp_next_bind wp_f64Store oldWord
     (by decide) (by decide) (by decide) (by decide)
-    (by decide) (by decide) (by decide) (by decide) $$ HwordLater
-  iintro Hword
+    (by decide) (by decide) (by decide) (by decide) with HwordLater => Hword
   wasm_wp_pures [wp_localGet]
   ihave HwordLater :
       ▷ pointsTo_u64 0 ((1048560 : UInt32) + 8) (f64Abs x) $$ [Hword]
   · ilater_exact Hword
-  wasm_wp_next wp_f64Load (f64Abs x)
+  wasm_wp_next_bind wp_f64Load (f64Abs x)
     (by decide) (by decide) (by decide) (by decide)
-    (by decide) (by decide) (by decide) (by decide) $$ HwordLater
-  iintro Hword
+    (by decide) (by decide) (by decide) (by decide) with HwordLater => Hword
   have hWordProp :
       pointsTo_u64 0 ((1048560 : UInt32) + 8) (f64Abs x) =
         pointsTo_u64 0 1048568 (f64Abs x) :=
@@ -957,18 +955,16 @@ theorem func3_lowered_body_smallStep_wp
   ihave HwordLater :
       ▷ pointsTo_u64 0 ((1048544 : UInt32) + 8) oldWord $$ [Hword]
   · ilater_rw_exact [show (1048544 : UInt32) + 8 = 1048552 by decide] with Hword
-  wasm_wp_next wp_f64Store oldWord
+  wasm_wp_next_bind wp_f64Store oldWord
     (by decide) (by decide) (by decide) (by decide)
-    (by decide) (by decide) (by decide) (by decide) $$ HwordLater
-  iintro Hword
+    (by decide) (by decide) (by decide) (by decide) with HwordLater => Hword
   wasm_wp_pures [wp_localGet]
   ihave HwordLater :
       ▷ pointsTo_u64 0 ((1048544 : UInt32) + 8) (f64Abs x) $$ [Hword]
   · ilater_exact Hword
-  wasm_wp_next wp_f64Load (f64Abs x)
+  wasm_wp_next_bind wp_f64Load (f64Abs x)
     (by decide) (by decide) (by decide) (by decide)
-    (by decide) (by decide) (by decide) (by decide) $$ HwordLater
-  iintro Hword
+    (by decide) (by decide) (by decide) (by decide) with HwordLater => Hword
   have hWordProp :
       pointsTo_u64 0 ((1048544 : UInt32) + 8) (f64Abs x) =
         pointsTo_u64 0 1048552 (f64Abs x) :=

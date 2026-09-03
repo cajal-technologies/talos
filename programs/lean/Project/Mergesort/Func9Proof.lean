@@ -132,12 +132,11 @@ private theorem twp_func9_zero_and_return
   wasm_twp_pures [twp_brIfZero twp_localGet]
   iapply twp_eqz (result := 0) (by simp [hsizeNonzero])
   wasm_twp_pures [twp_brIfZero twp_localGet twp_const twp_localGet]
-  iapply twp_memoryFill32 bytes
+  wasm_twp_bind twp_memoryFill32 bytes
       (by rw [hblockFacts.1, ← hsize])
       hpositive
       (by rw [hsize, ← hblockFacts.1];
-          simpa only [UInt32.size] using hnowrap) $$ Hbytes
-  iintro Hbytes
+          simpa only [UInt32.size] using hnowrap) with Hbytes => Hbytes
   ihave Hslice : Project.Mergesort.Representations.ByteSlice base
       (List.replicate layout.size 0) $$ [Hbytes]
   · unfold Project.Mergesort.Representations.ByteSlice

@@ -60,11 +60,10 @@ theorem opt3_func0_distinct_smallStep_wp
   simp only [List.set]
   ihave HALater : ▷ pointsTo_u64 0 (addressI + 0) oldA $$ [HA]
   · ilater_rw_exact [UInt32.add_zero] with HA
-  wasm_wp_next Wasm.SmallStep.wp_load64 oldA (by simp)
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 oldA (by simp)
     (by simpa using hi1) (by simpa using hi2) (by simpa using hi3)
     (by simpa using hi4) (by simpa using hi5) (by simpa using hi6)
-    (by simpa using hi7) $$ HALater
-  iintro HA
+    (by simpa using hi7) with HALater => HA
   wasm_wp_pures [wp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
@@ -72,26 +71,23 @@ theorem opt3_func0_distinct_smallStep_wp
   simp only [List.set]
   ihave HBLater : ▷ pointsTo_u64 0 (addressJ + 0) oldB $$ [HB]
   · ilater_rw_exact [UInt32.add_zero] with HB
-  wasm_wp_next Wasm.SmallStep.wp_load64 oldB (by simp)
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 oldB (by simp)
     (by simpa using hj1) (by simpa using hj2) (by simpa using hj3)
     (by simpa using hj4) (by simpa using hj5) (by simpa using hj6)
-    (by simpa using hj7) $$ HBLater
-  iintro HB
+    (by simpa using hj7) with HBLater => HB
   ihave HALater : ▷ pointsTo_u64 0 (addressI + 0) oldA $$ [HA]
   · ilater_rw_exact [UInt32.add_zero] with HA
-  wasm_wp_next Wasm.SmallStep.wp_store64 oldA (by simp)
+  wasm_wp_next_bind Wasm.SmallStep.wp_store64 oldA (by simp)
     (by simpa using hi1) (by simpa using hi2) (by simpa using hi3)
     (by simpa using hi4) (by simpa using hi5) (by simpa using hi6)
-    (by simpa using hi7) $$ HALater
-  iintro HA
+    (by simpa using hi7) with HALater => HA
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HBLater : ▷ pointsTo_u64 0 (addressJ + 0) oldB $$ [HB]
   · ilater_rw_exact [UInt32.add_zero] with HB
-  wasm_wp_next Wasm.SmallStep.wp_store64 oldB (by simp)
+  wasm_wp_next_bind Wasm.SmallStep.wp_store64 oldB (by simp)
     (by simpa using hj1) (by simpa using hj2) (by simpa using hj3)
     (by simpa using hj4) (by simpa using hj5) (by simpa using hj6)
-    (by simpa using hj7) $$ HBLater
-  iintro HB
+    (by simpa using hj7) with HBLater => HB
   wasm_wp_return_value
   isplitr_pureexact rfl
   · rw [show (i <<< (3 % 32)) + ptr = addressI by rfl,

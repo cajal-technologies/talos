@@ -1043,22 +1043,20 @@ theorem twp_copyPointerAt
       pointsTo_u32 0 (sourceAddress + 0) input[i] $$ [HsourceCell]
   · rw [UInt32.add_zero, hsourceAddress]
     iexact HsourceCell
-  iapply Wasm.SmallStep.twp_load32
+  wasm_twp_bind Wasm.SmallStep.twp_load32
     (address := sourceAddress) (offset := 0) input[i]
     (by simp) (by simpa using hs1) (by simpa using hs2)
-    (by simpa using hs3) $$ HsourceCellLater
-  iintro HsourceCell
+    (by simpa using hs3) with HsourceCellLater => HsourceCell
   ihave HscratchCellLater :
       pointsTo_u32 0 (destinationAddress + 0) scratchValues[k] $$
         [HscratchCell]
   · rw [UInt32.add_zero, hdestinationAddress]
     iexact HscratchCell
-  iapply Wasm.SmallStep.twp_store32
+  wasm_twp_bind Wasm.SmallStep.twp_store32
     (address := destinationAddress) (offset := 0)
     (value := input[i]) scratchValues[k]
     (by simp) (by simpa using hd1) (by simpa using hd2)
-    (by simpa using hd3) $$ HscratchCellLater
-  iintro HscratchCell
+    (by simpa using hd3) with HscratchCellLater => HscratchCell
   ihave HsourceCell' :
       pointsTo_u32 0 (source + 4 * UInt32.ofNat i) input[i] $$
         [HsourceCell]

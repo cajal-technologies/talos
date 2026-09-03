@@ -112,10 +112,9 @@ theorem len_export_correct : LenExportSpec := by
     · inext
       simp only [UInt32.add_zero]
       iexact Hdata
-    wasm_wp_next SmallStep.wp_load32 (address := p) (offset := 0)
+    wasm_wp_next_bind SmallStep.wp_load32 (address := p) (offset := 0)
       dataPtr (by simp) (by simpa using hp1)
-      (by simpa using hp2) (by simpa using hp3) $$ HdataLater
-    iintro Hdata
+      (by simpa using hp2) (by simpa using hp3) with HdataLater => Hdata
     wasm_wp_pures [wp_localGet]
     ihave HlenLater : ▷ pointsTo_u32 0 (p + 4) len $$ [Hlen]
     · ilater_exact Hlen
@@ -160,10 +159,9 @@ theorem is_empty_export_correct : IsEmptyExportSpec := by
     · inext
       simp only [UInt32.add_zero]
       iexact Hdata
-    wasm_wp_next SmallStep.wp_load32 (address := p) (offset := 0)
+    wasm_wp_next_bind SmallStep.wp_load32 (address := p) (offset := 0)
       dataPtr (by simp) (by simpa using hp1)
-      (by simpa using hp2) (by simpa using hp3) $$ HdataLater
-    iintro Hdata
+      (by simpa using hp2) (by simpa using hp3) with HdataLater => Hdata
     wasm_wp_pures [wp_localGet]
     ihave HlenLater : ▷ pointsTo_u32 0 (p + 4) len $$ [Hlen]
     · ilater_exact Hlen

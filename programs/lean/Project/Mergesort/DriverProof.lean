@@ -3435,10 +3435,9 @@ theorem twp_func3_write_one
   · simp only [UInt32.add_zero]
     iexact HvalueLoaded
   ihave Hvalues := HcloseValue $$ Hvalue
-  iapply twp_store32 (address := driverBase) (offset := 268)
+  wasm_twp_bind twp_store32 (address := driverBase) (offset := 268)
       (Spec.decodeWord outputBytes) (by decide) (by decide) (by decide)
-      (by decide) $$ HoldOutput
-  iintro Houtput
+      (by decide) with HoldOutput => Houtput
   ihave Houtput := HcloseOutput $$ Houtput
   wasm_twp_pures [twp_localGet twp_const twp_add]
   rw [UInt32.add_comm (268 : UInt32)]
@@ -5442,12 +5441,11 @@ theorem twp_func3_initialize
       (by decide) with HoldLength' => Hlength
   wasm_twp_pures [twp_localGet]
   iapply twp_pureStep _ _ _ (fun _ => Step.constI64)
-  iapply twp_store64_zero (address := driverBase)
+  wasm_twp_bind twp_store64_zero (address := driverBase)
       (value := 4294967296)
       (oldCapacity.toUInt64 ||| (oldPointer.toUInt64 <<< 32))
       (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HoldPair
-  iintro Hpair
+      (by decide) (by decide) (by decide) with HoldPair => Hpair
   wasm_twp_pures [twp_localGet twp_const twp_add]
   rw [show 12 + driverBase = driverBase + 12 by decide]
   wasm_twp_pures [twp_const twp_const]
