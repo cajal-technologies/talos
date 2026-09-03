@@ -91,18 +91,7 @@ theorem twp_pureStep
     exact ⟨.running next, store, [],
       ⟨rfl, kind, rfl, hstep store⟩⟩
   iintro %κ %e₂ %store₂ %forks %Hprim
-  rcases Hprim with ⟨hforks, actualKind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst κ
-  obtain ⟨rfl, hconfig⟩ :=
-    step_deterministic (hstep store) wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
+  wasm_wp_resolve_step Hprim using hstep store
   imod Hclose
   imodintro
   isplit
@@ -133,17 +122,7 @@ theorem twp_finish
     exact ⟨.done (values.take arity ++ remainder), store, [],
       ⟨rfl, .administrative .finish, rfl, Step.finish⟩⟩
   iintro %κ %e₂ %store₂ %forks %Hprim
-  rcases Hprim with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst κ
-  obtain ⟨rfl, hconfig⟩ := step_deterministic Step.finish wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
+  wasm_wp_resolve_step Hprim using Step.finish
   imod Hclose
   imodintro
   isplit
@@ -175,18 +154,7 @@ theorem twp_returnFromFunction
       ⟨rfl, .administrative .returnFromFunction, rfl,
         Step.returnFromFunction⟩⟩
   iintro %κ %e₂ %store₂ %forks %Hprim
-  rcases Hprim with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst κ
-  obtain ⟨rfl, hconfig⟩ :=
-    step_deterministic Step.returnFromFunction wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
+  wasm_wp_resolve_step Hprim using Step.returnFromFunction
   imod Hclose
   imodintro
   isplit
@@ -661,18 +629,11 @@ theorem twp_call
       store, [], ⟨rfl, .instruction (.call functionIndex), rfl,
         Step.call himports' hfn'⟩⟩
   iintro %κ %e₂ %store₂ %forks %Hstep
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst κ
+  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
   obtain ⟨rfl, hconfig⟩ :=
     step_deterministic (Step.call (α := α) himports' hfn') wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
+  simp only at hconfig
+  cases hconfig
   imod Hclose
   imodintro
   isplit
@@ -819,19 +780,12 @@ theorem twp_callHost
         { store with wasm := newWasm }, [],
         ⟨rfl, _, rfl, Step.callHostReturn himports' himp' hhost' h⟩⟩
     iintro %κ %e₂ %store₂ %forks %Hstep
-    rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-    change forks = [] at hforks
-    subst forks
-    subst κ
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
     obtain ⟨rfl, hconfig⟩ :=
       step_deterministic
         (Step.callHostReturn (α := α) himports' himp' hhost' h) wasmStep
-    have parts := Config.mk.inj hconfig
-    have hexpr := parts.1
-    have hstore := parts.2
-    simp only at hexpr hstore
-    subst e₂
-    subst store₂
+    simp only at hconfig
+    cases hconfig
     imod hRetTransfer store ns obs nt Hmodule results newWasm h $$
       [$HP $Hσ] with ⟨HQ, Hσ⟩
     imod Hclose
@@ -861,19 +815,12 @@ theorem twp_callHost
       exact ⟨.trapped (.host msg), { store with wasm := newWasm }, [],
         ⟨rfl, _, rfl, Step.callHostTrap himports' himp' hhost' h⟩⟩
     iintro %κ %e₂ %store₂ %forks %Hstep
-    rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-    change forks = [] at hforks
-    subst forks
-    subst κ
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
     obtain ⟨rfl, hconfig⟩ :=
       step_deterministic
         (Step.callHostTrap (α := α) himports' himp' hhost' h) wasmStep
-    have parts := Config.mk.inj hconfig
-    have hexpr := parts.1
-    have hstore := parts.2
-    simp only at hexpr hstore
-    subst e₂
-    subst store₂
+    simp only at hconfig
+    cases hconfig
     imod hTrapTransfer store ns obs nt Hmodule newWasm msg h $$
       [$HP $Hσ] with ⟨HQ, Hσ⟩
     imod Hclose
@@ -909,19 +856,12 @@ theorem twp_callHost
         { store with wasm := newWasm }, [],
         ⟨rfl, _, rfl, Step.callHostThrow himports' himp' hhost' h⟩⟩
     iintro %κ %e₂ %store₂ %forks %Hstep
-    rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-    change forks = [] at hforks
-    subst forks
-    subst κ
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
     obtain ⟨rfl, hconfig⟩ :=
       step_deterministic
         (Step.callHostThrow (α := α) himports' himp' hhost' h) wasmStep
-    have parts := Config.mk.inj hconfig
-    have hexpr := parts.1
-    have hstore := parts.2
-    simp only at hexpr hstore
-    subst e₂
-    subst store₂
+    simp only at hconfig
+    cases hconfig
     imod hThrowTransfer store ns obs nt Hmodule newWasm tag xs h $$
       [$HP $Hσ] with ⟨HQ, Hσ⟩
     imod Hclose
@@ -985,18 +925,11 @@ theorem twp_returnFromCallFallthrough
     exact ⟨_, store, [],
       ⟨rfl, _, rfl, Step.returnFromCallFallthrough hsame⟩⟩
   iintro %κ %e₂ %store₂ %forks %Hstep
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst κ
+  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
   obtain ⟨rfl, hconfig⟩ :=
     step_deterministic (Step.returnFromCallFallthrough (α := α) hsame) wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
+  simp only at hconfig
+  cases hconfig
   imod Hclose
   imodintro
   isplit
@@ -1061,18 +994,11 @@ theorem twp_returnFromCallExplicit
     exact ⟨_, store, [],
       ⟨rfl, _, rfl, Step.returnFromCallExplicit hsame⟩⟩
   iintro %κ %e₂ %store₂ %forks %Hstep
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst κ
+  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
   obtain ⟨rfl, hconfig⟩ :=
     step_deterministic (Step.returnFromCallExplicit (α := α) hsame) wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
+  simp only at hconfig
+  cases hconfig
   imod Hclose
   imodintro
   isplit
@@ -1124,17 +1050,8 @@ theorem twp_memorySize
       code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl, Step.memorySize⟩⟩
   iintro %κ %e₂ %store₂ %forks %Hstep
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst κ
-  obtain ⟨rfl, hconfig⟩ := step_deterministic Step.memorySize wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
+  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+  wasm_wp_resolve_target Step.memorySize against wasmStep
   imod Hclose
   imodintro
   isplit
@@ -1198,17 +1115,8 @@ theorem twp_memorySize_tracked
       code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl, Step.memorySize⟩⟩
   iintro %κ %e₂ %store₂ %forks %Hstep
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst κ
-  obtain ⟨rfl, hconfig⟩ := step_deterministic Step.memorySize wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
+  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+  wasm_wp_resolve_target Step.memorySize against wasmStep
   imod Hclose
   imodintro
   isplit
@@ -1253,18 +1161,11 @@ theorem twp_memoryGrow
       exact ⟨_, store, [],
         ⟨rfl, _, rfl, Step.memoryGrowFailure hg⟩⟩
     iintro %κ %e₂ %store₂ %forks %Hstep
-    rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-    change forks = [] at hforks
-    subst forks
-    subst κ
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
     obtain ⟨rfl, hconfig⟩ :=
       step_deterministic (Step.memoryGrowFailure hg) wasmStep
-    have parts := Config.mk.inj hconfig
-    have hexpr := parts.1
-    have hstore := parts.2
-    simp only at hexpr hstore
-    subst e₂
-    subst store₂
+    simp only at hconfig
+    cases hconfig
     imod Hclose
     imodintro
     isplit
@@ -1292,10 +1193,7 @@ theorem twp_memoryGrow
           simpa only [Wasm.SmallStep.setMemory_eq] using
             Step.memoryGrowSuccess hg⟩⟩
     iintro %κ %e₂ %store₂ %forks %Hstep
-    rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-    change forks = [] at hforks
-    subst forks
-    subst κ
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
     have expectedStep : Step
         ⟨.running ⟨⟨params, localValues, .i32 delta :: values⟩,
           .memoryGrow :: code, arity, remainder, controls, calls⟩, store⟩
@@ -1306,13 +1204,7 @@ theorem twp_memoryGrow
           { store with wasm := { store.wasm with mem := memory } }⟩ := by
       simpa only [Wasm.SmallStep.setMemory_eq] using
         Step.memoryGrowSuccess hg
-    obtain ⟨rfl, hconfig⟩ := step_deterministic expectedStep wasmStep
-    have parts := Config.mk.inj hconfig
-    have hexpr := parts.1
-    have hstore := parts.2
-    simp only at hexpr hstore
-    subst e₂
-    subst store₂
+    wasm_wp_resolve_target expectedStep against wasmStep
     imod (stateInterp_memoryGrow store ns obs nt delta
         (store.wasm.memoryCap store.runtime.currentModule 0)
         memory previousPages hg) $$ Hσ with Hσ
@@ -1390,18 +1282,11 @@ theorem twp_memoryGrow_tracked
       exact ⟨_, store, [],
         ⟨rfl, _, rfl, Step.memoryGrowFailure hg⟩⟩
     iintro %κ %e₂ %store₂ %forks %Hstep
-    rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-    change forks = [] at hforks
-    subst forks
-    subst κ
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
     obtain ⟨rfl, hconfig⟩ :=
       step_deterministic (Step.memoryGrowFailure hg) wasmStep
-    have parts := Config.mk.inj hconfig
-    have hexpr := parts.1
-    have hstore := parts.2
-    simp only at hexpr hstore
-    subst e₂
-    subst store₂
+    simp only at hconfig
+    cases hconfig
     imod Hclose
     imodintro
     isplit
@@ -1440,10 +1325,7 @@ theorem twp_memoryGrow_tracked
           simpa only [Wasm.SmallStep.setMemory_eq] using
             Step.memoryGrowSuccess hg⟩⟩
     iintro %κ %e₂ %store₂ %forks %Hstep
-    rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-    change forks = [] at hforks
-    subst forks
-    subst κ
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
     have expectedStep : Step
         ⟨.running ⟨⟨params, localValues, .i32 delta :: values⟩,
           .memoryGrow :: code, arity, remainder, controls, calls⟩, store⟩
@@ -1454,13 +1336,7 @@ theorem twp_memoryGrow_tracked
           { store with wasm := { store.wasm with mem := memory } }⟩ := by
       simpa only [Wasm.SmallStep.setMemory_eq] using
         Step.memoryGrowSuccess hg
-    obtain ⟨rfl, hconfig⟩ := step_deterministic expectedStep wasmStep
-    have parts := Config.mk.inj hconfig
-    have hexpr := parts.1
-    have hstore := parts.2
-    simp only at hexpr hstore
-    subst e₂
-    subst store₂
+    wasm_wp_resolve_target expectedStep against wasmStep
     icombine Hσ HcontNew as Hinput
     imod (stateInterp_memoryGrow_tracked_frame store ns obs nt delta
         (store.wasm.memoryCap store.runtime.currentModule 0)
@@ -1530,10 +1406,7 @@ theorem twp_load32
         by simpa [Hread] using
           Step.load32 (α := α) (address := Value.i32 address) rfl hbound⟩⟩
   iintro %κ %e₂ %store₂ %forks %Hstep
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst κ
+  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
   have expectedStep : Step
       ⟨.running
         ⟨⟨params, localValues, .i32 address :: values⟩,
@@ -1547,12 +1420,8 @@ theorem twp_load32
       (Step.load32 (α := α) (address := Value.i32 address) rfl hbound)
   obtain ⟨rfl, hconfig⟩ :=
     step_deterministic expectedStep wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
+  simp only at hconfig
+  cases hconfig
   imod Hclose
   imodintro
   isplit
@@ -1618,10 +1487,7 @@ theorem twp_store32
       [], ⟨rfl, .instruction (.store32 offset), rfl,
         Step.store32 (α := α) (address := Value.i32 address) rfl hbound⟩⟩
   iintro %κ %e₂ %store₂ %forks %Hstep
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst κ
+  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
   have expectedStep : Step
       ⟨.running
         ⟨⟨params, localValues, .i32 value :: .i32 address :: values⟩,
@@ -1637,12 +1503,8 @@ theorem twp_store32
     Step.store32 (α := α) (address := Value.i32 address) rfl hbound
   obtain ⟨rfl, hconfig⟩ :=
     step_deterministic expectedStep wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
+  simp only at hconfig
+  cases hconfig
   imod stateInterp_store32 store ns obs nt
       (address + offset) oldWord value h1 h2 h3 Hfacts.2 $$
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
@@ -1719,10 +1581,7 @@ theorem twp_memoryFill32
       [], ⟨rfl, .instruction .memoryFill, rfl,
         by simpa only [setMemory_eq] using Step.memoryFill32 hbound⟩⟩
   iintro %κ %e₂ %store₂ %forks %Hstep
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst κ
+  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
   have expectedStep : Step
       ⟨.running ⟨⟨params, localValues,
           .i32 len :: .i32 value :: .i32 destination :: values⟩,
@@ -1735,13 +1594,7 @@ theorem twp_memoryFill32
                 store.wasm.mem.fill destination.toNat oldBytes.length value.toUInt8 } }⟩ := by
     rw [hlen]
     simpa only [setMemory_eq] using Step.memoryFill32 hbound
-  obtain ⟨rfl, hconfig⟩ := step_deterministic expectedStep wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
+  wasm_wp_resolve_target expectedStep against wasmStep
   imod stateInterp_fill_bytes store ns obs nt destination oldBytes value.toUInt8
       (by rw [hlen]; exact hbound) (by rw [hlen]; exact hnowrap)
       $$ [$Hσ $Hbytes] with ⟨Hσ, Hbytes⟩
@@ -1820,10 +1673,7 @@ theorem twp_memoryCopy32
         by simpa only [setMemory_eq] using
           (Step.memoryCopy32 hbound_dst hbound_src)⟩⟩
   iintro %κ %e₂ %store₂ %forks %Hstep
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst κ
+  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
   have expectedStep : Step
       ⟨.running ⟨⟨params, localValues,
           .i32 len :: .i32 source :: .i32 destination :: values⟩,
@@ -1836,13 +1686,7 @@ theorem twp_memoryCopy32
                 store.wasm.mem.copy destination.toNat source.toNat oldDstBytes.length } }⟩ := by
     rw [hlen_dst]
     simpa only [setMemory_eq] using Step.memoryCopy32 hbound_dst hbound_src
-  obtain ⟨rfl, hconfig⟩ := step_deterministic expectedStep wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
+  wasm_wp_resolve_target expectedStep against wasmStep
   imod stateInterp_copy_bytes store ns obs nt
       destination source oldDstBytes srcBytes
       (hlen_src.trans hlen_dst.symm)
@@ -1917,18 +1761,11 @@ theorem twp_throwI
     exact ⟨_, store, [], ⟨rfl, .instruction (.throwI tagIndex), rfl,
         Step.throwI htag' hargs⟩⟩
   iintro %κ %e₂ %store₂ %forks %Hstep
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst κ
+  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
   obtain ⟨rfl, hconfig⟩ :=
     step_deterministic (Step.throwI (α := α) htag' hargs) wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
+  simp only at hconfig
+  cases hconfig
   imod Hclose
   imodintro
   isplit
@@ -1992,10 +1829,7 @@ theorem twp_catchException
       ⟨rfl, .administrative .catchException, rfl,
         Step.catchException hthrow hmatch (htarget store)⟩⟩
   iintro %κ %e₂ %store₂ %forks %Hstep
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst κ
+  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
   have expectedStep : Step
       ⟨.running ⟨locals, [], arity, remainder,
           throwingFrame ::
@@ -2008,13 +1842,7 @@ theorem twp_catchException
           arity, remainder, targetControl, calls⟩,
         (prepareCatch tag arguments clause store).2⟩ :=
     Step.catchException hthrow hmatch (htarget store)
-  obtain ⟨rfl, hconfig⟩ := step_deterministic expectedStep wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
+  wasm_wp_resolve_target expectedStep against wasmStep
   imod Hclose
   imodintro
   isplit
@@ -2121,19 +1949,12 @@ theorem twp_globalGet
       store, [], ⟨rfl, _, rfl, Step.globalGet (by
         simpa [globalAt?, hcanonical] using Hget)⟩⟩
   iintro %κ %e₂ %store₂ %forks %Hstep
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst κ
+  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
   obtain ⟨rfl, hconfig⟩ :=
     step_deterministic (Step.globalGet (α := α) (by
       simpa [globalAt?, hcanonical] using Hget)) wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
+  simp only at hconfig
+  cases hconfig
   imod Hclose
   imodintro
   isplit
@@ -2249,10 +2070,7 @@ theorem twp_f32Load
         by simpa [Hread] using
           Step.f32Load (α := α) (address := .i32 address) rfl hbound⟩⟩
   iintro %κ %e₂ %store₂ %forks %Hstep
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst κ
+  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
   have expectedStep : Step
       ⟨.running
         ⟨⟨params, localValues, .i32 address :: values⟩,
@@ -2266,12 +2084,8 @@ theorem twp_f32Load
       (Step.f32Load (α := α) (address := .i32 address) rfl hbound)
   obtain ⟨rfl, hconfig⟩ :=
     step_deterministic expectedStep wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
+  simp only at hconfig
+  cases hconfig
   imod Hclose
   imodintro
   isplit
@@ -2338,10 +2152,7 @@ theorem twp_f32Store
         by simpa only [Wasm.SmallStep.setMemory_eq] using
           Step.f32Store (address := .i32 address) rfl hbound⟩⟩
   iintro %κ %e₂ %store₂ %forks %Hstep
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst κ
+  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
   have expectedStep : Step
       ⟨.running
         ⟨⟨params, localValues, .f32 value :: .i32 address :: values⟩,
@@ -2358,12 +2169,8 @@ theorem twp_f32Store
       Step.f32Store (address := .i32 address) rfl hbound
   obtain ⟨rfl, hconfig⟩ :=
     step_deterministic expectedStep wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
+  simp only at hconfig
+  cases hconfig
   imod stateInterp_store32 store ns obs nt
       (address + offset) oldWord value h1 h2 h3 Hfacts.2 $$
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
@@ -2427,10 +2234,7 @@ theorem twp_globalSet
         rw [← setGlobal_eq_of_canonical store 0 newValue (hcanonical store)]
         exact Step.globalSet hsome⟩⟩
   iintro %κ %e₂ %store₂ %forks %Hstep
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst κ
+  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
   have expectedStep : Step
       ⟨.running
         ⟨⟨params, localValues, newValue :: values⟩,
@@ -2446,12 +2250,8 @@ theorem twp_globalSet
     exact Step.globalSet hsome
   obtain ⟨rfl, hconfig⟩ :=
     step_deterministic expectedStep wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
+  simp only at hconfig
+  cases hconfig
   imod stateInterp_global_set store ns obs nt
       0 oldValue newValue $$ [$Hσ $Hglobal] with ⟨Hσ, Hglobal⟩
   imod Hclose
@@ -2541,10 +2341,7 @@ theorem twp_f64Load
         by simpa [Hread] using
           Step.f64Load (α := α) (address := .i32 address) rfl hbound⟩⟩
   iintro %κ %e₂ %store₂ %forks %Hprim
-  rcases Hprim with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst κ
+  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hprim
   have expectedStep : Step
       ⟨.running
         ⟨⟨params, localValues, .i32 address :: values⟩,
@@ -2558,12 +2355,8 @@ theorem twp_f64Load
       (Step.f64Load (α := α) (address := .i32 address) rfl hbound)
   obtain ⟨rfl, hconfig⟩ :=
     step_deterministic expectedStep wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
+  simp only at hconfig
+  cases hconfig
   imod Hclose
   imodintro
   isplit
@@ -2639,10 +2432,7 @@ theorem twp_f64Store
         by simpa only [Wasm.SmallStep.setMemory_eq] using
           Step.f64Store (address := .i32 address) rfl hbound⟩⟩
   iintro %κ %e₂ %store₂ %forks %Hstep
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst κ
+  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
   have expectedStep : Step
       ⟨.running
         ⟨⟨params, localValues, .f64 value :: .i32 address :: values⟩,
@@ -2659,12 +2449,8 @@ theorem twp_f64Store
       Step.f64Store (address := .i32 address) rfl hbound
   obtain ⟨rfl, hconfig⟩ :=
     step_deterministic expectedStep wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
+  simp only at hconfig
+  cases hconfig
   imod stateInterp_store64 store ns obs nt
       (address + offset) oldWord value h1 h2 h3 h4 h5 h6 h7 Hfacts.2 $$
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
@@ -2740,10 +2526,7 @@ theorem twp_load64
         by simpa [Hread] using
           Step.load64 (α := α) (address := .i32 address) rfl hbound⟩⟩
   iintro %κ %e₂ %store₂ %forks %Hprim
-  rcases Hprim with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst κ
+  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hprim
   have expectedStep : Step
       ⟨.running
         ⟨⟨params, localValues, .i32 address :: values⟩,
@@ -2757,12 +2540,8 @@ theorem twp_load64
       (Step.load64 (α := α) (address := .i32 address) rfl hbound)
   obtain ⟨rfl, hconfig⟩ :=
     step_deterministic expectedStep wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
+  simp only at hconfig
+  cases hconfig
   imod Hclose
   imodintro
   isplit
@@ -2838,10 +2617,7 @@ theorem twp_store64
         by simpa only [Wasm.SmallStep.setMemory_eq] using
           Step.store64 (α := α) (address := .i32 address) rfl hbound⟩⟩
   iintro %κ %e₂ %store₂ %forks %Hstep
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst κ
+  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
   have expectedStep : Step
       ⟨.running
         ⟨⟨params, localValues, .i64 value :: .i32 address :: values⟩,
@@ -2858,12 +2634,8 @@ theorem twp_store64
       Step.store64 (α := α) (address := .i32 address) rfl hbound
   obtain ⟨rfl, hconfig⟩ :=
     step_deterministic expectedStep wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
+  simp only at hconfig
+  cases hconfig
   imod stateInterp_store64 store ns obs nt
       (address + offset) oldWord value h1 h2 h3 h4 h5 h6 h7 Hfacts.2 $$
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
@@ -3137,10 +2909,7 @@ theorem twp_load32_addr
              using Step.load32 (α := α) (address := Value.i32 addr) rfl
                hbound⟩⟩
   iintro %κ %e₂ %store₂ %forks %Hstep
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst κ
+  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
   have expectedStep : Step
       ⟨.running
         ⟨⟨params, localValues, .i32 addr :: values⟩,
@@ -3154,12 +2923,8 @@ theorem twp_load32_addr
       using Step.load32 (α := α) (address := Value.i32 addr) rfl hbound
   obtain ⟨rfl, hconfig⟩ :=
     step_deterministic expectedStep wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
+  simp only at hconfig
+  cases hconfig
   imod Hclose
   imodintro
   isplit
