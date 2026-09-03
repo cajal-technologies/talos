@@ -1047,18 +1047,9 @@ theorem twp_load32
   have hbound : address.toNat + offset.toNat + 4 ≤
       store.wasm.mem.pages * 65536 := by
     simpa only [hnowrap] using HinBounds
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, .i32 address :: values⟩,
-          .load32 offset :: code, arity, remainder, controls, calls⟩,
-        store⟩
-      (.instruction (.load32 offset))
-      ⟨.running
-        ⟨⟨params, localValues, .i32 word :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩ := by
+  wasm_twp_step (by
     simpa [Hread] using
-      (Step.load32 (α := α) (address := Value.i32 address) rfl hbound)
-  wasm_twp_step expectedStep =>
+      (Step.load32 (α := α) (address := Value.i32 address) rfl hbound)) =>
     wasm_twp_frame
       iapply Htwp
       iexact Hword
@@ -1540,18 +1531,9 @@ theorem twp_f32Load
   have hbound : address.toNat + offset.toNat + 4 ≤
       store.wasm.mem.pages * 65536 := by
     simpa only [hnowrap] using HinBounds
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, .i32 address :: values⟩,
-          .f32Load offset :: code, arity, remainder, controls, calls⟩,
-        store⟩
-      (.instruction (.f32Load offset))
-      ⟨.running
-        ⟨⟨params, localValues, .f32 word :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩ := by
+  wasm_twp_step (by
     simpa [Hread] using
-      (Step.f32Load (α := α) (address := .i32 address) rfl hbound)
-  wasm_twp_step expectedStep =>
+      (Step.f32Load (α := α) (address := .i32 address) rfl hbound)) =>
     wasm_twp_frame
       iapply Htwp
       iexact Hword
@@ -1729,18 +1711,9 @@ theorem twp_f64Load
   have hbound : address.toNat + offset.toNat + 8 ≤
       store.wasm.mem.pages * 65536 := by
     simpa only [hnowrap] using HinBounds
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, .i32 address :: values⟩,
-          .f64Load offset :: code, arity, remainder, controls, calls⟩,
-        store⟩
-      (.instruction (.f64Load offset))
-      ⟨.running
-        ⟨⟨params, localValues, .f64 word :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩ := by
+  wasm_twp_step (by
     simpa [Hread] using
-      (Step.f64Load (α := α) (address := .i32 address) rfl hbound)
-  wasm_twp_step expectedStep =>
+      (Step.f64Load (α := α) (address := .i32 address) rfl hbound)) =>
     wasm_twp_frame
       iapply Htwp
       iexact Hword
@@ -1859,18 +1832,9 @@ theorem twp_load64
   have hbound : address.toNat + offset.toNat + 8 ≤
       store.wasm.mem.pages * 65536 := by
     simpa only [hnowrap] using HinBounds
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, .i32 address :: values⟩,
-          .load64 offset :: code, arity, remainder, controls, calls⟩,
-        store⟩
-      (.instruction (.load64 offset))
-      ⟨.running
-        ⟨⟨params, localValues, .i64 word :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩ := by
+  wasm_twp_step (by
     simpa [Hread] using
-      (Step.load64 (α := α) (address := .i32 address) rfl hbound)
-  wasm_twp_step expectedStep =>
+      (Step.load64 (α := α) (address := .i32 address) rfl hbound)) =>
     wasm_twp_frame
       iapply Htwp
       iexact Hword
@@ -2185,18 +2149,9 @@ theorem twp_load32_addr
       store.wasm.mem.pages * 65536 := by
     have h0 : (0 : UInt32).toNat = 0 := rfl
     omega
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, .i32 addr :: values⟩,
-          .load32 0 :: code, arity, remainder, controls, calls⟩,
-        store⟩
-      (.instruction (.load32 0))
-      ⟨.running
-        ⟨⟨params, localValues, .i32 word :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩ := by
+  wasm_twp_step (by
     simpa only [show (addr + 0 : UInt32) = addr from by simp, Hread]
-      using Step.load32 (α := α) (address := Value.i32 addr) rfl hbound
-  wasm_twp_step expectedStep =>
+      using Step.load32 (α := α) (address := Value.i32 addr) rfl hbound) =>
     wasm_twp_frame
       iapply Htwp
       iexact Hword
