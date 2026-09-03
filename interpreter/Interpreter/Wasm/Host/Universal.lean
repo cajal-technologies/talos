@@ -90,6 +90,36 @@ def State.ofInputAndOracle (input : List UInt8) (oracle : Random.Oracle) :
   { stdio := StdIO.State.ofInput input
     random := Random.State.ofOracle oracle }
 
+/-! ## Parameterized exports -/
+
+/-- A parameterized exported call under the universal host. Specifications
+normally define a module-local abbreviation
+`abbrev Runs := Universal.RunsExport «module»`, then semantic `args` and
+`result` functions, so the visible proposition reads
+`Runs "op" (args input) (result output)`. -/
+def RunsExport (m : Module) (op : String) (call : ExportCall State)
+    (post : ExportReturn State → Prop) : Prop :=
+  RunsExportWith (envFor m) m op call post
+
+/-- The outcome-valued counterpart of `RunsExport`, for calls whose specified
+terminal behavior may be either a normal return or a structural trap. -/
+def RunsExportOutcome (m : Module) (op : String) (call : ExportCall State)
+    (post : ExportOutcome State → Prop) : Prop :=
+  RunsExportWithOutcome (envFor m) m op call post
+
+/-- Partial correctness for normal returns of a parameterized export under the
+universal host. This makes no termination claim. -/
+def PartiallyRunsExport (m : Module) (op : String) (call : ExportCall State)
+    (post : ExportReturn State → Prop) : Prop :=
+  PartiallyRunsExportWith (envFor m) m op call post
+
+/-- Outcome-complete partial correctness for a parameterized export under the
+universal host. Every finite return or trap is constrained; divergence remains
+permitted. -/
+def PartiallyRunsExportOutcome (m : Module) (op : String)
+    (call : ExportCall State) (post : ExportOutcome State → Prop) : Prop :=
+  PartiallyRunsExportWithOutcome (envFor m) m op call post
+
 /-- Export `op` of `m`, started under the universal host in state `initial`,
 terminates having returned no values and left a host state satisfying `post`.
 
@@ -103,5 +133,15 @@ def Runs (m : Module) (op : String) (initial : State) (post : State → Prop) :
 what else it imports. -/
 def RunsBytes (m : Module) (op : String) (input output : List UInt8) : Prop :=
   Runs m op (State.ofInput input) fun final => final.stdio.output = output
+
+/-- A fixed module export and input byte stream have at most one successful
+output byte stream under the universal host. -/
+theorem RunsBytes.output_unique
+    (first : RunsBytes m op input firstOutput)
+    (second : RunsBytes m op input secondOutput) :
+    firstOutput = secondOutput := by
+  unfold RunsBytes Runs at first second
+  obtain ⟨_, hfirst, hsecond⟩ := RunsWith.deterministic first second
+  exact hfirst.symm.trans hsecond
 
 end Wasm.Universal

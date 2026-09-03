@@ -183,49 +183,50 @@ not from Lake's `-d` argument.
 
 ### 4. Writing specs and proofs
 
-`Spec.lean` (statements as `def : Prop`, linked to the Rust export
-via `@[spec_of …]`):
+Public specifications follow the semantic `Input`/`Output`, `args`/`result`
+convention documented in [`SPECIFICATIONS.md`](SPECIFICATIONS.md). That guide
+also gives the distinct honest forms for total correctness, partial
+correctness, terminal outcomes, and multi-operation crate properties.
+
+The public declaration presents one semantic input and output; its adapters
+hide the Wasm calling convention:
 
 ```lean
-import Project.IsEven.Program
+structure Input where
+  left : UInt64
+  right : UInt64
 
-namespace Project.IsEven.Spec
-open Wasm
+abbrev Output := UInt64
 
-/-- The exported `is_even` returns 1 for even inputs and 0 otherwise.
+def args (input : Input) : ExportCall Unit :=
+  ExportCall.ofHost «module» () [.i64 input.left, .i64 input.right]
 
-Informal spec:
-For any input `n : UInt32`, `is_even` returns `1` when `n` is even
-and `0` otherwise. -/
-@[spec_of "rust-exported" "is_even::is_even"]
-def IsEvenSpec : Prop :=
-  ∀ (env : HostEnv Unit) (initial : Store Unit) (n : UInt32),
-    TerminatesWith env «module» 0 initial [.i32 n]
-      (fun _ rs => rs = [.i32 (if n.toNat % 2 = 0 then 1 else 0)])
+def result (output : Output) : ExportReturn Unit → Prop :=
+  fun returned => returned.values = [.i64 output]
 
-end Project.IsEven.Spec
+abbrev Runs := RunsExportWith (HostEnv.empty : HostEnv Unit) «module»
+
+@[spec_of "rust-exported" "num_integer::gcd_u64"]
+def GcdU64Spec : Prop :=
+  ∀ input : Input,
+    ∃ output : Output,
+      Runs "gcd_u64" (args input) (result output) ∧
+      output.toNat = Nat.gcd input.left.toNat input.right.toNat
 ```
 
-`Proof.lean` (theorems that close those statements, linked via
-`@[proves]`):
+The proof may use the raw machine freely, but its public theorem states the
+semantic specification and is linked with `@[proves]`:
 
 ```lean
-import Project.IsEven.Spec
-
-namespace Project.IsEven.Proof
-open Project.IsEven.Spec
-
-@[proves Project.IsEven.Spec.IsEvenSpec]
-theorem is_even_correct : IsEvenSpec := by
-  intro env initial n
-  apply TerminatesWith.of_wp_entry (f := ⟨[.i32], [], func0, [.i32]⟩) rfl
-  intro initial'
-  unfold func0
-  wp_run
-  simp [UInt32.and_one_eq_zero_iff_toNat_mod_two, UInt32.and_comm]
-
-end Project.IsEven.Proof
+@[proves Project.NumInteger.Spec.GcdU64Spec]
+theorem gcd_u64_correct : GcdU64Spec := by
+  -- Adapt the existing terminating small-step proof to `Runs`, then discharge
+  -- the explicit `Nat.gcd` equality.
+  ...
 ```
+
+The complete compiling version is
+`programs/lean/Project/NumInteger/Spec.lean`.
 
 `@[spec_of]` and `@[proves]` are the load-bearing project conventions
 that downstream tools (notably `verifier extract`) use to discover

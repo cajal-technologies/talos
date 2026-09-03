@@ -11,6 +11,11 @@ interface Props {
 }
 const { view, projectSlug } = Astro.props;
 const { spec, proofs, exports, status } = view;
+const proofLabel = view.strength === "partial"
+  ? "partial proof"
+  : view.strength === "crate-property"
+    ? "property proof"
+    : "proof";
 
 const informalHtml = renderMarkdown(spec.informal ?? spec.docstring.prose);
 const leanHtml = await highlightCode(spec.statement, "lean");
@@ -32,7 +37,9 @@ function fileAnchor(file: string, line: number): string {
     </div>
     <div style="display: flex; gap: 6px; align-items: center;">
       {status === "proven"
-        ? <Badge kind="good" label={`${proofs.length} proof${proofs.length === 1 ? "" : "s"}`} />
+        ? <Badge kind={view.strength === "partial" ? "warn" :
+              view.strength === "crate-property" ? "info" : "good"}
+            label={`${proofs.length} ${proofLabel}${proofs.length === 1 ? "" : "s"}`} />
         : <Badge kind="warn" label="unproven" />}
     </div>
   </header>

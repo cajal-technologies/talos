@@ -1164,19 +1164,48 @@ theorem inner_wp (env : HostEnv Unit) (st0 : Store Unit) (shared p0 p1 : UInt64)
           · rw [oddPart_toNat]; exact hgcd'.trans hgcd
           · rw [oddPart_toNat]; omega
 
-/-- Public fuel-free specification of the optimized exported `gcd_u64`.
-Unlike the retained compatibility theorem below, this contract is stated
-entirely over the authoritative small-step machine. -/
+/-- The two semantic operands supplied to `gcd_u64`. -/
+structure Input where
+  left : UInt64
+  right : UInt64
+
+/-- The semantic result returned by `gcd_u64`. -/
+abbrev Output := UInt64
+
+/-- Encode one semantic input as the export's Wasm parameters. -/
+def args (input : Input) : ExportCall Unit :=
+  ExportCall.ofHost «module» () [.i64 input.left, .i64 input.right]
+
+/-- Recognize one semantic `UInt64` in the export's normal return values. -/
+def result (output : Output) : ExportReturn Unit → Prop :=
+  fun returned => returned.values = [.i64 output]
+
+/-- Fuel-free execution of a named export under the empty host required by
+this import-free compiled module. -/
+abbrev Runs := RunsExportWith (HostEnv.empty : HostEnv Unit) «module»
+
+/-- The optimized exported `gcd_u64` terminates for every pair of operands and
+returns exactly Lean's `Nat.gcd`, converted back to `UInt64`. -/
 @[spec_of "rust-exported" "num_integer_opt3::gcd_u64"]
 def GcdU64Spec : Prop :=
-  ∀ (a b : UInt64),
-    SmallStep.TerminatesWith (gcdConfig a b)
-      (fun rs _store =>
-        rs = [.i64 (UInt64.ofNat (Nat.gcd a.toNat b.toNat))])
+  ∀ input : Input,
+    ∃ output : Output,
+      Runs "gcd_u64" (args input) (result output) ∧
+      output.toNat = Nat.gcd input.left.toNat input.right.toNat
 
 @[proves Project.NumIntegerOpt3.Spec.GcdU64Spec]
-theorem gcd_u64_correct : GcdU64Spec :=
-  mod3_gcd_smallStep_total
+theorem gcd_u64_correct : GcdU64Spec := by
+  intro input
+  refine ⟨UInt64.ofNat (Nat.gcd input.left.toNat input.right.toNat), ?_, ?_⟩
+  unfold Runs RunsExportWith
+  refine ⟨gcdConfig input.left input.right, rfl, ?_⟩
+  simpa [result] using mod3_gcd_smallStep_total input.left input.right
+  · by_cases hleft : input.left.toNat = 0
+    · simp [hleft]
+    · rw [UInt64.toNat_ofNat', Nat.mod_eq_of_lt]
+      exact _root_.lt_of_le_of_lt
+        (Nat.gcd_le_left _ (Nat.pos_of_ne_zero hleft))
+        (UInt64.toNat_lt input.left)
 
 /-- The exported `gcd_u64` (func 0) computes the gcd of its two operands and
 leaves the store untouched. This legacy theorem is retained only as a

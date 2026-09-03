@@ -33,7 +33,7 @@ private def exportConfig (env : HostEnv Unit) (st : Store Unit)
       { runtime := { instances := #[{ module := «module», host := env }], entry := ⟨0⟩ }
         wasm := st } }
 
-@[spec_of "rust-internal" "rust_array_tests::len_plus_one"]
+@[spec_of "rust-internal-partial" "rust_array_tests::len_plus_one"]
 def LenPlusOneSpec : Prop := ∀ (ptr len : UInt32),
   SmallStep.PartiallyMeets
     (bodyConfig func1 [.i32 ptr, .i32 len])
@@ -58,7 +58,7 @@ theorem len_plus_one_correct : LenPlusOneSpec := by
   ipureintro
   rfl
 
-@[spec_of "rust-internal" "rust_array_tests::len_plus_arg"]
+@[spec_of "rust-internal-partial" "rust_array_tests::len_plus_arg"]
 def LenPlusArgSpec : Prop := ∀ (ptr len n : UInt32),
   SmallStep.PartiallyMeets
     (bodyConfig func0 [.i32 ptr, .i32 len, .i32 n])
@@ -83,7 +83,7 @@ theorem len_plus_arg_correct : LenPlusArgSpec := by
   ipureintro
   rfl
 
-@[spec_of "rust-internal" "rust_array_tests::empty_plus_three"]
+@[spec_of "rust-internal-partial" "rust_array_tests::empty_plus_three"]
 def EmptyPlusThreeSpec : Prop := ∀ (ptr len : UInt32),
   SmallStep.PartiallyMeets
     (bodyConfig func4 [.i32 ptr, .i32 len])
@@ -140,7 +140,7 @@ theorem empty_plus_three_correct : EmptyPlusThreeSpec := by
     ipureintro
     rfl
 
-@[spec_of "rust-internal" "rust_array_tests::empty_xor_flag"]
+@[spec_of "rust-internal-partial" "rust_array_tests::empty_xor_flag"]
 def EmptyXorFlagSpec : Prop := ∀ (ptr len flag : UInt32),
   SmallStep.PartiallyMeets
     (bodyConfig func2 [.i32 ptr, .i32 len, .i32 flag])
@@ -207,7 +207,7 @@ unlike that scalar crate, here end-to-end through the memory marshalling,
 conditional on the shared `FatPtrAt` ABI contract, reusing the same call
 bridges. -/
 
-@[spec_of "rust-exported" "rust_array_tests::len_plus_one"]
+@[spec_of "rust-exported-partial" "rust_array_tests::len_plus_one"]
 def LenPlusOneExportSpec : Prop :=
   ∀ (env : HostEnv Unit) (st : Store Unit) (p dataPtr len : UInt32),
     FatPtrAt st p dataPtr len →
@@ -260,7 +260,7 @@ theorem len_plus_one_export_correct : LenPlusOneExportSpec := by
     ipureintro
     rfl
 
-@[spec_of "rust-exported" "rust_array_tests::len_plus_arg"]
+@[spec_of "rust-exported-partial" "rust_array_tests::len_plus_arg"]
 def LenPlusArgExportSpec : Prop :=
   ∀ (env : HostEnv Unit) (st : Store Unit) (p dataPtr len n : UInt32),
     FatPtrAt st p dataPtr len →
@@ -315,7 +315,7 @@ theorem len_plus_arg_export_correct : LenPlusArgExportSpec := by
     ipureintro
     rfl
 
-@[spec_of "rust-exported" "rust_array_tests::empty_plus_three"]
+@[spec_of "rust-exported-partial" "rust_array_tests::empty_plus_three"]
 def EmptyPlusThreeExportSpec : Prop :=
   ∀ (env : HostEnv Unit) (st : Store Unit) (p dataPtr len : UInt32),
     FatPtrAt st p dataPtr len →
@@ -399,7 +399,7 @@ theorem empty_plus_three_export_correct : EmptyPlusThreeExportSpec := by
     ipureintro
     rfl
 
-@[spec_of "rust-exported" "rust_array_tests::empty_xor_flag"]
+@[spec_of "rust-exported-partial" "rust_array_tests::empty_xor_flag"]
 def EmptyXorFlagExportSpec : Prop :=
   ∀ (env : HostEnv Unit) (st : Store Unit) (p dataPtr len flag : UInt32),
     FatPtrAt st p dataPtr len →

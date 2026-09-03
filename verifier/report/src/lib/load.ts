@@ -57,7 +57,7 @@ function exportsBoundBySpec(
 ): ExportedFunction[] {
   const targetFns = new Set<string>();
   for (const r of refs) {
-    if (r.kind !== "rust-exported") continue;
+    if (r.kind !== "rust-exported" && r.kind !== "rust-exported-partial") continue;
     const parts = r.target.split("::");
     if (parts.length === 2 && parts[0] === crate) {
       targetFns.add(parts[1]);
@@ -73,10 +73,18 @@ export function projectView(a: LoadedArtifact): ProjectView {
   const crate = art.project.crate ?? art.project.name ?? a.slug;
   const specs: SpecView[] = art.specs.map((s) => {
     const proofs = art.verifications.filter((v) => v.proves === s.name);
+    const strength = s.refs.some((r) => r.kind === "crate-property")
+      ? "crate-property"
+      : s.refs.some((r) =>
+          r.kind === "rust-exported-partial" ||
+          r.kind === "rust-internal-partial")
+        ? "partial"
+        : "total";
     return {
       spec: s,
       proofs,
       exports: exportsBoundBySpec(s.refs, crate, art.exported),
+      strength,
       status: proofs.length > 0 ? "proven" : "unproven",
     };
   });
@@ -84,10 +92,16 @@ export function projectView(a: LoadedArtifact): ProjectView {
     (v) => !art.specs.some((s) => s.name === v.proves),
   );
 
-  // Coverage = exports for which at least one spec is proven.
+  // Total-correctness coverage = exports with at least one proven total spec.
   const provenExportNames = new Set<string>();
   for (const sv of specs) {
     if (sv.status !== "proven") continue;
+    // A crate property names the exports it composes so readers can navigate
+    // to them, but it is not a per-export correctness contract. In particular,
+    // a conditional round trip can be proved without establishing that either
+    // operation ever returns successfully, so it must not grant export
+    // coverage on its own.
+    if (sv.strength !== "total") continue;
     for (const ex of sv.exports) provenExportNames.add(ex.name);
   }
   const coverage = {
@@ -120,6 +134,21 @@ export function loadAggregate() {
     (n, v) => n + v.specs.filter((s) => s.status === "proven").length,
     0,
   );
+  const provenTotalSpecs = views.reduce(
+    (n, v) => n + v.specs.filter(
+      (s) => s.status === "proven" && s.strength === "total").length,
+    0,
+  );
+  const provenPartialSpecs = views.reduce(
+    (n, v) => n + v.specs.filter(
+      (s) => s.status === "proven" && s.strength === "partial").length,
+    0,
+  );
+  const provenCrateProperties = views.reduce(
+    (n, v) => n + v.specs.filter(
+      (s) => s.status === "proven" && s.strength === "crate-property").length,
+    0,
+  );
   const exportsProven = views.reduce((n, v) => n + v.coverage.exportsProven, 0);
   const exportsTotal = views.reduce((n, v) => n + v.coverage.exportsTotal, 0);
   const first = arts[0]?.data;
@@ -133,6 +162,9 @@ export function loadAggregate() {
       verifications: totalVerifs,
       diagnostics: totalDiags,
       provenSpecs,
+      provenTotalSpecs,
+      provenPartialSpecs,
+      provenCrateProperties,
       exportsProven,
       exportsTotal,
     },

@@ -60,7 +60,7 @@ private def shiftTwiceConfig (body : Program)
         wasm := «module».initialStore } }
 
 /-! ## add -/
-@[spec_of "rust-exported" "rust_u64_tests::add_chain"]
+@[spec_of "rust-exported-partial" "rust_u64_tests::add_chain"]
 def AddChainSpec : Prop := ∀ (a b c : UInt64),
   SmallStep.PartiallyMeets (ternaryConfig func0 a b c)
     (fun rs _store => rs = [.i64 (a + b + c)])
@@ -87,7 +87,7 @@ theorem add_chain_correct : AddChainSpec := by
   ipureintro
   rfl
 
-@[spec_of "rust-exported" "rust_u64_tests::add_then_mul"]
+@[spec_of "rust-exported-partial" "rust_u64_tests::add_then_mul"]
 def AddThenMulSpec : Prop := ∀ (a b c : UInt64),
   SmallStep.PartiallyMeets (ternaryConfig func1 a b c)
     (fun rs _store => rs = [.i64 ((a + b) * c)])
@@ -115,7 +115,7 @@ theorem add_then_mul_correct : AddThenMulSpec := by
   rfl
 
 /-! ## sub -/
-@[spec_of "rust-exported" "rust_u64_tests::sub_chain"]
+@[spec_of "rust-exported-partial" "rust_u64_tests::sub_chain"]
 def SubChainSpec : Prop := ∀ (a b c : UInt64),
   SmallStep.PartiallyMeets (ternaryConfig func18 a b c)
     (fun rs _store => rs = [.i64 (a - b - c)])
@@ -142,7 +142,7 @@ theorem sub_chain_correct : SubChainSpec := by
   ipureintro
   rfl
 
-@[spec_of "rust-exported" "rust_u64_tests::sub_then_add"]
+@[spec_of "rust-exported-partial" "rust_u64_tests::sub_then_add"]
 def SubThenAddSpec : Prop := ∀ (a b c : UInt64),
   SmallStep.PartiallyMeets (ternaryConfig func19 a b c)
     (fun rs _store => rs = [.i64 ((a - b) + c)])
@@ -170,7 +170,7 @@ theorem sub_then_add_correct : SubThenAddSpec := by
   rfl
 
 /-! ## mul -/
-@[spec_of "rust-exported" "rust_u64_tests::mul_chain"]
+@[spec_of "rust-exported-partial" "rust_u64_tests::mul_chain"]
 def MulChainSpec : Prop := ∀ (a b c : UInt64),
   SmallStep.PartiallyMeets (ternaryConfig func6 a b c)
     (fun rs _store => rs = [.i64 (a * b * c)])
@@ -197,7 +197,7 @@ theorem mul_chain_correct : MulChainSpec := by
   ipureintro
   rfl
 
-@[spec_of "rust-exported" "rust_u64_tests::mul_then_add"]
+@[spec_of "rust-exported-partial" "rust_u64_tests::mul_then_add"]
 def MulThenAddSpec : Prop := ∀ (a b c : UInt64),
   SmallStep.PartiallyMeets (ternaryConfig func7 a b c)
     (fun rs _store => rs = [.i64 (a * b + c)])
@@ -225,7 +225,7 @@ theorem mul_then_add_correct : MulThenAddSpec := by
   rfl
 
 /-! ## bitand -/
-@[spec_of "rust-exported" "rust_u64_tests::and_chain"]
+@[spec_of "rust-exported-partial" "rust_u64_tests::and_chain"]
 def AndChainSpec : Prop := ∀ (a b c : UInt64),
   SmallStep.PartiallyMeets (ternaryConfig func2 a b c)
     (fun rs _store => rs = [.i64 (a &&& b &&& c)])
@@ -252,7 +252,7 @@ theorem and_chain_correct : AndChainSpec := by
   ipureintro
   rfl
 
-@[spec_of "rust-exported" "rust_u64_tests::and_then_or"]
+@[spec_of "rust-exported-partial" "rust_u64_tests::and_then_or"]
 def AndThenOrSpec : Prop := ∀ (a b c : UInt64),
   SmallStep.PartiallyMeets (ternaryConfig func3 a b c)
     (fun rs _store => rs = [.i64 ((a &&& b) ||| c)])
@@ -280,7 +280,7 @@ theorem and_then_or_correct : AndThenOrSpec := by
   rfl
 
 /-! ## bitor -/
-@[spec_of "rust-exported" "rust_u64_tests::or_chain"]
+@[spec_of "rust-exported-partial" "rust_u64_tests::or_chain"]
 def OrChainSpec : Prop := ∀ (a b c : UInt64),
   SmallStep.PartiallyMeets (ternaryConfig func10 a b c)
     (fun rs _store => rs = [.i64 (a ||| b ||| c)])
@@ -307,7 +307,7 @@ theorem or_chain_correct : OrChainSpec := by
   ipureintro
   rfl
 
-@[spec_of "rust-exported" "rust_u64_tests::or_then_xor"]
+@[spec_of "rust-exported-partial" "rust_u64_tests::or_then_xor"]
 def OrThenXorSpec : Prop := ∀ (a b c : UInt64),
   SmallStep.PartiallyMeets (ternaryConfig func11 a b c)
     (fun rs _store => rs = [.i64 ((a ||| b) ^^^ c)])
@@ -335,7 +335,7 @@ theorem or_then_xor_correct : OrThenXorSpec := by
   rfl
 
 /-! ## bitxor -/
-@[spec_of "rust-exported" "rust_u64_tests::xor_chain"]
+@[spec_of "rust-exported-partial" "rust_u64_tests::xor_chain"]
 def XorChainSpec : Prop := ∀ (a b c : UInt64),
   SmallStep.PartiallyMeets (ternaryConfig func20 a b c)
     (fun rs _store => rs = [.i64 (a ^^^ b ^^^ c)])
@@ -362,7 +362,7 @@ theorem xor_chain_correct : XorChainSpec := by
   ipureintro
   rfl
 
-@[spec_of "rust-exported" "rust_u64_tests::xor_then_and"]
+@[spec_of "rust-exported-partial" "rust_u64_tests::xor_then_and"]
 def XorThenAndSpec : Prop := ∀ (a b c : UInt64),
   SmallStep.PartiallyMeets (ternaryConfig func21 a b c)
     (fun rs _store => rs = [.i64 ((a ^^^ b) &&& c)])
@@ -390,7 +390,7 @@ theorem xor_then_and_correct : XorThenAndSpec := by
   rfl
 
 /-! ## not -/
-@[spec_of "rust-exported" "rust_u64_tests::not_twice"]
+@[spec_of "rust-exported-partial" "rust_u64_tests::not_twice"]
 def NotTwiceSpec : Prop := ∀ (a : UInt64),
   SmallStep.PartiallyMeets (unaryConfig func9 a)
     (fun rs _store => rs = [.i64 (~~~(~~~a))])
@@ -420,7 +420,7 @@ theorem not_twice_correct : NotTwiceSpec := by
   ipureintro
   rfl
 
-@[spec_of "rust-exported" "rust_u64_tests::not_then_xor"]
+@[spec_of "rust-exported-partial" "rust_u64_tests::not_then_xor"]
 def NotThenXorSpec : Prop := ∀ (a b : UInt64),
   SmallStep.PartiallyMeets (binaryConfig func8 a b)
     (fun rs _store => rs = [.i64 ((~~~a) ^^^ b)])
@@ -449,7 +449,7 @@ theorem not_then_xor_correct : NotThenXorSpec := by
   rfl
 
 /-! ## div (divisor nonzero) -/
-@[spec_of "rust-exported" "rust_u64_tests::div_then_add"]
+@[spec_of "rust-exported-partial" "rust_u64_tests::div_then_add"]
 def DivThenAddSpec : Prop := ∀ (a b c : UInt64), b ≠ 0 →
   SmallStep.PartiallyMeets (ternaryConfig func4 a b c)
     (fun rs _store => rs = [.i64 (a / b + c)])
@@ -491,7 +491,7 @@ theorem div_then_add_correct : DivThenAddSpec := by
   ipureintro
   rfl
 
-@[spec_of "rust-exported" "rust_u64_tests::div_then_mul"]
+@[spec_of "rust-exported-partial" "rust_u64_tests::div_then_mul"]
 def DivThenMulSpec : Prop := ∀ (a b c : UInt64), b ≠ 0 →
   SmallStep.PartiallyMeets (ternaryConfig func5 a b c)
     (fun rs _store => rs = [.i64 (a / b * c)])
@@ -534,7 +534,7 @@ theorem div_then_mul_correct : DivThenMulSpec := by
   rfl
 
 /-! ## rem (divisor nonzero) -/
-@[spec_of "rust-exported" "rust_u64_tests::rem_then_add"]
+@[spec_of "rust-exported-partial" "rust_u64_tests::rem_then_add"]
 def RemThenAddSpec : Prop := ∀ (a b c : UInt64), b ≠ 0 →
   SmallStep.PartiallyMeets (ternaryConfig func12 a b c)
     (fun rs _store => rs = [.i64 (a % b + c)])
@@ -576,7 +576,7 @@ theorem rem_then_add_correct : RemThenAddSpec := by
   ipureintro
   rfl
 
-@[spec_of "rust-exported" "rust_u64_tests::rem_then_mul"]
+@[spec_of "rust-exported-partial" "rust_u64_tests::rem_then_mul"]
 def RemThenMulSpec : Prop := ∀ (a b c : UInt64), b ≠ 0 →
   SmallStep.PartiallyMeets (ternaryConfig func13 a b c)
     (fun rs _store => rs = [.i64 (a % b * c)])
@@ -619,7 +619,7 @@ theorem rem_then_mul_correct : RemThenMulSpec := by
   rfl
 
 /-! ## shl / shr — mask, extend, then shift -/
-@[spec_of "rust-exported" "rust_u64_tests::shl_then_add"]
+@[spec_of "rust-exported-partial" "rust_u64_tests::shl_then_add"]
 def ShlThenAddSpec : Prop := ∀ (a : UInt64) (n : UInt32) (b : UInt64),
   SmallStep.PartiallyMeets (shiftValueConfig func14 a n b)
     (fun rs _store => rs = [.i64 ((a <<< (n.toUInt64 % 64)) + b)])
@@ -654,7 +654,7 @@ theorem shl_then_add_correct : ShlThenAddSpec := by
   ipureintro
   rfl
 
-@[spec_of "rust-exported" "rust_u64_tests::shl_twice"]
+@[spec_of "rust-exported-partial" "rust_u64_tests::shl_twice"]
 def ShlTwiceSpec : Prop := ∀ (a : UInt64) (n m : UInt32),
   SmallStep.PartiallyMeets (shiftTwiceConfig func15 a n m)
     (fun rs _store =>
@@ -698,7 +698,7 @@ theorem shl_twice_correct : ShlTwiceSpec := by
   ipureintro
   rfl
 
-@[spec_of "rust-exported" "rust_u64_tests::shr_then_sub"]
+@[spec_of "rust-exported-partial" "rust_u64_tests::shr_then_sub"]
 def ShrThenSubSpec : Prop := ∀ (a : UInt64) (n : UInt32) (b : UInt64),
   SmallStep.PartiallyMeets (shiftValueConfig func16 a n b)
     (fun rs _store => rs = [.i64 ((a >>> (n.toUInt64 % 64)) - b)])
@@ -733,7 +733,7 @@ theorem shr_then_sub_correct : ShrThenSubSpec := by
   ipureintro
   rfl
 
-@[spec_of "rust-exported" "rust_u64_tests::shr_twice"]
+@[spec_of "rust-exported-partial" "rust_u64_tests::shr_twice"]
 def ShrTwiceSpec : Prop := ∀ (a : UInt64) (n m : UInt32),
   SmallStep.PartiallyMeets (shiftTwiceConfig func17 a n m)
     (fun rs _store =>

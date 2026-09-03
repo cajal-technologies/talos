@@ -534,9 +534,18 @@ theorem entry_terminates (a b : UInt64) :
 
 theorem entry_adequacy :
     Project.GcdStdio.Spec.PublicEntrySpecification := by
-  intro a b
-  unfold Project.GcdStdio.Spec.RunsBytes Universal.RunsBytes Universal.Runs
-    RunsWith
-  exact ⟨entryConfig a b, startConfig_eq a b, entry_terminates a b⟩
+  rintro ⟨a, b⟩
+  refine ⟨UInt64.ofNat (Nat.gcd a.toNat b.toNat), ?_, ?_⟩
+  unfold Project.GcdStdio.Spec.Runs Project.GcdStdio.Spec.args
+    Project.GcdStdio.Spec.result Universal.RunsExport RunsExportWith
+  refine ⟨entryConfig a b, ?_, entry_terminates a b⟩
+  rw [startExportConfig?_ofHost_zero
+    Project.GcdStdio.Spec.gcd_zeroArgument]
+  exact startConfig_eq a b
+  · by_cases ha : a.toNat = 0
+    · simp [ha]
+    · rw [UInt64.toNat_ofNat', Nat.mod_eq_of_lt]
+      exact _root_.lt_of_le_of_lt
+        (Nat.gcd_le_left _ (Nat.pos_of_ne_zero ha)) (UInt64.toNat_lt a)
 
 end Project.GcdStdio.Adequacy

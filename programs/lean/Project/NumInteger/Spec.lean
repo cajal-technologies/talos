@@ -8166,21 +8166,49 @@ theorem func2_terminatesWith :
 
 /-! ## Public small-step specification -/
 
-/-- The exported `gcd_u64` returns the greatest common divisor of two
-`u64` operands from the canonical instantiated store. The contract uses the
-authoritative small-step machine and Iris partial correctness; fuel and the
-legacy interpreter are absent from its public surface. -/
+/-- The two semantic operands supplied to `gcd_u64`. -/
+structure Input where
+  left : UInt64
+  right : UInt64
+
+/-- The semantic result returned by `gcd_u64`. -/
+abbrev Output := UInt64
+
+/-- Encode one semantic input as the export's Wasm parameters. -/
+def args (input : Input) : ExportCall Unit :=
+  ExportCall.ofHost «module» () [.i64 input.left, .i64 input.right]
+
+/-- Recognize one semantic `UInt64` in the export's normal return values. -/
+def result (output : Output) : ExportReturn Unit → Prop :=
+  fun returned => returned.values = [.i64 output]
+
+/-- Fuel-free execution of a named export under the empty host required by
+this import-free compiled module. -/
+abbrev Runs := RunsExportWith (HostEnv.empty : HostEnv Unit) «module»
+
+/-- The exported `gcd_u64` terminates for every pair of operands and returns
+exactly Lean's `Nat.gcd`, converted back to `UInt64`. Fuel, raw Wasm values and
+the instantiated store are absent from the public proposition. -/
 @[spec_of "rust-exported" "num_integer::gcd_u64"]
 def GcdU64Spec : Prop :=
-  ∀ (a b : UInt64),
-    Wasm.SmallStep.TerminatesWith
-      (func2Config a b)
-      (fun rs _store =>
-        rs = [.i64 (UInt64.ofNat (Nat.gcd a.toNat b.toNat))])
+  ∀ input : Input,
+    ∃ output : Output,
+      Runs "gcd_u64" (args input) (result output) ∧
+      output.toNat = Nat.gcd input.left.toNat input.right.toNat
 
 @[proves Project.NumInteger.Spec.GcdU64Spec]
-theorem gcd_u64_correct : GcdU64Spec :=
-  func2_terminatesWith
+theorem gcd_u64_correct : GcdU64Spec := by
+  intro input
+  refine ⟨UInt64.ofNat (Nat.gcd input.left.toNat input.right.toNat), ?_, ?_⟩
+  unfold Runs RunsExportWith
+  refine ⟨func2Config input.left input.right, rfl, ?_⟩
+  simpa [result] using func2_terminatesWith input.left input.right
+  · by_cases hleft : input.left.toNat = 0
+    · simp [hleft]
+    · rw [UInt64.toNat_ofNat', Nat.mod_eq_of_lt]
+      exact _root_.lt_of_le_of_lt
+        (Nat.gcd_le_left _ (Nat.pos_of_ne_zero hleft))
+        (UInt64.toNat_lt input.left)
 
 
 end Project.NumInteger.Spec
