@@ -268,18 +268,10 @@ theorem quicksortHeapAux_addresses_lt
         UInt32.add_ofNat_toNat_noWrap base 4 (by decide) (by
           simp only [UInt32.size] at hlimit
           omega)
-      have hn1 : (base + 1).toNat = base.toNat + 1 :=
-        UInt32.add_ofNat_toNat_noWrap base 1 (by decide) (by
-          simp only [UInt32.size] at hlimit
-          omega)
-      have hn2 : (base + 2).toNat = base.toNat + 2 :=
-        UInt32.add_ofNat_toNat_noWrap base 2 (by decide) (by
-          simp only [UInt32.size] at hlimit
-          omega)
-      have hn3 : (base + 3).toNat = base.toNat + 3 :=
-        UInt32.add_ofNat_toNat_noWrap base 3 (by decide) (by
-          simp only [UInt32.size] at hlimit
-          omega)
+      have hroom : base.toNat + 4 ≤ 4294967296 := by
+        simp only [UInt32.size] at hlimit
+        omega
+      obtain ⟨hn1, hn2, hn3⟩ := UInt32.addSteps4 base hroom
       apply ih (store32Heap σ 0 base value) (base + 4)
       · intro address byte hget
         rw [h4]
@@ -942,21 +934,10 @@ theorem arrayAt_capacity [WasmSmallStepGS hlc Unit]
       exact Mem.words32_slotAddr_toNat base k (by
         simp only [UInt32.size] at hfit
         omega)
-    have h1 : (address + 1).toNat = address.toNat + 1 :=
-      UInt32.add_ofNat_toNat_noWrap address 1 (by decide) (by
-        simp only [UInt32.size] at hfit
-        rw [haddress]
-        omega)
-    have h2 : (address + 2).toNat = address.toNat + 2 :=
-      UInt32.add_ofNat_toNat_noWrap address 2 (by decide) (by
-        simp only [UInt32.size] at hfit
-        rw [haddress]
-        omega)
-    have h3 : (address + 3).toNat = address.toNat + 3 :=
-      UInt32.add_ofNat_toNat_noWrap address 3 (by decide) (by
-        simp only [UInt32.size] at hfit
-        rw [haddress]
-        omega)
+    obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4 address (by
+      simp only [UInt32.size] at hfit ⊢
+      rw [haddress]
+      omega)
     iintro ⟨Hstate, Harray⟩
     ihave Hfocus := arrayAt_get 0 base values k hk $$ Harray
     icases Hfocus with ⟨Hword, Hrestore⟩
