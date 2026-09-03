@@ -650,53 +650,6 @@ theorem stateInterp_host_agree [WasmSmallStepGS hlc α]
   iapply hostStateOwn_agree store.wasm.host host
   iframe Hstate_auth Hown
 
-/-- Ownership of a byte range in the primary memory determines every physical
-byte in it, and bounds every address in it. -/
-theorem stateInterp_pointsToBytes_agree [WasmSmallStepGS hlc α]
-    (store : MachineStore α) (steps : Nat)
-    (observations : List StepKind) (threads : Nat)
-    (addr : UInt32) (bytes : List UInt8) :
-    stateInterp (GF := WasmHeapGF α) store steps observations threads ∗
-      pointsToBytes 0 addr bytes ==∗
-      ⌜∀ i b, bytes[i]? = some b →
-          store.wasm.mem.read8 (addr + UInt32.ofNat i) = b ∧
-          (addr + UInt32.ofNat i).toNat < store.wasm.mem.pages * 65536⌝ := by
-  induction bytes generalizing addr with
-  | nil =>
-      iintro ⟨-, -⟩
-      ipureintro
-      intro i b h
-      simp at h
-  | cons b rest ih =>
-      iintro ⟨Hstate, Hbytes⟩
-      ihave Hbytes := (pointsToBytes_cons 0 addr b rest).mp $$ Hbytes
-      icases Hbytes with ⟨Hhead, Hrest⟩
-      ihave %hhead :
-          ⌜store.wasm.mem.read8 addr = b ∧
-            addr.toNat < store.wasm.mem.pages * 65536⌝ $$ [Hstate Hhead]
-      · imod stateInterp_pointsTo_facts store steps observations threads addr b $$
-            [$Hstate $Hhead] with %hhead
-        ipureintro; exact hhead
-      ihave %hrest :
-          ⌜∀ i b', rest[i]? = some b' →
-            store.wasm.mem.read8 ((addr + 1) + UInt32.ofNat i) = b' ∧
-            ((addr + 1) + UInt32.ofNat i).toNat <
-              store.wasm.mem.pages * 65536⌝ $$ [Hstate Hrest]
-      · imod (ih (addr + 1)) $$ [$Hstate $Hrest] with %hrest
-        ipureintro; exact hrest
-      ipureintro
-      intro i b' hget
-      cases i with
-      | zero =>
-          simp only [List.getElem?_cons_zero, Option.some.injEq] at hget
-          subst hget
-          simpa using hhead
-      | succ j =>
-          simp only [List.getElem?_cons_succ] at hget
-          obtain ⟨hmem, hbound⟩ := hrest j b' hget
-          rw [← byte_offset_succ addr j] at hmem hbound
-          exact ⟨hmem, hbound⟩
-
 /-- Obtain a pure fact from an update while preserving the selected Iris
 resources in the surrounding proof context. -/
 syntax "ihave_pure " ident " : " term " using " term
@@ -720,6 +673,51 @@ macro_rules
         $$ $resources:specPat) =>
     `(tactic|
       ihave_pure $fact : $claim using genHeap_valid $$ $resources)
+
+/-- Ownership of a byte range in the primary memory determines every physical
+byte in it, and bounds every address in it. -/
+theorem stateInterp_pointsToBytes_agree [WasmSmallStepGS hlc α]
+    (store : MachineStore α) (steps : Nat)
+    (observations : List StepKind) (threads : Nat)
+    (addr : UInt32) (bytes : List UInt8) :
+    stateInterp (GF := WasmHeapGF α) store steps observations threads ∗
+      pointsToBytes 0 addr bytes ==∗
+      ⌜∀ i b, bytes[i]? = some b →
+          store.wasm.mem.read8 (addr + UInt32.ofNat i) = b ∧
+          (addr + UInt32.ofNat i).toNat < store.wasm.mem.pages * 65536⌝ := by
+  induction bytes generalizing addr with
+  | nil =>
+      iintro ⟨-, -⟩
+      ipureintro
+      intro i b h
+      simp at h
+  | cons b rest ih =>
+      iintro ⟨Hstate, Hbytes⟩
+      ihave Hbytes := (pointsToBytes_cons 0 addr b rest).mp $$ Hbytes
+      icases Hbytes with ⟨Hhead, Hrest⟩
+      ihave_pure hhead :
+          ⌜store.wasm.mem.read8 addr = b ∧
+            addr.toNat < store.wasm.mem.pages * 65536⌝ using
+        stateInterp_pointsTo_facts store steps observations threads addr b $$
+          [Hstate Hhead]
+      ihave_pure hrest :
+          ⌜∀ i b', rest[i]? = some b' →
+            store.wasm.mem.read8 ((addr + 1) + UInt32.ofNat i) = b' ∧
+            ((addr + 1) + UInt32.ofNat i).toNat <
+              store.wasm.mem.pages * 65536⌝ using
+        ih (addr + 1) $$ [Hstate Hrest]
+      ipureintro
+      intro i b' hget
+      cases i with
+      | zero =>
+          simp only [List.getElem?_cons_zero, Option.some.injEq] at hget
+          subst hget
+          simpa using hhead
+      | succ j =>
+          simp only [List.getElem?_cons_succ] at hget
+          obtain ⟨hmem, hbound⟩ := hrest j b' hget
+          rw [← byte_offset_succ addr j] at hmem hbound
+          exact ⟨hmem, hbound⟩
 
 /-- Derive physical byte facts for an owned range in a lifting proof. -/
 syntax "wasm_points_to_bytes_agree " ident ", " term ", " term ", " term
@@ -1589,13 +1587,12 @@ theorem stateInterp_copy_bytes [WasmSmallStepGS hlc α]
       pointsToBytes 0 src srcBytes ∗
       pointsToBytes 0 dst srcBytes := by
   iintro ⟨Hstate, Hsrc, Hdst⟩
-  ihave %hagree :
+  ihave_pure hagree :
       ⌜∀ i b, srcBytes[i]? = some b →
           store.wasm.mem.read8 (src + UInt32.ofNat i) = b ∧
-          (src + UInt32.ofNat i).toNat < store.wasm.mem.pages * 65536⌝ $$ [Hstate Hsrc]
-  · imod stateInterp_pointsToBytes_agree store steps observations threads src srcBytes $$
-        [$Hstate $Hsrc] with %hagree
-    ipureintro; exact hagree
+          (src + UInt32.ofNat i).toNat < store.wasm.mem.pages * 65536⌝ using
+    stateInterp_pointsToBytes_agree store steps observations threads src srcBytes $$
+      [Hstate Hsrc]
   icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
     ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
       Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
@@ -3317,21 +3314,16 @@ theorem stateInterp_copy8_zero_four [WasmSmallStepGS hlc α]
         steps observations threads ∗
       pointsTo_u32 0 0 0x04030201 ∗ pointsTo_u32 0 8 0x04030201 := by
   iintro ⟨Hstate, Hsource, Hdestination⟩
-  ihave %HsourceFacts :
+  ihave_pure HsourceFacts :
       ⌜store.wasm.mem.read32 0 = 0x04030201 ∧
-        4 ≤ store.wasm.mem.pages * 65536⌝ $$ [Hstate Hsource]
-  · imod stateInterp_pointsTo_u32_facts store steps observations threads
-      0 0x04030201 rfl rfl rfl $$ [$Hstate $Hsource] with %HsourceFacts
-    ipureintro
-    exact HsourceFacts
-  ihave %HdestinationFacts :
+        4 ≤ store.wasm.mem.pages * 65536⌝ using
+    stateInterp_pointsTo_u32_facts store steps observations threads
+      0 0x04030201 rfl rfl rfl $$ [Hstate Hsource]
+  ihave_pure HdestinationFacts :
       ⌜store.wasm.mem.read32 8 = oldDestination ∧
-        12 ≤ store.wasm.mem.pages * 65536⌝ $$ [Hstate Hdestination]
-  · imod stateInterp_pointsTo_u32_facts store steps observations threads
-      8 oldDestination rfl rfl rfl $$ [$Hstate $Hdestination]
-      with %HdestinationFacts
-    ipureintro
-    exact HdestinationFacts
+        12 ≤ store.wasm.mem.pages * 65536⌝ using
+    stateInterp_pointsTo_u32_facts store steps observations threads
+      8 oldDestination rfl rfl rfl $$ [Hstate Hdestination]
   imod stateInterp_store32 store steps observations threads
       8 oldDestination 0x04030201 rfl rfl rfl HdestinationFacts.2 $$
       [$Hstate $Hdestination] with ⟨Hstate, Hdestination⟩
