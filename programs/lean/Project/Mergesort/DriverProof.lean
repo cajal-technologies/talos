@@ -2139,11 +2139,9 @@ theorem twp_func3_decode_tail_loop
       isimp only [Finish] at Hfinish
       ihave Hfinish' := Hfinish $$ Hsource
       isimp only [hoverwriteFinal] at Hdestination
-      ihave Hdestination' : WordSlice destination original $$ [Hdestination]
-      · iexact Hdestination
       rw [hcopiedFinal']
       isimp only [func3DecodeTailLocals, func3AppendLocals] at Hfinish'
-      iapply Hfinish' $$ Hdestination'
+      iapply Hfinish' $$ Hdestination
   · simp only [Inv, Finish]
     isplitr_pureexact ⟨hpartition, hremaining⟩
     iframe
@@ -2466,15 +2464,11 @@ theorem twp_func3_decode_bulk_loop
           overwritePrefix original initial (state.copied + 4) =
             overwritePrefix original initial bulk := by rw [hdone]
       isimp only [hoverwrite] at Hdestination
-      ihave Hdestination' :
-          WordSlice destination (overwritePrefix original initial bulk) $$
-          [Hdestination]
-      · iexact Hdestination
       rw [hdone, hprevious]
       simp only [func3_decode_byte_offset]
       isimp only [func3DecodeBulkLocals, func3AppendLocals,
         func3_decode_byte_offset] at Hfinish'
-      iapply Hfinish' $$ Hdestination'
+      iapply Hfinish' $$ Hdestination
   · simp only [Inv, Finish, overwritePrefix_zero]
     isplitr_pureexact ⟨hbulkPositive, by simp⟩
     iframe

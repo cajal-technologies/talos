@@ -4478,11 +4478,9 @@ theorem twp_func1_leftZero_core_smallStep_wp_to_return
   iapply Wasm.SmallStep.twp_brIf (by decide) rfl
   simp only [List.take_nil, List.drop_nil, List.nil_append]
   wasm_twp_pures [twp_localGet twp_localGet]
-  ihave HxLater : pointsTo_u64 0 (1048512 + 8) 0 $$ [Hx]
-  · iexact Hx
   iapply Wasm.SmallStep.twp_load64 0
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
+      (by decide) (by decide) (by decide) $$ Hx
   iintro Hx
   wasm_twp_pures [twp_localGet]
   ihave HyLater : pointsTo_u64 0 (1048512 + 16) b $$ [Hy]
@@ -4515,11 +4513,9 @@ theorem twp_func1_leftZero_core_smallStep_wp_to_return
   wasm_twp_pures [twp_br]
   simp only [List.take_nil, List.nil_append]
   wasm_twp_pures [twp_localGet]
-  ihave HresultLater : pointsTo_u64 0 (1048512 + 0) b $$ [Hresult]
-  · iexact Hresult
   iapply Wasm.SmallStep.twp_load64 b
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HresultLater
+      (by decide) (by decide) (by decide) $$ Hresult
   iintro Hresult
   have hResultProp :
       pointsTo_u64 0 ((1048512 : UInt32) + 0) b = pointsTo_u64 0 1048512 b :=
@@ -4699,18 +4695,14 @@ theorem twp_func1_rightZero_core_smallStep_wp_to_return
   wasm_twp_pures [twp_brIfZero twp_exitControl]
   simp only [List.take_nil, List.drop_nil, List.nil_append]
   wasm_twp_pures [twp_localGet twp_localGet]
-  ihave HxLater : pointsTo_u64 0 (1048512 + 8) a $$ [Hx]
-  · iexact Hx
   iapply Wasm.SmallStep.twp_load64 a
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
+      (by decide) (by decide) (by decide) $$ Hx
   iintro Hx
   wasm_twp_pures [twp_localGet]
-  ihave HyLater : pointsTo_u64 0 (1048512 + 16) 0 $$ [Hy]
-  · iexact Hy
   iapply Wasm.SmallStep.twp_load64 0
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HyLater
+      (by decide) (by decide) (by decide) $$ Hy
   iintro Hy
   wasm_twp_pures [twp_orI64]
   rw [show a ||| (0 : UInt64) = a by
@@ -4731,11 +4723,9 @@ theorem twp_func1_rightZero_core_smallStep_wp_to_return
   wasm_twp_pures [twp_br]
   simp only [List.take_nil, List.nil_append]
   wasm_twp_pures [twp_localGet]
-  ihave HresultLater : pointsTo_u64 0 (1048512 + 0) a $$ [Hresult]
-  · iexact Hresult
   iapply Wasm.SmallStep.twp_load64 a
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HresultLater
+      (by decide) (by decide) (by decide) $$ Hresult
   iintro Hresult
   have hResultProp :
       pointsTo_u64 0 ((1048512 : UInt32) + 0) a = pointsTo_u64 0 1048512 a :=
@@ -5070,21 +5060,17 @@ theorem twp_func1_normalizeX_smallStep_wp
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
   wasm_twp_pures [twp_localGet twp_localGet]
-  ihave HxLater : pointsTo_u64 0 (1048512 + 8) a $$ [Hx]
-  · iexact Hx
   iapply Wasm.SmallStep.twp_load64 a
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
+      (by decide) (by decide) (by decide) $$ Hx
   iintro Hx
   wasm_twp_pures [twp_localGet twp_const twp_and twp_extendUI32 twp_shrUI64]
   rw [UInt32.and_comm (operandShiftWord a) 63]
   unfold operandShiftWord
   rw [shift_pipeline a ha]
-  ihave HxLater : pointsTo_u64 0 (1048512 + 8) a $$ [Hx]
-  · iexact Hx
   iapply Wasm.SmallStep.twp_store64 a
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
+      (by decide) (by decide) (by decide) $$ Hx
   iintro Hx
   simp only [func1XShiftLocals, operandShiftWord, oddPart64,
     meatLoopProg, List.drop] at hcontinue
@@ -5176,21 +5162,17 @@ theorem twp_func1_normalizeY_smallStep_wp
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
   wasm_twp_pures [twp_localGet twp_localGet]
-  ihave HyLater : pointsTo_u64 0 (1048512 + 16) b $$ [Hy]
-  · iexact Hy
   iapply Wasm.SmallStep.twp_load64 b
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HyLater
+      (by decide) (by decide) (by decide) $$ Hy
   iintro Hy
   wasm_twp_pures [twp_localGet twp_const twp_and twp_extendUI32 twp_shrUI64]
   rw [UInt32.and_comm (operandShiftWord b) 63]
   unfold operandShiftWord
   rw [shift_pipeline b hb]
-  ihave HyLater : pointsTo_u64 0 (1048512 + 16) b $$ [Hy]
-  · iexact Hy
   iapply Wasm.SmallStep.twp_store64 b
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HyLater
+      (by decide) (by decide) (by decide) $$ Hy
   iintro Hy
   simp only [func1NormalizedLocals, func1LoopHeaderLocals,
     operandShiftWord, oddPart64,
@@ -5660,21 +5642,17 @@ theorem twp_func1_loopNormalizeY_smallStep_wp
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
   wasm_twp_pures [twp_localGet twp_localGet]
-  ihave HyLater : pointsTo_u64 0 (1048512 + 16) d $$ [Hy]
-  · iexact Hy
   iapply Wasm.SmallStep.twp_load64 d
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HyLater
+      (by decide) (by decide) (by decide) $$ Hy
   iintro Hy
   wasm_twp_pures [twp_localGet twp_const twp_and twp_extendUI32 twp_shrUI64]
   rw [UInt32.and_comm (operandShiftWord d) 63]
   unfold operandShiftWord
   rw [shift_pipeline d hd]
-  ihave HyLater : pointsTo_u64 0 (1048512 + 16) d $$ [Hy]
-  · iexact Hy
   iapply Wasm.SmallStep.twp_store64 d
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HyLater
+      (by decide) (by decide) (by decide) $$ Hy
   iintro Hy
   simp only [func1LoopYNormalizedLocals, operandShiftWord, oddPart64] at hcontinue
   have hYProp :
@@ -5771,11 +5749,9 @@ theorem twp_func1_loopDecreaseY_smallStep_wp
       (by decide) (by decide) (by decide) $$ HyLater
   iintro Hy
   wasm_twp_pures [twp_localGet twp_subI64]
-  ihave HyLater : pointsTo_u64 0 (1048512 + 16) y $$ [Hy]
-  · iexact Hy
   iapply Wasm.SmallStep.twp_store64 y
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HyLater
+      (by decide) (by decide) (by decide) $$ Hy
   iintro Hy
   rw [show
     [.localGet 2, .localGet 2, .load64 16, .ctzI64, .wrapI64, .store32 32,
@@ -5869,21 +5845,17 @@ theorem twp_func1_loopNormalizeX_smallStep_wp
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
   wasm_twp_pures [twp_localGet twp_localGet]
-  ihave HxLater : pointsTo_u64 0 (1048512 + 8) d $$ [Hx]
-  · iexact Hx
   iapply Wasm.SmallStep.twp_load64 d
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
+      (by decide) (by decide) (by decide) $$ Hx
   iintro Hx
   wasm_twp_pures [twp_localGet twp_const twp_and twp_extendUI32 twp_shrUI64]
   rw [UInt32.and_comm (operandShiftWord d) 63]
   unfold operandShiftWord
   rw [shift_pipeline d hd]
-  ihave HxLater : pointsTo_u64 0 (1048512 + 8) d $$ [Hx]
-  · iexact Hx
   iapply Wasm.SmallStep.twp_store64 d
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
+      (by decide) (by decide) (by decide) $$ Hx
   iintro Hx
   simp only [func1LoopXNormalizedLocals, operandShiftWord, oddPart64] at hcontinue
   have hXProp :
@@ -5980,11 +5952,9 @@ theorem twp_func1_loopDecreaseX_smallStep_wp
       (by decide) (by decide) (by decide) $$ HxLater
   iintro Hx
   wasm_twp_pures [twp_localGet twp_subI64]
-  ihave HxLater : pointsTo_u64 0 (1048512 + 8) x $$ [Hx]
-  · iexact Hx
   iapply Wasm.SmallStep.twp_store64 x
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
+      (by decide) (by decide) (by decide) $$ Hx
   iintro Hx
   rw [show
     [.localGet 2, .localGet 2, .load64 8, .ctzI64, .wrapI64, .store32 28,

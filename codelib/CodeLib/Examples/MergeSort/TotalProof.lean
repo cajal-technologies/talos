@@ -1339,11 +1339,8 @@ theorem twp_merge
         .call mergeIndex :: code, arity, remainder, controls, calls⟩ :
         Expr α) @ s; E [{ Φ }] := by
   iintro ⟨Hruntime, Hpre, Hcont⟩
-  ihave HruntimeLater : runtimeModuleOwn ⟨0⟩ runtimeModule $$ [Hruntime]
-  ·
-    iexact Hruntime
   iapply Wasm.SmallStep.twp_call (α := α) runtimeModule mergeIndex mergeFunction
-    himports hfunction $$ HruntimeLater
+    himports hfunction $$ Hruntime
   iintro Hruntime
   simp [mergeFunction, mergeArguments, Function.toLocals,
     Function.numParams, ValueType.zero]
@@ -2215,12 +2212,9 @@ theorem twp_mergeSort
         .call sortIndex :: code, arity, remainder, controls, calls⟩ :
         Expr α) @ s; E [{ Φ }] := by
   iintro ⟨Hruntime, Hpre, Hcont⟩
-  ihave HruntimeLater : runtimeModuleOwn ⟨0⟩ runtimeModule $$ [Hruntime]
-  ·
-    iexact Hruntime
   iapply Wasm.SmallStep.twp_call (α := α) runtimeModule sortIndex
     (mergeSortFunction mergeIndex) hsortImports hsortFunction $$
-      HruntimeLater
+      Hruntime
   iintro Hruntime
   simp [mergeSortFunction, mergeSortArguments, Function.toLocals,
     Function.numParams, ValueType.zero]

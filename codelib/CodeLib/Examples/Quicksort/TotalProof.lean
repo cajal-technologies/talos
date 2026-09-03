@@ -422,10 +422,8 @@ theorem twp_partition
         .call partitionIdx :: code, arity, remainder, controls, calls⟩ : Expr Unit)
         @ s; E [{ Φ }] := by
   iintro ⟨Hruntime, Harray, Hcont⟩
-  ihave HruntimeLater : runtimeModuleOwn ⟨0⟩ runtimeModule $$ [Hruntime]
-  · iexact Hruntime
   iapply Wasm.SmallStep.twp_call runtimeModule partitionIdx partitionFunction
-    himports hfunction $$ HruntimeLater
+    himports hfunction $$ Hruntime
   iintro Hruntime
   simp [partitionFunction, Function.toLocals, Function.numParams, ValueType.zero]
   iapply twp_partitionBody_from
@@ -479,11 +477,9 @@ private theorem twp_quicksortBody_aux
     have heq : hi = lo := by omega
     subst heq
     iintro ⟨Hruntime, Harray, Hcont⟩
-    ihave HruntimeLater : runtimeModuleOwn ⟨0⟩ runtimeModule $$ [Hruntime]
-    · iexact Hruntime
     iapply Wasm.SmallStep.twp_call runtimeModule quicksortIdx
         (quicksortFunction partitionIdx quicksortIdx)
-        himports_q hfunction_q $$ HruntimeLater
+        himports_q hfunction_q $$ Hruntime
     iintro Hruntime
     simp [quicksortFunction, Function.toLocals, Function.numParams, ValueType.zero]
     simp only [quicksortBody, quicksortBaseCheck, List.append_assoc, List.cons_append,
@@ -515,11 +511,9 @@ private theorem twp_quicksortBody_aux
       have := (UInt32.ofNat hi).toNat_lt
       rw [UInt32.toNat_ofNat_of_lt' hiSize] at this
       omega
-    ihave HruntimeLater : runtimeModuleOwn ⟨0⟩ runtimeModule $$ [Hruntime]
-    · iexact Hruntime
     iapply Wasm.SmallStep.twp_call runtimeModule quicksortIdx
         (quicksortFunction partitionIdx quicksortIdx)
-        himports_q hfunction_q $$ HruntimeLater
+        himports_q hfunction_q $$ Hruntime
     iintro Hruntime
     simp [quicksortFunction, Function.toLocals, Function.numParams, ValueType.zero]
     simp only [quicksortBody, quicksortBaseCheck, quicksortPartitionCall, quicksortLeftCall,
@@ -551,10 +545,8 @@ private theorem twp_quicksortBody_aux
       wasm_twp_pures [twp_exitControl]
       simp only [List.take_zero, List.nil_append, List.drop_zero]
       wasm_twp_pures [twp_localGet twp_localGet twp_localGet]
-      ihave HruntimeLater_p : runtimeModuleOwn ⟨0⟩ runtimeModule $$ [Hruntime]
-      · iexact Hruntime
       iapply Wasm.SmallStep.twp_call runtimeModule partitionIdx partitionFunction himports_p
-          hfunction_p $$ HruntimeLater_p
+          hfunction_p $$ Hruntime
       iintro Hruntime_p
       simp [partitionFunction, Function.toLocals, Function.numParams, ValueType.zero]
       iapply twp_partitionBody_from

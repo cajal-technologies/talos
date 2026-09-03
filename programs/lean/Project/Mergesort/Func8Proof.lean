@@ -331,14 +331,12 @@ private theorem twp_func8_commit_copy_and_return
       (by decide) (by decide) (by decide) (by decide) $$ HcursorAt
   iintro Hcursor
   isimp only [UInt32.zero_add] at Hcursor
-  ihave Hcursor' : pointsTo_u32 0 allocatorCursor finish $$ [Hcursor]
-  · iexact Hcursor
   have hnewAlignment : newLayout.alignment = 1 := by
     simpa using hlayout.2.1.2.symm
   imod BumpHeap_commit heapId frontier history newPtr finish newLayout newBytes
       ownedPages hfrontierLow hwf hlayout.2.2.2.1 (Or.inl hnewAlignment)
       hclassify hbytesLength hphysical $$
-      [Hcursor' Hfrontier Hauth Hretired Hpages Hbytes] with
+      [Hcursor Hfrontier Hauth Hretired Hpages Hbytes] with
       ⟨Hbump, HnewBlock⟩
   · iframe
   iapply twp_func8_copy_and_return oldPtr oldSize newPtr newSize oldLayout

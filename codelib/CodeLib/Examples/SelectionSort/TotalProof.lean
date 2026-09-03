@@ -291,10 +291,8 @@ private theorem twp_findMin_aux
   | zero =>
       have hscan : input.length ≤ scan := by omega
       iintro ⟨Hruntime, Harray, Hcont⟩
-      ihave HruntimeLater : runtimeModuleOwn ⟨0⟩ runtimeModule $$ [Hruntime]
-      · iexact Hruntime
       iapply Wasm.SmallStep.twp_call runtimeModule findIndex
-        (findMinRecursiveFunction findIndex) himports hfunction $$ HruntimeLater
+        (findMinRecursiveFunction findIndex) himports hfunction $$ Hruntime
       iintro Hruntime
       simp [findMinRecursiveFunction, Function.toLocals, Function.numParams]
       simp only [findMinRecursiveBody, List.cons_append, List.nil_append,
@@ -334,10 +332,8 @@ private theorem twp_findMin_aux
           callerRemainder := remainder
           control := controls
           returningInstance := ⟨0⟩ }
-      ihave HruntimeLater : runtimeModuleOwn ⟨0⟩ runtimeModule $$ [Hruntime]
-      · iexact Hruntime
       iapply Wasm.SmallStep.twp_call runtimeModule findIndex
-        (findMinRecursiveFunction findIndex) himports hfunction $$ HruntimeLater
+        (findMinRecursiveFunction findIndex) himports hfunction $$ Hruntime
       iintro Hruntime
       simp [findMinRecursiveFunction, Function.toLocals, Function.numParams]
       simp only [findMinRecursiveBody, List.cons_append, List.nil_append,
@@ -539,11 +535,9 @@ private theorem twp_recursiveSort_aux
         omega
       subst input
       iintro ⟨Hruntime, Harray, Hcont⟩
-      ihave HruntimeLater : runtimeModuleOwn ⟨0⟩ runtimeModule $$ [Hruntime]
-      · iexact Hruntime
       iapply Wasm.SmallStep.twp_call runtimeModule sortIndex
         (recursiveSelectionSortFunction findIndex sortIndex)
-        himportsSort hfunctionSort $$ HruntimeLater
+        himportsSort hfunctionSort $$ Hruntime
       iintro Hruntime
       simp [recursiveSelectionSortFunction, Function.toLocals,
         Function.numParams, ValueType.zero]
@@ -565,11 +559,9 @@ private theorem twp_recursiveSort_aux
           callerRemainder := remainder
           control := controls
           returningInstance := ⟨0⟩ }
-      ihave HruntimeLater : runtimeModuleOwn ⟨0⟩ runtimeModule $$ [Hruntime]
-      · iexact Hruntime
       iapply Wasm.SmallStep.twp_call runtimeModule sortIndex
         (recursiveSelectionSortFunction findIndex sortIndex)
-        himportsSort hfunctionSort $$ HruntimeLater
+        himportsSort hfunctionSort $$ Hruntime
       iintro Hruntime
       simp [recursiveSelectionSortFunction, Function.toLocals,
         Function.numParams, ValueType.zero]
@@ -1142,10 +1134,8 @@ theorem twp_loopSort
       callerRemainder := remainder
       control := controls
       returningInstance := ⟨0⟩ }
-  ihave HruntimeLater : runtimeModuleOwn ⟨0⟩ runtimeModule $$ [Hruntime]
-  · iexact Hruntime
   iapply Wasm.SmallStep.twp_call runtimeModule sortIndex
-    loopSelectionSortFunction himports hfunction $$ HruntimeLater
+    loopSelectionSortFunction himports hfunction $$ Hruntime
   iintro Hruntime
   simp [loopSelectionSortFunction, Function.toLocals, Function.numParams,
     ValueType.zero]
