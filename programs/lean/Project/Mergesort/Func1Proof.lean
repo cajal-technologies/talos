@@ -530,9 +530,7 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
         ihave Hsp' : StackPointer driverBase $$ [Hsp]
         · unfold StackPointer
           iexact Hsp
-        ihave Hruntime : RuntimeContext $$ [Hmodule Henv]
-        · unfold RuntimeContext
-          iframe Hmodule Henv
+        iclose_runtime Hruntime with Hmodule Henv
         isimp only [newCapacity, newCapacityNat] at Hreserve Hvec
         isimp only [newLayout, newCapacityNat, hnewCapacityWord] at Hbump
         have hnormalFacts :

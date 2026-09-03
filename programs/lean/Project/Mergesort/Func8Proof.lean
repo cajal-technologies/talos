@@ -693,9 +693,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
               omega
             have hpagesLeMul : pages ≤ pages * 65536 := by omega
             exact hfinishLePages.trans hpagesLeMul
-        ihave Hruntime : RuntimeContext $$ [Hmodule Henv]
-        · unfold RuntimeContext
-          iframe Hmodule Henv
+        iclose_runtime Hruntime with Hmodule Henv
         ihave Hnormal := BI.and_elim_l $$ Hcont
         iapply twp_func8_claim_commit_copy_and_return oldPtr oldSize newPtr
             newSize finish (allocatorRequiredPages finish)
@@ -750,9 +748,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
                 iframe
                 ipureexact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat,
                   hwf, hphysicalFrontier⟩
-              ihave Hruntime : RuntimeContext $$ [Hmodule Henv]
-              · unfold RuntimeContext
-                iframe Hmodule Henv
+              iclose_runtime Hruntime with Hmodule Henv
               ihave Hoom := BI.and_elim_r $$ Hcont
               iapply twp_func8_oom oldPtr oldSize newPtr newSize heapId oldId
                   oldLayout oldBytes storedCursor frontier history input output
@@ -778,9 +774,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
                   iframe
                   ipureexact ⟨hfrontierLow, hfrontierSigned, hcursorZero,
                     hcursorNat, hwf, hphysicalFrontier⟩
-                ihave Hruntime : RuntimeContext $$ [Hmodule Henv]
-                · unfold RuntimeContext
-                  iframe Hmodule Henv
+                iclose_runtime Hruntime with Hmodule Henv
                 ihave Hoom := BI.and_elim_r $$ Hcont
                 iapply twp_func8_oom oldPtr oldSize newPtr newSize heapId oldId
                     oldLayout oldBytes storedCursor frontier history input
@@ -825,9 +819,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
                       norm_num [UInt32.size] at hpagesHigh
                       omega
                     exact hfinishLeNew.trans (by omega)
-                ihave Hruntime : RuntimeContext $$ [Hmodule Henv]
-                · unfold RuntimeContext
-                  iframe Hmodule Henv
+                iclose_runtime Hruntime with Hmodule Henv
                 ihave Hnormal := BI.and_elim_l $$ Hcont
                 iapply twp_func8_claim_commit_copy_and_return oldPtr oldSize
                     newPtr newSize finish (allocatorRequiredPages finish)
@@ -977,9 +969,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
         iframe
         ipureexact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat, hwf,
           hphysicalFrontier⟩
-      ihave Hruntime : RuntimeContext $$ [Hmodule Henv]
-      · unfold RuntimeContext
-        iframe Hmodule Henv
+      iclose_runtime Hruntime with Hmodule Henv
       simp only [Nat.reduceAdd, Nat.reduceSub, List.set, ValueType.zero]
       iapply twp_func8_oom oldPtr oldSize base newSize heapId oldId oldLayout
           oldBytes storedCursor frontier history input output raised

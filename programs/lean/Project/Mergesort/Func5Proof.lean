@@ -470,9 +470,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
       iframe Hpages
       ipureexact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat, hwf,
         hfrontierPhysical⟩
-    ihave Hruntime : RuntimeContext $$ [Hmodule Henv]
-    · unfold RuntimeContext
-      iframe Hmodule Henv
+    iclose_runtime Hruntime with Hmodule Henv
     have Hfailure := twp_func5_oom size finish base
         (UInt32.ofNat (frontier + (layout.alignment - 1))) heapId storedCursor
         frontier history input output raised callerLocals stack code arity
@@ -566,9 +564,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
           (_root_.le_trans
             (UInt32.le_iff_toNat_le_toNat.mp hfits) hpagesWord))
       ihave Hnormal := BI.and_elim_l $$ Hcont
-      ihave Hruntime : RuntimeContext $$ [Hmodule Henv]
-      · unfold RuntimeContext
-        iframe Hmodule Henv
+      iclose_runtime Hruntime with Hmodule Henv
       iapply twp_func5_claim_commit_and_return pages.toUInt32 finish base
           (allocatorRequiredPages finish) storedCursor layout heapId frontier
           pages history input output raised callerLocals stack code arity
@@ -613,9 +609,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
               iframe
               ipureexact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat,
                 hwf, hfrontierPhysical⟩
-            ihave Hruntime : RuntimeContext $$ [Hmodule Henv]
-            · unfold RuntimeContext
-              iframe Hmodule Henv
+            iclose_runtime Hruntime with Hmodule Henv
             ihave Hoom := BI.and_elim_r $$ Hcont
             have Hfailure := twp_func5_oom pages.toUInt32 finish base
                 (allocatorRequiredPages finish) heapId storedCursor frontier
@@ -651,9 +645,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
                 iframe
                 ipureexact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat,
                   hwf, hfrontierPhysical⟩
-              ihave Hruntime : RuntimeContext $$ [Hmodule Henv]
-              · unfold RuntimeContext
-                iframe Hmodule Henv
+              iclose_runtime Hruntime with Hmodule Henv
               ihave Hoom := BI.and_elim_r $$ Hcont
               have Hfailure := twp_func5_oom pages.toUInt32 finish base
                   (allocatorRequiredPages finish) heapId storedCursor frontier
@@ -704,9 +696,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
                     omega
                   exact hfinishLeNew.trans (by omega)
               ihave Hnormal := BI.and_elim_l $$ Hcont
-              ihave Hruntime : RuntimeContext $$ [Hmodule Henv]
-              · unfold RuntimeContext
-                iframe Hmodule Henv
+              iclose_runtime Hruntime with Hmodule Henv
               iapply twp_func5_claim_commit_and_return pages.toUInt32 finish
                   base (allocatorRequiredPages finish) storedCursor layout
                   heapId frontier newPages history input output raised

@@ -6189,9 +6189,7 @@ theorem func3_correct_of
     wasm_twp_rebind Wasm.SmallStep.twp_returnFromCallFallthrough with Hmodule
     simp only [List.take_zero, List.nil_append]
     isimp only [ResumeWP, resumeExpr, List.nil_append] at Hnormal
-    ihave Hruntime : RuntimeContext $$ [Hmodule Henv]
-    · unfold RuntimeContext
-      iframe
+    iclose_runtime Hruntime with Hmodule Henv
     iapply Hnormal $$ Hruntime Hsuccess
   · iexact Hoom
 

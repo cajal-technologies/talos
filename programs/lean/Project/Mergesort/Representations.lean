@@ -3289,6 +3289,18 @@ macro "iopen_runtime " runtime:ident " with " pattern:icasesPat : tactic => do
     (isimp only [Project.Mergesort.Representations.RuntimeContext] at $selected
      icases $resource with $pattern))
 
+/-- Reassemble a merge-sort runtime context from its two resources. -/
+macro "iclose_runtime " runtime:ident " with " moduleOwn:ident hostEnv:ident : tactic => do
+  let runtimePattern ← `(icasesPat| $runtime:ident)
+  let moduleFrame ← `(frameIdent| $moduleOwn:ident)
+  let hostFrame ← `(frameIdent| $hostEnv:ident)
+  let moduleSelected ← `(selPat| $moduleOwn:ident)
+  let hostSelected ← `(selPat| $hostEnv:ident)
+  `(tactic|
+    (ihave $runtimePattern : RuntimeContext $$ [$moduleFrame $hostFrame]
+     · unfold RuntimeContext
+       iframe $moduleSelected $hostSelected))
+
 def AllRetired (history : AllocationHistory) : Prop :=
   ∀ allocationId metadata,
     get? history.records allocationId = some metadata →

@@ -647,9 +647,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
           (_root_.le_trans
             (UInt32.le_iff_toNat_le_toNat.mp hfits) hpagesWord))
       ihave Hnormal := BI.and_elim_l $$ Hcont
-      ihave Hruntime : RuntimeContext $$ [Hmodule Henv]
-      · unfold RuntimeContext
-        iframe Hmodule Henv
+      iclose_runtime Hruntime with Hmodule Henv
       have Hclaim := twp_func9_claim_commit_zero_and_return size base finish
           (allocatorRequiredPages finish) pages.toUInt32 storedCursor layout
           heapId frontier pages history input output raised
@@ -709,9 +707,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
               iframe
               ipureexact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat,
                 hwf, hfrontierPhysical⟩
-            ihave Hruntime : RuntimeContext $$ [Hmodule Henv]
-            · unfold RuntimeContext
-              iframe Hmodule Henv
+            iclose_runtime Hruntime with Hmodule Henv
             ihave Hoom := BI.and_elim_r $$ Hcont
             iapply twp_func9_oom size base finish
                 (allocatorRequiredPages finish) pages.toUInt32 heapId
@@ -735,9 +731,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
                 iframe
                 ipureexact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat,
                   hwf, hfrontierPhysical⟩
-              ihave Hruntime : RuntimeContext $$ [Hmodule Henv]
-              · unfold RuntimeContext
-                iframe Hmodule Henv
+              iclose_runtime Hruntime with Hmodule Henv
               ihave Hoom := BI.and_elim_r $$ Hcont
               iapply twp_func9_oom size base finish
                   (allocatorRequiredPages finish) pages.toUInt32 heapId
@@ -776,9 +770,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
                     omega
                   exact hfinishLeNew.trans (by omega)
               ihave Hnormal := BI.and_elim_l $$ Hcont
-              ihave Hruntime : RuntimeContext $$ [Hmodule Henv]
-              · unfold RuntimeContext
-                iframe Hmodule Henv
+              iclose_runtime Hruntime with Hmodule Henv
               have Hclaim := twp_func9_claim_commit_zero_and_return size base
                   finish
                   (allocatorRequiredPages finish) pages.toUInt32 storedCursor

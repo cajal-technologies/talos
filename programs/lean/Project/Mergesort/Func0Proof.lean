@@ -380,9 +380,7 @@ private theorem twp_func0_success_tail
   ihave Hresult := Hclose $$ Htag Hpointer Hcapacity
   isimp only [growResultBytes] at Hcont
   isimp only [ResumeWP, resumeExpr, List.nil_append] at Hcont
-  ihave Hruntime : RuntimeContext $$ [Hmodule Henv]
-  · unfold RuntimeContext
-    iframe Hmodule Henv
+  iclose_runtime Hruntime with Hmodule Henv
   iapply Hcont $$ Hruntime Hresult Hbump Hblock %hcopied Hstreams
 
 theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
