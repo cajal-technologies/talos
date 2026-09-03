@@ -3154,23 +3154,19 @@ theorem stateInterp_copy2_zero_four [WasmSmallStepGS hlc α]
   ihave H2At :
       pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
         ⟨0, 2⟩ (DFrac.own 1) (some (u64Byte 0x8877665544332211 2)) $$ [H2]
-  · rw [show (⟨0, (0 : UInt32) + 2⟩ : MemoryKey) = ⟨0, 2⟩ by decide]
-    iexact H2
+  · irw_exact [show (⟨0, (0 : UInt32) + 2⟩ : MemoryKey) = ⟨0, 2⟩ by decide] with H2
   ihave H3At :
       pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
         ⟨0, 3⟩ (DFrac.own 1) (some (u64Byte 0x8877665544332211 3)) $$ [H3]
-  · rw [show (⟨0, (0 : UInt32) + 3⟩ : MemoryKey) = ⟨0, 3⟩ by decide]
-    iexact H3
+  · irw_exact [show (⟨0, (0 : UInt32) + 3⟩ : MemoryKey) = ⟨0, 3⟩ by decide] with H3
   ihave H4At :
       pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
         ⟨0, 4⟩ (DFrac.own 1) (some (u64Byte 0x8877665544332211 4)) $$ [H4]
-  · rw [show (⟨0, (0 : UInt32) + 4⟩ : MemoryKey) = ⟨0, 4⟩ by decide]
-    iexact H4
+  · irw_exact [show (⟨0, (0 : UInt32) + 4⟩ : MemoryKey) = ⟨0, 4⟩ by decide] with H4
   ihave H5At :
       pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
         ⟨0, 5⟩ (DFrac.own 1) (some (u64Byte 0x8877665544332211 5)) $$ [H5]
-  · rw [show (⟨0, (0 : UInt32) + 5⟩ : MemoryKey) = ⟨0, 5⟩ by decide]
-    iexact H5
+  · irw_exact [show (⟨0, (0 : UInt32) + 5⟩ : MemoryKey) = ⟨0, 5⟩ by decide] with H5
   imod stateInterp_store8 store steps observations threads
       2 (u64Byte 0x8877665544332211 2) 0x11 (by
         simp only [UInt32.toNat_ofNat] at Hfacts ⊢

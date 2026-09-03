@@ -11,13 +11,18 @@ macro "isplitl_exact " hypothesis:ident : tactic =>
     (isplitl [$hypothesis]
      · iexact $hypothesis))
 
+/-- Rewrite an Iris goal and discharge it with an existing spatial fact. -/
+macro "irw_exact " rules:rwRuleSeq " with " hypothesis:ident : tactic =>
+  `(tactic|
+    (rw $rules:rwRuleSeq
+     iexact $hypothesis))
+
 /-- Split off one spatial fact, rewrite that branch, and discharge it with the
 same fact. -/
 macro "isplitl_rw_exact " rules:rwRuleSeq " with " hypothesis:ident : tactic =>
   `(tactic|
     (isplitl [$hypothesis]
-     · rw $rules:rwRuleSeq
-       iexact $hypothesis))
+     · irw_exact $rules:rwRuleSeq with $hypothesis))
 
 /-- Introduce a pure Iris obligation and discharge it with a Lean proof. -/
 macro "ipureexact " proof:term : tactic =>
@@ -56,5 +61,4 @@ spatial fact. -/
 macro "ilater_rw_exact " rules:rwRuleSeq " with " hypothesis:ident : tactic =>
   `(tactic|
     (inext
-     rw $rules:rwRuleSeq
-     iexact $hypothesis))
+     irw_exact $rules:rwRuleSeq with $hypothesis))

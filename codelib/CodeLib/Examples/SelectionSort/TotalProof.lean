@@ -113,8 +113,7 @@ theorem twp_loadAt64
     dsimp [address]; exact UInt32.add_comm _ _
   rw [haddress]
   ihave Hword' : pointsTo_u64 0 (address + 0) input[k] $$ [Hword]
-  · rw [UInt32.add_zero]
-    iexact Hword
+  · irw_exact [UInt32.add_zero] with Hword
   iapply Wasm.SmallStep.twp_load64 (address := address) (offset := 0)
     input[k] (by simp)
     (by simpa using h1) (by simpa using h2) (by simpa using h3)
@@ -149,8 +148,7 @@ private theorem twp_store64_cell
     simpa only [UInt32.size] using hroom)
   iintro ⟨Hword, Hcont⟩
   ihave Hword' : pointsTo_u64 0 (address + 0) oldWord $$ [Hword]
-  · rw [UInt32.add_zero]
-    iexact Hword
+  · irw_exact [UInt32.add_zero] with Hword
   iapply Wasm.SmallStep.twp_store64 (address := address) (offset := 0)
     (value := newWord) oldWord (by simp)
     (by simpa using h1) (by simpa using h2) (by simpa using h3)
@@ -625,8 +623,7 @@ private theorem twp_recursiveSort_aux
           | cons head tail => simp
         ihave Hupdated' :
             array64At 0 arr (updated[0]! :: updated.drop 1) $$ [Hupdated]
-        · rw [← hdecomp]
-          iexact Hupdated
+        · irw_exact [← hdecomp] with Hupdated
         isimp only [array64At] at Hupdated'
         icases Hupdated' with ⟨Hhead, Htail⟩
         wasm_twp_pures [twp_localGet twp_const twp_add

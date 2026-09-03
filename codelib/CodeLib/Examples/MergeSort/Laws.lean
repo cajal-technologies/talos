@@ -323,8 +323,7 @@ theorem twp_store32_cell
     (address := address) (offset := 0) oldWord
     (by simp) h1' h2' h3' with HwordLater => Hword
   ihave Hword' : pointsTo_u32 0 address newWord $$ [Hword]
-  · rw [UInt32.add_zero]
-    iexact Hword
+  · irw_exact [UInt32.add_zero] with Hword
   iapply Hcont
   iexact Hword'
 

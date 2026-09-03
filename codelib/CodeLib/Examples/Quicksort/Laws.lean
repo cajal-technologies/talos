@@ -102,8 +102,7 @@ theorem twp_loadAt_cell
   iapply twp_address hbase helement
   rw [haddress]
   ihave HwordLater : pointsTo_u32 0 (addr + 0) word $$ [Hword]
-  · rw [UInt32.add_zero]
-    iexact Hword
+  · irw_exact [UInt32.add_zero] with Hword
   wasm_twp_bind Wasm.SmallStep.twp_load32
     (address := addr) (offset := 0)
     word (by simp) h1' h2' h3' with HwordLater => Hword
@@ -181,14 +180,12 @@ private theorem twp_store32_cell
   have h3' : ((address + 0) + 3).toNat = (address + 0).toNat + 3 := by simpa using h3
   iintro ⟨Hword, Hcont⟩
   ihave HwordLater : pointsTo_u32 0 (address + 0) oldWord $$ [Hword]
-  · rw [UInt32.add_zero]
-    iexact Hword
+  · irw_exact [UInt32.add_zero] with Hword
   wasm_twp_bind Wasm.SmallStep.twp_store32
     (address := address) (offset := 0) oldWord
     (by simp) h1' h2' h3' with HwordLater => Hword
   ihave Hword' : pointsTo_u32 0 address newWord $$ [Hword]
-  · rw [UInt32.add_zero]
-    iexact Hword
+  · irw_exact [UInt32.add_zero] with Hword
   iapply Hcont
   iexact Hword'
 

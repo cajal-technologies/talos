@@ -4218,8 +4218,7 @@ theorem wp_wordRoundtrip (oldWord : UInt32) :
   wasm_wp_next_bind wp_load32 0x12345678 rfl rfl rfl rfl with HwordLater => Hword
   wasm_wp_finish_value
   isplitr_pureexact rfl
-  · rw [UInt32.add_zero]
-    iexact Hword
+  · irw_exact [UInt32.add_zero] with Hword
 
 /-- End-to-end Iris contract for the four-byte `memory.fill` example. The
 filled word is updated while ownership of the disjoint word at address 32 is
@@ -4252,8 +4251,7 @@ theorem wp_fillFourBytes (oldWord : UInt32) :
   wasm_wp_finish_value
   isplitr_pureexact rfl
   · isplitl_rw_exact [UInt32.add_zero] with H16
-    · rw [UInt32.add_zero]
-      iexact H32
+    · irw_exact [UInt32.add_zero] with H32
 
 /-- End-to-end Iris contract for an aligned four-byte copy. The source word
 is preserved and the destination word receives the source value. -/
@@ -4286,8 +4284,7 @@ theorem wp_copyWord (oldDestination : UInt32) :
   wasm_wp_finish_value
   isplitr_pureexact rfl
   · isplitl_exact Hsource
-    · rw [UInt32.add_zero]
-      iexact Hdestination
+    · irw_exact [UInt32.add_zero] with Hdestination
 
 /-- End-to-end Iris contract for passive data initialization followed by
 `data.drop`. The result exposes both the initialized physical word ownership
@@ -4354,8 +4351,7 @@ theorem wp_copyOverlapWord :
     rfl rfl rfl rfl rfl rfl rfl rfl with HwordLater => Hword
   wasm_wp_finish_value
   isplitr_pureexact rfl
-  · rw [UInt32.add_zero]
-    iexact Hword
+  · irw_exact [UInt32.add_zero] with Hword
 
 /-- Iris proof of an in-place swap of two 32-bit memory cells. This composes
 word ownership through locals and returns ownership of both updated cells. -/
@@ -4400,8 +4396,7 @@ theorem wp_swapWords :
   wasm_wp_finish_value
   isplitr_pureexact rfl
   · isplitl_rw_exact [UInt32.add_zero] with H0
-    · rw [UInt32.add_zero]
-      iexact H4
+    · irw_exact [UInt32.add_zero] with H4
 
 /-- Iris contract for reversing three adjacent words. The endpoint swap uses
 the same primitive loads and stores as `wp_swapWords`; ownership of the middle
@@ -4448,8 +4443,7 @@ theorem wp_reverseThreeWords :
   isplitr_pureexact rfl
   · isplitl_rw_exact [UInt32.add_zero] with H0
     · isplitl_exact H4
-      · rw [UInt32.add_zero]
-        iexact H8
+      · irw_exact [UInt32.add_zero] with H8
 
 /-- Iris proof of the concrete three-word partition kernel.  The final word is
 the pivot; all three input words remain exclusively owned, with the pivot
@@ -4497,8 +4491,7 @@ theorem wp_partitionThreeWords :
   isplitr_pureexact rfl
   · isplitl_rw_exact [UInt32.add_zero] with H0
     · isplitl_rw_exact [UInt32.add_zero] with H4
-      · rw [UInt32.add_zero]
-        iexact H8
+      · irw_exact [UInt32.add_zero] with H8
 
 /-- Iris proof for merging two singleton sorted runs. The Wasm comparison
 selects the swapping branch for the concrete input `[9, 4]`; both exclusive
@@ -4546,8 +4539,7 @@ theorem wp_mergeTwoWords :
   wasm_wp_finish_value
   isplitr_pureexact rfl
   · isplitl_rw_exact [UInt32.add_zero] with H0
-    · rw [UInt32.add_zero]
-      iexact H4
+    · irw_exact [UInt32.add_zero] with H4
 
 -- Load 16 bytes and push a v128. Ownership of the two 8-byte halves pins the
 -- loaded value and puts the 16-byte range in bounds.

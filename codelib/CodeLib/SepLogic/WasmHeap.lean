@@ -1525,12 +1525,10 @@ theorem array64At_fill_next (memId : Nat) (ptr : UInt32) (i : Nat)
       Harray with ⟨Hpre, Hrest⟩
   icases Hrest with ⟨Hcell, Hsuffix⟩
   ihave Hcell' : pointsTo_u64 memId (ptr + 8 * UInt32.ofNat i) old $$ [Hcell]
-  · rw [List.length_replicate]
-    iexact Hcell
+  · irw_exact [List.length_replicate] with Hcell
   ihave Hsuffix' :
       array64At memId ((ptr + 8 * UInt32.ofNat i) + 8) suffix $$ [Hsuffix]
-  · rw [List.length_replicate]
-    iexact Hsuffix
+  · irw_exact [List.length_replicate] with Hsuffix
   isplitl_exact Hcell'
   iintro Hcell
   have hrep :
