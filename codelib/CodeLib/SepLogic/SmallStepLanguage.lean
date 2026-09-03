@@ -1,4 +1,5 @@
 import Iris.ProgramLogic.Language
+import CodeLib.SepLogic.Tactics
 import Interpreter.Wasm.SmallStep
 
 /-!
@@ -171,8 +172,7 @@ macro "wasm_wp_trap_frame" : tactic =>
          iintro %_ %_ %_ %_ -
          iapply fupd_mask_intro Std.LawfulSet.empty_subset
          iintro -
-         ipureintro
-         exact ⟨rfl, fun _ _ _ _ h => by
+         ipureexact ⟨rfl, fun _ _ _ _ h => by
            rcases h with ⟨-, ⟨_, -, hstep⟩⟩
            exact trapped_terminal hstep⟩
        next => itrivial))

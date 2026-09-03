@@ -819,8 +819,7 @@ theorem twp_memoryGrow_tracked
       [Hσ HmeasuredPages]
   · imod (stateInterp_memoryPages_agree store ns obs nt measuredPages) $$
         [$Hσ $HmeasuredPages] with ⟨_, _, %hle⟩
-    ipureintro
-    exact hle
+    ipureexact hle
   cases hg : store.wasm.mem.grow delta
       (store.wasm.memoryCap store.runtime.currentModule 0) with
   | none =>

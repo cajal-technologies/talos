@@ -2264,8 +2264,7 @@ theorem func4_distinct_store_partiallyMeets
       imod Wasm.SmallStep.stateInterp_pointsTo_u64_facts
         store 0 [] 0 addressJ oldA hj1 hj2 hj3 hj4 hj5 hj6 hj7 $$
           [$Hstate $HB] with %HfactsJ
-      ipureintro
-      exact ⟨hvalues, HfactsI.1, HfactsJ.1⟩
+      ipureexact ⟨hvalues, HfactsI.1, HfactsJ.1⟩
     iapply wp_mono hpost
     iapply func4_happy_smallStep_wp
       ptr len i j oldSpillPtr oldSpillLen oldScratch oldA oldB
@@ -2339,8 +2338,7 @@ theorem func4_alias_store_partiallyMeets
       imod Wasm.SmallStep.stateInterp_pointsTo_u64_facts
         store 0 [] 0 address oldValue h1 h2 h3 h4 h5 h6 h7 $$
           [$Hstate $Hcell] with %Hfacts
-      ipureintro
-      exact ⟨hvalues, Hfacts.1⟩
+      ipureexact ⟨hvalues, Hfacts.1⟩
     iapply wp_mono hpost
     iapply func4_alias_smallStep_wp
       ptr len i oldSpillPtr oldSpillLen oldScratch oldValue hi hroom
@@ -2422,8 +2420,7 @@ theorem func4_distinct_store_terminatesWith
       imod Wasm.SmallStep.stateInterp_pointsTo_u64_facts
         store 0 [] 0 addressJ oldA hj1 hj2 hj3 hj4 hj5 hj6 hj7 $$
           [$Hstate $HB] with %HfactsJ
-      ipureintro
-      exact ⟨hvalues, HfactsI.1, HfactsJ.1⟩
+      ipureexact ⟨hvalues, HfactsI.1, HfactsJ.1⟩
     iapply twp.mono hpost
     iapply twp_func4_happy_smallStep_wp
       ptr len i j oldSpillPtr oldSpillLen oldScratch oldA oldB
@@ -2496,8 +2493,7 @@ theorem func4_alias_store_terminatesWith
       imod Wasm.SmallStep.stateInterp_pointsTo_u64_facts
         store 0 [] 0 address oldValue h1 h2 h3 h4 h5 h6 h7 $$
           [$Hstate $Hcell] with %Hfacts
-      ipureintro
-      exact ⟨hvalues, Hfacts.1⟩
+      ipureexact ⟨hvalues, Hfacts.1⟩
     iapply twp.mono hpost
     iapply twp_func4_alias_smallStep_wp
       ptr len i oldSpillPtr oldSpillLen oldScratch oldValue hi hroom
@@ -2610,8 +2606,7 @@ theorem func3_smallStep (ptr len : UInt32) :
         (iprop% ⌜values = []⌝) := by
       intro values
       iintro ⟨%hvalues, _Hptr, _Hlen⟩
-      ipureintro
-      exact hvalues
+      ipureexact hvalues
     iapply wp_mono hpost
     simp only [func3Config]
     iapply func3_smallStep_wp (s := Stuckness.NotStuck) (E := ⊤)
@@ -2798,8 +2793,7 @@ theorem func4Example_smallStep :
         (iprop% ⌜values = []⌝) := by
       intro values
       iintro ⟨%hvalues, _Hresources⟩
-      ipureintro
-      exact hvalues
+      ipureexact hvalues
     iapply wp_mono hpost
     have hfunc4 := func4_happy_smallStep_wp
       (s := Stuckness.NotStuck) (E := ⊤)
@@ -2857,8 +2851,7 @@ theorem func4Example_store_smallStep :
         (by decide) (by decide) (by decide) (by decide)
         (by decide) (by decide) (by decide) $$
           [$Hstate $H8] with %Hfacts8
-      ipureintro
-      exact ⟨hvalues, Hfacts0.1, Hfacts8.1⟩
+      ipureexact ⟨hvalues, Hfacts0.1, Hfacts8.1⟩
     iapply wp_mono hpost
     have hfunc4 := func4_happy_smallStep_wp
       (s := Stuckness.NotStuck) (E := ⊤)
@@ -3015,8 +3008,7 @@ theorem func4Alias_smallStep :
         (iprop% ⌜values = []⌝) := by
       intro values
       iintro ⟨%hvalues, _Hresources⟩
-      ipureintro
-      exact hvalues
+      ipureexact hvalues
     iapply wp_mono hpost
     have halias := func4_alias_smallStep_wp
       (s := Stuckness.NotStuck) (E := ⊤)
@@ -3065,8 +3057,7 @@ theorem func4Alias_store_smallStep :
         (by decide) (by decide) (by decide) (by decide)
         (by decide) (by decide) (by decide) $$
           [$Hstate $Hcell] with %Hfacts
-      ipureintro
-      exact ⟨hvalues, Hfacts.1⟩
+      ipureexact ⟨hvalues, Hfacts.1⟩
     iapply wp_mono hpost
     have halias := func4_alias_smallStep_wp
       (s := Stuckness.NotStuck) (E := ⊤)
@@ -3214,8 +3205,7 @@ theorem func0Alias_smallStep :
         (iprop% ⌜values = []⌝) := by
       intro values
       iintro ⟨%hvalues, _Hresources⟩
-      ipureintro
-      exact hvalues
+      ipureexact hvalues
     iapply wp_mono hpost
     have halias := func0_alias_smallStep_wp
       (s := Stuckness.NotStuck) (E := ⊤)

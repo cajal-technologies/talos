@@ -8,3 +8,9 @@ macro "isplitl_exact " hypothesis:ident : tactic =>
   `(tactic|
     (isplitl [$hypothesis]
      · iexact $hypothesis))
+
+/-- Introduce a pure Iris obligation and discharge it with a Lean proof. -/
+macro "ipureexact " proof:term : tactic =>
+  `(tactic|
+    (ipureintro
+     exact $proof))

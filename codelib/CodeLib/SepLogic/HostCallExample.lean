@@ -81,8 +81,7 @@ theorem writeByte_partiallyMeets :
       iintro ⟨%hvalues, Hbyte⟩ %store %_observations Hstate
       imod stateInterp_pointsTo_read8 store 0 [] 0 0 (42 : UInt8)
           $$ [$Hstate $Hbyte] with %hread
-      ipureintro
-      exact ⟨hvalues, hread⟩
+      ipureexact ⟨hvalues, hread⟩
     iapply (wp_mono hpost)
     iapply wp_callHost writeByteModule 0 writeByteImp writeByteHost
         (by simp [writeByteModule]) rfl { funcs := [writeByteHost] } rfl
@@ -103,8 +102,7 @@ theorem writeByte_partiallyMeets :
               ⌜(0 : UInt32).toNat < store.wasm.mem.pages * 65536⌝ $$ [Hσ Hpt]
           · imod stateInterp_pointsTo_inBounds store ns obs nt 0 (0 : UInt8)
                 $$ [$Hσ $Hpt] with %HinBounds
-            ipureintro
-            exact HinBounds
+            ipureexact HinBounds
           imod stateInterp_store8 store ns obs nt (0 : UInt32) (0 : UInt8) (42 : UInt8)
               (by exact HinBounds) $$ [$Hσ $Hpt] with ⟨Hσ, Hpt⟩
           imodintro

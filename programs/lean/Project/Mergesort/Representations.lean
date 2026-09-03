@@ -230,11 +230,9 @@ theorem ByteSlice_append {host : Type} [WasmHeapGS host]
       omega
     isplitl [Hleft]
     · iframe Hleft
-      ipureintro
-      exact hleftNowrap
+      ipureexact hleftNowrap
     · iframe Hright
-      ipureintro
-      exact hrightNowrap
+      ipureexact hrightNowrap
   · iintro ⟨⟨%hleftNowrap, Hleft⟩,
         ⟨%hrightNowrap, Hright⟩⟩
     have hoffset := byteOffset_toNat ptr left.length hleftNowrap
@@ -446,11 +444,9 @@ theorem WordSlice_append {host : Type} [WasmHeapGS host]
       iexact Hright
     isplitl [Hleft]
     · iframe Hleft
-      ipureintro
-      exact ⟨halign, hleftNowrap⟩
+      ipureexact ⟨halign, hleftNowrap⟩
     · iframe Hright'
-      ipureintro
-      exact ⟨hrightAlign, hrightNowrap⟩
+      ipureexact ⟨hrightAlign, hrightNowrap⟩
   · iintro ⟨⟨%halign, %hleftNowrap, Hleft⟩,
         ⟨%_hrightAlign, %hrightNowrap, Hright⟩⟩
     have hoffset := wordOffset_toNat ptr xs.length hleftNowrap
@@ -480,8 +476,7 @@ theorem WordSlice_facts {host : Type} [WasmHeapGS host]
   iintro ⟨%halign, %hnowrap, Hbytes⟩
   isplitl [Hbytes]
   · iframe Hbytes
-    ipureintro
-    exact ⟨halign, hnowrap⟩
+    ipureexact ⟨halign, hnowrap⟩
   · ipureintro
     exact ⟨halign, by simpa only [serialize_length] using hnowrap⟩
 
@@ -530,8 +525,7 @@ theorem WordSlice_get {host : Type} [WasmHeapGS host]
     · iapply (arrayAt_eq_wordCells ptr values).mp
       iexact Harray
     iframe Hbytes
-    ipureintro
-    exact ⟨halign, hnowrap⟩
+    ipureexact ⟨halign, hnowrap⟩
 
 /-- Focus one writable word cell.  Returning a new value reassembles the same
 physical slice with exactly the corresponding logical list update. -/
@@ -766,13 +760,11 @@ theorem SortBuffers_append {host : Type} [WasmHeapGS host]
     isplitl [HsourceLeft HscratchLeft]
     · unfold SortBuffers
       iframe
-      ipureintro
-      exact ⟨hleftLength, hleftDisjoint⟩
+      ipureexact ⟨hleftLength, hleftDisjoint⟩
     isplitl [HsourceRight HscratchRight]
     · unfold SortBuffers
       iframe
-      ipureintro
-      exact ⟨hrightLength, hrightDisjoint⟩
+      ipureexact ⟨hrightLength, hrightDisjoint⟩
     · ipureintro
       exact hfacts.2
   · iintro ⟨Hleft, Hright, %hfull⟩
@@ -1256,8 +1248,7 @@ theorem LiveBlock_bytesFocus {host : Type} [WasmHeapGS host]
     iintro %hnewLength
     iintro HnewBytes
     iframe Htoken HnewBytes
-    ipureintro
-    exact ⟨hnewLength, hfacts.2.1, hfacts.2.2⟩
+    ipureexact ⟨hnewLength, hfacts.2.1, hfacts.2.2⟩
 
 /-- A complete live allocation viewed as canonical little-endian words.  The
 token and word bytes are a single owner, not overlapping views. -/
@@ -1283,12 +1274,10 @@ theorem LiveWordBlock_as_liveBlock {host : Type} [WasmHeapGS host]
   constructor
   · iintro ⟨Htoken, ⟨%halign, %hnowrap, Hbytes⟩, %hnonnull⟩
     iframe Htoken Hbytes
-    ipureintro
-    exact ⟨hnowrap, trivial, hnonnull, halign⟩
+    ipureexact ⟨hnowrap, trivial, hnonnull, halign⟩
   · iintro ⟨Htoken, ⟨%hnowrap, Hbytes⟩, %hfacts⟩
     iframe Htoken Hbytes
-    ipureintro
-    exact ⟨⟨hfacts.2.2, hnowrap⟩, hfacts.2.1⟩
+    ipureexact ⟨⟨hfacts.2.2, hnowrap⟩, hfacts.2.1⟩
 
 /-- The reachable zeroing allocator result, specialized to a whole number of
 words, is the canonical live word-array representation expected by `func2`. -/
@@ -1346,8 +1335,7 @@ theorem LiveWordBlocks_sortFocus {host : Type} [WasmHeapGS host]
   isplitl [HsourceWords HscratchWords]
   · unfold SortBuffers
     iframe
-    ipureintro
-    exact ⟨hlength, hdisjoint⟩
+    ipureexact ⟨hlength, hdisjoint⟩
   · iintro %output
     iintro %scratchResult
     iintro %hresultLengths
@@ -1367,12 +1355,10 @@ theorem LiveWordBlocks_sortFocus {host : Type} [WasmHeapGS host]
     isplitl [HsourceToken' HsourceWords]
     · unfold LiveWordBlock
       iframe
-      ipureintro
-      exact hsourceNonzero
+      ipureexact hsourceNonzero
     · unfold LiveWordBlock
       iframe
-      ipureintro
-      exact hscratchNonzero
+      ipureexact hscratchNonzero
 
 /-- Pure chronological invariants shared by every allocator contract.  The
 map is complete below `nextId`, contains nothing at or above it, and numeric
@@ -1645,8 +1631,7 @@ theorem BumpHeap_empty {host : Type} [WasmHeapGS host]
   · itrivial
   · iexists ownedPages
     iframe Hpages
-    ipureintro
-    exact ⟨Nat.le_refl _, by decide, by decide, by decide,
+    ipureexact ⟨Nat.le_refl _, by decide, by decide, by decide,
       historyWellFormed_empty, hphysical⟩
 
 /-- A token agrees with the unique live metadata entry in the named heap. -/
@@ -1837,8 +1822,7 @@ theorem BumpHeap_commit {host : Type} [WasmHeapGS host]
       rfl
   · unfold LiveBlock
     iframe Htoken Hbytes
-    ipureintro
-    exact ⟨hbytesLength, hnonnull, haligned⟩
+    ipureexact ⟨hbytesLength, hnonnull, haligned⟩
 
 /-- Retirement with the agreement fact needed to update pure history. -/
 theorem AllocMetaAuth_retire_with_lookup {host : Type}
@@ -1861,8 +1845,7 @@ theorem AllocMetaAuth_retire_with_lookup {host : Type}
   · iframe
   imodintro
   iframe
-  ipureintro
-  exact hlookup
+  ipureexact hlookup
 
 /-- The no-op physical deallocator consumes a complete live block and moves
 its bytes and exclusive metadata fragment into allocator-owned retired state. -/
@@ -1883,8 +1866,7 @@ theorem AllocatorResources_retire {host : Type} [WasmHeapGS host]
   ihave HretiredNew := RetiredBytes_retire heapId history allocationId ptr
       layout bytes hlookup $$ [Hretired Hfragment Hbytes]
   · iframe
-    ipureintro
-    exact hfacts.1
+    ipureexact hfacts.1
   imodintro
   iframe
 
@@ -1917,13 +1899,11 @@ theorem BumpHeap_retire {host : Type} [WasmHeapGS host]
       $$ [Hauth Hretired Htoken Hbytes] with ⟨Hauth, Hretired⟩
   · unfold LiveBlock
     iframe
-    ipureintro
-    exact hblock
+    ipureexact hblock
   imodintro
   unfold BumpHeap
   iframe
-  ipureintro
-  exact ⟨hheap.1, hheap.2.1, by
+  ipureexact ⟨hheap.1, hheap.2.1, by
       simpa only [AllocationHistory.retire] using hheap.2.2.1,
     hheap.2.2.2.1, hwfNew, hheap.2.2.2.2.2⟩
 
@@ -2230,8 +2210,7 @@ theorem LiveBlock_to_VecStorage {host : Type} [WasmHeapGS host]
       hdecompose, hspareLength⟩
   · unfold LiveBlock
     iframe Htoken Hbytes
-    ipureintro
-    exact hblock
+    ipureexact hblock
 
 /-- Focus the initialized prefix of a nonempty Vec allocation while retaining
 the token and spare suffix needed to close the same storage afterwards. -/
@@ -2269,8 +2248,7 @@ theorem VecStorage_initializedFocus {host : Type} [WasmHeapGS host]
         exact ⟨hstorage.1, hstorage.2.1, rfl, hstorage.2.2.2⟩
       · unfold LiveBlock
         iframe Htoken HallBytes
-        ipureintro
-        exact ⟨by
+        ipureexact ⟨by
           simp only [List.length_append, hstorage.2.2.2]
           omega, hblock.2.1, hblock.2.2⟩
 
@@ -2362,8 +2340,7 @@ theorem VecStorage_appendFocus {host : Type} [WasmHeapGS host]
         simpa only [List.length_append] using htailLength⟩
     · unfold LiveBlock
       iframe Htoken HallBytesNew
-      ipureintro
-      exact ⟨hnewLength, hblock.2.1, hblock.2.2⟩
+      ipureexact ⟨hnewLength, hblock.2.1, hblock.2.2⟩
 
 /-- Complete three-word byte Vec plus its whole live allocation. -/
 def VecU8 {host : Type} [WasmHeapGS host]
@@ -2534,8 +2511,7 @@ theorem emptyVecHeaderBytes_to_VecU8 {host : Type} [WasmHeapGS host]
   isplitl_exact Hlength'
   · unfold VecStorage
     ileft
-    ipureintro
-    exact ⟨rfl, rfl, rfl⟩
+    ipureexact ⟨rfl, rfl, rfl⟩
 
 /-- Driver-frame ownership after initialization.  Its three parts are
 disjoint by separation and together cover exactly the visible 272 bytes. -/
@@ -2579,8 +2555,7 @@ theorem ExportFrame_completedWordsFocus
       Hwords
     ihave Hvec := Hclose $$ Hbytes
     iframe Hvec Hchunk Houtput
-    ipureintro
-    exact hframeLengths
+    ipureexact hframeLengths
 
 /-- Exact raw byte list left in the visible driver frame once the Vec's
 separate allocation-storage ownership is removed. -/
@@ -2622,8 +2597,7 @@ theorem ExportFrame_releaseStorage [WasmHeapGS Universal.State]
         hframeParts.1, hframeParts.2⟩
     · iframe
   iframe Hstorage Hframe
-  ipureintro
-  exact hframeLength
+  ipureexact hframeLength
 
 /-- Assemble the initialized driver frame from its exact three disjoint byte
 regions. -/
@@ -2639,8 +2613,7 @@ theorem ExportFrame_empty [WasmHeapGS Universal.State]
   ihave Hvec := emptyVecHeaderBytes_to_VecU8 heapId $$ Hheader
   unfold ExportFrame
   iframe
-  ipureintro
-  exact ⟨hchunk, houtput⟩
+  ipureexact ⟨hchunk, houtput⟩
 
 /-! ## Pure Vec-growth lineage -/
 
@@ -2994,8 +2967,7 @@ theorem DriverDecodeBuffers_open
       [Htoken Hbytes]
   · unfold LiveBlock
     iframe
-    ipureintro
-    exact hblockFacts
+    ipureexact hblockFacts
   ihave Hvalues := (LiveBlock_as_decodedWordBlock heapId valuesId
     original.length valuesPtr bytes hblockFacts.1).mp $$ Hblock
   iframe

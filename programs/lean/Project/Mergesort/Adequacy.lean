@@ -301,8 +301,7 @@ private theorem DriverSuccess_public
   ihave Hfields := Streams_public [] (serialize sorted) false $$ Hstreams
   ispecialize Hfields $$ %store %observations
   ihave %hfields := Hfields $$ Hstate
-  ipureintro
-  exact Or.inr ⟨sorted, ⟨rfl, hfields.1⟩, hfacts.1⟩
+  ipureexact Or.inr ⟨sorted, ⟨rfl, hfields.1⟩, hfacts.1⟩
 
 /-- Every phase-classified OOM state contains the precise typed stream marker
 installed by the `talos.oom` host call. -/
@@ -358,8 +357,7 @@ private theorem DriverOOM_public
   ihave Hfields := Streams_public remaining [] true $$ Hstreams
   ispecialize Hfields $$ %store %observations
   ihave %hfields := Hfields $$ Hstate
-  ipureintro
-  exact Or.inl ⟨rfl, hfields.2⟩
+  ipureexact Or.inl ⟨rfl, hfields.2⟩
 
 /-- Apply the future main-function correctness theorem at the genuine exported
 call site.  This is the only bridge from entry resources to `Func3Spec`. -/

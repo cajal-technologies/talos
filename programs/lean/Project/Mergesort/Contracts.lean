@@ -191,8 +191,7 @@ theorem VecStorage_as_growSource
     icases Hstorage with (%hempty | Hallocated)
     · iexists GrowSource.empty
       isimp only [GrowSourceOwn]
-      ipureintro
-      exact hempty
+      ipureexact hempty
     · icases Hallocated with
         ⟨%allocationId, %allBytes, %spare, Hfacts, Hblock⟩
       iexists GrowSource.allocated allocationId allBytes spare

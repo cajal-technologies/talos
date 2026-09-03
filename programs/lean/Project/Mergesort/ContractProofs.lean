@@ -195,8 +195,7 @@ theorem import0_correct [WasmSmallStepGS hlc Universal.State] :
                 store.wasm.mem.pages * 65536⌝ $$ [Hstate Hbytes]
         · imod stateInterp_pointsToBytes_agree store ns obs nt ptr buffer
               $$ [$Hstate $Hbytes] with %hmem
-          ipureintro
-          exact hmem
+          ipureexact hmem
         have hbufferBound : ptr.toNat + buffer.length ≤
             store.wasm.mem.pages * 65536 :=
           pointsToBytes_facts_bound hmem (by omega) hnowrap
@@ -227,8 +226,7 @@ theorem import0_correct [WasmSmallStepGS hlc Universal.State] :
                 store.wasm.mem.pages * 65536⌝ $$ [Hstate Hbytes]
         · imod stateInterp_pointsToBytes_agree store ns obs nt ptr buffer
               $$ [$Hstate $Hbytes] with %hmem
-          ipureintro
-          exact hmem
+          ipureexact hmem
         have hbufferBound : ptr.toNat + buffer.length ≤
             store.wasm.mem.pages * 65536 :=
           pointsToBytes_facts_bound hmem (by omega) hnowrap
@@ -359,8 +357,7 @@ theorem import1_correct [WasmSmallStepGS hlc Universal.State] :
                 store.wasm.mem.pages * 65536⌝ $$ [Hstate Hbytes]
         · imod stateInterp_pointsToBytes_agree store ns obs nt ptr bytes
               $$ [$Hstate $Hbytes] with %hmem
-          ipureintro
-          exact hmem
+          ipureexact hmem
         have hbound : ptr.toNat + requested.toNat ≤
             store.wasm.mem.pages * 65536 := by
           rw [hfacts.1]
@@ -382,8 +379,7 @@ theorem import1_correct [WasmSmallStepGS hlc Universal.State] :
                 store.wasm.mem.pages * 65536⌝ $$ [Hstate Hbytes]
         · imod stateInterp_pointsToBytes_agree store ns obs nt ptr bytes
               $$ [$Hstate $Hbytes] with %hmem
-          ipureintro
-          exact hmem
+          ipureexact hmem
         have hbound : ptr.toNat + requested.toNat ≤
             store.wasm.mem.pages * 65536 := by
           rw [hfacts.1]
@@ -748,8 +744,7 @@ theorem func2_correct [WasmSmallStepGS hlc Universal.State] :
         [HsourceWords HscratchWords]
   · unfold SortBuffers
     iframe HsourceWords HscratchWords
-    ipureintro
-    exact ⟨by omega, hresultDisjoint⟩
+    ipureexact ⟨by omega, hresultDisjoint⟩
   ihave HsortResult :
       SortResultBuffers source scratch input scratchInput sorted $$
         [HresultBuffers]

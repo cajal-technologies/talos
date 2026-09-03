@@ -407,15 +407,13 @@ macro "wasm_build_machine_aux " config:term : tactic =>
          isplitl [Hexceptions]
          next => iexact Hexceptions
          next =>
-           ipureintro
-           exact exceptionHeapAgrees_empty _
+           ipureexact exceptionHeapAgrees_empty _
        next =>
          iexists ($config).store.wasm.tagIds
          isplitl [HtagTable]
          next => iexact HtagTable
          next =>
-           ipureintro
-           exact List.prefix_rfl
+           ipureexact List.prefix_rfl
      ihave Hexc : machineAuxInterp _ ($config).store.wasm.mem.pages
          ($config).store.wasm.exns ($config).store.wasm.tagIds $$
          [HmemoryPagesAuth HheapDomain HexceptionInterp]

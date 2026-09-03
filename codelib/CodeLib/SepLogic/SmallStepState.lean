@@ -100,8 +100,7 @@ theorem currentInstanceOwn_update_of_any {α : Type} [gs : WasmInstanceGS α]
   iintro ⟨Hauth, Hfrag⟩
   ihave %heq_id : ⌜actual.id = calleeId.id⌝ $$ [Hauth Hfrag]
   · icombine Hauth Hfrag gives %Hvalid
-    ipureintro
-    exact congrArg DiscreteO.car (ExclAuth.agree (A := DiscreteO Nat) Hvalid)
+    ipureexact congrArg DiscreteO.car (ExclAuth.agree (A := DiscreteO Nat) Hvalid)
   imod iOwn_update_op (E := gs.instanceElem)
       (ExclAuth.update (A := DiscreteO Nat)
         (a := (⟨actual.id⟩ : DiscreteO Nat))
@@ -244,8 +243,7 @@ theorem heapDomain_init (σ : WasmHeapMap (Option UInt8)) :
   unfold heapDomainInterp heapFrontierAuth
   iexists UInt32.size
   iframe HheapFrontierAuth
-  ipureintro
-  exact heapBelow_uint32Size σ
+  ipureexact heapBelow_uint32Size σ
 
 /-- Allocate a tight sparse-domain frontier and expose the matching exclusive
 client fragment.  Callers must prove that the initial authoritative sparse
@@ -278,8 +276,7 @@ theorem heapDomain_init_at (σ : WasmHeapMap (Option UInt8))
   · unfold heapDomainInterp heapFrontierAuth
     iexists frontier
     iframe HheapFrontierAuth
-    ipureintro
-    exact hbelow
+    ipureexact hbelow
   · unfold heapFrontierOwn
     iexact HheapFrontierOwn
 
@@ -310,8 +307,7 @@ theorem machineAuxInterp_heap_mono [WasmHeapDomainGS α]
   · isplitl [Hfrontier]
     · iexists frontier
       iframe Hfrontier
-      ipureintro
-      exact hbelow frontier Hbelow
+      ipureexact hbelow frontier Hbelow
     · iexact Hexceptions
 
 /-- Ghost knowledge of an exception entry pins the physical entry. -/
@@ -325,8 +321,7 @@ theorem exceptionInterp_lookup [WasmExceptionGS α] [WasmTagTableGS α]
   iclear Htags
   ihave %hlookup := exceptionPointsTo_lookup exceptionσ index dq tagAndArgs $$
     Hauth Helem
-  ipureintro
-  exact hag index tagAndArgs hlookup
+  ipureexact hag index tagAndArgs hlookup
 
 /-- Ghost knowledge of the tag table is a prefix of the physical tag table.
 This is the *only* channel through which a rule may learn anything about
@@ -339,8 +334,7 @@ theorem exceptionInterp_tagPrefix [WasmExceptionGS α] [WasmTagTableGS α]
   iintro ⟨⟨Hexn, %ids', Hactual, %Hprefix⟩, Howned⟩
   iclear Hexn
   ihave %heq := tagTableOwn_agree ids' ids $$ [$Hactual $Howned]
-  ipureintro
-  exact heq ▸ Hprefix
+  ipureexact heq ▸ Hprefix
 
 /-- Monotonicity of `exceptionInterp` along the two physical lists.  Used when
 a rule replaces the whole `Store` (host-call return, instantiation) and only
@@ -357,12 +351,10 @@ theorem exceptionInterp_mono [WasmExceptionGS α] [WasmTagTableGS α]
   isplitl [Hauth]
   · iexists exceptionσ
     iframe Hauth
-    ipureintro
-    exact hexns exceptionσ hag
+    ipureexact hexns exceptionσ hag
   · iexists ids
     iframe Htags
-    ipureintro
-    exact htags ids hpre
+    ipureexact htags ids hpre
 
 theorem machineAuxInterp_exception_mono [WasmHeapDomainGS α]
     [WasmMemoryPagesGS α]
@@ -595,8 +587,7 @@ theorem stateInterp_pointsTo_read8 [WasmSmallStepGS hlc α]
   iintro ⟨Hstate, Hpointsto⟩
   iopen_state Hstate
   icases genHeap_valid $$ [$Hheap $Hpointsto] with >%hlookup
-  ipureintro
-  exact fromResolver store Hfacts.1 address value hlookup
+  ipureexact fromResolver store Hfacts.1 address value hlookup
 
 theorem stateInterp_pointsTo_inBounds [WasmSmallStepGS hlc α]
     (store : MachineStore α) (steps : Nat)
@@ -609,8 +600,7 @@ theorem stateInterp_pointsTo_inBounds [WasmSmallStepGS hlc α]
   iintro ⟨Hstate, Hpointsto⟩
   iopen_state Hstate
   icases genHeap_valid $$ [$Hheap $Hpointsto] with >%hlookup
-  ipureintro
-  exact fromResolverBounds store Hfacts.2.1 address (by simp [hlookup])
+  ipureexact fromResolverBounds store Hfacts.2.1 address (by simp [hlookup])
 
 theorem stateInterp_pointsTo_facts [WasmSmallStepGS hlc α]
     (store : MachineStore α) (steps : Nat)
@@ -624,8 +614,7 @@ theorem stateInterp_pointsTo_facts [WasmSmallStepGS hlc α]
   iintro ⟨Hstate, Hpointsto⟩
   iopen_state Hstate
   icases genHeap_valid $$ [$Hheap $Hpointsto] with >%hlookup
-  ipureintro
-  exact ⟨fromResolver store Hfacts.1 address value hlookup,
+  ipureexact ⟨fromResolver store Hfacts.1 address value hlookup,
     fromResolverBounds store Hfacts.2.1 address (by simp [hlookup])⟩
 
 /-- Regression lemma: the client fragment cannot describe a host state that
@@ -652,8 +641,7 @@ macro_rules
     `(tactic|
       (ihave %$fact : $claim $$ $resources
        · imod ($proof) $$ [$] with %$fact
-         ipureintro
-         exact $fact))
+         ipureexact $fact))
 
 /-- Extract a pure lookup from generic heap authority and ownership. -/
 syntax "ihave_heap_valid " ident " : " term " $$ " specPat : tactic
@@ -1073,8 +1061,7 @@ theorem stateInterp_alloc_freshRange [WasmSmallStepGS hlc α]
       iframe Hheap Hglobals Hsegments Htables HelementSegments
         HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances
         HinstanceAuth HhostEnvAuth HstateAuth Haux
-      ipureintro
-      exact ⟨by simpa [bytes] using hfacts'.1,
+      ipureexact ⟨by simpa [bytes] using hfacts'.1,
         by simpa [bytes] using hfacts'.2,
         Hfacts.2.2⟩
     · isimp only [bytes] at Hbytes
@@ -1735,8 +1722,7 @@ theorem stateInterp_host_set [WasmSmallStepGS hlc α]
     iexists σ, globalσ, dataSegmentσ, tableσ,
       elementSegmentσ, runtimeModuleσ, hostEnvσ
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth HhostEnvAuth Hauth' Hexc
-    ipureintro
-    exact Hfacts
+    ipureexact Hfacts
   · iexact HP'
 
 /-- Owned global state determines the corresponding physical instantiated
@@ -1752,8 +1738,7 @@ theorem stateInterp_global_facts [WasmSmallStepGS hlc α]
   iopen_state Hstate
   simp only [globalPointsToAt]
   ihave %hlookup := globalPointsTo_lookup globalσ ⟨0, index⟩ value $$ Hglobals Hglobal
-  ipureintro
-  exact Hfacts.2.2.1 index value hlookup
+  ipureexact Hfacts.2.2.1 index value hlookup
 
 /-- Owned table state determines the corresponding physical instantiated table. -/
 theorem stateInterp_table_facts [WasmSmallStepGS hlc α]
@@ -1767,8 +1752,7 @@ theorem stateInterp_table_facts [WasmSmallStepGS hlc α]
   iopen_state Hstate
   simp only [tablePointsToAt]
   ihave %hlookup := tablePointsTo_lookup tableσ ⟨0, tableIndex⟩ table $$ Htables Htable
-  ipureintro
-  exact Hfacts.2.2.2.2.1 tableIndex table hlookup
+  ipureexact Hfacts.2.2.2.2.1 tableIndex table hlookup
 
 /-- Updating an owned global updates both the authoritative ghost map and the
 physical instantiated global array in lockstep. -/
@@ -1802,8 +1786,7 @@ theorem stateInterp_global_set [WasmSmallStepGS hlc α]
     iexists σ, (insert globalσ ⟨0, index⟩ newValue),
       dataSegmentσ, tableσ, elementSegmentσ, runtimeModuleσ, hostEnvσ
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth HhostEnvAuth Hstate_auth Hexc
-    ipureintro
-    exact ⟨Hfacts.1, Hfacts.2.1,
+    ipureexact ⟨Hfacts.1, Hfacts.2.1,
       ⟨global_store_sound globalσ store.wasm.globals
           index oldValue newValue Hfacts.2.2.1 hlookup,
         Hfacts.2.2.2⟩⟩
@@ -1823,8 +1806,7 @@ theorem stateInterp_dataSegment_facts [WasmSmallStepGS hlc α]
   ihave %hlookup :=
     dataSegmentPointsTo_lookup dataSegmentσ ⟨0, index⟩ value $$
       Hsegments Hsegment
-  ipureintro
-  exact Hfacts.2.2.2.1 index value hlookup
+  ipureexact Hfacts.2.2.2.1 index value hlookup
 
 /-- `data.drop` updates the physical segment status and its authoritative
 ghost entry in lockstep. -/
@@ -1860,8 +1842,7 @@ theorem stateInterp_dataSegment_drop [WasmSmallStepGS hlc α]
       (insert dataSegmentσ ⟨0, index⟩ none), tableσ,
       elementSegmentσ, runtimeModuleσ, hostEnvσ
     iframe
-    ipureintro
-    exact ⟨Hfacts.1, Hfacts.2.1, Hfacts.2.2.1,
+    ipureexact ⟨Hfacts.1, Hfacts.2.1, Hfacts.2.2.1,
       dataSegment_store_sound dataSegmentσ store.wasm.dataSegments
         index oldValue none Hfacts.2.2.2.1 hlookup,
       Hfacts.2.2.2.2⟩
@@ -1881,8 +1862,7 @@ theorem stateInterp_elementSegment_facts [WasmSmallStepGS hlc α]
   ihave %hlookup :=
     elementSegmentPointsTo_lookup elementSegmentσ ⟨0, index⟩ value $$
       HelementSegments Hsegment
-  ipureintro
-  exact Hfacts.2.2.2.2.2.1 index value hlookup
+  ipureexact Hfacts.2.2.2.2.2.1 index value hlookup
 
 syntax "wasm_data_segment_agree " ident ", " term ", " term ", " term
   " $$ " specPat : tactic
@@ -1946,8 +1926,7 @@ theorem stateInterp_elementSegment_drop [WasmSmallStepGS hlc α]
     iexists σ, globalσ, dataSegmentσ, tableσ,
       (insert elementSegmentσ ⟨0, index⟩ none), runtimeModuleσ, hostEnvσ
     iframe
-    ipureintro
-    exact ⟨Hfacts.1, Hfacts.2.1, Hfacts.2.2.1,
+    ipureexact ⟨Hfacts.1, Hfacts.2.1, Hfacts.2.2.1,
       Hfacts.2.2.2.1,
       ⟨Hfacts.2.2.2.2.1,
         elementSegment_store_sound elementSegmentσ
@@ -1973,8 +1952,7 @@ theorem stateInterp_table_facts_frame [WasmSmallStepGS hlc α]
       [Hstate Htable]
   imodintro
   iframe
-  ipureintro
-  exact Hphysical
+  ipureexact Hphysical
 
 /-- Derive the physical table associated with an owned table fragment. -/
 syntax "wasm_table_agree " ident ", " term ", " term ", " term
@@ -2022,8 +2000,7 @@ theorem stateInterp_table_set [WasmSmallStepGS hlc α]
       (insert tableσ ⟨0, index⟩ newTable), elementSegmentσ,
       runtimeModuleσ, hostEnvσ
     iframe
-    ipureintro
-    exact ⟨Hfacts.1, Hfacts.2.1, Hfacts.2.2.1,
+    ipureexact ⟨Hfacts.1, Hfacts.2.1, Hfacts.2.2.1,
       Hfacts.2.2.2.1,
       ⟨table_store_listSetAt_sound tableσ store.wasm.tables
           index oldTable newTable Hfacts.2.2.2.2.1 hlookup,
@@ -2069,8 +2046,7 @@ macro_rules
           [Hσ Hruntime]
        · imod stateInterp_runtimeModule_agree store ns $observations nt
            $instanceId $module $$ $resources with %Hmodule
-         ipureintro
-         exact Hmodule))
+         ipureexact Hmodule))
 
 /-- Owned exception state determines the corresponding physical exception
 entry in the store's exception table. -/
@@ -2089,8 +2065,7 @@ theorem stateInterp_exception_facts [WasmSmallStepGS hlc α]
   ihave %hlookup :=
     exceptionInterp_lookup store.wasm.exns store.wasm.tagIds index dq tagAndArgs $$
       [$Hexceptions $Hexception]
-  ipureintro
-  exact hlookup
+  ipureexact hlookup
 
 /-- Ghost knowledge of the tag table is a prefix of the physical tag table.
 This is the *only* channel through which a rule may learn anything about
@@ -2110,8 +2085,7 @@ theorem stateInterp_tagTable_prefix [WasmSmallStepGS hlc α]
   ihave %hprefix :=
     exceptionInterp_tagPrefix store.wasm.exns store.wasm.tagIds ids $$
       [$Hexceptions $Howned]
-  ipureintro
-  exact hprefix
+  ipureexact hprefix
 
 /-- The interpreter's tag canonicalisation is the identity on indices that are
 canonical in a prefix of the physical tag table.  Entries appended by other
@@ -2145,8 +2119,7 @@ theorem stateInterp_instances_agree [WasmSmallStepGS hlc α]
   iopen_state Hstate
   icombine HruntimeInstances Hexpected as Hinst
   ihave %hagrees := runtimeInstancesOwn_agree store.runtime.instances instances $$ Hinst
-  ipureintro
-  exact hagrees
+  ipureexact hagrees
 
 /-- Owned fragment for the current instance id agrees with the stateInterp value. -/
 theorem stateInterp_currentInstance_agree [WasmSmallStepGS hlc α]
@@ -2160,8 +2133,7 @@ theorem stateInterp_currentInstance_agree [WasmSmallStepGS hlc α]
   iopen_state Hstate
   icombine HinstanceAuth Hfrag as Hcombined
   ihave %hagrees := currentInstanceOwn_agree store.runtime.entry id $$ Hcombined
-  ipureintro
-  exact hagrees
+  ipureexact hagrees
 
 /-- Derive the current instance id from its Iris ownership and the physical
 state, using the lifting proof's conventional context names. -/
@@ -2177,8 +2149,7 @@ macro_rules
           [Hσ HinstanceOwn]
        · imod stateInterp_currentInstance_agree store ns $observations nt
            $instanceId $$ $resources with %Hentry
-         ipureintro
-         exact Hentry))
+         ipureexact Hentry))
 
 /-- Update the current instance id in both stateInterp and the owned fragment.
 `hch` asserts the new instance has the same host as the current one,
@@ -2206,8 +2177,7 @@ theorem stateInterp_currentInstance_update [WasmSmallStepGS hlc α]
     have hres : storeResolve { store with runtime := { store.runtime with entry := newId } } = storeResolve store := rfl
     simp only [hres]
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth' HhostEnvAuth Hstate_auth Hexc
-    ipureintro
-    exact Hfacts
+    ipureexact Hfacts
   · iexact Hfrag'
 
 theorem stateInterp_currentInstance_update_of_any [WasmSmallStepGS hlc α]
@@ -2235,8 +2205,7 @@ theorem stateInterp_currentInstance_update_of_any [WasmSmallStepGS hlc α]
     have hres : storeResolve { store with runtime := { store.runtime with entry := newId } } = storeResolve store := rfl
     simp only [hres]
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth' HhostEnvAuth Hstate_auth Hexc
-    ipureintro
-    exact Hfacts
+    ipureexact Hfacts
   isplitl_exact Hfrag'
   · ipureintro; exact heq
 
@@ -2306,8 +2275,7 @@ theorem stateInterp_pointsTo_u32_facts_frame [WasmSmallStepGS hlc α]
       address value h1 h2 h3 $$ [Hstate Hword]
   imodintro
   iframe
-  ipureintro
-  exact Hfacts
+  ipureexact Hfacts
 
 /-- Eight-byte ownership determines the physical little-endian word and proves
 the complete access is in bounds. The address equalities exclude UInt32
@@ -2394,8 +2362,7 @@ theorem stateInterp_pointsTo_u64_facts_frame [WasmSmallStepGS hlc α]
       address value h1 h2 h3 h4 h5 h6 h7 $$ [Hstate Hword]
   imodintro
   iframe
-  ipureintro
-  exact Hfacts
+  ipureexact Hfacts
 
 theorem stateInterp_store8 [WasmSmallStepGS hlc α]
     (store : MachineStore α) (steps : Nat)
@@ -3062,8 +3029,7 @@ theorem stateInterp_hostCallReturn [WasmSmallStepGS hlc α]
     · iapply exceptionInterp_mono hExns hTagIds
       iexact Hexceptions
   iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth HhostEnvAuth Hstate_auth' Hexc'
-  ipureintro
-  exact ⟨hMem σ Hfacts.1, hBounds σ Hfacts.2.1, hGlobals globalσ Hfacts.2.2.1,
+  ipureexact ⟨hMem σ Hfacts.1, hBounds σ Hfacts.2.1, hGlobals globalσ Hfacts.2.2.1,
     hData dataSegmentσ Hfacts.2.2.2.1, hTables tableσ Hfacts.2.2.2.2.1,
     hElems elementSegmentσ Hfacts.2.2.2.2.2.1, Hfacts.2.2.2.2.2.2.1, Hfacts.2.2.2.2.2.2.2⟩
 

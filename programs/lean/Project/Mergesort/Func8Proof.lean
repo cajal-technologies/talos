@@ -195,14 +195,12 @@ private theorem twp_func8_copy_and_return
       [HoldBytes]
   · unfold Project.Mergesort.Representations.ByteSlice
     iframe
-    ipureintro
-    exact holdNowrap
+    ipureexact holdNowrap
   ihave HoldBlock : LiveBlock heapId oldId oldPtr oldLayout oldBytes $$
       [HoldToken HoldSlice]
   · unfold LiveBlock
     iframe
-    ipureintro
-    exact holdFacts
+    ipureexact holdFacts
   let finalBytes := oldBytes ++ newBytes.drop oldSize.toNat
   have hfinalLength : finalBytes.length = newLayout.size := by
     dsimp only [finalBytes]
@@ -229,8 +227,7 @@ private theorem twp_func8_copy_and_return
       finalBytes $$ [HnewToken HnewSlice]
   · unfold LiveBlock
     iframe
-    ipureintro
-    exact ⟨hfinalLength, hnewFacts.2⟩
+    ipureexact ⟨hfinalLength, hnewFacts.2⟩
   imod BumpHeap_retire heapId finish finish.toNat
       (history.allocate newPtr newLayout) oldId oldPtr oldLayout oldBytes $$
       [Hbump HoldBlock] with Hbump
@@ -761,8 +758,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
                   [Hcursor Hfrontier Hauth Hretired HoldPages]
               · unfold BumpHeap
                 iframe
-                ipureintro
-                exact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat,
+                ipureexact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat,
                   hwf, hphysicalFrontier⟩
               ihave Hruntime : RuntimeContext $$ [Hmodule Henv]
               · unfold RuntimeContext
@@ -790,8 +786,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
                     [Hcursor Hfrontier Hauth Hretired HoldPages]
                 · unfold BumpHeap
                   iframe
-                  ipureintro
-                  exact ⟨hfrontierLow, hfrontierSigned, hcursorZero,
+                  ipureexact ⟨hfrontierLow, hfrontierSigned, hcursorZero,
                     hcursorNat, hwf, hphysicalFrontier⟩
                 ihave Hruntime : RuntimeContext $$ [Hmodule Henv]
                 · unfold RuntimeContext
@@ -991,8 +986,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
           [Hcursor Hfrontier Hauth Hretired Hpages]
       · unfold BumpHeap
         iframe
-        ipureintro
-        exact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat, hwf,
+        ipureexact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat, hwf,
           hphysicalFrontier⟩
       ihave Hruntime : RuntimeContext $$ [Hmodule Henv]
       · unfold RuntimeContext

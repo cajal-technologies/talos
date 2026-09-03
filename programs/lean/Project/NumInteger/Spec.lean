@@ -969,8 +969,7 @@ theorem func1_zero_smallStep_partiallyMeets
             [.i64 (UInt64.ofNat (Nat.gcd a.toNat b.toNat))]⌝)) := by
       intro rs
       iintro ⟨%hrs, _Hresources⟩
-      ipureintro
-      exact hrs
+      ipureexact hrs
     simp only [func1ZeroConfig]
     iclear Hruntime
     iapply wp_mono hpost
@@ -3468,8 +3467,7 @@ theorem func1_nonzero_smallStep_partiallyMeets
             [.i64 (UInt64.ofNat (Nat.gcd a.toNat b.toNat))]⌝)) := by
       intro rs
       iintro ⟨%hrs, _Hresources⟩
-      ipureintro
-      exact hrs
+      ipureexact hrs
     simp only [func1ZeroConfig]
     iclear Hruntime
     iapply wp_mono hpost
@@ -4316,8 +4314,7 @@ theorem func0_smallStep_partiallyMeets (a b : UInt64) :
       intro rs
       unfold func0FramePost
       iintro ⟨%hrs, _Hresources⟩
-      ipureintro
-      exact hrs
+      ipureexact hrs
     iapply wp_mono hpost
     iapply func0_smallStep_wp
       (R := iprop(⌜True⌝))
@@ -4361,8 +4358,7 @@ theorem func2_smallStep_partiallyMeets (a b : UInt64) :
       intro rs
       unfold func0FramePost
       iintro ⟨%hrs, _Hresources⟩
-      ipureintro
-      exact hrs
+      ipureexact hrs
     iapply wp_mono hpost
     iapply func2_smallStep_wp
       (R := iprop(⌜True⌝))
@@ -7734,8 +7730,7 @@ theorem func2_terminatesWith :
       intro rs
       unfold func0FramePost
       iintro ⟨%hrs, _Hresources⟩ %store %_obs _Hstate
-      ipureintro
-      exact hrs
+      ipureexact hrs
     iapply twp.mono hpost
     iapply twp_func2_smallStep_wp
       (R := iprop(⌜True⌝))

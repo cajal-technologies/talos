@@ -164,8 +164,7 @@ theorem twp_acceptanceCaller
         [Hstate Hhost]
     · iapply stateInterp_host_agree store 0 observations 0
       iframe Hstate Hhost
-    ipureintro
-    exact ⟨rfl, hhost⟩
+    ipureexact ⟨rfl, hhost⟩
   · dsimp only [acceptanceExpr]
     iapply twp_iff (selectedBody := [.const 7]) rfl
     wasm_twp_pures [twp_const twp_exitControl]
@@ -175,8 +174,7 @@ theorem twp_acceptanceCaller
     ihave %hhost : ⌜store.wasm.host = acceptanceHost⌝ $$ [Hstate Hhost]
     · iapply stateInterp_host_agree store 0 observations 0
       iframe Hstate Hhost
-    ipureintro
-    exact ⟨rfl, hhost⟩
+    ipureexact ⟨rfl, hhost⟩
 
 /-- The acceptance caller has one finite authoritative execution ending in the
 normal result selected by `flag`, or in the exact `talos.oom` trap. -/

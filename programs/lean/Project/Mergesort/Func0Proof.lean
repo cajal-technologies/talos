@@ -82,8 +82,7 @@ private theorem ByteSlice_twelve_storeFocus
   ihave Hbytes : Representations.ByteSlice ptr bytes $$ [HrawBytes]
   · unfold Representations.ByteSlice
     iframe HrawBytes
-    ipureintro
-    exact hnowrap
+    ipureexact hnowrap
   let first := bytes.take 4
   let rest := bytes.drop 4
   let second := rest.take 4
@@ -232,8 +231,7 @@ private theorem LiveBlock_with_nonnull
   isplitl [Htoken Hbytes]
   · unfold LiveBlock
     iframe Htoken Hbytes
-    ipureintro
-    exact hfacts
+    ipureexact hfacts
   · ipureintro
     exact hfacts.2.1
 
@@ -413,8 +411,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
   ihave Hresult : Representations.ByteSlice result growBefore $$ [HresultBytes]
   · unfold Representations.ByteSlice
     iframe HresultBytes
-    ipureintro
-    exact hresultNowrap
+    ipureexact hresultNowrap
   iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   simp only [List.cons_append, List.nil_append]
   iapply Wasm.SmallStep.twp_call Project.Mergesort.module 3
@@ -548,8 +545,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
             iintro Hbump Hstreams
             ihave Hsource : GrowSourceOwn heapId 0 1 [] .empty $$ []
             · unfold GrowSourceOwn
-              ipureintro
-              exact ⟨rfl, rfl, rfl⟩
+              ipureexact ⟨rfl, rfl, rfl⟩
             iapply Hcont $$ Hresult Hsource Hbump Hstreams
         | success newPtr finish =>
             have hdecision' : classifyBump frontier
@@ -613,8 +609,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
               ihave Hoom := BI.and_elim_r $$ Hcont
               ihave Hsource : GrowSourceOwn heapId 0 1 [] .empty $$ []
               · unfold GrowSourceOwn
-                ipureintro
-                exact ⟨rfl, rfl, rfl⟩
+                ipureexact ⟨rfl, rfl, rfl⟩
               iapply Hoom $$ Hresult Hsource Hbump Hstreams
   | allocated oldId allBytes spare =>
       isimp only [GrowSourceOwn] at Hsource

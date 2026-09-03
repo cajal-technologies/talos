@@ -1037,8 +1037,7 @@ theorem twp_sort [WasmSmallStepGS hlc Unit]
         omega)
       (by simp [source]) $$ [$Hstate $Hsource] with
       ⟨_Hstate, _Hsource, %hcapacity⟩
-    ipureintro
-    exact ⟨output, hsorted, by
+    ipureexact ⟨output, hsorted, by
       rw [hsorted.2.length_eq]
       exact hread', by
       rw [hsorted.2.length_eq]

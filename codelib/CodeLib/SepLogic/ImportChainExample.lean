@@ -114,8 +114,7 @@ private theorem logTransfer (v : UInt32) (n : List UInt32)
       elementSegmentσ, runtimeModuleσ, hostEnvσ
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep
       HruntimeInstances HinstanceAuth HhostEnvAuth Hauth' Hexc
-    ipureintro
-    exact Hfacts
+    ipureexact Hfacts
 
 theorem importChain_partiallyMeets (v : UInt32) (initial : List UInt32) :
     PartiallyMeets (importChainConfig v initial) (fun values _ => values = []) := by

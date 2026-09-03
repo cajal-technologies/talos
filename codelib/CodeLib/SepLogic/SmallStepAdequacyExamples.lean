@@ -234,8 +234,7 @@ theorem wordRoundtrip_adequate (oldWord : UInt32) :
         (iprop% ⌜values = [.i32 0x12345678]⌝) := by
       intro values
       iintro ⟨%hvalues, _Hword⟩
-      ipureintro
-      exact hvalues
+      ipureexact hvalues
     iapply wp_mono hpost
     iapply wp_wordRoundtrip
     iexact Hword
@@ -283,8 +282,7 @@ theorem wordRoundtrip_store_partiallyMeets (oldWord : UInt32) :
         store 0 [] 0 16 0x12345678
         (by decide) (by decide) (by decide) $$
           [$Hstate $Hword] with %Hfacts
-      ipureintro
-      exact ⟨hvalues, Hfacts.1⟩
+      ipureexact ⟨hvalues, Hfacts.1⟩
     iapply wp_mono hpost
     iapply wp_wordRoundtrip
     iexact Hword
@@ -394,8 +392,7 @@ theorem swapWords_adequate :
         (iprop% ⌜values = [.i32 11, .i32 22]⌝) := by
       intro values
       iintro ⟨%hvalues, _H0, _H4⟩
-      ipureintro
-      exact hvalues
+      ipureexact hvalues
     iapply wp_mono hpost
     iapply wp_swapWords
     iexact Hwords
@@ -444,8 +441,7 @@ theorem swapWords_store_partiallyMeets :
         store 0 [] 0 4 11
         (by decide) (by decide) (by decide) $$
           [$Hstate $H4] with %Hfacts4
-      ipureintro
-      exact ⟨hvalues, Hfacts0.1, Hfacts4.1⟩
+      ipureexact ⟨hvalues, Hfacts0.1, Hfacts4.1⟩
     iapply wp_mono hpost
     iapply wp_swapWords
     iexact Hwords
@@ -577,8 +573,7 @@ theorem reverseThreeWords_store_partiallyMeets :
         store 0 [] 0 8 11
         (by decide) (by decide) (by decide) $$
           [$Hstate $H8] with %Hfacts8
-      ipureintro
-      exact ⟨hvalues, Hfacts0.1, Hfacts4.1, Hfacts8.1⟩
+      ipureexact ⟨hvalues, Hfacts0.1, Hfacts4.1, Hfacts8.1⟩
     iapply wp_mono hpost
     iapply wp_reverseThreeWords
     iexact Hwords
@@ -729,8 +724,7 @@ theorem partitionThreeWords_store_partiallyMeets :
         store 0 [] 0 8 33
         (by decide) (by decide) (by decide) $$
           [$Hstate $H8] with %Hfacts8
-      ipureintro
-      exact ⟨hvalues, Hfacts0.1, Hfacts4.1, Hfacts8.1,
+      ipureexact ⟨hvalues, Hfacts0.1, Hfacts4.1, Hfacts8.1,
         by rw [Hfacts0.1, Hfacts4.1]; decide,
         by rw [Hfacts4.1, Hfacts8.1]; decide⟩
     iapply wp_mono hpost
@@ -864,8 +858,7 @@ theorem mergeTwoWords_store_partiallyMeets :
         store 0 [] 0 4 9
         (by decide) (by decide) (by decide) $$
           [$Hstate $H4] with %Hfacts4
-      ipureintro
-      exact ⟨hvalues, Hfacts0.1, Hfacts4.1,
+      ipureexact ⟨hvalues, Hfacts0.1, Hfacts4.1,
         by rw [Hfacts0.1, Hfacts4.1]; decide⟩
     iapply wp_mono hpost
     iapply wp_mergeTwoWords
@@ -1008,8 +1001,7 @@ theorem fillFourBytes_store_partiallyMeets (oldWord : UInt32) :
         store 0 [] 0 32 0x12345678
         (by decide) (by decide) (by decide) $$
           [$Hstate $H32] with %Hfacts32
-      ipureintro
-      exact ⟨hvalues, Hfacts16.1, Hfacts32.1⟩
+      ipureexact ⟨hvalues, Hfacts16.1, Hfacts32.1⟩
     iapply wp_mono hpost
     iapply wp_fillFourBytes oldWord
     iexact Hwords
@@ -1135,8 +1127,7 @@ theorem copyWord_store_partiallyMeets (oldDestination : UInt32) :
         store 0 [] 0 8 0x04030201
         (by decide) (by decide) (by decide) $$
           [$Hstate $H8] with %Hfacts8
-      ipureintro
-      exact ⟨hvalues, Hfacts0.1, Hfacts8.1⟩
+      ipureexact ⟨hvalues, Hfacts0.1, Hfacts8.1⟩
     iapply wp_mono hpost
     iapply wp_copyWord oldDestination
     iexact Hwords
@@ -1242,8 +1233,7 @@ theorem copyOverlapWord_store_partiallyMeets :
         (by decide) (by decide) (by decide) (by decide)
         (by decide) (by decide) (by decide) $$
           [$Hstate $Hword] with %Hfacts
-      ipureintro
-      exact ⟨hvalues, Hfacts.1⟩
+      ipureexact ⟨hvalues, Hfacts.1⟩
     iapply wp_mono hpost
     iapply wp_copyOverlapWord
     iexact Hword
@@ -1487,8 +1477,7 @@ theorem tableSetGet_store_partiallyMeets :
             (.funcref (some 1))) $$
           [$Hstate $Htable] with
         ⟨Hstate, Htable, %Hphysical⟩
-      ipureintro
-      exact ⟨hvalues, by simpa [listSetAt] using Hphysical⟩
+      ipureexact ⟨hvalues, by simpa [listSetAt] using Hphysical⟩
     iapply wp_mono hpost
     wasm_wp_pures [wp_const]
     wasm_wp_next wp_pureStep _ _ _ (fun _ => Step.refFunc)
@@ -1589,8 +1578,7 @@ theorem tableGrowFill_store_partiallyMeets :
               (.funcref (some 1)))) $$
           [$Hstate $Htable] with
         ⟨Hstate, Htable, %Hphysical⟩
-      ipureintro
-      exact ⟨hvalues, by
+      ipureexact ⟨hvalues, by
         simpa [listWriteAt] using Hphysical⟩
     simp only [← tablePointsToAt_eq]
     wasm_wp_next wp_tableGrow32 tableGrowFillAdequacyModule ⟨0⟩
@@ -1698,8 +1686,7 @@ theorem tableGrow64Failure_store_partiallyMeets :
             List.replicate (UInt64.toNat 2) (.funcref (some 0))) $$
           [$Hstate $Htable] with
         ⟨Hstate, Htable, %Hphysical⟩
-      ipureintro
-      exact ⟨hvalues, by simpa using Hphysical⟩
+      ipureexact ⟨hvalues, by simpa using Hphysical⟩
     simp only [← tablePointsToAt_eq]
     wasm_wp_next wp_tableGrow64 tableGrow64FailureAdequacyModule ⟨0⟩
       (tableIndex := 0) (table := [.funcref none])
@@ -1833,8 +1820,7 @@ theorem tableCopyOverlap_store_partiallyMeets :
                   (UInt32.toNat 0)).take (UInt32.toNat 3))) $$
           [$Hstate $Htable] with
         ⟨Hstate, Htable, %Hphysical⟩
-      ipureintro
-      exact ⟨hvalues, by simpa [listWriteAt] using Hphysical⟩
+      ipureexact ⟨hvalues, by simpa [listWriteAt] using Hphysical⟩
     iapply wp_mono hpost
     simp only [← tablePointsToAt_eq]
     wasm_wp_next wp_tableCopySame
@@ -1995,8 +1981,7 @@ theorem tableCopyDistinct_store_partiallyMeets :
           [.funcref (some 0), .funcref (some 1),
             .funcref (some 2)] $$ [$Hstate $Hsource] with
         ⟨Hstate, Hsource, %HsourcePhysical⟩
-      ipureintro
-      exact ⟨hvalues,
+      ipureexact ⟨hvalues,
         by simpa [listWriteAt] using HdestinationPhysical,
         HsourcePhysical⟩
     have hframe : ∀ values : List Value,
@@ -2196,8 +2181,7 @@ theorem tableInitDrop_store_partiallyMeets :
       ihave_pure HelementPhysical :
           ⌜store.wasm.elementSegments[0]? = some none⌝ using
         stateInterp_elementSegment_facts store 0 [] 0 0 none $$ [Hstate Helement]
-      ipureintro
-      exact ⟨hvalues,
+      ipureexact ⟨hvalues,
         by simpa [tableInitDropAdequacyModule,
             ElementSegment.values, ElementSegment.plainValues, listWriteAt]
           using HtablePhysical,

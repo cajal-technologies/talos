@@ -478,8 +478,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
       iframe HcursorAlloc Hfrontier Hauth Hretired
       iexists ownedPages
       iframe Hpages
-      ipureintro
-      exact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat, hwf,
+      ipureexact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat, hwf,
         hfrontierPhysical⟩
     ihave Hruntime : RuntimeContext $$ [Hmodule Henv]
     · unfold RuntimeContext
@@ -622,8 +621,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
                 [Hcursor Hfrontier Hauth Hretired HoldPages]
             · unfold BumpHeap
               iframe
-              ipureintro
-              exact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat,
+              ipureexact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat,
                 hwf, hfrontierPhysical⟩
             ihave Hruntime : RuntimeContext $$ [Hmodule Henv]
             · unfold RuntimeContext
@@ -661,8 +659,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
                   [Hcursor Hfrontier Hauth Hretired HoldPages]
               · unfold BumpHeap
                 iframe
-                ipureintro
-                exact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat,
+                ipureexact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat,
                   hwf, hfrontierPhysical⟩
               ihave Hruntime : RuntimeContext $$ [Hmodule Henv]
               · unfold RuntimeContext

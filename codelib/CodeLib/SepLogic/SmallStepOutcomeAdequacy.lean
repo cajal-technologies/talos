@@ -176,8 +176,7 @@ theorem wasm_smallStep_heap_globals_runtime_host_store_adequacy_outcome_at
     unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth' HhostState Hexc
-    ipureintro
-    exact ⟨hagree, hinBounds, hglobals,
+    ipureexact ⟨hagree, hinBounds, hglobals,
       dataSegmentHeapAgrees_empty _,
       tableHeapAgrees_empty _,
       elementSegmentHeapAgrees_empty _,
@@ -312,8 +311,7 @@ theorem wasm_smallStep_heap_globals_runtime_host_stronglyNormalizing_outcome
     unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth' HhostState Hexc
-    ipureintro
-    exact ⟨hagree, hinBounds, hglobals,
+    ipureexact ⟨hagree, hinBounds, hglobals,
       dataSegmentHeapAgrees_empty _,
       tableHeapAgrees_empty _,
       elementSegmentHeapAgrees_empty _,

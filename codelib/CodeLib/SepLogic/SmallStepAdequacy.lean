@@ -225,8 +225,7 @@ theorem wasm_smallStep_adequacy
     unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
     simp only [BI.BigSepM.bigSepM_empty.to_eq, BI.emp_sep.to_eq]
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
-    ipureintro
-    exact ⟨heapAgreesWithMem_empty _,
+    ipureexact ⟨heapAgreesWithMem_empty _,
       heapAddressesInBounds_empty _,
       globalHeapAgrees_empty _,
       dataSegmentHeapAgrees_empty _,
@@ -310,8 +309,7 @@ theorem wasm_smallStep_stronglyNormalizing
     unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
     simp only [BI.BigSepM.bigSepM_empty.to_eq, BI.emp_sep.to_eq]
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
-    ipureintro
-    exact ⟨heapAgreesWithMem_empty _,
+    ipureexact ⟨heapAgreesWithMem_empty _,
       heapAddressesInBounds_empty _,
       globalHeapAgrees_empty _,
       dataSegmentHeapAgrees_empty _,
@@ -413,8 +411,7 @@ theorem wasm_smallStep_heap_globals_runtime_tags_stronglyNormalizing
     unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
-    ipureintro
-    exact ⟨hagree, hinBounds, hglobals,
+    ipureexact ⟨hagree, hinBounds, hglobals,
       dataSegmentHeapAgrees_empty _,
       tableHeapAgrees_empty _,
       elementSegmentHeapAgrees_empty _,
@@ -642,8 +639,7 @@ theorem wasm_smallStep_runtime_tags_adequacy
     unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
-    ipureintro
-    exact ⟨heapAgreesWithMem_empty _,
+    ipureexact ⟨heapAgreesWithMem_empty _,
       heapAddressesInBounds_empty _,
       globalHeapAgrees_empty _,
       dataSegmentHeapAgrees_empty _,
@@ -757,8 +753,7 @@ theorem wasm_smallStep_runtime_instance_adequacy
     unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstancesState HinstanceState HhostEnvAuth HhostState Hexc
-    ipureintro
-    exact ⟨heapAgreesWithMem_empty _,
+    ipureexact ⟨heapAgreesWithMem_empty _,
       heapAddressesInBounds_empty _,
       globalHeapAgrees_empty _,
       dataSegmentHeapAgrees_empty _,
@@ -859,8 +854,7 @@ theorem wasm_smallStep_instance_host_state_adequacy
     unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstancesState HinstanceState HhostEnvAuth' HhostState Hexc
-    ipureintro
-    exact ⟨heapAgreesWithMem_empty _,
+    ipureexact ⟨heapAgreesWithMem_empty _,
       heapAddressesInBounds_empty _,
       globalHeapAgrees_empty _,
       dataSegmentHeapAgrees_empty _,
@@ -948,8 +942,7 @@ theorem wasm_smallStep_heap_adequacy
     unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
     simp only [BI.BigSepM.bigSepM_empty.to_eq, BI.emp_sep.to_eq]
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
-    ipureintro
-    exact ⟨hagree, hinBounds,
+    ipureexact ⟨hagree, hinBounds,
       globalHeapAgrees_empty _,
       dataSegmentHeapAgrees_empty _,
       tableHeapAgrees_empty _,
@@ -1020,8 +1013,7 @@ theorem wasm_smallStep_heap_globals_runtime_adequacy
     unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
-    ipureintro
-    exact ⟨hagree, hinBounds, hglobals,
+    ipureexact ⟨hagree, hinBounds, hglobals,
       dataSegmentHeapAgrees_empty _,
       tableHeapAgrees_empty _,
       elementSegmentHeapAgrees_empty _,
@@ -1103,8 +1095,7 @@ theorem wasm_smallStep_heap_globals_runtime_store_adequacy
     unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth' HhostState Hexc
-    ipureintro
-    exact ⟨hagree, hinBounds, hglobals,
+    ipureexact ⟨hagree, hinBounds, hglobals,
       dataSegmentHeapAgrees_empty _,
       tableHeapAgrees_empty _,
       elementSegmentHeapAgrees_empty _,
@@ -1308,8 +1299,7 @@ theorem wasm_smallStep_heap_globals_runtime_store_terminates
       unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
       simp only [BI.BigSepM.bigSepM_singleton.to_eq]
       iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
-      ipureintro
-      exact ⟨hagree, hinBounds, hglobals,
+      ipureexact ⟨hagree, hinBounds, hglobals,
         dataSegmentHeapAgrees_empty _,
         tableHeapAgrees_empty _,
         elementSegmentHeapAgrees_empty _,
@@ -1548,8 +1538,7 @@ theorem wasm_smallStep_heap_store_terminates
       unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
       simp only [BI.BigSepM.bigSepM_singleton.to_eq]
       iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
-      ipureintro
-      exact ⟨hagree, hinBounds, globalHeapAgrees_empty _,
+      ipureexact ⟨hagree, hinBounds, globalHeapAgrees_empty _,
         dataSegmentHeapAgrees_empty _,
         tableHeapAgrees_empty _,
         elementSegmentHeapAgrees_empty _,
@@ -1633,8 +1622,7 @@ theorem wasm_smallStep_heap_terminates
     iintro %hφ
     iintro %store %observations Hstate
     iclear Hstate
-    ipureintro
-    exact hφ
+    ipureexact hφ
   iapply htwp hlc
   iexact Hpoints
 
@@ -1729,8 +1717,7 @@ theorem wasm_smallStep_heap_globals_segments_runtime_store_adequacy
     unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
     iframe ∗ #
-    ipureintro
-    exact ⟨hagree, hinBounds, hglobals, hsegments,
+    ipureexact ⟨hagree, hinBounds, hglobals, hsegments,
       tableHeapAgrees_empty _,
       elementSegmentHeapAgrees_empty _,
       runtimeModuleSingletonAgrees config.store.runtime hwf,
@@ -1889,8 +1876,7 @@ theorem wasm_smallStep_heap_globals_segments_tables_runtime_store_adequacy
     unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
     iframe ∗ #
-    ipureintro
-    exact ⟨hagree, hinBounds, hglobals, hsegments,
+    ipureexact ⟨hagree, hinBounds, hglobals, hsegments,
       htables,
       helementSegments,
       runtimeModuleSingletonAgrees config.store.runtime hwf,
@@ -2097,8 +2083,7 @@ theorem wasm_smallStep_heap_runtime_instance_adequacy
     unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
-    ipureintro
-    exact ⟨hagree, hinBounds, globalHeapAgrees_empty _,
+    ipureexact ⟨hagree, hinBounds, globalHeapAgrees_empty _,
       dataSegmentHeapAgrees_empty _,
       tableHeapAgrees_empty _,
       elementSegmentHeapAgrees_empty _,
@@ -2182,8 +2167,7 @@ theorem wasm_smallStep_heap_runtime_instances_adequacy
     unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstancesState HinstanceState HhostEnvAuth HhostState Hexc
-    ipureintro
-    exact ⟨hagree, hinBounds, globalHeapAgrees_empty _,
+    ipureexact ⟨hagree, hinBounds, globalHeapAgrees_empty _,
       dataSegmentHeapAgrees_empty _,
       tableHeapAgrees_empty _,
       elementSegmentHeapAgrees_empty _,

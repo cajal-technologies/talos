@@ -319,8 +319,7 @@ private theorem mergeSortPost_to_store {hlc : HasLC} [WasmSmallStepGS hlc Unit]
   imod arrayAt_readWordArray store 0 [] 0 source output
     (by rw [hlen]; simp only [UInt32.size]; omega) $$
       [$Hstate $Hout] with ⟨_Hstate, _Hout, %hread⟩
-  ipureintro
-  exact ⟨output, hsp, by rw [← hlen]; exact hread⟩
+  ipureexact ⟨output, hsp, by rw [← hlen]; exact hread⟩
 
 theorem mergesort_partiallyMeets
     (source temporary : UInt32) (input scratch : List UInt32)

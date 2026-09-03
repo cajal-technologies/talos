@@ -143,8 +143,7 @@ theorem writeTransfer
           store.wasm.mem.pages * 65536⌝ $$ [Hstate Hbytes]
   · imod stateInterp_pointsToBytes_agree store ns obs nt pointer bytes $$
         [$Hstate $Hbytes] with %hfacts
-    ipureintro
-    exact hfacts
+    ipureexact hfacts
   have hbound : pointer.toNat + length.toNat ≤
       store.wasm.mem.pages * 65536 := by
     rw [hlength]
@@ -228,8 +227,7 @@ theorem readTransfer
           store.wasm.mem.pages * 65536⌝ $$ [Hstate Hbuffer]
   · imod stateInterp_pointsToBytes_agree store ns obs nt pointer buffer $$
         [$Hstate $Hbuffer] with %hfacts
-    ipureintro
-    exact hfacts
+    ipureexact hfacts
   have hbufferBound : pointer.toNat + buffer.length ≤
       store.wasm.mem.pages * 65536 :=
     pointsToBytes_facts_bound hfacts hpos hnowrap

@@ -354,8 +354,7 @@ theorem absDiff_smallStep_partiallyMeets_of_store
           [.i64 (if a < b then b - a else a - b)]⌝) := by
       intro result
       iintro ⟨%hresult, _Hglobal, _Hscratch⟩
-      ipureintro
-      exact hresult
+      ipureexact hresult
     simp only [absDiffBodyConfig]
     iapply wp_mono hpost
     have hwp := absDiff_smallStep_wp

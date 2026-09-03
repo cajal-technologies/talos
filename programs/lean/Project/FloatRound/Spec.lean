@@ -981,8 +981,7 @@ theorem roundCheck_tail_result_smallStep_wp
   wasm_wp_pures [wp_localGet]
   wasm_wp_return_value
   iclear HR Hglobal Hresult
-  ipureintro
-  exact ⟨result, rfl⟩
+  ipureexact ⟨result, rfl⟩
 
 theorem roundCheck_comparison_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -1869,8 +1868,7 @@ theorem twp_roundCheck_tail_result_smallStep_wp
   wasm_twp_terminal_value twp_returnFromFunction
   iintro %store %obs _Hstate
   iclear HR Hglobal Hresult
-  ipureintro
-  exact ⟨result, rfl⟩
+  ipureexact ⟨result, rfl⟩
 
 theorem twp_roundCheck_comparison_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}

@@ -670,8 +670,7 @@ theorem tagTableOwn_agree [gs : WasmTagTableGS α]
   unfold tagTableOwn
   iintro ⟨Hactual, Hexpected⟩
   icombine Hactual Hexpected gives %Hvalid
-  ipureintro
-  exact congrArg DiscreteO.car (toAgree_op_valid_iff_eq.mp Hvalid)
+  ipureexact congrArg DiscreteO.car (toAgree_op_valid_iff_eq.mp Hvalid)
 
 def runtimeModuleElem {α : Type} [gs : WasmRuntimeModuleGS α]
     (id : Nat) (m : Module) : IProp (WasmHeapGF α) :=
@@ -717,8 +716,7 @@ theorem runtimeInstancesOwn_agree {α : Type} [gs : WasmRuntimeInstancesGS α]
   unfold runtimeInstancesOwn
   iintro ⟨Hactual, Hexpected⟩
   icombine Hactual Hexpected gives %Hvalid
-  ipureintro
-  exact congrArg DiscreteO.car (toAgree_op_valid_iff_eq.mp Hvalid)
+  ipureexact congrArg DiscreteO.car (toAgree_op_valid_iff_eq.mp Hvalid)
 
 /-- Persistent knowledge of the host environment for a given instance. -/
 def hostEnvOwn {α : Type} [gs : WasmHostEnvGS α] (instanceId : Nat) (env : HostEnv α) :
@@ -760,8 +758,7 @@ theorem hostStateOwn_agree {α : Type} [gs : WasmHostStateGS α]
   unfold hostStateAuth hostStateOwn
   iintro ⟨Hauth, Hfrag⟩
   icombine Hauth Hfrag gives %Hvalid
-  ipureintro
-  exact congrArg DiscreteO.car (ExclAuth.agree (A := DiscreteO α) Hvalid)
+  ipureexact congrArg DiscreteO.car (ExclAuth.agree (A := DiscreteO α) Hvalid)
 
 theorem hostStateOwn_update {α : Type} [gs : WasmHostStateGS α]
     (old new' : α) :
@@ -798,8 +795,7 @@ theorem heapFrontierOwn_agree {α : Type} [gs : WasmHeapDomainGS α]
   unfold heapFrontierAuth heapFrontierOwn
   iintro ⟨Hauth, Hfrag⟩
   icombine Hauth Hfrag gives %Hvalid
-  ipureintro
-  exact congrArg DiscreteO.car
+  ipureexact congrArg DiscreteO.car
     (ExclAuth.agree (A := DiscreteO Nat) Hvalid)
 
 theorem heapFrontierOwn_update {α : Type} [gs : WasmHeapDomainGS α]
@@ -852,8 +848,7 @@ theorem memoryPagesOwn_agree {α : Type} [gs : WasmMemoryPagesGS α]
   unfold memoryPagesAuth memoryPagesOwn
   iintro ⟨Hauth, Hsnapshot⟩
   icombine Hauth Hsnapshot gives %Hvalid
-  ipureintro
-  exact (MonoNat.both_valid
+  ipureexact (MonoNat.both_valid
     (MaxNat.ofNat actual) (MaxNat.ofNat expected)).mp Hvalid
 
 /-- Obtain an exact persistent snapshot from the page-count authority. -/
@@ -980,8 +975,7 @@ theorem currentInstanceOwnN_agree {α : Type} [gs : WasmInstanceGS α]
   unfold currentInstanceAuthN currentInstanceOwnN
   iintro ⟨Hauth, Hfrag⟩
   icombine Hauth Hfrag gives %Hvalid
-  ipureintro
-  exact congrArg DiscreteO.car (ExclAuth.agree (A := DiscreteO Nat) Hvalid)
+  ipureexact congrArg DiscreteO.car (ExclAuth.agree (A := DiscreteO Nat) Hvalid)
 
 theorem currentInstanceOwnN_update {α : Type} [gs : WasmInstanceGS α]
     (old new' : Nat) :
@@ -1006,8 +1000,7 @@ theorem currentInstanceOwnN_update_of_any {α : Type} [gs : WasmInstanceGS α]
   iintro ⟨Hauth, Hfrag⟩
   ihave %heq : ⌜actual = expected⌝ $$ [Hauth Hfrag]
   · icombine Hauth Hfrag gives %Hvalid
-    ipureintro
-    exact congrArg DiscreteO.car (ExclAuth.agree (A := DiscreteO Nat) Hvalid)
+    ipureexact congrArg DiscreteO.car (ExclAuth.agree (A := DiscreteO Nat) Hvalid)
   imod iOwn_update_op (E := gs.instanceElem)
       (ExclAuth.update (A := DiscreteO Nat)
         (a := (⟨actual⟩ : DiscreteO Nat))

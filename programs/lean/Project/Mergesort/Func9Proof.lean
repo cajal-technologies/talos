@@ -154,8 +154,7 @@ private theorem twp_func9_zero_and_return
       (List.replicate layout.size 0) $$ [Htoken Hslice]
   · unfold LiveBlock
     iframe
-    ipureintro
-    exact ⟨by simp, hblockFacts.2⟩
+    ipureexact ⟨by simp, hblockFacts.2⟩
   wasm_twp_pures [twp_exitControl]
   simp only [List.take_zero, List.nil_append]
   wasm_twp_pures [twp_localGet]
@@ -561,8 +560,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
       iframe Hcursor' Hfrontier Hauth Hretired
       iexists ownedPages
       iframe Hpages
-      ipureintro
-      exact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat, hwf,
+      ipureexact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat, hwf,
         hfrontierPhysical⟩
     iapply twp_func9_oom size
         ((UInt32.ofNat frontier + 3) &&& (-(4 : UInt32))) finish
@@ -721,8 +719,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
                 [Hcursor Hfrontier Hauth Hretired HoldPages]
             · unfold BumpHeap
               iframe
-              ipureintro
-              exact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat,
+              ipureexact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat,
                 hwf, hfrontierPhysical⟩
             ihave Hruntime : RuntimeContext $$ [Hmodule Henv]
             · unfold RuntimeContext
@@ -748,8 +745,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
                   [Hcursor Hfrontier Hauth Hretired HoldPages]
               · unfold BumpHeap
                 iframe
-                ipureintro
-                exact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat,
+                ipureexact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat,
                   hwf, hfrontierPhysical⟩
               ihave Hruntime : RuntimeContext $$ [Hmodule Henv]
               · unfold RuntimeContext

@@ -71,16 +71,14 @@ private theorem growSource_live_lookup
     iframe Hcursor Hfrontier Hauth Hretired
     iexists ownedPages
     iframe Hpages
-    ipureintro
-    exact hheap
+    ipureexact hheap
   isplitl [Htoken Hbytes]
   · unfold GrowSourceOwn LiveBlock
     isplitr
     · ipureintro
       exact hsource
     · iframe Htoken Hbytes
-      ipureintro
-      exact hblock
+      ipureexact hblock
   · ipureintro
     exact hlookup
 
@@ -105,8 +103,7 @@ private theorem growSource_reserveHistory
       isplitl_exact Hbump
       isplitl []
       · unfold GrowSourceOwn
-        ipureintro
-        exact hsource
+        ipureexact hsource
       · ipureintro
         intro newPtr newLayout
         rcases hsource with ⟨rfl, rfl, rfl⟩
@@ -522,8 +519,7 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
             (growResultBytes newPtr newCapacity) $$ [HresultBytes]
         · unfold Representations.ByteSlice growResultBytes
           iframe HresultBytes
-          ipureintro
-          exact hresultNowrap
+          ipureexact hresultNowrap
         have hheadTake : shadow.take 4 = headBytes := by
           rw [hshadow.1]
           simp [hshadow.2.1]

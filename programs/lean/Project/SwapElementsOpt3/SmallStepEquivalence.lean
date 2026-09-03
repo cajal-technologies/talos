@@ -180,8 +180,7 @@ theorem opt3_func0_distinct_store_partiallyMeets
       imod Wasm.SmallStep.stateInterp_pointsTo_u64_facts
         store 0 [] 0 addressJ oldA hj1 hj2 hj3 hj4 hj5 hj6 hj7 $$
           [$Hstate $HB] with %HfactsJ
-      ipureintro
-      exact ⟨hvalues, HfactsI.1, HfactsJ.1⟩
+      ipureexact ⟨hvalues, HfactsI.1, HfactsJ.1⟩
     iclear Hglobals Hruntime
     iapply wp_mono hpost
     simp only [opt3ConfigFromStore]

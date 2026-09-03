@@ -87,8 +87,7 @@ private theorem incrTransfer (n : Nat) [WasmSmallStepGS .hasLC Nat]
       elementSegmentσ, runtimeModuleσ, hostEnvσ
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep
       HruntimeInstances HinstanceAuth HhostEnvAuth Hauth' Hexc
-    ipureintro
-    exact Hfacts
+    ipureexact Hfacts
 
 -- read: observe host state = initial+3, return pure fact about results
 private theorem readTransfer (initial : Nat) [WasmSmallStepGS .hasLC Nat]
