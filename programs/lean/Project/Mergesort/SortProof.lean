@@ -2509,8 +2509,7 @@ theorem twp_sort_base
   iapply twp_ltU (result := 1) (by simp [hlt])
   iapply twp_brIf (by decide) (by rfl)
   simp only [List.drop_zero, List.take_nil, List.nil_append]
-  iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
-  iintro Hruntime
+  wasm_twp_return_from_call Hruntime
   simp only [List.take_zero, List.nil_append]
   iapply Hcont $$ Hruntime
 
@@ -2915,8 +2914,7 @@ theorem twp_sort
       wasm_twp_pures [twp_exitControl]
       isimp [sortBlock4Frame, emptyBlockFrame, sortBlock4, sortBlock3,
         sortBlock2, sortBlock1, blockBodyAt, Project.Mergesort.func2]
-      iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
-      iintro Hruntime
+      wasm_twp_return_from_call Hruntime
       ihave Hdone := Hfinish $$ %output %output %hsortedOutput
         %houtputLength
         %(by simp [show ¬combined.length ≤ 1 by omega])

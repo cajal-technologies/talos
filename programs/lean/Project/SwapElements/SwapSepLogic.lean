@@ -794,8 +794,7 @@ theorem func2_in_func1_context_smallStep_wp
   · iexact Hresources
   · inext
     iintro Hresources
-    wasm_wp_next Wasm.SmallStep.wp_returnFromCallExplicit' $$ Hruntime
-    iintro Hruntime
+    wasm_wp_return_from_call Hruntime
     simp only [List.take, List.nil_append]
     iapply hreturn
     iframe
@@ -845,8 +844,7 @@ theorem func2Alias_in_func1_context_smallStep_wp
   · iexact Hresources
   · inext
     iintro Hresources
-    wasm_wp_next Wasm.SmallStep.wp_returnFromCallExplicit' $$ Hruntime
-    iintro Hruntime
+    wasm_wp_return_from_call Hruntime
     simp only [List.take, List.nil_append]
     iapply hreturn
     iframe
@@ -1021,8 +1019,7 @@ theorem func0_happy_context_smallStep_wp
   iapply func1_happy_context_smallStep_wp R
     ptr len i j oldScratch oldA oldB hi hj hroomI hroomJ _
   · iintro ⟨HR, Hruntime, Hmem⟩
-    wasm_wp_next Wasm.SmallStep.wp_returnFromCallExplicit' $$ Hruntime
-    iintro Hruntime
+    wasm_wp_return_from_call Hruntime
     simp only [List.take, List.nil_append]
     iapply hreturn
     iframe
@@ -1068,8 +1065,7 @@ theorem func0_alias_context_smallStep_wp
   iapply func1_alias_context_smallStep_wp R
     ptr len i oldScratch oldValue hi hroom _
   · iintro ⟨HR, Hruntime, Hmem⟩
-    wasm_wp_next Wasm.SmallStep.wp_returnFromCallExplicit' $$ Hruntime
-    iintro Hruntime
+    wasm_wp_return_from_call Hruntime
     simp only [List.take, List.nil_append]
     iapply hreturn
     iframe
@@ -1286,8 +1282,7 @@ theorem func4_happy_smallStep_wp
     oldSpillPtr oldSpillLen ptr len _
   · iintro ⟨Hrest, HspillPtr, HspillLen⟩
     icases Hrest with ⟨Hruntime, Hglobal, Hscratch, HA, HB⟩
-    wasm_wp_next Wasm.SmallStep.wp_returnFromCallExplicit' $$ Hruntime
-    iintro Hruntime
+    wasm_wp_return_from_call Hruntime
     simp only [List.take, List.nil_append]
     wasm_wp_pures [wp_localGet]
     ihave HlenLater :
@@ -1395,8 +1390,7 @@ theorem func4_alias_smallStep_wp
     oldSpillPtr oldSpillLen ptr len _
   · iintro ⟨Hrest, HspillPtr, HspillLen⟩
     icases Hrest with ⟨Hruntime, Hglobal, Hscratch, Hcell⟩
-    wasm_wp_next Wasm.SmallStep.wp_returnFromCallExplicit' $$ Hruntime
-    iintro Hruntime
+    wasm_wp_return_from_call Hruntime
     simp only [List.take, List.nil_append]
     wasm_wp_pures [wp_localGet]
     ihave HlenLater :
@@ -1578,8 +1572,7 @@ theorem twp_func2_in_func1_context_smallStep_wp
   isplitl [Hresources]
   · iexact Hresources
   · iintro Hresources
-    iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
-    iintro Hruntime
+    wasm_twp_return_from_call Hruntime
     simp only [List.take, List.nil_append]
     iapply hreturn
     iframe
@@ -1625,8 +1618,7 @@ theorem twp_func2Alias_in_func1_context_smallStep_wp
   isplitl [Hresources]
   · iexact Hresources
   · iintro Hresources
-    iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
-    iintro Hruntime
+    wasm_twp_return_from_call Hruntime
     simp only [List.take, List.nil_append]
     iapply hreturn
     iframe
@@ -1793,8 +1785,7 @@ theorem twp_func0_happy_context_smallStep_wp
   iapply twp_func1_happy_context_smallStep_wp R
     ptr len i j oldScratch oldA oldB hi hj hroomI hroomJ _
   · iintro ⟨HR, Hruntime, Hmem⟩
-    iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
-    iintro Hruntime
+    wasm_twp_return_from_call Hruntime
     simp only [List.take, List.nil_append]
     iapply hreturn
     iframe
@@ -1839,8 +1830,7 @@ theorem twp_func0_alias_context_smallStep_wp
   iapply twp_func1_alias_context_smallStep_wp R
     ptr len i oldScratch oldValue hi hroom _
   · iintro ⟨HR, Hruntime, Hmem⟩
-    iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
-    iintro Hruntime
+    wasm_twp_return_from_call Hruntime
     simp only [List.take, List.nil_append]
     iapply hreturn
     iframe
@@ -2044,8 +2034,7 @@ theorem twp_func4_happy_smallStep_wp
     oldSpillPtr oldSpillLen ptr len _
   · iintro ⟨Hrest, HspillPtr, HspillLen⟩
     icases Hrest with ⟨Hruntime, Hglobal, Hscratch, HA, HB⟩
-    iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
-    iintro Hruntime
+    wasm_twp_return_from_call Hruntime
     simp only [List.take, List.nil_append]
     wasm_twp_pures [twp_localGet]
     ihave HspillLen' :
@@ -2076,8 +2065,7 @@ theorem twp_func4_happy_smallStep_wp
       ptr len i j oldScratch oldA oldB hi hj hroomI hroomJ _
     · iintro ⟨⟨HspillPtr, HspillLen⟩,
         Hruntime, Hglobal, Hscratch, HA, HB⟩
-      iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
-      iintro Hruntime
+      wasm_twp_return_from_call Hruntime
       simp only [List.take, List.nil_append]
       wasm_twp_pures [twp_localGet twp_const twp_add]
       iapply Wasm.SmallStep.twp_globalSet $$ Hglobal
@@ -2145,8 +2133,7 @@ theorem twp_func4_alias_smallStep_wp
     oldSpillPtr oldSpillLen ptr len _
   · iintro ⟨Hrest, HspillPtr, HspillLen⟩
     icases Hrest with ⟨Hruntime, Hglobal, Hscratch, Hcell⟩
-    iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
-    iintro Hruntime
+    wasm_twp_return_from_call Hruntime
     simp only [List.take, List.nil_append]
     wasm_twp_pures [twp_localGet]
     ihave HspillLen' :
@@ -2177,8 +2164,7 @@ theorem twp_func4_alias_smallStep_wp
       ptr len i oldScratch oldValue hi hroom _
     · iintro ⟨⟨HspillPtr, HspillLen⟩,
         Hruntime, Hglobal, Hscratch, Hcell⟩
-      iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
-      iintro Hruntime
+      wasm_twp_return_from_call Hruntime
       simp only [List.take, List.nil_append]
       wasm_twp_pures [twp_localGet twp_const twp_add]
       iapply Wasm.SmallStep.twp_globalSet $$ Hglobal

@@ -671,6 +671,14 @@ theorem twp_returnFromCallExplicit
       · iexact HruntimeElem
       · iexact HinstanceOwn
 
+/-- Return totally from a callee and bind the restored runtime ownership. -/
+macro "wasm_twp_return_from_call " runtime:ident : tactic => do
+  let spec ← `(specPat| $runtime:ident)
+  let intro ← `(introPat| $runtime:ident)
+  `(tactic|
+    (iapply twp_returnFromCallExplicit $$ $spec
+     iintro $intro))
+
 theorem twp_memorySize
     {params localValues values : List Value}
     {code : Program} {arity : Nat} {remainder : List Value}

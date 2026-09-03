@@ -508,8 +508,7 @@ theorem func4_correct [WasmSmallStepGS hlc Universal.State] :
   iintro Hmodule
   simp [Project.Mergesort.func4Def, Project.Mergesort.func4,
     Function.toLocals, Function.numParams]
-  iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hmodule
-  iintro Hmodule
+  wasm_twp_return_from_call Hmodule
   simp only [List.take_zero, List.nil_append]
   isimp only [RuntimeContext, ResumeWP, resumeExpr, List.nil_append] at Hcont
   iapply Hcont $$ [Hmodule Henv]

@@ -453,8 +453,7 @@ theorem twp_partition
   isplitl [Harray]
   · iexact Harray
   iintro %output %pivotIdx %tmp %hrange Harray
-  iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
-  iintro Hruntime
+  wasm_twp_return_from_call Hruntime
   simp only [partitionLocals, List.take_succ_cons, List.take_zero, List.singleton_append]
   iapply Hcont $$ %output %pivotIdx Hruntime %hrange Harray
 
@@ -515,8 +514,7 @@ private theorem twp_quicksortBody_aux
     simp only [if_pos (by decide : (0 : UInt32) < 2)]
     wasm_twp_pures [twp_iff]
     simp only [if_pos (by decide : (1 : UInt32) ≠ 0)]
-    iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
-    iintro Hruntime
+    wasm_twp_return_from_call Hruntime
     simp only [List.take_zero, List.nil_append]
     have hpure0 : input.length = input.length ∧ input.take hi = input.take hi ∧
         input.drop hi = input.drop hi ∧ Sorted (segment input hi hi) ∧
@@ -555,8 +553,7 @@ private theorem twp_quicksortBody_aux
       simp only [if_pos h_lt_u32]
       wasm_twp_pures [twp_iff]
       simp only [if_pos (by decide : (1 : UInt32) ≠ 0)]
-      iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
-      iintro Hruntime
+      wasm_twp_return_from_call Hruntime
       simp only [List.take_zero, List.nil_append]
       have hpure_base : input.length = input.length ∧ input.take lo = input.take lo ∧
           input.drop hi = input.drop hi ∧ Sorted (segment input lo hi) ∧
@@ -587,8 +584,7 @@ private theorem twp_quicksortBody_aux
       · iexact Harray
       iintro %output_p %pivotIdx %tmp %hpart Harray_p
       obtain ⟨hlo, hphi, hhilen_p, hlen_p, htake_p, hdrop_p, hperm_p, hleft_p, hright_p⟩ := hpart
-      iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime_p
-      iintro Hruntime_p
+      wasm_twp_return_from_call Hruntime_p
       simp only [partitionLocals, List.take_succ_cons, List.take_zero, List.singleton_append]
       have hset_piv :
           (⟨[.i32 arr, .i32 (UInt32.ofNat lo), .i32 (UInt32.ofNat hi)], [.i32 0],
@@ -629,8 +625,7 @@ private theorem twp_quicksortBody_aux
       · iexact Harray_l
       iintro %out_r Hruntime_r %hpure_r Harray_r
       obtain ⟨hlen_r, htake_r, hdrop_r, hsorted_r, hperm_r⟩ := hpure_r
-      iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime_r
-      iintro Hruntime_r
+      wasm_twp_return_from_call Hruntime_r
       simp only [List.take_zero, List.nil_append]
       have hpart_final : PartitionRange input out_r lo hi pivotIdx :=
         partitionRange_after_sorts

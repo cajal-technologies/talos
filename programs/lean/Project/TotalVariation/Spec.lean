@@ -63,8 +63,7 @@ theorem total_variation_correct : TotalVariationSpec := by
     iapply absDiff_smallStep_wp_to_return
       (runtimeModuleOwn ⟨0⟩ «module») _ 1048576 a b 0 (by decide) (by decide)
     · iintro ⟨Hruntime, Hglobal, Hscratch⟩
-      wasm_wp_next wp_returnFromCallExplicit' $$ Hruntime
-      iintro Hruntime
+      wasm_wp_return_from_call Hruntime
       wasm_wp_pures [wp_localGet wp_localGet]
       simp only [List.take, UInt32.reduceSub, UInt32.reduceAdd]
       wasm_wp_next wp_call «module» 0 func0Def (by simp [«module»]) (by simp [«module»]) $$

@@ -758,16 +758,14 @@ theorem twp_check
     (runtimeModuleOwn ⟨0⟩ «module») x _
     (fun word heq => by
       iintro ⟨Hruntime, Hglobal, Hword⟩
-      iapply twp_returnFromCallExplicit $$ Hruntime
-      iintro Hruntime
+      wasm_twp_return_from_call Hruntime
       wasm_twp_pures [twp_localGet]
       iapply twp_call «module» 1 func1Def
         (by simp [«module»]) (by simp [«module»]) $$ Hruntime
       iintro Hruntime
       simp [func1Def, Function.toLocals, Function.numParams]
       iapply twp_func1_body x _
-      iapply twp_returnFromCallExplicit $$ Hruntime
-      iintro Hruntime
+      wasm_twp_return_from_call Hruntime
       simp only [List.take, List.singleton_append]
       rw [heq]
       iapply twp_ne (result := 0) (by simp)
@@ -825,16 +823,14 @@ theorem check_smallStep (x : UInt32) :
       (runtimeModuleOwn ⟨0⟩ «module») x _
       (fun word heq => by
         iintro ⟨Hruntime, Hglobal, Hword⟩
-        wasm_wp_next wp_returnFromCallExplicit' $$ Hruntime
-        iintro Hruntime
+        wasm_wp_return_from_call Hruntime
         wasm_wp_pures [wp_localGet]
         wasm_wp_next wp_call «module» 1 func1Def
           (by simp [«module»]) (by simp [«module»]) $$ Hruntime
         iintro Hruntime
         simp [func1Def, Function.toLocals, Function.numParams]
         wasm_wp_next func1_body_smallStep_wp x _
-        wasm_wp_next wp_returnFromCallExplicit' $$ Hruntime
-        iintro Hruntime
+        wasm_wp_return_from_call Hruntime
         simp only [List.take, List.singleton_append]
         rw [heq]
         wasm_wp_next wp_ne (result := 0) (by simp)

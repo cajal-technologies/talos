@@ -1244,6 +1244,14 @@ theorem wp_returnFromCallExplicit'
       · iexact HruntimeElem
       · iexact HinstanceOwn
 
+/-- Return from a callee and bind the restored runtime-module ownership. -/
+macro "wasm_wp_return_from_call " runtime:ident : tactic => do
+  let spec ← `(specPat| $runtime:ident)
+  let intro ← `(introPat| $runtime:ident)
+  `(tactic|
+    (wasm_wp_next wp_returnFromCallExplicit' $$ $spec
+     iintro $intro))
+
 /-- Resume a suspended caller after an explicit callee return. -/
 theorem wp_returnFromCallExplicit
     {calleeLocals callerLocals : Locals}
