@@ -965,12 +965,8 @@ theorem roundCheck_comparison_smallStep_wp
           (by decide) (by decide) (by decide) (by decide) with HresultLater => Hresult
         wasm_wp_pures [wp_exitControl]
         simp only [roundCheckOuterFrame, List.take, List.nil_append]
-        have hResultProp :
-            pointsTo_u32 0 ((1048560 : UInt32) + 12) 1 =
-              pointsTo_u32 0 1048572 1 :=
-          congrArg (fun address => pointsTo_u32 0 address 1) (by decide)
         ihave HresultExact : pointsTo_u32 0 1048572 1 $$ [Hresult]
-        · irw_exact [← hResultProp] with Hresult
+        · irw_exact [← show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
         iapply_frame hone naive (f32Nearest x)
       · have heqFalse : f32Eq naive (f32Nearest x) = false := by
           cases h : f32Eq naive (f32Nearest x) <;> simp_all
@@ -1755,12 +1751,8 @@ theorem twp_roundCheck_comparison_smallStep_wp
           (by decide) (by decide) (by decide) (by decide) with Hresult' => Hresult
         wasm_twp_pures [twp_exitControl]
         simp only [roundCheckOuterFrame, List.take, List.nil_append]
-        have hResultProp :
-            pointsTo_u32 0 ((1048560 : UInt32) + 12) 1 =
-              pointsTo_u32 0 1048572 1 :=
-          congrArg (fun address => pointsTo_u32 0 address 1) (by decide)
         ihave HresultExact : pointsTo_u32 0 1048572 1 $$ [Hresult]
-        · irw_exact [← hResultProp] with Hresult
+        · irw_exact [← show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
         iapply_frame hone naive (f32Nearest x)
       · have heqFalse : f32Eq naive (f32Nearest x) = false := by
           cases h : f32Eq naive (f32Nearest x) <;> simp_all

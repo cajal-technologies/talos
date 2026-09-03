@@ -1773,12 +1773,8 @@ theorem checkCopysign_comparison_smallStep_wp
           (by decide) (by decide) (by decide) (by decide) with HresultLater => Hresult
         wasm_wp_pures [wp_exitControl]
         simp only [checkCopysignOuterFrame, List.take, List.nil_append]
-        have hResultProp :
-            pointsTo_u32 0 ((1048560 : UInt32) + 12) 1 =
-              pointsTo_u32 0 1048572 1 :=
-          congrArg (fun address => pointsTo_u32 0 address 1) (by decide)
         ihave HresultExact : pointsTo_u32 0 1048572 1 $$ [Hresult]
-        · irw_exact [← hResultProp] with Hresult
+        · irw_exact [← show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
         iapply_frame hone
       · have heqFalse :
             f32Eq (f32Copysign x y) (func4Result x y) = false := by
@@ -1967,13 +1963,8 @@ theorem twp_func1_lowered_body_smallStep_wp
   wasm_twp_pures [twp_localGet]
   wasm_twp_rebind twp_f32Load (f32Abs x)
     (by decide) (by decide) (by decide) (by decide) with Hword'
-  have hWordProp :
-      pointsTo_u32 0 ((1048544 : UInt32) + 12) (f32Abs x) =
-        pointsTo_u32 0 1048556 (f32Abs x) :=
-    congrArg (fun address => pointsTo_u32 0 address (f32Abs x)) (by decide)
   ihave HwordExact : pointsTo_u32 0 1048556 (f32Abs x) $$ [Hword']
-  · rw [← hWordProp]
-    iexact Hword'
+  · irw_exact [← show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword'
   iapply_frame hreturn
 
 theorem twp_func0_lowered_smallStep_wp
@@ -2045,13 +2036,8 @@ theorem twp_func3_lowered_body_smallStep_wp
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) (by decide) $$ Hword'
   iintro Hword'
-  have hWordProp :
-      pointsTo_u64 0 ((1048544 : UInt32) + 8) (f64Abs x) =
-        pointsTo_u64 0 1048552 (f64Abs x) :=
-    congrArg (fun address => pointsTo_u64 0 address (f64Abs x)) (by decide)
   ihave HwordExact : pointsTo_u64 0 1048552 (f64Abs x) $$ [Hword']
-  · rw [← hWordProp]
-    iexact Hword'
+  · irw_exact [← show (1048544 : UInt32) + 8 = 1048552 by decide] with Hword'
   iapply_frame hreturn
 
 theorem twp_func2_lowered_smallStep_wp
@@ -2124,13 +2110,8 @@ theorem twp_func8_lowered_body_smallStep_wp
   wasm_twp_pures [twp_localGet]
   wasm_twp_rebind twp_f32Load (f32Copysign x y)
     (by decide) (by decide) (by decide) (by decide) with Hword'
-  have hWordProp :
-      pointsTo_u32 0 ((1048544 : UInt32) + 12) (f32Copysign x y) =
-        pointsTo_u32 0 1048556 (f32Copysign x y) :=
-    congrArg (fun address => pointsTo_u32 0 address (f32Copysign x y)) (by decide)
   ihave HwordExact : pointsTo_u32 0 1048556 (f32Copysign x y) $$ [Hword']
-  · rw [← hWordProp]
-    iexact Hword'
+  · irw_exact [← show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword'
   iapply_frame hreturn
 
 theorem twp_func7_lowered_smallStep_wp
@@ -2271,13 +2252,8 @@ theorem twp_checkAbs_tail_smallStep_wp
   rw [show (16 : UInt32) + 1048560 = 1048576 by decide]
   wasm_twp_rebind twp_globalSet with Hglobal
   wasm_twp_pures [twp_localGet]
-  have hResultProp :
-      pointsTo_u32 0 ((1048560 : UInt32) + 12) result =
-        pointsTo_u32 0 1048572 result :=
-    congrArg (fun address => pointsTo_u32 0 address result) (by decide)
   ihave HresultExact : pointsTo_u32 0 1048572 result $$ [Hresult']
-  · rw [← hResultProp]
-    iexact Hresult'
+  · irw_exact [← show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult'
   iapply_frame hreturn
 
 theorem twp_checkAbs_zeroPath_smallStep_wp
@@ -2306,13 +2282,8 @@ theorem twp_checkAbs_zeroPath_smallStep_wp
     (by decide) (by decide) (by decide) (by decide) with Hresult'
   wasm_twp_pures [twp_exitControl]
   simp only [checkAbsOuterFrame, List.take, List.nil_append]
-  have hResultProp :
-      pointsTo_u32 0 ((1048560 : UInt32) + 12) 0 =
-        pointsTo_u32 0 1048572 0 :=
-    congrArg (fun address => pointsTo_u32 0 address 0) (by decide)
   ihave HresultExact : pointsTo_u32 0 1048572 0 $$ [Hresult']
-  · rw [← hResultProp]
-    iexact Hresult'
+  · irw_exact [← show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult'
   iapply_frame hcontinue
 
 theorem twp_checkAbs_onePath_smallStep_wp
@@ -2341,13 +2312,8 @@ theorem twp_checkAbs_onePath_smallStep_wp
     (by decide) (by decide) (by decide) (by decide) with Hresult'
   wasm_twp_pures [twp_br]
   simp only [checkAbsOuterFrame, List.take, List.nil_append]
-  have hResultProp :
-      pointsTo_u32 0 ((1048560 : UInt32) + 12) 1 =
-        pointsTo_u32 0 1048572 1 :=
-    congrArg (fun address => pointsTo_u32 0 address 1) (by decide)
   ihave HresultExact : pointsTo_u32 0 1048572 1 $$ [Hresult']
-  · rw [← hResultProp]
-    iexact Hresult'
+  · irw_exact [← show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult'
   iapply_frame hcontinue
 
 theorem twp_checkAbs_secondComparison_smallStep_wp
@@ -2789,13 +2755,8 @@ theorem twp_checkCopysign_comparison_smallStep_wp
           (by decide) (by decide) (by decide) (by decide) with Hresult'
         wasm_twp_pures [twp_exitControl]
         simp only [checkCopysignOuterFrame, List.take, List.nil_append]
-        have hResultProp :
-            pointsTo_u32 0 ((1048560 : UInt32) + 12) 1 =
-              pointsTo_u32 0 1048572 1 :=
-          congrArg (fun address => pointsTo_u32 0 address 1) (by decide)
         ihave HresultExact : pointsTo_u32 0 1048572 1 $$ [Hresult']
-        · rw [← hResultProp]
-          iexact Hresult'
+        · irw_exact [← show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult'
         iapply_frame hone
       · have heqFalse :
             f32Eq (f32Copysign x y) (func4Result x y) = false := by
@@ -2811,13 +2772,8 @@ theorem twp_checkCopysign_comparison_smallStep_wp
           (by decide) (by decide) (by decide) (by decide) with Hresult'
         wasm_twp_pures [twp_br]
         simp only [checkCopysignOuterFrame, List.take, List.nil_append]
-        have hResultProp :
-            pointsTo_u32 0 ((1048560 : UInt32) + 12) 0 =
-              pointsTo_u32 0 1048572 0 :=
-          congrArg (fun address => pointsTo_u32 0 address 0) (by decide)
         ihave HresultExact : pointsTo_u32 0 1048572 0 $$ [Hresult']
-        · rw [← hResultProp]
-          iexact Hresult'
+        · irw_exact [← show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult'
         iapply_frame hzero
     · iframe
   · iframe
