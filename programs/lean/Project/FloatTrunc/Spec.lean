@@ -530,8 +530,7 @@ theorem twp_func0_tail_to_ret
       pointsTo_u32 0 ((1048560 : UInt32) + 12) word $$ [Hword]
   · rw [heffective]
     iexact Hword
-  iapply twp_load32 word (by decide) (by decide) (by decide) (by decide) $$ Hword'
-  iintro Hword
+  wasm_twp_bind twp_load32 word (by decide) (by decide) (by decide) (by decide) with Hword' => Hword
   iapply Hcont
   isplitl_exact HR
   · rw [heffective]
@@ -561,8 +560,8 @@ theorem twp_func0_store32
       pointsTo_u32 0 ((1048560 : UInt32) + 12) oldWord $$ [Hword]
   · rw [heffective]
     iexact Hword
-  iapply twp_store32 oldWord (by decide) (by decide) (by decide) (by decide) $$ Hword'
-  iintro Hword
+  wasm_twp_bind twp_store32 oldWord (by decide) (by decide) (by decide) (by decide)
+    with Hword' => Hword
   iapply Hcont
   rw [heffective]
   iexact Hword

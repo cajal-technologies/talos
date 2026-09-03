@@ -568,15 +568,13 @@ theorem twp_swapElementsFunc3
       pointsTo_u32 0 ((1048568 : UInt32) + 4) oldLen $$ [Hlen]
   · rw [show (1048568 : UInt32) + 4 = 1048572 from rfl]
     iexact Hlen
-  iapply twp_store32 oldLen rfl rfl rfl rfl $$ Hlen'
-  iintro Hlen
+  wasm_twp_bind twp_store32 oldLen rfl rfl rfl rfl with Hlen' => Hlen
   wasm_twp_pures [twp_localGet twp_localGet]
   ihave Hptr' :
       pointsTo_u32 0 ((1048568 : UInt32) + 0) oldPtr $$ [Hptr]
   · rw [UInt32.add_zero]
     iexact Hptr
-  iapply twp_store32 oldPtr rfl rfl rfl rfl $$ Hptr'
-  iintro Hptr
+  wasm_twp_bind twp_store32 oldPtr rfl rfl rfl rfl with Hptr' => Hptr
   iapply twp_returnFromFunction
   simp only [List.take, List.nil_append]
   iapply twp.value rfl
@@ -1873,15 +1871,13 @@ theorem twp_func3_context_smallStep_wp
       pointsTo_u32 0 ((1048568 : UInt32) + 4) oldLen $$ [Hlen]
   · rw [show (1048568 : UInt32) + 4 = 1048572 from rfl]
     iexact Hlen
-  iapply Wasm.SmallStep.twp_store32 oldLen rfl rfl rfl rfl $$ Hlen'
-  iintro Hlen
+  wasm_twp_bind Wasm.SmallStep.twp_store32 oldLen rfl rfl rfl rfl with Hlen' => Hlen
   wasm_twp_pures [twp_localGet twp_localGet]
   ihave Hptr' :
       pointsTo_u32 0 ((1048568 : UInt32) + 0) oldPtr $$ [Hptr]
   · rw [UInt32.add_zero]
     iexact Hptr
-  iapply Wasm.SmallStep.twp_store32 oldPtr rfl rfl rfl rfl $$ Hptr'
-  iintro Hptr
+  wasm_twp_bind Wasm.SmallStep.twp_store32 oldPtr rfl rfl rfl rfl with Hptr' => Hptr
   iapply hreturn
   rw [UInt32.add_zero,
     ← show (1048568 : UInt32) + 4 = 1048572 from rfl]

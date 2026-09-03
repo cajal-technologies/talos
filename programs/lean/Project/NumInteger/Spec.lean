@@ -7188,8 +7188,7 @@ theorem twp_func0_resumeCaller_smallStep_wp
   subst returned
   simp only [func0CallerFrame]
   iintro ⟨Hruntime, Hresources⟩
-  iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
-  iintro Hruntime'
+  wasm_twp_bind Wasm.SmallStep.twp_returnFromCallExplicit with Hruntime => Hruntime'
   simp only [func0CallLocals, func0AfterCallProg,
     List.take, List.append_nil]
   icombine Hresources Hruntime' as Hresources
@@ -7528,8 +7527,7 @@ theorem twp_func2_smallStep_wp
     shiftXY shiftX shiftY nextY nextX
   · iintro ⟨Hruntime, Hpost⟩
     simp only [func2CallerFrame]
-    iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
-    iintro Hruntime'
+    wasm_twp_bind Wasm.SmallStep.twp_returnFromCallExplicit with Hruntime => Hruntime'
     simp only [List.take, List.append_nil]
     iapply Wasm.SmallStep.twp_returnFromFunction
     simp only [List.take, List.append_nil]

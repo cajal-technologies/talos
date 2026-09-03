@@ -130,15 +130,19 @@ macro "wasm_twp_terminal_value " step:pmTerm : tactic =>
     (iapply $step
      iapply twp.value rfl))
 
-/-- Apply a total lifting rule with one resource and bind the returned
-resource under the same name. -/
-macro "wasm_twp_rebind " rule:term " with " resource:ident : tactic => do
-  let spec ← `(specPat| $resource:ident)
-  let intro ← `(introPat| $resource:ident)
+/-- Apply a total lifting rule with one resource and bind the returned resource
+under a chosen name. -/
+macro "wasm_twp_bind " rule:term " with " input:ident " => " output:ident : tactic => do
+  let spec ← `(specPat| $input:ident)
+  let intro ← `(introPat| $output:ident)
   let applied ← `(pmTerm| $rule:term $$ $spec)
   `(tactic|
     (iapply $applied
      iintro $intro))
+
+/-- Apply a total lifting rule and rebind its resource under the same name. -/
+macro "wasm_twp_rebind " rule:term " with " resource:ident : tactic =>
+  `(tactic| wasm_twp_bind $rule with $resource => $resource)
 
 /-! ## Generating total pure rules
 
