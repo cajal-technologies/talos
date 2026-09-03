@@ -317,8 +317,7 @@ theorem copyWords_guard_wp
   by_cases hlt : i < n
   · iapply Wasm.SmallStep.wp_ltU (result := 1) (by simp [hlt])
     inext
-    iapply Wasm.SmallStep.wp_brIf (by decide) (by rfl)
-    inext
+    wasm_wp_next Wasm.SmallStep.wp_brIf (by decide) (by rfl)
     simp only [List.drop_zero, List.take_nil, List.nil_append]
     iapply hbody hlt
     iexact HP
@@ -521,8 +520,7 @@ theorem copyWords_loop_wp
         Wasm.SmallStep.Expr α) @ s; E {{ Φ }} := by
   iintro Hresources
   simp only [List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.wp_loop
-  inext
+  wasm_wp_next Wasm.SmallStep.wp_loop
   have hframe :
       ({ kind := .loop
          paramArity := 0

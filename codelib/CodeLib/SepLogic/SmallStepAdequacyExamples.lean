@@ -94,8 +94,7 @@ theorem globalGet_adequate :
     iintro Hglobal
     simp only [globalGetAdequacyConfig]
     simp only [← globalPointsToAt_eq]
-    iapply wp_globalGet $$ Hglobal
-    inext
+    wasm_wp_next wp_globalGet $$ Hglobal
     iintro Hglobal
     wasm_wp_finish_value
     ipureintro
@@ -131,8 +130,7 @@ theorem noopCall_adequate :
     iintro Hruntime
     simp only [noopCallModule, Function.toLocals, Function.numParams,
       List.take_nil, List.reverse_nil, List.drop_nil, List.length_nil]
-    iapply wp_returnFromCallExplicit $$ Hruntime
-    inext
+    wasm_wp_next wp_returnFromCallExplicit $$ Hruntime
     wasm_wp_return_value
     ipureintro
     rfl
@@ -1494,11 +1492,9 @@ theorem tableSetGet_store_partiallyMeets :
       exact ⟨hvalues, by simpa [listSetAt] using Hphysical⟩
     iapply wp_mono hpost
     wasm_wp_pures [wp_const]
-    iapply wp_pureStep _ _ _ (fun _ => Step.refFunc)
-    inext
+    wasm_wp_next wp_pureStep _ _ _ (fun _ => Step.refFunc)
     simp only [← tablePointsToAt_eq]
-    iapply wp_tableSet rfl (by decide) $$ Htable
-    inext
+    wasm_wp_next wp_tableSet rfl (by decide) $$ Htable
     iintro Htable
     wasm_wp_pures [wp_const]
     iapply wp_tableGet (value := .funcref (some 1))
@@ -1509,8 +1505,7 @@ theorem tableSetGet_store_partiallyMeets :
     iapply wp_frame_l
     isplitl [Htable]
     · iexact Htable
-    iapply wp_refIsNull rfl
-    inext
+    wasm_wp_next wp_refIsNull rfl
     wasm_wp_finish_value
     ipureintro
     rfl
@@ -1611,8 +1606,7 @@ theorem tableGrowFill_store_partiallyMeets :
     iapply wp_mono hpost
     simp only [← tablePointsToAt_eq]
     wasm_wp_pures [wp_const]
-    iapply wp_pureStep _ _ _ (fun _ => Step.refFunc)
-    inext
+    wasm_wp_next wp_pureStep _ _ _ (fun _ => Step.refFunc)
     wasm_wp_pures [wp_const]
     iapply wp_tableFill
       (tableIndex := 0) (destination := .i32 0) (length := .i32 3)
@@ -1632,8 +1626,7 @@ theorem tableGrowFill_store_partiallyMeets :
     iapply wp_frame_l
     isplitl [Htable]
     · iexact Htable
-    iapply wp_refIsNull rfl
-    inext
+    wasm_wp_next wp_refIsNull rfl
     wasm_wp_finish_value
     ipureintro
     rfl
@@ -1721,8 +1714,7 @@ theorem tableGrow64Failure_store_partiallyMeets :
         [$Htable $HruntimeOwn]
     inext
     iintro Htable HruntimeOwn
-    iapply wp_pureStep _ _ _ (fun _ => Step.drop)
-    inext
+    wasm_wp_next wp_pureStep _ _ _ (fun _ => Step.drop)
     iapply wp_tableGrow64Failure tableGrow64FailureAdequacyModule ⟨0⟩
       (tableIndex := 0)
       (table :=
@@ -2250,8 +2242,7 @@ theorem tableInitDrop_store_partiallyMeets :
       rfl (by decide) (by decide) $$ Hresources
     inext
     iintro Htable Helement Hruntime
-    iapply wp_elemDrop $$ Helement
-    inext
+    wasm_wp_next wp_elemDrop $$ Helement
     iintro Helement
     iapply wp_mono (fun _ => sep_pair_pure_rotate _ _ _)
     iapply wp_frame_l

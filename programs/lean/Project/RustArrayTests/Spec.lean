@@ -90,14 +90,12 @@ theorem empty_plus_three_correct : EmptyPlusThreeSpec := by
     iintro Hruntime
     simp [func3Def, Function.toLocals, Function.numParams, func3]
     wasm_wp_pures [wp_localGet wp_const]
-    iapply SmallStep.wp_eq (result := isEmptyValue len) (by rfl)
-    inext
+    wasm_wp_next SmallStep.wp_eq (result := isEmptyValue len) (by rfl)
     wasm_wp_pures [wp_const wp_and]
     rw [show isEmptyValue len &&& 1 = isEmptyValue len by
       unfold isEmptyValue
       by_cases h : len = 0 <;> simp [h]]
-    iapply SmallStep.wp_returnFromCallExplicit $$ Hruntime
-    inext
+    wasm_wp_next SmallStep.wp_returnFromCallExplicit $$ Hruntime
     simp only [List.take, List.singleton_append]
     wasm_wp_pures [wp_const wp_and]
     rw [show isEmptyValue len &&& 1 = isEmptyValue len by
@@ -130,22 +128,19 @@ theorem empty_xor_flag_correct : EmptyXorFlagSpec := by
     iintro Hruntime
     simp [func3Def, Function.toLocals, Function.numParams, func3]
     wasm_wp_pures [wp_localGet wp_const]
-    iapply SmallStep.wp_eq (result := isEmptyValue len) (by rfl)
-    inext
+    wasm_wp_next SmallStep.wp_eq (result := isEmptyValue len) (by rfl)
     wasm_wp_pures [wp_const wp_and]
     rw [show isEmptyValue len &&& 1 = isEmptyValue len by
       unfold isEmptyValue
       by_cases h : len = 0 <;> simp [h]]
-    iapply SmallStep.wp_returnFromCallExplicit $$ Hruntime
-    inext
+    wasm_wp_next SmallStep.wp_returnFromCallExplicit $$ Hruntime
     simp only [List.take, List.singleton_append]
     wasm_wp_pures [wp_const wp_and]
     rw [show isEmptyValue len &&& 1 = isEmptyValue len by
       unfold isEmptyValue
       by_cases h : len = 0 <;> simp [h]]
     wasm_wp_pures [wp_localGet]
-    iapply SmallStep.wp_xor
-    inext
+    wasm_wp_next SmallStep.wp_xor
     wasm_wp_return_value
     ipureintro
     rfl
@@ -200,8 +195,7 @@ theorem len_plus_one_export_correct : LenPlusOneExportSpec := by
     simp [func1Def, Function.toLocals, Function.numParams, func1]
     wasm_wp_pures [wp_localGet wp_const wp_add]
     rw [UInt32.add_comm 1 len]
-    iapply SmallStep.wp_returnFromCallExplicit $$ Hruntime
-    inext
+    wasm_wp_next SmallStep.wp_returnFromCallExplicit $$ Hruntime
     simp only [List.take, List.singleton_append]
     wasm_wp_return_value
     ipureintro
@@ -247,8 +241,7 @@ theorem len_plus_arg_export_correct : LenPlusArgExportSpec := by
     simp [func0Def, Function.toLocals, Function.numParams, func0]
     wasm_wp_pures [wp_localGet wp_localGet wp_add]
     rw [UInt32.add_comm n len]
-    iapply SmallStep.wp_returnFromCallExplicit $$ Hruntime
-    inext
+    wasm_wp_next SmallStep.wp_returnFromCallExplicit $$ Hruntime
     simp only [List.take, List.singleton_append]
     wasm_wp_return_value
     ipureintro
@@ -298,14 +291,12 @@ theorem empty_plus_three_export_correct : EmptyPlusThreeExportSpec := by
     iintro Hruntime
     simp [func3Def, Function.toLocals, Function.numParams, func3]
     wasm_wp_pures [wp_localGet wp_const]
-    iapply SmallStep.wp_eq (result := isEmptyValue len) (by rfl)
-    inext
+    wasm_wp_next SmallStep.wp_eq (result := isEmptyValue len) (by rfl)
     wasm_wp_pures [wp_const wp_and]
     rw [show isEmptyValue len &&& 1 = isEmptyValue len by
       unfold isEmptyValue
       by_cases h : len = 0 <;> simp [h]]
-    iapply SmallStep.wp_returnFromCallExplicit' $$ Hruntime
-    inext
+    wasm_wp_next SmallStep.wp_returnFromCallExplicit' $$ Hruntime
     iintro Hruntime
     simp only [List.take, List.singleton_append]
     wasm_wp_pures [wp_const wp_and]
@@ -314,8 +305,7 @@ theorem empty_plus_three_export_correct : EmptyPlusThreeExportSpec := by
       by_cases h : len = 0 <;> simp [h]]
     wasm_wp_pures [wp_const wp_add]
     rw [UInt32.add_comm 3 (isEmptyValue len)]
-    iapply SmallStep.wp_returnFromCallExplicit $$ Hruntime
-    inext
+    wasm_wp_next SmallStep.wp_returnFromCallExplicit $$ Hruntime
     simp only [List.take, List.singleton_append]
     wasm_wp_return_value
     ipureintro
@@ -366,14 +356,12 @@ theorem empty_xor_flag_export_correct : EmptyXorFlagExportSpec := by
     iintro Hruntime
     simp [func3Def, Function.toLocals, Function.numParams, func3]
     wasm_wp_pures [wp_localGet wp_const]
-    iapply SmallStep.wp_eq (result := isEmptyValue len) (by rfl)
-    inext
+    wasm_wp_next SmallStep.wp_eq (result := isEmptyValue len) (by rfl)
     wasm_wp_pures [wp_const wp_and]
     rw [show isEmptyValue len &&& 1 = isEmptyValue len by
       unfold isEmptyValue
       by_cases h : len = 0 <;> simp [h]]
-    iapply SmallStep.wp_returnFromCallExplicit' $$ Hruntime
-    inext
+    wasm_wp_next SmallStep.wp_returnFromCallExplicit' $$ Hruntime
     iintro Hruntime
     simp only [List.take, List.singleton_append]
     wasm_wp_pures [wp_const wp_and]
@@ -381,10 +369,8 @@ theorem empty_xor_flag_export_correct : EmptyXorFlagExportSpec := by
       unfold isEmptyValue
       by_cases h : len = 0 <;> simp [h]]
     wasm_wp_pures [wp_localGet]
-    iapply SmallStep.wp_xor
-    inext
-    iapply SmallStep.wp_returnFromCallExplicit $$ Hruntime
-    inext
+    wasm_wp_next SmallStep.wp_xor
+    wasm_wp_next SmallStep.wp_returnFromCallExplicit $$ Hruntime
     simp only [List.take, List.singleton_append]
     wasm_wp_return_value
     ipureintro

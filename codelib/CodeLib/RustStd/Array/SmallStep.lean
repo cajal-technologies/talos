@@ -166,8 +166,7 @@ theorem wp_loadFatPtr
         Wasm.SmallStep.Expr α) @ s; E {{ Φ }} := by
   obtain ⟨hp1, hp2, hp3, hp4, hp5, hp6, hp7⟩ := fatPtrArithmetic hroom
   iintro >Hdata >Hlen Hwp
-  iapply Wasm.SmallStep.wp_localGet hget
-  inext
+  wasm_wp_next Wasm.SmallStep.wp_localGet hget
   ihave HdataLater : ▷ pointsTo_u32 0 (p + 0) dataPtr $$ [Hdata]
   · inext
     simp only [UInt32.add_zero]
@@ -181,8 +180,7 @@ theorem wp_loadFatPtr
       (⟨params, localValues, .i32 dataPtr :: values⟩ : Locals).get index =
         some (.i32 p) := by
     simpa [Locals.get] using hget
-  iapply Wasm.SmallStep.wp_localGet hget'
-  inext
+  wasm_wp_next Wasm.SmallStep.wp_localGet hget'
   ihave HlenLater : ▷ pointsTo_u32 0 (p + 4) len $$ [Hlen]
   · inext
     iexact Hlen

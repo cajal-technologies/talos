@@ -200,8 +200,7 @@ theorem importChain_partiallyMeets (v : UInt32) (initial : List UInt32) :
             simp only [List.take_nil, List.length_cons, List.length_nil, Nat.zero_add,
                        List.drop_succ_cons, List.drop_zero, List.nil_append]
             iclear Hhost2
-            iapply wp_returnFromFunction
-            inext
+            wasm_wp_next wp_returnFromFunction
             simp only [List.append_nil]
             iapply wp_value'
             ipureintro

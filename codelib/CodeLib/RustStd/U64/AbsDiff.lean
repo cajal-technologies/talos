@@ -91,8 +91,7 @@ theorem absDiff_smallStep_wp_to_return
     UInt32.addSteps8 ((sp - 16) + 8) (by omega)
   iintro ⟨HR, Hglobal, Hscratch⟩
   simp only [absDiffBody]
-  iapply Wasm.SmallStep.wp_globalGet $$ Hglobal
-  inext
+  wasm_wp_next Wasm.SmallStep.wp_globalGet $$ Hglobal
   iintro Hglobal
   wasm_wp_pures [wp_const wp_sub wp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
@@ -103,8 +102,7 @@ theorem absDiff_smallStep_wp_to_return
     inext
     wasm_wp_pures [wp_const wp_and]
     rw [show (1 &&& 1 : UInt32) = 1 by decide]
-    iapply Wasm.SmallStep.wp_brIf (by decide) rfl
-    inext
+    wasm_wp_next Wasm.SmallStep.wp_brIf (by decide) rfl
     simp only [List.take_nil, List.drop_nil, List.nil_append]
     wasm_wp_pures [wp_localGet wp_localGet wp_localGet wp_subI64]
     ihave HscratchLater :

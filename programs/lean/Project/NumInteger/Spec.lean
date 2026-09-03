@@ -240,8 +240,7 @@ theorem func1_spillPrefix_smallStep_wp
         Wasm.SmallStep.Expr Unit) @ s; E {{ Φ }} := by
   iintro ⟨HR, Hglobal, HouterA, HouterB, Hx, Hy⟩
   simp only [func1, func1InitialLocals]
-  iapply Wasm.SmallStep.wp_globalGet $$ Hglobal
-  inext
+  wasm_wp_next Wasm.SmallStep.wp_globalGet $$ Hglobal
   iintro Hglobal
   wasm_wp_pures [wp_const wp_sub]
   rw [show (1048560 : UInt32) - 48 = 1048512 by decide]
@@ -411,12 +410,10 @@ theorem func1_leftZero_core_smallStep_wp_to_return
   inext
   iintro Hx
   wasm_wp_pures [wp_constI64]
-  iapply Wasm.SmallStep.wp_eqI64 (result := 1) (by decide)
-  inext
+  wasm_wp_next Wasm.SmallStep.wp_eqI64 (result := 1) (by decide)
   wasm_wp_pures [wp_const wp_and]
   rw [show (1 &&& 1 : UInt32) = 1 by decide]
-  iapply Wasm.SmallStep.wp_brIf (by decide) rfl
-  inext
+  wasm_wp_next Wasm.SmallStep.wp_brIf (by decide) rfl
   simp only [List.take_nil, List.drop_nil, List.nil_append]
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HxLater : ▷ pointsTo_u64 0 (1048512 + 8) 0 $$ [Hx]
@@ -514,8 +511,7 @@ theorem func1_leftZero_core_smallStep_wp
   iintro Hresources
   iapply func1_leftZero_core_smallStep_wp_to_return R [] result b
   · iintro Hresources
-    iapply Wasm.SmallStep.wp_returnFromFunction
-    inext
+    wasm_wp_next Wasm.SmallStep.wp_returnFromFunction
     simp only [List.take, List.append_nil]
     iapply wp_value'
     isplit
@@ -640,8 +636,7 @@ theorem func1_rightZero_core_smallStep_wp_to_return
   inext
   iintro Hx
   wasm_wp_pures [wp_constI64]
-  iapply Wasm.SmallStep.wp_eqI64 (result := 0) (by simp [ha])
-  inext
+  wasm_wp_next Wasm.SmallStep.wp_eqI64 (result := 0) (by simp [ha])
   wasm_wp_pures [wp_const wp_and]
   rw [show (0 &&& 1 : UInt32) = 0 by decide]
   wasm_wp_pures [wp_brIfZero wp_localGet]
@@ -659,12 +654,10 @@ theorem func1_rightZero_core_smallStep_wp_to_return
   inext
   iintro Hy
   wasm_wp_pures [wp_constI64]
-  iapply Wasm.SmallStep.wp_eqI64 (result := 1) (by decide)
-  inext
+  wasm_wp_next Wasm.SmallStep.wp_eqI64 (result := 1) (by decide)
   wasm_wp_pures [wp_const wp_and]
   rw [show (1 &&& 1 : UInt32) = 1 by decide]
-  iapply Wasm.SmallStep.wp_eqz (result := 0) (by decide)
-  inext
+  wasm_wp_next Wasm.SmallStep.wp_eqz (result := 0) (by decide)
   wasm_wp_pures [wp_brIfZero wp_exitControl]
   simp only [List.take_nil, List.drop_nil, List.nil_append]
   wasm_wp_pures [wp_localGet wp_localGet]
@@ -758,8 +751,7 @@ theorem func1_rightZero_core_smallStep_wp
   iintro Hresources
   iapply func1_rightZero_core_smallStep_wp_to_return R [] result a ha
   · iintro Hresources
-    iapply Wasm.SmallStep.wp_returnFromFunction
-    inext
+    wasm_wp_next Wasm.SmallStep.wp_returnFromFunction
     simp only [List.take]
     iapply wp_value'
     isplit
@@ -1696,8 +1688,7 @@ theorem func1_equalBlock_smallStep_wp
       (by decide) (by decide) (by decide) $$ HyLater
   inext
   iintro Hy
-  iapply Wasm.SmallStep.wp_neI64 (result := 0) (by simp)
-  inext
+  wasm_wp_next Wasm.SmallStep.wp_neI64 (result := 0) (by simp)
   wasm_wp_pures [wp_const wp_and]
   rw [show (0 : UInt32) &&& 1 = 0 by decide]
   wasm_wp_pures [wp_brIfZero]
@@ -2355,12 +2346,10 @@ theorem func1_loopEqualityDispatch_smallStep_wp
         (by decide) (by decide) (by decide) $$ HyLater
     inext
     iintro Hy
-    iapply Wasm.SmallStep.wp_neI64 (result := 1) (by simp [hxy])
-    inext
+    wasm_wp_next Wasm.SmallStep.wp_neI64 (result := 1) (by simp [hxy])
     wasm_wp_pures [wp_const wp_and]
     rw [show (1 : UInt32) &&& 1 = 1 by decide]
-    iapply Wasm.SmallStep.wp_brIf (by decide) rfl
-    inext
+    wasm_wp_next Wasm.SmallStep.wp_brIf (by decide) rfl
     simp only [func1EqualityFrame, List.take_nil, List.nil_append]
     rw [show
       [.i32 1048512, .i32 (sharedShiftWord a b), .i32 (operandShiftWord a),
@@ -2492,12 +2481,10 @@ theorem func1_loopDecreaseDispatch_smallStep_wp
       rw [hto] at hz
       have hnat := UInt64.lt_iff_toNat_lt.mp hlt
       omega
-    iapply Wasm.SmallStep.wp_gtUI64 (result := 1) (by simp [hlt])
-    inext
+    wasm_wp_next Wasm.SmallStep.wp_gtUI64 (result := 1) (by simp [hlt])
     wasm_wp_pures [wp_const wp_and]
     rw [show (1 : UInt32) &&& 1 = 1 by decide]
-    iapply Wasm.SmallStep.wp_brIf (by decide) rfl
-    inext
+    wasm_wp_next Wasm.SmallStep.wp_brIf (by decide) rfl
     simp only [func1DecreaseYFrame, List.take_nil, List.nil_append]
     rw [show
       [.i32 1048512, .i32 (sharedShiftWord a b), .i32 (operandShiftWord a),
@@ -2530,8 +2517,7 @@ theorem func1_loopDecreaseDispatch_smallStep_wp
       rw [hto] at hz
       have hnat := UInt64.lt_iff_toNat_lt.mp hxylt
       omega
-    iapply Wasm.SmallStep.wp_gtUI64 (result := 0) (by simp [hlt])
-    inext
+    wasm_wp_next Wasm.SmallStep.wp_gtUI64 (result := 0) (by simp [hlt])
     wasm_wp_pures [wp_const wp_and]
     rw [show (0 : UInt32) &&& 1 = 0 by decide]
     wasm_wp_pures [wp_brIfZero]
@@ -2863,8 +2849,7 @@ theorem func1_loopEntry_smallStep_wp
       UInt64.shr_ctz_toNat_odd b hb
   iintro ⟨HR, Hx, Hy, Hresult, HshiftX, HshiftY⟩
   simp only [func1LoopEntryProg]
-  iapply Wasm.SmallStep.wp_loop
-  inext
+  wasm_wp_next Wasm.SmallStep.wp_loop
   simp only [List.drop_zero]
   rw [show
     ({ kind := .loop
@@ -3014,8 +2999,7 @@ theorem func1_nonzeroGuards_smallStep_wp
   inext
   iintro Hx
   wasm_wp_pures [wp_constI64]
-  iapply Wasm.SmallStep.wp_eqI64 (result := 0) (by simp [ha])
-  inext
+  wasm_wp_next Wasm.SmallStep.wp_eqI64 (result := 0) (by simp [ha])
   wasm_wp_pures [wp_const wp_and]
   rw [show (0 &&& 1 : UInt32) = 0 by decide]
   wasm_wp_pures [wp_brIfZero wp_localGet]
@@ -3029,14 +3013,11 @@ theorem func1_nonzeroGuards_smallStep_wp
   inext
   iintro Hy
   wasm_wp_pures [wp_constI64]
-  iapply Wasm.SmallStep.wp_eqI64 (result := 0) (by simp [hb])
-  inext
+  wasm_wp_next Wasm.SmallStep.wp_eqI64 (result := 0) (by simp [hb])
   wasm_wp_pures [wp_const wp_and]
   rw [show (0 &&& 1 : UInt32) = 0 by decide]
-  iapply Wasm.SmallStep.wp_eqz (result := 1) (by decide)
-  inext
-  iapply Wasm.SmallStep.wp_brIf (by decide) rfl
-  inext
+  wasm_wp_next Wasm.SmallStep.wp_eqz (result := 1) (by decide)
+  wasm_wp_next Wasm.SmallStep.wp_brIf (by decide) rfl
   simp only [List.take_nil, List.nil_append]
   have hXProp :
       pointsTo_u64 0 ((1048512 : UInt32) + 8) a =
@@ -3150,8 +3131,7 @@ theorem func1_nonzeroFinish_smallStep_wp
   iapply func1_nonzeroFinish_smallStep_wp_to_return
     R outerBody [] a b g d6 d8 shiftX shiftY d7 d9 hgcd
   · iintro Hresources
-    iapply Wasm.SmallStep.wp_returnFromFunction
-    inext
+    wasm_wp_next Wasm.SmallStep.wp_returnFromFunction
     simp only [List.take]
     iapply wp_value'
     isplit
@@ -3620,8 +3600,7 @@ theorem func0_callPrefix_smallStep_wp
         Wasm.SmallStep.Expr Unit) @ s; E {{ Φ }} := by
   iintro ⟨HR, Hglobal, HouterA, HouterB⟩
   simp only [func0, func0InitialLocals]
-  iapply Wasm.SmallStep.wp_globalGet $$ Hglobal
-  inext
+  wasm_wp_next Wasm.SmallStep.wp_globalGet $$ Hglobal
   iintro Hglobal
   wasm_wp_pures [wp_const wp_sub]
   rw [show (1048576 : UInt32) - 16 = 1048560 by decide]
@@ -3629,8 +3608,7 @@ theorem func0_callPrefix_smallStep_wp
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
   wasm_wp_pures [wp_localGet]
-  iapply Wasm.SmallStep.wp_globalSet $$ Hglobal
-  inext
+  wasm_wp_next Wasm.SmallStep.wp_globalSet $$ Hglobal
   iintro Hglobal
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HouterALater :
@@ -3705,8 +3683,7 @@ theorem func0_afterCall_smallStep_wp_to_return
     List.set]
   wasm_wp_pures [wp_localGet wp_const wp_add]
   rw [show (16 : UInt32) + 1048560 = 1048576 from rfl]
-  iapply Wasm.SmallStep.wp_globalSet $$ Hglobal
-  inext
+  wasm_wp_next Wasm.SmallStep.wp_globalSet $$ Hglobal
   iintro Hglobal
   wasm_wp_pures [wp_localGet]
   iapply hreturn
@@ -3730,8 +3707,7 @@ theorem func0_afterCall_smallStep_wp
   iintro Hresources
   iapply func0_afterCall_smallStep_wp_to_return R [] a b
   · iintro Hresources
-    iapply Wasm.SmallStep.wp_returnFromFunction
-    inext
+    wasm_wp_next Wasm.SmallStep.wp_returnFromFunction
     simp only [List.take]
     iapply wp_value'
     isplit
@@ -3935,8 +3911,7 @@ theorem func0_resumeCaller_smallStep_wp
   subst returned
   simp only [func0CallerFrame]
   iintro ⟨Hruntime, Hresources⟩
-  iapply Wasm.SmallStep.wp_returnFromCallExplicit' $$ Hruntime
-  inext
+  wasm_wp_next Wasm.SmallStep.wp_returnFromCallExplicit' $$ Hruntime
   iintro Hruntime'
   simp only [func0CallLocals, func0AfterCallProg,
     List.take, List.append_nil]
@@ -4179,8 +4154,7 @@ theorem func0_smallStep_wp
           ⟨HR'', Hruntime'', HshiftXY'', HshiftX'', HshiftY'',
             HnextY'', HnextX''⟩
         simp only [func0CallerFrame]
-        iapply Wasm.SmallStep.wp_returnFromCallExplicit $$ Hruntime''
-        inext
+        wasm_wp_next Wasm.SmallStep.wp_returnFromCallExplicit $$ Hruntime''
         simp [func0CallLocals, func0AfterCallProg]
         iapply func0_afterCall_frame_smallStep_wp
           (R := R)
@@ -4203,8 +4177,7 @@ theorem func0_smallStep_wp
             ⟨HR'', Hruntime'', HshiftXY'', HshiftX'', HshiftY'',
               HnextY'', HnextX''⟩
           simp only [func0CallerFrame]
-          iapply Wasm.SmallStep.wp_returnFromCallExplicit $$ Hruntime''
-          inext
+          wasm_wp_next Wasm.SmallStep.wp_returnFromCallExplicit $$ Hruntime''
           simp [func0CallLocals, func0AfterCallProg]
           iapply func0_afterCall_frame_smallStep_wp
             (R := R)
@@ -4227,8 +4200,7 @@ theorem func0_smallStep_wp
             ⟨HRruntime, Hglobal'', HouterA'', HouterB''⟩
           icases HRruntime with ⟨HR'', Hruntime''⟩
           simp only [func0CallerFrame]
-          iapply Wasm.SmallStep.wp_returnFromCallExplicit $$ Hruntime''
-          inext
+          wasm_wp_next Wasm.SmallStep.wp_returnFromCallExplicit $$ Hruntime''
           simp only [func0CallLocals, func0AfterCallProg,
             List.take, List.append_nil]
           iapply func0_afterCall_frame_smallStep_wp
@@ -4296,11 +4268,9 @@ theorem func2_smallStep_wp
     shiftXY shiftX shiftY nextY nextX
   · iintro ⟨Hruntime, Hpost⟩
     simp only [func2CallerFrame]
-    iapply Wasm.SmallStep.wp_returnFromCallExplicit $$ Hruntime
-    inext
+    wasm_wp_next Wasm.SmallStep.wp_returnFromCallExplicit $$ Hruntime
     simp only [List.take, List.append_nil]
-    iapply Wasm.SmallStep.wp_returnFromFunction
-    inext
+    wasm_wp_next Wasm.SmallStep.wp_returnFromFunction
     simp only [List.take, List.append_nil]
     iapply wp_value'
     iexact Hpost

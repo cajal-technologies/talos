@@ -22,8 +22,7 @@ theorem isEmpty_chunk :
   · simp only [isEmptyValue, hlen, if_true]
     iintro Hwp
     wasm_wp_pures [wp_const]
-    iapply Wasm.SmallStep.wp_eq (result := 1) (by simp)
-    inext
+    wasm_wp_next Wasm.SmallStep.wp_eq (result := 1) (by simp)
     wasm_wp_pures [wp_const]
     iapply Wasm.SmallStep.wp_and
     rw [show (1 &&& 1 : UInt32) = 1 by decide]
@@ -32,8 +31,7 @@ theorem isEmpty_chunk :
   · simp only [isEmptyValue, hlen, if_false]
     iintro Hwp
     wasm_wp_pures [wp_const]
-    iapply Wasm.SmallStep.wp_eq (result := 0) (by simp [hlen])
-    inext
+    wasm_wp_next Wasm.SmallStep.wp_eq (result := 0) (by simp [hlen])
     wasm_wp_pures [wp_const]
     iapply Wasm.SmallStep.wp_and
     rw [show (0 &&& 1 : UInt32) = 0 by decide]

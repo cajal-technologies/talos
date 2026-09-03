@@ -136,8 +136,7 @@ theorem sharedMem_partiallyMeets (v : UInt8) :
       · inext
         rw [UInt32.add_zero]
         iexact Hpt
-      iapply wp_store8 (0 : UInt8) rfl $$ HptLater
-      inext
+      wasm_wp_next wp_store8 (0 : UInt8) rfl $$ HptLater
       iintro Hpt'
       -- return from writeFn to instanceR
       iapply wp_returnFromCallCrossInstance ⟨0⟩ instanceW instanceR #[instanceW, instanceR]
@@ -153,8 +152,7 @@ theorem sharedMem_partiallyMeets (v : UInt8) :
               ⟨0, 0 + 0⟩ (DFrac.own 1) (some v.toUInt32.toUInt8) $$ [Hpt']
         · inext
           iexact Hpt'
-        iapply wp_load8U v.toUInt32.toUInt8 rfl $$ HptLater2
-        inext
+        wasm_wp_next wp_load8U v.toUInt32.toUInt8 rfl $$ HptLater2
         iintro _Hpt_back
         wasm_wp_return_value
         ipureintro

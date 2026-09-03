@@ -70,10 +70,8 @@ theorem mod3_gcd_zero_smallStep (a b : UInt64) (hz : a = 0 ∨ b = 0) :
   by_cases ha : a = 0
   · subst a
     wasm_wp_pures [wp_localGet]
-    iapply wp_eqzI64 (result := 1) (by decide)
-    inext
-    iapply wp_brIf (by decide) rfl
-    inext
+    wasm_wp_next wp_eqzI64 (result := 1) (by decide)
+    wasm_wp_next wp_brIf (by decide) rfl
     simp only [List.take_nil, List.nil_append]
     wasm_wp_pures [wp_localGet]
     wasm_wp_finish_value
@@ -82,13 +80,10 @@ theorem mod3_gcd_zero_smallStep (a b : UInt64) (hz : a = 0 ∨ b = 0) :
   · have hb : b = 0 := hz.resolve_left ha
     subst b
     wasm_wp_pures [wp_localGet]
-    iapply wp_eqzI64 (result := 0) (by rw [if_neg ha])
-    inext
+    wasm_wp_next wp_eqzI64 (result := 0) (by rw [if_neg ha])
     wasm_wp_pures [wp_brIfZero wp_localGet]
-    iapply wp_eqzI64 (result := 1) (by decide)
-    inext
-    iapply wp_brIf (by decide) rfl
-    inext
+    wasm_wp_next wp_eqzI64 (result := 1) (by decide)
+    wasm_wp_next wp_brIf (by decide) rfl
     simp only [List.take_nil, List.drop_nil, List.nil_append]
     wasm_wp_pures [wp_localGet]
     wasm_wp_finish_value
@@ -196,8 +191,7 @@ theorem gcdLoopBody_smallStep_wp
   by_cases hgt : y < x
   · iapply wp_gtUI64 (result := 1) (by simp [hgt])
     inext
-    iapply wp_brIf (by decide) rfl
-    inext
+    wasm_wp_next wp_brIf (by decide) rfl
     simp only [List.take_nil, List.drop_nil, List.nil_append]
     wasm_wp_pures [wp_localGet wp_localGet wp_subI64 wp_localTee wp_localGet
       wp_ctzI64 wp_shrUI64 wp_localTee]
@@ -208,8 +202,7 @@ theorem gcdLoopBody_smallStep_wp
     by_cases hx'y : x' = y
     · change (x - y) >>> (UInt64.ofNat (ctz64 64 (x - y)) % 64) = y at hx'y
       wasm_wp_pures [wp_localGet]
-      iapply wp_neI64 (result := 0) (by simp [hx'y])
-      inext
+      wasm_wp_next wp_neI64 (result := 0) (by simp [hx'y])
       wasm_wp_pures [wp_brIfZero wp_exitControl]
       simp only [gcdLoopFrame, List.take_nil, List.nil_append]
       wasm_wp_pures [wp_localGet wp_localSet]
@@ -225,10 +218,8 @@ theorem gcdLoopBody_smallStep_wp
       itrivial
     · change (x - y) >>> (UInt64.ofNat (ctz64 64 (x - y)) % 64) ≠ y at hx'y
       wasm_wp_pures [wp_localGet]
-      iapply wp_neI64 (result := 1) (by simp [hx'y])
-      inext
-      iapply wp_brIf (by decide) rfl
-      inext
+      wasm_wp_next wp_neI64 (result := 1) (by simp [hx'y])
+      wasm_wp_next wp_brIf (by decide) rfl
       simp only [gcdLoopFrame, List.take_nil, List.nil_append]
       simp only [loopBody]
       ispecialize IH $$ %
@@ -257,10 +248,8 @@ theorem gcdLoopBody_smallStep_wp
       UInt64.stein_step_y x y hxne hyne hxodd hyodd hgt hxyne
     by_cases hxy' : x = y'
     · change x = (y - x) >>> (UInt64.ofNat (ctz64 64 (y - x)) % 64) at hxy'
-      iapply wp_eqI64 (result := 1) (by rw [if_pos hxy'])
-      inext
-      iapply wp_brIf (by decide) rfl
-      inext
+      wasm_wp_next wp_eqI64 (result := 1) (by rw [if_pos hxy'])
+      wasm_wp_next wp_brIf (by decide) rfl
       simp only [gcdInnerFrame, List.take_nil, List.nil_append]
       rw [← hxy']
       have hh : (y - x).toNat >>> (ctz64 64 (y - x) % 64) = x.toNat := by
@@ -271,8 +260,7 @@ theorem gcdLoopBody_smallStep_wp
         (hrecombine x hxGcd)
       itrivial
     · change x ≠ (y - x) >>> (UInt64.ofNat (ctz64 64 (y - x)) % 64) at hxy'
-      iapply wp_eqI64 (result := 0) (by rw [if_neg hxy'])
-      inext
+      wasm_wp_next wp_eqI64 (result := 0) (by rw [if_neg hxy'])
       wasm_wp_pures [wp_brIfZero wp_br]
       simp only [gcdLoopFrame, List.take_nil, List.nil_append]
       simp only [loopBody]
@@ -329,8 +317,7 @@ theorem gcdInner_smallStep_wp
   by_cases hab : ao = bo
   · iapply wp_eqI64 (result := 1) (by rw [if_pos hab])
     inext
-    iapply wp_brIf (by decide) rfl
-    inext
+    wasm_wp_next wp_brIf (by decide) rfl
     simp only [gcdInnerFrame, List.take_nil, List.nil_append]
     have haoGcd : ao.toNat = Nat.gcd ao.toNat bo.toNat := by
       rw [← hab, Nat.gcd_self]
@@ -340,8 +327,7 @@ theorem gcdInner_smallStep_wp
   · iapply wp_eqI64 (result := 0) (by rw [if_neg hab])
     inext
     wasm_wp_pures [wp_brIfZero]
-    iapply wp_loop
-    inext
+    wasm_wp_next wp_loop
     simp only [List.drop_nil]
     rw [show
       ({ kind := .loop
@@ -381,10 +367,8 @@ theorem mod3_gcd_smallStep (a b : UInt64) :
   wasm_wp_pures [wp_localGet]
   by_cases ha : a = 0
   · subst a
-    iapply wp_eqzI64 (result := 1) (by decide)
-    inext
-    iapply wp_brIf (by decide) rfl
-    inext
+    wasm_wp_next wp_eqzI64 (result := 1) (by decide)
+    wasm_wp_next wp_brIf (by decide) rfl
     simp only [List.take_nil, List.nil_append]
     wasm_wp_pures [wp_localGet]
     wasm_wp_finish_value
@@ -395,10 +379,8 @@ theorem mod3_gcd_smallStep (a b : UInt64) :
     wasm_wp_pures [wp_brIfZero wp_localGet]
     by_cases hb : b = 0
     · subst b
-      iapply wp_eqzI64 (result := 1) (by decide)
-      inext
-      iapply wp_brIf (by decide) rfl
-      inext
+      wasm_wp_next wp_eqzI64 (result := 1) (by decide)
+      wasm_wp_next wp_brIf (by decide) rfl
       simp only [List.take_nil, List.nil_append]
       wasm_wp_pures [wp_localGet]
       wasm_wp_finish_value
