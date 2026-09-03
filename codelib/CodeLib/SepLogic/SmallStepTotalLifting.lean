@@ -55,6 +55,14 @@ namespace Wasm.SmallStep
 open Iris Iris.ProgramLogic Language.Notation
 open Wasm.SepLogic
 
+set_option hygiene false in
+/-- Enter the total Iris lifting rule and name its physical-step context. -/
+macro "wasm_twp_begin" : tactic =>
+  `(tactic|
+    (iapply twp_lift_step_no_fork
+        (@TerminalView.running_not_val α Terminal view _)
+     iintro %store %ns %obs %nt Hσ))
+
 section terminalGeneric
 
 variable [WasmSmallStepGS hlc α]
@@ -81,8 +89,7 @@ theorem twp_pureStep
     WP (Expr.running next : Expr α) @ s; E [{ Φ }] ⊢
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   iintro Htwp
-  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
-  iintro %store %ns %obs %nt Hσ
+  wasm_twp_begin
   wasm_twp_step hstep store =>
     wasm_twp_frame
       iexact Htwp
@@ -97,8 +104,7 @@ theorem twp_finish
         ⟨{ locals with values }, [], arity, remainder, [], []⟩ :
           Expr α) @ s; E [{ Φ }] := by
   iintro Htwp
-  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
-  iintro %store %ns %obs %nt Hσ
+  wasm_twp_begin
   wasm_twp_step Step.finish =>
     wasm_twp_frame
       iexact Htwp
@@ -113,8 +119,7 @@ theorem twp_returnFromFunction
         ⟨locals, .ret :: code, arity, remainder, controls, []⟩ : Expr α) @
         s; E [{ Φ }] := by
   iintro Htwp
-  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
-  iintro %store %ns %obs %nt Hσ
+  wasm_twp_begin
   wasm_twp_step Step.returnFromFunction =>
     wasm_twp_frame
       iexact Htwp
@@ -544,8 +549,7 @@ theorem twp_call
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
   iintro Hruntime Htwp
-  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
-  iintro %store %ns %obs %nt Hσ
+  wasm_twp_begin
   ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$
       [Hσ Hruntime]
   · imod stateInterp_runtimeModule_agree store ns obs nt
@@ -664,8 +668,7 @@ theorem twp_callHost
     WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
   iintro HP Hruntime Henv HwpRet HwpTrap HwpThrow
-  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
-  iintro %store %ns %obs %nt Hσ
+  wasm_twp_begin
   ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$
       [Hσ Hruntime]
   · imod stateInterp_runtimeModule_agree store ns obs nt
@@ -752,8 +755,7 @@ theorem twp_returnFromCallFallthrough
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
   iintro Hruntime Hwp
-  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
-  iintro %store %ns %obs %nt Hσ
+  wasm_twp_begin
   simp only [runtimeModuleOwn]
   icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩
   ihave %Hentry : ⌜store.runtime.entry = returningInstance⌝ $$ [Hσ HinstanceOwn]
@@ -800,8 +802,7 @@ theorem twp_returnFromCallExplicit
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
   iintro Hruntime Hwp
-  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
-  iintro %store %ns %obs %nt Hσ
+  wasm_twp_begin
   simp only [runtimeModuleOwn]
   icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩
   ihave %Hentry : ⌜store.runtime.entry = returningInstance⌝ $$ [Hσ HinstanceOwn]
@@ -834,8 +835,7 @@ theorem twp_memorySize
         .memorySize :: code, arity, remainder, controls, calls⟩ : Expr α)
       @ s; E [{ Φ }] := by
   iintro Hruntime
-  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
-  iintro %store %ns %obs %nt Hσ
+  wasm_twp_begin
   ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$
       [Hσ Hruntime]
   · imod stateInterp_runtimeModule_agree store ns obs nt
@@ -870,8 +870,7 @@ theorem twp_memorySize_tracked
         .memorySize :: code, arity, remainder, controls, calls⟩ : Expr α)
       @ s; E [{ Φ }] := by
   iintro HP Hruntime
-  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
-  iintro %store %ns %obs %nt Hσ
+  wasm_twp_begin
   ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$
       [Hσ Hruntime]
   · imod stateInterp_runtimeModule_agree store ns obs nt
@@ -909,8 +908,7 @@ theorem twp_memoryGrow
         .memoryGrow :: code, arity, remainder, controls, calls⟩ : Expr α)
       @ s; E [{ Φ }] := by
   iintro Hruntime
-  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
-  iintro %store %ns %obs %nt Hσ
+  wasm_twp_begin
   cases hg : store.wasm.mem.grow delta
       (store.wasm.memoryCap store.runtime.currentModule 0) with
   | none =>
@@ -970,8 +968,7 @@ theorem twp_memoryGrow_tracked
         .memoryGrow :: code, arity, remainder, controls, calls⟩ : Expr α)
       @ s; E [{ Φ }] := by
   iintro HP Hruntime HmeasuredPages
-  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
-  iintro %store %ns %obs %nt Hσ
+  wasm_twp_begin
   ihave %hmeasuredPages : ⌜measuredPages ≤ store.wasm.mem.pages⌝ $$
       [Hσ HmeasuredPages]
   · imod (stateInterp_memoryPages_agree store ns obs nt measuredPages) $$
@@ -1037,8 +1034,7 @@ theorem twp_load32
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
   iintro Hword Htwp
-  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
-  iintro %store %ns %obs %nt Hσ
+  wasm_twp_begin
   ihave %Hfacts :
       ⌜store.wasm.mem.read32 (address + offset) = word ∧
         (address + offset).toNat + 4 ≤
@@ -1092,8 +1088,7 @@ theorem twp_store32
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
   iintro Hword Htwp
-  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
-  iintro %store %ns %obs %nt Hσ
+  wasm_twp_begin
   ihave %Hfacts :
       ⌜store.wasm.mem.read32 (address + offset) = oldWord ∧
         (address + offset).toNat + 4 ≤
@@ -1160,8 +1155,7 @@ theorem twp_memoryFill32
         .i32 len :: .i32 value :: .i32 destination :: values⟩,
         .memoryFill :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }] := by
   iintro Hbytes Htwp
-  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
-  iintro %store %ns %obs %nt Hσ
+  wasm_twp_begin
   ihave %Hpb : ⌜∀ i b, oldBytes[i]? = some b →
       store.wasm.mem.read8 (destination + UInt32.ofNat i) = b ∧
       (destination + UInt32.ofNat i).toNat < store.wasm.mem.pages * 65536⌝ $$
@@ -1215,8 +1209,7 @@ theorem twp_memoryCopy32
         .memoryCopy :: code, arity, remainder, controls, calls⟩ : Expr α)
       @ s; E [{ Φ }] := by
   iintro Hsrc Hdst Htwp
-  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
-  iintro %store %ns %obs %nt Hσ
+  wasm_twp_begin
   ihave %Hpbsrc : ⌜∀ i b, srcBytes[i]? = some b →
       store.wasm.mem.read8 (source + UInt32.ofNat i) = b ∧
       (source + UInt32.ofNat i).toNat < store.wasm.mem.pages * 65536⌝ $$
@@ -1297,8 +1290,7 @@ theorem twp_throwI
         .throwI tagIndex :: code, arity, remainder, controls, calls⟩ :
         Expr α) @ s; E [{ Φ }] := by
   iintro Hruntime Htags Hwp
-  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
-  iintro %store %ns %obs %nt Hσ
+  wasm_twp_begin
   ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$ [Hσ Hruntime]
   · imod stateInterp_runtimeModule_agree store ns obs nt
         instanceId runtimeModule $$ [$Hσ $Hruntime] with %Hmodule
@@ -1353,8 +1345,7 @@ theorem twp_catchException
                 continuation := handlerContinuation, belowStack } :: outer,
             calls⟩ : Expr α) @ s; E [{ Φ }] := by
   iintro Hwp
-  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
-  iintro %store %ns %obs %nt Hσ
+  wasm_twp_begin
   have expectedStep : Step
       ⟨.running ⟨locals, [], arity, remainder,
           throwingFrame ::
@@ -1445,8 +1436,7 @@ theorem twp_globalGet
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
   iintro Hglobal Htwp
-  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
-  iintro %store %ns %obs %nt Hσ
+  wasm_twp_begin
   have hcanonical : ∀ s : MachineStore α,
       canonicalGlobalIndex s 0 = 0 := fun _ => rfl
   ihave %Hget :
@@ -1537,8 +1527,7 @@ theorem twp_f32Load
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
   iintro Hword Htwp
-  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
-  iintro %store %ns %obs %nt Hσ
+  wasm_twp_begin
   ihave %Hfacts :
       ⌜store.wasm.mem.read32 (address + offset) = word ∧
         (address + offset).toNat + 4 ≤
@@ -1592,8 +1581,7 @@ theorem twp_f32Store
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
   iintro Hword Htwp
-  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
-  iintro %store %ns %obs %nt Hσ
+  wasm_twp_begin
   ihave %Hfacts :
       ⌜store.wasm.mem.read32 (address + offset) = oldWord ∧
         (address + offset).toNat + 4 ≤
@@ -1644,8 +1632,7 @@ theorem twp_globalSet
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
   iintro Hglobal Htwp
-  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
-  iintro %store %ns %obs %nt Hσ
+  wasm_twp_begin
   have hcanonical : ∀ s : MachineStore α,
       canonicalGlobalIndex s 0 = 0 := fun _ => rfl
   ihave %Hget :
@@ -1729,8 +1716,7 @@ theorem twp_f64Load
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
   iintro Hword Htwp
-  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
-  iintro %store %ns %obs %nt Hσ
+  wasm_twp_begin
   ihave %Hfacts :
       ⌜store.wasm.mem.read64 (address + offset) = word ∧
         (address + offset).toNat + 8 ≤
@@ -1793,8 +1779,7 @@ theorem twp_f64Store
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
   iintro Hword Htwp
-  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
-  iintro %store %ns %obs %nt Hσ
+  wasm_twp_begin
   ihave %Hfacts :
       ⌜store.wasm.mem.read64 (address + offset) = oldWord ∧
         (address + offset).toNat + 8 ≤
@@ -1861,8 +1846,7 @@ theorem twp_load64
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
   iintro Hword Htwp
-  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
-  iintro %store %ns %obs %nt Hσ
+  wasm_twp_begin
   ihave %Hfacts :
       ⌜store.wasm.mem.read64 (address + offset) = word ∧
         (address + offset).toNat + 8 ≤
@@ -1925,8 +1909,7 @@ theorem twp_store64
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
   iintro Hword Htwp
-  iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
-  iintro %store %ns %obs %nt Hσ
+  wasm_twp_begin
   ihave %Hfacts :
       ⌜store.wasm.mem.read64 (address + offset) = oldWord ∧
         (address + offset).toNat + 8 ≤
@@ -2189,9 +2172,7 @@ theorem twp_load32_addr
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
   iintro Hword Htwp
-  iapply twp_lift_step_no_fork
-    (@TerminalView.running_not_val α Terminal view _)
-  iintro %store %ns %obs %nt Hσ
+  wasm_twp_begin
   ihave %Hfacts :
       ⌜store.wasm.mem.read32 addr = word ∧
         addr.toNat + 4 ≤ store.wasm.mem.pages * 65536⌝ $$ [Hσ Hword]
