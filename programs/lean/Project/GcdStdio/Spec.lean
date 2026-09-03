@@ -21,11 +21,36 @@ examples. -/
 abbrev codec : WordCodec UInt64 :=
   Wasm.Examples.SelectionSort.StdIO.codec
 
+/-- The mathematical input of `gcd`, independently of its byte layout. -/
+structure Input where
+  left : UInt64
+  right : UInt64
+
+/-- The mathematical output of `gcd`, independently of its byte layout. -/
+abbrev Output := UInt64
+
+/-! The proof below predates the semantic names. Keep these two internal
+spellings while the machine proof is factored independently of the public
+statement; client-facing specifications use only `Input`, `Output`, `args`,
+and `result`. -/
+
 def encodeInput (a b : UInt64) : List UInt8 :=
   codec.serialize [a, b]
 
 def encodeOutput (value : UInt64) : List UInt8 :=
   codec.serialize [value]
+
+/-- Package one semantic input as the initial host stream of the exported
+zero-argument wrapper. -/
+def args (input : Input) : ExportCall Universal.State :=
+  ExportCall.ofHost «module»
+    (Universal.State.ofInput (encodeInput input.left input.right))
+
+/-- Recognize one semantic output in the wrapper's normal terminal state. -/
+def result (output : Output) : ExportReturn Universal.State → Prop :=
+  fun returned =>
+    returned.values = [] ∧
+      returned.final.host.stdio.output = encodeOutput output
 
 @[simp] theorem encodeInput_length (a b : UInt64) :
     (encodeInput a b).length = 16 := by rfl
@@ -67,21 +92,27 @@ theorem kernel_body_eq :
 
 /-- Functional contract for the arithmetic kernel linked into the stream
 driver. -/
-@[spec_of "rust-helper" "gcd_stdio::gcd_u64"]
+@[spec_of "rust-internal" "gcd_stdio::gcd_u64"]
 def KernelSpecification : Prop :=
   ∀ a b : UInt64,
     SmallStep.TerminatesWith (kernelConfig a b)
       (fun values _store =>
         values = [.i64 (UInt64.ofNat (Nat.gcd a.toNat b.toNat))])
 
-/-- Fuel-free byte-stream contract for the public export. -/
-def RunsBytes (input output : List UInt8) : Prop :=
-  Universal.RunsBytes «module» "gcd" input output
+/-- Fuel-free execution of a named export in this compiled module. -/
+abbrev Runs := Universal.RunsExport «module»
 
+theorem gcd_zeroArgument : ZeroArgumentExport «module» "gcd" := by
+  native_decide
+
+/-- For every semantic input there is an output produced by the compiled
+`gcd` export, and that output is exactly Lean's reference greatest common
+divisor on the two unsigned operands. -/
 @[spec_of "rust-exported" "gcd_stdio::gcd"]
 def PublicEntrySpecification : Prop :=
-  ∀ a b : UInt64,
-    RunsBytes (encodeInput a b)
-      (encodeOutput (UInt64.ofNat (Nat.gcd a.toNat b.toNat)))
+  ∀ input : Input,
+    ∃ output : Output,
+      Runs "gcd" (args input) (result output) ∧
+      output.toNat = Nat.gcd input.left.toNat input.right.toNat
 
 end Project.GcdStdio.Spec

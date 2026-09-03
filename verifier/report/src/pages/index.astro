@@ -12,8 +12,17 @@ const pct = agg.totals.exportsTotal === 0
 function projectStatus(v: typeof agg.views[number]): { kind: "good"|"warn"|"bad"|"muted"; label: string } {
   const errs = v.artifact.diagnostics.filter(d => d.severity === "error").length;
   const provenSpecs = v.specs.filter(s => s.status === "proven").length;
+  const partial = v.specs.filter(s =>
+    s.status === "proven" && s.strength === "partial").length;
+  const properties = v.specs.filter(s =>
+    s.status === "proven" && s.strength === "crate-property").length;
   if (errs > 0) return { kind: "bad", label: `${errs} error${errs===1?"":"s"}` };
-  if (v.specs.length > 0 && provenSpecs === v.specs.length) return { kind: "good", label: "verified" };
+  if (v.coverage.exportsTotal > 0 &&
+      v.coverage.exportsProven === v.coverage.exportsTotal)
+    return { kind: "good", label: "verified" };
+  if (partial > 0 || properties > 0)
+    return { kind: "warn", label:
+      `${v.coverage.exportsProven}/${v.coverage.exportsTotal} total · ${partial} partial · ${properties} crate` };
   if (v.specs.length > 0) return { kind: "warn", label: `${provenSpecs}/${v.specs.length} proven` };
   return { kind: "muted", label: "no specs" };
 }
@@ -28,7 +37,7 @@ function projectStatus(v: typeof agg.views[number]): { kind: "good"|"warn"|"bad"
       <div>
         <CoverageBar proven={agg.totals.exportsProven} total={agg.totals.exportsTotal} />
         <div style="margin-top: 6px; font-size: 12px; color: var(--muted);">
-          Coverage = exports with at least one proven spec.
+          Total-correctness coverage = exports with at least one proven total spec.
         </div>
       </div>
       <div class="coverage-figure">
@@ -50,7 +59,9 @@ function projectStatus(v: typeof agg.views[number]): { kind: "good"|"warn"|"bad"
     <div class="stat"><div class="label">Projects</div><div class="value">{agg.totals.projects}</div></div>
     <div class="stat"><div class="label">Exports</div><div class="value">{agg.totals.exports}</div></div>
     <div class="stat"><div class="label">Specs</div><div class="value">{agg.totals.specs}</div></div>
-    <div class="stat"><div class="label">Proven specs</div><div class="value">{agg.totals.provenSpecs}</div></div>
+    <div class="stat"><div class="label">Proven total specs</div><div class="value">{agg.totals.provenTotalSpecs}</div></div>
+    <div class="stat"><div class="label">Proven partial specs</div><div class="value">{agg.totals.provenPartialSpecs}</div></div>
+    <div class="stat"><div class="label">Proven crate properties</div><div class="value">{agg.totals.provenCrateProperties}</div></div>
     <div class="stat"><div class="label">Verifications</div><div class="value">{agg.totals.verifications}</div></div>
     <div class="stat"><div class="label">Diagnostics</div><div class="value">{agg.totals.diagnostics}</div></div>
   </section>
@@ -67,7 +78,7 @@ function projectStatus(v: typeof agg.views[number]): { kind: "good"|"warn"|"bad"
         <th data-sort="specs"   class="num">Specs</th>
         <th data-sort="verifs"  class="num">Proofs</th>
         <th data-sort="diags"   class="num">Diagnostics</th>
-        <th data-sort="coverage" class="coverage-cell">Coverage</th>
+        <th data-sort="coverage" class="coverage-cell">Total coverage</th>
         <th>Status</th>
       </tr>
     </thead>

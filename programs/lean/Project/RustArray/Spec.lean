@@ -48,7 +48,7 @@ private def exportConfig (env : HostEnv Unit) (st : Store Unit)
       { runtime := { instances := #[{ module := «module», host := env }], entry := ⟨0⟩ }
         wasm := st } }
 
-@[spec_of "rust-internal" "rust_array::len"]
+@[spec_of "rust-internal-partial" "rust_array::len"]
 def LenSpec : Prop := ∀ (ptr len : UInt32),
   SmallStep.PartiallyMeets (leafConfig func0 ptr len)
     (fun rs _store => rs = [.i32 len])
@@ -67,7 +67,7 @@ theorem len_correct : LenSpec := by
   ipureintro
   rfl
 
-@[spec_of "rust-internal" "rust_array::is_empty"]
+@[spec_of "rust-internal-partial" "rust_array::is_empty"]
 def IsEmptySpec : Prop := ∀ (ptr len : UInt32),
   SmallStep.PartiallyMeets (leafConfig func2 ptr len)
     (fun rs _store => rs = [.i32 (isEmptyValue len)])
@@ -99,7 +99,7 @@ theorem is_empty_correct : IsEmptySpec := by
 
 /-! ## Exported ABI wrappers (fat pointer in memory) -/
 
-@[spec_of "rust-exported" "rust_array::len"]
+@[spec_of "rust-exported-partial" "rust_array::len"]
 def LenExportSpec : Prop :=
   ∀ (env : HostEnv Unit) (st : Store Unit) (p dataPtr len : UInt32),
     FatPtrAt st p dataPtr len →
@@ -160,7 +160,7 @@ theorem len_export_correct : LenExportSpec := by
     ipureintro
     rfl
 
-@[spec_of "rust-exported" "rust_array::is_empty"]
+@[spec_of "rust-exported-partial" "rust_array::is_empty"]
 def IsEmptyExportSpec : Prop :=
   ∀ (env : HostEnv Unit) (st : Store Unit) (p dataPtr len : UInt32),
     FatPtrAt st p dataPtr len →

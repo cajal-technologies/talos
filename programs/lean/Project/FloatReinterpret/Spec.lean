@@ -3547,7 +3547,11 @@ theorem check_copysign_terminatesWith (x y : UInt32) :
     iapply twp_func11_body_smallStep_wp
     iframe
 
-@[spec_of "rust-exported" "float_reinterpret::float_reinterpret"]
+/-! The conjunction below is retained as a proof milestone, not registered as
+a public specification. It proves termination with some `i32` for two exports,
+but does not yet say that either check returns `1` or state the float identities
+those checks are meant to establish. Register two semantic specifications once
+those explicit postconditions are proved. -/
 def FloatReinterpretSpec : Prop :=
   (∀ (x : UInt32),
     SmallStep.TerminatesWith (checkAbsConfig x)
@@ -3556,7 +3560,6 @@ def FloatReinterpretSpec : Prop :=
     SmallStep.TerminatesWith (checkCopysignConfig x y)
       (fun rs _store => ∃ b : UInt32, rs = [.i32 b]))
 
-@[proves Project.FloatReinterpret.Spec.FloatReinterpretSpec]
 theorem check_reinterpret_correct : FloatReinterpretSpec :=
   ⟨check_abs_terminatesWith, check_copysign_terminatesWith⟩
 

@@ -33,7 +33,8 @@ export interface Program {
 }
 
 export interface Reference {
-  kind: "rust-exported" | "rust-internal" | "lean";
+  kind: "rust-exported" | "rust-exported-partial" | "rust-internal" |
+    "rust-internal-partial" | "crate-property" | "lean";
   target: string;
   resolved: boolean;
 }
@@ -95,6 +96,7 @@ export interface SpecView {
   spec: FormalSpec;
   proofs: Verification[];
   exports: ExportedFunction[]; // exports the spec binds via rust-exported refs
+  strength: "total" | "partial" | "crate-property";
   status: "proven" | "unproven";
 }
 

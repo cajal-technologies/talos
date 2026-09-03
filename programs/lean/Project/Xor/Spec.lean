@@ -23,14 +23,35 @@ theorem universal_env_satisfies :
     (Universal.envFor «module»).Satisfies «module» (Universal.specFor «module») :=
   Universal.envFor_satisfies «module»
 
-/-- Fuel-free relational execution of the exported byte-stream program. -/
-def RunsBytes (input output : List UInt8) : Prop :=
-  Universal.RunsBytes «module» "xor" input output
+/-- The two semantic bytes supplied to `xor`. Their stream representation is
+kept in `args`, outside the public proposition. -/
+structure Input where
+  first : UInt8
+  second : UInt8
 
-/-- For every pair of bytes, running the program with exactly those two input
-bytes terminates with their XOR as the singleton output. -/
+/-- The semantic byte returned by `xor`. -/
+abbrev Output := UInt8
+
+/-- Encode one semantic input as the export's initial host state. -/
+def args (input : Input) : ExportCall Universal.State :=
+  ExportCall.ofHost «module»
+    (Universal.State.ofInput [input.first, input.second])
+
+/-- Recognize the semantic output in the export's normal terminal state. -/
+def result (output : Output) : ExportReturn Universal.State → Prop :=
+  fun returned =>
+    returned.values = [] ∧ returned.final.host.stdio.output = [output]
+
+/-- Fuel-free execution of a named export in this compiled module. -/
+abbrev Runs := Universal.RunsExport «module»
+
+/-- For every semantic input there is an output produced by the compiled `xor`
+export, and that output is exactly the bitwise XOR of the two input bytes. -/
 @[spec_of "rust-exported" "xor::xor"]
 def XorSpec : Prop :=
-  ∀ first second : UInt8, RunsBytes [first, second] [first ^^^ second]
+  ∀ input : Input,
+    ∃ output : Output,
+      Runs "xor" (args input) (result output) ∧
+      output = input.first ^^^ input.second
 
 end Project.Xor.Spec

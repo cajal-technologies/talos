@@ -22,24 +22,29 @@ Tracks migration of legacy `TerminatesWith env` theorems to
 ### FloatRound
 
 - `FloatRoundSpec` redefined to `SmallStep.TerminatesWith (checkRoundConfig x)`.
-- `@[proves FloatRoundSpec]` on `check_round_correct := check_round_terminatesWith`.
+- It is retained as an unregistered termination milestone: its postcondition
+  says only that some `i32` is returned, not whether the two rounding
+  implementations agree.
 - 7 legacy `func*_term` theorems and helpers deleted.
 
 ### FloatReinterpret
 
 - `FloatReinterpretSpec` redefined to conjunction of two `SmallStep.TerminatesWith`
   (checkAbs + checkCopysign).
-- `@[proves FloatReinterpretSpec]` on
-  `check_reinterpret_correct := ⟨check_abs_terminatesWith, check_copysign_terminatesWith⟩`.
+- It is retained as an unregistered termination milestone: the two public
+  properties still need explicit status/reference postconditions and separate
+  export specifications.
 - 12 legacy `func*_term` theorems and helpers deleted.
 
 ### SwapElements
 
 - New `SmallStep.TerminatesWith` specs added in `SmallStepSpec.lean`:
   `SwapElementsDistinctTerminatesSpec` and `SwapElementsAliasTerminatesSpec`.
-- Registered under `@[spec_of "rust-exported-small-step-total"]`.
-- Legacy `SwapElementsSpec` under `@[spec_of "rust-exported"]` retained
-  (see Deferred).
+- These are now unregistered proof milestones: the supported partial/total
+  distinction applies to a public export contract, not to four implementation
+  variants, and `swap_elements_alias` is not an export.
+- The single public `SwapElementsSpec` under `@[spec_of "rust-exported"]`
+  remains the export contract.
 - TWP proofs in `SwapSepLogic.lean` for all 5 functions (both distinct and alias).
 
 ### SwapElementsOpt3
@@ -52,8 +57,8 @@ Tracks migration of legacy `TerminatesWith env` theorems to
 
 ### NumInteger
 
-- `GcdU64Spec` redefined to `SmallStep.TerminatesWith (func2Config a b)`.
-- `@[proves GcdU64Spec]` on `gcd_u64_correct := func2_terminatesWith`.
+- `GcdU64Spec` now exposes semantic `Input`/`Output`, `args`/`result`, and
+  `Runs "gcd_u64"`; `func2_terminatesWith` remains its machine-level proof.
 - TWP loop via `Nat.strongRecOn` on `x.toNat + y.toNat`.
 - Legacy `meatLoop_wp`, `func1_terminates`, `func0_terminates`,
   `LegacyGcdU64Spec`, `gcd_u64_legacy_correct` all deleted.

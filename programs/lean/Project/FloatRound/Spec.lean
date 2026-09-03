@@ -2256,13 +2256,15 @@ theorem check_round_terminatesWith (x : UInt32) :
 
 /-! ## FloatRoundSpec -/
 
-@[spec_of "rust-exported" "float_round::check_round"]
+/-! Retained as a termination proof milestone rather than a registered public
+specification: returning an arbitrary `i32` does not say whether the two
+rounding implementations agree. A public spec must expose that comparison and
+the returned status explicitly. -/
 def FloatRoundSpec : Prop :=
   ∀ (x : UInt32),
     SmallStep.TerminatesWith (checkRoundConfig x)
       (fun rs _store => ∃ b : UInt32, rs = [.i32 b])
 
-@[proves Project.FloatRound.Spec.FloatRoundSpec]
 theorem check_round_correct : FloatRoundSpec := check_round_terminatesWith
 
 end Project.FloatRound.Spec

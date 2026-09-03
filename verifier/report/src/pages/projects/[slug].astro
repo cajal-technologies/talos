@@ -17,6 +17,10 @@ const { view } = Astro.props;
 const art = view.artifact;
 const programHtml = art.program ? await highlightCode(art.program.body, "lean") : null;
 const provenCount = view.specs.filter(s => s.status === "proven").length;
+const partialCount = view.specs.filter(s =>
+  s.status === "proven" && s.strength === "partial").length;
+const propertyCount = view.specs.filter(s =>
+  s.status === "proven" && s.strength === "crate-property").length;
 const exportCards = await Promise.all(
   art.exported.map(async (e) => ({ e, html: await highlightCode(e.signature, "rust") })),
 );
@@ -34,8 +38,12 @@ function sevKind(s: "info"|"warn"|"error"): "info"|"warn"|"bad" {
       {(() => {
         const errs = art.diagnostics.filter(d => d.severity === "error").length;
         if (errs > 0) return <Badge kind="bad" label={`${errs} error${errs===1?"":"s"}`} />;
-        if (view.specs.length > 0 && provenCount === view.specs.length)
+        if (view.coverage.exportsTotal > 0 &&
+            view.coverage.exportsProven === view.coverage.exportsTotal)
           return <Badge kind="good" label="verified" />;
+        if (partialCount > 0 || propertyCount > 0)
+          return <Badge kind="warn"
+            label={`${view.coverage.exportsProven}/${view.coverage.exportsTotal} total · ${partialCount} partial · ${propertyCount} crate`} />;
         if (view.specs.length > 0)
           return <Badge kind="warn" label={`${provenCount}/${view.specs.length} proven`} />;
         return <Badge kind="muted" label="no specs" />;
@@ -50,7 +58,7 @@ function sevKind(s: "info"|"warn"|"error"): "info"|"warn"|"bad" {
     <div style="margin-top: 14px; max-width: 480px;">
       <CoverageBar proven={view.coverage.exportsProven} total={view.coverage.exportsTotal} />
       <div style="font-size: 12px; color: var(--muted); margin-top: 4px;">
-        {view.coverage.exportsProven} / {view.coverage.exportsTotal} exports have a proven spec
+        {view.coverage.exportsProven} / {view.coverage.exportsTotal} exports have a proven total-correctness spec
       </div>
     </div>
   </header>

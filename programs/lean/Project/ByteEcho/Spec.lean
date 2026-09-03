@@ -23,14 +23,33 @@ theorem universal_env_satisfies :
     (Universal.envFor «module»).Satisfies «module» (Universal.specFor «module») :=
   Universal.envFor_satisfies «module»
 
-/-- Fuel-free relational execution of the exported byte-stream program. -/
-def RunsBytes (input output : List UInt8) : Prop :=
-  Universal.RunsBytes «module» "byte_echo" input output
+/-- The one semantic byte supplied to `byte_echo`. The singleton stream
+encoding belongs in `args`, not in the public proposition. -/
+structure Input where
+  byte : UInt8
 
-/-- For every byte, running the program with that singleton input terminates
-with exactly the same singleton output. -/
+/-- The semantic byte returned by `byte_echo`. -/
+abbrev Output := UInt8
+
+/-- Encode one semantic input as the export's initial host state. -/
+def args (input : Input) : ExportCall Universal.State :=
+  ExportCall.ofHost «module» (Universal.State.ofInput [input.byte])
+
+/-- Recognize the semantic output in the export's normal terminal state. -/
+def result (output : Output) : ExportReturn Universal.State → Prop :=
+  fun returned =>
+    returned.values = [] ∧ returned.final.host.stdio.output = [output]
+
+/-- Fuel-free execution of a named export in this compiled module. -/
+abbrev Runs := Universal.RunsExport «module»
+
+/-- For every semantic input there is an output produced by the compiled
+`byte_echo` export, and that output is exactly the input byte. -/
 @[spec_of "rust-exported" "byte_echo::byte_echo"]
 def ByteEchoSpec : Prop :=
-  ∀ byte : UInt8, RunsBytes [byte] [byte]
+  ∀ input : Input,
+    ∃ output : Output,
+      Runs "byte_echo" (args input) (result output) ∧
+      output = input.byte
 
 end Project.ByteEcho.Spec

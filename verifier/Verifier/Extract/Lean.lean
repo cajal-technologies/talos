@@ -13,14 +13,13 @@ Conventions assumed (see `verifier/EXTRACT.md`):
 
 * The `/-- … -/` doc block immediately precedes the attribute block,
   which immediately precedes the `def` / `theorem`.
-* Each `@[…]` attribute lives on its own line; `@[a, b]` combined
-  attributes are not parsed (split them up).
+* Attribute blocks may span lines and may contain several comma-separated
+  `spec_of` / `proves` attributes.
 * `namespace` / `end` use matched dotted names (`namespace A.B` …
   `end A.B`).
 
-Out of scope: nested doc blocks, attribute payloads spanning multiple
-lines, declarations whose `def`/`theorem` keyword does not appear at
-the start of a (left-trimmed) line.
+Out of scope: nested doc blocks and declarations whose `def`/`theorem` keyword
+does not appear at the start of a (left-trimmed) line.
 -/
 
 namespace Verifier.Extract.LeanScan
@@ -159,6 +158,31 @@ private def takeTheorem (line : String) : Option String :=
     if name.isEmpty then none else some name
   else none
 
+/-- Remove modifiers that may precede a top-level declaration keyword. -/
+private partial def dropDeclarationModifiers (line : String) : String :=
+  let modifiers :=
+    ["private ", "protected ", "noncomputable ", "local ", "scoped ",
+      "unsafe ", "partial "]
+  match modifiers.find? fun modifier => line.startsWith modifier with
+  | some modifier =>
+      dropDeclarationModifiers (dropPrefix line modifier.length)
+  | none => line
+
+/-- Whether a later top-level line begins a new declaration or namespace
+boundary. Continuation lines are indented in the generated and handwritten
+specifications, so an indented declaration inside a term is not a boundary. -/
+private def declarationBoundary (line : String) : Bool :=
+  let trimmed := leftTrim line
+  if trimmed != line then false
+  else
+    let declaration := dropDeclarationModifiers trimmed
+    ["def ", "abbrev ", "opaque ", "theorem ", "lemma ", "example",
+      "structure ", "inductive ", "class ", "instance ", "namespace ",
+      "section", "end", "mutual", "variable ", "universe ", "open ",
+      "include ", "attribute ", "set_option ", "syntax ", "macro ",
+      "/--", "/-!", "@["].any fun candidate =>
+        declaration.startsWith candidate
+
 /-- Extract the `Informal spec:` block from a raw docstring (P6).
 Returns `(prose, informal?)`. -/
 private def splitInformal (raw : String) : String × Option String := Id.run do
@@ -198,7 +222,10 @@ private def classifyRustExportedTarget
 
 private def kindOfString : String → Option RefKind
   | "rust-exported" => some .rustExported
+  | "rust-exported-partial" => some .rustExportedPartial
   | "rust-internal" => some .rustInternal
+  | "rust-internal-partial" => some .rustInternalPartial
+  | "crate-property" => some .crateProperty
   | "lean"          => some .leanSym
   | _               => none
 
@@ -366,17 +393,19 @@ def scanFile
             | some kind =>
               let (sameCrate, resolved) :=
                 match kind with
-                | .rustExported =>
+                | .rustExported | .rustExportedPartial =>
                   classifyRustExportedTarget target thisCrate exportNames
                 | _ => (false, false)
               refs := refs.push { kind, target, resolved }
-              if (match kind with | .rustExported => true | _ => false) then
+              if (match kind with
+                  | .rustExported | .rustExportedPartial => true
+                  | _ => false) then
                 if ¬ sameCrate then
                   diags := diags.push {
                     severity := .info, kind := "cross_crate_reference",
                     location := mkLoc i i line.length,
                     message  :=
-                      s!"`@[spec_of rust-exported \"{target}\"]` on `{qname}` names a different crate's export"
+                      s!"`@[spec_of {kind.toString} \"{target}\"]` on `{qname}` names a different crate's export"
                   }
                 else if ¬ resolved then
                   diags := diags.push {
@@ -386,8 +415,26 @@ def scanFile
                       s!"`{target}` does not resolve to any export of crate `{thisCrate}`"
                   }
           | _ => pure ()
+        -- Preserve the complete visible proposition, not only the line that
+        -- says `def Name : Prop :=`. The report renders this field, and the
+        -- semantic Input/Output convention is normally written over several
+        -- following lines.
+        let mut statementEnd : Nat := i
+        let mut j : Nat := i + 1
+        while hJ : j < lines.size do
+          let next := lines[j]
+          if declarationBoundary next then
+            break
+          if ¬ (leftTrim next).isEmpty then
+            statementEnd := j
+          j := j + 1
+        let statementLines := (List.range (statementEnd - i + 1)).map fun offset =>
+          let source := (lines[i + offset]?).getD ""
+          if offset = 0 then dropPrefix (leftTrim source) 4 else source
+        let statementSlice := String.intercalate "\n" statementLines
         let startLine := st.attrStart.getD i
-        let loc := mkLoc startLine i line.length
+        let endLen := (lines[statementEnd]?).getD "" |>.length
+        let loc := mkLoc startLine statementEnd endLen
         if rawDoc.isEmpty then
           diags := diags.push {
             severity := .info, kind := "missing_docstring",
@@ -400,7 +447,6 @@ def scanFile
             location := loc,
             message  := s!"spec `{qname}` has no `Informal spec:` block"
           }
-        let statementSlice := (dropPrefix (leftTrim line) 4)
         specs := specs.push {
           name      := qname,
           statement := statementSlice,
