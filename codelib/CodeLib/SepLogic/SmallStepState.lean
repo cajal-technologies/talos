@@ -1748,10 +1748,7 @@ theorem stateInterp_host_set [WasmSmallStepGS hlc α]
         steps observations threads ∗
       hostStateOwn host := by
   iintro ⟨Hσ, HP⟩
-  icases (stateInterp_eq store steps observations threads).mp $$ Hσ with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep,
-      HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
+  iopen_state Hσ
   imod hostStateOwn_update store.wasm.host host $$ [$Hstate_auth $HP] with ⟨Hauth', HP'⟩
   imodintro
   isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth HhostEnvAuth Hauth' Hexc]
