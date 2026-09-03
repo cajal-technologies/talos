@@ -697,6 +697,24 @@ theorem stateInterp_pointsToBytes_agree [WasmSmallStepGS hlc α]
           rw [← byte_offset_succ addr j] at hmem hbound
           exact ⟨hmem, hbound⟩
 
+/-- Derive physical byte facts for an owned range in a lifting proof. -/
+syntax "wasm_points_to_bytes_agree " ident ", " term ", " term ", " term
+  " $$ " specPat : tactic
+
+set_option hygiene false in
+macro_rules
+  | `(tactic| wasm_points_to_bytes_agree $facts:ident, $addr:term,
+        $bytes:term, $observations:term $$ $resources:specPat) =>
+    `(tactic|
+      (ihave %$facts : ⌜∀ i b, $bytes[i]? = some b →
+            store.wasm.mem.read8 ($addr + UInt32.ofNat i) = b ∧
+            ($addr + UInt32.ofNat i).toNat <
+              store.wasm.mem.pages * 65536⌝ $$ $resources
+       · imod stateInterp_pointsToBytes_agree store ns $observations nt
+           $addr $bytes $$ [$] with %$facts
+         ipureintro
+         exact $facts))
+
 /-- Whole-range bound from the per-byte physical facts produced by
 `stateInterp_pointsToBytes_agree`: a nonempty owned byte range that does not
 wrap around the 32-bit address space pins `addr + bytes.length` within the

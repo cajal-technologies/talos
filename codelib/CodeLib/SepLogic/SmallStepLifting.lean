@@ -3142,14 +3142,7 @@ theorem wp_memoryFill32
         .memoryFill :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} := by
   iintro >Hbytes Hwp
   wasm_wp_begin
-  ihave %Hpb : ⌜∀ i b, oldBytes[i]? = some b →
-      store.wasm.mem.read8 (destination + UInt32.ofNat i) = b ∧
-      (destination + UInt32.ofNat i).toNat < store.wasm.mem.pages * 65536⌝ $$
-      [Hσ Hbytes]
-  · imod stateInterp_pointsToBytes_agree store ns (obs ++ obs') nt
-        destination oldBytes $$ [$Hσ $Hbytes] with %Hpb
-    ipureintro
-    exact Hpb
+  wasm_points_to_bytes_agree Hpb, destination, oldBytes, (obs ++ obs') $$ [Hσ Hbytes]
   have hbound : destination.toNat + len.toNat ≤ store.wasm.mem.pages * 65536 := by
     have := pointsToBytes_facts_bound Hpb (by omega) (by omega)
     omega
@@ -3197,14 +3190,8 @@ theorem wp_memoryFill64
     simp [UInt32.ofNat, UInt32.toNat]; omega
   iintro >Hbytes Hwp
   wasm_wp_begin
-  ihave %Hpb : ⌜∀ i b, oldBytes[i]? = some b →
-      store.wasm.mem.read8 (destination.toUInt32 + UInt32.ofNat i) = b ∧
-      (destination.toUInt32 + UInt32.ofNat i).toNat < store.wasm.mem.pages * 65536⌝ $$
-      [Hσ Hbytes]
-  · imod stateInterp_pointsToBytes_agree store ns (obs ++ obs') nt
-        destination.toUInt32 oldBytes $$ [$Hσ $Hbytes] with %Hpb
-    ipureintro
-    exact Hpb
+  wasm_points_to_bytes_agree Hpb, destination.toUInt32, oldBytes,
+    (obs ++ obs') $$ [Hσ Hbytes]
   have hbound : destination.toNat + len.toNat ≤ store.wasm.mem.pages * 65536 := by
     have := pointsToBytes_facts_bound Hpb (by omega) (by omega)
     omega
@@ -3248,22 +3235,8 @@ theorem wp_memoryCopy32
         .memoryCopy :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} := by
   iintro >Hsrc >Hdst Hwp
   wasm_wp_begin
-  ihave %Hpbsrc : ⌜∀ i b, srcBytes[i]? = some b →
-      store.wasm.mem.read8 (source + UInt32.ofNat i) = b ∧
-      (source + UInt32.ofNat i).toNat < store.wasm.mem.pages * 65536⌝ $$
-      [Hσ Hsrc]
-  · imod stateInterp_pointsToBytes_agree store ns (obs ++ obs') nt
-        source srcBytes $$ [$Hσ $Hsrc] with %Hpbsrc
-    ipureintro
-    exact Hpbsrc
-  ihave %Hpbdst : ⌜∀ i b, oldDstBytes[i]? = some b →
-      store.wasm.mem.read8 (destination + UInt32.ofNat i) = b ∧
-      (destination + UInt32.ofNat i).toNat < store.wasm.mem.pages * 65536⌝ $$
-      [Hσ Hdst]
-  · imod stateInterp_pointsToBytes_agree store ns (obs ++ obs') nt
-        destination oldDstBytes $$ [$Hσ $Hdst] with %Hpbdst
-    ipureintro
-    exact Hpbdst
+  wasm_points_to_bytes_agree Hpbsrc, source, srcBytes, (obs ++ obs') $$ [Hσ Hsrc]
+  wasm_points_to_bytes_agree Hpbdst, destination, oldDstBytes, (obs ++ obs') $$ [Hσ Hdst]
   have hbound_src : source.toNat + len.toNat ≤ store.wasm.mem.pages * 65536 := by
     have := pointsToBytes_facts_bound Hpbsrc (by omega) (by omega)
     omega
@@ -3321,22 +3294,10 @@ theorem wp_memoryCopy64
     simp [UInt32.ofNat, UInt32.toNat]; omega
   iintro >Hsrc >Hdst Hwp
   wasm_wp_begin
-  ihave %Hpbsrc : ⌜∀ i b, srcBytes[i]? = some b →
-      store.wasm.mem.read8 (source.toUInt32 + UInt32.ofNat i) = b ∧
-      (source.toUInt32 + UInt32.ofNat i).toNat < store.wasm.mem.pages * 65536⌝ $$
-      [Hσ Hsrc]
-  · imod stateInterp_pointsToBytes_agree store ns (obs ++ obs') nt
-        source.toUInt32 srcBytes $$ [$Hσ $Hsrc] with %Hpbsrc
-    ipureintro
-    exact Hpbsrc
-  ihave %Hpbdst : ⌜∀ i b, oldDstBytes[i]? = some b →
-      store.wasm.mem.read8 (destination.toUInt32 + UInt32.ofNat i) = b ∧
-      (destination.toUInt32 + UInt32.ofNat i).toNat < store.wasm.mem.pages * 65536⌝ $$
-      [Hσ Hdst]
-  · imod stateInterp_pointsToBytes_agree store ns (obs ++ obs') nt
-        destination.toUInt32 oldDstBytes $$ [$Hσ $Hdst] with %Hpbdst
-    ipureintro
-    exact Hpbdst
+  wasm_points_to_bytes_agree Hpbsrc, source.toUInt32, srcBytes,
+    (obs ++ obs') $$ [Hσ Hsrc]
+  wasm_points_to_bytes_agree Hpbdst, destination.toUInt32, oldDstBytes,
+    (obs ++ obs') $$ [Hσ Hdst]
   have hbound_src : source.toNat + len.toNat ≤ store.wasm.mem.pages * 65536 := by
     have := pointsToBytes_facts_bound Hpbsrc (by omega) (by omega)
     omega
@@ -3392,14 +3353,7 @@ theorem wp_memoryInit32
   imod stateInterp_dataSegment_facts_frame store ns (obs ++ obs') nt
       segmentIndex (some segmentBytes) $$ [$Hσ $Hsegment] with
     ⟨Hσ, Hsegment, %hsegment⟩
-  ihave %Hpbdst : ⌜∀ i b, oldDstBytes[i]? = some b →
-      store.wasm.mem.read8 (destination + UInt32.ofNat i) = b ∧
-      (destination + UInt32.ofNat i).toNat < store.wasm.mem.pages * 65536⌝ $$
-      [Hσ Hdst]
-  · imod stateInterp_pointsToBytes_agree store ns (obs ++ obs') nt
-        destination oldDstBytes $$ [$Hσ $Hdst] with %Hpbdst
-    ipureintro
-    exact Hpbdst
+  wasm_points_to_bytes_agree Hpbdst, destination, oldDstBytes, (obs ++ obs') $$ [Hσ Hdst]
   have hbound_dst : destination.toNat + len.toNat ≤ store.wasm.mem.pages * 65536 := by
     have := pointsToBytes_facts_bound Hpbdst (by omega) (by omega)
     omega
@@ -3450,14 +3404,8 @@ theorem wp_memoryInit64
   imod stateInterp_dataSegment_facts_frame store ns (obs ++ obs') nt
       segmentIndex (some segmentBytes) $$ [$Hσ $Hsegment] with
     ⟨Hσ, Hsegment, %hsegment⟩
-  ihave %Hpbdst : ⌜∀ i b, oldDstBytes[i]? = some b →
-      store.wasm.mem.read8 (destination.toUInt32 + UInt32.ofNat i) = b ∧
-      (destination.toUInt32 + UInt32.ofNat i).toNat < store.wasm.mem.pages * 65536⌝ $$
-      [Hσ Hdst]
-  · imod stateInterp_pointsToBytes_agree store ns (obs ++ obs') nt
-        destination.toUInt32 oldDstBytes $$ [$Hσ $Hdst] with %Hpbdst
-    ipureintro
-    exact Hpbdst
+  wasm_points_to_bytes_agree Hpbdst, destination.toUInt32, oldDstBytes,
+    (obs ++ obs') $$ [Hσ Hdst]
   have hbound_dst : destination.toNat + len.toNat ≤ store.wasm.mem.pages * 65536 := by
     have := pointsToBytes_facts_bound Hpbdst (by omega) (by omega)
     omega
