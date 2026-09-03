@@ -269,16 +269,9 @@ theorem heap64Aux_agrees
   | cons value values ih =>
       simp only [heap64Aux, writeWordArray64, List.length_cons] at *
       simp only [UInt32.size] at hfit
+      obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := UInt32.addSteps8 base (by omega)
       apply ih
-      · apply store64_sound0
-        · exact UInt32.add_ofNat_toNat_noWrap base 1 (by decide) (by omega)
-        · exact UInt32.add_ofNat_toNat_noWrap base 2 (by decide) (by omega)
-        · exact UInt32.add_ofNat_toNat_noWrap base 3 (by decide) (by omega)
-        · exact UInt32.add_ofNat_toNat_noWrap base 4 (by decide) (by omega)
-        · exact UInt32.add_ofNat_toNat_noWrap base 5 (by decide) (by omega)
-        · exact UInt32.add_ofNat_toNat_noWrap base 6 (by decide) (by omega)
-        · exact UInt32.add_ofNat_toNat_noWrap base 7 (by decide) (by omega)
-        · exact hagree
+      · exact store64_sound0 heap mem base value h1 h2 h3 h4 h5 h6 h7 hagree
       · have h8 : (base + 8 : UInt32).toNat = base.toNat + 8 :=
           UInt32.add_ofNat_toNat_noWrap base 8 (by decide) (by omega)
         rw [h8]
@@ -300,17 +293,10 @@ theorem heap64Aux_inBounds
       simp only [UInt32.size] at hfit
       have h8 : (base + 8 : UInt32).toNat = base.toNat + 8 :=
         UInt32.add_ofNat_toNat_noWrap base 8 (by decide) (by omega)
+      obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := UInt32.addSteps8 base (by omega)
       apply ih
-      · apply store64_inBounds0
-        · exact UInt32.add_ofNat_toNat_noWrap base 1 (by decide) (by omega)
-        · exact UInt32.add_ofNat_toNat_noWrap base 2 (by decide) (by omega)
-        · exact UInt32.add_ofNat_toNat_noWrap base 3 (by decide) (by omega)
-        · exact UInt32.add_ofNat_toNat_noWrap base 4 (by decide) (by omega)
-        · exact UInt32.add_ofNat_toNat_noWrap base 5 (by decide) (by omega)
-        · exact UInt32.add_ofNat_toNat_noWrap base 6 (by decide) (by omega)
-        · exact UInt32.add_ofNat_toNat_noWrap base 7 (by decide) (by omega)
-        · omega
-        · exact hinBounds
+      · exact store64_inBounds0 heap mem base value h1 h2 h3 h4 h5 h6 h7
+          (by omega) hinBounds
       · rw [h8]
         simp only [UInt32.size]
         omega
@@ -420,38 +406,9 @@ theorem heap64Aux_pointsTo [WasmHeapGS Unit]
         apply UInt32.add_ofNat_toNat_noWrap base n
         · omega
         · omega
-      have hn1 := hn 1 (by omega)
-      have hn2 := hn 2 (by omega)
-      have hn3 := hn 3 (by omega)
-      have hn4 := hn 4 (by omega)
-      have hn5 := hn 5 (by omega)
-      have hn6 := hn 6 (by omega)
-      have hn7 := hn 7 (by omega)
       have hn8 := hn 8 (by omega)
-      have hl1 : (base + 1 : UInt32).toNat = base.toNat + 1 := by
-        apply UInt32.add_ofNat_toNat_noWrap base 1 (by decide)
-        omega
-      have hl2 : (base + 2 : UInt32).toNat = base.toNat + 2 := by
-        apply UInt32.add_ofNat_toNat_noWrap base 2 (by decide)
-        omega
-      have hl3 : (base + 3 : UInt32).toNat = base.toNat + 3 := by
-        apply UInt32.add_ofNat_toNat_noWrap base 3 (by decide)
-        omega
-      have hl4 : (base + 4 : UInt32).toNat = base.toNat + 4 := by
-        apply UInt32.add_ofNat_toNat_noWrap base 4 (by decide)
-        omega
-      have hl5 : (base + 5 : UInt32).toNat = base.toNat + 5 := by
-        apply UInt32.add_ofNat_toNat_noWrap base 5 (by decide)
-        omega
-      have hl6 : (base + 6 : UInt32).toNat = base.toNat + 6 := by
-        apply UInt32.add_ofNat_toNat_noWrap base 6 (by decide)
-        omega
-      have hl7 : (base + 7 : UInt32).toNat = base.toNat + 7 := by
-        apply UInt32.add_ofNat_toNat_noWrap base 7 (by decide)
-        omega
-      have hl8 : (base + 8 : UInt32).toNat = base.toNat + 8 := by
-        apply UInt32.add_ofNat_toNat_noWrap base 8 (by decide)
-        omega
+      obtain ⟨hl1, hl2, hl3, hl4, hl5, hl6, hl7⟩ :=
+        UInt32.addSteps8 base (by omega)
       have hget (n : Nat) (hnle : n < 8) :
           get? heap ⟨0, base + UInt32.ofNat n⟩ = none := by
         by_contra h
@@ -624,20 +581,20 @@ theorem array64At_words [WasmSmallStepGS hlc α]
       · ipureintro; trivial
   | cons value output ih =>
       simp only [array64At, List.length_cons] at *
-      have hn (n : Nat) (hn : n ≤ 8) :
-          (base + UInt32.ofNat n).toNat = base.toNat + n := by
-        apply UInt32.add_ofNat_toNat_noWrap base n
-        · omega
-        · simp only [UInt32.size] at hfit ⊢; omega
+      have hroom : base.toNat + 8 ≤ 4294967296 := by
+        simp only [UInt32.size] at hfit
+        omega
+      obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := UInt32.addSteps8 base hroom
+      have h8 : (base + 8).toNat = base.toNat + 8 :=
+        UInt32.add_ofNat_toNat_noWrap base 8 (by decide) (by
+          simp only [UInt32.size] at hfit ⊢
+          omega)
       iintro ⟨Hstate, Hword, Houtput⟩
       imod stateInterp_pointsTo_u64_facts_frame store steps obs threads
-        base value (hn 1 (by omega)) (hn 2 (by omega))
-        (hn 3 (by omega)) (hn 4 (by omega)) (hn 5 (by omega))
-        (hn 6 (by omega)) (hn 7 (by omega)) $$
+        base value h1 h2 h3 h4 h5 h6 h7 $$
         [$Hstate $Hword] with ⟨Hstate, Hword, %hword⟩
       have hfit' : (base + 8).toNat + 8 * output.length < UInt32.size := by
-        change (base + UInt32.ofNat 8).toNat + 8 * output.length < UInt32.size
-        rw [hn 8 (by omega)]
+        rw [h8]
         simp only [UInt32.size] at hfit ⊢
         omega
       imod ih (base + 8) hfit' $$ [$Hstate $Houtput] with
@@ -687,21 +644,16 @@ theorem array64At_capacity [WasmSmallStepGS hlc α]
       exact Mem.words64_slotAddr_toNat base k (by
         simp only [UInt32.size] at hfit
         omega)
-    have hn (n : Nat) (hn : n ≤ 7) :
-        (address + UInt32.ofNat n).toNat = address.toNat + n := by
-      apply UInt32.add_ofNat_toNat_noWrap address n
-      · omega
-      · simp only [UInt32.size] at hfit ⊢
-        rw [haddress]
-        omega
+    obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := UInt32.addSteps8 address (by
+      simp only [UInt32.size] at hfit ⊢
+      rw [haddress]
+      omega)
     iintro ⟨Hstate, Harray⟩
     ihave Hfocus := array64At_get 0 base values k hk $$ Harray
     icases Hfocus with ⟨Hword, Hrestore⟩
     imod stateInterp_pointsTo_u64_facts_frame
       store steps observations threads address values[k]
-      (hn 1 (by omega)) (hn 2 (by omega)) (hn 3 (by omega))
-      (hn 4 (by omega)) (hn 5 (by omega)) (hn 6 (by omega))
-      (hn 7 (by omega)) $$ [$Hstate $Hword] with
+      h1 h2 h3 h4 h5 h6 h7 $$ [$Hstate $Hword] with
       ⟨Hstate, Hword, %hfacts⟩
     imodintro
     isplitl [Hstate]
