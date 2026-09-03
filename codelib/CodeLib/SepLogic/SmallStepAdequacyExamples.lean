@@ -27,8 +27,7 @@ private theorem sep_pair_pure_rotate
   iintro ⟨⟨HP, HQ⟩, %hφ⟩
   isplitl []
   · ipureexact hφ
-  · isplitl [HP]
-    · iexact HP
+  · isplitl_exact HP
     · iexact HQ
 
 private def globalGetAdequacyConfig : Config Unit :=
@@ -1996,8 +1995,7 @@ theorem tableCopyDistinct_store_partiallyMeets :
       iintro ⟨⟨Hdestination, Hsource⟩, %hvalues⟩
       isplitl []
       · ipureexact hvalues
-      · isplitl [Hdestination]
-        · iexact Hdestination
+      · isplitl_exact Hdestination
         · iexact Hsource
     iapply wp_mono hpost
     simp only [← tablePointsToAt_eq]
@@ -2015,8 +2013,7 @@ theorem tableCopyDistinct_store_partiallyMeets :
     iapply wp_mono hframe
     iapply wp_frame_l
     isplitl [Hdestination Hsource]
-    · isplitl [Hdestination]
-      · iexact Hdestination
+    · isplitl_exact Hdestination
       · iexact Hsource
     wasm_wp_finish_value_rfl
 
@@ -2176,10 +2173,8 @@ theorem tableInitDrop_store_partiallyMeets :
           elementSegmentPointsToAt 0 0 (some [some 0, none, some 0]) ∗
           runtimeModuleOwn ⟨0⟩ tableInitDropAdequacyModule $$
         [Htable Helement Hruntime HinstFrag]
-    · isplitl [Htable]
-      · iexact Htable
-      · isplitl [Helement]
-        · iexact Helement
+    · isplitl_exact Htable
+      · isplitl_exact Helement
         · unfold runtimeModuleOwn
           isplitl [Hruntime]
           · unfold runtimeModuleElem; iexact Hruntime
@@ -2196,8 +2191,7 @@ theorem tableInitDrop_store_partiallyMeets :
     iapply wp_mono (fun _ => sep_pair_pure_rotate _ _ _)
     iapply wp_frame_l
     isplitl [Htable Helement]
-    · isplitl [Htable]
-      · iexact Htable
+    · isplitl_exact Htable
       · iexact Helement
     wasm_wp_finish_value_rfl
 

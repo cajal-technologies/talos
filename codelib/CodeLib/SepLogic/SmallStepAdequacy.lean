@@ -1318,8 +1318,7 @@ theorem wasm_smallStep_heap_globals_runtime_store_terminates
     iapply twp.to_wp
     iapply htwp .hasLC
     isplitl_exact Hpoints
-    · isplitl [Hglobals]
-      · iexact Hglobals
+    · isplitl_exact Hglobals
       · iexact HruntimeModule
 
 /-- Relational partial-correctness form of state-sensitive authoritative

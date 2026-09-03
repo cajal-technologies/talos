@@ -535,8 +535,7 @@ theorem heap64Aux_pointsTo [WasmHeapGS Unit]
       icases Hword with ⟨Hword, Hheap⟩
       simp only [array64At]
       isplitl [Hword Hvalues]
-      · isplitl [Hword]
-        · iexact Hword
+      · isplitl_exact Hword
         · iexact Hvalues
       · iexact Hheap
 
@@ -600,8 +599,7 @@ theorem array64At_words [WasmSmallStepGS hlc α]
       imodintro
       isplitl_exact Hstate
       isplitl [Hword Houtput]
-      · isplitl [Hword]
-        · iexact Hword
+      · isplitl_exact Hword
         · iexact Houtput
       · ipureintro
         simp only [readWordArray64]

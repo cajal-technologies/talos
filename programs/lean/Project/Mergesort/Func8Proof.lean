@@ -255,8 +255,7 @@ private theorem twp_func8_copy_and_return
   isimp only [ResumeWP, resumeExpr, RuntimeContext, List.cons_append,
     List.nil_append] at Hcont
   iapply Hcont $$ [Hmodule Henv] Hbump' HnewBlock
-  · isplitl [Hmodule]
-    · iexact Hmodule
+  · isplitl_exact Hmodule
     · iexact Henv
   · ipureexact hcopy
   · iexact Hstreams

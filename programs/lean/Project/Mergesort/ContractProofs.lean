@@ -279,8 +279,7 @@ theorem import0_correct [WasmSmallStepGS hlc Universal.State] :
     isimp only [Cont, RuntimeContext, ResumeWP, resumeExpr, List.nil_append]
       at Hcont
     iapply Hcont $$ [Hmodule Henv] Hstreams Hslice
-    · isplitl [Hmodule]
-      · iexact Hmodule
+    · isplitl_exact Hmodule
       · iexact Henv
     · ipureexact Nat.min_le_left _ _
   · iintro %preWasm %postWasm %msg %hinvoke Hfalse
@@ -410,8 +409,7 @@ theorem import1_correct [WasmSmallStepGS hlc Universal.State] :
     isimp only [Cont, RuntimeContext, ResumeWP, resumeExpr, List.nil_append]
       at Hcont
     iapply Hcont $$ [Hmodule Henv] Hstreams Hslice
-    · isplitl [Hmodule]
-      · iexact Hmodule
+    · isplitl_exact Hmodule
       · iexact Henv
   · iintro %preWasm %postWasm %msg %hinvoke Hfalse
     iexfalso

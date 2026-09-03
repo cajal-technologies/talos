@@ -373,8 +373,7 @@ theorem fillWords_loopBody_invariant_wp
           iapply_frame IH'
         · simp only [Rloop]
           isplitl [IHcurrent HRcurrent]
-          · isplitl [IHcurrent]
-            · iexact IHcurrent
+          · isplitl_exact IHcurrent
             · iexact HRcurrent
           · iexact HarrayCurrent
   · intro hnlt

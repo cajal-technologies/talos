@@ -441,8 +441,7 @@ theorem copyWords_loopBody_invariant_wp
             iexact Hsrc'
         · simp only [Rloop]
           isplitl [IHcurrent HRcurrent]
-          · isplitl [IHcurrent]
-            · iexact IHcurrent
+          · isplitl_exact IHcurrent
             · iexact HRcurrent
           isplitl_exact HdstCurrent
           · iexact HsrcCurrent
@@ -965,8 +964,7 @@ theorem copyWords_loop_twp
             · simp only [List.append_assoc, List.singleton_append]
               iexact Hsrc'
           · isplitl [IHcurrent HRcurrent]
-            · isplitl [IHcurrent]
-              · iexact IHcurrent
+            · isplitl_exact IHcurrent
               · iexact HRcurrent
             isplitl_exact HdstCurrent
             · iexact HsrcCurrent

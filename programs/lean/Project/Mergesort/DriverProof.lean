@@ -5424,8 +5424,7 @@ theorem twp_func3_initialize
   ihave HentryParts :
       iprop(StackRegion entryStackLow entryBytes ∗
         ⌜entryBytes.length = 288⌝) $$ [Hentry]
-  · isplitl [Hentry]
-    · iexact Hentry
+  · isplitl_exact Hentry
     · ipureexact hentryLength
   icases (EntryStack_split entryBytes).mp $$ HentryParts with
     ⟨%reserveBytes, %frameBytes, %hentryParts, Hreserve, Hframe⟩

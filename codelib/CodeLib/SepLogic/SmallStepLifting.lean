@@ -1199,8 +1199,7 @@ theorem wp_callHost
         ispecialize HwpRet $$ %(store.wasm) %results %newWasm %h
         iapply HwpRet
         isplitl_exact HQ
-        · isplitl [HruntimeElem]
-          · iexact HruntimeElem
+        · isplitl_exact HruntimeElem
           · iexact HinstanceOwn
   | .Trap newWasm msg =>
     iclear HinstanceOwn HruntimeElem
@@ -4296,8 +4295,7 @@ theorem wp_copyWord (oldDestination : UInt32) :
   wasm_wp_finish_value
   isplitr
   · ipureexact rfl
-  · isplitl [Hsource]
-    · iexact Hsource
+  · isplitl_exact Hsource
     · rw [UInt32.add_zero]
       iexact Hdestination
 
@@ -4511,8 +4509,7 @@ theorem wp_reverseThreeWords :
   · isplitl [H0]
     · rw [UInt32.add_zero]
       iexact H0
-    · isplitl [H4]
-      · iexact H4
+    · isplitl_exact H4
       · rw [UInt32.add_zero]
         iexact H8
 

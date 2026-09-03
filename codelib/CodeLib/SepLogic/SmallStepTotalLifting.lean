@@ -572,8 +572,7 @@ theorem twp_callHost
         ispecialize HwpRet $$ %(store.wasm) %results %newWasm %h
         iapply HwpRet
         isplitl_exact HQ
-        · isplitl [HruntimeElem]
-          · iexact HruntimeElem
+        · isplitl_exact HruntimeElem
           · iexact HinstanceOwn
   | .Trap newWasm msg =>
     iclear HinstanceOwn HruntimeElem

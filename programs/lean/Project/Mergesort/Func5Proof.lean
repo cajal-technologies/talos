@@ -146,8 +146,7 @@ private theorem twp_func5_commit_and_return
   isimp only [RuntimeContext, ResumeWP, resumeExpr, List.cons_append,
     List.nil_append] at Hcont
   iapply Hcont $$ [Hmodule Henv] Hbump Hblock Hstreams
-  · isplitl [Hmodule]
-    · iexact Hmodule
+  · isplitl_exact Hmodule
     · iexact Henv
 
 /-- Claim the checked physical range, then commit and return it. -/

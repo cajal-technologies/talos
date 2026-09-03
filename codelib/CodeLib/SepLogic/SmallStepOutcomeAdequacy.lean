@@ -198,8 +198,7 @@ theorem wasm_smallStep_heap_globals_runtime_host_store_adequacy_outcome_at
           · isplitl [HhostStateFrag]
             · unfold hostStateOwn
               iexact HhostStateFrag
-            · isplitl [HheapFrontier]
-              · iexact HheapFrontier
+            · isplitl_exact HheapFrontier
               · iexact HmemoryPagesOwn
 
 /-- Backwards-compatible outcome adequacy with the maximally permissive heap

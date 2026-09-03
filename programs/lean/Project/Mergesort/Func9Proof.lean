@@ -165,8 +165,7 @@ private theorem twp_func9_zero_and_return
   isimp only [RuntimeContext, ResumeWP, resumeExpr, List.cons_append,
     List.nil_append] at Hcont
   iapply Hcont $$ [Hmodule Henv] Hbump Hblock Hstreams
-  · isplitl [Hmodule]
-    · iexact Hmodule
+  · isplitl_exact Hmodule
     · iexact Henv
 
 /-- Once physical capacity has been established and the fresh range has been

@@ -1589,8 +1589,7 @@ theorem stateInterp_copy_bytes [WasmSmallStepGS hlc α]
       exact ⟨h_ag, h_bn, Hfacts.2.2⟩
     · simp only [Mem.copy_pages]
       iexact Hexc'
-  · isplitl [Hsrc]
-    · iexact Hsrc
+  · isplitl_exact Hsrc
     · iexact Hdst
 
 /-- Ghost update for a bulk memory init: given ownership of the destination
@@ -1691,8 +1690,7 @@ theorem stateInterp_init_bytes [WasmSmallStepGS hlc α]
       exact ⟨h_ag, h_bn, Hfacts.2.2⟩
     · simp only [Mem.writeBytesFrom_pages]
       iexact Hexc'
-  · isplitl [Hseg]
-    · iexact Hseg
+  · isplitl_exact Hseg
     · iexact Hdst
 
 /-- Changing `Store.host` requires exchanging `hostStateOwn` because
