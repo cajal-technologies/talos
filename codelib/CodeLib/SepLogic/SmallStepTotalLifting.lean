@@ -84,15 +84,8 @@ theorem twp_pureStep
   iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
   iintro %store %ns %obs %nt Hσ
   wasm_twp_step hstep store =>
-    imod Hclose
-    imodintro
-    isplit
-    · ipureintro
-      rfl
-    isplit
-    · ipureintro
-      rfl
-    iframe
+    wasm_twp_frame
+      iexact Htwp
 
 /-- A normally finishing body is a total step to its result value. -/
 theorem twp_finish
@@ -107,15 +100,8 @@ theorem twp_finish
   iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
   iintro %store %ns %obs %nt Hσ
   wasm_twp_step Step.finish =>
-    imod Hclose
-    imodintro
-    isplit
-    · ipureintro
-      rfl
-    isplit
-    · ipureintro
-      rfl
-    iframe
+    wasm_twp_frame
+      iexact Htwp
 
 /-- Explicit total return from a top-level invocation. -/
 theorem twp_returnFromFunction
@@ -130,15 +116,8 @@ theorem twp_returnFromFunction
   iapply twp_lift_step_no_fork (@TerminalView.running_not_val α Terminal view _)
   iintro %store %ns %obs %nt Hσ
   wasm_twp_step Step.returnFromFunction =>
-    imod Hclose
-    imodintro
-    isplit
-    · ipureintro
-      rfl
-    isplit
-    · ipureintro
-      rfl
-    iframe
+    wasm_twp_frame
+      iexact Htwp
 
 theorem twp_remU
     {params localValues values : List Value}
@@ -1389,20 +1368,11 @@ theorem twp_catchException
         (prepareCatch tag arguments clause store).2⟩ :=
     Step.catchException hthrow hmatch (htarget store)
   wasm_twp_step expectedStep =>
-    imod Hclose
-    imodintro
-    isplit
-    · ipureintro
-      rfl
-    isplit
-    · ipureintro
-      rfl
-    isplitl [Hσ]
-    · have hstore_eq : (prepareCatch tag arguments clause store).2 = store := by
-        rcases hclause with ⟨t, l, rfl⟩ | ⟨l, rfl⟩ <;> rfl
-      rw [hstore_eq]
-      iexact Hσ
-    · iexact Hwp
+    have hstore_eq : (prepareCatch tag arguments clause store).2 = store := by
+      rcases hclause with ⟨t, l, rfl⟩ | ⟨l, rfl⟩ <;> rfl
+    rw [hstore_eq]
+    wasm_twp_frame
+      iexact Hwp
 
 theorem twp_tryTable
     {locals : Locals} {paramArity resultArity arity : Nat}
