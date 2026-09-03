@@ -446,12 +446,9 @@ theorem import2_correct [WasmSmallStepGS hlc Universal.State] :
   iapply Project.Mergesort.OutcomeInfrastructure.twp_oom_import
       ({ stdio := { input := input, output := output },
          random := random, oom := { raised := raised } } : Universal.State)
-  isplitl [Hhost]
-  · iexact Hhost
-  isplitl [Hmodule]
-  · iexact Hmodule
-  isplitl [Henv]
-  · iexact Henv
+  isplitl_exact Hhost
+  isplitl_exact Hmodule
+  isplitl_exact Henv
   iintro Hhost
   iapply Hterminal
   unfold Streams
@@ -582,13 +579,10 @@ theorem func10_correct [WasmSmallStepGS hlc Universal.State] :
   iapply Hread
   isplitl [Hmodule]
   · unfold RuntimeContext
-    isplitl [Hmodule]
-    · iexact Hmodule
+    isplitl_exact Hmodule
     · iexact Henv
-  isplitl [Hstreams]
-  · iexact Hstreams
-  isplitl [Hslice]
-  · iexact Hslice
+  isplitl_exact Hstreams
+  isplitl_exact Hslice
   isplitl []
   · ipureintro
     exact hfacts
@@ -644,13 +638,10 @@ theorem func11_correct [WasmSmallStepGS hlc Universal.State] :
   iapply Hwrite
   isplitl [Hmodule]
   · unfold RuntimeContext
-    isplitl [Hmodule]
-    · iexact Hmodule
+    isplitl_exact Hmodule
     · iexact Henv
-  isplitl [Hstreams]
-  · iexact Hstreams
-  isplitl [Hslice]
-  · iexact Hslice
+  isplitl_exact Hstreams
+  isplitl_exact Hslice
   isplitl []
   · ipureintro
     exact hfacts
@@ -725,12 +716,9 @@ theorem func2_correct [WasmSmallStepGS hlc Universal.State] :
   simp only [List.cons_append, List.nil_append]
   iapply Project.Mergesort.SortProof.twp_sort source scratch input scratchInput
       hbufferFacts.1.symm hlayout hsourceStrictWords hscratchStrictInput
-  isplitl [Hmodule]
-  · iexact Hmodule
-  isplitl [Hsource]
-  · iexact Hsource
-  isplitl [Hscratch]
-  · iexact Hscratch
+  isplitl_exact Hmodule
+  isplitl_exact Hsource
+  isplitl_exact Hscratch
   iintro %sorted %scratchResult %hsorted %hscratchLength
     %hscratchExact Hmodule Hsource Hscratch
   have hsortedLength : sorted.length = input.length :=
@@ -778,8 +766,7 @@ theorem func2_correct [WasmSmallStepGS hlc Universal.State] :
         [HresultBuffers]
   · unfold SortResultBuffers
     rw [← hscratchExact]
-    isplitl [HresultBuffers]
-    · iexact HresultBuffers
+    isplitl_exact HresultBuffers
     · ipureintro
       exact hsorted
   isimp only [RuntimeContext, ResumeWP, resumeExpr, List.nil_append] at Hcont

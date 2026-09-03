@@ -45,8 +45,7 @@ private theorem ByteSlice_storeAnyWordFocus
   iintro Hslice
   ihave Hold := (ByteSlice_four_as_word ptr oldBytes hlength hnowrap).mp $$
     Hslice
-  isplitl [Hold]
-  · iexact Hold
+  isplitl_exact Hold
   · iintro %newValue
     iintro Hnew
     have hnewLength : (serialize [newValue]).length = 4 := by
@@ -162,8 +161,7 @@ private theorem ByteSlice_twelve_storeFocus
       (serialize [tag] ++ serialize [pointer]) $$ [Htag Hpointer]
   · iapply (ByteSlice_append ptr (serialize [tag])
       (serialize [pointer])).mpr
-    isplitl [Htag]
-    · iexact Htag
+    isplitl_exact Htag
     · have hpointerAddress :
           ptr + UInt32.ofNat (serialize [tag]).length = ptr + 4 := by
         have htagLength : (serialize [tag]).length = 4 := by
@@ -183,8 +181,7 @@ private theorem ByteSlice_twelve_storeFocus
   · iapply (ByteSlice_append ptr
       (serialize [tag] ++ serialize [pointer])
       (serialize [capacity])).mpr
-    isplitl [Hhead]
-    · iexact Hhead
+    isplitl_exact Hhead
     · have hcapacityAddress : ptr + UInt32.ofNat
             (serialize [tag] ++ serialize [pointer]).length = ptr + 8 := by
         have hpairLength :
@@ -537,10 +534,8 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
         isplitl [Hmodule Henv]
         · unfold RuntimeContext
           iframe Hmodule Henv
-        isplitl [Hbump]
-        · iexact Hbump
-        isplitl [Hstreams]
-        · iexact Hstreams
+        isplitl_exact Hbump
+        isplitl_exact Hstreams
         isplitl []
         · ipureintro
           exact ⟨hnewMatches, hnewValid, Or.inl rfl⟩
@@ -611,16 +606,11 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
               isimp only [newLayout, growHistory] at Hblock
               isimp only [newLayout, growHistory] at Hnormal
               isimp only [newLayout, growHistory]
-              isplitl [Hruntime]
-              · iexact Hruntime
-              isplitl [Hresult]
-              · iexact Hresult
-              isplitl [Hbump]
-              · iexact Hbump
-              isplitl [Hblock]
-              · iexact Hblock
-              isplitl [Hstreams]
-              · iexact Hstreams
+              isplitl_exact Hruntime
+              isplitl_exact Hresult
+              isplitl_exact Hbump
+              isplitl_exact Hblock
+              isplitl_exact Hstreams
               · iexact Hnormal
             · iintro Hbump Hstreams
               ihave Hoom := BI.and_elim_r $$ Hcont
@@ -675,12 +665,9 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
       isplitl [Hmodule Henv]
       · unfold RuntimeContext
         iframe Hmodule Henv
-      isplitl [Hbump]
-      · iexact Hbump
-      isplitl [Hblock]
-      · iexact Hblock
-      isplitl [Hstreams]
-      · iexact Hstreams
+      isplitl_exact Hbump
+      isplitl_exact Hblock
+      isplitl_exact Hstreams
       isplitl []
       · ipureintro
         exact ⟨holdMatches, hnewMatches, holdValid, hnewValid, rfl,
@@ -780,16 +767,11 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
             isimp only [oldLayout, newLayout, growHistory] at Hblock
             isimp only [oldLayout, newLayout, growHistory] at Hnormal
             isimp only [oldLayout, newLayout, growHistory]
-            isplitl [Hruntime]
-            · iexact Hruntime
-            isplitl [Hresult]
-            · iexact Hresult
-            isplitl [Hbump]
-            · iexact Hbump
-            isplitl [Hblock]
-            · iexact Hblock
-            isplitl [Hstreams]
-            · iexact Hstreams
+            isplitl_exact Hruntime
+            isplitl_exact Hresult
+            isplitl_exact Hbump
+            isplitl_exact Hblock
+            isplitl_exact Hstreams
             · iexact Hnormal
           · iintro Hbump Hblock Hstreams
             ihave Hoom := BI.and_elim_r $$ Hcont

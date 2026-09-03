@@ -1,4 +1,4 @@
-import Iris.ProofMode
+import CodeLib.SepLogic.Tactics
 import Iris.Instances.Lib.FUpd
 import Iris.BI.Lib.GenHeap
 import Iris.BI.Lib.MonoNat
@@ -1017,10 +1017,8 @@ theorem currentInstanceOwnN_update_of_any {α : Type} [gs : WasmInstanceGS α]
   · iframe
   imodintro
   icases iOwn_op $$ Hboth with ⟨H1, H2⟩
-  isplitl [H1]
-  · iexact H1
-  isplitl [H2]
-  · iexact H2
+  isplitl_exact H1
+  isplitl_exact H2
   · ipureintro
     exact heq
 
@@ -1422,10 +1420,8 @@ theorem arrayAt_copy_next (memId : Nat) (dst src : UInt32) (pre : List UInt32)
   icases (arrayAt_append_cons memId src pre value srcSuffix).mp $$ Hsrc with
     ⟨HsrcPre, HsrcRest⟩
   icases HsrcRest with ⟨HsrcCell, HsrcSuffix⟩
-  isplitl [HsrcCell]
-  · iexact HsrcCell
-  isplitl [HdstCell]
-  · iexact HdstCell
+  isplitl_exact HsrcCell
+  isplitl_exact HdstCell
   iintro ⟨HsrcCell, HdstCell⟩
   isplitl [HdstPre HdstCell HdstSuffix]
   · iapply (arrayAt_append_cons memId dst pre value dstSuffix).mpr
@@ -1545,8 +1541,7 @@ theorem array64At_fill_next (memId : Nat) (ptr : UInt32) (i : Nat)
       array64At memId ((ptr + 8 * UInt32.ofNat i) + 8) suffix $$ [Hsuffix]
   · rw [List.length_replicate]
     iexact Hsuffix
-  isplitl [Hcell']
-  · iexact Hcell'
+  isplitl_exact Hcell'
   iintro Hcell
   have hrep :
       List.replicate (i + 1) value =
@@ -1561,8 +1556,7 @@ theorem array64At_fill_next (memId : Nat) (ptr : UInt32) (i : Nat)
   rw [List.append_assoc, List.singleton_append]
   iapply (array64At_append_cons memId ptr (List.replicate i value)
     value suffix).mpr
-  isplitl [Hpre]
-  · iexact Hpre
+  isplitl_exact Hpre
   isplitl [Hcell]
   · rw [List.length_replicate]
     iexact Hcell

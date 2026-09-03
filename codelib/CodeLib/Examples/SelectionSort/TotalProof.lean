@@ -395,10 +395,8 @@ private theorem twp_findMin_aux
             (stack := []) (code := [.ret]) (arity := 1) (remainder := [])
             (controls := [])
             (calls := callerFrame :: calls)
-          isplitl [Hruntime]
-          · iexact Hruntime
-          isplitl [Harray]
-          · iexact Harray
+          isplitl_exact Hruntime
+          isplitl_exact Harray
           iintro %finalBest %hpure Hruntime Harray
           wasm_twp_return_from_call Hruntime
           simp only [List.take_succ_cons, List.take_zero, List.nil_append, List.cons_append]
@@ -434,10 +432,8 @@ private theorem twp_findMin_aux
             (stack := []) (code := [.ret]) (arity := 1) (remainder := [])
             (controls := [])
             (calls := callerFrame :: calls)
-          isplitl [Hruntime]
-          · iexact Hruntime
-          isplitl [Harray]
-          · iexact Harray
+          isplitl_exact Hruntime
+          isplitl_exact Harray
           iintro %finalBest %hpure Hruntime Harray
           wasm_twp_return_from_call Hruntime
           simp only [List.take_succ_cons, List.take_zero, List.nil_append, List.cons_append]
@@ -618,18 +614,15 @@ private theorem twp_recursiveSort_aux
               Instruction.call sortIndex, Instruction.ret]))
           (arity := 0) (remainder := []) (controls := [])
           (calls := callerFrame :: calls) (s := s) (E := E) (Φ := Φ)
-        isplitl [Hruntime]
-        · iexact Hruntime
-        isplitl [Harray]
-        · iexact Harray
+        isplitl_exact Hruntime
+        isplitl_exact Harray
         iintro %best %hminimum Hruntime Harray
         have hbest : best < input.length := hminimum.2.1
         wasm_twp_pures [twp_localSet]
         simp only
         iapply twp_swapAt64 (a := 0) (b := best)
           hlen hbest hfit rfl rfl rfl rfl rfl rfl rfl
-        isplitl [Harray]
-        · iexact Harray
+        isplitl_exact Harray
         iintro Hupdated
         let updated := swapElems input 0 best
         have hupdatedLength : updated.length = input.length :=
@@ -682,10 +675,8 @@ private theorem twp_recursiveSort_aux
               values := [] })
           (stack := []) (code := [.ret]) (arity := 0) (remainder := [])
           (controls := []) (calls := callerFrame :: calls)
-        isplitl [Hruntime]
-        · iexact Hruntime
-        isplitl [Htail]
-        · iexact Htail
+        isplitl_exact Hruntime
+        isplitl_exact Htail
         iintro %tailOutput %htailPure Hruntime HtailOutput
         wasm_twp_return_from_call Hruntime
         simp only [List.take_zero, List.nil_append]
@@ -700,8 +691,7 @@ private theorem twp_recursiveSort_aux
         ihave Houtput : array64At 0 arr output $$ [Hhead HtailOutput]
         · dsimp only [output]
           simp only [array64At]
-          isplitl [Hhead]
-          · iexact Hhead
+          isplitl_exact Hhead
           · iexact HtailOutput
         iapply Hcont $$ %output %hpure Hruntime Houtput
 
@@ -1065,14 +1055,12 @@ private theorem twp_outerLoop
                     (incrementLocal 2 ++ [Instruction.br 0]))))]
             continuation := code, belowStack := List.drop 0 stack } :: controls)
         (calls := calls) (s := s) (E := E) (Φ := Φ)
-      isplitl [Harray]
-      · iexact Harray
+      isplitl_exact Harray
       iintro %finalBest %hminimum Harray
       have hbest : finalBest < state.current.length := hminimum.2.1
       iapply twp_swapAt64 (a := state.outer) (b := finalBest)
         houterLen hbest hfitCurrent rfl rfl rfl rfl rfl rfl rfl
-      isplitl [Harray]
-      · iexact Harray
+      isplitl_exact Harray
       iintro Hupdated
       simp only [incrementLocal, List.cons_append,
         List.nil_append]
@@ -1129,8 +1117,7 @@ private theorem twp_outerLoop
     isplitr
     · ipureintro
       exact hinv
-    isplitl [Harray]
-    · iexact Harray
+    isplitl_exact Harray
     · iexact Hfinish
 
 theorem twp_loopSort
@@ -1187,8 +1174,7 @@ theorem twp_loopSort
     (stack := []) (code := [.ret]) (arity := 0) (remainder := [])
     (controls := []) (calls := callerFrame :: calls)
     (s := s) (E := E) (Φ := Φ)
-  isplitl [Harray]
-  · iexact Harray
+  isplitl_exact Harray
   iintro %output %outer %best %scan %temporary %hpure Harray
   wasm_twp_return_from_call Hruntime
   simp only [List.take_zero, List.nil_append]

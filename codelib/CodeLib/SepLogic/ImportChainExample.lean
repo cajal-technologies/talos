@@ -106,8 +106,7 @@ private theorem logTransfer (v : UInt32) (n : List UInt32)
   rw [heq]
   imod hostStateOwn_update n (n ++ [v]) $$ [$Hstate_auth $HP] with ⟨Hauth', HP'⟩
   imodintro
-  isplitl [HP']
-  · iexact HP'
+  isplitl_exact HP'
   · iapply (stateInterp_eq
         { store with wasm := { store.wasm with host := n ++ [v] } }
         ns obs nt).mpr

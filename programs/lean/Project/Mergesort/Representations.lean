@@ -356,8 +356,7 @@ theorem ByteSlice_storeWordFocus {host : Type} [WasmHeapGS host]
   iintro Hslice
   ihave Hold := (ByteSlice_four_as_word ptr oldBytes hlength hnowrap).mp $$
     Hslice
-  isplitl [Hold]
-  · iexact Hold
+  isplitl_exact Hold
   · iintro Hnew
     have hnewLength : (serialize [newValue]).length = 4 := by
       rw [serialize_length]
@@ -466,8 +465,7 @@ theorem WordSlice_append {host : Type} [WasmHeapGS host]
     · ipureintro
       simpa only [Nat.mul_add] using hnowrap
     iapply (pointsToBytes_append 0 ptr (serialize xs) (serialize ys)).mpr
-    isplitl [Hleft]
-    · iexact Hleft
+    isplitl_exact Hleft
     · rw [← wordOffset_eq_byteOffset]
       iexact Hright
 
@@ -525,8 +523,7 @@ theorem WordSlice_get {host : Type} [WasmHeapGS host]
     iexact Hbytes
   ihave Hfocus := arrayAt_get 0 ptr values k hk $$ Harray
   icases Hfocus with ⟨Hcell, Hclose⟩
-  isplitl [Hcell]
-  · iexact Hcell
+  isplitl_exact Hcell
   · iintro Hcell
     ihave Harray := Hclose $$ Hcell
     ihave Hbytes : WordCells ptr values $$ [Harray]
@@ -552,8 +549,7 @@ theorem WordSlice_set {host : Type} [WasmHeapGS host]
     iexact Hbytes
   ihave Hfocus := arrayAt_set 0 ptr values k newValue hk $$ Harray
   icases Hfocus with ⟨Hcell, Hclose⟩
-  isplitl [Hcell]
-  · iexact Hcell
+  isplitl_exact Hcell
   · iintro Hcell
     ihave Harray := Hclose $$ Hcell
     ihave Hbytes : WordCells ptr (values.set k newValue) $$ [Harray]
@@ -628,10 +624,8 @@ theorem SortBuffers_copyFocus {host : Type} [WasmHeapGS host]
   ihave HscratchFocus :=
     WordSlice_set scratch scratchValues k newValue hk $$ Hscratch
   icases HscratchFocus with ⟨HscratchCell, HscratchClose⟩
-  isplitl [HsourceCell]
-  · iexact HsourceCell
-  isplitl [HscratchCell]
-  · iexact HscratchCell
+  isplitl_exact HsourceCell
+  isplitl_exact HscratchCell
   iintro HsourceCell
   iintro HscratchCell
   ihave Hsource := HsourceClose $$ HsourceCell
@@ -657,10 +651,8 @@ theorem SortBuffers_copyBackFocus {host : Type} [WasmHeapGS host]
   unfold SortBuffers WordSlice ByteSlice
   iintro ⟨⟨%hsourceAlign, %hsourceNowrap, Hsource⟩,
     ⟨%hscratchAlign, %hscratchNowrap, Hscratch⟩, %hfacts⟩
-  isplitl [Hsource]
-  · iexact Hsource
-  isplitl [Hscratch]
-  · iexact Hscratch
+  isplitl_exact Hsource
+  isplitl_exact Hscratch
   iintro Hsource
   iintro Hscratch
   isplitl [Hsource]
@@ -1259,8 +1251,7 @@ theorem LiveBlock_bytesFocus {host : Type} [WasmHeapGS host]
           LiveBlock heapId allocationId ptr layout newBytes)) := by
   unfold LiveBlock
   iintro ⟨Htoken, Hbytes, %hfacts⟩
-  isplitl [Hbytes]
-  · iexact Hbytes
+  isplitl_exact Hbytes
   · iintro %newBytes
     iintro %hnewLength
     iintro HnewBytes
@@ -1749,8 +1740,7 @@ theorem RetiredBytes_retire {host : Type} [WasmHeapGS host]
   ispecialize Hclose $$ %(retiredMeta ptr layout)
   iapply Hclose
   unfold RetiredEntry retiredMeta
-  isplitl [Hfragment]
-  · iexact Hfragment
+  isplitl_exact Hfragment
   · iexists bytes
     iframe Hbytes
     ipureintro
@@ -2266,8 +2256,7 @@ theorem VecStorage_initializedFocus {host : Type} [WasmHeapGS host]
       iexact HallBytes
     icases (ByteSlice_append ptr initialized spare).mp $$ HallBytes' with
       ⟨Hinitialized, Hspare⟩
-    isplitl [Hinitialized]
-    · iexact Hinitialized
+    isplitl_exact Hinitialized
     · iintro Hinitialized
       ihave HallBytes : ByteSlice ptr (initialized ++ spare) $$
           [Hinitialized Hspare]
@@ -2338,8 +2327,7 @@ theorem VecStorage_appendFocus {host : Type} [WasmHeapGS host]
     isplitr
     · ipureintro
       exact hchunkLength
-    isplitl [Hchunk]
-    · iexact Hchunk
+    isplitl_exact Hchunk
     iintro Hcurrent
     ihave Htail' : ByteSlice
         ((ptr + UInt32.ofNat initialized.length) +
@@ -2482,8 +2470,7 @@ theorem VecU8_initializedFocus {host : Type} [WasmHeapGS host]
   ihave Hfocus := VecStorage_initializedFocus heapId capacity ptr initialized
     hinitialized $$ Hstorage
   icases Hfocus with ⟨Hinitialized, Hclose⟩
-  isplitl [Hinitialized]
-  · iexact Hinitialized
+  isplitl_exact Hinitialized
   · iintro Hinitialized
     ihave Hstorage := Hclose $$ Hinitialized
     iframe
@@ -2513,10 +2500,8 @@ theorem VecU8_appendFocus {host : Type} [WasmHeapGS host]
   isplitr
   · ipureintro
     exact hchunkLength
-  isplitl [Hchunk]
-  · iexact Hchunk
-  isplitl [Hlength]
-  · iexact Hlength
+  isplitl_exact Hchunk
+  isplitl_exact Hlength
   iintro Hcurrent
   iintro Hlength
   ihave Hstorage := Hclose $$ Hcurrent
@@ -2546,8 +2531,7 @@ theorem emptyVecHeaderBytes_to_VecU8 {host : Type} [WasmHeapGS host]
   unfold VecU8 RawVecHeader
   isplitl [Hcapacity Hpointer]
   · iframe
-  isplitl [Hlength']
-  · iexact Hlength'
+  isplitl_exact Hlength'
   · unfold VecStorage
     ileft
     ipureintro
@@ -2589,8 +2573,7 @@ theorem ExportFrame_completedWordsFocus
   icases Hfocus with ⟨Hbytes, Hclose⟩
   ihave Hwords := (ByteSlice_serialize_as_WordSlice ptr original halign).mp $$
     Hbytes
-  isplitl [Hwords]
-  · iexact Hwords
+  isplitl_exact Hwords
   · iintro Hwords
     ihave Hbytes := (ByteSlice_serialize_as_WordSlice ptr original halign).mpr $$
       Hwords

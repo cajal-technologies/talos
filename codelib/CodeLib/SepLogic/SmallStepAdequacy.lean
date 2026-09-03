@@ -387,8 +387,7 @@ theorem wasm_smallStep_heap_globals_runtime_tags_stronglyNormalizing
   · unfold exceptionInterp
     isplitl [Hexceptions]
     · iexists (∅ : WasmExceptionMap (Nat × List Value))
-      isplitl [Hexceptions]
-      · iexact Hexceptions
+      isplitl_exact Hexceptions
       · ipureintro
         exact exceptionHeapAgrees_empty _
     · iexists config.store.wasm.tagIds
@@ -423,8 +422,7 @@ theorem wasm_smallStep_heap_globals_runtime_tags_stronglyNormalizing
       fun id env hm => by simp [get?_empty] at hm⟩
   · iintro _
     iapply htwp
-    isplitl [Hpoints]
-    · iexact Hpoints
+    isplitl_exact Hpoints
     isplitl [HglobalPoints]
     · unfold globalPointsTo
       iexact HglobalPoints
@@ -466,10 +464,8 @@ theorem wasm_smallStep_heap_globals_runtime_stronglyNormalizing
   iintro ⟨Hpoints, Hglobals, Hruntime, Htags⟩
   iclear Htags
   iapply htwp
-  isplitl [Hpoints]
-  · iexact Hpoints
-  isplitl [Hglobals]
-  · iexact Hglobals
+  isplitl_exact Hpoints
+  isplitl_exact Hglobals
   · iexact Hruntime
 
 theorem stronglyNormalizing_reaches_irreducible
@@ -620,8 +616,7 @@ theorem wasm_smallStep_runtime_tags_adequacy
   · unfold exceptionInterp
     isplitl [Hexceptions]
     · iexists (∅ : WasmExceptionMap (Nat × List Value))
-      isplitl [Hexceptions]
-      · iexact Hexceptions
+      isplitl_exact Hexceptions
       · ipureintro
         exact exceptionHeapAgrees_empty _
     · iexists config.store.wasm.tagIds
@@ -1033,8 +1028,7 @@ theorem wasm_smallStep_heap_globals_runtime_adequacy
       runtimeModuleSingletonAgrees config.store.runtime hwf,
       fun id env hm => by simp [get?_empty] at hm⟩
   · iapply hwp
-    isplitl [Hpoints]
-    · iexact Hpoints
+    isplitl_exact Hpoints
     · isplitl [HglobalPoints]
       · unfold globalPointsTo
         iexact HglobalPoints
@@ -1117,8 +1111,7 @@ theorem wasm_smallStep_heap_globals_runtime_store_adequacy
       runtimeModuleSingletonAgrees config.store.runtime hwf,
       hostEnvSingletonAgrees config.store.runtime hwf⟩
   · iapply hwp
-    isplitl [Hpoints]
-    · iexact Hpoints
+    isplitl_exact Hpoints
     · isplitl [HglobalPoints]
       · unfold globalPointsTo
         iexact HglobalPoints
@@ -1325,8 +1318,7 @@ theorem wasm_smallStep_heap_globals_runtime_store_terminates
     · iintro _
       iapply (twp.mono (fun _ => BI.true_intro))
       iapply htwp .hasNoLC
-      isplitl [Hpoints]
-      · iexact Hpoints
+      isplitl_exact Hpoints
       · isplitl [HglobalPoints]
         · unfold globalPointsTo
           iexact HglobalPoints
@@ -1340,8 +1332,7 @@ theorem wasm_smallStep_heap_globals_runtime_store_terminates
     iintro ⟨Hpoints, Hglobals, HruntimeModule, _HhostEnv⟩
     iapply twp.to_wp
     iapply htwp .hasLC
-    isplitl [Hpoints]
-    · iexact Hpoints
+    isplitl_exact Hpoints
     · isplitl [Hglobals]
       · iexact Hglobals
       · iexact HruntimeModule
@@ -1567,8 +1558,7 @@ theorem wasm_smallStep_heap_store_terminates
     · iintro _
       iapply (twp.mono (fun _ => BI.true_intro))
       iapply htwp .hasNoLC
-      isplitl [Hpoints]
-      · iexact Hpoints
+      isplitl_exact Hpoints
       · unfold runtimeModuleOwn
         isplitl [HruntimeWP]
         · unfold runtimeModuleElem; iexact HruntimeWP
@@ -1580,8 +1570,7 @@ theorem wasm_smallStep_heap_store_terminates
     iintro ⟨Hpoints, _Hempty, HruntimeModule, _HhostEnv⟩
     iapply twp.to_wp
     iapply htwp .hasLC
-    isplitl [Hpoints]
-    · iexact Hpoints
+    isplitl_exact Hpoints
     · iexact HruntimeModule
 
 /-- Total-correctness runtime entry point that also hands out the entry
@@ -1608,8 +1597,7 @@ theorem wasm_smallStep_runtime_tags_terminates
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
     iintro ⟨_Hheap, _Hglobals, Hruntime, Htags⟩
     iapply htwp .hasNoLC
-    isplitl [Hruntime]
-    · iexact Hruntime
+    isplitl_exact Hruntime
     · iexact Htags
   · apply wasm_smallStep_runtime_tags_adequacy config φ hwf
     intro gs
@@ -1748,8 +1736,7 @@ theorem wasm_smallStep_heap_globals_segments_runtime_store_adequacy
       runtimeModuleSingletonAgrees config.store.runtime hwf,
       fun id env hm => by simp [get?_empty] at hm⟩
   · iapply hwp
-    isplitl [Hpoints]
-    · iexact Hpoints
+    isplitl_exact Hpoints
     · isplitl [HglobalPoints]
       · unfold globalPointsTo
         iexact HglobalPoints
@@ -1909,8 +1896,7 @@ theorem wasm_smallStep_heap_globals_segments_tables_runtime_store_adequacy
       runtimeModuleSingletonAgrees config.store.runtime hwf,
       fun id env hm => by simp [get?_empty] at hm⟩
   · iapply hwp
-    isplitl [Hpoints]
-    · iexact Hpoints
+    isplitl_exact Hpoints
     · isplitl [HglobalPoints]
       · unfold globalPointsTo
         iexact HglobalPoints
@@ -2119,8 +2105,7 @@ theorem wasm_smallStep_heap_runtime_instance_adequacy
       runtimeModuleSingletonAgrees config.store.runtime hwf,
       fun id env hm => by simp [get?_empty] at hm⟩
   · iapply hwp
-    isplitl [Hpoints]
-    · iexact Hpoints
+    isplitl_exact Hpoints
     · unfold runtimeModuleOwn
       isplitl [HruntimeWP]
       · unfold runtimeModuleElem; iexact HruntimeWP
@@ -2205,8 +2190,7 @@ theorem wasm_smallStep_heap_runtime_instances_adequacy
       runtimeModuleSingletonAgrees config.store.runtime hwf,
       fun id env hm => by simp [get?_empty] at hm⟩
   · iapply hwp
-    isplitl [Hpoints]
-    · iexact Hpoints
+    isplitl_exact Hpoints
     · isplitl [HruntimeWP HinstanceFrag]
       · unfold runtimeModuleOwn
         isplitl [HruntimeWP]

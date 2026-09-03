@@ -396,8 +396,7 @@ theorem fillWords_loopBody_invariant_wp
     iintro ⟨#_IH', Hrest⟩
     icases Hrest with ⟨HR', Harray'⟩
     iapply hfinish
-    isplitl [HR']
-    · iexact HR'
+    isplitl_exact HR'
     · simp only [List.append_nil]
       iexact Harray'
   · simp only [P]

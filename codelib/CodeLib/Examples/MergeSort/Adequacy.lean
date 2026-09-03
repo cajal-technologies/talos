@@ -353,13 +353,10 @@ theorem mergesort_partiallyMeets
     iapply wp_mono (mergeSortPost_to_store source temporary input hbound_s)
     iapply twp.to_wp
     iapply twp_mergeSort_total source temporary input scratch
-    isplitl [Hruntime]
-    · iexact Hruntime
+    isplitl_exact Hruntime
     unfold mergeSortPre
-    isplitl [Hsrc]
-    · iexact Hsrc
-    isplitl [Htmp]
-    · iexact Htmp
+    isplitl_exact Hsrc
+    isplitl_exact Htmp
     isplitl []
     · ipureintro; exact hscr
     · ipureintro; exact hvalid
@@ -389,13 +386,10 @@ theorem mergesort_terminatesWith
     simp only [mergeSortConfig]
     iapply twp.mono (mergeSortPost_to_store source temporary input hbound_s)
     iapply twp_mergeSort_total source temporary input scratch
-    isplitl [Hruntime]
-    · iexact Hruntime
+    isplitl_exact Hruntime
     unfold mergeSortPre
-    isplitl [Hsrc]
-    · iexact Hsrc
-    isplitl [Htmp]
-    · iexact Htmp
+    isplitl_exact Hsrc
+    isplitl_exact Htmp
     isplitl []
     · ipureintro; exact hscr
     · ipureintro; exact hvalid

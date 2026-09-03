@@ -397,12 +397,10 @@ theorem twp_copyAt
     rw [UInt32.add_comm]
     iexact Hcell
   iapply twp_store32_cell h1 h2 h3
-  isplitl [Hcell']
-  · iexact Hcell'
+  isplitl_exact Hcell'
   iintro Hcell
   iapply Hcont
-  isplitl [Hsource]
-  · iexact Hsource
+  isplitl_exact Hsource
   iapply Hclose
   ihave Hcell' :
       pointsTo_u32 0

@@ -154,12 +154,9 @@ theorem twp_acceptanceCaller
   · dsimp only [acceptanceExpr]
     iapply twp_iff (selectedBody := [.call 2]) rfl
     iapply twp_oom_import acceptanceHost
-    isplitl [Hhost]
-    · iexact Hhost
-    isplitl [Hruntime]
-    · iexact Hruntime
-    isplitl [Henv]
-    · iexact Henv
+    isplitl_exact Hhost
+    isplitl_exact Hruntime
+    isplitl_exact Henv
     iintro Hhost
     iintro %store %observations Hstate
     ihave %hhost :

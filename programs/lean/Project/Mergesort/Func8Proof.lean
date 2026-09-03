@@ -507,8 +507,7 @@ private theorem twp_func8_oom
   unfold Func6Spec CallContract callExpr at Hoom
   simp only [List.nil_append, func8Locals] at Hoom ⊢
   iapply Hoom
-  isplitl [Hruntime]
-  · iexact Hruntime
+  isplitl_exact Hruntime
   iframe; iintro Hstreams
   iapply Hcont $$ Hbump Hblock Hstreams
 

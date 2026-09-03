@@ -3876,8 +3876,7 @@ theorem func0_resumeCaller_smallStep_wp
       ⟨HR, Hruntime'', Hresult, Hx, Hy, HshiftXY, HshiftX, HshiftY,
         HnextY, HnextX, HouterA, HouterB⟩
     iapply hreturn
-    isplitl [Hruntime'']
-    · iexact Hruntime''
+    isplitl_exact Hruntime''
     · iapply func0_exactFrame_entails_post
         R a b result x y outerA outerB
         shiftXY shiftX shiftY nextY nextX
@@ -7372,8 +7371,7 @@ theorem twp_func0_resumeCaller_smallStep_wp
       ⟨HR, Hruntime'', Hresult, Hx, Hy, HshiftXY, HshiftX, HshiftY,
         HnextY, HnextX, HouterA, HouterB⟩
     iapply hreturn
-    isplitl [Hruntime'']
-    · iexact Hruntime''
+    isplitl_exact Hruntime''
     · iapply func0_exactFrame_entails_post
         R a b result x y outerA outerB
         shiftXY shiftX shiftY nextY nextX

@@ -251,8 +251,7 @@ theorem wp_swapElementsFunc2
   iintro Hresources
   iapply wp_swapElementsFunc2Prefix ptrA ptrB oldScratch oldA oldB
     hroomA hroomB (calls := [])
-  isplitl [Hresources]
-  · iexact Hresources
+  isplitl_exact Hresources
   · inext
     iintro Hresources
     wasm_wp_return_value
@@ -281,8 +280,7 @@ theorem wp_swapElementsFunc2Alias
   iintro Hresources
   iapply wp_swapElementsFunc2AliasPrefix ptr oldScratch oldValue
     hroom (calls := [])
-  isplitl [Hresources]
-  · iexact Hresources
+  isplitl_exact Hresources
   · inext
     iintro Hresources
     wasm_wp_return_value
@@ -535,8 +533,7 @@ theorem twp_swapElementsFunc2
   iintro Hresources
   iapply twp_swapElementsFunc2Prefix ptrA ptrB oldScratch oldA oldB
     hroomA hroomB (calls := [])
-  isplitl [Hresources]
-  · iexact Hresources
+  isplitl_exact Hresources
   · iintro Hresources
     iapply twp_returnFromFunction
     simp only [List.take, List.nil_append]
@@ -565,8 +562,7 @@ theorem twp_swapElementsFunc2Alias
   iintro Hresources
   iapply twp_swapElementsFunc2AliasPrefix ptr oldScratch oldValue hroom
     (calls := [])
-  isplitl [Hresources]
-  · iexact Hresources
+  isplitl_exact Hresources
   · iintro Hresources
     iapply twp_returnFromFunction
     simp only [List.take, List.nil_append]
@@ -790,8 +786,7 @@ theorem func2_in_func1_context_smallStep_wp
   iapply Wasm.SmallStep.wp_swapElementsFunc2Prefix
     ((i <<< (3 % 32)) + ptr) ((j <<< (3 % 32)) + ptr)
     oldScratch oldA oldB hroomI hroomJ
-  isplitl [Hresources]
-  · iexact Hresources
+  isplitl_exact Hresources
   · inext
     iintro Hresources
     wasm_wp_return_from_call Hruntime
@@ -840,8 +835,7 @@ theorem func2Alias_in_func1_context_smallStep_wp
   simp only [func2]
   iapply Wasm.SmallStep.wp_swapElementsFunc2AliasPrefix
     ((i <<< (3 % 32)) + ptr) oldScratch oldValue hroom
-  isplitl [Hresources]
-  · iexact Hresources
+  isplitl_exact Hresources
   · inext
     iintro Hresources
     wasm_wp_return_from_call Hruntime
@@ -1569,8 +1563,7 @@ theorem twp_func2_in_func1_context_smallStep_wp
   iapply Wasm.SmallStep.twp_swapElementsFunc2Prefix
     ((i <<< (3 % 32)) + ptr) ((j <<< (3 % 32)) + ptr)
     oldScratch oldA oldB hroomI hroomJ
-  isplitl [Hresources]
-  · iexact Hresources
+  isplitl_exact Hresources
   · iintro Hresources
     wasm_twp_return_from_call Hruntime
     simp only [List.take, List.nil_append]
@@ -1615,8 +1608,7 @@ theorem twp_func2Alias_in_func1_context_smallStep_wp
   simp only [func2]
   iapply Wasm.SmallStep.twp_swapElementsFunc2AliasPrefix
     ((i <<< (3 % 32)) + ptr) oldScratch oldValue hroom
-  isplitl [Hresources]
-  · iexact Hresources
+  isplitl_exact Hresources
   · iintro Hresources
     wasm_twp_return_from_call Hruntime
     simp only [List.take, List.nil_append]

@@ -108,8 +108,7 @@ theorem writeByte_partiallyMeets :
           imod stateInterp_store8 store ns obs nt (0 : UInt32) (0 : UInt8) (42 : UInt8)
               (by exact HinBounds) $$ [$Hσ $Hpt] with ⟨Hσ, Hpt⟩
           imodintro
-          isplitl [Hpt]
-          · iexact Hpt
+          isplitl_exact Hpt
           · iexact Hσ)
         -- trap: impossible with args [.i32 0, .i32 42]
         (fun _ _ _ _ _ _ _ h => by simp [writeByteHost] at h)

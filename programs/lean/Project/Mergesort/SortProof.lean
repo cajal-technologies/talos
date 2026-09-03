@@ -1365,10 +1365,8 @@ theorem twp_mergeMainLoop
       mid state.i state.j state.k state.lastLeft state.lastRight
       hiState hjState hkScratch hdata.2.2.1 hlayout
       hdata.2.2.2.2.1
-    isplitl [Hsource]
-    · iexact Hsource
-    isplitl [Hscratch]
-    · iexact Hscratch
+    isplitl_exact Hsource
+    isplitl_exact Hscratch
     isplit
     · iintro ⟨%hle, Hsource, Hscratch⟩
       have hiLen : state.i < input.length := by omega
@@ -1800,10 +1798,8 @@ theorem twp_mergeLeftRemainder
         hiCurrentLen hkCurrentScratch hlayout.source_fits
         (by simpa [hstateLen] using hlayout.temporary_fits)
         (by rfl) (by rfl) (by rw [UInt32.add_comm]) (by rfl)
-      isplitl [Hsource]
-      · iexact Hsource
-      isplitl [Hscratch]
-      · iexact Hscratch
+      isplitl_exact Hsource
+      isplitl_exact Hscratch
       iintro ⟨Hsource, Hscratch⟩
       have hmidSize : mid < UInt32.size := by
         exact Nat.lt_of_le_of_lt hmjState hlayout.length_lt
@@ -1925,10 +1921,8 @@ theorem twp_mergeLeftRemainder
       isplitr
       · ipureintro
         simpa [hjEq] using hinv
-      isplitl [Hsource]
-      · iexact Hsource
-      isplitl [Hscratch]
-      · iexact Hscratch
+      isplitl_exact Hsource
+      isplitl_exact Hscratch
       iintro %scratch' %emitted' %aux6 %aux8 %aux9 %aux11 %aux12
         %hinv' Hsource Hscratch
       ihave Hdone := Hfinish $$ %scratch' %input.length %input.length
@@ -2203,10 +2197,8 @@ theorem twp_mergeRightRemainder
         (by simpa [hstateLen] using hlayout.temporary_fits)
         (by rfl) (by rfl) (by rw [UInt32.add_comm])
         (by rw [UInt32.add_comm])
-      isplitl [Hsource]
-      · iexact Hsource
-      isplitl [Hscratch]
-      · iexact Hscratch
+      isplitl_exact Hsource
+      isplitl_exact Hscratch
       iintro ⟨Hsource, Hscratch⟩
       have hrSuccSize : state.r + 1 < UInt32.size := by
         have : state.r + 1 ≤ n := by omega
@@ -2328,10 +2320,8 @@ theorem twp_mergeRightRemainder
       isplitr
       · ipureintro
         simpa using hinv
-      isplitl [Hsource]
-      · iexact Hsource
-      isplitl [Hscratch]
-      · iexact Hscratch
+      isplitl_exact Hsource
+      isplitl_exact Hscratch
       iintro %scratch' %emitted' %v6 %v8 %v9 %v10 %v11 %v12
         %hinv' Hsource Hscratch
       ihave Hdone := Hfinish $$ %scratch' %emitted' %v6 %v8 %v9
@@ -2383,27 +2373,21 @@ theorem twp_generated_merge
     mergeLoopInvariant_start (Nat.le_of_lt hmidLt) hscratchLength
   iapply twp_mergeMainLoop source scratch input scratchValues
     mid 0 mid 0 [] 0 0 hinvStart hmidPos hmidLt hlayout
-  isplitl [Hsource]
-  · iexact Hsource
-  isplitl [Hscratch]
-  · iexact Hscratch
+  isplitl_exact Hsource
+  isplitl_exact Hscratch
   iintro %scratch' %i %j %k %emitted %flag %last
     %hinv %hexit Hsource Hscratch
   iapply twp_mergeLeftRemainder source scratch input scratch'
     mid i j k emitted flag last hinv hexit hlayout
-  isplitl [Hsource]
-  · iexact Hsource
-  isplitl [Hscratch]
-  · iexact Hscratch
+  isplitl_exact Hsource
+  isplitl_exact Hscratch
   iintro %scratch'' %j' %k' %emitted'
     %aux6 %aux8 %aux9 %aux11 %aux12
     %hinv' Hsource Hscratch
   iapply twp_mergeRightRemainder source scratch input scratch''
     mid j' k' emitted' aux6 aux8 aux9 aux11 aux12 hinv' hlayout
-  isplitl [Hsource]
-  · iexact Hsource
-  isplitl [Hscratch]
-  · iexact Hscratch
+  isplitl_exact Hsource
+  isplitl_exact Hscratch
   iintro %scratchFinal %emittedFinal
     %v6 %v8 %v9 %v10 %v11 %v12
     %hfinal Hsource Hscratch
@@ -2651,12 +2635,9 @@ theorem twp_sort
       (by
         rw [hleftLength]
         omega)
-    isplitl [Hruntime]
-    · iexact Hruntime
-    isplitl [HsourceLeft]
-    · iexact HsourceLeft
-    isplitl [HscratchLeft]
-    · iexact HscratchLeft
+    isplitl_exact Hruntime
+    isplitl_exact HsourceLeft
+    isplitl_exact HscratchLeft
     iintro %leftOutput %leftScratch %hleftSorted
       %hleftScratchLength %hleftScratchExact Hruntime HsourceLeft HscratchLeft
     have hleftLt : left.length < input.length := by
@@ -2726,10 +2707,8 @@ theorem twp_sort
       (by
         rw [UInt32.add_comm, hscratchAddress, hrightLengthLeft]
         omega)
-    isplitl [Hruntime]
-    · iexact Hruntime
-    isplitl [HsourceRight]
-    · iexact HsourceRight
+    isplitl_exact Hruntime
+    isplitl_exact HsourceRight
     isplitl [HscratchRight']
     · rw [UInt32.add_comm]
       iexact HscratchRight'
@@ -2756,16 +2735,14 @@ theorem twp_sort
         [HsourceLeft HsourceRight]
     · dsimp only [combined]
       iapply (arrayAt_append 0 source leftOutput rightOutput).mpr
-      isplitl [HsourceLeft]
-      · iexact HsourceLeft
+      isplitl_exact HsourceLeft
       rw [hleftOutputLength]
       iexact HsourceRight
     ihave HscratchCombined : arrayAt 0 scratch scratchCombined $$
         [HscratchLeft HscratchRight]
     · dsimp only [scratchCombined]
       iapply (arrayAt_append 0 scratch leftScratch rightScratch).mpr
-      isplitl [HscratchLeft]
-      · iexact HscratchLeft
+      isplitl_exact HscratchLeft
       rw [hleftScratchLength, UInt32.add_comm]
       iexact HscratchRight
     wasm_twp_pures [twp_const twp_localSet]
@@ -2809,10 +2786,8 @@ theorem twp_sort
     · iapply twp_generated_merge_unfolded source scratch combined
         scratchCombined left.length hleftPositive hleftCombinedLt
         hscratchCombinedLength (by rw [hcombinedLength]; exact hlayout)
-      isplitl [HsourceCombined]
-      · iexact HsourceCombined
-      isplitl [HscratchCombined]
-      · iexact HscratchCombined
+      isplitl_exact HsourceCombined
+      isplitl_exact HscratchCombined
       iintro %output %v6 %v8 %v9 %v10 %v11 %v12 %hmerge
         HsourceCombined HscratchOutput
       have hsegmentLeft :

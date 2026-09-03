@@ -574,10 +574,8 @@ theorem array64At_words [WasmSmallStepGS hlc α]
       simp only [array64At, List.length_nil, readWordArray64]
       iintro ⟨Hstate, Hempty⟩
       imodintro
-      isplitl [Hstate]
-      · iexact Hstate
-      isplitl [Hempty]
-      · iexact Hempty
+      isplitl_exact Hstate
+      isplitl_exact Hempty
       · ipureintro; trivial
   | cons value output ih =>
       simp only [array64At, List.length_cons] at *
@@ -600,8 +598,7 @@ theorem array64At_words [WasmSmallStepGS hlc α]
       imod ih (base + 8) hfit' $$ [$Hstate $Houtput] with
         ⟨Hstate, Houtput, %hrest⟩
       imodintro
-      isplitl [Hstate]
-      · iexact Hstate
+      isplitl_exact Hstate
       isplitl [Hword Houtput]
       · isplitl [Hword]
         · iexact Hword
@@ -627,10 +624,8 @@ theorem array64At_capacity [WasmSmallStepGS hlc α]
   · subst values
     iintro ⟨Hstate, Harray⟩
     imodintro
-    isplitl [Hstate]
-    · iexact Hstate
-    isplitl [Harray]
-    · iexact Harray
+    isplitl_exact Hstate
+    isplitl_exact Harray
     · ipureintro
       simpa using hbaseBound
   · have hlength : 0 < values.length := by
@@ -656,8 +651,7 @@ theorem array64At_capacity [WasmSmallStepGS hlc α]
       h1 h2 h3 h4 h5 h6 h7 $$ [$Hstate $Hword] with
       ⟨Hstate, Hword, %hfacts⟩
     imodintro
-    isplitl [Hstate]
-    · iexact Hstate
+    isplitl_exact Hstate
     isplitl [Hrestore Hword]
     · iapply Hrestore
       iexact Hword
@@ -701,10 +695,8 @@ theorem twp_recursiveSortCall [WasmSmallStepGS hlc Unit]
       omega)
     (callerLocals := ⟨[], [], []⟩) (stack := []) (code := [])
     (arity := 0) (remainder := []) (controls := []) (calls := [])
-  isplitl [Hruntime]
-  · iexact Hruntime
-  isplitl [Harray]
-  · iexact Harray
+  isplitl_exact Hruntime
+  isplitl_exact Harray
   · iintro %output %hpure Hruntime Harray
     wasm_twp_terminal_value Wasm.SmallStep.twp_finish
     iintro %store %observations Hstate
@@ -749,10 +741,8 @@ theorem twp_loopSortCall [WasmSmallStepGS hlc Unit]
       omega)
     (callerLocals := ⟨[], [], []⟩) (stack := []) (code := [])
     (arity := 0) (remainder := []) (controls := []) (calls := [])
-  isplitl [Hruntime]
-  · iexact Hruntime
-  isplitl [Harray]
-  · iexact Harray
+  isplitl_exact Hruntime
+  isplitl_exact Harray
   · iintro %output %hpure Hruntime Harray
     wasm_twp_terminal_value Wasm.SmallStep.twp_finish
     iintro %store %observations Hstate
@@ -818,10 +808,8 @@ theorem recursive_sort_terminatesWith
     iintro ⟨Hheap, Hglobals, Hruntime, _Hhost⟩
     iapply twp.to_wp
     iapply twp_recursiveSortCall input hfit
-    isplitl [Hheap]
-    · iexact Hheap
-    isplitl [Hglobals]
-    · iexact Hglobals
+    isplitl_exact Hheap
+    isplitl_exact Hglobals
     iexact Hruntime
 
 theorem loop_sort_stronglyNormalizing
@@ -870,10 +858,8 @@ theorem loop_sort_terminatesWith
     iintro ⟨Hheap, Hglobals, Hruntime, _Hhost⟩
     iapply twp.to_wp
     iapply twp_loopSortCall input hfit
-    isplitl [Hheap]
-    · iexact Hheap
-    isplitl [Hglobals]
-    · iexact Hglobals
+    isplitl_exact Hheap
+    isplitl_exact Hglobals
     iexact Hruntime
 
 theorem executeSort_host (program : Executable) (fuel : Nat)

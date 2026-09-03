@@ -439,8 +439,7 @@ theorem copyWords_loopBody_invariant_wp
           ispecialize IH' $$ %(i + 1) %copied' %dstTail %srcTail
             %hpreNext %hdstNext %hsourceNext
           iapply IH'
-          isplitl [HR']
-          · iexact HR'
+          isplitl_exact HR'
           isplitl [Hdst']
           · simp only [copied', List.append_assoc, List.singleton_append]
             iexact Hdst'
@@ -451,8 +450,7 @@ theorem copyWords_loopBody_invariant_wp
           · isplitl [IHcurrent]
             · iexact IHcurrent
             · iexact HRcurrent
-          isplitl [HdstCurrent]
-          · iexact HdstCurrent
+          isplitl_exact HdstCurrent
           · iexact HsrcCurrent
   · intro hnlt
     simp only [P]
@@ -480,8 +478,7 @@ theorem copyWords_loopBody_invariant_wp
     icases Hrest with ⟨HR', Harrays'⟩
     icases Harrays' with ⟨Hdst', Hsrc'⟩
     iapply hfinish
-    isplitl [HR']
-    · iexact HR'
+    isplitl_exact HR'
     isplitl [Hdst']
     · simp only [List.append_nil]
       iexact Hdst'
@@ -973,8 +970,7 @@ theorem copyWords_loop_twp
             isplitr
             · ipureintro
               exact hsourceNext
-            isplitl [HR']
-            · iexact HR'
+            isplitl_exact HR'
             isplitl [Hdst']
             · simp only [List.append_assoc, List.singleton_append]
               iexact Hdst'
@@ -984,8 +980,7 @@ theorem copyWords_loop_twp
             · isplitl [IHcurrent]
               · iexact IHcurrent
               · iexact HRcurrent
-            isplitl [HdstCurrent]
-            · iexact HdstCurrent
+            isplitl_exact HdstCurrent
             · iexact HsrcCurrent
     · intro hnlt
       have hnltNat : ¬ state.index.toNat < n.toNat := by
@@ -1008,10 +1003,8 @@ theorem copyWords_loop_twp
       rw [hcopiedSource]
       iintro ⟨_IH, HR', Hdst', Hsrc'⟩
       iapply hfinish
-      isplitl [HR']
-      · iexact HR'
-      isplitl [Hdst']
-      · iexact Hdst'
+      isplitl_exact HR'
+      isplitl_exact Hdst'
       · iexact Hsrc'
     · simp only [Inv]
       iframe
@@ -1025,8 +1018,7 @@ theorem copyWords_loop_twp
     isplitr
     · ipureintro
       simp
-    isplitl [HR]
-    · iexact HR
+    isplitl_exact HR
     isplitl [Hdst]
     · simp only [List.nil_append]
       iexact Hdst

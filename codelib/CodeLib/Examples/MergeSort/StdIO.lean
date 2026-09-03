@@ -898,8 +898,7 @@ theorem sortHeap_pointsTo [WasmHeapGS Unit]
   ihave HsourceSplit := Quicksort.quicksortHeapAux_pointsTo
     ∅ source input hempty hsourceFit $$ HsourceHeap
   icases HsourceSplit with ⟨Hsource, _Hempty⟩
-  isplitl [Hsource]
-  · iexact Hsource
+  isplitl_exact Hsource
   · iexact Hscratch
 
 theorem arrayAt_capacity [WasmSmallStepGS hlc Unit]
@@ -917,10 +916,8 @@ theorem arrayAt_capacity [WasmSmallStepGS hlc Unit]
   · subst values
     iintro ⟨Hstate, Harray⟩
     imodintro
-    isplitl [Hstate]
-    · iexact Hstate
-    isplitl [Harray]
-    · iexact Harray
+    isplitl_exact Hstate
+    isplitl_exact Harray
     · ipureintro
       simpa using hbaseBound
   · have hlength : 0 < values.length := by
@@ -945,8 +942,7 @@ theorem arrayAt_capacity [WasmSmallStepGS hlc Unit]
       address values[k] h1 h2 h3 $$ [$Hstate $Hword] with
       ⟨Hstate, Hword, %hfacts⟩
     imodintro
-    isplitl [Hstate]
-    · iexact Hstate
+    isplitl_exact Hstate
     isplitl [Hrestore Hword]
     · iapply Hrestore
       iexact Hword
@@ -1004,14 +1000,11 @@ theorem twp_sort [WasmSmallStepGS hlc Unit]
   iapply twp_mergeSortBody (α := Unit) module 3
     (by decide) (by rfl)
     source scratch input (scratchValues input)
-  isplitl [Hruntime]
-  · iexact Hruntime
+  isplitl_exact Hruntime
   isplitl [Hsource Hscratch]
   · unfold mergeSortPre
-    isplitl [Hsource]
-    · iexact Hsource
-    isplitl [Hscratch]
-    · iexact Hscratch
+    isplitl_exact Hsource
+    isplitl_exact Hscratch
     isplitr
     · ipureintro
       exact scratchValues_length input
@@ -1067,10 +1060,8 @@ theorem sort_partiallyMeets (input : List UInt32) (hfit : Fits input) :
     iintro ⟨Hheap, Hglobals, Hruntime, _Hhost⟩
     iapply twp.to_wp
     iapply twp_sort input hfit
-    isplitl [Hheap]
-    · iexact Hheap
-    isplitl [Hglobals]
-    · iexact Hglobals
+    isplitl_exact Hheap
+    isplitl_exact Hglobals
     iexact Hruntime
 
 theorem sort_stronglyNormalizing (input : List UInt32) (hfit : Fits input) :
@@ -1093,10 +1084,8 @@ theorem sort_stronglyNormalizing (input : List UInt32) (hfit : Fits input) :
     iintro ⟨Hheap, Hglobals, Hruntime⟩
     iapply (twp.mono (fun _ => BI.true_intro))
     iapply twp_sort input hfit
-    isplitl [Hheap]
-    · iexact Hheap
-    isplitl [Hglobals]
-    · iexact Hglobals
+    isplitl_exact Hheap
+    isplitl_exact Hglobals
     iexact Hruntime
 
 theorem sort_terminatesWith (input : List UInt32) (hfit : Fits input) :
@@ -1117,10 +1106,8 @@ theorem sort_terminatesWith (input : List UInt32) (hfit : Fits input) :
     iintro ⟨Hheap, Hglobals, Hruntime, _Hhost⟩
     iapply twp.to_wp
     iapply twp_sort input hfit
-    isplitl [Hheap]
-    · iexact Hheap
-    isplitl [Hglobals]
-    · iexact Hglobals
+    isplitl_exact Hheap
+    isplitl_exact Hglobals
     iexact Hruntime
 
 theorem runSteps_sort_correct (fuel : Nat) (input : List UInt32)

@@ -442,8 +442,7 @@ theorem twp_call
     wasm_twp_frame
       rw [← hsame]
       iapply Htwp
-      isplitl [HruntimeElem]
-      · iexact HruntimeElem
+      isplitl_exact HruntimeElem
       · iexact HinstanceOwn
 
 /-- Total execution of an imported host function.  The resource-transfer
@@ -562,8 +561,7 @@ theorem twp_callHost
       wasm_twp_frame
         ispecialize HwpRet $$ %(store.wasm) %results %newWasm %h
         iapply HwpRet
-        isplitl [HQ]
-        · iexact HQ
+        isplitl_exact HQ
         · isplitl [HruntimeElem]
           · iexact HruntimeElem
           · iexact HinstanceOwn
@@ -624,8 +622,7 @@ theorem twp_returnFromCallFallthrough
     wasm_twp_frame
       simp only [resumeCaller]
       iapply Hwp
-      isplitl [HruntimeElem]
-      · iexact HruntimeElem
+      isplitl_exact HruntimeElem
       · iexact HinstanceOwn
 
 theorem twp_returnFromCallExplicit
@@ -667,8 +664,7 @@ theorem twp_returnFromCallExplicit
     wasm_twp_frame
       simp only [resumeCaller]
       iapply Hwp
-      isplitl [HruntimeElem]
-      · iexact HruntimeElem
+      isplitl_exact HruntimeElem
       · iexact HinstanceOwn
 
 /-- Return totally from a callee and bind the restored runtime ownership. -/

@@ -1501,8 +1501,7 @@ theorem tableSetGet_store_partiallyMeets :
     iintro Htable
     iapply wp_mono (fun _ => BI.sep_comm.mp)
     iapply wp_frame_l
-    isplitl [Htable]
-    · iexact Htable
+    isplitl_exact Htable
     wasm_wp_next wp_refIsNull rfl
     wasm_wp_finish_value
     ipureintro
@@ -1619,8 +1618,7 @@ theorem tableGrowFill_store_partiallyMeets :
     iintro Htable
     iapply wp_mono (fun _ => BI.sep_comm.mp)
     iapply wp_frame_l
-    isplitl [Htable]
-    · iexact Htable
+    isplitl_exact Htable
     wasm_wp_next wp_refIsNull rfl
     wasm_wp_finish_value
     ipureintro
@@ -1721,8 +1719,7 @@ theorem tableGrow64Failure_store_partiallyMeets :
     simp only [← tablePointsToAt_eq]
     iapply wp_mono (fun _ => BI.sep_comm.mp)
     iapply wp_frame_l
-    isplitl [Htable]
-    · iexact Htable
+    isplitl_exact Htable
     wasm_wp_finish_value
     ipureintro
     rfl
@@ -1850,8 +1847,7 @@ theorem tableCopyOverlap_store_partiallyMeets :
     iintro Htable
     iapply wp_mono (fun _ => BI.sep_comm.mp)
     iapply wp_frame_l
-    isplitl [Htable]
-    · iexact Htable
+    isplitl_exact Htable
     wasm_wp_finish_value
     ipureintro
     rfl
@@ -1901,8 +1897,7 @@ private theorem tableCopyDistinctMap_pointsTo [WasmTableGS α] :
     (BI.BigSepM.bigSepM_insert (get?_empty (⟨0, 0⟩ : TableKey))).to_eq,
     BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
   iintro ⟨Hsource, Hdestination⟩
-  isplitl [Hdestination]
-  · iexact Hdestination
+  isplitl_exact Hdestination
   · iexact Hsource
 
 def tableCopyDistinctAdequacyModule : Module :=

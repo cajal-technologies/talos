@@ -184,8 +184,7 @@ theorem wasm_smallStep_heap_globals_runtime_host_store_adequacy_outcome_at
       runtimeModuleSingletonAgrees config.store.runtime hwf,
       hostEnvSingletonAgrees config.store.runtime hwf⟩
   · iapply hwp
-    isplitl [Hpoints]
-    · iexact Hpoints
+    isplitl_exact Hpoints
     · isplitl [HglobalPoints]
       · unfold globalPointsTo
         iexact HglobalPoints
@@ -323,8 +322,7 @@ theorem wasm_smallStep_heap_globals_runtime_host_stronglyNormalizing_outcome
   · iintro _
     iapply (twp.mono (fun _ => BI.true_intro))
     iapply htwp .hasNoLC
-    isplitl [Hpoints]
-    · iexact Hpoints
+    isplitl_exact Hpoints
     · isplitl [HglobalPoints]
       · unfold globalPointsTo
         iexact HglobalPoints

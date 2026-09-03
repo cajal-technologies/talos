@@ -299,8 +299,7 @@ theorem readTransfer
         (incoming ++ buffer.drop incoming.length) $$ [Hprefix Hsuffix]
   · iapply (pointsToBytes_append 0 pointer incoming
       (buffer.drop incoming.length)).mpr
-    isplitl [Hprefix]
-    · iexact Hprefix
+    isplitl_exact Hprefix
     · iexact Hsuffix
   imodintro
   isplitl [Hhost Hbuffer]

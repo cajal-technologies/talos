@@ -1066,8 +1066,7 @@ theorem wp_call
     wasm_wp_frame
       rw [← hsame]
       iapply Hwp
-      isplitl [HruntimeElem]
-      · iexact HruntimeElem
+      isplitl_exact HruntimeElem
       · iexact HinstanceOwn
 
 /-- Execute an imported (host) function call.
@@ -1177,8 +1176,7 @@ theorem wp_callHost
       wasm_wp_frame
         ispecialize HwpRet $$ %(store.wasm) %results %newWasm %h
         iapply HwpRet
-        isplitl [HQ]
-        · iexact HQ
+        isplitl_exact HQ
         · isplitl [HruntimeElem]
           · iexact HruntimeElem
           · iexact HinstanceOwn
@@ -1240,8 +1238,7 @@ theorem wp_returnFromCallExplicit'
     simp only [resumeCaller]
     wasm_wp_frame
       iapply Hwp
-      isplitl [HruntimeElem]
-      · iexact HruntimeElem
+      isplitl_exact HruntimeElem
       · iexact HinstanceOwn
 
 /-- Return from a callee and bind the restored runtime-module ownership. -/
@@ -5176,8 +5173,7 @@ theorem wp_callCrossInstance
         [$Hσ $HinstanceOwn] with ⟨Hσ, HinstanceOwn', %_⟩
     wasm_wp_frame
       iapply Hwp
-      isplitl [HinstanceOwn']
-      · iexact HinstanceOwn'
+      isplitl_exact HinstanceOwn'
       · iexact HruntimeInstances
 
 /-- Resume a suspended caller after an explicit return that crosses module-instance
@@ -5305,8 +5301,7 @@ theorem wp_callIndirect
     wasm_wp_frame
       ispecialize Hwp $$ %store.runtime.entry
       iapply Hwp
-      isplitl [Hruntime]
-      · iexact Hruntime
+      isplitl_exact Hruntime
       · iexact Htable
 
 end Wasm.SmallStep

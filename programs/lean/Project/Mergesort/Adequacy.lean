@@ -268,8 +268,7 @@ theorem initialResources [WasmSmallStepGS hlc Universal.State]
   isplitl [Hruntime Henv]
   · iunfold RuntimeContext
     iframe Hruntime Henv
-  isplitl [Hsp]
-  · iexact Hsp
+  isplitl_exact Hsp
   isplitl [Hstack]
   · unfold StackRegion Project.Mergesort.Representations.ByteSlice
     isplitr
@@ -277,8 +276,7 @@ theorem initialResources [WasmSmallStepGS hlc Universal.State]
       rw [entryStackBytes_length]
       decide
     · iexact Hstack
-  isplitl [Hbump]
-  · iexact Hbump
+  isplitl_exact Hbump
   · iexact Hstreams
 
 private abbrev irisEntryPost [WasmSmallStepGS hlc Universal.State]

@@ -79,8 +79,7 @@ private theorem incrTransfer (n : Nat) [WasmSmallStepGS .hasLC Nat]
   imod hostStateOwn_update n (n + 1) $$ [$Hstate_auth $HP] with ⟨Hauth', HP'⟩
   imodintro
   -- conclusion: hostStateOwn (n+1) ∗ stateInterp; hostStateOwn is LEFT
-  isplitl [HP']
-  · iexact HP'
+  isplitl_exact HP'
   · iapply (stateInterp_eq
         { store with wasm := { store.wasm with host := n + 1 } }
         ns obs nt).mpr

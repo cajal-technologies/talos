@@ -102,8 +102,7 @@ private theorem growSource_reserveHistory
       iintro ⟨Hbump, Hsource⟩
       isimp only [GrowSourceOwn] at Hsource
       icases Hsource with %hsource
-      isplitl [Hbump]
-      · iexact Hbump
+      isplitl_exact Hbump
       isplitl []
       · unfold GrowSourceOwn
         ipureintro
@@ -131,10 +130,8 @@ private theorem growSource_reserveHistory
         · ipureintro
           exact hsource
         · iexact Hblock
-      isplitl [Hbump]
-      · iexact Hbump
-      isplitl [Hsource]
-      · iexact Hsource
+      isplitl_exact Hbump
+      isplitl_exact Hsource
       · ipureintro
         intro newPtr newLayout
         unfold VecReserveHistory growHistory
@@ -371,14 +368,10 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
   isplitl [Hmodule Henv]
   · unfold RuntimeContext
     iframe Hmodule Henv
-  isplitl [HgrowBeforeAt]
-  · iexact HgrowBeforeAt
-  isplitl [Hsource]
-  · iexact Hsource
-  isplitl [Hbump]
-  · iexact Hbump
-  isplitl [Hstreams]
-  · iexact Hstreams
+  isplitl_exact HgrowBeforeAt
+  isplitl_exact Hsource
+  isplitl_exact Hbump
+  isplitl_exact Hstreams
   isplitl []
   · ipureintro
     have hcapacityInitialized : initialized.length ≤ capacity.toNat := by
@@ -515,14 +508,12 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
         ihave Harray : arrayAt 0 (reserveBase + 4)
             [0, newPtr, newCapacity] $$ [Htag HnewPointer HnewCapacity]
         · isimp only [arrayAt]
-          isplitl [Htag]
-          · iexact Htag
+          isplitl_exact Htag
           isplitl [HnewPointer]
           · iapply pointsTo_u32_address_eq (by decide :
                 reserveBase + 8 = reserveBase + 4 + 4)
             iexact HnewPointer
-          isplitl [HnewCapacity]
-          · iexact HnewCapacity
+          isplitl_exact HnewCapacity
           · itrivial
         ihave HresultBytes : WordCells (reserveBase + 4)
             [0, newPtr, newCapacity] $$ [Harray]

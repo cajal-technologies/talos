@@ -263,8 +263,7 @@ theorem func0_tail_to_ret_smallStep_wp
     HwordLater
   iintro Hword
   iapply Hret
-  isplitl [HR]
-  · iexact HR
+  isplitl_exact HR
   · rw [heffective]
     iexact Hword
 
@@ -283,8 +282,7 @@ theorem func0_tail_smallStep_wp
   iapply func0_tail_to_ret_smallStep_wp (iprop(True)) x word []
   isplitr
   · itrivial
-  isplitl [Hword]
-  · iexact Hword
+  isplitl_exact Hword
   · inext
     iintro ⟨_Htrue, Hword⟩
     wasm_wp_return_value
@@ -381,8 +379,7 @@ theorem func0_body_to_ret_smallStep_wp
           wasm_wp_pures [wp_localGet wp_localGet]
           wasm_wp_next wp_scalarFloat1 rfl rfl
           iapply func0_store32_smallStep_wp 0 (i32TruncSatF32S x)
-          isplitl [Hword]
-          · iexact Hword
+          isplitl_exact Hword
           · inext
             iintro Hword
             wasm_wp_pures [wp_br]
@@ -392,8 +389,7 @@ theorem func0_body_to_ret_smallStep_wp
             isplitl [HR Hglobal]
             · simp only [Rglobal]
               iframe
-            isplitl [Hword]
-            · iexact Hword
+            isplitl_exact Hword
             · inext
               iintro ⟨⟨HR, Hglobal⟩, Hword⟩
               iapply hreturn (i32TruncSatF32S x) rfl
@@ -407,8 +403,7 @@ theorem func0_body_to_ret_smallStep_wp
           simp only [List.take, List.nil_append]
           wasm_wp_pures [wp_localGet wp_const]
           iapply func0_store32_smallStep_wp 0 2147483648
-          isplitl [Hword]
-          · iexact Hword
+          isplitl_exact Hword
           · inext
             iintro Hword
             wasm_wp_pures [wp_exitControl]
@@ -419,8 +414,7 @@ theorem func0_body_to_ret_smallStep_wp
             isplitl [HR Hglobal]
             · simp only [Rglobal]
               iframe
-            isplitl [Hword]
-            · iexact Hword
+            isplitl_exact Hword
             · inext
               iintro ⟨⟨HR, Hglobal⟩, Hword⟩
               iapply hreturn 2147483648 heq.symm
@@ -434,8 +428,7 @@ theorem func0_body_to_ret_smallStep_wp
         simp only [List.take, List.drop, List.nil_append]
         wasm_wp_pures [wp_localGet wp_const]
         iapply func0_store32_smallStep_wp 0 2147483647
-        isplitl [Hword]
-        · iexact Hword
+        isplitl_exact Hword
         · inext
           iintro Hword
           wasm_wp_pures [wp_br]
@@ -446,8 +439,7 @@ theorem func0_body_to_ret_smallStep_wp
           isplitl [HR Hglobal]
           · simp only [Rglobal]
             iframe
-          isplitl [Hword]
-          · iexact Hword
+          isplitl_exact Hword
           · inext
             iintro ⟨⟨HR, Hglobal⟩, Hword⟩
             iapply hreturn 2147483647 heq.symm
@@ -461,8 +453,7 @@ theorem func0_body_to_ret_smallStep_wp
       simp only [List.take, List.drop, List.nil_append]
       wasm_wp_pures [wp_localGet wp_const]
       iapply func0_store32_smallStep_wp 0 0
-      isplitl [Hword]
-      · iexact Hword
+      isplitl_exact Hword
       · inext
         iintro Hword
         wasm_wp_pures [wp_br]
@@ -475,8 +466,7 @@ theorem func0_body_to_ret_smallStep_wp
         isplitl [HR Hglobal]
         · simp only [Rglobal]
           iframe
-        isplitl [Hword]
-        · iexact Hword
+        isplitl_exact Hword
         · inext
           iintro ⟨⟨HR, Hglobal⟩, Hword⟩
           iapply hreturn 0 heq.symm
@@ -558,8 +548,7 @@ theorem twp_func0_tail_to_ret
   iapply twp_load32 word (by decide) (by decide) (by decide) (by decide) $$ Hword'
   iintro Hword
   iapply Hcont
-  isplitl [HR]
-  · iexact HR
+  isplitl_exact HR
   · rw [heffective]
     iexact Hword
 
@@ -642,8 +631,7 @@ theorem twp_func0_body_to_ret
         wasm_twp_pures [twp_localGet twp_localGet]
         iapply twp_scalarFloat1 rfl rfl
         iapply twp_func0_store32 0 (i32TruncSatF32S x)
-        isplitl [Hword]
-        · iexact Hword
+        isplitl_exact Hword
         · iintro Hword
           wasm_twp_pures [twp_br]
           simp only [List.take, List.nil_append]
@@ -651,8 +639,7 @@ theorem twp_func0_body_to_ret
           isplitl [HR Hglobal]
           · simp only [Rglobal]
             iframe
-          isplitl [Hword]
-          · iexact Hword
+          isplitl_exact Hword
           · iintro ⟨⟨HR, Hglobal⟩, Hword⟩
             iapply hreturn (i32TruncSatF32S x) rfl
             iframe
@@ -664,8 +651,7 @@ theorem twp_func0_body_to_ret
         simp only [List.take, List.nil_append]
         wasm_twp_pures [twp_localGet twp_const]
         iapply twp_func0_store32 0 2147483648
-        isplitl [Hword]
-        · iexact Hword
+        isplitl_exact Hword
         · iintro Hword
           wasm_twp_pures [twp_exitControl]
           simp only [List.take, List.nil_append]
@@ -674,8 +660,7 @@ theorem twp_func0_body_to_ret
           isplitl [HR Hglobal]
           · simp only [Rglobal]
             iframe
-          isplitl [Hword]
-          · iexact Hword
+          isplitl_exact Hword
           · iintro ⟨⟨HR, Hglobal⟩, Hword⟩
             iapply hreturn 2147483648 heq.symm
             iframe
@@ -687,8 +672,7 @@ theorem twp_func0_body_to_ret
       simp only [List.take, List.drop, List.nil_append]
       wasm_twp_pures [twp_localGet twp_const]
       iapply twp_func0_store32 0 2147483647
-      isplitl [Hword]
-      · iexact Hword
+      isplitl_exact Hword
       · iintro Hword
         wasm_twp_pures [twp_br]
         simp only [List.take, List.nil_append]
@@ -697,8 +681,7 @@ theorem twp_func0_body_to_ret
         isplitl [HR Hglobal]
         · simp only [Rglobal]
           iframe
-        isplitl [Hword]
-        · iexact Hword
+        isplitl_exact Hword
         · iintro ⟨⟨HR, Hglobal⟩, Hword⟩
           iapply hreturn 2147483647 heq.symm
           iframe
@@ -710,8 +693,7 @@ theorem twp_func0_body_to_ret
     simp only [List.take, List.drop, List.nil_append]
     wasm_twp_pures [twp_localGet twp_const]
     iapply twp_func0_store32 0 0
-    isplitl [Hword]
-    · iexact Hword
+    isplitl_exact Hword
     · iintro Hword
       wasm_twp_pures [twp_br]
       simp only [List.take, List.nil_append]
@@ -722,8 +704,7 @@ theorem twp_func0_body_to_ret
       isplitl [HR Hglobal]
       · simp only [Rglobal]
         iframe
-      isplitl [Hword]
-      · iexact Hword
+      isplitl_exact Hword
       · iintro ⟨⟨HR, Hglobal⟩, Hword⟩
         iapply hreturn 0 heq.symm
         iframe
