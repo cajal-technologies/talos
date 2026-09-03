@@ -164,17 +164,9 @@ theorem copyWords_loadStoreIteration_wp
     rw [← hpre]
     iexact HdstCell
   simp only [CopyWordsLoadStoreIteration, List.cons_append, List.nil_append]
-  wasm_wp_pures [wp_localGet]
-  wasm_wp_pures [wp_localGet]
-  wasm_wp_pures [wp_const]
-  wasm_wp_pures [wp_shl]
-  wasm_wp_pures [wp_add]
+  wasm_wp_pures [wp_localGet wp_localGet wp_const wp_shl wp_add]
   rw [hdstAddress]
-  wasm_wp_pures [wp_localGet]
-  wasm_wp_pures [wp_localGet]
-  wasm_wp_pures [wp_const]
-  wasm_wp_pures [wp_shl]
-  wasm_wp_pures [wp_add]
+  wasm_wp_pures [wp_localGet wp_localGet wp_const wp_shl wp_add]
   rw [hsrcAddress]
   ihave HsrcLater : ▷ pointsTo_u32 0 (srcAddress + 0) value $$ [HsrcCell']
   · inext
@@ -238,12 +230,9 @@ theorem copyWords_incrementBackedge_wp
         calls⟩ : Wasm.SmallStep.Expr α) @ s; E {{ Φ }} := by
   iintro Hcontinue
   simp only [CopyWordsIncrementBackedge]
-  wasm_wp_pures [wp_localGet]
-  wasm_wp_pures [wp_const]
-  wasm_wp_pures [wp_add]
+  wasm_wp_pures [wp_localGet wp_const wp_add]
   rw [UInt32.add_comm 1 i]
-  wasm_wp_pures [wp_localSet]
-  wasm_wp_pures [wp_br]
+  wasm_wp_pures [wp_localSet wp_br]
   simp only [copyWordsLoopFrame, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set, List.take_nil,
     List.nil_append]
@@ -324,8 +313,7 @@ theorem copyWords_guard_wp
   simp only [CopyWordsOuterBody, List.cons_append, List.nil_append]
   wasm_wp_pures [wp_block]
   simp only [CopyWordsInnerGuard]
-  wasm_wp_pures [wp_localGet]
-  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet wp_localGet]
   by_cases hlt : i < n
   · iapply Wasm.SmallStep.wp_ltU (result := 1) (by simp [hlt])
     inext
@@ -336,9 +324,7 @@ theorem copyWords_guard_wp
     iexact HP
   · iapply Wasm.SmallStep.wp_ltU (result := 0) (by simp [hlt])
     inext
-    wasm_wp_pures [wp_brIfZero]
-    wasm_wp_pures [wp_br]
-    wasm_wp_pures [wp_exitControl]
+    wasm_wp_pures [wp_brIfZero wp_br wp_exitControl]
     simp only [copyWordsLoopFrame, List.drop_zero, List.take_nil,
       List.nil_append]
     iapply hexit hlt
@@ -589,8 +575,7 @@ theorem copyWords_smallStep_wp
   iintro Hresources
   rw [CopyWords_eq_structured]
   simp only [List.cons_append, List.nil_append]
-  wasm_wp_pures [wp_const]
-  wasm_wp_pures [wp_localSet]
+  wasm_wp_pures [wp_const wp_localSet]
   simp only [List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set]
   have hloop := copyWords_loop_wp R dst src n destination source

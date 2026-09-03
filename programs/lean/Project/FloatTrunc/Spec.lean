@@ -357,39 +357,27 @@ theorem func0_body_to_ret_smallStep_wp
     iapply wp_globalGet $$ Hglobal
     inext
     iintro Hglobal
-    wasm_wp_pures [wp_const]
-    wasm_wp_pures [wp_sub]
-    wasm_wp_pures [wp_localSet]
+    wasm_wp_pures [wp_const wp_sub wp_localSet]
     simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
       List.set, UInt32.reduceSub]
-    wasm_wp_pures [wp_block]
-    wasm_wp_pures [wp_block]
-    wasm_wp_pures [wp_block]
-    wasm_wp_pures [wp_block]
-    wasm_wp_pures [wp_block]
-    wasm_wp_pures [wp_block]
-    wasm_wp_pures [wp_localGet]
-    wasm_wp_pures [wp_localGet]
+    wasm_wp_pures [wp_block wp_block wp_block wp_block wp_block wp_block wp_localGet
+      wp_localGet]
     cases hnan : f32Ne x x
     · iapply wp_scalarFloat2 rfl rfl rfl
       inext
       simp only [hnan, Bool.false_eq_true, if_false]
-      wasm_wp_pures [wp_const]
-      wasm_wp_pures [wp_and]
+      wasm_wp_pures [wp_const wp_and]
       rw [show (0 &&& 1 : UInt32) = 0 by decide]
-      wasm_wp_pures [wp_brIfZero]
-      wasm_wp_pures [wp_localGet]
+      wasm_wp_pures [wp_brIfZero wp_localGet]
       iapply wp_scalarFloat0 rfl
       inext
       cases hge : f32Ge x 1325400064
       · iapply wp_scalarFloat2 rfl rfl rfl
         inext
         simp only [hge, Bool.false_eq_true, if_false]
-        wasm_wp_pures [wp_const]
-        wasm_wp_pures [wp_and]
+        wasm_wp_pures [wp_const wp_and]
         rw [show (0 &&& 1 : UInt32) = 0 by decide]
-        wasm_wp_pures [wp_brIfZero]
-        wasm_wp_pures [wp_br]
+        wasm_wp_pures [wp_brIfZero wp_br]
         simp only [List.take, List.drop, List.nil_append]
         wasm_wp_pures [wp_localGet]
         iapply wp_scalarFloat0 rfl
@@ -398,14 +386,11 @@ theorem func0_body_to_ret_smallStep_wp
         · iapply wp_scalarFloat2 rfl rfl rfl
           inext
           simp only [hlt, Bool.false_eq_true, if_false]
-          wasm_wp_pures [wp_const]
-          wasm_wp_pures [wp_and]
+          wasm_wp_pures [wp_const wp_and]
           rw [show (0 &&& 1 : UInt32) = 0 by decide]
-          wasm_wp_pures [wp_brIfZero]
-          wasm_wp_pures [wp_br]
+          wasm_wp_pures [wp_brIfZero wp_br]
           simp only [List.take, List.nil_append]
-          wasm_wp_pures [wp_localGet]
-          wasm_wp_pures [wp_localGet]
+          wasm_wp_pures [wp_localGet wp_localGet]
           iapply wp_scalarFloat1 rfl rfl
           inext
           iapply func0_store32_smallStep_wp 0 (i32TruncSatF32S x)
@@ -429,14 +414,12 @@ theorem func0_body_to_ret_smallStep_wp
         · iapply wp_scalarFloat2 rfl rfl rfl
           inext
           simp only [hlt, if_true]
-          wasm_wp_pures [wp_const]
-          wasm_wp_pures [wp_and]
+          wasm_wp_pures [wp_const wp_and]
           rw [show (1 &&& 1 : UInt32) = 1 by decide]
           iapply wp_brIf (by decide) rfl
           inext
           simp only [List.take, List.nil_append]
-          wasm_wp_pures [wp_localGet]
-          wasm_wp_pures [wp_const]
+          wasm_wp_pures [wp_localGet wp_const]
           iapply func0_store32_smallStep_wp 0 2147483648
           isplitl [Hword]
           · iexact Hword
@@ -459,14 +442,12 @@ theorem func0_body_to_ret_smallStep_wp
       · iapply wp_scalarFloat2 rfl rfl rfl
         inext
         simp only [hge, if_true]
-        wasm_wp_pures [wp_const]
-        wasm_wp_pures [wp_and]
+        wasm_wp_pures [wp_const wp_and]
         rw [show (1 &&& 1 : UInt32) = 1 by decide]
         iapply wp_brIf (by decide) rfl
         inext
         simp only [List.take, List.drop, List.nil_append]
-        wasm_wp_pures [wp_localGet]
-        wasm_wp_pures [wp_const]
+        wasm_wp_pures [wp_localGet wp_const]
         iapply func0_store32_smallStep_wp 0 2147483647
         isplitl [Hword]
         · iexact Hword
@@ -489,14 +470,12 @@ theorem func0_body_to_ret_smallStep_wp
     · iapply wp_scalarFloat2 rfl rfl rfl
       inext
       simp only [hnan, if_true]
-      wasm_wp_pures [wp_const]
-      wasm_wp_pures [wp_and]
+      wasm_wp_pures [wp_const wp_and]
       rw [show (1 &&& 1 : UInt32) = 1 by decide]
       iapply wp_brIf (by decide) rfl
       inext
       simp only [List.take, List.drop, List.nil_append]
-      wasm_wp_pures [wp_localGet]
-      wasm_wp_pures [wp_const]
+      wasm_wp_pures [wp_localGet wp_const]
       iapply func0_store32_smallStep_wp 0 0
       isplitl [Hword]
       · iexact Hword
@@ -655,8 +634,8 @@ theorem twp_func0_body_to_ret
   wasm_twp_pures [twp_const twp_sub twp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set, UInt32.reduceSub]
-  wasm_twp_pures [twp_block twp_block twp_block twp_block twp_block twp_block]
-  wasm_twp_pures [twp_localGet twp_localGet]
+  wasm_twp_pures [twp_block twp_block twp_block twp_block twp_block twp_block twp_localGet
+    twp_localGet]
   cases hnan : f32Ne x x
   · iapply twp_scalarFloat2 rfl rfl rfl
     simp only [hnan, Bool.false_eq_true, if_false]
@@ -858,8 +837,7 @@ theorem check_smallStep (x : UInt32) :
     ihave Hword := func0Heap_pointsTo $$ Hbytes
     ihave Hglobal := func0Globals_pointsTo $$ Hglobals
     simp only [func2]
-    wasm_wp_pures [wp_block]
-    wasm_wp_pures [wp_localGet]
+    wasm_wp_pures [wp_block wp_localGet]
     iapply wp_call «module» 0 func0Def
       (by simp [«module»]) (by simp [«module»]) $$ Hruntime
     inext
@@ -887,8 +865,7 @@ theorem check_smallStep (x : UInt32) :
         rw [heq]
         iapply wp_ne (result := 0) (by simp)
         inext
-        wasm_wp_pures [wp_const]
-        wasm_wp_pures [wp_and]
+        wasm_wp_pures [wp_const wp_and]
         rw [show (0 &&& 1 : UInt32) = 0 by decide]
         wasm_wp_pures [wp_brIfZero]
         iapply wp_returnFromFunction

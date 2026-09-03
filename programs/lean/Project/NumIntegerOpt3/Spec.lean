@@ -47,11 +47,7 @@ theorem finishGcd_smallStep_wp
         1, [], [gcdOuterFrame outerBody], []⟩ : Expr Unit) @ s; E
       {{ rs, ⌜rs = [Value.i64 expected]⌝ }} := by
   iintro Htrue
-  wasm_wp_pures [wp_localGet]
-  wasm_wp_pures [wp_localGet]
-  wasm_wp_pures [wp_shlI64]
-  wasm_wp_pures [wp_localSet]
-  wasm_wp_pures [wp_exitControl]
+  wasm_wp_pures [wp_localGet wp_localGet wp_shlI64 wp_localSet wp_exitControl]
   simp only [gcdOuterFrame, List.take_nil, List.nil_append]
   wasm_wp_pures [wp_localGet]
   rw [hrecombine]
@@ -72,11 +68,7 @@ theorem mod3_gcd_zero_smallStep (a b : UInt64) (hz : a = 0 ∨ b = 0) :
   apply wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [gcdConfig, func0]
-  wasm_wp_pures [wp_localGet]
-  wasm_wp_pures [wp_localGet]
-  wasm_wp_pures [wp_orI64]
-  wasm_wp_pures [wp_localSet]
-  wasm_wp_pures [wp_block]
+  wasm_wp_pures [wp_localGet wp_localGet wp_orI64 wp_localSet wp_block]
   by_cases ha : a = 0
   · subst a
     wasm_wp_pures [wp_localGet]
@@ -96,8 +88,7 @@ theorem mod3_gcd_zero_smallStep (a b : UInt64) (hz : a = 0 ∨ b = 0) :
     wasm_wp_pures [wp_localGet]
     iapply wp_eqzI64 (result := 0) (by rw [if_neg ha])
     inext
-    wasm_wp_pures [wp_brIfZero]
-    wasm_wp_pures [wp_localGet]
+    wasm_wp_pures [wp_brIfZero wp_localGet]
     iapply wp_eqzI64 (result := 1) (by decide)
     inext
     iapply wp_brIf (by decide) rfl
@@ -207,24 +198,17 @@ theorem gcdLoopBody_smallStep_wp
   iintro _
   iloeb as IH generalizing %x %y %hxne %hyne %hxodd %hyodd %hxyne %hgcd
   simp only [loopBody]
-  wasm_wp_pures [wp_block]
-  wasm_wp_pures [wp_localGet]
-  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_block wp_localGet wp_localGet]
   by_cases hgt : y < x
   · iapply wp_gtUI64 (result := 1) (by simp [hgt])
     inext
     iapply wp_brIf (by decide) rfl
     inext
     simp only [List.take_nil, List.drop_nil, List.nil_append]
-    wasm_wp_pures [wp_localGet]
-    wasm_wp_pures [wp_localGet]
-    wasm_wp_pures [wp_subI64]
-    wasm_wp_pures [wp_localTee]
-    wasm_wp_pures [wp_localGet]
+    wasm_wp_pures [wp_localGet wp_localGet wp_subI64 wp_localTee wp_localGet]
     iapply wp_ctzI64
     inext
-    wasm_wp_pures [wp_shrUI64]
-    wasm_wp_pures [wp_localTee]
+    wasm_wp_pures [wp_shrUI64 wp_localTee]
     simp only [List.set]
     let x' := (x - y) >>> (UInt64.ofNat (ctz64 64 (x - y)) % 64)
     obtain ⟨hx'ne, hx'odd, hgcd', _hdec⟩ :=
@@ -234,11 +218,9 @@ theorem gcdLoopBody_smallStep_wp
       wasm_wp_pures [wp_localGet]
       iapply wp_neI64 (result := 0) (by simp [hx'y])
       inext
-      wasm_wp_pures [wp_brIfZero]
-      wasm_wp_pures [wp_exitControl]
+      wasm_wp_pures [wp_brIfZero wp_exitControl]
       simp only [gcdLoopFrame, List.take_nil, List.nil_append]
-      wasm_wp_pures [wp_localGet]
-      wasm_wp_pures [wp_localSet]
+      wasm_wp_pures [wp_localGet wp_localSet]
       simp only [List.set]
       wasm_wp_pures [wp_exitControl]
       simp only [gcdInnerFrame, List.take_nil, List.nil_append]
@@ -275,17 +257,11 @@ theorem gcdLoopBody_smallStep_wp
       itrivial
   · iapply wp_gtUI64 (result := 0) (by simp [hgt])
     inext
-    wasm_wp_pures [wp_brIfZero]
-    wasm_wp_pures [wp_localGet]
-    wasm_wp_pures [wp_localGet]
-    wasm_wp_pures [wp_localGet]
-    wasm_wp_pures [wp_subI64]
-    wasm_wp_pures [wp_localTee]
-    wasm_wp_pures [wp_localGet]
+    wasm_wp_pures [wp_brIfZero wp_localGet wp_localGet wp_localGet wp_subI64 wp_localTee
+      wp_localGet]
     iapply wp_ctzI64
     inext
-    wasm_wp_pures [wp_shrUI64]
-    wasm_wp_pures [wp_localTee]
+    wasm_wp_pures [wp_shrUI64 wp_localTee]
     simp only [List.set]
     let y' := (y - x) >>> (UInt64.ofNat (ctz64 64 (y - x)) % 64)
     obtain ⟨hy'ne, hy'odd, hgcd', _hdec⟩ :=
@@ -308,8 +284,7 @@ theorem gcdLoopBody_smallStep_wp
     · change x ≠ (y - x) >>> (UInt64.ofNat (ctz64 64 (y - x)) % 64) at hxy'
       iapply wp_eqI64 (result := 0) (by rw [if_neg hxy'])
       inext
-      wasm_wp_pures [wp_brIfZero]
-      wasm_wp_pures [wp_br]
+      wasm_wp_pures [wp_brIfZero wp_br]
       simp only [gcdLoopFrame, List.take_nil, List.nil_append]
       simp only [loopBody]
       ispecialize IH $$ %x %
@@ -350,20 +325,16 @@ theorem gcdInner_smallStep_wp
         {{ rs, ⌜rs = [.i64 expected]⌝ }} := by
   iintro Htrue
   simp only [innerBody]
-  wasm_wp_pures [wp_localGet]
-  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet wp_localGet]
   iapply wp_ctzI64
   inext
-  wasm_wp_pures [wp_shrUI64]
-  wasm_wp_pures [wp_localTee]
+  wasm_wp_pures [wp_shrUI64 wp_localTee]
   simp only [List.set]
   let ao := p0 >>> (UInt64.ofNat (ctz64 64 p0) % 64)
-  wasm_wp_pures [wp_localGet]
-  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet wp_localGet]
   iapply wp_ctzI64
   inext
-  wasm_wp_pures [wp_shrUI64]
-  wasm_wp_pures [wp_localTee]
+  wasm_wp_pures [wp_shrUI64 wp_localTee]
   simp only [List.set]
   let bo := p1 >>> (UInt64.ofNat (ctz64 64 p1) % 64)
   have haone : ao ≠ 0 := UInt64.shr_ctz_ne_zero p0 hp0
@@ -419,10 +390,7 @@ theorem mod3_gcd_smallStep (a b : UInt64) :
   rw [show func0 =
     [.localGet 1, .localGet 0, .orI64, .localSet 2,
       .block 0 0 gcdOuterBody, .localGet 2] from rfl]
-  wasm_wp_pures [wp_localGet]
-  wasm_wp_pures [wp_localGet]
-  wasm_wp_pures [wp_orI64]
-  wasm_wp_pures [wp_localSet]
+  wasm_wp_pures [wp_localGet wp_localGet wp_orI64 wp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
   wasm_wp_pures [wp_block]
@@ -443,8 +411,7 @@ theorem mod3_gcd_smallStep (a b : UInt64) :
     simp
   · iapply wp_eqzI64 (result := 0) (by rw [if_neg ha])
     inext
-    wasm_wp_pures [wp_brIfZero]
-    wasm_wp_pures [wp_localGet]
+    wasm_wp_pures [wp_brIfZero wp_localGet]
     by_cases hb : b = 0
     · subst b
       iapply wp_eqzI64 (result := 1) (by decide)
@@ -460,8 +427,7 @@ theorem mod3_gcd_smallStep (a b : UInt64) :
       simp
     · iapply wp_eqzI64 (result := 0) (by rw [if_neg hb])
       inext
-      wasm_wp_pures [wp_brIfZero]
-      wasm_wp_pures [wp_localGet]
+      wasm_wp_pures [wp_brIfZero wp_localGet]
       iapply wp_ctzI64
       inext
       wasm_wp_pures [wp_localSet]

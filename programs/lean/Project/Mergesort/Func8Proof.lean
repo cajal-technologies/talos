@@ -651,8 +651,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
         rw [hfinishNat]
         omega
       iapply twp_ltS (result := 0) (by rw [if_neg hfinishNonnegative])
-      wasm_twp_pures [twp_brIfZero twp_block]
-      wasm_twp_pures [twp_localGet twp_const twp_add]
+      wasm_twp_pures [twp_brIfZero twp_block twp_localGet twp_const twp_add]
       rw [UInt32.add_comm (65535 : UInt32) finish]
       wasm_twp_pures [twp_const twp_shrU]
       rw [show (16 : UInt32) % 32 = 16 by decide]

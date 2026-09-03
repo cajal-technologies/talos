@@ -2508,8 +2508,7 @@ theorem twp_sort_base
     rw [UInt32.lt_iff_toNat_lt, UInt32.toNat_ofNat_of_lt' hlength]
     exact hbase
   simp only [Project.Mergesort.func2]
-  wasm_twp_pures [twp_block twp_block twp_block twp_block]
-  wasm_twp_pures [twp_localGet twp_const]
+  wasm_twp_pures [twp_block twp_block twp_block twp_block twp_localGet twp_const]
   iapply twp_ltU (result := 1) (by simp [hlt])
   iapply twp_brIf (by decide) (by rfl)
   simp only [List.drop_zero, List.take_nil, List.nil_append]
@@ -2585,8 +2584,7 @@ theorem twp_sort
     simp [Project.Mergesort.func2Def, Function.toLocals,
       Function.numParams, ValueType.zero]
     simp only [Project.Mergesort.func2]
-    wasm_twp_pures [twp_block twp_block twp_block twp_block]
-    wasm_twp_pures [twp_localGet twp_const]
+    wasm_twp_pures [twp_block twp_block twp_block twp_block twp_localGet twp_const]
     have hnotLt : ¬UInt32.ofNat input.length < 2 := by
       rw [UInt32.lt_iff_toNat_lt,
         UInt32.toNat_ofNat_of_lt' hlengthSize,
@@ -2635,8 +2633,7 @@ theorem twp_sort
       rw [← hscratchSplit]
       iexact Hscratch
     icases HscratchSplit with ⟨HscratchLeft, HscratchRight⟩
-    wasm_twp_pures [twp_block twp_block]
-    wasm_twp_pures [twp_localGet twp_localGet twp_const twp_shrU]
+    wasm_twp_pures [twp_block twp_block twp_localGet twp_localGet twp_const twp_shrU]
     rw [show (1 % 32 : UInt32) = 1 by decide,
       ofNat_shr_one hlengthSize]
     iapply twp_localTee rfl

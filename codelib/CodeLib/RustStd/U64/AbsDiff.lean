@@ -94,28 +94,19 @@ theorem absDiff_smallStep_wp_to_return
   iapply Wasm.SmallStep.wp_globalGet $$ Hglobal
   inext
   iintro Hglobal
-  wasm_wp_pures [wp_const]
-  wasm_wp_pures [wp_sub]
-  wasm_wp_pures [wp_localSet]
+  wasm_wp_pures [wp_const wp_sub wp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
-  wasm_wp_pures [wp_block]
-  wasm_wp_pures [wp_block]
-  wasm_wp_pures [wp_localGet]
-  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_block wp_block wp_localGet wp_localGet]
   by_cases hab : a < b
   · iapply Wasm.SmallStep.wp_ltUI64 (result := 1) (by simp [hab])
     inext
-    wasm_wp_pures [wp_const]
-    wasm_wp_pures [wp_and]
+    wasm_wp_pures [wp_const wp_and]
     rw [show (1 &&& 1 : UInt32) = 1 by decide]
     iapply Wasm.SmallStep.wp_brIf (by decide) rfl
     inext
     simp only [List.take_nil, List.drop_nil, List.nil_append]
-    wasm_wp_pures [wp_localGet]
-    wasm_wp_pures [wp_localGet]
-    wasm_wp_pures [wp_localGet]
-    wasm_wp_pures [wp_subI64]
+    wasm_wp_pures [wp_localGet wp_localGet wp_localGet wp_subI64]
     ihave HscratchLater :
         ▷ pointsTo_u64 0 ((sp - 16) + 8) oldScratch $$ [Hscratch]
     · inext
@@ -124,8 +115,7 @@ theorem absDiff_smallStep_wp_to_return
       HscratchLater
     inext
     iintro Hscratch
-    wasm_wp_pures [wp_exitControl]
-    wasm_wp_pures [wp_localGet]
+    wasm_wp_pures [wp_exitControl wp_localGet]
     ihave HscratchLater :
         ▷ pointsTo_u64 0 ((sp - 16) + 8) (b - a) $$ [Hscratch]
     · inext
@@ -140,14 +130,9 @@ theorem absDiff_smallStep_wp_to_return
     iframe
   · iapply Wasm.SmallStep.wp_ltUI64 (result := 0) (by simp [hab])
     inext
-    wasm_wp_pures [wp_const]
-    wasm_wp_pures [wp_and]
+    wasm_wp_pures [wp_const wp_and]
     rw [show (0 &&& 1 : UInt32) = 0 by decide]
-    wasm_wp_pures [wp_brIfZero]
-    wasm_wp_pures [wp_localGet]
-    wasm_wp_pures [wp_localGet]
-    wasm_wp_pures [wp_localGet]
-    wasm_wp_pures [wp_subI64]
+    wasm_wp_pures [wp_brIfZero wp_localGet wp_localGet wp_localGet wp_subI64]
     ihave HscratchLater :
         ▷ pointsTo_u64 0 ((sp - 16) + 8) oldScratch $$ [Hscratch]
     · inext

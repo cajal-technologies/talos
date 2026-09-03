@@ -50,26 +50,15 @@ theorem opt3_func0_distinct_smallStep_wp
   obtain ⟨hj1, hj2, hj3, hj4, hj5, hj6, hj7⟩ := UInt32.addSteps8 addressJ hroomJ'
   iintro ⟨HA, HB⟩
   simp only [Project.SwapElementsOpt3.func0]
-  wasm_wp_pures [wp_block]
-  wasm_wp_pures [wp_block]
-  wasm_wp_pures [wp_localGet]
-  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_block wp_block wp_localGet wp_localGet]
   iapply Wasm.SmallStep.wp_geU (result := 0)
     (by simp [show ¬i ≥ len from not_le_of_gt hi])
   inext
-  wasm_wp_pures [wp_brIfZero]
-  wasm_wp_pures [wp_localGet]
-  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_brIfZero wp_localGet wp_localGet]
   iapply Wasm.SmallStep.wp_geU (result := 0)
     (by simp [show ¬j ≥ len from not_le_of_gt hj])
   inext
-  wasm_wp_pures [wp_brIfZero]
-  wasm_wp_pures [wp_localGet]
-  wasm_wp_pures [wp_localGet]
-  wasm_wp_pures [wp_const]
-  wasm_wp_pures [wp_shl]
-  wasm_wp_pures [wp_add]
-  wasm_wp_pures [wp_localTee]
+  wasm_wp_pures [wp_brIfZero wp_localGet wp_localGet wp_const wp_shl wp_add wp_localTee]
   simp only [List.set]
   ihave HALater : ▷ pointsTo_u64 0 (addressI + 0) oldA $$ [HA]
   · inext
@@ -84,13 +73,7 @@ theorem opt3_func0_distinct_smallStep_wp
   wasm_wp_pures [wp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
-  wasm_wp_pures [wp_localGet]
-  wasm_wp_pures [wp_localGet]
-  wasm_wp_pures [wp_localGet]
-  wasm_wp_pures [wp_const]
-  wasm_wp_pures [wp_shl]
-  wasm_wp_pures [wp_add]
-  wasm_wp_pures [wp_localTee]
+  wasm_wp_pures [wp_localGet wp_localGet wp_localGet wp_const wp_shl wp_add wp_localTee]
   simp only [List.set]
   ihave HBLater : ▷ pointsTo_u64 0 (addressJ + 0) oldB $$ [HB]
   · inext
@@ -112,8 +95,7 @@ theorem opt3_func0_distinct_smallStep_wp
     (by simpa using hi7) $$ HALater
   inext
   iintro HA
-  wasm_wp_pures [wp_localGet]
-  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet wp_localGet]
   ihave HBLater : ▷ pointsTo_u64 0 (addressJ + 0) oldB $$ [HB]
   · inext
     rw [UInt32.add_zero]

@@ -4080,8 +4080,7 @@ theorem twp_func3_deallocate_scratch
   simp only [List.cons_append, List.nil_append]
   iapply twp_block
   simp only [func3ScratchDeallocBlockBody, func3AppendLocals, List.drop_zero]
-  wasm_twp_pures [twp_localGet twp_brIfZero]
-  wasm_twp_pures [twp_localGet twp_localGet twp_const]
+  wasm_twp_pures [twp_localGet twp_brIfZero twp_localGet twp_localGet twp_const]
   have Hdealloc := Project.Mergesort.ContractProofs.func7_correct
     (hlc := hlc)
     (ptr := scratchPtr) (size := UInt32.ofNat (4 * sorted.length))

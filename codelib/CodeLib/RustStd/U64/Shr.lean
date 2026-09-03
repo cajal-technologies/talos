@@ -24,8 +24,7 @@ theorem shr_chunk :
   simp only [shiftAmountFrag, toV_u64, toV_u32, List.cons_append,
     List.nil_append]
   iintro Hwp
-  wasm_wp_pures [wp_const]
-  wasm_wp_pures [wp_and]
+  wasm_wp_pures [wp_const wp_and]
   iapply Wasm.SmallStep.wp_extendUI32
   inext
   iapply Wasm.SmallStep.wp_shrUI64

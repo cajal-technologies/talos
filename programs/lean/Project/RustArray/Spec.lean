@@ -77,12 +77,10 @@ theorem is_empty_correct : IsEmptySpec := by
   apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [leafConfig, func2]
-  wasm_wp_pures [wp_localGet]
-  wasm_wp_pures [wp_const]
+  wasm_wp_pures [wp_localGet wp_const]
   iapply SmallStep.wp_eq (result := isEmptyValue len) (by rfl)
   inext
-  wasm_wp_pures [wp_const]
-  wasm_wp_pures [wp_and]
+  wasm_wp_pures [wp_const wp_and]
   rw [show isEmptyValue len &&& 1 = isEmptyValue len by
     unfold isEmptyValue
     by_cases h : len = 0 <;> simp [h]]
@@ -199,19 +197,16 @@ theorem is_empty_export_correct : IsEmptyExportSpec := by
     inext
     iintro Hruntime
     simp [func1Def, Function.toLocals, Function.numParams, func1]
-    wasm_wp_pures [wp_localGet]
-    wasm_wp_pures [wp_localGet]
+    wasm_wp_pures [wp_localGet wp_localGet]
     iapply SmallStep.wp_call «module» 2 func2Def
       (by simp [«module»]) (by simp [«module»]) $$ Hruntime
     inext
     iintro Hruntime
     simp [func2Def, Function.toLocals, Function.numParams, func2]
-    wasm_wp_pures [wp_localGet]
-    wasm_wp_pures [wp_const]
+    wasm_wp_pures [wp_localGet wp_const]
     iapply SmallStep.wp_eq (result := isEmptyValue len) (by rfl)
     inext
-    wasm_wp_pures [wp_const]
-    wasm_wp_pures [wp_and]
+    wasm_wp_pures [wp_const wp_and]
     rw [show isEmptyValue len &&& 1 = isEmptyValue len by
       unfold isEmptyValue
       by_cases h : len = 0 <;> simp [h]]
@@ -219,16 +214,14 @@ theorem is_empty_export_correct : IsEmptyExportSpec := by
     inext
     iintro Hruntime
     simp only [List.take, List.singleton_append]
-    wasm_wp_pures [wp_const]
-    wasm_wp_pures [wp_and]
+    wasm_wp_pures [wp_const wp_and]
     rw [show isEmptyValue len &&& 1 = isEmptyValue len by
       unfold isEmptyValue
       by_cases h : len = 0 <;> simp [h]]
     iapply SmallStep.wp_returnFromCallExplicit $$ Hruntime
     inext
     simp only [List.take, List.singleton_append]
-    wasm_wp_pures [wp_const]
-    wasm_wp_pures [wp_and]
+    wasm_wp_pures [wp_const wp_and]
     rw [show isEmptyValue len &&& 1 = isEmptyValue len by
       unfold isEmptyValue
       by_cases h : len = 0 <;> simp [h]]

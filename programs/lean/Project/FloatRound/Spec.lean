@@ -171,14 +171,12 @@ theorem func5_lowered_body_smallStep_wp
   iapply wp_globalGet $$ Hglobal
   inext
   iintro Hglobal
-  wasm_wp_pures [wp_const]
-  wasm_wp_pures [wp_sub]
+  wasm_wp_pures [wp_const wp_sub]
   rw [show (1048560 : UInt32) - 16 = 1048544 by decide]
   wasm_wp_pures [wp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
-  wasm_wp_pures [wp_localGet]
-  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet wp_localGet]
   iapply wp_scalarFloat1 rfl rfl
   inext
   ihave HwordLater :
@@ -273,14 +271,12 @@ theorem deepFrameFloat_body_smallStep_wp
   iapply wp_globalGet $$ Hglobal
   inext
   iintro Hglobal
-  wasm_wp_pures [wp_const]
-  wasm_wp_pures [wp_sub]
+  wasm_wp_pures [wp_const wp_sub]
   rw [show (1048544 : UInt32) - 16 = 1048528 by decide]
   wasm_wp_pures [wp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
-  wasm_wp_pures [wp_localGet]
-  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet wp_localGet]
   iapply wp_scalarFloat1 hzero heval
   inext
   ihave HwordLater :
@@ -482,9 +478,7 @@ theorem naive_tail_smallStep_wp
   wasm_wp_pures [wp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
-  wasm_wp_pures [wp_localGet]
-  wasm_wp_pures [wp_const]
-  wasm_wp_pures [wp_add]
+  wasm_wp_pures [wp_localGet wp_const wp_add]
   rw [show (16 : UInt32) + 1048544 = 1048560 by decide]
   ihave HglobalLater :
       ▷ globalPointsToAt 0 0 (.i32 1048544) $$ [Hglobal]
@@ -531,8 +525,7 @@ theorem naive_storeTrunc_smallStep_wp
         Expr Unit) @ s; E {{ Φ }} := by
   iintro ⟨HR, Hglobal, Hword⟩
   simp only [naiveStoreTruncProg]
-  wasm_wp_pures [wp_localGet]
-  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet wp_localGet]
   ihave HwordLater :
       ▷ pointsTo_u32 0 ((1048544 : UInt32) + 12) oldWord $$ [Hword]
   · inext
@@ -584,8 +577,7 @@ theorem naive_ceil_smallStep_wp
         Expr Unit) @ s; E {{ Φ }} := by
   iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
   simp only [naiveCeilProg]
-  wasm_wp_pures [wp_localGet]
-  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet wp_localGet]
   iapply wp_call «module» 2 func2Def
     (by simp [«module»]) (by simp [«module»]) $$ Hruntime
   inext
@@ -655,8 +647,7 @@ theorem naive_floor_smallStep_wp
         Expr Unit) @ s; E {{ Φ }} := by
   iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
   simp only [naiveFloorProg]
-  wasm_wp_pures [wp_localGet]
-  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet wp_localGet]
   iapply wp_call «module» 3 func3Def
     (by simp [«module»]) (by simp [«module»]) $$ Hruntime
   inext
@@ -759,8 +750,7 @@ theorem naive_compare_smallStep_wp
   · iapply wp_scalarFloat2 (value := .i32 1) rfl rfl
       (by simp [evalScalarFloat2?, hge])
     inext
-    wasm_wp_pures [wp_const]
-    wasm_wp_pures [wp_and]
+    wasm_wp_pures [wp_const wp_and]
     rw [show (1 &&& 1 : UInt32) = 1 by decide]
     iapply wp_brIf (by decide) rfl
     inext
@@ -776,11 +766,9 @@ theorem naive_compare_smallStep_wp
     iapply wp_scalarFloat2 (value := .i32 0) rfl rfl
       (by simp [evalScalarFloat2?, hgeFalse])
     inext
-    wasm_wp_pures [wp_const]
-    wasm_wp_pures [wp_and]
+    wasm_wp_pures [wp_const wp_and]
     rw [show (0 &&& 1 : UInt32) = 0 by decide]
-    wasm_wp_pures [wp_brIfZero]
-    wasm_wp_pures [wp_localGet]
+    wasm_wp_pures [wp_brIfZero wp_localGet]
     iapply wp_scalarFloat0 rfl
     inext
     by_cases hle :
@@ -788,8 +776,7 @@ theorem naive_compare_smallStep_wp
     · iapply wp_scalarFloat2 (value := .i32 1) rfl rfl
         (by simp [evalScalarFloat2?, hle])
       inext
-      wasm_wp_pures [wp_const]
-      wasm_wp_pures [wp_and]
+      wasm_wp_pures [wp_const wp_and]
       rw [show (1 &&& 1 : UInt32) = 1 by decide]
       iapply wp_brIf (by decide) rfl
       inext
@@ -805,11 +792,9 @@ theorem naive_compare_smallStep_wp
       iapply wp_scalarFloat2 (value := .i32 0) rfl rfl
         (by simp [evalScalarFloat2?, hleFalse])
       inext
-      wasm_wp_pures [wp_const]
-      wasm_wp_pures [wp_and]
+      wasm_wp_pures [wp_const wp_and]
       rw [show (0 &&& 1 : UInt32) = 0 by decide]
-      wasm_wp_pures [wp_brIfZero]
-      wasm_wp_pures [wp_br]
+      wasm_wp_pures [wp_brIfZero wp_br]
       simp only [naiveCFrame, List.take, List.nil_append]
       iapply naive_storeTrunc_smallStep_wp
         (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
@@ -848,8 +833,7 @@ theorem func0_lowered_smallStep_wp
   iapply wp_globalGet $$ Hglobal
   inext
   iintro Hglobal
-  wasm_wp_pures [wp_const]
-  wasm_wp_pures [wp_sub]
+  wasm_wp_pures [wp_const wp_sub]
   rw [show (1048560 : UInt32) - 16 = 1048544 by decide]
   wasm_wp_pures [wp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
@@ -879,8 +863,7 @@ theorem func0_lowered_smallStep_wp
     wasm_wp_pures [wp_localSet]
     simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
       List.set]
-    wasm_wp_pures [wp_localGet]
-    wasm_wp_pures [wp_localGet]
+    wasm_wp_pures [wp_localGet wp_localGet]
     iapply wp_scalarFloat2 rfl rfl rfl
     inext
     wasm_wp_pures [wp_localSet]
@@ -1024,9 +1007,7 @@ theorem roundCheck_tail_result_smallStep_wp
   wasm_wp_pures [wp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
-  wasm_wp_pures [wp_localGet]
-  wasm_wp_pures [wp_const]
-  wasm_wp_pures [wp_add]
+  wasm_wp_pures [wp_localGet wp_const wp_add]
   rw [show (16 : UInt32) + 1048560 = 1048576 by decide]
   ihave HglobalLater :
       ▷ globalPointsToAt 0 0 (.i32 1048560) $$ [Hglobal]
@@ -1107,15 +1088,13 @@ theorem roundCheck_comparison_smallStep_wp
       · iapply wp_scalarFloat2 (value := .i32 1) rfl rfl
           (by simp [evalScalarFloat2?, heq])
         inext
-        wasm_wp_pures [wp_const]
-        wasm_wp_pures [wp_and]
+        wasm_wp_pures [wp_const wp_and]
         rw [show (1 &&& 1 : UInt32) = 1 by decide]
         iapply wp_brIf (by decide) rfl
         inext
         simp only [roundCheckInnerFrame, List.take, List.nil_append]
         simp only [roundCheckOneProg]
-        wasm_wp_pures [wp_localGet]
-        wasm_wp_pures [wp_const]
+        wasm_wp_pures [wp_localGet wp_const]
         ihave HresultLater :
             ▷ pointsTo_u32 0 ((1048560 : UInt32) + 12) oldResult $$ [Hresult]
         · inext
@@ -1141,12 +1120,9 @@ theorem roundCheck_comparison_smallStep_wp
         iapply wp_scalarFloat2 (value := .i32 0) rfl rfl
           (by simp [evalScalarFloat2?, heqFalse])
         inext
-        wasm_wp_pures [wp_const]
-        wasm_wp_pures [wp_and]
+        wasm_wp_pures [wp_const wp_and]
         rw [show (0 &&& 1 : UInt32) = 0 by decide]
-        wasm_wp_pures [wp_brIfZero]
-        wasm_wp_pures [wp_localGet]
-        wasm_wp_pures [wp_const]
+        wasm_wp_pures [wp_brIfZero wp_localGet wp_const]
         ihave HresultLater :
             ▷ pointsTo_u32 0 ((1048560 : UInt32) + 12) oldResult $$ [Hresult]
         · inext
@@ -1184,8 +1160,7 @@ theorem func6_body_smallStep_wp
   iapply wp_globalGet $$ Hglobal
   inext
   iintro Hglobal
-  wasm_wp_pures [wp_const]
-  wasm_wp_pures [wp_sub]
+  wasm_wp_pures [wp_const wp_sub]
   rw [show (1048576 : UInt32) - 16 = 1048560 by decide]
   wasm_wp_pures [wp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,

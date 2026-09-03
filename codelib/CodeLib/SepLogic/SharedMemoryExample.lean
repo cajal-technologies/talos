@@ -129,8 +129,7 @@ theorem sharedMem_partiallyMeets (v : UInt8) :
       iintro ⟨HinstanceOwn', HruntimeInstances'⟩
       simp only [writeFn, Function.toLocals, List.map_nil]
       -- inside writeFn: [.const 0, .localGet 0, .store8 0, .ret]
-      wasm_wp_pures [wp_const]
-      wasm_wp_pures [wp_localGet]
+      wasm_wp_pures [wp_const wp_localGet]
       ihave HptLater :
           ▷ pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
             ⟨0, 0 + 0⟩ (DFrac.own 1) (some 0) $$ [Hpt]

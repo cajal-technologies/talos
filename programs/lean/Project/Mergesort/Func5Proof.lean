@@ -357,8 +357,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
         exact Nat.lt_of_le_of_lt hpadSmall (by decide)),
       UInt32.toNat_ofNat_of_lt' hsumBound,
       Nat.mod_eq_of_lt hsumBound]
-  wasm_twp_pures [twp_block twp_block]
-  wasm_twp_pures [twp_localGet twp_const twp_add]
+  wasm_twp_pures [twp_block twp_block twp_localGet twp_const twp_add]
   rw [hpadWord]
   iapply twp_localTee rfl
   simp only [List.length]
