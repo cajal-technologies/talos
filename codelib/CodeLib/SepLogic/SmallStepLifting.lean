@@ -50,20 +50,17 @@ theorem wp_trapStep
   iintro -
   iapply wp_lift_step rfl
   iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro; trivial
-  iintro !> %e₂ %store₂ %forks %Hprim Hcredit
-  rcases Hprim with ⟨hforks, actualKind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ :=
-    step_deterministic (hstep store) wasmStep
-  simp only at hconfig
-  cases hconfig
-  wasm_wp_trap_frame
+  wasm_wp_allow_stuck =>
+    iintro !> %e₂ %store₂ %forks %Hprim Hcredit
+    rcases Hprim with ⟨hforks, actualKind, hobs, wasmStep⟩
+    change forks = [] at hforks
+    subst forks
+    subst obs
+    obtain ⟨rfl, hconfig⟩ :=
+      step_deterministic (hstep store) wasmStep
+    simp only at hconfig
+    cases hconfig
+    wasm_wp_trap_frame
 /-! ## Generating the pure rules
 
 Most of the rules below say the same thing: one instruction is retired, the
@@ -4509,22 +4506,10 @@ theorem wp_memoryInit32DroppedTrap
   imod stateInterp_dataSegment_facts_frame store ns (obs ++ obs') nt
       segmentIndex none $$ [$Hσ $Hsegment] with
     ⟨Hσ, Hsegment, %hsegment⟩
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro; trivial
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues,
-        .i32 len :: .i32 source :: .i32 destination :: values⟩,
-        .memoryInit segmentIndex :: code,
-        arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.memoryInit segmentIndex))
-      ⟨.trapped .outOfBoundsMemory, store⟩ :=
-    Step.memoryInit32DroppedTrap hsegment (Or.inl hpos)
-  wasm_wp_resolve_target expectedStep against wasmStep
-  wasm_wp_trap_frame
+  wasm_wp_allow_stuck =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    wasm_wp_resolve_step Hstep using Step.memoryInit32DroppedTrap hsegment (Or.inl hpos)
+    wasm_wp_trap_frame
 
 theorem wp_memoryInit64DroppedTrap
     {params localValues values : List Value}
@@ -4545,22 +4530,10 @@ theorem wp_memoryInit64DroppedTrap
   imod stateInterp_dataSegment_facts_frame store ns (obs ++ obs') nt
       segmentIndex none $$ [$Hσ $Hsegment] with
     ⟨Hσ, Hsegment, %hsegment⟩
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro; trivial
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues,
-        .i32 len :: .i32 source :: .i64 destination :: values⟩,
-        .memoryInit segmentIndex :: code,
-        arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.memoryInit segmentIndex))
-      ⟨.trapped .outOfBoundsMemory, store⟩ :=
-    Step.memoryInit64DroppedTrap hsegment (Or.inl hpos)
-  wasm_wp_resolve_target expectedStep against wasmStep
-  wasm_wp_trap_frame
+  wasm_wp_allow_stuck =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    wasm_wp_resolve_step Hstep using Step.memoryInit64DroppedTrap hsegment (Or.inl hpos)
+    wasm_wp_trap_frame
 
 theorem wp_memoryInit32Dropped
     {params localValues values : List Value}
@@ -4671,22 +4644,10 @@ theorem wp_memoryInit32Trap
   imod stateInterp_dataSegment_facts_frame store ns (obs ++ obs') nt
       segmentIndex (some segmentBytes) $$ [$Hσ $Hsegment] with
     ⟨Hσ, Hsegment, %hsegment⟩
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro; trivial
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues,
-        .i32 len :: .i32 source :: .i32 destination :: values⟩,
-        .memoryInit segmentIndex :: code,
-        arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.memoryInit segmentIndex))
-      ⟨.trapped .outOfBoundsMemory, store⟩ :=
-    Step.memoryInit32Trap hsegment (Or.inl hsrc)
-  wasm_wp_resolve_target expectedStep against wasmStep
-  wasm_wp_trap_frame
+  wasm_wp_allow_stuck =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    wasm_wp_resolve_step Hstep using Step.memoryInit32Trap hsegment (Or.inl hsrc)
+    wasm_wp_trap_frame
 
 theorem wp_memoryInit64Trap
     {params localValues values : List Value}
@@ -4707,22 +4668,10 @@ theorem wp_memoryInit64Trap
   imod stateInterp_dataSegment_facts_frame store ns (obs ++ obs') nt
       segmentIndex (some segmentBytes) $$ [$Hσ $Hsegment] with
     ⟨Hσ, Hsegment, %hsegment⟩
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro; trivial
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues,
-        .i32 len :: .i32 source :: .i64 destination :: values⟩,
-        .memoryInit segmentIndex :: code,
-        arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.memoryInit segmentIndex))
-      ⟨.trapped .outOfBoundsMemory, store⟩ :=
-    Step.memoryInit64Trap hsegment (Or.inl hsrc)
-  wasm_wp_resolve_target expectedStep against wasmStep
-  wasm_wp_trap_frame
+  wasm_wp_allow_stuck =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    wasm_wp_resolve_step Hstep using Step.memoryInit64Trap hsegment (Or.inl hsrc)
+    wasm_wp_trap_frame
 
 wasm_wp_pure_rule wp_vConst {bits : BitVec 128} :
   .vConst bits, values => .v128 bits :: values := Step.vConst

@@ -77,6 +77,22 @@ macro_rules
        exact $witness
      next => $continuation))
 
+/-- Open the step update for a `MaybeStuck` WP, whose reducibility branch is
+trivial, and continue with the primitive-step obligation. -/
+syntax "wasm_wp_allow_stuck" " =>" ppLine colGt tacticSeq : tactic
+
+set_option hygiene false in
+macro_rules
+  | `(tactic| wasm_wp_allow_stuck => $continuation:tacticSeq) =>
+   `(tactic|
+    (iapply fupd_mask_intro Std.LawfulSet.empty_subset
+     iintro Hclose
+     isplitr
+     next =>
+       ipureintro
+       trivial
+     next => $continuation))
+
 /-- Offer one Wasm primitive step to Iris's total WP and continue with its successor. -/
 syntax "wasm_twp_offer_step " term " =>" ppLine colGt tacticSeq : tactic
 
