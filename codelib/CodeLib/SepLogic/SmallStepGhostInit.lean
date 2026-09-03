@@ -364,4 +364,35 @@ macro "wasm_alloc_tag_table " config:term : tactic =>
        { tagTableElem
          tagTableName }))
 
+set_option hygiene false in
+/-- Build the auxiliary machine interpretation from freshly allocated state. -/
+macro "wasm_build_machine_aux " config:term : tactic =>
+  `(tactic|
+    (ihave HexceptionInterp :
+         exceptionInterp ($config).store.wasm.exns ($config).store.wasm.tagIds $$
+         [Hexceptions HtagTable]
+     next =>
+       unfold exceptionInterp tagTableOwn
+       isplitl [Hexceptions]
+       next =>
+         iexists (∅ : WasmExceptionMap (Nat × List Value))
+         isplitl [Hexceptions]
+         next => iexact Hexceptions
+         next =>
+           ipureintro
+           exact exceptionHeapAgrees_empty _
+       next =>
+         iexists ($config).store.wasm.tagIds
+         isplitl [HtagTable]
+         next => iexact HtagTable
+         next =>
+           ipureintro
+           exact List.prefix_rfl
+     ihave Hexc : machineAuxInterp _ ($config).store.wasm.mem.pages
+         ($config).store.wasm.exns ($config).store.wasm.tagIds $$
+         [HmemoryPagesAuth HheapDomain HexceptionInterp]
+     next =>
+       unfold machineAuxInterp
+       iframe HmemoryPagesAuth HheapDomain HexceptionInterp))
+
 end Wasm.SmallStep
