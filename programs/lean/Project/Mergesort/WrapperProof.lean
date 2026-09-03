@@ -122,7 +122,6 @@ theorem writeTransfer
     (hnowrap : pointer.toNat + bytes.length < UInt32.size)
     (store : MachineStore Universal.State) (ns : Nat)
     (obs : List StepKind) (nt : Nat)
-    (_hmodule : store.runtime.currentModule = Project.Mergesort.module)
     (results : List Value) (postWasm : Store Universal.State)
     (hinvoke : writeHost.invoke store.wasm [.i32 length, .i32 pointer] =
       .Return results postWasm) :
@@ -201,7 +200,6 @@ theorem readTransfer
     (hnowrap : pointer.toNat + buffer.length < UInt32.size)
     (store : MachineStore Universal.State) (ns : Nat)
     (obs : List StepKind) (nt : Nat)
-    (_hmodule : store.runtime.currentModule = Project.Mergesort.module)
     (results : List Value) (postWasm : Store Universal.State)
     (hinvoke : readHost.invoke store.wasm [.i32 length, .i32 pointer] =
       .Return results postWasm) :
