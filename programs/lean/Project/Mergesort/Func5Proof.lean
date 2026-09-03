@@ -278,9 +278,7 @@ private theorem twp_func5_oom
   iapply Hoom
   isplitl [Hruntime]
   · iexact Hruntime
-  isplitl [Hstreams]
-  · iexact Hstreams
-  iintro Hstreams
+  iframe; iintro Hstreams
   iapply Hcont $$ Hbump Hstreams
 
 theorem func5_correct [WasmSmallStepGS hlc Universal.State] :

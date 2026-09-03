@@ -964,9 +964,7 @@ theorem twp_func3_append_current
       (s := s) (E := E) (Φ := Φ)
     simp only [func3AppendLocals, func3AppendBody] at Happend
     iapply Happend
-    isplitl [Hframe]
-    · iexact Hframe
-    iintro Hframe
+    iframe; iintro Hframe
     have hgeo := GeometricVecFacts.appendWithoutReserve totalBytes
       initialized.length current.length remaining.length capacity dataPtr
       frontier history hfacts.2.2.2.2 hfacts.2.1 hfits
@@ -1057,9 +1055,7 @@ theorem twp_func3_append_current
           simp only [func3AppendLocals, func3CapacityBody,
             List.cons_append, List.nil_append] at Hreload
           iapply Hreload
-          isplitl [Hframe]
-          · iexact Hframe
-          iintro Hframe
+          iframe; iintro Hframe
           wasm_twp_pures [twp_exitControl]
           simp only [List.take_zero, List.nil_append]
           have hnewCapacityWord :
@@ -1088,9 +1084,7 @@ theorem twp_func3_append_current
             (s := s) (E := E) (Φ := Φ)
           simp only [func3AppendLocals] at Happend
           iapply Happend
-          isplitl [Hframe]
-          · iexact Hframe
-          iintro Hframe
+          iframe; iintro Hframe
           ihave Hnormal := BI.and_elim_l $$ Hcont
           iapply Hnormal $$
             %(UInt32.ofNat
@@ -1710,9 +1704,7 @@ theorem twp_func3_allocate_values
   unfold Func4Spec CallContract callExpr at Hmarker
   simp only [List.cons_append, List.nil_append] at Hmarker
   iapply Hmarker
-  isplitl [Hruntime]
-  · iexact Hruntime
-  iintro Hruntime
+  iframe; iintro Hruntime
   unfold ResumeWP resumeExpr
   simp only [List.cons_append, List.nil_append]
   have hlocal7' : ({ callerLocals with values := stack } : Locals).get 7 =
@@ -3069,9 +3061,7 @@ theorem twp_func3_decode_allocated
     (calls := calls) (s := s) (E := E) (Φ := Φ)
   simp only [List.cons_append, List.nil_append] at Hguard ⊢
   iapply Hguard
-  isplitl [Hblock]
-  · iexact Hblock
-  iintro Hblock
+  iframe; iintro Hblock
   isimp only [LiveBlock] at Hblock
   icases Hblock with ⟨HallocationToken, HallocationBytes, %hblockFacts⟩
   have hbytes : bytes.length = 4 * original.length := by
@@ -3229,9 +3219,7 @@ theorem twp_func3_allocate_scratch
   simp only [List.cons_append, List.nil_append] at Hmarker
   simp only [func3AppendLocals] at Hmarker ⊢
   iapply Hmarker
-  isplitl [Hruntime]
-  · iexact Hruntime
-  iintro Hruntime
+  iframe; iintro Hruntime
   unfold ResumeWP resumeExpr
   simp only [List.cons_append, List.nil_append]
   wasm_twp_pures [twp_localGet twp_const twp_shl]
@@ -6004,9 +5992,7 @@ theorem twp_func3_complete_nonempty
         (s := s) (E := E) (Phi := Phi)
       simp only [func3AppendLocals, List.append_nil] at HscratchTail ⊢
       iapply HscratchTail
-      isplitl [Hscratch]
-      · iexact Hscratch
-      iintro Hscratch
+      iframe; iintro Hscratch
       have Hsort := twp_func3_sort heapId history.nextId
         (history.allocate valuesPtr layout).nextId valuesPtr scratchPtr inputPtr
         original (UInt32.ofNat original.length) final3 final6 0
@@ -6153,9 +6139,7 @@ theorem twp_func3_completed_nonempty
   simp only [func3CompletedPtrReload, func3AppendLocals, serialize_length,
     List.cons_append, List.nil_append] at Hreload ⊢
   iapply Hreload
-  isplitl [Hframe]
-  · iexact Hframe
-  iintro Hframe
+  iframe; iintro Hframe
   wasm_twp_pures [twp_block]
   simp only [func3ScratchOuterBody, List.cons_append, List.nil_append]
   wasm_twp_pures [twp_block]

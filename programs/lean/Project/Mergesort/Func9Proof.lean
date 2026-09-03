@@ -377,9 +377,7 @@ private theorem twp_func9_oom
   iapply Hoom
   isplitl [Hruntime]
   · iexact Hruntime
-  isplitl [Hstreams]
-  · iexact Hstreams
-  iintro Hstreams
+  iframe; iintro Hstreams
   iapply Hcont $$ Hbump Hstreams
 
 /-- Generated `__rust_alloc_zeroed` satisfies its frozen contract. -/

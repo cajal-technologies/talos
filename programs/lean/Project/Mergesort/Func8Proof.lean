@@ -509,9 +509,7 @@ private theorem twp_func8_oom
   iapply Hoom
   isplitl [Hruntime]
   · iexact Hruntime
-  isplitl [Hstreams]
-  · iexact Hstreams
-  iintro Hstreams
+  iframe; iintro Hstreams
   iapply Hcont $$ Hbump Hblock Hstreams
 
 /-- Generated reallocation satisfies its frozen success/OOM contract. -/

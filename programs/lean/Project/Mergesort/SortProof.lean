@@ -1165,9 +1165,7 @@ theorem twp_mergeMainChoice
     hiLen hlayout.source_fits
     (by rfl) (by rfl)
     (by rw [MemRegion.shl2_eq_mul4, UInt32.add_comm])
-  isplitl [Hsource]
-  · iexact Hsource
-  iintro Hsource
+  iframe; iintro Hsource
   rw [mergeMainCompareBody_afterLoad1]
   wasm_twp_pures [twp_localTee]
   rw [mergeMainCompareBody_load2]
@@ -1177,9 +1175,7 @@ theorem twp_mergeMainChoice
     (computedIndex := UInt32.ofNat (j - mid))
     (input := input) (k := j) hj hlayout.source_fits
     (by rfl) (by rfl) (right_slot_address source hmj)
-  isplitl [Hsource]
-  · iexact Hsource
-  iintro Hsource
+  iframe; iintro Hsource
   rw [mergeMainCompareBody_afterLoad2]
   wasm_twp_pures [twp_localTee]
   simp only [List.length, List.set]
@@ -1200,9 +1196,7 @@ theorem twp_mergeMainChoice
       (newWord := input[i]) (values := scratchValues) (k := k)
       hk (by simpa [hscratchLength] using hlayout.temporary_fits)
       (by rfl) (by rfl) rfl
-    isplitl [Hscratch]
-    · iexact Hscratch
-    iintro Hscratch
+    iframe; iintro Hscratch
     rw [mergeMainLeftBody_advance]
     wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [hiValue]
@@ -1228,9 +1222,7 @@ theorem twp_mergeMainChoice
       (newWord := input[j]) (values := scratchValues) (k := k)
       hk (by simpa [hscratchLength] using hlayout.temporary_fits)
       (by rfl) (by rfl) rfl
-    isplitl [Hscratch]
-    · iexact Hscratch
-    iintro Hscratch
+    iframe; iintro Hscratch
     rw [mergeMainCompareBody_rightAdvance]
     wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [hjValue]
@@ -2553,9 +2545,7 @@ theorem twp_sort
       (scratchLength := input.length) source scratch
       hbase hlayout.length_lt
       hlayout.length_lt
-    isplitl [Hruntime]
-    · iexact Hruntime
-    iintro Hruntime
+    iframe; iintro Hruntime
     have hsorted : Wasm.Examples.MergeSort.Sorted input := by
       cases input with
       | nil => simp [Wasm.Examples.MergeSort.Sorted]

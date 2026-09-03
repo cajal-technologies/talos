@@ -69,9 +69,7 @@ theorem twp_partitionScanStep
   simp only [partitionScanStep, List.append_assoc, List.cons_append, List.nil_append]
   wasm_twp_pures [twp_localGet]
   iapply twp_loadAt hjLen hfit rfl rfl
-  isplitl [Harray]
-  · iexact Harray
-  iintro Harray
+  iframe; iintro Harray
   wasm_twp_pures [twp_ltU]
   by_cases hlt : pivot < current[j]'hjLen
   · simp only [if_pos hlt]
@@ -107,9 +105,7 @@ theorem twp_partitionScanStep
             (current[i]'hiLen) [.i32 (current[i]'hiLen)]) := rfl
     simp only [partitionLocals, List.drop_zero]
     iapply twp_swapAt hiLen hjLen hfit rfl rfl htmp_set rfl rfl rfl rfl
-    isplitl [Harray]
-    · iexact Harray
-    iintro Harray
+    iframe; iintro Harray
     have hiValue : 1 + UInt32.ofNat i = UInt32.ofNat (i + 1) := by
       rw [UInt32.add_comm, u32_ofNat_succ hiSucc]
     have hsetI :
@@ -318,9 +314,7 @@ theorem twp_partitionBody
   have hjm1 : hi - 1 < input.length := by omega
   simp only [partitionLocals]
   iapply twp_loadAt hjm1 hfit rfl rfl
-  isplitl [Harray]
-  · iexact Harray
-  iintro Harray
+  iframe; iintro Harray
   simp only [← getElem!_pos input (hi - 1) hjm1]
   have hset3 :
       (partitionLocals arr lo hi 0 0 0 (hi - 1) 0 [.i32 (input[hi - 1]!)]).set?
@@ -376,9 +370,7 @@ theorem twp_partitionBody
           (current'[i']'hiLen') [.i32 (current'[i']'hiLen')]) := rfl
   simp only [partitionLocals]
   iapply twp_swapAt hiLen' hjm1Len' hfitCurrent rfl rfl htmp_set rfl rfl rfl rfl
-  isplitl [Harray]
-  · iexact Harray
-  iintro Harray
+  iframe; iintro Harray
   wasm_twp_pures [twp_localGet]
   have hplacePivot : PartitionRange input (swapElems current' i' (hi - 1)) lo hi i' :=
     PartitionLoopInvariant.placePivot hinv'_orig (by omega)

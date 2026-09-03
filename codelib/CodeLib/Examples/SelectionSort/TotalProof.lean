@@ -209,15 +209,11 @@ theorem twp_swapAt64
   iintro ⟨Harray, Hcont⟩
   simp only [swapAt, storeAt, List.append_assoc, List.cons_append, List.nil_append]
   iapply twp_loadAt64 ha hfit hbase ha_local
-  isplitl [Harray]
-  · iexact Harray
-  iintro Harray
+  iframe; iintro Harray
   iapply Wasm.SmallStep.twp_localSet htmp_set
   iapply twp_address64 (by simpa using hbase_after) (by simpa using ha_after)
   iapply twp_loadAt64 hb hfit (by simpa using hbase_after) (by simpa using hb_after)
-  isplitl [Harray]
-  · iexact Harray
-  iintro Harray
+  iframe; iintro Harray
   ihave HfocusA := array64At_set 0 base input a input[b] ha $$ Harray
   icases HfocusA with ⟨HcellA, HcloseA⟩
   iapply twp_store64_cell hroomA
@@ -366,13 +362,9 @@ private theorem twp_findMin_aux
         have hbestLen : best < input.length :=
           _root_.lt_of_lt_of_le hinv.2.1 hinv.2.2.1
         iapply twp_loadAt64 hs hfit rfl rfl
-        isplitl [Harray]
-        · iexact Harray
-        iintro Harray
+        iframe; iintro Harray
         iapply twp_loadAt64 hbestLen hfit rfl rfl
-        isplitl [Harray]
-        · iexact Harray
-        iintro Harray
+        iframe; iintro Harray
         wasm_twp_pures [twp_ltUI64]
         by_cases hlt : input[scan] < input[best]
         · simp only [if_pos hlt]
@@ -834,13 +826,9 @@ private theorem twp_innerLoop
       have hbestLen : state.best < current.length := by
         exact _root_.lt_of_lt_of_le hstate.2.1 hstate.2.2.1
       iapply twp_loadAt64 hs hfit rfl rfl
-      isplitl [Harray]
-      · iexact Harray
-      iintro Harray
+      iframe; iintro Harray
       iapply twp_loadAt64 hbestLen hfit rfl rfl
-      isplitl [Harray]
-      · iexact Harray
-      iintro Harray
+      iframe; iintro Harray
       wasm_twp_pures [twp_ltUI64]
       by_cases hlt : current[state.scan] < current[state.best]
       · simp only [if_pos hlt]

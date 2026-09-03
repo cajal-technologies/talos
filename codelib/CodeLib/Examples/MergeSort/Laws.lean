@@ -283,9 +283,7 @@ theorem twp_loadAt
   iapply twp_loadAt_cell hbase helement
     (by rw [UInt32.add_comm])
     h1 h2 h3
-  isplitl [Hword]
-  · iexact Hword
-  iintro Hword
+  iframe; iintro Hword
   iapply Hcont
   iapply Hclose
   iexact Hword
@@ -390,9 +388,7 @@ theorem twp_copyAt
   iapply twp_loadAt hi hsourceFit
     (by simpa using hsource)
     (by simpa using hsourceElement)
-  isplitl [Hsource]
-  · iexact Hsource
-  iintro Hsource
+  iframe; iintro Hsource
   ihave Hfocus := arrayAt_set 0 temporary scratch k input[i] hk $$ Htemporary
   icases Hfocus with ⟨Hcell, Hclose⟩
   simp only [List.cons_append, List.nil_append]

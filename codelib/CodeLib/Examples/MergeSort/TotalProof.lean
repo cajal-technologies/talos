@@ -185,13 +185,9 @@ theorem twp_mergeMainStep
   iintro ⟨Hsource, Htemporary, Hbranches⟩
   simp only [mergeMainStep, List.append_assoc]
   iapply twp_loadAt (α := α) hiLen hlayout.source_fits rfl rfl
-  isplitl [Hsource]
-  · iexact Hsource
-  iintro Hsource
+  iframe; iintro Hsource
   iapply twp_loadAt (α := α) hjLen hlayout.source_fits rfl rfl
-  isplitl [Hsource]
-  · iexact Hsource
-  iintro Hsource
+  iframe; iintro Hsource
   simp only [List.cons_append, List.nil_append]
   iapply Wasm.SmallStep.twp_ltU (α := α) rfl
   by_cases hxy : input[i]'hiLen < input[j]'hjLen

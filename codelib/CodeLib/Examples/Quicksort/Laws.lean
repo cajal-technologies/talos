@@ -151,9 +151,7 @@ theorem twp_loadAt
   iapply twp_loadAt_cell hbase helement
     (by rw [UInt32.add_comm])
     h1 h2 h3
-  isplitl [Hword]
-  · iexact Hword
-  iintro Hword
+  iframe; iintro Hword
   iapply Hcont
   iapply Hclose
   iexact Hword
@@ -252,18 +250,14 @@ theorem twp_swapAt
     List.cons_append, List.nil_append]
   -- step 1: load arr[a] onto stack
   iapply twp_loadAt ha hfit hbase ha_local
-  isplitl [Harray]
-  · iexact Harray
-  iintro Harray
+  iframe; iintro Harray
   -- step 2: save arr[a] in tmp local
   iapply Wasm.SmallStep.twp_localSet htmp_set
   -- step 3: compute address of arr[a]
   iapply twp_address (by exact hbase_after) (by exact ha_after)
   -- step 4: load arr[b] onto stack
   iapply twp_loadAt hb hfit (by exact hbase_after) (by exact hb_after)
-  isplitl [Harray]
-  · iexact Harray
-  iintro Harray
+  iframe; iintro Harray
   -- focus on cell a for the first store
   ihave Hfocus := arrayAt_set 0 base input a input[b] ha $$ Harray
   icases Hfocus with ⟨Hcell_a, Hclose_a⟩
