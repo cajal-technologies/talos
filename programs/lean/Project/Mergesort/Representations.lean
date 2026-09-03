@@ -1930,9 +1930,7 @@ theorem StackReserve_split
     iexists headBytes, growBefore
     isplitr_pureexact ⟨hdecompose, hheadLength, hgrowLength⟩
     · iframe
-  · iintro Hparts
-    icases Hparts with
-      ⟨%headBytes, %growBefore, %hfacts, Hhead, Hgrow⟩
+  · iintro ⟨%headBytes, %growBefore, %hfacts, Hhead, Hgrow⟩
     unfold StackReserve
     isplitl []
     · ipureintro
@@ -1982,9 +1980,7 @@ theorem EntryStack_split
     iexists reserveBytes, frameBytes
     isplitr_pureexact ⟨hdecompose, hreserveLength, hframeLength⟩
     · iframe
-  · iintro Hparts
-    icases Hparts with
-      ⟨%reserveBytes, %frameBytes, %hfacts, Hreserve, Hframe⟩
+  · iintro ⟨%reserveBytes, %frameBytes, %hfacts, Hreserve, Hframe⟩
     isimp only [StackReserve] at Hreserve
     icases Hreserve with ⟨%hreserveLength, Hreserve⟩
     ihave Hreserve' : ByteSlice entryStackLow reserveBytes $$ [Hreserve]
@@ -2085,9 +2081,7 @@ theorem DriverFrame_split
     isplitr_pureexact ⟨by rw [hheaderRest, hchunkOutput, List.append_assoc],
         hheaderLength, hchunkLength, houtputLength⟩
     · iframe
-  · iintro Hparts
-    icases Hparts with
-      ⟨%headerBytes, %chunkBytes, %outputBytes, %hfacts,
+  · iintro ⟨%headerBytes, %chunkBytes, %outputBytes, %hfacts,
         Hheader, Hchunk, Houtput⟩
     ihave Hchunk' : ByteSlice
         (driverBase + UInt32.ofNat headerBytes.length) chunkBytes $$ [Hchunk]

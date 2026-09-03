@@ -339,9 +339,7 @@ theorem func1_spillPrefix_frame_smallStep_wp
       pointsTo_u32 0 1048548 shiftY ∗ pointsTo_u32 0 1048544 nextY ∗
       pointsTo_u32 0 1048540 nextX))
     (calls := calls) (a := a) (b := b) (oldX := oldX) (oldY := oldY)
-  · iintro Hresources
-    icases Hresources with
-      ⟨HR', Hglobal', HouterA', HouterB', Hx', Hy'⟩
+  · iintro ⟨HR', Hglobal', HouterA', HouterB', Hx', Hy'⟩
     icases HR' with
       ⟨Hresult', HshiftXY', HshiftX', HshiftY', HnextY', HnextX'⟩
     iapply_frame hcontinue
@@ -517,9 +515,7 @@ theorem func1_leftZero_smallStep_wp_to_return
   iapply func1_spillPrefix_smallStep_wp
     (R := iprop(R ∗ pointsTo_u64 0 1048512 result))
     (calls := calls) (a := 0) (b := b) (oldX := oldX) (oldY := oldY)
-  · iintro Hresources
-    icases Hresources with
-      ⟨HRresult, Hglobal', HouterA', HouterB', Hx', Hy'⟩
+  · iintro ⟨HRresult, Hglobal', HouterA', HouterB', Hx', Hy'⟩
     icases HRresult with ⟨HR', Hresult'⟩
     iapply func1_leftZero_core_smallStep_wp_to_return
       R calls result b hreturn
@@ -551,9 +547,7 @@ theorem func1_leftZero_smallStep_wp
   iapply func1_spillPrefix_smallStep_wp
     (R := iprop(R ∗ pointsTo_u64 0 1048512 result))
     (calls := []) (a := 0) (b := b) (oldX := oldX) (oldY := oldY)
-  · iintro Hresources
-    icases Hresources with
-      ⟨HRresult, Hglobal', HouterA', HouterB', Hx', Hy'⟩
+  · iintro ⟨HRresult, Hglobal', HouterA', HouterB', Hx', Hy'⟩
     icases HRresult with ⟨HR', Hresult'⟩
     iapply_frame func1_leftZero_core_smallStep_wp R result b
   · iframe
@@ -739,9 +733,7 @@ theorem func1_rightZero_smallStep_wp_to_return
   iapply func1_spillPrefix_smallStep_wp
     (R := iprop(R ∗ pointsTo_u64 0 1048512 result))
     (calls := calls) (a := a) (b := 0) (oldX := oldX) (oldY := oldY)
-  · iintro Hresources
-    icases Hresources with
-      ⟨HRresult, Hglobal', HouterA', HouterB', Hx', Hy'⟩
+  · iintro ⟨HRresult, Hglobal', HouterA', HouterB', Hx', Hy'⟩
     icases HRresult with ⟨HR', Hresult'⟩
     iapply func1_rightZero_core_smallStep_wp_to_return
       R calls result a ha hreturn
@@ -772,9 +764,7 @@ theorem func1_rightZero_smallStep_wp
   iapply func1_spillPrefix_smallStep_wp
     (R := iprop(R ∗ pointsTo_u64 0 1048512 result))
     (calls := []) (a := a) (b := 0) (oldX := oldX) (oldY := oldY)
-  · iintro Hresources
-    icases Hresources with
-      ⟨HRresult, Hglobal', HouterA', HouterB', Hx', Hy'⟩
+  · iintro ⟨HRresult, Hglobal', HouterA', HouterB', Hx', Hy'⟩
     icases HRresult with ⟨HR', Hresult'⟩
     iapply_frame func1_rightZero_core_smallStep_wp R result a ha
   · iframe
@@ -2328,9 +2318,7 @@ theorem func1_loopDecreaseDispatch_smallStep_wp
       (R := iprop(R ∗ pointsTo_u32 0 1048544 oldShiftY))
       (func1LoopFrame :: outerControls) calls a b x y hsubX oldShiftX
       c6 c8 c7 c9
-    · iintro Hresources
-      icases Hresources with
-        ⟨⟨HR', HshiftY'⟩, Hx', Hy', HshiftX'⟩
+    · iintro ⟨⟨HR', HshiftY'⟩, Hx', Hy', HshiftX'⟩
       iapply_frame hcontinueX hlt
     · iframe
   · have hxylt : x < y := by
@@ -2370,9 +2358,7 @@ theorem func1_loopDecreaseDispatch_smallStep_wp
       (R := iprop(R ∗ pointsTo_u32 0 1048540 oldShiftX))
       (func1DecreaseYFrame :: func1LoopFrame :: outerControls)
       calls a b x y hsubY oldShiftY c6 c8 c7 c9
-    · iintro Hresources
-      icases Hresources with
-        ⟨⟨HR', HshiftX'⟩, Hx', Hy', HshiftY'⟩
+    · iintro ⟨⟨HR', HshiftX'⟩, Hx', Hy', HshiftY'⟩
       iapply_frame hcontinueY hlt
     · iframe
 
@@ -2448,14 +2434,10 @@ theorem func1_loopBodyDispatch_smallStep_wp
     outerControls calls a b x y oldResult
     c6 c8 c7 c9
   · intro hxy
-    iintro Hresources
-    icases Hresources with
-      ⟨⟨HK', HR', HshiftX', HshiftY'⟩, Hx', Hy', Hresult'⟩
+    iintro ⟨⟨HK', HR', HshiftX', HshiftY'⟩, Hx', Hy', Hresult'⟩
     iapply_frame hfinish hxy
   · intro hxy
-    iintro Hresources
-    icases Hresources with
-      ⟨⟨HK', HR', HshiftX', HshiftY'⟩, Hx', Hy', Hresult'⟩
+    iintro ⟨⟨HK', HR', HshiftX', HshiftY'⟩, Hx', Hy', Hresult'⟩
     rw [show func1AfterEqualityProg =
       .block 0 0 loopDecreaseYBlockBody :: loopDecreaseXProg from rfl]
     wasm_wp_pures [wp_block]
@@ -2473,14 +2455,10 @@ theorem func1_loopBodyDispatch_smallStep_wp
       outerControls calls a b x y hxy oldShiftX oldShiftY
       c6 c8 c7 c9
     · intro hlt
-      iintro Hresources
-      icases Hresources with
-        ⟨⟨HK'', HR'', Hresult''⟩, Hx'', Hy'', HshiftX'', HshiftY''⟩
+      iintro ⟨⟨HK'', HR'', Hresult''⟩, Hx'', Hy'', HshiftX'', HshiftY''⟩
       iapply_frame hbackX hxy hlt
     · intro hlt
-      iintro Hresources
-      icases Hresources with
-        ⟨⟨HK'', HR'', Hresult''⟩, Hx'', Hy'', HshiftX'', HshiftY''⟩
+      iintro ⟨⟨HK'', HR'', Hresult''⟩, Hx'', Hy'', HshiftX'', HshiftY''⟩
       iapply_frame hbackY hxy hlt
     · iframe
   · iframe
@@ -2557,9 +2535,7 @@ theorem func1_loop_smallStep_wp
           x.toNat = Nat.gcd (oddPart64 a).toNat (oddPart64 b).toNat := by
         rw [← hgcd, hxy, Nat.gcd_self]
       have hresultEq := hrecombine x hxGcd
-      iintro Hresources
-      icases Hresources with
-        ⟨#IH', HR', Hx', Hy', Hresult', HshiftX', HshiftY'⟩
+      iintro ⟨#IH', HR', Hx', Hy', Hresult', HshiftX', HshiftY'⟩
       ihave HresultExpected : pointsTo_u64 0 1048512 expected $$ [Hresult']
       · rw [← hresultEq]
         iexact Hresult'
@@ -2578,9 +2554,7 @@ theorem func1_loop_smallStep_wp
         let x' := oddPart64 (x - y)
         obtain ⟨hx'ne, hx'odd, hgcd', _hdec⟩ :=
           UInt64.stein_step_x x y hxne hyne hxodd hyodd hlt
-        iintro Hresources
-        icases Hresources with
-          ⟨#IH', HR', Hx', Hy', Hresult', HshiftX', HshiftY'⟩
+        iintro ⟨#IH', HR', Hx', Hy', Hresult', HshiftX', HshiftY'⟩
         wasm_wp_pures [wp_br]
         simp only [func1LoopFrame, List.take_nil, List.nil_append]
         rw [show
@@ -2609,9 +2583,7 @@ theorem func1_loop_smallStep_wp
         let y' := oddPart64 (y - x)
         obtain ⟨hy'ne, hy'odd, hgcd', _hdec⟩ :=
           UInt64.stein_step_y x y hxne hyne hxodd hyodd hlt hxy
-        iintro Hresources
-        icases Hresources with
-          ⟨#IH', HR', Hx', Hy', Hresult', HshiftX', HshiftY'⟩
+        iintro ⟨#IH', HR', Hx', Hy', Hresult', HshiftX', HshiftY'⟩
         wasm_wp_pures [wp_br]
         simp only [func1LoopFrame, List.take_nil, List.nil_append]
         rw [show
@@ -2737,9 +2709,7 @@ theorem func1_nonzeroCore_smallStep_wp
     (R := iprop(R ∗ pointsTo_u64 0 1048512 oldResult ∗
       pointsTo_u32 0 1048540 oldLoopX ∗ pointsTo_u32 0 1048544 oldLoopY))
     outerControls calls a b ha hb oldShared oldNormX oldNormY
-  · iintro Hresources
-    icases Hresources with
-      ⟨⟨HR', Hresult', HloopX', HloopY'⟩, Hx', Hy',
+  · iintro ⟨⟨HR', Hresult', HloopX', HloopY'⟩, Hx', Hy',
         Hshared', HnormX', HnormY'⟩
     rw [show meatLoopProg.drop 48 = func1LoopEntryProg from rfl]
     iapply func1_loopEntry_smallStep_wp
@@ -2748,9 +2718,7 @@ theorem func1_nonzeroCore_smallStep_wp
         pointsTo_u32 0 1048548 (operandShiftWord b)))
       outerControls calls a b oldResult ha hb oldLoopX oldLoopY
     · intro g loopX loopY d6 d8 d7 d9 hg
-      iintro Hresources
-      icases Hresources with
-        ⟨⟨HR'', Hshared'', HnormX'', HnormY''⟩,
+      iintro ⟨⟨HR'', Hshared'', HnormX'', HnormY''⟩,
           Hx'', Hy'', Hresult'', HloopX'', HloopY''⟩
       iapply_frame hfinish g loopX loopY d6 d8 d7 d9 hg
     · iframe
@@ -2989,9 +2957,7 @@ theorem func1_nonzeroOuterCore_smallStep_wp_to_return
     R [func1OuterFrame outerBody] calls
     a b oldResult ha hb oldShared oldNormX oldNormY oldLoopX oldLoopY
   · intro g loopX loopY d6 d8 d7 d9 hg
-    iintro Hresources
-    icases Hresources with
-      ⟨HR, Hshared, HnormX, HnormY, Hx, Hy, Hresult, HloopX, HloopY⟩
+    iintro ⟨HR, Hshared, HnormX, HnormY, Hx, Hy, Hresult, HloopX, HloopY⟩
     iapply func1_nonzeroFinish_smallStep_wp_to_return
       (R := iprop(R ∗ pointsTo_u32 0 1048556 (sharedShiftWord a b) ∗
         pointsTo_u32 0 1048552 (operandShiftWord a) ∗
@@ -3037,9 +3003,7 @@ theorem func1_nonzeroOuterCore_smallStep_wp
   iapply func1_nonzeroCore_smallStep_wp R [func1OuterFrame outerBody] []
     a b oldResult ha hb oldShared oldNormX oldNormY oldLoopX oldLoopY
   · intro g loopX loopY d6 d8 d7 d9 hg
-    iintro Hresources
-    icases Hresources with
-      ⟨HR, Hshared, HnormX, HnormY, Hx, Hy, Hresult, HloopX, HloopY⟩
+    iintro ⟨HR, Hshared, HnormX, HnormY, Hx, Hy, Hresult, HloopX, HloopY⟩
     have hpost : ∀ rs : List Value,
         (iprop(
           ⌜rs = [.i64 (UInt64.ofNat (Nat.gcd a.toNat b.toNat))]⌝ ∗
@@ -3132,9 +3096,7 @@ theorem func1_nonzero_smallStep_wp_to_return
       pointsTo_u32 0 1048540 oldLoopX ∗
       pointsTo_u32 0 1048544 oldLoopY))
     (calls := calls) (a := a) (b := b) (oldX := oldX) (oldY := oldY)
-  · iintro Hresources
-    icases Hresources with
-      ⟨HRscratch, Hglobal', HouterA', HouterB', Hx', Hy'⟩
+  · iintro ⟨HRscratch, Hglobal', HouterA', HouterB', Hx', Hy'⟩
     icases HRscratch with
       ⟨HR', Hresult', Hshared', HnormX', HnormY', HloopX', HloopY'⟩
     iapply func1_nonzeroGuards_smallStep_wp
@@ -3211,9 +3173,7 @@ theorem func1_nonzero_smallStep_wp
       pointsTo_u32 0 1048540 oldLoopX ∗
       pointsTo_u32 0 1048544 oldLoopY))
     (calls := []) (a := a) (b := b) (oldX := oldX) (oldY := oldY)
-  · iintro Hresources
-    icases Hresources with
-      ⟨HRscratch, Hglobal', HouterA', HouterB', Hx', Hy'⟩
+  · iintro ⟨HRscratch, Hglobal', HouterA', HouterB', Hx', Hy'⟩
     icases HRscratch with
       ⟨HR', Hresult', Hshared', HnormX', HnormY', HloopX', HloopY'⟩
     iapply func1_nonzeroGuards_smallStep_wp
@@ -3773,9 +3733,7 @@ theorem func0_smallStep_wp_to_return
       pointsTo_u32 0 1048548 shiftY ∗ pointsTo_u32 0 1048544 nextY ∗
       pointsTo_u32 0 1048540 nextX))
     calls a b oldOuterA oldOuterB
-  · iintro Hresources
-    icases Hresources with
-      ⟨HRouter, Hglobal', HouterA', HouterB'⟩
+  · iintro ⟨HRouter, Hglobal', HouterA', HouterB'⟩
     icases HRouter with
       ⟨HR', Hruntime', Hresult', Hx', Hy', HshiftXY', HshiftX',
         HshiftY', HnextY', HnextX'⟩
@@ -3801,9 +3759,7 @@ theorem func0_smallStep_wp_to_return
           pointsTo_u32 0 1048548 shiftY ∗ pointsTo_u32 0 1048544 nextY ∗
           pointsTo_u32 0 1048540 nextX))
         (func0CallerFrame 0 b ⟨0⟩ :: calls) result oldX oldY b
-      · iintro Hresources
-        icases Hresources with
-          ⟨HRscratch, Hglobal'', HouterA'', HouterB'', Hresult'', Hx'', Hy''⟩
+      · iintro ⟨HRscratch, Hglobal'', HouterA'', HouterB'', Hresult'', Hx'', Hy''⟩
         icases HRscratch with
           ⟨HR'', Hruntime'', HshiftXY'', HshiftX'', HshiftY'',
             HnextY'', HnextX''⟩
@@ -3823,9 +3779,7 @@ theorem func0_smallStep_wp_to_return
             pointsTo_u32 0 1048548 shiftY ∗ pointsTo_u32 0 1048544 nextY ∗
             pointsTo_u32 0 1048540 nextX))
           (func0CallerFrame a 0 ⟨0⟩ :: calls) result oldX oldY a ha
-        · iintro Hresources
-          icases Hresources with
-            ⟨HRscratch, Hglobal'', HouterA'', HouterB'', Hresult'', Hx'', Hy''⟩
+        · iintro ⟨HRscratch, Hglobal'', HouterA'', HouterB'', Hresult'', Hx'', Hy''⟩
           icases HRscratch with
             ⟨HR'', Hruntime'', HshiftXY'', HshiftX'', HshiftY'',
               HnextY'', HnextX''⟩
@@ -3843,9 +3797,7 @@ theorem func0_smallStep_wp_to_return
           result oldX oldY a b ha hb
           shiftXY shiftX shiftY nextX nextY
         · intro g loopX loopY d6 d8 d7 d9 hg
-          iintro Hresources
-          icases Hresources with
-            ⟨HRscratch, Hx'', Hy'', Hresult'', HloopX'', HloopY''⟩
+          iintro ⟨HRscratch, Hx'', Hy'', Hresult'', HloopX'', HloopY''⟩
           icases HRscratch with
             ⟨HRouter, Hshared'', HnormX'', HnormY''⟩
           icases HRouter with
@@ -3898,9 +3850,7 @@ theorem func0_smallStep_wp
       pointsTo_u32 0 1048548 shiftY ∗ pointsTo_u32 0 1048544 nextY ∗
       pointsTo_u32 0 1048540 nextX))
     [] a b oldOuterA oldOuterB
-  · iintro Hresources
-    icases Hresources with
-      ⟨HRouter, Hglobal', HouterA', HouterB'⟩
+  · iintro ⟨HRouter, Hglobal', HouterA', HouterB'⟩
     icases HRouter with
       ⟨HR', Hruntime', Hresult', Hx', Hy', HshiftXY', HshiftX',
         HshiftY', HnextY', HnextX'⟩
@@ -3926,9 +3876,7 @@ theorem func0_smallStep_wp
           pointsTo_u32 0 1048548 shiftY ∗ pointsTo_u32 0 1048544 nextY ∗
           pointsTo_u32 0 1048540 nextX))
         [func0CallerFrame 0 b ⟨0⟩] result oldX oldY b
-      · iintro Hresources
-        icases Hresources with
-          ⟨HRscratch, Hglobal'', HouterA'', HouterB'', Hresult'', Hx'', Hy''⟩
+      · iintro ⟨HRscratch, Hglobal'', HouterA'', HouterB'', Hresult'', Hx'', Hy''⟩
         icases HRscratch with
           ⟨HR'', Hruntime'', HshiftXY'', HshiftX'', HshiftY'',
             HnextY'', HnextX''⟩
@@ -3949,9 +3897,7 @@ theorem func0_smallStep_wp
             pointsTo_u32 0 1048548 shiftY ∗ pointsTo_u32 0 1048544 nextY ∗
             pointsTo_u32 0 1048540 nextX))
           [func0CallerFrame a 0 ⟨0⟩] result oldX oldY a ha
-        · iintro Hresources
-          icases Hresources with
-            ⟨HRscratch, Hglobal'', HouterA'', HouterB'', Hresult'', Hx'', Hy''⟩
+        · iintro ⟨HRscratch, Hglobal'', HouterA'', HouterB'', Hresult'', Hx'', Hy''⟩
           icases HRscratch with
             ⟨HR'', Hruntime'', HshiftXY'', HshiftX'', HshiftY'',
               HnextY'', HnextX''⟩
@@ -3970,9 +3916,7 @@ theorem func0_smallStep_wp
           result oldX oldY a b ha hb
           shiftXY shiftX shiftY nextX nextY
         · intro g loopX loopY d6 d8 d7 d9 hg
-          iintro Hresources
-          icases Hresources with
-            ⟨HRscratch, Hx'', Hy'', Hresult'', HloopX'', HloopY''⟩
+          iintro ⟨HRscratch, Hx'', Hy'', Hresult'', HloopX'', HloopY''⟩
           icases HRscratch with
             ⟨HRouter, Hshared'', HnormX'', HnormY''⟩
           icases HRouter with
@@ -4331,9 +4275,7 @@ theorem twp_func1_spillPrefix_frame_smallStep_wp
       pointsTo_u32 0 1048548 shiftY ∗ pointsTo_u32 0 1048544 nextY ∗
       pointsTo_u32 0 1048540 nextX))
     (calls := calls) (a := a) (b := b) (oldX := oldX) (oldY := oldY)
-  · iintro Hresources
-    icases Hresources with
-      ⟨HR', Hglobal', HouterA', HouterB', Hx', Hy'⟩
+  · iintro ⟨HR', Hglobal', HouterA', HouterB', Hx', Hy'⟩
     icases HR' with
       ⟨Hresult', HshiftXY', HshiftX', HshiftY', HnextY', HnextX'⟩
     iapply_frame hcontinue
@@ -4496,9 +4438,7 @@ theorem twp_func1_leftZero_smallStep_wp_to_return
   iapply twp_func1_spillPrefix_smallStep_wp
     (R := iprop(R ∗ pointsTo_u64 0 1048512 result))
     (calls := calls) (a := 0) (b := b) (oldX := oldX) (oldY := oldY)
-  · iintro Hresources
-    icases Hresources with
-      ⟨HRresult, Hglobal', HouterA', HouterB', Hx', Hy'⟩
+  · iintro ⟨HRresult, Hglobal', HouterA', HouterB', Hx', Hy'⟩
     icases HRresult with ⟨HR', Hresult'⟩
     iapply twp_func1_leftZero_core_smallStep_wp_to_return
       R calls result b hreturn
@@ -4527,9 +4467,7 @@ theorem twp_func1_leftZero_smallStep_wp
   iapply twp_func1_spillPrefix_smallStep_wp
     (R := iprop(R ∗ pointsTo_u64 0 1048512 result))
     (calls := []) (a := 0) (b := b) (oldX := oldX) (oldY := oldY)
-  · iintro Hresources
-    icases Hresources with
-      ⟨HRresult, Hglobal', HouterA', HouterB', Hx', Hy'⟩
+  · iintro ⟨HRresult, Hglobal', HouterA', HouterB', Hx', Hy'⟩
     icases HRresult with ⟨HR', Hresult'⟩
     iapply_frame twp_func1_leftZero_core_smallStep_wp R result b
   · iframe
@@ -4700,9 +4638,7 @@ theorem twp_func1_rightZero_smallStep_wp_to_return
   iapply twp_func1_spillPrefix_smallStep_wp
     (R := iprop(R ∗ pointsTo_u64 0 1048512 result))
     (calls := calls) (a := a) (b := 0) (oldX := oldX) (oldY := oldY)
-  · iintro Hresources
-    icases Hresources with
-      ⟨HRresult, Hglobal', HouterA', HouterB', Hx', Hy'⟩
+  · iintro ⟨HRresult, Hglobal', HouterA', HouterB', Hx', Hy'⟩
     icases HRresult with ⟨HR', Hresult'⟩
     iapply twp_func1_rightZero_core_smallStep_wp_to_return
       R calls result a ha hreturn
@@ -4731,9 +4667,7 @@ theorem twp_func1_rightZero_smallStep_wp
   iapply twp_func1_spillPrefix_smallStep_wp
     (R := iprop(R ∗ pointsTo_u64 0 1048512 result))
     (calls := []) (a := a) (b := 0) (oldX := oldX) (oldY := oldY)
-  · iintro Hresources
-    icases Hresources with
-      ⟨HRresult, Hglobal', HouterA', HouterB', Hx', Hy'⟩
+  · iintro ⟨HRresult, Hglobal', HouterA', HouterB', Hx', Hy'⟩
     icases HRresult with ⟨HR', Hresult'⟩
     iapply_frame twp_func1_rightZero_core_smallStep_wp R result a ha
   · iframe
@@ -6050,9 +5984,7 @@ theorem twp_func1_loopDecreaseDispatch_smallStep_wp
       (R := iprop(R ∗ pointsTo_u32 0 1048544 oldShiftY))
       (func1LoopFrame :: outerControls) calls a b x y hsubX oldShiftX
       c6 c8 c7 c9
-    · iintro Hresources
-      icases Hresources with
-        ⟨⟨HR', HshiftY'⟩, Hx', Hy', HshiftX'⟩
+    · iintro ⟨⟨HR', HshiftY'⟩, Hx', Hy', HshiftX'⟩
       iapply_frame hcontinueX hlt
     · iframe
   · have hxylt : x < y := by
@@ -6092,9 +6024,7 @@ theorem twp_func1_loopDecreaseDispatch_smallStep_wp
       (R := iprop(R ∗ pointsTo_u32 0 1048540 oldShiftX))
       (func1DecreaseYFrame :: func1LoopFrame :: outerControls)
       calls a b x y hsubY oldShiftY c6 c8 c7 c9
-    · iintro Hresources
-      icases Hresources with
-        ⟨⟨HR', HshiftX'⟩, Hx', Hy', HshiftY'⟩
+    · iintro ⟨⟨HR', HshiftX'⟩, Hx', Hy', HshiftY'⟩
       iapply_frame hcontinueY hlt
     · iframe
 
@@ -6166,14 +6096,10 @@ theorem twp_func1_loopBodyDispatch_smallStep_wp
     outerControls calls a b x y oldResult
     c6 c8 c7 c9
   · intro hxy
-    iintro Hresources
-    icases Hresources with
-      ⟨⟨HR', HshiftX', HshiftY'⟩, Hx', Hy', Hresult'⟩
+    iintro ⟨⟨HR', HshiftX', HshiftY'⟩, Hx', Hy', Hresult'⟩
     iapply_frame hfinish hxy
   · intro hxy
-    iintro Hresources
-    icases Hresources with
-      ⟨⟨HR', HshiftX', HshiftY'⟩, Hx', Hy', Hresult'⟩
+    iintro ⟨⟨HR', HshiftX', HshiftY'⟩, Hx', Hy', Hresult'⟩
     rw [show func1AfterEqualityProg =
       .block 0 0 loopDecreaseYBlockBody :: loopDecreaseXProg from rfl]
     wasm_twp_pures [twp_block]
@@ -6191,14 +6117,10 @@ theorem twp_func1_loopBodyDispatch_smallStep_wp
       outerControls calls a b x y hxy oldShiftX oldShiftY
       c6 c8 c7 c9
     · intro hlt
-      iintro Hresources
-      icases Hresources with
-        ⟨⟨HR'', Hresult''⟩, Hx'', Hy'', HshiftX'', HshiftY''⟩
+      iintro ⟨⟨HR'', Hresult''⟩, Hx'', Hy'', HshiftX'', HshiftY''⟩
       iapply_frame hbackX hxy hlt
     · intro hlt
-      iintro Hresources
-      icases Hresources with
-        ⟨⟨HR'', Hresult''⟩, Hx'', Hy'', HshiftX'', HshiftY''⟩
+      iintro ⟨⟨HR'', Hresult''⟩, Hx'', Hy'', HshiftX'', HshiftY''⟩
       iapply_frame hbackY hxy hlt
     · iframe
   · iframe
@@ -6464,9 +6386,7 @@ theorem twp_func1_nonzeroCore_smallStep_wp
     (R := iprop(R ∗ pointsTo_u64 0 1048512 oldResult ∗
       pointsTo_u32 0 1048540 oldLoopX ∗ pointsTo_u32 0 1048544 oldLoopY))
     outerControls calls a b ha hb oldShared oldNormX oldNormY
-  · iintro Hresources
-    icases Hresources with
-      ⟨⟨HR', Hresult', HloopX', HloopY'⟩, Hx', Hy',
+  · iintro ⟨⟨HR', Hresult', HloopX', HloopY'⟩, Hx', Hy',
         Hshared', HnormX', HnormY'⟩
     rw [show meatLoopProg.drop 48 = func1LoopEntryProg from rfl]
     iapply twp_func1_loopEntry_smallStep_wp
@@ -6475,9 +6395,7 @@ theorem twp_func1_nonzeroCore_smallStep_wp
         pointsTo_u32 0 1048548 (operandShiftWord b)))
       outerControls calls a b oldResult ha hb oldLoopX oldLoopY
     · intro g loopX loopY d6 d8 d7 d9 hg
-      iintro Hresources
-      icases Hresources with
-        ⟨⟨HR'', Hshared'', HnormX'', HnormY''⟩,
+      iintro ⟨⟨HR'', Hshared'', HnormX'', HnormY''⟩,
           Hx'', Hy'', Hresult'', HloopX'', HloopY''⟩
       iapply_frame hfinish g loopX loopY d6 d8 d7 d9 hg
     · iframe
@@ -6520,9 +6438,7 @@ theorem twp_func1_nonzeroOuterCore_smallStep_wp_to_return
     R [func1OuterFrame outerBody] calls
     a b oldResult ha hb oldShared oldNormX oldNormY oldLoopX oldLoopY
   · intro g loopX loopY d6 d8 d7 d9 hg
-    iintro Hresources
-    icases Hresources with
-      ⟨HR, Hshared, HnormX, HnormY, Hx, Hy, Hresult, HloopX, HloopY⟩
+    iintro ⟨HR, Hshared, HnormX, HnormY, Hx, Hy, Hresult, HloopX, HloopY⟩
     iapply twp_func1_nonzeroFinish_smallStep_wp_to_return
       (R := iprop(R ∗ pointsTo_u32 0 1048556 (sharedShiftWord a b) ∗
         pointsTo_u32 0 1048552 (operandShiftWord a) ∗
@@ -6566,9 +6482,7 @@ theorem twp_func1_nonzeroOuterCore_smallStep_wp
   iapply twp_func1_nonzeroCore_smallStep_wp R [func1OuterFrame outerBody] []
     a b oldResult ha hb oldShared oldNormX oldNormY oldLoopX oldLoopY
   · intro g loopX loopY d6 d8 d7 d9 hg
-    iintro Hresources
-    icases Hresources with
-      ⟨HR, Hshared, HnormX, HnormY, Hx, Hy, Hresult, HloopX, HloopY⟩
+    iintro ⟨HR, Hshared, HnormX, HnormY, Hx, Hy, Hresult, HloopX, HloopY⟩
     have hpost : ∀ rs : List Value,
         (iprop(
           ⌜rs = [.i64 (UInt64.ofNat (Nat.gcd a.toNat b.toNat))]⌝ ∗
@@ -6659,9 +6573,7 @@ theorem twp_func1_nonzero_smallStep_wp_to_return
       pointsTo_u32 0 1048540 oldLoopX ∗
       pointsTo_u32 0 1048544 oldLoopY))
     (calls := calls) (a := a) (b := b) (oldX := oldX) (oldY := oldY)
-  · iintro Hresources
-    icases Hresources with
-      ⟨HRscratch, Hglobal', HouterA', HouterB', Hx', Hy'⟩
+  · iintro ⟨HRscratch, Hglobal', HouterA', HouterB', Hx', Hy'⟩
     icases HRscratch with
       ⟨HR', Hresult', Hshared', HnormX', HnormY', HloopX', HloopY'⟩
     iapply twp_func1_nonzeroGuards_smallStep_wp
@@ -6735,9 +6647,7 @@ theorem twp_func1_nonzero_smallStep_wp
       pointsTo_u32 0 1048540 oldLoopX ∗
       pointsTo_u32 0 1048544 oldLoopY))
     (calls := []) (a := a) (b := b) (oldX := oldX) (oldY := oldY)
-  · iintro Hresources
-    icases Hresources with
-      ⟨HRscratch, Hglobal', HouterA', HouterB', Hx', Hy'⟩
+  · iintro ⟨HRscratch, Hglobal', HouterA', HouterB', Hx', Hy'⟩
     icases HRscratch with
       ⟨HR', Hresult', Hshared', HnormX', HnormY', HloopX', HloopY'⟩
     iapply twp_func1_nonzeroGuards_smallStep_wp
@@ -7115,9 +7025,7 @@ theorem twp_func0_smallStep_wp_to_return
       pointsTo_u32 0 1048548 shiftY ∗ pointsTo_u32 0 1048544 nextY ∗
       pointsTo_u32 0 1048540 nextX))
     calls a b oldOuterA oldOuterB
-  · iintro Hresources
-    icases Hresources with
-      ⟨HRouter, Hglobal', HouterA', HouterB'⟩
+  · iintro ⟨HRouter, Hglobal', HouterA', HouterB'⟩
     icases HRouter with
       ⟨HR', Hruntime', Hresult', Hx', Hy', HshiftXY', HshiftX',
         HshiftY', HnextY', HnextX'⟩
@@ -7143,9 +7051,7 @@ theorem twp_func0_smallStep_wp_to_return
           pointsTo_u32 0 1048548 shiftY ∗ pointsTo_u32 0 1048544 nextY ∗
           pointsTo_u32 0 1048540 nextX))
         (func0CallerFrame 0 b ⟨0⟩ :: calls) result oldX oldY b
-      · iintro Hresources
-        icases Hresources with
-          ⟨HRscratch, Hglobal'', HouterA'', HouterB'', Hresult'', Hx'', Hy''⟩
+      · iintro ⟨HRscratch, Hglobal'', HouterA'', HouterB'', Hresult'', Hx'', Hy''⟩
         icases HRscratch with
           ⟨HR'', Hruntime'', HshiftXY'', HshiftX'', HshiftY'',
             HnextY'', HnextX''⟩
@@ -7165,9 +7071,7 @@ theorem twp_func0_smallStep_wp_to_return
             pointsTo_u32 0 1048548 shiftY ∗ pointsTo_u32 0 1048544 nextY ∗
             pointsTo_u32 0 1048540 nextX))
           (func0CallerFrame a 0 ⟨0⟩ :: calls) result oldX oldY a ha
-        · iintro Hresources
-          icases Hresources with
-            ⟨HRscratch, Hglobal'', HouterA'', HouterB'', Hresult'', Hx'', Hy''⟩
+        · iintro ⟨HRscratch, Hglobal'', HouterA'', HouterB'', Hresult'', Hx'', Hy''⟩
           icases HRscratch with
             ⟨HR'', Hruntime'', HshiftXY'', HshiftX'', HshiftY'',
               HnextY'', HnextX''⟩
@@ -7185,9 +7089,7 @@ theorem twp_func0_smallStep_wp_to_return
           result oldX oldY a b ha hb
           shiftXY shiftX shiftY nextX nextY
         · intro g loopX loopY d6 d8 d7 d9 hg
-          iintro Hresources
-          icases Hresources with
-            ⟨HRscratch, Hx'', Hy'', Hresult'', HloopX'', HloopY''⟩
+          iintro ⟨HRscratch, Hx'', Hy'', Hresult'', HloopX'', HloopY''⟩
           icases HRscratch with
             ⟨HRouter, Hshared'', HnormX'', HnormY''⟩
           icases HRouter with
@@ -7237,9 +7139,7 @@ theorem twp_func0_smallStep_wp
       pointsTo_u32 0 1048548 shiftY ∗ pointsTo_u32 0 1048544 nextY ∗
       pointsTo_u32 0 1048540 nextX))
     [] a b oldOuterA oldOuterB
-  · iintro Hresources
-    icases Hresources with
-      ⟨HRouter, Hglobal', HouterA', HouterB'⟩
+  · iintro ⟨HRouter, Hglobal', HouterA', HouterB'⟩
     icases HRouter with
       ⟨HR', Hruntime', Hresult', Hx', Hy', HshiftXY', HshiftX',
         HshiftY', HnextY', HnextX'⟩
@@ -7265,9 +7165,7 @@ theorem twp_func0_smallStep_wp
           pointsTo_u32 0 1048548 shiftY ∗ pointsTo_u32 0 1048544 nextY ∗
           pointsTo_u32 0 1048540 nextX))
         [func0CallerFrame 0 b ⟨0⟩] result oldX oldY b
-      · iintro Hresources
-        icases Hresources with
-          ⟨HRscratch, Hglobal'', HouterA'', HouterB'', Hresult'', Hx'', Hy''⟩
+      · iintro ⟨HRscratch, Hglobal'', HouterA'', HouterB'', Hresult'', Hx'', Hy''⟩
         icases HRscratch with
           ⟨HR'', Hruntime'', HshiftXY'', HshiftX'', HshiftY'',
             HnextY'', HnextX''⟩
@@ -7289,9 +7187,7 @@ theorem twp_func0_smallStep_wp
             pointsTo_u32 0 1048548 shiftY ∗ pointsTo_u32 0 1048544 nextY ∗
             pointsTo_u32 0 1048540 nextX))
           [func0CallerFrame a 0 ⟨0⟩] result oldX oldY a ha
-        · iintro Hresources
-          icases Hresources with
-            ⟨HRscratch, Hglobal'', HouterA'', HouterB'', Hresult'', Hx'', Hy''⟩
+        · iintro ⟨HRscratch, Hglobal'', HouterA'', HouterB'', Hresult'', Hx'', Hy''⟩
           icases HRscratch with
             ⟨HR'', Hruntime'', HshiftXY'', HshiftX'', HshiftY'',
               HnextY'', HnextX''⟩
@@ -7311,9 +7207,7 @@ theorem twp_func0_smallStep_wp
           result oldX oldY a b ha hb
           shiftXY shiftX shiftY nextX nextY
         · intro g loopX loopY d6 d8 d7 d9 hg
-          iintro Hresources
-          icases Hresources with
-            ⟨HRscratch, Hx'', Hy'', Hresult'', HloopX'', HloopY''⟩
+          iintro ⟨HRscratch, Hx'', Hy'', Hresult'', HloopX'', HloopY''⟩
           icases HRscratch with
             ⟨HRouter, Hshared'', HnormX'', HnormY''⟩
           icases HRouter with
