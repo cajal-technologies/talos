@@ -833,14 +833,9 @@ theorem wp_throwRef
     ipureintro
     exact hexn
   wasm_wp_step Step.throwRef hexn =>
-    imod Hclose
-    imodintro
-    isplitl [Hσ]
-    · iexact Hσ
-    isplitl [Hexception]
-    · iapply Hwp
+    wasm_wp_frame
+      iapply Hwp
       iexact Hexception
-    · itrivial
 
 /-- Pure step: an exception unwinds across a call boundary, resuming the
 caller with the throwing frame prepended to the caller's control stack.
@@ -897,14 +892,9 @@ theorem wp_throwI
   have htag' : store.runtime.currentModule.tags[tagIndex]? = some tagType := by
     simpa only [Hmodule] using htag
   wasm_wp_step Step.throwI (α := α) htag' hargs =>
-    imod Hclose
-    imodintro
-    isplitl [Hσ]
-    · iexact Hσ
-    isplitl [Hruntime]
-    · iapply Hwp
+    wasm_wp_frame
+      iapply Hwp
       iexact Hruntime
-    · itrivial
 
 /-- Unwind a throwing frame through a non-catching control frame. -/
 theorem wp_unwindExceptionFrame
@@ -976,16 +966,10 @@ theorem wp_catchException
         (prepareCatch tag arguments clause store).2⟩ :=
     Step.catchException hthrow hmatch (htarget store)
   wasm_wp_step expectedStep =>
-    imod Hclose
-    imodintro
-    isplitl [Hσ]
-    · have hstore_eq : (prepareCatch tag arguments clause store).2 = store := by
-        rcases hclause with ⟨t, l, rfl⟩ | ⟨l, rfl⟩ <;> rfl
-      rw [hstore_eq]
-      iexact Hσ
-    isplitl [Hwp]
-    · iexact Hwp
-    · itrivial
+    have hstore_eq : (prepareCatch tag arguments clause store).2 = store := by
+      rcases hclause with ⟨t, l, rfl⟩ | ⟨l, rfl⟩ <;> rfl
+    rw [hstore_eq]
+    wasm_wp_frame
 
 /-- Enter a defined Wasm function. Immutable runtime-module ownership ties the
 function lookup used by the rule to the actual `MachineStore` seen by
@@ -1038,17 +1022,12 @@ theorem wp_call
     exact Hentry
   have hsame : callerId = store.runtime.entry := Hentry.symm
   wasm_wp_step Step.call (α := α) himports' hfn' =>
-    imod Hclose
-    imodintro
-    isplitl [Hσ]
-    · iexact Hσ
-    isplitl [Hwp HruntimeElem HinstanceOwn]
-    · rw [← hsame]
+    wasm_wp_frame
+      rw [← hsame]
       iapply Hwp
       isplitl [HruntimeElem]
       · iexact HruntimeElem
       · iexact HinstanceOwn
-    · itrivial
 
 /-- Execute an imported (host) function call.
 `runtimeModule` and `hhostFn` tie the proof-time host function to the
@@ -1161,45 +1140,30 @@ theorem wp_callHost
   | .Return results newWasm =>
     wasm_wp_step Step.callHostReturn (α := α) himports' himp' hhost' h =>
       imod hRetTransfer store ns obs' nt Hmodule results newWasm h $$ [$HP $Hσ] with ⟨HQ, Hσ⟩
-      imod Hclose
-      imodintro
-      isplitl [Hσ]
-      · iexact Hσ
-      ispecialize HwpRet $$ %(store.wasm) %results %newWasm %h
-      isplitl [HwpRet HQ HruntimeElem HinstanceOwn]
-      · iapply HwpRet
+      wasm_wp_frame
+        ispecialize HwpRet $$ %(store.wasm) %results %newWasm %h
+        iapply HwpRet
         isplitl [HQ]
         · iexact HQ
         · isplitl [HruntimeElem]
           · iexact HruntimeElem
           · iexact HinstanceOwn
-      · itrivial
   | .Trap newWasm msg =>
     iclear HinstanceOwn HruntimeElem
     wasm_wp_step Step.callHostTrap (α := α) himports' himp' hhost' h =>
       imod hTrapTransfer store ns obs' nt Hmodule newWasm msg h $$ [$HP $Hσ] with ⟨HQ, Hσ⟩
-      imod Hclose
-      imodintro
-      isplitl [Hσ]
-      · iexact Hσ
-      ispecialize HwpTrap $$ %(store.wasm) %newWasm %msg %h
-      isplitl [HwpTrap HQ]
-      · iapply HwpTrap
+      wasm_wp_frame
+        ispecialize HwpTrap $$ %(store.wasm) %newWasm %msg %h
+        iapply HwpTrap
         iexact HQ
-      · itrivial
   | .Throw newWasm tag xs =>
     iclear HinstanceOwn HruntimeElem
     wasm_wp_step Step.callHostThrow (α := α) himports' himp' hhost' h =>
       imod hThrowTransfer store ns obs' nt Hmodule newWasm tag xs h $$ [$HP $Hσ] with ⟨HQ, Hσ⟩
-      imod Hclose
-      imodintro
-      isplitl [Hσ]
-      · iexact Hσ
-      ispecialize HwpThrow $$ %(store.wasm) %newWasm %tag %xs %h
-      isplitl [HwpThrow HQ]
-      · iapply HwpThrow
+      wasm_wp_frame
+        ispecialize HwpThrow $$ %(store.wasm) %newWasm %tag %xs %h
+        iapply HwpThrow
         iexact HQ
-      · itrivial
 
 /-- Resume caller after explicit return; runtime-module ownership is returned
     unchanged for chained same-instance calls. -/
@@ -1245,16 +1209,11 @@ theorem wp_returnFromCallExplicit'
   have hsame : returningInstance = store.runtime.entry := Hentry.symm
   wasm_wp_step Step.returnFromCallExplicit (α := α) hsame =>
     simp only [resumeCaller]
-    imod Hclose
-    imodintro
-    isplitl [Hσ]
-    · iexact Hσ
-    isplitl [Hwp HruntimeElem HinstanceOwn]
-    · iapply Hwp
+    wasm_wp_frame
+      iapply Hwp
       isplitl [HruntimeElem]
       · iexact HruntimeElem
       · iexact HinstanceOwn
-    · itrivial
 
 /-- Resume a suspended caller after an explicit callee return. -/
 theorem wp_returnFromCallExplicit
@@ -3233,14 +3192,9 @@ theorem wp_memoryGrowFailure
     ipureintro
     exact Hmodule
   wasm_wp_step Step.memoryGrowFailure (Hmodule ▸ hgrow store.wasm) =>
-    imod Hclose
-    imodintro
-    isplitl [Hσ]
-    · iexact Hσ
-    isplitl [Hruntime]
-    · iapply Hwp
+    wasm_wp_frame
+      iapply Hwp
       iexact Hruntime
-    · itrivial
 
 theorem wp_memorySize
     {params localValues values : List Value}
@@ -3265,14 +3219,9 @@ theorem wp_memorySize
     exact Hmodule
   wasm_wp_step Step.memorySize =>
     simp only [Hmodule]
-    imod Hclose
-    imodintro
-    isplitl [Hσ]
-    · iexact Hσ
-    isplitl [Hruntime]
-    · iapply (Hwp store.wasm.mem.pages)
+    wasm_wp_frame
+      iapply (Hwp store.wasm.mem.pages)
       iexact Hruntime
-    · itrivial
 
 theorem wp_memoryGrow64Failure
     {params localValues values : List Value}
@@ -3299,14 +3248,9 @@ theorem wp_memoryGrow64Failure
     exact Hmodule
   wasm_wp_step
     Step.memoryGrow64Failure hsmall (Hmodule ▸ hgrow store.wasm) =>
-    imod Hclose
-    imodintro
-    isplitl [Hσ]
-    · iexact Hσ
-    isplitl [Hruntime]
-    · iapply Hwp
+    wasm_wp_frame
+      iapply Hwp
       iexact Hruntime
-    · itrivial
 
 /-- Rule for `memory.grow` with an i32 delta. Whether the grow succeeds
 depends on the physical store (the current page count and the module cap),
@@ -3332,14 +3276,9 @@ theorem wp_memoryGrow
       (store.wasm.memoryCap store.runtime.currentModule 0) with
   | none =>
     wasm_wp_step Step.memoryGrowFailure hg =>
-      imod Hclose
-      imodintro
-      isplitl [Hσ]
-      · iexact Hσ
-      isplitl [Hruntime]
-      · iapply (Hwp (0xFFFFFFFF : UInt32))
+      wasm_wp_frame
+        iapply (Hwp (0xFFFFFFFF : UInt32))
         iexact Hruntime
-      · itrivial
   | some grown =>
     obtain ⟨memory, previousPages⟩ := grown
     wasm_wp_step (by
@@ -3348,14 +3287,9 @@ theorem wp_memoryGrow
       imod (stateInterp_memoryGrow store ns obs' nt delta
           (store.wasm.memoryCap store.runtime.currentModule 0) memory previousPages hg) $$
           Hσ with Hσ
-      imod Hclose
-      imodintro
-      isplitl [Hσ]
-      · iexact Hσ
-      isplitl [Hruntime]
-      · iapply (Hwp previousPages.toUInt32)
+      wasm_wp_frame
+        iapply (Hwp previousPages.toUInt32)
         iexact Hruntime
-      · itrivial
 
 /-- Rule for `memory.grow` with an i64 delta below `2 ^ 32` (the too-large
 case is `wp_memoryGrow64TooLarge`). As with `wp_memoryGrow`, the continuation
@@ -3382,14 +3316,9 @@ theorem wp_memoryGrow64
       (store.wasm.memoryCap store.runtime.currentModule 0) with
   | none =>
     wasm_wp_step Step.memoryGrow64Failure hsmall hg =>
-      imod Hclose
-      imodintro
-      isplitl [Hσ]
-      · iexact Hσ
-      isplitl [Hruntime]
-      · iapply (Hwp (0xFFFFFFFFFFFFFFFF : UInt64))
+      wasm_wp_frame
+        iapply (Hwp (0xFFFFFFFFFFFFFFFF : UInt64))
         iexact Hruntime
-      · itrivial
   | some grown =>
     obtain ⟨memory, previousPages⟩ := grown
     wasm_wp_step (by
@@ -3399,14 +3328,9 @@ theorem wp_memoryGrow64
       imod (stateInterp_memoryGrow store ns obs' nt delta.toUInt32
           (store.wasm.memoryCap store.runtime.currentModule 0) memory previousPages hg) $$
           Hσ with Hσ
-      imod Hclose
-      imodintro
-      isplitl [Hσ]
-      · iexact Hσ
-      isplitl [Hruntime]
-      · iapply (Hwp previousPages.toUInt64)
+      wasm_wp_frame
+        iapply (Hwp previousPages.toUInt64)
         iexact Hruntime
-      · itrivial
 
 /-- Primitive rule for `memory.fill` with i32 operands (non-trapping). `oldBytes`
 describes the pre-fill byte range; the post-condition hands back the range filled
@@ -4303,14 +4227,9 @@ theorem wp_memoryInit16_four
     imod stateInterp_init16_four store ns
         obs' nt oldWord HwordFacts.2 $$
         [$Hσ $Hword] with ⟨Hσ, Hword⟩
-    imod Hclose
-    imodintro
-    isplitl [Hσ]
-    · iexact Hσ
-    isplitl [Hwp Hword Hsegment]
-    · iapply Hwp
+    wasm_wp_frame
+      iapply Hwp
       iframe
-    · itrivial
 
 /-- Primitive Iris rule for consuming passive data segment zero. The post owns
 the dropped status, preventing the old bytes from being reused. -/
@@ -4624,14 +4543,9 @@ theorem wp_copy8_zero_four
         obs' nt oldDestination $$
         [$Hσ $Hsource $Hdestination] with
         ⟨Hσ, Hsource, Hdestination⟩
-    imod Hclose
-    imodintro
-    isplitl [Hσ]
-    · iexact Hσ
-    isplitl [Hwp Hsource Hdestination]
-    · iapply Hwp
+    wasm_wp_frame
+      iapply Hwp
       iframe
-    · itrivial
 
 /-- End-to-end Iris contract for the hand-written 32-bit memory roundtrip.
 The physical word and its four authoritative ghost bytes are updated by the
@@ -5386,14 +5300,9 @@ theorem wp_v128Store
         (UInt64.ofNat (value.toNat / 2 ^ 64))
         hnowrap16 (by simpa [hnowrap] using hbound_store) $$
         [$Hσ $Hlo_old $Hhi_old] with ⟨Hσ, ⟨Hlo, Hhi⟩⟩
-    imod Hclose
-    imodintro
-    isplitl [Hσ]
-    · iexact Hσ
-    isplitl [Hwp Hlo Hhi]
-    · iapply Hwp $$ [$Hlo]
+    wasm_wp_frame
+      iapply Hwp $$ [$Hlo]
       iexact Hhi
-    · itrivial
 
 theorem wp_load8UMemory64
     {params localValues values : List Value}
@@ -5852,17 +5761,12 @@ theorem wp_callCrossInstance
     Step.callCrossInstance himports' himport' hnoHost' hresolved' hcallee' hfn =>
     simp only [Hentry]
     imod stateInterp_currentInstance_update_of_any store ns obs' nt callerId calleeId $$
-        [$Hσ $HinstanceOwn] with ⟨Hσ', HinstanceOwn', %_⟩
-    imod Hclose
-    imodintro
-    isplitl [Hσ']
-    · iexact Hσ'
-    isplitl [HinstanceOwn' HruntimeInstances Hwp]
-    · iapply Hwp
+        [$Hσ $HinstanceOwn] with ⟨Hσ, HinstanceOwn', %_⟩
+    wasm_wp_frame
+      iapply Hwp
       isplitl [HinstanceOwn']
       · iexact HinstanceOwn'
       · iexact HruntimeInstances
-    · itrivial
 
 /-- Resume a suspended caller after an explicit return that crosses module-instance
 boundaries. `runtimeInstancesOwn instances` links the ghost instances array to
@@ -5920,14 +5824,10 @@ theorem wp_returnFromCallCrossInstance
   wasm_wp_step Step.returnFromCallCrossInstanceExplicit (α := α) hdiff =>
     simp only [resumeCaller]
     imod stateInterp_currentInstance_update_of_any store ns obs' nt calleeId returningInstance $$
-        [$Hσ $HinstanceOwn] with ⟨Hσ', HinstanceOwn', %_⟩
-    imod Hclose
-    imodintro
-    isplitl [Hσ']
-    · iexact Hσ'
-    isplitl [Hwp HinstanceOwn']
-    · iapply Hwp; iexact HinstanceOwn'
-    · itrivial
+        [$Hσ $HinstanceOwn] with ⟨Hσ, HinstanceOwn', %_⟩
+    wasm_wp_frame
+      iapply Hwp
+      iexact HinstanceOwn'
 
 /-- Call an indirect function through a table entry. `runtimeModule` owns the
 current module (provides `himports`, `hfn`, `hsignature`, `hexpected`, `htype`).
@@ -6006,16 +5906,11 @@ theorem wp_callIndirect
     simpa only [Hmodule] using htype
   wasm_wp_step Step.callIndirect (α := α) hselector Htablephys helement
     himports' hnotforeign' hfn' hsignature' hexpected' htype' =>
-    imod Hclose
-    imodintro
-    isplitl [Hσ]
-    · iexact Hσ
-    isplitl [Hwp Hruntime Htable]
-    · ispecialize Hwp $$ %store.runtime.entry
+    wasm_wp_frame
+      ispecialize Hwp $$ %store.runtime.entry
       iapply Hwp
       isplitl [Hruntime]
       · iexact Hruntime
       · iexact Htable
-    · itrivial
 
 end Wasm.SmallStep

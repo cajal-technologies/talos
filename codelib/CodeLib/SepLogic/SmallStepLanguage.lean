@@ -124,19 +124,30 @@ macro_rules
         next => $continuation))
 
 set_option hygiene false in
-/-- Reassemble the Iris state, continuation, and affine tail after a Wasm step. -/
-macro "wasm_wp_frame" : tactic =>
-  `(tactic|
+/-- Reassemble the Iris state, a custom continuation, and the affine tail after
+a Wasm step. -/
+syntax "wasm_wp_frame" ppLine colGt tacticSeq : tactic
+
+set_option hygiene false in
+macro_rules
+  | `(tactic| wasm_wp_frame $continuation:tacticSeq) =>
+    `(tactic|
     (imod Hclose
      imodintro
      isplitl [Hσ]
      next => iexact Hσ
      next =>
        isplitr [Hcredit]
-       next =>
-         repeat ispecialize Hwp $$ [$]
-         iexact Hwp
+       next => $continuation
        next => itrivial))
+
+set_option hygiene false in
+/-- Reassemble an ordinary Wasm step using the conventional `Hwp` continuation. -/
+macro "wasm_wp_frame" : tactic =>
+  `(tactic|
+    wasm_wp_frame
+      repeat ispecialize Hwp $$ [$]
+      iexact Hwp)
 
 set_option hygiene false in
 /-- Reassemble Iris state after a Wasm transition to a trapped expression. -/
