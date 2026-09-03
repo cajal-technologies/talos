@@ -171,10 +171,9 @@ theorem wp_loadFatPtr
   · inext
     simp only [UInt32.add_zero]
     iexact Hdata
-  iapply Wasm.SmallStep.wp_load32 (address := p) (offset := 0)
+  wasm_wp_next Wasm.SmallStep.wp_load32 (address := p) (offset := 0)
     dataPtr (by simp) (by simpa using hp1)
     (by simpa using hp2) (by simpa using hp3) $$ HdataLater
-  inext
   iintro Hdata
   have hget' :
       (⟨params, localValues, .i32 dataPtr :: values⟩ : Locals).get index =
@@ -184,9 +183,8 @@ theorem wp_loadFatPtr
   ihave HlenLater : ▷ pointsTo_u32 0 (p + 4) len $$ [Hlen]
   · inext
     iexact Hlen
-  iapply Wasm.SmallStep.wp_load32 (address := p) (offset := 4)
+  wasm_wp_next Wasm.SmallStep.wp_load32 (address := p) (offset := 4)
     len hp4 hp5 hp6 hp7 $$ HlenLater
-  inext
   iintro Hlen
   iexact Hwp
 

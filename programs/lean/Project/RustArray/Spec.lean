@@ -116,22 +116,19 @@ theorem len_export_correct : LenExportSpec := by
     · inext
       simp only [UInt32.add_zero]
       iexact Hdata
-    iapply SmallStep.wp_load32 (address := p) (offset := 0)
+    wasm_wp_next SmallStep.wp_load32 (address := p) (offset := 0)
       dataPtr (by simp) (by simpa using hp1)
       (by simpa using hp2) (by simpa using hp3) $$ HdataLater
-    inext
     iintro Hdata
     wasm_wp_pures [wp_localGet]
     ihave HlenLater : ▷ pointsTo_u32 0 (p + 4) len $$ [Hlen]
     · inext
       iexact Hlen
-    iapply SmallStep.wp_load32 (address := p) (offset := 4)
+    wasm_wp_next SmallStep.wp_load32 (address := p) (offset := 4)
       len hp4 hp5 hp6 hp7 $$ HlenLater
-    inext
     iintro Hlen
-    iapply SmallStep.wp_call «module» 0 func0Def
+    wasm_wp_next SmallStep.wp_call «module» 0 func0Def
       (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-    inext
     iintro Hruntime
     simp [func0Def, Function.toLocals, Function.numParams, func0]
     wasm_wp_pures [wp_localGet]
@@ -171,28 +168,24 @@ theorem is_empty_export_correct : IsEmptyExportSpec := by
     · inext
       simp only [UInt32.add_zero]
       iexact Hdata
-    iapply SmallStep.wp_load32 (address := p) (offset := 0)
+    wasm_wp_next SmallStep.wp_load32 (address := p) (offset := 0)
       dataPtr (by simp) (by simpa using hp1)
       (by simpa using hp2) (by simpa using hp3) $$ HdataLater
-    inext
     iintro Hdata
     wasm_wp_pures [wp_localGet]
     ihave HlenLater : ▷ pointsTo_u32 0 (p + 4) len $$ [Hlen]
     · inext
       iexact Hlen
-    iapply SmallStep.wp_load32 (address := p) (offset := 4)
+    wasm_wp_next SmallStep.wp_load32 (address := p) (offset := 4)
       len hp4 hp5 hp6 hp7 $$ HlenLater
-    inext
     iintro Hlen
-    iapply SmallStep.wp_call «module» 1 func1Def
+    wasm_wp_next SmallStep.wp_call «module» 1 func1Def
       (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-    inext
     iintro Hruntime
     simp [func1Def, Function.toLocals, Function.numParams, func1]
     wasm_wp_pures [wp_localGet wp_localGet]
-    iapply SmallStep.wp_call «module» 2 func2Def
+    wasm_wp_next SmallStep.wp_call «module» 2 func2Def
       (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-    inext
     iintro Hruntime
     simp [func2Def, Function.toLocals, Function.numParams, func2]
     wasm_wp_pures [wp_localGet wp_const]

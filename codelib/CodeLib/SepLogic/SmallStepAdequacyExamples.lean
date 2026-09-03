@@ -124,9 +124,8 @@ theorem noopCall_adequate :
     simp only [noopCallConfig, RuntimeEnv.currentModule_mk1]
     iintro ⟨Hruntime, _HruntimeInstances⟩
     iclear _HruntimeInstances
-    iapply wp_call noopCallModule 0 ({ body := [.ret] } : Function)
+    wasm_wp_next wp_call noopCallModule 0 ({ body := [.ret] } : Function)
         (by simp [noopCallModule]) rfl ⟨0⟩ $$ Hruntime
-    inext
     iintro Hruntime
     simp only [noopCallModule, Function.toLocals, Function.numParams,
       List.take_nil, List.reverse_nil, List.drop_nil, List.length_nil]
@@ -1497,9 +1496,8 @@ theorem tableSetGet_store_partiallyMeets :
     wasm_wp_next wp_tableSet rfl (by decide) $$ Htable
     iintro Htable
     wasm_wp_pures [wp_const]
-    iapply wp_tableGet (value := .funcref (some 1))
+    wasm_wp_next wp_tableGet (value := .funcref (some 1))
       rfl (by simp [listSetAt]) $$ Htable
-    inext
     iintro Htable
     iapply wp_mono (fun _ => BI.sep_comm.mp)
     iapply wp_frame_l
@@ -1596,11 +1594,10 @@ theorem tableGrowFill_store_partiallyMeets :
       exact ⟨hvalues, by
         simpa [listWriteAt] using Hphysical⟩
     simp only [← tablePointsToAt_eq]
-    iapply wp_tableGrow32 tableGrowFillAdequacyModule ⟨0⟩
+    wasm_wp_next wp_tableGrow32 tableGrowFillAdequacyModule ⟨0⟩
       (tableIndex := 0) (table := [.funcref none])
       (delta := 2) (initial := .funcref (some 1)) (by decide) $$
         [$Htable $HruntimeOwn]
-    inext
     iintro Htable _HruntimeOwn
     simp only [tableGrowFillAdequacyModule]
     iapply wp_mono hpost
@@ -1608,19 +1605,17 @@ theorem tableGrowFill_store_partiallyMeets :
     wasm_wp_pures [wp_const]
     wasm_wp_next wp_pureStep _ _ _ (fun _ => Step.refFunc)
     wasm_wp_pures [wp_const]
-    iapply wp_tableFill
+    wasm_wp_next wp_tableFill
       (tableIndex := 0) (destination := .i32 0) (length := .i32 3)
       (value := .funcref (some 1))
       (table :=
         [.funcref none] ++
           List.replicate (UInt32.toNat 2) (.funcref (some 1)))
       rfl rfl (by decide) $$ Htable
-    inext
     iintro Htable
     wasm_wp_pures [wp_const]
-    iapply wp_tableGet (value := .funcref (some 1))
+    wasm_wp_next wp_tableGet (value := .funcref (some 1))
       rfl (by simp [listWriteAt]) $$ Htable
-    inext
     iintro Htable
     iapply wp_mono (fun _ => BI.sep_comm.mp)
     iapply wp_frame_l
@@ -1708,21 +1703,19 @@ theorem tableGrow64Failure_store_partiallyMeets :
       ipureintro
       exact ⟨hvalues, by simpa using Hphysical⟩
     simp only [← tablePointsToAt_eq]
-    iapply wp_tableGrow64 tableGrow64FailureAdequacyModule ⟨0⟩
+    wasm_wp_next wp_tableGrow64 tableGrow64FailureAdequacyModule ⟨0⟩
       (tableIndex := 0) (table := [.funcref none])
       (delta := 2) (initial := .funcref (some 0)) (by decide) $$
         [$Htable $HruntimeOwn]
-    inext
     iintro Htable HruntimeOwn
     wasm_wp_next wp_pureStep _ _ _ (fun _ => Step.drop)
-    iapply wp_tableGrow64Failure tableGrow64FailureAdequacyModule ⟨0⟩
+    wasm_wp_next wp_tableGrow64Failure tableGrow64FailureAdequacyModule ⟨0⟩
       (tableIndex := 0)
       (table :=
         [.funcref none] ++
           List.replicate (UInt64.toNat 2) (.funcref (some 0)))
       (delta := 1) (initial := .funcref none) (by decide) $$
         [$Htable $HruntimeOwn]
-    inext
     iintro Htable _HruntimeOwn
     iapply wp_mono hpost
     simp only [← tablePointsToAt_eq]
@@ -1847,14 +1840,13 @@ theorem tableCopyOverlap_store_partiallyMeets :
       exact ⟨hvalues, by simpa [listWriteAt] using Hphysical⟩
     iapply wp_mono hpost
     simp only [← tablePointsToAt_eq]
-    iapply wp_tableCopySame
+    wasm_wp_next wp_tableCopySame
       (tableIndex := 0)
       (table :=
         [.funcref none, .funcref (some 0), .funcref (some 1),
           .funcref (some 2)])
       (destination := .i32 1) (source := .i32 0) (length := .i32 3)
       rfl rfl rfl (by decide) (by decide) $$ Htable
-    inext
     iintro Htable
     iapply wp_mono (fun _ => BI.sep_comm.mp)
     iapply wp_frame_l
@@ -2047,7 +2039,7 @@ theorem tableCopyDistinct_store_partiallyMeets :
     iapply wp_mono hpost
     simp only [← tablePointsToAt_eq]
     icombine Hdestination Hsource as HtablePair
-    iapply wp_tableCopyDistinct
+    wasm_wp_next wp_tableCopyDistinct
       (destinationTableIndex := 0) (sourceTableIndex := 1)
       (destinationTable :=
         [.funcref none, .funcref none, .funcref none])
@@ -2055,7 +2047,6 @@ theorem tableCopyDistinct_store_partiallyMeets :
         [.funcref (some 0), .funcref (some 1), .funcref (some 2)])
       (destination := .i32 0) (source := .i32 1) (length := .i32 2)
       rfl rfl rfl (by decide) (by decide) $$ HtablePair
-    inext
     iintro Hdestination Hsource
     simp only [tablePointsToAt_eq]
     iapply wp_mono hframe
@@ -2233,14 +2224,13 @@ theorem tableInitDrop_store_partiallyMeets :
           isplitl [Hruntime]
           · unfold runtimeModuleElem; iexact Hruntime
           · unfold currentInstanceOwnN; iexact HinstFrag
-    iapply wp_tableInitLive tableInitDropAdequacyModule ⟨0⟩
+    wasm_wp_next wp_tableInitLive tableInitDropAdequacyModule ⟨0⟩
       (tableIndex := 0) (elementIndex := 0)
       (table :=
         [.funcref none, .funcref none, .funcref none, .funcref none])
       (entries := [some 0, none, some 0])
       (destination := .i32 1) (source := 0) (length := 3)
       rfl (by decide) (by decide) $$ Hresources
-    inext
     iintro Htable Helement Hruntime
     wasm_wp_next wp_elemDrop $$ Helement
     iintro Helement

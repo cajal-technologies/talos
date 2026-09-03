@@ -4355,9 +4355,8 @@ theorem wp_copyOverlapWord :
   · inext
     rw [UInt32.add_zero]
     iexact Hword
-  iapply wp_load64 0x8877443322112211
+  wasm_wp_next wp_load64 0x8877443322112211
     rfl rfl rfl rfl rfl rfl rfl rfl $$ HwordLater
-  inext
   iintro Hword
   wasm_wp_finish_value
   isplitr
@@ -4613,12 +4612,11 @@ theorem wp_mergeTwoWords :
   iintro H4
   wasm_wp_pures [wp_localSet wp_localGet wp_localGet]
   wasm_wp_next wp_ltU (result := 0) (by decide)
-  iapply wp_iff
+  wasm_wp_next wp_iff
     (selectedBody :=
       [ .const 0, .localGet 1, .store32 0,
         .const 4, .localGet 0, .store32 0 ])
     rfl
-  inext
   wasm_wp_pures [wp_const wp_localGet]
   ihave H0Later : ▷ pointsTo_u32 0 (0 + 0) 9 $$ [H0]
   · inext

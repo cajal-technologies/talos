@@ -109,18 +109,16 @@ theorem absDiff_smallStep_wp_to_return
         ▷ pointsTo_u64 0 ((sp - 16) + 8) oldScratch $$ [Hscratch]
     · inext
       iexact Hscratch
-    iapply Wasm.SmallStep.wp_store64 oldScratch h8 h9 h10 h11 h12 h13 h14 h15 $$
+    wasm_wp_next Wasm.SmallStep.wp_store64 oldScratch h8 h9 h10 h11 h12 h13 h14 h15 $$
       HscratchLater
-    inext
     iintro Hscratch
     wasm_wp_pures [wp_exitControl wp_localGet]
     ihave HscratchLater :
         ▷ pointsTo_u64 0 ((sp - 16) + 8) (b - a) $$ [Hscratch]
     · inext
       iexact Hscratch
-    iapply Wasm.SmallStep.wp_load64 (b - a) h8 h9 h10 h11 h12 h13 h14 h15 $$
+    wasm_wp_next Wasm.SmallStep.wp_load64 (b - a) h8 h9 h10 h11 h12 h13 h14 h15 $$
       HscratchLater
-    inext
     iintro Hscratch
     simp only [List.take_nil, List.nil_append]
     simp only [hab, if_true] at hreturn
@@ -135,9 +133,8 @@ theorem absDiff_smallStep_wp_to_return
         ▷ pointsTo_u64 0 ((sp - 16) + 8) oldScratch $$ [Hscratch]
     · inext
       iexact Hscratch
-    iapply Wasm.SmallStep.wp_store64 oldScratch h8 h9 h10 h11 h12 h13 h14 h15 $$
+    wasm_wp_next Wasm.SmallStep.wp_store64 oldScratch h8 h9 h10 h11 h12 h13 h14 h15 $$
       HscratchLater
-    inext
     iintro Hscratch
     wasm_wp_pures [wp_br]
     simp only [List.take_nil, List.drop_nil, List.nil_append]
@@ -146,9 +143,8 @@ theorem absDiff_smallStep_wp_to_return
         ▷ pointsTo_u64 0 ((sp - 16) + 8) (a - b) $$ [Hscratch]
     · inext
       iexact Hscratch
-    iapply Wasm.SmallStep.wp_load64 (a - b) h8 h9 h10 h11 h12 h13 h14 h15 $$
+    wasm_wp_next Wasm.SmallStep.wp_load64 (a - b) h8 h9 h10 h11 h12 h13 h14 h15 $$
       HscratchLater
-    inext
     iintro Hscratch
     simp only [hab, if_false] at hreturn
     iapply hreturn

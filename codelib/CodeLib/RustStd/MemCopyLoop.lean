@@ -172,21 +172,19 @@ theorem copyWords_loadStoreIteration_wp
   · inext
     simp only [UInt32.add_zero]
     iexact HsrcCell'
-  iapply Wasm.SmallStep.wp_load32
+  wasm_wp_next Wasm.SmallStep.wp_load32
       (address := srcAddress) (offset := 0) value
       (by simp) (by simpa using hs1) (by simpa using hs2)
       (by simpa using hs3) $$ HsrcLater
-  inext
   iintro HsrcCell
   ihave HdstLater : ▷ pointsTo_u32 0 (dstAddress + 0) oldDst $$ [HdstCell']
   · inext
     simp only [UInt32.add_zero]
     iexact HdstCell'
-  iapply Wasm.SmallStep.wp_store32
+  wasm_wp_next Wasm.SmallStep.wp_store32
       (address := dstAddress) (offset := 0) (value := value) oldDst
       (by simp) (by simpa using hd1) (by simpa using hd2)
       (by simpa using hd3) $$ HdstLater
-  inext
   iintro HdstCell
   ihave HsrcCell'' :
       pointsTo_u32 0 (src + 4 * UInt32.ofNat pre.length) value $$

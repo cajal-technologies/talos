@@ -55,9 +55,8 @@ theorem total_variation_correct : TotalVariationSpec := by
     ihave Hglobal := absDiffGlobals_pointsTo $$ Hglobals
     simp only [func1]
     wasm_wp_pures [wp_localGet wp_localGet]
-    iapply wp_call «module» 0 func0Def (by simp [«module»]) (by simp [«module»]) $$
+    wasm_wp_next wp_call «module» 0 func0Def (by simp [«module»]) (by simp [«module»]) $$
       Hruntime
-    inext
     iintro Hruntime
     simp [func0Def, Function.toLocals, Function.numParams, ValueType.zero]
     rw [show func0 = absDiffBody by rfl]
@@ -68,9 +67,8 @@ theorem total_variation_correct : TotalVariationSpec := by
       iintro Hruntime
       wasm_wp_pures [wp_localGet wp_localGet]
       simp only [List.take, UInt32.reduceSub, UInt32.reduceAdd]
-      iapply wp_call «module» 0 func0Def (by simp [«module»]) (by simp [«module»]) $$
+      wasm_wp_next wp_call «module» 0 func0Def (by simp [«module»]) (by simp [«module»]) $$
         Hruntime
-      inext
       iintro Hruntime
       simp [func0Def, Function.toLocals, Function.numParams, ValueType.zero]
       rw [show func0 = absDiffBody by rfl]

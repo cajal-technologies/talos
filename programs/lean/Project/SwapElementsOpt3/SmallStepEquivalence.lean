@@ -51,24 +51,21 @@ theorem opt3_func0_distinct_smallStep_wp
   iintro ⟨HA, HB⟩
   simp only [Project.SwapElementsOpt3.func0]
   wasm_wp_pures [wp_block wp_block wp_localGet wp_localGet]
-  iapply Wasm.SmallStep.wp_geU (result := 0)
+  wasm_wp_next Wasm.SmallStep.wp_geU (result := 0)
     (by simp [show ¬i ≥ len from not_le_of_gt hi])
-  inext
   wasm_wp_pures [wp_brIfZero wp_localGet wp_localGet]
-  iapply Wasm.SmallStep.wp_geU (result := 0)
+  wasm_wp_next Wasm.SmallStep.wp_geU (result := 0)
     (by simp [show ¬j ≥ len from not_le_of_gt hj])
-  inext
   wasm_wp_pures [wp_brIfZero wp_localGet wp_localGet wp_const wp_shl wp_add wp_localTee]
   simp only [List.set]
   ihave HALater : ▷ pointsTo_u64 0 (addressI + 0) oldA $$ [HA]
   · inext
     rw [UInt32.add_zero]
     iexact HA
-  iapply Wasm.SmallStep.wp_load64 oldA (by simp)
+  wasm_wp_next Wasm.SmallStep.wp_load64 oldA (by simp)
     (by simpa using hi1) (by simpa using hi2) (by simpa using hi3)
     (by simpa using hi4) (by simpa using hi5) (by simpa using hi6)
     (by simpa using hi7) $$ HALater
-  inext
   iintro HA
   wasm_wp_pures [wp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
@@ -79,32 +76,29 @@ theorem opt3_func0_distinct_smallStep_wp
   · inext
     rw [UInt32.add_zero]
     iexact HB
-  iapply Wasm.SmallStep.wp_load64 oldB (by simp)
+  wasm_wp_next Wasm.SmallStep.wp_load64 oldB (by simp)
     (by simpa using hj1) (by simpa using hj2) (by simpa using hj3)
     (by simpa using hj4) (by simpa using hj5) (by simpa using hj6)
     (by simpa using hj7) $$ HBLater
-  inext
   iintro HB
   ihave HALater : ▷ pointsTo_u64 0 (addressI + 0) oldA $$ [HA]
   · inext
     rw [UInt32.add_zero]
     iexact HA
-  iapply Wasm.SmallStep.wp_store64 oldA (by simp)
+  wasm_wp_next Wasm.SmallStep.wp_store64 oldA (by simp)
     (by simpa using hi1) (by simpa using hi2) (by simpa using hi3)
     (by simpa using hi4) (by simpa using hi5) (by simpa using hi6)
     (by simpa using hi7) $$ HALater
-  inext
   iintro HA
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HBLater : ▷ pointsTo_u64 0 (addressJ + 0) oldB $$ [HB]
   · inext
     rw [UInt32.add_zero]
     iexact HB
-  iapply Wasm.SmallStep.wp_store64 oldB (by simp)
+  wasm_wp_next Wasm.SmallStep.wp_store64 oldB (by simp)
     (by simpa using hj1) (by simpa using hj2) (by simpa using hj3)
     (by simpa using hj4) (by simpa using hj5) (by simpa using hj6)
     (by simpa using hj7) $$ HBLater
-  inext
   iintro HB
   wasm_wp_return_value
   isplitr
