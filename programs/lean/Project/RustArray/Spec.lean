@@ -60,9 +60,7 @@ theorem len_correct : LenSpec := by
   intro gs
   simp only [leafConfig, func0]
   wasm_wp_pures [wp_localGet]
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -84,9 +82,7 @@ theorem is_empty_correct : IsEmptySpec := by
   rw [show isEmptyValue len &&& 1 = isEmptyValue len by
     unfold isEmptyValue
     by_cases h : len = 0 <;> simp [h]]
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -143,9 +139,7 @@ theorem len_export_correct : LenExportSpec := by
     iapply SmallStep.wp_returnFromCallExplicit $$ Hruntime
     inext
     simp only [List.take, List.singleton_append]
-    iapply SmallStep.wp_returnFromFunction
-    inext
-    iapply wp_value'
+    wasm_wp_return_value
     iclear Hdata Hlen
     ipureintro
     rfl
@@ -225,9 +219,7 @@ theorem is_empty_export_correct : IsEmptyExportSpec := by
     rw [show isEmptyValue len &&& 1 = isEmptyValue len by
       unfold isEmptyValue
       by_cases h : len = 0 <;> simp [h]]
-    iapply SmallStep.wp_returnFromFunction
-    inext
-    iapply wp_value'
+    wasm_wp_return_value
     iclear Hdata Hlen
     ipureintro
     rfl

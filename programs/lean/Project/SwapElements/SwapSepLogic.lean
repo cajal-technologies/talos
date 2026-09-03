@@ -269,9 +269,7 @@ theorem wp_swapElementsFunc2
   · iexact Hresources
   · inext
     iintro Hresources
-    iapply wp_returnFromFunction
-    inext
-    iapply wp_value'
+    wasm_wp_return_value
     isplitr
     · ipureintro
       rfl
@@ -301,9 +299,7 @@ theorem wp_swapElementsFunc2Alias
   · iexact Hresources
   · inext
     iintro Hresources
-    iapply wp_returnFromFunction
-    inext
-    iapply wp_value'
+    wasm_wp_return_value
     isplitr
     · ipureintro
       rfl
@@ -341,9 +337,7 @@ theorem wp_swapElementsFunc3
   iapply wp_store32 oldPtr rfl rfl rfl rfl $$ HptrLater
   inext
   iintro Hptr
-  iapply wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   isplitr
   · ipureintro
     rfl
@@ -999,9 +993,7 @@ theorem func1_happy_smallStep_wp
     ptr len i j oldScratch oldA oldB hi hj hroomI hroomJ []
   iintro ⟨_Htrue, Hruntime, Hresources⟩
   iclear Hruntime
-  iapply Wasm.SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   isplitr
   · ipureintro
     rfl
@@ -1137,9 +1129,7 @@ theorem func0_alias_smallStep_wp
     ptr len i oldScratch oldValue hi hroom []
   · iintro ⟨_Htrue, Hruntime, Hresources⟩
     iclear Hruntime
-    iapply Wasm.SmallStep.wp_returnFromFunction
-    inext
-    iapply wp_value'
+    wasm_wp_return_value
     isplitr
     · ipureintro
       rfl
@@ -1175,9 +1165,7 @@ theorem func0_happy_smallStep_wp
     ptr len i j oldScratch oldA oldB hi hj hroomI hroomJ []
   iintro ⟨_Htrue, Hruntime, Hresources⟩
   iclear Hruntime
-  iapply Wasm.SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   isplitr
   · ipureintro
     rfl
@@ -1384,9 +1372,7 @@ theorem func4_happy_smallStep_wp
       iintro Hglobal
       rw [show (16 : UInt32) + 1048560 = 1048576 by decide]
       rw [show (3 % 32 : UInt32) = 3 by decide]
-      iapply Wasm.SmallStep.wp_returnFromFunction
-      inext
-      iapply wp_value'
+      wasm_wp_return_value
       isplitr
       · ipureintro
         rfl
@@ -1504,9 +1490,7 @@ theorem func4_alias_smallStep_wp
       iintro Hglobal
       rw [show (16 : UInt32) + 1048560 = 1048576 by decide]
       rw [show (3 % 32 : UInt32) = 3 by decide]
-      iapply Wasm.SmallStep.wp_returnFromFunction
-      inext
-      iapply wp_value'
+      wasm_wp_return_value
       isplitr
       · ipureintro
         rfl

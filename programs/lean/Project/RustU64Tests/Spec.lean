@@ -72,9 +72,7 @@ theorem add_chain_correct : AddChainSpec := by
   intro gs
   simp only [ternaryConfig, func0]
   wasm_wp_pures [wp_localGet wp_localGet wp_addI64 wp_localGet wp_addI64]
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -90,9 +88,7 @@ theorem add_then_mul_correct : AddThenMulSpec := by
   intro gs
   simp only [ternaryConfig, func1]
   wasm_wp_pures [wp_localGet wp_localGet wp_addI64 wp_localGet wp_mulI64]
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -109,9 +105,7 @@ theorem sub_chain_correct : SubChainSpec := by
   intro gs
   simp only [ternaryConfig, func18]
   wasm_wp_pures [wp_localGet wp_localGet wp_subI64 wp_localGet wp_subI64]
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -127,9 +121,7 @@ theorem sub_then_add_correct : SubThenAddSpec := by
   intro gs
   simp only [ternaryConfig, func19]
   wasm_wp_pures [wp_localGet wp_localGet wp_subI64 wp_localGet wp_addI64]
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -146,9 +138,7 @@ theorem mul_chain_correct : MulChainSpec := by
   intro gs
   simp only [ternaryConfig, func6]
   wasm_wp_pures [wp_localGet wp_localGet wp_mulI64 wp_localGet wp_mulI64]
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -164,9 +154,7 @@ theorem mul_then_add_correct : MulThenAddSpec := by
   intro gs
   simp only [ternaryConfig, func7]
   wasm_wp_pures [wp_localGet wp_localGet wp_mulI64 wp_localGet wp_addI64]
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -183,9 +171,7 @@ theorem and_chain_correct : AndChainSpec := by
   intro gs
   simp only [ternaryConfig, func2]
   wasm_wp_pures [wp_localGet wp_localGet wp_andI64 wp_localGet wp_andI64]
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -201,9 +187,7 @@ theorem and_then_or_correct : AndThenOrSpec := by
   intro gs
   simp only [ternaryConfig, func3]
   wasm_wp_pures [wp_localGet wp_localGet wp_andI64 wp_localGet wp_orI64]
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -220,9 +204,7 @@ theorem or_chain_correct : OrChainSpec := by
   intro gs
   simp only [ternaryConfig, func10]
   wasm_wp_pures [wp_localGet wp_localGet wp_orI64 wp_localGet wp_orI64]
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -240,9 +222,7 @@ theorem or_then_xor_correct : OrThenXorSpec := by
   wasm_wp_pures [wp_localGet wp_localGet wp_orI64 wp_localGet]
   iapply SmallStep.wp_xorI64
   inext
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -264,9 +244,7 @@ theorem xor_chain_correct : XorChainSpec := by
   wasm_wp_pures [wp_localGet]
   iapply SmallStep.wp_xorI64
   inext
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -285,9 +263,7 @@ theorem xor_then_and_correct : XorThenAndSpec := by
   iapply SmallStep.wp_xorI64
   inext
   wasm_wp_pures [wp_localGet wp_andI64]
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -312,9 +288,7 @@ theorem not_twice_correct : NotTwiceSpec := by
   inext
   rw [show (~~~a) ^^^ (18446744073709551615 : UInt64) = ~~~(~~~a) by
     bv_decide]
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -336,9 +310,7 @@ theorem not_then_xor_correct : NotThenXorSpec := by
   wasm_wp_pures [wp_localGet]
   iapply SmallStep.wp_xorI64
   inext
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -363,9 +335,7 @@ theorem div_then_add_correct : DivThenAddSpec := by
   iapply SmallStep.wp_divUI64 hb
   inext
   wasm_wp_pures [wp_localGet wp_addI64]
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -389,9 +359,7 @@ theorem div_then_mul_correct : DivThenMulSpec := by
   iapply SmallStep.wp_divUI64 hb
   inext
   wasm_wp_pures [wp_localGet wp_mulI64]
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -416,9 +384,7 @@ theorem rem_then_add_correct : RemThenAddSpec := by
   iapply SmallStep.wp_remUI64 hb
   inext
   wasm_wp_pures [wp_localGet wp_addI64]
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -442,9 +408,7 @@ theorem rem_then_mul_correct : RemThenMulSpec := by
   iapply SmallStep.wp_remUI64 hb
   inext
   wasm_wp_pures [wp_localGet wp_mulI64]
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -467,9 +431,7 @@ theorem shl_then_add_correct : ShlThenAddSpec := by
   wasm_wp_pures [wp_shlI64]
   rw [shiftAmount_norm]
   wasm_wp_pures [wp_localGet wp_addI64]
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -497,9 +459,7 @@ theorem shl_twice_correct : ShlTwiceSpec := by
   inext
   wasm_wp_pures [wp_shlI64]
   rw [shiftAmount_norm]
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -521,9 +481,7 @@ theorem shr_then_sub_correct : ShrThenSubSpec := by
   wasm_wp_pures [wp_shrUI64]
   rw [shiftAmount_norm]
   wasm_wp_pures [wp_localGet wp_subI64]
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -551,9 +509,7 @@ theorem shr_twice_correct : ShrTwiceSpec := by
   inext
   wasm_wp_pures [wp_shrUI64]
   rw [shiftAmount_norm]
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 

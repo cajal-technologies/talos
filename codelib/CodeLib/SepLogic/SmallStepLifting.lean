@@ -166,6 +166,20 @@ theorem wp_returnFromFunction
   wasm_wp_step Step.returnFromFunction =>
     wasm_wp_frame
 
+/-- Finish a completed body and expose its result as an Iris value. -/
+macro "wasm_wp_finish_value" : tactic =>
+  `(tactic|
+    (iapply wp_finish
+     inext
+     iapply wp_value'))
+
+/-- Return from a top-level function and expose its result as an Iris value. -/
+macro "wasm_wp_return_value" : tactic =>
+  `(tactic|
+    (iapply wp_returnFromFunction
+     inext
+     iapply wp_value'))
+
 theorem wp_const
     {params localValues values : List Value}
     {value : UInt32} {code : Program} {arity : Nat}
@@ -4168,9 +4182,7 @@ theorem wp_wordRoundtrip (oldWord : UInt32) :
   iapply wp_load32 0x12345678 rfl rfl rfl rfl $$ HwordLater
   inext
   iintro Hword
-  iapply wp_finish
-  inext
-  iapply wp_value'
+  wasm_wp_finish_value
   isplitr
   · ipureintro
     rfl
@@ -4216,9 +4228,7 @@ theorem wp_fillFourBytes (oldWord : UInt32) :
   iapply wp_load32 0x12345678 rfl rfl rfl rfl $$ H32Later
   inext
   iintro H32
-  iapply wp_finish
-  inext
-  iapply wp_value'
+  wasm_wp_finish_value
   isplitr
   · ipureintro
     rfl
@@ -4261,9 +4271,7 @@ theorem wp_copyWord (oldDestination : UInt32) :
   iapply wp_load32 0x04030201 rfl rfl rfl rfl $$ HdestinationLater
   inext
   iintro Hdestination
-  iapply wp_finish
-  inext
-  iapply wp_value'
+  wasm_wp_finish_value
   isplitr
   · ipureintro
     rfl
@@ -4312,9 +4320,7 @@ theorem wp_memoryInitDrop (oldWord : UInt32) :
   iapply wp_load32 0x04030201 rfl rfl rfl rfl $$ HwordLater
   inext
   iintro Hword
-  iapply wp_finish
-  inext
-  iapply wp_value'
+  wasm_wp_finish_value
   isplitr
   · ipureintro
     rfl
@@ -4353,9 +4359,7 @@ theorem wp_copyOverlapWord :
     rfl rfl rfl rfl rfl rfl rfl rfl $$ HwordLater
   inext
   iintro Hword
-  iapply wp_finish
-  inext
-  iapply wp_value'
+  wasm_wp_finish_value
   isplitr
   · ipureintro
     rfl
@@ -4426,9 +4430,7 @@ theorem wp_swapWords :
   iapply wp_load32 11 rfl rfl rfl rfl $$ H4Later
   inext
   iintro H4
-  iapply wp_finish
-  inext
-  iapply wp_value'
+  wasm_wp_finish_value
   isplitr
   · ipureintro
     rfl
@@ -4503,9 +4505,7 @@ theorem wp_reverseThreeWords :
   iapply wp_load32 11 rfl rfl rfl rfl $$ H8Later
   inext
   iintro H8
-  iapply wp_finish
-  inext
-  iapply wp_value'
+  wasm_wp_finish_value
   isplitr
   · ipureintro
     rfl
@@ -4583,9 +4583,7 @@ theorem wp_partitionThreeWords :
   iapply wp_store32 22 rfl rfl rfl rfl $$ H8Later
   inext
   iintro H8
-  iapply wp_finish
-  inext
-  iapply wp_value'
+  wasm_wp_finish_value
   isplitr
   · ipureintro
     rfl
@@ -4659,9 +4657,7 @@ theorem wp_mergeTwoWords :
   inext
   iintro H4
   wasm_wp_pures [wp_exitControl]
-  iapply wp_finish
-  inext
-  iapply wp_value'
+  wasm_wp_finish_value
   isplitr
   · ipureintro
     rfl

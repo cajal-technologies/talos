@@ -47,9 +47,7 @@ theorem func5_smallStep (x : UInt32) :
   simp only [func5Config]
   iapply func5_body_smallStep_wp x []
   inext
-  iapply wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -84,9 +82,7 @@ theorem func6_smallStep (x : UInt32) :
   simp only [func6Config]
   iapply func6_body_smallStep_wp x []
   inext
-  iapply wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -134,9 +130,7 @@ theorem func9_smallStep_wp
   iapply wp_returnFromCallExplicit' $$ Hruntime
   inext
   iintro Hruntime
-  iapply wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   iclear Hruntime
   ipureintro
   rfl
@@ -210,9 +204,7 @@ theorem func4_smallStep_wp
   iapply wp_returnFromCallExplicit' $$ Hruntime
   inext
   iintro Hruntime
-  iapply wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   iclear Hruntime
   ipureintro
   rfl
@@ -385,9 +377,7 @@ theorem func1_smallStep (x : UInt32) :
     simp only [func1Config]
     iapply func1_body_smallStep_wp (iprop(True)) x 0 []
     · iintro ⟨_Htrue, Hglobal, Hword⟩
-      iapply wp_returnFromFunction
-      inext
-      iapply wp_value'
+      wasm_wp_return_value
       iclear Hglobal Hword
       ipureintro
       rfl
@@ -426,9 +416,7 @@ theorem func0_smallStep_wp
     iapply wp_returnFromCallExplicit' $$ Hruntime
     inext
     iintro Hruntime
-    iapply wp_returnFromFunction
-    inext
-    iapply wp_value'
+    wasm_wp_return_value
     iclear Hruntime Hglobal Hword
     ipureintro
     rfl
@@ -585,9 +573,7 @@ theorem func3_smallStep (x : UInt64) :
     simp only [func3Config]
     iapply func3_body_smallStep_wp (iprop(True)) x 0 []
     · iintro ⟨_Htrue, Hglobal, Hword⟩
-      iapply wp_returnFromFunction
-      inext
-      iapply wp_value'
+      wasm_wp_return_value
       iclear Hglobal Hword
       ipureintro
       rfl
@@ -633,9 +619,7 @@ theorem func2_smallStep_wp
     simp only [List.take, List.singleton_append]
     iapply wp_scalarFloat1 rfl rfl
     inext
-    iapply wp_returnFromFunction
-    inext
-    iapply wp_value'
+    wasm_wp_return_value
     iclear Hruntime Hglobal Hword
     ipureintro
     rfl
@@ -743,9 +727,7 @@ theorem func8_smallStep (x y : UInt32) :
     simp only [func8Config]
     iapply func8_body_smallStep_wp (iprop(True)) x y 0 []
     · iintro ⟨_Htrue, Hglobal, Hword⟩
-      iapply wp_returnFromFunction
-      inext
-      iapply wp_value'
+      wasm_wp_return_value
       iclear Hglobal Hword
       ipureintro
       rfl
@@ -782,9 +764,7 @@ theorem func7_smallStep_wp
     iapply wp_returnFromCallExplicit' $$ Hruntime
     inext
     iintro Hruntime
-    iapply wp_returnFromFunction
-    inext
-    iapply wp_value'
+    wasm_wp_return_value
     iclear Hruntime Hglobal Hword
     ipureintro
     rfl
@@ -1805,9 +1785,7 @@ theorem checkAbs_tail_result_smallStep_wp
         Expr Unit) @ s; E {{ values, ⌜∃ b : UInt32, values = [.i32 b]⌝ }} := by
   iapply checkAbs_tail_smallStep_wp R x result [] _
   iintro ⟨HR, Hglobal, Hresult⟩
-  iapply wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   iclear HR Hglobal Hresult
   ipureintro
   exact ⟨result, rfl⟩
@@ -1991,9 +1969,7 @@ theorem checkCopysign_tail_result_smallStep_wp
   inext
   iintro Hglobal
   wasm_wp_pures [wp_localGet]
-  iapply wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   iclear HR Hglobal Hresult
   ipureintro
   exact ⟨result, rfl⟩

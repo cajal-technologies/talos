@@ -178,9 +178,7 @@ theorem absDiff_smallStep_wp
   iintro Hresources
   iapply absDiff_smallStep_wp_to_return (iprop(True)) [] sp a b oldScratch hlo hroom
   · iintro ⟨_Htrue, Hresources⟩
-    iapply Wasm.SmallStep.wp_returnFromFunction
-    inext
-    iapply wp_value'
+    wasm_wp_return_value
     isplitr
     · ipureintro
       rfl

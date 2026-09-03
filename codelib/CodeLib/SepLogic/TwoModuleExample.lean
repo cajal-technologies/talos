@@ -71,9 +71,7 @@ theorem twoModule_partiallyMeets :
       · inext
         iintro _HinstanceCaller
         simp only [List.take_zero, List.nil_append]
-        iapply wp_finish
-        inext
-        iapply wp_value'
+        wasm_wp_finish_value
         ipureintro
         rfl
 

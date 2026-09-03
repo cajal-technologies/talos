@@ -51,9 +51,7 @@ theorem finishGcd_smallStep_wp
   simp only [gcdOuterFrame, List.take_nil, List.nil_append]
   wasm_wp_pures [wp_localGet]
   rw [hrecombine]
-  iapply wp_finish
-  inext
-  iapply wp_value'
+  wasm_wp_finish_value
   ipureintro
   rfl
 
@@ -78,9 +76,7 @@ theorem mod3_gcd_zero_smallStep (a b : UInt64) (hz : a = 0 ∨ b = 0) :
     inext
     simp only [List.take_nil, List.nil_append]
     wasm_wp_pures [wp_localGet]
-    iapply wp_finish
-    inext
-    iapply wp_value'
+    wasm_wp_finish_value
     ipureintro
     simp
   · have hb : b = 0 := hz.resolve_left ha
@@ -95,9 +91,7 @@ theorem mod3_gcd_zero_smallStep (a b : UInt64) (hz : a = 0 ∨ b = 0) :
     inext
     simp only [List.take_nil, List.drop_nil, List.nil_append]
     wasm_wp_pures [wp_localGet]
-    iapply wp_finish
-    inext
-    iapply wp_value'
+    wasm_wp_finish_value
     ipureintro
     simp
 
@@ -404,9 +398,7 @@ theorem mod3_gcd_smallStep (a b : UInt64) :
     inext
     simp only [List.take_nil, List.nil_append]
     wasm_wp_pures [wp_localGet]
-    iapply wp_finish
-    inext
-    iapply wp_value'
+    wasm_wp_finish_value
     ipureintro
     simp
   · iapply wp_eqzI64 (result := 0) (by rw [if_neg ha])
@@ -420,9 +412,7 @@ theorem mod3_gcd_smallStep (a b : UInt64) :
       inext
       simp only [List.take_nil, List.nil_append]
       wasm_wp_pures [wp_localGet]
-      iapply wp_finish
-      inext
-      iapply wp_value'
+      wasm_wp_finish_value
       ipureintro
       simp
     · iapply wp_eqzI64 (result := 0) (by rw [if_neg hb])

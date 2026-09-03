@@ -79,9 +79,7 @@ theorem crossInstance_partiallyMeets (a b : UInt32) :
       · inext; iexact HinstanceOwn'
       · inext
         iintro _HinstanceCaller
-        iapply wp_finish
-        inext
-        iapply wp_value'
+        wasm_wp_finish_value
         ipureintro
         rfl
 

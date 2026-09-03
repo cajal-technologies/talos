@@ -146,9 +146,7 @@ theorem func1_smallStep (x : UInt32) :
   simp only [func1Config]
   iapply func1_body_smallStep_wp x []
   inext
-  iapply wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -291,9 +289,7 @@ theorem func0_tail_smallStep_wp
   · iexact Hword
   · inext
     iintro ⟨_Htrue, Hword⟩
-    iapply wp_returnFromFunction
-    inext
-    iapply wp_value'
+    wasm_wp_return_value
     iclear Hword
     ipureintro
     rfl
@@ -522,9 +518,7 @@ theorem func0_smallStep (x : UInt32) :
             {{ rs, ⌜rs = [.i32 (i32TruncSatF32S x)]⌝ }} := by
       intro word heq
       iintro ⟨_Htrue, Hglobal, Hword⟩
-      iapply wp_returnFromFunction
-      inext
-      iapply wp_value'
+      wasm_wp_return_value
       iclear Hglobal Hword
       ipureintro
       simp [heq]
@@ -866,9 +860,7 @@ theorem check_smallStep (x : UInt32) :
         wasm_wp_pures [wp_const wp_and]
         rw [show (0 &&& 1 : UInt32) = 0 by decide]
         wasm_wp_pures [wp_brIfZero]
-        iapply wp_returnFromFunction
-        inext
-        iapply wp_value'
+        wasm_wp_return_value
         iclear Hruntime Hglobal Hword
         ipureintro
         rfl)

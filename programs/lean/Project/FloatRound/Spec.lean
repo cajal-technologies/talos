@@ -1017,9 +1017,7 @@ theorem roundCheck_tail_result_smallStep_wp
   inext
   iintro Hglobal
   wasm_wp_pures [wp_localGet]
-  iapply wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   iclear HR Hglobal Hresult
   ipureintro
   exact ⟨result, rfl⟩

@@ -124,9 +124,7 @@ theorem writeByte_partiallyMeets :
       iintro %preWasm %results %postWasm %h ⟨HQ, _⟩
       simp only [List.take_zero, List.nil_append, List.length_cons,
                  List.length_nil, List.drop]
-      iapply wp_finish
-      inext
-      iapply wp_value'
+      wasm_wp_finish_value
       isplitr [HQ]
       · ipureintro
         rfl

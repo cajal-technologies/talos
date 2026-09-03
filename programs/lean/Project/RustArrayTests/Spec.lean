@@ -47,9 +47,7 @@ theorem len_plus_one_correct : LenPlusOneSpec := by
   simp only [bodyConfig, func1]
   wasm_wp_pures [wp_localGet wp_const wp_add]
   rw [UInt32.add_comm 1 len]
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -67,9 +65,7 @@ theorem len_plus_arg_correct : LenPlusArgSpec := by
   simp only [bodyConfig, func0]
   wasm_wp_pures [wp_localGet wp_localGet wp_add]
   rw [UInt32.add_comm n len]
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -109,9 +105,7 @@ theorem empty_plus_three_correct : EmptyPlusThreeSpec := by
       by_cases h : len = 0 <;> simp [h]]
     wasm_wp_pures [wp_const wp_add]
     rw [UInt32.add_comm 3 (isEmptyValue len)]
-    iapply SmallStep.wp_returnFromFunction
-    inext
-    iapply wp_value'
+    wasm_wp_return_value
     ipureintro
     rfl
 
@@ -152,9 +146,7 @@ theorem empty_xor_flag_correct : EmptyXorFlagSpec := by
     wasm_wp_pures [wp_localGet]
     iapply SmallStep.wp_xor
     inext
-    iapply SmallStep.wp_returnFromFunction
-    inext
-    iapply wp_value'
+    wasm_wp_return_value
     ipureintro
     rfl
 
@@ -211,9 +203,7 @@ theorem len_plus_one_export_correct : LenPlusOneExportSpec := by
     iapply SmallStep.wp_returnFromCallExplicit $$ Hruntime
     inext
     simp only [List.take, List.singleton_append]
-    iapply SmallStep.wp_returnFromFunction
-    inext
-    iapply wp_value'
+    wasm_wp_return_value
     ipureintro
     rfl
 
@@ -260,9 +250,7 @@ theorem len_plus_arg_export_correct : LenPlusArgExportSpec := by
     iapply SmallStep.wp_returnFromCallExplicit $$ Hruntime
     inext
     simp only [List.take, List.singleton_append]
-    iapply SmallStep.wp_returnFromFunction
-    inext
-    iapply wp_value'
+    wasm_wp_return_value
     ipureintro
     rfl
 
@@ -329,9 +317,7 @@ theorem empty_plus_three_export_correct : EmptyPlusThreeExportSpec := by
     iapply SmallStep.wp_returnFromCallExplicit $$ Hruntime
     inext
     simp only [List.take, List.singleton_append]
-    iapply SmallStep.wp_returnFromFunction
-    inext
-    iapply wp_value'
+    wasm_wp_return_value
     ipureintro
     rfl
 
@@ -400,9 +386,7 @@ theorem empty_xor_flag_export_correct : EmptyXorFlagExportSpec := by
     iapply SmallStep.wp_returnFromCallExplicit $$ Hruntime
     inext
     simp only [List.take, List.singleton_append]
-    iapply SmallStep.wp_returnFromFunction
-    inext
-    iapply wp_value'
+    wasm_wp_return_value
     ipureintro
     rfl
 

@@ -83,9 +83,7 @@ theorem total_variation_correct : TotalVariationSpec := by
         inext
         simp only [List.take, List.singleton_append]
         wasm_wp_pures [wp_addI64]
-        iapply wp_returnFromFunction
-        inext
-        iapply wp_value'
+        wasm_wp_return_value
         ipureintro
         rfl
       · simp only [UInt32.reduceSub, UInt32.reduceAdd]

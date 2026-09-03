@@ -66,9 +66,7 @@ theorem add_correct : AddSpec := by
   intro gs
   simp only [pureBinaryConfig, func2]
   wasm_wp_pures [wp_localGet wp_localGet wp_addI64]
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -84,9 +82,7 @@ theorem sub_correct : SubSpec := by
   intro gs
   simp only [pureBinaryConfig, func8]
   wasm_wp_pures [wp_localGet wp_localGet wp_subI64]
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -102,9 +98,7 @@ theorem mul_correct : MulSpec := by
   intro gs
   simp only [pureBinaryConfig, func9]
   wasm_wp_pures [wp_localGet wp_localGet wp_mulI64]
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -127,9 +121,7 @@ theorem div_correct : DivSpec := by
   wasm_wp_pures [wp_brIfZero wp_localGet wp_localGet]
   iapply SmallStep.wp_divUI64 hb
   inext
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -152,9 +144,7 @@ theorem rem_correct : RemSpec := by
   wasm_wp_pures [wp_brIfZero wp_localGet wp_localGet]
   iapply SmallStep.wp_remUI64 hb
   inext
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -170,9 +160,7 @@ theorem bitand_correct : BitAndSpec := by
   intro gs
   simp only [pureBinaryConfig, func3]
   wasm_wp_pures [wp_localGet wp_localGet wp_andI64]
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -188,9 +176,7 @@ theorem bitor_correct : BitOrSpec := by
   intro gs
   simp only [pureBinaryConfig, func4]
   wasm_wp_pures [wp_localGet wp_localGet wp_orI64]
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -208,9 +194,7 @@ theorem bitxor_correct : BitXorSpec := by
   wasm_wp_pures [wp_localGet wp_localGet]
   iapply SmallStep.wp_xorI64
   inext
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -230,9 +214,7 @@ theorem not_correct : NotSpec := by
   inext
   rw [show a ^^^ (18446744073709551615 : UInt64) = ~~~a by
     bv_decide]
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -253,9 +235,7 @@ theorem shl_correct : ShlSpec := by
   inext
   wasm_wp_pures [wp_shlI64]
   rw [shiftAmount_norm]
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 
@@ -276,9 +256,7 @@ theorem shr_correct : ShrSpec := by
   inext
   wasm_wp_pures [wp_shrUI64]
   rw [shiftAmount_norm]
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   ipureintro
   rfl
 

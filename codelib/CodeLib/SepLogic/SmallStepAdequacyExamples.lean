@@ -97,9 +97,7 @@ theorem globalGet_adequate :
     iapply wp_globalGet $$ Hglobal
     inext
     iintro Hglobal
-    iapply wp_finish
-    inext
-    iapply wp_value'
+    wasm_wp_finish_value
     ipureintro
     rfl
 
@@ -135,9 +133,7 @@ theorem noopCall_adequate :
       List.take_nil, List.reverse_nil, List.drop_nil, List.length_nil]
     iapply wp_returnFromCallExplicit $$ Hruntime
     inext
-    iapply wp_returnFromFunction
-    inext
-    iapply wp_value'
+    wasm_wp_return_value
     ipureintro
     rfl
 
@@ -1515,9 +1511,7 @@ theorem tableSetGet_store_partiallyMeets :
     · iexact Htable
     iapply wp_refIsNull rfl
     inext
-    iapply wp_finish
-    inext
-    iapply wp_value'
+    wasm_wp_finish_value
     ipureintro
     rfl
 
@@ -1640,9 +1634,7 @@ theorem tableGrowFill_store_partiallyMeets :
     · iexact Htable
     iapply wp_refIsNull rfl
     inext
-    iapply wp_finish
-    inext
-    iapply wp_value'
+    wasm_wp_finish_value
     ipureintro
     rfl
 
@@ -1746,9 +1738,7 @@ theorem tableGrow64Failure_store_partiallyMeets :
     iapply wp_frame_l
     isplitl [Htable]
     · iexact Htable
-    iapply wp_finish
-    inext
-    iapply wp_value'
+    wasm_wp_finish_value
     ipureintro
     rfl
 
@@ -1878,9 +1868,7 @@ theorem tableCopyOverlap_store_partiallyMeets :
     iapply wp_frame_l
     isplitl [Htable]
     · iexact Htable
-    iapply wp_finish
-    inext
-    iapply wp_value'
+    wasm_wp_finish_value
     ipureintro
     rfl
 
@@ -2084,9 +2072,7 @@ theorem tableCopyDistinct_store_partiallyMeets :
     · isplitl [Hdestination]
       · iexact Hdestination
       · iexact Hsource
-    iapply wp_finish
-    inext
-    iapply wp_value'
+    wasm_wp_finish_value
     ipureintro
     rfl
 
@@ -2273,9 +2259,7 @@ theorem tableInitDrop_store_partiallyMeets :
     · isplitl [Htable]
       · iexact Htable
       · iexact Helement
-    iapply wp_finish
-    inext
-    iapply wp_value'
+    wasm_wp_finish_value
     ipureintro
     rfl
 

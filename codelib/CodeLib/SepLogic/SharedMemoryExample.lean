@@ -156,9 +156,7 @@ theorem sharedMem_partiallyMeets (v : UInt8) :
         iapply wp_load8U v.toUInt32.toUInt8 rfl $$ HptLater2
         inext
         iintro _Hpt_back
-        iapply wp_returnFromFunction
-        inext
-        iapply wp_value'
+        wasm_wp_return_value
         ipureintro
         simp [List.take]
 

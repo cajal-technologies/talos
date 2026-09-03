@@ -106,9 +106,7 @@ theorem opt3_func0_distinct_smallStep_wp
     (by simpa using hj7) $$ HBLater
   inext
   iintro HB
-  iapply Wasm.SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
+  wasm_wp_return_value
   isplitr
   · ipureintro
     rfl
