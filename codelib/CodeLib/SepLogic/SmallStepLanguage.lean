@@ -109,6 +109,19 @@ macro_rules
        exact $witness
      next => $continuation))
 
+/-- Offer an authoritative total Wasm step to Iris, resolve its successor, and
+continue. The Iris successor is inferred from the authoritative step. -/
+syntax "wasm_twp_step " term " =>" ppLine colGt tacticSeq : tactic
+
+set_option hygiene false in
+macro_rules
+  | `(tactic| wasm_twp_step $step:term => $continuation:tacticSeq) =>
+    `(tactic|
+      (wasm_twp_offer_step ⟨_, _, [], ⟨rfl, _, rfl, $step⟩⟩ =>
+        iintro %κ %e₂ %store₂ %forks %Hstep
+        wasm_wp_resolve_step Hstep using $step
+        next => $continuation))
+
 set_option hygiene false in
 /-- Reassemble the Iris state, continuation, and affine tail after a Wasm step. -/
 macro "wasm_wp_frame" : tactic =>
