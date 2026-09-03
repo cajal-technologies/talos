@@ -533,10 +533,9 @@ private theorem twp_recursiveSort_aux
         omega
       subst input
       iintro ⟨Hruntime, Harray, Hcont⟩
-      iapply Wasm.SmallStep.twp_call runtimeModule sortIndex
+      wasm_twp_bind Wasm.SmallStep.twp_call runtimeModule sortIndex
         (recursiveSelectionSortFunction findIndex sortIndex)
-        himportsSort hfunctionSort $$ Hruntime
-      iintro Hruntime
+        himportsSort hfunctionSort with Hruntime => Hruntime
       simp [recursiveSelectionSortFunction, Function.toLocals,
         Function.numParams, ValueType.zero]
       simp only [recursiveSelectionSortBody, List.cons_append, List.nil_append]
@@ -557,10 +556,9 @@ private theorem twp_recursiveSort_aux
           callerRemainder := remainder
           control := controls
           returningInstance := ⟨0⟩ }
-      iapply Wasm.SmallStep.twp_call runtimeModule sortIndex
+      wasm_twp_bind Wasm.SmallStep.twp_call runtimeModule sortIndex
         (recursiveSelectionSortFunction findIndex sortIndex)
-        himportsSort hfunctionSort $$ Hruntime
-      iintro Hruntime
+        himportsSort hfunctionSort with Hruntime => Hruntime
       simp [recursiveSelectionSortFunction, Function.toLocals,
         Function.numParams, ValueType.zero]
       simp only [recursiveSelectionSortBody, List.cons_append, List.nil_append]

@@ -476,10 +476,9 @@ private theorem twp_quicksortBody_aux
     have heq : hi = lo := by omega
     subst heq
     iintro ⟨Hruntime, Harray, Hcont⟩
-    iapply Wasm.SmallStep.twp_call runtimeModule quicksortIdx
+    wasm_twp_bind Wasm.SmallStep.twp_call runtimeModule quicksortIdx
         (quicksortFunction partitionIdx quicksortIdx)
-        himports_q hfunction_q $$ Hruntime
-    iintro Hruntime
+        himports_q hfunction_q with Hruntime => Hruntime
     simp [quicksortFunction, Function.toLocals, Function.numParams, ValueType.zero]
     simp only [quicksortBody, quicksortBaseCheck, List.append_assoc, List.cons_append,
       List.nil_append]
@@ -510,10 +509,9 @@ private theorem twp_quicksortBody_aux
       have := (UInt32.ofNat hi).toNat_lt
       rw [UInt32.toNat_ofNat_of_lt' hiSize] at this
       omega
-    iapply Wasm.SmallStep.twp_call runtimeModule quicksortIdx
+    wasm_twp_bind Wasm.SmallStep.twp_call runtimeModule quicksortIdx
         (quicksortFunction partitionIdx quicksortIdx)
-        himports_q hfunction_q $$ Hruntime
-    iintro Hruntime
+        himports_q hfunction_q with Hruntime => Hruntime
     simp [quicksortFunction, Function.toLocals, Function.numParams, ValueType.zero]
     simp only [quicksortBody, quicksortBaseCheck, quicksortPartitionCall, quicksortLeftCall,
       quicksortRightCall, List.cons_append, List.nil_append]

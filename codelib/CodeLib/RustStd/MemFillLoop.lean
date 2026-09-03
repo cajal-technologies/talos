@@ -145,12 +145,11 @@ theorem fillWords_storeIteration_wp
   · inext
     simp only [UInt32.add_zero, address]
     iexact Hold
-  wasm_wp_next Wasm.SmallStep.wp_store64
+  wasm_wp_next_bind Wasm.SmallStep.wp_store64
       (address := address) (offset := 0) (value := value) old
       (by simp) (by simpa using h1) (by simpa using h2)
       (by simpa using h3) (by simpa using h4) (by simpa using h5)
-      (by simpa using h6) (by simpa using h7) $$ HoldLater
-  iintro Hnew
+      (by simpa using h6) (by simpa using h7) with HoldLater => Hnew
   ihave Hnew' :
       pointsTo_u64 0 (base + 8 * UInt32.ofNat i.toNat) value $$ [Hnew]
   · simp only [UInt32.add_zero, address]

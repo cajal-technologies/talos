@@ -171,20 +171,18 @@ theorem copyWords_loadStoreIteration_wp
   · inext
     simp only [UInt32.add_zero]
     iexact HsrcCell'
-  wasm_wp_next Wasm.SmallStep.wp_load32
+  wasm_wp_next_bind Wasm.SmallStep.wp_load32
       (address := srcAddress) (offset := 0) value
       (by simp) (by simpa using hs1) (by simpa using hs2)
-      (by simpa using hs3) $$ HsrcLater
-  iintro HsrcCell
+      (by simpa using hs3) with HsrcLater => HsrcCell
   ihave HdstLater : ▷ pointsTo_u32 0 (dstAddress + 0) oldDst $$ [HdstCell']
   · inext
     simp only [UInt32.add_zero]
     iexact HdstCell'
-  wasm_wp_next Wasm.SmallStep.wp_store32
+  wasm_wp_next_bind Wasm.SmallStep.wp_store32
       (address := dstAddress) (offset := 0) (value := value) oldDst
       (by simp) (by simpa using hd1) (by simpa using hd2)
-      (by simpa using hd3) $$ HdstLater
-  iintro HdstCell
+      (by simpa using hd3) with HdstLater => HdstCell
   ihave HsrcCell'' :
       pointsTo_u32 0 (src + 4 * UInt32.ofNat pre.length) value $$
       [HsrcCell]
@@ -665,19 +663,17 @@ theorem copyWords_loadStoreIteration_twp
   ihave HsrcAt : pointsTo_u32 0 (srcAddress + 0) value $$ [HsrcCell']
   · simp only [UInt32.add_zero]
     iexact HsrcCell'
-  iapply Wasm.SmallStep.twp_load32
+  wasm_twp_bind Wasm.SmallStep.twp_load32
       (address := srcAddress) (offset := 0) value
       (by simp) (by simpa using hs1) (by simpa using hs2)
-      (by simpa using hs3) $$ HsrcAt
-  iintro HsrcCell
+      (by simpa using hs3) with HsrcAt => HsrcCell
   ihave HdstAt : pointsTo_u32 0 (dstAddress + 0) oldDst $$ [HdstCell']
   · simp only [UInt32.add_zero]
     iexact HdstCell'
-  iapply Wasm.SmallStep.twp_store32
+  wasm_twp_bind Wasm.SmallStep.twp_store32
       (address := dstAddress) (offset := 0) (value := value) oldDst
       (by simp) (by simpa using hd1) (by simpa using hd2)
-      (by simpa using hd3) $$ HdstAt
-  iintro HdstCell
+      (by simpa using hd3) with HdstAt => HdstCell
   ihave HsrcCell'' :
       pointsTo_u32 0 (src + 4 * UInt32.ofNat pre.length) value $$
       [HsrcCell]

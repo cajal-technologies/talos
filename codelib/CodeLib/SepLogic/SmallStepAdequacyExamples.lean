@@ -1578,14 +1578,13 @@ theorem tableGrowFill_store_partiallyMeets :
     wasm_wp_pures [wp_const]
     wasm_wp_next wp_pureStep _ _ _ (fun _ => Step.refFunc)
     wasm_wp_pures [wp_const]
-    wasm_wp_next wp_tableFill
+    wasm_wp_next_bind wp_tableFill
       (tableIndex := 0) (destination := .i32 0) (length := .i32 3)
       (value := .funcref (some 1))
       (table :=
         [.funcref none] ++
           List.replicate (UInt32.toNat 2) (.funcref (some 1)))
-      rfl rfl (by decide) $$ Htable
-    iintro Htable
+      rfl rfl (by decide) with Htable => Htable
     wasm_wp_pures [wp_const]
     wasm_wp_next_rebind wp_tableGet (value := .funcref (some 1))
       rfl (by simp [listWriteAt]) with Htable
@@ -1804,14 +1803,13 @@ theorem tableCopyOverlap_store_partiallyMeets :
       ipureexact ⟨hvalues, by simpa [listWriteAt] using Hphysical⟩
     iapply wp_mono hpost
     simp only [← tablePointsToAt_eq]
-    wasm_wp_next wp_tableCopySame
+    wasm_wp_next_bind wp_tableCopySame
       (tableIndex := 0)
       (table :=
         [.funcref none, .funcref (some 0), .funcref (some 1),
           .funcref (some 2)])
       (destination := .i32 1) (source := .i32 0) (length := .i32 3)
-      rfl rfl rfl (by decide) (by decide) $$ Htable
-    iintro Htable
+      rfl rfl rfl (by decide) (by decide) with Htable => Htable
     iapply wp_mono (fun _ => BI.sep_comm.mp)
     iapply wp_frame_l
     isplitl_exact Htable
@@ -2368,10 +2366,9 @@ theorem fillThenRead_terminatesWith (val : UInt32) :
     ihave H0 := fillThenReadInitialHeap_pointsTo $$ Hbytes
     ihave Hb := (pointsTo_u32_as_bytes 0 0 0).mp $$ H0
     wasm_twp_pures [twp_const twp_localGet twp_const]
-    iapply twp_memoryFill32
+    wasm_twp_bind twp_memoryFill32
         [u32Byte 0 0, u32Byte 0 1, u32Byte 0 2, u32Byte 0 3]
-        rfl (by decide) (by decide) $$ Hb
-    iintro Hb
+        rfl (by decide) (by decide) with Hb => Hb
     ihave H0 := splat_bytes_as_u32 val.toUInt8 $$ Hb
     wasm_twp_pures [twp_const]
     wasm_twp_rebind twp_load32_addr _ rfl rfl rfl with H0

@@ -171,10 +171,9 @@ theorem wp_loadFatPtr
   · inext
     simp only [UInt32.add_zero]
     iexact Hdata
-  wasm_wp_next Wasm.SmallStep.wp_load32 (address := p) (offset := 0)
+  wasm_wp_next_bind Wasm.SmallStep.wp_load32 (address := p) (offset := 0)
     dataPtr (by simp) (by simpa using hp1)
-    (by simpa using hp2) (by simpa using hp3) $$ HdataLater
-  iintro Hdata
+    (by simpa using hp2) (by simpa using hp3) with HdataLater => Hdata
   have hget' :
       (⟨params, localValues, .i32 dataPtr :: values⟩ : Locals).get index =
         some (.i32 p) := by

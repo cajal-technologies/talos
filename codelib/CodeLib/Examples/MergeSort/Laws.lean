@@ -233,10 +233,9 @@ theorem twp_loadAt_cell
   ·
     rw [UInt32.add_zero]
     iexact Hword
-  iapply Wasm.SmallStep.twp_load32
+  wasm_twp_bind Wasm.SmallStep.twp_load32
     (address := address) (offset := 0)
-    word (by simp) h1' h2' h3' $$ HwordLater
-  iintro Hword
+    word (by simp) h1' h2' h3' with HwordLater => Hword
   iapply Hcont
   rw [UInt32.add_zero]
   iexact Hword
@@ -320,10 +319,9 @@ theorem twp_store32_cell
   ·
     rw [UInt32.add_zero]
     iexact Hword
-  iapply Wasm.SmallStep.twp_store32
+  wasm_twp_bind Wasm.SmallStep.twp_store32
     (address := address) (offset := 0) oldWord
-    (by simp) h1' h2' h3' $$ HwordLater
-  iintro Hword
+    (by simp) h1' h2' h3' with HwordLater => Hword
   ihave Hword' : pointsTo_u32 0 address newWord $$ [Hword]
   · rw [UInt32.add_zero]
     iexact Hword
