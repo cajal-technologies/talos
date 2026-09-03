@@ -193,16 +193,7 @@ theorem wasm_smallStep_adequacy
   refine wp_adequacy (GF := WasmHeapGF α) Stuckness.NotStuck
     config.expr config.store φ ?_
   intro inv κs
-  imod genHeap_init (L := MemoryKey) (V := Option UInt8)
-      (GF := WasmHeapGF α) (H := WasmHeapMap) ∅ with
-    ⟨%heapGS, Hheap, Hpoints, Hmeta⟩
-  imod heapDomain_init (α := α) (∅ : WasmHeapMap (Option UInt8)) with
-    ⟨%heapDomainGS, HheapDomain⟩
-  letI _ : WasmHeapDomainGS α := heapDomainGS
-  imod memoryPages_init_authority (α := α)
-      config.store.wasm.mem.pages with
-    ⟨%memoryPagesGS, HmemoryPagesAuth⟩
-  letI _ : WasmMemoryPagesGS α := memoryPagesGS
+  wasm_alloc_memory_ghosts config from (∅ : WasmHeapMap (Option UInt8))
   letI globalMapG : GhostMapG (WasmHeapGF α) GlobalKey Value WasmGlobalMap :=
     GhostSlot.globalMap
   imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := GlobalKey)
@@ -226,20 +217,7 @@ theorem wasm_smallStep_adequacy
   imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := ElementSegmentKey)
       (V := Option (List (Option Nat))) (H := WasmElementSegmentMap)) with
     ⟨%elementSegmentName, HelementSegments⟩
-  letI wasmHeapGS : WasmHeapGS α :=
-    { togenHeapGS := heapGS }
-  letI wasmGlobalGS : WasmGlobalGS α :=
-    { toGhostMapG := globalMapG
-      globalName := globalName }
-  letI wasmDataSegmentGS : WasmDataSegmentGS α :=
-    { toGhostMapG := dataSegmentMapG
-      dataSegmentName := dataSegmentName }
-  letI wasmTableGS : WasmTableGS α :=
-    { toGhostMapG := tableMapG
-      tableName := tableName }
-  letI wasmElementSegmentGS : WasmElementSegmentGS α :=
-    { toGhostMapG := elementSegmentMapG
-      elementSegmentName := elementSegmentName }
+  wasm_install_heap_map_instances
   letI runtimeModuleMapG : GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
     GhostSlot.runtimeModuleMap
   imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
@@ -347,16 +325,7 @@ theorem wasm_smallStep_stronglyNormalizing
     Stuckness.NotStuck config.expr config.store
     (fun values => iprop(⌜φ values⌝)) 0 0
   intro inv
-  imod genHeap_init (L := MemoryKey) (V := Option UInt8)
-      (GF := WasmHeapGF α) (H := WasmHeapMap) ∅ with
-    ⟨%heapGS, Hheap, Hpoints, Hmeta⟩
-  imod heapDomain_init (α := α) (∅ : WasmHeapMap (Option UInt8)) with
-    ⟨%heapDomainGS, HheapDomain⟩
-  letI _ : WasmHeapDomainGS α := heapDomainGS
-  imod memoryPages_init_authority (α := α)
-      config.store.wasm.mem.pages with
-    ⟨%memoryPagesGS, HmemoryPagesAuth⟩
-  letI _ : WasmMemoryPagesGS α := memoryPagesGS
+  wasm_alloc_memory_ghosts config from (∅ : WasmHeapMap (Option UInt8))
   letI globalMapG : GhostMapG (WasmHeapGF α) GlobalKey Value WasmGlobalMap :=
     GhostSlot.globalMap
   imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := GlobalKey)
@@ -380,20 +349,7 @@ theorem wasm_smallStep_stronglyNormalizing
   imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := ElementSegmentKey)
       (V := Option (List (Option Nat))) (H := WasmElementSegmentMap)) with
     ⟨%elementSegmentName, HelementSegments⟩
-  letI wasmHeapGS : WasmHeapGS α :=
-    { togenHeapGS := heapGS }
-  letI wasmGlobalGS : WasmGlobalGS α :=
-    { toGhostMapG := globalMapG
-      globalName := globalName }
-  letI wasmDataSegmentGS : WasmDataSegmentGS α :=
-    { toGhostMapG := dataSegmentMapG
-      dataSegmentName := dataSegmentName }
-  letI wasmTableGS : WasmTableGS α :=
-    { toGhostMapG := tableMapG
-      tableName := tableName }
-  letI wasmElementSegmentGS : WasmElementSegmentGS α :=
-    { toGhostMapG := elementSegmentMapG
-      elementSegmentName := elementSegmentName }
+  wasm_install_heap_map_instances
   letI runtimeModuleMapG : GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
     GhostSlot.runtimeModuleMap
   imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
@@ -503,16 +459,7 @@ theorem wasm_smallStep_heap_globals_runtime_tags_stronglyNormalizing
     Stuckness.NotStuck config.expr config.store
     Φ 0 0
   intro inv
-  imod genHeap_init (L := MemoryKey) (V := Option UInt8)
-      (GF := WasmHeapGF α) (H := WasmHeapMap) σ with
-    ⟨%heapGS, Hheap, Hpoints, Hmeta⟩
-  imod heapDomain_init (α := α) σ with
-    ⟨%heapDomainGS, HheapDomain⟩
-  letI _ : WasmHeapDomainGS α := heapDomainGS
-  imod memoryPages_init_authority (α := α)
-      config.store.wasm.mem.pages with
-    ⟨%memoryPagesGS, HmemoryPagesAuth⟩
-  letI _ : WasmMemoryPagesGS α := memoryPagesGS
+  wasm_alloc_memory_ghosts config from σ
   letI globalMapG : GhostMapG (WasmHeapGF α) GlobalKey Value WasmGlobalMap :=
     GhostSlot.globalMap
   imod (ghost_map_alloc (GF := WasmHeapGF α) (K := GlobalKey)
@@ -537,20 +484,7 @@ theorem wasm_smallStep_heap_globals_runtime_tags_stronglyNormalizing
   imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := ElementSegmentKey)
       (V := Option (List (Option Nat))) (H := WasmElementSegmentMap)) with
     ⟨%elementSegmentName, HelementSegments⟩
-  letI wasmHeapGS : WasmHeapGS α :=
-    { togenHeapGS := heapGS }
-  letI wasmGlobalGS : WasmGlobalGS α :=
-    { toGhostMapG := globalMapG
-      globalName := globalName }
-  letI wasmDataSegmentGS : WasmDataSegmentGS α :=
-    { toGhostMapG := dataSegmentMapG
-      dataSegmentName := dataSegmentName }
-  letI wasmTableGS : WasmTableGS α :=
-    { toGhostMapG := tableMapG
-      tableName := tableName }
-  letI wasmElementSegmentGS : WasmElementSegmentGS α :=
-    { toGhostMapG := elementSegmentMapG
-      elementSegmentName := elementSegmentName }
+  wasm_install_heap_map_instances
   letI runtimeModuleMapG : GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
     GhostSlot.runtimeModuleMap
   imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
@@ -813,16 +747,7 @@ theorem wasm_smallStep_runtime_tags_adequacy
   refine wp_adequacy (GF := WasmHeapGF α) Stuckness.NotStuck
     config.expr config.store φ ?_
   intro inv κs
-  imod genHeap_init (L := MemoryKey) (V := Option UInt8)
-      (GF := WasmHeapGF α) (H := WasmHeapMap) ∅ with
-    ⟨%heapGS, Hheap, Hpoints, Hmeta⟩
-  imod heapDomain_init (α := α) (∅ : WasmHeapMap (Option UInt8)) with
-    ⟨%heapDomainGS, HheapDomain⟩
-  letI _ : WasmHeapDomainGS α := heapDomainGS
-  imod memoryPages_init_authority (α := α)
-      config.store.wasm.mem.pages with
-    ⟨%memoryPagesGS, HmemoryPagesAuth⟩
-  letI _ : WasmMemoryPagesGS α := memoryPagesGS
+  wasm_alloc_memory_ghosts config from (∅ : WasmHeapMap (Option UInt8))
   letI globalMapG : GhostMapG (WasmHeapGF α) GlobalKey Value WasmGlobalMap :=
     GhostSlot.globalMap
   imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := GlobalKey)
@@ -846,20 +771,7 @@ theorem wasm_smallStep_runtime_tags_adequacy
   imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := ElementSegmentKey)
       (V := Option (List (Option Nat))) (H := WasmElementSegmentMap)) with
     ⟨%elementSegmentName, HelementSegments⟩
-  letI wasmHeapGS : WasmHeapGS α :=
-    { togenHeapGS := heapGS }
-  letI wasmGlobalGS : WasmGlobalGS α :=
-    { toGhostMapG := globalMapG
-      globalName := globalName }
-  letI wasmDataSegmentGS : WasmDataSegmentGS α :=
-    { toGhostMapG := dataSegmentMapG
-      dataSegmentName := dataSegmentName }
-  letI wasmTableGS : WasmTableGS α :=
-    { toGhostMapG := tableMapG
-      tableName := tableName }
-  letI wasmElementSegmentGS : WasmElementSegmentGS α :=
-    { toGhostMapG := elementSegmentMapG
-      elementSegmentName := elementSegmentName }
+  wasm_install_heap_map_instances
   letI runtimeModuleMapG : GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
     GhostSlot.runtimeModuleMap
   imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
@@ -1007,16 +919,7 @@ theorem wasm_smallStep_runtime_instance_adequacy
   refine wp_adequacy (GF := WasmHeapGF α) Stuckness.NotStuck
     config.expr config.store φ ?_
   intro inv κs
-  imod genHeap_init (L := MemoryKey) (V := Option UInt8)
-      (GF := WasmHeapGF α) (H := WasmHeapMap) ∅ with
-    ⟨%heapGS, Hheap, Hpoints, Hmeta⟩
-  imod heapDomain_init (α := α) (∅ : WasmHeapMap (Option UInt8)) with
-    ⟨%heapDomainGS, HheapDomain⟩
-  letI _ : WasmHeapDomainGS α := heapDomainGS
-  imod memoryPages_init_authority (α := α)
-      config.store.wasm.mem.pages with
-    ⟨%memoryPagesGS, HmemoryPagesAuth⟩
-  letI _ : WasmMemoryPagesGS α := memoryPagesGS
+  wasm_alloc_memory_ghosts config from (∅ : WasmHeapMap (Option UInt8))
   letI globalMapG : GhostMapG (WasmHeapGF α) GlobalKey Value WasmGlobalMap :=
     GhostSlot.globalMap
   imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := GlobalKey)
@@ -1040,20 +943,7 @@ theorem wasm_smallStep_runtime_instance_adequacy
   imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := ElementSegmentKey)
       (V := Option (List (Option Nat))) (H := WasmElementSegmentMap)) with
     ⟨%elementSegmentName, HelementSegments⟩
-  letI wasmHeapGS : WasmHeapGS α :=
-    { togenHeapGS := heapGS }
-  letI wasmGlobalGS : WasmGlobalGS α :=
-    { toGhostMapG := globalMapG
-      globalName := globalName }
-  letI wasmDataSegmentGS : WasmDataSegmentGS α :=
-    { toGhostMapG := dataSegmentMapG
-      dataSegmentName := dataSegmentName }
-  letI wasmTableGS : WasmTableGS α :=
-    { toGhostMapG := tableMapG
-      tableName := tableName }
-  letI wasmElementSegmentGS : WasmElementSegmentGS α :=
-    { toGhostMapG := elementSegmentMapG
-      elementSegmentName := elementSegmentName }
+  wasm_install_heap_map_instances
   letI runtimeModuleMapG : GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
     GhostSlot.runtimeModuleMap
   imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
@@ -1198,16 +1088,7 @@ theorem wasm_smallStep_instance_host_state_adequacy
   refine wp_adequacy (GF := WasmHeapGF α) Stuckness.NotStuck
     config.expr config.store φ ?_
   intro inv κs
-  imod genHeap_init (L := MemoryKey) (V := Option UInt8)
-      (GF := WasmHeapGF α) (H := WasmHeapMap) ∅ with
-    ⟨%heapGS, Hheap, Hpoints, Hmeta⟩
-  imod heapDomain_init (α := α) (∅ : WasmHeapMap (Option UInt8)) with
-    ⟨%heapDomainGS, HheapDomain⟩
-  letI _ : WasmHeapDomainGS α := heapDomainGS
-  imod memoryPages_init_authority (α := α)
-      config.store.wasm.mem.pages with
-    ⟨%memoryPagesGS, HmemoryPagesAuth⟩
-  letI _ : WasmMemoryPagesGS α := memoryPagesGS
+  wasm_alloc_memory_ghosts config from (∅ : WasmHeapMap (Option UInt8))
   letI globalMapG : GhostMapG (WasmHeapGF α) GlobalKey Value WasmGlobalMap :=
     GhostSlot.globalMap
   imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := GlobalKey)
@@ -1231,20 +1112,7 @@ theorem wasm_smallStep_instance_host_state_adequacy
   imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := ElementSegmentKey)
       (V := Option (List (Option Nat))) (H := WasmElementSegmentMap)) with
     ⟨%elementSegmentName, HelementSegments⟩
-  letI wasmHeapGS : WasmHeapGS α :=
-    { togenHeapGS := heapGS }
-  letI wasmGlobalGS : WasmGlobalGS α :=
-    { toGhostMapG := globalMapG
-      globalName := globalName }
-  letI wasmDataSegmentGS : WasmDataSegmentGS α :=
-    { toGhostMapG := dataSegmentMapG
-      dataSegmentName := dataSegmentName }
-  letI wasmTableGS : WasmTableGS α :=
-    { toGhostMapG := tableMapG
-      tableName := tableName }
-  letI wasmElementSegmentGS : WasmElementSegmentGS α :=
-    { toGhostMapG := elementSegmentMapG
-      elementSegmentName := elementSegmentName }
+  wasm_install_heap_map_instances
   letI runtimeModuleMapG : GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
     GhostSlot.runtimeModuleMap
   imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
@@ -1405,16 +1273,7 @@ theorem wasm_smallStep_heap_adequacy
   refine wp_adequacy (GF := WasmHeapGF α) Stuckness.NotStuck
     config.expr config.store φ ?_
   intro inv κs
-  imod genHeap_init (L := MemoryKey) (V := Option UInt8)
-      (GF := WasmHeapGF α) (H := WasmHeapMap) σ with
-    ⟨%heapGS, Hheap, Hpoints, Hmeta⟩
-  imod heapDomain_init (α := α) σ with
-    ⟨%heapDomainGS, HheapDomain⟩
-  letI _ : WasmHeapDomainGS α := heapDomainGS
-  imod memoryPages_init_authority (α := α)
-      config.store.wasm.mem.pages with
-    ⟨%memoryPagesGS, HmemoryPagesAuth⟩
-  letI _ : WasmMemoryPagesGS α := memoryPagesGS
+  wasm_alloc_memory_ghosts config from σ
   letI globalMapG : GhostMapG (WasmHeapGF α) GlobalKey Value WasmGlobalMap :=
     GhostSlot.globalMap
   imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := GlobalKey)
@@ -1438,20 +1297,7 @@ theorem wasm_smallStep_heap_adequacy
   imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := ElementSegmentKey)
       (V := Option (List (Option Nat))) (H := WasmElementSegmentMap)) with
     ⟨%elementSegmentName, HelementSegments⟩
-  letI wasmHeapGS : WasmHeapGS α :=
-    { togenHeapGS := heapGS }
-  letI wasmGlobalGS : WasmGlobalGS α :=
-    { toGhostMapG := globalMapG
-      globalName := globalName }
-  letI wasmDataSegmentGS : WasmDataSegmentGS α :=
-    { toGhostMapG := dataSegmentMapG
-      dataSegmentName := dataSegmentName }
-  letI wasmTableGS : WasmTableGS α :=
-    { toGhostMapG := tableMapG
-      tableName := tableName }
-  letI wasmElementSegmentGS : WasmElementSegmentGS α :=
-    { toGhostMapG := elementSegmentMapG
-      elementSegmentName := elementSegmentName }
+  wasm_install_heap_map_instances
   letI runtimeModuleMapG : GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
     GhostSlot.runtimeModuleMap
   imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
@@ -1551,16 +1397,7 @@ theorem wasm_smallStep_heap_globals_runtime_adequacy
   refine wp_adequacy (GF := WasmHeapGF α) Stuckness.NotStuck
     config.expr config.store φ ?_
   intro inv κs
-  imod genHeap_init (L := MemoryKey) (V := Option UInt8)
-      (GF := WasmHeapGF α) (H := WasmHeapMap) σ with
-    ⟨%heapGS, Hheap, Hpoints, Hmeta⟩
-  imod heapDomain_init (α := α) σ with
-    ⟨%heapDomainGS, HheapDomain⟩
-  letI _ : WasmHeapDomainGS α := heapDomainGS
-  imod memoryPages_init_authority (α := α)
-      config.store.wasm.mem.pages with
-    ⟨%memoryPagesGS, HmemoryPagesAuth⟩
-  letI _ : WasmMemoryPagesGS α := memoryPagesGS
+  wasm_alloc_memory_ghosts config from σ
   letI globalMapG : GhostMapG (WasmHeapGF α) GlobalKey Value WasmGlobalMap :=
     GhostSlot.globalMap
   imod (ghost_map_alloc (GF := WasmHeapGF α) (K := GlobalKey)
@@ -1585,20 +1422,7 @@ theorem wasm_smallStep_heap_globals_runtime_adequacy
   imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := ElementSegmentKey)
       (V := Option (List (Option Nat))) (H := WasmElementSegmentMap)) with
     ⟨%elementSegmentName, HelementSegments⟩
-  letI wasmHeapGS : WasmHeapGS α :=
-    { togenHeapGS := heapGS }
-  letI wasmGlobalGS : WasmGlobalGS α :=
-    { toGhostMapG := globalMapG
-      globalName := globalName }
-  letI wasmDataSegmentGS : WasmDataSegmentGS α :=
-    { toGhostMapG := dataSegmentMapG
-      dataSegmentName := dataSegmentName }
-  letI wasmTableGS : WasmTableGS α :=
-    { toGhostMapG := tableMapG
-      tableName := tableName }
-  letI wasmElementSegmentGS : WasmElementSegmentGS α :=
-    { toGhostMapG := elementSegmentMapG
-      elementSegmentName := elementSegmentName }
+  wasm_install_heap_map_instances
   letI runtimeModuleMapG : GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
     GhostSlot.runtimeModuleMap
   imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
@@ -1724,16 +1548,7 @@ theorem wasm_smallStep_heap_globals_runtime_store_adequacy
     (GF := WasmHeapGF α) Stuckness.NotStuck
     config.expr config.store post ?_
   intro inv κs
-  imod genHeap_init (L := MemoryKey) (V := Option UInt8)
-      (GF := WasmHeapGF α) (H := WasmHeapMap) σ with
-    ⟨%heapGS, Hheap, Hpoints, Hmeta⟩
-  imod heapDomain_init (α := α) σ with
-    ⟨%heapDomainGS, HheapDomain⟩
-  letI _ : WasmHeapDomainGS α := heapDomainGS
-  imod memoryPages_init_authority (α := α)
-      config.store.wasm.mem.pages with
-    ⟨%memoryPagesGS, HmemoryPagesAuth⟩
-  letI _ : WasmMemoryPagesGS α := memoryPagesGS
+  wasm_alloc_memory_ghosts config from σ
   letI globalMapG : GhostMapG (WasmHeapGF α) GlobalKey Value WasmGlobalMap :=
     GhostSlot.globalMap
   imod (ghost_map_alloc (GF := WasmHeapGF α) (K := GlobalKey)
@@ -1758,20 +1573,7 @@ theorem wasm_smallStep_heap_globals_runtime_store_adequacy
   imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := ElementSegmentKey)
       (V := Option (List (Option Nat))) (H := WasmElementSegmentMap)) with
     ⟨%elementSegmentName, HelementSegments⟩
-  letI wasmHeapGS : WasmHeapGS α :=
-    { togenHeapGS := heapGS }
-  letI wasmGlobalGS : WasmGlobalGS α :=
-    { toGhostMapG := globalMapG
-      globalName := globalName }
-  letI wasmDataSegmentGS : WasmDataSegmentGS α :=
-    { toGhostMapG := dataSegmentMapG
-      dataSegmentName := dataSegmentName }
-  letI wasmTableGS : WasmTableGS α :=
-    { toGhostMapG := tableMapG
-      tableName := tableName }
-  letI wasmElementSegmentGS : WasmElementSegmentGS α :=
-    { toGhostMapG := elementSegmentMapG
-      elementSegmentName := elementSegmentName }
+  wasm_install_heap_map_instances
   letI runtimeModuleMapG : GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
     GhostSlot.runtimeModuleMap
   imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
@@ -2486,16 +2288,7 @@ theorem wasm_smallStep_heap_globals_segments_runtime_store_adequacy
     (GF := WasmHeapGF α) Stuckness.NotStuck
     config.expr config.store post ?_
   intro inv κs
-  imod genHeap_init (L := MemoryKey) (V := Option UInt8)
-      (GF := WasmHeapGF α) (H := WasmHeapMap) σ with
-    ⟨%heapGS, Hheap, Hpoints, Hmeta⟩
-  imod heapDomain_init (α := α) σ with
-    ⟨%heapDomainGS, HheapDomain⟩
-  letI _ : WasmHeapDomainGS α := heapDomainGS
-  imod memoryPages_init_authority (α := α)
-      config.store.wasm.mem.pages with
-    ⟨%memoryPagesGS, HmemoryPagesAuth⟩
-  letI _ : WasmMemoryPagesGS α := memoryPagesGS
+  wasm_alloc_memory_ghosts config from σ
   letI globalMapG : GhostMapG (WasmHeapGF α) GlobalKey Value WasmGlobalMap :=
     GhostSlot.globalMap
   imod (ghost_map_alloc (GF := WasmHeapGF α) (K := GlobalKey)
@@ -2521,20 +2314,7 @@ theorem wasm_smallStep_heap_globals_segments_runtime_store_adequacy
   imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := ElementSegmentKey)
       (V := Option (List (Option Nat))) (H := WasmElementSegmentMap)) with
     ⟨%elementSegmentName, HelementSegments⟩
-  letI wasmHeapGS : WasmHeapGS α :=
-    { togenHeapGS := heapGS }
-  letI wasmGlobalGS : WasmGlobalGS α :=
-    { toGhostMapG := globalMapG
-      globalName := globalName }
-  letI wasmDataSegmentGS : WasmDataSegmentGS α :=
-    { toGhostMapG := dataSegmentMapG
-      dataSegmentName := dataSegmentName }
-  letI wasmTableGS : WasmTableGS α :=
-    { toGhostMapG := tableMapG
-      tableName := tableName }
-  letI wasmElementSegmentGS : WasmElementSegmentGS α :=
-    { toGhostMapG := elementSegmentMapG
-      elementSegmentName := elementSegmentName }
+  wasm_install_heap_map_instances
   letI runtimeModuleMapG : GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
     GhostSlot.runtimeModuleMap
   imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
@@ -2711,16 +2491,7 @@ theorem wasm_smallStep_heap_globals_segments_tables_runtime_store_adequacy
     (GF := WasmHeapGF α) Stuckness.NotStuck
     config.expr config.store post ?_
   intro inv κs
-  imod genHeap_init (L := MemoryKey) (V := Option UInt8)
-      (GF := WasmHeapGF α) (H := WasmHeapMap) σ with
-    ⟨%heapGS, Hheap, Hpoints, Hmeta⟩
-  imod heapDomain_init (α := α) σ with
-    ⟨%heapDomainGS, HheapDomain⟩
-  letI _ : WasmHeapDomainGS α := heapDomainGS
-  imod memoryPages_init_authority (α := α)
-      config.store.wasm.mem.pages with
-    ⟨%memoryPagesGS, HmemoryPagesAuth⟩
-  letI _ : WasmMemoryPagesGS α := memoryPagesGS
+  wasm_alloc_memory_ghosts config from σ
   letI globalMapG : GhostMapG (WasmHeapGF α) GlobalKey Value WasmGlobalMap :=
     GhostSlot.globalMap
   imod (ghost_map_alloc (GF := WasmHeapGF α) (K := GlobalKey)
@@ -2748,20 +2519,7 @@ theorem wasm_smallStep_heap_globals_segments_tables_runtime_store_adequacy
       elementSegmentσ) with
     ⟨%elementSegmentName, HelementSegmentsAuth,
       HelementSegmentPoints⟩
-  letI wasmHeapGS : WasmHeapGS α :=
-    { togenHeapGS := heapGS }
-  letI wasmGlobalGS : WasmGlobalGS α :=
-    { toGhostMapG := globalMapG
-      globalName := globalName }
-  letI wasmDataSegmentGS : WasmDataSegmentGS α :=
-    { toGhostMapG := dataSegmentMapG
-      dataSegmentName := dataSegmentName }
-  letI wasmTableGS : WasmTableGS α :=
-    { toGhostMapG := tableMapG
-      tableName := tableName }
-  letI wasmElementSegmentGS : WasmElementSegmentGS α :=
-    { toGhostMapG := elementSegmentMapG
-      elementSegmentName := elementSegmentName }
+  wasm_install_heap_map_instances
   letI runtimeModuleMapG : GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
     GhostSlot.runtimeModuleMap
   imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
@@ -3014,16 +2772,7 @@ theorem wasm_smallStep_heap_runtime_instance_adequacy
   refine wp_adequacy (GF := WasmHeapGF α) Stuckness.NotStuck
     config.expr config.store φ ?_
   intro inv κs
-  imod genHeap_init (L := MemoryKey) (V := Option UInt8)
-      (GF := WasmHeapGF α) (H := WasmHeapMap) σ with
-    ⟨%heapGS, Hheap, Hpoints, Hmeta⟩
-  imod heapDomain_init (α := α) σ with
-    ⟨%heapDomainGS, HheapDomain⟩
-  letI _ : WasmHeapDomainGS α := heapDomainGS
-  imod memoryPages_init_authority (α := α)
-      config.store.wasm.mem.pages with
-    ⟨%memoryPagesGS, HmemoryPagesAuth⟩
-  letI _ : WasmMemoryPagesGS α := memoryPagesGS
+  wasm_alloc_memory_ghosts config from σ
   letI globalMapG : GhostMapG (WasmHeapGF α) GlobalKey Value WasmGlobalMap :=
     GhostSlot.globalMap
   imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := GlobalKey)
@@ -3047,20 +2796,7 @@ theorem wasm_smallStep_heap_runtime_instance_adequacy
   imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := ElementSegmentKey)
       (V := Option (List (Option Nat))) (H := WasmElementSegmentMap)) with
     ⟨%elementSegmentName, HelementSegments⟩
-  letI wasmHeapGS : WasmHeapGS α :=
-    { togenHeapGS := heapGS }
-  letI wasmGlobalGS : WasmGlobalGS α :=
-    { toGhostMapG := globalMapG
-      globalName := globalName }
-  letI wasmDataSegmentGS : WasmDataSegmentGS α :=
-    { toGhostMapG := dataSegmentMapG
-      dataSegmentName := dataSegmentName }
-  letI wasmTableGS : WasmTableGS α :=
-    { toGhostMapG := tableMapG
-      tableName := tableName }
-  letI wasmElementSegmentGS : WasmElementSegmentGS α :=
-    { toGhostMapG := elementSegmentMapG
-      elementSegmentName := elementSegmentName }
+  wasm_install_heap_map_instances
   letI runtimeModuleMapG : GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
     GhostSlot.runtimeModuleMap
   imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
@@ -3175,16 +2911,7 @@ theorem wasm_smallStep_heap_runtime_instances_adequacy
   refine wp_adequacy (GF := WasmHeapGF α) Stuckness.NotStuck
     config.expr config.store φ ?_
   intro inv κs
-  imod genHeap_init (L := MemoryKey) (V := Option UInt8)
-      (GF := WasmHeapGF α) (H := WasmHeapMap) σ with
-    ⟨%heapGS, Hheap, Hpoints, Hmeta⟩
-  imod heapDomain_init (α := α) σ with
-    ⟨%heapDomainGS, HheapDomain⟩
-  letI _ : WasmHeapDomainGS α := heapDomainGS
-  imod memoryPages_init_authority (α := α)
-      config.store.wasm.mem.pages with
-    ⟨%memoryPagesGS, HmemoryPagesAuth⟩
-  letI _ : WasmMemoryPagesGS α := memoryPagesGS
+  wasm_alloc_memory_ghosts config from σ
   letI globalMapG : GhostMapG (WasmHeapGF α) GlobalKey Value WasmGlobalMap :=
     GhostSlot.globalMap
   imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := GlobalKey)
@@ -3208,20 +2935,7 @@ theorem wasm_smallStep_heap_runtime_instances_adequacy
   imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := ElementSegmentKey)
       (V := Option (List (Option Nat))) (H := WasmElementSegmentMap)) with
     ⟨%elementSegmentName, HelementSegments⟩
-  letI wasmHeapGS : WasmHeapGS α :=
-    { togenHeapGS := heapGS }
-  letI wasmGlobalGS : WasmGlobalGS α :=
-    { toGhostMapG := globalMapG
-      globalName := globalName }
-  letI wasmDataSegmentGS : WasmDataSegmentGS α :=
-    { toGhostMapG := dataSegmentMapG
-      dataSegmentName := dataSegmentName }
-  letI wasmTableGS : WasmTableGS α :=
-    { toGhostMapG := tableMapG
-      tableName := tableName }
-  letI wasmElementSegmentGS : WasmElementSegmentGS α :=
-    { toGhostMapG := elementSegmentMapG
-      elementSegmentName := elementSegmentName }
+  wasm_install_heap_map_instances
   letI runtimeModuleMapG : GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
     GhostSlot.runtimeModuleMap
   imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)

@@ -16,9 +16,9 @@ are *literally* the same everywhere live here.
   number is now written exactly once.
 * `smallStepGS` performs the final field-by-field assembly of the fifteen
   component ghost states, which is byte-identical at every site.
-* The `wasm_alloc_*` tactics allocate the fixed host, current-instance,
-  runtime-instance, exception, and tag-table resources while exposing the
-  same local instances and hypotheses used by the adequacy proofs.
+* The `wasm_alloc_*` tactics allocate memory and fixed runtime resources, and
+  `wasm_install_heap_map_instances` installs the map instances. They expose
+  the same local instances and hypotheses used by the adequacy proofs.
 
 The parts that genuinely differ between entry points — which maps start empty
 and which start populated, whether the runtime module and host env maps get an
@@ -145,6 +145,40 @@ written once here. -/
     hostState := hostStateGS
     instanceGS := instanceGS
     runtimeInstances := runtimeInstancesGS }
+
+set_option hygiene false in
+/-- Allocate the physical memory heap, its domain, and the page authority. -/
+macro "wasm_alloc_memory_ghosts " config:term " from " heap:term : tactic =>
+  `(tactic|
+    (imod genHeap_init (L := MemoryKey) (V := Option UInt8)
+         (GF := WasmHeapGF α) (H := WasmHeapMap) ($heap) with
+       ⟨%heapGS, Hheap, Hpoints, Hmeta⟩
+     imod heapDomain_init (α := α) ($heap) with
+       ⟨%heapDomainGS, HheapDomain⟩
+     letI _ : WasmHeapDomainGS α := heapDomainGS
+     imod memoryPages_init_authority (α := α)
+         ($config).store.wasm.mem.pages with
+       ⟨%memoryPagesGS, HmemoryPagesAuth⟩
+     letI _ : WasmMemoryPagesGS α := memoryPagesGS))
+
+set_option hygiene false in
+/-- Install the five map instances after their authoritative maps are allocated. -/
+macro "wasm_install_heap_map_instances" : tactic =>
+  `(tactic|
+    (letI wasmHeapGS : WasmHeapGS α :=
+       { togenHeapGS := heapGS }
+     letI wasmGlobalGS : WasmGlobalGS α :=
+       { toGhostMapG := globalMapG
+         globalName := globalName }
+     letI wasmDataSegmentGS : WasmDataSegmentGS α :=
+       { toGhostMapG := dataSegmentMapG
+         dataSegmentName := dataSegmentName }
+     letI wasmTableGS : WasmTableGS α :=
+       { toGhostMapG := tableMapG
+         tableName := tableName }
+     letI wasmElementSegmentGS : WasmElementSegmentGS α :=
+       { toGhostMapG := elementSegmentMapG
+         elementSegmentName := elementSegmentName }))
 
 set_option hygiene false in
 /-- Allocate authoritative and fragment ownership of the current host state. -/
