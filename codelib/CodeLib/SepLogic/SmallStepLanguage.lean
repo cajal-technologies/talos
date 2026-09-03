@@ -46,6 +46,14 @@ instance instLanguage :
     | done values => exact False.elim (done_terminal hstep)
     | trapped => rfl
 
+set_option hygiene false in
+/-- Unpack an Iris primitive step and identify its target using determinism of
+the authoritative Wasm step relation. -/
+macro "wasm_wp_resolve_step " h:term " using " expected:term : tactic =>
+  `(tactic| (obtain ⟨rfl, kind, rfl, wasmStep⟩ := $h) <;>
+    (obtain ⟨rfl, hconfig⟩ := step_deterministic ($expected) wasmStep) <;>
+    cases hconfig)
+
 /-- A terminal observation for the Wasm machine.  Its language must reuse the
 authoritative Wasm primitive-step relation; only the terminal-value view may
 change. -/

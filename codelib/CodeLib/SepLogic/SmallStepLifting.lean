@@ -40,18 +40,7 @@ theorem wp_pureStep
     exact ⟨[], .running next, store, [],
       ⟨rfl, _, rfl, hstep store⟩⟩
   iintro !> %e₂ %store₂ %forks %Hprim Hcredit
-  rcases Hprim with ⟨hforks, actualKind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ :=
-    step_deterministic (hstep store) wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
+  wasm_wp_resolve_step Hprim using hstep store
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
   imod Hclose
   imodintro
@@ -214,17 +203,7 @@ theorem wp_finish
       .done (values.take arity ++ remainder), store, [],
       ⟨rfl, _, rfl, Step.finish⟩⟩
   iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ := step_deterministic Step.finish wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
+  wasm_wp_resolve_step Hstep using Step.finish
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
   imod Hclose
   imodintro
@@ -257,18 +236,7 @@ theorem wp_returnFromFunction
       .done (locals.values.take arity ++ remainder), store, [],
       ⟨rfl, _, rfl, Step.returnFromFunction⟩⟩
   iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst obs
-  obtain ⟨rfl, hconfig⟩ :=
-    step_deterministic Step.returnFromFunction wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
+  wasm_wp_resolve_step Hstep using Step.returnFromFunction
   simp only [List.length_nil, Nat.add_zero,
     Iris.Algebra.BigOpL.bigOpL_nil]
   imod Hclose
