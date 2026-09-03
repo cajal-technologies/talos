@@ -2026,6 +2026,36 @@ theorem twp_gtUI64
       [{ Φ }] :=
   twp_pureStep _ _ _ (fun _ => Step.gtUI64 hresult)
 
+/-- Consume a maximal run of side-condition-free scalar and local steps.
+Stops before any rule that needs a semantic choice, client resource, or
+non-definitional proof. -/
+syntax "wasm_twp_pures" "[" ident* "]" : tactic
+
+macro_rules
+  | `(tactic| wasm_twp_pures []) => `(tactic| skip)
+  | `(tactic| wasm_twp_pures [twp_localGet $rest:ident*]) =>
+      `(tactic| iapply twp_localGet rfl; wasm_twp_pures [$rest:ident*])
+  | `(tactic| wasm_twp_pures [twp_localSet $rest:ident*]) =>
+      `(tactic| iapply twp_localSet rfl; wasm_twp_pures [$rest:ident*])
+  | `(tactic| wasm_twp_pures [twp_localTee $rest:ident*]) =>
+      `(tactic| iapply twp_localTee rfl; wasm_twp_pures [$rest:ident*])
+  | `(tactic| wasm_twp_pures [twp_const $rest:ident*]) =>
+      `(tactic| iapply twp_const; wasm_twp_pures [$rest:ident*])
+  | `(tactic| wasm_twp_pures [twp_add $rest:ident*]) =>
+      `(tactic| iapply twp_add; wasm_twp_pures [$rest:ident*])
+  | `(tactic| wasm_twp_pures [twp_sub $rest:ident*]) =>
+      `(tactic| iapply twp_sub; wasm_twp_pures [$rest:ident*])
+  | `(tactic| wasm_twp_pures [twp_mul $rest:ident*]) =>
+      `(tactic| iapply twp_mul; wasm_twp_pures [$rest:ident*])
+  | `(tactic| wasm_twp_pures [twp_and $rest:ident*]) =>
+      `(tactic| iapply twp_and; wasm_twp_pures [$rest:ident*])
+  | `(tactic| wasm_twp_pures [twp_or $rest:ident*]) =>
+      `(tactic| iapply twp_or; wasm_twp_pures [$rest:ident*])
+  | `(tactic| wasm_twp_pures [twp_shl $rest:ident*]) =>
+      `(tactic| iapply twp_shl; wasm_twp_pures [$rest:ident*])
+  | `(tactic| wasm_twp_pures [twp_shrU $rest:ident*]) =>
+      `(tactic| iapply twp_shrU; wasm_twp_pures [$rest:ident*])
+
 /-- `i32.load` at offset 0, phrased directly on `addr` rather than
 `addr + 0`, which keeps Iris's unifier from having to see through the
 offset addition.  Relocated here from `SmallStepAdequacy`, where it sat
