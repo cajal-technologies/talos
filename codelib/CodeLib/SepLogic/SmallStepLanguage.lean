@@ -77,6 +77,22 @@ macro_rules
        exact $witness
      next => $continuation))
 
+/-- Offer one Wasm primitive step to Iris's total WP and continue with its successor. -/
+syntax "wasm_twp_offer_step " term " =>" ppLine colGt tacticSeq : tactic
+
+set_option hygiene false in
+macro_rules
+  | `(tactic| wasm_twp_offer_step $witness:term => $continuation:tacticSeq) =>
+   `(tactic|
+    (iapply fupd_mask_intro Std.LawfulSet.empty_subset
+     iintro Hclose
+     isplitr
+     next =>
+       ipureintro
+       cases s <;> simp only [Stuckness.MaybeReducibleNoObs]
+       exact $witness
+     next => $continuation))
+
 set_option hygiene false in
 /-- Reassemble the Iris state, continuation, and affine tail after a Wasm step. -/
 macro "wasm_wp_frame" : tactic =>
