@@ -3862,60 +3862,42 @@ theorem wp_memoryGrow
   cases hg : store.wasm.mem.grow delta
       (store.wasm.memoryCap store.runtime.currentModule 0) with
   | none =>
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro Hclose
-    isplitr
-    · ipureintro
-      cases s <;> simp only [Stuckness.MaybeReducible]
-      exact ⟨[], _, store, [], ⟨rfl, _, rfl, Step.memoryGrowFailure hg⟩⟩
-    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-    wasm_wp_resolve_target (Step.memoryGrowFailure hg) against wasmStep
-    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-    imod Hclose
-    imodintro
-    isplitl [Hσ]
-    · iexact Hσ
-    isplitl [Hruntime]
-    · iapply (Hwp (0xFFFFFFFF : UInt32))
-      iexact Hruntime
-    · itrivial
+    wasm_wp_offer_step ⟨[], _, store, [],
+        ⟨rfl, _, rfl, Step.memoryGrowFailure hg⟩⟩ =>
+      iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+      wasm_wp_resolve_step Hstep using Step.memoryGrowFailure hg
+      simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+      imod Hclose
+      imodintro
+      isplitl [Hσ]
+      · iexact Hσ
+      isplitl [Hruntime]
+      · iapply (Hwp (0xFFFFFFFF : UInt32))
+        iexact Hruntime
+      · itrivial
   | some grown =>
     obtain ⟨memory, previousPages⟩ := grown
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro Hclose
-    isplitr
-    · ipureintro
-      cases s <;> simp only [Stuckness.MaybeReducible]
-      exact ⟨[],
+    wasm_wp_offer_step ⟨[],
         .running ⟨⟨params, localValues, .i32 previousPages.toUInt32 :: values⟩,
           code, arity, remainder, controls, calls⟩,
         { store with wasm := { store.wasm with mem := memory } }, [],
         ⟨rfl, _, rfl, by simpa only [Wasm.SmallStep.setMemory_eq] using
-          Step.memoryGrowSuccess hg⟩⟩
-    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-    have expectedStep : Step
-        ⟨.running ⟨⟨params, localValues, .i32 delta :: values⟩,
-          .memoryGrow :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .memoryGrow)
-        ⟨.running ⟨⟨params, localValues, .i32 previousPages.toUInt32 :: values⟩,
-          code, arity, remainder, controls, calls⟩,
-          { store with wasm := { store.wasm with mem := memory } }⟩ := by
-      simpa only [Wasm.SmallStep.setMemory_eq] using Step.memoryGrowSuccess hg
-    wasm_wp_resolve_target expectedStep against wasmStep
-    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-    imod (stateInterp_memoryGrow store ns obs' nt delta
-        (store.wasm.memoryCap store.runtime.currentModule 0) memory previousPages hg) $$
-        Hσ with Hσ
-    imod Hclose
-    imodintro
-    isplitl [Hσ]
-    · iexact Hσ
-    isplitl [Hruntime]
-    · iapply (Hwp previousPages.toUInt32)
-      iexact Hruntime
-    · itrivial
+          Step.memoryGrowSuccess hg⟩⟩ =>
+      iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+      wasm_wp_resolve_step Hstep using (by
+        simpa only [Wasm.SmallStep.setMemory_eq] using Step.memoryGrowSuccess hg)
+      simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+      imod (stateInterp_memoryGrow store ns obs' nt delta
+          (store.wasm.memoryCap store.runtime.currentModule 0) memory previousPages hg) $$
+          Hσ with Hσ
+      imod Hclose
+      imodintro
+      isplitl [Hσ]
+      · iexact Hσ
+      isplitl [Hruntime]
+      · iapply (Hwp previousPages.toUInt32)
+        iexact Hruntime
+      · itrivial
 
 /-- Rule for `memory.grow` with an i64 delta below `2 ^ 32` (the too-large
 case is `wp_memoryGrow64TooLarge`). As with `wp_memoryGrow`, the continuation
@@ -3941,64 +3923,43 @@ theorem wp_memoryGrow64
   cases hg : store.wasm.mem.grow delta.toUInt32
       (store.wasm.memoryCap store.runtime.currentModule 0) with
   | none =>
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro Hclose
-    isplitr
-    · ipureintro
-      cases s <;> simp only [Stuckness.MaybeReducible]
-      exact ⟨[], _, store, [], ⟨rfl, _, rfl, Step.memoryGrow64Failure hsmall hg⟩⟩
-    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-    obtain ⟨rfl, hconfig⟩ :=
-      step_deterministic (Step.memoryGrow64Failure hsmall hg) wasmStep
-    simp only at hconfig
-    cases hconfig
-    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-    imod Hclose
-    imodintro
-    isplitl [Hσ]
-    · iexact Hσ
-    isplitl [Hruntime]
-    · iapply (Hwp (0xFFFFFFFFFFFFFFFF : UInt64))
-      iexact Hruntime
-    · itrivial
+    wasm_wp_offer_step ⟨[], _, store, [],
+        ⟨rfl, _, rfl, Step.memoryGrow64Failure hsmall hg⟩⟩ =>
+      iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+      wasm_wp_resolve_step Hstep using Step.memoryGrow64Failure hsmall hg
+      simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+      imod Hclose
+      imodintro
+      isplitl [Hσ]
+      · iexact Hσ
+      isplitl [Hruntime]
+      · iapply (Hwp (0xFFFFFFFFFFFFFFFF : UInt64))
+        iexact Hruntime
+      · itrivial
   | some grown =>
     obtain ⟨memory, previousPages⟩ := grown
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro Hclose
-    isplitr
-    · ipureintro
-      cases s <;> simp only [Stuckness.MaybeReducible]
-      exact ⟨[],
+    wasm_wp_offer_step ⟨[],
         .running ⟨⟨params, localValues, .i64 previousPages.toUInt64 :: values⟩,
           code, arity, remainder, controls, calls⟩,
         { store with wasm := { store.wasm with mem := memory } }, [],
         ⟨rfl, _, rfl, by simpa only [Wasm.SmallStep.setMemory_eq] using
-          Step.memoryGrow64Success hsmall hg⟩⟩
-    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-    have expectedStep : Step
-        ⟨.running ⟨⟨params, localValues, .i64 delta :: values⟩,
-          .memoryGrow :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .memoryGrow)
-        ⟨.running ⟨⟨params, localValues, .i64 previousPages.toUInt64 :: values⟩,
-          code, arity, remainder, controls, calls⟩,
-          { store with wasm := { store.wasm with mem := memory } }⟩ := by
-      simpa only [Wasm.SmallStep.setMemory_eq] using
-        Step.memoryGrow64Success hsmall hg
-    wasm_wp_resolve_target expectedStep against wasmStep
-    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-    imod (stateInterp_memoryGrow store ns obs' nt delta.toUInt32
-        (store.wasm.memoryCap store.runtime.currentModule 0) memory previousPages hg) $$
-        Hσ with Hσ
-    imod Hclose
-    imodintro
-    isplitl [Hσ]
-    · iexact Hσ
-    isplitl [Hruntime]
-    · iapply (Hwp previousPages.toUInt64)
-      iexact Hruntime
-    · itrivial
+          Step.memoryGrow64Success hsmall hg⟩⟩ =>
+      iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+      wasm_wp_resolve_step Hstep using (by
+        simpa only [Wasm.SmallStep.setMemory_eq] using
+          Step.memoryGrow64Success hsmall hg)
+      simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+      imod (stateInterp_memoryGrow store ns obs' nt delta.toUInt32
+          (store.wasm.memoryCap store.runtime.currentModule 0) memory previousPages hg) $$
+          Hσ with Hσ
+      imod Hclose
+      imodintro
+      isplitl [Hσ]
+      · iexact Hσ
+      isplitl [Hruntime]
+      · iapply (Hwp previousPages.toUInt64)
+        iexact Hruntime
+      · itrivial
 
 /-- Primitive rule for `memory.fill` with i32 operands (non-trapping). `oldBytes`
 describes the pre-fill byte range; the post-condition hands back the range filled
