@@ -93,31 +93,6 @@ theorem twp_address64
   iapply Wasm.SmallStep.twp_add
   iexact Hwp
 
-private theorem address64_steps (address : UInt32)
-    (hroom : address.toNat + 8 ≤ UInt32.size) :
-    ((address + 1).toNat = address.toNat + 1) ∧
-    ((address + 2).toNat = address.toNat + 2) ∧
-    ((address + 3).toNat = address.toNat + 3) ∧
-    ((address + 4).toNat = address.toNat + 4) ∧
-    ((address + 5).toNat = address.toNat + 5) ∧
-    ((address + 6).toNat = address.toNat + 6) ∧
-    ((address + 7).toNat = address.toNat + 7) := by
-  have hroom' : address.toNat + 8 ≤ 4294967296 := by
-    simpa only [UInt32.size] using hroom
-  constructor
-  · simpa using UInt32.add_ofNat_toNat_noWrap address 1 (by decide) (by omega)
-  constructor
-  · simpa using UInt32.add_ofNat_toNat_noWrap address 2 (by decide) (by omega)
-  constructor
-  · simpa using UInt32.add_ofNat_toNat_noWrap address 3 (by decide) (by omega)
-  constructor
-  · simpa using UInt32.add_ofNat_toNat_noWrap address 4 (by decide) (by omega)
-  constructor
-  · simpa using UInt32.add_ofNat_toNat_noWrap address 5 (by decide) (by omega)
-  constructor
-  · simpa using UInt32.add_ofNat_toNat_noWrap address 6 (by decide) (by omega)
-  · simpa using UInt32.add_ofNat_toNat_noWrap address 7 (by decide) (by omega)
-
 set_option maxHeartbeats 2000000 in
 theorem twp_loadAt64
     [WasmSmallStepGS hlc Unit]
@@ -149,7 +124,8 @@ theorem twp_loadAt64
     dsimp [address]
     simpa [UInt32.mul_comm] using arrayAddress64_toNat base hfit hk
   have hroom : address.toNat + 8 ≤ UInt32.size := by rw [hslot]; omega
-  obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := address64_steps address hroom
+  obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := UInt32.addSteps8 address (by
+    simpa only [UInt32.size] using hroom)
   iintro ⟨Harray, Hcont⟩
   ihave Hfocus := array64At_get 0 base input k hk $$ Harray
   icases Hfocus with ⟨Hword, Hclose⟩
@@ -191,7 +167,8 @@ private theorem twp_store64_cell
       ⟨⟨params, localValues, .i64 newWord :: .i32 address :: stack⟩,
         .store64 0 :: code, arity, remainder, controls, calls⟩ : Expr Unit)
       @ s; E [{ Φ }] := by
-  obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := address64_steps address hroom
+  obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := UInt32.addSteps8 address (by
+    simpa only [UInt32.size] using hroom)
   iintro ⟨Hword, Hcont⟩
   ihave Hword' : pointsTo_u64 0 (address + 0) oldWord $$ [Hword]
   · rw [UInt32.add_zero]
