@@ -3154,43 +3154,15 @@ theorem stateInterp_writeV128 [WasmSmallStepGS hlc α]
         steps observations threads ∗
       pointsTo_u64 0 addr lo ∗ pointsTo_u64 0 (addr + 8) hi := by
   have hbound_lo : addr.toNat + 8 ≤ store.wasm.mem.pages * 65536 := by omega
-  have h1 : (addr + 1).toNat = addr.toNat + 1 := by
-    simp only [UInt32.toNat_add, show (1 : UInt32).toNat = 1 from rfl]; omega
-  have h2 : (addr + 2).toNat = addr.toNat + 2 := by
-    simp only [UInt32.toNat_add, show (2 : UInt32).toNat = 2 from rfl]; omega
-  have h3 : (addr + 3).toNat = addr.toNat + 3 := by
-    simp only [UInt32.toNat_add, show (3 : UInt32).toNat = 3 from rfl]; omega
-  have h4 : (addr + 4).toNat = addr.toNat + 4 := by
-    simp only [UInt32.toNat_add, show (4 : UInt32).toNat = 4 from rfl]; omega
-  have h5 : (addr + 5).toNat = addr.toNat + 5 := by
-    simp only [UInt32.toNat_add, show (5 : UInt32).toNat = 5 from rfl]; omega
-  have h6 : (addr + 6).toNat = addr.toNat + 6 := by
-    simp only [UInt32.toNat_add, show (6 : UInt32).toNat = 6 from rfl]; omega
-  have h7 : (addr + 7).toNat = addr.toNat + 7 := by
-    simp only [UInt32.toNat_add, show (7 : UInt32).toNat = 7 from rfl]; omega
+  have hroomLo : addr.toNat + 8 ≤ 4294967296 := by omega
+  obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := UInt32.addSteps8 addr hroomLo
   have h8 : (addr + 8).toNat = addr.toNat + 8 := by
     simp only [UInt32.toNat_add, show (8 : UInt32).toNat = 8 from rfl]; omega
-  have h81 : (addr + 8 + 1).toNat = (addr + 8).toNat + 1 := by
-    simp only [UInt32.toNat_add, show (1 : UInt32).toNat = 1 from rfl,
-               show (8 : UInt32).toNat = 8 from rfl]; omega
-  have h82 : (addr + 8 + 2).toNat = (addr + 8).toNat + 2 := by
-    simp only [UInt32.toNat_add, show (2 : UInt32).toNat = 2 from rfl,
-               show (8 : UInt32).toNat = 8 from rfl]; omega
-  have h83 : (addr + 8 + 3).toNat = (addr + 8).toNat + 3 := by
-    simp only [UInt32.toNat_add, show (3 : UInt32).toNat = 3 from rfl,
-               show (8 : UInt32).toNat = 8 from rfl]; omega
-  have h84 : (addr + 8 + 4).toNat = (addr + 8).toNat + 4 := by
-    simp only [UInt32.toNat_add, show (4 : UInt32).toNat = 4 from rfl,
-               show (8 : UInt32).toNat = 8 from rfl]; omega
-  have h85 : (addr + 8 + 5).toNat = (addr + 8).toNat + 5 := by
-    simp only [UInt32.toNat_add, show (5 : UInt32).toNat = 5 from rfl,
-               show (8 : UInt32).toNat = 8 from rfl]; omega
-  have h86 : (addr + 8 + 6).toNat = (addr + 8).toNat + 6 := by
-    simp only [UInt32.toNat_add, show (6 : UInt32).toNat = 6 from rfl,
-               show (8 : UInt32).toNat = 8 from rfl]; omega
-  have h87 : (addr + 8 + 7).toNat = (addr + 8).toNat + 7 := by
-    simp only [UInt32.toNat_add, show (7 : UInt32).toNat = 7 from rfl,
-               show (8 : UInt32).toNat = 8 from rfl]; omega
+  have hroomHi : (addr + 8).toNat + 8 ≤ 4294967296 := by
+    rw [h8]
+    omega
+  obtain ⟨h81, h82, h83, h84, h85, h86, h87⟩ :=
+    UInt32.addSteps8 (addr + 8) hroomHi
   let store1 := { store with wasm := { store.wasm with mem := store.wasm.mem.write64 addr lo } }
   have hbound_hi : (addr + 8).toNat + 8 ≤ store1.wasm.mem.pages * 65536 := by
     show (addr + 8).toNat + 8 ≤ store.wasm.mem.pages * 65536; rw [h8]; omega

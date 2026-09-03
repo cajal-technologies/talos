@@ -6116,36 +6116,16 @@ theorem wp_v128Load
        WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
-  have h1 : ((address + offset) + 1).toNat = (address + offset).toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap (address + offset) 1 (by omega) (by omega)
-  have h2 : ((address + offset) + 2).toNat = (address + offset).toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap (address + offset) 2 (by omega) (by omega)
-  have h3 : ((address + offset) + 3).toNat = (address + offset).toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap (address + offset) 3 (by omega) (by omega)
-  have h4 : ((address + offset) + 4).toNat = (address + offset).toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap (address + offset) 4 (by omega) (by omega)
-  have h5 : ((address + offset) + 5).toNat = (address + offset).toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap (address + offset) 5 (by omega) (by omega)
-  have h6 : ((address + offset) + 6).toNat = (address + offset).toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap (address + offset) 6 (by omega) (by omega)
-  have h7 : ((address + offset) + 7).toNat = (address + offset).toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap (address + offset) 7 (by omega) (by omega)
+  have hroomLo : (address + offset).toNat + 8 ≤ 4294967296 := by omega
+  obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ :=
+    UInt32.addSteps8 (address + offset) hroomLo
   have h8 : ((address + offset) + 8).toNat = (address + offset).toNat + 8 := by
     simpa using UInt32.add_ofNat_toNat_noWrap (address + offset) 8 (by omega) (by omega)
-  have h9 : ((address + offset + 8) + 1).toNat = (address + offset + 8).toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap (address + offset + 8) 1 (by omega) (by omega)
-  have h10 : ((address + offset + 8) + 2).toNat = (address + offset + 8).toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap (address + offset + 8) 2 (by omega) (by omega)
-  have h11 : ((address + offset + 8) + 3).toNat = (address + offset + 8).toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap (address + offset + 8) 3 (by omega) (by omega)
-  have h12 : ((address + offset + 8) + 4).toNat = (address + offset + 8).toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap (address + offset + 8) 4 (by omega) (by omega)
-  have h13 : ((address + offset + 8) + 5).toNat = (address + offset + 8).toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap (address + offset + 8) 5 (by omega) (by omega)
-  have h14 : ((address + offset + 8) + 6).toNat = (address + offset + 8).toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap (address + offset + 8) 6 (by omega) (by omega)
-  have h15 : ((address + offset + 8) + 7).toNat = (address + offset + 8).toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap (address + offset + 8) 7 (by omega) (by omega)
+  have hroomHi : (address + offset + 8).toNat + 8 ≤ 4294967296 := by
+    rw [h8]
+    omega
+  obtain ⟨h9, h10, h11, h12, h13, h14, h15⟩ :=
+    UInt32.addSteps8 (address + offset + 8) hroomHi
   iintro >Hlo >Hhi Hwp
   iapply wp_lift_step rfl
   iintro %store %ns %obs %obs' %nt Hσ
@@ -6223,20 +6203,11 @@ theorem wp_v128Store
   dsimp only
   have h8 : ((address + offset) + 8).toNat = (address + offset).toNat + 8 := by
     simpa using UInt32.add_ofNat_toNat_noWrap (address + offset) 8 (by omega) (by omega)
-  have h9 : ((address + offset + 8) + 1).toNat = (address + offset + 8).toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap (address + offset + 8) 1 (by omega) (by omega)
-  have h10 : ((address + offset + 8) + 2).toNat = (address + offset + 8).toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap (address + offset + 8) 2 (by omega) (by omega)
-  have h11 : ((address + offset + 8) + 3).toNat = (address + offset + 8).toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap (address + offset + 8) 3 (by omega) (by omega)
-  have h12 : ((address + offset + 8) + 4).toNat = (address + offset + 8).toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap (address + offset + 8) 4 (by omega) (by omega)
-  have h13 : ((address + offset + 8) + 5).toNat = (address + offset + 8).toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap (address + offset + 8) 5 (by omega) (by omega)
-  have h14 : ((address + offset + 8) + 6).toNat = (address + offset + 8).toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap (address + offset + 8) 6 (by omega) (by omega)
-  have h15 : ((address + offset + 8) + 7).toNat = (address + offset + 8).toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap (address + offset + 8) 7 (by omega) (by omega)
+  have hroomHi : (address + offset + 8).toNat + 8 ≤ 4294967296 := by
+    rw [h8]
+    omega
+  obtain ⟨h9, h10, h11, h12, h13, h14, h15⟩ :=
+    UInt32.addSteps8 (address + offset + 8) hroomHi
   iintro >Hlo_old >Hhi_old Hwp
   iapply wp_lift_step rfl
   iintro %store %ns %obs %obs' %nt Hσ
