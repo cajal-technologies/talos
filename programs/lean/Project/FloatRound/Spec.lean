@@ -192,8 +192,7 @@ theorem func5_lowered_body_smallStep_wp
         pointsTo_u32 0 1048556 (f32Nearest x) :=
     congrArg (fun address => pointsTo_u32 0 address (f32Nearest x)) (by decide)
   ihave HwordExact : pointsTo_u32 0 1048556 (f32Nearest x) $$ [Hword]
-  · rw [← hWordProp]
-    iexact Hword
+  · irw_exact [← hWordProp] with Hword
   iapply_frame hreturn
 
 theorem func4_lowered_smallStep_wp
@@ -276,8 +275,7 @@ theorem deepFrameFloat_body_smallStep_wp
         pointsTo_u32 0 1048540 result :=
     congrArg (fun address => pointsTo_u32 0 address result) (by decide)
   ihave HwordExact : pointsTo_u32 0 1048540 result $$ [Hword]
-  · rw [← hWordProp]
-    iexact Hword
+  · irw_exact [← hWordProp] with Hword
   iapply_frame hreturn
 
 theorem func1_deep_body_smallStep_wp
@@ -459,8 +457,7 @@ theorem naive_tail_smallStep_wp
         pointsTo_u32 0 1048556 result :=
     congrArg (fun address => pointsTo_u32 0 address result) (by decide)
   ihave HwordExact : pointsTo_u32 0 1048556 result $$ [Hword]
-  · rw [← hWordProp]
-    iexact Hword
+  · irw_exact [← hWordProp] with Hword
   iapply_frame hreturn
 
 theorem naive_storeTrunc_smallStep_wp
@@ -503,8 +500,7 @@ theorem naive_storeTrunc_smallStep_wp
         pointsTo_u32 0 1048556 (f32Trunc x) :=
     congrArg (fun address => pointsTo_u32 0 address (f32Trunc x)) (by decide)
   ihave HwordExact : pointsTo_u32 0 1048556 (f32Trunc x) $$ [Hword]
-  · rw [← hWordProp]
-    iexact Hword
+  · irw_exact [← hWordProp] with Hword
   iapply_frame hnext
 
 theorem naive_ceil_smallStep_wp
@@ -564,8 +560,7 @@ theorem naive_ceil_smallStep_wp
         (by decide)
     ihave HwordExact :
         pointsTo_u32 0 1048556 (f32Ceil (f32Trunc x)) $$ [Hword]
-    · rw [← hWordProp]
-      iexact Hword
+    · irw_exact [← hWordProp] with Hword
     iapply_frame hnext
   · iframe
 
@@ -625,8 +620,7 @@ theorem naive_floor_smallStep_wp
         (by decide)
     ihave HwordExact :
         pointsTo_u32 0 1048556 (f32Floor (f32Trunc x)) $$ [Hword]
-    · rw [← hWordProp]
-      iexact Hword
+    · irw_exact [← hWordProp] with Hword
     iapply_frame hnext
   · iframe
 
@@ -1006,8 +1000,7 @@ theorem roundCheck_comparison_smallStep_wp
               pointsTo_u32 0 1048572 1 :=
           congrArg (fun address => pointsTo_u32 0 address 1) (by decide)
         ihave HresultExact : pointsTo_u32 0 1048572 1 $$ [Hresult]
-        · rw [← hResultProp]
-          iexact Hresult
+        · irw_exact [← hResultProp] with Hresult
         iapply_frame hone naive (f32Nearest x)
       · have heqFalse : f32Eq naive (f32Nearest x) = false := by
           cases h : f32Eq naive (f32Nearest x) <;> simp_all
@@ -1028,8 +1021,7 @@ theorem roundCheck_comparison_smallStep_wp
               pointsTo_u32 0 1048572 0 :=
           congrArg (fun address => pointsTo_u32 0 address 0) (by decide)
         ihave HresultExact : pointsTo_u32 0 1048572 0 $$ [Hresult]
-        · rw [← hResultProp]
-          iexact Hresult
+        · irw_exact [← hResultProp] with Hresult
         iapply_frame hzero naive (f32Nearest x)
     · iframe
   · iframe
@@ -1144,8 +1136,7 @@ theorem twp_func5_lowered_body_smallStep_wp
   wasm_twp_pures [twp_localGet twp_localGet]
   iapply twp_scalarFloat1 rfl rfl
   ihave Hword' : pointsTo_u32 0 ((1048544 : UInt32) + 12) oldWord $$ [Hword]
-  · rw [show (1048544 : UInt32) + 12 = 1048556 by decide]
-    iexact Hword
+  · irw_exact [show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
   wasm_twp_bind twp_f32Store oldWord
     (by decide) (by decide) (by decide) (by decide) with Hword' => Hword
   wasm_twp_pures [twp_localGet]
@@ -1156,8 +1147,7 @@ theorem twp_func5_lowered_body_smallStep_wp
         pointsTo_u32 0 1048556 (f32Nearest x) :=
     congrArg (fun address => pointsTo_u32 0 address (f32Nearest x)) (by decide)
   ihave HwordExact : pointsTo_u32 0 1048556 (f32Nearest x) $$ [Hword]
-  · rw [← hWordProp]
-    iexact Hword
+  · irw_exact [← hWordProp] with Hword
   iapply_frame hreturn
 
 theorem twp_func4_lowered_smallStep_wp
@@ -1223,8 +1213,7 @@ theorem twp_deepFrameFloat_body_smallStep_wp
   wasm_twp_pures [twp_localGet twp_localGet]
   iapply twp_scalarFloat1 hzero heval
   ihave Hword' : pointsTo_u32 0 ((1048528 : UInt32) + 12) oldWord $$ [Hword]
-  · rw [show (1048528 : UInt32) + 12 = 1048540 by decide]
-    iexact Hword
+  · irw_exact [show (1048528 : UInt32) + 12 = 1048540 by decide] with Hword
   wasm_twp_bind twp_f32Store oldWord
     (by decide) (by decide) (by decide) (by decide) with Hword' => Hword
   wasm_twp_pures [twp_localGet]
@@ -1235,8 +1224,7 @@ theorem twp_deepFrameFloat_body_smallStep_wp
         pointsTo_u32 0 1048540 result :=
     congrArg (fun address => pointsTo_u32 0 address result) (by decide)
   ihave HwordExact : pointsTo_u32 0 1048540 result $$ [Hword]
-  · rw [← hWordProp]
-    iexact Hword
+  · irw_exact [← hWordProp] with Hword
   iapply_frame hreturn
 
 theorem twp_func1_deep_body_smallStep_wp
@@ -1326,8 +1314,7 @@ theorem twp_naive_tail_smallStep_wp
   simp only [naiveTailProg]
   wasm_twp_pures [twp_localGet]
   ihave Hword' : pointsTo_u32 0 ((1048544 : UInt32) + 12) result $$ [Hword]
-  · rw [show (1048544 : UInt32) + 12 = 1048556 by decide]
-    iexact Hword
+  · irw_exact [show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
   wasm_twp_bind twp_f32Load result
     (by decide) (by decide) (by decide) (by decide) with Hword' => Hword
   wasm_twp_pures [twp_localSet]
@@ -1341,8 +1328,7 @@ theorem twp_naive_tail_smallStep_wp
         pointsTo_u32 0 1048556 result :=
     congrArg (fun address => pointsTo_u32 0 address result) (by decide)
   ihave HwordExact : pointsTo_u32 0 1048556 result $$ [Hword]
-  · rw [← hWordProp]
-    iexact Hword
+  · irw_exact [← hWordProp] with Hword
   iapply_frame hreturn
 
 theorem twp_naive_storeTrunc_smallStep_wp
@@ -1374,8 +1360,7 @@ theorem twp_naive_storeTrunc_smallStep_wp
   simp only [naiveStoreTruncProg]
   wasm_twp_pures [twp_localGet twp_localGet]
   ihave Hword' : pointsTo_u32 0 ((1048544 : UInt32) + 12) oldWord $$ [Hword]
-  · rw [show (1048544 : UInt32) + 12 = 1048556 by decide]
-    iexact Hword
+  · irw_exact [show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
   wasm_twp_bind twp_f32Store oldWord
     (by decide) (by decide) (by decide) (by decide) with Hword' => Hword
   wasm_twp_pures [twp_br]
@@ -1385,8 +1370,7 @@ theorem twp_naive_storeTrunc_smallStep_wp
         pointsTo_u32 0 1048556 (f32Trunc x) :=
     congrArg (fun address => pointsTo_u32 0 address (f32Trunc x)) (by decide)
   ihave HwordExact : pointsTo_u32 0 1048556 (f32Trunc x) $$ [Hword]
-  · rw [← hWordProp]
-    iexact Hword
+  · irw_exact [← hWordProp] with Hword
   iapply_frame hnext
 
 theorem twp_naive_ceil_smallStep_wp
@@ -1431,8 +1415,7 @@ theorem twp_naive_ceil_smallStep_wp
     wasm_twp_return_from_call Hruntime
     simp only [List.take, List.singleton_append]
     ihave Hword' : pointsTo_u32 0 ((1048544 : UInt32) + 12) oldWord $$ [Hword]
-    · rw [show (1048544 : UInt32) + 12 = 1048556 by decide]
-      iexact Hword
+    · irw_exact [show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
     wasm_twp_bind twp_f32Store oldWord
       (by decide) (by decide) (by decide) (by decide) with Hword' => Hword
     wasm_twp_pures [twp_br]
@@ -1446,8 +1429,7 @@ theorem twp_naive_ceil_smallStep_wp
         (by decide)
     ihave HwordExact :
         pointsTo_u32 0 1048556 (f32Ceil (f32Trunc x)) $$ [Hword]
-    · rw [← hWordProp]
-      iexact Hword
+    · irw_exact [← hWordProp] with Hword
     iapply_frame hnext
   · iframe
 
@@ -1492,8 +1474,7 @@ theorem twp_naive_floor_smallStep_wp
     wasm_twp_return_from_call Hruntime
     simp only [List.take, List.singleton_append]
     ihave Hword' : pointsTo_u32 0 ((1048544 : UInt32) + 12) oldWord $$ [Hword]
-    · rw [show (1048544 : UInt32) + 12 = 1048556 by decide]
-      iexact Hword
+    · irw_exact [show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
     wasm_twp_bind twp_f32Store oldWord
       (by decide) (by decide) (by decide) (by decide) with Hword' => Hword
     wasm_twp_pures [twp_exitControl]
@@ -1507,8 +1488,7 @@ theorem twp_naive_floor_smallStep_wp
         (by decide)
     ihave HwordExact :
         pointsTo_u32 0 1048556 (f32Floor (f32Trunc x)) $$ [Hword]
-    · rw [← hWordProp]
-      iexact Hword
+    · irw_exact [← hWordProp] with Hword
     iapply_frame hnext
   · iframe
 
@@ -1758,8 +1738,7 @@ theorem twp_roundCheck_tail_result_smallStep_wp
   simp only [roundCheckTailProg]
   wasm_twp_pures [twp_localGet]
   ihave Hresult' : pointsTo_u32 0 ((1048560 : UInt32) + 12) result $$ [Hresult]
-  · rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
-    iexact Hresult
+  · irw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
   wasm_twp_bind twp_load32 result
     (by decide) (by decide) (by decide) (by decide) with Hresult' => Hresult
   wasm_twp_pures [twp_localSet]
@@ -1835,8 +1814,7 @@ theorem twp_roundCheck_comparison_smallStep_wp
         simp only [roundCheckOneProg]
         wasm_twp_pures [twp_localGet twp_const]
         ihave Hresult' : pointsTo_u32 0 ((1048560 : UInt32) + 12) oldResult $$ [Hresult]
-        · rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
-          iexact Hresult
+        · irw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
         wasm_twp_bind twp_store32 oldResult
           (by decide) (by decide) (by decide) (by decide) with Hresult' => Hresult
         wasm_twp_pures [twp_exitControl]
@@ -1846,8 +1824,7 @@ theorem twp_roundCheck_comparison_smallStep_wp
               pointsTo_u32 0 1048572 1 :=
           congrArg (fun address => pointsTo_u32 0 address 1) (by decide)
         ihave HresultExact : pointsTo_u32 0 1048572 1 $$ [Hresult]
-        · rw [← hResultProp]
-          iexact Hresult
+        · irw_exact [← hResultProp] with Hresult
         iapply_frame hone naive (f32Nearest x)
       · have heqFalse : f32Eq naive (f32Nearest x) = false := by
           cases h : f32Eq naive (f32Nearest x) <;> simp_all
@@ -1857,8 +1834,7 @@ theorem twp_roundCheck_comparison_smallStep_wp
         rw [show (0 &&& 1 : UInt32) = 0 by decide]
         wasm_twp_pures [twp_brIfZero twp_localGet twp_const]
         ihave Hresult' : pointsTo_u32 0 ((1048560 : UInt32) + 12) oldResult $$ [Hresult]
-        · rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
-          iexact Hresult
+        · irw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
         wasm_twp_bind twp_store32 oldResult
           (by decide) (by decide) (by decide) (by decide) with Hresult' => Hresult
         wasm_twp_pures [twp_br]
@@ -1868,8 +1844,7 @@ theorem twp_roundCheck_comparison_smallStep_wp
               pointsTo_u32 0 1048572 0 :=
           congrArg (fun address => pointsTo_u32 0 address 0) (by decide)
         ihave HresultExact : pointsTo_u32 0 1048572 0 $$ [Hresult]
-        · rw [← hResultProp]
-          iexact Hresult
+        · irw_exact [← hResultProp] with Hresult
         iapply_frame hzero naive (f32Nearest x)
     · iframe
   · iframe

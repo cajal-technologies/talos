@@ -259,8 +259,7 @@ theorem func0_tail_to_ret_smallStep_wp
   iintro Hword
   iapply Hret
   isplitl_exact HR
-  · rw [heffective]
-    iexact Hword
+  · irw_exact [heffective] with Hword
 
 /-- Common load-and-return tail after one of `naive_trunc`'s four branches
 has written the authoritative scratch word. -/
@@ -523,13 +522,11 @@ theorem twp_func0_tail_to_ret
   have heffective : (1048560 : UInt32) + 12 = 1048572 := by decide
   ihave Hword' :
       pointsTo_u32 0 ((1048560 : UInt32) + 12) word $$ [Hword]
-  · rw [heffective]
-    iexact Hword
+  · irw_exact [heffective] with Hword
   wasm_twp_bind twp_load32 word (by decide) (by decide) (by decide) (by decide) with Hword' => Hword
   iapply Hcont
   isplitl_exact HR
-  · rw [heffective]
-    iexact Hword
+  · irw_exact [heffective] with Hword
 
 theorem twp_func0_store32
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -553,8 +550,7 @@ theorem twp_func0_store32
   have heffective : (1048560 : UInt32) + 12 = 1048572 := by decide
   ihave Hword' :
       pointsTo_u32 0 ((1048560 : UInt32) + 12) oldWord $$ [Hword]
-  · rw [heffective]
-    iexact Hword
+  · irw_exact [heffective] with Hword
   wasm_twp_bind twp_store32 oldWord (by decide) (by decide) (by decide) (by decide)
     with Hword' => Hword
   iapply Hcont

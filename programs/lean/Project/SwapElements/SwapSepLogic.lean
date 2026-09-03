@@ -274,8 +274,7 @@ theorem wp_swapElementsFunc3
   wasm_wp_return_value
   isplitr_pureexact rfl
   · isplitl_rw_exact [UInt32.add_zero] with Hptr
-    · rw [← show (1048568 : UInt32) + 4 = 1048572 from rfl]
-      iexact Hlen
+    · irw_exact [← show (1048568 : UInt32) + 4 = 1048572 from rfl] with Hlen
 
 end swapElementsPartial
 
@@ -319,8 +318,7 @@ theorem twp_swapElementsFunc2Prefix
     Nat.reduceAdd, Nat.reduceSub, List.set]
   wasm_twp_pures [twp_localGet twp_localGet]
   ihave HA' : pointsTo_u64 0 (ptrA + 0) oldA $$ [HA]
-  · rw [UInt32.add_zero]
-    iexact HA
+  · irw_exact [UInt32.add_zero] with HA
   iapply twp_load64 oldA (by simp)
     (by simpa using ha1) (by simpa using ha2) (by simpa using ha3)
     (by simpa using ha4) (by simpa using ha5) (by simpa using ha6)
@@ -328,23 +326,20 @@ theorem twp_swapElementsFunc2Prefix
   iintro HA
   ihave Hscratch' :
       pointsTo_u64 0 ((1048544 : UInt32) + 8) oldScratch $$ [Hscratch]
-  · rw [show (1048544 : UInt32) + 8 = 1048552 from rfl]
-    iexact Hscratch
+  · irw_exact [show (1048544 : UInt32) + 8 = 1048552 from rfl] with Hscratch
   iapply twp_store64 oldScratch rfl rfl rfl rfl rfl rfl rfl rfl $$
     Hscratch'
   iintro Hscratch
   wasm_twp_pures [twp_localGet twp_localGet]
   ihave HB' : pointsTo_u64 0 (ptrB + 0) oldB $$ [HB]
-  · rw [UInt32.add_zero]
-    iexact HB
+  · irw_exact [UInt32.add_zero] with HB
   iapply twp_load64 oldB (by simp)
     (by simpa using hb1) (by simpa using hb2) (by simpa using hb3)
     (by simpa using hb4) (by simpa using hb5) (by simpa using hb6)
     (by simpa using hb7) $$ HB'
   iintro HB
   ihave HA' : pointsTo_u64 0 (ptrA + 0) oldA $$ [HA]
-  · rw [UInt32.add_zero]
-    iexact HA
+  · irw_exact [UInt32.add_zero] with HA
   iapply twp_store64 oldA (by simp)
     (by simpa using ha1) (by simpa using ha2) (by simpa using ha3)
     (by simpa using ha4) (by simpa using ha5) (by simpa using ha6)
@@ -353,14 +348,12 @@ theorem twp_swapElementsFunc2Prefix
   wasm_twp_pures [twp_localGet twp_localGet]
   ihave Hscratch' :
       pointsTo_u64 0 ((1048544 : UInt32) + 8) oldA $$ [Hscratch]
-  · rw [show (1048544 : UInt32) + 8 = 1048552 from rfl]
-    iexact Hscratch
+  · irw_exact [show (1048544 : UInt32) + 8 = 1048552 from rfl] with Hscratch
   iapply twp_load64 oldA rfl rfl rfl rfl rfl rfl rfl rfl $$
     Hscratch'
   iintro Hscratch
   ihave HB' : pointsTo_u64 0 (ptrB + 0) oldB $$ [HB]
-  · rw [UInt32.add_zero]
-    iexact HB
+  · irw_exact [UInt32.add_zero] with HB
   iapply twp_store64 oldB (by simp)
     (by simpa using hb1) (by simpa using hb2) (by simpa using hb3)
     (by simpa using hb4) (by simpa using hb5) (by simpa using hb6)
@@ -396,8 +389,7 @@ theorem twp_swapElementsFunc2AliasPrefix
     Nat.reduceAdd, Nat.reduceSub, List.set]
   wasm_twp_pures [twp_localGet twp_localGet]
   ihave Hcell' : pointsTo_u64 0 (ptr + 0) oldValue $$ [Hcell]
-  · rw [UInt32.add_zero]
-    iexact Hcell
+  · irw_exact [UInt32.add_zero] with Hcell
   iapply twp_load64 oldValue (by simp)
     (by simpa using h1) (by simpa using h2) (by simpa using h3)
     (by simpa using h4) (by simpa using h5) (by simpa using h6)
@@ -405,23 +397,20 @@ theorem twp_swapElementsFunc2AliasPrefix
   iintro Hcell
   ihave Hscratch' :
       pointsTo_u64 0 ((1048544 : UInt32) + 8) oldScratch $$ [Hscratch]
-  · rw [show (1048544 : UInt32) + 8 = 1048552 from rfl]
-    iexact Hscratch
+  · irw_exact [show (1048544 : UInt32) + 8 = 1048552 from rfl] with Hscratch
   iapply twp_store64 oldScratch rfl rfl rfl rfl rfl rfl rfl rfl $$
     Hscratch'
   iintro Hscratch
   wasm_twp_pures [twp_localGet twp_localGet]
   ihave Hcell' : pointsTo_u64 0 (ptr + 0) oldValue $$ [Hcell]
-  · rw [UInt32.add_zero]
-    iexact Hcell
+  · irw_exact [UInt32.add_zero] with Hcell
   iapply twp_load64 oldValue (by simp)
     (by simpa using h1) (by simpa using h2) (by simpa using h3)
     (by simpa using h4) (by simpa using h5) (by simpa using h6)
     (by simpa using h7) $$ Hcell'
   iintro Hcell
   ihave Hcell' : pointsTo_u64 0 (ptr + 0) oldValue $$ [Hcell]
-  · rw [UInt32.add_zero]
-    iexact Hcell
+  · irw_exact [UInt32.add_zero] with Hcell
   iapply twp_store64 oldValue (by simp)
     (by simpa using h1) (by simpa using h2) (by simpa using h3)
     (by simpa using h4) (by simpa using h5) (by simpa using h6)
@@ -430,14 +419,12 @@ theorem twp_swapElementsFunc2AliasPrefix
   wasm_twp_pures [twp_localGet twp_localGet]
   ihave Hscratch' :
       pointsTo_u64 0 ((1048544 : UInt32) + 8) oldValue $$ [Hscratch]
-  · rw [show (1048544 : UInt32) + 8 = 1048552 from rfl]
-    iexact Hscratch
+  · irw_exact [show (1048544 : UInt32) + 8 = 1048552 from rfl] with Hscratch
   iapply twp_load64 oldValue rfl rfl rfl rfl rfl rfl rfl rfl $$
     Hscratch'
   iintro Hscratch
   ihave Hcell' : pointsTo_u64 0 (ptr + 0) oldValue $$ [Hcell]
-  · rw [UInt32.add_zero]
-    iexact Hcell
+  · irw_exact [UInt32.add_zero] with Hcell
   iapply twp_store64 oldValue (by simp)
     (by simpa using h1) (by simpa using h2) (by simpa using h3)
     (by simpa using h4) (by simpa using h5) (by simpa using h6)
@@ -528,22 +515,19 @@ theorem twp_swapElementsFunc3
   wasm_twp_pures [twp_localGet twp_localGet]
   ihave Hlen' :
       pointsTo_u32 0 ((1048568 : UInt32) + 4) oldLen $$ [Hlen]
-  · rw [show (1048568 : UInt32) + 4 = 1048572 from rfl]
-    iexact Hlen
+  · irw_exact [show (1048568 : UInt32) + 4 = 1048572 from rfl] with Hlen
   wasm_twp_bind twp_store32 oldLen rfl rfl rfl rfl with Hlen' => Hlen
   wasm_twp_pures [twp_localGet twp_localGet]
   ihave Hptr' :
       pointsTo_u32 0 ((1048568 : UInt32) + 0) oldPtr $$ [Hptr]
-  · rw [UInt32.add_zero]
-    iexact Hptr
+  · irw_exact [UInt32.add_zero] with Hptr
   wasm_twp_bind twp_store32 oldPtr rfl rfl rfl rfl with Hptr' => Hptr
   iapply twp_returnFromFunction
   simp only [List.take, List.nil_append]
   iapply twp.value rfl
   isplitr_pureexact rfl
   · isplitl_rw_exact [UInt32.add_zero] with Hptr
-    · rw [← show (1048568 : UInt32) + 4 = 1048572 from rfl]
-      iexact Hlen
+    · irw_exact [← show (1048568 : UInt32) + 4 = 1048572 from rfl] with Hlen
 
 end swapElementsTotal
 
@@ -1805,14 +1789,12 @@ theorem twp_func3_context_smallStep_wp
   wasm_twp_pures [twp_localGet twp_localGet]
   ihave Hlen' :
       pointsTo_u32 0 ((1048568 : UInt32) + 4) oldLen $$ [Hlen]
-  · rw [show (1048568 : UInt32) + 4 = 1048572 from rfl]
-    iexact Hlen
+  · irw_exact [show (1048568 : UInt32) + 4 = 1048572 from rfl] with Hlen
   wasm_twp_bind Wasm.SmallStep.twp_store32 oldLen rfl rfl rfl rfl with Hlen' => Hlen
   wasm_twp_pures [twp_localGet twp_localGet]
   ihave Hptr' :
       pointsTo_u32 0 ((1048568 : UInt32) + 0) oldPtr $$ [Hptr]
-  · rw [UInt32.add_zero]
-    iexact Hptr
+  · irw_exact [UInt32.add_zero] with Hptr
   wasm_twp_bind Wasm.SmallStep.twp_store32 oldPtr rfl rfl rfl rfl with Hptr' => Hptr
   iapply hreturn
   rw [UInt32.add_zero,
@@ -1888,8 +1870,7 @@ theorem twp_func4_happy_smallStep_wp
     wasm_twp_pures [twp_localGet]
     ihave HspillLen' :
         pointsTo_u32 0 ((1048560 : UInt32) + 12) len $$ [HspillLen]
-    · rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
-      iexact HspillLen
+    · irw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with HspillLen
     wasm_twp_bind Wasm.SmallStep.twp_load32 len
       (by decide) (by decide) (by decide) (by decide) with HspillLen' => HspillLen
     wasm_twp_pures [twp_localSet]
@@ -1898,8 +1879,7 @@ theorem twp_func4_happy_smallStep_wp
     wasm_twp_pures [twp_localGet]
     ihave HspillPtr' :
         pointsTo_u32 0 ((1048560 : UInt32) + 8) ptr $$ [HspillPtr]
-    · rw [show (1048560 : UInt32) + 8 = 1048568 by decide]
-      iexact HspillPtr
+    · irw_exact [show (1048560 : UInt32) + 8 = 1048568 by decide] with HspillPtr
     wasm_twp_bind Wasm.SmallStep.twp_load32 ptr
       (by decide) (by decide) (by decide) (by decide) with HspillPtr' => HspillPtr
     wasm_twp_pures [twp_localGet twp_localGet twp_localGet]
@@ -1978,8 +1958,7 @@ theorem twp_func4_alias_smallStep_wp
     wasm_twp_pures [twp_localGet]
     ihave HspillLen' :
         pointsTo_u32 0 ((1048560 : UInt32) + 12) len $$ [HspillLen]
-    · rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
-      iexact HspillLen
+    · irw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with HspillLen
     wasm_twp_bind Wasm.SmallStep.twp_load32 len
       (by decide) (by decide) (by decide) (by decide) with HspillLen' => HspillLen
     wasm_twp_pures [twp_localSet]
@@ -1988,8 +1967,7 @@ theorem twp_func4_alias_smallStep_wp
     wasm_twp_pures [twp_localGet]
     ihave HspillPtr' :
         pointsTo_u32 0 ((1048560 : UInt32) + 8) ptr $$ [HspillPtr]
-    · rw [show (1048560 : UInt32) + 8 = 1048568 by decide]
-      iexact HspillPtr
+    · irw_exact [show (1048560 : UInt32) + 8 = 1048568 by decide] with HspillPtr
     wasm_twp_bind Wasm.SmallStep.twp_load32 ptr
       (by decide) (by decide) (by decide) (by decide) with HspillPtr' => HspillPtr
     wasm_twp_pures [twp_localGet twp_localGet twp_localGet]
