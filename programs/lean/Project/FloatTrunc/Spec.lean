@@ -145,8 +145,7 @@ theorem func1_smallStep (x : UInt32) :
   intro gs
   simp only [func1Config]
   wasm_wp_next func1_body_smallStep_wp x []
-  wasm_wp_return_value
-  ipureexact rfl
+  wasm_wp_return_value_rfl
 
 /-- Small-step entry state for generated `naive_trunc`. -/
 def func0Config (x : UInt32) : Config Unit :=

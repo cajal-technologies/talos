@@ -60,8 +60,7 @@ theorem len_correct : LenSpec := by
   intro gs
   simp only [leafConfig, func0]
   wasm_wp_pures [wp_localGet]
-  wasm_wp_return_value
-  ipureexact rfl
+  wasm_wp_return_value_rfl
 
 @[spec_of "rust-internal" "rust_array::is_empty"]
 def IsEmptySpec : Prop := ∀ (ptr len : UInt32),
@@ -80,8 +79,7 @@ theorem is_empty_correct : IsEmptySpec := by
   rw [show isEmptyValue len &&& 1 = isEmptyValue len by
     unfold isEmptyValue
     by_cases h : len = 0 <;> simp [h]]
-  wasm_wp_return_value
-  ipureexact rfl
+  wasm_wp_return_value_rfl
 
 /-! ## Exported ABI wrappers (fat pointer in memory) -/
 

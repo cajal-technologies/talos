@@ -51,8 +51,7 @@ theorem finishGcd_smallStep_wp
   simp only [gcdOuterFrame, List.take_nil, List.nil_append]
   wasm_wp_pures [wp_localGet]
   rw [hrecombine]
-  wasm_wp_finish_value
-  ipureexact rfl
+  wasm_wp_finish_value_rfl
 
 /-- The two early exits of generated `gcd_u64`, proved through iris-lean's WP
 over the authoritative small-step relation.  This is deliberately a complete

@@ -178,11 +178,23 @@ macro "wasm_wp_finish_value" : tactic =>
     (wasm_wp_next wp_finish
      iapply wp_value'))
 
+/-- Finish a body whose concrete result already matches the postcondition. -/
+macro "wasm_wp_finish_value_rfl" : tactic =>
+  `(tactic|
+    (wasm_wp_finish_value
+     ipureexact rfl))
+
 /-- Return from a top-level function and expose its result as an Iris value. -/
 macro "wasm_wp_return_value" : tactic =>
   `(tactic|
     (wasm_wp_next wp_returnFromFunction
      iapply wp_value'))
+
+/-- Return a concrete result that already matches the postcondition. -/
+macro "wasm_wp_return_value_rfl" : tactic =>
+  `(tactic|
+    (wasm_wp_return_value
+     ipureexact rfl))
 
 theorem wp_const
     {params localValues values : List Value}

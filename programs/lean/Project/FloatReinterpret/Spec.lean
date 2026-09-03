@@ -46,8 +46,7 @@ theorem func5_smallStep (x : UInt32) :
   intro gs
   simp only [func5Config]
   wasm_wp_next func5_body_smallStep_wp x []
-  wasm_wp_return_value
-  ipureexact rfl
+  wasm_wp_return_value_rfl
 
 def func6Config (x : UInt32) : Config Unit :=
   { expr := .running
@@ -79,8 +78,7 @@ theorem func6_smallStep (x : UInt32) :
   intro gs
   simp only [func6Config]
   wasm_wp_next func6_body_smallStep_wp x []
-  wasm_wp_return_value
-  ipureexact rfl
+  wasm_wp_return_value_rfl
 
 def func9Config (x : UInt32) : Config Unit :=
   { expr := .running

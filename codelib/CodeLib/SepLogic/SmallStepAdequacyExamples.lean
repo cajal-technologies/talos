@@ -96,8 +96,7 @@ theorem globalGet_adequate :
     simp only [← globalPointsToAt_eq]
     wasm_wp_next wp_globalGet $$ Hglobal
     iintro Hglobal
-    wasm_wp_finish_value
-    ipureexact rfl
+    wasm_wp_finish_value_rfl
 
 def noopCallModule : Module :=
   { funcs := [{ body := [.ret] }] }
@@ -129,8 +128,7 @@ theorem noopCall_adequate :
     simp only [noopCallModule, Function.toLocals, Function.numParams,
       List.take_nil, List.reverse_nil, List.drop_nil, List.length_nil]
     wasm_wp_next wp_returnFromCallExplicit $$ Hruntime
-    wasm_wp_return_value
-    ipureexact rfl
+    wasm_wp_return_value_rfl
 
 private def word16Heap (word : UInt32) :
     WasmHeapMap (Option UInt8) :=
@@ -1489,8 +1487,7 @@ theorem tableSetGet_store_partiallyMeets :
     iapply wp_frame_l
     isplitl_exact Htable
     wasm_wp_next wp_refIsNull rfl
-    wasm_wp_finish_value
-    ipureexact rfl
+    wasm_wp_finish_value_rfl
 
 def tableGrowFillAdequacyModule : Module :=
   { funcs :=
@@ -1604,8 +1601,7 @@ theorem tableGrowFill_store_partiallyMeets :
     iapply wp_frame_l
     isplitl_exact Htable
     wasm_wp_next wp_refIsNull rfl
-    wasm_wp_finish_value
-    ipureexact rfl
+    wasm_wp_finish_value_rfl
 
 def tableGrow64FailureAdequacyModule : Module :=
   { funcs :=
@@ -1702,8 +1698,7 @@ theorem tableGrow64Failure_store_partiallyMeets :
     iapply wp_mono (fun _ => BI.sep_comm.mp)
     iapply wp_frame_l
     isplitl_exact Htable
-    wasm_wp_finish_value
-    ipureexact rfl
+    wasm_wp_finish_value_rfl
 
 private def tableCopyOverlapMap : WasmTableMap TableInst :=
   insert ∅ (⟨0, 0⟩ : TableKey)
@@ -1828,8 +1823,7 @@ theorem tableCopyOverlap_store_partiallyMeets :
     iapply wp_mono (fun _ => BI.sep_comm.mp)
     iapply wp_frame_l
     isplitl_exact Htable
-    wasm_wp_finish_value
-    ipureexact rfl
+    wasm_wp_finish_value_rfl
 
 private def tableCopyDistinctMap : WasmTableMap TableInst :=
   insert (insert ∅ (⟨0, 0⟩ : TableKey) [.funcref none, .funcref none, .funcref none])
@@ -2028,8 +2022,7 @@ theorem tableCopyDistinct_store_partiallyMeets :
     · isplitl [Hdestination]
       · iexact Hdestination
       · iexact Hsource
-    wasm_wp_finish_value
-    ipureexact rfl
+    wasm_wp_finish_value_rfl
 
 private def tableInitDropTableMap : WasmTableMap TableInst :=
   insert ∅ (⟨0, 0⟩ : TableKey)
@@ -2211,8 +2204,7 @@ theorem tableInitDrop_store_partiallyMeets :
     · isplitl [Htable]
       · iexact Htable
       · iexact Helement
-    wasm_wp_finish_value
-    ipureexact rfl
+    wasm_wp_finish_value_rfl
 
 /-! ## Parametric total-correctness examples
 

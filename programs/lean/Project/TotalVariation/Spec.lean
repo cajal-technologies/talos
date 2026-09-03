@@ -78,8 +78,7 @@ theorem total_variation_correct : TotalVariationSpec := by
         wasm_wp_next wp_returnFromCallExplicit $$ Hruntime
         simp only [List.take, List.singleton_append]
         wasm_wp_pures [wp_addI64]
-        wasm_wp_return_value
-        ipureexact rfl
+        wasm_wp_return_value_rfl
       · simp only [UInt32.reduceSub, UInt32.reduceAdd]
         iframe
     · simp only [UInt32.reduceSub, UInt32.reduceAdd]
