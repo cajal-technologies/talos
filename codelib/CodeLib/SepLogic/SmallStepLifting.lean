@@ -206,6 +206,14 @@ macro "wasm_wp_return_value_rfl" : tactic =>
     (wasm_wp_return_value
      ipureexact rfl))
 
+/-- Return a reflexively known result while preserving one spatial resource. -/
+macro "wasm_wp_return_value_rfl_exact " resource:ident : tactic =>
+  `(tactic|
+    (wasm_wp_return_value
+     isplitr
+     · ipureexact rfl
+     · iexact $resource))
+
 theorem wp_const
     {params localValues values : List Value}
     {value : UInt32} {code : Program} {arity : Nat}

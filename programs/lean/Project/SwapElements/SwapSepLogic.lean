@@ -252,10 +252,7 @@ theorem wp_swapElementsFunc2
   isplitl_exact Hresources
   · inext
     iintro Hresources
-    wasm_wp_return_value
-    isplitr
-    · ipureexact rfl
-    · iexact Hresources
+    wasm_wp_return_value_rfl_exact Hresources
 
 /-- Top-level one-cell specialization for equal exchange pointers. -/
 theorem wp_swapElementsFunc2Alias
@@ -280,10 +277,7 @@ theorem wp_swapElementsFunc2Alias
   isplitl_exact Hresources
   · inext
     iintro Hresources
-    wasm_wp_return_value
-    isplitr
-    · ipureexact rfl
-    · iexact Hresources
+    wasm_wp_return_value_rfl_exact Hresources
 
 /-- Small-step Iris contract for the exact generated body of
 `Project.SwapElements.func3`. It spills `len` and `ptr` into two adjacent
@@ -943,10 +937,7 @@ theorem func1_happy_smallStep_wp
     ptr len i j oldScratch oldA oldB hi hj hroomI hroomJ []
   iintro ⟨_Htrue, Hruntime, Hresources⟩
   iclear Hruntime
-  wasm_wp_return_value
-  isplitr
-  · ipureexact rfl
-  · iexact Hresources
+  wasm_wp_return_value_rfl_exact Hresources
   · isplitr
     · itrivial
     · iexact Hresources
@@ -1070,10 +1061,7 @@ theorem func0_alias_smallStep_wp
     ptr len i oldScratch oldValue hi hroom []
   · iintro ⟨_Htrue, Hruntime, Hresources⟩
     iclear Hruntime
-    wasm_wp_return_value
-    isplitr
-    · ipureexact rfl
-    · iexact Hresources
+    wasm_wp_return_value_rfl_exact Hresources
   · isplitr
     · itrivial
     · iexact Hresources
@@ -1105,10 +1093,7 @@ theorem func0_happy_smallStep_wp
     ptr len i j oldScratch oldA oldB hi hj hroomI hroomJ []
   iintro ⟨_Htrue, Hruntime, Hresources⟩
   iclear Hruntime
-  wasm_wp_return_value
-  isplitr
-  · ipureexact rfl
-  · iexact Hresources
+  wasm_wp_return_value_rfl_exact Hresources
   · isplitr
     · itrivial
     · iexact Hresources
