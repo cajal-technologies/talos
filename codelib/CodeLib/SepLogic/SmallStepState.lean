@@ -35,6 +35,24 @@ theorem runtimeModuleSingletonAgrees
     rw [getElem!_pos runtime.instances runtime.entry.id hwf]
   · simp [PartialMap.singleton, get?_insert_ne (Ne.symm h), get?_empty] at hm
 
+/-- A singleton logical host map agrees with the entry runtime instance. -/
+theorem hostEnvSingletonAgrees
+    (runtime : RuntimeEnv α)
+    (hwf : runtime.entry.id < runtime.instances.size) :
+    ∀ (id : Nat) (env : HostEnv α),
+      get? (PartialMap.singleton runtime.entry.id runtime.currentHost :
+        WasmHostEnvMap (HostEnv α)) id = some env →
+      runtime.instances[id]?.map (·.host) = some env := by
+  intro id env hm
+  by_cases h : id = runtime.entry.id
+  · subst h
+    simp [PartialMap.singleton, get?_insert_eq rfl] at hm
+    subst hm
+    rw [Array.getElem?_eq_getElem hwf, Option.map_some]
+    simp [RuntimeEnv.currentHost, RuntimeEnv.currentInstance]
+    rw [getElem!_pos runtime.instances runtime.entry.id hwf]
+  · simp [PartialMap.singleton, get?_insert_ne (Ne.symm h), get?_empty] at hm
+
 /-- Authoritative ownership of the current module instance id.
 Wraps `currentInstanceAuthN` to take `ModuleInstanceId` directly. -/
 def currentInstanceAuth {α : Type} [gs : WasmInstanceGS α]
