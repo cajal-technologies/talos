@@ -201,8 +201,7 @@ theorem importChain_partiallyMeets (v : UInt32) (initial : List UInt32) :
             wasm_wp_next wp_returnFromFunction
             simp only [List.append_nil]
             iapply wp_value'
-            ipureintro
-            rfl
+            ipureexact rfl
           · inext; iintro %_ %_ %_ %h _; simp [logHost] at h
           · inext; iintro %_ %_ %_ %_ %h _; simp [logHost] at h
         · inext; iintro %_ %_ %_ %h _; simp [logHost] at h

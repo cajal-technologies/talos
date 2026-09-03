@@ -47,8 +47,7 @@ theorem func5_smallStep (x : UInt32) :
   simp only [func5Config]
   wasm_wp_next func5_body_smallStep_wp x []
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 def func6Config (x : UInt32) : Config Unit :=
   { expr := .running
@@ -81,8 +80,7 @@ theorem func6_smallStep (x : UInt32) :
   simp only [func6Config]
   wasm_wp_next func6_body_smallStep_wp x []
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 def func9Config (x : UInt32) : Config Unit :=
   { expr := .running
@@ -122,8 +120,7 @@ theorem func9_smallStep_wp
   wasm_wp_return_from_call Hruntime
   wasm_wp_return_value
   iclear Hruntime
-  ipureintro
-  rfl
+  ipureexact rfl
 
 theorem func9_smallStep (x : UInt32) :
     PartiallyMeets (func9Config x)
@@ -184,8 +181,7 @@ theorem func4_smallStep_wp
   wasm_wp_return_from_call Hruntime
   wasm_wp_return_value
   iclear Hruntime
-  ipureintro
-  rfl
+  ipureexact rfl
 
 theorem func4_smallStep (x y : UInt32) :
     PartiallyMeets (func4Config x y)
@@ -353,8 +349,7 @@ theorem func1_smallStep (x : UInt32) :
     · iintro ⟨_Htrue, Hglobal, Hword⟩
       wasm_wp_return_value
       iclear Hglobal Hword
-      ipureintro
-      rfl
+      ipureexact rfl
     · iframe
 
 def func0Config (x : UInt32) : Config Unit :=
@@ -389,8 +384,7 @@ theorem func0_smallStep_wp
     wasm_wp_return_from_call Hruntime
     wasm_wp_return_value
     iclear Hruntime Hglobal Hword
-    ipureintro
-    rfl
+    ipureexact rfl
   · iframe
 
 theorem func0_smallStep (x : UInt32) :
@@ -542,8 +536,7 @@ theorem func3_smallStep (x : UInt64) :
     · iintro ⟨_Htrue, Hglobal, Hword⟩
       wasm_wp_return_value
       iclear Hglobal Hword
-      ipureintro
-      rfl
+      ipureexact rfl
     · iframe
 
 def func2Result (x : UInt32) : UInt32 :=
@@ -583,8 +576,7 @@ theorem func2_smallStep_wp
     wasm_wp_next wp_scalarFloat1 rfl rfl
     wasm_wp_return_value
     iclear Hruntime Hglobal Hword
-    ipureintro
-    rfl
+    ipureexact rfl
   · iframe
 
 theorem func2_smallStep (x : UInt32) :
@@ -687,8 +679,7 @@ theorem func8_smallStep (x y : UInt32) :
     · iintro ⟨_Htrue, Hglobal, Hword⟩
       wasm_wp_return_value
       iclear Hglobal Hword
-      ipureintro
-      rfl
+      ipureexact rfl
     · iframe
 
 def func7Config (x y : UInt32) : Config Unit :=
@@ -721,8 +712,7 @@ theorem func7_smallStep_wp
     wasm_wp_return_from_call Hruntime
     wasm_wp_return_value
     iclear Hruntime Hglobal Hword
-    ipureintro
-    rfl
+    ipureexact rfl
   · iframe
 
 theorem func7_smallStep (x y : UInt32) :

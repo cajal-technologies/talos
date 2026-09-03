@@ -48,8 +48,7 @@ theorem len_plus_one_correct : LenPlusOneSpec := by
   wasm_wp_pures [wp_localGet wp_const wp_add]
   rw [UInt32.add_comm 1 len]
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 @[spec_of "rust-internal" "rust_array_tests::len_plus_arg"]
 def LenPlusArgSpec : Prop := ∀ (ptr len n : UInt32),
@@ -66,8 +65,7 @@ theorem len_plus_arg_correct : LenPlusArgSpec := by
   wasm_wp_pures [wp_localGet wp_localGet wp_add]
   rw [UInt32.add_comm n len]
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 @[spec_of "rust-internal" "rust_array_tests::empty_plus_three"]
 def EmptyPlusThreeSpec : Prop := ∀ (ptr len : UInt32),
@@ -103,8 +101,7 @@ theorem empty_plus_three_correct : EmptyPlusThreeSpec := by
     wasm_wp_pures [wp_const wp_add]
     rw [UInt32.add_comm 3 (isEmptyValue len)]
     wasm_wp_return_value
-    ipureintro
-    rfl
+    ipureexact rfl
 
 @[spec_of "rust-internal" "rust_array_tests::empty_xor_flag"]
 def EmptyXorFlagSpec : Prop := ∀ (ptr len flag : UInt32),
@@ -140,8 +137,7 @@ theorem empty_xor_flag_correct : EmptyXorFlagSpec := by
     wasm_wp_pures [wp_localGet]
     wasm_wp_next SmallStep.wp_xor
     wasm_wp_return_value
-    ipureintro
-    rfl
+    ipureexact rfl
 
 /-! ## Exported ABI wrappers (fat pointer in memory)
 
@@ -194,8 +190,7 @@ theorem len_plus_one_export_correct : LenPlusOneExportSpec := by
     wasm_wp_next SmallStep.wp_returnFromCallExplicit $$ Hruntime
     simp only [List.take, List.singleton_append]
     wasm_wp_return_value
-    ipureintro
-    rfl
+    ipureexact rfl
 
 @[spec_of "rust-exported" "rust_array_tests::len_plus_arg"]
 def LenPlusArgExportSpec : Prop :=
@@ -238,8 +233,7 @@ theorem len_plus_arg_export_correct : LenPlusArgExportSpec := by
     wasm_wp_next SmallStep.wp_returnFromCallExplicit $$ Hruntime
     simp only [List.take, List.singleton_append]
     wasm_wp_return_value
-    ipureintro
-    rfl
+    ipureexact rfl
 
 @[spec_of "rust-exported" "rust_array_tests::empty_plus_three"]
 def EmptyPlusThreeExportSpec : Prop :=
@@ -299,8 +293,7 @@ theorem empty_plus_three_export_correct : EmptyPlusThreeExportSpec := by
     wasm_wp_next SmallStep.wp_returnFromCallExplicit $$ Hruntime
     simp only [List.take, List.singleton_append]
     wasm_wp_return_value
-    ipureintro
-    rfl
+    ipureexact rfl
 
 @[spec_of "rust-exported" "rust_array_tests::empty_xor_flag"]
 def EmptyXorFlagExportSpec : Prop :=
@@ -361,7 +354,6 @@ theorem empty_xor_flag_export_correct : EmptyXorFlagExportSpec := by
     wasm_wp_next SmallStep.wp_returnFromCallExplicit $$ Hruntime
     simp only [List.take, List.singleton_append]
     wasm_wp_return_value
-    ipureintro
-    rfl
+    ipureexact rfl
 
 end Project.RustArrayTests.Spec

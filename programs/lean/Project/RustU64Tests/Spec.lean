@@ -73,8 +73,7 @@ theorem add_chain_correct : AddChainSpec := by
   simp only [ternaryConfig, func0]
   wasm_wp_pures [wp_localGet wp_localGet wp_addI64 wp_localGet wp_addI64]
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 @[spec_of "rust-exported" "rust_u64_tests::add_then_mul"]
 def AddThenMulSpec : Prop := ∀ (a b c : UInt64),
@@ -89,8 +88,7 @@ theorem add_then_mul_correct : AddThenMulSpec := by
   simp only [ternaryConfig, func1]
   wasm_wp_pures [wp_localGet wp_localGet wp_addI64 wp_localGet wp_mulI64]
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 /-! ## sub -/
 @[spec_of "rust-exported" "rust_u64_tests::sub_chain"]
@@ -106,8 +104,7 @@ theorem sub_chain_correct : SubChainSpec := by
   simp only [ternaryConfig, func18]
   wasm_wp_pures [wp_localGet wp_localGet wp_subI64 wp_localGet wp_subI64]
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 @[spec_of "rust-exported" "rust_u64_tests::sub_then_add"]
 def SubThenAddSpec : Prop := ∀ (a b c : UInt64),
@@ -122,8 +119,7 @@ theorem sub_then_add_correct : SubThenAddSpec := by
   simp only [ternaryConfig, func19]
   wasm_wp_pures [wp_localGet wp_localGet wp_subI64 wp_localGet wp_addI64]
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 /-! ## mul -/
 @[spec_of "rust-exported" "rust_u64_tests::mul_chain"]
@@ -139,8 +135,7 @@ theorem mul_chain_correct : MulChainSpec := by
   simp only [ternaryConfig, func6]
   wasm_wp_pures [wp_localGet wp_localGet wp_mulI64 wp_localGet wp_mulI64]
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 @[spec_of "rust-exported" "rust_u64_tests::mul_then_add"]
 def MulThenAddSpec : Prop := ∀ (a b c : UInt64),
@@ -155,8 +150,7 @@ theorem mul_then_add_correct : MulThenAddSpec := by
   simp only [ternaryConfig, func7]
   wasm_wp_pures [wp_localGet wp_localGet wp_mulI64 wp_localGet wp_addI64]
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 /-! ## bitand -/
 @[spec_of "rust-exported" "rust_u64_tests::and_chain"]
@@ -172,8 +166,7 @@ theorem and_chain_correct : AndChainSpec := by
   simp only [ternaryConfig, func2]
   wasm_wp_pures [wp_localGet wp_localGet wp_andI64 wp_localGet wp_andI64]
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 @[spec_of "rust-exported" "rust_u64_tests::and_then_or"]
 def AndThenOrSpec : Prop := ∀ (a b c : UInt64),
@@ -188,8 +181,7 @@ theorem and_then_or_correct : AndThenOrSpec := by
   simp only [ternaryConfig, func3]
   wasm_wp_pures [wp_localGet wp_localGet wp_andI64 wp_localGet wp_orI64]
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 /-! ## bitor -/
 @[spec_of "rust-exported" "rust_u64_tests::or_chain"]
@@ -205,8 +197,7 @@ theorem or_chain_correct : OrChainSpec := by
   simp only [ternaryConfig, func10]
   wasm_wp_pures [wp_localGet wp_localGet wp_orI64 wp_localGet wp_orI64]
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 @[spec_of "rust-exported" "rust_u64_tests::or_then_xor"]
 def OrThenXorSpec : Prop := ∀ (a b c : UInt64),
@@ -222,8 +213,7 @@ theorem or_then_xor_correct : OrThenXorSpec := by
   wasm_wp_pures [wp_localGet wp_localGet wp_orI64 wp_localGet]
   wasm_wp_next SmallStep.wp_xorI64
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 /-! ## bitxor -/
 @[spec_of "rust-exported" "rust_u64_tests::xor_chain"]
@@ -242,8 +232,7 @@ theorem xor_chain_correct : XorChainSpec := by
   wasm_wp_pures [wp_localGet]
   wasm_wp_next SmallStep.wp_xorI64
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 @[spec_of "rust-exported" "rust_u64_tests::xor_then_and"]
 def XorThenAndSpec : Prop := ∀ (a b c : UInt64),
@@ -260,8 +249,7 @@ theorem xor_then_and_correct : XorThenAndSpec := by
   wasm_wp_next SmallStep.wp_xorI64
   wasm_wp_pures [wp_localGet wp_andI64]
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 /-! ## not -/
 @[spec_of "rust-exported" "rust_u64_tests::not_twice"]
@@ -283,8 +271,7 @@ theorem not_twice_correct : NotTwiceSpec := by
   rw [show (~~~a) ^^^ (18446744073709551615 : UInt64) = ~~~(~~~a) by
     bv_decide]
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 @[spec_of "rust-exported" "rust_u64_tests::not_then_xor"]
 def NotThenXorSpec : Prop := ∀ (a b : UInt64),
@@ -303,8 +290,7 @@ theorem not_then_xor_correct : NotThenXorSpec := by
   wasm_wp_pures [wp_localGet]
   wasm_wp_next SmallStep.wp_xorI64
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 /-! ## div (divisor nonzero) -/
 @[spec_of "rust-exported" "rust_u64_tests::div_then_add"]
@@ -326,8 +312,7 @@ theorem div_then_add_correct : DivThenAddSpec := by
   wasm_wp_next SmallStep.wp_divUI64 hb
   wasm_wp_pures [wp_localGet wp_addI64]
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 @[spec_of "rust-exported" "rust_u64_tests::div_then_mul"]
 def DivThenMulSpec : Prop := ∀ (a b c : UInt64), b ≠ 0 →
@@ -348,8 +333,7 @@ theorem div_then_mul_correct : DivThenMulSpec := by
   wasm_wp_next SmallStep.wp_divUI64 hb
   wasm_wp_pures [wp_localGet wp_mulI64]
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 /-! ## rem (divisor nonzero) -/
 @[spec_of "rust-exported" "rust_u64_tests::rem_then_add"]
@@ -371,8 +355,7 @@ theorem rem_then_add_correct : RemThenAddSpec := by
   wasm_wp_next SmallStep.wp_remUI64 hb
   wasm_wp_pures [wp_localGet wp_addI64]
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 @[spec_of "rust-exported" "rust_u64_tests::rem_then_mul"]
 def RemThenMulSpec : Prop := ∀ (a b c : UInt64), b ≠ 0 →
@@ -393,8 +376,7 @@ theorem rem_then_mul_correct : RemThenMulSpec := by
   wasm_wp_next SmallStep.wp_remUI64 hb
   wasm_wp_pures [wp_localGet wp_mulI64]
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 /-! ## shl / shr — mask, extend, then shift -/
 @[spec_of "rust-exported" "rust_u64_tests::shl_then_add"]
@@ -415,8 +397,7 @@ theorem shl_then_add_correct : ShlThenAddSpec := by
   rw [shiftAmount_norm]
   wasm_wp_pures [wp_localGet wp_addI64]
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 @[spec_of "rust-exported" "rust_u64_tests::shl_twice"]
 def ShlTwiceSpec : Prop := ∀ (a : UInt64) (n m : UInt32),
@@ -441,8 +422,7 @@ theorem shl_twice_correct : ShlTwiceSpec := by
   wasm_wp_pures [wp_shlI64]
   rw [shiftAmount_norm]
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 @[spec_of "rust-exported" "rust_u64_tests::shr_then_sub"]
 def ShrThenSubSpec : Prop := ∀ (a : UInt64) (n : UInt32) (b : UInt64),
@@ -462,8 +442,7 @@ theorem shr_then_sub_correct : ShrThenSubSpec := by
   rw [shiftAmount_norm]
   wasm_wp_pures [wp_localGet wp_subI64]
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 @[spec_of "rust-exported" "rust_u64_tests::shr_twice"]
 def ShrTwiceSpec : Prop := ∀ (a : UInt64) (n m : UInt32),
@@ -488,7 +467,6 @@ theorem shr_twice_correct : ShrTwiceSpec := by
   wasm_wp_pures [wp_shrUI64]
   rw [shiftAmount_norm]
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 end Project.RustU64Tests.Spec

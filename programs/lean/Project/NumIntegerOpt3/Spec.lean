@@ -52,8 +52,7 @@ theorem finishGcd_smallStep_wp
   wasm_wp_pures [wp_localGet]
   rw [hrecombine]
   wasm_wp_finish_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 /-- The two early exits of generated `gcd_u64`, proved through iris-lean's WP
 over the authoritative small-step relation.  This is deliberately a complete

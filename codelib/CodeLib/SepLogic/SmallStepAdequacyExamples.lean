@@ -97,8 +97,7 @@ theorem globalGet_adequate :
     wasm_wp_next wp_globalGet $$ Hglobal
     iintro Hglobal
     wasm_wp_finish_value
-    ipureintro
-    rfl
+    ipureexact rfl
 
 def noopCallModule : Module :=
   { funcs := [{ body := [.ret] }] }
@@ -131,8 +130,7 @@ theorem noopCall_adequate :
       List.take_nil, List.reverse_nil, List.drop_nil, List.length_nil]
     wasm_wp_next wp_returnFromCallExplicit $$ Hruntime
     wasm_wp_return_value
-    ipureintro
-    rfl
+    ipureexact rfl
 
 private def word16Heap (word : UInt32) :
     WasmHeapMap (Option UInt8) :=
@@ -1493,8 +1491,7 @@ theorem tableSetGet_store_partiallyMeets :
     isplitl_exact Htable
     wasm_wp_next wp_refIsNull rfl
     wasm_wp_finish_value
-    ipureintro
-    rfl
+    ipureexact rfl
 
 def tableGrowFillAdequacyModule : Module :=
   { funcs :=
@@ -1609,8 +1606,7 @@ theorem tableGrowFill_store_partiallyMeets :
     isplitl_exact Htable
     wasm_wp_next wp_refIsNull rfl
     wasm_wp_finish_value
-    ipureintro
-    rfl
+    ipureexact rfl
 
 def tableGrow64FailureAdequacyModule : Module :=
   { funcs :=
@@ -1708,8 +1704,7 @@ theorem tableGrow64Failure_store_partiallyMeets :
     iapply wp_frame_l
     isplitl_exact Htable
     wasm_wp_finish_value
-    ipureintro
-    rfl
+    ipureexact rfl
 
 private def tableCopyOverlapMap : WasmTableMap TableInst :=
   insert ∅ (⟨0, 0⟩ : TableKey)
@@ -1835,8 +1830,7 @@ theorem tableCopyOverlap_store_partiallyMeets :
     iapply wp_frame_l
     isplitl_exact Htable
     wasm_wp_finish_value
-    ipureintro
-    rfl
+    ipureexact rfl
 
 private def tableCopyDistinctMap : WasmTableMap TableInst :=
   insert (insert ∅ (⟨0, 0⟩ : TableKey) [.funcref none, .funcref none, .funcref none])
@@ -2036,8 +2030,7 @@ theorem tableCopyDistinct_store_partiallyMeets :
       · iexact Hdestination
       · iexact Hsource
     wasm_wp_finish_value
-    ipureintro
-    rfl
+    ipureexact rfl
 
 private def tableInitDropTableMap : WasmTableMap TableInst :=
   insert ∅ (⟨0, 0⟩ : TableKey)
@@ -2220,8 +2213,7 @@ theorem tableInitDrop_store_partiallyMeets :
       · iexact Htable
       · iexact Helement
     wasm_wp_finish_value
-    ipureintro
-    rfl
+    ipureexact rfl
 
 /-! ## Parametric total-correctness examples
 
@@ -2415,8 +2407,7 @@ theorem fillThenRead_terminatesWith (val : UInt32) :
                           (val.toUInt8.toUInt32 <<< 16) ||| (val.toUInt8.toUInt32 <<< 24))])
         (arity := 1) (remainder := [])
     iapply twp.value rfl
-    ipureintro
-    rfl
+    ipureexact rfl
 
 def exceptionLifecycleModule : Module :=
   { tags := [{ params := [.i32] }]
@@ -2467,8 +2458,7 @@ theorem exceptionLifecycle_terminatesWith (arg : UInt32) :
     (hclause := Or.inl ⟨0, 0, rfl⟩)
     (htarget := fun _ => rfl) (hthrow := rfl) (hmatch := by decide)
   wasm_twp_terminal_value twp_finish
-  ipureintro
-  rfl
+  ipureexact rfl
 
 /-! ### Decoder agreement
 

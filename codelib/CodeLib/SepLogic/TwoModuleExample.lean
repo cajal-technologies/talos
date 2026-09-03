@@ -72,7 +72,6 @@ theorem twoModule_partiallyMeets :
         iintro _HinstanceCaller
         simp only [List.take_zero, List.nil_append]
         wasm_wp_finish_value
-        ipureintro
-        rfl
+        ipureexact rfl
 
 end Wasm.SmallStep

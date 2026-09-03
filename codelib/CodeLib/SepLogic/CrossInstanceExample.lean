@@ -80,8 +80,7 @@ theorem crossInstance_partiallyMeets (a b : UInt32) :
       · inext
         iintro _HinstanceCaller
         wasm_wp_finish_value
-        ipureintro
-        rfl
+        ipureexact rfl
 
 theorem crossInstance_terminates :
     TerminatesWith (crossInstanceConfig 3 5) (fun _ _ => True) :=

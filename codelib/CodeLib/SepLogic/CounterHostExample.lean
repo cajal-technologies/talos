@@ -209,8 +209,7 @@ theorem counter_partiallyMeets (initial : Nat) (_hbound : initial + 3 < 2 ^ 32) 
             wasm_wp_next wp_returnFromFunction
             simp only [List.append_nil]
             iapply wp_value'
-            ipureintro
-            rfl
+            ipureexact rfl
           · inext; iintro %_ %_ %_ %h _; simp [readCounterHost] at h
           · inext; iintro %_ %_ %_ %_ %h _; simp [readCounterHost] at h
         · inext; iintro %_ %_ %_ %h _; simp [incrementHost] at h

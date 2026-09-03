@@ -61,8 +61,7 @@ theorem len_correct : LenSpec := by
   simp only [leafConfig, func0]
   wasm_wp_pures [wp_localGet]
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 @[spec_of "rust-internal" "rust_array::is_empty"]
 def IsEmptySpec : Prop := ∀ (ptr len : UInt32),
@@ -82,8 +81,7 @@ theorem is_empty_correct : IsEmptySpec := by
     unfold isEmptyValue
     by_cases h : len = 0 <;> simp [h]]
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 /-! ## Exported ABI wrappers (fat pointer in memory) -/
 
@@ -136,8 +134,7 @@ theorem len_export_correct : LenExportSpec := by
     simp only [List.take, List.singleton_append]
     wasm_wp_return_value
     iclear Hdata Hlen
-    ipureintro
-    rfl
+    ipureexact rfl
 
 @[spec_of "rust-exported" "rust_array::is_empty"]
 def IsEmptyExportSpec : Prop :=
@@ -209,7 +206,6 @@ theorem is_empty_export_correct : IsEmptyExportSpec := by
       by_cases h : len = 0 <;> simp [h]]
     wasm_wp_return_value
     iclear Hdata Hlen
-    ipureintro
-    rfl
+    ipureexact rfl
 
 end Project.RustArray.Spec

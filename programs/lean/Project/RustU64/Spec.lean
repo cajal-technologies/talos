@@ -67,8 +67,7 @@ theorem add_correct : AddSpec := by
   simp only [pureBinaryConfig, func2]
   wasm_wp_pures [wp_localGet wp_localGet wp_addI64]
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 @[spec_of "rust-exported" "rust_u64::sub"]
 def SubSpec : Prop :=
@@ -83,8 +82,7 @@ theorem sub_correct : SubSpec := by
   simp only [pureBinaryConfig, func8]
   wasm_wp_pures [wp_localGet wp_localGet wp_subI64]
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 @[spec_of "rust-exported" "rust_u64::mul"]
 def MulSpec : Prop :=
@@ -99,8 +97,7 @@ theorem mul_correct : MulSpec := by
   simp only [pureBinaryConfig, func9]
   wasm_wp_pures [wp_localGet wp_localGet wp_mulI64]
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 @[spec_of "rust-exported" "rust_u64::div"]
 def DivSpec : Prop :=
@@ -120,8 +117,7 @@ theorem div_correct : DivSpec := by
   wasm_wp_pures [wp_brIfZero wp_localGet wp_localGet]
   wasm_wp_next SmallStep.wp_divUI64 hb
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 @[spec_of "rust-exported" "rust_u64::rem"]
 def RemSpec : Prop :=
@@ -141,8 +137,7 @@ theorem rem_correct : RemSpec := by
   wasm_wp_pures [wp_brIfZero wp_localGet wp_localGet]
   wasm_wp_next SmallStep.wp_remUI64 hb
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 @[spec_of "rust-exported" "rust_u64::bitand"]
 def BitAndSpec : Prop :=
@@ -157,8 +152,7 @@ theorem bitand_correct : BitAndSpec := by
   simp only [pureBinaryConfig, func3]
   wasm_wp_pures [wp_localGet wp_localGet wp_andI64]
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 @[spec_of "rust-exported" "rust_u64::bitor"]
 def BitOrSpec : Prop :=
@@ -173,8 +167,7 @@ theorem bitor_correct : BitOrSpec := by
   simp only [pureBinaryConfig, func4]
   wasm_wp_pures [wp_localGet wp_localGet wp_orI64]
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 @[spec_of "rust-exported" "rust_u64::bitxor"]
 def BitXorSpec : Prop :=
@@ -190,8 +183,7 @@ theorem bitxor_correct : BitXorSpec := by
   wasm_wp_pures [wp_localGet wp_localGet]
   wasm_wp_next SmallStep.wp_xorI64
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 @[spec_of "rust-exported" "rust_u64::not"]
 def NotSpec : Prop :=
@@ -209,8 +201,7 @@ theorem not_correct : NotSpec := by
   rw [show a ^^^ (18446744073709551615 : UInt64) = ~~~a by
     bv_decide]
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 @[spec_of "rust-exported" "rust_u64::shl"]
 def ShlSpec : Prop :=
@@ -229,8 +220,7 @@ theorem shl_correct : ShlSpec := by
   wasm_wp_pures [wp_shlI64]
   rw [shiftAmount_norm]
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 @[spec_of "rust-exported" "rust_u64::shr"]
 def ShrSpec : Prop :=
@@ -249,7 +239,6 @@ theorem shr_correct : ShrSpec := by
   wasm_wp_pures [wp_shrUI64]
   rw [shiftAmount_norm]
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 end Project.RustU64.Spec

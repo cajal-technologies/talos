@@ -146,8 +146,7 @@ theorem func1_smallStep (x : UInt32) :
   simp only [func1Config]
   wasm_wp_next func1_body_smallStep_wp x []
   wasm_wp_return_value
-  ipureintro
-  rfl
+  ipureexact rfl
 
 /-- Small-step entry state for generated `naive_trunc`. -/
 def func0Config (x : UInt32) : Config Unit :=
@@ -287,8 +286,7 @@ theorem func0_tail_smallStep_wp
     iintro ⟨_Htrue, Hword⟩
     wasm_wp_return_value
     iclear Hword
-    ipureintro
-    rfl
+    ipureexact rfl
 
 /-- Specialized authoritative store rule for `func0`'s concrete
 `1048560 + 12 = 1048572` scratch address. -/
