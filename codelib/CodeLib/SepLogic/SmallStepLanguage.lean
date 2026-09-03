@@ -61,6 +61,22 @@ macro "wasm_wp_resolve_step " h:term " using " expected:term : tactic =>
   `(tactic| (obtain ⟨rfl, kind, rfl, wasmStep⟩ := $h) <;>
     wasm_wp_resolve_target ($expected) against wasmStep)
 
+/-- Offer one Wasm primitive step to Iris and continue with its successor. -/
+syntax "wasm_wp_offer_step " term " =>" ppLine colGt tacticSeq : tactic
+
+set_option hygiene false in
+macro_rules
+  | `(tactic| wasm_wp_offer_step $witness:term => $continuation:tacticSeq) =>
+   `(tactic|
+    (iapply fupd_mask_intro Std.LawfulSet.empty_subset
+     iintro Hclose
+     isplitr
+     next =>
+       ipureintro
+       cases s <;> simp only [Stuckness.MaybeReducible]
+       exact $witness
+     next => $continuation))
+
 set_option hygiene false in
 /-- Reassemble the Iris state, continuation, and affine tail after a Wasm step. -/
 macro "wasm_wp_frame" : tactic =>

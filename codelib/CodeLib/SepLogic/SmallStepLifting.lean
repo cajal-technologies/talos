@@ -32,17 +32,12 @@ theorem wp_pureStep
   iintro Hwp
   iapply wp_lift_step rfl
   iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[], .running next, store, [],
-      ⟨rfl, _, rfl, hstep store⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hprim Hcredit
-  wasm_wp_resolve_step Hprim using hstep store
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  wasm_wp_frame
+  wasm_wp_offer_step ⟨[], .running next, store, [],
+      ⟨rfl, _, rfl, hstep store⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hprim Hcredit
+    wasm_wp_resolve_step Hprim using hstep store
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    wasm_wp_frame
 
 /-- Generic lifting rule for a store-preserving deterministic Wasm step that
 traps. Every trapping operand, reference, and arithmetic rule below is a thin
@@ -184,18 +179,13 @@ theorem wp_finish
   iintro Hwp
   iapply wp_lift_step rfl
   iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .done (values.take arity ++ remainder), store, [],
-      ⟨rfl, _, rfl, Step.finish⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  wasm_wp_resolve_step Hstep using Step.finish
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  wasm_wp_frame
+      ⟨rfl, _, rfl, Step.finish⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    wasm_wp_resolve_step Hstep using Step.finish
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    wasm_wp_frame
 
 /-- Explicit return from a top-level invocation. The instruction discards the
 remaining code and control frames and exposes the declared function results as
@@ -211,19 +201,14 @@ theorem wp_returnFromFunction
   iintro Hwp
   iapply wp_lift_step rfl
   iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .done (locals.values.take arity ++ remainder), store, [],
-      ⟨rfl, _, rfl, Step.returnFromFunction⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  wasm_wp_resolve_step Hstep using Step.returnFromFunction
-  simp only [List.length_nil, Nat.add_zero,
-    Iris.Algebra.BigOpL.bigOpL_nil]
-  wasm_wp_frame
+      ⟨rfl, _, rfl, Step.returnFromFunction⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    wasm_wp_resolve_step Hstep using Step.returnFromFunction
+    simp only [List.length_nil, Nat.add_zero,
+      Iris.Algebra.BigOpL.bigOpL_nil]
+    wasm_wp_frame
 
 theorem wp_const
     {params localValues values : List Value}
@@ -956,24 +941,19 @@ theorem wp_throwRef
         (DFrac.own 1) (tag, arguments) $$ [$Hσ $Hexception] with %hexn
     ipureintro
     exact hexn
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[], _, store, [], ⟨rfl, _, rfl, Step.throwRef hexn⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  wasm_wp_resolve_target (Step.throwRef hexn) against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hexception]
-  · iapply Hwp
-    iexact Hexception
-  · itrivial
+  wasm_wp_offer_step ⟨[], _, store, [], ⟨rfl, _, rfl, Step.throwRef hexn⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    wasm_wp_resolve_target (Step.throwRef hexn) against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod Hclose
+    imodintro
+    isplitl [Hσ]
+    · iexact Hσ
+    isplitl [Hexception]
+    · iapply Hwp
+      iexact Hexception
+    · itrivial
 
 /-- Pure step: an exception unwinds across a call boundary, resuming the
 caller with the throwing frame prepended to the caller's control stack.
@@ -1029,27 +1009,22 @@ theorem wp_throwI
     exact Hmodule
   have htag' : store.runtime.currentModule.tags[tagIndex]? = some tagType := by
     simpa only [Hmodule] using htag
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[], _, store, [], ⟨rfl, _, rfl, Step.throwI htag' hargs⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  obtain ⟨rfl, hconfig⟩ :=
-    step_deterministic (Step.throwI (α := α) htag' hargs) wasmStep
-  simp only at hconfig
-  cases hconfig
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hruntime]
-  · iapply Hwp
-    iexact Hruntime
-  · itrivial
+  wasm_wp_offer_step ⟨[], _, store, [], ⟨rfl, _, rfl, Step.throwI htag' hargs⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    obtain ⟨rfl, hconfig⟩ :=
+      step_deterministic (Step.throwI (α := α) htag' hargs) wasmStep
+    simp only at hconfig
+    cases hconfig
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod Hclose
+    imodintro
+    isplitl [Hσ]
+    · iexact Hσ
+    isplitl [Hruntime]
+    · iapply Hwp
+      iexact Hruntime
+    · itrivial
 
 /-- Unwind a throwing frame through a non-catching control frame. -/
 theorem wp_unwindExceptionFrame
@@ -1108,42 +1083,37 @@ theorem wp_catchException
   iintro Hwp
   iapply wp_lift_step rfl
   iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨{ locals with values := targetValues }, targetCode,
         arity, remainder, targetControl, calls⟩,
       (prepareCatch tag arguments clause store).2, [],
-      ⟨rfl, _, rfl, Step.catchException hthrow hmatch (htarget store)⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨locals, [], arity, remainder,
-          throwingFrame ::
-            { kind := .tryTable catches, paramArity := handlerParamArity,
-              resultArity := handlerResultArity, body := handlerBody,
-              continuation := handlerContinuation, belowStack } :: outer,
-          calls⟩, store⟩
-      (.administrative .catchException)
-      ⟨.running ⟨{ locals with values := targetValues }, targetCode,
-          arity, remainder, targetControl, calls⟩,
-        (prepareCatch tag arguments clause store).2⟩ :=
-    Step.catchException hthrow hmatch (htarget store)
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · have hstore_eq : (prepareCatch tag arguments clause store).2 = store := by
-      rcases hclause with ⟨t, l, rfl⟩ | ⟨l, rfl⟩ <;> rfl
-    rw [hstore_eq]
-    iexact Hσ
-  isplitl [Hwp]
-  · iexact Hwp
-  · itrivial
+      ⟨rfl, _, rfl, Step.catchException hthrow hmatch (htarget store)⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running ⟨locals, [], arity, remainder,
+            throwingFrame ::
+              { kind := .tryTable catches, paramArity := handlerParamArity,
+                resultArity := handlerResultArity, body := handlerBody,
+                continuation := handlerContinuation, belowStack } :: outer,
+            calls⟩, store⟩
+        (.administrative .catchException)
+        ⟨.running ⟨{ locals with values := targetValues }, targetCode,
+            arity, remainder, targetControl, calls⟩,
+          (prepareCatch tag arguments clause store).2⟩ :=
+      Step.catchException hthrow hmatch (htarget store)
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod Hclose
+    imodintro
+    isplitl [Hσ]
+    · have hstore_eq : (prepareCatch tag arguments clause store).2 = store := by
+        rcases hclause with ⟨t, l, rfl⟩ | ⟨l, rfl⟩ <;> rfl
+      rw [hstore_eq]
+      iexact Hσ
+    isplitl [Hwp]
+    · iexact Hwp
+    · itrivial
 
 /-- Enter a defined Wasm function. Immutable runtime-module ownership ties the
 function lookup used by the rule to the actual `MachineStore` seen by
@@ -1195,12 +1165,7 @@ theorem wp_call
     ipureintro
     exact Hentry
   have hsame : callerId = store.runtime.entry := Hentry.symm
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running
         ⟨fn.toLocals (values.take fn.numParams).reverse,
           fn.body, fn.results.length, [], [],
@@ -1210,25 +1175,25 @@ theorem wp_call
             callerRemainder := remainder
             control := controls
             returningInstance := store.runtime.entry } :: calls⟩,
-      store, [], ⟨rfl, _, rfl, Step.call himports' hfn'⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  obtain ⟨rfl, hconfig⟩ :=
-    step_deterministic (Step.call (α := α) himports' hfn') wasmStep
-  simp only at hconfig
-  cases hconfig
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp HruntimeElem HinstanceOwn]
-  · rw [← hsame]
-    iapply Hwp
-    isplitl [HruntimeElem]
-    · iexact HruntimeElem
-    · iexact HinstanceOwn
-  · itrivial
+      store, [], ⟨rfl, _, rfl, Step.call himports' hfn'⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    obtain ⟨rfl, hconfig⟩ :=
+      step_deterministic (Step.call (α := α) himports' hfn') wasmStep
+    simp only at hconfig
+    cases hconfig
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod Hclose
+    imodintro
+    isplitl [Hσ]
+    · iexact Hσ
+    isplitl [Hwp HruntimeElem HinstanceOwn]
+    · rw [← hsame]
+      iapply Hwp
+      isplitl [HruntimeElem]
+      · iexact HruntimeElem
+      · iexact HinstanceOwn
+    · itrivial
 
 /-- Execute an imported (host) function call.
 `runtimeModule` and `hhostFn` tie the proof-time host function to the
@@ -1479,30 +1444,25 @@ theorem wp_returnFromCallExplicit'
     ipureintro
     exact Hentry
   have hsame : returningInstance = store.runtime.entry := Hentry.symm
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[], _, store, [],
-      ⟨rfl, _, rfl, Step.returnFromCallExplicit hsame⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  obtain ⟨rfl, hconfig⟩ :=
-    step_deterministic (Step.returnFromCallExplicit (α := α) hsame) wasmStep
-  simp only at hconfig
-  cases hconfig
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil, resumeCaller]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp HruntimeElem HinstanceOwn]
-  · iapply Hwp
-    isplitl [HruntimeElem]
-    · iexact HruntimeElem
-    · iexact HinstanceOwn
-  · itrivial
+  wasm_wp_offer_step ⟨[], _, store, [],
+      ⟨rfl, _, rfl, Step.returnFromCallExplicit hsame⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    obtain ⟨rfl, hconfig⟩ :=
+      step_deterministic (Step.returnFromCallExplicit (α := α) hsame) wasmStep
+    simp only at hconfig
+    cases hconfig
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil, resumeCaller]
+    imod Hclose
+    imodintro
+    isplitl [Hσ]
+    · iexact Hσ
+    isplitl [Hwp HruntimeElem HinstanceOwn]
+    · iapply Hwp
+      isplitl [HruntimeElem]
+      · iexact HruntimeElem
+      · iexact HinstanceOwn
+    · itrivial
 
 /-- Resume a suspended caller after an explicit callee return. -/
 theorem wp_returnFromCallExplicit
@@ -1544,22 +1504,17 @@ theorem wp_returnFromCallExplicit
     ipureintro
     exact Hentry
   have hsame : returningInstance = store.runtime.entry := Hentry.symm
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[], _, store, [],
-      ⟨rfl, _, rfl, Step.returnFromCallExplicit hsame⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  obtain ⟨rfl, hconfig⟩ :=
-    step_deterministic (Step.returnFromCallExplicit (α := α) hsame) wasmStep
-  simp only at hconfig
-  cases hconfig
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil, resumeCaller]
-  iclear HruntimeElem HinstanceOwn
-  wasm_wp_frame
+  wasm_wp_offer_step ⟨[], _, store, [],
+      ⟨rfl, _, rfl, Step.returnFromCallExplicit hsame⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    obtain ⟨rfl, hconfig⟩ :=
+      step_deterministic (Step.returnFromCallExplicit (α := α) hsame) wasmStep
+    simp only at hconfig
+    cases hconfig
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil, resumeCaller]
+    iclear HruntimeElem HinstanceOwn
+    wasm_wp_frame
 
 /-- Primitive rule for `global.get`. Authoritative global ownership connects
 the logical value to the instantiated global read by the machine, and the
@@ -1593,25 +1548,20 @@ theorem wp_globalGet_of_canonical
         [$Hσ $Hglobal] with %Hget
     ipureintro
     exact Hget
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, value :: values⟩,
         code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl, Step.globalGet (by
-        simpa [globalAt?, hcanonical] using Hget)⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  obtain ⟨rfl, hconfig⟩ :=
-    step_deterministic (Step.globalGet (α := α) (by
-      simpa [globalAt?, hcanonical] using Hget)) wasmStep
-  simp only at hconfig
-  cases hconfig
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  wasm_wp_frame
+        simpa [globalAt?, hcanonical] using Hget)⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    obtain ⟨rfl, hconfig⟩ :=
+      step_deterministic (Step.globalGet (α := α) (by
+        simpa [globalAt?, hcanonical] using Hget)) wasmStep
+    simp only at hconfig
+    cases hconfig
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    wasm_wp_frame
 
 /-- Primitive rule for `global.set`. Exclusive authoritative ownership is
 updated together with the physical instantiated global in `StateInterp`. -/
@@ -1653,43 +1603,38 @@ theorem wp_globalSet_of_canonical
     { store with wasm :=
         { store.wasm with globals :=
             { globals := store.wasm.globals.globals.set index newValue } } }
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       updatedStore, [], ⟨rfl, _, rfl, by
         dsimp [updatedStore]
         rw [← setGlobal_eq_of_canonical store index newValue
           (hcanonical store)]
-        exact Step.globalSet hsome⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, newValue :: values⟩,
-          .globalSet index :: code, arity, remainder, controls, calls⟩,
-        store⟩
-      (.instruction (.globalSet index))
-      ⟨.running
-        ⟨⟨params, localValues, values⟩,
-          code, arity, remainder, controls, calls⟩,
-        updatedStore⟩ :=
-    by
-      dsimp [updatedStore]
-      rw [← setGlobal_eq_of_canonical store index newValue
-        (hcanonical store)]
-      exact Step.globalSet hsome
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero,
-    Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_global_set store ns
-      obs' nt
-      index oldValue newValue $$ [$Hσ $Hglobal] with ⟨Hσ, Hglobal⟩
-  wasm_wp_frame
+        exact Step.globalSet hsome⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running
+          ⟨⟨params, localValues, newValue :: values⟩,
+            .globalSet index :: code, arity, remainder, controls, calls⟩,
+          store⟩
+        (.instruction (.globalSet index))
+        ⟨.running
+          ⟨⟨params, localValues, values⟩,
+            code, arity, remainder, controls, calls⟩,
+          updatedStore⟩ :=
+      by
+        dsimp [updatedStore]
+        rw [← setGlobal_eq_of_canonical store index newValue
+          (hcanonical store)]
+        exact Step.globalSet hsome
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero,
+      Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_global_set store ns
+        obs' nt
+        index oldValue newValue $$ [$Hσ $Hglobal] with ⟨Hσ, Hglobal⟩
+    wasm_wp_frame
 
 /-- Common non-aliased rule for the distinguished global at index zero.
 Index zero is definitionally canonical even when other local indices alias
@@ -1762,26 +1707,21 @@ theorem wp_tableGet
       ⟨Hσ, Htable, %Hphysical⟩
     ipureintro
     exact Hphysical
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, value :: values⟩,
         code, arity, remainder, controls, calls⟩,
       store, [],
-      ⟨rfl, _, rfl, Step.tableGet hindex Hphysical helement⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  obtain ⟨rfl, hconfig⟩ :=
-    step_deterministic
-      (Step.tableGet (α := α) hindex Hphysical helement) wasmStep
-  simp only at hconfig
-  cases hconfig
-  simp only [List.length_nil, Nat.add_zero,
-    Iris.Algebra.BigOpL.bigOpL_nil]
-  wasm_wp_frame
+      ⟨rfl, _, rfl, Step.tableGet hindex Hphysical helement⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    obtain ⟨rfl, hconfig⟩ :=
+      step_deterministic
+        (Step.tableGet (α := α) hindex Hphysical helement) wasmStep
+    simp only at hconfig
+    cases hconfig
+    simp only [List.length_nil, Nat.add_zero,
+      Iris.Algebra.BigOpL.bigOpL_nil]
+    wasm_wp_frame
 
 /-- Primitive rule for `table.size`. Runtime-module ownership determines
 whether the result is represented as an `i32` or `i64`; table ownership
@@ -1824,36 +1764,31 @@ theorem wp_tableSize
     ipureintro
     exact Hmodule
   subst runtimeModule
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues,
           sizeValue (store.runtime.currentModule.tableIs64 tableIndex) table.length ::
             values⟩,
         code, arity, remainder, controls, calls⟩,
-      store, [], ⟨rfl, _, rfl, Step.tableSize Hphysical⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, values⟩,
-          .tableSize tableIndex :: code, arity, remainder, controls, calls⟩,
-        store⟩
-      (.instruction (.tableSize tableIndex))
-      ⟨.running
-        ⟨⟨params, localValues,
-            sizeValue (store.runtime.currentModule.tableIs64 tableIndex)
-              table.length :: values⟩,
-          code, arity, remainder, controls, calls⟩,
-        store⟩ :=
-    Step.tableSize Hphysical
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero,
-    Iris.Algebra.BigOpL.bigOpL_nil]
-  wasm_wp_frame
+      store, [], ⟨rfl, _, rfl, Step.tableSize Hphysical⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running
+          ⟨⟨params, localValues, values⟩,
+            .tableSize tableIndex :: code, arity, remainder, controls, calls⟩,
+          store⟩
+        (.instruction (.tableSize tableIndex))
+        ⟨.running
+          ⟨⟨params, localValues,
+              sizeValue (store.runtime.currentModule.tableIs64 tableIndex)
+                table.length :: values⟩,
+            code, arity, remainder, controls, calls⟩,
+          store⟩ :=
+      Step.tableSize Hphysical
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero,
+      Iris.Algebra.BigOpL.bigOpL_nil]
+    wasm_wp_frame
 
 /-- Primitive rule for an in-bounds `table.set`. The table keeps its stable
 identity while its complete owned contents and physical instance update
@@ -1895,36 +1830,31 @@ theorem wp_tableSet
     { store with wasm :=
         { store.wasm with tables :=
             (listSetAt store.wasm.tables tableIndex newTable) } }
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       updatedStore, [],
-      ⟨rfl, _, rfl, Step.tableSet hindex Hphysical hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, value :: index :: values⟩,
-          .tableSet tableIndex :: code, arity, remainder, controls, calls⟩,
-        store⟩
-      (.instruction (.tableSet tableIndex))
-      ⟨.running
-        ⟨⟨params, localValues, values⟩,
-          code, arity, remainder, controls, calls⟩,
-        updatedStore⟩ :=
-    Step.tableSet hindex Hphysical hbound
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero,
-    Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_table_set store ns
-      obs' nt
-      tableIndex table newTable $$ [$Hσ $Htable] with ⟨Hσ, Htable⟩
-  wasm_wp_frame
+      ⟨rfl, _, rfl, Step.tableSet hindex Hphysical hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running
+          ⟨⟨params, localValues, value :: index :: values⟩,
+            .tableSet tableIndex :: code, arity, remainder, controls, calls⟩,
+          store⟩
+        (.instruction (.tableSet tableIndex))
+        ⟨.running
+          ⟨⟨params, localValues, values⟩,
+            code, arity, remainder, controls, calls⟩,
+          updatedStore⟩ :=
+      Step.tableSet hindex Hphysical hbound
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero,
+      Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_table_set store ns
+        obs' nt
+        tableIndex table newTable $$ [$Hσ $Htable] with ⟨Hσ, Htable⟩
+    wasm_wp_frame
 
 /-- Successful 32-bit `table.grow`. Stable table identity is preserved while
 the physical table and its authoritative contents are extended together. -/
@@ -1976,37 +1906,32 @@ theorem wp_tableGrow32
     { store with wasm :=
         { store.wasm with tables :=
             (listSetAt store.wasm.tables tableIndex newTable) } }
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running
         ⟨⟨params, localValues, .i32 table.length.toUInt32 :: values⟩,
           code, arity, remainder, controls, calls⟩,
       updatedStore, [],
-      ⟨rfl, _, rfl, Step.tableGrow32 Hphysical hbound'⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, .i32 delta :: initial :: values⟩,
-          .tableGrow tableIndex :: code, arity, remainder, controls, calls⟩,
-        store⟩
-      (.instruction (.tableGrow tableIndex))
-      ⟨.running
-        ⟨⟨params, localValues, .i32 table.length.toUInt32 :: values⟩,
-          code, arity, remainder, controls, calls⟩,
-        updatedStore⟩ :=
-    Step.tableGrow32 Hphysical hbound'
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero,
-    Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_table_set store ns
-      obs' nt
-      tableIndex table newTable $$ [$Hσ $Htable] with ⟨Hσ, Htable⟩
-  wasm_wp_frame
+      ⟨rfl, _, rfl, Step.tableGrow32 Hphysical hbound'⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running
+          ⟨⟨params, localValues, .i32 delta :: initial :: values⟩,
+            .tableGrow tableIndex :: code, arity, remainder, controls, calls⟩,
+          store⟩
+        (.instruction (.tableGrow tableIndex))
+        ⟨.running
+          ⟨⟨params, localValues, .i32 table.length.toUInt32 :: values⟩,
+            code, arity, remainder, controls, calls⟩,
+          updatedStore⟩ :=
+      Step.tableGrow32 Hphysical hbound'
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero,
+      Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_table_set store ns
+        obs' nt
+        tableIndex table newTable $$ [$Hσ $Htable] with ⟨Hσ, Htable⟩
+    wasm_wp_frame
 
 /-- Successful 64-bit `table.grow`. This is the table64 counterpart of
 `wp_tableGrow32`; it updates the same stable authoritative table identity. -/
@@ -2058,37 +1983,32 @@ theorem wp_tableGrow64
     { store with wasm :=
         { store.wasm with tables :=
             (listSetAt store.wasm.tables tableIndex newTable) } }
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running
         ⟨⟨params, localValues, .i64 table.length.toUInt64 :: values⟩,
           code, arity, remainder, controls, calls⟩,
       updatedStore, [],
-      ⟨rfl, _, rfl, Step.tableGrow64 Hphysical hbound'⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, .i64 delta :: initial :: values⟩,
-          .tableGrow tableIndex :: code, arity, remainder, controls, calls⟩,
-        store⟩
-      (.instruction (.tableGrow tableIndex))
-      ⟨.running
-        ⟨⟨params, localValues, .i64 table.length.toUInt64 :: values⟩,
-          code, arity, remainder, controls, calls⟩,
-        updatedStore⟩ :=
-    Step.tableGrow64 Hphysical hbound'
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero,
-    Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_table_set store ns
-      obs' nt
-      tableIndex table newTable $$ [$Hσ $Htable] with ⟨Hσ, Htable⟩
-  wasm_wp_frame
+      ⟨rfl, _, rfl, Step.tableGrow64 Hphysical hbound'⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running
+          ⟨⟨params, localValues, .i64 delta :: initial :: values⟩,
+            .tableGrow tableIndex :: code, arity, remainder, controls, calls⟩,
+          store⟩
+        (.instruction (.tableGrow tableIndex))
+        ⟨.running
+          ⟨⟨params, localValues, .i64 table.length.toUInt64 :: values⟩,
+            code, arity, remainder, controls, calls⟩,
+          updatedStore⟩ :=
+      Step.tableGrow64 Hphysical hbound'
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero,
+      Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_table_set store ns
+        obs' nt
+        tableIndex table newTable $$ [$Hσ $Htable] with ⟨Hσ, Htable⟩
+    wasm_wp_frame
 
 /-- Failed 32-bit `table.grow`. Capacity failure is an ordinary successful
 instruction result (`-1`), not a trap, and leaves the authoritative table and
@@ -2135,36 +2055,31 @@ theorem wp_tableGrow32Failure
       ¬table.length + delta.toNat ≤
         store.runtime.currentModule.tableCap tableIndex := by
     simpa only [Hmodule] using hbound
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running
         ⟨⟨params, localValues,
             .i32 (0xFFFFFFFF : UInt32) :: values⟩,
           code, arity, remainder, controls, calls⟩,
       store, [],
-      ⟨rfl, _, rfl, Step.tableGrow32Failure Hphysical hbound'⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, .i32 delta :: initial :: values⟩,
-          .tableGrow tableIndex :: code, arity, remainder, controls, calls⟩,
-        store⟩
-      (.instruction (.tableGrow tableIndex))
-      ⟨.running
-        ⟨⟨params, localValues,
-            .i32 (0xFFFFFFFF : UInt32) :: values⟩,
-          code, arity, remainder, controls, calls⟩,
-        store⟩ :=
-    Step.tableGrow32Failure Hphysical hbound'
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero,
-    Iris.Algebra.BigOpL.bigOpL_nil]
-  wasm_wp_frame
+      ⟨rfl, _, rfl, Step.tableGrow32Failure Hphysical hbound'⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running
+          ⟨⟨params, localValues, .i32 delta :: initial :: values⟩,
+            .tableGrow tableIndex :: code, arity, remainder, controls, calls⟩,
+          store⟩
+        (.instruction (.tableGrow tableIndex))
+        ⟨.running
+          ⟨⟨params, localValues,
+              .i32 (0xFFFFFFFF : UInt32) :: values⟩,
+            code, arity, remainder, controls, calls⟩,
+          store⟩ :=
+      Step.tableGrow32Failure Hphysical hbound'
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero,
+      Iris.Algebra.BigOpL.bigOpL_nil]
+    wasm_wp_frame
 
 /-- Failed table64 `table.grow`; returns the 64-bit all-ones sentinel and
 preserves complete ownership of the unchanged table. -/
@@ -2211,36 +2126,31 @@ theorem wp_tableGrow64Failure
       ¬table.length + delta.toNat ≤
         store.runtime.currentModule.tableCap tableIndex := by
     simpa only [Hmodule] using hbound
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running
         ⟨⟨params, localValues,
             .i64 (0xFFFFFFFFFFFFFFFF : UInt64) :: values⟩,
           code, arity, remainder, controls, calls⟩,
       store, [],
-      ⟨rfl, _, rfl, Step.tableGrow64Failure Hphysical hbound'⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, .i64 delta :: initial :: values⟩,
-          .tableGrow tableIndex :: code, arity, remainder, controls, calls⟩,
-        store⟩
-      (.instruction (.tableGrow tableIndex))
-      ⟨.running
-        ⟨⟨params, localValues,
-            .i64 (0xFFFFFFFFFFFFFFFF : UInt64) :: values⟩,
-          code, arity, remainder, controls, calls⟩,
-        store⟩ :=
-    Step.tableGrow64Failure Hphysical hbound'
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero,
-    Iris.Algebra.BigOpL.bigOpL_nil]
-  wasm_wp_frame
+      ⟨rfl, _, rfl, Step.tableGrow64Failure Hphysical hbound'⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running
+          ⟨⟨params, localValues, .i64 delta :: initial :: values⟩,
+            .tableGrow tableIndex :: code, arity, remainder, controls, calls⟩,
+          store⟩
+        (.instruction (.tableGrow tableIndex))
+        ⟨.running
+          ⟨⟨params, localValues,
+              .i64 (0xFFFFFFFFFFFFFFFF : UInt64) :: values⟩,
+            code, arity, remainder, controls, calls⟩,
+          store⟩ :=
+      Step.tableGrow64Failure Hphysical hbound'
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero,
+      Iris.Algebra.BigOpL.bigOpL_nil]
+    wasm_wp_frame
 
 /-- In-bounds `table.fill`. The complete authoritative table fragment is
 updated to the same `listWriteAt` result as the physical machine table. -/
@@ -2285,37 +2195,32 @@ theorem wp_tableFill
     { store with wasm :=
         { store.wasm with tables :=
             (listSetAt store.wasm.tables tableIndex newTable) } }
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       updatedStore, [],
       ⟨rfl, _, rfl,
-        Step.tableFill hlength hdestination Hphysical hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, length :: value :: destination :: values⟩,
-          .tableFill tableIndex :: code, arity, remainder, controls, calls⟩,
-        store⟩
-      (.instruction (.tableFill tableIndex))
-      ⟨.running
-        ⟨⟨params, localValues, values⟩,
-          code, arity, remainder, controls, calls⟩,
-        updatedStore⟩ :=
-    Step.tableFill hlength hdestination Hphysical hbound
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero,
-    Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_table_set store ns
-      obs' nt
-      tableIndex table newTable $$ [$Hσ $Htable] with ⟨Hσ, Htable⟩
-  wasm_wp_frame
+        Step.tableFill hlength hdestination Hphysical hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running
+          ⟨⟨params, localValues, length :: value :: destination :: values⟩,
+            .tableFill tableIndex :: code, arity, remainder, controls, calls⟩,
+          store⟩
+        (.instruction (.tableFill tableIndex))
+        ⟨.running
+          ⟨⟨params, localValues, values⟩,
+            code, arity, remainder, controls, calls⟩,
+          updatedStore⟩ :=
+      Step.tableFill hlength hdestination Hphysical hbound
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero,
+      Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_table_set store ns
+        obs' nt
+        tableIndex table newTable $$ [$Hσ $Htable] with ⟨Hσ, Htable⟩
+    wasm_wp_frame
 
 /-- In-bounds copy within one table, including overlapping ranges. The source
 slice is taken from the pre-step table before the authoritative table is
@@ -2366,40 +2271,35 @@ theorem wp_tableCopySame
     { store with wasm :=
         { store.wasm with tables :=
             (listSetAt store.wasm.tables tableIndex newTable) } }
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       updatedStore, [],
       ⟨rfl, _, rfl,
         Step.tableCopy hlength hsource hdestination
-          Hphysical Hphysical hdestinationBound hsourceBound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, length :: source :: destination :: values⟩,
-          .tableCopy tableIndex tableIndex :: code,
-          arity, remainder, controls, calls⟩,
-        store⟩
-      (.instruction (.tableCopy tableIndex tableIndex))
-      ⟨.running
-        ⟨⟨params, localValues, values⟩,
-          code, arity, remainder, controls, calls⟩,
-        updatedStore⟩ :=
-    Step.tableCopy hlength hsource hdestination
-      Hphysical Hphysical hdestinationBound hsourceBound
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero,
-    Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_table_set store ns
-      obs' nt
-      tableIndex table newTable $$ [$Hσ $Htable] with ⟨Hσ, Htable⟩
-  wasm_wp_frame
+          Hphysical Hphysical hdestinationBound hsourceBound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running
+          ⟨⟨params, localValues, length :: source :: destination :: values⟩,
+            .tableCopy tableIndex tableIndex :: code,
+            arity, remainder, controls, calls⟩,
+          store⟩
+        (.instruction (.tableCopy tableIndex tableIndex))
+        ⟨.running
+          ⟨⟨params, localValues, values⟩,
+            code, arity, remainder, controls, calls⟩,
+          updatedStore⟩ :=
+      Step.tableCopy hlength hsource hdestination
+        Hphysical Hphysical hdestinationBound hsourceBound
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero,
+      Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_table_set store ns
+        obs' nt
+        tableIndex table newTable $$ [$Hσ $Htable] with ⟨Hσ, Htable⟩
+    wasm_wp_frame
 
 /-- In-bounds copy between two separately owned tables. The source fragment is
 framed unchanged while only the destination table's authoritative contents and
@@ -2466,44 +2366,39 @@ theorem wp_tableCopyDistinct
         { store.wasm with tables :=
             (listSetAt store.wasm.tables destinationTableIndex
               newDestinationTable) } }
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       updatedStore, [],
       ⟨rfl, _, rfl,
         Step.tableCopy hlength hsource hdestination
           HdestinationPhysical HsourcePhysical
-          hdestinationBound hsourceBound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, length :: source :: destination :: values⟩,
-          .tableCopy destinationTableIndex sourceTableIndex :: code,
-          arity, remainder, controls, calls⟩,
-        store⟩
-      (.instruction
-        (.tableCopy destinationTableIndex sourceTableIndex))
-      ⟨.running
-        ⟨⟨params, localValues, values⟩,
-          code, arity, remainder, controls, calls⟩,
-        updatedStore⟩ :=
-    Step.tableCopy hlength hsource hdestination
-      HdestinationPhysical HsourcePhysical
-      hdestinationBound hsourceBound
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero,
-    Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_table_set store ns
-      obs' nt
-      destinationTableIndex destinationTable newDestinationTable $$
-      [$Hσ $Hdestination] with ⟨Hσ, Hdestination⟩
-  wasm_wp_frame
+          hdestinationBound hsourceBound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running
+          ⟨⟨params, localValues, length :: source :: destination :: values⟩,
+            .tableCopy destinationTableIndex sourceTableIndex :: code,
+            arity, remainder, controls, calls⟩,
+          store⟩
+        (.instruction
+          (.tableCopy destinationTableIndex sourceTableIndex))
+        ⟨.running
+          ⟨⟨params, localValues, values⟩,
+            code, arity, remainder, controls, calls⟩,
+          updatedStore⟩ :=
+      Step.tableCopy hlength hsource hdestination
+        HdestinationPhysical HsourcePhysical
+        hdestinationBound hsourceBound
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero,
+      Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_table_set store ns
+        obs' nt
+        destinationTableIndex destinationTable newDestinationTable $$
+        [$Hσ $Hdestination] with ⟨Hσ, Hdestination⟩
+    wasm_wp_frame
 
 /-- Primitive rule for `i32.load8_u`. The arithmetic premise rules out
 32-bit effective-address wraparound; physical bounds follow from ownership
@@ -2541,30 +2436,25 @@ theorem wp_load8U
   have hbound : address.toNat + offset.toNat + 1 ≤
       store.wasm.mem.pages * 65536 := by
     omega
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, .i32 byte.toUInt32 :: values⟩,
         code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl,
         by simpa [Hread] using
-          Step.load8U (α := α) (address := Value.i32 address) rfl hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
-        .load8U offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.load8U offset))
-      ⟨.running ⟨⟨params, localValues, .i32 byte.toUInt32 :: values⟩,
-        code, arity, remainder, controls, calls⟩, store⟩ := by
-    simpa [Hread] using
-      (Step.load8U (α := α) (address := Value.i32 address) rfl hbound)
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  wasm_wp_frame
+          Step.load8U (α := α) (address := Value.i32 address) rfl hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
+          .load8U offset :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.load8U offset))
+        ⟨.running ⟨⟨params, localValues, .i32 byte.toUInt32 :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+      simpa [Hread] using
+        (Step.load8U (α := α) (address := Value.i32 address) rfl hbound)
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    wasm_wp_frame
 
 /-- Primitive rule for `i64.load8_u` with an i32 memory address.  The loaded
 byte is zero-extended to i64; ownership remains at the physical UInt32 key. -/
@@ -2601,30 +2491,25 @@ theorem wp_load8UI64
   have hbound : address.toNat + offset.toNat + 1 ≤
       store.wasm.mem.pages * 65536 := by
     omega
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, .i64 byte.toUInt64 :: values⟩,
         code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl,
         by simpa [Hread] using
-          Step.load8UI64 (α := α) (address := Value.i32 address) rfl hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
-        .load8UI64 offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.load8UI64 offset))
-      ⟨.running ⟨⟨params, localValues, .i64 byte.toUInt64 :: values⟩,
-        code, arity, remainder, controls, calls⟩, store⟩ := by
-    simpa [Hread] using
-      (Step.load8UI64 (α := α) (address := Value.i32 address) rfl hbound)
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  wasm_wp_frame
+          Step.load8UI64 (α := α) (address := Value.i32 address) rfl hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
+          .load8UI64 offset :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.load8UI64 offset))
+        ⟨.running ⟨⟨params, localValues, .i64 byte.toUInt64 :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+      simpa [Hread] using
+        (Step.load8UI64 (α := α) (address := Value.i32 address) rfl hbound)
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    wasm_wp_frame
 
 theorem wp_load8S
     {params localValues values : List Value}
@@ -2660,32 +2545,27 @@ theorem wp_load8S
   have hbound : address.toNat + offset.toNat + 1 ≤
       store.wasm.mem.pages * 65536 := by
     omega
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues,
         .i32 (Int32.ofInt (signExtend (byte.toUInt32.toNat % 256) 8)).toUInt32 :: values⟩,
         code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl, by
         rw [show byte = store.wasm.mem.read8 (address + offset) from Hread.symm]
-        exact Step.load8S (address := Value.i32 address) rfl hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
-        .load8S offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.load8S offset))
-      ⟨.running ⟨⟨params, localValues,
-        .i32 (Int32.ofInt (signExtend (byte.toUInt32.toNat % 256) 8)).toUInt32 :: values⟩,
-        code, arity, remainder, controls, calls⟩, store⟩ := by
-    rw [show byte = store.wasm.mem.read8 (address + offset) from Hread.symm]
-    exact Step.load8S (α := α) (address := Value.i32 address) rfl hbound
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  wasm_wp_frame
+        exact Step.load8S (address := Value.i32 address) rfl hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
+          .load8S offset :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.load8S offset))
+        ⟨.running ⟨⟨params, localValues,
+          .i32 (Int32.ofInt (signExtend (byte.toUInt32.toNat % 256) 8)).toUInt32 :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+      rw [show byte = store.wasm.mem.read8 (address + offset) from Hread.symm]
+      exact Step.load8S (α := α) (address := Value.i32 address) rfl hbound
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    wasm_wp_frame
 
 theorem wp_load16U
     {params localValues values : List Value}
@@ -2720,30 +2600,25 @@ theorem wp_load16U
   have hbound : address.toNat + offset.toNat + 2 ≤
       store.wasm.mem.pages * 65536 := by
     simpa only [hnowrap] using HinBounds
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, .i32 (word &&& 0xFFFF) :: values⟩,
         code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl,
         by simpa [Hread] using
-          Step.load16U (α := α) (address := Value.i32 address) rfl hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
-        .load16U offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.load16U offset))
-      ⟨.running ⟨⟨params, localValues, .i32 (word &&& 0xFFFF) :: values⟩,
-        code, arity, remainder, controls, calls⟩, store⟩ := by
-    simpa [Hread] using
-      (Step.load16U (α := α) (address := Value.i32 address) rfl hbound)
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  wasm_wp_frame
+          Step.load16U (α := α) (address := Value.i32 address) rfl hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
+          .load16U offset :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.load16U offset))
+        ⟨.running ⟨⟨params, localValues, .i32 (word &&& 0xFFFF) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+      simpa [Hread] using
+        (Step.load16U (α := α) (address := Value.i32 address) rfl hbound)
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    wasm_wp_frame
 
 /-- Primitive rule for `i32.load16_s`. Like `wp_load16U` but the 16-bit value
 is sign-extended to i32; `extend16To32` is private so its body is inlined. -/
@@ -2759,7 +2634,8 @@ theorem wp_load16S
         .load16S offset :: code, arity, remainder, controls, calls⟩
     let next : ThreadState α :=
       ⟨⟨params, localValues,
-        .i32 (Int32.ofInt (signExtend ((word &&& 0xFFFF).toNat % 65536) 16)).toUInt32 :: values⟩,
+        .i32
+          (Int32.ofInt (signExtend ((word &&& 0xFFFF).toNat % 65536) 16)).toUInt32 :: values⟩,
         code, arity, remainder, controls, calls⟩
     ▷ pointsTo_u16 0 (address + offset) word -∗
     ▷ (pointsTo_u16 0 (address + offset) word -∗
@@ -2781,32 +2657,29 @@ theorem wp_load16S
   have hbound : address.toNat + offset.toNat + 2 ≤
       store.wasm.mem.pages * 65536 := by
     simpa only [hnowrap] using HinBounds
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues,
-        .i32 (Int32.ofInt (signExtend ((word &&& 0xFFFF).toNat % 65536) 16)).toUInt32 :: values⟩,
+        .i32
+          (Int32.ofInt (signExtend ((word &&& 0xFFFF).toNat % 65536) 16)).toUInt32 :: values⟩,
         code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl, by
         rw [show word &&& 0xFFFF = store.wasm.mem.read16 (address + offset) from Hread.symm]
-        exact Step.load16S (address := Value.i32 address) rfl hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
-        .load16S offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.load16S offset))
-      ⟨.running ⟨⟨params, localValues,
-        .i32 (Int32.ofInt (signExtend ((word &&& 0xFFFF).toNat % 65536) 16)).toUInt32 :: values⟩,
-        code, arity, remainder, controls, calls⟩, store⟩ := by
-    rw [show word &&& 0xFFFF = store.wasm.mem.read16 (address + offset) from Hread.symm]
-    exact Step.load16S (α := α) (address := Value.i32 address) rfl hbound
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  wasm_wp_frame
+        exact Step.load16S (address := Value.i32 address) rfl hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
+          .load16S offset :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.load16S offset))
+        ⟨.running ⟨⟨params, localValues,
+          .i32
+            (Int32.ofInt (signExtend ((word &&& 0xFFFF).toNat % 65536) 16)).toUInt32 :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+      rw [show word &&& 0xFFFF = store.wasm.mem.read16 (address + offset) from Hread.symm]
+      exact Step.load16S (α := α) (address := Value.i32 address) rfl hbound
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    wasm_wp_frame
 
 /-- Primitive rule for `i64.load8_s`. Like `wp_load8UI64` but sign-extended;
 `extend8To64` is private so its body is inlined. -/
@@ -2844,32 +2717,27 @@ theorem wp_load8SI64
   have hbound : address.toNat + offset.toNat + 1 ≤
       store.wasm.mem.pages * 65536 := by
     omega
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues,
         .i64 (Int64.ofInt (signExtend (byte.toUInt64.toNat % 256) 8)).toUInt64 :: values⟩,
         code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl, by
         rw [show byte = store.wasm.mem.read8 (address + offset) from Hread.symm]
-        exact Step.load8SI64 (address := Value.i32 address) rfl hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
-        .load8SI64 offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.load8SI64 offset))
-      ⟨.running ⟨⟨params, localValues,
-        .i64 (Int64.ofInt (signExtend (byte.toUInt64.toNat % 256) 8)).toUInt64 :: values⟩,
-        code, arity, remainder, controls, calls⟩, store⟩ := by
-    rw [show byte = store.wasm.mem.read8 (address + offset) from Hread.symm]
-    exact Step.load8SI64 (address := Value.i32 address) rfl hbound
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  wasm_wp_frame
+        exact Step.load8SI64 (address := Value.i32 address) rfl hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
+          .load8SI64 offset :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.load8SI64 offset))
+        ⟨.running ⟨⟨params, localValues,
+          .i64 (Int64.ofInt (signExtend (byte.toUInt64.toNat % 256) 8)).toUInt64 :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+      rw [show byte = store.wasm.mem.read8 (address + offset) from Hread.symm]
+      exact Step.load8SI64 (address := Value.i32 address) rfl hbound
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    wasm_wp_frame
 
 theorem wp_load16UI64
     {params localValues values : List Value}
@@ -2904,30 +2772,25 @@ theorem wp_load16UI64
   have hbound : address.toNat + offset.toNat + 2 ≤
       store.wasm.mem.pages * 65536 := by
     simpa only [hnowrap] using HinBounds
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, .i64 (word &&& 0xFFFF).toUInt64 :: values⟩,
         code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl, by
         simpa [Hread] using
-          Step.load16UI64 (address := Value.i32 address) rfl hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
-        .load16UI64 offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.load16UI64 offset))
-      ⟨.running ⟨⟨params, localValues, .i64 (word &&& 0xFFFF).toUInt64 :: values⟩,
-        code, arity, remainder, controls, calls⟩, store⟩ := by
-    simpa [Hread] using
-      (Step.load16UI64 (α := α) (address := Value.i32 address) rfl hbound)
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  wasm_wp_frame
+          Step.load16UI64 (address := Value.i32 address) rfl hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
+          .load16UI64 offset :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.load16UI64 offset))
+        ⟨.running ⟨⟨params, localValues, .i64 (word &&& 0xFFFF).toUInt64 :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+      simpa [Hread] using
+        (Step.load16UI64 (α := α) (address := Value.i32 address) rfl hbound)
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    wasm_wp_frame
 
 /-- Primitive rule for `i64.load16_s`. Like `wp_load16UI64` but sign-extended;
 `extend16To64` is private so its body is inlined. -/
@@ -2943,7 +2806,9 @@ theorem wp_load16SI64
         .load16SI64 offset :: code, arity, remainder, controls, calls⟩
     let next : ThreadState α :=
       ⟨⟨params, localValues,
-        .i64 (Int64.ofInt (signExtend ((word &&& 0xFFFF).toUInt64.toNat % 65536) 16)).toUInt64 :: values⟩,
+        .i64
+          (Int64.ofInt
+            (signExtend ((word &&& 0xFFFF).toUInt64.toNat % 65536) 16)).toUInt64 :: values⟩,
         code, arity, remainder, controls, calls⟩
     ▷ pointsTo_u16 0 (address + offset) word -∗
     ▷ (pointsTo_u16 0 (address + offset) word -∗
@@ -2965,32 +2830,31 @@ theorem wp_load16SI64
   have hbound : address.toNat + offset.toNat + 2 ≤
       store.wasm.mem.pages * 65536 := by
     simpa only [hnowrap] using HinBounds
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues,
-        .i64 (Int64.ofInt (signExtend ((word &&& 0xFFFF).toUInt64.toNat % 65536) 16)).toUInt64 :: values⟩,
+        .i64
+          (Int64.ofInt
+            (signExtend ((word &&& 0xFFFF).toUInt64.toNat % 65536) 16)).toUInt64 :: values⟩,
         code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl, by
         rw [show word &&& 0xFFFF = store.wasm.mem.read16 (address + offset) from Hread.symm]
-        exact Step.load16SI64 (address := Value.i32 address) rfl hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
-        .load16SI64 offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.load16SI64 offset))
-      ⟨.running ⟨⟨params, localValues,
-        .i64 (Int64.ofInt (signExtend ((word &&& 0xFFFF).toUInt64.toNat % 65536) 16)).toUInt64 :: values⟩,
-        code, arity, remainder, controls, calls⟩, store⟩ := by
-    rw [show word &&& 0xFFFF = store.wasm.mem.read16 (address + offset) from Hread.symm]
-    exact Step.load16SI64 (address := Value.i32 address) rfl hbound
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  wasm_wp_frame
+        exact Step.load16SI64 (address := Value.i32 address) rfl hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
+          .load16SI64 offset :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.load16SI64 offset))
+        ⟨.running ⟨⟨params, localValues,
+          .i64
+            (Int64.ofInt
+              (signExtend ((word &&& 0xFFFF).toUInt64.toNat % 65536) 16)).toUInt64 :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+      rw [show word &&& 0xFFFF = store.wasm.mem.read16 (address + offset) from Hread.symm]
+      exact Step.load16SI64 (address := Value.i32 address) rfl hbound
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    wasm_wp_frame
 
 theorem wp_load32UI64
     {params localValues values : List Value}
@@ -3027,30 +2891,25 @@ theorem wp_load32UI64
   have hbound : address.toNat + offset.toNat + 4 ≤
       store.wasm.mem.pages * 65536 := by
     simpa only [hnowrap] using HinBounds
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, .i64 word.toUInt64 :: values⟩,
         code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl, by
         simpa [Hread] using
-          Step.load32UI64 (address := Value.i32 address) rfl hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
-        .load32UI64 offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.load32UI64 offset))
-      ⟨.running ⟨⟨params, localValues, .i64 word.toUInt64 :: values⟩,
-        code, arity, remainder, controls, calls⟩, store⟩ := by
-    simpa [Hread] using
-      (Step.load32UI64 (α := α) (address := Value.i32 address) rfl hbound)
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  wasm_wp_frame
+          Step.load32UI64 (address := Value.i32 address) rfl hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
+          .load32UI64 offset :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.load32UI64 offset))
+        ⟨.running ⟨⟨params, localValues, .i64 word.toUInt64 :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+      simpa [Hread] using
+        (Step.load32UI64 (α := α) (address := Value.i32 address) rfl hbound)
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    wasm_wp_frame
 
 /-- Primitive rule for `i64.load32_s`. Like `wp_load32UI64` but sign-extended;
 `extend32To64` is private so its body is inlined. -/
@@ -3090,32 +2949,27 @@ theorem wp_load32SI64
   have hbound : address.toNat + offset.toNat + 4 ≤
       store.wasm.mem.pages * 65536 := by
     simpa only [hnowrap] using HinBounds
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues,
         .i64 (Int64.ofInt (signExtend (word.toUInt64.toNat % 2 ^ 32) 32)).toUInt64 :: values⟩,
         code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl, by
         rw [show word = store.wasm.mem.read32 (address + offset) from Hread.symm]
-        exact Step.load32SI64 (address := Value.i32 address) rfl hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
-        .load32SI64 offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.load32SI64 offset))
-      ⟨.running ⟨⟨params, localValues,
-        .i64 (Int64.ofInt (signExtend (word.toUInt64.toNat % 2 ^ 32) 32)).toUInt64 :: values⟩,
-        code, arity, remainder, controls, calls⟩, store⟩ := by
-    rw [show word = store.wasm.mem.read32 (address + offset) from Hread.symm]
-    exact Step.load32SI64 (address := Value.i32 address) rfl hbound
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  wasm_wp_frame
+        exact Step.load32SI64 (address := Value.i32 address) rfl hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
+          .load32SI64 offset :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.load32SI64 offset))
+        ⟨.running ⟨⟨params, localValues,
+          .i64 (Int64.ofInt (signExtend (word.toUInt64.toNat % 2 ^ 32) 32)).toUInt64 :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+      rw [show word = store.wasm.mem.read32 (address + offset) from Hread.symm]
+      exact Step.load32SI64 (address := Value.i32 address) rfl hbound
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    wasm_wp_frame
 
 /-- Primitive rule for `i32.store8`. The physical `Mem.write8` transition and
 the authoritative GenHeap update happen in the same Iris step. -/
@@ -3150,37 +3004,33 @@ theorem wp_store8
   have hbound : address.toNat + offset.toNat + 1 ≤
       store.wasm.mem.pages * 65536 := by
     omega
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
       { store with wasm :=
           { store.wasm with
             mem := store.wasm.mem.write8 (address + offset) value.toUInt8 } },
       [], ⟨rfl, _, rfl,
-        Step.store8 (α := α) (address := Value.i32 address) rfl hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, .i32 value :: .i32 address :: values⟩,
-          .store8 offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.store8 offset))
-      ⟨.running ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
-        { store with wasm :=
-            { store.wasm with
-              mem := store.wasm.mem.write8
-                (address + offset) value.toUInt8 } }⟩ :=
-    Step.store8 (α := α) (address := Value.i32 address) rfl hbound
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_store8 store ns obs' nt
-      (address + offset) oldByte value.toUInt8
-      (by simpa [hnowrap] using HinBounds) $$ [$Hσ $Hpt] with ⟨Hσ, Hpt⟩
-  wasm_wp_frame
+        Step.store8 (α := α) (address := Value.i32 address) rfl hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running
+          ⟨⟨params, localValues, .i32 value :: .i32 address :: values⟩,
+            .store8 offset :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.store8 offset))
+        ⟨.running
+          ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
+          { store with wasm :=
+              { store.wasm with
+                mem := store.wasm.mem.write8
+                  (address + offset) value.toUInt8 } }⟩ :=
+      Step.store8 (α := α) (address := Value.i32 address) rfl hbound
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_store8 store ns obs' nt
+        (address + offset) oldByte value.toUInt8
+        (by simpa [hnowrap] using HinBounds) $$ [$Hσ $Hpt] with ⟨Hσ, Hpt⟩
+    wasm_wp_frame
 
 /-- Primitive rule for `i64.store8` with an i32 memory address. -/
 theorem wp_store8I64
@@ -3214,36 +3064,32 @@ theorem wp_store8I64
   have hbound : address.toNat + offset.toNat + 1 ≤
       store.wasm.mem.pages * 65536 := by
     omega
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
       { store with wasm :=
           { store.wasm with
             mem := store.wasm.mem.write8 (address + offset) value.toUInt8 } },
       [], ⟨rfl, _, rfl,
-        Step.store8I64 (α := α) (address := Value.i32 address) rfl hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, .i64 value :: .i32 address :: values⟩,
-          .store8I64 offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.store8I64 offset))
-      ⟨.running ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
-        { store with wasm :=
-            { store.wasm with
-              mem := store.wasm.mem.write8 (address + offset) value.toUInt8 } }⟩ :=
-    Step.store8I64 (α := α) (address := Value.i32 address) rfl hbound
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_store8 store ns obs' nt
-      (address + offset) oldByte value.toUInt8
-      (by simpa [hnowrap] using HinBounds) $$ [$Hσ $Hpt] with ⟨Hσ, Hpt⟩
-  wasm_wp_frame
+        Step.store8I64 (α := α) (address := Value.i32 address) rfl hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running
+          ⟨⟨params, localValues, .i64 value :: .i32 address :: values⟩,
+            .store8I64 offset :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.store8I64 offset))
+        ⟨.running
+          ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
+          { store with wasm :=
+              { store.wasm with
+                mem := store.wasm.mem.write8 (address + offset) value.toUInt8 } }⟩ :=
+      Step.store8I64 (α := α) (address := Value.i32 address) rfl hbound
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_store8 store ns obs' nt
+        (address + offset) oldByte value.toUInt8
+        (by simpa [hnowrap] using HinBounds) $$ [$Hσ $Hpt] with ⟨Hσ, Hpt⟩
+    wasm_wp_frame
 
 theorem wp_store16
     {params localValues values : List Value}
@@ -3277,39 +3123,34 @@ theorem wp_store16
   have hbound : address.toNat + offset.toNat + 2 ≤
       store.wasm.mem.pages * 65536 := by
     simpa only [hnowrap] using Hfacts.2
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       { store with wasm :=
           { store.wasm with
             mem := store.wasm.mem.write16 (address + offset) value } },
       [], ⟨rfl, _, rfl,
-        Step.store16 (α := α) (address := Value.i32 address) rfl hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, .i32 value :: .i32 address :: values⟩,
-          .store16 offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.store16 offset))
-      ⟨.running
-        ⟨⟨params, localValues, values⟩,
-          code, arity, remainder, controls, calls⟩,
-        { store with wasm :=
-            { store.wasm with
-              mem := store.wasm.mem.write16 (address + offset) value } }⟩ :=
-    Step.store16 (α := α) (address := Value.i32 address) rfl hbound
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_store16 store ns obs' nt
-      (address + offset) oldWord value h1 Hfacts.2 $$
-      [$Hσ $Hword] with ⟨Hσ, Hword⟩
-  wasm_wp_frame
+        Step.store16 (α := α) (address := Value.i32 address) rfl hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running
+          ⟨⟨params, localValues, .i32 value :: .i32 address :: values⟩,
+            .store16 offset :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.store16 offset))
+        ⟨.running
+          ⟨⟨params, localValues, values⟩,
+            code, arity, remainder, controls, calls⟩,
+          { store with wasm :=
+              { store.wasm with
+                mem := store.wasm.mem.write16 (address + offset) value } }⟩ :=
+      Step.store16 (α := α) (address := Value.i32 address) rfl hbound
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_store16 store ns obs' nt
+        (address + offset) oldWord value h1 Hfacts.2 $$
+        [$Hσ $Hword] with ⟨Hσ, Hword⟩
+    wasm_wp_frame
 
 theorem wp_store16I64
     {params localValues values : List Value}
@@ -3343,39 +3184,34 @@ theorem wp_store16I64
   have hbound : address.toNat + offset.toNat + 2 ≤
       store.wasm.mem.pages * 65536 := by
     simpa only [hnowrap] using Hfacts.2
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       { store with wasm :=
           { store.wasm with
             mem := store.wasm.mem.write16 (address + offset) value.toUInt32 } },
       [], ⟨rfl, _, rfl,
-        Step.store16I64 (α := α) (address := Value.i32 address) rfl hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, .i64 value :: .i32 address :: values⟩,
-          .store16I64 offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.store16I64 offset))
-      ⟨.running
-        ⟨⟨params, localValues, values⟩,
-          code, arity, remainder, controls, calls⟩,
-        { store with wasm :=
-            { store.wasm with
-              mem := store.wasm.mem.write16 (address + offset) value.toUInt32 } }⟩ :=
-    Step.store16I64 (α := α) (address := Value.i32 address) rfl hbound
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_store16 store ns obs' nt
-      (address + offset) oldWord value.toUInt32 h1 Hfacts.2 $$
-      [$Hσ $Hword] with ⟨Hσ, Hword⟩
-  wasm_wp_frame
+        Step.store16I64 (α := α) (address := Value.i32 address) rfl hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running
+          ⟨⟨params, localValues, .i64 value :: .i32 address :: values⟩,
+            .store16I64 offset :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.store16I64 offset))
+        ⟨.running
+          ⟨⟨params, localValues, values⟩,
+            code, arity, remainder, controls, calls⟩,
+          { store with wasm :=
+              { store.wasm with
+                mem := store.wasm.mem.write16 (address + offset) value.toUInt32 } }⟩ :=
+      Step.store16I64 (α := α) (address := Value.i32 address) rfl hbound
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_store16 store ns obs' nt
+        (address + offset) oldWord value.toUInt32 h1 Hfacts.2 $$
+        [$Hσ $Hword] with ⟨Hσ, Hword⟩
+    wasm_wp_frame
 
 theorem wp_store32I64
     {params localValues values : List Value}
@@ -3411,39 +3247,34 @@ theorem wp_store32I64
   have hbound : address.toNat + offset.toNat + 4 ≤
       store.wasm.mem.pages * 65536 := by
     simpa only [hnowrap] using Hfacts.2
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       { store with wasm :=
           { store.wasm with
             mem := store.wasm.mem.write32 (address + offset) value.toUInt32 } },
       [], ⟨rfl, _, rfl,
-        Step.store32I64 (α := α) (address := Value.i32 address) rfl hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, .i64 value :: .i32 address :: values⟩,
-          .store32I64 offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.store32I64 offset))
-      ⟨.running
-        ⟨⟨params, localValues, values⟩,
-          code, arity, remainder, controls, calls⟩,
-        { store with wasm :=
-            { store.wasm with
-              mem := store.wasm.mem.write32 (address + offset) value.toUInt32 } }⟩ :=
-    Step.store32I64 (α := α) (address := Value.i32 address) rfl hbound
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_store32 store ns obs' nt
-      (address + offset) oldWord value.toUInt32 h1 h2 h3 Hfacts.2 $$
-      [$Hσ $Hword] with ⟨Hσ, Hword⟩
-  wasm_wp_frame
+        Step.store32I64 (α := α) (address := Value.i32 address) rfl hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running
+          ⟨⟨params, localValues, .i64 value :: .i32 address :: values⟩,
+            .store32I64 offset :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.store32I64 offset))
+        ⟨.running
+          ⟨⟨params, localValues, values⟩,
+            code, arity, remainder, controls, calls⟩,
+          { store with wasm :=
+              { store.wasm with
+                mem := store.wasm.mem.write32 (address + offset) value.toUInt32 } }⟩ :=
+      Step.store32I64 (α := α) (address := Value.i32 address) rfl hbound
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_store32 store ns obs' nt
+        (address + offset) oldWord value.toUInt32 h1 h2 h3 Hfacts.2 $$
+        [$Hσ $Hword] with ⟨Hσ, Hword⟩
+    wasm_wp_frame
 
 theorem wp_load32
     {params localValues values : List Value}
@@ -3480,30 +3311,25 @@ theorem wp_load32
   have hbound : address.toNat + offset.toNat + 4 ≤
       store.wasm.mem.pages * 65536 := by
     simpa only [hnowrap] using HinBounds
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, .i32 word :: values⟩,
         code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl,
         by simpa [Hread] using
-          Step.load32 (α := α) (address := Value.i32 address) rfl hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
-        .load32 offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.load32 offset))
-      ⟨.running ⟨⟨params, localValues, .i32 word :: values⟩,
-        code, arity, remainder, controls, calls⟩, store⟩ := by
-    simpa [Hread] using
-      (Step.load32 (α := α) (address := Value.i32 address) rfl hbound)
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  wasm_wp_frame
+          Step.load32 (α := α) (address := Value.i32 address) rfl hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
+          .load32 offset :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.load32 offset))
+        ⟨.running ⟨⟨params, localValues, .i32 word :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+      simpa [Hread] using
+        (Step.load32 (α := α) (address := Value.i32 address) rfl hbound)
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    wasm_wp_frame
 
 theorem wp_store32
     {params localValues values : List Value}
@@ -3539,39 +3365,34 @@ theorem wp_store32
   have hbound : address.toNat + offset.toNat + 4 ≤
       store.wasm.mem.pages * 65536 := by
     simpa only [hnowrap] using Hfacts.2
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       { store with wasm :=
           { store.wasm with
             mem := store.wasm.mem.write32 (address + offset) value } },
       [], ⟨rfl, _, rfl,
-        Step.store32 (α := α) (address := Value.i32 address) rfl hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, .i32 value :: .i32 address :: values⟩,
-          .store32 offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.store32 offset))
-      ⟨.running
-        ⟨⟨params, localValues, values⟩,
-          code, arity, remainder, controls, calls⟩,
-        { store with wasm :=
-            { store.wasm with
-              mem := store.wasm.mem.write32 (address + offset) value } }⟩ :=
-    Step.store32 (α := α) (address := Value.i32 address) rfl hbound
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_store32 store ns obs' nt
-      (address + offset) oldWord value h1 h2 h3 Hfacts.2 $$
-      [$Hσ $Hword] with ⟨Hσ, Hword⟩
-  wasm_wp_frame
+        Step.store32 (α := α) (address := Value.i32 address) rfl hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running
+          ⟨⟨params, localValues, .i32 value :: .i32 address :: values⟩,
+            .store32 offset :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.store32 offset))
+        ⟨.running
+          ⟨⟨params, localValues, values⟩,
+            code, arity, remainder, controls, calls⟩,
+          { store with wasm :=
+              { store.wasm with
+                mem := store.wasm.mem.write32 (address + offset) value } }⟩ :=
+      Step.store32 (α := α) (address := Value.i32 address) rfl hbound
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_store32 store ns obs' nt
+        (address + offset) oldWord value h1 h2 h3 Hfacts.2 $$
+        [$Hσ $Hword] with ⟨Hσ, Hword⟩
+    wasm_wp_frame
 
 theorem wp_f32Load
     {params localValues values : List Value}
@@ -3608,29 +3429,24 @@ theorem wp_f32Load
   have hbound : address.toNat + offset.toNat + 4 ≤
       store.wasm.mem.pages * 65536 := by
     simpa only [hnowrap] using HinBounds
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, .f32 word :: values⟩,
         code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl,
-        by simpa [Hread] using Step.f32Load (address := .i32 address) rfl hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
-        .f32Load offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.f32Load offset))
-      ⟨.running ⟨⟨params, localValues, .f32 word :: values⟩,
-        code, arity, remainder, controls, calls⟩, store⟩ := by
-    simpa [Hread] using
-      (Step.f32Load (α := α) (address := .i32 address) rfl hbound)
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  wasm_wp_frame
+        by simpa [Hread] using Step.f32Load (address := .i32 address) rfl hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
+          .f32Load offset :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.f32Load offset))
+        ⟨.running ⟨⟨params, localValues, .f32 word :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+      simpa [Hread] using
+        (Step.f32Load (α := α) (address := .i32 address) rfl hbound)
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    wasm_wp_frame
 
 theorem wp_f32Store
     {params localValues values : List Value}
@@ -3666,12 +3482,7 @@ theorem wp_f32Store
   have hbound : address.toNat + offset.toNat + 4 ≤
       store.wasm.mem.pages * 65536 := by
     simpa only [hnowrap] using Hfacts.2
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       { store with wasm :=
@@ -3679,28 +3490,28 @@ theorem wp_f32Store
             mem := store.wasm.mem.write32 (address + offset) value } },
       [], ⟨rfl, _, rfl,
         by simpa only [Wasm.SmallStep.setMemory_eq] using
-          Step.f32Store (address := .i32 address) rfl hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, .f32 value :: .i32 address :: values⟩,
-          .f32Store offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.f32Store offset))
-      ⟨.running
-        ⟨⟨params, localValues, values⟩,
-          code, arity, remainder, controls, calls⟩,
-        { store with wasm :=
-            { store.wasm with
-              mem := store.wasm.mem.write32 (address + offset) value } }⟩ := by
-    simpa only [Wasm.SmallStep.setMemory_eq] using
-      Step.f32Store (address := .i32 address) rfl hbound
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_store32 store ns obs' nt
-      (address + offset) oldWord value h1 h2 h3 Hfacts.2 $$
-      [$Hσ $Hword] with ⟨Hσ, Hword⟩
-  wasm_wp_frame
+          Step.f32Store (address := .i32 address) rfl hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running
+          ⟨⟨params, localValues, .f32 value :: .i32 address :: values⟩,
+            .f32Store offset :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.f32Store offset))
+        ⟨.running
+          ⟨⟨params, localValues, values⟩,
+            code, arity, remainder, controls, calls⟩,
+          { store with wasm :=
+              { store.wasm with
+                mem := store.wasm.mem.write32 (address + offset) value } }⟩ := by
+      simpa only [Wasm.SmallStep.setMemory_eq] using
+        Step.f32Store (address := .i32 address) rfl hbound
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_store32 store ns obs' nt
+        (address + offset) oldWord value h1 h2 h3 Hfacts.2 $$
+        [$Hσ $Hword] with ⟨Hσ, Hword⟩
+    wasm_wp_frame
 
 theorem wp_load64
     {params localValues values : List Value}
@@ -3742,30 +3553,25 @@ theorem wp_load64
   have hbound : address.toNat + offset.toNat + 8 ≤
       store.wasm.mem.pages * 65536 := by
     simpa only [hnowrap] using HinBounds
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, .i64 word :: values⟩,
         code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl, by
         simpa [Hread] using
-          Step.load64 (α := α) (address := Value.i32 address) rfl hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
-        .load64 offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.load64 offset))
-      ⟨.running ⟨⟨params, localValues, .i64 word :: values⟩,
-        code, arity, remainder, controls, calls⟩, store⟩ := by
-    simpa [Hread] using
-      (Step.load64 (α := α) (address := Value.i32 address) rfl hbound)
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  wasm_wp_frame
+          Step.load64 (α := α) (address := Value.i32 address) rfl hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
+          .load64 offset :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.load64 offset))
+        ⟨.running ⟨⟨params, localValues, .i64 word :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+      simpa [Hread] using
+        (Step.load64 (α := α) (address := Value.i32 address) rfl hbound)
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    wasm_wp_frame
 
 theorem wp_store64
     {params localValues values : List Value}
@@ -3807,39 +3613,34 @@ theorem wp_store64
   have hbound : address.toNat + offset.toNat + 8 ≤
       store.wasm.mem.pages * 65536 := by
     simpa only [hnowrap] using Hfacts.2
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       { store with wasm :=
           { store.wasm with
             mem := store.wasm.mem.write64 (address + offset) value } },
       [], ⟨rfl, _, rfl,
-        Step.store64 (α := α) (address := Value.i32 address) rfl hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, .i64 value :: .i32 address :: values⟩,
-          .store64 offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.store64 offset))
-      ⟨.running
-        ⟨⟨params, localValues, values⟩,
-          code, arity, remainder, controls, calls⟩,
-        { store with wasm :=
-            { store.wasm with
-              mem := store.wasm.mem.write64 (address + offset) value } }⟩ :=
-    Step.store64 (α := α) (address := Value.i32 address) rfl hbound
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_store64 store ns obs' nt
-      (address + offset) oldWord value h1 h2 h3 h4 h5 h6 h7 Hfacts.2 $$
-      [$Hσ $Hword] with ⟨Hσ, Hword⟩
-  wasm_wp_frame
+        Step.store64 (α := α) (address := Value.i32 address) rfl hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running
+          ⟨⟨params, localValues, .i64 value :: .i32 address :: values⟩,
+            .store64 offset :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.store64 offset))
+        ⟨.running
+          ⟨⟨params, localValues, values⟩,
+            code, arity, remainder, controls, calls⟩,
+          { store with wasm :=
+              { store.wasm with
+                mem := store.wasm.mem.write64 (address + offset) value } }⟩ :=
+      Step.store64 (α := α) (address := Value.i32 address) rfl hbound
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_store64 store ns obs' nt
+        (address + offset) oldWord value h1 h2 h3 h4 h5 h6 h7 Hfacts.2 $$
+        [$Hσ $Hword] with ⟨Hσ, Hword⟩
+    wasm_wp_frame
 
 theorem wp_f64Load
     {params localValues values : List Value}
@@ -3881,30 +3682,25 @@ theorem wp_f64Load
   have hbound : address.toNat + offset.toNat + 8 ≤
       store.wasm.mem.pages * 65536 := by
     simpa only [hnowrap] using HinBounds
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, .f64 word :: values⟩,
         code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl, by
         simpa [Hread] using
-          Step.f64Load (α := α) (address := Value.i32 address) rfl hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
-        .f64Load offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.f64Load offset))
-      ⟨.running ⟨⟨params, localValues, .f64 word :: values⟩,
-        code, arity, remainder, controls, calls⟩, store⟩ := by
-    simpa [Hread] using
-      (Step.f64Load (α := α) (address := Value.i32 address) rfl hbound)
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  wasm_wp_frame
+          Step.f64Load (α := α) (address := Value.i32 address) rfl hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
+          .f64Load offset :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.f64Load offset))
+        ⟨.running ⟨⟨params, localValues, .f64 word :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+      simpa [Hread] using
+        (Step.f64Load (α := α) (address := Value.i32 address) rfl hbound)
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    wasm_wp_frame
 
 theorem wp_f64Store
     {params localValues values : List Value}
@@ -3946,12 +3742,7 @@ theorem wp_f64Store
   have hbound : address.toNat + offset.toNat + 8 ≤
       store.wasm.mem.pages * 65536 := by
     simpa only [hnowrap] using Hfacts.2
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       { store with wasm :=
@@ -3959,28 +3750,28 @@ theorem wp_f64Store
             mem := store.wasm.mem.write64 (address + offset) value } },
       [], ⟨rfl, _, rfl, by
         simpa only [Wasm.SmallStep.setMemory_eq] using
-          Step.f64Store (α := α) (address := Value.i32 address) rfl hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, .f64 value :: .i32 address :: values⟩,
-          .f64Store offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.f64Store offset))
-      ⟨.running
-        ⟨⟨params, localValues, values⟩,
-          code, arity, remainder, controls, calls⟩,
-        { store with wasm :=
-            { store.wasm with
-              mem := store.wasm.mem.write64 (address + offset) value } }⟩ := by
-    simpa only [Wasm.SmallStep.setMemory_eq] using
-      Step.f64Store (α := α) (address := Value.i32 address) rfl hbound
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_store64 store ns obs' nt
-      (address + offset) oldWord value h1 h2 h3 h4 h5 h6 h7 Hfacts.2 $$
-      [$Hσ $Hword] with ⟨Hσ, Hword⟩
-  wasm_wp_frame
+          Step.f64Store (α := α) (address := Value.i32 address) rfl hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running
+          ⟨⟨params, localValues, .f64 value :: .i32 address :: values⟩,
+            .f64Store offset :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.f64Store offset))
+        ⟨.running
+          ⟨⟨params, localValues, values⟩,
+            code, arity, remainder, controls, calls⟩,
+          { store with wasm :=
+              { store.wasm with
+                mem := store.wasm.mem.write64 (address + offset) value } }⟩ := by
+      simpa only [Wasm.SmallStep.setMemory_eq] using
+        Step.f64Store (α := α) (address := Value.i32 address) rfl hbound
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_store64 store ns obs' nt
+        (address + offset) oldWord value h1 h2 h3 h4 h5 h6 h7 Hfacts.2 $$
+        [$Hσ $Hword] with ⟨Hσ, Hword⟩
+    wasm_wp_frame
 
 theorem wp_memoryGrow64TooLarge
     {params localValues values : List Value}
@@ -4018,28 +3809,23 @@ theorem wp_memoryGrowFailure
         [$Hσ $Hruntime] with %Hmodule
     ipureintro
     exact Hmodule
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[], _, store, [],
-      ⟨rfl, _, rfl, Step.memoryGrowFailure (Hmodule ▸ hgrow store.wasm)⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  obtain ⟨rfl, hconfig⟩ := step_deterministic
-      (Step.memoryGrowFailure (Hmodule ▸ hgrow store.wasm)) wasmStep
-  simp only at hconfig
-  cases hconfig
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hruntime]
-  · iapply Hwp
-    iexact Hruntime
-  · itrivial
+  wasm_wp_offer_step ⟨[], _, store, [],
+      ⟨rfl, _, rfl, Step.memoryGrowFailure (Hmodule ▸ hgrow store.wasm)⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    obtain ⟨rfl, hconfig⟩ := step_deterministic
+        (Step.memoryGrowFailure (Hmodule ▸ hgrow store.wasm)) wasmStep
+    simp only at hconfig
+    cases hconfig
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod Hclose
+    imodintro
+    isplitl [Hσ]
+    · iexact Hσ
+    isplitl [Hruntime]
+    · iapply Hwp
+      iexact Hruntime
+    · itrivial
 
 theorem wp_memorySize
     {params localValues values : List Value}
@@ -4062,28 +3848,23 @@ theorem wp_memorySize
       instanceId runtimeModule $$ [$Hσ $Hruntime] with %Hmodule
     ipureintro
     exact Hmodule
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues,
         sizeValue store.runtime.currentModule.memIs64 store.wasm.mem.pages :: values⟩,
         code, arity, remainder, controls, calls⟩,
-      store, [], ⟨rfl, _, rfl, Step.memorySize⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  wasm_wp_resolve_target Step.memorySize against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil, Hmodule]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hruntime]
-  · iapply (Hwp store.wasm.mem.pages)
-    iexact Hruntime
-  · itrivial
+      store, [], ⟨rfl, _, rfl, Step.memorySize⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    wasm_wp_resolve_target Step.memorySize against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil, Hmodule]
+    imod Hclose
+    imodintro
+    isplitl [Hσ]
+    · iexact Hσ
+    isplitl [Hruntime]
+    · iapply (Hwp store.wasm.mem.pages)
+      iexact Hruntime
+    · itrivial
 
 theorem wp_memoryGrow64Failure
     {params localValues values : List Value}
@@ -4108,28 +3889,23 @@ theorem wp_memoryGrow64Failure
         [$Hσ $Hruntime] with %Hmodule
     ipureintro
     exact Hmodule
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[], _, store, [],
-      ⟨rfl, _, rfl, Step.memoryGrow64Failure hsmall (Hmodule ▸ hgrow store.wasm)⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  obtain ⟨rfl, hconfig⟩ := step_deterministic
-      (Step.memoryGrow64Failure hsmall (Hmodule ▸ hgrow store.wasm)) wasmStep
-  simp only at hconfig
-  cases hconfig
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hruntime]
-  · iapply Hwp
-    iexact Hruntime
-  · itrivial
+  wasm_wp_offer_step ⟨[], _, store, [],
+      ⟨rfl, _, rfl, Step.memoryGrow64Failure hsmall (Hmodule ▸ hgrow store.wasm)⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    obtain ⟨rfl, hconfig⟩ := step_deterministic
+        (Step.memoryGrow64Failure hsmall (Hmodule ▸ hgrow store.wasm)) wasmStep
+    simp only at hconfig
+    cases hconfig
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod Hclose
+    imodintro
+    isplitl [Hσ]
+    · iexact Hσ
+    isplitl [Hruntime]
+    · iapply Hwp
+      iexact Hruntime
+    · itrivial
 
 /-- Rule for `memory.grow` with an i32 delta. Whether the grow succeeds
 depends on the physical store (the current page count and the module cap),
@@ -4326,37 +4102,33 @@ theorem wp_memoryFill32
   have hbound : destination.toNat + len.toNat ≤ store.wasm.mem.pages * 65536 := by
     have := pointsToBytes_facts_bound Hpb (by omega) (by omega)
     omega
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
       { store with wasm :=
           { store.wasm with mem :=
               store.wasm.mem.fill destination.toNat len.toNat value.toUInt8 } },
-      [], ⟨rfl, _, rfl, by simpa only [setMemory_eq] using Step.memoryFill32 hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues,
-        .i32 len :: .i32 value :: .i32 destination :: values⟩,
-        .memoryFill :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction .memoryFill)
-      ⟨.running ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
-        { store with wasm :=
-            { store.wasm with mem :=
-                store.wasm.mem.fill destination.toNat oldBytes.length value.toUInt8 } }⟩ := by
-    rw [hlen]
-    simpa only [setMemory_eq] using Step.memoryFill32 hbound
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_fill_bytes store ns obs' nt
-      destination oldBytes value.toUInt8
-      (by rw [hlen]; exact hbound) (by rw [hlen]; exact hnowrap)
-      $$ [$Hσ $Hbytes] with ⟨Hσ, Hbytes⟩
-  wasm_wp_frame
+      [], ⟨rfl, _, rfl, by simpa only [setMemory_eq] using Step.memoryFill32 hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running ⟨⟨params, localValues,
+          .i32 len :: .i32 value :: .i32 destination :: values⟩,
+          .memoryFill :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .memoryFill)
+        ⟨.running
+          ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
+          { store with wasm :=
+              { store.wasm with mem :=
+                  store.wasm.mem.fill destination.toNat oldBytes.length value.toUInt8 } }⟩ := by
+      rw [hlen]
+      simpa only [setMemory_eq] using Step.memoryFill32 hbound
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_fill_bytes store ns obs' nt
+        destination oldBytes value.toUInt8
+        (by rw [hlen]; exact hbound) (by rw [hlen]; exact hnowrap)
+        $$ [$Hσ $Hbytes] with ⟨Hσ, Hbytes⟩
+    wasm_wp_frame
 
 /-- Primitive rule for `memory.fill` with i64 operands (non-trapping). Same
 ownership as `wp_memoryFill32`; `destination.toUInt32` is the ghost address
@@ -4395,37 +4167,33 @@ theorem wp_memoryFill64
   have hbound : destination.toNat + len.toNat ≤ store.wasm.mem.pages * 65536 := by
     have := pointsToBytes_facts_bound Hpb (by omega) (by omega)
     omega
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
       { store with wasm :=
           { store.wasm with mem :=
               store.wasm.mem.fill destination.toUInt32.toNat oldBytes.length value.toUInt8 } },
       [], ⟨rfl, _, rfl, by
-        rw [hdst, hlen]; simpa only [setMemory_eq] using Step.memoryFill64 hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues,
-        .i64 len :: .i32 value :: .i64 destination :: values⟩,
-        .memoryFill :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction .memoryFill)
-      ⟨.running ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
-        { store with wasm :=
-            { store.wasm with mem :=
-                store.wasm.mem.fill destination.toUInt32.toNat oldBytes.length value.toUInt8 } }⟩ := by
-    rw [hdst, hlen]; simpa only [setMemory_eq] using Step.memoryFill64 hbound
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_fill_bytes store ns obs' nt
-      destination.toUInt32 oldBytes value.toUInt8
-      (by rw [hdst, hlen]; exact hbound) (by rw [hdst, hlen]; exact hnowrap)
-      $$ [$Hσ $Hbytes] with ⟨Hσ, Hbytes⟩
-  wasm_wp_frame
+        rw [hdst, hlen]; simpa only [setMemory_eq] using Step.memoryFill64 hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running ⟨⟨params, localValues,
+          .i64 len :: .i32 value :: .i64 destination :: values⟩,
+          .memoryFill :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .memoryFill)
+        ⟨.running
+          ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
+          { store with wasm :=
+              { store.wasm with mem := (store.wasm.mem.fill
+                  destination.toUInt32.toNat oldBytes.length value.toUInt8) } }⟩ := by
+      rw [hdst, hlen]; simpa only [setMemory_eq] using Step.memoryFill64 hbound
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_fill_bytes store ns obs' nt
+        destination.toUInt32 oldBytes value.toUInt8
+        (by rw [hdst, hlen]; exact hbound) (by rw [hdst, hlen]; exact hnowrap)
+        $$ [$Hσ $Hbytes] with ⟨Hσ, Hbytes⟩
+    wasm_wp_frame
 
 theorem wp_memoryCopy32
     {params localValues values : List Value}
@@ -4472,43 +4240,39 @@ theorem wp_memoryCopy32
   have hbound_dst : destination.toNat + len.toNat ≤ store.wasm.mem.pages * 65536 := by
     have := pointsToBytes_facts_bound Hpbdst (by omega) (by omega)
     omega
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
       { store with wasm :=
           { store.wasm with mem :=
               store.wasm.mem.copy destination.toNat source.toNat len.toNat } },
       [], ⟨rfl, _, rfl, by
         simpa only [setMemory_eq] using
-          (Step.memoryCopy32 hbound_dst hbound_src)⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues,
-        .i32 len :: .i32 source :: .i32 destination :: values⟩,
-        .memoryCopy :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction .memoryCopy)
-      ⟨.running ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
-        { store with wasm :=
-            { store.wasm with mem :=
-                store.wasm.mem.copy destination.toNat source.toNat oldDstBytes.length } }⟩ := by
-    rw [hlen_dst]
-    simpa only [setMemory_eq] using Step.memoryCopy32 hbound_dst hbound_src
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_copy_bytes store ns obs' nt
-      destination source oldDstBytes srcBytes
-      (hlen_src.trans hlen_dst.symm)
-      (by rw [hlen_dst]; exact hbound_dst)
-      (by rw [hlen_dst]; exact hnowrap_dst)
-      (by rw [hlen_src]; exact hbound_src)
-      (by rw [hlen_src]; exact hnowrap_src)
-      $$ [$Hσ $Hsrc $Hdst] with ⟨Hσ, Hsrc, Hdst⟩
-  wasm_wp_frame
+          (Step.memoryCopy32 hbound_dst hbound_src)⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running ⟨⟨params, localValues,
+          .i32 len :: .i32 source :: .i32 destination :: values⟩,
+          .memoryCopy :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .memoryCopy)
+        ⟨.running
+          ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
+          { store with wasm :=
+              { store.wasm with mem :=
+                  store.wasm.mem.copy destination.toNat source.toNat oldDstBytes.length } }⟩ := by
+      rw [hlen_dst]
+      simpa only [setMemory_eq] using Step.memoryCopy32 hbound_dst hbound_src
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_copy_bytes store ns obs' nt
+        destination source oldDstBytes srcBytes
+        (hlen_src.trans hlen_dst.symm)
+        (by rw [hlen_dst]; exact hbound_dst)
+        (by rw [hlen_dst]; exact hnowrap_dst)
+        (by rw [hlen_src]; exact hbound_src)
+        (by rw [hlen_src]; exact hnowrap_src)
+        $$ [$Hσ $Hsrc $Hdst] with ⟨Hσ, Hsrc, Hdst⟩
+    wasm_wp_frame
 
 theorem wp_memoryCopy64
     {params localValues values : List Value}
@@ -4561,44 +4325,40 @@ theorem wp_memoryCopy64
   have hbound_dst : destination.toNat + len.toNat ≤ store.wasm.mem.pages * 65536 := by
     have := pointsToBytes_facts_bound Hpbdst (by omega) (by omega)
     omega
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
       { store with wasm :=
           { store.wasm with mem :=
               store.wasm.mem.copy destination.toNat source.toNat len.toNat } },
       [], ⟨rfl, _, rfl, by
         simpa only [setMemory_eq] using
-          (Step.memoryCopy64 hbound_dst hbound_src)⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues,
-        .i64 len :: .i64 source :: .i64 destination :: values⟩,
-        .memoryCopy :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction .memoryCopy)
-      ⟨.running ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
-        { store with wasm :=
-            { store.wasm with mem :=
-                (store.wasm.mem.copy destination.toUInt32.toNat source.toUInt32.toNat
-                  oldDstBytes.length) } }⟩ := by
-    rw [hlen_dst, hdst, hsrc_nat]
-    simpa only [setMemory_eq] using Step.memoryCopy64 hbound_dst hbound_src
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_copy_bytes store ns obs' nt
-      destination.toUInt32 source.toUInt32 oldDstBytes srcBytes
-      (hlen_src.trans hlen_dst.symm)
-      (by rw [hdst, hlen_dst]; exact hbound_dst)
-      (by rw [hdst, hlen_dst]; exact hnowrap_dst)
-      (by rw [hsrc_nat, hlen_src]; exact hbound_src)
-      (by rw [hsrc_nat, hlen_src]; exact hnowrap_src)
-      $$ [$Hσ $Hsrc $Hdst] with ⟨Hσ, Hsrc, Hdst⟩
-  wasm_wp_frame
+          (Step.memoryCopy64 hbound_dst hbound_src)⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running ⟨⟨params, localValues,
+          .i64 len :: .i64 source :: .i64 destination :: values⟩,
+          .memoryCopy :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .memoryCopy)
+        ⟨.running
+          ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
+          { store with wasm :=
+              { store.wasm with mem :=
+                  (store.wasm.mem.copy destination.toUInt32.toNat source.toUInt32.toNat
+                    oldDstBytes.length) } }⟩ := by
+      rw [hlen_dst, hdst, hsrc_nat]
+      simpa only [setMemory_eq] using Step.memoryCopy64 hbound_dst hbound_src
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_copy_bytes store ns obs' nt
+        destination.toUInt32 source.toUInt32 oldDstBytes srcBytes
+        (hlen_src.trans hlen_dst.symm)
+        (by rw [hdst, hlen_dst]; exact hbound_dst)
+        (by rw [hdst, hlen_dst]; exact hnowrap_dst)
+        (by rw [hsrc_nat, hlen_src]; exact hbound_src)
+        (by rw [hsrc_nat, hlen_src]; exact hnowrap_src)
+        $$ [$Hσ $Hsrc $Hdst] with ⟨Hσ, Hsrc, Hdst⟩
+    wasm_wp_frame
 
 theorem wp_memoryInit32
     {params localValues values : List Value}
@@ -4637,12 +4397,7 @@ theorem wp_memoryInit32
   have hbound_dst : destination.toNat + len.toNat ≤ store.wasm.mem.pages * 65536 := by
     have := pointsToBytes_facts_bound Hpbdst (by omega) (by omega)
     omega
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
       { store with wasm :=
           { store.wasm with mem :=
@@ -4650,27 +4405,28 @@ theorem wp_memoryInit32
                 source.toNat len.toNat) } },
       [], ⟨rfl, _, rfl, by
         simpa only [setMemory_eq] using
-          (Step.memoryInit32 hsegment hbound_src hbound_dst)⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues,
-        .i32 len :: .i32 source :: .i32 destination :: values⟩,
-        .memoryInit segmentIndex :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.memoryInit segmentIndex))
-      ⟨.running ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
-        { store with wasm :=
-            { store.wasm with mem :=
-                (store.wasm.mem.writeBytesFrom destination.toNat segmentBytes source.toNat
-                  len.toNat) } }⟩ := by
-    simpa only [setMemory_eq] using Step.memoryInit32 hsegment hbound_src hbound_dst
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_init_bytes store ns obs' nt
-      destination source.toNat len.toNat segmentIndex oldDstBytes segmentBytes
-      hlen_dst hbound_dst hnowrap_dst hbound_src
-      $$ [$Hσ $Hsegment $Hdst] with ⟨Hσ, Hsegment, Hdst⟩
-  wasm_wp_frame
+          (Step.memoryInit32 hsegment hbound_src hbound_dst)⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running ⟨⟨params, localValues,
+          .i32 len :: .i32 source :: .i32 destination :: values⟩,
+          .memoryInit segmentIndex :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.memoryInit segmentIndex))
+        ⟨.running
+          ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
+          { store with wasm :=
+              { store.wasm with mem :=
+                  (store.wasm.mem.writeBytesFrom destination.toNat segmentBytes source.toNat
+                    len.toNat) } }⟩ := by
+      simpa only [setMemory_eq] using Step.memoryInit32 hsegment hbound_src hbound_dst
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_init_bytes store ns obs' nt
+        destination source.toNat len.toNat segmentIndex oldDstBytes segmentBytes
+        hlen_dst hbound_dst hnowrap_dst hbound_src
+        $$ [$Hσ $Hsegment $Hdst] with ⟨Hσ, Hsegment, Hdst⟩
+    wasm_wp_frame
 
 theorem wp_memoryInit64
     {params localValues values : List Value}
@@ -4712,12 +4468,7 @@ theorem wp_memoryInit64
   have hbound_dst : destination.toNat + len.toNat ≤ store.wasm.mem.pages * 65536 := by
     have := pointsToBytes_facts_bound Hpbdst (by omega) (by omega)
     omega
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
       { store with wasm :=
           { store.wasm with mem :=
@@ -4725,28 +4476,29 @@ theorem wp_memoryInit64
                 source.toNat len.toNat) } },
       [], ⟨rfl, _, rfl, by
         simpa only [setMemory_eq] using
-          (Step.memoryInit64 hsegment hbound_src hbound_dst)⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues,
-        .i32 len :: .i32 source :: .i64 destination :: values⟩,
-        .memoryInit segmentIndex :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.memoryInit segmentIndex))
-      ⟨.running ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
-        { store with wasm :=
-            { store.wasm with mem :=
-                (store.wasm.mem.writeBytesFrom destination.toUInt32.toNat segmentBytes
-                  source.toNat len.toNat) } }⟩ := by
-    rw [hdst]
-    simpa only [setMemory_eq] using Step.memoryInit64 hsegment hbound_src hbound_dst
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_init_bytes store ns obs' nt
-      destination.toUInt32 source.toNat len.toNat segmentIndex oldDstBytes segmentBytes
-      hlen_dst (by rw [hdst]; exact hbound_dst) (by rw [hdst]; exact hnowrap_dst) hbound_src
-      $$ [$Hσ $Hsegment $Hdst] with ⟨Hσ, Hsegment, Hdst⟩
-  wasm_wp_frame
+          (Step.memoryInit64 hsegment hbound_src hbound_dst)⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running ⟨⟨params, localValues,
+          .i32 len :: .i32 source :: .i64 destination :: values⟩,
+          .memoryInit segmentIndex :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.memoryInit segmentIndex))
+        ⟨.running
+          ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
+          { store with wasm :=
+              { store.wasm with mem :=
+                  (store.wasm.mem.writeBytesFrom destination.toUInt32.toNat segmentBytes
+                    source.toNat len.toNat) } }⟩ := by
+      rw [hdst]
+      simpa only [setMemory_eq] using Step.memoryInit64 hsegment hbound_src hbound_dst
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_init_bytes store ns obs' nt
+        destination.toUInt32 source.toNat len.toNat segmentIndex oldDstBytes segmentBytes
+        hlen_dst (by rw [hdst]; exact hbound_dst) (by rw [hdst]; exact hnowrap_dst) hbound_src
+        $$ [$Hσ $Hsegment $Hdst] with ⟨Hσ, Hsegment, Hdst⟩
+    wasm_wp_frame
 
 theorem wp_dataDrop
     {params localValues values : List Value}
@@ -4775,38 +4527,33 @@ theorem wp_dataDrop
       (store.wasm.dataSegments[segmentIndex]?).isSome = true := by
     rw [hsegment]
     rfl
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       { store with wasm :=
           { store.wasm with dataSegments :=
               store.wasm.dataSegments.set segmentIndex none } },
-      [], ⟨rfl, _, rfl, Step.dataDrop hisSome⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, values⟩,
-          .dataDrop segmentIndex :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.dataDrop segmentIndex))
-      ⟨.running
-        ⟨⟨params, localValues, values⟩,
-          code, arity, remainder, controls, calls⟩,
-        { store with wasm :=
-            { store.wasm with dataSegments :=
-                store.wasm.dataSegments.set segmentIndex none } }⟩ :=
-    Step.dataDrop hisSome
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_dataSegment_drop store ns
-      obs' nt segmentIndex (some bytes) $$
-      [$Hσ $Hsegment] with ⟨Hσ, Hsegment⟩
-  wasm_wp_frame
+      [], ⟨rfl, _, rfl, Step.dataDrop hisSome⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running
+          ⟨⟨params, localValues, values⟩,
+            .dataDrop segmentIndex :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.dataDrop segmentIndex))
+        ⟨.running
+          ⟨⟨params, localValues, values⟩,
+            code, arity, remainder, controls, calls⟩,
+          { store with wasm :=
+              { store.wasm with dataSegments :=
+                  store.wasm.dataSegments.set segmentIndex none } }⟩ :=
+      Step.dataDrop hisSome
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_dataSegment_drop store ns
+        obs' nt segmentIndex (some bytes) $$
+        [$Hσ $Hsegment] with ⟨Hσ, Hsegment⟩
+    wasm_wp_frame
 
 theorem wp_memoryInit32DroppedTrap
     {params localValues values : List Value}
@@ -4932,29 +4679,24 @@ theorem wp_memoryInit32Dropped
   imod stateInterp_dataSegment_facts_frame store ns (obs ++ obs') nt
       segmentIndex none $$ [$Hσ $Hsegment] with
     ⟨Hσ, Hsegment, %hsegment⟩
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
-      store, [], ⟨rfl, _, rfl, Step.memoryInit32Dropped hsegment (by omega)⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues,
-        .i32 len :: .i32 source :: .i32 destination :: values⟩,
-        .memoryInit segmentIndex :: code,
-        arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.memoryInit segmentIndex))
-      ⟨.running ⟨⟨params, localValues, values⟩,
-        code, arity, remainder, controls, calls⟩, store⟩ :=
-    Step.memoryInit32Dropped hsegment (by omega)
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  wasm_wp_frame
+      store, [], ⟨rfl, _, rfl, Step.memoryInit32Dropped hsegment (by omega)⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running ⟨⟨params, localValues,
+          .i32 len :: .i32 source :: .i32 destination :: values⟩,
+          .memoryInit segmentIndex :: code,
+          arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.memoryInit segmentIndex))
+        ⟨.running ⟨⟨params, localValues, values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ :=
+      Step.memoryInit32Dropped hsegment (by omega)
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    wasm_wp_frame
 
 theorem wp_memoryInit64Dropped
     {params localValues values : List Value}
@@ -4982,29 +4724,24 @@ theorem wp_memoryInit64Dropped
   imod stateInterp_dataSegment_facts_frame store ns (obs ++ obs') nt
       segmentIndex none $$ [$Hσ $Hsegment] with
     ⟨Hσ, Hsegment, %hsegment⟩
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
-      store, [], ⟨rfl, _, rfl, Step.memoryInit64Dropped hsegment (by omega)⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues,
-        .i32 len :: .i32 source :: .i64 destination :: values⟩,
-        .memoryInit segmentIndex :: code,
-        arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.memoryInit segmentIndex))
-      ⟨.running ⟨⟨params, localValues, values⟩,
-        code, arity, remainder, controls, calls⟩, store⟩ :=
-    Step.memoryInit64Dropped hsegment (by omega)
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  wasm_wp_frame
+      store, [], ⟨rfl, _, rfl, Step.memoryInit64Dropped hsegment (by omega)⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running ⟨⟨params, localValues,
+          .i32 len :: .i32 source :: .i64 destination :: values⟩,
+          .memoryInit segmentIndex :: code,
+          arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.memoryInit segmentIndex))
+        ⟨.running ⟨⟨params, localValues, values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ :=
+      Step.memoryInit64Dropped hsegment (by omega)
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    wasm_wp_frame
 
 theorem wp_memoryInit32Trap
     {params localValues values : List Value}
@@ -5354,36 +5091,31 @@ theorem wp_fill16_four_AB
       16 oldWord rfl rfl rfl $$ [$Hσ $Hword] with %Hfacts
     ipureintro
     exact Hfacts
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       { store with wasm :=
           { store.wasm with mem := store.wasm.mem.fill 16 4 0xAB } },
-      [], ⟨rfl, _, rfl, Step.memoryFill32 Hfacts.2⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, .i32 4 :: .i32 0xAB :: .i32 16 :: values⟩,
-          .memoryFill :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction .memoryFill)
-      ⟨.running
-        ⟨⟨params, localValues, values⟩,
-          code, arity, remainder, controls, calls⟩,
-        { store with wasm :=
-            { store.wasm with mem := store.wasm.mem.fill 16 4 0xAB } }⟩ :=
-    Step.memoryFill32 Hfacts.2
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_fill16_four_AB store ns
-      obs' nt oldWord Hfacts.2 $$
-      [$Hσ $Hword] with ⟨Hσ, Hword⟩
-  wasm_wp_frame
+      [], ⟨rfl, _, rfl, Step.memoryFill32 Hfacts.2⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running
+          ⟨⟨params, localValues, .i32 4 :: .i32 0xAB :: .i32 16 :: values⟩,
+            .memoryFill :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .memoryFill)
+        ⟨.running
+          ⟨⟨params, localValues, values⟩,
+            code, arity, remainder, controls, calls⟩,
+          { store with wasm :=
+              { store.wasm with mem := store.wasm.mem.fill 16 4 0xAB } }⟩ :=
+      Step.memoryFill32 Hfacts.2
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_fill16_four_AB store ns
+        obs' nt oldWord Hfacts.2 $$
+        [$Hσ $Hword] with ⟨Hσ, Hword⟩
+    wasm_wp_frame
 
 /-- Primitive Iris rule for initializing four bytes from passive data segment
 zero. Segment ownership proves that the bytes used by the relational
@@ -5421,46 +5153,41 @@ theorem wp_memoryInit16_four
       16 oldWord rfl rfl rfl $$ [$Hσ $Hword] with %HwordFacts
     ipureintro
     exact HwordFacts
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       { store with wasm :=
           { store.wasm with mem :=
               store.wasm.mem.writeBytesFrom 16 [1, 2, 3, 4] 0 4 } },
       [], ⟨rfl, _, rfl,
-        Step.memoryInit32 hsegment (by decide) HwordFacts.2⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, .i32 4 :: .i32 0 :: .i32 16 :: values⟩,
-          .memoryInit 0 :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.memoryInit 0))
-      ⟨.running
-        ⟨⟨params, localValues, values⟩,
-          code, arity, remainder, controls, calls⟩,
-        { store with wasm :=
-            { store.wasm with mem :=
-                store.wasm.mem.writeBytesFrom 16 [1, 2, 3, 4] 0 4 } }⟩ :=
-    Step.memoryInit32 hsegment (by decide) HwordFacts.2
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_init16_four store ns
-      obs' nt oldWord HwordFacts.2 $$
-      [$Hσ $Hword] with ⟨Hσ, Hword⟩
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hword Hsegment]
-  · iapply Hwp
-    iframe
-  · itrivial
+        Step.memoryInit32 hsegment (by decide) HwordFacts.2⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running
+          ⟨⟨params, localValues, .i32 4 :: .i32 0 :: .i32 16 :: values⟩,
+            .memoryInit 0 :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.memoryInit 0))
+        ⟨.running
+          ⟨⟨params, localValues, values⟩,
+            code, arity, remainder, controls, calls⟩,
+          { store with wasm :=
+              { store.wasm with mem :=
+                  store.wasm.mem.writeBytesFrom 16 [1, 2, 3, 4] 0 4 } }⟩ :=
+      Step.memoryInit32 hsegment (by decide) HwordFacts.2
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_init16_four store ns
+        obs' nt oldWord HwordFacts.2 $$
+        [$Hσ $Hword] with ⟨Hσ, Hword⟩
+    imod Hclose
+    imodintro
+    isplitl [Hσ]
+    · iexact Hσ
+    isplitl [Hwp Hword Hsegment]
+    · iapply Hwp
+      iframe
+    · itrivial
 
 /-- Primitive Iris rule for consuming passive data segment zero. The post owns
 the dropped status, preventing the old bytes from being reused. -/
@@ -5491,38 +5218,33 @@ theorem wp_dataDrop0
       (store.wasm.dataSegments[0]?).isSome = true := by
     rw [hsegment]
     rfl
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       { store with wasm :=
           { store.wasm with dataSegments :=
               store.wasm.dataSegments.set 0 none } },
-      [], ⟨rfl, _, rfl, Step.dataDrop hisSome⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, values⟩,
-          .dataDrop 0 :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.dataDrop 0))
-      ⟨.running
-        ⟨⟨params, localValues, values⟩,
-          code, arity, remainder, controls, calls⟩,
-        { store with wasm :=
-            { store.wasm with dataSegments :=
-                store.wasm.dataSegments.set 0 none } }⟩ :=
-    Step.dataDrop hisSome
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_dataSegment_drop store ns
-      obs' nt 0 (some bytes) $$
-      [$Hσ $Hsegment] with ⟨Hσ, Hsegment⟩
-  wasm_wp_frame
+      [], ⟨rfl, _, rfl, Step.dataDrop hisSome⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running
+          ⟨⟨params, localValues, values⟩,
+            .dataDrop 0 :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.dataDrop 0))
+        ⟨.running
+          ⟨⟨params, localValues, values⟩,
+            code, arity, remainder, controls, calls⟩,
+          { store with wasm :=
+              { store.wasm with dataSegments :=
+                  store.wasm.dataSegments.set 0 none } }⟩ :=
+      Step.dataDrop hisSome
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_dataSegment_drop store ns
+        obs' nt 0 (some bytes) $$
+        [$Hσ $Hsegment] with ⟨Hσ, Hsegment⟩
+    wasm_wp_frame
 
 /-- Primitive Iris rule for `elem.drop`. A live element-segment fragment is
 consumed and replaced by ownership of its dropped physical state. -/
@@ -5557,41 +5279,36 @@ theorem wp_elemDrop
       (store.wasm.elementSegments[elementIndex]?).isSome = true := by
     rw [hsegment]
     rfl
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       { store with wasm :=
           { store.wasm with elementSegments :=
               store.wasm.elementSegments.set elementIndex none } },
-      [], ⟨rfl, _, rfl, Step.elemDrop hisSome⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, values⟩,
-          .elemDrop elementIndex :: code,
-          arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.elemDrop elementIndex))
-      ⟨.running
-        ⟨⟨params, localValues, values⟩,
-          code, arity, remainder, controls, calls⟩,
-        { store with wasm :=
-            { store.wasm with elementSegments :=
-                store.wasm.elementSegments.set elementIndex none } }⟩ :=
-    Step.elemDrop hisSome
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero,
-    Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_elementSegment_drop store ns
-      obs' nt
-      elementIndex (some entries) $$ [$Hσ $Hsegment] with
-    ⟨Hσ, Hsegment⟩
-  wasm_wp_frame
+      [], ⟨rfl, _, rfl, Step.elemDrop hisSome⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running
+          ⟨⟨params, localValues, values⟩,
+            .elemDrop elementIndex :: code,
+            arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.elemDrop elementIndex))
+        ⟨.running
+          ⟨⟨params, localValues, values⟩,
+            code, arity, remainder, controls, calls⟩,
+          { store with wasm :=
+              { store.wasm with elementSegments :=
+                  store.wasm.elementSegments.set elementIndex none } }⟩ :=
+      Step.elemDrop hisSome
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero,
+      Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_elementSegment_drop store ns
+        obs' nt
+        elementIndex (some entries) $$ [$Hσ $Hsegment] with
+      ⟨Hσ, Hsegment⟩
+    wasm_wp_frame
 
 /-- Initialize a table range from a live element segment. Runtime-module
 ownership fixes the instantiated reference values while element and table
@@ -5678,42 +5395,37 @@ theorem wp_tableInitLive
     { store with wasm :=
         { store.wasm with tables :=
             (listSetAt store.wasm.tables tableIndex newTable) } }
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       updatedStore, [],
       ⟨rfl, _, rfl,
         Step.tableInit hdestination HtablePhysical HsegmentPhysical
-          hvalues hsourceBound' hdestinationBound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues,
-            .i32 length :: .i32 source :: destination :: values⟩,
-          .tableInit tableIndex elementIndex :: code,
-          arity, remainder, controls, calls⟩,
-        store⟩
-      (.instruction (.tableInit tableIndex elementIndex))
-      ⟨.running
-        ⟨⟨params, localValues, values⟩,
-          code, arity, remainder, controls, calls⟩,
-        updatedStore⟩ :=
-    Step.tableInit hdestination HtablePhysical HsegmentPhysical
-      hvalues hsourceBound' hdestinationBound
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero,
-    Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_table_set store ns
-      obs' nt
-      tableIndex table newTable $$ [$Hσ $Htable] with
-    ⟨Hσ, Htable⟩
-  wasm_wp_frame
+          hvalues hsourceBound' hdestinationBound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running
+          ⟨⟨params, localValues,
+              .i32 length :: .i32 source :: destination :: values⟩,
+            .tableInit tableIndex elementIndex :: code,
+            arity, remainder, controls, calls⟩,
+          store⟩
+        (.instruction (.tableInit tableIndex elementIndex))
+        ⟨.running
+          ⟨⟨params, localValues, values⟩,
+            code, arity, remainder, controls, calls⟩,
+          updatedStore⟩ :=
+      Step.tableInit hdestination HtablePhysical HsegmentPhysical
+        hvalues hsourceBound' hdestinationBound
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero,
+      Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_table_set store ns
+        obs' nt
+        tableIndex table newTable $$ [$Hσ $Htable] with
+      ⟨Hσ, Htable⟩
+    wasm_wp_frame
 
 /-- Primitive Iris rule for the overlapping four-byte copy from address 0 to
 address 2. One eight-byte owner represents the aliased source/destination
@@ -5748,36 +5460,31 @@ theorem wp_copy2_zero_four
     exact Hfacts
   have hsource : 4 ≤ store.wasm.mem.pages * 65536 := by omega
   have hdestination : 2 + 4 ≤ store.wasm.mem.pages * 65536 := by omega
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       { store with wasm :=
           { store.wasm with mem := store.wasm.mem.copy 2 0 4 } },
-      [], ⟨rfl, _, rfl, Step.memoryCopy32 hdestination hsource⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, .i32 4 :: .i32 0 :: .i32 2 :: values⟩,
-          .memoryCopy :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction .memoryCopy)
-      ⟨.running
-        ⟨⟨params, localValues, values⟩,
-          code, arity, remainder, controls, calls⟩,
-        { store with wasm :=
-            { store.wasm with mem := store.wasm.mem.copy 2 0 4 } }⟩ :=
-    Step.memoryCopy32 hdestination hsource
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_copy2_zero_four store ns
-      obs' nt $$
-      [$Hσ $Hword] with ⟨Hσ, Hword⟩
-  wasm_wp_frame
+      [], ⟨rfl, _, rfl, Step.memoryCopy32 hdestination hsource⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running
+          ⟨⟨params, localValues, .i32 4 :: .i32 0 :: .i32 2 :: values⟩,
+            .memoryCopy :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .memoryCopy)
+        ⟨.running
+          ⟨⟨params, localValues, values⟩,
+            code, arity, remainder, controls, calls⟩,
+          { store with wasm :=
+              { store.wasm with mem := store.wasm.mem.copy 2 0 4 } }⟩ :=
+      Step.memoryCopy32 hdestination hsource
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_copy2_zero_four store ns
+        obs' nt $$
+        [$Hσ $Hword] with ⟨Hσ, Hword⟩
+    wasm_wp_frame
 
 /-- Primitive Iris rule for an aligned four-byte copy from address 0 to 8.
 Both source and destination ranges are owned; source ownership is preserved
@@ -5819,45 +5526,40 @@ theorem wp_copy8_zero_four
       with %HdestinationFacts
     ipureintro
     exact HdestinationFacts
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩,
       { store with wasm :=
           { store.wasm with mem := store.wasm.mem.copy 8 0 4 } },
       [], ⟨rfl, _, rfl,
-        Step.memoryCopy32 HdestinationFacts.2 HsourceFacts.2⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, .i32 4 :: .i32 0 :: .i32 8 :: values⟩,
-          .memoryCopy :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction .memoryCopy)
-      ⟨.running
-        ⟨⟨params, localValues, values⟩,
-          code, arity, remainder, controls, calls⟩,
-        { store with wasm :=
-            { store.wasm with mem := store.wasm.mem.copy 8 0 4 } }⟩ :=
-    Step.memoryCopy32 HdestinationFacts.2 HsourceFacts.2
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_copy8_zero_four store ns
-      obs' nt oldDestination $$
-      [$Hσ $Hsource $Hdestination] with
-      ⟨Hσ, Hsource, Hdestination⟩
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hsource Hdestination]
-  · iapply Hwp
-    iframe
-  · itrivial
+        Step.memoryCopy32 HdestinationFacts.2 HsourceFacts.2⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running
+          ⟨⟨params, localValues, .i32 4 :: .i32 0 :: .i32 8 :: values⟩,
+            .memoryCopy :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .memoryCopy)
+        ⟨.running
+          ⟨⟨params, localValues, values⟩,
+            code, arity, remainder, controls, calls⟩,
+          { store with wasm :=
+              { store.wasm with mem := store.wasm.mem.copy 8 0 4 } }⟩ :=
+      Step.memoryCopy32 HdestinationFacts.2 HsourceFacts.2
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_copy8_zero_four store ns
+        obs' nt oldDestination $$
+        [$Hσ $Hsource $Hdestination] with
+        ⟨Hσ, Hsource, Hdestination⟩
+    imod Hclose
+    imodintro
+    isplitl [Hσ]
+    · iexact Hσ
+    isplitl [Hwp Hsource Hdestination]
+    · iapply Hwp
+      iframe
+    · itrivial
 
 /-- End-to-end Iris contract for the hand-written 32-bit memory roundtrip.
 The physical word and its four authoritative ghost bytes are updated by the
@@ -6561,32 +6263,27 @@ theorem wp_v128Load
   have hbound : address.toNat + offset.toNat + 16 ≤
       store.wasm.mem.pages * 65536 := by
     omega
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues,
         .v128 (BitVec.ofNat 128 (lo_word.toNat + hi_word.toNat * 2 ^ 64)) :: values⟩,
         code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl, by
         simpa [readV128_eq, Hread_lo, Hread_hi] using
-          Step.v128Load (α := α) (address := .i32 address) rfl hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
-        .v128Load offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.v128Load offset))
-      ⟨.running ⟨⟨params, localValues,
-        .v128 (BitVec.ofNat 128 (lo_word.toNat + hi_word.toNat * 2 ^ 64)) :: values⟩,
-        code, arity, remainder, controls, calls⟩, store⟩ := by
-    simpa [readV128_eq, Hread_lo, Hread_hi] using
-      Step.v128Load (α := α) (address := .i32 address) rfl hbound
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  wasm_wp_frame
+          Step.v128Load (α := α) (address := .i32 address) rfl hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
+          .v128Load offset :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.v128Load offset))
+        ⟨.running ⟨⟨params, localValues,
+          .v128 (BitVec.ofNat 128 (lo_word.toNat + hi_word.toNat * 2 ^ 64)) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+      simpa [readV128_eq, Hread_lo, Hread_hi] using
+        Step.v128Load (α := α) (address := .i32 address) rfl hbound
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    wasm_wp_frame
 
 -- Store a v128 to memory, updating 16 bytes of ghost state.
 -- lo_old/hi_old are the ghost values at addr and addr+8 before the write;
@@ -6647,37 +6344,32 @@ theorem wp_v128Store
       store.wasm.mem.pages * 65536 := by
     obtain ⟨-, HinBounds⟩ := Hhifacts
     omega
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
       _, [], ⟨rfl, _, rfl,
-        Step.v128Store (α := α) (address := .i32 address) rfl hbound_store⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  obtain ⟨rfl, hconfig⟩ := step_deterministic
-      (Step.v128Store (α := α) (address := .i32 address) rfl hbound_store) wasmStep
-  simp only at hconfig
-  cases hconfig
-  simp only [setMemory_eq, writeV128_eq]
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_writeV128 store ns obs' nt (address + offset)
-      lo_old hi_old
-      (UInt64.ofNat (value.toNat % 2 ^ 64))
-      (UInt64.ofNat (value.toNat / 2 ^ 64))
-      hnowrap16 (by simpa [hnowrap] using hbound_store) $$
-      [$Hσ $Hlo_old $Hhi_old] with ⟨Hσ, ⟨Hlo, Hhi⟩⟩
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hlo Hhi]
-  · iapply Hwp $$ [$Hlo]
-    iexact Hhi
-  · itrivial
+        Step.v128Store (α := α) (address := .i32 address) rfl hbound_store⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    obtain ⟨rfl, hconfig⟩ := step_deterministic
+        (Step.v128Store (α := α) (address := .i32 address) rfl hbound_store) wasmStep
+    simp only at hconfig
+    cases hconfig
+    simp only [setMemory_eq, writeV128_eq]
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_writeV128 store ns obs' nt (address + offset)
+        lo_old hi_old
+        (UInt64.ofNat (value.toNat % 2 ^ 64))
+        (UInt64.ofNat (value.toNat / 2 ^ 64))
+        hnowrap16 (by simpa [hnowrap] using hbound_store) $$
+        [$Hσ $Hlo_old $Hhi_old] with ⟨Hσ, ⟨Hlo, Hhi⟩⟩
+    imod Hclose
+    imodintro
+    isplitl [Hσ]
+    · iexact Hσ
+    isplitl [Hwp Hlo Hhi]
+    · iapply Hwp $$ [$Hlo]
+      iexact Hhi
+    · itrivial
 
 theorem wp_load8UMemory64
     {params localValues values : List Value}
@@ -6711,30 +6403,25 @@ theorem wp_load8UMemory64
   obtain ⟨Hread, HinBounds⟩ := Hfacts
   have hbound : address.toNat + offset.toNat + 1 ≤
       store.wasm.mem.pages * 65536 := by omega
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, .i32 byte.toUInt32 :: values⟩,
         code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl,
         by simpa [Hread] using
-          Step.load8U (α := α) (address := Value.i64 address) rfl hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues, .i64 address :: values⟩,
-        .load8U offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.load8U offset))
-      ⟨.running ⟨⟨params, localValues, .i32 byte.toUInt32 :: values⟩,
-        code, arity, remainder, controls, calls⟩, store⟩ := by
-    simpa [Hread] using
-      (Step.load8U (α := α) (address := Value.i64 address) rfl hbound)
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  wasm_wp_frame
+          Step.load8U (α := α) (address := Value.i64 address) rfl hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running ⟨⟨params, localValues, .i64 address :: values⟩,
+          .load8U offset :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.load8U offset))
+        ⟨.running ⟨⟨params, localValues, .i32 byte.toUInt32 :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+      simpa [Hread] using
+        (Step.load8U (α := α) (address := Value.i64 address) rfl hbound)
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    wasm_wp_frame
 
 theorem wp_load8SMemory64
     {params localValues values : List Value}
@@ -6769,32 +6456,27 @@ theorem wp_load8SMemory64
   obtain ⟨Hread, HinBounds⟩ := Hfacts
   have hbound : address.toNat + offset.toNat + 1 ≤
       store.wasm.mem.pages * 65536 := by omega
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues,
         .i32 (Int32.ofInt (signExtend (byte.toUInt32.toNat % 256) 8)).toUInt32 :: values⟩,
         code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl, by
         rw [show byte = store.wasm.mem.read8 (address.toUInt32 + offset) from Hread.symm]
-        exact Step.load8S (address := Value.i64 address) rfl hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues, .i64 address :: values⟩,
-        .load8S offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.load8S offset))
-      ⟨.running ⟨⟨params, localValues,
-        .i32 (Int32.ofInt (signExtend (byte.toUInt32.toNat % 256) 8)).toUInt32 :: values⟩,
-        code, arity, remainder, controls, calls⟩, store⟩ := by
-    rw [show byte = store.wasm.mem.read8 (address.toUInt32 + offset) from Hread.symm]
-    exact Step.load8S (address := Value.i64 address) rfl hbound
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  wasm_wp_frame
+        exact Step.load8S (address := Value.i64 address) rfl hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running ⟨⟨params, localValues, .i64 address :: values⟩,
+          .load8S offset :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.load8S offset))
+        ⟨.running ⟨⟨params, localValues,
+          .i32 (Int32.ofInt (signExtend (byte.toUInt32.toNat % 256) 8)).toUInt32 :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+      rw [show byte = store.wasm.mem.read8 (address.toUInt32 + offset) from Hread.symm]
+      exact Step.load8S (address := Value.i64 address) rfl hbound
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    wasm_wp_frame
 
 theorem wp_load16UMemory64
     {params localValues values : List Value}
@@ -6829,30 +6511,25 @@ theorem wp_load16UMemory64
   obtain ⟨Hread, HinBounds⟩ := Hfacts
   have hbound : address.toNat + offset.toNat + 2 ≤
       store.wasm.mem.pages * 65536 := by omega
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, .i32 (word &&& 0xFFFF) :: values⟩,
         code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl,
         by simpa [Hread] using
-          Step.load16U (α := α) (address := Value.i64 address) rfl hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues, .i64 address :: values⟩,
-        .load16U offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.load16U offset))
-      ⟨.running ⟨⟨params, localValues, .i32 (word &&& 0xFFFF) :: values⟩,
-        code, arity, remainder, controls, calls⟩, store⟩ := by
-    simpa [Hread] using
-      Step.load16U (α := α) (address := Value.i64 address) rfl hbound
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  wasm_wp_frame
+          Step.load16U (α := α) (address := Value.i64 address) rfl hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running ⟨⟨params, localValues, .i64 address :: values⟩,
+          .load16U offset :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.load16U offset))
+        ⟨.running ⟨⟨params, localValues, .i32 (word &&& 0xFFFF) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+      simpa [Hread] using
+        Step.load16U (α := α) (address := Value.i64 address) rfl hbound
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    wasm_wp_frame
 
 theorem wp_load16SMemory64
     {params localValues values : List Value}
@@ -6867,7 +6544,8 @@ theorem wp_load16SMemory64
         .load16S offset :: code, arity, remainder, controls, calls⟩
     let next : ThreadState α :=
       ⟨⟨params, localValues,
-        .i32 (Int32.ofInt (signExtend ((word &&& 0xFFFF).toNat % 65536) 16)).toUInt32 :: values⟩,
+        .i32
+          (Int32.ofInt (signExtend ((word &&& 0xFFFF).toNat % 65536) 16)).toUInt32 :: values⟩,
         code, arity, remainder, controls, calls⟩
     ▷ pointsTo_u16 0 (address.toUInt32 + offset) word -∗
     ▷ (pointsTo_u16 0 (address.toUInt32 + offset) word -∗
@@ -6888,34 +6566,31 @@ theorem wp_load16SMemory64
   obtain ⟨Hread, HinBounds⟩ := Hfacts
   have hbound : address.toNat + offset.toNat + 2 ≤
       store.wasm.mem.pages * 65536 := by omega
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues,
-        .i32 (Int32.ofInt (signExtend ((word &&& 0xFFFF).toNat % 65536) 16)).toUInt32 :: values⟩,
+        .i32
+          (Int32.ofInt (signExtend ((word &&& 0xFFFF).toNat % 65536) 16)).toUInt32 :: values⟩,
         code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl, by
         rw [show word &&& 0xFFFF = store.wasm.mem.read16 (address.toUInt32 + offset)
             from Hread.symm]
-        exact Step.load16S (address := Value.i64 address) rfl hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues, .i64 address :: values⟩,
-        .load16S offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.load16S offset))
-      ⟨.running ⟨⟨params, localValues,
-        .i32 (Int32.ofInt (signExtend ((word &&& 0xFFFF).toNat % 65536) 16)).toUInt32 :: values⟩,
-        code, arity, remainder, controls, calls⟩, store⟩ := by
-    rw [show word &&& 0xFFFF = store.wasm.mem.read16 (address.toUInt32 + offset)
-        from Hread.symm]
-    exact Step.load16S (address := Value.i64 address) rfl hbound
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  wasm_wp_frame
+        exact Step.load16S (address := Value.i64 address) rfl hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running ⟨⟨params, localValues, .i64 address :: values⟩,
+          .load16S offset :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.load16S offset))
+        ⟨.running ⟨⟨params, localValues,
+          .i32
+            (Int32.ofInt (signExtend ((word &&& 0xFFFF).toNat % 65536) 16)).toUInt32 :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+      rw [show word &&& 0xFFFF = store.wasm.mem.read16 (address.toUInt32 + offset)
+          from Hread.symm]
+      exact Step.load16S (address := Value.i64 address) rfl hbound
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    wasm_wp_frame
 
 theorem wp_store8Memory64
     {params localValues values : List Value}
@@ -6947,37 +6622,33 @@ theorem wp_store8Memory64
     exact HinBounds
   have hbound : address.toNat + offset.toNat + 1 ≤
       store.wasm.mem.pages * 65536 := by omega
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
       { store with wasm :=
           { store.wasm with
             mem := store.wasm.mem.write8 (address.toUInt32 + offset) value.toUInt8 } },
       [], ⟨rfl, _, rfl,
         by simpa only [Wasm.SmallStep.setMemory_eq] using
-          Step.store8 (α := α) (address := Value.i64 address) rfl hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues, .i32 value :: .i64 address :: values⟩,
-        .store8 offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.store8 offset))
-      ⟨.running ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
-        { store with wasm :=
-            { store.wasm with
-              mem := store.wasm.mem.write8 (address.toUInt32 + offset) value.toUInt8 } }⟩ := by
-    simpa only [Wasm.SmallStep.setMemory_eq] using
-      Step.store8 (α := α) (address := Value.i64 address) rfl hbound
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_store8 store ns obs' nt
-      (address.toUInt32 + offset) oldByte value.toUInt8
-      HinBounds $$ [$Hσ $Hpt] with ⟨Hσ, Hpt⟩
-  wasm_wp_frame
+          Step.store8 (α := α) (address := Value.i64 address) rfl hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running ⟨⟨params, localValues, .i32 value :: .i64 address :: values⟩,
+          .store8 offset :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.store8 offset))
+        ⟨.running
+          ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
+          { store with wasm :=
+              { store.wasm with
+                mem := store.wasm.mem.write8 (address.toUInt32 + offset) value.toUInt8 } }⟩ := by
+      simpa only [Wasm.SmallStep.setMemory_eq] using
+        Step.store8 (α := α) (address := Value.i64 address) rfl hbound
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_store8 store ns obs' nt
+        (address.toUInt32 + offset) oldByte value.toUInt8
+        HinBounds $$ [$Hσ $Hpt] with ⟨Hσ, Hpt⟩
+    wasm_wp_frame
 
 theorem wp_store16Memory64
     {params localValues values : List Value}
@@ -7011,37 +6682,33 @@ theorem wp_store16Memory64
   obtain ⟨_, HinBounds⟩ := Hfacts
   have hbound : address.toNat + offset.toNat + 2 ≤
       store.wasm.mem.pages * 65536 := by omega
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
       { store with wasm :=
           { store.wasm with
             mem := store.wasm.mem.write16 (address.toUInt32 + offset) value } },
       [], ⟨rfl, _, rfl,
         by simpa only [Wasm.SmallStep.setMemory_eq] using
-          Step.store16 (α := α) (address := Value.i64 address) rfl hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues, .i32 value :: .i64 address :: values⟩,
-        .store16 offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.store16 offset))
-      ⟨.running ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
-        { store with wasm :=
-            { store.wasm with
-              mem := store.wasm.mem.write16 (address.toUInt32 + offset) value } }⟩ := by
-    simpa only [Wasm.SmallStep.setMemory_eq] using
-      Step.store16 (α := α) (address := Value.i64 address) rfl hbound
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_store16 store ns obs' nt
-      (address.toUInt32 + offset) oldWord value h1 HinBounds $$
-      [$Hσ $Hword] with ⟨Hσ, Hword⟩
-  wasm_wp_frame
+          Step.store16 (α := α) (address := Value.i64 address) rfl hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running ⟨⟨params, localValues, .i32 value :: .i64 address :: values⟩,
+          .store16 offset :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.store16 offset))
+        ⟨.running
+          ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
+          { store with wasm :=
+              { store.wasm with
+                mem := store.wasm.mem.write16 (address.toUInt32 + offset) value } }⟩ := by
+      simpa only [Wasm.SmallStep.setMemory_eq] using
+        Step.store16 (α := α) (address := Value.i64 address) rfl hbound
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_store16 store ns obs' nt
+        (address.toUInt32 + offset) oldWord value h1 HinBounds $$
+        [$Hσ $Hword] with ⟨Hσ, Hword⟩
+    wasm_wp_frame
 
 theorem wp_load32Memory64
     {params localValues values : List Value}
@@ -7078,30 +6745,25 @@ theorem wp_load32Memory64
   obtain ⟨Hread, HinBounds⟩ := Hfacts
   have hbound : address.toNat + offset.toNat + 4 ≤
       store.wasm.mem.pages * 65536 := by omega
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, .i32 word :: values⟩,
         code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl,
         by simpa [Hread] using
-          Step.load32 (α := α) (address := Value.i64 address) rfl hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues, .i64 address :: values⟩,
-        .load32 offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.load32 offset))
-      ⟨.running ⟨⟨params, localValues, .i32 word :: values⟩,
-        code, arity, remainder, controls, calls⟩, store⟩ := by
-    simpa [Hread] using
-      Step.load32 (α := α) (address := Value.i64 address) rfl hbound
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  wasm_wp_frame
+          Step.load32 (α := α) (address := Value.i64 address) rfl hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running ⟨⟨params, localValues, .i64 address :: values⟩,
+          .load32 offset :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.load32 offset))
+        ⟨.running ⟨⟨params, localValues, .i32 word :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+      simpa [Hread] using
+        Step.load32 (α := α) (address := Value.i64 address) rfl hbound
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    wasm_wp_frame
 
 theorem wp_store32Memory64
     {params localValues values : List Value}
@@ -7137,37 +6799,33 @@ theorem wp_store32Memory64
   obtain ⟨_, HinBounds⟩ := Hfacts
   have hbound : address.toNat + offset.toNat + 4 ≤
       store.wasm.mem.pages * 65536 := by omega
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
       { store with wasm :=
           { store.wasm with
             mem := store.wasm.mem.write32 (address.toUInt32 + offset) value } },
       [], ⟨rfl, _, rfl,
         by simpa only [Wasm.SmallStep.setMemory_eq] using
-          Step.store32 (α := α) (address := Value.i64 address) rfl hbound⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues, .i32 value :: .i64 address :: values⟩,
-        .store32 offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.store32 offset))
-      ⟨.running ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
-        { store with wasm :=
-            { store.wasm with
-              mem := store.wasm.mem.write32 (address.toUInt32 + offset) value } }⟩ := by
-    simpa only [Wasm.SmallStep.setMemory_eq] using
-      Step.store32 (α := α) (address := Value.i64 address) rfl hbound
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod stateInterp_store32 store ns obs' nt
-      (address.toUInt32 + offset) oldWord value h1 h2 h3 HinBounds $$
-      [$Hσ $Hword] with ⟨Hσ, Hword⟩
-  wasm_wp_frame
+          Step.store32 (α := α) (address := Value.i64 address) rfl hbound⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    have expectedStep : Step
+        ⟨.running ⟨⟨params, localValues, .i32 value :: .i64 address :: values⟩,
+          .store32 offset :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction (.store32 offset))
+        ⟨.running
+          ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
+          { store with wasm :=
+              { store.wasm with
+                mem := store.wasm.mem.write32 (address.toUInt32 + offset) value } }⟩ := by
+      simpa only [Wasm.SmallStep.setMemory_eq] using
+        Step.store32 (α := α) (address := Value.i64 address) rfl hbound
+    wasm_wp_resolve_target expectedStep against wasmStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod stateInterp_store32 store ns obs' nt
+        (address.toUInt32 + offset) oldWord value h1 h2 h3 HinBounds $$
+        [$Hσ $Hword] with ⟨Hσ, Hword⟩
+    wasm_wp_frame
 
 /-- Call an imported function that crosses module-instance boundaries.
 `callerId` and `calleeId` index into `instances`; `hhost` asserts the callee
@@ -7248,12 +6906,7 @@ theorem wp_callCrossInstance
     hcurrentInst ▸ hresolved
   have hcallee' : store.runtime.instances[calleeId.id]? = some calleeInst :=
     Hinst ▸ hcalleeLookup
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running ⟨fn.toLocals (values.take imp.params.length).reverse,
         fn.body, fn.results.length, [], [],
         { locals := ⟨params, localValues, values.drop imp.params.length⟩
@@ -7263,26 +6916,29 @@ theorem wp_callCrossInstance
           control := controls
           returningInstance := store.runtime.entry } :: calls⟩,
       { store with runtime := { store.runtime with entry := calleeId } }, [],
-      ⟨rfl, _, rfl, Step.callCrossInstance himports' himport' hnoHost' hresolved' hcallee' hfn⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  obtain ⟨rfl, hconfig⟩ :=
-    step_deterministic (Step.callCrossInstance himports' himport' hnoHost' hresolved' hcallee' hfn) wasmStep
-  simp only at hconfig
-  cases hconfig
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil, Hentry]
-  imod stateInterp_currentInstance_update_of_any store ns obs' nt callerId calleeId $$
-      [$Hσ $HinstanceOwn] with ⟨Hσ', HinstanceOwn', %_⟩
-  imod Hclose
-  imodintro
-  isplitl [Hσ']
-  · iexact Hσ'
-  isplitl [HinstanceOwn' HruntimeInstances Hwp]
-  · iapply Hwp
-    isplitl [HinstanceOwn']
-    · iexact HinstanceOwn'
-    · iexact HruntimeInstances
-  · itrivial
+      ⟨rfl, _, rfl,
+        Step.callCrossInstance himports' himport' hnoHost' hresolved' hcallee' hfn⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    obtain ⟨rfl, hconfig⟩ :=
+      step_deterministic
+        (Step.callCrossInstance himports' himport' hnoHost' hresolved' hcallee' hfn)
+        wasmStep
+    simp only at hconfig
+    cases hconfig
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil, Hentry]
+    imod stateInterp_currentInstance_update_of_any store ns obs' nt callerId calleeId $$
+        [$Hσ $HinstanceOwn] with ⟨Hσ', HinstanceOwn', %_⟩
+    imod Hclose
+    imodintro
+    isplitl [Hσ']
+    · iexact Hσ'
+    isplitl [HinstanceOwn' HruntimeInstances Hwp]
+    · iapply Hwp
+      isplitl [HinstanceOwn']
+      · iexact HinstanceOwn'
+      · iexact HruntimeInstances
+    · itrivial
 
 /-- Resume a suspended caller after an explicit return that crosses module-instance
 boundaries. `runtimeInstancesOwn instances` links the ghost instances array to
@@ -7337,30 +6993,25 @@ theorem wp_returnFromCallCrossInstance
     ipureintro
     exact Hinst
   have hdiff : returningInstance ≠ store.runtime.entry := by rw [Hentry]; exact hneq
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[], _,
+  wasm_wp_offer_step ⟨[], _,
       { store with runtime := { store.runtime with entry := returningInstance } }, [],
-      ⟨rfl, _, rfl, Step.returnFromCallCrossInstanceExplicit hdiff⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  obtain ⟨rfl, hconfig⟩ :=
-    step_deterministic (Step.returnFromCallCrossInstanceExplicit (α := α) hdiff) wasmStep
-  simp only at hconfig
-  cases hconfig
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil, resumeCaller]
-  imod stateInterp_currentInstance_update_of_any store ns obs' nt calleeId returningInstance $$
-      [$Hσ $HinstanceOwn] with ⟨Hσ', HinstanceOwn', %_⟩
-  imod Hclose
-  imodintro
-  isplitl [Hσ']
-  · iexact Hσ'
-  isplitl [Hwp HinstanceOwn']
-  · iapply Hwp; iexact HinstanceOwn'
-  · itrivial
+      ⟨rfl, _, rfl, Step.returnFromCallCrossInstanceExplicit hdiff⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    obtain ⟨rfl, hconfig⟩ :=
+      step_deterministic (Step.returnFromCallCrossInstanceExplicit (α := α) hdiff) wasmStep
+    simp only at hconfig
+    cases hconfig
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil, resumeCaller]
+    imod stateInterp_currentInstance_update_of_any store ns obs' nt calleeId returningInstance $$
+        [$Hσ $HinstanceOwn] with ⟨Hσ', HinstanceOwn', %_⟩
+    imod Hclose
+    imodintro
+    isplitl [Hσ']
+    · iexact Hσ'
+    isplitl [Hwp HinstanceOwn']
+    · iapply Hwp; iexact HinstanceOwn'
+    · itrivial
 
 /-- Call an indirect function through a table entry. `runtimeModule` owns the
 current module (provides `himports`, `hfn`, `hsignature`, `hexpected`, `htype`).
@@ -7437,12 +7088,7 @@ theorem wp_callIndirect
   have htype' : store.runtime.currentModule.indirectCallTypeOk
       functionIndex typeIndex signature expected = true := by
     simpa only [Hmodule] using htype
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    exact ⟨[],
+  wasm_wp_offer_step ⟨[],
       .running
         ⟨fn.toLocals (values.take fn.numParams).reverse,
           fn.body, fn.results.length, [], [],
@@ -7453,25 +7099,25 @@ theorem wp_callIndirect
             control := controls
             returningInstance := store.runtime.entry } :: calls⟩,
       store, [], ⟨rfl, _, rfl, Step.callIndirect hselector Htablephys helement
-        himports' hnotforeign' hfn' hsignature' hexpected' htype'⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-  obtain ⟨rfl, hconfig⟩ :=
-    step_deterministic (Step.callIndirect (α := α) hselector Htablephys helement
-      himports' hnotforeign' hfn' hsignature' hexpected' htype') wasmStep
-  simp only at hconfig
-  cases hconfig
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hruntime Htable]
-  · ispecialize Hwp $$ %store.runtime.entry
-    iapply Hwp
-    isplitl [Hruntime]
-    · iexact Hruntime
-    · iexact Htable
-  · itrivial
+        himports' hnotforeign' hfn' hsignature' hexpected' htype'⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
+    obtain ⟨rfl, hconfig⟩ :=
+      step_deterministic (Step.callIndirect (α := α) hselector Htablephys helement
+        himports' hnotforeign' hfn' hsignature' hexpected' htype') wasmStep
+    simp only at hconfig
+    cases hconfig
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    imod Hclose
+    imodintro
+    isplitl [Hσ]
+    · iexact Hσ
+    isplitl [Hwp Hruntime Htable]
+    · ispecialize Hwp $$ %store.runtime.entry
+      iapply Hwp
+      isplitl [Hruntime]
+      · iexact Hruntime
+      · iexact Htable
+    · itrivial
 
 end Wasm.SmallStep
