@@ -2408,63 +2408,15 @@ theorem stateInterp_pointsTo_u32_facts_frame [WasmSmallStepGS hlc α]
       ⌜store.wasm.mem.read32 address = value ∧
         address.toNat + 4 ≤ store.wasm.mem.pages * 65536⌝ := by
   iintro ⟨Hstate, Hword⟩
-  ihave Hword := (pointsTo_u32_eq 0 address value).mp $$ Hword
-  icases Hword with ⟨H0, H1, H2, H3⟩
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
-  ihave %hg0 :
-      ⌜get? σ ⟨0, address⟩ = some (some (u32Byte value 0))⌝ $$ [Hheap H0]
-  · imod genHeap_valid $$ [$Hheap $H0] with %hg0
-    ipureintro
-    exact hg0
-  ihave %hg1 :
-      ⌜get? σ ⟨0, address + 1⟩ = some (some (u32Byte value 1))⌝ $$ [Hheap H1]
-  · imod genHeap_valid $$ [$Hheap $H1] with %hg1
-    ipureintro
-    exact hg1
-  ihave %hg2 :
-      ⌜get? σ ⟨0, address + 2⟩ = some (some (u32Byte value 2))⌝ $$ [Hheap H2]
-  · imod genHeap_valid $$ [$Hheap $H2] with %hg2
-    ipureintro
-    exact hg2
-  ihave %hg3 :
-      ⌜get? σ ⟨0, address + 3⟩ = some (some (u32Byte value 3))⌝ $$ [Hheap H3]
-  · imod genHeap_valid $$ [$Hheap $H3] with %hg3
-    ipureintro
-    exact hg3
-  have hr0 := fromResolver store Hfacts.1 address (u32Byte value 0) hg0
-  have hr1 := fromResolver store Hfacts.1 (address + 1) (u32Byte value 1) hg1
-  have hr2 := fromResolver store Hfacts.1 (address + 2) (u32Byte value 2) hg2
-  have hr3 := fromResolver store Hfacts.1 (address + 3) (u32Byte value 3) hg3
-  have hb3 := fromResolverBounds store Hfacts.2.1 (address + 3) (by simp [hg3])
-  have hread : store.wasm.mem.read32 address = value := by
-    simp only [Mem.read8] at hr0 hr1 hr2 hr3
-    simp only [Mem.read32]
-    rw [hr0, ← h1, hr1, ← h2, hr2, ← h3, hr3]
-    exact u32Byte_reassemble value
-  have hbound :
-      address.toNat + 4 ≤ store.wasm.mem.pages * 65536 := by
-    rw [h3] at hb3
-    omega
+  ihave_pure Hfacts :
+      ⌜store.wasm.mem.read32 address = value ∧
+        address.toNat + 4 ≤ store.wasm.mem.pages * 65536⌝ using
+    stateInterp_pointsTo_u32_facts store steps observations threads
+      address value h1 h2 h3 $$ [Hstate Hword]
   imodintro
-  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth HhostEnvAuth Hstate_auth Hexc]
-  · iapply (stateInterp_eq store steps observations threads).mpr
-    iexists σ
-    iexists globalσ
-    iexists dataSegmentσ
-    iexists tableσ
-    iexists elementSegmentσ
-    iexists runtimeModuleσ
-    iexists hostEnvσ
-    iframe
-    ipureintro
-    exact Hfacts
-  · isplitl [H0 H1 H2 H3]
-    · iapply (pointsTo_u32_eq 0 address value).mpr
-      iframe
-    · ipureintro
-      exact ⟨hread, hbound⟩
+  iframe
+  ipureintro
+  exact Hfacts
 
 /-- Eight-byte ownership determines the physical little-endian word and proves
 the complete access is in bounds. The address equalities exclude UInt32
@@ -2562,80 +2514,15 @@ theorem stateInterp_pointsTo_u64_facts_frame [WasmSmallStepGS hlc α]
       ⌜store.wasm.mem.read64 address = value ∧
         address.toNat + 8 ≤ store.wasm.mem.pages * 65536⌝ := by
   iintro ⟨Hstate, Hword⟩
-  ihave Hword := (pointsTo_u64_eq 0 address value).mp $$ Hword
-  icases Hword with ⟨H0, H1, H2, H3, H4, H5, H6, H7⟩
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
-  ihave %hg0 :
-      ⌜get? σ ⟨0, address⟩ = some (some (u64Byte value 0))⌝ $$ [Hheap H0]
-  · imod genHeap_valid $$ [$Hheap $H0] with %hg0
-    ipureintro; exact hg0
-  ihave %hg1 :
-      ⌜get? σ ⟨0, address + 1⟩ = some (some (u64Byte value 1))⌝ $$ [Hheap H1]
-  · imod genHeap_valid $$ [$Hheap $H1] with %hg1
-    ipureintro; exact hg1
-  ihave %hg2 :
-      ⌜get? σ ⟨0, address + 2⟩ = some (some (u64Byte value 2))⌝ $$ [Hheap H2]
-  · imod genHeap_valid $$ [$Hheap $H2] with %hg2
-    ipureintro; exact hg2
-  ihave %hg3 :
-      ⌜get? σ ⟨0, address + 3⟩ = some (some (u64Byte value 3))⌝ $$ [Hheap H3]
-  · imod genHeap_valid $$ [$Hheap $H3] with %hg3
-    ipureintro; exact hg3
-  ihave %hg4 :
-      ⌜get? σ ⟨0, address + 4⟩ = some (some (u64Byte value 4))⌝ $$ [Hheap H4]
-  · imod genHeap_valid $$ [$Hheap $H4] with %hg4
-    ipureintro; exact hg4
-  ihave %hg5 :
-      ⌜get? σ ⟨0, address + 5⟩ = some (some (u64Byte value 5))⌝ $$ [Hheap H5]
-  · imod genHeap_valid $$ [$Hheap $H5] with %hg5
-    ipureintro; exact hg5
-  ihave %hg6 :
-      ⌜get? σ ⟨0, address + 6⟩ = some (some (u64Byte value 6))⌝ $$ [Hheap H6]
-  · imod genHeap_valid $$ [$Hheap $H6] with %hg6
-    ipureintro; exact hg6
-  ihave %hg7 :
-      ⌜get? σ ⟨0, address + 7⟩ = some (some (u64Byte value 7))⌝ $$ [Hheap H7]
-  · imod genHeap_valid $$ [$Hheap $H7] with %hg7
-    ipureintro; exact hg7
-  have hr0 := fromResolver store Hfacts.1 address (u64Byte value 0) hg0
-  have hr1 := fromResolver store Hfacts.1 (address + 1) (u64Byte value 1) hg1
-  have hr2 := fromResolver store Hfacts.1 (address + 2) (u64Byte value 2) hg2
-  have hr3 := fromResolver store Hfacts.1 (address + 3) (u64Byte value 3) hg3
-  have hr4 := fromResolver store Hfacts.1 (address + 4) (u64Byte value 4) hg4
-  have hr5 := fromResolver store Hfacts.1 (address + 5) (u64Byte value 5) hg5
-  have hr6 := fromResolver store Hfacts.1 (address + 6) (u64Byte value 6) hg6
-  have hr7 := fromResolver store Hfacts.1 (address + 7) (u64Byte value 7) hg7
-  have hb7 := fromResolverBounds store Hfacts.2.1 (address + 7) (by simp [hg7])
-  have hread : store.wasm.mem.read64 address = value := by
-    simp only [Mem.read8] at hr0 hr1 hr2 hr3 hr4 hr5 hr6 hr7
-    simp only [Mem.read64]
-    rw [hr0, ← h1, hr1, ← h2, hr2, ← h3, hr3, ← h4, hr4,
-      ← h5, hr5, ← h6, hr6, ← h7, hr7]
-    exact u64Byte_reassemble value
-  have hbound :
-      address.toNat + 8 ≤ store.wasm.mem.pages * 65536 := by
-    rw [h7] at hb7
-    omega
+  ihave_pure Hfacts :
+      ⌜store.wasm.mem.read64 address = value ∧
+        address.toNat + 8 ≤ store.wasm.mem.pages * 65536⌝ using
+    stateInterp_pointsTo_u64_facts store steps observations threads
+      address value h1 h2 h3 h4 h5 h6 h7 $$ [Hstate Hword]
   imodintro
-  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth HhostEnvAuth Hstate_auth Hexc]
-  · iapply (stateInterp_eq store steps observations threads).mpr
-    iexists σ
-    iexists globalσ
-    iexists dataSegmentσ
-    iexists tableσ
-    iexists elementSegmentσ
-    iexists runtimeModuleσ
-    iexists hostEnvσ
-    iframe
-    ipureintro
-    exact Hfacts
-  · isplitl [H0 H1 H2 H3 H4 H5 H6 H7]
-    · iapply (pointsTo_u64_eq 0 address value).mpr
-      iframe
-    · ipureintro
-      exact ⟨hread, hbound⟩
+  iframe
+  ipureintro
+  exact Hfacts
 
 theorem stateInterp_store8 [WasmSmallStepGS hlc α]
     (store : MachineStore α) (steps : Nat)
