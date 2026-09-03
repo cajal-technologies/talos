@@ -2123,6 +2123,23 @@ theorem stateInterp_runtimeModule_agree [WasmSmallStepGS hlc α]
       simp only [getElem!_def, h]
     rw [hget]; exact hma
 
+/-- Derive the current runtime module from its Iris ownership and the physical
+state, using the lifting proof's conventional context names. -/
+syntax "wasm_runtime_module_agree " term ", " term ", " term
+  " $$ " specPat : tactic
+
+set_option hygiene false in
+macro_rules
+  | `(tactic| wasm_runtime_module_agree $observations:term,
+        $instanceId:term, $module:term $$ $resources:specPat) =>
+    `(tactic|
+      (ihave %Hmodule : ⌜store.runtime.currentModule = $module⌝ $$
+          [Hσ Hruntime]
+       · imod stateInterp_runtimeModule_agree store ns $observations nt
+           $instanceId $module $$ $resources with %Hmodule
+         ipureintro
+         exact Hmodule))
+
 /-- Owned exception state determines the corresponding physical exception
 entry in the store's exception table. -/
 theorem stateInterp_exception_facts [WasmSmallStepGS hlc α]

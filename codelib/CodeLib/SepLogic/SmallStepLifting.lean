@@ -876,12 +876,7 @@ theorem wp_throwI
         .throwI tagIndex :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} := by
   iintro >Hruntime
   wasm_wp_begin
-  ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$
-      [Hσ Hruntime]
-  · imod stateInterp_runtimeModule_agree store ns (obs ++ obs') nt
-      instanceId runtimeModule $$ [$Hσ $Hruntime] with %Hmodule
-    ipureintro
-    exact Hmodule
+  wasm_runtime_module_agree (obs ++ obs'), instanceId, runtimeModule $$ [$Hσ $Hruntime]
   have htag' : store.runtime.currentModule.tags[tagIndex]? = some tagType := by
     simpa only [Hmodule] using htag
   wasm_wp_step Step.throwI (α := α) htag' hargs =>
@@ -981,11 +976,7 @@ theorem wp_call
   dsimp only
   iintro >Hruntime Hwp
   wasm_wp_begin
-  ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$ [Hσ Hruntime]
-  · imod stateInterp_runtimeModule_agree store ns (obs ++ obs') nt
-      callerId runtimeModule $$ [$Hσ $Hruntime] with %Hmodule
-    ipureintro
-    exact Hmodule
+  wasm_runtime_module_agree (obs ++ obs'), callerId, runtimeModule $$ [$Hσ $Hruntime]
   have himports' :
       ¬functionIndex < store.runtime.currentModule.imports.length := by
     simpa only [Hmodule] using himports
@@ -1096,11 +1087,7 @@ theorem wp_callHost
   dsimp only
   iintro HP >Hruntime >Henv HwpRet HwpTrap HwpThrow
   wasm_wp_begin
-  ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$ [Hσ Hruntime]
-  · imod stateInterp_runtimeModule_agree store ns (obs ++ obs') nt
-      callerId runtimeModule $$ [$Hσ $Hruntime] with %Hmodule
-    ipureintro
-    exact Hmodule
+  wasm_runtime_module_agree (obs ++ obs'), callerId, runtimeModule $$ [$Hσ $Hruntime]
   simp only [runtimeModuleOwn]
   icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩
   have himports' : functionIndex < store.runtime.currentModule.imports.length := by
@@ -1437,12 +1424,7 @@ theorem wp_tableSize
       ⟨Hσ, Htable, %Hphysical⟩
     ipureintro
     exact Hphysical
-  ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$
-      [Hσ Hruntime]
-  · imod stateInterp_runtimeModule_agree store ns (obs ++ obs') nt
-        callerId runtimeModule $$ [$Hσ $Hruntime] with %Hmodule
-    ipureintro
-    exact Hmodule
+  wasm_runtime_module_agree (obs ++ obs'), callerId, runtimeModule $$ [$Hσ $Hruntime]
   subst runtimeModule
   wasm_wp_step Step.tableSize Hphysical =>
     wasm_wp_frame
@@ -1537,12 +1519,7 @@ theorem wp_tableGrow32
       ⟨Hσ, Htable, %Hphysical⟩
     ipureintro
     exact Hphysical
-  ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$
-      [Hσ Hruntime]
-  · imod stateInterp_runtimeModule_agree store ns (obs ++ obs') nt
-        callerId runtimeModule $$ [$Hσ $Hruntime] with %Hmodule
-    ipureintro
-    exact Hmodule
+  wasm_runtime_module_agree (obs ++ obs'), callerId, runtimeModule $$ [$Hσ $Hruntime]
   have hbound' :
       table.length + delta.toNat ≤
         store.runtime.currentModule.tableCap tableIndex := by
@@ -1603,12 +1580,7 @@ theorem wp_tableGrow64
       ⟨Hσ, Htable, %Hphysical⟩
     ipureintro
     exact Hphysical
-  ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$
-      [Hσ Hruntime]
-  · imod stateInterp_runtimeModule_agree store ns (obs ++ obs') nt
-        callerId runtimeModule $$ [$Hσ $Hruntime] with %Hmodule
-    ipureintro
-    exact Hmodule
+  wasm_runtime_module_agree (obs ++ obs'), callerId, runtimeModule $$ [$Hσ $Hruntime]
   have hbound' :
       table.length + delta.toNat ≤
         store.runtime.currentModule.tableCap tableIndex := by
@@ -1669,12 +1641,7 @@ theorem wp_tableGrow32Failure
       ⟨Hσ, Htable, %Hphysical⟩
     ipureintro
     exact Hphysical
-  ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$
-      [Hσ Hruntime]
-  · imod stateInterp_runtimeModule_agree store ns (obs ++ obs') nt
-        callerId runtimeModule $$ [$Hσ $Hruntime] with %Hmodule
-    ipureintro
-    exact Hmodule
+  wasm_runtime_module_agree (obs ++ obs'), callerId, runtimeModule $$ [$Hσ $Hruntime]
   have hbound' :
       ¬table.length + delta.toNat ≤
         store.runtime.currentModule.tableCap tableIndex := by
@@ -1716,12 +1683,7 @@ theorem wp_tableGrow64Failure
       ⟨Hσ, Htable, %Hphysical⟩
     ipureintro
     exact Hphysical
-  ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$
-      [Hσ Hruntime]
-  · imod stateInterp_runtimeModule_agree store ns (obs ++ obs') nt
-        callerId runtimeModule $$ [$Hσ $Hruntime] with %Hmodule
-    ipureintro
-    exact Hmodule
+  wasm_runtime_module_agree (obs ++ obs'), callerId, runtimeModule $$ [$Hσ $Hruntime]
   have hbound' :
       ¬table.length + delta.toNat ≤
         store.runtime.currentModule.tableCap tableIndex := by
@@ -3041,11 +3003,7 @@ theorem wp_memoryGrowFailure
         .memoryGrow :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} := by
   iintro >Hruntime
   wasm_wp_begin
-  ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$ [Hσ Hruntime]
-  · imod stateInterp_runtimeModule_agree store ns (obs ++ obs') nt instanceId runtimeModule $$
-        [$Hσ $Hruntime] with %Hmodule
-    ipureintro
-    exact Hmodule
+  wasm_runtime_module_agree (obs ++ obs'), instanceId, runtimeModule $$ [$Hσ $Hruntime]
   wasm_wp_step Step.memoryGrowFailure (Hmodule ▸ hgrow store.wasm) =>
     wasm_wp_frame
       iapply Hwp
@@ -3065,12 +3023,7 @@ theorem wp_memorySize
         .memorySize :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} := by
   iintro >Hruntime
   wasm_wp_begin
-  ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$
-      [Hσ Hruntime]
-  · imod stateInterp_runtimeModule_agree store ns (obs ++ obs') nt
-      instanceId runtimeModule $$ [$Hσ $Hruntime] with %Hmodule
-    ipureintro
-    exact Hmodule
+  wasm_runtime_module_agree (obs ++ obs'), instanceId, runtimeModule $$ [$Hσ $Hruntime]
   wasm_wp_step Step.memorySize =>
     simp only [Hmodule]
     wasm_wp_frame
@@ -3094,11 +3047,7 @@ theorem wp_memoryGrow64Failure
         .memoryGrow :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} := by
   iintro >Hruntime
   wasm_wp_begin
-  ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$ [Hσ Hruntime]
-  · imod stateInterp_runtimeModule_agree store ns (obs ++ obs') nt instanceId runtimeModule $$
-        [$Hσ $Hruntime] with %Hmodule
-    ipureintro
-    exact Hmodule
+  wasm_runtime_module_agree (obs ++ obs'), instanceId, runtimeModule $$ [$Hσ $Hruntime]
   wasm_wp_step
     Step.memoryGrow64Failure hsmall (Hmodule ▸ hgrow store.wasm) =>
     wasm_wp_frame
@@ -4225,12 +4174,7 @@ theorem wp_tableInitLive
       ⟨Hσ, Hsegment, %HsegmentPhysical⟩
     ipureintro
     exact HsegmentPhysical
-  ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$
-      [Hσ Hruntime]
-  · imod stateInterp_runtimeModule_agree store ns (obs ++ obs') nt
-        callerId runtimeModule $$ [$Hσ $Hruntime] with %Hmodule
-    ipureintro
-    exact Hmodule
+  wasm_runtime_module_agree (obs ++ obs'), callerId, runtimeModule $$ [$Hσ $Hruntime]
   let segmentValues :=
     (runtimeModule.elements[elementIndex]?.map
       ElementSegment.values).getD []
@@ -5676,12 +5620,7 @@ theorem wp_callIndirect
   simp only [tablePointsToAt]
   iintro >Hruntime >Htable Hwp
   wasm_wp_begin
-  ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$
-      [Hσ Hruntime]
-  · imod stateInterp_runtimeModule_agree store ns (obs ++ obs') nt
-      callerId runtimeModule $$ [$Hσ $Hruntime] with %Hmodule
-    ipureintro
-    exact Hmodule
+  wasm_runtime_module_agree (obs ++ obs'), callerId, runtimeModule $$ [$Hσ $Hruntime]
   ihave %Htablephys : ⌜store.wasm.tables[tableIndex]? = some table⌝ $$
       [Hσ Htable]
   · imod stateInterp_table_facts store ns (obs ++ obs') nt tableIndex table $$

@@ -550,12 +550,7 @@ theorem twp_call
   dsimp only
   iintro Hruntime Htwp
   wasm_twp_begin
-  ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$
-      [Hσ Hruntime]
-  · imod stateInterp_runtimeModule_agree store ns obs nt
-      callerId runtimeModule $$ [$Hσ $Hruntime] with %Hmodule
-    ipureintro
-    exact Hmodule
+  wasm_runtime_module_agree obs, callerId, runtimeModule $$ [$Hσ $Hruntime]
   have himports' :
       ¬functionIndex < store.runtime.currentModule.imports.length := by
     simpa only [Hmodule] using himports
@@ -669,12 +664,7 @@ theorem twp_callHost
   dsimp only
   iintro HP Hruntime Henv HwpRet HwpTrap HwpThrow
   wasm_twp_begin
-  ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$
-      [Hσ Hruntime]
-  · imod stateInterp_runtimeModule_agree store ns obs nt
-      callerId runtimeModule $$ [$Hσ $Hruntime] with %Hmodule
-    ipureintro
-    exact Hmodule
+  wasm_runtime_module_agree obs, callerId, runtimeModule $$ [$Hσ $Hruntime]
   simp only [runtimeModuleOwn]
   icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩
   have himports' : functionIndex <
@@ -836,12 +826,7 @@ theorem twp_memorySize
       @ s; E [{ Φ }] := by
   iintro Hruntime
   wasm_twp_begin
-  ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$
-      [Hσ Hruntime]
-  · imod stateInterp_runtimeModule_agree store ns obs nt
-        instanceId runtimeModule $$ [$Hσ $Hruntime] with %Hmodule
-    ipureintro
-    exact Hmodule
+  wasm_runtime_module_agree obs, instanceId, runtimeModule $$ [$Hσ $Hruntime]
   wasm_twp_step Step.memorySize =>
     wasm_twp_frame
       simp only [Hmodule]
@@ -871,12 +856,7 @@ theorem twp_memorySize_tracked
       @ s; E [{ Φ }] := by
   iintro HP Hruntime
   wasm_twp_begin
-  ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$
-      [Hσ Hruntime]
-  · imod stateInterp_runtimeModule_agree store ns obs nt
-        instanceId runtimeModule $$ [$Hσ $Hruntime] with %Hmodule
-    ipureintro
-    exact Hmodule
+  wasm_runtime_module_agree obs, instanceId, runtimeModule $$ [$Hσ $Hruntime]
   icombine HP Hruntime as Hclient
   icombine Hσ Hclient as Hinput
   imod (stateInterp_memoryPages_snapshot_frame store ns obs nt
@@ -1282,11 +1262,7 @@ theorem twp_throwI
         Expr α) @ s; E [{ Φ }] := by
   iintro Hruntime Htags Hwp
   wasm_twp_begin
-  ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$ [Hσ Hruntime]
-  · imod stateInterp_runtimeModule_agree store ns obs nt
-        instanceId runtimeModule $$ [$Hσ $Hruntime] with %Hmodule
-    ipureintro
-    exact Hmodule
+  wasm_runtime_module_agree obs, instanceId, runtimeModule $$ [$Hσ $Hruntime]
   have htag' : store.runtime.currentModule.tags[tagIndex]? = some tagType := by
     simpa only [Hmodule] using htag
   ihave %Hprefix : ⌜tagIds.IsPrefix store.wasm.tagIds⌝ $$ [Hσ Htags]
