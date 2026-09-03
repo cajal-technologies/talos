@@ -178,4 +178,13 @@ inside the relation; the statement mentions only the two byte streams. -/
 def Runs (m : Module) (op : String) (input output : List UInt8) : Prop :=
   RunsWith env m op (State.ofInput input) (fun final => final.output = output)
 
+/-- A fixed module export and input byte stream have at most one successful
+output byte stream. -/
+theorem Runs.output_unique
+    (first : Runs m op input firstOutput)
+    (second : Runs m op input secondOutput) :
+    firstOutput = secondOutput := by
+  obtain ⟨_, hfirst, hsecond⟩ := RunsWith.deterministic first second
+  exact hfirst.symm.trans hsecond
+
 end Wasm.StdIO
