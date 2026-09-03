@@ -1868,17 +1868,13 @@ theorem stateInterp_global_set [WasmSmallStepGS hlc α]
         Hfacts.2.2.2⟩⟩
   · iexact Hglobal
 
-/-- Owned passive-segment state determines the corresponding physical
-instantiated segment entry. The framed form keeps both resources available for
-a following `memory.init` or `data.drop` transition. -/
-theorem stateInterp_dataSegment_facts_frame [WasmSmallStepGS hlc α]
+/-- Owned passive-segment state determines the corresponding physical entry. -/
+theorem stateInterp_dataSegment_facts [WasmSmallStepGS hlc α]
     (store : MachineStore α) (steps : Nat)
     (observations : List StepKind) (threads : Nat)
     (index : Nat) (value : Option (List UInt8)) :
     stateInterp (GF := WasmHeapGF α) store steps observations threads ∗
       dataSegmentPointsToAt 0 index value ==∗
-      stateInterp (GF := WasmHeapGF α) store steps observations threads ∗
-      dataSegmentPointsToAt 0 index value ∗
       ⌜store.wasm.dataSegments[index]? = some value⌝ := by
   iintro ⟨Hstate, Hsegment⟩
   icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
@@ -1888,23 +1884,8 @@ theorem stateInterp_dataSegment_facts_frame [WasmSmallStepGS hlc α]
   ihave %hlookup :=
     dataSegmentPointsTo_lookup dataSegmentσ ⟨0, index⟩ value $$
       Hsegments Hsegment
-  imodintro
-  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth HhostEnvAuth Hstate_auth Hexc]
-  · iapply (stateInterp_eq store steps observations threads).mpr
-    iexists σ
-    iexists globalσ
-    iexists dataSegmentσ
-    iexists tableσ
-    iexists elementSegmentσ
-    iexists runtimeModuleσ
-    iexists hostEnvσ
-    iframe
-    ipureintro
-    exact Hfacts
-  · isplitl [Hsegment]
-    · iexact Hsegment
-    · ipureintro
-      exact Hfacts.2.2.2.1 index value hlookup
+  ipureintro
+  exact Hfacts.2.2.2.1 index value hlookup
 
 /-- `data.drop` updates the physical segment status and its authoritative
 ghost entry in lockstep. -/
@@ -1953,16 +1934,13 @@ theorem stateInterp_dataSegment_drop [WasmSmallStepGS hlc α]
       Hfacts.2.2.2.2⟩
   · iexact Hsegment
 
-/-- Element-segment ownership identifies the live or dropped state at the
-corresponding stable physical segment index. -/
-theorem stateInterp_elementSegment_facts_frame [WasmSmallStepGS hlc α]
+/-- Element-segment ownership identifies its physical live or dropped state. -/
+theorem stateInterp_elementSegment_facts [WasmSmallStepGS hlc α]
     (store : MachineStore α) (steps : Nat)
     (observations : List StepKind) (threads : Nat)
     (index : Nat) (value : Option (List (Option Nat))) :
     stateInterp (GF := WasmHeapGF α) store steps observations threads ∗
       elementSegmentPointsToAt 0 index value ==∗
-      stateInterp (GF := WasmHeapGF α) store steps observations threads ∗
-      elementSegmentPointsToAt 0 index value ∗
       ⌜store.wasm.elementSegments[index]? = some value⌝ := by
   iintro ⟨Hstate, Hsegment⟩
   icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
@@ -1972,23 +1950,34 @@ theorem stateInterp_elementSegment_facts_frame [WasmSmallStepGS hlc α]
   ihave %hlookup :=
     elementSegmentPointsTo_lookup elementSegmentσ ⟨0, index⟩ value $$
       HelementSegments Hsegment
-  imodintro
-  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth HhostEnvAuth Hstate_auth Hexc]
-  · iapply (stateInterp_eq store steps observations threads).mpr
-    iexists σ
-    iexists globalσ
-    iexists dataSegmentσ
-    iexists tableσ
-    iexists elementSegmentσ
-    iexists runtimeModuleσ
-    iexists hostEnvσ
-    iframe
-    ipureintro
-    exact Hfacts
-  · isplitl [Hsegment]
-    · iexact Hsegment
-    · ipureintro
-      exact Hfacts.2.2.2.2.2.1 index value hlookup
+  ipureintro
+  exact Hfacts.2.2.2.2.2.1 index value hlookup
+
+syntax "wasm_data_segment_agree " ident ", " term ", " term ", " term
+  " $$ " specPat : tactic
+
+set_option hygiene false in
+macro_rules
+  | `(tactic| wasm_data_segment_agree $fact:ident, $index:term,
+        $value:term, $observations:term $$ $resources:specPat) =>
+    `(tactic|
+      ihave_pure $fact :
+          ⌜store.wasm.dataSegments[$index]? = some $value⌝ using
+        stateInterp_dataSegment_facts store ns $observations nt $index $value
+          $$ $resources)
+
+syntax "wasm_element_segment_agree " ident ", " term ", " term ", " term
+  " $$ " specPat : tactic
+
+set_option hygiene false in
+macro_rules
+  | `(tactic| wasm_element_segment_agree $fact:ident, $index:term,
+        $value:term, $observations:term $$ $resources:specPat) =>
+    `(tactic|
+      ihave_pure $fact :
+          ⌜store.wasm.elementSegments[$index]? = some $value⌝ using
+        stateInterp_elementSegment_facts store ns $observations nt $index $value
+          $$ $resources)
 
 /-- `elem.drop` changes the physical segment status and authoritative ghost
 entry to `none` without renumbering any segment. -/

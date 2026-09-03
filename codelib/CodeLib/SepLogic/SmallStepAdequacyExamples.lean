@@ -1387,9 +1387,9 @@ theorem memoryInitDrop_store_partiallyMeets :
           [$Hstate $Hword] with
         ⟨Hstate, Hword, %HwordFacts⟩
       simp only [← dataSegmentPointsToAt_eq]
-      imod stateInterp_dataSegment_facts_frame
-        store 0 [] 0 0 none $$ [$Hstate $Hsegment] with
-        ⟨Hstate, Hsegment, %HsegmentFact⟩
+      ihave_pure HsegmentFact :
+          ⌜store.wasm.dataSegments[0]? = some none⌝ using
+        stateInterp_dataSegment_facts store 0 [] 0 0 none $$ [Hstate Hsegment]
       ipureintro
       constructor
       · exact hvalues
@@ -2234,9 +2234,9 @@ theorem tableInitDrop_store_partiallyMeets :
           [$Hstate $Htable] with
         ⟨Hstate, Htable, %HtablePhysical⟩
       simp only [← elementSegmentPointsToAt_eq]
-      imod stateInterp_elementSegment_facts_frame
-        store 0 [] 0 0 none $$ [$Hstate $Helement] with
-        ⟨Hstate, Helement, %HelementPhysical⟩
+      ihave_pure HelementPhysical :
+          ⌜store.wasm.elementSegments[0]? = some none⌝ using
+        stateInterp_elementSegment_facts store 0 [] 0 0 none $$ [Hstate Helement]
       ipureintro
       exact ⟨hvalues,
         by simpa [tableInitDropAdequacyModule,

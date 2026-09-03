@@ -3216,9 +3216,8 @@ theorem wp_memoryInit32
         .memoryInit segmentIndex :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} := by
   iintro >Hsegment >Hdst Hwp
   wasm_wp_begin
-  imod stateInterp_dataSegment_facts_frame store ns (obs ++ obs') nt
-      segmentIndex (some segmentBytes) $$ [$Hσ $Hsegment] with
-    ⟨Hσ, Hsegment, %hsegment⟩
+  wasm_data_segment_agree hsegment, segmentIndex, (some segmentBytes),
+    (obs ++ obs') $$ [Hσ Hsegment]
   wasm_points_to_bytes_agree Hpbdst, destination, oldDstBytes, (obs ++ obs') $$ [Hσ Hdst]
   have hbound_dst : destination.toNat + len.toNat ≤ store.wasm.mem.pages * 65536 := by
     have := pointsToBytes_facts_bound Hpbdst (by omega) (by omega)
@@ -3267,9 +3266,8 @@ theorem wp_memoryInit64
     simp [UInt32.ofNat, UInt32.toNat]; omega
   iintro >Hsegment >Hdst Hwp
   wasm_wp_begin
-  imod stateInterp_dataSegment_facts_frame store ns (obs ++ obs') nt
-      segmentIndex (some segmentBytes) $$ [$Hσ $Hsegment] with
-    ⟨Hσ, Hsegment, %hsegment⟩
+  wasm_data_segment_agree hsegment, segmentIndex, (some segmentBytes),
+    (obs ++ obs') $$ [Hσ Hsegment]
   wasm_points_to_bytes_agree Hpbdst, destination.toUInt32, oldDstBytes,
     (obs ++ obs') $$ [Hσ Hdst]
   have hbound_dst : destination.toNat + len.toNat ≤ store.wasm.mem.pages * 65536 := by
@@ -3314,9 +3312,8 @@ theorem wp_dataDrop
   dsimp only
   iintro >Hsegment Hwp
   wasm_wp_begin
-  imod stateInterp_dataSegment_facts_frame store ns (obs ++ obs') nt
-      segmentIndex (some bytes) $$ [$Hσ $Hsegment] with
-    ⟨Hσ, Hsegment, %hsegment⟩
+  wasm_data_segment_agree hsegment, segmentIndex, (some bytes),
+    (obs ++ obs') $$ [Hσ Hsegment]
   have hisSome :
       (store.wasm.dataSegments[segmentIndex]?).isSome = true := by
     rw [hsegment]
@@ -3354,9 +3351,8 @@ theorem wp_memoryInit32DroppedTrap
         arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} := by
   iintro >Hsegment
   wasm_wp_begin
-  imod stateInterp_dataSegment_facts_frame store ns (obs ++ obs') nt
-      segmentIndex none $$ [$Hσ $Hsegment] with
-    ⟨Hσ, Hsegment, %hsegment⟩
+  wasm_data_segment_agree hsegment, segmentIndex, none, (obs ++ obs') $$
+    [Hσ Hsegment]
   wasm_wp_step Step.memoryInit32DroppedTrap hsegment (Or.inl hpos) =>
     wasm_wp_trap_frame
 
@@ -3375,9 +3371,8 @@ theorem wp_memoryInit64DroppedTrap
         arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} := by
   iintro >Hsegment
   wasm_wp_begin
-  imod stateInterp_dataSegment_facts_frame store ns (obs ++ obs') nt
-      segmentIndex none $$ [$Hσ $Hsegment] with
-    ⟨Hσ, Hsegment, %hsegment⟩
+  wasm_data_segment_agree hsegment, segmentIndex, none, (obs ++ obs') $$
+    [Hσ Hsegment]
   wasm_wp_step Step.memoryInit64DroppedTrap hsegment (Or.inl hpos) =>
     wasm_wp_trap_frame
 
@@ -3403,9 +3398,8 @@ theorem wp_memoryInit32Dropped
   dsimp only
   iintro >Hsegment Hwp
   wasm_wp_begin
-  imod stateInterp_dataSegment_facts_frame store ns (obs ++ obs') nt
-      segmentIndex none $$ [$Hσ $Hsegment] with
-    ⟨Hσ, Hsegment, %hsegment⟩
+  wasm_data_segment_agree hsegment, segmentIndex, none, (obs ++ obs') $$
+    [Hσ Hsegment]
   have expectedStep : Step
       ⟨.running ⟨⟨params, localValues,
         .i32 len :: .i32 source :: .i32 destination :: values⟩,
@@ -3440,9 +3434,8 @@ theorem wp_memoryInit64Dropped
   dsimp only
   iintro >Hsegment Hwp
   wasm_wp_begin
-  imod stateInterp_dataSegment_facts_frame store ns (obs ++ obs') nt
-      segmentIndex none $$ [$Hσ $Hsegment] with
-    ⟨Hσ, Hsegment, %hsegment⟩
+  wasm_data_segment_agree hsegment, segmentIndex, none, (obs ++ obs') $$
+    [Hσ Hsegment]
   have expectedStep : Step
       ⟨.running ⟨⟨params, localValues,
         .i32 len :: .i32 source :: .i64 destination :: values⟩,
@@ -3470,9 +3463,8 @@ theorem wp_memoryInit32Trap
         arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} := by
   iintro >Hsegment
   wasm_wp_begin
-  imod stateInterp_dataSegment_facts_frame store ns (obs ++ obs') nt
-      segmentIndex (some segmentBytes) $$ [$Hσ $Hsegment] with
-    ⟨Hσ, Hsegment, %hsegment⟩
+  wasm_data_segment_agree hsegment, segmentIndex, (some segmentBytes),
+    (obs ++ obs') $$ [Hσ Hsegment]
   wasm_wp_step Step.memoryInit32Trap hsegment (Or.inl hsrc) =>
     wasm_wp_trap_frame
 
@@ -3491,9 +3483,8 @@ theorem wp_memoryInit64Trap
         arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} := by
   iintro >Hsegment
   wasm_wp_begin
-  imod stateInterp_dataSegment_facts_frame store ns (obs ++ obs') nt
-      segmentIndex (some segmentBytes) $$ [$Hσ $Hsegment] with
-    ⟨Hσ, Hsegment, %hsegment⟩
+  wasm_data_segment_agree hsegment, segmentIndex, (some segmentBytes),
+    (obs ++ obs') $$ [Hσ Hsegment]
   wasm_wp_step Step.memoryInit64Trap hsegment (Or.inl hsrc) =>
     wasm_wp_trap_frame
 
@@ -3786,9 +3777,8 @@ theorem wp_memoryInit16_four
   iintro >⟨Hword, Hsegment⟩ Hwp
   wasm_wp_begin
   simp only [← dataSegmentPointsToAt_eq]
-  imod stateInterp_dataSegment_facts_frame store ns (obs ++ obs') nt
-      0 (some [1, 2, 3, 4]) $$ [$Hσ $Hsegment] with
-    ⟨Hσ, Hsegment, %hsegment⟩
+  wasm_data_segment_agree hsegment, 0, (some [1, 2, 3, 4]),
+    (obs ++ obs') $$ [Hσ Hsegment]
   ihave_pure HwordFacts :
       ⌜store.wasm.mem.read32 16 = oldWord ∧
         20 ≤ store.wasm.mem.pages * 65536⌝ using
@@ -3835,9 +3825,8 @@ theorem wp_dataDrop0
   iintro >Hsegment Hwp
   wasm_wp_begin
   simp only [← dataSegmentPointsToAt_eq]
-  imod stateInterp_dataSegment_facts_frame store ns (obs ++ obs') nt
-      0 (some bytes) $$ [$Hσ $Hsegment] with
-    ⟨Hσ, Hsegment, %hsegment⟩
+  wasm_data_segment_agree hsegment, 0, (some bytes), (obs ++ obs') $$
+    [Hσ Hsegment]
   have hisSome :
       (store.wasm.dataSegments[0]?).isSome = true := by
     rw [hsegment]
@@ -3884,10 +3873,8 @@ theorem wp_elemDrop
   iintro >Hsegment Hwp
   wasm_wp_begin
   simp only [← elementSegmentPointsToAt_eq]
-  imod stateInterp_elementSegment_facts_frame
-      store ns (obs ++ obs') nt elementIndex (some entries) $$
-      [$Hσ $Hsegment] with
-    ⟨Hσ, Hsegment, %hsegment⟩
+  wasm_element_segment_agree hsegment, elementIndex, (some entries),
+    (obs ++ obs') $$ [Hσ Hsegment]
   have hisSome :
       (store.wasm.elementSegments[elementIndex]?).isSome = true := by
     rw [hsegment]
@@ -3958,15 +3945,8 @@ theorem wp_tableInitLive
   wasm_wp_begin
   wasm_table_agree HtablePhysical, tableIndex, table, (obs ++ obs') $$
     [Hσ Htable]
-  ihave %HsegmentPhysical :
-      ⌜store.wasm.elementSegments[elementIndex]? =
-        some (some entries)⌝ $$ [Hσ Hsegment]
-  · imod stateInterp_elementSegment_facts_frame
-        store ns (obs ++ obs') nt elementIndex (some entries) $$
-        [$Hσ $Hsegment] with
-      ⟨Hσ, Hsegment, %HsegmentPhysical⟩
-    ipureintro
-    exact HsegmentPhysical
+  wasm_element_segment_agree HsegmentPhysical, elementIndex,
+    (some entries), (obs ++ obs') $$ [Hσ Hsegment]
   wasm_runtime_module_agree (obs ++ obs'), callerId, runtimeModule $$ [$Hσ $Hruntime]
   let segmentValues :=
     (runtimeModule.elements[elementIndex]?.map
