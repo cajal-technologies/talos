@@ -69,17 +69,14 @@ private theorem incrTransfer (n : Nat) [WasmSmallStepGS .hasLC Nat]
   simp [incrementHost] at h
   obtain ⟨h1, h2⟩ := h; subst h1; subst h2
   iintro ⟨HP, Hσ⟩
-  icases (stateInterp_eq store ns obs nt).mp $$ Hσ with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep,
-      HruntimeInstances, HinstanceAuth, Henv, Hauth, %Hfacts, Hexc⟩
+  iopen_state Hσ
   -- auth and frag: derive store.wasm.host = n; specialize_dup_context retains Hauth HP
-  ihave %heq : ⌜store.wasm.host = n⌝ $$ [Hauth HP]
-  · iapply (hostStateOwn_agree store.wasm.host n); iframe Hauth HP
+  ihave %heq : ⌜store.wasm.host = n⌝ $$ [Hstate_auth HP]
+  · iapply (hostStateOwn_agree store.wasm.host n); iframe Hstate_auth HP
   -- rw [heq] replaces store.wasm.host with n throughout the iris goal,
   -- making auth and frag both carry n so hostStateOwn_update applies
   rw [heq]
-  imod hostStateOwn_update n (n + 1) $$ [$Hauth $HP] with ⟨Hauth', HP'⟩
+  imod hostStateOwn_update n (n + 1) $$ [$Hstate_auth $HP] with ⟨Hauth', HP'⟩
   imodintro
   -- conclusion: hostStateOwn (n+1) ∗ stateInterp; hostStateOwn is LEFT
   isplitl [HP']
@@ -87,10 +84,10 @@ private theorem incrTransfer (n : Nat) [WasmSmallStepGS .hasLC Nat]
   · iapply (stateInterp_eq
         { store with wasm := { store.wasm with host := n + 1 } }
         ns obs nt).mpr
-    iexists σ; iexists globalσ; iexists dataSegmentσ
-    iexists tableσ; iexists elementSegmentσ; iexists runtimeModuleσ; iexists hostEnvσ
+    iexists σ, globalσ, dataSegmentσ, tableσ,
+      elementSegmentσ, runtimeModuleσ, hostEnvσ
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep
-      HruntimeInstances HinstanceAuth Henv Hauth' Hexc
+      HruntimeInstances HinstanceAuth HhostEnvAuth Hauth' Hexc
     ipureintro
     exact Hfacts
 
@@ -108,23 +105,20 @@ private theorem readTransfer (initial : Nat) [WasmSmallStepGS .hasLC Nat]
   obtain ⟨h1, h2⟩ := h; subst h2
   iintro ⟨HP, Hσ⟩
   -- decompose stateInterp to get Hauth; read-only so reconstruct at the end
-  icases (stateInterp_eq store ns obs nt).mp $$ Hσ with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep,
-      HruntimeInstances, HinstanceAuth, Henv, Hauth, %Hfacts, Hexc⟩
+  iopen_state Hσ
   -- derive store.wasm.host = initial + 3; retains Hauth HP (pure conclusion)
-  ihave %heq : ⌜store.wasm.host = initial + 3⌝ $$ [Hauth HP]
-  · iapply (hostStateOwn_agree store.wasm.host (initial + 3)); iframe Hauth HP
+  ihave %heq : ⌜store.wasm.host = initial + 3⌝ $$ [Hstate_auth HP]
+  · iapply (hostStateOwn_agree store.wasm.host (initial + 3)); iframe Hstate_auth HP
   imodintro
   isplitl []
   -- h1 : [.i32 (UInt32.ofNat store.wasm.host)] = results (reversed by simp)
   · ipureintro; rw [← h1, heq]
   · -- reconstruct stateInterp store (= { store with wasm := store.wasm } definitionally)
     iapply (stateInterp_eq store ns obs nt).mpr
-    iexists σ; iexists globalσ; iexists dataSegmentσ
-    iexists tableσ; iexists elementSegmentσ; iexists runtimeModuleσ; iexists hostEnvσ
+    iexists σ, globalσ, dataSegmentσ, tableσ,
+      elementSegmentσ, runtimeModuleσ, hostEnvσ
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep
-      HruntimeInstances HinstanceAuth Henv Hauth Hexc
+      HruntimeInstances HinstanceAuth HhostEnvAuth Hstate_auth Hexc
     ipureintro; exact Hfacts
 
 theorem counter_partiallyMeets (initial : Nat) (_hbound : initial + 3 < 2 ^ 32) :

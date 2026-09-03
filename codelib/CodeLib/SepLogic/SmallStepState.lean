@@ -489,7 +489,7 @@ set_option hygiene false in
 macro_rules
   | `(tactic| iopen_state $state:specPat) =>
     `(tactic|
-      icases (stateInterp_eq store steps observations threads).mp $$ $state with
+      icases (stateInterp_eq _ _ _ _).mp $$ $state with
         ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ,
           %runtimeModuleσ, %hostEnvσ, Hheap, Hglobals, Hsegments, Htables,
           HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep,
