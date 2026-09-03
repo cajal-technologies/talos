@@ -42,8 +42,6 @@ theorem wp_pureStep
   iintro !> %e₂ %store₂ %forks %Hprim Hcredit
   wasm_wp_resolve_step Hprim using hstep store
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 /-- Generic lifting rule for a store-preserving deterministic Wasm step that
@@ -197,8 +195,6 @@ theorem wp_finish
   iintro !> %e₂ %store₂ %forks %Hstep Hcredit
   wasm_wp_resolve_step Hstep using Step.finish
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 /-- Explicit return from a top-level invocation. The instruction discards the
@@ -227,8 +223,6 @@ theorem wp_returnFromFunction
   wasm_wp_resolve_step Hstep using Step.returnFromFunction
   simp only [List.length_nil, Nat.add_zero,
     Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 theorem wp_const
@@ -767,8 +761,6 @@ theorem wp_refIsNull
     · exact Step.refIsNullTrue hnull
   wasm_wp_resolve_target expectedStep against wasmStep
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 theorem wp_localGet
@@ -1567,8 +1559,6 @@ theorem wp_returnFromCallExplicit
   cases hconfig
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil, resumeCaller]
   iclear HruntimeElem HinstanceOwn
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 /-- Primitive rule for `global.get`. Authoritative global ownership connects
@@ -1621,8 +1611,6 @@ theorem wp_globalGet_of_canonical
   simp only at hconfig
   cases hconfig
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 /-- Primitive rule for `global.set`. Exclusive authoritative ownership is
@@ -1701,8 +1689,6 @@ theorem wp_globalSet_of_canonical
   imod stateInterp_global_set store ns
       obs' nt
       index oldValue newValue $$ [$Hσ $Hglobal] with ⟨Hσ, Hglobal⟩
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 /-- Common non-aliased rule for the distinguished global at index zero.
@@ -1795,8 +1781,6 @@ theorem wp_tableGet
   cases hconfig
   simp only [List.length_nil, Nat.add_zero,
     Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 /-- Primitive rule for `table.size`. Runtime-module ownership determines
@@ -1869,8 +1853,6 @@ theorem wp_tableSize
   wasm_wp_resolve_target expectedStep against wasmStep
   simp only [List.length_nil, Nat.add_zero,
     Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 /-- Primitive rule for an in-bounds `table.set`. The table keeps its stable
@@ -1942,8 +1924,6 @@ theorem wp_tableSet
   imod stateInterp_table_set store ns
       obs' nt
       tableIndex table newTable $$ [$Hσ $Htable] with ⟨Hσ, Htable⟩
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 /-- Successful 32-bit `table.grow`. Stable table identity is preserved while
@@ -2026,8 +2006,6 @@ theorem wp_tableGrow32
   imod stateInterp_table_set store ns
       obs' nt
       tableIndex table newTable $$ [$Hσ $Htable] with ⟨Hσ, Htable⟩
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 /-- Successful 64-bit `table.grow`. This is the table64 counterpart of
@@ -2110,8 +2088,6 @@ theorem wp_tableGrow64
   imod stateInterp_table_set store ns
       obs' nt
       tableIndex table newTable $$ [$Hσ $Htable] with ⟨Hσ, Htable⟩
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 /-- Failed 32-bit `table.grow`. Capacity failure is an ordinary successful
@@ -2188,8 +2164,6 @@ theorem wp_tableGrow32Failure
   wasm_wp_resolve_target expectedStep against wasmStep
   simp only [List.length_nil, Nat.add_zero,
     Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 /-- Failed table64 `table.grow`; returns the 64-bit all-ones sentinel and
@@ -2266,8 +2240,6 @@ theorem wp_tableGrow64Failure
   wasm_wp_resolve_target expectedStep against wasmStep
   simp only [List.length_nil, Nat.add_zero,
     Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 /-- In-bounds `table.fill`. The complete authoritative table fragment is
@@ -2343,8 +2315,6 @@ theorem wp_tableFill
   imod stateInterp_table_set store ns
       obs' nt
       tableIndex table newTable $$ [$Hσ $Htable] with ⟨Hσ, Htable⟩
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 /-- In-bounds copy within one table, including overlapping ranges. The source
@@ -2429,8 +2399,6 @@ theorem wp_tableCopySame
   imod stateInterp_table_set store ns
       obs' nt
       tableIndex table newTable $$ [$Hσ $Htable] with ⟨Hσ, Htable⟩
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 /-- In-bounds copy between two separately owned tables. The source fragment is
@@ -2535,8 +2503,6 @@ theorem wp_tableCopyDistinct
       obs' nt
       destinationTableIndex destinationTable newDestinationTable $$
       [$Hσ $Hdestination] with ⟨Hσ, Hdestination⟩
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 /-- Primitive rule for `i32.load8_u`. The arithmetic premise rules out
@@ -2598,8 +2564,6 @@ theorem wp_load8U
       (Step.load8U (α := α) (address := Value.i32 address) rfl hbound)
   wasm_wp_resolve_target expectedStep against wasmStep
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 /-- Primitive rule for `i64.load8_u` with an i32 memory address.  The loaded
@@ -2660,8 +2624,6 @@ theorem wp_load8UI64
       (Step.load8UI64 (α := α) (address := Value.i32 address) rfl hbound)
   wasm_wp_resolve_target expectedStep against wasmStep
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 theorem wp_load8S
@@ -2723,8 +2685,6 @@ theorem wp_load8S
     exact Step.load8S (α := α) (address := Value.i32 address) rfl hbound
   wasm_wp_resolve_target expectedStep against wasmStep
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 theorem wp_load16U
@@ -2783,8 +2743,6 @@ theorem wp_load16U
       (Step.load16U (α := α) (address := Value.i32 address) rfl hbound)
   wasm_wp_resolve_target expectedStep against wasmStep
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 /-- Primitive rule for `i32.load16_s`. Like `wp_load16U` but the 16-bit value
@@ -2848,8 +2806,6 @@ theorem wp_load16S
     exact Step.load16S (α := α) (address := Value.i32 address) rfl hbound
   wasm_wp_resolve_target expectedStep against wasmStep
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 /-- Primitive rule for `i64.load8_s`. Like `wp_load8UI64` but sign-extended;
@@ -2913,8 +2869,6 @@ theorem wp_load8SI64
     exact Step.load8SI64 (address := Value.i32 address) rfl hbound
   wasm_wp_resolve_target expectedStep against wasmStep
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 theorem wp_load16UI64
@@ -2973,8 +2927,6 @@ theorem wp_load16UI64
       (Step.load16UI64 (α := α) (address := Value.i32 address) rfl hbound)
   wasm_wp_resolve_target expectedStep against wasmStep
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 /-- Primitive rule for `i64.load16_s`. Like `wp_load16UI64` but sign-extended;
@@ -3038,8 +2990,6 @@ theorem wp_load16SI64
     exact Step.load16SI64 (address := Value.i32 address) rfl hbound
   wasm_wp_resolve_target expectedStep against wasmStep
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 theorem wp_load32UI64
@@ -3100,8 +3050,6 @@ theorem wp_load32UI64
       (Step.load32UI64 (α := α) (address := Value.i32 address) rfl hbound)
   wasm_wp_resolve_target expectedStep against wasmStep
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 /-- Primitive rule for `i64.load32_s`. Like `wp_load32UI64` but sign-extended;
@@ -3167,8 +3115,6 @@ theorem wp_load32SI64
     exact Step.load32SI64 (address := Value.i32 address) rfl hbound
   wasm_wp_resolve_target expectedStep against wasmStep
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 /-- Primitive rule for `i32.store8`. The physical `Mem.write8` transition and
@@ -3234,8 +3180,6 @@ theorem wp_store8
   imod stateInterp_store8 store ns obs' nt
       (address + offset) oldByte value.toUInt8
       (by simpa [hnowrap] using HinBounds) $$ [$Hσ $Hpt] with ⟨Hσ, Hpt⟩
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 /-- Primitive rule for `i64.store8` with an i32 memory address. -/
@@ -3299,8 +3243,6 @@ theorem wp_store8I64
   imod stateInterp_store8 store ns obs' nt
       (address + offset) oldByte value.toUInt8
       (by simpa [hnowrap] using HinBounds) $$ [$Hσ $Hpt] with ⟨Hσ, Hpt⟩
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 theorem wp_store16
@@ -3367,8 +3309,6 @@ theorem wp_store16
   imod stateInterp_store16 store ns obs' nt
       (address + offset) oldWord value h1 Hfacts.2 $$
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 theorem wp_store16I64
@@ -3435,8 +3375,6 @@ theorem wp_store16I64
   imod stateInterp_store16 store ns obs' nt
       (address + offset) oldWord value.toUInt32 h1 Hfacts.2 $$
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 theorem wp_store32I64
@@ -3505,8 +3443,6 @@ theorem wp_store32I64
   imod stateInterp_store32 store ns obs' nt
       (address + offset) oldWord value.toUInt32 h1 h2 h3 Hfacts.2 $$
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 theorem wp_load32
@@ -3567,8 +3503,6 @@ theorem wp_load32
       (Step.load32 (α := α) (address := Value.i32 address) rfl hbound)
   wasm_wp_resolve_target expectedStep against wasmStep
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 theorem wp_store32
@@ -3637,8 +3571,6 @@ theorem wp_store32
   imod stateInterp_store32 store ns obs' nt
       (address + offset) oldWord value h1 h2 h3 Hfacts.2 $$
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 theorem wp_f32Load
@@ -3698,8 +3630,6 @@ theorem wp_f32Load
       (Step.f32Load (α := α) (address := .i32 address) rfl hbound)
   wasm_wp_resolve_target expectedStep against wasmStep
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 theorem wp_f32Store
@@ -3770,8 +3700,6 @@ theorem wp_f32Store
   imod stateInterp_store32 store ns obs' nt
       (address + offset) oldWord value h1 h2 h3 Hfacts.2 $$
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 theorem wp_load64
@@ -3837,8 +3765,6 @@ theorem wp_load64
       (Step.load64 (α := α) (address := Value.i32 address) rfl hbound)
   wasm_wp_resolve_target expectedStep against wasmStep
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 theorem wp_store64
@@ -3913,8 +3839,6 @@ theorem wp_store64
   imod stateInterp_store64 store ns obs' nt
       (address + offset) oldWord value h1 h2 h3 h4 h5 h6 h7 Hfacts.2 $$
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 theorem wp_f64Load
@@ -3980,8 +3904,6 @@ theorem wp_f64Load
       (Step.f64Load (α := α) (address := Value.i32 address) rfl hbound)
   wasm_wp_resolve_target expectedStep against wasmStep
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 theorem wp_f64Store
@@ -4058,8 +3980,6 @@ theorem wp_f64Store
   imod stateInterp_store64 store ns obs' nt
       (address + offset) oldWord value h1 h2 h3 h4 h5 h6 h7 Hfacts.2 $$
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 theorem wp_memoryGrow64TooLarge
@@ -4436,8 +4356,6 @@ theorem wp_memoryFill32
       destination oldBytes value.toUInt8
       (by rw [hlen]; exact hbound) (by rw [hlen]; exact hnowrap)
       $$ [$Hσ $Hbytes] with ⟨Hσ, Hbytes⟩
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 /-- Primitive rule for `memory.fill` with i64 operands (non-trapping). Same
@@ -4507,8 +4425,6 @@ theorem wp_memoryFill64
       destination.toUInt32 oldBytes value.toUInt8
       (by rw [hdst, hlen]; exact hbound) (by rw [hdst, hlen]; exact hnowrap)
       $$ [$Hσ $Hbytes] with ⟨Hσ, Hbytes⟩
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 theorem wp_memoryCopy32
@@ -4592,8 +4508,6 @@ theorem wp_memoryCopy32
       (by rw [hlen_src]; exact hbound_src)
       (by rw [hlen_src]; exact hnowrap_src)
       $$ [$Hσ $Hsrc $Hdst] with ⟨Hσ, Hsrc, Hdst⟩
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 theorem wp_memoryCopy64
@@ -4684,8 +4598,6 @@ theorem wp_memoryCopy64
       (by rw [hsrc_nat, hlen_src]; exact hbound_src)
       (by rw [hsrc_nat, hlen_src]; exact hnowrap_src)
       $$ [$Hσ $Hsrc $Hdst] with ⟨Hσ, Hsrc, Hdst⟩
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 theorem wp_memoryInit32
@@ -4758,8 +4670,6 @@ theorem wp_memoryInit32
       destination source.toNat len.toNat segmentIndex oldDstBytes segmentBytes
       hlen_dst hbound_dst hnowrap_dst hbound_src
       $$ [$Hσ $Hsegment $Hdst] with ⟨Hσ, Hsegment, Hdst⟩
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 theorem wp_memoryInit64
@@ -4836,8 +4746,6 @@ theorem wp_memoryInit64
       destination.toUInt32 source.toNat len.toNat segmentIndex oldDstBytes segmentBytes
       hlen_dst (by rw [hdst]; exact hbound_dst) (by rw [hdst]; exact hnowrap_dst) hbound_src
       $$ [$Hσ $Hsegment $Hdst] with ⟨Hσ, Hsegment, Hdst⟩
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 theorem wp_dataDrop
@@ -4898,8 +4806,6 @@ theorem wp_dataDrop
   imod stateInterp_dataSegment_drop store ns
       obs' nt segmentIndex (some bytes) $$
       [$Hσ $Hsegment] with ⟨Hσ, Hsegment⟩
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 theorem wp_memoryInit32DroppedTrap
@@ -5048,8 +4954,6 @@ theorem wp_memoryInit32Dropped
     Step.memoryInit32Dropped hsegment (by omega)
   wasm_wp_resolve_target expectedStep against wasmStep
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 theorem wp_memoryInit64Dropped
@@ -5100,8 +5004,6 @@ theorem wp_memoryInit64Dropped
     Step.memoryInit64Dropped hsegment (by omega)
   wasm_wp_resolve_target expectedStep against wasmStep
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 theorem wp_memoryInit32Trap
@@ -5481,8 +5383,6 @@ theorem wp_fill16_four_AB
   imod stateInterp_fill16_four_AB store ns
       obs' nt oldWord Hfacts.2 $$
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 /-- Primitive Iris rule for initializing four bytes from passive data segment
@@ -5622,8 +5522,6 @@ theorem wp_dataDrop0
   imod stateInterp_dataSegment_drop store ns
       obs' nt 0 (some bytes) $$
       [$Hσ $Hsegment] with ⟨Hσ, Hsegment⟩
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 /-- Primitive Iris rule for `elem.drop`. A live element-segment fragment is
@@ -5693,8 +5591,6 @@ theorem wp_elemDrop
       obs' nt
       elementIndex (some entries) $$ [$Hσ $Hsegment] with
     ⟨Hσ, Hsegment⟩
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 /-- Initialize a table range from a live element segment. Runtime-module
@@ -5817,8 +5713,6 @@ theorem wp_tableInitLive
       obs' nt
       tableIndex table newTable $$ [$Hσ $Htable] with
     ⟨Hσ, Htable⟩
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 /-- Primitive Iris rule for the overlapping four-byte copy from address 0 to
@@ -5883,8 +5777,6 @@ theorem wp_copy2_zero_four
   imod stateInterp_copy2_zero_four store ns
       obs' nt $$
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 /-- Primitive Iris rule for an aligned four-byte copy from address 0 to 8.
@@ -6694,8 +6586,6 @@ theorem wp_v128Load
       Step.v128Load (α := α) (address := .i32 address) rfl hbound
   wasm_wp_resolve_target expectedStep against wasmStep
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 -- Store a v128 to memory, updating 16 bytes of ghost state.
@@ -6844,8 +6734,6 @@ theorem wp_load8UMemory64
       (Step.load8U (α := α) (address := Value.i64 address) rfl hbound)
   wasm_wp_resolve_target expectedStep against wasmStep
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 theorem wp_load8SMemory64
@@ -6906,8 +6794,6 @@ theorem wp_load8SMemory64
     exact Step.load8S (address := Value.i64 address) rfl hbound
   wasm_wp_resolve_target expectedStep against wasmStep
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 theorem wp_load16UMemory64
@@ -6966,8 +6852,6 @@ theorem wp_load16UMemory64
       Step.load16U (α := α) (address := Value.i64 address) rfl hbound
   wasm_wp_resolve_target expectedStep against wasmStep
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 theorem wp_load16SMemory64
@@ -7031,8 +6915,6 @@ theorem wp_load16SMemory64
     exact Step.load16S (address := Value.i64 address) rfl hbound
   wasm_wp_resolve_target expectedStep against wasmStep
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 theorem wp_store8Memory64
@@ -7095,8 +6977,6 @@ theorem wp_store8Memory64
   imod stateInterp_store8 store ns obs' nt
       (address.toUInt32 + offset) oldByte value.toUInt8
       HinBounds $$ [$Hσ $Hpt] with ⟨Hσ, Hpt⟩
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 theorem wp_store16Memory64
@@ -7161,8 +7041,6 @@ theorem wp_store16Memory64
   imod stateInterp_store16 store ns obs' nt
       (address.toUInt32 + offset) oldWord value h1 HinBounds $$
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 theorem wp_load32Memory64
@@ -7223,8 +7101,6 @@ theorem wp_load32Memory64
       Step.load32 (α := α) (address := Value.i64 address) rfl hbound
   wasm_wp_resolve_target expectedStep against wasmStep
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 theorem wp_store32Memory64
@@ -7291,8 +7167,6 @@ theorem wp_store32Memory64
   imod stateInterp_store32 store ns obs' nt
       (address.toUInt32 + offset) oldWord value h1 h2 h3 HinBounds $$
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
-  imod Hclose
-  imodintro
   wasm_wp_frame
 
 /-- Call an imported function that crosses module-instance boundaries.

@@ -65,7 +65,9 @@ set_option hygiene false in
 /-- Reassemble the Iris state, continuation, and affine tail after a Wasm step. -/
 macro "wasm_wp_frame" : tactic =>
   `(tactic|
-    (isplitl [Hσ]
+    (imod Hclose
+     imodintro
+     isplitl [Hσ]
      next => iexact Hσ
      next =>
        isplitr [Hcredit]
@@ -81,7 +83,9 @@ set_option hygiene false in
 macro_rules
   | `(tactic| wasm_twp_frame $continuation:tacticSeq) =>
    `(tactic|
-    (isplit
+    (imod Hclose
+     imodintro
+     isplit
      next =>
        ipureintro
        rfl

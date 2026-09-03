@@ -634,8 +634,6 @@ theorem twp_call
     step_deterministic (Step.call (α := α) himports' hfn') wasmStep
   simp only at hconfig
   cases hconfig
-  imod Hclose
-  imodintro
   wasm_twp_frame
     rw [← hsame]
     iapply Htwp
@@ -781,8 +779,6 @@ theorem twp_callHost
     cases hconfig
     imod hRetTransfer store ns obs nt Hmodule results newWasm h $$
       [$HP $Hσ] with ⟨HQ, Hσ⟩
-    imod Hclose
-    imodintro
     wasm_twp_frame
       ispecialize HwpRet $$ %(store.wasm) %results %newWasm %h
       iapply HwpRet
@@ -809,8 +805,6 @@ theorem twp_callHost
     cases hconfig
     imod hTrapTransfer store ns obs nt Hmodule newWasm msg h $$
       [$HP $Hσ] with ⟨HQ, Hσ⟩
-    imod Hclose
-    imodintro
     wasm_twp_frame
       ispecialize HwpTrap $$ %(store.wasm) %newWasm %msg %h
       iapply HwpTrap
@@ -843,8 +837,6 @@ theorem twp_callHost
     cases hconfig
     imod hThrowTransfer store ns obs nt Hmodule newWasm tag xs h $$
       [$HP $Hσ] with ⟨HQ, Hσ⟩
-    imod Hclose
-    imodintro
     wasm_twp_frame
       ispecialize HwpThrow $$ %(store.wasm) %newWasm %tag %xs %h
       iapply HwpThrow
@@ -902,8 +894,6 @@ theorem twp_returnFromCallFallthrough
     step_deterministic (Step.returnFromCallFallthrough (α := α) hsame) wasmStep
   simp only at hconfig
   cases hconfig
-  imod Hclose
-  imodintro
   wasm_twp_frame
     simp only [resumeCaller]
     iapply Hwp
@@ -964,8 +954,6 @@ theorem twp_returnFromCallExplicit
     step_deterministic (Step.returnFromCallExplicit (α := α) hsame) wasmStep
   simp only at hconfig
   cases hconfig
-  imod Hclose
-  imodintro
   wasm_twp_frame
     simp only [resumeCaller]
     iapply Hwp
@@ -1010,8 +998,6 @@ theorem twp_memorySize
   iintro %κ %e₂ %store₂ %forks %Hstep
   obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
   wasm_wp_resolve_target Step.memorySize against wasmStep
-  imod Hclose
-  imodintro
   wasm_twp_frame
     simp only [Hmodule]
     iapply Hwp store.wasm.mem.pages
@@ -1068,8 +1054,6 @@ theorem twp_memorySize_tracked
   iintro %κ %e₂ %store₂ %forks %Hstep
   obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
   wasm_wp_resolve_target Step.memorySize against wasmStep
-  imod Hclose
-  imodintro
   wasm_twp_frame
     simp only [Hmodule]
     iexact Hcont
@@ -1110,8 +1094,6 @@ theorem twp_memoryGrow
       step_deterministic (Step.memoryGrowFailure hg) wasmStep
     simp only at hconfig
     cases hconfig
-    imod Hclose
-    imodintro
     wasm_twp_frame
       iapply Hwp (0xFFFFFFFF : UInt32)
       iexact Hruntime
@@ -1145,8 +1127,6 @@ theorem twp_memoryGrow
     imod (stateInterp_memoryGrow store ns obs nt delta
         (store.wasm.memoryCap store.runtime.currentModule 0)
         memory previousPages hg) $$ Hσ with Hσ
-    imod Hclose
-    imodintro
     wasm_twp_frame
       iapply Hwp previousPages.toUInt32
       iexact Hruntime
@@ -1217,8 +1197,6 @@ theorem twp_memoryGrow_tracked
       step_deterministic (Step.memoryGrowFailure hg) wasmStep
     simp only at hconfig
     cases hconfig
-    imod Hclose
-    imodintro
     wasm_twp_frame
       iexact Hcont
   | some grown =>
@@ -1266,8 +1244,6 @@ theorem twp_memoryGrow_tracked
         memory previousPages hg) $$ Hinput with Hout
     icases Hout with ⟨⟨Hσ, HnewPages, %_⟩, HcontNew⟩
     ispecialize HcontNew $$ HnewPages
-    imod Hclose
-    imodintro
     wasm_twp_frame
       iexact HcontNew
 
@@ -1338,8 +1314,6 @@ theorem twp_load32
     step_deterministic expectedStep wasmStep
   simp only at hconfig
   cases hconfig
-  imod Hclose
-  imodintro
   wasm_twp_frame
     iapply Htwp
     iexact Hword
@@ -1417,8 +1391,6 @@ theorem twp_store32
   imod stateInterp_store32 store ns obs nt
       (address + offset) oldWord value h1 h2 h3 Hfacts.2 $$
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
-  imod Hclose
-  imodintro
   wasm_twp_frame
     iapply Htwp
     iexact Hword
@@ -1500,8 +1472,6 @@ theorem twp_memoryFill32
   imod stateInterp_fill_bytes store ns obs nt destination oldBytes value.toUInt8
       (by rw [hlen]; exact hbound) (by rw [hlen]; exact hnowrap)
       $$ [$Hσ $Hbytes] with ⟨Hσ, Hbytes⟩
-  imod Hclose
-  imodintro
   wasm_twp_frame
     iapply Htwp
     iexact Hbytes
@@ -1590,8 +1560,6 @@ theorem twp_memoryCopy32
       (by rw [hlen_src]; exact hbound_src)
       (by rw [hlen_src]; exact hnowrap_src)
       $$ [$Hσ $Hsrc $Hdst] with ⟨Hσ, Hsrc, Hdst⟩
-  imod Hclose
-  imodintro
   wasm_twp_frame
     iapply Htwp $$ Hsrc Hdst
 
@@ -1654,8 +1622,6 @@ theorem twp_throwI
     step_deterministic (Step.throwI (α := α) htag' hargs) wasmStep
   simp only at hconfig
   cases hconfig
-  imod Hclose
-  imodintro
   wasm_twp_frame
     have hcanonicalStore :=
       (canonicalTagIndex_eq store tagIndex).trans
@@ -1836,8 +1802,6 @@ theorem twp_globalGet
       simpa [globalAt?, hcanonical] using Hget)) wasmStep
   simp only at hconfig
   cases hconfig
-  imod Hclose
-  imodintro
   wasm_twp_frame
     iapply Htwp
     iexact Hglobal
@@ -1960,8 +1924,6 @@ theorem twp_f32Load
     step_deterministic expectedStep wasmStep
   simp only at hconfig
   cases hconfig
-  imod Hclose
-  imodintro
   wasm_twp_frame
     iapply Htwp
     iexact Hword
@@ -2041,8 +2003,6 @@ theorem twp_f32Store
   imod stateInterp_store32 store ns obs nt
       (address + offset) oldWord value h1 h2 h3 Hfacts.2 $$
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
-  imod Hclose
-  imodintro
   wasm_twp_frame
     iapply Htwp
     iexact Hword
@@ -2114,8 +2074,6 @@ theorem twp_globalSet
   cases hconfig
   imod stateInterp_global_set store ns obs nt
       0 oldValue newValue $$ [$Hσ $Hglobal] with ⟨Hσ, Hglobal⟩
-  imod Hclose
-  imodintro
   wasm_twp_frame
     iapply Htwp
     iexact Hglobal
@@ -2210,8 +2168,6 @@ theorem twp_f64Load
     step_deterministic expectedStep wasmStep
   simp only at hconfig
   cases hconfig
-  imod Hclose
-  imodintro
   wasm_twp_frame
     iapply Htwp
     iexact Hword
@@ -2300,8 +2256,6 @@ theorem twp_f64Store
   imod stateInterp_store64 store ns obs nt
       (address + offset) oldWord value h1 h2 h3 h4 h5 h6 h7 Hfacts.2 $$
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
-  imod Hclose
-  imodintro
   wasm_twp_frame
     iapply Htwp
     iexact Hword
@@ -2381,8 +2335,6 @@ theorem twp_load64
     step_deterministic expectedStep wasmStep
   simp only at hconfig
   cases hconfig
-  imod Hclose
-  imodintro
   wasm_twp_frame
     iapply Htwp
     iexact Hword
@@ -2471,8 +2423,6 @@ theorem twp_store64
   imod stateInterp_store64 store ns obs nt
       (address + offset) oldWord value h1 h2 h3 h4 h5 h6 h7 Hfacts.2 $$
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
-  imod Hclose
-  imodintro
   wasm_twp_frame
     iapply Htwp
     iexact Hword
@@ -2750,8 +2700,6 @@ theorem twp_load32_addr
     step_deterministic expectedStep wasmStep
   simp only at hconfig
   cases hconfig
-  imod Hclose
-  imodintro
   wasm_twp_frame
     iapply Htwp
     iexact Hword
