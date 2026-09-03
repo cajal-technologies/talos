@@ -422,9 +422,8 @@ theorem twp_partition
         .call partitionIdx :: code, arity, remainder, controls, calls⟩ : Expr Unit)
         @ s; E [{ Φ }] := by
   iintro ⟨Hruntime, Harray, Hcont⟩
-  iapply Wasm.SmallStep.twp_call runtimeModule partitionIdx partitionFunction
-    himports hfunction $$ Hruntime
-  iintro Hruntime
+  wasm_twp_rebind Wasm.SmallStep.twp_call runtimeModule partitionIdx partitionFunction
+    himports hfunction with Hruntime
   simp [partitionFunction, Function.toLocals, Function.numParams, ValueType.zero]
   iapply twp_partitionBody_from
     (⟨[.i32 arr, .i32 (UInt32.ofNat lo), .i32 (UInt32.ofNat hi)],
@@ -545,9 +544,8 @@ private theorem twp_quicksortBody_aux
       wasm_twp_pures [twp_exitControl]
       simp only [List.take_zero, List.nil_append, List.drop_zero]
       wasm_twp_pures [twp_localGet twp_localGet twp_localGet]
-      iapply Wasm.SmallStep.twp_call runtimeModule partitionIdx partitionFunction himports_p
-          hfunction_p $$ Hruntime
-      iintro Hruntime_p
+      wasm_twp_bind Wasm.SmallStep.twp_call runtimeModule partitionIdx partitionFunction himports_p
+          hfunction_p with Hruntime => Hruntime_p
       simp [partitionFunction, Function.toLocals, Function.numParams, ValueType.zero]
       iapply twp_partitionBody_from
           (⟨[.i32 arr, .i32 (UInt32.ofNat lo), .i32 (UInt32.ofNat hi)],

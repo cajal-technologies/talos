@@ -4350,9 +4350,8 @@ theorem wp_copyOverlapWord :
   ihave HwordLater :
       ▷ pointsTo_u64 0 (0 + 0) 0x8877443322112211 $$ [Hword]
   · ilater_rw_exact [UInt32.add_zero] with Hword
-  wasm_wp_next wp_load64 0x8877443322112211
-    rfl rfl rfl rfl rfl rfl rfl rfl $$ HwordLater
-  iintro Hword
+  wasm_wp_next_bind wp_load64 0x8877443322112211
+    rfl rfl rfl rfl rfl rfl rfl rfl with HwordLater => Hword
   wasm_wp_finish_value
   isplitr_pureexact rfl
   · rw [UInt32.add_zero]

@@ -1118,16 +1118,14 @@ theorem func1_sharedShift_smallStep_wp
       congrArg (fun address => pointsTo_u32 0 address oldShift) (by decide)
     rw [h]
     iexact Hshift
-  wasm_wp_next Wasm.SmallStep.wp_store32 oldShift
-      (by decide) (by decide) (by decide) (by decide) $$ HshiftLater
-  iintro Hshift
+  wasm_wp_next_bind Wasm.SmallStep.wp_store32 oldShift
+      (by decide) (by decide) (by decide) (by decide) with HshiftLater => Hshift
   wasm_wp_pures [wp_localGet]
   ihave HshiftLater :
       ▷ pointsTo_u32 0 (1048512 + 44) (sharedShiftWord a b) $$ [Hshift]
   · ilater_rw_exact [sharedShiftWord] with Hshift
-  wasm_wp_next Wasm.SmallStep.wp_load32 (sharedShiftWord a b)
-      (by decide) (by decide) (by decide) (by decide) $$ HshiftLater
-  iintro Hshift
+  wasm_wp_next_bind Wasm.SmallStep.wp_load32 (sharedShiftWord a b)
+      (by decide) (by decide) (by decide) (by decide) with HshiftLater => Hshift
   wasm_wp_pures [wp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
@@ -1212,16 +1210,14 @@ theorem func1_normalizeX_smallStep_wp
       congrArg (fun address => pointsTo_u32 0 address oldShiftX) (by decide)
     rw [h]
     iexact HshiftX
-  wasm_wp_next Wasm.SmallStep.wp_store32 oldShiftX
-      (by decide) (by decide) (by decide) (by decide) $$ HshiftXLater
-  iintro HshiftX
+  wasm_wp_next_bind Wasm.SmallStep.wp_store32 oldShiftX
+      (by decide) (by decide) (by decide) (by decide) with HshiftXLater => HshiftX
   wasm_wp_pures [wp_localGet]
   ihave HshiftXLater :
       ▷ pointsTo_u32 0 (1048512 + 40) (operandShiftWord a) $$ [HshiftX]
   · ilater_rw_exact [operandShiftWord] with HshiftX
-  wasm_wp_next Wasm.SmallStep.wp_load32 (operandShiftWord a)
-      (by decide) (by decide) (by decide) (by decide) $$ HshiftXLater
-  iintro HshiftX
+  wasm_wp_next_bind Wasm.SmallStep.wp_load32 (operandShiftWord a)
+      (by decide) (by decide) (by decide) (by decide) with HshiftXLater => HshiftX
   wasm_wp_pures [wp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
@@ -1329,16 +1325,14 @@ theorem func1_normalizeY_smallStep_wp
       congrArg (fun address => pointsTo_u32 0 address oldShiftY) (by decide)
     rw [h]
     iexact HshiftY
-  wasm_wp_next Wasm.SmallStep.wp_store32 oldShiftY
-      (by decide) (by decide) (by decide) (by decide) $$ HshiftYLater
-  iintro HshiftY
+  wasm_wp_next_bind Wasm.SmallStep.wp_store32 oldShiftY
+      (by decide) (by decide) (by decide) (by decide) with HshiftYLater => HshiftY
   wasm_wp_pures [wp_localGet]
   ihave HshiftYLater :
       ▷ pointsTo_u32 0 (1048512 + 36) (operandShiftWord b) $$ [HshiftY]
   · ilater_rw_exact [operandShiftWord] with HshiftY
-  wasm_wp_next Wasm.SmallStep.wp_load32 (operandShiftWord b)
-      (by decide) (by decide) (by decide) (by decide) $$ HshiftYLater
-  iintro HshiftY
+  wasm_wp_next_bind Wasm.SmallStep.wp_load32 (operandShiftWord b)
+      (by decide) (by decide) (by decide) (by decide) with HshiftYLater => HshiftY
   wasm_wp_pures [wp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
@@ -1714,16 +1708,14 @@ theorem func1_loopNormalizeY_smallStep_wp
       congrArg (fun address => pointsTo_u32 0 address oldShift) (by decide)
     rw [h]
     iexact Hshift
-  wasm_wp_next Wasm.SmallStep.wp_store32 oldShift
-      (by decide) (by decide) (by decide) (by decide) $$ HshiftLater
-  iintro Hshift
+  wasm_wp_next_bind Wasm.SmallStep.wp_store32 oldShift
+      (by decide) (by decide) (by decide) (by decide) with HshiftLater => Hshift
   wasm_wp_pures [wp_localGet]
   ihave HshiftLater :
       ▷ pointsTo_u32 0 (1048512 + 32) (operandShiftWord d) $$ [Hshift]
   · ilater_rw_exact [operandShiftWord] with Hshift
-  wasm_wp_next Wasm.SmallStep.wp_load32 (operandShiftWord d)
-      (by decide) (by decide) (by decide) (by decide) $$ HshiftLater
-  iintro Hshift
+  wasm_wp_next_bind Wasm.SmallStep.wp_load32 (operandShiftWord d)
+      (by decide) (by decide) (by decide) (by decide) with HshiftLater => Hshift
   wasm_wp_pures [wp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
@@ -1954,16 +1946,14 @@ theorem func1_loopNormalizeX_smallStep_wp
       congrArg (fun address => pointsTo_u32 0 address oldShift) (by decide)
     rw [h]
     iexact Hshift
-  wasm_wp_next Wasm.SmallStep.wp_store32 oldShift
-      (by decide) (by decide) (by decide) (by decide) $$ HshiftLater
-  iintro Hshift
+  wasm_wp_next_bind Wasm.SmallStep.wp_store32 oldShift
+      (by decide) (by decide) (by decide) (by decide) with HshiftLater => Hshift
   wasm_wp_pures [wp_localGet]
   ihave HshiftLater :
       ▷ pointsTo_u32 0 (1048512 + 28) (operandShiftWord d) $$ [Hshift]
   · ilater_rw_exact [operandShiftWord] with Hshift
-  wasm_wp_next Wasm.SmallStep.wp_load32 (operandShiftWord d)
-      (by decide) (by decide) (by decide) (by decide) $$ HshiftLater
-  iintro Hshift
+  wasm_wp_next_bind Wasm.SmallStep.wp_load32 (operandShiftWord d)
+      (by decide) (by decide) (by decide) (by decide) with HshiftLater => Hshift
   wasm_wp_pures [wp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
@@ -3837,9 +3827,8 @@ theorem func0_smallStep_wp_to_return
     icases HRouter with
       ⟨HR', Hruntime', Hresult', Hx', Hy', HshiftXY', HshiftX',
         HshiftY', HnextY', HnextX'⟩
-    wasm_wp_next Wasm.SmallStep.wp_call
-      «module» 1 func1Def (by simp [«module»]) rfl $$ Hruntime'
-    iintro Hruntime
+    wasm_wp_next_bind Wasm.SmallStep.wp_call
+      «module» 1 func1Def (by simp [«module»]) rfl with Hruntime' => Hruntime
     simp [func1Def, Function.toLocals, Function.numParams, ValueType.zero]
     rw [show
       ([.i32 0, .i32 0, .i32 0, .i32 0, .i64 0, .i32 0, .i64 0,
@@ -3963,9 +3952,8 @@ theorem func0_smallStep_wp
     icases HRouter with
       ⟨HR', Hruntime', Hresult', Hx', Hy', HshiftXY', HshiftX',
         HshiftY', HnextY', HnextX'⟩
-    wasm_wp_next Wasm.SmallStep.wp_call
-      «module» 1 func1Def (by simp [«module»]) rfl $$ Hruntime'
-    iintro Hruntime
+    wasm_wp_next_bind Wasm.SmallStep.wp_call
+      «module» 1 func1Def (by simp [«module»]) rfl with Hruntime' => Hruntime
     simp [func1Def, Function.toLocals, Function.numParams, ValueType.zero]
     rw [show
       ([.i32 0, .i32 0, .i32 0, .i32 0, .i64 0, .i32 0, .i64 0,
@@ -4087,9 +4075,8 @@ theorem func2_smallStep_wp
   icases Hresources with
     ⟨HR, Hruntime, Hglobal, Hresult, Hx, Hy, HshiftXY, HshiftX,
       HshiftY, HnextY, HnextX, HouterA, HouterB⟩
-  wasm_wp_next Wasm.SmallStep.wp_call
-    «module» 0 func0Def (by simp [«module»]) rfl $$ Hruntime
-  iintro Hruntime
+  wasm_wp_next_rebind Wasm.SmallStep.wp_call
+    «module» 0 func0Def (by simp [«module»]) rfl with Hruntime
   simp [func0Def, Function.toLocals, Function.numParams, ValueType.zero]
   rw [show ([.i32 0, .i64 0] : List Value) = func0InitialLocals from rfl]
   rw [show
@@ -4935,17 +4922,15 @@ theorem twp_func1_sharedShift_smallStep_wp
       congrArg (fun address => pointsTo_u32 0 address oldShift) (by decide)
     rw [h]
     iexact Hshift
-  iapply Wasm.SmallStep.twp_store32 oldShift
-      (by decide) (by decide) (by decide) (by decide) $$ HshiftLater
-  iintro Hshift
+  wasm_twp_bind Wasm.SmallStep.twp_store32 oldShift
+      (by decide) (by decide) (by decide) (by decide) with HshiftLater => Hshift
   wasm_twp_pures [twp_localGet]
   ihave HshiftLater :
       pointsTo_u32 0 (1048512 + 44) (sharedShiftWord a b) $$ [Hshift]
   · rw [sharedShiftWord]
     iexact Hshift
-  iapply Wasm.SmallStep.twp_load32 (sharedShiftWord a b)
-      (by decide) (by decide) (by decide) (by decide) $$ HshiftLater
-  iintro Hshift
+  wasm_twp_bind Wasm.SmallStep.twp_load32 (sharedShiftWord a b)
+      (by decide) (by decide) (by decide) (by decide) with HshiftLater => Hshift
   wasm_twp_pures [twp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
@@ -5016,17 +5001,15 @@ theorem twp_func1_normalizeX_smallStep_wp
       congrArg (fun address => pointsTo_u32 0 address oldShiftX) (by decide)
     rw [h]
     iexact HshiftX
-  iapply Wasm.SmallStep.twp_store32 oldShiftX
-      (by decide) (by decide) (by decide) (by decide) $$ HshiftXLater
-  iintro HshiftX
+  wasm_twp_bind Wasm.SmallStep.twp_store32 oldShiftX
+      (by decide) (by decide) (by decide) (by decide) with HshiftXLater => HshiftX
   wasm_twp_pures [twp_localGet]
   ihave HshiftXLater :
       pointsTo_u32 0 (1048512 + 40) (operandShiftWord a) $$ [HshiftX]
   · rw [operandShiftWord]
     iexact HshiftX
-  iapply Wasm.SmallStep.twp_load32 (operandShiftWord a)
-      (by decide) (by decide) (by decide) (by decide) $$ HshiftXLater
-  iintro HshiftX
+  wasm_twp_bind Wasm.SmallStep.twp_load32 (operandShiftWord a)
+      (by decide) (by decide) (by decide) (by decide) with HshiftXLater => HshiftX
   wasm_twp_pures [twp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
@@ -5118,17 +5101,15 @@ theorem twp_func1_normalizeY_smallStep_wp
       congrArg (fun address => pointsTo_u32 0 address oldShiftY) (by decide)
     rw [h]
     iexact HshiftY
-  iapply Wasm.SmallStep.twp_store32 oldShiftY
-      (by decide) (by decide) (by decide) (by decide) $$ HshiftYLater
-  iintro HshiftY
+  wasm_twp_bind Wasm.SmallStep.twp_store32 oldShiftY
+      (by decide) (by decide) (by decide) (by decide) with HshiftYLater => HshiftY
   wasm_twp_pures [twp_localGet]
   ihave HshiftYLater :
       pointsTo_u32 0 (1048512 + 36) (operandShiftWord b) $$ [HshiftY]
   · rw [operandShiftWord]
     iexact HshiftY
-  iapply Wasm.SmallStep.twp_load32 (operandShiftWord b)
-      (by decide) (by decide) (by decide) (by decide) $$ HshiftYLater
-  iintro HshiftY
+  wasm_twp_bind Wasm.SmallStep.twp_load32 (operandShiftWord b)
+      (by decide) (by decide) (by decide) (by decide) with HshiftYLater => HshiftY
   wasm_twp_pures [twp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
@@ -5598,17 +5579,15 @@ theorem twp_func1_loopNormalizeY_smallStep_wp
       congrArg (fun address => pointsTo_u32 0 address oldShift) (by decide)
     rw [h]
     iexact Hshift
-  iapply Wasm.SmallStep.twp_store32 oldShift
-      (by decide) (by decide) (by decide) (by decide) $$ HshiftLater
-  iintro Hshift
+  wasm_twp_bind Wasm.SmallStep.twp_store32 oldShift
+      (by decide) (by decide) (by decide) (by decide) with HshiftLater => Hshift
   wasm_twp_pures [twp_localGet]
   ihave HshiftLater :
       pointsTo_u32 0 (1048512 + 32) (operandShiftWord d) $$ [Hshift]
   · rw [operandShiftWord]
     iexact Hshift
-  iapply Wasm.SmallStep.twp_load32 (operandShiftWord d)
-      (by decide) (by decide) (by decide) (by decide) $$ HshiftLater
-  iintro Hshift
+  wasm_twp_bind Wasm.SmallStep.twp_load32 (operandShiftWord d)
+      (by decide) (by decide) (by decide) (by decide) with HshiftLater => Hshift
   wasm_twp_pures [twp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
@@ -5801,17 +5780,15 @@ theorem twp_func1_loopNormalizeX_smallStep_wp
       congrArg (fun address => pointsTo_u32 0 address oldShift) (by decide)
     rw [h]
     iexact Hshift
-  iapply Wasm.SmallStep.twp_store32 oldShift
-      (by decide) (by decide) (by decide) (by decide) $$ HshiftLater
-  iintro Hshift
+  wasm_twp_bind Wasm.SmallStep.twp_store32 oldShift
+      (by decide) (by decide) (by decide) (by decide) with HshiftLater => Hshift
   wasm_twp_pures [twp_localGet]
   ihave HshiftLater :
       pointsTo_u32 0 (1048512 + 28) (operandShiftWord d) $$ [Hshift]
   · rw [operandShiftWord]
     iexact Hshift
-  iapply Wasm.SmallStep.twp_load32 (operandShiftWord d)
-      (by decide) (by decide) (by decide) (by decide) $$ HshiftLater
-  iintro Hshift
+  wasm_twp_bind Wasm.SmallStep.twp_load32 (operandShiftWord d)
+      (by decide) (by decide) (by decide) (by decide) with HshiftLater => Hshift
   wasm_twp_pures [twp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
@@ -7240,9 +7217,8 @@ theorem twp_func0_smallStep_wp_to_return
     icases HRouter with
       ⟨HR', Hruntime', Hresult', Hx', Hy', HshiftXY', HshiftX',
         HshiftY', HnextY', HnextX'⟩
-    iapply Wasm.SmallStep.twp_call
-      «module» 1 func1Def (by simp [«module»]) rfl $$ Hruntime'
-    iintro Hruntime
+    wasm_twp_bind Wasm.SmallStep.twp_call
+      «module» 1 func1Def (by simp [«module»]) rfl with Hruntime' => Hruntime
     simp [func1Def, Function.toLocals, Function.numParams, ValueType.zero]
     rw [show
       ([.i32 0, .i32 0, .i32 0, .i32 0, .i64 0, .i32 0, .i64 0,
@@ -7363,9 +7339,8 @@ theorem twp_func0_smallStep_wp
     icases HRouter with
       ⟨HR', Hruntime', Hresult', Hx', Hy', HshiftXY', HshiftX',
         HshiftY', HnextY', HnextX'⟩
-    iapply Wasm.SmallStep.twp_call
-      «module» 1 func1Def (by simp [«module»]) rfl $$ Hruntime'
-    iintro Hruntime
+    wasm_twp_bind Wasm.SmallStep.twp_call
+      «module» 1 func1Def (by simp [«module»]) rfl with Hruntime' => Hruntime
     simp [func1Def, Function.toLocals, Function.numParams, ValueType.zero]
     rw [show
       ([.i32 0, .i32 0, .i32 0, .i32 0, .i64 0, .i32 0, .i64 0,
@@ -7480,9 +7455,8 @@ theorem twp_func2_smallStep_wp
   icases Hresources with
     ⟨HR, Hruntime, Hglobal, Hresult, Hx, Hy, HshiftXY, HshiftX,
       HshiftY, HnextY, HnextX, HouterA, HouterB⟩
-  iapply Wasm.SmallStep.twp_call
-    «module» 0 func0Def (by simp [«module»]) rfl $$ Hruntime
-  iintro Hruntime
+  wasm_twp_rebind Wasm.SmallStep.twp_call
+    «module» 0 func0Def (by simp [«module»]) rfl with Hruntime
   simp [func0Def, Function.toLocals, Function.numParams, ValueType.zero]
   rw [show ([.i32 0, .i64 0] : List Value) = func0InitialLocals from rfl]
   rw [show

@@ -119,12 +119,10 @@ theorem len_export_correct : LenExportSpec := by
     wasm_wp_pures [wp_localGet]
     ihave HlenLater : ▷ pointsTo_u32 0 (p + 4) len $$ [Hlen]
     · ilater_exact Hlen
-    wasm_wp_next SmallStep.wp_load32 (address := p) (offset := 4)
-      len hp4 hp5 hp6 hp7 $$ HlenLater
-    iintro Hlen
-    wasm_wp_next SmallStep.wp_call «module» 0 func0Def
-      (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-    iintro Hruntime
+    wasm_wp_next_bind SmallStep.wp_load32 (address := p) (offset := 4)
+      len hp4 hp5 hp6 hp7 with HlenLater => Hlen
+    wasm_wp_next_rebind SmallStep.wp_call «module» 0 func0Def
+      (by simp [«module»]) (by simp [«module»]) with Hruntime
     simp [func0Def, Function.toLocals, Function.numParams, func0]
     wasm_wp_pures [wp_localGet]
     wasm_wp_next SmallStep.wp_returnFromCallExplicit $$ Hruntime
@@ -169,17 +167,14 @@ theorem is_empty_export_correct : IsEmptyExportSpec := by
     wasm_wp_pures [wp_localGet]
     ihave HlenLater : ▷ pointsTo_u32 0 (p + 4) len $$ [Hlen]
     · ilater_exact Hlen
-    wasm_wp_next SmallStep.wp_load32 (address := p) (offset := 4)
-      len hp4 hp5 hp6 hp7 $$ HlenLater
-    iintro Hlen
-    wasm_wp_next SmallStep.wp_call «module» 1 func1Def
-      (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-    iintro Hruntime
+    wasm_wp_next_bind SmallStep.wp_load32 (address := p) (offset := 4)
+      len hp4 hp5 hp6 hp7 with HlenLater => Hlen
+    wasm_wp_next_rebind SmallStep.wp_call «module» 1 func1Def
+      (by simp [«module»]) (by simp [«module»]) with Hruntime
     simp [func1Def, Function.toLocals, Function.numParams, func1]
     wasm_wp_pures [wp_localGet wp_localGet]
-    wasm_wp_next SmallStep.wp_call «module» 2 func2Def
-      (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-    iintro Hruntime
+    wasm_wp_next_rebind SmallStep.wp_call «module» 2 func2Def
+      (by simp [«module»]) (by simp [«module»]) with Hruntime
     simp [func2Def, Function.toLocals, Function.numParams, func2]
     wasm_wp_pures [wp_localGet wp_const]
     wasm_wp_next SmallStep.wp_eq (result := isEmptyValue len) (by rfl)

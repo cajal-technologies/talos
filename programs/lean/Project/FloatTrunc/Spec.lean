@@ -706,9 +706,8 @@ theorem twp_check
   iintro ⟨Hruntime, Hglobal, Hword⟩
   simp only [func2]
   wasm_twp_pures [twp_block twp_localGet]
-  iapply twp_call «module» 0 func0Def
-    (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-  iintro Hruntime
+  wasm_twp_rebind twp_call «module» 0 func0Def
+    (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func0Def, Function.toLocals, Function.numParams, ValueType.zero]
   iapply twp_func0_body_to_ret
     (runtimeModuleOwn ⟨0⟩ «module») x _
@@ -716,9 +715,8 @@ theorem twp_check
       iintro ⟨Hruntime, Hglobal, Hword⟩
       wasm_twp_return_from_call Hruntime
       wasm_twp_pures [twp_localGet]
-      iapply twp_call «module» 1 func1Def
-        (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-      iintro Hruntime
+      wasm_twp_rebind twp_call «module» 1 func1Def
+        (by simp [«module»]) (by simp [«module»]) with Hruntime
       simp [func1Def, Function.toLocals, Function.numParams]
       iapply twp_func1_body x _
       wasm_twp_return_from_call Hruntime
@@ -770,9 +768,8 @@ theorem check_smallStep (x : UInt32) :
     ihave Hglobal := func0Globals_pointsTo $$ Hglobals
     simp only [func2]
     wasm_wp_pures [wp_block wp_localGet]
-    wasm_wp_next wp_call «module» 0 func0Def
-      (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-    iintro Hruntime
+    wasm_wp_next_rebind wp_call «module» 0 func0Def
+      (by simp [«module»]) (by simp [«module»]) with Hruntime
     simp [func0Def, Function.toLocals, Function.numParams, ValueType.zero]
     iapply func0_body_to_ret_smallStep_wp
       (runtimeModuleOwn ⟨0⟩ «module») x _
@@ -780,9 +777,8 @@ theorem check_smallStep (x : UInt32) :
         iintro ⟨Hruntime, Hglobal, Hword⟩
         wasm_wp_return_from_call Hruntime
         wasm_wp_pures [wp_localGet]
-        wasm_wp_next wp_call «module» 1 func1Def
-          (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-        iintro Hruntime
+        wasm_wp_next_rebind wp_call «module» 1 func1Def
+          (by simp [«module»]) (by simp [«module»]) with Hruntime
         simp [func1Def, Function.toLocals, Function.numParams]
         wasm_wp_next func1_body_smallStep_wp x _
         wasm_wp_return_from_call Hruntime

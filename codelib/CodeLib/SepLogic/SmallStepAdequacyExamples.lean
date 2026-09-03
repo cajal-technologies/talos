@@ -118,9 +118,8 @@ theorem noopCall_adequate :
     simp only [noopCallConfig, RuntimeEnv.currentModule_mk1]
     iintro ⟨Hruntime, _HruntimeInstances⟩
     iclear _HruntimeInstances
-    wasm_wp_next wp_call noopCallModule 0 ({ body := [.ret] } : Function)
-        (by simp [noopCallModule]) rfl ⟨0⟩ $$ Hruntime
-    iintro Hruntime
+    wasm_wp_next_rebind wp_call noopCallModule 0 ({ body := [.ret] } : Function)
+        (by simp [noopCallModule]) rfl ⟨0⟩ with Hruntime
     simp only [noopCallModule, Function.toLocals, Function.numParams,
       List.take_nil, List.reverse_nil, List.drop_nil, List.length_nil]
     wasm_wp_next wp_returnFromCallExplicit $$ Hruntime
@@ -1475,9 +1474,8 @@ theorem tableSetGet_store_partiallyMeets :
     simp only [← tablePointsToAt_eq]
     wasm_wp_next_rebind wp_tableSet rfl (by decide) with Htable
     wasm_wp_pures [wp_const]
-    wasm_wp_next wp_tableGet (value := .funcref (some 1))
-      rfl (by simp [listSetAt]) $$ Htable
-    iintro Htable
+    wasm_wp_next_rebind wp_tableGet (value := .funcref (some 1))
+      rfl (by simp [listSetAt]) with Htable
     iapply wp_mono (fun _ => BI.sep_comm.mp)
     iapply wp_frame_l
     isplitl_exact Htable
@@ -1589,9 +1587,8 @@ theorem tableGrowFill_store_partiallyMeets :
       rfl rfl (by decide) $$ Htable
     iintro Htable
     wasm_wp_pures [wp_const]
-    wasm_wp_next wp_tableGet (value := .funcref (some 1))
-      rfl (by simp [listWriteAt]) $$ Htable
-    iintro Htable
+    wasm_wp_next_rebind wp_tableGet (value := .funcref (some 1))
+      rfl (by simp [listWriteAt]) with Htable
     iapply wp_mono (fun _ => BI.sep_comm.mp)
     iapply wp_frame_l
     isplitl_exact Htable

@@ -223,9 +223,8 @@ private theorem twp_func9_commit_zero_and_return
       storedCursor $$ [Hcursor]
   · rw [show (0 : UInt32) + 1049492 = allocatorCursor by decide]
     iexact Hcursor
-  iapply twp_store32 (address := 0) (offset := 1049492) (value := finish)
-      storedCursor (by decide) (by decide) (by decide) (by decide) $$ HcursorAt
-  iintro Hcursor
+  wasm_twp_bind twp_store32 (address := 0) (offset := 1049492) (value := finish)
+      storedCursor (by decide) (by decide) (by decide) (by decide) with HcursorAt => Hcursor
   ihave Hcursor' : pointsTo_u32 0 allocatorCursor finish $$ [Hcursor]
   · rw [← show (0 : UInt32) + 1049492 = allocatorCursor by decide]
     iexact Hcursor
@@ -385,9 +384,8 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
   iintro ⟨Hruntime, Hbump, Hstreams, %hlayout, Hcont⟩
   iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   simp only [List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.twp_call Project.Mergesort.module 12
-      Project.Mergesort.func9Def (by decide) func9_index $$ Hmodule
-  iintro Hmodule
+  wasm_twp_rebind Wasm.SmallStep.twp_call Project.Mergesort.module 12
+      Project.Mergesort.func9Def (by decide) func9_index with Hmodule
   simp [Project.Mergesort.func9Def, Project.Mergesort.func9,
     Function.toLocals, Function.numParams]
   have halignmentNat : alignment.toNat = 4 := by
@@ -441,9 +439,8 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
       storedCursor $$ [Hcursor]
   · rw [show (0 : UInt32) + 1049492 = allocatorCursor by decide]
     iexact Hcursor
-  iapply twp_load32 (address := 0) (offset := 1049492) storedCursor
-      (by decide) (by decide) (by decide) (by decide) $$ HcursorAt
-  iintro Hcursor
+  wasm_twp_bind twp_load32 (address := 0) (offset := 1049492) storedCursor
+      (by decide) (by decide) (by decide) (by decide) with HcursorAt => Hcursor
   wasm_twp_pures [twp_localTee]
   simp only [List.length]
   wasm_twp_pures [twp_const twp_localGet]

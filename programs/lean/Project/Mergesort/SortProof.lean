@@ -2440,9 +2440,8 @@ theorem twp_sort_base
         .call 5 :: code, arity, remainder, controls, calls⟩ :
         Expr Universal.State) @ s; E [{ Φ }] := by
   iintro ⟨Hruntime, Hcont⟩
-  iapply Wasm.SmallStep.twp_call Project.Mergesort.module 5
-    Project.Mergesort.func2Def (by decide) (by rfl) $$ Hruntime
-  iintro Hruntime
+  wasm_twp_rebind Wasm.SmallStep.twp_call Project.Mergesort.module 5
+    Project.Mergesort.func2Def (by decide) (by rfl) with Hruntime
   simp [Project.Mergesort.func2Def, Function.toLocals,
     Function.numParams, ValueType.zero]
   have hlt : UInt32.ofNat length < 2 := by
@@ -2513,9 +2512,8 @@ theorem twp_sort
     iexact Hdone
   · have hlengthTwo : 2 ≤ input.length := by omega
     have hlengthSize := hlayout.length_lt
-    iapply Wasm.SmallStep.twp_call Project.Mergesort.module 5
-      Project.Mergesort.func2Def (by decide) (by rfl) $$ Hruntime
-    iintro Hruntime
+    wasm_twp_rebind Wasm.SmallStep.twp_call Project.Mergesort.module 5
+      Project.Mergesort.func2Def (by decide) (by rfl) with Hruntime
     simp [Project.Mergesort.func2Def, Function.toLocals,
       Function.numParams, ValueType.zero]
     simp only [Project.Mergesort.func2]

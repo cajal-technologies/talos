@@ -349,9 +349,8 @@ private theorem twp_func0_success_tail
     rw [hresultLength] at hresultNowrap
     omega
   wasm_twp_pures [twp_localGet twp_localGet]
-  iapply twp_store32 (address := result) (offset := 4) oldResultPtr
-      hresult4 h4_1 h4_2 h4_3 $$ Hpointer
-  iintro Hpointer
+  wasm_twp_rebind twp_store32 (address := result) (offset := 4) oldResultPtr
+      hresult4 h4_1 h4_2 h4_3 with Hpointer
   wasm_twp_pures [twp_const twp_localSet]
   simp only [List.length]
   wasm_twp_pures [twp_exitControl]
@@ -412,9 +411,8 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
     ipureexact hresultNowrap
   iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   simp only [List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.twp_call Project.Mergesort.module 3
-      Project.Mergesort.func0Def (by decide) func0_index $$ Hmodule
-  iintro Hmodule
+  wasm_twp_rebind Wasm.SmallStep.twp_call Project.Mergesort.module 3
+      Project.Mergesort.func0Def (by decide) func0_index with Hmodule
   simp [Project.Mergesort.func0Def, Project.Mergesort.func0,
     Function.toLocals, Function.numParams]
   rcases hfacts with

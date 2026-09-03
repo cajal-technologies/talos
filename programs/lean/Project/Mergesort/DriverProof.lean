@@ -331,9 +331,8 @@ theorem twp_func3_append_without_reserve
         (.i32 (UInt32.ofNat (initialized ++ current).length) ::
           .i32 driverBase :: stack)) (by simp [func3AppendLocals])
   simp only [func3AppendLocals]
-  iapply twp_store32 (UInt32.ofNat initialized.length)
-      (by decide) (by decide) (by decide) (by decide) $$ HoldLength
-  iintro HnewLength
+  wasm_twp_bind twp_store32 (UInt32.ofNat initialized.length)
+      (by decide) (by decide) (by decide) (by decide) with HoldLength => HnewLength
   ihave Hvec := HcloseVec $$ HnewBytes HnewLength
   ihave Hframe : ExportFrame heapId capacity dataPtr
       (initialized ++ current) (current ++ chunkTail) outputBytes $$
@@ -385,9 +384,8 @@ theorem twp_func3_reload_vec_fields
   wasm_twp_pures [twp_localSet]
   simp only [List.length, List.set]
   wasm_twp_pures [twp_localGet]
-  iapply twp_load32 (UInt32.ofNat initialized.length)
-      (by decide) (by decide) (by decide) (by decide) $$ Hlength
-  iintro Hlength
+  wasm_twp_rebind twp_load32 (UInt32.ofNat initialized.length)
+      (by decide) (by decide) (by decide) (by decide) with Hlength
   wasm_twp_pures [twp_localSet]
   simp only [List.length, List.set]
   ihave Hframe : ExportFrame heapId capacity ptr initialized
@@ -901,9 +899,8 @@ theorem twp_func3_append_current
   ihave Hcapacity' : pointsTo_u32 0 (driverBase + 0) capacity $$ [Hcapacity]
   · simp only [UInt32.add_zero]
     iexact Hcapacity
-  iapply twp_load32 (address := driverBase) (offset := 0) capacity
-      (by decide) (by decide) (by decide) (by decide) $$ Hcapacity'
-  iintro Hcapacity
+  wasm_twp_bind twp_load32 (address := driverBase) (offset := 0) capacity
+      (by decide) (by decide) (by decide) (by decide) with Hcapacity' => Hcapacity
   isimp only [UInt32.add_zero] at Hcapacity
   wasm_twp_pures [twp_localGet twp_sub]
   by_cases hfits : current.length ≤ capacity.toNat - initialized.length
@@ -4043,9 +4040,8 @@ theorem twp_func3_deallocate_input
   ihave Hcapacity' : pointsTo_u32 0 (driverBase + 0) capacity $$ [Hcapacity]
   · simp only [UInt32.add_zero]
     iexact Hcapacity
-  iapply twp_load32 (address := driverBase) (offset := 0) capacity
-      (by decide) (by decide) (by decide) (by decide) $$ Hcapacity'
-  iintro Hcapacity
+  wasm_twp_bind twp_load32 (address := driverBase) (offset := 0) capacity
+      (by decide) (by decide) (by decide) (by decide) with Hcapacity' => Hcapacity
   isimp only [UInt32.add_zero] at Hcapacity
   wasm_twp_pures [twp_localTee]
   simp only [List.length, List.set]
@@ -4163,9 +4159,8 @@ theorem twp_func3_skip_empty_input
   ihave Hcapacity' : pointsTo_u32 0 (driverBase + 0) 0 $$ [Hcapacity]
   · simp only [UInt32.add_zero]
     iexact Hcapacity
-  iapply twp_load32 (address := driverBase) (offset := 0) 0
-      (by decide) (by decide) (by decide) (by decide) $$ Hcapacity'
-  iintro Hcapacity
+  wasm_twp_bind twp_load32 (address := driverBase) (offset := 0) 0
+      (by decide) (by decide) (by decide) (by decide) with Hcapacity' => Hcapacity
   isimp only [UInt32.add_zero] at Hcapacity
   wasm_twp_pures [twp_localTee]
   simp only [List.length, List.set]
@@ -5443,9 +5438,8 @@ theorem twp_func3_initialize
   wasm_twp_pures [twp_const twp_localSet]
   simp only [List.length_nil, Nat.reduceSub, List.set]
   wasm_twp_pures [twp_localGet twp_const]
-  iapply twp_store32 oldLength (by decide) (by decide) (by decide)
-      (by decide) $$ HoldLength'
-  iintro Hlength
+  wasm_twp_bind twp_store32 oldLength (by decide) (by decide) (by decide)
+      (by decide) with HoldLength' => Hlength
   wasm_twp_pures [twp_localGet]
   iapply twp_pureStep _ _ _ (fun _ => Step.constI64)
   iapply twp_store64_zero (address := driverBase)
@@ -6174,9 +6168,8 @@ theorem func3_correct_of
   iintro ⟨Hruntime, Hsp, Hstack, Hbump, Hstreams, %hentryLength,
     Hnormal, Hoom⟩
   iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
-  iapply Wasm.SmallStep.twp_call Project.Mergesort.module 6
-      Project.Mergesort.func3Def (by decide) func3_index $$ Hmodule
-  iintro Hmodule
+  wasm_twp_rebind Wasm.SmallStep.twp_call Project.Mergesort.module 6
+      Project.Mergesort.func3Def (by decide) func3_index with Hmodule
   simp [Project.Mergesort.func3Def, Function.toLocals, Function.numParams]
   let callerFrame : CallFrame :=
     { locals := { callerLocals with values := stack }

@@ -157,9 +157,8 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
     omega
   iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   simp only [List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.twp_call Project.Mergesort.module 4
-      Project.Mergesort.func1Def (by decide) func1_index $$ Hmodule
-  iintro Hmodule
+  wasm_twp_rebind Wasm.SmallStep.twp_call Project.Mergesort.module 4
+      Project.Mergesort.func1Def (by decide) func1_index with Hmodule
   simp [Project.Mergesort.func1Def, Project.Mergesort.func1,
     Function.toLocals, Function.numParams]
   ihave HreserveParts := (StackReserve_split reserveBase shadow).mp $$ Hreserve
@@ -279,9 +278,8 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
   ihave Hcapacity' : pointsTo_u32 0 (driverBase + 0) capacity $$ [Hcapacity]
   · rw [UInt32.add_zero]
     iexact Hcapacity
-  iapply twp_load32 (address := driverBase) (offset := 0) capacity
-      (by decide) (by decide) (by decide) (by decide) $$ Hcapacity'
-  iintro Hcapacity
+  wasm_twp_bind twp_load32 (address := driverBase) (offset := 0) capacity
+      (by decide) (by decide) (by decide) (by decide) with Hcapacity' => Hcapacity
   wasm_twp_pures [twp_localTee]
   simp only [List.set]
   wasm_twp_pures [twp_localGet]
@@ -448,9 +446,8 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
         isimp only [arrayAt] at Harray
         icases Harray with ⟨Htag, HnewPointer, HnewCapacity, _Hemp⟩
         wasm_twp_pures [twp_block twp_localGet]
-        iapply twp_load32 (address := reserveBase) (offset := 4) 0
-            (by decide) (by decide) (by decide) (by decide) $$ Htag
-        iintro Htag
+        wasm_twp_rebind twp_load32 (address := reserveBase) (offset := 4) 0
+            (by decide) (by decide) (by decide) (by decide) with Htag
         wasm_twp_pures [twp_const]
         iapply twp_ne (result := 1) (by decide)
         iapply twp_brIf (by decide) (by rfl)
@@ -460,19 +457,16 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
             [HnewPointer]
         · rw [← show reserveBase + 4 + 4 = reserveBase + 8 by decide]
           iexact HnewPointer
-        iapply twp_load32 (address := reserveBase) (offset := 8) newPtr
-            (by decide) (by decide) (by decide) (by decide) $$ HnewPointer'
-        iintro HnewPointer
+        wasm_twp_bind twp_load32 (address := reserveBase) (offset := 8) newPtr
+            (by decide) (by decide) (by decide) (by decide) with HnewPointer' => HnewPointer
         wasm_twp_pures [twp_localSet]
         simp only [List.set]
         wasm_twp_pures [twp_localGet twp_localGet]
-        iapply twp_store32 (address := driverBase) (offset := 0) capacity
-            (by decide) (by decide) (by decide) (by decide) $$ Hcapacity
-        iintro Hcapacity
+        wasm_twp_rebind twp_store32 (address := driverBase) (offset := 0) capacity
+            (by decide) (by decide) (by decide) (by decide) with Hcapacity
         wasm_twp_pures [twp_localGet twp_localGet]
-        iapply twp_store32 (address := driverBase) (offset := 4) ptr
-            (by decide) (by decide) (by decide) (by decide) $$ Hpointer
-        iintro Hpointer
+        wasm_twp_rebind twp_store32 (address := driverBase) (offset := 4) ptr
+            (by decide) (by decide) (by decide) (by decide) with Hpointer
         wasm_twp_pures [twp_localGet twp_const twp_add]
         rw [UInt32.add_comm 16 reserveBase,
           show reserveBase + 16 = driverBase by decide]

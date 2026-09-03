@@ -1339,9 +1339,8 @@ theorem twp_merge
         .call mergeIndex :: code, arity, remainder, controls, calls⟩ :
         Expr α) @ s; E [{ Φ }] := by
   iintro ⟨Hruntime, Hpre, Hcont⟩
-  iapply Wasm.SmallStep.twp_call (α := α) runtimeModule mergeIndex mergeFunction
-    himports hfunction $$ Hruntime
-  iintro Hruntime
+  wasm_twp_rebind Wasm.SmallStep.twp_call (α := α) runtimeModule mergeIndex mergeFunction
+    himports hfunction with Hruntime
   simp [mergeFunction, mergeArguments, Function.toLocals,
     Function.numParams, ValueType.zero]
   iapply twp_mergeBody_from (α := α)

@@ -80,9 +80,8 @@ theorem empty_plus_three_correct : EmptyPlusThreeSpec := by
     simp only [bodyConfig, func4, SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hruntime, -⟩
     wasm_wp_pures [wp_localGet wp_localGet]
-    wasm_wp_next SmallStep.wp_call «module» 3 func3Def
-      (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-    iintro Hruntime
+    wasm_wp_next_rebind SmallStep.wp_call «module» 3 func3Def
+      (by simp [«module»]) (by simp [«module»]) with Hruntime
     simp [func3Def, Function.toLocals, Function.numParams, func3]
     wasm_wp_pures [wp_localGet wp_const]
     wasm_wp_next SmallStep.wp_eq (result := isEmptyValue len) (by rfl)
@@ -115,9 +114,8 @@ theorem empty_xor_flag_correct : EmptyXorFlagSpec := by
     simp only [bodyConfig, func2, SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hruntime, -⟩
     wasm_wp_pures [wp_localGet wp_localGet]
-    wasm_wp_next SmallStep.wp_call «module» 3 func3Def
-      (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-    iintro Hruntime
+    wasm_wp_next_rebind SmallStep.wp_call «module» 3 func3Def
+      (by simp [«module»]) (by simp [«module»]) with Hruntime
     simp [func3Def, Function.toLocals, Function.numParams, func3]
     wasm_wp_pures [wp_localGet wp_const]
     wasm_wp_next SmallStep.wp_eq (result := isEmptyValue len) (by rfl)
@@ -175,9 +173,8 @@ theorem len_plus_one_export_correct : LenPlusOneExportSpec := by
     · ilater_exact Hlen
     wasm_wp_next wp_loadFatPtr 0 p dataPtr len rfl hfat.noWrap $$
       HdataLater HlenLater
-    wasm_wp_next SmallStep.wp_call «module» 1 func1Def
-      (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-    iintro Hruntime
+    wasm_wp_next_rebind SmallStep.wp_call «module» 1 func1Def
+      (by simp [«module»]) (by simp [«module»]) with Hruntime
     simp [func1Def, Function.toLocals, Function.numParams, func1]
     wasm_wp_pures [wp_localGet wp_const wp_add]
     rw [UInt32.add_comm 1 len]
@@ -215,9 +212,8 @@ theorem len_plus_arg_export_correct : LenPlusArgExportSpec := by
     wasm_wp_next wp_loadFatPtr 0 p dataPtr len rfl hfat.noWrap $$
       HdataLater HlenLater
     wasm_wp_pures [wp_localGet]
-    wasm_wp_next SmallStep.wp_call «module» 0 func0Def
-      (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-    iintro Hruntime
+    wasm_wp_next_rebind SmallStep.wp_call «module» 0 func0Def
+      (by simp [«module»]) (by simp [«module»]) with Hruntime
     simp [func0Def, Function.toLocals, Function.numParams, func0]
     wasm_wp_pures [wp_localGet wp_localGet wp_add]
     rw [UInt32.add_comm n len]
@@ -254,14 +250,12 @@ theorem empty_plus_three_export_correct : EmptyPlusThreeExportSpec := by
     · ilater_exact Hlen
     wasm_wp_next wp_loadFatPtr 0 p dataPtr len rfl hfat.noWrap $$
       HdataLater HlenLater
-    wasm_wp_next SmallStep.wp_call «module» 4 func4Def
-      (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-    iintro Hruntime
+    wasm_wp_next_rebind SmallStep.wp_call «module» 4 func4Def
+      (by simp [«module»]) (by simp [«module»]) with Hruntime
     simp [func4Def, Function.toLocals, Function.numParams, func4]
     wasm_wp_pures [wp_localGet wp_localGet]
-    wasm_wp_next SmallStep.wp_call «module» 3 func3Def
-      (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-    iintro Hruntime
+    wasm_wp_next_rebind SmallStep.wp_call «module» 3 func3Def
+      (by simp [«module»]) (by simp [«module»]) with Hruntime
     simp [func3Def, Function.toLocals, Function.numParams, func3]
     wasm_wp_pures [wp_localGet wp_const]
     wasm_wp_next SmallStep.wp_eq (result := isEmptyValue len) (by rfl)
@@ -311,14 +305,12 @@ theorem empty_xor_flag_export_correct : EmptyXorFlagExportSpec := by
     wasm_wp_next wp_loadFatPtr 0 p dataPtr len rfl hfat.noWrap $$
       HdataLater HlenLater
     wasm_wp_pures [wp_localGet]
-    wasm_wp_next SmallStep.wp_call «module» 2 func2Def
-      (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-    iintro Hruntime
+    wasm_wp_next_rebind SmallStep.wp_call «module» 2 func2Def
+      (by simp [«module»]) (by simp [«module»]) with Hruntime
     simp [func2Def, Function.toLocals, Function.numParams, func2]
     wasm_wp_pures [wp_localGet wp_localGet]
-    wasm_wp_next SmallStep.wp_call «module» 3 func3Def
-      (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-    iintro Hruntime
+    wasm_wp_next_rebind SmallStep.wp_call «module» 3 func3Def
+      (by simp [«module»]) (by simp [«module»]) with Hruntime
     simp [func3Def, Function.toLocals, Function.numParams, func3]
     wasm_wp_pures [wp_localGet wp_const]
     wasm_wp_next SmallStep.wp_eq (result := isEmptyValue len) (by rfl)

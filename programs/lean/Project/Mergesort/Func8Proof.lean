@@ -327,9 +327,8 @@ private theorem twp_func8_commit_copy_and_return
       storedCursor $$ [Hcursor]
   · rw [UInt32.zero_add]
     iexact Hcursor
-  iapply twp_store32 (address := 0) (offset := allocatorCursor) storedCursor
-      (by decide) (by decide) (by decide) (by decide) $$ HcursorAt
-  iintro Hcursor
+  wasm_twp_bind twp_store32 (address := 0) (offset := allocatorCursor) storedCursor
+      (by decide) (by decide) (by decide) (by decide) with HcursorAt => Hcursor
   isimp only [UInt32.zero_add] at Hcursor
   have hnewAlignment : newLayout.alignment = 1 := by
     simpa using hlayout.2.1.2.symm
@@ -513,9 +512,8 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
   iintro ⟨Hruntime, Hbump, Hblock, Hstreams, %hlayout, Hcont⟩
   iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   simp only [List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.twp_call Project.Mergesort.module 11
-      Project.Mergesort.func8Def (by decide) func8_index $$ Hmodule
-  iintro Hmodule
+  wasm_twp_rebind Wasm.SmallStep.twp_call Project.Mergesort.module 11
+      Project.Mergesort.func8Def (by decide) func8_index with Hmodule
   simp [Project.Mergesort.func8Def, func8_shape,
     Function.toLocals, Function.numParams]
   cases hdecision : classifyBump frontier newLayout with
@@ -590,9 +588,8 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
           [Hcursor]
       · simp only [UInt32.zero_add]
         iframe
-      iapply twp_load32 (address := 0) (offset := allocatorCursor) storedCursor
-          (by decide) (by decide) (by decide) (by decide) $$ HcursorAt
-      iintro Hcursor
+      wasm_twp_bind twp_load32 (address := 0) (offset := allocatorCursor) storedCursor
+          (by decide) (by decide) (by decide) (by decide) with HcursorAt => Hcursor
       isimp only [UInt32.zero_add] at Hcursor
       wasm_twp_pures [twp_localTee]
       simp only [List.length]
@@ -898,9 +895,8 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
           [Hcursor]
       · simp only [UInt32.zero_add]
         iframe
-      iapply twp_load32 (address := 0) (offset := allocatorCursor) storedCursor
-          (by decide) (by decide) (by decide) (by decide) $$ HcursorAt
-      iintro Hcursor
+      wasm_twp_bind twp_load32 (address := 0) (offset := allocatorCursor) storedCursor
+          (by decide) (by decide) (by decide) (by decide) with HcursorAt => Hcursor
       isimp only [UInt32.zero_add] at Hcursor
       wasm_twp_pures [twp_localTee]
       simp only [List.length]

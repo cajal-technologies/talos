@@ -937,9 +937,8 @@ theorem func0_happy_context_smallStep_wp
   iintro ⟨HR, Hruntime, Hresources⟩
   simp only [func0]
   wasm_wp_pures [wp_localGet wp_localGet wp_localGet wp_localGet wp_const]
-  wasm_wp_next Wasm.SmallStep.wp_call «module» 1 func1Def
-    (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-  iintro Hruntime
+  wasm_wp_next_rebind Wasm.SmallStep.wp_call «module» 1 func1Def
+    (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp only [func1Def, Function.toLocals, Function.numParams,
     List.length_cons, List.length_nil, Nat.reduceAdd, List.take, List.drop,
     List.reverse_cons, List.reverse_nil, List.nil_append,
@@ -982,9 +981,8 @@ theorem func0_alias_context_smallStep_wp
   iintro ⟨HR, Hruntime, Hresources⟩
   simp only [func0]
   wasm_wp_pures [wp_localGet wp_localGet wp_localGet wp_localGet wp_const]
-  wasm_wp_next Wasm.SmallStep.wp_call «module» 1 func1Def
-    (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-  iintro Hruntime
+  wasm_wp_next_rebind Wasm.SmallStep.wp_call «module» 1 func1Def
+    (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp only [func1Def, Function.toLocals, Function.numParams,
     List.length_cons, List.length_nil, Nat.reduceAdd, List.take, List.drop,
     List.reverse_cons, List.reverse_nil, List.nil_append,
@@ -1179,9 +1177,8 @@ theorem func4_happy_smallStep_wp
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
   wasm_wp_pures [wp_localGet wp_const wp_add wp_localGet wp_localGet wp_localGet]
-  wasm_wp_next Wasm.SmallStep.wp_call «module» 3 func3Def
-    (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-  iintro Hruntime
+  wasm_wp_next_rebind Wasm.SmallStep.wp_call «module» 3 func3Def
+    (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func3Def, Function.toLocals, Function.numParams]
   iapply func3_context_smallStep_wp
     (iprop% runtimeModuleOwn ⟨0⟩ «module» ∗ globalPointsToAt 0 0 (.i32 1048560) ∗
@@ -1197,9 +1194,8 @@ theorem func4_happy_smallStep_wp
     ihave HlenLater :
         ▷ pointsTo_u32 0 ((1048560 : UInt32) + 12) len $$ [HspillLen]
     · ilater_rw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with HspillLen
-    wasm_wp_next Wasm.SmallStep.wp_load32 len
-      (by decide) (by decide) (by decide) (by decide) $$ HlenLater
-    iintro HspillLen
+    wasm_wp_next_bind Wasm.SmallStep.wp_load32 len
+      (by decide) (by decide) (by decide) (by decide) with HlenLater => HspillLen
     wasm_wp_pures [wp_localSet]
     simp only [List.length_cons, List.length_nil, Nat.reduceAdd,
       Nat.reduceSub, List.set]
@@ -1207,13 +1203,11 @@ theorem func4_happy_smallStep_wp
     ihave HptrLater :
         ▷ pointsTo_u32 0 ((1048560 : UInt32) + 8) ptr $$ [HspillPtr]
     · ilater_rw_exact [show (1048560 : UInt32) + 8 = 1048568 by decide] with HspillPtr
-    wasm_wp_next Wasm.SmallStep.wp_load32 ptr
-      (by decide) (by decide) (by decide) (by decide) $$ HptrLater
-    iintro HspillPtr
+    wasm_wp_next_bind Wasm.SmallStep.wp_load32 ptr
+      (by decide) (by decide) (by decide) (by decide) with HptrLater => HspillPtr
     wasm_wp_pures [wp_localGet wp_localGet wp_localGet]
-    wasm_wp_next Wasm.SmallStep.wp_call «module» 0 func0Def
-      (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-    iintro Hruntime
+    wasm_wp_next_rebind Wasm.SmallStep.wp_call «module» 0 func0Def
+      (by simp [«module»]) (by simp [«module»]) with Hruntime
     simp [func0Def, Function.toLocals, Function.numParams]
     iapply func0_happy_context_smallStep_wp
       (iprop% pointsTo_u32 0 1048568 ptr ∗ pointsTo_u32 0 1048572 len)
@@ -1277,9 +1271,8 @@ theorem func4_alias_smallStep_wp
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
   wasm_wp_pures [wp_localGet wp_const wp_add wp_localGet wp_localGet wp_localGet]
-  wasm_wp_next Wasm.SmallStep.wp_call «module» 3 func3Def
-    (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-  iintro Hruntime
+  wasm_wp_next_rebind Wasm.SmallStep.wp_call «module» 3 func3Def
+    (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func3Def, Function.toLocals, Function.numParams]
   iapply func3_context_smallStep_wp
     (iprop% runtimeModuleOwn ⟨0⟩ «module» ∗ globalPointsToAt 0 0 (.i32 1048560) ∗
@@ -1294,9 +1287,8 @@ theorem func4_alias_smallStep_wp
     ihave HlenLater :
         ▷ pointsTo_u32 0 ((1048560 : UInt32) + 12) len $$ [HspillLen]
     · ilater_rw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with HspillLen
-    wasm_wp_next Wasm.SmallStep.wp_load32 len
-      (by decide) (by decide) (by decide) (by decide) $$ HlenLater
-    iintro HspillLen
+    wasm_wp_next_bind Wasm.SmallStep.wp_load32 len
+      (by decide) (by decide) (by decide) (by decide) with HlenLater => HspillLen
     wasm_wp_pures [wp_localSet]
     simp only [List.length_cons, List.length_nil, Nat.reduceAdd,
       Nat.reduceSub, List.set]
@@ -1304,13 +1296,11 @@ theorem func4_alias_smallStep_wp
     ihave HptrLater :
         ▷ pointsTo_u32 0 ((1048560 : UInt32) + 8) ptr $$ [HspillPtr]
     · ilater_rw_exact [show (1048560 : UInt32) + 8 = 1048568 by decide] with HspillPtr
-    wasm_wp_next Wasm.SmallStep.wp_load32 ptr
-      (by decide) (by decide) (by decide) (by decide) $$ HptrLater
-    iintro HspillPtr
+    wasm_wp_next_bind Wasm.SmallStep.wp_load32 ptr
+      (by decide) (by decide) (by decide) (by decide) with HptrLater => HspillPtr
     wasm_wp_pures [wp_localGet wp_localGet wp_localGet]
-    wasm_wp_next Wasm.SmallStep.wp_call «module» 0 func0Def
-      (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-    iintro Hruntime
+    wasm_wp_next_rebind Wasm.SmallStep.wp_call «module» 0 func0Def
+      (by simp [«module»]) (by simp [«module»]) with Hruntime
     simp [func0Def, Function.toLocals, Function.numParams]
     iapply func0_alias_context_smallStep_wp
       (iprop% pointsTo_u32 0 1048568 ptr ∗ pointsTo_u32 0 1048572 len)
@@ -1655,9 +1645,8 @@ theorem twp_func0_happy_context_smallStep_wp
   iintro ⟨HR, Hruntime, Hresources⟩
   simp only [func0]
   wasm_twp_pures [twp_localGet twp_localGet twp_localGet twp_localGet twp_const]
-  iapply Wasm.SmallStep.twp_call «module» 1 func1Def
-    (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-  iintro Hruntime
+  wasm_twp_rebind Wasm.SmallStep.twp_call «module» 1 func1Def
+    (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp only [func1Def, Function.toLocals, Function.numParams,
     List.length_cons, List.length_nil, Nat.reduceAdd, List.take, List.drop,
     List.reverse_cons, List.reverse_nil, List.nil_append,
@@ -1699,9 +1688,8 @@ theorem twp_func0_alias_context_smallStep_wp
   iintro ⟨HR, Hruntime, Hresources⟩
   simp only [func0]
   wasm_twp_pures [twp_localGet twp_localGet twp_localGet twp_localGet twp_const]
-  iapply Wasm.SmallStep.twp_call «module» 1 func1Def
-    (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-  iintro Hruntime
+  wasm_twp_rebind Wasm.SmallStep.twp_call «module» 1 func1Def
+    (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp only [func1Def, Function.toLocals, Function.numParams,
     List.length_cons, List.length_nil, Nat.reduceAdd, List.take, List.drop,
     List.reverse_cons, List.reverse_nil, List.nil_append,
@@ -1892,9 +1880,8 @@ theorem twp_func4_happy_smallStep_wp
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
   wasm_twp_pures [twp_localGet twp_const twp_add twp_localGet twp_localGet twp_localGet]
-  iapply Wasm.SmallStep.twp_call «module» 3 func3Def
-    (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-  iintro Hruntime
+  wasm_twp_rebind Wasm.SmallStep.twp_call «module» 3 func3Def
+    (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func3Def, Function.toLocals, Function.numParams]
   iapply twp_func3_context_smallStep_wp
     (iprop% runtimeModuleOwn ⟨0⟩ «module» ∗ globalPointsToAt 0 0 (.i32 1048560) ∗
@@ -1911,9 +1898,8 @@ theorem twp_func4_happy_smallStep_wp
         pointsTo_u32 0 ((1048560 : UInt32) + 12) len $$ [HspillLen]
     · rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
       iexact HspillLen
-    iapply Wasm.SmallStep.twp_load32 len
-      (by decide) (by decide) (by decide) (by decide) $$ HspillLen'
-    iintro HspillLen
+    wasm_twp_bind Wasm.SmallStep.twp_load32 len
+      (by decide) (by decide) (by decide) (by decide) with HspillLen' => HspillLen
     wasm_twp_pures [twp_localSet]
     simp only [List.length_cons, List.length_nil, Nat.reduceAdd,
       Nat.reduceSub, List.set]
@@ -1922,13 +1908,11 @@ theorem twp_func4_happy_smallStep_wp
         pointsTo_u32 0 ((1048560 : UInt32) + 8) ptr $$ [HspillPtr]
     · rw [show (1048560 : UInt32) + 8 = 1048568 by decide]
       iexact HspillPtr
-    iapply Wasm.SmallStep.twp_load32 ptr
-      (by decide) (by decide) (by decide) (by decide) $$ HspillPtr'
-    iintro HspillPtr
+    wasm_twp_bind Wasm.SmallStep.twp_load32 ptr
+      (by decide) (by decide) (by decide) (by decide) with HspillPtr' => HspillPtr
     wasm_twp_pures [twp_localGet twp_localGet twp_localGet]
-    iapply Wasm.SmallStep.twp_call «module» 0 func0Def
-      (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-    iintro Hruntime
+    wasm_twp_rebind Wasm.SmallStep.twp_call «module» 0 func0Def
+      (by simp [«module»]) (by simp [«module»]) with Hruntime
     simp [func0Def, Function.toLocals, Function.numParams]
     iapply twp_func0_happy_context_smallStep_wp
       (iprop% pointsTo_u32 0 1048568 ptr ∗ pointsTo_u32 0 1048572 len)
@@ -1987,9 +1971,8 @@ theorem twp_func4_alias_smallStep_wp
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
   wasm_twp_pures [twp_localGet twp_const twp_add twp_localGet twp_localGet twp_localGet]
-  iapply Wasm.SmallStep.twp_call «module» 3 func3Def
-    (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-  iintro Hruntime
+  wasm_twp_rebind Wasm.SmallStep.twp_call «module» 3 func3Def
+    (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func3Def, Function.toLocals, Function.numParams]
   iapply twp_func3_context_smallStep_wp
     (iprop% runtimeModuleOwn ⟨0⟩ «module» ∗ globalPointsToAt 0 0 (.i32 1048560) ∗
@@ -2005,9 +1988,8 @@ theorem twp_func4_alias_smallStep_wp
         pointsTo_u32 0 ((1048560 : UInt32) + 12) len $$ [HspillLen]
     · rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
       iexact HspillLen
-    iapply Wasm.SmallStep.twp_load32 len
-      (by decide) (by decide) (by decide) (by decide) $$ HspillLen'
-    iintro HspillLen
+    wasm_twp_bind Wasm.SmallStep.twp_load32 len
+      (by decide) (by decide) (by decide) (by decide) with HspillLen' => HspillLen
     wasm_twp_pures [twp_localSet]
     simp only [List.length_cons, List.length_nil, Nat.reduceAdd,
       Nat.reduceSub, List.set]
@@ -2016,13 +1998,11 @@ theorem twp_func4_alias_smallStep_wp
         pointsTo_u32 0 ((1048560 : UInt32) + 8) ptr $$ [HspillPtr]
     · rw [show (1048560 : UInt32) + 8 = 1048568 by decide]
       iexact HspillPtr
-    iapply Wasm.SmallStep.twp_load32 ptr
-      (by decide) (by decide) (by decide) (by decide) $$ HspillPtr'
-    iintro HspillPtr
+    wasm_twp_bind Wasm.SmallStep.twp_load32 ptr
+      (by decide) (by decide) (by decide) (by decide) with HspillPtr' => HspillPtr
     wasm_twp_pures [twp_localGet twp_localGet twp_localGet]
-    iapply Wasm.SmallStep.twp_call «module» 0 func0Def
-      (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-    iintro Hruntime
+    wasm_twp_rebind Wasm.SmallStep.twp_call «module» 0 func0Def
+      (by simp [«module»]) (by simp [«module»]) with Hruntime
     simp [func0Def, Function.toLocals, Function.numParams]
     iapply twp_func0_alias_context_smallStep_wp
       (iprop% pointsTo_u32 0 1048568 ptr ∗ pointsTo_u32 0 1048572 len)
