@@ -46,34 +46,8 @@ theorem opt3_func0_distinct_smallStep_wp
     simpa [addressI] using hroomI
   have hroomJ' : addressJ.toNat + 8 ≤ 4294967296 := by
     simpa [addressJ] using hroomJ
-  have hi1 : (addressI + 1).toNat = addressI.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 1 (by omega) (by omega)
-  have hi2 : (addressI + 2).toNat = addressI.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 2 (by omega) (by omega)
-  have hi3 : (addressI + 3).toNat = addressI.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 3 (by omega) (by omega)
-  have hi4 : (addressI + 4).toNat = addressI.toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 4 (by omega) (by omega)
-  have hi5 : (addressI + 5).toNat = addressI.toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 5 (by omega) (by omega)
-  have hi6 : (addressI + 6).toNat = addressI.toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 6 (by omega) (by omega)
-  have hi7 : (addressI + 7).toNat = addressI.toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 7 (by omega) (by omega)
-  have hj1 : (addressJ + 1).toNat = addressJ.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 1 (by omega) (by omega)
-  have hj2 : (addressJ + 2).toNat = addressJ.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 2 (by omega) (by omega)
-  have hj3 : (addressJ + 3).toNat = addressJ.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 3 (by omega) (by omega)
-  have hj4 : (addressJ + 4).toNat = addressJ.toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 4 (by omega) (by omega)
-  have hj5 : (addressJ + 5).toNat = addressJ.toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 5 (by omega) (by omega)
-  have hj6 : (addressJ + 6).toNat = addressJ.toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 6 (by omega) (by omega)
-  have hj7 : (addressJ + 7).toNat = addressJ.toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 7 (by omega) (by omega)
+  obtain ⟨hi1, hi2, hi3, hi4, hi5, hi6, hi7⟩ := UInt32.addSteps8 addressI hroomI'
+  obtain ⟨hj1, hj2, hj3, hj4, hj5, hj6, hj7⟩ := UInt32.addSteps8 addressJ hroomJ'
   iintro ⟨HA, HB⟩
   simp only [Project.SwapElementsOpt3.func0]
   iapply Wasm.SmallStep.wp_block
@@ -227,34 +201,8 @@ theorem opt3_func0_distinct_store_partiallyMeets
     simpa [addressI] using hroomI
   have hroomJ' : addressJ.toNat + 8 ≤ 4294967296 := by
     simpa [addressJ] using hroomJ
-  have hi1 : (addressI + 1).toNat = addressI.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 1 (by omega) (by omega)
-  have hi2 : (addressI + 2).toNat = addressI.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 2 (by omega) (by omega)
-  have hi3 : (addressI + 3).toNat = addressI.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 3 (by omega) (by omega)
-  have hi4 : (addressI + 4).toNat = addressI.toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 4 (by omega) (by omega)
-  have hi5 : (addressI + 5).toNat = addressI.toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 5 (by omega) (by omega)
-  have hi6 : (addressI + 6).toNat = addressI.toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 6 (by omega) (by omega)
-  have hi7 : (addressI + 7).toNat = addressI.toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 7 (by omega) (by omega)
-  have hj1 : (addressJ + 1).toNat = addressJ.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 1 (by omega) (by omega)
-  have hj2 : (addressJ + 2).toNat = addressJ.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 2 (by omega) (by omega)
-  have hj3 : (addressJ + 3).toNat = addressJ.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 3 (by omega) (by omega)
-  have hj4 : (addressJ + 4).toNat = addressJ.toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 4 (by omega) (by omega)
-  have hj5 : (addressJ + 5).toNat = addressJ.toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 5 (by omega) (by omega)
-  have hj6 : (addressJ + 6).toNat = addressJ.toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 6 (by omega) (by omega)
-  have hj7 : (addressJ + 7).toNat = addressJ.toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 7 (by omega) (by omega)
+  obtain ⟨hi1, hi2, hi3, hi4, hi5, hi6, hi7⟩ := UInt32.addSteps8 addressI hroomI'
+  obtain ⟨hj1, hj2, hj3, hj4, hj5, hj6, hj7⟩ := UInt32.addSteps8 addressJ hroomJ'
   apply
     Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_store_partiallyMeets
       (α := Unit) (σ := σ) (globalσ := globalσ)
