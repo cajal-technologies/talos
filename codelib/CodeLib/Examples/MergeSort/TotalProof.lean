@@ -198,8 +198,7 @@ theorem twp_mergeMainStep
     iapply twp_copyAt (α := α) hiLen hkLen hlayout.source_fits
       (by simpa [hinv.2.2.2.2.2] using hlayout.temporary_fits)
       rfl rfl rfl rfl
-    isplitl_exact Hsource
-    isplitl_exact Htemporary
+    isplitl_exacts [Hsource Htemporary]
     iintro ⟨Hsource, Htemporary⟩
     have hiSucc : i + 1 < UInt32.size := by
       have := hlayout.length_lt
@@ -249,8 +248,7 @@ theorem twp_mergeMainStep
     iapply twp_copyAt (α := α) hjLen hkLen hlayout.source_fits
       (by simpa [hinv.2.2.2.2.2] using hlayout.temporary_fits)
       rfl rfl rfl rfl
-    isplitl_exact Hsource
-    isplitl_exact Htemporary
+    isplitl_exacts [Hsource Htemporary]
     iintro ⟨Hsource, Htemporary⟩
     have hjSucc : j + 1 < UInt32.size := by
       have := hlayout.length_lt
@@ -419,8 +417,7 @@ theorem twp_mergeMainLoop
         iapply twp_mergeMainStep (α := α) source temporary input state.scratch
           left mid right state.i state.j state.k state.emitted
           hstate hi hj hiLen hjLen hkLen hlayout
-        isplitl_exact Hsource
-        isplitl_exact Htemporary
+        isplitl_exacts [Hsource Htemporary]
         isplit
         · iintro ⟨%hxy, Hsource, Htemporary⟩
           iapply Wasm.SmallStep.twp_br (α := α) rfl
@@ -550,8 +547,7 @@ theorem twp_mergeLeftStep
   iapply twp_copyAt (α := α) hiLen hkLen hlayout.source_fits
     (by simpa [hscratchLength] using hlayout.temporary_fits)
     rfl rfl rfl rfl
-  isplitl_exact Hsource
-  isplitl_exact Htemporary
+  isplitl_exacts [Hsource Htemporary]
   iintro ⟨Hsource, Htemporary⟩
   have hiSucc : i + 1 < UInt32.size := by
     have := hlayout.length_lt
@@ -622,8 +618,7 @@ theorem twp_mergeRightStep
   iapply twp_copyAt (α := α) hjLen hkLen hlayout.source_fits
     (by simpa [hscratchLength] using hlayout.temporary_fits)
     rfl rfl rfl rfl
-  isplitl_exact Hsource
-  isplitl_exact Htemporary
+  isplitl_exacts [Hsource Htemporary]
   iintro ⟨Hsource, Htemporary⟩
   have hjSucc : j + 1 < UInt32.size := by
     have := hlayout.length_lt
@@ -771,8 +766,7 @@ theorem twp_mergeLeftLoop
       iapply twp_mergeLeftStep (α := α) source temporary input state.scratch
         left mid right state.i state.j state.k
         hiLen hkLen hdata.2.2.2.2.2.1 hlayout
-      isplitl_exact Hsource
-      isplitl_exact Htemporary
+      isplitl_exacts [Hsource Htemporary]
       iintro ⟨Hsource, Htemporary⟩
       iapply Wasm.SmallStep.twp_br (α := α) rfl
       simp only [mergeLocals, List.take_zero, List.nil_append]
@@ -903,8 +897,7 @@ theorem twp_mergeRightLoop
       iapply twp_mergeRightStep (α := α) source temporary input state.scratch
         left mid right mid state.j state.k
         hjLen hkLen hdata.2.2.2.2.2.1 hlayout
-      isplitl_exact Hsource
-      isplitl_exact Htemporary
+      isplitl_exacts [Hsource Htemporary]
       iintro ⟨Hsource, Htemporary⟩
       iapply Wasm.SmallStep.twp_br (α := α) rfl
       simp only [mergeLocals, List.take_zero, List.nil_append]
@@ -965,8 +958,7 @@ theorem twp_mergeCopyStep
     (by simpa [hscratchLength] using hlayout.temporary_fits)
     hlayout.source_fits
     rfl rfl rfl rfl
-  isplitl_exact Htemporary
-  isplitl_exact Hsource
+  isplitl_exacts [Htemporary Hsource]
   iintro ⟨Htemporary, Hsource⟩
   have hkSucc : k + 1 < UInt32.size := by
     have := hlayout.length_lt
@@ -1106,8 +1098,7 @@ theorem twp_mergeCopyLoop
         hkCurrent hkScratch
         (by simpa [hcopyData.2.2.2.1] using hscratchLength)
         (by simpa [hcopyData.2.2.2.1] using hlayout)
-      isplitl_exact Hsource
-      isplitl_exact Htemporary
+      isplitl_exacts [Hsource Htemporary]
       iintro ⟨Hsource, Htemporary⟩
       iapply Wasm.SmallStep.twp_br (α := α) rfl
       simp only [mergeLocals, List.take_zero, List.nil_append]
@@ -1230,20 +1221,17 @@ theorem twp_mergeBody
         .i32 (UInt32.ofNat left)], []⟩ : Locals)
     [] source temporary input scratch
     left mid right left mid left [] hinvStart hlayout rfl
-  isplitl_exact Hsource
-  isplitl_exact Htemporary
+  isplitl_exacts [Hsource Htemporary]
   iintro %scratch' %i' %j' %k' %emitted'
     %hinv' %hexhausted Hsource Htemporary
   iapply twp_mergeLeftLoop (α := α) source temporary input scratch'
     left mid right i' j' k' emitted' hinv' hexhausted hlayout
-  isplitl_exact Hsource
-  isplitl_exact Htemporary
+  isplitl_exacts [Hsource Htemporary]
   iintro %scratch'' %j'' %k'' %emitted''
     %hinv'' Hsource Htemporary
   iapply twp_mergeRightLoop (α := α) source temporary input scratch''
     left mid right j'' k'' emitted'' hinv'' hlayout
-  isplitl_exact Hsource
-  isplitl_exact Htemporary
+  isplitl_exacts [Hsource Htemporary]
   iintro %scratchFinal %kFinal %merged
     %hinvFinal Hsource Htemporary
   rcases hinvFinal.finished with
@@ -1272,8 +1260,7 @@ theorem twp_mergeBody
     input input scratchFinal merged []
     left mid right left hcopyStart (by simp)
     hscratchFinalLength htemporary hmergedLength hlayout rfl
-  isplitl_exact Hsource
-  isplitl_exact Htemporary
+  isplitl_exacts [Hsource Htemporary]
   iintro %output %hcopy Hsource Htemporary
   have hmergeRange : MergeRange input output left mid right :=
     hcopy.finish hbounds.1 hbounds.2.1 hmerge
@@ -1636,8 +1623,7 @@ theorem twp_mergeSortCallAdvance
   simp only [mergeArguments, List.cons_append, List.nil_append]
     at HmergeCall
   iapply HmergeCall
-  isplitl_exact Hruntime
-  isplitl_exact Hpre
+  isplitl_exacts [Hruntime Hpre]
   iintro Hruntime Hpost
   iapply Wasm.SmallStep.twp_localGet (α := α) rfl
   iapply Wasm.SmallStep.twp_localGet (α := α) rfl
@@ -2049,9 +2035,7 @@ theorem twp_mergeSortOuterLoop
       simp only [sortLocals, Nat.zero_mul, loopFrame, blockFrame]
         at Hinner
       iapply Hinner
-      isplitl_exact Hruntime
-      isplitl_exact Hsource
-      isplitl_exact Htemporary
+      isplitl_exacts [Hruntime Hsource Htemporary]
       iintro %output %nextScratch %pass' %nextMid %nextRight
         %hpass %houtputLength %hnextScratchLength %hpassFinished
         Hruntime Hsource Htemporary
@@ -2160,9 +2144,7 @@ theorem twp_mergeSortBody
     (controls := []) (calls := calls) (stack := [])
   simp only [sortLocals] at Houter
   iapply Houter
-  isplitl_exact Hruntime
-  isplitl_exact Hsource
-  isplitl_exact Htemporary
+  isplitl_exacts [Hruntime Hsource Htemporary]
   iintro %output %scratchFinal %width %left %mid %right
     %hruns %hperm %houtputLength %hscratchFinalLength
     %hwidth Hruntime Hsource Htemporary
@@ -2230,8 +2212,7 @@ theorem twp_mergeSort
         returningInstance := ⟨0⟩ } :: calls)
   simp only [sortLocals] at Hbody
   iapply Hbody
-  isplitl_exact Hruntime
-  isplitl_exact Hpre
+  isplitl_exacts [Hruntime Hpre]
   iintro %width %left %mid %right Hruntime Hpost
   wasm_twp_rebind Wasm.SmallStep.twp_returnFromCallExplicit (α := α) with Hruntime
   simp only [List.take_zero, List.nil_append,
@@ -2263,8 +2244,7 @@ theorem twp_mergeSort_total
     (callerLocals := {})
     (code := []) (arity := 0) (remainder := [])
     (controls := []) (calls := []) (stack := [])
-  isplitl_exact Hruntime
-  isplitl_exact Hpre
+  isplitl_exacts [Hruntime Hpre]
   iintro Hruntime Hpost
   wasm_twp_terminal_value Wasm.SmallStep.twp_finish (α := α)
   iexact Hpost

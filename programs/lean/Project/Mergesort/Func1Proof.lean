@@ -122,8 +122,7 @@ private theorem growSource_reserveHistory
       · unfold GrowSourceOwn
         isplitr_pureexact hsource
         · iexact Hblock
-      isplitl_exact Hbump
-      isplitl_exact Hsource
+      isplitl_exacts [Hbump Hsource]
       · ipureintro
         intro newPtr newLayout
         unfold VecReserveHistory growHistory
@@ -354,10 +353,7 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
   isplitl [Hmodule Henv]
   · unfold RuntimeContext
     iframe Hmodule Henv
-  isplitl_exact HgrowBeforeAt
-  isplitl_exact Hsource
-  isplitl_exact Hbump
-  isplitl_exact Hstreams
+  isplitl_exacts [HgrowBeforeAt Hsource Hbump Hstreams]
   isplitl []
   · ipureintro
     have hcapacityInitialized : initialized.length ≤ capacity.toNat := by

@@ -1354,8 +1354,7 @@ theorem twp_mergeMainLoop
       mid state.i state.j state.k state.lastLeft state.lastRight
       hiState hjState hkScratch hdata.2.2.1 hlayout
       hdata.2.2.2.2.1
-    isplitl_exact Hsource
-    isplitl_exact Hscratch
+    isplitl_exacts [Hsource Hscratch]
     isplit
     · iintro ⟨%hle, Hsource, Hscratch⟩
       have hiLen : state.i < input.length := by omega
@@ -1770,8 +1769,7 @@ theorem twp_mergeLeftRemainder
         hiCurrentLen hkCurrentScratch hlayout.source_fits
         (by simpa [hstateLen] using hlayout.temporary_fits)
         (by rfl) (by rfl) (by rw [UInt32.add_comm]) (by rfl)
-      isplitl_exact Hsource
-      isplitl_exact Hscratch
+      isplitl_exacts [Hsource Hscratch]
       iintro ⟨Hsource, Hscratch⟩
       have hmidSize : mid < UInt32.size := by
         exact Nat.lt_of_le_of_lt hmjState hlayout.length_lt
@@ -1884,8 +1882,7 @@ theorem twp_mergeLeftRemainder
         dsimp only [n]
         omega
       isplitr_pureexact (by simpa [hjEq] using hinv)
-      isplitl_exact Hsource
-      isplitl_exact Hscratch
+      isplitl_exacts [Hsource Hscratch]
       iintro %scratch' %emitted' %aux6 %aux8 %aux9 %aux11 %aux12
         %hinv' Hsource Hscratch
       ihave Hdone := Hfinish $$ %scratch' %input.length %input.length
@@ -2156,8 +2153,7 @@ theorem twp_mergeRightRemainder
         (by simpa [hstateLen] using hlayout.temporary_fits)
         (by rfl) (by rfl) (by rw [UInt32.add_comm])
         (by rw [UInt32.add_comm])
-      isplitl_exact Hsource
-      isplitl_exact Hscratch
+      isplitl_exacts [Hsource Hscratch]
       iintro ⟨Hsource, Hscratch⟩
       have hrSuccSize : state.r + 1 < UInt32.size := by
         have : state.r + 1 ≤ n := by omega
@@ -2270,8 +2266,7 @@ theorem twp_mergeRightRemainder
         dsimp only [n]
         omega
       isplitr_pureexact (by simpa using hinv)
-      isplitl_exact Hsource
-      isplitl_exact Hscratch
+      isplitl_exacts [Hsource Hscratch]
       iintro %scratch' %emitted' %v6 %v8 %v9 %v10 %v11 %v12
         %hinv' Hsource Hscratch
       ihave Hdone := Hfinish $$ %scratch' %emitted' %v6 %v8 %v9
@@ -2323,21 +2318,18 @@ theorem twp_generated_merge
     mergeLoopInvariant_start (Nat.le_of_lt hmidLt) hscratchLength
   iapply twp_mergeMainLoop source scratch input scratchValues
     mid 0 mid 0 [] 0 0 hinvStart hmidPos hmidLt hlayout
-  isplitl_exact Hsource
-  isplitl_exact Hscratch
+  isplitl_exacts [Hsource Hscratch]
   iintro %scratch' %i %j %k %emitted %flag %last
     %hinv %hexit Hsource Hscratch
   iapply twp_mergeLeftRemainder source scratch input scratch'
     mid i j k emitted flag last hinv hexit hlayout
-  isplitl_exact Hsource
-  isplitl_exact Hscratch
+  isplitl_exacts [Hsource Hscratch]
   iintro %scratch'' %j' %k' %emitted'
     %aux6 %aux8 %aux9 %aux11 %aux12
     %hinv' Hsource Hscratch
   iapply twp_mergeRightRemainder source scratch input scratch''
     mid j' k' emitted' aux6 aux8 aux9 aux11 aux12 hinv' hlayout
-  isplitl_exact Hsource
-  isplitl_exact Hscratch
+  isplitl_exacts [Hsource Hscratch]
   iintro %scratchFinal %emittedFinal
     %v6 %v8 %v9 %v10 %v11 %v12
     %hfinal Hsource Hscratch
@@ -2577,9 +2569,7 @@ theorem twp_sort
       (by
         rw [hleftLength]
         omega)
-    isplitl_exact Hruntime
-    isplitl_exact HsourceLeft
-    isplitl_exact HscratchLeft
+    isplitl_exacts [Hruntime HsourceLeft HscratchLeft]
     iintro %leftOutput %leftScratch %hleftSorted
       %hleftScratchLength %hleftScratchExact Hruntime HsourceLeft HscratchLeft
     have hleftLt : left.length < input.length := by
@@ -2648,8 +2638,7 @@ theorem twp_sort
       (by
         rw [UInt32.add_comm, hscratchAddress, hrightLengthLeft]
         omega)
-    isplitl_exact Hruntime
-    isplitl_exact HsourceRight
+    isplitl_exacts [Hruntime HsourceRight]
     isplitl_rw_exact [UInt32.add_comm] with HscratchRight'
     iintro %rightOutput %rightScratch %hrightSorted
       %hrightScratchLength %hrightScratchExact Hruntime HsourceRight HscratchRight
@@ -2725,8 +2714,7 @@ theorem twp_sort
     · iapply twp_generated_merge_unfolded source scratch combined
         scratchCombined left.length hleftPositive hleftCombinedLt
         hscratchCombinedLength (by rw [hcombinedLength]; exact hlayout)
-      isplitl_exact HsourceCombined
-      isplitl_exact HscratchCombined
+      isplitl_exacts [HsourceCombined HscratchCombined]
       iintro %output %v6 %v8 %v9 %v10 %v11 %v12 %hmerge
         HsourceCombined HscratchOutput
       have hsegmentLeft :

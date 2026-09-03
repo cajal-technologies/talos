@@ -982,8 +982,7 @@ theorem copyWords_loop_twp
       rw [hcopiedSource]
       iintro ⟨_IH, HR', Hdst', Hsrc'⟩
       iapply hfinish
-      isplitl_exact HR'
-      isplitl_exact Hdst'
+      isplitl_exacts [HR' Hdst']
       · iexact Hsrc'
     · simp only [Inv]
       iframe

@@ -573,8 +573,7 @@ theorem array64At_words [WasmSmallStepGS hlc α]
       simp only [array64At, List.length_nil, readWordArray64]
       iintro ⟨Hstate, Hempty⟩
       imodintro
-      isplitl_exact Hstate
-      isplitl_exact Hempty
+      isplitl_exacts [Hstate Hempty]
       · ipureintro; trivial
   | cons value output ih =>
       simp only [array64At, List.length_cons] at *
@@ -622,8 +621,7 @@ theorem array64At_capacity [WasmSmallStepGS hlc α]
   · subst values
     iintro ⟨Hstate, Harray⟩
     imodintro
-    isplitl_exact Hstate
-    isplitl_exact Harray
+    isplitl_exacts [Hstate Harray]
     · ipureintro
       simpa using hbaseBound
   · have hlength : 0 < values.length := by
@@ -693,8 +691,7 @@ theorem twp_recursiveSortCall [WasmSmallStepGS hlc Unit]
       omega)
     (callerLocals := ⟨[], [], []⟩) (stack := []) (code := [])
     (arity := 0) (remainder := []) (controls := []) (calls := [])
-  isplitl_exact Hruntime
-  isplitl_exact Harray
+  isplitl_exacts [Hruntime Harray]
   · iintro %output %hpure Hruntime Harray
     wasm_twp_terminal_value Wasm.SmallStep.twp_finish
     iintro %store %observations Hstate
@@ -739,8 +736,7 @@ theorem twp_loopSortCall [WasmSmallStepGS hlc Unit]
       omega)
     (callerLocals := ⟨[], [], []⟩) (stack := []) (code := [])
     (arity := 0) (remainder := []) (controls := []) (calls := [])
-  isplitl_exact Hruntime
-  isplitl_exact Harray
+  isplitl_exacts [Hruntime Harray]
   · iintro %output %hpure Hruntime Harray
     wasm_twp_terminal_value Wasm.SmallStep.twp_finish
     iintro %store %observations Hstate
@@ -806,8 +802,7 @@ theorem recursive_sort_terminatesWith
     iintro ⟨Hheap, Hglobals, Hruntime, _Hhost⟩
     iapply twp.to_wp
     iapply twp_recursiveSortCall input hfit
-    isplitl_exact Hheap
-    isplitl_exact Hglobals
+    isplitl_exacts [Hheap Hglobals]
     iexact Hruntime
 
 theorem loop_sort_stronglyNormalizing
@@ -856,8 +851,7 @@ theorem loop_sort_terminatesWith
     iintro ⟨Hheap, Hglobals, Hruntime, _Hhost⟩
     iapply twp.to_wp
     iapply twp_loopSortCall input hfit
-    isplitl_exact Hheap
-    isplitl_exact Hglobals
+    isplitl_exacts [Hheap Hglobals]
     iexact Hruntime
 
 theorem executeSort_host (program : Executable) (fuel : Nat)

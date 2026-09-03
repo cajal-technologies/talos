@@ -597,8 +597,7 @@ theorem SortBuffers_copyFocus {host : Type} [WasmHeapGS host]
   ihave HscratchFocus :=
     WordSlice_set scratch scratchValues k newValue hk $$ Hscratch
   icases HscratchFocus with ⟨HscratchCell, HscratchClose⟩
-  isplitl_exact HsourceCell
-  isplitl_exact HscratchCell
+  isplitl_exacts [HsourceCell HscratchCell]
   iintro HsourceCell
   iintro HscratchCell
   ihave Hsource := HsourceClose $$ HsourceCell
@@ -624,8 +623,7 @@ theorem SortBuffers_copyBackFocus {host : Type} [WasmHeapGS host]
   unfold SortBuffers WordSlice ByteSlice
   iintro ⟨⟨%hsourceAlign, %hsourceNowrap, Hsource⟩,
     ⟨%hscratchAlign, %hscratchNowrap, Hscratch⟩, %hfacts⟩
-  isplitl_exact Hsource
-  isplitl_exact Hscratch
+  isplitl_exacts [Hsource Hscratch]
   iintro Hsource
   iintro Hscratch
   isplitl [Hsource]
@@ -2387,8 +2385,7 @@ theorem VecU8_appendFocus {host : Type} [WasmHeapGS host]
   icases Hfocus with ⟨%oldChunk, %hchunkLength, Hchunk, Hclose⟩
   iexists oldChunk
   isplitr_pureexact hchunkLength
-  isplitl_exact Hchunk
-  isplitl_exact Hlength
+  isplitl_exacts [Hchunk Hlength]
   iintro Hcurrent
   iintro Hlength
   ihave Hstorage := Hclose $$ Hcurrent

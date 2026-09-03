@@ -387,8 +387,7 @@ private theorem twp_findMin_aux
             (stack := []) (code := [.ret]) (arity := 1) (remainder := [])
             (controls := [])
             (calls := callerFrame :: calls)
-          isplitl_exact Hruntime
-          isplitl_exact Harray
+          isplitl_exacts [Hruntime Harray]
           iintro %finalBest %hpure Hruntime Harray
           wasm_twp_return_from_call Hruntime
           simp only [List.take_succ_cons, List.take_zero, List.nil_append, List.cons_append]
@@ -424,8 +423,7 @@ private theorem twp_findMin_aux
             (stack := []) (code := [.ret]) (arity := 1) (remainder := [])
             (controls := [])
             (calls := callerFrame :: calls)
-          isplitl_exact Hruntime
-          isplitl_exact Harray
+          isplitl_exacts [Hruntime Harray]
           iintro %finalBest %hpure Hruntime Harray
           wasm_twp_return_from_call Hruntime
           simp only [List.take_succ_cons, List.take_zero, List.nil_append, List.cons_append]
@@ -600,8 +598,7 @@ private theorem twp_recursiveSort_aux
               Instruction.call sortIndex, Instruction.ret]))
           (arity := 0) (remainder := []) (controls := [])
           (calls := callerFrame :: calls) (s := s) (E := E) (Φ := Φ)
-        isplitl_exact Hruntime
-        isplitl_exact Harray
+        isplitl_exacts [Hruntime Harray]
         iintro %best %hminimum Hruntime Harray
         have hbest : best < input.length := hminimum.2.1
         wasm_twp_pures [twp_localSet]
@@ -659,8 +656,7 @@ private theorem twp_recursiveSort_aux
               values := [] })
           (stack := []) (code := [.ret]) (arity := 0) (remainder := [])
           (controls := []) (calls := callerFrame :: calls)
-        isplitl_exact Hruntime
-        isplitl_exact Htail
+        isplitl_exacts [Hruntime Htail]
         iintro %tailOutput %htailPure Hruntime HtailOutput
         wasm_twp_return_from_call Hruntime
         simp only [List.take_zero, List.nil_append]

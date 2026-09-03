@@ -514,8 +514,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
         isplitl [Hmodule Henv]
         · unfold RuntimeContext
           iframe Hmodule Henv
-        isplitl_exact Hbump
-        isplitl_exact Hstreams
+        isplitl_exacts [Hbump Hstreams]
         isplitl_pureexact ⟨hnewMatches, hnewValid, Or.inl rfl⟩
         cases hdecision : classifyBump frontier newLayout with
         | oom =>
@@ -582,11 +581,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
               isimp only [newLayout, growHistory] at Hblock
               isimp only [newLayout, growHistory] at Hnormal
               isimp only [newLayout, growHistory]
-              isplitl_exact Hruntime
-              isplitl_exact Hresult
-              isplitl_exact Hbump
-              isplitl_exact Hblock
-              isplitl_exact Hstreams
+              isplitl_exacts [Hruntime Hresult Hbump Hblock Hstreams]
               · iexact Hnormal
             · iintro Hbump Hstreams
               ihave Hoom := BI.and_elim_r $$ Hcont
@@ -640,9 +635,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
       isplitl [Hmodule Henv]
       · unfold RuntimeContext
         iframe Hmodule Henv
-      isplitl_exact Hbump
-      isplitl_exact Hblock
-      isplitl_exact Hstreams
+      isplitl_exacts [Hbump Hblock Hstreams]
       isplitl_pureexact ⟨holdMatches, hnewMatches, holdValid, hnewValid, rfl,
           holdNew⟩
       cases hdecision : classifyBump frontier newLayout with
@@ -737,11 +730,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
             isimp only [oldLayout, newLayout, growHistory] at Hblock
             isimp only [oldLayout, newLayout, growHistory] at Hnormal
             isimp only [oldLayout, newLayout, growHistory]
-            isplitl_exact Hruntime
-            isplitl_exact Hresult
-            isplitl_exact Hbump
-            isplitl_exact Hblock
-            isplitl_exact Hstreams
+            isplitl_exacts [Hruntime Hresult Hbump Hblock Hstreams]
             · iexact Hnormal
           · iintro Hbump Hblock Hstreams
             ihave Hoom := BI.and_elim_r $$ Hcont

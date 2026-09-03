@@ -566,8 +566,7 @@ private theorem twp_quicksortBody_aux
       have hfit_left : arr.toNat + 4 * output_p.length ≤ UInt32.size := by rw [hlen_p]; exact hfit
       have hn_left : pivotIdx - lo ≤ n := by omega
       iapply ih output_p lo pivotIdx hlo hhilen_left hfit_left hn_left
-      isplitl_exact Hruntime_p
-      isplitl_exact Harray_p
+      isplitl_exacts [Hruntime_p Harray_p]
       iintro %out_l Hruntime_l %hpure_l Harray_l
       obtain ⟨hlen_l, htake_l, hdrop_l, hsorted_l, hperm_l⟩ := hpure_l
       wasm_twp_pures [twp_localGet twp_localGet twp_const twp_add]
@@ -585,8 +584,7 @@ private theorem twp_quicksortBody_aux
       iapply (ih (callerLocals := ⟨[.i32 arr, .i32 (UInt32.ofNat lo), .i32 (UInt32.ofNat hi)],
           [.i32 (UInt32.ofNat pivotIdx)], []⟩)
         out_l (pivotIdx + 1) hi hlohi_right hhilen_right hfit_right hn_right)
-      isplitl_exact Hruntime_l
-      isplitl_exact Harray_l
+      isplitl_exacts [Hruntime_l Harray_l]
       iintro %out_r Hruntime_r %hpure_r Harray_r
       obtain ⟨hlen_r, htake_r, hdrop_r, hsorted_r, hperm_r⟩ := hpure_r
       wasm_twp_return_from_call Hruntime_r
@@ -726,8 +724,7 @@ theorem quicksort_terminatesWith (arr : UInt32) (input : List UInt32)
         (hlohi := Nat.zero_le _) (hhilen := Nat.le_refl _) (hfit := hfit)
         (callerLocals := ⟨[], [], []⟩) (stack := []) (code := [])
         (arity := 0) (remainder := []) (controls := []) (calls := [])
-      isplitl_exact Hruntime
-      isplitl_exact Harray
+      isplitl_exacts [Hruntime Harray]
       iintro %output Hruntime_out %hpure Harray_out
       wasm_twp_terminal_value Wasm.SmallStep.twp_finish
       iintro %store %_obs Hstate
@@ -778,8 +775,7 @@ theorem quicksort_partiallyMeets (arr : UInt32) (input : List UInt32)
       (hlohi := Nat.zero_le _) (hhilen := Nat.le_refl _) (hfit := hfit)
       (callerLocals := ⟨[], [], []⟩) (stack := []) (code := [])
       (arity := 0) (remainder := []) (controls := []) (calls := [])
-    isplitl_exact Hruntime
-    isplitl_exact Harray
+    isplitl_exacts [Hruntime Harray]
     iintro %output Hruntime_out %hpure Harray_out
     wasm_twp_terminal_value Wasm.SmallStep.twp_finish
     iintro %store %_obs Hstate

@@ -464,8 +464,7 @@ theorem wasm_smallStep_heap_globals_runtime_stronglyNormalizing
   iintro ⟨Hpoints, Hglobals, Hruntime, Htags⟩
   iclear Htags
   iapply htwp
-  isplitl_exact Hpoints
-  isplitl_exact Hglobals
+  isplitl_exacts [Hpoints Hglobals]
   · iexact Hruntime
 
 theorem stronglyNormalizing_reaches_irreducible

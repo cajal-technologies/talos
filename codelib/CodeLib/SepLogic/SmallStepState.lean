@@ -110,8 +110,7 @@ theorem currentInstanceOwn_update_of_any {α : Type} [gs : WasmInstanceGS α]
   · iframe
   imodintro
   icases iOwn_op $$ Hboth with ⟨H1, H2⟩
-  isplitl_exact H1
-  isplitl_exact H2
+  isplitl_exacts [H1 H2]
   · ipureintro
     cases actual; cases calleeId; cases heq_id; rfl
 
@@ -370,8 +369,7 @@ theorem machineAuxInterp_exception_mono [WasmHeapDomainGS α]
       machineAuxInterp σ pages exns' tagIds' := by
   unfold machineAuxInterp
   iintro ⟨Hpages, Hdomain, Hexceptions⟩
-  isplitl_exact Hpages
-  isplitl_exact Hdomain
+  isplitl_exacts [Hpages Hdomain]
   · iapply exceptionInterp_mono hexns htags
     iexact Hexceptions
 
@@ -1064,8 +1062,7 @@ theorem stateInterp_alloc_freshRange [WasmSmallStepGS hlc α]
       iexact Hbytes
   icases HstateAndBytes with ⟨Hstate, Hbytes⟩
   imodintro
-  isplitl_exact Hstate
-  isplitl_exact HfrontierOwn
+  isplitl_exacts [Hstate HfrontierOwn]
   · iexact Hbytes
 
 /-- Allocate a fresh range using only a persistent lower-bound snapshot of the
@@ -1098,9 +1095,7 @@ theorem stateInterp_alloc_freshRange_owned [WasmSmallStepGS hlc α]
       [Hstate Hfrontier] with ⟨Hstate, Hfrontier, Hbytes⟩
   · iframe Hstate Hfrontier
   imodintro
-  isplitl_exact Hstate
-  isplitl_exact Hfrontier
-  isplitl_exact Hpages
+  isplitl_exacts [Hstate Hfrontier Hpages]
   · iexact Hbytes
 
 -- ghost map updated by a bulk fill of the primary memory
@@ -1125,8 +1120,7 @@ private theorem fillSigma_ghost [WasmSmallStepGS hlc α]
              ⌜∀ frontier, HeapBelow σ frontier → HeapBelow σ frontier⌝
       iintro ⟨Hheap, Hempty⟩
       imodintro
-      isplitl_exact Hheap
-      isplitl_exact Hempty
+      isplitl_exacts [Hheap Hempty]
       · ipureintro
         intro frontier Hbelow
         exact Hbelow
@@ -1388,8 +1382,7 @@ private theorem copySigma_ghost [WasmSmallStepGS hlc α]
                  ⌜∀ frontier, HeapBelow σ frontier → HeapBelow σ frontier⌝
           iintro ⟨Hheap, Hempty⟩
           imodintro
-          isplitl_exact Hheap
-          isplitl_exact Hempty
+          isplitl_exacts [Hheap Hempty]
           · ipureintro
             intro frontier Hbelow
             exact Hbelow
@@ -2940,8 +2933,7 @@ theorem stateInterp_memoryGrow_tracked [WasmSmallStepGS hlc α]
       { store with wasm := { store.wasm with mem := memory } }
       steps observations threads $$ Hstate with ⟨Hstate, Hpages⟩
   imodintro
-  isplitl_exact Hstate
-  isplitl_exact Hpages
+  isplitl_exacts [Hstate Hpages]
   · ipureexact hfacts
 
 /-- Frame-preserving form of `stateInterp_memoryGrow_tracked`, for lifting
@@ -3014,8 +3006,7 @@ theorem stateInterp_hostCallReturn [WasmSmallStepGS hlc α]
   ihave Hexc' : machineAuxInterp σ newWasm.mem.pages
       newWasm.exns newWasm.tagIds $$ [Hpages Hdomain Hexceptions]
   · unfold machineAuxInterp
-    isplitl_exact Hpages
-    isplitl_exact Hdomain
+    isplitl_exacts [Hpages Hdomain]
     · iapply exceptionInterp_mono hExns hTagIds
       iexact Hexceptions
   iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth HhostEnvAuth Hstate_auth' Hexc'

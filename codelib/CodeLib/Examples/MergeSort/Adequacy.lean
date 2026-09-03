@@ -354,8 +354,7 @@ theorem mergesort_partiallyMeets
     iapply twp_mergeSort_total source temporary input scratch
     isplitl_exact Hruntime
     unfold mergeSortPre
-    isplitl_exact Hsrc
-    isplitl_exact Htmp
+    isplitl_exacts [Hsrc Htmp]
     isplitl_pureexact hscr
     · ipureintro; exact hvalid
 
@@ -386,8 +385,7 @@ theorem mergesort_terminatesWith
     iapply twp_mergeSort_total source temporary input scratch
     isplitl_exact Hruntime
     unfold mergeSortPre
-    isplitl_exact Hsrc
-    isplitl_exact Htmp
+    isplitl_exacts [Hsrc Htmp]
     isplitl_pureexact hscr
     · ipureintro; exact hvalid
 

@@ -432,9 +432,7 @@ theorem import2_correct [WasmSmallStepGS hlc Universal.State] :
   iapply Project.Mergesort.OutcomeInfrastructure.twp_oom_import
       ({ stdio := { input := input, output := output },
          random := random, oom := { raised := raised } } : Universal.State)
-  isplitl_exact Hhost
-  isplitl_exact Hmodule
-  isplitl_exact Henv
+  isplitl_exacts [Hhost Hmodule Henv]
   iintro Hhost
   iapply Hterminal
   unfold Streams
@@ -558,8 +556,7 @@ theorem func10_correct [WasmSmallStepGS hlc Universal.State] :
   · unfold RuntimeContext
     isplitl_exact Hmodule
     · iexact Henv
-  isplitl_exact Hstreams
-  isplitl_exact Hslice
+  isplitl_exacts [Hstreams Hslice]
   isplitl_pureexact hfacts
   iintro Hruntime Hstreams Hslice %hcount
   iopen_runtime Hruntime with ⟨Hmodule, HenvInner⟩
@@ -611,8 +608,7 @@ theorem func11_correct [WasmSmallStepGS hlc Universal.State] :
   · unfold RuntimeContext
     isplitl_exact Hmodule
     · iexact Henv
-  isplitl_exact Hstreams
-  isplitl_exact Hslice
+  isplitl_exacts [Hstreams Hslice]
   isplitl_pureexact hfacts
   iintro Hruntime Hstreams Hslice
   iopen_runtime Hruntime with ⟨Hmodule, HenvInner⟩
@@ -682,9 +678,7 @@ theorem func2_correct [WasmSmallStepGS hlc Universal.State] :
   simp only [List.cons_append, List.nil_append]
   iapply Project.Mergesort.SortProof.twp_sort source scratch input scratchInput
       hbufferFacts.1.symm hlayout hsourceStrictWords hscratchStrictInput
-  isplitl_exact Hmodule
-  isplitl_exact Hsource
-  isplitl_exact Hscratch
+  isplitl_exacts [Hmodule Hsource Hscratch]
   iintro %sorted %scratchResult %hsorted %hscratchLength
     %hscratchExact Hmodule Hsource Hscratch
   have hsortedLength : sorted.length = input.length :=

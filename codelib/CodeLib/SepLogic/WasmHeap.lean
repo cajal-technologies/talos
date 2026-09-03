@@ -1010,8 +1010,7 @@ theorem currentInstanceOwnN_update_of_any {α : Type} [gs : WasmInstanceGS α]
   · iframe
   imodintro
   icases iOwn_op $$ Hboth with ⟨H1, H2⟩
-  isplitl_exact H1
-  isplitl_exact H2
+  isplitl_exacts [H1 H2]
   · ipureexact heq
 
 /-! ## Points-to assertions
@@ -1412,8 +1411,7 @@ theorem arrayAt_copy_next (memId : Nat) (dst src : UInt32) (pre : List UInt32)
   icases (arrayAt_append_cons memId src pre value srcSuffix).mp $$ Hsrc with
     ⟨HsrcPre, HsrcRest⟩
   icases HsrcRest with ⟨HsrcCell, HsrcSuffix⟩
-  isplitl_exact HsrcCell
-  isplitl_exact HdstCell
+  isplitl_exacts [HsrcCell HdstCell]
   iintro ⟨HsrcCell, HdstCell⟩
   isplitl [HdstPre HdstCell HdstSuffix]
   · iapply_frame (arrayAt_append_cons memId dst pre value dstSuffix).mpr

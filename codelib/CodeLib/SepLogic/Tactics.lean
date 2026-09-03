@@ -11,6 +11,16 @@ macro "isplitl_exact " hypothesis:ident : tactic =>
     (isplitl [$hypothesis]
      · iexact $hypothesis))
 
+/-- Split off and discharge several spatial hypotheses in order. -/
+syntax "isplitl_exacts" "[" ident* "]" : tactic
+
+macro_rules
+  | `(tactic| isplitl_exacts []) => `(tactic| skip)
+  | `(tactic| isplitl_exacts [$hypothesis:ident $rest:ident*]) =>
+      `(tactic|
+        (isplitl_exact $hypothesis
+         isplitl_exacts [$rest:ident*]))
+
 /-- Rewrite an Iris goal and discharge it with an existing spatial fact. -/
 macro "irw_exact " rules:rwRuleSeq " with " hypothesis:ident : tactic =>
   `(tactic|

@@ -168,18 +168,14 @@ theorem twp_func3_read_chunk
   unfold CallContract callExpr at Hread
   simp only [UInt32.reduceToNat, List.cons_append, List.nil_append] at Hread
   iapply Hread
-  isplitl_exact Hruntime
-  isplitl_exact Hstreams
-  isplitl_exact Hchunk
+  isplitl_exacts [Hruntime Hstreams Hchunk]
   isplitl_pureexact ⟨by simpa using hframeLengths.1.symm, by decide⟩
   iintro Hruntime Hstreams Hchunk %hcount
   ihave Hframe : ExportFrame heapId capacity ptr initialized
       (input.take count ++ chunkBytes.drop count) outputBytes $$
       [Hvec Hchunk Houtput]
   · unfold ExportFrame
-    isplitl_exact Hvec
-    isplitl_exact Hchunk
-    isplitl_exact Houtput
+    isplitl_exacts [Hvec Hchunk Houtput]
     ipureintro
     constructor
     · have htake := List.length_take_le count input
@@ -534,12 +530,7 @@ theorem twp_func3_reserve
   simp only [List.cons_append, List.nil_append, callerLocals,
     func3AppendLocals] at HreserveCall
   iapply HreserveCall
-  isplitl_exact Hruntime
-  isplitl_exact Hsp
-  isplitl_exact Hreserve
-  isplitl_exact Hvec
-  isplitl_exact Hbump
-  isplitl_exact Hstreams
+  isplitl_exacts [Hruntime Hsp Hreserve Hvec Hbump Hstreams]
   isplitl_pureexact ⟨True.intro, True.intro, True.intro,
       hinitializedWord, hcurrentWord,
       hfacts.1, hfacts.2.1, hfacts.2.2.1, hfacts.2.2.2.1,
@@ -762,9 +753,7 @@ theorem twp_func3_read_and_classify
     (calls := calls) (s := s) (E := E) (Φ := Φ)
   simp only [List.cons_append, List.nil_append] at Hread
   iapply Hread
-  isplitl_exact Hruntime
-  isplitl_exact Hstreams
-  isplitl_exact Hframe
+  isplitl_exacts [Hruntime Hstreams Hframe]
   iintro Hruntime Hstreams Hframe %_hcountBound
   iapply twp_localTee
       (locals' := func3AppendLocals dataPtr (UInt32.ofNat count)
@@ -970,12 +959,7 @@ theorem twp_func3_append_current
     simp only [func3AppendLocals, func3CapacityBody, List.cons_append,
       List.nil_append] at HreserveStep
     iapply HreserveStep
-    isplitl_exact Hruntime
-    isplitl_exact Hsp
-    isplitl_exact Hreserve
-    isplitl_exact Hframe
-    isplitl_exact Hbump
-    isplitl_exact Hstreams
+    isplitl_exacts [Hruntime Hsp Hreserve Hframe Hbump Hstreams]
     unfold Func3ReserveContinuation
     dsimp only
     cases hdecision : classifyBump frontier
@@ -1201,12 +1185,7 @@ theorem twp_func3_read_loop_iteration
     (calls := calls) (s := s) (E := E) (Φ := Φ)
   rw [List.append_assoc func3AppendBody func3ReadClassifyBody code]
   iapply Happend
-  isplitl_exact Hruntime
-  isplitl_exact Hsp
-  isplitl_exact Hreserve
-  isplitl_exact Hframe
-  isplitl_exact Hbump
-  isplitl_exact Hstreams
+  isplitl_exacts [Hruntime Hsp Hreserve Hframe Hbump Hstreams]
   unfold Func3AppendContinuation
   isplit
   · iintro %finalCapacity %finalPtr %finalStoredCursor %finalFrontier
@@ -1222,9 +1201,7 @@ theorem twp_func3_read_loop_iteration
     simp only [List.cons_append, List.nil_append] at Hread
     simp only [func3ReadClassifyBody, List.cons_append, List.nil_append]
     iapply Hread
-    isplitl_exact Hruntime
-    isplitl_exact Hstreams
-    isplitl_exact Hframe
+    isplitl_exacts [Hruntime Hstreams Hframe]
     isplit
     · iintro Hruntime Hstreams Hframe %hremainingEmpty
       ihave HdonePair := BI.and_elim_l $$ Hcont
@@ -1663,9 +1640,7 @@ theorem twp_func3_allocate_values
   unfold CallContract callExpr at Halloc
   simp only [List.cons_append, List.nil_append] at Halloc
   iapply Halloc
-  isplitl_exact Hruntime
-  isplitl_exact Hbump
-  isplitl_exact Hstreams
+  isplitl_exacts [Hruntime Hbump Hstreams]
   isplitl_pureexact ⟨hlayoutMatches, hlayoutValid, Or.inr rfl⟩
   unfold AllocContinuation
   cases hdecision : classifyBump frontier layout with
@@ -2075,8 +2050,7 @@ theorem twp_func3_decode_tail_loop
       func3AppendLocals, List.cons_append, List.nil_append, List.drop]
       at Hcopy ⊢
     iapply Hcopy
-    isplitl_exact Hsource
-    isplitl_exact Hdestination
+    isplitl_exacts [Hsource Hdestination]
     iintro Hsource Hdestination
     wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (4 : UInt32), func3_decode_next_address]
@@ -2322,8 +2296,7 @@ theorem twp_func3_decode_bulk_loop
       func3AppendLocals, addressedState, func3_decode_byte_offset,
       List.drop, List.cons_append, List.nil_append] at Hcopy0
     iapply Hcopy0
-    isplitl_exact Hsource
-    isplitl_exact Hdestination
+    isplitl_exacts [Hsource Hdestination]
     iintro Hsource Hdestination
     wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (4 : UInt32), func3_decode_address_add4]
@@ -2345,8 +2318,7 @@ theorem twp_func3_decode_bulk_loop
       func3AppendLocals, addressedState, func3_decode_byte_offset,
       List.drop, List.cons_append, List.nil_append] at Hcopy1
     iapply Hcopy1
-    isplitl_exact Hsource
-    isplitl_exact Hdestination
+    isplitl_exacts [Hsource Hdestination]
     iintro Hsource Hdestination
     wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (8 : UInt32), func3_decode_address_add8]
@@ -2368,8 +2340,7 @@ theorem twp_func3_decode_bulk_loop
       func3AppendLocals, addressedState, func3_decode_byte_offset,
       List.drop, List.cons_append, List.nil_append] at Hcopy2
     iapply Hcopy2
-    isplitl_exact Hsource
-    isplitl_exact Hdestination
+    isplitl_exacts [Hsource Hdestination]
     iintro Hsource Hdestination
     wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (12 : UInt32), func3_decode_address_add12]
@@ -2391,8 +2362,7 @@ theorem twp_func3_decode_bulk_loop
       func3AppendLocals, addressedState, func3_decode_byte_offset,
       List.drop, List.cons_append, List.nil_append] at Hcopy3
     iapply Hcopy3
-    isplitl_exact Hsource
-    isplitl_exact Hdestination
+    isplitl_exacts [Hsource Hdestination]
     iintro Hsource Hdestination
     have hcopiedFour : state.copied + 3 + 1 = state.copied + 4 := by omega
     isimp only [hcopiedFour] at Hdestination
@@ -2675,8 +2645,7 @@ theorem twp_func3_decode_positive_tail
     func3AppendLocals, List.cons_append, List.nil_append] at Htail
   simp only [func3DecodeTailLoopBody]
   iapply Htail
-  isplitl_exact Hsource
-  isplitl_exact Hdestination
+  isplitl_exacts [Hsource Hdestination]
   iintro Hsource Hdestination
   wasm_twp_pures [twp_localGet twp_localSet]
   simp only [List.length, List.set]
@@ -2769,8 +2738,7 @@ theorem twp_func3_decode_blocks
     simp only [show UInt32.ofNat 0 = 0 by decide, UInt32.mul_zero,
       UInt32.add_zero] at Htail
     iapply Htail
-    isplitl_exact Hsource
-    isplitl_exact Hdestination
+    isplitl_exacts [Hsource Hdestination]
     iintro Hsource Hdestination
     ihave Hfinal := Hcont $$
       %(UInt32.ofNat original.length)
@@ -2818,8 +2786,7 @@ theorem twp_func3_decode_blocks
     simp only [func3DecodeBulkLoopBody]
     simp only [List.drop_zero]
     iapply Hbulk
-    isplitl_exact Hsource
-    isplitl_exact Hdestination
+    isplitl_exacts [Hsource Hdestination]
     iintro Hsource Hdestination
     wasm_twp_pures [twp_localGet]
     by_cases htailZero : tail = 0
@@ -2870,8 +2837,7 @@ theorem twp_func3_decode_blocks
         func3DecodeBulkLoopBody, func3AppendLocals,
         func3_decode_byte_offset, List.cons_append, List.nil_append] at Htail ⊢
       iapply Htail
-      isplitl_exact Hsource
-      isplitl_exact Hdestination
+      isplitl_exacts [Hsource Hdestination]
       iintro Hsource Hdestination
       ihave Hfinal := Hcont $$
         %(UInt32.ofNat original.length)
@@ -2985,8 +2951,7 @@ theorem twp_func3_decode_allocated
   simp only [func3DecodeOuterBlockBody, List.cons_append, List.nil_append]
     at Hdecode ⊢
   iapply Hdecode
-  isplitl_exact Hsource
-  isplitl_exact Hdestination
+  isplitl_exacts [Hsource Hdestination]
   iintro %final1
   iintro %final3
   iintro %final6
@@ -3123,9 +3088,7 @@ theorem twp_func3_allocate_scratch
   dsimp only [callerLocals] at Halloc
   simp only [func3AppendLocals] at Halloc
   iapply Halloc
-  isplitl_exact Hruntime
-  isplitl_exact Hbump
-  isplitl_exact Hstreams
+  isplitl_exacts [Hruntime Hbump Hstreams]
   isplitl_pureexact ⟨hlayoutMatches, hlayoutValid, rfl⟩
   unfold ZeroAllocContinuation
   cases hdecision : classifyBump frontier layout with
@@ -3312,8 +3275,7 @@ theorem twp_func3_sort
   unfold Func2Spec CallContract callExpr at Hsort
   simp only [List.cons_append, List.nil_append, func3AppendLocals] at Hsort
   iapply Hsort
-  isplitl_exact Hruntime
-  isplitl_exact Hbuffers
+  isplitl_exacts [Hruntime Hbuffers]
   isplitl []
   · ipureintro
     have hcountBound : original.length < UInt32.size := by omega
@@ -3438,9 +3400,7 @@ theorem twp_func3_write_one
   unfold CallContract callExpr at Hwrite
   simp only [List.cons_append, List.nil_append, func3AppendLocals] at Hwrite
   iapply Hwrite
-  isplitl_exact Hruntime
-  isplitl_exact Hstreams
-  isplitl_exact Houtput
+  isplitl_exacts [Hruntime Hstreams Houtput]
   isplitl []
   · ipureintro
     constructor
@@ -3586,10 +3546,7 @@ theorem twp_func3_output_loop
     simp only [func3OutputLoopBody, func3OutputLocals, func3AppendLocals,
       List.drop, List.cons_append, List.nil_append] at Hwrite ⊢
     iapply Hwrite
-    isplitl_exact Hruntime
-    isplitl_exact Hframe
-    isplitl_exact Hwords
-    isplitl_exact Hstreams
+    isplitl_exacts [Hruntime Hframe Hwords Hstreams]
     iintro Hruntime Hframe Hwords Hstreams
     wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (4 : UInt32), func3_decode_next_address]
@@ -3742,10 +3699,7 @@ theorem twp_func3_output
     simp [func3OutputLocals, func3AppendLocals, func3OutputBlockBody]
       at Hloop ⊢
     iapply Hloop
-    isplitl_exact Hruntime
-    isplitl_exact Hframe
-    isplitl_exact Hvalues
-    isplitl_exact Hstreams
+    isplitl_exacts [Hruntime Hframe Hvalues Hstreams]
     iintro %finalOutput Hruntime Hframe Hvalues Hstreams
     wasm_twp_pures [twp_exitControl]
     simp only [List.take_zero, List.nil_append]
@@ -3840,9 +3794,7 @@ theorem twp_func3_deallocate_values
     func3AppendLocals, func3ValuesDeallocBlockBody]
     at Hdealloc
   iapply Hdealloc
-  isplitl_exact Hruntime
-  isplitl_exact Hbump
-  isplitl_exact Hblock
+  isplitl_exacts [Hruntime Hbump Hblock]
   isplitl_pureexact ⟨hsizeWord, hfour, Or.inr rfl⟩
   iintro Hruntime Hbump
   unfold ResumeWP resumeExpr
@@ -3929,9 +3881,7 @@ theorem twp_func3_deallocate_scratch
   simp only [List.cons_append, List.nil_append, func3AppendLocals,
     func3ScratchDeallocBlockBody] at Hdealloc
   iapply Hdealloc
-  isplitl_exact Hruntime
-  isplitl_exact Hbump
-  isplitl_exact Hblock
+  isplitl_exacts [Hruntime Hbump Hblock]
   isplitl_pureexact ⟨hsizeWord, hfour, Or.inr rfl⟩
   iintro Hruntime Hbump
   unfold ResumeWP resumeExpr
@@ -4078,9 +4028,7 @@ theorem twp_func3_deallocate_input
     simp only [List.cons_append, List.nil_append, finalLocals,
       func3AppendLocals] at Hdealloc
     iapply Hdealloc
-    isplitl_exact Hruntime
-    isplitl_exact Hbump
-    isplitl_exact Hblock
+    isplitl_exacts [Hruntime Hbump Hblock]
     isplitl_pureexact ⟨rfl, hone, Or.inl rfl⟩
     iintro Hruntime Hbump
     unfold ResumeWP resumeExpr
@@ -4487,9 +4435,7 @@ theorem twp_func3_finish_nonempty
   simp only [func3NonemptyCleanup, func3AppendLocals,
     List.cons_append, List.nil_append] at HvaluesCleanup ⊢
   iapply HvaluesCleanup
-  isplitl_exact Hruntime
-  isplitl_exact Hbump
-  isplitl_exact Hvalues
+  isplitl_exacts [Hruntime Hbump Hvalues]
   iintro Hruntime Hbump
   have HscratchCleanup := twp_func3_deallocate_scratch
     (hlc := hlc) heapId scratchId scratchPtr valuesPtr sorted scratchValues
@@ -4518,8 +4464,7 @@ theorem twp_func3_finish_nonempty
     (s := s) (E := E) (Phi := Phi)
   simp only [func3AppendLocals, func3CleanupOuterFrame] at HinputCleanup ⊢
   iapply HinputCleanup
-  isplitl_exact Hruntime
-  isplitl_exact Hframe
+  isplitl_exacts [Hruntime Hframe]
   isplitl [Hbump]
   · isimp only [beforeInput, afterValues, workLayout, hsortedLength]
       at Hbump
@@ -4548,9 +4493,7 @@ theorem twp_func3_finish_nonempty
     (s := s) (E := E) (Phi := Phi)
   simp only [List.append_nil, func3AppendLocals] at Hrestore ⊢
   iapply Hrestore
-  isplitl_exact Hsp
-  isplitl_exact Hreserve
-  isplitl_exact HframeBytes
+  isplitl_exacts [Hsp Hreserve HframeBytes]
   iintro Hsp Hstack %hstackLength
   ihave Hsuccess : DriverSuccess heapId original $$
       [Hsp Hstack Hbump Hstreams]
@@ -4686,9 +4629,7 @@ theorem twp_func3_finish_empty
     (controls := []) (calls := calls) (s := s) (E := E) (Phi := Phi)
   simp only [func3AppendLocals, func3CleanupOuterFrame] at Hinput ⊢
   iapply Hinput
-  isplitl_exact Hruntime
-  isplitl_exact Hframe
-  isplitl_exact Hbump
+  isplitl_exacts [Hruntime Hframe Hbump]
   iintro Hruntime Hbump HframeBytes %hframeLength
   have Hrestore := twp_func3_restore_stack reserveBytes
     (exportFrameBytes 0 1 [] chunkBytes outputBytes)
@@ -4697,9 +4638,7 @@ theorem twp_func3_finish_empty
     (s := s) (E := E) (Phi := Phi)
   simp only [List.append_nil, func3AppendLocals] at Hrestore ⊢
   iapply Hrestore
-  isplitl_exact Hsp
-  isplitl_exact Hreserve
-  isplitl_exact HframeBytes
+  isplitl_exacts [Hsp Hreserve HframeBytes]
   iintro Hsp Hstack %hstackLength
   have hallRetired : AllRetired AllocationHistory.empty := by
     intro allocationId metadata hlookup
@@ -4871,12 +4810,7 @@ theorem twp_func3_read_loop
     simp only [func3ReadLoopBody, func3ReadLoopLocals,
       List.cons_append, List.nil_append]
     iapply Hiteration
-    isplitl_exact Hruntime
-    isplitl_exact Hsp
-    isplitl_exact Hreserve
-    isplitl_exact Hframe
-    isplitl_exact Hbump
-    isplitl_exact Hstreams
+    isplitl_exacts [Hruntime Hsp Hreserve Hframe Hbump Hstreams]
     unfold Func3IterationContinuation
     isplit
     · isplit
@@ -4931,12 +4865,7 @@ theorem twp_func3_read_loop
           simp
         rw [← congrArg UInt32.ofNat htakeLength]
         iapply Hback
-        isplitl_exact Hruntime
-        isplitl_exact Hsp
-        isplitl_exact Hreserve
-        isplitl_exact Hframe
-        isplitl_exact Hbump
-        isplitl_exact Hstreams
+        isplitl_exacts [Hruntime Hsp Hreserve Hframe Hbump Hstreams]
         isplitl []
         · ipureintro
           have hserializeNext :
@@ -4986,8 +4915,7 @@ theorem twp_func3_read_loop
         state.storedCursor, state.frontier, state.history
       isplitl_pureexact ⟨hfacts.1, hfacts.2.2.1, hfacts.2.2.2.2.1,
           hfacts.2.1, hframeLengths.1, hfacts.2.2.2.2.2.2⟩
-      isplitl_exact Hsp
-      isplitl_exact Hreserve
+      isplitl_exacts [Hsp Hreserve]
       isplitl [Hvec Hchunk Houtput]
       · unfold ExportFrame
         iframe
@@ -5138,9 +5066,7 @@ theorem twp_func3_first_read_nonempty
     func3EmptyInputSuffix, func3InitializedLocals,
     List.cons_append, List.nil_append] at Hread ⊢
   iapply Hread
-  isplitl_exact Hruntime
-  isplitl_exact Hstreams
-  isplitl_exact Hframe
+  isplitl_exacts [Hruntime Hstreams Hframe]
   iintro Hruntime Hstreams Hframe %_hcountBound
   iapply twp_localTee
       (locals' := func3AppendLocals 0 (UInt32.ofNat count) 0
@@ -5176,12 +5102,7 @@ theorem twp_func3_first_read_nonempty
     hcurrentLength, List.length_nil, UInt32.reduceOfNat] at Hphase
   iapply Hphase
   unfold Func3ReadLoopInv
-  isplitl_exact Hruntime
-  isplitl_exact Hsp
-  isplitl_exact Hreserve
-  isplitl_exact Hframe
-  isplitl_exact Hbump
-  isplitl_exact Hstreams
+  isplitl_exacts [Hruntime Hsp Hreserve Hframe Hbump Hstreams]
   isplitl_pureexact ⟨hserializeSplit, hcurrentShape, hcurrentPositive,
       hcurrentBound, hcurrentMod, hsplit.2.2, by
         change GeometricVecFacts input.length 0
@@ -5277,9 +5198,7 @@ theorem twp_func3_first_read_empty
     func3EmptyInputSuffix, func3InitializedLocals,
     List.cons_append, List.nil_append] at Hread ⊢
   iapply Hread
-  isplitl_exact Hruntime
-  isplitl_exact Hstreams
-  isplitl_exact Hframe
+  isplitl_exacts [Hruntime Hstreams Hframe]
   iintro Hruntime Hstreams Hframe %_hcountBound
   iapply twp_localTee
       (locals' := func3AppendLocals 0 0 0 4 0 0 0 0 0 0 [.i32 0])
@@ -5450,8 +5369,7 @@ theorem twp_func3_initialize
   ihave Harray :
       arrayAt 0 driverBase [0, 1, 0] $$ [Hcapacity Hpointer Hlength]
   · isimp only [arrayAt]
-    isplitl_exact Hcapacity
-    isplitl_exact Hpointer
+    isplitl_exacts [Hcapacity Hpointer]
     isplitl_rw_exact [show driverBase + 4 + 4 = driverBase + 8 by decide] with Hlength
     · itrivial
   ihave HheaderBytes : WordCells driverBase [0, 1, 0] $$ [Harray]
@@ -5663,12 +5581,7 @@ theorem twp_func3_complete_nonempty
     List.nil_append]
     at HvaluesAlloc ⊢
   iapply HvaluesAlloc
-  isplitl_exact Hruntime
-  isplitl_exact Hsp
-  isplitl_exact Hreserve
-  isplitl_exact Hframe
-  isplitl_exact Hbump
-  isplitl_exact Hstreams
+  isplitl_exacts [Hruntime Hsp Hreserve Hframe Hbump Hstreams]
   isplit
   · iintro %valuesPtr %valuesFinish %valuesBytes %hvaluesClassify
       Hruntime Hsp Hreserve Hframe Hbump Hvalues Hstreams
@@ -5710,11 +5623,7 @@ theorem twp_func3_complete_nonempty
     simp only [func3AppendLocals, List.cons_append, List.nil_append]
       at HscratchAlloc ⊢
     iapply HscratchAlloc
-    isplitl_exact Hruntime
-    isplitl_exact Hsp
-    isplitl_exact Hreserve
-    isplitl_exact Hframe
-    isplitl_exact Hvalues
+    isplitl_exacts [Hruntime Hsp Hreserve Hframe Hvalues]
     isplitl [Hbump]
     · isimp only [serialize_length] at Hbump
       iexact Hbump
@@ -5748,9 +5657,7 @@ theorem twp_func3_complete_nonempty
       simp only [func3SortAndCleanup, func3AppendLocals, List.cons_append,
         List.nil_append] at Hsort ⊢
       iapply Hsort
-      isplitl_exact Hruntime
-      isplitl_exact Hvalues
-      isplitl_exact Hscratch
+      isplitl_exacts [Hruntime Hvalues Hscratch]
       iintro %sorted Hruntime Hvalues Hscratch %hsorted
       have hsortedLength : sorted.length = original.length :=
         hsorted.2.length_eq.symm
@@ -5773,10 +5680,7 @@ theorem twp_func3_complete_nonempty
       simp only [func3AppendLocals, hsortedLength, List.cons_append,
         List.nil_append] at Houtput ⊢
       iapply Houtput
-      isplitl_exact Hruntime
-      isplitl_exact Hframe
-      isplitl_exact Hvalues
-      isplitl_exact Hstreams
+      isplitl_exacts [Hruntime Hframe Hvalues Hstreams]
       iintro %outputCursor %final6' %finalOutput Hruntime Hframe Hvalues
         Hstreams
       have Hfinish := twp_func3_finish_nonempty heapId original sorted
@@ -5788,11 +5692,7 @@ theorem twp_func3_complete_nonempty
         (calls := calls) (s := s) (E := E) (Phi := Phi)
       simp only [func3AppendLocals, hsortedLength] at Hfinish ⊢
       iapply Hfinish
-      isplitl_exact Hruntime
-      isplitl_exact Hsp
-      isplitl_exact Hreserve
-      isplitl_exact Hframe
-      isplitl_exact Hvalues
+      isplitl_exacts [Hruntime Hsp Hreserve Hframe Hvalues]
       isplitl [Hscratch]
       · isimp only [scratchValues]
         iexact Hscratch
@@ -5948,12 +5848,7 @@ theorem twp_func3_read_dispatch_nonempty
   simp only [func3ReadAndDispatchBody, func3AfterInitialRead,
     func3InitializedLocals, List.cons_append, List.nil_append] at Hread ⊢
   iapply Hread
-  isplitl_exact Hruntime
-  isplitl_exact Hsp
-  isplitl_exact Hreserve
-  isplitl_exact Hframe
-  isplitl_exact Hbump
-  isplitl_exact Hstreams
+  isplitl_exacts [Hruntime Hsp Hreserve Hframe Hbump Hstreams]
   isimp only [Func3ReadLoopContinuation]
   isplit
   · iintro %completed %chunkBytes %finalShadow %finalCapacity %finalPtr
@@ -6053,11 +5948,7 @@ theorem twp_func3_after_initialize
       func3DriverBody, func3SortAndCleanup,
       List.cons_append, List.nil_append] at Hread ⊢
     iapply Hread
-    isplitl_exact Hruntime
-    isplitl_exact Hsp
-    isplitl_exact Hreserve
-    isplitl_exact Hframe
-    isplitl_exact Hbump
+    isplitl_exacts [Hruntime Hsp Hreserve Hframe Hbump]
     isplitl [Hstreams]
     · isimp only [serialize, WordCodec.serialize, List.flatMap_nil] at Hstreams
       iexact Hstreams
@@ -6070,12 +5961,7 @@ theorem twp_func3_after_initialize
       func3DriverBody, func3ReadAndDispatchBody, func3AfterInitialRead,
       func3SortAndCleanup, List.cons_append, List.nil_append] at Hempty ⊢
     iapply Hempty
-    isplitl_exact Hruntime
-    isplitl_exact Hsp
-    isplitl_exact Hreserve
-    isplitl_exact Hframe
-    isplitl_exact Hbump
-    isplitl_exact Hstreams
+    isplitl_exacts [Hruntime Hsp Hreserve Hframe Hbump Hstreams]
     iintro Hruntime Hsuccess
     iapply Hdone $$ Hruntime Hsuccess
   · have Hnonempty := twp_func3_read_dispatch_nonempty hfunc1 hfunc5
@@ -6119,8 +6005,7 @@ theorem twp_func3_body
   have Hinitialize := twp_func3_initialize heapId entryBytes
     (calls := calls) (s := s) (E := E) (Φ := Phi)
   iapply Hinitialize
-  isplitl_exact Hsp
-  isplitl_exact Hstack
+  isplitl_exacts [Hsp Hstack]
   isplitl_pureexact hentryLength
   iintro %reserveBytes %outputBytes Hsp Hreserve Hframe
   have Hbody := twp_func3_after_initialize hfunc1 hfunc5 hfunc9 heapId
@@ -6165,10 +6050,7 @@ theorem func3_correct_of
   isplitl [Hmodule Henv]
   · unfold RuntimeContext
     iframe
-  isplitl_exact Hsp
-  isplitl_exact Hstack
-  isplitl_exact Hbump
-  isplitl_exact Hstreams
+  isplitl_exacts [Hsp Hstack Hbump Hstreams]
   isplitl [Hnormal]
   · iintro %finalLocals Hruntime Hsuccess
     iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
