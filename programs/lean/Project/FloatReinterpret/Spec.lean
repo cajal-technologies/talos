@@ -42,8 +42,7 @@ theorem func5_body_smallStep_wp
 theorem func5_smallStep (x : UInt32) :
     PartiallyMeets (func5Config x)
       (fun rs _store => rs = [.i32 x]) := by
-  apply wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [func5Config]
   wasm_wp_next func5_body_smallStep_wp x []
   wasm_wp_return_value_rfl
@@ -74,8 +73,7 @@ theorem func6_body_smallStep_wp
 theorem func6_smallStep (x : UInt32) :
     PartiallyMeets (func6Config x)
       (fun rs _store => rs = [.f32 x]) := by
-  apply wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [func6Config]
   wasm_wp_next func6_body_smallStep_wp x []
   wasm_wp_return_value_rfl

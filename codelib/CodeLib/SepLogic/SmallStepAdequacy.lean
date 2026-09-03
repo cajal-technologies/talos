@@ -248,6 +248,12 @@ theorem wasm_smallStep_partiallyMeets
   adequate_to_partiallyMeets config (fun values _store => φ values)
     (wasm_smallStep_adequacy config φ hwp)
 
+/-- Start a closed partial-correctness proof and name its Iris instance. -/
+macro "wasm_wp_partially_meets " gs:ident : tactic =>
+  `(tactic|
+    apply Wasm.SmallStep.wasm_smallStep_partiallyMeets <;>
+      intro $gs:ident)
+
 instance instWasmLanguageNoFork :
     LanguageNoFork (Expr α) (MachineStore α) StepKind (List Value) where
   no_fork h := h.1

@@ -68,8 +68,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.AddChainSpec]
 theorem add_chain_correct : AddChainSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [ternaryConfig, func0]
   wasm_wp_pures [wp_localGet wp_localGet wp_addI64 wp_localGet wp_addI64]
   wasm_wp_return_value_rfl
@@ -82,8 +81,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.AddThenMulSpec]
 theorem add_then_mul_correct : AddThenMulSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [ternaryConfig, func1]
   wasm_wp_pures [wp_localGet wp_localGet wp_addI64 wp_localGet wp_mulI64]
   wasm_wp_return_value_rfl
@@ -97,8 +95,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.SubChainSpec]
 theorem sub_chain_correct : SubChainSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [ternaryConfig, func18]
   wasm_wp_pures [wp_localGet wp_localGet wp_subI64 wp_localGet wp_subI64]
   wasm_wp_return_value_rfl
@@ -111,8 +108,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.SubThenAddSpec]
 theorem sub_then_add_correct : SubThenAddSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [ternaryConfig, func19]
   wasm_wp_pures [wp_localGet wp_localGet wp_subI64 wp_localGet wp_addI64]
   wasm_wp_return_value_rfl
@@ -126,8 +122,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.MulChainSpec]
 theorem mul_chain_correct : MulChainSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [ternaryConfig, func6]
   wasm_wp_pures [wp_localGet wp_localGet wp_mulI64 wp_localGet wp_mulI64]
   wasm_wp_return_value_rfl
@@ -140,8 +135,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.MulThenAddSpec]
 theorem mul_then_add_correct : MulThenAddSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [ternaryConfig, func7]
   wasm_wp_pures [wp_localGet wp_localGet wp_mulI64 wp_localGet wp_addI64]
   wasm_wp_return_value_rfl
@@ -155,8 +149,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.AndChainSpec]
 theorem and_chain_correct : AndChainSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [ternaryConfig, func2]
   wasm_wp_pures [wp_localGet wp_localGet wp_andI64 wp_localGet wp_andI64]
   wasm_wp_return_value_rfl
@@ -169,8 +162,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.AndThenOrSpec]
 theorem and_then_or_correct : AndThenOrSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [ternaryConfig, func3]
   wasm_wp_pures [wp_localGet wp_localGet wp_andI64 wp_localGet wp_orI64]
   wasm_wp_return_value_rfl
@@ -184,8 +176,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.OrChainSpec]
 theorem or_chain_correct : OrChainSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [ternaryConfig, func10]
   wasm_wp_pures [wp_localGet wp_localGet wp_orI64 wp_localGet wp_orI64]
   wasm_wp_return_value_rfl
@@ -198,8 +189,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.OrThenXorSpec]
 theorem or_then_xor_correct : OrThenXorSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [ternaryConfig, func11]
   wasm_wp_pures [wp_localGet wp_localGet wp_orI64 wp_localGet]
   wasm_wp_next SmallStep.wp_xorI64
@@ -214,8 +204,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.XorChainSpec]
 theorem xor_chain_correct : XorChainSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [ternaryConfig, func20]
   wasm_wp_pures [wp_localGet wp_localGet]
   wasm_wp_next SmallStep.wp_xorI64
@@ -231,8 +220,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.XorThenAndSpec]
 theorem xor_then_and_correct : XorThenAndSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [ternaryConfig, func21]
   wasm_wp_pures [wp_localGet wp_localGet]
   wasm_wp_next SmallStep.wp_xorI64
@@ -248,8 +236,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.NotTwiceSpec]
 theorem not_twice_correct : NotTwiceSpec := by
   intro a
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [unaryConfig, func9]
   wasm_wp_pures [wp_localGet wp_constI64]
   wasm_wp_next SmallStep.wp_xorI64
@@ -268,8 +255,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.NotThenXorSpec]
 theorem not_then_xor_correct : NotThenXorSpec := by
   intro a b
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [binaryConfig, func8]
   wasm_wp_pures [wp_localGet wp_constI64]
   wasm_wp_next SmallStep.wp_xorI64
@@ -287,8 +273,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.DivThenAddSpec]
 theorem div_then_add_correct : DivThenAddSpec := by
   intro a b c hb
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [ternaryConfig, func4]
   wasm_wp_pures [wp_block wp_localGet wp_constI64]
   wasm_wp_next SmallStep.wp_eqI64 (result := 0) (by simp [hb])
@@ -307,8 +292,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.DivThenMulSpec]
 theorem div_then_mul_correct : DivThenMulSpec := by
   intro a b c hb
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [ternaryConfig, func5]
   wasm_wp_pures [wp_block wp_localGet wp_constI64]
   wasm_wp_next SmallStep.wp_eqI64 (result := 0) (by simp [hb])
@@ -328,8 +312,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.RemThenAddSpec]
 theorem rem_then_add_correct : RemThenAddSpec := by
   intro a b c hb
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [ternaryConfig, func12]
   wasm_wp_pures [wp_block wp_localGet wp_constI64]
   wasm_wp_next SmallStep.wp_eqI64 (result := 0) (by simp [hb])
@@ -348,8 +331,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.RemThenMulSpec]
 theorem rem_then_mul_correct : RemThenMulSpec := by
   intro a b c hb
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [ternaryConfig, func13]
   wasm_wp_pures [wp_block wp_localGet wp_constI64]
   wasm_wp_next SmallStep.wp_eqI64 (result := 0) (by simp [hb])
@@ -369,8 +351,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.ShlThenAddSpec]
 theorem shl_then_add_correct : ShlThenAddSpec := by
   intro a n b
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [shiftValueConfig, func14]
   wasm_wp_pures [wp_localGet wp_localGet wp_const wp_and]
   rw [UInt32.and_comm n 63]
@@ -389,8 +370,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.ShlTwiceSpec]
 theorem shl_twice_correct : ShlTwiceSpec := by
   intro a n m
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [shiftTwiceConfig, func15]
   wasm_wp_pures [wp_localGet wp_localGet wp_const wp_and]
   rw [UInt32.and_comm n 63]
@@ -412,8 +392,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.ShrThenSubSpec]
 theorem shr_then_sub_correct : ShrThenSubSpec := by
   intro a n b
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [shiftValueConfig, func16]
   wasm_wp_pures [wp_localGet wp_localGet wp_const wp_and]
   rw [UInt32.and_comm n 63]
@@ -432,8 +411,7 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.ShrTwiceSpec]
 theorem shr_twice_correct : ShrTwiceSpec := by
   intro a n m
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [shiftTwiceConfig, func17]
   wasm_wp_pures [wp_localGet wp_localGet wp_const wp_and]
   rw [UInt32.and_comm n 63]

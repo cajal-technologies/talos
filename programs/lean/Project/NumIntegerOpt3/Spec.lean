@@ -61,8 +61,7 @@ theorem mod3_gcd_zero_smallStep (a b : UInt64) (hz : a = 0 ∨ b = 0) :
     PartiallyMeets (gcdConfig a b)
       (fun rs _store =>
         rs = [.i64 (UInt64.ofNat (Nat.gcd a.toNat b.toNat))]) := by
-  apply wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [gcdConfig, func0]
   wasm_wp_pures [wp_localGet wp_localGet wp_orI64 wp_localSet wp_block]
   by_cases ha : a = 0
@@ -339,8 +338,7 @@ theorem mod3_gcd_smallStep (a b : UInt64) :
     PartiallyMeets (gcdConfig a b)
       (fun rs _store =>
         rs = [.i64 (UInt64.ofNat (Nat.gcd a.toNat b.toNat))]) := by
-  apply wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [gcdConfig]
   rw [show func0 =
     [.localGet 1, .localGet 0, .orI64, .localSet 2,

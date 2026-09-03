@@ -42,8 +42,7 @@ def LenPlusOneSpec : Prop := ∀ (ptr len : UInt32),
 @[proves Project.RustArrayTests.Spec.LenPlusOneSpec]
 theorem len_plus_one_correct : LenPlusOneSpec := by
   intro ptr len
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [bodyConfig, func1]
   wasm_wp_pures [wp_localGet wp_const wp_add]
   rw [UInt32.add_comm 1 len]
@@ -58,8 +57,7 @@ def LenPlusArgSpec : Prop := ∀ (ptr len n : UInt32),
 @[proves Project.RustArrayTests.Spec.LenPlusArgSpec]
 theorem len_plus_arg_correct : LenPlusArgSpec := by
   intro ptr len n
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [bodyConfig, func0]
   wasm_wp_pures [wp_localGet wp_localGet wp_add]
   rw [UInt32.add_comm n len]

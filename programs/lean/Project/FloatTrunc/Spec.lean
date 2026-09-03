@@ -141,8 +141,7 @@ theorem func1_body_smallStep_wp
 theorem func1_smallStep (x : UInt32) :
     PartiallyMeets (func1Config x)
       (fun rs _store => rs = [.i32 (i32TruncSatF32S x)]) := by
-  apply wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [func1Config]
   wasm_wp_next func1_body_smallStep_wp x []
   wasm_wp_return_value_rfl

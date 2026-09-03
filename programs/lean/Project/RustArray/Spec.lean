@@ -56,8 +56,7 @@ def LenSpec : Prop := ∀ (ptr len : UInt32),
 @[proves Project.RustArray.Spec.LenSpec]
 theorem len_correct : LenSpec := by
   intro ptr len
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [leafConfig, func0]
   wasm_wp_pures [wp_localGet]
   wasm_wp_return_value_rfl
@@ -70,8 +69,7 @@ def IsEmptySpec : Prop := ∀ (ptr len : UInt32),
 @[proves Project.RustArray.Spec.IsEmptySpec]
 theorem is_empty_correct : IsEmptySpec := by
   intro ptr len
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [leafConfig, func2]
   wasm_wp_pures [wp_localGet wp_const]
   wasm_wp_next SmallStep.wp_eq (result := isEmptyValue len) (by rfl)

@@ -62,8 +62,7 @@ def AddSpec : Prop :=
 @[proves Project.RustU64.Spec.AddSpec]
 theorem add_correct : AddSpec := by
   intro a b
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [pureBinaryConfig, func2]
   wasm_wp_pures [wp_localGet wp_localGet wp_addI64]
   wasm_wp_return_value_rfl
@@ -76,8 +75,7 @@ def SubSpec : Prop :=
 @[proves Project.RustU64.Spec.SubSpec]
 theorem sub_correct : SubSpec := by
   intro a b
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [pureBinaryConfig, func8]
   wasm_wp_pures [wp_localGet wp_localGet wp_subI64]
   wasm_wp_return_value_rfl
@@ -90,8 +88,7 @@ def MulSpec : Prop :=
 @[proves Project.RustU64.Spec.MulSpec]
 theorem mul_correct : MulSpec := by
   intro a b
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [pureBinaryConfig, func9]
   wasm_wp_pures [wp_localGet wp_localGet wp_mulI64]
   wasm_wp_return_value_rfl
@@ -104,8 +101,7 @@ def DivSpec : Prop :=
 @[proves Project.RustU64.Spec.DivSpec]
 theorem div_correct : DivSpec := by
   intro a b hb
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [pureBinaryConfig, func6]
   wasm_wp_pures [wp_block wp_localGet wp_constI64]
   wasm_wp_next SmallStep.wp_eqI64 (result := 0) (by simp [hb])
@@ -123,8 +119,7 @@ def RemSpec : Prop :=
 @[proves Project.RustU64.Spec.RemSpec]
 theorem rem_correct : RemSpec := by
   intro a b hb
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [pureBinaryConfig, func10]
   wasm_wp_pures [wp_block wp_localGet wp_constI64]
   wasm_wp_next SmallStep.wp_eqI64 (result := 0) (by simp [hb])
@@ -142,8 +137,7 @@ def BitAndSpec : Prop :=
 @[proves Project.RustU64.Spec.BitAndSpec]
 theorem bitand_correct : BitAndSpec := by
   intro a b
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [pureBinaryConfig, func3]
   wasm_wp_pures [wp_localGet wp_localGet wp_andI64]
   wasm_wp_return_value_rfl
@@ -156,8 +150,7 @@ def BitOrSpec : Prop :=
 @[proves Project.RustU64.Spec.BitOrSpec]
 theorem bitor_correct : BitOrSpec := by
   intro a b
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [pureBinaryConfig, func4]
   wasm_wp_pures [wp_localGet wp_localGet wp_orI64]
   wasm_wp_return_value_rfl
@@ -170,8 +163,7 @@ def BitXorSpec : Prop :=
 @[proves Project.RustU64.Spec.BitXorSpec]
 theorem bitxor_correct : BitXorSpec := by
   intro a b
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [pureBinaryConfig, func5]
   wasm_wp_pures [wp_localGet wp_localGet]
   wasm_wp_next SmallStep.wp_xorI64
@@ -185,8 +177,7 @@ def NotSpec : Prop :=
 @[proves Project.RustU64.Spec.NotSpec]
 theorem not_correct : NotSpec := by
   intro a
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [unaryConfig, func11]
   wasm_wp_pures [wp_localGet wp_constI64]
   wasm_wp_next SmallStep.wp_xorI64
@@ -202,8 +193,7 @@ def ShlSpec : Prop :=
 @[proves Project.RustU64.Spec.ShlSpec]
 theorem shl_correct : ShlSpec := by
   intro a b
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [shiftConfig, func12]
   wasm_wp_pures [wp_localGet wp_localGet wp_const wp_and]
   rw [UInt32.and_comm b 63]
@@ -220,8 +210,7 @@ def ShrSpec : Prop :=
 @[proves Project.RustU64.Spec.ShrSpec]
 theorem shr_correct : ShrSpec := by
   intro a b
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [shiftConfig, func13]
   wasm_wp_pures [wp_localGet wp_localGet wp_const wp_and]
   rw [UInt32.and_comm b 63]
