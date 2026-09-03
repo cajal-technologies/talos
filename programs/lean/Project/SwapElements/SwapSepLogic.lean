@@ -1172,9 +1172,7 @@ theorem func4_happy_smallStep_wp
     · ilater_rw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with HspillLen
     wasm_wp_next_bind Wasm.SmallStep.wp_load32 len
       (by decide) (by decide) (by decide) (by decide) with HlenLater => HspillLen
-    wasm_wp_pures [wp_localSet]
-    simp only [List.length_cons, List.length_nil, Nat.reduceAdd,
-      Nat.reduceSub, List.set]
+    wasm_wp_localSet
     wasm_wp_pures [wp_localGet]
     ihave HptrLater :
         ▷ pointsTo_u32 0 ((1048560 : UInt32) + 8) ptr $$ [HspillPtr]
@@ -1265,9 +1263,7 @@ theorem func4_alias_smallStep_wp
     · ilater_rw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with HspillLen
     wasm_wp_next_bind Wasm.SmallStep.wp_load32 len
       (by decide) (by decide) (by decide) (by decide) with HlenLater => HspillLen
-    wasm_wp_pures [wp_localSet]
-    simp only [List.length_cons, List.length_nil, Nat.reduceAdd,
-      Nat.reduceSub, List.set]
+    wasm_wp_localSet
     wasm_wp_pures [wp_localGet]
     ihave HptrLater :
         ▷ pointsTo_u32 0 ((1048560 : UInt32) + 8) ptr $$ [HspillPtr]
@@ -1873,9 +1869,7 @@ theorem twp_func4_happy_smallStep_wp
     · irw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with HspillLen
     wasm_twp_bind Wasm.SmallStep.twp_load32 len
       (by decide) (by decide) (by decide) (by decide) with HspillLen' => HspillLen
-    wasm_twp_pures [twp_localSet]
-    simp only [List.length_cons, List.length_nil, Nat.reduceAdd,
-      Nat.reduceSub, List.set]
+    wasm_twp_localSet
     wasm_twp_pures [twp_localGet]
     ihave HspillPtr' :
         pointsTo_u32 0 ((1048560 : UInt32) + 8) ptr $$ [HspillPtr]
@@ -1961,9 +1955,7 @@ theorem twp_func4_alias_smallStep_wp
     · irw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with HspillLen
     wasm_twp_bind Wasm.SmallStep.twp_load32 len
       (by decide) (by decide) (by decide) (by decide) with HspillLen' => HspillLen
-    wasm_twp_pures [twp_localSet]
-    simp only [List.length_cons, List.length_nil, Nat.reduceAdd,
-      Nat.reduceSub, List.set]
+    wasm_twp_localSet
     wasm_twp_pures [twp_localGet]
     ihave HspillPtr' :
         pointsTo_u32 0 ((1048560 : UInt32) + 8) ptr $$ [HspillPtr]

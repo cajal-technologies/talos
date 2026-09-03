@@ -289,9 +289,7 @@ theorem func1_body_smallStep_wp
   wasm_wp_next_rebind wp_globalGet with Hglobal
   wasm_wp_pures [wp_const wp_sub]
   rw [show (1048576 : UInt32) - 16 = 1048560 by decide]
-  wasm_wp_pures [wp_localSet]
-  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
-    List.set]
+  wasm_wp_localSet
   wasm_wp_pures [wp_localGet wp_localGet]
   wasm_wp_next wp_scalarFloat1 rfl rfl
   ihave HwordLater :
@@ -460,9 +458,7 @@ theorem func3_body_smallStep_wp
   wasm_wp_next_rebind wp_globalGet with Hglobal
   wasm_wp_pures [wp_const wp_sub]
   rw [show (1048576 : UInt32) - 16 = 1048560 by decide]
-  wasm_wp_pures [wp_localSet]
-  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
-    List.set]
+  wasm_wp_localSet
   wasm_wp_pures [wp_localGet wp_localGet]
   wasm_wp_next wp_scalarFloat1 rfl rfl
   ihave HwordLater :
@@ -591,9 +587,7 @@ theorem func8_body_smallStep_wp
   wasm_wp_next_rebind wp_globalGet with Hglobal
   wasm_wp_pures [wp_const wp_sub]
   rw [show (1048576 : UInt32) - 16 = 1048560 by decide]
-  wasm_wp_pures [wp_localSet]
-  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
-    List.set]
+  wasm_wp_localSet
   wasm_wp_pures [wp_localGet wp_localGet wp_localGet]
   wasm_wp_next wp_scalarFloat2 rfl rfl rfl
   ihave HwordLater :
@@ -851,9 +845,7 @@ theorem func1_lowered_body_smallStep_wp
   wasm_wp_next_rebind wp_globalGet with Hglobal
   wasm_wp_pures [wp_const wp_sub]
   rw [show (1048560 : UInt32) - 16 = 1048544 by decide]
-  wasm_wp_pures [wp_localSet]
-  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
-    List.set]
+  wasm_wp_localSet
   wasm_wp_pures [wp_localGet wp_localGet]
   wasm_wp_next wp_scalarFloat1 rfl rfl
   ihave HwordLater :
@@ -925,9 +917,7 @@ theorem func3_lowered_body_smallStep_wp
   wasm_wp_next_rebind wp_globalGet with Hglobal
   wasm_wp_pures [wp_const wp_sub]
   rw [show (1048560 : UInt32) - 16 = 1048544 by decide]
-  wasm_wp_pures [wp_localSet]
-  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
-    List.set]
+  wasm_wp_localSet
   wasm_wp_pures [wp_localGet wp_localGet]
   wasm_wp_next wp_scalarFloat1 rfl rfl
   ihave HwordLater :
@@ -1006,9 +996,7 @@ theorem func8_lowered_body_smallStep_wp
   wasm_wp_next_rebind wp_globalGet with Hglobal
   wasm_wp_pures [wp_const wp_sub]
   rw [show (1048560 : UInt32) - 16 = 1048544 by decide]
-  wasm_wp_pures [wp_localSet]
-  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
-    List.set]
+  wasm_wp_localSet
   wasm_wp_pures [wp_localGet wp_localGet wp_localGet]
   wasm_wp_next wp_scalarFloat2 rfl rfl rfl
   ihave HwordLater :
@@ -1163,9 +1151,7 @@ theorem checkAbs_tail_smallStep_wp
   · ilater_rw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
   wasm_wp_next_bind wp_load32 result
     (by decide) (by decide) (by decide) (by decide) with HresultLater => Hresult
-  wasm_wp_pures [wp_localSet]
-  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
-    List.set]
+  wasm_wp_localSet
   wasm_wp_pures [wp_localGet wp_const wp_add]
   rw [show (16 : UInt32) + 1048560 = 1048576 by decide]
   ihave HglobalLater :
@@ -1542,9 +1528,7 @@ theorem func10_body_smallStep_wp
   wasm_wp_next_rebind wp_globalGet with Hglobal
   wasm_wp_pures [wp_const wp_sub]
   rw [show (1048576 : UInt32) - 16 = 1048560 by decide]
-  wasm_wp_pures [wp_localSet]
-  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
-    List.set]
+  wasm_wp_localSet
   wasm_wp_pures [wp_localGet]
   ihave HglobalLater : ▷ globalPointsToAt 0 0 (.i32 1048576) $$ [Hglobal]
   · ilater_exact Hglobal
@@ -1685,9 +1669,7 @@ theorem checkCopysign_tail_result_smallStep_wp
   · ilater_rw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
   wasm_wp_next_bind wp_load32 result
     (by decide) (by decide) (by decide) (by decide) with HresultLater => Hresult
-  wasm_wp_pures [wp_localSet]
-  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
-    List.set]
+  wasm_wp_localSet
   wasm_wp_pures [wp_localGet wp_const wp_add]
   rw [show (16 : UInt32) + 1048560 = 1048576 by decide]
   ihave HglobalLater :
@@ -1810,9 +1792,7 @@ theorem func11_body_smallStep_wp
   wasm_wp_next_rebind wp_globalGet with Hglobal
   wasm_wp_pures [wp_const wp_sub]
   rw [show (1048576 : UInt32) - 16 = 1048560 by decide]
-  wasm_wp_pures [wp_localSet]
-  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
-    List.set]
+  wasm_wp_localSet
   wasm_wp_pures [wp_localGet]
   ihave HglobalLater : ▷ globalPointsToAt 0 0 (.i32 1048576) $$ [Hglobal]
   · ilater_exact Hglobal
@@ -1951,9 +1931,7 @@ theorem twp_func1_lowered_body_smallStep_wp
   wasm_twp_rebind twp_globalGet with Hglobal
   wasm_twp_pures [twp_const twp_sub]
   rw [show (1048560 : UInt32) - 16 = 1048544 by decide]
-  wasm_twp_pures [twp_localSet]
-  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
-    List.set]
+  wasm_twp_localSet
   wasm_twp_pures [twp_localGet twp_localGet]
   iapply twp_scalarFloat1 rfl rfl
   ihave Hword' : pointsTo_u32 0 ((1048544 : UInt32) + 12) oldWord $$ [Hword]
@@ -2020,9 +1998,7 @@ theorem twp_func3_lowered_body_smallStep_wp
   wasm_twp_rebind twp_globalGet with Hglobal
   wasm_twp_pures [twp_const twp_sub]
   rw [show (1048560 : UInt32) - 16 = 1048544 by decide]
-  wasm_twp_pures [twp_localSet]
-  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
-    List.set]
+  wasm_twp_localSet
   wasm_twp_pures [twp_localGet twp_localGet]
   iapply twp_scalarFloat1 rfl rfl
   ihave Hword' : pointsTo_u64 0 ((1048544 : UInt32) + 8) oldWord $$ [Hword]
@@ -2098,9 +2074,7 @@ theorem twp_func8_lowered_body_smallStep_wp
   wasm_twp_rebind twp_globalGet with Hglobal
   wasm_twp_pures [twp_const twp_sub]
   rw [show (1048560 : UInt32) - 16 = 1048544 by decide]
-  wasm_twp_pures [twp_localSet]
-  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
-    List.set]
+  wasm_twp_localSet
   wasm_twp_pures [twp_localGet twp_localGet twp_localGet]
   iapply twp_scalarFloat2 rfl rfl rfl
   ihave Hword' : pointsTo_u32 0 ((1048544 : UInt32) + 12) oldWord $$ [Hword]
@@ -2245,9 +2219,7 @@ theorem twp_checkAbs_tail_smallStep_wp
   · irw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
   wasm_twp_rebind twp_load32 result
     (by decide) (by decide) (by decide) (by decide) with Hresult'
-  wasm_twp_pures [twp_localSet]
-  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
-    List.set]
+  wasm_twp_localSet
   wasm_twp_pures [twp_localGet twp_const twp_add]
   rw [show (16 : UInt32) + 1048560 = 1048576 by decide]
   wasm_twp_rebind twp_globalSet with Hglobal
@@ -2588,9 +2560,7 @@ theorem twp_func10_body_smallStep_wp
   wasm_twp_rebind twp_globalGet with Hglobal
   wasm_twp_pures [twp_const twp_sub]
   rw [show (1048576 : UInt32) - 16 = 1048560 by decide]
-  wasm_twp_pures [twp_localSet]
-  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
-    List.set]
+  wasm_twp_localSet
   wasm_twp_pures [twp_localGet]
   wasm_twp_rebind twp_globalSet with Hglobal
   rw [← show checkAbsInnerBody =
@@ -2671,9 +2641,7 @@ theorem twp_checkCopysign_tail_result_smallStep_wp
   · irw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
   wasm_twp_rebind twp_load32 result
     (by decide) (by decide) (by decide) (by decide) with Hresult'
-  wasm_twp_pures [twp_localSet]
-  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
-    List.set]
+  wasm_twp_localSet
   wasm_twp_pures [twp_localGet twp_const twp_add]
   rw [show (16 : UInt32) + 1048560 = 1048576 by decide]
   wasm_twp_rebind twp_globalSet with Hglobal
@@ -2794,9 +2762,7 @@ theorem twp_func11_body_smallStep_wp
   wasm_twp_rebind twp_globalGet with Hglobal
   wasm_twp_pures [twp_const twp_sub]
   rw [show (1048576 : UInt32) - 16 = 1048560 by decide]
-  wasm_twp_pures [twp_localSet]
-  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
-    List.set]
+  wasm_twp_localSet
   wasm_twp_pures [twp_localGet]
   wasm_twp_rebind twp_globalSet with Hglobal
   rw [← show checkCopysignInnerBody =

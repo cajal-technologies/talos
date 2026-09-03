@@ -64,9 +64,7 @@ theorem opt3_func0_distinct_smallStep_wp
     (by simpa using hi1) (by simpa using hi2) (by simpa using hi3)
     (by simpa using hi4) (by simpa using hi5) (by simpa using hi6)
     (by simpa using hi7) with HALater => HA
-  wasm_wp_pures [wp_localSet]
-  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
-    List.set]
+  wasm_wp_localSet
   wasm_wp_pures [wp_localGet wp_localGet wp_localGet wp_const wp_shl wp_add wp_localTee]
   simp only [List.set]
   ihave HBLater : ▷ pointsTo_u64 0 (addressJ + 0) oldB $$ [HB]

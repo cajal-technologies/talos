@@ -1777,6 +1777,13 @@ macro_rules
   | `(tactic| wasm_twp_pures [twp_scalarFloat0 $rest:ident*]) =>
       `(tactic| iapply twp_scalarFloat0 rfl; wasm_twp_pures [$rest:ident*])
 
+/-- Execute a local assignment and normalize the concrete local list. -/
+macro "wasm_twp_localSet" : tactic =>
+  `(tactic|
+    (wasm_twp_pures [twp_localSet]
+     simp only [List.length_cons, List.length_nil, Nat.reduceAdd,
+       Nat.reduceSub, List.set]))
+
 /-- `i32.load` at offset 0, phrased directly on `addr` rather than
 `addr + 0`, which keeps Iris's unifier from having to see through the
 offset addition.  Relocated here from `SmallStepAdequacy`, where it sat

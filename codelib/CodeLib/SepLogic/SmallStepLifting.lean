@@ -849,6 +849,13 @@ macro_rules
   | `(tactic| wasm_wp_pures [wp_scalarFloat0 $rest:ident*]) =>
       `(tactic| iapply wp_scalarFloat0 rfl; inext; wasm_wp_pures [$rest:ident*])
 
+/-- Execute a local assignment and normalize the concrete local list. -/
+macro "wasm_wp_localSet" : tactic =>
+  `(tactic|
+    (wasm_wp_pures [wp_localSet]
+     simp only [List.length_cons, List.length_nil, Nat.reduceAdd,
+       Nat.reduceSub, List.set]))
+
 theorem wp_tryTable
     {locals : Locals} {paramArity resultArity arity : Nat}
     {catches : List CatchClause} {body code : Program}
