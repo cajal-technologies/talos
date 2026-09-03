@@ -162,6 +162,35 @@ macro "wasm_alloc_memory_ghosts " config:term " from " heap:term : tactic =>
      letI _ : WasmMemoryPagesGS α := memoryPagesGS))
 
 set_option hygiene false in
+/-- Allocate empty global, segment, table, and element-segment ghost maps. -/
+macro "wasm_alloc_empty_heap_maps" : tactic =>
+  `(tactic|
+    (letI globalMapG :
+        GhostMapG (WasmHeapGF α) GlobalKey Value WasmGlobalMap :=
+      GhostSlot.globalMap
+     imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := GlobalKey)
+         (V := Value) (H := WasmGlobalMap)) with ⟨%globalName, Hglobals⟩
+     letI dataSegmentMapG :
+         GhostMapG (WasmHeapGF α) DataSegmentKey (Option (List UInt8))
+           WasmDataSegmentMap :=
+       GhostSlot.dataSegmentMap
+     imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := DataSegmentKey)
+         (V := Option (List UInt8)) (H := WasmDataSegmentMap)) with
+       ⟨%dataSegmentName, Hsegments⟩
+     letI tableMapG :
+         GhostMapG (WasmHeapGF α) TableKey TableInst WasmTableMap :=
+       GhostSlot.tableMap
+     imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := TableKey)
+         (V := TableInst) (H := WasmTableMap)) with ⟨%tableName, Htables⟩
+     letI elementSegmentMapG :
+         GhostMapG (WasmHeapGF α) ElementSegmentKey (Option (List (Option Nat)))
+           WasmElementSegmentMap :=
+       GhostSlot.elementSegmentMap
+     imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := ElementSegmentKey)
+         (V := Option (List (Option Nat))) (H := WasmElementSegmentMap)) with
+       ⟨%elementSegmentName, HelementSegments⟩))
+
+set_option hygiene false in
 /-- Install the five map instances after their authoritative maps are allocated. -/
 macro "wasm_install_heap_map_instances" : tactic =>
   `(tactic|

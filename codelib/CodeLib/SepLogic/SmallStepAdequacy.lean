@@ -194,29 +194,7 @@ theorem wasm_smallStep_adequacy
     config.expr config.store φ ?_
   intro inv κs
   wasm_alloc_memory_ghosts config from (∅ : WasmHeapMap (Option UInt8))
-  letI globalMapG : GhostMapG (WasmHeapGF α) GlobalKey Value WasmGlobalMap :=
-    GhostSlot.globalMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := GlobalKey)
-      (V := Value) (H := WasmGlobalMap)) with ⟨%globalName, Hglobals⟩
-  letI dataSegmentMapG :
-      GhostMapG (WasmHeapGF α) DataSegmentKey (Option (List UInt8))
-        WasmDataSegmentMap :=
-    GhostSlot.dataSegmentMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := DataSegmentKey)
-      (V := Option (List UInt8)) (H := WasmDataSegmentMap)) with
-    ⟨%dataSegmentName, Hsegments⟩
-  letI tableMapG : GhostMapG (WasmHeapGF α) TableKey TableInst WasmTableMap :=
-    GhostSlot.tableMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := TableKey)
-      (V := TableInst) (H := WasmTableMap)) with
-    ⟨%tableName, Htables⟩
-  letI elementSegmentMapG :
-      GhostMapG (WasmHeapGF α) ElementSegmentKey (Option (List (Option Nat)))
-        WasmElementSegmentMap :=
-    GhostSlot.elementSegmentMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := ElementSegmentKey)
-      (V := Option (List (Option Nat))) (H := WasmElementSegmentMap)) with
-    ⟨%elementSegmentName, HelementSegments⟩
+  wasm_alloc_empty_heap_maps
   wasm_install_heap_map_instances
   letI runtimeModuleMapG : GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
     GhostSlot.runtimeModuleMap
@@ -326,29 +304,7 @@ theorem wasm_smallStep_stronglyNormalizing
     (fun values => iprop(⌜φ values⌝)) 0 0
   intro inv
   wasm_alloc_memory_ghosts config from (∅ : WasmHeapMap (Option UInt8))
-  letI globalMapG : GhostMapG (WasmHeapGF α) GlobalKey Value WasmGlobalMap :=
-    GhostSlot.globalMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := GlobalKey)
-      (V := Value) (H := WasmGlobalMap)) with ⟨%globalName, Hglobals⟩
-  letI dataSegmentMapG :
-      GhostMapG (WasmHeapGF α) DataSegmentKey (Option (List UInt8))
-        WasmDataSegmentMap :=
-    GhostSlot.dataSegmentMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := DataSegmentKey)
-      (V := Option (List UInt8)) (H := WasmDataSegmentMap)) with
-    ⟨%dataSegmentName, Hsegments⟩
-  letI tableMapG : GhostMapG (WasmHeapGF α) TableKey TableInst WasmTableMap :=
-    GhostSlot.tableMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := TableKey)
-      (V := TableInst) (H := WasmTableMap)) with
-    ⟨%tableName, Htables⟩
-  letI elementSegmentMapG :
-      GhostMapG (WasmHeapGF α) ElementSegmentKey (Option (List (Option Nat)))
-        WasmElementSegmentMap :=
-    GhostSlot.elementSegmentMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := ElementSegmentKey)
-      (V := Option (List (Option Nat))) (H := WasmElementSegmentMap)) with
-    ⟨%elementSegmentName, HelementSegments⟩
+  wasm_alloc_empty_heap_maps
   wasm_install_heap_map_instances
   letI runtimeModuleMapG : GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
     GhostSlot.runtimeModuleMap
@@ -748,29 +704,7 @@ theorem wasm_smallStep_runtime_tags_adequacy
     config.expr config.store φ ?_
   intro inv κs
   wasm_alloc_memory_ghosts config from (∅ : WasmHeapMap (Option UInt8))
-  letI globalMapG : GhostMapG (WasmHeapGF α) GlobalKey Value WasmGlobalMap :=
-    GhostSlot.globalMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := GlobalKey)
-      (V := Value) (H := WasmGlobalMap)) with ⟨%globalName, Hglobals⟩
-  letI dataSegmentMapG :
-      GhostMapG (WasmHeapGF α) DataSegmentKey (Option (List UInt8))
-        WasmDataSegmentMap :=
-    GhostSlot.dataSegmentMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := DataSegmentKey)
-      (V := Option (List UInt8)) (H := WasmDataSegmentMap)) with
-    ⟨%dataSegmentName, Hsegments⟩
-  letI tableMapG : GhostMapG (WasmHeapGF α) TableKey TableInst WasmTableMap :=
-    GhostSlot.tableMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := TableKey)
-      (V := TableInst) (H := WasmTableMap)) with
-    ⟨%tableName, Htables⟩
-  letI elementSegmentMapG :
-      GhostMapG (WasmHeapGF α) ElementSegmentKey (Option (List (Option Nat)))
-        WasmElementSegmentMap :=
-    GhostSlot.elementSegmentMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := ElementSegmentKey)
-      (V := Option (List (Option Nat))) (H := WasmElementSegmentMap)) with
-    ⟨%elementSegmentName, HelementSegments⟩
+  wasm_alloc_empty_heap_maps
   wasm_install_heap_map_instances
   letI runtimeModuleMapG : GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
     GhostSlot.runtimeModuleMap
@@ -920,29 +854,7 @@ theorem wasm_smallStep_runtime_instance_adequacy
     config.expr config.store φ ?_
   intro inv κs
   wasm_alloc_memory_ghosts config from (∅ : WasmHeapMap (Option UInt8))
-  letI globalMapG : GhostMapG (WasmHeapGF α) GlobalKey Value WasmGlobalMap :=
-    GhostSlot.globalMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := GlobalKey)
-      (V := Value) (H := WasmGlobalMap)) with ⟨%globalName, Hglobals⟩
-  letI dataSegmentMapG :
-      GhostMapG (WasmHeapGF α) DataSegmentKey (Option (List UInt8))
-        WasmDataSegmentMap :=
-    GhostSlot.dataSegmentMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := DataSegmentKey)
-      (V := Option (List UInt8)) (H := WasmDataSegmentMap)) with
-    ⟨%dataSegmentName, Hsegments⟩
-  letI tableMapG : GhostMapG (WasmHeapGF α) TableKey TableInst WasmTableMap :=
-    GhostSlot.tableMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := TableKey)
-      (V := TableInst) (H := WasmTableMap)) with
-    ⟨%tableName, Htables⟩
-  letI elementSegmentMapG :
-      GhostMapG (WasmHeapGF α) ElementSegmentKey (Option (List (Option Nat)))
-        WasmElementSegmentMap :=
-    GhostSlot.elementSegmentMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := ElementSegmentKey)
-      (V := Option (List (Option Nat))) (H := WasmElementSegmentMap)) with
-    ⟨%elementSegmentName, HelementSegments⟩
+  wasm_alloc_empty_heap_maps
   wasm_install_heap_map_instances
   letI runtimeModuleMapG : GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
     GhostSlot.runtimeModuleMap
@@ -1089,29 +1001,7 @@ theorem wasm_smallStep_instance_host_state_adequacy
     config.expr config.store φ ?_
   intro inv κs
   wasm_alloc_memory_ghosts config from (∅ : WasmHeapMap (Option UInt8))
-  letI globalMapG : GhostMapG (WasmHeapGF α) GlobalKey Value WasmGlobalMap :=
-    GhostSlot.globalMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := GlobalKey)
-      (V := Value) (H := WasmGlobalMap)) with ⟨%globalName, Hglobals⟩
-  letI dataSegmentMapG :
-      GhostMapG (WasmHeapGF α) DataSegmentKey (Option (List UInt8))
-        WasmDataSegmentMap :=
-    GhostSlot.dataSegmentMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := DataSegmentKey)
-      (V := Option (List UInt8)) (H := WasmDataSegmentMap)) with
-    ⟨%dataSegmentName, Hsegments⟩
-  letI tableMapG : GhostMapG (WasmHeapGF α) TableKey TableInst WasmTableMap :=
-    GhostSlot.tableMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := TableKey)
-      (V := TableInst) (H := WasmTableMap)) with
-    ⟨%tableName, Htables⟩
-  letI elementSegmentMapG :
-      GhostMapG (WasmHeapGF α) ElementSegmentKey (Option (List (Option Nat)))
-        WasmElementSegmentMap :=
-    GhostSlot.elementSegmentMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := ElementSegmentKey)
-      (V := Option (List (Option Nat))) (H := WasmElementSegmentMap)) with
-    ⟨%elementSegmentName, HelementSegments⟩
+  wasm_alloc_empty_heap_maps
   wasm_install_heap_map_instances
   letI runtimeModuleMapG : GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
     GhostSlot.runtimeModuleMap
@@ -1274,29 +1164,7 @@ theorem wasm_smallStep_heap_adequacy
     config.expr config.store φ ?_
   intro inv κs
   wasm_alloc_memory_ghosts config from σ
-  letI globalMapG : GhostMapG (WasmHeapGF α) GlobalKey Value WasmGlobalMap :=
-    GhostSlot.globalMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := GlobalKey)
-      (V := Value) (H := WasmGlobalMap)) with ⟨%globalName, Hglobals⟩
-  letI dataSegmentMapG :
-      GhostMapG (WasmHeapGF α) DataSegmentKey (Option (List UInt8))
-        WasmDataSegmentMap :=
-    GhostSlot.dataSegmentMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := DataSegmentKey)
-      (V := Option (List UInt8)) (H := WasmDataSegmentMap)) with
-    ⟨%dataSegmentName, Hsegments⟩
-  letI tableMapG : GhostMapG (WasmHeapGF α) TableKey TableInst WasmTableMap :=
-    GhostSlot.tableMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := TableKey)
-      (V := TableInst) (H := WasmTableMap)) with
-    ⟨%tableName, Htables⟩
-  letI elementSegmentMapG :
-      GhostMapG (WasmHeapGF α) ElementSegmentKey (Option (List (Option Nat)))
-        WasmElementSegmentMap :=
-    GhostSlot.elementSegmentMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := ElementSegmentKey)
-      (V := Option (List (Option Nat))) (H := WasmElementSegmentMap)) with
-    ⟨%elementSegmentName, HelementSegments⟩
+  wasm_alloc_empty_heap_maps
   wasm_install_heap_map_instances
   letI runtimeModuleMapG : GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
     GhostSlot.runtimeModuleMap
@@ -2773,29 +2641,7 @@ theorem wasm_smallStep_heap_runtime_instance_adequacy
     config.expr config.store φ ?_
   intro inv κs
   wasm_alloc_memory_ghosts config from σ
-  letI globalMapG : GhostMapG (WasmHeapGF α) GlobalKey Value WasmGlobalMap :=
-    GhostSlot.globalMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := GlobalKey)
-      (V := Value) (H := WasmGlobalMap)) with ⟨%globalName, Hglobals⟩
-  letI dataSegmentMapG :
-      GhostMapG (WasmHeapGF α) DataSegmentKey (Option (List UInt8))
-        WasmDataSegmentMap :=
-    GhostSlot.dataSegmentMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := DataSegmentKey)
-      (V := Option (List UInt8)) (H := WasmDataSegmentMap)) with
-    ⟨%dataSegmentName, Hsegments⟩
-  letI tableMapG : GhostMapG (WasmHeapGF α) TableKey TableInst WasmTableMap :=
-    GhostSlot.tableMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := TableKey)
-      (V := TableInst) (H := WasmTableMap)) with
-    ⟨%tableName, Htables⟩
-  letI elementSegmentMapG :
-      GhostMapG (WasmHeapGF α) ElementSegmentKey (Option (List (Option Nat)))
-        WasmElementSegmentMap :=
-    GhostSlot.elementSegmentMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := ElementSegmentKey)
-      (V := Option (List (Option Nat))) (H := WasmElementSegmentMap)) with
-    ⟨%elementSegmentName, HelementSegments⟩
+  wasm_alloc_empty_heap_maps
   wasm_install_heap_map_instances
   letI runtimeModuleMapG : GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
     GhostSlot.runtimeModuleMap
@@ -2912,29 +2758,7 @@ theorem wasm_smallStep_heap_runtime_instances_adequacy
     config.expr config.store φ ?_
   intro inv κs
   wasm_alloc_memory_ghosts config from σ
-  letI globalMapG : GhostMapG (WasmHeapGF α) GlobalKey Value WasmGlobalMap :=
-    GhostSlot.globalMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := GlobalKey)
-      (V := Value) (H := WasmGlobalMap)) with ⟨%globalName, Hglobals⟩
-  letI dataSegmentMapG :
-      GhostMapG (WasmHeapGF α) DataSegmentKey (Option (List UInt8))
-        WasmDataSegmentMap :=
-    GhostSlot.dataSegmentMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := DataSegmentKey)
-      (V := Option (List UInt8)) (H := WasmDataSegmentMap)) with
-    ⟨%dataSegmentName, Hsegments⟩
-  letI tableMapG : GhostMapG (WasmHeapGF α) TableKey TableInst WasmTableMap :=
-    GhostSlot.tableMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := TableKey)
-      (V := TableInst) (H := WasmTableMap)) with
-    ⟨%tableName, Htables⟩
-  letI elementSegmentMapG :
-      GhostMapG (WasmHeapGF α) ElementSegmentKey (Option (List (Option Nat)))
-        WasmElementSegmentMap :=
-    GhostSlot.elementSegmentMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := ElementSegmentKey)
-      (V := Option (List (Option Nat))) (H := WasmElementSegmentMap)) with
-    ⟨%elementSegmentName, HelementSegments⟩
+  wasm_alloc_empty_heap_maps
   wasm_install_heap_map_instances
   letI runtimeModuleMapG : GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
     GhostSlot.runtimeModuleMap
