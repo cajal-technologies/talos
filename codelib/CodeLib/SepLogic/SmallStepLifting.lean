@@ -702,22 +702,6 @@ theorem wp_refIsNull
   iintro Hwp
   iapply wp_lift_step rfl
   iintro %store %ns %obs %obs' %nt Hσ
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducible]
-    cases isNull
-    · exact ⟨[],
-        .running ⟨⟨params, localValues, .i32 0 :: values⟩,
-          code, arity, remainder, controls, calls⟩,
-        store, [], ⟨rfl, _, rfl, Step.refIsNullFalse hnull⟩⟩
-    · exact ⟨[],
-        .running ⟨⟨params, localValues, .i32 1 :: values⟩,
-          code, arity, remainder, controls, calls⟩,
-        store, [], ⟨rfl, _, rfl, Step.refIsNullTrue hnull⟩⟩
-  iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-  obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
   have expectedStep : Step
       ⟨.running ⟨⟨params, localValues, value :: values⟩,
         .refIsNull :: code, arity, remainder, controls, calls⟩, store⟩
@@ -728,9 +712,15 @@ theorem wp_refIsNull
     cases isNull
     · exact Step.refIsNullFalse hnull
     · exact Step.refIsNullTrue hnull
-  wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  wasm_wp_frame
+  wasm_wp_offer_step ⟨[],
+      .running ⟨⟨params, localValues,
+          .i32 (if isNull then 1 else 0) :: values⟩,
+        code, arity, remainder, controls, calls⟩,
+      store, [], ⟨rfl, _, rfl, expectedStep⟩⟩ =>
+    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+    wasm_wp_resolve_step Hstep using expectedStep
+    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+    wasm_wp_frame
 
 theorem wp_localGet
     {params localValues values : List Value}
@@ -1236,75 +1226,54 @@ theorem wp_callHost
     rw [Hhost]; exact hfuncs
   match h : hostFn.invoke store.wasm (values.take imp.params.length).reverse with
   | .Return results newWasm =>
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro Hclose
-    isplitr
-    · ipureintro
-      cases s <;> simp only [Stuckness.MaybeReducible]
-      exact ⟨[],
+    wasm_wp_offer_step ⟨[],
         .running ⟨⟨params, localValues,
             results.take imp.results.length ++
               values.drop imp.params.length⟩,
           code, arity, remainder, controls, calls⟩,
         { store with wasm := newWasm }, [],
-        ⟨rfl, _, rfl, Step.callHostReturn himports' himp' hhost' h⟩⟩
-    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-    obtain ⟨rfl, hconfig⟩ :=
-      step_deterministic (Step.callHostReturn (α := α) himports' himp' hhost' h) wasmStep
-    simp only at hconfig
-    cases hconfig
-    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-    imod hRetTransfer store ns obs' nt Hmodule results newWasm h $$ [$HP $Hσ] with ⟨HQ, Hσ⟩
-    imod Hclose
-    imodintro
-    isplitl [Hσ]
-    · iexact Hσ
-    ispecialize HwpRet $$ %(store.wasm) %results %newWasm %h
-    isplitl [HwpRet HQ HruntimeElem HinstanceOwn]
-    · iapply HwpRet
-      isplitl [HQ]
-      · iexact HQ
-      · isplitl [HruntimeElem]
-        · iexact HruntimeElem
-        · iexact HinstanceOwn
-    · itrivial
+        ⟨rfl, _, rfl, Step.callHostReturn himports' himp' hhost' h⟩⟩ =>
+      iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+      wasm_wp_resolve_step Hstep using
+        Step.callHostReturn (α := α) himports' himp' hhost' h
+      simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+      imod hRetTransfer store ns obs' nt Hmodule results newWasm h $$ [$HP $Hσ] with ⟨HQ, Hσ⟩
+      imod Hclose
+      imodintro
+      isplitl [Hσ]
+      · iexact Hσ
+      ispecialize HwpRet $$ %(store.wasm) %results %newWasm %h
+      isplitl [HwpRet HQ HruntimeElem HinstanceOwn]
+      · iapply HwpRet
+        isplitl [HQ]
+        · iexact HQ
+        · isplitl [HruntimeElem]
+          · iexact HruntimeElem
+          · iexact HinstanceOwn
+      · itrivial
   | .Trap newWasm msg =>
     iclear HinstanceOwn HruntimeElem
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro Hclose
-    isplitr
-    · ipureintro
-      cases s <;> simp only [Stuckness.MaybeReducible]
-      exact ⟨[],
+    wasm_wp_offer_step ⟨[],
         .trapped (.host msg),
         { store with wasm := newWasm }, [],
-        ⟨rfl, _, rfl, Step.callHostTrap himports' himp' hhost' h⟩⟩
-    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-    obtain ⟨rfl, hconfig⟩ :=
-      step_deterministic (Step.callHostTrap (α := α) himports' himp' hhost' h) wasmStep
-    simp only at hconfig
-    cases hconfig
-    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-    imod hTrapTransfer store ns obs' nt Hmodule newWasm msg h $$ [$HP $Hσ] with ⟨HQ, Hσ⟩
-    imod Hclose
-    imodintro
-    isplitl [Hσ]
-    · iexact Hσ
-    ispecialize HwpTrap $$ %(store.wasm) %newWasm %msg %h
-    isplitl [HwpTrap HQ]
-    · iapply HwpTrap
-      iexact HQ
-    · itrivial
+        ⟨rfl, _, rfl, Step.callHostTrap himports' himp' hhost' h⟩⟩ =>
+      iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+      wasm_wp_resolve_step Hstep using
+        Step.callHostTrap (α := α) himports' himp' hhost' h
+      simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+      imod hTrapTransfer store ns obs' nt Hmodule newWasm msg h $$ [$HP $Hσ] with ⟨HQ, Hσ⟩
+      imod Hclose
+      imodintro
+      isplitl [Hσ]
+      · iexact Hσ
+      ispecialize HwpTrap $$ %(store.wasm) %newWasm %msg %h
+      isplitl [HwpTrap HQ]
+      · iapply HwpTrap
+        iexact HQ
+      · itrivial
   | .Throw newWasm tag xs =>
     iclear HinstanceOwn HruntimeElem
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro Hclose
-    isplitr
-    · ipureintro
-      cases s <;> simp only [Stuckness.MaybeReducible]
-      exact ⟨[],
+    wasm_wp_offer_step ⟨[],
         .running ⟨⟨params, localValues, values.drop imp.params.length⟩,
           [], arity, remainder,
           [{ kind := .throwing tag xs
@@ -1315,24 +1284,21 @@ theorem wp_callHost
              belowStack := [] }] ++ controls,
           calls⟩,
         { store with wasm := newWasm }, [],
-        ⟨rfl, _, rfl, Step.callHostThrow himports' himp' hhost' h⟩⟩
-    iintro !> %e₂ %store₂ %forks %Hstep Hcredit
-    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-    obtain ⟨rfl, hconfig⟩ :=
-      step_deterministic (Step.callHostThrow (α := α) himports' himp' hhost' h) wasmStep
-    simp only at hconfig
-    cases hconfig
-    simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-    imod hThrowTransfer store ns obs' nt Hmodule newWasm tag xs h $$ [$HP $Hσ] with ⟨HQ, Hσ⟩
-    imod Hclose
-    imodintro
-    isplitl [Hσ]
-    · iexact Hσ
-    ispecialize HwpThrow $$ %(store.wasm) %newWasm %tag %xs %h
-    isplitl [HwpThrow HQ]
-    · iapply HwpThrow
-      iexact HQ
-    · itrivial
+        ⟨rfl, _, rfl, Step.callHostThrow himports' himp' hhost' h⟩⟩ =>
+      iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+      wasm_wp_resolve_step Hstep using
+        Step.callHostThrow (α := α) himports' himp' hhost' h
+      simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
+      imod hThrowTransfer store ns obs' nt Hmodule newWasm tag xs h $$ [$HP $Hσ] with ⟨HQ, Hσ⟩
+      imod Hclose
+      imodintro
+      isplitl [Hσ]
+      · iexact Hσ
+      ispecialize HwpThrow $$ %(store.wasm) %newWasm %tag %xs %h
+      isplitl [HwpThrow HQ]
+      · iapply HwpThrow
+        iexact HQ
+      · itrivial
 
 /-- Resume caller after explicit return; runtime-module ownership is returned
     unchanged for chained same-instance calls. -/
