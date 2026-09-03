@@ -91,8 +91,7 @@ theorem absDiff_smallStep_wp_to_return
     UInt32.addSteps8 ((sp - 16) + 8) (by omega)
   iintro ⟨HR, Hglobal, Hscratch⟩
   simp only [absDiffBody]
-  wasm_wp_next Wasm.SmallStep.wp_globalGet $$ Hglobal
-  iintro Hglobal
+  wasm_wp_next_rebind Wasm.SmallStep.wp_globalGet with Hglobal
   wasm_wp_pures [wp_const wp_sub wp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]

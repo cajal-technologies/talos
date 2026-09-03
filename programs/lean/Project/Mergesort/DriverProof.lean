@@ -4298,8 +4298,7 @@ theorem twp_func3_restore_stack
     List.cons_append, List.nil_append]
   wasm_twp_pures [twp_localGet twp_const twp_add]
   rw [show 272 + driverBase = entryStackTop by decide]
-  iapply twp_globalSet $$ Hsp
-  iintro Hsp
+  wasm_twp_rebind twp_globalSet with Hsp
   ihave Hsp' : StackPointer entryStackTop $$ [Hsp]
   · unfold StackPointer
     iexact Hsp
@@ -5499,14 +5498,12 @@ theorem twp_func3_initialize
   · iframe
   isimp only [StackPointer] at Hsp
   simp only [Project.Mergesort.func3]
-  iapply twp_globalGet $$ Hsp
-  iintro Hsp
+  wasm_twp_rebind twp_globalGet with Hsp
   wasm_twp_pures [twp_const twp_sub]
   rw [show entryStackTop - 272 = driverBase by decide]
   wasm_twp_pures [twp_localTee]
   simp [Project.Mergesort.func3Def, Function.toLocals]
-  iapply twp_globalSet $$ Hsp
-  iintro Hsp
+  wasm_twp_rebind twp_globalSet with Hsp
   wasm_twp_pures [twp_const twp_localSet]
   simp only [List.length_nil, Nat.reduceSub, List.set]
   wasm_twp_pures [twp_localGet twp_const]
@@ -6275,8 +6272,7 @@ theorem func3_correct_of
   isplitl [Hnormal]
   · iintro %finalLocals Hruntime Hsuccess
     iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
-    iapply Wasm.SmallStep.twp_returnFromCallFallthrough $$ Hmodule
-    iintro Hmodule
+    wasm_twp_rebind Wasm.SmallStep.twp_returnFromCallFallthrough with Hmodule
     simp only [List.take_zero, List.nil_append]
     isimp only [ResumeWP, resumeExpr, List.nil_append] at Hnormal
     ihave Hruntime : RuntimeContext $$ [Hmodule Henv]

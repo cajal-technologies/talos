@@ -240,8 +240,7 @@ theorem func1_spillPrefix_smallStep_wp
         Wasm.SmallStep.Expr Unit) @ s; E {{ Φ }} := by
   iintro ⟨HR, Hglobal, HouterA, HouterB, Hx, Hy⟩
   simp only [func1, func1InitialLocals]
-  wasm_wp_next Wasm.SmallStep.wp_globalGet $$ Hglobal
-  iintro Hglobal
+  wasm_wp_next_rebind Wasm.SmallStep.wp_globalGet with Hglobal
   wasm_wp_pures [wp_const wp_sub]
   rw [show (1048560 : UInt32) - 48 = 1048512 by decide]
   wasm_wp_pures [wp_localSet]
@@ -3514,16 +3513,14 @@ theorem func0_callPrefix_smallStep_wp
         Wasm.SmallStep.Expr Unit) @ s; E {{ Φ }} := by
   iintro ⟨HR, Hglobal, HouterA, HouterB⟩
   simp only [func0, func0InitialLocals]
-  wasm_wp_next Wasm.SmallStep.wp_globalGet $$ Hglobal
-  iintro Hglobal
+  wasm_wp_next_rebind Wasm.SmallStep.wp_globalGet with Hglobal
   wasm_wp_pures [wp_const wp_sub]
   rw [show (1048576 : UInt32) - 16 = 1048560 by decide]
   wasm_wp_pures [wp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
   wasm_wp_pures [wp_localGet]
-  wasm_wp_next Wasm.SmallStep.wp_globalSet $$ Hglobal
-  iintro Hglobal
+  wasm_wp_next_rebind Wasm.SmallStep.wp_globalSet with Hglobal
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HouterALater :
       ▷ pointsTo_u64 0 ((1048560 : UInt32) + 0) oldOuterA $$ [HouterA]
@@ -3594,8 +3591,7 @@ theorem func0_afterCall_smallStep_wp_to_return
     List.set]
   wasm_wp_pures [wp_localGet wp_const wp_add]
   rw [show (16 : UInt32) + 1048560 = 1048576 from rfl]
-  wasm_wp_next Wasm.SmallStep.wp_globalSet $$ Hglobal
-  iintro Hglobal
+  wasm_wp_next_rebind Wasm.SmallStep.wp_globalSet with Hglobal
   wasm_wp_pures [wp_localGet]
   iapply_frame hreturn
 
@@ -4364,8 +4360,7 @@ theorem twp_func1_spillPrefix_smallStep_wp
         Wasm.SmallStep.Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hglobal, HouterA, HouterB, Hx, Hy⟩
   simp only [func1, func1InitialLocals]
-  iapply Wasm.SmallStep.twp_globalGet $$ Hglobal
-  iintro Hglobal
+  wasm_twp_rebind Wasm.SmallStep.twp_globalGet with Hglobal
   wasm_twp_pures [twp_const twp_sub]
   rw [show (1048560 : UInt32) - 48 = 1048512 by decide]
   wasm_twp_pures [twp_localSet]
@@ -7068,16 +7063,14 @@ theorem twp_func0_callPrefix_smallStep_wp
         Wasm.SmallStep.Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hglobal, HouterA, HouterB⟩
   simp only [func0, func0InitialLocals]
-  iapply Wasm.SmallStep.twp_globalGet $$ Hglobal
-  iintro Hglobal
+  wasm_twp_rebind Wasm.SmallStep.twp_globalGet with Hglobal
   wasm_twp_pures [twp_const twp_sub]
   rw [show (1048576 : UInt32) - 16 = 1048560 by decide]
   wasm_twp_pures [twp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
   wasm_twp_pures [twp_localGet]
-  iapply Wasm.SmallStep.twp_globalSet $$ Hglobal
-  iintro Hglobal
+  wasm_twp_rebind Wasm.SmallStep.twp_globalSet with Hglobal
   wasm_twp_pures [twp_localGet twp_localGet]
   ihave HouterALater :
       pointsTo_u64 0 ((1048560 : UInt32) + 0) oldOuterA $$ [HouterA]
@@ -7144,8 +7137,7 @@ theorem twp_func0_afterCall_smallStep_wp_to_return
     List.set]
   wasm_twp_pures [twp_localGet twp_const twp_add]
   rw [show (16 : UInt32) + 1048560 = 1048576 from rfl]
-  iapply Wasm.SmallStep.twp_globalSet $$ Hglobal
-  iintro Hglobal
+  wasm_twp_rebind Wasm.SmallStep.twp_globalSet with Hglobal
   wasm_twp_pures [twp_localGet]
   iapply_frame hreturn
 

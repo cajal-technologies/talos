@@ -522,8 +522,7 @@ theorem func7_correct [WasmSmallStepGS hlc Universal.State] :
   iintro Hmodule
   simp [Project.Mergesort.func7Def, Project.Mergesort.func7,
     Function.toLocals, Function.numParams]
-  iapply Wasm.SmallStep.twp_returnFromCallFallthrough $$ Hmodule
-  iintro Hmodule
+  wasm_twp_rebind Wasm.SmallStep.twp_returnFromCallFallthrough with Hmodule
   simp only [List.take_zero, List.nil_append]
   isimp only [RuntimeContext, ResumeWP, resumeExpr, List.nil_append] at Hcont
   iapply Hcont $$ [Hmodule Henv] Hbump
@@ -578,8 +577,7 @@ theorem func10_correct [WasmSmallStepGS hlc Universal.State] :
   iintro Hruntime Hstreams Hslice %hcount
   iopen_runtime Hruntime with ⟨Hmodule, HenvInner⟩
   unfold ResumeWP resumeExpr
-  iapply Wasm.SmallStep.twp_returnFromCallFallthrough $$ Hmodule
-  iintro Hmodule
+  wasm_twp_rebind Wasm.SmallStep.twp_returnFromCallFallthrough with Hmodule
   simp only [List.append_nil, List.take_succ_cons, List.take_zero,
     List.cons_append, List.nil_append]
   isimp only [RuntimeContext, ResumeWP, resumeExpr, List.nil_append] at Hcont
@@ -635,8 +633,7 @@ theorem func11_correct [WasmSmallStepGS hlc Universal.State] :
   iintro Hruntime Hstreams Hslice
   iopen_runtime Hruntime with ⟨Hmodule, HenvInner⟩
   unfold ResumeWP resumeExpr
-  iapply Wasm.SmallStep.twp_returnFromCallFallthrough $$ Hmodule
-  iintro Hmodule
+  wasm_twp_rebind Wasm.SmallStep.twp_returnFromCallFallthrough with Hmodule
   simp only [List.take_zero, List.nil_append]
   isimp only [RuntimeContext, ResumeWP, resumeExpr, List.nil_append] at Hcont
   iapply Hcont $$ [Hmodule HenvInner] Hstreams Hslice

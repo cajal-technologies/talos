@@ -94,8 +94,7 @@ theorem globalGet_adequate :
     iintro Hglobal
     simp only [globalGetAdequacyConfig]
     simp only [← globalPointsToAt_eq]
-    wasm_wp_next wp_globalGet $$ Hglobal
-    iintro Hglobal
+    wasm_wp_next_rebind wp_globalGet with Hglobal
     wasm_wp_finish_value_rfl
 
 def noopCallModule : Module :=
@@ -1477,8 +1476,7 @@ theorem tableSetGet_store_partiallyMeets :
     wasm_wp_pures [wp_const]
     wasm_wp_next wp_pureStep _ _ _ (fun _ => Step.refFunc)
     simp only [← tablePointsToAt_eq]
-    wasm_wp_next wp_tableSet rfl (by decide) $$ Htable
-    iintro Htable
+    wasm_wp_next_rebind wp_tableSet rfl (by decide) with Htable
     wasm_wp_pures [wp_const]
     wasm_wp_next wp_tableGet (value := .funcref (some 1))
       rfl (by simp [listSetAt]) $$ Htable
@@ -2196,8 +2194,7 @@ theorem tableInitDrop_store_partiallyMeets :
       (destination := .i32 1) (source := 0) (length := 3)
       rfl (by decide) (by decide) $$ Hresources
     iintro Htable Helement Hruntime
-    wasm_wp_next wp_elemDrop $$ Helement
-    iintro Helement
+    wasm_wp_next_rebind wp_elemDrop with Helement
     iapply wp_mono (fun _ => sep_pair_pure_rotate _ _ _)
     iapply wp_frame_l
     isplitl [Htable Helement]
@@ -2390,8 +2387,7 @@ theorem fillThenRead_terminatesWith (val : UInt32) :
     iintro Hb
     ihave H0 := splat_bytes_as_u32 val.toUInt8 $$ Hb
     wasm_twp_pures [twp_const]
-    iapply twp_load32_addr _ rfl rfl rfl $$ H0
-    iintro H0
+    wasm_twp_rebind twp_load32_addr _ rfl rfl rfl with H0
     iapply twp_finish
         (locals := { params := [.i32 val], locals := [], values := [] })
         (values := [.i32 (val.toUInt8.toUInt32 ||| (val.toUInt8.toUInt32 <<< 8) |||

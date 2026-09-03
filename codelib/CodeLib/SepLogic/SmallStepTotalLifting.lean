@@ -130,6 +130,16 @@ macro "wasm_twp_terminal_value " step:pmTerm : tactic =>
     (iapply $step
      iapply twp.value rfl))
 
+/-- Apply a total lifting rule with one resource and bind the returned
+resource under the same name. -/
+macro "wasm_twp_rebind " rule:term " with " resource:ident : tactic => do
+  let spec ← `(specPat| $resource:ident)
+  let intro ← `(introPat| $resource:ident)
+  let applied ← `(pmTerm| $rule:term $$ $spec)
+  `(tactic|
+    (iapply $applied
+     iintro $intro))
+
 /-! ## Generating total pure rules
 
 `wasm_twp_pure_rule` is the total-WP counterpart of `wasm_wp_pure_rule`.
@@ -669,11 +679,7 @@ theorem twp_returnFromCallExplicit
 
 /-- Return totally from a callee and bind the restored runtime ownership. -/
 macro "wasm_twp_return_from_call " runtime:ident : tactic => do
-  let spec ← `(specPat| $runtime:ident)
-  let intro ← `(introPat| $runtime:ident)
-  `(tactic|
-    (iapply twp_returnFromCallExplicit $$ $spec
-     iintro $intro))
+  `(tactic| wasm_twp_rebind twp_returnFromCallExplicit with $runtime)
 
 theorem twp_memorySize
     {params localValues values : List Value}

@@ -172,6 +172,16 @@ macro "wasm_wp_next " rule:pmTerm : tactic =>
     (iapply $rule
      inext))
 
+/-- Apply a partial lifting rule with one resource and bind the returned
+resource under the same name. -/
+macro "wasm_wp_next_rebind " rule:term " with " resource:ident : tactic => do
+  let spec ← `(specPat| $resource:ident)
+  let intro ← `(introPat| $resource:ident)
+  let applied ← `(pmTerm| $rule:term $$ $spec)
+  `(tactic|
+    (wasm_wp_next $applied
+     iintro $intro))
+
 /-- Finish a completed body and expose its result as an Iris value. -/
 macro "wasm_wp_finish_value" : tactic =>
   `(tactic|
@@ -1255,11 +1265,7 @@ theorem wp_returnFromCallExplicit'
 
 /-- Return from a callee and bind the restored runtime-module ownership. -/
 macro "wasm_wp_return_from_call " runtime:ident : tactic => do
-  let spec ← `(specPat| $runtime:ident)
-  let intro ← `(introPat| $runtime:ident)
-  `(tactic|
-    (wasm_wp_next wp_returnFromCallExplicit' $$ $spec
-     iintro $intro))
+  `(tactic| wasm_wp_next_rebind wp_returnFromCallExplicit' with $runtime)
 
 /-- Resume a suspended caller after an explicit callee return. -/
 theorem wp_returnFromCallExplicit

@@ -139,8 +139,7 @@ private theorem twp_func5_commit_and_return
   · iframe
   wasm_twp_pures [twp_localGet]
   iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
-  iapply twp_returnFromCallFallthrough $$ Hmodule
-  iintro Hmodule
+  wasm_twp_rebind twp_returnFromCallFallthrough with Hmodule
   simp only [List.take_succ_cons, List.take_zero, List.cons_append,
     List.nil_append]
   ispecialize Hcont $$ %bytes

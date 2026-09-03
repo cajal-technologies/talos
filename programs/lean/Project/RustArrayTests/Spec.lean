@@ -275,8 +275,7 @@ theorem empty_plus_three_export_correct : EmptyPlusThreeExportSpec := by
     rw [show isEmptyValue len &&& 1 = isEmptyValue len by
       unfold isEmptyValue
       by_cases h : len = 0 <;> simp [h]]
-    wasm_wp_next SmallStep.wp_returnFromCallExplicit' $$ Hruntime
-    iintro Hruntime
+    wasm_wp_next_rebind SmallStep.wp_returnFromCallExplicit' with Hruntime
     simp only [List.take, List.singleton_append]
     wasm_wp_pures [wp_const wp_and]
     rw [show isEmptyValue len &&& 1 = isEmptyValue len by
@@ -335,8 +334,7 @@ theorem empty_xor_flag_export_correct : EmptyXorFlagExportSpec := by
     rw [show isEmptyValue len &&& 1 = isEmptyValue len by
       unfold isEmptyValue
       by_cases h : len = 0 <;> simp [h]]
-    wasm_wp_next SmallStep.wp_returnFromCallExplicit' $$ Hruntime
-    iintro Hruntime
+    wasm_wp_next_rebind SmallStep.wp_returnFromCallExplicit' with Hruntime
     simp only [List.take, List.singleton_append]
     wasm_wp_pures [wp_const wp_and]
     rw [show isEmptyValue len &&& 1 = isEmptyValue len by

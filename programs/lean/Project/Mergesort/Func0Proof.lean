@@ -385,8 +385,7 @@ private theorem twp_func0_success_tail
   iintro Htag
   isimp only [UInt32.add_zero] at Htag
   isimp only [UInt32.add_zero, hresult8Comm] at Hcapacity
-  iapply twp_returnFromCallFallthrough $$ Hmodule
-  iintro Hmodule
+  wasm_twp_rebind twp_returnFromCallFallthrough with Hmodule
   simp only [List.take_zero, List.nil_append]
   ihave Hresult := Hclose $$ Htag Hpointer Hcapacity
   isimp only [growResultBytes] at Hcont

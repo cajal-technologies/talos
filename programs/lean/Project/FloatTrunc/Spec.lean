@@ -342,8 +342,7 @@ theorem func0_body_to_ret_smallStep_wp
     let Rglobal : IProp (WasmHeapGF Unit) :=
       iprop(R ∗ globalPointsToAt 0 0 (.i32 1048576))
     simp only [func0]
-    wasm_wp_next wp_globalGet $$ Hglobal
-    iintro Hglobal
+    wasm_wp_next_rebind wp_globalGet with Hglobal
     wasm_wp_pures [wp_const wp_sub wp_localSet]
     simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
       List.set, UInt32.reduceSub]
@@ -592,8 +591,7 @@ theorem twp_func0_body_to_ret
   let Rglobal : IProp (WasmHeapGF Unit) :=
     iprop(R ∗ globalPointsToAt 0 0 (.i32 1048576))
   simp only [func0]
-  iapply twp_globalGet $$ Hglobal
-  iintro Hglobal
+  wasm_twp_rebind twp_globalGet with Hglobal
   wasm_twp_pures [twp_const twp_sub twp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set, UInt32.reduceSub]

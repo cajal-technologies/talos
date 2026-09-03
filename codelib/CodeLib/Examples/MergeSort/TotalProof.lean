@@ -1381,8 +1381,7 @@ theorem twp_merge
   isplitl_exact Hpre
   iintro %output %scratch' %hmergeRange %hscratchLength
     Hsource Htemporary
-  iapply Wasm.SmallStep.twp_returnFromCallExplicit (α := α) $$ Hruntime
-  iintro Hruntime
+  wasm_twp_rebind Wasm.SmallStep.twp_returnFromCallExplicit (α := α) with Hruntime
   simp only [mergeLocals, List.take_zero, List.nil_append,
     List.drop_eq_nil_of_le (by simp : 5 ≤
       (mergeArguments source temporary left mid right stack).length)]
@@ -2317,8 +2316,7 @@ theorem twp_mergeSort
   isplitl_exact Hruntime
   isplitl_exact Hpre
   iintro %width %left %mid %right Hruntime Hpost
-  iapply Wasm.SmallStep.twp_returnFromCallExplicit (α := α) $$ Hruntime
-  iintro Hruntime
+  wasm_twp_rebind Wasm.SmallStep.twp_returnFromCallExplicit (α := α) with Hruntime
   simp only [List.take_zero, List.nil_append,
     List.drop_eq_nil_of_le (by simp : 3 ≤
       (mergeSortArguments source temporary input.length stack).length)]

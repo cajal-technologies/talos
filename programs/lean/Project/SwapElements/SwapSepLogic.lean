@@ -77,8 +77,7 @@ theorem wp_swapElementsFunc2Prefix
   obtain ⟨ha1, ha2, ha3, ha4, ha5, ha6, ha7⟩ := UInt32.addSteps8 ptrA hroomA
   obtain ⟨hb1, hb2, hb3, hb4, hb5, hb6, hb7⟩ := UInt32.addSteps8 ptrB hroomB
   iintro ⟨⟨Hglobal, Hscratch, HA, HB⟩, Hdone⟩
-  wasm_wp_next wp_globalGet $$ Hglobal
-  iintro Hglobal
+  wasm_wp_next_rebind wp_globalGet with Hglobal
   wasm_wp_pures [wp_const wp_sub wp_localSet]
   simp only [UInt32.reduceSub, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set]
@@ -165,8 +164,7 @@ theorem wp_swapElementsFunc2AliasPrefix
         0, [], [], calls⟩ : Expr α) @ s; E {{ Φ }} := by
   obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := UInt32.addSteps8 ptr hroom
   iintro ⟨⟨Hglobal, Hscratch, Hcell⟩, Hdone⟩
-  wasm_wp_next wp_globalGet $$ Hglobal
-  iintro Hglobal
+  wasm_wp_next_rebind wp_globalGet with Hglobal
   wasm_wp_pures [wp_const wp_sub wp_localSet]
   simp only [UInt32.reduceSub, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set]
@@ -365,8 +363,7 @@ theorem twp_swapElementsFunc2Prefix
   obtain ⟨ha1, ha2, ha3, ha4, ha5, ha6, ha7⟩ := UInt32.addSteps8 ptrA hroomA
   obtain ⟨hb1, hb2, hb3, hb4, hb5, hb6, hb7⟩ := UInt32.addSteps8 ptrB hroomB
   iintro ⟨⟨Hglobal, Hscratch, HA, HB⟩, Hdone⟩
-  iapply twp_globalGet $$ Hglobal
-  iintro Hglobal
+  wasm_twp_rebind twp_globalGet with Hglobal
   wasm_twp_pures [twp_const twp_sub twp_localSet]
   simp only [UInt32.reduceSub, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set]
@@ -443,8 +440,7 @@ theorem twp_swapElementsFunc2AliasPrefix
         0, [], [], calls⟩ : Expr α) @ s; E [{ Φ }] := by
   obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := UInt32.addSteps8 ptr hroom
   iintro ⟨⟨Hglobal, Hscratch, Hcell⟩, Hdone⟩
-  iapply twp_globalGet $$ Hglobal
-  iintro Hglobal
+  wasm_twp_rebind twp_globalGet with Hglobal
   wasm_twp_pures [twp_const twp_sub twp_localSet]
   simp only [UInt32.reduceSub, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set]
@@ -872,8 +868,7 @@ theorem func1_alias_context_smallStep_wp
         Wasm.SmallStep.Expr Unit) @ s; E {{ Φ }} := by
   iintro ⟨HR, Hruntime, Hresources⟩
   wasm_wp_next func1_happyPrefix_smallStep_wp ptr len i i hi hi calls
-  wasm_wp_next func1_call2_entry_smallStep_wp ptr len i i calls $$ Hruntime
-  iintro Hruntime
+  wasm_wp_next_rebind func1_call2_entry_smallStep_wp ptr len i i calls with Hruntime
   iapply func2Alias_in_func1_context_smallStep_wp R
     ptr len i oldScratch oldValue hroom calls
   · iintro ⟨Hruntime, HR, Hresources⟩
@@ -917,8 +912,7 @@ theorem func1_happy_context_smallStep_wp
   dsimp only
   iintro ⟨HR, Hruntime, Hresources⟩
   wasm_wp_next func1_happyPrefix_smallStep_wp ptr len i j hi hj calls
-  wasm_wp_next func1_call2_entry_smallStep_wp ptr len i j calls $$ Hruntime
-  iintro Hruntime
+  wasm_wp_next_rebind func1_call2_entry_smallStep_wp ptr len i j calls with Hruntime
   iapply func2_in_func1_context_smallStep_wp R
     ptr len i j oldScratch oldA oldB hroomI hroomJ calls
   · iintro ⟨Hruntime, HR, Hresources⟩
@@ -1243,8 +1237,7 @@ theorem func4_happy_smallStep_wp
         pointsTo_u64 0 ((j <<< (3 % 32)) + ptr) oldA }} := by
   iintro ⟨Hruntime, Hglobal, Hscratch, HspillPtr, HspillLen, HA, HB⟩
   simp only [func4]
-  wasm_wp_next Wasm.SmallStep.wp_globalGet $$ Hglobal
-  iintro Hglobal
+  wasm_wp_next_rebind Wasm.SmallStep.wp_globalGet with Hglobal
   wasm_wp_pures [wp_const wp_sub wp_localSet]
   simp only [UInt32.reduceSub, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set]
@@ -1352,8 +1345,7 @@ theorem func4_alias_smallStep_wp
         pointsTo_u64 0 ((i <<< (3 % 32)) + ptr) oldValue }} := by
   iintro ⟨Hruntime, Hglobal, Hscratch, HspillPtr, HspillLen, Hcell⟩
   simp only [func4]
-  wasm_wp_next Wasm.SmallStep.wp_globalGet $$ Hglobal
-  iintro Hglobal
+  wasm_wp_next_rebind Wasm.SmallStep.wp_globalGet with Hglobal
   wasm_wp_pures [wp_const wp_sub wp_localSet]
   simp only [UInt32.reduceSub, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set]
@@ -1637,8 +1629,7 @@ theorem twp_func1_alias_context_smallStep_wp
         Wasm.SmallStep.Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hruntime, Hresources⟩
   iapply twp_func1_happyPrefix_smallStep_wp ptr len i i hi hi calls
-  iapply twp_func1_call2_entry_smallStep_wp ptr len i i calls $$ Hruntime
-  iintro Hruntime
+  wasm_twp_rebind twp_func1_call2_entry_smallStep_wp ptr len i i calls with Hruntime
   iapply twp_func2Alias_in_func1_context_smallStep_wp R
     ptr len i oldScratch oldValue hroom calls
   · iintro ⟨Hruntime, HR, Hresources⟩
@@ -1679,8 +1670,7 @@ theorem twp_func1_happy_context_smallStep_wp
   dsimp only
   iintro ⟨HR, Hruntime, Hresources⟩
   iapply twp_func1_happyPrefix_smallStep_wp ptr len i j hi hj calls
-  iapply twp_func1_call2_entry_smallStep_wp ptr len i j calls $$ Hruntime
-  iintro Hruntime
+  wasm_twp_rebind twp_func1_call2_entry_smallStep_wp ptr len i j calls with Hruntime
   iapply twp_func2_in_func1_context_smallStep_wp R
     ptr len i j oldScratch oldA oldB hroomI hroomJ calls
   · iintro ⟨Hruntime, HR, Hresources⟩
@@ -1990,14 +1980,12 @@ theorem twp_func4_happy_smallStep_wp
         pointsTo_u64 0 ((j <<< (3 % 32)) + ptr) oldA }] := by
   iintro ⟨Hruntime, Hglobal, Hscratch, HspillPtr, HspillLen, HA, HB⟩
   simp only [func4]
-  iapply Wasm.SmallStep.twp_globalGet $$ Hglobal
-  iintro Hglobal
+  wasm_twp_rebind Wasm.SmallStep.twp_globalGet with Hglobal
   wasm_twp_pures [twp_const twp_sub twp_localSet]
   simp only [UInt32.reduceSub, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set]
   wasm_twp_pures [twp_localGet]
-  iapply Wasm.SmallStep.twp_globalSet $$ Hglobal
-  iintro Hglobal
+  wasm_twp_rebind Wasm.SmallStep.twp_globalSet with Hglobal
   wasm_twp_pures [twp_const twp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
@@ -2048,8 +2036,7 @@ theorem twp_func4_happy_smallStep_wp
       wasm_twp_return_from_call Hruntime
       simp only [List.take, List.nil_append]
       wasm_twp_pures [twp_localGet twp_const twp_add]
-      iapply Wasm.SmallStep.twp_globalSet $$ Hglobal
-      iintro Hglobal
+      wasm_twp_rebind Wasm.SmallStep.twp_globalSet with Hglobal
       rw [show (16 : UInt32) + 1048560 = 1048576 by decide]
       rw [show (3 % 32 : UInt32) = 3 by decide]
       iapply Wasm.SmallStep.twp_returnFromFunction
@@ -2090,14 +2077,12 @@ theorem twp_func4_alias_smallStep_wp
         pointsTo_u64 0 ((i <<< (3 % 32)) + ptr) oldValue }] := by
   iintro ⟨Hruntime, Hglobal, Hscratch, HspillPtr, HspillLen, Hcell⟩
   simp only [func4]
-  iapply Wasm.SmallStep.twp_globalGet $$ Hglobal
-  iintro Hglobal
+  wasm_twp_rebind Wasm.SmallStep.twp_globalGet with Hglobal
   wasm_twp_pures [twp_const twp_sub twp_localSet]
   simp only [UInt32.reduceSub, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set]
   wasm_twp_pures [twp_localGet]
-  iapply Wasm.SmallStep.twp_globalSet $$ Hglobal
-  iintro Hglobal
+  wasm_twp_rebind Wasm.SmallStep.twp_globalSet with Hglobal
   wasm_twp_pures [twp_const twp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
@@ -2147,8 +2132,7 @@ theorem twp_func4_alias_smallStep_wp
       wasm_twp_return_from_call Hruntime
       simp only [List.take, List.nil_append]
       wasm_twp_pures [twp_localGet twp_const twp_add]
-      iapply Wasm.SmallStep.twp_globalSet $$ Hglobal
-      iintro Hglobal
+      wasm_twp_rebind Wasm.SmallStep.twp_globalSet with Hglobal
       rw [show (16 : UInt32) + 1048560 = 1048576 by decide]
       rw [show (3 % 32 : UInt32) = 3 by decide]
       iapply Wasm.SmallStep.twp_returnFromFunction

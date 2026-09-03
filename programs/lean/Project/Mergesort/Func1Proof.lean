@@ -263,14 +263,12 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
     unfold newCapacityNat selectedCapacity firstMaxNat
     omega
   isimp only [StackPointer] at Hsp
-  iapply twp_globalGet $$ Hsp
-  iintro Hsp
+  wasm_twp_rebind twp_globalGet with Hsp
   wasm_twp_pures [twp_const twp_sub]
   rw [show driverBase - 16 = reserveBase by decide]
   wasm_twp_pures [twp_localTee]
   simp only [List.length]
-  iapply twp_globalSet $$ Hsp
-  iintro Hsp
+  wasm_twp_rebind twp_globalSet with Hsp
   wasm_twp_pures [twp_block twp_localGet twp_localGet twp_add]
   rw [hsumWord]
   wasm_twp_pures [twp_localTee]
@@ -487,10 +485,8 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
         wasm_twp_pures [twp_localGet twp_const twp_add]
         rw [UInt32.add_comm 16 reserveBase,
           show reserveBase + 16 = driverBase by decide]
-        iapply twp_globalSet $$ Hsp
-        iintro Hsp
-        iapply twp_returnFromCallFallthrough $$ Hmodule
-        iintro Hmodule
+        wasm_twp_rebind twp_globalSet with Hsp
+        wasm_twp_rebind twp_returnFromCallFallthrough with Hmodule
         simp only [List.take_zero, List.nil_append]
         ihave HnewStorage := LiveBlock_to_VecStorage heapId history.nextId
           newCapacity newPtr initialized newBytes hnewPositive hcopy.2 $$ Hblock

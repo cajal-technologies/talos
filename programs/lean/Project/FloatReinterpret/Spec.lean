@@ -293,8 +293,7 @@ theorem func1_body_smallStep_wp
         func1, 1, [], [], calls⟩ : Expr Unit) @ s; E {{ Φ }} := by
   iintro ⟨HR, Hglobal, Hword⟩
   simp only [func1]
-  wasm_wp_next wp_globalGet $$ Hglobal
-  iintro Hglobal
+  wasm_wp_next_rebind wp_globalGet with Hglobal
   wasm_wp_pures [wp_const wp_sub]
   rw [show (1048576 : UInt32) - 16 = 1048560 by decide]
   wasm_wp_pures [wp_localSet]
@@ -476,8 +475,7 @@ theorem func3_body_smallStep_wp
         func3, 1, [], [], calls⟩ : Expr Unit) @ s; E {{ Φ }} := by
   iintro ⟨HR, Hglobal, Hword⟩
   simp only [func3]
-  wasm_wp_next wp_globalGet $$ Hglobal
-  iintro Hglobal
+  wasm_wp_next_rebind wp_globalGet with Hglobal
   wasm_wp_pures [wp_const wp_sub]
   rw [show (1048576 : UInt32) - 16 = 1048560 by decide]
   wasm_wp_pures [wp_localSet]
@@ -619,8 +617,7 @@ theorem func8_body_smallStep_wp
         func8, 1, [], [], calls⟩ : Expr Unit) @ s; E {{ Φ }} := by
   iintro ⟨HR, Hglobal, Hword⟩
   simp only [func8]
-  wasm_wp_next wp_globalGet $$ Hglobal
-  iintro Hglobal
+  wasm_wp_next_rebind wp_globalGet with Hglobal
   wasm_wp_pures [wp_const wp_sub]
   rw [show (1048576 : UInt32) - 16 = 1048560 by decide]
   wasm_wp_pures [wp_localSet]
@@ -893,8 +890,7 @@ theorem func1_lowered_body_smallStep_wp
         func1, 1, [], [], calls⟩ : Expr Unit) @ s; E {{ Φ }} := by
   iintro ⟨HR, Hglobal, Hword⟩
   simp only [func1]
-  wasm_wp_next wp_globalGet $$ Hglobal
-  iintro Hglobal
+  wasm_wp_next_rebind wp_globalGet with Hglobal
   wasm_wp_pures [wp_const wp_sub]
   rw [show (1048560 : UInt32) - 16 = 1048544 by decide]
   wasm_wp_pures [wp_localSet]
@@ -979,8 +975,7 @@ theorem func3_lowered_body_smallStep_wp
         func3, 1, [], [], calls⟩ : Expr Unit) @ s; E {{ Φ }} := by
   iintro ⟨HR, Hglobal, Hword⟩
   simp only [func3]
-  wasm_wp_next wp_globalGet $$ Hglobal
-  iintro Hglobal
+  wasm_wp_next_rebind wp_globalGet with Hglobal
   wasm_wp_pures [wp_const wp_sub]
   rw [show (1048560 : UInt32) - 16 = 1048544 by decide]
   wasm_wp_pures [wp_localSet]
@@ -1072,8 +1067,7 @@ theorem func8_lowered_body_smallStep_wp
         func8, 1, [], [], calls⟩ : Expr Unit) @ s; E {{ Φ }} := by
   iintro ⟨HR, Hglobal, Hword⟩
   simp only [func8]
-  wasm_wp_next wp_globalGet $$ Hglobal
-  iintro Hglobal
+  wasm_wp_next_rebind wp_globalGet with Hglobal
   wasm_wp_pures [wp_const wp_sub]
   rw [show (1048560 : UInt32) - 16 = 1048544 by decide]
   wasm_wp_pures [wp_localSet]
@@ -1655,8 +1649,7 @@ theorem func10_body_smallStep_wp
       {{ values, ⌜∃ b : UInt32, values = [.i32 b]⌝ }} := by
   iintro ⟨Hscratch, Hresult, Hruntime, Hglobal⟩
   simp only [func10]
-  wasm_wp_next wp_globalGet $$ Hglobal
-  iintro Hglobal
+  wasm_wp_next_rebind wp_globalGet with Hglobal
   wasm_wp_pures [wp_const wp_sub]
   rw [show (1048576 : UInt32) - 16 = 1048560 by decide]
   wasm_wp_pures [wp_localSet]
@@ -1949,8 +1942,7 @@ theorem func11_body_smallStep_wp
       {{ values, ⌜∃ b : UInt32, values = [.i32 b]⌝ }} := by
   iintro ⟨Hscratch, Hresult, Hruntime, Hglobal⟩
   simp only [func11]
-  wasm_wp_next wp_globalGet $$ Hglobal
-  iintro Hglobal
+  wasm_wp_next_rebind wp_globalGet with Hglobal
   wasm_wp_pures [wp_const wp_sub]
   rw [show (1048576 : UInt32) - 16 = 1048560 by decide]
   wasm_wp_pures [wp_localSet]
@@ -2093,8 +2085,7 @@ theorem twp_func1_lowered_body_smallStep_wp
         func1, 1, [], [], calls⟩ : Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hglobal, Hword⟩
   simp only [func1]
-  iapply twp_globalGet $$ Hglobal
-  iintro Hglobal
+  wasm_twp_rebind twp_globalGet with Hglobal
   wasm_twp_pures [twp_const twp_sub]
   rw [show (1048560 : UInt32) - 16 = 1048544 by decide]
   wasm_twp_pures [twp_localSet]
@@ -2172,8 +2163,7 @@ theorem twp_func3_lowered_body_smallStep_wp
         func3, 1, [], [], calls⟩ : Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hglobal, Hword⟩
   simp only [func3]
-  iapply twp_globalGet $$ Hglobal
-  iintro Hglobal
+  wasm_twp_rebind twp_globalGet with Hglobal
   wasm_twp_pures [twp_const twp_sub]
   rw [show (1048560 : UInt32) - 16 = 1048544 by decide]
   wasm_twp_pures [twp_localSet]
@@ -2258,8 +2248,7 @@ theorem twp_func8_lowered_body_smallStep_wp
         func8, 1, [], [], calls⟩ : Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hglobal, Hword⟩
   simp only [func8]
-  iapply twp_globalGet $$ Hglobal
-  iintro Hglobal
+  wasm_twp_rebind twp_globalGet with Hglobal
   wasm_twp_pures [twp_const twp_sub]
   rw [show (1048560 : UInt32) - 16 = 1048544 by decide]
   wasm_twp_pures [twp_localSet]
@@ -2430,8 +2419,7 @@ theorem twp_checkAbs_tail_smallStep_wp
     List.set]
   wasm_twp_pures [twp_localGet twp_const twp_add]
   rw [show (16 : UInt32) + 1048560 = 1048576 by decide]
-  iapply twp_globalSet $$ Hglobal
-  iintro Hglobal
+  wasm_twp_rebind twp_globalSet with Hglobal
   wasm_twp_pures [twp_localGet]
   have hResultProp :
       pointsTo_u32 0 ((1048560 : UInt32) + 12) result =
@@ -2789,16 +2777,14 @@ theorem twp_func10_body_smallStep_wp
           ⌜∃ b : UInt32, values = [.i32 b]⌝ }] := by
   iintro ⟨Hscratch, Hresult, Hruntime, Hglobal⟩
   simp only [func10]
-  iapply twp_globalGet $$ Hglobal
-  iintro Hglobal
+  wasm_twp_rebind twp_globalGet with Hglobal
   wasm_twp_pures [twp_const twp_sub]
   rw [show (1048576 : UInt32) - 16 = 1048560 by decide]
   wasm_twp_pures [twp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
   wasm_twp_pures [twp_localGet]
-  iapply twp_globalSet $$ Hglobal
-  iintro Hglobal
+  wasm_twp_rebind twp_globalSet with Hglobal
   rw [← show checkAbsInnerBody =
     [ .localGet 0, .call 0, .localGet 0, .call 9,
       .f32Eq, .const 1, .and, .eqz, .br_if 0,
@@ -2884,8 +2870,7 @@ theorem twp_checkCopysign_tail_result_smallStep_wp
     List.set]
   wasm_twp_pures [twp_localGet twp_const twp_add]
   rw [show (16 : UInt32) + 1048560 = 1048576 by decide]
-  iapply twp_globalSet $$ Hglobal
-  iintro Hglobal
+  wasm_twp_rebind twp_globalSet with Hglobal
   wasm_twp_pures [twp_localGet]
   wasm_twp_terminal_value twp_returnFromFunction
   iintro %store %obs _Hstate
@@ -3016,16 +3001,14 @@ theorem twp_func11_body_smallStep_wp
           ⌜∃ b : UInt32, values = [.i32 b]⌝ }] := by
   iintro ⟨Hscratch, Hresult, Hruntime, Hglobal⟩
   simp only [func11]
-  iapply twp_globalGet $$ Hglobal
-  iintro Hglobal
+  wasm_twp_rebind twp_globalGet with Hglobal
   wasm_twp_pures [twp_const twp_sub]
   rw [show (1048576 : UInt32) - 16 = 1048560 by decide]
   wasm_twp_pures [twp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
   wasm_twp_pures [twp_localGet]
-  iapply twp_globalSet $$ Hglobal
-  iintro Hglobal
+  wasm_twp_rebind twp_globalSet with Hglobal
   rw [← show checkCopysignInnerBody =
     [ .localGet 0, .localGet 1, .call 7,
       .localGet 0, .localGet 1, .call 4,
