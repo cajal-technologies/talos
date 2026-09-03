@@ -51,12 +51,7 @@ private theorem mergeSortHeapAux_agrees
     simp only [mergeSortHeapAux, writeWordArray, List.length_cons] at *
     have h4 : (base + 4).toNat = base.toNat + 4 :=
       UInt32.add_ofNat_toNat_noWrap base 4 (by decide) (by omega)
-    have h1 : (base + 1).toNat = base.toNat + 1 :=
-      UInt32.add_ofNat_toNat_noWrap base 1 (by decide) (by omega)
-    have h2 : (base + 2).toNat = base.toNat + 2 :=
-      UInt32.add_ofNat_toNat_noWrap base 2 (by decide) (by omega)
-    have h3 : (base + 3).toNat = base.toNat + 3 :=
-      UInt32.add_ofNat_toNat_noWrap base 3 (by decide) (by omega)
+    obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4 base (by omega)
     apply ih (store32Heap σ 0 base x) (mem.write32 base x) (base + 4)
     · rw [h4]; omega
     · exact store32_sound0 σ mem base x h1 h2 h3 h_agree
@@ -75,12 +70,7 @@ private theorem mergeSortHeapAux_inBounds
     simp only [mergeSortHeapAux, writeWordArray, List.length_cons] at *
     have h4 : (base + 4).toNat = base.toNat + 4 :=
       UInt32.add_ofNat_toNat_noWrap base 4 (by decide) (by omega)
-    have h1 : (base + 1).toNat = base.toNat + 1 :=
-      UInt32.add_ofNat_toNat_noWrap base 1 (by decide) (by omega)
-    have h2 : (base + 2).toNat = base.toNat + 2 :=
-      UInt32.add_ofNat_toNat_noWrap base 2 (by decide) (by omega)
-    have h3 : (base + 3).toNat = base.toNat + 3 :=
-      UInt32.add_ofNat_toNat_noWrap base 3 (by decide) (by omega)
+    obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4 base (by omega)
     apply ih (store32Heap σ 0 base x) (mem.write32 base x) (base + 4)
     · rw [h4]; omega
     · have : (mem.write32 base x).pages = mem.pages := rfl
@@ -100,12 +90,7 @@ private theorem mergeSortHeapAux_get?_none
     simp only [mergeSortHeapAux, List.length_cons] at *
     have h4 : (base + 4).toNat = base.toNat + 4 :=
       UInt32.add_ofNat_toNat_noWrap base 4 (by decide) (by omega)
-    have h1 : (base + 1).toNat = base.toNat + 1 :=
-      UInt32.add_ofNat_toNat_noWrap base 1 (by decide) (by omega)
-    have h2 : (base + 2).toNat = base.toNat + 2 :=
-      UInt32.add_ofNat_toNat_noWrap base 2 (by decide) (by omega)
-    have h3 : (base + 3).toNat = base.toNat + 3 :=
-      UInt32.add_ofNat_toNat_noWrap base 3 (by decide) (by omega)
+    obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4 base (by omega)
     have hne0 : addr ≠ base := by
       intro heq; have := congrArg UInt32.toNat heq; rcases hout with h | h <;> omega
     have hne1 : addr ≠ base + 1 := by
@@ -150,12 +135,7 @@ private theorem mergeSortHeapAux_pointsTo [WasmHeapGS Unit]
     simp only [mergeSortHeapAux, arrayAt, List.length_cons] at *
     have h4 : (base + 4).toNat = base.toNat + 4 :=
       UInt32.add_ofNat_toNat_noWrap base 4 (by decide) (by omega)
-    have h1 : (base + 1).toNat = base.toNat + 1 :=
-      UInt32.add_ofNat_toNat_noWrap base 1 (by decide) (by omega)
-    have h2 : (base + 2).toNat = base.toNat + 2 :=
-      UInt32.add_ofNat_toNat_noWrap base 2 (by decide) (by omega)
-    have h3 : (base + 3).toNat = base.toNat + 3 :=
-      UInt32.add_ofNat_toNat_noWrap base 3 (by decide) (by omega)
+    obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4 base (by omega)
     have hf0 : get? σ (⟨0, base⟩ : MemoryKey) = none :=
       hfresh base (Nat.le_refl _) (by omega)
     have hf1 : get? σ (⟨0, base + 1⟩ : MemoryKey) = none :=
@@ -309,12 +289,10 @@ private theorem arrayAt_readWordArray {hlc : HasLC} [WasmSmallStepGS hlc Unit]
       rw [h]; exact Nat.mod_le _ _
     have hfit' : (base + 4).toNat + 4 * xs.length ≤ UInt32.size := by
       simp only [UInt32.size]; omega
+    obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4 base (by omega)
     iintro ⟨Hstate, Hword, Hxs⟩
     imod stateInterp_pointsTo_u32_facts_frame store steps obs threads base x
-      (UInt32.add_ofNat_toNat_noWrap base 1 (by decide) (by omega))
-      (UInt32.add_ofNat_toNat_noWrap base 2 (by decide) (by omega))
-      (UInt32.add_ofNat_toNat_noWrap base 3 (by decide) (by omega)) $$
-        [$Hstate $Hword] with ⟨Hstate, Hword, %hfacts⟩
+      h1 h2 h3 $$ [$Hstate $Hword] with ⟨Hstate, Hword, %hfacts⟩
     imod ih (base + 4) hfit' $$ [$Hstate $Hxs] with ⟨Hstate, Hxs, %hread⟩
     imodintro
     isplitl [Hstate]; iexact Hstate
