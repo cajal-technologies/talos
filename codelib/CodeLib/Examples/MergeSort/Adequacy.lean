@@ -356,8 +356,7 @@ theorem mergesort_partiallyMeets
     unfold mergeSortPre
     isplitl_exact Hsrc
     isplitl_exact Htmp
-    isplitl []
-    · ipureintro; exact hscr
+    isplitl_pureexact hscr
     · ipureintro; exact hvalid
 
 theorem mergesort_terminatesWith
@@ -389,8 +388,7 @@ theorem mergesort_terminatesWith
     unfold mergeSortPre
     isplitl_exact Hsrc
     isplitl_exact Htmp
-    isplitl []
-    · ipureintro; exact hscr
+    isplitl_pureexact hscr
     · ipureintro; exact hvalid
 
 end Wasm.Examples.MergeSort

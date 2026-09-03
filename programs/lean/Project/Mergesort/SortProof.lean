@@ -1203,8 +1203,7 @@ theorem twp_mergeMainChoice
     simp only [List.take_nil, List.nil_append, List.length, List.set, List.drop]
     ihave Hleft := BI.and_elim_l $$ Hbranches
     iapply Hleft
-    isplitr
-    · ipureexact hle
+    isplitr_pureexact hle
     iframe
   · iapply twp_leU (result := 0) (by simp [hle])
     wasm_twp_pures [twp_brIfZero]
@@ -1228,8 +1227,7 @@ theorem twp_mergeMainChoice
     simp only [List.take_nil, List.nil_append, List.length, List.set, List.drop]
     ihave Hright := BI.and_elim_r $$ Hbranches
     iapply Hright
-    isplitr
-    · ipureexact hle
+    isplitr_pureexact hle
     iframe
 
 structure GeneratedMergeState where
@@ -1425,10 +1423,8 @@ theorem twp_mergeMainLoop
         · ipureintro
           dsimp only [GeneratedMergeState.i, GeneratedMergeState.j]
           omega
-        isplitr
-        · ipureexact hnext
-        isplitr
-        · ipureexact ⟨hiNext, hjState⟩
+        isplitr_pureexact hnext
+        isplitr_pureexact ⟨hiNext, hjState⟩
         iframe
       · have hiEq : state.i + 1 = mid := by omega
         have hge :
@@ -1512,10 +1508,8 @@ theorem twp_mergeMainLoop
         · ipureintro
           dsimp only [GeneratedMergeState.i, GeneratedMergeState.j]
           omega
-        isplitr
-        · ipureexact hnext
-        isplitr
-        · ipureexact ⟨hiState, hjNext⟩
+        isplitr_pureexact hnext
+        isplitr_pureexact ⟨hiState, hjNext⟩
         iframe
       · have hjEq : state.j + 1 = input.length := by omega
         have hnotRelative :
@@ -1541,10 +1535,8 @@ theorem twp_mergeMainLoop
         isimp only [sortLocals] at Hdone
         iexact Hdone
   · simp only [Inv, Finish]
-    isplitr
-    · ipureexact hinv
-    isplitr
-    · ipureexact ⟨hi, hj⟩
+    isplitr_pureexact hinv
+    isplitr_pureexact ⟨hi, hj⟩
     iframe
 
 set_option maxHeartbeats 8000000 in
@@ -1847,8 +1839,7 @@ theorem twp_mergeLeftRemainder
         · ipureintro
           dsimp only [LeftCopyState.r]
           omega
-        isplitr
-        · ipureexact hmore
+        isplitr_pureexact hmore
         isplitr
         · ipureintro
           simpa [Nat.add_assoc] using hnext
@@ -2264,8 +2255,7 @@ theorem twp_mergeRightRemainder
         · ipureintro
           dsimp only [RightCopyState.r]
           omega
-        isplitr
-        · ipureexact hmore
+        isplitr_pureexact hmore
         isplitr
         · ipureintro
           simpa [Nat.add_assoc] using hnext

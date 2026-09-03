@@ -25,8 +25,7 @@ private theorem sep_pair_pure_rotate
     (P Q : IProp (WasmHeapGF α)) (φ : Prop) :
     (P ∗ Q) ∗ ⌜φ⌝ ⊢ ⌜φ⌝ ∗ P ∗ Q := by
   iintro ⟨⟨HP, HQ⟩, %hφ⟩
-  isplitl []
-  · ipureexact hφ
+  isplitl_pureexact hφ
   · isplitl_exact HP
     · iexact HQ
 
@@ -1993,8 +1992,7 @@ theorem tableCopyDistinct_store_partiallyMeets :
                 .funcref (some 2)])) := by
       intro values
       iintro ⟨⟨Hdestination, Hsource⟩, %hvalues⟩
-      isplitl []
-      · ipureexact hvalues
+      isplitl_pureexact hvalues
       · isplitl_exact Hdestination
         · iexact Hsource
     iapply wp_mono hpost

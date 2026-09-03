@@ -210,8 +210,7 @@ macro "wasm_wp_return_value_rfl" : tactic =>
 macro "wasm_wp_return_value_rfl_exact " resource:ident : tactic =>
   `(tactic|
     (wasm_wp_return_value
-     isplitr
-     · ipureexact rfl
+     isplitr_pureexact rfl
      · iexact $resource))
 
 theorem wp_const
@@ -4220,8 +4219,7 @@ theorem wp_wordRoundtrip (oldWord : UInt32) :
   wasm_wp_next wp_load32 0x12345678 rfl rfl rfl rfl $$ HwordLater
   iintro Hword
   wasm_wp_finish_value
-  isplitr
-  · ipureexact rfl
+  isplitr_pureexact rfl
   · rw [UInt32.add_zero]
     iexact Hword
 
@@ -4261,8 +4259,7 @@ theorem wp_fillFourBytes (oldWord : UInt32) :
   wasm_wp_next wp_load32 0x12345678 rfl rfl rfl rfl $$ H32Later
   iintro H32
   wasm_wp_finish_value
-  isplitr
-  · ipureexact rfl
+  isplitr_pureexact rfl
   · isplitl [H16]
     · rw [UInt32.add_zero]
       iexact H16
@@ -4301,8 +4298,7 @@ theorem wp_copyWord (oldDestination : UInt32) :
   wasm_wp_next wp_load32 0x04030201 rfl rfl rfl rfl $$ HdestinationLater
   iintro Hdestination
   wasm_wp_finish_value
-  isplitr
-  · ipureexact rfl
+  isplitr_pureexact rfl
   · isplitl_exact Hsource
     · rw [UInt32.add_zero]
       iexact Hdestination
@@ -4345,8 +4341,7 @@ theorem wp_memoryInitDrop (oldWord : UInt32) :
   wasm_wp_next wp_load32 0x04030201 rfl rfl rfl rfl $$ HwordLater
   iintro Hword
   wasm_wp_finish_value
-  isplitr
-  · ipureexact rfl
+  isplitr_pureexact rfl
   · rw [UInt32.add_zero]
     iframe
 
@@ -4380,8 +4375,7 @@ theorem wp_copyOverlapWord :
     rfl rfl rfl rfl rfl rfl rfl rfl $$ HwordLater
   iintro Hword
   wasm_wp_finish_value
-  isplitr
-  · ipureexact rfl
+  isplitr_pureexact rfl
   · rw [UInt32.add_zero]
     iexact Hword
 
@@ -4444,8 +4438,7 @@ theorem wp_swapWords :
   wasm_wp_next wp_load32 11 rfl rfl rfl rfl $$ H4Later
   iintro H4
   wasm_wp_finish_value
-  isplitr
-  · ipureexact rfl
+  isplitr_pureexact rfl
   · isplitl [H0]
     · rw [UInt32.add_zero]
       iexact H0
@@ -4512,8 +4505,7 @@ theorem wp_reverseThreeWords :
   wasm_wp_next wp_load32 11 rfl rfl rfl rfl $$ H8Later
   iintro H8
   wasm_wp_finish_value
-  isplitr
-  · ipureexact rfl
+  isplitr_pureexact rfl
   · isplitl [H0]
     · rw [UInt32.add_zero]
       iexact H0
@@ -4582,8 +4574,7 @@ theorem wp_partitionThreeWords :
   wasm_wp_next wp_store32 22 rfl rfl rfl rfl $$ H8Later
   iintro H8
   wasm_wp_finish_value
-  isplitr
-  · ipureexact rfl
+  isplitr_pureexact rfl
   · isplitl [H0]
     · rw [UInt32.add_zero]
       iexact H0
@@ -4649,8 +4640,7 @@ theorem wp_mergeTwoWords :
   iintro H4
   wasm_wp_pures [wp_exitControl]
   wasm_wp_finish_value
-  isplitr
-  · ipureexact rfl
+  isplitr_pureexact rfl
   · isplitl [H0]
     · rw [UInt32.add_zero]
       iexact H0

@@ -385,8 +385,7 @@ theorem twp_entry_of_func3
   unfold CallContract at hcall
   iapply hcall
   iframe Hruntime Hsp Hstack Hbump Hstreams
-  isplitr
-  · ipureexact entryStackBytes_length
+  isplitr_pureexact entryStackBytes_length
   isplitr
   · iintro _Hruntime Hsuccess
     unfold ResumeWP resumeExpr

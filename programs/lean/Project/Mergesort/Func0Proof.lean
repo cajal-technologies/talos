@@ -528,8 +528,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
           iframe Hmodule Henv
         isplitl_exact Hbump
         isplitl_exact Hstreams
-        isplitl []
-        · ipureexact ⟨hnewMatches, hnewValid, Or.inl rfl⟩
+        isplitl_pureexact ⟨hnewMatches, hnewValid, Or.inl rfl⟩
         cases hdecision : classifyBump frontier newLayout with
         | oom =>
             have hdecision' : classifyBump frontier
@@ -657,8 +656,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
       isplitl_exact Hbump
       isplitl_exact Hblock
       isplitl_exact Hstreams
-      isplitl []
-      · ipureexact ⟨holdMatches, hnewMatches, holdValid, hnewValid, rfl,
+      isplitl_pureexact ⟨holdMatches, hnewMatches, holdValid, hnewValid, rfl,
           holdNew⟩
       cases hdecision : classifyBump frontier newLayout with
       | oom =>
@@ -677,8 +675,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
           ihave Hsource : GrowSourceOwn heapId oldCapacity oldPtr initialized
               (.allocated oldId allBytes spare) $$ [Hblock']
           · unfold GrowSourceOwn
-            isplitr
-            · ipureexact hsource
+            isplitr_pureexact hsource
             · iexact Hblock'
           iapply Hcont $$ Hresult Hsource Hbump Hstreams
       | success newPtr finish =>
@@ -769,8 +766,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
             ihave Hsource : GrowSourceOwn heapId oldCapacity oldPtr initialized
                 (.allocated oldId allBytes spare) $$ [Hblock']
             · unfold GrowSourceOwn
-              isplitr
-              · ipureexact hsource
+              isplitr_pureexact hsource
               · iexact Hblock'
             iapply Hoom $$ Hresult Hsource Hbump Hstreams
 

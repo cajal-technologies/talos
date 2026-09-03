@@ -15,6 +15,20 @@ macro "ipureexact " proof:term : tactic =>
     (ipureintro
      exact $proof))
 
+/-- Split a separating conjunction and discharge its pure left side with a
+Lean proof. -/
+macro "isplitl_pureexact " proof:term : tactic =>
+  `(tactic|
+    (isplitl []
+     · ipureexact $proof))
+
+/-- Split a separating conjunction and discharge its pure right side with a
+Lean proof. -/
+macro "isplitr_pureexact " proof:term : tactic =>
+  `(tactic|
+    (isplitr
+     · ipureexact $proof))
+
 /-- Apply an Iris entailment and frame its next spatial obligation. -/
 macro "iapply_frame " rule:pmTerm : tactic =>
   `(tactic|

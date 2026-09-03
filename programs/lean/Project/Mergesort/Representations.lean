@@ -240,8 +240,7 @@ theorem ByteSlice_append {host : Type} [WasmHeapGS host]
         ptr.toNat + (left.length + right.length) < UInt32.size := by
       rw [hoffset] at hrightNowrap
       omega
-    isplitl []
-    · ipureexact hnowrap
+    isplitl_pureexact hnowrap
     · iapply_frame (pointsToBytes_append 0 ptr left right).mpr
 
 /-- Exclusive ownership of a region whose current contents have no semantic
@@ -271,8 +270,7 @@ theorem ByteSlice_serialize_as_WordSlice {host : Type} [WasmHeapGS host]
   unfold WordSlice
   constructor
   · iintro Hbytes
-    isplitl []
-    · ipureexact halign
+    isplitl_pureexact halign
     · iexact Hbytes
   · iintro ⟨%_halign, Hbytes⟩
     iexact Hbytes
@@ -371,8 +369,7 @@ theorem WordSlice_nil {host : Type} [WasmHeapGS host]
     emp ⊢ WordSlice (host := host) ptr [] := by
   iintro _Hemp
   unfold WordSlice ByteSlice
-  isplitl []
-  · ipureexact halign
+  isplitl_pureexact halign
   isplitl []
   · ipureintro
     simpa [UInt32.size] using ptr.toBitVec.isLt
@@ -450,8 +447,7 @@ theorem WordSlice_append {host : Type} [WasmHeapGS host]
         ptr.toNat + 4 * (xs.length + ys.length) < UInt32.size := by
       rw [hoffset] at hrightNowrap
       omega
-    isplitl []
-    · ipureexact halign
+    isplitl_pureexact halign
     isplitl []
     · ipureintro
       simpa only [Nat.mul_add] using hnowrap
@@ -644,17 +640,14 @@ theorem SortBuffers_copyBackFocus {host : Type} [WasmHeapGS host]
   iintro Hsource
   iintro Hscratch
   isplitl [Hsource]
-  · isplitl []
-    · ipureexact hsourceAlign
+  · isplitl_pureexact hsourceAlign
     isplitl []
     · ipureintro
       simpa only [serialize_length, hfacts.1] using hsourceNowrap
     · iexact Hsource
   isplitl [Hscratch]
-  · isplitl []
-    · ipureexact hscratchAlign
-    isplitl []
-    · ipureexact hscratchNowrap
+  · isplitl_pureexact hscratchAlign
+    isplitl_pureexact hscratchNowrap
     · iexact Hscratch
   · ipureexact ⟨rfl, by simpa only [hfacts.1] using hfacts.2⟩
 
@@ -1943,8 +1936,7 @@ theorem StackReserve_split
     icases (ByteSlice_append low headBytes growBefore).mp $$ Hsplit with
       ⟨Hhead, Hgrow⟩
     iexists headBytes, growBefore
-    isplitr
-    · ipureexact ⟨hdecompose, hheadLength, hgrowLength⟩
+    isplitr_pureexact ⟨hdecompose, hheadLength, hgrowLength⟩
     · iframe
   · iintro Hparts
     icases Hparts with
@@ -1989,16 +1981,14 @@ theorem EntryStack_split
         Hsplit with ⟨Hreserve, Hframe⟩
     ihave Hreserve' : StackReserve reserveBase reserveBytes $$ [Hreserve]
     · unfold StackReserve
-      isplitl []
-      · ipureexact hreserveLength
+      isplitl_pureexact hreserveLength
       · rw [← hlow]
         iexact Hreserve
     ihave Hframe' : ByteSlice driverBase frameBytes $$ [Hframe]
     · rw [← hboundary, hreserveLength]
       iexact Hframe
     iexists reserveBytes, frameBytes
-    isplitr
-    · ipureexact ⟨hdecompose, hreserveLength, hframeLength⟩
+    isplitr_pureexact ⟨hdecompose, hreserveLength, hframeLength⟩
     · iframe
   · iintro Hparts
     icases Hparts with
@@ -2034,13 +2024,11 @@ theorem StackReserve_combineFrame
   icases Hreserve with ⟨%hreserveLength, HreserveBytes⟩
   ihave Hreserve : StackReserve reserveBase reserveBytes $$ [HreserveBytes]
   · unfold StackReserve
-    isplitl []
-    · ipureexact hreserveLength
+    isplitl_pureexact hreserveLength
     · iexact HreserveBytes
   iapply (EntryStack_split (reserveBytes ++ frameBytes)).mpr
   iexists reserveBytes, frameBytes
-  isplitr
-  · ipureexact ⟨rfl, hreserveLength, hframeLength⟩
+  isplitr_pureexact ⟨rfl, hreserveLength, hframeLength⟩
   · iframe
 
 /-- Reversible byte-level layout of the visible 272-byte driver frame: the
@@ -2102,8 +2090,7 @@ theorem DriverFrame_split
     · rw [← houtputBase, hchunkLength]
       iexact Houtput
     iexists headerBytes, chunkBytes, outputBytes
-    isplitr
-    · ipureexact ⟨by rw [hheaderRest, hchunkOutput, List.append_assoc],
+    isplitr_pureexact ⟨by rw [hheaderRest, hchunkOutput, List.append_assoc],
         hheaderLength, hchunkLength, houtputLength⟩
     · iframe
   · iintro Hparts
@@ -2180,8 +2167,7 @@ theorem LiveBlock_to_VecStorage {host : Type} [WasmHeapGS host]
   unfold VecStorage
   iright
   iexists allocationId, allBytes, spare
-  isplitr
-  · ipureexact ⟨hcapacity, by simpa [hblock.1] using hinitialized,
+  isplitr_pureexact ⟨hcapacity, by simpa [hblock.1] using hinitialized,
       hdecompose, hspareLength⟩
   · unfold LiveBlock
     iframe Htoken Hbytes
@@ -2216,8 +2202,7 @@ theorem VecStorage_initializedFocus {host : Type} [WasmHeapGS host]
       · iapply_frame (ByteSlice_append ptr initialized spare).mpr
       iright
       iexists allocationId, initialized ++ spare, spare
-      isplitr
-      · ipureexact ⟨hstorage.1, hstorage.2.1, rfl, hstorage.2.2.2⟩
+      isplitr_pureexact ⟨hstorage.1, hstorage.2.1, rfl, hstorage.2.2.2⟩
       · unfold LiveBlock
         iframe Htoken HallBytes
         ipureexact ⟨by
@@ -2273,8 +2258,7 @@ theorem VecStorage_appendFocus {host : Type} [WasmHeapGS host]
         (ptr + UInt32.ofNat initialized.length) oldChunk tail).mp $$
         Hspare' with ⟨Hchunk, Htail⟩
     iexists oldChunk
-    isplitr
-    · ipureexact hchunkLength
+    isplitr_pureexact hchunkLength
     isplitl_exact Hchunk
     iintro Hcurrent
     ihave Htail' : ByteSlice
@@ -2303,8 +2287,7 @@ theorem VecStorage_appendFocus {host : Type} [WasmHeapGS host]
       omega
     iright
     iexists allocationId, initialized ++ current ++ tail, tail
-    isplitr
-    · ipureexact ⟨hstorage.1, hnewInitialized, rfl, by
+    isplitr_pureexact ⟨hstorage.1, hnewInitialized, rfl, by
         simpa only [List.length_append] using htailLength⟩
     · unfold LiveBlock
       iframe Htoken HallBytesNew
@@ -2442,8 +2425,7 @@ theorem VecU8_appendFocus {host : Type} [WasmHeapGS host]
     initialized current hcurrent hfits $$ Hstorage
   icases Hfocus with ⟨%oldChunk, %hchunkLength, Hchunk, Hclose⟩
   iexists oldChunk
-  isplitr
-  · ipureexact hchunkLength
+  isplitr_pureexact hchunkLength
   isplitl_exact Hchunk
   isplitl_exact Hlength
   iintro Hcurrent
@@ -2558,8 +2540,7 @@ theorem ExportFrame_releaseStorage [WasmHeapGS Universal.State]
       (exportFrameBytes capacity ptr initialized chunkBytes outputBytes)
       hframeLength).mpr
     iexists vecHeaderBytes capacity ptr initialized, chunkBytes, outputBytes
-    isplitr
-    · ipureexact ⟨rfl, vecHeaderBytes_length capacity ptr initialized,
+    isplitr_pureexact ⟨rfl, vecHeaderBytes_length capacity ptr initialized,
         hframeParts.1, hframeParts.2⟩
     · iframe
   iframe Hstorage Hframe

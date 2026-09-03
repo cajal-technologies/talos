@@ -403,8 +403,7 @@ theorem import1_correct [WasmSmallStepGS hlc Universal.State] :
       iexact Hhost
     ihave Hslice : ByteSlice ptr bytes $$ [Hbytes]
     · unfold Project.Mergesort.Representations.ByteSlice
-      isplitl []
-      · ipureexact hnowrap
+      isplitl_pureexact hnowrap
       · iexact Hbytes
     isimp only [Cont, RuntimeContext, ResumeWP, resumeExpr, List.nil_append]
       at Hcont
@@ -565,8 +564,7 @@ theorem func10_correct [WasmSmallStepGS hlc Universal.State] :
     · iexact Henv
   isplitl_exact Hstreams
   isplitl_exact Hslice
-  isplitl []
-  · ipureexact hfacts
+  isplitl_pureexact hfacts
   iintro Hruntime Hstreams Hslice %hcount
   iopen_runtime Hruntime with ⟨Hmodule, HenvInner⟩
   unfold ResumeWP resumeExpr
@@ -620,8 +618,7 @@ theorem func11_correct [WasmSmallStepGS hlc Universal.State] :
     · iexact Henv
   isplitl_exact Hstreams
   isplitl_exact Hslice
-  isplitl []
-  · ipureexact hfacts
+  isplitl_pureexact hfacts
   iintro Hruntime Hstreams Hslice
   iopen_runtime Hruntime with ⟨Hmodule, HenvInner⟩
   unfold ResumeWP resumeExpr
@@ -705,16 +702,14 @@ theorem func2_correct [WasmSmallStepGS hlc Universal.State] :
     iexact Hscratch
   ihave HsourceWords : WordSlice source sorted $$ [HsourceBytes]
   · unfold WordSlice Project.Mergesort.Representations.ByteSlice
-    isplitl []
-    · ipureexact hsourceAlign
+    isplitl_pureexact hsourceAlign
     isplitl []
     · ipureintro
       simpa only [serialize_length, hsortedLength] using hsourceStrict
     · iexact HsourceBytes
   ihave HscratchWords : WordSlice scratch scratchResult $$ [HscratchBytes]
   · unfold WordSlice Project.Mergesort.Representations.ByteSlice
-    isplitl []
-    · ipureexact hscratchAlign
+    isplitl_pureexact hscratchAlign
     isplitl []
     · ipureintro
       simpa only [serialize_length, hscratchLength] using

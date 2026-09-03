@@ -171,8 +171,7 @@ theorem twp_func3_read_chunk
   isplitl_exact Hruntime
   isplitl_exact Hstreams
   isplitl_exact Hchunk
-  isplitl []
-  · ipureexact ⟨by simpa using hframeLengths.1.symm, by decide⟩
+  isplitl_pureexact ⟨by simpa using hframeLengths.1.symm, by decide⟩
   iintro Hruntime Hstreams Hchunk %hcount
   ihave Hframe : ExportFrame heapId capacity ptr initialized
       (input.take count ++ chunkBytes.drop count) outputBytes $$
@@ -545,8 +544,7 @@ theorem twp_func3_reserve
   isplitl_exact Hvec
   isplitl_exact Hbump
   isplitl_exact Hstreams
-  isplitl []
-  · ipureexact ⟨True.intro, True.intro, True.intro,
+  isplitl_pureexact ⟨True.intro, True.intro, True.intro,
       hinitializedWord, hcurrentWord,
       hfacts.1, hfacts.2.1, hfacts.2.2.1, hfacts.2.2.2.1,
       hfacts.2.2.2.2.1, hfacts.2.2.2.2.2.1,
@@ -1675,8 +1673,7 @@ theorem twp_func3_allocate_values
   isplitl_exact Hruntime
   isplitl_exact Hbump
   isplitl_exact Hstreams
-  isplitl []
-  · ipureexact ⟨hlayoutMatches, hlayoutValid, Or.inr rfl⟩
+  isplitl_pureexact ⟨hlayoutMatches, hlayoutValid, Or.inr rfl⟩
   unfold AllocContinuation
   cases hdecision : classifyBump frontier layout with
   | oom =>
@@ -1690,8 +1687,7 @@ theorem twp_func3_allocate_values
       unfold DriverValuesOOM
       iexists capacity, dataPtr, chunkBytes, outputBytes, shadow,
         storedCursor, frontier, history
-      isplitl []
-      · ipureexact ⟨List.length_pos_iff_ne_nil.mpr horiginal, hgeoOriginal⟩
+      isplitl_pureexact ⟨List.length_pos_iff_ne_nil.mpr horiginal, hgeoOriginal⟩
       iframe
   | success base finish =>
       isplit
@@ -1712,8 +1708,7 @@ theorem twp_func3_allocate_values
         unfold DriverValuesOOM
         iexists capacity, dataPtr, chunkBytes, outputBytes, shadow,
           storedCursor, frontier, history
-        isplitl []
-        · ipureexact ⟨List.length_pos_iff_ne_nil.mpr horiginal, hgeoOriginal⟩
+        isplitl_pureexact ⟨List.length_pos_iff_ne_nil.mpr horiginal, hgeoOriginal⟩
         iframe
 
 /-- Discharge the generated null check immediately following a normal values
@@ -2127,8 +2122,7 @@ theorem twp_func3_decode_tail_loop
       iapply Hrec
       · ipureintro
         omega
-      isplitr
-      · ipureexact ⟨hnextPartition, hmore⟩
+      isplitr_pureexact ⟨hnextPartition, hmore⟩
       iframe
     · have hzero : next.remaining = 0 := by omega
       have hcondition : UInt32.ofNat next.remaining = 0 := by simp [hzero]
@@ -2151,8 +2145,7 @@ theorem twp_func3_decode_tail_loop
       isimp only [func3DecodeTailLocals, func3AppendLocals] at Hfinish'
       iapply Hfinish' $$ Hdestination'
   · simp only [Inv, Finish]
-    isplitr
-    · ipureexact ⟨hpartition, hremaining⟩
+    isplitr_pureexact ⟨hpartition, hremaining⟩
     iframe
 
 /-- Exact body of the generated four-word unrolled decode loop. -/
@@ -2458,8 +2451,7 @@ theorem twp_func3_decode_bulk_loop
       iapply Hrec
       · ipureintro
         omega
-      isplitr
-      · ipureexact ⟨hnextBound, hnextMod⟩
+      isplitr_pureexact ⟨hnextBound, hnextMod⟩
       iframe
     · have hdone : state.copied + 4 = bulk := by omega
       have heq : UInt32.ofNat (state.copied + 4) = UInt32.ofNat bulk := by
@@ -2484,8 +2476,7 @@ theorem twp_func3_decode_bulk_loop
         func3_decode_byte_offset] at Hfinish'
       iapply Hfinish' $$ Hdestination'
   · simp only [Inv, Finish, overwritePrefix_zero]
-    isplitr
-    · ipureexact ⟨hbulkPositive, by simp⟩
+    isplitr_pureexact ⟨hbulkPositive, by simp⟩
     iframe
 
 /-- Arithmetic and local initialization immediately following the values
@@ -3159,8 +3150,7 @@ theorem twp_func3_allocate_scratch
   isplitl_exact Hruntime
   isplitl_exact Hbump
   isplitl_exact Hstreams
-  isplitl []
-  · ipureexact ⟨hlayoutMatches, hlayoutValid, rfl⟩
+  isplitl_pureexact ⟨hlayoutMatches, hlayoutValid, rfl⟩
   unfold ZeroAllocContinuation
   cases hdecision : classifyBump frontier layout with
   | oom =>
@@ -3170,8 +3160,7 @@ theorem twp_func3_allocate_scratch
       unfold DriverScratchOOM
       iexists capacity, source, valuesPtr, valuesId, chunkBytes, outputBytes,
         shadow, storedCursor, frontier, history
-      isplitl []
-      · ipureexact hpositive
+      isplitl_pureexact hpositive
       iframe
   | success scratch finish =>
       have hscratchStart : frontier ≤ scratch.toNat :=
@@ -3196,8 +3185,7 @@ theorem twp_func3_allocate_scratch
         unfold DriverScratchOOM
         iexists capacity, source, valuesPtr, valuesId, chunkBytes, outputBytes,
           shadow, storedCursor, frontier, history
-        isplitl []
-        · ipureexact hpositive
+        isplitl_pureexact hpositive
         iframe
 
 /-- Exact success tail following the generated zeroed scratch allocation. -/
@@ -3664,8 +3652,7 @@ theorem twp_func3_output_loop
       iapply Hrec
       · ipureintro
         omega
-      isplitr
-      · ipureexact hmore
+      isplitr_pureexact hmore
       iexists (serialize [sorted[emitted]])
       isimp only [hstreamStep] at Hstreams
       iframe
@@ -3687,8 +3674,7 @@ theorem twp_func3_output_loop
         Hstreams
   · simp only [Inv, Finish, List.take_zero, serialize, WordCodec.serialize,
       List.flatMap_nil]
-    isplitr
-    · ipureexact hpositive
+    isplitr_pureexact hpositive
     iexists outputBytes
     iframe
 
@@ -3885,8 +3871,7 @@ theorem twp_func3_deallocate_values
   isplitl_exact Hruntime
   isplitl_exact Hbump
   isplitl_exact Hblock
-  isplitl []
-  · ipureexact ⟨hsizeWord, hfour, Or.inr rfl⟩
+  isplitl_pureexact ⟨hsizeWord, hfour, Or.inr rfl⟩
   iintro Hruntime Hbump
   unfold ResumeWP resumeExpr
   wasm_twp_pures [twp_exitControl]
@@ -3975,8 +3960,7 @@ theorem twp_func3_deallocate_scratch
   isplitl_exact Hruntime
   isplitl_exact Hbump
   isplitl_exact Hblock
-  isplitl []
-  · ipureexact ⟨hsizeWord, hfour, Or.inr rfl⟩
+  isplitl_pureexact ⟨hsizeWord, hfour, Or.inr rfl⟩
   iintro Hruntime Hbump
   unfold ResumeWP resumeExpr
   wasm_twp_pures [twp_exitControl]
@@ -4126,8 +4110,7 @@ theorem twp_func3_deallocate_input
     isplitl_exact Hruntime
     isplitl_exact Hbump
     isplitl_exact Hblock
-    isplitl []
-    · ipureexact ⟨rfl, hone, Or.inl rfl⟩
+    isplitl_pureexact ⟨rfl, hone, Or.inl rfl⟩
     iintro Hruntime Hbump
     unfold ResumeWP resumeExpr
     wasm_twp_pures [twp_exitControl]
@@ -4608,8 +4591,7 @@ theorem twp_func3_finish_nonempty
       storedCursor, frontier,
       beforeInput.retire inputId inputPtr
         { size := capacity.toNat, alignment := 1 }
-    isplitl []
-    · ipureexact ⟨hsorted, hstackLength, hallRetired⟩
+    isplitl_pureexact ⟨hsorted, hstackLength, hallRetired⟩
     · iframe
   iapply Hcont $$ Hruntime Hsuccess
 
@@ -4763,8 +4745,7 @@ theorem twp_func3_finish_empty
   · unfold DriverSuccess
     iexists [], reserveBytes ++ exportFrameBytes 0 1 [] chunkBytes outputBytes,
       0, heapBase.toNat, AllocationHistory.empty
-    isplitl []
-    · ipureexact ⟨⟨by simp, by simp⟩,
+    isplitl_pureexact ⟨⟨by simp, by simp⟩,
         hstackLength, hallRetired⟩
     · iframe
   iapply Hcont $$ Hruntime Hsuccess
@@ -5035,8 +5016,7 @@ theorem twp_func3_read_loop
       iexists state.capacity, state.dataPtr, state.initialized, state.current,
         state.remaining, state.chunkTail, outputBytes, state.shadow,
         state.storedCursor, state.frontier, state.history
-      isplitl []
-      · ipureexact ⟨hfacts.1, hfacts.2.2.1, hfacts.2.2.2.2.1,
+      isplitl_pureexact ⟨hfacts.1, hfacts.2.2.1, hfacts.2.2.2.2.1,
           hfacts.2.1, hframeLengths.1, hfacts.2.2.2.2.2.2⟩
       isplitl_exact Hsp
       isplitl_exact Hreserve
@@ -5234,8 +5214,7 @@ theorem twp_func3_first_read_nonempty
   isplitl_exact Hframe
   isplitl_exact Hbump
   isplitl_exact Hstreams
-  isplitl []
-  · ipureexact ⟨hserializeSplit, hcurrentShape, hcurrentPositive,
+  isplitl_pureexact ⟨hserializeSplit, hcurrentShape, hcurrentPositive,
       hcurrentBound, hcurrentMod, hsplit.2.2, by
         change GeometricVecFacts input.length 0
           (current.length + remaining.length) 0 1 heapBase.toNat
@@ -6183,8 +6162,7 @@ theorem twp_func3_body
   iapply Hinitialize
   isplitl_exact Hsp
   isplitl_exact Hstack
-  isplitl []
-  · ipureexact hentryLength
+  isplitl_pureexact hentryLength
   iintro %reserveBytes %outputBytes Hsp Hreserve Hframe
   have Hbody := twp_func3_after_initialize hfunc1 hfunc5 hfunc9 heapId
     original outputBytes reserveBytes (calls := calls) (s := s) (E := E)

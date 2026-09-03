@@ -310,8 +310,7 @@ theorem wp_swapElementsFunc3
   wasm_wp_next wp_store32 oldPtr rfl rfl rfl rfl $$ HptrLater
   iintro Hptr
   wasm_wp_return_value
-  isplitr
-  · ipureexact rfl
+  isplitr_pureexact rfl
   · isplitl [Hptr]
     · rw [UInt32.add_zero]
       iexact Hptr
@@ -525,8 +524,7 @@ theorem twp_swapElementsFunc2
     iapply twp_returnFromFunction
     simp only [List.take, List.nil_append]
     iapply twp.value rfl
-    isplitr
-    · ipureexact rfl
+    isplitr_pureexact rfl
     · iexact Hresources
 
 theorem twp_swapElementsFunc2Alias
@@ -553,8 +551,7 @@ theorem twp_swapElementsFunc2Alias
     iapply twp_returnFromFunction
     simp only [List.take, List.nil_append]
     iapply twp.value rfl
-    isplitr
-    · ipureexact rfl
+    isplitr_pureexact rfl
     · iexact Hresources
 
 theorem twp_swapElementsFunc3
@@ -585,8 +582,7 @@ theorem twp_swapElementsFunc3
   iapply twp_returnFromFunction
   simp only [List.take, List.nil_append]
   iapply twp.value rfl
-  isplitr
-  · ipureexact rfl
+  isplitr_pureexact rfl
   · isplitl [Hptr]
     · rw [UInt32.add_zero]
       iexact Hptr
@@ -1282,8 +1278,7 @@ theorem func4_happy_smallStep_wp
       rw [show (16 : UInt32) + 1048560 = 1048576 by decide]
       rw [show (3 % 32 : UInt32) = 3 by decide]
       wasm_wp_return_value
-      isplitr
-      · ipureexact rfl
+      isplitr_pureexact rfl
       · iframe
     · rw [show (3 % 32 : UInt32) = 3 by decide]
       iframe
@@ -1386,8 +1381,7 @@ theorem func4_alias_smallStep_wp
       rw [show (16 : UInt32) + 1048560 = 1048576 by decide]
       rw [show (3 % 32 : UInt32) = 3 by decide]
       wasm_wp_return_value
-      isplitr
-      · ipureexact rfl
+      isplitr_pureexact rfl
       · iframe
     · rw [show (3 % 32 : UInt32) = 3 by decide]
       iframe
@@ -1677,8 +1671,7 @@ theorem twp_func1_happy_smallStep_wp
   iapply Wasm.SmallStep.twp_returnFromFunction
   simp only [List.take, List.nil_append]
   iapply twp.value rfl
-  isplitr
-  · ipureexact rfl
+  isplitr_pureexact rfl
   · iexact Hresources
   · isplitr
     · itrivial
@@ -1801,8 +1794,7 @@ theorem twp_func0_alias_smallStep_wp
     iapply Wasm.SmallStep.twp_returnFromFunction
     simp only [List.take, List.nil_append]
     iapply twp.value rfl
-    isplitr
-    · ipureexact rfl
+    isplitr_pureexact rfl
     · iexact Hresources
   · isplitr
     · itrivial
@@ -1837,8 +1829,7 @@ theorem twp_func0_happy_smallStep_wp
   iapply Wasm.SmallStep.twp_returnFromFunction
   simp only [List.take, List.nil_append]
   iapply twp.value rfl
-  isplitr
-  · ipureexact rfl
+  isplitr_pureexact rfl
   · iexact Hresources
   · isplitr
     · itrivial
@@ -2009,8 +2000,7 @@ theorem twp_func4_happy_smallStep_wp
       iapply Wasm.SmallStep.twp_returnFromFunction
       simp only [List.take, List.nil_append]
       iapply twp.value rfl
-      isplitr
-      · ipureexact rfl
+      isplitr_pureexact rfl
       · iframe
     · rw [show (3 % 32 : UInt32) = 3 by decide]
       iframe
@@ -2104,8 +2094,7 @@ theorem twp_func4_alias_smallStep_wp
       iapply Wasm.SmallStep.twp_returnFromFunction
       simp only [List.take, List.nil_append]
       iapply twp.value rfl
-      isplitr
-      · ipureexact rfl
+      isplitr_pureexact rfl
       · iframe
     · rw [show (3 % 32 : UInt32) = 3 by decide]
       iframe

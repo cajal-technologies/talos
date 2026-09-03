@@ -74,8 +74,7 @@ private theorem growSource_live_lookup
     ipureexact hheap
   isplitl [Htoken Hbytes]
   · unfold GrowSourceOwn LiveBlock
-    isplitr
-    · ipureexact hsource
+    isplitr_pureexact hsource
     · iframe Htoken Hbytes
       ipureexact hblock
   · ipureexact hlookup
@@ -121,8 +120,7 @@ private theorem growSource_reserveHistory
       ihave Hsource : GrowSourceOwn heapId capacity ptr initialized
           (.allocated oldId allBytes spare) $$ [Hblock]
       · unfold GrowSourceOwn
-        isplitr
-        · ipureexact hsource
+        isplitr_pureexact hsource
         · iexact Hblock
       isplitl_exact Hbump
       isplitl_exact Hsource
@@ -419,8 +417,7 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
       ihave Hreserve : StackReserve reserveBase shadow $$ [Hhead HresultAt]
       · iapply (StackReserve_split reserveBase shadow).mpr
         iexists headBytes, growBefore
-        isplitr
-        · ipureexact hshadow
+        isplitr_pureexact hshadow
         · iframe
       ihave Hsp' : StackPointer reserveBase $$ [Hsp]
       · unfold StackPointer
@@ -590,8 +587,7 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
         ihave Hreserve : StackReserve reserveBase shadow $$ [Hhead HresultAt]
         · iapply (StackReserve_split reserveBase shadow).mpr
           iexists headBytes, growBefore
-          isplitr
-          · ipureexact hshadow
+          isplitr_pureexact hshadow
           · iframe
         ihave Hsp' : StackPointer reserveBase $$ [Hsp]
         · unfold StackPointer

@@ -90,8 +90,7 @@ theorem twp_partitionScanStep
     iapply twp_increment rfl hsetJ
     simp only [partitionLocals]
     iapply Hthen
-    isplitr
-    · ipureintro; exact hlt
+    isplitr_pureexact hlt
     iframe
   · simp only [if_neg hlt]
     wasm_twp_pures [twp_iff]
@@ -131,8 +130,7 @@ theorem twp_partitionScanStep
     iapply twp_increment rfl hsetJ
     simp only [partitionLocals]
     iapply Helse
-    isplitr
-    · ipureintro; exact hlt
+    isplitr_pureexact hlt
     iframe
 
 set_option maxHeartbeats 4000000 in
@@ -230,8 +228,7 @@ theorem twp_partitionScanLoop
         · ipureintro
           show hiMinusOne - (state.j + 1) < hiMinusOne - state.j
           omega
-        isplitr
-        · ipureexact hstate.skipStep (by omega) (by rwa [getElem!_pos state.values state.j hjLen])
+        isplitr_pureexact hstate.skipStep (by omega) (by rwa [getElem!_pos state.values state.j hjLen])
         iframe
       · iintro ⟨%hlt, Harray⟩
         wasm_twp_pures [twp_br]
@@ -243,8 +240,7 @@ theorem twp_partitionScanLoop
         · ipureintro
           show hiMinusOne - (state.j + 1) < hiMinusOne - state.j
           omega
-        isplitr
-        · ipureexact hstate.swapStep (by omega) (by rwa [getElem!_pos state.values state.j hjLen])
+        isplitr_pureexact hstate.swapStep (by omega) (by rwa [getElem!_pos state.values state.j hjLen])
         iframe
     · have hlt := mt hjCmp.mp hj
       simp only [if_neg hlt]
@@ -259,8 +255,7 @@ theorem twp_partitionScanLoop
       rw [hfold]
       iapply Hfinish $$ %state.values %state.i %state.j %state.tmp %hstate %hjEq Harray
   · simp only [Inv]
-    isplitr
-    · ipureexact hinv
+    isplitr_pureexact hinv
     iframe
 
 set_option maxHeartbeats 4000000 in

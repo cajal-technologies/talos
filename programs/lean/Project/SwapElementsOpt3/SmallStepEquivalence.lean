@@ -101,8 +101,7 @@ theorem opt3_func0_distinct_smallStep_wp
     (by simpa using hj7) $$ HBLater
   iintro HB
   wasm_wp_return_value
-  isplitr
-  · ipureexact rfl
+  isplitr_pureexact rfl
   · rw [show (i <<< (3 % 32)) + ptr = addressI by rfl,
       show (j <<< (3 % 32)) + ptr = addressJ by rfl]
     simp only [UInt32.add_zero]
