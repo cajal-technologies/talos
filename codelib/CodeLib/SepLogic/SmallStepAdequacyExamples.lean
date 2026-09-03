@@ -2318,8 +2318,7 @@ theorem signedBranch_terminatesWith (a b : UInt32) :
         [.block 0 0 [.localGet 0, .localGet 1, .geS, .br_if 0, .const 0, .ret],
           .const 1, .ret] from rfl]
   iapply twp_block
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   by_cases h : a.toInt32 ≥ b.toInt32
   · iapply twp_geS (result := 1) (by simp [h])
     iapply twp_brIf (condition := 1) (by decide) rfl
@@ -2466,9 +2465,7 @@ theorem fillThenRead_terminatesWith (val : UInt32) :
     iintro Hbytes
     ihave H0 := fillThenReadInitialHeap_pointsTo $$ Hbytes
     ihave Hb := (pointsTo_u32_as_bytes 0 0 0).mp $$ H0
-    iapply twp_const
-    iapply twp_localGet rfl
-    iapply twp_const
+    wasm_twp_pures [twp_const twp_localGet twp_const]
     iapply twp_memoryFill32
         [u32Byte 0 0, u32Byte 0 1, u32Byte 0 2, u32Byte 0 3]
         rfl (by decide) (by decide) $$ Hb

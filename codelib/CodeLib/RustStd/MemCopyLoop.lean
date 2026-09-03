@@ -712,17 +712,9 @@ theorem copyWords_loadStoreIteration_twp
     rw [← hpre]
     iexact HdstCell
   simp only [CopyWordsLoadStoreIteration, List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_const
-  iapply Wasm.SmallStep.twp_shl
-  iapply Wasm.SmallStep.twp_add
+  wasm_twp_pures [twp_localGet twp_localGet twp_const twp_shl twp_add]
   rw [hdstAddress]
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_const
-  iapply Wasm.SmallStep.twp_shl
-  iapply Wasm.SmallStep.twp_add
+  wasm_twp_pures [twp_localGet twp_localGet twp_const twp_shl twp_add]
   rw [hsrcAddress]
   ihave HsrcAt : pointsTo_u32 0 (srcAddress + 0) value $$ [HsrcCell']
   · simp only [UInt32.add_zero]
@@ -783,9 +775,7 @@ theorem copyWords_incrementBackedge_twp
         calls⟩ : Wasm.SmallStep.Expr α) @ s; E [{ Φ }] := by
   iintro Hcontinue
   simp only [CopyWordsIncrementBackedge]
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_const
-  iapply Wasm.SmallStep.twp_add
+  wasm_twp_pures [twp_localGet twp_const twp_add]
   rw [UInt32.add_comm 1 i]
   iapply Wasm.SmallStep.twp_localSet rfl
   iapply Wasm.SmallStep.twp_br (by rfl)
@@ -871,8 +861,7 @@ theorem copyWords_guard_twp
   simp only [CopyWordsOuterBody, List.cons_append, List.nil_append]
   iapply Wasm.SmallStep.twp_block
   simp only [CopyWordsInnerGuard]
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   by_cases hlt : i < n
   · iapply Wasm.SmallStep.twp_ltU (result := 1) (by simp [hlt])
     iapply Wasm.SmallStep.twp_brIf (by decide) (by rfl)
@@ -1122,8 +1111,7 @@ theorem copyWords_smallStep_twp
   iintro Hresources
   rw [CopyWords_eq_structured]
   simp only [List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.twp_const
-  iapply Wasm.SmallStep.twp_localSet rfl
+  wasm_twp_pures [twp_const twp_localSet]
   simp only [List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set]
   have hloop := copyWords_loop_twp R dst src n destination source

@@ -296,9 +296,7 @@ theorem twp_partitionBody
   simp only [partitionBody, partitionInit, partitionPlacePivot,
     List.cons_append, List.nil_append, List.append_assoc]
   have hiPos : 0 < hi := by omega
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_const
-  iapply Wasm.SmallStep.twp_sub
+  wasm_twp_pures [twp_localGet twp_const twp_sub]
   have hiMinus1 : UInt32.ofNat hi - 1 = UInt32.ofNat (hi - 1) := by
     have hiSize : hi < UInt32.size := by
       have := hbounds.2; simp only [UInt32.size] at hfit ⊢; omega
@@ -510,9 +508,7 @@ private theorem twp_quicksortBody_aux
     simp [quicksortFunction, Function.toLocals, Function.numParams, ValueType.zero]
     simp only [quicksortBody, quicksortBaseCheck, List.append_assoc, List.cons_append,
       List.nil_append]
-    iapply Wasm.SmallStep.twp_localGet rfl
-    iapply Wasm.SmallStep.twp_localGet rfl
-    iapply Wasm.SmallStep.twp_sub
+    wasm_twp_pures [twp_localGet twp_localGet twp_sub]
     have hloSub : UInt32.ofNat hi - UInt32.ofNat hi = 0 := by simp
     simp only [hloSub]
     iapply Wasm.SmallStep.twp_const
@@ -550,9 +546,7 @@ private theorem twp_quicksortBody_aux
     simp [quicksortFunction, Function.toLocals, Function.numParams, ValueType.zero]
     simp only [quicksortBody, quicksortBaseCheck, quicksortPartitionCall, quicksortLeftCall,
       quicksortRightCall, List.cons_append, List.nil_append]
-    iapply Wasm.SmallStep.twp_localGet rfl
-    iapply Wasm.SmallStep.twp_localGet rfl
-    iapply Wasm.SmallStep.twp_sub
+    wasm_twp_pures [twp_localGet twp_localGet twp_sub]
     simp only [hsubEq]
     iapply Wasm.SmallStep.twp_const
     iapply Wasm.SmallStep.twp_ltU rfl
@@ -580,9 +574,7 @@ private theorem twp_quicksortBody_aux
       simp only [if_neg (by decide : ¬(0 : UInt32) ≠ 0)]
       iapply Wasm.SmallStep.twp_exitControl rfl
       simp only [List.take_zero, List.nil_append, List.drop_zero]
-      iapply Wasm.SmallStep.twp_localGet rfl
-      iapply Wasm.SmallStep.twp_localGet rfl
-      iapply Wasm.SmallStep.twp_localGet rfl
+      wasm_twp_pures [twp_localGet twp_localGet twp_localGet]
       ihave HruntimeLater_p : runtimeModuleOwn ⟨0⟩ runtimeModule $$ [Hruntime]
       · iexact Hruntime
       iapply Wasm.SmallStep.twp_call runtimeModule partitionIdx partitionFunction himports_p
@@ -607,9 +599,7 @@ private theorem twp_quicksortBody_aux
           some ⟨[.i32 arr, .i32 (UInt32.ofNat lo), .i32 (UInt32.ofNat hi)],
                 [.i32 (UInt32.ofNat pivotIdx)], [.i32 (UInt32.ofNat pivotIdx)]⟩ := rfl
       iapply Wasm.SmallStep.twp_localSet hset_piv
-      iapply Wasm.SmallStep.twp_localGet rfl
-      iapply Wasm.SmallStep.twp_localGet rfl
-      iapply Wasm.SmallStep.twp_localGet rfl
+      wasm_twp_pures [twp_localGet twp_localGet twp_localGet]
       have hhilen_left : pivotIdx ≤ output_p.length := by omega
       have hfit_left : arr.toNat + 4 * output_p.length ≤ UInt32.size := by rw [hlen_p]; exact hfit
       have hn_left : pivotIdx - lo ≤ n := by omega
@@ -620,10 +610,7 @@ private theorem twp_quicksortBody_aux
       · iexact Harray_p
       iintro %out_l Hruntime_l %hpure_l Harray_l
       obtain ⟨hlen_l, htake_l, hdrop_l, hsorted_l, hperm_l⟩ := hpure_l
-      iapply Wasm.SmallStep.twp_localGet rfl
-      iapply Wasm.SmallStep.twp_localGet rfl
-      iapply Wasm.SmallStep.twp_const
-      iapply Wasm.SmallStep.twp_add
+      wasm_twp_pures [twp_localGet twp_localGet twp_const twp_add]
       have hpivSuccSize : pivotIdx + 1 < UInt32.size := by
         have : UInt32.size = 4294967296 := rfl; omega
       have hpivValue : 1 + UInt32.ofNat pivotIdx = UInt32.ofNat (pivotIdx + 1) := by

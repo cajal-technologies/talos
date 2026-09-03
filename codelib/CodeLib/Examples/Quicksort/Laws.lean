@@ -64,9 +64,7 @@ theorem twp_address
   simp only [address, List.cons_append, List.nil_append]
   iapply Wasm.SmallStep.twp_localGet hbase
   iapply Wasm.SmallStep.twp_localGet (by simpa using helement)
-  iapply Wasm.SmallStep.twp_const
-  iapply Wasm.SmallStep.twp_mul
-  iapply Wasm.SmallStep.twp_add
+  wasm_twp_pures [twp_const twp_mul twp_add]
   iexact Hwp
 
 theorem twp_loadAt_cell
@@ -353,8 +351,7 @@ theorem twp_increment
   iintro Hwp
   simp only [increment, List.cons_append, List.nil_append]
   iapply Wasm.SmallStep.twp_localGet hget
-  iapply Wasm.SmallStep.twp_const
-  iapply Wasm.SmallStep.twp_add
+  wasm_twp_pures [twp_const twp_add]
   iapply Wasm.SmallStep.twp_localSet hset
   iexact Hwp
 
