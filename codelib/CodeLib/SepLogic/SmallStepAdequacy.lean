@@ -196,20 +196,8 @@ theorem wasm_smallStep_adequacy
   wasm_alloc_memory_ghosts config from (∅ : WasmHeapMap (Option UInt8))
   wasm_alloc_empty_heap_maps
   wasm_install_heap_map_instances
-  letI runtimeModuleMapG : GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
-    GhostSlot.runtimeModuleMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
-      (V := Module) (H := WasmRuntimeModuleMap)) with ⟨%runtimeName, HruntimeModuleAuth⟩
-  letI runtimeGS : WasmRuntimeModuleGS α :=
-    { toGhostMapG := runtimeModuleMapG
-      runtimeName }
-  letI hostEnvMapG : GhostMapG (WasmHeapGF α) Nat (HostEnv α) WasmHostEnvMap :=
-    GhostSlot.hostEnvMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
-      (V := HostEnv α) (H := WasmHostEnvMap)) with ⟨%hostEnvName, HhostEnvAuth⟩
-  letI hostEnvGS : WasmHostEnvGS α :=
-    { toGhostMapG := hostEnvMapG
-      hostEnvName }
+  wasm_alloc_empty_runtime_modules
+  wasm_alloc_empty_host_envs
   wasm_alloc_host_state config
   iclear HhostStateFrag
   wasm_alloc_current_instance config
@@ -306,20 +294,8 @@ theorem wasm_smallStep_stronglyNormalizing
   wasm_alloc_memory_ghosts config from (∅ : WasmHeapMap (Option UInt8))
   wasm_alloc_empty_heap_maps
   wasm_install_heap_map_instances
-  letI runtimeModuleMapG : GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
-    GhostSlot.runtimeModuleMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
-      (V := Module) (H := WasmRuntimeModuleMap)) with ⟨%runtimeName, HruntimeModuleAuth⟩
-  letI runtimeGS : WasmRuntimeModuleGS α :=
-    { toGhostMapG := runtimeModuleMapG
-      runtimeName }
-  letI hostEnvMapG : GhostMapG (WasmHeapGF α) Nat (HostEnv α) WasmHostEnvMap :=
-    GhostSlot.hostEnvMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
-      (V := HostEnv α) (H := WasmHostEnvMap)) with ⟨%hostEnvName, HhostEnvAuth⟩
-  letI hostEnvGS : WasmHostEnvGS α :=
-    { toGhostMapG := hostEnvMapG
-      hostEnvName }
+  wasm_alloc_empty_runtime_modules
+  wasm_alloc_empty_host_envs
   wasm_alloc_host_state config
   iclear HhostStateFrag
   wasm_alloc_current_instance config
@@ -441,29 +417,8 @@ theorem wasm_smallStep_heap_globals_runtime_tags_stronglyNormalizing
       (V := Option (List (Option Nat))) (H := WasmElementSegmentMap)) with
     ⟨%elementSegmentName, HelementSegments⟩
   wasm_install_heap_map_instances
-  letI runtimeModuleMapG : GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
-    GhostSlot.runtimeModuleMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
-      (V := Module) (H := WasmRuntimeModuleMap)) with ⟨%runtimeName, HruntimeModuleAuth⟩
-  imod ghost_map_insert_persist (k := config.store.runtime.entry.id)
-      (v := config.store.runtime.currentModule)
-      (get?_empty config.store.runtime.entry.id) $$ HruntimeModuleAuth with
-    ⟨HruntimeModuleAuth', HruntimeWP⟩
-  iintuitionistic HruntimeWP
-  rw [show insert (∅ : WasmRuntimeModuleMap Module)
-      config.store.runtime.entry.id config.store.runtime.currentModule =
-      PartialMap.singleton config.store.runtime.entry.id
-      config.store.runtime.currentModule from rfl]
-  letI runtimeGS : WasmRuntimeModuleGS α :=
-    { toGhostMapG := runtimeModuleMapG
-      runtimeName }
-  letI hostEnvMapG : GhostMapG (WasmHeapGF α) Nat (HostEnv α) WasmHostEnvMap :=
-    GhostSlot.hostEnvMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
-      (V := HostEnv α) (H := WasmHostEnvMap)) with ⟨%hostEnvName, HhostEnvAuth⟩
-  letI hostEnvGS : WasmHostEnvGS α :=
-    { toGhostMapG := hostEnvMapG
-      hostEnvName }
+  wasm_alloc_current_runtime_module config
+  wasm_alloc_empty_host_envs
   wasm_alloc_host_state config
   iclear HhostStateFrag
   wasm_alloc_current_instance config
@@ -706,29 +661,8 @@ theorem wasm_smallStep_runtime_tags_adequacy
   wasm_alloc_memory_ghosts config from (∅ : WasmHeapMap (Option UInt8))
   wasm_alloc_empty_heap_maps
   wasm_install_heap_map_instances
-  letI runtimeModuleMapG : GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
-    GhostSlot.runtimeModuleMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
-      (V := Module) (H := WasmRuntimeModuleMap)) with ⟨%runtimeName, HruntimeModuleAuth⟩
-  imod ghost_map_insert_persist (k := config.store.runtime.entry.id)
-      (v := config.store.runtime.currentModule)
-      (get?_empty config.store.runtime.entry.id) $$ HruntimeModuleAuth with
-    ⟨HruntimeModuleAuth', HruntimeWP⟩
-  iintuitionistic HruntimeWP
-  rw [show insert (∅ : WasmRuntimeModuleMap Module)
-      config.store.runtime.entry.id config.store.runtime.currentModule =
-      PartialMap.singleton config.store.runtime.entry.id
-      config.store.runtime.currentModule from rfl]
-  letI runtimeGS : WasmRuntimeModuleGS α :=
-    { toGhostMapG := runtimeModuleMapG
-      runtimeName }
-  letI hostEnvMapG : GhostMapG (WasmHeapGF α) Nat (HostEnv α) WasmHostEnvMap :=
-    GhostSlot.hostEnvMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
-      (V := HostEnv α) (H := WasmHostEnvMap)) with ⟨%hostEnvName, HhostEnvAuth⟩
-  letI hostEnvGS : WasmHostEnvGS α :=
-    { toGhostMapG := hostEnvMapG
-      hostEnvName }
+  wasm_alloc_current_runtime_module config
+  wasm_alloc_empty_host_envs
   wasm_alloc_host_state config
   iclear HhostStateFrag
   wasm_alloc_current_instance config
@@ -856,29 +790,8 @@ theorem wasm_smallStep_runtime_instance_adequacy
   wasm_alloc_memory_ghosts config from (∅ : WasmHeapMap (Option UInt8))
   wasm_alloc_empty_heap_maps
   wasm_install_heap_map_instances
-  letI runtimeModuleMapG : GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
-    GhostSlot.runtimeModuleMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
-      (V := Module) (H := WasmRuntimeModuleMap)) with ⟨%runtimeName, HruntimeModuleAuth⟩
-  imod ghost_map_insert_persist (k := config.store.runtime.entry.id)
-      (v := config.store.runtime.currentModule)
-      (get?_empty config.store.runtime.entry.id) $$ HruntimeModuleAuth with
-    ⟨HruntimeModuleAuth', HruntimeWP⟩
-  iintuitionistic HruntimeWP
-  rw [show insert (∅ : WasmRuntimeModuleMap Module)
-      config.store.runtime.entry.id config.store.runtime.currentModule =
-      PartialMap.singleton config.store.runtime.entry.id
-      config.store.runtime.currentModule from rfl]
-  letI runtimeGS : WasmRuntimeModuleGS α :=
-    { toGhostMapG := runtimeModuleMapG
-      runtimeName }
-  letI hostEnvMapG : GhostMapG (WasmHeapGF α) Nat (HostEnv α) WasmHostEnvMap :=
-    GhostSlot.hostEnvMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
-      (V := HostEnv α) (H := WasmHostEnvMap)) with ⟨%hostEnvName, HhostEnvAuth⟩
-  letI hostEnvGS : WasmHostEnvGS α :=
-    { toGhostMapG := hostEnvMapG
-      hostEnvName }
+  wasm_alloc_current_runtime_module config
+  wasm_alloc_empty_host_envs
   wasm_alloc_host_state config
   iclear HhostStateFrag
   wasm_alloc_current_instance config
@@ -1003,38 +916,8 @@ theorem wasm_smallStep_instance_host_state_adequacy
   wasm_alloc_memory_ghosts config from (∅ : WasmHeapMap (Option UInt8))
   wasm_alloc_empty_heap_maps
   wasm_install_heap_map_instances
-  letI runtimeModuleMapG : GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
-    GhostSlot.runtimeModuleMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
-      (V := Module) (H := WasmRuntimeModuleMap)) with ⟨%runtimeName, HruntimeModuleAuth⟩
-  imod ghost_map_insert_persist (k := config.store.runtime.entry.id)
-      (v := config.store.runtime.currentModule)
-      (get?_empty config.store.runtime.entry.id) $$ HruntimeModuleAuth with
-    ⟨HruntimeModuleAuth', HruntimeWP⟩
-  iintuitionistic HruntimeWP
-  rw [show insert (∅ : WasmRuntimeModuleMap Module)
-      config.store.runtime.entry.id config.store.runtime.currentModule =
-      PartialMap.singleton config.store.runtime.entry.id
-      config.store.runtime.currentModule from rfl]
-  letI runtimeGS : WasmRuntimeModuleGS α :=
-    { toGhostMapG := runtimeModuleMapG
-      runtimeName }
-  letI hostEnvMapG : GhostMapG (WasmHeapGF α) Nat (HostEnv α) WasmHostEnvMap :=
-    GhostSlot.hostEnvMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
-      (V := HostEnv α) (H := WasmHostEnvMap)) with ⟨%hostEnvName, HhostEnvAuth⟩
-  imod ghost_map_insert_persist (k := config.store.runtime.entry.id)
-      (v := config.store.runtime.currentHost)
-      (get?_empty config.store.runtime.entry.id) $$ HhostEnvAuth with
-    ⟨HhostEnvAuth', HhostEnvWP⟩
-  iintuitionistic HhostEnvWP
-  rw [show insert (∅ : WasmHostEnvMap (HostEnv α))
-      config.store.runtime.entry.id config.store.runtime.currentHost =
-      PartialMap.singleton config.store.runtime.entry.id
-      config.store.runtime.currentHost from rfl]
-  letI hostEnvGS : WasmHostEnvGS α :=
-    { toGhostMapG := hostEnvMapG
-      hostEnvName }
+  wasm_alloc_current_runtime_module config
+  wasm_alloc_current_host_env config
   wasm_alloc_host_state config
   wasm_alloc_current_instance config
   letI runtimeInstancesElem :
@@ -1166,20 +1049,8 @@ theorem wasm_smallStep_heap_adequacy
   wasm_alloc_memory_ghosts config from σ
   wasm_alloc_empty_heap_maps
   wasm_install_heap_map_instances
-  letI runtimeModuleMapG : GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
-    GhostSlot.runtimeModuleMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
-      (V := Module) (H := WasmRuntimeModuleMap)) with ⟨%runtimeName, HruntimeModuleAuth⟩
-  letI runtimeGS : WasmRuntimeModuleGS α :=
-    { toGhostMapG := runtimeModuleMapG
-      runtimeName }
-  letI hostEnvMapG : GhostMapG (WasmHeapGF α) Nat (HostEnv α) WasmHostEnvMap :=
-    GhostSlot.hostEnvMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
-      (V := HostEnv α) (H := WasmHostEnvMap)) with ⟨%hostEnvName, HhostEnvAuth⟩
-  letI hostEnvGS : WasmHostEnvGS α :=
-    { toGhostMapG := hostEnvMapG
-      hostEnvName }
+  wasm_alloc_empty_runtime_modules
+  wasm_alloc_empty_host_envs
   wasm_alloc_host_state config
   iclear HhostStateFrag
   wasm_alloc_current_instance config
@@ -1291,29 +1162,8 @@ theorem wasm_smallStep_heap_globals_runtime_adequacy
       (V := Option (List (Option Nat))) (H := WasmElementSegmentMap)) with
     ⟨%elementSegmentName, HelementSegments⟩
   wasm_install_heap_map_instances
-  letI runtimeModuleMapG : GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
-    GhostSlot.runtimeModuleMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
-      (V := Module) (H := WasmRuntimeModuleMap)) with ⟨%runtimeName, HruntimeModuleAuth⟩
-  imod ghost_map_insert_persist (k := config.store.runtime.entry.id)
-      (v := config.store.runtime.currentModule)
-      (get?_empty config.store.runtime.entry.id) $$ HruntimeModuleAuth with
-    ⟨HruntimeModuleAuth', HruntimeWP⟩
-  iintuitionistic HruntimeWP
-  rw [show insert (∅ : WasmRuntimeModuleMap Module)
-      config.store.runtime.entry.id config.store.runtime.currentModule =
-      PartialMap.singleton config.store.runtime.entry.id
-      config.store.runtime.currentModule from rfl]
-  letI runtimeGS : WasmRuntimeModuleGS α :=
-    { toGhostMapG := runtimeModuleMapG
-      runtimeName }
-  letI hostEnvMapG : GhostMapG (WasmHeapGF α) Nat (HostEnv α) WasmHostEnvMap :=
-    GhostSlot.hostEnvMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
-      (V := HostEnv α) (H := WasmHostEnvMap)) with ⟨%hostEnvName, HhostEnvAuth⟩
-  letI hostEnvGS : WasmHostEnvGS α :=
-    { toGhostMapG := hostEnvMapG
-      hostEnvName }
+  wasm_alloc_current_runtime_module config
+  wasm_alloc_empty_host_envs
   wasm_alloc_host_state config
   iclear HhostStateFrag
   wasm_alloc_current_instance config
@@ -1442,38 +1292,8 @@ theorem wasm_smallStep_heap_globals_runtime_store_adequacy
       (V := Option (List (Option Nat))) (H := WasmElementSegmentMap)) with
     ⟨%elementSegmentName, HelementSegments⟩
   wasm_install_heap_map_instances
-  letI runtimeModuleMapG : GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
-    GhostSlot.runtimeModuleMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
-      (V := Module) (H := WasmRuntimeModuleMap)) with ⟨%runtimeName, HruntimeModuleAuth⟩
-  imod ghost_map_insert_persist (k := config.store.runtime.entry.id)
-      (v := config.store.runtime.currentModule)
-      (get?_empty config.store.runtime.entry.id) $$ HruntimeModuleAuth with
-    ⟨HruntimeModuleAuth', HruntimeWP⟩
-  iintuitionistic HruntimeWP
-  rw [show insert (∅ : WasmRuntimeModuleMap Module)
-      config.store.runtime.entry.id config.store.runtime.currentModule =
-      PartialMap.singleton config.store.runtime.entry.id
-      config.store.runtime.currentModule from rfl]
-  letI runtimeGS : WasmRuntimeModuleGS α :=
-    { toGhostMapG := runtimeModuleMapG
-      runtimeName }
-  letI hostEnvMapG : GhostMapG (WasmHeapGF α) Nat (HostEnv α) WasmHostEnvMap :=
-    GhostSlot.hostEnvMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
-      (V := HostEnv α) (H := WasmHostEnvMap)) with ⟨%hostEnvName, HhostEnvAuth⟩
-  imod ghost_map_insert_persist (k := config.store.runtime.entry.id)
-      (v := config.store.runtime.currentHost)
-      (get?_empty config.store.runtime.entry.id) $$ HhostEnvAuth with
-    ⟨HhostEnvAuth', HhostEnvWP⟩
-  iintuitionistic HhostEnvWP
-  rw [show insert (∅ : WasmHostEnvMap (HostEnv α))
-      config.store.runtime.entry.id config.store.runtime.currentHost =
-      PartialMap.singleton config.store.runtime.entry.id
-      config.store.runtime.currentHost from rfl]
-  letI hostEnvGS : WasmHostEnvGS α :=
-    { toGhostMapG := hostEnvMapG
-      hostEnvName }
+  wasm_alloc_current_runtime_module config
+  wasm_alloc_current_host_env config
   wasm_alloc_host_state config
   iclear HhostStateFrag
   wasm_alloc_current_instance config
@@ -2183,29 +2003,8 @@ theorem wasm_smallStep_heap_globals_segments_runtime_store_adequacy
       (V := Option (List (Option Nat))) (H := WasmElementSegmentMap)) with
     ⟨%elementSegmentName, HelementSegments⟩
   wasm_install_heap_map_instances
-  letI runtimeModuleMapG : GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
-    GhostSlot.runtimeModuleMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
-      (V := Module) (H := WasmRuntimeModuleMap)) with ⟨%runtimeName, HruntimeModuleAuth⟩
-  imod ghost_map_insert_persist (k := config.store.runtime.entry.id)
-      (v := config.store.runtime.currentModule)
-      (get?_empty config.store.runtime.entry.id) $$ HruntimeModuleAuth with
-    ⟨HruntimeModuleAuth', HruntimeWP⟩
-  iintuitionistic HruntimeWP
-  rw [show insert (∅ : WasmRuntimeModuleMap Module)
-      config.store.runtime.entry.id config.store.runtime.currentModule =
-      PartialMap.singleton config.store.runtime.entry.id
-      config.store.runtime.currentModule from rfl]
-  letI runtimeGS : WasmRuntimeModuleGS α :=
-    { toGhostMapG := runtimeModuleMapG
-      runtimeName }
-  letI hostEnvMapG : GhostMapG (WasmHeapGF α) Nat (HostEnv α) WasmHostEnvMap :=
-    GhostSlot.hostEnvMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
-      (V := HostEnv α) (H := WasmHostEnvMap)) with ⟨%hostEnvName, HhostEnvAuth⟩
-  letI hostEnvGS : WasmHostEnvGS α :=
-    { toGhostMapG := hostEnvMapG
-      hostEnvName }
+  wasm_alloc_current_runtime_module config
+  wasm_alloc_empty_host_envs
   wasm_alloc_host_state config
   iclear HhostStateFrag
   wasm_alloc_current_instance config
@@ -2388,29 +2187,8 @@ theorem wasm_smallStep_heap_globals_segments_tables_runtime_store_adequacy
     ⟨%elementSegmentName, HelementSegmentsAuth,
       HelementSegmentPoints⟩
   wasm_install_heap_map_instances
-  letI runtimeModuleMapG : GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
-    GhostSlot.runtimeModuleMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
-      (V := Module) (H := WasmRuntimeModuleMap)) with ⟨%runtimeName, HruntimeModuleAuth⟩
-  imod ghost_map_insert_persist (k := config.store.runtime.entry.id)
-      (v := config.store.runtime.currentModule)
-      (get?_empty config.store.runtime.entry.id) $$ HruntimeModuleAuth with
-    ⟨HruntimeModuleAuth', HruntimeWP⟩
-  iintuitionistic HruntimeWP
-  rw [show insert (∅ : WasmRuntimeModuleMap Module)
-      config.store.runtime.entry.id config.store.runtime.currentModule =
-      PartialMap.singleton config.store.runtime.entry.id
-      config.store.runtime.currentModule from rfl]
-  letI runtimeGS : WasmRuntimeModuleGS α :=
-    { toGhostMapG := runtimeModuleMapG
-      runtimeName }
-  letI hostEnvMapG : GhostMapG (WasmHeapGF α) Nat (HostEnv α) WasmHostEnvMap :=
-    GhostSlot.hostEnvMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
-      (V := HostEnv α) (H := WasmHostEnvMap)) with ⟨%hostEnvName, HhostEnvAuth⟩
-  letI hostEnvGS : WasmHostEnvGS α :=
-    { toGhostMapG := hostEnvMapG
-      hostEnvName }
+  wasm_alloc_current_runtime_module config
+  wasm_alloc_empty_host_envs
   wasm_alloc_host_state config
   iclear HhostStateFrag
   wasm_alloc_current_instance config
@@ -2643,29 +2421,8 @@ theorem wasm_smallStep_heap_runtime_instance_adequacy
   wasm_alloc_memory_ghosts config from σ
   wasm_alloc_empty_heap_maps
   wasm_install_heap_map_instances
-  letI runtimeModuleMapG : GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
-    GhostSlot.runtimeModuleMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
-      (V := Module) (H := WasmRuntimeModuleMap)) with ⟨%runtimeName, HruntimeModuleAuth⟩
-  imod ghost_map_insert_persist (k := config.store.runtime.entry.id)
-      (v := config.store.runtime.currentModule)
-      (get?_empty config.store.runtime.entry.id) $$ HruntimeModuleAuth with
-    ⟨HruntimeModuleAuth', HruntimeWP⟩
-  iintuitionistic HruntimeWP
-  rw [show insert (∅ : WasmRuntimeModuleMap Module)
-      config.store.runtime.entry.id config.store.runtime.currentModule =
-      PartialMap.singleton config.store.runtime.entry.id
-      config.store.runtime.currentModule from rfl]
-  letI runtimeGS : WasmRuntimeModuleGS α :=
-    { toGhostMapG := runtimeModuleMapG
-      runtimeName }
-  letI hostEnvMapG : GhostMapG (WasmHeapGF α) Nat (HostEnv α) WasmHostEnvMap :=
-    GhostSlot.hostEnvMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
-      (V := HostEnv α) (H := WasmHostEnvMap)) with ⟨%hostEnvName, HhostEnvAuth⟩
-  letI hostEnvGS : WasmHostEnvGS α :=
-    { toGhostMapG := hostEnvMapG
-      hostEnvName }
+  wasm_alloc_current_runtime_module config
+  wasm_alloc_empty_host_envs
   wasm_alloc_host_state config
   iclear HhostStateFrag
   wasm_alloc_current_instance config
@@ -2760,29 +2517,8 @@ theorem wasm_smallStep_heap_runtime_instances_adequacy
   wasm_alloc_memory_ghosts config from σ
   wasm_alloc_empty_heap_maps
   wasm_install_heap_map_instances
-  letI runtimeModuleMapG : GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
-    GhostSlot.runtimeModuleMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
-      (V := Module) (H := WasmRuntimeModuleMap)) with ⟨%runtimeName, HruntimeModuleAuth⟩
-  imod ghost_map_insert_persist (k := config.store.runtime.entry.id)
-      (v := config.store.runtime.currentModule)
-      (get?_empty config.store.runtime.entry.id) $$ HruntimeModuleAuth with
-    ⟨HruntimeModuleAuth', HruntimeWP⟩
-  iintuitionistic HruntimeWP
-  rw [show insert (∅ : WasmRuntimeModuleMap Module)
-      config.store.runtime.entry.id config.store.runtime.currentModule =
-      PartialMap.singleton config.store.runtime.entry.id
-      config.store.runtime.currentModule from rfl]
-  letI runtimeGS : WasmRuntimeModuleGS α :=
-    { toGhostMapG := runtimeModuleMapG
-      runtimeName }
-  letI hostEnvMapG : GhostMapG (WasmHeapGF α) Nat (HostEnv α) WasmHostEnvMap :=
-    GhostSlot.hostEnvMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
-      (V := HostEnv α) (H := WasmHostEnvMap)) with ⟨%hostEnvName, HhostEnvAuth⟩
-  letI hostEnvGS : WasmHostEnvGS α :=
-    { toGhostMapG := hostEnvMapG
-      hostEnvName }
+  wasm_alloc_current_runtime_module config
+  wasm_alloc_empty_host_envs
   wasm_alloc_host_state config
   iclear HhostStateFrag
   wasm_alloc_current_instance config

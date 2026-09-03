@@ -210,6 +210,80 @@ macro "wasm_install_heap_map_instances" : tactic =>
          elementSegmentName := elementSegmentName }))
 
 set_option hygiene false in
+/-- Allocate an empty runtime-module map. -/
+macro "wasm_alloc_empty_runtime_modules" : tactic =>
+  `(tactic|
+    (letI runtimeModuleMapG :
+        GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
+      GhostSlot.runtimeModuleMap
+     imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
+         (V := Module) (H := WasmRuntimeModuleMap)) with
+       ⟨%runtimeName, HruntimeModuleAuth⟩
+     letI runtimeGS : WasmRuntimeModuleGS α :=
+       { toGhostMapG := runtimeModuleMapG
+         runtimeName }))
+
+set_option hygiene false in
+/-- Allocate a runtime-module map containing the entry instance's module. -/
+macro "wasm_alloc_current_runtime_module " config:term : tactic =>
+  `(tactic|
+    (letI runtimeModuleMapG :
+        GhostMapG (WasmHeapGF α) Nat Module WasmRuntimeModuleMap :=
+      GhostSlot.runtimeModuleMap
+     imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
+         (V := Module) (H := WasmRuntimeModuleMap)) with
+       ⟨%runtimeName, HruntimeModuleAuth⟩
+     imod ghost_map_insert_persist (k := ($config).store.runtime.entry.id)
+         (v := ($config).store.runtime.currentModule)
+         (get?_empty ($config).store.runtime.entry.id) $$ HruntimeModuleAuth with
+       ⟨HruntimeModuleAuth', HruntimeWP⟩
+     iintuitionistic HruntimeWP
+     rw [show insert (∅ : WasmRuntimeModuleMap Module)
+         ($config).store.runtime.entry.id ($config).store.runtime.currentModule =
+         PartialMap.singleton ($config).store.runtime.entry.id
+           ($config).store.runtime.currentModule from rfl]
+     letI runtimeGS : WasmRuntimeModuleGS α :=
+       { toGhostMapG := runtimeModuleMapG
+         runtimeName }))
+
+set_option hygiene false in
+/-- Allocate an empty host-environment map. -/
+macro "wasm_alloc_empty_host_envs" : tactic =>
+  `(tactic|
+    (letI hostEnvMapG :
+        GhostMapG (WasmHeapGF α) Nat (HostEnv α) WasmHostEnvMap :=
+      GhostSlot.hostEnvMap
+     imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
+         (V := HostEnv α) (H := WasmHostEnvMap)) with
+       ⟨%hostEnvName, HhostEnvAuth⟩
+     letI hostEnvGS : WasmHostEnvGS α :=
+       { toGhostMapG := hostEnvMapG
+         hostEnvName }))
+
+set_option hygiene false in
+/-- Allocate a host-environment map containing the entry instance's host. -/
+macro "wasm_alloc_current_host_env " config:term : tactic =>
+  `(tactic|
+    (letI hostEnvMapG :
+        GhostMapG (WasmHeapGF α) Nat (HostEnv α) WasmHostEnvMap :=
+      GhostSlot.hostEnvMap
+     imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
+         (V := HostEnv α) (H := WasmHostEnvMap)) with
+       ⟨%hostEnvName, HhostEnvAuth⟩
+     imod ghost_map_insert_persist (k := ($config).store.runtime.entry.id)
+         (v := ($config).store.runtime.currentHost)
+         (get?_empty ($config).store.runtime.entry.id) $$ HhostEnvAuth with
+       ⟨HhostEnvAuth', HhostEnvWP⟩
+     iintuitionistic HhostEnvWP
+     rw [show insert (∅ : WasmHostEnvMap (HostEnv α))
+         ($config).store.runtime.entry.id ($config).store.runtime.currentHost =
+         PartialMap.singleton ($config).store.runtime.entry.id
+           ($config).store.runtime.currentHost from rfl]
+     letI hostEnvGS : WasmHostEnvGS α :=
+       { toGhostMapG := hostEnvMapG
+         hostEnvName }))
+
+set_option hygiene false in
 /-- Allocate authoritative and fragment ownership of the current host state. -/
 macro "wasm_alloc_host_state " config:term : tactic =>
   `(tactic|
