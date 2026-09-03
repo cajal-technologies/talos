@@ -77,6 +77,19 @@ macro_rules
        exact $witness
      next => $continuation))
 
+/-- Offer an authoritative Wasm step to Iris, resolve its successor, and
+continue. The Iris successor is inferred from the authoritative step. -/
+syntax "wasm_wp_step " term " =>" ppLine colGt tacticSeq : tactic
+
+set_option hygiene false in
+macro_rules
+  | `(tactic| wasm_wp_step $step:term => $continuation:tacticSeq) =>
+    `(tactic|
+      (wasm_wp_offer_step ⟨[], _, _, [], ⟨rfl, _, rfl, $step⟩⟩ =>
+        iintro !> %e₂ %store₂ %forks %Hstep Hcredit
+        wasm_wp_resolve_step Hstep using $step
+        next => $continuation))
+
 /-- Open the step update for a `MaybeStuck` WP, whose reducibility branch is
 trivial, and continue with the primitive-step obligation. -/
 syntax "wasm_wp_allow_stuck" " =>" ppLine colGt tacticSeq : tactic
