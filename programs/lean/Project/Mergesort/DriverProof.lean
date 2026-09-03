@@ -1913,27 +1913,14 @@ theorem twp_func3_copy_decoded_word
     rw [hdestinationAddress]
     rw [hcurrentLength] at hdestinationFacts
     omega
-  have hsource1 : (sourceAddress + 1).toNat = sourceAddress.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap sourceAddress 1
-      (by decide) (by norm_num [UInt32.size] at hsourceRoom ⊢; omega)
-  have hsource2 : (sourceAddress + 2).toNat = sourceAddress.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap sourceAddress 2
-      (by decide) (by norm_num [UInt32.size] at hsourceRoom ⊢; omega)
-  have hsource3 : (sourceAddress + 3).toNat = sourceAddress.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap sourceAddress 3
-      (by decide) (by norm_num [UInt32.size] at hsourceRoom ⊢; omega)
-  have hdestination1 :
-      (destinationAddress + 1).toNat = destinationAddress.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap destinationAddress 1
-      (by decide) (by norm_num [UInt32.size] at hdestinationRoom ⊢; omega)
-  have hdestination2 :
-      (destinationAddress + 2).toNat = destinationAddress.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap destinationAddress 2
-      (by decide) (by norm_num [UInt32.size] at hdestinationRoom ⊢; omega)
-  have hdestination3 :
-      (destinationAddress + 3).toNat = destinationAddress.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap destinationAddress 3
-      (by decide) (by norm_num [UInt32.size] at hdestinationRoom ⊢; omega)
+  have hsourceRoom' : sourceAddress.toNat + 4 ≤ 4294967296 := by
+    simpa only [UInt32.size] using hsourceRoom
+  have hdestinationRoom' : destinationAddress.toNat + 4 ≤ 4294967296 := by
+    simpa only [UInt32.size] using hdestinationRoom
+  obtain ⟨hsource1, hsource2, hsource3⟩ :=
+    UInt32.addSteps4 sourceAddress hsourceRoom'
+  obtain ⟨hdestination1, hdestination2, hdestination3⟩ :=
+    UInt32.addSteps4 destinationAddress hdestinationRoom'
   ihave HsourceFocus := WordSlice_get source original copied hsourceIndex $$
     Hsource
   icases HsourceFocus with ⟨HsourceWord, HcloseSource⟩
@@ -3629,24 +3616,9 @@ theorem twp_func3_write_one
       (valuesPtr + 4 * UInt32.ofNat emitted).toNat + 4 ≤ UInt32.size := by
     rw [haddress]
     omega
-  have h1 :
-      (valuesPtr + 4 * UInt32.ofNat emitted + 1).toNat =
-        (valuesPtr + 4 * UInt32.ofNat emitted).toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap
-      (valuesPtr + 4 * UInt32.ofNat emitted) 1 (by decide)
-      (by norm_num [UInt32.size] at hroom ⊢; omega)
-  have h2 :
-      (valuesPtr + 4 * UInt32.ofNat emitted + 2).toNat =
-        (valuesPtr + 4 * UInt32.ofNat emitted).toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap
-      (valuesPtr + 4 * UInt32.ofNat emitted) 2 (by decide)
-      (by norm_num [UInt32.size] at hroom ⊢; omega)
-  have h3 :
-      (valuesPtr + 4 * UInt32.ofNat emitted + 3).toNat =
-        (valuesPtr + 4 * UInt32.ofNat emitted).toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap
-      (valuesPtr + 4 * UInt32.ofNat emitted) 3 (by decide)
-      (by norm_num [UInt32.size] at hroom ⊢; omega)
+  obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4
+    (valuesPtr + 4 * UInt32.ofNat emitted) (by
+      simpa only [UInt32.size] using hroom)
   ihave HvalueFocus := WordSlice_get valuesPtr sorted emitted hemitted $$ Hvalues
   icases HvalueFocus with ⟨Hvalue, HcloseValue⟩
   ihave HoutputFocus := ByteSlice_storeWordFocus (driverBase + 268)

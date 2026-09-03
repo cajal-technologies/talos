@@ -882,15 +882,7 @@ theorem twp_loadShlAt
   have hroom : address.toNat + 4 ≤ UInt32.size := by rw [hslot]; omega
   have hroom' : address.toNat + 4 ≤ 4294967296 := by
     simpa only [UInt32.size] using hroom
-  have h1 : (address + 1).toNat = address.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap address 1
-      (by decide) (by omega)
-  have h2 : (address + 2).toNat = address.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap address 2
-      (by decide) (by omega)
-  have h3 : (address + 3).toNat = address.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap address 3
-      (by decide) (by omega)
+  obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4 address hroom'
   iintro ⟨Harray, Hcont⟩
   ihave Hfocus := arrayAt_get 0 physicalBase input k hk $$ Harray
   icases Hfocus with ⟨Hword, Hclose⟩
@@ -955,15 +947,7 @@ theorem twp_storeCurrentAt
   have hroom : address.toNat + 4 ≤ UInt32.size := by rw [hslot]; omega
   have hroom' : address.toNat + 4 ≤ 4294967296 := by
     simpa only [UInt32.size] using hroom
-  have h1 : (address + 1).toNat = address.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap address 1
-      (by decide) (by omega)
-  have h2 : (address + 2).toNat = address.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap address 2
-      (by decide) (by omega)
-  have h3 : (address + 3).toNat = address.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap address 3
-      (by decide) (by omega)
+  obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4 address hroom'
   iintro ⟨Harray, Hcont⟩
   ihave Hfocus := arrayAt_set 0 physicalBase values k newWord hk $$ Harray
   icases Hfocus with ⟨Hword, Hclose⟩
@@ -1043,48 +1027,12 @@ theorem twp_copyPointerAt
       destinationAddress.toNat + 4 ≤ UInt32.size := by
     rw [hdestinationSlot]
     omega
-  have hs1 :
-      (sourceAddress + 1).toNat = sourceAddress.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap sourceAddress 1
-      (by decide) (by
-        have : sourceAddress.toNat + 4 ≤ 4294967296 := by
-          simpa only [UInt32.size] using hsourceRoom
-        omega)
-  have hs2 :
-      (sourceAddress + 2).toNat = sourceAddress.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap sourceAddress 2
-      (by decide) (by
-        have : sourceAddress.toNat + 4 ≤ 4294967296 := by
-          simpa only [UInt32.size] using hsourceRoom
-        omega)
-  have hs3 :
-      (sourceAddress + 3).toNat = sourceAddress.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap sourceAddress 3
-      (by decide) (by
-        have : sourceAddress.toNat + 4 ≤ 4294967296 := by
-          simpa only [UInt32.size] using hsourceRoom
-        omega)
-  have hd1 :
-      (destinationAddress + 1).toNat = destinationAddress.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap destinationAddress 1
-      (by decide) (by
-        have : destinationAddress.toNat + 4 ≤ 4294967296 := by
-          simpa only [UInt32.size] using hdestinationRoom
-        omega)
-  have hd2 :
-      (destinationAddress + 2).toNat = destinationAddress.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap destinationAddress 2
-      (by decide) (by
-        have : destinationAddress.toNat + 4 ≤ 4294967296 := by
-          simpa only [UInt32.size] using hdestinationRoom
-        omega)
-  have hd3 :
-      (destinationAddress + 3).toNat = destinationAddress.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap destinationAddress 3
-      (by decide) (by
-        have : destinationAddress.toNat + 4 ≤ 4294967296 := by
-          simpa only [UInt32.size] using hdestinationRoom
-        omega)
+  have hsourceRoom' : sourceAddress.toNat + 4 ≤ 4294967296 := by
+    simpa only [UInt32.size] using hsourceRoom
+  have hdestinationRoom' : destinationAddress.toNat + 4 ≤ 4294967296 := by
+    simpa only [UInt32.size] using hdestinationRoom
+  obtain ⟨hs1, hs2, hs3⟩ := UInt32.addSteps4 sourceAddress hsourceRoom'
+  obtain ⟨hd1, hd2, hd3⟩ := UInt32.addSteps4 destinationAddress hdestinationRoom'
   iintro ⟨Hsource, Hscratch, Hcont⟩
   ihave HsourceFocus := arrayAt_get 0 source input i hi $$ Hsource
   icases HsourceFocus with ⟨HsourceCell, HsourceClose⟩
