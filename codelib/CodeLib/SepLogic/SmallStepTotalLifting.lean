@@ -951,21 +951,10 @@ theorem twp_store32
       iexact Hword
 
 
-theorem twp_geS
-    {params localValues values : List Value}
-    {lhs rhs result : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
+wasm_twp_pure_rule twp_geS {lhs rhs result : UInt32}
     (hresult : result = if lhs.toInt32 ≥ rhs.toInt32 then 1 else 0) :
-    WP (.running
-      ⟨⟨params, localValues, .i32 result :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-        [{ Φ }] ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-        .geS :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      [{ Φ }] :=
-  twp_pureStep _ _ _ (fun _ => Step.geS hresult)
+  .geS, .i32 rhs :: .i32 lhs :: values =>
+    .i32 result :: values := Step.geS hresult
 
 theorem twp_memoryFill32
     {params localValues values : List Value}
