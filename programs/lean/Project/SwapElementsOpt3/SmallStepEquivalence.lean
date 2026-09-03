@@ -54,36 +54,26 @@ theorem opt3_func0_distinct_smallStep_wp
   inext
   iapply Wasm.SmallStep.wp_block
   inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet]
   iapply Wasm.SmallStep.wp_geU (result := 0)
     (by simp [show ¬i ≥ len from not_le_of_gt hi])
   inext
   iapply Wasm.SmallStep.wp_brIfZero
   inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet]
   iapply Wasm.SmallStep.wp_geU (result := 0)
     (by simp [show ¬j ≥ len from not_le_of_gt hj])
   inext
   iapply Wasm.SmallStep.wp_brIfZero
   inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_const
-  inext
-  iapply Wasm.SmallStep.wp_shl
-  inext
-  iapply Wasm.SmallStep.wp_add
-  inext
-  iapply Wasm.SmallStep.wp_localTee rfl
-  inext
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_const]
+  wasm_wp_pures [wp_shl]
+  wasm_wp_pures [wp_add]
+  wasm_wp_pures [wp_localTee]
   simp only [List.set]
   ihave HALater : ▷ pointsTo_u64 0 (addressI + 0) oldA $$ [HA]
   · inext
@@ -95,24 +85,16 @@ theorem opt3_func0_distinct_smallStep_wp
     (by simpa using hi7) $$ HALater
   inext
   iintro HA
-  iapply Wasm.SmallStep.wp_localSet rfl
-  inext
+  wasm_wp_pures [wp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_const
-  inext
-  iapply Wasm.SmallStep.wp_shl
-  inext
-  iapply Wasm.SmallStep.wp_add
-  inext
-  iapply Wasm.SmallStep.wp_localTee rfl
-  inext
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_const]
+  wasm_wp_pures [wp_shl]
+  wasm_wp_pures [wp_add]
+  wasm_wp_pures [wp_localTee]
   simp only [List.set]
   ihave HBLater : ▷ pointsTo_u64 0 (addressJ + 0) oldB $$ [HB]
   · inext
@@ -134,10 +116,8 @@ theorem opt3_func0_distinct_smallStep_wp
     (by simpa using hi7) $$ HALater
   inext
   iintro HA
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet]
   ihave HBLater : ▷ pointsTo_u64 0 (addressJ + 0) oldB $$ [HB]
   · inext
     rw [UInt32.add_zero]

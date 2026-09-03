@@ -59,8 +59,7 @@ theorem len_correct : LenSpec := by
   apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [leafConfig, func0]
-  iapply SmallStep.wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet]
   iapply SmallStep.wp_returnFromFunction
   inext
   iapply wp_value'
@@ -78,16 +77,12 @@ theorem is_empty_correct : IsEmptySpec := by
   apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [leafConfig, func2]
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_const
-  inext
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_const]
   iapply SmallStep.wp_eq (result := isEmptyValue len) (by rfl)
   inext
-  iapply SmallStep.wp_const
-  inext
-  iapply SmallStep.wp_and
-  inext
+  wasm_wp_pures [wp_const]
+  wasm_wp_pures [wp_and]
   rw [show isEmptyValue len &&& 1 = isEmptyValue len by
     unfold isEmptyValue
     by_cases h : len = 0 <;> simp [h]]
@@ -123,8 +118,7 @@ theorem len_export_correct : LenExportSpec := by
     obtain ⟨hp1, hp2, hp3, hp4, hp5, hp6, hp7⟩ :=
       fatPtrArithmetic_of hfat
     simp only [func4]
-    iapply SmallStep.wp_localGet rfl
-    inext
+    wasm_wp_pures [wp_localGet]
     ihave HdataLater : ▷ pointsTo_u32 0 (p + 0) dataPtr $$ [Hdata]
     · inext
       simp only [UInt32.add_zero]
@@ -134,8 +128,7 @@ theorem len_export_correct : LenExportSpec := by
       (by simpa using hp2) (by simpa using hp3) $$ HdataLater
     inext
     iintro Hdata
-    iapply SmallStep.wp_localGet rfl
-    inext
+    wasm_wp_pures [wp_localGet]
     ihave HlenLater : ▷ pointsTo_u32 0 (p + 4) len $$ [Hlen]
     · inext
       iexact Hlen
@@ -148,8 +141,7 @@ theorem len_export_correct : LenExportSpec := by
     inext
     iintro Hruntime
     simp [func0Def, Function.toLocals, Function.numParams, func0]
-    iapply SmallStep.wp_localGet rfl
-    inext
+    wasm_wp_pures [wp_localGet]
     iapply SmallStep.wp_returnFromCallExplicit $$ Hruntime
     inext
     simp only [List.take, List.singleton_append]
@@ -184,8 +176,7 @@ theorem is_empty_export_correct : IsEmptyExportSpec := by
     obtain ⟨hp1, hp2, hp3, hp4, hp5, hp6, hp7⟩ :=
       fatPtrArithmetic_of hfat
     simp only [func5]
-    iapply SmallStep.wp_localGet rfl
-    inext
+    wasm_wp_pures [wp_localGet]
     ihave HdataLater : ▷ pointsTo_u32 0 (p + 0) dataPtr $$ [Hdata]
     · inext
       simp only [UInt32.add_zero]
@@ -195,8 +186,7 @@ theorem is_empty_export_correct : IsEmptyExportSpec := by
       (by simpa using hp2) (by simpa using hp3) $$ HdataLater
     inext
     iintro Hdata
-    iapply SmallStep.wp_localGet rfl
-    inext
+    wasm_wp_pures [wp_localGet]
     ihave HlenLater : ▷ pointsTo_u32 0 (p + 4) len $$ [Hlen]
     · inext
       iexact Hlen
@@ -209,25 +199,19 @@ theorem is_empty_export_correct : IsEmptyExportSpec := by
     inext
     iintro Hruntime
     simp [func1Def, Function.toLocals, Function.numParams, func1]
-    iapply SmallStep.wp_localGet rfl
-    inext
-    iapply SmallStep.wp_localGet rfl
-    inext
+    wasm_wp_pures [wp_localGet]
+    wasm_wp_pures [wp_localGet]
     iapply SmallStep.wp_call «module» 2 func2Def
       (by simp [«module»]) (by simp [«module»]) $$ Hruntime
     inext
     iintro Hruntime
     simp [func2Def, Function.toLocals, Function.numParams, func2]
-    iapply SmallStep.wp_localGet rfl
-    inext
-    iapply SmallStep.wp_const
-    inext
+    wasm_wp_pures [wp_localGet]
+    wasm_wp_pures [wp_const]
     iapply SmallStep.wp_eq (result := isEmptyValue len) (by rfl)
     inext
-    iapply SmallStep.wp_const
-    inext
-    iapply SmallStep.wp_and
-    inext
+    wasm_wp_pures [wp_const]
+    wasm_wp_pures [wp_and]
     rw [show isEmptyValue len &&& 1 = isEmptyValue len by
       unfold isEmptyValue
       by_cases h : len = 0 <;> simp [h]]
@@ -235,20 +219,16 @@ theorem is_empty_export_correct : IsEmptyExportSpec := by
     inext
     iintro Hruntime
     simp only [List.take, List.singleton_append]
-    iapply SmallStep.wp_const
-    inext
-    iapply SmallStep.wp_and
-    inext
+    wasm_wp_pures [wp_const]
+    wasm_wp_pures [wp_and]
     rw [show isEmptyValue len &&& 1 = isEmptyValue len by
       unfold isEmptyValue
       by_cases h : len = 0 <;> simp [h]]
     iapply SmallStep.wp_returnFromCallExplicit $$ Hruntime
     inext
     simp only [List.take, List.singleton_append]
-    iapply SmallStep.wp_const
-    inext
-    iapply SmallStep.wp_and
-    inext
+    wasm_wp_pures [wp_const]
+    wasm_wp_pures [wp_and]
     rw [show isEmptyValue len &&& 1 = isEmptyValue len by
       unfold isEmptyValue
       by_cases h : len = 0 <;> simp [h]]

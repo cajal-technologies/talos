@@ -54,10 +54,8 @@ theorem total_variation_correct : TotalVariationSpec := by
     ihave Hscratch := absDiffHeap_pointsTo 0 $$ Hbytes
     ihave Hglobal := absDiffGlobals_pointsTo $$ Hglobals
     simp only [func1]
-    iapply wp_localGet rfl
-    inext
-    iapply wp_localGet rfl
-    inext
+    wasm_wp_pures [wp_localGet]
+    wasm_wp_pures [wp_localGet]
     iapply wp_call «module» 0 func0Def (by simp [«module»]) (by simp [«module»]) $$
       Hruntime
     inext
@@ -70,10 +68,8 @@ theorem total_variation_correct : TotalVariationSpec := by
       iapply wp_returnFromCallExplicit' $$ Hruntime
       inext
       iintro Hruntime
-      iapply wp_localGet rfl
-      inext
-      iapply wp_localGet rfl
-      inext
+      wasm_wp_pures [wp_localGet]
+      wasm_wp_pures [wp_localGet]
       simp only [List.take, UInt32.reduceSub, UInt32.reduceAdd]
       iapply wp_call «module» 0 func0Def (by simp [«module»]) (by simp [«module»]) $$
         Hruntime

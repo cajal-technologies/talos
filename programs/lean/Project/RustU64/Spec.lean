@@ -65,10 +65,8 @@ theorem add_correct : AddSpec := by
   apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [pureBinaryConfig, func2]
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet]
   iapply SmallStep.wp_addI64
   inext
   iapply SmallStep.wp_returnFromFunction
@@ -88,10 +86,8 @@ theorem sub_correct : SubSpec := by
   apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [pureBinaryConfig, func8]
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet]
   iapply SmallStep.wp_subI64
   inext
   iapply SmallStep.wp_returnFromFunction
@@ -111,10 +107,8 @@ theorem mul_correct : MulSpec := by
   apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [pureBinaryConfig, func9]
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet]
   iapply SmallStep.wp_mulI64
   inext
   iapply SmallStep.wp_returnFromFunction
@@ -136,23 +130,18 @@ theorem div_correct : DivSpec := by
   simp only [pureBinaryConfig, func6]
   iapply SmallStep.wp_block
   inext
-  iapply SmallStep.wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet]
   iapply SmallStep.wp_constI64
   inext
   iapply SmallStep.wp_eqI64 (result := 0) (by simp [hb])
   inext
-  iapply SmallStep.wp_const
-  inext
-  iapply SmallStep.wp_and
-  inext
+  wasm_wp_pures [wp_const]
+  wasm_wp_pures [wp_and]
   rw [show (0 &&& 1 : UInt32) = 0 by decide]
   iapply SmallStep.wp_brIfZero
   inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet]
   iapply SmallStep.wp_divUI64 hb
   inext
   iapply SmallStep.wp_returnFromFunction
@@ -174,23 +163,18 @@ theorem rem_correct : RemSpec := by
   simp only [pureBinaryConfig, func10]
   iapply SmallStep.wp_block
   inext
-  iapply SmallStep.wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet]
   iapply SmallStep.wp_constI64
   inext
   iapply SmallStep.wp_eqI64 (result := 0) (by simp [hb])
   inext
-  iapply SmallStep.wp_const
-  inext
-  iapply SmallStep.wp_and
-  inext
+  wasm_wp_pures [wp_const]
+  wasm_wp_pures [wp_and]
   rw [show (0 &&& 1 : UInt32) = 0 by decide]
   iapply SmallStep.wp_brIfZero
   inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet]
   iapply SmallStep.wp_remUI64 hb
   inext
   iapply SmallStep.wp_returnFromFunction
@@ -210,10 +194,8 @@ theorem bitand_correct : BitAndSpec := by
   apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [pureBinaryConfig, func3]
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet]
   iapply SmallStep.wp_andI64
   inext
   iapply SmallStep.wp_returnFromFunction
@@ -233,10 +215,8 @@ theorem bitor_correct : BitOrSpec := by
   apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [pureBinaryConfig, func4]
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet]
   iapply SmallStep.wp_orI64
   inext
   iapply SmallStep.wp_returnFromFunction
@@ -256,10 +236,8 @@ theorem bitxor_correct : BitXorSpec := by
   apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [pureBinaryConfig, func5]
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet]
   iapply SmallStep.wp_xorI64
   inext
   iapply SmallStep.wp_returnFromFunction
@@ -279,8 +257,7 @@ theorem not_correct : NotSpec := by
   apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [unaryConfig, func11]
-  iapply SmallStep.wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet]
   iapply SmallStep.wp_constI64
   inext
   iapply SmallStep.wp_xorI64
@@ -304,14 +281,10 @@ theorem shl_correct : ShlSpec := by
   apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [shiftConfig, func12]
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_const
-  inext
-  iapply SmallStep.wp_and
-  inext
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_const]
+  wasm_wp_pures [wp_and]
   rw [UInt32.and_comm b 63]
   iapply SmallStep.wp_extendUI32
   inext
@@ -335,14 +308,10 @@ theorem shr_correct : ShrSpec := by
   apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [shiftConfig, func13]
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_const
-  inext
-  iapply SmallStep.wp_and
-  inext
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_const]
+  wasm_wp_pures [wp_and]
   rw [UInt32.and_comm b 63]
   iapply SmallStep.wp_extendUI32
   inext

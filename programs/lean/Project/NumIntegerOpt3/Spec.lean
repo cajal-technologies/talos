@@ -47,19 +47,15 @@ theorem finishGcd_smallStep_wp
         1, [], [gcdOuterFrame outerBody], []⟩ : Expr Unit) @ s; E
       {{ rs, ⌜rs = [Value.i64 expected]⌝ }} := by
   iintro Htrue
-  iapply wp_localGet rfl
-  inext
-  iapply wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet]
   iapply wp_shlI64
   inext
-  iapply wp_localSet rfl
-  inext
+  wasm_wp_pures [wp_localSet]
   iapply wp_exitControl rfl
   inext
   simp only [gcdOuterFrame, List.take_nil, List.nil_append]
-  iapply wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet]
   rw [hrecombine]
   iapply wp_finish
   inext
@@ -78,27 +74,22 @@ theorem mod3_gcd_zero_smallStep (a b : UInt64) (hz : a = 0 ∨ b = 0) :
   apply wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [gcdConfig, func0]
-  iapply wp_localGet rfl
-  inext
-  iapply wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet]
   iapply wp_orI64
   inext
-  iapply wp_localSet rfl
-  inext
+  wasm_wp_pures [wp_localSet]
   iapply wp_block
   inext
   by_cases ha : a = 0
   · subst a
-    iapply wp_localGet rfl
-    inext
+    wasm_wp_pures [wp_localGet]
     iapply wp_eqzI64 (result := 1) (by decide)
     inext
     iapply wp_brIf (by decide) rfl
     inext
     simp only [List.take_nil, List.nil_append]
-    iapply wp_localGet rfl
-    inext
+    wasm_wp_pures [wp_localGet]
     iapply wp_finish
     inext
     iapply wp_value'
@@ -106,21 +97,18 @@ theorem mod3_gcd_zero_smallStep (a b : UInt64) (hz : a = 0 ∨ b = 0) :
     simp
   · have hb : b = 0 := hz.resolve_left ha
     subst b
-    iapply wp_localGet rfl
-    inext
+    wasm_wp_pures [wp_localGet]
     iapply wp_eqzI64 (result := 0) (by rw [if_neg ha])
     inext
     iapply wp_brIfZero
     inext
-    iapply wp_localGet rfl
-    inext
+    wasm_wp_pures [wp_localGet]
     iapply wp_eqzI64 (result := 1) (by decide)
     inext
     iapply wp_brIf (by decide) rfl
     inext
     simp only [List.take_nil, List.drop_nil, List.nil_append]
-    iapply wp_localGet rfl
-    inext
+    wasm_wp_pures [wp_localGet]
     iapply wp_finish
     inext
     iapply wp_value'
@@ -226,40 +214,32 @@ theorem gcdLoopBody_smallStep_wp
   simp only [loopBody]
   iapply wp_block
   inext
-  iapply wp_localGet rfl
-  inext
-  iapply wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet]
   by_cases hgt : y < x
   · iapply wp_gtUI64 (result := 1) (by simp [hgt])
     inext
     iapply wp_brIf (by decide) rfl
     inext
     simp only [List.take_nil, List.drop_nil, List.nil_append]
-    iapply wp_localGet rfl
-    inext
-    iapply wp_localGet rfl
-    inext
+    wasm_wp_pures [wp_localGet]
+    wasm_wp_pures [wp_localGet]
     iapply wp_subI64
     inext
-    iapply wp_localTee rfl
-    inext
-    iapply wp_localGet rfl
-    inext
+    wasm_wp_pures [wp_localTee]
+    wasm_wp_pures [wp_localGet]
     iapply wp_ctzI64
     inext
     iapply wp_shrUI64
     inext
-    iapply wp_localTee rfl
-    inext
+    wasm_wp_pures [wp_localTee]
     simp only [List.set]
     let x' := (x - y) >>> (UInt64.ofNat (ctz64 64 (x - y)) % 64)
     obtain ⟨hx'ne, hx'odd, hgcd', _hdec⟩ :=
       UInt64.stein_step_x x y hxne hyne hxodd hyodd hgt
     by_cases hx'y : x' = y
     · change (x - y) >>> (UInt64.ofNat (ctz64 64 (x - y)) % 64) = y at hx'y
-      iapply wp_localGet rfl
-      inext
+      wasm_wp_pures [wp_localGet]
       iapply wp_neI64 (result := 0) (by simp [hx'y])
       inext
       iapply wp_brIfZero
@@ -267,10 +247,8 @@ theorem gcdLoopBody_smallStep_wp
       iapply wp_exitControl rfl
       inext
       simp only [gcdLoopFrame, List.take_nil, List.nil_append]
-      iapply wp_localGet rfl
-      inext
-      iapply wp_localSet rfl
-      inext
+      wasm_wp_pures [wp_localGet]
+      wasm_wp_pures [wp_localSet]
       simp only [List.set]
       iapply wp_exitControl rfl
       inext
@@ -283,8 +261,7 @@ theorem gcdLoopBody_smallStep_wp
         (hrecombine y hyGcd)
       itrivial
     · change (x - y) >>> (UInt64.ofNat (ctz64 64 (x - y)) % 64) ≠ y at hx'y
-      iapply wp_localGet rfl
-      inext
+      wasm_wp_pures [wp_localGet]
       iapply wp_neI64 (result := 1) (by simp [hx'y])
       inext
       iapply wp_brIf (by decide) rfl
@@ -311,24 +288,18 @@ theorem gcdLoopBody_smallStep_wp
     inext
     iapply wp_brIfZero
     inext
-    iapply wp_localGet rfl
-    inext
-    iapply wp_localGet rfl
-    inext
-    iapply wp_localGet rfl
-    inext
+    wasm_wp_pures [wp_localGet]
+    wasm_wp_pures [wp_localGet]
+    wasm_wp_pures [wp_localGet]
     iapply wp_subI64
     inext
-    iapply wp_localTee rfl
-    inext
-    iapply wp_localGet rfl
-    inext
+    wasm_wp_pures [wp_localTee]
+    wasm_wp_pures [wp_localGet]
     iapply wp_ctzI64
     inext
     iapply wp_shrUI64
     inext
-    iapply wp_localTee rfl
-    inext
+    wasm_wp_pures [wp_localTee]
     simp only [List.set]
     let y' := (y - x) >>> (UInt64.ofNat (ctz64 64 (y - x)) % 64)
     obtain ⟨hy'ne, hy'odd, hgcd', _hdec⟩ :=
@@ -395,28 +366,22 @@ theorem gcdInner_smallStep_wp
         {{ rs, ⌜rs = [.i64 expected]⌝ }} := by
   iintro Htrue
   simp only [innerBody]
-  iapply wp_localGet rfl
-  inext
-  iapply wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet]
   iapply wp_ctzI64
   inext
   iapply wp_shrUI64
   inext
-  iapply wp_localTee rfl
-  inext
+  wasm_wp_pures [wp_localTee]
   simp only [List.set]
   let ao := p0 >>> (UInt64.ofNat (ctz64 64 p0) % 64)
-  iapply wp_localGet rfl
-  inext
-  iapply wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet]
   iapply wp_ctzI64
   inext
   iapply wp_shrUI64
   inext
-  iapply wp_localTee rfl
-  inext
+  wasm_wp_pures [wp_localTee]
   simp only [List.set]
   let bo := p1 >>> (UInt64.ofNat (ctz64 64 p1) % 64)
   have haone : ao ≠ 0 := UInt64.shr_ctz_ne_zero p0 hp0
@@ -473,21 +438,17 @@ theorem mod3_gcd_smallStep (a b : UInt64) :
   rw [show func0 =
     [.localGet 1, .localGet 0, .orI64, .localSet 2,
       .block 0 0 gcdOuterBody, .localGet 2] from rfl]
-  iapply wp_localGet rfl
-  inext
-  iapply wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_pures [wp_localGet]
   iapply wp_orI64
   inext
-  iapply wp_localSet rfl
-  inext
+  wasm_wp_pures [wp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
   iapply wp_block
   inext
   simp only [gcdOuterBody, List.drop_nil]
-  iapply wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet]
   by_cases ha : a = 0
   · subst a
     iapply wp_eqzI64 (result := 1) (by decide)
@@ -495,8 +456,7 @@ theorem mod3_gcd_smallStep (a b : UInt64) :
     iapply wp_brIf (by decide) rfl
     inext
     simp only [List.take_nil, List.nil_append]
-    iapply wp_localGet rfl
-    inext
+    wasm_wp_pures [wp_localGet]
     iapply wp_finish
     inext
     iapply wp_value'
@@ -506,8 +466,7 @@ theorem mod3_gcd_smallStep (a b : UInt64) :
     inext
     iapply wp_brIfZero
     inext
-    iapply wp_localGet rfl
-    inext
+    wasm_wp_pures [wp_localGet]
     by_cases hb : b = 0
     · subst b
       iapply wp_eqzI64 (result := 1) (by decide)
@@ -515,8 +474,7 @@ theorem mod3_gcd_smallStep (a b : UInt64) :
       iapply wp_brIf (by decide) rfl
       inext
       simp only [List.take_nil, List.nil_append]
-      iapply wp_localGet rfl
-      inext
+      wasm_wp_pures [wp_localGet]
       iapply wp_finish
       inext
       iapply wp_value'
@@ -526,12 +484,10 @@ theorem mod3_gcd_smallStep (a b : UInt64) :
       inext
       iapply wp_brIfZero
       inext
-      iapply wp_localGet rfl
-      inext
+      wasm_wp_pures [wp_localGet]
       iapply wp_ctzI64
       inext
-      iapply wp_localSet rfl
-      inext
+      wasm_wp_pures [wp_localSet]
       simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
         List.set]
       iapply wp_block
