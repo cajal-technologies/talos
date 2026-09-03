@@ -519,13 +519,8 @@ theorem stateInterp_memoryPages_snapshot [WasmSmallStepGS hlc α]
       HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth
       HhostEnvAuth HstateAuth Hpages Hdomain Hexceptions]
   · iapply (stateInterp_eq store steps observations threads).mpr
-    iexists σ
-    iexists globalσ
-    iexists dataSegmentσ
-    iexists tableσ
-    iexists elementSegmentσ
-    iexists runtimeModuleσ
-    iexists hostEnvσ
+    iexists σ, globalσ, dataSegmentσ, tableσ,
+      elementSegmentσ, runtimeModuleσ, hostEnvσ
     iframe Hheap Hglobals Hsegments Htables HelementSegments
       HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth
       HhostEnvAuth HstateAuth
@@ -580,13 +575,8 @@ theorem stateInterp_memoryPages_agree [WasmSmallStepGS hlc α]
       HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth
       HhostEnvAuth HstateAuth Hpages Hdomain Hexceptions]
   · iapply (stateInterp_eq store steps observations threads).mpr
-    iexists σ
-    iexists globalσ
-    iexists dataSegmentσ
-    iexists tableσ
-    iexists elementSegmentσ
-    iexists runtimeModuleσ
-    iexists hostEnvσ
+    iexists σ, globalσ, dataSegmentσ, tableσ,
+      elementSegmentσ, runtimeModuleσ, hostEnvσ
     iframe Hheap Hglobals Hsegments Htables HelementSegments
       HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth
       HhostEnvAuth HstateAuth
@@ -1088,13 +1078,8 @@ theorem stateInterp_alloc_freshRange [WasmSmallStepGS hlc α]
         HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances
         HinstanceAuth HhostEnvAuth HstateAuth Haux]
     · iapply (stateInterp_eq store steps observations threads).mpr
-      iexists insertFreshBytes σ base bytes
-      iexists globalσ
-      iexists dataSegmentσ
-      iexists tableσ
-      iexists elementSegmentσ
-      iexists runtimeModuleσ
-      iexists hostEnvσ
+      iexists (insertFreshBytes σ base bytes), globalσ,
+        dataSegmentσ, tableσ, elementSegmentσ, runtimeModuleσ, hostEnvσ
       iframe Hheap Hglobals Hsegments Htables HelementSegments
         HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances
         HinstanceAuth HhostEnvAuth HstateAuth Haux
@@ -1318,13 +1303,8 @@ theorem stateInterp_fill_bytes [WasmSmallStepGS hlc α]
             { store.wasm with mem :=
                 store.wasm.mem.fill addr.toNat oldBytes.length val } }
         steps observations threads).mpr
-    iexists fillSigma σ addr oldBytes val
-    iexists globalσ
-    iexists dataSegmentσ
-    iexists tableσ
-    iexists elementSegmentσ
-    iexists runtimeModuleσ
-    iexists hostEnvσ
+    iexists (fillSigma σ addr oldBytes val), globalσ,
+      dataSegmentσ, tableσ, elementSegmentσ, runtimeModuleσ, hostEnvσ
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth HhostEnvAuth Hstate_auth
     isplitr [Hexc']
     · ipureintro
@@ -1612,9 +1592,8 @@ theorem stateInterp_copy_bytes [WasmSmallStepGS hlc α]
             { store.wasm with mem :=
                 store.wasm.mem.copy dst.toNat src.toNat oldDstBytes.length } }
         steps observations threads).mpr
-    iexists copySigma σ dst oldDstBytes srcBytes
-    iexists globalσ; iexists dataSegmentσ; iexists tableσ; iexists elementSegmentσ
-    iexists runtimeModuleσ; iexists hostEnvσ
+    iexists (copySigma σ dst oldDstBytes srcBytes), globalσ,
+      dataSegmentσ, tableσ, elementSegmentσ, runtimeModuleσ, hostEnvσ
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth HhostEnvAuth Hstate_auth
     isplitr [Hexc']
     · ipureintro
@@ -1697,9 +1676,8 @@ theorem stateInterp_init_bytes [WasmSmallStepGS hlc α]
             { store.wasm with mem :=
                 store.wasm.mem.writeBytesFrom dst.toNat segmentBytes srcOff len } }
         steps observations threads).mpr
-    iexists copySigma σ dst oldDstBytes newDstBytes
-    iexists globalσ; iexists dataSegmentσ; iexists tableσ; iexists elementSegmentσ
-    iexists runtimeModuleσ; iexists hostEnvσ
+    iexists (copySigma σ dst oldDstBytes newDstBytes), globalσ,
+      dataSegmentσ, tableσ, elementSegmentσ, runtimeModuleσ, hostEnvσ
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth HhostEnvAuth Hstate_auth
     isplitr [Hexc']
     · ipureintro
@@ -1780,8 +1758,8 @@ theorem stateInterp_host_set [WasmSmallStepGS hlc α]
   · iapply (stateInterp_eq
       { store with wasm := { store.wasm with host } }
       steps observations threads).mpr
-    iexists σ; iexists globalσ; iexists dataSegmentσ; iexists tableσ
-    iexists elementSegmentσ; iexists runtimeModuleσ; iexists hostEnvσ
+    iexists σ, globalσ, dataSegmentσ, tableσ,
+      elementSegmentσ, runtimeModuleσ, hostEnvσ
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth HhostEnvAuth Hauth' Hexc
     ipureintro
     exact Hfacts
@@ -1847,13 +1825,8 @@ theorem stateInterp_global_set [WasmSmallStepGS hlc α]
           { store.wasm with globals :=
               { globals := store.wasm.globals.globals.set index newValue } } }
       steps observations threads).mpr
-    iexists σ
-    iexists insert globalσ ⟨0, index⟩ newValue
-    iexists dataSegmentσ
-    iexists tableσ
-    iexists elementSegmentσ
-    iexists runtimeModuleσ
-    iexists hostEnvσ
+    iexists σ, (insert globalσ ⟨0, index⟩ newValue),
+      dataSegmentσ, tableσ, elementSegmentσ, runtimeModuleσ, hostEnvσ
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth HhostEnvAuth Hstate_auth Hexc
     ipureintro
     exact ⟨Hfacts.1, Hfacts.2.1,
@@ -1909,13 +1882,9 @@ theorem stateInterp_dataSegment_drop [WasmSmallStepGS hlc α]
           { store.wasm with
             dataSegments := store.wasm.dataSegments.set index none } }
       steps observations threads).mpr
-    iexists σ
-    iexists globalσ
-    iexists insert dataSegmentσ ⟨0, index⟩ none
-    iexists tableσ
-    iexists elementSegmentσ
-    iexists runtimeModuleσ
-    iexists hostEnvσ
+    iexists σ, globalσ,
+      (insert dataSegmentσ ⟨0, index⟩ none), tableσ,
+      elementSegmentσ, runtimeModuleσ, hostEnvσ
     iframe
     ipureintro
     exact ⟨Hfacts.1, Hfacts.2.1, Hfacts.2.2.1,
@@ -2000,13 +1969,8 @@ theorem stateInterp_elementSegment_drop [WasmSmallStepGS hlc α]
             elementSegments :=
               store.wasm.elementSegments.set index none } }
       steps observations threads).mpr
-    iexists σ
-    iexists globalσ
-    iexists dataSegmentσ
-    iexists tableσ
-    iexists insert elementSegmentσ ⟨0, index⟩ none
-    iexists runtimeModuleσ
-    iexists hostEnvσ
+    iexists σ, globalσ, dataSegmentσ, tableσ,
+      (insert elementSegmentσ ⟨0, index⟩ none), runtimeModuleσ, hostEnvσ
     iframe
     ipureintro
     exact ⟨Hfacts.1, Hfacts.2.1, Hfacts.2.2.1,
@@ -2080,13 +2044,9 @@ theorem stateInterp_table_set [WasmSmallStepGS hlc α]
           { store.wasm with
             tables := listSetAt store.wasm.tables index newTable } }
       steps observations threads).mpr
-    iexists σ
-    iexists globalσ
-    iexists dataSegmentσ
-    iexists insert tableσ ⟨0, index⟩ newTable
-    iexists elementSegmentσ
-    iexists runtimeModuleσ
-    iexists hostEnvσ
+    iexists σ, globalσ, dataSegmentσ,
+      (insert tableσ ⟨0, index⟩ newTable), elementSegmentσ,
+      runtimeModuleσ, hostEnvσ
     iframe
     ipureintro
     exact ⟨Hfacts.1, Hfacts.2.1, Hfacts.2.2.1,
@@ -2267,7 +2227,8 @@ theorem stateInterp_currentInstance_update [WasmSmallStepGS hlc α]
   · iapply (stateInterp_eq
       { store with runtime := { store.runtime with entry := newId } }
       steps observations threads).mpr
-    iexists σ; iexists globalσ; iexists dataSegmentσ; iexists tableσ; iexists elementSegmentσ; iexists runtimeModuleσ; iexists hostEnvσ
+    iexists σ, globalσ, dataSegmentσ, tableσ,
+      elementSegmentσ, runtimeModuleσ, hostEnvσ
     have hres : storeResolve { store with runtime := { store.runtime with entry := newId } } = storeResolve store := rfl
     simp only [hres]
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth' HhostEnvAuth Hstate_auth Hexc
@@ -2295,7 +2256,8 @@ theorem stateInterp_currentInstance_update_of_any [WasmSmallStepGS hlc α]
   · iapply (stateInterp_eq
         { store with runtime := { store.runtime with entry := newId } }
         steps observations threads).mpr
-    iexists σ; iexists globalσ; iexists dataSegmentσ; iexists tableσ; iexists elementSegmentσ; iexists runtimeModuleσ; iexists hostEnvσ
+    iexists σ, globalσ, dataSegmentσ, tableσ,
+      elementSegmentσ, runtimeModuleσ, hostEnvσ
     have hres : storeResolve { store with runtime := { store.runtime with entry := newId } } = storeResolve store := rfl
     simp only [hres]
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth' HhostEnvAuth Hstate_auth Hexc
@@ -2496,13 +2458,8 @@ theorem stateInterp_store8 [WasmSmallStepGS hlc α]
       { store with wasm :=
           { store.wasm with mem := store.wasm.mem.write8 address newValue } }
       steps observations threads).mpr
-    iexists insert σ ⟨0, address⟩ (some newValue)
-    iexists globalσ
-    iexists dataSegmentσ
-    iexists tableσ
-    iexists elementSegmentσ
-    iexists runtimeModuleσ
-    iexists hostEnvσ
+    iexists (insert σ ⟨0, address⟩ (some newValue)), globalσ,
+      dataSegmentσ, tableσ, elementSegmentσ, runtimeModuleσ, hostEnvσ
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth HhostEnvAuth Hstate_auth
     isplitr [Hexc']
     · ipureintro
@@ -2757,13 +2714,8 @@ theorem stateInterp_store16 [WasmSmallStepGS hlc α]
       { store with wasm :=
           { store.wasm with mem := store.wasm.mem.write16 address newValue } }
       steps observations threads).mpr
-    iexists store16Heap σ 0 address newValue
-    iexists globalσ
-    iexists dataSegmentσ
-    iexists tableσ
-    iexists elementSegmentσ
-    iexists runtimeModuleσ
-    iexists hostEnvσ
+    iexists (store16Heap σ 0 address newValue), globalσ,
+      dataSegmentσ, tableσ, elementSegmentσ, runtimeModuleσ, hostEnvσ
     unfold store16Heap
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth HhostEnvAuth Hstate_auth
     isplitr [Hexc']
@@ -2831,13 +2783,8 @@ theorem stateInterp_store32 [WasmSmallStepGS hlc α]
       { store with wasm :=
           { store.wasm with mem := store.wasm.mem.write32 address newValue } }
       steps observations threads).mpr
-    iexists store32Heap σ 0 address newValue
-    iexists globalσ
-    iexists dataSegmentσ
-    iexists tableσ
-    iexists elementSegmentσ
-    iexists runtimeModuleσ
-    iexists hostEnvσ
+    iexists (store32Heap σ 0 address newValue), globalσ,
+      dataSegmentσ, tableσ, elementSegmentσ, runtimeModuleσ, hostEnvσ
     unfold store32Heap
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth HhostEnvAuth Hstate_auth
     isplitr [Hexc']
@@ -2930,13 +2877,8 @@ theorem stateInterp_store64 [WasmSmallStepGS hlc α]
       { store with wasm :=
           { store.wasm with mem := store.wasm.mem.write64 address newValue } }
       steps observations threads).mpr
-    iexists store64Heap σ 0 address newValue
-    iexists globalσ
-    iexists dataSegmentσ
-    iexists tableσ
-    iexists elementSegmentσ
-    iexists runtimeModuleσ
-    iexists hostEnvσ
+    iexists (store64Heap σ 0 address newValue), globalσ,
+      dataSegmentσ, tableσ, elementSegmentσ, runtimeModuleσ, hostEnvσ
     unfold store64Heap
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth HhostEnvAuth Hstate_auth
     isplitr [Hexc']
@@ -3024,13 +2966,8 @@ theorem stateInterp_memoryGrow [WasmSmallStepGS hlc α]
   iapply (stateInterp_eq
       { store with wasm := { store.wasm with mem := memory } }
       steps observations threads).mpr
-  iexists σ
-  iexists globalσ
-  iexists dataSegmentσ
-  iexists tableσ
-  iexists elementSegmentσ
-  iexists runtimeModuleσ
-  iexists hostEnvσ
+  iexists σ, globalσ, dataSegmentσ, tableσ,
+    elementSegmentσ, runtimeModuleσ, hostEnvσ
   iframe Hheap Hglobals Hsegments Htables HelementSegments
     HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth
     HhostEnvAuth Hstate_auth
@@ -3146,13 +3083,8 @@ theorem stateInterp_hostCallReturn [WasmSmallStepGS hlc α]
   iapply (stateInterp_eq
       { store with wasm := newWasm }
       steps observations threads).mpr
-  iexists σ
-  iexists globalσ
-  iexists dataSegmentσ
-  iexists tableσ
-  iexists elementSegmentσ
-  iexists runtimeModuleσ
-  iexists hostEnvσ
+  iexists σ, globalσ, dataSegmentσ, tableσ,
+    elementSegmentσ, runtimeModuleσ, hostEnvσ
   ihave Hstate_auth' : hostStateAuth newWasm.host $$ [Hstate_auth]
   · rw [h_host]; iexact Hstate_auth
   ihave Hexc' : machineAuxInterp σ newWasm.mem.pages
