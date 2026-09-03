@@ -1651,205 +1651,60 @@ local instance (priority := high) activeTerminalIrisGSHelpers :
 variable {s : Stuckness} {E : CoPset}
 variable {Φ : Terminal → IProp (WasmHeapGF α)}
 
-theorem twp_subI64
-    {params localValues values : List Value}
-    {lhs rhs : UInt64} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    WP (.running
-      ⟨⟨params, localValues, .i64 (lhs - rhs) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-        [{ Φ }] ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-        .subI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      [{ Φ }] :=
-  twp_pureStep _ _ _ (fun _ => Step.subI64)
+wasm_twp_pure_rule twp_subI64 {lhs rhs : UInt64} :
+  .subI64, .i64 rhs :: .i64 lhs :: values =>
+    .i64 (lhs - rhs) :: values := Step.subI64
 
-theorem twp_mulI64
-    {params localValues values : List Value}
-    {lhs rhs : UInt64} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    WP (.running
-      ⟨⟨params, localValues, .i64 (lhs * rhs) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }] ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-        .mulI64 :: code, arity, remainder, controls, calls⟩ : Expr α)
-      @ s; E [{ Φ }] :=
-  twp_pureStep _ _ _ (fun _ => Step.mulI64)
+wasm_twp_pure_rule twp_mulI64 {lhs rhs : UInt64} :
+  .mulI64, .i64 rhs :: .i64 lhs :: values =>
+    .i64 (lhs * rhs) :: values := Step.mulI64
 
-theorem twp_constI64
-    {params localValues values : List Value}
-    {value : UInt64} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    WP (.running
-      ⟨⟨params, localValues, .i64 value :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-        [{ Φ }] ⊢
-    WP (.running
-      ⟨⟨params, localValues, values⟩,
-        .constI64 value :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      [{ Φ }] :=
-  twp_pureStep _ _ _ (fun _ => Step.constI64)
+wasm_twp_pure_rule twp_constI64 {value : UInt64} :
+  .constI64 value, values => .i64 value :: values := Step.constI64
 
-theorem twp_orI64
-    {params localValues values : List Value}
-    {lhs rhs : UInt64} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    WP (.running
-      ⟨⟨params, localValues, .i64 (lhs ||| rhs) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-        [{ Φ }] ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-        .orI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      [{ Φ }] :=
-  twp_pureStep _ _ _ (fun _ => Step.orI64)
+wasm_twp_pure_rule twp_orI64 {lhs rhs : UInt64} :
+  .orI64, .i64 rhs :: .i64 lhs :: values =>
+    .i64 (lhs ||| rhs) :: values := Step.orI64
 
-theorem twp_shlI64
-    {params localValues values : List Value}
-    {lhs rhs : UInt64} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    WP (.running
-      ⟨⟨params, localValues, .i64 (lhs <<< (rhs % 64)) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-        [{ Φ }] ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-        .shlI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      [{ Φ }] :=
-  twp_pureStep _ _ _ (fun _ => Step.shlI64)
+wasm_twp_pure_rule twp_shlI64 {lhs rhs : UInt64} :
+  .shlI64, .i64 rhs :: .i64 lhs :: values =>
+    .i64 (lhs <<< (rhs % 64)) :: values := Step.shlI64
 
-theorem twp_shrUI64
-    {params localValues values : List Value}
-    {lhs rhs : UInt64} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    WP (.running
-      ⟨⟨params, localValues, .i64 (lhs >>> (rhs % 64)) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-        [{ Φ }] ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-        .shrUI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      [{ Φ }] :=
-  twp_pureStep _ _ _ (fun _ => Step.shrUI64)
+wasm_twp_pure_rule twp_shrUI64 {lhs rhs : UInt64} :
+  .shrUI64, .i64 rhs :: .i64 lhs :: values =>
+    .i64 (lhs >>> (rhs % 64)) :: values := Step.shrUI64
 
-theorem twp_ctzI64
-    {params localValues values : List Value}
-    {value : UInt64} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    WP (.running
-      ⟨⟨params, localValues,
-          .i64 (UInt64.ofNat (ctz64 64 value)) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-        [{ Φ }] ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 value :: values⟩,
-        .ctzI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      [{ Φ }] :=
-  twp_pureStep _ _ _ (fun _ => Step.ctzI64)
+wasm_twp_pure_rule twp_ctzI64 {value : UInt64} :
+  .ctzI64, .i64 value :: values =>
+    .i64 (UInt64.ofNat (ctz64 64 value)) :: values := Step.ctzI64
 
-theorem twp_wrapI64
-    {params localValues values : List Value}
-    {value : UInt64} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    WP (.running
-      ⟨⟨params, localValues,
-          .i32 (UInt32.ofNat (value.toNat % 2 ^ 32)) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-        [{ Φ }] ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 value :: values⟩,
-        .wrapI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      [{ Φ }] :=
-  twp_pureStep _ _ _ (fun _ => Step.wrapI64)
+wasm_twp_pure_rule twp_wrapI64 {value : UInt64} :
+  .wrapI64, .i64 value :: values =>
+    .i32 (UInt32.ofNat (value.toNat % 2 ^ 32)) :: values := Step.wrapI64
 
-theorem twp_extendUI32
-    {params localValues values : List Value}
-    {value : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    WP (.running
-      ⟨⟨params, localValues, .i64 (UInt64.ofNat value.toNat) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-        [{ Φ }] ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 value :: values⟩,
-        .extendUI32 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      [{ Φ }] :=
-  twp_pureStep _ _ _ (fun _ => Step.extendUI32)
+wasm_twp_pure_rule twp_extendUI32 {value : UInt32} :
+  .extendUI32, .i32 value :: values =>
+    .i64 (UInt64.ofNat value.toNat) :: values := Step.extendUI32
 
-theorem twp_eqI64
-    {params localValues values : List Value}
-    {lhs rhs : UInt64} {result : UInt32}
-    {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
+wasm_twp_pure_rule twp_eqI64 {lhs rhs : UInt64} {result : UInt32}
     (hresult : result = if lhs = rhs then 1 else 0) :
-    WP (.running
-      ⟨⟨params, localValues, .i32 result :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-        [{ Φ }] ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-        .eqI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      [{ Φ }] :=
-  twp_pureStep _ _ _ (fun _ => Step.eqI64 hresult)
+  .eqI64, .i64 rhs :: .i64 lhs :: values =>
+    .i32 result :: values := Step.eqI64 hresult
 
-theorem twp_neI64
-    {params localValues values : List Value}
-    {lhs rhs : UInt64} {result : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
+wasm_twp_pure_rule twp_neI64 {lhs rhs : UInt64} {result : UInt32}
     (hresult : result = if lhs ≠ rhs then 1 else 0) :
-    WP (.running
-      ⟨⟨params, localValues, .i32 result :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-        [{ Φ }] ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-        .neI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      [{ Φ }] :=
-  twp_pureStep _ _ _ (fun _ => Step.neI64 hresult)
+  .neI64, .i64 rhs :: .i64 lhs :: values =>
+    .i32 result :: values := Step.neI64 hresult
 
-theorem twp_ltUI64
-    {params localValues values : List Value}
-    {lhs rhs : UInt64} {result : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
+wasm_twp_pure_rule twp_ltUI64 {lhs rhs : UInt64} {result : UInt32}
     (hresult : result = if lhs < rhs then 1 else 0) :
-    WP (.running
-      ⟨⟨params, localValues, .i32 result :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }] ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-        .ltUI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      [{ Φ }] :=
-  twp_pureStep _ _ _ (fun _ => Step.ltUI64 hresult)
+  .ltUI64, .i64 rhs :: .i64 lhs :: values =>
+    .i32 result :: values := Step.ltUI64 hresult
 
-theorem twp_gtUI64
-    {params localValues values : List Value}
-    {lhs rhs : UInt64} {result : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
+wasm_twp_pure_rule twp_gtUI64 {lhs rhs : UInt64} {result : UInt32}
     (hresult : result = if lhs > rhs then 1 else 0) :
-    WP (.running
-      ⟨⟨params, localValues, .i32 result :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-        [{ Φ }] ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-        .gtUI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      [{ Φ }] :=
-  twp_pureStep _ _ _ (fun _ => Step.gtUI64 hresult)
+  .gtUI64, .i64 rhs :: .i64 lhs :: values =>
+    .i32 result :: values := Step.gtUI64 hresult
 
 /-- Apply an explicit sequence of side-condition-free pure Wasm steps.
 Stops before any rule that needs a semantic choice, client resource, or
