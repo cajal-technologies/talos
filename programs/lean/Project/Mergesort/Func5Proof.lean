@@ -138,8 +138,7 @@ private theorem twp_func5_commit_and_return
       ⟨Hbump, Hblock⟩
   · iframe
   wasm_twp_pures [twp_localGet]
-  isimp only [RuntimeContext] at Hruntime
-  icases Hruntime with ⟨Hmodule, Henv⟩
+  iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   iapply twp_returnFromCallFallthrough $$ Hmodule
   iintro Hmodule
   simp only [List.take_succ_cons, List.take_zero, List.cons_append,
@@ -286,8 +285,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
   intro size alignment layout heapId storedCursor frontier history input output
     raised callerLocals stack code arity remainder controls calls s E Φ
   iintro ⟨Hruntime, Hbump, Hstreams, %hlayout, Hcont⟩
-  isimp only [RuntimeContext] at Hruntime
-  icases Hruntime with ⟨Hmodule, Henv⟩
+  iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   simp only [List.cons_append, List.nil_append]
   iapply Wasm.SmallStep.twp_call Project.Mergesort.module 8
       Project.Mergesort.func5Def (by decide) func5_index $$ Hmodule

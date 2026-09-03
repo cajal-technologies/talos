@@ -295,8 +295,7 @@ private theorem twp_func0_success_tail
             returningInstance := ⟨0⟩ } :: calls⟩ : Expr Universal.State)
         @ s; E [{ Φ }] := by
   iintro ⟨Hruntime, Hresult, Hbump, Hblock, Hstreams, Hcont⟩
-  isimp only [RuntimeContext] at Hruntime
-  icases Hruntime with ⟨Hmodule, Henv⟩
+  iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   ihave Hfocus := ByteSlice_twelve_storeFocus result growBefore
     hresultLength $$ Hresult
   icases Hfocus with
@@ -416,8 +415,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
     iframe HresultBytes
     ipureintro
     exact hresultNowrap
-  isimp only [RuntimeContext] at Hruntime
-  icases Hruntime with ⟨Hmodule, Henv⟩
+  iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   simp only [List.cons_append, List.nil_append]
   iapply Wasm.SmallStep.twp_call Project.Mergesort.module 3
       Project.Mergesort.func0Def (by decide) func0_index $$ Hmodule
@@ -514,8 +512,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
       · unfold ResumeWP resumeExpr
         simp only [List.nil_append]
         iintro Hruntime
-        isimp only [RuntimeContext] at Hruntime
-        icases Hruntime with ⟨Hmodule, Henv⟩
+        iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
         wasm_twp_pures [twp_localGet twp_localGet]
         have Halloc : Func5Spec (hlc := hlc) := hfunc5
         unfold Func5Spec CallContract callExpr at Halloc

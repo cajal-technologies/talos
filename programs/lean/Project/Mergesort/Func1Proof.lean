@@ -163,8 +163,7 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
     rw [hnewCapacityWord]
     unfold newCapacityNat selectedCapacity
     omega
-  isimp only [RuntimeContext] at Hruntime
-  icases Hruntime with ⟨Hmodule, Henv⟩
+  iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   simp only [List.cons_append, List.nil_append]
   iapply Wasm.SmallStep.twp_call Project.Mergesort.module 4
       Project.Mergesort.func1Def (by decide) func1_index $$ Hmodule
@@ -449,8 +448,7 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
       rw [hdecision']
       isplit
       · iintro %newBytes Hruntime Hresult Hbump Hblock %hcopy Hstreams
-        isimp only [RuntimeContext] at Hruntime
-        icases Hruntime with ⟨Hmodule, Henv⟩
+        iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
         isimp only [ResumeWP, resumeExpr, List.nil_append]
         isimp only [Representations.ByteSlice, growResultBytes] at Hresult
         icases Hresult with ⟨%hresultNowrap, HresultBytes⟩

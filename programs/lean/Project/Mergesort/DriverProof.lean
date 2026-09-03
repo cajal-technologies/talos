@@ -6271,8 +6271,7 @@ theorem func3_correct_of
     controls calls s E Phi
   iintro ⟨Hruntime, Hsp, Hstack, Hbump, Hstreams, %hentryLength,
     Hnormal, Hoom⟩
-  isimp only [RuntimeContext] at Hruntime
-  icases Hruntime with ⟨Hmodule, Henv⟩
+  iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   iapply Wasm.SmallStep.twp_call Project.Mergesort.module 6
       Project.Mergesort.func3Def (by decide) func3_index $$ Hmodule
   iintro Hmodule
@@ -6298,8 +6297,7 @@ theorem func3_correct_of
   isplitl_exact Hstreams
   isplitl [Hnormal]
   · iintro %finalLocals Hruntime Hsuccess
-    isimp only [RuntimeContext] at Hruntime
-    icases Hruntime with ⟨Hmodule, Henv⟩
+    iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
     iapply Wasm.SmallStep.twp_returnFromCallFallthrough $$ Hmodule
     iintro Hmodule
     simp only [List.take_zero, List.nil_append]

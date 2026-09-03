@@ -242,8 +242,7 @@ private theorem twp_func8_copy_and_return
   wasm_twp_pures [twp_exitControl]
   simp only [List.take_zero, List.nil_append]
   wasm_twp_pures [twp_localGet]
-  isimp only [RuntimeContext] at Hruntime
-  icases Hruntime with ⟨Hmodule, Henv⟩
+  iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   wasm_twp_return_from_call Hmodule
   simp only [List.take_succ_cons, List.take_zero, List.cons_append,
     List.nil_append]
@@ -519,8 +518,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
     oldBytes storedCursor frontier history input output raised callerLocals
     stack code arity remainder controls calls s E Φ
   iintro ⟨Hruntime, Hbump, Hblock, Hstreams, %hlayout, Hcont⟩
-  isimp only [RuntimeContext] at Hruntime
-  icases Hruntime with ⟨Hmodule, Henv⟩
+  iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   simp only [List.cons_append, List.nil_append]
   iapply Wasm.SmallStep.twp_call Project.Mergesort.module 11
       Project.Mergesort.func8Def (by decide) func8_index $$ Hmodule

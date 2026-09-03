@@ -136,8 +136,7 @@ theorem import0_correct [WasmSmallStepGS hlc Universal.State] :
     ResumeWP [.i32 (UInt32.ofNat count)] callerLocals stack code arity
       remainder controls calls s E Φ)
   iintro ⟨Hruntime, ⟨Hstreams, ⟨Hslice, ⟨%hfacts, Hcont⟩⟩⟩⟩
-  isimp only [RuntimeContext] at Hruntime
-  icases Hruntime with ⟨Hmodule, Henv⟩
+  iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   iintuitionistic Henv
   isimp only [Streams] at Hstreams
   icases Hstreams with ⟨%random, Hhost⟩
@@ -309,8 +308,7 @@ theorem import1_correct [WasmSmallStepGS hlc Universal.State] :
     ByteSlice ptr bytes -∗
     ResumeWP [] callerLocals stack code arity remainder controls calls s E Φ)
   iintro ⟨Hruntime, ⟨Hstreams, ⟨Hslice, ⟨%hfacts, Hcont⟩⟩⟩⟩
-  isimp only [RuntimeContext] at Hruntime
-  icases Hruntime with ⟨Hmodule, Henv⟩
+  iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   iintuitionistic Henv
   isimp only [Streams] at Hstreams
   icases Hstreams with ⟨%random, Hhost⟩
@@ -439,8 +437,7 @@ theorem import2_correct [WasmSmallStepGS hlc Universal.State] :
   intro input output raised callerLocals stack code arity remainder controls
     calls s E Φ
   iintro ⟨Hruntime, ⟨Hstreams, Hterminal⟩⟩
-  isimp only [RuntimeContext] at Hruntime
-  icases Hruntime with ⟨Hmodule, Henv⟩
+  iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   isimp only [Streams] at Hstreams
   icases Hstreams with ⟨%random, Hhost⟩
   iapply Project.Mergesort.OutcomeInfrastructure.twp_oom_import
@@ -464,8 +461,7 @@ theorem func6_correct [WasmSmallStepGS hlc Universal.State] :
   intro input output raised callerLocals stack code arity remainder controls
     calls s E Φ
   iintro ⟨Hruntime, ⟨Hstreams, Hterminal⟩⟩
-  isimp only [RuntimeContext] at Hruntime
-  icases Hruntime with ⟨Hmodule, Henv⟩
+  iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   iapply Wasm.SmallStep.twp_call Project.Mergesort.module 9
       Project.Mergesort.func6Def (by decide)
       Project.Mergesort.WrapperProof.func6_index $$ Hmodule
@@ -497,8 +493,7 @@ theorem func4_correct [WasmSmallStepGS hlc Universal.State] :
   unfold Func4Spec CallContract callExpr
   intro callerLocals stack code arity remainder controls calls s E Φ
   iintro ⟨Hruntime, Hcont⟩
-  isimp only [RuntimeContext] at Hruntime
-  icases Hruntime with ⟨Hmodule, Henv⟩
+  iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   iapply Wasm.SmallStep.twp_call Project.Mergesort.module 7
       Project.Mergesort.func4Def (by decide)
       Project.Mergesort.WrapperProof.func4_index $$ Hmodule
@@ -521,8 +516,7 @@ theorem func7_correct [WasmSmallStepGS hlc Universal.State] :
     frontier history callerLocals stack code arity remainder controls calls s
     E Φ
   iintro ⟨Hruntime, ⟨Hbump, ⟨Hblock, ⟨%_hlayout, Hcont⟩⟩⟩⟩
-  isimp only [RuntimeContext] at Hruntime
-  icases Hruntime with ⟨Hmodule, Henv⟩
+  iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   imod BumpHeap_retire heapId storedCursor frontier history allocationId ptr
       layout bytes $$ [Hbump Hblock] with Hbump
   · iframe
@@ -549,8 +543,7 @@ theorem func10_correct [WasmSmallStepGS hlc Universal.State] :
     remainder controls calls s E Φ
   dsimp only
   iintro ⟨Hruntime, ⟨Hstreams, ⟨Hslice, ⟨%hfacts, Hcont⟩⟩⟩⟩
-  isimp only [RuntimeContext] at Hruntime
-  icases Hruntime with ⟨Hmodule, Henv⟩
+  iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   iintuitionistic Henv
   simp only [List.cons_append, List.nil_append]
   iapply Wasm.SmallStep.twp_call Project.Mergesort.module 13
@@ -587,8 +580,7 @@ theorem func10_correct [WasmSmallStepGS hlc Universal.State] :
   · ipureintro
     exact hfacts
   iintro Hruntime Hstreams Hslice %hcount
-  isimp only [RuntimeContext] at Hruntime
-  icases Hruntime with ⟨Hmodule, HenvInner⟩
+  iopen_runtime Hruntime with ⟨Hmodule, HenvInner⟩
   unfold ResumeWP resumeExpr
   iapply Wasm.SmallStep.twp_returnFromCallFallthrough $$ Hmodule
   iintro Hmodule
@@ -608,8 +600,7 @@ theorem func11_correct [WasmSmallStepGS hlc Universal.State] :
   intro ptr requested bytes input output raised callerLocals stack code arity
     remainder controls calls s E Φ
   iintro ⟨Hruntime, ⟨Hstreams, ⟨Hslice, ⟨%hfacts, Hcont⟩⟩⟩⟩
-  isimp only [RuntimeContext] at Hruntime
-  icases Hruntime with ⟨Hmodule, Henv⟩
+  iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   iintuitionistic Henv
   simp only [List.cons_append, List.nil_append]
   iapply Wasm.SmallStep.twp_call Project.Mergesort.module 14
@@ -646,8 +637,7 @@ theorem func11_correct [WasmSmallStepGS hlc Universal.State] :
   · ipureintro
     exact hfacts
   iintro Hruntime Hstreams Hslice
-  isimp only [RuntimeContext] at Hruntime
-  icases Hruntime with ⟨Hmodule, HenvInner⟩
+  iopen_runtime Hruntime with ⟨Hmodule, HenvInner⟩
   unfold ResumeWP resumeExpr
   iapply Wasm.SmallStep.twp_returnFromCallFallthrough $$ Hmodule
   iintro Hmodule
@@ -666,8 +656,7 @@ theorem func2_correct [WasmSmallStepGS hlc Universal.State] :
   intro source n scratch scratchN input scratchInput callerLocals stack code
     arity remainder controls calls s E Φ
   iintro ⟨Hruntime, Hbuffers, %hlengths, Hcont⟩
-  isimp only [RuntimeContext] at Hruntime
-  icases Hruntime with ⟨Hmodule, Henv⟩
+  iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   isimp only [SortBuffers] at Hbuffers
   icases Hbuffers with ⟨HsourceWords, HscratchWords, %hbufferFacts⟩
   isimp only [WordSlice, Project.Mergesort.Representations.ByteSlice]

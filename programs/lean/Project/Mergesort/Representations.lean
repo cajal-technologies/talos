@@ -3400,6 +3400,15 @@ def RuntimeContext [WasmRuntimeModuleGS Universal.State]
   iprop(runtimeModuleOwn ⟨0⟩ Project.Mergesort.module ∗
     hostEnvOwn 0 (Universal.envFor Project.Mergesort.module))
 
+/-- Open the module and host-environment resources carried by a merge-sort
+runtime context. -/
+macro "iopen_runtime " runtime:ident " with " pattern:icasesPat : tactic => do
+  let selected ← `(selPat| $runtime:ident)
+  let resource ← `(pmTerm| $runtime:ident)
+  `(tactic|
+    (isimp only [Project.Mergesort.Representations.RuntimeContext] at $selected
+     icases $resource with $pattern))
+
 def AllRetired (history : AllocationHistory) : Prop :=
   ∀ allocationId metadata,
     get? history.records allocationId = some metadata →
