@@ -810,6 +810,8 @@ macro_rules
       `(tactic| iapply wp_br rfl; inext; wasm_wp_pures [$rest:ident*])
   | `(tactic| wasm_wp_pures [wp_exitControl $rest:ident*]) =>
       `(tactic| iapply wp_exitControl rfl; inext; wasm_wp_pures [$rest:ident*])
+  | `(tactic| wasm_wp_pures [wp_scalarFloat0 $rest:ident*]) =>
+      `(tactic| iapply wp_scalarFloat0 rfl; inext; wasm_wp_pures [$rest:ident*])
 
 theorem wp_tryTable
     {locals : Locals} {paramArity resultArity arity : Nat}

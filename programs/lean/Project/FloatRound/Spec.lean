@@ -742,9 +742,7 @@ theorem naive_compare_smallStep_wp
         Expr Unit) @ s; E {{ Φ }} := by
   iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
   simp only [naiveCompareProg]
-  wasm_wp_pures [wp_localGet]
-  iapply wp_scalarFloat0 rfl
-  inext
+  wasm_wp_pures [wp_localGet wp_scalarFloat0]
   by_cases hge :
       f32Ge (f32Sub x (f32Trunc x)) 1056964608 = true
   · iapply wp_scalarFloat2 (value := .i32 1) rfl rfl
@@ -768,9 +766,7 @@ theorem naive_compare_smallStep_wp
     inext
     wasm_wp_pures [wp_const wp_and]
     rw [show (0 &&& 1 : UInt32) = 0 by decide]
-    wasm_wp_pures [wp_brIfZero wp_localGet]
-    iapply wp_scalarFloat0 rfl
-    inext
+    wasm_wp_pures [wp_brIfZero wp_localGet wp_scalarFloat0]
     by_cases hle :
         f32Le (f32Sub x (f32Trunc x)) 3204448256 = true
     · iapply wp_scalarFloat2 (value := .i32 1) rfl rfl

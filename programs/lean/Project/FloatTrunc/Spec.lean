@@ -364,9 +364,7 @@ theorem func0_body_to_ret_smallStep_wp
       simp only [hnan, Bool.false_eq_true, if_false]
       wasm_wp_pures [wp_const wp_and]
       rw [show (0 &&& 1 : UInt32) = 0 by decide]
-      wasm_wp_pures [wp_brIfZero wp_localGet]
-      iapply wp_scalarFloat0 rfl
-      inext
+      wasm_wp_pures [wp_brIfZero wp_localGet wp_scalarFloat0]
       cases hge : f32Ge x 1325400064
       · iapply wp_scalarFloat2 rfl rfl rfl
         inext
@@ -375,9 +373,7 @@ theorem func0_body_to_ret_smallStep_wp
         rw [show (0 &&& 1 : UInt32) = 0 by decide]
         wasm_wp_pures [wp_brIfZero wp_br]
         simp only [List.take, List.drop, List.nil_append]
-        wasm_wp_pures [wp_localGet]
-        iapply wp_scalarFloat0 rfl
-        inext
+        wasm_wp_pures [wp_localGet wp_scalarFloat0]
         cases hlt : f32Lt x 3472883712
         · iapply wp_scalarFloat2 rfl rfl rfl
           inext
