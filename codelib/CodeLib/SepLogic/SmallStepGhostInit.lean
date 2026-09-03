@@ -5,8 +5,8 @@ import CodeLib.SepLogic.SmallStepState
 
 Every adequacy entry point in `CodeLib.SepLogic.SmallStepAdequacy` opens with
 the same preamble: allocate one ghost resource per `WasmHeapGF` slot, then
-bundle the results into a `WasmSmallStepGS`.  The two parts of that preamble
-that are *literally* the same everywhere live here.
+bundle the results into a `WasmSmallStepGS`.  The parts of that preamble that
+are *literally* the same everywhere live here.
 
 * `GhostSlot.*` names the `WasmHeapGF` slot each ghost map or element lives in.
   Previously every entry point repeated the raw slot numbers, and several
@@ -16,6 +16,9 @@ that are *literally* the same everywhere live here.
   number is now written exactly once.
 * `smallStepGS` performs the final field-by-field assembly of the fifteen
   component ghost states, which is byte-identical at every site.
+* The `wasm_alloc_*` tactics allocate the fixed host, current-instance,
+  runtime-instance, exception, and tag-table resources while exposing the
+  same local instances and hypotheses used by the adequacy proofs.
 
 The parts that genuinely differ between entry points — which maps start empty
 and which start populated, whether the runtime module and host env maps get an
@@ -142,5 +145,86 @@ written once here. -/
     hostState := hostStateGS
     instanceGS := instanceGS
     runtimeInstances := runtimeInstancesGS }
+
+set_option hygiene false in
+/-- Allocate authoritative and fragment ownership of the current host state. -/
+macro "wasm_alloc_host_state " config:term : tactic =>
+  `(tactic|
+    (letI hostStateElem :
+        ElemG (WasmHeapGF α)
+          (Auth.AuthRF (OptionOF (Excl.ExclOF (constOF (DiscreteO α))))) :=
+      GhostSlot.hostStateElem
+     imod (iOwn_alloc (E := hostStateElem)
+         (ExclAuth.auth (⟨($config).store.wasm.host⟩ : DiscreteO α) •
+          ExclAuth.frag (⟨($config).store.wasm.host⟩ : DiscreteO α))
+         ExclAuth.valid) with
+       ⟨%hostStateName, HhostStateAll⟩
+     ihave HhostStatePair := iOwn_op.mp $$ HhostStateAll
+     icases HhostStatePair with ⟨HhostState, HhostStateFrag⟩
+     letI hostStateGS : WasmHostStateGS α :=
+       { hostStateElem
+         hostStateName }))
+
+set_option hygiene false in
+/-- Allocate authoritative and fragment ownership of the current instance. -/
+macro "wasm_alloc_current_instance " config:term : tactic =>
+  `(tactic|
+    (letI instanceElem :
+        ElemG (WasmHeapGF α)
+          (Auth.AuthRF (OptionOF (Excl.ExclOF (constOF (DiscreteO Nat))))) :=
+      GhostSlot.instanceElem
+     imod (iOwn_alloc (E := instanceElem)
+         (ExclAuth.auth (⟨($config).store.runtime.entry.id⟩ : DiscreteO Nat) •
+          ExclAuth.frag (⟨($config).store.runtime.entry.id⟩ : DiscreteO Nat))
+         ExclAuth.valid) with
+       ⟨%instanceName, HinstanceAll⟩
+     ihave HinstancePair := iOwn_op.mp $$ HinstanceAll
+     icases HinstancePair with ⟨HinstanceState, HinstanceFrag⟩
+     letI instanceGS : WasmInstanceGS α :=
+       { instanceElem
+         instanceName }))
+
+set_option hygiene false in
+/-- Allocate agreement on the runtime instance table. -/
+macro "wasm_alloc_runtime_instances " config:term : tactic =>
+  `(tactic|
+    (letI runtimeInstancesElem :
+        ElemG (WasmHeapGF α)
+          (constOF (Agree (DiscreteO (Array (ModuleInstance α))))) :=
+      GhostSlot.runtimeInstancesElem
+     imod (iOwn_alloc (E := runtimeInstancesElem)
+         (toAgree ⟨($config).store.runtime.instances⟩) (fun _ => trivial)) with
+       ⟨%runtimeInstancesName, HruntimeInstances⟩
+     letI runtimeInstancesGS : WasmRuntimeInstancesGS α :=
+       { runtimeInstancesElem
+         runtimeInstancesName }))
+
+set_option hygiene false in
+/-- Allocate the initially empty in-flight exception map. -/
+macro "wasm_alloc_exception_map" : tactic =>
+  `(tactic|
+    (letI exceptionMapG :
+        GhostMapG (WasmHeapGF α) Nat (Nat × List Value) WasmExceptionMap :=
+      GhostSlot.exceptionMap
+     imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := Nat)
+         (V := Nat × List Value) (H := WasmExceptionMap)) with
+       ⟨%exceptionName, Hexceptions⟩
+     letI wasmExceptionGS : WasmExceptionGS α :=
+       { toGhostMapG := exceptionMapG
+         exceptionName := exceptionName }))
+
+set_option hygiene false in
+/-- Allocate agreement on the entry instance's tag table. -/
+macro "wasm_alloc_tag_table " config:term : tactic =>
+  `(tactic|
+    (letI tagTableElem : ElemG (WasmHeapGF α)
+         (constOF (Agree (DiscreteO (List Nat)))) :=
+       GhostSlot.tagTableElem
+     imod (iOwn_alloc (E := tagTableElem)
+         (toAgree ⟨($config).store.wasm.tagIds⟩) (fun _ => trivial)) with
+       ⟨%tagTableName, HtagTable⟩
+     letI tagTableGS : WasmTagTableGS α :=
+       { tagTableElem
+         tagTableName }))
 
 end Wasm.SmallStep
