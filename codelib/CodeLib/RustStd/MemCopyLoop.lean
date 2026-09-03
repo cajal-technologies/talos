@@ -151,8 +151,7 @@ theorem copyWords_loadStoreIteration_wp
         pointsTo_u32 0 (dst + 4 * UInt32.ofNat pre.length) value -∗
         arrayAt 0 dst (pre ++ value :: dstSuffix) ∗
           arrayAt 0 src (pre ++ value :: srcSuffix)) $$ [Hdst Hsrc]
-  · iapply arrayAt_copy_next 0 dst src pre oldDst value dstSuffix srcSuffix
-    iframe
+  · iapply_frame arrayAt_copy_next 0 dst src pre oldDst value dstSuffix srcSuffix
   icases Hfocused with ⟨HsrcCell, Hrest⟩
   icases Hrest with ⟨HdstCell, Hreassemble⟩
   ihave HsrcCell' : pointsTo_u32 0 srcAddress value $$ [HsrcCell]
@@ -202,8 +201,7 @@ theorem copyWords_loadStoreIteration_wp
       arrayAt 0 dst (pre ++ value :: dstSuffix) ∗
         arrayAt 0 src (pre ++ value :: srcSuffix) $$
       [Hreassemble HsrcCell'' HdstCell'']
-  · iapply Hreassemble
-    iframe
+  · iapply_frame Hreassemble
   iapply_frame hcontinue
 
 theorem copyWords_incrementBackedge_wp
@@ -649,8 +647,7 @@ theorem copyWords_loadStoreIteration_twp
         pointsTo_u32 0 (dst + 4 * UInt32.ofNat pre.length) value -∗
         arrayAt 0 dst (pre ++ value :: dstSuffix) ∗
           arrayAt 0 src (pre ++ value :: srcSuffix)) $$ [Hdst Hsrc]
-  · iapply arrayAt_copy_next 0 dst src pre oldDst value dstSuffix srcSuffix
-    iframe
+  · iapply_frame arrayAt_copy_next 0 dst src pre oldDst value dstSuffix srcSuffix
   icases Hfocused with ⟨HsrcCell, Hrest⟩
   icases Hrest with ⟨HdstCell, Hreassemble⟩
   ihave HsrcCell' : pointsTo_u32 0 srcAddress value $$ [HsrcCell]
@@ -698,8 +695,7 @@ theorem copyWords_loadStoreIteration_twp
       arrayAt 0 dst (pre ++ value :: dstSuffix) ∗
         arrayAt 0 src (pre ++ value :: srcSuffix) $$
       [Hreassemble HsrcCell'' HdstCell'']
-  · iapply Hreassemble
-    iframe
+  · iapply_frame Hreassemble
   iapply_frame hcontinue
 
 /-- Total counterpart of `copyWords_incrementBackedge_wp`. -/

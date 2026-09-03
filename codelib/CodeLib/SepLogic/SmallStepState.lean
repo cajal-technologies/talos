@@ -2662,8 +2662,7 @@ theorem stateInterp_store16 [WasmSmallStepGS hlc α]
       exact ⟨h_ag, h_bn, Hfacts.2.2⟩
     · simp only [Mem.write16]
       iexact Hexc'
-  · iapply (pointsTo_u16_eq 0 address newValue).mpr
-    iframe
+  · iapply_frame (pointsTo_u16_eq 0 address newValue).mpr
 
 theorem stateInterp_store32 [WasmSmallStepGS hlc α]
     (store : MachineStore α) (steps : Nat)
@@ -2731,8 +2730,7 @@ theorem stateInterp_store32 [WasmSmallStepGS hlc α]
       exact ⟨h_ag, h_bn, Hfacts.2.2⟩
     · simp only [Mem.write32]
       iexact Hexc'
-  · iapply (pointsTo_u32_eq 0 address newValue).mpr
-    iframe
+  · iapply_frame (pointsTo_u32_eq 0 address newValue).mpr
 
 theorem stateInterp_store64 [WasmSmallStepGS hlc α]
     (store : MachineStore α) (steps : Nat)
@@ -2825,8 +2823,7 @@ theorem stateInterp_store64 [WasmSmallStepGS hlc α]
       exact ⟨h_ag, h_bn, Hfacts.2.2⟩
     · simp only [Mem.write64]
       iexact Hexc'
-  · iapply (pointsTo_u64_eq 0 address newValue).mpr
-    iframe
+  · iapply_frame (pointsTo_u64_eq 0 address newValue).mpr
 
 /-- A 16-byte (v128) store as two consecutive 8-byte stores. -/
 theorem stateInterp_writeV128 [WasmSmallStepGS hlc α]

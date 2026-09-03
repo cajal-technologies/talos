@@ -1416,10 +1416,8 @@ theorem arrayAt_copy_next (memId : Nat) (dst src : UInt32) (pre : List UInt32)
   isplitl_exact HdstCell
   iintro ⟨HsrcCell, HdstCell⟩
   isplitl [HdstPre HdstCell HdstSuffix]
-  · iapply (arrayAt_append_cons memId dst pre value dstSuffix).mpr
-    iframe
-  · iapply (arrayAt_append_cons memId src pre value srcSuffix).mpr
-    iframe
+  · iapply_frame (arrayAt_append_cons memId dst pre value dstSuffix).mpr
+  · iapply_frame (arrayAt_append_cons memId src pre value srcSuffix).mpr
 
 -- update element k: give back a cell with a NEW value,
 -- own the updated array (merge writes out[k] = v)

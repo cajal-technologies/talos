@@ -308,8 +308,7 @@ theorem twp_func3_append_without_reserve
     ipureexact hcurrentNowrap
   ihave Hchunk : Project.Mergesort.Representations.ByteSlice
       (driverBase + 12) (current ++ chunkTail) $$ [Hcurrent HchunkTail]
-  · iapply (ByteSlice_append (driverBase + 12) current chunkTail).mpr
-    iframe
+  · iapply_frame (ByteSlice_append (driverBase + 12) current chunkTail).mpr
   ihave HnewBytes : Project.Mergesort.Representations.ByteSlice
       (dataPtr + UInt32.ofNat initialized.length) current $$
       [HoldChunkBytes]
@@ -4099,8 +4098,7 @@ theorem twp_func3_deallocate_input
     icases Hblock with ⟨Htoken, Hbytes, %hblock⟩
     ihave %hlookup : ⌜get? history.records allocationId =
         some (liveMeta inputPtr layout)⌝ $$ [Hauth Htoken]
-    · iapply AllocMetaAuth_token_agree
-      iframe
+    · iapply_frame AllocMetaAuth_token_agree
     ihave Hbump : BumpHeap heapId storedCursor frontier history $$
         [Hcursor Hfrontier Hauth Hretired Hpages]
     · unfold BumpHeap
@@ -4265,8 +4263,7 @@ theorem twp_func3_restore_stack
         StackRegion entryStackLow (reserveBytes ++ frameBytes) ∗
           ⌜(reserveBytes ++ frameBytes).length = 288⌝) $$
         [Hreserve Hframe]
-    · iapply StackReserve_combineFrame reserveBytes frameBytes hframeLength
-      iframe
+    · iapply_frame StackReserve_combineFrame reserveBytes frameBytes hframeLength
     icases Hcombined with ⟨Hstack, %hstackLength⟩
     iapply Hcont $$ Hsp' Hstack %hstackLength
   isimp only [StackPointer] at Hsp

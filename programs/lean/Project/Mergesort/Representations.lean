@@ -242,8 +242,7 @@ theorem ByteSlice_append {host : Type} [WasmHeapGS host]
       omega
     isplitl []
     · ipureexact hnowrap
-    · iapply (pointsToBytes_append 0 ptr left right).mpr
-      iframe
+    · iapply_frame (pointsToBytes_append 0 ptr left right).mpr
 
 /-- Exclusive ownership of a region whose current contents have no semantic
 role. -/
@@ -763,11 +762,9 @@ theorem SortBuffers_append {host : Type} [WasmHeapGS host]
     icases Hright with ⟨HsourceRight, HscratchRight, %_hrightFacts⟩
     unfold SortBuffers
     isplitl [HsourceLeft HsourceRight]
-    · iapply (WordSlice_append source left right).mpr
-      iframe
+    · iapply_frame (WordSlice_append source left right).mpr
     isplitl [HscratchLeft HscratchRight]
-    · iapply (WordSlice_append scratch scratchLeft scratchRight).mpr
-      iframe
+    · iapply_frame (WordSlice_append scratch scratchLeft scratchRight).mpr
     · ipureexact ⟨by
         simp only [List.length_append, hleftLength, hrightLength], hfull⟩
 
@@ -1827,8 +1824,7 @@ theorem AllocMetaAuth_retire_with_lookup {host : Type}
   iintro ⟨Hauth, Htoken⟩
   ihave %hlookup : ⌜get? history.records allocationId =
       some (liveMeta ptr layout)⌝ $$ [Hauth Htoken]
-  · iapply AllocMetaAuth_token_agree
-    iframe
+  · iapply_frame AllocMetaAuth_token_agree
   imod AllocMetaAuth_retire heapId history allocationId ptr layout $$
       [Hauth Htoken] with ⟨Hauth, Hfragment⟩
   · iframe
@@ -1880,8 +1876,7 @@ theorem BumpHeap_retire {host : Type} [WasmHeapGS host]
   icases Hblock with ⟨Htoken, Hbytes, %hblock⟩
   ihave %hlookup : ⌜get? history.records allocationId =
       some (liveMeta ptr layout)⌝ $$ [Hauth Htoken]
-  · iapply AllocMetaAuth_token_agree
-    iframe
+  · iapply_frame AllocMetaAuth_token_agree
   have hwfNew := HistoryWellFormed.retire frontier history allocationId ptr
     layout hheap.2.2.2.2.1 hlookup
   imod AllocatorResources_retire heapId history allocationId ptr layout bytes
@@ -2218,8 +2213,7 @@ theorem VecStorage_initializedFocus {host : Type} [WasmHeapGS host]
     · iintro Hinitialized
       ihave HallBytes : ByteSlice ptr (initialized ++ spare) $$
           [Hinitialized Hspare]
-      · iapply (ByteSlice_append ptr initialized spare).mpr
-        iframe
+      · iapply_frame (ByteSlice_append ptr initialized spare).mpr
       iright
       iexists allocationId, initialized ++ spare, spare
       isplitr
