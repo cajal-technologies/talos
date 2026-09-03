@@ -27,25 +27,11 @@ theorem fatPtrArithmetic {p : UInt32} (hroom : p.toNat + 8 ≤ 4294967296) :
     ((p + 4) + 1).toNat = (p + 4).toNat + 1 ∧
     ((p + 4) + 2).toNat = (p + 4).toNat + 2 ∧
     ((p + 4) + 3).toNat = (p + 4).toNat + 3 := by
-  have step (n : Nat) (hn : n < 4294967296)
-      (hr : p.toNat + n < 4294967296) :
-      (p + UInt32.ofNat n).toNat = p.toNat + n :=
-    UInt32.add_ofNat_toNat_noWrap p n hn hr
-  have hp1 := step 1 (by decide) (by omega)
-  have hp2 := step 2 (by decide) (by omega)
-  have hp3 := step 3 (by decide) (by omega)
-  have hp4 := step 4 (by decide) (by omega)
-  have hp5 := step 5 (by decide) (by omega)
-  have hp6 := step 6 (by decide) (by omega)
-  have hp7 := step 7 (by decide) (by omega)
-  have hp4' : (p + 4).toNat = p.toNat + 4 := by simpa using hp4
-  have hp5' : (p + 5).toNat = p.toNat + 5 := by simpa using hp5
-  have hp6' : (p + 6).toNat = p.toNat + 6 := by simpa using hp6
-  have hp7' : (p + 7).toNat = p.toNat + 7 := by simpa using hp7
+  obtain ⟨hp1, hp2, hp3, hp4, hp5, hp6, hp7⟩ := UInt32.addSteps8 p hroom
   refine ⟨hp1, hp2, hp3, hp4, ?_, ?_, ?_⟩
-  · rw [UInt32.add_assoc, show (4 + 1 : UInt32) = 5 by decide, hp5', hp4']
-  · rw [UInt32.add_assoc, show (4 + 2 : UInt32) = 6 by decide, hp6', hp4']
-  · rw [UInt32.add_assoc, show (4 + 3 : UInt32) = 7 by decide, hp7', hp4']
+  · rw [UInt32.add_assoc, show (4 + 1 : UInt32) = 5 by decide, hp5, hp4]
+  · rw [UInt32.add_assoc, show (4 + 2 : UInt32) = 6 by decide, hp6, hp4]
+  · rw [UInt32.add_assoc, show (4 + 3 : UInt32) = 7 by decide, hp7, hp4]
 
 /-- `fatPtrArithmetic` for a caller that already owns a `FatPtrAt`. -/
 theorem fatPtrArithmetic_of {α} {st : Store α} {p dataPtr len : UInt32}
