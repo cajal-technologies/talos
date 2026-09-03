@@ -258,8 +258,7 @@ private theorem twp_func8_copy_and_return
   · isplitl [Hmodule]
     · iexact Hmodule
     · iexact Henv
-  · ipureintro
-    exact hcopy
+  · ipureexact hcopy
   · iexact Hstreams
 
 /-- Commit the cursor and metadata after the fresh physical range has been

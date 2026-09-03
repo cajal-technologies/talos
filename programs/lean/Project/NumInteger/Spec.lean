@@ -502,8 +502,7 @@ theorem func1_leftZero_core_smallStep_wp
     simp only [List.take, List.append_nil]
     iapply wp_value'
     isplit
-    · ipureintro
-      rfl
+    · ipureexact rfl
     · iexact Hresources
   · iexact Hresources
 
@@ -734,8 +733,7 @@ theorem func1_rightZero_core_smallStep_wp
     simp only [List.take]
     iapply wp_value'
     isplit
-    · ipureintro
-      rfl
+    · ipureexact rfl
     · iexact Hresources
   · iexact Hresources
 
@@ -3049,8 +3047,7 @@ theorem func1_nonzeroFinish_smallStep_wp
     simp only [List.take]
     iapply wp_value'
     isplit
-    · ipureintro
-      rfl
+    · ipureexact rfl
     · iexact Hresources
   · iexact Hresources
 
@@ -3171,14 +3168,12 @@ theorem func1_nonzeroOuterCore_smallStep_wp
       iintro ⟨%hrs, HR, Hx, Hy, Hresult, HloopX, HloopY⟩
       icases HR with ⟨HR, Hshared, HnormX, HnormY⟩
       isplit
-      · ipureintro
-        exact hrs
+      · ipureexact hrs
       · iexists g
         iexists loopX
         iexists loopY
         isplit
-        · ipureintro
-          exact hg
+        · ipureexact hg
         · iframe
     iapply wp_mono hpost
     iapply func1_nonzeroFinish_smallStep_wp
@@ -3617,8 +3612,7 @@ theorem func0_afterCall_smallStep_wp
     simp only [List.take]
     iapply wp_value'
     isplit
-    · ipureintro
-      rfl
+    · ipureexact rfl
     · iexact Hresources
   · iexact Hresources
 
@@ -3659,8 +3653,7 @@ theorem func0_exactFrame_entails_post
       HnextY, HnextX, HouterA, HouterB⟩
   unfold func0FramePost
   isplit
-  · ipureintro
-    rfl
+  · ipureexact rfl
   · iexists result
     iexists x
     iexists y
@@ -3684,8 +3677,7 @@ theorem func0FramePost_absorb
   iintro ⟨HQ, %hrs, %result, %x, %y, %outerA, %outerB,
     %shiftXY, %shiftX, %shiftY, %nextY, %nextX, Hbody⟩
   isplit
-  · ipureintro
-    exact hrs
+  · ipureexact hrs
   · iexists result
     iexists x
     iexists y
@@ -3746,8 +3738,7 @@ theorem func0_afterCall_frame_smallStep_wp
         HnextY, HnextX, HouterA, HouterB⟩
     unfold func0FramePost
     isplit
-    · ipureintro
-      exact hrs
+    · ipureexact hrs
     · iexists result
       iexists x
       iexists y
@@ -4606,8 +4597,7 @@ theorem twp_func1_leftZero_core_smallStep_wp
     simp only [List.take, List.append_nil]
     iapply twp.value rfl
     isplit
-    · ipureintro
-      rfl
+    · ipureexact rfl
     · iexact Hresources
   · iexact Hresources
 
@@ -4823,8 +4813,7 @@ theorem twp_func1_rightZero_core_smallStep_wp
     simp only [List.take]
     iapply twp.value rfl
     isplit
-    · ipureintro
-      rfl
+    · ipureexact rfl
     · iexact Hresources
   · iexact Hresources
 
@@ -5640,8 +5629,7 @@ theorem twp_func1_nonzeroFinish_smallStep_wp
     simp only [List.take]
     iapply twp.value rfl
     isplit
-    · ipureintro
-      rfl
+    · ipureexact rfl
     · iexact Hresources
   · iexact Hresources
 
@@ -6820,14 +6808,12 @@ theorem twp_func1_nonzeroOuterCore_smallStep_wp
       iintro ⟨%hrs, HR, Hx, Hy, Hresult, HloopX, HloopY⟩
       icases HR with ⟨HR, Hshared, HnormX, HnormY⟩
       isplit
-      · ipureintro
-        exact hrs
+      · ipureexact hrs
       · iexists g
         iexists loopX
         iexists loopY
         isplit
-        · ipureintro
-          exact hg
+        · ipureexact hg
         · iframe
     iapply twp.mono hpost
     iapply twp_func1_nonzeroFinish_smallStep_wp
@@ -7159,8 +7145,7 @@ theorem twp_func0_afterCall_smallStep_wp
     simp only [List.take]
     iapply twp.value rfl
     isplit
-    · ipureintro
-      rfl
+    · ipureexact rfl
     · iexact Hresources
   · iexact Hresources
 
@@ -7207,8 +7192,7 @@ theorem twp_func0_afterCall_frame_smallStep_wp
         HnextY, HnextX, HouterA, HouterB⟩
     unfold func0FramePost
     isplit
-    · ipureintro
-      exact hrs
+    · ipureexact hrs
     · iexists result
       iexists x
       iexists y

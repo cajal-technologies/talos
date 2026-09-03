@@ -4214,8 +4214,7 @@ theorem wp_wordRoundtrip (oldWord : UInt32) :
   iintro Hword
   wasm_wp_finish_value
   isplitr
-  · ipureintro
-    rfl
+  · ipureexact rfl
   · rw [UInt32.add_zero]
     iexact Hword
 
@@ -4257,8 +4256,7 @@ theorem wp_fillFourBytes (oldWord : UInt32) :
   iintro H32
   wasm_wp_finish_value
   isplitr
-  · ipureintro
-    rfl
+  · ipureexact rfl
   · isplitl [H16]
     · rw [UInt32.add_zero]
       iexact H16
@@ -4298,8 +4296,7 @@ theorem wp_copyWord (oldDestination : UInt32) :
   iintro Hdestination
   wasm_wp_finish_value
   isplitr
-  · ipureintro
-    rfl
+  · ipureexact rfl
   · isplitl [Hsource]
     · iexact Hsource
     · rw [UInt32.add_zero]
@@ -4344,8 +4341,7 @@ theorem wp_memoryInitDrop (oldWord : UInt32) :
   iintro Hword
   wasm_wp_finish_value
   isplitr
-  · ipureintro
-    rfl
+  · ipureexact rfl
   · rw [UInt32.add_zero]
     iframe
 
@@ -4381,8 +4377,7 @@ theorem wp_copyOverlapWord :
   iintro Hword
   wasm_wp_finish_value
   isplitr
-  · ipureintro
-    rfl
+  · ipureexact rfl
   · rw [UInt32.add_zero]
     iexact Hword
 
@@ -4446,8 +4441,7 @@ theorem wp_swapWords :
   iintro H4
   wasm_wp_finish_value
   isplitr
-  · ipureintro
-    rfl
+  · ipureexact rfl
   · isplitl [H0]
     · rw [UInt32.add_zero]
       iexact H0
@@ -4515,8 +4509,7 @@ theorem wp_reverseThreeWords :
   iintro H8
   wasm_wp_finish_value
   isplitr
-  · ipureintro
-    rfl
+  · ipureexact rfl
   · isplitl [H0]
     · rw [UInt32.add_zero]
       iexact H0
@@ -4587,8 +4580,7 @@ theorem wp_partitionThreeWords :
   iintro H8
   wasm_wp_finish_value
   isplitr
-  · ipureintro
-    rfl
+  · ipureexact rfl
   · isplitl [H0]
     · rw [UInt32.add_zero]
       iexact H0
@@ -4655,8 +4647,7 @@ theorem wp_mergeTwoWords :
   wasm_wp_pures [wp_exitControl]
   wasm_wp_finish_value
   isplitr
-  · ipureintro
-    rfl
+  · ipureexact rfl
   · isplitl [H0]
     · rw [UInt32.add_zero]
       iexact H0

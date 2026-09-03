@@ -241,8 +241,7 @@ theorem twp_mergeMainStep
     simp only [mergeLocals]
     iapply Hthen
     isplitr
-    · ipureintro
-      exact hxy
+    · ipureexact hxy
     iframe
   · simp only [if_neg hxy]
     iapply Wasm.SmallStep.twp_iff (α := α) rfl
@@ -294,8 +293,7 @@ theorem twp_mergeMainStep
     simp only [mergeLocals]
     iapply Helse
     isplitr
-    · ipureintro
-      exact hxy
+    · ipureexact hxy
     iframe
 
 set_option maxHeartbeats 4000000 in
@@ -440,8 +438,7 @@ theorem twp_mergeMainLoop
                 (mid - state.i) + (right - state.j)
             omega
           isplitr
-          · ipureintro
-            exact hstate.takeLeft hi hj
+          · ipureexact hstate.takeLeft hi hj
               (List.getElem?_eq_getElem hiLen)
               (List.getElem?_eq_getElem hjLen) hxy
           iframe
@@ -459,8 +456,7 @@ theorem twp_mergeMainLoop
                 (mid - state.i) + (right - state.j)
             omega
           isplitr
-          · ipureintro
-            exact hstate.takeRight hi hj
+          · ipureexact hstate.takeRight hi hj
               (List.getElem?_eq_getElem hiLen)
               (List.getElem?_eq_getElem hjLen) hxy
           iframe
@@ -492,8 +488,7 @@ theorem twp_mergeMainLoop
       iexact Hdone
   · simp only [Inv, Finish]
     isplitr
-    · ipureintro
-      exact hinv
+    · ipureexact hinv
     iframe
 
 theorem twp_mergeMainLoop_from
@@ -799,8 +794,7 @@ theorem twp_mergeLeftLoop
         simpa [hjEq] using hstateRight.takeRemainingLeft hi
           (List.getElem?_eq_getElem hiLen)
       isplitr
-      · ipureintro
-        exact Or.inr hjEq
+      · ipureexact Or.inr hjEq
       iframe
     · simp only [hiCmp, if_neg hi]
       have hiEq : state.i = mid := by omega
@@ -815,11 +809,9 @@ theorem twp_mergeLeftLoop
       iexact Hdone
   · simp only [Inv, Finish]
     isplitr
-    · ipureintro
-      exact hinv
+    · ipureexact hinv
     isplitr
-    · ipureintro
-      exact hexhausted
+    · ipureexact hexhausted
     iframe
 
 set_option maxHeartbeats 4000000 in
@@ -933,8 +925,7 @@ theorem twp_mergeRightLoop
         change right - (state.j + 1) < right - state.j
         omega
       isplitr
-      · ipureintro
-        exact hstate.takeRemainingRight hj
+      · ipureexact hstate.takeRemainingRight hj
           (List.getElem?_eq_getElem hjLen)
       iframe
     · simp only [hjCmp, if_neg hj]
@@ -950,8 +941,7 @@ theorem twp_mergeRightLoop
       iexact Hdone
   · simp only [Inv, Finish]
     isplitr
-    · ipureintro
-      exact hinv
+    · ipureexact hinv
     iframe
 
 set_option maxHeartbeats 3000000 in
@@ -1140,8 +1130,7 @@ theorem twp_mergeCopyLoop
         change right - (state.k + 1) < right - state.k
         omega
       isplitr
-      · ipureintro
-        exact hcopyState.step hk
+      · ipureexact hcopyState.step hk
       isplitr
       · ipureintro
         rw [hcopiedState, hscratchValue]
@@ -1167,11 +1156,9 @@ theorem twp_mergeCopyLoop
       iexact Hdone
   · simp only [Inv, Finish]
     isplitr
-    · ipureintro
-      exact hcopy
+    · ipureexact hcopy
     isplitr
-    · ipureintro
-      exact hcopied
+    · ipureexact hcopied
     iframe
 
 theorem twp_mergeCopyLoop_from
@@ -1389,11 +1376,9 @@ theorem twp_merge
   unfold mergePost
   iexists output, scratch'
   isplitr
-  · ipureintro
-    exact hmergeRange
+  · ipureexact hmergeRange
   isplitr
-  · ipureintro
-    exact hscratchLength
+  · ipureexact hscratchLength
   iframe
 
 set_option maxHeartbeats 3000000 in
@@ -1860,8 +1845,7 @@ theorem twp_mergeSortInnerLoop
       · unfold mergePre
         iframe
         isplitr
-        · ipureintro
-          exact hscratchLength.trans hvaluesLength.symm
+        · ipureexact hscratchLength.trans hvaluesLength.symm
         isplitr
         · ipureintro
           simpa only [hvaluesLength] using hlayout
@@ -1898,14 +1882,11 @@ theorem twp_mergeSortInnerLoop
         have hwidthPositive : 0 < width := hpass.1
         omega
       isplitr
-      · ipureintro
-        exact hpassNext
+      · ipureexact hpassNext
       isplitr
-      · ipureintro
-        exact hmergeRange.length_eq.trans hvaluesLength
+      · ipureexact hmergeRange.length_eq.trans hvaluesLength
       isplitr
-      · ipureintro
-        exact hnextScratchLength.trans hvaluesLength
+      · ipureexact hnextScratchLength.trans hvaluesLength
       isplitr
       · ipureintro
         rw [← hnextPass]
@@ -1928,17 +1909,13 @@ theorem twp_mergeSortInnerLoop
       iexact Hdone
   · simp only [Inv, Finish]
     isplitr
-    · ipureintro
-      exact hinv
+    · ipureexact hinv
     isplitr
-    · ipureintro
-      exact hcurrent
+    · ipureexact hcurrent
     isplitr
-    · ipureintro
-      exact hscratch
+    · ipureexact hscratch
     isplitr
-    · ipureintro
-      exact hleftSize
+    · ipureexact hleftSize
     iframe
 
 set_option maxHeartbeats 10000000 in
@@ -2141,20 +2118,16 @@ theorem twp_mergeSortOuterLoop
       · ipureintro
         simpa [Nat.mul_comm] using hnextRuns
       isplitr
-      · ipureintro
-        exact hnextPerm
+      · ipureexact hnextPerm
       isplitr
-      · ipureintro
-        exact houtputLength
+      · ipureexact houtputLength
       isplitr
-      · ipureintro
-        exact hnextScratchLength
+      · ipureexact hnextScratchLength
       isplitr
       · ipureintro
         omega
       isplitr
-      · ipureintro
-        exact hdoubleSize
+      · ipureexact hdoubleSize
       iframe
     · have hcmp :
           ¬UInt32.ofNat state.width < UInt32.ofNat count :=
@@ -2172,23 +2145,17 @@ theorem twp_mergeSortOuterLoop
       iexact Hdone
   · simp only [Inv, Finish]
     isplitr
-    · ipureintro
-      exact hruns
+    · ipureexact hruns
     isplitr
-    · ipureintro
-      exact hperm
+    · ipureexact hperm
     isplitr
-    · ipureintro
-      exact hcurrent
+    · ipureexact hcurrent
     isplitr
-    · ipureintro
-      exact hscratch
+    · ipureexact hscratch
     isplitr
-    · ipureintro
-      exact hwidthPositive
+    · ipureexact hwidthPositive
     isplitr
-    · ipureintro
-      exact hwidthSize
+    · ipureexact hwidthSize
     iframe
 
 set_option maxHeartbeats 6000000 in
@@ -2250,11 +2217,9 @@ theorem twp_mergeSortBody
   unfold mergeSortPost
   iexists output, scratchFinal
   isplitr
-  · ipureintro
-    exact ⟨hsorted, hperm⟩
+  · ipureexact ⟨hsorted, hperm⟩
   isplitr
-  · ipureintro
-    exact hscratchFinalLength
+  · ipureexact hscratchFinalLength
   iframe
 
 set_option maxHeartbeats 5000000 in

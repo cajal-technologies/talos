@@ -176,8 +176,7 @@ theorem writeTransfer
   imodintro
   isplitl [Hhost Hbytes]
   · isplitl []
-    · ipureintro
-      rfl
+    · ipureexact rfl
     · isplitl [Hhost]
       · iexact Hhost
       · iexact Hbytes
@@ -302,8 +301,7 @@ theorem readTransfer
   imodintro
   isplitl [Hhost Hbuffer]
   · isplitl []
-    · ipureintro
-      rfl
+    · ipureexact rfl
     · isplitl [Hhost]
       · iexact Hhost
       · iexact Hbuffer
@@ -349,8 +347,7 @@ theorem oomTransfer
   imodintro
   isplitl [Hhost]
   · isplitl []
-    · ipureintro
-      rfl
+    · ipureexact rfl
     · iexact Hhost
   · isimp only [afterOom] at Hstate
     rw [hhostEq]

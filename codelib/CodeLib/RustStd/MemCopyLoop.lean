@@ -957,14 +957,11 @@ theorem copyWords_loop_twp
             iapply IH'
             simp only [Inv, next]
             isplitr
-            · ipureintro
-              exact hcopiedNext
+            · ipureexact hcopiedNext
             isplitr
-            · ipureintro
-              exact hdstNext
+            · ipureexact hdstNext
             isplitr
-            · ipureintro
-              exact hsourceNext
+            · ipureexact hsourceNext
             isplitl_exact HR'
             isplitl [Hdst']
             · simp only [List.append_assoc, List.singleton_append]

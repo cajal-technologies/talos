@@ -169,8 +169,7 @@ theorem absDiff_smallStep_wp
   · iintro ⟨_Htrue, Hresources⟩
     wasm_wp_return_value
     isplitr
-    · ipureintro
-      rfl
+    · ipureexact rfl
     · iexact Hresources
   · isplitr
     · itrivial

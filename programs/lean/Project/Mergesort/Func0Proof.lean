@@ -232,8 +232,7 @@ private theorem LiveBlock_with_nonnull
   · unfold LiveBlock
     iframe Htoken Hbytes
     ipureexact hfacts
-  · ipureintro
-    exact hfacts.2.1
+  · ipureexact hfacts.2.1
 
 /-- Common normal-return tail after either the first allocation or a
 reallocation has produced a non-null pointer. -/
@@ -530,8 +529,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
         isplitl_exact Hbump
         isplitl_exact Hstreams
         isplitl []
-        · ipureintro
-          exact ⟨hnewMatches, hnewValid, Or.inl rfl⟩
+        · ipureexact ⟨hnewMatches, hnewValid, Or.inl rfl⟩
         cases hdecision : classifyBump frontier newLayout with
         | oom =>
             have hdecision' : classifyBump frontier
@@ -660,8 +658,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
       isplitl_exact Hblock
       isplitl_exact Hstreams
       isplitl []
-      · ipureintro
-        exact ⟨holdMatches, hnewMatches, holdValid, hnewValid, rfl,
+      · ipureexact ⟨holdMatches, hnewMatches, holdValid, hnewValid, rfl,
           holdNew⟩
       cases hdecision : classifyBump frontier newLayout with
       | oom =>
@@ -681,8 +678,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
               (.allocated oldId allBytes spare) $$ [Hblock']
           · unfold GrowSourceOwn
             isplitr
-            · ipureintro
-              exact hsource
+            · ipureexact hsource
             · iexact Hblock'
           iapply Hcont $$ Hresult Hsource Hbump Hstreams
       | success newPtr finish =>
@@ -774,8 +770,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
                 (.allocated oldId allBytes spare) $$ [Hblock']
             · unfold GrowSourceOwn
               isplitr
-              · ipureintro
-                exact hsource
+              · ipureexact hsource
               · iexact Hblock'
             iapply Hoom $$ Hresult Hsource Hbump Hstreams
 

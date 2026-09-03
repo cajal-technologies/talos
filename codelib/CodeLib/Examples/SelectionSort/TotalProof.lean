@@ -852,8 +852,7 @@ private theorem twp_innerLoop
             current.length - state.scan
           omega
         isplitr
-        · ipureintro
-          exact hnext
+        · ipureexact hnext
         iframe
       · simp only [if_neg hlt]
         wasm_twp_pures [twp_iff]
@@ -884,8 +883,7 @@ private theorem twp_innerLoop
             current.length - state.scan
           omega
         isplitr
-        · ipureintro
-          exact hnext
+        · ipureexact hnext
         iframe
     · have hnlt : ¬UInt32.ofNat state.scan < UInt32.ofNat length := by
         apply mt hcmp.mp
@@ -908,8 +906,7 @@ private theorem twp_innerLoop
       iexact Hfinish
   · simp only [Inv]
     isplitr
-    · ipureintro
-      exact hinv
+    · ipureexact hinv
     iframe
 
 private structure OuterState where
@@ -1090,8 +1087,7 @@ private theorem twp_outerLoop
           input.length - state.outer
         omega
       isplitr
-      · ipureintro
-        exact hnext
+      · ipureexact hnext
       isplitl [Hupdated]
       · rw [show updated =
           swapElems state.current state.outer finalBest from rfl]
@@ -1115,8 +1111,7 @@ private theorem twp_outerLoop
       iexact Hfinish
   · simp only [Inv]
     isplitr
-    · ipureintro
-      exact hinv
+    · ipureexact hinv
     isplitl_exact Harray
     · iexact Hfinish
 

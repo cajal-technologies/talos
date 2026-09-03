@@ -26,8 +26,7 @@ private theorem sep_pair_pure_rotate
     (P ∗ Q) ∗ ⌜φ⌝ ⊢ ⌜φ⌝ ∗ P ∗ Q := by
   iintro ⟨⟨HP, HQ⟩, %hφ⟩
   isplitl []
-  · ipureintro
-    exact hφ
+  · ipureexact hφ
   · isplitl [HP]
     · iexact HP
     · iexact HQ
@@ -1996,8 +1995,7 @@ theorem tableCopyDistinct_store_partiallyMeets :
       intro values
       iintro ⟨⟨Hdestination, Hsource⟩, %hvalues⟩
       isplitl []
-      · ipureintro
-        exact hvalues
+      · ipureexact hvalues
       · isplitl [Hdestination]
         · iexact Hdestination
         · iexact Hsource

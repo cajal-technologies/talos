@@ -75,12 +75,10 @@ private theorem growSource_live_lookup
   isplitl [Htoken Hbytes]
   · unfold GrowSourceOwn LiveBlock
     isplitr
-    · ipureintro
-      exact hsource
+    · ipureexact hsource
     · iframe Htoken Hbytes
       ipureexact hblock
-  · ipureintro
-    exact hlookup
+  · ipureexact hlookup
 
 private theorem growSource_reserveHistory
     [WasmSmallStepGS hlc Universal.State]
@@ -124,8 +122,7 @@ private theorem growSource_reserveHistory
           (.allocated oldId allBytes spare) $$ [Hblock]
       · unfold GrowSourceOwn
         isplitr
-        · ipureintro
-          exact hsource
+        · ipureexact hsource
         · iexact Hblock
       isplitl_exact Hbump
       isplitl_exact Hsource
@@ -423,8 +420,7 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
       · iapply (StackReserve_split reserveBase shadow).mpr
         iexists headBytes, growBefore
         isplitr
-        · ipureintro
-          exact hshadow
+        · ipureexact hshadow
         · iframe
       ihave Hsp' : StackPointer reserveBase $$ [Hsp]
       · unfold StackPointer
@@ -595,8 +591,7 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
         · iapply (StackReserve_split reserveBase shadow).mpr
           iexists headBytes, growBefore
           isplitr
-          · ipureintro
-            exact hshadow
+          · ipureexact hshadow
           · iframe
         ihave Hsp' : StackPointer reserveBase $$ [Hsp]
         · unfold StackPointer

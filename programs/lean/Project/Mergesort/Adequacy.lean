@@ -386,8 +386,7 @@ theorem twp_entry_of_func3
   iapply hcall
   iframe Hruntime Hsp Hstack Hbump Hstreams
   isplitr
-  · ipureintro
-    exact entryStackBytes_length
+  · ipureexact entryStackBytes_length
   isplitr
   · iintro _Hruntime Hsuccess
     unfold ResumeWP resumeExpr

@@ -102,8 +102,7 @@ theorem opt3_func0_distinct_smallStep_wp
   iintro HB
   wasm_wp_return_value
   isplitr
-  · ipureintro
-    rfl
+  · ipureexact rfl
   · rw [show (i <<< (3 % 32)) + ptr = addressI by rfl,
       show (j <<< (3 % 32)) + ptr = addressJ by rfl]
     simp only [UInt32.add_zero]

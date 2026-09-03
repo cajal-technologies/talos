@@ -512,8 +512,7 @@ theorem stateInterp_memoryPages_snapshot [WasmSmallStepGS hlc α]
       HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth
       HhostEnvAuth HstateAuth
     isplit
-    · ipureintro
-      exact Hfacts
+    · ipureexact Hfacts
     · unfold machineAuxInterp
       iframe Hpages Hdomain Hexceptions
   · iexact Hsnapshot
@@ -568,13 +567,11 @@ theorem stateInterp_memoryPages_agree [WasmSmallStepGS hlc α]
       HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth
       HhostEnvAuth HstateAuth
     isplit
-    · ipureintro
-      exact Hfacts
+    · ipureexact Hfacts
     · unfold machineAuxInterp
       iframe Hpages Hdomain Hexceptions
   isplitl_exact Hsnapshot
-  · ipureintro
-    exact hle
+  · ipureexact hle
 
 theorem stateInterp_pointsTo_read8 [WasmSmallStepGS hlc α]
     (store : MachineStore α) (steps : Nat)
@@ -793,8 +790,7 @@ theorem genHeap_alloc_freshBytes [WasmHeapGS α]
       isplit
       · iapply (pointsToBytes_nil 0 addr).mpr
         itrivial
-      · ipureintro
-        exact hbelow
+      · ipureexact hbelow
   | cons byte rest ih =>
       have hlookup : get? σ (⟨0, addr⟩ : MemoryKey) = none :=
         hbelow.get?_eq_none_of_le ⟨0, addr⟩ rfl (Nat.le_refl _)
@@ -2951,8 +2947,7 @@ theorem stateInterp_memoryGrow_tracked [WasmSmallStepGS hlc α]
   imodintro
   isplitl_exact Hstate
   isplitl_exact Hpages
-  · ipureintro
-    exact hfacts
+  · ipureexact hfacts
 
 /-- Frame-preserving form of `stateInterp_memoryGrow_tracked`, for lifting
 rules that prepare a continuation before updating the hidden page authority. -/

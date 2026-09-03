@@ -1006,10 +1006,8 @@ theorem twp_sort [WasmSmallStepGS hlc Unit]
     isplitl_exact Hsource
     isplitl_exact Hscratch
     isplitr
-    · ipureintro
-      exact scratchValues_length input
-    · ipureintro
-      exact validLayout input hfit
+    · ipureexact scratchValues_length input
+    · ipureexact validLayout input hfit
   · iintro %width %left %mid %right Hruntime Hpost
     ihave Hpost' := mergeSortPost_elim source scratch input $$ Hpost
     icases Hpost' with ⟨%output, %scratchFinal, %hsorted, %_hscratchLength,

@@ -241,8 +241,7 @@ theorem ByteSlice_append {host : Type} [WasmHeapGS host]
       rw [hoffset] at hrightNowrap
       omega
     isplitl []
-    · ipureintro
-      exact hnowrap
+    · ipureexact hnowrap
     · iapply (pointsToBytes_append 0 ptr left right).mpr
       iframe
 
@@ -274,8 +273,7 @@ theorem ByteSlice_serialize_as_WordSlice {host : Type} [WasmHeapGS host]
   constructor
   · iintro Hbytes
     isplitl []
-    · ipureintro
-      exact halign
+    · ipureexact halign
     · iexact Hbytes
   · iintro ⟨%_halign, Hbytes⟩
     iexact Hbytes
@@ -375,8 +373,7 @@ theorem WordSlice_nil {host : Type} [WasmHeapGS host]
   iintro _Hemp
   unfold WordSlice ByteSlice
   isplitl []
-  · ipureintro
-    exact halign
+  · ipureexact halign
   isplitl []
   · ipureintro
     simpa [UInt32.size] using ptr.toBitVec.isLt
@@ -455,8 +452,7 @@ theorem WordSlice_append {host : Type} [WasmHeapGS host]
       rw [hoffset] at hrightNowrap
       omega
     isplitl []
-    · ipureintro
-      exact halign
+    · ipureexact halign
     isplitl []
     · ipureintro
       simpa only [Nat.mul_add] using hnowrap
@@ -477,8 +473,7 @@ theorem WordSlice_facts {host : Type} [WasmHeapGS host]
   isplitl [Hbytes]
   · iframe Hbytes
     ipureexact ⟨halign, hnowrap⟩
-  · ipureintro
-    exact ⟨halign, by simpa only [serialize_length] using hnowrap⟩
+  · ipureexact ⟨halign, by simpa only [serialize_length] using hnowrap⟩
 
 /-- Existing `arrayAt` proofs and the canonical codec describe the same
 physical bytes. -/
@@ -651,22 +646,18 @@ theorem SortBuffers_copyBackFocus {host : Type} [WasmHeapGS host]
   iintro Hscratch
   isplitl [Hsource]
   · isplitl []
-    · ipureintro
-      exact hsourceAlign
+    · ipureexact hsourceAlign
     isplitl []
     · ipureintro
       simpa only [serialize_length, hfacts.1] using hsourceNowrap
     · iexact Hsource
   isplitl [Hscratch]
   · isplitl []
-    · ipureintro
-      exact hscratchAlign
+    · ipureexact hscratchAlign
     isplitl []
-    · ipureintro
-      exact hscratchNowrap
+    · ipureexact hscratchNowrap
     · iexact Hscratch
-  · ipureintro
-    exact ⟨rfl, by simpa only [hfacts.1] using hfacts.2⟩
+  · ipureexact ⟨rfl, by simpa only [hfacts.1] using hfacts.2⟩
 
 private theorem disjoint_prefixes
     (source scratch : UInt32)
@@ -765,8 +756,7 @@ theorem SortBuffers_append {host : Type} [WasmHeapGS host]
     · unfold SortBuffers
       iframe
       ipureexact ⟨hrightLength, hrightDisjoint⟩
-    · ipureintro
-      exact hfacts.2
+    · ipureexact hfacts.2
   · iintro ⟨Hleft, Hright, %hfull⟩
     isimp only [SortBuffers] at Hleft Hright
     icases Hleft with ⟨HsourceLeft, HscratchLeft, %_hleftFacts⟩
@@ -778,8 +768,7 @@ theorem SortBuffers_append {host : Type} [WasmHeapGS host]
     isplitl [HscratchLeft HscratchRight]
     · iapply (WordSlice_append scratch scratchLeft scratchRight).mpr
       iframe
-    · ipureintro
-      exact ⟨by
+    · ipureexact ⟨by
         simp only [List.length_append, hleftLength, hrightLength], hfull⟩
 
 /-! ## Allocator vocabulary and ownership -/
@@ -1960,8 +1949,7 @@ theorem StackReserve_split
       ⟨Hhead, Hgrow⟩
     iexists headBytes, growBefore
     isplitr
-    · ipureintro
-      exact ⟨hdecompose, hheadLength, hgrowLength⟩
+    · ipureexact ⟨hdecompose, hheadLength, hgrowLength⟩
     · iframe
   · iintro Hparts
     icases Hparts with
@@ -2007,8 +1995,7 @@ theorem EntryStack_split
     ihave Hreserve' : StackReserve reserveBase reserveBytes $$ [Hreserve]
     · unfold StackReserve
       isplitl []
-      · ipureintro
-        exact hreserveLength
+      · ipureexact hreserveLength
       · rw [← hlow]
         iexact Hreserve
     ihave Hframe' : ByteSlice driverBase frameBytes $$ [Hframe]
@@ -2016,8 +2003,7 @@ theorem EntryStack_split
       iexact Hframe
     iexists reserveBytes, frameBytes
     isplitr
-    · ipureintro
-      exact ⟨hdecompose, hreserveLength, hframeLength⟩
+    · ipureexact ⟨hdecompose, hreserveLength, hframeLength⟩
     · iframe
   · iintro Hparts
     icases Hparts with
@@ -2054,14 +2040,12 @@ theorem StackReserve_combineFrame
   ihave Hreserve : StackReserve reserveBase reserveBytes $$ [HreserveBytes]
   · unfold StackReserve
     isplitl []
-    · ipureintro
-      exact hreserveLength
+    · ipureexact hreserveLength
     · iexact HreserveBytes
   iapply (EntryStack_split (reserveBytes ++ frameBytes)).mpr
   iexists reserveBytes, frameBytes
   isplitr
-  · ipureintro
-    exact ⟨rfl, hreserveLength, hframeLength⟩
+  · ipureexact ⟨rfl, hreserveLength, hframeLength⟩
   · iframe
 
 /-- Reversible byte-level layout of the visible 272-byte driver frame: the
@@ -2124,8 +2108,7 @@ theorem DriverFrame_split
       iexact Houtput
     iexists headerBytes, chunkBytes, outputBytes
     isplitr
-    · ipureintro
-      exact ⟨by rw [hheaderRest, hchunkOutput, List.append_assoc],
+    · ipureexact ⟨by rw [hheaderRest, hchunkOutput, List.append_assoc],
         hheaderLength, hchunkLength, houtputLength⟩
     · iframe
   · iintro Hparts
@@ -2203,8 +2186,7 @@ theorem LiveBlock_to_VecStorage {host : Type} [WasmHeapGS host]
   iright
   iexists allocationId, allBytes, spare
   isplitr
-  · ipureintro
-    exact ⟨hcapacity, by simpa [hblock.1] using hinitialized,
+  · ipureexact ⟨hcapacity, by simpa [hblock.1] using hinitialized,
       hdecompose, hspareLength⟩
   · unfold LiveBlock
     iframe Htoken Hbytes
@@ -2241,8 +2223,7 @@ theorem VecStorage_initializedFocus {host : Type} [WasmHeapGS host]
       iright
       iexists allocationId, initialized ++ spare, spare
       isplitr
-      · ipureintro
-        exact ⟨hstorage.1, hstorage.2.1, rfl, hstorage.2.2.2⟩
+      · ipureexact ⟨hstorage.1, hstorage.2.1, rfl, hstorage.2.2.2⟩
       · unfold LiveBlock
         iframe Htoken HallBytes
         ipureexact ⟨by
@@ -2299,8 +2280,7 @@ theorem VecStorage_appendFocus {host : Type} [WasmHeapGS host]
         Hspare' with ⟨Hchunk, Htail⟩
     iexists oldChunk
     isplitr
-    · ipureintro
-      exact hchunkLength
+    · ipureexact hchunkLength
     isplitl_exact Hchunk
     iintro Hcurrent
     ihave Htail' : ByteSlice
@@ -2330,8 +2310,7 @@ theorem VecStorage_appendFocus {host : Type} [WasmHeapGS host]
     iright
     iexists allocationId, initialized ++ current ++ tail, tail
     isplitr
-    · ipureintro
-      exact ⟨hstorage.1, hnewInitialized, rfl, by
+    · ipureexact ⟨hstorage.1, hnewInitialized, rfl, by
         simpa only [List.length_append] using htailLength⟩
     · unfold LiveBlock
       iframe Htoken HallBytesNew
@@ -2470,8 +2449,7 @@ theorem VecU8_appendFocus {host : Type} [WasmHeapGS host]
   icases Hfocus with ⟨%oldChunk, %hchunkLength, Hchunk, Hclose⟩
   iexists oldChunk
   isplitr
-  · ipureintro
-    exact hchunkLength
+  · ipureexact hchunkLength
   isplitl_exact Hchunk
   isplitl_exact Hlength
   iintro Hcurrent
@@ -2587,8 +2565,7 @@ theorem ExportFrame_releaseStorage [WasmHeapGS Universal.State]
       hframeLength).mpr
     iexists vecHeaderBytes capacity ptr initialized, chunkBytes, outputBytes
     isplitr
-    · ipureintro
-      exact ⟨rfl, vecHeaderBytes_length capacity ptr initialized,
+    · ipureexact ⟨rfl, vecHeaderBytes_length capacity ptr initialized,
         hframeParts.1, hframeParts.2⟩
     · iframe
   iframe Hstorage Hframe

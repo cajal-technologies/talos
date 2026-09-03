@@ -386,13 +386,11 @@ theorem wasm_smallStep_heap_globals_runtime_tags_stronglyNormalizing
     isplitl [Hexceptions]
     · iexists (∅ : WasmExceptionMap (Nat × List Value))
       isplitl_exact Hexceptions
-      · ipureintro
-        exact exceptionHeapAgrees_empty _
+      · ipureexact exceptionHeapAgrees_empty _
     · iexists config.store.wasm.tagIds
       isplitl []
       · iexact HtagTableOwn
-      · ipureintro
-        exact List.prefix_rfl -- The ordinary frontier is installed below.
+      · ipureexact List.prefix_rfl -- The ordinary frontier is installed below.
   ihave Hexc : machineAuxInterp _ config.store.wasm.mem.pages
       config.store.wasm.exns config.store.wasm.tagIds $$
       [HmemoryPagesAuth HheapDomain HexceptionInterp]
@@ -614,13 +612,11 @@ theorem wasm_smallStep_runtime_tags_adequacy
     isplitl [Hexceptions]
     · iexists (∅ : WasmExceptionMap (Nat × List Value))
       isplitl_exact Hexceptions
-      · ipureintro
-        exact exceptionHeapAgrees_empty _
+      · ipureexact exceptionHeapAgrees_empty _
     · iexists config.store.wasm.tagIds
       isplitl []
       · iexact HtagTableOwn
-      · ipureintro
-        exact List.prefix_rfl -- The ordinary frontier is installed below.
+      · ipureexact List.prefix_rfl -- The ordinary frontier is installed below.
   ihave Hexc : machineAuxInterp _ config.store.wasm.mem.pages
       config.store.wasm.exns config.store.wasm.tagIds $$
       [HmemoryPagesAuth HheapDomain HexceptionInterp]

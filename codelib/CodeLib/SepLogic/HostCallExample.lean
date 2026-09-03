@@ -123,8 +123,7 @@ theorem writeByte_partiallyMeets :
                  List.length_nil, List.drop]
       wasm_wp_finish_value
       isplitr [HQ]
-      · ipureintro
-        rfl
+      · ipureexact rfl
       · iexact HQ
     -- trap: refuted by simp
     · inext

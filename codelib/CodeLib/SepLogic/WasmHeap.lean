@@ -1012,8 +1012,7 @@ theorem currentInstanceOwnN_update_of_any {α : Type} [gs : WasmInstanceGS α]
   icases iOwn_op $$ Hboth with ⟨H1, H2⟩
   isplitl_exact H1
   isplitl_exact H2
-  · ipureintro
-    exact heq
+  · ipureexact heq
 
 /-! ## Points-to assertions
 
