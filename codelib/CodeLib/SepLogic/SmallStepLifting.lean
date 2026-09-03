@@ -796,6 +796,12 @@ macro_rules
       `(tactic| iapply wp_shlI64; inext; wasm_wp_pures [$rest:ident*])
   | `(tactic| wasm_wp_pures [wp_shrUI64 $rest:ident*]) =>
       `(tactic| iapply wp_shrUI64; inext; wasm_wp_pures [$rest:ident*])
+  | `(tactic| wasm_wp_pures [wp_ctzI64 $rest:ident*]) =>
+      `(tactic| iapply wp_ctzI64; inext; wasm_wp_pures [$rest:ident*])
+  | `(tactic| wasm_wp_pures [wp_wrapI64 $rest:ident*]) =>
+      `(tactic| iapply wp_wrapI64; inext; wasm_wp_pures [$rest:ident*])
+  | `(tactic| wasm_wp_pures [wp_extendUI32 $rest:ident*]) =>
+      `(tactic| iapply wp_extendUI32; inext; wasm_wp_pures [$rest:ident*])
   | `(tactic| wasm_wp_pures [wp_block $rest:ident*]) =>
       `(tactic| iapply wp_block; inext; wasm_wp_pures [$rest:ident*])
   | `(tactic| wasm_wp_pures [wp_brIfZero $rest:ident*]) =>

@@ -456,11 +456,8 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
   simp only [List.length]
   wasm_twp_pures [twp_const twp_localSet]
   simp only [List.length]
-  wasm_twp_pures [twp_block twp_block twp_localGet]
-  iapply twp_extendUI32
-  wasm_twp_pures [twp_localGet]
-  iapply twp_extendUI32
-  wasm_twp_pures [twp_mulI64]
+  wasm_twp_pures [twp_block twp_block twp_localGet twp_extendUI32 twp_localGet
+    twp_extendUI32 twp_mulI64]
   have hproduct : UInt64.ofNat (1 : UInt32).toNat *
       UInt64.ofNat newCapacity.toNat = UInt64.ofNat newCapacity.toNat := by
     rw [show (1 : UInt32).toNat = 1 by decide]
@@ -470,13 +467,12 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
   simp only [List.length]
   wasm_twp_pures [twp_constI64 twp_shrUI64]
   rw [show (32 : UInt64) % 64 = 32 by decide, hhigh]
-  iapply twp_wrapI64
+  wasm_twp_pures [twp_wrapI64]
   norm_num
   wasm_twp_pures [twp_eqz]
   iapply twp_brIf (by decide) (by rfl)
   simp only [List.take_zero, List.nil_append]
-  wasm_twp_pures [twp_block twp_localGet]
-  iapply twp_wrapI64
+  wasm_twp_pures [twp_block twp_localGet twp_wrapI64]
   rw [hwrap]
   wasm_twp_pures [twp_localTee]
   simp only [List.set]

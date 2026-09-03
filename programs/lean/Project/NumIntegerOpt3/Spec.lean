@@ -199,10 +199,8 @@ theorem gcdLoopBody_smallStep_wp
     iapply wp_brIf (by decide) rfl
     inext
     simp only [List.take_nil, List.drop_nil, List.nil_append]
-    wasm_wp_pures [wp_localGet wp_localGet wp_subI64 wp_localTee wp_localGet]
-    iapply wp_ctzI64
-    inext
-    wasm_wp_pures [wp_shrUI64 wp_localTee]
+    wasm_wp_pures [wp_localGet wp_localGet wp_subI64 wp_localTee wp_localGet
+      wp_ctzI64 wp_shrUI64 wp_localTee]
     simp only [List.set]
     let x' := (x - y) >>> (UInt64.ofNat (ctz64 64 (x - y)) % 64)
     obtain ⟨hx'ne, hx'odd, hgcd', _hdec⟩ :=
@@ -252,10 +250,7 @@ theorem gcdLoopBody_smallStep_wp
   · iapply wp_gtUI64 (result := 0) (by simp [hgt])
     inext
     wasm_wp_pures [wp_brIfZero wp_localGet wp_localGet wp_localGet wp_subI64 wp_localTee
-      wp_localGet]
-    iapply wp_ctzI64
-    inext
-    wasm_wp_pures [wp_shrUI64 wp_localTee]
+      wp_localGet wp_ctzI64 wp_shrUI64 wp_localTee]
     simp only [List.set]
     let y' := (y - x) >>> (UInt64.ofNat (ctz64 64 (y - x)) % 64)
     obtain ⟨hy'ne, hy'odd, hgcd', _hdec⟩ :=
@@ -319,16 +314,10 @@ theorem gcdInner_smallStep_wp
         {{ rs, ⌜rs = [.i64 expected]⌝ }} := by
   iintro Htrue
   simp only [innerBody]
-  wasm_wp_pures [wp_localGet wp_localGet]
-  iapply wp_ctzI64
-  inext
-  wasm_wp_pures [wp_shrUI64 wp_localTee]
+  wasm_wp_pures [wp_localGet wp_localGet wp_ctzI64 wp_shrUI64 wp_localTee]
   simp only [List.set]
   let ao := p0 >>> (UInt64.ofNat (ctz64 64 p0) % 64)
-  wasm_wp_pures [wp_localGet wp_localGet]
-  iapply wp_ctzI64
-  inext
-  wasm_wp_pures [wp_shrUI64 wp_localTee]
+  wasm_wp_pures [wp_localGet wp_localGet wp_ctzI64 wp_shrUI64 wp_localTee]
   simp only [List.set]
   let bo := p1 >>> (UInt64.ofNat (ctz64 64 p1) % 64)
   have haone : ao ≠ 0 := UInt64.shr_ctz_ne_zero p0 hp0
@@ -417,10 +406,7 @@ theorem mod3_gcd_smallStep (a b : UInt64) :
       simp
     · iapply wp_eqzI64 (result := 0) (by rw [if_neg hb])
       inext
-      wasm_wp_pures [wp_brIfZero wp_localGet]
-      iapply wp_ctzI64
-      inext
-      wasm_wp_pures [wp_localSet]
+      wasm_wp_pures [wp_brIfZero wp_localGet wp_ctzI64 wp_localSet]
       simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
         List.set]
       wasm_wp_pures [wp_block]

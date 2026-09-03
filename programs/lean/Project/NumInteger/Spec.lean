@@ -1156,11 +1156,7 @@ theorem func1_sharedShift_smallStep_wp
       (by decide) (by decide) (by decide) $$ HyLater
   inext
   iintro Hy
-  wasm_wp_pures [wp_orI64]
-  iapply Wasm.SmallStep.wp_ctzI64
-  inext
-  iapply Wasm.SmallStep.wp_wrapI64
-  inext
+  wasm_wp_pures [wp_orI64 wp_ctzI64 wp_wrapI64]
   ihave HshiftLater :
       ▷ pointsTo_u32 0 (1048512 + 44) oldShift $$ [Hshift]
   · inext
@@ -1260,10 +1256,7 @@ theorem func1_normalizeX_smallStep_wp
       (by decide) (by decide) (by decide) $$ HxLater
   inext
   iintro Hx
-  iapply Wasm.SmallStep.wp_ctzI64
-  inext
-  iapply Wasm.SmallStep.wp_wrapI64
-  inext
+  wasm_wp_pures [wp_ctzI64 wp_wrapI64]
   ihave HshiftXLater :
       ▷ pointsTo_u32 0 (1048512 + 40) oldShiftX $$ [HshiftX]
   · inext
@@ -1299,10 +1292,7 @@ theorem func1_normalizeX_smallStep_wp
       (by decide) (by decide) (by decide) $$ HxLater
   inext
   iintro Hx
-  wasm_wp_pures [wp_localGet wp_const wp_and]
-  iapply Wasm.SmallStep.wp_extendUI32
-  inext
-  wasm_wp_pures [wp_shrUI64]
+  wasm_wp_pures [wp_localGet wp_const wp_and wp_extendUI32 wp_shrUI64]
   rw [UInt32.and_comm (operandShiftWord a) 63]
   unfold operandShiftWord
   rw [shift_pipeline a ha]
@@ -1393,10 +1383,7 @@ theorem func1_normalizeY_smallStep_wp
       (by decide) (by decide) (by decide) $$ HyLater
   inext
   iintro Hy
-  iapply Wasm.SmallStep.wp_ctzI64
-  inext
-  iapply Wasm.SmallStep.wp_wrapI64
-  inext
+  wasm_wp_pures [wp_ctzI64 wp_wrapI64]
   ihave HshiftYLater :
       ▷ pointsTo_u32 0 (1048512 + 36) oldShiftY $$ [HshiftY]
   · inext
@@ -1432,10 +1419,7 @@ theorem func1_normalizeY_smallStep_wp
       (by decide) (by decide) (by decide) $$ HyLater
   inext
   iintro Hy
-  wasm_wp_pures [wp_localGet wp_const wp_and]
-  iapply Wasm.SmallStep.wp_extendUI32
-  inext
-  wasm_wp_pures [wp_shrUI64]
+  wasm_wp_pures [wp_localGet wp_const wp_and wp_extendUI32 wp_shrUI64]
   rw [UInt32.and_comm (operandShiftWord b) 63]
   unfold operandShiftWord
   rw [shift_pipeline b hb]
@@ -1611,10 +1595,7 @@ theorem func1_equalRecombine_smallStep_wp
       (by decide) (by decide) (by decide) $$ HxLater
   inext
   iintro Hx
-  wasm_wp_pures [wp_localGet wp_const wp_and]
-  iapply Wasm.SmallStep.wp_extendUI32
-  inext
-  wasm_wp_pures [wp_shlI64]
+  wasm_wp_pures [wp_localGet wp_const wp_and wp_extendUI32 wp_shlI64]
   ihave HresultLater :
       ▷ pointsTo_u64 0 (1048512 + 0) oldResult $$ [Hresult]
   · inext
@@ -1809,10 +1790,7 @@ theorem func1_loopNormalizeY_smallStep_wp
       (by decide) (by decide) (by decide) $$ HyLater
   inext
   iintro Hy
-  iapply Wasm.SmallStep.wp_ctzI64
-  inext
-  iapply Wasm.SmallStep.wp_wrapI64
-  inext
+  wasm_wp_pures [wp_ctzI64 wp_wrapI64]
   ihave HshiftLater :
       ▷ pointsTo_u32 0 (1048512 + 32) oldShift $$ [Hshift]
   · inext
@@ -1848,10 +1826,7 @@ theorem func1_loopNormalizeY_smallStep_wp
       (by decide) (by decide) (by decide) $$ HyLater
   inext
   iintro Hy
-  wasm_wp_pures [wp_localGet wp_const wp_and]
-  iapply Wasm.SmallStep.wp_extendUI32
-  inext
-  wasm_wp_pures [wp_shrUI64]
+  wasm_wp_pures [wp_localGet wp_const wp_and wp_extendUI32 wp_shrUI64]
   rw [UInt32.and_comm (operandShiftWord d) 63]
   unfold operandShiftWord
   rw [shift_pipeline d hd]
@@ -2071,10 +2046,7 @@ theorem func1_loopNormalizeX_smallStep_wp
       (by decide) (by decide) (by decide) $$ HxLater
   inext
   iintro Hx
-  iapply Wasm.SmallStep.wp_ctzI64
-  inext
-  iapply Wasm.SmallStep.wp_wrapI64
-  inext
+  wasm_wp_pures [wp_ctzI64 wp_wrapI64]
   ihave HshiftLater :
       ▷ pointsTo_u32 0 (1048512 + 28) oldShift $$ [Hshift]
   · inext
@@ -2110,10 +2082,7 @@ theorem func1_loopNormalizeX_smallStep_wp
       (by decide) (by decide) (by decide) $$ HxLater
   inext
   iintro Hx
-  wasm_wp_pures [wp_localGet wp_const wp_and]
-  iapply Wasm.SmallStep.wp_extendUI32
-  inext
-  wasm_wp_pures [wp_shrUI64]
+  wasm_wp_pures [wp_localGet wp_const wp_and wp_extendUI32 wp_shrUI64]
   rw [UInt32.and_comm (operandShiftWord d) 63]
   unfold operandShiftWord
   rw [shift_pipeline d hd]
@@ -5174,9 +5143,7 @@ theorem twp_func1_sharedShift_smallStep_wp
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) $$ HyLater
   iintro Hy
-  wasm_twp_pures [twp_orI64]
-  iapply Wasm.SmallStep.twp_ctzI64
-  iapply Wasm.SmallStep.twp_wrapI64
+  wasm_twp_pures [twp_orI64 twp_ctzI64 twp_wrapI64]
   ihave HshiftLater :
       pointsTo_u32 0 (1048512 + 44) oldShift $$ [Hshift]
   · have h :
@@ -5258,8 +5225,7 @@ theorem twp_func1_normalizeX_smallStep_wp
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) $$ HxLater
   iintro Hx
-  iapply Wasm.SmallStep.twp_ctzI64
-  iapply Wasm.SmallStep.twp_wrapI64
+  wasm_twp_pures [twp_ctzI64 twp_wrapI64]
   ihave HshiftXLater :
       pointsTo_u32 0 (1048512 + 40) oldShiftX $$ [HshiftX]
   · have h :
@@ -5289,9 +5255,7 @@ theorem twp_func1_normalizeX_smallStep_wp
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) $$ HxLater
   iintro Hx
-  wasm_twp_pures [twp_localGet twp_const twp_and]
-  iapply Wasm.SmallStep.twp_extendUI32
-  wasm_twp_pures [twp_shrUI64]
+  wasm_twp_pures [twp_localGet twp_const twp_and twp_extendUI32 twp_shrUI64]
   rw [UInt32.and_comm (operandShiftWord a) 63]
   unfold operandShiftWord
   rw [shift_pipeline a ha]
@@ -5368,8 +5332,7 @@ theorem twp_func1_normalizeY_smallStep_wp
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) $$ HyLater
   iintro Hy
-  iapply Wasm.SmallStep.twp_ctzI64
-  iapply Wasm.SmallStep.twp_wrapI64
+  wasm_twp_pures [twp_ctzI64 twp_wrapI64]
   ihave HshiftYLater :
       pointsTo_u32 0 (1048512 + 36) oldShiftY $$ [HshiftY]
   · have h :
@@ -5399,9 +5362,7 @@ theorem twp_func1_normalizeY_smallStep_wp
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) $$ HyLater
   iintro Hy
-  wasm_twp_pures [twp_localGet twp_const twp_and]
-  iapply Wasm.SmallStep.twp_extendUI32
-  wasm_twp_pures [twp_shrUI64]
+  wasm_twp_pures [twp_localGet twp_const twp_and twp_extendUI32 twp_shrUI64]
   rw [UInt32.and_comm (operandShiftWord b) 63]
   unfold operandShiftWord
   rw [shift_pipeline b hb]
@@ -5538,9 +5499,7 @@ theorem twp_func1_equalRecombine_smallStep_wp
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) $$ HxLater
   iintro Hx
-  wasm_twp_pures [twp_localGet twp_const twp_and]
-  iapply Wasm.SmallStep.twp_extendUI32
-  wasm_twp_pures [twp_shlI64]
+  wasm_twp_pures [twp_localGet twp_const twp_and twp_extendUI32 twp_shlI64]
   ihave HresultLater :
       pointsTo_u64 0 (1048512 + 0) oldResult $$ [Hresult]
   · have h :
@@ -5868,8 +5827,7 @@ theorem twp_func1_loopNormalizeY_smallStep_wp
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) $$ HyLater
   iintro Hy
-  iapply Wasm.SmallStep.twp_ctzI64
-  iapply Wasm.SmallStep.twp_wrapI64
+  wasm_twp_pures [twp_ctzI64 twp_wrapI64]
   ihave HshiftLater :
       pointsTo_u32 0 (1048512 + 32) oldShift $$ [Hshift]
   · have h :
@@ -5899,9 +5857,7 @@ theorem twp_func1_loopNormalizeY_smallStep_wp
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) $$ HyLater
   iintro Hy
-  wasm_twp_pures [twp_localGet twp_const twp_and]
-  iapply Wasm.SmallStep.twp_extendUI32
-  wasm_twp_pures [twp_shrUI64]
+  wasm_twp_pures [twp_localGet twp_const twp_and twp_extendUI32 twp_shrUI64]
   rw [UInt32.and_comm (operandShiftWord d) 63]
   unfold operandShiftWord
   rw [shift_pipeline d hd]
@@ -6083,8 +6039,7 @@ theorem twp_func1_loopNormalizeX_smallStep_wp
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) $$ HxLater
   iintro Hx
-  iapply Wasm.SmallStep.twp_ctzI64
-  iapply Wasm.SmallStep.twp_wrapI64
+  wasm_twp_pures [twp_ctzI64 twp_wrapI64]
   ihave HshiftLater :
       pointsTo_u32 0 (1048512 + 28) oldShift $$ [Hshift]
   · have h :
@@ -6114,9 +6069,7 @@ theorem twp_func1_loopNormalizeX_smallStep_wp
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) $$ HxLater
   iintro Hx
-  wasm_twp_pures [twp_localGet twp_const twp_and]
-  iapply Wasm.SmallStep.twp_extendUI32
-  wasm_twp_pures [twp_shrUI64]
+  wasm_twp_pures [twp_localGet twp_const twp_and twp_extendUI32 twp_shrUI64]
   rw [UInt32.and_comm (operandShiftWord d) 63]
   unfold operandShiftWord
   rw [shift_pipeline d hd]

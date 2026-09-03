@@ -2088,6 +2088,12 @@ macro_rules
       `(tactic| iapply twp_shlI64; wasm_twp_pures [$rest:ident*])
   | `(tactic| wasm_twp_pures [twp_shrUI64 $rest:ident*]) =>
       `(tactic| iapply twp_shrUI64; wasm_twp_pures [$rest:ident*])
+  | `(tactic| wasm_twp_pures [twp_ctzI64 $rest:ident*]) =>
+      `(tactic| iapply twp_ctzI64; wasm_twp_pures [$rest:ident*])
+  | `(tactic| wasm_twp_pures [twp_wrapI64 $rest:ident*]) =>
+      `(tactic| iapply twp_wrapI64; wasm_twp_pures [$rest:ident*])
+  | `(tactic| wasm_twp_pures [twp_extendUI32 $rest:ident*]) =>
+      `(tactic| iapply twp_extendUI32; wasm_twp_pures [$rest:ident*])
   | `(tactic| wasm_twp_pures [twp_block $rest:ident*]) =>
       `(tactic| iapply twp_block; wasm_twp_pures [$rest:ident*])
   | `(tactic| wasm_twp_pures [twp_brIfZero $rest:ident*]) =>
