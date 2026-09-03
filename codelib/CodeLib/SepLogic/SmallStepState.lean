@@ -3072,9 +3072,7 @@ theorem stateInterp_fill16_four_AB [WasmSmallStepGS hlc α]
       16 oldWord 0xABABABAB rfl rfl rfl hbound $$
       [$Hstate $Hword] with ⟨Hstate, Hword⟩
   imodintro
-  isplitl [Hstate]
-  · rw [fill16_four_AB_eq_write32]
-    iexact Hstate
+  isplitl_rw_exact [fill16_four_AB_eq_write32] with Hstate
   · iexact Hword
 
 /-- Four-byte passive-segment initialization used by the manual Iris example.
@@ -3098,9 +3096,7 @@ theorem stateInterp_init16_four [WasmSmallStepGS hlc α]
       16 oldWord 0x04030201 rfl rfl rfl hbound $$
       [$Hstate $Hword] with ⟨Hstate, Hword⟩
   imodintro
-  isplitl [Hstate]
-  · rw [init16_four_eq_write32]
-    iexact Hstate
+  isplitl_rw_exact [init16_four_eq_write32] with Hstate
   · iexact Hword
 
 /-- Aligned four-byte copy used by the manual Iris example. Source ownership
@@ -3131,9 +3127,7 @@ theorem stateInterp_copy8_zero_four [WasmSmallStepGS hlc α]
       8 oldDestination 0x04030201 rfl rfl rfl HdestinationFacts.2 $$
       [$Hstate $Hdestination] with ⟨Hstate, Hdestination⟩
   imodintro
-  isplitl [Hstate]
-  · rw [copy8_zero_four_eq_write32 store.wasm.mem HsourceFacts.1]
-    iexact Hstate
+  isplitl_rw_exact [copy8_zero_four_eq_write32 store.wasm.mem HsourceFacts.1] with Hstate
   · iframe
 
 /-- Overlapping four-byte copy from address 0 to address 2.  One eight-byte
@@ -3209,9 +3203,7 @@ theorem stateInterp_copy2_zero_four [WasmSmallStepGS hlc α]
         simp only [UInt32.toNat_ofNat] at Hfacts ⊢
         omega) $$ [$Hstate $H5At] with ⟨Hstate, H5⟩
   imodintro
-  isplitl [Hstate]
-  · rw [copy2_zero_four_eq_write64 store.wasm.mem Hfacts.1]
-    iexact Hstate
+  isplitl_rw_exact [copy2_zero_four_eq_write64 store.wasm.mem Hfacts.1] with Hstate
   · iapply (pointsTo_u64_eq 0 0 0x8877443322112211).mpr
     rw [show u64Byte 0x8877443322112211 0 =
         u64Byte 0x8877665544332211 0 by decide]

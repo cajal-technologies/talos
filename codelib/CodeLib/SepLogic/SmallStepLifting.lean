@@ -4251,9 +4251,7 @@ theorem wp_fillFourBytes (oldWord : UInt32) :
   wasm_wp_next_bind wp_load32 0x12345678 rfl rfl rfl rfl with H32Later => H32
   wasm_wp_finish_value
   isplitr_pureexact rfl
-  · isplitl [H16]
-    · rw [UInt32.add_zero]
-      iexact H16
+  · isplitl_rw_exact [UInt32.add_zero] with H16
     · rw [UInt32.add_zero]
       iexact H32
 
@@ -4402,9 +4400,7 @@ theorem wp_swapWords :
   wasm_wp_next_bind wp_load32 11 rfl rfl rfl rfl with H4Later => H4
   wasm_wp_finish_value
   isplitr_pureexact rfl
-  · isplitl [H0]
-    · rw [UInt32.add_zero]
-      iexact H0
+  · isplitl_rw_exact [UInt32.add_zero] with H0
     · rw [UInt32.add_zero]
       iexact H4
 
@@ -4451,9 +4447,7 @@ theorem wp_reverseThreeWords :
   wasm_wp_next_bind wp_load32 11 rfl rfl rfl rfl with H8Later => H8
   wasm_wp_finish_value
   isplitr_pureexact rfl
-  · isplitl [H0]
-    · rw [UInt32.add_zero]
-      iexact H0
+  · isplitl_rw_exact [UInt32.add_zero] with H0
     · isplitl_exact H4
       · rw [UInt32.add_zero]
         iexact H8
@@ -4502,12 +4496,8 @@ theorem wp_partitionThreeWords :
   wasm_wp_next_bind wp_store32 22 rfl rfl rfl rfl with H8Later => H8
   wasm_wp_finish_value
   isplitr_pureexact rfl
-  · isplitl [H0]
-    · rw [UInt32.add_zero]
-      iexact H0
-    · isplitl [H4]
-      · rw [UInt32.add_zero]
-        iexact H4
+  · isplitl_rw_exact [UInt32.add_zero] with H0
+    · isplitl_rw_exact [UInt32.add_zero] with H4
       · rw [UInt32.add_zero]
         iexact H8
 
@@ -4556,9 +4546,7 @@ theorem wp_mergeTwoWords :
   wasm_wp_pures [wp_exitControl]
   wasm_wp_finish_value
   isplitr_pureexact rfl
-  · isplitl [H0]
-    · rw [UInt32.add_zero]
-      iexact H0
+  · isplitl_rw_exact [UInt32.add_zero] with H0
     · rw [UInt32.add_zero]
       iexact H4
 

@@ -1547,9 +1547,7 @@ theorem array64At_fill_next (memId : Nat) (ptr : UInt32) (i : Nat)
   iapply (array64At_append_cons memId ptr (List.replicate i value)
     value suffix).mpr
   isplitl_exact Hpre
-  isplitl [Hcell]
-  · rw [List.length_replicate]
-    iexact Hcell
+  isplitl_rw_exact [List.length_replicate] with Hcell
   · rw [List.length_replicate]
     iexact Hsuffix'
 

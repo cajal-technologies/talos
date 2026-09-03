@@ -5479,9 +5479,7 @@ theorem twp_func3_initialize
   · isimp only [arrayAt]
     isplitl_exact Hcapacity
     isplitl_exact Hpointer
-    isplitl [Hlength]
-    · rw [show driverBase + 4 + 4 = driverBase + 8 by decide]
-      iexact Hlength
+    isplitl_rw_exact [show driverBase + 4 + 4 = driverBase + 8 by decide] with Hlength
     · itrivial
   ihave HheaderBytes : WordCells driverBase [0, 1, 0] $$ [Harray]
   · iapply (arrayAt_eq_wordCells driverBase [0, 1, 0]).mp

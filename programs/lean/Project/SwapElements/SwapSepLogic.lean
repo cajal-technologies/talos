@@ -281,9 +281,7 @@ theorem wp_swapElementsFunc3
   wasm_wp_next_bind wp_store32 oldPtr rfl rfl rfl rfl with HptrLater => Hptr
   wasm_wp_return_value
   isplitr_pureexact rfl
-  · isplitl [Hptr]
-    · rw [UInt32.add_zero]
-      iexact Hptr
+  · isplitl_rw_exact [UInt32.add_zero] with Hptr
     · rw [← show (1048568 : UInt32) + 4 = 1048572 from rfl]
       iexact Hlen
 
@@ -551,9 +549,7 @@ theorem twp_swapElementsFunc3
   simp only [List.take, List.nil_append]
   iapply twp.value rfl
   isplitr_pureexact rfl
-  · isplitl [Hptr]
-    · rw [UInt32.add_zero]
-      iexact Hptr
+  · isplitl_rw_exact [UInt32.add_zero] with Hptr
     · rw [← show (1048568 : UInt32) + 4 = 1048572 from rfl]
       iexact Hlen
 

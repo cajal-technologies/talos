@@ -2674,9 +2674,7 @@ theorem twp_sort
         omega)
     isplitl_exact Hruntime
     isplitl_exact HsourceRight
-    isplitl [HscratchRight']
-    · rw [UInt32.add_comm]
-      iexact HscratchRight'
+    isplitl_rw_exact [UInt32.add_comm] with HscratchRight'
     iintro %rightOutput %rightScratch %hrightSorted
       %hrightScratchLength %hrightScratchExact Hruntime HsourceRight HscratchRight
     have hleftOutputLength : leftOutput.length = left.length :=
