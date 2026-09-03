@@ -72,13 +72,11 @@ private theorem pointsTo_u32_pair_as_u64
   rw [show ptr + 4 + 2 = ptr + 6 by bv_decide]
   rw [show ptr + 4 + 3 = ptr + 7 by bv_decide]
   constructor
-  · iintro H
-    icases H with ⟨Hlo, Hhi⟩
+  · iintro ⟨Hlo, Hhi⟩
     icases Hlo with ⟨H0, H1, H2, H3⟩
     icases Hhi with ⟨H4, H5, H6, H7⟩
     iframe
-  · iintro H
-    icases H with ⟨H0, H1, H2, H3, H4, H5, H6, H7⟩
+  · iintro ⟨H0, H1, H2, H3, H4, H5, H6, H7⟩
     iframe
 
 /-- The offset-zero form of `twp_store64`, stated without the syntactic

@@ -1439,24 +1439,21 @@ theorem func1_normalization_smallStep_wp
     (R := iprop(R ∗ pointsTo_u32 0 1048552 oldShiftX ∗
       pointsTo_u32 0 1048548 oldShiftY))
     controls calls a b oldShared
-  · iintro Hresources
-    icases Hresources with ⟨HRshifts, Hx', Hy', Hshared'⟩
+  · iintro ⟨HRshifts, Hx', Hy', Hshared'⟩
     icases HRshifts with ⟨HR', HshiftX', HshiftY'⟩
     iapply func1_normalizeX_smallStep_wp
       (R := iprop(R ∗ pointsTo_u64 0 1048528 b ∗
         pointsTo_u32 0 1048556 (sharedShiftWord a b) ∗
         pointsTo_u32 0 1048548 oldShiftY))
       controls calls a b ha oldShiftX
-    · iintro Hresources
-      icases Hresources with ⟨HRrest, HxOdd, HshiftXNew⟩
+    · iintro ⟨HRrest, HxOdd, HshiftXNew⟩
       icases HRrest with ⟨HR'', Hy'', Hshared'', HshiftY''⟩
       iapply func1_normalizeY_smallStep_wp
         (R := iprop(R ∗ pointsTo_u64 0 1048520 (oddPart64 a) ∗
           pointsTo_u32 0 1048556 (sharedShiftWord a b) ∗
           pointsTo_u32 0 1048552 (operandShiftWord a)))
         controls calls a b hb oldShiftY
-      · iintro Hresources
-        icases Hresources with ⟨HRfinal, HyOdd, HshiftYNew⟩
+      · iintro ⟨HRfinal, HyOdd, HshiftYNew⟩
         icases HRfinal with ⟨HR''', HxOdd', Hshared''', HshiftXNew'⟩
         iapply_frame hcontinue
       · iframe
@@ -1659,8 +1656,7 @@ theorem func1_equalBlock_smallStep_wp
   iapply func1_equalRecombine_smallStep_wp
     (R := iprop(R ∗ pointsTo_u64 0 1048528 g))
     controls calls a b g oldResult c6 c8 c7 c9
-  · iintro Hresources
-    icases Hresources with ⟨⟨HR', Hy'⟩, Hx', Hresult'⟩
+  · iintro ⟨⟨HR', Hy'⟩, Hx', Hresult'⟩
     iapply_frame hcontinue
   · iframe
 
@@ -1902,8 +1898,7 @@ theorem func1_loopDecreaseY_smallStep_wp
   iapply func1_loopNormalizeY_smallStep_wp
     (R := iprop(R ∗ pointsTo_u64 0 1048520 x))
     controls calls a b x (y - x) hsub oldShift c8 c7 c9
-  · iintro Hresources
-    icases Hresources with ⟨⟨HR', Hx'⟩, Hy', Hshift'⟩
+  · iintro ⟨⟨HR', Hx'⟩, Hy', Hshift'⟩
     iapply_frame hcontinue
   · iframe
 
@@ -2145,8 +2140,7 @@ theorem func1_loopDecreaseX_smallStep_wp
   iapply func1_loopNormalizeX_smallStep_wp
     (R := iprop(R ∗ pointsTo_u64 0 1048528 y))
     controls calls a b y (x - y) hsub oldShift c6 c7 c9
-  · iintro Hresources
-    icases Hresources with ⟨⟨HR', Hy'⟩, Hx', Hshift'⟩
+  · iintro ⟨⟨HR', Hy'⟩, Hx', Hshift'⟩
     iapply_frame hcontinue
   · iframe
 
@@ -3234,8 +3228,7 @@ theorem func1_nonzero_smallStep_wp_to_return
         pointsTo_u32 0 1048540 oldLoopX ∗
         pointsTo_u32 0 1048544 oldLoopY))
       calls a b ha hb
-    · iintro Hresources
-      icases Hresources with ⟨HRouterScratch, Hx'', Hy''⟩
+    · iintro ⟨HRouterScratch, Hx'', Hy''⟩
       icases HRouterScratch with
         ⟨HRouter, Hresult'', Hshared'', HnormX'', HnormY'',
           HloopX'', HloopY''⟩
@@ -3314,8 +3307,7 @@ theorem func1_nonzero_smallStep_wp
         pointsTo_u32 0 1048540 oldLoopX ∗
         pointsTo_u32 0 1048544 oldLoopY))
       [] a b ha hb
-    · iintro Hresources
-      icases Hresources with ⟨HRouterScratch, Hx'', Hy''⟩
+    · iintro ⟨HRouterScratch, Hx'', Hy''⟩
       icases HRouterScratch with
         ⟨HRouter, Hresult'', Hshared'', HnormX'', HnormY'',
           HloopX'', HloopY''⟩
@@ -3810,8 +3802,7 @@ theorem func0_resumeCaller_smallStep_wp
     calls a b
   simp only [func0CallLocals, func0AfterCallProg] at hafter
   iapply hafter
-  · iintro Hresources
-    icases Hresources with ⟨Hframe, Hglobal⟩
+  · iintro ⟨Hframe, Hglobal⟩
     icases Hframe with
       ⟨HR, Hruntime'', Hresult, Hx, Hy, HshiftXY, HshiftX, HshiftY,
         HnextY, HnextX, HouterA, HouterB⟩
@@ -5271,24 +5262,21 @@ theorem twp_func1_normalization_smallStep_wp
     (R := iprop(R ∗ pointsTo_u32 0 1048552 oldShiftX ∗
       pointsTo_u32 0 1048548 oldShiftY))
     controls calls a b oldShared
-  · iintro Hresources
-    icases Hresources with ⟨HRshifts, Hx', Hy', Hshared'⟩
+  · iintro ⟨HRshifts, Hx', Hy', Hshared'⟩
     icases HRshifts with ⟨HR', HshiftX', HshiftY'⟩
     iapply twp_func1_normalizeX_smallStep_wp
       (R := iprop(R ∗ pointsTo_u64 0 1048528 b ∗
         pointsTo_u32 0 1048556 (sharedShiftWord a b) ∗
         pointsTo_u32 0 1048548 oldShiftY))
       controls calls a b ha oldShiftX
-    · iintro Hresources
-      icases Hresources with ⟨HRrest, HxOdd, HshiftXNew⟩
+    · iintro ⟨HRrest, HxOdd, HshiftXNew⟩
       icases HRrest with ⟨HR'', Hy'', Hshared'', HshiftY''⟩
       iapply twp_func1_normalizeY_smallStep_wp
         (R := iprop(R ∗ pointsTo_u64 0 1048520 (oddPart64 a) ∗
           pointsTo_u32 0 1048556 (sharedShiftWord a b) ∗
           pointsTo_u32 0 1048552 (operandShiftWord a)))
         controls calls a b hb oldShiftY
-      · iintro Hresources
-        icases Hresources with ⟨HRfinal, HyOdd, HshiftYNew⟩
+      · iintro ⟨HRfinal, HyOdd, HshiftYNew⟩
         icases HRfinal with ⟨HR''', HxOdd', Hshared''', HshiftXNew'⟩
         iapply_frame hcontinue
       · iframe
@@ -5451,8 +5439,7 @@ theorem twp_func1_equalBlock_smallStep_wp
   iapply twp_func1_equalRecombine_smallStep_wp
     (R := iprop(R ∗ pointsTo_u64 0 1048528 g))
     controls calls a b g oldResult c6 c8 c7 c9
-  · iintro Hresources
-    icases Hresources with ⟨⟨HR', Hy'⟩, Hx', Hresult'⟩
+  · iintro ⟨⟨HR', Hy'⟩, Hx', Hresult'⟩
     iapply_frame hcontinue
   · iframe
 
@@ -5823,8 +5810,7 @@ theorem twp_func1_loopDecreaseY_smallStep_wp
   iapply twp_func1_loopNormalizeY_smallStep_wp
     (R := iprop(R ∗ pointsTo_u64 0 1048520 x))
     controls calls a b x (y - x) hsub oldShift c8 c7 c9
-  · iintro Hresources
-    icases Hresources with ⟨⟨HR', Hx'⟩, Hy', Hshift'⟩
+  · iintro ⟨⟨HR', Hx'⟩, Hy', Hshift'⟩
     iapply_frame hcontinue
   · iframe
 
@@ -6033,8 +6019,7 @@ theorem twp_func1_loopDecreaseX_smallStep_wp
   iapply twp_func1_loopNormalizeX_smallStep_wp
     (R := iprop(R ∗ pointsTo_u64 0 1048528 y))
     controls calls a b y (x - y) hsub oldShift c6 c7 c9
-  · iintro Hresources
-    icases Hresources with ⟨⟨HR', Hy'⟩, Hx', Hshift'⟩
+  · iintro ⟨⟨HR', Hy'⟩, Hx', Hshift'⟩
     iapply_frame hcontinue
   · iframe
 
@@ -6872,8 +6857,7 @@ theorem twp_func1_nonzero_smallStep_wp_to_return
         pointsTo_u32 0 1048540 oldLoopX ∗
         pointsTo_u32 0 1048544 oldLoopY))
       calls a b ha hb
-    · iintro Hresources
-      icases Hresources with ⟨HRouterScratch, Hx'', Hy''⟩
+    · iintro ⟨HRouterScratch, Hx'', Hy''⟩
       icases HRouterScratch with
         ⟨HRouter, Hresult'', Hshared'', HnormX'', HnormY'',
           HloopX'', HloopY''⟩
@@ -6949,8 +6933,7 @@ theorem twp_func1_nonzero_smallStep_wp
         pointsTo_u32 0 1048540 oldLoopX ∗
         pointsTo_u32 0 1048544 oldLoopY))
       [] a b ha hb
-    · iintro Hresources
-      icases Hresources with ⟨HRouterScratch, Hx'', Hy''⟩
+    · iintro ⟨HRouterScratch, Hx'', Hy''⟩
       icases HRouterScratch with
         ⟨HRouter, Hresult'', Hshared'', HnormX'', HnormY'',
           HloopX'', HloopY''⟩
@@ -7261,8 +7244,7 @@ theorem twp_func0_resumeCaller_smallStep_wp
     calls a b
   simp only [func0CallLocals, func0AfterCallProg] at hafter
   iapply hafter
-  · iintro Hresources
-    icases Hresources with ⟨Hframe, Hglobal⟩
+  · iintro ⟨Hframe, Hglobal⟩
     icases Hframe with
       ⟨HR, Hruntime'', Hresult, Hx, Hy, HshiftXY, HshiftX, HshiftY,
         HnextY, HnextX, HouterA, HouterB⟩

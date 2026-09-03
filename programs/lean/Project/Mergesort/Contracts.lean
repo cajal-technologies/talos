@@ -197,8 +197,7 @@ theorem VecStorage_as_growSource
       iexists GrowSource.allocated allocationId allBytes spare
       isimp only [GrowSourceOwn]
       iframe
-  · iintro Hsource
-    icases Hsource with ⟨%source, Hsource⟩
+  · iintro ⟨%source, Hsource⟩
     iapply GrowSourceOwn_to_VecStorage heapId capacity ptr initialized source
     iexact Hsource
 
