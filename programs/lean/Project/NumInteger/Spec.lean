@@ -282,17 +282,13 @@ theorem func1_spillPrefix_smallStep_wp
       pointsTo_u64 0 ((1048512 : UInt32) + 16) b = pointsTo_u64 0 1048528 b :=
     congrArg (fun address => pointsTo_u64 0 address b) (by decide)
   ihave HouterAExact : pointsTo_u64 0 1048560 a $$ [HouterA]
-  · rw [← hOuterAProp]
-    iexact HouterA
+  · irw_exact [← hOuterAProp] with HouterA
   ihave HouterBExact : pointsTo_u64 0 1048568 b $$ [HouterB]
-  · rw [← hOuterBProp]
-    iexact HouterB
+  · irw_exact [← hOuterBProp] with HouterB
   ihave HxExact : pointsTo_u64 0 1048520 a $$ [Hx]
-  · rw [← hXProp]
-    iexact Hx
+  · irw_exact [← hXProp] with Hx
   ihave HyExact : pointsTo_u64 0 1048528 b $$ [Hy]
-  · rw [← hYProp]
-    iexact Hy
+  · irw_exact [← hYProp] with Hy
   iapply_frame hcontinue
 
 /-- Frame-level form of `func1_spillPrefix_smallStep_wp`. It connects the
@@ -426,14 +422,11 @@ theorem func1_leftZero_core_smallStep_wp_to_return
       pointsTo_u64 0 ((1048512 : UInt32) + 16) b = pointsTo_u64 0 1048528 b :=
     congrArg (fun address => pointsTo_u64 0 address b) (by decide)
   ihave HresultExact : pointsTo_u64 0 1048512 b $$ [Hresult]
-  · rw [← hResultProp]
-    iexact Hresult
+  · irw_exact [← hResultProp] with Hresult
   ihave HxExact : pointsTo_u64 0 1048520 0 $$ [Hx]
-  · rw [← hXProp]
-    iexact Hx
+  · irw_exact [← hXProp] with Hx
   ihave HyExact : pointsTo_u64 0 1048528 b $$ [Hy]
-  · rw [← hYProp]
-    iexact Hy
+  · irw_exact [← hYProp] with Hy
   simp only [func1SpilledLocals] at hreturn
   iapply_frame hreturn
 
@@ -626,14 +619,11 @@ theorem func1_rightZero_core_smallStep_wp_to_return
       pointsTo_u64 0 ((1048512 : UInt32) + 16) 0 = pointsTo_u64 0 1048528 0 :=
     congrArg (fun address => pointsTo_u64 0 address 0) (by decide)
   ihave HresultExact : pointsTo_u64 0 1048512 a $$ [Hresult]
-  · rw [← hResultProp]
-    iexact Hresult
+  · irw_exact [← hResultProp] with Hresult
   ihave HxExact : pointsTo_u64 0 1048520 a $$ [Hx]
-  · rw [← hXProp]
-    iexact Hx
+  · irw_exact [← hXProp] with Hx
   ihave HyExact : pointsTo_u64 0 1048528 0 $$ [Hy]
-  · rw [← hYProp]
-    iexact Hy
+  · irw_exact [← hYProp] with Hy
   simp only [func1SpilledLocals] at hreturn
   iapply_frame hreturn
 
@@ -1061,15 +1051,12 @@ theorem func1_sharedShift_smallStep_wp
         pointsTo_u32 0 1048556 (sharedShiftWord a b) :=
     congrArg (fun address => pointsTo_u32 0 address (sharedShiftWord a b)) (by decide)
   ihave HxExact : pointsTo_u64 0 1048520 a $$ [Hx]
-  · rw [← hXProp]
-    iexact Hx
+  · irw_exact [← hXProp] with Hx
   ihave HyExact : pointsTo_u64 0 1048528 b $$ [Hy]
-  · rw [← hYProp]
-    iexact Hy
+  · irw_exact [← hYProp] with Hy
   ihave HshiftExact :
       pointsTo_u32 0 1048556 (sharedShiftWord a b) $$ [Hshift]
-  · rw [← hShiftProp]
-    iexact Hshift
+  · irw_exact [← hShiftProp] with Hshift
   iapply_frame hcontinue
 
 def operandShiftWord (v : UInt64) : UInt32 :=
@@ -1165,13 +1152,11 @@ theorem func1_normalizeX_smallStep_wp
   ihave HxExact :
       pointsTo_u64 0 1048520
         (a >>> (UInt64.ofNat (ctz64 64 a) % 64)) $$ [Hx]
-  · rw [← hXProp]
-    iexact Hx
+  · irw_exact [← hXProp] with Hx
   ihave HshiftExact :
       pointsTo_u32 0 1048552
         (UInt32.ofNat ((UInt64.ofNat (ctz64 64 a)).toNat % 2 ^ 32)) $$ [HshiftX]
-  · rw [← hShiftProp]
-    iexact HshiftX
+  · irw_exact [← hShiftProp] with HshiftX
   iapply_frame hcontinue
 
 def func1LoopHeaderLocals
@@ -1266,13 +1251,11 @@ theorem func1_normalizeY_smallStep_wp
   ihave HyExact :
       pointsTo_u64 0 1048528
         (b >>> (UInt64.ofNat (ctz64 64 b) % 64)) $$ [Hy]
-  · rw [← hYProp]
-    iexact Hy
+  · irw_exact [← hYProp] with Hy
   ihave HshiftExact :
       pointsTo_u32 0 1048548
         (UInt32.ofNat ((UInt64.ofNat (ctz64 64 b)).toNat % 2 ^ 32)) $$ [HshiftY]
-  · rw [← hShiftProp]
-    iexact HshiftY
+  · irw_exact [← hShiftProp] with HshiftY
   iapply_frame hcontinue
 
 /-- Complete nonzero normalization prefix, composed from the three physical
@@ -1414,14 +1397,12 @@ theorem func1_equalRecombine_smallStep_wp
         (g <<< (UInt64.ofNat ((sharedShiftWord a b &&& 63).toNat) % 64)))
       (by decide)
   ihave HxExact : pointsTo_u64 0 1048520 g $$ [Hx]
-  · rw [← hXProp]
-    iexact Hx
+  · irw_exact [← hXProp] with Hx
   ihave HresultExact :
       pointsTo_u64 0 1048512
         (g <<< (UInt64.ofNat ((sharedShiftWord a b &&& 63).toNat) % 64)) $$
         [Hresult]
-  · rw [← hResultProp]
-    iexact Hresult
+  · irw_exact [← hResultProp] with Hresult
   iapply_frame hcontinue
 
 /-- Equality arm of the first generated loop block. When the two normalized
@@ -1604,14 +1585,12 @@ theorem func1_loopNormalizeY_smallStep_wp
   ihave HyExact :
       pointsTo_u64 0 1048528
         (d >>> (UInt64.ofNat (ctz64 64 d) % 64)) $$ [Hy]
-  · rw [← hYProp]
-    iexact Hy
+  · irw_exact [← hYProp] with Hy
   ihave HshiftExact :
       pointsTo_u32 0 1048544
         (UInt32.ofNat ((UInt64.ofNat (ctz64 64 d)).toNat % 2 ^ 32)) $$
         [Hshift]
-  · rw [← hShiftProp]
-    iexact Hshift
+  · irw_exact [← hShiftProp] with Hshift
   iapply_frame hcontinue
 
 def loopDecreaseYProg : Program :=
@@ -1812,14 +1791,12 @@ theorem func1_loopNormalizeX_smallStep_wp
   ihave HxExact :
       pointsTo_u64 0 1048520
         (d >>> (UInt64.ofNat (ctz64 64 d) % 64)) $$ [Hx]
-  · rw [← hXProp]
-    iexact Hx
+  · irw_exact [← hXProp] with Hx
   ihave HshiftExact :
       pointsTo_u32 0 1048540
         (UInt32.ofNat ((UInt64.ofNat (ctz64 64 d)).toNat % 2 ^ 32)) $$
         [Hshift]
-  · rw [← hShiftProp]
-    iexact Hshift
+  · irw_exact [← hShiftProp] with Hshift
   iapply_frame hcontinue
 
 def loopDecreaseXProg : Program :=
@@ -2639,11 +2616,9 @@ theorem func1_nonzeroGuards_smallStep_wp
         pointsTo_u64 0 1048528 b :=
     congrArg (fun address => pointsTo_u64 0 address b) (by decide)
   ihave HxExact : pointsTo_u64 0 1048520 a $$ [Hx]
-  · rw [← hXProp]
-    iexact Hx
+  · irw_exact [← hXProp] with Hx
   ihave HyExact : pointsTo_u64 0 1048528 b $$ [Hy]
-  · rw [← hYProp]
-    iexact Hy
+  · irw_exact [← hYProp] with Hy
   simp only [List.drop_nil]
   simp only [func1OuterFrame, func1OuterBody, func1MiddleBody,
     func1InnerGuardProg, func1ZeroJoinProg, func1EpilogueProg,
@@ -3223,11 +3198,9 @@ theorem func0_callPrefix_smallStep_wp
         pointsTo_u64 0 1048568 b :=
     congrArg (fun address => pointsTo_u64 0 address b) (by decide)
   ihave HouterAExact : pointsTo_u64 0 1048560 a $$ [HouterA]
-  · rw [← hOuterAProp]
-    iexact HouterA
+  · irw_exact [← hOuterAProp] with HouterA
   ihave HouterBExact : pointsTo_u64 0 1048568 b $$ [HouterB]
-  · rw [← hOuterBProp]
-    iexact HouterB
+  · irw_exact [← hOuterBProp] with HouterB
   iapply_frame hcontinue
 
 /-- Resume `func0` after `func1` returns: save the result, restore the stack
@@ -4009,27 +3982,23 @@ theorem twp_func1_spillPrefix_smallStep_wp
     List.set]
   wasm_twp_pures [twp_localGet twp_localGet]
   ihave HouterALater : pointsTo_u64 0 (1048560 + 0) a $$ [HouterA]
-  · rw [show (1048560 : UInt32) + 0 = 1048560 by decide]
-    iexact HouterA
+  · irw_exact [show (1048560 : UInt32) + 0 = 1048560 by decide] with HouterA
   wasm_twp_bind Wasm.SmallStep.twp_load64 a
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) with HouterALater => HouterA
   ihave HxLater : pointsTo_u64 0 (1048512 + 8) oldX $$ [Hx]
-  · rw [show (1048512 : UInt32) + 8 = 1048520 by decide]
-    iexact Hx
+  · irw_exact [show (1048512 : UInt32) + 8 = 1048520 by decide] with Hx
   wasm_twp_bind Wasm.SmallStep.twp_store64 oldX
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) with HxLater => Hx
   wasm_twp_pures [twp_localGet twp_localGet]
   ihave HouterBLater : pointsTo_u64 0 (1048568 + 0) b $$ [HouterB]
-  · rw [show (1048568 : UInt32) + 0 = 1048568 by decide]
-    iexact HouterB
+  · irw_exact [show (1048568 : UInt32) + 0 = 1048568 by decide] with HouterB
   wasm_twp_bind Wasm.SmallStep.twp_load64 b
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) with HouterBLater => HouterB
   ihave HyLater : pointsTo_u64 0 (1048512 + 16) oldY $$ [Hy]
-  · rw [show (1048512 : UInt32) + 16 = 1048528 by decide]
-    iexact Hy
+  · irw_exact [show (1048512 : UInt32) + 16 = 1048528 by decide] with Hy
   wasm_twp_bind Wasm.SmallStep.twp_store64 oldY
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) with HyLater => Hy
@@ -4047,17 +4016,13 @@ theorem twp_func1_spillPrefix_smallStep_wp
       pointsTo_u64 0 ((1048512 : UInt32) + 16) b = pointsTo_u64 0 1048528 b :=
     congrArg (fun address => pointsTo_u64 0 address b) (by decide)
   ihave HouterAExact : pointsTo_u64 0 1048560 a $$ [HouterA]
-  · rw [← hOuterAProp]
-    iexact HouterA
+  · irw_exact [← hOuterAProp] with HouterA
   ihave HouterBExact : pointsTo_u64 0 1048568 b $$ [HouterB]
-  · rw [← hOuterBProp]
-    iexact HouterB
+  · irw_exact [← hOuterBProp] with HouterB
   ihave HxExact : pointsTo_u64 0 1048520 a $$ [Hx]
-  · rw [← hXProp]
-    iexact Hx
+  · irw_exact [← hXProp] with Hx
   ihave HyExact : pointsTo_u64 0 1048528 b $$ [Hy]
-  · rw [← hYProp]
-    iexact Hy
+  · irw_exact [← hYProp] with Hy
   iapply_frame hcontinue
 
 theorem twp_func1_spillPrefix_frame_smallStep_wp
@@ -4196,14 +4161,11 @@ theorem twp_func1_leftZero_core_smallStep_wp_to_return
       pointsTo_u64 0 ((1048512 : UInt32) + 16) b = pointsTo_u64 0 1048528 b :=
     congrArg (fun address => pointsTo_u64 0 address b) (by decide)
   ihave HresultExact : pointsTo_u64 0 1048512 b $$ [Hresult]
-  · rw [← hResultProp]
-    iexact Hresult
+  · irw_exact [← hResultProp] with Hresult
   ihave HxExact : pointsTo_u64 0 1048520 0 $$ [Hx]
-  · rw [← hXProp]
-    iexact Hx
+  · irw_exact [← hXProp] with Hx
   ihave HyExact : pointsTo_u64 0 1048528 b $$ [Hy]
-  · rw [← hYProp]
-    iexact Hy
+  · irw_exact [← hYProp] with Hy
   simp only [func1SpilledLocals] at hreturn
   iapply_frame hreturn
 
@@ -4396,14 +4358,11 @@ theorem twp_func1_rightZero_core_smallStep_wp_to_return
       pointsTo_u64 0 ((1048512 : UInt32) + 16) 0 = pointsTo_u64 0 1048528 0 :=
     congrArg (fun address => pointsTo_u64 0 address 0) (by decide)
   ihave HresultExact : pointsTo_u64 0 1048512 a $$ [Hresult]
-  · rw [← hResultProp]
-    iexact Hresult
+  · irw_exact [← hResultProp] with Hresult
   ihave HxExact : pointsTo_u64 0 1048520 a $$ [Hx]
-  · rw [← hXProp]
-    iexact Hx
+  · irw_exact [← hXProp] with Hx
   ihave HyExact : pointsTo_u64 0 1048528 0 $$ [Hy]
-  · rw [← hYProp]
-    iexact Hy
+  · irw_exact [← hYProp] with Hy
   simp only [func1SpilledLocals] at hreturn
   iapply_frame hreturn
 
@@ -4622,8 +4581,7 @@ theorem twp_func1_sharedShift_smallStep_wp
   wasm_twp_pures [twp_localGet]
   ihave HshiftLater :
       pointsTo_u32 0 (1048512 + 44) (sharedShiftWord a b) $$ [Hshift]
-  · rw [sharedShiftWord]
-    iexact Hshift
+  · irw_exact [sharedShiftWord] with Hshift
   wasm_twp_bind Wasm.SmallStep.twp_load32 (sharedShiftWord a b)
       (by decide) (by decide) (by decide) (by decide) with HshiftLater => Hshift
   wasm_twp_pures [twp_localSet]
@@ -4642,15 +4600,12 @@ theorem twp_func1_sharedShift_smallStep_wp
         pointsTo_u32 0 1048556 (sharedShiftWord a b) :=
     congrArg (fun address => pointsTo_u32 0 address (sharedShiftWord a b)) (by decide)
   ihave HxExact : pointsTo_u64 0 1048520 a $$ [Hx]
-  · rw [← hXProp]
-    iexact Hx
+  · irw_exact [← hXProp] with Hx
   ihave HyExact : pointsTo_u64 0 1048528 b $$ [Hy]
-  · rw [← hYProp]
-    iexact Hy
+  · irw_exact [← hYProp] with Hy
   ihave HshiftExact :
       pointsTo_u32 0 1048556 (sharedShiftWord a b) $$ [Hshift]
-  · rw [← hShiftProp]
-    iexact Hshift
+  · irw_exact [← hShiftProp] with Hshift
   iapply_frame hcontinue
 
 theorem twp_func1_normalizeX_smallStep_wp
@@ -4700,8 +4655,7 @@ theorem twp_func1_normalizeX_smallStep_wp
   wasm_twp_pures [twp_localGet]
   ihave HshiftXLater :
       pointsTo_u32 0 (1048512 + 40) (operandShiftWord a) $$ [HshiftX]
-  · rw [operandShiftWord]
-    iexact HshiftX
+  · irw_exact [operandShiftWord] with HshiftX
   wasm_twp_bind Wasm.SmallStep.twp_load32 (operandShiftWord a)
       (by decide) (by decide) (by decide) (by decide) with HshiftXLater => HshiftX
   wasm_twp_pures [twp_localSet]
@@ -4741,13 +4695,11 @@ theorem twp_func1_normalizeX_smallStep_wp
   ihave HxExact :
       pointsTo_u64 0 1048520
         (a >>> (UInt64.ofNat (ctz64 64 a) % 64)) $$ [Hx]
-  · rw [← hXProp]
-    iexact Hx
+  · irw_exact [← hXProp] with Hx
   ihave HshiftExact :
       pointsTo_u32 0 1048552
         (UInt32.ofNat ((UInt64.ofNat (ctz64 64 a)).toNat % 2 ^ 32)) $$ [HshiftX]
-  · rw [← hShiftProp]
-    iexact HshiftX
+  · irw_exact [← hShiftProp] with HshiftX
   iapply_frame hcontinue
 
 theorem twp_func1_normalizeY_smallStep_wp
@@ -4797,8 +4749,7 @@ theorem twp_func1_normalizeY_smallStep_wp
   wasm_twp_pures [twp_localGet]
   ihave HshiftYLater :
       pointsTo_u32 0 (1048512 + 36) (operandShiftWord b) $$ [HshiftY]
-  · rw [operandShiftWord]
-    iexact HshiftY
+  · irw_exact [operandShiftWord] with HshiftY
   wasm_twp_bind Wasm.SmallStep.twp_load32 (operandShiftWord b)
       (by decide) (by decide) (by decide) (by decide) with HshiftYLater => HshiftY
   wasm_twp_pures [twp_localSet]
@@ -4839,13 +4790,11 @@ theorem twp_func1_normalizeY_smallStep_wp
   ihave HyExact :
       pointsTo_u64 0 1048528
         (b >>> (UInt64.ofNat (ctz64 64 b) % 64)) $$ [Hy]
-  · rw [← hYProp]
-    iexact Hy
+  · irw_exact [← hYProp] with Hy
   ihave HshiftExact :
       pointsTo_u32 0 1048548
         (UInt32.ofNat ((UInt64.ofNat (ctz64 64 b)).toNat % 2 ^ 32)) $$ [HshiftY]
-  · rw [← hShiftProp]
-    iexact HshiftY
+  · irw_exact [← hShiftProp] with HshiftY
   iapply_frame hcontinue
 
 theorem twp_func1_normalization_smallStep_wp
@@ -4962,14 +4911,12 @@ theorem twp_func1_equalRecombine_smallStep_wp
         (g <<< (UInt64.ofNat ((sharedShiftWord a b &&& 63).toNat) % 64)))
       (by decide)
   ihave HxExact : pointsTo_u64 0 1048520 g $$ [Hx]
-  · rw [← hXProp]
-    iexact Hx
+  · irw_exact [← hXProp] with Hx
   ihave HresultExact :
       pointsTo_u64 0 1048512
         (g <<< (UInt64.ofNat ((sharedShiftWord a b &&& 63).toNat) % 64)) $$
         [Hresult]
-  · rw [← hResultProp]
-    iexact Hresult
+  · irw_exact [← hResultProp] with Hresult
   iapply_frame hcontinue
 
 theorem twp_func1_equalBlock_smallStep_wp
@@ -5081,8 +5028,7 @@ theorem twp_func1_nonzeroGuards_smallStep_wp
     List.cons_append]
   wasm_twp_pures [twp_block twp_block twp_block twp_localGet]
   ihave HxLater : pointsTo_u64 0 (1048512 + 8) a $$ [Hx]
-  · rw [show (1048512 : UInt32) + 8 = 1048520 from rfl]
-    iexact Hx
+  · irw_exact [show (1048512 : UInt32) + 8 = 1048520 from rfl] with Hx
   wasm_twp_bind Wasm.SmallStep.twp_load64 a
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) with HxLater => Hx
@@ -5092,8 +5038,7 @@ theorem twp_func1_nonzeroGuards_smallStep_wp
   rw [show (0 &&& 1 : UInt32) = 0 by decide]
   wasm_twp_pures [twp_brIfZero twp_localGet]
   ihave HyLater : pointsTo_u64 0 (1048512 + 16) b $$ [Hy]
-  · rw [show (1048512 : UInt32) + 16 = 1048528 from rfl]
-    iexact Hy
+  · irw_exact [show (1048512 : UInt32) + 16 = 1048528 from rfl] with Hy
   wasm_twp_bind Wasm.SmallStep.twp_load64 b
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) with HyLater => Hy
@@ -5113,11 +5058,9 @@ theorem twp_func1_nonzeroGuards_smallStep_wp
         pointsTo_u64 0 1048528 b :=
     congrArg (fun address => pointsTo_u64 0 address b) (by decide)
   ihave HxExact : pointsTo_u64 0 1048520 a $$ [Hx]
-  · rw [← hXProp]
-    iexact Hx
+  · irw_exact [← hXProp] with Hx
   ihave HyExact : pointsTo_u64 0 1048528 b $$ [Hy]
-  · rw [← hYProp]
-    iexact Hy
+  · irw_exact [← hYProp] with Hy
   simp only [List.drop_nil]
   simp only [func1OuterFrame, func1OuterBody, func1MiddleBody,
     func1InnerGuardProg, func1ZeroJoinProg, func1EpilogueProg,
@@ -5160,8 +5103,7 @@ theorem twp_func1_nonzeroFinish_smallStep_wp_to_return
   ihave HresultLater :
       pointsTo_u64 0 ((1048512 : UInt32) + 0)
         (UInt64.ofNat (Nat.gcd a.toNat b.toNat)) $$ [Hresult]
-  · rw [show (1048512 : UInt32) + 0 = 1048512 from rfl]
-    iexact Hresult
+  · irw_exact [show (1048512 : UInt32) + 0 = 1048512 from rfl] with Hresult
   wasm_twp_bind Wasm.SmallStep.twp_load64
       (UInt64.ofNat (Nat.gcd a.toNat b.toNat))
       (by decide) (by decide) (by decide) (by decide) (by decide)
@@ -5265,8 +5207,7 @@ theorem twp_func1_loopNormalizeY_smallStep_wp
   wasm_twp_pures [twp_localGet]
   ihave HshiftLater :
       pointsTo_u32 0 (1048512 + 32) (operandShiftWord d) $$ [Hshift]
-  · rw [operandShiftWord]
-    iexact Hshift
+  · irw_exact [operandShiftWord] with Hshift
   wasm_twp_bind Wasm.SmallStep.twp_load32 (operandShiftWord d)
       (by decide) (by decide) (by decide) (by decide) with HshiftLater => Hshift
   wasm_twp_pures [twp_localSet]
@@ -5305,14 +5246,12 @@ theorem twp_func1_loopNormalizeY_smallStep_wp
   ihave HyExact :
       pointsTo_u64 0 1048528
         (d >>> (UInt64.ofNat (ctz64 64 d) % 64)) $$ [Hy]
-  · rw [← hYProp]
-    iexact Hy
+  · irw_exact [← hYProp] with Hy
   ihave HshiftExact :
       pointsTo_u32 0 1048544
         (UInt32.ofNat ((UInt64.ofNat (ctz64 64 d)).toNat % 2 ^ 32)) $$
         [Hshift]
-  · rw [← hShiftProp]
-    iexact Hshift
+  · irw_exact [← hShiftProp] with Hshift
   iapply_frame hcontinue
 
 theorem twp_func1_loopDecreaseY_smallStep_wp
@@ -5460,8 +5399,7 @@ theorem twp_func1_loopNormalizeX_smallStep_wp
   wasm_twp_pures [twp_localGet]
   ihave HshiftLater :
       pointsTo_u32 0 (1048512 + 28) (operandShiftWord d) $$ [Hshift]
-  · rw [operandShiftWord]
-    iexact Hshift
+  · irw_exact [operandShiftWord] with Hshift
   wasm_twp_bind Wasm.SmallStep.twp_load32 (operandShiftWord d)
       (by decide) (by decide) (by decide) (by decide) with HshiftLater => Hshift
   wasm_twp_pures [twp_localSet]
@@ -5500,14 +5438,12 @@ theorem twp_func1_loopNormalizeX_smallStep_wp
   ihave HxExact :
       pointsTo_u64 0 1048520
         (d >>> (UInt64.ofNat (ctz64 64 d) % 64)) $$ [Hx]
-  · rw [← hXProp]
-    iexact Hx
+  · irw_exact [← hXProp] with Hx
   ihave HshiftExact :
       pointsTo_u32 0 1048540
         (UInt32.ofNat ((UInt64.ofNat (ctz64 64 d)).toNat % 2 ^ 32)) $$
         [Hshift]
-  · rw [← hShiftProp]
-    iexact Hshift
+  · irw_exact [← hShiftProp] with Hshift
   iapply_frame hcontinue
 
 theorem twp_func1_loopDecreaseX_smallStep_wp
@@ -6577,16 +6513,14 @@ theorem twp_func0_callPrefix_smallStep_wp
   wasm_twp_pures [twp_localGet twp_localGet]
   ihave HouterALater :
       pointsTo_u64 0 ((1048560 : UInt32) + 0) oldOuterA $$ [HouterA]
-  · rw [show (1048560 : UInt32) + 0 = 1048560 from rfl]
-    iexact HouterA
+  · irw_exact [show (1048560 : UInt32) + 0 = 1048560 from rfl] with HouterA
   wasm_twp_bind Wasm.SmallStep.twp_store64 oldOuterA
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) with HouterALater => HouterA
   wasm_twp_pures [twp_localGet twp_localGet]
   ihave HouterBLater :
       pointsTo_u64 0 ((1048560 : UInt32) + 8) oldOuterB $$ [HouterB]
-  · rw [show (1048560 : UInt32) + 8 = 1048568 from rfl]
-    iexact HouterB
+  · irw_exact [show (1048560 : UInt32) + 8 = 1048568 from rfl] with HouterB
   wasm_twp_bind Wasm.SmallStep.twp_store64 oldOuterB
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) with HouterBLater => HouterB
@@ -6602,11 +6536,9 @@ theorem twp_func0_callPrefix_smallStep_wp
         pointsTo_u64 0 1048568 b :=
     congrArg (fun address => pointsTo_u64 0 address b) (by decide)
   ihave HouterAExact : pointsTo_u64 0 1048560 a $$ [HouterA]
-  · rw [← hOuterAProp]
-    iexact HouterA
+  · irw_exact [← hOuterAProp] with HouterA
   ihave HouterBExact : pointsTo_u64 0 1048568 b $$ [HouterB]
-  · rw [← hOuterBProp]
-    iexact HouterB
+  · irw_exact [← hOuterBProp] with HouterB
   iapply_frame hcontinue
 
 theorem twp_func0_afterCall_smallStep_wp_to_return
