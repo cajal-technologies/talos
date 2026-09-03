@@ -47,12 +47,19 @@ instance instLanguage :
     | trapped => rfl
 
 set_option hygiene false in
+/-- Identify the target of an authoritative Wasm step using determinism. -/
+macro "wasm_wp_resolve_target " expected:term " against " actual:term : tactic =>
+  `(tactic|
+    (obtain ⟨rfl, hconfig⟩ := step_deterministic ($expected) ($actual)) <;>
+    simp only at hconfig <;>
+    cases hconfig)
+
+set_option hygiene false in
 /-- Unpack an Iris primitive step and identify its target using determinism of
 the authoritative Wasm step relation. -/
 macro "wasm_wp_resolve_step " h:term " using " expected:term : tactic =>
   `(tactic| (obtain ⟨rfl, kind, rfl, wasmStep⟩ := $h) <;>
-    (obtain ⟨rfl, hconfig⟩ := step_deterministic ($expected) wasmStep) <;>
-    cases hconfig)
+    wasm_wp_resolve_target ($expected) against wasmStep)
 
 /-- A terminal observation for the Wasm machine.  Its language must reuse the
 authoritative Wasm primitive-step relation; only the terminal-value view may
