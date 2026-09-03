@@ -41,6 +41,23 @@ Output: `120`
 lake exe runner --fuel 10000 samples/factorial.wat fact 5
 ```
 
+**Capture an execution trace** without changing the program's normal output:
+
+```
+lake exe runner \
+  --trace /tmp/factorial.jsonl \
+  --trace-summary /tmp/factorial-summary.json \
+  samples/factorial.wat fact 5
+```
+
+The JSONL file preserves the total event order and includes instruction,
+function enter/exit, local/global access, and linear-memory access events.
+The summary file contains instruction counts by opcode, function-entry counts,
+and aggregate local/global/memory counters. Function, global, and memory events
+also retain stable runtime identities when the instantiated store provides
+them. Tracing observes the authoritative small-step machine and does not alter
+its semantic configuration or transition relation.
+
 See [`interpreter/samples/factorial.wat`](interpreter/samples/factorial.wat) for a minimal example module.
 
 **Prove something about it:**

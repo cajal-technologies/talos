@@ -41,6 +41,7 @@ import Interpreter.Wasm.Examples.RefCastFuncType
 import Interpreter.Wasm.Examples.SmallStep
 import Interpreter.Wasm.Examples.Validation
 import Interpreter.Wasm.Examples.MeasureLoopDemo
+import Interpreter.Wasm.Examples.Trace
 
 /-! # Wasm.Examples.Basic
 

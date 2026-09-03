@@ -1,4 +1,4 @@
-import Interpreter.Wasm.SmallStep
+import Interpreter.Wasm.Trace
 import Interpreter.Wasm.Decoder.Wat
 
 /-!
@@ -20,12 +20,14 @@ structure Args where
   method : String
   args   : List String
   fuel   : Nat
+  trace : Option String := none
+  traceSummary : Option String := none
 deriving Repr
 
 def defaultFuel : Nat := 1_000_000
 
 def usage : String :=
-"Usage: lake exe runner [--fuel N] [-h|--help] <file> <method> [args...]
+"Usage: lake exe runner [--fuel N] [--trace FILE] [--trace-summary FILE] [-h|--help] <file> <method> [args...]
 
   <file>    Path ending in .wat (read directly) or .wasm (decoded via
             `wasm-tools print`; requires wasm-tools on PATH).
@@ -37,36 +39,55 @@ def usage : String :=
             literal grammar (`1.5`, `-0x1.8p+2`, `inf`, `nan`). The
             declared parameter type drives the coercion.
   --fuel N  Reduction-step cap, default 1_000_000.
+  --trace FILE  Write ordered execution events as JSON Lines.
+  --trace-summary FILE  Write aggregate counters as one JSON object.
   -h, --help  Print this message and exit 0."
 
 /-- Strip the `--fuel N` / `-h` / `--help` flags and return the
 remaining positionals plus the chosen fuel. Bails on bad flag usage. -/
 partial def splitFlags
     (toks : List String) (acc : List String) (fuel : Nat) (help : Bool)
-    : Except String (List String × Nat × Bool) :=
+    (trace traceSummary : Option String)
+    : Except String (List String × Nat × Bool × Option String × Option String) :=
   match toks with
-  | [] => .ok (acc.reverse, fuel, help)
+  | [] => .ok (acc.reverse, fuel, help, trace, traceSummary)
   | "-h" :: rest | "--help" :: rest =>
-    splitFlags rest acc fuel true
+    splitFlags rest acc fuel true trace traceSummary
   | "--fuel" :: nStr :: rest =>
     match nStr.toNat? with
-    | some n => splitFlags rest acc n help
+    | some n => splitFlags rest acc n help trace traceSummary
     | none   => .error s!"--fuel expects a non-negative integer, got `{nStr}`"
   | "--fuel" :: [] => .error "--fuel expects an argument"
+  | "--trace" :: path :: rest =>
+    splitFlags rest acc fuel help (some path) traceSummary
+  | "--trace" :: [] => .error "--trace expects a file path"
+  | "--trace-summary" :: path :: rest =>
+    splitFlags rest acc fuel help trace (some path)
+  | "--trace-summary" :: [] => .error "--trace-summary expects a file path"
   | tok :: rest =>
     if tok.startsWith "--fuel=" then
       let v := (tok.drop "--fuel=".length).toString
       match v.toNat? with
-      | some n => splitFlags rest acc n help
+      | some n => splitFlags rest acc n help trace traceSummary
       | none   => .error s!"--fuel expects a non-negative integer, got `{v}`"
+    else if tok.startsWith "--trace=" then
+      let path := (tok.drop "--trace=".length).toString
+      if path.isEmpty then .error "--trace expects a file path"
+      else splitFlags rest acc fuel help (some path) traceSummary
+    else if tok.startsWith "--trace-summary=" then
+      let path := (tok.drop "--trace-summary=".length).toString
+      if path.isEmpty then .error "--trace-summary expects a file path"
+      else splitFlags rest acc fuel help trace (some path)
     else
-      splitFlags rest (tok :: acc) fuel help
+      splitFlags rest (tok :: acc) fuel help trace traceSummary
 
 def parseArgs (argv : List String) : Except String (Sum Unit Args) := do
-  let (pos, fuel, help) ← splitFlags argv [] defaultFuel false
+  let (pos, fuel, help, trace, traceSummary) ←
+    splitFlags argv [] defaultFuel false none none
   if help then return .inl ()
   match pos with
-  | file :: method :: args => return .inr { file, method, args, fuel }
+  | file :: method :: args =>
+      return .inr { file, method, args, fuel, trace, traceSummary }
   | [_] => .error "missing <method>"
   | []  => .error "missing <file> and <method>"
 
@@ -215,6 +236,21 @@ def EXIT_TRAP       : UInt32 := 1
 def EXIT_OUT_OF_FUEL: UInt32 := 2
 def EXIT_ERR        : UInt32 := 3
 
+private def writeTraceOutputs
+    (a : Args) (trace : Wasm.SmallStep.TracedRun Unit) : IO (Except String Unit) := do
+  try
+    match a.trace with
+    | some path =>
+        IO.FS.writeFile path (Wasm.SmallStep.TraceJson.jsonLines trace.events)
+    | none => pure ()
+    match a.traceSummary with
+    | some path =>
+        IO.FS.writeFile path (toString (Wasm.SmallStep.TraceJson.summary trace.summary) ++ "\n")
+    | none => pure ()
+    return .ok ()
+  catch error =>
+    return .error s!"could not write trace output: {error.toString}"
+
 /-- The big dispatcher. Returns the exit code; all stderr/stdout work is
 done as a side effect for streaming. -/
 def runOnce (a : Args) : IO UInt32 := do
@@ -278,7 +314,17 @@ def runOnce (a : Args) : IO UInt32 := do
     | .error error =>
       IO.eprintln s!"error: small-step initialization error: {error.message}"
       return EXIT_ERR
-  match (Wasm.SmallStep.runSteps a.fuel config).result with
+  let result ←
+    if a.trace.isSome || a.traceSummary.isSome then
+      let trace := Wasm.SmallStep.runTraced a.fuel idx config
+      match (← writeTraceOutputs a trace) with
+      | .ok () => pure trace.result
+      | .error message =>
+          IO.eprintln s!"error: {message}"
+          return EXIT_ERR
+    else
+      pure (Wasm.SmallStep.runSteps a.fuel config).result
+  match result with
   | .success results _ =>
     for v in results.reverse do
       IO.println (renderValue v)
