@@ -559,11 +559,7 @@ theorem twp_call
     simpa only [Hmodule] using hfn
   simp only [runtimeModuleOwn]
   icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩
-  ihave %Hentry : ⌜store.runtime.entry = callerId⌝ $$ [Hσ HinstanceOwn]
-  · imod stateInterp_currentInstance_agree store ns obs nt callerId $$
-        [$Hσ $HinstanceOwn] with %Hentry
-    ipureintro
-    exact Hentry
+  wasm_current_instance_agree obs, callerId $$ [$Hσ $HinstanceOwn]
   have hsame : callerId = store.runtime.entry := Hentry.symm
   wasm_twp_step (Step.call (α := α) himports' hfn') =>
     wasm_twp_frame
@@ -748,11 +744,7 @@ theorem twp_returnFromCallFallthrough
   wasm_twp_begin
   simp only [runtimeModuleOwn]
   icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩
-  ihave %Hentry : ⌜store.runtime.entry = returningInstance⌝ $$ [Hσ HinstanceOwn]
-  · imod stateInterp_currentInstance_agree store ns obs nt returningInstance $$
-        [$Hσ $HinstanceOwn] with %Hentry
-    ipureintro
-    exact Hentry
+  wasm_current_instance_agree obs, returningInstance $$ [$Hσ $HinstanceOwn]
   have hsame : returningInstance = store.runtime.entry := Hentry.symm
   wasm_twp_step (Step.returnFromCallFallthrough (α := α) hsame) =>
     wasm_twp_frame
@@ -795,11 +787,7 @@ theorem twp_returnFromCallExplicit
   wasm_twp_begin
   simp only [runtimeModuleOwn]
   icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩
-  ihave %Hentry : ⌜store.runtime.entry = returningInstance⌝ $$ [Hσ HinstanceOwn]
-  · imod stateInterp_currentInstance_agree store ns obs nt returningInstance $$
-        [$Hσ $HinstanceOwn] with %Hentry
-    ipureintro
-    exact Hentry
+  wasm_current_instance_agree obs, returningInstance $$ [$Hσ $HinstanceOwn]
   have hsame : returningInstance = store.runtime.entry := Hentry.symm
   wasm_twp_step (Step.returnFromCallExplicit (α := α) hsame) =>
     wasm_twp_frame

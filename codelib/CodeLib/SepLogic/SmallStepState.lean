@@ -2239,6 +2239,23 @@ theorem stateInterp_currentInstance_agree [WasmSmallStepGS hlc α]
   ipureintro
   exact hagrees
 
+/-- Derive the current instance id from its Iris ownership and the physical
+state, using the lifting proof's conventional context names. -/
+syntax "wasm_current_instance_agree " term ", " term
+  " $$ " specPat : tactic
+
+set_option hygiene false in
+macro_rules
+  | `(tactic| wasm_current_instance_agree $observations:term,
+        $instanceId:term $$ $resources:specPat) =>
+    `(tactic|
+      (ihave %Hentry : ⌜store.runtime.entry = $instanceId⌝ $$
+          [Hσ HinstanceOwn]
+       · imod stateInterp_currentInstance_agree store ns $observations nt
+           $instanceId $$ $resources with %Hentry
+         ipureintro
+         exact Hentry))
+
 /-- Update the current instance id in both stateInterp and the owned fragment.
 `hch` asserts the new instance has the same host as the current one,
 so the `hostEnvOwn` resource remains valid. -/

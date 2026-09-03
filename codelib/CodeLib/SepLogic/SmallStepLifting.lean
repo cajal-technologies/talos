@@ -985,11 +985,7 @@ theorem wp_call
     simpa only [Hmodule] using hfn
   simp only [runtimeModuleOwn]
   icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩
-  ihave %Hentry : ⌜store.runtime.entry = callerId⌝ $$ [Hσ HinstanceOwn]
-  · imod stateInterp_currentInstance_agree store ns (obs ++ obs') nt callerId $$
-        [$Hσ $HinstanceOwn] with %Hentry
-    ipureintro
-    exact Hentry
+  wasm_current_instance_agree (obs ++ obs'), callerId $$ [$Hσ $HinstanceOwn]
   have hsame : callerId = store.runtime.entry := Hentry.symm
   wasm_wp_step Step.call (α := α) himports' hfn' =>
     wasm_wp_frame
@@ -1165,11 +1161,7 @@ theorem wp_returnFromCallExplicit'
   wasm_wp_begin
   simp only [runtimeModuleOwn]
   icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩
-  ihave %Hentry : ⌜store.runtime.entry = returningInstance⌝ $$ [Hσ HinstanceOwn]
-  · imod stateInterp_currentInstance_agree store ns (obs ++ obs') nt returningInstance $$
-        [$Hσ $HinstanceOwn] with %Hentry
-    ipureintro
-    exact Hentry
+  wasm_current_instance_agree (obs ++ obs'), returningInstance $$ [$Hσ $HinstanceOwn]
   have hsame : returningInstance = store.runtime.entry := Hentry.symm
   wasm_wp_step Step.returnFromCallExplicit (α := α) hsame =>
     simp only [resumeCaller]
@@ -1212,11 +1204,7 @@ theorem wp_returnFromCallExplicit
   wasm_wp_begin
   simp only [runtimeModuleOwn]
   icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩
-  ihave %Hentry : ⌜store.runtime.entry = returningInstance⌝ $$ [Hσ HinstanceOwn]
-  · imod stateInterp_currentInstance_agree store ns (obs ++ obs') nt returningInstance $$
-        [$Hσ $HinstanceOwn] with %Hentry
-    ipureintro
-    exact Hentry
+  wasm_current_instance_agree (obs ++ obs'), returningInstance $$ [$Hσ $HinstanceOwn]
   have hsame : returningInstance = store.runtime.entry := Hentry.symm
   wasm_wp_step Step.returnFromCallExplicit (α := α) hsame =>
     simp only [resumeCaller]
@@ -5471,11 +5459,7 @@ theorem wp_callCrossInstance
   wasm_wp_begin
   simp only [runtimeModuleOwn]
   icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩
-  ihave %Hentry : ⌜store.runtime.entry = callerId⌝ $$ [Hσ HinstanceOwn]
-  · imod stateInterp_currentInstance_agree store ns (obs ++ obs') nt callerId $$
-        [$Hσ $HinstanceOwn] with %Hentry
-    ipureintro
-    exact Hentry
+  wasm_current_instance_agree (obs ++ obs'), callerId $$ [$Hσ $HinstanceOwn]
   iclear HruntimeElem
   ihave %Hinst : ⌜store.runtime.instances = instances⌝ $$ [Hσ HruntimeInstances]
   · imod stateInterp_instances_agree store ns (obs ++ obs') nt instances $$
@@ -5555,11 +5539,7 @@ theorem wp_returnFromCallCrossInstance
   dsimp only
   iintro >HinstanceOwn >HruntimeInstances Hwp
   wasm_wp_begin
-  ihave %Hentry : ⌜store.runtime.entry = calleeId⌝ $$ [Hσ HinstanceOwn]
-  · imod stateInterp_currentInstance_agree store ns (obs ++ obs') nt calleeId $$
-        [$Hσ $HinstanceOwn] with %Hentry
-    ipureintro
-    exact Hentry
+  wasm_current_instance_agree (obs ++ obs'), calleeId $$ [$Hσ $HinstanceOwn]
   ihave %Hinst : ⌜store.runtime.instances = instances⌝ $$ [Hσ HruntimeInstances]
   · imod stateInterp_instances_agree store ns (obs ++ obs') nt instances $$
         [$Hσ $HruntimeInstances] with %Hinst
