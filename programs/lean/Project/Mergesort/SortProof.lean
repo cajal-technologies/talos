@@ -1373,11 +1373,9 @@ theorem twp_mergeMainLoop
       wasm_twp_pures [twp_localGet twp_const twp_add]
       rw [UInt32.add_comm (4 : UInt32), next_slot_address]
       wasm_twp_pures [twp_localSet]
-      simp only
       wasm_twp_pures [twp_localGet twp_const twp_add]
       rw [hkValue]
       wasm_twp_pures [twp_localSet]
-      simp only
       wasm_twp_pures [twp_localGet twp_localGet]
       by_cases hiNext : state.i + 1 < mid
       · have hmidSize : mid < UInt32.size := by
@@ -1459,11 +1457,9 @@ theorem twp_mergeMainLoop
       wasm_twp_pures [twp_localGet twp_const twp_add]
       rw [UInt32.add_comm (4 : UInt32), next_slot_address]
       wasm_twp_pures [twp_localSet]
-      simp only
       wasm_twp_pures [twp_localGet twp_const twp_add]
       rw [hkValue]
       wasm_twp_pures [twp_localSet]
-      simp only
       wasm_twp_pures [twp_localGet twp_localGet]
       have hmidSize : mid < UInt32.size := by
         have := hlayout.length_lt
@@ -1612,7 +1608,6 @@ theorem twp_mergeLeftRemainder
     wasm_twp_pures [twp_localGet twp_localGet twp_const twp_shl twp_add]
     rw [MemRegion.shl2_eq_mul4, UInt32.add_comm]
     wasm_twp_pures [twp_localSet]
-    simp only
     wasm_twp_pures [twp_localGet twp_localGet twp_localGet twp_localGet twp_localGet]
     have hnotGt :
         ¬UInt32.ofNat input.length < UInt32.ofNat k := by
@@ -1800,12 +1795,10 @@ theorem twp_mergeLeftRemainder
         omega
       wasm_twp_pures [twp_localGet twp_const twp_add]
       rw [UInt32.add_comm (4 : UInt32), next_slot_address]
-      wasm_twp_pures [twp_localSet]
-      simp only [List.length, List.set]
+      wasm_twp_localSet [List.length, List.set]
       wasm_twp_pures [twp_localGet twp_const twp_add]
       rw [UInt32.add_comm (4 : UInt32), hsourceNext]
-      wasm_twp_pures [twp_localSet]
-      simp only [List.length, List.set]
+      wasm_twp_localSet [List.length, List.set]
       wasm_twp_pures [twp_localGet twp_localGet twp_const twp_add]
       rw [UInt32.add_comm (4294967295 : UInt32),
         u32_neg_counter_step hrSuccSize]
@@ -1862,8 +1855,7 @@ theorem twp_mergeLeftRemainder
               exact hlayout.length_lt), hkN]
         wasm_twp_pures [twp_localGet twp_localGet twp_sub]
         rw [hfinalK]
-        wasm_twp_pures [twp_localSet]
-        simp only [List.length, List.set]
+        wasm_twp_localSet [List.length, List.set]
         iapply Wasm.SmallStep.twp_exitControl (α := α) rfl
         simp only [List.take_zero, List.nil_append]
         have hiFinal : i + state.r + 1 = mid := by omega
@@ -2001,7 +1993,6 @@ theorem twp_mergeRightRemainder
       exact h
     rw [hsourceAddress]
     wasm_twp_pures [twp_localSet]
-    simp only
     wasm_twp_pures [twp_localGet twp_localGet twp_localGet twp_localGet]
     have hnotGt :
         ¬UInt32.ofNat input.length < UInt32.ofNat k := by
@@ -2013,17 +2004,14 @@ theorem twp_mergeRightRemainder
     iapply twp_select (selected := .i32 (UInt32.ofNat input.length))
       (by simp)
     wasm_twp_pures [twp_localSet]
-    simp only
     wasm_twp_pures [twp_localGet twp_localGet twp_const twp_shl]
     rw [MemRegion.shl2_eq_mul4]
     wasm_twp_pures [twp_add]
     rw [UInt32.add_comm]
     wasm_twp_pures [twp_localSet]
-    simp only
     wasm_twp_pures [twp_localGet twp_localGet twp_sub twp_localGet twp_add]
     rw [right_counter_init hmj hjl hlayout.length_lt]
-    wasm_twp_pures [twp_localSet]
-    simp only [sortLocals, List.length, List.set]
+    wasm_twp_localSet [sortLocals, List.length, List.set]
     let n := input.length - j
     have hjN : j + n = input.length := by
       dsimp only [n]
@@ -2207,16 +2195,13 @@ theorem twp_mergeRightRemainder
         congr 2
       wasm_twp_pures [twp_localGet twp_const twp_add]
       rw [UInt32.add_comm (4 : UInt32), hdestinationNext]
-      wasm_twp_pures [twp_localSet]
-      simp only [List.length, List.set]
+      wasm_twp_localSet [List.length, List.set]
       wasm_twp_pures [twp_localGet twp_const twp_add]
       rw [UInt32.add_comm (4 : UInt32), hsourceNext]
-      wasm_twp_pures [twp_localSet]
-      simp only [List.length, List.set]
+      wasm_twp_localSet [List.length, List.set]
       wasm_twp_pures [twp_localGet twp_const twp_add]
       rw [UInt32.add_comm (1 : UInt32), hkStep]
-      wasm_twp_pures [twp_localSet]
-      simp only [List.length, List.set]
+      wasm_twp_localSet [List.length, List.set]
       wasm_twp_pures [twp_localGet twp_const twp_add]
       rw [UInt32.add_comm (1 : UInt32), hcounterStep]
       wasm_twp_pures [twp_localTee]

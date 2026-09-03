@@ -605,7 +605,6 @@ private theorem twp_recursiveSort_aux
         iintro %best %hminimum Hruntime Harray
         have hbest : best < input.length := hminimum.2.1
         wasm_twp_pures [twp_localSet]
-        simp only
         iapply twp_swapAt64 (a := 0) (b := best)
           hlen hbest hfit rfl rfl rfl rfl rfl rfl rfl
         isplitl_exact Harray
@@ -990,8 +989,7 @@ private theorem twp_outerLoop
         rw [UInt32.add_comm]
         change UInt32.ofNat state.outer + UInt32.ofNat 1 = _
         rw [← UInt32.ofNat_add]]
-      wasm_twp_pures [twp_localSet]
-      simp only [loopSortLocals, List.length_cons, List.length_nil,
+      wasm_twp_localSet [loopSortLocals, List.length_cons, List.length_nil,
         Nat.reduceAdd, Nat.reduceSub, List.set]
       have hlocals :
           ({ params := [.i32 arr, .i32 (UInt32.ofNat input.length)]

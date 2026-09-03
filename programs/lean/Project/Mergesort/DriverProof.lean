@@ -381,13 +381,11 @@ theorem twp_func3_reload_vec_fields
   iapply twp_load32 ptr (by decide) (by decide) (by decide) (by decide) $$
     Hpointer
   iintro Hpointer
-  wasm_twp_pures [twp_localSet]
-  simp only [List.length, List.set]
+  wasm_twp_localSet [List.length, List.set]
   wasm_twp_pures [twp_localGet]
   wasm_twp_rebind twp_load32 (UInt32.ofNat initialized.length)
       (by decide) (by decide) (by decide) (by decide) with Hlength
-  wasm_twp_pures [twp_localSet]
-  simp only [List.length, List.set]
+  wasm_twp_localSet [List.length, List.set]
   ihave Hframe : ExportFrame heapId capacity ptr initialized
       chunkBytes outputBytes $$
       [Hcapacity Hpointer Hlength Hstorage Hchunk Houtput]
@@ -1412,8 +1410,7 @@ theorem twp_func3_reload_completed_ptr
   iapply twp_load32 dataPtr (by decide) (by decide) (by decide) (by decide) $$
     Hpointer
   iintro Hpointer
-  wasm_twp_pures [twp_localSet]
-  simp only [List.length, List.set]
+  wasm_twp_localSet [List.length, List.set]
   ihave Hframe : ExportFrame heapId capacity dataPtr completed
       chunkBytes outputBytes $$
       [Hcapacity Hpointer Hlength Hstorage Hchunk Houtput]
@@ -2083,12 +2080,10 @@ theorem twp_func3_decode_tail_loop
     iintro Hsource Hdestination
     wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (4 : UInt32), func3_decode_next_address]
-    wasm_twp_pures [twp_localSet]
-    simp only [List.length, List.set]
+    wasm_twp_localSet [List.length, List.set]
     wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (4 : UInt32), func3_decode_next_address]
-    wasm_twp_pures [twp_localSet]
-    simp only [List.length, List.set]
+    wasm_twp_localSet [List.length, List.set]
     wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (4294967295 : UInt32), hdecrement]
     wasm_twp_pures [twp_localTee]
@@ -2403,8 +2398,7 @@ theorem twp_func3_decode_bulk_loop
     isimp only [hcopiedFour] at Hdestination
     wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (16 : UInt32), func3_decode_byte_offset_step]
-    wasm_twp_pures [twp_localSet]
-    simp only [List.length, List.set]
+    wasm_twp_localSet [List.length, List.set]
     wasm_twp_pures [twp_localGet twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (4 : UInt32), func3_decode_count_step]
     wasm_twp_pures [twp_localTee]
@@ -2577,8 +2571,7 @@ theorem twp_func3_decode_setup
   simp only [List.length, List.set]
   wasm_twp_pures [twp_const twp_and]
   rw [htail]
-  wasm_twp_pures [twp_localSet]
-  simp only [List.length, List.set]
+  wasm_twp_localSet [List.length, List.set]
   wasm_twp_pures [twp_const twp_localSet]
   simp only [List.length, List.set]
   wasm_twp_pures [twp_localGet twp_localSet]
@@ -2665,14 +2658,12 @@ theorem twp_func3_decode_positive_tail
   simp only [func3DecodeTailContinuation, func3AppendLocals]
   wasm_twp_pures [twp_localGet twp_localGet twp_add]
   rw [htotal]
-  wasm_twp_pures [twp_localSet]
-  simp only [List.length, List.set]
+  wasm_twp_localSet [List.length, List.set]
   wasm_twp_pures [twp_localGet twp_localGet twp_const twp_shl]
   rw [MemRegion.shl2_eq_mul4]
   wasm_twp_pures [twp_add]
   rw [UInt32.add_comm (4 * UInt32.ofNat bulk)]
-  wasm_twp_pures [twp_localSet]
-  simp only [List.length, List.set]
+  wasm_twp_localSet [List.length, List.set]
   have Htail := twp_func3_decode_tail_loop
     (hlc := hlc) source destination original initial bulk tail aux10 hlength
     hpartition htailPositive hlengthBound
@@ -2802,8 +2793,7 @@ theorem twp_func3_decode_blocks
     iapply twp_ltU (result := 0) (by simp [hnotLt])
     wasm_twp_pures [twp_brIfZero twp_localGet twp_const twp_and]
     rw [bulk4_signedMask_eq original.length hcountBound]
-    wasm_twp_pures [twp_localSet]
-    simp only [List.length, List.set]
+    wasm_twp_localSet [List.length, List.set]
     wasm_twp_pures [twp_const twp_localSet]
     simp only [List.length, List.set]
     wasm_twp_pures [twp_const twp_localSet]
@@ -2864,8 +2854,7 @@ theorem twp_func3_decode_blocks
       wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet twp_add]
       simp only [func3_decode_byte_offset]
       rw [UInt32.add_comm (4 * UInt32.ofNat bulk) source]
-      wasm_twp_pures [twp_localSet]
-      simp only [List.length, List.set]
+      wasm_twp_localSet [List.length, List.set]
       wasm_twp_pures [twp_exitControl]
       simp only [List.take_zero, List.nil_append]
       have Htail := twp_func3_decode_positive_tail
@@ -3235,8 +3224,7 @@ theorem twp_func3_scratch_success_tail
   wasm_twp_pures [twp_brIfZero twp_localGet twp_const twp_shrU]
   rw [show (2 : UInt32) % 32 = 2 by decide,
     func3_scratch_count_shift length hbyteBound]
-  wasm_twp_pures [twp_localSet]
-  simp only [List.length, List.set]
+  wasm_twp_localSet [List.length, List.set]
   wasm_twp_pures [twp_const twp_localSet]
   simp only [List.length, List.set]
   iapply twp_br hbranch
@@ -3605,8 +3593,7 @@ theorem twp_func3_output_loop
     iintro Hruntime Hframe Hwords Hstreams
     wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (4 : UInt32), func3_decode_next_address]
-    wasm_twp_pures [twp_localSet]
-    simp only [List.length, List.set]
+    wasm_twp_localSet [List.length, List.set]
     wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (4294967292 : UInt32), hcountdown]
     wasm_twp_pures [twp_localTee]
@@ -3739,8 +3726,7 @@ theorem twp_func3_output
     iapply twp_eqz (result := 0) (by simp [hnonzero])
     wasm_twp_pures [twp_brIfZero twp_localGet twp_const twp_shl]
     rw [MemRegion.shl2_eq_mul4, ← func3_decode_byte_offset]
-    wasm_twp_pures [twp_localSet]
-    simp only [List.length, List.set]
+    wasm_twp_localSet [List.length, List.set]
     wasm_twp_pures [twp_localGet twp_localSet]
     simp only [List.length, List.set]
     have Hloop := twp_func3_output_loop

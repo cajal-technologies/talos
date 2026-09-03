@@ -544,8 +544,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
             · iintro %newBytes Hruntime Hbump Hblock Hstreams
               isimp only [ResumeWP, resumeExpr, List.nil_append,
                 List.append_nil]
-              wasm_twp_pures [twp_localSet]
-              simp only [List.length, List.set]
+              wasm_twp_localSet [List.length, List.set]
               wasm_twp_pures [twp_exitControl]
               simp only [List.take_zero, List.nil_append]
               ihave HblockFacts := LiveBlock_with_nonnull heapId
@@ -681,8 +680,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
             rw [min_eq_left (Nat.le_of_lt holdNew)] at hcopy
             isimp only [ResumeWP, resumeExpr, List.nil_append,
               List.append_nil]
-            wasm_twp_pures [twp_localSet]
-            simp only [List.length, List.set]
+            wasm_twp_localSet [List.length, List.set]
             wasm_twp_pures [twp_br]
             simp only [List.take_zero, List.nil_append]
             ihave HblockFacts := LiveBlock_with_nonnull heapId

@@ -1784,6 +1784,15 @@ macro "wasm_twp_localSet" : tactic =>
      simp only [List.length_cons, List.length_nil, Nat.reduceAdd,
        Nat.reduceSub, List.set]))
 
+/-- Execute a local assignment with caller-selected local-list rewrites. -/
+syntax "wasm_twp_localSet" Lean.Parser.Tactic.simpArgs : tactic
+
+macro_rules
+  | `(tactic| wasm_twp_localSet [$rules,*]) =>
+      `(tactic|
+        (wasm_twp_pures [twp_localSet]
+         simp only [$rules,*]))
+
 /-- `i32.load` at offset 0, phrased directly on `addr` rather than
 `addr + 0`, which keeps Iris's unifier from having to see through the
 offset addition.  Relocated here from `SmallStepAdequacy`, where it sat

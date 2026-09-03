@@ -457,8 +457,7 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
         · irw_exact [← show reserveBase + 4 + 4 = reserveBase + 8 by decide] with HnewPointer
         wasm_twp_bind twp_load32 (address := reserveBase) (offset := 8) newPtr
             (by decide) (by decide) (by decide) (by decide) with HnewPointer' => HnewPointer
-        wasm_twp_pures [twp_localSet]
-        simp only [List.set]
+        wasm_twp_localSet [List.set]
         wasm_twp_pures [twp_localGet twp_localGet]
         wasm_twp_rebind twp_store32 (address := driverBase) (offset := 0) capacity
             (by decide) (by decide) (by decide) (by decide) with Hcapacity
