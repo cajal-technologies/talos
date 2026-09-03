@@ -169,8 +169,7 @@ theorem writeTransfer
   subst results
   subst postWasm
   ihave HhostActual : hostStateOwn store.wasm.host $$ [Hhost]
-  · rw [hhostEq]
-    iexact Hhost
+  · irw_exact [hhostEq] with Hhost
   imod stateInterp_host_set store ns obs nt (afterWrite host bytes) $$
       [$Hstate $HhostActual] with ⟨Hstate, Hhost⟩
   imodintro
@@ -284,8 +283,7 @@ theorem readTransfer
     dsimp only [memoryStore]
     exact hhostEq
   ihave HhostActual : hostStateOwn memoryStore.wasm.host $$ [Hhost]
-  · rw [hmemoryHost]
-    iexact Hhost
+  · irw_exact [hmemoryHost] with Hhost
   imod stateInterp_host_set memoryStore ns obs nt
       (afterRead host incoming.length) $$ [$Hstate $HhostActual] with
       ⟨Hstate, Hhost⟩
@@ -336,8 +334,7 @@ theorem oomTransfer
   subst postWasm
   subst message
   ihave HhostActual : hostStateOwn store.wasm.host $$ [Hhost]
-  · rw [hhostEq]
-    iexact Hhost
+  · irw_exact [hhostEq] with Hhost
   imod stateInterp_host_set store ns obs nt (afterOom host) $$
       [$Hstate $HhostActual] with ⟨Hstate, Hhost⟩
   imodintro

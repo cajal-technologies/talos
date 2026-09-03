@@ -780,8 +780,7 @@ theorem twp_func3_read_and_classify
     have hremainingEmpty : input.drop count = [] := by
       simp [hempty, hcountZero]
     ihave HstreamsEmpty : Streams [] output false $$ [Hstreams]
-    · rw [← hremainingEmpty]
-      iexact Hstreams
+    · irw_exact [← hremainingEmpty] with Hstreams
     ihave HframeEmpty : ExportFrame heapId capacity dataPtr initialized
         chunkBytes outputBytes $$ [Hframe]
     · isimp only [hempty, List.length_nil, min_zero, List.take_zero,
@@ -1679,8 +1678,7 @@ theorem twp_func3_allocate_values
       iapply Hoom
       ihave HframeOriginal : ExportFrame heapId capacity dataPtr
           (serialize original) chunkBytes outputBytes $$ [Hframe]
-      · rw [hcompleted]
-        iexact Hframe
+      · irw_exact [hcompleted] with Hframe
       unfold DriverValuesOOM
       iexists capacity, dataPtr, chunkBytes, outputBytes, shadow,
         storedCursor, frontier, history
@@ -1700,8 +1698,7 @@ theorem twp_func3_allocate_values
         iapply Hoom
         ihave HframeOriginal : ExportFrame heapId capacity dataPtr
             (serialize original) chunkBytes outputBytes $$ [Hframe]
-        · rw [hcompleted]
-          iexact Hframe
+        · irw_exact [hcompleted] with Hframe
         unfold DriverValuesOOM
         iexists capacity, dataPtr, chunkBytes, outputBytes, shadow,
           storedCursor, frontier, history
@@ -1867,8 +1864,7 @@ theorem twp_func3_copy_decoded_word
   have hnext : current.set copied original[copied] = next := by
     exact overwritePrefix_set_next original initial copied hlength hcopied
   ihave Hnext : WordSlice destination next $$ [Hdestination]
-  · rw [← hnext]
-    iexact Hdestination
+  · irw_exact [← hnext] with Hdestination
   iapply Hcont $$ Hsource Hnext
 
 /-- The local-address form used by the generated tail loop (and by each
@@ -5421,8 +5417,7 @@ theorem twp_func3_initialize
   icases Harray with ⟨HoldCapacity, HoldPointer, HoldLength, _Hemp⟩
   ihave HoldLength' :
       pointsTo_u32 0 (driverBase + 8) oldLength $$ [HoldLength]
-  · rw [← show driverBase + 4 + 4 = driverBase + 8 by decide]
-    iexact HoldLength
+  · irw_exact [← show driverBase + 4 + 4 = driverBase + 8 by decide] with HoldLength
   ihave HoldPair := (pointsTo_u32_pair_as_u64
       driverBase oldCapacity oldPointer).mp $$ [HoldCapacity HoldPointer]
   · iframe

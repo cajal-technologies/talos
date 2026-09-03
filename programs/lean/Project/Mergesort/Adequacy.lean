@@ -419,16 +419,13 @@ theorem entry_partiallyMeets_of_func3
     iintro ⟨Hheap, Hglobals, Hruntime, Henv, Hhost, Hfrontier, Hpages⟩
     ihave Hruntime' :
         runtimeModuleOwn ⟨0⟩ Project.Mergesort.module $$ [Hruntime]
-    · rw [← entryConfig_entry input, ← entryConfig_currentModule input]
-      iexact Hruntime
+    · irw_exact [← entryConfig_entry input, ← entryConfig_currentModule input] with Hruntime
     ihave Henv' :
         hostEnvOwn 0 (Universal.envFor Project.Mergesort.module) $$ [Henv]
-    · rw [← entryConfig_entry_id input, ← entryConfig_currentHost input]
-      iexact Henv
+    · irw_exact [← entryConfig_entry_id input, ← entryConfig_currentHost input] with Henv
     ihave Hhost' :
         hostStateOwn (Universal.State.ofInput (serialize input)) $$ [Hhost]
-    · rw [← entryConfig_host input]
-      iexact Hhost
+    · irw_exact [← entryConfig_host input] with Hhost
     iapply twp.to_wp
     iapply twp_entry_of_func3 (hfunc3 := hfunc3) input
     ihave Hpages' : memoryPagesOwn entryMemory.pages $$ [Hpages]

@@ -291,8 +291,7 @@ theorem ByteSlice_as_decodedWordSlice {host : Type} [WasmHeapGS host]
   constructor
   · iintro Hbytes
     ihave Hencoded : ByteSlice ptr (serialize (decodeWords bytes)) $$ [Hbytes]
-    · rw [hslice]
-      iexact Hbytes
+    · irw_exact [hslice] with Hbytes
     iapply (ByteSlice_serialize_as_WordSlice ptr
       (decodeWords bytes) halign).mp
     iexact Hencoded
@@ -300,8 +299,7 @@ theorem ByteSlice_as_decodedWordSlice {host : Type} [WasmHeapGS host]
     ihave Hencoded := (ByteSlice_serialize_as_WordSlice ptr
       (decodeWords bytes) halign).mpr $$ Hwords
     ihave Hbytes : ByteSlice ptr bytes $$ [Hencoded]
-    · rw [← hslice]
-      iexact Hencoded
+    · irw_exact [← hslice] with Hencoded
     iexact Hbytes
 
 /-- At a known non-wrapping four-byte slot, arbitrary current bytes and the
@@ -330,8 +328,7 @@ theorem ByteSlice_four_as_word {host : Type} [WasmHeapGS host]
     isplitl_pureexact (by simpa [hlength] using hnowrap)
     · ihave Hbytes := (pointsTo_u32_as_bytes 0 ptr word).mp $$ Hword
       ihave Hbytes' : pointsToBytes 0 ptr bytes $$ [Hbytes]
-      · rw [← hencoded]
-        iexact Hbytes
+      · irw_exact [← hencoded] with Hbytes
       iexact Hbytes'
 
 /-- Focus the driver's reusable four-byte output slot for one word store and
@@ -429,8 +426,7 @@ theorem WordSlice_append {host : Type} [WasmHeapGS host]
     ihave Hright' :
         pointsToBytes 0 (ptr + 4 * UInt32.ofNat xs.length)
           (serialize ys) $$ [Hright]
-    · rw [wordOffset_eq_byteOffset]
-      iexact Hright
+    · irw_exact [wordOffset_eq_byteOffset] with Hright
     isplitl [Hleft]
     · iframe Hleft
       ipureexact ⟨halign, hleftNowrap⟩
@@ -447,8 +443,7 @@ theorem WordSlice_append {host : Type} [WasmHeapGS host]
     isplitl_pureexact (by simpa only [Nat.mul_add] using hnowrap)
     iapply (pointsToBytes_append 0 ptr (serialize xs) (serialize ys)).mpr
     isplitl_exact Hleft
-    · rw [← wordOffset_eq_byteOffset]
-      iexact Hright
+    · irw_exact [← wordOffset_eq_byteOffset] with Hright
 
 /-- Retain a word slice while exposing its alignment and exact no-wrap facts. -/
 theorem WordSlice_facts {host : Type} [WasmHeapGS host]
@@ -1316,13 +1311,11 @@ theorem LiveWordBlocks_sortFocus {host : Type} [WasmHeapGS host]
       ⟨HsourceWords, HscratchWords, %_hbufferFacts⟩
     ihave HsourceToken' : AllocToken heapId sourceId source
         { size := 4 * output.length, alignment := 4 } $$ [HsourceToken]
-    · rw [hresultLengths.1]
-      iexact HsourceToken
+    · irw_exact [hresultLengths.1] with HsourceToken
     ihave HscratchToken' : AllocToken heapId scratchId scratch
         { size := 4 * scratchResult.length, alignment := 4 } $$
         [HscratchToken]
-    · rw [hresultLengths.2]
-      iexact HscratchToken
+    · irw_exact [hresultLengths.2] with HscratchToken
     isplitl [HsourceToken' HsourceWords]
     · unfold LiveWordBlock
       iframe
@@ -1923,8 +1916,7 @@ theorem StackReserve_split
     have hgrowLength : growBefore.length = 12 := by
       simp [growBefore, hlength]
     ihave Hsplit : ByteSlice low (headBytes ++ growBefore) $$ [Hbytes]
-    · rw [← hdecompose]
-      iexact Hbytes
+    · irw_exact [← hdecompose] with Hbytes
     icases (ByteSlice_append low headBytes growBefore).mp $$ Hsplit with
       ⟨Hhead, Hgrow⟩
     iexists headBytes, growBefore
@@ -1965,18 +1957,15 @@ theorem EntryStack_split
       simp [frameBytes, hlength]
     ihave Hsplit :
         ByteSlice entryStackLow (reserveBytes ++ frameBytes) $$ [Hstack]
-    · rw [← hdecompose]
-      iexact Hstack
+    · irw_exact [← hdecompose] with Hstack
     icases (ByteSlice_append entryStackLow reserveBytes frameBytes).mp $$
         Hsplit with ⟨Hreserve, Hframe⟩
     ihave Hreserve' : StackReserve reserveBase reserveBytes $$ [Hreserve]
     · unfold StackReserve
       isplitl_pureexact hreserveLength
-      · rw [← hlow]
-        iexact Hreserve
+      · irw_exact [← hlow] with Hreserve
     ihave Hframe' : ByteSlice driverBase frameBytes $$ [Hframe]
-    · rw [← hboundary, hreserveLength]
-      iexact Hframe
+    · irw_exact [← hboundary, hreserveLength] with Hframe
     iexists reserveBytes, frameBytes
     isplitr_pureexact ⟨hdecompose, hreserveLength, hframeLength⟩
     · iframe
@@ -1984,13 +1973,11 @@ theorem EntryStack_split
     isimp only [StackReserve] at Hreserve
     icases Hreserve with ⟨%hreserveLength, Hreserve⟩
     ihave Hreserve' : ByteSlice entryStackLow reserveBytes $$ [Hreserve]
-    · rw [hlow]
-      iexact Hreserve
+    · irw_exact [hlow] with Hreserve
     ihave Hframe' :
         ByteSlice (entryStackLow + UInt32.ofNat reserveBytes.length)
           frameBytes $$ [Hframe]
-    · rw [hreserveLength, hboundary]
-      iexact Hframe
+    · irw_exact [hreserveLength, hboundary] with Hframe
     isplitl [Hreserve' Hframe']
     · rw [hfacts.1]
       iapply_frame (ByteSlice_append entryStackLow reserveBytes frameBytes).mpr
@@ -2059,24 +2046,20 @@ theorem DriverFrame_split
     have houtputLength : outputBytes.length = 4 := by
       simp [outputBytes, hrestLength]
     ihave Hfirst : ByteSlice driverBase (headerBytes ++ rest) $$ [Hbytes]
-    · rw [← hheaderRest]
-      iexact Hbytes
+    · irw_exact [← hheaderRest] with Hbytes
     icases (ByteSlice_append driverBase headerBytes rest).mp $$ Hfirst with
       ⟨Hheader, Hrest⟩
     ihave Hrest' : ByteSlice
         (driverBase + UInt32.ofNat 12) (chunkBytes ++ outputBytes) $$
         [Hrest]
-    · rw [← hheaderLength, ← hchunkOutput]
-      iexact Hrest
+    · irw_exact [← hheaderLength, ← hchunkOutput] with Hrest
     icases (ByteSlice_append (driverBase + UInt32.ofNat 12)
         chunkBytes outputBytes).mp $$ Hrest' with
       ⟨Hchunk, Houtput⟩
     ihave Hchunk' : ByteSlice (driverBase + 12) chunkBytes $$ [Hchunk]
-    · rw [← hchunkBase]
-      iexact Hchunk
+    · irw_exact [← hchunkBase] with Hchunk
     ihave Houtput' : ByteSlice (driverBase + 268) outputBytes $$ [Houtput]
-    · rw [← houtputBase, hchunkLength]
-      iexact Houtput
+    · irw_exact [← houtputBase, hchunkLength] with Houtput
     iexists headerBytes, chunkBytes, outputBytes
     isplitr_pureexact ⟨by rw [hheaderRest, hchunkOutput, List.append_assoc],
         hheaderLength, hchunkLength, houtputLength⟩
@@ -2085,13 +2068,11 @@ theorem DriverFrame_split
         Hheader, Hchunk, Houtput⟩
     ihave Hchunk' : ByteSlice
         (driverBase + UInt32.ofNat headerBytes.length) chunkBytes $$ [Hchunk]
-    · rw [hfacts.2.1, hchunkBase]
-      iexact Hchunk
+    · irw_exact [hfacts.2.1, hchunkBase] with Hchunk
     ihave Houtput' : ByteSlice
         ((driverBase + UInt32.ofNat headerBytes.length) +
           UInt32.ofNat chunkBytes.length) outputBytes $$ [Houtput]
-    · rw [hfacts.2.1, hfacts.2.2.1, houtputBase]
-      iexact Houtput
+    · irw_exact [hfacts.2.1, hfacts.2.2.1, houtputBase] with Houtput
     ihave Hrest : ByteSlice
         (driverBase + UInt32.ofNat headerBytes.length)
           (chunkBytes ++ outputBytes) $$ [Hchunk' Houtput']
@@ -2177,8 +2158,7 @@ theorem VecStorage_initializedFocus {host : Type} [WasmHeapGS host]
     isimp only [LiveBlock] at Hblock
     icases Hblock with ⟨Htoken, HallBytes, %hblock⟩
     ihave HallBytes' : ByteSlice ptr (initialized ++ spare) $$ [HallBytes]
-    · rw [← hstorage.2.2.1]
-      iexact HallBytes
+    · irw_exact [← hstorage.2.2.1] with HallBytes
     icases (ByteSlice_append ptr initialized spare).mp $$ HallBytes' with
       ⟨Hinitialized, Hspare⟩
     isplitl_exact Hinitialized
@@ -2231,15 +2211,13 @@ theorem VecStorage_appendFocus {host : Type} [WasmHeapGS host]
       simp [tail, hstorage.2.2.2]
       omega
     ihave HallBytes' : ByteSlice ptr (initialized ++ spare) $$ [HallBytes]
-    · rw [← hstorage.2.2.1]
-      iexact HallBytes
+    · irw_exact [← hstorage.2.2.1] with HallBytes
     icases (ByteSlice_append ptr initialized spare).mp $$ HallBytes' with
       ⟨Hinitialized, Hspare⟩
     ihave Hspare' : ByteSlice
         (ptr + UInt32.ofNat initialized.length) (oldChunk ++ tail) $$
         [Hspare]
-    · rw [← hdecompose]
-      iexact Hspare
+    · irw_exact [← hdecompose] with Hspare
     icases (ByteSlice_append
         (ptr + UInt32.ofNat initialized.length) oldChunk tail).mp $$
         Hspare' with ⟨Hchunk, Htail⟩
@@ -2250,8 +2228,7 @@ theorem VecStorage_appendFocus {host : Type} [WasmHeapGS host]
     ihave Htail' : ByteSlice
         ((ptr + UInt32.ofNat initialized.length) +
           UInt32.ofNat current.length) tail $$ [Htail]
-    · rw [← hchunkLength]
-      iexact Htail
+    · irw_exact [← hchunkLength] with Htail
     ihave HspareNew : ByteSlice
         (ptr + UInt32.ofNat initialized.length) (current ++ tail) $$
         [Hcurrent Htail']
@@ -2318,8 +2295,7 @@ theorem VecU8_as_headerBytes_storage {host : Type} [WasmHeapGS host]
       ⟨⟨Hcapacity, Hpointer⟩, Hlength, Hstorage⟩
     ihave Hlength' : pointsTo_u32 0 ((header + 4) + 4)
         (UInt32.ofNat initialized.length) $$ [Hlength]
-    · rw [haddress]
-      iexact Hlength
+    · irw_exact [haddress] with Hlength
     ihave Harray : arrayAt 0 header
         [capacity, ptr, UInt32.ofNat initialized.length] $$
         [Hcapacity Hpointer Hlength']
@@ -2354,8 +2330,7 @@ theorem VecU8_as_headerBytes_storage {host : Type} [WasmHeapGS host]
     icases Hlength with ⟨Hlength, _Hemp⟩
     ihave Hlength' : pointsTo_u32 0 (header + 8)
         (UInt32.ofNat initialized.length) $$ [Hlength]
-    · rw [← haddress]
-      iexact Hlength
+    · irw_exact [← haddress] with Hlength
     unfold VecU8 RawVecHeader
     iframe
 

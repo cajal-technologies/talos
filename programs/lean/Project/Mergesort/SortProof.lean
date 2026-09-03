@@ -1041,8 +1041,7 @@ theorem twp_copyPointerAt
   iapply twp_localGet (by simpa [Locals.get] using hsource)
   ihave HsourceCellLater :
       pointsTo_u32 0 (sourceAddress + 0) input[i] $$ [HsourceCell]
-  · rw [UInt32.add_zero, hsourceAddress]
-    iexact HsourceCell
+  · irw_exact [UInt32.add_zero, hsourceAddress] with HsourceCell
   wasm_twp_bind Wasm.SmallStep.twp_load32
     (address := sourceAddress) (offset := 0) input[i]
     (by simp) (by simpa using hs1) (by simpa using hs2)
@@ -1050,8 +1049,7 @@ theorem twp_copyPointerAt
   ihave HscratchCellLater :
       pointsTo_u32 0 (destinationAddress + 0) scratchValues[k] $$
         [HscratchCell]
-  · rw [UInt32.add_zero, hdestinationAddress]
-    iexact HscratchCell
+  · irw_exact [UInt32.add_zero, hdestinationAddress] with HscratchCell
   wasm_twp_bind Wasm.SmallStep.twp_store32
     (address := destinationAddress) (offset := 0)
     (value := input[i]) scratchValues[k]
@@ -1060,14 +1058,12 @@ theorem twp_copyPointerAt
   ihave HsourceCell' :
       pointsTo_u32 0 (source + 4 * UInt32.ofNat i) input[i] $$
         [HsourceCell]
-  · rw [← hsourceAddress, UInt32.add_zero]
-    iexact HsourceCell
+  · irw_exact [← hsourceAddress, UInt32.add_zero] with HsourceCell
   ihave HsourceArray := HsourceClose $$ HsourceCell'
   ihave HscratchCell' :
       pointsTo_u32 0 (scratch + 4 * UInt32.ofNat k) input[i] $$
         [HscratchCell]
-  · rw [← hdestinationAddress, UInt32.add_zero]
-    iexact HscratchCell
+  · irw_exact [← hdestinationAddress, UInt32.add_zero] with HscratchCell
   ihave HscratchArray := HscratchClose $$ HscratchCell'
   iapply_frame Hcont
 
@@ -2609,8 +2605,7 @@ theorem twp_sort
     ihave HscratchRight' :
         arrayAt 0 (scratch + 4 * UInt32.ofNat left.length) scratchRight $$
           [HscratchRight]
-    · rw [← hscratchLeftEq]
-      iexact HscratchRight
+    · irw_exact [← hscratchLeftEq] with HscratchRight
     wasm_twp_pures [twp_localGet twp_localGet twp_const twp_shl]
     rw [MemRegion.shl2_eq_mul4]
     wasm_twp_pures [twp_localTee]

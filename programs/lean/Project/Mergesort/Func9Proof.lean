@@ -220,13 +220,11 @@ private theorem twp_func9_commit_zero_and_return
   wasm_twp_pures [twp_localGet]
   ihave HcursorAt : pointsTo_u32 0 ((0 : UInt32) + 1049492)
       storedCursor $$ [Hcursor]
-  · rw [show (0 : UInt32) + 1049492 = allocatorCursor by decide]
-    iexact Hcursor
+  · irw_exact [show (0 : UInt32) + 1049492 = allocatorCursor by decide] with Hcursor
   wasm_twp_bind twp_store32 (address := 0) (offset := 1049492) (value := finish)
       storedCursor (by decide) (by decide) (by decide) (by decide) with HcursorAt => Hcursor
   ihave Hcursor' : pointsTo_u32 0 allocatorCursor finish $$ [Hcursor]
-  · rw [← show (0 : UInt32) + 1049492 = allocatorCursor by decide]
-    iexact Hcursor
+  · irw_exact [← show (0 : UInt32) + 1049492 = allocatorCursor by decide] with Hcursor
   have halignment : layout.alignment = 4 := by
     simpa using hmatches.2.symm
   imod BumpHeap_commit heapId frontier history base finish layout bytes
@@ -313,8 +311,7 @@ private theorem twp_func9_claim_commit_zero_and_return
   icases HclaimFrame with
     ⟨Hruntime, Hcursor, Hauth, Hretired, Hstreams, Hcont⟩
   ihave Hfrontier' : heapFrontierOwn finish.toNat $$ [Hfrontier]
-  · rw [hfinishExact]
-    iexact Hfrontier
+  · irw_exact [hfinishExact] with Hfrontier
   iapply twp_func9_commit_zero_and_return size base finish requiredPages
       currentPages storedCursor layout heapId bytes frontier ownedPages history
       input output raised callerLocals stack code arity remainder functionControls
@@ -436,8 +433,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
   wasm_twp_pures [twp_const]
   ihave HcursorAt : pointsTo_u32 0 ((0 : UInt32) + 1049492)
       storedCursor $$ [Hcursor]
-  · rw [show (0 : UInt32) + 1049492 = allocatorCursor by decide]
-    iexact Hcursor
+  · irw_exact [show (0 : UInt32) + 1049492 = allocatorCursor by decide] with Hcursor
   wasm_twp_bind twp_load32 (address := 0) (offset := 1049492) storedCursor
       (by decide) (by decide) (by decide) (by decide) with HcursorAt => Hcursor
   wasm_twp_pures [twp_localTee]
@@ -550,8 +546,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
         [Hcursor Hfrontier Hauth Hretired]
     · unfold BumpHeap
       ihave Hcursor' : pointsTo_u32 0 allocatorCursor storedCursor $$ [Hcursor]
-      · rw [allocatorCursor]
-        iexact Hcursor
+      · irw_exact [allocatorCursor] with Hcursor
       iframe Hcursor' Hfrontier Hauth Hretired
       iexists ownedPages
       iframe Hpages
@@ -609,8 +604,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
       rfl
     rw [hbaseRaw]
     ihave HcursorAlloc : pointsTo_u32 0 allocatorCursor storedCursor $$ [Hcursor]
-    · rw [allocatorCursor]
-      iexact Hcursor
+    · irw_exact [allocatorCursor] with Hcursor
     ihave HsizeFrame : iprop(
         hostEnvOwn 0 (Universal.envFor Project.Mergesort.module) ∗
         pointsTo_u32 0 allocatorCursor storedCursor ∗
@@ -673,8 +667,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
         Nat.toUInt32, List.cons_append, List.nil_append] at Hclaim
       ihave HcursorRaw : pointsTo_u32 0 (1049492 : UInt32) storedCursor $$
           [Hcursor]
-      · rw [show (1049492 : UInt32) = allocatorCursor by decide]
-        iexact Hcursor
+      · irw_exact [show (1049492 : UInt32) = allocatorCursor by decide] with Hcursor
       iapply Hclaim
       iframe Hruntime HcursorRaw Hfrontier Hauth Hretired Hmeasured Hstreams
         Hnormal
@@ -804,8 +797,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
                 heapBase, Nat.toUInt32, List.cons_append, List.nil_append] at Hclaim
               ihave HcursorRaw : pointsTo_u32 0 (1049492 : UInt32)
                   storedCursor $$ [Hcursor]
-              · rw [show (1049492 : UInt32) = allocatorCursor by decide]
-                iexact Hcursor
+              · irw_exact [show (1049492 : UInt32) = allocatorCursor by decide] with Hcursor
               iapply Hclaim
               iframe Hruntime HcursorRaw Hfrontier Hauth Hretired HnewPages
                 Hstreams Hnormal)

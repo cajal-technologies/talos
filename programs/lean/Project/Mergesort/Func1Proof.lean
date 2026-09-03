@@ -276,8 +276,7 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
   rw [UInt32.add_comm 4 reserveBase]
   wasm_twp_pures [twp_localGet]
   ihave Hcapacity' : pointsTo_u32 0 (driverBase + 0) capacity $$ [Hcapacity]
-  · rw [UInt32.add_zero]
-    iexact Hcapacity
+  · irw_exact [UInt32.add_zero] with Hcapacity
   wasm_twp_bind twp_load32 (address := driverBase) (offset := 0) capacity
       (by decide) (by decide) (by decide) (by decide) with Hcapacity' => Hcapacity
   wasm_twp_pures [twp_localTee]
@@ -455,8 +454,7 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
         wasm_twp_pures [twp_localGet]
         ihave HnewPointer' : pointsTo_u32 0 (reserveBase + 8) newPtr $$
             [HnewPointer]
-        · rw [← show reserveBase + 4 + 4 = reserveBase + 8 by decide]
-          iexact HnewPointer
+        · irw_exact [← show reserveBase + 4 + 4 = reserveBase + 8 by decide] with HnewPointer
         wasm_twp_bind twp_load32 (address := reserveBase) (offset := 8) newPtr
             (by decide) (by decide) (by decide) (by decide) with HnewPointer' => HnewPointer
         wasm_twp_pures [twp_localSet]

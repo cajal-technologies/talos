@@ -102,19 +102,16 @@ private theorem ByteSlice_twelve_storeFocus
   have hthirdLength : third.length = 4 := by
     simp [third, hrestLength]
   ihave Hsplit : Representations.ByteSlice ptr (first ++ rest) $$ [Hbytes]
-  · rw [← hfirstRest]
-    iexact Hbytes
+  · irw_exact [← hfirstRest] with Hbytes
   icases (ByteSlice_append ptr first rest).mp $$ Hsplit with
     ⟨Hfirst, Hrest⟩
   have hfirstAddress : ptr + UInt32.ofNat first.length = ptr + 4 := by
     simp [hfirstLength]
   ihave HrestAt4 : Representations.ByteSlice (ptr + 4) rest $$ [Hrest]
-  · rw [← hfirstAddress]
-    iexact Hrest
+  · irw_exact [← hfirstAddress] with Hrest
   ihave Hrest' : Representations.ByteSlice (ptr + 4)
       (second ++ third) $$ [HrestAt4]
-  · rw [← hsecondThird]
-    iexact HrestAt4
+  · irw_exact [← hsecondThird] with HrestAt4
   icases (ByteSlice_append (ptr + 4) second third).mp $$ Hrest' with
     ⟨Hsecond, Hthird⟩
   have hfirstNowrap : ptr.toNat + 4 < UInt32.size := by omega
@@ -139,8 +136,7 @@ private theorem ByteSlice_twelve_storeFocus
       ptr + 4 + UInt32.ofNat second.length = ptr + 8 := by
     simp [hsecondLength, hptr8]
   ihave Hthird' : Representations.ByteSlice (ptr + 8) third $$ [Hthird]
-  · rw [← hthirdAddress]
-    iexact Hthird
+  · irw_exact [← hthirdAddress] with Hthird
   ihave HthirdFocus := ByteSlice_storeAnyWordFocus (ptr + 8) third
     hthirdLength hthirdNowrap $$ Hthird'
   icases HthirdFocus with ⟨Hthird, HcloseThird⟩
@@ -171,8 +167,7 @@ private theorem ByteSlice_twelve_storeFocus
       ihave Hpointer' : Representations.ByteSlice
           (ptr + UInt32.ofNat (serialize [tag]).length)
           (serialize [pointer]) $$ [Hpointer]
-      · rw [hpointerAddress]
-        iexact Hpointer
+      · irw_exact [hpointerAddress] with Hpointer
       iexact Hpointer'
   ihave Hall : Representations.ByteSlice ptr
       ((serialize [tag] ++ serialize [pointer]) ++ serialize [capacity]) $$
@@ -193,8 +188,7 @@ private theorem ByteSlice_twelve_storeFocus
           (ptr + UInt32.ofNat
             (serialize [tag] ++ serialize [pointer]).length)
           (serialize [capacity]) $$ [Hcapacity]
-      · rw [hcapacityAddress]
-        iexact Hcapacity
+      · irw_exact [hcapacityAddress] with Hcapacity
       iexact Hcapacity'
   rw [show serialize [tag, pointer, capacity] =
       (serialize [tag] ++ serialize [pointer]) ++ serialize [capacity] by
@@ -364,8 +358,7 @@ private theorem twp_func0_success_tail
     ac_rfl
   ihave Hcapacity' : pointsTo_u32 0 (8 + result + 0)
       oldResultCapacity $$ [Hcapacity]
-  · rw [show 8 + result + 0 = result + 8 by simp [hresult8Comm]]
-    iexact Hcapacity
+  · irw_exact [show 8 + result + 0 = result + 8 by simp [hresult8Comm]] with Hcapacity
   iapply twp_store32 (address := 8 + result) (offset := 0)
       oldResultCapacity
       (by simp)
@@ -375,8 +368,7 @@ private theorem twp_func0_success_tail
   iintro Hcapacity
   wasm_twp_pures [twp_localGet twp_localGet]
   ihave Htag' : pointsTo_u32 0 (result + 0) oldTag $$ [Htag]
-  · rw [show result + 0 = result by simp]
-    iexact Htag
+  · irw_exact [show result + 0 = result by simp] with Htag
   iapply twp_store32 (address := result) (offset := 0) oldTag
       (by simp) (by simpa using h0_1) (by simpa using h0_2)
       (by simpa using h0_3) $$ Htag'

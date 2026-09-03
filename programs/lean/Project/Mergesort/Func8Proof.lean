@@ -162,8 +162,7 @@ private theorem twp_func8_copy_and_return
     simp [hnewFacts.1, holdSize]
   ihave HnewSlice' : ByteSlice newPtr
       (newBytes.take oldSize.toNat ++ newBytes.drop oldSize.toNat) $$ [HnewSlice]
-  · rw [List.take_append_drop]
-    iexact HnewSlice
+  · irw_exact [List.take_append_drop] with HnewSlice
   icases (ByteSlice_append newPtr (newBytes.take oldSize.toNat)
       (newBytes.drop oldSize.toNat)).mp $$ HnewSlice' with
     ⟨HnewPrefix, HnewTail⟩
@@ -325,8 +324,7 @@ private theorem twp_func8_commit_copy_and_return
   wasm_twp_pures [twp_localGet]
   ihave HcursorAt : pointsTo_u32 0 ((0 : UInt32) + allocatorCursor)
       storedCursor $$ [Hcursor]
-  · rw [UInt32.zero_add]
-    iexact Hcursor
+  · irw_exact [UInt32.zero_add] with Hcursor
   wasm_twp_bind twp_store32 (address := 0) (offset := allocatorCursor) storedCursor
       (by decide) (by decide) (by decide) (by decide) with HcursorAt => Hcursor
   isimp only [UInt32.zero_add] at Hcursor
@@ -433,8 +431,7 @@ private theorem twp_func8_claim_commit_copy_and_return
   icases Hframe with
     ⟨Hruntime, Hcursor, Hauth, Hretired, HoldBlock, Hstreams, Hcont⟩
   ihave Hfrontier' : heapFrontierOwn finish.toNat $$ [Hfrontier]
-  · rw [hfinishNat]
-    iexact Hfrontier
+  · irw_exact [hfinishNat] with Hfrontier
   iapply twp_func8_commit_copy_and_return oldPtr oldSize newPtr newSize finish
       requiredPages currentPages storedCursor oldLayout newLayout heapId oldId
       oldBytes newBytes frontier ownedPages history input output raised

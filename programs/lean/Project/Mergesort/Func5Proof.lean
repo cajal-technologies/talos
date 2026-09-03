@@ -124,13 +124,11 @@ private theorem twp_func5_commit_and_return
   wasm_twp_pures [twp_localGet]
   ihave HcursorAt : pointsTo_u32 0 ((0 : UInt32) + 1049492)
       storedCursor $$ [Hcursor]
-  · rw [show (0 : UInt32) + 1049492 = allocatorCursor by decide]
-    iexact Hcursor
+  · irw_exact [show (0 : UInt32) + 1049492 = allocatorCursor by decide] with Hcursor
   wasm_twp_bind twp_store32 (address := 0) (offset := 1049492) (value := finish)
       storedCursor (by decide) (by decide) (by decide) (by decide) with HcursorAt => Hcursor
   ihave Hcursor' : pointsTo_u32 0 allocatorCursor finish $$ [Hcursor]
-  · rw [← show (0 : UInt32) + 1049492 = allocatorCursor by decide]
-    iexact Hcursor
+  · irw_exact [← show (0 : UInt32) + 1049492 = allocatorCursor by decide] with Hcursor
   imod BumpHeap_commit heapId frontier history base finish layout bytes
       ownedPages hfrontierLow hwf hvalid halignment hclassify hbytesLength
       hphysical $$ [Hcursor' Hfrontier Hauth Hretired Hpages Hbytes] with
@@ -218,8 +216,7 @@ private theorem twp_func5_claim_commit_and_return
   icases HclaimFrame with
     ⟨Hruntime, Hcursor, Hauth, Hretired, Hstreams, Hcont⟩
   ihave Hfrontier' : heapFrontierOwn finish.toNat $$ [Hfrontier]
-  · rw [hfinishExact]
-    iexact Hfrontier
+  · irw_exact [hfinishExact] with Hfrontier
   iapply twp_func5_commit_and_return currentPages finish base requiredPages
       storedCursor layout heapId bytes frontier ownedPages history input output
       raised callerLocals stack code arity remainder controls calls s E Φ
@@ -355,8 +352,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
   wasm_twp_pures [twp_const]
   ihave HcursorAt : pointsTo_u32 0 ((0 : UInt32) + 1049492)
       storedCursor $$ [Hcursor]
-  · rw [show (0 : UInt32) + 1049492 = allocatorCursor by decide]
-    iexact Hcursor
+  · irw_exact [show (0 : UInt32) + 1049492 = allocatorCursor by decide] with Hcursor
   wasm_twp_bind twp_load32 (address := 0) (offset := 1049492) storedCursor
       (by decide) (by decide) (by decide) (by decide) with HcursorAt => Hcursor
   wasm_twp_pures [twp_localTee]
@@ -430,8 +426,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
   have hfinishWordBoundNumeric : finishNat < 4294967296 := by
     simpa [UInt32.size] using hfinishWordBound
   ihave HcursorAlloc : pointsTo_u32 0 allocatorCursor storedCursor $$ [Hcursor]
-  · rw [← show (0 : UInt32) + 1049492 = allocatorCursor by decide]
-    iexact Hcursor
+  · irw_exact [← show (0 : UInt32) + 1049492 = allocatorCursor by decide] with Hcursor
   wasm_twp_pures [twp_localGet twp_const twp_localGet twp_sub twp_and]
   rw [hbaseRaw]
   wasm_twp_pures [twp_localTee]
