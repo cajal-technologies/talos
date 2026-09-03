@@ -953,19 +953,7 @@ theorem wp_catchException
   iintro Hwp
   iapply wp_lift_step rfl
   iintro %store %ns %obs %obs' %nt Hσ
-  have expectedStep : Step
-      ⟨.running ⟨locals, [], arity, remainder,
-          throwingFrame ::
-            { kind := .tryTable catches, paramArity := handlerParamArity,
-              resultArity := handlerResultArity, body := handlerBody,
-              continuation := handlerContinuation, belowStack } :: outer,
-          calls⟩, store⟩
-      (.administrative .catchException)
-      ⟨.running ⟨{ locals with values := targetValues }, targetCode,
-          arity, remainder, targetControl, calls⟩,
-        (prepareCatch tag arguments clause store).2⟩ :=
-    Step.catchException hthrow hmatch (htarget store)
-  wasm_wp_step expectedStep =>
+  wasm_wp_step Step.catchException hthrow hmatch (htarget store) =>
     have hstore_eq : (prepareCatch tag arguments clause store).2 = store := by
       rcases hclause with ⟨t, l, rfl⟩ | ⟨l, rfl⟩ <;> rfl
     rw [hstore_eq]
@@ -1472,20 +1460,7 @@ theorem wp_tableSize
     ipureintro
     exact Hmodule
   subst runtimeModule
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, values⟩,
-          .tableSize tableIndex :: code, arity, remainder, controls, calls⟩,
-        store⟩
-      (.instruction (.tableSize tableIndex))
-      ⟨.running
-        ⟨⟨params, localValues,
-            sizeValue (store.runtime.currentModule.tableIs64 tableIndex)
-              table.length :: values⟩,
-          code, arity, remainder, controls, calls⟩,
-        store⟩ :=
-    Step.tableSize Hphysical
-  wasm_wp_step expectedStep =>
+  wasm_wp_step Step.tableSize Hphysical =>
     wasm_wp_frame
 
 /-- Primitive rule for an in-bounds `table.set`. The table keeps its stable
@@ -1724,19 +1699,7 @@ theorem wp_tableGrow32Failure
       ¬table.length + delta.toNat ≤
         store.runtime.currentModule.tableCap tableIndex := by
     simpa only [Hmodule] using hbound
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, .i32 delta :: initial :: values⟩,
-          .tableGrow tableIndex :: code, arity, remainder, controls, calls⟩,
-        store⟩
-      (.instruction (.tableGrow tableIndex))
-      ⟨.running
-        ⟨⟨params, localValues,
-            .i32 (0xFFFFFFFF : UInt32) :: values⟩,
-          code, arity, remainder, controls, calls⟩,
-        store⟩ :=
-    Step.tableGrow32Failure Hphysical hbound'
-  wasm_wp_step expectedStep =>
+  wasm_wp_step Step.tableGrow32Failure Hphysical hbound' =>
     wasm_wp_frame
 
 /-- Failed table64 `table.grow`; returns the 64-bit all-ones sentinel and
@@ -1784,19 +1747,7 @@ theorem wp_tableGrow64Failure
       ¬table.length + delta.toNat ≤
         store.runtime.currentModule.tableCap tableIndex := by
     simpa only [Hmodule] using hbound
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, .i64 delta :: initial :: values⟩,
-          .tableGrow tableIndex :: code, arity, remainder, controls, calls⟩,
-        store⟩
-      (.instruction (.tableGrow tableIndex))
-      ⟨.running
-        ⟨⟨params, localValues,
-            .i64 (0xFFFFFFFFFFFFFFFF : UInt64) :: values⟩,
-          code, arity, remainder, controls, calls⟩,
-        store⟩ :=
-    Step.tableGrow64Failure Hphysical hbound'
-  wasm_wp_step expectedStep =>
+  wasm_wp_step Step.tableGrow64Failure Hphysical hbound' =>
     wasm_wp_frame
 
 /-- In-bounds `table.fill`. The complete authoritative table fragment is
@@ -2050,15 +2001,9 @@ theorem wp_load8U
   have hbound : address.toNat + offset.toNat + 1 ≤
       store.wasm.mem.pages * 65536 := by
     omega
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
-        .load8U offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.load8U offset))
-      ⟨.running ⟨⟨params, localValues, .i32 byte.toUInt32 :: values⟩,
-        code, arity, remainder, controls, calls⟩, store⟩ := by
+  wasm_wp_step (by
     simpa [Hread] using
-      (Step.load8U (α := α) (address := Value.i32 address) rfl hbound)
-  wasm_wp_step expectedStep =>
+      (Step.load8U (α := α) (address := Value.i32 address) rfl hbound)) =>
     wasm_wp_frame
 
 /-- Primitive rule for `i64.load8_u` with an i32 memory address.  The loaded
