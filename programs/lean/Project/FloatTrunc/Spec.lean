@@ -349,15 +349,13 @@ theorem func0_body_to_ret_smallStep_wp
     wasm_wp_pures [wp_block wp_block wp_block wp_block wp_block wp_block wp_localGet
       wp_localGet]
     cases hnan : f32Ne x x
-    · iapply wp_scalarFloat2 rfl rfl rfl
-      inext
+    · wasm_wp_next wp_scalarFloat2 rfl rfl rfl
       simp only [hnan, Bool.false_eq_true, if_false]
       wasm_wp_pures [wp_const wp_and]
       rw [show (0 &&& 1 : UInt32) = 0 by decide]
       wasm_wp_pures [wp_brIfZero wp_localGet wp_scalarFloat0]
       cases hge : f32Ge x 1325400064
-      · iapply wp_scalarFloat2 rfl rfl rfl
-        inext
+      · wasm_wp_next wp_scalarFloat2 rfl rfl rfl
         simp only [hge, Bool.false_eq_true, if_false]
         wasm_wp_pures [wp_const wp_and]
         rw [show (0 &&& 1 : UInt32) = 0 by decide]
@@ -365,8 +363,7 @@ theorem func0_body_to_ret_smallStep_wp
         simp only [List.take, List.drop, List.nil_append]
         wasm_wp_pures [wp_localGet wp_scalarFloat0]
         cases hlt : f32Lt x 3472883712
-        · iapply wp_scalarFloat2 rfl rfl rfl
-          inext
+        · wasm_wp_next wp_scalarFloat2 rfl rfl rfl
           simp only [hlt, Bool.false_eq_true, if_false]
           wasm_wp_pures [wp_const wp_and]
           rw [show (0 &&& 1 : UInt32) = 0 by decide]
@@ -389,8 +386,7 @@ theorem func0_body_to_ret_smallStep_wp
             · inext
               iintro ⟨⟨HR, Hglobal⟩, Hword⟩
               iapply_frame hreturn (i32TruncSatF32S x) rfl
-        · iapply wp_scalarFloat2 rfl rfl rfl
-          inext
+        · wasm_wp_next wp_scalarFloat2 rfl rfl rfl
           simp only [hlt, if_true]
           wasm_wp_pures [wp_const wp_and]
           rw [show (1 &&& 1 : UInt32) = 1 by decide]
@@ -413,8 +409,7 @@ theorem func0_body_to_ret_smallStep_wp
             · inext
               iintro ⟨⟨HR, Hglobal⟩, Hword⟩
               iapply_frame hreturn 2147483648 heq.symm
-      · iapply wp_scalarFloat2 rfl rfl rfl
-        inext
+      · wasm_wp_next wp_scalarFloat2 rfl rfl rfl
         simp only [hge, if_true]
         wasm_wp_pures [wp_const wp_and]
         rw [show (1 &&& 1 : UInt32) = 1 by decide]
@@ -437,8 +432,7 @@ theorem func0_body_to_ret_smallStep_wp
           · inext
             iintro ⟨⟨HR, Hglobal⟩, Hword⟩
             iapply_frame hreturn 2147483647 heq.symm
-    · iapply wp_scalarFloat2 rfl rfl rfl
-      inext
+    · wasm_wp_next wp_scalarFloat2 rfl rfl rfl
       simp only [hnan, if_true]
       wasm_wp_pures [wp_const wp_and]
       rw [show (1 &&& 1 : UInt32) = 1 by decide]

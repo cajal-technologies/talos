@@ -274,14 +274,12 @@ theorem fillWords_guard_wp
   simp only [FillWordsInnerGuard]
   wasm_wp_pures [wp_localGet wp_localGet]
   by_cases hlt : i < n
-  · iapply Wasm.SmallStep.wp_ltU (result := 1) (by simp [hlt])
-    inext
+  · wasm_wp_next Wasm.SmallStep.wp_ltU (result := 1) (by simp [hlt])
     wasm_wp_next Wasm.SmallStep.wp_brIf (by decide) (by rfl)
     simp only [List.drop_zero, List.take_nil, List.nil_append]
     iapply hbody hlt
     iexact HP
-  · iapply Wasm.SmallStep.wp_ltU (result := 0) (by simp [hlt])
-    inext
+  · wasm_wp_next Wasm.SmallStep.wp_ltU (result := 0) (by simp [hlt])
     wasm_wp_pures [wp_brIfZero wp_br wp_exitControl]
     simp only [fillWordsLoopFrame, List.drop_zero, List.take_nil,
       List.nil_append]

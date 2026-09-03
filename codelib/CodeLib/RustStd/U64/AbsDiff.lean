@@ -97,8 +97,7 @@ theorem absDiff_smallStep_wp_to_return
     List.set]
   wasm_wp_pures [wp_block wp_block wp_localGet wp_localGet]
   by_cases hab : a < b
-  · iapply Wasm.SmallStep.wp_ltUI64 (result := 1) (by simp [hab])
-    inext
+  · wasm_wp_next Wasm.SmallStep.wp_ltUI64 (result := 1) (by simp [hab])
     wasm_wp_pures [wp_const wp_and]
     rw [show (1 &&& 1 : UInt32) = 1 by decide]
     wasm_wp_next Wasm.SmallStep.wp_brIf (by decide) rfl
@@ -122,8 +121,7 @@ theorem absDiff_smallStep_wp_to_return
     simp only [List.take_nil, List.nil_append]
     simp only [hab, if_true] at hreturn
     iapply_frame hreturn
-  · iapply Wasm.SmallStep.wp_ltUI64 (result := 0) (by simp [hab])
-    inext
+  · wasm_wp_next Wasm.SmallStep.wp_ltUI64 (result := 0) (by simp [hab])
     wasm_wp_pures [wp_const wp_and]
     rw [show (0 &&& 1 : UInt32) = 0 by decide]
     wasm_wp_pures [wp_brIfZero wp_localGet wp_localGet wp_localGet wp_subI64]

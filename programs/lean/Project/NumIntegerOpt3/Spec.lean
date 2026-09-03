@@ -187,8 +187,7 @@ theorem gcdLoopBody_smallStep_wp
   simp only [loopBody]
   wasm_wp_pures [wp_block wp_localGet wp_localGet]
   by_cases hgt : y < x
-  · iapply wp_gtUI64 (result := 1) (by simp [hgt])
-    inext
+  · wasm_wp_next wp_gtUI64 (result := 1) (by simp [hgt])
     wasm_wp_next wp_brIf (by decide) rfl
     simp only [List.take_nil, List.drop_nil, List.nil_append]
     wasm_wp_pures [wp_localGet wp_localGet wp_subI64 wp_localTee wp_localGet
@@ -232,8 +231,7 @@ theorem gcdLoopBody_smallStep_wp
       ipureintro
       simpa [x', oddPart_toNat] using hgcd'.trans hgcd
       itrivial
-  · iapply wp_gtUI64 (result := 0) (by simp [hgt])
-    inext
+  · wasm_wp_next wp_gtUI64 (result := 0) (by simp [hgt])
     wasm_wp_pures [wp_brIfZero wp_localGet wp_localGet wp_localGet wp_subI64 wp_localTee
       wp_localGet wp_ctzI64 wp_shrUI64 wp_localTee]
     simp only [List.set]
@@ -305,8 +303,7 @@ theorem gcdInner_smallStep_wp
   have hbodd : bo.toNat % 2 = 1 := by
     simpa [bo, oddPart_toNat] using UInt64.shr_ctz_toNat_odd p1 hp1
   by_cases hab : ao = bo
-  · iapply wp_eqI64 (result := 1) (by rw [if_pos hab])
-    inext
+  · wasm_wp_next wp_eqI64 (result := 1) (by rw [if_pos hab])
     wasm_wp_next wp_brIf (by decide) rfl
     simp only [gcdInnerFrame, List.take_nil, List.nil_append]
     have haoGcd : ao.toNat = Nat.gcd ao.toNat bo.toNat := by
@@ -314,8 +311,7 @@ theorem gcdInner_smallStep_wp
     iapply finishGcd_smallStep_wp outerBody ao bo shared expected
       (hrecombine ao haoGcd)
     itrivial
-  · iapply wp_eqI64 (result := 0) (by rw [if_neg hab])
-    inext
+  · wasm_wp_next wp_eqI64 (result := 0) (by rw [if_neg hab])
     wasm_wp_pures [wp_brIfZero]
     wasm_wp_next wp_loop
     simp only [List.drop_nil]
@@ -364,8 +360,7 @@ theorem mod3_gcd_smallStep (a b : UInt64) :
     wasm_wp_finish_value
     ipureintro
     simp
-  · iapply wp_eqzI64 (result := 0) (by rw [if_neg ha])
-    inext
+  · wasm_wp_next wp_eqzI64 (result := 0) (by rw [if_neg ha])
     wasm_wp_pures [wp_brIfZero wp_localGet]
     by_cases hb : b = 0
     · subst b
@@ -376,8 +371,7 @@ theorem mod3_gcd_smallStep (a b : UInt64) :
       wasm_wp_finish_value
       ipureintro
       simp
-    · iapply wp_eqzI64 (result := 0) (by rw [if_neg hb])
-      inext
+    · wasm_wp_next wp_eqzI64 (result := 0) (by rw [if_neg hb])
       wasm_wp_pures [wp_brIfZero wp_localGet wp_ctzI64 wp_localSet]
       simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
         List.set]
