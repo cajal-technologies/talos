@@ -1805,20 +1805,19 @@ theorem stateInterp_global_facts [WasmSmallStepGS hlc α]
   ipureintro
   exact Hfacts.2.2.1 index value hlookup
 
-/-- Owned table state determines the corresponding physical instantiated table.
-Uses the unfolded `tablePointsTo` form so `iframe` can match without going through the
-`tablePointsToAt` def. Call after `simp only [tablePointsToAt]` to unfold the hypothesis. -/
+/-- Owned table state determines the corresponding physical instantiated table. -/
 theorem stateInterp_table_facts [WasmSmallStepGS hlc α]
     (store : MachineStore α) (steps : Nat)
     (observations : List StepKind) (threads : Nat)
     (tableIndex : Nat) (table : TableInst) :
     stateInterp (GF := WasmHeapGF α) store steps observations threads ∗
-      tablePointsTo (⟨0, tableIndex⟩ : TableKey) table ==∗
+      tablePointsToAt 0 tableIndex table ==∗
       ⌜store.wasm.tables[tableIndex]? = some table⌝ := by
   iintro ⟨Hstate, Htable⟩
   icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
     ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
       Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
+  simp only [tablePointsToAt]
   ihave %hlookup := tablePointsTo_lookup tableσ ⟨0, tableIndex⟩ table $$ Htables Htable
   ipureintro
   exact Hfacts.2.2.2.2.1 tableIndex table hlookup
@@ -2056,29 +2055,26 @@ theorem stateInterp_table_facts_frame [WasmSmallStepGS hlc α]
       tablePointsToAt 0 index table ∗
       ⌜store.wasm.tables[index]? = some table⌝ := by
   iintro ⟨Hstate, Htable⟩
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
-  simp only [tablePointsToAt]
-  ihave %hlookup :=
-    tablePointsTo_lookup tableσ ⟨0, index⟩ table $$ Htables Htable
+  ihave_pure Hphysical : ⌜store.wasm.tables[index]? = some table⌝ using
+    stateInterp_table_facts store steps observations threads index table $$
+      [Hstate Htable]
   imodintro
-  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth HhostEnvAuth Hstate_auth Hexc]
-  · iapply (stateInterp_eq store steps observations threads).mpr
-    iexists σ
-    iexists globalσ
-    iexists dataSegmentσ
-    iexists tableσ
-    iexists elementSegmentσ
-    iexists runtimeModuleσ
-    iexists hostEnvσ
-    iframe
-    ipureintro
-    exact Hfacts
-  · isplitl [Htable]
-    · iexact Htable
-    · ipureintro
-      exact Hfacts.2.2.2.2.1 index table hlookup
+  iframe
+  ipureintro
+  exact Hphysical
+
+/-- Derive the physical table associated with an owned table fragment. -/
+syntax "wasm_table_agree " ident ", " term ", " term ", " term
+  " $$ " specPat : tactic
+
+set_option hygiene false in
+macro_rules
+  | `(tactic| wasm_table_agree $fact:ident, $index:term, $table:term,
+        $observations:term $$ $resources:specPat) =>
+    `(tactic|
+      ihave_pure $fact : ⌜store.wasm.tables[$index]? = some $table⌝ using
+        stateInterp_table_facts store ns $observations nt $index $table $$
+          $resources)
 
 /-- Replacing an owned table preserves its stable identity and updates the
 authoritative ghost map and physical table list in lockstep. -/

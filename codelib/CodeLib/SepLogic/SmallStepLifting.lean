@@ -1360,13 +1360,8 @@ theorem wp_tableGet
   iintro >Htable Hwp
   wasm_wp_begin
   simp only [← tablePointsToAt_eq]
-  ihave %Hphysical :
-      ⌜store.wasm.tables[tableIndex]? = some table⌝ $$ [Hσ Htable]
-  · imod stateInterp_table_facts_frame store ns (obs ++ obs') nt
-        tableIndex table $$ [$Hσ $Htable] with
-      ⟨Hσ, Htable, %Hphysical⟩
-    ipureintro
-    exact Hphysical
+  wasm_table_agree Hphysical, tableIndex, table, (obs ++ obs') $$
+    [Hσ Htable]
   wasm_wp_step Step.tableGet (α := α) hindex Hphysical helement =>
     wasm_wp_frame
 
@@ -1396,13 +1391,8 @@ theorem wp_tableSize
   dsimp only
   iintro ⟨Htable, Hruntime⟩ Hwp
   wasm_wp_begin
-  ihave %Hphysical :
-      ⌜store.wasm.tables[tableIndex]? = some table⌝ $$ [Hσ Htable]
-  · imod stateInterp_table_facts_frame store ns (obs ++ obs') nt
-        tableIndex table $$ [$Hσ $Htable] with
-      ⟨Hσ, Htable, %Hphysical⟩
-    ipureintro
-    exact Hphysical
+  wasm_table_agree Hphysical, tableIndex, table, (obs ++ obs') $$
+    [Hσ Htable]
   wasm_runtime_module_agree (obs ++ obs'), callerId, runtimeModule $$ [$Hσ $Hruntime]
   subst runtimeModule
   wasm_wp_step Step.tableSize Hphysical =>
@@ -1435,13 +1425,8 @@ theorem wp_tableSet
   iintro >Htable Hwp
   wasm_wp_begin
   simp only [← tablePointsToAt_eq]
-  ihave %Hphysical :
-      ⌜store.wasm.tables[tableIndex]? = some table⌝ $$ [Hσ Htable]
-  · imod stateInterp_table_facts_frame store ns (obs ++ obs') nt
-        tableIndex table $$ [$Hσ $Htable] with
-      ⟨Hσ, Htable, %Hphysical⟩
-    ipureintro
-    exact Hphysical
+  wasm_table_agree Hphysical, tableIndex, table, (obs ++ obs') $$
+    [Hσ Htable]
   let newTable := listSetAt table elementIndex value
   let updatedStore : MachineStore α :=
     { store with wasm :=
@@ -1491,13 +1476,8 @@ theorem wp_tableGrow32
   dsimp only
   iintro ⟨Htable, Hruntime⟩ Hwp
   wasm_wp_begin
-  ihave %Hphysical :
-      ⌜store.wasm.tables[tableIndex]? = some table⌝ $$ [Hσ Htable]
-  · imod stateInterp_table_facts_frame store ns (obs ++ obs') nt
-        tableIndex table $$ [$Hσ $Htable] with
-      ⟨Hσ, Htable, %Hphysical⟩
-    ipureintro
-    exact Hphysical
+  wasm_table_agree Hphysical, tableIndex, table, (obs ++ obs') $$
+    [Hσ Htable]
   wasm_runtime_module_agree (obs ++ obs'), callerId, runtimeModule $$ [$Hσ $Hruntime]
   have hbound' :
       table.length + delta.toNat ≤
@@ -1552,13 +1532,8 @@ theorem wp_tableGrow64
   dsimp only
   iintro ⟨Htable, Hruntime⟩ Hwp
   wasm_wp_begin
-  ihave %Hphysical :
-      ⌜store.wasm.tables[tableIndex]? = some table⌝ $$ [Hσ Htable]
-  · imod stateInterp_table_facts_frame store ns (obs ++ obs') nt
-        tableIndex table $$ [$Hσ $Htable] with
-      ⟨Hσ, Htable, %Hphysical⟩
-    ipureintro
-    exact Hphysical
+  wasm_table_agree Hphysical, tableIndex, table, (obs ++ obs') $$
+    [Hσ Htable]
   wasm_runtime_module_agree (obs ++ obs'), callerId, runtimeModule $$ [$Hσ $Hruntime]
   have hbound' :
       table.length + delta.toNat ≤
@@ -1613,13 +1588,8 @@ theorem wp_tableGrow32Failure
   dsimp only
   iintro ⟨Htable, Hruntime⟩ Hwp
   wasm_wp_begin
-  ihave %Hphysical :
-      ⌜store.wasm.tables[tableIndex]? = some table⌝ $$ [Hσ Htable]
-  · imod stateInterp_table_facts_frame store ns (obs ++ obs') nt
-        tableIndex table $$ [$Hσ $Htable] with
-      ⟨Hσ, Htable, %Hphysical⟩
-    ipureintro
-    exact Hphysical
+  wasm_table_agree Hphysical, tableIndex, table, (obs ++ obs') $$
+    [Hσ Htable]
   wasm_runtime_module_agree (obs ++ obs'), callerId, runtimeModule $$ [$Hσ $Hruntime]
   have hbound' :
       ¬table.length + delta.toNat ≤
@@ -1655,13 +1625,8 @@ theorem wp_tableGrow64Failure
   dsimp only
   iintro ⟨Htable, Hruntime⟩ Hwp
   wasm_wp_begin
-  ihave %Hphysical :
-      ⌜store.wasm.tables[tableIndex]? = some table⌝ $$ [Hσ Htable]
-  · imod stateInterp_table_facts_frame store ns (obs ++ obs') nt
-        tableIndex table $$ [$Hσ $Htable] with
-      ⟨Hσ, Htable, %Hphysical⟩
-    ipureintro
-    exact Hphysical
+  wasm_table_agree Hphysical, tableIndex, table, (obs ++ obs') $$
+    [Hσ Htable]
   wasm_runtime_module_agree (obs ++ obs'), callerId, runtimeModule $$ [$Hσ $Hruntime]
   have hbound' :
       ¬table.length + delta.toNat ≤
@@ -1699,13 +1664,8 @@ theorem wp_tableFill
   iintro >Htable Hwp
   wasm_wp_begin
   simp only [← tablePointsToAt_eq]
-  ihave %Hphysical :
-      ⌜store.wasm.tables[tableIndex]? = some table⌝ $$ [Hσ Htable]
-  · imod stateInterp_table_facts_frame store ns (obs ++ obs') nt
-        tableIndex table $$ [$Hσ $Htable] with
-      ⟨Hσ, Htable, %Hphysical⟩
-    ipureintro
-    exact Hphysical
+  wasm_table_agree Hphysical, tableIndex, table, (obs ++ obs') $$
+    [Hσ Htable]
   let newTable :=
     listWriteAt table destinationNat (List.replicate lengthNat value)
   let updatedStore : MachineStore α :=
@@ -1763,13 +1723,8 @@ theorem wp_tableCopySame
   iintro >Htable Hwp
   wasm_wp_begin
   simp only [← tablePointsToAt_eq]
-  ihave %Hphysical :
-      ⌜store.wasm.tables[tableIndex]? = some table⌝ $$ [Hσ Htable]
-  · imod stateInterp_table_facts_frame store ns (obs ++ obs') nt
-        tableIndex table $$ [$Hσ $Htable] with
-      ⟨Hσ, Htable, %Hphysical⟩
-    ipureintro
-    exact Hphysical
+  wasm_table_agree Hphysical, tableIndex, table, (obs ++ obs') $$
+    [Hσ Htable]
   let newTable :=
     listWriteAt table destinationNat
       ((table.drop sourceNat).take lengthNat)
@@ -1835,23 +1790,10 @@ theorem wp_tableCopyDistinct
   iintro >⟨Hdestination, Hsource⟩ Hwp
   wasm_wp_begin
   simp only [← tablePointsToAt_eq]
-  ihave %HdestinationPhysical :
-      ⌜store.wasm.tables[destinationTableIndex]? =
-        some destinationTable⌝ $$ [Hσ Hdestination]
-  · imod stateInterp_table_facts_frame store ns (obs ++ obs') nt
-        destinationTableIndex destinationTable $$
-        [$Hσ $Hdestination] with
-      ⟨Hσ, Hdestination, %HdestinationPhysical⟩
-    ipureintro
-    exact HdestinationPhysical
-  ihave %HsourcePhysical :
-      ⌜store.wasm.tables[sourceTableIndex]? = some sourceTable⌝ $$
-      [Hσ Hsource]
-  · imod stateInterp_table_facts_frame store ns (obs ++ obs') nt
-        sourceTableIndex sourceTable $$ [$Hσ $Hsource] with
-      ⟨Hσ, Hsource, %HsourcePhysical⟩
-    ipureintro
-    exact HsourcePhysical
+  wasm_table_agree HdestinationPhysical, destinationTableIndex,
+    destinationTable, (obs ++ obs') $$ [Hσ Hdestination]
+  wasm_table_agree HsourcePhysical, sourceTableIndex, sourceTable,
+    (obs ++ obs') $$ [Hσ Hsource]
   let newDestinationTable :=
     listWriteAt destinationTable destinationNat
       ((sourceTable.drop sourceNat).take lengthNat)
@@ -4014,13 +3956,8 @@ theorem wp_tableInitLive
   dsimp only
   iintro ⟨Htable, Hsegment, Hruntime⟩ Hwp
   wasm_wp_begin
-  ihave %HtablePhysical :
-      ⌜store.wasm.tables[tableIndex]? = some table⌝ $$ [Hσ Htable]
-  · imod stateInterp_table_facts_frame store ns (obs ++ obs') nt
-        tableIndex table $$ [$Hσ $Htable] with
-      ⟨Hσ, Htable, %HtablePhysical⟩
-    ipureintro
-    exact HtablePhysical
+  wasm_table_agree HtablePhysical, tableIndex, table, (obs ++ obs') $$
+    [Hσ Htable]
   ihave %HsegmentPhysical :
       ⌜store.wasm.elementSegments[elementIndex]? =
         some (some entries)⌝ $$ [Hσ Hsegment]
@@ -5424,10 +5361,9 @@ theorem wp_callIndirect
   iintro >Hruntime >Htable Hwp
   wasm_wp_begin
   wasm_runtime_module_agree (obs ++ obs'), callerId, runtimeModule $$ [$Hσ $Hruntime]
-  ihave_pure Htablephys :
-      ⌜store.wasm.tables[tableIndex]? = some table⌝ using
-    stateInterp_table_facts store ns (obs ++ obs') nt tableIndex table $$
-      [Hσ Htable]
+  simp only [← tablePointsToAt_eq]
+  wasm_table_agree Htablephys, tableIndex, table, (obs ++ obs') $$
+    [Hσ Htable]
   have himports' :
       ¬functionIndex < store.runtime.currentModule.imports.length := by
     simpa only [Hmodule] using himports
