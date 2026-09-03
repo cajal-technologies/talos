@@ -609,11 +609,8 @@ theorem twp_call
       store, [], ⟨rfl, .instruction (.call functionIndex), rfl,
         Step.call himports' hfn'⟩⟩ =>
     iintro %κ %e₂ %store₂ %forks %Hstep
-    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-    obtain ⟨rfl, hconfig⟩ :=
-      step_deterministic (Step.call (α := α) himports' hfn') wasmStep
-    simp only at hconfig
-    cases hconfig
+    wasm_wp_resolve_step Hstep using
+      (Step.call (α := α) himports' hfn')
     wasm_twp_frame
       rw [← hsame]
       iapply Htwp
@@ -837,11 +834,8 @@ theorem twp_returnFromCallFallthrough
   wasm_twp_offer_step ⟨_, store, [],
       ⟨rfl, _, rfl, Step.returnFromCallFallthrough hsame⟩⟩ =>
     iintro %κ %e₂ %store₂ %forks %Hstep
-    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-    obtain ⟨rfl, hconfig⟩ :=
-      step_deterministic (Step.returnFromCallFallthrough (α := α) hsame) wasmStep
-    simp only at hconfig
-    cases hconfig
+    wasm_wp_resolve_step Hstep using
+      (Step.returnFromCallFallthrough (α := α) hsame)
     wasm_twp_frame
       simp only [resumeCaller]
       iapply Hwp
@@ -892,11 +886,8 @@ theorem twp_returnFromCallExplicit
   wasm_twp_offer_step ⟨_, store, [],
       ⟨rfl, _, rfl, Step.returnFromCallExplicit hsame⟩⟩ =>
     iintro %κ %e₂ %store₂ %forks %Hstep
-    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-    obtain ⟨rfl, hconfig⟩ :=
-      step_deterministic (Step.returnFromCallExplicit (α := α) hsame) wasmStep
-    simp only at hconfig
-    cases hconfig
+    wasm_wp_resolve_step Hstep using
+      (Step.returnFromCallExplicit (α := α) hsame)
     wasm_twp_frame
       simp only [resumeCaller]
       iapply Hwp
@@ -934,8 +925,7 @@ theorem twp_memorySize
       code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl, Step.memorySize⟩⟩ =>
     iintro %κ %e₂ %store₂ %forks %Hstep
-    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-    wasm_wp_resolve_target Step.memorySize against wasmStep
+    wasm_wp_resolve_step Hstep using Step.memorySize
     wasm_twp_frame
       simp only [Hmodule]
       iapply Hwp store.wasm.mem.pages
@@ -985,8 +975,7 @@ theorem twp_memorySize_tracked
       code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, _, rfl, Step.memorySize⟩⟩ =>
     iintro %κ %e₂ %store₂ %forks %Hstep
-    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-    wasm_wp_resolve_target Step.memorySize against wasmStep
+    wasm_wp_resolve_step Hstep using Step.memorySize
     wasm_twp_frame
       simp only [Hmodule]
       iexact Hcont
@@ -1178,7 +1167,6 @@ theorem twp_load32
         by simpa [Hread] using
           Step.load32 (α := α) (address := Value.i32 address) rfl hbound⟩⟩ =>
     iintro %κ %e₂ %store₂ %forks %Hstep
-    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
     have expectedStep : Step
         ⟨.running
           ⟨⟨params, localValues, .i32 address :: values⟩,
@@ -1190,10 +1178,7 @@ theorem twp_load32
             code, arity, remainder, controls, calls⟩, store⟩ := by
       simpa [Hread] using
         (Step.load32 (α := α) (address := Value.i32 address) rfl hbound)
-    obtain ⟨rfl, hconfig⟩ :=
-      step_deterministic expectedStep wasmStep
-    simp only at hconfig
-    cases hconfig
+    wasm_wp_resolve_step Hstep using expectedStep
     wasm_twp_frame
       iapply Htwp
       iexact Hword
@@ -1245,7 +1230,6 @@ theorem twp_store32
       [], ⟨rfl, .instruction (.store32 offset), rfl,
         Step.store32 (α := α) (address := Value.i32 address) rfl hbound⟩⟩ =>
     iintro %κ %e₂ %store₂ %forks %Hstep
-    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
     have expectedStep : Step
         ⟨.running
           ⟨⟨params, localValues, .i32 value :: .i32 address :: values⟩,
@@ -1259,10 +1243,7 @@ theorem twp_store32
               { store.wasm with
                 mem := store.wasm.mem.write32 (address + offset) value } }⟩ :=
       Step.store32 (α := α) (address := Value.i32 address) rfl hbound
-    obtain ⟨rfl, hconfig⟩ :=
-      step_deterministic expectedStep wasmStep
-    simp only at hconfig
-    cases hconfig
+    wasm_wp_resolve_step Hstep using expectedStep
     imod stateInterp_store32 store ns obs nt
         (address + offset) oldWord value h1 h2 h3 Hfacts.2 $$
         [$Hσ $Hword] with ⟨Hσ, Hword⟩
@@ -1325,7 +1306,6 @@ theorem twp_memoryFill32
       [], ⟨rfl, .instruction .memoryFill, rfl,
         by simpa only [setMemory_eq] using Step.memoryFill32 hbound⟩⟩ =>
     iintro %κ %e₂ %store₂ %forks %Hstep
-    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
     have expectedStep : Step
         ⟨.running ⟨⟨params, localValues,
             .i32 len :: .i32 value :: .i32 destination :: values⟩,
@@ -1338,7 +1318,7 @@ theorem twp_memoryFill32
                   store.wasm.mem.fill destination.toNat oldBytes.length value.toUInt8 } }⟩ := by
       rw [hlen]
       simpa only [setMemory_eq] using Step.memoryFill32 hbound
-    wasm_wp_resolve_target expectedStep against wasmStep
+    wasm_wp_resolve_step Hstep using expectedStep
     imod stateInterp_fill_bytes store ns obs nt destination oldBytes value.toUInt8
         (by rw [hlen]; exact hbound) (by rw [hlen]; exact hnowrap)
         $$ [$Hσ $Hbytes] with ⟨Hσ, Hbytes⟩
@@ -1403,7 +1383,6 @@ theorem twp_memoryCopy32
         by simpa only [setMemory_eq] using
           (Step.memoryCopy32 hbound_dst hbound_src)⟩⟩ =>
     iintro %κ %e₂ %store₂ %forks %Hstep
-    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
     have expectedStep : Step
         ⟨.running ⟨⟨params, localValues,
             .i32 len :: .i32 source :: .i32 destination :: values⟩,
@@ -1416,7 +1395,7 @@ theorem twp_memoryCopy32
                   store.wasm.mem.copy destination.toNat source.toNat oldDstBytes.length } }⟩ := by
       rw [hlen_dst]
       simpa only [setMemory_eq] using Step.memoryCopy32 hbound_dst hbound_src
-    wasm_wp_resolve_target expectedStep against wasmStep
+    wasm_wp_resolve_step Hstep using expectedStep
     imod stateInterp_copy_bytes store ns obs nt
         destination source oldDstBytes srcBytes
         (hlen_src.trans hlen_dst.symm)
@@ -1477,11 +1456,8 @@ theorem twp_throwI
   wasm_twp_offer_step ⟨_, store, [], ⟨rfl, .instruction (.throwI tagIndex), rfl,
         Step.throwI htag' hargs⟩⟩ =>
     iintro %κ %e₂ %store₂ %forks %Hstep
-    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-    obtain ⟨rfl, hconfig⟩ :=
-      step_deterministic (Step.throwI (α := α) htag' hargs) wasmStep
-    simp only at hconfig
-    cases hconfig
+    wasm_wp_resolve_step Hstep using
+      (Step.throwI (α := α) htag' hargs)
     wasm_twp_frame
       have hcanonicalStore :=
         (canonicalTagIndex_eq store tagIndex).trans
@@ -1531,7 +1507,6 @@ theorem twp_catchException
       ⟨rfl, .administrative .catchException, rfl,
         Step.catchException hthrow hmatch (htarget store)⟩⟩ =>
     iintro %κ %e₂ %store₂ %forks %Hstep
-    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
     have expectedStep : Step
         ⟨.running ⟨locals, [], arity, remainder,
             throwingFrame ::
@@ -1544,7 +1519,7 @@ theorem twp_catchException
             arity, remainder, targetControl, calls⟩,
           (prepareCatch tag arguments clause store).2⟩ :=
       Step.catchException hthrow hmatch (htarget store)
-    wasm_wp_resolve_target expectedStep against wasmStep
+    wasm_wp_resolve_step Hstep using expectedStep
     imod Hclose
     imodintro
     isplit
@@ -1646,12 +1621,9 @@ theorem twp_globalGet
       store, [], ⟨rfl, _, rfl, Step.globalGet (by
         simpa [globalAt?, hcanonical] using Hget)⟩⟩ =>
     iintro %κ %e₂ %store₂ %forks %Hstep
-    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
-    obtain ⟨rfl, hconfig⟩ :=
-      step_deterministic (Step.globalGet (α := α) (by
-        simpa [globalAt?, hcanonical] using Hget)) wasmStep
-    simp only at hconfig
-    cases hconfig
+    wasm_wp_resolve_step Hstep using
+      (Step.globalGet (α := α) (by
+        simpa [globalAt?, hcanonical] using Hget))
     wasm_twp_frame
       iapply Htwp
       iexact Hglobal
@@ -1753,7 +1725,6 @@ theorem twp_f32Load
         by simpa [Hread] using
           Step.f32Load (α := α) (address := .i32 address) rfl hbound⟩⟩ =>
     iintro %κ %e₂ %store₂ %forks %Hstep
-    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
     have expectedStep : Step
         ⟨.running
           ⟨⟨params, localValues, .i32 address :: values⟩,
@@ -1765,10 +1736,7 @@ theorem twp_f32Load
             code, arity, remainder, controls, calls⟩, store⟩ := by
       simpa [Hread] using
         (Step.f32Load (α := α) (address := .i32 address) rfl hbound)
-    obtain ⟨rfl, hconfig⟩ :=
-      step_deterministic expectedStep wasmStep
-    simp only at hconfig
-    cases hconfig
+    wasm_wp_resolve_step Hstep using expectedStep
     wasm_twp_frame
       iapply Htwp
       iexact Hword
@@ -1821,7 +1789,6 @@ theorem twp_f32Store
         by simpa only [Wasm.SmallStep.setMemory_eq] using
           Step.f32Store (address := .i32 address) rfl hbound⟩⟩ =>
     iintro %κ %e₂ %store₂ %forks %Hstep
-    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
     have expectedStep : Step
         ⟨.running
           ⟨⟨params, localValues, .f32 value :: .i32 address :: values⟩,
@@ -1836,10 +1803,7 @@ theorem twp_f32Store
                 mem := store.wasm.mem.write32 (address + offset) value } }⟩ := by
       simpa only [Wasm.SmallStep.setMemory_eq] using
         Step.f32Store (address := .i32 address) rfl hbound
-    obtain ⟨rfl, hconfig⟩ :=
-      step_deterministic expectedStep wasmStep
-    simp only at hconfig
-    cases hconfig
+    wasm_wp_resolve_step Hstep using expectedStep
     imod stateInterp_store32 store ns obs nt
         (address + offset) oldWord value h1 h2 h3 Hfacts.2 $$
         [$Hσ $Hword] with ⟨Hσ, Hword⟩
@@ -1889,7 +1853,6 @@ theorem twp_globalSet
         rw [← setGlobal_eq_of_canonical store 0 newValue (hcanonical store)]
         exact Step.globalSet hsome⟩⟩ =>
     iintro %κ %e₂ %store₂ %forks %Hstep
-    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
     have expectedStep : Step
         ⟨.running
           ⟨⟨params, localValues, newValue :: values⟩,
@@ -1903,10 +1866,7 @@ theorem twp_globalSet
       dsimp [updatedStore]
       rw [← setGlobal_eq_of_canonical store 0 newValue (hcanonical store)]
       exact Step.globalSet hsome
-    obtain ⟨rfl, hconfig⟩ :=
-      step_deterministic expectedStep wasmStep
-    simp only at hconfig
-    cases hconfig
+    wasm_wp_resolve_step Hstep using expectedStep
     imod stateInterp_global_set store ns obs nt
         0 oldValue newValue $$ [$Hσ $Hglobal] with ⟨Hσ, Hglobal⟩
     wasm_twp_frame
@@ -1982,7 +1942,6 @@ theorem twp_f64Load
         by simpa [Hread] using
           Step.f64Load (α := α) (address := .i32 address) rfl hbound⟩⟩ =>
     iintro %κ %e₂ %store₂ %forks %Hprim
-    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hprim
     have expectedStep : Step
         ⟨.running
           ⟨⟨params, localValues, .i32 address :: values⟩,
@@ -1994,10 +1953,7 @@ theorem twp_f64Load
             code, arity, remainder, controls, calls⟩, store⟩ := by
       simpa [Hread] using
         (Step.f64Load (α := α) (address := .i32 address) rfl hbound)
-    obtain ⟨rfl, hconfig⟩ :=
-      step_deterministic expectedStep wasmStep
-    simp only at hconfig
-    cases hconfig
+    wasm_wp_resolve_step Hprim using expectedStep
     wasm_twp_frame
       iapply Htwp
       iexact Hword
@@ -2059,7 +2015,6 @@ theorem twp_f64Store
         by simpa only [Wasm.SmallStep.setMemory_eq] using
           Step.f64Store (address := .i32 address) rfl hbound⟩⟩ =>
     iintro %κ %e₂ %store₂ %forks %Hstep
-    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
     have expectedStep : Step
         ⟨.running
           ⟨⟨params, localValues, .f64 value :: .i32 address :: values⟩,
@@ -2074,10 +2029,7 @@ theorem twp_f64Store
                 mem := store.wasm.mem.write64 (address + offset) value } }⟩ := by
       simpa only [Wasm.SmallStep.setMemory_eq] using
         Step.f64Store (address := .i32 address) rfl hbound
-    obtain ⟨rfl, hconfig⟩ :=
-      step_deterministic expectedStep wasmStep
-    simp only at hconfig
-    cases hconfig
+    wasm_wp_resolve_step Hstep using expectedStep
     imod stateInterp_store64 store ns obs nt
         (address + offset) oldWord value h1 h2 h3 h4 h5 h6 h7 Hfacts.2 $$
         [$Hσ $Hword] with ⟨Hσ, Hword⟩
@@ -2139,7 +2091,6 @@ theorem twp_load64
         by simpa [Hread] using
           Step.load64 (α := α) (address := .i32 address) rfl hbound⟩⟩ =>
     iintro %κ %e₂ %store₂ %forks %Hprim
-    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hprim
     have expectedStep : Step
         ⟨.running
           ⟨⟨params, localValues, .i32 address :: values⟩,
@@ -2151,10 +2102,7 @@ theorem twp_load64
             code, arity, remainder, controls, calls⟩, store⟩ := by
       simpa [Hread] using
         (Step.load64 (α := α) (address := .i32 address) rfl hbound)
-    obtain ⟨rfl, hconfig⟩ :=
-      step_deterministic expectedStep wasmStep
-    simp only at hconfig
-    cases hconfig
+    wasm_wp_resolve_step Hprim using expectedStep
     wasm_twp_frame
       iapply Htwp
       iexact Hword
@@ -2216,7 +2164,6 @@ theorem twp_store64
         by simpa only [Wasm.SmallStep.setMemory_eq] using
           Step.store64 (α := α) (address := .i32 address) rfl hbound⟩⟩ =>
     iintro %κ %e₂ %store₂ %forks %Hstep
-    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
     have expectedStep : Step
         ⟨.running
           ⟨⟨params, localValues, .i64 value :: .i32 address :: values⟩,
@@ -2231,10 +2178,7 @@ theorem twp_store64
                 mem := store.wasm.mem.write64 (address + offset) value } }⟩ := by
       simpa only [Wasm.SmallStep.setMemory_eq] using
         Step.store64 (α := α) (address := .i32 address) rfl hbound
-    obtain ⟨rfl, hconfig⟩ :=
-      step_deterministic expectedStep wasmStep
-    simp only at hconfig
-    cases hconfig
+    wasm_wp_resolve_step Hstep using expectedStep
     imod stateInterp_store64 store ns obs nt
         (address + offset) oldWord value h1 h2 h3 h4 h5 h6 h7 Hfacts.2 $$
         [$Hσ $Hword] with ⟨Hσ, Hword⟩
@@ -2494,7 +2438,6 @@ theorem twp_load32_addr
              using Step.load32 (α := α) (address := Value.i32 addr) rfl
                hbound⟩⟩ =>
     iintro %κ %e₂ %store₂ %forks %Hstep
-    obtain ⟨rfl, kind, rfl, wasmStep⟩ := Hstep
     have expectedStep : Step
         ⟨.running
           ⟨⟨params, localValues, .i32 addr :: values⟩,
@@ -2506,10 +2449,7 @@ theorem twp_load32_addr
             code, arity, remainder, controls, calls⟩, store⟩ := by
       simpa only [show (addr + 0 : UInt32) = addr from by simp, Hread]
         using Step.load32 (α := α) (address := Value.i32 addr) rfl hbound
-    obtain ⟨rfl, hconfig⟩ :=
-      step_deterministic expectedStep wasmStep
-    simp only at hconfig
-    cases hconfig
+    wasm_wp_resolve_step Hstep using expectedStep
     wasm_twp_frame
       iapply Htwp
       iexact Hword
