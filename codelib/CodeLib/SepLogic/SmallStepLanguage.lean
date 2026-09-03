@@ -90,6 +90,8 @@ macro_rules
       (wasm_wp_offer_step ⟨[], _, _, [], ⟨rfl, _, rfl, $step⟩⟩ =>
         iintro !> %e₂ %store₂ %forks %Hstep Hcredit
         wasm_wp_resolve_step Hstep using $step
+        simp only [List.length_nil, Nat.add_zero,
+          Iris.Algebra.BigOpL.bigOpL_nil]
         next => $continuation))
 
 /-- Offer one Wasm primitive step to Iris's total WP and continue with its successor. -/
@@ -140,9 +142,7 @@ set_option hygiene false in
 /-- Reassemble Iris state after a Wasm transition to a trapped expression. -/
 macro "wasm_wp_trap_frame" : tactic =>
   `(tactic|
-    (simp only [List.length_nil, Nat.add_zero,
-       Iris.Algebra.BigOpL.bigOpL_nil]
-     imod Hclose
+    (imod Hclose
      imodintro
      isplitl [Hσ]
      next => iexact Hσ
