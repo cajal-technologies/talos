@@ -26,8 +26,7 @@ theorem isEmpty_chunk :
     wasm_wp_pures [wp_const]
     iapply Wasm.SmallStep.wp_and
     rw [show (1 &&& 1 : UInt32) = 1 by decide]
-    inext
-    iexact Hwp
+    ilater_exact Hwp
   · simp only [isEmptyValue, hlen, if_false]
     iintro Hwp
     wasm_wp_pures [wp_const]
@@ -35,7 +34,6 @@ theorem isEmpty_chunk :
     wasm_wp_pures [wp_const]
     iapply Wasm.SmallStep.wp_and
     rw [show (0 &&& 1 : UInt32) = 0 by decide]
-    inext
-    iexact Hwp
+    ilater_exact Hwp
 
 end Wasm.RustStd.Array

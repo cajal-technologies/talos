@@ -1234,8 +1234,7 @@ theorem func4_happy_smallStep_wp
     Nat.reduceAdd, Nat.reduceSub, List.set]
   wasm_wp_pures [wp_localGet]
   ihave HglobalLater : ▷ globalPointsToAt 0 0 (.i32 1048576) $$ [Hglobal]
-  · inext
-    iexact Hglobal
+  · ilater_exact Hglobal
   wasm_wp_next Wasm.SmallStep.wp_globalSet $$ HglobalLater
   iintro Hglobal
   wasm_wp_pures [wp_const wp_localSet]
@@ -1292,8 +1291,7 @@ theorem func4_happy_smallStep_wp
       wasm_wp_pures [wp_localGet wp_const wp_add]
       ihave HglobalLater :
           ▷ globalPointsToAt 0 0 (.i32 1048560) $$ [Hglobal]
-      · inext
-        iexact Hglobal
+      · ilater_exact Hglobal
       wasm_wp_next Wasm.SmallStep.wp_globalSet $$ HglobalLater
       iintro Hglobal
       rw [show (16 : UInt32) + 1048560 = 1048576 by decide]
@@ -1341,8 +1339,7 @@ theorem func4_alias_smallStep_wp
     Nat.reduceAdd, Nat.reduceSub, List.set]
   wasm_wp_pures [wp_localGet]
   ihave HglobalLater : ▷ globalPointsToAt 0 0 (.i32 1048576) $$ [Hglobal]
-  · inext
-    iexact Hglobal
+  · ilater_exact Hglobal
   wasm_wp_next Wasm.SmallStep.wp_globalSet $$ HglobalLater
   iintro Hglobal
   wasm_wp_pures [wp_const wp_localSet]
@@ -1398,8 +1395,7 @@ theorem func4_alias_smallStep_wp
       wasm_wp_pures [wp_localGet wp_const wp_add]
       ihave HglobalLater :
           ▷ globalPointsToAt 0 0 (.i32 1048560) $$ [Hglobal]
-      · inext
-        iexact Hglobal
+      · ilater_exact Hglobal
       wasm_wp_next Wasm.SmallStep.wp_globalSet $$ HglobalLater
       iintro Hglobal
       rw [show (16 : UInt32) + 1048560 = 1048576 by decide]

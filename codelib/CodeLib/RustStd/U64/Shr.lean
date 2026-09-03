@@ -27,7 +27,6 @@ theorem shr_chunk :
   wasm_wp_pures [wp_const wp_and wp_extendUI32]
   iapply Wasm.SmallStep.wp_shrUI64
   simp only [hnorm]
-  inext
-  iexact Hwp
+  ilater_exact Hwp
 
 end Wasm.RustStd.U64

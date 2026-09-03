@@ -150,8 +150,7 @@ theorem sharedMem_partiallyMeets (v : UInt8) :
         ihave HptLater2 :
             ▷ pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
               ⟨0, 0 + 0⟩ (DFrac.own 1) (some v.toUInt32.toUInt8) $$ [Hpt']
-        · inext
-          iexact Hpt'
+        · ilater_exact Hpt'
         wasm_wp_next wp_load8U v.toUInt32.toUInt8 rfl $$ HptLater2
         iintro _Hpt_back
         wasm_wp_return_value

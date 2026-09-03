@@ -181,8 +181,7 @@ theorem wp_loadFatPtr
     simpa [Locals.get] using hget
   wasm_wp_next Wasm.SmallStep.wp_localGet hget'
   ihave HlenLater : ▷ pointsTo_u32 0 (p + 4) len $$ [Hlen]
-  · inext
-    iexact Hlen
+  · ilater_exact Hlen
   wasm_wp_next Wasm.SmallStep.wp_load32 (address := p) (offset := 4)
     len hp4 hp5 hp6 hp7 $$ HlenLater
   iintro Hlen

@@ -312,8 +312,7 @@ theorem func1_body_smallStep_wp
   wasm_wp_pures [wp_localGet]
   ihave HwordLater :
       ▷ pointsTo_u32 0 ((1048560 : UInt32) + 12) (f32Abs x) $$ [Hword]
-  · inext
-    iexact Hword
+  · ilater_exact Hword
   wasm_wp_next wp_f32Load (f32Abs x)
     (by decide) (by decide) (by decide) (by decide) $$ HwordLater
   iintro Hword
@@ -495,8 +494,7 @@ theorem func3_body_smallStep_wp
   wasm_wp_pures [wp_localGet]
   ihave HwordLater :
       ▷ pointsTo_u64 0 ((1048560 : UInt32) + 8) (f64Abs x) $$ [Hword]
-  · inext
-    iexact Hword
+  · ilater_exact Hword
   wasm_wp_next wp_f64Load (f64Abs x)
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) (by decide) $$ HwordLater
@@ -636,8 +634,7 @@ theorem func8_body_smallStep_wp
   wasm_wp_pures [wp_localGet]
   ihave HwordLater :
       ▷ pointsTo_u32 0 ((1048560 : UInt32) + 12) (f32Copysign x y) $$ [Hword]
-  · inext
-    iexact Hword
+  · ilater_exact Hword
   wasm_wp_next wp_f32Load (f32Copysign x y)
     (by decide) (by decide) (by decide) (by decide) $$ HwordLater
   iintro Hword
@@ -907,8 +904,7 @@ theorem func1_lowered_body_smallStep_wp
   wasm_wp_pures [wp_localGet]
   ihave HwordLater :
       ▷ pointsTo_u32 0 ((1048544 : UInt32) + 12) (f32Abs x) $$ [Hword]
-  · inext
-    iexact Hword
+  · ilater_exact Hword
   wasm_wp_next wp_f32Load (f32Abs x)
     (by decide) (by decide) (by decide) (by decide) $$ HwordLater
   iintro Hword
@@ -993,8 +989,7 @@ theorem func3_lowered_body_smallStep_wp
   wasm_wp_pures [wp_localGet]
   ihave HwordLater :
       ▷ pointsTo_u64 0 ((1048544 : UInt32) + 8) (f64Abs x) $$ [Hword]
-  · inext
-    iexact Hword
+  · ilater_exact Hword
   wasm_wp_next wp_f64Load (f64Abs x)
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) (by decide) $$ HwordLater
@@ -1084,8 +1079,7 @@ theorem func8_lowered_body_smallStep_wp
   wasm_wp_pures [wp_localGet]
   ihave HwordLater :
       ▷ pointsTo_u32 0 ((1048544 : UInt32) + 12) (f32Copysign x y) $$ [Hword]
-  · inext
-    iexact Hword
+  · ilater_exact Hword
   wasm_wp_next wp_f32Load (f32Copysign x y)
     (by decide) (by decide) (by decide) (by decide) $$ HwordLater
   iintro Hword
@@ -1251,8 +1245,7 @@ theorem checkAbs_tail_smallStep_wp
   rw [show (16 : UInt32) + 1048560 = 1048576 by decide]
   ihave HglobalLater :
       ▷ globalPointsToAt 0 0 (.i32 1048560) $$ [Hglobal]
-  · inext
-    iexact Hglobal
+  · ilater_exact Hglobal
   wasm_wp_next wp_globalSet $$ HglobalLater
   iintro Hglobal
   wasm_wp_pures [wp_localGet]
@@ -1655,8 +1648,7 @@ theorem func10_body_smallStep_wp
     List.set]
   wasm_wp_pures [wp_localGet]
   ihave HglobalLater : ▷ globalPointsToAt 0 0 (.i32 1048576) $$ [Hglobal]
-  · inext
-    iexact Hglobal
+  · ilater_exact Hglobal
   wasm_wp_next wp_globalSet $$ HglobalLater
   iintro Hglobal
   rw [← show checkAbsInnerBody =
@@ -1805,8 +1797,7 @@ theorem checkCopysign_tail_result_smallStep_wp
   rw [show (16 : UInt32) + 1048560 = 1048576 by decide]
   ihave HglobalLater :
       ▷ globalPointsToAt 0 0 (.i32 1048560) $$ [Hglobal]
-  · inext
-    iexact Hglobal
+  · ilater_exact Hglobal
   wasm_wp_next wp_globalSet $$ HglobalLater
   iintro Hglobal
   wasm_wp_pures [wp_localGet]
@@ -1948,8 +1939,7 @@ theorem func11_body_smallStep_wp
     List.set]
   wasm_wp_pures [wp_localGet]
   ihave HglobalLater : ▷ globalPointsToAt 0 0 (.i32 1048576) $$ [Hglobal]
-  · inext
-    iexact Hglobal
+  · ilater_exact Hglobal
   wasm_wp_next wp_globalSet $$ HglobalLater
   iintro Hglobal
   rw [← show checkCopysignInnerBody =

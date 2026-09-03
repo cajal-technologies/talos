@@ -105,16 +105,14 @@ theorem absDiff_smallStep_wp_to_return
     wasm_wp_pures [wp_localGet wp_localGet wp_localGet wp_subI64]
     ihave HscratchLater :
         ▷ pointsTo_u64 0 ((sp - 16) + 8) oldScratch $$ [Hscratch]
-    · inext
-      iexact Hscratch
+    · ilater_exact Hscratch
     wasm_wp_next Wasm.SmallStep.wp_store64 oldScratch h8 h9 h10 h11 h12 h13 h14 h15 $$
       HscratchLater
     iintro Hscratch
     wasm_wp_pures [wp_exitControl wp_localGet]
     ihave HscratchLater :
         ▷ pointsTo_u64 0 ((sp - 16) + 8) (b - a) $$ [Hscratch]
-    · inext
-      iexact Hscratch
+    · ilater_exact Hscratch
     wasm_wp_next Wasm.SmallStep.wp_load64 (b - a) h8 h9 h10 h11 h12 h13 h14 h15 $$
       HscratchLater
     iintro Hscratch
@@ -127,8 +125,7 @@ theorem absDiff_smallStep_wp_to_return
     wasm_wp_pures [wp_brIfZero wp_localGet wp_localGet wp_localGet wp_subI64]
     ihave HscratchLater :
         ▷ pointsTo_u64 0 ((sp - 16) + 8) oldScratch $$ [Hscratch]
-    · inext
-      iexact Hscratch
+    · ilater_exact Hscratch
     wasm_wp_next Wasm.SmallStep.wp_store64 oldScratch h8 h9 h10 h11 h12 h13 h14 h15 $$
       HscratchLater
     iintro Hscratch
@@ -137,8 +134,7 @@ theorem absDiff_smallStep_wp_to_return
     wasm_wp_pures [wp_localGet]
     ihave HscratchLater :
         ▷ pointsTo_u64 0 ((sp - 16) + 8) (a - b) $$ [Hscratch]
-    · inext
-      iexact Hscratch
+    · ilater_exact Hscratch
     wasm_wp_next Wasm.SmallStep.wp_load64 (a - b) h8 h9 h10 h11 h12 h13 h14 h15 $$
       HscratchLater
     iintro Hscratch

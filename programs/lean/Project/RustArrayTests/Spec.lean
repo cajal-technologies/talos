@@ -170,11 +170,9 @@ theorem len_plus_one_export_correct : LenPlusOneExportSpec := by
     icases Hfat with ⟨Hdata, Hlen⟩
     simp only [func8]
     ihave HdataLater : ▷ pointsTo_u32 0 p dataPtr $$ [Hdata]
-    · inext
-      iexact Hdata
+    · ilater_exact Hdata
     ihave HlenLater : ▷ pointsTo_u32 0 (p + 4) len $$ [Hlen]
-    · inext
-      iexact Hlen
+    · ilater_exact Hlen
     wasm_wp_next wp_loadFatPtr 0 p dataPtr len rfl hfat.noWrap $$
       HdataLater HlenLater
     wasm_wp_next SmallStep.wp_call «module» 1 func1Def
@@ -211,11 +209,9 @@ theorem len_plus_arg_export_correct : LenPlusArgExportSpec := by
     icases Hfat with ⟨Hdata, Hlen⟩
     simp only [func7]
     ihave HdataLater : ▷ pointsTo_u32 0 p dataPtr $$ [Hdata]
-    · inext
-      iexact Hdata
+    · ilater_exact Hdata
     ihave HlenLater : ▷ pointsTo_u32 0 (p + 4) len $$ [Hlen]
-    · inext
-      iexact Hlen
+    · ilater_exact Hlen
     wasm_wp_next wp_loadFatPtr 0 p dataPtr len rfl hfat.noWrap $$
       HdataLater HlenLater
     wasm_wp_pures [wp_localGet]
@@ -253,11 +249,9 @@ theorem empty_plus_three_export_correct : EmptyPlusThreeExportSpec := by
     icases Hfat with ⟨Hdata, Hlen⟩
     simp only [func5]
     ihave HdataLater : ▷ pointsTo_u32 0 p dataPtr $$ [Hdata]
-    · inext
-      iexact Hdata
+    · ilater_exact Hdata
     ihave HlenLater : ▷ pointsTo_u32 0 (p + 4) len $$ [Hlen]
-    · inext
-      iexact Hlen
+    · ilater_exact Hlen
     wasm_wp_next wp_loadFatPtr 0 p dataPtr len rfl hfat.noWrap $$
       HdataLater HlenLater
     wasm_wp_next SmallStep.wp_call «module» 4 func4Def
@@ -311,11 +305,9 @@ theorem empty_xor_flag_export_correct : EmptyXorFlagExportSpec := by
     icases Hfat with ⟨Hdata, Hlen⟩
     simp only [func6]
     ihave HdataLater : ▷ pointsTo_u32 0 p dataPtr $$ [Hdata]
-    · inext
-      iexact Hdata
+    · ilater_exact Hdata
     ihave HlenLater : ▷ pointsTo_u32 0 (p + 4) len $$ [Hlen]
-    · inext
-      iexact Hlen
+    · ilater_exact Hlen
     wasm_wp_next wp_loadFatPtr 0 p dataPtr len rfl hfat.noWrap $$
       HdataLater HlenLater
     wasm_wp_pures [wp_localGet]

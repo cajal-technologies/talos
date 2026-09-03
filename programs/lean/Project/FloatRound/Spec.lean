@@ -187,8 +187,7 @@ theorem func5_lowered_body_smallStep_wp
   wasm_wp_pures [wp_localGet]
   ihave HwordLater :
       ▷ pointsTo_u32 0 ((1048544 : UInt32) + 12) (f32Nearest x) $$ [Hword]
-  · inext
-    iexact Hword
+  · ilater_exact Hword
   wasm_wp_next wp_f32Load (f32Nearest x)
     (by decide) (by decide) (by decide) (by decide) $$ HwordLater
   iintro Hword
@@ -277,8 +276,7 @@ theorem deepFrameFloat_body_smallStep_wp
   wasm_wp_pures [wp_localGet]
   ihave HwordLater :
       ▷ pointsTo_u32 0 ((1048528 : UInt32) + 12) result $$ [Hword]
-  · inext
-    iexact Hword
+  · ilater_exact Hword
   wasm_wp_next wp_f32Load result
     (by decide) (by decide) (by decide) (by decide) $$ HwordLater
   iintro Hword
@@ -465,8 +463,7 @@ theorem naive_tail_smallStep_wp
   rw [show (16 : UInt32) + 1048544 = 1048560 by decide]
   ihave HglobalLater :
       ▷ globalPointsToAt 0 0 (.i32 1048544) $$ [Hglobal]
-  · inext
-    iexact Hglobal
+  · ilater_exact Hglobal
   wasm_wp_next wp_globalSet $$ HglobalLater
   iintro Hglobal
   wasm_wp_pures [wp_localGet]
@@ -796,8 +793,7 @@ theorem func0_lowered_smallStep_wp
     List.set]
   wasm_wp_pures [wp_localGet]
   ihave HglobalLater : ▷ globalPointsToAt 0 0 (.i32 1048560) $$ [Hglobal]
-  · inext
-    iexact Hglobal
+  · ilater_exact Hglobal
   wasm_wp_next wp_globalSet $$ HglobalLater
   iintro Hglobal
   wasm_wp_pures [wp_localGet]
@@ -958,8 +954,7 @@ theorem roundCheck_tail_result_smallStep_wp
   rw [show (16 : UInt32) + 1048560 = 1048576 by decide]
   ihave HglobalLater :
       ▷ globalPointsToAt 0 0 (.i32 1048560) $$ [Hglobal]
-  · inext
-    iexact Hglobal
+  · ilater_exact Hglobal
   wasm_wp_next wp_globalSet $$ HglobalLater
   iintro Hglobal
   wasm_wp_pures [wp_localGet]
@@ -1096,8 +1091,7 @@ theorem func6_body_smallStep_wp
     List.set]
   wasm_wp_pures [wp_localGet]
   ihave HglobalLater : ▷ globalPointsToAt 0 0 (.i32 1048576) $$ [Hglobal]
-  · inext
-    iexact Hglobal
+  · ilater_exact Hglobal
   wasm_wp_next wp_globalSet $$ HglobalLater
   iintro Hglobal
   rw [← show roundCheckInnerBody =

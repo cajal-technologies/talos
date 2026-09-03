@@ -4236,8 +4236,7 @@ theorem wp_fillFourBytes (oldWord : UInt32) :
   iintro ⟨H16, H32⟩
   wasm_wp_pures [wp_const wp_const wp_const]
   ihave H16Later : ▷ pointsTo_u32 0 16 oldWord $$ [H16]
-  · inext
-    iexact H16
+  · ilater_exact H16
   wasm_wp_next wp_fill16_four_AB oldWord $$ H16Later
   iintro H16
   wasm_wp_pures [wp_const]
@@ -4362,8 +4361,7 @@ theorem wp_copyOverlapWord :
   wasm_wp_pures [wp_const wp_const wp_const]
   ihave HwordLater :
       ▷ pointsTo_u64 0 0 0x8877665544332211 $$ [Hword]
-  · inext
-    iexact Hword
+  · ilater_exact Hword
   wasm_wp_next wp_copy2_zero_four $$ HwordLater
   iintro Hword
   wasm_wp_pures [wp_const]

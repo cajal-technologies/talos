@@ -23,7 +23,6 @@ theorem not_chunk : UnChunk (T := UInt64) [.constI64 MAX_U64, .xorI64] (~~~ ·) 
     bv_decide
   iapply Wasm.SmallStep.wp_xorI64
   simp only [hnot]
-  inext
-  iexact Hwp
+  ilater_exact Hwp
 
 end Wasm.RustStd.U64

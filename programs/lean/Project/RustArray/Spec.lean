@@ -118,8 +118,7 @@ theorem len_export_correct : LenExportSpec := by
     iintro Hdata
     wasm_wp_pures [wp_localGet]
     ihave HlenLater : ▷ pointsTo_u32 0 (p + 4) len $$ [Hlen]
-    · inext
-      iexact Hlen
+    · ilater_exact Hlen
     wasm_wp_next SmallStep.wp_load32 (address := p) (offset := 4)
       len hp4 hp5 hp6 hp7 $$ HlenLater
     iintro Hlen
@@ -169,8 +168,7 @@ theorem is_empty_export_correct : IsEmptyExportSpec := by
     iintro Hdata
     wasm_wp_pures [wp_localGet]
     ihave HlenLater : ▷ pointsTo_u32 0 (p + 4) len $$ [Hlen]
-    · inext
-      iexact Hlen
+    · ilater_exact Hlen
     wasm_wp_next SmallStep.wp_load32 (address := p) (offset := 4)
       len hp4 hp5 hp6 hp7 $$ HlenLater
     iintro Hlen

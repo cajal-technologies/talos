@@ -20,3 +20,9 @@ macro "iapply_frame " rule:pmTerm : tactic =>
   `(tactic|
     (iapply $rule
      iframe))
+
+/-- Introduce one later and discharge it with an existing spatial fact. -/
+macro "ilater_exact " hypothesis:ident : tactic =>
+  `(tactic|
+    (inext
+     iexact $hypothesis))
