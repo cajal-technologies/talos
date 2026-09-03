@@ -108,6 +108,29 @@ macro "wasm_wp_frame" : tactic =>
          iexact Hwp
        next => itrivial))
 
+set_option hygiene false in
+/-- Reassemble Iris state after a Wasm transition to a trapped expression. -/
+macro "wasm_wp_trap_frame" : tactic =>
+  `(tactic|
+    (simp only [List.length_nil, Nat.add_zero,
+       Iris.Algebra.BigOpL.bigOpL_nil]
+     imod Hclose
+     imodintro
+     isplitl [Hσ]
+     next => iexact Hσ
+     next =>
+       isplitl []
+       next =>
+         iapply wp_lift_stuck rfl
+         iintro %_ %_ %_ %_ -
+         iapply fupd_mask_intro Std.LawfulSet.empty_subset
+         iintro -
+         ipureintro
+         exact ⟨rfl, fun _ _ _ _ h => by
+           rcases h with ⟨-, ⟨_, -, hstep⟩⟩
+           exact trapped_terminal hstep⟩
+       next => itrivial))
+
 /-- Discharge the fixed result shape and state branch of a total Wasm step. -/
 syntax "wasm_twp_frame" ppLine colGt tacticSeq : tactic
 

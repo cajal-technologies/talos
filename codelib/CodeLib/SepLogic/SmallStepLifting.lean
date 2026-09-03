@@ -63,20 +63,7 @@ theorem wp_trapStep
     step_deterministic (hstep store) wasmStep
   simp only at hconfig
   cases hconfig
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl []
-  · iapply wp_lift_stuck rfl
-    iintro %_ %_ %_ %_ -
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro -
-    ipureintro
-    exact ⟨rfl, fun _ _ _ _ h => by
-      rcases h with ⟨-, ⟨_, -, htrapped⟩⟩; exact trapped_terminal htrapped⟩
-  · itrivial
+  wasm_wp_trap_frame
 /-! ## Generating the pure rules
 
 Most of the rules below say the same thing: one instruction is retired, the
@@ -860,20 +847,7 @@ theorem wp_throwRefNull
     step_deterministic Step.throwRefNull wasmStep
   simp only at hconfig
   cases hconfig
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl []
-  · iapply wp_lift_stuck rfl
-    iintro %_ %_ %_ %_ -
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro -
-    ipureintro
-    exact ⟨rfl, fun _ _ _ _ h => by
-      rcases h with ⟨-, ⟨_, -, hstep⟩⟩; exact trapped_terminal hstep⟩
-  · itrivial
+  wasm_wp_trap_frame
 
 /-- Trap step: an exception propagated through all control frames with no
 matching handler and no enclosing call frame traps. -/
@@ -896,20 +870,7 @@ theorem wp_uncaughtException
     step_deterministic (Step.uncaughtException hthrow) wasmStep
   simp only at hconfig
   cases hconfig
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl []
-  · iapply wp_lift_stuck rfl
-    iintro %_ %_ %_ %_ -
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro -
-    ipureintro
-    exact ⟨rfl, fun _ _ _ _ h => by
-      rcases h with ⟨-, ⟨_, -, hstep⟩⟩; exact trapped_terminal hstep⟩
-  · itrivial
+  wasm_wp_trap_frame
 
 /-- Step: `throw_ref` with a live exnref pushes a throwing frame, consuming
 fractional ownership of the exception ghost cell to witness tag and arguments. -/
@@ -4589,20 +4550,7 @@ theorem wp_memoryInit32DroppedTrap
       ⟨.trapped .outOfBoundsMemory, store⟩ :=
     Step.memoryInit32DroppedTrap hsegment (Or.inl hpos)
   wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl []
-  · iapply wp_lift_stuck rfl
-    iintro %_ %_ %_ %_ -
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro -
-    ipureintro
-    exact ⟨rfl, fun _ _ _ _ h => by
-      rcases h with ⟨-, ⟨_, -, hstep⟩⟩; exact trapped_terminal hstep⟩
-  · itrivial
+  wasm_wp_trap_frame
 
 theorem wp_memoryInit64DroppedTrap
     {params localValues values : List Value}
@@ -4638,20 +4586,7 @@ theorem wp_memoryInit64DroppedTrap
       ⟨.trapped .outOfBoundsMemory, store⟩ :=
     Step.memoryInit64DroppedTrap hsegment (Or.inl hpos)
   wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl []
-  · iapply wp_lift_stuck rfl
-    iintro %_ %_ %_ %_ -
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro -
-    ipureintro
-    exact ⟨rfl, fun _ _ _ _ h => by
-      rcases h with ⟨-, ⟨_, -, hstep⟩⟩; exact trapped_terminal hstep⟩
-  · itrivial
+  wasm_wp_trap_frame
 
 theorem wp_memoryInit32Dropped
     {params localValues values : List Value}
@@ -4777,20 +4712,7 @@ theorem wp_memoryInit32Trap
       ⟨.trapped .outOfBoundsMemory, store⟩ :=
     Step.memoryInit32Trap hsegment (Or.inl hsrc)
   wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl []
-  · iapply wp_lift_stuck rfl
-    iintro %_ %_ %_ %_ -
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro -
-    ipureintro
-    exact ⟨rfl, fun _ _ _ _ h => by
-      rcases h with ⟨-, ⟨_, -, hstep⟩⟩; exact trapped_terminal hstep⟩
-  · itrivial
+  wasm_wp_trap_frame
 
 theorem wp_memoryInit64Trap
     {params localValues values : List Value}
@@ -4826,20 +4748,7 @@ theorem wp_memoryInit64Trap
       ⟨.trapped .outOfBoundsMemory, store⟩ :=
     Step.memoryInit64Trap hsegment (Or.inl hsrc)
   wasm_wp_resolve_target expectedStep against wasmStep
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
-  imod Hclose
-  imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl []
-  · iapply wp_lift_stuck rfl
-    iintro %_ %_ %_ %_ -
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro -
-    ipureintro
-    exact ⟨rfl, fun _ _ _ _ h => by
-      rcases h with ⟨-, ⟨_, -, hstep⟩⟩; exact trapped_terminal hstep⟩
-  · itrivial
+  wasm_wp_trap_frame
 
 wasm_wp_pure_rule wp_vConst {bits : BitVec 128} :
   .vConst bits, values => .v128 bits :: values := Step.vConst
