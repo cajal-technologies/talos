@@ -171,12 +171,11 @@ private theorem twp_func8_copy_and_return
     HoldSlice HnewPrefix
   icases HoldSlice with ⟨%holdNowrap, HoldBytes⟩
   icases HnewPrefix with ⟨%hnewPrefixNowrap, HnewPrefixBytes⟩
-  iapply twp_block
+  wasm_twp_pures [twp_block]
   simp only [func8CopyBody, func8Locals]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   iapply twp_eqz (result := 0) (by simp [hnewNonzero])
-  iapply twp_brIfZero
-  wasm_twp_pures [twp_localGet twp_localGet twp_localGet twp_localGet]
+  wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet twp_localGet twp_localGet]
   iapply twp_ltU (result := 0) (by simp [UInt32.not_lt.mpr (UInt32.le_of_lt holdLt)])
   iapply twp_select (selected := .i32 oldSize) (by simp)
   iapply twp_localTee
@@ -185,8 +184,7 @@ private theorem twp_func8_copy_and_return
         [.i32 oldSize]) (by rfl)
   simp only [func8Locals]
   iapply twp_eqz (result := 0) (by simp [holdNonzero])
-  iapply twp_brIfZero
-  wasm_twp_pures [twp_localGet twp_localGet twp_localGet]
+  wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet twp_localGet]
   iapply twp_memoryCopy32 (newBytes.take oldSize.toNat) oldBytes
       hprefixLength holdLength holdPositive
       (by simpa only [hprefixLength, UInt32.size] using hnewPrefixNowrap)
@@ -241,9 +239,9 @@ private theorem twp_func8_copy_and_return
       (history.reallocate oldId oldPtr oldLayout newPtr newLayout) $$ [Hbump]
   · unfold AllocationHistory.reallocate
     iexact Hbump
-  iapply twp_exitControl rfl
+  wasm_twp_pures [twp_exitControl]
   simp only [List.take_zero, List.nil_append]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   isimp only [RuntimeContext] at Hruntime
   icases Hruntime with ⟨Hmodule, Henv⟩
   iapply twp_returnFromCallExplicit $$ Hmodule
@@ -331,7 +329,7 @@ private theorem twp_func8_commit_copy_and_return
   iintro ⟨Hruntime, Hcursor, Hfrontier, Hauth, Hretired, Hpages, Hbytes,
     HoldBlock, Hstreams, Hcont⟩
   simp only [func8Locals]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   ihave HcursorAt : pointsTo_u32 0 ((0 : UInt32) + allocatorCursor)
       storedCursor $$ [Hcursor]
   · rw [UInt32.zero_add]
@@ -592,15 +590,15 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
           apply UInt32.toNat_inj.mp
           rw [UInt32.toNat_ofNat_of_lt' hfrontierBound]
           exact hfrontierEq.symm
-      iapply twp_block
+      wasm_twp_pures [twp_block]
       simp only [func8PostArithmetic, func8GrowthBody, func8CopyBody,
         List.drop_zero]
       subst alignment
       wasm_twp_pures [twp_localGet twp_const twp_add]
       simp only [show (0xFFFFFFFF : UInt32) + 1 = 0 by decide]
-      iapply twp_localTee rfl
+      wasm_twp_pures [twp_localTee]
       simp only [List.length]
-      iapply twp_const
+      wasm_twp_pures [twp_const]
       ihave HcursorAt : pointsTo_u32 0 (0 + allocatorCursor) storedCursor $$
           [Hcursor]
       · simp only [UInt32.zero_add]
@@ -609,7 +607,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
           (by decide) (by decide) (by decide) (by decide) $$ HcursorAt
       iintro Hcursor
       isimp only [UInt32.zero_add] at Hcursor
-      iapply twp_localTee rfl
+      wasm_twp_pures [twp_localTee]
       simp only [List.length]
       wasm_twp_pures [twp_const twp_localGet]
       iapply twp_select (selected := .i32 newPtr) (by
@@ -618,29 +616,27 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
           exact hfrontierWord.symm
         · simp [hzero] at hfrontierWord ⊢
           exact hfrontierWord.symm)
-      iapply twp_add
+      wasm_twp_pures [twp_add]
       simp only [UInt32.add_zero]
-      iapply twp_localTee rfl
+      wasm_twp_pures [twp_localTee]
       simp only [List.length]
-      iapply twp_localGet rfl
+      wasm_twp_pures [twp_localGet]
       iapply twp_ltU (result := 0) (by simp)
-      iapply twp_brIfZero
-      wasm_twp_pures [twp_localGet twp_const twp_localGet twp_sub]
+      wasm_twp_pures [twp_brIfZero twp_localGet twp_const twp_localGet twp_sub]
       simp only [show (0 : UInt32) - 1 = 0xFFFFFFFF by decide]
-      iapply twp_and
+      wasm_twp_pures [twp_and]
       rw [show newPtr &&& (0xFFFFFFFF : UInt32) = newPtr by
         exact UInt32.and_neg_one]
-      iapply twp_localTee rfl
+      wasm_twp_pures [twp_localTee]
       simp only [List.set]
       wasm_twp_pures [twp_localGet twp_add]
       rw [UInt32.add_comm newSize newPtr, hfinishWord]
-      iapply twp_localTee rfl
+      wasm_twp_pures [twp_localTee]
       simp only [List.length]
-      iapply twp_localGet rfl
+      wasm_twp_pures [twp_localGet]
       iapply twp_ltU (result := 0) (by
         simp [UInt32.not_lt.mpr hbaseLeFinish])
-      iapply twp_brIfZero
-      wasm_twp_pures [twp_localGet twp_const]
+      wasm_twp_pures [twp_brIfZero twp_localGet twp_const]
       have hfinishNonnegative :
           ¬ finish.toInt32 < (0 : UInt32).toInt32 := by
         simp only [UInt32.toInt32, LT.lt, Int32.lt, Int32.toBitVec]
@@ -657,7 +653,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
       rw [show (16 : UInt32) % 32 = 16 by decide]
       rw [show (finish + 65535) >>> (16 : UInt32) =
         allocatorRequiredPages finish by rfl]
-      iapply twp_localTee rfl
+      wasm_twp_pures [twp_localTee]
       simp only [List.length]
       ihave HsizeFrame : iprop(
           hostEnvOwn 0 (Universal.envFor Project.Mergesort.module) ∗
@@ -691,7 +687,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
           Hstreams, Hcont⟩
       rw [show Project.Mergesort.module.memIs64 = false by rfl]
       simp only [sizeValue_false]
-      iapply twp_localTee rfl
+      wasm_twp_pures [twp_localTee]
       simp only [List.length]
       iapply twp_leU (result := if allocatorRequiredPages finish ≤
         UInt32.ofNat pages then 1 else 0) rfl
@@ -730,8 +726,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
         iframe Hruntime Hcursor Hfrontier Hauth Hretired Hpages Hblock Hstreams
           Hnormal
       · rw [if_neg hcapacity]
-        iapply twp_brIfZero
-        wasm_twp_pures [twp_localGet twp_localGet twp_sub]
+        wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet twp_sub]
         let delta := allocatorRequiredPages finish - UInt32.ofNat pages
         ihave HgrowFrame : iprop(
             hostEnvOwn 0 (Universal.envFor Project.Mergesort.module) ∗
@@ -763,7 +758,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
               icases HgrowFrame with
                 ⟨Henv, Hcursor, Hfrontier, Hauth, Hretired, HoldPages,
                   Hblock, Hstreams, Hcont⟩
-              iapply twp_const
+              wasm_twp_pures [twp_const]
               iapply twp_eq (result := 1) (by simp)
               iapply twp_brIf (by decide) (by rfl)
               simp only [List.take_zero, List.nil_append, Nat.reduceAdd,
@@ -790,7 +785,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
               icases HgrowFrame with
                 ⟨Henv, Hcursor, Hfrontier, Hauth, Hretired, HoldPages,
                   Hblock, Hstreams, Hcont⟩
-              iapply twp_const
+              wasm_twp_pures [twp_const]
               by_cases hsentinel : previousPages.toUInt32 =
                   (0xFFFFFFFF : UInt32)
               · iapply twp_eq (result := 1) (by simp [hsentinel])
@@ -905,15 +900,15 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
           (frontier + newLayout.size) % UInt32.size := by
         dsimp only [finishWord]
         rw [UInt32.toNat_add, hbaseNat, hnewSizeNat]
-      iapply twp_block
+      wasm_twp_pures [twp_block]
       simp only [func8PostArithmetic, func8GrowthBody, func8CopyBody,
         List.drop_zero]
       subst alignment
       wasm_twp_pures [twp_localGet twp_const twp_add]
       simp only [show (0xFFFFFFFF : UInt32) + 1 = 0 by decide]
-      iapply twp_localTee rfl
+      wasm_twp_pures [twp_localTee]
       simp only [List.length]
-      iapply twp_const
+      wasm_twp_pures [twp_const]
       ihave HcursorAt : pointsTo_u32 0 (0 + allocatorCursor) storedCursor $$
           [Hcursor]
       · simp only [UInt32.zero_add]
@@ -922,7 +917,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
           (by decide) (by decide) (by decide) (by decide) $$ HcursorAt
       iintro Hcursor
       isimp only [UInt32.zero_add] at Hcursor
-      iapply twp_localTee rfl
+      wasm_twp_pures [twp_localTee]
       simp only [List.length]
       wasm_twp_pures [twp_const twp_localGet]
       iapply twp_select (selected := .i32 base) (by
@@ -931,26 +926,25 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
           exact hfrontierWord.symm
         · simp [hzero] at hfrontierWord ⊢
           exact hfrontierWord.symm)
-      iapply twp_add
+      wasm_twp_pures [twp_add]
       simp only [UInt32.add_zero]
-      iapply twp_localTee rfl
+      wasm_twp_pures [twp_localTee]
       simp only [List.length]
-      iapply twp_localGet rfl
+      wasm_twp_pures [twp_localGet]
       iapply twp_ltU (result := 0) (by simp)
-      iapply twp_brIfZero
-      wasm_twp_pures [twp_localGet twp_const twp_localGet twp_sub]
+      wasm_twp_pures [twp_brIfZero twp_localGet twp_const twp_localGet twp_sub]
       simp only [show (0 : UInt32) - 1 = 0xFFFFFFFF by decide]
-      iapply twp_and
+      wasm_twp_pures [twp_and]
       rw [show base &&& (0xFFFFFFFF : UInt32) = base by
         exact UInt32.and_neg_one]
-      iapply twp_localTee rfl
+      wasm_twp_pures [twp_localTee]
       simp only [List.set]
       wasm_twp_pures [twp_localGet twp_add]
       rw [UInt32.add_comm newSize base]
       rw [show base + newSize = finishWord by rfl]
-      iapply twp_localTee rfl
+      wasm_twp_pures [twp_localTee]
       simp only [List.length]
-      iapply twp_localGet rfl
+      wasm_twp_pures [twp_localGet]
       have hsizeUpper : newLayout.size ≤ 2147483647 := by
         simpa [hnewAlignment] using hlayout.2.2.2.1.2.2.2.2.1
       have hend : frontier + newLayout.size < UInt32.size := by
@@ -963,8 +957,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
         omega
       iapply twp_ltU (result := 0) (by
         rw [if_neg (UInt32.not_lt.mpr hbaseLeFinish)])
-      iapply twp_brIfZero
-      wasm_twp_pures [twp_localGet twp_const]
+      wasm_twp_pures [twp_brIfZero twp_localGet twp_const]
       have hnotSigned : ¬ frontier + newLayout.size < 2147483648 := by
         intro hsigned
         have hrawBase :

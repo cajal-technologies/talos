@@ -817,9 +817,9 @@ theorem copyWords_guard_twp
     CopyWordsInnerGuard, List.cons_append, List.nil_append] at hbody
   iintro HP
   simp only [CopyWordsLoopBody]
-  iapply Wasm.SmallStep.twp_block
+  wasm_twp_pures [twp_block]
   simp only [CopyWordsOuterBody, List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.twp_block
+  wasm_twp_pures [twp_block]
   simp only [CopyWordsInnerGuard]
   wasm_twp_pures [twp_localGet twp_localGet]
   by_cases hlt : i < n

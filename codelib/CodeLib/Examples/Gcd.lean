@@ -100,12 +100,11 @@ private theorem twp_gcdLoop
       simp only [gcdLocals, List.take_nil, List.drop_nil, List.nil_append]
       exact hreturn currentA currentB temporary hb Hgcd
     · iapply twp_eqz (result := 0) (by simp [hb])
-      iapply twp_brIfZero
-      wasm_twp_pures [twp_localGet twp_localGet]
+      wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet]
       iapply twp_remU hb
       wasm_twp_pures [twp_localSet twp_localGet twp_localSet
         twp_localGet twp_localSet]
-      iapply twp_br rfl
+      wasm_twp_pures [twp_br]
       simp only [gcdLocals, List.set]
       have hbpos : 0 < currentB.toNat := by
         rcases Nat.eq_zero_or_pos currentB.toNat with hz | hp

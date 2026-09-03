@@ -21,26 +21,6 @@ local instance instSelectionSortWasmTotalIrisGS :
 variable {s : Stuckness} {E : CoPset}
 variable {Φ : List Value → IProp (WasmHeapGF α)}
 
-/- These i64 rules are the direct total-WP counterparts of `wp_ltUI64`,
-`wp_load64`, and `wp_store64`.  They are kept here because the generic total
-lifting library currently only exposes the i32 memory rules. -/
-
-theorem twp_ltUI64
-    {params localValues values : List Value}
-    {lhs rhs : UInt64} {result : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hresult : result = if lhs < rhs then 1 else 0) :
-    WP (.running
-      ⟨⟨params, localValues, .i32 result :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }] ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-        .ltUI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      [{ Φ }] :=
-  twp_pureStep _ _ _ (fun _ => Step.ltUI64 hresult)
-
-
 end Wasm.SmallStep
 
 namespace Wasm.Examples.SelectionSort
@@ -331,13 +311,13 @@ private theorem twp_findMin_aux
         omega
       have hnotlt : ¬ UInt32.ofNat scan < UInt32.ofNat input.length :=
         mt (nat_lt_u32_iff hscanSize hlengthSize).mp (by omega)
-      iapply Wasm.SmallStep.twp_ltU rfl
+      wasm_twp_pures [twp_ltU]
       simp only [if_neg hnotlt]
-      iapply Wasm.SmallStep.twp_eqz rfl
+      wasm_twp_pures [twp_eqz]
       simp only
       iapply Wasm.SmallStep.twp_iff
         (selectedBody := [.localGet 2, .ret]) (by simp)
-      iapply Wasm.SmallStep.twp_localGet rfl
+      wasm_twp_pures [twp_localGet]
       iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
       iintro Hruntime
       simp only [List.take_succ_cons, List.take_zero, List.singleton_append]
@@ -376,13 +356,13 @@ private theorem twp_findMin_aux
         · have := hinv.2.2.1
           omega
       have hcmp := nat_lt_u32_iff hscanSize hlengthSize
-      iapply Wasm.SmallStep.twp_ltU rfl
+      wasm_twp_pures [twp_ltU]
       by_cases hs : scan < input.length
       · simp only [if_pos (hcmp.mpr hs)]
-        iapply Wasm.SmallStep.twp_eqz rfl
+        wasm_twp_pures [twp_eqz]
         simp only [if_neg (by decide : ¬(1 : UInt32) = 0)]
         iapply Wasm.SmallStep.twp_iff (selectedBody := []) (by simp)
-        iapply Wasm.SmallStep.twp_exitControl rfl
+        wasm_twp_pures [twp_exitControl]
         simp only [List.take_zero, List.nil_append, List.drop_zero]
         have hbestLen : best < input.length :=
           _root_.lt_of_lt_of_le hinv.2.1 hinv.2.2.1
@@ -394,13 +374,12 @@ private theorem twp_findMin_aux
         isplitl [Harray]
         · iexact Harray
         iintro Harray
-        iapply Wasm.SmallStep.twp_ltUI64 rfl
+        wasm_twp_pures [twp_ltUI64]
         by_cases hlt : input[scan] < input[best]
         · simp only [if_pos hlt]
-          iapply Wasm.SmallStep.twp_iff rfl
+          wasm_twp_pures [twp_iff]
           simp only [if_pos (by decide : (1 : UInt32) ≠ 0)]
-          wasm_twp_pures [twp_localGet twp_localSet]
-          iapply Wasm.SmallStep.twp_exitControl rfl
+          wasm_twp_pures [twp_localGet twp_localSet twp_exitControl]
           simp only [List.take_zero, List.nil_append, List.drop_zero]
           wasm_twp_pures [twp_localGet twp_localGet twp_localGet
             twp_localGet twp_const twp_add]
@@ -439,9 +418,9 @@ private theorem twp_findMin_aux
             simpa only [List.getElem!_eq_getElem?_getD] using hpure
           iapply Hcont $$ %finalBest %hpure' Hruntime Harray
         · simp only [if_neg hlt]
-          iapply Wasm.SmallStep.twp_iff rfl
+          wasm_twp_pures [twp_iff]
           simp only [if_neg (by decide : ¬(0 : UInt32) ≠ 0)]
-          iapply Wasm.SmallStep.twp_exitControl rfl
+          wasm_twp_pures [twp_exitControl]
           simp only [List.take_zero, List.nil_append, List.drop_zero]
           wasm_twp_pures [twp_localGet twp_localGet twp_localGet
             twp_localGet twp_const twp_add]
@@ -480,11 +459,11 @@ private theorem twp_findMin_aux
           iapply Hcont $$ %finalBest %hpure' Hruntime Harray
       · have hnotlt := mt hcmp.mp hs
         simp only [if_neg hnotlt]
-        iapply Wasm.SmallStep.twp_eqz rfl
+        wasm_twp_pures [twp_eqz]
         simp only
         iapply Wasm.SmallStep.twp_iff
           (selectedBody := [.localGet 2, .ret]) (by simp)
-        iapply Wasm.SmallStep.twp_localGet rfl
+        wasm_twp_pures [twp_localGet]
         iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
         iintro Hruntime
         simp only [List.take_succ_cons, List.take_zero, List.singleton_append]
@@ -636,7 +615,7 @@ private theorem twp_recursiveSort_aux
             simpa using hnotlt
           simp [hnlt])
         iapply Wasm.SmallStep.twp_iff (selectedBody := []) (by simp)
-        iapply Wasm.SmallStep.twp_exitControl rfl
+        wasm_twp_pures [twp_exitControl]
         simp only [List.take_zero, List.nil_append, List.drop_zero]
         have hlen : 0 < input.length := by omega
         wasm_twp_pures [twp_localGet twp_localGet twp_const twp_const]
@@ -659,7 +638,7 @@ private theorem twp_recursiveSort_aux
         · iexact Harray
         iintro %best %hminimum Hruntime Harray
         have hbest : best < input.length := hminimum.2.1
-        iapply Wasm.SmallStep.twp_localSet rfl
+        wasm_twp_pures [twp_localSet]
         simp only
         iapply twp_swapAt64 (a := 0) (b := best)
           hlen hbest hfit rfl rfl rfl rfl rfl rfl rfl
@@ -826,7 +805,7 @@ private theorem twp_innerLoop
       array64At 0 arr current ∗ Finish
   iintro ⟨Harray, Hfinish⟩
   simp only [whileDo, List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.twp_block
+  wasm_twp_pures [twp_block]
   iapply Wasm.SmallStep.twp_loop_wf_family
     (measure := fun state : InnerState => current.length - state.scan)
     (locals := fun state => loopSortLocals arr length outer
@@ -853,14 +832,12 @@ private theorem twp_innerLoop
     simp only [whileLoopCode, loopSelectionSortInnerCondition,
       loopSelectionSortInnerStep, List.append_assoc, List.cons_append,
       List.nil_append]
-    wasm_twp_pures [twp_localGet twp_localGet]
-    iapply Wasm.SmallStep.twp_ltU rfl
-    iapply Wasm.SmallStep.twp_eqz rfl
+    wasm_twp_pures [twp_localGet twp_localGet twp_ltU twp_eqz]
     by_cases hs : state.scan < current.length
     · have hs' : state.scan < length := by rwa [← hlength]
       simp only [if_pos (hcmp.mpr hs'),
         if_neg (by decide : ¬(1 : UInt32) = 0)]
-      iapply Wasm.SmallStep.twp_brIfZero
+      wasm_twp_pures [twp_brIfZero]
       have hbestLen : state.best < current.length := by
         exact _root_.lt_of_lt_of_le hstate.2.1 hstate.2.2.1
       iapply twp_loadAt64 hs hfit rfl rfl
@@ -871,19 +848,17 @@ private theorem twp_innerLoop
       isplitl [Harray]
       · iexact Harray
       iintro Harray
-      iapply Wasm.SmallStep.twp_ltUI64 rfl
+      wasm_twp_pures [twp_ltUI64]
       by_cases hlt : current[state.scan] < current[state.best]
       · simp only [if_pos hlt]
-        iapply Wasm.SmallStep.twp_iff rfl
+        wasm_twp_pures [twp_iff]
         simp only [if_pos (by decide : (1 : UInt32) ≠ 0)]
-        wasm_twp_pures [twp_localGet twp_localSet]
-        iapply Wasm.SmallStep.twp_exitControl rfl
+        wasm_twp_pures [twp_localGet twp_localSet twp_exitControl]
         simp only [List.take_zero, List.nil_append, List.drop_zero,
           incrementLocal, List.cons_append]
         simp only [loopSortLocals, List.length_cons, List.length_nil,
           Nat.reduceAdd, Nat.reduceSub, List.set]
-        wasm_twp_pures [twp_localGet twp_const twp_add twp_localSet]
-        iapply Wasm.SmallStep.twp_br rfl
+        wasm_twp_pures [twp_localGet twp_const twp_add twp_localSet twp_br]
         rw [show 1 + UInt32.ofNat state.scan =
             UInt32.ofNat (state.scan + 1) by
           rw [UInt32.add_comm]
@@ -910,13 +885,12 @@ private theorem twp_innerLoop
           exact hnext
         iframe
       · simp only [if_neg hlt]
-        iapply Wasm.SmallStep.twp_iff rfl
+        wasm_twp_pures [twp_iff]
         simp only [if_neg (by decide : ¬(0 : UInt32) ≠ 0)]
-        iapply Wasm.SmallStep.twp_exitControl rfl
+        wasm_twp_pures [twp_exitControl]
         simp only [List.take_zero, List.nil_append, List.drop_zero,
           incrementLocal, List.cons_append]
-        wasm_twp_pures [twp_localGet twp_const twp_add twp_localSet]
-        iapply Wasm.SmallStep.twp_br rfl
+        wasm_twp_pures [twp_localGet twp_const twp_add twp_localSet twp_br]
         rw [show 1 + UInt32.ofNat state.scan =
             UInt32.ofNat (state.scan + 1) by
           rw [UInt32.add_comm]
@@ -1014,7 +988,7 @@ private theorem twp_outerLoop
       array64At 0 arr state.current ∗ Finish
   iintro ⟨Harray, Hfinish⟩
   simp only [whileDo, List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.twp_block
+  wasm_twp_pures [twp_block]
   iapply Wasm.SmallStep.twp_loop_wf_family
     (measure := fun state : OuterState => input.length - state.outer)
     (locals := fun state => loopSortLocals arr input.length state.outer
@@ -1052,15 +1026,13 @@ private theorem twp_outerLoop
       rw [UInt32.add_comm]
       change UInt32.ofNat state.outer + UInt32.ofNat 1 = _
       rw [← UInt32.ofNat_add]]
-    iapply Wasm.SmallStep.twp_localGet rfl
-    iapply Wasm.SmallStep.twp_ltU rfl
-    iapply Wasm.SmallStep.twp_eqz rfl
+    wasm_twp_pures [twp_localGet twp_ltU twp_eqz]
     by_cases hmore : state.outer + 1 < state.current.length
     · have hmore' : state.outer + 1 < input.length := by
         rwa [← hlength]
       simp only [if_pos (hcmp.mpr hmore'),
         if_neg (by decide : ¬(1 : UInt32) = 0)]
-      iapply Wasm.SmallStep.twp_brIfZero
+      wasm_twp_pures [twp_brIfZero]
       wasm_twp_pures [twp_localGet twp_localSet twp_localGet
         twp_const twp_add]
       rw [show 1 + UInt32.ofNat state.outer =
@@ -1068,7 +1040,7 @@ private theorem twp_outerLoop
         rw [UInt32.add_comm]
         change UInt32.ofNat state.outer + UInt32.ofNat 1 = _
         rw [← UInt32.ofNat_add]]
-      iapply Wasm.SmallStep.twp_localSet rfl
+      wasm_twp_pures [twp_localSet]
       simp only [loopSortLocals, List.length_cons, List.length_nil,
         Nat.reduceAdd, Nat.reduceSub, List.set]
       have hlocals :
@@ -1125,8 +1097,7 @@ private theorem twp_outerLoop
         List.nil_append]
       simp only [loopSortLocals, List.length_cons, List.length_nil,
         Nat.reduceAdd, Nat.reduceSub, List.set]
-      wasm_twp_pures [twp_localGet twp_const twp_add twp_localSet]
-      iapply Wasm.SmallStep.twp_br rfl
+      wasm_twp_pures [twp_localGet twp_const twp_add twp_localSet twp_br]
       rw [show 1 + UInt32.ofNat state.outer =
           UInt32.ofNat (state.outer + 1) by
         rw [UInt32.add_comm]

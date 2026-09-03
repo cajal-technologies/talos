@@ -158,7 +158,7 @@ theorem twp_func3_read_chunk
   iapply twp_localGet hlocal0
   wasm_twp_pures [twp_const twp_add]
   rw [show 12 + driverBase = driverBase + 12 by decide]
-  iapply twp_const
+  wasm_twp_pures [twp_const]
   have Hread := Project.Mergesort.ContractProofs.func10_correct (hlc := hlc)
       (ptr := driverBase + 12) (requested := 256)
       (buffer := chunkBytes) (input := input) (output := output)
@@ -290,14 +290,13 @@ theorem twp_func3_append_without_reserve
     simp only [UInt32.toNat_zero] at hzeroNat
     omega
   simp only [func3AppendBody, List.cons_append, List.nil_append]
-  iapply twp_block
+  wasm_twp_pures [twp_block]
   simp only [func3AppendCopyBody, func3AppendLocals]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   iapply twp_eqz (result := 0) (by simp [hcurrentNonzero])
-  iapply twp_brIfZero
-  wasm_twp_pures [twp_localGet twp_localGet twp_add twp_localGet twp_const twp_add]
+  wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet twp_add twp_localGet twp_const twp_add]
   rw [show 12 + driverBase = driverBase + 12 by decide]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   rw [show UInt32.ofNat initialized.length + dataPtr =
     dataPtr + UInt32.ofNat initialized.length by ac_rfl]
   iapply twp_memoryCopy32 oldChunk current
@@ -328,7 +327,7 @@ theorem twp_func3_append_without_reserve
     ipureintro
     rw [holdChunkLength] at holdChunkNowrap
     exact holdChunkNowrap
-  iapply twp_exitControl (by rfl)
+  wasm_twp_pures [twp_exitControl]
   simp only [List.take_zero, List.drop_zero, List.nil_append]
   wasm_twp_pures [twp_localGet twp_localGet twp_localGet twp_add]
   have hlengthWord :
@@ -393,17 +392,17 @@ theorem twp_func3_reload_vec_fields
     ⟨⟨⟨Hcapacity, Hpointer⟩, Hlength, Hstorage⟩,
       Hchunk, Houtput, %hframeLengths⟩
   simp only [List.cons_append, List.nil_append, func3AppendLocals]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   iapply twp_load32 ptr (by decide) (by decide) (by decide) (by decide) $$
     Hpointer
   iintro Hpointer
-  iapply twp_localSet rfl
+  wasm_twp_pures [twp_localSet]
   simp only [List.length, List.set]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   iapply twp_load32 (UInt32.ofNat initialized.length)
       (by decide) (by decide) (by decide) (by decide) $$ Hlength
   iintro Hlength
-  iapply twp_localSet rfl
+  wasm_twp_pures [twp_localSet]
   simp only [List.length, List.set]
   ihave Hframe : ExportFrame heapId capacity ptr initialized
       chunkBytes outputBytes $$
@@ -693,7 +692,7 @@ theorem twp_func3_count_guard
   wasm_twp_pures [twp_localGet twp_const]
   iapply twp_geU (result := 0)
     (by simp [UInt32.not_le.mpr hlt])
-  iapply twp_brIfZero
+  wasm_twp_pures [twp_brIfZero]
   iexact Hcont
 
 /-- Splitting a canonical byte stream at the driver's 256-byte read size
@@ -984,7 +983,7 @@ theorem twp_func3_append_current
           rw [UInt32.le_iff_toNat_le_toNat, hcurrentWord, hspareWord]
           exact hfits
         simp [hfitsWord])
-    iapply twp_brIfZero
+    wasm_twp_pures [twp_brIfZero]
     simp only [func3AppendLocals, List.drop_zero]
     ihave Hframe : ExportFrame heapId capacity dataPtr initialized
         (current ++ chunkTail) outputBytes $$
@@ -1061,7 +1060,7 @@ theorem twp_func3_append_current
           isplitl [Hframe]
           · iexact Hframe
           iintro Hframe
-          iapply twp_exitControl (by rfl)
+          wasm_twp_pures [twp_exitControl]
           simp only [List.take_zero, List.nil_append]
           have hnewCapacityWord :
               (UInt32.ofNat
@@ -1471,11 +1470,11 @@ theorem twp_func3_reload_completed_ptr
       Hchunk, Houtput, %hframeLengths⟩
   simp only [func3CompletedPtrReload, List.cons_append, List.nil_append,
     func3AppendLocals]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   iapply twp_load32 dataPtr (by decide) (by decide) (by decide) (by decide) $$
     Hpointer
   iintro Hpointer
-  iapply twp_localSet rfl
+  wasm_twp_pures [twp_localSet]
   simp only [List.length, List.set]
   ihave Hframe : ExportFrame heapId capacity dataPtr completed
       chunkBytes outputBytes $$
@@ -1532,7 +1531,7 @@ theorem twp_func3_completed_length_guard
     func3AppendLocals]
   wasm_twp_pures [twp_localGet twp_const twp_and]
   rw [hlowMask]
-  iapply twp_brIfZero
+  wasm_twp_pures [twp_brIfZero]
   iexact Hcont
 
 /-- On nonempty public input, execute both post-read length tests and enter
@@ -1600,7 +1599,7 @@ theorem twp_func3_enter_nonempty_decode
   simp only [func3CompletedLengthGuard, List.cons_append, List.nil_append]
     at Hguard ⊢
   iapply Hguard
-  iapply twp_block
+  wasm_twp_pures [twp_block]
   simp only [func3AlignedLengthBlockBody, func3AppendLocals]
   wasm_twp_pures [twp_localGet twp_const twp_and]
   rw [hmask]
@@ -1720,7 +1719,7 @@ theorem twp_func3_allocate_values
       some (.i32 (UInt32.ofNat completed.length)) := by
     simpa using hlocal7
   iapply twp_localGet hlocal7'
-  iapply twp_const
+  wasm_twp_pures [twp_const]
   have Halloc := hfunc5
       (size := UInt32.ofNat completed.length) (alignment := 4)
       (layout := layout) (heapId := heapId) (storedCursor := storedCursor)
@@ -1818,7 +1817,7 @@ theorem twp_func3_values_nonnull_guard
       (by simp [func3AppendLocals])
   simp only [func3AppendLocals]
   iapply twp_eqz (result := 0) (by simp [hfacts.2.1])
-  iapply twp_brIfZero
+  wasm_twp_pures [twp_brIfZero]
   ihave Hblock : LiveBlock heapId allocationId base layout bytes $$
       [Htoken Hbytes]
   · unfold LiveBlock
@@ -2164,15 +2163,15 @@ theorem twp_func3_decode_tail_loop
     iintro Hsource Hdestination
     wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (4 : UInt32), func3_decode_next_address]
-    iapply twp_localSet rfl
+    wasm_twp_pures [twp_localSet]
     simp only [List.length, List.set]
     wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (4 : UInt32), func3_decode_next_address]
-    iapply twp_localSet rfl
+    wasm_twp_pures [twp_localSet]
     simp only [List.length, List.set]
     wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (4294967295 : UInt32), hdecrement]
-    iapply twp_localTee rfl
+    wasm_twp_pures [twp_localTee]
     simp only [List.length, List.set]
     by_cases hmore : 0 < next.remaining
     · have hnonzero : UInt32.ofNat next.remaining ≠ 0 := by
@@ -2392,11 +2391,11 @@ theorem twp_func3_decode_bulk_loop
     simp only [func3_decode_byte_offset]
     wasm_twp_pures [twp_localGet twp_localGet twp_add]
     rw [UInt32.add_comm (4 * UInt32.ofNat state.copied)]
-    iapply twp_localTee rfl
+    wasm_twp_pures [twp_localTee]
     simp only [List.length, List.set]
     wasm_twp_pures [twp_localGet twp_localGet twp_add]
     rw [UInt32.add_comm (4 * UInt32.ofNat state.copied)]
-    iapply twp_localTee rfl
+    wasm_twp_pures [twp_localTee]
     simp only [List.length, List.set]
     have Hcopy0 := twp_func3_copy_decoded_word
       (hlc := hlc) source destination original initial state.copied hlength
@@ -2498,11 +2497,11 @@ theorem twp_func3_decode_bulk_loop
     isimp only [hcopiedFour] at Hdestination
     wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (16 : UInt32), func3_decode_byte_offset_step]
-    iapply twp_localSet rfl
+    wasm_twp_pures [twp_localSet]
     simp only [List.length, List.set]
     wasm_twp_pures [twp_localGet twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (4 : UInt32), func3_decode_count_step]
-    iapply twp_localTee rfl
+    wasm_twp_pures [twp_localTee]
     simp only [List.length, List.set]
     by_cases hmore : state.copied + 4 < bulk
     · have hnextBound : state.copied + 8 ≤ bulk := by
@@ -2670,17 +2669,17 @@ theorem twp_func3_decode_setup
     List.cons_append, List.nil_append]
   wasm_twp_pures [twp_localGet twp_const twp_add]
   rw [UInt32.add_comm (4294967292 : UInt32), hsub]
-  iapply twp_localTee rfl
+  wasm_twp_pures [twp_localTee]
   simp only [List.length, List.set]
   wasm_twp_pures [twp_const twp_shrU]
   rw [show (2 % 32 : UInt32) = 2 by decide, hshift]
   wasm_twp_pures [twp_const twp_add]
   rw [UInt32.add_comm (1 : UInt32), hsucc]
-  iapply twp_localTee rfl
+  wasm_twp_pures [twp_localTee]
   simp only [List.length, List.set]
   wasm_twp_pures [twp_const twp_and]
   rw [htail]
-  iapply twp_localSet rfl
+  wasm_twp_pures [twp_localSet]
   simp only [List.length, List.set]
   wasm_twp_pures [twp_const twp_localSet]
   simp only [List.length, List.set]
@@ -2768,13 +2767,13 @@ theorem twp_func3_decode_positive_tail
   simp only [func3DecodeTailContinuation, func3AppendLocals]
   wasm_twp_pures [twp_localGet twp_localGet twp_add]
   rw [htotal]
-  iapply twp_localSet rfl
+  wasm_twp_pures [twp_localSet]
   simp only [List.length, List.set]
   wasm_twp_pures [twp_localGet twp_localGet twp_const twp_shl]
   rw [MemRegion.shl2_eq_mul4]
-  iapply twp_add
+  wasm_twp_pures [twp_add]
   rw [UInt32.add_comm (4 * UInt32.ofNat bulk)]
-  iapply twp_localSet rfl
+  wasm_twp_pures [twp_localSet]
   simp only [List.length, List.set]
   have Htail := twp_func3_decode_tail_loop
     (hlc := hlc) source destination original initial bulk tail aux10 hlength
@@ -2794,7 +2793,7 @@ theorem twp_func3_decode_positive_tail
   iintro Hsource Hdestination
   wasm_twp_pures [twp_localGet twp_localSet]
   simp only [List.length, List.set]
-  iapply twp_exitControl rfl
+  wasm_twp_pures [twp_exitControl]
   simp only [func3DecodeOuterFrame, List.take_zero, List.nil_append]
   iapply Hcont $$ Hsource Hdestination
 
@@ -2850,9 +2849,9 @@ theorem twp_func3_decode_blocks
     UInt32.toNat_ofNat_of_lt' hbyteWordBound
   iintro ⟨Hsource, Hdestination, Hcont⟩
   simp only [List.cons_append, List.nil_append]
-  iapply twp_block
+  wasm_twp_pures [twp_block]
   simp only [func3DecodeOuterBlockBody, List.cons_append, List.nil_append]
-  iapply twp_block
+  wasm_twp_pures [twp_block]
   simp only [func3DecodeBulkBlockBody, func3AppendLocals]
   wasm_twp_pures [twp_localGet twp_const]
   by_cases hsmall : original.length < 4
@@ -2907,10 +2906,9 @@ theorem twp_func3_decode_blocks
       rw [h12]
       omega
     iapply twp_ltU (result := 0) (by simp [hnotLt])
-    iapply twp_brIfZero
-    wasm_twp_pures [twp_localGet twp_const twp_and]
+    wasm_twp_pures [twp_brIfZero twp_localGet twp_const twp_and]
     rw [bulk4_signedMask_eq original.length hcountBound]
-    iapply twp_localSet rfl
+    wasm_twp_pures [twp_localSet]
     simp only [List.length, List.set]
     wasm_twp_pures [twp_const twp_localSet]
     simp only [List.length, List.set]
@@ -2941,7 +2939,7 @@ theorem twp_func3_decode_blocks
     isplitl [Hdestination]
     · iexact Hdestination
     iintro Hsource Hdestination
-    iapply twp_localGet rfl
+    wasm_twp_pures [twp_localGet]
     by_cases htailZero : tail = 0
     · rw [htailZero]
       iapply twp_eqz (result := 1) (by simp)
@@ -2971,13 +2969,12 @@ theorem twp_func3_decode_blocks
         omega
       dsimp only [tail] at htailNonzero
       iapply twp_eqz (result := 0) (by simpa using htailNonzero)
-      iapply twp_brIfZero
-      wasm_twp_pures [twp_localGet twp_localGet twp_add]
+      wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet twp_add]
       simp only [func3_decode_byte_offset]
       rw [UInt32.add_comm (4 * UInt32.ofNat bulk) source]
-      iapply twp_localSet rfl
+      wasm_twp_pures [twp_localSet]
       simp only [List.length, List.set]
-      iapply twp_exitControl rfl
+      wasm_twp_pures [twp_exitControl]
       simp only [List.take_zero, List.nil_append]
       have Htail := twp_func3_decode_positive_tail
         (hlc := hlc) source destination original initial bulk tail
@@ -3239,9 +3236,9 @@ theorem twp_func3_allocate_scratch
   simp only [List.cons_append, List.nil_append]
   wasm_twp_pures [twp_localGet twp_const twp_shl]
   rw [MemRegion.shl2_eq_mul4, ← func3_decode_byte_offset]
-  iapply twp_localTee rfl
+  wasm_twp_pures [twp_localTee]
   simp only [List.length, List.set]
-  iapply twp_const
+  wasm_twp_pures [twp_const]
   have Halloc := hfunc9
     (size := UInt32.ofNat (4 * original.length)) (alignment := 4)
     (layout := layout) (heapId := heapId) (storedCursor := storedCursor)
@@ -3359,14 +3356,13 @@ theorem twp_func3_scratch_success_tail
   isimp only [LiveBlock] at Hscratch
   icases Hscratch with ⟨Htoken, Hbytes, %hfacts⟩
   simp only [func3ScratchSuccessTail, func3AppendLocals]
-  iapply twp_localTee rfl
+  wasm_twp_pures [twp_localTee]
   simp only [List.length, List.set]
   iapply twp_eqz (result := 0) (by simp [hfacts.2.1])
-  iapply twp_brIfZero
-  wasm_twp_pures [twp_localGet twp_const twp_shrU]
+  wasm_twp_pures [twp_brIfZero twp_localGet twp_const twp_shrU]
   rw [show (2 : UInt32) % 32 = 2 by decide,
     func3_scratch_count_shift length hbyteBound]
-  iapply twp_localSet rfl
+  wasm_twp_pures [twp_localSet]
   simp only [List.length, List.set]
   wasm_twp_pures [twp_const twp_localSet]
   simp only [List.length, List.set]
@@ -3572,7 +3568,7 @@ theorem twp_func3_write_one
   ihave Houtput := HcloseOutput $$ Houtput
   wasm_twp_pures [twp_localGet twp_const twp_add]
   rw [UInt32.add_comm (268 : UInt32)]
-  iapply twp_const
+  wasm_twp_pures [twp_const]
   have Hwrite := Project.Mergesort.ContractProofs.func11_correct
     (hlc := hlc) (ptr := driverBase + 268) (requested := 4)
     (bytes := serialize [sorted[emitted]]) (input := [])
@@ -3747,11 +3743,11 @@ theorem twp_func3_output_loop
     iintro Hruntime Hframe Hwords Hstreams
     wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (4 : UInt32), func3_decode_next_address]
-    iapply twp_localSet rfl
+    wasm_twp_pures [twp_localSet]
     simp only [List.length, List.set]
     wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (4294967292 : UInt32), hcountdown]
-    iapply twp_localTee rfl
+    wasm_twp_pures [twp_localTee]
     simp only [List.length, List.set]
     ihave Hvalues : LiveWordBlock heapId valuesId valuesPtr sorted $$
         [Htoken Hwords]
@@ -3860,9 +3856,9 @@ theorem twp_func3_output
         @ s; E [{ Φ }] := by
   iintro ⟨Hruntime, Hframe, Hvalues, Hstreams, Hcont⟩
   simp only [List.cons_append, List.nil_append]
-  iapply twp_block
+  wasm_twp_pures [twp_block]
   simp only [func3OutputBlockBody, func3AppendLocals]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   by_cases hempty : sorted.length = 0
   · have hzero : UInt32.ofNat sorted.length = 0 := by simp [hempty]
     iapply twp_eqz (result := 1) (by simp [hzero])
@@ -3884,10 +3880,9 @@ theorem twp_func3_output
       simp only [UInt32.toNat_zero] at hzeroNat
       omega
     iapply twp_eqz (result := 0) (by simp [hnonzero])
-    iapply twp_brIfZero
-    wasm_twp_pures [twp_localGet twp_const twp_shl]
+    wasm_twp_pures [twp_brIfZero twp_localGet twp_const twp_shl]
     rw [MemRegion.shl2_eq_mul4, ← func3_decode_byte_offset]
-    iapply twp_localSet rfl
+    wasm_twp_pures [twp_localSet]
     simp only [List.length, List.set]
     wasm_twp_pures [twp_localGet twp_localSet]
     simp only [List.length, List.set]
@@ -3913,7 +3908,7 @@ theorem twp_func3_output
     isplitl [Hstreams]
     · iexact Hstreams
     iintro %finalOutput Hruntime Hframe Hvalues Hstreams
-    iapply twp_exitControl rfl
+    wasm_twp_pures [twp_exitControl]
     simp only [List.take_zero, List.nil_append]
     iapply Hcont $$ %(valuesPtr + 4 * UInt32.ofNat sorted.length)
       %(0 : UInt32) %finalOutput Hruntime Hframe Hvalues Hstreams
@@ -3978,14 +3973,13 @@ theorem twp_func3_deallocate_values
   ihave Hblock := (LiveWordBlock_as_liveBlock heapId valuesId valuesPtr
     sorted).mp $$ Hvalues
   simp only [List.cons_append, List.nil_append]
-  iapply twp_block
+  wasm_twp_pures [twp_block]
   simp only [func3ValuesDeallocBlockBody, func3AppendLocals, List.drop_zero]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   iapply twp_eqz (result := 0) (by simp [hcountNonzero])
-  iapply twp_brIfZero
-  wasm_twp_pures [twp_localGet twp_localGet twp_const twp_shl]
+  wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet twp_const twp_shl]
   rw [MemRegion.shl2_eq_mul4, ← func3_decode_byte_offset]
-  iapply twp_const
+  wasm_twp_pures [twp_const]
   have Hdealloc := Project.Mergesort.ContractProofs.func7_correct
     (hlc := hlc)
     (ptr := valuesPtr) (size := UInt32.ofNat (4 * sorted.length))
@@ -4018,7 +4012,7 @@ theorem twp_func3_deallocate_values
     exact ⟨hsizeWord, hfour, Or.inr rfl⟩
   iintro Hruntime Hbump
   unfold ResumeWP resumeExpr
-  iapply twp_exitControl rfl
+  wasm_twp_pures [twp_exitControl]
   simp only [List.take_zero, List.nil_append]
   iapply Hcont $$ Hruntime Hbump
 
@@ -4078,7 +4072,7 @@ theorem twp_func3_deallocate_scratch
     scratchValues).mp $$ Hscratch
   isimp only [hscratchLength] at Hblock
   simp only [List.cons_append, List.nil_append]
-  iapply twp_block
+  wasm_twp_pures [twp_block]
   simp only [func3ScratchDeallocBlockBody, func3AppendLocals, List.drop_zero]
   wasm_twp_pures [twp_localGet twp_brIfZero twp_localGet twp_localGet twp_const]
   have Hdealloc := Project.Mergesort.ContractProofs.func7_correct
@@ -4112,7 +4106,7 @@ theorem twp_func3_deallocate_scratch
     exact ⟨hsizeWord, hfour, Or.inr rfl⟩
   iintro Hruntime Hbump
   unfold ResumeWP resumeExpr
-  iapply twp_exitControl rfl
+  wasm_twp_pures [twp_exitControl]
   simp only [List.take_zero, List.nil_append]
   iapply Hcont $$ Hruntime Hbump
 
@@ -4194,7 +4188,7 @@ theorem twp_func3_deallocate_input
     ⟨⟨⟨Hcapacity, Hpointer⟩, Hlength, Hstorage⟩,
       Hchunk, Houtput, %hframeLengths⟩
   simp only [func3InputDeallocTail, func3AppendLocals]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   ihave Hcapacity' : pointsTo_u32 0 (driverBase + 0) capacity $$ [Hcapacity]
   · simp only [UInt32.add_zero]
     iexact Hcapacity
@@ -4202,10 +4196,10 @@ theorem twp_func3_deallocate_input
       (by decide) (by decide) (by decide) (by decide) $$ Hcapacity'
   iintro Hcapacity
   isimp only [UInt32.add_zero] at Hcapacity
-  iapply twp_localTee rfl
+  wasm_twp_pures [twp_localTee]
   simp only [List.length, List.set]
   iapply twp_eqz (result := 0) (by simp [hcapacityNonzero])
-  iapply twp_brIfZero
+  wasm_twp_pures [twp_brIfZero]
   ihave Hframe : ExportFrame heapId capacity inputPtr initialized chunkBytes
       outputBytes $$ [Hcapacity Hpointer Hlength Hstorage Hchunk Houtput]
   · unfold ExportFrame VecU8 RawVecHeader
@@ -4271,7 +4265,7 @@ theorem twp_func3_deallocate_input
       exact ⟨rfl, hone, Or.inl rfl⟩
     iintro Hruntime Hbump
     unfold ResumeWP resumeExpr
-    iapply twp_exitControl rfl
+    wasm_twp_pures [twp_exitControl]
     simp only [List.take_zero, List.nil_append]
     ispecialize Hcont $$ %allocationId %allBytes %spare
     ispecialize Hcont $$
@@ -4323,7 +4317,7 @@ theorem twp_func3_skip_empty_input
     ⟨⟨⟨Hcapacity, Hpointer⟩, Hlength, Hstorage⟩,
       Hchunk, Houtput, %hframeLengths⟩
   simp only [func3InputDeallocTail, func3AppendLocals]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   ihave Hcapacity' : pointsTo_u32 0 (driverBase + 0) 0 $$ [Hcapacity]
   · simp only [UInt32.add_zero]
     iexact Hcapacity
@@ -4331,7 +4325,7 @@ theorem twp_func3_skip_empty_input
       (by decide) (by decide) (by decide) (by decide) $$ Hcapacity'
   iintro Hcapacity
   isimp only [UInt32.add_zero] at Hcapacity
-  iapply twp_localTee rfl
+  wasm_twp_pures [twp_localTee]
   simp only [List.length, List.set]
   iapply twp_eqz (result := 1) (by simp)
   ihave Hframe : ExportFrame heapId 0 1 [] chunkBytes outputBytes $$
@@ -4821,7 +4815,7 @@ theorem twp_func3_finish_empty
   simp only [List.length, List.set]
   wasm_twp_pures [twp_const twp_localSet]
   simp only [List.length, List.set]
-  iapply twp_exitControl rfl
+  wasm_twp_pures [twp_exitControl]
   simp only [func3EmptyMiddleFrame, List.take_zero, List.nil_append,
     func3SortAndCleanup, List.cons_append]
   wasm_twp_pures [twp_localGet twp_localGet twp_localGet twp_localGet]
@@ -4859,18 +4853,18 @@ theorem twp_func3_finish_empty
   iclear Hbuffers
   unfold ResumeWP resumeExpr
   simp only [List.nil_append]
-  iapply twp_block
+  wasm_twp_pures [twp_block]
   simp only [func3OutputBlockBody]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   iapply twp_eqz (result := 1) (by simp)
   iapply twp_brIf (condition := 1) (depth := 0) (arity := 0)
     (targetCode := func3NonemptyCleanup)
     (targetControl := [func3CleanupOuterFrame driverBody])
     (targetValues := []) (by decide) (by rfl)
   simp only [func3NonemptyCleanup, List.cons_append, List.nil_append]
-  iapply twp_block
+  wasm_twp_pures [twp_block]
   simp only [func3ValuesDeallocBlockBody]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   iapply twp_eqz (result := 1) (by simp)
   iapply twp_brIf (condition := 1) (depth := 0) (arity := 0)
     (targetCode :=
@@ -4878,9 +4872,9 @@ theorem twp_func3_finish_empty
     (targetControl := [func3CleanupOuterFrame driverBody])
     (targetValues := []) (by decide) (by rfl)
   simp only [List.cons_append, List.nil_append]
-  iapply twp_block
+  wasm_twp_pures [twp_block]
   simp only [func3ScratchDeallocBlockBody]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   iapply twp_brIf (condition := 1) (depth := 0) (arity := 0)
     (targetCode := func3InputDeallocTail)
     (targetControl := [func3CleanupOuterFrame driverBody])
@@ -5250,9 +5244,9 @@ theorem twp_func3_read_phase
           arity, remainder, controls, calls⟩ : Expr Universal.State)
         @ s; E [{ Φ }] := by
   iintro Hinv
-  iapply twp_block
+  wasm_twp_pures [twp_block]
   simp only [func3ReadPhaseBody, List.cons_append, List.nil_append]
-  iapply twp_block
+  wasm_twp_pures [twp_block]
   simp only [func3ReadLoopBlockBody]
   have Hloop := twp_func3_read_loop hfunc1 heapId original outputBytes
     aux2 aux4 aux5 aux7 aux8 aux9 aux10 initial
@@ -5460,7 +5454,7 @@ theorem twp_func3_initial_read_block_nonempty
           arity, remainder, controls, calls⟩ : Expr Universal.State)
         @ s; E [{ Φ }] := by
   iintro Hresources
-  iapply twp_block
+  wasm_twp_pures [twp_block]
   have Hread := twp_func3_first_read_nonempty hfunc1 heapId original
     outputBytes shadow horiginal
     (afterLoop := afterLoop) (arity := arity) (remainder := remainder)
@@ -5578,7 +5572,7 @@ theorem twp_func3_initial_read_block_empty
           func3EnclosingDriverFrame enclosingBody afterEmpty :: controls,
           calls⟩ : Expr Universal.State) @ s; E [{ Φ }] := by
   iintro Hresources
-  iapply twp_block
+  wasm_twp_pures [twp_block]
   have Hread := twp_func3_first_read_empty heapId outputBytes shadow
     afterLoop enclosingBody afterEmpty
     (arity := arity) (remainder := remainder) (controls := controls)
@@ -5662,7 +5656,7 @@ theorem twp_func3_initialize
   iintro Hsp
   wasm_twp_pures [twp_const twp_sub]
   rw [show entryStackTop - 272 = driverBase by decide]
-  iapply twp_localTee rfl
+  wasm_twp_pures [twp_localTee]
   simp [Project.Mergesort.func3Def, Function.toLocals]
   iapply twp_globalSet $$ Hsp
   iintro Hsp
@@ -5672,7 +5666,7 @@ theorem twp_func3_initialize
   iapply twp_store32 oldLength (by decide) (by decide) (by decide)
       (by decide) $$ HoldLength'
   iintro Hlength
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   iapply twp_pureStep _ _ _ (fun _ => Step.constI64)
   iapply twp_store64_zero (address := driverBase)
       (value := 4294967296)
@@ -6162,11 +6156,11 @@ theorem twp_func3_completed_nonempty
   isplitl [Hframe]
   · iexact Hframe
   iintro Hframe
-  iapply twp_block
+  wasm_twp_pures [twp_block]
   simp only [func3ScratchOuterBody, List.cons_append, List.nil_append]
-  iapply twp_block
+  wasm_twp_pures [twp_block]
   simp only [func3ValuesOuterBody, List.cons_append, List.nil_append]
-  iapply twp_block
+  wasm_twp_pures [twp_block]
   simp only [func3DecodeAllocationBody]
   have Hguards := twp_func3_enter_nonempty_decode original
     (serialize original) capacity inputPtr frontier history horiginal rfl hgeo
@@ -6329,11 +6323,11 @@ theorem twp_func3_after_initialize
   iintro ⟨Hruntime, Hsp, Hreserve, Hframe, Hbump, Hstreams, Hdone, Hoom⟩
   rw [func3_after_init_exact]
   simp only [List.cons_append, List.nil_append]
-  iapply twp_block
+  wasm_twp_pures [twp_block]
   simp only [func3DriverBody, List.cons_append, List.nil_append]
-  iapply twp_block
+  wasm_twp_pures [twp_block]
   simp only [func3MiddleBody, List.cons_append, List.nil_append]
-  iapply twp_block
+  wasm_twp_pures [twp_block]
   simp only [func3InitializedLocals, List.drop_zero]
   by_cases horiginal : original = []
   · subst original

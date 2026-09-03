@@ -67,18 +67,18 @@ theorem twp_partitionScanStep
     omega
   iintro ⟨Harray, Hbranches⟩
   simp only [partitionScanStep, List.append_assoc, List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   iapply twp_loadAt hjLen hfit rfl rfl
   isplitl [Harray]
   · iexact Harray
   iintro Harray
-  iapply Wasm.SmallStep.twp_ltU rfl
+  wasm_twp_pures [twp_ltU]
   by_cases hlt : pivot < current[j]'hjLen
   · simp only [if_pos hlt]
-    iapply Wasm.SmallStep.twp_iff rfl
+    wasm_twp_pures [twp_iff]
     simp only [if_pos (by decide : (1 : UInt32) ≠ 0)]
     ihave Hthen := BI.and_elim_l $$ Hbranches
-    iapply Wasm.SmallStep.twp_exitControl rfl
+    wasm_twp_pures [twp_exitControl]
     have hjValue : 1 + UInt32.ofNat j = UInt32.ofNat (j + 1) := by
       rw [UInt32.add_comm, u32_ofNat_succ hjSucc]
     have hsetJ :
@@ -96,7 +96,7 @@ theorem twp_partitionScanStep
     · ipureintro; exact hlt
     iframe
   · simp only [if_neg hlt]
-    iapply Wasm.SmallStep.twp_iff rfl
+    wasm_twp_pures [twp_iff]
     simp only [if_neg (by decide : ¬(0 : UInt32) ≠ 0)]
     ihave Helse := BI.and_elim_r $$ Hbranches
     have htmp_set :
@@ -121,7 +121,7 @@ theorem twp_partitionScanStep
       rw [hiValue]; rfl
     simp only [partitionLocals]
     iapply twp_increment_nil rfl hsetI
-    iapply Wasm.SmallStep.twp_exitControl rfl
+    wasm_twp_pures [twp_exitControl]
     simp only [partitionLocals, List.take_zero, List.nil_append]
     have hjValue : 1 + UInt32.ofNat j = UInt32.ofNat (j + 1) := by
       rw [UInt32.add_comm, u32_ofNat_succ hjSucc]
@@ -176,7 +176,7 @@ theorem twp_partitionScanLoop
     arrayAt 0 arr state.values ∗ Finish
   iintro ⟨Harray, Hfinish⟩
   simp only [whileDo, List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.twp_block
+  wasm_twp_pures [twp_block]
   iapply twp_loop_wf_family_from
     (ι := PartitionState)
     (measure := fun state => hiMinusOne - state.j)
@@ -215,19 +215,19 @@ theorem twp_partitionScanLoop
     simp only [whileLoopCode, partitionScanCondition, List.append_assoc]
     iapply twp_lessLocal rfl rfl
     simp only [List.cons_append, List.nil_append]
-    iapply Wasm.SmallStep.twp_eqz rfl
+    wasm_twp_pures [twp_eqz]
     by_cases hj : state.j < hiMinusOne
     · have hlt := hjCmp.mpr hj
       simp only [if_pos hlt]
       simp only [if_neg (by decide : (1 : UInt32) ≠ 0)]
-      iapply Wasm.SmallStep.twp_brIfZero
+      wasm_twp_pures [twp_brIfZero]
       iapply twp_partitionScanStep arr input state.values lo hi state.i state.j hiMinusOne
         pivot state.tmp hstate hj hjLen hiLen hfitState
       isplitl [Harray]
       · iexact Harray
       isplit
       · iintro ⟨%hlt, Harray⟩
-        iapply Wasm.SmallStep.twp_br rfl
+        wasm_twp_pures [twp_br]
         simp only [partitionLocals, List.take_zero, List.nil_append]
         ispecialize Hrec $$
           %(⟨state.values, state.i, state.j + 1, state.tmp⟩ : PartitionState)
@@ -240,7 +240,7 @@ theorem twp_partitionScanLoop
           exact hstate.skipStep (by omega) (by rwa [getElem!_pos state.values state.j hjLen])
         iframe
       · iintro ⟨%hlt, Harray⟩
-        iapply Wasm.SmallStep.twp_br rfl
+        wasm_twp_pures [twp_br]
         simp only [partitionLocals, List.take_zero, List.nil_append]
         ispecialize Hrec $$
           %(⟨swapElems state.values state.i state.j, state.i + 1, state.j + 1,
@@ -328,7 +328,7 @@ theorem twp_partitionBody
       some (partitionLocals arr lo hi (input[hi - 1]!) 0 0 (hi - 1) 0
           [.i32 (input[hi - 1]!)]) := rfl
   iapply Wasm.SmallStep.twp_localSet hset3
-  iapply Wasm.SmallStep.twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   have hset4 :
       (partitionLocals arr lo hi (input[hi - 1]!) 0 0 (hi - 1) 0
           [.i32 (UInt32.ofNat lo)]).set?
@@ -337,7 +337,7 @@ theorem twp_partitionBody
           [.i32 (UInt32.ofNat lo)]) := rfl
   simp only [partitionLocals]
   iapply Wasm.SmallStep.twp_localSet hset4
-  iapply Wasm.SmallStep.twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   have hset5 :
       (partitionLocals arr lo hi (input[hi - 1]!) lo 0 (hi - 1) 0
           [.i32 (UInt32.ofNat lo)]).set?
@@ -379,7 +379,7 @@ theorem twp_partitionBody
   isplitl [Harray]
   · iexact Harray
   iintro Harray
-  iapply Wasm.SmallStep.twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   have hplacePivot : PartitionRange input (swapElems current' i' (hi - 1)) lo hi i' :=
     PartitionLoopInvariant.placePivot hinv'_orig (by omega)
   simp only [partitionLocals]
@@ -511,10 +511,9 @@ private theorem twp_quicksortBody_aux
     wasm_twp_pures [twp_localGet twp_localGet twp_sub]
     have hloSub : UInt32.ofNat hi - UInt32.ofNat hi = 0 := by simp
     simp only [hloSub]
-    iapply Wasm.SmallStep.twp_const
-    iapply Wasm.SmallStep.twp_ltU rfl
+    wasm_twp_pures [twp_const twp_ltU]
     simp only [if_pos (by decide : (0 : UInt32) < 2)]
-    iapply Wasm.SmallStep.twp_iff rfl
+    wasm_twp_pures [twp_iff]
     simp only [if_pos (by decide : (1 : UInt32) ≠ 0)]
     iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
     iintro Hruntime
@@ -548,14 +547,13 @@ private theorem twp_quicksortBody_aux
       quicksortRightCall, List.cons_append, List.nil_append]
     wasm_twp_pures [twp_localGet twp_localGet twp_sub]
     simp only [hsubEq]
-    iapply Wasm.SmallStep.twp_const
-    iapply Wasm.SmallStep.twp_ltU rfl
+    wasm_twp_pures [twp_const twp_ltU]
     by_cases hbase : hi - lo < 2
     · have h_lt_u32 : UInt32.ofNat (hi - lo) < 2 := by
         have h2 : (2 : UInt32).toNat = 2 := rfl
         rw [UInt32.lt_iff_toNat_lt, UInt32.toNat_ofNat_of_lt' hdiffSize, h2]; exact hbase
       simp only [if_pos h_lt_u32]
-      iapply Wasm.SmallStep.twp_iff rfl
+      wasm_twp_pures [twp_iff]
       simp only [if_pos (by decide : (1 : UInt32) ≠ 0)]
       iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
       iintro Hruntime
@@ -570,9 +568,9 @@ private theorem twp_quicksortBody_aux
         rw [UInt32.lt_iff_toNat_lt, UInt32.toNat_ofNat_of_lt' hdiffSize, h2]; omega
       have hlohi_strict : lo < hi := by omega
       simp only [if_neg h_not_lt]
-      iapply Wasm.SmallStep.twp_iff rfl
+      wasm_twp_pures [twp_iff]
       simp only [if_neg (by decide : ¬(0 : UInt32) ≠ 0)]
-      iapply Wasm.SmallStep.twp_exitControl rfl
+      wasm_twp_pures [twp_exitControl]
       simp only [List.take_zero, List.nil_append, List.drop_zero]
       wasm_twp_pures [twp_localGet twp_localGet twp_localGet]
       ihave HruntimeLater_p : runtimeModuleOwn ⟨0⟩ runtimeModule $$ [Hruntime]
@@ -616,7 +614,7 @@ private theorem twp_quicksortBody_aux
       have hpivValue : 1 + UInt32.ofNat pivotIdx = UInt32.ofNat (pivotIdx + 1) := by
         rw [UInt32.add_comm, u32_ofNat_succ hpivSuccSize]
       simp only [hpivValue]
-      iapply Wasm.SmallStep.twp_localGet rfl
+      wasm_twp_pures [twp_localGet]
       have hlohi_right : pivotIdx + 1 ≤ hi := by omega
       have hhilen_right : hi ≤ out_l.length := by omega
       have hfit_right : arr.toNat + 4 * out_l.length ≤ UInt32.size := by

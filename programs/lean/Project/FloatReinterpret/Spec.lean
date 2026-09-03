@@ -2245,7 +2245,7 @@ theorem twp_func5_body_smallStep_wp
         func5, 1, [], [], calls⟩ : Expr Unit) @ s; E [{ Φ }] := by
   simp only [func5]
   iintro Hret
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   iapply twp_scalarFloat1 rfl rfl
   iexact Hret
 
@@ -2261,7 +2261,7 @@ theorem twp_func6_body_smallStep_wp
         func6, 1, [], [], calls⟩ : Expr Unit) @ s; E [{ Φ }] := by
   simp only [func6]
   iintro Hret
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   iapply twp_scalarFloat1 rfl rfl
   iexact Hret
 
@@ -2287,7 +2287,7 @@ theorem twp_func1_lowered_body_smallStep_wp
   iintro Hglobal
   wasm_twp_pures [twp_const twp_sub]
   rw [show (1048560 : UInt32) - 16 = 1048544 by decide]
-  iapply twp_localSet rfl
+  wasm_twp_pures [twp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
   wasm_twp_pures [twp_localGet twp_localGet]
@@ -2298,7 +2298,7 @@ theorem twp_func1_lowered_body_smallStep_wp
   iapply twp_f32Store oldWord
     (by decide) (by decide) (by decide) (by decide) $$ Hword'
   iintro Hword'
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   iapply twp_f32Load (f32Abs x)
     (by decide) (by decide) (by decide) (by decide) $$ Hword'
   iintro Hword'
@@ -2332,7 +2332,7 @@ theorem twp_func0_lowered_smallStep_wp
         func0, 1, [], [], calls⟩ : Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hruntime, Hglobal, Hword⟩
   simp only [func0]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   iapply twp_call «module» 1 func1Def
     (by simp [«module»]) (by simp [«module»]) $$ Hruntime
   iintro Hruntime
@@ -2369,7 +2369,7 @@ theorem twp_func3_lowered_body_smallStep_wp
   iintro Hglobal
   wasm_twp_pures [twp_const twp_sub]
   rw [show (1048560 : UInt32) - 16 = 1048544 by decide]
-  iapply twp_localSet rfl
+  wasm_twp_pures [twp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
   wasm_twp_pures [twp_localGet twp_localGet]
@@ -2381,7 +2381,7 @@ theorem twp_func3_lowered_body_smallStep_wp
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) (by decide) $$ Hword'
   iintro Hword'
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   iapply twp_f64Load (f64Abs x)
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) (by decide) $$ Hword'
@@ -2416,7 +2416,7 @@ theorem twp_func2_lowered_smallStep_wp
         func2, 1, [], [], calls⟩ : Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hruntime, Hglobal, Hword⟩
   simp only [func2]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   iapply twp_scalarFloat1 rfl rfl
   iapply twp_call «module» 3 func3Def
     (by simp [«module»]) (by simp [«module»]) $$ Hruntime
@@ -2458,7 +2458,7 @@ theorem twp_func8_lowered_body_smallStep_wp
   iintro Hglobal
   wasm_twp_pures [twp_const twp_sub]
   rw [show (1048560 : UInt32) - 16 = 1048544 by decide]
-  iapply twp_localSet rfl
+  wasm_twp_pures [twp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
   wasm_twp_pures [twp_localGet twp_localGet twp_localGet]
@@ -2469,7 +2469,7 @@ theorem twp_func8_lowered_body_smallStep_wp
   iapply twp_f32Store oldWord
     (by decide) (by decide) (by decide) (by decide) $$ Hword'
   iintro Hword'
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   iapply twp_f32Load (f32Copysign x y)
     (by decide) (by decide) (by decide) (by decide) $$ Hword'
   iintro Hword'
@@ -2534,7 +2534,7 @@ theorem twp_func9_context_smallStep_wp
         func9, 1, [], [], calls⟩ : Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hruntime⟩
   simp only [func9]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   iapply twp_call «module» 5 func5Def
     (by simp [«module»]) (by simp [«module»]) $$ Hruntime
   iintro Hruntime
@@ -2572,7 +2572,7 @@ theorem twp_func4_context_smallStep_wp
         func4, 1, [], [], calls⟩ : Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hruntime⟩
   simp only [func4]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   iapply twp_call «module» 5 func5Def
     (by simp [«module»]) (by simp [«module»]) $$ Hruntime
   iintro Hruntime
@@ -2624,21 +2624,21 @@ theorem twp_checkAbs_tail_smallStep_wp
         checkAbsTailProg, 1, [], [], calls⟩ : Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hglobal, Hresult⟩
   simp only [checkAbsTailProg]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   ihave Hresult' : pointsTo_u32 0 ((1048560 : UInt32) + 12) result $$ [Hresult]
   · rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
     iexact Hresult
   iapply twp_load32 result
     (by decide) (by decide) (by decide) (by decide) $$ Hresult'
   iintro Hresult'
-  iapply twp_localSet rfl
+  wasm_twp_pures [twp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
   wasm_twp_pures [twp_localGet twp_const twp_add]
   rw [show (16 : UInt32) + 1048560 = 1048576 by decide]
   iapply twp_globalSet $$ Hglobal
   iintro Hglobal
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   have hResultProp :
       pointsTo_u32 0 ((1048560 : UInt32) + 12) result =
         pointsTo_u32 0 1048572 result :=
@@ -2675,7 +2675,7 @@ theorem twp_checkAbs_zeroPath_smallStep_wp
   iapply twp_store32 oldResult
     (by decide) (by decide) (by decide) (by decide) $$ Hresult'
   iintro Hresult'
-  iapply twp_exitControl rfl
+  wasm_twp_pures [twp_exitControl]
   simp only [checkAbsOuterFrame, List.take, List.nil_append]
   have hResultProp :
       pointsTo_u32 0 ((1048560 : UInt32) + 12) 0 =
@@ -2713,7 +2713,7 @@ theorem twp_checkAbs_onePath_smallStep_wp
   iapply twp_store32 oldResult
     (by decide) (by decide) (by decide) (by decide) $$ Hresult'
   iintro Hresult'
-  iapply twp_br rfl
+  wasm_twp_pures [twp_br]
   simp only [checkAbsOuterFrame, List.take, List.nil_append]
   have hResultProp :
       pointsTo_u32 0 ((1048560 : UInt32) + 12) 1 =
@@ -2757,7 +2757,7 @@ theorem twp_checkAbs_secondComparison_smallStep_wp
         [checkAbsInnerFrame, checkAbsOuterFrame], []⟩ :
         Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨Hlow, Hupper, Hruntime, Hglobal, Hresult⟩
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   iapply twp_call «module» 0 func0Def
     (by simp [«module»]) (by simp [«module»]) $$ Hruntime
   iintro Hruntime
@@ -2769,7 +2769,7 @@ theorem twp_checkAbs_secondComparison_smallStep_wp
     iapply twp_returnFromCallExplicit $$ Hruntime
     iintro Hruntime
     simp only [List.take, List.singleton_append]
-    iapply twp_localGet rfl
+    wasm_twp_pures [twp_localGet]
     iapply twp_call «module» 2 func2Def
       (by simp [«module»]) (by simp [«module»]) $$ Hruntime
     iintro Hruntime
@@ -2790,7 +2790,7 @@ theorem twp_checkAbs_secondComparison_smallStep_wp
         wasm_twp_pures [twp_const twp_and]
         rw [show (1 &&& 1 : UInt32) = 1 by decide]
         iapply twp_eqz (result := 0) (by decide)
-        iapply twp_brIfZero
+        wasm_twp_pures [twp_brIfZero]
         iapply twp_checkAbs_onePath_smallStep_wp
           (iprop(pointsTo_u64 0 1048552
             (f64Abs (f64PromoteF32 x)) ∗ runtimeModuleOwn ⟨0⟩ «module»))
@@ -2868,7 +2868,7 @@ theorem twp_checkAbs_firstComparisonTail_smallStep_wp
     wasm_twp_pures [twp_const twp_and]
     rw [show (1 &&& 1 : UInt32) = 1 by decide]
     iapply twp_eqz (result := 0) (by decide)
-    iapply twp_brIfZero
+    wasm_twp_pures [twp_brIfZero]
     iapply twp_checkAbs_secondComparison_smallStep_wp
       (s := s) (E := E) (Φ := Φ)
       x (f32Abs x) oldResult _ _
@@ -2934,7 +2934,7 @@ theorem twp_checkAbs_firstComparison_smallStep_wp
         Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨Hlow, Hupper, Hruntime, Hglobal, Hresult⟩
   simp only [checkAbsInnerBody]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   iapply twp_call «module» 0 func0Def
     (by simp [«module»]) (by simp [«module»]) $$ Hruntime
   iintro Hruntime
@@ -2946,7 +2946,7 @@ theorem twp_checkAbs_firstComparison_smallStep_wp
     iapply twp_returnFromCallExplicit $$ Hruntime
     iintro Hruntime
     simp only [List.take, List.singleton_append]
-    iapply twp_localGet rfl
+    wasm_twp_pures [twp_localGet]
     iapply twp_call «module» 9 func9Def
       (by simp [«module»]) (by simp [«module»]) $$ Hruntime
     iintro Hruntime
@@ -3011,10 +3011,10 @@ theorem twp_func10_body_smallStep_wp
   iintro Hglobal
   wasm_twp_pures [twp_const twp_sub]
   rw [show (1048576 : UInt32) - 16 = 1048560 by decide]
-  iapply twp_localSet rfl
+  wasm_twp_pures [twp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   iapply twp_globalSet $$ Hglobal
   iintro Hglobal
   rw [← show checkAbsInnerBody =
@@ -3031,10 +3031,10 @@ theorem twp_func10_body_smallStep_wp
     [ .localGet 1, .load32 12, .localSet 2,
       .localGet 1, .const 16, .add, .globalSet 0,
       .localGet 2, .ret ] by rfl]
-  iapply twp_block
+  wasm_twp_pures [twp_block]
   rw (occs := .pos [1]) [show checkAbsOuterBody =
     (.block 0 0 checkAbsInnerBody :: checkAbsZeroProg) by rfl]
-  iapply twp_block
+  wasm_twp_pures [twp_block]
   simp only [List.drop_zero]
   rw [← show checkAbsInnerFrame =
     { kind := .block
@@ -3090,21 +3090,21 @@ theorem twp_checkCopysign_tail_result_smallStep_wp
           ⌜∃ b : UInt32, values = [.i32 b]⌝ }] := by
   iintro ⟨HR, Hglobal, Hresult⟩
   simp only [checkCopysignTailProg]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   ihave Hresult' : pointsTo_u32 0 ((1048560 : UInt32) + 12) result $$ [Hresult]
   · rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
     iexact Hresult
   iapply twp_load32 result
     (by decide) (by decide) (by decide) (by decide) $$ Hresult'
   iintro Hresult'
-  iapply twp_localSet rfl
+  wasm_twp_pures [twp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
   wasm_twp_pures [twp_localGet twp_const twp_add]
   rw [show (16 : UInt32) + 1048560 = 1048576 by decide]
   iapply twp_globalSet $$ Hglobal
   iintro Hglobal
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   iapply twp_returnFromFunction
   iapply twp.value rfl
   iintro %store %obs _Hstate
@@ -3188,7 +3188,7 @@ theorem twp_checkCopysign_comparison_smallStep_wp
         iapply twp_store32 oldResult
           (by decide) (by decide) (by decide) (by decide) $$ Hresult'
         iintro Hresult'
-        iapply twp_exitControl rfl
+        wasm_twp_pures [twp_exitControl]
         simp only [checkCopysignOuterFrame, List.take, List.nil_append]
         have hResultProp :
             pointsTo_u32 0 ((1048560 : UInt32) + 12) 1 =
@@ -3206,15 +3206,14 @@ theorem twp_checkCopysign_comparison_smallStep_wp
           (by simp [evalScalarFloat2?, heqFalse])
         wasm_twp_pures [twp_const twp_and]
         rw [show (0 &&& 1 : UInt32) = 0 by decide]
-        iapply twp_brIfZero
-        wasm_twp_pures [twp_localGet twp_const]
+        wasm_twp_pures [twp_brIfZero twp_localGet twp_const]
         ihave Hresult' : pointsTo_u32 0 ((1048560 : UInt32) + 12) oldResult $$ [Hresult]
         · rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
           iexact Hresult
         iapply twp_store32 oldResult
           (by decide) (by decide) (by decide) (by decide) $$ Hresult'
         iintro Hresult'
-        iapply twp_br rfl
+        wasm_twp_pures [twp_br]
         simp only [checkCopysignOuterFrame, List.take, List.nil_append]
         have hResultProp :
             pointsTo_u32 0 ((1048560 : UInt32) + 12) 0 =
@@ -3245,10 +3244,10 @@ theorem twp_func11_body_smallStep_wp
   iintro Hglobal
   wasm_twp_pures [twp_const twp_sub]
   rw [show (1048576 : UInt32) - 16 = 1048560 by decide]
-  iapply twp_localSet rfl
+  wasm_twp_pures [twp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   iapply twp_globalSet $$ Hglobal
   iintro Hglobal
   rw [← show checkCopysignInnerBody =
@@ -3264,10 +3263,10 @@ theorem twp_func11_body_smallStep_wp
     [ .localGet 2, .load32 12, .localSet 3,
       .localGet 2, .const 16, .add, .globalSet 0,
       .localGet 3, .ret ] by rfl]
-  iapply twp_block
+  wasm_twp_pures [twp_block]
   rw (occs := .pos [1]) [show checkCopysignOuterBody =
     (.block 0 0 checkCopysignInnerBody :: checkCopysignOneProg) by rfl]
-  iapply twp_block
+  wasm_twp_pures [twp_block]
   simp only [List.drop_zero]
   rw [← show checkCopysignInnerFrame =
     { kind := .block

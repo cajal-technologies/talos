@@ -2312,12 +2312,11 @@ theorem signedBranch_terminatesWith (a b : UInt32) :
     show signedBranchModule.funcs[0]!.body =
         [.block 0 0 [.localGet 0, .localGet 1, .geS, .br_if 0, .const 0, .ret],
           .const 1, .ret] from rfl]
-  iapply twp_block
-  wasm_twp_pures [twp_localGet twp_localGet]
+  wasm_twp_pures [twp_block twp_localGet twp_localGet]
   by_cases h : a.toInt32 ≥ b.toInt32
   · iapply twp_geS (result := 1) (by simp [h])
     iapply twp_brIf (condition := 1) (by decide) rfl
-    iapply twp_const
+    wasm_twp_pures [twp_const]
     iapply twp_returnFromFunction
     iapply twp.value rfl
     ipureintro
@@ -2465,7 +2464,7 @@ theorem fillThenRead_terminatesWith (val : UInt32) :
         rfl (by decide) (by decide) $$ Hb
     iintro Hb
     ihave H0 := splat_bytes_as_u32 val.toUInt8 $$ Hb
-    iapply twp_const
+    wasm_twp_pures [twp_const]
     iapply twp_load32_addr _ rfl rfl rfl $$ H0
     iintro H0
     iapply twp_finish
@@ -2513,7 +2512,7 @@ theorem exceptionLifecycle_terminatesWith (arg : UInt32) :
         [.tryTable 0 1 [.catch 0 0] [.localGet 0, .throwI 0], .const 99] from rfl]
   iintro ⟨Hruntime, Htags⟩
   iapply twp_tryTable
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   iapply (twp_throwI exceptionLifecycleModule ⟨0⟩ 0
     (tagType := { params := [.i32] }) (htag := rfl)
     (tagIds := (exceptionLifecycleModule.initialStore : Store Unit).tagIds)

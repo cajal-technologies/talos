@@ -549,7 +549,7 @@ theorem twp_func1_body
         func1, 1, [], [], calls⟩ : Expr Unit) @ s; E [{ Φ }] := by
   simp only [func1]
   iintro Hret
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   iapply twp_scalarFloat1 rfl rfl
   iexact Hret
 
@@ -567,7 +567,7 @@ theorem twp_func0_tail_to_ret
           [.localGet 1, .load32 12, .ret], 1, [], [], calls⟩ :
           Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hword, Hcont⟩
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   have heffective : (1048560 : UInt32) + 12 = 1048572 := by decide
   ihave Hword' :
       pointsTo_u32 0 ((1048560 : UInt32) + 12) word $$ [Hword]
@@ -641,8 +641,7 @@ theorem twp_func0_body_to_ret
     simp only [hnan, Bool.false_eq_true, if_false]
     wasm_twp_pures [twp_const twp_and]
     rw [show (0 &&& 1 : UInt32) = 0 by decide]
-    wasm_twp_pures [twp_brIfZero twp_localGet]
-    iapply twp_scalarFloat0 rfl
+    wasm_twp_pures [twp_brIfZero twp_localGet twp_scalarFloat0]
     cases hge : f32Ge x 1325400064
     · iapply twp_scalarFloat2 rfl rfl rfl
       simp only [hge, Bool.false_eq_true, if_false]
@@ -650,8 +649,7 @@ theorem twp_func0_body_to_ret
       rw [show (0 &&& 1 : UInt32) = 0 by decide]
       wasm_twp_pures [twp_brIfZero twp_br]
       simp only [List.take, List.drop, List.nil_append]
-      iapply twp_localGet rfl
-      iapply twp_scalarFloat0 rfl
+      wasm_twp_pures [twp_localGet twp_scalarFloat0]
       cases hlt : f32Lt x 3472883712
       · iapply twp_scalarFloat2 rfl rfl rfl
         simp only [hlt, Bool.false_eq_true, if_false]
@@ -665,7 +663,7 @@ theorem twp_func0_body_to_ret
         isplitl [Hword]
         · iexact Hword
         · iintro Hword
-          iapply twp_br rfl
+          wasm_twp_pures [twp_br]
           simp only [List.take, List.nil_append]
           iapply twp_func0_tail_to_ret Rglobal x (i32TruncSatF32S x) calls
           isplitl [HR Hglobal]
@@ -687,7 +685,7 @@ theorem twp_func0_body_to_ret
         isplitl [Hword]
         · iexact Hword
         · iintro Hword
-          iapply twp_exitControl rfl
+          wasm_twp_pures [twp_exitControl]
           simp only [List.take, List.nil_append]
           have heq := i32TruncSatF32S_large_neg hnan hlt
           iapply twp_func0_tail_to_ret Rglobal x 2147483648 calls
@@ -710,7 +708,7 @@ theorem twp_func0_body_to_ret
       isplitl [Hword]
       · iexact Hword
       · iintro Hword
-        iapply twp_br rfl
+        wasm_twp_pures [twp_br]
         simp only [List.take, List.nil_append]
         have heq := i32TruncSatF32S_large_pos hnan hge
         iapply twp_func0_tail_to_ret Rglobal x 2147483647 calls
@@ -733,7 +731,7 @@ theorem twp_func0_body_to_ret
     isplitl [Hword]
     · iexact Hword
     · iintro Hword
-      iapply twp_br rfl
+      wasm_twp_pures [twp_br]
       simp only [List.take, List.nil_append]
       have hisNaN : (Float32.ofBits x).toFloat.isNaN = true :=
         (f32Ne_self_iff_isNaN x).symm.trans hnan
@@ -780,7 +778,7 @@ theorem twp_check
       iintro ⟨Hruntime, Hglobal, Hword⟩
       iapply twp_returnFromCallExplicit $$ Hruntime
       iintro Hruntime
-      iapply twp_localGet rfl
+      wasm_twp_pures [twp_localGet]
       iapply twp_call «module» 1 func1Def
         (by simp [«module»]) (by simp [«module»]) $$ Hruntime
       iintro Hruntime
@@ -793,7 +791,7 @@ theorem twp_check
       iapply twp_ne (result := 0) (by simp)
       wasm_twp_pures [twp_const twp_and]
       rw [show (0 &&& 1 : UInt32) = 0 by decide]
-      iapply twp_brIfZero
+      wasm_twp_pures [twp_brIfZero]
       iapply twp_returnFromFunction
       iapply twp.value rfl
       iintro %store %obs _Hstate

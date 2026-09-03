@@ -121,7 +121,7 @@ private theorem twp_func5_commit_and_return
         @ s; E [{ Φ }] := by
   iintro ⟨Hruntime, Hcursor, Hfrontier, Hauth, Hretired, Hpages, Hbytes,
     Hstreams, Hcont⟩
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   ihave HcursorAt : pointsTo_u32 0 ((0 : UInt32) + 1049492)
       storedCursor $$ [Hcursor]
   · rw [show (0 : UInt32) + 1049492 = allocatorCursor by decide]
@@ -137,7 +137,7 @@ private theorem twp_func5_commit_and_return
       hphysical $$ [Hcursor' Hfrontier Hauth Hretired Hpages Hbytes] with
       ⟨Hbump, Hblock⟩
   · iframe
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   isimp only [RuntimeContext] at Hruntime
   icases Hruntime with ⟨Hmodule, Henv⟩
   iapply twp_returnFromCallFallthrough $$ Hmodule
@@ -359,9 +359,9 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
       Nat.mod_eq_of_lt hsumBound]
   wasm_twp_pures [twp_block twp_block twp_localGet twp_const twp_add]
   rw [hpadWord]
-  iapply twp_localTee rfl
+  wasm_twp_pures [twp_localTee]
   simp only [List.length]
-  iapply twp_const
+  wasm_twp_pures [twp_const]
   ihave HcursorAt : pointsTo_u32 0 ((0 : UInt32) + 1049492)
       storedCursor $$ [Hcursor]
   · rw [show (0 : UInt32) + 1049492 = allocatorCursor by decide]
@@ -369,7 +369,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
   iapply twp_load32 (address := 0) (offset := 1049492) storedCursor
       (by decide) (by decide) (by decide) (by decide) $$ HcursorAt
   iintro Hcursor
-  iapply twp_localTee rfl
+  wasm_twp_pures [twp_localTee]
   simp only [List.length]
   wasm_twp_pures [twp_const twp_localGet]
   iapply twp_select
@@ -383,11 +383,11 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
           rw [if_neg hzero] at hfrontierWord
           simpa only [if_neg hzero, heapBase] using
             congrArg Value.i32 hfrontierWord.symm)
-  iapply twp_add
+  wasm_twp_pures [twp_add]
   rw [hsumWord]
-  iapply twp_localTee rfl
+  wasm_twp_pures [twp_localTee]
   simp only [List.length]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   have hsumNotLt :
       ¬ UInt32.ofNat (frontier + (layout.alignment - 1)) <
         UInt32.ofNat (layout.alignment - 1) := by
@@ -397,7 +397,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
         exact Nat.lt_of_le_of_lt hpadSmall (by decide))]
     omega
   iapply twp_ltU (result := 0) (by rw [if_neg hsumNotLt])
-  iapply twp_brIfZero
+  wasm_twp_pures [twp_brIfZero]
   let base : UInt32 :=
     UInt32.ofNat (frontier + (layout.alignment - 1)) &&&
       (0 - UInt32.ofNat layout.alignment)
@@ -444,17 +444,16 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
     iexact Hcursor
   wasm_twp_pures [twp_localGet twp_const twp_localGet twp_sub twp_and]
   rw [hbaseRaw]
-  iapply twp_localTee rfl
+  wasm_twp_pures [twp_localTee]
   simp only [List.length]
   wasm_twp_pures [twp_localGet twp_add]
   rw [hfinishWord']
-  iapply twp_localTee rfl
+  wasm_twp_pures [twp_localTee]
   simp only [List.set]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   iapply twp_ltU (result := 0) (by
     rw [if_neg (UInt32.not_lt.mpr hbaseLeFinish)])
-  iapply twp_brIfZero
-  wasm_twp_pures [twp_localGet twp_const]
+  wasm_twp_pures [twp_brIfZero twp_localGet twp_const]
   by_cases hfinishFails : ¬ finishNat < 2147483648
   · have hfinishHigh : 2147483648 ≤ finishNat := by omega
     have hfinishNegative : finish.toInt32 < (0 : UInt32).toInt32 := by
@@ -516,7 +515,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
       rw [hfinishNatEq]
       omega
     iapply twp_ltS (result := 0) (by rw [if_neg hfinishNonnegative])
-    iapply twp_brIfZero
+    wasm_twp_pures [twp_brIfZero]
     have hclassify :
         classifyBump frontier layout = .success base finish := by
       unfold classifyBump
@@ -530,7 +529,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
     rw [show (16 : UInt32) % 32 = 16 by decide]
     rw [show (finish + 65535) >>> (16 : UInt32) =
       allocatorRequiredPages finish by rfl]
-    iapply twp_localTee rfl
+    wasm_twp_pures [twp_localTee]
     simp only [List.length]
     have hfinishSignedWord : finish.toNat < 2147483648 := by
       rw [hfinishNatEq]
@@ -568,7 +567,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
       ⟨Henv, Hcursor, Hfrontier, Hauth, Hretired, Hpages, Hstreams, Hcont⟩
     simp only [show Project.Mergesort.module.memIs64 = false by rfl,
       sizeValue, Bool.false_eq_true, ↓reduceIte]
-    iapply twp_localTee rfl
+    wasm_twp_pures [twp_localTee]
     simp
     by_cases hfits : allocatorRequiredPages finish ≤ pages.toUInt32
     · iapply twp_leU (result := 1) (by rw [if_pos hfits])
@@ -593,8 +592,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
           halignmentCases hclassify hbaseFresh hallocWord hfinishExact hphysical
       iframe Hruntime Hcursor Hfrontier Hauth Hretired Hmeasured Hstreams Hnormal
     · iapply twp_leU (result := 0) (by rw [if_neg hfits])
-      iapply twp_brIfZero
-      wasm_twp_pures [twp_localGet twp_localGet twp_sub]
+      wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet twp_sub]
       let delta := allocatorRequiredPages finish - pages.toUInt32
       ihave HgrowFrame : iprop(
           hostEnvOwn 0 (Universal.envFor Project.Mergesort.module) ∗
@@ -621,7 +619,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
             icases HgrowFrame with
               ⟨Henv, Hcursor, Hfrontier, Hauth, Hretired, HoldPages,
                 Hstreams, Hcont⟩
-            iapply twp_const
+            wasm_twp_pures [twp_const]
             iapply twp_ne (result := 0) (by simp)
             wasm_twp_pures [twp_brIfZero twp_exitControl]
             simp only [List.take_zero, List.nil_append]
@@ -658,7 +656,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
             icases HgrowFrame with
               ⟨Henv, Hcursor, Hfrontier, Hauth, Hretired, HoldPages,
                 Hstreams, Hcont⟩
-            iapply twp_const
+            wasm_twp_pures [twp_const]
             by_cases hsentinel : previousPages.toUInt32 =
                 (0xFFFFFFFF : UInt32)
             · iapply twp_ne (result := 0) (by simp [hsentinel])

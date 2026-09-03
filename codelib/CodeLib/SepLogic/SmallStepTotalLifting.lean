@@ -2010,6 +2010,21 @@ theorem twp_neI64
       [{ Φ }] :=
   twp_pureStep _ _ _ (fun _ => Step.neI64 hresult)
 
+theorem twp_ltUI64
+    {params localValues values : List Value}
+    {lhs rhs : UInt64} {result : UInt32} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame}
+    (hresult : result = if lhs < rhs then 1 else 0) :
+    WP (.running
+      ⟨⟨params, localValues, .i32 result :: values⟩,
+        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }] ⊢
+    WP (.running
+      ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
+        .ltUI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
+      [{ Φ }] :=
+  twp_pureStep _ _ _ (fun _ => Step.ltUI64 hresult)
+
 theorem twp_gtUI64
     {params localValues values : List Value}
     {lhs rhs : UInt64} {result : UInt32} {code : Program} {arity : Nat}
@@ -2075,6 +2090,20 @@ macro_rules
       `(tactic| iapply twp_br rfl; wasm_twp_pures [$rest:ident*])
   | `(tactic| wasm_twp_pures [twp_exitControl $rest:ident*]) =>
       `(tactic| iapply twp_exitControl rfl; wasm_twp_pures [$rest:ident*])
+  | `(tactic| wasm_twp_pures [twp_eqz $rest:ident*]) =>
+      `(tactic| iapply twp_eqz rfl; wasm_twp_pures [$rest:ident*])
+  | `(tactic| wasm_twp_pures [twp_eq $rest:ident*]) =>
+      `(tactic| iapply twp_eq rfl; wasm_twp_pures [$rest:ident*])
+  | `(tactic| wasm_twp_pures [twp_ltU $rest:ident*]) =>
+      `(tactic| iapply twp_ltU rfl; wasm_twp_pures [$rest:ident*])
+  | `(tactic| wasm_twp_pures [twp_gtU $rest:ident*]) =>
+      `(tactic| iapply twp_gtU rfl; wasm_twp_pures [$rest:ident*])
+  | `(tactic| wasm_twp_pures [twp_ltUI64 $rest:ident*]) =>
+      `(tactic| iapply twp_ltUI64 rfl; wasm_twp_pures [$rest:ident*])
+  | `(tactic| wasm_twp_pures [twp_iff $rest:ident*]) =>
+      `(tactic| iapply twp_iff rfl; wasm_twp_pures [$rest:ident*])
+  | `(tactic| wasm_twp_pures [twp_scalarFloat0 $rest:ident*]) =>
+      `(tactic| iapply twp_scalarFloat0 rfl; wasm_twp_pures [$rest:ident*])
 
 /-- `i32.load` at offset 0, phrased directly on `addr` rather than
 `addr + 0`, which keeps Iris's unifier from having to see through the

@@ -274,41 +274,39 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
   iintro Hsp
   wasm_twp_pures [twp_const twp_sub]
   rw [show driverBase - 16 = reserveBase by decide]
-  iapply twp_localTee rfl
+  wasm_twp_pures [twp_localTee]
   simp only [List.length]
   iapply twp_globalSet $$ Hsp
   iintro Hsp
-  iapply twp_block
-  wasm_twp_pures [twp_localGet twp_localGet twp_add]
+  wasm_twp_pures [twp_block twp_localGet twp_localGet twp_add]
   rw [hsumWord]
-  iapply twp_localTee rfl
+  wasm_twp_pures [twp_localTee]
   simp only [List.set]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   iapply twp_geU (result := 1) (by
     rw [if_pos (by simpa only [← hsumWord] using hguard)])
   iapply twp_brIf (by decide) (by rfl)
   simp only [List.take_zero, List.drop_zero, List.nil_append]
   wasm_twp_pures [twp_localGet twp_const twp_add]
   rw [UInt32.add_comm 4 reserveBase]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   ihave Hcapacity' : pointsTo_u32 0 (driverBase + 0) capacity $$ [Hcapacity]
   · rw [UInt32.add_zero]
     iexact Hcapacity
   iapply twp_load32 (address := driverBase) (offset := 0) capacity
       (by decide) (by decide) (by decide) (by decide) $$ Hcapacity'
   iintro Hcapacity
-  iapply twp_localTee rfl
+  wasm_twp_pures [twp_localTee]
   simp only [List.set]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   iapply twp_load32 ptr (by decide) (by decide) (by decide) (by decide) $$
     Hpointer
   iintro Hpointer
   wasm_twp_pures [twp_localGet twp_localGet twp_const twp_shl]
   rw [show (1 : UInt32) % 32 = 1 by decide, hdoubleWord]
-  iapply twp_localTee rfl
+  wasm_twp_pures [twp_localTee]
   simp only [List.set]
-  wasm_twp_pures [twp_localGet twp_localGet]
-  iapply twp_gtU rfl
+  wasm_twp_pures [twp_localGet twp_localGet twp_gtU]
   iapply twp_select (selected := .i32 (UInt32.ofNat firstMaxNat)) (by
     by_cases hcmp : UInt32.ofNat (initialized.length + current.length) >
         UInt32.ofNat (2 * capacity.toNat)
@@ -324,15 +322,13 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
       rw [if_neg hcmp,
         if_neg (by decide : ¬ ((0 : UInt32) ≠ 0))]
       exact congrArg Value.i32 hw.symm)
-  iapply twp_localTee rfl
+  wasm_twp_pures [twp_localTee]
   simp only [List.set]
-  wasm_twp_pures [twp_const twp_const twp_localGet twp_const]
-  iapply twp_eq rfl
+  wasm_twp_pures [twp_const twp_const twp_localGet twp_const twp_eq]
   iapply twp_select (selected := .i32 8) (by simp)
-  iapply twp_localTee rfl
+  wasm_twp_pures [twp_localTee]
   simp only [List.set]
-  wasm_twp_pures [twp_localGet twp_localGet]
-  iapply twp_gtU rfl
+  wasm_twp_pures [twp_localGet twp_localGet twp_gtU]
   iapply twp_select (selected := .i32 newCapacity) (by
     rw [← hselectedWord]
     by_cases hcmp : UInt32.ofNat firstMaxNat > 8
@@ -350,7 +346,7 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
           show (8 : UInt32).toNat = 8 by decide] at hcmp
         omega
       simp [hcmp, max_eq_right hn])
-  iapply twp_localTee rfl
+  wasm_twp_pures [twp_localTee]
   simp only [List.set]
   wasm_twp_pures [twp_localGet twp_localGet]
   have Hfunc0 : Func0Spec (hlc := hlc) := hfunc0
@@ -478,11 +474,11 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
         iapply twp_load32 (address := reserveBase) (offset := 4) 0
             (by decide) (by decide) (by decide) (by decide) $$ Htag'
         iintro Htag
-        iapply twp_const
+        wasm_twp_pures [twp_const]
         iapply twp_ne (result := 1) (by decide)
         iapply twp_brIf (by decide) (by rfl)
         simp only [List.take_zero, List.drop_zero, List.nil_append]
-        iapply twp_localGet rfl
+        wasm_twp_pures [twp_localGet]
         ihave HnewPointer' : pointsTo_u32 0 (reserveBase + 8) newPtr $$
             [HnewPointer]
         · rw [← show reserveBase + 4 + 4 = reserveBase + 8 by decide]
@@ -490,7 +486,7 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
         iapply twp_load32 (address := reserveBase) (offset := 8) newPtr
             (by decide) (by decide) (by decide) (by decide) $$ HnewPointer'
         iintro HnewPointer
-        iapply twp_localSet rfl
+        wasm_twp_pures [twp_localSet]
         simp only [List.set]
         wasm_twp_pures [twp_localGet twp_localGet]
         iapply twp_store32 (address := driverBase) (offset := 0) capacity

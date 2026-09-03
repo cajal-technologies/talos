@@ -113,7 +113,7 @@ theorem twp_lessLocal
   simp only [lessLocal, List.cons_append, List.nil_append]
   iapply Wasm.SmallStep.twp_localGet hlhs
   iapply Wasm.SmallStep.twp_localGet (by simpa using hrhs)
-  iapply Wasm.SmallStep.twp_ltU rfl
+  wasm_twp_pures [twp_ltU]
   iexact Hwp
 
 theorem twp_address
