@@ -464,8 +464,7 @@ theorem naive_tail_smallStep_wp
   ihave HglobalLater :
       ▷ globalPointsToAt 0 0 (.i32 1048544) $$ [Hglobal]
   · ilater_exact Hglobal
-  wasm_wp_next wp_globalSet $$ HglobalLater
-  iintro Hglobal
+  wasm_wp_next_bind wp_globalSet with HglobalLater => Hglobal
   wasm_wp_pures [wp_localGet]
   have hWordProp :
       pointsTo_u32 0 ((1048544 : UInt32) + 12) result =
@@ -794,8 +793,7 @@ theorem func0_lowered_smallStep_wp
   wasm_wp_pures [wp_localGet]
   ihave HglobalLater : ▷ globalPointsToAt 0 0 (.i32 1048560) $$ [Hglobal]
   · ilater_exact Hglobal
-  wasm_wp_next wp_globalSet $$ HglobalLater
-  iintro Hglobal
+  wasm_wp_next_bind wp_globalSet with HglobalLater => Hglobal
   wasm_wp_pures [wp_localGet]
   wasm_wp_next wp_call «module» 1 func1Def
     (by simp [«module»]) (by simp [«module»]) $$ Hruntime
@@ -955,8 +953,7 @@ theorem roundCheck_tail_result_smallStep_wp
   ihave HglobalLater :
       ▷ globalPointsToAt 0 0 (.i32 1048560) $$ [Hglobal]
   · ilater_exact Hglobal
-  wasm_wp_next wp_globalSet $$ HglobalLater
-  iintro Hglobal
+  wasm_wp_next_bind wp_globalSet with HglobalLater => Hglobal
   wasm_wp_pures [wp_localGet]
   wasm_wp_return_value
   iclear HR Hglobal Hresult
@@ -1092,8 +1089,7 @@ theorem func6_body_smallStep_wp
   wasm_wp_pures [wp_localGet]
   ihave HglobalLater : ▷ globalPointsToAt 0 0 (.i32 1048576) $$ [Hglobal]
   · ilater_exact Hglobal
-  wasm_wp_next wp_globalSet $$ HglobalLater
-  iintro Hglobal
+  wasm_wp_next_bind wp_globalSet with HglobalLater => Hglobal
   rw [← show roundCheckInnerBody =
     [ .localGet 0, .call 0, .localGet 0, .call 4,
       .f32Eq, .const 1, .and, .br_if 0,

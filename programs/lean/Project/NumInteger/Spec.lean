@@ -3783,8 +3783,7 @@ theorem func0_resumeCaller_smallStep_wp
   subst returned
   simp only [func0CallerFrame]
   iintro ⟨Hruntime, Hresources⟩
-  wasm_wp_next Wasm.SmallStep.wp_returnFromCallExplicit' $$ Hruntime
-  iintro Hruntime'
+  wasm_wp_next_bind Wasm.SmallStep.wp_returnFromCallExplicit' with Hruntime => Hruntime'
   simp only [func0CallLocals, func0AfterCallProg,
     List.take, List.append_nil]
   icombine Hresources Hruntime' as Hresources

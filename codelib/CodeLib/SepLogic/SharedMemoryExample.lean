@@ -136,8 +136,7 @@ theorem sharedMem_partiallyMeets (v : UInt8) :
       · inext
         rw [UInt32.add_zero]
         iexact Hpt
-      wasm_wp_next wp_store8 (0 : UInt8) rfl $$ HptLater
-      iintro Hpt'
+      wasm_wp_next_bind wp_store8 (0 : UInt8) rfl with HptLater => Hpt'
       -- return from writeFn to instanceR
       iapply wp_returnFromCallCrossInstance ⟨0⟩ instanceW instanceR #[instanceW, instanceR]
           (by decide) rfl rfl
@@ -151,8 +150,7 @@ theorem sharedMem_partiallyMeets (v : UInt8) :
             ▷ pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
               ⟨0, 0 + 0⟩ (DFrac.own 1) (some v.toUInt32.toUInt8) $$ [Hpt']
         · ilater_exact Hpt'
-        wasm_wp_next wp_load8U v.toUInt32.toUInt8 rfl $$ HptLater2
-        iintro _Hpt_back
+        wasm_wp_next_bind wp_load8U v.toUInt32.toUInt8 rfl with HptLater2 => _Hpt_back
         wasm_wp_return_value
         ipureintro
         simp [List.take]

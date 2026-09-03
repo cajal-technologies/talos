@@ -1246,8 +1246,7 @@ theorem checkAbs_tail_smallStep_wp
   ihave HglobalLater :
       ▷ globalPointsToAt 0 0 (.i32 1048560) $$ [Hglobal]
   · ilater_exact Hglobal
-  wasm_wp_next wp_globalSet $$ HglobalLater
-  iintro Hglobal
+  wasm_wp_next_bind wp_globalSet with HglobalLater => Hglobal
   wasm_wp_pures [wp_localGet]
   have hResultProp :
       pointsTo_u32 0 ((1048560 : UInt32) + 12) result =
@@ -1649,8 +1648,7 @@ theorem func10_body_smallStep_wp
   wasm_wp_pures [wp_localGet]
   ihave HglobalLater : ▷ globalPointsToAt 0 0 (.i32 1048576) $$ [Hglobal]
   · ilater_exact Hglobal
-  wasm_wp_next wp_globalSet $$ HglobalLater
-  iintro Hglobal
+  wasm_wp_next_bind wp_globalSet with HglobalLater => Hglobal
   rw [← show checkAbsInnerBody =
     [ .localGet 0, .call 0, .localGet 0, .call 9,
       .f32Eq, .const 1, .and, .eqz, .br_if 0,
@@ -1798,8 +1796,7 @@ theorem checkCopysign_tail_result_smallStep_wp
   ihave HglobalLater :
       ▷ globalPointsToAt 0 0 (.i32 1048560) $$ [Hglobal]
   · ilater_exact Hglobal
-  wasm_wp_next wp_globalSet $$ HglobalLater
-  iintro Hglobal
+  wasm_wp_next_bind wp_globalSet with HglobalLater => Hglobal
   wasm_wp_pures [wp_localGet]
   wasm_wp_return_value
   iclear HR Hglobal Hresult
@@ -1940,8 +1937,7 @@ theorem func11_body_smallStep_wp
   wasm_wp_pures [wp_localGet]
   ihave HglobalLater : ▷ globalPointsToAt 0 0 (.i32 1048576) $$ [Hglobal]
   · ilater_exact Hglobal
-  wasm_wp_next wp_globalSet $$ HglobalLater
-  iintro Hglobal
+  wasm_wp_next_bind wp_globalSet with HglobalLater => Hglobal
   rw [← show checkCopysignInnerBody =
     [ .localGet 0, .localGet 1, .call 7,
       .localGet 0, .localGet 1, .call 4,
