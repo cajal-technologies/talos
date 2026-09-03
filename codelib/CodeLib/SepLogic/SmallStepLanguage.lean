@@ -74,6 +74,27 @@ macro "wasm_wp_frame" : tactic =>
          iexact Hwp
        next => itrivial))
 
+/-- Discharge the fixed result shape and state branch of a total Wasm step. -/
+syntax "wasm_twp_frame" ppLine colGt tacticSeq : tactic
+
+set_option hygiene false in
+macro_rules
+  | `(tactic| wasm_twp_frame $continuation:tacticSeq) =>
+   `(tactic|
+    (isplit
+     next =>
+       ipureintro
+       rfl
+     next =>
+       isplit
+       next =>
+         ipureintro
+         rfl
+       next =>
+         isplitl [Hσ]
+         next => iexact Hσ
+         next => $continuation))
+
 /-- A terminal observation for the Wasm machine.  Its language must reuse the
 authoritative Wasm primitive-step relation; only the terminal-value view may
 change. -/

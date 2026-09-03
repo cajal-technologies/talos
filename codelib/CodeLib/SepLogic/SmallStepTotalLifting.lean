@@ -636,15 +636,8 @@ theorem twp_call
   cases hconfig
   imod Hclose
   imodintro
-  isplit
-  · ipureintro
-    rfl
-  isplit
-  · ipureintro
-    rfl
-  isplitl [Hσ]
-  · iexact Hσ
-  · rw [← hsame]
+  wasm_twp_frame
+    rw [← hsame]
     iapply Htwp
     isplitl [HruntimeElem]
     · iexact HruntimeElem
@@ -790,15 +783,8 @@ theorem twp_callHost
       [$HP $Hσ] with ⟨HQ, Hσ⟩
     imod Hclose
     imodintro
-    isplit
-    · ipureintro
-      rfl
-    isplit
-    · ipureintro
-      rfl
-    isplitl [Hσ]
-    · iexact Hσ
-    · ispecialize HwpRet $$ %(store.wasm) %results %newWasm %h
+    wasm_twp_frame
+      ispecialize HwpRet $$ %(store.wasm) %results %newWasm %h
       iapply HwpRet
       isplitl [HQ]
       · iexact HQ
@@ -825,15 +811,8 @@ theorem twp_callHost
       [$HP $Hσ] with ⟨HQ, Hσ⟩
     imod Hclose
     imodintro
-    isplit
-    · ipureintro
-      rfl
-    isplit
-    · ipureintro
-      rfl
-    isplitl [Hσ]
-    · iexact Hσ
-    · ispecialize HwpTrap $$ %(store.wasm) %newWasm %msg %h
+    wasm_twp_frame
+      ispecialize HwpTrap $$ %(store.wasm) %newWasm %msg %h
       iapply HwpTrap
       iexact HQ
   | .Throw newWasm tag xs =>
@@ -866,15 +845,8 @@ theorem twp_callHost
       [$HP $Hσ] with ⟨HQ, Hσ⟩
     imod Hclose
     imodintro
-    isplit
-    · ipureintro
-      rfl
-    isplit
-    · ipureintro
-      rfl
-    isplitl [Hσ]
-    · iexact Hσ
-    · ispecialize HwpThrow $$ %(store.wasm) %newWasm %tag %xs %h
+    wasm_twp_frame
+      ispecialize HwpThrow $$ %(store.wasm) %newWasm %tag %xs %h
       iapply HwpThrow
       iexact HQ
 
@@ -932,15 +904,8 @@ theorem twp_returnFromCallFallthrough
   cases hconfig
   imod Hclose
   imodintro
-  isplit
-  · ipureintro
-    rfl
-  isplit
-  · ipureintro
-    rfl
-  isplitl [Hσ]
-  · iexact Hσ
-  · simp only [resumeCaller]
+  wasm_twp_frame
+    simp only [resumeCaller]
     iapply Hwp
     isplitl [HruntimeElem]
     · iexact HruntimeElem
@@ -1001,15 +966,8 @@ theorem twp_returnFromCallExplicit
   cases hconfig
   imod Hclose
   imodintro
-  isplit
-  · ipureintro
-    rfl
-  isplit
-  · ipureintro
-    rfl
-  isplitl [Hσ]
-  · iexact Hσ
-  · simp only [resumeCaller]
+  wasm_twp_frame
+    simp only [resumeCaller]
     iapply Hwp
     isplitl [HruntimeElem]
     · iexact HruntimeElem
@@ -1054,15 +1012,8 @@ theorem twp_memorySize
   wasm_wp_resolve_target Step.memorySize against wasmStep
   imod Hclose
   imodintro
-  isplit
-  · ipureintro
-    rfl
-  isplit
-  · ipureintro
-    rfl
-  isplitl [Hσ]
-  · iexact Hσ
-  · simp only [Hmodule]
+  wasm_twp_frame
+    simp only [Hmodule]
     iapply Hwp store.wasm.mem.pages
     iexact Hruntime
 
@@ -1119,15 +1070,8 @@ theorem twp_memorySize_tracked
   wasm_wp_resolve_target Step.memorySize against wasmStep
   imod Hclose
   imodintro
-  isplit
-  · ipureintro
-    rfl
-  isplit
-  · ipureintro
-    rfl
-  isplitl [Hσ]
-  · iexact Hσ
-  · simp only [Hmodule]
+  wasm_twp_frame
+    simp only [Hmodule]
     iexact Hcont
 
 /-- Total `memory.grow` rule. The continuation handles both the physical
@@ -1168,15 +1112,8 @@ theorem twp_memoryGrow
     cases hconfig
     imod Hclose
     imodintro
-    isplit
-    · ipureintro
-      rfl
-    isplit
-    · ipureintro
-      rfl
-    isplitl [Hσ]
-    · iexact Hσ
-    · iapply Hwp (0xFFFFFFFF : UInt32)
+    wasm_twp_frame
+      iapply Hwp (0xFFFFFFFF : UInt32)
       iexact Hruntime
   | some grown =>
     obtain ⟨memory, previousPages⟩ := grown
@@ -1210,15 +1147,8 @@ theorem twp_memoryGrow
         memory previousPages hg) $$ Hσ with Hσ
     imod Hclose
     imodintro
-    isplit
-    · ipureintro
-      rfl
-    isplit
-    · ipureintro
-      rfl
-    isplitl [Hσ]
-    · iexact Hσ
-    · iapply Hwp previousPages.toUInt32
+    wasm_twp_frame
+      iapply Hwp previousPages.toUInt32
       iexact Hruntime
 
 /-- Tracked total `memory.grow` rule.  A snapshot previously issued by
@@ -1289,15 +1219,8 @@ theorem twp_memoryGrow_tracked
     cases hconfig
     imod Hclose
     imodintro
-    isplit
-    · ipureintro
-      rfl
-    isplit
-    · ipureintro
-      rfl
-    isplitl [Hσ]
-    · iexact Hσ
-    · iexact Hcont
+    wasm_twp_frame
+      iexact Hcont
   | some grown =>
     obtain ⟨memory, previousPages⟩ := grown
     have hfacts : previousPages = store.wasm.mem.pages ∧
@@ -1345,15 +1268,8 @@ theorem twp_memoryGrow_tracked
     ispecialize HcontNew $$ HnewPages
     imod Hclose
     imodintro
-    isplit
-    · ipureintro
-      rfl
-    isplit
-    · ipureintro
-      rfl
-    isplitl [Hσ]
-    · iexact Hσ
-    · iexact HcontNew
+    wasm_twp_frame
+      iexact HcontNew
 
 theorem twp_load32
     {params localValues values : List Value}
@@ -1424,15 +1340,8 @@ theorem twp_load32
   cases hconfig
   imod Hclose
   imodintro
-  isplit
-  · ipureintro
-    rfl
-  isplit
-  · ipureintro
-    rfl
-  isplitl [Hσ]
-  · iexact Hσ
-  · iapply Htwp
+  wasm_twp_frame
+    iapply Htwp
     iexact Hword
 
 theorem twp_store32
@@ -1510,15 +1419,8 @@ theorem twp_store32
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
   imod Hclose
   imodintro
-  isplit
-  · ipureintro
-    rfl
-  isplit
-  · ipureintro
-    rfl
-  isplitl [Hσ]
-  · iexact Hσ
-  · iapply Htwp
+  wasm_twp_frame
+    iapply Htwp
     iexact Hword
 
 
@@ -1600,15 +1502,8 @@ theorem twp_memoryFill32
       $$ [$Hσ $Hbytes] with ⟨Hσ, Hbytes⟩
   imod Hclose
   imodintro
-  isplit
-  · ipureintro
-    rfl
-  isplit
-  · ipureintro
-    rfl
-  isplitl [Hσ]
-  · iexact Hσ
-  · iapply Htwp
+  wasm_twp_frame
+    iapply Htwp
     iexact Hbytes
 
 theorem twp_memoryCopy32
@@ -1697,15 +1592,8 @@ theorem twp_memoryCopy32
       $$ [$Hσ $Hsrc $Hdst] with ⟨Hσ, Hsrc, Hdst⟩
   imod Hclose
   imodintro
-  isplit
-  · ipureintro
-    rfl
-  isplit
-  · ipureintro
-    rfl
-  isplitl [Hσ]
-  · iexact Hσ
-  · iapply Htwp $$ Hsrc Hdst
+  wasm_twp_frame
+    iapply Htwp $$ Hsrc Hdst
 
 /-- `throw` instruction (total form).  Tag identity is supplied by the
 persistent `tagTableOwn` fragment handed out at adequacy setup, not by an
@@ -1768,15 +1656,8 @@ theorem twp_throwI
   cases hconfig
   imod Hclose
   imodintro
-  isplit
-  · ipureintro
-    rfl
-  isplit
-  · ipureintro
-    rfl
-  isplitl [Hσ]
-  · iexact Hσ
-  · have hcanonicalStore :=
+  wasm_twp_frame
+    have hcanonicalStore :=
       (canonicalTagIndex_eq store tagIndex).trans
         (canonicalTagIndex_of_prefix store tagIds tagIndex Hprefix hcanonical)
     rw [hcanonicalStore]
@@ -1957,15 +1838,8 @@ theorem twp_globalGet
   cases hconfig
   imod Hclose
   imodintro
-  isplit
-  · ipureintro
-    rfl
-  isplit
-  · ipureintro
-    rfl
-  isplitl [Hσ]
-  · iexact Hσ
-  · iapply Htwp
+  wasm_twp_frame
+    iapply Htwp
     iexact Hglobal
 
 theorem twp_scalarFloat0
@@ -2088,15 +1962,8 @@ theorem twp_f32Load
   cases hconfig
   imod Hclose
   imodintro
-  isplit
-  · ipureintro
-    rfl
-  isplit
-  · ipureintro
-    rfl
-  isplitl [Hσ]
-  · iexact Hσ
-  · iapply Htwp
+  wasm_twp_frame
+    iapply Htwp
     iexact Hword
 
 theorem twp_f32Store
@@ -2176,15 +2043,8 @@ theorem twp_f32Store
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
   imod Hclose
   imodintro
-  isplit
-  · ipureintro
-    rfl
-  isplit
-  · ipureintro
-    rfl
-  isplitl [Hσ]
-  · iexact Hσ
-  · iapply Htwp
+  wasm_twp_frame
+    iapply Htwp
     iexact Hword
 
 theorem twp_globalSet
@@ -2256,15 +2116,8 @@ theorem twp_globalSet
       0 oldValue newValue $$ [$Hσ $Hglobal] with ⟨Hσ, Hglobal⟩
   imod Hclose
   imodintro
-  isplit
-  · ipureintro
-    rfl
-  isplit
-  · ipureintro
-    rfl
-  isplitl [Hσ]
-  · iexact Hσ
-  · iapply Htwp
+  wasm_twp_frame
+    iapply Htwp
     iexact Hglobal
 
 theorem twp_or
@@ -2359,15 +2212,8 @@ theorem twp_f64Load
   cases hconfig
   imod Hclose
   imodintro
-  isplit
-  · ipureintro
-    rfl
-  isplit
-  · ipureintro
-    rfl
-  isplitl [Hσ]
-  · iexact Hσ
-  · iapply Htwp
+  wasm_twp_frame
+    iapply Htwp
     iexact Hword
 
 theorem twp_f64Store
@@ -2456,15 +2302,8 @@ theorem twp_f64Store
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
   imod Hclose
   imodintro
-  isplit
-  · ipureintro
-    rfl
-  isplit
-  · ipureintro
-    rfl
-  isplitl [Hσ]
-  · iexact Hσ
-  · iapply Htwp
+  wasm_twp_frame
+    iapply Htwp
     iexact Hword
 
 theorem twp_load64
@@ -2544,15 +2383,8 @@ theorem twp_load64
   cases hconfig
   imod Hclose
   imodintro
-  isplit
-  · ipureintro
-    rfl
-  isplit
-  · ipureintro
-    rfl
-  isplitl [Hσ]
-  · iexact Hσ
-  · iapply Htwp
+  wasm_twp_frame
+    iapply Htwp
     iexact Hword
 
 theorem twp_store64
@@ -2641,15 +2473,8 @@ theorem twp_store64
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
   imod Hclose
   imodintro
-  isplit
-  · ipureintro
-    rfl
-  isplit
-  · ipureintro
-    rfl
-  isplitl [Hσ]
-  · iexact Hσ
-  · iapply Htwp
+  wasm_twp_frame
+    iapply Htwp
     iexact Hword
 
 end terminalGeneric
@@ -2927,15 +2752,8 @@ theorem twp_load32_addr
   cases hconfig
   imod Hclose
   imodintro
-  isplit
-  · ipureintro
-    rfl
-  isplit
-  · ipureintro
-    rfl
-  isplitl [Hσ]
-  · iexact Hσ
-  · iapply Htwp
+  wasm_twp_frame
+    iapply Htwp
     iexact Hword
 
 end terminalGenericHelpers
