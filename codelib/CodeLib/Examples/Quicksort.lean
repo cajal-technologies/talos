@@ -448,12 +448,9 @@ theorem quicksortHeapAux_agrees
       have h := UInt32.toNat_add base 4
       simp only [show (4 : UInt32).toNat = 4 from by decide] at h
       rw [h]; exact Nat.mod_le _ _
+    obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4 base (by omega)
     apply ih
-    · apply store32_sound0
-      · exact UInt32.add_ofNat_toNat_noWrap base 1 (by decide) (by omega)
-      · exact UInt32.add_ofNat_toNat_noWrap base 2 (by decide) (by omega)
-      · exact UInt32.add_ofNat_toNat_noWrap base 3 (by decide) (by omega)
-      · exact hagree
+    · exact store32_sound0 σ mem base x h1 h2 h3 hagree
     · simp only [UInt32.size]; omega
 
 theorem quicksortHeap_agrees (arr : UInt32) (input : List UInt32)
@@ -491,13 +488,9 @@ theorem quicksortHeapAux_inBounds
       simp only [show (4 : UInt32).toNat = 4 from by decide] at h
       rw [h]; exact Nat.mod_le _ _
     have hpages : (mem.write32 base x).pages = mem.pages := by simp [Mem.write32]
+    obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4 base (by omega)
     apply ih
-    · apply store32_inBounds0
-      · exact UInt32.add_ofNat_toNat_noWrap base 1 (by decide) (by omega)
-      · exact UInt32.add_ofNat_toNat_noWrap base 2 (by decide) (by omega)
-      · exact UInt32.add_ofNat_toNat_noWrap base 3 (by decide) (by omega)
-      · omega
-      · exact hinBounds
+    · exact store32_inBounds0 σ mem base x h1 h2 h3 (by omega) hinBounds
     · simp only [UInt32.size]; omega
     · rw [hpages]; omega
 
@@ -542,12 +535,7 @@ theorem quicksortHeapAux_pointsTo [WasmHeapGS α]
       UInt32.add_ofNat_toNat_noWrap base 4 (by decide) (by omega)
     have hfit' : (base + 4).toNat + 4 * xs.length < UInt32.size := by
       simp only [UInt32.size]; omega
-    have hn1 : (base + 1).toNat = base.toNat + 1 :=
-      UInt32.add_ofNat_toNat_noWrap base 1 (by decide) (by omega)
-    have hn2 : (base + 2).toNat = base.toNat + 2 :=
-      UInt32.add_ofNat_toNat_noWrap base 2 (by decide) (by omega)
-    have hn3 : (base + 3).toNat = base.toNat + 3 :=
-      UInt32.add_ofNat_toNat_noWrap base 3 (by decide) (by omega)
+    obtain ⟨hn1, hn2, hn3⟩ := UInt32.addSteps4 base (by omega)
     have hget0 : get? σ ⟨0, base⟩ = none := by
       by_contra h; obtain ⟨v, hget⟩ := Option.ne_none_iff_exists.mp h
       have hlt := hdisjoint (⟨0, base⟩ : MemoryKey) v hget.symm
@@ -627,12 +615,10 @@ theorem arrayAt_readWordArray [WasmSmallStepGS hlc α]
       rw [h]; exact Nat.mod_le _ _
     have hfit' : (arr + 4).toNat + 4 * xs.length ≤ UInt32.size := by
       simp only [UInt32.size]; omega
+    obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4 arr (by omega)
     iintro ⟨Hstate, Hword, Hxs⟩
     imod stateInterp_pointsTo_u32_facts_frame store steps obs threads arr x
-      (UInt32.add_ofNat_toNat_noWrap arr 1 (by decide) (by omega))
-      (UInt32.add_ofNat_toNat_noWrap arr 2 (by decide) (by omega))
-      (UInt32.add_ofNat_toNat_noWrap arr 3 (by decide) (by omega)) $$
-        [$Hstate $Hword] with ⟨Hstate, Hword, %hfacts⟩
+      h1 h2 h3 $$ [$Hstate $Hword] with ⟨Hstate, Hword, %hfacts⟩
     imod ih (arr + 4) hfit' $$ [$Hstate $Hxs] with ⟨Hstate, Hxs, %hread⟩
     imodintro
     isplitl [Hstate]; iexact Hstate
