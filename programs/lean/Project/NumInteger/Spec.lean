@@ -249,29 +249,25 @@ theorem func1_spillPrefix_smallStep_wp
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HouterALater : ▷ pointsTo_u64 0 (1048560 + 0) a $$ [HouterA]
   · ilater_rw_exact [show (1048560 : UInt32) + 0 = 1048560 by decide] with HouterA
-  wasm_wp_next Wasm.SmallStep.wp_load64 a
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 a
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HouterALater
-  iintro HouterA
+      (by decide) (by decide) (by decide) with HouterALater => HouterA
   ihave HxLater : ▷ pointsTo_u64 0 (1048512 + 8) oldX $$ [Hx]
   · ilater_rw_exact [show (1048512 : UInt32) + 8 = 1048520 by decide] with Hx
-  wasm_wp_next Wasm.SmallStep.wp_store64 oldX
+  wasm_wp_next_bind Wasm.SmallStep.wp_store64 oldX
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
-  iintro Hx
+      (by decide) (by decide) (by decide) with HxLater => Hx
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HouterBLater : ▷ pointsTo_u64 0 (1048568 + 0) b $$ [HouterB]
   · ilater_rw_exact [show (1048568 : UInt32) + 0 = 1048568 by decide] with HouterB
-  wasm_wp_next Wasm.SmallStep.wp_load64 b
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 b
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HouterBLater
-  iintro HouterB
+      (by decide) (by decide) (by decide) with HouterBLater => HouterB
   ihave HyLater : ▷ pointsTo_u64 0 (1048512 + 16) oldY $$ [Hy]
   · ilater_rw_exact [show (1048512 : UInt32) + 16 = 1048528 by decide] with Hy
-  wasm_wp_next Wasm.SmallStep.wp_store64 oldY
+  wasm_wp_next_bind Wasm.SmallStep.wp_store64 oldY
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HyLater
-  iintro Hy
+      (by decide) (by decide) (by decide) with HyLater => Hy
   simp only [func1SpilledLocals, func1, List.drop] at hcontinue
   have hOuterAProp :
       pointsTo_u64 0 ((1048560 : UInt32) + 0) a = pointsTo_u64 0 1048560 a :=
@@ -389,10 +385,9 @@ theorem func1_leftZero_core_smallStep_wp_to_return
       congrArg (fun address => pointsTo_u64 0 address 0) (by decide)
     rw [h]
     iexact Hx
-  wasm_wp_next Wasm.SmallStep.wp_load64 0
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 0
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
-  iintro Hx
+      (by decide) (by decide) (by decide) with HxLater => Hx
   wasm_wp_pures [wp_constI64]
   wasm_wp_next Wasm.SmallStep.wp_eqI64 (result := 1) (by decide)
   wasm_wp_pures [wp_const wp_and]
@@ -402,10 +397,9 @@ theorem func1_leftZero_core_smallStep_wp_to_return
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HxLater : ▷ pointsTo_u64 0 (1048512 + 8) 0 $$ [Hx]
   · ilater_exact Hx
-  wasm_wp_next Wasm.SmallStep.wp_load64 0
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 0
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
-  iintro Hx
+      (by decide) (by decide) (by decide) with HxLater => Hx
   wasm_wp_pures [wp_localGet]
   ihave HyLater : ▷ pointsTo_u64 0 (1048512 + 16) b $$ [Hy]
   · inext
@@ -415,10 +409,9 @@ theorem func1_leftZero_core_smallStep_wp_to_return
       congrArg (fun address => pointsTo_u64 0 address b) (by decide)
     rw [h]
     iexact Hy
-  wasm_wp_next Wasm.SmallStep.wp_load64 b
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 b
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HyLater
-  iintro Hy
+      (by decide) (by decide) (by decide) with HyLater => Hy
   wasm_wp_pures [wp_orI64]
   rw [show (0 : UInt64) ||| b = b by
     apply UInt64.toNat.inj
@@ -432,19 +425,17 @@ theorem func1_leftZero_core_smallStep_wp_to_return
       congrArg (fun address => pointsTo_u64 0 address result) (by decide)
     rw [h]
     iexact Hresult
-  wasm_wp_next Wasm.SmallStep.wp_store64 result
+  wasm_wp_next_bind Wasm.SmallStep.wp_store64 result
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HresultLater
-  iintro Hresult
+      (by decide) (by decide) (by decide) with HresultLater => Hresult
   wasm_wp_pures [wp_br]
   simp only [List.take_nil, List.nil_append]
   wasm_wp_pures [wp_localGet]
   ihave HresultLater : ▷ pointsTo_u64 0 (1048512 + 0) b $$ [Hresult]
   · ilater_exact Hresult
-  wasm_wp_next Wasm.SmallStep.wp_load64 b
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 b
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HresultLater
-  iintro Hresult
+      (by decide) (by decide) (by decide) with HresultLater => Hresult
   have hResultProp :
       pointsTo_u64 0 ((1048512 : UInt32) + 0) b = pointsTo_u64 0 1048512 b :=
     congrArg (fun address => pointsTo_u64 0 address b) (by decide)
@@ -605,10 +596,9 @@ theorem func1_rightZero_core_smallStep_wp_to_return
       congrArg (fun address => pointsTo_u64 0 address a) (by decide)
     rw [h]
     iexact Hx
-  wasm_wp_next Wasm.SmallStep.wp_load64 a
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 a
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
-  iintro Hx
+      (by decide) (by decide) (by decide) with HxLater => Hx
   wasm_wp_pures [wp_constI64]
   wasm_wp_next Wasm.SmallStep.wp_eqI64 (result := 0) (by simp [ha])
   wasm_wp_pures [wp_const wp_and]
@@ -622,10 +612,9 @@ theorem func1_rightZero_core_smallStep_wp_to_return
       congrArg (fun address => pointsTo_u64 0 address 0) (by decide)
     rw [h]
     iexact Hy
-  wasm_wp_next Wasm.SmallStep.wp_load64 0
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 0
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HyLater
-  iintro Hy
+      (by decide) (by decide) (by decide) with HyLater => Hy
   wasm_wp_pures [wp_constI64]
   wasm_wp_next Wasm.SmallStep.wp_eqI64 (result := 1) (by decide)
   wasm_wp_pures [wp_const wp_and]
@@ -636,17 +625,15 @@ theorem func1_rightZero_core_smallStep_wp_to_return
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HxLater : ▷ pointsTo_u64 0 (1048512 + 8) a $$ [Hx]
   · ilater_exact Hx
-  wasm_wp_next Wasm.SmallStep.wp_load64 a
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 a
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
-  iintro Hx
+      (by decide) (by decide) (by decide) with HxLater => Hx
   wasm_wp_pures [wp_localGet]
   ihave HyLater : ▷ pointsTo_u64 0 (1048512 + 16) 0 $$ [Hy]
   · ilater_exact Hy
-  wasm_wp_next Wasm.SmallStep.wp_load64 0
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 0
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HyLater
-  iintro Hy
+      (by decide) (by decide) (by decide) with HyLater => Hy
   wasm_wp_pures [wp_orI64]
   rw [show a ||| (0 : UInt64) = a by
     apply UInt64.toNat.inj
@@ -660,19 +647,17 @@ theorem func1_rightZero_core_smallStep_wp_to_return
       congrArg (fun address => pointsTo_u64 0 address result) (by decide)
     rw [h]
     iexact Hresult
-  wasm_wp_next Wasm.SmallStep.wp_store64 result
+  wasm_wp_next_bind Wasm.SmallStep.wp_store64 result
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HresultLater
-  iintro Hresult
+      (by decide) (by decide) (by decide) with HresultLater => Hresult
   wasm_wp_pures [wp_br]
   simp only [List.take_nil, List.nil_append]
   wasm_wp_pures [wp_localGet]
   ihave HresultLater : ▷ pointsTo_u64 0 (1048512 + 0) a $$ [Hresult]
   · ilater_exact Hresult
-  wasm_wp_next Wasm.SmallStep.wp_load64 a
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 a
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HresultLater
-  iintro Hresult
+      (by decide) (by decide) (by decide) with HresultLater => Hresult
   have hResultProp :
       pointsTo_u64 0 ((1048512 : UInt32) + 0) a = pointsTo_u64 0 1048512 a :=
     congrArg (fun address => pointsTo_u64 0 address a) (by decide)
@@ -1091,10 +1076,9 @@ theorem func1_sharedShift_smallStep_wp
       congrArg (fun address => pointsTo_u64 0 address a) (by decide)
     rw [h]
     iexact Hx
-  wasm_wp_next Wasm.SmallStep.wp_load64 a
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 a
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
-  iintro Hx
+      (by decide) (by decide) (by decide) with HxLater => Hx
   wasm_wp_pures [wp_localGet]
   ihave HyLater : ▷ pointsTo_u64 0 (1048512 + 16) b $$ [Hy]
   · inext
@@ -1104,10 +1088,9 @@ theorem func1_sharedShift_smallStep_wp
       congrArg (fun address => pointsTo_u64 0 address b) (by decide)
     rw [h]
     iexact Hy
-  wasm_wp_next Wasm.SmallStep.wp_load64 b
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 b
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HyLater
-  iintro Hy
+      (by decide) (by decide) (by decide) with HyLater => Hy
   wasm_wp_pures [wp_orI64 wp_ctzI64 wp_wrapI64]
   ihave HshiftLater :
       ▷ pointsTo_u32 0 (1048512 + 44) oldShift $$ [Hshift]
@@ -1196,10 +1179,9 @@ theorem func1_normalizeX_smallStep_wp
       congrArg (fun address => pointsTo_u64 0 address a) (by decide)
     rw [h]
     iexact Hx
-  wasm_wp_next Wasm.SmallStep.wp_load64 a
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 a
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
-  iintro Hx
+      (by decide) (by decide) (by decide) with HxLater => Hx
   wasm_wp_pures [wp_ctzI64 wp_wrapI64]
   ihave HshiftXLater :
       ▷ pointsTo_u32 0 (1048512 + 40) oldShiftX $$ [HshiftX]
@@ -1224,20 +1206,18 @@ theorem func1_normalizeX_smallStep_wp
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HxLater : ▷ pointsTo_u64 0 (1048512 + 8) a $$ [Hx]
   · ilater_exact Hx
-  wasm_wp_next Wasm.SmallStep.wp_load64 a
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 a
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
-  iintro Hx
+      (by decide) (by decide) (by decide) with HxLater => Hx
   wasm_wp_pures [wp_localGet wp_const wp_and wp_extendUI32 wp_shrUI64]
   rw [UInt32.and_comm (operandShiftWord a) 63]
   unfold operandShiftWord
   rw [shift_pipeline a ha]
   ihave HxLater : ▷ pointsTo_u64 0 (1048512 + 8) a $$ [Hx]
   · ilater_exact Hx
-  wasm_wp_next Wasm.SmallStep.wp_store64 a
+  wasm_wp_next_bind Wasm.SmallStep.wp_store64 a
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
-  iintro Hx
+      (by decide) (by decide) (by decide) with HxLater => Hx
   simp only [func1XShiftLocals, operandShiftWord, oddPart64,
     meatLoopProg, List.drop] at hcontinue
   have hXProp :
@@ -1311,10 +1291,9 @@ theorem func1_normalizeY_smallStep_wp
       congrArg (fun address => pointsTo_u64 0 address b) (by decide)
     rw [h]
     iexact Hy
-  wasm_wp_next Wasm.SmallStep.wp_load64 b
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 b
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HyLater
-  iintro Hy
+      (by decide) (by decide) (by decide) with HyLater => Hy
   wasm_wp_pures [wp_ctzI64 wp_wrapI64]
   ihave HshiftYLater :
       ▷ pointsTo_u32 0 (1048512 + 36) oldShiftY $$ [HshiftY]
@@ -1339,20 +1318,18 @@ theorem func1_normalizeY_smallStep_wp
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HyLater : ▷ pointsTo_u64 0 (1048512 + 16) b $$ [Hy]
   · ilater_exact Hy
-  wasm_wp_next Wasm.SmallStep.wp_load64 b
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 b
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HyLater
-  iintro Hy
+      (by decide) (by decide) (by decide) with HyLater => Hy
   wasm_wp_pures [wp_localGet wp_const wp_and wp_extendUI32 wp_shrUI64]
   rw [UInt32.and_comm (operandShiftWord b) 63]
   unfold operandShiftWord
   rw [shift_pipeline b hb]
   ihave HyLater : ▷ pointsTo_u64 0 (1048512 + 16) b $$ [Hy]
   · ilater_exact Hy
-  wasm_wp_next Wasm.SmallStep.wp_store64 b
+  wasm_wp_next_bind Wasm.SmallStep.wp_store64 b
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HyLater
-  iintro Hy
+      (by decide) (by decide) (by decide) with HyLater => Hy
   simp only [func1NormalizedLocals, func1LoopHeaderLocals,
     operandShiftWord, oddPart64,
     meatLoopProg, List.drop] at hcontinue
@@ -1507,10 +1484,9 @@ theorem func1_equalRecombine_smallStep_wp
       congrArg (fun address => pointsTo_u64 0 address g) (by decide)
     rw [h]
     iexact Hx
-  wasm_wp_next Wasm.SmallStep.wp_load64 g
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 g
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
-  iintro Hx
+      (by decide) (by decide) (by decide) with HxLater => Hx
   wasm_wp_pures [wp_localGet wp_const wp_and wp_extendUI32 wp_shlI64]
   ihave HresultLater :
       ▷ pointsTo_u64 0 (1048512 + 0) oldResult $$ [Hresult]
@@ -1521,10 +1497,9 @@ theorem func1_equalRecombine_smallStep_wp
       congrArg (fun address => pointsTo_u64 0 address oldResult) (by decide)
     rw [h]
     iexact Hresult
-  wasm_wp_next Wasm.SmallStep.wp_store64 oldResult
+  wasm_wp_next_bind Wasm.SmallStep.wp_store64 oldResult
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HresultLater
-  iintro Hresult
+      (by decide) (by decide) (by decide) with HresultLater => Hresult
   simp only [func1LoopHeaderLocals, recombinedWord] at hcontinue
   have hXProp :
       pointsTo_u64 0 ((1048512 : UInt32) + 8) g = pointsTo_u64 0 1048520 g :=
@@ -1591,10 +1566,9 @@ theorem func1_equalBlock_smallStep_wp
       congrArg (fun address => pointsTo_u64 0 address g) (by decide)
     rw [h]
     iexact Hx
-  wasm_wp_next Wasm.SmallStep.wp_load64 g
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 g
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
-  iintro Hx
+      (by decide) (by decide) (by decide) with HxLater => Hx
   wasm_wp_pures [wp_localGet]
   ihave HyLater : ▷ pointsTo_u64 0 (1048512 + 16) g $$ [Hy]
   · inext
@@ -1604,10 +1578,9 @@ theorem func1_equalBlock_smallStep_wp
       congrArg (fun address => pointsTo_u64 0 address g) (by decide)
     rw [h]
     iexact Hy
-  wasm_wp_next Wasm.SmallStep.wp_load64 g
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 g
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HyLater
-  iintro Hy
+      (by decide) (by decide) (by decide) with HyLater => Hy
   wasm_wp_next Wasm.SmallStep.wp_neI64 (result := 0) (by simp)
   wasm_wp_pures [wp_const wp_and]
   rw [show (0 : UInt32) &&& 1 = 0 by decide]
@@ -1694,10 +1667,9 @@ theorem func1_loopNormalizeY_smallStep_wp
       congrArg (fun address => pointsTo_u64 0 address d) (by decide)
     rw [h]
     iexact Hy
-  wasm_wp_next Wasm.SmallStep.wp_load64 d
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 d
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HyLater
-  iintro Hy
+      (by decide) (by decide) (by decide) with HyLater => Hy
   wasm_wp_pures [wp_ctzI64 wp_wrapI64]
   ihave HshiftLater :
       ▷ pointsTo_u32 0 (1048512 + 32) oldShift $$ [Hshift]
@@ -1722,20 +1694,18 @@ theorem func1_loopNormalizeY_smallStep_wp
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HyLater : ▷ pointsTo_u64 0 (1048512 + 16) d $$ [Hy]
   · ilater_exact Hy
-  wasm_wp_next Wasm.SmallStep.wp_load64 d
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 d
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HyLater
-  iintro Hy
+      (by decide) (by decide) (by decide) with HyLater => Hy
   wasm_wp_pures [wp_localGet wp_const wp_and wp_extendUI32 wp_shrUI64]
   rw [UInt32.and_comm (operandShiftWord d) 63]
   unfold operandShiftWord
   rw [shift_pipeline d hd]
   ihave HyLater : ▷ pointsTo_u64 0 (1048512 + 16) d $$ [Hy]
   · ilater_exact Hy
-  wasm_wp_next Wasm.SmallStep.wp_store64 d
+  wasm_wp_next_bind Wasm.SmallStep.wp_store64 d
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HyLater
-  iintro Hy
+      (by decide) (by decide) (by decide) with HyLater => Hy
   simp only [func1LoopYNormalizedLocals, operandShiftWord, oddPart64] at hcontinue
   have hYProp :
       pointsTo_u64 0 ((1048512 : UInt32) + 16)
@@ -1820,10 +1790,9 @@ theorem func1_loopDecreaseY_smallStep_wp
       congrArg (fun address => pointsTo_u64 0 address x) (by decide)
     rw [h]
     iexact Hx
-  wasm_wp_next Wasm.SmallStep.wp_load64 x
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 x
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
-  iintro Hx
+      (by decide) (by decide) (by decide) with HxLater => Hx
   wasm_wp_pures [wp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
@@ -1836,17 +1805,15 @@ theorem func1_loopDecreaseY_smallStep_wp
       congrArg (fun address => pointsTo_u64 0 address y) (by decide)
     rw [h]
     iexact Hy
-  wasm_wp_next Wasm.SmallStep.wp_load64 y
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 y
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HyLater
-  iintro Hy
+      (by decide) (by decide) (by decide) with HyLater => Hy
   wasm_wp_pures [wp_localGet wp_subI64]
   ihave HyLater : ▷ pointsTo_u64 0 (1048512 + 16) y $$ [Hy]
   · ilater_exact Hy
-  wasm_wp_next Wasm.SmallStep.wp_store64 y
+  wasm_wp_next_bind Wasm.SmallStep.wp_store64 y
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HyLater
-  iintro Hy
+      (by decide) (by decide) (by decide) with HyLater => Hy
   rw [show
     [.localGet 2, .localGet 2, .load64 16, .ctzI64, .wrapI64, .store32 32,
       .localGet 2, .load32 32, .localSet 7,
@@ -1932,10 +1899,9 @@ theorem func1_loopNormalizeX_smallStep_wp
       congrArg (fun address => pointsTo_u64 0 address d) (by decide)
     rw [h]
     iexact Hx
-  wasm_wp_next Wasm.SmallStep.wp_load64 d
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 d
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
-  iintro Hx
+      (by decide) (by decide) (by decide) with HxLater => Hx
   wasm_wp_pures [wp_ctzI64 wp_wrapI64]
   ihave HshiftLater :
       ▷ pointsTo_u32 0 (1048512 + 28) oldShift $$ [Hshift]
@@ -1960,20 +1926,18 @@ theorem func1_loopNormalizeX_smallStep_wp
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HxLater : ▷ pointsTo_u64 0 (1048512 + 8) d $$ [Hx]
   · ilater_exact Hx
-  wasm_wp_next Wasm.SmallStep.wp_load64 d
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 d
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
-  iintro Hx
+      (by decide) (by decide) (by decide) with HxLater => Hx
   wasm_wp_pures [wp_localGet wp_const wp_and wp_extendUI32 wp_shrUI64]
   rw [UInt32.and_comm (operandShiftWord d) 63]
   unfold operandShiftWord
   rw [shift_pipeline d hd]
   ihave HxLater : ▷ pointsTo_u64 0 (1048512 + 8) d $$ [Hx]
   · ilater_exact Hx
-  wasm_wp_next Wasm.SmallStep.wp_store64 d
+  wasm_wp_next_bind Wasm.SmallStep.wp_store64 d
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
-  iintro Hx
+      (by decide) (by decide) (by decide) with HxLater => Hx
   simp only [func1LoopXNormalizedLocals, operandShiftWord, oddPart64] at hcontinue
   have hXProp :
       pointsTo_u64 0 ((1048512 : UInt32) + 8)
@@ -2058,10 +2022,9 @@ theorem func1_loopDecreaseX_smallStep_wp
       congrArg (fun address => pointsTo_u64 0 address y) (by decide)
     rw [h]
     iexact Hy
-  wasm_wp_next Wasm.SmallStep.wp_load64 y
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 y
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HyLater
-  iintro Hy
+      (by decide) (by decide) (by decide) with HyLater => Hy
   wasm_wp_pures [wp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
@@ -2074,17 +2037,15 @@ theorem func1_loopDecreaseX_smallStep_wp
       congrArg (fun address => pointsTo_u64 0 address x) (by decide)
     rw [h]
     iexact Hx
-  wasm_wp_next Wasm.SmallStep.wp_load64 x
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 x
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
-  iintro Hx
+      (by decide) (by decide) (by decide) with HxLater => Hx
   wasm_wp_pures [wp_localGet wp_subI64]
   ihave HxLater : ▷ pointsTo_u64 0 (1048512 + 8) x $$ [Hx]
   · ilater_exact Hx
-  wasm_wp_next Wasm.SmallStep.wp_store64 x
+  wasm_wp_next_bind Wasm.SmallStep.wp_store64 x
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
-  iintro Hx
+      (by decide) (by decide) (by decide) with HxLater => Hx
   rw [show
     [.localGet 2, .localGet 2, .load64 8, .ctzI64, .wrapI64, .store32 28,
       .localGet 2, .load32 28, .localSet 9,
@@ -2209,10 +2170,9 @@ theorem func1_loopEqualityDispatch_smallStep_wp
         congrArg (fun address => pointsTo_u64 0 address x) (by decide)
       rw [h]
       iexact Hx
-    wasm_wp_next Wasm.SmallStep.wp_load64 x
+    wasm_wp_next_bind Wasm.SmallStep.wp_load64 x
         (by decide) (by decide) (by decide) (by decide) (by decide)
-        (by decide) (by decide) (by decide) $$ HxLater
-    iintro Hx
+        (by decide) (by decide) (by decide) with HxLater => Hx
     wasm_wp_pures [wp_localGet]
     ihave HyLater : ▷ pointsTo_u64 0 (1048512 + 16) y $$ [Hy]
     · inext
@@ -2222,10 +2182,9 @@ theorem func1_loopEqualityDispatch_smallStep_wp
         congrArg (fun address => pointsTo_u64 0 address y) (by decide)
       rw [h]
       iexact Hy
-    wasm_wp_next Wasm.SmallStep.wp_load64 y
+    wasm_wp_next_bind Wasm.SmallStep.wp_load64 y
         (by decide) (by decide) (by decide) (by decide) (by decide)
-        (by decide) (by decide) (by decide) $$ HyLater
-    iintro Hy
+        (by decide) (by decide) (by decide) with HyLater => Hy
     wasm_wp_next Wasm.SmallStep.wp_neI64 (result := 1) (by simp [hxy])
     wasm_wp_pures [wp_const wp_and]
     rw [show (1 : UInt32) &&& 1 = 1 by decide]
@@ -2316,10 +2275,9 @@ theorem func1_loopDecreaseDispatch_smallStep_wp
       congrArg (fun address => pointsTo_u64 0 address x) (by decide)
     rw [h]
     iexact Hx
-  wasm_wp_next Wasm.SmallStep.wp_load64 x
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 x
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
-  iintro Hx
+      (by decide) (by decide) (by decide) with HxLater => Hx
   wasm_wp_pures [wp_localGet]
   ihave HyLater : ▷ pointsTo_u64 0 (1048512 + 16) y $$ [Hy]
   · inext
@@ -2329,10 +2287,9 @@ theorem func1_loopDecreaseDispatch_smallStep_wp
       congrArg (fun address => pointsTo_u64 0 address y) (by decide)
     rw [h]
     iexact Hy
-  wasm_wp_next Wasm.SmallStep.wp_load64 y
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 y
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HyLater
-  iintro Hy
+      (by decide) (by decide) (by decide) with HyLater => Hy
   ihave HxExact : pointsTo_u64 0 1048520 x $$ [Hx]
   · have h :
         pointsTo_u64 0 ((1048512 : UInt32) + 8) x =
@@ -2859,10 +2816,9 @@ theorem func1_nonzeroGuards_smallStep_wp
   wasm_wp_pures [wp_block wp_block wp_block wp_localGet]
   ihave HxLater : ▷ pointsTo_u64 0 (1048512 + 8) a $$ [Hx]
   · ilater_rw_exact [show (1048512 : UInt32) + 8 = 1048520 from rfl] with Hx
-  wasm_wp_next Wasm.SmallStep.wp_load64 a
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 a
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
-  iintro Hx
+      (by decide) (by decide) (by decide) with HxLater => Hx
   wasm_wp_pures [wp_constI64]
   wasm_wp_next Wasm.SmallStep.wp_eqI64 (result := 0) (by simp [ha])
   wasm_wp_pures [wp_const wp_and]
@@ -2870,10 +2826,9 @@ theorem func1_nonzeroGuards_smallStep_wp
   wasm_wp_pures [wp_brIfZero wp_localGet]
   ihave HyLater : ▷ pointsTo_u64 0 (1048512 + 16) b $$ [Hy]
   · ilater_rw_exact [show (1048512 : UInt32) + 16 = 1048528 from rfl] with Hy
-  wasm_wp_next Wasm.SmallStep.wp_load64 b
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 b
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HyLater
-  iintro Hy
+      (by decide) (by decide) (by decide) with HyLater => Hy
   wasm_wp_pures [wp_constI64]
   wasm_wp_next Wasm.SmallStep.wp_eqI64 (result := 0) (by simp [hb])
   wasm_wp_pures [wp_const wp_and]
@@ -2941,11 +2896,10 @@ theorem func1_nonzeroFinish_smallStep_wp_to_return
       ▷ pointsTo_u64 0 ((1048512 : UInt32) + 0)
         (UInt64.ofNat (Nat.gcd a.toNat b.toNat)) $$ [Hresult]
   · ilater_rw_exact [show (1048512 : UInt32) + 0 = 1048512 from rfl] with Hresult
-  wasm_wp_next Wasm.SmallStep.wp_load64
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64
       (UInt64.ofNat (Nat.gcd a.toNat b.toNat))
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HresultLater
-  iintro Hresult
+      (by decide) (by decide) (by decide) with HresultLater => Hresult
   ihave HresultExact :
       pointsTo_u64 0 1048512 (UInt64.ofNat (Nat.gcd a.toNat b.toNat))
       $$ [Hresult]
@@ -3461,18 +3415,16 @@ theorem func0_callPrefix_smallStep_wp
   ihave HouterALater :
       ▷ pointsTo_u64 0 ((1048560 : UInt32) + 0) oldOuterA $$ [HouterA]
   · ilater_rw_exact [show (1048560 : UInt32) + 0 = 1048560 from rfl] with HouterA
-  wasm_wp_next Wasm.SmallStep.wp_store64 oldOuterA
+  wasm_wp_next_bind Wasm.SmallStep.wp_store64 oldOuterA
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HouterALater
-  iintro HouterA
+      (by decide) (by decide) (by decide) with HouterALater => HouterA
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HouterBLater :
       ▷ pointsTo_u64 0 ((1048560 : UInt32) + 8) oldOuterB $$ [HouterB]
   · ilater_rw_exact [show (1048560 : UInt32) + 8 = 1048568 from rfl] with HouterB
-  wasm_wp_next Wasm.SmallStep.wp_store64 oldOuterB
+  wasm_wp_next_bind Wasm.SmallStep.wp_store64 oldOuterB
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HouterBLater
-  iintro HouterB
+      (by decide) (by decide) (by decide) with HouterBLater => HouterB
   wasm_wp_pures [wp_localGet wp_localGet wp_const wp_add]
   rw [show (8 : UInt32) + 1048560 = 1048568 from rfl]
   simp only [func0CallLocals, func0AfterCallProg] at hcontinue
@@ -4289,32 +4241,28 @@ theorem twp_func1_spillPrefix_smallStep_wp
   ihave HouterALater : pointsTo_u64 0 (1048560 + 0) a $$ [HouterA]
   · rw [show (1048560 : UInt32) + 0 = 1048560 by decide]
     iexact HouterA
-  iapply Wasm.SmallStep.twp_load64 a
+  wasm_twp_bind Wasm.SmallStep.twp_load64 a
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HouterALater
-  iintro HouterA
+      (by decide) (by decide) (by decide) with HouterALater => HouterA
   ihave HxLater : pointsTo_u64 0 (1048512 + 8) oldX $$ [Hx]
   · rw [show (1048512 : UInt32) + 8 = 1048520 by decide]
     iexact Hx
-  iapply Wasm.SmallStep.twp_store64 oldX
+  wasm_twp_bind Wasm.SmallStep.twp_store64 oldX
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
-  iintro Hx
+      (by decide) (by decide) (by decide) with HxLater => Hx
   wasm_twp_pures [twp_localGet twp_localGet]
   ihave HouterBLater : pointsTo_u64 0 (1048568 + 0) b $$ [HouterB]
   · rw [show (1048568 : UInt32) + 0 = 1048568 by decide]
     iexact HouterB
-  iapply Wasm.SmallStep.twp_load64 b
+  wasm_twp_bind Wasm.SmallStep.twp_load64 b
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HouterBLater
-  iintro HouterB
+      (by decide) (by decide) (by decide) with HouterBLater => HouterB
   ihave HyLater : pointsTo_u64 0 (1048512 + 16) oldY $$ [Hy]
   · rw [show (1048512 : UInt32) + 16 = 1048528 by decide]
     iexact Hy
-  iapply Wasm.SmallStep.twp_store64 oldY
+  wasm_twp_bind Wasm.SmallStep.twp_store64 oldY
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HyLater
-  iintro Hy
+      (by decide) (by decide) (by decide) with HyLater => Hy
   simp only [func1SpilledLocals, func1, List.drop] at hcontinue
   have hOuterAProp :
       pointsTo_u64 0 ((1048560 : UInt32) + 0) a = pointsTo_u64 0 1048560 a :=
@@ -4425,10 +4373,9 @@ theorem twp_func1_leftZero_core_smallStep_wp_to_return
       congrArg (fun address => pointsTo_u64 0 address 0) (by decide)
     rw [h]
     iexact Hx
-  iapply Wasm.SmallStep.twp_load64 0
+  wasm_twp_bind Wasm.SmallStep.twp_load64 0
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
-  iintro Hx
+      (by decide) (by decide) (by decide) with HxLater => Hx
   wasm_twp_pures [twp_constI64]
   iapply Wasm.SmallStep.twp_eqI64 (result := 1) (by decide)
   wasm_twp_pures [twp_const twp_and]
@@ -4436,10 +4383,9 @@ theorem twp_func1_leftZero_core_smallStep_wp_to_return
   iapply Wasm.SmallStep.twp_brIf (by decide) rfl
   simp only [List.take_nil, List.drop_nil, List.nil_append]
   wasm_twp_pures [twp_localGet twp_localGet]
-  iapply Wasm.SmallStep.twp_load64 0
+  wasm_twp_bind Wasm.SmallStep.twp_load64 0
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ Hx
-  iintro Hx
+      (by decide) (by decide) (by decide) with Hx => Hx
   wasm_twp_pures [twp_localGet]
   ihave HyLater : pointsTo_u64 0 (1048512 + 16) b $$ [Hy]
   · have h :
@@ -4448,10 +4394,9 @@ theorem twp_func1_leftZero_core_smallStep_wp_to_return
       congrArg (fun address => pointsTo_u64 0 address b) (by decide)
     rw [h]
     iexact Hy
-  iapply Wasm.SmallStep.twp_load64 b
+  wasm_twp_bind Wasm.SmallStep.twp_load64 b
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HyLater
-  iintro Hy
+      (by decide) (by decide) (by decide) with HyLater => Hy
   wasm_twp_pures [twp_orI64]
   rw [show (0 : UInt64) ||| b = b by
     apply UInt64.toNat.inj
@@ -4464,17 +4409,15 @@ theorem twp_func1_leftZero_core_smallStep_wp_to_return
       congrArg (fun address => pointsTo_u64 0 address result) (by decide)
     rw [h]
     iexact Hresult
-  iapply Wasm.SmallStep.twp_store64 result
+  wasm_twp_bind Wasm.SmallStep.twp_store64 result
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HresultLater
-  iintro Hresult
+      (by decide) (by decide) (by decide) with HresultLater => Hresult
   wasm_twp_pures [twp_br]
   simp only [List.take_nil, List.nil_append]
   wasm_twp_pures [twp_localGet]
-  iapply Wasm.SmallStep.twp_load64 b
+  wasm_twp_bind Wasm.SmallStep.twp_load64 b
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ Hresult
-  iintro Hresult
+      (by decide) (by decide) (by decide) with Hresult => Hresult
   have hResultProp :
       pointsTo_u64 0 ((1048512 : UInt32) + 0) b = pointsTo_u64 0 1048512 b :=
     congrArg (fun address => pointsTo_u64 0 address b) (by decide)
@@ -4625,10 +4568,9 @@ theorem twp_func1_rightZero_core_smallStep_wp_to_return
       congrArg (fun address => pointsTo_u64 0 address a) (by decide)
     rw [h]
     iexact Hx
-  iapply Wasm.SmallStep.twp_load64 a
+  wasm_twp_bind Wasm.SmallStep.twp_load64 a
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
-  iintro Hx
+      (by decide) (by decide) (by decide) with HxLater => Hx
   wasm_twp_pures [twp_constI64]
   iapply Wasm.SmallStep.twp_eqI64 (result := 0) (by simp [ha])
   wasm_twp_pures [twp_const twp_and]
@@ -4641,10 +4583,9 @@ theorem twp_func1_rightZero_core_smallStep_wp_to_return
       congrArg (fun address => pointsTo_u64 0 address 0) (by decide)
     rw [h]
     iexact Hy
-  iapply Wasm.SmallStep.twp_load64 0
+  wasm_twp_bind Wasm.SmallStep.twp_load64 0
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HyLater
-  iintro Hy
+      (by decide) (by decide) (by decide) with HyLater => Hy
   wasm_twp_pures [twp_constI64]
   iapply Wasm.SmallStep.twp_eqI64 (result := 1) (by decide)
   wasm_twp_pures [twp_const twp_and]
@@ -4653,15 +4594,13 @@ theorem twp_func1_rightZero_core_smallStep_wp_to_return
   wasm_twp_pures [twp_brIfZero twp_exitControl]
   simp only [List.take_nil, List.drop_nil, List.nil_append]
   wasm_twp_pures [twp_localGet twp_localGet]
-  iapply Wasm.SmallStep.twp_load64 a
+  wasm_twp_bind Wasm.SmallStep.twp_load64 a
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ Hx
-  iintro Hx
+      (by decide) (by decide) (by decide) with Hx => Hx
   wasm_twp_pures [twp_localGet]
-  iapply Wasm.SmallStep.twp_load64 0
+  wasm_twp_bind Wasm.SmallStep.twp_load64 0
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ Hy
-  iintro Hy
+      (by decide) (by decide) (by decide) with Hy => Hy
   wasm_twp_pures [twp_orI64]
   rw [show a ||| (0 : UInt64) = a by
     apply UInt64.toNat.inj
@@ -4674,17 +4613,15 @@ theorem twp_func1_rightZero_core_smallStep_wp_to_return
       congrArg (fun address => pointsTo_u64 0 address result) (by decide)
     rw [h]
     iexact Hresult
-  iapply Wasm.SmallStep.twp_store64 result
+  wasm_twp_bind Wasm.SmallStep.twp_store64 result
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HresultLater
-  iintro Hresult
+      (by decide) (by decide) (by decide) with HresultLater => Hresult
   wasm_twp_pures [twp_br]
   simp only [List.take_nil, List.nil_append]
   wasm_twp_pures [twp_localGet]
-  iapply Wasm.SmallStep.twp_load64 a
+  wasm_twp_bind Wasm.SmallStep.twp_load64 a
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ Hresult
-  iintro Hresult
+      (by decide) (by decide) (by decide) with Hresult => Hresult
   have hResultProp :
       pointsTo_u64 0 ((1048512 : UInt32) + 0) a = pointsTo_u64 0 1048512 a :=
     congrArg (fun address => pointsTo_u64 0 address a) (by decide)
@@ -4897,10 +4834,9 @@ theorem twp_func1_sharedShift_smallStep_wp
       congrArg (fun address => pointsTo_u64 0 address a) (by decide)
     rw [h]
     iexact Hx
-  iapply Wasm.SmallStep.twp_load64 a
+  wasm_twp_bind Wasm.SmallStep.twp_load64 a
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
-  iintro Hx
+      (by decide) (by decide) (by decide) with HxLater => Hx
   wasm_twp_pures [twp_localGet]
   ihave HyLater : pointsTo_u64 0 (1048512 + 16) b $$ [Hy]
   · have h :
@@ -4909,10 +4845,9 @@ theorem twp_func1_sharedShift_smallStep_wp
       congrArg (fun address => pointsTo_u64 0 address b) (by decide)
     rw [h]
     iexact Hy
-  iapply Wasm.SmallStep.twp_load64 b
+  wasm_twp_bind Wasm.SmallStep.twp_load64 b
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HyLater
-  iintro Hy
+      (by decide) (by decide) (by decide) with HyLater => Hy
   wasm_twp_pures [twp_orI64 twp_ctzI64 twp_wrapI64]
   ihave HshiftLater :
       pointsTo_u32 0 (1048512 + 44) oldShift $$ [Hshift]
@@ -4988,10 +4923,9 @@ theorem twp_func1_normalizeX_smallStep_wp
       congrArg (fun address => pointsTo_u64 0 address a) (by decide)
     rw [h]
     iexact Hx
-  iapply Wasm.SmallStep.twp_load64 a
+  wasm_twp_bind Wasm.SmallStep.twp_load64 a
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
-  iintro Hx
+      (by decide) (by decide) (by decide) with HxLater => Hx
   wasm_twp_pures [twp_ctzI64 twp_wrapI64]
   ihave HshiftXLater :
       pointsTo_u32 0 (1048512 + 40) oldShiftX $$ [HshiftX]
@@ -5014,18 +4948,16 @@ theorem twp_func1_normalizeX_smallStep_wp
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
   wasm_twp_pures [twp_localGet twp_localGet]
-  iapply Wasm.SmallStep.twp_load64 a
+  wasm_twp_bind Wasm.SmallStep.twp_load64 a
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ Hx
-  iintro Hx
+      (by decide) (by decide) (by decide) with Hx => Hx
   wasm_twp_pures [twp_localGet twp_const twp_and twp_extendUI32 twp_shrUI64]
   rw [UInt32.and_comm (operandShiftWord a) 63]
   unfold operandShiftWord
   rw [shift_pipeline a ha]
-  iapply Wasm.SmallStep.twp_store64 a
+  wasm_twp_bind Wasm.SmallStep.twp_store64 a
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ Hx
-  iintro Hx
+      (by decide) (by decide) (by decide) with Hx => Hx
   simp only [func1XShiftLocals, operandShiftWord, oddPart64,
     meatLoopProg, List.drop] at hcontinue
   have hXProp :
@@ -5088,10 +5020,9 @@ theorem twp_func1_normalizeY_smallStep_wp
       congrArg (fun address => pointsTo_u64 0 address b) (by decide)
     rw [h]
     iexact Hy
-  iapply Wasm.SmallStep.twp_load64 b
+  wasm_twp_bind Wasm.SmallStep.twp_load64 b
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HyLater
-  iintro Hy
+      (by decide) (by decide) (by decide) with HyLater => Hy
   wasm_twp_pures [twp_ctzI64 twp_wrapI64]
   ihave HshiftYLater :
       pointsTo_u32 0 (1048512 + 36) oldShiftY $$ [HshiftY]
@@ -5114,18 +5045,16 @@ theorem twp_func1_normalizeY_smallStep_wp
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
   wasm_twp_pures [twp_localGet twp_localGet]
-  iapply Wasm.SmallStep.twp_load64 b
+  wasm_twp_bind Wasm.SmallStep.twp_load64 b
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ Hy
-  iintro Hy
+      (by decide) (by decide) (by decide) with Hy => Hy
   wasm_twp_pures [twp_localGet twp_const twp_and twp_extendUI32 twp_shrUI64]
   rw [UInt32.and_comm (operandShiftWord b) 63]
   unfold operandShiftWord
   rw [shift_pipeline b hb]
-  iapply Wasm.SmallStep.twp_store64 b
+  wasm_twp_bind Wasm.SmallStep.twp_store64 b
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ Hy
-  iintro Hy
+      (by decide) (by decide) (by decide) with Hy => Hy
   simp only [func1NormalizedLocals, func1LoopHeaderLocals,
     operandShiftWord, oddPart64,
     meatLoopProg, List.drop] at hcontinue
@@ -5244,10 +5173,9 @@ theorem twp_func1_equalRecombine_smallStep_wp
       congrArg (fun address => pointsTo_u64 0 address g) (by decide)
     rw [h]
     iexact Hx
-  iapply Wasm.SmallStep.twp_load64 g
+  wasm_twp_bind Wasm.SmallStep.twp_load64 g
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
-  iintro Hx
+      (by decide) (by decide) (by decide) with HxLater => Hx
   wasm_twp_pures [twp_localGet twp_const twp_and twp_extendUI32 twp_shlI64]
   ihave HresultLater :
       pointsTo_u64 0 (1048512 + 0) oldResult $$ [Hresult]
@@ -5257,10 +5185,9 @@ theorem twp_func1_equalRecombine_smallStep_wp
       congrArg (fun address => pointsTo_u64 0 address oldResult) (by decide)
     rw [h]
     iexact Hresult
-  iapply Wasm.SmallStep.twp_store64 oldResult
+  wasm_twp_bind Wasm.SmallStep.twp_store64 oldResult
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HresultLater
-  iintro Hresult
+      (by decide) (by decide) (by decide) with HresultLater => Hresult
   simp only [func1LoopHeaderLocals, recombinedWord] at hcontinue
   have hXProp :
       pointsTo_u64 0 ((1048512 : UInt32) + 8) g = pointsTo_u64 0 1048520 g :=
@@ -5323,10 +5250,9 @@ theorem twp_func1_equalBlock_smallStep_wp
       congrArg (fun address => pointsTo_u64 0 address g) (by decide)
     rw [h]
     iexact Hx
-  iapply Wasm.SmallStep.twp_load64 g
+  wasm_twp_bind Wasm.SmallStep.twp_load64 g
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
-  iintro Hx
+      (by decide) (by decide) (by decide) with HxLater => Hx
   wasm_twp_pures [twp_localGet]
   ihave HyLater : pointsTo_u64 0 (1048512 + 16) g $$ [Hy]
   · have h :
@@ -5335,10 +5261,9 @@ theorem twp_func1_equalBlock_smallStep_wp
       congrArg (fun address => pointsTo_u64 0 address g) (by decide)
     rw [h]
     iexact Hy
-  iapply Wasm.SmallStep.twp_load64 g
+  wasm_twp_bind Wasm.SmallStep.twp_load64 g
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HyLater
-  iintro Hy
+      (by decide) (by decide) (by decide) with HyLater => Hy
   iapply Wasm.SmallStep.twp_neI64 (result := 0) (by simp)
   wasm_twp_pures [twp_const twp_and]
   rw [show (0 : UInt32) &&& 1 = 0 by decide]
@@ -5398,10 +5323,9 @@ theorem twp_func1_nonzeroGuards_smallStep_wp
   ihave HxLater : pointsTo_u64 0 (1048512 + 8) a $$ [Hx]
   · rw [show (1048512 : UInt32) + 8 = 1048520 from rfl]
     iexact Hx
-  iapply Wasm.SmallStep.twp_load64 a
+  wasm_twp_bind Wasm.SmallStep.twp_load64 a
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
-  iintro Hx
+      (by decide) (by decide) (by decide) with HxLater => Hx
   wasm_twp_pures [twp_constI64]
   iapply Wasm.SmallStep.twp_eqI64 (result := 0) (by simp [ha])
   wasm_twp_pures [twp_const twp_and]
@@ -5410,10 +5334,9 @@ theorem twp_func1_nonzeroGuards_smallStep_wp
   ihave HyLater : pointsTo_u64 0 (1048512 + 16) b $$ [Hy]
   · rw [show (1048512 : UInt32) + 16 = 1048528 from rfl]
     iexact Hy
-  iapply Wasm.SmallStep.twp_load64 b
+  wasm_twp_bind Wasm.SmallStep.twp_load64 b
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HyLater
-  iintro Hy
+      (by decide) (by decide) (by decide) with HyLater => Hy
   wasm_twp_pures [twp_constI64]
   iapply Wasm.SmallStep.twp_eqI64 (result := 0) (by simp [hb])
   wasm_twp_pures [twp_const twp_and]
@@ -5479,11 +5402,10 @@ theorem twp_func1_nonzeroFinish_smallStep_wp_to_return
         (UInt64.ofNat (Nat.gcd a.toNat b.toNat)) $$ [Hresult]
   · rw [show (1048512 : UInt32) + 0 = 1048512 from rfl]
     iexact Hresult
-  iapply Wasm.SmallStep.twp_load64
+  wasm_twp_bind Wasm.SmallStep.twp_load64
       (UInt64.ofNat (Nat.gcd a.toNat b.toNat))
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HresultLater
-  iintro Hresult
+      (by decide) (by decide) (by decide) with HresultLater => Hresult
   ihave HresultExact :
       pointsTo_u64 0 1048512 (UInt64.ofNat (Nat.gcd a.toNat b.toNat))
       $$ [Hresult]
@@ -5566,10 +5488,9 @@ theorem twp_func1_loopNormalizeY_smallStep_wp
       congrArg (fun address => pointsTo_u64 0 address d) (by decide)
     rw [h]
     iexact Hy
-  iapply Wasm.SmallStep.twp_load64 d
+  wasm_twp_bind Wasm.SmallStep.twp_load64 d
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HyLater
-  iintro Hy
+      (by decide) (by decide) (by decide) with HyLater => Hy
   wasm_twp_pures [twp_ctzI64 twp_wrapI64]
   ihave HshiftLater :
       pointsTo_u32 0 (1048512 + 32) oldShift $$ [Hshift]
@@ -5592,18 +5513,16 @@ theorem twp_func1_loopNormalizeY_smallStep_wp
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
   wasm_twp_pures [twp_localGet twp_localGet]
-  iapply Wasm.SmallStep.twp_load64 d
+  wasm_twp_bind Wasm.SmallStep.twp_load64 d
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ Hy
-  iintro Hy
+      (by decide) (by decide) (by decide) with Hy => Hy
   wasm_twp_pures [twp_localGet twp_const twp_and twp_extendUI32 twp_shrUI64]
   rw [UInt32.and_comm (operandShiftWord d) 63]
   unfold operandShiftWord
   rw [shift_pipeline d hd]
-  iapply Wasm.SmallStep.twp_store64 d
+  wasm_twp_bind Wasm.SmallStep.twp_store64 d
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ Hy
-  iintro Hy
+      (by decide) (by decide) (by decide) with Hy => Hy
   simp only [func1LoopYNormalizedLocals, operandShiftWord, oddPart64] at hcontinue
   have hYProp :
       pointsTo_u64 0 ((1048512 : UInt32) + 16)
@@ -5679,10 +5598,9 @@ theorem twp_func1_loopDecreaseY_smallStep_wp
       congrArg (fun address => pointsTo_u64 0 address x) (by decide)
     rw [h]
     iexact Hx
-  iapply Wasm.SmallStep.twp_load64 x
+  wasm_twp_bind Wasm.SmallStep.twp_load64 x
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
-  iintro Hx
+      (by decide) (by decide) (by decide) with HxLater => Hx
   wasm_twp_pures [twp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
@@ -5694,15 +5612,13 @@ theorem twp_func1_loopDecreaseY_smallStep_wp
       congrArg (fun address => pointsTo_u64 0 address y) (by decide)
     rw [h]
     iexact Hy
-  iapply Wasm.SmallStep.twp_load64 y
+  wasm_twp_bind Wasm.SmallStep.twp_load64 y
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HyLater
-  iintro Hy
+      (by decide) (by decide) (by decide) with HyLater => Hy
   wasm_twp_pures [twp_localGet twp_subI64]
-  iapply Wasm.SmallStep.twp_store64 y
+  wasm_twp_bind Wasm.SmallStep.twp_store64 y
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ Hy
-  iintro Hy
+      (by decide) (by decide) (by decide) with Hy => Hy
   rw [show
     [.localGet 2, .localGet 2, .load64 16, .ctzI64, .wrapI64, .store32 32,
       .localGet 2, .load32 32, .localSet 7,
@@ -5767,10 +5683,9 @@ theorem twp_func1_loopNormalizeX_smallStep_wp
       congrArg (fun address => pointsTo_u64 0 address d) (by decide)
     rw [h]
     iexact Hx
-  iapply Wasm.SmallStep.twp_load64 d
+  wasm_twp_bind Wasm.SmallStep.twp_load64 d
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
-  iintro Hx
+      (by decide) (by decide) (by decide) with HxLater => Hx
   wasm_twp_pures [twp_ctzI64 twp_wrapI64]
   ihave HshiftLater :
       pointsTo_u32 0 (1048512 + 28) oldShift $$ [Hshift]
@@ -5793,18 +5708,16 @@ theorem twp_func1_loopNormalizeX_smallStep_wp
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
   wasm_twp_pures [twp_localGet twp_localGet]
-  iapply Wasm.SmallStep.twp_load64 d
+  wasm_twp_bind Wasm.SmallStep.twp_load64 d
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ Hx
-  iintro Hx
+      (by decide) (by decide) (by decide) with Hx => Hx
   wasm_twp_pures [twp_localGet twp_const twp_and twp_extendUI32 twp_shrUI64]
   rw [UInt32.and_comm (operandShiftWord d) 63]
   unfold operandShiftWord
   rw [shift_pipeline d hd]
-  iapply Wasm.SmallStep.twp_store64 d
+  wasm_twp_bind Wasm.SmallStep.twp_store64 d
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ Hx
-  iintro Hx
+      (by decide) (by decide) (by decide) with Hx => Hx
   simp only [func1LoopXNormalizedLocals, operandShiftWord, oddPart64] at hcontinue
   have hXProp :
       pointsTo_u64 0 ((1048512 : UInt32) + 8)
@@ -5880,10 +5793,9 @@ theorem twp_func1_loopDecreaseX_smallStep_wp
       congrArg (fun address => pointsTo_u64 0 address y) (by decide)
     rw [h]
     iexact Hy
-  iapply Wasm.SmallStep.twp_load64 y
+  wasm_twp_bind Wasm.SmallStep.twp_load64 y
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HyLater
-  iintro Hy
+      (by decide) (by decide) (by decide) with HyLater => Hy
   wasm_twp_pures [twp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
@@ -5895,15 +5807,13 @@ theorem twp_func1_loopDecreaseX_smallStep_wp
       congrArg (fun address => pointsTo_u64 0 address x) (by decide)
     rw [h]
     iexact Hx
-  iapply Wasm.SmallStep.twp_load64 x
+  wasm_twp_bind Wasm.SmallStep.twp_load64 x
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
-  iintro Hx
+      (by decide) (by decide) (by decide) with HxLater => Hx
   wasm_twp_pures [twp_localGet twp_subI64]
-  iapply Wasm.SmallStep.twp_store64 x
+  wasm_twp_bind Wasm.SmallStep.twp_store64 x
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ Hx
-  iintro Hx
+      (by decide) (by decide) (by decide) with Hx => Hx
   rw [show
     [.localGet 2, .localGet 2, .load64 8, .ctzI64, .wrapI64, .store32 28,
       .localGet 2, .load32 28, .localSet 9,
@@ -5989,10 +5899,9 @@ theorem twp_func1_loopEqualityDispatch_smallStep_wp
         congrArg (fun address => pointsTo_u64 0 address x) (by decide)
       rw [h]
       iexact Hx
-    iapply Wasm.SmallStep.twp_load64 x
+    wasm_twp_bind Wasm.SmallStep.twp_load64 x
         (by decide) (by decide) (by decide) (by decide) (by decide)
-        (by decide) (by decide) (by decide) $$ HxLater
-    iintro Hx
+        (by decide) (by decide) (by decide) with HxLater => Hx
     wasm_twp_pures [twp_localGet]
     ihave HyLater : pointsTo_u64 0 (1048512 + 16) y $$ [Hy]
     · have h :
@@ -6001,10 +5910,9 @@ theorem twp_func1_loopEqualityDispatch_smallStep_wp
         congrArg (fun address => pointsTo_u64 0 address y) (by decide)
       rw [h]
       iexact Hy
-    iapply Wasm.SmallStep.twp_load64 y
+    wasm_twp_bind Wasm.SmallStep.twp_load64 y
         (by decide) (by decide) (by decide) (by decide) (by decide)
-        (by decide) (by decide) (by decide) $$ HyLater
-    iintro Hy
+        (by decide) (by decide) (by decide) with HyLater => Hy
     iapply Wasm.SmallStep.twp_neI64 (result := 1) (by simp [hxy])
     wasm_twp_pures [twp_const twp_and]
     rw [show (1 : UInt32) &&& 1 = 1 by decide]
@@ -6090,10 +5998,9 @@ theorem twp_func1_loopDecreaseDispatch_smallStep_wp
       congrArg (fun address => pointsTo_u64 0 address x) (by decide)
     rw [h]
     iexact Hx
-  iapply Wasm.SmallStep.twp_load64 x
+  wasm_twp_bind Wasm.SmallStep.twp_load64 x
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HxLater
-  iintro Hx
+      (by decide) (by decide) (by decide) with HxLater => Hx
   wasm_twp_pures [twp_localGet]
   ihave HyLater : pointsTo_u64 0 (1048512 + 16) y $$ [Hy]
   · have h :
@@ -6102,10 +6009,9 @@ theorem twp_func1_loopDecreaseDispatch_smallStep_wp
       congrArg (fun address => pointsTo_u64 0 address y) (by decide)
     rw [h]
     iexact Hy
-  iapply Wasm.SmallStep.twp_load64 y
+  wasm_twp_bind Wasm.SmallStep.twp_load64 y
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HyLater
-  iintro Hy
+      (by decide) (by decide) (by decide) with HyLater => Hy
   ihave HxExact : pointsTo_u64 0 1048520 x $$ [Hx]
   · have h :
         pointsTo_u64 0 ((1048512 : UInt32) + 8) x =
@@ -6937,19 +6843,17 @@ theorem twp_func0_callPrefix_smallStep_wp
       pointsTo_u64 0 ((1048560 : UInt32) + 0) oldOuterA $$ [HouterA]
   · rw [show (1048560 : UInt32) + 0 = 1048560 from rfl]
     iexact HouterA
-  iapply Wasm.SmallStep.twp_store64 oldOuterA
+  wasm_twp_bind Wasm.SmallStep.twp_store64 oldOuterA
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HouterALater
-  iintro HouterA
+      (by decide) (by decide) (by decide) with HouterALater => HouterA
   wasm_twp_pures [twp_localGet twp_localGet]
   ihave HouterBLater :
       pointsTo_u64 0 ((1048560 : UInt32) + 8) oldOuterB $$ [HouterB]
   · rw [show (1048560 : UInt32) + 8 = 1048568 from rfl]
     iexact HouterB
-  iapply Wasm.SmallStep.twp_store64 oldOuterB
+  wasm_twp_bind Wasm.SmallStep.twp_store64 oldOuterB
       (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HouterBLater
-  iintro HouterB
+      (by decide) (by decide) (by decide) with HouterBLater => HouterB
   wasm_twp_pures [twp_localGet twp_localGet twp_const twp_add]
   rw [show (8 : UInt32) + 1048560 = 1048568 from rfl]
   simp only [func0CallLocals, func0AfterCallProg] at hcontinue
