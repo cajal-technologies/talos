@@ -696,9 +696,7 @@ theorem twp_func0_body_to_ret
   simp only [func0]
   iapply twp_globalGet $$ Hglobal
   iintro Hglobal
-  iapply twp_const
-  iapply twp_sub
-  iapply twp_localSet rfl
+  wasm_twp_pures [twp_const twp_sub twp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set, UInt32.reduceSub]
   iapply twp_block
@@ -707,13 +705,11 @@ theorem twp_func0_body_to_ret
   iapply twp_block
   iapply twp_block
   iapply twp_block
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   cases hnan : f32Ne x x
   · iapply twp_scalarFloat2 rfl rfl rfl
     simp only [hnan, Bool.false_eq_true, if_false]
-    iapply twp_const
-    iapply twp_and
+    wasm_twp_pures [twp_const twp_and]
     rw [show (0 &&& 1 : UInt32) = 0 by decide]
     iapply twp_brIfZero
     iapply twp_localGet rfl
@@ -721,8 +717,7 @@ theorem twp_func0_body_to_ret
     cases hge : f32Ge x 1325400064
     · iapply twp_scalarFloat2 rfl rfl rfl
       simp only [hge, Bool.false_eq_true, if_false]
-      iapply twp_const
-      iapply twp_and
+      wasm_twp_pures [twp_const twp_and]
       rw [show (0 &&& 1 : UInt32) = 0 by decide]
       iapply twp_brIfZero
       iapply twp_br rfl
@@ -732,14 +727,12 @@ theorem twp_func0_body_to_ret
       cases hlt : f32Lt x 3472883712
       · iapply twp_scalarFloat2 rfl rfl rfl
         simp only [hlt, Bool.false_eq_true, if_false]
-        iapply twp_const
-        iapply twp_and
+        wasm_twp_pures [twp_const twp_and]
         rw [show (0 &&& 1 : UInt32) = 0 by decide]
         iapply twp_brIfZero
         iapply twp_br rfl
         simp only [List.take, List.nil_append]
-        iapply twp_localGet rfl
-        iapply twp_localGet rfl
+        wasm_twp_pures [twp_localGet twp_localGet]
         iapply twp_scalarFloat1 rfl rfl
         iapply twp_func0_store32 0 (i32TruncSatF32S x)
         isplitl [Hword]
@@ -758,13 +751,11 @@ theorem twp_func0_body_to_ret
             iframe
       · iapply twp_scalarFloat2 rfl rfl rfl
         simp only [hlt, if_true]
-        iapply twp_const
-        iapply twp_and
+        wasm_twp_pures [twp_const twp_and]
         rw [show (1 &&& 1 : UInt32) = 1 by decide]
         iapply twp_brIf (by decide) rfl
         simp only [List.take, List.nil_append]
-        iapply twp_localGet rfl
-        iapply twp_const
+        wasm_twp_pures [twp_localGet twp_const]
         iapply twp_func0_store32 0 2147483648
         isplitl [Hword]
         · iexact Hword
@@ -783,13 +774,11 @@ theorem twp_func0_body_to_ret
             iframe
     · iapply twp_scalarFloat2 rfl rfl rfl
       simp only [hge, if_true]
-      iapply twp_const
-      iapply twp_and
+      wasm_twp_pures [twp_const twp_and]
       rw [show (1 &&& 1 : UInt32) = 1 by decide]
       iapply twp_brIf (by decide) rfl
       simp only [List.take, List.drop, List.nil_append]
-      iapply twp_localGet rfl
-      iapply twp_const
+      wasm_twp_pures [twp_localGet twp_const]
       iapply twp_func0_store32 0 2147483647
       isplitl [Hword]
       · iexact Hword
@@ -808,13 +797,11 @@ theorem twp_func0_body_to_ret
           iframe
   · iapply twp_scalarFloat2 rfl rfl rfl
     simp only [hnan, if_true]
-    iapply twp_const
-    iapply twp_and
+    wasm_twp_pures [twp_const twp_and]
     rw [show (1 &&& 1 : UInt32) = 1 by decide]
     iapply twp_brIf (by decide) rfl
     simp only [List.take, List.drop, List.nil_append]
-    iapply twp_localGet rfl
-    iapply twp_const
+    wasm_twp_pures [twp_localGet twp_const]
     iapply twp_func0_store32 0 0
     isplitl [Hword]
     · iexact Hword
@@ -878,8 +865,7 @@ theorem twp_check
       simp only [List.take, List.singleton_append]
       rw [heq]
       iapply twp_ne (result := 0) (by simp)
-      iapply twp_const
-      iapply twp_and
+      wasm_twp_pures [twp_const twp_and]
       rw [show (0 &&& 1 : UInt32) = 0 by decide]
       iapply twp_brIfZero
       iapply twp_returnFromFunction

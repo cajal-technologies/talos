@@ -425,13 +425,10 @@ theorem twp_swapElementsFunc2Prefix
   iintro ⟨⟨Hglobal, Hscratch, HA, HB⟩, Hdone⟩
   iapply twp_globalGet $$ Hglobal
   iintro Hglobal
-  iapply twp_const
-  iapply twp_sub
-  iapply twp_localSet rfl
+  wasm_twp_pures [twp_const twp_sub twp_localSet]
   simp only [UInt32.reduceSub, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set]
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   ihave HA' : pointsTo_u64 0 (ptrA + 0) oldA $$ [HA]
   · rw [UInt32.add_zero]
     iexact HA
@@ -447,8 +444,7 @@ theorem twp_swapElementsFunc2Prefix
   iapply twp_store64 oldScratch rfl rfl rfl rfl rfl rfl rfl rfl $$
     Hscratch'
   iintro Hscratch
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   ihave HB' : pointsTo_u64 0 (ptrB + 0) oldB $$ [HB]
   · rw [UInt32.add_zero]
     iexact HB
@@ -465,8 +461,7 @@ theorem twp_swapElementsFunc2Prefix
     (by simpa using ha4) (by simpa using ha5) (by simpa using ha6)
     (by simpa using ha7) $$ HA'
   iintro HA
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   ihave Hscratch' :
       pointsTo_u64 0 ((1048544 : UInt32) + 8) oldA $$ [Hscratch]
   · rw [show (1048544 : UInt32) + 8 = 1048552 from rfl]
@@ -508,13 +503,10 @@ theorem twp_swapElementsFunc2AliasPrefix
   iintro ⟨⟨Hglobal, Hscratch, Hcell⟩, Hdone⟩
   iapply twp_globalGet $$ Hglobal
   iintro Hglobal
-  iapply twp_const
-  iapply twp_sub
-  iapply twp_localSet rfl
+  wasm_twp_pures [twp_const twp_sub twp_localSet]
   simp only [UInt32.reduceSub, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set]
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   ihave Hcell' : pointsTo_u64 0 (ptr + 0) oldValue $$ [Hcell]
   · rw [UInt32.add_zero]
     iexact Hcell
@@ -530,8 +522,7 @@ theorem twp_swapElementsFunc2AliasPrefix
   iapply twp_store64 oldScratch rfl rfl rfl rfl rfl rfl rfl rfl $$
     Hscratch'
   iintro Hscratch
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   ihave Hcell' : pointsTo_u64 0 (ptr + 0) oldValue $$ [Hcell]
   · rw [UInt32.add_zero]
     iexact Hcell
@@ -548,8 +539,7 @@ theorem twp_swapElementsFunc2AliasPrefix
     (by simpa using h4) (by simpa using h5) (by simpa using h6)
     (by simpa using h7) $$ Hcell'
   iintro Hcell
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   ihave Hscratch' :
       pointsTo_u64 0 ((1048544 : UInt32) + 8) oldValue $$ [Hscratch]
   · rw [show (1048544 : UInt32) + 8 = 1048552 from rfl]
@@ -653,16 +643,14 @@ theorem twp_swapElementsFunc3
       [{ result, ⌜result = []⌝ ∗
         pointsTo_u32 0 1048568 ptr ∗ pointsTo_u32 0 1048572 len }] := by
   iintro ⟨Hptr, Hlen⟩
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   ihave Hlen' :
       pointsTo_u32 0 ((1048568 : UInt32) + 4) oldLen $$ [Hlen]
   · rw [show (1048568 : UInt32) + 4 = 1048572 from rfl]
     iexact Hlen
   iapply twp_store32 oldLen rfl rfl rfl rfl $$ Hlen'
   iintro Hlen
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   ihave Hptr' :
       pointsTo_u32 0 ((1048568 : UInt32) + 0) oldPtr $$ [Hptr]
   · rw [UInt32.add_zero]
@@ -1720,36 +1708,22 @@ theorem twp_func1_happyPrefix_smallStep_wp
   iapply Wasm.SmallStep.twp_block
   iapply Wasm.SmallStep.twp_block
   iapply Wasm.SmallStep.twp_block
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   iapply Wasm.SmallStep.twp_ltU (result := 1) (by simp [hi])
-  iapply Wasm.SmallStep.twp_const
-  iapply Wasm.SmallStep.twp_and
+  wasm_twp_pures [twp_const twp_and]
   rw [show (1 &&& 1 : UInt32) = 1 by decide]
   iapply Wasm.SmallStep.twp_eqz (value := 1) (result := 0) rfl
   iapply Wasm.SmallStep.twp_brIfZero
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_const
-  iapply Wasm.SmallStep.twp_shl
-  iapply Wasm.SmallStep.twp_add
-  iapply Wasm.SmallStep.twp_localSet rfl
+  wasm_twp_pures [twp_localGet twp_localGet twp_const twp_shl twp_add twp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   iapply Wasm.SmallStep.twp_ltU (result := 1) (by simp [hj])
-  iapply Wasm.SmallStep.twp_const
-  iapply Wasm.SmallStep.twp_and
+  wasm_twp_pures [twp_const twp_and]
   rw [show (1 &&& 1 : UInt32) = 1 by decide]
   iapply Wasm.SmallStep.twp_brIf (by decide) rfl
   simp only [List.take_nil, List.drop_nil, List.nil_append]
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_const
-  iapply Wasm.SmallStep.twp_shl
-  iapply Wasm.SmallStep.twp_add
+  wasm_twp_pures [twp_localGet twp_localGet twp_localGet twp_const twp_shl twp_add]
   simp only [func1OuterFrame, func1OuterBody, func1OuterContinuation, func1]
   iexact Htarget
 
@@ -2044,11 +2018,7 @@ theorem twp_func0_happy_context_smallStep_wp
         Wasm.SmallStep.Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hruntime, Hresources⟩
   simp only [func0]
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_const
+  wasm_twp_pures [twp_localGet twp_localGet twp_localGet twp_localGet twp_const]
   iapply Wasm.SmallStep.twp_call «module» 1 func1Def
     (by simp [«module»]) (by simp [«module»]) $$ Hruntime
   iintro Hruntime
@@ -2094,11 +2064,7 @@ theorem twp_func0_alias_context_smallStep_wp
         Wasm.SmallStep.Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hruntime, Hresources⟩
   simp only [func0]
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_const
+  wasm_twp_pures [twp_localGet twp_localGet twp_localGet twp_localGet twp_const]
   iapply Wasm.SmallStep.twp_call «module» 1 func1Def
     (by simp [«module»]) (by simp [«module»]) $$ Hruntime
   iintro Hruntime
@@ -2228,16 +2194,14 @@ theorem twp_func3_context_smallStep_wp
         Wasm.SmallStep.Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hptr, Hlen⟩
   simp only [func3]
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   ihave Hlen' :
       pointsTo_u32 0 ((1048568 : UInt32) + 4) oldLen $$ [Hlen]
   · rw [show (1048568 : UInt32) + 4 = 1048572 from rfl]
     iexact Hlen
   iapply Wasm.SmallStep.twp_store32 oldLen rfl rfl rfl rfl $$ Hlen'
   iintro Hlen
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   ihave Hptr' :
       pointsTo_u32 0 ((1048568 : UInt32) + 0) oldPtr $$ [Hptr]
   · rw [UInt32.add_zero]
@@ -2294,24 +2258,16 @@ theorem twp_func4_happy_smallStep_wp
   simp only [func4]
   iapply Wasm.SmallStep.twp_globalGet $$ Hglobal
   iintro Hglobal
-  iapply Wasm.SmallStep.twp_const
-  iapply Wasm.SmallStep.twp_sub
-  iapply Wasm.SmallStep.twp_localSet rfl
+  wasm_twp_pures [twp_const twp_sub twp_localSet]
   simp only [UInt32.reduceSub, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set]
   iapply Wasm.SmallStep.twp_localGet rfl
   iapply Wasm.SmallStep.twp_globalSet $$ Hglobal
   iintro Hglobal
-  iapply Wasm.SmallStep.twp_const
-  iapply Wasm.SmallStep.twp_localSet rfl
+  wasm_twp_pures [twp_const twp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_const
-  iapply Wasm.SmallStep.twp_add
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_const twp_add twp_localGet twp_localGet twp_localGet]
   iapply Wasm.SmallStep.twp_call «module» 3 func3Def
     (by simp [«module»]) (by simp [«module»]) $$ Hruntime
   iintro Hruntime
@@ -2346,9 +2302,7 @@ theorem twp_func4_happy_smallStep_wp
     iapply Wasm.SmallStep.twp_load32 ptr
       (by decide) (by decide) (by decide) (by decide) $$ HspillPtr'
     iintro HspillPtr
-    iapply Wasm.SmallStep.twp_localGet rfl
-    iapply Wasm.SmallStep.twp_localGet rfl
-    iapply Wasm.SmallStep.twp_localGet rfl
+    wasm_twp_pures [twp_localGet twp_localGet twp_localGet]
     iapply Wasm.SmallStep.twp_call «module» 0 func0Def
       (by simp [«module»]) (by simp [«module»]) $$ Hruntime
     iintro Hruntime
@@ -2361,9 +2315,7 @@ theorem twp_func4_happy_smallStep_wp
       iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
       iintro Hruntime
       simp only [List.take, List.nil_append]
-      iapply Wasm.SmallStep.twp_localGet rfl
-      iapply Wasm.SmallStep.twp_const
-      iapply Wasm.SmallStep.twp_add
+      wasm_twp_pures [twp_localGet twp_const twp_add]
       iapply Wasm.SmallStep.twp_globalSet $$ Hglobal
       iintro Hglobal
       rw [show (16 : UInt32) + 1048560 = 1048576 by decide]
@@ -2408,24 +2360,16 @@ theorem twp_func4_alias_smallStep_wp
   simp only [func4]
   iapply Wasm.SmallStep.twp_globalGet $$ Hglobal
   iintro Hglobal
-  iapply Wasm.SmallStep.twp_const
-  iapply Wasm.SmallStep.twp_sub
-  iapply Wasm.SmallStep.twp_localSet rfl
+  wasm_twp_pures [twp_const twp_sub twp_localSet]
   simp only [UInt32.reduceSub, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set]
   iapply Wasm.SmallStep.twp_localGet rfl
   iapply Wasm.SmallStep.twp_globalSet $$ Hglobal
   iintro Hglobal
-  iapply Wasm.SmallStep.twp_const
-  iapply Wasm.SmallStep.twp_localSet rfl
+  wasm_twp_pures [twp_const twp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_const
-  iapply Wasm.SmallStep.twp_add
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_const twp_add twp_localGet twp_localGet twp_localGet]
   iapply Wasm.SmallStep.twp_call «module» 3 func3Def
     (by simp [«module»]) (by simp [«module»]) $$ Hruntime
   iintro Hruntime
@@ -2459,9 +2403,7 @@ theorem twp_func4_alias_smallStep_wp
     iapply Wasm.SmallStep.twp_load32 ptr
       (by decide) (by decide) (by decide) (by decide) $$ HspillPtr'
     iintro HspillPtr
-    iapply Wasm.SmallStep.twp_localGet rfl
-    iapply Wasm.SmallStep.twp_localGet rfl
-    iapply Wasm.SmallStep.twp_localGet rfl
+    wasm_twp_pures [twp_localGet twp_localGet twp_localGet]
     iapply Wasm.SmallStep.twp_call «module» 0 func0Def
       (by simp [«module»]) (by simp [«module»]) $$ Hruntime
     iintro Hruntime
@@ -2474,9 +2416,7 @@ theorem twp_func4_alias_smallStep_wp
       iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
       iintro Hruntime
       simp only [List.take, List.nil_append]
-      iapply Wasm.SmallStep.twp_localGet rfl
-      iapply Wasm.SmallStep.twp_const
-      iapply Wasm.SmallStep.twp_add
+      wasm_twp_pures [twp_localGet twp_const twp_add]
       iapply Wasm.SmallStep.twp_globalSet $$ Hglobal
       iintro Hglobal
       rw [show (16 : UInt32) + 1048560 = 1048576 by decide]

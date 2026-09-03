@@ -1360,13 +1360,11 @@ theorem twp_func5_lowered_body_smallStep_wp
   simp only [func5]
   iapply twp_globalGet $$ Hglobal
   iintro Hglobal
-  iapply twp_const
-  iapply twp_sub
+  wasm_twp_pures [twp_const twp_sub]
   rw [show (1048560 : UInt32) - 16 = 1048544 by decide]
   iapply twp_localSet rfl
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub, List.set]
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   iapply twp_scalarFloat1 rfl rfl
   ihave Hword' : pointsTo_u32 0 ((1048544 : UInt32) + 12) oldWord $$ [Hword]
   · rw [show (1048544 : UInt32) + 12 = 1048556 by decide]
@@ -1448,13 +1446,11 @@ theorem twp_deepFrameFloat_body_smallStep_wp
   iintro ⟨HR, Hglobal, Hword⟩
   iapply twp_globalGet $$ Hglobal
   iintro Hglobal
-  iapply twp_const
-  iapply twp_sub
+  wasm_twp_pures [twp_const twp_sub]
   rw [show (1048544 : UInt32) - 16 = 1048528 by decide]
   iapply twp_localSet rfl
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub, List.set]
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   iapply twp_scalarFloat1 hzero heval
   ihave Hword' : pointsTo_u32 0 ((1048528 : UInt32) + 12) oldWord $$ [Hword]
   · rw [show (1048528 : UInt32) + 12 = 1048540 by decide]
@@ -1570,9 +1566,7 @@ theorem twp_naive_tail_smallStep_wp
   iintro Hword
   iapply twp_localSet rfl
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub, List.set]
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_add
+  wasm_twp_pures [twp_localGet twp_const twp_add]
   rw [show (16 : UInt32) + 1048544 = 1048560 by decide]
   iapply twp_globalSet $$ Hglobal
   iintro Hglobal
@@ -1614,8 +1608,7 @@ theorem twp_naive_storeTrunc_smallStep_wp
         Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hglobal, Hword⟩
   simp only [naiveStoreTruncProg]
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   ihave Hword' : pointsTo_u32 0 ((1048544 : UInt32) + 12) oldWord $$ [Hword]
   · rw [show (1048544 : UInt32) + 12 = 1048556 by decide]
     iexact Hword
@@ -1664,8 +1657,7 @@ theorem twp_naive_ceil_smallStep_wp
         Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
   simp only [naiveCeilProg]
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   iapply twp_call «module» 2 func2Def
     (by simp [«module»]) (by simp [«module»]) $$ Hruntime
   iintro Hruntime
@@ -1730,8 +1722,7 @@ theorem twp_naive_floor_smallStep_wp
         Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
   simp only [naiveFloorProg]
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   iapply twp_call «module» 3 func3Def
     (by simp [«module»]) (by simp [«module»]) $$ Hruntime
   iintro Hruntime
@@ -1827,8 +1818,7 @@ theorem twp_naive_compare_smallStep_wp
       f32Ge (f32Sub x (f32Trunc x)) 1056964608 = true
   · iapply twp_scalarFloat2 (value := .i32 1) rfl rfl
       (by simp [evalScalarFloat2?, hge])
-    iapply twp_const
-    iapply twp_and
+    wasm_twp_pures [twp_const twp_and]
     rw [show (1 &&& 1 : UInt32) = 1 by decide]
     iapply twp_brIf (by decide) rfl
     simp only [naiveDFrame, List.take, List.nil_append]
@@ -1842,8 +1832,7 @@ theorem twp_naive_compare_smallStep_wp
       cases h : f32Ge (f32Sub x (f32Trunc x)) 1056964608 <;> simp_all
     iapply twp_scalarFloat2 (value := .i32 0) rfl rfl
       (by simp [evalScalarFloat2?, hgeFalse])
-    iapply twp_const
-    iapply twp_and
+    wasm_twp_pures [twp_const twp_and]
     rw [show (0 &&& 1 : UInt32) = 0 by decide]
     iapply twp_brIfZero
     iapply twp_localGet rfl
@@ -1852,8 +1841,7 @@ theorem twp_naive_compare_smallStep_wp
         f32Le (f32Sub x (f32Trunc x)) 3204448256 = true
     · iapply twp_scalarFloat2 (value := .i32 1) rfl rfl
         (by simp [evalScalarFloat2?, hle])
-      iapply twp_const
-      iapply twp_and
+      wasm_twp_pures [twp_const twp_and]
       rw [show (1 &&& 1 : UInt32) = 1 by decide]
       iapply twp_brIf (by decide) rfl
       simp only [naiveBFrame, List.take, List.nil_append]
@@ -1867,8 +1855,7 @@ theorem twp_naive_compare_smallStep_wp
         cases h : f32Le (f32Sub x (f32Trunc x)) 3204448256 <;> simp_all
       iapply twp_scalarFloat2 (value := .i32 0) rfl rfl
         (by simp [evalScalarFloat2?, hleFalse])
-      iapply twp_const
-      iapply twp_and
+      wasm_twp_pures [twp_const twp_and]
       rw [show (0 &&& 1 : UInt32) = 0 by decide]
       iapply twp_brIfZero
       iapply twp_br rfl
@@ -1909,8 +1896,7 @@ theorem twp_func0_lowered_smallStep_wp
   simp only [func0]
   iapply twp_globalGet $$ Hglobal
   iintro Hglobal
-  iapply twp_const
-  iapply twp_sub
+  wasm_twp_pures [twp_const twp_sub]
   rw [show (1048560 : UInt32) - 16 = 1048544 by decide]
   iapply twp_localSet rfl
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub, List.set]
@@ -1932,8 +1918,7 @@ theorem twp_func0_lowered_smallStep_wp
     simp only [List.take, List.singleton_append]
     iapply twp_localSet rfl
     simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub, List.set]
-    iapply twp_localGet rfl
-    iapply twp_localGet rfl
+    wasm_twp_pures [twp_localGet twp_localGet]
     iapply twp_scalarFloat2 rfl rfl rfl
     iapply twp_localSet rfl
     simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub, List.set]
@@ -2040,9 +2025,7 @@ theorem twp_roundCheck_tail_result_smallStep_wp
   iintro Hresult
   iapply twp_localSet rfl
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub, List.set]
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_add
+  wasm_twp_pures [twp_localGet twp_const twp_add]
   rw [show (16 : UInt32) + 1048560 = 1048576 by decide]
   iapply twp_globalSet $$ Hglobal
   iintro Hglobal
@@ -2113,14 +2096,12 @@ theorem twp_roundCheck_comparison_smallStep_wp
       by_cases heq : f32Eq naive (f32Nearest x) = true
       · iapply twp_scalarFloat2 (value := .i32 1) rfl rfl
           (by simp [evalScalarFloat2?, heq])
-        iapply twp_const
-        iapply twp_and
+        wasm_twp_pures [twp_const twp_and]
         rw [show (1 &&& 1 : UInt32) = 1 by decide]
         iapply twp_brIf (by decide) rfl
         simp only [roundCheckInnerFrame, List.take, List.nil_append]
         simp only [roundCheckOneProg]
-        iapply twp_localGet rfl
-        iapply twp_const
+        wasm_twp_pures [twp_localGet twp_const]
         ihave Hresult' : pointsTo_u32 0 ((1048560 : UInt32) + 12) oldResult $$ [Hresult]
         · rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
           iexact Hresult
@@ -2142,12 +2123,10 @@ theorem twp_roundCheck_comparison_smallStep_wp
           cases h : f32Eq naive (f32Nearest x) <;> simp_all
         iapply twp_scalarFloat2 (value := .i32 0) rfl rfl
           (by simp [evalScalarFloat2?, heqFalse])
-        iapply twp_const
-        iapply twp_and
+        wasm_twp_pures [twp_const twp_and]
         rw [show (0 &&& 1 : UInt32) = 0 by decide]
         iapply twp_brIfZero
-        iapply twp_localGet rfl
-        iapply twp_const
+        wasm_twp_pures [twp_localGet twp_const]
         ihave Hresult' : pointsTo_u32 0 ((1048560 : UInt32) + 12) oldResult $$ [Hresult]
         · rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
           iexact Hresult
@@ -2183,8 +2162,7 @@ theorem twp_func6_body_smallStep_wp
   simp only [func6]
   iapply twp_globalGet $$ Hglobal
   iintro Hglobal
-  iapply twp_const
-  iapply twp_sub
+  wasm_twp_pures [twp_const twp_sub]
   rw [show (1048576 : UInt32) - 16 = 1048560 by decide]
   iapply twp_localSet rfl
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub, List.set]
