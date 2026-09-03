@@ -1003,14 +1003,12 @@ theorem twp_load32
   dsimp only
   iintro Hword Htwp
   wasm_twp_begin
-  ihave %Hfacts :
+  ihave_pure Hfacts :
       ⌜store.wasm.mem.read32 (address + offset) = word ∧
         (address + offset).toNat + 4 ≤
-          store.wasm.mem.pages * 65536⌝ $$ [Hσ Hword]
-  · imod stateInterp_pointsTo_u32_facts store ns obs nt
-      (address + offset) word h1 h2 h3 $$ [$Hσ $Hword] with %Hfacts
-    ipureintro
-    exact Hfacts
+          store.wasm.mem.pages * 65536⌝ using
+    stateInterp_pointsTo_u32_facts store ns obs nt
+      (address + offset) word h1 h2 h3 $$ [Hσ Hword]
   obtain ⟨Hread, HinBounds⟩ := Hfacts
   have hbound : address.toNat + offset.toNat + 4 ≤
       store.wasm.mem.pages * 65536 := by
@@ -1048,14 +1046,12 @@ theorem twp_store32
   dsimp only
   iintro Hword Htwp
   wasm_twp_begin
-  ihave %Hfacts :
+  ihave_pure Hfacts :
       ⌜store.wasm.mem.read32 (address + offset) = oldWord ∧
         (address + offset).toNat + 4 ≤
-          store.wasm.mem.pages * 65536⌝ $$ [Hσ Hword]
-  · imod stateInterp_pointsTo_u32_facts store ns obs nt
-      (address + offset) oldWord h1 h2 h3 $$ [$Hσ $Hword] with %Hfacts
-    ipureintro
-    exact Hfacts
+          store.wasm.mem.pages * 65536⌝ using
+    stateInterp_pointsTo_u32_facts store ns obs nt
+      (address + offset) oldWord h1 h2 h3 $$ [Hσ Hword]
   have hbound : address.toNat + offset.toNat + 4 ≤
       store.wasm.mem.pages * 65536 := by
     simpa only [hnowrap] using Hfacts.2
@@ -1462,14 +1458,12 @@ theorem twp_f32Load
   dsimp only
   iintro Hword Htwp
   wasm_twp_begin
-  ihave %Hfacts :
+  ihave_pure Hfacts :
       ⌜store.wasm.mem.read32 (address + offset) = word ∧
         (address + offset).toNat + 4 ≤
-          store.wasm.mem.pages * 65536⌝ $$ [Hσ Hword]
-  · imod stateInterp_pointsTo_u32_facts store ns obs nt
-      (address + offset) word h1 h2 h3 $$ [$Hσ $Hword] with %Hfacts
-    ipureintro
-    exact Hfacts
+          store.wasm.mem.pages * 65536⌝ using
+    stateInterp_pointsTo_u32_facts store ns obs nt
+      (address + offset) word h1 h2 h3 $$ [Hσ Hword]
   obtain ⟨Hread, HinBounds⟩ := Hfacts
   have hbound : address.toNat + offset.toNat + 4 ≤
       store.wasm.mem.pages * 65536 := by
@@ -1507,14 +1501,12 @@ theorem twp_f32Store
   dsimp only
   iintro Hword Htwp
   wasm_twp_begin
-  ihave %Hfacts :
+  ihave_pure Hfacts :
       ⌜store.wasm.mem.read32 (address + offset) = oldWord ∧
         (address + offset).toNat + 4 ≤
-          store.wasm.mem.pages * 65536⌝ $$ [Hσ Hword]
-  · imod stateInterp_pointsTo_u32_facts store ns obs nt
-      (address + offset) oldWord h1 h2 h3 $$ [$Hσ $Hword] with %Hfacts
-    ipureintro
-    exact Hfacts
+          store.wasm.mem.pages * 65536⌝ using
+    stateInterp_pointsTo_u32_facts store ns obs nt
+      (address + offset) oldWord h1 h2 h3 $$ [Hσ Hword]
   have hbound : address.toNat + offset.toNat + 4 ≤
       store.wasm.mem.pages * 65536 := by
     simpa only [hnowrap] using Hfacts.2
@@ -1642,14 +1634,12 @@ theorem twp_f64Load
   dsimp only
   iintro Hword Htwp
   wasm_twp_begin
-  ihave %Hfacts :
+  ihave_pure Hfacts :
       ⌜store.wasm.mem.read64 (address + offset) = word ∧
         (address + offset).toNat + 8 ≤
-          store.wasm.mem.pages * 65536⌝ $$ [Hσ Hword]
-  · imod stateInterp_pointsTo_u64_facts store ns obs nt
-      (address + offset) word h1 h2 h3 h4 h5 h6 h7 $$ [$Hσ $Hword] with %Hfacts
-    ipureintro
-    exact Hfacts
+          store.wasm.mem.pages * 65536⌝ using
+    stateInterp_pointsTo_u64_facts store ns obs nt
+      (address + offset) word h1 h2 h3 h4 h5 h6 h7 $$ [Hσ Hword]
   obtain ⟨Hread, HinBounds⟩ := Hfacts
   have hbound : address.toNat + offset.toNat + 8 ≤
       store.wasm.mem.pages * 65536 := by
@@ -1696,14 +1686,12 @@ theorem twp_f64Store
   dsimp only
   iintro Hword Htwp
   wasm_twp_begin
-  ihave %Hfacts :
+  ihave_pure Hfacts :
       ⌜store.wasm.mem.read64 (address + offset) = oldWord ∧
         (address + offset).toNat + 8 ≤
-          store.wasm.mem.pages * 65536⌝ $$ [Hσ Hword]
-  · imod stateInterp_pointsTo_u64_facts store ns obs nt
-      (address + offset) oldWord h1 h2 h3 h4 h5 h6 h7 $$ [$Hσ $Hword] with %Hfacts
-    ipureintro
-    exact Hfacts
+          store.wasm.mem.pages * 65536⌝ using
+    stateInterp_pointsTo_u64_facts store ns obs nt
+      (address + offset) oldWord h1 h2 h3 h4 h5 h6 h7 $$ [Hσ Hword]
   have hbound : address.toNat + offset.toNat + 8 ≤
       store.wasm.mem.pages * 65536 := by
     simpa only [hnowrap] using Hfacts.2
@@ -1763,14 +1751,12 @@ theorem twp_load64
   dsimp only
   iintro Hword Htwp
   wasm_twp_begin
-  ihave %Hfacts :
+  ihave_pure Hfacts :
       ⌜store.wasm.mem.read64 (address + offset) = word ∧
         (address + offset).toNat + 8 ≤
-          store.wasm.mem.pages * 65536⌝ $$ [Hσ Hword]
-  · imod stateInterp_pointsTo_u64_facts store ns obs nt
-      (address + offset) word h1 h2 h3 h4 h5 h6 h7 $$ [$Hσ $Hword] with %Hfacts
-    ipureintro
-    exact Hfacts
+          store.wasm.mem.pages * 65536⌝ using
+    stateInterp_pointsTo_u64_facts store ns obs nt
+      (address + offset) word h1 h2 h3 h4 h5 h6 h7 $$ [Hσ Hword]
   obtain ⟨Hread, HinBounds⟩ := Hfacts
   have hbound : address.toNat + offset.toNat + 8 ≤
       store.wasm.mem.pages * 65536 := by
@@ -1817,14 +1803,12 @@ theorem twp_store64
   dsimp only
   iintro Hword Htwp
   wasm_twp_begin
-  ihave %Hfacts :
+  ihave_pure Hfacts :
       ⌜store.wasm.mem.read64 (address + offset) = oldWord ∧
         (address + offset).toNat + 8 ≤
-          store.wasm.mem.pages * 65536⌝ $$ [Hσ Hword]
-  · imod stateInterp_pointsTo_u64_facts store ns obs nt
-      (address + offset) oldWord h1 h2 h3 h4 h5 h6 h7 $$ [$Hσ $Hword] with %Hfacts
-    ipureintro
-    exact Hfacts
+          store.wasm.mem.pages * 65536⌝ using
+    stateInterp_pointsTo_u64_facts store ns obs nt
+      (address + offset) oldWord h1 h2 h3 h4 h5 h6 h7 $$ [Hσ Hword]
   have hbound : address.toNat + offset.toNat + 8 ≤
       store.wasm.mem.pages * 65536 := by
     simpa only [hnowrap] using Hfacts.2
@@ -2080,13 +2064,11 @@ theorem twp_load32_addr
   dsimp only
   iintro Hword Htwp
   wasm_twp_begin
-  ihave %Hfacts :
+  ihave_pure Hfacts :
       ⌜store.wasm.mem.read32 addr = word ∧
-        addr.toNat + 4 ≤ store.wasm.mem.pages * 65536⌝ $$ [Hσ Hword]
-  · imod stateInterp_pointsTo_u32_facts store ns obs nt
-      addr word h1 h2 h3 $$ [$Hσ $Hword] with %Hfacts
-    ipureintro
-    exact Hfacts
+        addr.toNat + 4 ≤ store.wasm.mem.pages * 65536⌝ using
+    stateInterp_pointsTo_u32_facts store ns obs nt
+      addr word h1 h2 h3 $$ [Hσ Hword]
   obtain ⟨Hread, HinBounds⟩ := Hfacts
   have hbound : addr.toNat + (0 : UInt32).toNat + 4 ≤
       store.wasm.mem.pages * 65536 := by

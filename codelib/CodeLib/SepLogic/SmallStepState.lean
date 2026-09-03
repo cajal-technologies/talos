@@ -697,6 +697,21 @@ theorem stateInterp_pointsToBytes_agree [WasmSmallStepGS hlc α]
           rw [← byte_offset_succ addr j] at hmem hbound
           exact ⟨hmem, hbound⟩
 
+/-- Obtain a pure fact from an update while preserving the selected Iris
+resources in the surrounding proof context. -/
+syntax "ihave_pure " ident " : " term " using " term
+  " $$ " specPat : tactic
+
+set_option hygiene false in
+macro_rules
+  | `(tactic| ihave_pure $fact:ident : $claim:term using $proof:term
+        $$ $resources:specPat) =>
+    `(tactic|
+      (ihave %$fact : $claim $$ $resources
+       · imod ($proof) $$ [$] with %$fact
+         ipureintro
+         exact $fact))
+
 /-- Derive physical byte facts for an owned range in a lifting proof. -/
 syntax "wasm_points_to_bytes_agree " ident ", " term ", " term ", " term
   " $$ " specPat : tactic
@@ -706,14 +721,12 @@ macro_rules
   | `(tactic| wasm_points_to_bytes_agree $facts:ident, $addr:term,
         $bytes:term, $observations:term $$ $resources:specPat) =>
     `(tactic|
-      (ihave %$facts : ⌜∀ i b, $bytes[i]? = some b →
-            store.wasm.mem.read8 ($addr + UInt32.ofNat i) = b ∧
-            ($addr + UInt32.ofNat i).toNat <
-              store.wasm.mem.pages * 65536⌝ $$ $resources
-       · imod stateInterp_pointsToBytes_agree store ns $observations nt
-           $addr $bytes $$ [$] with %$facts
-         ipureintro
-         exact $facts))
+      ihave_pure $facts : ⌜∀ i b, $bytes[i]? = some b →
+          store.wasm.mem.read8 ($addr + UInt32.ofNat i) = b ∧
+          ($addr + UInt32.ofNat i).toNat <
+            store.wasm.mem.pages * 65536⌝ using
+        stateInterp_pointsToBytes_agree store ns $observations nt $addr $bytes
+        $$ $resources)
 
 /-- Whole-range bound from the per-byte physical facts produced by
 `stateInterp_pointsToBytes_agree`: a nonempty owned byte range that does not
