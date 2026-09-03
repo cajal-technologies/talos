@@ -1189,36 +1189,12 @@ theorem twp_tryTable
   exact twp_pureStep _ _ _ (fun _ => Step.tryTable)
 
 
-theorem twp_and
-    {params localValues values : List Value}
-    {lhs rhs : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    WP (.running
-      ⟨⟨params, localValues, .i32 (lhs &&& rhs) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-        [{ Φ }] ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-        .and :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      [{ Φ }] :=
-  twp_pureStep _ _ _ (fun _ => Step.and)
+wasm_twp_pure_rule twp_and {lhs rhs : UInt32} :
+  .and, .i32 rhs :: .i32 lhs :: values => .i32 (lhs &&& rhs) :: values := Step.and
 
-theorem twp_ne
-    {params localValues values : List Value}
-    {lhs rhs result : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
+wasm_twp_pure_rule twp_ne {lhs rhs result : UInt32}
     (hresult : result = if lhs ≠ rhs then 1 else 0) :
-    WP (.running
-      ⟨⟨params, localValues, .i32 result :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-        [{ Φ }] ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-        .ne :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      [{ Φ }] :=
-  twp_pureStep _ _ _ (fun _ => Step.ne hresult)
+  .ne, .i32 rhs :: .i32 lhs :: values => .i32 result :: values := Step.ne hresult
 
 theorem twp_globalGet
     {params localValues values : List Value}
@@ -1249,56 +1225,25 @@ theorem twp_globalGet
       iapply Htwp
       iexact Hglobal
 
-theorem twp_scalarFloat0
-    {params localValues values : List Value}
+wasm_twp_pure_rule twp_scalarFloat0
     {instruction : Instruction} {value : Value}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame}
     (heval : evalScalarFloat0? instruction = some value) :
-    WP (.running
-      ⟨⟨params, localValues, value :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-        [{ Φ }] ⊢
-    WP (.running
-      ⟨⟨params, localValues, values⟩,
-        instruction :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      [{ Φ }] :=
-  twp_pureStep _ _ _ (fun _ => Step.scalarFloat0 heval)
+  instruction, values => value :: values := Step.scalarFloat0 heval
 
-theorem twp_scalarFloat1
-    {params localValues values : List Value}
+wasm_twp_pure_rule twp_scalarFloat1
     {instruction : Instruction} {operand value : Value}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame}
     (hzero : evalScalarFloat0? instruction = none)
     (heval : evalScalarFloat1? instruction operand = some value) :
-    WP (.running
-      ⟨⟨params, localValues, value :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-        [{ Φ }] ⊢
-    WP (.running
-      ⟨⟨params, localValues, operand :: values⟩,
-        instruction :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      [{ Φ }] :=
-  twp_pureStep _ _ _ (fun _ => Step.scalarFloat1 hzero heval)
+  instruction, operand :: values => value :: values :=
+    Step.scalarFloat1 hzero heval
 
-theorem twp_scalarFloat2
-    {params localValues values : List Value}
+wasm_twp_pure_rule twp_scalarFloat2
     {instruction : Instruction} {lhs rhs value : Value}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame}
     (hzero : evalScalarFloat0? instruction = none)
     (hunary : evalScalarFloat1? instruction rhs = none)
     (heval : evalScalarFloat2? instruction lhs rhs = some value) :
-    WP (.running
-      ⟨⟨params, localValues, value :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-        [{ Φ }] ⊢
-    WP (.running
-      ⟨⟨params, localValues, rhs :: lhs :: values⟩,
-        instruction :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      [{ Φ }] :=
-  twp_pureStep _ _ _ (fun _ => Step.scalarFloat2 hzero hunary heval)
+  instruction, rhs :: lhs :: values => value :: values :=
+    Step.scalarFloat2 hzero hunary heval
 
 theorem twp_f32Load
     {params localValues values : List Value}
@@ -1450,20 +1395,8 @@ theorem twp_globalSet
       iapply Htwp
       iexact Hglobal
 
-theorem twp_or
-    {params localValues values : List Value}
-    {lhs rhs : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    WP (.running
-      ⟨⟨params, localValues, .i32 (lhs ||| rhs) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-        [{ Φ }] ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-        .or :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      [{ Φ }] :=
-  twp_pureStep _ _ _ (fun _ => Step.or)
+wasm_twp_pure_rule twp_or {lhs rhs : UInt32} :
+  .or, .i32 rhs :: .i32 lhs :: values => .i32 (lhs ||| rhs) :: values := Step.or
 
 theorem twp_f64Load
     {params localValues values : List Value}
