@@ -355,8 +355,7 @@ theorem fillWords_loopBody_invariant_wp
           simp only [List.length_cons] at hinv
           omega
         let Rloop : IProp (WasmHeapGF α) := iprop% □ Kloop ∗ R
-        iintro Hcurrent
-        icases Hcurrent with ⟨#IHcurrent, HcurrentRest⟩
+        iintro ⟨#IHcurrent, HcurrentRest⟩
         icases HcurrentRest with ⟨HRcurrent, HarrayCurrent⟩
         iapply fillWords_bodyTail_wp Rloop base n i value old tail
           afterLoop arity remainder outerControls calls

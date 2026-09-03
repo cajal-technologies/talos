@@ -2220,8 +2220,7 @@ theorem VecStorage_initializedFocus {host : Type} [WasmHeapGS host]
         (ByteSlice ptr initialized -∗
           VecStorage heapId capacity ptr initialized)) := by
   unfold VecStorage
-  iintro Hstorage
-  icases Hstorage with (%hempty | Hallocated)
+  iintro (%hempty | Hallocated)
   · rcases hempty with ⟨_hcapacity, _hptr, rfl⟩
     simp at hinitialized
   · icases Hallocated with
@@ -2265,8 +2264,7 @@ theorem VecStorage_appendFocus {host : Type} [WasmHeapGS host]
         (ByteSlice (ptr + UInt32.ofNat initialized.length) current -∗
           VecStorage heapId capacity ptr (initialized ++ current))) := by
   unfold VecStorage
-  iintro Hstorage
-  icases Hstorage with (%hempty | Hallocated)
+  iintro (%hempty | Hallocated)
   · rcases hempty with ⟨rfl, _hptr, rfl⟩
     simp only [UInt32.toNat_zero, Nat.zero_sub] at hfits
     omega

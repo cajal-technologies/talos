@@ -6562,8 +6562,7 @@ theorem twp_func1_loopEntry_smallStep_wp
         have hxGcd_i : i.x.toNat = Nat.gcd (oddPart64 a).toNat (oddPart64 b).toNat := by
           rw [← hgcd_i, hxy, Nat.gcd_self]
         have hresultEq := recombinedWord_eq_gcd a b i.x ha hb hxGcd_i
-        iintro Hresources
-        icases Hresources with ⟨HR', Hx', Hy', Hresult', HshiftX', HshiftY'⟩
+        iintro ⟨HR', Hx', Hy', Hresult', HshiftX', HshiftY'⟩
         ihave HresultFixed :
             pointsTo_u64 0 1048512 (UInt64.ofNat (Nat.gcd a.toNat b.toNat)) $$ [Hresult']
         · rw [← hresultEq]; iexact Hresult'
@@ -6579,8 +6578,7 @@ theorem twp_func1_loopEntry_smallStep_wp
           a b i.x i.y oldResult i.oldShiftX i.oldShiftY i.c6 i.c8 i.c7 i.c9
         · intro heq; exact (hxy heq).elim
         · intro _ _
-          iintro Hresources
-          icases Hresources with ⟨HR', Hx', Hy', Hresult', HshiftX', HshiftY'⟩
+          iintro ⟨HR', Hx', Hy', Hresult', HshiftX', HshiftY'⟩
           wasm_twp_pures [twp_br]
           simp only [func1LoopFrame, List.take_nil, List.nil_append]
           rw [show func1LoopXNormalizedLocals a b i.y (i.x - i.y) i.c6 i.c7 =
@@ -6616,8 +6614,7 @@ theorem twp_func1_loopEntry_smallStep_wp
         · intro heq; exact (hxy heq).elim
         · intro _ hlt'; exact (hlt hlt').elim
         · intro _ _
-          iintro Hresources
-          icases Hresources with ⟨HR', Hx', Hy', Hresult', HshiftX', HshiftY'⟩
+          iintro ⟨HR', Hx', Hy', Hresult', HshiftX', HshiftY'⟩
           wasm_twp_pures [twp_br]
           simp only [func1LoopFrame, List.take_nil, List.nil_append]
           rw [show func1LoopYNormalizedLocals a b i.x (i.y - i.x) i.c8 i.c9 =

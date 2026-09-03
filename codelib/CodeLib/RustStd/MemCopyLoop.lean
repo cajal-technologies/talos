@@ -417,8 +417,7 @@ theorem copyWords_loopBody_invariant_wp
           rw [hsource]
           simp only [copied', List.append_assoc, List.singleton_append]
         let Rloop : IProp (WasmHeapGF α) := iprop% □ Kloop ∗ R
-        iintro Hcurrent
-        icases Hcurrent with ⟨#IHcurrent, HcurrentRest⟩
+        iintro ⟨#IHcurrent, HcurrentRest⟩
         icases HcurrentRest with ⟨HRcurrent, HarraysCurrent⟩
         icases HarraysCurrent with ⟨HdstCurrent, HsrcCurrent⟩
         iapply copyWords_bodyTail_wp Rloop dst src n i pre oldDst value

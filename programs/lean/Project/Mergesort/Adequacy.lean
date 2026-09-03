@@ -349,8 +349,7 @@ private theorem DriverOOM_public
     (heapId : GName) (input : List UInt32) :
     (∃ phase : DriverOOMPhase, DriverOOMState heapId input phase) -∗
       irisEntryPost input (.trapped (.host OOM.trapMessage)) := by
-  iintro Hoom
-  icases Hoom with ⟨%phase, Hoom⟩
+  iintro ⟨%phase, Hoom⟩
   ihave HstreamsExist := DriverOOMState_streams heapId input phase $$ Hoom
   icases HstreamsExist with ⟨%remaining, Hstreams⟩
   iintro %store %observations Hstate

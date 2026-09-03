@@ -827,8 +827,7 @@ theorem innerScratch_split_zero [WasmHeapGS Unit] :
     show (1048552 : UInt32) + 5 = 1048556 + 1 by decide,
     show (1048552 : UInt32) + 6 = 1048556 + 2 by decide,
     show (1048552 : UInt32) + 7 = 1048556 + 3 by decide]
-  iintro Hbytes
-  icases Hbytes with ⟨H0, H1, H2, H3, H4, H5, H6, H7⟩
+  iintro ⟨H0, H1, H2, H3, H4, H5, H6, H7⟩
   iframe
 
 theorem innerScratch_merge_upper [WasmHeapGS Unit] (upper : UInt32) :
@@ -864,8 +863,7 @@ theorem innerScratch_merge_upper [WasmHeapGS Unit] (upper : UInt32) :
     show (1048552 : UInt32) + 5 = 1048556 + 1 by decide,
     show (1048552 : UInt32) + 6 = 1048556 + 2 by decide,
     show (1048552 : UInt32) + 7 = 1048556 + 3 by decide]
-  iintro Hbytes
-  icases Hbytes with ⟨Hlow, Hhigh⟩
+  iintro ⟨Hlow, Hhigh⟩
   icases Hlow with ⟨H0, H1, H2, H3⟩
   icases Hhigh with ⟨H4, H5, H6, H7⟩
   iframe
