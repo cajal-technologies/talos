@@ -563,8 +563,7 @@ theorem func10_correct [WasmSmallStepGS hlc Universal.State] :
   iintro Hmodule
   simp [Project.Mergesort.func10Def, Project.Mergesort.func10,
     Function.toLocals, Function.numParams]
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   let shimLocals : Locals := ⟨[.i32 ptr, .i32 requested], [], []⟩
   let callerFrame : CallFrame :=
     { locals := { callerLocals with values := stack }
@@ -626,8 +625,7 @@ theorem func11_correct [WasmSmallStepGS hlc Universal.State] :
   iintro Hmodule
   simp [Project.Mergesort.func11Def, Project.Mergesort.func11,
     Function.toLocals, Function.numParams]
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   let shimLocals : Locals := ⟨[.i32 ptr, .i32 requested], [], []⟩
   let callerFrame : CallFrame :=
     { locals := { callerLocals with values := stack }

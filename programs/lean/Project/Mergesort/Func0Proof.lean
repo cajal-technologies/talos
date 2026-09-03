@@ -355,25 +355,19 @@ private theorem twp_func0_success_tail
     apply byteOffset_toNat result 3
     rw [hresultLength] at hresultNowrap
     omega
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   iapply twp_store32 (address := result) (offset := 4) oldResultPtr
       hresult4 h4_1 h4_2 h4_3 $$ Hpointer
   iintro Hpointer
-  iapply twp_const
-  iapply twp_localSet rfl
+  wasm_twp_pures [twp_const twp_localSet]
   simp only [List.length]
   iapply twp_exitControl (by rfl)
   simp only [List.take_zero, List.nil_append]
-  iapply twp_const
-  iapply twp_localSet rfl
+  wasm_twp_pures [twp_const twp_localSet]
   simp only [List.length]
   iapply twp_exitControl (by rfl)
   simp only [func0FinalCode, List.take_zero, List.nil_append]
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
-  iapply twp_add
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet twp_add twp_localGet]
   have hresult8Comm : 8 + result = result + 8 := by
     ac_rfl
   ihave Hcapacity' : pointsTo_u32 0 (8 + result + 0)
@@ -387,8 +381,7 @@ private theorem twp_func0_success_tail
       (by simpa [hresult8Comm] using h8_2)
       (by simpa [hresult8Comm] using h8_3) $$ Hcapacity'
   iintro Hcapacity
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   ihave Htag' : pointsTo_u32 0 (result + 0) oldTag $$ [Htag]
   · rw [show result + 0 = result by simp]
     iexact Htag
@@ -459,11 +452,9 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
           (newCapacity.toUInt64.toNat % 2 ^ 32) =
         newCapacity := by
     simp
-  iapply twp_const
-  iapply twp_localSet rfl
+  wasm_twp_pures [twp_const twp_localSet]
   simp only [List.length]
-  iapply twp_const
-  iapply twp_localSet rfl
+  wasm_twp_pures [twp_const twp_localSet]
   simp only [List.length]
   iapply twp_block
   iapply twp_block
@@ -493,9 +484,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
   rw [hwrap]
   iapply twp_localTee rfl
   simp only [List.set]
-  iapply twp_const
-  iapply twp_localGet rfl
-  iapply twp_sub
+  wasm_twp_pures [twp_const twp_localGet twp_sub]
   have hcapacityGuard : newCapacity ≤ (2147483648 : UInt32) - 1 := by
     rw [UInt32.le_iff_toNat_le_toNat]
     exact hnewUpper
@@ -543,8 +532,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
         iintro Hruntime
         isimp only [RuntimeContext] at Hruntime
         icases Hruntime with ⟨Hmodule, Henv⟩
-        iapply twp_localGet rfl
-        iapply twp_localGet rfl
+        wasm_twp_pures [twp_localGet twp_localGet]
         have Halloc : Func5Spec (hlc := hlc) := hfunc5
         unfold Func5Spec CallContract callExpr at Halloc
         simp only [List.cons_append, List.nil_append] at Halloc
@@ -679,13 +667,9 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
       iapply twp_localGet rfl
       iapply twp_eqz (by rw [if_neg holdNonzero])
       iapply twp_brIfZero
-      iapply twp_localGet rfl
-      iapply twp_localGet rfl
-      iapply twp_localGet rfl
-      iapply twp_mul
+      wasm_twp_pures [twp_localGet twp_localGet twp_localGet twp_mul]
       rw [show oldCapacity * (1 : UInt32) = oldCapacity by bv_decide]
-      iapply twp_localGet rfl
-      iapply twp_localGet rfl
+      wasm_twp_pures [twp_localGet twp_localGet]
       have Hrealloc : Func8Spec (hlc := hlc) := hfunc8
       unfold Func8Spec CallContract callExpr at Hrealloc
       simp only [List.cons_append, List.nil_append] at Hrealloc

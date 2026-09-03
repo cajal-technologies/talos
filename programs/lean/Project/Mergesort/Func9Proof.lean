@@ -133,9 +133,7 @@ private theorem twp_func9_zero_and_return
   iapply twp_localGet rfl
   iapply twp_eqz (result := 0) (by simp [hsizeNonzero])
   iapply twp_brIfZero
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_const twp_localGet]
   iapply twp_memoryFill32 bytes
       (by rw [hblockFacts.1, ← hsize])
       hpositive
@@ -445,9 +443,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
       UInt32.toNat_ofNat_of_lt' hsumBound]
     omega
   iapply twp_block
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_add
+  wasm_twp_pures [twp_localGet twp_const twp_add]
   norm_num
   iapply twp_localTee rfl
   simp only [List.length]
@@ -461,8 +457,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
   iintro Hcursor
   iapply twp_localTee rfl
   simp only [List.length]
-  iapply twp_const
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_const twp_localGet]
   iapply twp_select
       (selected := .i32 (UInt32.ofNat frontier)) (by
         split
@@ -529,18 +524,14 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
     exact hbaseLeFinish
   have hfinishNatEq : finish.toNat = finishNat :=
     UInt32.toNat_ofNat_of_lt' hfinishWordBound
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_localGet rfl
-  iapply twp_sub
+  wasm_twp_pures [twp_localGet twp_const twp_localGet twp_sub]
   norm_num
   iapply twp_and (lhs := UInt32.ofNat frontier + (3 : UInt32))
       (rhs := -(4 : UInt32))
   rw [hsumWord]
   iapply twp_localTee rfl
   simp only [List.set]
-  iapply twp_localGet rfl
-  iapply twp_add
+  wasm_twp_pures [twp_localGet twp_add]
   rw [hfinishRaw]
   iapply twp_localTee rfl
   simp only [List.length]
@@ -548,8 +539,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
   iapply twp_ltU (result := 0) (by
     rw [if_neg (UInt32.not_lt.mpr hbaseLeFinishRaw)])
   iapply twp_brIfZero
-  iapply twp_localGet rfl
-  iapply twp_const
+  wasm_twp_pures [twp_localGet twp_const]
   by_cases hfinishFails : ¬ finishNat < 2147483648
   · have hfinishHigh : 2147483648 ≤ finishNat := by omega
     have hfinishNegative : finish.toInt32 < (0 : UInt32).toInt32 := by
@@ -613,12 +603,9 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
     isimp only [ZeroAllocContinuation, hclassify] at Hcont
     iapply twp_block
     simp [ValueType.zero]
-    iapply twp_localGet rfl
-    iapply twp_const
-    iapply twp_add
+    wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (65535 : UInt32) finish]
-    iapply twp_const
-    iapply twp_shrU
+    wasm_twp_pures [twp_const twp_shrU]
     rw [show (16 : UInt32) % 32 = 16 by decide]
     rw [show (finish + 65535) >>> (16 : UInt32) =
       allocatorRequiredPages finish by rfl]
@@ -710,9 +697,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
         Hnormal
     · iapply twp_leU (result := 0) (by rw [if_neg hfits])
       iapply twp_brIfZero
-      iapply twp_localGet rfl
-      iapply twp_localGet rfl
-      iapply twp_sub
+      wasm_twp_pures [twp_localGet twp_localGet twp_sub]
       let delta := allocatorRequiredPages finish - pages.toUInt32
       ihave HgrowFrame : iprop(
           hostEnvOwn 0 (Universal.envFor Project.Mergesort.module) ∗

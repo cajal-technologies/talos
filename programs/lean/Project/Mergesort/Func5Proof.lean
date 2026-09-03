@@ -359,9 +359,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
       Nat.mod_eq_of_lt hsumBound]
   iapply twp_block
   iapply twp_block
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_add
+  wasm_twp_pures [twp_localGet twp_const twp_add]
   rw [hpadWord]
   iapply twp_localTee rfl
   simp only [List.length]
@@ -375,8 +373,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
   iintro Hcursor
   iapply twp_localTee rfl
   simp only [List.length]
-  iapply twp_const
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_const twp_localGet]
   iapply twp_select
       (selected := .i32 (UInt32.ofNat frontier)) (by
         split
@@ -447,16 +444,11 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
   ihave HcursorAlloc : pointsTo_u32 0 allocatorCursor storedCursor $$ [Hcursor]
   · rw [← show (0 : UInt32) + 1049492 = allocatorCursor by decide]
     iexact Hcursor
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_localGet rfl
-  iapply twp_sub
-  iapply twp_and
+  wasm_twp_pures [twp_localGet twp_const twp_localGet twp_sub twp_and]
   rw [hbaseRaw]
   iapply twp_localTee rfl
   simp only [List.length]
-  iapply twp_localGet rfl
-  iapply twp_add
+  wasm_twp_pures [twp_localGet twp_add]
   rw [hfinishWord']
   iapply twp_localTee rfl
   simp only [List.set]
@@ -464,8 +456,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
   iapply twp_ltU (result := 0) (by
     rw [if_neg (UInt32.not_lt.mpr hbaseLeFinish)])
   iapply twp_brIfZero
-  iapply twp_localGet rfl
-  iapply twp_const
+  wasm_twp_pures [twp_localGet twp_const]
   by_cases hfinishFails : ¬ finishNat < 2147483648
   · have hfinishHigh : 2147483648 ≤ finishNat := by omega
     have hfinishNegative : finish.toInt32 < (0 : UInt32).toInt32 := by
@@ -535,12 +526,9 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
       simp only
       rw [if_pos ⟨hfinishWordBound, hfinishSigned⟩]
     isimp only [AllocContinuation, hclassify] at Hcont
-    iapply twp_localGet rfl
-    iapply twp_const
-    iapply twp_add
+    wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (65535 : UInt32) finish]
-    iapply twp_const
-    iapply twp_shrU
+    wasm_twp_pures [twp_const twp_shrU]
     rw [show (16 : UInt32) % 32 = 16 by decide]
     rw [show (finish + 65535) >>> (16 : UInt32) =
       allocatorRequiredPages finish by rfl]
@@ -608,9 +596,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
       iframe Hruntime Hcursor Hfrontier Hauth Hretired Hmeasured Hstreams Hnormal
     · iapply twp_leU (result := 0) (by rw [if_neg hfits])
       iapply twp_brIfZero
-      iapply twp_localGet rfl
-      iapply twp_localGet rfl
-      iapply twp_sub
+      wasm_twp_pures [twp_localGet twp_localGet twp_sub]
       let delta := allocatorRequiredPages finish - pages.toUInt32
       ihave HgrowFrame : iprop(
           hostEnvOwn 0 (Universal.envFor Project.Mergesort.module) ∗
