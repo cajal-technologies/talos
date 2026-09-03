@@ -4668,9 +4668,7 @@ theorem twp_func3_finish_empty
   isplitl []
   · iapply SortBuffers_empty 4 (by decide)
     itrivial
-  isplitl []
-  · ipureintro
-    decide
+  isplitl_pureexact (by decide)
   iintro %sorted Hruntime Hresult
   isimp only [SortResultBuffers] at Hresult
   icases Hresult with ⟨Hbuffers, %hsorted⟩
@@ -5497,16 +5495,12 @@ theorem twp_func3_initialize
   ihave Hheader : Project.Mergesort.Representations.ByteSlice
       driverBase emptyVecHeaderBytes $$ [HheaderBytes]
   · unfold Project.Mergesort.Representations.ByteSlice emptyVecHeaderBytes
-    isplitl []
-    · ipureintro
-      decide
+    isplitl_pureexact (by decide)
     · iexact HheaderBytes
   ihave Hchunk : Project.Mergesort.Representations.ByteSlice
       (driverBase + 12) (List.replicate 256 0) $$ [HchunkBytes]
   · unfold Project.Mergesort.Representations.ByteSlice
-    isplitl []
-    · ipureintro
-      simpa [hframeParts.2.2.1] using hchunkNowrap
+    isplitl_pureexact (by simpa [hframeParts.2.2.1] using hchunkNowrap)
     · rw [← hframeParts.2.2.1]
       rw [← show (0 : UInt32).toUInt8 = (0 : UInt8) by decide]
       iexact HchunkBytes

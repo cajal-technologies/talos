@@ -992,15 +992,9 @@ theorem copyWords_loop_twp
     · simp only [Inv]
       iframe
   · simp only [Inv]
-    isplitr
-    · ipureintro
-      simp
-    isplitr
-    · ipureintro
-      simpa using hdestinationLength
-    isplitr
-    · ipureintro
-      simp
+    isplitr_pureexact (by simp)
+    isplitr_pureexact (by simpa using hdestinationLength)
+    isplitr_pureexact (by simp)
     isplitl_exact HR
     isplitl [Hdst]
     · simp only [List.nil_append]

@@ -1830,9 +1830,7 @@ theorem twp_mergeSortInnerLoop
       · unfold mergePre
         iframe
         isplitr_pureexact hscratchLength.trans hvaluesLength.symm
-        isplitr
-        · ipureintro
-          simpa only [hvaluesLength] using hlayout
+        isplitr_pureexact (by simpa only [hvaluesLength] using hlayout)
         · ipureintro
           rw [hvaluesLength]
           exact hbounds
@@ -2091,15 +2089,11 @@ theorem twp_mergeSortOuterLoop
       iapply Hrec
       · ipureintro
         omega
-      isplitr
-      · ipureintro
-        simpa [Nat.mul_comm] using hnextRuns
+      isplitr_pureexact (by simpa [Nat.mul_comm] using hnextRuns)
       isplitr_pureexact hnextPerm
       isplitr_pureexact houtputLength
       isplitr_pureexact hnextScratchLength
-      isplitr
-      · ipureintro
-        omega
+      isplitr_pureexact (by omega)
       isplitr_pureexact hdoubleSize
       iframe
     · have hcmp :

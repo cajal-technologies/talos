@@ -703,9 +703,7 @@ theorem func2_correct [WasmSmallStepGS hlc Universal.State] :
   ihave HsourceWords : WordSlice source sorted $$ [HsourceBytes]
   · unfold WordSlice Project.Mergesort.Representations.ByteSlice
     isplitl_pureexact hsourceAlign
-    isplitl []
-    · ipureintro
-      simpa only [serialize_length, hsortedLength] using hsourceStrict
+    isplitl_pureexact (by simpa only [serialize_length, hsortedLength] using hsourceStrict)
     · iexact HsourceBytes
   ihave HscratchWords : WordSlice scratch scratchResult $$ [HscratchBytes]
   · unfold WordSlice Project.Mergesort.Representations.ByteSlice

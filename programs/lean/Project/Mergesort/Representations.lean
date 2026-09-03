@@ -327,9 +327,7 @@ theorem ByteSlice_four_as_word {host : Type} [WasmHeapGS host]
     iexact Hbytes
   · iintro Hword
     unfold ByteSlice
-    isplitl []
-    · ipureintro
-      simpa [hlength] using hnowrap
+    isplitl_pureexact (by simpa [hlength] using hnowrap)
     · ihave Hbytes := (pointsTo_u32_as_bytes 0 ptr word).mp $$ Hword
       ihave Hbytes' : pointsToBytes 0 ptr bytes $$ [Hbytes]
       · rw [← hencoded]
@@ -370,9 +368,7 @@ theorem WordSlice_nil {host : Type} [WasmHeapGS host]
   iintro _Hemp
   unfold WordSlice ByteSlice
   isplitl_pureexact halign
-  isplitl []
-  · ipureintro
-    simpa [UInt32.size] using ptr.toBitVec.isLt
+  isplitl_pureexact (by simpa [UInt32.size] using ptr.toBitVec.isLt)
   · isimp only [serialize, Wasm.WordCodec.serialize_nil]
     iapply (pointsToBytes_nil 0 ptr).mpr
     itrivial
@@ -448,9 +444,7 @@ theorem WordSlice_append {host : Type} [WasmHeapGS host]
       rw [hoffset] at hrightNowrap
       omega
     isplitl_pureexact halign
-    isplitl []
-    · ipureintro
-      simpa only [Nat.mul_add] using hnowrap
+    isplitl_pureexact (by simpa only [Nat.mul_add] using hnowrap)
     iapply (pointsToBytes_append 0 ptr (serialize xs) (serialize ys)).mpr
     isplitl_exact Hleft
     · rw [← wordOffset_eq_byteOffset]
@@ -641,9 +635,7 @@ theorem SortBuffers_copyBackFocus {host : Type} [WasmHeapGS host]
   iintro Hscratch
   isplitl [Hsource]
   · isplitl_pureexact hsourceAlign
-    isplitl []
-    · ipureintro
-      simpa only [serialize_length, hfacts.1] using hsourceNowrap
+    isplitl_pureexact (by simpa only [serialize_length, hfacts.1] using hsourceNowrap)
     · iexact Hsource
   isplitl [Hscratch]
   · isplitl_pureexact hscratchAlign

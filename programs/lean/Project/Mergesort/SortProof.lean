@@ -1840,9 +1840,7 @@ theorem twp_mergeLeftRemainder
           dsimp only [LeftCopyState.r]
           omega
         isplitr_pureexact hmore
-        isplitr
-        · ipureintro
-          simpa [Nat.add_assoc] using hnext
+        isplitr_pureexact (by simpa [Nat.add_assoc] using hnext)
         iframe
       · have heqR : state.r + 1 = n := by omega
         have heq := hleftCounterEq.mpr heqR
@@ -1899,9 +1897,7 @@ theorem twp_mergeLeftRemainder
       · ipureintro
         dsimp only [n]
         omega
-      isplitr
-      · ipureintro
-        simpa [hjEq] using hinv
+      isplitr_pureexact (by simpa [hjEq] using hinv)
       isplitl_exact Hsource
       isplitl_exact Hscratch
       iintro %scratch' %emitted' %aux6 %aux8 %aux9 %aux11 %aux12
@@ -2256,9 +2252,7 @@ theorem twp_mergeRightRemainder
           dsimp only [RightCopyState.r]
           omega
         isplitr_pureexact hmore
-        isplitr
-        · ipureintro
-          simpa [Nat.add_assoc] using hnext
+        isplitr_pureexact (by simpa [Nat.add_assoc] using hnext)
         iframe
       · have heqR : state.r + 1 = n := by omega
         have hcounterZero :
@@ -2296,9 +2290,7 @@ theorem twp_mergeRightRemainder
       · ipureintro
         dsimp only [n]
         omega
-      isplitr
-      · ipureintro
-        simpa using hinv
+      isplitr_pureexact (by simpa using hinv)
       isplitl_exact Hsource
       isplitl_exact Hscratch
       iintro %scratch' %emitted' %v6 %v8 %v9 %v10 %v11 %v12

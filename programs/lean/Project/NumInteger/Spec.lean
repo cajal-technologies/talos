@@ -3360,9 +3360,7 @@ theorem func1_nonzero_frame_smallStep_wp
   iapply func1_nonzero_smallStep_wp
     (R := iprop(⌜True⌝))
     result oldX oldY a b ha hb shiftXY shiftX shiftY nextX nextY
-  isplitl []
-  · ipureintro
-    trivial
+  isplitl_pureexact (by trivial)
   · iframe
 
 /-- Closed operational partial correctness for the nonzero opt0 `func1`,
@@ -4252,9 +4250,7 @@ theorem func0_smallStep_partiallyMeets (a b : UInt64) :
     iapply func0_smallStep_wp
       (R := iprop(⌜True⌝))
       a b 0 0 0 0 0 0 0 0 0 0
-    isplitl []
-    · ipureintro
-      trivial
+    isplitl_pureexact (by trivial)
     · iframe
 
 /-- Closed operational partial correctness of the exported opt0 `func2`
@@ -4296,9 +4292,7 @@ theorem func2_smallStep_partiallyMeets (a b : UInt64) :
     iapply func2_smallStep_wp
       (R := iprop(⌜True⌝))
       a b 0 0 0 0 0 0 0 0 0 0
-    isplitl []
-    · ipureintro
-      trivial
+    isplitl_pureexact (by trivial)
     · iframe
 
 /-! ## Total weakest precondition versions of non-loop theorems -/
@@ -6985,9 +6979,7 @@ theorem twp_func1_nonzero_frame_smallStep_wp
   iapply twp_func1_nonzero_smallStep_wp
     (R := iprop(⌜True⌝))
     result oldX oldY a b ha hb shiftXY shiftX shiftY nextX nextY
-  isplitl []
-  · ipureintro
-    trivial
+  isplitl_pureexact (by trivial)
   · iframe
 
 theorem twp_func0_callPrefix_smallStep_wp
@@ -7616,9 +7608,7 @@ theorem func2_terminatesWith :
     iapply twp_func2_smallStep_wp
       (R := iprop(⌜True⌝))
       a b 0 0 0 0 0 0 0 0 0 0
-    isplitl []
-    · ipureintro
-      trivial
+    isplitl_pureexact (by trivial)
     · iframe
 
 
