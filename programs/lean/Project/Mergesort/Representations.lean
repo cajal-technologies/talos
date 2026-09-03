@@ -1971,8 +1971,7 @@ theorem StackReserve_split
     · ipureintro
       rw [hfacts.1, List.length_append, hfacts.2.1, hfacts.2.2]
     · rw [hfacts.1]
-      iapply (ByteSlice_append low headBytes growBefore).mpr
-      iframe
+      iapply_frame (ByteSlice_append low headBytes growBefore).mpr
 
 /-- Reversible split of the exported function's full 288-byte entry stack
 ownership into the 16-byte reserve and 272-byte visible driver frame. -/
@@ -2035,8 +2034,7 @@ theorem EntryStack_split
       iexact Hframe
     isplitl [Hreserve' Hframe']
     · rw [hfacts.1]
-      iapply (ByteSlice_append entryStackLow reserveBytes frameBytes).mpr
-      iframe
+      iapply_frame (ByteSlice_append entryStackLow reserveBytes frameBytes).mpr
     · ipureintro
       rw [hfacts.1, List.length_append, hfacts.2.1, hfacts.2.2]
 
@@ -2322,8 +2320,7 @@ theorem VecStorage_appendFocus {host : Type} [WasmHeapGS host]
         ByteSlice ptr (initialized ++ current ++ tail) $$
         [Hinitialized HspareNew]
     · rw [List.append_assoc]
-      iapply (ByteSlice_append ptr initialized (current ++ tail)).mpr
-      iframe
+      iapply_frame (ByteSlice_append ptr initialized (current ++ tail)).mpr
     have hnewLength :
         (initialized ++ current ++ tail).length = capacity.toNat := by
       simp only [List.length_append]

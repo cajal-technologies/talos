@@ -1071,8 +1071,7 @@ theorem twp_copyPointerAt
   · rw [← hdestinationAddress, UInt32.add_zero]
     iexact HscratchCell
   ihave HscratchArray := HscratchClose $$ HscratchCell'
-  iapply Hcont
-  iframe
+  iapply_frame Hcont
 
 /-! ## Generated main merge loop -/
 

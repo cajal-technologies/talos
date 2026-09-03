@@ -390,8 +390,7 @@ theorem func0_body_to_ret_smallStep_wp
             isplitl_exact Hword
             · inext
               iintro ⟨⟨HR, Hglobal⟩, Hword⟩
-              iapply hreturn (i32TruncSatF32S x) rfl
-              iframe
+              iapply_frame hreturn (i32TruncSatF32S x) rfl
         · iapply wp_scalarFloat2 rfl rfl rfl
           inext
           simp only [hlt, if_true]
@@ -415,8 +414,7 @@ theorem func0_body_to_ret_smallStep_wp
             isplitl_exact Hword
             · inext
               iintro ⟨⟨HR, Hglobal⟩, Hword⟩
-              iapply hreturn 2147483648 heq.symm
-              iframe
+              iapply_frame hreturn 2147483648 heq.symm
       · iapply wp_scalarFloat2 rfl rfl rfl
         inext
         simp only [hge, if_true]
@@ -440,8 +438,7 @@ theorem func0_body_to_ret_smallStep_wp
           isplitl_exact Hword
           · inext
             iintro ⟨⟨HR, Hglobal⟩, Hword⟩
-            iapply hreturn 2147483647 heq.symm
-            iframe
+            iapply_frame hreturn 2147483647 heq.symm
     · iapply wp_scalarFloat2 rfl rfl rfl
       inext
       simp only [hnan, if_true]
@@ -467,8 +464,7 @@ theorem func0_body_to_ret_smallStep_wp
         isplitl_exact Hword
         · inext
           iintro ⟨⟨HR, Hglobal⟩, Hword⟩
-          iapply hreturn 0 heq.symm
-          iframe
+          iapply_frame hreturn 0 heq.symm
 
 /-- Complete authoritative small-step proof for generated `naive_trunc`. -/
 theorem func0_smallStep (x : UInt32) :
@@ -502,8 +498,7 @@ theorem func0_smallStep (x : UInt32) :
     ihave Hword := func0Heap_pointsTo $$ Hbytes
     ihave Hglobal := func0Globals_pointsTo $$ Hglobals
     simp only [func0Config]
-    iapply func0_body_to_ret_smallStep_wp (iprop(True)) x [] hreturn
-    iframe
+    iapply_frame func0_body_to_ret_smallStep_wp (iprop(True)) x [] hreturn
 
 /-! ## Total WP helpers (no `▷` on continuations) -/
 
@@ -639,8 +634,7 @@ theorem twp_func0_body_to_ret
             iframe
           isplitl_exact Hword
           · iintro ⟨⟨HR, Hglobal⟩, Hword⟩
-            iapply hreturn (i32TruncSatF32S x) rfl
-            iframe
+            iapply_frame hreturn (i32TruncSatF32S x) rfl
       · iapply twp_scalarFloat2 rfl rfl rfl
         simp only [hlt, if_true]
         wasm_twp_pures [twp_const twp_and]
@@ -660,8 +654,7 @@ theorem twp_func0_body_to_ret
             iframe
           isplitl_exact Hword
           · iintro ⟨⟨HR, Hglobal⟩, Hword⟩
-            iapply hreturn 2147483648 heq.symm
-            iframe
+            iapply_frame hreturn 2147483648 heq.symm
     · iapply twp_scalarFloat2 rfl rfl rfl
       simp only [hge, if_true]
       wasm_twp_pures [twp_const twp_and]
@@ -681,8 +674,7 @@ theorem twp_func0_body_to_ret
           iframe
         isplitl_exact Hword
         · iintro ⟨⟨HR, Hglobal⟩, Hword⟩
-          iapply hreturn 2147483647 heq.symm
-          iframe
+          iapply_frame hreturn 2147483647 heq.symm
   · iapply twp_scalarFloat2 rfl rfl rfl
     simp only [hnan, if_true]
     wasm_twp_pures [twp_const twp_and]
@@ -704,8 +696,7 @@ theorem twp_func0_body_to_ret
         iframe
       isplitl_exact Hword
       · iintro ⟨⟨HR, Hglobal⟩, Hword⟩
-        iapply hreturn 0 heq.symm
-        iframe
+        iapply_frame hreturn 0 heq.symm
 
 /-! ## Top-level spec -/
 
@@ -774,8 +765,7 @@ theorem check_terminatesWith (x : UInt32) :
     iintro ⟨Hbytes, Hglobals, Hruntime⟩
     ihave Hword := func0Heap_pointsTo $$ Hbytes
     ihave Hglobal := func0Globals_pointsTo $$ Hglobals
-    iapply twp_check x
-    iframe
+    iapply_frame twp_check x
 
 /-- Iris partial-correctness proof for the exported agreement check. -/
 theorem check_smallStep (x : UInt32) :

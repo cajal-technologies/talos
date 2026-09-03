@@ -1971,8 +1971,7 @@ theorem wasm_smallStep_heap_globals_adequacy
   intro gs
   iintro ⟨Hheap, Hglobals, Hruntime⟩
   iclear Hruntime
-  iapply hwp
-  iframe
+  iapply_frame hwp
 
 /-- Public partial-correctness form of
 `wasm_smallStep_heap_globals_adequacy`. Generated-function clients generally

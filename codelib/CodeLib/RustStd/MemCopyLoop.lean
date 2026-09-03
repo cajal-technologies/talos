@@ -204,8 +204,7 @@ theorem copyWords_loadStoreIteration_wp
       [Hreassemble HsrcCell'' HdstCell'']
   · iapply Hreassemble
     iframe
-  iapply hcontinue
-  iframe
+  iapply_frame hcontinue
 
 theorem copyWords_incrementBackedge_wp
     {α : Type} [Wasm.SmallStep.WasmSmallStepGS hlc α]
@@ -704,8 +703,7 @@ theorem copyWords_loadStoreIteration_twp
       [Hreassemble HsrcCell'' HdstCell'']
   · iapply Hreassemble
     iframe
-  iapply hcontinue
-  iframe
+  iapply_frame hcontinue
 
 /-- Total counterpart of `copyWords_incrementBackedge_wp`. -/
 theorem copyWords_incrementBackedge_twp

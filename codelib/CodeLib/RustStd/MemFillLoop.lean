@@ -161,8 +161,7 @@ theorem fillWords_storeIteration_wp
       [Hreassemble Hnew']
   · iapply Hreassemble
     iexact Hnew'
-  iapply hcontinue
-  iframe
+  iapply_frame hcontinue
 
 /-- The generated index increment and `br 1` really target the surrounding
 loop frame, with the updated local and no operand-stack leakage. -/
@@ -374,8 +373,7 @@ theorem fillWords_loopBody_invariant_wp
           icases Hexpanded with ⟨Hloop, Harray'⟩
           icases Hloop with ⟨#IH', HR'⟩
           ispecialize IH' $$ %(i + 1) %tail %hinvNext
-          iapply IH'
-          iframe
+          iapply_frame IH'
         · simp only [Rloop]
           isplitl [IHcurrent HRcurrent]
           · isplitl [IHcurrent]

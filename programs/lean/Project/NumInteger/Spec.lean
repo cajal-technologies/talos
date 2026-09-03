@@ -306,8 +306,7 @@ theorem func1_spillPrefix_smallStep_wp
   ihave HyExact : pointsTo_u64 0 1048528 b $$ [Hy]
   · rw [← hYProp]
     iexact Hy
-  iapply hcontinue
-  iframe
+  iapply_frame hcontinue
 
 /-- Frame-level form of `func1_spillPrefix_smallStep_wp`. It connects the
 finite authoritative heap used by adequacy to the typed resources used by
@@ -358,8 +357,7 @@ theorem func1_spillPrefix_frame_smallStep_wp
       ⟨HR', Hglobal', HouterA', HouterB', Hx', Hy'⟩
     icases HR' with
       ⟨Hresult', HshiftXY', HshiftX', HshiftY', HnextY', HnextX'⟩
-    iapply hcontinue
-    iframe
+    iapply_frame hcontinue
   · iframe
 
 /-- Complete left-zero path of the memory-backed GCD core. The result is
@@ -477,8 +475,7 @@ theorem func1_leftZero_core_smallStep_wp_to_return
   · rw [← hYProp]
     iexact Hy
   simp only [func1SpilledLocals] at hreturn
-  iapply hreturn
-  iframe
+  iapply_frame hreturn
 
 /-- Closed top-level corollary of the contextual left-zero core. -/
 theorem func1_leftZero_core_smallStep_wp
@@ -579,8 +576,7 @@ theorem func1_leftZero_smallStep_wp
     icases Hresources with
       ⟨HRresult, Hglobal', HouterA', HouterB', Hx', Hy'⟩
     icases HRresult with ⟨HR', Hresult'⟩
-    iapply func1_leftZero_core_smallStep_wp R result b
-    iframe
+    iapply_frame func1_leftZero_core_smallStep_wp R result b
   · iframe
 
 /-- Complete right-zero path of the memory-backed GCD core. The nonzero
@@ -711,8 +707,7 @@ theorem func1_rightZero_core_smallStep_wp_to_return
   · rw [← hYProp]
     iexact Hy
   simp only [func1SpilledLocals] at hreturn
-  iapply hreturn
-  iframe
+  iapply_frame hreturn
 
 /-- Closed top-level corollary of the contextual right-zero core. -/
 theorem func1_rightZero_core_smallStep_wp
@@ -812,8 +807,7 @@ theorem func1_rightZero_smallStep_wp
     icases Hresources with
       ⟨HRresult, Hglobal', HouterA', HouterB', Hx', Hy'⟩
     icases HRresult with ⟨HR', Hresult'⟩
-    iapply func1_rightZero_core_smallStep_wp R result a ha
-    iframe
+    iapply_frame func1_rightZero_core_smallStep_wp R result a ha
   · iframe
 
 /-- Public zero-case rule for `func1`, phrased using the mathematical GCD
@@ -1177,8 +1171,7 @@ theorem func1_sharedShift_smallStep_wp
       pointsTo_u32 0 1048556 (sharedShiftWord a b) $$ [Hshift]
   · rw [← hShiftProp]
     iexact Hshift
-  iapply hcontinue
-  iframe
+  iapply_frame hcontinue
 
 def operandShiftWord (v : UInt64) : UInt32 :=
   UInt32.ofNat ((UInt64.ofNat (ctz64 64 v)).toNat % 2 ^ 32)
@@ -1301,8 +1294,7 @@ theorem func1_normalizeX_smallStep_wp
         (UInt32.ofNat ((UInt64.ofNat (ctz64 64 a)).toNat % 2 ^ 32)) $$ [HshiftX]
   · rw [← hShiftProp]
     iexact HshiftX
-  iapply hcontinue
-  iframe
+  iapply_frame hcontinue
 
 def func1LoopHeaderLocals
     (a b c6 c8 : UInt64) (c7 c9 : UInt32) : List Value :=
@@ -1424,8 +1416,7 @@ theorem func1_normalizeY_smallStep_wp
         (UInt32.ofNat ((UInt64.ofNat (ctz64 64 b)).toNat % 2 ^ 32)) $$ [HshiftY]
   · rw [← hShiftProp]
     iexact HshiftY
-  iapply hcontinue
-  iframe
+  iapply_frame hcontinue
 
 /-- Complete nonzero normalization prefix, composed from the three physical
 scratch-memory slices. The next instruction is the generated Stein loop. -/
@@ -1479,8 +1470,7 @@ theorem func1_normalization_smallStep_wp
       · iintro Hresources
         icases Hresources with ⟨HRfinal, HyOdd, HshiftYNew⟩
         icases HRfinal with ⟨HR''', HxOdd', Hshared''', HshiftXNew'⟩
-        iapply hcontinue
-        iframe
+        iapply_frame hcontinue
       · iframe
     · iframe
   · iframe
@@ -1592,8 +1582,7 @@ theorem func1_equalRecombine_smallStep_wp
         [Hresult]
   · rw [← hResultProp]
     iexact Hresult
-  iapply hcontinue
-  iframe
+  iapply_frame hcontinue
 
 /-- Equality arm of the first generated loop block. When the two normalized
 operands agree, the guard falls through to `func1_equalRecombine_smallStep_wp`.
@@ -1684,8 +1673,7 @@ theorem func1_equalBlock_smallStep_wp
     controls calls a b g oldResult c6 c8 c7 c9
   · iintro Hresources
     icases Hresources with ⟨⟨HR', Hy'⟩, Hx', Hresult'⟩
-    iapply hcontinue
-    iframe
+    iapply_frame hcontinue
   · iframe
 
 def loopNormalizeYProg : Program :=
@@ -1820,8 +1808,7 @@ theorem func1_loopNormalizeY_smallStep_wp
         [Hshift]
   · rw [← hShiftProp]
     iexact Hshift
-  iapply hcontinue
-  iframe
+  iapply_frame hcontinue
 
 def loopDecreaseYProg : Program :=
   [.localGet 2, .load64 8, .localSet 6,
@@ -1932,8 +1919,7 @@ theorem func1_loopDecreaseY_smallStep_wp
     controls calls a b x (y - x) hsub oldShift c8 c7 c9
   · iintro Hresources
     icases Hresources with ⟨⟨HR', Hx'⟩, Hy', Hshift'⟩
-    iapply hcontinue
-    iframe
+    iapply_frame hcontinue
   · iframe
 
 def loopNormalizeXProg : Program :=
@@ -2068,8 +2054,7 @@ theorem func1_loopNormalizeX_smallStep_wp
         [Hshift]
   · rw [← hShiftProp]
     iexact Hshift
-  iapply hcontinue
-  iframe
+  iapply_frame hcontinue
 
 def loopDecreaseXProg : Program :=
   [.localGet 2, .load64 16, .localSet 8,
@@ -2180,8 +2165,7 @@ theorem func1_loopDecreaseX_smallStep_wp
     controls calls a b y (x - y) hsub oldShift c6 c7 c9
   · iintro Hresources
     icases Hresources with ⟨⟨HR', Hy'⟩, Hx', Hshift'⟩
-    iapply hcontinue
-    iframe
+    iapply_frame hcontinue
   · iframe
 
 def loopDecreaseYBlockBody : Program :=
@@ -2317,8 +2301,7 @@ theorem func1_loopEqualityDispatch_smallStep_wp
         congrArg (fun address => pointsTo_u64 0 address y) (by decide)
       rw [← h]
       iexact Hy
-    iapply hnext hxy
-    iframe
+    iapply_frame hnext hxy
 
 /-- Comparison dispatch for the second generated loop block. A true
 `x > y` exits the block into the left-decreasing arm; otherwise execution
@@ -2443,8 +2426,7 @@ theorem func1_loopDecreaseDispatch_smallStep_wp
     · iintro Hresources
       icases Hresources with
         ⟨⟨HR', HshiftY'⟩, Hx', Hy', HshiftX'⟩
-      iapply hcontinueX hlt
-      iframe
+      iapply_frame hcontinueX hlt
     · iframe
   · have hxylt : x < y := by
       rw [UInt64.lt_iff_toNat_lt]
@@ -2486,8 +2468,7 @@ theorem func1_loopDecreaseDispatch_smallStep_wp
     · iintro Hresources
       icases Hresources with
         ⟨⟨HR', HshiftX'⟩, Hx', Hy', HshiftY'⟩
-      iapply hcontinueY hlt
-      iframe
+      iapply_frame hcontinueY hlt
     · iframe
 
 /-- One complete generated loop-body iteration, with structured-control
@@ -2565,8 +2546,7 @@ theorem func1_loopBodyDispatch_smallStep_wp
     iintro Hresources
     icases Hresources with
       ⟨⟨HK', HR', HshiftX', HshiftY'⟩, Hx', Hy', Hresult'⟩
-    iapply hfinish hxy
-    iframe
+    iapply_frame hfinish hxy
   · intro hxy
     iintro Hresources
     icases Hresources with
@@ -2591,14 +2571,12 @@ theorem func1_loopBodyDispatch_smallStep_wp
       iintro Hresources
       icases Hresources with
         ⟨⟨HK'', HR'', Hresult''⟩, Hx'', Hy'', HshiftX'', HshiftY''⟩
-      iapply hbackX hxy hlt
-      iframe
+      iapply_frame hbackX hxy hlt
     · intro hlt
       iintro Hresources
       icases Hresources with
         ⟨⟨HK'', HR'', Hresult''⟩, Hx'', Hy'', HshiftX'', HshiftY''⟩
-      iapply hbackY hxy hlt
-      iframe
+      iapply_frame hbackY hxy hlt
     · iframe
   · iframe
 
@@ -2680,8 +2658,7 @@ theorem func1_loop_smallStep_wp
       ihave HresultExpected : pointsTo_u64 0 1048512 expected $$ [Hresult']
       · rw [← hresultEq]
         iexact Hresult'
-      iapply hfinish x oldShiftX oldShiftY c6 c8 c7 c9 hxGcd
-      iframe
+      iapply_frame hfinish x oldShiftX oldShiftY c6 c8 c7 c9 hxGcd
     · intro hne
       exact (hne hxy).elim
     · intro hne
@@ -2713,8 +2690,7 @@ theorem func1_loop_smallStep_wp
           %(by simpa [x', oddPart_toNat, oddPart64] using hx'odd)
           %hyodd
           %(by simpa [x', oddPart_toNat, oddPart64] using hgcd'.trans hgcd)
-        iapply IH'
-        iframe
+        iapply_frame IH'
       · intro _ hnlt
         exact (hnlt hlt).elim
       · iframe
@@ -2744,8 +2720,7 @@ theorem func1_loop_smallStep_wp
           %hxne %hy'ne %hxodd
           %(by simpa [y', oddPart_toNat, oddPart64] using hy'odd)
           %(by simpa [y', oddPart_toNat, oddPart64] using hgcd'.trans hgcd)
-        iapply IH'
-        iframe
+        iapply_frame IH'
       · iframe
 
 def func1LoopEntryProg : Program :=
@@ -2872,8 +2847,7 @@ theorem func1_nonzeroCore_smallStep_wp
       icases Hresources with
         ⟨⟨HR'', Hshared'', HnormX'', HnormY''⟩,
           Hx'', Hy'', Hresult'', HloopX'', HloopY''⟩
-      iapply hfinish g loopX loopY d6 d8 d7 d9 hg
-      iframe
+      iapply_frame hfinish g loopX loopY d6 d8 d7 d9 hg
     · iframe
   · iframe
 
@@ -2981,8 +2955,7 @@ theorem func1_nonzeroGuards_smallStep_wp
   simp only [func1OuterFrame, func1OuterBody, func1MiddleBody,
     func1InnerGuardProg, func1ZeroJoinProg, func1EpilogueProg,
     func1SpilledLocals] at hcontinue
-  iapply hcontinue
-  iframe
+  iapply_frame hcontinue
 
 /-- The equality exit from the Stein loop targets the generated outer block.
 That branch exposes the epilogue, which reloads the result slot and returns it
@@ -3044,8 +3017,7 @@ theorem func1_nonzeroFinish_smallStep_wp_to_return
           (UInt64.ofNat (Nat.gcd a.toNat b.toNat))) (by decide)
     rw [← h]
     iexact Hresult
-  iapply hreturn
-  iframe
+  iapply_frame hreturn
 
 /-- Closed top-level corollary of the contextual nonzero finish rule. -/
 theorem func1_nonzeroFinish_smallStep_wp
@@ -3589,8 +3561,7 @@ theorem func0_callPrefix_smallStep_wp
   ihave HouterBExact : pointsTo_u64 0 1048568 b $$ [HouterB]
   · rw [← hOuterBProp]
     iexact HouterB
-  iapply hcontinue
-  iframe
+  iapply_frame hcontinue
 
 /-- Resume `func0` after `func1` returns: save the result, restore the stack
 pointer global, and return the GCD from the top-level invocation. -/
@@ -3626,8 +3597,7 @@ theorem func0_afterCall_smallStep_wp_to_return
   wasm_wp_next Wasm.SmallStep.wp_globalSet $$ Hglobal
   iintro Hglobal
   wasm_wp_pures [wp_localGet]
-  iapply hreturn
-  iframe
+  iapply_frame hreturn
 
 /-- Closed top-level corollary of the contextual `func0` epilogue. -/
 theorem func0_afterCall_smallStep_wp
@@ -4456,8 +4426,7 @@ theorem twp_func1_spillPrefix_smallStep_wp
   ihave HyExact : pointsTo_u64 0 1048528 b $$ [Hy]
   · rw [← hYProp]
     iexact Hy
-  iapply hcontinue
-  iframe
+  iapply_frame hcontinue
 
 theorem twp_func1_spillPrefix_frame_smallStep_wp
     [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
@@ -4505,8 +4474,7 @@ theorem twp_func1_spillPrefix_frame_smallStep_wp
       ⟨HR', Hglobal', HouterA', HouterB', Hx', Hy'⟩
     icases HR' with
       ⟨Hresult', HshiftXY', HshiftX', HshiftY', HnextY', HnextX'⟩
-    iapply hcontinue
-    iframe
+    iapply_frame hcontinue
   · iframe
 
 theorem twp_func1_leftZero_core_smallStep_wp_to_return
@@ -4616,8 +4584,7 @@ theorem twp_func1_leftZero_core_smallStep_wp_to_return
   · rw [← hYProp]
     iexact Hy
   simp only [func1SpilledLocals] at hreturn
-  iapply hreturn
-  iframe
+  iapply_frame hreturn
 
 theorem twp_func1_leftZero_core_smallStep_wp
     [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
@@ -4712,8 +4679,7 @@ theorem twp_func1_leftZero_smallStep_wp
     icases Hresources with
       ⟨HRresult, Hglobal', HouterA', HouterB', Hx', Hy'⟩
     icases HRresult with ⟨HR', Hresult'⟩
-    iapply twp_func1_leftZero_core_smallStep_wp R result b
-    iframe
+    iapply_frame twp_func1_leftZero_core_smallStep_wp R result b
   · iframe
 
 theorem twp_func1_rightZero_core_smallStep_wp_to_return
@@ -4835,8 +4801,7 @@ theorem twp_func1_rightZero_core_smallStep_wp_to_return
   · rw [← hYProp]
     iexact Hy
   simp only [func1SpilledLocals] at hreturn
-  iapply hreturn
-  iframe
+  iapply_frame hreturn
 
 theorem twp_func1_rightZero_core_smallStep_wp
     [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
@@ -4931,8 +4896,7 @@ theorem twp_func1_rightZero_smallStep_wp
     icases Hresources with
       ⟨HRresult, Hglobal', HouterA', HouterB', Hx', Hy'⟩
     icases HRresult with ⟨HR', Hresult'⟩
-    iapply twp_func1_rightZero_core_smallStep_wp R result a ha
-    iframe
+    iapply_frame twp_func1_rightZero_core_smallStep_wp R result a ha
   · iframe
 
 theorem twp_func1_zero_smallStep_wp
@@ -5092,8 +5056,7 @@ theorem twp_func1_sharedShift_smallStep_wp
       pointsTo_u32 0 1048556 (sharedShiftWord a b) $$ [Hshift]
   · rw [← hShiftProp]
     iexact Hshift
-  iapply hcontinue
-  iframe
+  iapply_frame hcontinue
 
 theorem twp_func1_normalizeX_smallStep_wp
     [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
@@ -5199,8 +5162,7 @@ theorem twp_func1_normalizeX_smallStep_wp
         (UInt32.ofNat ((UInt64.ofNat (ctz64 64 a)).toNat % 2 ^ 32)) $$ [HshiftX]
   · rw [← hShiftProp]
     iexact HshiftX
-  iapply hcontinue
-  iframe
+  iapply_frame hcontinue
 
 theorem twp_func1_normalizeY_smallStep_wp
     [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
@@ -5307,8 +5269,7 @@ theorem twp_func1_normalizeY_smallStep_wp
         (UInt32.ofNat ((UInt64.ofNat (ctz64 64 b)).toNat % 2 ^ 32)) $$ [HshiftY]
   · rw [← hShiftProp]
     iexact HshiftY
-  iapply hcontinue
-  iframe
+  iapply_frame hcontinue
 
 theorem twp_func1_normalization_smallStep_wp
     [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
@@ -5360,8 +5321,7 @@ theorem twp_func1_normalization_smallStep_wp
       · iintro Hresources
         icases Hresources with ⟨HRfinal, HyOdd, HshiftYNew⟩
         icases HRfinal with ⟨HR''', HxOdd', Hshared''', HshiftXNew'⟩
-        iapply hcontinue
-        iframe
+        iapply_frame hcontinue
       · iframe
     · iframe
   · iframe
@@ -5438,8 +5398,7 @@ theorem twp_func1_equalRecombine_smallStep_wp
         [Hresult]
   · rw [← hResultProp]
     iexact Hresult
-  iapply hcontinue
-  iframe
+  iapply_frame hcontinue
 
 theorem twp_func1_equalBlock_smallStep_wp
     [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
@@ -5525,8 +5484,7 @@ theorem twp_func1_equalBlock_smallStep_wp
     controls calls a b g oldResult c6 c8 c7 c9
   · iintro Hresources
     icases Hresources with ⟨⟨HR', Hy'⟩, Hx', Hresult'⟩
-    iapply hcontinue
-    iframe
+    iapply_frame hcontinue
   · iframe
 
 theorem twp_func1_nonzeroGuards_smallStep_wp
@@ -5597,8 +5555,7 @@ theorem twp_func1_nonzeroGuards_smallStep_wp
   simp only [func1OuterFrame, func1OuterBody, func1MiddleBody,
     func1InnerGuardProg, func1ZeroJoinProg, func1EpilogueProg,
     func1SpilledLocals] at hcontinue
-  iapply hcontinue
-  iframe
+  iapply_frame hcontinue
 
 theorem twp_func1_nonzeroFinish_smallStep_wp_to_return
     [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
@@ -5656,8 +5613,7 @@ theorem twp_func1_nonzeroFinish_smallStep_wp_to_return
           (UInt64.ofNat (Nat.gcd a.toNat b.toNat))) (by decide)
     rw [← h]
     iexact Hresult
-  iapply hreturn
-  iframe
+  iapply_frame hreturn
 
 theorem twp_func1_nonzeroFinish_smallStep_wp
     [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
@@ -5801,8 +5757,7 @@ theorem twp_func1_loopNormalizeY_smallStep_wp
         [Hshift]
   · rw [← hShiftProp]
     iexact Hshift
-  iapply hcontinue
-  iframe
+  iapply_frame hcontinue
 
 theorem twp_func1_loopDecreaseY_smallStep_wp
     [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
@@ -5902,8 +5857,7 @@ theorem twp_func1_loopDecreaseY_smallStep_wp
     controls calls a b x (y - x) hsub oldShift c8 c7 c9
   · iintro Hresources
     icases Hresources with ⟨⟨HR', Hx'⟩, Hy', Hshift'⟩
-    iapply hcontinue
-    iframe
+    iapply_frame hcontinue
   · iframe
 
 theorem twp_func1_loopNormalizeX_smallStep_wp
@@ -6013,8 +5967,7 @@ theorem twp_func1_loopNormalizeX_smallStep_wp
         [Hshift]
   · rw [← hShiftProp]
     iexact Hshift
-  iapply hcontinue
-  iframe
+  iapply_frame hcontinue
 
 theorem twp_func1_loopDecreaseX_smallStep_wp
     [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
@@ -6114,8 +6067,7 @@ theorem twp_func1_loopDecreaseX_smallStep_wp
     controls calls a b y (x - y) hsub oldShift c6 c7 c9
   · iintro Hresources
     icases Hresources with ⟨⟨HR', Hy'⟩, Hx', Hshift'⟩
-    iapply hcontinue
-    iframe
+    iapply_frame hcontinue
   · iframe
 
 theorem twp_func1_loopEqualityDispatch_smallStep_wp
@@ -6211,8 +6163,7 @@ theorem twp_func1_loopEqualityDispatch_smallStep_wp
         congrArg (fun address => pointsTo_u64 0 address y) (by decide)
       rw [← h]
       iexact Hy
-    iapply hnext hxy
-    iframe
+    iapply_frame hnext hxy
 
 theorem twp_func1_loopDecreaseDispatch_smallStep_wp
     [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
@@ -6331,8 +6282,7 @@ theorem twp_func1_loopDecreaseDispatch_smallStep_wp
     · iintro Hresources
       icases Hresources with
         ⟨⟨HR', HshiftY'⟩, Hx', Hy', HshiftX'⟩
-      iapply hcontinueX hlt
-      iframe
+      iapply_frame hcontinueX hlt
     · iframe
   · have hxylt : x < y := by
       rw [UInt64.lt_iff_toNat_lt]
@@ -6374,8 +6324,7 @@ theorem twp_func1_loopDecreaseDispatch_smallStep_wp
     · iintro Hresources
       icases Hresources with
         ⟨⟨HR', HshiftX'⟩, Hx', Hy', HshiftY'⟩
-      iapply hcontinueY hlt
-      iframe
+      iapply_frame hcontinueY hlt
     · iframe
 
 theorem twp_func1_loopBodyDispatch_smallStep_wp
@@ -6449,8 +6398,7 @@ theorem twp_func1_loopBodyDispatch_smallStep_wp
     iintro Hresources
     icases Hresources with
       ⟨⟨HR', HshiftX', HshiftY'⟩, Hx', Hy', Hresult'⟩
-    iapply hfinish hxy
-    iframe
+    iapply_frame hfinish hxy
   · intro hxy
     iintro Hresources
     icases Hresources with
@@ -6475,14 +6423,12 @@ theorem twp_func1_loopBodyDispatch_smallStep_wp
       iintro Hresources
       icases Hresources with
         ⟨⟨HR'', Hresult''⟩, Hx'', Hy'', HshiftX'', HshiftY''⟩
-      iapply hbackX hxy hlt
-      iframe
+      iapply_frame hbackX hxy hlt
     · intro hlt
       iintro Hresources
       icases Hresources with
         ⟨⟨HR'', Hresult''⟩, Hx'', Hy'', HshiftX'', HshiftY''⟩
-      iapply hbackY hxy hlt
-      iframe
+      iapply_frame hbackY hxy hlt
     · iframe
   · iframe
 
@@ -6626,8 +6572,7 @@ theorem twp_func1_loopEntry_smallStep_wp
         ihave HresultFixed :
             pointsTo_u64 0 1048512 (UInt64.ofNat (Nat.gcd a.toNat b.toNat)) $$ [Hresult']
         · rw [← hresultEq]; iexact Hresult'
-        iapply hfinish i.x i.oldShiftX i.oldShiftY i.c6 i.c8 i.c7 i.c9 hxGcd_i
-        iframe
+        iapply_frame hfinish i.x i.oldShiftX i.oldShiftY i.c6 i.c8 i.c7 i.c9 hxGcd_i
       · intro hne; exact (hne hxy).elim
       · intro hne; exact (hne hxy).elim
       · iframe
@@ -6766,8 +6711,7 @@ theorem twp_func1_nonzeroCore_smallStep_wp
       icases Hresources with
         ⟨⟨HR'', Hshared'', HnormX'', HnormY''⟩,
           Hx'', Hy'', Hresult'', HloopX'', HloopY''⟩
-      iapply hfinish g loopX loopY d6 d8 d7 d9 hg
-      iframe
+      iapply_frame hfinish g loopX loopY d6 d8 d7 d9 hg
     · iframe
   · iframe
 
@@ -7169,8 +7113,7 @@ theorem twp_func0_callPrefix_smallStep_wp
   ihave HouterBExact : pointsTo_u64 0 1048568 b $$ [HouterB]
   · rw [← hOuterBProp]
     iexact HouterB
-  iapply hcontinue
-  iframe
+  iapply_frame hcontinue
 
 theorem twp_func0_afterCall_smallStep_wp_to_return
     [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
@@ -7204,8 +7147,7 @@ theorem twp_func0_afterCall_smallStep_wp_to_return
   iapply Wasm.SmallStep.twp_globalSet $$ Hglobal
   iintro Hglobal
   wasm_twp_pures [twp_localGet]
-  iapply hreturn
-  iframe
+  iapply_frame hreturn
 
 theorem twp_func0_afterCall_smallStep_wp
     [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
@@ -7691,8 +7633,7 @@ theorem twp_func2_smallStep_wp
     iapply Wasm.SmallStep.twp_returnFromFunction
     simp only [List.take, List.append_nil]
     iapply twp.value rfl
-    iapply func0FramePost_absorb R (runtimeModuleOwn ⟨0⟩ «module») a b
-    iframe
+    iapply_frame func0FramePost_absorb R (runtimeModuleOwn ⟨0⟩ «module») a b
   · iframe
 
 theorem func2_terminatesWith :

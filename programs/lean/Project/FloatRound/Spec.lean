@@ -200,8 +200,7 @@ theorem func5_lowered_body_smallStep_wp
   ihave HwordExact : pointsTo_u32 0 1048556 (f32Nearest x) $$ [Hword]
   · rw [← hWordProp]
     iexact Hword
-  iapply hreturn
-  iframe
+  iapply_frame hreturn
 
 theorem func4_lowered_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -233,8 +232,7 @@ theorem func4_lowered_smallStep_wp
   · iintro ⟨⟨HR, Hruntime⟩, Hglobal, Hword⟩
     wasm_wp_return_from_call Hruntime
     simp only [List.take, List.singleton_append]
-    iapply hreturn
-    iframe
+    iapply_frame hreturn
   · iframe
 
 theorem deepFrameFloat_body_smallStep_wp
@@ -293,8 +291,7 @@ theorem deepFrameFloat_body_smallStep_wp
   ihave HwordExact : pointsTo_u32 0 1048540 result $$ [Hword]
   · rw [← hWordProp]
     iexact Hword
-  iapply hreturn
-  iframe
+  iapply_frame hreturn
 
 theorem func1_deep_body_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -482,8 +479,7 @@ theorem naive_tail_smallStep_wp
   ihave HwordExact : pointsTo_u32 0 1048556 result $$ [Hword]
   · rw [← hWordProp]
     iexact Hword
-  iapply hreturn
-  iframe
+  iapply_frame hreturn
 
 theorem naive_storeTrunc_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -530,8 +526,7 @@ theorem naive_storeTrunc_smallStep_wp
   ihave HwordExact : pointsTo_u32 0 1048556 (f32Trunc x) $$ [Hword]
   · rw [← hWordProp]
     iexact Hword
-  iapply hnext
-  iframe
+  iapply_frame hnext
 
 theorem naive_ceil_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -596,8 +591,7 @@ theorem naive_ceil_smallStep_wp
         pointsTo_u32 0 1048556 (f32Ceil (f32Trunc x)) $$ [Hword]
     · rw [← hWordProp]
       iexact Hword
-    iapply hnext
-    iframe
+    iapply_frame hnext
   · iframe
 
 theorem naive_floor_smallStep_wp
@@ -662,8 +656,7 @@ theorem naive_floor_smallStep_wp
         pointsTo_u32 0 1048556 (f32Floor (f32Trunc x)) $$ [Hword]
     · rw [← hWordProp]
       iexact Hword
-    iapply hnext
-    iframe
+    iapply_frame hnext
   · iframe
 
 theorem naive_compare_smallStep_wp
@@ -732,8 +725,7 @@ theorem naive_compare_smallStep_wp
     simp only [naiveDFrame, List.take, List.nil_append]
     iapply naive_ceil_smallStep_wp R x oldDeep oldWord calls _
     · iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
-      iapply hceil
-      iframe
+      iapply_frame hceil
     · iframe
   · have hgeFalse :
         f32Ge (f32Sub x (f32Trunc x)) 1056964608 = false := by
@@ -754,8 +746,7 @@ theorem naive_compare_smallStep_wp
       simp only [naiveBFrame, List.take, List.nil_append]
       iapply naive_floor_smallStep_wp R x oldDeep oldWord calls _
       · iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
-        iapply hfloor
-        iframe
+        iapply_frame hfloor
       · iframe
     · have hleFalse :
           f32Le (f32Sub x (f32Trunc x)) 3204448256 = false := by
@@ -771,8 +762,7 @@ theorem naive_compare_smallStep_wp
           pointsTo_u32 0 1048540 oldDeep))
         x oldWord calls _
       · iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
-        iapply htrunc
-        iframe
+        iapply_frame htrunc
       · iframe
 
 theorem func0_lowered_smallStep_wp
@@ -889,8 +879,7 @@ theorem func0_lowered_smallStep_wp
           pointsTo_u32 0 1048540 (f32Ceil (f32Trunc x))))
         x (f32Ceil (f32Trunc x)) calls _
       · iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
-        iapply hreturn (f32Ceil (f32Trunc x))
-        iframe
+        iapply_frame hreturn (f32Ceil (f32Trunc x))
       · iframe
     · iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
       iapply naive_tail_smallStep_wp
@@ -898,8 +887,7 @@ theorem func0_lowered_smallStep_wp
           pointsTo_u32 0 1048540 (f32Floor (f32Trunc x))))
         x (f32Floor (f32Trunc x)) calls _
       · iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
-        iapply hreturn (f32Floor (f32Trunc x))
-        iframe
+        iapply_frame hreturn (f32Floor (f32Trunc x))
       · iframe
     · iintro ⟨HR, Hruntime, Hdeep, Hglobal, Hword⟩
       iapply naive_tail_smallStep_wp
@@ -907,8 +895,7 @@ theorem func0_lowered_smallStep_wp
           pointsTo_u32 0 1048540 (f32Trunc x)))
         x (f32Trunc x) calls _
       · iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
-        iapply hreturn (f32Trunc x)
-        iframe
+        iapply_frame hreturn (f32Trunc x)
       · iframe
     · iframe
   · iframe
@@ -1064,8 +1051,7 @@ theorem roundCheck_comparison_smallStep_wp
         ihave HresultExact : pointsTo_u32 0 1048572 1 $$ [Hresult]
         · rw [← hResultProp]
           iexact Hresult
-        iapply hone naive (f32Nearest x)
-        iframe
+        iapply_frame hone naive (f32Nearest x)
       · have heqFalse : f32Eq naive (f32Nearest x) = false := by
           cases h : f32Eq naive (f32Nearest x) <;> simp_all
         wasm_wp_next wp_scalarFloat2 (value := .i32 0) rfl rfl
@@ -1090,8 +1076,7 @@ theorem roundCheck_comparison_smallStep_wp
         ihave HresultExact : pointsTo_u32 0 1048572 0 $$ [Hresult]
         · rw [← hResultProp]
           iexact Hresult
-        iapply hzero naive (f32Nearest x)
-        iframe
+        iapply_frame hzero naive (f32Nearest x)
     · iframe
   · iframe
 
@@ -1178,8 +1163,7 @@ theorem checkRound_smallStep (x : UInt32) :
     ihave Hmemory := roundHeap_pointsTo $$ Hbytes
     icases Hmemory with ⟨Hdeep, Hword, Hresult⟩
     ihave Hglobal := roundGlobals_pointsTo $$ Hglobals
-    iapply func6_body_smallStep_wp
-    iframe
+    iapply_frame func6_body_smallStep_wp
 
 /-! ## Total WP helpers (no `▷` on continuations) -/
 
@@ -1226,8 +1210,7 @@ theorem twp_func5_lowered_body_smallStep_wp
   ihave HwordExact : pointsTo_u32 0 1048556 (f32Nearest x) $$ [Hword]
   · rw [← hWordProp]
     iexact Hword
-  iapply hreturn
-  iframe
+  iapply_frame hreturn
 
 theorem twp_func4_lowered_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -1259,8 +1242,7 @@ theorem twp_func4_lowered_smallStep_wp
   · iintro ⟨⟨HR, Hruntime⟩, Hglobal, Hword⟩
     wasm_twp_return_from_call Hruntime
     simp only [List.take, List.singleton_append]
-    iapply hreturn
-    iframe
+    iapply_frame hreturn
   · iframe
 
 theorem twp_deepFrameFloat_body_smallStep_wp
@@ -1311,8 +1293,7 @@ theorem twp_deepFrameFloat_body_smallStep_wp
   ihave HwordExact : pointsTo_u32 0 1048540 result $$ [Hword]
   · rw [← hWordProp]
     iexact Hword
-  iapply hreturn
-  iframe
+  iapply_frame hreturn
 
 theorem twp_func1_deep_body_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -1420,8 +1401,7 @@ theorem twp_naive_tail_smallStep_wp
   ihave HwordExact : pointsTo_u32 0 1048556 result $$ [Hword]
   · rw [← hWordProp]
     iexact Hword
-  iapply hreturn
-  iframe
+  iapply_frame hreturn
 
 theorem twp_naive_storeTrunc_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -1466,8 +1446,7 @@ theorem twp_naive_storeTrunc_smallStep_wp
   ihave HwordExact : pointsTo_u32 0 1048556 (f32Trunc x) $$ [Hword]
   · rw [← hWordProp]
     iexact Hword
-  iapply hnext
-  iframe
+  iapply_frame hnext
 
 theorem twp_naive_ceil_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -1530,8 +1509,7 @@ theorem twp_naive_ceil_smallStep_wp
         pointsTo_u32 0 1048556 (f32Ceil (f32Trunc x)) $$ [Hword]
     · rw [← hWordProp]
       iexact Hword
-    iapply hnext
-    iframe
+    iapply_frame hnext
   · iframe
 
 theorem twp_naive_floor_smallStep_wp
@@ -1594,8 +1572,7 @@ theorem twp_naive_floor_smallStep_wp
         pointsTo_u32 0 1048556 (f32Floor (f32Trunc x)) $$ [Hword]
     · rw [← hWordProp]
       iexact Hword
-    iapply hnext
-    iframe
+    iapply_frame hnext
   · iframe
 
 theorem twp_naive_compare_smallStep_wp
@@ -1663,8 +1640,7 @@ theorem twp_naive_compare_smallStep_wp
     simp only [naiveDFrame, List.take, List.nil_append]
     iapply twp_naive_ceil_smallStep_wp R x oldDeep oldWord calls _
     · iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
-      iapply hceil
-      iframe
+      iapply_frame hceil
     · iframe
   · have hgeFalse :
         f32Ge (f32Sub x (f32Trunc x)) 1056964608 = false := by
@@ -1684,8 +1660,7 @@ theorem twp_naive_compare_smallStep_wp
       simp only [naiveBFrame, List.take, List.nil_append]
       iapply twp_naive_floor_smallStep_wp R x oldDeep oldWord calls _
       · iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
-        iapply hfloor
-        iframe
+        iapply_frame hfloor
       · iframe
     · have hleFalse :
           f32Le (f32Sub x (f32Trunc x)) 3204448256 = false := by
@@ -1701,8 +1676,7 @@ theorem twp_naive_compare_smallStep_wp
           pointsTo_u32 0 1048540 oldDeep))
         x oldWord calls _
       · iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
-        iapply htrunc
-        iframe
+        iapply_frame htrunc
       · iframe
 
 theorem twp_func0_lowered_smallStep_wp
@@ -1813,8 +1787,7 @@ theorem twp_func0_lowered_smallStep_wp
           pointsTo_u32 0 1048540 (f32Ceil (f32Trunc x))))
         x (f32Ceil (f32Trunc x)) calls _
       · iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
-        iapply hreturn (f32Ceil (f32Trunc x))
-        iframe
+        iapply_frame hreturn (f32Ceil (f32Trunc x))
       · iframe
     · iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
       iapply twp_naive_tail_smallStep_wp
@@ -1822,8 +1795,7 @@ theorem twp_func0_lowered_smallStep_wp
           pointsTo_u32 0 1048540 (f32Floor (f32Trunc x))))
         x (f32Floor (f32Trunc x)) calls _
       · iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
-        iapply hreturn (f32Floor (f32Trunc x))
-        iframe
+        iapply_frame hreturn (f32Floor (f32Trunc x))
       · iframe
     · iintro ⟨HR, Hruntime, Hdeep, Hglobal, Hword⟩
       iapply twp_naive_tail_smallStep_wp
@@ -1831,8 +1803,7 @@ theorem twp_func0_lowered_smallStep_wp
           pointsTo_u32 0 1048540 (f32Trunc x)))
         x (f32Trunc x) calls _
       · iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
-        iapply hreturn (f32Trunc x)
-        iframe
+        iapply_frame hreturn (f32Trunc x)
       · iframe
     · iframe
   · iframe
@@ -1948,8 +1919,7 @@ theorem twp_roundCheck_comparison_smallStep_wp
         ihave HresultExact : pointsTo_u32 0 1048572 1 $$ [Hresult]
         · rw [← hResultProp]
           iexact Hresult
-        iapply hone naive (f32Nearest x)
-        iframe
+        iapply_frame hone naive (f32Nearest x)
       · have heqFalse : f32Eq naive (f32Nearest x) = false := by
           cases h : f32Eq naive (f32Nearest x) <;> simp_all
         iapply twp_scalarFloat2 (value := .i32 0) rfl rfl
@@ -1972,8 +1942,7 @@ theorem twp_roundCheck_comparison_smallStep_wp
         ihave HresultExact : pointsTo_u32 0 1048572 0 $$ [Hresult]
         · rw [← hResultProp]
           iexact Hresult
-        iapply hzero naive (f32Nearest x)
-        iframe
+        iapply_frame hzero naive (f32Nearest x)
     · iframe
   · iframe
 
@@ -2059,8 +2028,7 @@ theorem check_round_terminatesWith (x : UInt32) :
     ihave Hmemory := roundHeap_pointsTo $$ Hbytes
     icases Hmemory with ⟨Hdeep, Hword, Hresult⟩
     ihave Hglobal := roundGlobals_pointsTo $$ Hglobals
-    iapply twp_func6_body_smallStep_wp
-    iframe
+    iapply_frame twp_func6_body_smallStep_wp
 
 /-! ## FloatRoundSpec -/
 

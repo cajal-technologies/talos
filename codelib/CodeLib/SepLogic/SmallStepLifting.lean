@@ -3883,8 +3883,7 @@ theorem wp_memoryInit16_four
         obs' nt oldWord HwordFacts.2 $$
         [$Hσ $Hword] with ⟨Hσ, Hword⟩
     wasm_wp_frame
-      iapply Hwp
-      iframe
+      iapply_frame Hwp
 
 /-- Primitive Iris rule for consuming passive data segment zero. The post owns
 the dropped status, preventing the old bytes from being reused. -/
@@ -4166,8 +4165,7 @@ theorem wp_copy8_zero_four
         [$Hσ $Hsource $Hdestination] with
         ⟨Hσ, Hsource, Hdestination⟩
     wasm_wp_frame
-      iapply Hwp
-      iframe
+      iapply_frame Hwp
 
 /-- End-to-end Iris contract for the hand-written 32-bit memory roundtrip.
 The physical word and its four authoritative ghost bytes are updated by the

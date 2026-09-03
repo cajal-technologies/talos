@@ -327,8 +327,7 @@ theorem func1_body_smallStep_wp
   ihave HwordExact : pointsTo_u32 0 1048572 (f32Abs x) $$ [Hword]
   · rw [← hWordProp]
     iexact Hword
-  iapply hreturn
-  iframe
+  iapply_frame hreturn
 
 theorem func1_smallStep (x : UInt32) :
     PartiallyMeets (func1Config x)
@@ -402,8 +401,7 @@ theorem func0_smallStep (x : UInt32) :
     iintro ⟨Hbytes, Hglobals, Hruntime⟩
     ihave Hword := func1Heap_pointsTo $$ Hbytes
     ihave Hglobal := func1Globals_pointsTo $$ Hglobals
-    iapply func0_smallStep_wp x 0
-    iframe
+    iapply_frame func0_smallStep_wp x 0
 
 /-! ## Authoritative frame-backed `f64.abs` -/
 
@@ -514,8 +512,7 @@ theorem func3_body_smallStep_wp
   ihave HwordExact : pointsTo_u64 0 1048568 (f64Abs x) $$ [Hword]
   · rw [← hWordProp]
     iexact Hword
-  iapply hreturn
-  iframe
+  iapply_frame hreturn
 
 theorem func3_smallStep (x : UInt64) :
     PartiallyMeets (func3Config x)
@@ -594,8 +591,7 @@ theorem func2_smallStep (x : UInt32) :
     iintro ⟨Hbytes, Hglobals, Hruntime⟩
     ihave Hword := func3Heap_pointsTo $$ Hbytes
     ihave Hglobal := func1Globals_pointsTo $$ Hglobals
-    iapply func2_smallStep_wp x 0
-    iframe
+    iapply_frame func2_smallStep_wp x 0
 
 /-! ## Authoritative frame-backed `f32.copysign` -/
 
@@ -657,8 +653,7 @@ theorem func8_body_smallStep_wp
   ihave HwordExact : pointsTo_u32 0 1048572 (f32Copysign x y) $$ [Hword]
   · rw [← hWordProp]
     iexact Hword
-  iapply hreturn
-  iframe
+  iapply_frame hreturn
 
 theorem func8_smallStep (x y : UInt32) :
     PartiallyMeets (func8Config x y)
@@ -730,8 +725,7 @@ theorem func7_smallStep (x y : UInt32) :
     iintro ⟨Hbytes, Hglobals, Hruntime⟩
     ihave Hword := func1Heap_pointsTo $$ Hbytes
     ihave Hglobal := func1Globals_pointsTo $$ Hglobals
-    iapply func7_smallStep_wp x y 0
-    iframe
+    iapply_frame func7_smallStep_wp x y 0
 
 /-! ## Combined ownership for the exported checks
 
@@ -933,8 +927,7 @@ theorem func1_lowered_body_smallStep_wp
   ihave HwordExact : pointsTo_u32 0 1048556 (f32Abs x) $$ [Hword]
   · rw [← hWordProp]
     iexact Hword
-  iapply hreturn
-  iframe
+  iapply_frame hreturn
 
 theorem func0_lowered_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -966,8 +959,7 @@ theorem func0_lowered_smallStep_wp
   · iintro ⟨⟨HR, Hruntime⟩, Hglobal, Hword⟩
     wasm_wp_return_from_call Hruntime
     simp only [List.take, List.singleton_append]
-    iapply hreturn
-    iframe
+    iapply_frame hreturn
   · iframe
 
 /-- `func3` under an export's already-lowered stack pointer. -/
@@ -1023,8 +1015,7 @@ theorem func3_lowered_body_smallStep_wp
   ihave HwordExact : pointsTo_u64 0 1048552 (f64Abs x) $$ [Hword]
   · rw [← hWordProp]
     iexact Hword
-  iapply hreturn
-  iframe
+  iapply_frame hreturn
 
 theorem func2_lowered_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -1060,8 +1051,7 @@ theorem func2_lowered_smallStep_wp
     simp only [List.take, List.singleton_append]
     wasm_wp_next wp_scalarFloat1 rfl rfl
     simp only [func2Result] at hreturn
-    iapply hreturn
-    iframe
+    iapply_frame hreturn
   · iframe
 
 /-- `func8` under an export's already-lowered stack pointer. -/
@@ -1116,8 +1106,7 @@ theorem func8_lowered_body_smallStep_wp
   ihave HwordExact : pointsTo_u32 0 1048556 (f32Copysign x y) $$ [Hword]
   · rw [← hWordProp]
     iexact Hword
-  iapply hreturn
-  iframe
+  iapply_frame hreturn
 
 theorem func7_lowered_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -1149,8 +1138,7 @@ theorem func7_lowered_smallStep_wp
   · iintro ⟨⟨HR, Hruntime⟩, Hglobal, Hword⟩
     wasm_wp_return_from_call Hruntime
     simp only [List.take, List.singleton_append]
-    iapply hreturn
-    iframe
+    iapply_frame hreturn
   · iframe
 
 theorem func9_context_smallStep_wp
@@ -1186,8 +1174,7 @@ theorem func9_context_smallStep_wp
   wasm_wp_next func6_body_smallStep_wp (2147483647 &&& x) _
   wasm_wp_return_from_call Hruntime
   simp only [List.take, List.singleton_append]
-  iapply hreturn
-  iframe
+  iapply_frame hreturn
 
 theorem func4_context_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -1233,8 +1220,7 @@ theorem func4_context_smallStep_wp
   simp only [List.take, List.singleton_append]
   rw [← show func4Result x y =
     (2147483648 &&& y) ||| (2147483647 &&& x) by rfl]
-  iapply hreturn
-  iframe
+  iapply_frame hreturn
 
 def checkAbsTailProg : Program :=
   [ .localGet 1, .load32 12, .localSet 2,
@@ -1287,8 +1273,7 @@ theorem checkAbs_tail_smallStep_wp
   ihave HresultExact : pointsTo_u32 0 1048572 result $$ [Hresult]
   · rw [← hResultProp]
     iexact Hresult
-  iapply hreturn
-  iframe
+  iapply_frame hreturn
 
 def checkAbsInnerBody : Program :=
   [ .localGet 0, .call 0, .localGet 0, .call 9,
@@ -1356,8 +1341,7 @@ theorem checkAbs_zeroPath_smallStep_wp
   ihave HresultExact : pointsTo_u32 0 1048572 0 $$ [Hresult]
   · rw [← hResultProp]
     iexact Hresult
-  iapply hcontinue
-  iframe
+  iapply_frame hcontinue
 
 theorem checkAbs_onePath_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -1396,8 +1380,7 @@ theorem checkAbs_onePath_smallStep_wp
   ihave HresultExact : pointsTo_u32 0 1048572 1 $$ [Hresult]
   · rw [← hResultProp]
     iexact Hresult
-  iapply hcontinue
-  iframe
+  iapply_frame hcontinue
 
 def checkAbsSecondProg : Program :=
   [ .localGet 0, .call 0, .localGet 0, .call 2,
@@ -1474,8 +1457,7 @@ theorem checkAbs_secondComparison_smallStep_wp
             (f64Abs (f64PromoteF32 x)) ∗ runtimeModuleOwn ⟨0⟩ «module»))
           x oldResult _
         · iintro ⟨⟨Hscratch, Hruntime⟩, Hglobal, Hresult⟩
-          iapply hone
-          iframe
+          iapply_frame hone
         · iframe
       · have heqFalse :
             f32Eq (f32Abs x) (func2Result x) = false := by
@@ -1492,8 +1474,7 @@ theorem checkAbs_secondComparison_smallStep_wp
             (f64Abs (f64PromoteF32 x)) ∗ runtimeModuleOwn ⟨0⟩ «module»))
           x oldResult _
         · iintro ⟨⟨Hscratch, Hruntime⟩, Hglobal, Hresult⟩
-          iapply hzero
-          iframe
+          iapply_frame hzero
         · iframe
     · iframe
   · iframe
@@ -1574,8 +1555,7 @@ theorem checkAbs_firstComparisonTail_smallStep_wp
         runtimeModuleOwn ⟨0⟩ «module»))
       x oldResult _
     · iintro ⟨⟨Hscratch, Hruntime⟩, Hglobal, Hresult⟩
-      iapply hzeroFirst
-      iframe
+      iapply_frame hzeroFirst
     · iframe
 
 theorem checkAbs_firstComparison_smallStep_wp
@@ -1772,8 +1752,7 @@ theorem checkAbs_smallStep (x : UInt32) :
     ihave Hmemory := exportHeap_pointsTo $$ Hbytes
     icases Hmemory with ⟨Hscratch, Hresult⟩
     ihave Hglobal := func1Globals_pointsTo $$ Hglobals
-    iapply func10_body_smallStep_wp
-    iframe
+    iapply_frame func10_body_smallStep_wp
 
 /-! ## Exported `check_copysign` -/
 
@@ -1932,8 +1911,7 @@ theorem checkCopysign_comparison_smallStep_wp
         ihave HresultExact : pointsTo_u32 0 1048572 1 $$ [Hresult]
         · rw [← hResultProp]
           iexact Hresult
-        iapply hone
-        iframe
+        iapply_frame hone
       · have heqFalse :
             f32Eq (f32Copysign x y) (func4Result x y) = false := by
           cases h : f32Eq (f32Copysign x y) (func4Result x y) <;> simp_all
@@ -1959,8 +1937,7 @@ theorem checkCopysign_comparison_smallStep_wp
         ihave HresultExact : pointsTo_u32 0 1048572 0 $$ [Hresult]
         · rw [← hResultProp]
           iexact Hresult
-        iapply hzero
-        iframe
+        iapply_frame hzero
     · iframe
   · iframe
 
@@ -2064,8 +2041,7 @@ theorem checkCopysign_smallStep (x y : UInt32) :
     ihave Hmemory := exportHeap_pointsTo $$ Hbytes
     icases Hmemory with ⟨Hscratch, Hresult⟩
     ihave Hglobal := func1Globals_pointsTo $$ Hglobals
-    iapply func11_body_smallStep_wp
-    iframe
+    iapply_frame func11_body_smallStep_wp
 
 /-! ## TWP lifting lemmas -/
 
@@ -2145,8 +2121,7 @@ theorem twp_func1_lowered_body_smallStep_wp
   ihave HwordExact : pointsTo_u32 0 1048556 (f32Abs x) $$ [Hword']
   · rw [← hWordProp]
     iexact Hword'
-  iapply hreturn
-  iframe
+  iapply_frame hreturn
 
 theorem twp_func0_lowered_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -2178,8 +2153,7 @@ theorem twp_func0_lowered_smallStep_wp
   · iintro ⟨⟨HR, Hruntime⟩, Hglobal, Hword⟩
     wasm_twp_return_from_call Hruntime
     simp only [List.take, List.singleton_append]
-    iapply hreturn
-    iframe
+    iapply_frame hreturn
   · iframe
 
 theorem twp_func3_lowered_body_smallStep_wp
@@ -2228,8 +2202,7 @@ theorem twp_func3_lowered_body_smallStep_wp
   ihave HwordExact : pointsTo_u64 0 1048552 (f64Abs x) $$ [Hword']
   · rw [← hWordProp]
     iexact Hword'
-  iapply hreturn
-  iframe
+  iapply_frame hreturn
 
 theorem twp_func2_lowered_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -2265,8 +2238,7 @@ theorem twp_func2_lowered_smallStep_wp
     simp only [List.take, List.singleton_append]
     iapply twp_scalarFloat1 rfl rfl
     simp only [func2Result] at hreturn
-    iapply hreturn
-    iframe
+    iapply_frame hreturn
   · iframe
 
 theorem twp_func8_lowered_body_smallStep_wp
@@ -2314,8 +2286,7 @@ theorem twp_func8_lowered_body_smallStep_wp
   ihave HwordExact : pointsTo_u32 0 1048556 (f32Copysign x y) $$ [Hword']
   · rw [← hWordProp]
     iexact Hword'
-  iapply hreturn
-  iframe
+  iapply_frame hreturn
 
 theorem twp_func7_lowered_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -2347,8 +2318,7 @@ theorem twp_func7_lowered_smallStep_wp
   · iintro ⟨⟨HR, Hruntime⟩, Hglobal, Hword⟩
     wasm_twp_return_from_call Hruntime
     simp only [List.take, List.singleton_append]
-    iapply hreturn
-    iframe
+    iapply_frame hreturn
   · iframe
 
 theorem twp_func9_context_smallStep_wp
@@ -2384,8 +2354,7 @@ theorem twp_func9_context_smallStep_wp
   iapply twp_func6_body_smallStep_wp (2147483647 &&& x) _
   wasm_twp_return_from_call Hruntime
   simp only [List.take, List.singleton_append]
-  iapply hreturn
-  iframe
+  iapply_frame hreturn
 
 theorem twp_func4_context_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -2431,8 +2400,7 @@ theorem twp_func4_context_smallStep_wp
   simp only [List.take, List.singleton_append]
   rw [← show func4Result x y =
     (2147483648 &&& y) ||| (2147483647 &&& x) by rfl]
-  iapply hreturn
-  iframe
+  iapply_frame hreturn
 
 theorem twp_checkAbs_tail_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -2474,8 +2442,7 @@ theorem twp_checkAbs_tail_smallStep_wp
   ihave HresultExact : pointsTo_u32 0 1048572 result $$ [Hresult']
   · rw [← hResultProp]
     iexact Hresult'
-  iapply hreturn
-  iframe
+  iapply_frame hreturn
 
 theorem twp_checkAbs_zeroPath_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -2512,8 +2479,7 @@ theorem twp_checkAbs_zeroPath_smallStep_wp
   ihave HresultExact : pointsTo_u32 0 1048572 0 $$ [Hresult']
   · rw [← hResultProp]
     iexact Hresult'
-  iapply hcontinue
-  iframe
+  iapply_frame hcontinue
 
 theorem twp_checkAbs_onePath_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -2550,8 +2516,7 @@ theorem twp_checkAbs_onePath_smallStep_wp
   ihave HresultExact : pointsTo_u32 0 1048572 1 $$ [Hresult']
   · rw [← hResultProp]
     iexact Hresult'
-  iapply hcontinue
-  iframe
+  iapply_frame hcontinue
 
 theorem twp_checkAbs_secondComparison_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -2622,8 +2587,7 @@ theorem twp_checkAbs_secondComparison_smallStep_wp
             (f64Abs (f64PromoteF32 x)) ∗ runtimeModuleOwn ⟨0⟩ «module»))
           x oldResult _
         · iintro ⟨⟨Hscratch, Hruntime⟩, Hglobal, Hresult⟩
-          iapply hone
-          iframe
+          iapply_frame hone
         · iframe
       · have heqFalse :
             f32Eq (f32Abs x) (func2Result x) = false := by
@@ -2640,8 +2604,7 @@ theorem twp_checkAbs_secondComparison_smallStep_wp
             (f64Abs (f64PromoteF32 x)) ∗ runtimeModuleOwn ⟨0⟩ «module»))
           x oldResult _
         · iintro ⟨⟨Hscratch, Hruntime⟩, Hglobal, Hresult⟩
-          iapply hzero
-          iframe
+          iapply_frame hzero
         · iframe
     · iframe
   · iframe
@@ -2718,8 +2681,7 @@ theorem twp_checkAbs_firstComparisonTail_smallStep_wp
         runtimeModuleOwn ⟨0⟩ «module»))
       x oldResult _
     · iintro ⟨⟨Hscratch, Hruntime⟩, Hglobal, Hresult⟩
-      iapply hzeroFirst
-      iframe
+      iapply_frame hzeroFirst
     · iframe
 
 theorem twp_checkAbs_firstComparison_smallStep_wp
@@ -3015,8 +2977,7 @@ theorem twp_checkCopysign_comparison_smallStep_wp
         ihave HresultExact : pointsTo_u32 0 1048572 1 $$ [Hresult']
         · rw [← hResultProp]
           iexact Hresult'
-        iapply hone
-        iframe
+        iapply_frame hone
       · have heqFalse :
             f32Eq (f32Copysign x y) (func4Result x y) = false := by
           cases h : f32Eq (f32Copysign x y) (func4Result x y) <;> simp_all
@@ -3040,8 +3001,7 @@ theorem twp_checkCopysign_comparison_smallStep_wp
         ihave HresultExact : pointsTo_u32 0 1048572 0 $$ [Hresult']
         · rw [← hResultProp]
           iexact Hresult'
-        iapply hzero
-        iframe
+        iapply_frame hzero
     · iframe
   · iframe
 
@@ -3138,8 +3098,7 @@ theorem check_abs_terminatesWith (x : UInt32) :
     ihave Hmemory := exportHeap_pointsTo $$ Hbytes
     icases Hmemory with ⟨Hscratch, Hresult⟩
     ihave Hglobal := func1Globals_pointsTo $$ Hglobals
-    iapply twp_func10_body_smallStep_wp
-    iframe
+    iapply_frame twp_func10_body_smallStep_wp
 
 theorem check_copysign_terminatesWith (x y : UInt32) :
     Wasm.SmallStep.TerminatesWith (checkCopysignConfig x y)
@@ -3158,8 +3117,7 @@ theorem check_copysign_terminatesWith (x y : UInt32) :
     ihave Hmemory := exportHeap_pointsTo $$ Hbytes
     icases Hmemory with ⟨Hscratch, Hresult⟩
     ihave Hglobal := func1Globals_pointsTo $$ Hglobals
-    iapply twp_func11_body_smallStep_wp
-    iframe
+    iapply_frame twp_func11_body_smallStep_wp
 
 @[spec_of "rust-exported" "float_reinterpret::float_reinterpret"]
 def FloatReinterpretSpec : Prop :=

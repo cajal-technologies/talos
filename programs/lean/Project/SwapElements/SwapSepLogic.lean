@@ -791,8 +791,7 @@ theorem func2_in_func1_context_smallStep_wp
     iintro Hresources
     wasm_wp_return_from_call Hruntime
     simp only [List.take, List.nil_append]
-    iapply hreturn
-    iframe
+    iapply_frame hreturn
 
 /-- Equal-index counterpart of `func2_in_func1_context_smallStep_wp`. The
 callee receives the same pointer twice, so one array-word owner is threaded
@@ -840,8 +839,7 @@ theorem func2Alias_in_func1_context_smallStep_wp
     iintro Hresources
     wasm_wp_return_from_call Hruntime
     simp only [List.take, List.nil_append]
-    iapply hreturn
-    iframe
+    iapply_frame hreturn
 
 /-- Successful equal-index path of the generated bounds-checking wrapper. -/
 theorem func1_alias_context_smallStep_wp
@@ -879,8 +877,7 @@ theorem func1_alias_context_smallStep_wp
   iapply func2Alias_in_func1_context_smallStep_wp R
     ptr len i oldScratch oldValue hroom calls
   · iintro ⟨Hruntime, HR, Hresources⟩
-    iapply hreturn
-    iframe
+    iapply_frame hreturn
   · iframe
 
 /-- Call-stack-polymorphic happy path of generated `func1`. The theorem stops
@@ -925,8 +922,7 @@ theorem func1_happy_context_smallStep_wp
   iapply func2_in_func1_context_smallStep_wp R
     ptr len i j oldScratch oldA oldB hroomI hroomJ calls
   · iintro ⟨Hruntime, HR, Hresources⟩
-    iapply hreturn
-    iframe
+    iapply_frame hreturn
   · iframe
 
 /-- End-to-end happy path of generated `func1`: both bounds checks succeed,
@@ -1015,8 +1011,7 @@ theorem func0_happy_context_smallStep_wp
   · iintro ⟨HR, Hruntime, Hmem⟩
     wasm_wp_return_from_call Hruntime
     simp only [List.take, List.nil_append]
-    iapply hreturn
-    iframe
+    iapply_frame hreturn
   · iframe
 
 /-- Equal-index path of the generated forwarding wrapper. -/
@@ -1061,8 +1056,7 @@ theorem func0_alias_context_smallStep_wp
   · iintro ⟨HR, Hruntime, Hmem⟩
     wasm_wp_return_from_call Hruntime
     simp only [List.take, List.nil_append]
-    iapply hreturn
-    iframe
+    iapply_frame hreturn
   · iframe
 
 /-- Top-level equal-index forwarding-wrapper contract. -/
@@ -1567,8 +1561,7 @@ theorem twp_func2_in_func1_context_smallStep_wp
   · iintro Hresources
     wasm_twp_return_from_call Hruntime
     simp only [List.take, List.nil_append]
-    iapply hreturn
-    iframe
+    iapply_frame hreturn
 
 theorem twp_func2Alias_in_func1_context_smallStep_wp
     [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
@@ -1612,8 +1605,7 @@ theorem twp_func2Alias_in_func1_context_smallStep_wp
   · iintro Hresources
     wasm_twp_return_from_call Hruntime
     simp only [List.take, List.nil_append]
-    iapply hreturn
-    iframe
+    iapply_frame hreturn
 
 theorem twp_func1_alias_context_smallStep_wp
     [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
@@ -1650,8 +1642,7 @@ theorem twp_func1_alias_context_smallStep_wp
   iapply twp_func2Alias_in_func1_context_smallStep_wp R
     ptr len i oldScratch oldValue hroom calls
   · iintro ⟨Hruntime, HR, Hresources⟩
-    iapply hreturn
-    iframe
+    iapply_frame hreturn
   · iframe
 
 theorem twp_func1_happy_context_smallStep_wp
@@ -1693,8 +1684,7 @@ theorem twp_func1_happy_context_smallStep_wp
   iapply twp_func2_in_func1_context_smallStep_wp R
     ptr len i j oldScratch oldA oldB hroomI hroomJ calls
   · iintro ⟨Hruntime, HR, Hresources⟩
-    iapply hreturn
-    iframe
+    iapply_frame hreturn
   · iframe
 
 theorem twp_func1_happy_smallStep_wp
@@ -1779,8 +1769,7 @@ theorem twp_func0_happy_context_smallStep_wp
   · iintro ⟨HR, Hruntime, Hmem⟩
     wasm_twp_return_from_call Hruntime
     simp only [List.take, List.nil_append]
-    iapply hreturn
-    iframe
+    iapply_frame hreturn
   · iframe
 
 theorem twp_func0_alias_context_smallStep_wp
@@ -1824,8 +1813,7 @@ theorem twp_func0_alias_context_smallStep_wp
   · iintro ⟨HR, Hruntime, Hmem⟩
     wasm_twp_return_from_call Hruntime
     simp only [List.take, List.nil_append]
-    iapply hreturn
-    iframe
+    iapply_frame hreturn
   · iframe
 
 theorem twp_func0_alias_smallStep_wp
@@ -2802,8 +2790,7 @@ theorem func4Example_smallStep :
     simp only [
       show ((0 : UInt32) <<< (3 % 32)) + 0 = 0 by decide,
       show ((1 : UInt32) <<< (3 % 32)) + 0 = 8 by decide] at hfunc4
-    iapply hfunc4
-    iframe
+    iapply_frame hfunc4
 
 /-- State-sensitive adequacy for the distinct-index export example proves
 both sides of the physical swap in the reached `MachineStore`. -/
@@ -2860,8 +2847,7 @@ theorem func4Example_store_smallStep :
     simp only [
       show ((0 : UInt32) <<< (3 % 32)) + 0 = 0 by decide,
       show ((1 : UInt32) <<< (3 % 32)) + 0 = 8 by decide] at hfunc4
-    iapply hfunc4
-    iframe
+    iapply_frame hfunc4
 
 /-- Executable finite-trace witness complementing the Iris partial-correctness
 proof for the distinct-index export example. -/
@@ -3015,8 +3001,7 @@ theorem func4Alias_smallStep :
       0 1 0 0 0 0 42 (by decide) (by decide)
     simp only [
       show ((0 : UInt32) <<< (3 % 32)) + 0 = 0 by decide] at halias
-    iapply halias
-    iframe
+    iapply_frame halias
 
 /-- State-sensitive adequacy for the exported equal-index case: the physical
 array word in the reached `MachineStore` is unchanged. -/
@@ -3064,8 +3049,7 @@ theorem func4Alias_store_smallStep :
       0 1 0 0 0 0 42 (by decide) (by decide)
     simp only [
       show ((0 : UInt32) <<< (3 % 32)) + 0 = 0 by decide] at halias
-    iapply halias
-    iframe
+    iapply_frame halias
 
 /-- Executable finite-trace witness for the equal-index export example. -/
 theorem func4Alias_terminates :
@@ -3212,8 +3196,7 @@ theorem func0Alias_smallStep :
       0 1 0 0 42 (by decide) (by decide)
     simp only [
       show ((0 : UInt32) <<< (3 % 32)) + 0 = 0 by decide] at halias
-    iapply halias
-    iframe
+    iapply_frame halias
 
 /- The former custom `wp_wasm`/big-step proof block lived below this point.
 It is retained temporarily as commented migration history while the public

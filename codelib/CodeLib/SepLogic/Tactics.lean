@@ -14,3 +14,9 @@ macro "ipureexact " proof:term : tactic =>
   `(tactic|
     (ipureintro
      exact $proof))
+
+/-- Apply an Iris entailment and frame its next spatial obligation. -/
+macro "iapply_frame " rule:pmTerm : tactic =>
+  `(tactic|
+    (iapply $rule
+     iframe))

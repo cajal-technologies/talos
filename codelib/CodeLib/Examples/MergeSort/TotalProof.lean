@@ -600,8 +600,7 @@ theorem twp_mergeLeftStep
     rfl
   iapply twp_increment (α := α) rfl hsetK
   simp only [mergeLocals]
-  iapply Hcont
-  iframe
+  iapply_frame Hcont
 
 set_option maxHeartbeats 3000000 in
 theorem twp_mergeRightStep
@@ -673,8 +672,7 @@ theorem twp_mergeRightStep
     rfl
   iapply twp_increment (α := α) rfl hsetK
   simp only [mergeLocals]
-  iapply Hcont
-  iframe
+  iapply_frame Hcont
 
 set_option maxHeartbeats 4000000 in
 theorem twp_mergeLeftLoop

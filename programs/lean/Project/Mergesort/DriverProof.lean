@@ -5999,8 +5999,7 @@ theorem twp_func3_completed_nonempty
     func3ValuesOuterBody, func3ScratchOuterBody,
     func3CompletedLengthGuard, List.cons_append, List.nil_append]
     at Hcomplete ⊢
-  iapply Hcomplete
-  iframe
+  iapply_frame Hcomplete
 
 /-- Execute the exact initial-read block and well-founded read loop for a
 nonempty public input, then compose its authoritative completed-Vec result
@@ -6071,8 +6070,7 @@ theorem twp_func3_read_dispatch_nonempty
       (calls := calls) (s := s) (E := E) (Phi := Phi)
     simp only [← hfacts.1, func3AppendLocals, serialize_length]
       at Hcompleted ⊢
-    iapply Hcompleted
-    iframe
+    iapply_frame Hcompleted
   · iintro HOOM
     iapply Hoom
     iexact HOOM
@@ -6188,8 +6186,7 @@ theorem twp_func3_after_initialize
       func3CleanupOuterFrame, func3MiddleBody, func3DriverBody,
       func3SortAndCleanup, List.cons_append,
       List.nil_append] at Hnonempty ⊢
-    iapply Hnonempty
-    iframe
+    iapply_frame Hnonempty
 
 /-- Execute the generated prologue and the complete reviewed driver body,
 stopping at the administrative return boundary. -/
@@ -6231,8 +6228,7 @@ theorem twp_func3_body
   have Hbody := twp_func3_after_initialize hfunc1 hfunc5 hfunc9 heapId
     original outputBytes reserveBytes (calls := calls) (s := s) (E := E)
     (Phi := Phi)
-  iapply Hbody
-  iframe
+  iapply_frame Hbody
 
 private theorem func3_index :
     Project.Mergesort.module.funcs[3]? =

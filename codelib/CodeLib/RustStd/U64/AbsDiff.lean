@@ -122,8 +122,7 @@ theorem absDiff_smallStep_wp_to_return
     iintro Hscratch
     simp only [List.take_nil, List.nil_append]
     simp only [hab, if_true] at hreturn
-    iapply hreturn
-    iframe
+    iapply_frame hreturn
   · iapply Wasm.SmallStep.wp_ltUI64 (result := 0) (by simp [hab])
     inext
     wasm_wp_pures [wp_const wp_and]
@@ -147,8 +146,7 @@ theorem absDiff_smallStep_wp_to_return
       HscratchLater
     iintro Hscratch
     simp only [hab, if_false] at hreturn
-    iapply hreturn
-    iframe
+    iapply_frame hreturn
 
 set_option maxHeartbeats 4000000 in
 /-- Top-level corollary of the contextual body rule. -/
@@ -361,8 +359,7 @@ theorem absDiff_smallStep_partiallyMeets_of_store
       (s := Stuckness.NotStuck) (E := ⊤)
       1048576 a b oldScratch (by decide) (by decide)
     simp only [UInt32.reduceSub, UInt32.reduceAdd] at hwp
-    iapply hwp
-    iframe
+    iapply_frame hwp
 
 /-- Closed instance of `absDiff_smallStep_partiallyMeets_of_store`. The
 theorem starts from a concrete physical memory/global store and assumes no

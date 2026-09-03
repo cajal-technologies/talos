@@ -1378,8 +1378,7 @@ theorem memoryInitDrop_store_partiallyMeets :
       · exact HwordFacts.1
       · exact HsegmentFact
     iapply wp_mono hpost
-    iapply wp_memoryInitDrop 0
-    iframe
+    iapply_frame wp_memoryInitDrop 0
 
 private def tableSetGetMap : WasmTableMap TableInst :=
   insert ∅ (⟨0, 0⟩ : TableKey) [.funcref none]
