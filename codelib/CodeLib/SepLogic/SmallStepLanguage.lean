@@ -61,6 +61,19 @@ macro "wasm_wp_resolve_step " h:term " using " expected:term : tactic =>
   `(tactic| (obtain ⟨rfl, kind, rfl, wasmStep⟩ := $h) <;>
     wasm_wp_resolve_target ($expected) against wasmStep)
 
+set_option hygiene false in
+/-- Reassemble the Iris state, continuation, and affine tail after a Wasm step. -/
+macro "wasm_wp_frame" : tactic =>
+  `(tactic|
+    (isplitl [Hσ]
+     next => iexact Hσ
+     next =>
+       isplitr [Hcredit]
+       next =>
+         repeat ispecialize Hwp $$ [$]
+         iexact Hwp
+       next => itrivial))
+
 /-- A terminal observation for the Wasm machine.  Its language must reuse the
 authoritative Wasm primitive-step relation; only the terminal-value view may
 change. -/

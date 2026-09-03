@@ -44,11 +44,7 @@ theorem wp_pureStep
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp]
-  · iexact Hwp
-  · itrivial
+  wasm_wp_frame
 
 /-- Generic lifting rule for a store-preserving deterministic Wasm step that
 traps. Every trapping operand, reference, and arithmetic rule below is a thin
@@ -203,11 +199,7 @@ theorem wp_finish
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp]
-  · iexact Hwp
-  · itrivial
+  wasm_wp_frame
 
 /-- Explicit return from a top-level invocation. The instruction discards the
 remaining code and control frames and exposes the declared function results as
@@ -237,11 +229,7 @@ theorem wp_returnFromFunction
     Iris.Algebra.BigOpL.bigOpL_nil]
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp]
-  · iexact Hwp
-  · itrivial
+  wasm_wp_frame
 
 theorem wp_const
     {params localValues values : List Value}
@@ -781,11 +769,7 @@ theorem wp_refIsNull
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp]
-  · iexact Hwp
-  · itrivial
+  wasm_wp_frame
 
 theorem wp_localGet
     {params localValues values : List Value}
@@ -1585,11 +1569,7 @@ theorem wp_returnFromCallExplicit
   iclear HruntimeElem HinstanceOwn
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp]
-  · iexact Hwp
-  · itrivial
+  wasm_wp_frame
 
 /-- Primitive rule for `global.get`. Authoritative global ownership connects
 the logical value to the instantiated global read by the machine, and the
@@ -1643,12 +1623,7 @@ theorem wp_globalGet_of_canonical
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hglobal]
-  · iapply Hwp
-    iexact Hglobal
-  · itrivial
+  wasm_wp_frame
 
 /-- Primitive rule for `global.set`. Exclusive authoritative ownership is
 updated together with the physical instantiated global in `StateInterp`. -/
@@ -1728,12 +1703,7 @@ theorem wp_globalSet_of_canonical
       index oldValue newValue $$ [$Hσ $Hglobal] with ⟨Hσ, Hglobal⟩
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hglobal]
-  · iapply Hwp
-    iexact Hglobal
-  · itrivial
+  wasm_wp_frame
 
 /-- Common non-aliased rule for the distinguished global at index zero.
 Index zero is definitionally canonical even when other local indices alias
@@ -1827,12 +1797,7 @@ theorem wp_tableGet
     Iris.Algebra.BigOpL.bigOpL_nil]
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Htable]
-  · iapply Hwp
-    iexact Htable
-  · itrivial
+  wasm_wp_frame
 
 /-- Primitive rule for `table.size`. Runtime-module ownership determines
 whether the result is represented as an `i32` or `i64`; table ownership
@@ -1906,11 +1871,7 @@ theorem wp_tableSize
     Iris.Algebra.BigOpL.bigOpL_nil]
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Htable Hruntime]
-  · iapply Hwp $$ Htable Hruntime
-  · itrivial
+  wasm_wp_frame
 
 /-- Primitive rule for an in-bounds `table.set`. The table keeps its stable
 identity while its complete owned contents and physical instance update
@@ -1983,12 +1944,7 @@ theorem wp_tableSet
       tableIndex table newTable $$ [$Hσ $Htable] with ⟨Hσ, Htable⟩
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Htable]
-  · iapply Hwp
-    iexact Htable
-  · itrivial
+  wasm_wp_frame
 
 /-- Successful 32-bit `table.grow`. Stable table identity is preserved while
 the physical table and its authoritative contents are extended together. -/
@@ -2072,11 +2028,7 @@ theorem wp_tableGrow32
       tableIndex table newTable $$ [$Hσ $Htable] with ⟨Hσ, Htable⟩
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Htable Hruntime]
-  · iapply Hwp $$ Htable Hruntime
-  · itrivial
+  wasm_wp_frame
 
 /-- Successful 64-bit `table.grow`. This is the table64 counterpart of
 `wp_tableGrow32`; it updates the same stable authoritative table identity. -/
@@ -2160,11 +2112,7 @@ theorem wp_tableGrow64
       tableIndex table newTable $$ [$Hσ $Htable] with ⟨Hσ, Htable⟩
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Htable Hruntime]
-  · iapply Hwp $$ Htable Hruntime
-  · itrivial
+  wasm_wp_frame
 
 /-- Failed 32-bit `table.grow`. Capacity failure is an ordinary successful
 instruction result (`-1`), not a trap, and leaves the authoritative table and
@@ -2242,11 +2190,7 @@ theorem wp_tableGrow32Failure
     Iris.Algebra.BigOpL.bigOpL_nil]
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Htable Hruntime]
-  · iapply Hwp $$ Htable Hruntime
-  · itrivial
+  wasm_wp_frame
 
 /-- Failed table64 `table.grow`; returns the 64-bit all-ones sentinel and
 preserves complete ownership of the unchanged table. -/
@@ -2324,11 +2268,7 @@ theorem wp_tableGrow64Failure
     Iris.Algebra.BigOpL.bigOpL_nil]
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Htable Hruntime]
-  · iapply Hwp $$ Htable Hruntime
-  · itrivial
+  wasm_wp_frame
 
 /-- In-bounds `table.fill`. The complete authoritative table fragment is
 updated to the same `listWriteAt` result as the physical machine table. -/
@@ -2405,12 +2345,7 @@ theorem wp_tableFill
       tableIndex table newTable $$ [$Hσ $Htable] with ⟨Hσ, Htable⟩
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Htable]
-  · iapply Hwp
-    iexact Htable
-  · itrivial
+  wasm_wp_frame
 
 /-- In-bounds copy within one table, including overlapping ranges. The source
 slice is taken from the pre-step table before the authoritative table is
@@ -2496,12 +2431,7 @@ theorem wp_tableCopySame
       tableIndex table newTable $$ [$Hσ $Htable] with ⟨Hσ, Htable⟩
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Htable]
-  · iapply Hwp
-    iexact Htable
-  · itrivial
+  wasm_wp_frame
 
 /-- In-bounds copy between two separately owned tables. The source fragment is
 framed unchanged while only the destination table's authoritative contents and
@@ -2607,11 +2537,7 @@ theorem wp_tableCopyDistinct
       [$Hσ $Hdestination] with ⟨Hσ, Hdestination⟩
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hdestination Hsource]
-  · iapply Hwp $$ Hdestination Hsource
-  · itrivial
+  wasm_wp_frame
 
 /-- Primitive rule for `i32.load8_u`. The arithmetic premise rules out
 32-bit effective-address wraparound; physical bounds follow from ownership
@@ -2674,12 +2600,7 @@ theorem wp_load8U
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hpt]
-  · iapply Hwp
-    iexact Hpt
-  · itrivial
+  wasm_wp_frame
 
 /-- Primitive rule for `i64.load8_u` with an i32 memory address.  The loaded
 byte is zero-extended to i64; ownership remains at the physical UInt32 key. -/
@@ -2741,12 +2662,7 @@ theorem wp_load8UI64
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hpt]
-  · iapply Hwp
-    iexact Hpt
-  · itrivial
+  wasm_wp_frame
 
 theorem wp_load8S
     {params localValues values : List Value}
@@ -2809,12 +2725,7 @@ theorem wp_load8S
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hpt]
-  · iapply Hwp
-    iexact Hpt
-  · itrivial
+  wasm_wp_frame
 
 theorem wp_load16U
     {params localValues values : List Value}
@@ -2874,12 +2785,7 @@ theorem wp_load16U
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hword]
-  · iapply Hwp
-    iexact Hword
-  · itrivial
+  wasm_wp_frame
 
 /-- Primitive rule for `i32.load16_s`. Like `wp_load16U` but the 16-bit value
 is sign-extended to i32; `extend16To32` is private so its body is inlined. -/
@@ -2944,12 +2850,7 @@ theorem wp_load16S
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hword]
-  · iapply Hwp
-    iexact Hword
-  · itrivial
+  wasm_wp_frame
 
 /-- Primitive rule for `i64.load8_s`. Like `wp_load8UI64` but sign-extended;
 `extend8To64` is private so its body is inlined. -/
@@ -3014,12 +2915,7 @@ theorem wp_load8SI64
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hpt]
-  · iapply Hwp
-    iexact Hpt
-  · itrivial
+  wasm_wp_frame
 
 theorem wp_load16UI64
     {params localValues values : List Value}
@@ -3079,12 +2975,7 @@ theorem wp_load16UI64
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hword]
-  · iapply Hwp
-    iexact Hword
-  · itrivial
+  wasm_wp_frame
 
 /-- Primitive rule for `i64.load16_s`. Like `wp_load16UI64` but sign-extended;
 `extend16To64` is private so its body is inlined. -/
@@ -3149,12 +3040,7 @@ theorem wp_load16SI64
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hword]
-  · iapply Hwp
-    iexact Hword
-  · itrivial
+  wasm_wp_frame
 
 theorem wp_load32UI64
     {params localValues values : List Value}
@@ -3216,12 +3102,7 @@ theorem wp_load32UI64
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hword]
-  · iapply Hwp
-    iexact Hword
-  · itrivial
+  wasm_wp_frame
 
 /-- Primitive rule for `i64.load32_s`. Like `wp_load32UI64` but sign-extended;
 `extend32To64` is private so its body is inlined. -/
@@ -3288,12 +3169,7 @@ theorem wp_load32SI64
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hword]
-  · iapply Hwp
-    iexact Hword
-  · itrivial
+  wasm_wp_frame
 
 /-- Primitive rule for `i32.store8`. The physical `Mem.write8` transition and
 the authoritative GenHeap update happen in the same Iris step. -/
@@ -3360,12 +3236,7 @@ theorem wp_store8
       (by simpa [hnowrap] using HinBounds) $$ [$Hσ $Hpt] with ⟨Hσ, Hpt⟩
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hpt]
-  · iapply Hwp
-    iexact Hpt
-  · itrivial
+  wasm_wp_frame
 
 /-- Primitive rule for `i64.store8` with an i32 memory address. -/
 theorem wp_store8I64
@@ -3430,12 +3301,7 @@ theorem wp_store8I64
       (by simpa [hnowrap] using HinBounds) $$ [$Hσ $Hpt] with ⟨Hσ, Hpt⟩
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hpt]
-  · iapply Hwp
-    iexact Hpt
-  · itrivial
+  wasm_wp_frame
 
 theorem wp_store16
     {params localValues values : List Value}
@@ -3503,12 +3369,7 @@ theorem wp_store16
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hword]
-  · iapply Hwp
-    iexact Hword
-  · itrivial
+  wasm_wp_frame
 
 theorem wp_store16I64
     {params localValues values : List Value}
@@ -3576,12 +3437,7 @@ theorem wp_store16I64
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hword]
-  · iapply Hwp
-    iexact Hword
-  · itrivial
+  wasm_wp_frame
 
 theorem wp_store32I64
     {params localValues values : List Value}
@@ -3651,12 +3507,7 @@ theorem wp_store32I64
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hword]
-  · iapply Hwp
-    iexact Hword
-  · itrivial
+  wasm_wp_frame
 
 theorem wp_load32
     {params localValues values : List Value}
@@ -3718,12 +3569,7 @@ theorem wp_load32
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hword]
-  · iapply Hwp
-    iexact Hword
-  · itrivial
+  wasm_wp_frame
 
 theorem wp_store32
     {params localValues values : List Value}
@@ -3793,12 +3639,7 @@ theorem wp_store32
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hword]
-  · iapply Hwp
-    iexact Hword
-  · itrivial
+  wasm_wp_frame
 
 theorem wp_f32Load
     {params localValues values : List Value}
@@ -3859,12 +3700,7 @@ theorem wp_f32Load
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hword]
-  · iapply Hwp
-    iexact Hword
-  · itrivial
+  wasm_wp_frame
 
 theorem wp_f32Store
     {params localValues values : List Value}
@@ -3936,12 +3772,7 @@ theorem wp_f32Store
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hword]
-  · iapply Hwp
-    iexact Hword
-  · itrivial
+  wasm_wp_frame
 
 theorem wp_load64
     {params localValues values : List Value}
@@ -4008,12 +3839,7 @@ theorem wp_load64
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hword]
-  · iapply Hwp
-    iexact Hword
-  · itrivial
+  wasm_wp_frame
 
 theorem wp_store64
     {params localValues values : List Value}
@@ -4089,12 +3915,7 @@ theorem wp_store64
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hword]
-  · iapply Hwp
-    iexact Hword
-  · itrivial
+  wasm_wp_frame
 
 theorem wp_f64Load
     {params localValues values : List Value}
@@ -4161,12 +3982,7 @@ theorem wp_f64Load
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hword]
-  · iapply Hwp
-    iexact Hword
-  · itrivial
+  wasm_wp_frame
 
 theorem wp_f64Store
     {params localValues values : List Value}
@@ -4244,12 +4060,7 @@ theorem wp_f64Store
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hword]
-  · iapply Hwp
-    iexact Hword
-  · itrivial
+  wasm_wp_frame
 
 theorem wp_memoryGrow64TooLarge
     {params localValues values : List Value}
@@ -4627,12 +4438,7 @@ theorem wp_memoryFill32
       $$ [$Hσ $Hbytes] with ⟨Hσ, Hbytes⟩
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hbytes]
-  · iapply Hwp
-    iexact Hbytes
-  · itrivial
+  wasm_wp_frame
 
 /-- Primitive rule for `memory.fill` with i64 operands (non-trapping). Same
 ownership as `wp_memoryFill32`; `destination.toUInt32` is the ghost address
@@ -4703,12 +4509,7 @@ theorem wp_memoryFill64
       $$ [$Hσ $Hbytes] with ⟨Hσ, Hbytes⟩
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hbytes]
-  · iapply Hwp
-    iexact Hbytes
-  · itrivial
+  wasm_wp_frame
 
 theorem wp_memoryCopy32
     {params localValues values : List Value}
@@ -4793,11 +4594,7 @@ theorem wp_memoryCopy32
       $$ [$Hσ $Hsrc $Hdst] with ⟨Hσ, Hsrc, Hdst⟩
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hsrc Hdst]
-  · iapply Hwp $$ Hsrc Hdst
-  · itrivial
+  wasm_wp_frame
 
 theorem wp_memoryCopy64
     {params localValues values : List Value}
@@ -4889,11 +4686,7 @@ theorem wp_memoryCopy64
       $$ [$Hσ $Hsrc $Hdst] with ⟨Hσ, Hsrc, Hdst⟩
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hsrc Hdst]
-  · iapply Hwp $$ Hsrc Hdst
-  · itrivial
+  wasm_wp_frame
 
 theorem wp_memoryInit32
     {params localValues values : List Value}
@@ -4967,11 +4760,7 @@ theorem wp_memoryInit32
       $$ [$Hσ $Hsegment $Hdst] with ⟨Hσ, Hsegment, Hdst⟩
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hsegment Hdst]
-  · iapply Hwp $$ Hsegment Hdst
-  · itrivial
+  wasm_wp_frame
 
 theorem wp_memoryInit64
     {params localValues values : List Value}
@@ -5049,11 +4838,7 @@ theorem wp_memoryInit64
       $$ [$Hσ $Hsegment $Hdst] with ⟨Hσ, Hsegment, Hdst⟩
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hsegment Hdst]
-  · iapply Hwp $$ Hsegment Hdst
-  · itrivial
+  wasm_wp_frame
 
 theorem wp_dataDrop
     {params localValues values : List Value}
@@ -5115,12 +4900,7 @@ theorem wp_dataDrop
       [$Hσ $Hsegment] with ⟨Hσ, Hsegment⟩
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hsegment]
-  · iapply Hwp
-    iexact Hsegment
-  · itrivial
+  wasm_wp_frame
 
 theorem wp_memoryInit32DroppedTrap
     {params localValues values : List Value}
@@ -5270,12 +5050,7 @@ theorem wp_memoryInit32Dropped
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hsegment]
-  · iapply Hwp
-    iexact Hsegment
-  · itrivial
+  wasm_wp_frame
 
 theorem wp_memoryInit64Dropped
     {params localValues values : List Value}
@@ -5327,12 +5102,7 @@ theorem wp_memoryInit64Dropped
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hsegment]
-  · iapply Hwp
-    iexact Hsegment
-  · itrivial
+  wasm_wp_frame
 
 theorem wp_memoryInit32Trap
     {params localValues values : List Value}
@@ -5713,12 +5483,7 @@ theorem wp_fill16_four_AB
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hword]
-  · iapply Hwp
-    iexact Hword
-  · itrivial
+  wasm_wp_frame
 
 /-- Primitive Iris rule for initializing four bytes from passive data segment
 zero. Segment ownership proves that the bytes used by the relational
@@ -5859,12 +5624,7 @@ theorem wp_dataDrop0
       [$Hσ $Hsegment] with ⟨Hσ, Hsegment⟩
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hsegment]
-  · iapply Hwp
-    iexact Hsegment
-  · itrivial
+  wasm_wp_frame
 
 /-- Primitive Iris rule for `elem.drop`. A live element-segment fragment is
 consumed and replaced by ownership of its dropped physical state. -/
@@ -5935,12 +5695,7 @@ theorem wp_elemDrop
     ⟨Hσ, Hsegment⟩
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hsegment]
-  · iapply Hwp
-    iexact Hsegment
-  · itrivial
+  wasm_wp_frame
 
 /-- Initialize a table range from a live element segment. Runtime-module
 ownership fixes the instantiated reference values while element and table
@@ -6064,11 +5819,7 @@ theorem wp_tableInitLive
     ⟨Hσ, Htable⟩
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Htable Hsegment Hruntime]
-  · iapply Hwp $$ Htable Hsegment Hruntime
-  · itrivial
+  wasm_wp_frame
 
 /-- Primitive Iris rule for the overlapping four-byte copy from address 0 to
 address 2. One eight-byte owner represents the aliased source/destination
@@ -6134,12 +5885,7 @@ theorem wp_copy2_zero_four
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hword]
-  · iapply Hwp
-    iexact Hword
-  · itrivial
+  wasm_wp_frame
 
 /-- Primitive Iris rule for an aligned four-byte copy from address 0 to 8.
 Both source and destination ranges are owned; source ownership is preserved
@@ -6950,11 +6696,7 @@ theorem wp_v128Load
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hlo Hhi]
-  · iapply Hwp $$ Hlo Hhi
-  · itrivial
+  wasm_wp_frame
 
 -- Store a v128 to memory, updating 16 bytes of ghost state.
 -- lo_old/hi_old are the ghost values at addr and addr+8 before the write;
@@ -7104,12 +6846,7 @@ theorem wp_load8UMemory64
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hpt]
-  · iapply Hwp
-    iexact Hpt
-  · itrivial
+  wasm_wp_frame
 
 theorem wp_load8SMemory64
     {params localValues values : List Value}
@@ -7171,12 +6908,7 @@ theorem wp_load8SMemory64
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hpt]
-  · iapply Hwp
-    iexact Hpt
-  · itrivial
+  wasm_wp_frame
 
 theorem wp_load16UMemory64
     {params localValues values : List Value}
@@ -7236,12 +6968,7 @@ theorem wp_load16UMemory64
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hword]
-  · iapply Hwp
-    iexact Hword
-  · itrivial
+  wasm_wp_frame
 
 theorem wp_load16SMemory64
     {params localValues values : List Value}
@@ -7306,12 +7033,7 @@ theorem wp_load16SMemory64
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hword]
-  · iapply Hwp
-    iexact Hword
-  · itrivial
+  wasm_wp_frame
 
 theorem wp_store8Memory64
     {params localValues values : List Value}
@@ -7375,12 +7097,7 @@ theorem wp_store8Memory64
       HinBounds $$ [$Hσ $Hpt] with ⟨Hσ, Hpt⟩
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hpt]
-  · iapply Hwp
-    iexact Hpt
-  · itrivial
+  wasm_wp_frame
 
 theorem wp_store16Memory64
     {params localValues values : List Value}
@@ -7446,12 +7163,7 @@ theorem wp_store16Memory64
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hword]
-  · iapply Hwp
-    iexact Hword
-  · itrivial
+  wasm_wp_frame
 
 theorem wp_load32Memory64
     {params localValues values : List Value}
@@ -7513,12 +7225,7 @@ theorem wp_load32Memory64
   simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil]
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hword]
-  · iapply Hwp
-    iexact Hword
-  · itrivial
+  wasm_wp_frame
 
 theorem wp_store32Memory64
     {params localValues values : List Value}
@@ -7586,12 +7293,7 @@ theorem wp_store32Memory64
       [$Hσ $Hword] with ⟨Hσ, Hword⟩
   imod Hclose
   imodintro
-  isplitl [Hσ]
-  · iexact Hσ
-  isplitl [Hwp Hword]
-  · iapply Hwp
-    iexact Hword
-  · itrivial
+  wasm_wp_frame
 
 /-- Call an imported function that crosses module-instance boundaries.
 `callerId` and `calleeId` index into `instances`; `hhost` asserts the callee
