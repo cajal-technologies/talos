@@ -30,8 +30,7 @@ theorem wp_pureStep
     ▷ WP (Expr.running next : Expr α) @ s; E {{ Φ }} ⊢
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   iintro Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   wasm_wp_step hstep store =>
     wasm_wp_frame
 
@@ -44,8 +43,7 @@ theorem wp_trapStep
       Step ⟨.running current, store⟩ kind ⟨.trapped reason, store⟩) :
     True ⊢ WP (Expr.running current : Expr α) @ E ?{{ Φ }} := by
   iintro -
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   wasm_wp_step hstep store =>
     wasm_wp_trap_frame
 /-! ## Generating the pure rules
@@ -148,8 +146,7 @@ theorem wp_finish
         ⟨⟨params, localValues, values⟩, [], arity, remainder, [], []⟩ :
         Expr α) @ s; E {{ Φ }} := by
   iintro Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   wasm_wp_step Step.finish =>
     wasm_wp_frame
 
@@ -165,8 +162,7 @@ theorem wp_returnFromFunction
         ⟨locals, .ret :: code, arity, remainder, controls, []⟩ : Expr α) @
         s; E {{ Φ }} := by
   iintro Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   wasm_wp_step Step.returnFromFunction =>
     wasm_wp_frame
 
@@ -676,8 +672,7 @@ theorem wp_refIsNull
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   have expectedStep : Step
       ⟨.running ⟨⟨params, localValues, value :: values⟩,
         .refIsNull :: code, arity, remainder, controls, calls⟩, store⟩
@@ -824,8 +819,7 @@ theorem wp_throwRef
       ⟨⟨params, localValues, .exnref (some exceptionIndex) :: values⟩,
         .throwRef :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} := by
   iintro >Hexception
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %hexn : ⌜store.wasm.exns[exceptionIndex]? = some (tag, arguments)⌝ $$
       [Hσ Hexception]
   · imod stateInterp_exception_facts store ns (obs ++ obs') nt exceptionIndex
@@ -881,8 +875,7 @@ theorem wp_throwI
       ⟨⟨params, localValues, values⟩,
         .throwI tagIndex :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} := by
   iintro >Hruntime
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$
       [Hσ Hruntime]
   · imod stateInterp_runtimeModule_agree store ns (obs ++ obs') nt
@@ -951,8 +944,7 @@ theorem wp_catchException
                 continuation := handlerContinuation, belowStack } :: outer,
             calls⟩ : Expr α) @ s; E {{ Φ }} := by
   iintro Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   wasm_wp_step Step.catchException hthrow hmatch (htarget store) =>
     have hstore_eq : (prepareCatch tag arguments clause store).2 = store := by
       rcases hclause with ⟨t, l, rfl⟩ | ⟨l, rfl⟩ <;> rfl
@@ -988,8 +980,7 @@ theorem wp_call
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hruntime Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$ [Hσ Hruntime]
   · imod stateInterp_runtimeModule_agree store ns (obs ++ obs') nt
       callerId runtimeModule $$ [$Hσ $Hruntime] with %Hmodule
@@ -1104,8 +1095,7 @@ theorem wp_callHost
     WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro HP >Hruntime >Henv HwpRet HwpTrap HwpThrow
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$ [Hσ Hruntime]
   · imod stateInterp_runtimeModule_agree store ns (obs ++ obs') nt
       callerId runtimeModule $$ [$Hσ $Hruntime] with %Hmodule
@@ -1185,8 +1175,7 @@ theorem wp_returnFromCallExplicit'
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hruntime Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   simp only [runtimeModuleOwn]
   icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩
   ihave %Hentry : ⌜store.runtime.entry = returningInstance⌝ $$ [Hσ HinstanceOwn]
@@ -1233,8 +1222,7 @@ theorem wp_returnFromCallExplicit
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hruntime Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   simp only [runtimeModuleOwn]
   icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩
   ihave %Hentry : ⌜store.runtime.entry = returningInstance⌝ $$ [Hσ HinstanceOwn]
@@ -1271,8 +1259,7 @@ theorem wp_globalGet_of_canonical
   dsimp only
   simp only [globalPointsToAt]
   iintro >Hglobal Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   simp only [← globalPointsToAt_eq]
   ihave %Hget :
       ⌜store.wasm.globals.globals[index]? = some value⌝ $$ [Hσ Hglobal]
@@ -1307,8 +1294,7 @@ theorem wp_globalSet_of_canonical
   dsimp only
   simp only [globalPointsToAt]
   iintro >Hglobal Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   simp only [← globalPointsToAt_eq]
   ihave %Hget :
       ⌜store.wasm.globals.globals[index]? = some oldValue⌝ $$
@@ -1406,8 +1392,7 @@ theorem wp_tableGet
   dsimp only
   simp only [tablePointsToAt]
   iintro >Htable Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   simp only [← tablePointsToAt_eq]
   ihave %Hphysical :
       ⌜store.wasm.tables[tableIndex]? = some table⌝ $$ [Hσ Htable]
@@ -1444,8 +1429,7 @@ theorem wp_tableSize
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro ⟨Htable, Hruntime⟩ Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hphysical :
       ⌜store.wasm.tables[tableIndex]? = some table⌝ $$ [Hσ Htable]
   · imod stateInterp_table_facts_frame store ns (obs ++ obs') nt
@@ -1488,8 +1472,7 @@ theorem wp_tableSet
   dsimp only
   simp only [tablePointsToAt]
   iintro >Htable Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   simp only [← tablePointsToAt_eq]
   ihave %Hphysical :
       ⌜store.wasm.tables[tableIndex]? = some table⌝ $$ [Hσ Htable]
@@ -1546,8 +1529,7 @@ theorem wp_tableGrow32
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro ⟨Htable, Hruntime⟩ Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hphysical :
       ⌜store.wasm.tables[tableIndex]? = some table⌝ $$ [Hσ Htable]
   · imod stateInterp_table_facts_frame store ns (obs ++ obs') nt
@@ -1613,8 +1595,7 @@ theorem wp_tableGrow64
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro ⟨Htable, Hruntime⟩ Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hphysical :
       ⌜store.wasm.tables[tableIndex]? = some table⌝ $$ [Hσ Htable]
   · imod stateInterp_table_facts_frame store ns (obs ++ obs') nt
@@ -1680,8 +1661,7 @@ theorem wp_tableGrow32Failure
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro ⟨Htable, Hruntime⟩ Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hphysical :
       ⌜store.wasm.tables[tableIndex]? = some table⌝ $$ [Hσ Htable]
   · imod stateInterp_table_facts_frame store ns (obs ++ obs') nt
@@ -1728,8 +1708,7 @@ theorem wp_tableGrow64Failure
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro ⟨Htable, Hruntime⟩ Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hphysical :
       ⌜store.wasm.tables[tableIndex]? = some table⌝ $$ [Hσ Htable]
   · imod stateInterp_table_facts_frame store ns (obs ++ obs') nt
@@ -1777,8 +1756,7 @@ theorem wp_tableFill
   dsimp only
   simp only [tablePointsToAt]
   iintro >Htable Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   simp only [← tablePointsToAt_eq]
   ihave %Hphysical :
       ⌜store.wasm.tables[tableIndex]? = some table⌝ $$ [Hσ Htable]
@@ -1842,8 +1820,7 @@ theorem wp_tableCopySame
   dsimp only
   simp only [tablePointsToAt]
   iintro >Htable Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   simp only [← tablePointsToAt_eq]
   ihave %Hphysical :
       ⌜store.wasm.tables[tableIndex]? = some table⌝ $$ [Hσ Htable]
@@ -1915,8 +1892,7 @@ theorem wp_tableCopyDistinct
   dsimp only
   simp only [tablePointsToAt]
   iintro >⟨Hdestination, Hsource⟩ Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   simp only [← tablePointsToAt_eq]
   ihave %HdestinationPhysical :
       ⌜store.wasm.tables[destinationTableIndex]? =
@@ -1989,8 +1965,7 @@ theorem wp_load8U
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hpt Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hfacts : ⌜store.wasm.mem.read8 (address + offset) = byte ∧
       (address + offset).toNat < store.wasm.mem.pages * 65536⌝ $$ [Hσ Hpt]
   · imod stateInterp_pointsTo_facts store ns (obs ++ obs') nt
@@ -2029,8 +2004,7 @@ theorem wp_load8UI64
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hpt Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hfacts : ⌜store.wasm.mem.read8 (address + offset) = byte ∧
       (address + offset).toNat < store.wasm.mem.pages * 65536⌝ $$ [Hσ Hpt]
   · imod stateInterp_pointsTo_facts store ns (obs ++ obs') nt
@@ -2074,8 +2048,7 @@ theorem wp_load8S
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hpt Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hfacts : ⌜store.wasm.mem.read8 (address + offset) = byte ∧
       (address + offset).toNat < store.wasm.mem.pages * 65536⌝ $$ [Hσ Hpt]
   · imod stateInterp_pointsTo_facts store ns (obs ++ obs') nt
@@ -2117,8 +2090,7 @@ theorem wp_load16U
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hword Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hfacts :
       ⌜store.wasm.mem.read16 (address + offset) = word &&& 0xFFFF ∧
         (address + offset).toNat + 2 ≤ store.wasm.mem.pages * 65536⌝ $$
@@ -2165,8 +2137,7 @@ theorem wp_load16S
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hword Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hfacts :
       ⌜store.wasm.mem.read16 (address + offset) = word &&& 0xFFFF ∧
         (address + offset).toNat + 2 ≤ store.wasm.mem.pages * 65536⌝ $$
@@ -2216,8 +2187,7 @@ theorem wp_load8SI64
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hpt Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hfacts : ⌜store.wasm.mem.read8 (address + offset) = byte ∧
       (address + offset).toNat < store.wasm.mem.pages * 65536⌝ $$ [Hσ Hpt]
   · imod stateInterp_pointsTo_facts store ns (obs ++ obs') nt
@@ -2259,8 +2229,7 @@ theorem wp_load16UI64
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hword Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hfacts :
       ⌜store.wasm.mem.read16 (address + offset) = word &&& 0xFFFF ∧
         (address + offset).toNat + 2 ≤ store.wasm.mem.pages * 65536⌝ $$
@@ -2308,8 +2277,7 @@ theorem wp_load16SI64
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hword Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hfacts :
       ⌜store.wasm.mem.read16 (address + offset) = word &&& 0xFFFF ∧
         (address + offset).toNat + 2 ≤ store.wasm.mem.pages * 65536⌝ $$
@@ -2357,8 +2325,7 @@ theorem wp_load32UI64
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hword Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hfacts :
       ⌜store.wasm.mem.read32 (address + offset) = word ∧
         (address + offset).toNat + 4 ≤ store.wasm.mem.pages * 65536⌝ $$
@@ -2406,8 +2373,7 @@ theorem wp_load32SI64
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hword Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hfacts :
       ⌜store.wasm.mem.read32 (address + offset) = word ∧
         (address + offset).toNat + 4 ≤ store.wasm.mem.pages * 65536⌝ $$
@@ -2454,8 +2420,7 @@ theorem wp_store8
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hpt Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %HinBounds :
       ⌜(address + offset).toNat < store.wasm.mem.pages * 65536⌝ $$ [Hσ Hpt]
   · imod stateInterp_pointsTo_inBounds store ns (obs ++ obs') nt
@@ -2504,8 +2469,7 @@ theorem wp_store8I64
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hpt Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %HinBounds :
       ⌜(address + offset).toNat < store.wasm.mem.pages * 65536⌝ $$ [Hσ Hpt]
   · imod stateInterp_pointsTo_inBounds store ns (obs ++ obs') nt
@@ -2551,8 +2515,7 @@ theorem wp_store16
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hword Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hfacts :
       ⌜store.wasm.mem.read16 (address + offset) = oldWord &&& 0xFFFF ∧
         (address + offset).toNat + 2 ≤ store.wasm.mem.pages * 65536⌝ $$
@@ -2601,8 +2564,7 @@ theorem wp_store16I64
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hword Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hfacts :
       ⌜store.wasm.mem.read16 (address + offset) = oldWord &&& 0xFFFF ∧
         (address + offset).toNat + 2 ≤ store.wasm.mem.pages * 65536⌝ $$
@@ -2653,8 +2615,7 @@ theorem wp_store32I64
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hword Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hfacts :
       ⌜store.wasm.mem.read32 (address + offset) = oldWord ∧
         (address + offset).toNat + 4 ≤ store.wasm.mem.pages * 65536⌝ $$
@@ -2705,8 +2666,7 @@ theorem wp_load32
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hword Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hfacts :
       ⌜store.wasm.mem.read32 (address + offset) = word ∧
         (address + offset).toNat + 4 ≤ store.wasm.mem.pages * 65536⌝ $$
@@ -2751,8 +2711,7 @@ theorem wp_store32
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hword Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hfacts :
       ⌜store.wasm.mem.read32 (address + offset) = oldWord ∧
         (address + offset).toNat + 4 ≤ store.wasm.mem.pages * 65536⌝ $$
@@ -2803,8 +2762,7 @@ theorem wp_f32Load
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hword Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hfacts :
       ⌜store.wasm.mem.read32 (address + offset) = word ∧
         (address + offset).toNat + 4 ≤ store.wasm.mem.pages * 65536⌝ $$
@@ -2849,8 +2807,7 @@ theorem wp_f32Store
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hword Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hfacts :
       ⌜store.wasm.mem.read32 (address + offset) = oldWord ∧
         (address + offset).toNat + 4 ≤ store.wasm.mem.pages * 65536⌝ $$
@@ -2906,8 +2863,7 @@ theorem wp_load64
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hword Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hfacts :
       ⌜store.wasm.mem.read64 (address + offset) = word ∧
         (address + offset).toNat + 8 ≤ store.wasm.mem.pages * 65536⌝ $$
@@ -2958,8 +2914,7 @@ theorem wp_store64
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hword Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hfacts :
       ⌜store.wasm.mem.read64 (address + offset) = oldWord ∧
         (address + offset).toNat + 8 ≤ store.wasm.mem.pages * 65536⌝ $$
@@ -3015,8 +2970,7 @@ theorem wp_f64Load
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hword Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hfacts :
       ⌜store.wasm.mem.read64 (address + offset) = word ∧
         (address + offset).toNat + 8 ≤ store.wasm.mem.pages * 65536⌝ $$
@@ -3067,8 +3021,7 @@ theorem wp_f64Store
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hword Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hfacts :
       ⌜store.wasm.mem.read64 (address + offset) = oldWord ∧
         (address + offset).toNat + 8 ≤ store.wasm.mem.pages * 65536⌝ $$
@@ -3129,8 +3082,7 @@ theorem wp_memoryGrowFailure
     WP (.running ⟨⟨params, localValues, .i32 delta :: values⟩,
         .memoryGrow :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} := by
   iintro >Hruntime
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$ [Hσ Hruntime]
   · imod stateInterp_runtimeModule_agree store ns (obs ++ obs') nt instanceId runtimeModule $$
         [$Hσ $Hruntime] with %Hmodule
@@ -3154,8 +3106,7 @@ theorem wp_memorySize
     WP (.running ⟨⟨params, localValues, values⟩,
         .memorySize :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} := by
   iintro >Hruntime
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$
       [Hσ Hruntime]
   · imod stateInterp_runtimeModule_agree store ns (obs ++ obs') nt
@@ -3184,8 +3135,7 @@ theorem wp_memoryGrow64Failure
     WP (.running ⟨⟨params, localValues, .i64 delta :: values⟩,
         .memoryGrow :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} := by
   iintro >Hruntime
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$ [Hσ Hruntime]
   · imod stateInterp_runtimeModule_agree store ns (obs ++ obs') nt instanceId runtimeModule $$
         [$Hσ $Hruntime] with %Hmodule
@@ -3215,8 +3165,7 @@ theorem wp_memoryGrow
     WP (.running ⟨⟨params, localValues, .i32 delta :: values⟩,
         .memoryGrow :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} := by
   iintro >Hruntime
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   cases hg : store.wasm.mem.grow delta
       (store.wasm.memoryCap store.runtime.currentModule 0) with
   | none =>
@@ -3255,8 +3204,7 @@ theorem wp_memoryGrow64
     WP (.running ⟨⟨params, localValues, .i64 delta :: values⟩,
         .memoryGrow :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} := by
   iintro >Hruntime
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   cases hg : store.wasm.mem.grow delta.toUInt32
       (store.wasm.memoryCap store.runtime.currentModule 0) with
   | none =>
@@ -3298,8 +3246,7 @@ theorem wp_memoryFill32
         .i32 len :: .i32 value :: .i32 destination :: values⟩,
         .memoryFill :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} := by
   iintro >Hbytes Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hpb : ⌜∀ i b, oldBytes[i]? = some b →
       store.wasm.mem.read8 (destination + UInt32.ofNat i) = b ∧
       (destination + UInt32.ofNat i).toNat < store.wasm.mem.pages * 65536⌝ $$
@@ -3354,8 +3301,7 @@ theorem wp_memoryFill64
     unfold UInt64.toUInt32 Nat.toUInt32
     simp [UInt32.ofNat, UInt32.toNat]; omega
   iintro >Hbytes Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hpb : ⌜∀ i b, oldBytes[i]? = some b →
       store.wasm.mem.read8 (destination.toUInt32 + UInt32.ofNat i) = b ∧
       (destination.toUInt32 + UInt32.ofNat i).toNat < store.wasm.mem.pages * 65536⌝ $$
@@ -3406,8 +3352,7 @@ theorem wp_memoryCopy32
         .i32 len :: .i32 source :: .i32 destination :: values⟩,
         .memoryCopy :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} := by
   iintro >Hsrc >Hdst Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hpbsrc : ⌜∀ i b, srcBytes[i]? = some b →
       store.wasm.mem.read8 (source + UInt32.ofNat i) = b ∧
       (source + UInt32.ofNat i).toNat < store.wasm.mem.pages * 65536⌝ $$
@@ -3480,8 +3425,7 @@ theorem wp_memoryCopy64
     unfold UInt64.toUInt32 Nat.toUInt32
     simp [UInt32.ofNat, UInt32.toNat]; omega
   iintro >Hsrc >Hdst Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hpbsrc : ⌜∀ i b, srcBytes[i]? = some b →
       store.wasm.mem.read8 (source.toUInt32 + UInt32.ofNat i) = b ∧
       (source.toUInt32 + UInt32.ofNat i).toNat < store.wasm.mem.pages * 65536⌝ $$
@@ -3549,8 +3493,7 @@ theorem wp_memoryInit32
         .i32 len :: .i32 source :: .i32 destination :: values⟩,
         .memoryInit segmentIndex :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} := by
   iintro >Hsegment >Hdst Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   imod stateInterp_dataSegment_facts_frame store ns (obs ++ obs') nt
       segmentIndex (some segmentBytes) $$ [$Hσ $Hsegment] with
     ⟨Hσ, Hsegment, %hsegment⟩
@@ -3608,8 +3551,7 @@ theorem wp_memoryInit64
     unfold UInt64.toUInt32 Nat.toUInt32
     simp [UInt32.ofNat, UInt32.toNat]; omega
   iintro >Hsegment >Hdst Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   imod stateInterp_dataSegment_facts_frame store ns (obs ++ obs') nt
       segmentIndex (some segmentBytes) $$ [$Hσ $Hsegment] with
     ⟨Hσ, Hsegment, %hsegment⟩
@@ -3662,8 +3604,7 @@ theorem wp_dataDrop
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hsegment Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   imod stateInterp_dataSegment_facts_frame store ns (obs ++ obs') nt
       segmentIndex (some bytes) $$ [$Hσ $Hsegment] with
     ⟨Hσ, Hsegment, %hsegment⟩
@@ -3703,8 +3644,7 @@ theorem wp_memoryInit32DroppedTrap
         .memoryInit segmentIndex :: code,
         arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} := by
   iintro >Hsegment
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   imod stateInterp_dataSegment_facts_frame store ns (obs ++ obs') nt
       segmentIndex none $$ [$Hσ $Hsegment] with
     ⟨Hσ, Hsegment, %hsegment⟩
@@ -3725,8 +3665,7 @@ theorem wp_memoryInit64DroppedTrap
         .memoryInit segmentIndex :: code,
         arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} := by
   iintro >Hsegment
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   imod stateInterp_dataSegment_facts_frame store ns (obs ++ obs') nt
       segmentIndex none $$ [$Hσ $Hsegment] with
     ⟨Hσ, Hsegment, %hsegment⟩
@@ -3754,8 +3693,7 @@ theorem wp_memoryInit32Dropped
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hsegment Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   imod stateInterp_dataSegment_facts_frame store ns (obs ++ obs') nt
       segmentIndex none $$ [$Hσ $Hsegment] with
     ⟨Hσ, Hsegment, %hsegment⟩
@@ -3792,8 +3730,7 @@ theorem wp_memoryInit64Dropped
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hsegment Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   imod stateInterp_dataSegment_facts_frame store ns (obs ++ obs') nt
       segmentIndex none $$ [$Hσ $Hsegment] with
     ⟨Hσ, Hsegment, %hsegment⟩
@@ -3823,8 +3760,7 @@ theorem wp_memoryInit32Trap
         .memoryInit segmentIndex :: code,
         arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} := by
   iintro >Hsegment
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   imod stateInterp_dataSegment_facts_frame store ns (obs ++ obs') nt
       segmentIndex (some segmentBytes) $$ [$Hσ $Hsegment] with
     ⟨Hσ, Hsegment, %hsegment⟩
@@ -3845,8 +3781,7 @@ theorem wp_memoryInit64Trap
         .memoryInit segmentIndex :: code,
         arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} := by
   iintro >Hsegment
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   imod stateInterp_dataSegment_facts_frame store ns (obs ++ obs') nt
       segmentIndex (some segmentBytes) $$ [$Hσ $Hsegment] with
     ⟨Hσ, Hsegment, %hsegment⟩
@@ -4094,8 +4029,7 @@ theorem wp_fill16_four_AB
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hword Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hfacts :
       ⌜store.wasm.mem.read32 16 = oldWord ∧
         20 ≤ store.wasm.mem.pages * 65536⌝ $$ [Hσ Hword]
@@ -4143,8 +4077,7 @@ theorem wp_memoryInit16_four
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >⟨Hword, Hsegment⟩ Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   simp only [← dataSegmentPointsToAt_eq]
   imod stateInterp_dataSegment_facts_frame store ns (obs ++ obs') nt
       0 (some [1, 2, 3, 4]) $$ [$Hσ $Hsegment] with
@@ -4195,8 +4128,7 @@ theorem wp_dataDrop0
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hsegment Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   simp only [← dataSegmentPointsToAt_eq]
   imod stateInterp_dataSegment_facts_frame store ns (obs ++ obs') nt
       0 (some bytes) $$ [$Hσ $Hsegment] with
@@ -4245,8 +4177,7 @@ theorem wp_elemDrop
   dsimp only
   simp only [elementSegmentPointsToAt]
   iintro >Hsegment Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   simp only [← elementSegmentPointsToAt_eq]
   imod stateInterp_elementSegment_facts_frame
       store ns (obs ++ obs') nt elementIndex (some entries) $$
@@ -4319,8 +4250,7 @@ theorem wp_tableInitLive
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro ⟨Htable, Hsegment, Hruntime⟩ Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %HtablePhysical :
       ⌜store.wasm.tables[tableIndex]? = some table⌝ $$ [Hσ Htable]
   · imod stateInterp_table_facts_frame store ns (obs ++ obs') nt
@@ -4403,8 +4333,7 @@ theorem wp_copy2_zero_four
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hword Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hfacts :
       ⌜store.wasm.mem.read64 0 = 0x8877665544332211 ∧
         8 ≤ store.wasm.mem.pages * 65536⌝ $$ [Hσ Hword]
@@ -4455,8 +4384,7 @@ theorem wp_copy8_zero_four
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >⟨Hsource, Hdestination⟩ Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %HsourceFacts :
       ⌜store.wasm.mem.read32 0 = 0x04030201 ∧
         4 ≤ store.wasm.mem.pages * 65536⌝ $$ [Hσ Hsource]
@@ -5149,8 +5077,7 @@ theorem wp_v128Load
   obtain ⟨h9, h10, h11, h12, h13, h14, h15⟩ :=
     UInt32.addSteps8 (address + offset + 8) hroomHi
   iintro >Hlo >Hhi Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hlofacts :
       ⌜store.wasm.mem.read64 (address + offset) = lo_word ∧
         (address + offset).toNat + 8 ≤ store.wasm.mem.pages * 65536⌝ $$
@@ -5221,8 +5148,7 @@ theorem wp_v128Store
   obtain ⟨h9, h10, h11, h12, h13, h14, h15⟩ :=
     UInt32.addSteps8 (address + offset + 8) hroomHi
   iintro >Hlo_old >Hhi_old Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hhifacts :
       ⌜store.wasm.mem.read64 (address + offset + 8) = hi_old ∧
         (address + offset + 8).toNat + 8 ≤ store.wasm.mem.pages * 65536⌝ $$
@@ -5270,8 +5196,7 @@ theorem wp_load8UMemory64
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hpt Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hfacts : ⌜store.wasm.mem.read8 (address.toUInt32 + offset) = byte ∧
       (address.toUInt32 + offset).toNat < store.wasm.mem.pages * 65536⌝ $$ [Hσ Hpt]
   · imod stateInterp_pointsTo_facts store ns (obs ++ obs') nt
@@ -5314,8 +5239,7 @@ theorem wp_load8SMemory64
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hpt Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hfacts : ⌜store.wasm.mem.read8 (address.toUInt32 + offset) = byte ∧
       (address.toUInt32 + offset).toNat < store.wasm.mem.pages * 65536⌝ $$ [Hσ Hpt]
   · imod stateInterp_pointsTo_facts store ns (obs ++ obs') nt
@@ -5357,8 +5281,7 @@ theorem wp_load16UMemory64
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hword Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hfacts :
       ⌜store.wasm.mem.read16 (address.toUInt32 + offset) = word &&& 0xFFFF ∧
         (address.toUInt32 + offset).toNat + 2 ≤ store.wasm.mem.pages * 65536⌝ $$
@@ -5403,8 +5326,7 @@ theorem wp_load16SMemory64
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hword Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hfacts :
       ⌜store.wasm.mem.read16 (address.toUInt32 + offset) = word &&& 0xFFFF ∧
         (address.toUInt32 + offset).toNat + 2 ≤ store.wasm.mem.pages * 65536⌝ $$
@@ -5450,8 +5372,7 @@ theorem wp_store8Memory64
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hpt Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %HinBounds :
       ⌜(address.toUInt32 + offset).toNat < store.wasm.mem.pages * 65536⌝ $$ [Hσ Hpt]
   · imod stateInterp_pointsTo_inBounds store ns (obs ++ obs') nt
@@ -5496,8 +5417,7 @@ theorem wp_store16Memory64
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hword Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hfacts :
       ⌜store.wasm.mem.read16 (address.toUInt32 + offset) = oldWord &&& 0xFFFF ∧
         (address.toUInt32 + offset).toNat + 2 ≤ store.wasm.mem.pages * 65536⌝ $$
@@ -5548,8 +5468,7 @@ theorem wp_load32Memory64
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hword Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hfacts :
       ⌜store.wasm.mem.read32 (address.toUInt32 + offset) = word ∧
         (address.toUInt32 + offset).toNat + 4 ≤ store.wasm.mem.pages * 65536⌝ $$
@@ -5593,8 +5512,7 @@ theorem wp_store32Memory64
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hword Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hfacts :
       ⌜store.wasm.mem.read32 (address.toUInt32 + offset) = oldWord ∧
         (address.toUInt32 + offset).toNat + 4 ≤ store.wasm.mem.pages * 65536⌝ $$
@@ -5666,8 +5584,7 @@ theorem wp_callCrossInstance
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >Hruntime >HruntimeInstances Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   simp only [runtimeModuleOwn]
   icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩
   ihave %Hentry : ⌜store.runtime.entry = callerId⌝ $$ [Hσ HinstanceOwn]
@@ -5753,8 +5670,7 @@ theorem wp_returnFromCallCrossInstance
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only
   iintro >HinstanceOwn >HruntimeInstances Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hentry : ⌜store.runtime.entry = calleeId⌝ $$ [Hσ HinstanceOwn]
   · imod stateInterp_currentInstance_agree store ns (obs ++ obs') nt calleeId $$
         [$Hσ $HinstanceOwn] with %Hentry
@@ -5819,8 +5735,7 @@ theorem wp_callIndirect
   dsimp only
   simp only [tablePointsToAt]
   iintro >Hruntime >Htable Hwp
-  iapply wp_lift_step rfl
-  iintro %store %ns %obs %obs' %nt Hσ
+  wasm_wp_begin
   ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$
       [Hσ Hruntime]
   · imod stateInterp_runtimeModule_agree store ns (obs ++ obs') nt

@@ -61,6 +61,13 @@ macro "wasm_wp_resolve_step " h:term " using " expected:term : tactic =>
   `(tactic| (obtain ⟨rfl, kind, rfl, wasmStep⟩ := $h) <;>
     wasm_wp_resolve_target ($expected) against wasmStep)
 
+set_option hygiene false in
+/-- Enter the ordinary Iris lifting rule and name its physical-step context. -/
+macro "wasm_wp_begin" : tactic =>
+  `(tactic|
+    (iapply wp_lift_step rfl
+     iintro %store %ns %obs %obs' %nt Hσ))
+
 /-- Offer one Wasm primitive step to Iris and continue with its successor. -/
 syntax "wasm_wp_offer_step " term " =>" ppLine colGt tacticSeq : tactic
 
