@@ -668,12 +668,9 @@ theorem twp_callHost
     simpa only [Hmodule] using himports
   have himp' : store.runtime.currentModule.imports[functionIndex] = imp := by
     simpa only [Hmodule] using himp
-  ihave %Hhost : ⌜store.runtime.currentHost = hostEnv⌝ $$
+  ihave_pure Hhost : ⌜store.runtime.currentHost = hostEnv⌝ using
+    stateInterp_hostEnv store ns obs nt callerId.id hostEnv $$
       [Hσ HinstanceOwn Henv]
-  · imod stateInterp_hostEnv store ns obs nt callerId.id hostEnv $$
-      [$Hσ $HinstanceOwn $Henv] with %Hhost
-    ipureintro
-    exact Hhost
   have hhost' : store.runtime.currentHost.funcs[functionIndex]? =
       some hostFn := by
     rw [Hhost]
@@ -1228,11 +1225,8 @@ theorem twp_throwI
   wasm_runtime_module_agree obs, instanceId, runtimeModule $$ [$Hσ $Hruntime]
   have htag' : store.runtime.currentModule.tags[tagIndex]? = some tagType := by
     simpa only [Hmodule] using htag
-  ihave %Hprefix : ⌜tagIds.IsPrefix store.wasm.tagIds⌝ $$ [Hσ Htags]
-  · imod stateInterp_tagTable_prefix store ns obs nt tagIds $$ [$Hσ $Htags]
-      with %Hprefix
-    ipureintro
-    exact Hprefix
+  ihave_pure Hprefix : ⌜tagIds.IsPrefix store.wasm.tagIds⌝ using
+    stateInterp_tagTable_prefix store ns obs nt tagIds $$ [Hσ Htags]
   wasm_twp_step (Step.throwI (α := α) htag' hargs) =>
     wasm_twp_frame
       have hcanonicalStore :=
@@ -1369,12 +1363,9 @@ theorem twp_globalGet
   wasm_twp_begin
   have hcanonical : ∀ s : MachineStore α,
       canonicalGlobalIndex s 0 = 0 := fun _ => rfl
-  ihave %Hget :
-      ⌜store.wasm.globals.globals[0]? = some value⌝ $$ [Hσ Hglobal]
-  · imod stateInterp_global_facts store ns obs nt 0 value $$
-        [$Hσ $Hglobal] with %Hget
-    ipureintro
-    exact Hget
+  ihave_pure Hget :
+      ⌜store.wasm.globals.globals[0]? = some value⌝ using
+    stateInterp_global_facts store ns obs nt 0 value $$ [Hσ Hglobal]
   wasm_twp_step (Step.globalGet (α := α) (by
     simpa [globalAt?, hcanonical] using Hget)) =>
     wasm_twp_frame
@@ -1552,12 +1543,9 @@ theorem twp_globalSet
   wasm_twp_begin
   have hcanonical : ∀ s : MachineStore α,
       canonicalGlobalIndex s 0 = 0 := fun _ => rfl
-  ihave %Hget :
-      ⌜store.wasm.globals.globals[0]? = some oldValue⌝ $$ [Hσ Hglobal]
-  · imod stateInterp_global_facts store ns obs nt 0 oldValue $$
-        [$Hσ $Hglobal] with %Hget
-    ipureintro
-    exact Hget
+  ihave_pure Hget :
+      ⌜store.wasm.globals.globals[0]? = some oldValue⌝ using
+    stateInterp_global_facts store ns obs nt 0 oldValue $$ [Hσ Hglobal]
   have hsome :
       (globalAt? store 0).isSome = true := by
     simp [globalAt?, hcanonical, Hget]

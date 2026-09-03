@@ -820,12 +820,10 @@ theorem wp_throwRef
         .throwRef :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} := by
   iintro >Hexception
   wasm_wp_begin
-  ihave %hexn : ⌜store.wasm.exns[exceptionIndex]? = some (tag, arguments)⌝ $$
-      [Hσ Hexception]
-  · imod stateInterp_exception_facts store ns (obs ++ obs') nt exceptionIndex
-        (DFrac.own 1) (tag, arguments) $$ [$Hσ $Hexception] with %hexn
-    ipureintro
-    exact hexn
+  ihave_pure hexn :
+      ⌜store.wasm.exns[exceptionIndex]? = some (tag, arguments)⌝ using
+    stateInterp_exception_facts store ns (obs ++ obs') nt exceptionIndex
+      (DFrac.own 1) (tag, arguments) $$ [Hσ Hexception]
   wasm_wp_step Step.throwRef hexn =>
     wasm_wp_frame
       iapply Hwp
@@ -1090,11 +1088,9 @@ theorem wp_callHost
     simpa only [Hmodule] using himports
   have himp' : store.runtime.currentModule.imports[functionIndex] = imp := by
     simpa only [Hmodule] using himp
-  ihave %Hhost : ⌜store.runtime.currentHost = hostEnv⌝ $$ [Hσ HinstanceOwn Henv]
-  · imod stateInterp_hostEnv store ns (obs ++ obs') nt
-        callerId.id hostEnv $$ [$Hσ $HinstanceOwn $Henv] with %Hhost
-    ipureintro
-    exact Hhost
+  ihave_pure Hhost : ⌜store.runtime.currentHost = hostEnv⌝ using
+    stateInterp_hostEnv store ns (obs ++ obs') nt callerId.id hostEnv $$
+      [Hσ HinstanceOwn Henv]
   have hhost' : store.runtime.currentHost.funcs[functionIndex]? = some hostFn := by
     rw [Hhost]; exact hfuncs
   match h : hostFn.invoke store.wasm (values.take imp.params.length).reverse with
@@ -1236,12 +1232,10 @@ theorem wp_globalGet_of_canonical
   iintro >Hglobal Hwp
   wasm_wp_begin
   simp only [← globalPointsToAt_eq]
-  ihave %Hget :
-      ⌜store.wasm.globals.globals[index]? = some value⌝ $$ [Hσ Hglobal]
-  · imod stateInterp_global_facts store ns (obs ++ obs') nt index value $$
-        [$Hσ $Hglobal] with %Hget
-    ipureintro
-    exact Hget
+  ihave_pure Hget :
+      ⌜store.wasm.globals.globals[index]? = some value⌝ using
+    stateInterp_global_facts store ns (obs ++ obs') nt index value $$
+      [Hσ Hglobal]
   wasm_wp_step Step.globalGet (α := α) (by
     simpa [globalAt?, hcanonical] using Hget) =>
     wasm_wp_frame
@@ -1271,13 +1265,10 @@ theorem wp_globalSet_of_canonical
   iintro >Hglobal Hwp
   wasm_wp_begin
   simp only [← globalPointsToAt_eq]
-  ihave %Hget :
-      ⌜store.wasm.globals.globals[index]? = some oldValue⌝ $$
+  ihave_pure Hget :
+      ⌜store.wasm.globals.globals[index]? = some oldValue⌝ using
+    stateInterp_global_facts store ns (obs ++ obs') nt index oldValue $$
       [Hσ Hglobal]
-  · imod stateInterp_global_facts store ns (obs ++ obs') nt
-        index oldValue $$ [$Hσ $Hglobal] with %Hget
-    ipureintro
-    exact Hget
   have hsome :
       (globalAt? store index).isSome = true := by
     simp [globalAt?, hcanonical, Hget]
@@ -2327,12 +2318,10 @@ theorem wp_store8
   dsimp only
   iintro >Hpt Hwp
   wasm_wp_begin
-  ihave %HinBounds :
-      ⌜(address + offset).toNat < store.wasm.mem.pages * 65536⌝ $$ [Hσ Hpt]
-  · imod stateInterp_pointsTo_inBounds store ns (obs ++ obs') nt
-      (address + offset) oldByte $$ [$Hσ $Hpt] with %HinBounds
-    ipureintro
-    exact HinBounds
+  ihave_pure HinBounds :
+      ⌜(address + offset).toNat < store.wasm.mem.pages * 65536⌝ using
+    stateInterp_pointsTo_inBounds store ns (obs ++ obs') nt
+      (address + offset) oldByte $$ [Hσ Hpt]
   have hbound : address.toNat + offset.toNat + 1 ≤
       store.wasm.mem.pages * 65536 := by
     omega
@@ -2376,12 +2365,10 @@ theorem wp_store8I64
   dsimp only
   iintro >Hpt Hwp
   wasm_wp_begin
-  ihave %HinBounds :
-      ⌜(address + offset).toNat < store.wasm.mem.pages * 65536⌝ $$ [Hσ Hpt]
-  · imod stateInterp_pointsTo_inBounds store ns (obs ++ obs') nt
-      (address + offset) oldByte $$ [$Hσ $Hpt] with %HinBounds
-    ipureintro
-    exact HinBounds
+  ihave_pure HinBounds :
+      ⌜(address + offset).toNat < store.wasm.mem.pages * 65536⌝ using
+    stateInterp_pointsTo_inBounds store ns (obs ++ obs') nt
+      (address + offset) oldByte $$ [Hσ Hpt]
   have hbound : address.toNat + offset.toNat + 1 ≤
       store.wasm.mem.pages * 65536 := by
     omega
@@ -5102,12 +5089,10 @@ theorem wp_store8Memory64
   dsimp only
   iintro >Hpt Hwp
   wasm_wp_begin
-  ihave %HinBounds :
-      ⌜(address.toUInt32 + offset).toNat < store.wasm.mem.pages * 65536⌝ $$ [Hσ Hpt]
-  · imod stateInterp_pointsTo_inBounds store ns (obs ++ obs') nt
-      (address.toUInt32 + offset) oldByte $$ [$Hσ $Hpt] with %HinBounds
-    ipureintro
-    exact HinBounds
+  ihave_pure HinBounds :
+      ⌜(address.toUInt32 + offset).toNat < store.wasm.mem.pages * 65536⌝ using
+    stateInterp_pointsTo_inBounds store ns (obs ++ obs') nt
+      (address.toUInt32 + offset) oldByte $$ [Hσ Hpt]
   have hbound : address.toNat + offset.toNat + 1 ≤
       store.wasm.mem.pages * 65536 := by omega
   have expectedStep : Step
@@ -5303,11 +5288,9 @@ theorem wp_callCrossInstance
   icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩
   wasm_current_instance_agree (obs ++ obs'), callerId $$ [$Hσ $HinstanceOwn]
   iclear HruntimeElem
-  ihave %Hinst : ⌜store.runtime.instances = instances⌝ $$ [Hσ HruntimeInstances]
-  · imod stateInterp_instances_agree store ns (obs ++ obs') nt instances $$
-        [$Hσ $HruntimeInstances] with %Hinst
-    ipureintro
-    exact Hinst
+  ihave_pure Hinst : ⌜store.runtime.instances = instances⌝ using
+    stateInterp_instances_agree store ns (obs ++ obs') nt instances $$
+      [Hσ HruntimeInstances]
   have hcurrentInst : store.runtime.currentInstance = callerInst := by
     simp only [RuntimeEnv.currentInstance, Hinst, Hentry]
     simp [getElem!_def, hcallerLookup]
@@ -5382,11 +5365,9 @@ theorem wp_returnFromCallCrossInstance
   iintro >HinstanceOwn >HruntimeInstances Hwp
   wasm_wp_begin
   wasm_current_instance_agree (obs ++ obs'), calleeId $$ [$Hσ $HinstanceOwn]
-  ihave %Hinst : ⌜store.runtime.instances = instances⌝ $$ [Hσ HruntimeInstances]
-  · imod stateInterp_instances_agree store ns (obs ++ obs') nt instances $$
-        [$Hσ $HruntimeInstances] with %Hinst
-    ipureintro
-    exact Hinst
+  ihave_pure Hinst : ⌜store.runtime.instances = instances⌝ using
+    stateInterp_instances_agree store ns (obs ++ obs') nt instances $$
+      [Hσ HruntimeInstances]
   have hdiff : returningInstance ≠ store.runtime.entry := by rw [Hentry]; exact hneq
   wasm_wp_step Step.returnFromCallCrossInstanceExplicit (α := α) hdiff =>
     simp only [resumeCaller]
@@ -5443,12 +5424,10 @@ theorem wp_callIndirect
   iintro >Hruntime >Htable Hwp
   wasm_wp_begin
   wasm_runtime_module_agree (obs ++ obs'), callerId, runtimeModule $$ [$Hσ $Hruntime]
-  ihave %Htablephys : ⌜store.wasm.tables[tableIndex]? = some table⌝ $$
+  ihave_pure Htablephys :
+      ⌜store.wasm.tables[tableIndex]? = some table⌝ using
+    stateInterp_table_facts store ns (obs ++ obs') nt tableIndex table $$
       [Hσ Htable]
-  · imod stateInterp_table_facts store ns (obs ++ obs') nt tableIndex table $$
-        [$Hσ $Htable] with %Htablephys
-    ipureintro
-    exact Htablephys
   have himports' :
       ¬functionIndex < store.runtime.currentModule.imports.length := by
     simpa only [Hmodule] using himports
