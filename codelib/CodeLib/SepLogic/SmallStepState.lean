@@ -482,6 +482,20 @@ theorem stateInterp_eq [WasmSmallStepGS hlc α]
           store.wasm.exns store.wasm.tagIds) :=
   .rfl
 
+/-- Open the standard components and physical invariants of `stateInterp`. -/
+syntax "iopen_state " specPat : tactic
+
+set_option hygiene false in
+macro_rules
+  | `(tactic| iopen_state $state:specPat) =>
+    `(tactic|
+      icases (stateInterp_eq store steps observations threads).mp $$ $state with
+        ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ,
+          %runtimeModuleσ, %hostEnvσ, Hheap, Hglobals, Hsegments, Htables,
+          HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep,
+          HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth,
+          %Hfacts, Hexc⟩)
+
 /-- The exact physical primary-memory page count is available as a persistent
 lower-bound snapshot without changing the physical or ghost state. -/
 theorem stateInterp_memoryPages_snapshot [WasmSmallStepGS hlc α]
@@ -595,9 +609,7 @@ theorem stateInterp_pointsTo_read8 [WasmSmallStepGS hlc α]
         ⟨0, address⟩ (DFrac.own 1) (some value) ==∗
       ⌜store.wasm.mem.read8 address = value⌝ := by
   iintro ⟨Hstate, Hpointsto⟩
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
+  iopen_state Hstate
   icases genHeap_valid $$ [$Hheap $Hpointsto] with >%hlookup
   ipureintro
   exact fromResolver store Hfacts.1 address value hlookup
@@ -611,9 +623,7 @@ theorem stateInterp_pointsTo_inBounds [WasmSmallStepGS hlc α]
         ⟨0, address⟩ (DFrac.own 1) (some value) ==∗
       ⌜address.toNat < store.wasm.mem.pages * 65536⌝ := by
   iintro ⟨Hstate, Hpointsto⟩
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
+  iopen_state Hstate
   icases genHeap_valid $$ [$Hheap $Hpointsto] with >%hlookup
   ipureintro
   exact fromResolverBounds store Hfacts.2.1 address (by simp [hlookup])
@@ -628,9 +638,7 @@ theorem stateInterp_pointsTo_facts [WasmSmallStepGS hlc α]
       ⌜store.wasm.mem.read8 address = value ∧
         address.toNat < store.wasm.mem.pages * 65536⌝ := by
   iintro ⟨Hstate, Hpointsto⟩
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
+  iopen_state Hstate
   icases genHeap_valid $$ [$Hheap $Hpointsto] with >%hlookup
   ipureintro
   exact ⟨fromResolver store Hfacts.1 address value hlookup,
@@ -644,9 +652,7 @@ theorem stateInterp_host_agree [WasmSmallStepGS hlc α]
     stateInterp (GF := WasmHeapGF α) store steps observations threads ∗
       hostStateOwn host ⊢ ⌜store.wasm.host = host⌝ := by
   iintro ⟨Hstate, Hown⟩
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
+  iopen_state Hstate
   iapply hostStateOwn_agree store.wasm.host host
   iframe Hstate_auth Hown
 
@@ -1297,9 +1303,7 @@ theorem stateInterp_fill_bytes [WasmSmallStepGS hlc α]
         steps observations threads ∗
       pointsToBytes 0 addr (List.replicate oldBytes.length val) := by
   iintro ⟨Hstate, Hbytes⟩
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
+  iopen_state Hstate
   imod fillSigma_ghost σ addr oldBytes val $$ [$Hheap $Hbytes] with
     ⟨Hheap, Hbytes, %Hbelow⟩
   ihave Hexc' : machineAuxInterp (fillSigma σ addr oldBytes val)
@@ -1593,9 +1597,7 @@ theorem stateInterp_copy_bytes [WasmSmallStepGS hlc α]
           (src + UInt32.ofNat i).toNat < store.wasm.mem.pages * 65536⌝ using
     stateInterp_pointsToBytes_agree store steps observations threads src srcBytes $$
       [Hstate Hsrc]
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
+  iopen_state Hstate
   imod copySigma_ghost σ dst oldDstBytes srcBytes hlen $$ [$Hheap $Hdst] with
     ⟨Hheap, Hdst, %Hbelow⟩
   ihave Hexc' : machineAuxInterp (copySigma σ dst oldDstBytes srcBytes)
@@ -1680,9 +1682,7 @@ theorem stateInterp_init_bytes [WasmSmallStepGS hlc α]
     simp only [newDstBytes, List.length_take, List.length_drop]; omega
   have hlen_eq : newDstBytes.length = oldDstBytes.length := by omega
   iintro ⟨Hstate, Hseg, Hdst⟩
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
+  iopen_state Hstate
   imod copySigma_ghost σ dst oldDstBytes newDstBytes hlen_eq $$
       [$Hheap $Hdst] with ⟨Hheap, Hdst, %Hbelow⟩
   ihave Hexc' : machineAuxInterp (copySigma σ dst oldDstBytes newDstBytes)
@@ -1797,9 +1797,7 @@ theorem stateInterp_global_facts [WasmSmallStepGS hlc α]
       globalPointsToAt 0 index value ==∗
       ⌜store.wasm.globals.globals[index]? = some value⌝ := by
   iintro ⟨Hstate, Hglobal⟩
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
+  iopen_state Hstate
   simp only [globalPointsToAt]
   ihave %hlookup := globalPointsTo_lookup globalσ ⟨0, index⟩ value $$ Hglobals Hglobal
   ipureintro
@@ -1814,9 +1812,7 @@ theorem stateInterp_table_facts [WasmSmallStepGS hlc α]
       tablePointsToAt 0 tableIndex table ==∗
       ⌜store.wasm.tables[tableIndex]? = some table⌝ := by
   iintro ⟨Hstate, Htable⟩
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
+  iopen_state Hstate
   simp only [tablePointsToAt]
   ihave %hlookup := tablePointsTo_lookup tableσ ⟨0, tableIndex⟩ table $$ Htables Htable
   ipureintro
@@ -1837,9 +1833,7 @@ theorem stateInterp_global_set [WasmSmallStepGS hlc α]
         steps observations threads ∗
       globalPointsToAt 0 index newValue := by
   iintro ⟨Hstate, Hglobal⟩
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
+  iopen_state Hstate
   simp only [globalPointsToAt]
   ihave %hlookup :=
     globalPointsTo_lookup globalσ ⟨0, index⟩ oldValue $$ Hglobals Hglobal
@@ -1877,9 +1871,7 @@ theorem stateInterp_dataSegment_facts [WasmSmallStepGS hlc α]
       dataSegmentPointsToAt 0 index value ==∗
       ⌜store.wasm.dataSegments[index]? = some value⌝ := by
   iintro ⟨Hstate, Hsegment⟩
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
+  iopen_state Hstate
   simp only [dataSegmentPointsToAt]
   ihave %hlookup :=
     dataSegmentPointsTo_lookup dataSegmentσ ⟨0, index⟩ value $$
@@ -1902,9 +1894,7 @@ theorem stateInterp_dataSegment_drop [WasmSmallStepGS hlc α]
         steps observations threads ∗
       dataSegmentPointsToAt 0 index none := by
   iintro ⟨Hstate, Hsegment⟩
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
+  iopen_state Hstate
   simp only [dataSegmentPointsToAt]
   ihave %hlookup :=
     dataSegmentPointsTo_lookup dataSegmentσ ⟨0, index⟩ oldValue $$
@@ -1943,9 +1933,7 @@ theorem stateInterp_elementSegment_facts [WasmSmallStepGS hlc α]
       elementSegmentPointsToAt 0 index value ==∗
       ⌜store.wasm.elementSegments[index]? = some value⌝ := by
   iintro ⟨Hstate, Hsegment⟩
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
+  iopen_state Hstate
   simp only [elementSegmentPointsToAt]
   ihave %hlookup :=
     elementSegmentPointsTo_lookup elementSegmentσ ⟨0, index⟩ value $$
@@ -1995,9 +1983,7 @@ theorem stateInterp_elementSegment_drop [WasmSmallStepGS hlc α]
         steps observations threads ∗
       elementSegmentPointsToAt 0 index none := by
   iintro ⟨Hstate, Hsegment⟩
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
+  iopen_state Hstate
   simp only [elementSegmentPointsToAt]
   ihave %hlookup :=
     elementSegmentPointsTo_lookup elementSegmentσ ⟨0, index⟩ oldValue $$
@@ -2080,9 +2066,7 @@ theorem stateInterp_table_set [WasmSmallStepGS hlc α]
         steps observations threads ∗
       tablePointsToAt 0 index newTable := by
   iintro ⟨Hstate, Htable⟩
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
+  iopen_state Hstate
   simp only [tablePointsToAt]
   ihave %hlookup :=
     tablePointsTo_lookup tableσ ⟨0, index⟩ oldTable $$ Htables Htable
@@ -2121,9 +2105,7 @@ theorem stateInterp_runtimeModule_agree [WasmSmallStepGS hlc α]
       ⌜store.runtime.currentModule = m⌝ := by
   simp only [runtimeModuleOwn]
   iintro ⟨Hstate, Hmod, Hid⟩
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
+  iopen_state Hstate
   icombine HinstanceAuth Hid as Hentry
   ihave %hentry := currentInstanceOwn_agree store.runtime.entry instanceId $$ Hentry
   ihave %hlookup := runtimeModuleElem_lookup $$ HruntimeModuleAuth Hmod
@@ -2167,9 +2149,7 @@ theorem stateInterp_exception_facts [WasmSmallStepGS hlc α]
       ⌜store.wasm.exns[index]? = some tagAndArgs⌝ := by
   iintro ⟨Hstate, Hexception⟩
   imodintro
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
+  iopen_state Hstate
   iunfold machineAuxInterp at Hexc
   icases Hexc with ⟨Hpages, Hdomain, Hexceptions⟩
   ihave %hlookup :=
@@ -2190,9 +2170,7 @@ theorem stateInterp_tagTable_prefix [WasmSmallStepGS hlc α]
       ⌜ids.IsPrefix store.wasm.tagIds⌝ := by
   iintro ⟨Hstate, Howned⟩
   imodintro
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
+  iopen_state Hstate
   iunfold machineAuxInterp at Hexc
   icases Hexc with ⟨Hpages, Hdomain, Hexceptions⟩
   ihave %hprefix :=
@@ -2230,9 +2208,7 @@ theorem stateInterp_instances_agree [WasmSmallStepGS hlc α]
       runtimeInstancesOwn instances ==∗
       ⌜store.runtime.instances = instances⌝ := by
   iintro ⟨Hstate, Hexpected⟩
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
+  iopen_state Hstate
   icombine HruntimeInstances Hexpected as Hinst
   ihave %hagrees := runtimeInstancesOwn_agree store.runtime.instances instances $$ Hinst
   ipureintro
@@ -2247,9 +2223,7 @@ theorem stateInterp_currentInstance_agree [WasmSmallStepGS hlc α]
       currentInstanceOwn id ==∗
       ⌜store.runtime.entry = id⌝ := by
   iintro ⟨Hstate, Hfrag⟩
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
+  iopen_state Hstate
   icombine HinstanceAuth Hfrag as Hcombined
   ihave %hagrees := currentInstanceOwn_agree store.runtime.entry id $$ Hcombined
   ipureintro
@@ -2286,9 +2260,7 @@ theorem stateInterp_currentInstance_update [WasmSmallStepGS hlc α]
         steps observations threads ∗
       currentInstanceOwn newId := by
   iintro ⟨Hstate, Hfrag⟩
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
+  iopen_state Hstate
   imod currentInstanceOwn_update store.runtime.entry newId $$ [$HinstanceAuth $Hfrag] with ⟨HinstanceAuth', Hfrag'⟩
   imodintro
   isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth' HhostEnvAuth Hstate_auth Hexc]
@@ -2315,9 +2287,7 @@ theorem stateInterp_currentInstance_update_of_any [WasmSmallStepGS hlc α]
       currentInstanceOwn newId ∗
       ⌜store.runtime.entry = calleeId⌝ := by
   iintro ⟨Hstate, Hfrag⟩
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
+  iopen_state Hstate
   imod currentInstanceOwn_update_of_any store.runtime.entry calleeId newId $$
       [$HinstanceAuth $Hfrag] with ⟨HinstanceAuth', Hfrag', %heq⟩
   imodintro
@@ -2354,9 +2324,7 @@ theorem stateInterp_pointsTo_u32_facts [WasmSmallStepGS hlc α]
   iintro ⟨Hstate, Hword⟩
   ihave Hword := (pointsTo_u32_eq 0 address value).mp $$ Hword
   icases Hword with ⟨H0, H1, H2, H3⟩
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
+  iopen_state Hstate
   ihave_heap_valid hg0 :
       ⌜get? σ ⟨0, address⟩ = some (some (u32Byte value 0))⌝ $$ [Hheap H0]
   ihave_heap_valid hg1 :
@@ -2427,9 +2395,7 @@ theorem stateInterp_pointsTo_u64_facts [WasmSmallStepGS hlc α]
   iintro ⟨Hstate, Hword⟩
   ihave Hword := (pointsTo_u64_eq 0 address value).mp $$ Hword
   icases Hword with ⟨H0, H1, H2, H3, H4, H5, H6, H7⟩
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
+  iopen_state Hstate
   ihave_heap_valid hg0 :
       ⌜get? σ ⟨0, address⟩ = some (some (u64Byte value 0))⌝ $$ [Hheap H0]
   ihave_heap_valid hg1 :
@@ -2511,9 +2477,7 @@ theorem stateInterp_store8 [WasmSmallStepGS hlc α]
       pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
         ⟨0, address⟩ (DFrac.own 1) (some newValue) := by
   iintro ⟨Hstate, Hpointsto⟩
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
+  iopen_state Hstate
   ihave_heap_valid hlookup :
       ⌜get? σ ⟨0, address⟩ = some (some oldValue)⌝ $$ [Hheap Hpointsto]
   imod genHeap_update (v₂ := some newValue) $$ [$Hheap $Hpointsto] with
@@ -2651,9 +2615,7 @@ theorem stateInterp_pointsTo_u16_facts [WasmSmallStepGS hlc α]
   iintro ⟨Hstate, Hword⟩
   ihave Hword := (pointsTo_u16_eq 0 address value).mp $$ Hword
   icases Hword with ⟨H0, H1⟩
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
+  iopen_state Hstate
   ihave_heap_valid hg0 :
       ⌜get? σ ⟨0, address⟩ = some (some (u32Byte value 0))⌝ $$ [Hheap H0]
   ihave_heap_valid hg1 :
@@ -2772,9 +2734,7 @@ theorem stateInterp_store16 [WasmSmallStepGS hlc α]
   iintro ⟨Hstate, Hword⟩
   ihave Hword := (pointsTo_u16_eq 0 address oldValue).mp $$ Hword
   icases Hword with ⟨H0, H1⟩
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
+  iopen_state Hstate
   ihave_heap_valid hg0 :
       ⌜get? σ ⟨0, address⟩ = some (some (u32Byte oldValue 0))⌝ $$ [Hheap H0]
   ihave_heap_valid hg1 :
@@ -2838,9 +2798,7 @@ theorem stateInterp_store32 [WasmSmallStepGS hlc α]
   iintro ⟨Hstate, Hword⟩
   ihave Hword := (pointsTo_u32_eq 0 address oldValue).mp $$ Hword
   icases Hword with ⟨H0, H1, H2, H3⟩
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
+  iopen_state Hstate
   ihave_heap_valid hg0 :
       ⌜get? σ ⟨0, address⟩ = some (some (u32Byte oldValue 0))⌝ $$ [Hheap H0]
   ihave_heap_valid hg1 :
@@ -2918,9 +2876,7 @@ theorem stateInterp_store64 [WasmSmallStepGS hlc α]
   iintro ⟨Hstate, Hword⟩
   ihave Hword := (pointsTo_u64_eq 0 address oldValue).mp $$ Hword
   icases Hword with ⟨H0, H1, H2, H3, H4, H5, H6, H7⟩
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
+  iopen_state Hstate
   ihave_heap_valid hg0 :
       ⌜get? σ ⟨0, address⟩ = some (some (u64Byte oldValue 0))⌝ $$ [Hheap H0]
   ihave_heap_valid hg1 :
@@ -3059,9 +3015,7 @@ theorem stateInterp_memoryGrow [WasmSmallStepGS hlc α]
     rw [hmemoryPages]
     exact Nat.le_add_right _ _
   iintro Hstate
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
+  iopen_state Hstate
   iunfold machineAuxInterp at Hexc
   icases Hexc with ⟨Hpages, Hdomain, Hexceptions⟩
   imod memoryPagesAuth_update store.wasm.mem.pages memory.pages hpagesMono $$
@@ -3183,9 +3137,7 @@ theorem stateInterp_hostCallReturn [WasmSmallStepGS hlc α]
         steps observations threads := by
   intro hMem hBounds hGlobals hData hTables hElems hExns hTagIds
   iintro Hstate
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
+  iopen_state Hstate
   iunfold machineAuxInterp at Hexc
   icases Hexc with ⟨Hpages, Hdomain, Hexceptions⟩
   imod memoryPagesAuth_update store.wasm.mem.pages newWasm.mem.pages h_pages $$
@@ -3233,9 +3185,7 @@ theorem stateInterp_hostEnv [WasmSmallStepGS hlc α]
       currentInstanceOwnN (α := α) instanceId ∗ hostEnvOwn instanceId env ==∗
       ⌜store.runtime.currentHost = env⌝ := by
   iintro ⟨Hstate, Hid, Henv_expected⟩
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth, %Hfacts, Hexc⟩
+  iopen_state Hstate
   icombine HinstanceAuth Hid as Hentry
   ihave %hentry := currentInstanceAuth_ownN_agree store.runtime.entry instanceId $$ Hentry
   ihave %hlookup := hostEnvOwn_lookup $$ HhostEnvAuth Henv_expected
