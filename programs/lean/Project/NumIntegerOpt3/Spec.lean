@@ -51,8 +51,7 @@ theorem finishGcd_smallStep_wp
   wasm_wp_pures [wp_localGet]
   wasm_wp_pures [wp_shlI64]
   wasm_wp_pures [wp_localSet]
-  iapply wp_exitControl rfl
-  inext
+  wasm_wp_pures [wp_exitControl]
   simp only [gcdOuterFrame, List.take_nil, List.nil_append]
   wasm_wp_pures [wp_localGet]
   rw [hrecombine]
@@ -77,8 +76,7 @@ theorem mod3_gcd_zero_smallStep (a b : UInt64) (hz : a = 0 ∨ b = 0) :
   wasm_wp_pures [wp_localGet]
   wasm_wp_pures [wp_orI64]
   wasm_wp_pures [wp_localSet]
-  iapply wp_block
-  inext
+  wasm_wp_pures [wp_block]
   by_cases ha : a = 0
   · subst a
     wasm_wp_pures [wp_localGet]
@@ -98,8 +96,7 @@ theorem mod3_gcd_zero_smallStep (a b : UInt64) (hz : a = 0 ∨ b = 0) :
     wasm_wp_pures [wp_localGet]
     iapply wp_eqzI64 (result := 0) (by rw [if_neg ha])
     inext
-    iapply wp_brIfZero
-    inext
+    wasm_wp_pures [wp_brIfZero]
     wasm_wp_pures [wp_localGet]
     iapply wp_eqzI64 (result := 1) (by decide)
     inext
@@ -210,8 +207,7 @@ theorem gcdLoopBody_smallStep_wp
   iintro _
   iloeb as IH generalizing %x %y %hxne %hyne %hxodd %hyodd %hxyne %hgcd
   simp only [loopBody]
-  iapply wp_block
-  inext
+  wasm_wp_pures [wp_block]
   wasm_wp_pures [wp_localGet]
   wasm_wp_pures [wp_localGet]
   by_cases hgt : y < x
@@ -238,16 +234,13 @@ theorem gcdLoopBody_smallStep_wp
       wasm_wp_pures [wp_localGet]
       iapply wp_neI64 (result := 0) (by simp [hx'y])
       inext
-      iapply wp_brIfZero
-      inext
-      iapply wp_exitControl rfl
-      inext
+      wasm_wp_pures [wp_brIfZero]
+      wasm_wp_pures [wp_exitControl]
       simp only [gcdLoopFrame, List.take_nil, List.nil_append]
       wasm_wp_pures [wp_localGet]
       wasm_wp_pures [wp_localSet]
       simp only [List.set]
-      iapply wp_exitControl rfl
-      inext
+      wasm_wp_pures [wp_exitControl]
       simp only [gcdInnerFrame, List.take_nil, List.nil_append]
       have hh : (x - y).toNat >>> (ctz64 64 (x - y) % 64) = y.toNat := by
         rw [← oddPart_toNat, hx'y]
@@ -282,8 +275,7 @@ theorem gcdLoopBody_smallStep_wp
       itrivial
   · iapply wp_gtUI64 (result := 0) (by simp [hgt])
     inext
-    iapply wp_brIfZero
-    inext
+    wasm_wp_pures [wp_brIfZero]
     wasm_wp_pures [wp_localGet]
     wasm_wp_pures [wp_localGet]
     wasm_wp_pures [wp_localGet]
@@ -316,10 +308,8 @@ theorem gcdLoopBody_smallStep_wp
     · change x ≠ (y - x) >>> (UInt64.ofNat (ctz64 64 (y - x)) % 64) at hxy'
       iapply wp_eqI64 (result := 0) (by rw [if_neg hxy'])
       inext
-      iapply wp_brIfZero
-      inext
-      iapply wp_br rfl
-      inext
+      wasm_wp_pures [wp_brIfZero]
+      wasm_wp_pures [wp_br]
       simp only [gcdLoopFrame, List.take_nil, List.nil_append]
       simp only [loopBody]
       ispecialize IH $$ %x %
@@ -395,8 +385,7 @@ theorem gcdInner_smallStep_wp
     itrivial
   · iapply wp_eqI64 (result := 0) (by rw [if_neg hab])
     inext
-    iapply wp_brIfZero
-    inext
+    wasm_wp_pures [wp_brIfZero]
     iapply wp_loop
     inext
     simp only [List.drop_nil]
@@ -436,8 +425,7 @@ theorem mod3_gcd_smallStep (a b : UInt64) :
   wasm_wp_pures [wp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
-  iapply wp_block
-  inext
+  wasm_wp_pures [wp_block]
   simp only [gcdOuterBody, List.drop_nil]
   wasm_wp_pures [wp_localGet]
   by_cases ha : a = 0
@@ -455,8 +443,7 @@ theorem mod3_gcd_smallStep (a b : UInt64) :
     simp
   · iapply wp_eqzI64 (result := 0) (by rw [if_neg ha])
     inext
-    iapply wp_brIfZero
-    inext
+    wasm_wp_pures [wp_brIfZero]
     wasm_wp_pures [wp_localGet]
     by_cases hb : b = 0
     · subst b
@@ -473,16 +460,14 @@ theorem mod3_gcd_smallStep (a b : UInt64) :
       simp
     · iapply wp_eqzI64 (result := 0) (by rw [if_neg hb])
       inext
-      iapply wp_brIfZero
-      inext
+      wasm_wp_pures [wp_brIfZero]
       wasm_wp_pures [wp_localGet]
       iapply wp_ctzI64
       inext
       wasm_wp_pures [wp_localSet]
       simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
         List.set]
-      iapply wp_block
-      inext
+      wasm_wp_pures [wp_block]
       simp only [List.drop_nil]
       rw [show
         ({ kind := .block

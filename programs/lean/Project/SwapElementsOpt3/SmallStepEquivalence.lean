@@ -50,24 +50,20 @@ theorem opt3_func0_distinct_smallStep_wp
   obtain ⟨hj1, hj2, hj3, hj4, hj5, hj6, hj7⟩ := UInt32.addSteps8 addressJ hroomJ'
   iintro ⟨HA, HB⟩
   simp only [Project.SwapElementsOpt3.func0]
-  iapply Wasm.SmallStep.wp_block
-  inext
-  iapply Wasm.SmallStep.wp_block
-  inext
+  wasm_wp_pures [wp_block]
+  wasm_wp_pures [wp_block]
   wasm_wp_pures [wp_localGet]
   wasm_wp_pures [wp_localGet]
   iapply Wasm.SmallStep.wp_geU (result := 0)
     (by simp [show ¬i ≥ len from not_le_of_gt hi])
   inext
-  iapply Wasm.SmallStep.wp_brIfZero
-  inext
+  wasm_wp_pures [wp_brIfZero]
   wasm_wp_pures [wp_localGet]
   wasm_wp_pures [wp_localGet]
   iapply Wasm.SmallStep.wp_geU (result := 0)
     (by simp [show ¬j ≥ len from not_le_of_gt hj])
   inext
-  iapply Wasm.SmallStep.wp_brIfZero
-  inext
+  wasm_wp_pures [wp_brIfZero]
   wasm_wp_pures [wp_localGet]
   wasm_wp_pures [wp_localGet]
   wasm_wp_pures [wp_const]

@@ -2203,8 +2203,7 @@ theorem twp_func3_decode_tail_loop
     · have hzero : next.remaining = 0 := by omega
       have hcondition : UInt32.ofNat next.remaining = 0 := by simp [hzero]
       rw [hcondition]
-      iapply twp_brIfZero
-      iapply twp_exitControl rfl
+      wasm_twp_pures [twp_brIfZero twp_exitControl]
       simp only [List.take_zero, List.nil_append]
       have hcopiedFinal : next.copied = original.length := by omega
       have hcopiedFinal' : state.copied + 1 = original.length := by
@@ -2546,8 +2545,7 @@ theorem twp_func3_decode_bulk_loop
       have heq : UInt32.ofNat (state.copied + 4) = UInt32.ofNat bulk := by
         rw [hdone]
       iapply twp_ne (result := 0) (by simp [heq])
-      iapply twp_brIfZero
-      iapply twp_exitControl rfl
+      wasm_twp_pures [twp_brIfZero twp_exitControl]
       simp only [List.take_zero, List.nil_append]
       have hprevious : state.copied = bulk - 4 := by omega
       isimp only [Finish] at Hfinish
@@ -3794,8 +3792,7 @@ theorem twp_func3_output_loop
           UInt32.ofNat (4 * (sorted.length - (emitted + 1))) = 0 := by
         simp [hdone]
       rw [hzero]
-      iapply twp_brIfZero
-      iapply twp_exitControl rfl
+      wasm_twp_pures [twp_brIfZero twp_exitControl]
       simp only [List.take_zero, List.nil_append]
       have hfinalCountdown :
           UInt32.ofNat (4 * (sorted.length - sorted.length)) = 0 := by
@@ -4083,8 +4080,7 @@ theorem twp_func3_deallocate_scratch
   simp only [List.cons_append, List.nil_append]
   iapply twp_block
   simp only [func3ScratchDeallocBlockBody, func3AppendLocals, List.drop_zero]
-  iapply twp_localGet rfl
-  iapply twp_brIfZero
+  wasm_twp_pures [twp_localGet twp_brIfZero]
   wasm_twp_pures [twp_localGet twp_localGet twp_const]
   have Hdealloc := Project.Mergesort.ContractProofs.func7_correct
     (hlc := hlc)

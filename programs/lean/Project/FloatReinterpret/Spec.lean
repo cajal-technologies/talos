@@ -1497,8 +1497,7 @@ theorem checkAbs_zeroPath_smallStep_wp
     (by decide) (by decide) (by decide) (by decide) $$ HresultLater
   inext
   iintro Hresult
-  iapply wp_exitControl rfl
-  inext
+  wasm_wp_pures [wp_exitControl]
   simp only [checkAbsOuterFrame, List.take, List.nil_append]
   have hResultProp :
       pointsTo_u32 0 ((1048560 : UInt32) + 12) 0 =
@@ -1540,8 +1539,7 @@ theorem checkAbs_onePath_smallStep_wp
     (by decide) (by decide) (by decide) (by decide) $$ HresultLater
   inext
   iintro Hresult
-  iapply wp_br rfl
-  inext
+  wasm_wp_pures [wp_br]
   simp only [checkAbsOuterFrame, List.take, List.nil_append]
   have hResultProp :
       pointsTo_u32 0 ((1048560 : UInt32) + 12) 1 =
@@ -1630,8 +1628,7 @@ theorem checkAbs_secondComparison_smallStep_wp
         rw [show (1 &&& 1 : UInt32) = 1 by decide]
         iapply wp_eqz (result := 0) (by decide)
         inext
-        iapply wp_brIfZero
-        inext
+        wasm_wp_pures [wp_brIfZero]
         iapply checkAbs_onePath_smallStep_wp
           (iprop(pointsTo_u64 0 1048552
             (f64Abs (f64PromoteF32 x)) ∗ runtimeModuleOwn ⟨0⟩ «module»))
@@ -1719,8 +1716,7 @@ theorem checkAbs_firstComparisonTail_smallStep_wp
     rw [show (1 &&& 1 : UInt32) = 1 by decide]
     iapply wp_eqz (result := 0) (by decide)
     inext
-    iapply wp_brIfZero
-    inext
+    wasm_wp_pures [wp_brIfZero]
     iapply checkAbs_secondComparison_smallStep_wp
       (s := s) (E := E) (Φ := Φ)
       x (f32Abs x) oldResult _ _
@@ -1890,12 +1886,10 @@ theorem func10_body_smallStep_wp
     [ .localGet 1, .load32 12, .localSet 2,
       .localGet 1, .const 16, .add, .globalSet 0,
       .localGet 2, .ret ] by rfl]
-  iapply wp_block
-  inext
+  wasm_wp_pures [wp_block]
   rw (occs := .pos [1]) [show checkAbsOuterBody =
     (.block 0 0 checkAbsInnerBody :: checkAbsZeroProg) by rfl]
-  iapply wp_block
-  inext
+  wasm_wp_pures [wp_block]
   simp only [List.drop_zero]
   rw [← show checkAbsInnerFrame =
     { kind := .block
@@ -2130,8 +2124,7 @@ theorem checkCopysign_comparison_smallStep_wp
           (by decide) (by decide) (by decide) (by decide) $$ HresultLater
         inext
         iintro Hresult
-        iapply wp_exitControl rfl
-        inext
+        wasm_wp_pures [wp_exitControl]
         simp only [checkCopysignOuterFrame, List.take, List.nil_append]
         have hResultProp :
             pointsTo_u32 0 ((1048560 : UInt32) + 12) 1 =
@@ -2151,8 +2144,7 @@ theorem checkCopysign_comparison_smallStep_wp
         wasm_wp_pures [wp_const]
         wasm_wp_pures [wp_and]
         rw [show (0 &&& 1 : UInt32) = 0 by decide]
-        iapply wp_brIfZero
-        inext
+        wasm_wp_pures [wp_brIfZero]
         wasm_wp_pures [wp_localGet]
         wasm_wp_pures [wp_const]
         ihave HresultLater :
@@ -2164,8 +2156,7 @@ theorem checkCopysign_comparison_smallStep_wp
           (by decide) (by decide) (by decide) (by decide) $$ HresultLater
         inext
         iintro Hresult
-        iapply wp_br rfl
-        inext
+        wasm_wp_pures [wp_br]
         simp only [checkCopysignOuterFrame, List.take, List.nil_append]
         have hResultProp :
             pointsTo_u32 0 ((1048560 : UInt32) + 12) 0 =
@@ -2218,12 +2209,10 @@ theorem func11_body_smallStep_wp
     [ .localGet 2, .load32 12, .localSet 3,
       .localGet 2, .const 16, .add, .globalSet 0,
       .localGet 3, .ret ] by rfl]
-  iapply wp_block
-  inext
+  wasm_wp_pures [wp_block]
   rw (occs := .pos [1]) [show checkCopysignOuterBody =
     (.block 0 0 checkCopysignInnerBody :: checkCopysignOneProg) by rfl]
-  iapply wp_block
-  inext
+  wasm_wp_pures [wp_block]
   simp only [List.drop_zero]
   rw [← show checkCopysignInnerFrame =
     { kind := .block

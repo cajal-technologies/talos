@@ -399,12 +399,9 @@ theorem func1_leftZero_core_smallStep_wp_to_return
       {{ Φ }} := by
   iintro ⟨HR, Hglobal, HouterA, HouterB, Hresult, Hx, Hy⟩
   simp only [func1SpilledLocals, func1, List.drop]
-  iapply Wasm.SmallStep.wp_block
-  inext
-  iapply Wasm.SmallStep.wp_block
-  inext
-  iapply Wasm.SmallStep.wp_block
-  inext
+  wasm_wp_pures [wp_block]
+  wasm_wp_pures [wp_block]
+  wasm_wp_pures [wp_block]
   wasm_wp_pures [wp_localGet]
   ihave HxLater : ▷ pointsTo_u64 0 (1048512 + 8) 0 $$ [Hx]
   · inext
@@ -470,8 +467,7 @@ theorem func1_leftZero_core_smallStep_wp_to_return
       (by decide) (by decide) (by decide) $$ HresultLater
   inext
   iintro Hresult
-  iapply Wasm.SmallStep.wp_br rfl
-  inext
+  wasm_wp_pures [wp_br]
   simp only [List.take_nil, List.nil_append]
   wasm_wp_pures [wp_localGet]
   ihave HresultLater : ▷ pointsTo_u64 0 (1048512 + 0) b $$ [Hresult]
@@ -637,12 +633,9 @@ theorem func1_rightZero_core_smallStep_wp_to_return
       {{ Φ }} := by
   iintro ⟨HR, Hglobal, HouterA, HouterB, Hresult, Hx, Hy⟩
   simp only [func1SpilledLocals, func1, List.drop]
-  iapply Wasm.SmallStep.wp_block
-  inext
-  iapply Wasm.SmallStep.wp_block
-  inext
-  iapply Wasm.SmallStep.wp_block
-  inext
+  wasm_wp_pures [wp_block]
+  wasm_wp_pures [wp_block]
+  wasm_wp_pures [wp_block]
   wasm_wp_pures [wp_localGet]
   ihave HxLater : ▷ pointsTo_u64 0 (1048512 + 8) a $$ [Hx]
   · inext
@@ -663,8 +656,7 @@ theorem func1_rightZero_core_smallStep_wp_to_return
   wasm_wp_pures [wp_const]
   wasm_wp_pures [wp_and]
   rw [show (0 &&& 1 : UInt32) = 0 by decide]
-  iapply Wasm.SmallStep.wp_brIfZero
-  inext
+  wasm_wp_pures [wp_brIfZero]
   wasm_wp_pures [wp_localGet]
   ihave HyLater : ▷ pointsTo_u64 0 (1048512 + 16) 0 $$ [Hy]
   · inext
@@ -687,10 +679,8 @@ theorem func1_rightZero_core_smallStep_wp_to_return
   rw [show (1 &&& 1 : UInt32) = 1 by decide]
   iapply Wasm.SmallStep.wp_eqz (result := 0) (by decide)
   inext
-  iapply Wasm.SmallStep.wp_brIfZero
-  inext
-  iapply Wasm.SmallStep.wp_exitControl rfl
-  inext
+  wasm_wp_pures [wp_brIfZero]
+  wasm_wp_pures [wp_exitControl]
   simp only [List.take_nil, List.drop_nil, List.nil_append]
   wasm_wp_pures [wp_localGet]
   wasm_wp_pures [wp_localGet]
@@ -729,8 +719,7 @@ theorem func1_rightZero_core_smallStep_wp_to_return
       (by decide) (by decide) (by decide) $$ HresultLater
   inext
   iintro Hresult
-  iapply Wasm.SmallStep.wp_br rfl
-  inext
+  wasm_wp_pures [wp_br]
   simp only [List.take_nil, List.nil_append]
   wasm_wp_pures [wp_localGet]
   ihave HresultLater : ▷ pointsTo_u64 0 (1048512 + 0) a $$ [Hresult]
@@ -1759,8 +1748,7 @@ theorem func1_equalBlock_smallStep_wp
   wasm_wp_pures [wp_const]
   wasm_wp_pures [wp_and]
   rw [show (0 : UInt32) &&& 1 = 0 by decide]
-  iapply Wasm.SmallStep.wp_brIfZero
-  inext
+  wasm_wp_pures [wp_brIfZero]
   rw [show
     [.localGet 2, .localGet 2, .load64 8, .localGet 3, .const 63, .and,
       .extendUI32, .shlI64, .store64 0, .br 2] = equalRecombineProg from rfl]
@@ -2621,8 +2609,7 @@ theorem func1_loopDecreaseDispatch_smallStep_wp
     wasm_wp_pures [wp_const]
     wasm_wp_pures [wp_and]
     rw [show (0 : UInt32) &&& 1 = 0 by decide]
-    iapply Wasm.SmallStep.wp_brIfZero
-    inext
+    wasm_wp_pures [wp_brIfZero]
     rw [show
       [.localGet 2, .load64 8, .localSet 6,
         .localGet 2, .localGet 2, .load64 16, .localGet 6, .subI64, .store64 16,
@@ -2702,8 +2689,7 @@ theorem func1_loopBodyDispatch_smallStep_wp
   iintro ⟨HK, HR, Hx, Hy, Hresult, HshiftX, HshiftY⟩
   rw [show func1LoopBody =
     .block 0 0 equalityBlockBody :: func1AfterEqualityProg from rfl]
-  iapply Wasm.SmallStep.wp_block
-  inext
+  wasm_wp_pures [wp_block]
   simp only [List.drop_zero]
   rw [show
     ({ kind := .block
@@ -2730,8 +2716,7 @@ theorem func1_loopBodyDispatch_smallStep_wp
       ⟨⟨HK', HR', HshiftX', HshiftY'⟩, Hx', Hy', Hresult'⟩
     rw [show func1AfterEqualityProg =
       .block 0 0 loopDecreaseYBlockBody :: loopDecreaseXProg from rfl]
-    iapply Wasm.SmallStep.wp_block
-    inext
+    wasm_wp_pures [wp_block]
     simp only [List.drop_zero]
     rw [show
       ({ kind := .block
@@ -2857,8 +2842,7 @@ theorem func1_loop_smallStep_wp
         iintro Hresources
         icases Hresources with
           ⟨#IH', HR', Hx', Hy', Hresult', HshiftX', HshiftY'⟩
-        iapply Wasm.SmallStep.wp_br rfl
-        inext
+        wasm_wp_pures [wp_br]
         simp only [func1LoopFrame, List.take_nil, List.nil_append]
         rw [show
           func1LoopXNormalizedLocals a b y (x - y) c6 c7 =
@@ -2890,8 +2874,7 @@ theorem func1_loop_smallStep_wp
         iintro Hresources
         icases Hresources with
           ⟨#IH', HR', Hx', Hy', Hresult', HshiftX', HshiftY'⟩
-        iapply Wasm.SmallStep.wp_br rfl
-        inext
+        wasm_wp_pures [wp_br]
         simp only [func1LoopFrame, List.take_nil, List.nil_append]
         rw [show
           func1LoopYNormalizedLocals a b x (y - x) c8 c9 =
@@ -3095,12 +3078,9 @@ theorem func1_nonzeroGuards_smallStep_wp
   simp only [func1OuterBody, func1MiddleBody, func1InnerGuardProg,
     func1ZeroJoinProg, func1EpilogueProg, func1SpilledLocals,
     List.cons_append]
-  iapply Wasm.SmallStep.wp_block
-  inext
-  iapply Wasm.SmallStep.wp_block
-  inext
-  iapply Wasm.SmallStep.wp_block
-  inext
+  wasm_wp_pures [wp_block]
+  wasm_wp_pures [wp_block]
+  wasm_wp_pures [wp_block]
   wasm_wp_pures [wp_localGet]
   ihave HxLater : ▷ pointsTo_u64 0 (1048512 + 8) a $$ [Hx]
   · inext
@@ -3117,8 +3097,7 @@ theorem func1_nonzeroGuards_smallStep_wp
   wasm_wp_pures [wp_const]
   wasm_wp_pures [wp_and]
   rw [show (0 &&& 1 : UInt32) = 0 by decide]
-  iapply Wasm.SmallStep.wp_brIfZero
-  inext
+  wasm_wp_pures [wp_brIfZero]
   wasm_wp_pures [wp_localGet]
   ihave HyLater : ▷ pointsTo_u64 0 (1048512 + 16) b $$ [Hy]
   · inext
@@ -3193,8 +3172,7 @@ theorem func1_nonzeroFinish_smallStep_wp_to_return
         func1EqualityFrame :: func1LoopFrame :: [func1OuterFrame outerBody],
         calls⟩ : Wasm.SmallStep.Expr Unit) @ s; E {{ Φ }} := by
   iintro ⟨HR, Hx, Hy, Hresult, HshiftX, HshiftY⟩
-  iapply Wasm.SmallStep.wp_br rfl
-  inext
+  wasm_wp_pures [wp_br]
   simp only [func1OuterFrame, func1EpilogueProg, List.take_nil,
     List.nil_append]
   wasm_wp_pures [wp_localGet]
@@ -4743,10 +4721,7 @@ theorem twp_func1_leftZero_core_smallStep_wp_to_return
         Wasm.SmallStep.Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hglobal, HouterA, HouterB, Hresult, Hx, Hy⟩
   simp only [func1SpilledLocals, func1, List.drop]
-  iapply Wasm.SmallStep.twp_block
-  iapply Wasm.SmallStep.twp_block
-  iapply Wasm.SmallStep.twp_block
-  iapply Wasm.SmallStep.twp_localGet rfl
+  wasm_twp_pures [twp_block twp_block twp_block twp_localGet]
   ihave HxLater : pointsTo_u64 0 (1048512 + 8) 0 $$ [Hx]
   · have h :
         pointsTo_u64 0 ((1048512 : UInt32) + 8) 0 =
@@ -4953,10 +4928,7 @@ theorem twp_func1_rightZero_core_smallStep_wp_to_return
         Wasm.SmallStep.Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hglobal, HouterA, HouterB, Hresult, Hx, Hy⟩
   simp only [func1SpilledLocals, func1, List.drop]
-  iapply Wasm.SmallStep.twp_block
-  iapply Wasm.SmallStep.twp_block
-  iapply Wasm.SmallStep.twp_block
-  iapply Wasm.SmallStep.twp_localGet rfl
+  wasm_twp_pures [twp_block twp_block twp_block twp_localGet]
   ihave HxLater : pointsTo_u64 0 (1048512 + 8) a $$ [Hx]
   · have h :
         pointsTo_u64 0 ((1048512 : UInt32) + 8) a =
@@ -4972,8 +4944,7 @@ theorem twp_func1_rightZero_core_smallStep_wp_to_return
   iapply Wasm.SmallStep.twp_eqI64 (result := 0) (by simp [ha])
   wasm_twp_pures [twp_const twp_and]
   rw [show (0 &&& 1 : UInt32) = 0 by decide]
-  iapply Wasm.SmallStep.twp_brIfZero
-  iapply Wasm.SmallStep.twp_localGet rfl
+  wasm_twp_pures [twp_brIfZero twp_localGet]
   ihave HyLater : pointsTo_u64 0 (1048512 + 16) 0 $$ [Hy]
   · have h :
         pointsTo_u64 0 ((1048512 : UInt32) + 16) 0 =
@@ -4990,8 +4961,7 @@ theorem twp_func1_rightZero_core_smallStep_wp_to_return
   wasm_twp_pures [twp_const twp_and]
   rw [show (1 &&& 1 : UInt32) = 1 by decide]
   iapply Wasm.SmallStep.twp_eqz (result := 0) (by decide)
-  iapply Wasm.SmallStep.twp_brIfZero
-  iapply Wasm.SmallStep.twp_exitControl rfl
+  wasm_twp_pures [twp_brIfZero twp_exitControl]
   simp only [List.take_nil, List.drop_nil, List.nil_append]
   wasm_twp_pures [twp_localGet twp_localGet]
   ihave HxLater : pointsTo_u64 0 (1048512 + 8) a $$ [Hx]
@@ -5778,10 +5748,7 @@ theorem twp_func1_nonzeroGuards_smallStep_wp
   simp only [func1OuterBody, func1MiddleBody, func1InnerGuardProg,
     func1ZeroJoinProg, func1EpilogueProg, func1SpilledLocals,
     List.cons_append]
-  iapply Wasm.SmallStep.twp_block
-  iapply Wasm.SmallStep.twp_block
-  iapply Wasm.SmallStep.twp_block
-  iapply Wasm.SmallStep.twp_localGet rfl
+  wasm_twp_pures [twp_block twp_block twp_block twp_localGet]
   ihave HxLater : pointsTo_u64 0 (1048512 + 8) a $$ [Hx]
   · rw [show (1048512 : UInt32) + 8 = 1048520 from rfl]
     iexact Hx
@@ -5793,8 +5760,7 @@ theorem twp_func1_nonzeroGuards_smallStep_wp
   iapply Wasm.SmallStep.twp_eqI64 (result := 0) (by simp [ha])
   wasm_twp_pures [twp_const twp_and]
   rw [show (0 &&& 1 : UInt32) = 0 by decide]
-  iapply Wasm.SmallStep.twp_brIfZero
-  iapply Wasm.SmallStep.twp_localGet rfl
+  wasm_twp_pures [twp_brIfZero twp_localGet]
   ihave HyLater : pointsTo_u64 0 (1048512 + 16) b $$ [Hy]
   · rw [show (1048512 : UInt32) + 16 = 1048528 from rfl]
     iexact Hy
@@ -6099,8 +6065,7 @@ theorem twp_func1_loopDecreaseY_smallStep_wp
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) $$ HyLater
   iintro Hy
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_subI64
+  wasm_twp_pures [twp_localGet twp_subI64]
   ihave HyLater : pointsTo_u64 0 (1048512 + 16) y $$ [Hy]
   · iexact Hy
   iapply Wasm.SmallStep.twp_store64 y
@@ -6315,8 +6280,7 @@ theorem twp_func1_loopDecreaseX_smallStep_wp
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) $$ HxLater
   iintro Hx
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_subI64
+  wasm_twp_pures [twp_localGet twp_subI64]
   ihave HxLater : pointsTo_u64 0 (1048512 + 8) x $$ [Hx]
   · iexact Hx
   iapply Wasm.SmallStep.twp_store64 x

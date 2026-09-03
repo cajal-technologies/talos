@@ -243,8 +243,7 @@ theorem copyWords_incrementBackedge_wp
   wasm_wp_pures [wp_add]
   rw [UInt32.add_comm 1 i]
   wasm_wp_pures [wp_localSet]
-  iapply Wasm.SmallStep.wp_br (by rfl)
-  inext
+  wasm_wp_pures [wp_br]
   simp only [copyWordsLoopFrame, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set, List.take_nil,
     List.nil_append]
@@ -321,11 +320,9 @@ theorem copyWords_guard_wp
     CopyWordsInnerGuard, List.cons_append, List.nil_append] at hbody
   iintro HP
   simp only [CopyWordsLoopBody]
-  iapply Wasm.SmallStep.wp_block
-  inext
+  wasm_wp_pures [wp_block]
   simp only [CopyWordsOuterBody, List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.wp_block
-  inext
+  wasm_wp_pures [wp_block]
   simp only [CopyWordsInnerGuard]
   wasm_wp_pures [wp_localGet]
   wasm_wp_pures [wp_localGet]
@@ -339,12 +336,9 @@ theorem copyWords_guard_wp
     iexact HP
   · iapply Wasm.SmallStep.wp_ltU (result := 0) (by simp [hlt])
     inext
-    iapply Wasm.SmallStep.wp_brIfZero
-    inext
-    iapply Wasm.SmallStep.wp_br (by rfl)
-    inext
-    iapply Wasm.SmallStep.wp_exitControl rfl
-    inext
+    wasm_wp_pures [wp_brIfZero]
+    wasm_wp_pures [wp_br]
+    wasm_wp_pures [wp_exitControl]
     simp only [copyWordsLoopFrame, List.drop_zero, List.take_nil,
       List.nil_append]
     iapply hexit hlt
@@ -759,8 +753,7 @@ theorem copyWords_incrementBackedge_twp
   simp only [CopyWordsIncrementBackedge]
   wasm_twp_pures [twp_localGet twp_const twp_add]
   rw [UInt32.add_comm 1 i]
-  iapply Wasm.SmallStep.twp_localSet rfl
-  iapply Wasm.SmallStep.twp_br (by rfl)
+  wasm_twp_pures [twp_localSet twp_br]
   simp only [copyWordsLoopFrame, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set, List.take_nil,
     List.nil_append]
@@ -851,9 +844,7 @@ theorem copyWords_guard_twp
     iapply hbody hlt
     iexact HP
   · iapply Wasm.SmallStep.twp_ltU (result := 0) (by simp [hlt])
-    iapply Wasm.SmallStep.twp_brIfZero
-    iapply Wasm.SmallStep.twp_br (by rfl)
-    iapply Wasm.SmallStep.twp_exitControl rfl
+    wasm_twp_pures [twp_brIfZero twp_br twp_exitControl]
     simp only [copyWordsLoopFrame, List.drop_zero, List.take_nil,
       List.nil_append]
     iapply hexit hlt

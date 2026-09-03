@@ -92,13 +92,11 @@ private theorem twp_gcdLoop
     subst n
     intro Hgcd
     simp only [loopBodyExpr, gcdLoopBody, gcdLoopBlock]
-    iapply twp_block
-    iapply twp_localGet rfl
+    wasm_twp_pures [twp_block twp_localGet]
     by_cases hb : currentB = 0
     · iapply twp_eqz (result := 1) (by simp [hb])
       iapply twp_brIf (by decide) rfl
-      iapply twp_exitControl rfl
-      iapply twp_localGet rfl
+      wasm_twp_pures [twp_exitControl twp_localGet]
       simp only [gcdLocals, List.take_nil, List.drop_nil, List.nil_append]
       exact hreturn currentA currentB temporary hb Hgcd
     · iapply twp_eqz (result := 0) (by simp [hb])

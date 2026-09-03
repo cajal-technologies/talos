@@ -398,8 +398,7 @@ theorem div_then_add_correct : DivThenAddSpec := by
   apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [ternaryConfig, func4]
-  iapply SmallStep.wp_block
-  inext
+  wasm_wp_pures [wp_block]
   wasm_wp_pures [wp_localGet]
   wasm_wp_pures [wp_constI64]
   iapply SmallStep.wp_eqI64 (result := 0) (by simp [hb])
@@ -407,8 +406,7 @@ theorem div_then_add_correct : DivThenAddSpec := by
   wasm_wp_pures [wp_const]
   wasm_wp_pures [wp_and]
   rw [show (0 &&& 1 : UInt32) = 0 by decide]
-  iapply SmallStep.wp_brIfZero
-  inext
+  wasm_wp_pures [wp_brIfZero]
   wasm_wp_pures [wp_localGet]
   wasm_wp_pures [wp_localGet]
   iapply SmallStep.wp_divUI64 hb
@@ -432,8 +430,7 @@ theorem div_then_mul_correct : DivThenMulSpec := by
   apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [ternaryConfig, func5]
-  iapply SmallStep.wp_block
-  inext
+  wasm_wp_pures [wp_block]
   wasm_wp_pures [wp_localGet]
   wasm_wp_pures [wp_constI64]
   iapply SmallStep.wp_eqI64 (result := 0) (by simp [hb])
@@ -441,8 +438,7 @@ theorem div_then_mul_correct : DivThenMulSpec := by
   wasm_wp_pures [wp_const]
   wasm_wp_pures [wp_and]
   rw [show (0 &&& 1 : UInt32) = 0 by decide]
-  iapply SmallStep.wp_brIfZero
-  inext
+  wasm_wp_pures [wp_brIfZero]
   wasm_wp_pures [wp_localGet]
   wasm_wp_pures [wp_localGet]
   iapply SmallStep.wp_divUI64 hb
@@ -467,8 +463,7 @@ theorem rem_then_add_correct : RemThenAddSpec := by
   apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [ternaryConfig, func12]
-  iapply SmallStep.wp_block
-  inext
+  wasm_wp_pures [wp_block]
   wasm_wp_pures [wp_localGet]
   wasm_wp_pures [wp_constI64]
   iapply SmallStep.wp_eqI64 (result := 0) (by simp [hb])
@@ -476,8 +471,7 @@ theorem rem_then_add_correct : RemThenAddSpec := by
   wasm_wp_pures [wp_const]
   wasm_wp_pures [wp_and]
   rw [show (0 &&& 1 : UInt32) = 0 by decide]
-  iapply SmallStep.wp_brIfZero
-  inext
+  wasm_wp_pures [wp_brIfZero]
   wasm_wp_pures [wp_localGet]
   wasm_wp_pures [wp_localGet]
   iapply SmallStep.wp_remUI64 hb
@@ -501,8 +495,7 @@ theorem rem_then_mul_correct : RemThenMulSpec := by
   apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [ternaryConfig, func13]
-  iapply SmallStep.wp_block
-  inext
+  wasm_wp_pures [wp_block]
   wasm_wp_pures [wp_localGet]
   wasm_wp_pures [wp_constI64]
   iapply SmallStep.wp_eqI64 (result := 0) (by simp [hb])
@@ -510,8 +503,7 @@ theorem rem_then_mul_correct : RemThenMulSpec := by
   wasm_wp_pures [wp_const]
   wasm_wp_pures [wp_and]
   rw [show (0 &&& 1 : UInt32) = 0 by decide]
-  iapply SmallStep.wp_brIfZero
-  inext
+  wasm_wp_pures [wp_brIfZero]
   wasm_wp_pures [wp_localGet]
   wasm_wp_pures [wp_localGet]
   iapply SmallStep.wp_remUI64 hb

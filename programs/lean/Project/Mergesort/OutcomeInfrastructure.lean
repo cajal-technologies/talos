@@ -171,8 +171,7 @@ theorem twp_acceptanceCaller
     exact ⟨rfl, hhost⟩
   · dsimp only [acceptanceExpr]
     iapply twp_iff (selectedBody := [.const 7]) rfl
-    iapply twp_const
-    iapply twp_exitControl (by rfl)
+    wasm_twp_pures [twp_const twp_exitControl]
     iapply twp_finish
     iapply Wasm.SmallStep.twp_outcome_done
     iintro %store %observations Hstate

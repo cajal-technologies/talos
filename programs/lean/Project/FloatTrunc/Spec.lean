@@ -362,18 +362,12 @@ theorem func0_body_to_ret_smallStep_wp
     wasm_wp_pures [wp_localSet]
     simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
       List.set, UInt32.reduceSub]
-    iapply wp_block
-    inext
-    iapply wp_block
-    inext
-    iapply wp_block
-    inext
-    iapply wp_block
-    inext
-    iapply wp_block
-    inext
-    iapply wp_block
-    inext
+    wasm_wp_pures [wp_block]
+    wasm_wp_pures [wp_block]
+    wasm_wp_pures [wp_block]
+    wasm_wp_pures [wp_block]
+    wasm_wp_pures [wp_block]
+    wasm_wp_pures [wp_block]
     wasm_wp_pures [wp_localGet]
     wasm_wp_pures [wp_localGet]
     cases hnan : f32Ne x x
@@ -383,8 +377,7 @@ theorem func0_body_to_ret_smallStep_wp
       wasm_wp_pures [wp_const]
       wasm_wp_pures [wp_and]
       rw [show (0 &&& 1 : UInt32) = 0 by decide]
-      iapply wp_brIfZero
-      inext
+      wasm_wp_pures [wp_brIfZero]
       wasm_wp_pures [wp_localGet]
       iapply wp_scalarFloat0 rfl
       inext
@@ -395,10 +388,8 @@ theorem func0_body_to_ret_smallStep_wp
         wasm_wp_pures [wp_const]
         wasm_wp_pures [wp_and]
         rw [show (0 &&& 1 : UInt32) = 0 by decide]
-        iapply wp_brIfZero
-        inext
-        iapply wp_br rfl
-        inext
+        wasm_wp_pures [wp_brIfZero]
+        wasm_wp_pures [wp_br]
         simp only [List.take, List.drop, List.nil_append]
         wasm_wp_pures [wp_localGet]
         iapply wp_scalarFloat0 rfl
@@ -410,10 +401,8 @@ theorem func0_body_to_ret_smallStep_wp
           wasm_wp_pures [wp_const]
           wasm_wp_pures [wp_and]
           rw [show (0 &&& 1 : UInt32) = 0 by decide]
-          iapply wp_brIfZero
-          inext
-          iapply wp_br rfl
-          inext
+          wasm_wp_pures [wp_brIfZero]
+          wasm_wp_pures [wp_br]
           simp only [List.take, List.nil_append]
           wasm_wp_pures [wp_localGet]
           wasm_wp_pures [wp_localGet]
@@ -424,8 +413,7 @@ theorem func0_body_to_ret_smallStep_wp
           · iexact Hword
           · inext
             iintro Hword
-            iapply wp_br rfl
-            inext
+            wasm_wp_pures [wp_br]
             simp only [List.take, List.nil_append]
             iapply func0_tail_to_ret_smallStep_wp
               Rglobal x (i32TruncSatF32S x) calls
@@ -454,8 +442,7 @@ theorem func0_body_to_ret_smallStep_wp
           · iexact Hword
           · inext
             iintro Hword
-            iapply wp_exitControl rfl
-            inext
+            wasm_wp_pures [wp_exitControl]
             simp only [List.take, List.nil_append]
             have heq := i32TruncSatF32S_large_neg hnan hlt
             iapply func0_tail_to_ret_smallStep_wp
@@ -485,8 +472,7 @@ theorem func0_body_to_ret_smallStep_wp
         · iexact Hword
         · inext
           iintro Hword
-          iapply wp_br rfl
-          inext
+          wasm_wp_pures [wp_br]
           simp only [List.take, List.nil_append]
           have heq := i32TruncSatF32S_large_pos hnan hge
           iapply func0_tail_to_ret_smallStep_wp
@@ -516,8 +502,7 @@ theorem func0_body_to_ret_smallStep_wp
       · iexact Hword
       · inext
         iintro Hword
-        iapply wp_br rfl
-        inext
+        wasm_wp_pures [wp_br]
         simp only [List.take, List.nil_append]
         have hisNaN : (Float32.ofBits x).toFloat.isNaN = true :=
           (f32Ne_self_iff_isNaN x).symm.trans hnan
@@ -670,28 +655,21 @@ theorem twp_func0_body_to_ret
   wasm_twp_pures [twp_const twp_sub twp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set, UInt32.reduceSub]
-  iapply twp_block
-  iapply twp_block
-  iapply twp_block
-  iapply twp_block
-  iapply twp_block
-  iapply twp_block
+  wasm_twp_pures [twp_block twp_block twp_block twp_block twp_block twp_block]
   wasm_twp_pures [twp_localGet twp_localGet]
   cases hnan : f32Ne x x
   · iapply twp_scalarFloat2 rfl rfl rfl
     simp only [hnan, Bool.false_eq_true, if_false]
     wasm_twp_pures [twp_const twp_and]
     rw [show (0 &&& 1 : UInt32) = 0 by decide]
-    iapply twp_brIfZero
-    iapply twp_localGet rfl
+    wasm_twp_pures [twp_brIfZero twp_localGet]
     iapply twp_scalarFloat0 rfl
     cases hge : f32Ge x 1325400064
     · iapply twp_scalarFloat2 rfl rfl rfl
       simp only [hge, Bool.false_eq_true, if_false]
       wasm_twp_pures [twp_const twp_and]
       rw [show (0 &&& 1 : UInt32) = 0 by decide]
-      iapply twp_brIfZero
-      iapply twp_br rfl
+      wasm_twp_pures [twp_brIfZero twp_br]
       simp only [List.take, List.drop, List.nil_append]
       iapply twp_localGet rfl
       iapply twp_scalarFloat0 rfl
@@ -700,8 +678,7 @@ theorem twp_func0_body_to_ret
         simp only [hlt, Bool.false_eq_true, if_false]
         wasm_twp_pures [twp_const twp_and]
         rw [show (0 &&& 1 : UInt32) = 0 by decide]
-        iapply twp_brIfZero
-        iapply twp_br rfl
+        wasm_twp_pures [twp_brIfZero twp_br]
         simp only [List.take, List.nil_append]
         wasm_twp_pures [twp_localGet twp_localGet]
         iapply twp_scalarFloat1 rfl rfl
@@ -813,8 +790,7 @@ theorem twp_check
             ⌜rs = []⌝ }] := by
   iintro ⟨Hruntime, Hglobal, Hword⟩
   simp only [func2]
-  iapply twp_block
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_block twp_localGet]
   iapply twp_call «module» 0 func0Def
     (by simp [«module»]) (by simp [«module»]) $$ Hruntime
   iintro Hruntime
@@ -882,8 +858,7 @@ theorem check_smallStep (x : UInt32) :
     ihave Hword := func0Heap_pointsTo $$ Hbytes
     ihave Hglobal := func0Globals_pointsTo $$ Hglobals
     simp only [func2]
-    iapply wp_block
-    inext
+    wasm_wp_pures [wp_block]
     wasm_wp_pures [wp_localGet]
     iapply wp_call «module» 0 func0Def
       (by simp [«module»]) (by simp [«module»]) $$ Hruntime
@@ -915,8 +890,7 @@ theorem check_smallStep (x : UInt32) :
         wasm_wp_pures [wp_const]
         wasm_wp_pures [wp_and]
         rw [show (0 &&& 1 : UInt32) = 0 by decide]
-        iapply wp_brIfZero
-        inext
+        wasm_wp_pures [wp_brIfZero]
         iapply wp_returnFromFunction
         inext
         iapply wp_value'

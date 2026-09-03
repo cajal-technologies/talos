@@ -2026,7 +2026,7 @@ theorem twp_gtUI64
       [{ Φ }] :=
   twp_pureStep _ _ _ (fun _ => Step.gtUI64 hresult)
 
-/-- Consume a maximal run of side-condition-free scalar and local steps.
+/-- Apply an explicit sequence of side-condition-free pure Wasm steps.
 Stops before any rule that needs a semantic choice, client resource, or
 non-definitional proof. -/
 syntax "wasm_twp_pures" "[" ident* "]" : tactic
@@ -2067,6 +2067,14 @@ macro_rules
       `(tactic| iapply twp_shlI64; wasm_twp_pures [$rest:ident*])
   | `(tactic| wasm_twp_pures [twp_shrUI64 $rest:ident*]) =>
       `(tactic| iapply twp_shrUI64; wasm_twp_pures [$rest:ident*])
+  | `(tactic| wasm_twp_pures [twp_block $rest:ident*]) =>
+      `(tactic| iapply twp_block; wasm_twp_pures [$rest:ident*])
+  | `(tactic| wasm_twp_pures [twp_brIfZero $rest:ident*]) =>
+      `(tactic| iapply twp_brIfZero; wasm_twp_pures [$rest:ident*])
+  | `(tactic| wasm_twp_pures [twp_br $rest:ident*]) =>
+      `(tactic| iapply twp_br rfl; wasm_twp_pures [$rest:ident*])
+  | `(tactic| wasm_twp_pures [twp_exitControl $rest:ident*]) =>
+      `(tactic| iapply twp_exitControl rfl; wasm_twp_pures [$rest:ident*])
 
 /-- `i32.load` at offset 0, phrased directly on `addr` rather than
 `addr + 0`, which keeps Iris's unifier from having to see through the

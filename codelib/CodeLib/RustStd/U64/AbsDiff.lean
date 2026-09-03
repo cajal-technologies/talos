@@ -99,10 +99,8 @@ theorem absDiff_smallStep_wp_to_return
   wasm_wp_pures [wp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
-  iapply Wasm.SmallStep.wp_block
-  inext
-  iapply Wasm.SmallStep.wp_block
-  inext
+  wasm_wp_pures [wp_block]
+  wasm_wp_pures [wp_block]
   wasm_wp_pures [wp_localGet]
   wasm_wp_pures [wp_localGet]
   by_cases hab : a < b
@@ -126,8 +124,7 @@ theorem absDiff_smallStep_wp_to_return
       HscratchLater
     inext
     iintro Hscratch
-    iapply Wasm.SmallStep.wp_exitControl rfl
-    inext
+    wasm_wp_pures [wp_exitControl]
     wasm_wp_pures [wp_localGet]
     ihave HscratchLater :
         ▷ pointsTo_u64 0 ((sp - 16) + 8) (b - a) $$ [Hscratch]
@@ -146,8 +143,7 @@ theorem absDiff_smallStep_wp_to_return
     wasm_wp_pures [wp_const]
     wasm_wp_pures [wp_and]
     rw [show (0 &&& 1 : UInt32) = 0 by decide]
-    iapply Wasm.SmallStep.wp_brIfZero
-    inext
+    wasm_wp_pures [wp_brIfZero]
     wasm_wp_pures [wp_localGet]
     wasm_wp_pures [wp_localGet]
     wasm_wp_pures [wp_localGet]
@@ -160,8 +156,7 @@ theorem absDiff_smallStep_wp_to_return
       HscratchLater
     inext
     iintro Hscratch
-    iapply Wasm.SmallStep.wp_br rfl
-    inext
+    wasm_wp_pures [wp_br]
     simp only [List.take_nil, List.drop_nil, List.nil_append]
     wasm_wp_pures [wp_localGet]
     ihave HscratchLater :

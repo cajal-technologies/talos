@@ -125,8 +125,7 @@ theorem div_correct : DivSpec := by
   apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [pureBinaryConfig, func6]
-  iapply SmallStep.wp_block
-  inext
+  wasm_wp_pures [wp_block]
   wasm_wp_pures [wp_localGet]
   wasm_wp_pures [wp_constI64]
   iapply SmallStep.wp_eqI64 (result := 0) (by simp [hb])
@@ -134,8 +133,7 @@ theorem div_correct : DivSpec := by
   wasm_wp_pures [wp_const]
   wasm_wp_pures [wp_and]
   rw [show (0 &&& 1 : UInt32) = 0 by decide]
-  iapply SmallStep.wp_brIfZero
-  inext
+  wasm_wp_pures [wp_brIfZero]
   wasm_wp_pures [wp_localGet]
   wasm_wp_pures [wp_localGet]
   iapply SmallStep.wp_divUI64 hb
@@ -157,8 +155,7 @@ theorem rem_correct : RemSpec := by
   apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
   intro gs
   simp only [pureBinaryConfig, func10]
-  iapply SmallStep.wp_block
-  inext
+  wasm_wp_pures [wp_block]
   wasm_wp_pures [wp_localGet]
   wasm_wp_pures [wp_constI64]
   iapply SmallStep.wp_eqI64 (result := 0) (by simp [hb])
@@ -166,8 +163,7 @@ theorem rem_correct : RemSpec := by
   wasm_wp_pures [wp_const]
   wasm_wp_pures [wp_and]
   rw [show (0 &&& 1 : UInt32) = 0 by decide]
-  iapply SmallStep.wp_brIfZero
-  inext
+  wasm_wp_pures [wp_brIfZero]
   wasm_wp_pures [wp_localGet]
   wasm_wp_pures [wp_localGet]
   iapply SmallStep.wp_remUI64 hb

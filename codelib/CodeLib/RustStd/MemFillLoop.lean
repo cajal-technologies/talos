@@ -197,8 +197,7 @@ theorem fillWords_incrementBackedge_wp
   wasm_wp_pures [wp_add]
   rw [UInt32.add_comm 1 i]
   wasm_wp_pures [wp_localSet]
-  iapply Wasm.SmallStep.wp_br (by rfl)
-  inext
+  wasm_wp_pures [wp_br]
   simp only [fillWordsLoopFrame, List.length_cons,
     List.length_nil, Nat.reduceAdd, Nat.reduceSub, List.set, List.take_nil,
     List.nil_append]
@@ -278,11 +277,9 @@ theorem fillWords_guard_wp
     FillWordsInnerGuard, List.cons_append, List.nil_append] at hbody
   iintro HP
   simp only [FillWordsLoopBody]
-  iapply Wasm.SmallStep.wp_block
-  inext
+  wasm_wp_pures [wp_block]
   simp only [FillWordsOuterBody, List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.wp_block
-  inext
+  wasm_wp_pures [wp_block]
   simp only [FillWordsInnerGuard]
   wasm_wp_pures [wp_localGet]
   wasm_wp_pures [wp_localGet]
@@ -296,12 +293,9 @@ theorem fillWords_guard_wp
     iexact HP
   · iapply Wasm.SmallStep.wp_ltU (result := 0) (by simp [hlt])
     inext
-    iapply Wasm.SmallStep.wp_brIfZero
-    inext
-    iapply Wasm.SmallStep.wp_br (by rfl)
-    inext
-    iapply Wasm.SmallStep.wp_exitControl rfl
-    inext
+    wasm_wp_pures [wp_brIfZero]
+    wasm_wp_pures [wp_br]
+    wasm_wp_pures [wp_exitControl]
     simp only [fillWordsLoopFrame, List.drop_zero, List.take_nil,
       List.nil_append]
     iapply hexit hlt

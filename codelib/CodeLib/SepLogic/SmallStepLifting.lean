@@ -739,7 +739,7 @@ theorem wp_localTee
   dsimp only
   exact wp_pureStep _ _ _ (fun _ => Step.localTee hset)
 
-/-- Apply an explicit sequence of side-condition-free scalar and local steps.
+/-- Apply an explicit sequence of side-condition-free pure Wasm steps.
 The rule list keeps the Wasm trace visible while avoiding repetitive `iapply`
 lines. -/
 syntax "wasm_wp_pures" "[" ident* "]" : tactic
@@ -782,6 +782,14 @@ macro_rules
       `(tactic| iapply wp_shlI64; inext; wasm_wp_pures [$rest:ident*])
   | `(tactic| wasm_wp_pures [wp_shrUI64 $rest:ident*]) =>
       `(tactic| iapply wp_shrUI64; inext; wasm_wp_pures [$rest:ident*])
+  | `(tactic| wasm_wp_pures [wp_block $rest:ident*]) =>
+      `(tactic| iapply wp_block; inext; wasm_wp_pures [$rest:ident*])
+  | `(tactic| wasm_wp_pures [wp_brIfZero $rest:ident*]) =>
+      `(tactic| iapply wp_brIfZero; inext; wasm_wp_pures [$rest:ident*])
+  | `(tactic| wasm_wp_pures [wp_br $rest:ident*]) =>
+      `(tactic| iapply wp_br rfl; inext; wasm_wp_pures [$rest:ident*])
+  | `(tactic| wasm_wp_pures [wp_exitControl $rest:ident*]) =>
+      `(tactic| iapply wp_exitControl rfl; inext; wasm_wp_pures [$rest:ident*])
 
 theorem wp_tryTable
     {locals : Locals} {paramArity resultArity arity : Nat}
@@ -4678,8 +4686,7 @@ theorem wp_mergeTwoWords :
   iapply wp_store32 4 rfl rfl rfl rfl $$ H4Later
   inext
   iintro H4
-  iapply wp_exitControl rfl
-  inext
+  wasm_wp_pures [wp_exitControl]
   iapply wp_finish
   inext
   iapply wp_value'

@@ -2323,8 +2323,7 @@ theorem signedBranch_terminatesWith (a b : UInt32) :
     ipureintro
     simp [h]
   · iapply twp_geS (result := 0) (by simp [h])
-    iapply twp_brIfZero
-    iapply twp_const
+    wasm_twp_pures [twp_brIfZero twp_const]
     iapply twp_returnFromFunction
     iapply twp.value rfl
     ipureintro

@@ -716,12 +716,9 @@ theorem func1_happyPrefix_smallStep_wp
   dsimp only
   iintro Htarget
   simp only [func1]
-  iapply Wasm.SmallStep.wp_block
-  inext
-  iapply Wasm.SmallStep.wp_block
-  inext
-  iapply Wasm.SmallStep.wp_block
-  inext
+  wasm_wp_pures [wp_block]
+  wasm_wp_pures [wp_block]
+  wasm_wp_pures [wp_block]
   wasm_wp_pures [wp_localGet]
   wasm_wp_pures [wp_localGet]
   iapply Wasm.SmallStep.wp_ltU (result := 1) (by simp [hi])
@@ -731,8 +728,7 @@ theorem func1_happyPrefix_smallStep_wp
   rw [show (1 &&& 1 : UInt32) = 1 by decide]
   iapply Wasm.SmallStep.wp_eqz (value := 1) (result := 0) rfl
   inext
-  iapply Wasm.SmallStep.wp_brIfZero
-  inext
+  wasm_wp_pures [wp_brIfZero]
   wasm_wp_pures [wp_localGet]
   wasm_wp_pures [wp_localGet]
   wasm_wp_pures [wp_const]
@@ -1607,9 +1603,7 @@ theorem twp_func1_happyPrefix_smallStep_wp
   dsimp only
   iintro Htarget
   simp only [func1]
-  iapply Wasm.SmallStep.twp_block
-  iapply Wasm.SmallStep.twp_block
-  iapply Wasm.SmallStep.twp_block
+  wasm_twp_pures [twp_block twp_block twp_block]
   wasm_twp_pures [twp_localGet twp_localGet]
   iapply Wasm.SmallStep.twp_ltU (result := 1) (by simp [hi])
   wasm_twp_pures [twp_const twp_and]

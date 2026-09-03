@@ -129,8 +129,7 @@ private theorem twp_func9_zero_and_return
   simp only [func9ZeroBody, func9Locals]
   iapply twp_localGet rfl
   iapply twp_eqz (result := 0) (by simp [hbaseNonzero])
-  iapply twp_brIfZero
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_brIfZero twp_localGet]
   iapply twp_eqz (result := 0) (by simp [hsizeNonzero])
   iapply twp_brIfZero
   wasm_twp_pures [twp_localGet twp_const twp_localGet]
@@ -772,8 +771,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
                   stack code arity remainder controls calls s E Φ
               iframe Hruntime Hbump Hstreams Hoom
             · iapply twp_eq (result := 0) (by simp [hsentinel])
-              iapply twp_brIfZero
-              iapply twp_exitControl rfl
+              wasm_twp_pures [twp_brIfZero twp_exitControl]
               simp only [List.take_zero, List.nil_append]
               have hphysical : finish.toNat ≤ newPages * 65536 := by
                 by_cases hpagesLow : pages < UInt32.size

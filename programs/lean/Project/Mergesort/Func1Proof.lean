@@ -472,8 +472,7 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
           iexact HresultBytes
         isimp only [arrayAt] at Harray
         icases Harray with ⟨Htag, HnewPointer, HnewCapacity, _Hemp⟩
-        iapply twp_block
-        iapply twp_localGet rfl
+        wasm_twp_pures [twp_block twp_localGet]
         ihave Htag' : pointsTo_u32 0 (reserveBase + 4) 0 $$ [Htag]
         · iexact Htag
         iapply twp_load32 (address := reserveBase) (offset := 4) 0

@@ -456,9 +456,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
   simp only [List.length]
   wasm_twp_pures [twp_const twp_localSet]
   simp only [List.length]
-  iapply twp_block
-  iapply twp_block
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_block twp_block twp_localGet]
   iapply twp_extendUI32
   iapply twp_localGet rfl
   iapply twp_extendUI32
@@ -477,8 +475,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
   iapply twp_eqz rfl
   iapply twp_brIf (by decide) (by rfl)
   simp only [List.take_zero, List.nil_append]
-  iapply twp_block
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_block twp_localGet]
   iapply twp_wrapI64
   rw [hwrap]
   iapply twp_localTee rfl
@@ -490,10 +487,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
   iapply twp_leU (result := 1) (by rw [if_pos hcapacityGuard])
   iapply twp_brIf (by decide) (by rfl)
   simp only [List.take_zero, List.drop_zero, List.nil_append]
-  iapply twp_block
-  iapply twp_block
-  iapply twp_block
-  iapply twp_block
+  wasm_twp_pures [twp_block twp_block twp_block twp_block]
   cases source with
   | empty =>
       isimp only [GrowSourceOwn] at Hsource
@@ -503,8 +497,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
       iapply twp_eqz rfl
       iapply twp_brIf (by decide) (by rfl)
       simp only [List.take_zero, List.drop_zero, List.nil_append]
-      iapply twp_block
-      iapply twp_localGet rfl
+      wasm_twp_pures [twp_block twp_localGet]
       have hnewNonzero : newCapacity ≠ 0 := by
         intro hzero
         have := congrArg UInt32.toNat hzero

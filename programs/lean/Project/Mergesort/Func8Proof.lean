@@ -651,8 +651,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
         rw [hfinishNat]
         omega
       iapply twp_ltS (result := 0) (by rw [if_neg hfinishNonnegative])
-      iapply twp_brIfZero
-      iapply twp_block
+      wasm_twp_pures [twp_brIfZero twp_block]
       wasm_twp_pures [twp_localGet twp_const twp_add]
       rw [UInt32.add_comm (65535 : UInt32) finish]
       wasm_twp_pures [twp_const twp_shrU]
@@ -817,8 +816,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
                     controls calls s E Φ
                 iframe Hruntime Hbump Hblock Hstreams Hoom
               · iapply twp_eq (result := 0) (by simp [hsentinel])
-                iapply twp_brIfZero
-                iapply twp_exitControl rfl
+                wasm_twp_pures [twp_brIfZero twp_exitControl]
                 simp only [List.take_zero, List.nil_append, Nat.reduceAdd,
                   Nat.reduceSub, List.set, List.drop_zero]
                 have hphysical : finish.toNat ≤ newPages * 65536 := by

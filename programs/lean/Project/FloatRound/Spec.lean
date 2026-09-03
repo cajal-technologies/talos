@@ -542,8 +542,7 @@ theorem naive_storeTrunc_smallStep_wp
     (by decide) (by decide) (by decide) (by decide) $$ HwordLater
   inext
   iintro Hword
-  iapply wp_br rfl
-  inext
+  wasm_wp_pures [wp_br]
   simp only [naiveAFrame, List.take, List.nil_append]
   have hWordProp :
       pointsTo_u32 0 ((1048544 : UInt32) + 12) (f32Trunc x) =
@@ -610,8 +609,7 @@ theorem naive_ceil_smallStep_wp
       (by decide) (by decide) (by decide) (by decide) $$ HwordLater
     inext
     iintro Hword
-    iapply wp_br rfl
-    inext
+    wasm_wp_pures [wp_br]
     simp only [naiveAFrame, List.take, List.nil_append]
     have hWordProp :
         pointsTo_u32 0 ((1048544 : UInt32) + 12)
@@ -682,8 +680,7 @@ theorem naive_floor_smallStep_wp
       (by decide) (by decide) (by decide) (by decide) $$ HwordLater
     inext
     iintro Hword
-    iapply wp_exitControl rfl
-    inext
+    wasm_wp_pures [wp_exitControl]
     simp only [naiveAFrame, List.take, List.nil_append]
     have hWordProp :
         pointsTo_u32 0 ((1048544 : UInt32) + 12)
@@ -782,8 +779,7 @@ theorem naive_compare_smallStep_wp
     wasm_wp_pures [wp_const]
     wasm_wp_pures [wp_and]
     rw [show (0 &&& 1 : UInt32) = 0 by decide]
-    iapply wp_brIfZero
-    inext
+    wasm_wp_pures [wp_brIfZero]
     wasm_wp_pures [wp_localGet]
     iapply wp_scalarFloat0 rfl
     inext
@@ -812,10 +808,8 @@ theorem naive_compare_smallStep_wp
       wasm_wp_pures [wp_const]
       wasm_wp_pures [wp_and]
       rw [show (0 &&& 1 : UInt32) = 0 by decide]
-      iapply wp_brIfZero
-      inext
-      iapply wp_br rfl
-      inext
+      wasm_wp_pures [wp_brIfZero]
+      wasm_wp_pures [wp_br]
       simp only [naiveCFrame, List.take, List.nil_append]
       iapply naive_storeTrunc_smallStep_wp
         (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
@@ -913,20 +907,16 @@ theorem func0_lowered_smallStep_wp
       [ .localGet 1, .f32Load 12, .localSet 4,
         .localGet 1, .const 16, .add, .globalSet 0,
         .localGet 4, .ret ] by rfl]
-    iapply wp_block
-    inext
+    wasm_wp_pures [wp_block]
     rw (occs := .pos [1]) [show naiveABody =
       (.block 0 0 naiveBBody :: naiveFloorProg) by rfl]
-    iapply wp_block
-    inext
+    wasm_wp_pures [wp_block]
     rw (occs := .pos [1]) [show naiveBBody =
       (.block 0 0 naiveCBody :: naiveStoreTruncProg) by rfl]
-    iapply wp_block
-    inext
+    wasm_wp_pures [wp_block]
     rw (occs := .pos [1]) [show naiveCBody =
       (.block 0 0 naiveCompareProg :: naiveCeilProg) by rfl]
-    iapply wp_block
-    inext
+    wasm_wp_pures [wp_block]
     simp only [List.drop_zero]
     rw [← show naiveDFrame =
       { kind := .block, paramArity := 0, resultArity := 0
@@ -1135,8 +1125,7 @@ theorem roundCheck_comparison_smallStep_wp
           (by decide) (by decide) (by decide) (by decide) $$ HresultLater
         inext
         iintro Hresult
-        iapply wp_exitControl rfl
-        inext
+        wasm_wp_pures [wp_exitControl]
         simp only [roundCheckOuterFrame, List.take, List.nil_append]
         have hResultProp :
             pointsTo_u32 0 ((1048560 : UInt32) + 12) 1 =
@@ -1155,8 +1144,7 @@ theorem roundCheck_comparison_smallStep_wp
         wasm_wp_pures [wp_const]
         wasm_wp_pures [wp_and]
         rw [show (0 &&& 1 : UInt32) = 0 by decide]
-        iapply wp_brIfZero
-        inext
+        wasm_wp_pures [wp_brIfZero]
         wasm_wp_pures [wp_localGet]
         wasm_wp_pures [wp_const]
         ihave HresultLater :
@@ -1168,8 +1156,7 @@ theorem roundCheck_comparison_smallStep_wp
           (by decide) (by decide) (by decide) (by decide) $$ HresultLater
         inext
         iintro Hresult
-        iapply wp_br rfl
-        inext
+        wasm_wp_pures [wp_br]
         simp only [roundCheckOuterFrame, List.take, List.nil_append]
         have hResultProp :
             pointsTo_u32 0 ((1048560 : UInt32) + 12) 0 =
@@ -1222,12 +1209,10 @@ theorem func6_body_smallStep_wp
     [ .localGet 1, .load32 12, .localSet 2,
       .localGet 1, .const 16, .add, .globalSet 0,
       .localGet 2, .ret ] by rfl]
-  iapply wp_block
-  inext
+  wasm_wp_pures [wp_block]
   rw (occs := .pos [1]) [show roundCheckOuterBody =
     (.block 0 0 roundCheckInnerBody :: roundCheckOneProg) by rfl]
-  iapply wp_block
-  inext
+  wasm_wp_pures [wp_block]
   simp only [List.drop_zero]
   rw [← show roundCheckInnerFrame =
     { kind := .block, paramArity := 0, resultArity := 0
@@ -1770,8 +1755,7 @@ theorem twp_naive_compare_smallStep_wp
       (by simp [evalScalarFloat2?, hgeFalse])
     wasm_twp_pures [twp_const twp_and]
     rw [show (0 &&& 1 : UInt32) = 0 by decide]
-    iapply twp_brIfZero
-    iapply twp_localGet rfl
+    wasm_twp_pures [twp_brIfZero twp_localGet]
     iapply twp_scalarFloat0 rfl
     by_cases hle :
         f32Le (f32Sub x (f32Trunc x)) 3204448256 = true
@@ -1793,8 +1777,7 @@ theorem twp_naive_compare_smallStep_wp
         (by simp [evalScalarFloat2?, hleFalse])
       wasm_twp_pures [twp_const twp_and]
       rw [show (0 &&& 1 : UInt32) = 0 by decide]
-      iapply twp_brIfZero
-      iapply twp_br rfl
+      wasm_twp_pures [twp_brIfZero twp_br]
       simp only [naiveCFrame, List.take, List.nil_append]
       iapply twp_naive_storeTrunc_smallStep_wp
         (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
