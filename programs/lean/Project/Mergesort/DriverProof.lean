@@ -5299,8 +5299,7 @@ private def func3ScratchSuccessControls : List ControlFrame :=
 private theorem func3_scratch_success_branch :
     branchTarget? 0 4 func3ScratchSuccessControls [] =
       some (func3SortAndCleanup,
-        [func3CleanupOuterFrame func3DriverBody], []) := by
-  rfl
+        [func3CleanupOuterFrame func3DriverBody], []) := by rfl
 
 private theorem geometricVec_frontier_ge_heapBase
     (total length remaining : Nat) (capacity ptr : UInt32)
@@ -5820,8 +5819,7 @@ theorem twp_func3_body
 
 private theorem func3_index :
     Project.Mergesort.module.funcs[3]? =
-      some Project.Mergesort.func3Def := by
-  rfl
+      some Project.Mergesort.func3Def := by rfl
 
 /-- The authoritative `func3` call contract, conditional only on the three
 reachable allocator/Vec contracts that are proved in their own files. -/

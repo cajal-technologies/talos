@@ -14,8 +14,7 @@ open Wasm
 
 /-- The generated module imports standard I/O plus the allocator's terminal
 OOM notification. -/
-theorem module_imports : «module».imports = StdIO.imports ++ OOM.imports := by
-  native_decide
+theorem module_imports : «module».imports = StdIO.imports ++ OOM.imports := by native_decide
 
 /-- The universal host implements every operation required by the generated
 module. -/

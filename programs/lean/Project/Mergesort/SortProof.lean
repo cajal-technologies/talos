@@ -442,8 +442,7 @@ def arrayBytes (values : List UInt32) : List UInt8 :=
   values.flatMap wordBytes
 
 @[simp] theorem wordBytes_length (value : UInt32) :
-    (wordBytes value).length = 4 := by
-  rfl
+    (wordBytes value).length = 4 := by rfl
 
 @[simp] theorem arrayBytes_length (values : List UInt32) :
     (arrayBytes values).length = 4 * values.length := by
@@ -694,98 +693,82 @@ private theorem right_counter_init {mid j length : Nat}
 
 theorem mergeMainLoopBody_shape :
     mergeMainLoopBody =
-      .block 0 0 mergeMainOuterBody :: mergeMainLoopBody.drop 1 := by
-  rfl
+      .block 0 0 mergeMainOuterBody :: mergeMainLoopBody.drop 1 := by rfl
 
 theorem mergeMainLoopBody_tail :
     mergeMainLoopBody.drop 1 =
       [.localGet 8, .const 4, .add, .localSet 8,
        .localGet 5, .const 1, .add, .localSet 5,
        .localGet 9, .localGet 4, .geU, .localTee 11, .br_if 2,
-       .localGet 10, .localGet 7, .ltU, .br_if 0, .br 2] := by
-  rfl
+       .localGet 10, .localGet 7, .ltU, .br_if 0, .br 2] := by rfl
 
 theorem mergeMainOuterBody_shape :
     mergeMainOuterBody =
-      .block 0 0 mergeMainChoiceBody :: mergeMainOuterBody.drop 1 := by
-  rfl
+      .block 0 0 mergeMainChoiceBody :: mergeMainOuterBody.drop 1 := by rfl
 
 theorem mergeMainChoiceBody_shape :
     mergeMainChoiceBody =
       .block 0 0 mergeMainCompareBody ::
       .block 0 0 mergeMainLeftBody ::
       [.localGet 5, .localGet 3, .const 1049048, .call 52,
-        .unreachable] := by
-  rfl
+        .unreachable] := by rfl
 
 theorem mergeMainCompareBody_load1 :
     mergeMainCompareBody =
       [.localGet 0, .localGet 9, .const 2, .shl, .add, .load32 0] ++
-        mergeMainCompareBody.drop 6 := by
-  rfl
+        mergeMainCompareBody.drop 6 := by rfl
 
 theorem mergeMainCompareBody_load2 :
     mergeMainCompareBody.drop 7 =
       [.localGet 6, .localGet 10, .const 2, .shl, .add, .load32 0] ++
-        mergeMainCompareBody.drop 13 := by
-  rfl
+        mergeMainCompareBody.drop 13 := by rfl
 
 theorem mergeMainCompareBody_afterLoad1 :
     mergeMainCompareBody.drop 6 =
-      .localTee 11 :: mergeMainCompareBody.drop 7 := by
-  rfl
+      .localTee 11 :: mergeMainCompareBody.drop 7 := by rfl
 
 theorem mergeMainCompareBody_afterLoad2 :
     mergeMainCompareBody.drop 13 =
-      .localTee 12 :: .leU :: .br_if 0 :: mergeMainCompareBody.drop 16 := by
-  rfl
+      .localTee 12 :: .leU :: .br_if 0 :: mergeMainCompareBody.drop 16 := by rfl
 
 theorem mergeMainCompareBody_rightGuard :
     mergeMainCompareBody.drop 16 =
       [.localGet 5, .localGet 3, .geU, .br_if 1] ++
-        mergeMainCompareBody.drop 20 := by
-  rfl
+        mergeMainCompareBody.drop 20 := by rfl
 
 theorem mergeMainLeftBody_guard :
     mergeMainLeftBody =
       [.localGet 5, .localGet 3, .geU, .br_if 0] ++
-        mergeMainLeftBody.drop 4 := by
-  rfl
+        mergeMainLeftBody.drop 4 := by rfl
 
 theorem mergeMainLeftBody_store :
     mergeMainLeftBody.drop 4 =
       [.localGet 8, .localGet 11, .store32 0] ++
-        mergeMainLeftBody.drop 7 := by
-  rfl
+        mergeMainLeftBody.drop 7 := by rfl
 
 theorem mergeMainLeftBody_advance :
     mergeMainLeftBody.drop 7 =
-      [.localGet 9, .const 1, .add, .localSet 9, .br 2] := by
-  rfl
+      [.localGet 9, .const 1, .add, .localSet 9, .br 2] := by rfl
 
 theorem mergeMainCompareBody_rightStore :
     mergeMainCompareBody.drop 20 =
       [.localGet 8, .localGet 12, .store32 0] ++
-        mergeMainCompareBody.drop 23 := by
-  rfl
+        mergeMainCompareBody.drop 23 := by rfl
 
 theorem mergeMainCompareBody_rightAdvance :
     mergeMainCompareBody.drop 23 =
-      [.localGet 10, .const 1, .add, .localSet 10, .br 2] := by
-  rfl
+      [.localGet 10, .const 1, .add, .localSet 10, .br 2] := by rfl
 
 theorem sortBlock4_remainder_shape :
     sortBlock4.drop 5 =
       .block 0 0 mergeLeftRemainderBody ::
-      .block 0 0 mergeRightRemainderBody :: sortBlock4.drop 7 := by
-  rfl
+      .block 0 0 mergeRightRemainderBody :: sortBlock4.drop 7 := by rfl
 
 theorem sortBlock4_after_merge :
     sortBlock4.drop 7 =
       [.localGet 1, .localGet 3, .ne, .br_if 3,
        .localGet 1, .const 2, .shl, .localTee 5, .eqz, .br_if 0,
-       .localGet 0, .localGet 2, .localGet 5, .memoryCopy] := by
-  rfl
+       .localGet 0, .localGet 2, .localGet 5, .memoryCopy] := by rfl
 
 theorem mergeLeftRemainderBody_shape :
     mergeLeftRemainderBody =
@@ -796,8 +779,7 @@ theorem mergeLeftRemainderBody_shape :
        .gtU, .select, .sub, .localSet 12,
        .const 0, .localSet 9,
        .loop 0 0 mergeLeftLoopBody,
-       .localGet 5, .localGet 9, .sub, .localSet 5] := by
-  rfl
+       .localGet 5, .localGet 9, .sub, .localSet 5] := by rfl
 
 theorem mergeLeftLoopBody_shape :
     mergeLeftLoopBody =
@@ -806,8 +788,7 @@ theorem mergeLeftLoopBody_shape :
        .localGet 8, .const 4, .add, .localSet 8,
        .localGet 11, .const 4, .add, .localSet 11,
        .localGet 6, .localGet 9, .const 4294967295, .add,
-       .localTee 9, .ne, .br_if 0] := by
-  rfl
+       .localTee 9, .ne, .br_if 0] := by rfl
 
 theorem mergeRightRemainderBody_shape :
     mergeRightRemainderBody =
@@ -819,8 +800,7 @@ theorem mergeRightRemainderBody_shape :
        .localGet 2, .localGet 5, .const 2, .shl, .add, .localSet 9,
        .localGet 4, .localGet 1, .sub, .localGet 10, .add,
        .localSet 10,
-       .loop 0 0 mergeRightLoopBody] := by
-  rfl
+       .loop 0 0 mergeRightLoopBody] := by rfl
 
 theorem mergeRightLoopBody_shape :
     mergeRightLoopBody =
@@ -829,8 +809,7 @@ theorem mergeRightLoopBody_shape :
        .localGet 9, .const 4, .add, .localSet 9,
        .localGet 8, .const 4, .add, .localSet 8,
        .localGet 5, .const 1, .add, .localSet 5,
-       .localGet 10, .const 1, .add, .localTee 10, .br_if 0] := by
-  rfl
+       .localGet 10, .const 1, .add, .localTee 10, .br_if 0] := by rfl
 
 /-! ## Array access patterns emitted by LLVM -/
 

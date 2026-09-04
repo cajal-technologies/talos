@@ -17,8 +17,7 @@ def memModule : Module :=
         data := [{ offset := some 0, bytes := [0x42, 0x43, 0x44, 0x45] }] } }
 
 theorem memDataSection_read32_zero :
-    (memModule.initialStore (α := Unit)).mem.read32 0 = 0x45444342 := by
-  native_decide
+    (memModule.initialStore (α := Unit)).mem.read32 0 = 0x45444342 := by native_decide
 
 def memDataStore : MachineStore Unit :=
   { runtime := { instances := #[{ module := memModule, host := {} }], entry := ⟨0⟩ }
@@ -34,8 +33,7 @@ def memDataConfig : Config Unit :=
 
 theorem memDataSection_runs :
     (runSteps 2 memDataConfig).result =
-      .success [.i32 7] memDataStore := by
-  rfl
+      .success [.i32 7] memDataStore := by rfl
 
 theorem memDataSection_terminates :
     TerminatesWith memDataConfig (fun values store =>

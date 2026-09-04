@@ -58,13 +58,11 @@ def mixedOutput (oracle : Random.Oracle) (fuel : Nat) : Option (List UInt8) :=
 
 /-- The entropy byte crosses from one host's state, through linear memory, into
 the other host's state — in a single run, under a single environment. -/
-theorem mixed_writes_entropy_byte : mixedOutput (fun _ => 7) 50 = some [7] := by
-  native_decide
+theorem mixed_writes_entropy_byte : mixedOutput (fun _ => 7) 50 = some [7] := by native_decide
 
 /-- And it is genuinely the oracle's first byte that is written. -/
 theorem mixed_writes_first_oracle_byte :
-    mixedOutput (fun index => if index = 0 then 42 else 0) 50 = some [42] := by
-  native_decide
+    mixedOutput (fun index => if index = 0 then 42 else 0) 50 = some [42] := by native_decide
 
 /-! ## 2. A module importing one function of a two-function host -/
 
@@ -100,8 +98,7 @@ theorem writeOnly_positional_env_resolves_read :
 
 /-- Whereas name-keyed resolution gives it the arity `write` actually has. -/
 theorem writeOnly_named_env_resolves_write :
-    (envFor writeOnly).funcs[0]?.map HostFn.results = some [] := by
-  native_decide
+    (envFor writeOnly).funcs[0]?.map HostFn.results = some [] := by native_decide
 
 /-! ## 3. A module importing nothing -/
 

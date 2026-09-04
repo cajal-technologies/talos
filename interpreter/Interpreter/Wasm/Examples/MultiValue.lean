@@ -107,8 +107,7 @@ def callsSwapConfig : Config Unit :=
 
 theorem swap_runs :
     (runSteps 3 (swapConfig 1 2)).result.values? =
-      some [.i32 1, .i32 2] := by
-  rfl
+      some [.i32 1, .i32 2] := by rfl
 
 /-! ### Check 2 — total and partial contracts for `Swap` -/
 
@@ -197,7 +196,6 @@ private def firstBlockArity (m : Wasm.Module) : Option (Nat × Nat) :=
     `native_decide` on the literal decoder output. -/
 theorem multiValueBlockTypeDecodes :
     (Wasm.Decoder.Wat.decode multiValueWat).toOption.bind firstBlockArity
-      = some (0, 2) := by
-  native_decide
+      = some (0, 2) := by native_decide
 
 end Wasm

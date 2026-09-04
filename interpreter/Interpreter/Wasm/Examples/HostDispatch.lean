@@ -135,14 +135,12 @@ def memLoadConfig : Config Unit :=
   internalConfig memLoadModule memLoadEnv [.i32 0]
 
 theorem inc_returns_plus_one :
-    (runSteps 3 incConfig).result.values? = some [.i32 42] := by
-  native_decide
+    (runSteps 3 incConfig).result.values? = some [.i32 42] := by native_decide
 
 theorem abort_propagates_trap :
     (match (runSteps 1 abortConfig).result with
       | .trapped reason _ => some reason.message
-      | _ => none) = some "host abort" := by
-  native_decide
+      | _ => none) = some "host abort" := by native_decide
 
 theorem abort_trapsWith :
     TrapsWith abortConfig (.host "host abort")
@@ -152,8 +150,7 @@ theorem abort_trapsWith :
 
 theorem imported_tail_call_propagates_exception :
     (runSteps 2 throwTailConfig).result =
-      .trapped (.uncaughtException 0 [.i32 7]) throwTailConfig.store := by
-  rfl
+      .trapped (.uncaughtException 0 [.i32 7]) throwTailConfig.store := by rfl
 
 theorem imported_tail_call_exception_trapsWith :
     TrapsWith throwTailConfig (.uncaughtException 0 [.i32 7])
@@ -163,8 +160,7 @@ theorem imported_tail_call_exception_trapsWith :
 
 theorem imported_indirect_call_propagates_exception :
     (runSteps 3 throwIndirectConfig).result =
-      .trapped (.uncaughtException 0 [.i32 7]) throwIndirectConfig.store := by
-  rfl
+      .trapped (.uncaughtException 0 [.i32 7]) throwIndirectConfig.store := by rfl
 
 theorem imported_indirect_call_exception_trapsWith :
     TrapsWith throwIndirectConfig (.uncaughtException 0 [.i32 7])
@@ -185,8 +181,7 @@ theorem remaining_imported_call_forms_propagate_exceptions :
   exact ⟨rfl, rfl, rfl⟩
 
 theorem memLoad_reads_caller_memory :
-    (runSteps 3 memLoadConfig).result.values? = some [.i32 42] := by
-  native_decide
+    (runSteps 3 memLoadConfig).result.values? = some [.i32 42] := by native_decide
 
 def incCallConfig (env : HostEnv Unit) (st : Store Unit)
     (n : UInt32) : Config Unit :=
@@ -213,8 +208,7 @@ theorem incHost_satisfies : incEnv.Satisfies incModule incSpec := by
   subst args
   rfl
 
-private theorem inc_import_exists : 0 < incModule.imports.length := by
-  decide
+private theorem inc_import_exists : 0 < incModule.imports.length := by decide
 
 theorem inc_call_steps_abstract
     (env : HostEnv Unit) (hSat : env.Satisfies incModule incSpec)

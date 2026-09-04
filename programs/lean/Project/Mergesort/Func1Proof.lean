@@ -20,8 +20,7 @@ open scoped Wasm.SmallStep.Outcome
 
 private theorem func1_index :
     Project.Mergesort.module.funcs[1]? =
-      some Project.Mergesort.func1Def := by
-  rfl
+      some Project.Mergesort.func1Def := by rfl
 
 private theorem byteSlice_address_eq
     [WasmSmallStepGS hlc Universal.State]

@@ -85,11 +85,9 @@ def counterModule : Module :=
       { body := counterBody }
     ] }
 
-private theorem counter_import0 : 0 < counterModule.imports.length := by
-  decide
+private theorem counter_import0 : 0 < counterModule.imports.length := by decide
 
-private theorem counter_import1 : 1 < counterModule.imports.length := by
-  decide
+private theorem counter_import1 : 1 < counterModule.imports.length := by decide
 
 /-! ### Relational contracts -/
 

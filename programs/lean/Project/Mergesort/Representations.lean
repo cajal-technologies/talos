@@ -65,8 +65,7 @@ canonical stream encoding, not a second serializer. -/
 theorem encodeWord_eq_u32Bytes (value : UInt32) :
     Spec.encodeWord value =
         [u32Byte value 0, u32Byte value 1,
-        u32Byte value 2, u32Byte value 3] := by
-  rfl
+        u32Byte value 2, u32Byte value 3] := by rfl
 
 /-- Every exact four-byte sequence is the canonical encoding of the word
 obtained by the generated little-endian decoder. -/
@@ -1063,22 +1062,19 @@ theorem allocatorMemoryGrow_succeeds (memory : Mem) (finish : UInt32)
 /-- The frozen module declares no maximum, so its declaration-level cap is
 the interpreter's i32 hard cap. -/
 theorem module_memoryCap :
-    Project.Mergesort.module.memoryCap = Module.memoryHardCap := by
-  rfl
+    Project.Mergesort.module.memoryCap = Module.memoryHardCap := by rfl
 
 /-- Instantiation materializes that declaration-level cap in memory-resource
 metadata.  A modular allocator proof still needs a state-linked invariant
 showing that this immutable field remains the current store's metadata. -/
 theorem initialStore_memoryCaps :
     (Project.Mergesort.module.initialStore
-      (α := Universal.State)).memoryCaps = [Module.memoryHardCap] := by
-  rfl
+      (α := Universal.State)).memoryCaps = [Module.memoryHardCap] := by rfl
 
 theorem initialStore_memoryCap :
     (Project.Mergesort.module.initialStore
       (α := Universal.State)).memoryCap Project.Mergesort.module 0 =
-      Module.memoryHardCap := by
-  rfl
+      Module.memoryHardCap := by rfl
 
 /-- Map-native allocation history.  `nextId` makes freshness explicit; the
 map itself is exactly the value stored in ghost authority. -/
@@ -2844,8 +2840,7 @@ theorem bulk4_add_tail (count : Nat) :
   omega
 
 theorem bulk4_tail_lt (count : Nat) :
-    count % 4 < 4 := by
-  omega
+    count % 4 < 4 := by omega
 
 /-- Every four-store iteration stays strictly inside the decoded array and
 advances no farther than the bulk boundary. -/

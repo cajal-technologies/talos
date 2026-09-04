@@ -23,8 +23,7 @@ def tickModule : Module :=
     globals := [{ init := .i32 0 }] }
 
 theorem tickModule_initial_global :
-    (tickModule.initialStore (α := Unit)).globals.globals = [.i32 0] := by
-  native_decide
+    (tickModule.initialStore (α := Unit)).globals.globals = [.i32 0] := by native_decide
 
 def tickStore (st : Store Unit) : MachineStore Unit :=
   { runtime := { instances := #[{ module := tickModule, host := {} }], entry := ⟨0⟩ }

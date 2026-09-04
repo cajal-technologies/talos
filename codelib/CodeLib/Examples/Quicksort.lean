@@ -184,12 +184,10 @@ theorem quicksort_exec_singleton :
     runQuicksortExample 200 0 [42] = some [42] := by native_decide
 
 theorem quicksort_exec_five :
-    runQuicksortExample 15000 0 [5, 1, 4, 2, 3] = some [1, 2, 3, 4, 5] := by
-  native_decide
+    runQuicksortExample 15000 0 [5, 1, 4, 2, 3] = some [1, 2, 3, 4, 5] := by native_decide
 
 theorem quicksort_exec_duplicates :
-    runQuicksortExample 18000 0 [4, 1, 4, 2, 1, 3] = some [1, 1, 2, 3, 4, 4] := by
-  native_decide
+    runQuicksortExample 18000 0 [4, 1, 4, 2, 1, 3] = some [1, 1, 2, 3, 4, 4] := by native_decide
 
 theorem quicksort_exec_sorted :
     runQuicksortExample 10000 0 [1, 2, 3, 4] = some [1, 2, 3, 4] := by native_decide
@@ -294,8 +292,7 @@ def runQuicksortMutated1 (fuel : Nat) (arr : UInt32) (input : List UInt32) :
       | _ => none
 
 theorem quicksort_mutation_comparison :
-    runQuicksortMutated1 15000 0 [5, 1, 4, 2, 3] ≠ some [1, 2, 3, 4, 5] := by
-  native_decide
+    runQuicksortMutated1 15000 0 [5, 1, 4, 2, 3] ≠ some [1, 2, 3, 4, 5] := by native_decide
 
 private def partitionFunctionMutated2 : Function :=
   { params := [.i32, .i32, .i32]
@@ -324,8 +321,7 @@ def runQuicksortMutated2 (fuel : Nat) (arr : UInt32) (input : List UInt32) :
       | _ => none
 
 theorem quicksort_mutation_index :
-    runQuicksortMutated2 15000 0 [5, 1, 4, 2, 3] ≠ some [1, 2, 3, 4, 5] := by
-  native_decide
+    runQuicksortMutated2 15000 0 [5, 1, 4, 2, 3] ≠ some [1, 2, 3, 4, 5] := by native_decide
 
 private def quicksortFunctionMutated3 : Function :=
   { params := [.i32, .i32, .i32]
@@ -355,8 +351,7 @@ def runQuicksortMutated3 (fuel : Nat) (arr : UInt32) (input : List UInt32) :
       | _ => none
 
 theorem quicksort_mutation_bound :
-    runQuicksortMutated3 15000 0 [5, 1, 4, 2, 3] ≠ some [1, 2, 3, 4, 5] := by
-  native_decide
+    runQuicksortMutated3 15000 0 [5, 1, 4, 2, 3] ≠ some [1, 2, 3, 4, 5] := by native_decide
 
 private def partitionFunctionMutated4 : Function :=
   { params := [.i32, .i32, .i32]
@@ -388,8 +383,7 @@ def runQuicksortMutated4 (fuel : Nat) (arr : UInt32) (input : List UInt32) :
       | _ => none
 
 theorem quicksort_mutation_store :
-    runQuicksortMutated4 15000 0 [5, 1, 4, 2, 3] ≠ some [1, 2, 3, 4, 5] := by
-  native_decide
+    runQuicksortMutated4 15000 0 [5, 1, 4, 2, 3] ≠ some [1, 2, 3, 4, 5] := by native_decide
 
 /-! ## Oracle agreement -/
 
@@ -646,7 +640,6 @@ theorem quicksort_decoded_agrees :
     runQuicksortDecoded 15000 0 [4, 3, 2, 1] =
       runQuicksortExample 15000 0 [4, 3, 2, 1] ∧
     runQuicksortDecoded 20 0 [3, 2, 1] =
-      runQuicksortExample 20 0 [3, 2, 1] := by
-  native_decide
+      runQuicksortExample 20 0 [3, 2, 1] := by native_decide
 
 end Wasm.Examples.Quicksort

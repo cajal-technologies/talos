@@ -19,8 +19,7 @@ open scoped Wasm.SmallStep.Outcome
 
 private theorem func5_index :
     Project.Mergesort.module.funcs[5]? =
-      some Project.Mergesort.func5Def := by
-  rfl
+      some Project.Mergesort.func5Def := by rfl
 
 private abbrev func5ArithmeticPrefix : Program :=
   [.localGet 1, .const 0xFFFFFFFF, .add, .localTee 2,

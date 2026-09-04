@@ -99,8 +99,7 @@ theorem decodes_five_funcs : decoded.funcs.length = 5 := by native_decide
 
 theorem table_populated :
     (decoded.initialStore (α := Unit)).tables =
-      [[.funcref (some 0), .funcref (some 1), .funcref none]] := by
-  native_decide
+      [[.funcref (some 0), .funcref (some 1), .funcref none]] := by native_decide
 
 theorem sz_runs : runVals 2 [] = some [.i32 3] := by native_decide
 

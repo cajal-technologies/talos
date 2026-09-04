@@ -56,8 +56,7 @@ def fillFinalStore : MachineStore Unit :=
 
 theorem fill_then_load_returns_repeated_byte :
     (runSteps 7 fillThenReadConfig).result =
-      .success [.i64 0xABABABABABABABAB] fillFinalStore := by
-  rfl
+      .success [.i64 0xABABABABABABABAB] fillFinalStore := by rfl
 
 /-- Fuel-free total contract: the returned word and all affected bytes agree. -/
 theorem fill_then_load_terminates :
@@ -79,8 +78,7 @@ theorem fill_then_load_partial :
 /-- The failing instruction is atomic: the trap retains the original store. -/
 theorem fill_out_of_bounds_traps :
     (runSteps 4 fillTrapConfig).result =
-      .trapped .outOfBoundsMemory fillStore := by
-  rfl
+      .trapped .outOfBoundsMemory fillStore := by rfl
 
 /-- Fuel-free trap contract, including atomic preservation of the store. -/
 theorem fill_out_of_bounds_trapsWith :

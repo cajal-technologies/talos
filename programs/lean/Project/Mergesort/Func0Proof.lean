@@ -20,8 +20,7 @@ open scoped Wasm.SmallStep.Outcome
 
 private theorem func0_index :
     Project.Mergesort.module.funcs[0]? =
-      some Project.Mergesort.func0Def := by
-  rfl
+      some Project.Mergesort.func0Def := by rfl
 
 private def func0Locals
     (result oldCapacity oldPtr newCapacity alignment elementSize tag pointer : UInt32)

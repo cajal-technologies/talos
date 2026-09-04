@@ -124,8 +124,7 @@ theorem cast_call :
 
 /-- Casting a `$ft` funcref *down* to `$sub` still traps. -/
 theorem cast_super_traps :
-    runTrapMsg 20 m 7 (m.initialStore (α := Unit)) [] = some "cast failure" := by
-  native_decide
+    runTrapMsg 20 m 7 (m.initialStore (α := Unit)) [] = some "cast failure" := by native_decide
 
 def castSuperConfig : Config Unit :=
   { expr := .running
@@ -175,13 +174,11 @@ def structM : Module :=
 
 /-- The comment's struct-twin case: a `$a` value tests `1` against `$b`. -/
 theorem struct_twin :
-    runValues 20 structM 0 (structM.initialStore (α := Unit)) [] = [.i32 1] := by
-  native_decide
+    runValues 20 structM 0 (structM.initialStore (α := Unit)) [] = [.i32 1] := by native_decide
 
 /-- A structurally *different* struct type still tests `0`. -/
 theorem struct_other :
-    runValues 20 structM 1 (structM.initialStore (α := Unit)) [] = [.i32 0] := by
-  native_decide
+    runValues 20 structM 1 (structM.initialStore (α := Unit)) [] = [.i32 0] := by native_decide
 
 /-- Iso-recursive equivalence respects recursion-group boundaries: a
 member of a two-member `(rec …)` group is *not* equivalent to the same
@@ -224,8 +221,7 @@ private def castCallM   : Module := decodeOrDefault castCallWat
 private def structTwinM : Module := decodeOrDefault structTwinWat
 
 /-- The decoder records `$impl`'s declared `(type $ft)`. -/
-theorem decoded_typeIdx : refTestM.funcs.map (·.typeIdx) = [some 0, none] := by
-  native_decide
+theorem decoded_typeIdx : refTestM.funcs.map (·.typeIdx) = [some 0, none] := by native_decide
 
 /-- wasmtime/V8 return `1`; Talos previously returned `0`. -/
 theorem decoded_ref_test :

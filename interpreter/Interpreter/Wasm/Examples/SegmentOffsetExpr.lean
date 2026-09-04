@@ -58,8 +58,7 @@ def callAt2Config : Config Unit := functionConfig 2
 
 theorem readByte4_returns_65 :
     (runSteps 3 readByte4Config).result.values? =
-      some [.i32 65] := by
-  native_decide
+      some [.i32 65] := by native_decide
 
 theorem readByte4_terminates :
     TerminatesWith readByte4Config (fun values store =>
@@ -83,8 +82,7 @@ theorem readByte4_partial :
 
 theorem callAt2_returns_42 :
     (runSteps 16 callAt2Config).result.values? =
-      some [.i32 42] := by
-  native_decide
+      some [.i32 42] := by native_decide
 
 theorem callAt2_terminates :
     TerminatesWith callAt2Config (fun values _ =>
@@ -96,8 +94,7 @@ theorem callAt2_partial :
       values = [.i32 42]) :=
   callAt2_terminates.toPartiallyMeets
 
-theorem byte0_still_zero : store0.mem.read8 0 = 0 := by
-  native_decide
+theorem byte0_still_zero : store0.mem.read8 0 = 0 := by native_decide
 
 end SegmentOffsetExpr
 end Wasm

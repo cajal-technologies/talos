@@ -87,8 +87,7 @@ def copyWordsInnerFrame : Wasm.SmallStep.ControlFrame :=
 
 theorem CopyWords_eq_structured :
     CopyWords = [.const 0, .localSet 3,
-      .loop 0 0 CopyWordsLoopBody] := by
-  rfl
+      .loop 0 0 CopyWordsLoopBody] := by rfl
 
 /-- One real small-step copy iteration reads the next authoritative source
 word, writes the destination, and preserves source ownership. -/

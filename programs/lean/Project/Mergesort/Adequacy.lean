@@ -65,8 +65,7 @@ theorem startCallConfig_eq (input : List UInt32) :
     startCallConfig? (Universal.envFor Project.Mergesort.module)
       Project.Mergesort.module "mergesort"
       (Universal.State.ofInput (serialize input)) =
-      some (entryConfig input) := by
-  rfl
+      some (entryConfig input) := by rfl
 
 /-- Public postcondition before the final machine store is hidden. -/
 def entryPost (input : List UInt32) (outcome : ObservableOutcome)
@@ -123,8 +122,7 @@ theorem entryHeap_below_heapBase : HeapBelow entryHeap heapBase.toNat := by
   exact h.mono (by decide)
 
 private theorem entryCursorBytes_zero :
-    entryCursorBytes = [0, 0, 0, 0] := by
-  decide
+    entryCursorBytes = [0, 0, 0, 0] := by decide
 
 private theorem entryCursorBytes_u32 :
   entryCursorBytes =
@@ -135,8 +133,7 @@ private theorem entryHost_eq (input : List UInt32) :
     Universal.State.ofInput (serialize input) =
       ({ stdio := { input := serialize input, output := [] }
          random := default
-         oom := { raised := false } } : Universal.State) := by
-  rfl
+         oom := { raised := false } } : Universal.State) := by rfl
 
 theorem entryHeap_facts (input : List UInt32) :
     heapAgreesWithMem entryHeap (storeResolve (entryConfig input).store) ∧

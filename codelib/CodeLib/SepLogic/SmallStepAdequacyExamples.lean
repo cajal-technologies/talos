@@ -2315,8 +2315,7 @@ theorem signedBranch_decoded_agrees :
     runSignedBranch 50 signedBranchModule 4294967295 0 =
       runSignedBranch 50 signedBranchModuleDecoded 4294967295 0 ∧
     runSignedBranch 100 signedBranchModule 42 43 =
-      runSignedBranch 100 signedBranchModuleDecoded 42 43 := by
-  native_decide
+      runSignedBranch 100 signedBranchModuleDecoded 42 43 := by native_decide
 
 private def fillThenReadWat : String := include_str "fill_then_read.wat"
 
@@ -2337,8 +2336,7 @@ theorem fillThenRead_decoded_agrees :
     runFillThenRead 20 fillThenReadModule 255 = runFillThenRead 20 fillThenReadModuleDecoded 255 ∧
     runFillThenRead 50 fillThenReadModule 171 = runFillThenRead 50 fillThenReadModuleDecoded 171 ∧
     runFillThenRead 100 fillThenReadModule 1000 =
-      runFillThenRead 100 fillThenReadModuleDecoded 1000 := by
-  native_decide
+      runFillThenRead 100 fillThenReadModuleDecoded 1000 := by native_decide
 
 private def exceptionLifecycleWat : String := include_str "exception_lifecycle.wat"
 
@@ -2364,7 +2362,6 @@ theorem exceptionLifecycle_decoded_agrees :
     runExceptionLifecycle 50 exceptionLifecycleModule 255 =
       runExceptionLifecycle 50 exceptionLifecycleModuleDecoded 255 ∧
     runExceptionLifecycle 100 exceptionLifecycleModule 1000 =
-      runExceptionLifecycle 100 exceptionLifecycleModuleDecoded 1000 := by
-  native_decide
+      runExceptionLifecycle 100 exceptionLifecycleModuleDecoded 1000 := by native_decide
 
 end Wasm.SmallStep

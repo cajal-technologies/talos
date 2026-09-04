@@ -107,12 +107,10 @@ private abbrev writeImport : ImportDecl :=
     params := [.i32, .i32], results := [] }
 
 private theorem readImport_index :
-    Project.Mergesort.module.imports[0] = readImport := by
-  rfl
+    Project.Mergesort.module.imports[0] = readImport := by rfl
 
 private theorem writeImport_index :
-    Project.Mergesort.module.imports[1] = writeImport := by
-  rfl
+    Project.Mergesort.module.imports[1] = writeImport := by rfl
 
 /-- The authoritative `stdio.read` import contract. -/
 theorem import0_correct [WasmSmallStepGS hlc Universal.State] :

@@ -2355,8 +2355,7 @@ def func1OuterFrame (body : Program) : Wasm.SmallStep.ControlFrame :=
 
 theorem func1_afterSpill_shape :
     func1.drop 12 =
-      [.block 0 0 func1OuterBody] ++ func1EpilogueProg := by
-  rfl
+      [.block 0 0 func1OuterBody] ++ func1EpilogueProg := by rfl
 
 /-- With both operands nonzero, the generated nested guards leave their inner
 and middle blocks and transfer control to `meatLoopProg` under the one

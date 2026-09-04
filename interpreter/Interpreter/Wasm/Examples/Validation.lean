@@ -538,437 +538,343 @@ def brOnNonNullRefinementValidationModule : Module :=
 
 theorem validator_accepts_passive_data_without_linear_memory :
     passiveDataWithoutMemoryModule.dataWithoutMemory = false ∧
-      validationSucceeds passiveDataWithoutMemoryModule = true := by
-  native_decide
+      validationSucceeds passiveDataWithoutMemoryModule = true := by native_decide
 
 theorem validator_rejects_active_data_without_linear_memory :
     activeDataWithoutMemoryModule.dataWithoutMemory = true ∧
-      validationErrorIs activeDataWithoutMemoryModule "unknown memory" = true := by
-  native_decide
+      validationErrorIs activeDataWithoutMemoryModule "unknown memory" = true := by native_decide
 
 theorem validator_accepts_float_constant_global :
-    validationSucceeds floatConstantGlobalValidationModule = true := by
-  native_decide
+    validationSucceeds floatConstantGlobalValidationModule = true := by native_decide
 
 theorem validator_rejects_immutable_array_init_data :
     validationErrorIs immutableArrayInitDataValidationModule
-      "immutable array" = true := by
-  native_decide
+      "immutable array" = true := by native_decide
 
 theorem validator_rejects_reference_array_init_data :
     validationErrorIs referenceArrayInitDataValidationModule
-      "array type is not numeric or vector" = true := by
-  native_decide
+      "array type is not numeric or vector" = true := by native_decide
 
 theorem validator_accepts_precise_array_constructor_result :
-    validationSucceeds preciseArrayConstructorValidationModule = true := by
-  native_decide
+    validationSucceeds preciseArrayConstructorValidationModule = true := by native_decide
 
 theorem validator_rejects_cross_typed_array_get :
     validationErrorIs crossTypedArrayGetValidationModule
-      "type mismatch" = true := by
-  native_decide
+      "type mismatch" = true := by native_decide
 
 theorem validator_accepts_declarative_function_reference :
-    validationSucceeds declarativeFunctionReferenceValidationModule = true := by
-  native_decide
+    validationSucceeds declarativeFunctionReferenceValidationModule = true := by native_decide
 
 theorem validator_accepts_precise_function_reference_global :
-    validationSucceeds preciseFunctionReferenceGlobalValidationModule = true := by
-  native_decide
+    validationSucceeds preciseFunctionReferenceGlobalValidationModule = true := by native_decide
 
 theorem validator_accepts_nonnull_element_for_nullable_table :
-    validationSucceeds covariantElementTableValidationModule = true := by
-  native_decide
+    validationSucceeds covariantElementTableValidationModule = true := by native_decide
 
 theorem validator_accepts_br_on_non_null_refinement :
-    validationSucceeds brOnNonNullRefinementValidationModule = true := by
-  native_decide
+    validationSucceeds brOnNonNullRefinementValidationModule = true := by native_decide
 
 theorem validator_rejects_unknown_data_drop :
-    validationErrorIs invalidDataDropModule "unknown data segment" = true := by
-  native_decide
+    validationErrorIs invalidDataDropModule "unknown data segment" = true := by native_decide
 
 theorem validator_rejects_unknown_memory_init_segment :
     validationErrorIs invalidMemoryInitIndexModule
-      "unknown data segment" = true := by
-  native_decide
+      "unknown data segment" = true := by native_decide
 
 theorem validator_accepts_typed_memory64_init :
-    validationSucceeds validMemoryInit64ValidationModule = true := by
-  native_decide
+    validationSucceeds validMemoryInit64ValidationModule = true := by native_decide
 
 theorem validator_rejects_memory_fill_without_memory :
     validationErrorIs invalidMemoryFillWithoutMemoryModule
-      "unknown memory" = true := by
-  native_decide
+      "unknown memory" = true := by native_decide
 
 theorem validator_accepts_typed_memory64_fill :
-    validationSucceeds validMemoryFill64ValidationModule = true := by
-  native_decide
+    validationSucceeds validMemoryFill64ValidationModule = true := by native_decide
 
 theorem validator_rejects_mistyped_memory64_copy_length :
     validationErrorIs invalidMemoryCopy64LengthModule
-      "type mismatch" = true := by
-  native_decide
+      "type mismatch" = true := by native_decide
 
 theorem validator_accepts_typed_memory64_copy :
-    validationSucceeds validMemoryCopy64ValidationModule = true := by
-  native_decide
+    validationSucceeds validMemoryCopy64ValidationModule = true := by native_decide
 
 theorem validator_rejects_load_without_memory :
     validationErrorIs invalidLoadWithoutMemoryModule
-      "unknown memory" = true := by
-  native_decide
+      "unknown memory" = true := by native_decide
 
 theorem validator_rejects_mistyped_memory64_load_address :
     validationErrorIs invalidMemory64LoadAddressModule
-      "type mismatch" = true := by
-  native_decide
+      "type mismatch" = true := by native_decide
 
 theorem validator_accepts_typed_memory64_load :
-    validationSucceeds validMemory64LoadValidationModule = true := by
-  native_decide
+    validationSucceeds validMemory64LoadValidationModule = true := by native_decide
 
 theorem validator_accepts_typed_memory64_i64_store :
-    validationSucceeds validMemory64I64StoreValidationModule = true := by
-  native_decide
+    validationSucceeds validMemory64I64StoreValidationModule = true := by native_decide
 
 theorem validator_rejects_memory_size_without_memory :
     validationErrorIs invalidMemorySizeWithoutMemoryModule
-      "unknown memory" = true := by
-  native_decide
+      "unknown memory" = true := by native_decide
 
 theorem validator_accepts_typed_memory64_size :
-    validationSucceeds validMemory64SizeValidationModule = true := by
-  native_decide
+    validationSucceeds validMemory64SizeValidationModule = true := by native_decide
 
 theorem validator_rejects_mistyped_memory64_grow_delta :
     validationErrorIs invalidMemory64GrowDeltaModule
-      "type mismatch" = true := by
-  native_decide
+      "type mismatch" = true := by native_decide
 
 theorem validator_accepts_typed_memory64_grow :
-    validationSucceeds validMemory64GrowValidationModule = true := by
-  native_decide
+    validationSucceeds validMemory64GrowValidationModule = true := by native_decide
 
 theorem validator_rejects_unknown_global_get :
     validationErrorIs invalidGlobalGetIndexModule
-      "unknown global" = true := by
-  native_decide
+      "unknown global" = true := by native_decide
 
 theorem validator_rejects_unknown_global_set :
     validationErrorIs invalidGlobalSetIndexModule
-      "unknown global" = true := by
-  native_decide
+      "unknown global" = true := by native_decide
 
 theorem validator_rejects_immutable_global_set :
     validationErrorIs invalidImmutableGlobalSetModule
-      "immutable global" = true := by
-  native_decide
+      "immutable global" = true := by native_decide
 
 theorem validator_rejects_mistyped_global_initializer :
     validationErrorIs invalidGlobalInitializerTypeModule
-      "type mismatch" = true := by
-  native_decide
+      "type mismatch" = true := by native_decide
 
 theorem validator_rejects_nonconstant_global_initializer :
     validationErrorIs invalidGlobalInitializerInstructionModule
-      "constant expression required" = true := by
-  native_decide
+      "constant expression required" = true := by native_decide
 
 theorem validator_rejects_forward_global_initializer :
     validationErrorIs invalidForwardGlobalInitializerModule
-      "unknown global" = true := by
-  native_decide
+      "unknown global" = true := by native_decide
 
 theorem validator_rejects_unknown_element_drop :
     validationErrorIs invalidElemDropModule
-      "unknown element segment" = true := by
-  native_decide
+      "unknown element segment" = true := by native_decide
 
 theorem validator_rejects_unknown_table_init_table :
-    validationErrorIs invalidTableInitTableModule "unknown table" = true := by
-  native_decide
+    validationErrorIs invalidTableInitTableModule "unknown table" = true := by native_decide
 
 theorem validator_rejects_unknown_table_init_element :
     validationErrorIs invalidTableInitElementModule
-      "unknown element segment" = true := by
-  native_decide
+      "unknown element segment" = true := by native_decide
 
 theorem validator_accepts_typed_table64_init :
-    validationSucceeds validTableInit64ValidationModule = true := by
-  native_decide
+    validationSucceeds validTableInit64ValidationModule = true := by native_decide
 
 theorem validator_rejects_unknown_table_get :
-    validationErrorIs invalidTableGetIndexModule "unknown table" = true := by
-  native_decide
+    validationErrorIs invalidTableGetIndexModule "unknown table" = true := by native_decide
 
 theorem validator_accepts_typed_table64_fill :
-    validationSucceeds validTable64FillValidationModule = true := by
-  native_decide
+    validationSucceeds validTable64FillValidationModule = true := by native_decide
 
 theorem validator_accepts_typed_mixed_table_copy :
-    validationSucceeds validMixedTableCopyValidationModule = true := by
-  native_decide
+    validationSucceeds validMixedTableCopyValidationModule = true := by native_decide
 
 theorem validator_rejects_mistyped_mixed_table_copy_length :
     validationErrorIs invalidMixedTableCopyLengthModule
-      "type mismatch" = true := by
-  native_decide
+      "type mismatch" = true := by native_decide
 
 theorem validator_rejects_unknown_direct_call :
     validationErrorIs invalidDirectCallIndexModule
-      "unknown function" = true := by
-  native_decide
+      "unknown function" = true := by native_decide
 
 theorem validator_accepts_typed_imported_call :
-    validationSucceeds validImportedCallValidationModule = true := by
-  native_decide
+    validationSucceeds validImportedCallValidationModule = true := by native_decide
 
 theorem validator_rejects_unknown_indirect_call_type :
     validationErrorIs invalidIndirectCallTypeModule
-      "unknown type" = true := by
-  native_decide
+      "unknown type" = true := by native_decide
 
 theorem validator_accepts_typed_table64_indirect_call :
-    validationSucceeds validTable64IndirectCallValidationModule = true := by
-  native_decide
+    validationSucceeds validTable64IndirectCallValidationModule = true := by native_decide
 
 theorem validator_rejects_unknown_ref_func :
     validationErrorIs invalidRefFuncIndexModule
-      "unknown function" = true := by
-  native_decide
+      "unknown function" = true := by native_decide
 
 theorem validator_rejects_extra_block_value :
     validationErrorIs invalidStructuredBlockExtraValueModule
-      "type mismatch" = true := by
-  native_decide
+      "type mismatch" = true := by native_decide
 
 theorem validator_rejects_missing_block_result :
     validationErrorIs invalidStructuredBlockMissingResultModule
-      "type mismatch" = true := by
-  native_decide
+      "type mismatch" = true := by native_decide
 
 theorem validator_rejects_mismatched_if_results :
     validationErrorIs invalidStructuredIfResultMismatchModule
-      "type mismatch" = true := by
-  native_decide
+      "type mismatch" = true := by native_decide
 
 theorem validator_accepts_branch_stack_polymorphism :
-    validationSucceeds validStructuredBranchPolymorphicModule = true := by
-  native_decide
+    validationSucceeds validStructuredBranchPolymorphicModule = true := by native_decide
 
 theorem validator_rejects_invalid_simd_lane :
     validationErrorIs invalidSimdExtractLaneModule
-      "invalid lane index" = true := by
-  native_decide
+      "invalid lane index" = true := by native_decide
 
 theorem validator_rejects_mistyped_simd_splat :
     validationErrorIs invalidSimdSplatOperandModule
-      "type mismatch" = true := by
-  native_decide
+      "type mismatch" = true := by native_decide
 
 theorem validator_accepts_typed_simd_splat :
-    validationSucceeds validSimdSplatValidationModule = true := by
-  native_decide
+    validationSucceeds validSimdSplatValidationModule = true := by native_decide
 
 theorem validator_rejects_simd_load_without_memory :
     validationErrorIs invalidSimdLoadWithoutMemoryModule
-      "unknown memory" = true := by
-  native_decide
+      "unknown memory" = true := by native_decide
 
 theorem validator_accepts_memory64_simd_load :
-    validationSucceeds validMemory64SimdLoadValidationModule = true := by
-  native_decide
+    validationSucceeds validMemory64SimdLoadValidationModule = true := by native_decide
 
 theorem validator_rejects_unknown_local :
     validationErrorIs invalidLocalIndexValidationModule
-      "unknown local" = true := by
-  native_decide
+      "unknown local" = true := by native_decide
 
 theorem validator_rejects_unknown_local_after_unreachable :
     validationErrorIs invalidUnreachableLocalIndexValidationModule
-      "unknown local" = true := by
-  native_decide
+      "unknown local" = true := by native_decide
 
 theorem validator_accepts_param_and_local_indices :
-    validationSucceeds validParamAndLocalIndexValidationModule = true := by
-  native_decide
+    validationSucceeds validParamAndLocalIndexValidationModule = true := by native_decide
 
 theorem validator_rejects_unknown_function_export :
     validationErrorIs invalidFunctionExportValidationModule
-      "unknown function" = true := by
-  native_decide
+      "unknown function" = true := by native_decide
 
 theorem validator_rejects_duplicate_cross_kind_export :
     validationErrorIs invalidDuplicateCrossKindExportValidationModule
-      "duplicate export name" = true := by
-  native_decide
+      "duplicate export name" = true := by native_decide
 
 theorem validator_rejects_start_signature :
     validationErrorIs invalidStartSignatureValidationModule
-      "start function" = true := by
-  native_decide
+      "start function" = true := by native_decide
 
 theorem validator_rejects_unknown_start_function :
     validationErrorIs invalidStartIndexValidationModule
-      "unknown function" = true := by
-  native_decide
+      "unknown function" = true := by native_decide
 
 theorem validator_accepts_imported_start_function :
-    validationSucceeds validImportedStartValidationModule = true := by
-  native_decide
+    validationSucceeds validImportedStartValidationModule = true := by native_decide
 
 theorem validator_rejects_decoder_synthesized_data_memory :
     validationErrorIs invalidSyntheticDataMemoryValidationModule
-      "unknown memory" = true := by
-  native_decide
+      "unknown memory" = true := by native_decide
 
 theorem validator_rejects_mistyped_data_offset :
     validationErrorIs invalidDataOffsetTypeValidationModule
-      "type mismatch" = true := by
-  native_decide
+      "type mismatch" = true := by native_decide
 
 theorem validator_accepts_memory64_data_offset :
-    validationSucceeds validMemory64DataOffsetValidationModule = true := by
-  native_decide
+    validationSucceeds validMemory64DataOffsetValidationModule = true := by native_decide
 
 theorem validator_rejects_active_element_without_table :
     validationErrorIs invalidActiveElementTableValidationModule
-      "unknown table" = true := by
-  native_decide
+      "unknown table" = true := by native_decide
 
 theorem validator_rejects_active_element_type_mismatch :
     validationErrorIs invalidActiveElementTypeValidationModule
-      "type mismatch" = true := by
-  native_decide
+      "type mismatch" = true := by native_decide
 
 theorem validator_accepts_table64_element_offset :
-    validationSucceeds validTable64ElementOffsetValidationModule = true := by
-  native_decide
+    validationSucceeds validTable64ElementOffsetValidationModule = true := by native_decide
 
 theorem validator_rejects_direct_tail_call_result_mismatch :
     validationErrorIs invalidDirectTailCallResultValidationModule
-      "type mismatch" = true := by
-  native_decide
+      "type mismatch" = true := by native_decide
 
 theorem validator_accepts_direct_tail_call :
-    validationSucceeds validDirectTailCallValidationModule = true := by
-  native_decide
+    validationSucceeds validDirectTailCallValidationModule = true := by native_decide
 
 theorem validator_rejects_indirect_tail_call_result_mismatch :
     validationErrorIs invalidIndirectTailCallResultValidationModule
-      "type mismatch" = true := by
-  native_decide
+      "type mismatch" = true := by native_decide
 
 theorem validator_rejects_reference_tail_call_result_mismatch :
     validationErrorIs invalidReferenceTailCallResultValidationModule
-      "type mismatch" = true := by
-  native_decide
+      "type mismatch" = true := by native_decide
 
 theorem validator_rejects_polymorphic_ref_as_non_null_result :
     validationErrorIs invalidRefAsNonNullPolymorphicResultValidationModule
-      "type mismatch" = true := by
-  native_decide
+      "type mismatch" = true := by native_decide
 
 theorem validator_rejects_ref_is_null_on_scalar :
     validationErrorIs invalidRefIsNullScalarValidationModule
-      "type mismatch" = true := by
-  native_decide
+      "type mismatch" = true := by native_decide
 
 theorem validator_accepts_polymorphic_reference_operations :
-    validationSucceeds validPolymorphicReferenceValidationModule = true := by
-  native_decide
+    validationSucceeds validPolymorphicReferenceValidationModule = true := by native_decide
 
 theorem validator_rejects_copy_into_immutable_array :
     validationErrorIs invalidImmutableArrayCopyValidationModule
-      "immutable array" = true := by
-  native_decide
+      "immutable array" = true := by native_decide
 
 theorem validator_rejects_mismatched_array_copy :
     validationErrorIs invalidMismatchedArrayCopyValidationModule
-      "array types do not match" = true := by
-  native_decide
+      "array types do not match" = true := by native_decide
 
 theorem validator_accepts_matching_array_copy :
-    validationSucceeds validArrayCopyValidationModule = true := by
-  native_decide
+    validationSucceeds validArrayCopyValidationModule = true := by native_decide
 
 theorem validator_rejects_typed_block_result_mismatch :
     validationErrorIs invalidTypedBlockResultValidationModule
-      "type mismatch" = true := by
-  native_decide
+      "type mismatch" = true := by native_decide
 
 theorem validator_rejects_typed_block_branch_mismatch :
     validationErrorIs invalidTypedBlockBranchValidationModule
-      "type mismatch" = true := by
-  native_decide
+      "type mismatch" = true := by native_decide
 
 theorem validator_rejects_typed_loop_parameter_mismatch :
     validationErrorIs invalidTypedLoopParameterValidationModule
-      "type mismatch" = true := by
-  native_decide
+      "type mismatch" = true := by native_decide
 
 theorem validator_accepts_typed_structured_control :
-    validationSucceeds validTypedStructuredValidationModule = true := by
-  native_decide
+    validationSucceeds validTypedStructuredValidationModule = true := by native_decide
 
 theorem validator_rejects_unknown_throw_tag :
     validationErrorIs invalidUnknownThrowValidationModule
-      "unknown tag" = true := by
-  native_decide
+      "unknown tag" = true := by native_decide
 
 theorem validator_rejects_missing_throw_argument :
     validationErrorIs invalidThrowArgumentValidationModule
-      "type mismatch" = true := by
-  native_decide
+      "type mismatch" = true := by native_decide
 
 theorem validator_rejects_missing_throw_ref_operand :
     validationErrorIs invalidThrowRefOperandValidationModule
-      "type mismatch" = true := by
-  native_decide
+      "type mismatch" = true := by native_decide
 
 theorem validator_rejects_try_table_result_mismatch :
     validationErrorIs invalidTryTableResultValidationModule
-      "type mismatch" = true := by
-  native_decide
+      "type mismatch" = true := by native_decide
 
 theorem validator_rejects_catch_ref_target_mismatch :
     validationErrorIs invalidCatchRefTargetValidationModule
-      "type mismatch" = true := by
-  native_decide
+      "type mismatch" = true := by native_decide
 
 theorem validator_accepts_typed_try_table_catch :
-    validationSucceeds validTryTableCatchValidationModule = true := by
-  native_decide
+    validationSucceeds validTryTableCatchValidationModule = true := by native_decide
 
 theorem validator_rejects_br_on_null_scalar :
     validationErrorIs invalidBrOnNullScalarValidationModule
-      "type mismatch" = true := by
-  native_decide
+      "type mismatch" = true := by native_decide
 
 theorem validator_rejects_br_on_non_null_target_mismatch :
     validationErrorIs invalidBrOnNonNullTargetValidationModule
-      "type mismatch" = true := by
-  native_decide
+      "type mismatch" = true := by native_decide
 
 theorem validator_accepts_reference_branch :
-    validationSucceeds validReferenceBranchValidationModule = true := by
-  native_decide
+    validationSucceeds validReferenceBranchValidationModule = true := by native_decide
 
 theorem validator_rejects_broad_return_call_ref :
     validationErrorIs invalidBroadReturnCallRefValidationModule
-      "type mismatch" = true := by
-  native_decide
+      "type mismatch" = true := by native_decide
 
 theorem validator_accepts_precise_return_call_ref :
-    validationSucceeds validPreciseReturnCallRefValidationModule = true := by
-  native_decide
+    validationSucceeds validPreciseReturnCallRefValidationModule = true := by native_decide
 
 theorem validator_rejects_ref_eq_on_anyref :
     validationErrorIs invalidRefEqAnyValidationModule
-      "type mismatch" = true := by
-  native_decide
+      "type mismatch" = true := by native_decide
 
 end Wasm.Examples.SmallStep

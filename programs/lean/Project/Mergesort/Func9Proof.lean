@@ -19,8 +19,7 @@ open scoped Wasm.SmallStep.Outcome
 
 private theorem func9_index :
     Project.Mergesort.module.funcs[9]? =
-      some Project.Mergesort.func9Def := by
-  rfl
+      some Project.Mergesort.func9Def := by rfl
 
 private abbrev func9ZeroBody : Program :=
   [.localGet 1, .eqz, .br_if 0,

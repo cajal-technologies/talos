@@ -19,8 +19,7 @@ open scoped Wasm.SmallStep.Outcome
 
 private theorem func8_index :
     Project.Mergesort.module.funcs[8]? =
-      some Project.Mergesort.func8Def := by
-  rfl
+      some Project.Mergesort.func8Def := by rfl
 
 private abbrev func8CopyBody : Program :=
   [.localGet 2, .eqz, .br_if 0,
@@ -77,8 +76,7 @@ private abbrev func8PostArithmetic : Program :=
 private theorem func8_shape :
     Project.Mergesort.func8 =
       [.block 0 0 (func8ArithmeticPrefix ++ func8PostArithmetic),
-        .call 9, .unreachable] := by
-  rfl
+        .call 9, .unreachable] := by rfl
 
 /-- The post-commit tail copies the whole old allocation, retires it, and
 returns the new pointer.  All allocation arithmetic and memory growth have

@@ -23,8 +23,7 @@ private abbrev oomImport : ImportDecl :=
   { «module» := "talos", name := "oom", params := [], results := [] }
 
 theorem oomImport_index :
-    Project.Mergesort.module.imports[2] = oomImport := by
-  rfl
+    Project.Mergesort.module.imports[2] = oomImport := by rfl
 
 /-- Authoritative total-WP contract for reachable calls to import 2,
 `talos.oom`.  Its implementation has no return or throw outcome for the valid

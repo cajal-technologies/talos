@@ -506,8 +506,7 @@ private theorem take_eq_self_of_length_le {β : Type} (xs : List β) (n : Nat)
           rw [ih n (Nat.le_of_succ_le_succ h)]
 
 @[simp] private theorem initialStore_host (input : List UInt8) :
-    (initialStore input).host = Wasm.StdIO.State.ofInput input := by
-  rfl
+    (initialStore input).host = Wasm.StdIO.State.ofInput input := by rfl
 
 set_option maxRecDepth 100000 in
 private theorem initial_byteCapacity (input : List UInt8) :
@@ -565,8 +564,7 @@ theorem initConfig_sort (input : List UInt32) :
     SmallStep.initConfig { module, host := ({} : HostEnv Unit) } 2
       (replaceHost (afterRead input) ())
       (mergeSortArguments source scratch input.length []) =
-      .ok (sortConfig input) := by
-  rfl
+      .ok (sortConfig input) := by rfl
 
 set_option maxRecDepth 10000 in
 theorem read_fits (input : List UInt32)
@@ -1267,21 +1265,17 @@ theorem complete : Complete := by
     change 4 * input.length ≤ 32768 at hfit
     omega
 
-theorem exec_empty : run 100 (serialize []) = some (serialize []) := by
-  native_decide
+theorem exec_empty : run 100 (serialize []) = some (serialize []) := by native_decide
 
 theorem exec_five :
     run 12000 (serialize [5, 1, 4, 2, 3]) =
-      some (serialize [1, 2, 3, 4, 5]) := by
-  native_decide
+      some (serialize [1, 2, 3, 4, 5]) := by native_decide
 
 theorem exec_duplicates :
     run 15000 (serialize [4, 1, 4, 2, 1, 3]) =
-      some (serialize [1, 1, 2, 3, 4, 4]) := by
-  native_decide
+      some (serialize [1, 1, 2, 3, 4, 4]) := by native_decide
 
 theorem exec_values_five :
-    runValues 12000 [5, 1, 4, 2, 3] = some [1, 2, 3, 4, 5] := by
-  native_decide
+    runValues 12000 [5, 1, 4, 2, 3] = some [1, 2, 3, 4, 5] := by native_decide
 
 end Wasm.Examples.MergeSort.StdIO

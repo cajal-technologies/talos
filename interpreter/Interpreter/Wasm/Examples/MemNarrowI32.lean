@@ -46,23 +46,17 @@ def narrowI32Config (index : Nat) : Config Unit :=
     store := narrowI32Store }
 
 theorem load8U_returns_byte :
-    (runSteps 8 (narrowI32Config 0)).result.values? = some [.i32 0x42] := by
-  native_decide
+    (runSteps 8 (narrowI32Config 0)).result.values? = some [.i32 0x42] := by native_decide
 theorem load8S_sign_extends :
-    (runSteps 8 (narrowI32Config 1)).result.values? = some [.i32 0xFFFFFFFF] := by
-  native_decide
+    (runSteps 8 (narrowI32Config 1)).result.values? = some [.i32 0xFFFFFFFF] := by native_decide
 theorem load16U_returns_halfword :
-    (runSteps 8 (narrowI32Config 2)).result.values? = some [.i32 0xABCD] := by
-  native_decide
+    (runSteps 8 (narrowI32Config 2)).result.values? = some [.i32 0xABCD] := by native_decide
 theorem load16S_sign_extends :
-    (runSteps 8 (narrowI32Config 3)).result.values? = some [.i32 0xFFFFFFCD] := by
-  native_decide
+    (runSteps 8 (narrowI32Config 3)).result.values? = some [.i32 0xFFFFFFCD] := by native_decide
 theorem store8_roundtrip :
-    (runSteps 8 (narrowI32Config 4)).result.values? = some [.i32 0xAB] := by
-  native_decide
+    (runSteps 8 (narrowI32Config 4)).result.values? = some [.i32 0xAB] := by native_decide
 theorem store16_roundtrip :
-    (runSteps 8 (narrowI32Config 5)).result.values? = some [.i32 0xABCD] := by
-  native_decide
+    (runSteps 8 (narrowI32Config 5)).result.values? = some [.i32 0xABCD] := by native_decide
 
 theorem narrowI32_terminates :
     TerminatesWith (narrowI32Config 0) (fun vs _ => vs = [.i32 0x42]) ∧

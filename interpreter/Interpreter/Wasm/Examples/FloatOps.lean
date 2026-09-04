@@ -73,41 +73,33 @@ def floatConfig (index : Nat) : Config Unit :=
 
 theorem f64_arith :
     (runSteps 10 (floatConfig 0)).result.values? =
-      some [.f64 (20.0 : Float).toBits] := by
-  native_decide
+      some [.f64 (20.0 : Float).toBits] := by native_decide
 
 theorem f32_arith :
     (runSteps 10 (floatConfig 1)).result.values? =
-      some [.f32 (3.0 : Float32).toBits] := by
-  native_decide
+      some [.f32 (3.0 : Float32).toBits] := by native_decide
 
 theorem f64_compare :
-    (runSteps 10 (floatConfig 2)).result.values? = some [.i32 1] := by
-  native_decide
+    (runSteps 10 (floatConfig 2)).result.values? = some [.i32 1] := by native_decide
 
 theorem f64_sqrt :
     (runSteps 10 (floatConfig 3)).result.values? =
-      some [.f64 (3.0 : Float).toBits] := by
-  native_decide
+      some [.f64 (3.0 : Float).toBits] := by native_decide
 
 theorem f64_min :
     (runSteps 10 (floatConfig 4)).result.values? =
-      some [.f64 (2.0 : Float).toBits] := by
-  native_decide
+      some [.f64 (2.0 : Float).toBits] := by native_decide
 
 theorem conv_roundtrip :
-    (runSteps 10 (floatConfig 5)).result.values? = some [.i32 7] := by
-  native_decide
+    (runSteps 10 (floatConfig 5)).result.values? = some [.i32 7] := by native_decide
 
 theorem reinterpret_one :
     (runSteps 10 (floatConfig 6)).result.values? =
-      some [.f32 (1.0 : Float32).toBits] := by
-  native_decide
+      some [.f32 (1.0 : Float32).toBits] := by native_decide
 
 theorem mem_roundtrip :
     (runSteps 10 (floatConfig 7)).result.values? =
-      some [.f64 (3.5 : Float).toBits] := by
-  native_decide
+      some [.f64 (3.5 : Float).toBits] := by native_decide
 
 theorem mem_roundtrip_terminates :
     TerminatesWith (floatConfig 7)

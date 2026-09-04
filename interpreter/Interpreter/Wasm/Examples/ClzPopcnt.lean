@@ -53,16 +53,13 @@ def popcntConfig (a : UInt32) : Config Unit := bitCountConfig PopcntBody a
 /-! ### Checks 1–3 — concrete small-step execution -/
 
 theorem clz_zero_runs :
-    (runSteps 3 (clzConfig 0)).result.values? = some [.i32 32] := by
-  rfl
+    (runSteps 3 (clzConfig 0)).result.values? = some [.i32 32] := by rfl
 
 theorem ctz_eight_runs :
-    (runSteps 3 (ctzConfig 8)).result.values? = some [.i32 3] := by
-  rfl
+    (runSteps 3 (ctzConfig 8)).result.values? = some [.i32 3] := by rfl
 
 theorem popcnt_nibble_runs :
-    (runSteps 3 (popcntConfig 0xF)).result.values? = some [.i32 4] := by
-  rfl
+    (runSteps 3 (popcntConfig 0xF)).result.values? = some [.i32 4] := by rfl
 
 /-! ### Checks 4–6 — fuel-free small-step specifications -/
 

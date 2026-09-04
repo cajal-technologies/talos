@@ -27,8 +27,7 @@ def callIndirectModule : Module :=
 theorem callIndirectModule_valid :
     (match callIndirectModule.validate with
       | .ok () => true
-      | .error _ => false) = true := by
-  native_decide
+      | .error _ => false) = true := by native_decide
 
 private def validationAccepts (module : Module) : Bool :=
   match module.validate with
@@ -41,24 +40,19 @@ private def validationModuleWith (body : Program) : Module :=
     tables := [{ min := 1 }] }
 
 theorem callIndirect_type_out_of_range_rejected :
-    validationAccepts (validationModuleWith [.callIndirect 1 0]) = false := by
-  native_decide
+    validationAccepts (validationModuleWith [.callIndirect 1 0]) = false := by native_decide
 
 theorem returnCallIndirect_type_out_of_range_rejected :
-    validationAccepts (validationModuleWith [.returnCallIndirect 1 0]) = false := by
-  native_decide
+    validationAccepts (validationModuleWith [.returnCallIndirect 1 0]) = false := by native_decide
 
 theorem callRef_type_out_of_range_rejected :
-    validationAccepts (validationModuleWith [.callRef 1]) = false := by
-  native_decide
+    validationAccepts (validationModuleWith [.callRef 1]) = false := by native_decide
 
 theorem returnCallRef_type_out_of_range_rejected :
-    validationAccepts (validationModuleWith [.returnCallRef 1]) = false := by
-  native_decide
+    validationAccepts (validationModuleWith [.returnCallRef 1]) = false := by native_decide
 
 theorem gc_type_out_of_range_rejected :
-    validationAccepts (validationModuleWith [.gc (.structNew 0)]) = false := by
-  native_decide
+    validationAccepts (validationModuleWith [.gc (.structNew 0)]) = false := by native_decide
 
 def incrConfig (st : Store Unit) (n : UInt32) : Config Unit :=
   { expr := .running

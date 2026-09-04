@@ -91,8 +91,7 @@ def fillWordsInnerFrame : Wasm.SmallStep.ControlFrame :=
 
 theorem FillWords_eq_structured :
     FillWords = [.const 0, .localSet 3,
-      .loop 0 0 FillWordsLoopBody] := by
-  rfl
+      .loop 0 0 FillWordsLoopBody] := by rfl
 
 /-- One real small-step fill iteration extends the authoritatively owned
 filled prefix by one word and frames an arbitrary Iris resource `R`. -/
