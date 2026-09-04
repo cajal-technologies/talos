@@ -163,6 +163,12 @@ macro "wasm_wp_frame" : tactic =>
       repeat ispecialize Hwp $$ [$]
       iexact Hwp)
 
+/-- Offer an authoritative Wasm step and use the standard ordinary frame. -/
+macro "wasm_wp_step_frame " step:term : tactic =>
+  `(tactic|
+    (wasm_wp_step $step =>
+      wasm_wp_frame))
+
 set_option hygiene false in
 /-- Reassemble Iris state after a Wasm transition to a trapped expression. -/
 macro "wasm_wp_trap_frame" : tactic =>

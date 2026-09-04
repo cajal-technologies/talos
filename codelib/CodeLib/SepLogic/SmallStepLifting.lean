@@ -31,8 +31,7 @@ theorem wp_pureStep
     ▷ WP (Expr.running next : Expr α) @ s; E {{ Φ }} ⊢
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   wasm_wp_begin_with iintro Hwp
-  wasm_wp_step hstep store =>
-    wasm_wp_frame
+  wasm_wp_step_frame hstep store
 
 /-- Generic lifting rule for a store-preserving deterministic Wasm step that
 traps. Every trapping operand, reference, and arithmetic rule below is a thin
@@ -145,8 +144,7 @@ theorem wp_finish
         ⟨⟨params, localValues, values⟩, [], arity, remainder, [], []⟩ :
         Expr α) @ s; E {{ Φ }} := by
   wasm_wp_begin_with iintro Hwp
-  wasm_wp_step Step.finish =>
-    wasm_wp_frame
+  wasm_wp_step_frame Step.finish
 
 /-- Explicit return from a top-level invocation. The instruction discards the
 remaining code and control frames and exposes the declared function results as
@@ -160,8 +158,7 @@ theorem wp_returnFromFunction
         ⟨locals, .ret :: code, arity, remainder, controls, []⟩ : Expr α) @
         s; E {{ Φ }} := by
   wasm_wp_begin_with iintro Hwp
-  wasm_wp_step Step.returnFromFunction =>
-    wasm_wp_frame
+  wasm_wp_step_frame Step.returnFromFunction
 
 /-- Apply a partial-WP lifting rule and consume its one-step `later`. -/
 macro "wasm_wp_next " rule:pmTerm : tactic =>
@@ -729,8 +726,7 @@ theorem wp_refIsNull
     cases isNull
     · exact Step.refIsNullFalse hnull
     · exact Step.refIsNullTrue hnull
-  wasm_wp_step expectedStep =>
-    wasm_wp_frame
+  wasm_wp_step_frame expectedStep
 
 theorem wp_localGet
     {params localValues values : List Value}
@@ -1484,8 +1480,7 @@ theorem wp_tableGet
   simp only [← tablePointsToAt_eq]
   wasm_table_agree Hphysical, tableIndex, table, (obs ++ obs') $$
     [Hσ Htable]
-  wasm_wp_step Step.tableGet (α := α) hindex Hphysical helement =>
-    wasm_wp_frame
+  wasm_wp_step_frame Step.tableGet (α := α) hindex Hphysical helement
 
 /-- Primitive rule for `table.size`. Runtime-module ownership determines
 whether the result is represented as an `i32` or `i64`; table ownership
@@ -1516,8 +1511,7 @@ theorem wp_tableSize
     [Hσ Htable]
   wasm_runtime_module_agree (obs ++ obs'), callerId, runtimeModule $$ [$Hσ $Hruntime]
   subst runtimeModule
-  wasm_wp_step Step.tableSize Hphysical =>
-    wasm_wp_frame
+  wasm_wp_step_frame Step.tableSize Hphysical
 
 /-- Primitive rule for an in-bounds `table.set`. The table keeps its stable
 identity while its complete owned contents and physical instance update
@@ -1712,8 +1706,7 @@ theorem wp_tableGrow32Failure
       ¬table.length + delta.toNat ≤
         store.runtime.currentModule.tableCap tableIndex := by
     simpa only [Hmodule] using hbound
-  wasm_wp_step Step.tableGrow32Failure Hphysical hbound' =>
-    wasm_wp_frame
+  wasm_wp_step_frame Step.tableGrow32Failure Hphysical hbound'
 
 /-- Failed table64 `table.grow`; returns the 64-bit all-ones sentinel and
 preserves complete ownership of the unchanged table. -/
@@ -1748,8 +1741,7 @@ theorem wp_tableGrow64Failure
       ¬table.length + delta.toNat ≤
         store.runtime.currentModule.tableCap tableIndex := by
     simpa only [Hmodule] using hbound
-  wasm_wp_step Step.tableGrow64Failure Hphysical hbound' =>
-    wasm_wp_frame
+  wasm_wp_step_frame Step.tableGrow64Failure Hphysical hbound'
 
 /-- In-bounds `table.fill`. The complete authoritative table fragment is
 updated to the same `listWriteAt` result as the physical machine table. -/
@@ -2049,8 +2041,7 @@ theorem wp_load8S
         code, arity, remainder, controls, calls⟩, store⟩ := by
     rw [show byte = store.wasm.mem.read8 (address + offset) from Hread.symm]
     exact Step.load8S (α := α) (address := Value.i32 address) rfl hbound
-  wasm_wp_step expectedStep =>
-    wasm_wp_frame
+  wasm_wp_step_frame expectedStep
 
 theorem wp_load16U
     {params localValues values : List Value}
@@ -2127,8 +2118,7 @@ theorem wp_load16S
         code, arity, remainder, controls, calls⟩, store⟩ := by
     rw [show word &&& 0xFFFF = store.wasm.mem.read16 (address + offset) from Hread.symm]
     exact Step.load16S (α := α) (address := Value.i32 address) rfl hbound
-  wasm_wp_step expectedStep =>
-    wasm_wp_frame
+  wasm_wp_step_frame expectedStep
 
 /-- Primitive rule for `i64.load8_s`. Like `wp_load8UI64` but sign-extended;
 `extend8To64` is private so its body is inlined. -/
@@ -2171,8 +2161,7 @@ theorem wp_load8SI64
         code, arity, remainder, controls, calls⟩, store⟩ := by
     rw [show byte = store.wasm.mem.read8 (address + offset) from Hread.symm]
     exact Step.load8SI64 (address := Value.i32 address) rfl hbound
-  wasm_wp_step expectedStep =>
-    wasm_wp_frame
+  wasm_wp_step_frame expectedStep
 
 theorem wp_load16UI64
     {params localValues values : List Value}
@@ -2210,8 +2199,7 @@ theorem wp_load16UI64
         code, arity, remainder, controls, calls⟩, store⟩ := by
     simpa [Hread] using
       (Step.load16UI64 (α := α) (address := Value.i32 address) rfl hbound)
-  wasm_wp_step expectedStep =>
-    wasm_wp_frame
+  wasm_wp_step_frame expectedStep
 
 /-- Primitive rule for `i64.load16_s`. Like `wp_load16UI64` but sign-extended;
 `extend16To64` is private so its body is inlined. -/
@@ -2257,8 +2245,7 @@ theorem wp_load16SI64
         code, arity, remainder, controls, calls⟩, store⟩ := by
     rw [show word &&& 0xFFFF = store.wasm.mem.read16 (address + offset) from Hread.symm]
     exact Step.load16SI64 (address := Value.i32 address) rfl hbound
-  wasm_wp_step expectedStep =>
-    wasm_wp_frame
+  wasm_wp_step_frame expectedStep
 
 theorem wp_load32UI64
     {params localValues values : List Value}
@@ -2337,8 +2324,7 @@ theorem wp_load32SI64
         code, arity, remainder, controls, calls⟩, store⟩ := by
     rw [show word = store.wasm.mem.read32 (address + offset) from Hread.symm]
     exact Step.load32SI64 (address := Value.i32 address) rfl hbound
-  wasm_wp_step expectedStep =>
-    wasm_wp_frame
+  wasm_wp_step_frame expectedStep
 
 /-- Primitive rule for `i32.store8`. The physical `Mem.write8` transition and
 the authoritative GenHeap update happen in the same Iris step. -/
@@ -3477,8 +3463,7 @@ theorem wp_memoryInit32Dropped
       ⟨.running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩, store⟩ :=
     Step.memoryInit32Dropped hsegment (by omega)
-  wasm_wp_step expectedStep =>
-    wasm_wp_frame
+  wasm_wp_step_frame expectedStep
 
 theorem wp_memoryInit64Dropped
     {params localValues values : List Value}
@@ -3512,8 +3497,7 @@ theorem wp_memoryInit64Dropped
       ⟨.running ⟨⟨params, localValues, values⟩,
         code, arity, remainder, controls, calls⟩, store⟩ :=
     Step.memoryInit64Dropped hsegment (by omega)
-  wasm_wp_step expectedStep =>
-    wasm_wp_frame
+  wasm_wp_step_frame expectedStep
 
 theorem wp_memoryInit32Trap
     {params localValues values : List Value}
@@ -4546,8 +4530,7 @@ theorem wp_v128Load
         code, arity, remainder, controls, calls⟩, store⟩ := by
     simpa [readV128_eq, Hread_lo, Hread_hi] using
       Step.v128Load (α := α) (address := .i32 address) rfl hbound
-  wasm_wp_step expectedStep =>
-    wasm_wp_frame
+  wasm_wp_step_frame expectedStep
 
 -- Store a v128 to memory, updating 16 bytes of ghost state.
 -- lo_old/hi_old are the ghost values at addr and addr+8 before the write;
@@ -4675,8 +4658,7 @@ theorem wp_load8SMemory64
         code, arity, remainder, controls, calls⟩, store⟩ := by
     rw [show byte = store.wasm.mem.read8 (address.toUInt32 + offset) from Hread.symm]
     exact Step.load8S (address := Value.i64 address) rfl hbound
-  wasm_wp_step expectedStep =>
-    wasm_wp_frame
+  wasm_wp_step_frame expectedStep
 
 theorem wp_load16UMemory64
     {params localValues values : List Value}
@@ -4752,8 +4734,7 @@ theorem wp_load16SMemory64
     rw [show word &&& 0xFFFF = store.wasm.mem.read16 (address.toUInt32 + offset)
         from Hread.symm]
     exact Step.load16S (address := Value.i64 address) rfl hbound
-  wasm_wp_step expectedStep =>
-    wasm_wp_frame
+  wasm_wp_step_frame expectedStep
 
 theorem wp_store8Memory64
     {params localValues values : List Value}
