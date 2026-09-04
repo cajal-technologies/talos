@@ -1640,10 +1640,8 @@ theorem null_as_non_null_traps :
 theorem null_as_non_null_trapsWith :
     TrapsWith (referenceConfig 1 1) .nullReference
       (fun store => store = (referenceConfig 1 1).store) := by
-  apply runSteps_trapped_trapsWith (fuel := 2)
-    (store := (referenceConfig 1 1).store)
-  · rfl
-  · rfl
+  exact runSteps_trapped_trapsWith (fuel := 2)
+    (store := (referenceConfig 1 1).store) (by rfl) _ rfl
 
 theorem reference_values_match_big_step :
     (runSteps 9 (referenceConfig 0 4)).result.values? =
@@ -1696,10 +1694,8 @@ theorem table_get_out_of_bounds_traps :
 theorem table_get_out_of_bounds_trapsWith :
     TrapsWith (tableConfig 1 1) .outOfBoundsTable
       (fun store => store = (tableConfig 1 1).store) := by
-  apply runSteps_trapped_trapsWith (fuel := 2)
-    (store := (tableConfig 1 1).store)
-  · rfl
-  · rfl
+  exact runSteps_trapped_trapsWith (fuel := 2)
+    (store := (tableConfig 1 1).store) (by rfl) _ rfl
 
 theorem table_read_write_matches_big_step :
     (runSteps 11 (tableConfig 0 3)).result.values? =
@@ -1756,9 +1752,8 @@ theorem table_fill_out_of_bounds_traps_atomically :
 theorem table_fill_out_of_bounds_trapsWith :
     TrapsWith (tableBulkConfig 2 0) .outOfBoundsTable
       (fun store => store = (tableBulkConfig 2 0).store) := by
-  apply runSteps_trapped_trapsWith
-    table_fill_out_of_bounds_traps_atomically
-  rfl
+  exact runSteps_trapped_trapsWith
+    table_fill_out_of_bounds_traps_atomically _ rfl
 theorem table_bulk_matches_big_step :
     (runSteps 13 (tableBulkConfig 0 2)).result.values? =
       some (runValues 20 tableBulkModule 0 tableBulkModule.initialStore []) := by native_decide
@@ -1829,9 +1824,8 @@ theorem table_init_after_drop_traps_atomically (is64 : Bool) :
 theorem table_init_after_drop_trapsWith (is64 : Bool) :
     TrapsWith (elementInitConfig is64 1 0) .outOfBoundsTable
       (fun store => store = elementDroppedStore is64) := by
-  apply runSteps_trapped_trapsWith
-    (table_init_after_drop_traps_atomically is64)
-  rfl
+  exact runSteps_trapped_trapsWith
+    (table_init_after_drop_traps_atomically is64) _ rfl
 
 theorem element_init_matches_big_step (is64 : Bool) :
     (runSteps 12 (elementInitConfig is64 0 2)).result.values? =
@@ -2307,9 +2301,7 @@ theorem simd_memory_variant_traps_structurally :
 theorem simd_memory_variant_trapsWith :
     TrapsWith simdMemoryVariantTrapConfig .outOfBoundsMemory
       (fun store => store = simdMemoryVariantTrapConfig.store) := by
-  apply runSteps_trapped_trapsWith
-    simd_memory_variant_traps_structurally
-  rfl
+  exact runSteps_trapped_trapsWith simd_memory_variant_traps_structurally _ rfl
 def crossMemoryModule : Module :=
   { funcs :=
       [ { body :=
@@ -2418,9 +2410,7 @@ theorem indexed_memory_trap_restores_stable_slots :
 theorem indexed_memory_trap_trapsWith :
     TrapsWith indexedMemoryTrapConfig .outOfBoundsMemory
       (fun store => store = indexedMemoryTrapConfig.store) := by
-  apply runSteps_trapped_trapsWith
-    indexed_memory_trap_restores_stable_slots
-  rfl
+  exact runSteps_trapped_trapsWith indexed_memory_trap_restores_stable_slots _ rfl
 
 def smallStepHost : HostFn Unit :=
   { params := [.i32]
@@ -2726,9 +2716,7 @@ theorem uncaught_exception_trapsWith :
     TrapsWith (smallStepExceptionConfig 1)
       (.uncaughtException 0 [.i32 17])
       (fun store => store = (smallStepExceptionConfig 1).store) := by
-  apply runSteps_trapped_trapsWith
-    uncaught_exception_is_not_a_trap_category
-  rfl
+  exact runSteps_trapped_trapsWith uncaught_exception_is_not_a_trap_category _ rfl
 def smallStepThrowRefConfig : Config Unit :=
   { expr := .running
       { locals := { values := [.exnref (some 0)] }
