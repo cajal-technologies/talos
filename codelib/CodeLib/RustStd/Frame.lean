@@ -1,4 +1,5 @@
 import Interpreter.Wasm
+import CodeLib.UInt32
 import Std.Tactic.BVDecide
 
 /-!
@@ -39,37 +40,6 @@ namespace Wasm
 
 /-! ## Store/load round-trips -/
 
-/-- Reading a 32-bit word back from the address it was just written to
-returns the stored value. -/
-private theorem reassemble32_nat (n : Nat) (h : n < 2 ^ 32) :
-    n % 2 ^ 8 ||| (((n >>> 8) % 2 ^ 8) <<< 8) % 2 ^ 32 |||
-      (((n >>> 16) % 2 ^ 8) <<< 16) % 2 ^ 32 |||
-      (((n >>> 24) % 2 ^ 8) <<< 24) % 2 ^ 32 = n := by
-  apply Nat.eq_of_testBit_eq
-  intro i
-  simp only [Nat.testBit_or, Nat.testBit_mod_two_pow,
-    Nat.testBit_shiftLeft, Nat.testBit_shiftRight]
-  by_cases hi8 : i < 8
-  · simp [hi8, show i < 32 by omega, show ¬i ≥ 8 by omega,
-      show ¬i ≥ 16 by omega, show ¬i ≥ 24 by omega]
-  by_cases hi16 : i < 16
-  · have heq : 8 + (i - 8) = i := by omega
-    simp [hi8, heq, show i ≥ 8 by omega, show i < 32 by omega,
-      show i - 8 < 8 by omega, show ¬i ≥ 16 by omega, show ¬i ≥ 24 by omega]
-  by_cases hi24 : i < 24
-  · have heq : 16 + (i - 16) = i := by omega
-    simp [hi8, heq, show i ≥ 16 by omega, show i < 32 by omega,
-      show ¬i - 8 < 8 by omega, show i - 16 < 8 by omega, show ¬i ≥ 24 by omega]
-  by_cases hi32 : i < 32
-  · have heq : 24 + (i - 24) = i := by omega
-    simp [hi8, hi32, heq, show i ≥ 24 by omega, show ¬i - 8 < 8 by omega,
-      show ¬i - 16 < 8 by omega, show i - 24 < 8 by omega]
-  · have hibound : n.testBit i = false :=
-      Nat.testBit_lt_two_pow
-        (Nat.lt_of_lt_of_le h (Nat.pow_le_pow_right (by decide) (by omega)))
-    simp [hi8, hibound, show ¬i < 32 by omega, show ¬i - 8 < 8 by omega,
-      show ¬i - 16 < 8 by omega, show ¬i - 24 < 8 by omega]
-
 private theorem and255_toUInt8 (w : UInt32) : (w &&& 255).toUInt8 = w.toUInt8 := by
   apply UInt8.toNat_inj.mp
   simp only [UInt32.toNat_toUInt8, UInt32.toNat_and]
@@ -89,7 +59,7 @@ private theorem and255_toUInt8 (w : UInt32) : (w &&& 255).toUInt8 = w.toUInt8 :=
   apply UInt32.toNat_inj.mp
   simp only [UInt32.toNat_or, UInt32.toNat_shiftLeft, UInt8.toNat_toUInt32,
     UInt32.toNat_toUInt8, UInt32.toNat_shiftRight]
-  exact reassemble32_nat v.toNat (UInt32.toNat_lt v)
+  exact Nat.reassemble32_of_lt v.toNat (UInt32.toNat_lt v)
 
 /-- Reading a 64-bit word back from the address it was just written to
 returns the stored value. -/

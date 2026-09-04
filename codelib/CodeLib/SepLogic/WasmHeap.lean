@@ -1,4 +1,5 @@
 import CodeLib.SepLogic.Tactics
+import CodeLib.UInt32
 import Iris.Instances.Lib.FUpd
 import Iris.BI.Lib.GenHeap
 import Iris.BI.Lib.MonoNat
@@ -1045,36 +1046,6 @@ def u64Byte (v : UInt64) (n : Nat) : UInt8 :=
   | 6 => (v >>> 48).toUInt8
   | _ => (v >>> 56).toUInt8
 
-omit inst in
-private theorem reassemble32_nat (n : Nat) (h : n < 2 ^ 32) :
-    n % 2 ^ 8 ||| (((n >>> 8) % 2 ^ 8) <<< 8) % 2 ^ 32 |||
-      (((n >>> 16) % 2 ^ 8) <<< 16) % 2 ^ 32 |||
-      (((n >>> 24) % 2 ^ 8) <<< 24) % 2 ^ 32 = n := by
-  apply Nat.eq_of_testBit_eq
-  intro i
-  simp only [Nat.testBit_or, Nat.testBit_mod_two_pow,
-    Nat.testBit_shiftLeft, Nat.testBit_shiftRight]
-  by_cases hi8 : i < 8
-  · simp [hi8, show i < 32 by omega, show ¬i ≥ 8 by omega,
-      show ¬i ≥ 16 by omega, show ¬i ≥ 24 by omega]
-  by_cases hi16 : i < 16
-  · have heq : 8 + (i - 8) = i := by omega
-    simp [hi8, heq, show i ≥ 8 by omega, show i < 32 by omega,
-      show i - 8 < 8 by omega, show ¬i ≥ 16 by omega, show ¬i ≥ 24 by omega]
-  by_cases hi24 : i < 24
-  · have heq : 16 + (i - 16) = i := by omega
-    simp [hi8, heq, show i ≥ 16 by omega, show i < 32 by omega,
-      show ¬i - 8 < 8 by omega, show i - 16 < 8 by omega, show ¬i ≥ 24 by omega]
-  by_cases hi32 : i < 32
-  · have heq : 24 + (i - 24) = i := by omega
-    simp [hi8, hi32, heq, show i ≥ 24 by omega, show ¬i - 8 < 8 by omega,
-      show ¬i - 16 < 8 by omega, show i - 24 < 8 by omega]
-  · have hibound : n.testBit i = false :=
-      Nat.testBit_lt_two_pow
-        (Nat.lt_of_lt_of_le h (Nat.pow_le_pow_right (by decide) (by omega)))
-    simp [hi8, hibound, show ¬i < 32 by omega, show ¬i - 8 < 8 by omega,
-      show ¬i - 16 < 8 by omega, show ¬i - 24 < 8 by omega]
-
 private theorem reassemble64_nat (n : Nat) (h : n < 2 ^ 64) :
     n % 2 ^ 8 ||| (((n >>> 8) % 2 ^ 8) <<< 8) % 2 ^ 64 |||
       (((n >>> 16) % 2 ^ 8) <<< 16) % 2 ^ 64 |||
@@ -1227,7 +1198,7 @@ theorem u32Byte_reassemble (v : UInt32) :
   unfold u32Byte
   simp only [UInt32.toNat_or, UInt32.toNat_shiftLeft,
     UInt8.toNat_toUInt32, UInt32.toNat_toUInt8, UInt32.toNat_shiftRight]
-  exact reassemble32_nat v.toNat (UInt32.toNat_lt v)
+  exact Nat.reassemble32_of_lt v.toNat (UInt32.toNat_lt v)
 
 -- Multi-byte: u32 as 4 consecutive owned bytes (little-endian)
 def pointsTo_u32 (memId : Nat) (addr : UInt32) (v : UInt32) : IProp (WasmHeapGF α) :=
