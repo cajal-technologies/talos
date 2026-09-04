@@ -75,6 +75,12 @@ macro "wasm_wp_begin_with " intro:tactic : tactic =>
     ($intro
      wasm_wp_begin))
 
+/-- Unfold local configurations, introduce resources, and enter lifting. -/
+macro "wasm_wp_start_with " intro:tactic : tactic =>
+  `(tactic|
+    (dsimp only
+     wasm_wp_begin_with $intro))
+
 /-- Offer one Wasm primitive step to Iris and continue with its successor. -/
 syntax "wasm_wp_offer_step " term " =>" ppLine colGt tacticSeq : tactic
 
