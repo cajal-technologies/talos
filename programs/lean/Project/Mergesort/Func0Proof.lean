@@ -117,13 +117,11 @@ private theorem ByteSlice_twelve_storeFocus
   have hptr4Nat : (ptr + 4).toNat = ptr.toNat + 4 := by
     simpa using byteOffset_toNat ptr 4 hfirstNowrap
   have hsecondNowrap : (ptr + 4).toNat + 4 < UInt32.size := by
-    rw [hptr4Nat]
     omega
   have hptr8 : (ptr + 4) + 4 = ptr + 8 := by bv_decide
   have hthirdNowrap : (ptr + 8).toNat + 4 < UInt32.size := by
     have hptr8Nat : (ptr + 8).toNat = ptr.toNat + 8 := by
       simpa using byteOffset_toNat ptr 8 (by omega)
-    rw [hptr8Nat]
     omega
   ihave ⟨Hfirst, HcloseFirst⟩ := ByteSlice_storeAnyWordFocus ptr first
     hfirstLength hfirstNowrap $$ Hfirst

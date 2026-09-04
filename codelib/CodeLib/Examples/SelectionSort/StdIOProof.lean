@@ -254,7 +254,6 @@ theorem writeBytes_serialize (mem : Mem) (base : UInt32)
       rw [show base.toNat + (encodeWord value).length = (base + 8).toNat by
         simp [encodeWord, hbase]]
       apply ih
-      rw [hbase]
       omega
 
 theorem heap64Aux_agrees

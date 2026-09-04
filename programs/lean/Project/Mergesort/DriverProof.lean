@@ -1238,7 +1238,6 @@ theorem twp_func3_read_loop_iteration
           (remaining.take (min 256 remaining.length)).length +
               (remaining.drop (min 256 remaining.length)).length <
             current.length + remaining.length := by
-        rw [← hremainingLength]
         omega
       have hnextPositive :
           0 < (remaining.take (min 256 remaining.length)).length := by
@@ -1772,7 +1771,6 @@ theorem twp_func3_copy_decoded_word
       rw [hcurrentLength] at hdestinationFacts
       omega)
   have hsourceRoom : sourceAddress.toNat + 4 ≤ UInt32.size := by
-    rw [hsourceAddress]
     omega
   have hdestinationRoom : destinationAddress.toNat + 4 ≤ UInt32.size := by
     rw [hdestinationAddress]
@@ -2687,7 +2685,6 @@ theorem twp_func3_decode_blocks
     have hlt : UInt32.ofNat (4 * original.length - 4) < (12 : UInt32) := by
       rw [UInt32.lt_iff_toNat_lt, hbyteWord]
       have h12 : (12 : UInt32).toNat = 12 := by decide
-      rw [h12]
       omega
     iapply twp_ltU (result := 1) (by simp [hlt])
     iapply twp_brIf (condition := 1) (depth := 0) (arity := arity)
@@ -2725,7 +2722,6 @@ theorem twp_func3_decode_blocks
         (12 : UInt32) := by
       rw [UInt32.lt_iff_toNat_lt, hbyteWord]
       have h12 : (12 : UInt32).toNat = 12 := by decide
-      rw [h12]
       omega
     iapply twp_ltU (result := 0) (by simp [hnotLt])
     wasm_twp_pures [twp_brIfZero twp_localGet twp_const twp_and]
@@ -3315,7 +3311,6 @@ theorem twp_func3_write_one
     wordOffset_toNat valuesPtr emitted (by omega)
   have hroom :
       (valuesPtr + 4 * UInt32.ofNat emitted).toNat + 4 ≤ UInt32.size := by
-    rw [haddress]
     omega
   obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4
     (valuesPtr + 4 * UInt32.ofNat emitted) (by
@@ -4173,7 +4168,6 @@ private theorem completedHistory_other_records_retired
       have hnotTop : allocationId + 8 ≠ exponent := by
         intro hlive
         apply hne
-        rw [hinputId]
         omega
       simp [geometricMetadata, hnotTop]
     · contradiction
@@ -4348,7 +4342,6 @@ theorem twp_func3_finish_nonempty
       rw [serialize_length] at hzero
       omega
     · rcases hshort with ⟨_, _, _, hcapacity, _, _, _⟩
-      rw [hcapacity]
       omega
     · rcases hlarge with ⟨exponent, _, _, hcapacity, _, _, _, _, _⟩
       rw [hcapacity]
@@ -4936,7 +4929,6 @@ theorem twp_func3_first_read_nonempty
       exact List.eq_nil_of_length_eq_zero (by omega)
     omega
   have hinputMod : input.length % 4 = 0 := by
-    rw [hinputLength]
     omega
   have hsplit := readChunk_mod_four input hinputMod
   dsimp only at hsplit

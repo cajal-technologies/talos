@@ -517,7 +517,6 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
       simp only [BitVec.toInt, Nat.reducePow]
       change (if 2 * finish.toNat < 4294967296 then
         (finish.toNat : Int) else (finish.toNat : Int) - 4294967296) < 0
-      rw [hfinishNatEq]
       omega
     iapply twp_ltS (result := 1) (by rw [if_pos hfinishNegative])
     iapply twp_brIf (by decide) (by rfl)
@@ -556,7 +555,6 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
       simp only [BitVec.toInt, Nat.reducePow]
       change ¬ (if 2 * finish.toNat < 4294967296 then
         (finish.toNat : Int) else (finish.toNat : Int) - 4294967296) < 0
-      rw [hfinishNatEq]
       omega
     iapply twp_ltS (result := 0) (by rw [if_neg hfinishNonnegative])
     wasm_twp_pures [twp_brIfZero]

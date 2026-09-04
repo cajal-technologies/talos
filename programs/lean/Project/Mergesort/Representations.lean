@@ -226,7 +226,6 @@ theorem ByteSlice_append {host : Type} [WasmHeapGS host]
     have hrightNowrap :
         (ptr + UInt32.ofNat left.length).toNat + right.length <
           UInt32.size := by
-      rw [hoffset]
       omega
     isplitl [Hleft]
     · iframe Hleft
@@ -415,7 +414,6 @@ theorem WordSlice_append {host : Type} [WasmHeapGS host]
     have hrightNowrap :
         (ptr + 4 * UInt32.ofNat xs.length).toNat +
             4 * ys.length < UInt32.size := by
-      rw [hoffset]
       omega
     have hrightAlign :
         (ptr + 4 * UInt32.ofNat xs.length).toNat % 4 = 0 := by
@@ -1748,7 +1746,6 @@ theorem BumpHeap_commit {host : Type} [WasmHeapGS host]
     apply UInt32.toNat_inj.mp
     simpa using hzero
   have hfinishPositive : 0 < finish.toNat := by
-    rw [hfinish]
     omega
   have hfinishSigned : finish.toNat < 2147483648 := by
     rw [hfinish]

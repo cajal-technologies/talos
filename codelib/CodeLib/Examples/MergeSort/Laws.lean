@@ -267,7 +267,6 @@ theorem twp_loadAt
       (base + 4 * UInt32.ofNat k).toNat = base.toNat + 4 * k := by
     simpa [UInt32.mul_comm] using arrayAddress_toNat base hfit hk
   have hroom : (base + 4 * UInt32.ofNat k).toNat + 4 ≤ UInt32.size := by
-    rw [hslot]
     omega
   have hroom' :
       (base + 4 * UInt32.ofNat k).toNat + 4 ≤ 4294967296 := by
@@ -368,7 +367,6 @@ theorem twp_copyAt
     simpa [UInt32.mul_comm] using
       arrayAddress_toNat temporary htemporaryFit hk
   have hroom : destination.toNat + 4 ≤ UInt32.size := by
-    rw [hslot]
     omega
   obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4 destination (by
     simpa only [UInt32.size] using hroom)

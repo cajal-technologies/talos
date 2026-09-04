@@ -968,11 +968,9 @@ theorem insertFreshPhysicalBytes_facts
           (mem.read8 addr) hresolve hinBounds haddrBound
       have hbound' :
           (addr + 1).toNat + size ≤ mem.pages * 65536 := by
-        rw [hsucc]
         omega
       have hnowrap' :
           (addr + 1).toNat + size < UInt32.size := by
-        rw [hsucc]
         omega
       simpa only [physicalBytes, insertFreshBytes] using
         ih (insert σ ⟨0, addr⟩ (some (mem.read8 addr)))
@@ -2810,7 +2808,6 @@ theorem stateInterp_writeV128 [WasmSmallStepGS hlc α]
   have h8 : (addr + 8).toNat = addr.toNat + 8 := by
     simp only [UInt32.toNat_add, show (8 : UInt32).toNat = 8 from rfl]; omega
   have hroomHi : (addr + 8).toNat + 8 ≤ 4294967296 := by
-    rw [h8]
     omega
   obtain ⟨h81, h82, h83, h84, h85, h86, h87⟩ :=
     UInt32.addSteps8 (addr + 8) hroomHi

@@ -4593,7 +4593,6 @@ theorem wp_v128Load
   have h8 : ((address + offset) + 8).toNat = (address + offset).toNat + 8 := by
     simpa using UInt32.add_ofNat_toNat_noWrap (address + offset) 8 (by omega) (by omega)
   have hroomHi : (address + offset + 8).toNat + 8 ≤ 4294967296 := by
-    rw [h8]
     omega
   obtain ⟨h9, h10, h11, h12, h13, h14, h15⟩ :=
     UInt32.addSteps8 (address + offset + 8) hroomHi
@@ -4656,7 +4655,6 @@ theorem wp_v128Store
   have h8 : ((address + offset) + 8).toNat = (address + offset).toNat + 8 := by
     simpa using UInt32.add_ofNat_toNat_noWrap (address + offset) 8 (by omega) (by omega)
   have hroomHi : (address + offset + 8).toNat + 8 ≤ 4294967296 := by
-    rw [h8]
     omega
   obtain ⟨h9, h10, h11, h12, h13, h14, h15⟩ :=
     UInt32.addSteps8 (address + offset + 8) hroomHi

@@ -1016,11 +1016,9 @@ theorem twp_copyPointerAt
     simpa [UInt32.mul_comm] using
       Wasm.Examples.MergeSort.arrayAddress_toNat scratch hscratchFit hk
   have hsourceRoom : sourceAddress.toNat + 4 ≤ UInt32.size := by
-    rw [hsourceSlot]
     omega
   have hdestinationRoom :
       destinationAddress.toNat + 4 ≤ UInt32.size := by
-    rw [hdestinationSlot]
     omega
   have hsourceRoom' : sourceAddress.toNat + 4 ≤ 4294967296 := by
     simpa only [UInt32.size] using hsourceRoom
@@ -2699,7 +2697,6 @@ theorem twp_sort
       rw [MemRegion.shl2_eq_mul4]
       wasm_twp_pures [twp_localTee]
       have hfourFits : 4 * combined.length < UInt32.size := by
-        rw [hcombinedLength]
         omega
       have hbyteLengthPositive :
           0 < (4 * UInt32.ofNat combined.length : UInt32).toNat := by

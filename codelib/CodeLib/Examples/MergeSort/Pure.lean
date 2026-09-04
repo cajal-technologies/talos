@@ -309,7 +309,6 @@ theorem MergeLoopInvariant.takeLeft
     ⟨hli, him, hmj, hjr, hrlen, hlength, hk, hemitted,
       htake, hprogress⟩
   have hklen : k < temporaryValues.length := by
-    rw [hlength]
     omega
   have hlk : left ≤ k := by omega
   have hleftSegment :
@@ -344,7 +343,6 @@ theorem MergeLoopInvariant.takeRight
     ⟨hli, him, hmj, hjr, hrlen, hlength, hk, hemitted,
       htake, hprogress⟩
   have hklen : k < temporaryValues.length := by
-    rw [hlength]
     omega
   have hlk : left ≤ k := by omega
   have hrightSegment :
@@ -378,7 +376,6 @@ theorem MergeLoopInvariant.takeRemainingLeft
     ⟨hli, him, hmr, hrr, hrlen, hlength, hk, hemitted,
       htake, hprogress⟩
   have hklen : k < temporaryValues.length := by
-    rw [hlength]
     omega
   have hlk : left ≤ k := by omega
   have hleftSegment :
@@ -411,7 +408,6 @@ theorem MergeLoopInvariant.takeRemainingRight
     ⟨hlm, hmm, hmj, hjr, hrlen, hlength, hk, hemitted,
       htake, hprogress⟩
   have hklen : k < temporaryValues.length := by
-    rw [hlength]
     omega
   have hlk : left ≤ k := by omega
   have hrightSegment :
