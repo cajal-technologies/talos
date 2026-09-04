@@ -1726,8 +1726,7 @@ theorem AllocatorResources_retire {host : Type} [WasmHeapGS host]
       layout $$ Hmetadata with ⟨Hauth, Hfragment, %hlookup⟩
   ihave HretiredNew := RetiredBytes_retire heapId history allocationId ptr
       layout bytes hlookup $$ [Hretired Hfragment Hbytes]
-  · iframe
-    ipureexact hfacts.1
+  · iframe_pureexact hfacts.1
   imodintro
   iframe
 

@@ -272,8 +272,7 @@ private theorem arrayAt_readWordArray {hlc : HasLC} [WasmSmallStepGS hlc Unit]
     simp only [arrayAt, List.length_nil, readWordArray]
     iintro ⟨Hstate, Hemp⟩
     imodintro
-    isplitl [Hstate]; iexact Hstate
-    isplitl [Hemp]; iexact Hemp
+    isplitl_exacts [Hstate Hemp]
     ipureintro; trivial
   | cons x xs ih =>
     simp only [arrayAt, List.length_cons]
@@ -290,9 +289,9 @@ private theorem arrayAt_readWordArray {hlc : HasLC} [WasmSmallStepGS hlc Unit]
       h1 h2 h3 $$ [$Hstate $Hword] with ⟨Hstate, Hword, %hfacts⟩
     imod ih (base + 4) hfit' $$ [$Hstate $Hxs] with ⟨Hstate, Hxs, %hread⟩
     imodintro
-    isplitl [Hstate]; iexact Hstate
+    isplitl_exact Hstate
     isplitl [Hword Hxs]
-    · isplitl [Hword]; iexact Hword; iexact Hxs
+    · isplitl_exact Hword; iexact Hxs
     ipureintro
     unfold readWordArray
     rw [hfacts.1, hread]

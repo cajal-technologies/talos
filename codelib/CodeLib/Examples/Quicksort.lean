@@ -559,7 +559,7 @@ theorem quicksortHeapAux_pointsTo [WasmHeapGS α]
       store32Heap_pointsTo σ 0 base x hget0 hget1 hget2 hget3 hn1 hn2 hn3 $$ Hstore32
     simp only [arrayAt]
     isplitl [Hword Hxs]
-    · isplitl [Hword]; iexact Hword; iexact Hxs
+    · isplitl_exact Hword; iexact Hxs
     · iexact Hσ
 
 theorem quicksortHeap_pointsTo [WasmHeapGS α]
@@ -586,8 +586,7 @@ theorem arrayAt_readWordArray [WasmSmallStepGS hlc α]
     simp only [arrayAt, List.length_nil, readWordArray]
     iintro ⟨Hstate, Hemp⟩
     imodintro
-    isplitl [Hstate]; iexact Hstate
-    isplitl [Hemp]; iexact Hemp
+    isplitl_exacts [Hstate Hemp]
     ipureintro; trivial
   | cons x xs ih =>
     simp only [arrayAt, List.length_cons]
@@ -604,9 +603,9 @@ theorem arrayAt_readWordArray [WasmSmallStepGS hlc α]
       h1 h2 h3 $$ [$Hstate $Hword] with ⟨Hstate, Hword, %hfacts⟩
     imod ih (arr + 4) hfit' $$ [$Hstate $Hxs] with ⟨Hstate, Hxs, %hread⟩
     imodintro
-    isplitl [Hstate]; iexact Hstate
+    isplitl_exact Hstate
     isplitl [Hword Hxs]
-    · isplitl [Hword]; iexact Hword; iexact Hxs
+    · isplitl_exact Hword; iexact Hxs
     ipureintro
     unfold readWordArray
     rw [hfacts.1, hread]
