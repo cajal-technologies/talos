@@ -162,12 +162,10 @@ theorem deserialize_readBytes (mem : Mem) (base : UInt32) (count : Nat)
       rw [show 4 * (count + 1) = 4 + 4 * count by omega]
       rw [readBytes_four_add]
       simp only [List.cons_append, List.nil_append, deserialize_cons]
-      have hbase : (base + 4).toNat = base.toNat + 4 := by
-        simp only [UInt32.toNat_add, UInt32.reduceToNat]
-        rw [Nat.mod_eq_of_lt]
-        change base.toNat + 4 < 4294967296
-        change base.toNat + 4 * (count + 1) < 4294967296 at hfit
-        omega
+      have hbase : (base + 4).toNat = base.toNat + 4 :=
+        UInt32.add_ofNat_toNat_noWrap base 4 (by decide) (by
+          simp only [UInt32.size] at hfit ⊢
+          omega)
       change (deserialize (mem.readBytes (base.toNat + 4) (4 * count))).map
           (mem.read32 base :: ·) =
         some (mem.read32 base :: readWordArray mem (base + 4) count)
