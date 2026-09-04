@@ -33,29 +33,13 @@ theorem ValidLayout.length_lt
   have hsize : UInt32.size = 4294967296 := rfl
   rw [hsize] at hfit ⊢; omega
 
-theorem u32_ofNat_add {a b : Nat} (h : a + b < UInt32.size) :
-    UInt32.ofNat a + UInt32.ofNat b = UInt32.ofNat (a + b) := by
-  apply UInt32.toNat.inj
-  rw [UInt32.toNat_add,
-    UInt32.toNat_ofNat_of_lt' (by omega),
-    UInt32.toNat_ofNat_of_lt' (by omega),
-    Nat.mod_eq_of_lt h,
-    UInt32.toNat_ofNat_of_lt' h]
+theorem u32_ofNat_add {a b : Nat} (_ : a + b < UInt32.size) :
+    UInt32.ofNat a + UInt32.ofNat b = UInt32.ofNat (a + b) :=
+  (UInt32.ofNat_add a b).symm
 
-theorem u32_ofNat_mul {a b : Nat} (h : a * b < UInt32.size) :
-    UInt32.ofNat a * UInt32.ofNat b = UInt32.ofNat (a * b) := by
-  rcases Nat.eq_zero_or_pos a with rfl | ha
-  · simp
-  rcases Nat.eq_zero_or_pos b with rfl | hb
-  · simp
-  have haSize : a < UInt32.size :=
-    Nat.lt_of_le_of_lt (Nat.le_mul_of_pos_right a hb) h
-  have hbSize : b < UInt32.size :=
-    Nat.lt_of_le_of_lt (Nat.le_mul_of_pos_left b ha) h
-  apply UInt32.toNat.inj
-  rw [UInt32.toNat_mul, UInt32.toNat_ofNat_of_lt' haSize,
-    UInt32.toNat_ofNat_of_lt' hbSize, Nat.mod_eq_of_lt h,
-    UInt32.toNat_ofNat_of_lt' h]
+theorem u32_ofNat_mul {a b : Nat} (_ : a * b < UInt32.size) :
+    UInt32.ofNat a * UInt32.ofNat b = UInt32.ofNat (a * b) :=
+  (UInt32.ofNat_mul a b).symm
 
 theorem arrayAddress_toNat (base : UInt32) {index length : Nat}
     (hfit : base.toNat + 4 * length ≤ UInt32.size)
