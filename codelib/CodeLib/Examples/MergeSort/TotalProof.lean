@@ -12,6 +12,8 @@ correctness is obtained from these total proofs through `twp.to_wp`.
 
 namespace Wasm.Examples.MergeSort
 
+open Wasm.Examples.UInt32Array
+
 open Wasm
 open Iris Iris.ProgramLogic Language.Notation
 open Wasm.SepLogic

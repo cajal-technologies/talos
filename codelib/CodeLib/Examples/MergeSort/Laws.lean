@@ -14,6 +14,7 @@ open Wasm
 open Iris Iris.ProgramLogic Language.Notation
 open Wasm.SepLogic
 open Wasm.SmallStep
+open Wasm.Examples.UInt32Array
 
 theorem ValidLayout.source_fits
     {source temporary : UInt32} {length : Nat}

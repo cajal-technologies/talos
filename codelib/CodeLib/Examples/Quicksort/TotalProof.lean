@@ -11,6 +11,8 @@ reuses the same total proofs through `twp.to_wp`.
 
 namespace Wasm.Examples.Quicksort
 
+open Wasm.Examples.UInt32Array
+
 open Wasm
 open Iris Iris.ProgramLogic Language.Notation Std
 open Wasm.SepLogic
