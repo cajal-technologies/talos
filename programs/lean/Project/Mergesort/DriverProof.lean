@@ -1857,15 +1857,13 @@ private theorem func3_decode_next_address (base : UInt32) (index : Nat) :
   ac_rfl
 
 private theorem func3_decode_decrement {remaining : Nat}
-    (hpositive : 0 < remaining)
-    (hbound : remaining < UInt32.size) :
+    (hpositive : 0 < remaining) :
     UInt32.ofNat remaining + 4294967295 =
       UInt32.ofNat (remaining - 1) := by
   have hpred : remaining - 1 + 1 = remaining := by omega
-  have hpredBound : remaining - 1 + 1 < UInt32.size := by omega
   have hremaining :
       UInt32.ofNat remaining = UInt32.ofNat (remaining - 1) + 1 := by
-    rw [Wasm.Examples.MergeSort.u32_ofNat_succ hpredBound, hpred]
+    rw [UInt32.ofNat_succ, hpred]
   have hmax : (4294967295 : UInt32) = 0 - 1 := by decide
   rw [hremaining, hmax]
   calc
@@ -1946,11 +1944,10 @@ theorem twp_func3_decode_tail_loop
     iintro Hrec Hinv
     icases Hinv with ⟨%hstate, Hsource, Hdestination, Hfinish⟩
     have hcopied : state.copied < original.length := by omega
-    have hremainingBound : state.remaining < UInt32.size := by omega
     have hdecrement :
         UInt32.ofNat state.remaining + 4294967295 =
           UInt32.ofNat (state.remaining - 1) :=
-      func3_decode_decrement hstate.2 hremainingBound
+      func3_decode_decrement hstate.2
     let next : Func3DecodeTailState :=
       { copied := state.copied + 1,
         remaining := state.remaining - 1 }
@@ -2432,8 +2429,7 @@ theorem twp_func3_decode_setup
   have hshift := func3_decode_shift_two length hpositive hwordBound
   have hsucc : UInt32.ofNat (length - 1) + 1 = UInt32.ofNat length := by
     have hpred : length - 1 + 1 = length := by omega
-    have hpredBound : length - 1 + 1 < UInt32.size := by omega
-    rw [Wasm.Examples.MergeSort.u32_ofNat_succ hpredBound, hpred]
+    rw [UInt32.ofNat_succ, hpred]
   have htail := func3_decode_tail_mask length hlengthBound
   simp only [func3DecodeSetup, func3AppendLocals,
     List.cons_append, List.nil_append]

@@ -641,22 +641,20 @@ private theorem u32_sub_eq_neg_iff_sum_eq {a b r : Nat}
             exact UInt32.sub_eq_add_neg _ _
       _ = 0 - UInt32.ofNat r := by rw [UInt32.sub_self]
 
-private theorem u32_neg_counter_step {r : Nat}
-    (h : r + 1 < UInt32.size) :
+private theorem u32_neg_counter_step {r : Nat} :
     (0 - UInt32.ofNat r) + 4294967295 =
       0 - UInt32.ofNat (r + 1) := by
   have hmax : (4294967295 : UInt32) = 0 - 1 := by decide
-  rw [hmax, ← Wasm.Examples.MergeSort.u32_ofNat_succ h,
+  rw [hmax, ← UInt32.ofNat_succ,
     UInt32.zero_sub, UInt32.zero_sub, UInt32.zero_sub,
     UInt32.neg_add, UInt32.sub_eq_add_neg]
 
 private theorem u32_neg_counter_increment {q : Nat}
-    (hq : 0 < q) (hsize : q < UInt32.size) :
+    (hq : 0 < q) :
     (0 - UInt32.ofNat q) + 1 = 0 - UInt32.ofNat (q - 1) := by
   have hpred : q - 1 + 1 = q := by omega
-  have hpredSize : q - 1 + 1 < UInt32.size := by omega
   have hof : UInt32.ofNat q = UInt32.ofNat (q - 1) + 1 := by
-    rw [Wasm.Examples.MergeSort.u32_ofNat_succ hpredSize, hpred]
+    rw [UInt32.ofNat_succ, hpred]
   rw [hof, UInt32.zero_sub, UInt32.zero_sub, UInt32.neg_add,
     UInt32.sub_add_cancel]
 
@@ -1084,12 +1082,10 @@ theorem twp_mergeMainChoice
     exact hkLen
   have hiValue :
       1 + UInt32.ofNat i = UInt32.ofNat (i + 1) := by
-    rw [UInt32.add_comm,
-      Wasm.Examples.MergeSort.u32_ofNat_succ (by omega)]
+    rw [UInt32.add_comm, UInt32.ofNat_succ]
   have hjValue :
       1 + UInt32.ofNat (j - mid) = UInt32.ofNat (j + 1 - mid) := by
-    rw [UInt32.add_comm,
-      Wasm.Examples.MergeSort.u32_ofNat_succ (by omega)]
+    rw [UInt32.add_comm, UInt32.ofNat_succ]
     congr 1
     omega
   iintro ⟨Hsource, Hscratch, Hbranches⟩
@@ -1298,12 +1294,9 @@ theorem twp_mergeMainLoop
       have hnext := hstate.takeLeft hiState hjState
         (List.getElem?_eq_getElem hiLen)
         (List.getElem?_eq_getElem hjState) hle
-      have hkSucc : state.k + 1 < UInt32.size := by
-        have := hlayout.length_lt; omega
       have hkValue :
           1 + UInt32.ofNat state.k = UInt32.ofNat (state.k + 1) := by
-        rw [UInt32.add_comm,
-          Wasm.Examples.MergeSort.u32_ofNat_succ hkSucc]
+        rw [UInt32.add_comm, UInt32.ofNat_succ]
       rw [mergeMainLoopBody_tail]
       wasm_twp_pures [twp_localGet twp_const twp_add]
       rw [UInt32.add_comm (4 : UInt32), next_slot_address]
@@ -1373,12 +1366,9 @@ theorem twp_mergeMainLoop
       have hnext := hstate.takeRight hiState hjState
         (List.getElem?_eq_getElem hiLen)
         (List.getElem?_eq_getElem hjState) hle
-      have hkSucc : state.k + 1 < UInt32.size := by
-        have := hlayout.length_lt; omega
       have hkValue :
           1 + UInt32.ofNat state.k = UInt32.ofNat (state.k + 1) := by
-        rw [UInt32.add_comm,
-          Wasm.Examples.MergeSort.u32_ofNat_succ hkSucc]
+        rw [UInt32.add_comm, UInt32.ofNat_succ]
       rw [mergeMainLoopBody_tail]
       wasm_twp_pures [twp_localGet twp_const twp_add]
       rw [UInt32.add_comm (4 : UInt32), next_slot_address]
@@ -1682,9 +1672,6 @@ theorem twp_mergeLeftRemainder
       isplitl_exacts [Hsource Hscratch]
       iintro ⟨Hsource, Hscratch⟩
       have hmidSize : mid < UInt32.size := Nat.lt_of_le_of_lt hmjState hlayout.length_lt
-      have hrSuccSize : state.r + 1 < UInt32.size := by
-        have : state.r + 1 ≤ n := by omega
-        omega
       have hsourceNext :
           4 * UInt32.ofNat (i + state.r) + source + 4 =
             4 * UInt32.ofNat (i + (state.r + 1)) + source := by
@@ -1707,7 +1694,7 @@ theorem twp_mergeLeftRemainder
       wasm_twp_localSet [List.length, List.set]
       wasm_twp_pures [twp_localGet twp_localGet twp_const twp_add]
       rw [UInt32.add_comm (4294967295 : UInt32),
-        u32_neg_counter_step hrSuccSize]
+        u32_neg_counter_step]
       wasm_twp_localTee [List.length, List.set]
       by_cases hmore : state.r + 1 < n
       · have hne :
@@ -1718,7 +1705,7 @@ theorem twp_mergeLeftRemainder
         have hneActual :
             UInt32.ofNat i - UInt32.ofNat mid ≠
               -(UInt32.ofNat state.r + 1) := by
-          rw [Wasm.Examples.MergeSort.u32_ofNat_succ hrSuccSize]
+          rw [UInt32.ofNat_succ]
           simpa [UInt32.zero_sub] using hne
         iapply twp_ne (result := 1) (by rw [if_pos hne])
         iapply twp_brIf (by decide) (by rfl)
@@ -1736,7 +1723,7 @@ theorem twp_mergeLeftRemainder
         have heqActual :
             UInt32.ofNat i - UInt32.ofNat mid =
               -(UInt32.ofNat state.r + 1) := by
-          rw [Wasm.Examples.MergeSort.u32_ofNat_succ hrSuccSize]
+          rw [UInt32.ofNat_succ]
           simpa [UInt32.zero_sub] using heq
         have hnotne : ¬(
             UInt32.ofNat i - UInt32.ofNat mid ≠
@@ -2041,9 +2028,6 @@ theorem twp_mergeRightRemainder
         (by rw [UInt32.add_comm])
       isplitl_exacts [Hsource Hscratch]
       iintro ⟨Hsource, Hscratch⟩
-      have hrSuccSize : state.r + 1 < UInt32.size := by
-        have : state.r + 1 ≤ n := by omega
-        dsimp only [n] at this; omega
       have hsourceNext :
           4 * UInt32.ofNat (j + state.r) + source + 4 =
             4 * UInt32.ofNat (j + (state.r + 1)) + source := by
@@ -2059,19 +2043,13 @@ theorem twp_mergeRightRemainder
       have hkStep :
           UInt32.ofNat (k + state.r) + 1 =
             UInt32.ofNat (k + (state.r + 1)) := by
-        have hkSuccSize : k + state.r + 1 < UInt32.size := by
-          calc
-            k + state.r + 1 ≤ input.length := Nat.succ_le_of_lt hkCurrent
-            _ < UInt32.size := hlayout.length_lt
-        rw [Wasm.Examples.MergeSort.u32_ofNat_succ hkSuccSize]
+        rw [UInt32.ofNat_succ]
         congr 1
       have hq : 0 < n - state.r := by omega
-      have hqSize : n - state.r < UInt32.size := by
-        dsimp only [n]; omega
       have hcounterStep :
           (0 - UInt32.ofNat (n - state.r)) + 1 =
             0 - UInt32.ofNat (n - (state.r + 1)) := by
-        rw [u32_neg_counter_increment hq hqSize]
+        rw [u32_neg_counter_increment hq]
         congr 2
       wasm_twp_pures [twp_localGet twp_const twp_add]
       rw [UInt32.add_comm (4 : UInt32), hdestinationNext]
