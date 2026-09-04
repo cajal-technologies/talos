@@ -198,8 +198,7 @@ theorem VecStorage_as_growSource
       isimp only [GrowSourceOwn]
       iframe
   · iintro ⟨%source, Hsource⟩
-    iapply GrowSourceOwn_to_VecStorage heapId capacity ptr initialized source
-    iexact Hsource
+    iapply_exact GrowSourceOwn_to_VecStorage heapId capacity ptr initialized source with Hsource
 
 def growHistory (history : AllocationHistory) (source : GrowSource)
     (oldCapacity oldPtr newPtr : UInt32) (newLayout : AllocLayout) :

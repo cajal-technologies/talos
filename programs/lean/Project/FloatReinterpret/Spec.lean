@@ -36,8 +36,7 @@ theorem func5_body_smallStep_wp
   simp only [func5]
   iintro Hret
   wasm_wp_pures [wp_localGet]
-  iapply wp_scalarFloat1 rfl rfl
-  iexact Hret
+  iapply_exact wp_scalarFloat1 rfl rfl with Hret
 
 theorem func5_smallStep (x : UInt32) :
     PartiallyMeets (func5Config x)
@@ -67,8 +66,7 @@ theorem func6_body_smallStep_wp
   simp only [func6]
   iintro Hret
   wasm_wp_pures [wp_localGet]
-  iapply wp_scalarFloat1 rfl rfl
-  iexact Hret
+  iapply_exact wp_scalarFloat1 rfl rfl with Hret
 
 theorem func6_smallStep (x : UInt32) :
     PartiallyMeets (func6Config x)
@@ -1873,8 +1871,7 @@ theorem twp_func5_body_smallStep_wp
   simp only [func5]
   iintro Hret
   wasm_twp_pures [twp_localGet]
-  iapply twp_scalarFloat1 rfl rfl
-  iexact Hret
+  iapply_exact twp_scalarFloat1 rfl rfl with Hret
 
 theorem twp_func6_body_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -1889,8 +1886,7 @@ theorem twp_func6_body_smallStep_wp
   simp only [func6]
   iintro Hret
   wasm_twp_pures [twp_localGet]
-  iapply twp_scalarFloat1 rfl rfl
-  iexact Hret
+  iapply_exact twp_scalarFloat1 rfl rfl with Hret
 
 theorem twp_func1_lowered_body_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}

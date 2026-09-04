@@ -264,8 +264,7 @@ theorem copyWords_bodyTail_wp
   iintro Hresources
   iapply copyWords_incrementBackedge_wp dst src n i afterLoop arity
     remainder outerControls calls
-  iapply hback
-  iexact Hresources
+  iapply_exact hback with Hresources
 
 theorem copyWords_guard_wp
     {α : Type} [Wasm.SmallStep.WasmSmallStepGS hlc α]
@@ -307,14 +306,12 @@ theorem copyWords_guard_wp
   · wasm_wp_next Wasm.SmallStep.wp_ltU (result := 1) (by simp [hlt])
     wasm_wp_next Wasm.SmallStep.wp_brIf (by decide) (by rfl)
     simp only [List.drop_zero, List.take_nil, List.nil_append]
-    iapply hbody hlt
-    iexact HP
+    iapply_exact hbody hlt with HP
   · wasm_wp_next Wasm.SmallStep.wp_ltU (result := 0) (by simp [hlt])
     wasm_wp_pures [wp_brIfZero wp_br wp_exitControl]
     simp only [copyWordsLoopFrame, List.drop_zero, List.take_nil,
       List.nil_append]
-    iapply hexit hlt
-    iexact HP
+    iapply_exact hexit hlt with HP
 
 /-- Universal copy invariant: `pre` is already equal in both arrays;
 `dstSuffix` and `srcSuffix` are the unprocessed tails, and their concatenation
@@ -562,8 +559,7 @@ theorem copyWords_smallStep_wp
     afterLoop arity remainder controls calls hdestinationLength hsourceLength
     hdstTotal hsrcTotal hfinish
   simp only [List.cons_append, List.nil_append] at hloop
-  iapply hloop
-  iexact Hresources
+  iapply_exact hloop with Hresources
 
 /-! ## Total small-step correctness
 
@@ -753,8 +749,7 @@ theorem copyWords_bodyTail_twp
   iintro Hresources
   iapply copyWords_incrementBackedge_twp dst src n i afterLoop arity
     remainder outerControls calls
-  iapply hback
-  iexact Hresources
+  iapply_exact hback with Hresources
 
 /-- Total counterpart of `copyWords_guard_wp`. -/
 theorem copyWords_guard_twp
@@ -797,14 +792,12 @@ theorem copyWords_guard_twp
   · iapply Wasm.SmallStep.twp_ltU (result := 1) (by simp [hlt])
     iapply Wasm.SmallStep.twp_brIf (by decide) (by rfl)
     simp only [List.drop_zero, List.take_nil, List.nil_append]
-    iapply hbody hlt
-    iexact HP
+    iapply_exact hbody hlt with HP
   · iapply Wasm.SmallStep.twp_ltU (result := 0) (by simp [hlt])
     wasm_twp_pures [twp_brIfZero twp_br twp_exitControl]
     simp only [copyWordsLoopFrame, List.drop_zero, List.take_nil,
       List.nil_append]
-    iapply hexit hlt
-    iexact HP
+    iapply_exact hexit hlt with HP
 
 /-- The copy loop terminates and copies: `n - i` strictly decreases across the
 back edge, so the well-founded family rule closes the proof without a
@@ -1028,7 +1021,6 @@ theorem copyWords_smallStep_twp
     afterLoop arity remainder controls calls hdestinationLength hsourceLength
     hdstTotal hsrcTotal hfinish
   simp only [List.cons_append, List.nil_append] at hloop
-  iapply hloop
-  iexact Hresources
+  iapply_exact hloop with Hresources
 
 end Wasm

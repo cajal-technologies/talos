@@ -373,14 +373,12 @@ theorem wasm_smallStep_heap_globals_runtime_host_store_terminatesWithOutcome
     intro hlc gs
     iintro Hresources
     iapply (twp.mono (fun _ => BI.true_intro))
-    iapply htwp hlc
-    iexact Hresources
+    iapply_exact htwp hlc with Hresources
   · apply wasm_smallStep_heap_globals_runtime_host_store_adequacy_outcome
       config σ globalσ post hagree hinBounds hglobals hwf
     intro gs
     iintro Hresources
     iapply twp.to_wp
-    iapply htwp .hasLC
-    iexact Hresources
+    iapply_exact htwp .hasLC with Hresources
 
 end Wasm.SmallStep

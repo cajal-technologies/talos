@@ -673,8 +673,7 @@ theorem wasm_smallStep_runtime_adequacy
   intro gs
   iintro ⟨Hruntime, Htags⟩
   iclear Htags
-  iapply hwp
-  iexact Hruntime
+  iapply_exact hwp with Hruntime
 
 /-- Relational partial-correctness form of call-capable runtime adequacy. -/
 theorem wasm_smallStep_runtime_partiallyMeets
@@ -1591,8 +1590,7 @@ theorem wasm_smallStep_runtime_tags_terminates
     intro gs
     iintro Hboth
     iapply twp.to_wp
-    iapply htwp .hasLC
-    iexact Hboth
+    iapply_exact htwp .hasLC with Hboth
 
 /-- Total-correctness entry point owning only the physical memory bytes, with a
 value-only postcondition. -/
@@ -1622,8 +1620,7 @@ theorem wasm_smallStep_heap_terminates
     iintro %store %observations Hstate
     iclear Hstate
     ipureexact hφ
-  iapply htwp hlc
-  iexact Hpoints
+  iapply_exact htwp hlc with Hpoints
 
 /-- State-sensitive adequacy with explicit authoritative ownership of passive
 data-segment status in addition to memory, globals, and the runtime module. -/

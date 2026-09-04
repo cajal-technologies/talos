@@ -92,8 +92,7 @@ theorem twp_oom_import
       rw [WrapperProof.oomHost_invoke] at h
       exact (HostResult.Trap.inj h).2.symm
     subst msg
-    iapply Wasm.SmallStep.twp_outcome_trapped
-    iexact Houtcome
+    iapply_exact Wasm.SmallStep.twp_outcome_trapped with Houtcome
   · iintro %preWasm %postWasm %tag %xs %h HQ
     simp [WrapperProof.oomHost_invoke] at h
 

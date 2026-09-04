@@ -1893,8 +1893,7 @@ theorem twp_func3_copy_decoded_word_from_locals
     (code := code) (arity := arity) (remainder := remainder)
     (controls := controls) (calls := calls) (s := s) (E := E) (Φ := Φ)
   simp only [List.cons_append, List.nil_append] at Hcopy
-  iapply Hcopy
-  iexact Hresources
+  iapply_exact Hcopy with Hresources
 
 /-! ## Generated decode loops -/
 
@@ -4947,8 +4946,7 @@ theorem twp_func3_read_phase
     func3ReadLoopBlockBody, func3ReadLoopLocals, func3AppendLocals,
     List.cons_append, List.nil_append] at Hloop
   simp only [func3ReadLoopLocals, func3AppendLocals, List.drop_zero]
-  iapply Hloop
-  iexact Hinv
+  iapply_exact Hloop with Hinv
 
 /-- Execute a nonempty public input's first generated read, take the actual
 `br_if 0` edge out of the initial-read block, initialize the Vec cursor
@@ -5134,8 +5132,7 @@ theorem twp_func3_initial_read_block_nonempty
     (controls := controls) (calls := calls) (s := s) (E := E) (Φ := Φ)
   simp only [func3InitialReadFrame, func3InitializedLocals] at Hread
   simp only [func3InitializedLocals, List.drop_zero]
-  iapply Hread
-  iexact Hresources
+  iapply_exact Hread with Hresources
 
 /-- Execute the disjoint empty-input arm of the exact initial-read block.
 The zero read falls through `br_if 0`, sets the two generated empty-case
@@ -5247,8 +5244,7 @@ theorem twp_func3_initial_read_block_empty
     (calls := calls) (s := s) (E := E) (Φ := Φ)
   simp only [func3InitialReadFrame, func3InitializedLocals] at Hread
   simp only [func3InitializedLocals, List.drop_zero]
-  iapply Hread
-  iexact Hresources
+  iapply_exact Hread with Hresources
 
 /-- Execute the generated `func3` prologue from raw entry ownership to the
 reviewed initialized-frame representation.  No allocator, host call, or
@@ -5855,8 +5851,7 @@ theorem twp_func3_read_dispatch_nonempty
       at Hcompleted ⊢
     iapply_frame Hcompleted
   · iintro HOOM
-    iapply Hoom
-    iexact HOOM
+    iapply_exact Hoom with HOOM
 
 /-- Audited decomposition of the generated body following its 21-instruction
 prologue. -/

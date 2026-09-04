@@ -943,8 +943,7 @@ theorem wp_throwRef
       (DFrac.own 1) (tag, arguments) $$ [Hσ Hexception]
   wasm_wp_step Step.throwRef hexn =>
     wasm_wp_frame
-      iapply Hwp
-      iexact Hexception
+      iapply_exact Hwp with Hexception
 
 /-- Pure step: an exception unwinds across a call boundary, resuming the
 caller with the throwing frame prepended to the caller's control stack.
@@ -996,8 +995,7 @@ theorem wp_throwI
     simpa only [Hmodule] using htag
   wasm_wp_step Step.throwI (α := α) htag' hargs =>
     wasm_wp_frame
-      iapply Hwp
-      iexact Hruntime
+      iapply_exact Hwp with Hruntime
 
 /-- Unwind a throwing frame through a non-catching control frame. -/
 theorem wp_unwindExceptionFrame
@@ -1225,16 +1223,14 @@ theorem wp_callHost
       imod hTrapTransfer store ns obs' nt Hmodule newWasm msg h $$ [$HP $Hσ] with ⟨HQ, Hσ⟩
       wasm_wp_frame
         ispecialize HwpTrap $$ %(store.wasm) %newWasm %msg %h
-        iapply HwpTrap
-        iexact HQ
+        iapply_exact HwpTrap with HQ
   | .Throw newWasm tag xs =>
     iclear HinstanceOwn HruntimeElem
     wasm_wp_step Step.callHostThrow (α := α) himports' himp' hhost' h =>
       imod hThrowTransfer store ns obs' nt Hmodule newWasm tag xs h $$ [$HP $Hσ] with ⟨HQ, Hσ⟩
       wasm_wp_frame
         ispecialize HwpThrow $$ %(store.wasm) %newWasm %tag %xs %h
-        iapply HwpThrow
-        iexact HQ
+        iapply_exact HwpThrow with HQ
 
 /-- Resume caller after explicit return; runtime-module ownership is returned
     unchanged for chained same-instance calls. -/
@@ -2986,8 +2982,7 @@ theorem wp_memoryGrowFailure
   wasm_runtime_module_agree (obs ++ obs'), instanceId, runtimeModule $$ [$Hσ $Hruntime]
   wasm_wp_step Step.memoryGrowFailure (Hmodule ▸ hgrow store.wasm) =>
     wasm_wp_frame
-      iapply Hwp
-      iexact Hruntime
+      iapply_exact Hwp with Hruntime
 
 theorem wp_memorySize
     {params localValues values : List Value}
@@ -3007,8 +3002,7 @@ theorem wp_memorySize
   wasm_wp_step Step.memorySize =>
     simp only [Hmodule]
     wasm_wp_frame
-      iapply (Hwp store.wasm.mem.pages)
-      iexact Hruntime
+      iapply_exact (Hwp store.wasm.mem.pages) with Hruntime
 
 theorem wp_memoryGrow64Failure
     {params localValues values : List Value}
@@ -3031,8 +3025,7 @@ theorem wp_memoryGrow64Failure
   wasm_wp_step
     Step.memoryGrow64Failure hsmall (Hmodule ▸ hgrow store.wasm) =>
     wasm_wp_frame
-      iapply Hwp
-      iexact Hruntime
+      iapply_exact Hwp with Hruntime
 
 /-- Rule for `memory.grow` with an i32 delta. Whether the grow succeeds
 depends on the physical store (the current page count and the module cap),
@@ -3058,8 +3051,7 @@ theorem wp_memoryGrow
   | none =>
     wasm_wp_step Step.memoryGrowFailure hg =>
       wasm_wp_frame
-        iapply (Hwp (0xFFFFFFFF : UInt32))
-        iexact Hruntime
+        iapply_exact (Hwp (0xFFFFFFFF : UInt32)) with Hruntime
   | some grown =>
     obtain ⟨memory, previousPages⟩ := grown
     wasm_wp_step (by
@@ -3069,8 +3061,7 @@ theorem wp_memoryGrow
           (store.wasm.memoryCap store.runtime.currentModule 0) memory previousPages hg) $$
           Hσ with Hσ
       wasm_wp_frame
-        iapply (Hwp previousPages.toUInt32)
-        iexact Hruntime
+        iapply_exact (Hwp previousPages.toUInt32) with Hruntime
 
 /-- Rule for `memory.grow` with an i64 delta below `2 ^ 32` (the too-large
 case is `wp_memoryGrow64TooLarge`). As with `wp_memoryGrow`, the continuation
@@ -3097,8 +3088,7 @@ theorem wp_memoryGrow64
   | none =>
     wasm_wp_step Step.memoryGrow64Failure hsmall hg =>
       wasm_wp_frame
-        iapply (Hwp (0xFFFFFFFFFFFFFFFF : UInt64))
-        iexact Hruntime
+        iapply_exact (Hwp (0xFFFFFFFFFFFFFFFF : UInt64)) with Hruntime
   | some grown =>
     obtain ⟨memory, previousPages⟩ := grown
     wasm_wp_step (by
@@ -3109,8 +3099,7 @@ theorem wp_memoryGrow64
           (store.wasm.memoryCap store.runtime.currentModule 0) memory previousPages hg) $$
           Hσ with Hσ
       wasm_wp_frame
-        iapply (Hwp previousPages.toUInt64)
-        iexact Hruntime
+        iapply_exact (Hwp previousPages.toUInt64) with Hruntime
 
 /-- Primitive rule for `memory.fill` with i32 operands (non-trapping). `oldBytes`
 describes the pre-fill byte range; the post-condition hands back the range filled
@@ -4674,8 +4663,7 @@ theorem wp_v128Store
         hnowrap16 (by simpa [hnowrap] using hbound_store) $$
         [$Hσ $Hlo_old $Hhi_old] with ⟨Hσ, ⟨Hlo, Hhi⟩⟩
     wasm_wp_frame
-      iapply Hwp $$ [$Hlo]
-      iexact Hhi
+      iapply_exact Hwp $$ [$Hlo] with Hhi
 
 theorem wp_load8UMemory64
     {params localValues values : List Value}
@@ -5137,8 +5125,7 @@ theorem wp_returnFromCallCrossInstance
     imod stateInterp_currentInstance_update_of_any store ns obs' nt calleeId returningInstance $$
         [$Hσ $HinstanceOwn] with ⟨Hσ, HinstanceOwn', %_⟩
     wasm_wp_frame
-      iapply Hwp
-      iexact HinstanceOwn'
+      iapply_exact Hwp with HinstanceOwn'
 
 /-- Call an indirect function through a table entry. `runtimeModule` owns the
 current module (provides `himports`, `hfn`, `hsignature`, `hexpected`, `htype`).

@@ -227,8 +227,7 @@ theorem wordRoundtrip_adequate (oldWord : UInt32) :
       iintro ⟨%hvalues, _Hword⟩
       ipureexact hvalues
     iapply wp_mono hpost
-    iapply wp_wordRoundtrip
-    iexact Hword
+    iapply_exact wp_wordRoundtrip with Hword
 
 /-- State-sensitive adequacy exposes the physical effect of the manual
 roundtrip, not only its returned value. -/
@@ -275,8 +274,7 @@ theorem wordRoundtrip_store_partiallyMeets (oldWord : UInt32) :
           [$Hstate $Hword] with %Hfacts
       ipureexact ⟨hvalues, Hfacts.1⟩
     iapply wp_mono hpost
-    iapply wp_wordRoundtrip
-    iexact Hword
+    iapply_exact wp_wordRoundtrip with Hword
 
 /-- Authoritative footprint for the two cells used by `wp_swapWords`. -/
 private def swapWordsHeap : WasmHeapMap (Option UInt8) :=
@@ -385,8 +383,7 @@ theorem swapWords_adequate :
       iintro ⟨%hvalues, _H0, _H4⟩
       ipureexact hvalues
     iapply wp_mono hpost
-    iapply wp_swapWords
-    iexact Hwords
+    iapply_exact wp_swapWords with Hwords
 
 /-- State-sensitive Iris adequacy for the two-word swap.  In addition to the
 returned stack, this exposes both exchanged words in the reached physical
@@ -434,8 +431,7 @@ theorem swapWords_store_partiallyMeets :
           [$Hstate $H4] with %Hfacts4
       ipureexact ⟨hvalues, Hfacts0.1, Hfacts4.1⟩
     iapply wp_mono hpost
-    iapply wp_swapWords
-    iexact Hwords
+    iapply_exact wp_swapWords with Hwords
 
 /-! ### Three-word reverse with a framed middle cell -/
 
@@ -566,8 +562,7 @@ theorem reverseThreeWords_store_partiallyMeets :
           [$Hstate $H8] with %Hfacts8
       ipureexact ⟨hvalues, Hfacts0.1, Hfacts4.1, Hfacts8.1⟩
     iapply wp_mono hpost
-    iapply wp_reverseThreeWords
-    iexact Hwords
+    iapply_exact wp_reverseThreeWords with Hwords
 
 /-! ### Three-word partition with a pivot in its final position -/
 
@@ -719,8 +714,7 @@ theorem partitionThreeWords_store_partiallyMeets :
         by rw [Hfacts0.1, Hfacts4.1]; decide,
         by rw [Hfacts4.1, Hfacts8.1]; decide⟩
     iapply wp_mono hpost
-    iapply wp_partitionThreeWords
-    iexact Hwords
+    iapply_exact wp_partitionThreeWords with Hwords
 
 /-! ### Merge of two singleton sorted runs -/
 
@@ -852,8 +846,7 @@ theorem mergeTwoWords_store_partiallyMeets :
       ipureexact ⟨hvalues, Hfacts0.1, Hfacts4.1,
         by rw [Hfacts0.1, Hfacts4.1]; decide⟩
     iapply wp_mono hpost
-    iapply wp_mergeTwoWords
-    iexact Hwords
+    iapply_exact wp_mergeTwoWords with Hwords
 
 /-! ### Bulk-memory examples -/
 
@@ -994,8 +987,7 @@ theorem fillFourBytes_store_partiallyMeets (oldWord : UInt32) :
           [$Hstate $H32] with %Hfacts32
       ipureexact ⟨hvalues, Hfacts16.1, Hfacts32.1⟩
     iapply wp_mono hpost
-    iapply wp_fillFourBytes oldWord
-    iexact Hwords
+    iapply_exact wp_fillFourBytes oldWord with Hwords
 
 private def copyWordHeap (oldDestination : UInt32) :
     WasmHeapMap (Option UInt8) :=
@@ -1120,8 +1112,7 @@ theorem copyWord_store_partiallyMeets (oldDestination : UInt32) :
           [$Hstate $H8] with %Hfacts8
       ipureexact ⟨hvalues, Hfacts0.1, Hfacts8.1⟩
     iapply wp_mono hpost
-    iapply wp_copyWord oldDestination
-    iexact Hwords
+    iapply_exact wp_copyWord oldDestination with Hwords
 
 private def copyOverlapWordHeap : WasmHeapMap (Option UInt8) :=
   store64Heap ∅ 0 0 0x8877665544332211
@@ -1226,8 +1217,7 @@ theorem copyOverlapWord_store_partiallyMeets :
           [$Hstate $Hword] with %Hfacts
       ipureexact ⟨hvalues, Hfacts.1⟩
     iapply wp_mono hpost
-    iapply wp_copyOverlapWord
-    iexact Hword
+    iapply_exact wp_copyOverlapWord with Hword
 
 private def memoryInitDropHeap : WasmHeapMap (Option UInt8) :=
   store32Heap ∅ 0 16 0

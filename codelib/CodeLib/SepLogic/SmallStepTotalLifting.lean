@@ -585,8 +585,7 @@ theorem twp_callHost
         [$HP $Hσ] with ⟨HQ, Hσ⟩
       wasm_twp_frame
         ispecialize HwpTrap $$ %(store.wasm) %newWasm %msg %h
-        iapply HwpTrap
-        iexact HQ
+        iapply_exact HwpTrap with HQ
   | .Throw newWasm tag xs =>
     iclear HinstanceOwn HruntimeElem
     wasm_twp_step (Step.callHostThrow (α := α) himports' himp' hhost' h) =>
@@ -594,8 +593,7 @@ theorem twp_callHost
         [$HP $Hσ] with ⟨HQ, Hσ⟩
       wasm_twp_frame
         ispecialize HwpThrow $$ %(store.wasm) %newWasm %tag %xs %h
-        iapply HwpThrow
-        iexact HQ
+        iapply_exact HwpThrow with HQ
 
 theorem twp_returnFromCallFallthrough
     {calleeLocals callerLocals : Locals}
@@ -714,8 +712,7 @@ theorem twp_memorySize
   wasm_twp_step Step.memorySize =>
     wasm_twp_frame
       simp only [Hmodule]
-      iapply Hwp store.wasm.mem.pages
-      iexact Hruntime
+      iapply_exact Hwp store.wasm.mem.pages with Hruntime
 
 /-- Total `memory.size` rule that returns an exact persistent snapshot of the
 observed physical page count while preserving an arbitrary caller frame. -/
@@ -778,8 +775,7 @@ theorem twp_memoryGrow
   | none =>
     wasm_twp_step Step.memoryGrowFailure hg =>
       wasm_twp_frame
-        iapply Hwp (0xFFFFFFFF : UInt32)
-        iexact Hruntime
+        iapply_exact Hwp (0xFFFFFFFF : UInt32) with Hruntime
   | some grown =>
     obtain ⟨memory, previousPages⟩ := grown
     wasm_twp_step (by
@@ -789,8 +785,7 @@ theorem twp_memoryGrow
           (store.wasm.memoryCap store.runtime.currentModule 0)
           memory previousPages hg) $$ Hσ with Hσ
       wasm_twp_frame
-        iapply Hwp previousPages.toUInt32
-        iexact Hruntime
+        iapply_exact Hwp previousPages.toUInt32 with Hruntime
 
 /-- Tracked total `memory.grow` rule.  A snapshot previously issued by
 `memory.size` is threaded through an arbitrary caller frame.  Both outcomes
@@ -912,8 +907,7 @@ theorem twp_load32
     simpa [Hread] using
       (Step.load32 (α := α) (address := Value.i32 address) rfl hbound)) =>
     wasm_twp_frame
-      iapply Htwp
-      iexact Hword
+      iapply_exact Htwp with Hword
 
 theorem twp_store32
     {params localValues values : List Value}
@@ -968,8 +962,7 @@ theorem twp_store32
         (address + offset) oldWord value h1 h2 h3 Hfacts.2 $$
         [$Hσ $Hword] with ⟨Hσ, Hword⟩
     wasm_twp_frame
-      iapply Htwp
-      iexact Hword
+      iapply_exact Htwp with Hword
 
 
 wasm_twp_pure_rule twp_geS {lhs rhs result : UInt32}
@@ -1016,8 +1009,7 @@ theorem twp_memoryFill32
         (by rw [hlen]; exact hbound) (by rw [hlen]; exact hnowrap)
         $$ [$Hσ $Hbytes] with ⟨Hσ, Hbytes⟩
     wasm_twp_frame
-      iapply Htwp
-      iexact Hbytes
+      iapply_exact Htwp with Hbytes
 
 theorem twp_memoryCopy32
     {params localValues values : List Value}
@@ -1120,8 +1112,7 @@ theorem twp_throwI
         (canonicalTagIndex_eq store tagIndex).trans
           (canonicalTagIndex_of_prefix store tagIds tagIndex Hprefix hcanonical)
       rw [hcanonicalStore]
-      iapply Hwp
-      iexact Hruntime
+      iapply_exact Hwp with Hruntime
 
 /-- Total-correctness counterpart of `wp_catchException`, and restricted the
 same way: `hclause` limits it to the ref-less `.catch` / `.catchAll` clauses,
@@ -1232,8 +1223,7 @@ theorem twp_globalGet
   wasm_twp_step (Step.globalGet (α := α) (by
     simpa [globalAt?, hcanonical] using Hget)) =>
     wasm_twp_frame
-      iapply Htwp
-      iexact Hglobal
+      iapply_exact Htwp with Hglobal
 
 wasm_twp_pure_rule twp_scalarFloat0
     {instruction : Instruction} {value : Value}
@@ -1295,8 +1285,7 @@ theorem twp_f32Load
     simpa [Hread] using
       (Step.f32Load (α := α) (address := .i32 address) rfl hbound)) =>
     wasm_twp_frame
-      iapply Htwp
-      iexact Hword
+      iapply_exact Htwp with Hword
 
 theorem twp_f32Store
     {params localValues values : List Value}
@@ -1352,8 +1341,7 @@ theorem twp_f32Store
         (address + offset) oldWord value h1 h2 h3 Hfacts.2 $$
         [$Hσ $Hword] with ⟨Hσ, Hword⟩
     wasm_twp_frame
-      iapply Htwp
-      iexact Hword
+      iapply_exact Htwp with Hword
 
 theorem twp_globalSet
     {params localValues values : List Value}
@@ -1402,8 +1390,7 @@ theorem twp_globalSet
     imod stateInterp_global_set store ns obs nt
         0 oldValue newValue $$ [$Hσ $Hglobal] with ⟨Hσ, Hglobal⟩
     wasm_twp_frame
-      iapply Htwp
-      iexact Hglobal
+      iapply_exact Htwp with Hglobal
 
 wasm_twp_pure_rule twp_or {lhs rhs : UInt32} :
   .or, .i32 rhs :: .i32 lhs :: values => .i32 (lhs ||| rhs) :: values := Step.or
@@ -1456,8 +1443,7 @@ theorem twp_f64Load
     simpa [Hread] using
       (Step.f64Load (α := α) (address := .i32 address) rfl hbound)) =>
     wasm_twp_frame
-      iapply Htwp
-      iexact Hword
+      iapply_exact Htwp with Hword
 
 theorem twp_f64Store
     {params localValues values : List Value}
@@ -1522,8 +1508,7 @@ theorem twp_f64Store
         (address + offset) oldWord value h1 h2 h3 h4 h5 h6 h7 Hfacts.2 $$
         [$Hσ $Hword] with ⟨Hσ, Hword⟩
     wasm_twp_frame
-      iapply Htwp
-      iexact Hword
+      iapply_exact Htwp with Hword
 
 theorem twp_load64
     {params localValues values : List Value}
@@ -1573,8 +1558,7 @@ theorem twp_load64
     simpa [Hread] using
       (Step.load64 (α := α) (address := .i32 address) rfl hbound)) =>
     wasm_twp_frame
-      iapply Htwp
-      iexact Hword
+      iapply_exact Htwp with Hword
 
 theorem twp_store64
     {params localValues values : List Value}
@@ -1639,8 +1623,7 @@ theorem twp_store64
         (address + offset) oldWord value h1 h2 h3 h4 h5 h6 h7 Hfacts.2 $$
         [$Hσ $Hword] with ⟨Hσ, Hword⟩
     wasm_twp_frame
-      iapply Htwp
-      iexact Hword
+      iapply_exact Htwp with Hword
 
 end terminalGeneric
 
@@ -1851,8 +1834,7 @@ theorem twp_load32_addr
     simpa only [show (addr + 0 : UInt32) = addr from by simp, Hread]
       using Step.load32 (α := α) (address := Value.i32 addr) rfl hbound) =>
     wasm_twp_frame
-      iapply Htwp
-      iexact Hword
+      iapply_exact Htwp with Hword
 
 end terminalGenericHelpers
 

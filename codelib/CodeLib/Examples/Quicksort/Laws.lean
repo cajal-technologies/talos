@@ -150,8 +150,7 @@ theorem twp_loadAt
     h1 h2 h3
   iframe; iintro Hword
   iapply Hcont
-  iapply Hclose
-  iexact Hword
+  iapply_exact Hclose with Hword
 
 private theorem twp_store32_cell
     [WasmSmallStepGS hlc Unit]
@@ -185,8 +184,7 @@ private theorem twp_store32_cell
     (by simp) h1' h2' h3' with HwordLater => Hword
   ihave Hword' : pointsTo_u32 0 address newWord $$ [Hword]
   · irw_exact [UInt32.add_zero] with Hword
-  iapply Hcont
-  iexact Hword'
+  iapply_exact Hcont with Hword'
 
 set_option maxHeartbeats 2000000 in
 theorem twp_swapAt
@@ -334,8 +332,7 @@ theorem twp_increment
   simp only [increment, List.cons_append, List.nil_append]
   iapply Wasm.SmallStep.twp_localGet hget
   wasm_twp_pures [twp_const twp_add]
-  iapply Wasm.SmallStep.twp_localSet hset
-  iexact Hwp
+  iapply_exact Wasm.SmallStep.twp_localSet hset with Hwp
 
 theorem twp_increment_nil
     [WasmSmallStepGS hlc Unit]

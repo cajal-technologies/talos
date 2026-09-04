@@ -133,8 +133,7 @@ theorem func1_body_smallStep_wp
   simp only [func1]
   iintro Hret
   wasm_wp_pures [wp_localGet]
-  iapply wp_scalarFloat1 rfl rfl
-  iexact Hret
+  iapply_exact wp_scalarFloat1 rfl rfl with Hret
 
 /-- iris-lean partial-correctness proof for the generated
 `i32.trunc_sat_f32_s` leaf. -/
@@ -500,8 +499,7 @@ theorem twp_func1_body
   simp only [func1]
   iintro Hret
   wasm_twp_pures [twp_localGet]
-  iapply twp_scalarFloat1 rfl rfl
-  iexact Hret
+  iapply_exact twp_scalarFloat1 rfl rfl with Hret
 
 theorem twp_func0_tail_to_ret
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}

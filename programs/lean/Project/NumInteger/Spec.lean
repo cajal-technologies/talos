@@ -2605,8 +2605,7 @@ theorem func1_nonzeroOuterCore_smallStep_wp_to_return
         pointsTo_u32 0 1048548 (operandShiftWord b)))
       outerBody calls a b g d6 d8 loopX loopY d7 d9 hg
     · iintro Hresources
-      iapply hreturn g loopX loopY d6 d8 d7 d9 hg
-      iexact Hresources
+      iapply_exact hreturn g loopX loopY d6 d8 d7 d9 hg with Hresources
     · iframe
   · iexact Hresources
 
@@ -2762,8 +2761,7 @@ theorem func1_nonzero_smallStep_wp_to_return
         oldShared oldNormX oldNormY oldLoopX oldLoopY
       · intro g loopX loopY d6 d8 d7 d9 hg
         iintro Hresources
-        iapply hreturn g loopX loopY d6 d8 d7 d9 hg
-        iexact Hresources
+        iapply_exact hreturn g loopX loopY d6 d8 d7 d9 hg with Hresources
       · iframe
     · iframe
   · iframe
@@ -3620,8 +3618,7 @@ theorem func2_smallStep_wp
     simp only [List.take, List.append_nil]
     wasm_wp_next Wasm.SmallStep.wp_returnFromFunction
     simp only [List.take, List.append_nil]
-    iapply wp_value'
-    iexact Hpost
+    iapply_exact wp_value' with Hpost
   · iframe
 
 def func0InitialHeap : WasmHeapMap (Option UInt8) :=
@@ -5847,8 +5844,7 @@ theorem twp_func1_nonzeroOuterCore_smallStep_wp_to_return
         pointsTo_u32 0 1048548 (operandShiftWord b)))
       outerBody calls a b g d6 d8 loopX loopY d7 d9 hg
     · iintro Hresources
-      iapply hreturn g loopX loopY d6 d8 d7 d9 hg
-      iexact Hresources
+      iapply_exact hreturn g loopX loopY d6 d8 d7 d9 hg with Hresources
     · iframe
   · iexact Hresources
 
@@ -6000,8 +5996,7 @@ theorem twp_func1_nonzero_smallStep_wp_to_return
         oldShared oldNormX oldNormY oldLoopX oldLoopY
       · intro g loopX loopY d6 d8 d7 d9 hg
         iintro Hresources
-        iapply hreturn g loopX loopY d6 d8 d7 d9 hg
-        iexact Hresources
+        iapply_exact hreturn g loopX loopY d6 d8 d7 d9 hg with Hresources
       · iframe
     · iframe
   · iframe

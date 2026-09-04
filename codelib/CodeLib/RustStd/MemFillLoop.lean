@@ -230,8 +230,7 @@ theorem fillWords_bodyTail_wp
   iintro Hresources
   iapply fillWords_incrementBackedge_wp base n i value afterLoop arity
     remainder outerControls calls
-  iapply hback
-  iexact Hresources
+  iapply_exact hback with Hresources
 
 /-- The two generated blocks implement the loop guard: `i < n` exposes the
 stateful body tail, while `i ≥ n` exits first the outer block and then the
@@ -276,14 +275,12 @@ theorem fillWords_guard_wp
   · wasm_wp_next Wasm.SmallStep.wp_ltU (result := 1) (by simp [hlt])
     wasm_wp_next Wasm.SmallStep.wp_brIf (by decide) (by rfl)
     simp only [List.drop_zero, List.take_nil, List.nil_append]
-    iapply hbody hlt
-    iexact HP
+    iapply_exact hbody hlt with HP
   · wasm_wp_next Wasm.SmallStep.wp_ltU (result := 0) (by simp [hlt])
     wasm_wp_pures [wp_brIfZero wp_br wp_exitControl]
     simp only [fillWordsLoopFrame, List.drop_zero, List.take_nil,
       List.nil_append]
-    iapply hexit hlt
-    iexact HP
+    iapply_exact hexit hlt with HP
 
 /-- Universal Iris loop invariant.  `suffix` is the not-yet-written part of
 the original array, so `i + suffix.length = n`; ownership is exactly the
@@ -477,7 +474,6 @@ theorem fillWords_smallStep_wp
   have hloop := fillWords_loop_wp R base n value original afterLoop arity
     remainder controls calls hlength htotal hfinish
   simp only [List.cons_append, List.nil_append] at hloop
-  iapply hloop
-  iexact Hresources
+  iapply_exact hloop with Hresources
 
 end Wasm

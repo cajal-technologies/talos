@@ -392,8 +392,7 @@ theorem twp_entry_of_func3
       (arity := 0) (remainder := []))
     isimp only [List.take_zero, List.nil_append]
     iapply Wasm.SmallStep.twp_outcome_done
-    iapply DriverSuccess_public heapId input
-    iexact Hsuccess
+    iapply_exact DriverSuccess_public heapId input with Hsuccess
   · iapply DriverOOM_public heapId input
 
 /-- Generic operational bridge for the concrete entry call.  This theorem is

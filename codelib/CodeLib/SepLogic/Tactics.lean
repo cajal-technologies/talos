@@ -60,6 +60,12 @@ macro "iapply_frame " rule:pmTerm : tactic =>
     (iapply $rule
      iframe))
 
+/-- Apply an Iris entailment and discharge its next goal with one hypothesis. -/
+macro "iapply_exact " rule:pmTerm " with " hypothesis:ident : tactic =>
+  `(tactic|
+    (iapply $rule
+     iexact $hypothesis))
+
 /-- Introduce one later and discharge it with an existing spatial fact. -/
 macro "ilater_exact " hypothesis:ident : tactic =>
   `(tactic|
