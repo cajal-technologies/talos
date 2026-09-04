@@ -93,10 +93,8 @@ theorem twp_const_alloc_freshRange_owned
   subst store₂
   imod Hclose
   imodintro
-  isplit
-  · ipureexact rfl
-  isplit
-  · ipureexact rfl
+  isplitl_pureexact rfl
+  isplitl_pureexact rfl
   isplitl [Hσ]
   · iexact Hσ
   · iexact Hnext

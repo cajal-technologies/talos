@@ -419,8 +419,7 @@ theorem func1_leftZero_core_smallStep_wp
     wasm_wp_next Wasm.SmallStep.wp_returnFromFunction
     simp only [List.take, List.append_nil]
     iapply wp_value'
-    isplit
-    · ipureexact rfl
+    isplitl_pureexact rfl
     · iexact Hresources
   · iexact Hresources
 
@@ -603,8 +602,7 @@ theorem func1_rightZero_core_smallStep_wp
     wasm_wp_next Wasm.SmallStep.wp_returnFromFunction
     simp only [List.take]
     iapply wp_value'
-    isplit
-    · ipureexact rfl
+    isplitl_pureexact rfl
     · iexact Hresources
   · iexact Hresources
 
@@ -2526,8 +2524,7 @@ theorem func1_nonzeroFinish_smallStep_wp
     wasm_wp_next Wasm.SmallStep.wp_returnFromFunction
     simp only [List.take]
     iapply wp_value'
-    isplit
-    · ipureexact rfl
+    isplitl_pureexact rfl
     · iexact Hresources
   · iexact Hresources
 
@@ -2642,13 +2639,11 @@ theorem func1_nonzeroOuterCore_smallStep_wp
       intro rs
       iintro ⟨%hrs, HR, Hx, Hy, Hresult, HloopX, HloopY⟩
       icases HR with ⟨HR, Hshared, HnormX, HnormY⟩
-      isplit
-      · ipureexact hrs
+      isplitl_pureexact hrs
       · iexists g
         iexists loopX
         iexists loopY
-        isplit
-        · ipureexact hg
+        isplitl_pureexact hg
         · iframe
     iapply wp_mono hpost
     iapply func1_nonzeroFinish_smallStep_wp
@@ -3056,8 +3051,7 @@ theorem func0_afterCall_smallStep_wp
     wasm_wp_next Wasm.SmallStep.wp_returnFromFunction
     simp only [List.take]
     iapply wp_value'
-    isplit
-    · ipureexact rfl
+    isplitl_pureexact rfl
     · iexact Hresources
   · iexact Hresources
 
@@ -3097,8 +3091,7 @@ theorem func0_exactFrame_entails_post
     ⟨HR, Hglobal, Hresult, Hx, Hy, HshiftXY, HshiftX, HshiftY,
       HnextY, HnextX, HouterA, HouterB⟩
   unfold func0FramePost
-  isplit
-  · ipureexact rfl
+  isplitl_pureexact rfl
   · iexists result
     iexists x
     iexists y
@@ -3121,8 +3114,7 @@ theorem func0FramePost_absorb
   unfold func0FramePost
   iintro ⟨HQ, %hrs, %result, %x, %y, %outerA, %outerB,
     %shiftXY, %shiftX, %shiftY, %nextY, %nextX, Hbody⟩
-  isplit
-  · ipureexact hrs
+  isplitl_pureexact hrs
   · iexists result
     iexists x
     iexists y
@@ -3182,8 +3174,7 @@ theorem func0_afterCall_frame_smallStep_wp
       ⟨HR, Hresult, Hx, Hy, HshiftXY, HshiftX, HshiftY,
         HnextY, HnextX, HouterA, HouterB⟩
     unfold func0FramePost
-    isplit
-    · ipureexact hrs
+    isplitl_pureexact hrs
     · iexists result
       iexists x
       iexists y
@@ -3959,8 +3950,7 @@ theorem twp_func1_leftZero_core_smallStep_wp
     iapply Wasm.SmallStep.twp_returnFromFunction
     simp only [List.take, List.append_nil]
     iapply twp.value rfl
-    isplit
-    · ipureexact rfl
+    isplitl_pureexact rfl
     · iexact Hresources
   · iexact Hresources
 
@@ -4141,8 +4131,7 @@ theorem twp_func1_rightZero_core_smallStep_wp
     iapply Wasm.SmallStep.twp_returnFromFunction
     simp only [List.take]
     iapply twp.value rfl
-    isplit
-    · ipureexact rfl
+    isplitl_pureexact rfl
     · iexact Hresources
   · iexact Hresources
 
@@ -4813,8 +4802,7 @@ theorem twp_func1_nonzeroFinish_smallStep_wp
     iapply Wasm.SmallStep.twp_returnFromFunction
     simp only [List.take]
     iapply twp.value rfl
-    isplit
-    · ipureexact rfl
+    isplitl_pureexact rfl
     · iexact Hresources
   · iexact Hresources
 
@@ -5860,13 +5848,11 @@ theorem twp_func1_nonzeroOuterCore_smallStep_wp
       intro rs
       iintro ⟨%hrs, HR, Hx, Hy, Hresult, HloopX, HloopY⟩
       icases HR with ⟨HR, Hshared, HnormX, HnormY⟩
-      isplit
-      · ipureexact hrs
+      isplitl_pureexact hrs
       · iexists g
         iexists loopX
         iexists loopY
-        isplit
-        · ipureexact hg
+        isplitl_pureexact hg
         · iframe
     iapply twp.mono hpost
     iapply twp_func1_nonzeroFinish_smallStep_wp
@@ -6169,8 +6155,7 @@ theorem twp_func0_afterCall_smallStep_wp
     iapply Wasm.SmallStep.twp_returnFromFunction
     simp only [List.take]
     iapply twp.value rfl
-    isplit
-    · ipureexact rfl
+    isplitl_pureexact rfl
     · iexact Hresources
   · iexact Hresources
 
@@ -6216,8 +6201,7 @@ theorem twp_func0_afterCall_frame_smallStep_wp
       ⟨HR, Hresult, Hx, Hy, HshiftXY, HshiftX, HshiftY,
         HnextY, HnextX, HouterA, HouterB⟩
     unfold func0FramePost
-    isplit
-    · ipureexact hrs
+    isplitl_pureexact hrs
     · iexists result
       iexists x
       iexists y

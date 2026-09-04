@@ -516,8 +516,7 @@ theorem stateInterp_memoryPages_snapshot [WasmSmallStepGS hlc α]
     iframe Hheap Hglobals Hsegments Htables HelementSegments
       HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth
       HhostEnvAuth HstateAuth
-    isplit
-    · ipureexact Hfacts
+    isplitl_pureexact Hfacts
     · unfold machineAuxInterp
       iframe Hpages Hdomain Hexceptions
   · iexact Hsnapshot
@@ -571,8 +570,7 @@ theorem stateInterp_memoryPages_agree [WasmSmallStepGS hlc α]
     iframe Hheap Hglobals Hsegments Htables HelementSegments
       HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth
       HhostEnvAuth HstateAuth
-    isplit
-    · ipureexact Hfacts
+    isplitl_pureexact Hfacts
     · unfold machineAuxInterp
       iframe Hpages Hdomain Hexceptions
   isplitl_exact Hsnapshot
