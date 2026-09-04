@@ -106,6 +106,14 @@ name = "rust_array_tests"
 version = "0.1.0"
 
 [[package]]
+name = "rust_hash_map"
+version = "0.1.0"
+dependencies = [
+ "borsh",
+ "talos-stdio",
+]
+
+[[package]]
 name = "rust_u64"
 version = "0.1.0"
 

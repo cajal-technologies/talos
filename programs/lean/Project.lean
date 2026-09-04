@@ -27,3 +27,4 @@ import Project.Mergesort.ContractProofs
 import Project.Mergesort.DriverProof
 import Project.Mergesort.Proof
 import Project.RustVec.Spec
+import Project.RustHashMap.Spec

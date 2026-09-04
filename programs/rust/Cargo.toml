@@ -19,6 +19,7 @@ members = [
   "byte_echo",
   "xor",
   "rust_vec",
+  "rust_hash_map",
   "mergesort",
   "gcd_stdio",
 ]
@@ -61,4 +62,7 @@ opt-level = 3
 opt-level = 3
 
 [profile.release.package.gcd_stdio]
+opt-level = 3
+
+[profile.release.package.rust_hash_map]
 opt-level = 3
