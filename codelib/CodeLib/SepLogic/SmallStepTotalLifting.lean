@@ -224,6 +224,10 @@ wasm_twp_pure_rule twp_ltU {lhs rhs result : UInt32}
     (hresult : result = if lhs < rhs then 1 else 0) :
   .ltU, .i32 rhs :: .i32 lhs :: values => .i32 result :: values := Step.ltU hresult
 
+wasm_twp_pure_rule twp_ltS {lhs rhs result : UInt32}
+    (hresult : result = if lhs.toInt32 < rhs.toInt32 then 1 else 0) :
+  .ltS, .i32 rhs :: .i32 lhs :: values => .i32 result :: values := Step.ltS hresult
+
 wasm_twp_pure_rule twp_eq {lhs rhs result : UInt32}
     (hresult : result = if lhs = rhs then 1 else 0) :
   .eq, .i32 rhs :: .i32 lhs :: values => .i32 result :: values := Step.eq hresult

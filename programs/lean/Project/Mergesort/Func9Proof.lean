@@ -54,24 +54,6 @@ private abbrev func9Locals
     locals := [.i32 finish, .i32 requiredPages, .i32 currentPages]
     values := values }
 
-private theorem twp_ltS
-    [WasmSmallStepGS hlc Universal.State]
-    {params localValues values : List Value}
-    {lhs rhs result : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} {s : Stuckness} {E : CoPset}
-    {Φ : ObservableOutcome → HeapIProp}
-    (hresult : result = if lhs.toInt32 < rhs.toInt32 then 1 else 0) :
-    WP (.running
-      ⟨⟨params, localValues, .i32 result :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr Universal.State)
-        @ s; E [{ Φ }] ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-        .ltS :: code, arity, remainder, controls, calls⟩ :
-          Expr Universal.State) @ s; E [{ Φ }] :=
-  twp_pureStep _ _ _ (fun _ => Step.ltS hresult)
-
 /-- Once the cursor commit has produced a fresh block, the remaining generated
 code zeroes exactly that block and returns its non-null base pointer. -/
 private theorem twp_func9_zero_and_return
