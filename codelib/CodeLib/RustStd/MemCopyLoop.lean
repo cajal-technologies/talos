@@ -376,12 +376,8 @@ theorem copyWords_loopBody_invariant_wp
           omega
       | cons value srcTail =>
         have hltNat : i.toNat < n.toNat := hlt
-        have hnext :
-            (i + 1).toNat = i.toNat + 1 := by
-          rw [UInt32.toNat_add]
-          simp only [UInt32.reduceToNat]
-          rw [Nat.mod_eq_of_lt
-            (lt_of_le_of_lt (by omega) n.toNat_lt)]
+        have hnext : (i + 1).toNat = i.toNat + 1 :=
+          UInt32.add_ofNat_toNat_noWrap i 1 (by decide) (by omega)
         let copied' : List UInt32 := pre ++ [value]
         have hpreNext : copied'.length = (i + 1).toNat := by
           simp only [copied', List.length_append, List.length_singleton,
@@ -861,11 +857,8 @@ theorem copyWords_loop_twp
               hsourceLength] at hsourceLen
             omega
         | cons value srcTail =>
-          have hnext : (state.index + 1).toNat = state.index.toNat + 1 := by
-            rw [UInt32.toNat_add]
-            simp only [UInt32.reduceToNat]
-            rw [Nat.mod_eq_of_lt
-              (lt_of_le_of_lt (by omega) n.toNat_lt)]
+          have hnext : (state.index + 1).toNat = state.index.toNat + 1 :=
+            UInt32.add_ofNat_toNat_noWrap state.index 1 (by decide) (by omega)
           let next : CopyWordsLoopState :=
             ⟨state.index + 1, state.copied ++ [value], dstTail, srcTail⟩
           have hcopiedNext :
