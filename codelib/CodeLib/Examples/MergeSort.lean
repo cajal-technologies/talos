@@ -150,15 +150,12 @@ theorem sorted_referenceSort (values : List UInt32) :
     List.pairwise_mergeSort
       (le := fun a b : UInt32 => decide (a ≤ b))
       (by
-        intro a b c hab hbc
-        simp only [decide_eq_true_eq] at hab hbc ⊢
-        change a.toNat ≤ b.toNat at hab
-        change b.toNat ≤ c.toNat at hbc
-        change a.toNat ≤ c.toNat
-        exact Nat.le_trans hab hbc)
+        intro a b c
+        simpa only [decide_eq_true_eq] using
+          (UInt32.le_trans (a := a) (b := b) (c := c)))
       (by
         intro a b
-        simp only [decide_eq_true_eq, Bool.or_eq_true]; exact UInt32.le_total a b)
+        simpa only [decide_eq_true_eq, Bool.or_eq_true] using UInt32.le_total a b)
       values
 
 theorem perm_referenceSort (values : List UInt32) :
