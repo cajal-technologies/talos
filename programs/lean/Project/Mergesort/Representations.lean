@@ -928,8 +928,7 @@ theorem classifyBump_success_reachable
       rw [hbase', UInt32.toNat_ofNat_of_lt' hsum']
     have hnonnull : base ≠ 0 := by
       intro hzero
-      have hzeroNat := congrArg UInt32.toNat hzero
-      simp only [UInt32.toNat_zero] at hzeroNat
+      have hzeroNat := congrArg UInt32.toNat hzero; simp only [UInt32.toNat_zero] at hzeroNat
       rw [hbaseNat] at hzeroNat
       omega
     have haligned : base.toNat % layout.alignment = 0 := by
@@ -959,8 +958,7 @@ theorem classifyBump_success_reachable
         (Nat.dvd_sub_mod (n := 4) (frontier + 3))
     have hnonnull : base ≠ 0 := by
       intro hzero
-      have hzeroNat := congrArg UInt32.toNat hzero
-      simp only [UInt32.toNat_zero] at hzeroNat
+      have hzeroNat := congrArg UInt32.toNat hzero; simp only [UInt32.toNat_zero] at hzeroNat
       rw [hzeroNat] at hstart
       omega
     have haligned : base.toNat % layout.alignment = 0 := by
@@ -3190,8 +3188,7 @@ theorem GeometricVecFacts.reserveSuccess
       rw [hnewPtr, hfrontierNext]
     have hcapacityNe : capacity ≠ 0 := by
       intro hzero
-      have hzeroNat := congrArg UInt32.toNat hzero
-      simp only [UInt32.toNat_zero] at hzeroNat
+      have hzeroNat := congrArg UInt32.toNat hzero; simp only [UInt32.toNat_zero] at hzeroNat
       have hpowPositive : 0 < 2 ^ exponent := Nat.pow_pos (by omega)
       rw [hcapacity] at hzeroNat
       omega

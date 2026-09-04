@@ -138,8 +138,7 @@ private theorem twp_func8_copy_and_return
     simpa only [holdSize] using hlayout.2.2.1.1
   have holdNonzero : oldSize ≠ 0 := by
     intro hzero
-    have := congrArg UInt32.toNat hzero
-    simp only [UInt32.toNat_zero] at this
+    have := congrArg UInt32.toNat hzero; simp only [UInt32.toNat_zero] at this
     omega
   iintro ⟨Hruntime, Hbump, HoldBlock, HnewBlock, Hstreams, Hcont⟩
   isimp only [LiveBlock] at HoldBlock HnewBlock

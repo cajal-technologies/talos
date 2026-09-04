@@ -269,8 +269,7 @@ theorem twp_func3_append_without_reserve
     UInt32.toNat_ofNat_of_lt' (by omega)
   have hcurrentNonzero : UInt32.ofNat current.length ≠ 0 := by
     intro hzero
-    have hzeroNat := congrArg UInt32.toNat hzero
-    rw [hcurrentWord] at hzeroNat
+    have hzeroNat := congrArg UInt32.toNat hzero; rw [hcurrentWord] at hzeroNat
     simp only [UInt32.toNat_zero] at hzeroNat; omega
   simp only [func3AppendBody, List.cons_append, List.nil_append]
   wasm_twp_pures [twp_block] using [func3AppendCopyBody, func3AppendLocals]
@@ -782,8 +781,7 @@ theorem twp_func3_read_and_classify
       UInt32.toNat_ofNat_of_lt' hcountSize
     have hcountNonzero : UInt32.ofNat count ≠ 0 := by
       intro hzero
-      have hzeroNat := congrArg UInt32.toNat hzero
-      rw [hcountWord] at hzeroNat
+      have hzeroNat := congrArg UInt32.toNat hzero; rw [hcountWord] at hzeroNat
       simp only [UInt32.toNat_zero] at hzeroNat; omega
     iapply twp_eqz (result := 0) (by simp [hcountNonzero])
     ihave Hnonempty := BI.and_elim_r $$ Hcont
@@ -1470,8 +1468,7 @@ theorem twp_func3_enter_nonempty_decode
     omega
   have hnonzero : UInt32.ofNat completed.length ≠ 0 := by
     intro hzero
-    have hzeroNat := congrArg UInt32.toNat hzero
-    rw [hlengthWord] at hzeroNat
+    have hzeroNat := congrArg UInt32.toNat hzero; rw [hlengthWord] at hzeroNat
     simp only [UInt32.toNat_zero] at hzeroNat; omega
   have Hguard := twp_func3_completed_length_guard
     (hlc := hlc) original completed hcompleted hbound dataPtr current
@@ -3869,8 +3866,7 @@ theorem twp_func3_deallocate_input
       aux10 []
   have hcapacityNonzero : capacity ≠ 0 := by
     intro hzero
-    have := congrArg UInt32.toNat hzero
-    simp only [UInt32.toNat_zero] at this
+    have := congrArg UInt32.toNat hzero; simp only [UInt32.toNat_zero] at this
     omega
   have hone : (1 : UInt32).toNat = 1 := by decide
   iintro ⟨Hruntime, Hframe, Hbump, Hcont⟩
@@ -3898,8 +3894,7 @@ theorem twp_func3_deallocate_input
   isimp only [VecStorage] at Hstorage
   icases Hstorage with (%hempty | Hlive)
   ·
-    have hzero := congrArg UInt32.toNat hempty.1
-    simp only [UInt32.toNat_zero] at hzero
+    have hzero := congrArg UInt32.toNat hempty.1; simp only [UInt32.toNat_zero] at hzero
     omega
   · icases Hlive with
       ⟨%allocationId, %allBytes, %spare, %hstorage, Hblock⟩
@@ -4901,8 +4896,7 @@ theorem twp_func3_first_read_nonempty
     UInt32.toNat_ofNat_of_lt' hcountSize
   have hcountNonzero : UInt32.ofNat count ≠ 0 := by
     intro hzero
-    have hzeroNat := congrArg UInt32.toNat hzero
-    rw [hcountWord] at hzeroNat
+    have hzeroNat := congrArg UInt32.toNat hzero; rw [hcountWord] at hzeroNat
     simp only [UInt32.toNat_zero] at hzeroNat; omega
   have hremainingLength :
       input.length = current.length + remaining.length := by

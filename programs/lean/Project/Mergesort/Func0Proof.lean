@@ -447,8 +447,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
       wasm_twp_pures [twp_block twp_localGet]
       have hnewNonzero : newCapacity ≠ 0 := by
         intro hzero
-        have := congrArg UInt32.toNat hzero
-        simp only [UInt32.toNat_zero] at this
+        have := congrArg UInt32.toNat hzero; simp only [UInt32.toNat_zero] at this
         omega
       iapply twp_brIf hnewNonzero (by rfl)
       simp only [List.take_zero, List.drop_zero, List.nil_append]
@@ -567,8 +566,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
       have holdPositive : 0 < oldCapacity.toNat := hsource.1
       have holdNonzero : oldCapacity ≠ 0 := by
         intro hzero
-        have := congrArg UInt32.toNat hzero
-        simp only [UInt32.toNat_zero] at this
+        have := congrArg UInt32.toNat hzero; simp only [UInt32.toNat_zero] at this
         omega
       let oldLayout : AllocLayout :=
         { size := oldCapacity.toNat, alignment := 1 }

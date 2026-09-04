@@ -113,8 +113,7 @@ private theorem growSource_reserveHistory
       icases Hsource with ⟨%hsource, Hblock⟩
       have hcapacity : capacity ≠ 0 := by
         intro hzero
-        have := congrArg UInt32.toNat hzero
-        simp only [UInt32.toNat_zero] at this
+        have := congrArg UInt32.toNat hzero; simp only [UInt32.toNat_zero] at this
         omega
       ihave Hsource : GrowSourceOwn heapId capacity ptr initialized
           (.allocated oldId allBytes spare) $$ [Hblock]

@@ -2688,8 +2688,7 @@ theorem twp_sort
       have hbyteLengthNonzero :
           (4 * UInt32.ofNat combined.length : UInt32) ≠ 0 := by
         intro hz
-        have := congrArg UInt32.toNat hz
-        rw [mul4_ofNat_toNat hfourFits] at this
+        have := congrArg UInt32.toNat hz; rw [mul4_ofNat_toNat hfourFits] at this
         simp at this
         rw [this] at hleftCombinedLt
         simp at hleftCombinedLt

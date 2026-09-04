@@ -116,8 +116,7 @@ private theorem twp_func9_zero_and_return
     simpa only [hsize] using hvalid.1
   have hsizeNonzero : size ≠ 0 := by
     intro hzero
-    have := congrArg UInt32.toNat hzero
-    simp only [UInt32.toNat_zero] at this
+    have := congrArg UInt32.toNat hzero; simp only [UInt32.toNat_zero] at this
     omega
   isimp only [LiveBlock] at Hblock
   icases Hblock with ⟨Htoken, Hslice, %hblockFacts⟩
