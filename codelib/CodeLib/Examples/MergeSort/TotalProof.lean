@@ -1310,20 +1310,21 @@ theorem twp_mergeSortPrepareRight
   have hmul :
       (2 : UInt32) * UInt32.ofNat width =
         UInt32.ofNat (width * 2) := by
-    rw [UInt32.mul_comm]; exact u32_ofNat_mul (a := width) (b := 2) _htwoWidth
+    rw [UInt32.mul_comm]
+    exact (UInt32.ofNat_mul width 2).symm
   rw [hmul]
   iapply Wasm.SmallStep.twp_add (α := α)
   have hrightValue :
       UInt32.ofNat (width * 2) + UInt32.ofNat left =
         UInt32.ofNat (left + width * 2) := by
-    rw [UInt32.add_comm, u32_ofNat_add hrightCandidate]
+    rw [UInt32.add_comm, ← UInt32.ofNat_add]
   rw [hrightValue]
   iapply Wasm.SmallStep.twp_localSet (α := α) rfl
   simp [sortLocals, List.set]
   have hmul' :
       UInt32.ofNat width * 2 = UInt32.ofNat (width * 2) :=
-    u32_ofNat_mul (a := width) (b := 2) _htwoWidth
-  rw [hmul', u32_ofNat_add hrightCandidate]
+    (UInt32.ofNat_mul width 2).symm
+  rw [hmul', ← UInt32.ofNat_add]
   iapply Wasm.SmallStep.twp_localGet (α := α) rfl
   iapply Wasm.SmallStep.twp_localGet (α := α) rfl
   iapply Wasm.SmallStep.twp_ltU (α := α) rfl
@@ -1440,11 +1441,11 @@ theorem twp_mergeSortPrepare
   have hleftValue :
       UInt32.ofNat width + UInt32.ofNat left =
         UInt32.ofNat (left + width) := by
-    rw [UInt32.add_comm, u32_ofNat_add hleftWidth]
+    rw [UInt32.add_comm, ← UInt32.ofNat_add]
   rw [hleftValue]
   iapply Wasm.SmallStep.twp_localSet (α := α) rfl
   simp [sortLocals, List.set]
-  rw [u32_ofNat_add hleftWidth]
+  rw [← UInt32.ofNat_add]
   iapply Wasm.SmallStep.twp_localGet (α := α) rfl
   iapply Wasm.SmallStep.twp_localGet (α := α) rfl
   iapply Wasm.SmallStep.twp_ltU (α := α) rfl
@@ -1503,7 +1504,6 @@ theorem twp_mergeSortCallAdvance
         some mergeFunction)
     (source temporary : UInt32) (input scratch : List UInt32)
     (count width left mid right : Nat)
-    (hrightCandidate : left + width * 2 < UInt32.size)
     {code : Program} {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame}
     {stack : List Value} :
@@ -1555,13 +1555,14 @@ theorem twp_mergeSortCallAdvance
   have hmul :
       (2 : UInt32) * UInt32.ofNat width =
         UInt32.ofNat (width * 2) := by
-    rw [UInt32.mul_comm]; exact u32_ofNat_mul (a := width) (b := 2) (by omega)
+    rw [UInt32.mul_comm]
+    exact (UInt32.ofNat_mul width 2).symm
   rw [hmul]
   iapply Wasm.SmallStep.twp_add (α := α)
   have hadd :
       UInt32.ofNat (width * 2) + UInt32.ofNat left =
         UInt32.ofNat (left + width * 2) := by
-    rw [UInt32.add_comm, u32_ofNat_add hrightCandidate]
+    rw [UInt32.add_comm, ← UInt32.ofNat_add]
   rw [hadd]
   iapply Wasm.SmallStep.twp_localSet (α := α) rfl
   simp [List.set]
@@ -1717,7 +1718,6 @@ theorem twp_mergeSortInnerLoop
       have Hadvance := twp_mergeSortCallAdvance (α := α)
         runtimeModule mergeIndex himports hfunction source temporary
         state.current state.scratch count width left newMid newRight
-        hrightCandidate
         (s := s) (E := E) (Φ := Φ)
         (code := [.br 0]) (arity := arity) (remainder := remainder)
         (controls := loopFrame :: blockFrame :: controls) (calls := calls)
@@ -1960,7 +1960,8 @@ theorem twp_mergeSortOuterLoop
       have hmul :
           (2 : UInt32) * UInt32.ofNat state.width =
             UInt32.ofNat (state.width * 2) := by
-        rw [UInt32.mul_comm]; exact u32_ofNat_mul hdoubleSize
+        rw [UInt32.mul_comm]
+        exact (UInt32.ofNat_mul state.width 2).symm
       rw [hmul]
       iapply Wasm.SmallStep.twp_localSet (α := α) rfl
       simp
