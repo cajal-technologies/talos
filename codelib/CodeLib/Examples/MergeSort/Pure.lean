@@ -493,25 +493,15 @@ theorem MergeRange.segment_before
     {input output : List UInt32} {left mid right start stop : Nat}
     (h : MergeRange input output left mid right)
     (hstop : stop ≤ left) :
-    segment output start stop = segment input start stop := by
-  have htake : output.take stop = input.take stop := by
-    have hcongr := congrArg (List.take stop) h.2.2.2.2.1
-    simpa [List.take_take, Nat.min_eq_left hstop] using hcongr
-  simp only [segment]
-  rw [← List.drop_take, ← List.drop_take, htake]
+    segment output start stop = segment input start stop :=
+  List.extract_eq_of_take_eq hstop h.2.2.2.2.1
 
 theorem MergeRange.segment_after
     {input output : List UInt32} {left mid right start stop : Nat}
     (h : MergeRange input output left mid right)
     (hstart : right ≤ start) :
-    segment output start stop = segment input start stop := by
-  simp only [segment]
-  have hright : right + (start - right) = start :=
-    Nat.add_sub_of_le hstart
-  have hdrop : output.drop start = input.drop start := by
-    rw [← hright, ← List.drop_drop, h.2.2.2.2.2.1,
-      List.drop_drop, hright]
-  rw [hdrop]
+    segment output start stop = segment input start stop :=
+  List.extract_eq_of_drop_eq hstart h.2.2.2.2.2.1
 
 /-- Every consecutive block of `width` values is sorted.  Blocks are numbered
 from zero; the final block may be shorter than `width`. -/

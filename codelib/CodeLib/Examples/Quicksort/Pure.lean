@@ -215,27 +215,6 @@ theorem quicksort_compose
            hleft_cond hright_cond,
          hperm⟩
 
-private theorem segment_eq_of_take {a b : List UInt32} {lo hi k : Nat}
-    (hhik : hi ≤ k) (htake : a.take k = b.take k) :
-    segment a lo hi = segment b lo hi := by
-  simp only [segment]
-  rw [← List.drop_take, ← List.drop_take]
-  congr 1
-  rw [show a.take hi = (a.take k).take hi from by
-        rw [List.take_take]; simp [Nat.min_eq_left hhik],
-      show b.take hi = (b.take k).take hi from by
-        rw [List.take_take]; simp [Nat.min_eq_left hhik],
-      htake]
-
-private theorem segment_eq_of_drop {a b : List UInt32} {lo hi k : Nat}
-    (hklo : k ≤ lo) (hdrop : a.drop k = b.drop k) :
-    segment a lo hi = segment b lo hi := by
-  simp only [segment]
-  congr 1
-  have step : ∀ l : List UInt32, l.drop lo = (l.drop k).drop (lo - k) := fun l => by
-    rw [List.drop_drop]; congr 1; omega
-  rw [step a, step b, hdrop]
-
 private theorem getElem!_eq_of_take {a b : List UInt32} {k i : Nat}
     (hik : i < k) (htake : a.take k = b.take k) :
     a[i]! = b[i]! := by
@@ -270,9 +249,9 @@ theorem partitionRange_after_sorts
   have hhilen_r : hi ≤ out_r.length := by omega
   -- segment equalities
   have hseg_r_lo_p : segment out_r lo pivotIdx = segment out_l lo pivotIdx :=
-    segment_eq_of_take (by omega) htake_r
+    List.extract_eq_of_take_eq (by omega) htake_r
   have hseg_l_p1_hi : segment out_l (pivotIdx + 1) hi = segment output_p (pivotIdx + 1) hi :=
-    segment_eq_of_drop (by omega) hdrop_l
+    List.extract_eq_of_drop_eq (by omega) hdrop_l
   -- pivot element equalities
   have hpiv_l : out_l[pivotIdx]! = output_p[pivotIdx]! :=
     getElem!_eq_of_drop (le_refl _) hdrop_l
@@ -309,6 +288,8 @@ theorem partitionRange_after_sorts
 theorem segment_sorted_of_take_eq {a b : List UInt32} {lo hi k : Nat}
     (hhik : hi ≤ k) (htake : a.take k = b.take k)
     (h : Sorted (segment b lo hi)) : Sorted (segment a lo hi) := by
-  rw [segment_eq_of_take hhik htake]; exact h
+  change Sorted (a.extract lo hi)
+  change Sorted (b.extract lo hi) at h
+  rw [List.extract_eq_of_take_eq hhik htake]; exact h
 
 end Wasm.Examples.Quicksort

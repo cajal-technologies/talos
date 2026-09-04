@@ -20,6 +20,21 @@ theorem take_extract_drop {values : List α} {start stop : Nat}
   rw [List.extract, ← List.take_add, hstop]
   exact List.take_append_drop stop values
 
+theorem extract_eq_of_take_eq {a b : List α} {start stop k : Nat}
+    (hstop : stop ≤ k) (htake : a.take k = b.take k) :
+    a.extract start stop = b.extract start stop := by
+  simp only [List.extract, ← List.drop_take]
+  simpa [List.take_take, Nat.min_eq_left hstop] using
+    congrArg (List.drop start) (congrArg (List.take stop) htake)
+
+theorem extract_eq_of_drop_eq {a b : List α} {start stop k : Nat}
+    (hstart : k ≤ start) (hdrop : a.drop k = b.drop k) :
+    a.extract start stop = b.extract start stop := by
+  simp only [List.extract]
+  congr 1
+  simpa [List.drop_drop, Nat.add_sub_of_le hstart] using
+    congrArg (List.drop (start - k)) hdrop
+
 theorem pairwise_of_length_le_one {relation : α → α → Prop} {values : List α}
     (h : values.length ≤ 1) : values.Pairwise relation := by
   match values, h with
