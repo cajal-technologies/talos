@@ -497,7 +497,7 @@ private theorem mul4_ofNat_toNat {n : Nat}
     (h : 4 * n < UInt32.size) :
     (4 * UInt32.ofNat n : UInt32).toNat = 4 * n := by
   rw [show (4 : UInt32) = UInt32.ofNat 4 from rfl,
-    Wasm.Examples.MergeSort.u32_ofNat_mul h,
+    ← UInt32.ofNat_mul,
     UInt32.toNat_ofNat_of_lt' h]
 
 private theorem ofNat_shr_one {n : Nat} (h : n < UInt32.size) :
@@ -612,13 +612,13 @@ private theorem u32_sub_eq_neg_iff_sum_eq {a b r : Nat}
               UInt32.ofNat r + UInt32.ofNat b := by ac_rfl
         _ = UInt32.ofNat b := by
           rw [UInt32.sub_add_cancel, UInt32.zero_add]
-    rw [Wasm.Examples.MergeSort.u32_ofNat_add hsum] at hu
+    rw [← UInt32.ofNat_add] at hu
     have hnat := congrArg UInt32.toNat hu
     rw [UInt32.toNat_ofNat_of_lt' hsum,
       UInt32.toNat_ofNat_of_lt' hb] at hnat
     exact hnat
   · intro h
-    rw [← h, ← Wasm.Examples.MergeSort.u32_ofNat_add hsum]
+    rw [← h, UInt32.ofNat_add]
     calc
       UInt32.ofNat a -
           (UInt32.ofNat a + UInt32.ofNat r) =
@@ -673,7 +673,7 @@ private theorem right_counter_init {mid j length : Nat}
           rw [UInt32.sub_eq_add_neg, UInt32.sub_eq_add_neg]
           ac_rfl
     _ = UInt32.ofNat j - UInt32.ofNat length := by
-      rw [Wasm.Examples.MergeSort.u32_ofNat_add (by omega), hj]
+      rw [← UInt32.ofNat_add, hj]
     _ = 0 - UInt32.ofNat (length - j) :=
       (u32_sub_eq_neg_iff_sum_eq (by omega) hlength).mpr (by omega)
 
@@ -1739,8 +1739,7 @@ theorem twp_mergeLeftRemainder
               UInt32.ofNat input.length := by
           rw [heqR, UInt32.sub_eq_add_neg, UInt32.zero_sub,
             UInt32.neg_neg,
-            Wasm.Examples.MergeSort.u32_ofNat_add (by
-              rw [hkN]; exact hlayout.length_lt), hkN]
+            ← UInt32.ofNat_add, hkN]
         wasm_twp_pures [twp_localGet twp_localGet twp_sub] rewriting [hfinalK]
         wasm_twp_localSet [List.length, List.set]
         iapply Wasm.SmallStep.twp_exitControl (α := α) rfl

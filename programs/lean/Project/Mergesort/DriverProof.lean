@@ -301,10 +301,9 @@ theorem twp_func3_append_without_reserve
   wasm_twp_pures [twp_exitControl] using [List.take_zero, List.drop_zero, List.nil_append]
   wasm_twp_pures [twp_localGet twp_localGet twp_localGet twp_add]
   have hlengthWord :
-      UInt32.ofNat current.length + UInt32.ofNat initialized.length =
+    UInt32.ofNat current.length + UInt32.ofNat initialized.length =
         UInt32.ofNat (initialized ++ current).length := by
-    rw [UInt32.add_comm,
-      Wasm.Examples.MergeSort.u32_ofNat_add hnewLength]
+    rw [UInt32.add_comm, ← UInt32.ofNat_add]
     simp
   rw [hlengthWord]
   iapply twp_localTee
