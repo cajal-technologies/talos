@@ -22,14 +22,6 @@ private theorem func0_index :
     Project.Mergesort.module.funcs[0]? =
       some Project.Mergesort.func0Def := by rfl
 
-private def func0Locals
-    (result oldCapacity oldPtr newCapacity alignment elementSize tag pointer : UInt32)
-    (product : UInt64) (values : List Value := []) : Locals :=
-  { params := [.i32 result, .i32 oldCapacity, .i32 oldPtr,
-      .i32 newCapacity, .i32 alignment, .i32 elementSize]
-    locals := [.i32 tag, .i32 pointer, .i64 product]
-    values := values }
-
 /-- A four-byte slice may be overwritten by any word, with ownership returned
 in the canonical serialized form. -/
 private theorem ByteSlice_storeAnyWordFocus

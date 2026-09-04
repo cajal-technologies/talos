@@ -555,16 +555,6 @@ private def func1MiddleBody : Program :=
   | .block _ _ body _ _ :: _ => body
   | _ => []
 
-private def func1MiddleContinuation : Program :=
-  match func1OuterBody with
-  | .block _ _ _ _ _ :: continuation => continuation
-  | _ => []
-
-private def func1InnerBody : Program :=
-  match func1MiddleBody with
-  | .block _ _ body _ _ :: _ => body
-  | _ => []
-
 private def func1OuterFrame : Wasm.SmallStep.ControlFrame :=
   { kind := .block
     paramArity := 0
