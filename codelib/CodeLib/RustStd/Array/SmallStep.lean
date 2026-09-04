@@ -51,48 +51,30 @@ theorem fatPtrHeap_agrees {α} {st : Store α} {p dataPtr len : UInt32}
     (h : FatPtrAt st p dataPtr len) :
     heapAgreesWithMem (fatPtrHeap p dataPtr len) resolve := by
   obtain ⟨hp1, hp2, hp3, _hp4, hp5, hp6, hp7⟩ := fatPtrArithmetic_of h
-  have hempty : heapAgreesWithMem (∅ : WasmHeapMap (Option UInt8)) resolve :=
-    heapAgreesWithMem_empty _
-  have hfirst := store32_sound (∅ : WasmHeapMap (Option UInt8)) resolve 0 st.mem
-    p dataPtr h_resolve hp1 hp2 hp3 hempty
-  have hwriteFirst : st.mem.write32 p dataPtr = st.mem :=
-    Mem.write32_eq_self (by simpa using h.data) hp1 hp2 hp3
-  rw [hwriteFirst] at hfirst
-  have hresolveEq : (fun id => if id = 0 then some st.mem else resolve id) = resolve :=
-    funext fun id => by by_cases h0 : id = 0 <;> simp [h0, h_resolve]
-  have hfirst' : heapAgreesWithMem (store32Heap ∅ 0 p dataPtr) resolve := hresolveEq ▸ hfirst
-  have hsecond := store32_sound (store32Heap ∅ 0 p dataPtr) resolve 0 st.mem
-    (p + 4) len h_resolve hp5 hp6 hp7 hfirst'
-  have hwriteSecond : st.mem.write32 (p + 4) len = st.mem :=
-    Mem.write32_eq_self h.count hp5 hp6 hp7
-  rw [hwriteSecond] at hsecond
-  have hsecond' : heapAgreesWithMem (fatPtrHeap p dataPtr len) resolve := hresolveEq ▸ hsecond
-  simpa [fatPtrHeap] using hsecond'
+  unfold fatPtrHeap
+  apply insert_physical_word32_sound (store32Heap ∅ 0 p dataPtr) resolve
+    0 st.mem (p + 4) len h_resolve hp5 hp6 hp7
+  · exact insert_physical_word32_sound (∅ : WasmHeapMap (Option UInt8)) resolve
+      0 st.mem p dataPtr h_resolve hp1 hp2 hp3 (heapAgreesWithMem_empty _)
+      (by simpa using h.data)
+  · exact h.count
 
 theorem fatPtrHeap_inBounds {α} {st : Store α} {p dataPtr len : UInt32}
     (resolve : Nat → Option Mem)
     (h_resolve : resolve 0 = some st.mem)
     (h : FatPtrAt st p dataPtr len) :
     heapAddressesInBounds (fatPtrHeap p dataPtr len) resolve := by
-  obtain ⟨hp1, hp2, hp3, _hp4, hp5, hp6, hp7⟩ := fatPtrArithmetic_of h
+  obtain ⟨hp1, hp2, hp3, hp4, hp5, hp6, hp7⟩ := fatPtrArithmetic_of h
   have hbound := h.bound
-  have hempty : heapAddressesInBounds (∅ : WasmHeapMap (Option UInt8)) resolve :=
-    heapAddressesInBounds_empty _
-  have hfirst := store32_inBounds (∅ : WasmHeapMap (Option UInt8)) resolve 0 st.mem
-    p dataPtr h_resolve hp1 hp2 hp3 hempty (by omega)
-  have hwriteFirst : st.mem.write32 p dataPtr = st.mem :=
-    Mem.write32_eq_self (by simpa using h.data) hp1 hp2 hp3
-  rw [hwriteFirst] at hfirst
-  have hresolveEq : (fun id => if id = 0 then some st.mem else resolve id) = resolve :=
-    funext fun id => by by_cases h0 : id = 0 <;> simp [h0, h_resolve]
-  have hfirst' : heapAddressesInBounds (store32Heap ∅ 0 p dataPtr) resolve := hresolveEq ▸ hfirst
-  have hsecond := store32_inBounds (store32Heap ∅ 0 p dataPtr) resolve 0 st.mem
-    (p + 4) len h_resolve hp5 hp6 hp7 hfirst' (by omega)
-  have hwriteSecond : st.mem.write32 (p + 4) len = st.mem :=
-    Mem.write32_eq_self h.count hp5 hp6 hp7
-  rw [hwriteSecond] at hsecond
-  have hsecond' : heapAddressesInBounds (fatPtrHeap p dataPtr len) resolve := hresolveEq ▸ hsecond
-  simpa [fatPtrHeap] using hsecond'
+  unfold fatPtrHeap
+  apply insert_physical_word32_inBounds (store32Heap ∅ 0 p dataPtr) resolve
+    0 st.mem (p + 4) len h_resolve hp5 hp6 hp7
+  · exact insert_physical_word32_inBounds
+      (∅ : WasmHeapMap (Option UInt8)) resolve 0 st.mem p dataPtr
+      h_resolve hp1 hp2 hp3 (heapAddressesInBounds_empty _) (by omega)
+      (by simpa using h.data)
+  · omega
+  · exact h.count
 
 theorem fatPtrHeap_pointsTo
     [WasmHeapGS α] (p dataPtr len : UInt32)

@@ -76,6 +76,13 @@ theorem heapAddressesInBounds_empty (resolve : Nat → Option Mem) :
   intro key hne
   simp [LawfulPartialMap.get?_empty] at hne
 
+/-- Replacing one resolver entry by the memory it already resolves is identity. -/
+theorem resolverOverride_eq_self (resolve : Nat → Option Mem)
+    (memId : Nat) (mem : Mem) (hresolve : resolve memId = some mem) :
+    (fun id => if id = memId then some mem else resolve id) = resolve := by
+  funext id
+  by_cases hid : id = memId <;> simp [hid, hresolve]
+
 theorem instanceIndexHeapAgrees_empty (values : List α) :
     instanceIndexHeapAgrees (∅ : WasmInstanceIndexMap α) values := by
   intro index value hget
@@ -789,6 +796,42 @@ theorem store32_inBounds (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Op
       · simp [hid]
       · simpa [Mem.write32, hm_eq] using hlt
     · exact ⟨m, by simp [if_neg hid, hm], hlt⟩
+
+/-- Claiming a word already present in physical memory preserves agreement. -/
+theorem insert_physical_word32_sound
+    (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Option Mem)
+    (memId : Nat) (mem : Mem) (addr value : UInt32)
+    (hresolve : resolve memId = some mem)
+    (h1 : (addr + 1).toNat = addr.toNat + 1)
+    (h2 : (addr + 2).toNat = addr.toNat + 2)
+    (h3 : (addr + 3).toNat = addr.toNat + 3)
+    (hagree : heapAgreesWithMem σ resolve)
+    (hread : mem.read32 addr = value) :
+    heapAgreesWithMem (store32Heap σ memId addr value) resolve := by
+  have h := store32_sound σ resolve memId mem addr value
+    hresolve h1 h2 h3 hagree
+  rw [Mem.write32_eq_self hread h1 h2 h3,
+    resolverOverride_eq_self resolve memId mem hresolve] at h
+  exact h
+
+/-- Claiming an allocated physical word preserves the in-bounds invariant
+when that word already contains the claimed value. -/
+theorem insert_physical_word32_inBounds
+    (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Option Mem)
+    (memId : Nat) (mem : Mem) (addr value : UInt32)
+    (hresolve : resolve memId = some mem)
+    (h1 : (addr + 1).toNat = addr.toNat + 1)
+    (h2 : (addr + 2).toNat = addr.toNat + 2)
+    (h3 : (addr + 3).toNat = addr.toNat + 3)
+    (hinBounds : heapAddressesInBounds σ resolve)
+    (hbound : addr.toNat + 4 ≤ mem.pages * 65536)
+    (hread : mem.read32 addr = value) :
+    heapAddressesInBounds (store32Heap σ memId addr value) resolve := by
+  have h := store32_inBounds σ resolve memId mem addr value
+    hresolve h1 h2 h3 hinBounds hbound
+  rw [Mem.write32_eq_self hread h1 h2 h3,
+    resolverOverride_eq_self resolve memId mem hresolve] at h
+  exact h
 
 def store64Heap (σ : WasmHeapMap (Option UInt8)) (memId : Nat) (addr : UInt32)
     (value : UInt64) : WasmHeapMap (Option UInt8) :=

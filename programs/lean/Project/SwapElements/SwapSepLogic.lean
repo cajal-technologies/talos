@@ -2307,50 +2307,33 @@ def func3Config (ptr len : UInt32) : Wasm.SmallStep.Config Unit :=
 def func3Heap : WasmHeapMap (Option UInt8) :=
   store32Heap (store32Heap ∅ 0 1048568 0) 0 1048572 0
 
-private def func3Mem (memory : Mem) : Mem :=
-  (memory.write32 1048568 0).write32 1048572 0
-
-private theorem func3_initialMem_eq :
-    func3Mem («module».initialStore : Store Unit).mem =
-      («module».initialStore : Store Unit).mem := by
-  unfold func3Mem
-  rw [Mem.write32_eq_self (by decide) (by decide) (by decide) (by decide)]
-  rw [Mem.write32_eq_self (by decide) (by decide) (by decide) (by decide)]
-
 theorem func3Heap_agrees (ptr len : UInt32) :
     heapAgreesWithMem func3Heap (storeResolve (func3Config ptr len).store) := by
+  let mem := («module».initialStore : Store Unit).mem
+  let resolve := storeResolve (func3Config ptr len).store
+  have hresolve : resolve 0 = some mem := rfl
   unfold func3Heap
-  have h := store32_sound0 (store32Heap ∅ 0 1048568 0)
-      ((«module».initialStore : Store Unit).mem.write32 1048568 0) 1048572 0
-      (by decide) (by decide) (by decide)
-      (store32_sound0 ∅ («module».initialStore : Store Unit).mem 1048568 0
-          (by decide) (by decide) (by decide)
-          (heapAgreesWithMem_empty _))
-  rw [show ((«module».initialStore : Store Unit).mem.write32 1048568 0).write32 1048572 0 =
-      («module».initialStore : Store Unit).mem from by
-    have := func3_initialMem_eq; unfold func3Mem at this; exact this] at h
-  have hresolveEq := singleMemoryResolve_eq_storeResolve
-    (func3Config ptr len).store («module».initialStore : Store Unit).mem rfl
-    (show («module».initialStore : Store Unit).extraMems = [] from by native_decide)
-  simpa only [← hresolveEq] using h
+  apply insert_physical_word32_sound _ resolve 0 mem 1048572 0
+    hresolve (by decide) (by decide) (by decide)
+  · exact insert_physical_word32_sound _ resolve 0 mem 1048568 0
+      hresolve (by decide) (by decide) (by decide)
+      (heapAgreesWithMem_empty _) (by decide)
+  · decide
 
 theorem func3Heap_inBounds (ptr len : UInt32) :
     heapAddressesInBounds func3Heap
       (storeResolve (func3Config ptr len).store) := by
+  let mem := («module».initialStore : Store Unit).mem
+  let resolve := storeResolve (func3Config ptr len).store
+  have hresolve : resolve 0 = some mem := rfl
   unfold func3Heap
-  have h := store32_inBounds0 (store32Heap ∅ 0 1048568 0)
-      ((«module».initialStore : Store Unit).mem.write32 1048568 0) 1048572 0
-      (by decide) (by decide) (by decide) (by decide)
-      (store32_inBounds0 ∅ («module».initialStore : Store Unit).mem 1048568 0
-          (by decide) (by decide) (by decide) (by decide)
-          (heapAddressesInBounds_empty _))
-  rw [show ((«module».initialStore : Store Unit).mem.write32 1048568 0).write32 1048572 0 =
-      («module».initialStore : Store Unit).mem from by
-    have := func3_initialMem_eq; unfold func3Mem at this; exact this] at h
-  have hresolveEq := singleMemoryResolve_eq_storeResolve
-    (func3Config ptr len).store («module».initialStore : Store Unit).mem rfl
-    (show («module».initialStore : Store Unit).extraMems = [] from by native_decide)
-  simpa only [← hresolveEq] using h
+  apply insert_physical_word32_inBounds _ resolve 0 mem 1048572 0
+    hresolve (by decide) (by decide) (by decide)
+  · exact insert_physical_word32_inBounds _ resolve 0 mem 1048568 0
+      hresolve (by decide) (by decide) (by decide)
+      (heapAddressesInBounds_empty _) (by decide) (by decide)
+  · decide
+  · decide
 
 theorem func3Heap_pointsTo [WasmHeapGS Unit] :
     ([∗map] address ↦ value ∈ func3Heap,

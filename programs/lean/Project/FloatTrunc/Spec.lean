@@ -164,26 +164,17 @@ def func0Globals : WasmGlobalMap Value :=
 theorem func0Heap_agrees :
     heapAgreesWithMem func0Heap (storeResolve (func0Config 0).store) := by
   unfold func0Heap
-  have h := store32_sound0 (∅ : WasmHeapMap (Option UInt8))
-      («module».initialStore : Store Unit).mem 1048572 0
-      (by decide) (by decide) (by decide)
-      (heapAgreesWithMem_empty _)
-  rw [Mem.write32_eq_self (by decide) (by decide) (by decide) (by decide)] at h
-  have hresolveEq := singleMemoryResolve_eq_storeResolve
-    (func0Config 0).store («module».initialStore : Store Unit).mem rfl (by native_decide)
-  simpa only [← hresolveEq] using h
+  exact insert_physical_word32_sound ∅ (storeResolve (func0Config 0).store)
+    0 («module».initialStore : Store Unit).mem 1048572 0 rfl
+    (by decide) (by decide) (by decide) (heapAgreesWithMem_empty _) (by decide)
 
 theorem func0Heap_inBounds :
     heapAddressesInBounds func0Heap (storeResolve (func0Config 0).store) := by
   unfold func0Heap
-  have h := store32_inBounds0 (∅ : WasmHeapMap (Option UInt8))
-      («module».initialStore : Store Unit).mem 1048572 0
-      (by decide) (by decide) (by decide) (by decide)
-      (heapAddressesInBounds_empty _)
-  rw [Mem.write32_eq_self (by decide) (by decide) (by decide) (by decide)] at h
-  have hresolveEq := singleMemoryResolve_eq_storeResolve
-    (func0Config 0).store («module».initialStore : Store Unit).mem rfl (by native_decide)
-  simpa only [← hresolveEq] using h
+  exact insert_physical_word32_inBounds ∅ (storeResolve (func0Config 0).store)
+    0 («module».initialStore : Store Unit).mem 1048572 0 rfl
+    (by decide) (by decide) (by decide) (heapAddressesInBounds_empty _)
+    (by decide) (by decide)
 
 theorem func0Globals_agree :
     globalHeapAgrees func0Globals (func0Config 0).store.wasm.globals := by
