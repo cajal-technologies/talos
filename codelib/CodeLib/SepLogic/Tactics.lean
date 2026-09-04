@@ -112,6 +112,15 @@ macro "iframe_pureexact " proof:term : tactic =>
     (iframe
      ipureexact $proof))
 
+/-- Frame selected spatial hypotheses, then discharge the remaining pure goal. -/
+syntax "iframe_pureexact " "using " "[" selPat* "]" " => " term : tactic
+
+macro_rules
+  | `(tactic| iframe_pureexact using [$hypotheses:selPat*] => $proof:term) =>
+      `(tactic|
+        (iframe $hypotheses*
+         ipureexact $proof))
+
 /-- Apply an Iris entailment and discharge its next goal with one hypothesis. -/
 macro "iapply_exact " rule:pmTerm " with " hypothesis:ident : tactic =>
   `(tactic|

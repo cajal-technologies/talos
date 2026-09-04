@@ -68,8 +68,7 @@ theorem twp_const_alloc_freshRange_owned
   ihave Hslice : Project.Mergesort.Representations.ByteSlice base bytes $$
       [Hbytes]
   · unfold Project.Mergesort.Representations.ByteSlice
-    iframe Hbytes
-    ipureexact (by simpa [bytes] using hnowrap)
+    iframe_pureexact using [Hbytes] => (by simpa [bytes] using hnowrap)
   ihave Hnext := Hwp bytes
   ispecialize Hnext $$ %(by simp [bytes]) Hfrontier Hpages Hslice HP
   iapply fupd_mask_intro Std.LawfulSet.empty_subset
@@ -681,8 +680,7 @@ theorem func2_correct [WasmSmallStepGS hlc Universal.State] :
       SortBuffers source scratch sorted scratchResult $$
         [HsourceWords HscratchWords]
   · unfold SortBuffers
-    iframe HsourceWords HscratchWords
-    ipureexact ⟨by omega, hresultDisjoint⟩
+    iframe_pureexact using [HsourceWords HscratchWords] => ⟨by omega, hresultDisjoint⟩
   ihave HsortResult :
       SortResultBuffers source scratch input scratchInput sorted $$
         [HresultBuffers]

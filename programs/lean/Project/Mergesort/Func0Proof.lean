@@ -79,8 +79,7 @@ private theorem ByteSlice_twelve_storeFocus
   icases Hbytes with ⟨%hnowrap, HrawBytes⟩
   ihave Hbytes : Representations.ByteSlice ptr bytes $$ [HrawBytes]
   · unfold Representations.ByteSlice
-    iframe HrawBytes
-    ipureexact hnowrap
+    iframe_pureexact using [HrawBytes] => hnowrap
   let first := bytes.take 4
   let rest := bytes.drop 4
   let second := rest.take 4
@@ -214,8 +213,7 @@ private theorem LiveBlock_with_nonnull
   icases Hblock with ⟨Htoken, Hbytes, %hfacts⟩
   isplitl [Htoken Hbytes]
   · unfold LiveBlock
-    iframe Htoken Hbytes
-    ipureexact hfacts
+    iframe_pureexact using [Htoken Hbytes] => hfacts
   · ipureexact hfacts.2.1
 
 /-- Common normal-return tail after either the first allocation or a
@@ -372,8 +370,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
   icases Hresult with ⟨%hresultNowrap, HresultBytes⟩
   ihave Hresult : Representations.ByteSlice result growBefore $$ [HresultBytes]
   · unfold Representations.ByteSlice
-    iframe HresultBytes
-    ipureexact hresultNowrap
+    iframe_pureexact using [HresultBytes] => hresultNowrap
   iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   simp only [List.cons_append, List.nil_append]
   wasm_twp_rebind Wasm.SmallStep.twp_call Project.Mergesort.module 3

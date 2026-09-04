@@ -1690,8 +1690,7 @@ theorem wasm_smallStep_heap_globals_segments_runtime_store_adequacy
     iexists (∅ : WasmHostEnvMap (HostEnv α))
     unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
-    iframe ∗ #
-    ipureexact ⟨hagree, hinBounds, hglobals, hsegments,
+    iframe_pureexact using [∗ #] => ⟨hagree, hinBounds, hglobals, hsegments,
       tableHeapAgrees_empty _,
       elementSegmentHeapAgrees_empty _,
       runtimeModuleSingletonAgrees config.store.runtime hwf,
@@ -1847,8 +1846,7 @@ theorem wasm_smallStep_heap_globals_segments_tables_runtime_store_adequacy
     iexists (∅ : WasmHostEnvMap (HostEnv α))
     unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
-    iframe ∗ #
-    ipureexact ⟨hagree, hinBounds, hglobals, hsegments,
+    iframe_pureexact using [∗ #] => ⟨hagree, hinBounds, hglobals, hsegments,
       htables,
       helementSegments,
       runtimeModuleSingletonAgrees config.store.runtime hwf,

@@ -68,8 +68,7 @@ private theorem growSource_live_lookup
   · unfold BumpHeap
     iframe Hcursor Hfrontier Hauth Hretired
     iexists ownedPages
-    iframe Hpages
-    ipureexact hheap
+    iframe_pureexact using [Hpages] => hheap
   isplitl [Htoken Hbytes]
   · unfold GrowSourceOwn LiveBlock
     isplitr_pureexact hsource
@@ -468,8 +467,7 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
         ihave Hresult : Representations.ByteSlice (reserveBase + 4)
             (growResultBytes newPtr newCapacity) $$ [HresultBytes]
         · unfold Representations.ByteSlice growResultBytes
-          iframe HresultBytes
-          ipureexact hresultNowrap
+          iframe_pureexact using [HresultBytes] => hresultNowrap
         have hheadTake : shadow.take 4 = headBytes := by
           rw [hshadow.1]
           simp [hshadow.2.1]

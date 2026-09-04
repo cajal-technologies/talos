@@ -472,8 +472,7 @@ theorem WordSlice_get {host : Type} [WasmHeapGS host]
     ihave Harray := Hclose $$ Hcell
     ihave Hbytes : WordCells ptr values $$ [Harray]
     · iapply_exact (arrayAt_eq_wordCells ptr values).mp with Harray
-    iframe Hbytes
-    ipureexact ⟨halign, hnowrap⟩
+    iframe_pureexact using [Hbytes] => ⟨halign, hnowrap⟩
 
 /-- Focus one writable word cell.  Returning a new value reassembles the same
 physical slice with exactly the corresponding logical list update. -/
@@ -565,8 +564,7 @@ theorem SortBuffers_copyFocus {host : Type} [WasmHeapGS host]
   iintro HscratchCell
   ihave Hsource := HsourceClose $$ HsourceCell
   ihave Hscratch := HscratchClose $$ HscratchCell
-  iframe Hsource Hscratch
-  ipureexact (by simpa using hfacts)
+  iframe_pureexact using [Hsource Hscratch] => (by simpa using hfacts)
 
 /-- Expose both complete byte ranges for the generated final
 `memory.copy(source, scratch, 4*n)`.  Returning the overwritten source bytes
@@ -1168,11 +1166,9 @@ theorem LiveWordBlock_as_liveBlock {host : Type} [WasmHeapGS host]
   simp only [serialize_length]
   constructor
   · iintro ⟨Htoken, ⟨%halign, %hnowrap, Hbytes⟩, %hnonnull⟩
-    iframe Htoken Hbytes
-    ipureexact ⟨hnowrap, trivial, hnonnull, halign⟩
+    iframe_pureexact using [Htoken Hbytes] => ⟨hnowrap, trivial, hnonnull, halign⟩
   · iintro ⟨Htoken, ⟨%hnowrap, Hbytes⟩, %hfacts⟩
-    iframe Htoken Hbytes
-    ipureexact ⟨⟨hfacts.2.2, hnowrap⟩, hfacts.2.1⟩
+    iframe_pureexact using [Htoken Hbytes] => ⟨⟨hfacts.2.2, hnowrap⟩, hfacts.2.1⟩
 
 /-- The reachable zeroing allocator result, specialized to a whole number of
 words, is the canonical live word-array representation expected by `func2`. -/
@@ -1511,8 +1507,7 @@ theorem BumpHeap_empty {host : Type} [WasmHeapGS host]
   isplitl []
   · itrivial
   · iexists ownedPages
-    iframe Hpages
-    ipureexact ⟨Nat.le_refl _, by decide, by decide, by decide,
+    iframe_pureexact using [Hpages] => ⟨Nat.le_refl _, by decide, by decide, by decide,
       historyWellFormed_empty, hphysical⟩
 
 /-- A token agrees with the unique live metadata entry in the named heap. -/
@@ -1608,8 +1603,7 @@ theorem RetiredBytes_retire {host : Type} [WasmHeapGS host]
   unfold RetiredEntry retiredMeta
   isplitl_exact Hfragment
   · iexists bytes
-    iframe Hbytes
-    ipureexact (by simpa [retiredMeta] using hlen)
+    iframe_pureexact using [Hbytes] => (by simpa [retiredMeta] using hlen)
 
 /-- The complete metadata-side allocation transition.  Physical fresh-byte
 ownership is deliberately supplied separately by `stateInterp_alloc_freshRange`. -/
@@ -1693,8 +1687,7 @@ theorem BumpHeap_commit {host : Type} [WasmHeapGS host]
       · intro _hnonzero
         rfl)
   · unfold LiveBlock
-    iframe Htoken Hbytes
-    ipureexact ⟨hbytesLength, hnonnull, haligned⟩
+    iframe_pureexact using [Htoken Hbytes] => ⟨hbytesLength, hnonnull, haligned⟩
 
 /-- Retirement with the agreement fact needed to update pure history. -/
 theorem AllocMetaAuth_retire_with_lookup {host : Type}
@@ -2036,8 +2029,7 @@ theorem LiveBlock_to_VecStorage {host : Type} [WasmHeapGS host]
   isplitr_pureexact ⟨hcapacity, by simpa [hblock.1] using hinitialized,
       hdecompose, hspareLength⟩
   · unfold LiveBlock
-    iframe Htoken Hbytes
-    ipureexact hblock
+    iframe_pureexact using [Htoken Hbytes] => hblock
 
 /-- Focus the initialized prefix of a nonempty Vec allocation while retaining
 the token and spare suffix needed to close the same storage afterwards. -/
@@ -2069,8 +2061,7 @@ theorem VecStorage_initializedFocus {host : Type} [WasmHeapGS host]
       iexists allocationId, initialized ++ spare, spare
       isplitr_pureexact ⟨hstorage.1, hstorage.2.1, rfl, hstorage.2.2.2⟩
       · unfold LiveBlock
-        iframe Htoken HallBytes
-        ipureexact ⟨by
+        iframe_pureexact using [Htoken HallBytes] => ⟨by
           simp only [List.length_append, hstorage.2.2.2]; omega, hblock.2.1, hblock.2.2⟩
 
 /-- Focus exactly the spare-capacity subrange filled by the driver's append
@@ -2146,8 +2137,7 @@ theorem VecStorage_appendFocus {host : Type} [WasmHeapGS host]
     isplitr_pureexact ⟨hstorage.1, hnewInitialized, rfl, by
         simpa only [List.length_append] using htailLength⟩
     · unfold LiveBlock
-      iframe Htoken HallBytesNew
-      ipureexact ⟨hnewLength, hblock.2.1, hblock.2.2⟩
+      iframe_pureexact using [Htoken HallBytesNew] => ⟨hnewLength, hblock.2.1, hblock.2.2⟩
 
 /-- Complete three-word byte Vec plus its whole live allocation. -/
 def VecU8 {host : Type} [WasmHeapGS host]
@@ -2349,8 +2339,7 @@ theorem ExportFrame_completedWordsFocus
     ihave Hbytes := (ByteSlice_serialize_as_WordSlice ptr original halign).mpr $$
       Hwords
     ihave Hvec := Hclose $$ Hbytes
-    iframe Hvec Hchunk Houtput
-    ipureexact hframeLengths
+    iframe_pureexact using [Hvec Hchunk Houtput] => hframeLengths
 
 /-- Exact raw byte list left in the visible driver frame once the Vec's
 separate allocation-storage ownership is removed. -/
@@ -2389,8 +2378,7 @@ theorem ExportFrame_releaseStorage [WasmHeapGS Universal.State]
     isplitr_pureexact ⟨rfl, vecHeaderBytes_length capacity ptr initialized,
         hframeParts.1, hframeParts.2⟩
     · iframe
-  iframe Hstorage Hframe
-  ipureexact hframeLength
+  iframe_pureexact using [Hstorage Hframe] => hframeLength
 
 /-- Assemble the initialized driver frame from its exact three disjoint byte
 regions. -/

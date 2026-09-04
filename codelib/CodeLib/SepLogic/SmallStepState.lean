@@ -247,8 +247,7 @@ theorem heapDomain_init (σ : WasmHeapMap (Option UInt8)) :
   iexists gs
   unfold heapDomainInterp heapFrontierAuth
   iexists UInt32.size
-  iframe HheapFrontierAuth
-  ipureexact heapBelow_uint32Size σ
+  iframe_pureexact using [HheapFrontierAuth] => heapBelow_uint32Size σ
 
 /-- Allocate a tight sparse-domain frontier and expose the matching exclusive
 client fragment.  Callers must prove that the initial authoritative sparse
@@ -280,8 +279,7 @@ theorem heapDomain_init_at (σ : WasmHeapMap (Option UInt8))
   isplitl [HheapFrontierAuth]
   · unfold heapDomainInterp heapFrontierAuth
     iexists frontier
-    iframe HheapFrontierAuth
-    ipureexact hbelow
+    iframe_pureexact using [HheapFrontierAuth] => hbelow
   · unfold heapFrontierOwn
     iexact HheapFrontierOwn
 
@@ -311,8 +309,7 @@ theorem machineAuxInterp_heap_mono [WasmHeapDomainGS α]
   isplitl_exact Hpages
   · isplitl [Hfrontier]
     · iexists frontier
-      iframe Hfrontier
-      ipureexact hbelow frontier Hbelow
+      iframe_pureexact using [Hfrontier] => hbelow frontier Hbelow
     · iexact Hexceptions
 
 /-- Ghost knowledge of an exception entry pins the physical entry. -/
@@ -355,11 +352,9 @@ theorem exceptionInterp_mono [WasmExceptionGS α] [WasmTagTableGS α]
   iintro ⟨⟨%exceptionσ, Hauth, %hag⟩, %ids, Htags, %hpre⟩
   isplitl [Hauth]
   · iexists exceptionσ
-    iframe Hauth
-    ipureexact hexns exceptionσ hag
+    iframe_pureexact using [Hauth] => hexns exceptionσ hag
   · iexists ids
-    iframe Htags
-    ipureexact htags ids hpre
+    iframe_pureexact using [Htags] => htags ids hpre
 
 theorem machineAuxInterp_exception_mono [WasmHeapDomainGS α]
     [WasmMemoryPagesGS α]
@@ -1014,8 +1009,7 @@ theorem stateInterp_alloc_freshRange [WasmSmallStepGS hlc α]
     isplitl_exact Hpages
     · isplitl [HfrontierAuth]
       · iexists base.toNat + size
-        iframe HfrontierAuth
-        ipureexact (by simpa [hbytesLength] using HbelowFinal)
+        iframe_pureexact using [HfrontierAuth] => (by simpa [hbytesLength] using HbelowFinal)
       · iexact HexceptionInterp
   ihave HstateAndBytes :
       stateInterp (GF := WasmHeapGF α)
