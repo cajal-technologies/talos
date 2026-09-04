@@ -321,8 +321,7 @@ theorem ByteSlice_four_as_word {host : Type} [WasmHeapGS host]
     isimp only [ByteSlice] at Hslice
     icases Hslice with ⟨%_hsliceNowrap, Hbytes⟩
     iapply (pointsTo_u32_as_bytes 0 ptr word).mpr
-    rw [hencoded]
-    iexact Hbytes
+    irw_exact [hencoded] with Hbytes
   · iintro Hword
     unfold ByteSlice
     isplitl_pureexact (by simpa [hlength] using hnowrap)
@@ -354,8 +353,7 @@ theorem ByteSlice_storeWordFocus {host : Type} [WasmHeapGS host]
       exact Spec.u32Codec.decode_encode newValue
     iapply (ByteSlice_four_as_word ptr (serialize [newValue])
       hnewLength hnowrap).mpr
-    rw [hdecode]
-    iexact Hnew
+    irw_exact [hdecode] with Hnew
 
 /-- Empty canonical word ownership is resource-free.  This is the exact
 dangling-pointer case taken by the driver when the public input is empty. -/
@@ -2410,8 +2408,7 @@ theorem emptyVecHeaderBytes_to_VecU8 {host : Type} [WasmHeapGS host]
   icases Hlength with ⟨Hlength, _Hemp⟩
   ihave Hlength' : pointsTo_u32 0 (driverBase + 8) 0 $$ [Hlength]
   · have haddress : (driverBase + 4) + 4 = driverBase + 8 := by decide
-    rw [← haddress]
-    iexact Hlength
+    irw_exact [← haddress] with Hlength
   unfold VecU8 RawVecHeader
   isplitl [Hcapacity Hpointer]
   · iframe

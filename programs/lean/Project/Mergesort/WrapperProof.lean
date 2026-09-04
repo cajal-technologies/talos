@@ -178,8 +178,7 @@ theorem writeTransfer
     · isplitl_exact Hhost
       · iexact Hbytes
   · isimp only [afterWrite] at Hstate
-    rw [hhostEq]
-    iexact Hstate
+    irw_exact [hhostEq] with Hstate
 
 def afterRead (host : Universal.State) (count : Nat) : Universal.State :=
   { host with
@@ -267,8 +266,7 @@ theorem readTransfer
         (buffer.drop incoming.length) $$ [Hbuffer]
   · iapply (pointsToBytes_append 0 pointer
       (buffer.take incoming.length) (buffer.drop incoming.length)).mp
-    rw [List.take_append_drop]
-    iexact Hbuffer
+    irw_exact [List.take_append_drop] with Hbuffer
   icases Hparts with ⟨Hprefix, Hsuffix⟩
   isimp only [hprefixLength] at Hsuffix
   imod stateInterp_write_bytes store ns obs nt pointer
@@ -300,8 +298,7 @@ theorem readTransfer
     · isplitl_exact Hhost
       · iexact Hbuffer
   · isimp only [memoryStore, afterRead] at Hstate
-    rw [hhostEq]
-    iexact Hstate
+    irw_exact [hhostEq] with Hstate
 
 def afterOom (host : Universal.State) : Universal.State :=
   { host with oom := { raised := true } }
@@ -342,8 +339,7 @@ theorem oomTransfer
   · isplitl_pureexact rfl
     · iexact Hhost
   · isimp only [afterOom] at Hstate
-    rw [hhostEq]
-    iexact Hstate
+    irw_exact [hhostEq] with Hstate
 
 theorem func4_index : Project.Mergesort.module.funcs[4]? =
     some Project.Mergesort.func4Def := by rfl

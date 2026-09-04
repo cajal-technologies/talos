@@ -1544,8 +1544,7 @@ theorem array64At_fill_next (memId : Nat) (ptr : UInt32) (i : Nat)
     value suffix).mpr
   isplitl_exact Hpre
   isplitl_rw_exact [List.length_replicate] with Hcell
-  · rw [List.length_replicate]
-    iexact Hsuffix'
+  · irw_exact [List.length_replicate] with Hsuffix'
 
 /-- Extract a u64 cell and a continuation accepting its replacement. -/
 theorem array64At_set (memId : Nat) (ptr : UInt32) (xs : List UInt64) (k : Nat)

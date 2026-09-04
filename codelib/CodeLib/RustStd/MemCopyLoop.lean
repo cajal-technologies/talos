@@ -156,12 +156,10 @@ theorem copyWords_loadStoreIteration_wp
   icases Hrest with ⟨HdstCell, Hreassemble⟩
   ihave HsrcCell' : pointsTo_u32 0 srcAddress value $$ [HsrcCell]
   · simp only [srcAddress]
-    rw [← hpre]
-    iexact HsrcCell
+    irw_exact [← hpre] with HsrcCell
   ihave HdstCell' : pointsTo_u32 0 dstAddress oldDst $$ [HdstCell]
   · simp only [dstAddress]
-    rw [← hpre]
-    iexact HdstCell
+    irw_exact [← hpre] with HdstCell
   simp only [CopyWordsLoadStoreIteration, List.cons_append, List.nil_append]
   wasm_wp_pures [wp_localGet wp_localGet wp_const wp_shl wp_add]
   rw [hdstAddress]
@@ -187,14 +185,12 @@ theorem copyWords_loadStoreIteration_wp
       pointsTo_u32 0 (src + 4 * UInt32.ofNat pre.length) value $$
       [HsrcCell]
   · simp only [UInt32.add_zero, srcAddress]
-    rw [hpre]
-    iexact HsrcCell
+    irw_exact [hpre] with HsrcCell
   ihave HdstCell'' :
       pointsTo_u32 0 (dst + 4 * UInt32.ofNat pre.length) value $$
       [HdstCell]
   · simp only [UInt32.add_zero, dstAddress]
-    rw [hpre]
-    iexact HdstCell
+    irw_exact [hpre] with HdstCell
   ihave Harrays :
       arrayAt 0 dst (pre ++ value :: dstSuffix) ∗
         arrayAt 0 src (pre ++ value :: srcSuffix) $$
@@ -649,12 +645,10 @@ theorem copyWords_loadStoreIteration_twp
   icases Hrest with ⟨HdstCell, Hreassemble⟩
   ihave HsrcCell' : pointsTo_u32 0 srcAddress value $$ [HsrcCell]
   · simp only [srcAddress]
-    rw [← hpre]
-    iexact HsrcCell
+    irw_exact [← hpre] with HsrcCell
   ihave HdstCell' : pointsTo_u32 0 dstAddress oldDst $$ [HdstCell]
   · simp only [dstAddress]
-    rw [← hpre]
-    iexact HdstCell
+    irw_exact [← hpre] with HdstCell
   simp only [CopyWordsLoadStoreIteration, List.cons_append, List.nil_append]
   wasm_twp_pures [twp_localGet twp_localGet twp_const twp_shl twp_add]
   rw [hdstAddress]
@@ -678,14 +672,12 @@ theorem copyWords_loadStoreIteration_twp
       pointsTo_u32 0 (src + 4 * UInt32.ofNat pre.length) value $$
       [HsrcCell]
   · simp only [UInt32.add_zero, srcAddress]
-    rw [hpre]
-    iexact HsrcCell
+    irw_exact [hpre] with HsrcCell
   ihave HdstCell'' :
       pointsTo_u32 0 (dst + 4 * UInt32.ofNat pre.length) value $$
       [HdstCell]
   · simp only [UInt32.add_zero, dstAddress]
-    rw [hpre]
-    iexact HdstCell
+    irw_exact [hpre] with HdstCell
   ihave Harrays :
       arrayAt 0 dst (pre ++ value :: dstSuffix) ∗
         arrayAt 0 src (pre ++ value :: srcSuffix) $$

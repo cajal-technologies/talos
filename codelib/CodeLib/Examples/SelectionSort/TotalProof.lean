@@ -122,8 +122,7 @@ theorem twp_loadAt64
   iintro Hword
   iapply Hcont
   iapply Hclose
-  rw [UInt32.add_zero]
-  iexact Hword
+  irw_exact [UInt32.add_zero] with Hword
 
 private theorem twp_store64_cell
     [WasmSmallStepGS hlc Unit]
@@ -156,8 +155,7 @@ private theorem twp_store64_cell
     (by simpa using h7) $$ Hword'
   iintro Hword
   iapply Hcont
-  rw [UInt32.add_zero]
-  iexact Hword
+  irw_exact [UInt32.add_zero] with Hword
 
 set_option maxHeartbeats 4000000 in
 theorem twp_swapAt64
@@ -217,14 +215,12 @@ theorem twp_swapAt64
   iapply twp_store64_cell hroomA
   isplitl [HcellA]
   · dsimp [addrA]
-    rw [UInt32.add_comm]
-    iexact HcellA
+    irw_exact [UInt32.add_comm] with HcellA
   iintro HcellA
   ihave Harray2 : array64At 0 base (input.set a input[b]) $$ [HcellA HcloseA]
   · iapply HcloseA
     dsimp [addrA]
-    rw [UInt32.add_comm]
-    iexact HcellA
+    irw_exact [UInt32.add_comm] with HcellA
   iapply twp_address64 (by simpa using hbase_after) (by simpa using hb_after)
   iapply Wasm.SmallStep.twp_localGet (by simpa using htmp_after)
   have hb2 : b < (input.set a input[b]).length := by simpa
@@ -233,15 +229,13 @@ theorem twp_swapAt64
   iapply twp_store64_cell hroomB
   isplitl [HcellB]
   · dsimp [addrB]
-    rw [UInt32.add_comm]
-    iexact HcellB
+    irw_exact [UInt32.add_comm] with HcellB
   iintro HcellB
   iapply Hcont
   rw [hswap]
   iapply HcloseB
   dsimp [addrB]
-  rw [UInt32.add_comm]
-  iexact HcellB
+  irw_exact [UInt32.add_comm] with HcellB
 
 def findMinLocals (arr : UInt32) (length best scan : Nat)
     (stack : List Value) : Locals :=

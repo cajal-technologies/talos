@@ -244,14 +244,12 @@ theorem initialResources [WasmSmallStepGS hlc Universal.State]
   icases HstackSplit with ⟨Hstack, _Hempty⟩
   ihave Hcursor : pointsTo_u32 0 allocatorCursor 0 $$ [HcursorBytes]
   · iapply (pointsTo_u32_as_bytes 0 allocatorCursor 0).mpr
-    rw [← entryCursorBytes_u32]
-    iexact HcursorBytes
+    irw_exact [← entryCursorBytes_u32] with HcursorBytes
   ihave Hsp := entryGlobals_pointsTo $$ Hglobals
   ihave Hstreams : Streams (serialize input) [] false $$ [Hhost]
   · iunfold Streams
     iexists default
-    rw [← entryHost_eq input]
-    iexact Hhost
+    irw_exact [← entryHost_eq input] with Hhost
   imod AllocMetaAuth_alloc_empty (host := Universal.State) with
     ⟨%heapId, Hmetadata⟩
   ihave HbumpResources :

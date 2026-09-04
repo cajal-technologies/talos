@@ -1370,15 +1370,13 @@ theorem func1_equalBlock_smallStep_wp
         pointsTo_u64 0 ((1048512 : UInt32) + 8) g =
           pointsTo_u64 0 1048520 g :=
       congrArg (fun address => pointsTo_u64 0 address g) (by decide)
-    rw [← h]
-    iexact Hx
+    irw_exact [← h] with Hx
   ihave HyExact : pointsTo_u64 0 1048528 g $$ [Hy]
   · have h :
         pointsTo_u64 0 ((1048512 : UInt32) + 16) g =
           pointsTo_u64 0 1048528 g :=
       congrArg (fun address => pointsTo_u64 0 address g) (by decide)
-    rw [← h]
-    iexact Hy
+    irw_exact [← h] with Hy
   iapply func1_equalRecombine_smallStep_wp
     (R := iprop(R ∗ pointsTo_u64 0 1048528 g))
     controls calls a b g oldResult c6 c8 c7 c9
@@ -1554,15 +1552,13 @@ theorem func1_loopDecreaseY_smallStep_wp
         pointsTo_u64 0 ((1048512 : UInt32) + 8) x =
           pointsTo_u64 0 1048520 x :=
       congrArg (fun address => pointsTo_u64 0 address x) (by decide)
-    rw [← h]
-    iexact Hx
+    irw_exact [← h] with Hx
   ihave HyExact : pointsTo_u64 0 1048528 (y - x) $$ [Hy]
   · have h :
         pointsTo_u64 0 ((1048512 : UInt32) + 16) (y - x) =
           pointsTo_u64 0 1048528 (y - x) :=
       congrArg (fun address => pointsTo_u64 0 address (y - x)) (by decide)
-    rw [← h]
-    iexact Hy
+    irw_exact [← h] with Hy
   iapply func1_loopNormalizeY_smallStep_wp
     (R := iprop(R ∗ pointsTo_u64 0 1048520 x))
     controls calls a b x (y - x) hsub oldShift c8 c7 c9
@@ -1738,15 +1734,13 @@ theorem func1_loopDecreaseX_smallStep_wp
         pointsTo_u64 0 ((1048512 : UInt32) + 8) (x - y) =
           pointsTo_u64 0 1048520 (x - y) :=
       congrArg (fun address => pointsTo_u64 0 address (x - y)) (by decide)
-    rw [← h]
-    iexact Hx
+    irw_exact [← h] with Hx
   ihave HyExact : pointsTo_u64 0 1048528 y $$ [Hy]
   · have h :
         pointsTo_u64 0 ((1048512 : UInt32) + 16) y =
           pointsTo_u64 0 1048528 y :=
       congrArg (fun address => pointsTo_u64 0 address y) (by decide)
-    rw [← h]
-    iexact Hy
+    irw_exact [← h] with Hy
   iapply func1_loopNormalizeX_smallStep_wp
     (R := iprop(R ∗ pointsTo_u64 0 1048528 y))
     controls calls a b y (x - y) hsub oldShift c6 c7 c9
@@ -1864,15 +1858,13 @@ theorem func1_loopEqualityDispatch_smallStep_wp
           pointsTo_u64 0 ((1048512 : UInt32) + 8) x =
             pointsTo_u64 0 1048520 x :=
         congrArg (fun address => pointsTo_u64 0 address x) (by decide)
-      rw [← h]
-      iexact Hx
+      irw_exact [← h] with Hx
     ihave HyExact : pointsTo_u64 0 1048528 y $$ [Hy]
     · have h :
           pointsTo_u64 0 ((1048512 : UInt32) + 16) y =
             pointsTo_u64 0 1048528 y :=
         congrArg (fun address => pointsTo_u64 0 address y) (by decide)
-      rw [← h]
-      iexact Hy
+      irw_exact [← h] with Hy
     iapply_frame hnext hxy
 
 /-- Comparison dispatch for the second generated loop block. A true
@@ -1948,15 +1940,13 @@ theorem func1_loopDecreaseDispatch_smallStep_wp
         pointsTo_u64 0 ((1048512 : UInt32) + 8) x =
           pointsTo_u64 0 1048520 x :=
       congrArg (fun address => pointsTo_u64 0 address x) (by decide)
-    rw [← h]
-    iexact Hx
+    irw_exact [← h] with Hx
   ihave HyExact : pointsTo_u64 0 1048528 y $$ [Hy]
   · have h :
         pointsTo_u64 0 ((1048512 : UInt32) + 16) y =
           pointsTo_u64 0 1048528 y :=
       congrArg (fun address => pointsTo_u64 0 address y) (by decide)
-    rw [← h]
-    iexact Hy
+    irw_exact [← h] with Hy
   by_cases hlt : y < x
   · have hsubX : x - y ≠ 0 := by
       intro h
@@ -2200,8 +2190,7 @@ theorem func1_loop_smallStep_wp
       have hresultEq := hrecombine x hxGcd
       iintro ⟨#IH', HR', Hx', Hy', Hresult', HshiftX', HshiftY'⟩
       ihave HresultExpected : pointsTo_u64 0 1048512 expected $$ [Hresult']
-      · rw [← hresultEq]
-        iexact Hresult'
+      · irw_exact [← hresultEq] with Hresult'
       iapply_frame hfinish x oldShiftX oldShiftY c6 c8 c7 c9 hxGcd
     · intro hne
       exact (hne hxy).elim
@@ -2532,8 +2521,7 @@ theorem func1_nonzeroFinish_smallStep_wp_to_return
       congrArg
         (fun address => pointsTo_u64 0 address
           (UInt64.ofNat (Nat.gcd a.toNat b.toNat))) (by decide)
-    rw [← h]
-    iexact Hresult
+    irw_exact [← h] with Hresult
   iapply_frame hreturn
 
 /-- Closed top-level corollary of the contextual nonzero finish rule. -/
@@ -3930,8 +3918,7 @@ theorem twp_func1_leftZero_core_smallStep_wp_to_return
         pointsTo_u64 0 ((1048512 : UInt32) + 8) 0 =
           pointsTo_u64 0 1048520 0 :=
       congrArg (fun address => pointsTo_u64 0 address 0) (by decide)
-    rw [h]
-    iexact Hx
+    irw_exact [h] with Hx
   wasm_twp_bind Wasm.SmallStep.twp_load64 0
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) with HxLater => Hx
@@ -3951,8 +3938,7 @@ theorem twp_func1_leftZero_core_smallStep_wp_to_return
         pointsTo_u64 0 ((1048512 : UInt32) + 16) b =
           pointsTo_u64 0 1048528 b :=
       congrArg (fun address => pointsTo_u64 0 address b) (by decide)
-    rw [h]
-    iexact Hy
+    irw_exact [h] with Hy
   wasm_twp_bind Wasm.SmallStep.twp_load64 b
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) with HyLater => Hy
@@ -3966,8 +3952,7 @@ theorem twp_func1_leftZero_core_smallStep_wp_to_return
         pointsTo_u64 0 ((1048512 : UInt32) + 0) result =
           pointsTo_u64 0 1048512 result :=
       congrArg (fun address => pointsTo_u64 0 address result) (by decide)
-    rw [h]
-    iexact Hresult
+    irw_exact [h] with Hresult
   wasm_twp_bind Wasm.SmallStep.twp_store64 result
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) with HresultLater => Hresult
@@ -4109,8 +4094,7 @@ theorem twp_func1_rightZero_core_smallStep_wp_to_return
         pointsTo_u64 0 ((1048512 : UInt32) + 8) a =
           pointsTo_u64 0 1048520 a :=
       congrArg (fun address => pointsTo_u64 0 address a) (by decide)
-    rw [h]
-    iexact Hx
+    irw_exact [h] with Hx
   wasm_twp_bind Wasm.SmallStep.twp_load64 a
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) with HxLater => Hx
@@ -4124,8 +4108,7 @@ theorem twp_func1_rightZero_core_smallStep_wp_to_return
         pointsTo_u64 0 ((1048512 : UInt32) + 16) 0 =
           pointsTo_u64 0 1048528 0 :=
       congrArg (fun address => pointsTo_u64 0 address 0) (by decide)
-    rw [h]
-    iexact Hy
+    irw_exact [h] with Hy
   wasm_twp_bind Wasm.SmallStep.twp_load64 0
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) with HyLater => Hy
@@ -4154,8 +4137,7 @@ theorem twp_func1_rightZero_core_smallStep_wp_to_return
         pointsTo_u64 0 ((1048512 : UInt32) + 0) result =
           pointsTo_u64 0 1048512 result :=
       congrArg (fun address => pointsTo_u64 0 address result) (by decide)
-    rw [h]
-    iexact Hresult
+    irw_exact [h] with Hresult
   wasm_twp_bind Wasm.SmallStep.twp_store64 result
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) with HresultLater => Hresult
@@ -4359,8 +4341,7 @@ theorem twp_func1_sharedShift_smallStep_wp
         pointsTo_u64 0 ((1048512 : UInt32) + 8) a =
           pointsTo_u64 0 1048520 a :=
       congrArg (fun address => pointsTo_u64 0 address a) (by decide)
-    rw [h]
-    iexact Hx
+    irw_exact [h] with Hx
   wasm_twp_bind Wasm.SmallStep.twp_load64 a
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) with HxLater => Hx
@@ -4370,8 +4351,7 @@ theorem twp_func1_sharedShift_smallStep_wp
         pointsTo_u64 0 ((1048512 : UInt32) + 16) b =
           pointsTo_u64 0 1048528 b :=
       congrArg (fun address => pointsTo_u64 0 address b) (by decide)
-    rw [h]
-    iexact Hy
+    irw_exact [h] with Hy
   wasm_twp_bind Wasm.SmallStep.twp_load64 b
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) with HyLater => Hy
@@ -4382,8 +4362,7 @@ theorem twp_func1_sharedShift_smallStep_wp
         pointsTo_u32 0 ((1048512 : UInt32) + 44) oldShift =
           pointsTo_u32 0 1048556 oldShift :=
       congrArg (fun address => pointsTo_u32 0 address oldShift) (by decide)
-    rw [h]
-    iexact Hshift
+    irw_exact [h] with Hshift
   wasm_twp_bind Wasm.SmallStep.twp_store32 oldShift
       (by decide) (by decide) (by decide) (by decide) with HshiftLater => Hshift
   wasm_twp_pures [twp_localGet]
@@ -4432,8 +4411,7 @@ theorem twp_func1_normalizeX_smallStep_wp
         pointsTo_u64 0 ((1048512 : UInt32) + 8) a =
           pointsTo_u64 0 1048520 a :=
       congrArg (fun address => pointsTo_u64 0 address a) (by decide)
-    rw [h]
-    iexact Hx
+    irw_exact [h] with Hx
   wasm_twp_bind Wasm.SmallStep.twp_load64 a
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) with HxLater => Hx
@@ -4444,8 +4422,7 @@ theorem twp_func1_normalizeX_smallStep_wp
         pointsTo_u32 0 ((1048512 : UInt32) + 40) oldShiftX =
           pointsTo_u32 0 1048552 oldShiftX :=
       congrArg (fun address => pointsTo_u32 0 address oldShiftX) (by decide)
-    rw [h]
-    iexact HshiftX
+    irw_exact [h] with HshiftX
   wasm_twp_bind Wasm.SmallStep.twp_store32 oldShiftX
       (by decide) (by decide) (by decide) (by decide) with HshiftXLater => HshiftX
   wasm_twp_pures [twp_localGet]
@@ -4506,8 +4483,7 @@ theorem twp_func1_normalizeY_smallStep_wp
         pointsTo_u64 0 ((1048512 : UInt32) + 16) b =
           pointsTo_u64 0 1048528 b :=
       congrArg (fun address => pointsTo_u64 0 address b) (by decide)
-    rw [h]
-    iexact Hy
+    irw_exact [h] with Hy
   wasm_twp_bind Wasm.SmallStep.twp_load64 b
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) with HyLater => Hy
@@ -4518,8 +4494,7 @@ theorem twp_func1_normalizeY_smallStep_wp
         pointsTo_u32 0 ((1048512 : UInt32) + 36) oldShiftY =
           pointsTo_u32 0 1048548 oldShiftY :=
       congrArg (fun address => pointsTo_u32 0 address oldShiftY) (by decide)
-    rw [h]
-    iexact HshiftY
+    irw_exact [h] with HshiftY
   wasm_twp_bind Wasm.SmallStep.twp_store32 oldShiftY
       (by decide) (by decide) (by decide) (by decide) with HshiftYLater => HshiftY
   wasm_twp_pures [twp_localGet]
@@ -4636,8 +4611,7 @@ theorem twp_func1_equalRecombine_smallStep_wp
         pointsTo_u64 0 ((1048512 : UInt32) + 8) g =
           pointsTo_u64 0 1048520 g :=
       congrArg (fun address => pointsTo_u64 0 address g) (by decide)
-    rw [h]
-    iexact Hx
+    irw_exact [h] with Hx
   wasm_twp_bind Wasm.SmallStep.twp_load64 g
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) with HxLater => Hx
@@ -4648,8 +4622,7 @@ theorem twp_func1_equalRecombine_smallStep_wp
         pointsTo_u64 0 ((1048512 : UInt32) + 0) oldResult =
           pointsTo_u64 0 1048512 oldResult :=
       congrArg (fun address => pointsTo_u64 0 address oldResult) (by decide)
-    rw [h]
-    iexact Hresult
+    irw_exact [h] with Hresult
   wasm_twp_bind Wasm.SmallStep.twp_store64 oldResult
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) with HresultLater => Hresult
@@ -4699,8 +4672,7 @@ theorem twp_func1_equalBlock_smallStep_wp
         pointsTo_u64 0 ((1048512 : UInt32) + 8) g =
           pointsTo_u64 0 1048520 g :=
       congrArg (fun address => pointsTo_u64 0 address g) (by decide)
-    rw [h]
-    iexact Hx
+    irw_exact [h] with Hx
   wasm_twp_bind Wasm.SmallStep.twp_load64 g
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) with HxLater => Hx
@@ -4710,8 +4682,7 @@ theorem twp_func1_equalBlock_smallStep_wp
         pointsTo_u64 0 ((1048512 : UInt32) + 16) g =
           pointsTo_u64 0 1048528 g :=
       congrArg (fun address => pointsTo_u64 0 address g) (by decide)
-    rw [h]
-    iexact Hy
+    irw_exact [h] with Hy
   wasm_twp_bind Wasm.SmallStep.twp_load64 g
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) with HyLater => Hy
@@ -4731,15 +4702,13 @@ theorem twp_func1_equalBlock_smallStep_wp
         pointsTo_u64 0 ((1048512 : UInt32) + 8) g =
           pointsTo_u64 0 1048520 g :=
       congrArg (fun address => pointsTo_u64 0 address g) (by decide)
-    rw [← h]
-    iexact Hx
+    irw_exact [← h] with Hx
   ihave HyExact : pointsTo_u64 0 1048528 g $$ [Hy]
   · have h :
         pointsTo_u64 0 ((1048512 : UInt32) + 16) g =
           pointsTo_u64 0 1048528 g :=
       congrArg (fun address => pointsTo_u64 0 address g) (by decide)
-    rw [← h]
-    iexact Hy
+    irw_exact [← h] with Hy
   iapply twp_func1_equalRecombine_smallStep_wp
     (R := iprop(R ∗ pointsTo_u64 0 1048528 g))
     controls calls a b g oldResult c6 c8 c7 c9
@@ -4855,8 +4824,7 @@ theorem twp_func1_nonzeroFinish_smallStep_wp_to_return
       congrArg
         (fun address => pointsTo_u64 0 address
           (UInt64.ofNat (Nat.gcd a.toNat b.toNat))) (by decide)
-    rw [← h]
-    iexact Hresult
+    irw_exact [← h] with Hresult
   iapply_frame hreturn
 
 theorem twp_func1_nonzeroFinish_smallStep_wp
@@ -4924,8 +4892,7 @@ theorem twp_func1_loopNormalizeY_smallStep_wp
         pointsTo_u64 0 ((1048512 : UInt32) + 16) d =
           pointsTo_u64 0 1048528 d :=
       congrArg (fun address => pointsTo_u64 0 address d) (by decide)
-    rw [h]
-    iexact Hy
+    irw_exact [h] with Hy
   wasm_twp_bind Wasm.SmallStep.twp_load64 d
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) with HyLater => Hy
@@ -4936,8 +4903,7 @@ theorem twp_func1_loopNormalizeY_smallStep_wp
         pointsTo_u32 0 ((1048512 : UInt32) + 32) oldShift =
           pointsTo_u32 0 1048544 oldShift :=
       congrArg (fun address => pointsTo_u32 0 address oldShift) (by decide)
-    rw [h]
-    iexact Hshift
+    irw_exact [h] with Hshift
   wasm_twp_bind Wasm.SmallStep.twp_store32 oldShift
       (by decide) (by decide) (by decide) (by decide) with HshiftLater => Hshift
   wasm_twp_pures [twp_localGet]
@@ -5011,8 +4977,7 @@ theorem twp_func1_loopDecreaseY_smallStep_wp
         pointsTo_u64 0 ((1048512 : UInt32) + 8) x =
           pointsTo_u64 0 1048520 x :=
       congrArg (fun address => pointsTo_u64 0 address x) (by decide)
-    rw [h]
-    iexact Hx
+    irw_exact [h] with Hx
   wasm_twp_bind Wasm.SmallStep.twp_load64 x
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) with HxLater => Hx
@@ -5023,8 +4988,7 @@ theorem twp_func1_loopDecreaseY_smallStep_wp
         pointsTo_u64 0 ((1048512 : UInt32) + 16) y =
           pointsTo_u64 0 1048528 y :=
       congrArg (fun address => pointsTo_u64 0 address y) (by decide)
-    rw [h]
-    iexact Hy
+    irw_exact [h] with Hy
   wasm_twp_bind Wasm.SmallStep.twp_load64 y
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) with HyLater => Hy
@@ -5047,15 +5011,13 @@ theorem twp_func1_loopDecreaseY_smallStep_wp
         pointsTo_u64 0 ((1048512 : UInt32) + 8) x =
           pointsTo_u64 0 1048520 x :=
       congrArg (fun address => pointsTo_u64 0 address x) (by decide)
-    rw [← h]
-    iexact Hx
+    irw_exact [← h] with Hx
   ihave HyExact : pointsTo_u64 0 1048528 (y - x) $$ [Hy]
   · have h :
         pointsTo_u64 0 ((1048512 : UInt32) + 16) (y - x) =
           pointsTo_u64 0 1048528 (y - x) :=
       congrArg (fun address => pointsTo_u64 0 address (y - x)) (by decide)
-    rw [← h]
-    iexact Hy
+    irw_exact [← h] with Hy
   iapply twp_func1_loopNormalizeY_smallStep_wp
     (R := iprop(R ∗ pointsTo_u64 0 1048520 x))
     controls calls a b x (y - x) hsub oldShift c8 c7 c9
@@ -5094,8 +5056,7 @@ theorem twp_func1_loopNormalizeX_smallStep_wp
         pointsTo_u64 0 ((1048512 : UInt32) + 8) d =
           pointsTo_u64 0 1048520 d :=
       congrArg (fun address => pointsTo_u64 0 address d) (by decide)
-    rw [h]
-    iexact Hx
+    irw_exact [h] with Hx
   wasm_twp_bind Wasm.SmallStep.twp_load64 d
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) with HxLater => Hx
@@ -5106,8 +5067,7 @@ theorem twp_func1_loopNormalizeX_smallStep_wp
         pointsTo_u32 0 ((1048512 : UInt32) + 28) oldShift =
           pointsTo_u32 0 1048540 oldShift :=
       congrArg (fun address => pointsTo_u32 0 address oldShift) (by decide)
-    rw [h]
-    iexact Hshift
+    irw_exact [h] with Hshift
   wasm_twp_bind Wasm.SmallStep.twp_store32 oldShift
       (by decide) (by decide) (by decide) (by decide) with HshiftLater => Hshift
   wasm_twp_pures [twp_localGet]
@@ -5181,8 +5141,7 @@ theorem twp_func1_loopDecreaseX_smallStep_wp
         pointsTo_u64 0 ((1048512 : UInt32) + 16) y =
           pointsTo_u64 0 1048528 y :=
       congrArg (fun address => pointsTo_u64 0 address y) (by decide)
-    rw [h]
-    iexact Hy
+    irw_exact [h] with Hy
   wasm_twp_bind Wasm.SmallStep.twp_load64 y
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) with HyLater => Hy
@@ -5193,8 +5152,7 @@ theorem twp_func1_loopDecreaseX_smallStep_wp
         pointsTo_u64 0 ((1048512 : UInt32) + 8) x =
           pointsTo_u64 0 1048520 x :=
       congrArg (fun address => pointsTo_u64 0 address x) (by decide)
-    rw [h]
-    iexact Hx
+    irw_exact [h] with Hx
   wasm_twp_bind Wasm.SmallStep.twp_load64 x
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) with HxLater => Hx
@@ -5217,15 +5175,13 @@ theorem twp_func1_loopDecreaseX_smallStep_wp
         pointsTo_u64 0 ((1048512 : UInt32) + 8) (x - y) =
           pointsTo_u64 0 1048520 (x - y) :=
       congrArg (fun address => pointsTo_u64 0 address (x - y)) (by decide)
-    rw [← h]
-    iexact Hx
+    irw_exact [← h] with Hx
   ihave HyExact : pointsTo_u64 0 1048528 y $$ [Hy]
   · have h :
         pointsTo_u64 0 ((1048512 : UInt32) + 16) y =
           pointsTo_u64 0 1048528 y :=
       congrArg (fun address => pointsTo_u64 0 address y) (by decide)
-    rw [← h]
-    iexact Hy
+    irw_exact [← h] with Hy
   iapply twp_func1_loopNormalizeX_smallStep_wp
     (R := iprop(R ∗ pointsTo_u64 0 1048528 y))
     controls calls a b y (x - y) hsub oldShift c6 c7 c9
@@ -5285,8 +5241,7 @@ theorem twp_func1_loopEqualityDispatch_smallStep_wp
           pointsTo_u64 0 ((1048512 : UInt32) + 8) x =
             pointsTo_u64 0 1048520 x :=
         congrArg (fun address => pointsTo_u64 0 address x) (by decide)
-      rw [h]
-      iexact Hx
+      irw_exact [h] with Hx
     wasm_twp_bind Wasm.SmallStep.twp_load64 x
         (by decide) (by decide) (by decide) (by decide) (by decide)
         (by decide) (by decide) (by decide) with HxLater => Hx
@@ -5296,8 +5251,7 @@ theorem twp_func1_loopEqualityDispatch_smallStep_wp
           pointsTo_u64 0 ((1048512 : UInt32) + 16) y =
             pointsTo_u64 0 1048528 y :=
         congrArg (fun address => pointsTo_u64 0 address y) (by decide)
-      rw [h]
-      iexact Hy
+      irw_exact [h] with Hy
     wasm_twp_bind Wasm.SmallStep.twp_load64 y
         (by decide) (by decide) (by decide) (by decide) (by decide)
         (by decide) (by decide) (by decide) with HyLater => Hy
@@ -5315,15 +5269,13 @@ theorem twp_func1_loopEqualityDispatch_smallStep_wp
           pointsTo_u64 0 ((1048512 : UInt32) + 8) x =
             pointsTo_u64 0 1048520 x :=
         congrArg (fun address => pointsTo_u64 0 address x) (by decide)
-      rw [← h]
-      iexact Hx
+      irw_exact [← h] with Hx
     ihave HyExact : pointsTo_u64 0 1048528 y $$ [Hy]
     · have h :
           pointsTo_u64 0 ((1048512 : UInt32) + 16) y =
             pointsTo_u64 0 1048528 y :=
         congrArg (fun address => pointsTo_u64 0 address y) (by decide)
-      rw [← h]
-      iexact Hy
+      irw_exact [← h] with Hy
     iapply_frame hnext hxy
 
 theorem twp_func1_loopDecreaseDispatch_smallStep_wp
@@ -5384,8 +5336,7 @@ theorem twp_func1_loopDecreaseDispatch_smallStep_wp
         pointsTo_u64 0 ((1048512 : UInt32) + 8) x =
           pointsTo_u64 0 1048520 x :=
       congrArg (fun address => pointsTo_u64 0 address x) (by decide)
-    rw [h]
-    iexact Hx
+    irw_exact [h] with Hx
   wasm_twp_bind Wasm.SmallStep.twp_load64 x
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) with HxLater => Hx
@@ -5395,8 +5346,7 @@ theorem twp_func1_loopDecreaseDispatch_smallStep_wp
         pointsTo_u64 0 ((1048512 : UInt32) + 16) y =
           pointsTo_u64 0 1048528 y :=
       congrArg (fun address => pointsTo_u64 0 address y) (by decide)
-    rw [h]
-    iexact Hy
+    irw_exact [h] with Hy
   wasm_twp_bind Wasm.SmallStep.twp_load64 y
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) with HyLater => Hy
@@ -5405,15 +5355,13 @@ theorem twp_func1_loopDecreaseDispatch_smallStep_wp
         pointsTo_u64 0 ((1048512 : UInt32) + 8) x =
           pointsTo_u64 0 1048520 x :=
       congrArg (fun address => pointsTo_u64 0 address x) (by decide)
-    rw [← h]
-    iexact Hx
+    irw_exact [← h] with Hx
   ihave HyExact : pointsTo_u64 0 1048528 y $$ [Hy]
   · have h :
         pointsTo_u64 0 ((1048512 : UInt32) + 16) y =
           pointsTo_u64 0 1048528 y :=
       congrArg (fun address => pointsTo_u64 0 address y) (by decide)
-    rw [← h]
-    iexact Hy
+    irw_exact [← h] with Hy
   by_cases hlt : y < x
   · have hsubX : x - y ≠ 0 := by
       intro h

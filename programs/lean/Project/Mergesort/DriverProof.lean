@@ -5385,8 +5385,7 @@ theorem twp_func3_initialize
   · unfold Project.Mergesort.Representations.ByteSlice
     isplitl_pureexact (by simpa [hframeParts.2.2.1] using hchunkNowrap)
     · rw [← hframeParts.2.2.1]
-      rw [← show (0 : UInt32).toUInt8 = (0 : UInt8) by decide]
-      iexact HchunkBytes
+      irw_exact [← show (0 : UInt32).toUInt8 = (0 : UInt8) by decide] with HchunkBytes
   ihave Hexport := ExportFrame_empty heapId (List.replicate 256 0)
       outputBytes (by simp) hframeParts.2.2.2 $$ [Hheader Hchunk Houtput]
   · iframe

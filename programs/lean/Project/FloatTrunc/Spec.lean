@@ -312,8 +312,7 @@ theorem func0_store32_smallStep_wp
     HwordLater
   iintro Hword
   iapply Hnext
-  rw [heffective]
-  iexact Hword
+  irw_exact [heffective] with Hword
 
 /-- Call-stack-polymorphic body rule for generated `naive_trunc`.  The four
 control-flow paths write the same value as Rust's saturating cast and join
@@ -554,8 +553,7 @@ theorem twp_func0_store32
   wasm_twp_bind twp_store32 oldWord (by decide) (by decide) (by decide) (by decide)
     with Hword' => Hword
   iapply Hcont
-  rw [heffective]
-  iexact Hword
+  irw_exact [heffective] with Hword
 
 theorem twp_func0_body_to_ret
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}

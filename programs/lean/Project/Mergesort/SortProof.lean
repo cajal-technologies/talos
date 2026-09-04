@@ -2258,8 +2258,7 @@ theorem twp_mergeRightRemainder
           %hfinalInv Hsource Hscratch
         isimp only [sortLocals] at Hdone
         simp only [List.drop_zero]
-        rw [hkFinal']
-        iexact Hdone
+        irw_exact [hkFinal'] with Hdone
     · simp only [Inv, Finish, sortLocals]
       isplitr
       · ipureintro
@@ -2526,16 +2525,14 @@ theorem twp_sort
           arrayAt 0 (source + 4 * UInt32.ofNat left.length) right $$
           [Hsource]
     · iapply (arrayAt_append 0 source left right).mp
-      rw [← hinputSplit]
-      iexact Hsource
+      irw_exact [← hinputSplit] with Hsource
     icases HsourceSplit with ⟨HsourceLeft, HsourceRight⟩
     ihave HscratchSplit :
         arrayAt 0 scratch scratchLeft ∗
           arrayAt 0 (scratch + 4 * UInt32.ofNat scratchLeft.length)
             scratchRight $$ [Hscratch]
     · iapply (arrayAt_append 0 scratch scratchLeft scratchRight).mp
-      rw [← hscratchSplit]
-      iexact Hscratch
+      irw_exact [← hscratchSplit] with Hscratch
     icases HscratchSplit with ⟨HscratchLeft, HscratchRight⟩
     wasm_twp_pures [twp_block twp_block twp_localGet twp_localGet twp_const twp_shrU]
     rw [show (1 % 32 : UInt32) = 1 by decide,
@@ -2664,15 +2661,13 @@ theorem twp_sort
     · dsimp only [combined]
       iapply (arrayAt_append 0 source leftOutput rightOutput).mpr
       isplitl_exact HsourceLeft
-      rw [hleftOutputLength]
-      iexact HsourceRight
+      irw_exact [hleftOutputLength] with HsourceRight
     ihave HscratchCombined : arrayAt 0 scratch scratchCombined $$
         [HscratchLeft HscratchRight]
     · dsimp only [scratchCombined]
       iapply (arrayAt_append 0 scratch leftScratch rightScratch).mpr
       isplitl_exact HscratchLeft
-      rw [hleftScratchLength, UInt32.add_comm]
-      iexact HscratchRight
+      irw_exact [hleftScratchLength, UInt32.add_comm] with HscratchRight
     wasm_twp_pures [twp_const twp_localSet]
     simp only [List.length]
     wasm_twp_pures [twp_localGet twp_localSet]

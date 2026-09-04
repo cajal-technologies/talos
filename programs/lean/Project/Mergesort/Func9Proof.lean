@@ -147,8 +147,7 @@ private theorem twp_func9_zero_and_return
           rw [← hblockFacts.1]
           exact hnowrap)
     · rw [← hblockFacts.1]
-      rw [← show (0 : UInt32).toUInt8 = (0 : UInt8) by decide]
-      iexact Hbytes
+      irw_exact [← show (0 : UInt32).toUInt8 = (0 : UInt8) by decide] with Hbytes
   ihave Hblock : LiveBlock heapId allocationId base layout
       (List.replicate layout.size 0) $$ [Htoken Hslice]
   · unfold LiveBlock

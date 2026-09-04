@@ -364,8 +364,7 @@ theorem fillWords_loopBody_invariant_wp
                   (List.replicate ((i + 1).toNat) value ++ tail) $$
               [Hresources]
           · simp only [Rloop]
-            rw [hnext]
-            iexact Hresources
+            irw_exact [hnext] with Hresources
           icases Hexpanded with ⟨Hloop, Harray'⟩
           icases Hloop with ⟨#IH', HR'⟩
           ispecialize IH' $$ %(i + 1) %tail %hinvNext

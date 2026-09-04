@@ -231,14 +231,12 @@ theorem twp_loadAt_cell
   rw [haddress]
   ihave HwordLater : pointsTo_u32 0 (address + 0) word $$ [Hword]
   ·
-    rw [UInt32.add_zero]
-    iexact Hword
+    irw_exact [UInt32.add_zero] with Hword
   wasm_twp_bind Wasm.SmallStep.twp_load32
     (address := address) (offset := 0)
     word (by simp) h1' h2' h3' with HwordLater => Hword
   iapply Hcont
-  rw [UInt32.add_zero]
-  iexact Hword
+  irw_exact [UInt32.add_zero] with Hword
 
 set_option maxHeartbeats 2000000 in
 theorem twp_loadAt
@@ -317,8 +315,7 @@ theorem twp_store32_cell
   iintro ⟨Hword, Hcont⟩
   ihave HwordLater : pointsTo_u32 0 (address + 0) oldWord $$ [Hword]
   ·
-    rw [UInt32.add_zero]
-    iexact Hword
+    irw_exact [UInt32.add_zero] with Hword
   wasm_twp_bind Wasm.SmallStep.twp_store32
     (address := address) (offset := 0) oldWord
     (by simp) h1' h2' h3' with HwordLater => Hword
@@ -391,8 +388,7 @@ theorem twp_copyAt
   simp only [List.cons_append, List.nil_append]
   ihave Hcell' : pointsTo_u32 0 destination scratch[k] $$ [Hcell]
   · dsimp [destination]
-    rw [UInt32.add_comm]
-    iexact Hcell
+    irw_exact [UInt32.add_comm] with Hcell
   iapply twp_store32_cell h1 h2 h3
   isplitl_exact Hcell'
   iintro Hcell
@@ -403,8 +399,7 @@ theorem twp_copyAt
       pointsTo_u32 0
         (temporary + 4 * UInt32.ofNat k) input[i] $$ [Hcell]
   · dsimp [destination]
-    rw [UInt32.add_comm]
-    iexact Hcell
+    irw_exact [UInt32.add_comm] with Hcell
   iexact Hcell'
 
 

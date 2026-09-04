@@ -107,8 +107,7 @@ theorem twp_loadAt_cell
     (address := addr) (offset := 0)
     word (by simp) h1' h2' h3' with HwordLater => Hword
   iapply Hcont
-  rw [UInt32.add_zero]
-  iexact Hword
+  irw_exact [UInt32.add_zero] with Hword
 
 set_option maxHeartbeats 2000000 in
 theorem twp_loadAt
@@ -258,8 +257,7 @@ theorem twp_swapAt
   icases Hfocus with ⟨Hcell_a, Hclose_a⟩
   ihave Hcell_a' : pointsTo_u32 0 addr_a input[a] $$ [Hcell_a]
   · dsimp [addr_a]
-    rw [UInt32.add_comm]
-    iexact Hcell_a
+    irw_exact [UInt32.add_comm] with Hcell_a
   -- step 5: store arr[b] at arr[a]
   iapply twp_store32_cell h1_a h2_a h3_a
   isplitl_exact Hcell_a'
@@ -267,8 +265,7 @@ theorem twp_swapAt
   -- rebuild intermediate array
   ihave Harray2 : arrayAt 0 base (input.set a input[b]) $$ [Hcell_a Hclose_a]
   · iapply Hclose_a
-    rw [UInt32.add_comm]
-    iexact Hcell_a
+    irw_exact [UInt32.add_comm] with Hcell_a
   -- step 6: compute address of arr[b]
   iapply twp_address (by exact hbase_after) (by exact hb_after)
   -- step 7: push tmp (= original arr[a]) onto stack
@@ -279,8 +276,7 @@ theorem twp_swapAt
   icases Hfocus with ⟨Hcell_b, Hclose_b⟩
   ihave Hcell_b' : pointsTo_u32 0 addr_b (input.set a input[b])[b] $$ [Hcell_b]
   · dsimp [addr_b]
-    rw [UInt32.add_comm]
-    iexact Hcell_b
+    irw_exact [UInt32.add_comm] with Hcell_b
   -- step 8: store original arr[a] at arr[b]
   iapply twp_store32_cell h1_b h2_b h3_b
   isplitl_exact Hcell_b'
@@ -289,8 +285,7 @@ theorem twp_swapAt
   iapply Hcont
   rw [hswap]
   iapply Hclose_b
-  rw [UInt32.add_comm]
-  iexact Hcell_b
+  irw_exact [UInt32.add_comm] with Hcell_b
 
 theorem twp_lessLocal
     [WasmSmallStepGS hlc Unit]

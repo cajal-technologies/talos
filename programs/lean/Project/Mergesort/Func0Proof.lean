@@ -56,8 +56,7 @@ private theorem ByteSlice_storeAnyWordFocus
       exact Spec.u32Codec.decode_encode newValue
     iapply (ByteSlice_four_as_word ptr (serialize [newValue])
       hnewLength hnowrap).mpr
-    rw [hdecode]
-    iexact Hnew
+    irw_exact [hdecode] with Hnew
 
 /-- Expose an arbitrary twelve-byte result slot as three writable words, with
 an exact close operation for the generated grow result.  No alignment premise
