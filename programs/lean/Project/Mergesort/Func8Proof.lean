@@ -495,8 +495,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
       have halignmentNat : alignment.toNat = 1 := by
         rw [hlayout.1.2, hlayout.2.2.2.2.1]
       have halignment : alignment = 1 := by
-        apply UInt32.toNat_inj.mp
-        simpa using halignmentNat
+        exact UInt32.toNat_inj.mp (by simpa using halignmentNat)
       have hnewAlignment : newLayout.alignment = 1 := by
         rw [← hlayout.2.1.2, halignmentNat]
       have hnewLayoutShape :
@@ -786,8 +785,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
       have halignmentNat : alignment.toNat = 1 := by
         rw [hlayout.1.2, hlayout.2.2.2.2.1]
       have halignment : alignment = 1 := by
-        apply UInt32.toNat_inj.mp
-        simpa using halignmentNat
+        exact UInt32.toNat_inj.mp (by simpa using halignmentNat)
       have hnewAlignment : newLayout.alignment = 1 := by
         rw [← hlayout.2.1.2, halignmentNat]
       have hnewSizeNat : newSize.toNat = newLayout.size := hlayout.2.1.1
@@ -811,8 +809,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
         · rename_i hzero
           simp only [ne_eq, Decidable.not_not] at hzero
           have hfrontierEq := (hcursorZero.mp hzero).2
-          apply UInt32.toNat_inj.mp
-          simpa only [hbaseNat] using hfrontierEq.symm
+          exact UInt32.toNat_inj.mp (by simpa only [hbaseNat] using hfrontierEq.symm)
       let finishWord : UInt32 := base + newSize
       have hfinishWordNat : finishWord.toNat =
           (frontier + newLayout.size) % UInt32.size := by

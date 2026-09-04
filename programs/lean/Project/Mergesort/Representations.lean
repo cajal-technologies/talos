@@ -1661,8 +1661,7 @@ theorem BumpHeap_commit {host : Type} [WasmHeapGS host]
   have hbaseNatNe : base.toNat ≠ 0 := by
     intro hzero
     apply hnonnull
-    apply UInt32.toNat_inj.mp
-    simpa using hzero
+    exact UInt32.toNat_inj.mp (by simpa using hzero)
   have hfinishPositive : 0 < finish.toNat := by omega
   have hfinishSigned : finish.toNat < 2147483648 := by simpa only [hfinish] using hendSigned
   have hfinishNonzero : finish ≠ 0 := by

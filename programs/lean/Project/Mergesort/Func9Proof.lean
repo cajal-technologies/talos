@@ -373,8 +373,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
   have halignmentNat : alignment.toNat = 4 := by
     rw [hlayout.1.2, hlayout.2.2]
   have halignment : alignment = 4 := by
-    apply UInt32.toNat_inj.mp
-    simpa using halignmentNat
+    exact UInt32.toNat_inj.mp (by simpa using halignmentNat)
   subst alignment
   isimp only [BumpHeap] at Hbump
   icases Hbump with
