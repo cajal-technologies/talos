@@ -1,4 +1,5 @@
 import CodeLib.Examples.SelectionSort.Pure
+import CodeLib.RustStd.MemArray
 import CodeLib.SepLogic.SmallStepAdequacy
 import CodeLib.SepLogic.SmallStepTotalLoop
 
@@ -34,12 +35,8 @@ private theorem arrayAddress64_toNat (base : UInt32) {index length : Nat}
     (hfit : base.toNat + 8 * length ≤ UInt32.size)
     (hindex : index < length) :
     (base + UInt32.ofNat index * 8).toNat = base.toNat + 8 * index := by
-  have hi : index < UInt32.size := by omega
-  have hp : index * 8 < UInt32.size := by omega
-  rw [UInt32.toNat_add, UInt32.toNat_mul, UInt32.toNat_ofNat_of_lt' hi]
-  have height : (8 : UInt32).toNat = 8 := by decide
-  rw [height, Nat.mod_eq_of_lt hp, Nat.mul_comm index 8]
-  exact Nat.mod_eq_of_lt (by simp only [UInt32.size] at hfit ⊢; omega)
+  simpa [UInt32.mul_comm] using Mem.words64_slotAddr_toNat base index (by
+    simpa only [UInt32.size] using Nat.lt_of_lt_of_le (by omega) hfit)
 
 theorem twp_address64
     [WasmSmallStepGS hlc Unit]
