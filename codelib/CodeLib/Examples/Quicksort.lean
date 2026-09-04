@@ -462,13 +462,9 @@ theorem quicksortHeap_agrees (arr : UInt32) (input : List UInt32)
     arr input
     (by intro key value hget; simp [get?_empty] at hget)
     hfit
-  have heq : (fun id => if id = 0 then
-      some (writeWordArray (quicksortModule.initialStore (α := Unit)).mem arr input)
-      else none) = storeResolve (quicksortConfig arr input).store := by
-    funext id; by_cases hid : id = 0
-    · subst hid; simp [storeResolve, quicksortConfig]
-    · have hext : (quicksortModule.initialStore (α := Unit)).extraMems = [] := by native_decide
-      simp [hid, storeResolve, quicksortConfig, hext]
+  have heq := singleMemoryResolve_eq_storeResolve (quicksortConfig arr input).store
+    (writeWordArray (quicksortModule.initialStore (α := Unit)).mem arr input) rfl
+    (show (quicksortModule.initialStore (α := Unit)).extraMems = [] from by native_decide)
   rw [heq] at h; exact h
 
 theorem quicksortHeapAux_inBounds
@@ -506,13 +502,9 @@ theorem quicksortHeap_inBounds (arr : UInt32) (input : List UInt32)
     hfit
     (by have hpages : (quicksortModule.initialStore (α := Unit)).mem.pages = 1 := by decide
         simp only [hpages]; exact hmem)
-  have heq : (fun id => if id = 0 then
-      some (writeWordArray (quicksortModule.initialStore (α := Unit)).mem arr input)
-      else none) = storeResolve (quicksortConfig arr input).store := by
-    funext id; by_cases hid : id = 0
-    · subst hid; simp [storeResolve, quicksortConfig]
-    · have hext : (quicksortModule.initialStore (α := Unit)).extraMems = [] := by native_decide
-      simp [hid, storeResolve, quicksortConfig, hext]
+  have heq := singleMemoryResolve_eq_storeResolve (quicksortConfig arr input).store
+    (writeWordArray (quicksortModule.initialStore (α := Unit)).mem arr input) rfl
+    (show (quicksortModule.initialStore (α := Unit)).extraMems = [] from by native_decide)
   rw [heq] at h; exact h
 
 theorem quicksortHeapAux_pointsTo [WasmHeapGS α]

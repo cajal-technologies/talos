@@ -330,13 +330,8 @@ theorem inputHeap_agrees (program : Executable) (input : List UInt64)
   have hext : (afterRead program input).extraMems = [] := by
     show program.module.extraMemories.zipIdx.map _ = []
     simp [program.extraMemories_empty]
-  have hresolve : storeResolve (concreteSortConfig program input).store =
-      fun id => if id = 0 then some (afterRead program input).mem else none := by
-    funext id
-    unfold storeResolve concreteSortConfig sortConfig replaceHost
-    by_cases hid : id = 0
-    · simp [hid]
-    · simp [hid, hext]
+  have hresolve := (singleMemoryResolve_eq_storeResolve
+    (concreteSortConfig program input).store (afterRead program input).mem rfl hext).symm
   rw [hresolve, afterRead_mem_eq program input hfit]
   unfold inputHeap
   apply heap64Aux_agrees
@@ -351,13 +346,8 @@ theorem inputHeap_inBounds (program : Executable) (input : List UInt64)
   have hext : (afterRead program input).extraMems = [] := by
     show program.module.extraMemories.zipIdx.map _ = []
     simp [program.extraMemories_empty]
-  have hresolve : storeResolve (concreteSortConfig program input).store =
-      fun id => if id = 0 then some (afterRead program input).mem else none := by
-    funext id
-    unfold storeResolve concreteSortConfig sortConfig replaceHost
-    by_cases hid : id = 0
-    · simp [hid]
-    · simp [hid, hext]
+  have hresolve := (singleMemoryResolve_eq_storeResolve
+    (concreteSortConfig program input).store (afterRead program input).mem rfl hext).symm
   rw [hresolve, afterRead_mem_eq program input hfit]
   unfold inputHeap
   apply heap64Aux_inBounds

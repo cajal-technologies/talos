@@ -177,13 +177,13 @@ private theorem mergeSortConfig_storeResolve
         some (writeWordArray (writeWordArray
           (mergeSortModule.initialStore (α := Unit)).mem source input)
           temporary scratch)
-        else none) := by
-  funext id
-  by_cases h0 : id = 0
-  · simp [h0, storeResolve, mergeSortConfig, mergeSortExampleStore]
-  · simp [h0, storeResolve, mergeSortConfig, mergeSortExampleStore,
-      show ((mergeSortModule.initialStore : Store Unit)).extraMems = [] from by
-        native_decide]
+        else none) :=
+  (singleMemoryResolve_eq_storeResolve
+    (mergeSortConfig source temporary input scratch).store
+    (writeWordArray (writeWordArray
+      (mergeSortModule.initialStore (α := Unit)).mem source input) temporary scratch)
+    rfl (show (mergeSortModule.initialStore (α := Unit)).extraMems = [] from by
+      native_decide)).symm
 
 private theorem mergeSortHeap_agrees
     (source temporary : UInt32) (input scratch : List UInt32)
