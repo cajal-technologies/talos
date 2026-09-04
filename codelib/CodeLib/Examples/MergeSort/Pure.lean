@@ -1,4 +1,5 @@
 import CodeLib.Examples.MergeSort
+import CodeLib.UInt32
 
 /-!
 # Pure mathematics used by the MiniWasm merge-sort proof
@@ -117,19 +118,6 @@ theorem perm_of_mergeRel {left right output}
       exact (List.Perm.cons _ List.perm_middle).trans
         ((List.Perm.swap _ _ _).symm.trans (List.Perm.cons _ ih))
 
-private theorem i32_le_trans {a b c : UInt32} (hab : a ≤ b) (hbc : b ≤ c) :
-    a ≤ c := by
-  change a.toNat ≤ b.toNat at hab
-  change b.toNat ≤ c.toNat at hbc
-  change a.toNat ≤ c.toNat
-  exact Nat.le_trans hab hbc
-
-private theorem i32_le_of_not_lt {a b : UInt32} (h : ¬ a < b) : b ≤ a :=
-  by
-    change ¬a.toNat < b.toNat at h
-    change b.toNat ≤ a.toNat
-    omega
-
 theorem sorted_of_mergeRel {left right output}
     (hmerge : MergeRel left right output)
     (hleft : Sorted left) (hright : Sorted right) :
@@ -149,7 +137,7 @@ theorem sorted_of_mergeRel {left right output}
         rcases hz' with hxs | rfl | hys
         · exact hleft.1 z hxs
         · exact UInt32.le_of_lt hxy
-        · exact i32_le_trans (UInt32.le_of_lt hxy) (hright.1 z hys)
+        · exact UInt32.le_trans (UInt32.le_of_lt hxy) (hright.1 z hys)
       · exact ih hxs hyr
   | @takeRight x y xs ys output hxy tail ih =>
       have hxl : Sorted (x :: xs) := hleft
@@ -161,8 +149,8 @@ theorem sorted_of_mergeRel {left right output}
           (perm_of_mergeRel tail).mem_iff.mpr hz
         simp only [List.cons_append, List.mem_cons, List.mem_append] at hz'
         rcases hz' with rfl | hxs | hys
-        · exact i32_le_of_not_lt hxy
-        · exact i32_le_trans (i32_le_of_not_lt hxy) (hleft.1 z hxs)
+        · exact UInt32.le_of_not_lt hxy
+        · exact UInt32.le_trans (UInt32.le_of_not_lt hxy) (hleft.1 z hxs)
         · exact hright.1 z hys
       · exact ih hxl hys
 

@@ -110,13 +110,6 @@ private theorem mem_segment {output : List UInt32} {lo hi : Nat} {x : UInt32}
   rw [List.getElem_take] at hkval
   rw [List.getElem_drop' (by omega)]; exact hkval
 
-private theorem uint32_le_of_lt {a b : UInt32} (h : a < b) : a ≤ b := by
-  change a.toNat < b.toNat at h; change a.toNat ≤ b.toNat; exact Nat.le_of_lt h
-
-private theorem uint32_le_trans {a b c : UInt32} (h1 : a ≤ b) (h2 : b ≤ c) : a ≤ c := by
-  change a.toNat ≤ b.toNat at h1; change b.toNat ≤ c.toNat at h2
-  change a.toNat ≤ c.toNat; exact Nat.le_trans h1 h2
-
 private theorem compose_sorted (output : List UInt32) (lo hi p : Nat)
     (hlo : lo ≤ p) (hp : p < hi) (hhi : hi ≤ output.length)
     (hleft : List.Pairwise (· ≤ ·) (segment output lo p))
@@ -128,12 +121,12 @@ private theorem compose_sorted (output : List UInt32) (lo hi p : Nat)
       from by rw [← segment_cons_pivot hp hhi, segment_append hlo (by omega)]]
   rw [List.pairwise_append, List.pairwise_cons]
   refine ⟨hleft, ⟨?_, hright⟩, ?_⟩
-  · intro y hy; exact uint32_le_of_lt (hright_cond y hy)
+  · intro y hy; exact UInt32.le_of_lt (hright_cond y hy)
   · intro x hx y hy
     rw [List.mem_cons] at hy
     rcases hy with rfl | hy
     · exact hleft_cond x hx
-    · exact uint32_le_trans (hleft_cond x hx) (uint32_le_of_lt (hright_cond y hy))
+    · exact UInt32.le_trans (hleft_cond x hx) (UInt32.le_of_lt (hright_cond y hy))
 
 /-- loop invariant for the lomuto partition scan:
     [lo, i) ≤ pivot, [i, j) > pivot, arr[hi-1] = pivot -/

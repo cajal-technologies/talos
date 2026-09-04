@@ -1,4 +1,5 @@
 import CodeLib.Examples.SelectionSort
+import CodeLib.UInt64
 import Mathlib.Data.List.Sort
 
 /-! Pure list facts shared by the recursive and loop proofs. -/
@@ -7,29 +8,6 @@ namespace Wasm.Examples.SelectionSort
 
 def Sorted (values : List UInt64) : Prop :=
   values.Pairwise (· ≤ ·)
-
-private theorem uint64_le_refl (value : UInt64) : value ≤ value := by
-  change value.toNat ≤ value.toNat
-  omega
-
-private theorem uint64_le_of_lt {left right : UInt64}
-    (h : left < right) : left ≤ right := by
-  change left.toNat < right.toNat at h
-  change left.toNat ≤ right.toNat
-  omega
-
-private theorem uint64_le_trans {a b c : UInt64}
-    (hab : a ≤ b) (hbc : b ≤ c) : a ≤ c := by
-  change a.toNat ≤ b.toNat at hab
-  change b.toNat ≤ c.toNat at hbc
-  change a.toNat ≤ c.toNat
-  omega
-
-private theorem uint64_le_of_not_lt {left right : UInt64}
-    (h : ¬ left < right) : right ≤ left := by
-  change ¬ left.toNat < right.toNat at h
-  change right.toNat ≤ left.toNat
-  omega
 
 def swapElems (values : List UInt64) (i j : Nat) : List UInt64 :=
   (values.set i values[j]!).set j values[i]!
@@ -103,7 +81,7 @@ theorem minScan_start (values : List UInt64) {start : Nat}
   intro k hk hks
   have : k = start := by omega
   subst k
-  exact uint64_le_refl _
+  exact UInt64.le_refl _
 
 theorem MinScan.step (values : List UInt64) {start best scan : Nat}
     (h : MinScan values start best scan) (hscan : scan < values.length) :
@@ -115,14 +93,14 @@ theorem MinScan.step (values : List UInt64) {start best scan : Nat}
     refine ⟨by omega, by omega, by omega, ?_⟩
     intro k hk hks
     by_cases hkscan : k = scan
-    · subst k; exact uint64_le_refl _
-    · exact uint64_le_trans (uint64_le_of_lt hlt)
+    · subst k; exact UInt64.le_refl _
+    · exact UInt64.le_trans (UInt64.le_of_lt hlt)
         (hmin k hk (by omega))
   · simp only [if_neg hlt]
     refine ⟨hstartBest, by omega, by omega, ?_⟩
     intro k hk hks
     by_cases hkscan : k = scan
-    · subst k; exact uint64_le_of_not_lt hlt
+    · subst k; exact UInt64.le_of_not_lt hlt
     · exact hmin k hk (by omega)
 
 /-- Prefix `[0, fixed)` is sorted, contains the globally least `fixed`
