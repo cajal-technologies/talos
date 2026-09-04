@@ -1,5 +1,6 @@
 import Project.Mergesort.Program
 import Interpreter.Wasm.Host.Universal
+import CodeLib.UInt32
 import CodeLib.WordCodec
 import Std.Tactic.BVDecide
 
@@ -48,44 +49,6 @@ def decodeWord : List UInt8 → UInt32
         (b₂.toUInt32 <<< 16) ||| (b₃.toUInt32 <<< 24)
   | _ => 0
 
-/-- Kernel-checked reconstruction of a 32-bit natural from its four bytes.
-This avoids making the public codec, and therefore every theorem mentioning
-its serialization, depend on the native bit-vector decision axiom. -/
-private theorem reassemble32 (n : Nat) (h : n < 2 ^ 32) :
-    n % 2 ^ 8 ||| (((n >>> 8) % 2 ^ 8) <<< 8) % 2 ^ 32 |||
-      (((n >>> 16) % 2 ^ 8) <<< 16) % 2 ^ 32 |||
-      (((n >>> 24) % 2 ^ 8) <<< 24) % 2 ^ 32 = n := by
-  apply Nat.eq_of_testBit_eq
-  intro i
-  simp only [Nat.testBit_lor, Nat.testBit_mod_two_pow,
-    Nat.testBit_shiftLeft, Nat.testBit_shiftRight]
-  by_cases hi8 : i < 8
-  · simp [hi8, show i < 32 by omega, show ¬i ≥ 8 by omega,
-      show ¬i ≥ 16 by omega, show ¬i ≥ 24 by omega]
-  by_cases hi16 : i < 16
-  · have h8le : i ≥ 8 := by omega
-    have heq : 8 + (i - 8) = i := by omega
-    simp [hi8, h8le, heq, show i < 32 by omega,
-      show i - 8 < 8 by omega, show ¬i ≥ 16 by omega,
-      show ¬i ≥ 24 by omega]
-  by_cases hi24 : i < 24
-  · have h16le : i ≥ 16 := by omega
-    have heq : 16 + (i - 16) = i := by omega
-    simp [hi8, h16le, heq, show i < 32 by omega,
-      show ¬i - 8 < 8 by omega, show i - 16 < 8 by omega,
-      show ¬i ≥ 24 by omega]
-  by_cases hi32 : i < 32
-  · have h24le : i ≥ 24 := by omega
-    have heq : 24 + (i - 24) = i := by omega
-    simp [hi8, hi32, h24le, heq, show ¬i - 8 < 8 by omega,
-      show ¬i - 16 < 8 by omega, show i - 24 < 8 by omega]
-  · have hibound : n.testBit i = false :=
-      Nat.testBit_eq_false_of_lt (lt_of_lt_of_le h
-        (Nat.pow_le_pow_right (by decide) (by omega)))
-    simp [hi8, hibound, show ¬i < 32 by omega,
-      show ¬i - 8 < 8 by omega, show ¬i - 16 < 8 by omega,
-      show ¬i - 24 < 8 by omega]
-
 /-- The one canonical codec used by streams and all memory-array views in the
 merge-sort formalization. -/
 def u32Codec : WordCodec UInt32 where
@@ -101,7 +64,7 @@ def u32Codec : WordCodec UInt32 where
     simp only [UInt32.toNat_or, UInt32.toNat_shiftLeft,
       UInt8.toNat_toUInt32, UInt32.toNat_toUInt8,
       UInt32.toNat_shiftRight]
-    exact reassemble32 value.toNat (UInt32.toNat_lt value)
+    exact Nat.reassemble32_of_lt value.toNat (UInt32.toNat_lt value)
 
 /-- The exact packed format consumed and produced by the Rust entry point. -/
 def encodeValues (values : List UInt32) : List UInt8 :=

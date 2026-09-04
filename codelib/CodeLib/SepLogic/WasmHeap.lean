@@ -1,4 +1,5 @@
 import CodeLib.SepLogic.Tactics
+import CodeLib.UInt32
 import Iris.Instances.Lib.FUpd
 import Iris.BI.Lib.GenHeap
 import Iris.BI.Lib.MonoNat
@@ -1132,8 +1133,11 @@ theorem u32Byte_reassemble (v : UInt32) :
     (u32Byte v 0).toUInt32 ||| ((u32Byte v 1).toUInt32 <<< 8) |||
       ((u32Byte v 2).toUInt32 <<< 16) |||
       ((u32Byte v 3).toUInt32 <<< 24) = v := by
+  apply UInt32.toNat_inj.mp
   unfold u32Byte
-  bv_decide
+  simp only [UInt32.toNat_or, UInt32.toNat_shiftLeft,
+    UInt8.toNat_toUInt32, UInt32.toNat_toUInt8, UInt32.toNat_shiftRight]
+  exact Nat.reassemble32_of_lt v.toNat (UInt32.toNat_lt v)
 
 -- Multi-byte: u32 as 4 consecutive owned bytes (little-endian)
 def pointsTo_u32 (memId : Nat) (addr : UInt32) (v : UInt32) : IProp (WasmHeapGF α) :=
