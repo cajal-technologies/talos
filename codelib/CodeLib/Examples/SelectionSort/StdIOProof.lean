@@ -987,13 +987,12 @@ private theorem correct_of_sort_complete
 
 /-- The recursive StdIO selection sort terminates and returns a sorted
 permutation. Its algorithmic proof is the induction proof in `TotalProof`. -/
-theorem recursive_correct : RecursiveCorrect := by
-  exact correct_of_sort_complete recursive recursive_execute_sort_complete
+theorem recursive_correct : RecursiveCorrect :=
+  correct_of_sort_complete recursive recursive_execute_sort_complete
 
 /-- The loop-based StdIO selection sort terminates and returns a sorted
 permutation. Its algorithmic proof uses the inner and outer loop invariants in
 `TotalProof`. -/
-theorem loop_correct : LoopCorrect := by
-  exact correct_of_sort_complete loop loop_execute_sort_complete
+theorem loop_correct : LoopCorrect := correct_of_sort_complete loop loop_execute_sort_complete
 
 end Wasm.Examples.SelectionSort.StdIO

@@ -286,8 +286,8 @@ theorem absDiffBodyGlobals_agree
     (a b oldScratch : UInt64)
     (hglobal : initial.globals.globals[0]? = some (.i32 1048576)) :
     globalHeapAgrees absDiffGlobals
-      (absDiffBodyConfig runtimeModule initial a b oldScratch).store.wasm.globals := by
-  exact globalHeapAgrees_singleton hglobal
+      (absDiffBodyConfig runtimeModule initial a b oldScratch).store.wasm.globals :=
+  globalHeapAgrees_singleton hglobal
 
 set_option maxHeartbeats 4000000 in
 /-- Generated-module form of the reusable Iris body proof. It works over any

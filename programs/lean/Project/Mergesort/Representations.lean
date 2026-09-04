@@ -32,8 +32,7 @@ abbrev SortedPermutation (input output : List UInt32) : Prop :=
   Spec.SortedPermutation input output
 
 @[simp] theorem serialize_length (values : List UInt32) :
-    (serialize values).length = 4 * values.length := by
-  exact U32Codec.serialize_length values
+    (serialize values).length = 4 * values.length := U32Codec.serialize_length values
 
 @[simp] theorem serialize_append (xs ys : List UInt32) :
     serialize (xs ++ ys) = serialize xs ++ serialize ys := by
@@ -41,8 +40,7 @@ abbrev SortedPermutation (input output : List UInt32) : Prop :=
   simp
 
 @[simp] theorem deserialize_serialize (values : List UInt32) :
-    U32Codec.deserialize (serialize values) = some values := by
-  exact U32Codec.deserialize_serialize values
+    U32Codec.deserialize (serialize values) = some values := U32Codec.deserialize_serialize values
 
 /-- A zeroed four-byte allocation is exactly the canonical serialization of
 the corresponding zero-valued word array. -/

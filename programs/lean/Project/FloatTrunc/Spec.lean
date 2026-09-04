@@ -177,8 +177,8 @@ theorem func0Heap_inBounds :
     (by decide) (by decide)
 
 theorem func0Globals_agree :
-    globalHeapAgrees func0Globals (func0Config 0).store.wasm.globals := by
-  exact globalHeapAgrees_singleton rfl
+    globalHeapAgrees func0Globals (func0Config 0).store.wasm.globals :=
+  globalHeapAgrees_singleton rfl
 
 theorem func0Heap_pointsTo [WasmHeapGS Unit] :
     ([∗map] address ↦ value ∈ func0Heap,

@@ -742,8 +742,7 @@ def func1GlobalHeap : WasmGlobalMap Value :=
 theorem func1GlobalHeap_agrees :
     globalHeapAgrees func1GlobalHeap
       ({ globals := [.i32 1048560, .i32 1048576, .i32 1048576] } :
-        Globals) := by
-  exact globalHeapAgrees_singleton rfl
+        Globals) := globalHeapAgrees_singleton rfl
 
 theorem func1GlobalHeap_pointsTo [WasmGlobalGS Unit] :
     ([∗map] index ↦ value ∈ func1GlobalHeap,
@@ -3587,8 +3586,7 @@ def func0GlobalHeap : WasmGlobalMap Value :=
 
 theorem func0GlobalHeap_agrees :
     globalHeapAgrees func0GlobalHeap
-      («module».initialStore : Store Unit).globals := by
-  exact globalHeapAgrees_singleton rfl
+      («module».initialStore : Store Unit).globals := globalHeapAgrees_singleton rfl
 
 theorem func0GlobalHeap_pointsTo [WasmGlobalGS Unit] :
     ([∗map] index ↦ value ∈ func0GlobalHeap,

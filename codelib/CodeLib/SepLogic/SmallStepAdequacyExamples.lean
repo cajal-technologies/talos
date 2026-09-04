@@ -45,8 +45,7 @@ private def global0Heap : WasmGlobalMap Value :=
 
 private theorem global0Heap_agrees :
     globalHeapAgrees global0Heap
-      globalGetAdequacyConfig.store.wasm.globals := by
-  exact globalHeapAgrees_singleton rfl
+      globalGetAdequacyConfig.store.wasm.globals := globalHeapAgrees_singleton rfl
 
 private theorem global0Heap_pointsTo [WasmGlobalGS α] :
     ([∗map] index ↦ value ∈ global0Heap,
@@ -1208,8 +1207,7 @@ private def memoryInitDropSegments :
 
 private theorem memoryInitDropSegments_agree :
     dataSegmentHeapAgrees memoryInitDropSegments
-      [some [1, 2, 3, 4]] := by
-  exact instanceIndexHeapAgrees_singleton rfl
+      [some [1, 2, 3, 4]] := instanceIndexHeapAgrees_singleton rfl
 
 private theorem memoryInitDropSegments_pointsTo [WasmDataSegmentGS α] :
     ([∗map] index ↦ value ∈ memoryInitDropSegments,
@@ -1303,8 +1301,7 @@ private def tableSetGetMap : WasmTableMap TableInst :=
   insert ∅ (⟨0, 0⟩ : TableKey) [.funcref none]
 
 private theorem tableSetGetMap_agrees :
-    tableHeapAgrees tableSetGetMap [[.funcref none]] := by
-  exact tableHeapAgrees_singleton rfl
+    tableHeapAgrees tableSetGetMap [[.funcref none]] := tableHeapAgrees_singleton rfl
 
 private theorem tableSetGetMap_pointsTo [WasmTableGS α] :
     ([∗map] index ↦ table ∈ tableSetGetMap,
@@ -1611,8 +1608,7 @@ private def tableCopyOverlapMap : WasmTableMap TableInst :=
 private theorem tableCopyOverlapMap_agrees :
     tableHeapAgrees tableCopyOverlapMap
       [[.funcref none, .funcref (some 0), .funcref (some 1),
-        .funcref (some 2)]] := by
-  exact tableHeapAgrees_singleton rfl
+        .funcref (some 2)]] := tableHeapAgrees_singleton rfl
 
 private theorem tableCopyOverlapMap_pointsTo [WasmTableGS α] :
     ([∗map] index ↦ table ∈ tableCopyOverlapMap,
@@ -1724,8 +1720,7 @@ private def tableCopyDistinctMap : WasmTableMap TableInst :=
 private theorem tableCopyDistinctMap_agrees :
     tableHeapAgrees tableCopyDistinctMap
       [[.funcref none, .funcref none, .funcref none],
-       [.funcref (some 0), .funcref (some 1), .funcref (some 2)]] := by
-  exact instanceIndexHeapAgrees_insert
+       [.funcref (some 0), .funcref (some 1), .funcref (some 2)]] := instanceIndexHeapAgrees_insert
     (instanceIndexHeapAgrees_insert
       (instanceIndexHeapAgrees_empty _) rfl) rfl
 
@@ -1907,13 +1902,11 @@ private def tableInitDropElementMap :
 private theorem tableInitDropTableMap_agrees :
     tableHeapAgrees tableInitDropTableMap
       [[.funcref none, .funcref none, .funcref none,
-        .funcref none]] := by
-  exact tableHeapAgrees_singleton rfl
+        .funcref none]] := tableHeapAgrees_singleton rfl
 
 private theorem tableInitDropElementMap_agrees :
     elementSegmentHeapAgrees tableInitDropElementMap
-      [some [some 0, none, some 0]] := by
-  exact instanceIndexHeapAgrees_singleton rfl
+      [some [some 0, none, some 0]] := instanceIndexHeapAgrees_singleton rfl
 
 private theorem tableInitDropTableMap_pointsTo [WasmTableGS α] :
     ([∗map] index ↦ table ∈ tableInitDropTableMap,

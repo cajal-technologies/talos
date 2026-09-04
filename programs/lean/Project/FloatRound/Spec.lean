@@ -73,8 +73,7 @@ def roundGlobals : WasmGlobalMap Value :=
 
 theorem roundGlobals_agree :
     globalHeapAgrees roundGlobals
-      («module».initialStore : Store Unit).globals := by
-  exact globalHeapAgrees_singleton rfl
+      («module».initialStore : Store Unit).globals := globalHeapAgrees_singleton rfl
 
 theorem roundHeap_pointsTo [WasmHeapGS Unit] :
     ([∗map] address ↦ value ∈ roundHeap,

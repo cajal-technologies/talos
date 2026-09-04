@@ -44,16 +44,16 @@ theorem writeHost_eq : writeHost = StdIO.writeHost.lift stdioLens := by rfl
 theorem oomHost_eq : oomHost = OOM.oomHost.lift oomLens := by rfl
 
 theorem readHost_resolves :
-    (Universal.envFor Project.Mergesort.module).funcs[0]? = some readHost := by
-  exact Universal.registry.envFor_getElem? Project.Mergesort.module (by decide)
+    (Universal.envFor Project.Mergesort.module).funcs[0]? = some readHost :=
+  Universal.registry.envFor_getElem? Project.Mergesort.module (by decide)
 
 theorem writeHost_resolves :
-    (Universal.envFor Project.Mergesort.module).funcs[1]? = some writeHost := by
-  exact Universal.registry.envFor_getElem? Project.Mergesort.module (by decide)
+    (Universal.envFor Project.Mergesort.module).funcs[1]? = some writeHost :=
+  Universal.registry.envFor_getElem? Project.Mergesort.module (by decide)
 
 theorem oomHost_resolves :
-    (Universal.envFor Project.Mergesort.module).funcs[2]? = some oomHost := by
-  exact Universal.registry.envFor_getElem? Project.Mergesort.module (by decide)
+    (Universal.envFor Project.Mergesort.module).funcs[2]? = some oomHost :=
+  Universal.registry.envFor_getElem? Project.Mergesort.module (by decide)
 
 theorem readHost_invoke_of_bound
     (store : Store Universal.State) (length pointer : UInt32)

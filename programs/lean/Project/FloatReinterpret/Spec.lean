@@ -209,8 +209,8 @@ theorem func1Heap_inBounds :
     (by decide) (by decide)
 
 theorem func1Globals_agree :
-    globalHeapAgrees func1Globals (func1Config 0).store.wasm.globals := by
-  exact globalHeapAgrees_singleton rfl
+    globalHeapAgrees func1Globals (func1Config 0).store.wasm.globals :=
+  globalHeapAgrees_singleton rfl
 
 theorem func1Heap_pointsTo [WasmHeapGS Unit] :
     ([∗map] address ↦ value ∈ func1Heap,
@@ -374,8 +374,7 @@ theorem func3Heap_pointsTo [WasmHeapGS Unit] :
     ([∗map] address ↦ value ∈ func3Heap,
       pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
         address (DFrac.own 1) value) ⊢
-      pointsTo_u64 0 1048568 0 := by
-  exact Wasm.RustStd.U64.absDiffHeap_pointsTo 0
+      pointsTo_u64 0 1048568 0 := Wasm.RustStd.U64.absDiffHeap_pointsTo 0
 
 theorem func3_body_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}

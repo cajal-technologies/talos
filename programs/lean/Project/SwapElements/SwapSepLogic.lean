@@ -2439,8 +2439,7 @@ theorem func4ExampleHeap_inBounds :
 
 theorem func4ExampleGlobals_agree :
     globalHeapAgrees func4ExampleGlobals
-      func4ExampleConfig.store.wasm.globals := by
-  exact globalHeapAgrees_singleton rfl
+      func4ExampleConfig.store.wasm.globals := globalHeapAgrees_singleton rfl
 
 theorem func4ExampleHeap_pointsTo [WasmHeapGS Unit] :
     ([∗map] address ↦ value ∈ func4ExampleHeap,
@@ -2787,8 +2786,7 @@ theorem func0AliasHeap_inBounds :
 
 theorem func0AliasGlobals_agree :
     globalHeapAgrees func0AliasGlobals
-      func0AliasConfig.store.wasm.globals := by
-  exact globalHeapAgrees_singleton rfl
+      func0AliasConfig.store.wasm.globals := globalHeapAgrees_singleton rfl
 
 theorem func0AliasHeap_pointsTo [WasmHeapGS Unit] :
     ([∗map] address ↦ value ∈ func0AliasHeap,

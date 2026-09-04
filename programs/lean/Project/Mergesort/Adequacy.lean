@@ -156,8 +156,8 @@ theorem entryHeap_facts (input : List UInt32) :
   exact hcursor
 
 theorem entryGlobals_agree (input : List UInt32) :
-    globalHeapAgrees entryGlobals (entryConfig input).store.wasm.globals := by
-  exact globalHeapAgrees_singleton rfl
+    globalHeapAgrees entryGlobals (entryConfig input).store.wasm.globals :=
+  globalHeapAgrees_singleton rfl
 
 private theorem entryGlobals_pointsTo [WasmGlobalGS Universal.State] :
     ([∗map] index ↦ value ∈ entryGlobals,
