@@ -347,16 +347,14 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
       Nat.mod_eq_of_lt hsumBound]
   wasm_twp_pures [twp_block twp_block twp_localGet twp_const twp_add]
   rw [hpadWord]
-  wasm_twp_pures [twp_localTee]
-  simp only [List.length]
+  wasm_twp_localTee [List.length]
   wasm_twp_pures [twp_const]
   ihave HcursorAt : pointsTo_u32 0 ((0 : UInt32) + 1049492)
       storedCursor $$ [Hcursor]
   · irw_exact [show (0 : UInt32) + 1049492 = allocatorCursor by decide] with Hcursor
   wasm_twp_bind twp_load32 (address := 0) (offset := 1049492) storedCursor
       (by decide) (by decide) (by decide) (by decide) with HcursorAt => Hcursor
-  wasm_twp_pures [twp_localTee]
-  simp only [List.length]
+  wasm_twp_localTee [List.length]
   wasm_twp_pures [twp_const twp_localGet]
   iapply twp_select
       (selected := .i32 (UInt32.ofNat frontier)) (by
@@ -371,8 +369,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
             congrArg Value.i32 hfrontierWord.symm)
   wasm_twp_pures [twp_add]
   rw [hsumWord]
-  wasm_twp_pures [twp_localTee]
-  simp only [List.length]
+  wasm_twp_localTee [List.length]
   wasm_twp_pures [twp_localGet]
   have hsumNotLt :
       ¬ UInt32.ofNat (frontier + (layout.alignment - 1)) <
@@ -429,12 +426,10 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
   · irw_exact [← show (0 : UInt32) + 1049492 = allocatorCursor by decide] with Hcursor
   wasm_twp_pures [twp_localGet twp_const twp_localGet twp_sub twp_and]
   rw [hbaseRaw]
-  wasm_twp_pures [twp_localTee]
-  simp only [List.length]
+  wasm_twp_localTee [List.length]
   wasm_twp_pures [twp_localGet twp_add]
   rw [hfinishWord']
-  wasm_twp_pures [twp_localTee]
-  simp only [List.set]
+  wasm_twp_localTee [List.set]
   wasm_twp_pures [twp_localGet]
   iapply twp_ltU (result := 0) (by
     rw [if_neg (UInt32.not_lt.mpr hbaseLeFinish)])
@@ -511,8 +506,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
     rw [show (16 : UInt32) % 32 = 16 by decide]
     rw [show (finish + 65535) >>> (16 : UInt32) =
       allocatorRequiredPages finish by rfl]
-    wasm_twp_pures [twp_localTee]
-    simp only [List.length]
+    wasm_twp_localTee [List.length]
     have hfinishSignedWord : finish.toNat < 2147483648 := by
       rw [hfinishNatEq]
       exact hfinishSigned

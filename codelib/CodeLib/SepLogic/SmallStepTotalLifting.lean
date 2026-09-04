@@ -1802,6 +1802,15 @@ macro_rules
         (wasm_twp_pures [twp_localSet]
          simp only [$rules,*]))
 
+/-- Execute a local tee, then normalize the concrete local list. -/
+syntax "wasm_twp_localTee" Lean.Parser.Tactic.simpArgs : tactic
+
+macro_rules
+  | `(tactic| wasm_twp_localTee [$rules,*]) =>
+      `(tactic|
+        (wasm_twp_pures [twp_localTee]
+         simp only [$rules,*]))
+
 /-- `i32.load` at offset 0, phrased directly on `addr` rather than
 `addr + 0`, which keeps Iris's unifier from having to see through the
 offset addition.  Relocated here from `SmallStepAdequacy`, where it sat

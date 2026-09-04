@@ -1170,8 +1170,7 @@ theorem twp_mergeMainChoice
     (by rfl) (by rfl) (right_slot_address source hmj)
   iframe; iintro Hsource
   rw [mergeMainCompareBody_afterLoad2]
-  wasm_twp_pures [twp_localTee]
-  simp only [List.length, List.set]
+  wasm_twp_localTee [List.length, List.set]
   by_cases hle : input[i] ≤ input[j]
   · iapply twp_leU (result := 1) (by simp [hle])
     iapply twp_brIf (by decide) (by rfl)
@@ -1389,7 +1388,6 @@ theorem twp_mergeMainLoop
         iapply twp_geU (result := 0)
           (by rw [if_neg (UInt32.not_le.mpr hiNextU)])
         wasm_twp_pures [twp_localTee]
-        simp only
         wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet]
         have hlengthLt := hlayout.length_lt
         have hjDiffSize : state.j - mid < UInt32.size := by omega
@@ -1424,7 +1422,6 @@ theorem twp_mergeMainLoop
           exact le_refl (UInt32.ofNat mid)
         iapply twp_geU (result := 1) (by rw [if_pos hge])
         wasm_twp_pures [twp_localTee]
-        simp only
         iapply twp_brIf (by decide) (by rfl)
         simp only [sortLocals, List.length, List.set, List.take_zero,
           List.nil_append, sortRecursiveGuardFrame, emptyBlockFrame]
@@ -1471,7 +1468,6 @@ theorem twp_mergeMainLoop
       iapply twp_geU (result := 0)
         (by rw [if_neg (UInt32.not_le.mpr hiU)])
       wasm_twp_pures [twp_localTee]
-      simp only
       wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet]
       by_cases hjNext : state.j + 1 < input.length
       · have hlengthLt := hlayout.length_lt
@@ -1800,8 +1796,7 @@ theorem twp_mergeLeftRemainder
       wasm_twp_pures [twp_localGet twp_localGet twp_const twp_add]
       rw [UInt32.add_comm (4294967295 : UInt32),
         u32_neg_counter_step hrSuccSize]
-      wasm_twp_pures [twp_localTee]
-      simp only [List.length, List.set]
+      wasm_twp_localTee [List.length, List.set]
       by_cases hmore : state.r + 1 < n
       · have hne :
             UInt32.ofNat i - UInt32.ofNat mid ≠
@@ -2200,8 +2195,7 @@ theorem twp_mergeRightRemainder
       wasm_twp_localSet [List.length, List.set]
       wasm_twp_pures [twp_localGet twp_const twp_add]
       rw [UInt32.add_comm (1 : UInt32), hcounterStep]
-      wasm_twp_pures [twp_localTee]
-      simp only [List.length, List.set]
+      wasm_twp_localTee [List.length, List.set]
       by_cases hmore : state.r + 1 < n
       · have hnextCounterSize : n - (state.r + 1) < UInt32.size := by
           dsimp only [n]
@@ -2536,8 +2530,7 @@ theorem twp_sort
     wasm_twp_pures [twp_block twp_block twp_localGet twp_localGet twp_const twp_shrU]
     rw [show (1 % 32 : UInt32) = 1 by decide,
       ofNat_shr_one hlengthSize]
-    wasm_twp_pures [twp_localTee]
-    simp only [List.length]
+    wasm_twp_localTee [List.length]
     have hscratchNotLt :
         ¬UInt32.ofNat input.length < UInt32.ofNat mid := by
       rw [UInt32.lt_iff_toNat_lt,
@@ -2579,16 +2572,13 @@ theorem twp_sort
     · irw_exact [← hscratchLeftEq] with HscratchRight
     wasm_twp_pures [twp_localGet twp_localGet twp_const twp_shl]
     rw [MemRegion.shl2_eq_mul4]
-    wasm_twp_pures [twp_localTee]
-    simp only [List.length]
+    wasm_twp_localTee [List.length]
     wasm_twp_pures [twp_add]
     rw [UInt32.add_comm]
-    wasm_twp_pures [twp_localTee]
-    simp only [List.length]
+    wasm_twp_localTee [List.length]
     wasm_twp_pures [twp_localGet twp_localGet twp_sub]
     rw [u32_ofNat_sub (Nat.le_of_lt hleftLt) hlengthSize]
-    wasm_twp_pures [twp_localTee]
-    simp only [List.length]
+    wasm_twp_localTee [List.length]
     wasm_twp_pures [twp_localGet twp_localGet twp_add]
     rw [UInt32.add_comm]
     wasm_twp_pures [twp_localGet twp_localGet twp_sub]
@@ -2745,7 +2735,6 @@ theorem twp_sort
       wasm_twp_pures [twp_brIfZero twp_localGet twp_const twp_shl]
       rw [MemRegion.shl2_eq_mul4]
       wasm_twp_pures [twp_localTee]
-      simp only
       have hfourFits : 4 * combined.length < UInt32.size := by
         rw [hcombinedLength]
         omega

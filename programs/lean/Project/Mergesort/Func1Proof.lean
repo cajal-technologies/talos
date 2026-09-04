@@ -259,13 +259,11 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
   wasm_twp_rebind twp_globalGet with Hsp
   wasm_twp_pures [twp_const twp_sub]
   rw [show driverBase - 16 = reserveBase by decide]
-  wasm_twp_pures [twp_localTee]
-  simp only [List.length]
+  wasm_twp_localTee [List.length]
   wasm_twp_rebind twp_globalSet with Hsp
   wasm_twp_pures [twp_block twp_localGet twp_localGet twp_add]
   rw [hsumWord]
-  wasm_twp_pures [twp_localTee]
-  simp only [List.set]
+  wasm_twp_localTee [List.set]
   wasm_twp_pures [twp_localGet]
   iapply twp_geU (result := 1) (by
     rw [if_pos (by simpa only [← hsumWord] using hguard)])
@@ -278,16 +276,14 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
   · irw_exact [UInt32.add_zero] with Hcapacity
   wasm_twp_bind twp_load32 (address := driverBase) (offset := 0) capacity
       (by decide) (by decide) (by decide) (by decide) with Hcapacity' => Hcapacity
-  wasm_twp_pures [twp_localTee]
-  simp only [List.set]
+  wasm_twp_localTee [List.set]
   wasm_twp_pures [twp_localGet]
   iapply twp_load32 ptr (by decide) (by decide) (by decide) (by decide) $$
     Hpointer
   iintro Hpointer
   wasm_twp_pures [twp_localGet twp_localGet twp_const twp_shl]
   rw [show (1 : UInt32) % 32 = 1 by decide, hdoubleWord]
-  wasm_twp_pures [twp_localTee]
-  simp only [List.set]
+  wasm_twp_localTee [List.set]
   wasm_twp_pures [twp_localGet twp_localGet twp_gtU]
   iapply twp_select (selected := .i32 (UInt32.ofNat firstMaxNat)) (by
     by_cases hcmp : UInt32.ofNat (initialized.length + current.length) >
@@ -304,12 +300,10 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
       rw [if_neg hcmp,
         if_neg (by decide : ¬ ((0 : UInt32) ≠ 0))]
       exact congrArg Value.i32 hw.symm)
-  wasm_twp_pures [twp_localTee]
-  simp only [List.set]
+  wasm_twp_localTee [List.set]
   wasm_twp_pures [twp_const twp_const twp_localGet twp_const twp_eq]
   iapply twp_select (selected := .i32 8) (by simp)
-  wasm_twp_pures [twp_localTee]
-  simp only [List.set]
+  wasm_twp_localTee [List.set]
   wasm_twp_pures [twp_localGet twp_localGet twp_gtU]
   iapply twp_select (selected := .i32 newCapacity) (by
     rw [← hselectedWord]
@@ -328,8 +322,7 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
           show (8 : UInt32).toNat = 8 by decide] at hcmp
         omega
       simp [hcmp, max_eq_right hn])
-  wasm_twp_pures [twp_localTee]
-  simp only [List.set]
+  wasm_twp_localTee [List.set]
   wasm_twp_pures [twp_localGet twp_localGet]
   have Hfunc0 : Func0Spec (hlc := hlc) := hfunc0
   unfold Func0Spec CallContract callExpr at Hfunc0
