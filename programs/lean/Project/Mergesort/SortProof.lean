@@ -417,12 +417,12 @@ private theorem validLayout_suffix
   have hsourceAddress :
       (source + 4 * UInt32.ofNat mid).toNat = source.toNat + 4 * mid := by
     simpa [UInt32.mul_comm] using
-      Wasm.Examples.MergeSort.arrayAddress_toNat source
+      Wasm.Examples.UInt32Array.arrayAddress_toNat source
         hlayout.source_fits hmid
   have hscratchAddress :
       (scratch + 4 * UInt32.ofNat mid).toNat = scratch.toNat + 4 * mid := by
     simpa [UInt32.mul_comm] using
-      Wasm.Examples.MergeSort.arrayAddress_toNat scratch
+      Wasm.Examples.UInt32Array.arrayAddress_toNat scratch
         hlayout.temporary_fits hmid
   unfold Wasm.Examples.MergeSort.ValidLayout
     Wasm.Examples.MergeSort.arrayByteRange at hlayout ⊢
@@ -779,7 +779,7 @@ theorem twp_loadShlAt
   have hslot : address.toNat = physicalBase.toNat + 4 * k := by
     dsimp only [address]
     simpa [UInt32.mul_comm] using
-      Wasm.Examples.MergeSort.arrayAddress_toNat physicalBase hfit hk
+      Wasm.Examples.UInt32Array.arrayAddress_toNat physicalBase hfit hk
   have hroom : address.toNat + 4 ≤ UInt32.size := by rw [hslot]; omega
   have hroom' : address.toNat + 4 ≤ 4294967296 := by simpa only [UInt32.size] using hroom
   obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4 address hroom'
@@ -839,7 +839,7 @@ theorem twp_storeCurrentAt
   have hslot : address.toNat = physicalBase.toNat + 4 * k := by
     dsimp only [address]
     simpa [UInt32.mul_comm] using
-      Wasm.Examples.MergeSort.arrayAddress_toNat physicalBase hfit hk
+      Wasm.Examples.UInt32Array.arrayAddress_toNat physicalBase hfit hk
   have hroom : address.toNat + 4 ≤ UInt32.size := by rw [hslot]; omega
   have hroom' : address.toNat + 4 ≤ 4294967296 := by simpa only [UInt32.size] using hroom
   obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4 address hroom'
@@ -908,12 +908,12 @@ theorem twp_copyPointerAt
       sourceAddress.toNat = source.toNat + 4 * i := by
     rw [hsourceAddress]
     simpa [UInt32.mul_comm] using
-      Wasm.Examples.MergeSort.arrayAddress_toNat source hsourceFit hi
+      Wasm.Examples.UInt32Array.arrayAddress_toNat source hsourceFit hi
   have hdestinationSlot :
       destinationAddress.toNat = scratch.toNat + 4 * k := by
     rw [hdestinationAddress]
     simpa [UInt32.mul_comm] using
-      Wasm.Examples.MergeSort.arrayAddress_toNat scratch hscratchFit hk
+      Wasm.Examples.UInt32Array.arrayAddress_toNat scratch hscratchFit hk
   have hsourceRoom : sourceAddress.toNat + 4 ≤ UInt32.size := by omega
   have hdestinationRoom :
       destinationAddress.toNat + 4 ≤ UInt32.size := by omega
@@ -2380,13 +2380,13 @@ theorem twp_sort
         (source + 4 * UInt32.ofNat left.length).toNat =
           source.toNat + 4 * left.length := by
       simpa [UInt32.mul_comm] using
-        Wasm.Examples.MergeSort.arrayAddress_toNat source
+        Wasm.Examples.UInt32Array.arrayAddress_toNat source
           hlayout.source_fits hleftLt
     have hscratchAddress :
         (scratch + 4 * UInt32.ofNat left.length).toNat =
           scratch.toNat + 4 * left.length := by
       simpa [UInt32.mul_comm] using
-        Wasm.Examples.MergeSort.arrayAddress_toNat scratch
+        Wasm.Examples.UInt32Array.arrayAddress_toNat scratch
           hlayout.temporary_fits hleftLt
     iapply twp_sort
       (callerLocals := ⟨
