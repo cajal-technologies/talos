@@ -152,9 +152,7 @@ def MergeProgress
 
 @[simp]
 theorem mergeProgress_start (left right : List UInt32) :
-    MergeProgress left right [] left right := by
-  intro tail htail
-  simpa using htail
+    MergeProgress left right [] left right := by simp [MergeProgress]
 
 theorem MergeProgress.takeLeft
     {originalLeft originalRight emitted xs ys : List UInt32} {x y : UInt32}
