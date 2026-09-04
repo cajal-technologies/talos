@@ -84,6 +84,12 @@ macro "iapply_exact " rule:pmTerm " with " hypothesis:ident : tactic =>
     (iapply $rule
      iexact $hypothesis))
 
+/-- Apply an Iris entailment and dedicate one hypothesis to its first split. -/
+macro "iapply_splitl_exact " rule:pmTerm " with " hypothesis:ident : tactic =>
+  `(tactic|
+    (iapply $rule
+     isplitl_exact $hypothesis))
+
 /-- Introduce one later and discharge it with an existing spatial fact. -/
 macro "ilater_exact " hypothesis:ident : tactic =>
   `(tactic|

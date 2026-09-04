@@ -346,8 +346,7 @@ theorem mergesort_partiallyMeets
     simp only [mergeSortConfig]
     iapply wp_mono (mergeSortPost_to_store source temporary input hbound_s)
     iapply twp.to_wp
-    iapply twp_mergeSort_total source temporary input scratch
-    isplitl_exact Hruntime
+    iapply_splitl_exact twp_mergeSort_total source temporary input scratch with Hruntime
     unfold mergeSortPre
     isplitl_exacts [Hsrc Htmp]
     isplitl_pureexact hscr
@@ -376,8 +375,7 @@ theorem mergesort_terminatesWith
         = mergeSortModule from rfl]
     simp only [mergeSortConfig]
     iapply twp.mono (mergeSortPost_to_store source temporary input hbound_s)
-    iapply twp_mergeSort_total source temporary input scratch
-    isplitl_exact Hruntime
+    iapply_splitl_exact twp_mergeSort_total source temporary input scratch with Hruntime
     unfold mergeSortPre
     isplitl_exacts [Hsrc Htmp]
     isplitl_pureexact hscr

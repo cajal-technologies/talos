@@ -255,8 +255,7 @@ theorem twp_swapAt
   · dsimp [addr_a]
     irw_exact [UInt32.add_comm] with Hcell_a
   -- step 5: store arr[b] at arr[a]
-  iapply twp_store32_cell h1_a h2_a h3_a
-  isplitl_exact Hcell_a'
+  iapply_splitl_exact twp_store32_cell h1_a h2_a h3_a with Hcell_a'
   iintro Hcell_a
   -- rebuild intermediate array
   ihave Harray2 : arrayAt 0 base (input.set a input[b]) $$ [Hcell_a Hclose_a]
@@ -273,8 +272,7 @@ theorem twp_swapAt
   · dsimp [addr_b]
     irw_exact [UInt32.add_comm] with Hcell_b
   -- step 8: store original arr[a] at arr[b]
-  iapply twp_store32_cell h1_b h2_b h3_b
-  isplitl_exact Hcell_b'
+  iapply_splitl_exact twp_store32_cell h1_b h2_b h3_b with Hcell_b'
   iintro Hcell_b
   -- apply continuation with swapped array
   iapply Hcont

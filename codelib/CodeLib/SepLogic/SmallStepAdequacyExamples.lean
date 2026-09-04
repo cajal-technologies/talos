@@ -1454,8 +1454,7 @@ theorem tableSetGet_store_partiallyMeets :
     wasm_wp_next_rebind wp_tableGet (value := .funcref (some 1))
       rfl (by simp [listSetAt]) with Htable
     iapply wp_mono (fun _ => BI.sep_comm.mp)
-    iapply wp_frame_l
-    isplitl_exact Htable
+    iapply_splitl_exact wp_frame_l with Htable
     wasm_wp_next wp_refIsNull rfl
     wasm_wp_finish_value_rfl
 
@@ -1566,8 +1565,7 @@ theorem tableGrowFill_store_partiallyMeets :
     wasm_wp_next_rebind wp_tableGet (value := .funcref (some 1))
       rfl (by simp [listWriteAt]) with Htable
     iapply wp_mono (fun _ => BI.sep_comm.mp)
-    iapply wp_frame_l
-    isplitl_exact Htable
+    iapply_splitl_exact wp_frame_l with Htable
     wasm_wp_next wp_refIsNull rfl
     wasm_wp_finish_value_rfl
 
@@ -1664,8 +1662,7 @@ theorem tableGrow64Failure_store_partiallyMeets :
     iapply wp_mono hpost
     simp only [← tablePointsToAt_eq]
     iapply wp_mono (fun _ => BI.sep_comm.mp)
-    iapply wp_frame_l
-    isplitl_exact Htable
+    iapply_splitl_exact wp_frame_l with Htable
     wasm_wp_finish_value_rfl
 
 private def tableCopyOverlapMap : WasmTableMap TableInst :=
@@ -1788,8 +1785,7 @@ theorem tableCopyOverlap_store_partiallyMeets :
       (destination := .i32 1) (source := .i32 0) (length := .i32 3)
       rfl rfl rfl (by decide) (by decide) with Htable => Htable
     iapply wp_mono (fun _ => BI.sep_comm.mp)
-    iapply wp_frame_l
-    isplitl_exact Htable
+    iapply_splitl_exact wp_frame_l with Htable
     wasm_wp_finish_value_rfl
 
 private def tableCopyDistinctMap : WasmTableMap TableInst :=

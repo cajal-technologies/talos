@@ -417,8 +417,7 @@ theorem copyWords_loopBody_invariant_wp
           icases Harrays' with ⟨Hdst', Hsrc'⟩
           ispecialize IH' $$ %(i + 1) %copied' %dstTail %srcTail
             %hpreNext %hdstNext %hsourceNext
-          iapply IH'
-          isplitl_exact HR'
+          iapply_splitl_exact IH' with HR'
           isplitl [Hdst']
           · simp only [copied', List.append_assoc, List.singleton_append]
             iexact Hdst'
@@ -455,8 +454,7 @@ theorem copyWords_loopBody_invariant_wp
     iintro ⟨#_IH', Hrest⟩
     icases Hrest with ⟨HR', Harrays'⟩
     icases Harrays' with ⟨Hdst', Hsrc'⟩
-    iapply hfinish
-    isplitl_exact HR'
+    iapply_splitl_exact hfinish with HR'
     isplitl [Hdst']
     · simp only [List.append_nil]
       iexact Hdst'

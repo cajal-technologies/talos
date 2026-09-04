@@ -382,11 +382,9 @@ theorem twp_copyAt
   ihave Hcell' : pointsTo_u32 0 destination scratch[k] $$ [Hcell]
   · dsimp [destination]
     irw_exact [UInt32.add_comm] with Hcell
-  iapply twp_store32_cell h1 h2 h3
-  isplitl_exact Hcell'
+  iapply_splitl_exact twp_store32_cell h1 h2 h3 with Hcell'
   iintro Hcell
-  iapply Hcont
-  isplitl_exact Hsource
+  iapply_splitl_exact Hcont with Hsource
   iapply Hclose
   ihave Hcell' :
       pointsTo_u32 0

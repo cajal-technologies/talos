@@ -4356,8 +4356,7 @@ theorem twp_func3_finish_nonempty
     (calls := calls) (s := s) (E := E) (Φ := Phi)
   simp only [func3AppendLocals, List.cons_append, List.nil_append]
     at HscratchCleanup ⊢
-  iapply HscratchCleanup
-  isplitl_exact Hruntime
+  iapply_splitl_exact HscratchCleanup with Hruntime
   isplitl [Hbump]
   · isimp only [afterValues, workLayout, hsortedLength] at Hbump
     iexact Hbump
@@ -4482,8 +4481,7 @@ theorem twp_func3_finish_empty
   unfold Func2Spec CallContract callExpr at Hsort
   simp only [List.cons_append, List.nil_append, func3EmptyReadyLocals,
     func3AppendLocals] at Hsort
-  iapply Hsort
-  isplitl_exact Hruntime
+  iapply_splitl_exact Hsort with Hruntime
   isplitl []
   · iapply SortBuffers_empty 4 (by decide)
     itrivial
@@ -5491,8 +5489,7 @@ theorem twp_func3_complete_nonempty
     simp only [func3AppendLocals, List.append_assoc, List.cons_append,
       List.nil_append]
       at Hdecode ⊢
-    iapply Hdecode
-    isplitl_exact Hframe
+    iapply_splitl_exact Hdecode with Hframe
     isplitl [Hvalues]
     · isimp only [serialize_length] at Hvalues
       iexact Hvalues

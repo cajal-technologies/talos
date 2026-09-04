@@ -421,8 +421,7 @@ theorem wasm_smallStep_heap_globals_runtime_tags_stronglyNormalizing
       runtimeModuleSingletonAgrees config.store.runtime hwf,
       fun id env hm => by simp [get?_empty] at hm⟩
   · iintro _
-    iapply htwp
-    isplitl_exact Hpoints
+    iapply_splitl_exact htwp with Hpoints
     isplitl [HglobalPoints]
     · unfold globalPointsTo
       iexact HglobalPoints
@@ -1302,8 +1301,7 @@ theorem wasm_smallStep_heap_globals_runtime_store_terminates
         fun id env hm => by simp [get?_empty] at hm⟩
     · iintro _
       iapply (twp.mono (fun _ => BI.true_intro))
-      iapply htwp .hasNoLC
-      isplitl_exact Hpoints
+      iapply_splitl_exact htwp .hasNoLC with Hpoints
       · isplitl [HglobalPoints]
         · unfold globalPointsTo
           iexact HglobalPoints
@@ -1316,8 +1314,7 @@ theorem wasm_smallStep_heap_globals_runtime_store_terminates
     intro gs
     iintro ⟨Hpoints, Hglobals, HruntimeModule, _HhostEnv⟩
     iapply twp.to_wp
-    iapply htwp .hasLC
-    isplitl_exact Hpoints
+    iapply_splitl_exact htwp .hasLC with Hpoints
     · isplitl_exact Hglobals
       · iexact HruntimeModule
 
@@ -1538,8 +1535,7 @@ theorem wasm_smallStep_heap_store_terminates
         fun id env hm => by simp [get?_empty] at hm⟩
     · iintro _
       iapply (twp.mono (fun _ => BI.true_intro))
-      iapply htwp .hasNoLC
-      isplitl_exact Hpoints
+      iapply_splitl_exact htwp .hasNoLC with Hpoints
       · unfold runtimeModuleOwn
         isplitl [HruntimeWP]
         · unfold runtimeModuleElem; iexact HruntimeWP
@@ -1550,8 +1546,7 @@ theorem wasm_smallStep_heap_store_terminates
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
     iintro ⟨Hpoints, _Hempty, HruntimeModule, _HhostEnv⟩
     iapply twp.to_wp
-    iapply htwp .hasLC
-    isplitl_exact Hpoints
+    iapply_splitl_exact htwp .hasLC with Hpoints
     · iexact HruntimeModule
 
 /-- Total-correctness runtime entry point that also hands out the entry
@@ -1577,8 +1572,7 @@ theorem wasm_smallStep_runtime_tags_terminates
     intro gs
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
     iintro ⟨_Hheap, _Hglobals, Hruntime, Htags⟩
-    iapply htwp .hasNoLC
-    isplitl_exact Hruntime
+    iapply_splitl_exact htwp .hasNoLC with Hruntime
     · iexact Htags
   · apply wasm_smallStep_runtime_tags_adequacy config φ hwf
     intro gs

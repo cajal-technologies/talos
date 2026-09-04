@@ -974,8 +974,7 @@ theorem twp_mergeCopyStep
   simp only [mergeLocals]
   iapply twp_increment (α := α) rfl hsetK
   simp only [mergeLocals]
-  iapply Hcont
-  isplitl_exact Hsource
+  iapply_splitl_exact Hcont with Hsource
   iexact Htemporary
 
 set_option maxHeartbeats 5000000 in
@@ -1799,8 +1798,7 @@ theorem twp_mergeSortInnerLoop
         (stack := stack)
       simp only [sortLocals, left, newMid, newRight,
         loopFrame, blockFrame] at Hadvance
-      iapply Hadvance
-      isplitl_exact Hruntime
+      iapply_splitl_exact Hadvance with Hruntime
       isplitl [Hsource Htemporary]
       · unfold mergePre
         iframe

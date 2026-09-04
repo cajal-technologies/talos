@@ -1121,8 +1121,7 @@ theorem wp_call
   wasm_wp_step Step.call (α := α) himports' hfn' =>
     wasm_wp_frame
       rw [← hsame]
-      iapply Hwp
-      isplitl_exact HruntimeElem
+      iapply_splitl_exact Hwp with HruntimeElem
       · iexact HinstanceOwn
 
 /-- Execute an imported (host) function call.
@@ -1231,8 +1230,7 @@ theorem wp_callHost
       imod hRetTransfer store ns obs' nt Hmodule results newWasm h $$ [$HP $Hσ] with ⟨HQ, Hσ⟩
       wasm_wp_frame
         ispecialize HwpRet $$ %(store.wasm) %results %newWasm %h
-        iapply HwpRet
-        isplitl_exact HQ
+        iapply_splitl_exact HwpRet with HQ
         · isplitl_exact HruntimeElem
           · iexact HinstanceOwn
   | .Trap newWasm msg =>
@@ -1290,8 +1288,7 @@ theorem wp_returnFromCallExplicit'
   wasm_wp_step Step.returnFromCallExplicit (α := α) hsame =>
     simp only [resumeCaller]
     wasm_wp_frame
-      iapply Hwp
-      isplitl_exact HruntimeElem
+      iapply_splitl_exact Hwp with HruntimeElem
       · iexact HinstanceOwn
 
 /-- Return from a callee and bind the restored runtime-module ownership. -/
@@ -5086,8 +5083,7 @@ theorem wp_callCrossInstance
     imod stateInterp_currentInstance_update_of_any store ns obs' nt callerId calleeId $$
         [$Hσ $HinstanceOwn] with ⟨Hσ, HinstanceOwn', %_⟩
     wasm_wp_frame
-      iapply Hwp
-      isplitl_exact HinstanceOwn'
+      iapply_splitl_exact Hwp with HinstanceOwn'
       · iexact HruntimeInstances
 
 /-- Resume a suspended caller after an explicit return that crosses module-instance
@@ -5213,8 +5209,7 @@ theorem wp_callIndirect
     himports' hnotforeign' hfn' hsignature' hexpected' htype' =>
     wasm_wp_frame
       ispecialize Hwp $$ %store.runtime.entry
-      iapply Hwp
-      isplitl_exact Hruntime
+      iapply_splitl_exact Hwp with Hruntime
       · iexact Htable
 
 end Wasm.SmallStep

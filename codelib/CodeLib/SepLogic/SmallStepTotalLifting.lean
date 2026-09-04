@@ -456,8 +456,7 @@ theorem twp_call
   wasm_twp_step (Step.call (α := α) himports' hfn') =>
     wasm_twp_frame
       rw [← hsame]
-      iapply Htwp
-      isplitl_exact HruntimeElem
+      iapply_splitl_exact Htwp with HruntimeElem
       · iexact HinstanceOwn
 
 /-- Total execution of an imported host function.  The resource-transfer
@@ -574,8 +573,7 @@ theorem twp_callHost
         [$HP $Hσ] with ⟨HQ, Hσ⟩
       wasm_twp_frame
         ispecialize HwpRet $$ %(store.wasm) %results %newWasm %h
-        iapply HwpRet
-        isplitl_exact HQ
+        iapply_splitl_exact HwpRet with HQ
         · isplitl_exact HruntimeElem
           · iexact HinstanceOwn
   | .Trap newWasm msg =>
@@ -632,8 +630,7 @@ theorem twp_returnFromCallFallthrough
   wasm_twp_step (Step.returnFromCallFallthrough (α := α) hsame) =>
     wasm_twp_frame
       simp only [resumeCaller]
-      iapply Hwp
-      isplitl_exact HruntimeElem
+      iapply_splitl_exact Hwp with HruntimeElem
       · iexact HinstanceOwn
 
 theorem twp_returnFromCallExplicit
@@ -674,8 +671,7 @@ theorem twp_returnFromCallExplicit
   wasm_twp_step (Step.returnFromCallExplicit (α := α) hsame) =>
     wasm_twp_frame
       simp only [resumeCaller]
-      iapply Hwp
-      isplitl_exact HruntimeElem
+      iapply_splitl_exact Hwp with HruntimeElem
       · iexact HinstanceOwn
 
 /-- Return totally from a callee and bind the restored runtime ownership. -/

@@ -2609,14 +2609,12 @@ theorem twp_sort
     ihave HsourceCombined : arrayAt 0 source combined $$
         [HsourceLeft HsourceRight]
     · dsimp only [combined]
-      iapply (arrayAt_append 0 source leftOutput rightOutput).mpr
-      isplitl_exact HsourceLeft
+      iapply_splitl_exact (arrayAt_append 0 source leftOutput rightOutput).mpr with HsourceLeft
       irw_exact [hleftOutputLength] with HsourceRight
     ihave HscratchCombined : arrayAt 0 scratch scratchCombined $$
         [HscratchLeft HscratchRight]
     · dsimp only [scratchCombined]
-      iapply (arrayAt_append 0 scratch leftScratch rightScratch).mpr
-      isplitl_exact HscratchLeft
+      iapply_splitl_exact (arrayAt_append 0 scratch leftScratch rightScratch).mpr with HscratchLeft
       irw_exact [hleftScratchLength, UInt32.add_comm] with HscratchRight
     wasm_twp_pures [twp_const twp_localSet] using [List.length]
     wasm_twp_pures [twp_localGet twp_localSet] using [List.length]

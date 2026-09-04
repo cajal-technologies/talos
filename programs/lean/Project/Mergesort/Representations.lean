@@ -437,8 +437,7 @@ theorem WordSlice_append {host : Type} [WasmHeapGS host]
       omega
     isplitl_pureexact halign
     isplitl_pureexact (by simpa only [Nat.mul_add] using hnowrap)
-    iapply (pointsToBytes_append 0 ptr (serialize xs) (serialize ys)).mpr
-    isplitl_exact Hleft
+    iapply_splitl_exact (pointsToBytes_append 0 ptr (serialize xs) (serialize ys)).mpr with Hleft
     · irw_exact [← wordOffset_eq_byteOffset] with Hright
 
 /-- Retain a word slice while exposing its alignment and exact no-wrap facts. -/
