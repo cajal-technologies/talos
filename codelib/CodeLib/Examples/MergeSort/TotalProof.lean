@@ -196,17 +196,12 @@ theorem twp_mergeMainStep
       rfl rfl rfl rfl
     isplitl_exacts [Hsource Htemporary]
     iintro ⟨Hsource, Htemporary⟩
-    have hiSucc : i + 1 < UInt32.size := by
-      have := hlayout.length_lt; omega
-    have hkSucc : k + 1 < UInt32.size := by
-      have hscratchLength := hinv.2.2.2.2.2
-      have := hlayout.length_lt; omega
     have hiValue :
         1 + UInt32.ofNat i = UInt32.ofNat (i + 1) := by
-      rw [UInt32.add_comm, u32_ofNat_succ hiSucc]
+      rw [UInt32.add_comm, UInt32.ofNat_succ]
     have hkValue :
         1 + UInt32.ofNat k = UInt32.ofNat (k + 1) := by
-      rw [UInt32.add_comm, u32_ofNat_succ hkSucc]
+      rw [UInt32.add_comm, UInt32.ofNat_succ]
     have hsetI :
         (mergeLocals source temporary left mid right i j k
             (.i32 (1 + UInt32.ofNat i) :: stack)).set?
@@ -242,17 +237,12 @@ theorem twp_mergeMainStep
       rfl rfl rfl rfl
     isplitl_exacts [Hsource Htemporary]
     iintro ⟨Hsource, Htemporary⟩
-    have hjSucc : j + 1 < UInt32.size := by
-      have := hlayout.length_lt; omega
-    have hkSucc : k + 1 < UInt32.size := by
-      have hscratchLength := hinv.2.2.2.2.2
-      have := hlayout.length_lt; omega
     have hjValue :
         1 + UInt32.ofNat j = UInt32.ofNat (j + 1) := by
-      rw [UInt32.add_comm, u32_ofNat_succ hjSucc]
+      rw [UInt32.add_comm, UInt32.ofNat_succ]
     have hkValue :
         1 + UInt32.ofNat k = UInt32.ofNat (k + 1) := by
-      rw [UInt32.add_comm, u32_ofNat_succ hkSucc]
+      rw [UInt32.add_comm, UInt32.ofNat_succ]
     have hsetJ :
         (mergeLocals source temporary left mid right i j k
             (.i32 (1 + UInt32.ofNat j) :: stack)).set?
@@ -530,17 +520,12 @@ theorem twp_mergeLeftStep
     rfl rfl rfl rfl
   isplitl_exacts [Hsource Htemporary]
   iintro ⟨Hsource, Htemporary⟩
-  have hiSucc : i + 1 < UInt32.size := by
-    have := hlayout.length_lt; omega
-  have hkSucc : k + 1 < UInt32.size := by
-    have := hlayout.length_lt
-    rw [hscratchLength] at hkLen; omega
   have hiValue :
       1 + UInt32.ofNat i = UInt32.ofNat (i + 1) := by
-    rw [UInt32.add_comm, u32_ofNat_succ hiSucc]
+    rw [UInt32.add_comm, UInt32.ofNat_succ]
   have hkValue :
       1 + UInt32.ofNat k = UInt32.ofNat (k + 1) := by
-    rw [UInt32.add_comm, u32_ofNat_succ hkSucc]
+    rw [UInt32.add_comm, UInt32.ofNat_succ]
   have hsetI :
       (mergeLocals source temporary left mid right i j k
           (.i32 (1 + UInt32.ofNat i) :: stack)).set?
@@ -597,17 +582,12 @@ theorem twp_mergeRightStep
     rfl rfl rfl rfl
   isplitl_exacts [Hsource Htemporary]
   iintro ⟨Hsource, Htemporary⟩
-  have hjSucc : j + 1 < UInt32.size := by
-    have := hlayout.length_lt; omega
-  have hkSucc : k + 1 < UInt32.size := by
-    have := hlayout.length_lt
-    rw [hscratchLength] at hkLen; omega
   have hjValue :
       1 + UInt32.ofNat j = UInt32.ofNat (j + 1) := by
-    rw [UInt32.add_comm, u32_ofNat_succ hjSucc]
+    rw [UInt32.add_comm, UInt32.ofNat_succ]
   have hkValue :
       1 + UInt32.ofNat k = UInt32.ofNat (k + 1) := by
-    rw [UInt32.add_comm, u32_ofNat_succ hkSucc]
+    rw [UInt32.add_comm, UInt32.ofNat_succ]
   have hsetJ :
       (mergeLocals source temporary left mid right i j k
           (.i32 (1 + UInt32.ofNat j) :: stack)).set?
@@ -919,11 +899,9 @@ theorem twp_mergeCopyStep
     rfl rfl rfl rfl
   isplitl_exacts [Htemporary Hsource]
   iintro ⟨Htemporary, Hsource⟩
-  have hkSucc : k + 1 < UInt32.size := by
-    have := hlayout.length_lt; omega
   have hkValue :
       1 + UInt32.ofNat k = UInt32.ofNat (k + 1) := by
-    rw [UInt32.add_comm, u32_ofNat_succ hkSucc]
+    rw [UInt32.add_comm, UInt32.ofNat_succ]
   have hsetK :
       (mergeLocals source temporary left mid right mid right k
           (.i32 (1 + UInt32.ofNat k) :: stack)).set?
