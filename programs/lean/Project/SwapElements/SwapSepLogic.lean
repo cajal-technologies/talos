@@ -550,11 +550,6 @@ private def func1OuterContinuation : Program :=
   | .block _ _ _ _ _ :: continuation => continuation
   | _ => []
 
-private def func1MiddleBody : Program :=
-  match func1OuterBody with
-  | .block _ _ body _ _ :: _ => body
-  | _ => []
-
 private def func1OuterFrame : Wasm.SmallStep.ControlFrame :=
   { kind := .block
     paramArity := 0
