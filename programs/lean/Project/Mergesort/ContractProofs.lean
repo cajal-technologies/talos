@@ -95,8 +95,7 @@ theorem twp_const_alloc_freshRange_owned
   imodintro
   isplitl_pureexact rfl
   isplitl_pureexact rfl
-  isplitl [Hσ]
-  · iexact Hσ
+  isplitl_exact Hσ
   · iexact Hnext
 
 private abbrev readImport : ImportDecl :=

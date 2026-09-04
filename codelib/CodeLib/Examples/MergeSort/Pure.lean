@@ -323,8 +323,7 @@ theorem MergeLoopInvariant.takeLeft
     omega
   · rw [take_set_succ hklen, take_set_of_le hlk, htake]
     simp [List.append_assoc]
-  · rw [hrightSegment]
-    exact hprogress.takeLeft hxy
+  · rw [hrightSegment]; exact hprogress.takeLeft hxy
 
 theorem MergeLoopInvariant.takeRight
     {input temporaryValues : List UInt32} {left mid right i j k : Nat}
@@ -357,8 +356,7 @@ theorem MergeLoopInvariant.takeRight
     omega
   · rw [take_set_succ hklen, take_set_of_le hlk, htake]
     simp [List.append_assoc]
-  · rw [hleftSegment]
-    exact hprogress.takeRight hxy
+  · rw [hleftSegment]; exact hprogress.takeRight hxy
 
 theorem MergeLoopInvariant.takeRemainingLeft
     {input temporaryValues : List UInt32} {left mid right i k : Nat}
@@ -389,8 +387,7 @@ theorem MergeLoopInvariant.takeRemainingLeft
     omega
   · rw [take_set_succ hklen, take_set_of_le hlk, htake]
     simp [List.append_assoc]
-  · rw [hrightSegment]
-    exact hprogress.takeRemainingLeft
+  · rw [hrightSegment]; exact hprogress.takeRemainingLeft
 
 theorem MergeLoopInvariant.takeRemainingRight
     {input temporaryValues : List UInt32} {left mid right j k : Nat}
@@ -421,8 +418,7 @@ theorem MergeLoopInvariant.takeRemainingRight
     omega
   · rw [take_set_succ hklen, take_set_of_le hlk, htake]
     simp [List.append_assoc]
-  · rw [hleftSegment]
-    exact hprogress.takeRemainingRight
+  · rw [hleftSegment]; exact hprogress.takeRemainingRight
 
 theorem MergeLoopInvariant.finished
     {input temporaryValues : List UInt32} {left mid right k : Nat}

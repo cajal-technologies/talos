@@ -2779,8 +2779,7 @@ theorem stateInterp_writeV128 [WasmSmallStepGS hlc α]
   imod stateInterp_store64 store1 steps observations threads (addr + 8) hi_old hi
       h81 h82 h83 h84 h85 h86 h87 hbound_hi $$ [$Hσ1 $Hhi] with ⟨Hσ2, Hhi⟩
   imodintro
-  isplitl [Hσ2]
-  · iexact Hσ2
+  isplitl_exact Hσ2
   isplitl_exact Hlo
   · iexact Hhi
 

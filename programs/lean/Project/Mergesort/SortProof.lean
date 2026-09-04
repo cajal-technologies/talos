@@ -309,8 +309,7 @@ theorem MergeLoopInvariant.takeLeft
   · simp; omega
   · simp; omega
   · rw [Wasm.Examples.MergeSort.take_set_succ hklen, htake]
-  · rw [hrightSegment]
-    exact hprogress.takeLeft hxy
+  · rw [hrightSegment]; exact hprogress.takeLeft hxy
 
 theorem MergeLoopInvariant.takeRight
     {input scratchValues : List UInt32} {mid i j k : Nat}
@@ -339,8 +338,7 @@ theorem MergeLoopInvariant.takeRight
   · simp; omega
   · simp; omega
   · rw [Wasm.Examples.MergeSort.take_set_succ hklen, htake]
-  · rw [hleftSegment]
-    exact hprogress.takeRight hxy
+  · rw [hleftSegment]; exact hprogress.takeRight hxy
 
 theorem MergeLoopInvariant.takeRemainingLeft
     {input scratchValues : List UInt32} {mid i k : Nat}
@@ -366,8 +364,7 @@ theorem MergeLoopInvariant.takeRemainingLeft
   · simp; omega
   · simp; omega
   · rw [Wasm.Examples.MergeSort.take_set_succ hklen, htake]
-  · rw [hrightSegment]
-    exact hprogress.takeRemainingLeft
+  · rw [hrightSegment]; exact hprogress.takeRemainingLeft
 
 theorem MergeLoopInvariant.takeRemainingRight
     {input scratchValues : List UInt32} {mid j k : Nat}
@@ -393,8 +390,7 @@ theorem MergeLoopInvariant.takeRemainingRight
   · simp; omega
   · simp; omega
   · rw [Wasm.Examples.MergeSort.take_set_succ hklen, htake]
-  · rw [hleftSegment]
-    exact hprogress.takeRemainingRight
+  · rw [hleftSegment]; exact hprogress.takeRemainingRight
 
 theorem MergeLoopInvariant.finished
     {input scratchValues : List UInt32} {mid k : Nat}
