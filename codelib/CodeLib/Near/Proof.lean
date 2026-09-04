@@ -279,36 +279,31 @@ theorem inputFn_satisfies_rel :
     ∀ st args, inputRelContract st args (inputFn.invoke st args) := by
   intro st args
   unfold inputRelContract inputFn writeRegisterResult trapResult
-  repeat split
-  all_goals simp_all
+  repeat split <;> simp_all
 
 theorem readRegisterFn_satisfies_rel :
     ∀ st args, readRegisterRelContract st args (readRegisterFn.invoke st args) := by
   intro st args
   unfold readRegisterRelContract readRegisterFn trapResult
-  repeat split
-  all_goals simp_all
+  repeat split <;> simp_all
 
 theorem registerLenFn_satisfies_rel :
     ∀ st args, registerLenRelContract st args (registerLenFn.invoke st args) := by
   intro st args
   unfold registerLenRelContract registerLenFn trapResult
-  repeat split
-  all_goals simp_all
+  repeat split <;> simp_all
 
 theorem writeRegisterFn_satisfies_rel :
     ∀ st args, writeRegisterRelContract st args (writeRegisterFn.invoke st args) := by
   intro st args
   unfold writeRegisterRelContract writeRegisterFn trapResult
-  repeat split
-  all_goals simp_all [writeRegisterResult]
+  repeat split <;> simp_all [writeRegisterResult]
 
 theorem valueReturnFn_satisfies_rel :
     ∀ st args, valueReturnRelContract st args (valueReturnFn.invoke st args) := by
   intro st args
   unfold valueReturnRelContract valueReturnFn checkDataLimit trapResult
-  repeat split
-  all_goals simp_all
+  repeat split <;> simp_all
 
 theorem contextRegisterFn_satisfies_rel (name : String)
     (select : NearContext → List UInt8) :
@@ -317,8 +312,7 @@ theorem contextRegisterFn_satisfies_rel (name : String)
         ((contextRegisterFn name select).invoke st args) := by
   intro st args
   unfold contextRegisterRelContract contextRegisterFn writeRegisterResult trapResult
-  repeat split
-  all_goals simp_all
+  repeat split <;> simp_all
 
 theorem accountIdRegisterFn_satisfies_rel (name : String)
     (select : NearContext → List UInt8) :
@@ -328,8 +322,7 @@ theorem accountIdRegisterFn_satisfies_rel (name : String)
   intro st args
   simp [accountIdRegisterRelContract, accountIdRegisterFn, checkAccountId,
     writeRegisterResult, trapResult]
-  repeat split
-  all_goals simp_all
+  repeat split <;> simp_all
 
 theorem accountIdRegisterFn_satisfies_view_rel (name : String)
     (select : NearContext → List UInt8) :
@@ -341,8 +334,7 @@ theorem accountIdRegisterFn_satisfies_view_rel (name : String)
   · simp [accountIdRegisterRelContract, disallowInView, hView, trapResult]
   · simp [accountIdRegisterRelContract, disallowInView, hView]
     unfold accountIdRegisterFn checkAccountId writeRegisterResult trapResult
-    repeat split
-    all_goals simp_all
+    repeat split <;> simp_all
 
 theorem publicKeyRegisterFn_satisfies_view_rel (name : String)
     (select : NearContext → List UInt8) :
@@ -354,8 +346,7 @@ theorem publicKeyRegisterFn_satisfies_view_rel (name : String)
   · simp [publicKeyRegisterRelContract, disallowInView, hView, trapResult]
   · simp [publicKeyRegisterRelContract, disallowInView, hView]
     unfold publicKeyRegisterFn checkPublicKey writeRegisterResult trapResult
-    repeat split
-    all_goals simp_all
+    repeat split <;> simp_all
 
 theorem contextU64Fn_satisfies_rel (name : String) (select : NearContext → UInt64) :
     ∀ st args,
@@ -363,8 +354,7 @@ theorem contextU64Fn_satisfies_rel (name : String) (select : NearContext → UIn
         ((contextU64Fn name select).invoke st args) := by
   intro st args
   simp [contextU64RelContract, contextU64Fn, trapResult]
-  repeat split
-  all_goals simp_all
+  repeat split <;> simp_all
 
 theorem contextU64Fn_satisfies_view_rel (name : String) (select : NearContext → UInt64) :
     ∀ st args,
@@ -375,8 +365,7 @@ theorem contextU64Fn_satisfies_view_rel (name : String) (select : NearContext �
   · simp [contextU64RelContract, disallowInView, hView, trapResult]
   · simp [contextU64RelContract, disallowInView, hView]
     unfold contextU64Fn trapResult
-    repeat split
-    all_goals simp_all
+    repeat split <;> simp_all
 
 @[simp] theorem leU128Bytes_length (n : Nat) :
     (leU128Bytes n).length = 16 := by
@@ -388,9 +377,7 @@ theorem contextU128MemFn_satisfies_rel (name : String) (select : NearContext →
         ((contextU128MemFn name select).invoke st args) := by
   intro st args
   simp [contextU128MemRelContract, contextU128MemFn, writeU128, writeMemBytes, trapResult]
-  repeat split
-  all_goals simp_all
-  all_goals try omega
+  repeat split <;> simp_all
 
 theorem contextU128MemFn_satisfies_view_rel (name : String) (select : NearContext → Nat) :
     ∀ st args,
@@ -401,9 +388,7 @@ theorem contextU128MemFn_satisfies_view_rel (name : String) (select : NearContex
   · simp [contextU128MemRelContract, disallowInView, hView, trapResult]
   · simp [contextU128MemRelContract, disallowInView, hView, contextU128MemFn,
       writeU128, writeMemBytes, trapResult]
-    repeat split
-    all_goals simp_all
-    all_goals try omega
+    repeat split <;> simp_all
 
 theorem digestFn_satisfies_rel (name : String)
     (hash : NearState → List UInt8 → List UInt8) :
@@ -412,22 +397,19 @@ theorem digestFn_satisfies_rel (name : String)
         ((digestFn name hash).invoke st args) := by
   intro st args
   unfold digestRelContract digestFn writeRegisterResult trapResult
-  repeat split
-  all_goals simp_all
+  repeat split <;> simp_all
 
 theorem logUtf8Fn_satisfies_rel :
     ∀ st args, logRelContract st args (logUtf8Fn.invoke st args) := by
   intro st args
   unfold logRelContract logUtf8Fn appendLogResult checkDataLimit trapResult
-  repeat split
-  all_goals simp_all
+  repeat split <;> simp_all
 
 theorem logUtf16Fn_satisfies_rel :
     ∀ st args, logRelContract st args (logUtf16Fn.invoke st args) := by
   intro st args
   unfold logRelContract logUtf16Fn appendLogResult checkDataLimit trapResult
-  repeat split
-  all_goals simp_all
+  repeat split <;> simp_all
 
 theorem storageWriteFn_satisfies_rel :
     ∀ st args, storageWriteRelContract st args (storageWriteFn.invoke st args) := by
@@ -435,15 +417,13 @@ theorem storageWriteFn_satisfies_rel :
   by_cases hView : st.host.context.isView
   · simp [storageWriteRelContract, storageWriteFn, disallowInView, hView, trapResult]
   · simp [storageWriteRelContract, storageWriteFn, disallowInView, hView, checkDataLimit]
-    repeat split
-    all_goals simp_all [trapResult]
+    repeat split <;> simp_all [trapResult]
 
 theorem storageReadFn_satisfies_rel :
     ∀ st args, storageReadRelContract st args (storageReadFn.invoke st args) := by
   intro st args
   unfold storageReadRelContract storageReadFn checkDataLimit writeRegisterResult trapResult
-  repeat split
-  all_goals simp_all
+  repeat split <;> simp_all
 
 theorem storageRemoveFn_satisfies_rel :
     ∀ st args, storageRemoveRelContract st args (storageRemoveFn.invoke st args) := by
@@ -451,15 +431,13 @@ theorem storageRemoveFn_satisfies_rel :
   by_cases hView : st.host.context.isView
   · simp [storageRemoveRelContract, storageRemoveFn, disallowInView, hView, trapResult]
   · simp [storageRemoveRelContract, storageRemoveFn, disallowInView, hView, checkDataLimit]
-    repeat split
-    all_goals simp_all [trapResult]
+    repeat split <;> simp_all [trapResult]
 
 theorem storageHasKeyFn_satisfies_rel :
     ∀ st args, storageHasKeyRelContract st args (storageHasKeyFn.invoke st args) := by
   intro st args
   unfold storageHasKeyRelContract storageHasKeyFn checkDataLimit trapResult
-  repeat split
-  all_goals simp_all
+  repeat split <;> simp_all
 
 theorem promiseResultFn_satisfies_rel :
     ∀ st args, promiseResultRelContract st args (promiseResultFn.invoke st args) := by
@@ -468,9 +446,7 @@ theorem promiseResultFn_satisfies_rel :
   · simp [promiseResultRelContract, promiseResultFn, disallowInView, hView, trapResult]
   · simp [promiseResultRelContract, promiseResultFn, disallowInView, hView,
       writeRegisterResult, trapResult]
-    repeat split
-    all_goals simp_all
-    all_goals split <;> simp_all
+    repeat split <;> simp_all
 
 /-- Canonical proof spec aligned with `nearImports`/`nearEnv`. -/
 def nearSpec : HostSpec NearState :=
