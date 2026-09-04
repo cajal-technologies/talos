@@ -113,8 +113,7 @@ private theorem ByteSlice_twelve_storeFocus
   have hfirstNowrap : ptr.toNat + 4 < UInt32.size := by omega
   have hptr4Nat : (ptr + 4).toNat = ptr.toNat + 4 := by
     simpa using byteOffset_toNat ptr 4 hfirstNowrap
-  have hsecondNowrap : (ptr + 4).toNat + 4 < UInt32.size := by
-    omega
+  have hsecondNowrap : (ptr + 4).toNat + 4 < UInt32.size := by omega
   have hptr8 : (ptr + 4) + 4 = ptr + 8 := by bv_decide
   have hthirdNowrap : (ptr + 8).toNat + 4 < UInt32.size := by
     have hptr8Nat : (ptr + 8).toNat = ptr.toNat + 8 := by
@@ -391,8 +390,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
     · rfl
     · change (1 : UInt32).toNat = 1
       decide
-  have hnewUpper : newCapacity.toNat ≤ 2147483647 := by
-    simpa using hnewValid.2.2.2.2.1
+  have hnewUpper : newCapacity.toNat ≤ 2147483647 := by simpa using hnewValid.2.2.2.2.1
   have hhigh :
       UInt64.ofNat newCapacity.toNat >>> (32 : UInt64) = 0 := by
     apply UInt64.toNat.inj
@@ -502,8 +500,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
         | success newPtr finish =>
             have hdecision' : classifyBump frontier
                 { size := newCapacity.toNat, alignment := 1 } =
-                  .success newPtr finish := by
-              simpa [newLayout] using hdecision
+                  .success newPtr finish := by simpa [newLayout] using hdecision
             isimp only [AllocContinuation, hdecision',
               FinishGrowContinuation] at Hcont
             isimp only [AllocContinuation, hdecision,
@@ -627,8 +624,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
       | success newPtr finish =>
           have hdecision' : classifyBump frontier
               { size := newCapacity.toNat, alignment := 1 } =
-                .success newPtr finish := by
-            simpa [newLayout] using hdecision
+                .success newPtr finish := by simpa [newLayout] using hdecision
           isimp only [ReallocContinuation, hdecision',
             FinishGrowContinuation] at Hcont
           isimp only [ReallocContinuation, hdecision,

@@ -166,8 +166,7 @@ theorem twp_gcd
   wasm_twp_terminal_value twp_returnFromFunction
   ipureintro; simp
   have hcurrent :
-      currentA.toNat = Nat.gcd a.toNat b.toNat := by
-    simpa [Nat.gcd_zero_right] using Hgcd
+      currentA.toNat = Nat.gcd a.toNat b.toNat := by simpa [Nat.gcd_zero_right] using Hgcd
   congr 2
   calc
     currentA = UInt32.ofNat currentA.toNat :=

@@ -2055,8 +2055,7 @@ theorem scalar_float_terminates :
           values =
             [ .i32 1, .f32 (2.0 : Float32).toBits,
               .f32 (3.5 : Float32).toBits,
-              .f32 (3.0 : Float32).toBits ] := by
-        simpa [RunnerResult.values?] using hvalues
+              .f32 (3.0 : Float32).toBits ] := by simpa [RunnerResult.values?] using hvalues
       refine ⟨(runSteps 11 (scalarFloatConfig 0 4)).trace,
         values, store, ?_, hpost⟩
       apply runSteps_sound

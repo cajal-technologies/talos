@@ -278,14 +278,12 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
     by_cases hcmp : UInt32.ofNat (initialized.length + current.length) >
         UInt32.ofNat (2 * capacity.toNat)
     · have hw : UInt32.ofNat (initialized.length + current.length) =
-          UInt32.ofNat firstMaxNat := by
-        simpa only [if_pos hcmp] using hfirstMaxWord
+          UInt32.ofNat firstMaxNat := by simpa only [if_pos hcmp] using hfirstMaxWord
       rw [if_pos hcmp,
         if_pos (by decide : (1 : UInt32) ≠ 0)]
       exact congrArg Value.i32 hw.symm
     · have hw : UInt32.ofNat (2 * capacity.toNat) =
-          UInt32.ofNat firstMaxNat := by
-        simpa only [if_neg hcmp] using hfirstMaxWord
+          UInt32.ofNat firstMaxNat := by simpa only [if_neg hcmp] using hfirstMaxWord
       rw [if_neg hcmp,
         if_neg (by decide : ¬ ((0 : UInt32) ≠ 0))]
       exact congrArg Value.i32 hw.symm)
@@ -403,8 +401,7 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
         simpa only [newLayout, newCapacityNat] using hdecision
       have hdecision' : classifyBump frontier
           { size := newCapacity.toNat, alignment := 1 } =
-            .success newPtr finish := by
-        simpa only [newLayout, hnewCapacityWord] using hdecision
+            .success newPtr finish := by simpa only [newLayout, hnewCapacityWord] using hdecision
       rw [hdecision']
       isplit
       · iintro %newBytes Hruntime Hresult Hbump Hblock %hcopy Hstreams

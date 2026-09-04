@@ -1577,8 +1577,7 @@ theorem wp_tableGrow32
   wasm_runtime_module_agree (obs ++ obs'), callerId, runtimeModule $$ [$Hσ $Hruntime]
   have hbound' :
       table.length + delta.toNat ≤
-        store.runtime.currentModule.tableCap tableIndex := by
-    simpa only [Hmodule] using hbound
+        store.runtime.currentModule.tableCap tableIndex := by simpa only [Hmodule] using hbound
   let newTable := table ++ List.replicate delta.toNat initial
   let updatedStore : MachineStore α :=
     { store with wasm :=
@@ -1631,8 +1630,7 @@ theorem wp_tableGrow64
   wasm_runtime_module_agree (obs ++ obs'), callerId, runtimeModule $$ [$Hσ $Hruntime]
   have hbound' :
       table.length + delta.toNat ≤
-        store.runtime.currentModule.tableCap tableIndex := by
-    simpa only [Hmodule] using hbound
+        store.runtime.currentModule.tableCap tableIndex := by simpa only [Hmodule] using hbound
   let newTable := table ++ List.replicate delta.toNat initial
   let updatedStore : MachineStore α :=
     { store with wasm :=
@@ -1685,8 +1683,7 @@ theorem wp_tableGrow32Failure
   wasm_runtime_module_agree (obs ++ obs'), callerId, runtimeModule $$ [$Hσ $Hruntime]
   have hbound' :
       ¬table.length + delta.toNat ≤
-        store.runtime.currentModule.tableCap tableIndex := by
-    simpa only [Hmodule] using hbound
+        store.runtime.currentModule.tableCap tableIndex := by simpa only [Hmodule] using hbound
   wasm_wp_step_frame Step.tableGrow32Failure Hphysical hbound'
 
 /-- Failed table64 `table.grow`; returns the 64-bit all-ones sentinel and
@@ -1719,8 +1716,7 @@ theorem wp_tableGrow64Failure
   wasm_runtime_module_agree (obs ++ obs'), callerId, runtimeModule $$ [$Hσ $Hruntime]
   have hbound' :
       ¬table.length + delta.toNat ≤
-        store.runtime.currentModule.tableCap tableIndex := by
-    simpa only [Hmodule] using hbound
+        store.runtime.currentModule.tableCap tableIndex := by simpa only [Hmodule] using hbound
   wasm_wp_step_frame Step.tableGrow64Failure Hphysical hbound'
 
 /-- In-bounds `table.fill`. The complete authoritative table fragment is
@@ -1938,8 +1934,7 @@ theorem wp_load8U
       (address + offset) byte $$ [Hσ Hpt]
   obtain ⟨Hread, HinBounds⟩ := Hfacts
   have hbound : address.toNat + offset.toNat + 1 ≤
-      store.wasm.mem.pages * 65536 := by
-    omega
+      store.wasm.mem.pages * 65536 := by omega
   wasm_wp_step (by
     simpa [Hread] using
       (Step.load8U (α := α) (address := Value.i32 address) rfl hbound)) =>
@@ -1973,8 +1968,7 @@ theorem wp_load8UI64
       (address + offset) byte $$ [Hσ Hpt]
   obtain ⟨Hread, HinBounds⟩ := Hfacts
   have hbound : address.toNat + offset.toNat + 1 ≤
-      store.wasm.mem.pages * 65536 := by
-    omega
+      store.wasm.mem.pages * 65536 := by omega
   wasm_wp_step (by
     simpa [Hread] using
       (Step.load8UI64 (α := α) (address := Value.i32 address) rfl hbound)) =>
@@ -2007,8 +2001,7 @@ theorem wp_load8S
       (address + offset) byte $$ [Hσ Hpt]
   obtain ⟨Hread, HinBounds⟩ := Hfacts
   have hbound : address.toNat + offset.toNat + 1 ≤
-      store.wasm.mem.pages * 65536 := by
-    omega
+      store.wasm.mem.pages * 65536 := by omega
   have expectedStep : Step
       ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
         .load8S offset :: code, arity, remainder, controls, calls⟩, store⟩
@@ -2045,8 +2038,7 @@ theorem wp_load16U
       (address + offset) word h1 $$ [Hσ Hword]
   obtain ⟨Hread, HinBounds⟩ := Hfacts
   have hbound : address.toNat + offset.toNat + 2 ≤
-      store.wasm.mem.pages * 65536 := by
-    simpa only [hnowrap] using HinBounds
+      store.wasm.mem.pages * 65536 := by simpa only [hnowrap] using HinBounds
   wasm_wp_step (by
     simpa [Hread] using
       (Step.load16U (α := α) (address := Value.i32 address) rfl hbound)) =>
@@ -2081,8 +2073,7 @@ theorem wp_load16S
       (address + offset) word h1 $$ [Hσ Hword]
   obtain ⟨Hread, HinBounds⟩ := Hfacts
   have hbound : address.toNat + offset.toNat + 2 ≤
-      store.wasm.mem.pages * 65536 := by
-    simpa only [hnowrap] using HinBounds
+      store.wasm.mem.pages * 65536 := by simpa only [hnowrap] using HinBounds
   have expectedStep : Step
       ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
         .load16S offset :: code, arity, remainder, controls, calls⟩, store⟩
@@ -2124,8 +2115,7 @@ theorem wp_load8SI64
       (address + offset) byte $$ [Hσ Hpt]
   obtain ⟨Hread, HinBounds⟩ := Hfacts
   have hbound : address.toNat + offset.toNat + 1 ≤
-      store.wasm.mem.pages * 65536 := by
-    omega
+      store.wasm.mem.pages * 65536 := by omega
   have expectedStep : Step
       ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
         .load8SI64 offset :: code, arity, remainder, controls, calls⟩, store⟩
@@ -2162,8 +2152,7 @@ theorem wp_load16UI64
       (address + offset) word h1 $$ [Hσ Hword]
   obtain ⟨Hread, HinBounds⟩ := Hfacts
   have hbound : address.toNat + offset.toNat + 2 ≤
-      store.wasm.mem.pages * 65536 := by
-    simpa only [hnowrap] using HinBounds
+      store.wasm.mem.pages * 65536 := by simpa only [hnowrap] using HinBounds
   have expectedStep : Step
       ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
         .load16UI64 offset :: code, arity, remainder, controls, calls⟩, store⟩
@@ -2204,8 +2193,7 @@ theorem wp_load16SI64
       (address + offset) word h1 $$ [Hσ Hword]
   obtain ⟨Hread, HinBounds⟩ := Hfacts
   have hbound : address.toNat + offset.toNat + 2 ≤
-      store.wasm.mem.pages * 65536 := by
-    simpa only [hnowrap] using HinBounds
+      store.wasm.mem.pages * 65536 := by simpa only [hnowrap] using HinBounds
   have expectedStep : Step
       ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
         .load16SI64 offset :: code, arity, remainder, controls, calls⟩, store⟩
@@ -2246,8 +2234,7 @@ theorem wp_load32UI64
       (address + offset) word h1 h2 h3 $$ [Hσ Hword]
   obtain ⟨Hread, HinBounds⟩ := Hfacts
   have hbound : address.toNat + offset.toNat + 4 ≤
-      store.wasm.mem.pages * 65536 := by
-    simpa only [hnowrap] using HinBounds
+      store.wasm.mem.pages * 65536 := by simpa only [hnowrap] using HinBounds
   wasm_wp_step (by
     simpa [Hread] using
       (Step.load32UI64 (α := α) (address := Value.i32 address) rfl hbound)) =>
@@ -2283,8 +2270,7 @@ theorem wp_load32SI64
       (address + offset) word h1 h2 h3 $$ [Hσ Hword]
   obtain ⟨Hread, HinBounds⟩ := Hfacts
   have hbound : address.toNat + offset.toNat + 4 ≤
-      store.wasm.mem.pages * 65536 := by
-    simpa only [hnowrap] using HinBounds
+      store.wasm.mem.pages * 65536 := by simpa only [hnowrap] using HinBounds
   have expectedStep : Step
       ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
         .load32SI64 offset :: code, arity, remainder, controls, calls⟩, store⟩
@@ -2322,8 +2308,7 @@ theorem wp_store8
     stateInterp_pointsTo_inBounds store ns (obs ++ obs') nt
       (address + offset) oldByte $$ [Hσ Hpt]
   have hbound : address.toNat + offset.toNat + 1 ≤
-      store.wasm.mem.pages * 65536 := by
-    omega
+      store.wasm.mem.pages * 65536 := by omega
   have expectedStep : Step
       ⟨.running
         ⟨⟨params, localValues, .i32 value :: .i32 address :: values⟩,
@@ -2367,8 +2352,7 @@ theorem wp_store8I64
     stateInterp_pointsTo_inBounds store ns (obs ++ obs') nt
       (address + offset) oldByte $$ [Hσ Hpt]
   have hbound : address.toNat + offset.toNat + 1 ≤
-      store.wasm.mem.pages * 65536 := by
-    omega
+      store.wasm.mem.pages * 65536 := by omega
   have expectedStep : Step
       ⟨.running
         ⟨⟨params, localValues, .i64 value :: .i32 address :: values⟩,
@@ -2410,8 +2394,7 @@ theorem wp_store16
     stateInterp_pointsTo_u16_facts store ns (obs ++ obs') nt
       (address + offset) oldWord h1 $$ [Hσ Hword]
   have hbound : address.toNat + offset.toNat + 2 ≤
-      store.wasm.mem.pages * 65536 := by
-    simpa only [hnowrap] using Hfacts.2
+      store.wasm.mem.pages * 65536 := by simpa only [hnowrap] using Hfacts.2
   have expectedStep : Step
       ⟨.running
         ⟨⟨params, localValues, .i32 value :: .i32 address :: values⟩,
@@ -2454,8 +2437,7 @@ theorem wp_store16I64
     stateInterp_pointsTo_u16_facts store ns (obs ++ obs') nt
       (address + offset) oldWord h1 $$ [Hσ Hword]
   have hbound : address.toNat + offset.toNat + 2 ≤
-      store.wasm.mem.pages * 65536 := by
-    simpa only [hnowrap] using Hfacts.2
+      store.wasm.mem.pages * 65536 := by simpa only [hnowrap] using Hfacts.2
   have expectedStep : Step
       ⟨.running
         ⟨⟨params, localValues, .i64 value :: .i32 address :: values⟩,
@@ -2500,8 +2482,7 @@ theorem wp_store32I64
     stateInterp_pointsTo_u32_facts store ns (obs ++ obs') nt
       (address + offset) oldWord h1 h2 h3 $$ [Hσ Hword]
   have hbound : address.toNat + offset.toNat + 4 ≤
-      store.wasm.mem.pages * 65536 := by
-    simpa only [hnowrap] using Hfacts.2
+      store.wasm.mem.pages * 65536 := by simpa only [hnowrap] using Hfacts.2
   have expectedStep : Step
       ⟨.running
         ⟨⟨params, localValues, .i64 value :: .i32 address :: values⟩,
@@ -2547,8 +2528,7 @@ theorem wp_load32
       (address + offset) word h1 h2 h3 $$ [Hσ Hword]
   obtain ⟨Hread, HinBounds⟩ := Hfacts
   have hbound : address.toNat + offset.toNat + 4 ≤
-      store.wasm.mem.pages * 65536 := by
-    simpa only [hnowrap] using HinBounds
+      store.wasm.mem.pages * 65536 := by simpa only [hnowrap] using HinBounds
   wasm_wp_step (by
     simpa [Hread] using
       (Step.load32 (α := α) (address := Value.i32 address) rfl hbound)) =>
@@ -2580,8 +2560,7 @@ theorem wp_store32
     stateInterp_pointsTo_u32_facts store ns (obs ++ obs') nt
       (address + offset) oldWord h1 h2 h3 $$ [Hσ Hword]
   have hbound : address.toNat + offset.toNat + 4 ≤
-      store.wasm.mem.pages * 65536 := by
-    simpa only [hnowrap] using Hfacts.2
+      store.wasm.mem.pages * 65536 := by simpa only [hnowrap] using Hfacts.2
   have expectedStep : Step
       ⟨.running
         ⟨⟨params, localValues, .i32 value :: .i32 address :: values⟩,
@@ -2627,8 +2606,7 @@ theorem wp_f32Load
       (address + offset) word h1 h2 h3 $$ [Hσ Hword]
   obtain ⟨Hread, HinBounds⟩ := Hfacts
   have hbound : address.toNat + offset.toNat + 4 ≤
-      store.wasm.mem.pages * 65536 := by
-    simpa only [hnowrap] using HinBounds
+      store.wasm.mem.pages * 65536 := by simpa only [hnowrap] using HinBounds
   wasm_wp_step (by
     simpa [Hread] using
       (Step.f32Load (α := α) (address := .i32 address) rfl hbound)) =>
@@ -2660,8 +2638,7 @@ theorem wp_f32Store
     stateInterp_pointsTo_u32_facts store ns (obs ++ obs') nt
       (address + offset) oldWord h1 h2 h3 $$ [Hσ Hword]
   have hbound : address.toNat + offset.toNat + 4 ≤
-      store.wasm.mem.pages * 65536 := by
-    simpa only [hnowrap] using Hfacts.2
+      store.wasm.mem.pages * 65536 := by simpa only [hnowrap] using Hfacts.2
   have expectedStep : Step
       ⟨.running
         ⟨⟨params, localValues, .f32 value :: .i32 address :: values⟩,
@@ -2712,8 +2689,7 @@ theorem wp_load64
       (address + offset) word h1 h2 h3 h4 h5 h6 h7 $$ [Hσ Hword]
   obtain ⟨Hread, HinBounds⟩ := Hfacts
   have hbound : address.toNat + offset.toNat + 8 ≤
-      store.wasm.mem.pages * 65536 := by
-    simpa only [hnowrap] using HinBounds
+      store.wasm.mem.pages * 65536 := by simpa only [hnowrap] using HinBounds
   wasm_wp_step (by
     simpa [Hread] using
       (Step.load64 (α := α) (address := Value.i32 address) rfl hbound)) =>
@@ -2750,8 +2726,7 @@ theorem wp_store64
     stateInterp_pointsTo_u64_facts store ns (obs ++ obs') nt
       (address + offset) oldWord h1 h2 h3 h4 h5 h6 h7 $$ [Hσ Hword]
   have hbound : address.toNat + offset.toNat + 8 ≤
-      store.wasm.mem.pages * 65536 := by
-    simpa only [hnowrap] using Hfacts.2
+      store.wasm.mem.pages * 65536 := by simpa only [hnowrap] using Hfacts.2
   have expectedStep : Step
       ⟨.running
         ⟨⟨params, localValues, .i64 value :: .i32 address :: values⟩,
@@ -2801,8 +2776,7 @@ theorem wp_f64Load
       (address + offset) word h1 h2 h3 h4 h5 h6 h7 $$ [Hσ Hword]
   obtain ⟨Hread, HinBounds⟩ := Hfacts
   have hbound : address.toNat + offset.toNat + 8 ≤
-      store.wasm.mem.pages * 65536 := by
-    simpa only [hnowrap] using HinBounds
+      store.wasm.mem.pages * 65536 := by simpa only [hnowrap] using HinBounds
   wasm_wp_step (by
     simpa [Hread] using
       (Step.f64Load (α := α) (address := Value.i32 address) rfl hbound)) =>
@@ -2839,8 +2813,7 @@ theorem wp_f64Store
     stateInterp_pointsTo_u64_facts store ns (obs ++ obs') nt
       (address + offset) oldWord h1 h2 h3 h4 h5 h6 h7 $$ [Hσ Hword]
   have hbound : address.toNat + offset.toNat + 8 ≤
-      store.wasm.mem.pages * 65536 := by
-    simpa only [hnowrap] using Hfacts.2
+      store.wasm.mem.pages * 65536 := by simpa only [hnowrap] using Hfacts.2
   have expectedStep : Step
       ⟨.running
         ⟨⟨params, localValues, .f64 value :: .i32 address :: values⟩,
@@ -4444,8 +4417,7 @@ theorem wp_v128Load
     UInt32.addSteps8 (address + offset) hroomLo
   have h8 : ((address + offset) + 8).toNat = (address + offset).toNat + 8 := by
     simpa using UInt32.add_ofNat_toNat_noWrap (address + offset) 8 (by omega) (by omega)
-  have hroomHi : (address + offset + 8).toNat + 8 ≤ 4294967296 := by
-    omega
+  have hroomHi : (address + offset + 8).toNat + 8 ≤ 4294967296 := by omega
   obtain ⟨h9, h10, h11, h12, h13, h14, h15⟩ :=
     UInt32.addSteps8 (address + offset + 8) hroomHi
   wasm_wp_begin_with iintro >Hlo >Hhi Hwp
@@ -4462,8 +4434,7 @@ theorem wp_v128Load
   obtain ⟨Hread_lo, -⟩ := Hlofacts
   obtain ⟨Hread_hi, HinBounds⟩ := Hhifacts
   have hbound : address.toNat + offset.toNat + 16 ≤
-      store.wasm.mem.pages * 65536 := by
-    omega
+      store.wasm.mem.pages * 65536 := by omega
   have expectedStep : Step
       ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
         .v128Load offset :: code, arity, remainder, controls, calls⟩, store⟩
@@ -4504,8 +4475,7 @@ theorem wp_v128Store
   dsimp only
   have h8 : ((address + offset) + 8).toNat = (address + offset).toNat + 8 := by
     simpa using UInt32.add_ofNat_toNat_noWrap (address + offset) 8 (by omega) (by omega)
-  have hroomHi : (address + offset + 8).toNat + 8 ≤ 4294967296 := by
-    omega
+  have hroomHi : (address + offset + 8).toNat + 8 ≤ 4294967296 := by omega
   obtain ⟨h9, h10, h11, h12, h13, h14, h15⟩ :=
     UInt32.addSteps8 (address + offset + 8) hroomHi
   wasm_wp_begin_with iintro >Hlo_old >Hhi_old Hwp
@@ -5032,8 +5002,7 @@ theorem wp_callIndirect
   have hexpected' : store.runtime.currentModule.types[typeIndex]? = some expected := by
     simpa only [Hmodule] using hexpected
   have htype' : store.runtime.currentModule.indirectCallTypeOk
-      functionIndex typeIndex signature expected = true := by
-    simpa only [Hmodule] using htype
+      functionIndex typeIndex signature expected = true := by simpa only [Hmodule] using htype
   wasm_wp_step Step.callIndirect (α := α) hselector Htablephys helement
     himports' hnotforeign' hfn' hsignature' hexpected' htype' =>
     wasm_wp_frame

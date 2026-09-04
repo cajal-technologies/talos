@@ -132,8 +132,7 @@ private theorem twp_func8_copy_and_return
   have hnewSize : newSize.toNat = newLayout.size := hlayout.2.1.1
   have holdLt : oldSize < newSize := by
     simpa only [UInt32.lt_iff_toNat_lt, holdSize, hnewSize] using hlayout.2.2.2.2.2
-  have holdPositive : 0 < oldSize.toNat := by
-    simpa only [holdSize] using hlayout.2.2.1.1
+  have holdPositive : 0 < oldSize.toNat := by simpa only [holdSize] using hlayout.2.2.1.1
   have holdNonzero : oldSize ≠ 0 := by
     intro hzero
     have := congrArg UInt32.toNat hzero; simp only [UInt32.toNat_zero] at this
@@ -143,10 +142,8 @@ private theorem twp_func8_copy_and_return
   icases HoldBlock with ⟨HoldToken, HoldSlice, %holdFacts⟩
   icases HnewBlock with ⟨HnewToken, HnewSlice, %hnewFacts⟩
   have hnewNonzero : newPtr ≠ 0 := hnewFacts.2.1
-  have holdLength : oldBytes.length = oldSize.toNat := by
-    simpa only [holdSize] using holdFacts.1
-  have hnewLength : newBytes.length = newSize.toNat := by
-    simpa only [hnewSize] using hnewFacts.1
+  have holdLength : oldBytes.length = oldSize.toNat := by simpa only [holdSize] using holdFacts.1
+  have hnewLength : newBytes.length = newSize.toNat := by simpa only [hnewSize] using hnewFacts.1
   have hprefixLength : (newBytes.take oldSize.toNat).length = oldSize.toNat := by
     simp [List.length_take, hnewLength]; omega
   have htailLength : (newBytes.drop oldSize.toNat).length =
@@ -310,8 +307,7 @@ private theorem twp_func8_commit_copy_and_return
   wasm_twp_bind twp_store32 (address := 0) (offset := allocatorCursor) storedCursor
       (by decide) (by decide) (by decide) (by decide) with HcursorAt => Hcursor
   isimp only [UInt32.zero_add] at Hcursor
-  have hnewAlignment : newLayout.alignment = 1 := by
-    simpa using hlayout.2.1.2.symm
+  have hnewAlignment : newLayout.alignment = 1 := by simpa using hlayout.2.1.2.symm
   imod BumpHeap_commit heapId frontier history newPtr finish newLayout newBytes
       ownedPages hfrontierLow hwf hlayout.2.2.2.1 (Or.inl hnewAlignment)
       hclassify hbytesLength hphysical $$
@@ -509,8 +505,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
         simp_all
       have hclassify' :
           classifyBump frontier { size := newLayout.size, alignment := 1 } =
-            .success newPtr finish := by
-        simpa only [← hnewLayoutShape] using hdecision
+            .success newPtr finish := by simpa only [← hnewLayoutShape] using hdecision
       rcases classifyBump_success_align1 frontier newLayout.size newPtr finish
           hclassify' with
         ⟨hfrontierBound, hbase, hbaseNat, hendWord, hendSigned,

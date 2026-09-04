@@ -406,8 +406,7 @@ theorem execute_read (store wasm : Store Wasm.StdIO.State)
     (Steps.cons hcall (Steps.single hfinish))
   have hinit : SmallStep.initConfig
       { module, host := Wasm.StdIO.env } 0 store
-        [.i32 pointer, .i32 length] = .ok initial := by
-    rfl
+        [.i32 pointer, .i32 length] = .ok initial := by rfl
   simp only [execute, hinit]
   rw [show (runSteps 2 initial).result =
       .success [.i32 count] { machine with wasm } by simpa using hrun]
@@ -441,8 +440,7 @@ theorem execute_read_trap (store wasm : Store Wasm.StdIO.State)
       Wasm.StdIO.env] using hcallRaw
   have hinit : SmallStep.initConfig
       { module, host := Wasm.StdIO.env } 0 store
-        [.i32 pointer, .i32 length] = .ok initial := by
-    rfl
+        [.i32 pointer, .i32 length] = .ok initial := by rfl
   simp [execute, hinit, runSteps, stepChecked?_complete hcall, trapped]
 
 theorem execute_write (store wasm : Store Wasm.StdIO.State)
@@ -478,8 +476,7 @@ theorem execute_write (store wasm : Store Wasm.StdIO.State)
     (Steps.cons hcall (Steps.single hfinish))
   have hinit : SmallStep.initConfig
       { module, host := Wasm.StdIO.env } 1 store
-        [.i32 pointer, .i32 length] = .ok initial := by
-    rfl
+        [.i32 pointer, .i32 length] = .ok initial := by rfl
   simp only [execute, hinit]
   rw [show (runSteps 2 initial).result =
       .success [] { machine with wasm } by simpa using hrun]
@@ -512,8 +509,7 @@ set_option maxRecDepth 100000 in
 private theorem initial_byteCapacity (input : List UInt8) :
     Wasm.StdIO.byteCapacity (initialStore input) = 65536 := by
   change (module.initialStore (α := Wasm.StdIO.State)).mem.pages * 65536 = 65536
-  have hpages : (module.initialStore (α := Wasm.StdIO.State)).mem.pages = 1 := by
-    decide
+  have hpages : (module.initialStore (α := Wasm.StdIO.State)).mem.pages = 1 := by decide
   rw [hpages]
 
 /-- Concrete store after the first read, before the EOF probe. -/

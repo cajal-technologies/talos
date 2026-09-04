@@ -741,8 +741,7 @@ theorem pointsToBytes_facts_readBytes {addr : UInt32}
   apply List.ext_getElem
   · simp [Mem.readBytes]
   · intro i hi _
-    have hi' : i < bytes.length := by
-      simpa [Mem.readBytes] using hi
+    have hi' : i < bytes.length := by simpa [Mem.readBytes] using hi
     have haddr : (addr + UInt32.ofNat i).toNat = addr.toNat + i := by
       have hiSize : i < UInt32.size := by omega
       rw [UInt32.toNat_add, UInt32.toNat_ofNat_of_lt' hiSize]
@@ -941,8 +940,7 @@ theorem insertFreshPhysicalBytes_facts
       have hsucc : (addr + 1).toNat = addr.toNat + 1 := by
         simpa using UInt32.add_ofNat_toNat_noWrap addr 1 (by decide) (by
           simp only [UInt32.size] at hnowrap; omega)
-      have haddrBound : addr.toNat < mem.pages * 65536 := by
-        omega
+      have haddrBound : addr.toNat < mem.pages * 65536 := by omega
       have hagree' :
           heapAgreesWithMem
             (insert σ ⟨0, addr⟩ (some (mem.read8 addr))) resolve :=
@@ -954,11 +952,9 @@ theorem insertFreshPhysicalBytes_facts
         insert_physical_byte_inBounds σ resolve 0 mem addr
           (mem.read8 addr) hresolve hinBounds haddrBound
       have hbound' :
-          (addr + 1).toNat + size ≤ mem.pages * 65536 := by
-        omega
+          (addr + 1).toNat + size ≤ mem.pages * 65536 := by omega
       have hnowrap' :
-          (addr + 1).toNat + size < UInt32.size := by
-        omega
+          (addr + 1).toNat + size < UInt32.size := by omega
       simpa only [physicalBytes, insertFreshBytes] using
         ih (insert σ ⟨0, addr⟩ (some (mem.read8 addr)))
           (addr + 1) hagree' hinBounds' hbound' hnowrap'
@@ -2761,8 +2757,7 @@ theorem stateInterp_writeV128 [WasmSmallStepGS hlc α]
   obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := UInt32.addSteps8 addr hroomLo
   have h8 : (addr + 8).toNat = addr.toNat + 8 := by
     simp only [UInt32.toNat_add, show (8 : UInt32).toNat = 8 from rfl]; omega
-  have hroomHi : (addr + 8).toNat + 8 ≤ 4294967296 := by
-    omega
+  have hroomHi : (addr + 8).toNat + 8 ≤ 4294967296 := by omega
   obtain ⟨h81, h82, h83, h84, h85, h86, h87⟩ :=
     UInt32.addSteps8 (addr + 8) hroomHi
   let store1 := { store with wasm := { store.wasm with mem := store.wasm.mem.write64 addr lo } }

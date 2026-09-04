@@ -910,8 +910,7 @@ theorem deserialize_readBytes64 (mem : Mem) (base : UInt32) (count : Nat)
           (mem.bytes (base.toNat + 2)) (mem.bytes (base.toNat + 3))
           (mem.bytes (base.toNat + 4)) (mem.bytes (base.toNat + 5))
           (mem.bytes (base.toNat + 6)) (mem.bytes (base.toNat + 7)) =
-          mem.read64 base := by
-        rfl
+          mem.read64 base := by rfl
       rw [hdecode]
       simp only [readWordArray64]
       change (deserialize (mem.readBytes (base.toNat + 8) (8 * count))).map

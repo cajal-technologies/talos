@@ -554,16 +554,14 @@ theorem twp_callHost
   simp only [runtimeModuleOwn]
   icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩
   have himports' : functionIndex <
-      store.runtime.currentModule.imports.length := by
-    simpa only [Hmodule] using himports
+      store.runtime.currentModule.imports.length := by simpa only [Hmodule] using himports
   have himp' : store.runtime.currentModule.imports[functionIndex] = imp := by
     simpa only [Hmodule] using himp
   ihave_pure Hhost : ⌜store.runtime.currentHost = hostEnv⌝ using
     stateInterp_hostEnv store ns obs nt callerId.id hostEnv $$
       [Hσ HinstanceOwn Henv]
   have hhost' : store.runtime.currentHost.funcs[functionIndex]? =
-      some hostFn := by
-    simpa only [Hhost] using hfuncs
+      some hostFn := by simpa only [Hhost] using hfuncs
   match h : hostFn.invoke store.wasm
       (values.take imp.params.length).reverse with
   | .Return results newWasm =>
@@ -887,8 +885,7 @@ theorem twp_load32
       (address + offset) word h1 h2 h3 $$ [Hσ Hword]
   obtain ⟨Hread, HinBounds⟩ := Hfacts
   have hbound : address.toNat + offset.toNat + 4 ≤
-      store.wasm.mem.pages * 65536 := by
-    simpa only [hnowrap] using HinBounds
+      store.wasm.mem.pages * 65536 := by simpa only [hnowrap] using HinBounds
   wasm_twp_step (by
     simpa [Hread] using
       (Step.load32 (α := α) (address := Value.i32 address) rfl hbound)) =>
@@ -926,8 +923,7 @@ theorem twp_store32
     stateInterp_pointsTo_u32_facts store ns obs nt
       (address + offset) oldWord h1 h2 h3 $$ [Hσ Hword]
   have hbound : address.toNat + offset.toNat + 4 ≤
-      store.wasm.mem.pages * 65536 := by
-    simpa only [hnowrap] using Hfacts.2
+      store.wasm.mem.pages * 65536 := by simpa only [hnowrap] using Hfacts.2
   have expectedStep : Step
       ⟨.running
         ⟨⟨params, localValues, .i32 value :: .i32 address :: values⟩,
@@ -1254,8 +1250,7 @@ theorem twp_f32Load
       (address + offset) word h1 h2 h3 $$ [Hσ Hword]
   obtain ⟨Hread, HinBounds⟩ := Hfacts
   have hbound : address.toNat + offset.toNat + 4 ≤
-      store.wasm.mem.pages * 65536 := by
-    simpa only [hnowrap] using HinBounds
+      store.wasm.mem.pages * 65536 := by simpa only [hnowrap] using HinBounds
   wasm_twp_step (by
     simpa [Hread] using
       (Step.f32Load (α := α) (address := .i32 address) rfl hbound)) =>
@@ -1293,8 +1288,7 @@ theorem twp_f32Store
     stateInterp_pointsTo_u32_facts store ns obs nt
       (address + offset) oldWord h1 h2 h3 $$ [Hσ Hword]
   have hbound : address.toNat + offset.toNat + 4 ≤
-      store.wasm.mem.pages * 65536 := by
-    simpa only [hnowrap] using Hfacts.2
+      store.wasm.mem.pages * 65536 := by simpa only [hnowrap] using Hfacts.2
   have expectedStep : Step
       ⟨.running
         ⟨⟨params, localValues, .f32 value :: .i32 address :: values⟩,
@@ -1406,8 +1400,7 @@ theorem twp_f64Load
       (address + offset) word h1 h2 h3 h4 h5 h6 h7 $$ [Hσ Hword]
   obtain ⟨Hread, HinBounds⟩ := Hfacts
   have hbound : address.toNat + offset.toNat + 8 ≤
-      store.wasm.mem.pages * 65536 := by
-    simpa only [hnowrap] using HinBounds
+      store.wasm.mem.pages * 65536 := by simpa only [hnowrap] using HinBounds
   wasm_twp_step (by
     simpa [Hread] using
       (Step.f64Load (α := α) (address := .i32 address) rfl hbound)) =>
@@ -1454,8 +1447,7 @@ theorem twp_f64Store
     stateInterp_pointsTo_u64_facts store ns obs nt
       (address + offset) oldWord h1 h2 h3 h4 h5 h6 h7 $$ [Hσ Hword]
   have hbound : address.toNat + offset.toNat + 8 ≤
-      store.wasm.mem.pages * 65536 := by
-    simpa only [hnowrap] using Hfacts.2
+      store.wasm.mem.pages * 65536 := by simpa only [hnowrap] using Hfacts.2
   have expectedStep : Step
       ⟨.running
         ⟨⟨params, localValues, .f64 value :: .i32 address :: values⟩,
@@ -1517,8 +1509,7 @@ theorem twp_load64
       (address + offset) word h1 h2 h3 h4 h5 h6 h7 $$ [Hσ Hword]
   obtain ⟨Hread, HinBounds⟩ := Hfacts
   have hbound : address.toNat + offset.toNat + 8 ≤
-      store.wasm.mem.pages * 65536 := by
-    simpa only [hnowrap] using HinBounds
+      store.wasm.mem.pages * 65536 := by simpa only [hnowrap] using HinBounds
   wasm_twp_step (by
     simpa [Hread] using
       (Step.load64 (α := α) (address := .i32 address) rfl hbound)) =>
@@ -1565,8 +1556,7 @@ theorem twp_store64
     stateInterp_pointsTo_u64_facts store ns obs nt
       (address + offset) oldWord h1 h2 h3 h4 h5 h6 h7 $$ [Hσ Hword]
   have hbound : address.toNat + offset.toNat + 8 ≤
-      store.wasm.mem.pages * 65536 := by
-    simpa only [hnowrap] using Hfacts.2
+      store.wasm.mem.pages * 65536 := by simpa only [hnowrap] using Hfacts.2
   have expectedStep : Step
       ⟨.running
         ⟨⟨params, localValues, .i64 value :: .i32 address :: values⟩,

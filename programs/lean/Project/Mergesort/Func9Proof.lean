@@ -111,8 +111,7 @@ private theorem twp_func9_zero_and_return
         @ s; E [{ Φ }] := by
   iintro ⟨Hruntime, Hbump, Hblock, Hstreams, Hcont⟩
   have hsize : size.toNat = layout.size := hmatches.1
-  have hpositive : 0 < size.toNat := by
-    simpa only [hsize] using hvalid.1
+  have hpositive : 0 < size.toNat := by simpa only [hsize] using hvalid.1
   have hsizeNonzero : size ≠ 0 := by
     intro hzero
     have := congrArg UInt32.toNat hzero; simp only [UInt32.toNat_zero] at this
@@ -215,8 +214,7 @@ private theorem twp_func9_commit_zero_and_return
       storedCursor (by decide) (by decide) (by decide) (by decide) with HcursorAt => Hcursor
   ihave Hcursor' : pointsTo_u32 0 allocatorCursor finish $$ [Hcursor]
   · irw_exact [← show (0 : UInt32) + 1049492 = allocatorCursor by decide] with Hcursor
-  have halignment : layout.alignment = 4 := by
-    simpa using hmatches.2.symm
+  have halignment : layout.alignment = 4 := by simpa using hmatches.2.symm
   imod BumpHeap_commit heapId frontier history base finish layout bytes
       ownedPages
       hfrontierLow hwf hvalid (Or.inr halignment) hclassify hbytesLength

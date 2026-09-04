@@ -302,8 +302,7 @@ theorem MergeLoopInvariant.takeLeft
   rcases h with
     ⟨hli, him, hmj, hjr, hrlen, hlength, hk, hemitted,
       htake, hprogress⟩
-  have hklen : k < temporaryValues.length := by
-    omega
+  have hklen : k < temporaryValues.length := by omega
   have hlk : left ≤ k := by omega
   have hleftSegment :
       segment input i mid = x :: segment input (i + 1) mid :=
@@ -333,8 +332,7 @@ theorem MergeLoopInvariant.takeRight
   rcases h with
     ⟨hli, him, hmj, hjr, hrlen, hlength, hk, hemitted,
       htake, hprogress⟩
-  have hklen : k < temporaryValues.length := by
-    omega
+  have hklen : k < temporaryValues.length := by omega
   have hlk : left ≤ k := by omega
   have hrightSegment :
       segment input j right = y :: segment input (j + 1) right :=
@@ -363,8 +361,7 @@ theorem MergeLoopInvariant.takeRemainingLeft
   rcases h with
     ⟨hli, him, hmr, hrr, hrlen, hlength, hk, hemitted,
       htake, hprogress⟩
-  have hklen : k < temporaryValues.length := by
-    omega
+  have hklen : k < temporaryValues.length := by omega
   have hlk : left ≤ k := by omega
   have hleftSegment :
       segment input i mid = x :: segment input (i + 1) mid :=
@@ -392,8 +389,7 @@ theorem MergeLoopInvariant.takeRemainingRight
   rcases h with
     ⟨hlm, hmm, hmj, hjr, hrlen, hlength, hk, hemitted,
       htake, hprogress⟩
-  have hklen : k < temporaryValues.length := by
-    omega
+  have hklen : k < temporaryValues.length := by omega
   have hlk : left ≤ k := by omega
   have hrightSegment :
       segment input j right = y :: segment input (j + 1) right :=
@@ -527,8 +523,7 @@ theorem segment_append {values : List UInt32} {start mid stop : Nat}
   simp only [segment]
   have hstartMid : start + (mid - start) = mid :=
     Nat.add_sub_of_le hstart
-  have hlength : (mid - start) + (stop - mid) = stop - start := by
-    omega
+  have hlength : (mid - start) + (stop - mid) = stop - start := by omega
   have hdrop :
       values.drop mid = (values.drop start).drop (mid - start) := by
     rw [List.drop_drop, hstartMid]

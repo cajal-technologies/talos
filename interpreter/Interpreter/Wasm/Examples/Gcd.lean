@@ -144,8 +144,7 @@ private theorem gcdLoop_steps (a b temporary : UInt32) :
         rcases Nat.eq_zero_or_pos b.toNat with hz | hp
         · exact absurd (UInt32.toNat.inj hz) hb
         · exact hp
-      have hmod : (a % b).toNat < b.toNat := by
-        simpa using Nat.mod_lt a.toNat hbpos
+      have hmod : (a % b).toNat < b.toNat := by simpa using Nat.mod_lt a.toNat hbpos
       obtain ⟨initialTrace, hinitial⟩ :=
         gcdLoop_iteration_steps a b temporary hb
       obtain ⟨suffix, hsuffix⟩ :=

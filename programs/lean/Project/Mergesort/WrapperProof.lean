@@ -227,8 +227,7 @@ theorem readTransfer
     rw [hlength]; exact List.length_take_le _ _
   have hincomingBound : pointer.toNat + incoming.length ≤
       store.wasm.mem.pages * 65536 := by omega
-  have hincomingNoWrap : pointer.toNat + incoming.length < UInt32.size := by
-    omega
+  have hincomingNoWrap : pointer.toNat + incoming.length < UInt32.size := by omega
   have hphysicalIncoming :
       store.wasm.host.stdio.input.take length.toNat = incoming := by
     rw [hhostEq]

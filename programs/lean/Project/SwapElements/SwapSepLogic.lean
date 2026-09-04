@@ -2009,10 +2009,8 @@ theorem func4_distinct_store_partiallyMeets
           store.wasm.mem.read64 ((j <<< (3 % 32)) + ptr) = oldA) := by
   let addressI := (i <<< (3 % 32)) + ptr
   let addressJ := (j <<< (3 % 32)) + ptr
-  have hroomI' : addressI.toNat + 8 ≤ 4294967296 := by
-    simpa [addressI] using hroomI
-  have hroomJ' : addressJ.toNat + 8 ≤ 4294967296 := by
-    simpa [addressJ] using hroomJ
+  have hroomI' : addressI.toNat + 8 ≤ 4294967296 := by simpa [addressI] using hroomI
+  have hroomJ' : addressJ.toNat + 8 ≤ 4294967296 := by simpa [addressJ] using hroomJ
   obtain ⟨hi1, hi2, hi3, hi4, hi5, hi6, hi7⟩ := UInt32.addSteps8 addressI hroomI'
   obtain ⟨hj1, hj2, hj3, hj4, hj5, hj6, hj7⟩ := UInt32.addSteps8 addressJ hroomJ'
   apply
@@ -2089,8 +2087,7 @@ theorem func4_alias_store_partiallyMeets
         values = [] ∧
           store.wasm.mem.read64 ((i <<< (3 % 32)) + ptr) = oldValue) := by
   let address := (i <<< (3 % 32)) + ptr
-  have hroom' : address.toNat + 8 ≤ 4294967296 := by
-    simpa [address] using hroom
+  have hroom' : address.toNat + 8 ≤ 4294967296 := by simpa [address] using hroom
   obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := UInt32.addSteps8 address hroom'
   apply
     Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_store_partiallyMeets
@@ -2165,10 +2162,8 @@ theorem func4_distinct_store_terminatesWith
           store.wasm.mem.read64 ((j <<< (3 % 32)) + ptr) = oldA) := by
   let addressI := (i <<< (3 % 32)) + ptr
   let addressJ := (j <<< (3 % 32)) + ptr
-  have hroomI' : addressI.toNat + 8 ≤ 4294967296 := by
-    simpa [addressI] using hroomI
-  have hroomJ' : addressJ.toNat + 8 ≤ 4294967296 := by
-    simpa [addressJ] using hroomJ
+  have hroomI' : addressI.toNat + 8 ≤ 4294967296 := by simpa [addressI] using hroomI
+  have hroomJ' : addressJ.toNat + 8 ≤ 4294967296 := by simpa [addressJ] using hroomJ
   obtain ⟨hi1, hi2, hi3, hi4, hi5, hi6, hi7⟩ := UInt32.addSteps8 addressI hroomI'
   obtain ⟨hj1, hj2, hj3, hj4, hj5, hj6, hj7⟩ := UInt32.addSteps8 addressJ hroomJ'
   apply
@@ -2244,8 +2239,7 @@ theorem func4_alias_store_terminatesWith
         values = [] ∧
           store.wasm.mem.read64 ((i <<< (3 % 32)) + ptr) = oldValue) := by
   let address := (i <<< (3 % 32)) + ptr
-  have hroom' : address.toNat + 8 ≤ 4294967296 := by
-    simpa [address] using hroom
+  have hroom' : address.toNat + 8 ≤ 4294967296 := by simpa [address] using hroom
   obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := UInt32.addSteps8 address hroom'
   apply
     Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_store_terminates

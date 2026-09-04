@@ -42,10 +42,8 @@ theorem opt3_func0_distinct_smallStep_wp
   dsimp only
   let addressI := (i <<< (3 % 32)) + ptr
   let addressJ := (j <<< (3 % 32)) + ptr
-  have hroomI' : addressI.toNat + 8 ≤ 4294967296 := by
-    simpa [addressI] using hroomI
-  have hroomJ' : addressJ.toNat + 8 ≤ 4294967296 := by
-    simpa [addressJ] using hroomJ
+  have hroomI' : addressI.toNat + 8 ≤ 4294967296 := by simpa [addressI] using hroomI
+  have hroomJ' : addressJ.toNat + 8 ≤ 4294967296 := by simpa [addressJ] using hroomJ
   obtain ⟨hi1, hi2, hi3, hi4, hi5, hi6, hi7⟩ := UInt32.addSteps8 addressI hroomI'
   obtain ⟨hj1, hj2, hj3, hj4, hj5, hj6, hj7⟩ := UInt32.addSteps8 addressJ hroomJ'
   iintro ⟨HA, HB⟩
@@ -131,10 +129,8 @@ theorem opt3_func0_distinct_store_partiallyMeets
           store.wasm.mem.read64 ((j <<< (3 % 32)) + ptr) = oldA) := by
   let addressI := (i <<< (3 % 32)) + ptr
   let addressJ := (j <<< (3 % 32)) + ptr
-  have hroomI' : addressI.toNat + 8 ≤ 4294967296 := by
-    simpa [addressI] using hroomI
-  have hroomJ' : addressJ.toNat + 8 ≤ 4294967296 := by
-    simpa [addressJ] using hroomJ
+  have hroomI' : addressI.toNat + 8 ≤ 4294967296 := by simpa [addressI] using hroomI
+  have hroomJ' : addressJ.toNat + 8 ≤ 4294967296 := by simpa [addressJ] using hroomJ
   obtain ⟨hi1, hi2, hi3, hi4, hi5, hi6, hi7⟩ := UInt32.addSteps8 addressI hroomI'
   obtain ⟨hj1, hj2, hj3, hj4, hj5, hj6, hj7⟩ := UInt32.addSteps8 addressJ hroomJ'
   apply

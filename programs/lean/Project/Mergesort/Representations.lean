@@ -212,8 +212,7 @@ theorem ByteSlice_append {host : Type} [WasmHeapGS host]
     have hoffset := byteOffset_toNat ptr left.length hleftNowrap
     have hrightNowrap :
         (ptr + UInt32.ofNat left.length).toNat + right.length <
-          UInt32.size := by
-      omega
+          UInt32.size := by omega
     isplitl [Hleft]
     · iframe Hleft
       ipureexact hleftNowrap
@@ -395,8 +394,7 @@ theorem WordSlice_append {host : Type} [WasmHeapGS host]
     have hoffset := wordOffset_toNat ptr xs.length hleftNowrap
     have hrightNowrap :
         (ptr + 4 * UInt32.ofNat xs.length).toNat +
-            4 * ys.length < UInt32.size := by
-      omega
+            4 * ys.length < UInt32.size := by omega
     have hrightAlign :
         (ptr + 4 * UInt32.ofNat xs.length).toNat % 4 = 0 := by
       rw [hoffset, Nat.add_mod]; omega
@@ -768,14 +766,12 @@ private theorem align4_mask_toNat (x : UInt32) :
   change (x.toBitVec &&& ((0 - 4 : UInt32).toBitVec)).toNat =
     x.toBitVec.toNat - x.toBitVec.toNat % 4
   have hmask :
-      ((0 - 4 : UInt32).toBitVec) = BitVec.allOnes 32 <<< 2 := by
-    decide
+      ((0 - 4 : UInt32).toBitVec) = BitVec.allOnes 32 <<< 2 := by decide
   rw [hmask, ← BitVec.shiftLeft_ushiftRight]
   simp only [BitVec.toNat_shiftLeft, BitVec.toNat_ushiftRight,
     Nat.shiftRight_eq_div_pow, Nat.shiftLeft_eq, Nat.reducePow]
   have hdiv : x.toBitVec.toNat / 4 * 4 =
-      x.toBitVec.toNat - x.toBitVec.toNat % 4 := by
-    omega
+      x.toBitVec.toNat - x.toBitVec.toNat % 4 := by omega
   have hbound : x.toBitVec.toNat / 4 * 4 < 4294967296 := by
     have hx := x.toBitVec.isLt
     omega
@@ -923,8 +919,7 @@ theorem classifyBump_success_reachable
       intro hzero
       have hzeroNat := congrArg UInt32.toNat hzero; simp only [UInt32.toNat_zero] at hzeroNat
       rw [hzeroNat] at hstart; omega
-    have haligned : base.toNat % layout.alignment = 0 := by
-      simpa only [halignment] using hmod4
+    have haligned : base.toNat % layout.alignment = 0 := by simpa only [halignment] using hmod4
     exact ⟨hstart, hnonnull, haligned, hendWord, hendSigned, hfinish,
       hvalid, hnonnull, haligned⟩
 
@@ -1675,10 +1670,8 @@ theorem BumpHeap_commit {host : Type} [WasmHeapGS host]
     apply hnonnull
     apply UInt32.toNat_inj.mp
     simpa using hzero
-  have hfinishPositive : 0 < finish.toNat := by
-    omega
-  have hfinishSigned : finish.toNat < 2147483648 := by
-    simpa only [hfinish] using hendSigned
+  have hfinishPositive : 0 < finish.toNat := by omega
+  have hfinishSigned : finish.toNat < 2147483648 := by simpa only [hfinish] using hendSigned
   have hfinishNonzero : finish ≠ 0 := by
     intro hzero
     have hzeroNat := congrArg UInt32.toNat hzero
@@ -2709,8 +2702,7 @@ theorem GeometricVecFacts.completed_ptr_align4
     unfold vectorBlockBase
     have hpow256 : 256 ≤ 2 ^ exponent := by
       rw [show 256 = 2 ^ 8 by norm_num]; exact Nat.pow_le_pow_right (by decide) hexponentLower
-    have hdiv : 4 ∣ 2 ^ exponent := by
-      simpa using Nat.pow_dvd_pow 2 (by omega : 2 ≤ exponent)
+    have hdiv : 4 ∣ 2 ^ exponent := by simpa using Nat.pow_dvd_pow 2 (by omega : 2 ≤ exponent)
     have hpowMod : 2 ^ exponent % 4 = 0 :=
       Nat.mod_eq_zero_of_dvd hdiv
     have hbaseMod : heapBase.toNat % 4 = 0 := by decide
@@ -2772,8 +2764,7 @@ theorem bulk4_signedMask_eq (count : Nat)
     apply UInt32.toNat_ofNat_of_lt'
     norm_num [UInt32.size] at hbound ⊢; omega
   rw [hcountWord]
-  have hmaskWord : (2147483644 : UInt32).toNat = 2147483644 := by
-    decide
+  have hmaskWord : (2147483644 : UInt32).toNat = 2147483644 := by decide
   rw [hmaskWord]
   have hbulkLe : 4 * (count / 4) ≤ count := by
     have hmod := Nat.mod_add_div count 4
@@ -2995,8 +2986,7 @@ theorem GeometricVecFacts.reserveSuccess
   rcases halloc with
     ⟨hfrontierWord, hnewPtr, hnewPtrNat, hendWord, hendSigned, hfinish⟩
   have hcapacityWord :
-      selectedCapacity length current capacity.toNat < UInt32.size := by
-    omega
+      selectedCapacity length current capacity.toNat < UInt32.size := by omega
   have hcapacityNat :
       (UInt32.ofNat
         (selectedCapacity length current capacity.toNat)).toNat =
@@ -3006,8 +2996,7 @@ theorem GeometricVecFacts.reserveSuccess
   · rcases hempty with
       ⟨rfl, rfl, rfl, hremaining, rfl, rfl⟩
     simp only [UInt32.toNat_zero] at *
-    have hnewPtrBase : newPtr = heapBase := by
-      simpa only [hnewPtr] using UInt32.ofNat_toNat
+    have hnewPtrBase : newPtr = heapBase := by simpa only [hnewPtr] using UInt32.ofNat_toNat
     have hselected :
         selectedCapacity 0 current 0 = max current 8 := by
       simp [selectedCapacity]
@@ -3049,8 +3038,7 @@ theorem GeometricVecFacts.reserveSuccess
   · rcases hlarge with
       ⟨exponent, hexponentLower, hexponentUpper, hcapacity,
         hlength, htotal, hptr, hfrontier, hgeoHistory⟩
-    have hlength' : length ≤ 2 ^ exponent := by
-      simpa only [← hcapacity] using hlength
+    have hlength' : length ≤ 2 ^ exponent := by simpa only [← hcapacity] using hlength
     have hselected :
         selectedCapacity length current capacity.toNat =
           2 ^ (exponent + 1) := by
@@ -3058,8 +3046,7 @@ theorem GeometricVecFacts.reserveSuccess
         hexponentLower hlength' hcurrentBound
     have hselected' :
         selectedCapacity length current (2 ^ exponent) =
-          2 ^ (exponent + 1) := by
-      simpa only [← hcapacity] using hselected
+          2 ^ (exponent + 1) := by simpa only [← hcapacity] using hselected
     have hpow : 256 ≤ 2 ^ exponent := by
       rw [show 256 = 2 ^ 8 by norm_num]; exact Nat.pow_le_pow_right (by decide) hexponentLower
     have hfrontierNext : frontier = vectorBlockBase (exponent + 1) := by

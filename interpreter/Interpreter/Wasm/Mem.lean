@@ -214,8 +214,7 @@ theorem Mem.writeBytes_append (m : Mem) (offset : Nat) (xs ys : List UInt8) :
     by_cases hy : offset + xs.length ≤ i ∧
         i < offset + xs.length + ys.length
     · rw [dif_pos hy]
-      have hall : offset ≤ i ∧ i < offset + (xs.length + ys.length) := by
-        omega
+      have hall : offset ≤ i ∧ i < offset + (xs.length + ys.length) := by omega
       rw [dif_pos hall]
       rw [List.getElem_append_right (by omega)]
       congr 1
@@ -223,13 +222,11 @@ theorem Mem.writeBytes_append (m : Mem) (offset : Nat) (xs ys : List UInt8) :
     · rw [dif_neg hy]
       by_cases hx : offset ≤ i ∧ i < offset + xs.length
       · rw [dif_pos hx]
-        have hall : offset ≤ i ∧ i < offset + (xs.length + ys.length) := by
-          omega
+        have hall : offset ≤ i ∧ i < offset + (xs.length + ys.length) := by omega
         rw [dif_pos hall]
         rw [List.getElem_append_left (by omega)]
       · rw [dif_neg hx]
-        have hall : ¬(offset ≤ i ∧ i < offset + (xs.length + ys.length)) := by
-          omega
+        have hall : ¬(offset ≤ i ∧ i < offset + (xs.length + ys.length)) := by omega
         rw [dif_neg hall]
 
 /-- Writing an empty byte list leaves memory unchanged. -/

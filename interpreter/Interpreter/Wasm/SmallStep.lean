@@ -7418,8 +7418,7 @@ theorem runSteps_trapReason_trapsWith {fuel : Nat} {config : Config α}
   | success values store =>
     simp [RunnerResult.trapReason?, hr] at h
   | trapped actual store =>
-    have : actual = reason := by
-      simpa [RunnerResult.trapReason?, hr] using h
+    have : actual = reason := by simpa [RunnerResult.trapReason?, hr] using h
     subst actual
     apply runSteps_trapped_trapsWith hr
     trivial
@@ -7438,8 +7437,7 @@ theorem runSteps_values_terminates {fuel : Nat} {config : Config α}
     TerminatesWith config (fun actual _ => actual = values) := by
   cases hr : (runSteps fuel config).result with
   | success actual store =>
-    have : actual = values := by
-      simpa [RunnerResult.values?, hr] using h
+    have : actual = values := by simpa [RunnerResult.values?, hr] using h
     subst actual
     apply runSteps_success_terminates hr
     rfl

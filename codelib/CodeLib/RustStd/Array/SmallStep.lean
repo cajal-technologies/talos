@@ -156,8 +156,7 @@ theorem wp_loadFatPtr
     (by simpa using hp2) (by simpa using hp3) with HdataLater => Hdata
   have hget' :
       (⟨params, localValues, .i32 dataPtr :: values⟩ : Locals).get index =
-        some (.i32 p) := by
-    simpa [Locals.get] using hget
+        some (.i32 p) := by simpa [Locals.get] using hget
   wasm_wp_next Wasm.SmallStep.wp_localGet hget'
   ihave HlenLater : ▷ pointsTo_u32 0 (p + 4) len $$ [Hlen]
   · ilater_exact Hlen

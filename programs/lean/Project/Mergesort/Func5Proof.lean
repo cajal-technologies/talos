@@ -386,8 +386,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
     apply UInt32.toNat_inj.mp
     rw [UInt32.toNat_add, hsizeNat, Nat.mod_eq_of_lt hfinishWordBound]
     exact (UInt32.toNat_ofNat_of_lt' hfinishWordBound).symm
-  have hfinishWord' : size + base = finish := by
-    simpa only [UInt32.add_comm] using hfinishWord
+  have hfinishWord' : size + base = finish := by simpa only [UInt32.add_comm] using hfinishWord
   have hbaseRaw :
       UInt32.ofNat (frontier + (layout.alignment - 1)) &&&
           (0 - alignment) = base := by
@@ -395,8 +394,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
   have hfinishRaw :
       size +
           (UInt32.ofNat (frontier + (layout.alignment - 1)) &&&
-            (0 - alignment)) = finish := by
-    simpa only [hbaseRaw] using hfinishWord'
+            (0 - alignment)) = finish := by simpa only [hbaseRaw] using hfinishWord'
   have hbaseLeFinish : base ≤ finish := by
     rw [UInt32.le_iff_toNat_le_toNat,
       UInt32.toNat_ofNat_of_lt' hfinishWordBound]

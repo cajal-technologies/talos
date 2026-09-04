@@ -265,8 +265,7 @@ theorem twp_loadAt
   have hslot :
       (base + 4 * UInt32.ofNat k).toNat = base.toNat + 4 * k := by
     simpa [UInt32.mul_comm] using arrayAddress_toNat base hfit hk
-  have hroom : (base + 4 * UInt32.ofNat k).toNat + 4 ≤ UInt32.size := by
-    omega
+  have hroom : (base + 4 * UInt32.ofNat k).toNat + 4 ≤ UInt32.size := by omega
   have hroom' :
       (base + 4 * UInt32.ofNat k).toNat + 4 ≤ 4294967296 := by
     simpa only [UInt32.size] using hroom
@@ -301,12 +300,9 @@ theorem twp_store32_cell
       ⟨⟨params, localValues, .i32 newWord :: .i32 address :: stack⟩,
         .store32 0 :: code, arity, remainder, controls, calls⟩ : Expr α)
       @ s; E [{ Φ }] := by
-  have h1' : ((address + 0) + 1).toNat = (address + 0).toNat + 1 := by
-    simpa using h1
-  have h2' : ((address + 0) + 2).toNat = (address + 0).toNat + 2 := by
-    simpa using h2
-  have h3' : ((address + 0) + 3).toNat = (address + 0).toNat + 3 := by
-    simpa using h3
+  have h1' : ((address + 0) + 1).toNat = (address + 0).toNat + 1 := by simpa using h1
+  have h2' : ((address + 0) + 2).toNat = (address + 0).toNat + 2 := by simpa using h2
+  have h3' : ((address + 0) + 3).toNat = (address + 0).toNat + 3 := by simpa using h3
   iintro ⟨Hword, Hcont⟩
   ihave HwordLater : pointsTo_u32 0 (address + 0) oldWord $$ [Hword]
   ·
@@ -365,8 +361,7 @@ theorem twp_copyAt
     rw [UInt32.add_comm]
     simpa [UInt32.mul_comm] using
       arrayAddress_toNat temporary htemporaryFit hk
-  have hroom : destination.toNat + 4 ≤ UInt32.size := by
-    omega
+  have hroom : destination.toNat + 4 ≤ UInt32.size := by omega
   obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4 destination (by
     simpa only [UInt32.size] using hroom)
   iintro ⟨Hsource, Htemporary, Hcont⟩

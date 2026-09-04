@@ -426,8 +426,7 @@ theorem copyWords_loopBody_invariant_wp
           · iexact HsrcCurrent
   · intro hnlt
     simp only [P]
-    have hnltNat : ¬ i.toNat < n.toNat := by
-      simpa only [UInt32.lt_iff_toNat_lt] using hnlt
+    have hnltNat : ¬ i.toNat < n.toNat := by simpa only [UInt32.lt_iff_toNat_lt] using hnlt
     have hiNat : i.toNat = n.toNat := by
       rw [← hpre] at hnltNat; omega
     have hi : i = n := UInt32.toNat_inj.mp hiNat
@@ -442,8 +441,7 @@ theorem copyWords_loopBody_invariant_wp
       exact List.eq_nil_of_length_eq_zero (by omega)
     subst dstSuffix
     subst srcSuffix
-    have hpreSource : pre = source := by
-      simpa using hsource.symm
+    have hpreSource : pre = source := by simpa using hsource.symm
     subst pre
     iintro ⟨#_IH', Hrest⟩
     icases Hrest with ⟨HR', Harrays'⟩
@@ -496,8 +494,7 @@ theorem copyWords_loop_wp
            (⟨[.i32 dst, .i32 src, .i32 n], [.i32 0], []⟩ :
              Locals).values.drop 0 } :
         Wasm.SmallStep.ControlFrame) =
-      copyWordsLoopFrame afterLoop := by
-    rfl
+      copyWordsLoopFrame afterLoop := by rfl
   rw [hframe]
   have hbody := copyWords_loopBody_invariant_wp R dst src n 0 source
     [] destination source afterLoop arity remainder outerControls calls

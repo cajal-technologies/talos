@@ -63,8 +63,7 @@ theorem env_satisfies (module : Module) (himports : module.imports = imports) :
     env.Satisfies module spec := by
   intro index hindex
   rw [himports] at hindex
-  have hzero : index = 0 := by
-    simpa [imports] using hindex
+  have hzero : index = 0 := by simpa [imports] using hindex
   subst index
   refine ⟨oomHost, oomContract, rfl, rfl, ?_⟩
   intro store args

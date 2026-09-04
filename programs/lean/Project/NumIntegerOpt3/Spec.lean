@@ -718,8 +718,7 @@ theorem gcdLoop_terminates
           gcdLoop_step_x x y shared hgt (by simpa [x'] using hx'y)
         have hdecrease : x'.toNat + y.toNat < x.toNat + y.toNat := by
           simpa [x', oddPart_toNat] using hdec
-        have hx'odd' : x'.toNat % 2 = 1 := by
-          simpa [x', oddPart_toNat] using hx'odd
+        have hx'odd' : x'.toNat % 2 = 1 := by simpa [x', oddPart_toNat] using hx'odd
         have suffix := ih (x'.toNat + y.toNat) hdecrease
           x' y hx'ne hyne hx'odd' hyodd hx'y rfl
         exact TerminatesWith.prependSteps initial suffix
@@ -735,8 +734,7 @@ theorem gcdLoop_terminates
           gcdLoop_step_y x y shared hgt (by simpa [y'] using hxy')
         have hdecrease : x.toNat + y'.toNat < x.toNat + y.toNat := by
           simpa [y', oddPart_toNat] using hdec
-        have hy'odd' : y'.toNat % 2 = 1 := by
-          simpa [y', oddPart_toNat] using hy'odd
+        have hy'odd' : y'.toNat % 2 = 1 := by simpa [y', oddPart_toNat] using hy'odd
         have suffix := ih (x.toNat + y'.toNat) hdecrease
           x y' hxne hy'ne hxodd hy'odd' hxy' rfl
         exact TerminatesWith.prependSteps initial suffix

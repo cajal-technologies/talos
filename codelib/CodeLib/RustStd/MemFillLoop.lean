@@ -363,8 +363,7 @@ theorem fillWords_loopBody_invariant_wp
           · iexact HarrayCurrent
   · intro hnlt
     simp only [P]
-    have hnltNat : ¬ i.toNat < n.toNat := by
-      simpa only [UInt32.lt_iff_toNat_lt] using hnlt
+    have hnltNat : ¬ i.toNat < n.toNat := by simpa only [UInt32.lt_iff_toNat_lt] using hnlt
     have hiEq : i.toNat = n.toNat := by omega
     have hiWord : i = n := UInt32.toNat_inj.mp hiEq
     subst i
@@ -417,8 +416,7 @@ theorem fillWords_loop_wp
            (⟨[.i32 base, .i32 n, .i64 value], [.i32 0], []⟩ :
              Locals).values.drop 0 } :
         Wasm.SmallStep.ControlFrame) =
-      fillWordsLoopFrame afterLoop := by
-    rfl
+      fillWordsLoopFrame afterLoop := by rfl
   rw [hframe]
   have hbody := fillWords_loopBody_invariant_wp R base n 0 value
     original afterLoop arity remainder outerControls calls htotal

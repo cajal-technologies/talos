@@ -1205,8 +1205,7 @@ theorem twp_func3_read_loop_iteration
       have hmeasure :
           (remaining.take (min 256 remaining.length)).length +
               (remaining.drop (min 256 remaining.length)).length <
-            current.length + remaining.length := by
-        omega
+            current.length + remaining.length := by omega
       have hnextPositive :
           0 < (remaining.take (min 256 remaining.length)).length := by
         simpa only [hnext.2.1] using hnext.2.2.1
@@ -1434,8 +1433,7 @@ theorem twp_func3_enter_nonempty_decode
   have hboundTotal := GeometricVecFacts.completed_lt_signed
     (serialize original).length completed.length 0 capacity dataPtr frontier
     history hgeo rfl
-  have hbound : completed.length < 2147483648 := by
-    simpa [hcompleted] using hboundTotal
+  have hbound : completed.length < 2147483648 := by simpa [hcompleted] using hboundTotal
   have halign : completed.length % 4 = 0 := by
     rw [← hcompleted, serialize_length]; omega
   have hmask := align4_signedMask_eq completed.length hbound halign
@@ -1535,8 +1533,7 @@ theorem twp_func3_allocate_values
   have hboundTotal := GeometricVecFacts.completed_lt_signed
     (serialize original).length completed.length 0 capacity dataPtr frontier
     history hgeo rfl
-  have hbound : completed.length < 2147483648 := by
-    simpa [hcompleted] using hboundTotal
+  have hbound : completed.length < 2147483648 := by simpa [hcompleted] using hboundTotal
   have halign : completed.length % 4 = 0 := by
     rw [← hcompleted, serialize_length]; omega
   have hpositive : 0 < completed.length := by
@@ -1569,8 +1566,7 @@ theorem twp_func3_allocate_values
   unfold ResumeWP resumeExpr
   simp only [List.cons_append, List.nil_append]
   have hlocal7' : ({ callerLocals with values := stack } : Locals).get 7 =
-      some (.i32 (UInt32.ofNat completed.length)) := by
-    simpa using hlocal7
+      some (.i32 (UInt32.ofNat completed.length)) := by simpa using hlocal7
   iapply twp_localGet hlocal7'
   wasm_twp_pures [twp_const]
   have Halloc := hfunc5
@@ -1705,8 +1701,7 @@ theorem twp_func3_copy_decoded_word
   have hcurrentLength : current.length = original.length :=
     overwritePrefix_length original initial copied hlength
   have hsourceIndex : copied < original.length := hcopied
-  have hdestinationIndex : copied < current.length := by
-    simpa only [hcurrentLength] using hcopied
+  have hdestinationIndex : copied < current.length := by simpa only [hcurrentLength] using hcopied
   iintro ⟨Hsource, Hdestination, Hcont⟩
   ihave ⟨Hsource, %hsourceFacts⟩ := WordSlice_facts source original $$ Hsource
   ihave HdestinationFacts := WordSlice_facts destination current $$
@@ -1718,8 +1713,7 @@ theorem twp_func3_copy_decoded_word
       destinationAddress.toNat = destination.toNat + 4 * copied := by
     dsimp only [destinationAddress]; exact wordOffset_toNat destination copied (by
       rw [hcurrentLength] at hdestinationFacts; omega)
-  have hsourceRoom : sourceAddress.toNat + 4 ≤ UInt32.size := by
-    omega
+  have hsourceRoom : sourceAddress.toNat + 4 ≤ UInt32.size := by omega
   have hdestinationRoom : destinationAddress.toNat + 4 ≤ UInt32.size := by
     rw [hdestinationAddress]
     rw [hcurrentLength] at hdestinationFacts; omega
@@ -1819,8 +1813,7 @@ theorem twp_func3_copy_decoded_word_from_locals
       (⟨params, localValues,
         .i32 (destination + 4 * UInt32.ofNat copied) :: stack⟩ : Locals).get
           sourceIndex =
-        some (.i32 (source + 4 * UInt32.ofNat copied)) := by
-    simpa using hsourceGet
+        some (.i32 (source + 4 * UInt32.ofNat copied)) := by simpa using hsourceGet
   iapply twp_localGet hsourceGet'
   have Hcopy := twp_func3_copy_decoded_word
     (hlc := hlc) source destination original initial copied hlength hcopied
@@ -2297,8 +2290,7 @@ theorem twp_func3_decode_bulk_loop
     rw [UInt32.add_comm (4 : UInt32), func3_decode_count_step]
     wasm_twp_localTee [List.length, List.set]
     by_cases hmore : state.copied + 4 < bulk
-    · have hnextBound : state.copied + 8 ≤ bulk := by
-        omega
+    · have hnextBound : state.copied + 8 ≤ bulk := by omega
       have hnextMod : (state.copied + 4) % 4 = 0 := by omega
       have hnextLtSize : state.copied + 4 < UInt32.size := by omega
       have hbulkLtSize : bulk < UInt32.size := by omega
@@ -2806,8 +2798,7 @@ theorem twp_func3_decode_allocated
   iapply_frame_intro Hguard as Hblock
   isimp only [LiveBlock] at Hblock
   icases Hblock with ⟨HallocationToken, HallocationBytes, %hblockFacts⟩
-  have hbytes : bytes.length = 4 * original.length := by
-    simpa only [layout] using hblockFacts.1
+  have hbytes : bytes.length = 4 * original.length := by simpa only [layout] using hblockFacts.1
   have hdecodedLength : (decodeWords bytes).length = original.length :=
     (serialize_decodeWords_of_length bytes original.length hbytes).2
   ihave Hblock : LiveBlock heapId valuesId destination layout bytes $$
@@ -3229,8 +3220,7 @@ theorem twp_func3_write_one
         valuesPtr.toNat + 4 * emitted :=
     wordOffset_toNat valuesPtr emitted (by omega)
   have hroom :
-      (valuesPtr + 4 * UInt32.ofNat emitted).toNat + 4 ≤ UInt32.size := by
-    omega
+      (valuesPtr + 4 * UInt32.ofNat emitted).toNat + 4 ≤ UInt32.size := by omega
   obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4
     (valuesPtr + 4 * UInt32.ofNat emitted) (by
       simpa only [UInt32.size] using hroom)
@@ -4238,8 +4228,7 @@ theorem twp_func3_finish_nonempty
       (UInt32.ofNat sorted.length) (UInt32.ofNat (4 * sorted.length)) []
   have hsortedLength : sorted.length = original.length :=
     hsorted.2.length_eq.symm
-  have hsortedPositive : 0 < sorted.length := by
-    simpa only [hsortedLength] using hpositive
+  have hsortedPositive : 0 < sorted.length := by simpa only [hsortedLength] using hpositive
   have hcapacityPositive : 0 < capacity.toNat := by
     rcases hgeo with hempty | hshort | hlarge
     · have hzero := hempty.2.2.1
@@ -4822,8 +4811,7 @@ theorem twp_func3_first_read_nonempty
       apply horiginal
       exact List.eq_nil_of_length_eq_zero (by omega)
     omega
-  have hinputMod : input.length % 4 = 0 := by
-    omega
+  have hinputMod : input.length % 4 = 0 := by omega
   have hsplit := readChunk_mod_four input hinputMod
   dsimp only at hsplit
   have hcountPositive : 0 < count := by
@@ -4844,12 +4832,10 @@ theorem twp_func3_first_read_nonempty
   have hcurrentShape :
       current.length = min 256 (current.length + remaining.length) := by
     simpa only [← hremainingLength] using hsplit.1
-  have hcurrentPositive : 0 < current.length := by
-    simpa only [hcurrentLength] using hcountPositive
+  have hcurrentPositive : 0 < current.length := by simpa only [hcurrentLength] using hcountPositive
   have hcurrentBound : current.length ≤ 256 := by
     rw [hcurrentLength]; exact min_le_left 256 input.length
-  have hcurrentMod : current.length % 4 = 0 := by
-    simpa only [hcurrentLength] using hsplit.2.1
+  have hcurrentMod : current.length % 4 = 0 := by simpa only [hcurrentLength] using hsplit.2.1
   have hserializeSplit :
       serialize original = [] ++ current ++ remaining := by
     calc
@@ -5644,8 +5630,7 @@ theorem twp_func3_read_dispatch_nonempty
       Hframe Hbump Hstreams %hfacts
     have hgeo : GeometricVecFacts (serialize original).length
         (serialize original).length 0 finalCapacity finalPtr finalFrontier
-        finalHistory := by
-      simpa only [← hfacts.1] using hfacts.2
+        finalHistory := by simpa only [← hfacts.1] using hfacts.2
     isimp only [← hfacts.1] at Hframe
     have Hcompleted := twp_func3_completed_nonempty hfunc5 hfunc9 heapId
       original finalCapacity finalPtr chunkBytes outputBytes finalShadow

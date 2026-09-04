@@ -724,13 +724,10 @@ theorem twp_mergeLeftLoop
         · exact hEq
       have hstateRight :
           MergeLoopInvariant input state.scratch left mid right
-            state.i right state.k state.emitted := by
-        simpa [hjEq] using hstate
+            state.i right state.k state.emitted := by simpa [hjEq] using hstate
       have hiLen : state.i < input.length := by omega
-      have hkInput : state.k < input.length := by
-        omega
-      have hkLen : state.k < state.scratch.length := by
-        simpa only [hdata.2.2.2.2.2.1] using hkInput
+      have hkInput : state.k < input.length := by omega
+      have hkLen : state.k < state.scratch.length := by simpa only [hdata.2.2.2.2.2.1] using hkInput
       simp only [if_neg (by decide : (1 : UInt32) ≠ 0)]
       iapply Wasm.SmallStep.twp_brIfZero (α := α)
       iapply twp_mergeLeftStep (α := α) source temporary input state.scratch
@@ -855,8 +852,7 @@ theorem twp_mergeRightLoop
         if_neg (by decide : (1 : UInt32) ≠ 0)]
       have hjLen : state.j < input.length := by omega
       have hkInput : state.k < input.length := by omega
-      have hkLen : state.k < state.scratch.length := by
-        simpa only [hdata.2.2.2.2.2.1] using hkInput
+      have hkLen : state.k < state.scratch.length := by simpa only [hdata.2.2.2.2.2.1] using hkInput
       iapply Wasm.SmallStep.twp_brIfZero (α := α)
       iapply twp_mergeRightStep (α := α) source temporary input state.scratch
         left mid right mid state.j state.k
@@ -1032,8 +1028,7 @@ theorem twp_mergeCopyLoop
         if_neg (by decide : (1 : UInt32) ≠ 0)]
       have hkInput : state.k < input.length := by omega
       have hkCurrent := hcopyState.k_lt_length hk
-      have hkScratch : state.k < scratch.length := by
-        simpa only [hscratchLength] using hkInput
+      have hkScratch : state.k < scratch.length := by simpa only [hscratchLength] using hkInput
       have hkMerged : state.k - left < merged.length := by omega
       have hlookup :
           scratch[state.k]? = some merged[state.k - left] := by
@@ -1701,8 +1696,7 @@ theorem twp_mergeSortInnerLoop
         Hruntime, Hsource, Htemporary, Hfinish⟩
     let left := state.pass * (2 * width)
     have hcountSize : count < UInt32.size := hlayout.length_lt
-    have hleftSize' : left < UInt32.size := by
-      simpa only [left] using hleftBound
+    have hleftSize' : left < UInt32.size := by simpa only [left] using hleftBound
     have hleftCmp :
         (UInt32.ofNat left < UInt32.ofNat count) ↔ left < count := by
       change (UInt32.ofNat left).toNat <
@@ -1717,16 +1711,14 @@ theorem twp_mergeSortInnerLoop
     by_cases hleftCount : left < count
     · have hcmp :
           UInt32.ofNat (state.pass * (2 * width)) <
-            UInt32.ofNat count := by
-        simpa only [left] using hleftCmp.mpr hleftCount
+            UInt32.ofNat count := by simpa only [left] using hleftCmp.mpr hleftCount
       simp only [if_pos hcmp,
         if_neg (by decide : (1 : UInt32) ≠ 0)]
       iapply Wasm.SmallStep.twp_brIfZero (α := α)
       have hfourCount := hlayout.source_fits
       have hleftWidth : left + width < UInt32.size := by omega
       have htwoWidth : width * 2 < UInt32.size := by omega
-      have hrightCandidate : left + width * 2 < UInt32.size := by
-        omega
+      have hrightCandidate : left + width * 2 < UInt32.size := by omega
       let newMid := min (left + width) count
       let newRight := min (left + width * 2) count
       simp only [mergeSortInnerStep, List.append_assoc]
@@ -1796,8 +1788,7 @@ theorem twp_mergeSortInnerLoop
       iframe
     · have hcmp :
           ¬UInt32.ofNat (state.pass * (2 * width)) <
-            UInt32.ofNat count := by
-        simpa only [left] using (mt hleftCmp.mp hleftCount)
+            UInt32.ofNat count := by simpa only [left] using (mt hleftCmp.mp hleftCount)
       simp only [if_neg hcmp]
       iapply Wasm.SmallStep.twp_brIf (α := α) (by decide) rfl
       simp only [List.take_zero, List.nil_append,

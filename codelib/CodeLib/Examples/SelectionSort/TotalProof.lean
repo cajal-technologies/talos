@@ -540,8 +540,7 @@ private theorem twp_recursiveSort_aux
       have hcmp := nat_lt_u32_iff hlengthSize htwoSize
       by_cases hbase : input.length < 2
       · iapply Wasm.SmallStep.twp_ltU (result := 1) (by
-          have hlt : UInt32.ofNat input.length < (2 : UInt32) := by
-            simpa using hcmp.mpr hbase
+          have hlt : UInt32.ofNat input.length < (2 : UInt32) := by simpa using hcmp.mpr hbase
           simp [hlt])
         iapply Wasm.SmallStep.twp_iff
           (selectedBody := [.ret]) (by simp)
@@ -551,8 +550,7 @@ private theorem twp_recursiveSort_aux
         iapply Hcont $$ %input %hpure Hruntime Harray
       · have hnotlt := mt hcmp.mp hbase
         iapply Wasm.SmallStep.twp_ltU (result := 0) (by
-          have hnlt : ¬UInt32.ofNat input.length < (2 : UInt32) := by
-            simpa using hnotlt
+          have hnlt : ¬UInt32.ofNat input.length < (2 : UInt32) := by simpa using hnotlt
           simp [hnlt])
         iapply Wasm.SmallStep.twp_iff (selectedBody := []) (by simp)
         wasm_twp_pures [twp_exitControl] using [List.take_zero, List.nil_append, List.drop_zero]
@@ -747,8 +745,7 @@ private theorem twp_innerLoop
       simp only [UInt32.size] at hfit ⊢; omega
     have hdeclaredSize : length < UInt32.size := by
       rwa [← hlength]
-    have hscanSize : state.scan < UInt32.size := by
-      omega
+    have hscanSize : state.scan < UInt32.size := by omega
     have hcmp := nat_lt_u32_iff hscanSize hdeclaredSize
     simp only [whileLoopCode, loopSelectionSortInnerCondition,
       loopSelectionSortInnerStep, List.append_assoc, List.cons_append,
