@@ -60,13 +60,9 @@ theorem perm_of_mergeLE {left right output}
     (hmerge : MergeLE left right output) :
     List.Perm (left ++ right) output := by
   induction hmerge with
-  | leftNil => simp
-  | rightNil => simp
-  | takeLeft hxy tail ih =>
-      simp only [List.cons_append]; exact List.Perm.cons _ ih
-  | takeRight hxy tail ih =>
-      exact (List.Perm.cons _ List.perm_middle).trans
-        ((List.Perm.swap _ _ _).symm.trans (List.Perm.cons _ ih))
+  | leftNil | rightNil | takeLeft => simp_all
+  | takeRight _ _ ih =>
+      exact List.perm_middle.trans (List.Perm.cons _ ih)
 
 theorem sorted_of_mergeLE {left right output}
     (hmerge : MergeLE left right output)
