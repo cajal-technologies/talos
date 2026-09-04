@@ -64,6 +64,12 @@ macro "wasm_twp_begin" : tactic =>
         (@TerminalView.running_not_val α Terminal view _)
      iintro %store %ns %obs %nt Hσ))
 
+/-- Introduce caller-supplied Iris resources, then enter total lifting. -/
+macro "wasm_twp_begin_with " intro:tactic : tactic =>
+  `(tactic|
+    ($intro
+     wasm_twp_begin))
+
 section terminalGeneric
 
 variable [WasmSmallStepGS hlc α]
@@ -89,8 +95,7 @@ theorem twp_pureStep
       Step ⟨.running current, store⟩ kind ⟨.running next, store⟩) :
     WP (Expr.running next : Expr α) @ s; E [{ Φ }] ⊢
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
-  iintro Htwp
-  wasm_twp_begin
+  wasm_twp_begin_with iintro Htwp
   wasm_twp_step hstep store =>
     wasm_twp_frame
       iexact Htwp
@@ -104,8 +109,7 @@ theorem twp_finish
       WP (.running
         ⟨{ locals with values }, [], arity, remainder, [], []⟩ :
           Expr α) @ s; E [{ Φ }] := by
-  iintro Htwp
-  wasm_twp_begin
+  wasm_twp_begin_with iintro Htwp
   wasm_twp_step Step.finish =>
     wasm_twp_frame
       iexact Htwp
@@ -119,8 +123,7 @@ theorem twp_returnFromFunction
       WP (.running
         ⟨locals, .ret :: code, arity, remainder, controls, []⟩ : Expr α) @
         s; E [{ Φ }] := by
-  iintro Htwp
-  wasm_twp_begin
+  wasm_twp_begin_with iintro Htwp
   wasm_twp_step Step.returnFromFunction =>
     wasm_twp_frame
       iexact Htwp
@@ -440,8 +443,7 @@ theorem twp_call
       WP (Expr.running next : Expr α) @ s; E [{ Φ }]) -∗
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
-  iintro Hruntime Htwp
-  wasm_twp_begin
+  wasm_twp_begin_with iintro Hruntime Htwp
   wasm_runtime_module_agree obs, callerId, runtimeModule $$ [$Hσ $Hruntime]
   have himports' :
       ¬functionIndex < store.runtime.currentModule.imports.length := by
@@ -548,8 +550,7 @@ theorem twp_callHost
           @ s; E [{ Φ }]) -∗
     WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
-  iintro HP Hruntime Henv HwpRet HwpTrap HwpThrow
-  wasm_twp_begin
+  wasm_twp_begin_with iintro HP Hruntime Henv HwpRet HwpTrap HwpThrow
   wasm_runtime_module_agree obs, callerId, runtimeModule $$ [$Hσ $Hruntime]
   simp only [runtimeModuleOwn]
   icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩
@@ -621,8 +622,7 @@ theorem twp_returnFromCallFallthrough
       WP (Expr.running next : Expr α) @ s; E [{ Φ }]) -∗
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
-  iintro Hruntime Hwp
-  wasm_twp_begin
+  wasm_twp_begin_with iintro Hruntime Hwp
   simp only [runtimeModuleOwn]
   icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩
   wasm_current_instance_agree obs, returningInstance $$ [$Hσ $HinstanceOwn]
@@ -662,8 +662,7 @@ theorem twp_returnFromCallExplicit
       WP (Expr.running next : Expr α) @ s; E [{ Φ }]) -∗
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
-  iintro Hruntime Hwp
-  wasm_twp_begin
+  wasm_twp_begin_with iintro Hruntime Hwp
   simp only [runtimeModuleOwn]
   icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩
   wasm_current_instance_agree obs, returningInstance $$ [$Hσ $HinstanceOwn]
@@ -702,8 +701,7 @@ theorem twp_memorySize
     WP (.running ⟨⟨params, localValues, values⟩,
         .memorySize :: code, arity, remainder, controls, calls⟩ : Expr α)
       @ s; E [{ Φ }] := by
-  iintro Hruntime
-  wasm_twp_begin
+  wasm_twp_begin_with iintro Hruntime
   wasm_runtime_module_agree obs, instanceId, runtimeModule $$ [$Hσ $Hruntime]
   wasm_twp_step Step.memorySize =>
     wasm_twp_frame
@@ -731,8 +729,7 @@ theorem twp_memorySize_tracked
     WP (.running ⟨⟨params, localValues, values⟩,
         .memorySize :: code, arity, remainder, controls, calls⟩ : Expr α)
       @ s; E [{ Φ }] := by
-  iintro HP Hruntime
-  wasm_twp_begin
+  wasm_twp_begin_with iintro HP Hruntime
   wasm_runtime_module_agree obs, instanceId, runtimeModule $$ [$Hσ $Hruntime]
   icombine HP Hruntime as Hclient
   icombine Hσ Hclient as Hinput
@@ -764,8 +761,7 @@ theorem twp_memoryGrow
     WP (.running ⟨⟨params, localValues, .i32 delta :: values⟩,
         .memoryGrow :: code, arity, remainder, controls, calls⟩ : Expr α)
       @ s; E [{ Φ }] := by
-  iintro Hruntime
-  wasm_twp_begin
+  wasm_twp_begin_with iintro Hruntime
   cases hg : store.wasm.mem.grow delta
       (store.wasm.memoryCap store.runtime.currentModule 0) with
   | none =>
@@ -822,8 +818,7 @@ theorem twp_memoryGrow_tracked
     WP (.running ⟨⟨params, localValues, .i32 delta :: values⟩,
         .memoryGrow :: code, arity, remainder, controls, calls⟩ : Expr α)
       @ s; E [{ Φ }] := by
-  iintro HP Hruntime HmeasuredPages
-  wasm_twp_begin
+  wasm_twp_begin_with iintro HP Hruntime HmeasuredPages
   ihave %hmeasuredPages : ⌜measuredPages ≤ store.wasm.mem.pages⌝ $$
       [Hσ HmeasuredPages]
   · imod (stateInterp_memoryPages_agree store ns obs nt measuredPages) $$
@@ -887,8 +882,7 @@ theorem twp_load32
       WP (Expr.running next : Expr α) @ s; E [{ Φ }]) -∗
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
-  iintro Hword Htwp
-  wasm_twp_begin
+  wasm_twp_begin_with iintro Hword Htwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read32 (address + offset) = word ∧
         (address + offset).toNat + 4 ≤
@@ -929,8 +923,7 @@ theorem twp_store32
       WP (Expr.running next : Expr α) @ s; E [{ Φ }]) -∗
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
-  iintro Hword Htwp
-  wasm_twp_begin
+  wasm_twp_begin_with iintro Hword Htwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read32 (address + offset) = oldWord ∧
         (address + offset).toNat + 4 ≤
@@ -982,8 +975,7 @@ theorem twp_memoryFill32
     WP (Expr.running ⟨⟨params, localValues,
         .i32 len :: .i32 value :: .i32 destination :: values⟩,
         .memoryFill :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }] := by
-  iintro Hbytes Htwp
-  wasm_twp_begin
+  wasm_twp_begin_with iintro Hbytes Htwp
   wasm_points_to_bytes_agree Hpb, destination, oldBytes, obs $$ [Hσ Hbytes]
   have hbound : destination.toNat + len.toNat ≤ store.wasm.mem.pages * 65536 := by
     have := pointsToBytes_facts_bound Hpb (by omega) (by omega)
@@ -1028,8 +1020,7 @@ theorem twp_memoryCopy32
         .i32 len :: .i32 source :: .i32 destination :: values⟩,
         .memoryCopy :: code, arity, remainder, controls, calls⟩ : Expr α)
       @ s; E [{ Φ }] := by
-  iintro Hsrc Hdst Htwp
-  wasm_twp_begin
+  wasm_twp_begin_with iintro Hsrc Hdst Htwp
   wasm_points_to_bytes_agree Hpbsrc, source, srcBytes, obs $$ [Hσ Hsrc]
   wasm_points_to_bytes_agree Hpbdst, destination, oldDstBytes, obs $$ [Hσ Hdst]
   have hbound_src :
@@ -1095,8 +1086,7 @@ theorem twp_throwI
       ⟨⟨params, localValues, values⟩,
         .throwI tagIndex :: code, arity, remainder, controls, calls⟩ :
         Expr α) @ s; E [{ Φ }] := by
-  iintro Hruntime Htags Hwp
-  wasm_twp_begin
+  wasm_twp_begin_with iintro Hruntime Htags Hwp
   wasm_runtime_module_agree obs, instanceId, runtimeModule $$ [$Hσ $Hruntime]
   have htag' : store.runtime.currentModule.tags[tagIndex]? = some tagType := by
     simpa only [Hmodule] using htag
@@ -1142,8 +1132,7 @@ theorem twp_catchException
                 resultArity := handlerResultArity, body := handlerBody,
                 continuation := handlerContinuation, belowStack } :: outer,
             calls⟩ : Expr α) @ s; E [{ Φ }] := by
-  iintro Hwp
-  wasm_twp_begin
+  wasm_twp_begin_with iintro Hwp
   have expectedStep : Step
       ⟨.running ⟨locals, [], arity, remainder,
           throwingFrame ::
@@ -1209,8 +1198,7 @@ theorem twp_globalGet
       WP (Expr.running next : Expr α) @ s; E [{ Φ }]) -∗
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
-  iintro Hglobal Htwp
-  wasm_twp_begin
+  wasm_twp_begin_with iintro Hglobal Htwp
   have hcanonical : ∀ s : MachineStore α,
       canonicalGlobalIndex s 0 = 0 := fun _ => rfl
   ihave_pure Hget :
@@ -1265,8 +1253,7 @@ theorem twp_f32Load
       WP (Expr.running next : Expr α) @ s; E [{ Φ }]) -∗
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
-  iintro Hword Htwp
-  wasm_twp_begin
+  wasm_twp_begin_with iintro Hword Htwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read32 (address + offset) = word ∧
         (address + offset).toNat + 4 ≤
@@ -1307,8 +1294,7 @@ theorem twp_f32Store
       WP (Expr.running next : Expr α) @ s; E [{ Φ }]) -∗
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
-  iintro Hword Htwp
-  wasm_twp_begin
+  wasm_twp_begin_with iintro Hword Htwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read32 (address + offset) = oldWord ∧
         (address + offset).toNat + 4 ≤
@@ -1355,8 +1341,7 @@ theorem twp_globalSet
       WP (Expr.running next : Expr α) @ s; E [{ Φ }]) -∗
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
-  iintro Hglobal Htwp
-  wasm_twp_begin
+  wasm_twp_begin_with iintro Hglobal Htwp
   have hcanonical : ∀ s : MachineStore α,
       canonicalGlobalIndex s 0 = 0 := fun _ => rfl
   ihave_pure Hget :
@@ -1423,8 +1408,7 @@ theorem twp_f64Load
       WP (Expr.running next : Expr α) @ s; E [{ Φ }]) -∗
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
-  iintro Hword Htwp
-  wasm_twp_begin
+  wasm_twp_begin_with iintro Hword Htwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read64 (address + offset) = word ∧
         (address + offset).toNat + 8 ≤
@@ -1474,8 +1458,7 @@ theorem twp_f64Store
       WP (Expr.running next : Expr α) @ s; E [{ Φ }]) -∗
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
-  iintro Hword Htwp
-  wasm_twp_begin
+  wasm_twp_begin_with iintro Hword Htwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read64 (address + offset) = oldWord ∧
         (address + offset).toNat + 8 ≤
@@ -1538,8 +1521,7 @@ theorem twp_load64
       WP (Expr.running next : Expr α) @ s; E [{ Φ }]) -∗
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
-  iintro Hword Htwp
-  wasm_twp_begin
+  wasm_twp_begin_with iintro Hword Htwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read64 (address + offset) = word ∧
         (address + offset).toNat + 8 ≤
@@ -1589,8 +1571,7 @@ theorem twp_store64
       WP (Expr.running next : Expr α) @ s; E [{ Φ }]) -∗
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
-  iintro Hword Htwp
-  wasm_twp_begin
+  wasm_twp_begin_with iintro Hword Htwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read64 (address + offset) = oldWord ∧
         (address + offset).toNat + 8 ≤
@@ -1831,8 +1812,7 @@ theorem twp_load32_addr
       WP (Expr.running next : Expr α) @ s; E [{ Φ }]) -∗
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
   dsimp only
-  iintro Hword Htwp
-  wasm_twp_begin
+  wasm_twp_begin_with iintro Hword Htwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read32 addr = word ∧
         addr.toNat + 4 ≤ store.wasm.mem.pages * 65536⌝ using

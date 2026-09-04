@@ -69,6 +69,12 @@ macro "wasm_wp_begin" : tactic =>
     (iapply wp_lift_step rfl
      iintro %store %ns %obs %obs' %nt Hσ))
 
+/-- Introduce caller-supplied Iris resources, then enter ordinary lifting. -/
+macro "wasm_wp_begin_with " intro:tactic : tactic =>
+  `(tactic|
+    ($intro
+     wasm_wp_begin))
+
 /-- Offer one Wasm primitive step to Iris and continue with its successor. -/
 syntax "wasm_wp_offer_step " term " =>" ppLine colGt tacticSeq : tactic
 
