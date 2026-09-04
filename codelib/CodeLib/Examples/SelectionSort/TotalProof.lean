@@ -202,8 +202,7 @@ theorem twp_swapAt64
     rw [getElem!_pos input b hb, getElem!_pos input a ha]
   iintro ⟨Harray, Hcont⟩
   simp only [swapAt, storeAt, List.append_assoc, List.cons_append, List.nil_append]
-  iapply twp_loadAt64 ha hfit hbase ha_local
-  iframe; iintro Harray
+  iapply_frame_intro twp_loadAt64 ha hfit hbase ha_local as Harray
   iapply Wasm.SmallStep.twp_localSet htmp_set
   iapply twp_address64 (by simpa using hbase_after) (by simpa using ha_after)
   iapply twp_loadAt64 hb hfit (by simpa using hbase_after) (by simpa using hb_after)
@@ -340,10 +339,8 @@ private theorem twp_findMin_aux
         wasm_twp_pures [twp_exitControl] using [List.take_zero, List.nil_append, List.drop_zero]
         have hbestLen : best < input.length :=
           _root_.lt_of_lt_of_le hinv.2.1 hinv.2.2.1
-        iapply twp_loadAt64 hs hfit rfl rfl
-        iframe; iintro Harray
-        iapply twp_loadAt64 hbestLen hfit rfl rfl
-        iframe; iintro Harray
+        iapply_frame_intro twp_loadAt64 hs hfit rfl rfl as Harray
+        iapply_frame_intro twp_loadAt64 hbestLen hfit rfl rfl as Harray
         wasm_twp_pures [twp_ltUI64]
         by_cases hlt : input[scan] < input[best]
         · simp only [if_pos hlt]
@@ -764,10 +761,8 @@ private theorem twp_innerLoop
       wasm_twp_pures [twp_brIfZero]
       have hbestLen : state.best < current.length := by
         exact _root_.lt_of_lt_of_le hstate.2.1 hstate.2.2.1
-      iapply twp_loadAt64 hs hfit rfl rfl
-      iframe; iintro Harray
-      iapply twp_loadAt64 hbestLen hfit rfl rfl
-      iframe; iintro Harray
+      iapply_frame_intro twp_loadAt64 hs hfit rfl rfl as Harray
+      iapply_frame_intro twp_loadAt64 hbestLen hfit rfl rfl as Harray
       wasm_twp_pures [twp_ltUI64]
       by_cases hlt : current[state.scan] < current[state.best]
       · simp only [if_pos hlt]

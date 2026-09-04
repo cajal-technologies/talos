@@ -240,15 +240,13 @@ theorem twp_swapAt
   simp only [swapAt, storeAt, List.append_assoc,
     List.cons_append, List.nil_append]
   -- step 1: load arr[a] onto stack
-  iapply twp_loadAt ha hfit hbase ha_local
-  iframe; iintro Harray
+  iapply_frame_intro twp_loadAt ha hfit hbase ha_local as Harray
   -- step 2: save arr[a] in tmp local
   iapply Wasm.SmallStep.twp_localSet htmp_set
   -- step 3: compute address of arr[a]
   iapply twp_address (by exact hbase_after) (by exact ha_after)
   -- step 4: load arr[b] onto stack
-  iapply twp_loadAt hb hfit (by exact hbase_after) (by exact hb_after)
-  iframe; iintro Harray
+  iapply_frame_intro twp_loadAt hb hfit (by exact hbase_after) (by exact hb_after) as Harray
   -- focus on cell a for the first store
   ihave ⟨Hcell_a, Hclose_a⟩ := arrayAt_set 0 base input a input[b] ha $$ Harray
   ihave Hcell_a' : pointsTo_u32 0 addr_a input[a] $$ [Hcell_a]

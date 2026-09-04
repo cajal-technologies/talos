@@ -182,10 +182,8 @@ theorem twp_mergeMainStep
         Expr α) @ s; E [{ Φ }] := by
   iintro ⟨Hsource, Htemporary, Hbranches⟩
   simp only [mergeMainStep, List.append_assoc]
-  iapply twp_loadAt (α := α) hiLen hlayout.source_fits rfl rfl
-  iframe; iintro Hsource
-  iapply twp_loadAt (α := α) hjLen hlayout.source_fits rfl rfl
-  iframe; iintro Hsource
+  iapply_frame_intro twp_loadAt (α := α) hiLen hlayout.source_fits rfl rfl as Hsource
+  iapply_frame_intro twp_loadAt (α := α) hjLen hlayout.source_fits rfl rfl as Hsource
   simp only [List.cons_append, List.nil_append]
   iapply Wasm.SmallStep.twp_ltU (α := α) rfl
   by_cases hxy : input[i]'hiLen < input[j]'hjLen
