@@ -172,12 +172,11 @@ theorem func4_lowered_smallStep_wp
   wasm_wp_next_rebind wp_call «module» 5 func5Def
     (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func5Def, Function.toLocals, Function.numParams, ValueType.zero]
-  iapply func5_lowered_body_smallStep_wp
-    (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module»)) x oldWord _ _
-  · iintro ⟨⟨HR, Hruntime⟩, Hglobal, Hword⟩
+  iapply_then_frame func5_lowered_body_smallStep_wp
+      (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module»)) x oldWord _ _ =>
+    iintro ⟨⟨HR, Hruntime⟩, Hglobal, Hword⟩
     wasm_wp_return_from_call Hruntime [List.take, List.singleton_append]
     iapply_frame hreturn
-  · iframe
 
 theorem deepFrameFloat_body_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -471,11 +470,11 @@ theorem naive_ceil_smallStep_wp
   wasm_wp_next_rebind wp_call «module» 2 func2Def
     (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func2Def, Function.toLocals, Function.numParams, ValueType.zero]
-  iapply func2_deep_body_smallStep_wp
-    (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
-      pointsTo_u32 0 1048556 oldWord))
-    (f32Trunc x) oldDeep _ _
-  · iintro ⟨⟨HR, Hruntime, Hword⟩, Hglobal, Hdeep⟩
+  iapply_then_frame func2_deep_body_smallStep_wp
+      (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
+        pointsTo_u32 0 1048556 oldWord))
+      (f32Trunc x) oldDeep _ _ =>
+    iintro ⟨⟨HR, Hruntime, Hword⟩, Hglobal, Hdeep⟩
     wasm_wp_return_from_call Hruntime [List.take, List.singleton_append]
     ihave HwordLater :
         ▷ pointsTo_u32 0 ((1048544 : UInt32) + 12) oldWord $$ [Hword]
@@ -487,7 +486,6 @@ theorem naive_ceil_smallStep_wp
         pointsTo_u32 0 1048556 (f32Ceil (f32Trunc x)) $$ [Hword]
     · irw_exact [← show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
     iapply_frame hnext
-  · iframe
 
 theorem naive_floor_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -522,11 +520,11 @@ theorem naive_floor_smallStep_wp
   wasm_wp_next_rebind wp_call «module» 3 func3Def
     (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func3Def, Function.toLocals, Function.numParams, ValueType.zero]
-  iapply func3_deep_body_smallStep_wp
-    (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
-      pointsTo_u32 0 1048556 oldWord))
-    (f32Trunc x) oldDeep _ _
-  · iintro ⟨⟨HR, Hruntime, Hword⟩, Hglobal, Hdeep⟩
+  iapply_then_frame func3_deep_body_smallStep_wp
+      (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
+        pointsTo_u32 0 1048556 oldWord))
+      (f32Trunc x) oldDeep _ _ =>
+    iintro ⟨⟨HR, Hruntime, Hword⟩, Hglobal, Hdeep⟩
     wasm_wp_return_from_call Hruntime [List.take, List.singleton_append]
     ihave HwordLater :
         ▷ pointsTo_u32 0 ((1048544 : UInt32) + 12) oldWord $$ [Hword]
@@ -538,7 +536,6 @@ theorem naive_floor_smallStep_wp
         pointsTo_u32 0 1048556 (f32Floor (f32Trunc x)) $$ [Hword]
     · irw_exact [← show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
     iapply_frame hnext
-  · iframe
 
 theorem naive_compare_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -603,10 +600,9 @@ theorem naive_compare_smallStep_wp
     wasm_wp_pures [wp_const wp_and] rewriting [show (1 &&& 1 : UInt32) = 1 by decide]
     wasm_wp_next wp_brIf (by decide) rfl
     simp only [naiveDFrame, List.take, List.nil_append]
-    iapply naive_ceil_smallStep_wp R x oldDeep oldWord calls _
-    · iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
+    iapply_then_frame naive_ceil_smallStep_wp R x oldDeep oldWord calls _ =>
+      iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
       iapply_frame hceil
-    · iframe
   · have hgeFalse :
         f32Ge (f32Sub x (f32Trunc x)) 1056964608 = false := by
       cases h : f32Ge (f32Sub x (f32Trunc x)) 1056964608 <;> simp_all
@@ -622,10 +618,9 @@ theorem naive_compare_smallStep_wp
       wasm_wp_pures [wp_const wp_and] rewriting [show (1 &&& 1 : UInt32) = 1 by decide]
       wasm_wp_next wp_brIf (by decide) rfl
       simp only [naiveBFrame, List.take, List.nil_append]
-      iapply naive_floor_smallStep_wp R x oldDeep oldWord calls _
-      · iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
+      iapply_then_frame naive_floor_smallStep_wp R x oldDeep oldWord calls _ =>
+        iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
         iapply_frame hfloor
-      · iframe
     · have hleFalse :
           f32Le (f32Sub x (f32Trunc x)) 3204448256 = false := by
         cases h : f32Le (f32Sub x (f32Trunc x)) 3204448256 <;> simp_all
@@ -633,13 +628,12 @@ theorem naive_compare_smallStep_wp
         (by simp [evalScalarFloat2?, hleFalse])
       wasm_wp_pures [wp_const wp_and] rewriting [show (0 &&& 1 : UInt32) = 0 by decide]
       wasm_wp_pures [wp_brIfZero wp_br] using [naiveCFrame, List.take, List.nil_append]
-      iapply naive_storeTrunc_smallStep_wp
-        (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
-          pointsTo_u32 0 1048540 oldDeep))
-        x oldWord calls _
-      · iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
+      iapply_then_frame naive_storeTrunc_smallStep_wp
+          (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
+            pointsTo_u32 0 1048540 oldDeep))
+          x oldWord calls _ =>
+        iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
         iapply_frame htrunc
-      · iframe
 
 theorem func0_lowered_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -737,29 +731,26 @@ theorem func0_lowered_smallStep_wp
     iapply naive_compare_smallStep_wp
       R x (f32Trunc x) oldWord calls _ _ _
     · iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
-      iapply naive_tail_smallStep_wp
-        (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
-          pointsTo_u32 0 1048540 (f32Ceil (f32Trunc x))))
-        x (f32Ceil (f32Trunc x)) calls _
-      · iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
+      iapply_then_frame naive_tail_smallStep_wp
+          (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
+            pointsTo_u32 0 1048540 (f32Ceil (f32Trunc x))))
+          x (f32Ceil (f32Trunc x)) calls _ =>
+        iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
         iapply_frame hreturn (f32Ceil (f32Trunc x))
-      · iframe
     · iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
-      iapply naive_tail_smallStep_wp
-        (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
-          pointsTo_u32 0 1048540 (f32Floor (f32Trunc x))))
-        x (f32Floor (f32Trunc x)) calls _
-      · iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
+      iapply_then_frame naive_tail_smallStep_wp
+          (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
+            pointsTo_u32 0 1048540 (f32Floor (f32Trunc x))))
+          x (f32Floor (f32Trunc x)) calls _ =>
+        iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
         iapply_frame hreturn (f32Floor (f32Trunc x))
-      · iframe
     · iintro ⟨HR, Hruntime, Hdeep, Hglobal, Hword⟩
-      iapply naive_tail_smallStep_wp
-        (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
-          pointsTo_u32 0 1048540 (f32Trunc x)))
-        x (f32Trunc x) calls _
-      · iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
+      iapply_then_frame naive_tail_smallStep_wp
+          (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
+            pointsTo_u32 0 1048540 (f32Trunc x)))
+          x (f32Trunc x) calls _ =>
+        iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
         iapply_frame hreturn (f32Trunc x)
-      · iframe
     · iframe
   · iframe
 
@@ -1049,12 +1040,11 @@ theorem twp_func4_lowered_smallStep_wp
   wasm_twp_rebind twp_call «module» 5 func5Def
     (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func5Def, Function.toLocals, Function.numParams, ValueType.zero]
-  iapply twp_func5_lowered_body_smallStep_wp
-    (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module»)) x oldWord _ _
-  · iintro ⟨⟨HR, Hruntime⟩, Hglobal, Hword⟩
+  iapply_then_frame twp_func5_lowered_body_smallStep_wp
+      (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module»)) x oldWord _ _ =>
+    iintro ⟨⟨HR, Hruntime⟩, Hglobal, Hword⟩
     wasm_twp_return_from_call Hruntime [List.take, List.singleton_append]
     iapply_frame hreturn
-  · iframe
 
 theorem twp_deepFrameFloat_body_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -1265,11 +1255,11 @@ theorem twp_naive_ceil_smallStep_wp
   wasm_twp_rebind twp_call «module» 2 func2Def
     (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func2Def, Function.toLocals, Function.numParams, ValueType.zero]
-  iapply twp_func2_deep_body_smallStep_wp
-    (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
-      pointsTo_u32 0 1048556 oldWord))
-    (f32Trunc x) oldDeep _ _
-  · iintro ⟨⟨HR, Hruntime, Hword⟩, Hglobal, Hdeep⟩
+  iapply_then_frame twp_func2_deep_body_smallStep_wp
+      (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
+        pointsTo_u32 0 1048556 oldWord))
+      (f32Trunc x) oldDeep _ _ =>
+    iintro ⟨⟨HR, Hruntime, Hword⟩, Hglobal, Hdeep⟩
     wasm_twp_return_from_call Hruntime [List.take, List.singleton_append]
     ihave Hword' : pointsTo_u32 0 ((1048544 : UInt32) + 12) oldWord $$ [Hword]
     · irw_exact [show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
@@ -1280,7 +1270,6 @@ theorem twp_naive_ceil_smallStep_wp
         pointsTo_u32 0 1048556 (f32Ceil (f32Trunc x)) $$ [Hword]
     · irw_exact [← show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
     iapply_frame hnext
-  · iframe
 
 theorem twp_naive_floor_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -1315,11 +1304,11 @@ theorem twp_naive_floor_smallStep_wp
   wasm_twp_rebind twp_call «module» 3 func3Def
     (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func3Def, Function.toLocals, Function.numParams, ValueType.zero]
-  iapply twp_func3_deep_body_smallStep_wp
-    (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
-      pointsTo_u32 0 1048556 oldWord))
-    (f32Trunc x) oldDeep _ _
-  · iintro ⟨⟨HR, Hruntime, Hword⟩, Hglobal, Hdeep⟩
+  iapply_then_frame twp_func3_deep_body_smallStep_wp
+      (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
+        pointsTo_u32 0 1048556 oldWord))
+      (f32Trunc x) oldDeep _ _ =>
+    iintro ⟨⟨HR, Hruntime, Hword⟩, Hglobal, Hdeep⟩
     wasm_twp_return_from_call Hruntime [List.take, List.singleton_append]
     ihave Hword' : pointsTo_u32 0 ((1048544 : UInt32) + 12) oldWord $$ [Hword]
     · irw_exact [show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
@@ -1330,7 +1319,6 @@ theorem twp_naive_floor_smallStep_wp
         pointsTo_u32 0 1048556 (f32Floor (f32Trunc x)) $$ [Hword]
     · irw_exact [← show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
     iapply_frame hnext
-  · iframe
 
 theorem twp_naive_compare_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -1394,10 +1382,9 @@ theorem twp_naive_compare_smallStep_wp
     wasm_twp_pures [twp_const twp_and] rewriting [show (1 &&& 1 : UInt32) = 1 by decide]
     iapply twp_brIf (by decide) rfl
     simp only [naiveDFrame, List.take, List.nil_append]
-    iapply twp_naive_ceil_smallStep_wp R x oldDeep oldWord calls _
-    · iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
+    iapply_then_frame twp_naive_ceil_smallStep_wp R x oldDeep oldWord calls _ =>
+      iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
       iapply_frame hceil
-    · iframe
   · have hgeFalse :
         f32Ge (f32Sub x (f32Trunc x)) 1056964608 = false := by
       cases h : f32Ge (f32Sub x (f32Trunc x)) 1056964608 <;> simp_all
@@ -1412,10 +1399,9 @@ theorem twp_naive_compare_smallStep_wp
       wasm_twp_pures [twp_const twp_and] rewriting [show (1 &&& 1 : UInt32) = 1 by decide]
       iapply twp_brIf (by decide) rfl
       simp only [naiveBFrame, List.take, List.nil_append]
-      iapply twp_naive_floor_smallStep_wp R x oldDeep oldWord calls _
-      · iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
+      iapply_then_frame twp_naive_floor_smallStep_wp R x oldDeep oldWord calls _ =>
+        iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
         iapply_frame hfloor
-      · iframe
     · have hleFalse :
           f32Le (f32Sub x (f32Trunc x)) 3204448256 = false := by
         cases h : f32Le (f32Sub x (f32Trunc x)) 3204448256 <;> simp_all
@@ -1423,13 +1409,12 @@ theorem twp_naive_compare_smallStep_wp
         (by simp [evalScalarFloat2?, hleFalse])
       wasm_twp_pures [twp_const twp_and] rewriting [show (0 &&& 1 : UInt32) = 0 by decide]
       wasm_twp_pures [twp_brIfZero twp_br] using [naiveCFrame, List.take, List.nil_append]
-      iapply twp_naive_storeTrunc_smallStep_wp
-        (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
-          pointsTo_u32 0 1048540 oldDeep))
-        x oldWord calls _
-      · iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
+      iapply_then_frame twp_naive_storeTrunc_smallStep_wp
+          (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
+            pointsTo_u32 0 1048540 oldDeep))
+          x oldWord calls _ =>
+        iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
         iapply_frame htrunc
-      · iframe
 
 theorem twp_func0_lowered_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -1525,29 +1510,26 @@ theorem twp_func0_lowered_smallStep_wp
     iapply twp_naive_compare_smallStep_wp
       R x (f32Trunc x) oldWord calls _ _ _
     · iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
-      iapply twp_naive_tail_smallStep_wp
-        (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
-          pointsTo_u32 0 1048540 (f32Ceil (f32Trunc x))))
-        x (f32Ceil (f32Trunc x)) calls _
-      · iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
+      iapply_then_frame twp_naive_tail_smallStep_wp
+          (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
+            pointsTo_u32 0 1048540 (f32Ceil (f32Trunc x))))
+          x (f32Ceil (f32Trunc x)) calls _ =>
+        iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
         iapply_frame hreturn (f32Ceil (f32Trunc x))
-      · iframe
     · iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
-      iapply twp_naive_tail_smallStep_wp
-        (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
-          pointsTo_u32 0 1048540 (f32Floor (f32Trunc x))))
-        x (f32Floor (f32Trunc x)) calls _
-      · iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
+      iapply_then_frame twp_naive_tail_smallStep_wp
+          (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
+            pointsTo_u32 0 1048540 (f32Floor (f32Trunc x))))
+          x (f32Floor (f32Trunc x)) calls _ =>
+        iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
         iapply_frame hreturn (f32Floor (f32Trunc x))
-      · iframe
     · iintro ⟨HR, Hruntime, Hdeep, Hglobal, Hword⟩
-      iapply twp_naive_tail_smallStep_wp
-        (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
-          pointsTo_u32 0 1048540 (f32Trunc x)))
-        x (f32Trunc x) calls _
-      · iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
+      iapply_then_frame twp_naive_tail_smallStep_wp
+          (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
+            pointsTo_u32 0 1048540 (f32Trunc x)))
+          x (f32Trunc x) calls _ =>
+        iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
         iapply_frame hreturn (f32Trunc x)
-      · iframe
     · iframe
   · iframe
 

@@ -789,11 +789,10 @@ theorem func1_alias_context_smallStep_wp
   iintro ⟨HR, Hruntime, Hresources⟩
   wasm_wp_next func1_happyPrefix_smallStep_wp ptr len i i hi hi calls
   wasm_wp_next_rebind func1_call2_entry_smallStep_wp ptr len i i calls with Hruntime
-  iapply func2Alias_in_func1_context_smallStep_wp R
-    ptr len i oldScratch oldValue hroom calls
-  · iintro ⟨Hruntime, HR, Hresources⟩
+  iapply_then_frame func2Alias_in_func1_context_smallStep_wp R
+      ptr len i oldScratch oldValue hroom calls =>
+    iintro ⟨Hruntime, HR, Hresources⟩
     iapply_frame hreturn
-  · iframe
 
 /-- Call-stack-polymorphic happy path of generated `func1`. The theorem stops
 at `func1`'s own final return, allowing callers to choose whether that return
@@ -833,11 +832,10 @@ theorem func1_happy_context_smallStep_wp
   iintro ⟨HR, Hruntime, Hresources⟩
   wasm_wp_next func1_happyPrefix_smallStep_wp ptr len i j hi hj calls
   wasm_wp_next_rebind func1_call2_entry_smallStep_wp ptr len i j calls with Hruntime
-  iapply func2_in_func1_context_smallStep_wp R
-    ptr len i j oldScratch oldA oldB hroomI hroomJ calls
-  · iintro ⟨Hruntime, HR, Hresources⟩
+  iapply_then_frame func2_in_func1_context_smallStep_wp R
+      ptr len i j oldScratch oldA oldB hroomI hroomJ calls =>
+    iintro ⟨Hruntime, HR, Hresources⟩
     iapply_frame hreturn
-  · iframe
 
 /-- End-to-end happy path of generated `func1`: both bounds checks succeed,
 the physical-runtime-checked direct call enters `func2`, the three words are
@@ -915,12 +913,11 @@ theorem func0_happy_context_smallStep_wp
     List.length_cons, List.length_nil, Nat.reduceAdd, List.take, List.drop,
     List.reverse_cons, List.reverse_nil, List.nil_append,
     List.cons_append, List.map, ValueType.zero]
-  iapply func1_happy_context_smallStep_wp R
-    ptr len i j oldScratch oldA oldB hi hj hroomI hroomJ _
-  · iintro ⟨HR, Hruntime, Hmem⟩
+  iapply_then_frame func1_happy_context_smallStep_wp R
+      ptr len i j oldScratch oldA oldB hi hj hroomI hroomJ _ =>
+    iintro ⟨HR, Hruntime, Hmem⟩
     wasm_wp_return_from_call Hruntime [List.take, List.nil_append]
     iapply_frame hreturn
-  · iframe
 
 /-- Equal-index path of the generated forwarding wrapper. -/
 theorem func0_alias_context_smallStep_wp
@@ -958,12 +955,11 @@ theorem func0_alias_context_smallStep_wp
     List.length_cons, List.length_nil, Nat.reduceAdd, List.take, List.drop,
     List.reverse_cons, List.reverse_nil, List.nil_append,
     List.cons_append, List.map, ValueType.zero]
-  iapply func1_alias_context_smallStep_wp R
-    ptr len i oldScratch oldValue hi hroom _
-  · iintro ⟨HR, Hruntime, Hmem⟩
+  iapply_then_frame func1_alias_context_smallStep_wp R
+      ptr len i oldScratch oldValue hi hroom _ =>
+    iintro ⟨HR, Hruntime, Hmem⟩
     wasm_wp_return_from_call Hruntime [List.take, List.nil_append]
     iapply_frame hreturn
-  · iframe
 
 /-- Top-level equal-index forwarding-wrapper contract. -/
 theorem func0_alias_smallStep_wp
@@ -1490,11 +1486,10 @@ theorem twp_func1_alias_context_smallStep_wp
   iintro ⟨HR, Hruntime, Hresources⟩
   iapply twp_func1_happyPrefix_smallStep_wp ptr len i i hi hi calls
   wasm_twp_rebind twp_func1_call2_entry_smallStep_wp ptr len i i calls with Hruntime
-  iapply twp_func2Alias_in_func1_context_smallStep_wp R
-    ptr len i oldScratch oldValue hroom calls
-  · iintro ⟨Hruntime, HR, Hresources⟩
+  iapply_then_frame twp_func2Alias_in_func1_context_smallStep_wp R
+      ptr len i oldScratch oldValue hroom calls =>
+    iintro ⟨Hruntime, HR, Hresources⟩
     iapply_frame hreturn
-  · iframe
 
 theorem twp_func1_happy_context_smallStep_wp
     [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
@@ -1531,11 +1526,10 @@ theorem twp_func1_happy_context_smallStep_wp
   iintro ⟨HR, Hruntime, Hresources⟩
   iapply twp_func1_happyPrefix_smallStep_wp ptr len i j hi hj calls
   wasm_twp_rebind twp_func1_call2_entry_smallStep_wp ptr len i j calls with Hruntime
-  iapply twp_func2_in_func1_context_smallStep_wp R
-    ptr len i j oldScratch oldA oldB hroomI hroomJ calls
-  · iintro ⟨Hruntime, HR, Hresources⟩
+  iapply_then_frame twp_func2_in_func1_context_smallStep_wp R
+      ptr len i j oldScratch oldA oldB hroomI hroomJ calls =>
+    iintro ⟨Hruntime, HR, Hresources⟩
     iapply_frame hreturn
-  · iframe
 
 theorem twp_func1_happy_smallStep_wp
     [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
@@ -1611,12 +1605,11 @@ theorem twp_func0_happy_context_smallStep_wp
     List.length_cons, List.length_nil, Nat.reduceAdd, List.take, List.drop,
     List.reverse_cons, List.reverse_nil, List.nil_append,
     List.cons_append, List.map, ValueType.zero]
-  iapply twp_func1_happy_context_smallStep_wp R
-    ptr len i j oldScratch oldA oldB hi hj hroomI hroomJ _
-  · iintro ⟨HR, Hruntime, Hmem⟩
+  iapply_then_frame twp_func1_happy_context_smallStep_wp R
+      ptr len i j oldScratch oldA oldB hi hj hroomI hroomJ _ =>
+    iintro ⟨HR, Hruntime, Hmem⟩
     wasm_twp_return_from_call Hruntime [List.take, List.nil_append]
     iapply_frame hreturn
-  · iframe
 
 theorem twp_func0_alias_context_smallStep_wp
     [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
@@ -1653,12 +1646,11 @@ theorem twp_func0_alias_context_smallStep_wp
     List.length_cons, List.length_nil, Nat.reduceAdd, List.take, List.drop,
     List.reverse_cons, List.reverse_nil, List.nil_append,
     List.cons_append, List.map, ValueType.zero]
-  iapply twp_func1_alias_context_smallStep_wp R
-    ptr len i oldScratch oldValue hi hroom _
-  · iintro ⟨HR, Hruntime, Hmem⟩
+  iapply_then_frame twp_func1_alias_context_smallStep_wp R
+      ptr len i oldScratch oldValue hi hroom _ =>
+    iintro ⟨HR, Hruntime, Hmem⟩
     wasm_twp_return_from_call Hruntime [List.take, List.nil_append]
     iapply_frame hreturn
-  · iframe
 
 theorem twp_func0_alias_smallStep_wp
     [Wasm.SmallStep.WasmSmallStepGS hlc Unit]

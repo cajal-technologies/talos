@@ -784,12 +784,11 @@ theorem func0_lowered_smallStep_wp
   wasm_wp_next_rebind wp_call «module» 1 func1Def
     (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func1Def, Function.toLocals, Function.numParams, ValueType.zero]
-  iapply func1_lowered_body_smallStep_wp
-    (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module»)) x oldWord _
-  · iintro ⟨⟨HR, Hruntime⟩, Hglobal, Hword⟩
+  iapply_then_frame func1_lowered_body_smallStep_wp
+      (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module»)) x oldWord _ =>
+    iintro ⟨⟨HR, Hruntime⟩, Hglobal, Hword⟩
     wasm_wp_return_from_call Hruntime [List.take, List.singleton_append]
     iapply_frame hreturn
-  · iframe
 
 /-- `func3` under an export's already-lowered stack pointer. -/
 theorem func3_lowered_body_smallStep_wp
@@ -857,15 +856,14 @@ theorem func2_lowered_smallStep_wp
   wasm_wp_next_rebind wp_call «module» 3 func3Def
     (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func3Def, Function.toLocals, Function.numParams, ValueType.zero]
-  iapply func3_lowered_body_smallStep_wp
-    (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module»))
-    (f64PromoteF32 x) oldWord _
-  · iintro ⟨⟨HR, Hruntime⟩, Hglobal, Hword⟩
+  iapply_then_frame func3_lowered_body_smallStep_wp
+      (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module»))
+      (f64PromoteF32 x) oldWord _ =>
+    iintro ⟨⟨HR, Hruntime⟩, Hglobal, Hword⟩
     wasm_wp_return_from_call Hruntime [List.take, List.singleton_append]
     wasm_wp_next wp_scalarFloat1 rfl rfl
     simp only [func2Result] at hreturn
     iapply_frame hreturn
-  · iframe
 
 /-- `func8` under an export's already-lowered stack pointer. -/
 theorem func8_lowered_body_smallStep_wp
@@ -931,12 +929,11 @@ theorem func7_lowered_smallStep_wp
   wasm_wp_next_rebind wp_call «module» 8 func8Def
     (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func8Def, Function.toLocals, Function.numParams, ValueType.zero]
-  iapply func8_lowered_body_smallStep_wp
-    (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module»)) x y oldWord _
-  · iintro ⟨⟨HR, Hruntime⟩, Hglobal, Hword⟩
+  iapply_then_frame func8_lowered_body_smallStep_wp
+      (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module»)) x y oldWord _ =>
+    iintro ⟨⟨HR, Hruntime⟩, Hglobal, Hword⟩
     wasm_wp_return_from_call Hruntime [List.take, List.singleton_append]
     iapply_frame hreturn
-  · iframe
 
 theorem func9_context_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
