@@ -1348,8 +1348,8 @@ theorem twp_mergeSortPrepareRight
   iapply Wasm.SmallStep.twp_localSet (α := α) rfl
   simp [sortLocals, List.set]
   have hmul' :
-      UInt32.ofNat width * 2 = UInt32.ofNat (width * 2) := by
-    exact u32_ofNat_mul (a := width) (b := 2) _htwoWidth
+      UInt32.ofNat width * 2 = UInt32.ofNat (width * 2) :=
+    u32_ofNat_mul (a := width) (b := 2) _htwoWidth
   rw [hmul', u32_ofNat_add hrightCandidate]
   iapply Wasm.SmallStep.twp_localGet (α := α) rfl
   iapply Wasm.SmallStep.twp_localGet (α := α) rfl

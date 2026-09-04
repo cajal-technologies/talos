@@ -759,8 +759,7 @@ private theorem twp_innerLoop
       simp only [if_pos (hcmp.mpr hs'),
         if_neg (by decide : ¬(1 : UInt32) = 0)]
       wasm_twp_pures [twp_brIfZero]
-      have hbestLen : state.best < current.length := by
-        exact _root_.lt_of_lt_of_le hstate.2.1 hstate.2.2.1
+      have hbestLen : state.best < current.length := _root_.lt_of_lt_of_le hstate.2.1 hstate.2.2.1
       iapply_frame_intro twp_loadAt64 hs hfit rfl rfl as Harray
       iapply_frame_intro twp_loadAt64 hbestLen hfit rfl rfl as Harray
       wasm_twp_pures [twp_ltUI64]

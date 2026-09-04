@@ -64,8 +64,8 @@ theorem narrowI32_terminates :
     TerminatesWith (narrowI32Config 2) (fun vs _ => vs = [.i32 0xABCD]) ∧
     TerminatesWith (narrowI32Config 3) (fun vs _ => vs = [.i32 0xFFFFFFCD]) ∧
     TerminatesWith (narrowI32Config 4) (fun vs _ => vs = [.i32 0xAB]) ∧
-    TerminatesWith (narrowI32Config 5) (fun vs _ => vs = [.i32 0xABCD]) := by
-  exact ⟨runSteps_values_terminates load8U_returns_byte,
+    TerminatesWith (narrowI32Config 5) (fun vs _ => vs = [.i32 0xABCD]) :=
+  ⟨runSteps_values_terminates load8U_returns_byte,
     runSteps_values_terminates load8S_sign_extends,
     runSteps_values_terminates load16U_returns_halfword,
     runSteps_values_terminates load16S_sign_extends,

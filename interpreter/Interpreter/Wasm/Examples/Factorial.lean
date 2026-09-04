@@ -152,8 +152,7 @@ private theorem factorial_initial_steps (n : UInt32) :
     Steps (factorialConfig n)
       [.instruction (.const 1), .instruction (.localSet 1),
         .instruction (.loop 0 0 factorialLoopBody)]
-      (factorialLoopConfig n 1) := by
-  exact Steps.cons .const
+      (factorialLoopConfig n 1) := Steps.cons .const
     (Steps.cons (.localSet rfl) (Steps.single .loop))
 
 theorem factorial_steps (n : UInt32) :

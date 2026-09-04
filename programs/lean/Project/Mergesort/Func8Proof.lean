@@ -754,8 +754,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
                         pages < (allocatorRequiredPages finish).toNat := by
                       rw [← hpagesWord]
                       have hwordLt : UInt32.ofNat pages <
-                          allocatorRequiredPages finish := by
-                        exact UInt32.not_le.mp hcapacity
+                          allocatorRequiredPages finish := UInt32.not_le.mp hcapacity
                       exact UInt32.lt_iff_toNat_lt.mp hwordLt
                     have hdeltaNat : delta.toNat =
                         (allocatorRequiredPages finish).toNat - pages := by

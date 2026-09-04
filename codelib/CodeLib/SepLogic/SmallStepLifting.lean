@@ -3946,8 +3946,7 @@ theorem wp_tableInitLive
           store elementIndex (some entries) := by
     simp [segmentValues, elementSegmentValues, Hmodule]
   have hsourceBound' :
-      source.toNat + length.toNat ≤ segmentValues.length := by
-    exact hsourceBound
+      source.toNat + length.toNat ≤ segmentValues.length := hsourceBound
   let newTable :=
     listWriteAt table destinationNat
       ((segmentValues.drop source.toNat).take length.toNat)

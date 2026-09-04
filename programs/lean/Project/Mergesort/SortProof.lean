@@ -1697,8 +1697,7 @@ theorem twp_mergeLeftRemainder
         (by rfl) (by rfl) (by rw [UInt32.add_comm]) (by rfl)
       isplitl_exacts [Hsource Hscratch]
       iintro ⟨Hsource, Hscratch⟩
-      have hmidSize : mid < UInt32.size := by
-        exact Nat.lt_of_le_of_lt hmjState hlayout.length_lt
+      have hmidSize : mid < UInt32.size := Nat.lt_of_le_of_lt hmjState hlayout.length_lt
       have hrSuccSize : state.r + 1 < UInt32.size := by
         have : state.r + 1 ≤ n := by omega
         omega
@@ -1848,10 +1847,8 @@ theorem twp_mergeRightRemainder
   rcases hdata with
     ⟨_, him, hmj, hjl, hscratchLength, hkEmitted,
       hemittedLength, htake, hprogress⟩
-  have hmidSize : mid < UInt32.size := by
-    exact Nat.lt_of_le_of_lt (Nat.le_trans hmj hjl) hlayout.length_lt
-  have hjSize : j < UInt32.size := by
-    exact Nat.lt_of_le_of_lt hjl hlayout.length_lt
+  have hmidSize : mid < UInt32.size := Nat.lt_of_le_of_lt (Nat.le_trans hmj hjl) hlayout.length_lt
+  have hjSize : j < UInt32.size := Nat.lt_of_le_of_lt hjl hlayout.length_lt
   have hjDiffSize : j - mid < UInt32.size := by omega
   have hlengthDiffSize : input.length - mid < UInt32.size :=
     Nat.lt_of_le_of_lt (Nat.sub_le _ _) hlayout.length_lt

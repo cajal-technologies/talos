@@ -909,8 +909,7 @@ theorem classifyBump_success_reachable
         base = UInt32.ofNat (frontier + 3) &&& (0 - 4) := by
       norm_num [halignment] at hbase ⊢; exact hbase
     have hsumWord :
-        (UInt32.ofNat (frontier + 3)).toNat = frontier + 3 := by
-      exact UInt32.toNat_ofNat_of_lt' hsum'
+        (UInt32.ofNat (frontier + 3)).toNat = frontier + 3 := UInt32.toNat_ofNat_of_lt' hsum'
     have hbaseNat :
         base.toNat = (frontier + 3) - (frontier + 3) % 4 := by
       rw [hbase', align4_mask_toNat, hsumWord]

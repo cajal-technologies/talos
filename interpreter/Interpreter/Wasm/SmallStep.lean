@@ -7304,8 +7304,7 @@ theorem runSteps_eq_success_of_steps
     {config : Config α} {trace : List StepKind}
     {values : List Value} {store : MachineStore α}
     (h : Steps config trace ⟨.done values, store⟩) :
-    (runSteps trace.length config).result = .success values store := by
-  exact runSteps_finalConfig_of_steps h
+    (runSteps trace.length config).result = .success values store := runSteps_finalConfig_of_steps h
 
 theorem runSteps_sound {fuel : Nat} {config final : Config α}
     (h : (runSteps fuel config).result.finalConfig? = some final) :

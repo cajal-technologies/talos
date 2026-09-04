@@ -354,8 +354,7 @@ theorem inputHeap_inBounds (program : Executable) (input : List UInt64)
       Fits, serialize_length, bufferBytes] at hfit ⊢
     omega
   · have hpages :
-        (initialStore program (serialize input)).mem.pages = 1 := by
-      exact program.memory_pages
+        (initialStore program (serialize input)).mem.pages = 1 := program.memory_pages
     rw [hpages]
     simp only [array, UInt32.reduceToNat, Nat.zero_add, Nat.one_mul,
       Fits, serialize_length, bufferBytes] at hfit ⊢
@@ -602,8 +601,7 @@ theorem array64At_capacity [WasmSmallStepGS hlc α]
     let k := values.length - 1
     have hk : k < values.length := by simp [k, hlength]
     let address := base + 8 * UInt32.ofNat k
-    have haddress : address.toNat = base.toNat + 8 * k := by
-      exact Mem.words64_slotAddr_toNat base k (by
+    have haddress : address.toNat = base.toNat + 8 * k := Mem.words64_slotAddr_toNat base k (by
         simp only [UInt32.size] at hfit; omega)
     obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := UInt32.addSteps8 address (by
       simp only [UInt32.size] at hfit ⊢

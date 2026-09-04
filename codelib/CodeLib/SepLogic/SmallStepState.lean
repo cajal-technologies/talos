@@ -1071,8 +1071,8 @@ theorem stateInterp_alloc_freshRange_owned [WasmSmallStepGS hlc α]
       ⟨Hstate, Hpages, %hpages⟩
   · iframe Hstate Hpages
   have hboundPhysical :
-      base.toNat + size ≤ store.wasm.mem.pages * 65536 := by
-    exact Nat.le_trans hbound (Nat.mul_le_mul_right 65536 hpages)
+      base.toNat + size ≤ store.wasm.mem.pages * 65536 :=
+    Nat.le_trans hbound (Nat.mul_le_mul_right 65536 hpages)
   imod stateInterp_alloc_freshRange store steps observations threads
       frontier base size hbase hboundPhysical hnowrap $$
       [Hstate Hfrontier] with ⟨Hstate, Hfrontier, Hbytes⟩
@@ -2392,8 +2392,7 @@ theorem stateInterp_write_bytes [WasmSmallStepGS hlc α]
               UInt32.size := by
             rw [h1]
             simp only [List.length_cons] at hnowrap; omega
-          have haddr : UInt32.ofNat addr.toNat = addr := by
-            exact UInt32.ofNat_toNat
+          have haddr : UInt32.ofNat addr.toNat = addr := UInt32.ofNat_toNat
           have hmem :
               (store.wasm.mem.write8 addr new).writeBytes
                   (addr + 1).toNat newRest =

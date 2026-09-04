@@ -1547,8 +1547,7 @@ theorem twp_func3_allocate_values
       (UInt32.ofNat completed.length).toNat = completed.length := by
     apply UInt32.toNat_ofNat_of_lt'
     norm_num [UInt32.size] at hbound ⊢; omega
-  have hlayoutValid : layout.Valid := by
-    exact Project.Mergesort.Representations.align4Layout_valid_of_bounds
+  have hlayoutValid : layout.Valid := Project.Mergesort.Representations.align4Layout_valid_of_bounds
       completed.length hpositive hbound halign
   have hlayoutMatches :
       layout.Matches (UInt32.ofNat completed.length) 4 := by
@@ -1769,8 +1768,8 @@ theorem twp_func3_copy_decoded_word
     iexact HdestinationStored
   ihave Hsource := HcloseSource $$ HsourceWord
   ihave Hdestination := HcloseDestination $$ HdestinationWord
-  have hnext : current.set copied original[copied] = next := by
-    exact overwritePrefix_set_next original initial copied hlength hcopied
+  have hnext : current.set copied original[copied] = next :=
+    overwritePrefix_set_next original initial copied hlength hcopied
   ihave Hnext : WordSlice destination next $$ [Hdestination]
   · irw_exact [← hnext] with Hdestination
   iapply Hcont $$ Hsource Hnext
@@ -2930,8 +2929,7 @@ theorem twp_func3_allocate_scratch
   have hsizeWord :
       (UInt32.ofNat (4 * original.length)).toNat = 4 * original.length :=
     UInt32.toNat_ofNat_of_lt' hwordBound
-  have hlayoutValid : layout.Valid := by
-    exact align4Layout_valid_of_bounds (4 * original.length)
+  have hlayoutValid : layout.Valid := align4Layout_valid_of_bounds (4 * original.length)
       (by omega) hbyteBound (by omega)
   have hlayoutMatches :
       layout.Matches (UInt32.ofNat (4 * original.length)) 4 := by
@@ -4842,8 +4840,7 @@ theorem twp_func3_first_read_nonempty
       input.length = current.length + remaining.length := by
     dsimp only [current, remaining]
     rw [← List.length_append, List.take_append_drop count input]
-  have hcurrentLength : current.length = count := by
-    exact hsplit.1
+  have hcurrentLength : current.length = count := hsplit.1
   have hcurrentShape :
       current.length = min 256 (current.length + remaining.length) := by
     simpa only [← hremainingLength] using hsplit.1
@@ -4857,8 +4854,7 @@ theorem twp_func3_first_read_nonempty
       serialize original = [] ++ current ++ remaining := by
     calc
       serialize original = input := rfl
-      _ = current ++ remaining := by
-        exact (List.take_append_drop count input).symm
+      _ = current ++ remaining := (List.take_append_drop count input).symm
       _ = [] ++ current ++ remaining := by simp
   have hgeo :
       GeometricVecFacts input.length 0
@@ -5356,8 +5352,7 @@ theorem twp_func3_complete_nonempty
     simpa only [serialize_length] using htotal
   have hbyteBound : 4 * original.length < UInt32.size := by
     norm_num [UInt32.size] at hbyteBoundSigned ⊢; omega
-  have hlayoutValid : layout.Valid := by
-    exact align4Layout_valid_of_bounds (4 * original.length)
+  have hlayoutValid : layout.Valid := align4Layout_valid_of_bounds (4 * original.length)
       (by omega) hbyteBoundSigned (by omega)
   have hfrontier : heapBase.toNat ≤ frontier :=
     geometricVec_frontier_ge_heapBase _ _ _ _ _ _ _ hgeo
@@ -5391,8 +5386,7 @@ theorem twp_func3_complete_nonempty
     have hvaluesEnd :
         valuesPtr.toNat + 4 * original.length ≤ valuesFinish.toNat := by
       rw [hvaluesFacts.2.2.2.2.2.1]
-    have hvaluesFrontier : heapBase.toNat ≤ valuesFinish.toNat := by
-      exact Nat.le_trans hfrontier
+    have hvaluesFrontier : heapBase.toNat ≤ valuesFinish.toNat := Nat.le_trans hfrontier
         (Nat.le_trans hvaluesFacts.1 (by omega))
     unfold ResumeWP resumeExpr
     have Hdecode := twp_func3_decode_allocated heapId history.nextId capacity

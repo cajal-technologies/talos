@@ -2239,10 +2239,8 @@ theorem func1_loopEntry_smallStep_wp
       ⟨⟨[.i32 1048560, .i32 1048568], func1NormalizedLocals a b, []⟩,
         func1LoopEntryProg, 1, [], outerControls, calls⟩ :
         Wasm.SmallStep.Expr Unit) @ s; E {{ Φ }} := by
-  have hxne : oddPart64 a ≠ 0 := by
-    exact UInt64.shr_ctz_ne_zero a ha
-  have hyne : oddPart64 b ≠ 0 := by
-    exact UInt64.shr_ctz_ne_zero b hb
+  have hxne : oddPart64 a ≠ 0 := UInt64.shr_ctz_ne_zero a ha
+  have hyne : oddPart64 b ≠ 0 := UInt64.shr_ctz_ne_zero b hb
   have hxodd : (oddPart64 a).toNat % 2 = 1 := by
     simpa [oddPart64, oddPart_toNat] using
       UInt64.shr_ctz_toNat_odd a ha

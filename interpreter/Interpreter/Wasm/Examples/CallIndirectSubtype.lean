@@ -139,14 +139,14 @@ theorem return_call_indirect_trapsWith :
 
 theorem call_indirect_runs_trap :
     (runSteps 3 callConfig).result.finalConfig? =
-      some ⟨.trapped .indirectCallTypeMismatch, callConfig.store⟩ := by
-  exact congrArg RunnerResult.finalConfig?
+      some ⟨.trapped .indirectCallTypeMismatch, callConfig.store⟩ :=
+  congrArg RunnerResult.finalConfig?
     (runSteps_finalConfig_of_steps call_indirect_traps)
 
 theorem return_call_indirect_runs_trap :
     (runSteps 3 returnCallConfig).result.finalConfig? =
-      some ⟨.trapped .indirectCallTypeMismatch, returnCallConfig.store⟩ := by
-  exact congrArg RunnerResult.finalConfig?
+      some ⟨.trapped .indirectCallTypeMismatch, returnCallConfig.store⟩ :=
+  congrArg RunnerResult.finalConfig?
     (runSteps_finalConfig_of_steps return_call_indirect_traps)
 
 end CallIndirectSubtype

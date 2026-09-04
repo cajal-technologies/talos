@@ -2144,8 +2144,7 @@ theorem float_memory_roundtrip_terminates :
               [ .f64 (-7.5 : Float).toBits,
                 .f32 (1.25 : Float32).toBits ] ∧
             store.wasm.mem.read32 32 = (1.25 : Float32).toBits ∧
-            store.wasm.mem.read64 40 = (-7.5 : Float).toBits := by
-        exact ⟨hvalues, hmemory⟩
+            store.wasm.mem.read64 40 = (-7.5 : Float).toBits := ⟨hvalues, hmemory⟩
       refine ⟨(runSteps 11 floatMemoryConfig).trace,
         values, store, ?_, hpost⟩
       apply runSteps_sound

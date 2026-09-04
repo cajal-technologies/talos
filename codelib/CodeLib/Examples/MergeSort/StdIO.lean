@@ -900,8 +900,7 @@ theorem arrayAt_capacity [WasmSmallStepGS hlc Unit]
     let k := values.length - 1
     have hk : k < values.length := by simp [k, hlength]
     let address := base + 4 * UInt32.ofNat k
-    have haddress : address.toNat = base.toNat + 4 * k := by
-      exact Mem.words32_slotAddr_toNat base k (by
+    have haddress : address.toNat = base.toNat + 4 * k := Mem.words32_slotAddr_toNat base k (by
         simp only [UInt32.size] at hfit; omega)
     obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4 address (by
       simp only [UInt32.size] at hfit ⊢
@@ -1184,8 +1183,7 @@ theorem RunsValues.fits {input output : List UInt32}
     (h : RunsValues input output) : Fits input := by
   rcases h with ⟨fuel, hrun⟩
   by_contra hfit
-  have hlong : bufferBytes < (serialize input).length := by
-    exact Nat.lt_of_not_ge hfit
+  have hlong : bufferBytes < (serialize input).length := Nat.lt_of_not_ge hfit
   simp [runValues, run_none_of_too_long fuel (serialize input) hlong] at hrun
 
 /-- Every value-level result successfully produced by the program is a sorted

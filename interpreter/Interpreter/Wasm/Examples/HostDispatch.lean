@@ -177,8 +177,7 @@ theorem remaining_imported_call_forms_propagate_exceptions :
           throwCallRefConfig.store ∧
       (runSteps 3 throwReturnCallRefConfig).result =
         .trapped (.uncaughtException 0 [.i32 7])
-          throwReturnCallRefConfig.store := by
-  exact ⟨rfl, rfl, rfl⟩
+          throwReturnCallRefConfig.store := ⟨rfl, rfl, rfl⟩
 
 theorem memLoad_reads_caller_memory :
     (runSteps 3 memLoadConfig).result.values? = some [.i32 42] := by native_decide

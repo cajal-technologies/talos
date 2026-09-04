@@ -138,8 +138,7 @@ theorem sorted_of_mergeRel {left right output}
   | leftNil => exact hright
   | rightNil => exact hleft
   | @takeLeft x y xs ys output hxy tail ih =>
-      have hxs : Sorted xs := by
-        exact List.Pairwise.tail hleft
+      have hxs : Sorted xs := List.Pairwise.tail hleft
       have hyr : Sorted (y :: ys) := hright
       simp only [Sorted, List.pairwise_cons] at hleft hright ⊢
       constructor
@@ -154,8 +153,7 @@ theorem sorted_of_mergeRel {left right output}
       · exact ih hxs hyr
   | @takeRight x y xs ys output hxy tail ih =>
       have hxl : Sorted (x :: xs) := hleft
-      have hys : Sorted ys := by
-        exact List.Pairwise.tail hright
+      have hys : Sorted ys := List.Pairwise.tail hright
       simp only [Sorted, List.pairwise_cons] at hleft hright ⊢
       constructor
       · intro z hz
@@ -491,8 +489,7 @@ theorem CopyLoopInvariant.finish
     rw [List.take_take]
     simp
   · rw [segment_eq_take_drop hlr, htake]
-    have hleftlen : (input.take left).length = left := by
-      exact List.length_take_of_le (by omega)
+    have hleftlen : (input.take left).length = left := List.length_take_of_le (by omega)
     rw [List.drop_append_of_le_length (by omega)]
     simp; exact hmerge
 
@@ -505,8 +502,7 @@ theorem getElem?_of_take_eq_append
     values[k]? = merged[k - left]? := by
   subst pref
   have hlookup := congrArg (fun xs : List UInt32 => xs[k]?) htake
-  have hleftlen : (values.take left).length = left := by
-    exact List.length_take_of_le (by omega)
+  have hleftlen : (values.take left).length = left := List.length_take_of_le (by omega)
   simpa [List.getElem?_take, hkright, List.getElem?_append,
     hleftlen, show ¬k < left by omega] using hlookup
 

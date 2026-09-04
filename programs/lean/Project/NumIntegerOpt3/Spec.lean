@@ -767,10 +767,8 @@ theorem mod3_gcd_smallStep_termination (a b : UInt64) :
             (by simpa [ao, bo] using hab)
         change Steps (gcdInnerConfig a b shared) innerTrace
           (gcdLoopConfig ao bo shared) at inner
-        have haone : ao ≠ 0 := by
-          exact UInt64.shr_ctz_ne_zero a ha
-        have hbone : bo ≠ 0 := by
-          exact UInt64.shr_ctz_ne_zero b hb
+        have haone : ao ≠ 0 := UInt64.shr_ctz_ne_zero a ha
+        have hbone : bo ≠ 0 := UInt64.shr_ctz_ne_zero b hb
         have haodd : ao.toNat % 2 = 1 := by
           simpa [ao, oddPart_toNat] using
             UInt64.shr_ctz_toNat_odd a ha

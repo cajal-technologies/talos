@@ -93,8 +93,8 @@ theorem i64Mem_terminates :
     TerminatesWith (i64MemConfig 7) (fun vs _ => vs = [.i64 0xCD]) ∧
     TerminatesWith (i64MemConfig 8) (fun vs _ => vs = [.i64 0xCDEF]) ∧
     TerminatesWith (i64MemConfig 9) (fun vs _ => vs = [.i64 0xABCDEF01]) ∧
-    TerminatesWith (i64MemConfig 10) (fun vs _ => vs = [.i64 0x1122334455667788]) := by
-  exact ⟨runSteps_values_terminates load64_returns_word,
+    TerminatesWith (i64MemConfig 10) (fun vs _ => vs = [.i64 0x1122334455667788]) :=
+  ⟨runSteps_values_terminates load64_returns_word,
     runSteps_values_terminates load8UI64_zero_extends,
     runSteps_values_terminates load8SI64_sign_extends,
     runSteps_values_terminates load16UI64_zero_extends,
