@@ -35,6 +35,17 @@ theorem extract_eq_of_drop_eq {a b : List α} {start stop k : Nat}
   simpa [List.drop_drop, Nat.add_sub_of_le hstart] using
     congrArg (List.drop (start - k)) hdrop
 
+theorem getElem!_eq_of_take_eq [Inhabited α] {a b : List α} {k i : Nat}
+    (hik : i < k) (htake : a.take k = b.take k) : a[i]! = b[i]! := by
+  simpa [List.getElem!_eq_getElem?_getD, hik] using
+    congrArg (fun values : List α => values[i]!) htake
+
+theorem getElem!_eq_of_drop_eq [Inhabited α] {a b : List α} {k i : Nat}
+    (hki : k ≤ i) (hdrop : a.drop k = b.drop k) : a[i]! = b[i]! := by
+  simpa [List.getElem!_eq_getElem?_getD, List.getElem?_drop,
+    Nat.add_sub_of_le hki] using
+    congrArg (fun values : List α => values[i - k]!) hdrop
+
 theorem pairwise_of_length_le_one {relation : α → α → Prop} {values : List α}
     (h : values.length ≤ 1) : values.Pairwise relation := by
   match values, h with

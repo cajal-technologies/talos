@@ -215,24 +215,6 @@ theorem quicksort_compose
            hleft_cond hright_cond,
          hperm⟩
 
-private theorem getElem!_eq_of_take {a b : List UInt32} {k i : Nat}
-    (hik : i < k) (htake : a.take k = b.take k) :
-    a[i]! = b[i]! := by
-  simp only [List.getElem!_eq_getElem?_getD]
-  rw [show a[i]? = (a.take k)[i]? from by simp [hik],
-      show b[i]? = (b.take k)[i]? from by simp [hik],
-      htake]
-
-private theorem getElem!_eq_of_drop {a b : List UInt32} {k i : Nat}
-    (hki : k ≤ i) (hdrop : a.drop k = b.drop k) :
-    a[i]! = b[i]! := by
-  simp only [List.getElem!_eq_getElem?_getD]
-  have ha : a[i]? = (a.drop k)[i - k]? := by
-    rw [List.getElem?_drop]; congr 1; omega
-  have hb : b[i]? = (b.drop k)[i - k]? := by
-    rw [List.getElem?_drop]; congr 1; omega
-  rw [ha, hb, hdrop]
-
 theorem partitionRange_after_sorts
     {values output_p out_l out_r : List UInt32} {lo hi pivotIdx : Nat}
     (hpart : PartitionRange values output_p lo hi pivotIdx)
@@ -254,9 +236,9 @@ theorem partitionRange_after_sorts
     List.extract_eq_of_drop_eq (by omega) hdrop_l
   -- pivot element equalities
   have hpiv_l : out_l[pivotIdx]! = output_p[pivotIdx]! :=
-    getElem!_eq_of_drop (le_refl _) hdrop_l
+    List.getElem!_eq_of_drop_eq (le_refl _) hdrop_l
   have hpiv_r : out_r[pivotIdx]! = out_l[pivotIdx]! :=
-    getElem!_eq_of_take (by omega) htake_r
+    List.getElem!_eq_of_take_eq (by omega) htake_r
   -- perm of whole segment
   have hperm_op_r : List.Perm (segment output_p lo hi) (segment out_r lo hi) := by
     have lhs_eq : segment output_p lo hi =
