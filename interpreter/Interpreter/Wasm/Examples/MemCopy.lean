@@ -67,7 +67,7 @@ theorem copy_disjoint_moves_bytes :
       .success [.i32 0x44332211] copyDisjointFinalStore := by
   rfl
 
-theorem copy_disjoint_spec :
+theorem copy_disjoint_terminates :
     TerminatesWith copyDisjointConfig (fun values store =>
       values = [.i32 0x44332211] ∧
       store.wasm.mem.read32 0 = 0x44332211 ∧
@@ -80,7 +80,7 @@ theorem copy_disjoint_spec :
 theorem copy_disjoint_partial :
     PartiallyMeets copyDisjointConfig (fun values store =>
       values = [.i32 0x44332211] ∧ store.wasm.mem.read32 8 = 0x44332211) :=
-  copy_disjoint_spec.toPartiallyMeets.mono fun _ _ post => ⟨post.1, post.2.2⟩
+  copy_disjoint_terminates.toPartiallyMeets.mono fun _ _ post => ⟨post.1, post.2.2⟩
 
 theorem copy_overlap_uses_pre_copy_bytes :
     (runSteps 7 copyOverlapConfig).result =
@@ -88,7 +88,7 @@ theorem copy_overlap_uses_pre_copy_bytes :
   rfl
 
 /-- The copied word at address 2 is read from the pre-copy memory. -/
-theorem copy_overlap_spec :
+theorem copy_overlap_terminates :
     TerminatesWith copyOverlapConfig (fun values store =>
       values = [.i64 0x8877443322112211] ∧
       store.wasm.mem.read32 2 = 0x44332211) := by
@@ -99,7 +99,7 @@ theorem copy_overlap_partial :
     PartiallyMeets copyOverlapConfig (fun values store =>
       values = [.i64 0x8877443322112211] ∧
       store.wasm.mem.read32 2 = 0x44332211) :=
-  copy_overlap_spec.toPartiallyMeets
+  copy_overlap_terminates.toPartiallyMeets
 
 theorem copy_out_of_bounds_traps :
     (runSteps 4 copyTrapConfig).result =

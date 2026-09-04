@@ -82,7 +82,7 @@ theorem store32I64_roundtrip :
 theorem store64_roundtrip :
     (runSteps 8 (i64MemConfig 10)).result.values? = some [.i64 0x1122334455667788] := by native_decide
 
-theorem i64Mem_contracts :
+theorem i64Mem_terminates :
     TerminatesWith (i64MemConfig 0) (fun vs _ => vs = [.i64 0xFF2233445566FF88]) ∧
     TerminatesWith (i64MemConfig 1) (fun vs _ => vs = [.i64 0xFF]) ∧
     TerminatesWith (i64MemConfig 2) (fun vs _ => vs = [.i64 0xFFFFFFFFFFFFFFFF]) ∧
@@ -106,7 +106,7 @@ theorem i64Mem_contracts :
     runSteps_values_terminates store32I64_roundtrip,
     runSteps_values_terminates store64_roundtrip⟩
 
-theorem i64Mem_partial_contracts :
+theorem i64Mem_partial :
     PartiallyMeets (i64MemConfig 0) (fun vs _ => vs = [.i64 0xFF2233445566FF88]) ∧
     PartiallyMeets (i64MemConfig 1) (fun vs _ => vs = [.i64 0xFF]) ∧
     PartiallyMeets (i64MemConfig 2) (fun vs _ => vs = [.i64 0xFFFFFFFFFFFFFFFF]) ∧
@@ -118,7 +118,7 @@ theorem i64Mem_partial_contracts :
     PartiallyMeets (i64MemConfig 8) (fun vs _ => vs = [.i64 0xCDEF]) ∧
     PartiallyMeets (i64MemConfig 9) (fun vs _ => vs = [.i64 0xABCDEF01]) ∧
     PartiallyMeets (i64MemConfig 10) (fun vs _ => vs = [.i64 0x1122334455667788]) := by
-  obtain ⟨h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10⟩ := i64Mem_contracts
+  obtain ⟨h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10⟩ := i64Mem_terminates
   exact ⟨h0.toPartiallyMeets, h1.toPartiallyMeets, h2.toPartiallyMeets,
     h3.toPartiallyMeets, h4.toPartiallyMeets, h5.toPartiallyMeets,
     h6.toPartiallyMeets, h7.toPartiallyMeets, h8.toPartiallyMeets,

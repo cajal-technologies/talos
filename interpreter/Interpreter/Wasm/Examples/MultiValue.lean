@@ -15,9 +15,11 @@ import Interpreter.Wasm.Decoder.Wat
     and decoding `(block (type $sig))` annotations.
 
     * `swap_runs` executes a two-result body.
-    * `swapSpec` specifies arbitrary input values.
-    * `pairBlockSpec` exercises `block 0 2` and administrative block exit.
-    * `callsSwapSpec` exercises a call frame returning two values to a caller.
+    * `swap_terminates` specifies arbitrary input values.
+    * `pairBlock_terminates` exercises `block 0 2` and administrative block
+      exit.
+    * `callsSwap_terminates` exercises a call frame returning two values to a
+      caller.
     * `multiValueBlockTypeDecodes`  — decodes a `(block (type $sig))`
                                        WAT snippet and asserts the parsed
                                        block has the correct arity. Locks
@@ -65,7 +67,7 @@ def CallsSwap : Program := [
 
     One module holds all three functions so that `callsSwap`'s `.call 0`
     dispatches to the same `Swap` whose behavior is exercised by the
-    relational call trace in `callsSwapSpec`. -/
+    relational call trace in `callsSwap_terminates`. -/
 
 def multiValueModule : Module :=
   { funcs :=
@@ -113,7 +115,7 @@ theorem swap_runs :
 /-- For *any* two i32 inputs, `swap` returns them in flipped order. The
     interesting bit is the `Post`'s value-list has length 2 — every earlier
     example's `Post` carried a length-≤ 1 list. -/
-theorem swapSpec (a b : UInt32) :
+theorem swap_terminates (a b : UInt32) :
     TerminatesWith (swapConfig a b)
       (fun values _ => values = [.i32 a, .i32 b]) := by
   apply runSteps_success_terminates (fuel := 3)
@@ -124,11 +126,11 @@ theorem swapSpec (a b : UInt32) :
 theorem swap_partial (a b : UInt32) :
     PartiallyMeets (swapConfig a b)
       (fun values _ => values = [.i32 a, .i32 b]) :=
-  (swapSpec a b).toPartiallyMeets
+  (swap_terminates a b).toPartiallyMeets
 
 /-! ### Check 3 — multi-value block -/
 
-theorem pairBlockSpec (x : UInt32) :
+theorem pairBlock_terminates (x : UInt32) :
     TerminatesWith (pairBlockConfig x)
       (fun values _ => values = [.i32 (x - 1), .i32 (1 + x)]) := by
   apply runSteps_success_terminates (fuel := 9)
@@ -139,14 +141,14 @@ theorem pairBlockSpec (x : UInt32) :
 theorem pairBlock_partial (x : UInt32) :
     PartiallyMeets (pairBlockConfig x)
       (fun values _ => values = [.i32 (x - 1), .i32 (1 + x)]) :=
-  (pairBlockSpec x).toPartiallyMeets
+  (pairBlock_terminates x).toPartiallyMeets
 
 /-! ### Check 4 — caller that consumes both results of a multi-value call -/
 
 /-- `callsSwap` exercises relational call return with multiple values: in
     every earlier example the returned stack had length 1, so this checks
     composition when `f.results.length > 1`. -/
-theorem callsSwapSpec :
+theorem callsSwap_terminates :
     TerminatesWith callsSwapConfig
       (fun values _ => values = [.i32 8]) := by
   apply runSteps_success_terminates (fuel := 8)
@@ -157,7 +159,7 @@ theorem callsSwapSpec :
 theorem callsSwap_partial :
     PartiallyMeets callsSwapConfig
       (fun values _ => values = [.i32 8]) :=
-  callsSwapSpec.toPartiallyMeets
+  callsSwap_terminates.toPartiallyMeets
 
 /-! ### Check 5 — decoder: `block (type $sig)` resolves to the right arity
 

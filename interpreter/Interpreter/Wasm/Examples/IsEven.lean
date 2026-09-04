@@ -38,7 +38,7 @@ theorem isEven_runs (value : UInt32) :
     all_goals exact Steps.refl _
   exact congrArg RunnerResult.values? (runSteps_eq_success_of_steps hsteps)
 
-theorem isEvenSpec (value : UInt32) :
+theorem isEven_terminates (value : UInt32) :
     TerminatesWith (isEvenConfig value)
       (fun values _ => values = [.i32 (isEvenResult value)]) :=
   runSteps_values_terminates (isEven_runs value)
@@ -46,6 +46,6 @@ theorem isEvenSpec (value : UInt32) :
 theorem isEven_partial (value : UInt32) :
     PartiallyMeets (isEvenConfig value)
       (fun values _ => values = [.i32 (isEvenResult value)]) :=
-  (isEvenSpec value).toPartiallyMeets
+  (isEven_terminates value).toPartiallyMeets
 
 end Wasm

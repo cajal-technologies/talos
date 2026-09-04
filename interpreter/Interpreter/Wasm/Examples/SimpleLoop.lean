@@ -193,15 +193,15 @@ theorem simpleLoop_steps (n : UInt32) :
   exact ⟨_ ++ suffix,
     Steps.trans (simpleLoop_initial_steps n) (by simpa using hsuffix)⟩
 
-theorem simpleLoopSpec (n : UInt32) :
+theorem simpleLoop_terminates (n : UInt32) :
     TerminatesWith (simpleLoopConfig n)
       (fun values _ => values = [.i32 n]) := by
   obtain ⟨trace, execution⟩ := simpleLoop_steps n
   exact ⟨trace, _, _, execution, rfl⟩
 
-theorem simpleLoopPartial (n : UInt32) :
+theorem simpleLoop_partial (n : UInt32) :
     PartiallyMeets (simpleLoopConfig n)
       (fun values _ => values = [.i32 n]) :=
-  (simpleLoopSpec n).toPartiallyMeets
+  (simpleLoop_terminates n).toPartiallyMeets
 
 end Wasm

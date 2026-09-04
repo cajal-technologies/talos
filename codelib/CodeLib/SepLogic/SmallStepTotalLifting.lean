@@ -1527,7 +1527,8 @@ theorem twp_load32
         ⟨⟨params, localValues, .i32 word :: values⟩,
           code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, .instruction (.load32 offset), rfl,
-        by simpa [Hread] using Step.load32 hbound⟩⟩
+        by simpa [Hread] using
+          Step.load32 (α := α) (address := Value.i32 address) rfl hbound⟩⟩
   iintro %κ %e₂ %store₂ %forks %Hstep
   rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
   change forks = [] at hforks
@@ -1542,7 +1543,8 @@ theorem twp_load32
       ⟨.running
         ⟨⟨params, localValues, .i32 word :: values⟩,
           code, arity, remainder, controls, calls⟩, store⟩ := by
-    simpa [Hread] using (Step.load32 (α := α) hbound)
+    simpa [Hread] using
+      (Step.load32 (α := α) (address := Value.i32 address) rfl hbound)
   obtain ⟨rfl, hconfig⟩ :=
     step_deterministic expectedStep wasmStep
   have parts := Config.mk.inj hconfig
@@ -1614,7 +1616,7 @@ theorem twp_store32
           { store.wasm with
             mem := store.wasm.mem.write32 (address + offset) value } },
       [], ⟨rfl, .instruction (.store32 offset), rfl,
-        Step.store32 hbound⟩⟩
+        Step.store32 (α := α) (address := Value.i32 address) rfl hbound⟩⟩
   iintro %κ %e₂ %store₂ %forks %Hstep
   rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
   change forks = [] at hforks
@@ -1632,7 +1634,7 @@ theorem twp_store32
         { store with wasm :=
             { store.wasm with
               mem := store.wasm.mem.write32 (address + offset) value } }⟩ :=
-    Step.store32 hbound
+    Step.store32 (α := α) (address := Value.i32 address) rfl hbound
   obtain ⟨rfl, hconfig⟩ :=
     step_deterministic expectedStep wasmStep
   have parts := Config.mk.inj hconfig
@@ -3132,7 +3134,8 @@ theorem twp_load32_addr
           code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, .instruction (.load32 0), rfl,
         by simpa only [show (addr + 0 : UInt32) = addr from by simp, Hread]
-             using Step.load32 (α := α) hbound⟩⟩
+             using Step.load32 (α := α) (address := Value.i32 addr) rfl
+               hbound⟩⟩
   iintro %κ %e₂ %store₂ %forks %Hstep
   rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
   change forks = [] at hforks
@@ -3148,7 +3151,7 @@ theorem twp_load32_addr
         ⟨⟨params, localValues, .i32 word :: values⟩,
           code, arity, remainder, controls, calls⟩, store⟩ := by
     simpa only [show (addr + 0 : UInt32) = addr from by simp, Hread]
-      using Step.load32 (α := α) hbound
+      using Step.load32 (α := α) (address := Value.i32 addr) rfl hbound
   obtain ⟨rfl, hconfig⟩ :=
     step_deterministic expectedStep wasmStep
   have parts := Config.mk.inj hconfig

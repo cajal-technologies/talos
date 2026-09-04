@@ -189,17 +189,17 @@ theorem gcd_steps (a b : UInt32) :
   obtain ⟨suffix, hsuffix⟩ := gcdLoop_steps a b 0
   exact ⟨_ ++ suffix, Steps.trans (gcd_initial_steps a b) hsuffix⟩
 
-theorem gcdSpec (a b : UInt32) :
+theorem gcd_terminates (a b : UInt32) :
     TerminatesWith (gcdConfig a b)
       (fun values _ =>
         values = [.i32 (UInt32.ofNat (Nat.gcd a.toNat b.toNat))]) := by
   obtain ⟨trace, execution⟩ := gcd_steps a b
   exact ⟨trace, _, _, execution, rfl⟩
 
-theorem gcdPartial (a b : UInt32) :
+theorem gcd_partial (a b : UInt32) :
     PartiallyMeets (gcdConfig a b)
       (fun values _ =>
         values = [.i32 (UInt32.ofNat (Nat.gcd a.toNat b.toNat))]) :=
-  (gcdSpec a b).toPartiallyMeets
+  (gcd_terminates a b).toPartiallyMeets
 
 end Wasm

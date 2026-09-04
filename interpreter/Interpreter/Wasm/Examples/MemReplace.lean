@@ -65,12 +65,12 @@ theorem replace_steps (st : Store Unit) (new old : UInt32)
   rw [← hmem]
   have hbound : 4 ≤ st.mem.pages * 65536 := by omega
   refine .cons .const ?_
-  refine .cons (.load32 ?_) ?_
+  refine .cons (.load32 rfl ?_) ?_
   · simpa [replaceStore] using hbound
   refine .cons (.localSet (by rfl)) ?_
   refine .cons .const ?_
   refine .cons (.localGet (by rfl)) ?_
-  refine .cons (.store32 ?_) ?_
+  refine .cons (.store32 rfl ?_) ?_
   · simpa [replaceStore] using hbound
   refine .cons (.localGet (by rfl)) ?_
   exact .cons .finish (.refl _)
@@ -84,7 +84,7 @@ theorem replace_runs (st : Store Unit) (new old : UInt32)
     SmallStep.runSteps_eq_success_of_steps
       (replace_steps st new old hpages hmem)
 
-theorem replace_spec (st : Store Unit) (new old : UInt32)
+theorem replace_terminates (st : Store Unit) (new old : UInt32)
     (hpages : 1 ≤ st.mem.pages) (hmem : st.mem.read32 0 = old) :
     TerminatesWith (replaceConfig st new) (fun values store =>
       values = [.i32 old] ∧
@@ -100,6 +100,6 @@ theorem replace_partial (st : Store Unit) (new old : UInt32)
     PartiallyMeets (replaceConfig st new) (fun values store =>
       values = [.i32 old] ∧
       store.wasm.mem.read32 0 = new) :=
-  (replace_spec st new old hpages hmem).toPartiallyMeets
+  (replace_terminates st new old hpages hmem).toPartiallyMeets
 
 end Wasm

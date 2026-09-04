@@ -23,7 +23,7 @@ def trapUnreachableConfig : Config Unit :=
       { runtime := { instances := #[{ module := trapUnreachableModule, host := {} }], entry := ⟨0⟩ }
         wasm := trapUnreachableModule.initialStore } }
 
-theorem trapUnreachableSpec :
+theorem trapUnreachable_steps :
     Steps trapUnreachableConfig
       [(.instruction .unreachable)]
       ⟨.trapped .unreachable, trapUnreachableConfig.store⟩ :=
@@ -32,7 +32,7 @@ theorem trapUnreachableSpec :
 theorem trapUnreachable_runs :
     (runSteps 1 trapUnreachableConfig).result =
       .trapped .unreachable trapUnreachableConfig.store :=
-  runSteps_finalConfig_of_steps trapUnreachableSpec
+  runSteps_finalConfig_of_steps trapUnreachable_steps
 
 /-- Fuel-free public trap specification. -/
 theorem trapUnreachable_traps :
