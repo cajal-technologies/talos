@@ -59,12 +59,6 @@ theorem twp_partitionScanStep
     WP (.running ⟨partitionLocals arr lo hi pivot i j hiMinusOne tmp [],
         partitionScanStep ++ code, arity, remainder, controls, calls⟩ : Expr Unit)
         @ s; E [{ Φ }] := by
-  have hjSucc : j + 1 < UInt32.size := by
-    have : 4 * current.length ≤ UInt32.size := by omega
-    omega
-  have hiSucc : i + 1 < UInt32.size := by
-    have : 4 * current.length ≤ UInt32.size := by omega
-    omega
   iintro ⟨Harray, Hbranches⟩
   simp only [partitionScanStep, List.append_assoc, List.cons_append, List.nil_append]
   wasm_twp_pures [twp_localGet]
@@ -76,7 +70,7 @@ theorem twp_partitionScanStep
     ihave Hthen := BI.and_elim_l $$ Hbranches
     wasm_twp_pures [twp_exitControl]
     have hjValue : 1 + UInt32.ofNat j = UInt32.ofNat (j + 1) := by
-      rw [UInt32.add_comm, u32_ofNat_succ hjSucc]
+      rw [UInt32.add_comm, UInt32.ofNat_succ]
     have hsetJ :
         (partitionLocals arr lo hi pivot i j hiMinusOne tmp
             [.i32 (1 + UInt32.ofNat j)]).set?
@@ -102,7 +96,7 @@ theorem twp_partitionScanStep
     simp only [partitionLocals, List.drop_zero]
     iapply_frame_intro twp_swapAt hiLen hjLen hfit rfl rfl htmp_set rfl rfl rfl rfl as Harray
     have hiValue : 1 + UInt32.ofNat i = UInt32.ofNat (i + 1) := by
-      rw [UInt32.add_comm, u32_ofNat_succ hiSucc]
+      rw [UInt32.add_comm, UInt32.ofNat_succ]
     have hsetI :
         (partitionLocals arr lo hi pivot i j hiMinusOne (current[i]'hiLen)
             [.i32 (1 + UInt32.ofNat i)]).set?
@@ -114,7 +108,7 @@ theorem twp_partitionScanStep
     iapply twp_increment_nil rfl hsetI
     wasm_twp_pures [twp_exitControl] using [partitionLocals, List.take_zero, List.nil_append]
     have hjValue : 1 + UInt32.ofNat j = UInt32.ofNat (j + 1) := by
-      rw [UInt32.add_comm, u32_ofNat_succ hjSucc]
+      rw [UInt32.add_comm, UInt32.ofNat_succ]
     have hsetJ :
         (partitionLocals arr lo hi pivot (i + 1) j hiMinusOne (current[i]'hiLen)
             [.i32 (1 + UInt32.ofNat j)]).set?
@@ -549,10 +543,8 @@ private theorem twp_quicksortBody_aux
       iintro %out_l Hruntime_l %hpure_l Harray_l
       obtain ⟨hlen_l, htake_l, hdrop_l, hsorted_l, hperm_l⟩ := hpure_l
       wasm_twp_pures [twp_localGet twp_localGet twp_const twp_add]
-      have hpivSuccSize : pivotIdx + 1 < UInt32.size := by
-        have : UInt32.size = 4294967296 := rfl; omega
       have hpivValue : 1 + UInt32.ofNat pivotIdx = UInt32.ofNat (pivotIdx + 1) := by
-        rw [UInt32.add_comm, u32_ofNat_succ hpivSuccSize]
+        rw [UInt32.add_comm, UInt32.ofNat_succ]
       simp only [hpivValue]
       wasm_twp_pures [twp_localGet]
       have hlohi_right : pivotIdx + 1 ≤ hi := by omega

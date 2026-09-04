@@ -29,9 +29,6 @@ private theorem arrayAddress_toNat (base : UInt32) {index length : Nat}
   change base.toNat + 4 * index < UInt32.size
   omega
 
-theorem u32_ofNat_succ {n : Nat} (_ : n + 1 < UInt32.size) :
-    UInt32.ofNat n + 1 = UInt32.ofNat (n + 1) := UInt32.ofNat_succ n
-
 theorem twp_address
     [WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
