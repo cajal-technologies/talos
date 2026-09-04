@@ -47,14 +47,6 @@ private theorem global0Heap_agrees :
     globalHeapAgrees global0Heap
       globalGetAdequacyConfig.store.wasm.globals := globalHeapAgrees_singleton rfl
 
-private theorem global0Heap_pointsTo [WasmGlobalGS α] :
-    ([∗map] index ↦ value ∈ global0Heap,
-      globalPointsTo index value) ⊢
-      globalPointsTo ⟨0, 0⟩ (.i32 42) := by
-  unfold global0Heap
-  rw [(BI.BigSepM.bigSepM_insert (get?_empty (⟨0, 0⟩ : GlobalKey))).to_eq,
-    BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
-
 /-- A concrete adequacy witness for authoritative globals: the WP may derive
 the result of `global.get 0` only from ownership allocated for the matching
 physical global in the initial machine store. -/
