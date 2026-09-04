@@ -574,16 +574,8 @@ private theorem twp_quicksortBody_aux
       have hleft_r : Sorted (segment out_r lo pivotIdx) :=
         segment_sorted_of_take_eq (by omega) htake_r hsorted_l
       have hcomp := quicksort_compose input out_r lo hi pivotIdx hpart_final hleft_r hsorted_r
-      have htake_r_lo : out_r.take lo = out_l.take lo := by
-        have := congr_arg (·.take lo) htake_r
-        simp only [List.take_take, Nat.min_eq_left (by omega : lo ≤ pivotIdx + 1)] at this
-        exact this
-      have hdrop_l_hi : out_l.drop hi = output_p.drop hi := by
-        rw [show out_l.drop hi = (out_l.drop pivotIdx).drop (hi - pivotIdx) from by
-              rw [List.drop_drop]; congr 1; omega,
-            show output_p.drop hi = (output_p.drop pivotIdx).drop (hi - pivotIdx) from by
-              rw [List.drop_drop]; congr 1; omega,
-            hdrop_l]
+      have htake_r_lo := List.take_eq_of_take_eq (by omega : lo ≤ pivotIdx + 1) htake_r
+      have hdrop_l_hi := List.drop_eq_of_drop_eq (by omega : pivotIdx ≤ hi) hdrop_l
       have hpure_final : out_r.length = input.length ∧ out_r.take lo = input.take lo ∧
           out_r.drop hi = input.drop hi ∧ Sorted (segment out_r lo hi) ∧
           List.Perm (segment input lo hi) (segment out_r lo hi) :=

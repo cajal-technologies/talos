@@ -4,6 +4,15 @@ import Mathlib.Data.List.Sort
 
 namespace List
 
+theorem take_eq_of_take_eq {a b : List α} {i k : Nat}
+    (hik : i ≤ k) (htake : a.take k = b.take k) : a.take i = b.take i := by
+  simpa [List.take_take, Nat.min_eq_left hik] using congrArg (List.take i) htake
+
+theorem drop_eq_of_drop_eq {a b : List α} {k i : Nat}
+    (hki : k ≤ i) (hdrop : a.drop k = b.drop k) : a.drop i = b.drop i := by
+  simpa [List.drop_drop, Nat.add_sub_of_le hki] using
+    congrArg (List.drop (i - k)) hdrop
+
 theorem extract_append {values : List α} {start mid stop : Nat}
     (hstart : start ≤ mid) (hmid : mid ≤ stop) :
     values.extract start mid ++ values.extract mid stop =
@@ -23,17 +32,14 @@ theorem take_extract_drop {values : List α} {start stop : Nat}
 theorem extract_eq_of_take_eq {a b : List α} {start stop k : Nat}
     (hstop : stop ≤ k) (htake : a.take k = b.take k) :
     a.extract start stop = b.extract start stop := by
-  simp only [List.extract, ← List.drop_take]
-  simpa [List.take_take, Nat.min_eq_left hstop] using
-    congrArg (List.drop start) (congrArg (List.take stop) htake)
+  simp only [List.extract]
+  rw [← List.drop_take, ← List.drop_take,
+    List.take_eq_of_take_eq hstop htake]
 
 theorem extract_eq_of_drop_eq {a b : List α} {start stop k : Nat}
     (hstart : k ≤ start) (hdrop : a.drop k = b.drop k) :
     a.extract start stop = b.extract start stop := by
-  simp only [List.extract]
-  congr 1
-  simpa [List.drop_drop, Nat.add_sub_of_le hstart] using
-    congrArg (List.drop (start - k)) hdrop
+  rw [List.extract, List.drop_eq_of_drop_eq hstart hdrop]
 
 theorem getElem!_eq_of_take_eq [Inhabited α] {a b : List α} {k i : Nat}
     (hik : i < k) (htake : a.take k = b.take k) : a[i]! = b[i]! := by

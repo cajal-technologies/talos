@@ -250,14 +250,9 @@ theorem partitionRange_after_sorts
     rw [lhs_eq, rhs_eq, hseg_r_lo_p, hpiv_r, ← hpiv_l, ← hseg_l_p1_hi]
     exact hperm_l.append (List.Perm.cons _ hperm_r)
   -- take lo chain
-  have htake_r_lo : out_r.take lo = out_l.take lo := by
-    have := congr_arg (·.take lo) htake_r
-    simp only [List.take_take, Nat.min_eq_left (by omega : lo ≤ pivotIdx + 1)] at this; exact this
+  have htake_r_lo := List.take_eq_of_take_eq (by omega : lo ≤ pivotIdx + 1) htake_r
   -- drop hi chain
-  have hdrop_l_hi : out_l.drop hi = output_p.drop hi := by
-    have step : ∀ l : List UInt32, l.drop hi = (l.drop pivotIdx).drop (hi - pivotIdx) := fun l => by
-      rw [List.drop_drop]; congr 1; omega
-    rw [step out_l, step output_p, hdrop_l]
+  have hdrop_l_hi := List.drop_eq_of_drop_eq (by omega : pivotIdx ≤ hi) hdrop_l
   exact ⟨hlo, hphi, hhilen, by omega,
     by rw [htake_r_lo, htake_l, htake_p],
     by rw [hdrop_r, hdrop_l_hi, hdrop_p],
