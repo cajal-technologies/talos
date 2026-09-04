@@ -494,8 +494,8 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
       isimp only [ReallocContinuation, hdecision] at Hcont
       have halignmentNat : alignment.toNat = 1 := by
         rw [hlayout.1.2, hlayout.2.2.2.2.1]
-      have halignment : alignment = 1 := by
-        exact UInt32.toNat_inj.mp (by simpa using halignmentNat)
+      have halignment : alignment = 1 :=
+        UInt32.toNat_inj.mp (by simpa using halignmentNat)
       have hnewAlignment : newLayout.alignment = 1 := by
         rw [← hlayout.2.1.2, halignmentNat]
       have hnewLayoutShape :
@@ -784,8 +784,8 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
       isimp only [ReallocContinuation, hdecision] at Hcont
       have halignmentNat : alignment.toNat = 1 := by
         rw [hlayout.1.2, hlayout.2.2.2.2.1]
-      have halignment : alignment = 1 := by
-        exact UInt32.toNat_inj.mp (by simpa using halignmentNat)
+      have halignment : alignment = 1 :=
+        UInt32.toNat_inj.mp (by simpa using halignmentNat)
       have hnewAlignment : newLayout.alignment = 1 := by
         rw [← hlayout.2.1.2, halignmentNat]
       have hnewSizeNat : newSize.toNat = newLayout.size := hlayout.2.1.1

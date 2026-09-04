@@ -2562,8 +2562,8 @@ theorem func4Example_store_smallStep :
 proof for the distinct-index export example. -/
 theorem func4Example_terminates :
     Wasm.SmallStep.TerminatesWith func4ExampleConfig
-      (fun values _store => values = []) := by
-  exact Wasm.SmallStep.runSteps_values_terminates (fuel := 200) (by native_decide)
+      (fun values _store => values = []) :=
+  Wasm.SmallStep.runSteps_values_terminates (fuel := 200) (by native_decide)
 
 def func4AliasHeap : WasmHeapMap (Option UInt8) :=
   store64Heap
@@ -2724,8 +2724,8 @@ theorem func4Alias_store_smallStep :
 /-- Executable finite-trace witness for the equal-index export example. -/
 theorem func4Alias_terminates :
     Wasm.SmallStep.TerminatesWith func4AliasConfig
-      (fun values _store => values = []) := by
-  exact Wasm.SmallStep.runSteps_values_terminates (fuel := 200) (by native_decide)
+      (fun values _store => values = []) :=
+  Wasm.SmallStep.runSteps_values_terminates (fuel := 200) (by native_decide)
 
 /-! ## Closed equal-index example -/
 
