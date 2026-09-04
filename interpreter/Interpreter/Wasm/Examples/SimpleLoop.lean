@@ -133,8 +133,7 @@ private theorem simpleLoop_iteration_steps (x y : UInt32)
   simp only [List.take_zero, List.drop_zero, List.nil_append]
   wasm_steps [(.localGet rfl), .const, .add, (.localSet rfl), (.localGet rfl), .const, .sub,
     (.localSet rfl)]
-  simp
-  exact Steps.single (.br rfl)
+  simp; exact Steps.single (.br rfl)
 
 private theorem simpleLoopHead_steps (x y : UInt32) :
     ∃ trace,

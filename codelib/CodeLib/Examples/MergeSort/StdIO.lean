@@ -944,8 +944,7 @@ private theorem mergeSortPost_elim [WasmHeapGS Unit]
         ⌜scratchFinal.length = input.length⌝ ∗
         arrayAt 0 source output ∗ arrayAt 0 scratch scratchFinal) := by
   unfold mergeSortPost
-  iintro Hpost
-  iexact Hpost
+  iintro Hpost; iexact Hpost
 
 set_option maxHeartbeats 6000000 in
 theorem twp_sort [WasmSmallStepGS hlc Unit]

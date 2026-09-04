@@ -6779,8 +6779,7 @@ theorem step_deterministic {config next₁ next₂ : Config α} {kind₁ kind₂
     kind₁ = kind₂ ∧ next₁ = next₂ := by
   have e₁ := stepChecked?_complete h₁
   have e₂ := stepChecked?_complete h₂
-  rw [e₁] at e₂
-  exact Prod.mk.inj (Option.some.inj (Except.ok.inj e₂))
+  rw [e₁] at e₂; exact Prod.mk.inj (Option.some.inj (Except.ok.inj e₂))
 
 theorem done_terminal {values : List Value} {store : MachineStore α} {kind config'} :
     ¬ Step ⟨.done values, store⟩ kind config' := by
@@ -7031,8 +7030,7 @@ theorem step?_sound {valid : ValidConfig α} {kind} {next : ValidConfig α}
     Step valid.config kind next.config := by
   have erased := step?_erase valid
   rw [h] at erased
-  simp at erased
-  exact stepChecked?_sound (stepUnchecked?_eq_some_iff.mp erased.symm)
+  simp at erased; exact stepChecked?_sound (stepUnchecked?_eq_some_iff.mp erased.symm)
 
 theorem step?_complete {valid : ValidConfig α} {kind} {next : Config α}
     (h : Step valid.config kind next) :

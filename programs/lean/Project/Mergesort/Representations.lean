@@ -520,8 +520,7 @@ theorem wordRegions_disjoint_of_order
     MemRegion.Disjoint
       ⟨source, 4 * input.length⟩
       ⟨scratch, 4 * scratchValues.length⟩ := by
-  unfold MemRegion.Disjoint
-  exact Or.inl horder
+  unfold MemRegion.Disjoint; exact Or.inl horder
 
 /-- The driver may pass its aligned dangling pointer as both arrays at length
 zero; neither empty slice owns bytes. -/
@@ -2528,8 +2527,7 @@ theorem geometricRecords_lookup (topExponent allocationId : Nat) :
       if allocationId < topExponent - 7 then
         some (geometricMetadata topExponent allocationId)
       else none := by
-  unfold geometricRecords
-  exact foldl_insert_range_lookup _ _ _
+  unfold geometricRecords; exact foldl_insert_range_lookup _ _ _
 
 /-- In the canonical geometric lineage, the only live record for the current
 block is the most recently allocated one. -/

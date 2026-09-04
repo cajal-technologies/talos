@@ -77,8 +77,7 @@ theorem mergePost_elim
         ⌜scratch.length = input.length⌝ ∗
         arrayAt 0 source output ∗ arrayAt 0 temporary scratch) := by
   unfold mergePost
-  iintro Hpost
-  iexact Hpost
+  iintro Hpost; iexact Hpost
 
 theorem mergeSortPre_elim
     [WasmHeapGS α]
@@ -89,8 +88,7 @@ theorem mergeSortPre_elim
         ⌜scratch.length = input.length⌝ ∗
         ⌜ValidLayout source temporary input.length⌝) := by
   unfold mergeSortPre
-  iintro Hpre
-  iexact Hpre
+  iintro Hpre; iexact Hpre
 
 /-- Well-founded family rule for total Wasm loops. The recursive hypothesis is
 available only at strictly smaller measures, reflecting TWP's inductive

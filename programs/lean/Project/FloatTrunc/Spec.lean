@@ -163,15 +163,13 @@ def func0Globals : WasmGlobalMap Value :=
 
 theorem func0Heap_agrees :
     heapAgreesWithMem func0Heap (storeResolve (func0Config 0).store) := by
-  unfold func0Heap
-  exact insert_physical_word32_sound ∅ (storeResolve (func0Config 0).store)
+  unfold func0Heap; exact insert_physical_word32_sound ∅ (storeResolve (func0Config 0).store)
     0 («module».initialStore : Store Unit).mem 1048572 0 rfl
     (by decide) (by decide) (by decide) (heapAgreesWithMem_empty _) (by decide)
 
 theorem func0Heap_inBounds :
     heapAddressesInBounds func0Heap (storeResolve (func0Config 0).store) := by
-  unfold func0Heap
-  exact insert_physical_word32_inBounds ∅ (storeResolve (func0Config 0).store)
+  unfold func0Heap; exact insert_physical_word32_inBounds ∅ (storeResolve (func0Config 0).store)
     0 («module».initialStore : Store Unit).mem 1048572 0 rfl
     (by decide) (by decide) (by decide) (heapAddressesInBounds_empty _)
     (by decide) (by decide)

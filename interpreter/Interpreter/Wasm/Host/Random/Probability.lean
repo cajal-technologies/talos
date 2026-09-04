@@ -72,7 +72,6 @@ theorem uniformByte_lowHalf_probability :
     apply (ENNReal.div_eq_div_iff (by norm_num) (by norm_num)
       (by norm_num) (by norm_num)).2
     norm_num
-  rw [Fintype.card_fin]
-  exact half
+  rw [Fintype.card_fin]; exact half
 
 end Wasm.Random

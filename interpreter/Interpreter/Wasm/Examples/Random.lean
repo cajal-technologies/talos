@@ -91,7 +91,6 @@ theorem acceptanceEvent_eq :
 /-- End-to-end probabilistic correctness of the Wasm program. -/
 theorem accepts_with_probability_one_half :
     probability uniformByte acceptanceEvent = (1 / 2 : ℝ≥0∞) := by
-  rw [acceptanceEvent_eq]
-  exact uniformByte_lowHalf_probability
+  rw [acceptanceEvent_eq]; exact uniformByte_lowHalf_probability
 
 end Wasm.Examples.Random

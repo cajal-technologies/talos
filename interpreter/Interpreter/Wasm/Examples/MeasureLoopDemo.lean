@@ -102,8 +102,7 @@ private theorem iteration_steps (x y : UInt32) (hx : x ≠ 0) :
   simp only [List.take_zero, List.drop_zero, List.nil_append]
   wasm_steps [(.localGet rfl), .const, .add, (.localSet rfl), (.localGet rfl), .const, .sub,
     (.localSet rfl)]
-  simp
-  exact Steps.single (.br rfl)
+  simp; exact Steps.single (.br rfl)
 
 /-- Termination of the loop head, with no induction written by hand: the
 variant is `x.toNat`, the two branches are the lemmas above, and
