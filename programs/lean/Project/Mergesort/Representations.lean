@@ -136,8 +136,7 @@ def overwritePrefix (source initial : List UInt32) (copied : Nat) :
   source.take copied ++ initial.drop copied
 
 @[simp] theorem overwritePrefix_zero (source initial : List UInt32) :
-    overwritePrefix source initial 0 = initial := by
-  simp [overwritePrefix]
+    overwritePrefix source initial 0 = initial := by simp [overwritePrefix]
 
 theorem overwritePrefix_length (source initial : List UInt32) (copied : Nat)
     (hlength : source.length = initial.length) :
@@ -173,8 +172,7 @@ theorem overwritePrefix_set_next (source initial : List UInt32) (copied : Nat)
 
 @[simp] theorem overwritePrefix_all (source initial : List UInt32)
     (hlength : source.length = initial.length) :
-    overwritePrefix source initial source.length = source := by
-  simp [overwritePrefix, hlength]
+    overwritePrefix source initial source.length = source := by simp [overwritePrefix, hlength]
 
 /-! ## Byte and word regions -/
 
@@ -765,8 +763,7 @@ def classifyBump (frontier : Nat) (layout : AllocLayout) : BumpDecision :=
     .oom
 
 private theorem align1_mask (x : UInt32) :
-    x &&& (0 - 1) = x := by
-  simp
+    x &&& (0 - 1) = x := by simp
 
 private theorem align4_mask_toNat (x : UInt32) :
     (x &&& (0 - 4)).toNat = x.toNat - x.toNat % 4 := by

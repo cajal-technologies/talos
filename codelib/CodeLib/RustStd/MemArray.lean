@@ -26,8 +26,7 @@ def Mem.words64 (m : Mem) (base : UInt32) (n : Nat) : List UInt64 :=
   (List.range n).map fun k => m.read64 (base + 8 * (UInt32.ofNat k))
 
 @[simp] theorem Mem.length_words64 (m : Mem) (base : UInt32) (n : Nat) :
-    (m.words64 base n).length = n := by
-  simp [Mem.words64]
+    (m.words64 base n).length = n := by simp [Mem.words64]
 
 theorem Mem.getElem_words64 (m : Mem) (base : UInt32) (n k : Nat) (h : k < n) :
     (m.words64 base n)[k]'(by simpa using h) = m.read64 (base + 8 * UInt32.ofNat k) := by
@@ -166,8 +165,7 @@ def Mem.words32 (m : Mem) (base : UInt32) (n : Nat) : List UInt32 :=
   (List.range n).map fun k => m.read32 (base + 4 * (UInt32.ofNat k))
 
 @[simp] theorem Mem.length_words32 (m : Mem) (base : UInt32) (n : Nat) :
-    (m.words32 base n).length = n := by
-  simp [Mem.words32]
+    (m.words32 base n).length = n := by simp [Mem.words32]
 
 theorem Mem.getElem_words32 (m : Mem) (base : UInt32) (n k : Nat) (h : k < n) :
     (m.words32 base n)[k]'(by simpa using h) = m.read32 (base + 4 * UInt32.ofNat k) := by

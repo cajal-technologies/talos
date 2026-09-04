@@ -47,8 +47,7 @@ def instanceR : ModuleInstance Unit where
 
 @[simp] private theorem sharedMem_currentModule :
     ({ instances := #[instanceW, instanceR], entry := ⟨1⟩ } : RuntimeEnv Unit).currentModule =
-        instanceR.module := by
-  simp [RuntimeEnv.currentModule, RuntimeEnv.currentInstance]
+        instanceR.module := by simp [RuntimeEnv.currentModule, RuntimeEnv.currentInstance]
 
 -- entry = instance 1 (moduleR); v on top ready for cross-instance write
 def sharedMemConfig (v : UInt8) : Config Unit :=

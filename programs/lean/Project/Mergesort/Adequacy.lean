@@ -99,8 +99,7 @@ abbrev entryHeap : WasmHeapMap (Option UInt8) :=
 def entryGlobals : WasmGlobalMap Value :=
   insert ∅ (⟨0, 0⟩ : GlobalKey) (.i32 entryStackTop)
 
-@[simp] theorem entryStackBytes_length : entryStackBytes.length = 288 := by
-  simp [entryStackBytes]
+@[simp] theorem entryStackBytes_length : entryStackBytes.length = 288 := by simp [entryStackBytes]
 
 private theorem empty_below_entryStack :
     HeapBelow (∅ : WasmHeapMap (Option UInt8)) entryStackLow.toNat := by

@@ -687,8 +687,7 @@ def sortHeap (input : List UInt32) : WasmHeapMap (Option UInt8) :=
     scratch (scratchValues input)
 
 theorem fits_iff (values : List UInt32) :
-    Fits values ↔ 4 * values.length ≤ bufferBytes := by
-  simp only [Fits, serialize_length]
+    Fits values ↔ 4 * values.length ≤ bufferBytes := by simp only [Fits, serialize_length]
 
 theorem encodedLength_toNat (input : List UInt32) (hfit : Fits input) :
     (UInt32.ofNat (serialize input).length).toNat = (serialize input).length := by

@@ -445,8 +445,7 @@ def arrayBytes (values : List UInt32) : List UInt8 :=
     (wordBytes value).length = 4 := by rfl
 
 @[simp] theorem arrayBytes_length (values : List UInt32) :
-    (arrayBytes values).length = 4 * values.length := by
-  simp [arrayBytes, Nat.mul_comm]
+    (arrayBytes values).length = 4 * values.length := by simp [arrayBytes, Nat.mul_comm]
 
 theorem arrayAt_as_bytes [WasmHeapGS α] (memId : Nat) (ptr : UInt32)
     (values : List UInt32) :

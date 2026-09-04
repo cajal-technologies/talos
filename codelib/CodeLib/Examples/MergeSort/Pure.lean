@@ -443,8 +443,7 @@ def CopyLoopInvariant
 
 theorem copyLoopInvariant_start {input : List UInt32} {left right : Nat}
     (hleft : left ≤ right) (hright : right ≤ input.length) :
-    CopyLoopInvariant input input left right left [] := by
-  simp [CopyLoopInvariant, hleft, hright]
+    CopyLoopInvariant input input left right left [] := by simp [CopyLoopInvariant, hleft, hright]
 
 theorem CopyLoopInvariant.k_lt_length
     {input current copied : List UInt32} {left right k : Nat}

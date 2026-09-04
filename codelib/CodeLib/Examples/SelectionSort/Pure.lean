@@ -35,8 +35,7 @@ def swapElems (values : List UInt64) (i j : Nat) : List UInt64 :=
   (values.set i values[j]!).set j values[i]!
 
 theorem swapElems_length (values : List UInt64) (i j : Nat) :
-    (swapElems values i j).length = values.length := by
-  simp [swapElems, List.length_set]
+    (swapElems values i j).length = values.length := by simp [swapElems, List.length_set]
 
 theorem swapElems_get_i (values : List UInt64) {i j : Nat}
     (hi : i < values.length) (hj : j < values.length) :

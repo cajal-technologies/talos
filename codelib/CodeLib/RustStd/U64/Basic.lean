@@ -34,8 +34,7 @@ the only `bv_decide` for `u64` shifts; it speaks of the shift *amount* only (not
 the shift direction), so it is proven here once and reused by every shift
 (`shl`, `shr`, and any future shift-like op). -/
 theorem shiftAmount_norm (b : UInt32) :
-    UInt64.ofNat (shiftMask &&& b).toNat % 64 = b.toUInt64 % 64 := by
-  simp; bv_decide
+    UInt64.ofNat (shiftMask &&& b).toNat % 64 = b.toUInt64 % 64 := by simp; bv_decide
 
 end U64
 

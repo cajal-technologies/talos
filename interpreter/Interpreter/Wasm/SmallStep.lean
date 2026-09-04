@@ -320,8 +320,7 @@ private def setGlobal (store : MachineStore α) (index : Nat) (value : Value) :
     setGlobal store 0 value =
       { store with wasm :=
           { store.wasm with globals :=
-              { globals := store.wasm.globals.globals.set 0 value } } } := by
-  simp [setGlobal]
+              { globals := store.wasm.globals.globals.set 0 value } } } := by simp [setGlobal]
 
 theorem setGlobal_eq_of_canonical
     (store : MachineStore α) (index : Nat) (value : Value)

@@ -370,8 +370,7 @@ theorem listSetAt_length (values : List α) (index : Nat) (value : α) :
 theorem Module.initialStore_elementSegments_length [Inhabited α]
     (m : Module) :
     (m.initialStore : Store α).elementSegments.length =
-      m.elementSegmentCount := by
-  simp [Module.initialStore, Module.elementSegmentCount]
+      m.elementSegmentCount := by simp [Module.initialStore, Module.elementSegmentCount]
 
 theorem Module.initialStore_elementSegment_exists [Inhabited α]
     (m : Module) (index : Nat)

@@ -368,8 +368,7 @@ theorem contextU64Fn_satisfies_view_rel (name : String) (select : NearContext �
     repeat split <;> simp_all
 
 @[simp] theorem leU128Bytes_length (n : Nat) :
-    (leU128Bytes n).length = 16 := by
-  simp [leU128Bytes]
+    (leU128Bytes n).length = 16 := by simp [leU128Bytes]
 
 theorem contextU128MemFn_satisfies_rel (name : String) (select : NearContext → Nat) :
     ∀ st args,
@@ -491,26 +490,22 @@ theorem nearEnv_satisfies_canonical (m : Module) (himports : m.imports = nearImp
 /-! ## Memory framing -/
 
 @[simp] theorem readBytes_length (m : Mem) (off len : Nat) :
-    (m.readBytes off len).length = len := by
-  simp [Mem.readBytes]
+    (m.readBytes off len).length = len := by simp [Mem.readBytes]
 
 @[simp] theorem writeBytes_pages (m : Mem) (off : Nat) (data : List UInt8) :
     (m.writeBytes off data).pages = m.pages := rfl
 
 @[simp] theorem writeBytes_byte_in (m : Mem) (off i : Nat) (data : List UInt8)
     (h : i < data.length) :
-    (m.writeBytes off data).bytes (off + i) = data[i] := by
-  simp [Mem.writeBytes, h]
+    (m.writeBytes off data).bytes (off + i) = data[i] := by simp [Mem.writeBytes, h]
 
 @[simp] theorem writeBytes_byte_before (m : Mem) (off i : Nat) (data : List UInt8)
     (h : i < off) :
-    (m.writeBytes off data).bytes i = m.bytes i := by
-  simp [Mem.writeBytes]; omega
+    (m.writeBytes off data).bytes i = m.bytes i := by simp [Mem.writeBytes]; omega
 
 @[simp] theorem writeBytes_byte_after (m : Mem) (off i : Nat) (data : List UInt8)
     (h : off + data.length ≤ i) :
-    (m.writeBytes off data).bytes i = m.bytes i := by
-  simp [Mem.writeBytes]; omega
+    (m.writeBytes off data).bytes i = m.bytes i := by simp [Mem.writeBytes]; omega
 
 @[simp] theorem read32_writeBytes_four (m : Mem) (a : UInt32) (b0 b1 b2 b3 : UInt8) :
     (m.writeBytes a.toNat [b0, b1, b2, b3]).read32 a =
@@ -567,22 +562,18 @@ theorem storageWriteFn_invoke_absent (st : Store NearState) (key val : List UInt
 /-! ## NEAR state projection lemmas -/
 
 @[simp] theorem setStorage_same (ns : NearState) (key val : List UInt8) :
-    (ns.setStorage key val).storage key = some val := by
-  simp [NearState.setStorage]
+    (ns.setStorage key val).storage key = some val := by simp [NearState.setStorage]
 
 @[simp] theorem setStorage_other (ns : NearState) {key other val : List UInt8}
     (h : other ≠ key) :
-    (ns.setStorage key val).storage other = ns.storage other := by
-  simp [NearState.setStorage, h]
+    (ns.setStorage key val).storage other = ns.storage other := by simp [NearState.setStorage, h]
 
 @[simp] theorem removeStorage_same (ns : NearState) (key : List UInt8) :
-    (ns.removeStorage key).storage key = none := by
-  simp [NearState.removeStorage]
+    (ns.removeStorage key).storage key = none := by simp [NearState.removeStorage]
 
 @[simp] theorem removeStorage_other (ns : NearState) {key other : List UInt8}
     (h : other ≠ key) :
-    (ns.removeStorage key).storage other = ns.storage other := by
-  simp [NearState.removeStorage, h]
+    (ns.removeStorage key).storage other = ns.storage other := by simp [NearState.removeStorage, h]
 
 end Near
 end Wasm

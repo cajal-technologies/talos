@@ -82,8 +82,7 @@ decreasing_by
   have hpos := codec.width_pos
   simp only [List.length_drop, List.length_cons]; omega
 
-@[simp] theorem deserialize_nil : codec.deserialize [] = some [] := by
-  simp [deserialize]
+@[simp] theorem deserialize_nil : codec.deserialize [] = some [] := by simp [deserialize]
 
 /-- Fewer than `width` bytes left, and not none left, is a partial word. -/
 theorem deserialize_eq_none_of_length_lt (bytes : List UInt8)

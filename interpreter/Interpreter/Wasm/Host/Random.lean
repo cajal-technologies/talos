@@ -52,8 +52,7 @@ def State.draw (state : State) (count : Nat) : List UInt8 :=
 
 @[simp]
 theorem State.draw_length (state : State) (count : Nat) :
-    (state.draw count).length = count := by
-  simp [State.draw]
+    (state.draw count).length = count := by simp [State.draw]
 
 /-- Advance past `count` bytes without changing the oracle realization. -/
 def State.advance (state : State) (count : Nat) : State :=

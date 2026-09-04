@@ -36,8 +36,7 @@ def instanceA : ModuleInstance Unit where
 
 @[simp] private theorem crossInstance_currentModule :
     ({ instances := #[instanceB, instanceA], entry := ⟨1⟩ } : RuntimeEnv Unit).currentModule =
-        instanceA.module := by
-  simp [RuntimeEnv.currentModule, RuntimeEnv.currentInstance]
+        instanceA.module := by simp [RuntimeEnv.currentModule, RuntimeEnv.currentInstance]
 
 -- entry = instance 1 (moduleA); values [b, a] ready for cross-instance call to instance 0
 def crossInstanceConfig (a b : UInt32) : Config Unit :=

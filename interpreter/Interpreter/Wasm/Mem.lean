@@ -134,13 +134,11 @@ theorem Mem.fill_zero (m : Mem) (offset : Nat) (val : UInt8) :
 
 theorem Mem.fill_read8_in (m : Mem) (offset len : Nat) (val : UInt8) (i : UInt32)
     (h : offset ≤ i.toNat ∧ i.toNat < offset + len) :
-    (m.fill offset len val).read8 i = val := by
-  simp [Mem.fill, Mem.read8, h]
+    (m.fill offset len val).read8 i = val := by simp [Mem.fill, Mem.read8, h]
 
 theorem Mem.fill_read8_out (m : Mem) (offset len : Nat) (val : UInt8) (i : UInt32)
     (h : ¬(offset ≤ i.toNat ∧ i.toNat < offset + len)) :
-    (m.fill offset len val).read8 i = m.read8 i := by
-  simp [Mem.fill, Mem.read8, h]
+    (m.fill offset len val).read8 i = m.read8 i := by simp [Mem.fill, Mem.read8, h]
 
 theorem Mem.fill_pages (m : Mem) (offset len : Nat) (val : UInt8) :
     (m.fill offset len val).pages = m.pages := rfl
@@ -178,8 +176,7 @@ theorem Mem.copy_read8_in (m : Mem) (dst src len : Nat) (i : UInt32)
 
 theorem Mem.copy_read8_out (m : Mem) (dst src len : Nat) (i : UInt32)
     (h : ¬(dst ≤ i.toNat ∧ i.toNat < dst + len)) :
-    (m.copy dst src len).read8 i = m.read8 i := by
-  simp [Mem.copy, Mem.read8, h]
+    (m.copy dst src len).read8 i = m.read8 i := by simp [Mem.copy, Mem.read8, h]
 
 /-- Attempt to grow `m` by `delta` pages, accepting only if the resulting
 page count stays within `cap`. On success returns the new memory paired
@@ -272,8 +269,7 @@ def Mem.readBytes (m : Mem) (offset len : Nat) : List UInt8 :=
 
 theorem Mem.readBytes_getElem? (m : Mem) (offset len i : Nat)
     (hi : i < len) :
-    (m.readBytes offset len)[i]? = some (m.bytes (offset + i)) := by
-  simp [Mem.readBytes, hi]
+    (m.readBytes offset len)[i]? = some (m.bytes (offset + i)) := by simp [Mem.readBytes, hi]
 
 /-- Write a slice of `src` into memory at `dst`. The byte at address
 `dst + k` (for `0 ≤ k < len`) is `src[srcOff + k]`. The caller is
