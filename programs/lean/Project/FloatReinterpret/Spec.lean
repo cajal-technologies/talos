@@ -1201,13 +1201,12 @@ theorem checkAbs_secondComparison_smallStep_wp
         wasm_wp_pures [wp_const wp_and] rewriting [show (1 &&& 1 : UInt32) = 1 by decide]
         wasm_wp_next wp_eqz (result := 0) (by decide)
         wasm_wp_pures [wp_brIfZero]
-        iapply checkAbs_onePath_smallStep_wp
-          (iprop(pointsTo_u64 0 1048552
-            (f64Abs (f64PromoteF32 x)) ∗ runtimeModuleOwn ⟨0⟩ «module»))
-          x oldResult _
-        · iintro ⟨⟨Hscratch, Hruntime⟩, Hglobal, Hresult⟩
+        iapply_then_frame checkAbs_onePath_smallStep_wp
+            (iprop(pointsTo_u64 0 1048552
+              (f64Abs (f64PromoteF32 x)) ∗ runtimeModuleOwn ⟨0⟩ «module»))
+            x oldResult _ =>
+          iintro ⟨⟨Hscratch, Hruntime⟩, Hglobal, Hresult⟩
           iapply_frame hone
-        · iframe
       · have heqFalse :
             f32Eq (f32Abs x) (func2Result x) = false := by
           cases h : f32Eq (f32Abs x) (func2Result x) <;> simp_all
@@ -1217,13 +1216,12 @@ theorem checkAbs_secondComparison_smallStep_wp
         wasm_wp_next wp_eqz (result := 1) (by decide)
         wasm_wp_next wp_brIf (by decide) rfl
         simp only [checkAbsInnerFrame, List.take, List.nil_append]
-        iapply checkAbs_zeroPath_smallStep_wp
-          (iprop(pointsTo_u64 0 1048552
-            (f64Abs (f64PromoteF32 x)) ∗ runtimeModuleOwn ⟨0⟩ «module»))
-          x oldResult _
-        · iintro ⟨⟨Hscratch, Hruntime⟩, Hglobal, Hresult⟩
+        iapply_then_frame checkAbs_zeroPath_smallStep_wp
+            (iprop(pointsTo_u64 0 1048552
+              (f64Abs (f64PromoteF32 x)) ∗ runtimeModuleOwn ⟨0⟩ «module»))
+            x oldResult _ =>
+          iintro ⟨⟨Hscratch, Hruntime⟩, Hglobal, Hresult⟩
           iapply_frame hzero
-        · iframe
     · iframe
   · iframe
 
@@ -1296,13 +1294,12 @@ theorem checkAbs_firstComparisonTail_smallStep_wp
     simp only [checkAbsInnerFrame, List.take, List.nil_append]
     icombine Hlow Hupper as Hscratch
     ihave Hpacked := innerScratch_merge_upper (f32Abs x) $$ Hscratch
-    iapply checkAbs_zeroPath_smallStep_wp
-      (iprop(pointsTo_u64 0 1048552 (packUpper32 (f32Abs x)) ∗
-        runtimeModuleOwn ⟨0⟩ «module»))
-      x oldResult _
-    · iintro ⟨⟨Hscratch, Hruntime⟩, Hglobal, Hresult⟩
+    iapply_then_frame checkAbs_zeroPath_smallStep_wp
+        (iprop(pointsTo_u64 0 1048552 (packUpper32 (f32Abs x)) ∗
+          runtimeModuleOwn ⟨0⟩ «module»))
+        x oldResult _ =>
+      iintro ⟨⟨Hscratch, Hruntime⟩, Hglobal, Hresult⟩
       iapply_frame hzeroFirst
-    · iframe
 
 theorem checkAbs_firstComparison_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -1596,13 +1593,13 @@ theorem checkCopysign_comparison_smallStep_wp
     wasm_wp_next_rebind wp_call «module» 4 func4Def
       (by simp [«module»]) (by simp [«module»]) with Hruntime
     simp [func4Def, Function.toLocals, Function.numParams]
-    iapply func4_context_smallStep_wp
-      (iprop(pointsTo_u32 0 1048552 0 ∗
-        pointsTo_u32 0 1048556 (f32Copysign x y) ∗
-        globalPointsToAt 0 0 (.i32 1048560) ∗
-        pointsTo_u32 0 1048572 oldResult))
-      x y _ _
-    · iintro ⟨HR, Hruntime⟩
+    iapply_then_frame func4_context_smallStep_wp
+        (iprop(pointsTo_u32 0 1048552 0 ∗
+          pointsTo_u32 0 1048556 (f32Copysign x y) ∗
+          globalPointsToAt 0 0 (.i32 1048560) ∗
+          pointsTo_u32 0 1048572 oldResult))
+        x y _ _ =>
+      iintro ⟨HR, Hruntime⟩
       wasm_wp_return_from_call Hruntime [List.take, List.singleton_append]
       icases HR with ⟨Hlow, Hupper, Hglobal, Hresult⟩
       by_cases heq :
@@ -1640,7 +1637,6 @@ theorem checkCopysign_comparison_smallStep_wp
         ihave HresultExact : pointsTo_u32 0 1048572 0 $$ [Hresult]
         · irw_exact [← show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
         iapply_frame hzero
-    · iframe
   · iframe
 
 theorem func11_body_smallStep_wp
@@ -1826,12 +1822,11 @@ theorem twp_func0_lowered_smallStep_wp
   wasm_twp_rebind twp_call «module» 1 func1Def
     (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func1Def, Function.toLocals, Function.numParams, ValueType.zero]
-  iapply twp_func1_lowered_body_smallStep_wp
-    (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module»)) x oldWord _
-  · iintro ⟨⟨HR, Hruntime⟩, Hglobal, Hword⟩
+  iapply_then_frame twp_func1_lowered_body_smallStep_wp
+      (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module»)) x oldWord _ =>
+    iintro ⟨⟨HR, Hruntime⟩, Hglobal, Hword⟩
     wasm_twp_return_from_call Hruntime [List.take, List.singleton_append]
     iapply_frame hreturn
-  · iframe
 
 theorem twp_func3_lowered_body_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -1896,15 +1891,14 @@ theorem twp_func2_lowered_smallStep_wp
   wasm_twp_rebind twp_call «module» 3 func3Def
     (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func3Def, Function.toLocals, Function.numParams, ValueType.zero]
-  iapply twp_func3_lowered_body_smallStep_wp
-    (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module»))
-    (f64PromoteF32 x) oldWord _
-  · iintro ⟨⟨HR, Hruntime⟩, Hglobal, Hword⟩
+  iapply_then_frame twp_func3_lowered_body_smallStep_wp
+      (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module»))
+      (f64PromoteF32 x) oldWord _ =>
+    iintro ⟨⟨HR, Hruntime⟩, Hglobal, Hword⟩
     wasm_twp_return_from_call Hruntime [List.take, List.singleton_append]
     iapply twp_scalarFloat1 rfl rfl
     simp only [func2Result] at hreturn
     iapply_frame hreturn
-  · iframe
 
 theorem twp_func8_lowered_body_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -1965,12 +1959,11 @@ theorem twp_func7_lowered_smallStep_wp
   wasm_twp_rebind twp_call «module» 8 func8Def
     (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func8Def, Function.toLocals, Function.numParams, ValueType.zero]
-  iapply twp_func8_lowered_body_smallStep_wp
-    (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module»)) x y oldWord _
-  · iintro ⟨⟨HR, Hruntime⟩, Hglobal, Hword⟩
+  iapply_then_frame twp_func8_lowered_body_smallStep_wp
+      (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module»)) x y oldWord _ =>
+    iintro ⟨⟨HR, Hruntime⟩, Hglobal, Hword⟩
     wasm_twp_return_from_call Hruntime [List.take, List.singleton_append]
     iapply_frame hreturn
-  · iframe
 
 theorem twp_func9_context_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -2192,13 +2185,12 @@ theorem twp_checkAbs_secondComparison_smallStep_wp
         wasm_twp_pures [twp_const twp_and] rewriting [show (1 &&& 1 : UInt32) = 1 by decide]
         iapply twp_eqz (result := 0) (by decide)
         wasm_twp_pures [twp_brIfZero]
-        iapply twp_checkAbs_onePath_smallStep_wp
-          (iprop(pointsTo_u64 0 1048552
-            (f64Abs (f64PromoteF32 x)) ∗ runtimeModuleOwn ⟨0⟩ «module»))
-          x oldResult _
-        · iintro ⟨⟨Hscratch, Hruntime⟩, Hglobal, Hresult⟩
+        iapply_then_frame twp_checkAbs_onePath_smallStep_wp
+            (iprop(pointsTo_u64 0 1048552
+              (f64Abs (f64PromoteF32 x)) ∗ runtimeModuleOwn ⟨0⟩ «module»))
+            x oldResult _ =>
+          iintro ⟨⟨Hscratch, Hruntime⟩, Hglobal, Hresult⟩
           iapply_frame hone
-        · iframe
       · have heqFalse :
             f32Eq (f32Abs x) (func2Result x) = false := by
           cases h : f32Eq (f32Abs x) (func2Result x) <;> simp_all
@@ -2208,13 +2200,12 @@ theorem twp_checkAbs_secondComparison_smallStep_wp
         iapply twp_eqz (result := 1) (by decide)
         iapply twp_brIf (by decide) rfl
         simp only [checkAbsInnerFrame, List.take, List.nil_append]
-        iapply twp_checkAbs_zeroPath_smallStep_wp
-          (iprop(pointsTo_u64 0 1048552
-            (f64Abs (f64PromoteF32 x)) ∗ runtimeModuleOwn ⟨0⟩ «module»))
-          x oldResult _
-        · iintro ⟨⟨Hscratch, Hruntime⟩, Hglobal, Hresult⟩
+        iapply_then_frame twp_checkAbs_zeroPath_smallStep_wp
+            (iprop(pointsTo_u64 0 1048552
+              (f64Abs (f64PromoteF32 x)) ∗ runtimeModuleOwn ⟨0⟩ «module»))
+            x oldResult _ =>
+          iintro ⟨⟨Hscratch, Hruntime⟩, Hglobal, Hresult⟩
           iapply_frame hzero
-        · iframe
     · iframe
   · iframe
 
@@ -2283,13 +2274,12 @@ theorem twp_checkAbs_firstComparisonTail_smallStep_wp
     simp only [checkAbsInnerFrame, List.take, List.nil_append]
     icombine Hlow Hupper as Hscratch
     ihave Hpacked := innerScratch_merge_upper (f32Abs x) $$ Hscratch
-    iapply twp_checkAbs_zeroPath_smallStep_wp
-      (iprop(pointsTo_u64 0 1048552 (packUpper32 (f32Abs x)) ∗
-        runtimeModuleOwn ⟨0⟩ «module»))
-      x oldResult _
-    · iintro ⟨⟨Hscratch, Hruntime⟩, Hglobal, Hresult⟩
+    iapply_then_frame twp_checkAbs_zeroPath_smallStep_wp
+        (iprop(pointsTo_u64 0 1048552 (packUpper32 (f32Abs x)) ∗
+          runtimeModuleOwn ⟨0⟩ «module»))
+        x oldResult _ =>
+      iintro ⟨⟨Hscratch, Hruntime⟩, Hglobal, Hresult⟩
       iapply_frame hzeroFirst
-    · iframe
 
 theorem twp_checkAbs_firstComparison_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -2530,13 +2520,13 @@ theorem twp_checkCopysign_comparison_smallStep_wp
     wasm_twp_rebind twp_call «module» 4 func4Def
       (by simp [«module»]) (by simp [«module»]) with Hruntime
     simp [func4Def, Function.toLocals, Function.numParams]
-    iapply twp_func4_context_smallStep_wp
-      (iprop(pointsTo_u32 0 1048552 0 ∗
-        pointsTo_u32 0 1048556 (f32Copysign x y) ∗
-        globalPointsToAt 0 0 (.i32 1048560) ∗
-        pointsTo_u32 0 1048572 oldResult))
-      x y _ _
-    · iintro ⟨HR, Hruntime⟩
+    iapply_then_frame twp_func4_context_smallStep_wp
+        (iprop(pointsTo_u32 0 1048552 0 ∗
+          pointsTo_u32 0 1048556 (f32Copysign x y) ∗
+          globalPointsToAt 0 0 (.i32 1048560) ∗
+          pointsTo_u32 0 1048572 oldResult))
+        x y _ _ =>
+      iintro ⟨HR, Hruntime⟩
       wasm_twp_return_from_call Hruntime [List.take, List.singleton_append]
       icases HR with ⟨Hlow, Hupper, Hglobal, Hresult⟩
       by_cases heq :
@@ -2571,7 +2561,6 @@ theorem twp_checkCopysign_comparison_smallStep_wp
         ihave HresultExact : pointsTo_u32 0 1048572 0 $$ [Hresult']
         · irw_exact [← show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult'
         iapply_frame hzero
-    · iframe
   · iframe
 
 theorem twp_func11_body_smallStep_wp
