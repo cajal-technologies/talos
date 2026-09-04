@@ -83,19 +83,27 @@ theorem instanceIndexHeapAgrees_empty (values : List α) :
   rw [LawfulPartialMap.get?_empty] at hget
   contradiction
 
-theorem instanceIndexHeapAgrees_singleton
-    {values : List α} {index : Nat} {value : α}
+theorem instanceIndexHeapAgrees_insert
+    {σ : WasmInstanceIndexMap α} {values : List α}
+    {index : Nat} {value : α}
+    (hagree : instanceIndexHeapAgrees σ values)
     (hvalue : values[index]? = some value) :
-    instanceIndexHeapAgrees (insert ∅ ⟨0, index⟩ value) values := by
+    instanceIndexHeapAgrees (insert σ ⟨0, index⟩ value) values := by
   intro idx other hget
   by_cases hidx : idx = index
   · subst idx
     simp only [get?_insert_eq rfl, Option.some.injEq] at hget
-    subst other
-    exact hvalue
+    simpa only [← hget] using hvalue
   · rw [get?_insert_ne (fun h =>
-      hidx (congrArg InstanceIndexKey.index h).symm), get?_empty] at hget
-    contradiction
+      hidx (congrArg InstanceIndexKey.index h).symm)] at hget
+    exact hagree idx other hget
+
+theorem instanceIndexHeapAgrees_singleton
+    {values : List α} {index : Nat} {value : α}
+    (hvalue : values[index]? = some value) :
+    instanceIndexHeapAgrees (insert ∅ ⟨0, index⟩ value) values :=
+  instanceIndexHeapAgrees_insert
+    (instanceIndexHeapAgrees_empty values) hvalue
 
 theorem globalHeapAgrees_empty (globals : Globals) :
     globalHeapAgrees (∅ : WasmGlobalMap Value) globals :=

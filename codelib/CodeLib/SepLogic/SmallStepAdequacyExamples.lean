@@ -1753,23 +1753,9 @@ private theorem tableCopyDistinctMap_agrees :
     tableHeapAgrees tableCopyDistinctMap
       [[.funcref none, .funcref none, .funcref none],
        [.funcref (some 0), .funcref (some 1), .funcref (some 2)]] := by
-  intro index table hget
-  unfold tableCopyDistinctMap at hget
-  by_cases hindex0 : index = 0
-  · subst index
-    simp only [get?_insert_ne (show (⟨0, 1⟩ : TableKey) ≠ ⟨0, 0⟩ by decide),
-      get?_insert_eq rfl,
-      Option.some.injEq] at hget
-    subst table
-    rfl
-  by_cases hindex1 : index = 1
-  · subst index
-    simp only [get?_insert_eq rfl, Option.some.injEq] at hget
-    subst table
-    rfl
-  rw [get?_insert_ne (fun h => hindex1 (congrArg TableKey.index h).symm),
-    get?_insert_ne (fun h => hindex0 (congrArg TableKey.index h).symm), get?_empty] at hget
-  contradiction
+  exact instanceIndexHeapAgrees_insert
+    (instanceIndexHeapAgrees_insert
+      (instanceIndexHeapAgrees_empty _) rfl) rfl
 
 private theorem tableCopyDistinctMap_pointsTo [WasmTableGS α] :
     ([∗map] index ↦ table ∈ tableCopyDistinctMap,
