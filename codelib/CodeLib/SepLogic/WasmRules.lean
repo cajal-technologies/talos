@@ -400,8 +400,7 @@ theorem fill16_four_AB_eq_write32 (mem : Mem) :
     by_cases h3 : i = 19
     · subst i; simp
       bv_decide
-    simp [h0, h1, h2, h3]
-    omega
+    simp [h0, h1, h2, h3]; omega
 
 /-- The concrete passive-segment initialization used by the handwritten Iris
 example is exactly a little-endian 32-bit store. -/
@@ -425,8 +424,7 @@ theorem init16_four_eq_write32 (mem : Mem) :
     by_cases h3 : i = 19
     · subst i; simp
       bv_decide
-    simp [h0, h1, h2, h3]
-    omega
+    simp [h0, h1, h2, h3]; omega
 
 /-- Copying the concrete source word used by the aligned manual example is
 physically the same update as storing that word at the destination. -/
@@ -462,8 +460,7 @@ theorem copy8_zero_four_eq_write32 (mem : Mem)
     by_cases h11 : i = 11
     · subst i; simp [hb3]
       bv_decide
-    simp [h8, h9, h10, h11]
-    omega
+    simp [h8, h9, h10, h11]; omega
 
 /-- The overlapping manual copy has memmove semantics: source bytes are read
 from the pre-copy memory before the overlapping destination is updated. -/
@@ -496,8 +493,7 @@ theorem copy2_zero_four_eq_write64 (mem : Mem)
     · subst i; simp [hb2]
     by_cases h5 : i = 5
     · subst i; simp [hb3]
-    simp [h2, h3, h4, h5]
-    omega
+    simp [h2, h3, h4, h5]; omega
 
 def store16Heap (σ : WasmHeapMap (Option UInt8)) (memId : Nat) (addr value : UInt32) :
     WasmHeapMap (Option UInt8) :=

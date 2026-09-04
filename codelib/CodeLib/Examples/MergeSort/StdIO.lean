@@ -258,11 +258,9 @@ theorem quicksortHeapAux_addresses_lt
       simp only [Quicksort.quicksortHeapAux, List.length_cons] at *
       have h4 : (base + 4 : UInt32).toNat = base.toNat + 4 :=
         UInt32.add_ofNat_toNat_noWrap base 4 (by decide) (by
-          simp only [UInt32.size] at hlimit
-          omega)
+          simp only [UInt32.size] at hlimit; omega)
       have hroom : base.toNat + 4 ≤ 4294967296 := by
-        simp only [UInt32.size] at hlimit
-        omega
+        simp only [UInt32.size] at hlimit; omega
       obtain ⟨hn1, hn2, hn3⟩ := UInt32.addSteps4 base hroom
       apply ih (store32Heap σ 0 base value) (base + 4)
       · intro address byte hget
@@ -624,8 +622,7 @@ theorem probe_traps_of_too_long (input : List UInt8)
     intro hempty
     have hlength := congrArg List.length hempty
     simp only [List.length_drop, List.length_nil] at hlength
-    rw [List.length_take, Nat.min_eq_left (Nat.le_of_lt hlong)] at hlength
-    omega
+    rw [List.length_take, Nat.min_eq_left (Nat.le_of_lt hlong)] at hlength; omega
   · rw [afterBoundedRead_byteCapacity]
     exact UInt32.toNat_ofNat_of_lt' (by decide)
 
@@ -705,13 +702,11 @@ theorem encodedLength_toNat (input : List UInt32) (hfit : Fits input) :
   apply UInt32.toNat_ofNat_of_lt'
   rw [fits_iff] at hfit
   change 4 * input.length ≤ 32768 at hfit
-  simp only [serialize_length, UInt32.size]
-  omega
+  simp only [serialize_length, UInt32.size]; omega
 
 theorem encodedLength_words (input : List UInt32) (hfit : Fits input) :
     (UInt32.ofNat (serialize input).length).toNat / 4 = input.length := by
-  rw [encodedLength_toNat input hfit, serialize_length]
-  omega
+  rw [encodedLength_toNat input hfit, serialize_length]; omega
 
 theorem scratchValues_length (input : List UInt32) :
     (scratchValues input).length = input.length := by
@@ -880,8 +875,7 @@ theorem sortHeap_pointsTo [WasmHeapGS Unit]
       exact hfit
     · have hscratchNat : scratch.toNat = 32768 := by decide
       rw [hscratchNat]
-      simp only [UInt32.size]
-      omega
+      simp only [UInt32.size]; omega
   simp only [sortHeap]
   iintro Hheap
   ihave ⟨Hscratch, HsourceHeap⟩ := Quicksort.quicksortHeapAux_pointsTo
@@ -918,12 +912,10 @@ theorem arrayAt_capacity [WasmSmallStepGS hlc Unit]
     let address := base + 4 * UInt32.ofNat k
     have haddress : address.toNat = base.toNat + 4 * k := by
       exact Mem.words32_slotAddr_toNat base k (by
-        simp only [UInt32.size] at hfit
-        omega)
+        simp only [UInt32.size] at hfit; omega)
     obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4 address (by
       simp only [UInt32.size] at hfit ⊢
-      rw [haddress]
-      omega)
+      rw [haddress]; omega)
     iintro ⟨Hstate, Harray⟩
     ihave ⟨Hword, Hrestore⟩ := arrayAt_get 0 base values k hk $$ Harray
     imod stateInterp_pointsTo_u32_facts_frame store steps observations threads
@@ -936,8 +928,7 @@ theorem arrayAt_capacity [WasmSmallStepGS hlc Unit]
       iexact Hword
     · ipureintro
       rw [haddress] at hfacts
-      dsimp only [k] at hfacts
-      omega
+      dsimp only [k] at hfacts; omega
 
 theorem validLayout (input : List UInt32) (hfit : Fits input) :
     ValidLayout source scratch input.length := by

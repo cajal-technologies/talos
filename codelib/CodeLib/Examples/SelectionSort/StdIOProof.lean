@@ -181,13 +181,11 @@ theorem encodedLength_toNat (input : List UInt64) (hfit : Fits input) :
       (serialize input).length := by
   apply UInt32.toNat_ofNat_of_lt'
   simp only [Fits, serialize_length, bufferBytes] at hfit ⊢
-  simp only [UInt32.size]
-  omega
+  simp only [UInt32.size]; omega
 
 theorem encodedLength_words (input : List UInt64) (hfit : Fits input) :
     (UInt32.ofNat (serialize input).length).toNat / 8 = input.length := by
-  rw [encodedLength_toNat input hfit, serialize_length]
-  omega
+  rw [encodedLength_toNat input hfit, serialize_length]; omega
 
 /-! ## The packed stream and the u64 separation-logic array agree -/
 
@@ -249,8 +247,7 @@ theorem writeBytes_serialize (mem : Mem) (base : UInt32)
       simp only [List.length_cons, Nat.mul_add] at hfit
       have hbase : (base + 8).toNat = base.toNat + 8 :=
         UInt32.add_ofNat_toNat_noWrap base 8 (by decide) (by
-          simp only [UInt32.size] at hfit ⊢
-          omega)
+          simp only [UInt32.size] at hfit ⊢; omega)
       rw [show base.toNat + (encodeWord value).length = (base + 8).toNat by
         simp [encodeWord, hbase]]
       apply ih
@@ -274,8 +271,7 @@ theorem heap64Aux_agrees
       · have h8 : (base + 8 : UInt32).toNat = base.toNat + 8 :=
           UInt32.add_ofNat_toNat_noWrap base 8 (by decide) (by omega)
         rw [h8]
-        simp only [UInt32.size]
-        omega
+        simp only [UInt32.size]; omega
 
 theorem heap64Aux_inBounds
     (heap : WasmHeapMap (Option UInt8)) (mem : Mem) (base : UInt32)
@@ -297,11 +293,9 @@ theorem heap64Aux_inBounds
       · exact store64_inBounds0 heap mem base value h1 h2 h3 h4 h5 h6 h7
           (by omega) hinBounds
       · rw [h8]
-        simp only [UInt32.size]
-        omega
+        simp only [UInt32.size]; omega
       · have : (mem.write64 base value).pages = mem.pages := rfl
-        rw [h8, this]
-        omega
+        rw [h8, this]; omega
 
 private theorem empty_agrees (mem : Mem) :
     heapAgreesWithMem (∅ : WasmHeapMap (Option UInt8))
@@ -414,8 +408,7 @@ theorem heap64Aux_pointsTo [WasmHeapGS Unit]
         obtain ⟨byte, hbyte⟩ := Option.ne_none_iff_exists.mp h
         have hlt := hdisjoint _ _ hbyte.symm
         simp only [] at hlt
-        rw [hn n (by omega)] at hlt
-        omega
+        rw [hn n (by omega)] at hlt; omega
       have hget0 : get? heap ⟨0, base⟩ = none := by simpa using hget 0 (by omega)
       have hget1 := hget 1 (by omega)
       have hget2 := hget 2 (by omega)
@@ -437,8 +430,7 @@ theorem heap64Aux_pointsTo [WasmHeapGS Unit]
         have heq' := congrArg MemoryKey.addr heq
         simp only [] at heq'
         have heq'' := congrArg UInt32.toNat heq'
-        rw [hn i (by omega), hn j (by omega)] at heq''
-        omega
+        rw [hn i (by omega), hn j (by omega)] at heq''; omega
       have hneU (i j : UInt32) (hi : i.toNat ≤ 7) (hj : j.toNat ≤ 7)
           (hij : i ≠ j) : (⟨0, base + i⟩ : MemoryKey) ≠ ⟨0, base + j⟩ := by
         simpa only [UInt32.ofNat_toNat] using
@@ -482,8 +474,7 @@ theorem heap64Aux_pointsTo [WasmHeapGS Unit]
       have hfit' : (base + 8).toNat + 8 * values.length < UInt32.size := by
         change (base + UInt32.ofNat 8).toNat + 8 * values.length < UInt32.size
         rw [hn8]
-        simp only [UInt32.size]
-        omega
+        simp only [UInt32.size]; omega
       iintro Hheap
       ihave ⟨Hvalues, Hstored⟩ := ih (store64Heap heap 0 base value) (base + 8)
         hdisjoint' hfit' $$ Hheap
@@ -574,21 +565,18 @@ theorem array64At_words [WasmSmallStepGS hlc α]
   | cons value output ih =>
       simp only [array64At, List.length_cons] at *
       have hroom : base.toNat + 8 ≤ 4294967296 := by
-        simp only [UInt32.size] at hfit
-        omega
+        simp only [UInt32.size] at hfit; omega
       obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := UInt32.addSteps8 base hroom
       have h8 : (base + 8).toNat = base.toNat + 8 :=
         UInt32.add_ofNat_toNat_noWrap base 8 (by decide) (by
-          simp only [UInt32.size] at hfit ⊢
-          omega)
+          simp only [UInt32.size] at hfit ⊢; omega)
       iintro ⟨Hstate, Hword, Houtput⟩
       imod stateInterp_pointsTo_u64_facts_frame store steps obs threads
         base value h1 h2 h3 h4 h5 h6 h7 $$
         [$Hstate $Hword] with ⟨Hstate, Hword, %hword⟩
       have hfit' : (base + 8).toNat + 8 * output.length < UInt32.size := by
         rw [h8]
-        simp only [UInt32.size] at hfit ⊢
-        omega
+        simp only [UInt32.size] at hfit ⊢; omega
       imod ih (base + 8) hfit' $$ [$Hstate $Houtput] with
         ⟨Hstate, Houtput, %hrest⟩
       imodintro
@@ -629,12 +617,10 @@ theorem array64At_capacity [WasmSmallStepGS hlc α]
     let address := base + 8 * UInt32.ofNat k
     have haddress : address.toNat = base.toNat + 8 * k := by
       exact Mem.words64_slotAddr_toNat base k (by
-        simp only [UInt32.size] at hfit
-        omega)
+        simp only [UInt32.size] at hfit; omega)
     obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := UInt32.addSteps8 address (by
       simp only [UInt32.size] at hfit ⊢
-      rw [haddress]
-      omega)
+      rw [haddress]; omega)
     iintro ⟨Hstate, Harray⟩
     ihave ⟨Hword, Hrestore⟩ := array64At_get 0 base values k hk $$ Harray
     imod stateInterp_pointsTo_u64_facts_frame
@@ -648,8 +634,7 @@ theorem array64At_capacity [WasmSmallStepGS hlc α]
       iexact Hword
     · ipureintro
       rw [haddress] at hfacts
-      dsimp only [k] at hfacts
-      omega
+      dsimp only [k] at hfacts; omega
 
 /-! ## Adequacy of the two host-independent sort calls -/
 
@@ -935,8 +920,7 @@ theorem deserialize_readBytes64 (mem : Mem) (base : UInt32) (count : Nat)
       simp only [List.cons_append, List.nil_append, deserialize_cons]
       have hbase : (base + 8).toNat = base.toNat + 8 := by
         apply UInt32.add_ofNat_toNat_noWrap base 8 (by decide)
-        simp only [UInt32.size] at hfit ⊢
-        omega
+        simp only [UInt32.size] at hfit ⊢; omega
       have hdecode : decodeWord
           (mem.bytes base.toNat) (mem.bytes (base.toNat + 1))
           (mem.bytes (base.toNat + 2)) (mem.bytes (base.toNat + 3))

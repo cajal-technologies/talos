@@ -40,8 +40,7 @@ private theorem arrayAddress64_toNat (base : UInt32) {index length : Nat}
   have height : (8 : UInt32).toNat = 8 := by decide
   rw [height, Nat.mod_eq_of_lt hp, Nat.mul_comm index 8]
   apply Nat.mod_eq_of_lt
-  simp only [UInt32.size] at hfit ⊢
-  omega
+  simp only [UInt32.size] at hfit ⊢; omega
 
 theorem twp_address64
     [WasmSmallStepGS hlc Unit]
@@ -472,8 +471,7 @@ private theorem sorted_of_length_lt_two (values : List UInt64)
   | [] => exact List.Pairwise.nil
   | [value] => exact List.pairwise_singleton _ _
   | _ :: _ :: _ =>
-      simp only [List.length_cons] at h
-      omega
+      simp only [List.length_cons] at h; omega
 
 set_option maxHeartbeats 12000000 in
 set_option maxRecDepth 10000 in
@@ -594,8 +592,7 @@ private theorem twp_recursiveSort_aux
           cases hUpdated : updated with
           | nil =>
               have hlength := congrArg List.length hUpdated
-              simp only [List.length_nil] at hlength
-              omega
+              simp only [List.length_nil] at hlength; omega
           | cons head tail => simp
         ihave Hupdated' :
             array64At 0 arr (updated[0]! :: updated.drop 1) $$ [Hupdated]
@@ -606,14 +603,12 @@ private theorem twp_recursiveSort_aux
           twp_localGet twp_const twp_sub]
         have harrStep : (arr + 8).toNat = arr.toNat + 8 := by
           simpa using UInt32.add_ofNat_toNat_noWrap arr 8 (by decide) (by
-            simp only [UInt32.size] at hfit ⊢
-            omega)
+            simp only [UInt32.size] at hfit ⊢; omega)
         have htailLength : (updated.drop 1).length = input.length - 1 := by
           simp only [List.length_drop, hupdatedLength]
         have hfitTail : (arr + 8).toNat + 8 * (updated.drop 1).length ≤
             UInt32.size := by
-          rw [harrStep, htailLength]
-          omega
+          rw [harrStep, htailLength]; omega
         have hpred : UInt32.ofNat input.length - 1 =
             UInt32.ofNat (input.length - 1) := by
           apply UInt32.toNat.inj
@@ -621,15 +616,13 @@ private theorem twp_recursiveSort_aux
             UInt32.toNat_ofNat_of_lt' hlengthSize,
             UInt32.toNat_ofNat_of_lt' (by omega : input.length - 1 < UInt32.size)]
           have hbound := (UInt32.ofNat input.length).toNat_lt
-          rw [UInt32.toNat_ofNat_of_lt' hlengthSize] at hbound
-          omega
+          rw [UInt32.toNat_ofNat_of_lt' hlengthSize] at hbound; omega
         rw [hpred]
         simp only [List.length_cons, List.length_nil, Nat.reduceAdd,
           Nat.reduceSub, List.set]
         rw [UInt32.add_comm 8 arr, ← htailLength]
         iapply ih (arr + 8) (updated.drop 1) hfitTail (by
-          rw [htailLength]
-          omega)
+          rw [htailLength]; omega)
           (callerLocals :=
             { params := [.i32 arr, .i32 (UInt32.ofNat input.length)]
               locals := [.i32 (UInt32.ofNat best), .i32 0, .i64 input[0]]
@@ -756,8 +749,7 @@ private theorem twp_innerLoop
     icases Hinv with ⟨%hstate, Harray, Hfinish⟩
     unfold MinScan at hstate
     have hlengthSize : current.length < UInt32.size := by
-      simp only [UInt32.size] at hfit ⊢
-      omega
+      simp only [UInt32.size] at hfit ⊢; omega
     have hdeclaredSize : length < UInt32.size := by
       rwa [← hlength]
     have hscanSize : state.scan < UInt32.size := by
@@ -927,12 +919,10 @@ private theorem twp_outerLoop
     have hfitCurrent : arr.toNat + 8 * state.current.length ≤
         UInt32.size := by rwa [hlength]
     have hlengthSize : state.current.length < UInt32.size := by
-      simp only [UInt32.size] at hfitCurrent ⊢
-      omega
+      simp only [UInt32.size] at hfitCurrent ⊢; omega
     have houterSize : state.outer + 1 < UInt32.size := by
       unfold OuterInvariant at houter
-      simp only [UInt32.size] at hfitCurrent ⊢
-      omega
+      simp only [UInt32.size] at hfitCurrent ⊢; omega
     have hinputSize : input.length < UInt32.size := by
       rwa [← hlength]
     have hcmp := nat_lt_u32_iff houterSize hinputSize

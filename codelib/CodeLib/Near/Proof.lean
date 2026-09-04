@@ -505,14 +505,12 @@ theorem nearEnv_satisfies_canonical (m : Module) (himports : m.imports = nearImp
 @[simp] theorem writeBytes_byte_before (m : Mem) (off i : Nat) (data : List UInt8)
     (h : i < off) :
     (m.writeBytes off data).bytes i = m.bytes i := by
-  simp [Mem.writeBytes]
-  omega
+  simp [Mem.writeBytes]; omega
 
 @[simp] theorem writeBytes_byte_after (m : Mem) (off i : Nat) (data : List UInt8)
     (h : off + data.length ≤ i) :
     (m.writeBytes off data).bytes i = m.bytes i := by
-  simp [Mem.writeBytes]
-  omega
+  simp [Mem.writeBytes]; omega
 
 @[simp] theorem read32_writeBytes_four (m : Mem) (a : UInt32) (b0 b1 b2 b3 : UInt8) :
     (m.writeBytes a.toNat [b0, b1, b2, b3]).read32 a =

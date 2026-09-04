@@ -179,8 +179,7 @@ theorem OuterInvariant.step
     rcases hy with ⟨offset, hoffset, hy⟩
     have hkUpdated : fixed + 1 + offset < updated.length := by
       simp only [List.length_drop] at hoffset
-      rw [hupdatedLength] at hoffset ⊢
-      omega
+      rw [hupdatedLength] at hoffset ⊢; omega
     refine ⟨fixed + 1 + offset, by omega, ?_, ?_⟩
     · rw [hupdatedLength] at hkUpdated
       exact hkUpdated
@@ -236,8 +235,7 @@ theorem OuterInvariant.sorted
   rw [List.pairwise_append]
   refine ⟨hsorted, ?_, hcross⟩
   have hsuffixLength : (current.drop fixed).length ≤ 1 := by
-    simp only [List.length_drop]
-    omega
+    simp only [List.length_drop]; omega
   match hsuffix : current.drop fixed with
   | [] => exact List.Pairwise.nil
   | [_] => exact List.pairwise_singleton _ _
@@ -270,8 +268,7 @@ theorem recursive_compose
     cases hUpdated : updated with
     | nil =>
         have hlength := congrArg List.length hUpdated
-        simp only [List.length_nil] at hlength
-        omega
+        simp only [List.length_nil] at hlength; omega
     | cons head tail => simp
   dsimp only
   constructor
@@ -286,8 +283,7 @@ theorem recursive_compose
         cases hUpdated : updated with
         | nil =>
             have hlength := congrArg List.length hUpdated
-            simp only [List.length_nil] at hlength
-            omega
+            simp only [List.length_nil] at hlength; omega
         | cons head tail => simp
       rw [htake]
       simp

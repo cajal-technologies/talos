@@ -80,8 +80,7 @@ def deserialize (codec : WordCodec W) : List UInt8 → Option (List W)
 termination_by bytes => bytes.length
 decreasing_by
   have hpos := codec.width_pos
-  simp only [List.length_drop, List.length_cons]
-  omega
+  simp only [List.length_drop, List.length_cons]; omega
 
 @[simp] theorem deserialize_nil : codec.deserialize [] = some [] := by
   simp [deserialize]

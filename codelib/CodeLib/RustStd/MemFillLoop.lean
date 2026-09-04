@@ -329,8 +329,7 @@ theorem fillWords_loopBody_invariant_wp
     cases suffix with
     | nil =>
         have hltNat : i.toNat < n.toNat := hlt
-        simp only [List.length_nil, Nat.add_zero] at hinv
-        omega
+        simp only [List.length_nil, Nat.add_zero] at hinv; omega
     | cons old tail =>
         have hltNat : i.toNat < n.toNat := hlt
         have hnext :
@@ -341,8 +340,7 @@ theorem fillWords_loopBody_invariant_wp
             (lt_of_le_of_lt (by omega) n.toNat_lt)]
         have hinvNext :
             (i + 1).toNat + tail.length = n.toNat := by
-          simp only [List.length_cons] at hinv
-          omega
+          simp only [List.length_cons] at hinv; omega
         let Rloop : IProp (WasmHeapGF α) := iprop% □ Kloop ∗ R
         iintro ⟨#IHcurrent, HcurrentRest⟩
         icases HcurrentRest with ⟨HRcurrent, HarrayCurrent⟩

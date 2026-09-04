@@ -651,8 +651,7 @@ theorem sortedRuns_one (values : List UInt32) :
     SortedRuns values 1 := by
   intro block _
   apply sorted_of_length_le_one
-  simp only [segment, List.length_take, List.length_drop]
-  omega
+  simp only [segment, List.length_take, List.length_drop]; omega
 
 theorem MergePassInvariant.finished
     {original current : List UInt32} {width pass : Nat}
@@ -722,12 +721,10 @@ theorem MergePassInvariant.step
       simpa only [hmidEq, hmidIndex, hrightIndex, right] using hrun
     · have hmidEnd : mid = current.length := by
         dsimp only [mid]
-        rw [Nat.min_eq_right]
-        omega
+        rw [Nat.min_eq_right]; omega
       have hrightEnd : right = current.length := by
         dsimp only [right]
-        rw [Nat.min_eq_right]
-        omega
+        rw [Nat.min_eq_right]; omega
       simp [hmidEnd, hrightEnd, segment, Sorted]
   have hmergedSorted : Sorted (segment output left right) :=
     sorted_of_mergeRel hmerge'.2.2.2.2.2.2

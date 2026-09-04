@@ -542,8 +542,7 @@ theorem twp_mergeLeftStep
     have := hlayout.length_lt; omega
   have hkSucc : k + 1 < UInt32.size := by
     have := hlayout.length_lt
-    rw [hscratchLength] at hkLen
-    omega
+    rw [hscratchLength] at hkLen; omega
   have hiValue :
       1 + UInt32.ofNat i = UInt32.ofNat (i + 1) := by
     rw [UInt32.add_comm, u32_ofNat_succ hiSucc]
@@ -612,8 +611,7 @@ theorem twp_mergeRightStep
     have := hlayout.length_lt; omega
   have hkSucc : k + 1 < UInt32.size := by
     have := hlayout.length_lt
-    rw [hscratchLength] at hkLen
-    omega
+    rw [hscratchLength] at hkLen; omega
   have hjValue :
       1 + UInt32.ofNat j = UInt32.ofNat (j + 1) := by
     rw [UInt32.add_comm, u32_ofNat_succ hjSucc]
@@ -1213,8 +1211,7 @@ theorem twp_mergeBody
     hinvFinal.2.2.2.2.2.1
   have hmergedLength : merged.length = right - left := by
     have hlength := (perm_of_mergeRel hmerge).length_eq
-    simp [segment, List.length_take, List.length_drop] at hlength
-    omega
+    simp [segment, List.length_take, List.length_drop] at hlength; omega
   iapply Wasm.SmallStep.twp_localGet (α := α) rfl
   iapply Wasm.SmallStep.twp_localSet (α := α) rfl
   simp [mergeLocals, List.set]
@@ -1764,8 +1761,7 @@ theorem twp_mergeSortInnerLoop
       iapply Hprepare
       have hbounds :
           left ≤ newMid ∧ newMid ≤ newRight ∧ newRight ≤ count := by
-        dsimp only [newMid, newRight]
-        omega
+        dsimp only [newMid, newRight]; omega
       have Hadvance := twp_mergeSortCallAdvance (α := α)
         runtimeModule mergeIndex himports hfunction source temporary
         state.current state.scratch count width left newMid newRight

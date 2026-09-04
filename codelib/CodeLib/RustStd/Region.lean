@@ -72,8 +72,7 @@ address of `slot64 base k` is the integer `base.toNat + 8 * k.toNat`. -/
 theorem slot64_base_toNat (base k : UInt32)
     (h : base.toNat + 8 * k.toNat < 4294967296) :
     (slot64 base k).base.toNat = base.toNat + 8 * k.toNat := by
-  simp only [slot64, UInt32.toNat_add, UInt32.toNat_mul, UInt32.reduceToNat]
-  omega
+  simp only [slot64, UInt32.toNat_add, UInt32.toNat_mul, UInt32.reduceToNat]; omega
 
 /-- Distinct in-bounds element slots of a no-wrap array are disjoint regions. -/
 theorem slot64_disjoint (base k l : UInt32)
@@ -84,8 +83,7 @@ theorem slot64_disjoint (base k l : UInt32)
   unfold Disjoint
   rw [slot64_base_toNat base k hk, slot64_base_toNat base l hl]
   have : k.toNat ≠ l.toNat := fun he => hkl (UInt32.toNat.inj he)
-  simp only [slot64]
-  omega
+  simp only [slot64]; omega
 
 /-- The `k`-th 4-byte slot of a `u32` array based at `base` (wasm address
 `base + 4 * k`). The 32-bit twin of `slot64`, matching the `Mem.words32`
@@ -101,8 +99,7 @@ address of `slot32 base k` is the integer `base.toNat + 4 * k.toNat`. -/
 theorem slot32_base_toNat (base k : UInt32)
     (h : base.toNat + 4 * k.toNat < 4294967296) :
     (slot32 base k).base.toNat = base.toNat + 4 * k.toNat := by
-  simp only [slot32, UInt32.toNat_add, UInt32.toNat_mul, UInt32.reduceToNat]
-  omega
+  simp only [slot32, UInt32.toNat_add, UInt32.toNat_mul, UInt32.reduceToNat]; omega
 
 end MemRegion
 

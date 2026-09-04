@@ -742,8 +742,7 @@ theorem pointsToBytes_facts_readBytes {addr : UInt32}
     have haddr : (addr + UInt32.ofNat i).toNat = addr.toNat + i := by
       have hiSize : i < UInt32.size := by omega
       rw [UInt32.toNat_add, UInt32.toNat_ofNat_of_lt' hiSize]
-      simp only [UInt32.size] at hnowrap ⊢
-      omega
+      simp only [UInt32.size] at hnowrap ⊢; omega
     have hfact := hfacts i bytes[i] (List.getElem?_eq_getElem hi')
     simpa [Mem.readBytes, Mem.read8, haddr] using hfact
 
@@ -792,8 +791,7 @@ theorem genHeap_alloc_freshBytes [WasmHeapGS α]
         hbelow.get?_eq_none_of_le ⟨0, addr⟩ rfl (Nat.le_refl _)
       have hsucc : (addr + 1).toNat = addr.toNat + 1 := by
         simpa using UInt32.add_ofNat_toNat_noWrap addr 1 (by decide) (by
-          simp only [List.length_cons, UInt32.size] at hnowrap
-          omega)
+          simp only [List.length_cons, UInt32.size] at hnowrap; omega)
       have hbelow' :
           HeapBelow (insert σ ⟨0, addr⟩ (some byte))
             (addr + 1).toNat := by
@@ -805,8 +803,7 @@ theorem genHeap_alloc_freshBytes [WasmHeapGS α]
       have hnowrap' :
           (addr + 1).toNat + rest.length < UInt32.size := by
         rw [hsucc]
-        simp only [List.length_cons] at hnowrap
-        omega
+        simp only [List.length_cons] at hnowrap; omega
       iintro Hheap
       imod genHeap_alloc hlookup $$ Hheap with
         ⟨Hheap, Hhead, Hmeta⟩
@@ -840,8 +837,7 @@ theorem HeapBelow.insertFreshBytes
   | cons byte rest ih =>
       have hsucc : (addr + 1).toNat = addr.toNat + 1 := by
         simpa using UInt32.add_ofNat_toNat_noWrap addr 1 (by decide) (by
-          simp only [List.length_cons, UInt32.size] at hnowrap
-          omega)
+          simp only [List.length_cons, UInt32.size] at hnowrap; omega)
       have hbelow' :
           HeapBelow (insert σ ⟨0, addr⟩ (some byte))
             (addr + 1).toNat := by
@@ -853,8 +849,7 @@ theorem HeapBelow.insertFreshBytes
       have hnowrap' :
           (addr + 1).toNat + rest.length < UInt32.size := by
         rw [hsucc]
-        simp only [List.length_cons] at hnowrap
-        omega
+        simp only [List.length_cons] at hnowrap; omega
       change HeapBelow
         (SmallStep.insertFreshBytes (insert σ ⟨0, addr⟩ (some byte))
           (addr + 1) rest)
@@ -889,8 +884,7 @@ theorem insertFreshBytes_bigSep_pointsToBytes [WasmHeapGS α]
         hbelow.get?_eq_none_of_le ⟨0, addr⟩ rfl (Nat.le_refl _)
       have hsucc : (addr + 1).toNat = addr.toNat + 1 := by
         simpa using UInt32.add_ofNat_toNat_noWrap addr 1 (by decide) (by
-          simp only [List.length_cons, UInt32.size] at hnowrap
-          omega)
+          simp only [List.length_cons, UInt32.size] at hnowrap; omega)
       have hbelow' :
           HeapBelow (insert σ ⟨0, addr⟩ (some byte))
             (addr + 1).toNat := by
@@ -902,8 +896,7 @@ theorem insertFreshBytes_bigSep_pointsToBytes [WasmHeapGS α]
       have hnowrap' :
           (addr + 1).toNat + rest.length < UInt32.size := by
         rw [hsucc]
-        simp only [List.length_cons] at hnowrap
-        omega
+        simp only [List.length_cons] at hnowrap; omega
       simp only [insertFreshBytes]
       iintro Hheap
       ihave ⟨Hrest, Hinsert⟩ := ih (insert σ ⟨0, addr⟩ (some byte)) (addr + 1)
@@ -948,8 +941,7 @@ theorem insertFreshPhysicalBytes_facts
   | succ size ih =>
       have hsucc : (addr + 1).toNat = addr.toNat + 1 := by
         simpa using UInt32.add_ofNat_toNat_noWrap addr 1 (by decide) (by
-          simp only [UInt32.size] at hnowrap
-          omega)
+          simp only [UInt32.size] at hnowrap; omega)
       have haddrBound : addr.toNat < mem.pages * 65536 := by
         omega
       have hagree' :
@@ -2403,24 +2395,20 @@ theorem stateInterp_write_bytes [WasmSmallStepGS hlc α]
           simp only [List.length_cons, Nat.succ.injEq] at hlength
           have h1 : (addr + 1).toNat = addr.toNat + 1 := by
             apply UInt32.add_ofNat_toNat_noWrap addr 1 (by decide)
-            simp only [List.length_cons, UInt32.size] at hnowrap ⊢
-            omega
+            simp only [List.length_cons, UInt32.size] at hnowrap ⊢; omega
           have hheadBound : addr.toNat <
               store.wasm.mem.pages * 65536 := by
-            simp only [List.length_cons] at hbound
-            omega
+            simp only [List.length_cons] at hbound; omega
           have htailBound : (addr + 1).toNat + newRest.length ≤
               (store.wasm.mem.write8 addr new).pages * 65536 := by
             rw [h1]
             change addr.toNat + 1 + newRest.length ≤
               store.wasm.mem.pages * 65536
-            simp only [List.length_cons] at hbound
-            omega
+            simp only [List.length_cons] at hbound; omega
           have htailNoWrap : (addr + 1).toNat + newRest.length <
               UInt32.size := by
             rw [h1]
-            simp only [List.length_cons] at hnowrap
-            omega
+            simp only [List.length_cons] at hnowrap; omega
           have haddr : UInt32.ofNat addr.toNat = addr := by
             exact UInt32.ofNat_toNat
           have hmem :
@@ -2430,8 +2418,7 @@ theorem stateInterp_write_bytes [WasmSmallStepGS hlc α]
             symm
             rw [Mem.writeBytes_cons store.wasm.mem addr.toNat new newRest
               (by
-                simp only [List.length_cons] at hnowrap
-                omega)]
+                simp only [List.length_cons] at hnowrap; omega)]
             rw [haddr, h1]
           iintro ⟨Hstate, Hbytes⟩
           ihave ⟨Hhead, Hrest⟩ := (pointsToBytes_cons 0 addr old oldRest).mp $$ Hbytes
@@ -3118,8 +3105,7 @@ theorem stateInterp_copy2_zero_four [WasmSmallStepGS hlc α]
   · irw_exact [show (⟨0, (0 : UInt32) + 5⟩ : MemoryKey) = ⟨0, 5⟩ by decide] with H5
   imod stateInterp_store8 store steps observations threads
       2 (u64Byte 0x8877665544332211 2) 0x11 (by
-        simp only [UInt32.toNat_ofNat] at Hfacts ⊢
-        omega) $$
+        simp only [UInt32.toNat_ofNat] at Hfacts ⊢; omega) $$
       [$Hstate $H2At] with ⟨Hstate, H2⟩
   imod stateInterp_store8
       { store with wasm :=

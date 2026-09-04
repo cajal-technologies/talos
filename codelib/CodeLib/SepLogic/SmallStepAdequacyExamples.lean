@@ -284,14 +284,12 @@ private theorem swapWordsHeap_inBounds (memory : Mem)
   · have hcapacity :
         65536 ≤ memory.pages * 65536 :=
       Nat.mul_le_mul_right 65536 hpages
-    simp only [UInt32.toNat_ofNat, Mem.write32]
-    omega
+    simp only [UInt32.toNat_ofNat, Mem.write32]; omega
   · apply store32_inBounds0 (mem := memory) (h1 := rfl) (h2 := rfl) (h3 := rfl)
     · have hcapacity :
           65536 ≤ memory.pages * 65536 :=
         Nat.mul_le_mul_right 65536 hpages
-      simp only [UInt32.toNat_zero, Nat.zero_add]
-      omega
+      simp only [UInt32.toNat_zero, Nat.zero_add]; omega
     · exact emptyHeap_inBounds _
 
 private theorem swapWordsHeap_pointsTo [WasmHeapGS α] :
@@ -440,8 +438,7 @@ private theorem reverseThreeWordsHeap_inBounds (memory : Mem)
   · have hcapacity :
         65536 ≤ memory.pages * 65536 :=
       Nat.mul_le_mul_right 65536 hpages
-    simp only [UInt32.toNat_ofNat, Mem.write32]
-    omega
+    simp only [UInt32.toNat_ofNat, Mem.write32]; omega
   · exact swapWordsHeap_inBounds memory hpages
 
 private theorem reverseThreeWordsHeap_pointsTo [WasmHeapGS α] :
@@ -844,14 +841,12 @@ private theorem fillFourBytesHeap_inBounds (memory : Mem)
   · have hcapacity :
         65536 ≤ memory.pages * 65536 :=
       Nat.mul_le_mul_right 65536 hpages
-    simp only [UInt32.toNat_ofNat, Mem.write32]
-    omega
+    simp only [UInt32.toNat_ofNat, Mem.write32]; omega
   · apply store32_inBounds0 (mem := memory) (h1 := rfl) (h2 := rfl) (h3 := rfl)
     · have hcapacity :
           65536 ≤ memory.pages * 65536 :=
         Nat.mul_le_mul_right 65536 hpages
-      simp only [UInt32.toNat_ofNat]
-      omega
+      simp only [UInt32.toNat_ofNat]; omega
     · exact emptyHeap_inBounds _
 
 private theorem fillFourBytesHeap_pointsTo (oldWord : UInt32)
@@ -980,14 +975,12 @@ private theorem copyWordHeap_inBounds (memory : Mem)
   · have hcapacity :
         65536 ≤ memory.pages * 65536 :=
       Nat.mul_le_mul_right 65536 hpages
-    simp only [UInt32.toNat_ofNat, Mem.write32]
-    omega
+    simp only [UInt32.toNat_ofNat, Mem.write32]; omega
   · apply store32_inBounds0 (mem := memory) (h1 := rfl) (h2 := rfl) (h3 := rfl)
     · have hcapacity :
           65536 ≤ memory.pages * 65536 :=
         Nat.mul_le_mul_right 65536 hpages
-      simp only [UInt32.toNat_zero, Nat.zero_add]
-      omega
+      simp only [UInt32.toNat_zero, Nat.zero_add]; omega
     · exact emptyHeap_inBounds _
 
 private theorem copyWordHeap_pointsTo (oldDestination : UInt32)
@@ -1101,8 +1094,7 @@ private theorem copyOverlapWordHeap_inBounds (memory : Mem)
   · have hcapacity :
         65536 ≤ memory.pages * 65536 :=
       Nat.mul_le_mul_right 65536 hpages
-    simp only [UInt32.toNat_zero, Nat.zero_add]
-    omega
+    simp only [UInt32.toNat_zero, Nat.zero_add]; omega
   · exact emptyHeap_inBounds _
 
 private theorem copyOverlapWordHeap_pointsTo [WasmHeapGS α] :
@@ -1201,8 +1193,7 @@ private theorem memoryInitDropHeap_inBounds (memory : Mem)
   · have hcapacity :
         65536 ≤ memory.pages * 65536 :=
       Nat.mul_le_mul_right 65536 hpages
-    simp only [UInt32.toNat_ofNat]
-    omega
+    simp only [UInt32.toNat_ofNat]; omega
   · exact emptyHeap_inBounds _
 
 private theorem memoryInitDropHeap_pointsTo [WasmHeapGS α] :

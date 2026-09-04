@@ -285,8 +285,7 @@ theorem twp_partitionBody
         UInt32.toNat_ofNat_of_lt' hiSize,
         UInt32.toNat_ofNat_of_lt' (show hi - 1 < UInt32.size by omega)]
     have := (UInt32.ofNat hi).toNat_lt
-    rw [UInt32.toNat_ofNat_of_lt' hiSize] at this
-    omega
+    rw [UInt32.toNat_ofNat_of_lt' hiSize] at this; omega
   have hset6 :
       (⟨[.i32 arr, .i32 (UInt32.ofNat lo), .i32 (UInt32.ofNat hi)],
         [.i32 0, .i32 0, .i32 0, .i32 0, .i32 0],
@@ -497,8 +496,7 @@ private theorem twp_quicksortBody_aux
       rw [UInt32.toNat_sub, UInt32.toNat_ofNat_of_lt' hiSize,
           UInt32.toNat_ofNat_of_lt' hloSize, UInt32.toNat_ofNat_of_lt' hdiffSize]
       have := (UInt32.ofNat hi).toNat_lt
-      rw [UInt32.toNat_ofNat_of_lt' hiSize] at this
-      omega
+      rw [UInt32.toNat_ofNat_of_lt' hiSize] at this; omega
     wasm_twp_bind Wasm.SmallStep.twp_call runtimeModule quicksortIdx
         (quicksortFunction partitionIdx quicksortIdx)
         himports_q hfunction_q with Hruntime => Hruntime

@@ -368,8 +368,7 @@ theorem copyWords_loopBody_invariant_wp
     cases dstSuffix with
     | nil =>
         have hltNat : i.toNat < n.toNat := hlt
-        simp only [List.length_nil, Nat.add_zero] at hdstInv
-        omega
+        simp only [List.length_nil, Nat.add_zero] at hdstInv; omega
     | cons oldDst dstTail =>
       cases srcSuffix with
       | nil =>
@@ -392,8 +391,7 @@ theorem copyWords_loopBody_invariant_wp
             hpre, hnext]
         have hdstNext :
             copied'.length + dstTail.length = n.toNat := by
-          simp only [List.length_cons] at hdstInv
-          omega
+          simp only [List.length_cons] at hdstInv; omega
         have hsourceNext : source = copied' ++ srcTail := by
           rw [hsource]
           simp only [copied', List.append_assoc, List.singleton_append]
@@ -434,8 +432,7 @@ theorem copyWords_loopBody_invariant_wp
     have hnltNat : ¬ i.toNat < n.toNat := by
       simpa only [UInt32.lt_iff_toNat_lt] using hnlt
     have hiNat : i.toNat = n.toNat := by
-      rw [← hpre] at hnltNat
-      omega
+      rw [← hpre] at hnltNat; omega
     have hi : i = n := UInt32.toNat_inj.mp hiNat
     subst i
     have hpreLen : pre.length = n.toNat := hpre
@@ -863,8 +860,7 @@ theorem copyWords_loop_twp
       cases hdst : state.dstTail with
       | nil =>
           rw [hdst] at hdstInv
-          simp only [List.length_nil, Nat.add_zero] at hdstInv
-          omega
+          simp only [List.length_nil, Nat.add_zero] at hdstInv; omega
       | cons oldDst dstTail =>
         cases hsrc : state.srcTail with
         | nil =>
@@ -897,8 +893,7 @@ theorem copyWords_loop_twp
             simp only [next, List.append_assoc, List.singleton_append]
           have hmeasure :
               n.toNat - next.index.toNat < n.toNat - state.index.toNat := by
-            simp only [next, hnext]
-            omega
+            simp only [next, hnext]; omega
           iintro ⟨IHcurrent, HRcurrent, HdstCurrent, HsrcCurrent⟩
           iapply copyWords_bodyTail_twp
             (iprop% (∀ (j : CopyWordsLoopState),
@@ -933,8 +928,7 @@ theorem copyWords_loop_twp
       have hnltNat : ¬ state.index.toNat < n.toNat := by
         simpa only [UInt32.lt_iff_toNat_lt] using hnlt
       have hindexNat : state.index.toNat = n.toNat := by
-        rw [← hcopied] at hnltNat
-        omega
+        rw [← hcopied] at hnltNat; omega
       have hindex : state.index = n := UInt32.toNat_inj.mp hindexNat
       have hdstNil : state.dstTail = [] := by
         apply List.eq_nil_of_length_eq_zero

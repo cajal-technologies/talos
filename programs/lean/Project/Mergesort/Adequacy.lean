@@ -80,8 +80,7 @@ body-level proof must use this fact at the `chunks_exact(4)` guard; the adequacy
 bridge does not postulate that the compiler's bounds/panic branches return. -/
 theorem entryInput_valid (input : List UInt32) :
     (serialize input).length % 4 = 0 := by
-  rw [serialize_length]
-  omega
+  rw [serialize_length]; omega
 
 private abbrev entryMemory : Mem :=
   (Project.Mergesort.module.initialStore : Store Universal.State).mem

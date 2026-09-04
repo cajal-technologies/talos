@@ -119,8 +119,7 @@ theorem serialize_decodeWords_of_length (bytes : List UInt8) (count : Nat)
       · simp at hlength
         omega
       have hrest : rest.length = 4 * count := by
-        simp only [List.length_cons, Nat.mul_succ] at hlength
-        omega
+        simp only [List.length_cons, Nat.mul_succ] at hlength; omega
       have hind := ih rest hrest
       constructor
       · change U32Codec.serialize
@@ -149,8 +148,7 @@ def overwritePrefix (source initial : List UInt32) (copied : Nat) :
 theorem overwritePrefix_length (source initial : List UInt32) (copied : Nat)
     (hlength : source.length = initial.length) :
     (overwritePrefix source initial copied).length = source.length := by
-  simp [overwritePrefix, hlength]
-  omega
+  simp [overwritePrefix, hlength]; omega
 
 /-- One generated decode store advances the exact logical prefix by one word.
 The unrolled loop applies this law four times per iteration. -/
@@ -237,8 +235,7 @@ theorem ByteSlice_append {host : Type} [WasmHeapGS host]
     have hoffset := byteOffset_toNat ptr left.length hleftNowrap
     have hnowrap :
         ptr.toNat + (left.length + right.length) < UInt32.size := by
-      rw [hoffset] at hrightNowrap
-      omega
+      rw [hoffset] at hrightNowrap; omega
     isplitl_pureexact hnowrap
     · iapply_frame (pointsToBytes_append 0 ptr left right).mpr
 
@@ -385,8 +382,7 @@ theorem wordOffset_toNat (ptr : UInt32) (count : Nat)
   rw [show (4 : UInt32).toNat = 4 by decide,
     UInt32.toNat_ofNat_of_lt' hcount]
   have hprod : 4 * count < 2 ^ 32 := by
-    norm_num [UInt32.size] at h ⊢
-    omega
+    norm_num [UInt32.size] at h ⊢; omega
   rw [Nat.mod_eq_of_lt hprod]
   change (ptr.toNat + 4 * count) % 2 ^ 32 =
     ptr.toNat + 4 * count
@@ -417,8 +413,7 @@ theorem WordSlice_append {host : Type} [WasmHeapGS host]
       omega
     have hrightAlign :
         (ptr + 4 * UInt32.ofNat xs.length).toNat % 4 = 0 := by
-      rw [hoffset, Nat.add_mod]
-      omega
+      rw [hoffset, Nat.add_mod]; omega
     ihave Hright' :
         pointsToBytes 0 (ptr + 4 * UInt32.ofNat xs.length)
           (serialize ys) $$ [Hright]
@@ -433,8 +428,7 @@ theorem WordSlice_append {host : Type} [WasmHeapGS host]
     have hoffset := wordOffset_toNat ptr xs.length hleftNowrap
     have hnowrap :
         ptr.toNat + 4 * (xs.length + ys.length) < UInt32.size := by
-      rw [hoffset] at hrightNowrap
-      omega
+      rw [hoffset] at hrightNowrap; omega
     isplitl_pureexact halign
     isplitl_pureexact (by simpa only [Nat.mul_add] using hnowrap)
     iapply_splitl_exact (pointsToBytes_append 0 ptr (serialize xs) (serialize ys)).mpr with Hleft
@@ -702,12 +696,10 @@ theorem SortBuffers_append {host : Type} [WasmHeapGS host]
       ⟨HscratchLeft, HscratchRight⟩
     have hsourcePrefix :
         source.toNat + 4 * left.length < UInt32.size := by
-      simp only [List.length_append, Nat.mul_add] at hsourceFacts
-      omega
+      simp only [List.length_append, Nat.mul_add] at hsourceFacts; omega
     have hscratchPrefix :
         scratch.toNat + 4 * scratchLeft.length < UInt32.size := by
-      simp only [List.length_append, Nat.mul_add] at hscratchFacts
-      omega
+      simp only [List.length_append, Nat.mul_add] at hscratchFacts; omega
     have hsourceOffset :=
       wordOffset_toNat source left.length hsourcePrefix
     have hscratchOffset :=
@@ -929,8 +921,7 @@ theorem classifyBump_success_reachable
     have hnonnull : base ≠ 0 := by
       intro hzero
       have hzeroNat := congrArg UInt32.toNat hzero; simp only [UInt32.toNat_zero] at hzeroNat
-      rw [hbaseNat] at hzeroNat
-      omega
+      rw [hbaseNat] at hzeroNat; omega
     have haligned : base.toNat % layout.alignment = 0 := by
       rw [halignment]
       exact Nat.mod_one _
@@ -959,8 +950,7 @@ theorem classifyBump_success_reachable
     have hnonnull : base ≠ 0 := by
       intro hzero
       have hzeroNat := congrArg UInt32.toNat hzero; simp only [UInt32.toNat_zero] at hzeroNat
-      rw [hzeroNat] at hstart
-      omega
+      rw [hzeroNat] at hstart; omega
     have haligned : base.toNat % layout.alignment = 0 := by
       simpa only [halignment] using hmod4
     exact ⟨hstart, hnonnull, haligned, hendWord, hendSigned, hfinish,
@@ -1040,8 +1030,7 @@ theorem allocatorRequiredPages_le_signedLimit (finish : UInt32)
   have hsum : finish.toNat + 65535 < 2 ^ 32 := by omega
   have hquot :
       (finish.toNat + 65535) / 65536 < 32769 := by
-    rw [Nat.div_lt_iff_lt_mul (by norm_num : 0 < 65536)]
-    omega
+    rw [Nat.div_lt_iff_lt_mul (by norm_num : 0 < 65536)]; omega
   have hquotle :
       (finish.toNat + 65535) / 65536 ≤ 32768 := by omega
   unfold allocatorRequiredPages
@@ -1078,15 +1067,13 @@ theorem allocatorMemoryGrow_succeeds (memory : Mem) (finish : UInt32)
   have htarget :=
     allocatorRequiredPages_le_signedLimit finish hfinish
   have hpages : memory.pages < UInt32.size := by
-    norm_num [UInt32.size] at htarget ⊢
-    omega
+    norm_num [UInt32.size] at htarget ⊢; omega
   have hpagesWord :
       (UInt32.ofNat memory.pages).toNat = memory.pages :=
     UInt32.toNat_ofNat_of_lt' hpages
   have hleWords :
       UInt32.ofNat memory.pages ≤ allocatorRequiredPages finish := by
-    rw [UInt32.le_iff_toNat_le_toNat, hpagesWord]
-    omega
+    rw [UInt32.le_iff_toNat_le_toNat, hpagesWord]; omega
   have hdelta :
       (allocatorRequiredPages finish -
         UInt32.ofNat memory.pages).toNat =
@@ -1094,8 +1081,7 @@ theorem allocatorMemoryGrow_succeeds (memory : Mem) (finish : UInt32)
     rw [UInt32.toNat_sub_of_le _ _ hleWords, hpagesWord]
   unfold Mem.grow
   simp only [hdelta, Nat.add_sub_of_le (Nat.le_of_lt hneed)]
-  norm_num [Module.memoryHardCap]
-  omega
+  norm_num [Module.memoryHardCap]; omega
 
 /-- The frozen module declares no maximum, so its declaration-level cap is
 the interpreter's i32 hard cap. -/
@@ -1750,8 +1736,7 @@ theorem BumpHeap_commit {host : Type} [WasmHeapGS host]
       · intro hzero
         exact (hfinishNonzero hzero).elim
       · intro hzero
-        simp only [AllocationHistory.allocate] at hzero
-        omega
+        simp only [AllocationHistory.allocate] at hzero; omega
     · intro _hnonzero
       rfl
   · unfold LiveBlock
@@ -2139,8 +2124,7 @@ theorem VecStorage_initializedFocus {host : Type} [WasmHeapGS host]
       · unfold LiveBlock
         iframe Htoken HallBytes
         ipureexact ⟨by
-          simp only [List.length_append, hstorage.2.2.2]
-          omega, hblock.2.1, hblock.2.2⟩
+          simp only [List.length_append, hstorage.2.2.2]; omega, hblock.2.1, hblock.2.2⟩
 
 /-- Focus exactly the spare-capacity subrange filled by the driver's append
 copy.  Returning the current chunk reassembles the same live allocation with
@@ -2159,8 +2143,7 @@ theorem VecStorage_appendFocus {host : Type} [WasmHeapGS host]
   unfold VecStorage
   iintro (%hempty | Hallocated)
   · rcases hempty with ⟨rfl, _hptr, rfl⟩
-    simp only [UInt32.toNat_zero, Nat.zero_sub] at hfits
-    omega
+    simp only [UInt32.toNat_zero, Nat.zero_sub] at hfits; omega
   · icases Hallocated with
       ⟨%allocationId, %allBytes, %spare, %hstorage, Hblock⟩
     isimp only [LiveBlock] at Hblock
@@ -2175,8 +2158,7 @@ theorem VecStorage_appendFocus {host : Type} [WasmHeapGS host]
     have htailLength :
         tail.length = capacity.toNat -
           (initialized.length + current.length) := by
-      simp [tail, hstorage.2.2.2]
-      omega
+      simp [tail, hstorage.2.2.2]; omega
     ihave HallBytes' : ByteSlice ptr (initialized ++ spare) $$ [HallBytes]
     · irw_exact [← hstorage.2.2.1] with HallBytes
     icases (ByteSlice_append ptr initialized spare).mp $$ HallBytes' with
@@ -2209,12 +2191,10 @@ theorem VecStorage_appendFocus {host : Type} [WasmHeapGS host]
       iapply_frame (ByteSlice_append ptr initialized (current ++ tail)).mpr
     have hnewLength :
         (initialized ++ current ++ tail).length = capacity.toNat := by
-      simp only [List.length_append]
-      omega
+      simp only [List.length_append]; omega
     have hnewInitialized :
         (initialized ++ current).length ≤ capacity.toNat := by
-      simp only [List.length_append] at hnewLength ⊢
-      omega
+      simp only [List.length_append] at hnewLength ⊢; omega
     iright
     iexists allocationId, initialized ++ current ++ tail, tail
     isplitr_pureexact ⟨hstorage.1, hnewInitialized, rfl, by
@@ -2718,8 +2698,7 @@ theorem selectedCapacity_geometric
   have hlower : length + current ≤ 2 * 2 ^ exponent := by omega
   have h8 : 8 ≤ 2 * 2 ^ exponent := by omega
   unfold selectedCapacity
-  rw [max_eq_left h8, max_eq_right hlower, pow_succ]
-  omega
+  rw [max_eq_left h8, max_eq_right hlower, pow_succ]; omega
 
 /-- Exact public-input Vec lineage used to eliminate both RawVec panic edges.
 `totalBytes = length + remaining` in every active state. -/
@@ -2761,8 +2740,7 @@ theorem GeometricVecFacts.completed_lt_signed
       Nat.pow_le_pow_right (by decide) hexponentUpper
     rw [hremaining, Nat.add_zero] at htotal
     rw [hcapacity] at hlength
-    norm_num at hpow ⊢
-    omega
+    norm_num at hpow ⊢; omega
 
 /-- Every nonempty completed public Vec has a four-aligned data pointer, even
 though its Rust allocation layout requests only byte alignment.  This follows
@@ -2847,8 +2825,7 @@ theorem bulk4_signedMask_eq (count : Nat)
   rw [UInt32.toNat_and]
   have hcountWord : (UInt32.ofNat count).toNat = count := by
     apply UInt32.toNat_ofNat_of_lt'
-    norm_num [UInt32.size] at hbound ⊢
-    omega
+    norm_num [UInt32.size] at hbound ⊢; omega
   rw [hcountWord]
   have hmaskWord : (2147483644 : UInt32).toNat = 2147483644 := by
     decide
@@ -2857,8 +2834,7 @@ theorem bulk4_signedMask_eq (count : Nat)
     have hmod := Nat.mod_add_div count 4
     omega
   have hbulkBound : 4 * (count / 4) < UInt32.size := by
-    norm_num [UInt32.size] at hbound ⊢
-    omega
+    norm_num [UInt32.size] at hbound ⊢; omega
   rw [UInt32.toNat_ofNat_of_lt' hbulkBound]
   apply Nat.eq_of_testBit_eq
   intro i
@@ -2883,8 +2859,7 @@ theorem bulk4_signedMask_eq (count : Nat)
           have hp : 2 ^ 31 ≤ 2 ^ i :=
             Nat.pow_le_pow_right (by decide) (by omega)
           have hnlt : count < 2 ^ i := by
-            norm_num at hp
-            omega
+            norm_num at hp; omega
           have hfalse := Nat.testBit_eq_false_of_lt hnlt
           rw [hnbit] at hfalse
           contradiction
@@ -2892,8 +2867,7 @@ theorem bulk4_signedMask_eq (count : Nat)
           apply Nat.testBit_eq_false_of_lt
           have hp : 2 ^ 2 ≤ 2 ^ i :=
             Nat.pow_le_pow_right (by decide) hi2
-          norm_num at hp ⊢
-          omega
+          norm_num at hp ⊢; omega
         have hmask : 2147483644 = 2 ^ 31 - (3 + 1) := by norm_num
         rw [hmask,
           Nat.testBit_two_pow_sub_succ (by norm_num : 3 < 2 ^ 31), h3]
@@ -2993,19 +2967,15 @@ theorem GeometricVecFacts.reserveLayout
     have hnewUpper :
         max (0 + current) (max (2 * (0 : UInt32).toNat) 8) ≤
           1073741824 := by
-      norm_num
-      omega
+      norm_num; omega
     exact ⟨by
-      norm_num [UInt32.size]
-      omega, by
-      norm_num [UInt32.size]
-      omega, align1Layout_valid_of_bounds _ hnewLower hnewUpper⟩
+      norm_num [UInt32.size]; omega, by
+      norm_num [UInt32.size]; omega, align1Layout_valid_of_bounds _ hnewLower hnewUpper⟩
   · rcases hshort with
       ⟨hremaining, _hlength, _htotal, _hcapacity, _hptr,
         _hfrontier, _hhistory⟩
     rw [hremaining] at hread
-    simp at hread
-    omega
+    simp at hread; omega
   · rcases hlarge with
       ⟨exponent, _hexponentLower, hexponentUpper, hcapacity,
         hlength, _htotal, _hptr, _hfrontier, _hhistory⟩
@@ -3019,13 +2989,10 @@ theorem GeometricVecFacts.reserveLayout
     have hnewUpper :
         selectedCapacity length current capacity.toNat ≤ 1073741824 := by
       unfold selectedCapacity
-      norm_num
-      omega
+      norm_num; omega
     exact ⟨by
-      norm_num [UInt32.size]
-      omega, by
-      norm_num [UInt32.size]
-      omega, align1Layout_valid_of_bounds _ hnewLower hnewUpper⟩
+      norm_num [UInt32.size]; omega, by
+      norm_num [UInt32.size]; omega, align1Layout_valid_of_bounds _ hnewLower hnewUpper⟩
 
 /-- When the generated capacity test says that the new chunk fits, appending
 it preserves the current large-input lineage without touching allocation
@@ -3044,8 +3011,7 @@ theorem GeometricVecFacts.appendWithoutReserve
   rcases hgeo with hempty | hshort | hlarge
   · rcases hempty with
       ⟨rfl, _hptr, rfl, _hremaining, _hfrontier, _hhistory⟩
-    simp only [UInt32.toNat_zero, Nat.zero_sub] at hfits
-    omega
+    simp only [UInt32.toNat_zero, Nat.zero_sub] at hfits; omega
   · rcases hshort with
       ⟨hremaining, _hlength, _htotal, _hcapacity, _hptr,
         _hfrontier, _hhistory⟩
@@ -3148,8 +3114,7 @@ theorem GeometricVecFacts.reserveSuccess
       ⟨hremaining, _hlength, _htotal, _hcapacity, _hptr,
         _hfrontier, _hhistory⟩
     rw [hremaining] at hread
-    simp at hread
-    omega
+    simp at hread; omega
   · rcases hlarge with
       ⟨exponent, hexponentLower, hexponentUpper, hcapacity,
         hlength, htotal, hptr, hfrontier, hgeoHistory⟩
@@ -3181,8 +3146,7 @@ theorem GeometricVecFacts.reserveSuccess
       intro hzero
       have hzeroNat := congrArg UInt32.toNat hzero; simp only [UInt32.toNat_zero] at hzeroNat
       have hpowPositive : 0 < 2 ^ exponent := Nat.pow_pos (by omega)
-      rw [hcapacity] at hzeroNat
-      omega
+      rw [hcapacity] at hzeroNat; omega
     unfold VecReserveHistory at hreserveHistory
     rw [if_neg hcapacityNe] at hreserveHistory
     rcases hreserveHistory with ⟨oldId, holdLookup, hfinalHistory⟩

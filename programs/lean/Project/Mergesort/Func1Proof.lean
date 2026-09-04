@@ -206,8 +206,7 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
       show (1 : UInt32).toNat % 32 = 1 by decide,
       Nat.shiftLeft_eq, pow_one,
       Nat.mod_eq_of_lt (by
-        norm_num [UInt32.size] at hdoubleBound ⊢
-        omega),
+        norm_num [UInt32.size] at hdoubleBound ⊢; omega),
       UInt32.toNat_ofNat_of_lt' hdoubleBound]
     omega
   let firstMaxNat := max (initialized.length + current.length)

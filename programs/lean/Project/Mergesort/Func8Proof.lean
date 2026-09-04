@@ -150,8 +150,7 @@ private theorem twp_func8_copy_and_return
   have hnewLength : newBytes.length = newSize.toNat := by
     simpa only [hnewSize] using hnewFacts.1
   have hprefixLength : (newBytes.take oldSize.toNat).length = oldSize.toNat := by
-    simp [List.length_take, hnewLength]
-    omega
+    simp [List.length_take, hnewLength]; omega
   have htailLength : (newBytes.drop oldSize.toNat).length =
       newLayout.size - oldLayout.size := by
     simp [hnewFacts.1, holdSize]
@@ -195,8 +194,7 @@ private theorem twp_func8_copy_and_return
   let finalBytes := oldBytes ++ newBytes.drop oldSize.toNat
   have hfinalLength : finalBytes.length = newLayout.size := by
     dsimp only [finalBytes]
-    rw [List.length_append, holdFacts.1, htailLength]
-    omega
+    rw [List.length_append, holdFacts.1, htailLength]; omega
   ihave HnewPrefix : Project.Mergesort.Representations.ByteSlice newPtr oldBytes $$
       [HnewPrefixBytes]
   · unfold Project.Mergesort.Representations.ByteSlice
@@ -531,8 +529,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
         norm_num [UInt32.size] at hendWord ⊢
         rw [Nat.mod_eq_of_lt hendWord, hfinishNat, hbaseNat]
       have hbaseLeFinish : newPtr ≤ finish := by
-        rw [UInt32.le_iff_toNat_le_toNat, hfinishNat]
-        omega
+        rw [UInt32.le_iff_toNat_le_toNat, hfinishNat]; omega
       have hfinishSigned : finish.toNat < 2147483648 := by
         simpa only [hfinishPtrNat] using hendSigned
       isimp only [BumpHeap] at Hbump
@@ -660,8 +657,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
             exact hcover.trans (Nat.mul_le_mul_right 65536 hrequiredLe)
           · have hpagesHigh : UInt32.size ≤ pages := by omega
             have hfinishLePages : finish.toNat ≤ pages := by
-              norm_num [UInt32.size] at hpagesHigh
-              omega
+              norm_num [UInt32.size] at hpagesHigh; omega
             have hpagesLeMul : pages ≤ pages * 65536 := by omega
             exact hfinishLePages.trans hpagesLeMul
         iclose_runtime Hruntime with Hmodule Henv
@@ -777,16 +773,14 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
                         omega
                     have hrequiredLeNew :
                         (allocatorRequiredPages finish).toNat ≤ newPages := by
-                      rw [hfacts.2, hdeltaNat]
-                      omega
+                      rw [hfacts.2, hdeltaNat]; omega
                     exact hcover.trans
                       (Nat.mul_le_mul_right 65536 hrequiredLeNew)
                   · have hpagesHigh : UInt32.size ≤ pages := by omega
                     have hpagesLeOld : pages ≤ oldPages := hmeasured
                     have hfinishLeNew : finish.toNat ≤ newPages := by
                       rw [hfacts.2]
-                      norm_num [UInt32.size] at hpagesHigh
-                      omega
+                      norm_num [UInt32.size] at hpagesHigh; omega
                     exact hfinishLeNew.trans (by omega)
                 iclose_runtime Hruntime with Hmodule Henv
                 ihave Hnormal := BI.and_elim_l $$ Hcont
@@ -818,8 +812,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
         ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat, hwf,
           hphysicalFrontier⟩
       have hfrontierBound : frontier < UInt32.size := by
-        norm_num [UInt32.size] at hfrontierSigned ⊢
-        omega
+        norm_num [UInt32.size] at hfrontierSigned ⊢; omega
       let base : UInt32 := UInt32.ofNat frontier
       have hbaseNat : base.toNat = frontier :=
         UInt32.toNat_ofNat_of_lt' hfrontierBound
@@ -878,13 +871,11 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
       have hsizeUpper : newLayout.size ≤ 2147483647 := by
         simpa [hnewAlignment] using hlayout.2.2.2.1.2.2.2.2.1
       have hend : frontier + newLayout.size < UInt32.size := by
-        norm_num [UInt32.size] at hfrontierSigned ⊢
-        omega
+        norm_num [UInt32.size] at hfrontierSigned ⊢; omega
       have hfinishNat : finishWord.toNat = frontier + newLayout.size := by
         rw [hfinishWordNat, Nat.mod_eq_of_lt hend]
       have hbaseLeFinish : base ≤ finishWord := by
-        rw [UInt32.le_iff_toNat_le_toNat, hbaseNat, hfinishNat]
-        omega
+        rw [UInt32.le_iff_toNat_le_toNat, hbaseNat, hfinishNat]; omega
       iapply twp_ltU (result := 0) (by
         rw [if_neg (UInt32.not_lt.mpr hbaseLeFinish)])
       wasm_twp_pures [twp_brIfZero twp_localGet twp_const]
@@ -917,8 +908,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
         change (if 2 * finishWord.toNat < 4294967296 then
           (finishWord.toNat : Int)
           else (finishWord.toNat : Int) - 4294967296) < 0
-        rw [if_neg (by rw [hfinishNat]; omega)]
-        omega
+        rw [if_neg (by rw [hfinishNat]; omega)]; omega
       iapply twp_ltS (result := 1) (by rw [if_pos hfinishNegative])
       iapply twp_brIf (by decide) (by rfl)
       simp only [List.take_zero, List.nil_append]

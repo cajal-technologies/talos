@@ -539,8 +539,7 @@ private theorem u32_ofNat_sub {a b : Nat} (hle : b ≤ a)
     UInt32.toNat_ofNat_of_lt'
       (Nat.lt_of_le_of_lt (Nat.sub_le a b) ha)]
   have htoNatLt := (UInt32.ofNat a).toNat_lt
-  rw [UInt32.toNat_ofNat_of_lt' ha] at htoNatLt
-  omega
+  rw [UInt32.toNat_ofNat_of_lt' ha] at htoNatLt; omega
 
 /-- Reducible projections keep compiler-created block bodies named without
 copying hundreds of generated instructions into this proof file. -/
@@ -1388,8 +1387,7 @@ theorem twp_mergeMainLoop
               state.emitted ++ [input[state.i]],
               0, input[state.j]⟩ : GeneratedMergeState)
         iapply_pure Hrec =>
-          dsimp only [GeneratedMergeState.i, GeneratedMergeState.j]
-          omega
+          dsimp only [GeneratedMergeState.i, GeneratedMergeState.j]; omega
         isplitr_pureexacts [hnext, ⟨hiNext, hjState⟩]
         iframe
       · have hiEq : state.i + 1 = mid := by omega
@@ -1464,8 +1462,7 @@ theorem twp_mergeMainLoop
               state.emitted ++ [input[state.j]],
               0, input[state.j]⟩ : GeneratedMergeState)
         iapply_pure Hrec =>
-          dsimp only [GeneratedMergeState.i, GeneratedMergeState.j]
-          omega
+          dsimp only [GeneratedMergeState.i, GeneratedMergeState.j]; omega
         isplitr_pureexacts [hnext, ⟨hiState, hjNext⟩]
         iframe
       · have hjEq : state.j + 1 = input.length := by omega
@@ -1561,8 +1558,7 @@ theorem twp_mergeLeftRemainder
       ⟨_, him, hmj, hjr, hscratchLength, hkEmitted,
         hemittedLength, htake, hprogress⟩
     have hkLt : k < input.length := by
-      rw [hkEmitted, hemittedLength]
-      omega
+      rw [hkEmitted, hemittedLength]; omega
     have hkU : UInt32.ofNat k < UInt32.ofNat input.length := by
       rw [UInt32.lt_iff_toNat_lt,
         UInt32.toNat_ofNat_of_lt' (Nat.lt_trans hkLt hlayout.length_lt),
@@ -1588,12 +1584,10 @@ theorem twp_mergeLeftRemainder
     wasm_twp_pures [twp_const twp_localSet] using [sortLocals, List.length, List.set, hjEq]
     let n := mid - i
     have hiN : i + n = mid := by
-      dsimp only [n]
-      omega
+      dsimp only [n]; omega
     have hkN : k + n = input.length := by
       rw [hkEmitted, hemittedLength]
-      dsimp only [n]
-      omega
+      dsimp only [n]; omega
     let Finish : IProp (WasmHeapGF α) := iprop%
       ∀ (scratch' : List UInt32) (emitted' : List UInt32)
           (aux6 aux8 aux9 aux11 aux12 : UInt32),
@@ -1655,12 +1649,10 @@ theorem twp_mergeLeftRemainder
         ⟨_, himState, hmjState, hjrState, hstateLen, hkState,
           hemittedState, htakeState, hprogressState⟩
       have hiCurrent : i + state.r < mid := by
-        dsimp only [n] at hr
-        omega
+        dsimp only [n] at hr; omega
       have hiCurrentLen : i + state.r < input.length := by omega
       have hkCurrent : k + state.r < input.length := by
-        rw [hkState, hemittedState]
-        omega
+        rw [hkState, hemittedState]; omega
       have hkCurrentScratch : k + state.r < state.scratchValues.length := by
         simpa only [hstateLen] using hkCurrent
       have hsumSize : k + state.r < UInt32.size :=
@@ -1753,8 +1745,7 @@ theorem twp_mergeLeftRemainder
         have hiSuccSize : i + (state.r + 1) < UInt32.size := by
           have : i + (state.r + 1) ≤ mid := by omega
           omega
-        rw [u32_sub_eq_neg_iff_sum_eq hiSuccSize hmidSize]
-        omega
+        rw [u32_sub_eq_neg_iff_sum_eq hiSuccSize hmidSize]; omega
       wasm_twp_pures [twp_localGet twp_const twp_add]
       rw [UInt32.add_comm (4 : UInt32), next_slot_address]
       wasm_twp_localSet [List.length, List.set]
@@ -1784,8 +1775,7 @@ theorem twp_mergeLeftRemainder
             state.r + 1, state.emitted ++ [input[i + state.r]]⟩ :
               LeftCopyState)
         iapply_pure Hrec =>
-          dsimp only [LeftCopyState.r]
-          omega
+          dsimp only [LeftCopyState.r]; omega
         isplitr_pureexacts [hmore, by simpa [Nat.add_assoc] using hnext]
         iframe
       · have heqR : state.r + 1 = n := by omega
@@ -1839,8 +1829,7 @@ theorem twp_mergeLeftRemainder
     · simp only [Inv, Finish, sortLocals]
       isplitr
       · ipureintro
-        dsimp only [n]
-        omega
+        dsimp only [n]; omega
       isplitr_pureexact (by simpa [hjEq] using hinv)
       isplitl_exacts [Hsource Hscratch]
       iintro %scratch' %emitted' %aux6 %aux8 %aux9 %aux11 %aux12
@@ -1966,8 +1955,7 @@ theorem twp_mergeRightRemainder
     wasm_twp_localSet [sortLocals, List.length, List.set]
     let n := input.length - j
     have hjN : j + n = input.length := by
-      dsimp only [n]
-      omega
+      dsimp only [n]; omega
     have hkN : k + n = input.length := by omega
     let Finish : IProp (WasmHeapGF α) := iprop%
       ∀ (scratch' : List UInt32) (emitted' : List UInt32)
@@ -2033,11 +2021,9 @@ theorem twp_mergeRightRemainder
         ⟨_, himState, hmjState, hjlState, hstateLen, hkState,
           hemittedState, htakeState, hprogressState⟩
       have hjCurrent : j + state.r < input.length := by
-        dsimp only [n] at hr
-        omega
+        dsimp only [n] at hr; omega
       have hkCurrent : k + state.r < input.length := by
-        rw [hkState, hemittedState]
-        omega
+        rw [hkState, hemittedState]; omega
       have hkCurrentScratch : k + state.r < state.scratchValues.length := by
         simpa only [hstateLen] using hkCurrent
       have hcounterNe :
@@ -2111,8 +2097,7 @@ theorem twp_mergeRightRemainder
       iintro ⟨Hsource, Hscratch⟩
       have hrSuccSize : state.r + 1 < UInt32.size := by
         have : state.r + 1 ≤ n := by omega
-        dsimp only [n] at this
-        omega
+        dsimp only [n] at this; omega
       have hsourceNext :
           4 * UInt32.ofNat (j + state.r) + source + 4 =
             4 * UInt32.ofNat (j + (state.r + 1)) + source := by
@@ -2136,8 +2121,7 @@ theorem twp_mergeRightRemainder
         congr 1
       have hq : 0 < n - state.r := by omega
       have hqSize : n - state.r < UInt32.size := by
-        dsimp only [n]
-        omega
+        dsimp only [n]; omega
       have hcounterStep :
           (0 - UInt32.ofNat (n - state.r)) + 1 =
             0 - UInt32.ofNat (n - (state.r + 1)) := by
@@ -2157,8 +2141,7 @@ theorem twp_mergeRightRemainder
       wasm_twp_localTee [List.length, List.set]
       by_cases hmore : state.r + 1 < n
       · have hnextCounterSize : n - (state.r + 1) < UInt32.size := by
-          dsimp only [n]
-          omega
+          dsimp only [n]; omega
         have hcounterNextNe :
             0 - UInt32.ofNat (n - (state.r + 1)) ≠ 0 := by
           intro hz
@@ -2176,8 +2159,7 @@ theorem twp_mergeRightRemainder
             state.r + 1, state.emitted ++ [input[j + state.r]]⟩ :
               RightCopyState)
         iapply_pure Hrec =>
-          dsimp only [RightCopyState.r]
-          omega
+          dsimp only [RightCopyState.r]; omega
         isplitr_pureexacts [hmore, by simpa [Nat.add_assoc] using hnext]
         iframe
       · have heqR : state.r + 1 = n := by omega
@@ -2213,8 +2195,7 @@ theorem twp_mergeRightRemainder
     · simp only [Inv, Finish, sortLocals]
       isplitr
       · ipureintro
-        dsimp only [n]
-        omega
+        dsimp only [n]; omega
       isplitr_pureexact (by simpa using hinv)
       isplitl_exacts [Hsource Hscratch]
       iintro %scratch' %emitted' %v6 %v8 %v9 %v10 %v11 %v12
@@ -2451,11 +2432,9 @@ theorem twp_sort
     let scratchLeft := scratchValues.take mid
     let scratchRight := scratchValues.drop mid
     have hmidPos : 0 < mid := by
-      dsimp only [mid]
-      omega
+      dsimp only [mid]; omega
     have hmidLt : mid < input.length := by
-      dsimp only [mid]
-      omega
+      dsimp only [mid]; omega
     have hmidLe : mid ≤ input.length := Nat.le_of_lt hmidLt
     have hleftLength : left.length = mid := by
       simp [left, Nat.min_eq_left hmidLe]
@@ -2510,11 +2489,9 @@ theorem twp_sort
       (by rw [hscratchLeftLength, hleftLength])
       (validLayout_prefix hlayout (by rw [hleftLength]; exact hmidLe))
       (by
-        rw [hleftLength]
-        omega)
+        rw [hleftLength]; omega)
       (by
-        rw [hleftLength]
-        omega)
+        rw [hleftLength]; omega)
     isplitl_exacts [Hruntime HsourceLeft HscratchLeft]
     iintro %leftOutput %leftScratch %hleftSorted
       %hleftScratchLength %hleftScratchExact Hruntime HsourceLeft HscratchLeft
@@ -2575,8 +2552,7 @@ theorem twp_sort
         validLayout_suffix hlayout hleftLt)
       (by rw [hsourceAddress, hrightLengthLeft]; omega)
       (by
-        rw [UInt32.add_comm, hscratchAddress, hrightLengthLeft]
-        omega)
+        rw [UInt32.add_comm, hscratchAddress, hrightLengthLeft]; omega)
     isplitl_exacts [Hruntime HsourceRight]
     isplitl_rw_exact [UInt32.add_comm] with HscratchRight'
     iintro %rightOutput %rightScratch %hrightSorted
@@ -2591,8 +2567,7 @@ theorem twp_sort
       dsimp only [combined]
       simp only [List.length_append, hleftOutputLength,
         hrightOutputLength]
-      rw [hleftLength, hrightLength]
-      omega
+      rw [hleftLength, hrightLength]; omega
     have hscratchCombinedLength :
         scratchCombined.length = combined.length := by
       dsimp only [scratchCombined, combined]
@@ -2683,8 +2658,7 @@ theorem twp_sort
         omega
       have hbyteLengthPositive :
           0 < (4 * UInt32.ofNat combined.length : UInt32).toNat := by
-        rw [mul4_ofNat_toNat hfourFits]
-        omega
+        rw [mul4_ofNat_toNat hfourFits]; omega
       have hbyteLengthNonzero :
           (4 * UInt32.ofNat combined.length : UInt32) ≠ 0 := by
         intro hz

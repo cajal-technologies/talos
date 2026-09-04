@@ -408,7 +408,6 @@ theorem u32_ofNat_sub_eq {a b : Nat} (hle : b ≤ a) (ha : a < UInt32.size) :
   rw [UInt32.toNat_sub, UInt32.toNat_ofNat_of_lt' ha, UInt32.toNat_ofNat_of_lt' hb,
       UInt32.toNat_ofNat_of_lt' hab]
   have := (UInt32.ofNat a).toNat_lt
-  rw [UInt32.toNat_ofNat_of_lt' ha] at this
-  omega
+  rw [UInt32.toNat_ofNat_of_lt' ha] at this; omega
 
 end Wasm.Examples.Quicksort

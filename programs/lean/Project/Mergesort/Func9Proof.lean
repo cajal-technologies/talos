@@ -396,19 +396,16 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
       apply UInt32.toNat_inj.mp
       rw [hcursorNat hnonzero,
         UInt32.toNat_ofNat_of_lt' (by
-          norm_num [UInt32.size] at hfrontierSigned ⊢
-          omega)]
+          norm_num [UInt32.size] at hfrontierSigned ⊢; omega)]
     · rename_i hzero
       simp only [ne_eq, Decidable.not_not] at hzero
       have hfrontierEq := (hcursorZero.mp hzero).2
       apply UInt32.toNat_inj.mp
       rw [UInt32.toNat_ofNat_of_lt' (by
-        norm_num [UInt32.size] at hfrontierSigned ⊢
-        omega)]
+        norm_num [UInt32.size] at hfrontierSigned ⊢; omega)]
       exact hfrontierEq.symm
   have hsumBound : frontier + 3 < UInt32.size := by
-    norm_num [UInt32.size] at hfrontierSigned ⊢
-    omega
+    norm_num [UInt32.size] at hfrontierSigned ⊢; omega
   have hsumWord : UInt32.ofNat frontier + 3 =
       UInt32.ofNat (frontier + 3) := by
     apply UInt32.toNat_inj.mp
@@ -462,8 +459,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
     simpa only [hlayout.2.2] using hlayout.2.1.2.2.2.2.1
   have hfinishWordBound : finishNat < UInt32.size := by
     dsimp only [finishNat]
-    norm_num [UInt32.size] at hfrontierSigned hsizeBound ⊢
-    omega
+    norm_num [UInt32.size] at hfrontierSigned hsizeBound ⊢; omega
   have hsizeNat : size.toNat = layout.size := hlayout.1.1
   have hfinishWord : base + size = finish := by
     apply UInt32.toNat_inj.mp
@@ -481,8 +477,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
   have hbaseLeFinish : base ≤ finish := by
     rw [UInt32.le_iff_toNat_le_toNat,
       UInt32.toNat_ofNat_of_lt' hfinishWordBound]
-    dsimp only [finishNat]
-    omega
+    dsimp only [finishNat]; omega
   have hbaseLeFinishRaw :
       UInt32.ofNat (frontier + 3) &&& (-(4 : UInt32)) ≤ finish := by
     simpa only [← show (0 : UInt32) - 4 = -(4 : UInt32) by decide] using hbaseLeFinish
@@ -731,15 +726,13 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
                       omega
                   have hrequiredLeNew :
                       (allocatorRequiredPages finish).toNat ≤ newPages := by
-                    rw [hfacts.2, hdeltaNat]
-                    omega
+                    rw [hfacts.2, hdeltaNat]; omega
                   exact hrequiredCovers.trans
                     (Nat.mul_le_mul_right 65536 hrequiredLeNew)
                 · have hpagesHigh : UInt32.size ≤ pages := by omega
                   have hfinishLeNew : finish.toNat ≤ newPages := by
                     rw [hfacts.2]
-                    norm_num [UInt32.size] at hpagesHigh
-                    omega
+                    norm_num [UInt32.size] at hpagesHigh; omega
                   exact hfinishLeNew.trans (by omega)
               ihave Hnormal := BI.and_elim_l $$ Hcont
               iclose_runtime Hruntime with Hmodule Henv

@@ -239,8 +239,7 @@ theorem u64_ofNat_ne_u64Max_of_u32_len (n : Nat) (h : n < 4294967296) :
   have ht := congrArg UInt64.toNat heq
   change (BitVec.ofNat 64 n).toNat = (18446744073709551615#64).toNat at ht
   rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)] at ht
-  norm_num at ht
-  omega
+  norm_num at ht; omega
 
 theorem u64_key_add8_toNat (key : List UInt8) (hKey : key.length < 4294967296) :
     (UInt64.ofNat key.length + 8).toNat = key.length + 8 := by
@@ -248,8 +247,7 @@ theorem u64_key_add8_toNat (key : List UInt8) (hKey : key.length < 4294967296) :
   change ((UInt64.ofNat key.length).toNat + (8#64).toNat) %
       18446744073709551616 = key.length + 8
   rw [u64_toNat_of_u32_len key.length hKey]
-  norm_num
-  omega
+  norm_num; omega
 
 theorem getMemOrReg_writeBytes_encode_key (st : Store NearState) (key val : List UInt8)
     (hKey : key.length < 4294967296)

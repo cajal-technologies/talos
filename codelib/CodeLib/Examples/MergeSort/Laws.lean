@@ -31,8 +31,7 @@ theorem ValidLayout.length_lt
     length < UInt32.size := by
   have hfit := h.source_fits
   have hsize : UInt32.size = 4294967296 := rfl
-  rw [hsize] at hfit ⊢
-  omega
+  rw [hsize] at hfit ⊢; omega
 
 theorem u32_ofNat_succ {n : Nat} (h : n + 1 < UInt32.size) :
     UInt32.ofNat n + 1 = UInt32.ofNat (n + 1) := by

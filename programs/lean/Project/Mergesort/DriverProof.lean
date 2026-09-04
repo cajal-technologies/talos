@@ -628,8 +628,7 @@ theorem twp_func3_count_guard
           arity, remainder, controls, calls⟩ : Expr Universal.State)
         @ s; E [{ Φ }] := by
   have hcurrentSize : currentLength < UInt32.size := by
-    norm_num [UInt32.size]
-    omega
+    norm_num [UInt32.size]; omega
   have hcurrentWord :
       (UInt32.ofNat currentLength).toNat = currentLength :=
     UInt32.toNat_ofNat_of_lt' hcurrentSize
@@ -772,11 +771,9 @@ theorem twp_func3_read_and_classify
       apply hempty
       exact List.eq_nil_of_length_eq_zero (by omega)
     have hcountPositive : 0 < count := by
-      dsimp only [count]
-      omega
+      dsimp only [count]; omega
     have hcountSize : count < UInt32.size := by
-      norm_num [UInt32.size]
-      omega
+      norm_num [UInt32.size]; omega
     have hcountWord : (UInt32.ofNat count).toNat = count :=
       UInt32.toNat_ofNat_of_lt' hcountSize
     have hcountNonzero : UInt32.ofNat count ≠ 0 := by
@@ -1209,8 +1206,7 @@ theorem twp_func3_read_loop_iteration
             (remaining.take (min 256 remaining.length)).length +
             (remaining.drop (min 256 remaining.length)).length := by
         have htotal := hfacts.2.2.2.2.2.1
-        simp only [List.length_append]
-        omega
+        simp only [List.length_append]; omega
       have hreadShape :
           (remaining.take (min 256 remaining.length)).length =
             min 256
@@ -1395,13 +1391,11 @@ theorem twp_func3_completed_length_guard
       @ s; E [{ Φ }] := by
   iintro Hcont
   have halign : completed.length % 4 = 0 := by
-    rw [← hcompleted, serialize_length]
-    omega
+    rw [← hcompleted, serialize_length]; omega
   have hlengthWord :
       (UInt32.ofNat completed.length).toNat = completed.length := by
     apply UInt32.toNat_ofNat_of_lt'
-    norm_num [UInt32.size] at hbound ⊢
-    omega
+    norm_num [UInt32.size] at hbound ⊢; omega
   have hlowMask : UInt32.ofNat completed.length &&& 3 = 0 := by
     apply UInt32.toNat.inj
     rw [UInt32.toNat_and, hlengthWord]
@@ -1454,14 +1448,12 @@ theorem twp_func3_enter_nonempty_decode
   have hbound : completed.length < 2147483648 := by
     simpa [hcompleted] using hboundTotal
   have halign : completed.length % 4 = 0 := by
-    rw [← hcompleted, serialize_length]
-    omega
+    rw [← hcompleted, serialize_length]; omega
   have hmask := align4_signedMask_eq completed.length hbound halign
   have hlengthWord :
       (UInt32.ofNat completed.length).toNat = completed.length := by
     apply UInt32.toNat_ofNat_of_lt'
-    norm_num [UInt32.size] at hbound ⊢
-    omega
+    norm_num [UInt32.size] at hbound ⊢; omega
   have hpositive : 0 < completed.length := by
     rw [← hcompleted, serialize_length]
     have := List.length_pos_iff_ne_nil.mpr horiginal
@@ -1557,8 +1549,7 @@ theorem twp_func3_allocate_values
   have hbound : completed.length < 2147483648 := by
     simpa [hcompleted] using hboundTotal
   have halign : completed.length % 4 = 0 := by
-    rw [← hcompleted, serialize_length]
-    omega
+    rw [← hcompleted, serialize_length]; omega
   have hpositive : 0 < completed.length := by
     rw [← hcompleted, serialize_length]
     have := List.length_pos_iff_ne_nil.mpr horiginal
@@ -1566,8 +1557,7 @@ theorem twp_func3_allocate_values
   have hlengthWord :
       (UInt32.ofNat completed.length).toNat = completed.length := by
     apply UInt32.toNat_ofNat_of_lt'
-    norm_num [UInt32.size] at hbound ⊢
-    omega
+    norm_num [UInt32.size] at hbound ⊢; omega
   have hlayoutValid : layout.Valid := by
     exact Project.Mergesort.Representations.align4Layout_valid_of_bounds
       completed.length hpositive hbound halign
@@ -1743,14 +1733,12 @@ theorem twp_func3_copy_decoded_word
       destinationAddress.toNat = destination.toNat + 4 * copied := by
     dsimp only [destinationAddress]
     exact wordOffset_toNat destination copied (by
-      rw [hcurrentLength] at hdestinationFacts
-      omega)
+      rw [hcurrentLength] at hdestinationFacts; omega)
   have hsourceRoom : sourceAddress.toNat + 4 ≤ UInt32.size := by
     omega
   have hdestinationRoom : destinationAddress.toNat + 4 ≤ UInt32.size := by
     rw [hdestinationAddress]
-    rw [hcurrentLength] at hdestinationFacts
-    omega
+    rw [hcurrentLength] at hdestinationFacts; omega
   have hsourceRoom' : sourceAddress.toNat + 4 ≤ 4294967296 := by
     simpa only [UInt32.size] using hsourceRoom
   have hdestinationRoom' : destinationAddress.toNat + 4 ≤ 4294967296 := by
@@ -1992,8 +1980,7 @@ theorem twp_func3_decode_tail_loop
         remaining := state.remaining - 1 }
     have hnextPartition :
         next.copied + next.remaining = original.length := by
-      dsimp only [next]
-      omega
+      dsimp only [next]; omega
     have Hcopy := twp_func3_copy_decoded_word_from_locals
       (hlc := hlc) source destination original initial state.copied hlength
       hcopied 6 3 []
@@ -2437,8 +2424,7 @@ private theorem func3_decode_tail_mask (length : Nat)
   rw [hthree]
   have htailBound : length % 4 < UInt32.size := by
     have := Nat.mod_lt length (by decide : 0 < 4)
-    norm_num [UInt32.size]
-    omega
+    norm_num [UInt32.size]; omega
   rw [UInt32.toNat_ofNat_of_lt' htailBound]
   rw [show (3 : Nat) = 2 ^ 2 - 1 by norm_num,
     Nat.and_two_pow_sub_one_eq_mod]
@@ -2470,8 +2456,7 @@ theorem twp_func3_decode_setup
       @ s; E [{ Φ }] := by
   iintro Hcont
   have hwordBound : 4 * length < UInt32.size := by
-    norm_num [UInt32.size] at hbyteBound ⊢
-    omega
+    norm_num [UInt32.size] at hbyteBound ⊢; omega
   have hlengthBound : length < UInt32.size := by omega
   have hsub := func3_decode_sub_four length hpositive
   have hshift := func3_decode_shift_two length hpositive hwordBound
@@ -2634,12 +2619,10 @@ theorem twp_func3_decode_blocks
     dsimp only [bulk, tail]
     exact bulk4_add_tail original.length
   have hlengthBound : original.length < UInt32.size := by
-    norm_num [UInt32.size] at hbyteBound ⊢
-    omega
+    norm_num [UInt32.size] at hbyteBound ⊢; omega
   have hcountBound : original.length < 2147483648 := by omega
   have hbyteWordBound : 4 * original.length - 4 < UInt32.size := by
-    norm_num [UInt32.size]
-    omega
+    norm_num [UInt32.size]; omega
   have hbyteWord :
       (UInt32.ofNat (4 * original.length - 4)).toNat =
         4 * original.length - 4 :=
@@ -2685,11 +2668,9 @@ theorem twp_func3_decode_blocks
       %(0 : UInt32) Hsource Hdestination
     iexact Hfinal
   · have hbulkPositive : 4 ≤ bulk := by
-      dsimp only [bulk]
-      omega
+      dsimp only [bulk]; omega
     have hbulkMod : bulk % 4 = 0 := by
-      dsimp only [bulk]
-      omega
+      dsimp only [bulk]; omega
     have hnotLt : ¬UInt32.ofNat (4 * original.length - 4) <
         (12 : UInt32) := by
       rw [UInt32.lt_iff_toNat_lt, hbyteWord]
@@ -2749,8 +2730,7 @@ theorem twp_func3_decode_blocks
         intro hzero
         have hnat := congrArg UInt32.toNat hzero
         rw [UInt32.toNat_ofNat_of_lt' (by omega)] at hnat
-        simp only [UInt32.toNat_zero] at hnat
-        omega
+        simp only [UInt32.toNat_zero] at hnat; omega
       dsimp only [tail] at htailNonzero
       iapply twp_eqz (result := 0) (by simpa using htailNonzero)
       wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet twp_add]
@@ -2970,8 +2950,7 @@ theorem twp_func3_allocate_scratch
       (UInt32.ofNat (4 * original.length)) final8
       (UInt32.ofNat original.length) (UInt32.ofNat (4 * original.length)) []
   have hwordBound : 4 * original.length < UInt32.size := by
-    norm_num [UInt32.size] at hbyteBound ⊢
-    omega
+    norm_num [UInt32.size] at hbyteBound ⊢; omega
   have hsizeWord :
       (UInt32.ofNat (4 * original.length)).toNat = 4 * original.length :=
     UInt32.toNat_ofNat_of_lt' hwordBound
@@ -4296,8 +4275,7 @@ theorem twp_func3_finish_nonempty
   have hcapacityPositive : 0 < capacity.toNat := by
     rcases hgeo with hempty | hshort | hlarge
     · have hzero := hempty.2.2.1
-      rw [serialize_length] at hzero
-      omega
+      rw [serialize_length] at hzero; omega
     · rcases hshort with ⟨_, _, _, hcapacity, _, _, _⟩
       omega
     · rcases hlarge with ⟨exponent, _, _, hcapacity, _, _, _, _, _⟩
@@ -4675,8 +4653,7 @@ theorem twp_func3_read_loop
         (serialize original).length = state.initialized.length +
           state.current.length + state.remaining.length := by
       have hbytes := congrArg List.length hfacts.1
-      simp only [List.length_append] at hbytes
-      omega
+      simp only [List.length_append] at hbytes; omega
     have Hiteration := twp_func3_read_loop_iteration hfunc1
       (serialize original).length state.current state.remaining state.capacity
       state.dataPtr state.initialized state.chunkTail outputBytes state.shadow
@@ -4887,11 +4864,9 @@ theorem twp_func3_first_read_nonempty
   have hsplit := readChunk_mod_four input hinputMod
   dsimp only at hsplit
   have hcountPositive : 0 < count := by
-    dsimp only [count]
-    omega
+    dsimp only [count]; omega
   have hcountSize : count < UInt32.size := by
-    norm_num [UInt32.size]
-    omega
+    norm_num [UInt32.size]; omega
   have hcountWord : (UInt32.ofNat count).toNat = count :=
     UInt32.toNat_ofNat_of_lt' hcountSize
   have hcountNonzero : UInt32.ofNat count ≠ 0 := by
@@ -5420,8 +5395,7 @@ theorem twp_func3_complete_nonempty
       inputPtr frontier history hgeo rfl
     simpa only [serialize_length] using htotal
   have hbyteBound : 4 * original.length < UInt32.size := by
-    norm_num [UInt32.size] at hbyteBoundSigned ⊢
-    omega
+    norm_num [UInt32.size] at hbyteBoundSigned ⊢; omega
   have hlayoutValid : layout.Valid := by
     exact align4Layout_valid_of_bounds (4 * original.length)
       (by omega) hbyteBoundSigned (by omega)

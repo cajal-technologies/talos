@@ -308,20 +308,17 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
       apply UInt32.toNat_inj.mp
       rw [hcursorNat hnonzero,
         UInt32.toNat_ofNat_of_lt' (by
-          norm_num [UInt32.size] at hfrontierSigned ⊢
-          omega)]
+          norm_num [UInt32.size] at hfrontierSigned ⊢; omega)]
     · rename_i hzero
       simp only [ne_eq, Decidable.not_not] at hzero
       have hfrontierEq := (hcursorZero.mp hzero).2
       apply UInt32.toNat_inj.mp
       rw [UInt32.toNat_ofNat_of_lt' (by
-        norm_num [UInt32.size] at hfrontierSigned ⊢
-        omega)]
+        norm_num [UInt32.size] at hfrontierSigned ⊢; omega)]
       exact hfrontierEq.symm
   have hsumBound :
       frontier + (layout.alignment - 1) < UInt32.size := by
-    norm_num [UInt32.size] at hfrontierSigned ⊢
-    omega
+    norm_num [UInt32.size] at hfrontierSigned ⊢; omega
   have hpadWord :
       (0xFFFFFFFF : UInt32) + alignment =
         UInt32.ofNat (layout.alignment - 1) := by
@@ -336,8 +333,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
     apply UInt32.toNat_inj.mp
     rw [UInt32.toNat_add,
       UInt32.toNat_ofNat_of_lt' (by
-        norm_num [UInt32.size] at hfrontierSigned ⊢
-        omega),
+        norm_num [UInt32.size] at hfrontierSigned ⊢; omega),
       UInt32.toNat_ofNat_of_lt' (by
         exact Nat.lt_of_le_of_lt hpadSmall (by decide)),
       UInt32.toNat_ofNat_of_lt' hsumBound,
@@ -388,8 +384,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
   have hfinishWordBound : finishNat < UInt32.size := by
     dsimp only [finishNat]
     have hsizeBound := hvalid.2.2.2.2.1
-    norm_num [UInt32.size] at hfrontierSigned hsizeBound ⊢
-    omega
+    norm_num [UInt32.size] at hfrontierSigned hsizeBound ⊢; omega
   have hfinishWord : base + size = finish := by
     apply UInt32.toNat_inj.mp
     rw [UInt32.toNat_add, hsizeNat, Nat.mod_eq_of_lt hfinishWordBound]
@@ -408,8 +403,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
   have hbaseLeFinish : base ≤ finish := by
     rw [UInt32.le_iff_toNat_le_toNat,
       UInt32.toNat_ofNat_of_lt' hfinishWordBound]
-    dsimp only [finishNat]
-    omega
+    dsimp only [finishNat]; omega
   have hfinishNatEq : finish.toNat = finishNat :=
     UInt32.toNat_ofNat_of_lt' hfinishWordBound
   have hfinishWordBoundNumeric : finishNat < 4294967296 := by
@@ -661,15 +655,13 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
                       omega
                   have hrequiredLeNew :
                       (allocatorRequiredPages finish).toNat ≤ newPages := by
-                    rw [hfacts.2, hdeltaNat]
-                    omega
+                    rw [hfacts.2, hdeltaNat]; omega
                   exact hrequiredCovers.trans
                     (Nat.mul_le_mul_right 65536 hrequiredLeNew)
                 · have hpagesHigh : UInt32.size ≤ pages := by omega
                   have hfinishLeNew : finish.toNat ≤ newPages := by
                     rw [hfacts.2]
-                    norm_num [UInt32.size] at hpagesHigh
-                    omega
+                    norm_num [UInt32.size] at hpagesHigh; omega
                   exact hfinishLeNew.trans (by omega)
               ihave Hnormal := BI.and_elim_l $$ Hcont
               iclose_runtime Hruntime with Hmodule Henv
