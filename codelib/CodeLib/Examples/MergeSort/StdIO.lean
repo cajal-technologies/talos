@@ -131,19 +131,12 @@ theorem writeBytes_serialize (mem : Mem) (base : UInt32)
       simp only [serialize_cons, writeWordArray]
       rw [Mem.writeBytes_append, writeBytes_encodeWord]
       simp only [List.length_cons, Nat.mul_add] at hfit
-      have hbase : (base + 4).toNat = base.toNat + 4 := by
-        simp only [UInt32.toNat_add, UInt32.reduceToNat]
-        rw [Nat.mod_eq_of_lt]
-        change base.toNat + 4 < 4294967296
-        change base.toNat + (4 * values.length + 4) < 4294967296 at hfit
-        omega
+      have hbase : (base + 4).toNat = base.toNat + 4 :=
+        UInt32.add_ofNat_toNat_noWrap base 4 (by decide) (by
+          simp only [UInt32.size] at hfit ⊢; omega)
       rw [show base.toNat + (encodeWord value).length =
           (base + 4).toNat by simp [encodeWord, hbase]]
-      apply ih
-      rw [hbase]
-      change base.toNat + 4 + 4 * values.length < 4294967296
-      change base.toNat + (4 * values.length + 4) < 4294967296 at hfit
-      omega
+      exact ih _ _ (by rw [hbase]; omega)
 
 private theorem readBytes_four_add (mem : Mem) (offset n : Nat) :
     mem.readBytes offset (4 + n) =
