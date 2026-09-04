@@ -62,15 +62,8 @@ theorem arrayAddress_toNat (base : UInt32) {index length : Nat}
     (hindex : index < length) :
     (base + UInt32.ofNat index * 4).toNat =
       base.toNat + 4 * index := by
-  have hi : index < UInt32.size := by omega
-  have hp : index * 4 < UInt32.size := by omega
-  rw [UInt32.toNat_add, UInt32.toNat_mul,
-    UInt32.toNat_ofNat_of_lt' hi]
-  have hfour : (4 : UInt32).toNat = 4 := by decide
-  rw [hfour, Nat.mod_eq_of_lt hp, Nat.mul_comm index 4]
-  apply Nat.mod_eq_of_lt
-  change base.toNat + 4 * index < UInt32.size
-  omega
+  simpa [UInt32.mul_comm] using Mem.words32_slotAddr_toNat base index (by
+    simpa only [UInt32.size] using Nat.lt_of_lt_of_le (by omega) hfit)
 
 /-! ## Total-WP derived laws -/
 

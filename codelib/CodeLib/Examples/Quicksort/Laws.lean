@@ -15,20 +15,6 @@ open Iris Iris.ProgramLogic Language.Notation
 open Wasm.SepLogic
 open Wasm.SmallStep
 
--- address arithmetic (same proof as MergeSort.Laws.arrayAddress_toNat)
-private theorem arrayAddress_toNat (base : UInt32) {index length : Nat}
-    (hfit : base.toNat + 4 * length ≤ UInt32.size)
-    (hindex : index < length) :
-    (base + UInt32.ofNat index * 4).toNat = base.toNat + 4 * index := by
-  have hi : index < UInt32.size := by omega
-  have hp : index * 4 < UInt32.size := by omega
-  rw [UInt32.toNat_add, UInt32.toNat_mul, UInt32.toNat_ofNat_of_lt' hi]
-  have hfour : (4 : UInt32).toNat = 4 := by decide
-  rw [hfour, Nat.mod_eq_of_lt hp, Nat.mul_comm index 4]
-  apply Nat.mod_eq_of_lt
-  change base.toNat + 4 * index < UInt32.size
-  omega
-
 theorem twp_address
     [WasmSmallStepGS hlc Unit]
     {s : Stuckness} {E : CoPset}
@@ -126,7 +112,8 @@ theorem twp_loadAt
         arity, remainder, controls, calls⟩ : Expr Unit)
       @ s; E [{ Φ }] := by
   have hslot : (base + 4 * UInt32.ofNat k).toNat = base.toNat + 4 * k := by
-    simpa [UInt32.mul_comm] using arrayAddress_toNat base hfit hk
+    exact Mem.words32_slotAddr_toNat base k (by
+      simpa only [UInt32.size] using Nat.lt_of_lt_of_le (by omega) hfit)
   have hroom : (base + 4 * UInt32.ofNat k).toNat + 4 ≤ UInt32.size := by
     rw [hslot]; omega
   have hroom' : (base + 4 * UInt32.ofNat k).toNat + 4 ≤ 4294967296 := by
@@ -211,15 +198,19 @@ theorem twp_swapAt
       @ s; E [{ Φ }] := by
   let addr_a : UInt32 := 4 * UInt32.ofNat a + base
   have hslot_a : addr_a.toNat = base.toNat + 4 * a := by
-    dsimp [addr_a]; rw [UInt32.add_comm]
-    simpa [UInt32.mul_comm] using arrayAddress_toNat base hfit ha
+    dsimp [addr_a]
+    rw [UInt32.add_comm]
+    exact Mem.words32_slotAddr_toNat base a (by
+      simpa only [UInt32.size] using Nat.lt_of_lt_of_le (by omega) hfit)
   have hroom_a : addr_a.toNat + 4 ≤ UInt32.size := by rw [hslot_a]; omega
   obtain ⟨h1_a, h2_a, h3_a⟩ := UInt32.addSteps4 addr_a (by
     simpa only [UInt32.size] using hroom_a)
   let addr_b : UInt32 := 4 * UInt32.ofNat b + base
   have hslot_b : addr_b.toNat = base.toNat + 4 * b := by
-    dsimp [addr_b]; rw [UInt32.add_comm]
-    simpa [UInt32.mul_comm] using arrayAddress_toNat base hfit hb
+    dsimp [addr_b]
+    rw [UInt32.add_comm]
+    exact Mem.words32_slotAddr_toNat base b (by
+      simpa only [UInt32.size] using Nat.lt_of_lt_of_le (by omega) hfit)
   have hroom_b : addr_b.toNat + 4 ≤ UInt32.size := by rw [hslot_b]; omega
   obtain ⟨h1_b, h2_b, h3_b⟩ := UInt32.addSteps4 addr_b (by
     simpa only [UInt32.size] using hroom_b)
