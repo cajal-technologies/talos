@@ -59,7 +59,7 @@ def codec : WordCodec UInt32 where
     bv_decide
 
 /-- Packed little-endian serialization of a list of 32-bit words. -/
-def serialize (values : List UInt32) : List UInt8 :=
+abbrev serialize (values : List UInt32) : List UInt8 :=
   codec.serialize values
 
 /-- Decode a packed little-endian byte sequence. A trailing partial word is
@@ -523,16 +523,9 @@ def sortHeap (input : List UInt32) : WasmHeapMap (Option UInt8) :=
 theorem fits_iff (values : List UInt32) :
     Fits values ↔ 4 * values.length ≤ bufferBytes := by simp only [Fits, serialize_length]
 
-theorem encodedLength_toNat (input : List UInt32) (hfit : Fits input) :
-    (UInt32.ofNat (serialize input).length).toNat = (serialize input).length := by
-  apply UInt32.toNat_ofNat_of_lt'
-  rw [fits_iff] at hfit
-  change 4 * input.length ≤ 32768 at hfit
-  simp only [serialize_length, UInt32.size]; omega
-
 theorem encodedLength_words (input : List UInt32) (hfit : Fits input) :
     (UInt32.ofNat (serialize input).length).toNat / 4 = input.length := by
-  rw [encodedLength_toNat input hfit, serialize_length]; omega
+  rw [codec.serializeLength_toNat input hfit (by decide), serialize_length]; omega
 
 theorem scratchValues_length (input : List UInt32) :
     (scratchValues input).length = input.length := by
@@ -976,7 +969,8 @@ theorem run_correct (fuel : Nat) (input : List UInt32) (bytes : List UInt8)
         (mergeSortArguments source scratch input.length []) sortValues hsortResult
       have hbyteLength :
           (UInt32.ofNat (serialize input).length).toNat = 4 * input.length := by
-        rw [encodedLength_toNat input hfit, serialize_length]
+        rw [codec.serializeLength_toNat input hfit (by decide),
+          serialize_length]
       have hwriteBound : source.toNat +
           (UInt32.ofNat (serialize input).length).toNat ≤
           Wasm.StdIO.byteCapacity afterSort := by
@@ -1048,7 +1042,8 @@ theorem complete : Complete := by
     (mergeSortArguments source scratch input.length []) values hsort
   have hbyteLength :
       (UInt32.ofNat (serialize input).length).toNat = 4 * input.length := by
-    rw [encodedLength_toNat input hfit, serialize_length]
+    rw [codec.serializeLength_toNat input hfit (by decide),
+      serialize_length]
   have hwriteBound : source.toNat +
       (UInt32.ofNat (serialize input).length).toNat ≤
       Wasm.StdIO.byteCapacity afterSort := by

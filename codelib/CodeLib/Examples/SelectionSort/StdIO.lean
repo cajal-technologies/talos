@@ -68,7 +68,7 @@ def codec : WordCodec UInt64 where
     simp only [encodeWord, decodeChunk, decodeWord]
     bv_decide
 
-def serialize (values : List UInt64) : List UInt8 :=
+abbrev serialize (values : List UInt64) : List UInt8 :=
   codec.serialize values
 
 /-- Reject a trailing partial word instead of silently ignoring it. -/

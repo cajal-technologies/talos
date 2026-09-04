@@ -70,16 +70,9 @@ theorem probe_afterRead (program : Executable) (input : List UInt64) :
   · rfl
   · rw [afterRead_byteCapacity]; decide
 
-theorem encodedLength_toNat (input : List UInt64) (hfit : Fits input) :
-    (UInt32.ofNat (serialize input).length).toNat =
-      (serialize input).length := by
-  apply UInt32.toNat_ofNat_of_lt'
-  simp only [Fits, serialize_length, bufferBytes] at hfit ⊢
-  simp only [UInt32.size]; omega
-
 theorem encodedLength_words (input : List UInt64) (hfit : Fits input) :
     (UInt32.ofNat (serialize input).length).toNat / 8 = input.length := by
-  rw [encodedLength_toNat input hfit, serialize_length]; omega
+  rw [codec.serializeLength_toNat input hfit (by decide), serialize_length]; omega
 
 /-! ## The packed stream and the u64 separation-logic array agree -/
 
@@ -843,7 +836,7 @@ private theorem correct_of_sort_complete
     (afterRead program input) afterSort (sortArguments input) values hsort
   have hbyteLength :
       (UInt32.ofNat (serialize input).length).toNat = 8 * input.length := by
-    rw [encodedLength_toNat input hfit, serialize_length]
+    rw [codec.serializeLength_toNat input hfit (by decide), serialize_length]
   have hwriteBound : array.toNat +
       (UInt32.ofNat (serialize input).length).toNat ≤
       Wasm.StdIO.byteCapacity afterSort := by

@@ -67,6 +67,13 @@ def serialize (values : List W) : List UInt8 :=
         List.length_cons, Nat.mul_succ]
       omega
 
+theorem serializeLength_toNat (values : List W) {limit : Nat}
+    (hfit : (codec.serialize values).length ≤ limit)
+    (hlimit : limit < UInt32.size) :
+    (UInt32.ofNat (codec.serialize values).length).toNat =
+      (codec.serialize values).length :=
+  UInt32.toNat_ofNat_of_lt' (Nat.lt_of_le_of_lt hfit hlimit)
+
 /-- Decode a packed byte stream. A trailing run of fewer than `width` bytes is
 rejected rather than silently ignored, so `some` means every byte was
 consumed. -/
