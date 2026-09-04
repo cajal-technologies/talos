@@ -356,37 +356,19 @@ def func3Config (x : UInt64) : Config Unit :=
 def func3Heap : WasmHeapMap (Option UInt8) :=
   Wasm.RustStd.U64.absDiffHeap 0
 
-theorem func3_initialScratchMem_eq :
-    («module».initialStore : Store Unit).mem.write64 1048568 0 =
-      («module».initialStore : Store Unit).mem := by
-  simp [«module», Module.initialStore, Mem.write64, Mem.empty]
-
 theorem func3Heap_agrees :
     heapAgreesWithMem func3Heap (storeResolve (func3Config 0).store) := by
   unfold func3Heap func3Config Wasm.RustStd.U64.absDiffHeap
-  have h := store64_sound0 (∅ : WasmHeapMap (Option UInt8))
-      («module».initialStore : Store Unit).mem 1048568 0
-      (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
-      (heapAgreesWithMem_empty _)
-  rw [func3_initialScratchMem_eq] at h
-  have hresolveEq := singleMemoryResolve_eq_storeResolve
-    (func3Config 0).store («module».initialStore : Store Unit).mem rfl
-    (by native_decide)
-  exact hresolveEq ▸ h
+  apply insert_physical_word64_sound ∅ _ 0 _ 1048568 0 rfl
+  · exact heapAgreesWithMem_empty _
+  · decide
 
 theorem func3Heap_inBounds :
     heapAddressesInBounds func3Heap (storeResolve (func3Config 0).store) := by
   unfold func3Heap func3Config Wasm.RustStd.U64.absDiffHeap
-  have h := store64_inBounds0 (∅ : WasmHeapMap (Option UInt8))
-      («module».initialStore : Store Unit).mem 1048568 0
-      (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide)
-      (heapAddressesInBounds_empty _)
-  rw [func3_initialScratchMem_eq] at h
-  have hresolveEq := singleMemoryResolve_eq_storeResolve
-    (func3Config 0).store («module».initialStore : Store Unit).mem rfl
-    (by native_decide)
-  exact hresolveEq ▸ h
+  apply insert_physical_word64_inBounds ∅ _ 0 _ 1048568 0 rfl
+  · exact heapAddressesInBounds_empty _
+  · decide
 
 theorem func3Heap_pointsTo [WasmHeapGS Unit] :
     ([∗map] address ↦ value ∈ func3Heap,
