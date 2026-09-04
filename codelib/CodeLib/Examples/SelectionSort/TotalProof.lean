@@ -303,8 +303,8 @@ private theorem twp_findMin_aux
       iapply Wasm.SmallStep.twp_iff
         (selectedBody := [.localGet 2, .ret]) (by simp)
       wasm_twp_pures [twp_localGet]
-      wasm_twp_return_from_call Hruntime
-      simp only [List.take_succ_cons, List.take_zero, List.singleton_append]
+      wasm_twp_return_from_call Hruntime [List.take_succ_cons, List.take_zero,
+        List.singleton_append]
       have hpure : start ≤ best ∧ best < input.length ∧
           ∀ k, start ≤ k → k < input.length →
             input[best]?.getD default ≤ input[k]?.getD default := by
@@ -383,8 +383,8 @@ private theorem twp_findMin_aux
             (calls := callerFrame :: calls)
           isplitl_exacts [Hruntime Harray]
           iintro %finalBest %hpure Hruntime Harray
-          wasm_twp_return_from_call Hruntime
-          simp only [List.take_succ_cons, List.take_zero, List.nil_append, List.cons_append]
+          wasm_twp_return_from_call Hruntime [List.take_succ_cons, List.take_zero,
+            List.nil_append, List.cons_append]
           have hpure' : start ≤ finalBest ∧ finalBest < input.length ∧
               ∀ k, start ≤ k → k < input.length →
                 input[finalBest]?.getD default ≤ input[k]?.getD default := by
@@ -419,8 +419,8 @@ private theorem twp_findMin_aux
             (calls := callerFrame :: calls)
           isplitl_exacts [Hruntime Harray]
           iintro %finalBest %hpure Hruntime Harray
-          wasm_twp_return_from_call Hruntime
-          simp only [List.take_succ_cons, List.take_zero, List.nil_append, List.cons_append]
+          wasm_twp_return_from_call Hruntime [List.take_succ_cons, List.take_zero,
+            List.nil_append, List.cons_append]
           have hpure' : start ≤ finalBest ∧ finalBest < input.length ∧
               ∀ k, start ≤ k → k < input.length →
                 input[finalBest]?.getD default ≤ input[k]?.getD default := by
@@ -433,8 +433,8 @@ private theorem twp_findMin_aux
         iapply Wasm.SmallStep.twp_iff
           (selectedBody := [.localGet 2, .ret]) (by simp)
         wasm_twp_pures [twp_localGet]
-        wasm_twp_return_from_call Hruntime
-        simp only [List.take_succ_cons, List.take_zero, List.singleton_append]
+        wasm_twp_return_from_call Hruntime [List.take_succ_cons, List.take_zero,
+          List.singleton_append]
         have hpure : start ≤ best ∧ best < input.length ∧
             ∀ k, start ≤ k → k < input.length →
               input[best]?.getD default ≤ input[k]?.getD default := by
@@ -532,8 +532,7 @@ private theorem twp_recursiveSort_aux
       wasm_twp_pures [twp_localGet twp_const]
       iapply Wasm.SmallStep.twp_ltU (result := 1) (by simp)
       iapply Wasm.SmallStep.twp_iff (selectedBody := [.ret]) (by simp)
-      wasm_twp_return_from_call Hruntime
-      simp only [List.take_zero, List.nil_append]
+      wasm_twp_return_from_call Hruntime [List.take_zero, List.nil_append]
       have hpure : ([] : List UInt64) = [] ∧ Sorted [] :=
         ⟨rfl, List.Pairwise.nil⟩
       iapply Hcont $$ %([] : List UInt64) %hpure Hruntime Harray
@@ -564,8 +563,7 @@ private theorem twp_recursiveSort_aux
           simp [hlt])
         iapply Wasm.SmallStep.twp_iff
           (selectedBody := [.ret]) (by simp)
-        wasm_twp_return_from_call Hruntime
-        simp only [List.take_zero, List.nil_append]
+        wasm_twp_return_from_call Hruntime [List.take_zero, List.nil_append]
         have hpure : List.Perm input input ∧ Sorted input :=
           ⟨List.Perm.refl _, sorted_of_length_lt_two input hbase⟩
         iapply Hcont $$ %input %hpure Hruntime Harray
@@ -652,8 +650,7 @@ private theorem twp_recursiveSort_aux
           (controls := []) (calls := callerFrame :: calls)
         isplitl_exacts [Hruntime Htail]
         iintro %tailOutput %htailPure Hruntime HtailOutput
-        wasm_twp_return_from_call Hruntime
-        simp only [List.take_zero, List.nil_append]
+        wasm_twp_return_from_call Hruntime [List.take_zero, List.nil_append]
         let output := updated[0]! :: tailOutput
         have hpure : List.Perm input output ∧ Sorted output := by
           dsimp only [output, updated]
@@ -1136,8 +1133,7 @@ theorem twp_loopSort
     (s := s) (E := E) (Φ := Φ)
   isplitl_exact Harray
   iintro %output %outer %best %scan %temporary %hpure Harray
-  wasm_twp_return_from_call Hruntime
-  simp only [List.take_zero, List.nil_append]
+  wasm_twp_return_from_call Hruntime [List.take_zero, List.nil_append]
   iapply Hcont $$ %output %hpure Hruntime Harray
 
 end Wasm.Examples.SelectionSort

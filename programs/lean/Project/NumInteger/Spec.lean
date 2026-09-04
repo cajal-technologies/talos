@@ -6556,8 +6556,7 @@ theorem twp_func0_smallStep_wp
           ⟨HR'', Hruntime'', HshiftXY'', HshiftX'', HshiftY'',
             HnextY'', HnextX''⟩
         simp only [func0CallerFrame]
-        wasm_twp_return_from_call Hruntime''
-        simp only [func0CallLocals, func0AfterCallProg,
+        wasm_twp_return_from_call Hruntime'' [func0CallLocals, func0AfterCallProg,
           List.take, List.append_nil]
         iapply twp_func0_afterCall_frame_smallStep_wp
           (R := iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module»))
@@ -6578,8 +6577,7 @@ theorem twp_func0_smallStep_wp
             ⟨HR'', Hruntime'', HshiftXY'', HshiftX'', HshiftY'',
               HnextY'', HnextX''⟩
           simp only [func0CallerFrame]
-          wasm_twp_return_from_call Hruntime''
-          simp only [func0CallLocals, func0AfterCallProg,
+          wasm_twp_return_from_call Hruntime'' [func0CallLocals, func0AfterCallProg,
             List.take, List.append_nil]
           iapply twp_func0_afterCall_frame_smallStep_wp
             (R := iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module»))
@@ -6600,8 +6598,7 @@ theorem twp_func0_smallStep_wp
             ⟨HRruntime, Hglobal'', HouterA'', HouterB''⟩
           icases HRruntime with ⟨HR'', Hruntime''⟩
           simp only [func0CallerFrame]
-          wasm_twp_return_from_call Hruntime''
-          simp only [func0CallLocals, func0AfterCallProg,
+          wasm_twp_return_from_call Hruntime'' [func0CallLocals, func0AfterCallProg,
             List.take, List.append_nil]
           iapply twp_func0_afterCall_frame_smallStep_wp
             (R := iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module»))

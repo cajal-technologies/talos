@@ -485,8 +485,7 @@ theorem func4_correct [WasmSmallStepGS hlc Universal.State] :
       Project.Mergesort.WrapperProof.func4_index with Hmodule => Hmodule
   simp [Project.Mergesort.func4Def, Project.Mergesort.func4,
     Function.toLocals, Function.numParams]
-  wasm_twp_return_from_call Hmodule
-  simp only [List.take_zero, List.nil_append]
+  wasm_twp_return_from_call Hmodule [List.take_zero, List.nil_append]
   isimp only [RuntimeContext, ResumeWP, resumeExpr, List.nil_append] at Hcont
   iapply Hcont $$ [Hmodule Henv]
   · iframe

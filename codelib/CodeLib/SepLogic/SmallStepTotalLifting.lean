@@ -684,6 +684,15 @@ theorem twp_returnFromCallExplicit
 macro "wasm_twp_return_from_call " runtime:ident : tactic => do
   `(tactic| wasm_twp_rebind twp_returnFromCallExplicit with $runtime)
 
+/-- Return totally from a callee, then normalize the restored caller state. -/
+syntax "wasm_twp_return_from_call " ident Lean.Parser.Tactic.simpArgs : tactic
+
+macro_rules
+  | `(tactic| wasm_twp_return_from_call $runtime:ident [$rules,*]) =>
+      `(tactic|
+        (wasm_twp_return_from_call $runtime
+         simp only [$rules,*]))
+
 theorem twp_memorySize
     {params localValues values : List Value}
     {code : Program} {arity : Nat} {remainder : List Value}

@@ -712,8 +712,7 @@ theorem twp_check
         (by simp [«module»]) (by simp [«module»]) with Hruntime
       simp [func1Def, Function.toLocals, Function.numParams]
       iapply twp_func1_body x _
-      wasm_twp_return_from_call Hruntime
-      simp only [List.take, List.singleton_append]
+      wasm_twp_return_from_call Hruntime [List.take, List.singleton_append]
       rw [heq]
       iapply twp_ne (result := 0) (by simp)
       wasm_twp_pures [twp_const twp_and]
@@ -774,8 +773,7 @@ theorem check_smallStep (x : UInt32) :
           (by simp [«module»]) (by simp [«module»]) with Hruntime
         simp [func1Def, Function.toLocals, Function.numParams]
         wasm_wp_next func1_body_smallStep_wp x _
-        wasm_wp_return_from_call Hruntime
-        simp only [List.take, List.singleton_append]
+        wasm_wp_return_from_call Hruntime [List.take, List.singleton_append]
         rw [heq]
         wasm_wp_next wp_ne (result := 0) (by simp)
         wasm_wp_pures [wp_const wp_and]

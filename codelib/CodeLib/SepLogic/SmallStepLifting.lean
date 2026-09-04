@@ -1284,6 +1284,15 @@ theorem wp_returnFromCallExplicit'
 macro "wasm_wp_return_from_call " runtime:ident : tactic => do
   `(tactic| wasm_wp_next_rebind wp_returnFromCallExplicit' with $runtime)
 
+/-- Return from a callee, then normalize the restored caller state. -/
+syntax "wasm_wp_return_from_call " ident Lean.Parser.Tactic.simpArgs : tactic
+
+macro_rules
+  | `(tactic| wasm_wp_return_from_call $runtime:ident [$rules,*]) =>
+      `(tactic|
+        (wasm_wp_return_from_call $runtime
+         simp only [$rules,*]))
+
 /-- Resume a suspended caller after an explicit callee return. -/
 theorem wp_returnFromCallExplicit
     {calleeLocals callerLocals : Locals}

@@ -2422,8 +2422,7 @@ theorem twp_sort_base
   iapply twp_ltU (result := 1) (by simp [hlt])
   iapply twp_brIf (by decide) (by rfl)
   simp only [List.drop_zero, List.take_nil, List.nil_append]
-  wasm_twp_return_from_call Hruntime
-  simp only [List.take_zero, List.nil_append]
+  wasm_twp_return_from_call Hruntime [List.take_zero, List.nil_append]
   iapply Hcont $$ Hruntime
 
 set_option maxHeartbeats 16000000 in

@@ -239,8 +239,7 @@ private theorem twp_func8_copy_and_return
   simp only [List.take_zero, List.nil_append]
   wasm_twp_pures [twp_localGet]
   iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
-  wasm_twp_return_from_call Hmodule
-  simp only [List.take_succ_cons, List.take_zero, List.cons_append,
+  wasm_twp_return_from_call Hmodule [List.take_succ_cons, List.take_zero, List.cons_append,
     List.nil_append]
   have hcopy : finalBytes.take (min oldLayout.size newLayout.size) =
       oldBytes.take (min oldLayout.size newLayout.size) := by

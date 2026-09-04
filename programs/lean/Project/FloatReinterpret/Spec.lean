@@ -103,8 +103,7 @@ theorem func9_smallStep_wp
     (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func5Def, Function.toLocals, Function.numParams]
   wasm_wp_next func5_body_smallStep_wp x _
-  wasm_wp_return_from_call Hruntime
-  simp only [List.take, List.singleton_append]
+  wasm_wp_return_from_call Hruntime [List.take, List.singleton_append]
   wasm_wp_pures [wp_const wp_and]
   wasm_wp_next_rebind wp_call «module» 6 func6Def
     (by simp [«module»]) (by simp [«module»]) with Hruntime
@@ -152,15 +151,13 @@ theorem func4_smallStep_wp
     (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func5Def, Function.toLocals, Function.numParams]
   wasm_wp_next func5_body_smallStep_wp y _
-  wasm_wp_return_from_call Hruntime
-  simp only [List.take, List.singleton_append]
+  wasm_wp_return_from_call Hruntime [List.take, List.singleton_append]
   wasm_wp_pures [wp_const wp_and wp_localGet]
   wasm_wp_next_rebind wp_call «module» 5 func5Def
     (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func5Def, Function.toLocals, Function.numParams]
   wasm_wp_next func5_body_smallStep_wp x _
-  wasm_wp_return_from_call Hruntime
-  simp only [List.take, List.singleton_append]
+  wasm_wp_return_from_call Hruntime [List.take, List.singleton_append]
   wasm_wp_pures [wp_const wp_and wp_or]
   wasm_wp_next_rebind wp_call «module» 6 func6Def
     (by simp [«module»]) (by simp [«module»]) with Hruntime
@@ -531,8 +528,7 @@ theorem func2_smallStep_wp
   iapply func3_body_smallStep_wp
     (runtimeModuleOwn ⟨0⟩ «module») (f64PromoteF32 x) oldWord _
   · iintro ⟨Hruntime, Hglobal, Hword⟩
-    wasm_wp_return_from_call Hruntime
-    simp only [List.take, List.singleton_append]
+    wasm_wp_return_from_call Hruntime [List.take, List.singleton_append]
     wasm_wp_next wp_scalarFloat1 rfl rfl
     wasm_wp_return_value
     iclear Hruntime Hglobal Hword
@@ -890,8 +886,7 @@ theorem func0_lowered_smallStep_wp
   iapply func1_lowered_body_smallStep_wp
     (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module»)) x oldWord _
   · iintro ⟨⟨HR, Hruntime⟩, Hglobal, Hword⟩
-    wasm_wp_return_from_call Hruntime
-    simp only [List.take, List.singleton_append]
+    wasm_wp_return_from_call Hruntime [List.take, List.singleton_append]
     iapply_frame hreturn
   · iframe
 
@@ -966,8 +961,7 @@ theorem func2_lowered_smallStep_wp
     (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module»))
     (f64PromoteF32 x) oldWord _
   · iintro ⟨⟨HR, Hruntime⟩, Hglobal, Hword⟩
-    wasm_wp_return_from_call Hruntime
-    simp only [List.take, List.singleton_append]
+    wasm_wp_return_from_call Hruntime [List.take, List.singleton_append]
     wasm_wp_next wp_scalarFloat1 rfl rfl
     simp only [func2Result] at hreturn
     iapply_frame hreturn
@@ -1041,8 +1035,7 @@ theorem func7_lowered_smallStep_wp
   iapply func8_lowered_body_smallStep_wp
     (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module»)) x y oldWord _
   · iintro ⟨⟨HR, Hruntime⟩, Hglobal, Hword⟩
-    wasm_wp_return_from_call Hruntime
-    simp only [List.take, List.singleton_append]
+    wasm_wp_return_from_call Hruntime [List.take, List.singleton_append]
     iapply_frame hreturn
   · iframe
 
@@ -1067,16 +1060,14 @@ theorem func9_context_smallStep_wp
     (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func5Def, Function.toLocals, Function.numParams]
   wasm_wp_next func5_body_smallStep_wp x _
-  wasm_wp_return_from_call Hruntime
-  simp only [List.take, List.singleton_append]
+  wasm_wp_return_from_call Hruntime [List.take, List.singleton_append]
   wasm_wp_pures [wp_const wp_and]
   wasm_wp_next_rebind wp_call «module» 6 func6Def
     (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func6Def, Function.toLocals, Function.numParams]
   rw [UInt32.and_comm x 2147483647]
   wasm_wp_next func6_body_smallStep_wp (2147483647 &&& x) _
-  wasm_wp_return_from_call Hruntime
-  simp only [List.take, List.singleton_append]
+  wasm_wp_return_from_call Hruntime [List.take, List.singleton_append]
   iapply_frame hreturn
 
 theorem func4_context_smallStep_wp
@@ -1100,15 +1091,13 @@ theorem func4_context_smallStep_wp
     (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func5Def, Function.toLocals, Function.numParams]
   wasm_wp_next func5_body_smallStep_wp y _
-  wasm_wp_return_from_call Hruntime
-  simp only [List.take, List.singleton_append]
+  wasm_wp_return_from_call Hruntime [List.take, List.singleton_append]
   wasm_wp_pures [wp_const wp_and wp_localGet]
   wasm_wp_next_rebind wp_call «module» 5 func5Def
     (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func5Def, Function.toLocals, Function.numParams]
   wasm_wp_next func5_body_smallStep_wp x _
-  wasm_wp_return_from_call Hruntime
-  simp only [List.take, List.singleton_append]
+  wasm_wp_return_from_call Hruntime [List.take, List.singleton_append]
   wasm_wp_pures [wp_const wp_and wp_or]
   wasm_wp_next_rebind wp_call «module» 6 func6Def
     (by simp [«module»]) (by simp [«module»]) with Hruntime
@@ -1116,8 +1105,7 @@ theorem func4_context_smallStep_wp
   rw [UInt32.and_comm y 2147483648, UInt32.and_comm x 2147483647]
   wasm_wp_next func6_body_smallStep_wp
     ((2147483648 &&& y) ||| (2147483647 &&& x)) _
-  wasm_wp_return_from_call Hruntime
-  simp only [List.take, List.singleton_append]
+  wasm_wp_return_from_call Hruntime [List.take, List.singleton_append]
   rw [← show func4Result x y =
     (2147483648 &&& y) ||| (2147483647 &&& x) by rfl]
   iapply_frame hreturn
@@ -1299,8 +1287,7 @@ theorem checkAbs_secondComparison_smallStep_wp
     (iprop(pointsTo_u32 0 1048552 0 ∗ pointsTo_u32 0 1048572 oldResult))
     x upper _
   · iintro ⟨⟨Hlow, Hresult⟩, Hruntime, Hglobal, Hupper⟩
-    wasm_wp_return_from_call Hruntime
-    simp only [List.take, List.singleton_append]
+    wasm_wp_return_from_call Hruntime [List.take, List.singleton_append]
     wasm_wp_pures [wp_localGet]
     wasm_wp_next_rebind wp_call «module» 2 func2Def
       (by simp [«module»]) (by simp [«module»]) with Hruntime
@@ -1311,8 +1298,7 @@ theorem checkAbs_secondComparison_smallStep_wp
       (iprop(pointsTo_u32 0 1048572 oldResult))
       x (packUpper32 (f32Abs x)) _
     · iintro ⟨Hresult, Hruntime, Hglobal, Hscratch⟩
-      wasm_wp_return_from_call Hruntime
-      simp only [List.take, List.singleton_append]
+      wasm_wp_return_from_call Hruntime [List.take, List.singleton_append]
       by_cases heq :
           f32Eq (f32Abs x) (func2Result x) = true
       · iapply wp_scalarFloat2 (value := .i32 1) rfl rfl
@@ -1474,8 +1460,7 @@ theorem checkAbs_firstComparison_smallStep_wp
     (iprop(pointsTo_u32 0 1048552 0 ∗ pointsTo_u32 0 1048572 oldResult))
     x upper _
   · iintro ⟨⟨Hlow, Hresult⟩, Hruntime, Hglobal, Hupper⟩
-    wasm_wp_return_from_call Hruntime
-    simp only [List.take, List.singleton_append]
+    wasm_wp_return_from_call Hruntime [List.take, List.singleton_append]
     wasm_wp_pures [wp_localGet]
     wasm_wp_next_rebind wp_call «module» 9 func9Def
       (by simp [«module»]) (by simp [«module»]) with Hruntime
@@ -1487,8 +1472,7 @@ theorem checkAbs_firstComparison_smallStep_wp
         pointsTo_u32 0 1048572 oldResult))
       x _ _
     · iintro ⟨HR, Hruntime⟩
-      wasm_wp_return_from_call Hruntime
-      simp only [List.take, List.singleton_append]
+      wasm_wp_return_from_call Hruntime [List.take, List.singleton_append]
       icases HR with ⟨Hlow, Hupper, Hglobal, Hresult⟩
       iapply checkAbs_firstComparisonTail_smallStep_wp
         (s := s) (E := E) (Φ := Φ)
@@ -1721,8 +1705,7 @@ theorem checkCopysign_comparison_smallStep_wp
     (iprop(pointsTo_u32 0 1048552 0 ∗ pointsTo_u32 0 1048572 oldResult))
     x y upper _ _
   · iintro ⟨⟨Hlow, Hresult⟩, Hruntime, Hglobal, Hupper⟩
-    wasm_wp_return_from_call Hruntime
-    simp only [List.take, List.singleton_append]
+    wasm_wp_return_from_call Hruntime [List.take, List.singleton_append]
     wasm_wp_pures [wp_localGet wp_localGet]
     wasm_wp_next_rebind wp_call «module» 4 func4Def
       (by simp [«module»]) (by simp [«module»]) with Hruntime
@@ -1734,8 +1717,7 @@ theorem checkCopysign_comparison_smallStep_wp
         pointsTo_u32 0 1048572 oldResult))
       x y _ _
     · iintro ⟨HR, Hruntime⟩
-      wasm_wp_return_from_call Hruntime
-      simp only [List.take, List.singleton_append]
+      wasm_wp_return_from_call Hruntime [List.take, List.singleton_append]
       icases HR with ⟨Hlow, Hupper, Hglobal, Hresult⟩
       by_cases heq :
           f32Eq (f32Copysign x y) (func4Result x y) = true
@@ -1972,8 +1954,7 @@ theorem twp_func0_lowered_smallStep_wp
   iapply twp_func1_lowered_body_smallStep_wp
     (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module»)) x oldWord _
   · iintro ⟨⟨HR, Hruntime⟩, Hglobal, Hword⟩
-    wasm_twp_return_from_call Hruntime
-    simp only [List.take, List.singleton_append]
+    wasm_twp_return_from_call Hruntime [List.take, List.singleton_append]
     iapply_frame hreturn
   · iframe
 
@@ -2045,8 +2026,7 @@ theorem twp_func2_lowered_smallStep_wp
     (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module»))
     (f64PromoteF32 x) oldWord _
   · iintro ⟨⟨HR, Hruntime⟩, Hglobal, Hword⟩
-    wasm_twp_return_from_call Hruntime
-    simp only [List.take, List.singleton_append]
+    wasm_twp_return_from_call Hruntime [List.take, List.singleton_append]
     iapply twp_scalarFloat1 rfl rfl
     simp only [func2Result] at hreturn
     iapply_frame hreturn
@@ -2115,8 +2095,7 @@ theorem twp_func7_lowered_smallStep_wp
   iapply twp_func8_lowered_body_smallStep_wp
     (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module»)) x y oldWord _
   · iintro ⟨⟨HR, Hruntime⟩, Hglobal, Hword⟩
-    wasm_twp_return_from_call Hruntime
-    simp only [List.take, List.singleton_append]
+    wasm_twp_return_from_call Hruntime [List.take, List.singleton_append]
     iapply_frame hreturn
   · iframe
 
@@ -2141,16 +2120,14 @@ theorem twp_func9_context_smallStep_wp
     (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func5Def, Function.toLocals, Function.numParams]
   iapply twp_func5_body_smallStep_wp x _
-  wasm_twp_return_from_call Hruntime
-  simp only [List.take, List.singleton_append]
+  wasm_twp_return_from_call Hruntime [List.take, List.singleton_append]
   wasm_twp_pures [twp_const twp_and]
   wasm_twp_rebind twp_call «module» 6 func6Def
     (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func6Def, Function.toLocals, Function.numParams]
   rw [UInt32.and_comm x 2147483647]
   iapply twp_func6_body_smallStep_wp (2147483647 &&& x) _
-  wasm_twp_return_from_call Hruntime
-  simp only [List.take, List.singleton_append]
+  wasm_twp_return_from_call Hruntime [List.take, List.singleton_append]
   iapply_frame hreturn
 
 theorem twp_func4_context_smallStep_wp
@@ -2174,15 +2151,13 @@ theorem twp_func4_context_smallStep_wp
     (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func5Def, Function.toLocals, Function.numParams]
   iapply twp_func5_body_smallStep_wp y _
-  wasm_twp_return_from_call Hruntime
-  simp only [List.take, List.singleton_append]
+  wasm_twp_return_from_call Hruntime [List.take, List.singleton_append]
   wasm_twp_pures [twp_const twp_and twp_localGet]
   wasm_twp_rebind twp_call «module» 5 func5Def
     (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func5Def, Function.toLocals, Function.numParams]
   iapply twp_func5_body_smallStep_wp x _
-  wasm_twp_return_from_call Hruntime
-  simp only [List.take, List.singleton_append]
+  wasm_twp_return_from_call Hruntime [List.take, List.singleton_append]
   wasm_twp_pures [twp_const twp_and twp_or]
   wasm_twp_rebind twp_call «module» 6 func6Def
     (by simp [«module»]) (by simp [«module»]) with Hruntime
@@ -2190,8 +2165,7 @@ theorem twp_func4_context_smallStep_wp
   rw [UInt32.and_comm y 2147483648, UInt32.and_comm x 2147483647]
   iapply twp_func6_body_smallStep_wp
     ((2147483648 &&& y) ||| (2147483647 &&& x)) _
-  wasm_twp_return_from_call Hruntime
-  simp only [List.take, List.singleton_append]
+  wasm_twp_return_from_call Hruntime [List.take, List.singleton_append]
   rw [← show func4Result x y =
     (2147483648 &&& y) ||| (2147483647 &&& x) by rfl]
   iapply_frame hreturn
@@ -2328,8 +2302,7 @@ theorem twp_checkAbs_secondComparison_smallStep_wp
     (iprop(pointsTo_u32 0 1048552 0 ∗ pointsTo_u32 0 1048572 oldResult))
     x upper _
   · iintro ⟨⟨Hlow, Hresult⟩, Hruntime, Hglobal, Hupper⟩
-    wasm_twp_return_from_call Hruntime
-    simp only [List.take, List.singleton_append]
+    wasm_twp_return_from_call Hruntime [List.take, List.singleton_append]
     wasm_twp_pures [twp_localGet]
     wasm_twp_rebind twp_call «module» 2 func2Def
       (by simp [«module»]) (by simp [«module»]) with Hruntime
@@ -2340,8 +2313,7 @@ theorem twp_checkAbs_secondComparison_smallStep_wp
       (iprop(pointsTo_u32 0 1048572 oldResult))
       x (packUpper32 (f32Abs x)) _
     · iintro ⟨Hresult, Hruntime, Hglobal, Hscratch⟩
-      wasm_twp_return_from_call Hruntime
-      simp only [List.take, List.singleton_append]
+      wasm_twp_return_from_call Hruntime [List.take, List.singleton_append]
       by_cases heq :
           f32Eq (f32Abs x) (func2Result x) = true
       · iapply twp_scalarFloat2 (value := .i32 1) rfl rfl
@@ -2498,8 +2470,7 @@ theorem twp_checkAbs_firstComparison_smallStep_wp
     (iprop(pointsTo_u32 0 1048552 0 ∗ pointsTo_u32 0 1048572 oldResult))
     x upper _
   · iintro ⟨⟨Hlow, Hresult⟩, Hruntime, Hglobal, Hupper⟩
-    wasm_twp_return_from_call Hruntime
-    simp only [List.take, List.singleton_append]
+    wasm_twp_return_from_call Hruntime [List.take, List.singleton_append]
     wasm_twp_pures [twp_localGet]
     wasm_twp_rebind twp_call «module» 9 func9Def
       (by simp [«module»]) (by simp [«module»]) with Hruntime
@@ -2511,8 +2482,7 @@ theorem twp_checkAbs_firstComparison_smallStep_wp
         pointsTo_u32 0 1048572 oldResult))
       x _ _
     · iintro ⟨HR, Hruntime⟩
-      wasm_twp_return_from_call Hruntime
-      simp only [List.take, List.singleton_append]
+      wasm_twp_return_from_call Hruntime [List.take, List.singleton_append]
       icases HR with ⟨Hlow, Hupper, Hglobal, Hresult⟩
       iapply twp_checkAbs_firstComparisonTail_smallStep_wp
         (s := s) (E := E) (Φ := Φ)
@@ -2691,8 +2661,7 @@ theorem twp_checkCopysign_comparison_smallStep_wp
     (iprop(pointsTo_u32 0 1048552 0 ∗ pointsTo_u32 0 1048572 oldResult))
     x y upper _ _
   · iintro ⟨⟨Hlow, Hresult⟩, Hruntime, Hglobal, Hupper⟩
-    wasm_twp_return_from_call Hruntime
-    simp only [List.take, List.singleton_append]
+    wasm_twp_return_from_call Hruntime [List.take, List.singleton_append]
     wasm_twp_pures [twp_localGet twp_localGet]
     wasm_twp_rebind twp_call «module» 4 func4Def
       (by simp [«module»]) (by simp [«module»]) with Hruntime
@@ -2704,8 +2673,7 @@ theorem twp_checkCopysign_comparison_smallStep_wp
         pointsTo_u32 0 1048572 oldResult))
       x y _ _
     · iintro ⟨HR, Hruntime⟩
-      wasm_twp_return_from_call Hruntime
-      simp only [List.take, List.singleton_append]
+      wasm_twp_return_from_call Hruntime [List.take, List.singleton_append]
       icases HR with ⟨Hlow, Hupper, Hglobal, Hresult⟩
       by_cases heq :
           f32Eq (f32Copysign x y) (func4Result x y) = true
