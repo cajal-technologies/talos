@@ -77,16 +77,16 @@ theorem gcdFrameHeap_agrees
         (gcdFrameMem mem result x y shiftXY shiftX shiftY nextY nextX outerA outerB)
         else none) := by
   unfold gcdFrameHeap gcdFrameMem
-  apply store64_sound0 _ _ 1048568 outerB (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
-  apply store64_sound0 _ _ 1048560 outerA (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
-  apply store32_sound0 _ _ 1048556 shiftXY (by decide) (by decide) (by decide)
-  apply store32_sound0 _ _ 1048552 shiftX (by decide) (by decide) (by decide)
-  apply store32_sound0 _ _ 1048548 shiftY (by decide) (by decide) (by decide)
-  apply store32_sound0 _ _ 1048544 nextY (by decide) (by decide) (by decide)
-  apply store32_sound0 _ _ 1048540 nextX (by decide) (by decide) (by decide)
-  apply store64_sound0 _ _ 1048528 y (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
-  apply store64_sound0 _ _ 1048520 x (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
-  apply store64_sound0 _ _ 1048512 result (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+  apply_store64_sound0
+  apply_store64_sound0
+  apply_store32_sound0
+  apply_store32_sound0
+  apply_store32_sound0
+  apply_store32_sound0
+  apply_store32_sound0
+  apply_store64_sound0
+  apply_store64_sound0
+  apply_store64_sound0
   exact heapAgreesWithMem_empty _
 
 theorem gcdFrameHeap_inBounds
@@ -104,25 +104,25 @@ theorem gcdFrameHeap_inBounds
       1048576 = 16 * 65536 := by norm_num
       _ ≤ mem.pages * 65536 := Nat.mul_le_mul_right 65536 hpages
   unfold gcdFrameHeap gcdFrameMem
-  apply store64_inBounds0 _ _ 1048568 outerB (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+  apply_store64_inBounds0
   · simp only [Mem.write64_pages, Mem.write32_pages, UInt32.reduceToNat]; omega
-  apply store64_inBounds0 _ _ 1048560 outerA (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+  apply_store64_inBounds0
   · simp only [Mem.write64_pages, Mem.write32_pages, UInt32.reduceToNat]; omega
-  apply store32_inBounds0 _ _ 1048556 shiftXY (by decide) (by decide) (by decide)
+  apply_store32_inBounds0
   · simp only [Mem.write64_pages, Mem.write32_pages, UInt32.reduceToNat]; omega
-  apply store32_inBounds0 _ _ 1048552 shiftX (by decide) (by decide) (by decide)
+  apply_store32_inBounds0
   · simp only [Mem.write64_pages, Mem.write32_pages, UInt32.reduceToNat]; omega
-  apply store32_inBounds0 _ _ 1048548 shiftY (by decide) (by decide) (by decide)
+  apply_store32_inBounds0
   · simp only [Mem.write64_pages, Mem.write32_pages, UInt32.reduceToNat]; omega
-  apply store32_inBounds0 _ _ 1048544 nextY (by decide) (by decide) (by decide)
+  apply_store32_inBounds0
   · simp only [Mem.write64_pages, Mem.write32_pages, UInt32.reduceToNat]; omega
-  apply store32_inBounds0 _ _ 1048540 nextX (by decide) (by decide) (by decide)
+  apply_store32_inBounds0
   · simp only [Mem.write64_pages, UInt32.reduceToNat]; omega
-  apply store64_inBounds0 _ _ 1048528 y (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+  apply_store64_inBounds0
   · simp only [Mem.write64_pages, UInt32.reduceToNat]; omega
-  apply store64_inBounds0 _ _ 1048520 x (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+  apply_store64_inBounds0
   · simp only [Mem.write64_pages, UInt32.reduceToNat]; omega
-  apply store64_inBounds0 _ _ 1048512 result (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+  apply_store64_inBounds0
   · simp only [UInt32.reduceToNat]; omega
   exact heapAddressesInBounds_empty _
 

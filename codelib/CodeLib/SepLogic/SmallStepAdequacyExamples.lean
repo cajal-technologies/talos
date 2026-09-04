@@ -193,11 +193,10 @@ theorem wordRoundtrip_adequate (oldWord : UInt32) :
     (σ := word16Heap oldWord)
     (φ := fun values => values = [.i32 0x12345678])
   · unfold word16Heap
-    exact store32_sound0 _ (mem := wordRoundtripAdequacyModule.initialStore.mem)
-      _ _ (h1 := rfl) (h2 := rfl) (h3 := rfl) (emptyHeap_agrees _)
+    apply_store32_sound0
+    exact emptyHeap_agrees _
   · unfold word16Heap
-    apply store32_inBounds0 (mem := wordRoundtripAdequacyModule.initialStore.mem)
-      (h1 := rfl) (h2 := rfl) (h3 := rfl)
+    apply_store32_inBounds0
     · native_decide
     · exact emptyHeap_inBounds _
   · intro gs
@@ -226,11 +225,10 @@ theorem wordRoundtrip_store_partiallyMeets (oldWord : UInt32) :
     (σ := word16Heap oldWord)
     (globalσ := (∅ : WasmGlobalMap Value))
   · unfold word16Heap
-    exact store32_sound0 _ (mem := wordRoundtripAdequacyModule.initialStore.mem)
-      _ _ (h1 := rfl) (h2 := rfl) (h3 := rfl) (emptyHeap_agrees _)
+    apply_store32_sound0
+    exact emptyHeap_agrees _
   · unfold word16Heap
-    apply store32_inBounds0 (mem := wordRoundtripAdequacyModule.initialStore.mem)
-      (h1 := rfl) (h2 := rfl) (h3 := rfl)
+    apply_store32_inBounds0
     · native_decide
     · exact emptyHeap_inBounds _
   · intro index value hget
@@ -267,20 +265,21 @@ private theorem swapWordsHeap_agrees (mem : Mem) :
     heapAgreesWithMem swapWordsHeap
       (fun id => if id = 0 then some ((mem.write32 0 11).write32 4 22) else none) := by
   unfold swapWordsHeap
-  apply store32_sound0 (mem := mem.write32 0 11) (h1 := rfl) (h2 := rfl) (h3 := rfl)
-  exact store32_sound0 _ (mem := mem) _ _ (h1 := rfl) (h2 := rfl) (h3 := rfl) (emptyHeap_agrees _)
+  apply_store32_sound0
+  apply_store32_sound0
+  exact emptyHeap_agrees _
 
 private theorem swapWordsHeap_inBounds (memory : Mem)
     (hpages : 1 ≤ memory.pages) :
     heapAddressesInBounds swapWordsHeap
       (fun id => if id = 0 then some ((memory.write32 0 11).write32 4 22) else none) := by
   unfold swapWordsHeap
-  apply store32_inBounds0 (mem := memory.write32 0 11) (h1 := rfl) (h2 := rfl) (h3 := rfl)
+  apply_store32_inBounds0
   · have hcapacity :
         65536 ≤ memory.pages * 65536 :=
       Nat.mul_le_mul_right 65536 hpages
     simp only [UInt32.toNat_ofNat, Mem.write32]; omega
-  · apply store32_inBounds0 (mem := memory) (h1 := rfl) (h2 := rfl) (h3 := rfl)
+  · apply_store32_inBounds0
     · have hcapacity :
           65536 ≤ memory.pages * 65536 :=
         Nat.mul_le_mul_right 65536 hpages
@@ -419,7 +418,7 @@ private theorem reverseThreeWordsHeap_agrees (mem : Mem) :
     heapAgreesWithMem reverseThreeWordsHeap
       (fun id => if id = 0 then some (((mem.write32 0 11).write32 4 22).write32 8 33) else none) := by
   unfold reverseThreeWordsHeap
-  apply store32_sound0 (mem := (mem.write32 0 11).write32 4 22) (h1 := rfl) (h2 := rfl) (h3 := rfl)
+  apply_store32_sound0
   exact swapWordsHeap_agrees mem
 
 private theorem reverseThreeWordsHeap_inBounds (memory : Mem)
@@ -427,8 +426,7 @@ private theorem reverseThreeWordsHeap_inBounds (memory : Mem)
     heapAddressesInBounds reverseThreeWordsHeap
       (fun id => if id = 0 then some (((memory.write32 0 11).write32 4 22).write32 8 33) else none) := by
   unfold reverseThreeWordsHeap
-  apply store32_inBounds0 (mem := (memory.write32 0 11).write32 4 22)
-    (h1 := rfl) (h2 := rfl) (h3 := rfl)
+  apply_store32_inBounds0
   · have hcapacity :
         65536 ≤ memory.pages * 65536 :=
       Nat.mul_le_mul_right 65536 hpages
@@ -545,9 +543,9 @@ private theorem partitionThreeWordsHeap_agrees (memory : Mem) :
     heapAgreesWithMem partitionThreeWordsHeap
       (fun id => if id = 0 then some (((memory.write32 0 33).write32 4 11).write32 8 22) else none) := by
   unfold partitionThreeWordsHeap
-  apply store32_sound0 (mem := (memory.write32 0 33).write32 4 11) (h1 := rfl) (h2 := rfl) (h3 := rfl)
-  apply store32_sound0 (mem := memory.write32 0 33) (h1 := rfl) (h2 := rfl) (h3 := rfl)
-  apply store32_sound0 (mem := memory) (h1 := rfl) (h2 := rfl) (h3 := rfl)
+  apply_store32_sound0
+  apply_store32_sound0
+  apply_store32_sound0
   exact emptyHeap_agrees _
 
 private theorem partitionThreeWordsHeap_inBounds (memory : Mem)
@@ -558,12 +556,11 @@ private theorem partitionThreeWordsHeap_inBounds (memory : Mem)
   have hcapacity :
       65536 ≤ memory.pages * 65536 :=
     Nat.mul_le_mul_right 65536 hpages
-  apply store32_inBounds0 (mem := (memory.write32 0 33).write32 4 11)
-    (h1 := rfl) (h2 := rfl) (h3 := rfl)
+  apply_store32_inBounds0
   · simp only [UInt32.toNat_ofNat, Mem.write32]; omega
-  · apply store32_inBounds0 (mem := memory.write32 0 33) (h1 := rfl) (h2 := rfl) (h3 := rfl)
+  · apply_store32_inBounds0
     · simp only [UInt32.toNat_ofNat, Mem.write32]; omega
-    · apply store32_inBounds0 (mem := memory) (h1 := rfl) (h2 := rfl) (h3 := rfl)
+    · apply_store32_inBounds0
       · simp only [UInt32.toNat_ofNat]; omega
       · exact emptyHeap_inBounds _
 
@@ -689,8 +686,8 @@ private theorem mergeTwoWordsHeap_agrees (memory : Mem) :
     heapAgreesWithMem mergeTwoWordsHeap
       (fun id => if id = 0 then some ((memory.write32 0 9).write32 4 4) else none) := by
   unfold mergeTwoWordsHeap
-  apply store32_sound0 (mem := memory.write32 0 9) (h1 := rfl) (h2 := rfl) (h3 := rfl)
-  apply store32_sound0 (mem := memory) (h1 := rfl) (h2 := rfl) (h3 := rfl)
+  apply_store32_sound0
+  apply_store32_sound0
   exact emptyHeap_agrees _
 
 private theorem mergeTwoWordsHeap_inBounds (memory : Mem)
@@ -701,9 +698,9 @@ private theorem mergeTwoWordsHeap_inBounds (memory : Mem)
   have hcapacity :
       65536 ≤ memory.pages * 65536 :=
     Nat.mul_le_mul_right 65536 hpages
-  apply store32_inBounds0 (mem := memory.write32 0 9) (h1 := rfl) (h2 := rfl) (h3 := rfl)
+  apply_store32_inBounds0
   · simp only [UInt32.toNat_ofNat, Mem.write32]; omega
-  · apply store32_inBounds0 (mem := memory) (h1 := rfl) (h2 := rfl) (h3 := rfl)
+  · apply_store32_inBounds0
     · simp only [UInt32.toNat_zero, Nat.zero_add]; omega
     · exact emptyHeap_inBounds _
 
@@ -817,8 +814,8 @@ private theorem fillFourBytesHeap_agrees (memory : Mem)
     heapAgreesWithMem (fillFourBytesHeap oldWord)
       (fun id => if id = 0 then some ((memory.write32 16 oldWord).write32 32 0x12345678) else none) := by
   unfold fillFourBytesHeap
-  apply store32_sound0 (mem := memory.write32 16 oldWord) (h1 := rfl) (h2 := rfl) (h3 := rfl)
-  apply store32_sound0 (mem := memory) (h1 := rfl) (h2 := rfl) (h3 := rfl)
+  apply_store32_sound0
+  apply_store32_sound0
   exact emptyHeap_agrees _
 
 private theorem fillFourBytesHeap_inBounds (memory : Mem)
@@ -826,12 +823,12 @@ private theorem fillFourBytesHeap_inBounds (memory : Mem)
     heapAddressesInBounds (fillFourBytesHeap oldWord)
       (fun id => if id = 0 then some ((memory.write32 16 oldWord).write32 32 0x12345678) else none) := by
   unfold fillFourBytesHeap
-  apply store32_inBounds0 (mem := memory.write32 16 oldWord) (h1 := rfl) (h2 := rfl) (h3 := rfl)
+  apply_store32_inBounds0
   · have hcapacity :
         65536 ≤ memory.pages * 65536 :=
       Nat.mul_le_mul_right 65536 hpages
     simp only [UInt32.toNat_ofNat, Mem.write32]; omega
-  · apply store32_inBounds0 (mem := memory) (h1 := rfl) (h2 := rfl) (h3 := rfl)
+  · apply_store32_inBounds0
     · have hcapacity :
           65536 ≤ memory.pages * 65536 :=
         Nat.mul_le_mul_right 65536 hpages
@@ -951,8 +948,8 @@ private theorem copyWordHeap_agrees (memory : Mem)
     heapAgreesWithMem (copyWordHeap oldDestination)
       (fun id => if id = 0 then some ((memory.write32 0 0x04030201).write32 8 oldDestination) else none) := by
   unfold copyWordHeap
-  apply store32_sound0 (mem := memory.write32 0 0x04030201) (h1 := rfl) (h2 := rfl) (h3 := rfl)
-  apply store32_sound0 (mem := memory) (h1 := rfl) (h2 := rfl) (h3 := rfl)
+  apply_store32_sound0
+  apply_store32_sound0
   exact emptyHeap_agrees _
 
 private theorem copyWordHeap_inBounds (memory : Mem)
@@ -960,12 +957,12 @@ private theorem copyWordHeap_inBounds (memory : Mem)
     heapAddressesInBounds (copyWordHeap oldDestination)
       (fun id => if id = 0 then some ((memory.write32 0 0x04030201).write32 8 oldDestination) else none) := by
   unfold copyWordHeap
-  apply store32_inBounds0 (mem := memory.write32 0 0x04030201) (h1 := rfl) (h2 := rfl) (h3 := rfl)
+  apply_store32_inBounds0
   · have hcapacity :
         65536 ≤ memory.pages * 65536 :=
       Nat.mul_le_mul_right 65536 hpages
     simp only [UInt32.toNat_ofNat, Mem.write32]; omega
-  · apply store32_inBounds0 (mem := memory) (h1 := rfl) (h2 := rfl) (h3 := rfl)
+  · apply_store32_inBounds0
     · have hcapacity :
           65536 ≤ memory.pages * 65536 :=
         Nat.mul_le_mul_right 65536 hpages
@@ -1069,8 +1066,7 @@ private theorem copyOverlapWordHeap_agrees (memory : Mem) :
     heapAgreesWithMem copyOverlapWordHeap
       (fun id => if id = 0 then some (memory.write64 0 0x8877665544332211) else none) := by
   unfold copyOverlapWordHeap
-  apply store64_sound0 (mem := memory)
-    (h1 := rfl) (h2 := rfl) (h3 := rfl) (h4 := rfl) (h5 := rfl) (h6 := rfl) (h7 := rfl)
+  apply_store64_sound0
   exact emptyHeap_agrees _
 
 private theorem copyOverlapWordHeap_inBounds (memory : Mem)
@@ -1078,8 +1074,7 @@ private theorem copyOverlapWordHeap_inBounds (memory : Mem)
     heapAddressesInBounds copyOverlapWordHeap
       (fun id => if id = 0 then some (memory.write64 0 0x8877665544332211) else none) := by
   unfold copyOverlapWordHeap
-  apply store64_inBounds0 (mem := memory)
-    (h1 := rfl) (h2 := rfl) (h3 := rfl) (h4 := rfl) (h5 := rfl) (h6 := rfl) (h7 := rfl)
+  apply_store64_inBounds0
   · have hcapacity :
         65536 ≤ memory.pages * 65536 :=
       Nat.mul_le_mul_right 65536 hpages
@@ -1170,7 +1165,7 @@ private theorem memoryInitDropHeap_agrees (memory : Mem) :
     heapAgreesWithMem memoryInitDropHeap
       (fun id => if id = 0 then some (memory.write32 16 0) else none) := by
   unfold memoryInitDropHeap
-  apply store32_sound0 (mem := memory) (h1 := rfl) (h2 := rfl) (h3 := rfl)
+  apply_store32_sound0
   exact emptyHeap_agrees _
 
 private theorem memoryInitDropHeap_inBounds (memory : Mem)
@@ -1178,7 +1173,7 @@ private theorem memoryInitDropHeap_inBounds (memory : Mem)
     heapAddressesInBounds memoryInitDropHeap
       (fun id => if id = 0 then some (memory.write32 16 0) else none) := by
   unfold memoryInitDropHeap
-  apply store32_inBounds0 (mem := memory) (h1 := rfl) (h2 := rfl) (h3 := rfl)
+  apply_store32_inBounds0
   · have hcapacity :
         65536 ≤ memory.pages * 65536 :=
       Nat.mul_le_mul_right 65536 hpages

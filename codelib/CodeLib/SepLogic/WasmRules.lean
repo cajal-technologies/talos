@@ -1195,4 +1195,25 @@ theorem store64_inBounds0 (σ : WasmHeapMap (Option UInt8))
     funext id; by_cases hid : id = 0 <;> simp [hid]
   rwa [heq] at h
 
+/-! Tactics for concrete-address heap chains. They discharge only the routine
+`UInt32.toNat` no-wrap premises and leave agreement or bounds obligations open. -/
+
+macro "apply_store32_sound0" : tactic =>
+  `(tactic| apply store32_sound0
+    (h1 := by decide) (h2 := by decide) (h3 := by decide))
+
+macro "apply_store32_inBounds0" : tactic =>
+  `(tactic| apply store32_inBounds0
+    (h1 := by decide) (h2 := by decide) (h3 := by decide))
+
+macro "apply_store64_sound0" : tactic =>
+  `(tactic| apply store64_sound0
+    (h1 := by decide) (h2 := by decide) (h3 := by decide)
+    (h4 := by decide) (h5 := by decide) (h6 := by decide) (h7 := by decide))
+
+macro "apply_store64_inBounds0" : tactic =>
+  `(tactic| apply store64_inBounds0
+    (h1 := by decide) (h2 := by decide) (h3 := by decide)
+    (h4 := by decide) (h5 := by decide) (h6 := by decide) (h7 := by decide))
+
 end Wasm.SepLogic
