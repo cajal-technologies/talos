@@ -433,8 +433,7 @@ theorem copyWords_loopBody_invariant_wp
     subst i
     have hpreLen : pre.length = n.toNat := hpre
     have hdstNil : dstSuffix = [] := by
-      apply List.eq_nil_of_length_eq_zero
-      omega
+      exact List.eq_nil_of_length_eq_zero (by omega)
     have hsrcNil : srcSuffix = [] := by
       have hsourceLen := congrArg List.length hsource
       simp only [List.length_append, hsourceLength] at hsourceLen
@@ -923,8 +922,7 @@ theorem copyWords_loop_twp
         rw [← hcopied] at hnltNat; omega
       have hindex : state.index = n := UInt32.toNat_inj.mp hindexNat
       have hdstNil : state.dstTail = [] := by
-        apply List.eq_nil_of_length_eq_zero
-        omega
+        exact List.eq_nil_of_length_eq_zero (by omega)
       have hsrcNil : state.srcTail = [] := by
         have hsourceLen := congrArg List.length hsource
         simp only [List.length_append, hsourceLength] at hsourceLen

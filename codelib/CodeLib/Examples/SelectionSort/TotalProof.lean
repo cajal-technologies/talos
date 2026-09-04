@@ -39,8 +39,7 @@ private theorem arrayAddress64_toNat (base : UInt32) {index length : Nat}
   rw [UInt32.toNat_add, UInt32.toNat_mul, UInt32.toNat_ofNat_of_lt' hi]
   have height : (8 : UInt32).toNat = 8 := by decide
   rw [height, Nat.mod_eq_of_lt hp, Nat.mul_comm index 8]
-  apply Nat.mod_eq_of_lt
-  simp only [UInt32.size] at hfit ⊢; omega
+  exact Nat.mod_eq_of_lt (by simp only [UInt32.size] at hfit ⊢; omega)
 
 theorem twp_address64
     [WasmSmallStepGS hlc Unit]
@@ -501,8 +500,7 @@ private theorem twp_recursiveSort_aux
   induction n generalizing arr input callerLocals stack code arity remainder controls calls with
   | zero =>
       have hinput : input = [] := by
-        apply List.eq_nil_of_length_eq_zero
-        omega
+        exact List.eq_nil_of_length_eq_zero (by omega)
       subst input
       iintro ⟨Hruntime, Harray, Hcont⟩
       wasm_twp_bind Wasm.SmallStep.twp_call runtimeModule sortIndex

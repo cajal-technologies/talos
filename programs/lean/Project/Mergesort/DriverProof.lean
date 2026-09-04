@@ -4061,8 +4061,7 @@ private theorem completedHistory_other_records_retired
       subst metadata
       have hnotTop : allocationId + 8 ≠ exponent := by
         intro hlive
-        apply hne
-        omega
+        exact hne (by omega)
       simp [geometricMetadata, hnotTop]
     · contradiction
 
@@ -4407,8 +4406,7 @@ theorem twp_func3_finish_empty
   icases Hresult with ⟨Hbuffers, %hsorted⟩
   have hsortedLength := hsorted.2.length_eq
   have hsortedNil : sorted = [] := by
-    apply List.eq_nil_of_length_eq_zero
-    simpa using hsortedLength.symm
+    exact List.eq_nil_of_length_eq_zero (by simpa using hsortedLength.symm)
   subst sorted
   isimp only [SortBuffers, WordSlice,
     Project.Mergesort.Representations.ByteSlice, List.length_nil,

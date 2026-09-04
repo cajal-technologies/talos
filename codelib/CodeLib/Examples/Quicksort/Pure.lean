@@ -282,8 +282,7 @@ theorem quicksort_base
     (_ : hi ≤ input.length)
     (hbase : hi - lo < 2) :
     Sorted (segment input lo hi) := by
-  apply sorted_of_length_le_one
-  simp [segment, List.length_drop]; omega
+  exact sorted_of_length_le_one (by simp [segment, List.length_drop]; omega)
 
 theorem quicksort_compose
     (input output : List UInt32) (lo hi p : Nat)

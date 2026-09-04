@@ -368,8 +368,7 @@ theorem fillWords_loopBody_invariant_wp
     have hiWord : i = n := UInt32.toNat_inj.mp hiEq
     subst i
     have hsuffix : suffix = [] := by
-      apply List.eq_nil_of_length_eq_zero
-      omega
+      exact List.eq_nil_of_length_eq_zero (by omega)
     subst suffix
     iintro ⟨#_IH', Hrest⟩
     icases Hrest with ⟨HR', Harray'⟩

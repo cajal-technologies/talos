@@ -248,8 +248,7 @@ theorem writeBytes_serialize (mem : Mem) (base : UInt32)
           simp only [UInt32.size] at hfit ⊢; omega)
       rw [show base.toNat + (encodeWord value).length = (base + 8).toNat by
         simp [encodeWord, hbase]]
-      apply ih
-      omega
+      exact ih _ _ (by omega)
 
 theorem heap64Aux_agrees
     (heap : WasmHeapMap (Option UInt8)) (mem : Mem) (base : UInt32)
