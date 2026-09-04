@@ -305,8 +305,7 @@ theorem memory_fill_traps_atomically :
 theorem memory_fill_trapsWith :
     TrapsWith memoryFillTrapConfig .outOfBoundsMemory
       (fun store => store = memoryFillTrapConfig.store) := by
-  apply runSteps_trapped_trapsWith memory_fill_traps_atomically
-  rfl
+  exact runSteps_trapped_trapsWith memory_fill_traps_atomically _ rfl
 def memory64FillModule : Module :=
   { funcs :=
       [{ body :=
@@ -412,8 +411,7 @@ theorem memory_copy_traps_atomically :
 theorem memory_copy_trapsWith :
     TrapsWith memoryCopyTrapConfig .outOfBoundsMemory
       (fun store => store = memoryCopyTrapConfig.store) := by
-  apply runSteps_trapped_trapsWith memory_copy_traps_atomically
-  rfl
+  exact runSteps_trapped_trapsWith memory_copy_traps_atomically _ rfl
 def memory64CopyModule : Module :=
   { funcs :=
       [{ body :=
@@ -523,8 +521,7 @@ theorem dropped_memory_init_traps_atomically :
 theorem dropped_memory_init_trapsWith :
     TrapsWith droppedMemoryInitTrapConfig .outOfBoundsMemory
       (fun store => store = droppedMemoryInitTrapConfig.store) := by
-  apply runSteps_trapped_trapsWith dropped_memory_init_traps_atomically
-  rfl
+  exact runSteps_trapped_trapsWith dropped_memory_init_traps_atomically _ rfl
 
 def memory64InitModule : Module :=
   { funcs :=
@@ -751,8 +748,7 @@ theorem i32_memory64_out_of_bounds_traps :
 theorem i32_memory64_out_of_bounds_trapsWith :
     TrapsWith i32Memory64TrapConfig .outOfBoundsMemory
       (fun store => store = i32Memory64TrapConfig.store) := by
-  apply runSteps_trapped_trapsWith i32_memory64_out_of_bounds_traps
-  rfl
+  exact runSteps_trapped_trapsWith i32_memory64_out_of_bounds_traps _ rfl
 
 theorem i32_memory64_matches_big_step :
     (runSteps 6 i32Memory64Config).result.values? =
@@ -1058,8 +1054,7 @@ theorem partition_three_terminates :
       store.wasm.mem.read32 8 = 33 ∧
       store.wasm.mem.read32 0 ≤ store.wasm.mem.read32 4 ∧
       store.wasm.mem.read32 4 ≤ store.wasm.mem.read32 8) := by
-  apply runSteps_success_terminates partition_three_run
-  native_decide
+  exact runSteps_success_terminates partition_three_run _ (by native_decide)
 
 theorem partition_three_partial :
     PartiallyMeets partitionThreeConfig (fun values store =>
@@ -1133,8 +1128,7 @@ theorem merge_two_terminates :
       store.wasm.mem.read32 0 = 4 ∧
       store.wasm.mem.read32 4 = 9 ∧
       store.wasm.mem.read32 0 ≤ store.wasm.mem.read32 4) := by
-  apply runSteps_success_terminates merge_two_run
-  native_decide
+  exact runSteps_success_terminates merge_two_run _ (by native_decide)
 
 theorem merge_two_partial :
     PartiallyMeets mergeTwoConfig (fun values store =>
@@ -2029,14 +2023,12 @@ theorem scalar_float_overflow_traps :
 theorem scalar_float_nan_trapsWith :
     TrapsWith (scalarFloatConfig 4 1) .invalidConversionToInteger
       (fun _ => True) := by
-  apply runSteps_trapReason_trapsWith (fuel := 3)
-  native_decide
+  exact runSteps_trapReason_trapsWith (fuel := 3) (by native_decide)
 
 theorem scalar_float_overflow_trapsWith :
     TrapsWith (scalarFloatConfig 5 1) .integerOverflow
       (fun _ => True) := by
-  apply runSteps_trapReason_trapsWith (fuel := 3)
-  native_decide
+  exact runSteps_trapReason_trapsWith (fuel := 3) (by native_decide)
 
 theorem scalar_float_terminates :
     TerminatesWith (scalarFloatConfig 0 4)
@@ -2559,8 +2551,7 @@ committed by the host before returning the trap. -/
 theorem host_trap_trapsWith :
     TrapsWith smallStepTrapConfig (.host "host abort")
       (fun store => store.wasm.mem.read8 255 = 0xAB) := by
-  apply runSteps_trapped_trapsWith host_trap_run
-  rfl
+  exact runSteps_trapped_trapsWith host_trap_run _ rfl
 
 def smallStepHostDispatchModule : Module :=
   { types := [{ params := [.i32], results := [.i32] }]
@@ -2758,8 +2749,7 @@ theorem exception_reference_rethrows_trapsWith :
     TrapsWith smallStepThrowRefConfig
       (.uncaughtException 0 [.i32 23])
       (fun store => store = smallStepThrowRefConfig.store) := by
-  apply runSteps_trapped_trapsWith exception_reference_rethrows_package
-  rfl
+  exact runSteps_trapped_trapsWith exception_reference_rethrows_package _ rfl
 
 /-- Defensive administrative states can contain an older propagation marker
 below the currently propagating exception. The current exception wins and the

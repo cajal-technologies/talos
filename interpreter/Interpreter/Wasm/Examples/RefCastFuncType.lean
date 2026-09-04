@@ -139,8 +139,7 @@ def castSuperConfig : Config Unit :=
 theorem cast_super_trapsWith :
     TrapsWith castSuperConfig .castFailure
       (fun _ => True) := by
-  apply runSteps_trapReason_trapsWith (fuel := 320)
-  native_decide
+  exact runSteps_trapReason_trapsWith (fuel := 320) (by native_decide)
 
 /-- The null funcref inhabits the nullable concrete type `(ref null $ft)`… -/
 theorem test_null_nullable :

@@ -155,8 +155,7 @@ theorem imported_tail_call_propagates_exception :
 theorem imported_tail_call_exception_trapsWith :
     TrapsWith throwTailConfig (.uncaughtException 0 [.i32 7])
       (fun store => store = throwTailConfig.store) := by
-  apply runSteps_trapped_trapsWith imported_tail_call_propagates_exception
-  rfl
+  exact runSteps_trapped_trapsWith imported_tail_call_propagates_exception _ rfl
 
 theorem imported_indirect_call_propagates_exception :
     (runSteps 3 throwIndirectConfig).result =
@@ -165,8 +164,7 @@ theorem imported_indirect_call_propagates_exception :
 theorem imported_indirect_call_exception_trapsWith :
     TrapsWith throwIndirectConfig (.uncaughtException 0 [.i32 7])
       (fun store => store = throwIndirectConfig.store) := by
-  apply runSteps_trapped_trapsWith imported_indirect_call_propagates_exception
-  rfl
+  exact runSteps_trapped_trapsWith imported_indirect_call_propagates_exception _ rfl
 
 theorem remaining_imported_call_forms_propagate_exceptions :
     (runSteps 3 throwIndirectTailConfig).result =

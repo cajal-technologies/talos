@@ -57,8 +57,7 @@ theorem trapDivZero_runs_trap (a : UInt32) :
 theorem trapDivZero_traps (a : UInt32) :
     TrapsWith (trapDivZeroConfig a 0) .integerDivideByZero
       (fun store => store = (trapDivZeroConfig a 0).store) := by
-  apply runSteps_trapped_trapsWith (trapDivZero_runs_trap a)
-  rfl
+  exact runSteps_trapped_trapsWith (trapDivZero_runs_trap a) _ rfl
 
 theorem trapDivZero_terminates (a b : UInt32) (hb : b ≠ 0) :
     TerminatesWith (trapDivZeroConfig a b)

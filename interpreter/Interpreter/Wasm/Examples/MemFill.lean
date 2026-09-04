@@ -84,7 +84,6 @@ theorem fill_out_of_bounds_traps :
 theorem fill_out_of_bounds_trapsWith :
     TrapsWith fillTrapConfig .outOfBoundsMemory
       (fun store => store = fillStore) := by
-  apply runSteps_trapped_trapsWith fill_out_of_bounds_traps
-  rfl
+  exact runSteps_trapped_trapsWith fill_out_of_bounds_traps _ rfl
 
 end Wasm
