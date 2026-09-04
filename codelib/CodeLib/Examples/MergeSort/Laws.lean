@@ -33,17 +33,8 @@ theorem ValidLayout.length_lt
   have hsize : UInt32.size = 4294967296 := rfl
   rw [hsize] at hfit ⊢; omega
 
-theorem u32_ofNat_succ {n : Nat} (h : n + 1 < UInt32.size) :
-    UInt32.ofNat n + 1 = UInt32.ofNat (n + 1) := by
-  apply UInt32.toNat.inj
-  rw [UInt32.toNat_add]
-  have hn : n < UInt32.size := by omega
-  rw [UInt32.toNat_ofNat_of_lt' hn]
-  have hone : (1 : UInt32).toNat = 1 := by decide
-  rw [hone, Nat.mod_eq_of_lt]
-  · symm
-    exact UInt32.toNat_ofNat_of_lt' h
-  · simpa only [UInt32.size] using h
+theorem u32_ofNat_succ {n : Nat} (_ : n + 1 < UInt32.size) :
+    UInt32.ofNat n + 1 = UInt32.ofNat (n + 1) := UInt32.ofNat_succ n
 
 theorem u32_ofNat_add {a b : Nat} (h : a + b < UInt32.size) :
     UInt32.ofNat a + UInt32.ofNat b = UInt32.ofNat (a + b) := by

@@ -1,5 +1,6 @@
 import CodeLib.Examples.Quicksort.Pure
 import CodeLib.SepLogic.SmallStepTotalLifting
+import CodeLib.UInt32
 
 /-!
 # Derived laws for the quicksort proof
@@ -28,16 +29,8 @@ private theorem arrayAddress_toNat (base : UInt32) {index length : Nat}
   change base.toNat + 4 * index < UInt32.size
   omega
 
-theorem u32_ofNat_succ {n : Nat} (h : n + 1 < UInt32.size) :
-    UInt32.ofNat n + 1 = UInt32.ofNat (n + 1) := by
-  apply UInt32.toNat.inj
-  rw [UInt32.toNat_add]
-  have hn : n < UInt32.size := by omega
-  rw [UInt32.toNat_ofNat_of_lt' hn]
-  have hone : (1 : UInt32).toNat = 1 := by decide
-  rw [hone, Nat.mod_eq_of_lt]
-  · symm; exact UInt32.toNat_ofNat_of_lt' h
-  · simpa only [UInt32.size] using h
+theorem u32_ofNat_succ {n : Nat} (_ : n + 1 < UInt32.size) :
+    UInt32.ofNat n + 1 = UInt32.ofNat (n + 1) := UInt32.ofNat_succ n
 
 theorem twp_address
     [WasmSmallStepGS hlc Unit]

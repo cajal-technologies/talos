@@ -12,6 +12,14 @@ to fold into one shared low-bit lemma once that consolidation is done (keep this
 public name as a corollary — the template simp-references it).
 -/
 
+namespace UInt32
+
+theorem ofNat_succ (n : Nat) :
+    UInt32.ofNat n + 1 = UInt32.ofNat (n + 1) := by
+  simpa only [UInt32.ofNat_one] using (UInt32.ofNat_add n 1).symm
+
+end UInt32
+
 namespace Wasm
 
 /-- The reverse `UInt32` inequality follows when strict comparison fails. -/
