@@ -78,34 +78,9 @@ private theorem i32TruncSatF32S_expand (x : UInt32) :
          else if t ≥ (2147483647.0 : Float) then 0x7FFFFFFF
          else t.toInt64.toUInt64.toUInt32 := rfl
 
-/-- IEEE 754: `f32Ne x x = true` iff `x` encodes a NaN.
-`f32Ne x x = !(f == f)` and `Float.isNaN f = !(f == f)` (both opaque externs);
-checked for all 2^32 bit patterns by native evaluation. -/
-private theorem f32Ne_self_iff_isNaN (x : UInt32) :
-    f32Ne x x = (Float32.ofBits x).toFloat.isNaN :=
-  IEEE32Exec.f32Ne_self_iff_isNaN x
-
 private theorem i32TruncSatF32S_nan {x : UInt32}
     (h : (Float32.ofBits x).toFloat.isNaN) : i32TruncSatF32S x = 0 := by
   simp [i32TruncSatF32S_expand, h]
-
-/-- `2^31` as a `Float32` bit pattern is `0x4F000000 = 1325400064`. When
-`f ≥ 2^31`, `floor f ≥ 2^31 > 2147483647`, so `satI32S` saturates to `MAX`.
-Checked for all 2^32 bit patterns by native evaluation. -/
-private theorem i32TruncSatF32S_large_pos {x : UInt32}
-    (hnan : f32Ne x x = false)
-    (hge : f32Ge x 1325400064 = true) :
-    i32TruncSatF32S x = 0x7FFFFFFF :=
-  IEEE32Exec.i32TruncSatF32S_large_pos hnan hge
-
-/-- `-2^31` as a `Float32` bit pattern is `0xCF000000 = 3472883712`. When
-`f < -2^31`, `ceil f ≤ -2^31 ≤ -2147483648`, so `satI32S` saturates to `MIN`.
-Checked for all 2^32 bit patterns by native evaluation. -/
-private theorem i32TruncSatF32S_large_neg {x : UInt32}
-    (hnan : f32Ne x x = false)
-    (hlt : f32Lt x 3472883712 = true) :
-    i32TruncSatF32S x = 0x80000000 :=
-  IEEE32Exec.i32TruncSatF32S_large_neg hnan hlt
 
 /-! ## Per-function termination -/
 
@@ -350,7 +325,7 @@ theorem func0_body_to_ret_smallStep_wp
           · inext
             iintro Hword
             wasm_wp_pures [wp_exitControl] using [List.take, List.nil_append]
-            have heq := i32TruncSatF32S_large_neg hnan hlt
+            have heq := IEEE32Exec.i32TruncSatF32S_large_neg hnan hlt
             iapply func0_tail_to_ret_smallStep_wp
               Rglobal x 2147483648 calls
             isplitl [HR Hglobal]
@@ -370,7 +345,7 @@ theorem func0_body_to_ret_smallStep_wp
         · inext
           iintro Hword
           wasm_wp_pures [wp_br] using [List.take, List.nil_append]
-          have heq := i32TruncSatF32S_large_pos hnan hge
+          have heq := IEEE32Exec.i32TruncSatF32S_large_pos hnan hge
           iapply func0_tail_to_ret_smallStep_wp
             Rglobal x 2147483647 calls
           isplitl [HR Hglobal]
@@ -391,7 +366,7 @@ theorem func0_body_to_ret_smallStep_wp
         iintro Hword
         wasm_wp_pures [wp_br] using [List.take, List.nil_append]
         have hisNaN : (Float32.ofBits x).toFloat.isNaN = true :=
-          (f32Ne_self_iff_isNaN x).symm.trans hnan
+          (IEEE32Exec.f32Ne_self_iff_isNaN x).symm.trans hnan
         have heq := i32TruncSatF32S_nan hisNaN
         iapply func0_tail_to_ret_smallStep_wp
           Rglobal x 0 calls
@@ -565,7 +540,7 @@ theorem twp_func0_body_to_ret
         iapply_splitl_exact twp_func0_store32 0 2147483648 with Hword
         · iintro Hword
           wasm_twp_pures [twp_exitControl] using [List.take, List.nil_append]
-          have heq := i32TruncSatF32S_large_neg hnan hlt
+          have heq := IEEE32Exec.i32TruncSatF32S_large_neg hnan hlt
           iapply twp_func0_tail_to_ret Rglobal x 2147483648 calls
           isplitl [HR Hglobal]
           · simp only [Rglobal]
@@ -582,7 +557,7 @@ theorem twp_func0_body_to_ret
       iapply_splitl_exact twp_func0_store32 0 2147483647 with Hword
       · iintro Hword
         wasm_twp_pures [twp_br] using [List.take, List.nil_append]
-        have heq := i32TruncSatF32S_large_pos hnan hge
+        have heq := IEEE32Exec.i32TruncSatF32S_large_pos hnan hge
         iapply twp_func0_tail_to_ret Rglobal x 2147483647 calls
         isplitl [HR Hglobal]
         · simp only [Rglobal]
@@ -600,7 +575,7 @@ theorem twp_func0_body_to_ret
     · iintro Hword
       wasm_twp_pures [twp_br] using [List.take, List.nil_append]
       have hisNaN : (Float32.ofBits x).toFloat.isNaN = true :=
-        (f32Ne_self_iff_isNaN x).symm.trans hnan
+        (IEEE32Exec.f32Ne_self_iff_isNaN x).symm.trans hnan
       have heq := i32TruncSatF32S_nan hisNaN
       iapply twp_func0_tail_to_ret Rglobal x 0 calls
       isplitl [HR Hglobal]
