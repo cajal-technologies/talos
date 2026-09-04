@@ -72,6 +72,12 @@ macro "iapply_frame " rule:pmTerm : tactic =>
     (iapply $rule
      iframe))
 
+/-- Frame spatial goals, then discharge the remaining pure goal. -/
+macro "iframe_pureexact " proof:term : tactic =>
+  `(tactic|
+    (iframe
+     ipureexact $proof))
+
 /-- Apply an Iris entailment and discharge its next goal with one hypothesis. -/
 macro "iapply_exact " rule:pmTerm " with " hypothesis:ident : tactic =>
   `(tactic|

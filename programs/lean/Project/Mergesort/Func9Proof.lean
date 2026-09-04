@@ -149,8 +149,7 @@ private theorem twp_func9_zero_and_return
   ihave Hblock : LiveBlock heapId allocationId base layout
       (List.replicate layout.size 0) $$ [Htoken Hslice]
   · unfold LiveBlock
-    iframe
-    ipureexact ⟨by simp, hblockFacts.2⟩
+    iframe_pureexact ⟨by simp, hblockFacts.2⟩
   wasm_twp_pures [twp_exitControl] using [List.take_zero, List.nil_append]
   wasm_twp_pures [twp_localGet]
   iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
@@ -682,8 +681,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
             ihave Hbump : BumpHeap heapId storedCursor frontier history $$
                 [Hcursor Hfrontier Hauth Hretired HoldPages]
             · unfold BumpHeap
-              iframe
-              ipureexact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat,
+              iframe_pureexact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat,
                 hwf, hfrontierPhysical⟩
             iclose_runtime Hruntime with Hmodule Henv
             ihave Hoom := BI.and_elim_r $$ Hcont
@@ -706,8 +704,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
               ihave Hbump : BumpHeap heapId storedCursor frontier history $$
                   [Hcursor Hfrontier Hauth Hretired HoldPages]
               · unfold BumpHeap
-                iframe
-                ipureexact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat,
+                iframe_pureexact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat,
                   hwf, hfrontierPhysical⟩
               iclose_runtime Hruntime with Hmodule Henv
               ihave Hoom := BI.and_elim_r $$ Hcont

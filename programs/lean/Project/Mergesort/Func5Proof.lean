@@ -586,8 +586,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
             ihave Hbump : BumpHeap heapId storedCursor frontier history $$
                 [Hcursor Hfrontier Hauth Hretired HoldPages]
             · unfold BumpHeap
-              iframe
-              ipureexact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat,
+              iframe_pureexact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat,
                 hwf, hfrontierPhysical⟩
             iclose_runtime Hruntime with Hmodule Henv
             ihave Hoom := BI.and_elim_r $$ Hcont
@@ -621,8 +620,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
               ihave Hbump : BumpHeap heapId storedCursor frontier history $$
                   [Hcursor Hfrontier Hauth Hretired HoldPages]
               · unfold BumpHeap
-                iframe
-                ipureexact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat,
+                iframe_pureexact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat,
                   hwf, hfrontierPhysical⟩
               iclose_runtime Hruntime with Hmodule Henv
               ihave Hoom := BI.and_elim_r $$ Hcont

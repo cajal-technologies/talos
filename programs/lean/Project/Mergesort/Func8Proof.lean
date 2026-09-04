@@ -188,13 +188,11 @@ private theorem twp_func8_copy_and_return
   ihave HoldSlice : Project.Mergesort.Representations.ByteSlice oldPtr oldBytes $$
       [HoldBytes]
   · unfold Project.Mergesort.Representations.ByteSlice
-    iframe
-    ipureexact holdNowrap
+    iframe_pureexact holdNowrap
   ihave HoldBlock : LiveBlock heapId oldId oldPtr oldLayout oldBytes $$
       [HoldToken HoldSlice]
   · unfold LiveBlock
-    iframe
-    ipureexact holdFacts
+    iframe_pureexact holdFacts
   let finalBytes := oldBytes ++ newBytes.drop oldSize.toNat
   have hfinalLength : finalBytes.length = newLayout.size := by
     dsimp only [finalBytes]
@@ -219,8 +217,7 @@ private theorem twp_func8_copy_and_return
   ihave HnewBlock : LiveBlock heapId history.nextId newPtr newLayout
       finalBytes $$ [HnewToken HnewSlice]
   · unfold LiveBlock
-    iframe
-    ipureexact ⟨hfinalLength, hnewFacts.2⟩
+    iframe_pureexact ⟨hfinalLength, hnewFacts.2⟩
   imod BumpHeap_retire heapId finish finish.toNat
       (history.allocate newPtr newLayout) oldId oldPtr oldLayout oldBytes $$
       [Hbump HoldBlock] with Hbump
@@ -721,8 +718,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
               ihave Hbump : BumpHeap heapId storedCursor frontier history $$
                   [Hcursor Hfrontier Hauth Hretired HoldPages]
               · unfold BumpHeap
-                iframe
-                ipureexact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat,
+                iframe_pureexact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat,
                   hwf, hphysicalFrontier⟩
               iclose_runtime Hruntime with Hmodule Henv
               ihave Hoom := BI.and_elim_r $$ Hcont
@@ -747,8 +743,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
                 ihave Hbump : BumpHeap heapId storedCursor frontier history $$
                     [Hcursor Hfrontier Hauth Hretired HoldPages]
                 · unfold BumpHeap
-                  iframe
-                  ipureexact ⟨hfrontierLow, hfrontierSigned, hcursorZero,
+                  iframe_pureexact ⟨hfrontierLow, hfrontierSigned, hcursorZero,
                     hcursorNat, hwf, hphysicalFrontier⟩
                 iclose_runtime Hruntime with Hmodule Henv
                 ihave Hoom := BI.and_elim_r $$ Hcont
@@ -932,8 +927,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
       ihave Hbump : BumpHeap heapId storedCursor frontier history $$
           [Hcursor Hfrontier Hauth Hretired Hpages]
       · unfold BumpHeap
-        iframe
-        ipureexact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat, hwf,
+        iframe_pureexact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat, hwf,
           hphysicalFrontier⟩
       iclose_runtime Hruntime with Hmodule Henv
       simp only [Nat.reduceAdd, Nat.reduceSub, List.set, ValueType.zero]

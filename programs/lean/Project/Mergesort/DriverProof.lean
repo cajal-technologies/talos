@@ -295,8 +295,7 @@ theorem twp_func3_append_without_reserve
   ihave Hcurrent : Project.Mergesort.Representations.ByteSlice
       (driverBase + 12) current $$ [HcurrentBytes]
   · unfold Project.Mergesort.Representations.ByteSlice
-    iframe
-    ipureexact hcurrentNowrap
+    iframe_pureexact hcurrentNowrap
   ihave Hchunk : Project.Mergesort.Representations.ByteSlice
       (driverBase + 12) (current ++ chunkTail) $$ [Hcurrent HchunkTail]
   · iapply_frame (ByteSlice_append (driverBase + 12) current chunkTail).mpr
@@ -331,8 +330,7 @@ theorem twp_func3_append_without_reserve
       (initialized ++ current) (current ++ chunkTail) outputBytes $$
       [Hvec Hchunk Houtput]
   · unfold ExportFrame
-    iframe
-    ipureexact hframeLengths
+    iframe_pureexact hframeLengths
   iapply Hcont $$ Hframe
 
 /-- Reload the Vec data pointer and length after `func1` returns.  The
@@ -383,8 +381,7 @@ theorem twp_func3_reload_vec_fields
       chunkBytes outputBytes $$
       [Hcapacity Hpointer Hlength Hstorage Hchunk Houtput]
   · unfold ExportFrame VecU8 RawVecHeader
-    iframe
-    ipureexact hframeLengths
+    iframe_pureexact hframeLengths
   iapply Hcont $$ Hframe
 
 /-- Driver-level view of `Func1Spec`'s continuation.  It frames the read
@@ -544,8 +541,7 @@ theorem twp_func3_reserve
       ihave Hframe : ExportFrame heapId capacity dataPtr initialized
           chunkBytes outputBytes $$ [Hvec Hchunk Houtput]
       · unfold ExportFrame
-        iframe
-        ipureexact hframeLengths
+        iframe_pureexact hframeLengths
       iapply Hcont $$ Hsp Hreserve Hframe Hbump Hstreams
   | success newPtr finish =>
       isimp only [hdecision] at Hcont
@@ -554,8 +550,7 @@ theorem twp_func3_reserve
         ihave Hframe : ExportFrame heapId newCapacity newPtr initialized
             chunkBytes outputBytes $$ [Hvec Hchunk Houtput]
         · unfold ExportFrame
-          iframe
-          ipureexact hframeLengths
+          iframe_pureexact hframeLengths
         ihave Hnormal := BI.and_elim_l $$ Hcont
         iapply Hnormal $$ %finalHistory Hruntime Hsp Hreserve Hframe Hbump
           %hpure Hstreams
@@ -563,8 +558,7 @@ theorem twp_func3_reserve
         ihave Hframe : ExportFrame heapId capacity dataPtr initialized
             chunkBytes outputBytes $$ [Hvec Hchunk Houtput]
         · unfold ExportFrame
-          iframe
-          ipureexact hframeLengths
+          iframe_pureexact hframeLengths
         ihave Hoom := BI.and_elim_r $$ Hcont
         iapply Hoom $$ Hsp Hreserve Hframe Hbump Hstreams
 
@@ -900,8 +894,7 @@ theorem twp_func3_append_current
         (current ++ chunkTail) outputBytes $$
         [Hcapacity Hpointer Hlength Hstorage Hchunk Houtput]
     · unfold ExportFrame VecU8 RawVecHeader
-      iframe
-      ipureexact hframeLengths
+      iframe_pureexact hframeLengths
     have Happend := twp_func3_append_without_reserve heapId capacity dataPtr
       initialized current chunkTail outputBytes hfacts.2.1 hfits hlayout.1
       aux2 aux4 aux5 aux7 aux8 aux9 aux10
@@ -930,8 +923,7 @@ theorem twp_func3_append_current
         (current ++ chunkTail) outputBytes $$
         [Hcapacity Hpointer Hlength Hstorage Hchunk Houtput]
     · unfold ExportFrame VecU8 RawVecHeader
-      iframe
-      ipureexact hframeLengths
+      iframe_pureexact hframeLengths
     have HreserveStep := twp_func3_reserve hfunc1 totalBytes current remaining capacity
       dataPtr initialized (current ++ chunkTail) outputBytes shadow heapId
       storedCursor frontier history output false aux2 aux4 aux5 aux7 aux8
@@ -1378,8 +1370,7 @@ theorem twp_func3_reload_completed_ptr
       chunkBytes outputBytes $$
       [Hcapacity Hpointer Hlength Hstorage Hchunk Houtput]
   · unfold ExportFrame VecU8 RawVecHeader
-    iframe
-    ipureexact hframeLengths
+    iframe_pureexact hframeLengths
   iapply Hcont $$ Hframe
 
 /-- Canonical serialized input makes the compiler's partial-word branch
@@ -1700,8 +1691,7 @@ theorem twp_func3_values_nonnull_guard
   ihave Hblock : LiveBlock heapId allocationId base layout bytes $$
       [Htoken Hbytes]
   · unfold LiveBlock
-    iframe
-    ipureexact hfacts
+    iframe_pureexact hfacts
   iapply Hcont $$ Hblock
 
 /-- Copy one already-addressed word from the completed input slice into the
@@ -2877,8 +2867,7 @@ theorem twp_func3_decode_allocated
   ihave Hblock : LiveBlock heapId valuesId destination layout bytes $$
       [HallocationToken HallocationBytes]
   · unfold LiveBlock
-    iframe
-    ipureexact hblockFacts
+    iframe_pureexact hblockFacts
   ihave Hbuffers := DriverDecodeBuffers_open heapId capacity source destination
     valuesId original chunkBytes outputBytes bytes frontier history horiginal
     hgeo $$ [Hframe Hblock]
@@ -2915,8 +2904,7 @@ theorem twp_func3_decode_allocated
   ihave Hvalues : LiveWordBlock heapId valuesId destination original $$
       [Htoken Hdestination]
   · unfold LiveWordBlock
-    iframe
-    ipureexact hnonnull
+    iframe_pureexact hnonnull
   iapply Hcont $$ %final1 %final3 %final6 %final5 %final8 Hframe Hvalues
 
 /-- Execute the allocation marker and zeroing scratch allocation after decode.
@@ -3144,8 +3132,7 @@ theorem twp_func3_scratch_success_tail
   ihave Hscratch : LiveBlock heapId scratchId scratch layout bytes $$
       [Htoken Hbytes]
   · unfold LiveBlock
-    iframe
-    ipureexact hfacts
+    iframe_pureexact hfacts
   iapply Hcont $$ Hscratch
 
 /-- Frame both allocation tokens around the single generated `func2` call.
@@ -3502,8 +3489,7 @@ theorem twp_func3_output_loop
     ihave Hvalues : LiveWordBlock heapId valuesId valuesPtr sorted $$
         [Htoken Hwords]
     · unfold LiveWordBlock
-      iframe
-      ipureexact hnonnull
+      iframe_pureexact hnonnull
     by_cases hmore : emitted + 1 < sorted.length
     · have hnonzero :
           UInt32.ofNat (4 * (sorted.length - (emitted + 1))) ≠ 0 := by
@@ -3916,8 +3902,7 @@ theorem twp_func3_deallocate_input
   ihave Hframe : ExportFrame heapId capacity inputPtr initialized chunkBytes
       outputBytes $$ [Hcapacity Hpointer Hlength Hstorage Hchunk Houtput]
   · unfold ExportFrame VecU8 RawVecHeader
-    iframe
-    ipureexact hframeLengths
+    iframe_pureexact hframeLengths
   ihave ⟨Hstorage, HframeBytes, %_hframeLength⟩ :=
     ExportFrame_releaseStorage heapId capacity inputPtr initialized chunkBytes outputBytes $$ Hframe
   isimp only [VecStorage] at Hstorage
@@ -3939,13 +3924,11 @@ theorem twp_func3_deallocate_input
     ihave Hbump : BumpHeap heapId storedCursor frontier history $$
         [Hcursor Hfrontier Hauth Hretired Hpages]
     · unfold BumpHeap
-      iframe
-      ipureexact hheap
+      iframe_pureexact hheap
     ihave Hblock : LiveBlock heapId allocationId inputPtr layout allBytes $$
         [Htoken Hbytes]
     · unfold LiveBlock
-      iframe
-      ipureexact hblock
+      iframe_pureexact hblock
     wasm_twp_pures [twp_localGet twp_localGet twp_const]
     have Hdealloc := Project.Mergesort.ContractProofs.func7_correct
       (hlc := hlc) (ptr := inputPtr) (size := capacity) (alignment := 1)
@@ -4029,8 +4012,7 @@ theorem twp_func3_skip_empty_input
   ihave Hframe : ExportFrame heapId 0 1 [] chunkBytes outputBytes $$
       [Hcapacity Hpointer Hlength Hstorage Hchunk Houtput]
   · unfold ExportFrame VecU8 RawVecHeader
-    iframe
-    ipureexact hframeLengths
+    iframe_pureexact hframeLengths
   ihave ⟨Hstorage, HframeBytes, %hframeLength⟩ :=
     ExportFrame_releaseStorage heapId 0 1 [] chunkBytes outputBytes $$ Hframe
   isimp only [VecStorage] at Hstorage
@@ -4839,8 +4821,7 @@ theorem twp_func3_read_loop
       isplitl_exacts [Hsp Hreserve]
       isplitl [Hvec Hchunk Houtput]
       · unfold ExportFrame
-        iframe
-        ipureexact hframeLengths
+        iframe_pureexact hframeLengths
       isplitl_exact Hbump
       · iexact Hstreams
 

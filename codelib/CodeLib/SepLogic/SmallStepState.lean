@@ -1816,8 +1816,7 @@ theorem stateInterp_dataSegment_drop [WasmSmallStepGS hlc α]
     iexists σ, globalσ,
       (insert dataSegmentσ ⟨0, index⟩ none), tableσ,
       elementSegmentσ, runtimeModuleσ, hostEnvσ
-    iframe
-    ipureexact ⟨Hfacts.1, Hfacts.2.1, Hfacts.2.2.1,
+    iframe_pureexact ⟨Hfacts.1, Hfacts.2.1, Hfacts.2.2.1,
       dataSegment_store_sound dataSegmentσ store.wasm.dataSegments
         index oldValue none Hfacts.2.2.2.1 hlookup,
       Hfacts.2.2.2.2⟩
@@ -1898,8 +1897,7 @@ theorem stateInterp_elementSegment_drop [WasmSmallStepGS hlc α]
       steps observations threads).mpr
     iexists σ, globalσ, dataSegmentσ, tableσ,
       (insert elementSegmentσ ⟨0, index⟩ none), runtimeModuleσ, hostEnvσ
-    iframe
-    ipureexact ⟨Hfacts.1, Hfacts.2.1, Hfacts.2.2.1,
+    iframe_pureexact ⟨Hfacts.1, Hfacts.2.1, Hfacts.2.2.1,
       Hfacts.2.2.2.1,
       ⟨Hfacts.2.2.2.2.1,
         elementSegment_store_sound elementSegmentσ
@@ -1924,8 +1922,7 @@ theorem stateInterp_table_facts_frame [WasmSmallStepGS hlc α]
     stateInterp_table_facts store steps observations threads index table $$
       [Hstate Htable]
   imodintro
-  iframe
-  ipureexact Hphysical
+  iframe_pureexact Hphysical
 
 /-- Derive the physical table associated with an owned table fragment. -/
 syntax "wasm_table_agree " ident ", " term ", " term ", " term
@@ -1971,8 +1968,7 @@ theorem stateInterp_table_set [WasmSmallStepGS hlc α]
     iexists σ, globalσ, dataSegmentσ,
       (insert tableσ ⟨0, index⟩ newTable), elementSegmentσ,
       runtimeModuleσ, hostEnvσ
-    iframe
-    ipureexact ⟨Hfacts.1, Hfacts.2.1, Hfacts.2.2.1,
+    iframe_pureexact ⟨Hfacts.1, Hfacts.2.1, Hfacts.2.2.1,
       Hfacts.2.2.2.1,
       ⟨table_store_listSetAt_sound tableσ store.wasm.tables
           index oldTable newTable Hfacts.2.2.2.2.1 hlookup,
@@ -2239,8 +2235,7 @@ theorem stateInterp_pointsTo_u32_facts_frame [WasmSmallStepGS hlc α]
     stateInterp_pointsTo_u32_facts store steps observations threads
       address value h1 h2 h3 $$ [Hstate Hword]
   imodintro
-  iframe
-  ipureexact Hfacts
+  iframe_pureexact Hfacts
 
 /-- Eight-byte ownership determines the physical little-endian word and proves
 the complete access is in bounds. The address equalities exclude UInt32
@@ -2325,8 +2320,7 @@ theorem stateInterp_pointsTo_u64_facts_frame [WasmSmallStepGS hlc α]
     stateInterp_pointsTo_u64_facts store steps observations threads
       address value h1 h2 h3 h4 h5 h6 h7 $$ [Hstate Hword]
   imodintro
-  iframe
-  ipureexact Hfacts
+  iframe_pureexact Hfacts
 
 theorem stateInterp_store8 [WasmSmallStepGS hlc α]
     (store : MachineStore α) (steps : Nat)

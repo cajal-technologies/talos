@@ -719,12 +719,10 @@ theorem SortBuffers_append {host : Type} [WasmHeapGS host]
       scratchLeft scratchRight hsourceOffset hscratchOffset hfacts.2
     isplitl [HsourceLeft HscratchLeft]
     · unfold SortBuffers
-      iframe
-      ipureexact ⟨hleftLength, hleftDisjoint⟩
+      iframe_pureexact ⟨hleftLength, hleftDisjoint⟩
     isplitl [HsourceRight HscratchRight]
     · unfold SortBuffers
-      iframe
-      ipureexact ⟨hrightLength, hrightDisjoint⟩
+      iframe_pureexact ⟨hrightLength, hrightDisjoint⟩
     · ipureexact hfacts.2
   · iintro ⟨Hleft, Hright, %hfull⟩
     isimp only [SortBuffers] at Hleft Hright
@@ -1287,8 +1285,7 @@ theorem LiveWordBlocks_sortFocus {host : Type} [WasmHeapGS host]
     ⟨HscratchToken, HscratchWords, %hscratchNonzero⟩
   isplitl [HsourceWords HscratchWords]
   · unfold SortBuffers
-    iframe
-    ipureexact ⟨hlength, hdisjoint⟩
+    iframe_pureexact ⟨hlength, hdisjoint⟩
   · iintro %output
     iintro %scratchResult
     iintro %hresultLengths
@@ -1305,11 +1302,9 @@ theorem LiveWordBlocks_sortFocus {host : Type} [WasmHeapGS host]
     · irw_exact [hresultLengths.2] with HscratchToken
     isplitl [HsourceToken' HsourceWords]
     · unfold LiveWordBlock
-      iframe
-      ipureexact hsourceNonzero
+      iframe_pureexact hsourceNonzero
     · unfold LiveWordBlock
-      iframe
-      ipureexact hscratchNonzero
+      iframe_pureexact hscratchNonzero
 
 /-- Pure chronological invariants shared by every allocator contract.  The
 map is complete below `nextId`, contains nothing at or above it, and numeric
@@ -1792,8 +1787,7 @@ theorem AllocMetaAuth_retire_with_lookup {host : Type}
       [Hauth Htoken] with ⟨Hauth, Hfragment⟩
   · iframe
   imodintro
-  iframe
-  ipureexact hlookup
+  iframe_pureexact hlookup
 
 /-- The no-op physical deallocator consumes a complete live block and moves
 its bytes and exclusive metadata fragment into allocator-owned retired state. -/
@@ -1845,12 +1839,10 @@ theorem BumpHeap_retire {host : Type} [WasmHeapGS host]
   imod AllocatorResources_retire heapId history allocationId ptr layout bytes
       $$ [Hauth Hretired Htoken Hbytes] with ⟨Hauth, Hretired⟩
   · unfold LiveBlock
-    iframe
-    ipureexact hblock
+    iframe_pureexact hblock
   imodintro
   unfold BumpHeap
-  iframe
-  ipureexact ⟨hheap.1, hheap.2.1, by
+  iframe_pureexact ⟨hheap.1, hheap.2.1, by
       simpa only [AllocationHistory.retire] using hheap.2.2.1,
     hheap.2.2.2.1, hwfNew, hheap.2.2.2.2.2⟩
 
@@ -2500,8 +2492,7 @@ theorem ExportFrame_empty [WasmHeapGS Universal.State]
   iintro ⟨Hheader, Hchunk, Houtput⟩
   ihave Hvec := emptyVecHeaderBytes_to_VecU8 heapId $$ Hheader
   unfold ExportFrame
-  iframe
-  ipureexact ⟨hchunk, houtput⟩
+  iframe_pureexact ⟨hchunk, houtput⟩
 
 /-! ## Pure Vec-growth lineage -/
 
@@ -2853,8 +2844,7 @@ theorem DriverDecodeBuffers_open
       { size := 4 * original.length, alignment := 4 } bytes $$
       [Htoken Hbytes]
   · unfold LiveBlock
-    iframe
-    ipureexact hblockFacts
+    iframe_pureexact hblockFacts
   ihave Hvalues := (LiveBlock_as_decodedWordBlock heapId valuesId
     original.length valuesPtr bytes hblockFacts.1).mp $$ Hblock
   iframe
