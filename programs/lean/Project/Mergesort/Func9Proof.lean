@@ -136,13 +136,12 @@ private theorem twp_func9_zero_and_return
   ihave Hslice : Project.Mergesort.Representations.ByteSlice base
       (List.replicate layout.size 0) $$ [Hbytes]
   · unfold Project.Mergesort.Representations.ByteSlice
-    isplitl []
-    · ipureintro
+    isplitl_pureexact (by
       simpa [List.length_replicate] using
         (show base.toNat + layout.size < UInt32.size by
-          rw [← hblockFacts.1]; exact hnowrap)
-    · rw [← hblockFacts.1]
-      irw_exact [← show (0 : UInt32).toUInt8 = (0 : UInt8) by decide] with Hbytes
+          rw [← hblockFacts.1]; exact hnowrap))
+    rw [← hblockFacts.1]
+    irw_exact [← show (0 : UInt32).toUInt8 = (0 : UInt8) by decide] with Hbytes
   ihave Hblock : LiveBlock heapId allocationId base layout
       (List.replicate layout.size 0) $$ [Htoken Hslice]
   · unfold LiveBlock

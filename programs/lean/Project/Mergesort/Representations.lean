@@ -1836,11 +1836,9 @@ theorem StackReserve_split
     · iframe
   · iintro ⟨%headBytes, %growBefore, %hfacts, Hhead, Hgrow⟩
     unfold StackReserve
-    isplitl []
-    · ipureintro
-      rw [hfacts.1, List.length_append, hfacts.2.1, hfacts.2.2]
-    · rw [hfacts.1]
-      iapply_frame (ByteSlice_append low headBytes growBefore).mpr
+    isplitl_pureexact (by rw [hfacts.1, List.length_append, hfacts.2.1, hfacts.2.2])
+    rw [hfacts.1]
+    iapply_frame (ByteSlice_append low headBytes growBefore).mpr
 
 /-- Reversible split of the exported function's full 288-byte entry stack
 ownership into the 16-byte reserve and 272-byte visible driver frame. -/
@@ -2211,13 +2209,12 @@ theorem VecU8_as_headerBytes_storage {host : Type} [WasmHeapGS host]
       iexact Harray
     isplitl [Hbytes]
     · unfold ByteSlice
-      isplitl []
-      · ipureintro
+      isplitl_pureexact (by
         unfold vecHeaderBytes
         rw [serialize_length]
-        norm_num; exact hheader
-      · unfold vecHeaderBytes
-        iexact Hbytes
+        norm_num; exact hheader)
+      unfold vecHeaderBytes
+      iexact Hbytes
     · iexact Hstorage
   · iintro ⟨Hheader, Hstorage⟩
     isimp only [ByteSlice, vecHeaderBytes] at Hheader

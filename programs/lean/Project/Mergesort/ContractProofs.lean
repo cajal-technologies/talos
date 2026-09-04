@@ -258,12 +258,10 @@ theorem import0_correct [WasmSmallStepGS hlc Universal.State] :
     ihave Hslice : ByteSlice ptr
         (input.take count ++ buffer.drop count) $$ [Hbytes]
     · unfold Project.Mergesort.Representations.ByteSlice
-      isplitl []
-      · ipureintro
-        simpa only [hnewLength] using hnowrap
-      · rw [← htake, ← hcount]
-        isimp only [host] at Hbytes
-        iexact Hbytes
+      isplitl_pureexact (by simpa only [hnewLength] using hnowrap)
+      rw [← htake, ← hcount]
+      isimp only [host] at Hbytes
+      iexact Hbytes
     isimp only [Cont, RuntimeContext, ResumeWP, resumeExpr, List.nil_append]
       at Hcont
     iapply Hcont $$ [Hmodule Henv] Hstreams Hslice
@@ -671,11 +669,8 @@ theorem func2_correct [WasmSmallStepGS hlc Universal.State] :
   ihave HscratchWords : WordSlice scratch scratchResult $$ [HscratchBytes]
   · unfold WordSlice Project.Mergesort.Representations.ByteSlice
     isplitl_pureexact hscratchAlign
-    isplitl []
-    · ipureintro
-      simpa only [serialize_length, hscratchLength] using
-        hscratchStrictInput
-    · iexact HscratchBytes
+    isplitl_pureexact (by simpa only [serialize_length, hscratchLength] using hscratchStrictInput)
+    iexact HscratchBytes
   have hresultDisjoint : MemRegion.Disjoint
       ⟨source, 4 * sorted.length⟩
       ⟨scratch, 4 * scratchResult.length⟩ := by

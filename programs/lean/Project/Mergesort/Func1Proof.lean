@@ -336,8 +336,7 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
   · unfold RuntimeContext
     iframe Hmodule Henv
   isplitl_exacts [HgrowBeforeAt Hsource Hbump Hstreams]
-  isplitl []
-  · ipureintro
+  isplitl_pureexact (by
     have hcapacityInitialized : initialized.length ≤ capacity.toNat := by
       rcases hgeo with hempty | hshort | hlarge
       · rcases hempty with ⟨_hcapacity, _hptr, hlength, _hremaining,
@@ -360,7 +359,7 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
     exact ⟨rfl, rfl, hshadow.2.2, by
       rw [hnewCapacityWord]
       unfold newCapacityNat selectedCapacity
-      omega, holdNew, hvalid⟩
+      omega, holdNew, hvalid⟩)
   unfold FinishGrowContinuation
   dsimp only
   cases hdecision : classifyBump frontier newLayout with

@@ -3157,10 +3157,9 @@ theorem twp_func3_sort
   simp only [List.cons_append, List.nil_append, func3AppendLocals] at Hsort
   iapply Hsort
   isplitl_exacts [Hruntime Hbuffers]
-  isplitl []
-  · ipureintro
+  isplitl_pureexact (by
     have hcountBound : original.length < UInt32.size := by omega
-    simp [scratchInitial, UInt32.toNat_ofNat_of_lt' hcountBound]
+    simp [scratchInitial, UInt32.toNat_ofNat_of_lt' hcountBound])
   iintro %sorted Hruntime Hresult
   isimp only [SortResultBuffers] at Hresult
   icases Hresult with ⟨Hbuffers, %hsorted⟩
@@ -3277,12 +3276,11 @@ theorem twp_func3_write_one
   simp only [List.cons_append, List.nil_append, func3AppendLocals] at Hwrite
   iapply Hwrite
   isplitl_exacts [Hruntime Hstreams Houtput]
-  isplitl []
-  · ipureintro
+  isplitl_pureexact (by
     constructor
     · change 4 = (Spec.u32Codec.encode sorted[emitted]).length
       exact (Spec.u32Codec.encode_length sorted[emitted]).symm
-    · decide
+    · decide)
   iintro Hruntime Hstreams Houtput
   ihave Hframe : ExportFrame heapId capacity inputPtr input chunkBytes
       (serialize [sorted[emitted]]) $$ [Hvec Hchunk Houtput]
@@ -4698,8 +4696,7 @@ theorem twp_func3_read_loop
         rw [← congrArg UInt32.ofNat htakeLength]
         iapply Hback
         isplitl_exacts [Hruntime Hsp Hreserve Hframe Hbump Hstreams]
-        isplitl []
-        · ipureintro
+        isplitl_pureexact (by
           have hserializeNext :
               serialize original =
                 (state.initialized ++ state.current) ++
@@ -4730,10 +4727,10 @@ theorem twp_func3_read_loop
               hnext.2.2.2.2.2.2.2.1
           exact ⟨hserializeNext, hnext.1, hnext.2.1, hnext.2.2.1,
             hnext.2.2.2.1, hnext.2.2.2.2.1,
-            hgeoNext⟩
-        · unfold Func3ReadLoopContinuation
-          simp only [func3AppendLocals]
-          iexact Hfinish
+            hgeoNext⟩)
+        unfold Func3ReadLoopContinuation
+        simp only [func3AppendLocals]
+        iexact Hfinish
     · iintro Hsp Hreserve Hframe Hbump Hstreams
       ihave Hoom := BI.and_elim_r $$ Hfinish
       iapply Hoom
