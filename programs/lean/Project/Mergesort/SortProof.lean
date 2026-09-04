@@ -3,7 +3,7 @@ import CodeLib.UInt32
 import CodeLib.Examples.MergeSort.TotalProof
 import CodeLib.Examples.MergeSort.Laws
 import CodeLib.RustStd.Region
-import CodeLib.SepLogic.SmallStepTotalLifting
+import CodeLib.SepLogic.SmallStepTotalLoop
 
 /-!
 # Total Iris contract for the generated recursive merge-sort body
@@ -38,63 +38,6 @@ local instance (priority := high) sortTerminalIrisGS
   stateInterp_mono _ _ _ _ := by iintro $
 
 set_option maxHeartbeats 4000000
-
-/-- Terminal-polymorphic form of the well-founded loop-family rule used by the
-generated merge loops.  The CodeLib example predates outcome-valued terminals
-and fixes its postcondition to `List Value`; keeping the rule local avoids
-changing that example while allowing this body proof to be reused by the
-authoritative observable-outcome contracts. -/
-theorem twp_loop_wf_family_from_terminal
-    [WasmSmallStepGS hlc α]
-    {Terminal : Type} [TerminalView α Terminal]
-    {s : Stuckness} {E : CoPset}
-    {Φ : Terminal → IProp (WasmHeapGF α)}
-    {ι : Type} (measure : ι → Nat)
-    (locals : ι → Locals) (I : ι → IProp (WasmHeapGF α))
-    (initial : ι) (initialLocals : Locals)
-    {paramArity resultArity arity : Nat}
-    {body code : Program} {remainder belowStack : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame}
-    (hinitial : locals initial = initialLocals)
-    (hbelow : belowStack = (locals initial).values.drop paramArity)
-    (body_closes : ∀ i,
-      ⊢@{IProp (WasmHeapGF α)} (iprop%
-        (∀ (j : ι), ⌜measure j < measure i⌝ -∗ I j -∗
-          WP (loopBodyExpr (α := α) (locals j)
-            paramArity resultArity arity body code remainder belowStack
-            controls calls) @ s; E [{ Φ }]) -∗
-        I i -∗
-          WP (loopBodyExpr (α := α) (locals i)
-            paramArity resultArity arity body code remainder belowStack
-            controls calls) @ s; E [{ Φ }])) :
-    I initial ⊢
-      WP (.running
-        ⟨initialLocals, .loop paramArity resultArity body :: code,
-          arity, remainder, controls, calls⟩ : Expr α)
-        @ s; E [{ Φ }] := by
-  have closes : ∀ i,
-      I i ⊢
-        WP (loopBodyExpr (α := α) (locals i)
-          paramArity resultArity arity body code remainder belowStack
-          controls calls) @ s; E [{ Φ }] := by
-    intro current
-    induction hmeasure : measure current using Nat.strongRecOn
-        generalizing current with
-    | ind n ih =>
-      subst n
-      iintro HI
-      iapply body_closes current
-      · iintro %j %hji Hj
-        ihave Hih := ih (measure j) hji j rfl $$ Hj
-        iexact Hih
-      · iexact HI
-  simp only [loopBodyExpr] at closes
-  subst initialLocals
-  iintro HI
-  iapply twp_loop (Terminal := Terminal) (α := α)
-  rw [← hbelow]
-  ihave Hbody := closes initial $$ HI
-  iexact Hbody
 
 /-! ## Pure merge relation used by the generated loop
 
@@ -1246,7 +1189,7 @@ theorem twp_mergeMainLoop
     ⌜state.i < mid ∧ state.j < input.length⌝ ∗
     arrayAt 0 source input ∗ arrayAt 0 scratch state.scratchValues ∗ Finish
   iintro ⟨Hsource, Hscratch, Hfinish⟩
-  iapply twp_loop_wf_family_from_terminal
+  iapply twp_loop_wf_family
     (ι := GeneratedMergeState)
     (measure := fun state =>
       (mid - state.i) + (input.length - state.j))
@@ -1554,7 +1497,7 @@ theorem twp_mergeLeftRemainder
       ⌜MergeLoopInvariant input state.scratchValues mid
         (i + state.r) input.length (k + state.r) state.emitted⌝ ∗
       arrayAt 0 source input ∗ arrayAt 0 scratch state.scratchValues ∗ Finish
-    iapply twp_loop_wf_family_from_terminal
+    iapply twp_loop_wf_family
       (ι := LeftCopyState) (measure := fun state => n - state.r)
       (locals := fun state =>
         (⟨[.i32 source, .i32 (UInt32.ofNat input.length), .i32 scratch,
@@ -1907,7 +1850,7 @@ theorem twp_mergeRightRemainder
       ⌜MergeLoopInvariant input state.scratchValues mid mid
         (j + state.r) (k + state.r) state.emitted⌝ ∗
       arrayAt 0 source input ∗ arrayAt 0 scratch state.scratchValues ∗ Finish
-    iapply twp_loop_wf_family_from_terminal
+    iapply twp_loop_wf_family
       (ι := RightCopyState) (measure := fun state => n - state.r)
       (locals := fun state =>
         (⟨[.i32 source, .i32 (UInt32.ofNat input.length), .i32 scratch,

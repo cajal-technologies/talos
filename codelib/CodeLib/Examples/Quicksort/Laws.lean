@@ -1,5 +1,5 @@
 import CodeLib.Examples.Quicksort.Pure
-import CodeLib.SepLogic.SmallStepTotalLifting
+import CodeLib.SepLogic.SmallStepTotalLoop
 import CodeLib.UInt32
 
 /-!
@@ -326,57 +326,6 @@ theorem twp_increment_nil
         increment index, arity, remainder, controls, calls⟩ : Expr Unit)
       @ s; E [{ Φ }] := by
   simpa only [List.append_nil] using (twp_increment (s := s) (E := E) (Φ := Φ) (code := []) hget hset)
-
-theorem twp_loop_wf_family_from
-    [WasmSmallStepGS hlc Unit]
-    {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp (WasmHeapGF Unit)}
-    {ι : Type} (measure : ι → Nat)
-    (locals : ι → Locals) (I : ι → IProp (WasmHeapGF Unit))
-    (initial : ι) (initialLocals : Locals)
-    {paramArity resultArity arity : Nat}
-    {body code : Program} {remainder belowStack : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame}
-    (hinitial : locals initial = initialLocals)
-    (hbelow : belowStack = (locals initial).values.drop paramArity)
-    (body_closes : ∀ i,
-      ⊢@{IProp (WasmHeapGF Unit)} (iprop%
-        (∀ (j : ι), ⌜measure j < measure i⌝ -∗ I j -∗
-          WP (loopBodyExpr (α := Unit) (locals j)
-            paramArity resultArity arity body code remainder belowStack
-            controls calls) @ s; E [{ Φ }]) -∗
-        I i -∗
-          WP (loopBodyExpr (α := Unit) (locals i)
-            paramArity resultArity arity body code remainder belowStack
-            controls calls) @ s; E [{ Φ }])) :
-    I initial ⊢
-      WP (.running
-        ⟨initialLocals, .loop paramArity resultArity body :: code,
-          arity, remainder, controls, calls⟩ : Expr Unit)
-        @ s; E [{ Φ }] := by
-  have closes : ∀ i,
-      I i ⊢
-        WP (loopBodyExpr (α := Unit) (locals i)
-          paramArity resultArity arity body code remainder belowStack
-          controls calls) @ s; E [{ Φ }] := by
-    intro current
-    induction hmeasure : measure current using Nat.strongRecOn
-        generalizing current with
-    | ind n ih =>
-      subst n
-      iintro HI
-      iapply body_closes current
-      · iintro %j %hji Hj
-        ihave Hih := ih (measure j) hji j rfl $$ Hj
-        iexact Hih
-      · iexact HI
-  simp only [loopBodyExpr] at closes
-  subst initialLocals
-  iintro HI
-  iapply twp_loop
-  rw [← hbelow]
-  ihave Hbody := closes initial $$ HI
-  iexact Hbody
 
 theorem u32_ofNat_sub_eq {a b : Nat} (hle : b ≤ a) (ha : a < UInt32.size) :
     UInt32.ofNat a - UInt32.ofNat b = UInt32.ofNat (a - b) := by

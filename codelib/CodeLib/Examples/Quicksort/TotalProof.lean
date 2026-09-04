@@ -160,7 +160,7 @@ theorem twp_partitionScanLoop
   iintro ⟨Harray, Hfinish⟩
   simp only [whileDo, List.cons_append, List.nil_append]
   wasm_twp_pures [twp_block]
-  iapply twp_loop_wf_family_from
+  iapply twp_loop_wf_family
     (ι := PartitionState)
     (measure := fun state => hiMinusOne - state.j)
     (locals := fun state =>

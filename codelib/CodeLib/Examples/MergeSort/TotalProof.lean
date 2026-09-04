@@ -1,5 +1,5 @@
 import CodeLib.Examples.MergeSort.Laws
-import CodeLib.SepLogic.SmallStepTotalLifting
+import CodeLib.SepLogic.SmallStepTotalLoop
 
 /-!
 # Total Iris verification of the handwritten merge sort
@@ -89,60 +89,6 @@ theorem mergeSortPre_elim
         ⌜ValidLayout source temporary input.length⌝) := by
   unfold mergeSortPre
   iintro Hpre; iexact Hpre
-
-/-- Well-founded family rule for total Wasm loops. The recursive hypothesis is
-available only at strictly smaller measures, reflecting TWP's inductive
-semantics. -/
-theorem twp_loop_wf_family_from
-    [WasmSmallStepGS hlc α]
-    {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp (WasmHeapGF α)}
-    {ι : Type} (measure : ι → Nat)
-    (locals : ι → Locals) (I : ι → IProp (WasmHeapGF α))
-    (initial : ι) (initialLocals : Locals)
-    {paramArity resultArity arity : Nat}
-    {body code : Program} {remainder belowStack : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame}
-    (hinitial : locals initial = initialLocals)
-    (hbelow : belowStack = (locals initial).values.drop paramArity)
-    (body_closes : ∀ i,
-      ⊢@{IProp (WasmHeapGF α)} (iprop%
-        (∀ (j : ι), ⌜measure j < measure i⌝ -∗ I j -∗
-          WP (loopBodyExpr (α := α) (locals j)
-            paramArity resultArity arity body code remainder belowStack
-            controls calls) @ s; E [{ Φ }]) -∗
-        I i -∗
-          WP (loopBodyExpr (α := α) (locals i)
-            paramArity resultArity arity body code remainder belowStack
-            controls calls) @ s; E [{ Φ }])) :
-    I initial ⊢
-      WP (.running
-        ⟨initialLocals, .loop paramArity resultArity body :: code,
-          arity, remainder, controls, calls⟩ : Expr α)
-        @ s; E [{ Φ }] := by
-  have closes : ∀ i,
-      I i ⊢
-        WP (loopBodyExpr (α := α) (locals i)
-          paramArity resultArity arity body code remainder belowStack
-          controls calls) @ s; E [{ Φ }] := by
-    intro current
-    induction hmeasure : measure current using Nat.strongRecOn
-        generalizing current with
-    | ind n ih =>
-      subst n
-      iintro HI
-      iapply body_closes current
-      · iintro %j %hji Hj
-        ihave Hih := ih (measure j) hji j rfl $$ Hj
-        iexact Hih
-      · iexact HI
-  simp only [loopBodyExpr] at closes
-  subst initialLocals
-  iintro HI
-  iapply twp_loop (α := α)
-  rw [← hbelow]
-  ihave Hbody := closes initial $$ HI
-  iexact Hbody
 
 set_option maxHeartbeats 4000000 in
 theorem twp_mergeMainStep
@@ -326,7 +272,7 @@ theorem twp_mergeMainLoop
   iintro ⟨Hsource, Htemporary, Hfinish⟩
   simp only [whileDo, List.cons_append, List.nil_append]
   iapply Wasm.SmallStep.twp_block (α := α)
-  iapply twp_loop_wf_family_from (α := α)
+  iapply twp_loop_wf_family (α := α)
     (ι := MergeLoopState)
     (measure := fun state =>
       (mid - state.i) + (right - state.j))
@@ -660,7 +606,7 @@ theorem twp_mergeLeftLoop
   iintro ⟨Hsource, Htemporary, Hfinish⟩
   simp only [whileDo, List.cons_append, List.nil_append]
   iapply Wasm.SmallStep.twp_block (α := α)
-  iapply twp_loop_wf_family_from (α := α)
+  iapply twp_loop_wf_family (α := α)
     (ι := MergeLoopState)
     (measure := fun state => mid - state.i)
     (locals := fun state =>
@@ -791,7 +737,7 @@ theorem twp_mergeRightLoop
   iintro ⟨Hsource, Htemporary, Hfinish⟩
   simp only [whileDo, List.cons_append, List.nil_append]
   iapply Wasm.SmallStep.twp_block (α := α)
-  iapply twp_loop_wf_family_from (α := α)
+  iapply twp_loop_wf_family (α := α)
     (ι := MergeLoopState)
     (measure := fun state => right - state.j)
     (locals := fun state =>
@@ -964,7 +910,7 @@ theorem twp_mergeCopyLoop
   iintro ⟨Hsource, Htemporary, Hfinish⟩
   simp only [whileDo, List.cons_append, List.nil_append]
   iapply Wasm.SmallStep.twp_block (α := α)
-  iapply twp_loop_wf_family_from (α := α)
+  iapply twp_loop_wf_family (α := α)
     (ι := CopyLoopState)
     (measure := fun state => right - state.k)
     (locals := fun state =>
@@ -1653,7 +1599,7 @@ theorem twp_mergeSortInnerLoop
   iintro ⟨Hruntime, Hsource, Htemporary, Hfinish⟩
   simp only [whileDo, List.cons_append, List.nil_append]
   iapply Wasm.SmallStep.twp_block (α := α)
-  iapply twp_loop_wf_family_from (α := α)
+  iapply twp_loop_wf_family (α := α)
     (ι := SortInnerState)
     (measure := fun state => count - state.pass * (2 * width))
     (locals := fun state =>
@@ -1877,7 +1823,7 @@ theorem twp_mergeSortOuterLoop
   iintro ⟨Hruntime, Hsource, Htemporary, Hfinish⟩
   simp only [whileDo, List.cons_append, List.nil_append]
   iapply Wasm.SmallStep.twp_block (α := α)
-  iapply twp_loop_wf_family_from (α := α)
+  iapply twp_loop_wf_family (α := α)
     (ι := SortOuterState)
     (measure := fun state => count - state.width)
     (locals := fun state =>

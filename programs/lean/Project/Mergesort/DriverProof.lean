@@ -1927,7 +1927,7 @@ theorem twp_func3_decode_tail_loop
     Finish)
   iintro ⟨Hsource, Hdestination, Hfinish⟩
   simp only [List.cons_append, List.nil_append]
-  iapply Project.Mergesort.SortProof.twp_loop_wf_family_from_terminal
+  iapply Wasm.SmallStep.twp_loop_wf_family
     (ι := Func3DecodeTailState)
     (measure := fun state => state.remaining)
     (locals := func3DecodeTailLocals source destination original.length bulk
@@ -2154,7 +2154,7 @@ theorem twp_func3_decode_bulk_loop
     Finish)
   iintro ⟨Hsource, Hdestination, Hfinish⟩
   simp only [List.cons_append, List.nil_append]
-  iapply Project.Mergesort.SortProof.twp_loop_wf_family_from_terminal
+  iapply Wasm.SmallStep.twp_loop_wf_family
     (ι := Func3DecodeBulkState)
     (measure := fun state => bulk - state.copied)
     (locals := func3DecodeBulkLocals source destination original.length bulk
@@ -3363,7 +3363,7 @@ theorem twp_func3_output_loop
       Finish)
   iintro ⟨Hruntime, Hframe, Hvalues, Hstreams, Hfinish⟩
   simp only [List.cons_append, List.nil_append]
-  iapply Project.Mergesort.SortProof.twp_loop_wf_family_from_terminal
+  iapply Wasm.SmallStep.twp_loop_wf_family
     (ι := Nat)
     (measure := fun emitted => sorted.length - emitted)
     (locals := func3OutputLocals valuesPtr sorted aux1 aux4 aux5 aux7 aux8
@@ -4573,7 +4573,7 @@ theorem twp_func3_read_loop
           [.loop 0 0 func3ReadLoopBody], arity, remainder,
           func3ReadInnerFrame :: func3ReadPhaseFrame afterLoop :: controls,
           calls⟩ : Expr Universal.State) @ s; E [{ Φ }] := by
-  iapply Project.Mergesort.SortProof.twp_loop_wf_family_from_terminal
+  iapply Wasm.SmallStep.twp_loop_wf_family
     (ι := Func3ReadLoopState)
     (measure := fun state => state.current.length + state.remaining.length)
     (locals := func3ReadLoopLocals aux2 aux4 aux5 aux7 aux8 aux9 aux10)
