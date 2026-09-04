@@ -568,8 +568,7 @@ theorem SortBuffers_copyFocus {host : Type} [WasmHeapGS host]
   ihave Hsource := HsourceClose $$ HsourceCell
   ihave Hscratch := HscratchClose $$ HscratchCell
   iframe Hsource Hscratch
-  ipureintro
-  simpa using hfacts
+  ipureexact (by simpa using hfacts)
 
 /-- Expose both complete byte ranges for the generated final
 `memory.copy(source, scratch, 4*n)`.  Returning the overwritten source bytes
@@ -1616,8 +1615,7 @@ theorem RetiredBytes_retire {host : Type} [WasmHeapGS host]
   isplitl_exact Hfragment
   · iexists bytes
     iframe Hbytes
-    ipureintro
-    simpa [retiredMeta] using hlen
+    ipureexact (by simpa [retiredMeta] using hlen)
 
 /-- The complete metadata-side allocation transition.  Physical fresh-byte
 ownership is deliberately supplied separately by `stateInterp_alloc_freshRange`. -/

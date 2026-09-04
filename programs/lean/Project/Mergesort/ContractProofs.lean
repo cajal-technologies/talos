@@ -69,8 +69,7 @@ theorem twp_const_alloc_freshRange_owned
       [Hbytes]
   · unfold Project.Mergesort.Representations.ByteSlice
     iframe Hbytes
-    ipureintro
-    simpa [bytes] using hnowrap
+    ipureexact (by simpa [bytes] using hnowrap)
   ihave Hnext := Hwp bytes
   ispecialize Hnext $$ %(by simp [bytes]) Hfrontier Hpages Hslice HP
   iapply fupd_mask_intro Std.LawfulSet.empty_subset

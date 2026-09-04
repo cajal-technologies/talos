@@ -1019,8 +1019,7 @@ theorem stateInterp_alloc_freshRange [WasmSmallStepGS hlc α]
     · isplitl [HfrontierAuth]
       · iexists base.toNat + size
         iframe HfrontierAuth
-        ipureintro
-        simpa [hbytesLength] using HbelowFinal
+        ipureexact (by simpa [hbytesLength] using HbelowFinal)
       · iexact HexceptionInterp
   ihave HstateAndBytes :
       stateInterp (GF := WasmHeapGF α)

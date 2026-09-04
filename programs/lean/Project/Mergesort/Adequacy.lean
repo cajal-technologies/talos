@@ -185,8 +185,7 @@ private theorem Streams_public [WasmSmallStepGS hlc Universal.State]
            oom := { raised := raised } } : Universal.State)⌝ $$
       [Hstate Hhost]
   · iapply_frame stateInterp_host_agree store 0 observations 0 using [Hstate Hhost]
-  ipureintro
-  rw [hhost]; exact ⟨rfl, rfl⟩
+  ipureexact (by rw [hhost]; exact ⟨rfl, rfl⟩)
 
 /-- Construct exactly the resources consumed by `Func3Spec` from adequacy's
 physical initial state.  The allocator metadata name and the Universal random

@@ -71,8 +71,7 @@ theorem mod3_gcd_zero_smallStep (a b : UInt64) (hz : a = 0 ∨ b = 0) :
     simp only [List.take_nil, List.nil_append]
     wasm_wp_pures [wp_localGet]
     wasm_wp_finish_value
-    ipureintro
-    simp
+    ipureexact (by simp)
   · have hb : b = 0 := hz.resolve_left ha
     subst b
     wasm_wp_pures [wp_localGet]
@@ -83,8 +82,7 @@ theorem mod3_gcd_zero_smallStep (a b : UInt64) (hz : a = 0 ∨ b = 0) :
     simp only [List.take_nil, List.drop_nil, List.nil_append]
     wasm_wp_pures [wp_localGet]
     wasm_wp_finish_value
-    ipureintro
-    simp
+    ipureexact (by simp)
 
 /-- Straight-line driver for the register-only `func0`: the atomic `wp`
 lemmas plus list/`Nat` reductions (no memory lemmas — this build never
@@ -219,12 +217,10 @@ theorem gcdLoopBody_smallStep_wp
         ((x - y) >>> (UInt64.ofNat (ctz64 64 (x - y)) % 64)) %y
       iapply_pure IH => exact hx'ne
       ipureexact hyne
-      ipureintro
-      simpa [x', oddPart_toNat] using hx'odd
+      ipureexact (by simpa [x', oddPart_toNat] using hx'odd)
       ipureexact hyodd
       ipureexact hx'y
-      ipureintro
-      simpa [x', oddPart_toNat] using hgcd'.trans hgcd
+      ipureexact (by simpa [x', oddPart_toNat] using hgcd'.trans hgcd)
       itrivial
   · wasm_wp_next wp_gtUI64 (result := 0) (by simp [hgt])
     wasm_wp_pures [wp_brIfZero wp_localGet wp_localGet wp_localGet wp_subI64 wp_localTee
@@ -255,11 +251,9 @@ theorem gcdLoopBody_smallStep_wp
       iapply_pure IH => exact hxne
       ipureexact hy'ne
       ipureexact hxodd
-      ipureintro
-      simpa [y', oddPart_toNat] using hy'odd
+      ipureexact (by simpa [y', oddPart_toNat] using hy'odd)
       ipureexact hxy'
-      ipureintro
-      simpa [y', oddPart_toNat] using hgcd'.trans hgcd
+      ipureexact (by simpa [y', oddPart_toNat] using hgcd'.trans hgcd)
       itrivial
 
 /-- The generated odd-part setup and equality fast path, followed by the
@@ -347,8 +341,7 @@ theorem mod3_gcd_smallStep (a b : UInt64) :
     simp only [List.take_nil, List.nil_append]
     wasm_wp_pures [wp_localGet]
     wasm_wp_finish_value
-    ipureintro
-    simp
+    ipureexact (by simp)
   · wasm_wp_next wp_eqzI64 (result := 0) (by rw [if_neg ha])
     wasm_wp_pures [wp_brIfZero wp_localGet]
     by_cases hb : b = 0
@@ -358,8 +351,7 @@ theorem mod3_gcd_smallStep (a b : UInt64) :
       simp only [List.take_nil, List.nil_append]
       wasm_wp_pures [wp_localGet]
       wasm_wp_finish_value
-      ipureintro
-      simp
+      ipureexact (by simp)
     · wasm_wp_next wp_eqzI64 (result := 0) (by rw [if_neg hb])
       wasm_wp_pures [wp_brIfZero wp_localGet wp_ctzI64 wp_localSet]
       simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,

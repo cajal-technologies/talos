@@ -147,8 +147,7 @@ theorem sharedMem_partiallyMeets (v : UInt8) :
         · ilater_exact Hpt'
         wasm_wp_next_bind wp_load8U v.toUInt32.toUInt8 rfl with HptLater2 => _Hpt_back
         wasm_wp_return_value
-        ipureintro
-        simp [List.take]
+        ipureexact (by simp [List.take])
 
 theorem sharedMem_terminates :
     TerminatesWith (sharedMemConfig 0) (fun _ _ => True) :=

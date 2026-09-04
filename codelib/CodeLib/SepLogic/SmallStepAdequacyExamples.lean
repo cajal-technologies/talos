@@ -2089,13 +2089,11 @@ theorem signedBranch_terminatesWith (a b : UInt32) :
     iapply twp_brIf (condition := 1) (by decide) rfl
     wasm_twp_pures [twp_const]
     wasm_twp_terminal_value twp_returnFromFunction
-    ipureintro
-    simp [h]
+    ipureexact (by simp [h])
   · iapply twp_geS (result := 0) (by simp [h])
     wasm_twp_pures [twp_brIfZero twp_const]
     wasm_twp_terminal_value twp_returnFromFunction
-    ipureintro
-    simp [h]
+    ipureexact (by simp [h])
 
 /-- Splat conversion for the fill-then-read example: after `memory.fill`
 writes `b` into four bytes at address 0, the byte range is the little-endian

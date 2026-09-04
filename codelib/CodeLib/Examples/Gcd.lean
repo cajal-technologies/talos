@@ -164,8 +164,7 @@ theorem twp_gcd
   intro currentA currentB temporary hzero Hgcd
   subst currentB
   wasm_twp_terminal_value twp_returnFromFunction
-  ipureintro
-  simp
+  ipureintro; simp
   have hcurrent :
       currentA.toNat = Nat.gcd a.toNat b.toNat := by
     simpa [Nat.gcd_zero_right] using Hgcd

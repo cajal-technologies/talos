@@ -427,8 +427,7 @@ theorem func0_smallStep (x : UInt32) :
       iintro ⟨_Htrue, Hglobal, Hword⟩
       wasm_wp_return_value
       iclear Hglobal Hword
-      ipureintro
-      simp [heq]
+      ipureexact (by simp [heq])
     iintro ⟨Hbytes, Hglobals⟩
     ihave Hword := func0Heap_pointsTo $$ Hbytes
     ihave Hglobal := func0Globals_pointsTo $$ Hglobals
