@@ -516,11 +516,8 @@ theorem mergePassInvariant_start
     (hwidth : 0 < width) (hperm : List.Perm original current)
     (hruns : SortedRuns current width) :
     MergePassInvariant original current width 0 := by
-  refine ⟨hwidth, hperm.length_eq.symm, hperm, ?_, ?_⟩
-  · intro block hblock
-    omega
-  · intro block _ hblock
-    exact hruns block hblock
+  exact ⟨hwidth, hperm.length_eq.symm, hperm, by omega, by
+    simpa [SortedRuns] using hruns⟩
 
 theorem sortedRuns_one (values : List UInt32) :
     SortedRuns values 1 := by
