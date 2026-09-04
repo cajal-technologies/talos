@@ -64,8 +64,7 @@ private theorem growSource_live_lookup
   ihave %hlookup : ⌜get? history.records oldId = some
       (liveMeta oldPtr
         { size := oldCapacity.toNat, alignment := 1 })⌝ $$ [Hauth Htoken]
-  · iapply AllocMetaAuth_token_agree
-    iframe Hauth Htoken
+  · iapply_frame AllocMetaAuth_token_agree using [Hauth Htoken]
   isplitl [Hcursor Hfrontier Hauth Hretired Hpages]
   · unfold BumpHeap
     iframe Hcursor Hfrontier Hauth Hretired

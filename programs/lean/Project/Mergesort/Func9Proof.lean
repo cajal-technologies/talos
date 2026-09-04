@@ -632,9 +632,8 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
       ihave HcursorRaw : pointsTo_u32 0 (1049492 : UInt32) storedCursor $$
           [Hcursor]
       · irw_exact [show (1049492 : UInt32) = allocatorCursor by decide] with Hcursor
-      iapply Hclaim
-      iframe Hruntime HcursorRaw Hfrontier Hauth Hretired Hmeasured Hstreams
-        Hnormal
+      iapply_frame Hclaim using [
+        Hruntime HcursorRaw Hfrontier Hauth Hretired Hmeasured Hstreams Hnormal]
     · iapply twp_leU (result := 0) (by rw [if_neg hfits])
       wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet twp_sub]
       let delta := allocatorRequiredPages finish - pages.toUInt32
@@ -750,8 +749,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
               ihave HcursorRaw : pointsTo_u32 0 (1049492 : UInt32)
                   storedCursor $$ [Hcursor]
               · irw_exact [show (1049492 : UInt32) = allocatorCursor by decide] with Hcursor
-              iapply Hclaim
-              iframe Hruntime HcursorRaw Hfrontier Hauth Hretired HnewPages
-                Hstreams Hnormal)
+              iapply_frame Hclaim using [
+                Hruntime HcursorRaw Hfrontier Hauth Hretired HnewPages Hstreams Hnormal])
           $$ HgrowFrame Hmodule Hmeasured
 end Project.Mergesort.Func9Proof

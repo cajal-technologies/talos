@@ -155,8 +155,7 @@ theorem twp_acceptanceCaller
     ihave %hhost :
         ⌜store.wasm.host = WrapperProof.afterOom acceptanceHost⌝ $$
         [Hstate Hhost]
-    · iapply stateInterp_host_agree store 0 observations 0
-      iframe Hstate Hhost
+    · iapply_frame stateInterp_host_agree store 0 observations 0 using [Hstate Hhost]
     ipureexact ⟨rfl, hhost⟩
   · dsimp only [acceptanceExpr]
     iapply twp_iff (selectedBody := [.const 7]) rfl
@@ -165,8 +164,7 @@ theorem twp_acceptanceCaller
     iapply Wasm.SmallStep.twp_outcome_done
     iintro %store %observations Hstate
     ihave %hhost : ⌜store.wasm.host = acceptanceHost⌝ $$ [Hstate Hhost]
-    · iapply stateInterp_host_agree store 0 observations 0
-      iframe Hstate Hhost
+    · iapply_frame stateInterp_host_agree store 0 observations 0 using [Hstate Hhost]
     ipureexact ⟨rfl, hhost⟩
 
 /-- The acceptance caller has one finite authoritative execution ending in the
@@ -185,8 +183,7 @@ theorem acceptance_total (flag : Bool) :
       acceptanceInstance, RuntimeEnv.currentModule_mk1,
       RuntimeEnv.currentHost_mk1]
     iintro ⟨_Hheap, _Hglobals, Hruntime, Henv, Hhost⟩
-    iapply twp_acceptanceCaller flag
-    iframe Hruntime Henv Hhost
+    iapply_frame twp_acceptanceCaller flag using [Hruntime Henv Hhost]
 
 theorem acceptance_returns :
     TerminatesWith (acceptanceConfig true)

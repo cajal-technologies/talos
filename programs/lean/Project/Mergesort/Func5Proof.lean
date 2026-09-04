@@ -463,8 +463,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
     simp only [func5Locals, func5OuterBody, func5InnerBody,
       func5ArithmeticPrefix, func5GrowthTail, func5CommitTail,
       allocatorCursor, heapBase, List.cons_append, List.nil_append] at Hfailure
-    iapply Hfailure
-    iframe Hruntime Hbump Hstreams Hcont
+    iapply_frame Hfailure using [Hruntime Hbump Hstreams Hcont]
   · have hfinishSigned : finishNat < 2147483648 := by omega
     have hfinishNonnegative : ¬ finish.toInt32 < (0 : UInt32).toInt32 := by
       simp only [UInt32.toInt32, LT.lt, Int32.lt, Int32.toBitVec]
@@ -597,8 +596,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
               func5ArithmeticPrefix, func5GrowthTail, func5CommitTail,
               allocatorCursor, heapBase, Nat.toUInt32, List.cons_append,
               List.nil_append] at Hfailure
-            iapply Hfailure
-            iframe Hruntime Hbump Hstreams Hoom)
+            iapply_frame Hfailure using [Hruntime Hbump Hstreams Hoom])
           (fun oldPages previousPages newPages hfacts hmeasured => by
             iintro HgrowFrame Hmodule HMeasured HnewPages
             icases HgrowFrame with
@@ -631,8 +629,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
                 func5ArithmeticPrefix, func5GrowthTail, func5CommitTail,
                 allocatorCursor, heapBase, Nat.toUInt32, List.cons_append,
                 List.nil_append] at Hfailure
-              iapply Hfailure
-              iframe Hruntime Hbump Hstreams Hoom
+              iapply_frame Hfailure using [Hruntime Hbump Hstreams Hoom]
             · iapply twp_ne (result := 1) (by simp [hsentinel])
               iapply twp_brIf (by decide) (by rfl)
               simp only [List.take_zero, List.nil_append]

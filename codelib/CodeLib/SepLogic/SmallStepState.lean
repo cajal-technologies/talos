@@ -626,8 +626,7 @@ theorem stateInterp_host_agree [WasmSmallStepGS hlc α]
     stateInterp (GF := WasmHeapGF α) store steps observations threads ∗
       hostStateOwn host ⊢ ⌜store.wasm.host = host⌝ := by
   iopen_state Hstate from ⟨Hstate, Hown⟩
-  iapply hostStateOwn_agree store.wasm.host host
-  iframe Hstate_auth Hown
+  iapply_frame hostStateOwn_agree store.wasm.host host using [Hstate_auth Hown]
 
 /-- Obtain a pure fact from an update while preserving the selected Iris
 resources in the surrounding proof context. -/
@@ -906,8 +905,7 @@ theorem insertFreshBytes_bigSep_pointsToBytes [WasmHeapGS α]
       ihave ⟨Hhead, Hprevious⟩ :=
         (BI.BigSepM.bigSepM_insert hlookup).mp $$ Hinsert
       isplitl [Hhead Hrest]
-      · iapply (pointsToBytes_cons 0 addr byte rest).mpr
-        iframe Hhead Hrest
+      · iapply_frame (pointsToBytes_cons 0 addr byte rest).mpr using [Hhead Hrest]
       · iexact Hprevious
 
 /-- The concrete current contents of a non-wrapping physical range, expressed

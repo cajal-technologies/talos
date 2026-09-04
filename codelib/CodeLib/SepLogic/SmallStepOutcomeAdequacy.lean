@@ -234,8 +234,7 @@ theorem wasm_smallStep_heap_globals_runtime_host_store_adequacy_outcome
       (heapBelow_uint32Size σ) hglobals hwf
   intro gs
   iintro ⟨Hheap, Hglobals, Hruntime, Henv, Hhost, _Hfrontier, _Hpages⟩
-  iapply hwp
-  iframe Hheap Hglobals Hruntime Henv Hhost
+  iapply_frame hwp using [Hheap Hglobals Hruntime Henv Hhost]
 
 /-- Outcome-valued total-WP initialization for the same complete physical
 footprint as

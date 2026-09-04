@@ -182,8 +182,7 @@ theorem import0_correct [WasmSmallStepGS hlc Universal.State] :
           List.reverse_nil, List.cons_append, List.nil_append] at hinvoke
         iintro ⟨⟨Hhost, ⟨Hbytes, _Hcont⟩⟩, Hstate⟩
         ihave %hhostEq : ⌜store.wasm.host = host⌝ $$ [Hstate Hhost]
-        · iapply stateInterp_host_agree store ns obs nt host
-          iframe Hstate Hhost
+        · iapply_frame stateInterp_host_agree store ns obs nt host using [Hstate Hhost]
         ihave %hmem :
             ⌜∀ i b, buffer[i]? = some b →
               store.wasm.mem.read8 (ptr + UInt32.ofNat i) = b ∧
@@ -212,8 +211,7 @@ theorem import0_correct [WasmSmallStepGS hlc Universal.State] :
           List.reverse_nil, List.cons_append, List.nil_append] at hinvoke
         iintro ⟨⟨Hhost, ⟨Hbytes, _Hcont⟩⟩, Hstate⟩
         ihave %hhostEq : ⌜store.wasm.host = host⌝ $$ [Hstate Hhost]
-        · iapply stateInterp_host_agree store ns obs nt host
-          iframe Hstate Hhost
+        · iapply_frame stateInterp_host_agree store ns obs nt host using [Hstate Hhost]
         ihave %hmem :
             ⌜∀ i b, buffer[i]? = some b →
               store.wasm.mem.read8 (ptr + UInt32.ofNat i) = b ∧

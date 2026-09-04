@@ -133,8 +133,7 @@ theorem writeTransfer
         { store with wasm := postWasm } ns obs nt := by
   iintro ⟨⟨Hhost, Hbytes⟩, Hstate⟩
   ihave %hhostEq : ⌜store.wasm.host = host⌝ $$ [Hstate Hhost]
-  · iapply stateInterp_host_agree store ns obs nt host
-    iframe Hstate Hhost
+  · iapply_frame stateInterp_host_agree store ns obs nt host using [Hstate Hhost]
   ihave %hfacts :
       ⌜∀ i b, bytes[i]? = some b →
         store.wasm.mem.read8 (pointer + UInt32.ofNat i) = b ∧
@@ -211,8 +210,7 @@ theorem readTransfer
   let incoming := host.stdio.input.take length.toNat
   iintro ⟨⟨Hhost, Hbuffer⟩, Hstate⟩
   ihave %hhostEq : ⌜store.wasm.host = host⌝ $$ [Hstate Hhost]
-  · iapply stateInterp_host_agree store ns obs nt host
-    iframe Hstate Hhost
+  · iapply_frame stateInterp_host_agree store ns obs nt host using [Hstate Hhost]
   ihave %hfacts :
       ⌜∀ i b, buffer[i]? = some b →
         store.wasm.mem.read8 (pointer + UInt32.ofNat i) = b ∧
@@ -313,8 +311,7 @@ theorem oomTransfer
         { store with wasm := postWasm } ns obs nt := by
   iintro ⟨Hhost, Hstate⟩
   ihave %hhostEq : ⌜store.wasm.host = host⌝ $$ [Hstate Hhost]
-  · iapply stateInterp_host_agree store ns obs nt host
-    iframe Hstate Hhost
+  · iapply_frame stateInterp_host_agree store ns obs nt host using [Hstate Hhost]
   have hconcrete := oomHost_invoke store.wasm
   rw [hconcrete] at hinvoke
   have hresult := HostResult.Trap.inj hinvoke

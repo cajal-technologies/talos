@@ -188,8 +188,7 @@ private theorem Streams_public [WasmSmallStepGS hlc Universal.State]
            random := random
            oom := { raised := raised } } : Universal.State)⌝ $$
       [Hstate Hhost]
-  · iapply stateInterp_host_agree store 0 observations 0
-    iframe Hstate Hhost
+  · iapply_frame stateInterp_host_agree store 0 observations 0 using [Hstate Hhost]
   ipureintro
   rw [hhost]; exact ⟨rfl, rfl⟩
 
@@ -362,8 +361,7 @@ theorem twp_entry_of_func3
     (remainder := []) (controls := []) (calls := [])
     (s := Stuckness.NotStuck) (E := ⊤) (Φ := irisEntryPost input)
   unfold CallContract at hcall
-  iapply hcall
-  iframe Hruntime Hsp Hstack Hbump Hstreams
+  iapply_frame hcall using [Hruntime Hsp Hstack Hbump Hstreams]
   isplitr_pureexact entryStackBytes_length
   isplitr
   · iintro _Hruntime Hsuccess

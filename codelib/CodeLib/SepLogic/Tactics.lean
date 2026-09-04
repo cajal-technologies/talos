@@ -72,6 +72,13 @@ macro "iapply_frame " rule:pmTerm : tactic =>
     (iapply $rule
      iframe))
 
+/-- Apply an Iris entailment and frame its next obligation explicitly. -/
+syntax "iapply_frame " pmTerm " using " "[" selPat* "]" : tactic
+
+macro_rules
+  | `(tactic| iapply_frame $rule:pmTerm using [$hypotheses:selPat*]) =>
+      `(tactic| (iapply $rule; iframe $hypotheses*))
+
 /-- Apply an Iris entailment, prove its first obligation, then frame the next. -/
 syntax "iapply_then_frame " pmTerm " =>" ppLine colGt tacticSeq : tactic
 
