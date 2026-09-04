@@ -40,13 +40,11 @@ theorem roundHeap_agrees :
   let resolve := storeResolve (checkRoundConfig 0).store
   have hresolve : resolve 0 = some mem := rfl
   unfold roundHeap
-  apply insert_physical_word32_sound _ resolve 0 mem 1048572 0
-    hresolve (by decide) (by decide) (by decide)
-  · apply insert_physical_word32_sound _ resolve 0 mem 1048556 0
-      hresolve (by decide) (by decide) (by decide)
-    · exact insert_physical_word32_sound _ resolve 0 mem 1048540 0
-        hresolve (by decide) (by decide) (by decide)
-        (heapAgreesWithMem_empty _) (by decide)
+  apply_insert_physical_word32_sound hresolve
+  · apply_insert_physical_word32_sound hresolve
+    · apply_insert_physical_word32_sound hresolve
+      · exact heapAgreesWithMem_empty _
+      · decide
     · decide
   · decide
 
@@ -56,13 +54,12 @@ theorem roundHeap_inBounds :
   let resolve := storeResolve (checkRoundConfig 0).store
   have hresolve : resolve 0 = some mem := rfl
   unfold roundHeap
-  apply insert_physical_word32_inBounds _ resolve 0 mem 1048572 0
-    hresolve (by decide) (by decide) (by decide)
-  · apply insert_physical_word32_inBounds _ resolve 0 mem 1048556 0
-      hresolve (by decide) (by decide) (by decide)
-    · exact insert_physical_word32_inBounds _ resolve 0 mem 1048540 0
-        hresolve (by decide) (by decide) (by decide)
-        (heapAddressesInBounds_empty _) (by decide) (by decide)
+  apply_insert_physical_word32_inBounds hresolve
+  · apply_insert_physical_word32_inBounds hresolve
+    · apply_insert_physical_word32_inBounds hresolve
+      · exact heapAddressesInBounds_empty _
+      · decide
+      · decide
     · decide
     · decide
   · decide

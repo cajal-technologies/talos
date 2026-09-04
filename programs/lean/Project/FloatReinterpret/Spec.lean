@@ -195,16 +195,18 @@ def func1Globals : WasmGlobalMap Value :=
 
 theorem func1Heap_agrees :
     heapAgreesWithMem func1Heap (storeResolve (func1Config 0).store) := by
-  unfold func1Heap; exact insert_physical_word32_sound ∅ (storeResolve (func1Config 0).store)
-    0 («module».initialStore : Store Unit).mem 1048572 0 rfl
-    (by decide) (by decide) (by decide) (heapAgreesWithMem_empty _) (by decide)
+  unfold func1Heap
+  apply_insert_physical_word32_sound rfl
+  · exact heapAgreesWithMem_empty _
+  · decide
 
 theorem func1Heap_inBounds :
     heapAddressesInBounds func1Heap (storeResolve (func1Config 0).store) := by
-  unfold func1Heap; exact insert_physical_word32_inBounds ∅ (storeResolve (func1Config 0).store)
-    0 («module».initialStore : Store Unit).mem 1048572 0 rfl
-    (by decide) (by decide) (by decide) (heapAddressesInBounds_empty _)
-    (by decide) (by decide)
+  unfold func1Heap
+  apply_insert_physical_word32_inBounds rfl
+  · exact heapAddressesInBounds_empty _
+  · decide
+  · decide
 
 theorem func1Globals_agree :
     globalHeapAgrees func1Globals (func1Config 0).store.wasm.globals :=
@@ -357,14 +359,14 @@ def func3Heap : WasmHeapMap (Option UInt8) :=
 theorem func3Heap_agrees :
     heapAgreesWithMem func3Heap (storeResolve (func3Config 0).store) := by
   unfold func3Heap func3Config Wasm.RustStd.U64.absDiffHeap
-  apply insert_physical_word64_sound ∅ _ 0 _ 1048568 0 rfl
+  apply_insert_physical_word64_sound rfl
   · exact heapAgreesWithMem_empty _
   · decide
 
 theorem func3Heap_inBounds :
     heapAddressesInBounds func3Heap (storeResolve (func3Config 0).store) := by
   unfold func3Heap func3Config Wasm.RustStd.U64.absDiffHeap
-  apply insert_physical_word64_inBounds ∅ _ 0 _ 1048568 0 rfl
+  apply_insert_physical_word64_inBounds rfl
   · exact heapAddressesInBounds_empty _
   · decide
 
@@ -623,19 +625,19 @@ def exportHeap : WasmHeapMap (Option UInt8) :=
 theorem exportHeap_agrees :
     heapAgreesWithMem exportHeap (storeResolve (func1Config 0).store) := by
   unfold exportHeap
-  apply insert_physical_word32_sound _ _ 0 _ 1048572 0
-    rfl (by decide) (by decide) (by decide)
-  · apply insert_physical_word64_sound ∅ _ 0 _ 1048552 0
-      rfl (heapAgreesWithMem_empty _) (by decide)
+  apply_insert_physical_word32_sound rfl
+  · apply_insert_physical_word64_sound rfl
+    · exact heapAgreesWithMem_empty _
+    · decide
   · decide
 
 theorem exportHeap_inBounds :
     heapAddressesInBounds exportHeap (storeResolve (func1Config 0).store) := by
   unfold exportHeap
-  apply insert_physical_word32_inBounds _ _ 0 _ 1048572 0
-    rfl (by decide) (by decide) (by decide)
-  · apply insert_physical_word64_inBounds ∅ _ 0 _ 1048552 0
-      rfl (heapAddressesInBounds_empty _) (by decide)
+  apply_insert_physical_word32_inBounds rfl
+  · apply_insert_physical_word64_inBounds rfl
+    · exact heapAddressesInBounds_empty _
+    · decide
   · decide
   · decide
 

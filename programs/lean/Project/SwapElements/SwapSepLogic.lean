@@ -2299,11 +2299,10 @@ theorem func3Heap_agrees (ptr len : UInt32) :
   let resolve := storeResolve (func3Config ptr len).store
   have hresolve : resolve 0 = some mem := rfl
   unfold func3Heap
-  apply insert_physical_word32_sound _ resolve 0 mem 1048572 0
-    hresolve (by decide) (by decide) (by decide)
-  · exact insert_physical_word32_sound _ resolve 0 mem 1048568 0
-      hresolve (by decide) (by decide) (by decide)
-      (heapAgreesWithMem_empty _) (by decide)
+  apply_insert_physical_word32_sound hresolve
+  · apply_insert_physical_word32_sound hresolve
+    · exact heapAgreesWithMem_empty _
+    · decide
   · decide
 
 theorem func3Heap_inBounds (ptr len : UInt32) :
@@ -2313,11 +2312,11 @@ theorem func3Heap_inBounds (ptr len : UInt32) :
   let resolve := storeResolve (func3Config ptr len).store
   have hresolve : resolve 0 = some mem := rfl
   unfold func3Heap
-  apply insert_physical_word32_inBounds _ resolve 0 mem 1048572 0
-    hresolve (by decide) (by decide) (by decide)
-  · exact insert_physical_word32_inBounds _ resolve 0 mem 1048568 0
-      hresolve (by decide) (by decide) (by decide)
-      (heapAddressesInBounds_empty _) (by decide) (by decide)
+  apply_insert_physical_word32_inBounds hresolve
+  · apply_insert_physical_word32_inBounds hresolve
+    · exact heapAddressesInBounds_empty _
+    · decide
+    · decide
   · decide
   · decide
 
@@ -2397,13 +2396,11 @@ theorem func4ExampleHeap_agrees :
     heapAgreesWithMem func4ExampleHeap
       (storeResolve func4ExampleConfig.store) := by
   unfold func4ExampleHeap
-  apply insert_physical_word64_sound _ _ 0 _ 8 22 rfl
-  · apply insert_physical_word64_sound _ _ 0 _ 0 11 rfl
-    · apply insert_physical_word32_sound _ _ 0 _ 1048572 0
-        rfl (by decide) (by decide) (by decide)
-      · apply insert_physical_word32_sound _ _ 0 _ 1048568 0
-          rfl (by decide) (by decide) (by decide)
-        · apply insert_physical_word64_sound ∅ _ 0 _ 1048552 0 rfl
+  apply_insert_physical_word64_sound rfl
+  · apply_insert_physical_word64_sound rfl
+    · apply_insert_physical_word32_sound rfl
+      · apply_insert_physical_word32_sound rfl
+        · apply_insert_physical_word64_sound rfl
           · exact heapAgreesWithMem_empty _
           · native_decide
         · native_decide
@@ -2415,13 +2412,11 @@ theorem func4ExampleHeap_inBounds :
     heapAddressesInBounds func4ExampleHeap
       (storeResolve func4ExampleConfig.store) := by
   unfold func4ExampleHeap
-  apply insert_physical_word64_inBounds _ _ 0 _ 8 22 rfl
-  · apply insert_physical_word64_inBounds _ _ 0 _ 0 11 rfl
-    · apply insert_physical_word32_inBounds _ _ 0 _ 1048572 0
-        rfl (by decide) (by decide) (by decide)
-      · apply insert_physical_word32_inBounds _ _ 0 _ 1048568 0
-          rfl (by decide) (by decide) (by decide)
-        · apply insert_physical_word64_inBounds ∅ _ 0 _ 1048552 0 rfl
+  apply_insert_physical_word64_inBounds rfl
+  · apply_insert_physical_word64_inBounds rfl
+    · apply_insert_physical_word32_inBounds rfl
+      · apply_insert_physical_word32_inBounds rfl
+        · apply_insert_physical_word64_inBounds rfl
           · exact heapAddressesInBounds_empty _
           · native_decide
         · native_decide
@@ -2595,12 +2590,10 @@ theorem func4AliasHeap_agrees :
     heapAgreesWithMem func4AliasHeap
       (storeResolve func4AliasConfig.store) := by
   unfold func4AliasHeap
-  apply insert_physical_word64_sound _ _ 0 _ 0 42 rfl
-  · apply insert_physical_word32_sound _ _ 0 _ 1048572 0
-      rfl (by decide) (by decide) (by decide)
-    · apply insert_physical_word32_sound _ _ 0 _ 1048568 0
-        rfl (by decide) (by decide) (by decide)
-      · apply insert_physical_word64_sound ∅ _ 0 _ 1048552 0 rfl
+  apply_insert_physical_word64_sound rfl
+  · apply_insert_physical_word32_sound rfl
+    · apply_insert_physical_word32_sound rfl
+      · apply_insert_physical_word64_sound rfl
         · exact heapAgreesWithMem_empty _
         · native_decide
       · native_decide
@@ -2611,12 +2604,10 @@ theorem func4AliasHeap_inBounds :
     heapAddressesInBounds func4AliasHeap
       (storeResolve func4AliasConfig.store) := by
   unfold func4AliasHeap
-  apply insert_physical_word64_inBounds _ _ 0 _ 0 42 rfl
-  · apply insert_physical_word32_inBounds _ _ 0 _ 1048572 0
-      rfl (by decide) (by decide) (by decide)
-    · apply insert_physical_word32_inBounds _ _ 0 _ 1048568 0
-        rfl (by decide) (by decide) (by decide)
-      · apply insert_physical_word64_inBounds ∅ _ 0 _ 1048552 0 rfl
+  apply_insert_physical_word64_inBounds rfl
+  · apply_insert_physical_word32_inBounds rfl
+    · apply_insert_physical_word32_inBounds rfl
+      · apply_insert_physical_word64_inBounds rfl
         · exact heapAddressesInBounds_empty _
         · native_decide
       · native_decide
@@ -2760,8 +2751,8 @@ theorem func0AliasHeap_agrees :
     heapAgreesWithMem func0AliasHeap
       (storeResolve func0AliasConfig.store) := by
   unfold func0AliasHeap
-  apply insert_physical_word64_sound _ _ 0 _ 0 42 rfl
-  · apply insert_physical_word64_sound ∅ _ 0 _ 1048552 0 rfl
+  apply_insert_physical_word64_sound rfl
+  · apply_insert_physical_word64_sound rfl
     · exact heapAgreesWithMem_empty _
     · native_decide
   · native_decide
@@ -2770,8 +2761,8 @@ theorem func0AliasHeap_inBounds :
     heapAddressesInBounds func0AliasHeap
       (storeResolve func0AliasConfig.store) := by
   unfold func0AliasHeap
-  apply insert_physical_word64_inBounds _ _ 0 _ 0 42 rfl
-  · apply insert_physical_word64_inBounds ∅ _ 0 _ 1048552 0 rfl
+  apply_insert_physical_word64_inBounds rfl
+  · apply_insert_physical_word64_inBounds rfl
     · exact heapAddressesInBounds_empty _
     · native_decide
   · native_decide

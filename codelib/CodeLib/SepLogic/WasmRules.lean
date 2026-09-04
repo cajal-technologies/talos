@@ -902,6 +902,33 @@ theorem insert_physical_word64_inBounds
     · exact hbound 6
   · exact hbound 7
 
+/-! Concrete-address applications retain the resolver witness while automating
+the routine 32-bit no-wrap equalities. -/
+
+syntax "apply_insert_physical_word32_sound " term : tactic
+macro_rules
+  | `(tactic| apply_insert_physical_word32_sound $hresolve) =>
+      `(tactic| apply insert_physical_word32_sound
+        (hresolve := $hresolve) (h1 := by decide)
+        (h2 := by decide) (h3 := by decide))
+
+syntax "apply_insert_physical_word32_inBounds " term : tactic
+macro_rules
+  | `(tactic| apply_insert_physical_word32_inBounds $hresolve) =>
+      `(tactic| apply insert_physical_word32_inBounds
+        (hresolve := $hresolve) (h1 := by decide)
+        (h2 := by decide) (h3 := by decide))
+
+syntax "apply_insert_physical_word64_sound " term : tactic
+macro_rules
+  | `(tactic| apply_insert_physical_word64_sound $hresolve) =>
+      `(tactic| apply insert_physical_word64_sound (hresolve := $hresolve))
+
+syntax "apply_insert_physical_word64_inBounds " term : tactic
+macro_rules
+  | `(tactic| apply_insert_physical_word64_inBounds $hresolve) =>
+      `(tactic| apply insert_physical_word64_inBounds (hresolve := $hresolve))
+
 theorem store64Heap_pointsTo {α : Type} [WasmHeapGS α]
     (σ : WasmHeapMap (Option UInt8)) (memId : Nat) (addr : UInt32) (value : UInt64)
     (h0 : get? σ ⟨memId, addr⟩ = none)
