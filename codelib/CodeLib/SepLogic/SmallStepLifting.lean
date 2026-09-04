@@ -607,8 +607,7 @@ theorem wp_loop_löb_family
   clear hbelow
   simp only [loopBodyExpr] at body_closes
   iloeb as IH generalizing %initial HI
-  iapply body_closes initial
-  · iexact IH
+  iapply_exact body_closes initial with IH
   · iexact HI
 
 theorem wp_iff
