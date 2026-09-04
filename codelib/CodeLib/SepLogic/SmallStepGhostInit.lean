@@ -391,6 +391,14 @@ macro "wasm_alloc_tag_table " config:term : tactic =>
          tagTableName }))
 
 set_option hygiene false in
+/-- Allocate the fixed runtime-instance, exception, and tag resources. -/
+macro "wasm_alloc_fixed_runtime_resources " config:term : tactic =>
+  `(tactic|
+    (wasm_alloc_runtime_instances $config
+     wasm_alloc_exception_map
+     wasm_alloc_tag_table $config))
+
+set_option hygiene false in
 /-- Build the auxiliary machine interpretation from freshly allocated state. -/
 macro "wasm_build_machine_aux " config:term : tactic =>
   `(tactic|

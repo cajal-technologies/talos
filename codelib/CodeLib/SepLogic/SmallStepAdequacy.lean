@@ -201,9 +201,7 @@ theorem wasm_smallStep_adequacy
   iclear HhostStateFrag
   wasm_alloc_current_instance config
   iclear HinstanceFrag
-  wasm_alloc_runtime_instances config
-  wasm_alloc_exception_map
-  wasm_alloc_tag_table config
+  wasm_alloc_fixed_runtime_resources config
   letI gs : WasmSmallStepGS .hasLC α := smallStepGS .hasLC inv
   iclear Hpoints Hmeta
   imodintro
@@ -286,9 +284,7 @@ theorem wasm_smallStep_stronglyNormalizing
   iclear HhostStateFrag
   wasm_alloc_current_instance config
   iclear HinstanceFrag
-  wasm_alloc_runtime_instances config
-  wasm_alloc_exception_map
-  wasm_alloc_tag_table config
+  wasm_alloc_fixed_runtime_resources config
   letI gs : WasmSmallStepGS .hasNoLC α := smallStepGS .hasNoLC inv
   iclear Hpoints Hmeta
   imodintro
@@ -366,9 +362,7 @@ theorem wasm_smallStep_heap_globals_runtime_tags_stronglyNormalizing
   wasm_alloc_host_state config
   iclear HhostStateFrag
   wasm_alloc_current_instance config
-  wasm_alloc_runtime_instances config
-  wasm_alloc_exception_map
-  wasm_alloc_tag_table config
+  wasm_alloc_fixed_runtime_resources config
   ihave HtagTableOwn : tagTableOwn config.store.wasm.tagIds $$ [HtagTable]
   · unfold tagTableOwn
     iexact HtagTable
@@ -595,9 +589,7 @@ theorem wasm_smallStep_runtime_tags_adequacy
   wasm_alloc_host_state config
   iclear HhostStateFrag
   wasm_alloc_current_instance config
-  wasm_alloc_runtime_instances config
-  wasm_alloc_exception_map
-  wasm_alloc_tag_table config
+  wasm_alloc_fixed_runtime_resources config
   ihave HtagTableOwn : tagTableOwn config.store.wasm.tagIds $$ [HtagTable]
   · unfold tagTableOwn
     iexact HtagTable
@@ -915,9 +907,7 @@ theorem wasm_smallStep_heap_adequacy
   iclear HhostStateFrag
   wasm_alloc_current_instance config
   iclear HinstanceFrag
-  wasm_alloc_runtime_instances config
-  wasm_alloc_exception_map
-  wasm_alloc_tag_table config
+  wasm_alloc_fixed_runtime_resources config
   letI gs : WasmSmallStepGS .hasLC α := smallStepGS .hasLC inv
   iclear Hmeta
   imodintro
@@ -985,9 +975,7 @@ theorem wasm_smallStep_heap_globals_runtime_adequacy
   wasm_alloc_host_state config
   iclear HhostStateFrag
   wasm_alloc_current_instance config
-  wasm_alloc_runtime_instances config
-  wasm_alloc_exception_map
-  wasm_alloc_tag_table config
+  wasm_alloc_fixed_runtime_resources config
   letI gs : WasmSmallStepGS .hasLC α := smallStepGS .hasLC inv
   iclear Hmeta
   imodintro
@@ -1066,9 +1054,7 @@ theorem wasm_smallStep_heap_globals_runtime_store_adequacy
   wasm_alloc_host_state config
   iclear HhostStateFrag
   wasm_alloc_current_instance config
-  wasm_alloc_runtime_instances config
-  wasm_alloc_exception_map
-  wasm_alloc_tag_table config
+  wasm_alloc_fixed_runtime_resources config
   letI gs : WasmSmallStepGS .hasLC α := smallStepGS .hasLC inv
   iclear Hmeta
   imodintro
@@ -1677,9 +1663,7 @@ theorem wasm_smallStep_heap_globals_segments_runtime_store_adequacy
   wasm_alloc_host_state config
   iclear HhostStateFrag
   wasm_alloc_current_instance config
-  wasm_alloc_runtime_instances config
-  wasm_alloc_exception_map
-  wasm_alloc_tag_table config
+  wasm_alloc_fixed_runtime_resources config
   letI gs : WasmSmallStepGS .hasLC α := smallStepGS .hasLC inv
   iclear Hmeta
   imodintro
@@ -1835,9 +1819,7 @@ theorem wasm_smallStep_heap_globals_segments_tables_runtime_store_adequacy
   wasm_alloc_host_state config
   iclear HhostStateFrag
   wasm_alloc_current_instance config
-  wasm_alloc_runtime_instances config
-  wasm_alloc_exception_map
-  wasm_alloc_tag_table config
+  wasm_alloc_fixed_runtime_resources config
   letI gs : WasmSmallStepGS .hasLC α := smallStepGS .hasLC inv
   iclear Hmeta
   imodintro
@@ -2042,9 +2024,7 @@ theorem wasm_smallStep_heap_runtime_instance_adequacy
   wasm_alloc_host_state config
   iclear HhostStateFrag
   wasm_alloc_current_instance config
-  wasm_alloc_runtime_instances config
-  wasm_alloc_exception_map
-  wasm_alloc_tag_table config
+  wasm_alloc_fixed_runtime_resources config
   letI gs : WasmSmallStepGS .hasLC α := smallStepGS .hasLC inv
   iclear Hmeta
   imodintro

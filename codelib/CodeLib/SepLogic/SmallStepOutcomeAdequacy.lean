@@ -151,9 +151,7 @@ theorem wasm_smallStep_heap_globals_runtime_host_store_adequacy_outcome_at
   wasm_alloc_current_host_env config
   wasm_alloc_host_state config
   wasm_alloc_current_instance config
-  wasm_alloc_runtime_instances config
-  wasm_alloc_exception_map
-  wasm_alloc_tag_table config
+  wasm_alloc_fixed_runtime_resources config
   letI gs : WasmSmallStepGS .hasLC α := smallStepGS .hasLC inv
   iclear Hmeta
   imodintro
@@ -280,9 +278,7 @@ theorem wasm_smallStep_heap_globals_runtime_host_stronglyNormalizing_outcome
   wasm_alloc_current_host_env config
   wasm_alloc_host_state config
   wasm_alloc_current_instance config
-  wasm_alloc_runtime_instances config
-  wasm_alloc_exception_map
-  wasm_alloc_tag_table config
+  wasm_alloc_fixed_runtime_resources config
   letI gs : WasmSmallStepGS .hasNoLC α := smallStepGS .hasNoLC inv
   iclear Hmeta
   imodintro
