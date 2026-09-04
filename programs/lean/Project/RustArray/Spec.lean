@@ -100,8 +100,7 @@ theorem len_export_correct : LenExportSpec := by
   · intro gs
     simp only [exportConfig, SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, Hruntime⟩
-    ihave Hfat := fatPtrHeap_pointsTo p dataPtr len hfat.noWrap $$ Hbytes
-    icases Hfat with ⟨Hdata, Hlen⟩
+    ihave ⟨Hdata, Hlen⟩ := fatPtrHeap_pointsTo p dataPtr len hfat.noWrap $$ Hbytes
     obtain ⟨hp1, hp2, hp3, hp4, hp5, hp6, hp7⟩ :=
       fatPtrArithmetic_of hfat
     simp only [func4]
@@ -147,8 +146,7 @@ theorem is_empty_export_correct : IsEmptyExportSpec := by
   · intro gs
     simp only [exportConfig, SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, Hruntime⟩
-    ihave Hfat := fatPtrHeap_pointsTo p dataPtr len hfat.noWrap $$ Hbytes
-    icases Hfat with ⟨Hdata, Hlen⟩
+    ihave ⟨Hdata, Hlen⟩ := fatPtrHeap_pointsTo p dataPtr len hfat.noWrap $$ Hbytes
     obtain ⟨hp1, hp2, hp3, hp4, hp5, hp6, hp7⟩ :=
       fatPtrArithmetic_of hfat
     simp only [func5]

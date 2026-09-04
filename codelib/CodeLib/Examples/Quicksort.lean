@@ -568,11 +568,9 @@ theorem quicksortHeapAux_pointsTo [WasmHeapGS α]
             get?_insert_ne (Ne.symm h1), get?_insert_ne (Ne.symm h0)] at hget
         have hlt := hdisjoint a b hget; omega
     iintro Hheap
-    ihave Hsplit := ih (store32Heap σ 0 base x) (base + 4) hdisjoint' hfit' $$ Hheap
-    icases Hsplit with ⟨Hxs, Hstore32⟩
-    ihave Hdecomp :=
+    ihave ⟨Hxs, Hstore32⟩ := ih (store32Heap σ 0 base x) (base + 4) hdisjoint' hfit' $$ Hheap
+    ihave ⟨Hword, Hσ⟩ :=
       store32Heap_pointsTo σ 0 base x hget0 hget1 hget2 hget3 hn1 hn2 hn3 $$ Hstore32
-    icases Hdecomp with ⟨Hword, Hσ⟩
     simp only [arrayAt]
     isplitl [Hword Hxs]
     · isplitl [Hword]; iexact Hword; iexact Hxs
@@ -586,9 +584,8 @@ theorem quicksortHeap_pointsTo [WasmHeapGS α]
       arrayAt 0 arr input := by
   unfold quicksortHeap
   iintro Hheap
-  ihave Hsplit := quicksortHeapAux_pointsTo ∅ arr input
+  ihave ⟨Harray, _Hemp⟩ := quicksortHeapAux_pointsTo ∅ arr input
     (fun a b hget => by simp [get?_empty] at hget) hfit $$ Hheap
-  icases Hsplit with ⟨Harray, _Hemp⟩
   iexact Harray
 
 theorem arrayAt_readWordArray [WasmSmallStepGS hlc α]

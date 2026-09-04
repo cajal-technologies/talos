@@ -486,10 +486,9 @@ theorem heap64Aux_pointsTo [WasmHeapGS Unit]
         simp only [UInt32.size]
         omega
       iintro Hheap
-      ihave Hsplit := ih (store64Heap heap 0 base value) (base + 8)
+      ihave ⟨Hvalues, Hstored⟩ := ih (store64Heap heap 0 base value) (base + 8)
         hdisjoint' hfit' $$ Hheap
-      icases Hsplit with ⟨Hvalues, Hstored⟩
-      ihave Hword := store64Heap_pointsTo heap 0 base value
+      ihave ⟨Hword, Hheap⟩ := store64Heap_pointsTo heap 0 base value
         hget0
         (by simpa only [get?_insert_ne (hbaseNe 1 (by decide) (by decide))]
           using hgetL1)
@@ -532,7 +531,6 @@ theorem heap64Aux_pointsTo [WasmHeapGS Unit]
             get?_insert_ne (hneU 1 7 (by decide) (by decide) (by decide)),
             get?_insert_ne (hbaseNe 7 (by decide) (by decide))]
           exact hgetL7) $$ Hstored
-      icases Hword with ⟨Hword, Hheap⟩
       simp only [array64At]
       isplitl [Hword Hvalues]
       · isplitl_exact Hword
@@ -546,13 +544,12 @@ theorem inputHeap_pointsTo [WasmHeapGS Unit] (input : List UInt64)
         address (DFrac.own 1) value) ⊢ array64At 0 array input := by
   unfold inputHeap
   iintro Hheap
-  ihave Hsplit := heap64Aux_pointsTo ∅ array input
+  ihave ⟨Harray, _Hempty⟩ := heap64Aux_pointsTo ∅ array input
     (fun address byte hget => by simp [get?_empty] at hget)
     (by
       simp only [array, UInt32.reduceToNat, Nat.zero_add, UInt32.size,
         Fits, serialize_length, bufferBytes] at hfit ⊢
       omega) $$ Hheap
-  icases Hsplit with ⟨Harray, _Hempty⟩
   iexact Harray
 
 def readWordArray64 (mem : Mem) (base : UInt32) : Nat → List UInt64
@@ -640,8 +637,7 @@ theorem array64At_capacity [WasmSmallStepGS hlc α]
       rw [haddress]
       omega)
     iintro ⟨Hstate, Harray⟩
-    ihave Hfocus := array64At_get 0 base values k hk $$ Harray
-    icases Hfocus with ⟨Hword, Hrestore⟩
+    ihave ⟨Hword, Hrestore⟩ := array64At_get 0 base values k hk $$ Harray
     imod stateInterp_pointsTo_u64_facts_frame
       store steps observations threads address values[k]
       h1 h2 h3 h4 h5 h6 h7 $$ [$Hstate $Hword] with

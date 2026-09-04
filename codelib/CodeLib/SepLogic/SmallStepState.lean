@@ -666,8 +666,7 @@ theorem stateInterp_pointsToBytes_agree [WasmSmallStepGS hlc α]
       simp at h
   | cons b rest ih =>
       iintro ⟨Hstate, Hbytes⟩
-      ihave Hbytes := (pointsToBytes_cons 0 addr b rest).mp $$ Hbytes
-      icases Hbytes with ⟨Hhead, Hrest⟩
+      ihave ⟨Hhead, Hrest⟩ := (pointsToBytes_cons 0 addr b rest).mp $$ Hbytes
       ihave_pure hhead :
           ⌜store.wasm.mem.read8 addr = b ∧
             addr.toNat < store.wasm.mem.pages * 65536⌝ using
@@ -908,12 +907,10 @@ theorem insertFreshBytes_bigSep_pointsToBytes [WasmHeapGS α]
         omega
       simp only [insertFreshBytes]
       iintro Hheap
-      ihave Hsplit := ih (insert σ ⟨0, addr⟩ (some byte)) (addr + 1)
+      ihave ⟨Hrest, Hinsert⟩ := ih (insert σ ⟨0, addr⟩ (some byte)) (addr + 1)
           hbelow' hnowrap' $$ Hheap
-      icases Hsplit with ⟨Hrest, Hinsert⟩
-      ihave Hinsert' :=
+      ihave ⟨Hhead, Hprevious⟩ :=
         (BI.BigSepM.bigSepM_insert hlookup).mp $$ Hinsert
-      icases Hinsert' with ⟨Hhead, Hprevious⟩
       isplitl [Hhead Hrest]
       · iapply (pointsToBytes_cons 0 addr byte rest).mpr
         iframe Hhead Hrest
@@ -1133,8 +1130,7 @@ private theorem fillSigma_ghost [WasmSmallStepGS hlc α]
                (fillSigma (insert σ ⟨0, addr⟩ (some val))
                  (addr + 1) rest val) frontier⌝
       iintro ⟨Hheap, Hbytes⟩
-      ihave Hbytes := (pointsToBytes_cons 0 addr b rest).mp $$ Hbytes
-      icases Hbytes with ⟨Hhead, Hrest⟩
+      ihave ⟨Hhead, Hrest⟩ := (pointsToBytes_cons 0 addr b rest).mp $$ Hbytes
       ihave_heap_valid hlookup :
           ⌜get? σ ⟨0, addr⟩ = some (some b)⌝ $$ [Hheap Hhead]
       imod genHeap_update (v₂ := some val) $$ [$Hheap $Hhead] with ⟨Hheap, Hhead⟩
@@ -1399,8 +1395,7 @@ private theorem copySigma_ghost [WasmSmallStepGS hlc α]
                    (copySigma (insert σ ⟨0, dst⟩ (some s))
                      (dst + 1) bRest sRest) frontier⌝
           iintro ⟨Hheap, Hbytes⟩
-          ihave Hbytes := (pointsToBytes_cons 0 dst b bRest).mp $$ Hbytes
-          icases Hbytes with ⟨Hhead, Hrest⟩
+          ihave ⟨Hhead, Hrest⟩ := (pointsToBytes_cons 0 dst b bRest).mp $$ Hbytes
           ihave_heap_valid hlookup :
               ⌜get? σ ⟨0, dst⟩ = some (some b)⌝ $$ [Hheap Hhead]
           imod genHeap_update (v₂ := some s) $$ [$Hheap $Hhead] with ⟨Hheap, Hhead⟩
@@ -2213,8 +2208,7 @@ theorem stateInterp_pointsTo_u32_facts [WasmSmallStepGS hlc α]
       ⌜store.wasm.mem.read32 address = value ∧
         address.toNat + 4 ≤ store.wasm.mem.pages * 65536⌝ := by
   iintro ⟨Hstate, Hword⟩
-  ihave Hword := (pointsTo_u32_eq 0 address value).mp $$ Hword
-  icases Hword with ⟨H0, H1, H2, H3⟩
+  ihave ⟨H0, H1, H2, H3⟩ := (pointsTo_u32_eq 0 address value).mp $$ Hword
   iopen_state Hstate
   ihave_heap_valid hg0 :
       ⌜get? σ ⟨0, address⟩ = some (some (u32Byte value 0))⌝ $$ [Hheap H0]
@@ -2283,8 +2277,7 @@ theorem stateInterp_pointsTo_u64_facts [WasmSmallStepGS hlc α]
       ⌜store.wasm.mem.read64 address = value ∧
         address.toNat + 8 ≤ store.wasm.mem.pages * 65536⌝ := by
   iintro ⟨Hstate, Hword⟩
-  ihave Hword := (pointsTo_u64_eq 0 address value).mp $$ Hword
-  icases Hword with ⟨H0, H1, H2, H3, H4, H5, H6, H7⟩
+  ihave ⟨H0, H1, H2, H3, H4, H5, H6, H7⟩ := (pointsTo_u64_eq 0 address value).mp $$ Hword
   iopen_state Hstate
   ihave_heap_valid hg0 :
       ⌜get? σ ⟨0, address⟩ = some (some (u64Byte value 0))⌝ $$ [Hheap H0]
@@ -2468,8 +2461,7 @@ theorem stateInterp_write_bytes [WasmSmallStepGS hlc α]
                 omega)]
             rw [haddr, h1]
           iintro ⟨Hstate, Hbytes⟩
-          ihave Hbytes := (pointsToBytes_cons 0 addr old oldRest).mp $$ Hbytes
-          icases Hbytes with ⟨Hhead, Hrest⟩
+          ihave ⟨Hhead, Hrest⟩ := (pointsToBytes_cons 0 addr old oldRest).mp $$ Hbytes
           imod stateInterp_store8 store steps observations threads addr old new
               hheadBound $$ [$Hstate $Hhead] with ⟨Hstate, Hhead⟩
           imod ih
@@ -2494,8 +2486,7 @@ theorem stateInterp_pointsTo_u16_facts [WasmSmallStepGS hlc α]
       ⌜store.wasm.mem.read16 address = value &&& 0xFFFF ∧
         address.toNat + 2 ≤ store.wasm.mem.pages * 65536⌝ := by
   iintro ⟨Hstate, Hword⟩
-  ihave Hword := (pointsTo_u16_eq 0 address value).mp $$ Hword
-  icases Hword with ⟨H0, H1⟩
+  ihave ⟨H0, H1⟩ := (pointsTo_u16_eq 0 address value).mp $$ Hword
   iopen_state Hstate
   ihave_heap_valid hg0 :
       ⌜get? σ ⟨0, address⟩ = some (some (u32Byte value 0))⌝ $$ [Hheap H0]
@@ -2613,8 +2604,7 @@ theorem stateInterp_store16 [WasmSmallStepGS hlc α]
         steps observations threads ∗
       pointsTo_u16 0 address newValue := by
   iintro ⟨Hstate, Hword⟩
-  ihave Hword := (pointsTo_u16_eq 0 address oldValue).mp $$ Hword
-  icases Hword with ⟨H0, H1⟩
+  ihave ⟨H0, H1⟩ := (pointsTo_u16_eq 0 address oldValue).mp $$ Hword
   iopen_state Hstate
   ihave_heap_valid hg0 :
       ⌜get? σ ⟨0, address⟩ = some (some (u32Byte oldValue 0))⌝ $$ [Hheap H0]
@@ -2671,8 +2661,7 @@ theorem stateInterp_store32 [WasmSmallStepGS hlc α]
         steps observations threads ∗
       pointsTo_u32 0 address newValue := by
   iintro ⟨Hstate, Hword⟩
-  ihave Hword := (pointsTo_u32_eq 0 address oldValue).mp $$ Hword
-  icases Hword with ⟨H0, H1, H2, H3⟩
+  ihave ⟨H0, H1, H2, H3⟩ := (pointsTo_u32_eq 0 address oldValue).mp $$ Hword
   iopen_state Hstate
   ihave_heap_valid hg0 :
       ⌜get? σ ⟨0, address⟩ = some (some (u32Byte oldValue 0))⌝ $$ [Hheap H0]
@@ -2743,8 +2732,7 @@ theorem stateInterp_store64 [WasmSmallStepGS hlc α]
         steps observations threads ∗
       pointsTo_u64 0 address newValue := by
   iintro ⟨Hstate, Hword⟩
-  ihave Hword := (pointsTo_u64_eq 0 address oldValue).mp $$ Hword
-  icases Hword with ⟨H0, H1, H2, H3, H4, H5, H6, H7⟩
+  ihave ⟨H0, H1, H2, H3, H4, H5, H6, H7⟩ := (pointsTo_u64_eq 0 address oldValue).mp $$ Hword
   iopen_state Hstate
   ihave_heap_valid hg0 :
       ⌜get? σ ⟨0, address⟩ = some (some (u64Byte oldValue 0))⌝ $$ [Hheap H0]
@@ -3139,9 +3127,8 @@ theorem stateInterp_copy2_zero_four [WasmSmallStepGS hlc α]
       store steps observations threads
       0 0x8877665544332211 rfl rfl rfl rfl rfl rfl rfl $$
       [$Hstate $Hword] with ⟨Hstate, Hword, %Hfacts⟩
-  ihave Hword :=
+  ihave ⟨H0, H1, H2, H3, H4, H5, H6, H7⟩ :=
     (pointsTo_u64_eq 0 0 0x8877665544332211).mp $$ Hword
-  icases Hword with ⟨H0, H1, H2, H3, H4, H5, H6, H7⟩
   ihave H2At :
       pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
         ⟨0, 2⟩ (DFrac.own 1) (some (u64Byte 0x8877665544332211 2)) $$ [H2]

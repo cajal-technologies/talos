@@ -493,8 +493,7 @@ theorem WordSlice_get {host : Type} [WasmHeapGS host]
   ihave Harray : arrayAt 0 ptr values $$ [Hbytes]
   · iapply (arrayAt_eq_wordCells ptr values).mpr
     iexact Hbytes
-  ihave Hfocus := arrayAt_get 0 ptr values k hk $$ Harray
-  icases Hfocus with ⟨Hcell, Hclose⟩
+  ihave ⟨Hcell, Hclose⟩ := arrayAt_get 0 ptr values k hk $$ Harray
   isplitl_exact Hcell
   · iintro Hcell
     ihave Harray := Hclose $$ Hcell
@@ -518,8 +517,7 @@ theorem WordSlice_set {host : Type} [WasmHeapGS host]
   ihave Harray : arrayAt 0 ptr values $$ [Hbytes]
   · iapply (arrayAt_eq_wordCells ptr values).mpr
     iexact Hbytes
-  ihave Hfocus := arrayAt_set 0 ptr values k newValue hk $$ Harray
-  icases Hfocus with ⟨Hcell, Hclose⟩
+  ihave ⟨Hcell, Hclose⟩ := arrayAt_set 0 ptr values k newValue hk $$ Harray
   isplitl_exact Hcell
   · iintro Hcell
     ihave Harray := Hclose $$ Hcell
@@ -590,11 +588,9 @@ theorem SortBuffers_copyFocus {host : Type} [WasmHeapGS host]
             (scratchValues.set k newValue))) := by
   unfold SortBuffers
   iintro ⟨Hsource, Hscratch, %hfacts⟩
-  ihave HsourceFocus := WordSlice_get source input i hi $$ Hsource
-  icases HsourceFocus with ⟨HsourceCell, HsourceClose⟩
-  ihave HscratchFocus :=
+  ihave ⟨HsourceCell, HsourceClose⟩ := WordSlice_get source input i hi $$ Hsource
+  ihave ⟨HscratchCell, HscratchClose⟩ :=
     WordSlice_set scratch scratchValues k newValue hk $$ Hscratch
-  icases HscratchFocus with ⟨HscratchCell, HscratchClose⟩
   isplitl_exacts [HsourceCell HscratchCell]
   iintro HsourceCell
   iintro HscratchCell
@@ -2352,9 +2348,8 @@ theorem VecU8_initializedFocus {host : Type} [WasmHeapGS host]
           VecU8 heapId header capacity ptr initialized)) := by
   unfold VecU8
   iintro ⟨Hheader, Hlength, Hstorage⟩
-  ihave Hfocus := VecStorage_initializedFocus heapId capacity ptr initialized
+  ihave ⟨Hinitialized, Hclose⟩ := VecStorage_initializedFocus heapId capacity ptr initialized
     hinitialized $$ Hstorage
-  icases Hfocus with ⟨Hinitialized, Hclose⟩
   isplitl_exact Hinitialized
   · iintro Hinitialized
     ihave Hstorage := Hclose $$ Hinitialized
@@ -2378,9 +2373,8 @@ theorem VecU8_appendFocus {host : Type} [WasmHeapGS host]
           VecU8 heapId header capacity ptr (initialized ++ current))) := by
   unfold VecU8
   iintro ⟨Hheader, Hlength, Hstorage⟩
-  ihave Hfocus := VecStorage_appendFocus heapId capacity ptr
+  ihave ⟨%oldChunk, %hchunkLength, Hchunk, Hclose⟩ := VecStorage_appendFocus heapId capacity ptr
     initialized current hcurrent hfits $$ Hstorage
-  icases Hfocus with ⟨%oldChunk, %hchunkLength, Hchunk, Hclose⟩
   iexists oldChunk
   isplitr_pureexact hchunkLength
   isplitl_exacts [Hchunk Hlength]
@@ -2448,9 +2442,8 @@ theorem ExportFrame_completedWordsFocus
     omega
   unfold ExportFrame
   iintro ⟨Hvec, Hchunk, Houtput, %hframeLengths⟩
-  ihave Hfocus := VecU8_initializedFocus heapId driverBase capacity ptr
+  ihave ⟨Hbytes, Hclose⟩ := VecU8_initializedFocus heapId driverBase capacity ptr
     (serialize original) hpositive $$ Hvec
-  icases Hfocus with ⟨Hbytes, Hclose⟩
   ihave Hwords := (ByteSlice_serialize_as_WordSlice ptr original halign).mp $$
     Hbytes
   isplitl_exact Hwords
@@ -2859,9 +2852,8 @@ theorem DriverDecodeBuffers_open
   have hsourceAlign := GeometricVecFacts.completed_ptr_align4
     (serialize original).length (serialize original).length 0 capacity source
     frontier history hgeo rfl hpositive
-  ihave HsourceFocus := ExportFrame_completedWordsFocus heapId capacity source
+  ihave ⟨Hsource, HcloseSource⟩ := ExportFrame_completedWordsFocus heapId capacity source
     original chunkBytes outputBytes horiginal hsourceAlign $$ Hframe
-  icases HsourceFocus with ⟨Hsource, HcloseSource⟩
   isimp only [LiveBlock] at Hblock
   icases Hblock with ⟨Htoken, Hbytes, %hblockFacts⟩
   ihave Hblock : LiveBlock heapId valuesId valuesPtr

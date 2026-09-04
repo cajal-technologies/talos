@@ -121,22 +121,20 @@ theorem fatPtrHeap_pointsTo
       get?_insert_ne (Ne.symm hne1), get?_insert_ne (Ne.symm hne0), get?_empty]
   simp only [fatPtrHeap]
   iintro Hbytes
-  ihave Hsplit := store32Heap_pointsTo (store32Heap ∅ 0 p dataPtr)
+  ihave ⟨Hlen, Hfirst⟩ := store32Heap_pointsTo (store32Heap ∅ 0 p dataPtr)
     0 (p + 4) len
     (fresh ⟨0, p + 4⟩ (by simp only [hp4]; omega))
     (fresh ⟨0, (p + 4) + 1⟩ (by simp only [h41, hp4]; omega))
     (fresh ⟨0, (p + 4) + 2⟩ (by simp only [h42, hp4]; omega))
     (fresh ⟨0, (p + 4) + 3⟩ (by simp only [h43, hp4]; omega))
     h41 h42 h43 $$ Hbytes
-  icases Hsplit with ⟨Hlen, Hfirst⟩
-  ihave HdataSplit := store32Heap_pointsTo
+  ihave ⟨Hdata, _Hempty⟩ := store32Heap_pointsTo
     (∅ : WasmHeapMap (Option UInt8)) 0 p dataPtr
     (get?_empty (⟨0, p⟩ : MemoryKey))
     (get?_empty (⟨0, p + 1⟩ : MemoryKey))
     (get?_empty (⟨0, p + 2⟩ : MemoryKey))
     (get?_empty (⟨0, p + 3⟩ : MemoryKey))
     hp1 hp2 hp3 $$ Hfirst
-  icases HdataSplit with ⟨Hdata, _Hempty⟩
   iframe
 
 /-- Iris loader for the canonical `(dataPtr, len)` ABI pair. Both words are

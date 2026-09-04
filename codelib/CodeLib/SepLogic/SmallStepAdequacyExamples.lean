@@ -467,13 +467,11 @@ private theorem reverseThreeWordsHeap_pointsTo [WasmHeapGS α] :
         pointsTo_u32 0 8 33 := by
   unfold reverseThreeWordsHeap
   iintro Hheap
-  ihave H8 := store32Heap_pointsTo swapWordsHeap 0 8 33
+  ihave ⟨H8, Hheap⟩ := store32Heap_pointsTo swapWordsHeap 0 8 33
     (by native_decide) (by native_decide)
     (by native_decide) (by native_decide)
     (by decide) (by decide) (by decide) $$ Hheap
-  icases H8 with ⟨H8, Hheap⟩
-  ihave Hwords := swapWordsHeap_pointsTo $$ Hheap
-  icases Hwords with ⟨H0, H4⟩
+  ihave ⟨H0, H4⟩ := swapWordsHeap_pointsTo $$ Hheap
   iframe
 
 def reverseThreeWordsAdequacyModule : Module :=
@@ -606,22 +604,19 @@ private theorem partitionThreeWordsHeap_pointsTo [WasmHeapGS α] :
         pointsTo_u32 0 8 22 := by
   unfold partitionThreeWordsHeap
   iintro Hheap
-  ihave H8 := store32Heap_pointsTo
+  ihave ⟨H8, Hheap⟩ := store32Heap_pointsTo
     (store32Heap (store32Heap ∅ 0 0 33) 0 4 11) 0 8 22
     (by native_decide) (by native_decide)
     (by native_decide) (by native_decide)
     (by decide) (by decide) (by decide) $$ Hheap
-  icases H8 with ⟨H8, Hheap⟩
-  ihave H4 := store32Heap_pointsTo (store32Heap ∅ 0 0 33) 0 4 11
+  ihave ⟨H4, Hheap⟩ := store32Heap_pointsTo (store32Heap ∅ 0 0 33) 0 4 11
     (by native_decide) (by native_decide)
     (by native_decide) (by native_decide)
     (by decide) (by decide) (by decide) $$ Hheap
-  icases H4 with ⟨H4, Hheap⟩
-  ihave H0 := store32Heap_pointsTo (∅ : WasmHeapMap (Option UInt8)) 0 0 33
+  ihave ⟨H0, _Hempty⟩ := store32Heap_pointsTo (∅ : WasmHeapMap (Option UInt8)) 0 0 33
     (get?_empty (⟨0, 0⟩ : MemoryKey)) (get?_empty (⟨0, 1⟩ : MemoryKey))
     (get?_empty (⟨0, 2⟩ : MemoryKey)) (get?_empty (⟨0, 3⟩ : MemoryKey))
     (by decide) (by decide) (by decide) $$ Hheap
-  icases H0 with ⟨H0, _Hempty⟩
   iframe
 
 def partitionThreeWordsAdequacyModule : Module :=
@@ -752,16 +747,14 @@ private theorem mergeTwoWordsHeap_pointsTo [WasmHeapGS α] :
       pointsTo_u32 0 0 9 ∗ pointsTo_u32 0 4 4 := by
   unfold mergeTwoWordsHeap
   iintro Hheap
-  ihave H4 := store32Heap_pointsTo (store32Heap ∅ 0 0 9) 0 4 4
+  ihave ⟨H4, Hheap⟩ := store32Heap_pointsTo (store32Heap ∅ 0 0 9) 0 4 4
     (by native_decide) (by native_decide)
     (by native_decide) (by native_decide)
     (by decide) (by decide) (by decide) $$ Hheap
-  icases H4 with ⟨H4, Hheap⟩
-  ihave H0 := store32Heap_pointsTo (∅ : WasmHeapMap (Option UInt8)) 0 0 9
+  ihave ⟨H0, _Hempty⟩ := store32Heap_pointsTo (∅ : WasmHeapMap (Option UInt8)) 0 0 9
     (get?_empty (⟨0, 0⟩ : MemoryKey)) (get?_empty (⟨0, 1⟩ : MemoryKey))
     (get?_empty (⟨0, 2⟩ : MemoryKey)) (get?_empty (⟨0, 3⟩ : MemoryKey))
     (by decide) (by decide) (by decide) $$ Hheap
-  icases H0 with ⟨H0, _Hempty⟩
   iframe
 
 def mergeTwoWordsAdequacyModule : Module :=
@@ -900,20 +893,18 @@ private theorem fillFourBytesHeap_pointsTo (oldWord : UInt32)
     rw [get?_insert_ne (mk_ne _ _ h3), get?_insert_ne (mk_ne _ _ h2),
       get?_insert_ne (mk_ne _ _ h1), get?_insert_ne (mk_ne _ _ h0),
       get?_empty]
-  ihave H32 := store32Heap_pointsTo
+  ihave ⟨H32, Hheap⟩ := store32Heap_pointsTo
     (store32Heap ∅ 0 16 oldWord) 0 32 0x12345678
     (hnone 32 (by decide) (by decide) (by decide) (by decide))
     (hnone (32 + 1) (by decide) (by decide) (by decide) (by decide))
     (hnone (32 + 2) (by decide) (by decide) (by decide) (by decide))
     (hnone (32 + 3) (by decide) (by decide) (by decide) (by decide))
     (by decide) (by decide) (by decide) $$ Hheap
-  icases H32 with ⟨H32, Hheap⟩
-  ihave H16 := store32Heap_pointsTo
+  ihave ⟨H16, _Hempty⟩ := store32Heap_pointsTo
     (∅ : WasmHeapMap (Option UInt8)) 0 16 oldWord
     (by native_decide) (by native_decide)
     (by native_decide) (by native_decide)
     (by decide) (by decide) (by decide) $$ Hheap
-  icases H16 with ⟨H16, _Hempty⟩
   iframe
 
 def fillFourBytesAdequacyModule : Module :=
@@ -1029,18 +1020,16 @@ private theorem copyWordHeap_pointsTo (oldDestination : UInt32)
       pointsTo_u32 0 0 0x04030201 ∗ pointsTo_u32 0 8 oldDestination := by
   unfold copyWordHeap
   iintro Hheap
-  ihave H8 := store32Heap_pointsTo
+  ihave ⟨H8, Hheap⟩ := store32Heap_pointsTo
     (store32Heap ∅ 0 0 0x04030201) 0 8 oldDestination
     (by native_decide) (by native_decide)
     (by native_decide) (by native_decide)
     (by decide) (by decide) (by decide) $$ Hheap
-  icases H8 with ⟨H8, Hheap⟩
-  ihave H0 := store32Heap_pointsTo
+  ihave ⟨H0, _Hempty⟩ := store32Heap_pointsTo
     (∅ : WasmHeapMap (Option UInt8)) 0 0 0x04030201
     (by native_decide) (by native_decide)
     (by native_decide) (by native_decide)
     (by decide) (by decide) (by decide) $$ Hheap
-  icases H0 with ⟨H0, _Hempty⟩
   iframe
 
 def copyWordAdequacyModule : Module :=
@@ -1146,11 +1135,10 @@ private theorem copyOverlapWordHeap_pointsTo [WasmHeapGS α] :
       pointsTo_u64 0 0 0x8877665544332211 := by
   unfold copyOverlapWordHeap
   iintro Hheap
-  ihave Hword := store64Heap_pointsTo
+  ihave ⟨Hword, _Hempty⟩ := store64Heap_pointsTo
     (∅ : WasmHeapMap (Option UInt8)) 0 0 0x8877665544332211
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) (by decide) $$ Hheap
-  icases Hword with ⟨Hword, _Hempty⟩
   iexact Hword
 
 def copyOverlapWordAdequacyModule : Module :=
@@ -1249,11 +1237,10 @@ private theorem memoryInitDropHeap_pointsTo [WasmHeapGS α] :
       pointsTo_u32 0 16 0 := by
   unfold memoryInitDropHeap
   iintro Hheap
-  ihave Hword := store32Heap_pointsTo
+  ihave ⟨Hword, _Hempty⟩ := store32Heap_pointsTo
     (∅ : WasmHeapMap (Option UInt8)) 0 16 0
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) $$ Hheap
-  icases Hword with ⟨Hword, _Hempty⟩
   iexact Hword
 
 private def memoryInitDropSegments :
@@ -1905,8 +1892,7 @@ theorem tableCopyDistinct_store_partiallyMeets :
       tableCopyDistinctAdequacyConfig]
     simp only [runtimeModuleOwn]
     iintro ⟨_Hbytes, _Hglobals, _Hsegments, Htables, _HelementSegments, _Hruntime, _HinstFrag⟩
-    ihave HtablePair := tableCopyDistinctMap_pointsTo $$ Htables
-    icases HtablePair with ⟨Hdestination, Hsource⟩
+    ihave ⟨Hdestination, Hsource⟩ := tableCopyDistinctMap_pointsTo $$ Htables
     have hpost : ∀ values : List Value,
         (iprop% ⌜values = []⌝ ∗
           tablePointsTo ⟨0, 0⟩
@@ -2323,12 +2309,11 @@ private theorem fillThenReadInitialHeap_pointsTo [WasmHeapGS Unit] :
       pointsTo_u32 0 0 0 := by
   unfold fillThenReadInitialHeap
   iintro Hheap
-  ihave H0 := store32Heap_pointsTo
+  ihave ⟨H0, _⟩ := store32Heap_pointsTo
     (∅ : WasmHeapMap (Option UInt8)) 0 0 0
     (by simp [get?_empty]) (by simp [get?_empty])
     (by simp [get?_empty]) (by simp [get?_empty])
     (by decide) (by decide) (by decide) $$ Hheap
-  icases H0 with ⟨H0, _⟩
   iexact H0
 
 /-- `memory.fill` of four bytes with the low byte of the parameter, then

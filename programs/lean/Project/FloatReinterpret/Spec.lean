@@ -740,16 +740,14 @@ theorem exportHeap_pointsTo [WasmHeapGS Unit] :
       pointsTo_u64 0 1048552 0 ∗ pointsTo_u32 0 1048572 0 := by
   unfold exportHeap
   iintro Hheap
-  ihave Houter := store32Heap_pointsTo
+  ihave ⟨Houter, HinnerHeap⟩ := store32Heap_pointsTo
     (store64Heap ∅ 0 1048552 0) 0 1048572 0
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) $$ Hheap
-  icases Houter with ⟨Houter, HinnerHeap⟩
-  ihave Hinner := store64Heap_pointsTo
+  ihave ⟨Hinner, Hempty⟩ := store64Heap_pointsTo
     (∅ : WasmHeapMap (Option UInt8)) 0 1048552 0
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) (by decide) $$ HinnerHeap
-  icases Hinner with ⟨Hinner, Hempty⟩
   iframe
 
 def packUpper32 (upper : UInt32) : UInt64 :=
@@ -1534,8 +1532,7 @@ theorem func10_body_smallStep_wp
       body := checkAbsOuterBody
       continuation := checkAbsTailProg
       belowStack := [] } by rfl]
-  ihave HscratchSplit := innerScratch_split_zero $$ Hscratch
-  icases HscratchSplit with ⟨Hlow, Hupper⟩
+  ihave ⟨Hlow, Hupper⟩ := innerScratch_split_zero $$ Hscratch
   iapply checkAbs_firstComparison_smallStep_wp
     (s := s) (E := E)
     x 0 0 _ _ _
@@ -1580,8 +1577,7 @@ theorem checkAbs_smallStep (x : UInt32) :
   · intro gs
     simp only [checkAbsConfig, RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, Hglobals, Hruntime⟩
-    ihave Hmemory := exportHeap_pointsTo $$ Hbytes
-    icases Hmemory with ⟨Hscratch, Hresult⟩
+    ihave ⟨Hscratch, Hresult⟩ := exportHeap_pointsTo $$ Hbytes
     ihave Hglobal := func1Globals_pointsTo $$ Hglobals
     iapply_frame func10_body_smallStep_wp
 
@@ -1789,8 +1785,7 @@ theorem func11_body_smallStep_wp
       body := checkCopysignOuterBody
       continuation := checkCopysignTailProg
       belowStack := [] } by rfl]
-  ihave HscratchSplit := innerScratch_split_zero $$ Hscratch
-  icases HscratchSplit with ⟨Hlow, Hupper⟩
+  ihave ⟨Hlow, Hupper⟩ := innerScratch_split_zero $$ Hscratch
   iapply checkCopysign_comparison_smallStep_wp
     (s := s) (E := E)
     x y 0 0 _ _
@@ -1831,8 +1826,7 @@ theorem checkCopysign_smallStep (x y : UInt32) :
   · intro gs
     simp only [checkCopysignConfig, RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, Hglobals, Hruntime⟩
-    ihave Hmemory := exportHeap_pointsTo $$ Hbytes
-    icases Hmemory with ⟨Hscratch, Hresult⟩
+    ihave ⟨Hscratch, Hresult⟩ := exportHeap_pointsTo $$ Hbytes
     ihave Hglobal := func1Globals_pointsTo $$ Hglobals
     iapply_frame func11_body_smallStep_wp
 
@@ -2531,8 +2525,7 @@ theorem twp_func10_body_smallStep_wp
       body := checkAbsOuterBody
       continuation := checkAbsTailProg
       belowStack := [] } by rfl]
-  ihave HscratchSplit := innerScratch_split_zero $$ Hscratch
-  icases HscratchSplit with ⟨Hlow, Hupper⟩
+  ihave ⟨Hlow, Hupper⟩ := innerScratch_split_zero $$ Hscratch
   iapply twp_checkAbs_firstComparison_smallStep_wp
     (s := s) (E := E)
     x 0 0 _ _ _
@@ -2724,8 +2717,7 @@ theorem twp_func11_body_smallStep_wp
       body := checkCopysignOuterBody
       continuation := checkCopysignTailProg
       belowStack := [] } by rfl]
-  ihave HscratchSplit := innerScratch_split_zero $$ Hscratch
-  icases HscratchSplit with ⟨Hlow, Hupper⟩
+  ihave ⟨Hlow, Hupper⟩ := innerScratch_split_zero $$ Hscratch
   iapply twp_checkCopysign_comparison_smallStep_wp
     (s := s) (E := E)
     x y 0 0 _ _
@@ -2759,8 +2751,7 @@ theorem check_abs_terminatesWith (x : UInt32) :
   · intro _hlc _gs
     simp only [checkAbsConfig, RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, Hglobals, Hruntime⟩
-    ihave Hmemory := exportHeap_pointsTo $$ Hbytes
-    icases Hmemory with ⟨Hscratch, Hresult⟩
+    ihave ⟨Hscratch, Hresult⟩ := exportHeap_pointsTo $$ Hbytes
     ihave Hglobal := func1Globals_pointsTo $$ Hglobals
     iapply_frame twp_func10_body_smallStep_wp
 
@@ -2778,8 +2769,7 @@ theorem check_copysign_terminatesWith (x y : UInt32) :
   · intro _hlc _gs
     simp only [checkCopysignConfig, RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, Hglobals, Hruntime⟩
-    ihave Hmemory := exportHeap_pointsTo $$ Hbytes
-    icases Hmemory with ⟨Hscratch, Hresult⟩
+    ihave ⟨Hscratch, Hresult⟩ := exportHeap_pointsTo $$ Hbytes
     ihave Hglobal := func1Globals_pointsTo $$ Hglobals
     iapply_frame twp_func11_body_smallStep_wp
 

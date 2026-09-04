@@ -105,8 +105,7 @@ theorem twp_loadAt64
   obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := UInt32.addSteps8 address (by
     simpa only [UInt32.size] using hroom)
   iintro ⟨Harray, Hcont⟩
-  ihave Hfocus := array64At_get 0 base input k hk $$ Harray
-  icases Hfocus with ⟨Hword, Hclose⟩
+  ihave ⟨Hword, Hclose⟩ := array64At_get 0 base input k hk $$ Harray
   simp only [loadAt, List.append_assoc, List.cons_append, List.nil_append]
   iapply twp_address64 hbase helement
   have haddress : 8 * UInt32.ofNat k + base = address := by
@@ -210,8 +209,7 @@ theorem twp_swapAt64
   iapply twp_address64 (by simpa using hbase_after) (by simpa using ha_after)
   iapply twp_loadAt64 hb hfit (by simpa using hbase_after) (by simpa using hb_after)
   iframe; iintro Harray
-  ihave HfocusA := array64At_set 0 base input a input[b] ha $$ Harray
-  icases HfocusA with ⟨HcellA, HcloseA⟩
+  ihave ⟨HcellA, HcloseA⟩ := array64At_set 0 base input a input[b] ha $$ Harray
   iapply twp_store64_cell hroomA
   isplitl [HcellA]
   · dsimp [addrA]
@@ -224,8 +222,7 @@ theorem twp_swapAt64
   iapply twp_address64 (by simpa using hbase_after) (by simpa using hb_after)
   iapply Wasm.SmallStep.twp_localGet (by simpa using htmp_after)
   have hb2 : b < (input.set a input[b]).length := by simpa
-  ihave HfocusB := array64At_set 0 base (input.set a input[b]) b input[a] hb2 $$ Harray2
-  icases HfocusB with ⟨HcellB, HcloseB⟩
+  ihave ⟨HcellB, HcloseB⟩ := array64At_set 0 base (input.set a input[b]) b input[a] hb2 $$ Harray2
   iapply twp_store64_cell hroomB
   isplitl [HcellB]
   · dsimp [addrB]

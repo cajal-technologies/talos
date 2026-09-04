@@ -884,8 +884,7 @@ theorem twp_loadShlAt
     simpa only [UInt32.size] using hroom
   obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4 address hroom'
   iintro ⟨Harray, Hcont⟩
-  ihave Hfocus := arrayAt_get 0 physicalBase input k hk $$ Harray
-  icases Hfocus with ⟨Hword, Hclose⟩
+  ihave ⟨Hword, Hclose⟩ := arrayAt_get 0 physicalBase input k hk $$ Harray
   simp only [List.cons_append, List.nil_append]
   iapply twp_localGet hbase
   iapply twp_localGet (by simpa [Locals.get] using helement)
@@ -946,8 +945,7 @@ theorem twp_storeCurrentAt
     simpa only [UInt32.size] using hroom
   obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4 address hroom'
   iintro ⟨Harray, Hcont⟩
-  ihave Hfocus := arrayAt_set 0 physicalBase values k newWord hk $$ Harray
-  icases Hfocus with ⟨Hword, Hclose⟩
+  ihave ⟨Hword, Hclose⟩ := arrayAt_set 0 physicalBase values k newWord hk $$ Harray
   simp only [List.cons_append, List.nil_append]
   iapply twp_localGet haddressGet
   iapply twp_localGet (by simpa [Locals.get] using hvalueGet)
@@ -1031,11 +1029,9 @@ theorem twp_copyPointerAt
   obtain ⟨hs1, hs2, hs3⟩ := UInt32.addSteps4 sourceAddress hsourceRoom'
   obtain ⟨hd1, hd2, hd3⟩ := UInt32.addSteps4 destinationAddress hdestinationRoom'
   iintro ⟨Hsource, Hscratch, Hcont⟩
-  ihave HsourceFocus := arrayAt_get 0 source input i hi $$ Hsource
-  icases HsourceFocus with ⟨HsourceCell, HsourceClose⟩
-  ihave HscratchFocus :=
+  ihave ⟨HsourceCell, HsourceClose⟩ := arrayAt_get 0 source input i hi $$ Hsource
+  ihave ⟨HscratchCell, HscratchClose⟩ :=
     arrayAt_set 0 scratch scratchValues k input[i] hk $$ Hscratch
-  icases HscratchFocus with ⟨HscratchCell, HscratchClose⟩
   iapply twp_localGet hdestination
   iapply twp_localGet (by simpa [Locals.get] using hsource)
   ihave HsourceCellLater :

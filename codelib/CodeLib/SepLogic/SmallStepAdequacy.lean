@@ -731,8 +731,7 @@ theorem wasm_smallStep_runtime_instance_adequacy
   wasm_alloc_tag_table config
   letI gs : WasmSmallStepGS .hasLC α := smallStepGS .hasLC inv
   iclear Hpoints Hmeta
-  ihave HruntimeInstancesPair := iOwn_op.mp $$ HruntimeInstances
-  icases HruntimeInstancesPair with ⟨HruntimeInstancesState, HruntimeInstancesWP⟩
+  ihave ⟨HruntimeInstancesState, HruntimeInstancesWP⟩ := iOwn_op.mp $$ HruntimeInstances
   imodintro
   iexists (fun store _observations =>
     stateInterp (GF := WasmHeapGF α) store 0 [] 0)
@@ -831,8 +830,7 @@ theorem wasm_smallStep_instance_host_state_adequacy
   wasm_alloc_tag_table config
   letI gs : WasmSmallStepGS .hasLC α := smallStepGS .hasLC inv
   iclear Hpoints Hmeta
-  ihave HruntimeInstancesPair := iOwn_op.mp $$ HruntimeInstances
-  icases HruntimeInstancesPair with ⟨HruntimeInstancesState, HruntimeInstancesWP⟩
+  ihave ⟨HruntimeInstancesState, HruntimeInstancesWP⟩ := iOwn_op.mp $$ HruntimeInstances
   imodintro
   iexists (fun store _observations =>
     stateInterp (GF := WasmHeapGF α) store 0 [] 0)
@@ -1225,8 +1223,7 @@ theorem wasm_smallStep_heap_globals_runtime_store_terminates
          ExclAuth.frag (⟨config.store.wasm.host⟩ : DiscreteO α))
         ExclAuth.valid) with
       ⟨%hostStateName, HhostStateAll⟩
-    ihave HhostStatePair := iOwn_op.mp $$ HhostStateAll
-    icases HhostStatePair with ⟨HhostState, HhostStateFrag⟩
+    ihave ⟨HhostState, HhostStateFrag⟩ := iOwn_op.mp $$ HhostStateAll
     letI hostStateGS : WasmHostStateGS α :=
       { hostStateElem
         hostStateName }
@@ -1240,8 +1237,7 @@ theorem wasm_smallStep_heap_globals_runtime_store_terminates
          ExclAuth.frag (⟨config.store.runtime.entry.id⟩ : DiscreteO Nat))
         ExclAuth.valid) with
       ⟨%instanceName, HinstanceAll⟩
-    ihave HinstancePair := iOwn_op.mp $$ HinstanceAll
-    icases HinstancePair with ⟨HinstanceState, HinstanceFrag⟩
+    ihave ⟨HinstanceState, HinstanceFrag⟩ := iOwn_op.mp $$ HinstanceAll
     letI instanceGS : WasmInstanceGS α :=
       { instanceElem
         instanceName }
@@ -1463,8 +1459,7 @@ theorem wasm_smallStep_heap_store_terminates
          ExclAuth.frag (⟨config.store.wasm.host⟩ : DiscreteO α))
         ExclAuth.valid) with
       ⟨%hostStateName, HhostStateAll⟩
-    ihave HhostStatePair := iOwn_op.mp $$ HhostStateAll
-    icases HhostStatePair with ⟨HhostState, HhostStateFrag⟩
+    ihave ⟨HhostState, HhostStateFrag⟩ := iOwn_op.mp $$ HhostStateAll
     letI hostStateGS : WasmHostStateGS α :=
       { hostStateElem
         hostStateName }
@@ -1478,8 +1473,7 @@ theorem wasm_smallStep_heap_store_terminates
          ExclAuth.frag (⟨config.store.runtime.entry.id⟩ : DiscreteO Nat))
         ExclAuth.valid) with
       ⟨%instanceName, HinstanceAll⟩
-    ihave HinstancePair := iOwn_op.mp $$ HinstanceAll
-    icases HinstancePair with ⟨HinstanceState, HinstanceFrag⟩
+    ihave ⟨HinstanceState, HinstanceFrag⟩ := iOwn_op.mp $$ HinstanceAll
     letI instanceGS : WasmInstanceGS α :=
       { instanceElem
         instanceName }
@@ -2141,8 +2135,7 @@ theorem wasm_smallStep_heap_runtime_instances_adequacy
   wasm_alloc_tag_table config
   letI gs : WasmSmallStepGS .hasLC α := smallStepGS .hasLC inv
   iclear Hmeta
-  ihave HruntimeInstancesPair := iOwn_op.mp $$ HruntimeInstances
-  icases HruntimeInstancesPair with ⟨HruntimeInstancesState, HruntimeInstancesWP⟩
+  ihave ⟨HruntimeInstancesState, HruntimeInstancesWP⟩ := iOwn_op.mp $$ HruntimeInstances
   imodintro
   iexists (fun store _observations =>
     stateInterp (GF := WasmHeapGF α) store 0 [] 0)

@@ -146,8 +146,7 @@ theorem opt3_func0_distinct_store_partiallyMeets
   · simp only [opt3ConfigFromStore]; decide
   · intro gs
     iintro ⟨Hheap, Hglobals, Hruntime, _Henv⟩
-    ihave Hwords := hresources $$ Hheap
-    icases Hwords with ⟨HA, HB⟩
+    ihave ⟨HA, HB⟩ := hresources $$ Hheap
     have hpost : ∀ values : List Value,
         (iprop% ⌜values = []⌝ ∗
           pointsTo_u64 0 addressI oldB ∗ pointsTo_u64 0 addressJ oldA) ⊢

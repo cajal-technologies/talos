@@ -165,10 +165,8 @@ private theorem mergeSortHeapAux_pointsTo [WasmHeapGS Unit]
           get?_insert_ne (keyNe hne1), get?_insert_ne (keyNe hne0)]
       exact hfresh addr (by rw [h4] at hlo; omega) (by rw [h4] at hhi; omega)
     iintro Hbytes
-    ihave Hsplit := ih (store32Heap σ 0 base x) (base + 4) hnoWrap' hfresh' $$ Hbytes
-    icases Hsplit with ⟨Hrest, Hstore⟩
-    ihave Hpoint := store32Heap_pointsTo σ 0 base x hf0 hf1 hf2 hf3 h1 h2 h3 $$ Hstore
-    icases Hpoint with ⟨Hhead, Horig⟩
+    ihave ⟨Hrest, Hstore⟩ := ih (store32Heap σ 0 base x) (base + 4) hnoWrap' hfresh' $$ Hbytes
+    ihave ⟨Hhead, Horig⟩ := store32Heap_pointsTo σ 0 base x hf0 hf1 hf2 hf3 h1 h2 h3 $$ Hstore
     iframe
 
 /-- `mergeSortConfig` runs a single instance with a single linear memory, so
@@ -252,13 +250,11 @@ private theorem mergeSortHeap_pointsTo [WasmHeapGS Unit]
     · apply mergeSortHeapAux_get?_none ∅ source input addr hnoWrap_s (Or.inl (by omega))
       exact LawfulPartialMap.get?_empty _
   iintro Hbytes
-  ihave Hstep1 :=
+  ihave ⟨Htmp, Hsource_heap⟩ :=
     mergeSortHeapAux_pointsTo (mergeSortHeapAux ∅ source input) temporary scratch
       hnoWrap_t hfresh_t $$ Hbytes
-  icases Hstep1 with ⟨Htmp, Hsource_heap⟩
-  ihave Hstep2 :=
+  ihave ⟨Hsrc, _Hemp⟩ :=
     mergeSortHeapAux_pointsTo ∅ source input hnoWrap_s hfresh_s $$ Hsource_heap
-  icases Hstep2 with ⟨Hsrc, _Hemp⟩
   iframe
 
 /-- Walking `arrayAt` ownership against the final state interpretation
@@ -343,9 +339,8 @@ theorem mergesort_partiallyMeets
   · intro _gs
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
     iintro ⟨Hbytes, _Hglobals, Hruntime, _HhostEnv⟩
-    ihave Hpoints :=
+    ihave ⟨Hsrc, Htmp⟩ :=
       mergeSortHeap_pointsTo source temporary input scratch hvalid hscr hbound_s hbound_t $$ Hbytes
-    icases Hpoints with ⟨Hsrc, Htmp⟩
     rw [show (mergeSortConfig source temporary input scratch).store.runtime.currentModule
         = mergeSortModule from rfl]
     simp only [mergeSortConfig]
@@ -375,9 +370,8 @@ theorem mergesort_terminatesWith
   · simp [mergeSortConfig]
   · intro _hlc _gs
     iintro ⟨Hbytes, Hruntime⟩
-    ihave Hpoints :=
+    ihave ⟨Hsrc, Htmp⟩ :=
       mergeSortHeap_pointsTo source temporary input scratch hvalid hscr hbound_s hbound_t $$ Hbytes
-    icases Hpoints with ⟨Hsrc, Htmp⟩
     rw [show (mergeSortConfig source temporary input scratch).store.runtime.currentModule
         = mergeSortModule from rfl]
     simp only [mergeSortConfig]

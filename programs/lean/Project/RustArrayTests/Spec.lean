@@ -159,8 +159,7 @@ theorem len_plus_one_export_correct : LenPlusOneExportSpec := by
   · intro gs
     simp only [exportConfig, SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, Hruntime⟩
-    ihave Hfat := fatPtrHeap_pointsTo p dataPtr len hfat.noWrap $$ Hbytes
-    icases Hfat with ⟨Hdata, Hlen⟩
+    ihave ⟨Hdata, Hlen⟩ := fatPtrHeap_pointsTo p dataPtr len hfat.noWrap $$ Hbytes
     simp only [func8]
     ihave HdataLater : ▷ pointsTo_u32 0 p dataPtr $$ [Hdata]
     · ilater_exact Hdata
@@ -196,8 +195,7 @@ theorem len_plus_arg_export_correct : LenPlusArgExportSpec := by
   · intro gs
     simp only [exportConfig, SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, Hruntime⟩
-    ihave Hfat := fatPtrHeap_pointsTo p dataPtr len hfat.noWrap $$ Hbytes
-    icases Hfat with ⟨Hdata, Hlen⟩
+    ihave ⟨Hdata, Hlen⟩ := fatPtrHeap_pointsTo p dataPtr len hfat.noWrap $$ Hbytes
     simp only [func7]
     ihave HdataLater : ▷ pointsTo_u32 0 p dataPtr $$ [Hdata]
     · ilater_exact Hdata
@@ -234,8 +232,7 @@ theorem empty_plus_three_export_correct : EmptyPlusThreeExportSpec := by
   · intro gs
     simp only [exportConfig, SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, Hruntime⟩
-    ihave Hfat := fatPtrHeap_pointsTo p dataPtr len hfat.noWrap $$ Hbytes
-    icases Hfat with ⟨Hdata, Hlen⟩
+    ihave ⟨Hdata, Hlen⟩ := fatPtrHeap_pointsTo p dataPtr len hfat.noWrap $$ Hbytes
     simp only [func5]
     ihave HdataLater : ▷ pointsTo_u32 0 p dataPtr $$ [Hdata]
     · ilater_exact Hdata
@@ -287,8 +284,7 @@ theorem empty_xor_flag_export_correct : EmptyXorFlagExportSpec := by
   · intro gs
     simp only [exportConfig, SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, Hruntime⟩
-    ihave Hfat := fatPtrHeap_pointsTo p dataPtr len hfat.noWrap $$ Hbytes
-    icases Hfat with ⟨Hdata, Hlen⟩
+    ihave ⟨Hdata, Hlen⟩ := fatPtrHeap_pointsTo p dataPtr len hfat.noWrap $$ Hbytes
     simp only [func6]
     ihave HdataLater : ▷ pointsTo_u32 0 p dataPtr $$ [Hdata]
     · ilater_exact Hdata

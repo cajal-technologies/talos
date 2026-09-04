@@ -148,62 +148,52 @@ theorem gcdFrameHeap_pointsTo
       pointsTo_u64 0 1048568 outerB := by
   unfold gcdFrameHeap
   iintro Hframe
-  ihave HsplitB := store64Heap_pointsTo _ 0 1048568 outerB
+  ihave ⟨HouterB, Hframe⟩ := store64Heap_pointsTo _ 0 1048568 outerB
     (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty]) (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty])
     (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty]) (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty])
     (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty]) (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty])
     (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty]) (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty]) $$ Hframe
-  icases HsplitB with ⟨HouterB, Hframe⟩
-  ihave HsplitA := store64Heap_pointsTo _ 0 1048560 outerA
+  ihave ⟨HouterA, Hframe⟩ := store64Heap_pointsTo _ 0 1048560 outerA
     (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty]) (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty])
     (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty]) (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty])
     (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty]) (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty])
     (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty]) (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty]) $$ Hframe
-  icases HsplitA with ⟨HouterA, Hframe⟩
-  ihave HsplitShiftXY := store32Heap_pointsTo _ 0 1048556 shiftXY
+  ihave ⟨HshiftXY, Hframe⟩ := store32Heap_pointsTo _ 0 1048556 shiftXY
     (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty]) (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty])
     (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty]) (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty])
     (by decide) (by decide) (by decide) $$ Hframe
-  icases HsplitShiftXY with ⟨HshiftXY, Hframe⟩
-  ihave HsplitShiftX := store32Heap_pointsTo _ 0 1048552 shiftX
+  ihave ⟨HshiftX, Hframe⟩ := store32Heap_pointsTo _ 0 1048552 shiftX
     (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty]) (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty])
     (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty]) (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty])
     (by decide) (by decide) (by decide) $$ Hframe
-  icases HsplitShiftX with ⟨HshiftX, Hframe⟩
-  ihave HsplitShiftY := store32Heap_pointsTo _ 0 1048548 shiftY
+  ihave ⟨HshiftY, Hframe⟩ := store32Heap_pointsTo _ 0 1048548 shiftY
     (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty]) (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty])
     (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty]) (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty])
     (by decide) (by decide) (by decide) $$ Hframe
-  icases HsplitShiftY with ⟨HshiftY, Hframe⟩
-  ihave HsplitNextY := store32Heap_pointsTo _ 0 1048544 nextY
+  ihave ⟨HnextY, Hframe⟩ := store32Heap_pointsTo _ 0 1048544 nextY
     (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty]) (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty])
     (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty]) (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty])
     (by decide) (by decide) (by decide) $$ Hframe
-  icases HsplitNextY with ⟨HnextY, Hframe⟩
-  ihave HsplitNextX := store32Heap_pointsTo _ 0 1048540 nextX
+  ihave ⟨HnextX, Hframe⟩ := store32Heap_pointsTo _ 0 1048540 nextX
     (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty]) (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty])
     (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty]) (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty])
     (by decide) (by decide) (by decide) $$ Hframe
-  icases HsplitNextX with ⟨HnextX, Hframe⟩
-  ihave HsplitY := store64Heap_pointsTo _ 0 1048528 y
+  ihave ⟨Hy, Hframe⟩ := store64Heap_pointsTo _ 0 1048528 y
     (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty]) (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty])
     (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty]) (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty])
     (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty]) (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty])
     (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty]) (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty]) $$ Hframe
-  icases HsplitY with ⟨Hy, Hframe⟩
-  ihave HsplitX := store64Heap_pointsTo _ 0 1048520 x
+  ihave ⟨Hx, Hframe⟩ := store64Heap_pointsTo _ 0 1048520 x
     (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty]) (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty])
     (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty]) (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty])
     (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty]) (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty])
     (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty]) (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty]) $$ Hframe
-  icases HsplitX with ⟨Hx, Hframe⟩
-  ihave HsplitResult := store64Heap_pointsTo
+  ihave ⟨Hresult, _Hempty⟩ := store64Heap_pointsTo
     (∅ : WasmHeapMap (Option UInt8)) 0 1048512 result
     (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty]) (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty])
     (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty]) (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty])
     (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty]) (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty])
     (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty]) (by simp [store64Heap, store32Heap, get?_insert_ne, get?_empty]) $$ Hframe
-  icases HsplitResult with ⟨Hresult, _Hempty⟩
   iframe
 
 def func1InitialLocals : List Value :=

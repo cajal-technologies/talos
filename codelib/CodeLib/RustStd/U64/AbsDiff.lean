@@ -207,7 +207,7 @@ theorem absDiffHeap_pointsTo (oldScratch : UInt64) [WasmHeapGS Unit] :
       pointsTo_u64 0 1048568 oldScratch := by
   unfold absDiffHeap
   iintro Hbytes
-  ihave Hsplit := store64Heap_pointsTo (α := Unit)
+  ihave ⟨Hword, _Hempty⟩ := store64Heap_pointsTo (α := Unit)
     (∅ : WasmHeapMap (Option UInt8)) 0 1048568 oldScratch
     (get?_empty (⟨0, 1048568⟩ : MemoryKey))
     (by rw [get?_insert_ne (by decide), get?_empty])
@@ -227,7 +227,6 @@ theorem absDiffHeap_pointsTo (oldScratch : UInt64) [WasmHeapGS Unit] :
       get?_insert_ne (by decide), get?_insert_ne (by decide),
       get?_insert_ne (by decide), get?_empty])
     $$ Hbytes
-  icases Hsplit with ⟨Hword, _Hempty⟩
   iframe
 
 theorem absDiffGlobals_pointsTo [WasmGlobalGS Unit] :

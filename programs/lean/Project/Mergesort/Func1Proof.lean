@@ -107,9 +107,8 @@ private theorem growSource_reserveHistory
         simp [VecReserveHistory, growHistory]
   | allocated oldId allBytes spare =>
       iintro Hresources
-      ihave Hfacts := growSource_live_lookup heapId storedCursor frontier
+      ihave ⟨Hbump, Hsource, %hlookup⟩ := growSource_live_lookup heapId storedCursor frontier
         history oldId capacity ptr initialized allBytes spare $$ Hresources
-      icases Hfacts with ⟨Hbump, Hsource, %hlookup⟩
       isimp only [GrowSourceOwn] at Hsource
       icases Hsource with ⟨%hsource, Hblock⟩
       have hcapacity : capacity ≠ 0 := by
@@ -165,9 +164,8 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
     ⟨%headBytes, %growBefore, %hshadow, Hhead, HgrowBefore⟩
   isimp only [VecU8, RawVecHeader] at Hvec
   icases Hvec with ⟨⟨Hcapacity, Hpointer⟩, Hlength, Hstorage⟩
-  ihave HsourceEx := (VecStorage_as_growSource heapId capacity ptr
+  ihave ⟨%source, Hsource⟩ := (VecStorage_as_growSource heapId capacity ptr
     initialized).mp $$ Hstorage
-  icases HsourceEx with ⟨%source, Hsource⟩
   ihave HsourceFacts := growSource_reserveHistory heapId storedCursor
     frontier history capacity ptr initialized source $$ [Hbump Hsource]
   · iframe

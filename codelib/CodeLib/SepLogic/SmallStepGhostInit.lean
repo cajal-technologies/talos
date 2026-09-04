@@ -324,8 +324,7 @@ macro "wasm_alloc_host_state " config:term : tactic =>
           ExclAuth.frag (⟨($config).store.wasm.host⟩ : DiscreteO α))
          ExclAuth.valid) with
        ⟨%hostStateName, HhostStateAll⟩
-     ihave HhostStatePair := iOwn_op.mp $$ HhostStateAll
-     icases HhostStatePair with ⟨HhostState, HhostStateFrag⟩
+     ihave ⟨HhostState, HhostStateFrag⟩ := iOwn_op.mp $$ HhostStateAll
      letI hostStateGS : WasmHostStateGS α :=
        { hostStateElem
          hostStateName }))
@@ -343,8 +342,7 @@ macro "wasm_alloc_current_instance " config:term : tactic =>
           ExclAuth.frag (⟨($config).store.runtime.entry.id⟩ : DiscreteO Nat))
          ExclAuth.valid) with
        ⟨%instanceName, HinstanceAll⟩
-     ihave HinstancePair := iOwn_op.mp $$ HinstanceAll
-     icases HinstancePair with ⟨HinstanceState, HinstanceFrag⟩
+     ihave ⟨HinstanceState, HinstanceFrag⟩ := iOwn_op.mp $$ HinstanceAll
      letI instanceGS : WasmInstanceGS α :=
        { instanceElem
          instanceName }))

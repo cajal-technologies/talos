@@ -229,19 +229,17 @@ theorem initialResources [WasmSmallStepGS hlc Universal.State]
         BumpHeap heapId 0 heapBase.toNat AllocationHistory.empty ∗
         Streams (serialize input) [] false := by
   iintro ⟨Hheap, Hglobals, Hruntime, Henv, Hhost, Hfrontier, Hpages⟩
-  ihave HcursorSplit :=
+  ihave ⟨HcursorBytes, HstackHeap⟩ :=
     insertFreshBytes_bigSep_pointsToBytes entryStackHeap allocatorCursor
       entryCursorBytes entryStackHeap_below_cursor (by
         change allocatorCursor.toNat + 4 < UInt32.size
         decide) $$ Hheap
-  icases HcursorSplit with ⟨HcursorBytes, HstackHeap⟩
-  ihave HstackSplit :=
+  ihave ⟨Hstack, _Hempty⟩ :=
     insertFreshBytes_bigSep_pointsToBytes
       (∅ : WasmHeapMap (Option UInt8)) entryStackLow entryStackBytes
       empty_below_entryStack (by
         rw [entryStackBytes_length]
         decide) $$ HstackHeap
-  icases HstackSplit with ⟨Hstack, _Hempty⟩
   ihave Hcursor : pointsTo_u32 0 allocatorCursor 0 $$ [HcursorBytes]
   · iapply (pointsTo_u32_as_bytes 0 allocatorCursor 0).mpr
     irw_exact [← entryCursorBytes_u32] with HcursorBytes
@@ -348,8 +346,7 @@ private theorem DriverOOM_public
     (∃ phase : DriverOOMPhase, DriverOOMState heapId input phase) -∗
       irisEntryPost input (.trapped (.host OOM.trapMessage)) := by
   iintro ⟨%phase, Hoom⟩
-  ihave HstreamsExist := DriverOOMState_streams heapId input phase $$ Hoom
-  icases HstreamsExist with ⟨%remaining, Hstreams⟩
+  ihave ⟨%remaining, Hstreams⟩ := DriverOOMState_streams heapId input phase $$ Hoom
   iintro %store %observations Hstate
   ihave Hfields := Streams_public remaining [] true $$ Hstreams
   ispecialize Hfields $$ %store %observations

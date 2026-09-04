@@ -143,8 +143,7 @@ theorem twp_loadAt
     simpa only [UInt32.size] using hroom
   obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4 (base + 4 * UInt32.ofNat k) hroom'
   iintro ⟨Harray, Hcont⟩
-  ihave Hfocus := arrayAt_get 0 base input k hk $$ Harray
-  icases Hfocus with ⟨Hword, Hclose⟩
+  ihave ⟨Hword, Hclose⟩ := arrayAt_get 0 base input k hk $$ Harray
   iapply twp_loadAt_cell hbase helement
     (by rw [UInt32.add_comm])
     h1 h2 h3
@@ -251,8 +250,7 @@ theorem twp_swapAt
   iapply twp_loadAt hb hfit (by exact hbase_after) (by exact hb_after)
   iframe; iintro Harray
   -- focus on cell a for the first store
-  ihave Hfocus := arrayAt_set 0 base input a input[b] ha $$ Harray
-  icases Hfocus with ⟨Hcell_a, Hclose_a⟩
+  ihave ⟨Hcell_a, Hclose_a⟩ := arrayAt_set 0 base input a input[b] ha $$ Harray
   ihave Hcell_a' : pointsTo_u32 0 addr_a input[a] $$ [Hcell_a]
   · dsimp [addr_a]
     irw_exact [UInt32.add_comm] with Hcell_a
@@ -270,8 +268,7 @@ theorem twp_swapAt
   iapply Wasm.SmallStep.twp_localGet (by exact htmp_after)
   -- focus on cell b for the second store
   have hb' : b < (input.set a input[b]).length := by rw [List.length_set]; exact hb
-  ihave Hfocus := arrayAt_set 0 base (input.set a input[b]) b input[a] hb' $$ Harray2
-  icases Hfocus with ⟨Hcell_b, Hclose_b⟩
+  ihave ⟨Hcell_b, Hclose_b⟩ := arrayAt_set 0 base (input.set a input[b]) b input[a] hb' $$ Harray2
   ihave Hcell_b' : pointsTo_u32 0 addr_b (input.set a input[b])[b] $$ [Hcell_b]
   · dsimp [addr_b]
     irw_exact [UInt32.add_comm] with Hcell_b

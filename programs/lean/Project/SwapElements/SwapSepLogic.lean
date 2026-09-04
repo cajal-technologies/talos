@@ -2367,16 +2367,14 @@ theorem func3Heap_pointsTo [WasmHeapGS Unit] :
       pointsTo_u32 0 1048568 0 ∗ pointsTo_u32 0 1048572 0 := by
   unfold func3Heap
   iintro Hheap
-  ihave Houter := store32Heap_pointsTo
+  ihave ⟨Hlen, Hheap⟩ := store32Heap_pointsTo
     (store32Heap ∅ 0 1048568 0) 0 1048572 0
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) $$ Hheap
-  icases Houter with ⟨Hlen, Hheap⟩
-  ihave Hinner := store32Heap_pointsTo
+  ihave ⟨Hptr, Hempty⟩ := store32Heap_pointsTo
     (∅ : WasmHeapMap (Option UInt8)) 0 1048568 0
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) $$ Hheap
-  icases Hinner with ⟨Hptr, Hempty⟩
   iframe
 
 /-- The spill helper's existing instruction proof, closed through iris-lean
@@ -2392,8 +2390,7 @@ theorem func3_smallStep (ptr len : UInt32) :
   · exact func3Heap_inBounds ptr len
   · intro gs
     iintro Hheap
-    ihave Hwords := func3Heap_pointsTo $$ Hheap
-    icases Hwords with ⟨Hptr, Hlen⟩
+    ihave ⟨Hptr, Hlen⟩ := func3Heap_pointsTo $$ Hheap
     have hpost : ∀ values : List Value,
         (iprop% ⌜values = []⌝ ∗
           pointsTo_u32 0 1048568 ptr ∗ pointsTo_u32 0 1048572 len) ⊢
@@ -2526,27 +2523,22 @@ theorem func4ExampleHeap_pointsTo [WasmHeapGS Unit] :
       pointsTo_u64 0 0 11 ∗ pointsTo_u64 0 8 22 := by
   unfold func4ExampleHeap
   iintro Hheap
-  ihave H8 := store64Heap_pointsTo _ 0 8 22
+  ihave ⟨H8, Hheap⟩ := store64Heap_pointsTo _ 0 8 22
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) (by decide) $$ Hheap
-  icases H8 with ⟨H8, Hheap⟩
-  ihave H0 := store64Heap_pointsTo _ 0 0 11
+  ihave ⟨H0, Hheap⟩ := store64Heap_pointsTo _ 0 0 11
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) (by decide) $$ Hheap
-  icases H0 with ⟨H0, Hheap⟩
-  ihave Hlen := store32Heap_pointsTo _ 0 1048572 0
+  ihave ⟨Hlen, Hheap⟩ := store32Heap_pointsTo _ 0 1048572 0
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) $$ Hheap
-  icases Hlen with ⟨Hlen, Hheap⟩
-  ihave Hptr := store32Heap_pointsTo _ 0 1048568 0
+  ihave ⟨Hptr, Hheap⟩ := store32Heap_pointsTo _ 0 1048568 0
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) $$ Hheap
-  icases Hptr with ⟨Hptr, Hheap⟩
-  ihave Hscratch := store64Heap_pointsTo
+  ihave ⟨Hscratch, Hempty⟩ := store64Heap_pointsTo
     (∅ : WasmHeapMap (Option UInt8)) 0 1048552 0
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) (by decide) $$ Hheap
-  icases Hscratch with ⟨Hscratch, Hempty⟩
   iframe
 
 theorem func4ExampleGlobals_pointsTo [WasmGlobalGS Unit] :
@@ -2575,9 +2567,8 @@ theorem func4Example_smallStep :
   · intro gs
     simp only [func4ExampleConfig, Wasm.SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hheap, Hglobals, Hruntime⟩
-    ihave Hwords := func4ExampleHeap_pointsTo $$ Hheap
+    ihave ⟨Hscratch, HspillPtr, HspillLen, H0, H8⟩ := func4ExampleHeap_pointsTo $$ Hheap
     ihave Hglobal := func4ExampleGlobals_pointsTo $$ Hglobals
-    icases Hwords with ⟨Hscratch, HspillPtr, HspillLen, H0, H8⟩
     have hpost : ∀ values : List Value,
         (iprop% ⌜values = []⌝ ∗
           globalPointsToAt 0 0 (.i32 1048576) ∗
@@ -2616,9 +2607,8 @@ theorem func4Example_store_smallStep :
   · intro gs
     simp only [func4ExampleConfig, Wasm.SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hheap, Hglobals, Hruntime, _Henv⟩
-    ihave Hwords := func4ExampleHeap_pointsTo $$ Hheap
+    ihave ⟨Hscratch, HspillPtr, HspillLen, H0, H8⟩ := func4ExampleHeap_pointsTo $$ Hheap
     ihave Hglobal := func4ExampleGlobals_pointsTo $$ Hglobals
-    icases Hwords with ⟨Hscratch, HspillPtr, HspillLen, H0, H8⟩
     have hpost : ∀ values : List Value,
         (iprop% ⌜values = []⌝ ∗
           globalPointsToAt 0 0 (.i32 1048576) ∗
@@ -2753,23 +2743,19 @@ theorem func4AliasHeap_pointsTo [WasmHeapGS Unit] :
       pointsTo_u64 0 0 42 := by
   unfold func4AliasHeap
   iintro Hheap
-  ihave Hcell := store64Heap_pointsTo _ 0 0 42
+  ihave ⟨Hcell, Hheap⟩ := store64Heap_pointsTo _ 0 0 42
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) (by decide) $$ Hheap
-  icases Hcell with ⟨Hcell, Hheap⟩
-  ihave Hlen := store32Heap_pointsTo _ 0 1048572 0
+  ihave ⟨Hlen, Hheap⟩ := store32Heap_pointsTo _ 0 1048572 0
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) $$ Hheap
-  icases Hlen with ⟨Hlen, Hheap⟩
-  ihave Hptr := store32Heap_pointsTo _ 0 1048568 0
+  ihave ⟨Hptr, Hheap⟩ := store32Heap_pointsTo _ 0 1048568 0
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) $$ Hheap
-  icases Hptr with ⟨Hptr, Hheap⟩
-  ihave Hscratch := store64Heap_pointsTo
+  ihave ⟨Hscratch, Hempty⟩ := store64Heap_pointsTo
     (∅ : WasmHeapMap (Option UInt8)) 0 1048552 0
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) (by decide) $$ Hheap
-  icases Hscratch with ⟨Hscratch, Hempty⟩
   iframe
 
 /-- The exported wrapper also closes in the equal-index case from one array
@@ -2788,9 +2774,8 @@ theorem func4Alias_smallStep :
   · intro gs
     simp only [func4AliasConfig, Wasm.SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hheap, Hglobals, Hruntime⟩
-    ihave Hwords := func4AliasHeap_pointsTo $$ Hheap
+    ihave ⟨Hscratch, HspillPtr, HspillLen, Hcell⟩ := func4AliasHeap_pointsTo $$ Hheap
     ihave Hglobal := func4ExampleGlobals_pointsTo $$ Hglobals
-    icases Hwords with ⟨Hscratch, HspillPtr, HspillLen, Hcell⟩
     have hpost : ∀ values : List Value,
         (iprop% ⌜values = []⌝ ∗
           globalPointsToAt 0 0 (.i32 1048576) ∗
@@ -2826,9 +2811,8 @@ theorem func4Alias_store_smallStep :
   · intro gs
     simp only [func4AliasConfig, Wasm.SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hheap, Hglobals, Hruntime, _Henv⟩
-    ihave Hwords := func4AliasHeap_pointsTo $$ Hheap
+    ihave ⟨Hscratch, HspillPtr, HspillLen, Hcell⟩ := func4AliasHeap_pointsTo $$ Hheap
     ihave Hglobal := func4ExampleGlobals_pointsTo $$ Hglobals
-    icases Hwords with ⟨Hscratch, HspillPtr, HspillLen, Hcell⟩
     have hpost : ∀ values : List Value,
         (iprop% ⌜values = []⌝ ∗
           globalPointsToAt 0 0 (.i32 1048576) ∗
@@ -2948,15 +2932,13 @@ theorem func0AliasHeap_pointsTo [WasmHeapGS Unit] :
       pointsTo_u64 0 1048552 0 ∗ pointsTo_u64 0 0 42 := by
   unfold func0AliasHeap
   iintro Hheap
-  ihave Hcell := store64Heap_pointsTo _ 0 0 42
+  ihave ⟨Hcell, Hheap⟩ := store64Heap_pointsTo _ 0 0 42
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) (by decide) $$ Hheap
-  icases Hcell with ⟨Hcell, Hheap⟩
-  ihave Hscratch := store64Heap_pointsTo
+  ihave ⟨Hscratch, Hempty⟩ := store64Heap_pointsTo
     (∅ : WasmHeapMap (Option UInt8)) 0 1048552 0
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) (by decide) $$ Hheap
-  icases Hscratch with ⟨Hscratch, Hempty⟩
   iframe
 
 theorem func0AliasGlobals_pointsTo [WasmGlobalGS Unit] :
@@ -2985,9 +2967,8 @@ theorem func0Alias_smallStep :
   · intro gs
     simp only [func0AliasConfig, Wasm.SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hheap, Hglobals, Hruntime⟩
-    ihave Hwords := func0AliasHeap_pointsTo $$ Hheap
+    ihave ⟨Hscratch, Hcell⟩ := func0AliasHeap_pointsTo $$ Hheap
     ihave Hglobal := func0AliasGlobals_pointsTo $$ Hglobals
-    icases Hwords with ⟨Hscratch, Hcell⟩
     have hpost : ∀ values : List Value,
         (iprop% ⌜values = []⌝ ∗
           globalPointsToAt 0 0 (.i32 1048560) ∗

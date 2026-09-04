@@ -1758,8 +1758,7 @@ theorem twp_func3_copy_decoded_word
     rw [hcurrentLength]
     exact hcopied
   iintro ⟨Hsource, Hdestination, Hcont⟩
-  ihave HsourceFacts := WordSlice_facts source original $$ Hsource
-  icases HsourceFacts with ⟨Hsource, %hsourceFacts⟩
+  ihave ⟨Hsource, %hsourceFacts⟩ := WordSlice_facts source original $$ Hsource
   ihave HdestinationFacts := WordSlice_facts destination current $$
     Hdestination
   icases HdestinationFacts with ⟨Hdestination, %hdestinationFacts⟩
@@ -1790,9 +1789,8 @@ theorem twp_func3_copy_decoded_word
   ihave HsourceFocus := WordSlice_get source original copied hsourceIndex $$
     Hsource
   icases HsourceFocus with ⟨HsourceWord, HcloseSource⟩
-  ihave HdestinationFocus := WordSlice_set destination current copied
+  ihave ⟨HdestinationWord, HcloseDestination⟩ := WordSlice_set destination current copied
     original[copied] hdestinationIndex $$ Hdestination
-  icases HdestinationFocus with ⟨HdestinationWord, HcloseDestination⟩
   ihave HsourceWord' : pointsTo_u32 0 (sourceAddress + 0)
       original[copied] $$ [HsourceWord]
   · simp only [UInt32.add_zero, sourceAddress]
@@ -3310,8 +3308,7 @@ theorem twp_func3_write_one
   iintro ⟨Hruntime, Hframe, Hvalues, Hstreams, Hcont⟩
   isimp only [ExportFrame] at Hframe
   icases Hframe with ⟨Hvec, Hchunk, Houtput, %hframeLengths⟩
-  ihave HvalueFacts := WordSlice_facts valuesPtr sorted $$ Hvalues
-  icases HvalueFacts with ⟨Hvalues, %hvalueFacts⟩
+  ihave ⟨Hvalues, %hvalueFacts⟩ := WordSlice_facts valuesPtr sorted $$ Hvalues
   have haddress :
       (valuesPtr + 4 * UInt32.ofNat emitted).toNat =
         valuesPtr.toNat + 4 * emitted :=
@@ -3323,11 +3320,9 @@ theorem twp_func3_write_one
   obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4
     (valuesPtr + 4 * UInt32.ofNat emitted) (by
       simpa only [UInt32.size] using hroom)
-  ihave HvalueFocus := WordSlice_get valuesPtr sorted emitted hemitted $$ Hvalues
-  icases HvalueFocus with ⟨Hvalue, HcloseValue⟩
-  ihave HoutputFocus := ByteSlice_storeWordFocus (driverBase + 268)
+  ihave ⟨Hvalue, HcloseValue⟩ := WordSlice_get valuesPtr sorted emitted hemitted $$ Hvalues
+  ihave ⟨HoldOutput, HcloseOutput⟩ := ByteSlice_storeWordFocus (driverBase + 268)
     outputBytes sorted[emitted] hframeLengths.2 (by decide) $$ Houtput
-  icases HoutputFocus with ⟨HoldOutput, HcloseOutput⟩
   ihave Hvalue' : pointsTo_u32 0
       (valuesPtr + 4 * UInt32.ofNat emitted + 0) sorted[emitted] $$ [Hvalue]
   · simp only [UInt32.add_zero]
@@ -3937,9 +3932,8 @@ theorem twp_func3_deallocate_input
   · unfold ExportFrame VecU8 RawVecHeader
     iframe
     ipureexact hframeLengths
-  ihave Hreleased := ExportFrame_releaseStorage heapId capacity inputPtr
-    initialized chunkBytes outputBytes $$ Hframe
-  icases Hreleased with ⟨Hstorage, HframeBytes, %_hframeLength⟩
+  ihave ⟨Hstorage, HframeBytes, %_hframeLength⟩ :=
+    ExportFrame_releaseStorage heapId capacity inputPtr initialized chunkBytes outputBytes $$ Hframe
   isimp only [VecStorage] at Hstorage
   icases Hstorage with (%hempty | Hlive)
   ·
@@ -4051,9 +4045,8 @@ theorem twp_func3_skip_empty_input
   · unfold ExportFrame VecU8 RawVecHeader
     iframe
     ipureexact hframeLengths
-  ihave Hreleased := ExportFrame_releaseStorage heapId 0 1 [] chunkBytes
-    outputBytes $$ Hframe
-  icases Hreleased with ⟨Hstorage, HframeBytes, %hframeLength⟩
+  ihave ⟨Hstorage, HframeBytes, %hframeLength⟩ :=
+    ExportFrame_releaseStorage heapId 0 1 [] chunkBytes outputBytes $$ Hframe
   isimp only [VecStorage] at Hstorage
   icases Hstorage with (%_hempty | Hlive)
   · iapply twp_brIf (condition := 1) (depth := 0) (arity := arity)

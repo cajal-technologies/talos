@@ -892,12 +892,10 @@ theorem sortHeap_pointsTo [WasmHeapGS Unit]
       omega
   simp only [sortHeap]
   iintro Hheap
-  ihave HscratchSplit := Quicksort.quicksortHeapAux_pointsTo
+  ihave ⟨Hscratch, HsourceHeap⟩ := Quicksort.quicksortHeapAux_pointsTo
     sourceHeap scratch (scratchValues input) hdisjoint hscratchFit $$ Hheap
-  icases HscratchSplit with ⟨Hscratch, HsourceHeap⟩
-  ihave HsourceSplit := Quicksort.quicksortHeapAux_pointsTo
+  ihave ⟨Hsource, _Hempty⟩ := Quicksort.quicksortHeapAux_pointsTo
     ∅ source input hempty hsourceFit $$ HsourceHeap
-  icases HsourceSplit with ⟨Hsource, _Hempty⟩
   isplitl_exact Hsource
   · iexact Hscratch
 
@@ -935,8 +933,7 @@ theorem arrayAt_capacity [WasmSmallStepGS hlc Unit]
       rw [haddress]
       omega)
     iintro ⟨Hstate, Harray⟩
-    ihave Hfocus := arrayAt_get 0 base values k hk $$ Harray
-    icases Hfocus with ⟨Hword, Hrestore⟩
+    ihave ⟨Hword, Hrestore⟩ := arrayAt_get 0 base values k hk $$ Harray
     imod stateInterp_pointsTo_u32_facts_frame store steps observations threads
       address values[k] h1 h2 h3 $$ [$Hstate $Hword] with
       ⟨Hstate, Hword, %hfacts⟩
@@ -993,8 +990,7 @@ theorem twp_sort [WasmSmallStepGS hlc Unit]
             stateInterp (GF := WasmHeapGF Unit) store 0 [] 0 -∗
             ⌜SortPost input values store⌝ }] := by
   iintro ⟨Hheap, _Hglobals, Hruntime⟩
-  ihave Harrays := sortHeap_pointsTo input hfit $$ Hheap
-  icases Harrays with ⟨Hsource, Hscratch⟩
+  ihave ⟨Hsource, Hscratch⟩ := sortHeap_pointsTo input hfit $$ Hheap
   simp only [sortConfig]
   iapply twp_mergeSortBody (α := Unit) module 3
     (by decide) (by rfl)
@@ -1006,9 +1002,8 @@ theorem twp_sort [WasmSmallStepGS hlc Unit]
     isplitr_pureexact scratchValues_length input
     · ipureexact validLayout input hfit
   · iintro %width %left %mid %right Hruntime Hpost
-    ihave Hpost' := mergeSortPost_elim source scratch input $$ Hpost
-    icases Hpost' with ⟨%output, %scratchFinal, %hsorted, %_hscratchLength,
-      Hsource, _Hscratch⟩
+    ihave ⟨%output, %scratchFinal, %hsorted, %_hscratchLength,
+      Hsource, _Hscratch⟩ := mergeSortPost_elim source scratch input $$ Hpost
     wasm_twp_terminal_value Wasm.SmallStep.twp_returnFromFunction
     iintro %store %observations Hstate
     imod Quicksort.arrayAt_readWordArray store 0 [] 0 source output

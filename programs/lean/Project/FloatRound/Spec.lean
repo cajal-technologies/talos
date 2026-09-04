@@ -120,22 +120,19 @@ theorem roundHeap_pointsTo [WasmHeapGS Unit] :
         pointsTo_u32 0 1048556 0 ∗ pointsTo_u32 0 1048572 0 := by
   unfold roundHeap
   iintro Hheap
-  ihave Houter := store32Heap_pointsTo
+  ihave ⟨Houter, Hheap⟩ := store32Heap_pointsTo
     (store32Heap (store32Heap ∅ 0 1048540 0) 0 1048556 0)
     0 1048572 0
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) $$ Hheap
-  icases Houter with ⟨Houter, Hheap⟩
-  ihave Hmiddle := store32Heap_pointsTo
+  ihave ⟨Hmiddle, Hheap⟩ := store32Heap_pointsTo
     (store32Heap ∅ 0 1048540 0) 0 1048556 0
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) $$ Hheap
-  icases Hmiddle with ⟨Hmiddle, Hheap⟩
-  ihave Hinner := store32Heap_pointsTo
+  ihave ⟨Hinner, Hempty⟩ := store32Heap_pointsTo
     (∅ : WasmHeapMap (Option UInt8)) 0 1048540 0
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) $$ Hheap
-  icases Hinner with ⟨Hinner, Hempty⟩
   iframe
 
 theorem roundGlobals_pointsTo [WasmGlobalGS Unit] :
@@ -1025,8 +1022,7 @@ theorem checkRound_smallStep (x : UInt32) :
   · intro gs
     simp only [checkRoundConfig, RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, Hglobals, Hruntime⟩
-    ihave Hmemory := roundHeap_pointsTo $$ Hbytes
-    icases Hmemory with ⟨Hdeep, Hword, Hresult⟩
+    ihave ⟨Hdeep, Hword, Hresult⟩ := roundHeap_pointsTo $$ Hbytes
     ihave Hglobal := roundGlobals_pointsTo $$ Hglobals
     iapply_frame func6_body_smallStep_wp
 
@@ -1778,8 +1774,7 @@ theorem check_round_terminatesWith (x : UInt32) :
   · intro _hlc _gs
     simp only [checkRoundConfig, RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, Hglobals, Hruntime⟩
-    ihave Hmemory := roundHeap_pointsTo $$ Hbytes
-    icases Hmemory with ⟨Hdeep, Hword, Hresult⟩
+    ihave ⟨Hdeep, Hword, Hresult⟩ := roundHeap_pointsTo $$ Hbytes
     ihave Hglobal := roundGlobals_pointsTo $$ Hglobals
     iapply_frame twp_func6_body_smallStep_wp
 

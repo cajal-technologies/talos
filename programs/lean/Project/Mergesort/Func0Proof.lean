@@ -125,20 +125,17 @@ private theorem ByteSlice_twelve_storeFocus
       simpa using byteOffset_toNat ptr 8 (by omega)
     rw [hptr8Nat]
     omega
-  ihave HfirstFocus := ByteSlice_storeAnyWordFocus ptr first
+  ihave ⟨Hfirst, HcloseFirst⟩ := ByteSlice_storeAnyWordFocus ptr first
     hfirstLength hfirstNowrap $$ Hfirst
-  icases HfirstFocus with ⟨Hfirst, HcloseFirst⟩
-  ihave HsecondFocus := ByteSlice_storeAnyWordFocus (ptr + 4) second
+  ihave ⟨Hsecond, HcloseSecond⟩ := ByteSlice_storeAnyWordFocus (ptr + 4) second
     hsecondLength hsecondNowrap $$ Hsecond
-  icases HsecondFocus with ⟨Hsecond, HcloseSecond⟩
   have hthirdAddress :
       ptr + 4 + UInt32.ofNat second.length = ptr + 8 := by
     simp [hsecondLength, hptr8]
   ihave Hthird' : Representations.ByteSlice (ptr + 8) third $$ [Hthird]
   · irw_exact [← hthirdAddress] with Hthird
-  ihave HthirdFocus := ByteSlice_storeAnyWordFocus (ptr + 8) third
+  ihave ⟨Hthird, HcloseThird⟩ := ByteSlice_storeAnyWordFocus (ptr + 8) third
     hthirdLength hthirdNowrap $$ Hthird'
-  icases HthirdFocus with ⟨Hthird, HcloseThird⟩
   iexists Spec.decodeWord first, Spec.decodeWord second,
     Spec.decodeWord third
   iframe Hfirst Hsecond Hthird
@@ -535,9 +532,8 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
                 List.append_nil]
               wasm_twp_localSet [List.length, List.set]
               wasm_twp_pures [twp_exitControl] using [List.take_zero, List.nil_append]
-              ihave HblockFacts := LiveBlock_with_nonnull heapId
+              ihave ⟨Hblock, %hnewPtrNonzero⟩ := LiveBlock_with_nonnull heapId
                 history.nextId newPtr newLayout newBytes $$ Hblock
-              icases HblockFacts with ⟨Hblock, %hnewPtrNonzero⟩
               wasm_twp_pures [twp_localGet]
               iapply twp_brIf hnewPtrNonzero (by rfl)
               simp only [List.take_zero, List.nil_append]
@@ -664,9 +660,8 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
               List.append_nil]
             wasm_twp_localSet [List.length, List.set]
             wasm_twp_pures [twp_br] using [List.take_zero, List.nil_append]
-            ihave HblockFacts := LiveBlock_with_nonnull heapId
+            ihave ⟨Hblock, %hnewPtrNonzero⟩ := LiveBlock_with_nonnull heapId
               history.nextId newPtr newLayout newBytes $$ Hblock
-            icases HblockFacts with ⟨Hblock, %hnewPtrNonzero⟩
             wasm_twp_pures [twp_localGet]
             iapply twp_brIf hnewPtrNonzero (by rfl)
             simp only [List.take_zero, List.drop_zero, List.nil_append]

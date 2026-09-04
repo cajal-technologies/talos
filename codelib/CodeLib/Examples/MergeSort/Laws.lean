@@ -274,8 +274,7 @@ theorem twp_loadAt
     simpa only [UInt32.size] using hroom
   obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4 (base + 4 * UInt32.ofNat k) hroom'
   iintro ⟨Harray, Hcont⟩
-  ihave Hfocus := arrayAt_get 0 base input k hk $$ Harray
-  icases Hfocus with ⟨Hword, Hclose⟩
+  ihave ⟨Hword, Hclose⟩ := arrayAt_get 0 base input k hk $$ Harray
   iapply twp_loadAt_cell hbase helement
     (by rw [UInt32.add_comm])
     h1 h2 h3
@@ -380,8 +379,7 @@ theorem twp_copyAt
     (by simpa using hsource)
     (by simpa using hsourceElement)
   iframe; iintro Hsource
-  ihave Hfocus := arrayAt_set 0 temporary scratch k input[i] hk $$ Htemporary
-  icases Hfocus with ⟨Hcell, Hclose⟩
+  ihave ⟨Hcell, Hclose⟩ := arrayAt_set 0 temporary scratch k input[i] hk $$ Htemporary
   simp only [List.cons_append, List.nil_append]
   ihave Hcell' : pointsTo_u32 0 destination scratch[k] $$ [Hcell]
   · dsimp [destination]
