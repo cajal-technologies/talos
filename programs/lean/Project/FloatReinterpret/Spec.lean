@@ -641,53 +641,24 @@ eight-byte range at `1048552`; the outer check result is the disjoint word at
 def exportHeap : WasmHeapMap (Option UInt8) :=
   store32Heap (store64Heap ∅ 0 1048552 0) 0 1048572 0
 
-def exportMem (memory : Mem) : Mem :=
-  (memory.write64 1048552 0).write32 1048572 0
-
-theorem export_initialMem_eq :
-    exportMem («module».initialStore : Store Unit).mem =
-      («module».initialStore : Store Unit).mem := by
-  simp [exportMem, «module», Module.initialStore, Mem.write64,
-    Mem.write32, Mem.empty]
-
 theorem exportHeap_agrees :
     heapAgreesWithMem exportHeap (storeResolve (func1Config 0).store) := by
   unfold exportHeap
-  have h := store32_sound0 (store64Heap ∅ 0 1048552 0)
-      ((«module».initialStore : Store Unit).mem.write64 1048552 0) 1048572 0
-      (by decide) (by decide) (by decide)
-      (store64_sound0 (∅ : WasmHeapMap (Option UInt8))
-          («module».initialStore : Store Unit).mem 1048552 0
-          (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
-          (heapAgreesWithMem_empty _))
-  have hrw : ((«module».initialStore : Store Unit).mem.write64 1048552 0).write32 1048572 0 =
-      («module».initialStore : Store Unit).mem := by
-    have := export_initialMem_eq; unfold exportMem at this; exact this
-  rw [hrw] at h
-  have hresolveEq := singleMemoryResolve_eq_storeResolve
-    (func1Config 0).store («module».initialStore : Store Unit).mem rfl
-    (by native_decide)
-  simpa only [← hresolveEq] using h
+  apply insert_physical_word32_sound _ _ 0 _ 1048572 0
+    rfl (by decide) (by decide) (by decide)
+  · apply insert_physical_word64_sound ∅ _ 0 _ 1048552 0
+      rfl (heapAgreesWithMem_empty _) (by decide)
+  · decide
 
 theorem exportHeap_inBounds :
     heapAddressesInBounds exportHeap (storeResolve (func1Config 0).store) := by
   unfold exportHeap
-  have h := store32_inBounds0 (store64Heap ∅ 0 1048552 0)
-      ((«module».initialStore : Store Unit).mem.write64 1048552 0) 1048572 0
-      (by decide) (by decide) (by decide) (by decide)
-      (store64_inBounds0 (∅ : WasmHeapMap (Option UInt8))
-          («module».initialStore : Store Unit).mem 1048552 0
-          (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
-          (by decide)
-          (heapAddressesInBounds_empty _))
-  have hrw : ((«module».initialStore : Store Unit).mem.write64 1048552 0).write32 1048572 0 =
-      («module».initialStore : Store Unit).mem := by
-    have := export_initialMem_eq; unfold exportMem at this; exact this
-  rw [hrw] at h
-  have hresolveEq := singleMemoryResolve_eq_storeResolve
-    (func1Config 0).store («module».initialStore : Store Unit).mem rfl
-    (by native_decide)
-  simpa only [← hresolveEq] using h
+  apply insert_physical_word32_inBounds _ _ 0 _ 1048572 0
+    rfl (by decide) (by decide) (by decide)
+  · apply insert_physical_word64_inBounds ∅ _ 0 _ 1048552 0
+      rfl (heapAddressesInBounds_empty _) (by decide)
+  · decide
+  · decide
 
 theorem exportHeap_pointsTo [WasmHeapGS Unit] :
     ([∗map] address ↦ value ∈ exportHeap,

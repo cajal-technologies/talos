@@ -851,6 +851,60 @@ def store64Heap (σ : WasmHeapMap (Option UInt8)) (memId : Nat) (addr : UInt32)
       ⟨memId, addr + 6⟩ (some (u64Byte value 6)))
     ⟨memId, addr + 7⟩ (some (u64Byte value 7))
 
+/-- Claim a 64-bit word whose eight bytes are already present in memory. -/
+theorem insert_physical_word64_sound
+    (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Option Mem)
+    (memId : Nat) (mem : Mem) (addr : UInt32) (value : UInt64)
+    (hresolve : resolve memId = some mem)
+    (hagree : heapAgreesWithMem σ resolve)
+    (hread : ∀ i : Fin 8,
+      mem.read8 (addr + UInt32.ofNat i) = u64Byte value i) :
+    heapAgreesWithMem (store64Heap σ memId addr value) resolve := by
+  unfold store64Heap
+  apply insert_physical_byte_sound _ resolve memId mem (addr + 7) _ hresolve
+  · apply insert_physical_byte_sound _ resolve memId mem (addr + 6) _ hresolve
+    · apply insert_physical_byte_sound _ resolve memId mem (addr + 5) _ hresolve
+      · apply insert_physical_byte_sound _ resolve memId mem (addr + 4) _ hresolve
+        · apply insert_physical_byte_sound _ resolve memId mem (addr + 3) _ hresolve
+          · apply insert_physical_byte_sound _ resolve memId mem (addr + 2) _ hresolve
+            · apply insert_physical_byte_sound _ resolve memId mem (addr + 1) _ hresolve
+              · exact insert_physical_byte_sound σ resolve memId mem addr _
+                  hresolve hagree (by simpa using hread 0)
+              · exact hread 1
+            · exact hread 2
+          · exact hread 3
+        · exact hread 4
+      · exact hread 5
+    · exact hread 6
+  · exact hread 7
+
+/-- Claim the bounds of a 64-bit word whose eight addresses are allocated. -/
+theorem insert_physical_word64_inBounds
+    (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Option Mem)
+    (memId : Nat) (mem : Mem) (addr : UInt32) (value : UInt64)
+    (hresolve : resolve memId = some mem)
+    (hinBounds : heapAddressesInBounds σ resolve)
+    (hbound : ∀ i : Fin 8,
+      (addr + UInt32.ofNat i).toNat < mem.pages * 65536) :
+    heapAddressesInBounds (store64Heap σ memId addr value) resolve := by
+  unfold store64Heap
+  apply insert_physical_byte_inBounds _ resolve memId mem (addr + 7) _ hresolve
+  · apply insert_physical_byte_inBounds _ resolve memId mem (addr + 6) _ hresolve
+    · apply insert_physical_byte_inBounds _ resolve memId mem (addr + 5) _ hresolve
+      · apply insert_physical_byte_inBounds _ resolve memId mem (addr + 4) _ hresolve
+        · apply insert_physical_byte_inBounds _ resolve memId mem (addr + 3) _ hresolve
+          · apply insert_physical_byte_inBounds _ resolve memId mem (addr + 2) _ hresolve
+            · apply insert_physical_byte_inBounds _ resolve memId mem (addr + 1) _ hresolve
+              · exact insert_physical_byte_inBounds σ resolve memId mem addr _
+                  hresolve hinBounds (by simpa using hbound 0)
+              · exact hbound 1
+            · exact hbound 2
+          · exact hbound 3
+        · exact hbound 4
+      · exact hbound 5
+    · exact hbound 6
+  · exact hbound 7
+
 theorem store64Heap_pointsTo {α : Type} [WasmHeapGS α]
     (σ : WasmHeapMap (Option UInt8)) (memId : Nat) (addr : UInt32) (value : UInt64)
     (h0 : get? σ ⟨memId, addr⟩ = none)

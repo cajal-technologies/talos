@@ -2411,62 +2411,39 @@ theorem func4ExampleHeap_agrees :
     heapAgreesWithMem func4ExampleHeap
       (storeResolve func4ExampleConfig.store) := by
   unfold func4ExampleHeap
-  have h := store64_sound0
-      (store64Heap (store32Heap (store32Heap (store64Heap ∅ 0 1048552 0) 0 1048568 0) 0 1048572 0) 0 0 11)
-      (((( («module».initialStore : Store Unit).mem.write64 1048552 0).write32 1048568 0).write32 1048572 0).write64 0 11) 8 22
-      (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
-      (store64_sound0
-        (store32Heap (store32Heap (store64Heap ∅ 0 1048552 0) 0 1048568 0) 0 1048572 0)
-        ((( («module».initialStore : Store Unit).mem.write64 1048552 0).write32 1048568 0).write32 1048572 0) 0 11
-        (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
-        (store32_sound0
-          (store32Heap (store64Heap ∅ 0 1048552 0) 0 1048568 0)
-          (( («module».initialStore : Store Unit).mem.write64 1048552 0).write32 1048568 0) 1048572 0
-          (by decide) (by decide) (by decide)
-          (store32_sound0
-            (store64Heap ∅ 0 1048552 0)
-            ( («module».initialStore : Store Unit).mem.write64 1048552 0) 1048568 0
-            (by decide) (by decide) (by decide)
-            (store64_sound0 ∅ («module».initialStore : Store Unit).mem 1048552 0
-              (by decide) (by decide) (by decide) (by decide)
-              (by decide) (by decide) (by decide)
-              (heapAgreesWithMem_empty _)))))
-  have hresolveEq := singleMemoryResolve_eq_storeResolve func4ExampleConfig.store
-    (func4ExampleMem («module».initialStore : Store Unit).mem) rfl
-    (by native_decide)
-  rw [← hresolveEq]; exact h
+  apply insert_physical_word64_sound _ _ 0 _ 8 22 rfl
+  · apply insert_physical_word64_sound _ _ 0 _ 0 11 rfl
+    · apply insert_physical_word32_sound _ _ 0 _ 1048572 0
+        rfl (by decide) (by decide) (by decide)
+      · apply insert_physical_word32_sound _ _ 0 _ 1048568 0
+          rfl (by decide) (by decide) (by decide)
+        · apply insert_physical_word64_sound ∅ _ 0 _ 1048552 0 rfl
+          · exact heapAgreesWithMem_empty _
+          · native_decide
+        · native_decide
+      · native_decide
+    · native_decide
+  · native_decide
 
 theorem func4ExampleHeap_inBounds :
     heapAddressesInBounds func4ExampleHeap
       (storeResolve func4ExampleConfig.store) := by
   unfold func4ExampleHeap
-  have h := store64_inBounds0
-      (store64Heap (store32Heap (store32Heap (store64Heap ∅ 0 1048552 0) 0 1048568 0) 0 1048572 0) 0 0 11)
-      (((( («module».initialStore : Store Unit).mem.write64 1048552 0).write32 1048568 0).write32 1048572 0).write64 0 11) 8 22
-      (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide)
-      (store64_inBounds0
-        (store32Heap (store32Heap (store64Heap ∅ 0 1048552 0) 0 1048568 0) 0 1048572 0)
-        ((( («module».initialStore : Store Unit).mem.write64 1048552 0).write32 1048568 0).write32 1048572 0) 0 11
-        (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
-        (by decide)
-        (store32_inBounds0
-          (store32Heap (store64Heap ∅ 0 1048552 0) 0 1048568 0)
-          (( («module».initialStore : Store Unit).mem.write64 1048552 0).write32 1048568 0) 1048572 0
-          (by decide) (by decide) (by decide) (by decide)
-          (store32_inBounds0
-            (store64Heap ∅ 0 1048552 0)
-            ( («module».initialStore : Store Unit).mem.write64 1048552 0) 1048568 0
-            (by decide) (by decide) (by decide) (by decide)
-            (store64_inBounds0 ∅ («module».initialStore : Store Unit).mem 1048552 0
-              (by decide) (by decide) (by decide) (by decide)
-              (by decide) (by decide) (by decide)
-              (by decide)
-              (heapAddressesInBounds_empty _)))))
-  have hresolveEq := singleMemoryResolve_eq_storeResolve func4ExampleConfig.store
-    (func4ExampleMem («module».initialStore : Store Unit).mem) rfl
-    (by native_decide)
-  rw [← hresolveEq]; exact h
+  apply insert_physical_word64_inBounds _ _ 0 _ 8 22 rfl
+  · apply insert_physical_word64_inBounds _ _ 0 _ 0 11 rfl
+    · apply insert_physical_word32_inBounds _ _ 0 _ 1048572 0
+        rfl (by decide) (by decide) (by decide)
+      · apply insert_physical_word32_inBounds _ _ 0 _ 1048568 0
+          rfl (by decide) (by decide) (by decide)
+        · apply insert_physical_word64_inBounds ∅ _ 0 _ 1048552 0 rfl
+          · exact heapAddressesInBounds_empty _
+          · native_decide
+        · native_decide
+        · native_decide
+      · native_decide
+      · native_decide
+    · native_decide
+  · native_decide
 
 theorem func4ExampleGlobals_agree :
     globalHeapAgrees func4ExampleGlobals
@@ -2634,53 +2611,35 @@ theorem func4AliasHeap_agrees :
     heapAgreesWithMem func4AliasHeap
       (storeResolve func4AliasConfig.store) := by
   unfold func4AliasHeap
-  have h := store64_sound0
-      (store32Heap (store32Heap (store64Heap ∅ 0 1048552 0) 0 1048568 0) 0 1048572 0)
-      ((( («module».initialStore : Store Unit).mem.write64 1048552 0).write32 1048568 0).write32 1048572 0) 0 42
-      (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
-      (store32_sound0
-        (store32Heap (store64Heap ∅ 0 1048552 0) 0 1048568 0)
-        (( («module».initialStore : Store Unit).mem.write64 1048552 0).write32 1048568 0) 1048572 0
-        (by decide) (by decide) (by decide)
-        (store32_sound0
-          (store64Heap ∅ 0 1048552 0)
-          ( («module».initialStore : Store Unit).mem.write64 1048552 0) 1048568 0
-          (by decide) (by decide) (by decide)
-          (store64_sound0 ∅ («module».initialStore : Store Unit).mem 1048552 0
-            (by decide) (by decide) (by decide) (by decide)
-            (by decide) (by decide) (by decide)
-            (heapAgreesWithMem_empty _))))
-  have hresolveEq := singleMemoryResolve_eq_storeResolve func4AliasConfig.store
-    (func4AliasMem («module».initialStore : Store Unit).mem) rfl
-    (by native_decide)
-  rw [← hresolveEq]; exact h
+  apply insert_physical_word64_sound _ _ 0 _ 0 42 rfl
+  · apply insert_physical_word32_sound _ _ 0 _ 1048572 0
+      rfl (by decide) (by decide) (by decide)
+    · apply insert_physical_word32_sound _ _ 0 _ 1048568 0
+        rfl (by decide) (by decide) (by decide)
+      · apply insert_physical_word64_sound ∅ _ 0 _ 1048552 0 rfl
+        · exact heapAgreesWithMem_empty _
+        · native_decide
+      · native_decide
+    · native_decide
+  · native_decide
 
 theorem func4AliasHeap_inBounds :
     heapAddressesInBounds func4AliasHeap
       (storeResolve func4AliasConfig.store) := by
   unfold func4AliasHeap
-  have h := store64_inBounds0
-      (store32Heap (store32Heap (store64Heap ∅ 0 1048552 0) 0 1048568 0) 0 1048572 0)
-      ((( («module».initialStore : Store Unit).mem.write64 1048552 0).write32 1048568 0).write32 1048572 0) 0 42
-      (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide)
-      (store32_inBounds0
-        (store32Heap (store64Heap ∅ 0 1048552 0) 0 1048568 0)
-        (( («module».initialStore : Store Unit).mem.write64 1048552 0).write32 1048568 0) 1048572 0
-        (by decide) (by decide) (by decide) (by decide)
-        (store32_inBounds0
-          (store64Heap ∅ 0 1048552 0)
-          ( («module».initialStore : Store Unit).mem.write64 1048552 0) 1048568 0
-          (by decide) (by decide) (by decide) (by decide)
-          (store64_inBounds0 ∅ («module».initialStore : Store Unit).mem 1048552 0
-            (by decide) (by decide) (by decide) (by decide)
-            (by decide) (by decide) (by decide)
-            (by decide)
-            (heapAddressesInBounds_empty _))))
-  have hresolveEq := singleMemoryResolve_eq_storeResolve func4AliasConfig.store
-    (func4AliasMem («module».initialStore : Store Unit).mem) rfl
-    (by native_decide)
-  rw [← hresolveEq]; exact h
+  apply insert_physical_word64_inBounds _ _ 0 _ 0 42 rfl
+  · apply insert_physical_word32_inBounds _ _ 0 _ 1048572 0
+      rfl (by decide) (by decide) (by decide)
+    · apply insert_physical_word32_inBounds _ _ 0 _ 1048568 0
+        rfl (by decide) (by decide) (by decide)
+      · apply insert_physical_word64_inBounds ∅ _ 0 _ 1048552 0 rfl
+        · exact heapAddressesInBounds_empty _
+        · native_decide
+      · native_decide
+      · native_decide
+    · native_decide
+    · native_decide
+  · native_decide
 
 theorem func4AliasHeap_pointsTo [WasmHeapGS Unit] :
     ([∗map] address ↦ value ∈ func4AliasHeap,
@@ -2818,37 +2777,21 @@ theorem func0AliasHeap_agrees :
     heapAgreesWithMem func0AliasHeap
       (storeResolve func0AliasConfig.store) := by
   unfold func0AliasHeap
-  have h := store64_sound0
-      (store64Heap ∅ 0 1048552 0)
-      ( («module».initialStore : Store Unit).mem.write64 1048552 0) 0 42
-      (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
-      (store64_sound0 ∅ («module».initialStore : Store Unit).mem 1048552 0
-        (by decide) (by decide) (by decide) (by decide)
-        (by decide) (by decide) (by decide)
-        (heapAgreesWithMem_empty _))
-  have hresolveEq := singleMemoryResolve_eq_storeResolve func0AliasConfig.store
-    (((«module».initialStore : Store Unit).mem.write64 1048552 0).write64 0 42)
-    rfl (by native_decide)
-  simpa only [← hresolveEq] using h
+  apply insert_physical_word64_sound _ _ 0 _ 0 42 rfl
+  · apply insert_physical_word64_sound ∅ _ 0 _ 1048552 0 rfl
+    · exact heapAgreesWithMem_empty _
+    · native_decide
+  · native_decide
 
 theorem func0AliasHeap_inBounds :
     heapAddressesInBounds func0AliasHeap
       (storeResolve func0AliasConfig.store) := by
   unfold func0AliasHeap
-  have h := store64_inBounds0
-      (store64Heap ∅ 0 1048552 0)
-      ( («module».initialStore : Store Unit).mem.write64 1048552 0) 0 42
-      (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide)
-      (store64_inBounds0 ∅ («module».initialStore : Store Unit).mem 1048552 0
-        (by decide) (by decide) (by decide) (by decide)
-        (by decide) (by decide) (by decide)
-        (by decide)
-        (heapAddressesInBounds_empty _))
-  have hresolveEq := singleMemoryResolve_eq_storeResolve func0AliasConfig.store
-    (((«module».initialStore : Store Unit).mem.write64 1048552 0).write64 0 42)
-    rfl (by native_decide)
-  simpa only [← hresolveEq] using h
+  apply insert_physical_word64_inBounds _ _ 0 _ 0 42 rfl
+  · apply insert_physical_word64_inBounds ∅ _ 0 _ 1048552 0 rfl
+    · exact heapAddressesInBounds_empty _
+    · native_decide
+  · native_decide
 
 theorem func0AliasGlobals_agree :
     globalHeapAgrees func0AliasGlobals
