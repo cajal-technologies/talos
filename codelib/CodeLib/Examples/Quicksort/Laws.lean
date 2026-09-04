@@ -233,9 +233,8 @@ theorem twp_swapAt
   have hroom_b : addr_b.toNat + 4 ≤ UInt32.size := by rw [hslot_b]; omega
   obtain ⟨h1_b, h2_b, h3_b⟩ := UInt32.addSteps4 addr_b (by
     simpa only [UInt32.size] using hroom_b)
-  have hswap : swapElems input a b = (input.set a input[b]).set b input[a] := by
-    unfold swapElems
-    rw [getElem!_pos input b hb, getElem!_pos input a ha]
+  have hswap : swapElems input a b = (input.set a input[b]).set b input[a] :=
+    List.swapElems_eq_set input ha hb
   iintro ⟨Harray, Hcont⟩
   simp only [swapAt, storeAt, List.append_assoc,
     List.cons_append, List.nil_append]

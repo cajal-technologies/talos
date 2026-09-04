@@ -196,9 +196,8 @@ theorem twp_swapAt64
   have hroomA : addrA.toNat + 8 ≤ UInt32.size := by rw [hslotA]; omega
   have hroomB : addrB.toNat + 8 ≤ UInt32.size := by rw [hslotB]; omega
   have hswap : swapElems input a b =
-      (input.set a input[b]).set b input[a] := by
-    unfold swapElems
-    rw [getElem!_pos input b hb, getElem!_pos input a ha]
+      (input.set a input[b]).set b input[a] :=
+    List.swapElems_eq_set input ha hb
   iintro ⟨Harray, Hcont⟩
   simp only [swapAt, storeAt, List.append_assoc, List.cons_append, List.nil_append]
   iapply_frame_intro twp_loadAt64 ha hfit hbase ha_local as Harray
@@ -577,7 +576,7 @@ private theorem twp_recursiveSort_aux
         iintro Hupdated
         let updated := swapElems input 0 best
         have hupdatedLength : updated.length = input.length :=
-          swapElems_length input 0 best
+          List.swapElems_length input 0 best
         have hupdatedNonempty : 0 < updated.length := by omega
         have hdecomp : updated = updated[0]! :: updated.drop 1 := by
           cases hUpdated : updated with
