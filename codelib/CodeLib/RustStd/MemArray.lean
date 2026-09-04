@@ -92,12 +92,10 @@ theorem Mem.words64_swap {m m' : Mem} {base : UInt32} {n i j : Nat}
   simp only [Mem.length_words64] at hk
   rw [Mem.getElem_words64 m' base n k hk]
   by_cases hkj : k = j
-  · subst hkj
-    simpa only [List.getElem_set_self] using h_j
+  · subst hkj; simpa only [List.getElem_set_self] using h_j
   · rw [List.getElem_set_ne (Ne.symm hkj)]
     by_cases hki : k = i
-    · subst hki
-      simpa only [List.getElem_set_self] using h_i
+    · subst hki; simpa only [List.getElem_set_self] using h_i
     · rw [List.getElem_set_ne (Ne.symm hki), Mem.getElem_words64 m base n k hk]
       exact h_k k hk hki hkj
 

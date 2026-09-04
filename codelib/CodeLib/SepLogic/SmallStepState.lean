@@ -27,8 +27,7 @@ theorem runtimeModuleSingletonAgrees
       runtime.instances[id]?.map (·.module) = some m := by
   intro id m hm
   by_cases h : id = runtime.entry.id
-  · subst h
-    simp [PartialMap.singleton, get?_insert_eq rfl] at hm
+  · subst h; simp [PartialMap.singleton, get?_insert_eq rfl] at hm
     subst hm
     rw [Array.getElem?_eq_getElem hwf]
     simp [RuntimeEnv.currentModule, RuntimeEnv.currentInstance]
@@ -45,8 +44,7 @@ theorem hostEnvSingletonAgrees
       runtime.instances[id]?.map (·.host) = some env := by
   intro id env hm
   by_cases h : id = runtime.entry.id
-  · subst h
-    simp [PartialMap.singleton, get?_insert_eq rfl] at hm
+  · subst h; simp [PartialMap.singleton, get?_insert_eq rfl] at hm
     subst hm
     rw [Array.getElem?_eq_getElem hwf, Option.map_some]
     simp [RuntimeEnv.currentHost, RuntimeEnv.currentInstance]

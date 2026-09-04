@@ -427,8 +427,7 @@ theorem mod3_gcd_right_zero_smallStep_terminates (a : UInt64) :
       (fun rs _store =>
         rs = [.i64 (UInt64.ofNat (Nat.gcd a.toNat 0))]) := by
   by_cases ha : a = 0
-  · subst a
-    simpa using mod3_gcd_left_zero_smallStep_terminates 0
+  · subst a; simpa using mod3_gcd_left_zero_smallStep_terminates 0
   · refine ⟨[.instruction (.localGet 1), .instruction (.localGet 0),
         .instruction .orI64, .instruction (.localSet 2),
         .instruction (.block 0 0 gcdOuterBody),
@@ -756,12 +755,10 @@ theorem gcdLoop_terminates
 theorem mod3_gcd_smallStep_termination (a b : UInt64) :
     SmallStep.TerminatesWith (gcdConfig a b) (fun _ _ => True) := by
   by_cases ha : a = 0
-  · subst a
-    exact (mod3_gcd_left_zero_smallStep_terminates b).mono
+  · subst a; exact (mod3_gcd_left_zero_smallStep_terminates b).mono
       (fun _ _ _ => trivial)
   · by_cases hb : b = 0
-    · subst b
-      exact (mod3_gcd_right_zero_smallStep_terminates a).mono
+    · subst b; exact (mod3_gcd_right_zero_smallStep_terminates a).mono
         (fun _ _ _ => trivial)
     · let shared := UInt64.ofNat (ctz64 64 (b ||| a))
       let ao := a >>> (UInt64.ofNat (ctz64 64 a) % 64)

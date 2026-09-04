@@ -116,16 +116,14 @@ theorem MinScan.step (values : List UInt64) {start best scan : Nat}
     refine ⟨by omega, by omega, by omega, ?_⟩
     intro k hk hks
     by_cases hkscan : k = scan
-    · subst k
-      exact uint64_le_refl _
+    · subst k; exact uint64_le_refl _
     · exact uint64_le_trans (uint64_le_of_lt hlt)
         (hmin k hk (by omega))
   · simp only [if_neg hlt]
     refine ⟨hstartBest, by omega, by omega, ?_⟩
     intro k hk hks
     by_cases hkscan : k = scan
-    · subst k
-      exact uint64_le_of_not_lt hlt
+    · subst k; exact uint64_le_of_not_lt hlt
     · exact hmin k hk (by omega)
 
 /-- Prefix `[0, fixed)` is sorted, contains the globally least `fixed`

@@ -76,8 +76,7 @@ private theorem sharedMemHeap_agrees (v : UInt8) :
   intro key value hget
   simp only [sharedMemHeap] at hget
   by_cases h : key = ⟨0, 0⟩
-  · subst h
-    simp only [get?_insert_eq rfl, Option.some.injEq] at hget
+  · subst h; simp only [get?_insert_eq rfl, Option.some.injEq] at hget
     subst hget
     exact ⟨Mem.empty 1,
       by simp [storeResolve, sharedMemConfig],

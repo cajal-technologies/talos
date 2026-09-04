@@ -107,17 +107,13 @@ theorem writeBytes_encodeWord (mem : Mem) (base value : UInt32) :
     congr
     funext i
     by_cases h0 : i = base.toNat
-    · subst i
-      simp
+    · subst i; simp
     by_cases h1 : i = base.toNat + 1
-    · subst i
-      simp
+    · subst i; simp
     by_cases h2 : i = base.toNat + 2
-    · subst i
-      simp
+    · subst i; simp
     by_cases h3 : i = base.toNat + 3
-    · subst i
-      simp
+    · subst i; simp
     rw [dif_neg (by omega)]
     simp [h0, h1, h2, h3]
 
@@ -202,20 +198,16 @@ theorem write32_read32 (mem : Mem) (base : UInt32) :
     congr
     funext i
     by_cases h0 : i = base.toNat
-    · subst i
-      simp only [if_pos]
+    · subst i; simp only [if_pos]
       bv_decide
     by_cases h1 : i = base.toNat + 1
-    · subst i
-      simp only [if_neg h0, if_pos]
+    · subst i; simp only [if_neg h0, if_pos]
       bv_decide
     by_cases h2 : i = base.toNat + 2
-    · subst i
-      simp only [if_neg h0, if_neg h1, if_pos]
+    · subst i; simp only [if_neg h0, if_neg h1, if_pos]
       bv_decide
     by_cases h3 : i = base.toNat + 3
-    · subst i
-      simp only [if_neg h0, if_neg h1, if_neg h2, if_pos]
+    · subst i; simp only [if_neg h0, if_neg h1, if_neg h2, if_pos]
       bv_decide
     simp [h0, h1, h2, h3]
 

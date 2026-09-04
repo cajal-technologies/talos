@@ -48,8 +48,7 @@ theorem writeByte_partiallyMeets :
     (globalσ := (∅ : WasmGlobalMap Value))
   · intro addr v hget
     by_cases h : addr = ⟨0, 0⟩
-    · subst h
-      rw [get?_insert_eq rfl] at hget
+    · subst h; rw [get?_insert_eq rfl] at hget
       have hv := Option.some.inj (Option.some.inj hget)
       subst hv
       exact ⟨_, rfl, by decide⟩
@@ -57,8 +56,7 @@ theorem writeByte_partiallyMeets :
       contradiction
   · intro addr hget
     by_cases h : addr = ⟨0, 0⟩
-    · subst h
-      exact ⟨_, rfl, by decide⟩
+    · subst h; exact ⟨_, rfl, by decide⟩
     · rw [get?_insert_ne (Ne.symm h), get?_empty] at hget
       contradiction
   · exact globalHeapAgrees_empty _

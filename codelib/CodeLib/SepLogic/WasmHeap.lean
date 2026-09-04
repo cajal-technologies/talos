@@ -282,8 +282,7 @@ theorem HeapBelow.insert_fresh
     HeapBelow (insert σ key value) frontier := by
   intro query queryValue hquery hmemory
   by_cases heq : query = key
-  · subst query
-    exact hkey hmemory
+  · subst query; exact hkey hmemory
   · apply hbelow query queryValue _ hmemory
     rwa [get?_insert_ne (Ne.symm heq)] at hquery
 

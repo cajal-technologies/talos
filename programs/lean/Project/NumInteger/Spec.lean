@@ -694,12 +694,10 @@ theorem func1_zero_smallStep_wp
           pointsTo_u64 0 1048512 (UInt64.ofNat (Nat.gcd a.toNat b.toNat)) ∗
           pointsTo_u64 0 1048520 a ∗ pointsTo_u64 0 1048528 b }} := by
   rcases hz with ha | hb
-  · subst a
-    simpa using func1_leftZero_smallStep_wp R result oldX oldY b
+  · subst a; simpa using func1_leftZero_smallStep_wp R result oldX oldY b
   · subst b
     by_cases ha : a = 0
-    · subst a
-      simpa using func1_leftZero_smallStep_wp R result oldX oldY 0
+    · subst a; simpa using func1_leftZero_smallStep_wp R result oldX oldY 0
     · simpa using func1_rightZero_smallStep_wp R result oldX oldY a ha
 
 /-- Finite-heap form of the complete zero-case rule. This is the shape needed
@@ -4201,12 +4199,10 @@ theorem twp_func1_zero_smallStep_wp
           pointsTo_u64 0 1048512 (UInt64.ofNat (Nat.gcd a.toNat b.toNat)) ∗
           pointsTo_u64 0 1048520 a ∗ pointsTo_u64 0 1048528 b }] := by
   rcases hz with ha | hb
-  · subst a
-    simpa using twp_func1_leftZero_smallStep_wp R result oldX oldY b
+  · subst a; simpa using twp_func1_leftZero_smallStep_wp R result oldX oldY b
   · subst b
     by_cases ha : a = 0
-    · subst a
-      simpa using twp_func1_leftZero_smallStep_wp R result oldX oldY 0
+    · subst a; simpa using twp_func1_leftZero_smallStep_wp R result oldX oldY 0
     · simpa using twp_func1_rightZero_smallStep_wp R result oldX oldY a ha
 
 theorem twp_func1_zero_frame_smallStep_wp

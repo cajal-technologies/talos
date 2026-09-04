@@ -91,8 +91,7 @@ theorem instanceIndexHeapAgrees_insert
     instanceIndexHeapAgrees (insert σ ⟨0, index⟩ value) values := by
   intro idx other hget
   by_cases hidx : idx = index
-  · subst idx
-    simp only [get?_insert_eq rfl, Option.some.injEq] at hget
+  · subst idx; simp only [get?_insert_eq rfl, Option.some.injEq] at hget
     simpa only [← hget] using hvalue
   · rw [get?_insert_ne (fun h =>
       hidx (congrArg InstanceIndexKey.index h).symm)] at hget
@@ -163,8 +162,7 @@ theorem instanceIndex_store_sound
   obtain ⟨hindex, _⟩ := getElem?_eq_some_iff.mp hphysical
   intro idx value hother
   by_cases heq : idx = index
-  · subst idx
-    simp only [get?_insert_eq rfl, Option.some.injEq] at hother
+  · subst idx; simp only [get?_insert_eq rfl, Option.some.injEq] at hother
     subst value
     exact List.getElem?_set_self hindex
   · have hne : (⟨0, idx⟩ : InstanceIndexKey) ≠ ⟨0, index⟩ := fun h =>
@@ -260,8 +258,7 @@ theorem store_sound (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Option 
       (fun id => if id = memId then some (mem.write8 addr new_v) else resolve id) := by
   intro key v h_get
   by_cases heq : key = ⟨memId, addr⟩
-  · subst key
-    simp only [get?_insert_eq rfl, Option.some.injEq] at h_get
+  · subst key; simp only [get?_insert_eq rfl, Option.some.injEq] at h_get
     rw [← h_get]
     refine ⟨mem.write8 addr new_v, ?_, ?_⟩
     · simp
@@ -313,8 +310,7 @@ theorem insert_physical_byte_sound
     heapAgreesWithMem (insert σ ⟨memId, addr⟩ (some value)) resolve := by
   intro key other hget
   by_cases heq : key = ⟨memId, addr⟩
-  · subst key
-    simp only [get?_insert_eq rfl, Option.some.injEq] at hget
+  · subst key; simp only [get?_insert_eq rfl, Option.some.injEq] at hget
     subst other
     exact ⟨mem, hresolve, hread⟩
   · rw [get?_insert_ne (Ne.symm heq)] at hget
@@ -332,8 +328,7 @@ theorem insert_physical_byte_inBounds
       (insert σ ⟨memId, addr⟩ (some value)) resolve := by
   intro key hget
   by_cases heq : key = ⟨memId, addr⟩
-  · subst key
-    exact ⟨mem, hresolve, haddr⟩
+  · subst key; exact ⟨mem, hresolve, haddr⟩
   · rw [get?_insert_ne (Ne.symm heq)] at hget
     exact hinBounds key hget
 
@@ -394,20 +389,16 @@ theorem fill16_four_AB_eq_write32 (mem : Mem) :
     congr
     funext i
     by_cases h0 : i = 16
-    · subst i
-      simp
+    · subst i; simp
       bv_decide
     by_cases h1 : i = 17
-    · subst i
-      simp
+    · subst i; simp
       bv_decide
     by_cases h2 : i = 18
-    · subst i
-      simp
+    · subst i; simp
       bv_decide
     by_cases h3 : i = 19
-    · subst i
-      simp
+    · subst i; simp
       bv_decide
     simp [h0, h1, h2, h3]
     omega
@@ -423,20 +414,16 @@ theorem init16_four_eq_write32 (mem : Mem) :
     congr
     funext i
     by_cases h0 : i = 16
-    · subst i
-      simp
+    · subst i; simp
       bv_decide
     by_cases h1 : i = 17
-    · subst i
-      simp
+    · subst i; simp
       bv_decide
     by_cases h2 : i = 18
-    · subst i
-      simp
+    · subst i; simp
       bv_decide
     by_cases h3 : i = 19
-    · subst i
-      simp
+    · subst i; simp
       bv_decide
     simp [h0, h1, h2, h3]
     omega
@@ -464,20 +451,16 @@ theorem copy8_zero_four_eq_write32 (mem : Mem)
     congr
     funext i
     by_cases h8 : i = 8
-    · subst i
-      simp [hb0]
+    · subst i; simp [hb0]
       bv_decide
     by_cases h9 : i = 9
-    · subst i
-      simp [hb1]
+    · subst i; simp [hb1]
       bv_decide
     by_cases h10 : i = 10
-    · subst i
-      simp [hb2]
+    · subst i; simp [hb2]
       bv_decide
     by_cases h11 : i = 11
-    · subst i
-      simp [hb3]
+    · subst i; simp [hb3]
       bv_decide
     simp [h8, h9, h10, h11]
     omega
@@ -506,17 +489,13 @@ theorem copy2_zero_four_eq_write64 (mem : Mem)
     congr
     funext i
     by_cases h2 : i = 2
-    · subst i
-      simp [hb0]
+    · subst i; simp [hb0]
     by_cases h3 : i = 3
-    · subst i
-      simp [hb1]
+    · subst i; simp [hb1]
     by_cases h4 : i = 4
-    · subst i
-      simp [hb2]
+    · subst i; simp [hb2]
     by_cases h5 : i = 5
-    · subst i
-      simp [hb3]
+    · subst i; simp [hb3]
     simp [h2, h3, h4, h5]
     omega
 
@@ -535,15 +514,13 @@ theorem store16_sound (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Optio
       (fun id => if id = memId then some (mem.write16 addr value) else resolve id) := by
   intro key byte h_get
   by_cases e1 : key = ⟨memId, addr + 1⟩
-  · subst key
-    simp [store16Heap, get?_insert_eq] at h_get
+  · subst key; simp [store16Heap, get?_insert_eq] at h_get
     rw [← h_get]
     refine ⟨mem.write16 addr value, ?_, ?_⟩
     · simp
     · simp [Mem.write16, Mem.read8, h1, u32Byte]; bv_decide
   by_cases e0 : key = ⟨memId, addr⟩
-  · subst key
-    simp [store16Heap, get?_insert_ne (Ne.symm e1), get?_insert_eq] at h_get
+  · subst key; simp [store16Heap, get?_insert_ne (Ne.symm e1), get?_insert_eq] at h_get
     rw [← h_get]
     refine ⟨mem.write16 addr value, ?_, ?_⟩
     · simp
@@ -666,23 +643,19 @@ theorem Mem.write32_eq_self {m : Mem} {addr value : UInt32}
     congr
     funext index
     split <;> rename_i heq
-    · subst index
-      simp [Mem.read8, u32Byte] at hb0
+    · subst index; simp [Mem.read8, u32Byte] at hb0
       rw [hb0]
       bv_decide
     split <;> rename_i heq
-    · subst index
-      simp [Mem.read8, u32Byte, h1] at hb1
+    · subst index; simp [Mem.read8, u32Byte, h1] at hb1
       rw [hb1]
       bv_decide
     split <;> rename_i heq
-    · subst index
-      simp [Mem.read8, u32Byte, h2] at hb2
+    · subst index; simp [Mem.read8, u32Byte, h2] at hb2
       rw [hb2]
       bv_decide
     split <;> rename_i heq
-    · subst index
-      simp [Mem.read8, u32Byte, h3] at hb3
+    · subst index; simp [Mem.read8, u32Byte, h3] at hb3
       rw [hb3]
       bv_decide
     · rfl
@@ -739,30 +712,26 @@ theorem store32_sound (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Optio
       (fun id => if id = memId then some (mem.write32 addr value) else resolve id) := by
   intro key byte h_get
   by_cases e3 : key = ⟨memId, addr + 3⟩
-  · subst key
-    simp [store32Heap, get?_insert_eq] at h_get
+  · subst key; simp [store32Heap, get?_insert_eq] at h_get
     rw [← h_get]
     refine ⟨mem.write32 addr value, ?_, ?_⟩
     · simp
     · simp [Mem.write32, Mem.read8, h3, u32Byte]; bv_decide
   by_cases e2 : key = ⟨memId, addr + 2⟩
-  · subst key
-    simp [store32Heap, get?_insert_ne (Ne.symm e3), get?_insert_eq] at h_get
+  · subst key; simp [store32Heap, get?_insert_ne (Ne.symm e3), get?_insert_eq] at h_get
     rw [← h_get]
     refine ⟨mem.write32 addr value, ?_, ?_⟩
     · simp
     · simp [Mem.write32, Mem.read8, h2, u32Byte]; bv_decide
   by_cases e1 : key = ⟨memId, addr + 1⟩
-  · subst key
-    simp [store32Heap, get?_insert_ne (Ne.symm e3),
+  · subst key; simp [store32Heap, get?_insert_ne (Ne.symm e3),
       get?_insert_ne (Ne.symm e2), get?_insert_eq] at h_get
     rw [← h_get]
     refine ⟨mem.write32 addr value, ?_, ?_⟩
     · simp
     · simp [Mem.write32, Mem.read8, h1, u32Byte]; bv_decide
   by_cases e0 : key = ⟨memId, addr⟩
-  · subst key
-    simp [store32Heap, get?_insert_ne (Ne.symm e3),
+  · subst key; simp [store32Heap, get?_insert_ne (Ne.symm e3),
       get?_insert_ne (Ne.symm e2), get?_insert_ne (Ne.symm e1),
       get?_insert_eq] at h_get
     rw [← h_get]
@@ -938,8 +907,7 @@ theorem store64_sound (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Optio
       (fun id => if id = memId then some (mem.write64 addr value) else resolve id) := by
   intro key byte h_get
   by_cases e7 : key = ⟨memId, addr + 7⟩
-  · subst key
-    simp [store64Heap, get?_insert_eq] at h_get; rw [← h_get]
+  · subst key; simp [store64Heap, get?_insert_eq] at h_get; rw [← h_get]
     refine ⟨mem.write64 addr value, ?_, ?_⟩; · simp
     · simp [Mem.write64, Mem.read8, h7, u64Byte]; bv_decide
   by_cases e6 : key = ⟨memId, addr + 6⟩
@@ -948,44 +916,38 @@ theorem store64_sound (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Optio
     refine ⟨mem.write64 addr value, ?_, ?_⟩; · simp
     · simp [Mem.write64, Mem.read8, h6, u64Byte]; bv_decide
   by_cases e5 : key = ⟨memId, addr + 5⟩
-  · subst key
-    simp [store64Heap, get?_insert_ne (Ne.symm e7),
+  · subst key; simp [store64Heap, get?_insert_ne (Ne.symm e7),
       get?_insert_ne (Ne.symm e6), get?_insert_eq] at h_get; rw [← h_get]
     refine ⟨mem.write64 addr value, ?_, ?_⟩; · simp
     · simp [Mem.write64, Mem.read8, h5, u64Byte]; bv_decide
   by_cases e4 : key = ⟨memId, addr + 4⟩
-  · subst key
-    simp [store64Heap, get?_insert_ne (Ne.symm e7),
+  · subst key; simp [store64Heap, get?_insert_ne (Ne.symm e7),
       get?_insert_ne (Ne.symm e6), get?_insert_ne (Ne.symm e5),
       get?_insert_eq] at h_get; rw [← h_get]
     refine ⟨mem.write64 addr value, ?_, ?_⟩; · simp
     · simp [Mem.write64, Mem.read8, h4, u64Byte]; bv_decide
   by_cases e3 : key = ⟨memId, addr + 3⟩
-  · subst key
-    simp [store64Heap, get?_insert_ne (Ne.symm e7),
+  · subst key; simp [store64Heap, get?_insert_ne (Ne.symm e7),
       get?_insert_ne (Ne.symm e6), get?_insert_ne (Ne.symm e5),
       get?_insert_ne (Ne.symm e4), get?_insert_eq] at h_get; rw [← h_get]
     refine ⟨mem.write64 addr value, ?_, ?_⟩; · simp
     · simp [Mem.write64, Mem.read8, h3, u64Byte]; bv_decide
   by_cases e2 : key = ⟨memId, addr + 2⟩
-  · subst key
-    simp [store64Heap, get?_insert_ne (Ne.symm e7),
+  · subst key; simp [store64Heap, get?_insert_ne (Ne.symm e7),
       get?_insert_ne (Ne.symm e6), get?_insert_ne (Ne.symm e5),
       get?_insert_ne (Ne.symm e4), get?_insert_ne (Ne.symm e3),
       get?_insert_eq] at h_get; rw [← h_get]
     refine ⟨mem.write64 addr value, ?_, ?_⟩; · simp
     · simp [Mem.write64, Mem.read8, h2, u64Byte]; bv_decide
   by_cases e1 : key = ⟨memId, addr + 1⟩
-  · subst key
-    simp [store64Heap, get?_insert_ne (Ne.symm e7),
+  · subst key; simp [store64Heap, get?_insert_ne (Ne.symm e7),
       get?_insert_ne (Ne.symm e6), get?_insert_ne (Ne.symm e5),
       get?_insert_ne (Ne.symm e4), get?_insert_ne (Ne.symm e3),
       get?_insert_ne (Ne.symm e2), get?_insert_eq] at h_get; rw [← h_get]
     refine ⟨mem.write64 addr value, ?_, ?_⟩; · simp
     · simp [Mem.write64, Mem.read8, h1, u64Byte]; bv_decide
   by_cases e0 : key = ⟨memId, addr⟩
-  · subst key
-    simp [store64Heap, get?_insert_ne (Ne.symm e7),
+  · subst key; simp [store64Heap, get?_insert_ne (Ne.symm e7),
       get?_insert_ne (Ne.symm e6), get?_insert_ne (Ne.symm e5),
       get?_insert_ne (Ne.symm e4), get?_insert_ne (Ne.symm e3),
       get?_insert_ne (Ne.symm e2), get?_insert_ne (Ne.symm e1),

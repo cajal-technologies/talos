@@ -215,15 +215,13 @@ theorem PartitionLoopInvariant.swapStep
     exact hperm.trans hseg_perm.symm
   · intro k hlo hki1
     by_cases hki : k = i
-    · subst hki
-      rw [swapElems_get_i current hilen hjlen]
+    · subst hki; rw [swapElems_get_i current hilen hjlen]
       exact UInt32.not_lt.mp hle
     · rw [swapElems_get_other (hki := hki) (hkj := by omega)]
       exact hle_zone k hlo (by omega)
   · intro k hik hkj1
     by_cases hkj : k = j
-    · subst hkj
-      rw [swapElems_get_j current hilen hjlen]
+    · subst hkj; rw [swapElems_get_j current hilen hjlen]
       exact hgt_zone i (Nat.le_refl i) (by omega)
     · rw [swapElems_get_other (hki := by omega) (hkj := hkj)]
       exact hgt_zone k (by omega) (by omega)

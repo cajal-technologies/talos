@@ -1341,15 +1341,13 @@ theorem HistoryWellFormed.allocate
   refine ⟨?_, ?_, ?_, ?_, ?_⟩
   · intro allocationId hid
     by_cases heq : allocationId = history.nextId
-    · subst allocationId
-      exact ⟨liveMeta ptr layout, get?_insert_eq rfl⟩
+    · subst allocationId; exact ⟨liveMeta ptr layout, get?_insert_eq rfl⟩
     · have hlt : allocationId < history.nextId := by omega
       obtain ⟨metadata, hmetadata⟩ := hcomplete allocationId hlt
       exact ⟨metadata, (get?_insert_ne (Ne.symm heq)).trans hmetadata⟩
   · intro allocationId metadata hmetadata
     by_cases heq : history.nextId = allocationId
-    · subst allocationId
-      rw [get?_insert_eq rfl] at hmetadata
+    · subst allocationId; rw [get?_insert_eq rfl] at hmetadata
       injection hmetadata with hmetadata
       subst metadata
       exact ⟨by omega, hvalid, by
@@ -1360,8 +1358,7 @@ theorem HistoryWellFormed.allocate
       exact ⟨by omega, hvalidOld, by omega⟩
   · intro earlierId laterId earlier later hid hearlier hlater
     by_cases hlaterId : history.nextId = laterId
-    · subst laterId
-      rw [get?_insert_eq rfl] at hlater
+    · subst laterId; rw [get?_insert_eq rfl] at hlater
       injection hlater with hlater
       subst later
       have hne : history.nextId ≠ earlierId := by omega
@@ -1411,8 +1408,7 @@ theorem HistoryWellFormed.retire
           oldMetadata.ptr = metadata.ptr := by
     intro key metadata hmetadata
     by_cases hkey : allocationId = key
-    · subst key
-      rw [get?_insert_eq rfl] at hmetadata
+    · subst key; rw [get?_insert_eq rfl] at hmetadata
       injection hmetadata with hmetadata
       subst metadata
       exact ⟨liveMeta ptr layout, hlookup, by
@@ -1424,14 +1420,12 @@ theorem HistoryWellFormed.retire
   refine ⟨?_, ?_, ?_, ?_, ?_⟩
   · intro key hkeyLt
     by_cases hkey : allocationId = key
-    · subst key
-      exact ⟨retiredMeta ptr layout, get?_insert_eq rfl⟩
+    · subst key; exact ⟨retiredMeta ptr layout, get?_insert_eq rfl⟩
     · obtain ⟨metadata, hmetadata⟩ := hcomplete key hkeyLt
       exact ⟨metadata, (get?_insert_ne hkey).trans hmetadata⟩
   · intro key metadata hmetadata
     by_cases hkey : allocationId = key
-    · subst key
-      rw [get?_insert_eq rfl] at hmetadata
+    · subst key; rw [get?_insert_eq rfl] at hmetadata
       injection hmetadata with hmetadata
       subst metadata
       refine ⟨hlive.1, ?_, ?_⟩
@@ -2563,11 +2557,9 @@ private theorem insert_overwrite_commute
   intro key
   simp only [LawfulPartialMap.get?_insert]
   by_cases hn : n = key
-  · subst key
-    simp
+  · subst key; simp
   · by_cases hnext : n + 1 = key
-    · subst key
-      simp
+    · subst key; simp
     · simp [hn, hnext]
 
 private theorem foldl_insert_range_lookup
@@ -2583,8 +2575,7 @@ private theorem foldl_insert_range_lookup
       rw [List.range_succ, List.foldl_append]
       simp only [List.foldl_cons, List.foldl_nil]
       by_cases hkey : n = key
-      · subst key
-        rw [get?_insert_eq rfl]
+      · subst key; rw [get?_insert_eq rfl]
         simp
       · rw [get?_insert_ne hkey, ih]
         by_cases hlt : key < n
