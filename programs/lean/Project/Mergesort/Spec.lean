@@ -28,12 +28,6 @@ theorem module_imports : «module».imports = StdIO.imports ++ OOM.imports := by
 /-- Every import of the generated module is implemented by the universal host. -/
 theorem universal_host_covers : Universal.covers «module» = true := by native_decide
 
-/-- The name-keyed universal environment satisfies the matching relational
-host contract regardless of generated import indices. -/
-theorem universal_env_satisfies :
-    (Universal.envFor «module»).Satisfies «module» (Universal.specFor «module») :=
-  Universal.envFor_satisfies «module»
-
 /-- The four little-endian bytes of a 32-bit word. -/
 def encodeWord (value : UInt32) : List UInt8 :=
   [ value.toUInt8

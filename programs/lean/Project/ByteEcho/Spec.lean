@@ -16,12 +16,6 @@ open Wasm
 OOM notification. -/
 theorem module_imports : «module».imports = StdIO.imports ++ OOM.imports := by native_decide
 
-/-- The universal host implements every operation required by the generated
-module. -/
-theorem universal_env_satisfies :
-    (Universal.envFor «module»).Satisfies «module» (Universal.specFor «module») :=
-  Universal.envFor_satisfies «module»
-
 /-- Fuel-free relational execution of the exported byte-stream program. -/
 def RunsBytes (input output : List UInt8) : Prop :=
   Universal.RunsBytes «module» "byte_echo" input output
