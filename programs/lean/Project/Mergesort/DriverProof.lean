@@ -3390,7 +3390,7 @@ theorem twp_func3_output_loop
         serialize (sorted.take emitted) ++ serialize [sorted[emitted]] =
           serialize (sorted.take (emitted + 1)) := by
       rw [← serialize_append,
-        ← Wasm.Examples.MergeSort.take_succ_eq_append_getElem hemitted]
+        ← List.take_succ_eq_append_getElem hemitted]
     have Hwrite := twp_func3_write_one
       (hlc := hlc) heapId capacity inputPtr valuesPtr input chunkBytes
       frameOutput sorted emitted aux1

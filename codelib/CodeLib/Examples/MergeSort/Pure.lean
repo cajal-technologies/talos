@@ -490,20 +490,6 @@ theorem getElem?_of_take_eq_append
   simpa [List.getElem?_take, hkright, List.getElem?_append,
     hleftlen, show ¬k < left by omega] using hlookup
 
-theorem take_succ_eq_append_getElem
-    {values : List UInt32} {index : Nat} (hindex : index < values.length) :
-    values.take (index + 1) = values.take index ++ [values[index]] := by
-  induction values generalizing index with
-  | nil => simp at hindex
-  | cons head tail ih =>
-    cases index with
-    | zero => simp
-    | succ index =>
-      simp at hindex
-      change head :: tail.take (index + 1) =
-        head :: (tail.take index ++ [tail[index]])
-      rw [ih hindex]
-
 theorem segment_append {values : List UInt32} {start mid stop : Nat}
     (hstart : start ≤ mid) (hmid : mid ≤ stop) :
     segment values start mid ++ segment values mid stop =

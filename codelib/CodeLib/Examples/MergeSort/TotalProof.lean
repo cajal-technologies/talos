@@ -1065,7 +1065,7 @@ theorem twp_mergeCopyLoop
         rw [hcopiedState, hscratchValue]
         have hsub :
             state.k + 1 - left = (state.k - left) + 1 := by omega
-        rw [hsub, take_succ_eq_append_getElem hkMerged])
+        rw [hsub, List.take_succ_eq_append_getElem hkMerged])
       iframe
     · simp only [hkCmp, if_neg hk]
       have hkEq : state.k = right := by omega
