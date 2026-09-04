@@ -202,8 +202,7 @@ theorem MergeProgress.takeRemainingLeft
       MergeProgress originalLeft originalRight emitted (x :: xs) []) :
     MergeProgress originalLeft originalRight (emitted ++ [x]) xs [] := by
   intro tail htail
-  have htailEq : tail = xs := mergeRel_right_nil_eq htail
-  subst tail
+  cases mergeRel_right_nil_eq htail
   simpa [List.append_assoc] using
     hprogress (x :: xs) (.rightNil (x :: xs))
 
@@ -213,8 +212,7 @@ theorem MergeProgress.takeRemainingRight
       MergeProgress originalLeft originalRight emitted [] (y :: ys)) :
     MergeProgress originalLeft originalRight (emitted ++ [y]) [] ys := by
   intro tail htail
-  have htailEq : tail = ys := mergeRel_left_nil_eq htail
-  subst tail
+  cases mergeRel_left_nil_eq htail
   simpa [List.append_assoc] using
     hprogress (y :: ys) (.leftNil (y :: ys))
 
