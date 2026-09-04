@@ -670,7 +670,7 @@ theorem twp_quicksort
 theorem quicksort_terminatesWith (arr : UInt32) (input : List UInt32)
     (hfit : arr.toNat + 4 * input.length ≤ UInt32.size)
     (hmem : arr.toNat + 4 * input.length ≤ 65536) :
-    TerminatesWith (quicksortConfig arr input)
+    SmallStep.TerminatesWith (quicksortConfig arr input)
       (fun values store =>
         values = [] ∧ ∃ output : List UInt32,
           output.length = input.length ∧ Sorted output ∧
@@ -727,7 +727,7 @@ partial-WP chain to maintain. -/
 theorem quicksort_partiallyMeets (arr : UInt32) (input : List UInt32)
     (hfit : arr.toNat + 4 * input.length ≤ UInt32.size)
     (hmem : arr.toNat + 4 * input.length ≤ 65536) :
-    PartiallyMeets (quicksortConfig arr input)
+    SmallStep.PartiallyMeets (quicksortConfig arr input)
       (fun values store =>
         values = [] ∧ ∃ output : List UInt32,
           output.length = input.length ∧ Sorted output ∧

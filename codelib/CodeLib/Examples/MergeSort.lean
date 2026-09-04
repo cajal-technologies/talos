@@ -1,3 +1,4 @@
+import CodeLib.RustStd.MemArray
 import CodeLib.SepLogic.SmallStepAdequacy
 import Mathlib.Data.List.Sort
 
@@ -255,16 +256,9 @@ These checks execute the same handwritten module used by the proofs.  They are
 not a second implementation of merge sort: `runSteps` iterates the
 authoritative small-step function. -/
 
-def writeWordArray : Mem → UInt32 → List UInt32 → Mem
-  | memory, _, [] => memory
-  | memory, address, value :: values =>
-      writeWordArray (memory.write32 address value) (address + 4) values
+abbrev writeWordArray := Mem.writeWords32
 
-def readWordArray : Mem → UInt32 → Nat → List UInt32
-  | _, _, 0 => []
-  | memory, address, count + 1 =>
-      memory.read32 address ::
-        readWordArray memory (address + 4) count
+abbrev readWordArray := Mem.readWords32
 
 def mergeSortExampleStore
     (source temporary : UInt32)

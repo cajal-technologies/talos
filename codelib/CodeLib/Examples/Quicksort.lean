@@ -1,3 +1,4 @@
+import CodeLib.RustStd.MemArray
 import CodeLib.SepLogic.SmallStepAdequacy
 import Interpreter.Wasm.Decoder.Wat
 import Mathlib.Data.List.Sort
@@ -146,16 +147,9 @@ def quicksortPost [WasmHeapGS α]
 
 /-! ## Executable regressions -/
 
-def writeWordArray : Mem → UInt32 → List UInt32 → Mem
-  | memory, _, [] => memory
-  | memory, address, value :: values =>
-      writeWordArray (memory.write32 address value) (address + 4) values
+abbrev writeWordArray := Mem.writeWords32
 
-def readWordArray : Mem → UInt32 → Nat → List UInt32
-  | _, _, 0 => []
-  | memory, address, count + 1 =>
-      memory.read32 address ::
-        readWordArray memory (address + 4) count
+abbrev readWordArray := Mem.readWords32
 
 def quicksortExampleStore (arr : UInt32) (input : List UInt32) : Store Unit :=
   let initial := quicksortModule.initialStore (α := Unit)
@@ -607,8 +601,7 @@ theorem arrayAt_readWordArray [WasmSmallStepGS hlc α]
     isplitl [Hword Hxs]
     · isplitl_exact Hword; iexact Hxs
     ipureintro
-    unfold readWordArray
-    rw [hfacts.1, hread]
+    simp only [readWordArray, Mem.readWords32, hfacts.1, hread]
 
 /-! ## WAT decoder agreement -/
 

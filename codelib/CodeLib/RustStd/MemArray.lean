@@ -21,6 +21,50 @@ wasm spec naturally produces).
 
 namespace Wasm
 
+/-- Write consecutive `u32` values starting at `base`. -/
+def Mem.writeWords32 : Mem → UInt32 → List UInt32 → Mem
+  | memory, _, [] => memory
+  | memory, address, value :: values =>
+      writeWords32 (memory.write32 address value) (address + 4) values
+
+/-- Read `count` consecutive `u32` values starting at `base`. -/
+def Mem.readWords32 : Mem → UInt32 → Nat → List UInt32
+  | _, _, 0 => []
+  | memory, address, count + 1 =>
+      memory.read32 address :: readWords32 memory (address + 4) count
+
+@[simp] theorem Mem.length_readWords32 (memory : Mem) (base : UInt32) (count : Nat) :
+    (memory.readWords32 base count).length = count := by
+  induction count generalizing base <;> simp_all [Mem.readWords32]
+
+/-- Writing a word back unchanged preserves the memory. -/
+theorem Mem.write32_read32 (memory : Mem) (base : UInt32) :
+    memory.write32 base (memory.read32 base) = memory := by
+  cases memory with
+  | mk pages bytes =>
+    simp only [Mem.write32, Mem.read32]
+    congr
+    funext i
+    by_cases h0 : i = base.toNat
+    · subst i; simp only [if_pos]; bv_decide
+    by_cases h1 : i = base.toNat + 1
+    · subst i; simp only [if_neg h0, if_pos]; bv_decide
+    by_cases h2 : i = base.toNat + 2
+    · subst i; simp only [if_neg h0, if_neg h1, if_pos]; bv_decide
+    by_cases h3 : i = base.toNat + 3
+    · subst i; simp only [if_neg h0, if_neg h1, if_neg h2, if_pos]; bv_decide
+    simp [h0, h1, h2, h3]
+
+/-- Reading consecutive words and writing them back preserves the memory. -/
+@[simp] theorem Mem.writeWords32_readWords32
+    (memory : Mem) (base : UInt32) (count : Nat) :
+    memory.writeWords32 base (memory.readWords32 base count) = memory := by
+  induction count generalizing base with
+  | zero => rfl
+  | succ count ih =>
+      simp only [Mem.readWords32, Mem.writeWords32, Mem.write32_read32]
+      exact ih (base + 4)
+
 /-- The `List UInt64` view of the `u64` array `[base, base + 8*n)`. -/
 def Mem.words64 (m : Mem) (base : UInt32) (n : Nat) : List UInt64 :=
   (List.range n).map fun k => m.read64 (base + 8 * (UInt32.ofNat k))

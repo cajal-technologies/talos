@@ -293,8 +293,7 @@ private theorem arrayAt_readWordArray {hlc : HasLC} [WasmSmallStepGS hlc Unit]
     isplitl [Hword Hxs]
     · isplitl_exact Hword; iexact Hxs
     ipureintro
-    unfold readWordArray
-    rw [hfacts.1, hread]
+    simp only [readWordArray, Mem.readWords32, hfacts.1, hread]
 
 -- post conversion: mergeSortPost pins the physical `source` array in every
 -- terminal store to a sorted permutation of the input.
@@ -321,7 +320,7 @@ theorem mergesort_partiallyMeets
     (hscr : scratch.length = input.length)
     (hbound_s : source.toNat + 4 * input.length ≤ 65536)
     (hbound_t : temporary.toNat + 4 * scratch.length ≤ 65536) :
-    PartiallyMeets (mergeSortConfig source temporary input scratch)
+    SmallStep.PartiallyMeets (mergeSortConfig source temporary input scratch)
       (fun _values store => ∃ output, SortedPermutation input output ∧
         readWordArray store.wasm.mem source input.length = output) := by
   apply wasm_smallStep_heap_globals_runtime_store_partiallyMeets
@@ -355,7 +354,7 @@ theorem mergesort_terminatesWith
     (hscr : scratch.length = input.length)
     (hbound_s : source.toNat + 4 * input.length ≤ 65536)
     (hbound_t : temporary.toNat + 4 * scratch.length ≤ 65536) :
-    TerminatesWith (mergeSortConfig source temporary input scratch)
+    SmallStep.TerminatesWith (mergeSortConfig source temporary input scratch)
       (fun _values store => ∃ output, SortedPermutation input output ∧
         readWordArray store.wasm.mem source input.length = output) := by
   apply wasm_smallStep_heap_store_terminates

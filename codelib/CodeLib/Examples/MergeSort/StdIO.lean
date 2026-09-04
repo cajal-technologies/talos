@@ -190,55 +190,15 @@ theorem deserialize_readBytes (mem : Mem) (base : UInt32) (count : Nat)
         change base.toNat + 4 * (count + 1) < 4294967296 at hfit
         omega
 
-theorem write32_read32 (mem : Mem) (base : UInt32) :
-    mem.write32 base (mem.read32 base) = mem := by
-  cases mem with
-  | mk pages bytes =>
-    simp only [Mem.write32, Mem.read32]
-    congr
-    funext i
-    by_cases h0 : i = base.toNat
-    · subst i; simp only [if_pos]
-      bv_decide
-    by_cases h1 : i = base.toNat + 1
-    · subst i; simp only [if_neg h0, if_pos]
-      bv_decide
-    by_cases h2 : i = base.toNat + 2
-    · subst i; simp only [if_neg h0, if_neg h1, if_pos]
-      bv_decide
-    by_cases h3 : i = base.toNat + 3
-    · subst i; simp only [if_neg h0, if_neg h1, if_neg h2, if_pos]
-      bv_decide
-    simp [h0, h1, h2, h3]
-
-/-- Owning the words currently present in memory can be represented by the
-same `writeWordArray` model without changing the concrete memory. -/
-theorem writeWordArray_readWordArray (mem : Mem) (base : UInt32)
-    (count : Nat) :
-    writeWordArray mem base (readWordArray mem base count) = mem := by
-  induction count generalizing base with
-  | zero => rfl
-  | succ count ih =>
-      simp only [readWordArray, writeWordArray]
-      rw [write32_read32, ih]
-
 theorem quicksort_writeWordArray_eq (mem : Mem) (base : UInt32)
     (values : List UInt32) :
-    Quicksort.writeWordArray mem base values = writeWordArray mem base values := by
-  induction values generalizing mem base with
-  | nil => rfl
-  | cons value values ih =>
-      simp only [Quicksort.writeWordArray, writeWordArray]
-      rw [ih]
+    Quicksort.writeWordArray mem base values = writeWordArray mem base values :=
+  rfl
 
 theorem quicksort_readWordArray_eq (mem : Mem) (base : UInt32)
     (count : Nat) :
-    Quicksort.readWordArray mem base count = readWordArray mem base count := by
-  induction count generalizing base with
-  | zero => rfl
-  | succ count ih =>
-      simp only [Quicksort.readWordArray, readWordArray]
-      rw [ih]
+    Quicksort.readWordArray mem base count = readWordArray mem base count :=
+  rfl
 
 theorem quicksortHeapAux_addresses_lt
     (σ : WasmHeapMap (Option UInt8)) (base : UInt32)
@@ -698,14 +658,7 @@ theorem encodedLength_words (input : List UInt32) (hfit : Fits input) :
 
 theorem scratchValues_length (input : List UInt32) :
     (scratchValues input).length = input.length := by
-  have aux (mem : Mem) (base : UInt32) (count : Nat) :
-      (readWordArray mem base count).length = count := by
-    induction count generalizing base with
-    | zero => rfl
-    | succ count ih =>
-        simp only [readWordArray, List.length_cons]
-        rw [ih]
-  exact aux _ _ _
+  simp [scratchValues]
 
 theorem afterRead_mem_eq (input : List UInt32) (hfit : Fits input) :
     (afterRead input).mem =
@@ -750,7 +703,7 @@ theorem sortHeap_agrees (input : List UInt32) (hfit : Fits input) :
   have h : heapAgreesWithMem (sortHeap input)
       (fun id => if id = 0 then some (afterRead input).mem else none) := by
     simpa only [sortHeap, sourceHeap, scratchValues,
-      writeWordArray_readWordArray] using hscratch
+      Mem.writeWords32_readWords32] using hscratch
   have heq : (fun id : Nat => if id = 0 then some (afterRead input).mem else none) =
       storeResolve (sortConfig input).store := by
     funext id; by_cases hid : id = 0
@@ -811,7 +764,7 @@ theorem sortHeap_inBounds (input : List UInt32) (hfit : Fits input) :
   have h : heapAddressesInBounds (sortHeap input)
       (fun id => if id = 0 then some (afterRead input).mem else none) := by
     simpa only [sortHeap, sourceHeap, scratchValues,
-      writeWordArray_readWordArray] using hscratch
+      Mem.writeWords32_readWords32] using hscratch
   have heq : (fun id : Nat => if id = 0 then some (afterRead input).mem else none) =
       storeResolve (sortConfig input).store := by
     funext id; by_cases hid : id = 0
