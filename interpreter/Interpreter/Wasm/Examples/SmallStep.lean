@@ -136,10 +136,7 @@ rather than only over the executable iterator. -/
 theorem memory_roundtrip_terminates :
     TerminatesWith memoryRoundtripConfig (fun values store =>
       values = [.i32 0x12345678] ∧ store.wasm.mem.read32 16 = 0x12345678) := by
-  apply runSteps_success_terminates memory_roundtrip_run
-  constructor
-  native_decide
-  · native_decide
+  exact runSteps_success_terminates_eq_values memory_roundtrip_run (by native_decide)
 
 theorem memory_roundtrip_partial :
     PartiallyMeets memoryRoundtripConfig (fun values store =>
@@ -194,7 +191,7 @@ theorem memory_growth_terminates :
     TerminatesWith memoryGrowthConfig (fun values store =>
       values = [.i32 2, .i32 0xFFFFFFFF, .i32 2, .i32 1, .i32 1] ∧
       store.wasm.mem.pages = 2) := by
-  exact runSteps_success_terminates memory_growth_run _ ⟨rfl, rfl⟩
+  exact runSteps_success_terminates_eq_values memory_growth_run rfl
 
 theorem memory_growth_matches_big_step :
     (runSteps 8 memoryGrowthConfig).result.values? =
@@ -238,7 +235,7 @@ theorem memory64_growth_terminates :
         [.i64 2, .i64 0xFFFFFFFFFFFFFFFF, .i64 2,
           .i64 0xFFFFFFFFFFFFFFFF, .i64 2, .i64 1, .i64 1] ∧
       store.wasm.mem.pages = 2) := by
-  exact runSteps_success_terminates memory64_growth_run _ ⟨rfl, rfl⟩
+  exact runSteps_success_terminates_eq_values memory64_growth_run rfl
 
 theorem memory64_growth_matches_big_step :
     (runSteps 11 memory64GrowthConfig).result.values? =
@@ -283,10 +280,8 @@ theorem memory_fill_terminates :
       values = [.i32 0x12345678, .i32 0xABABABAB] ∧
       store.wasm.mem.read32 16 = 0xABABABAB ∧
       store.wasm.mem.read32 32 = 0x12345678) := by
-  apply runSteps_success_terminates memory_fill_run
-  constructor
-  native_decide
-  constructor <;> native_decide
+  exact runSteps_success_terminates_eq_values
+    memory_fill_run (by constructor <;> native_decide)
 
 theorem memory_fill_matches_big_step :
     (runSteps 9 memoryFillConfig).result.values? =
@@ -337,12 +332,10 @@ theorem memory64_fill_terminates :
       store.wasm.mem.read8 20 = 0xCD ∧
       store.wasm.mem.read8 21 = 0xCD ∧
       store.wasm.mem.read8 22 = 0xCD) := by
-  apply runSteps_success_terminates memory64_fill_run
-  constructor
-  native_decide
-  constructor
-  · native_decide
-  constructor <;> native_decide
+  exact runSteps_success_terminates_eq_values memory64_fill_run (by
+    constructor
+    · native_decide
+    constructor <;> native_decide)
 
 theorem memory64_fill_matches_big_step :
     (runSteps 6 memory64FillConfig).result.values? =
@@ -388,10 +381,8 @@ theorem overlapping_copy_terminates :
       values = [.i32 0x04030201, .i32 0x02010201] ∧
       store.wasm.mem.read32 0 = 0x02010201 ∧
       store.wasm.mem.read32 2 = 0x04030201) := by
-  apply runSteps_success_terminates overlapping_copy_run
-  constructor
-  native_decide
-  constructor <;> native_decide
+  exact runSteps_success_terminates_eq_values
+    overlapping_copy_run (by constructor <;> native_decide)
 
 theorem overlapping_copy_matches_big_step :
     (runSteps 9 overlappingCopyConfig).result.values? =
@@ -447,10 +438,8 @@ theorem memory64_copy_terminates :
       values = [.i64 1] ∧
       store.wasm.mem.read32 0 = 0x12345678 ∧
       store.wasm.mem.read32 8 = 0x12345678) := by
-  apply runSteps_success_terminates memory64_copy_run
-  constructor
-  native_decide
-  constructor <;> native_decide
+  exact runSteps_success_terminates_eq_values
+    memory64_copy_run (by constructor <;> native_decide)
 
 theorem memory64_copy_matches_big_step :
     (runSteps 6 memory64CopyConfig).result.values? =
@@ -495,10 +484,8 @@ theorem memory_init_terminates :
       values = [.i32 0x04030201] ∧
       store.wasm.mem.read32 16 = 0x04030201 ∧
       store.wasm.dataSegments = [none]) := by
-  apply runSteps_success_terminates memory_init_run
-  constructor
-  native_decide
-  constructor <;> native_decide
+  exact runSteps_success_terminates_eq_values
+    memory_init_run (by constructor <;> native_decide)
 
 theorem memory_init_matches_big_step :
     (runSteps 12 memoryInitConfig).result.values? =
@@ -557,10 +544,8 @@ theorem memory64_init_terminates :
       values = [.i64 1] ∧
       store.wasm.mem.read8 20 = 0xBB ∧
       store.wasm.mem.read8 21 = 0xCC) := by
-  apply runSteps_success_terminates memory64_init_run
-  constructor
-  native_decide
-  constructor <;> native_decide
+  exact runSteps_success_terminates_eq_values
+    memory64_init_run (by constructor <;> native_decide)
 
 theorem memory64_init_matches_big_step :
     (runSteps 6 memory64InitConfig).result.values? =
@@ -590,10 +575,7 @@ theorem byte_roundtrip_run :
 theorem byte_roundtrip_terminates :
     TerminatesWith byteRoundtripConfig (fun values store =>
       values = [.i32 0xAB] ∧ store.wasm.mem.read8 24 = 0xAB) := by
-  apply runSteps_success_terminates byte_roundtrip_run
-  constructor
-  native_decide
-  · native_decide
+  exact runSteps_success_terminates_eq_values byte_roundtrip_run (by native_decide)
 
 theorem byte_roundtrip_matches_big_step :
     (runSteps 6 byteRoundtripConfig).result.values? =
@@ -637,10 +619,8 @@ theorem narrow_memory_terminates :
       values = [.i32 0xFFFF8001, .i32 0x8001, .i32 0xFFFFFF80] ∧
       store.wasm.mem.read8 24 = 0x80 ∧
       store.wasm.mem.read16 26 = 0x8001) := by
-  apply runSteps_success_terminates narrow_memory_run
-  constructor
-  native_decide
-  constructor <;> native_decide
+  exact runSteps_success_terminates_eq_values
+    narrow_memory_run (by constructor <;> native_decide)
 
 theorem narrow_memory_matches_big_step :
     (runSteps 13 narrowMemoryConfig).result.values? =
@@ -688,10 +668,8 @@ theorem i64_memory_terminates (is64 : Bool) :
       values = [.i64 0x0123456789ABCDEF] ∧
       store.wasm.mem.read64 32 = 0x0123456789ABCDEF) := by
   cases is64
-  · apply runSteps_success_terminates i64_memory32_run
-    constructor <;> native_decide
-  · apply runSteps_success_terminates i64_memory64_run
-    constructor <;> native_decide
+  · exact runSteps_success_terminates_eq_values i64_memory32_run (by native_decide)
+  · exact runSteps_success_terminates_eq_values i64_memory64_run (by native_decide)
 
 theorem i64_memory_matches_big_step :
     (runSteps 6 (i64MemoryConfig false)).result.values? =
@@ -733,8 +711,7 @@ theorem i32_memory64_terminates :
     TerminatesWith i32Memory64Config (fun values store =>
       values = [.i32 0x12345678] ∧
       store.wasm.mem.read32 24 = 0x12345678) := by
-  apply runSteps_success_terminates i32_memory64_run
-  constructor <;> native_decide
+  exact runSteps_success_terminates_eq_values i32_memory64_run (by native_decide)
 
 def i32Memory64TrapConfig : Config Unit :=
   { i32Memory64Config with
@@ -847,14 +824,10 @@ theorem i64_narrow_store_terminates (is64 : Bool) :
       store.wasm.mem.read16 42 = 0xCDEF ∧
       store.wasm.mem.read32 44 = 0x89ABCDEF) := by
   cases is64
-  · apply runSteps_success_terminates i64_narrow_store_memory32_run
-    constructor
-    native_decide
-    constructor <;> native_decide
-  · apply runSteps_success_terminates i64_narrow_store_memory64_run
-    constructor
-    native_decide
-    constructor <;> native_decide
+  · exact runSteps_success_terminates_eq_values
+      i64_narrow_store_memory32_run (by constructor <;> native_decide)
+  · exact runSteps_success_terminates_eq_values
+      i64_narrow_store_memory64_run (by constructor <;> native_decide)
 
 theorem i64_narrow_store_matches_big_step :
     (runSteps 16 (i64NarrowStoreConfig false)).result.values? =
@@ -910,10 +883,8 @@ theorem swap_terminates :
       values = [.i32 11, .i32 22] ∧
       store.wasm.mem.read32 0 = 22 ∧
       store.wasm.mem.read32 4 = 11) := by
-  apply runSteps_success_terminates swap_run
-  constructor
-  native_decide
-  constructor <;> native_decide
+  exact runSteps_success_terminates_eq_values
+    swap_run (by constructor <;> native_decide)
 
 theorem swap_partial :
     PartiallyMeets swapConfig (fun values store =>
@@ -974,12 +945,10 @@ theorem reverse_three_terminates :
       store.wasm.mem.read32 0 = 33 ∧
       store.wasm.mem.read32 4 = 22 ∧
       store.wasm.mem.read32 8 = 11) := by
-  apply runSteps_success_terminates reverse_three_run
-  constructor
-  native_decide
-  constructor
-  · native_decide
-  constructor <;> native_decide
+  exact runSteps_success_terminates_eq_values reverse_three_run (by
+    constructor
+    · native_decide
+    constructor <;> native_decide)
 
 theorem reverse_three_partial :
     PartiallyMeets reverseThreeConfig (fun values store =>
@@ -1054,7 +1023,7 @@ theorem partition_three_terminates :
       store.wasm.mem.read32 8 = 33 ∧
       store.wasm.mem.read32 0 ≤ store.wasm.mem.read32 4 ∧
       store.wasm.mem.read32 4 ≤ store.wasm.mem.read32 8) := by
-  exact runSteps_success_terminates partition_three_run _ (by native_decide)
+  exact runSteps_success_terminates_eq_values partition_three_run (by native_decide)
 
 theorem partition_three_partial :
     PartiallyMeets partitionThreeConfig (fun values store =>
@@ -1128,7 +1097,7 @@ theorem merge_two_terminates :
       store.wasm.mem.read32 0 = 4 ∧
       store.wasm.mem.read32 4 = 9 ∧
       store.wasm.mem.read32 0 ≤ store.wasm.mem.read32 4) := by
-  exact runSteps_success_terminates merge_two_run _ (by native_decide)
+  exact runSteps_success_terminates_eq_values merge_two_run (by native_decide)
 
 theorem merge_two_partial :
     PartiallyMeets mergeTwoConfig (fun values store =>
@@ -1666,10 +1635,8 @@ theorem table_read_write_terminates :
         values = [.i32 2, .i32 1, .i32 0] ∧
           store.wasm.tables[0]? =
             some [.funcref (some 0), .funcref none]) := by
-  apply runSteps_success_terminates
-    (fuel := 11) (store := tableFinalStore)
-  rfl
-  · constructor <;> rfl
+  exact runSteps_success_terminates_eq_values
+    (fuel := 11) (store := tableFinalStore) (by rfl) rfl
 
 theorem table_get_out_of_bounds_traps :
     (runSteps 2 (tableConfig 1 1)).result.trapReason? =
@@ -1721,10 +1688,7 @@ theorem table_bulk_terminates :
       (fun values store =>
         values = [.i32 6, .i32 4] ∧
           store.wasm.tables = tableBulkFinalStore.wasm.tables) := by
-  apply runSteps_success_terminates
-    (fuel := 13) (store := tableBulkFinalStore)
-  · rfl
-  · exact ⟨rfl, rfl⟩
+  exact runSteps_success_terminates_eq_values table_bulk_small_step rfl
 
 theorem table_grow_failure_is_atomic :
     (runSteps 4 (tableBulkConfig 1 1)).result =
@@ -1795,10 +1759,9 @@ theorem element_init_terminates (is64 : Bool) :
         values = [.i32 1, .i32 0] ∧
           store.wasm.tables = (elementInitFinalStore is64).wasm.tables ∧
           store.wasm.elementSegments = [none]) := by
-  apply runSteps_success_terminates
+  exact runSteps_success_terminates_eq_values
     (fuel := 12) (store := elementInitFinalStore is64)
-  · cases is64 <;> rfl
-  · exact ⟨rfl, rfl, rfl⟩
+    (by cases is64 <;> rfl) ⟨rfl, rfl⟩
 
 theorem table_init_after_drop_traps_atomically (is64 : Bool) :
     (runSteps 5 (elementInitConfig is64 1 0)).result =
@@ -2367,7 +2330,7 @@ theorem indexed_memory_roundtrip_terminates :
         values = [.i32 0xA1B2C3D4] ∧
           store.wasm.mem.read32 24 = 0 ∧
           store.wasm.extraMems[0]!.read32 24 = 0xA1B2C3D4) := by
-  exact runSteps_success_terminates indexed_memory_roundtrip_run _ ⟨rfl, rfl, rfl⟩
+  exact runSteps_success_terminates_eq_values indexed_memory_roundtrip_run ⟨rfl, rfl⟩
 
 theorem indexed_memory_roundtrip_matches_big_step :
     (runSteps 6 indexedMemoryConfig).result.values? =
@@ -2445,10 +2408,7 @@ records both its returned value and the committed store effect. -/
 theorem host_call_terminates :
     TerminatesWith smallStepHostConfig (fun values store =>
       values = [.i32 42] ∧ store.wasm.mem.read32 200 = 41) := by
-  apply runSteps_success_terminates host_call_run
-  constructor
-  native_decide
-  · native_decide
+  exact runSteps_success_terminates_eq_values host_call_run (by native_decide)
 
 theorem host_call_partial :
     PartiallyMeets smallStepHostConfig (fun values store =>
@@ -2601,7 +2561,7 @@ theorem gc_struct_allocation_and_read :
 theorem gc_struct_terminates :
     TerminatesWith (smallStepGcConfig 1) (fun values store =>
       values = [.i32 7] ∧ store.wasm.gcHeap.length = 1) := by
-  apply runSteps_success_terminates
+  exact runSteps_success_terminates_eq_values
     (fuel := 6)
     (values := [.i32 7])
     (store :=
@@ -2609,8 +2569,7 @@ theorem gc_struct_terminates :
         wasm :=
           { (smallStepGcConfig 1).store.wasm with
             gcHeap := [.struct 0 [.i32 7]] } })
-  · rfl
-  · decide
+    (by rfl) (by decide)
 
 /-- GC traps are represented by structural machine reasons rather than an
 opaque message inherited from the evaluator. -/

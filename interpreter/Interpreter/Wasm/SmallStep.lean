@@ -7349,6 +7349,15 @@ theorem runSteps_success_terminates {fuel : Nat} {config : Config α}
   apply runSteps_sound
   simp [h, RunnerResult.finalConfig?]
 
+/-- A successful runner result satisfies exact-value contracts whose remaining
+postcondition only inspects the reached store. -/
+theorem runSteps_success_terminates_eq_values {fuel : Nat} {config : Config α}
+    {values : List Value} {store : MachineStore α}
+    (h : (runSteps fuel config).result = .success values store)
+    {post : MachineStore α → Prop} (hp : post store) :
+    TerminatesWith config (fun actual reached => actual = values ∧ post reached) :=
+  runSteps_success_terminates h _ ⟨rfl, hp⟩
+
 /-- A state-sensitive executable check yields a fuel-free relational
 termination theorem. The fuel remains confined to the proof, while `post`
 may inspect both returned values and the reached machine store. -/

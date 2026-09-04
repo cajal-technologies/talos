@@ -39,8 +39,7 @@ theorem memDataSection_terminates :
     TerminatesWith memDataConfig (fun values store =>
       values = [.i32 7] ∧
       store.wasm.mem.read32 0 = 0x45444342) := by
-  apply runSteps_success_terminates memDataSection_runs
-  constructor <;> native_decide
+  exact runSteps_success_terminates_eq_values memDataSection_runs (by native_decide)
 
 theorem memDataSection_partial :
     PartiallyMeets memDataConfig (fun values store =>

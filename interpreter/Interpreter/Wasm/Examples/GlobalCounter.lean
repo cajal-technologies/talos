@@ -83,11 +83,9 @@ theorem tick_terminates (st : Store Unit) (n : UInt32)
     TerminatesWith (tickConfig st) (fun values store =>
       values = [.i32 n] ∧
       store.wasm.globals.globals[0]? = some (.i32 (1 + n))) := by
-  apply runSteps_success_terminates (tick_runs st n hg)
-  constructor
-  · rfl
-  simp [tickFinalStore, tickStore]
-  grind
+  exact runSteps_success_terminates_eq_values (tick_runs st n hg) (by
+    simp [tickFinalStore, tickStore]
+    grind)
 
 theorem tick_partial (st : Store Unit) (n : UInt32)
     (hg : st.globals.globals[0]? = some (.i32 n)) :

@@ -87,11 +87,10 @@ theorem replace_terminates (st : Store Unit) (new old : UInt32)
     TerminatesWith (replaceConfig st new) (fun values store =>
       values = [.i32 old] ∧
       store.wasm.mem.read32 0 = new) := by
-  apply runSteps_success_terminates (replace_runs st new old hpages hmem)
-  constructor
-  · rfl
-  simp [replaceFinalStore, replaceStore, Mem.read32, Mem.write32]
-  bv_decide
+  exact runSteps_success_terminates_eq_values
+    (replace_runs st new old hpages hmem) (by
+      simp [replaceFinalStore, replaceStore, Mem.read32, Mem.write32]
+      bv_decide)
 
 theorem replace_partial (st : Store Unit) (new old : UInt32)
     (hpages : 1 ≤ st.mem.pages) (hmem : st.mem.read32 0 = old) :
