@@ -72,8 +72,7 @@ theorem globalGet_adequate :
   · intro address hne
     exact absurd (get?_empty address) hne
   · exact global0Heap_agrees
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [BI.BigSepM.bigSepM_empty.to_eq, BI.emp_sep.to_eq]
     unfold global0Heap
     rw [(BI.BigSepM.bigSepM_insert (get?_empty (⟨0, 0⟩ : GlobalKey))).to_eq,
@@ -103,8 +102,7 @@ theorem noopCall_adequate :
       (fun values _ => values = []) := by
   apply wasm_smallStep_runtime_instance_adequacy (α := Unit)
     (φ := fun values => values = [])
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [noopCallConfig, RuntimeEnv.currentModule_mk1]
     iintro ⟨Hruntime, _HruntimeInstances⟩
     iclear _HruntimeInstances
@@ -392,8 +390,7 @@ theorem swapWords_store_partiallyMeets :
     native_decide
   · intro index value hget
     rw [get?_empty] at hget; contradiction
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
     iintro ⟨Hbytes, _Hglobals, _Hruntime⟩
     ihave Hwords := swapWordsHeap_pointsTo $$ Hbytes
@@ -512,8 +509,7 @@ theorem reverseThreeWords_store_partiallyMeets :
     native_decide
   · intro index value hget
     rw [get?_empty] at hget; contradiction
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
     iintro ⟨Hbytes, _Hglobals, _Hruntime⟩
     ihave Hwords := reverseThreeWordsHeap_pointsTo $$ Hbytes
@@ -656,8 +652,7 @@ theorem partitionThreeWords_store_partiallyMeets :
     native_decide
   · intro index value hget
     rw [get?_empty] at hget; contradiction
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
     iintro ⟨Hbytes, _Hglobals, _Hruntime⟩
     ihave Hwords := partitionThreeWordsHeap_pointsTo $$ Hbytes
@@ -794,8 +789,7 @@ theorem mergeTwoWords_store_partiallyMeets :
     native_decide
   · intro index value hget
     rw [get?_empty] at hget; contradiction
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
     iintro ⟨Hbytes, _Hglobals, _Hruntime⟩
     ihave Hwords := mergeTwoWordsHeap_pointsTo $$ Hbytes
@@ -1162,8 +1156,7 @@ theorem copyOverlapWord_store_partiallyMeets :
     native_decide
   · intro index value hget
     rw [get?_empty] at hget; contradiction
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
     iintro ⟨Hbytes, _Hglobals, _Hruntime⟩
     ihave Hword := copyOverlapWordHeap_pointsTo $$ Hbytes
@@ -1284,8 +1277,7 @@ theorem memoryInitDrop_store_partiallyMeets :
   · intro index value hget
     rw [get?_empty] at hget; contradiction
   · exact memoryInitDropSegments_agree
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
     iintro ⟨Hbytes, _Hglobals, Hsegments, _Hruntime⟩
     ihave Hword := memoryInitDropHeap_pointsTo $$ Hbytes
@@ -1381,8 +1373,7 @@ theorem tableSetGet_store_partiallyMeets :
   · exact dataSegmentHeapAgrees_empty _
   · exact tableSetGetMap_agrees
   · exact elementSegmentHeapAgrees_empty _
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
     simp only [runtimeModuleOwn]
     iintro ⟨_Hbytes, _Hglobals, _Hsegments, Htables, _HelementSegments, _Hruntime, _HinstFrag⟩
@@ -1469,8 +1460,7 @@ theorem tableGrowFill_store_partiallyMeets :
   · exact dataSegmentHeapAgrees_empty _
   · exact tableSetGetMap_agrees
   · exact elementSegmentHeapAgrees_empty _
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [BI.BigSepM.bigSepM_empty.to_eq,
       tableGrowFillAdequacyConfig, RuntimeEnv.currentModule_mk1]
     iintro ⟨_Hbytes, _Hglobals, _Hsegments, Htables, _HelementSegments, HruntimeOwn⟩
@@ -1578,8 +1568,7 @@ theorem tableGrow64Failure_store_partiallyMeets :
   · exact dataSegmentHeapAgrees_empty _
   · exact tableSetGetMap_agrees
   · exact elementSegmentHeapAgrees_empty _
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [BI.BigSepM.bigSepM_empty.to_eq,
       tableGrow64FailureAdequacyConfig, RuntimeEnv.currentModule_mk1]
     iintro ⟨_Hbytes, _Hglobals, _Hsegments, Htables, _HelementSegments, HruntimeOwn⟩
@@ -1692,8 +1681,7 @@ theorem tableCopyOverlap_store_partiallyMeets :
   · exact dataSegmentHeapAgrees_empty _
   · exact tableCopyOverlapMap_agrees
   · exact elementSegmentHeapAgrees_empty _
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [BI.BigSepM.bigSepM_empty.to_eq,
       tableCopyOverlapAdequacyConfig]
     simp only [runtimeModuleOwn]
@@ -1825,8 +1813,7 @@ theorem tableCopyDistinct_store_partiallyMeets :
   · exact dataSegmentHeapAgrees_empty _
   · exact tableCopyDistinctMap_agrees
   · exact elementSegmentHeapAgrees_empty _
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [BI.BigSepM.bigSepM_empty.to_eq,
       tableCopyDistinctAdequacyConfig]
     simp only [runtimeModuleOwn]
@@ -2001,8 +1988,7 @@ theorem tableInitDrop_store_partiallyMeets :
   · exact dataSegmentHeapAgrees_empty _
   · exact tableInitDropTableMap_agrees
   · exact tableInitDropElementMap_agrees
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [BI.BigSepM.bigSepM_empty.to_eq,
       tableInitDropAdequacyConfig, RuntimeEnv.currentModule_mk1]
     simp only [runtimeModuleOwn]

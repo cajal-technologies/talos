@@ -252,6 +252,17 @@ macro "wasm_wp_partially_meets " gs:ident : tactic =>
     apply Wasm.SmallStep.wasm_smallStep_partiallyMeets <;>
       intro $gs:ident)
 
+/-- Close a concrete adequacy entry-bound premise and introduce the Iris
+instance in the remaining proof premise. -/
+syntax "wasm_adequacy_intro " ident " =>" ppLine colGt tacticSeq : tactic
+
+macro_rules
+  | `(tactic| wasm_adequacy_intro $gs:ident => $proof:tacticSeq) =>
+      `(tactic|
+        (· decide
+         · intro $gs:ident
+           next => $proof))
+
 instance instWasmLanguageNoFork :
     LanguageNoFork (Expr α) (MachineStore α) StepKind (List Value) where
   no_fork h := h.1

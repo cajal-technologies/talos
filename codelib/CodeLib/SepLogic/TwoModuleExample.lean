@@ -52,8 +52,7 @@ resumes the caller. -/
 theorem twoModule_partiallyMeets :
     PartiallyMeets twoModuleConfig (fun values _store => values = []) := by
   apply wasm_smallStep_runtime_instance_partiallyMeets (α := Unit)
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [twoModuleConfig, xInst_currentModule]
     iintro ⟨Hruntime, HruntimeInstances⟩
     iapply wp_callCrossInstance ⟨0⟩ xInst ⟨1⟩ xInst #[xInst, xInst] 0 xImp 0 xFn

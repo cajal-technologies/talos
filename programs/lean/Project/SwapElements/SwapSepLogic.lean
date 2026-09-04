@@ -2553,8 +2553,7 @@ theorem func4Example_smallStep :
   · exact func4ExampleHeap_agrees
   · exact func4ExampleHeap_inBounds
   · exact func4ExampleGlobals_agree
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [func4ExampleConfig, Wasm.SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hheap, Hglobals, Hruntime⟩
     ihave ⟨Hscratch, HspillPtr, HspillLen, H0, H8⟩ := func4ExampleHeap_pointsTo $$ Hheap
@@ -2593,8 +2592,7 @@ theorem func4Example_store_smallStep :
   · exact func4ExampleHeap_agrees
   · exact func4ExampleHeap_inBounds
   · exact func4ExampleGlobals_agree
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [func4ExampleConfig, Wasm.SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hheap, Hglobals, Hruntime, _Henv⟩
     ihave ⟨Hscratch, HspillPtr, HspillLen, H0, H8⟩ := func4ExampleHeap_pointsTo $$ Hheap
@@ -2760,8 +2758,7 @@ theorem func4Alias_smallStep :
   · exact func4AliasHeap_agrees
   · exact func4AliasHeap_inBounds
   · exact func4ExampleGlobals_agree
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [func4AliasConfig, Wasm.SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hheap, Hglobals, Hruntime⟩
     ihave ⟨Hscratch, HspillPtr, HspillLen, Hcell⟩ := func4AliasHeap_pointsTo $$ Hheap
@@ -2797,8 +2794,7 @@ theorem func4Alias_store_smallStep :
   · exact func4AliasHeap_agrees
   · exact func4AliasHeap_inBounds
   · exact func4ExampleGlobals_agree
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [func4AliasConfig, Wasm.SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hheap, Hglobals, Hruntime, _Henv⟩
     ihave ⟨Hscratch, HspillPtr, HspillLen, Hcell⟩ := func4AliasHeap_pointsTo $$ Hheap
@@ -2943,8 +2939,7 @@ theorem func0Alias_smallStep :
   · exact func0AliasHeap_agrees
   · exact func0AliasHeap_inBounds
   · exact func0AliasGlobals_agree
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [func0AliasConfig, Wasm.SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hheap, Hglobals, Hruntime⟩
     ihave ⟨Hscratch, Hcell⟩ := func0AliasHeap_pointsTo $$ Hheap

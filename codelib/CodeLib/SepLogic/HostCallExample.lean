@@ -60,8 +60,7 @@ theorem writeByte_partiallyMeets :
     · rw [get?_insert_ne (Ne.symm h), get?_empty] at hget
       contradiction
   · exact globalHeapAgrees_empty _
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [(BI.BigSepM.bigSepM_insert (get?_empty (⟨0, 0⟩ : MemoryKey))).to_eq,
                BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
     iintro ⟨Hpt, _Hglobals, Hruntime, Henv⟩
