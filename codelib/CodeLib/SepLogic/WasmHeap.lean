@@ -767,8 +767,7 @@ theorem hostStateOwn_update {α : Type} [gs : WasmHostStateGS α]
       $$ [Hauth Hfrag] with Hboth
   · iframe
   imodintro
-  icases iOwn_op $$ Hboth with ⟨H1, H2⟩
-  iframe
+  icases iOwn_op $$ Hboth with ⟨H1, H2⟩; iframe
 
 /-- Authoritative sparse-heap frontier, held inside `stateInterp`. -/
 def heapFrontierAuth {α : Type} [gs : WasmHeapDomainGS α]
@@ -805,8 +804,7 @@ theorem heapFrontierOwn_update {α : Type} [gs : WasmHeapDomainGS α]
       $$ [Hauth Hfrag] with Hboth
   · iframe
   imodintro
-  icases iOwn_op $$ Hboth with ⟨H1, H2⟩
-  iframe
+  icases iOwn_op $$ Hboth with ⟨H1, H2⟩; iframe
 
 /-- Exact authoritative primary-memory page count, held inside `stateInterp`. -/
 def memoryPagesAuth {α : Type} [gs : WasmMemoryPagesGS α]
@@ -984,8 +982,7 @@ theorem currentInstanceOwnN_update {α : Type} [gs : WasmInstanceGS α]
       $$ [Hauth Hfrag] with Hboth
   · iframe
   imodintro
-  icases iOwn_op $$ Hboth with ⟨H1, H2⟩
-  iframe
+  icases iOwn_op $$ Hboth with ⟨H1, H2⟩; iframe
 
 theorem currentInstanceOwnN_update_of_any {α : Type} [gs : WasmInstanceGS α]
     (actual expected new' : Nat) :

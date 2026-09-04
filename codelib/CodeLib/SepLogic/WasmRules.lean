@@ -694,8 +694,7 @@ theorem store32Heap_pointsTo {α : Type} [WasmHeapGS α]
     simp only [get?_insert_ne (Ne.symm h01), h1])).to_eq]
   rw [(BI.BigSepM.bigSepM_insert h0).to_eq]
   unfold pointsTo_u32
-  iintro ⟨H3, H2, H1, H0, Hrest⟩
-  iframe
+  iintro ⟨H3, H2, H1, H0, Hrest⟩; iframe
 
 theorem store32_sound (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Option Mem)
     (memId : Nat) (mem : Mem) (addr value : UInt32)
@@ -972,8 +971,7 @@ theorem store64Heap_pointsTo {α : Type} [WasmHeapGS α]
   rw [(BI.BigSepM.bigSepM_insert h1).to_eq]
   rw [(BI.BigSepM.bigSepM_insert h0).to_eq]
   unfold pointsTo_u64
-  iintro ⟨H7, H6, H5, H4, H3, H2, H1, H0, Hrest⟩
-  iframe
+  iintro ⟨H7, H6, H5, H4, H3, H2, H1, H0, Hrest⟩; iframe
 
 theorem store64_sound (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Option Mem)
     (memId : Nat) (mem : Mem) (addr : UInt32) (value : UInt64)

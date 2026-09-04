@@ -287,8 +287,7 @@ theorem wasm_smallStep_heap_globals_runtime_host_stronglyNormalizing_outcome
     (fun _ => 0), (fun _ => iprop(True)),
     (fun _ _ _ _ => by
       iintro Hstate
-      imodintro
-      iexact Hstate)
+      imodintro; iexact Hstate)
   dsimp only
   wasm_build_machine_aux config
   isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth' HhostState Hexc]

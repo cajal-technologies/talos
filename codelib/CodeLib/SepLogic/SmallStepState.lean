@@ -879,8 +879,7 @@ theorem insertFreshBytes_bigSep_pointsToBytes [WasmHeapGS α]
   induction bytes generalizing σ addr with
   | nil =>
       simp only [insertFreshBytes, pointsToBytes]
-      iintro Hheap
-      iframe Hheap
+      iintro Hheap; iframe Hheap
   | cons byte rest ih =>
       have hlookup : get? σ (⟨0, addr⟩ : MemoryKey) = none :=
         hbelow.get?_eq_none_of_le ⟨0, addr⟩ rfl (Nat.le_refl _)

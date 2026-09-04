@@ -1159,8 +1159,7 @@ theorem LiveBlock_bytesFocus {host : Type} [WasmHeapGS host]
   isplitl_exact Hbytes
   · iintro %newBytes
     iintro %hnewLength
-    iintro HnewBytes
-    iframe Htoken HnewBytes
+    iintro HnewBytes; iframe Htoken HnewBytes
     ipureexact ⟨hnewLength, hfacts.2.1, hfacts.2.2⟩
 
 /-- A complete live allocation viewed as canonical little-endian words.  The
@@ -1525,8 +1524,7 @@ theorem BumpHeap_empty {host : Type} [WasmHeapGS host]
         AllocationHistory.empty := by
   unfold BumpHeap RetiredBytes
   simp only [AllocationHistory.empty, BI.BigSepM.bigSepM_empty.to_eq]
-  iintro ⟨Hcursor, Hfrontier, Hmetadata, Hpages⟩
-  iframe Hcursor Hfrontier Hmetadata
+  iintro ⟨Hcursor, Hfrontier, Hmetadata, Hpages⟩; iframe Hcursor Hfrontier Hmetadata
   isplitl []
   · itrivial
   · iexists ownedPages

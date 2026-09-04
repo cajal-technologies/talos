@@ -679,8 +679,7 @@ theorem innerScratch_split_zero [WasmHeapGS Unit] :
     show (1048552 : UInt32) + 5 = 1048556 + 1 by decide,
     show (1048552 : UInt32) + 6 = 1048556 + 2 by decide,
     show (1048552 : UInt32) + 7 = 1048556 + 3 by decide]
-  iintro ⟨H0, H1, H2, H3, H4, H5, H6, H7⟩
-  iframe
+  iintro ⟨H0, H1, H2, H3, H4, H5, H6, H7⟩; iframe
 
 theorem innerScratch_merge_upper [WasmHeapGS Unit] (upper : UInt32) :
     pointsTo_u32 0 1048552 0 ∗ pointsTo_u32 0 1048556 upper ⊢
@@ -717,8 +716,7 @@ theorem innerScratch_merge_upper [WasmHeapGS Unit] (upper : UInt32) :
     show (1048552 : UInt32) + 7 = 1048556 + 3 by decide]
   iintro ⟨Hlow, Hhigh⟩
   icases Hlow with ⟨H0, H1, H2, H3⟩
-  icases Hhigh with ⟨H4, H5, H6, H7⟩
-  iframe
+  icases Hhigh with ⟨H4, H5, H6, H7⟩; iframe
 
 /-- `func1` under an export's already-lowered stack pointer. The upper half of
 the owned `u64` scratch range is exposed as the `u32` word at `1048556`. -/

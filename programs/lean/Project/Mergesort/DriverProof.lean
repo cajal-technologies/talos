@@ -74,10 +74,8 @@ private theorem pointsTo_u32_pair_as_u64
   constructor
   · iintro ⟨Hlo, Hhi⟩
     icases Hlo with ⟨H0, H1, H2, H3⟩
-    icases Hhi with ⟨H4, H5, H6, H7⟩
-    iframe
-  · iintro ⟨H0, H1, H2, H3, H4, H5, H6, H7⟩
-    iframe
+    icases Hhi with ⟨H4, H5, H6, H7⟩; iframe
+  · iintro ⟨H0, H1, H2, H3, H4, H5, H6, H7⟩; iframe
 
 /-- The offset-zero form of `twp_store64`, stated without the syntactic
 `address + 0` in its owned cell. -/

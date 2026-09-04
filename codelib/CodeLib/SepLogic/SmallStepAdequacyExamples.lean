@@ -149,8 +149,7 @@ private theorem word16Heap_pointsTo (word : UInt32) [WasmHeapGS α] :
   rw [BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
   unfold pointsTo_u32
   simp only [UInt32.reduceAdd]
-  iintro ⟨H19, H18, H17, H16⟩
-  iframe
+  iintro ⟨H19, H18, H17, H16⟩; iframe
 
 private theorem emptyHeap_agrees (resolve : Nat → Option Mem) :
     heapAgreesWithMem (∅ : WasmHeapMap (Option UInt8)) resolve :=
@@ -309,8 +308,7 @@ private theorem swapWordsHeap_pointsTo [WasmHeapGS α] :
   rw [BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
   unfold pointsTo_u32
   simp only [UInt32.reduceAdd]
-  iintro ⟨H7, H6, H5, H4, H3, H2, H1, H0⟩
-  iframe
+  iintro ⟨H7, H6, H5, H4, H3, H2, H1, H0⟩; iframe
 
 def swapWordsAdequacyModule : Module :=
   { funcs :=

@@ -305,8 +305,7 @@ theorem wasm_smallStep_stronglyNormalizing
     (fun _ => 0), (fun _ => iprop(True)),
     (fun _ _ _ _ => by
       iintro Hstate
-      imodintro
-      iexact Hstate)
+      imodintro; iexact Hstate)
   dsimp only
   wasm_build_machine_aux config
   isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
@@ -387,8 +386,7 @@ theorem wasm_smallStep_heap_globals_runtime_tags_stronglyNormalizing
     (fun _ => 0), (fun _ => iprop(True)),
     (fun _ _ _ _ => by
       iintro Hstate
-      imodintro
-      iexact Hstate)
+      imodintro; iexact Hstate)
   dsimp only
   ihave HexceptionInterp : exceptionInterp config.store.wasm.exns config.store.wasm.tagIds $$
       [Hexceptions]
@@ -1272,8 +1270,7 @@ theorem wasm_smallStep_heap_globals_runtime_store_terminates
       (fun _ => 0), (fun _ => iprop(True)),
       (fun _ _ _ _ => by
         iintro Hstate
-        imodintro
-        iexact Hstate)
+        imodintro; iexact Hstate)
     dsimp only
     wasm_build_machine_aux config
     isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
@@ -1506,8 +1503,7 @@ theorem wasm_smallStep_heap_store_terminates
       (fun _ => 0), (fun _ => iprop(True)),
       (fun _ _ _ _ => by
         iintro Hstate
-        imodintro
-        iexact Hstate)
+        imodintro; iexact Hstate)
     dsimp only
     wasm_build_machine_aux config
     isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
