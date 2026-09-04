@@ -33,6 +33,9 @@ import CodeLib.RustStd.Array.SmallStep
 import CodeLib.RustStd.Vec.Basic
 import CodeLib.RustStd.Vec.Codec
 import CodeLib.RustStd.Borsh
+import CodeLib.RustStd.HashMap.Basic
+import CodeLib.RustStd.HashMap.Codec
+import CodeLib.RustStd.StdioContract
 import CodeLib.Near.State
 import CodeLib.Near.Env
 import CodeLib.Near.Proof
