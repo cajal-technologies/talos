@@ -125,8 +125,7 @@ private theorem twp_func9_zero_and_return
   isimp only [Project.Mergesort.Representations.ByteSlice] at Hslice
   icases Hslice with ⟨%hnowrap, Hbytes⟩
   have hbaseNonzero : base ≠ 0 := hblockFacts.2.1
-  wasm_twp_pures [twp_block]
-  simp only [func9ZeroBody, func9Locals]
+  wasm_twp_pures [twp_block] using [func9ZeroBody, func9Locals]
   wasm_twp_pures [twp_localGet]
   iapply twp_eqz (result := 0) (by simp [hbaseNonzero])
   wasm_twp_pures [twp_brIfZero twp_localGet]
@@ -153,8 +152,7 @@ private theorem twp_func9_zero_and_return
   · unfold LiveBlock
     iframe
     ipureexact ⟨by simp, hblockFacts.2⟩
-  wasm_twp_pures [twp_exitControl]
-  simp only [List.take_zero, List.nil_append]
+  wasm_twp_pures [twp_exitControl] using [List.take_zero, List.nil_append]
   wasm_twp_pures [twp_localGet]
   iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   wasm_twp_return_from_call Hmodule [List.take_succ_cons, List.take_zero, List.cons_append,
@@ -731,8 +729,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
                   stack code arity remainder controls calls s E Φ
               iframe Hruntime Hbump Hstreams Hoom
             · iapply twp_eq (result := 0) (by simp [hsentinel])
-              wasm_twp_pures [twp_brIfZero twp_exitControl]
-              simp only [List.take_zero, List.nil_append]
+              wasm_twp_pures [twp_brIfZero twp_exitControl] using [List.take_zero, List.nil_append]
               have hphysical : finish.toNat ≤ newPages * 65536 := by
                 by_cases hpagesLow : pages < UInt32.size
                 · have hpagesWord : pages.toUInt32.toNat = pages := by

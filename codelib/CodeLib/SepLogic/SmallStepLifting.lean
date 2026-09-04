@@ -849,6 +849,16 @@ macro_rules
   | `(tactic| wasm_wp_pures [wp_scalarFloat0 $rest:ident*]) =>
       `(tactic| iapply wp_scalarFloat0 rfl; inext; wasm_wp_pures [$rest:ident*])
 
+/-- Execute pure Wasm steps, then normalize with caller-selected rewrites. -/
+syntax "wasm_wp_pures" "[" ident* "]" "using"
+  Lean.Parser.Tactic.simpArgs : tactic
+
+macro_rules
+  | `(tactic| wasm_wp_pures [$steps:ident*] using [$rules,*]) =>
+      `(tactic|
+        (wasm_wp_pures [$steps:ident*]
+         simp only [$rules,*]))
+
 /-- Execute a local assignment and normalize the concrete local list. -/
 macro "wasm_wp_localSet" : tactic =>
   `(tactic|

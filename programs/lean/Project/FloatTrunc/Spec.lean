@@ -351,24 +351,21 @@ theorem func0_body_to_ret_smallStep_wp
         simp only [hge, Bool.false_eq_true, if_false]
         wasm_wp_pures [wp_const wp_and]
         rw [show (0 &&& 1 : UInt32) = 0 by decide]
-        wasm_wp_pures [wp_brIfZero wp_br]
-        simp only [List.take, List.drop, List.nil_append]
+        wasm_wp_pures [wp_brIfZero wp_br] using [List.take, List.drop, List.nil_append]
         wasm_wp_pures [wp_localGet wp_scalarFloat0]
         cases hlt : f32Lt x 3472883712
         · wasm_wp_next wp_scalarFloat2 rfl rfl rfl
           simp only [hlt, Bool.false_eq_true, if_false]
           wasm_wp_pures [wp_const wp_and]
           rw [show (0 &&& 1 : UInt32) = 0 by decide]
-          wasm_wp_pures [wp_brIfZero wp_br]
-          simp only [List.take, List.nil_append]
+          wasm_wp_pures [wp_brIfZero wp_br] using [List.take, List.nil_append]
           wasm_wp_pures [wp_localGet wp_localGet]
           wasm_wp_next wp_scalarFloat1 rfl rfl
           iapply func0_store32_smallStep_wp 0 (i32TruncSatF32S x)
           isplitl_exact Hword
           · inext
             iintro Hword
-            wasm_wp_pures [wp_br]
-            simp only [List.take, List.nil_append]
+            wasm_wp_pures [wp_br] using [List.take, List.nil_append]
             iapply func0_tail_to_ret_smallStep_wp
               Rglobal x (i32TruncSatF32S x) calls
             isplitl [HR Hglobal]
@@ -389,8 +386,7 @@ theorem func0_body_to_ret_smallStep_wp
           isplitl_exact Hword
           · inext
             iintro Hword
-            wasm_wp_pures [wp_exitControl]
-            simp only [List.take, List.nil_append]
+            wasm_wp_pures [wp_exitControl] using [List.take, List.nil_append]
             have heq := i32TruncSatF32S_large_neg hnan hlt
             iapply func0_tail_to_ret_smallStep_wp
               Rglobal x 2147483648 calls
@@ -412,8 +408,7 @@ theorem func0_body_to_ret_smallStep_wp
         isplitl_exact Hword
         · inext
           iintro Hword
-          wasm_wp_pures [wp_br]
-          simp only [List.take, List.nil_append]
+          wasm_wp_pures [wp_br] using [List.take, List.nil_append]
           have heq := i32TruncSatF32S_large_pos hnan hge
           iapply func0_tail_to_ret_smallStep_wp
             Rglobal x 2147483647 calls
@@ -435,8 +430,7 @@ theorem func0_body_to_ret_smallStep_wp
       isplitl_exact Hword
       · inext
         iintro Hword
-        wasm_wp_pures [wp_br]
-        simp only [List.take, List.nil_append]
+        wasm_wp_pures [wp_br] using [List.take, List.nil_append]
         have hisNaN : (Float32.ofBits x).toFloat.isNaN = true :=
           (f32Ne_self_iff_isNaN x).symm.trans hnan
         have heq := i32TruncSatF32S_nan hisNaN
@@ -588,23 +582,20 @@ theorem twp_func0_body_to_ret
       simp only [hge, Bool.false_eq_true, if_false]
       wasm_twp_pures [twp_const twp_and]
       rw [show (0 &&& 1 : UInt32) = 0 by decide]
-      wasm_twp_pures [twp_brIfZero twp_br]
-      simp only [List.take, List.drop, List.nil_append]
+      wasm_twp_pures [twp_brIfZero twp_br] using [List.take, List.drop, List.nil_append]
       wasm_twp_pures [twp_localGet twp_scalarFloat0]
       cases hlt : f32Lt x 3472883712
       · iapply twp_scalarFloat2 rfl rfl rfl
         simp only [hlt, Bool.false_eq_true, if_false]
         wasm_twp_pures [twp_const twp_and]
         rw [show (0 &&& 1 : UInt32) = 0 by decide]
-        wasm_twp_pures [twp_brIfZero twp_br]
-        simp only [List.take, List.nil_append]
+        wasm_twp_pures [twp_brIfZero twp_br] using [List.take, List.nil_append]
         wasm_twp_pures [twp_localGet twp_localGet]
         iapply twp_scalarFloat1 rfl rfl
         iapply twp_func0_store32 0 (i32TruncSatF32S x)
         isplitl_exact Hword
         · iintro Hword
-          wasm_twp_pures [twp_br]
-          simp only [List.take, List.nil_append]
+          wasm_twp_pures [twp_br] using [List.take, List.nil_append]
           iapply twp_func0_tail_to_ret Rglobal x (i32TruncSatF32S x) calls
           isplitl [HR Hglobal]
           · simp only [Rglobal]
@@ -622,8 +613,7 @@ theorem twp_func0_body_to_ret
         iapply twp_func0_store32 0 2147483648
         isplitl_exact Hword
         · iintro Hword
-          wasm_twp_pures [twp_exitControl]
-          simp only [List.take, List.nil_append]
+          wasm_twp_pures [twp_exitControl] using [List.take, List.nil_append]
           have heq := i32TruncSatF32S_large_neg hnan hlt
           iapply twp_func0_tail_to_ret Rglobal x 2147483648 calls
           isplitl [HR Hglobal]
@@ -642,8 +632,7 @@ theorem twp_func0_body_to_ret
       iapply twp_func0_store32 0 2147483647
       isplitl_exact Hword
       · iintro Hword
-        wasm_twp_pures [twp_br]
-        simp only [List.take, List.nil_append]
+        wasm_twp_pures [twp_br] using [List.take, List.nil_append]
         have heq := i32TruncSatF32S_large_pos hnan hge
         iapply twp_func0_tail_to_ret Rglobal x 2147483647 calls
         isplitl [HR Hglobal]
@@ -662,8 +651,7 @@ theorem twp_func0_body_to_ret
     iapply twp_func0_store32 0 0
     isplitl_exact Hword
     · iintro Hword
-      wasm_twp_pures [twp_br]
-      simp only [List.take, List.nil_append]
+      wasm_twp_pures [twp_br] using [List.take, List.nil_append]
       have hisNaN : (Float32.ofBits x).toFloat.isNaN = true :=
         (f32Ne_self_iff_isNaN x).symm.trans hnan
       have heq := i32TruncSatF32S_nan hisNaN

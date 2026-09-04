@@ -390,8 +390,7 @@ theorem func1_leftZero_core_smallStep_wp_to_return
   wasm_wp_next_bind Wasm.SmallStep.wp_store64 result
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) with HresultLater => Hresult
-  wasm_wp_pures [wp_br]
-  simp only [List.take_nil, List.nil_append]
+  wasm_wp_pures [wp_br] using [List.take_nil, List.nil_append]
   wasm_wp_pures [wp_localGet]
   ihave HresultLater : ▷ pointsTo_u64 0 (1048512 + 0) b $$ [Hresult]
   · ilater_exact Hresult
@@ -554,8 +553,7 @@ theorem func1_rightZero_core_smallStep_wp_to_return
   wasm_wp_pures [wp_const wp_and]
   rw [show (1 &&& 1 : UInt32) = 1 by decide]
   wasm_wp_next Wasm.SmallStep.wp_eqz (result := 0) (by decide)
-  wasm_wp_pures [wp_brIfZero wp_exitControl]
-  simp only [List.take_nil, List.drop_nil, List.nil_append]
+  wasm_wp_pures [wp_brIfZero wp_exitControl] using [List.take_nil, List.drop_nil, List.nil_append]
   wasm_wp_pures [wp_localGet wp_localGet]
   ihave HxLater : ▷ pointsTo_u64 0 (1048512 + 8) a $$ [Hx]
   · ilater_exact Hx
@@ -578,8 +576,7 @@ theorem func1_rightZero_core_smallStep_wp_to_return
   wasm_wp_next_bind Wasm.SmallStep.wp_store64 result
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) with HresultLater => Hresult
-  wasm_wp_pures [wp_br]
-  simp only [List.take_nil, List.nil_append]
+  wasm_wp_pures [wp_br] using [List.take_nil, List.nil_append]
   wasm_wp_pures [wp_localGet]
   ihave HresultLater : ▷ pointsTo_u64 0 (1048512 + 0) a $$ [Hresult]
   · ilater_exact Hresult
@@ -2071,8 +2068,7 @@ theorem func1_loopBodyDispatch_smallStep_wp
   iintro ⟨HK, HR, Hx, Hy, Hresult, HshiftX, HshiftY⟩
   rw [show func1LoopBody =
     .block 0 0 equalityBlockBody :: func1AfterEqualityProg from rfl]
-  wasm_wp_pures [wp_block]
-  simp only [List.drop_zero]
+  wasm_wp_pures [wp_block] using [List.drop_zero]
   rw [show
     ({ kind := .block
        paramArity := 0
@@ -2093,8 +2089,7 @@ theorem func1_loopBodyDispatch_smallStep_wp
     iintro ⟨⟨HK', HR', HshiftX', HshiftY'⟩, Hx', Hy', Hresult'⟩
     rw [show func1AfterEqualityProg =
       .block 0 0 loopDecreaseYBlockBody :: loopDecreaseXProg from rfl]
-    wasm_wp_pures [wp_block]
-    simp only [List.drop_zero]
+    wasm_wp_pures [wp_block] using [List.drop_zero]
     rw [show
       ({ kind := .block
          paramArity := 0
@@ -2207,8 +2202,7 @@ theorem func1_loop_smallStep_wp
         obtain ⟨hx'ne, hx'odd, hgcd', _hdec⟩ :=
           UInt64.stein_step_x x y hxne hyne hxodd hyodd hlt
         iintro ⟨#IH', HR', Hx', Hy', Hresult', HshiftX', HshiftY'⟩
-        wasm_wp_pures [wp_br]
-        simp only [func1LoopFrame, List.take_nil, List.nil_append]
+        wasm_wp_pures [wp_br] using [func1LoopFrame, List.take_nil, List.nil_append]
         rw [show
           func1LoopXNormalizedLocals a b y (x - y) c6 c7 =
             func1LoopHeaderLocals a b c6 y c7
@@ -2236,8 +2230,7 @@ theorem func1_loop_smallStep_wp
         obtain ⟨hy'ne, hy'odd, hgcd', _hdec⟩ :=
           UInt64.stein_step_y x y hxne hyne hxodd hyodd hlt hxy
         iintro ⟨#IH', HR', Hx', Hy', Hresult', HshiftX', HshiftY'⟩
-        wasm_wp_pures [wp_br]
-        simp only [func1LoopFrame, List.take_nil, List.nil_append]
+        wasm_wp_pures [wp_br] using [func1LoopFrame, List.take_nil, List.nil_append]
         rw [show
           func1LoopYNormalizedLocals a b x (y - x) c8 c9 =
             func1LoopHeaderLocals a b x c8
@@ -2498,8 +2491,7 @@ theorem func1_nonzeroFinish_smallStep_wp_to_return
         func1EqualityFrame :: func1LoopFrame :: [func1OuterFrame outerBody],
         calls⟩ : Wasm.SmallStep.Expr Unit) @ s; E {{ Φ }} := by
   iintro ⟨HR, Hx, Hy, Hresult, HshiftX, HshiftY⟩
-  wasm_wp_pures [wp_br]
-  simp only [func1OuterFrame, func1EpilogueProg, List.take_nil,
+  wasm_wp_pures [wp_br] using [func1OuterFrame, func1EpilogueProg, List.take_nil,
     List.nil_append]
   wasm_wp_pures [wp_localGet]
   ihave HresultLater :
@@ -3953,8 +3945,7 @@ theorem twp_func1_leftZero_core_smallStep_wp_to_return
   wasm_twp_bind Wasm.SmallStep.twp_store64 result
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) with HresultLater => Hresult
-  wasm_twp_pures [twp_br]
-  simp only [List.take_nil, List.nil_append]
+  wasm_twp_pures [twp_br] using [List.take_nil, List.nil_append]
   wasm_twp_pures [twp_localGet]
   wasm_twp_bind Wasm.SmallStep.twp_load64 b
       (by decide) (by decide) (by decide) (by decide) (by decide)
@@ -4138,8 +4129,7 @@ theorem twp_func1_rightZero_core_smallStep_wp_to_return
   wasm_twp_bind Wasm.SmallStep.twp_store64 result
       (by decide) (by decide) (by decide) (by decide) (by decide)
       (by decide) (by decide) (by decide) with HresultLater => Hresult
-  wasm_twp_pures [twp_br]
-  simp only [List.take_nil, List.nil_append]
+  wasm_twp_pures [twp_br] using [List.take_nil, List.nil_append]
   wasm_twp_pures [twp_localGet]
   wasm_twp_bind Wasm.SmallStep.twp_load64 a
       (by decide) (by decide) (by decide) (by decide) (by decide)
@@ -4798,8 +4788,7 @@ theorem twp_func1_nonzeroFinish_smallStep_wp_to_return
         func1EqualityFrame :: func1LoopFrame :: [func1OuterFrame outerBody],
         calls⟩ : Wasm.SmallStep.Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hx, Hy, Hresult, HshiftX, HshiftY⟩
-  wasm_twp_pures [twp_br]
-  simp only [func1OuterFrame, func1EpilogueProg, List.take_nil,
+  wasm_twp_pures [twp_br] using [func1OuterFrame, func1EpilogueProg, List.take_nil,
     List.nil_append]
   wasm_twp_pures [twp_localGet]
   ihave HresultLater :
@@ -5479,8 +5468,7 @@ theorem twp_func1_loopBodyDispatch_smallStep_wp
   iintro ⟨HR, Hx, Hy, Hresult, HshiftX, HshiftY⟩
   rw [show func1LoopBody =
     .block 0 0 equalityBlockBody :: func1AfterEqualityProg from rfl]
-  wasm_twp_pures [twp_block]
-  simp only [List.drop_zero]
+  wasm_twp_pures [twp_block] using [List.drop_zero]
   rw [show
     ({ kind := .block
        paramArity := 0
@@ -5501,8 +5489,7 @@ theorem twp_func1_loopBodyDispatch_smallStep_wp
     iintro ⟨⟨HR', HshiftX', HshiftY'⟩, Hx', Hy', Hresult'⟩
     rw [show func1AfterEqualityProg =
       .block 0 0 loopDecreaseYBlockBody :: loopDecreaseXProg from rfl]
-    wasm_twp_pures [twp_block]
-    simp only [List.drop_zero]
+    wasm_twp_pures [twp_block] using [List.drop_zero]
     rw [show
       ({ kind := .block
          paramArity := 0
@@ -5676,8 +5663,7 @@ theorem twp_func1_loopEntry_smallStep_wp
         · intro heq; exact (hxy heq).elim
         · intro _ _
           iintro ⟨HR', Hx', Hy', Hresult', HshiftX', HshiftY'⟩
-          wasm_twp_pures [twp_br]
-          simp only [func1LoopFrame, List.take_nil, List.nil_append]
+          wasm_twp_pures [twp_br] using [func1LoopFrame, List.take_nil, List.nil_append]
           rw [show func1LoopXNormalizedLocals a b i.y (i.x - i.y) i.c6 i.c7 =
               func1LoopHeaderLocals a b i.c6 i.y i.c7
                 (operandShiftWord (i.x - i.y)) from rfl]
@@ -5712,8 +5698,7 @@ theorem twp_func1_loopEntry_smallStep_wp
         · intro _ hlt'; exact (hlt hlt').elim
         · intro _ _
           iintro ⟨HR', Hx', Hy', Hresult', HshiftX', HshiftY'⟩
-          wasm_twp_pures [twp_br]
-          simp only [func1LoopFrame, List.take_nil, List.nil_append]
+          wasm_twp_pures [twp_br] using [func1LoopFrame, List.take_nil, List.nil_append]
           rw [show func1LoopYNormalizedLocals a b i.x (i.y - i.x) i.c8 i.c9 =
               func1LoopHeaderLocals a b i.x i.c8
                 (operandShiftWord (i.y - i.x)) i.c9 from rfl]

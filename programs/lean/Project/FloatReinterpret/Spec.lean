@@ -1203,8 +1203,7 @@ theorem checkAbs_zeroPath_smallStep_wp
   · ilater_rw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
   wasm_wp_next_bind wp_store32 oldResult
     (by decide) (by decide) (by decide) (by decide) with HresultLater => Hresult
-  wasm_wp_pures [wp_exitControl]
-  simp only [checkAbsOuterFrame, List.take, List.nil_append]
+  wasm_wp_pures [wp_exitControl] using [checkAbsOuterFrame, List.take, List.nil_append]
   ihave HresultExact : pointsTo_u32 0 1048572 0 $$ [Hresult]
   · irw_exact [← show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
   iapply_frame hcontinue
@@ -1234,8 +1233,7 @@ theorem checkAbs_onePath_smallStep_wp
   · ilater_rw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
   wasm_wp_next_bind wp_store32 oldResult
     (by decide) (by decide) (by decide) (by decide) with HresultLater => Hresult
-  wasm_wp_pures [wp_br]
-  simp only [checkAbsOuterFrame, List.take, List.nil_append]
+  wasm_wp_pures [wp_br] using [checkAbsOuterFrame, List.take, List.nil_append]
   ihave HresultExact : pointsTo_u32 0 1048572 1 $$ [Hresult]
   · irw_exact [← show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
   iapply_frame hcontinue
@@ -1532,8 +1530,7 @@ theorem func10_body_smallStep_wp
   wasm_wp_pures [wp_block]
   rw (occs := .pos [1]) [show checkAbsOuterBody =
     (.block 0 0 checkAbsInnerBody :: checkAbsZeroProg) by rfl]
-  wasm_wp_pures [wp_block]
-  simp only [List.drop_zero]
+  wasm_wp_pures [wp_block] using [List.drop_zero]
   rw [← show checkAbsInnerFrame =
     { kind := .block
       paramArity := 0
@@ -1733,8 +1730,7 @@ theorem checkCopysign_comparison_smallStep_wp
         · ilater_rw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
         wasm_wp_next_bind wp_store32 oldResult
           (by decide) (by decide) (by decide) (by decide) with HresultLater => Hresult
-        wasm_wp_pures [wp_exitControl]
-        simp only [checkCopysignOuterFrame, List.take, List.nil_append]
+        wasm_wp_pures [wp_exitControl] using [checkCopysignOuterFrame, List.take, List.nil_append]
         ihave HresultExact : pointsTo_u32 0 1048572 1 $$ [Hresult]
         · irw_exact [← show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
         iapply_frame hone
@@ -1751,8 +1747,7 @@ theorem checkCopysign_comparison_smallStep_wp
         · ilater_rw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
         wasm_wp_next_bind wp_store32 oldResult
           (by decide) (by decide) (by decide) (by decide) with HresultLater => Hresult
-        wasm_wp_pures [wp_br]
-        simp only [checkCopysignOuterFrame, List.take, List.nil_append]
+        wasm_wp_pures [wp_br] using [checkCopysignOuterFrame, List.take, List.nil_append]
         ihave HresultExact : pointsTo_u32 0 1048572 0 $$ [Hresult]
         · irw_exact [← show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
         iapply_frame hzero
@@ -1793,8 +1788,7 @@ theorem func11_body_smallStep_wp
   wasm_wp_pures [wp_block]
   rw (occs := .pos [1]) [show checkCopysignOuterBody =
     (.block 0 0 checkCopysignInnerBody :: checkCopysignOneProg) by rfl]
-  wasm_wp_pures [wp_block]
-  simp only [List.drop_zero]
+  wasm_wp_pures [wp_block] using [List.drop_zero]
   rw [← show checkCopysignInnerFrame =
     { kind := .block
       paramArity := 0
@@ -2222,8 +2216,7 @@ theorem twp_checkAbs_zeroPath_smallStep_wp
   · irw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
   wasm_twp_rebind twp_store32 oldResult
     (by decide) (by decide) (by decide) (by decide) with Hresult'
-  wasm_twp_pures [twp_exitControl]
-  simp only [checkAbsOuterFrame, List.take, List.nil_append]
+  wasm_twp_pures [twp_exitControl] using [checkAbsOuterFrame, List.take, List.nil_append]
   ihave HresultExact : pointsTo_u32 0 1048572 0 $$ [Hresult']
   · irw_exact [← show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult'
   iapply_frame hcontinue
@@ -2252,8 +2245,7 @@ theorem twp_checkAbs_onePath_smallStep_wp
   · irw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
   wasm_twp_rebind twp_store32 oldResult
     (by decide) (by decide) (by decide) (by decide) with Hresult'
-  wasm_twp_pures [twp_br]
-  simp only [checkAbsOuterFrame, List.take, List.nil_append]
+  wasm_twp_pures [twp_br] using [checkAbsOuterFrame, List.take, List.nil_append]
   ihave HresultExact : pointsTo_u32 0 1048572 1 $$ [Hresult']
   · irw_exact [← show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult'
   iapply_frame hcontinue
@@ -2546,8 +2538,7 @@ theorem twp_func10_body_smallStep_wp
   wasm_twp_pures [twp_block]
   rw (occs := .pos [1]) [show checkAbsOuterBody =
     (.block 0 0 checkAbsInnerBody :: checkAbsZeroProg) by rfl]
-  wasm_twp_pures [twp_block]
-  simp only [List.drop_zero]
+  wasm_twp_pures [twp_block] using [List.drop_zero]
   rw [← show checkAbsInnerFrame =
     { kind := .block
       paramArity := 0
@@ -2685,8 +2676,7 @@ theorem twp_checkCopysign_comparison_smallStep_wp
         · irw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
         wasm_twp_rebind twp_store32 oldResult
           (by decide) (by decide) (by decide) (by decide) with Hresult'
-        wasm_twp_pures [twp_exitControl]
-        simp only [checkCopysignOuterFrame, List.take, List.nil_append]
+        wasm_twp_pures [twp_exitControl] using [checkCopysignOuterFrame, List.take, List.nil_append]
         ihave HresultExact : pointsTo_u32 0 1048572 1 $$ [Hresult']
         · irw_exact [← show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult'
         iapply_frame hone
@@ -2702,8 +2692,7 @@ theorem twp_checkCopysign_comparison_smallStep_wp
         · irw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
         wasm_twp_rebind twp_store32 oldResult
           (by decide) (by decide) (by decide) (by decide) with Hresult'
-        wasm_twp_pures [twp_br]
-        simp only [checkCopysignOuterFrame, List.take, List.nil_append]
+        wasm_twp_pures [twp_br] using [checkCopysignOuterFrame, List.take, List.nil_append]
         ihave HresultExact : pointsTo_u32 0 1048572 0 $$ [Hresult']
         · irw_exact [← show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult'
         iapply_frame hzero
@@ -2745,8 +2734,7 @@ theorem twp_func11_body_smallStep_wp
   wasm_twp_pures [twp_block]
   rw (occs := .pos [1]) [show checkCopysignOuterBody =
     (.block 0 0 checkCopysignInnerBody :: checkCopysignOneProg) by rfl]
-  wasm_twp_pures [twp_block]
-  simp only [List.drop_zero]
+  wasm_twp_pures [twp_block] using [List.drop_zero]
   rw [← show checkCopysignInnerFrame =
     { kind := .block
       paramArity := 0

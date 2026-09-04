@@ -1769,6 +1769,16 @@ macro_rules
   | `(tactic| wasm_twp_pures [twp_scalarFloat0 $rest:ident*]) =>
       `(tactic| iapply twp_scalarFloat0 rfl; wasm_twp_pures [$rest:ident*])
 
+/-- Execute pure Wasm steps, then normalize with caller-selected rewrites. -/
+syntax "wasm_twp_pures" "[" ident* "]" "using"
+  Lean.Parser.Tactic.simpArgs : tactic
+
+macro_rules
+  | `(tactic| wasm_twp_pures [$steps:ident*] using [$rules,*]) =>
+      `(tactic|
+        (wasm_twp_pures [$steps:ident*]
+         simp only [$rules,*]))
+
 /-- Execute a local assignment and normalize the concrete local list. -/
 macro "wasm_twp_localSet" : tactic =>
   `(tactic|

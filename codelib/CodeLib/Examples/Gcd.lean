@@ -104,8 +104,7 @@ private theorem twp_gcdLoop
       iapply twp_remU hb
       wasm_twp_pures [twp_localSet twp_localGet twp_localSet
         twp_localGet twp_localSet]
-      wasm_twp_pures [twp_br]
-      simp only [gcdLocals, List.set]
+      wasm_twp_pures [twp_br] using [gcdLocals, List.set]
       have hbpos : 0 < currentB.toNat := by
         rcases Nat.eq_zero_or_pos currentB.toNat with hz | hp
         · exact absurd (UInt32.toNat.inj hz) hb

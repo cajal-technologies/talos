@@ -170,8 +170,7 @@ private theorem twp_func8_copy_and_return
     HoldSlice HnewPrefix
   icases HoldSlice with ⟨%holdNowrap, HoldBytes⟩
   icases HnewPrefix with ⟨%hnewPrefixNowrap, HnewPrefixBytes⟩
-  wasm_twp_pures [twp_block]
-  simp only [func8CopyBody, func8Locals]
+  wasm_twp_pures [twp_block] using [func8CopyBody, func8Locals]
   wasm_twp_pures [twp_localGet]
   iapply twp_eqz (result := 0) (by simp [hnewNonzero])
   wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet twp_localGet twp_localGet]
@@ -235,8 +234,7 @@ private theorem twp_func8_copy_and_return
       (history.reallocate oldId oldPtr oldLayout newPtr newLayout) $$ [Hbump]
   · unfold AllocationHistory.reallocate
     iexact Hbump
-  wasm_twp_pures [twp_exitControl]
-  simp only [List.take_zero, List.nil_append]
+  wasm_twp_pures [twp_exitControl] using [List.take_zero, List.nil_append]
   wasm_twp_pures [twp_localGet]
   iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   wasm_twp_return_from_call Hmodule [List.take_succ_cons, List.take_zero, List.cons_append,
@@ -571,8 +569,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
           apply UInt32.toNat_inj.mp
           rw [UInt32.toNat_ofNat_of_lt' hfrontierBound]
           exact hfrontierEq.symm
-      wasm_twp_pures [twp_block]
-      simp only [func8PostArithmetic, func8GrowthBody, func8CopyBody,
+      wasm_twp_pures [twp_block] using [func8PostArithmetic, func8GrowthBody, func8CopyBody,
         List.drop_zero]
       subst alignment
       wasm_twp_pures [twp_localGet twp_const twp_add]
@@ -594,8 +591,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
           exact hfrontierWord.symm
         · simp [hzero] at hfrontierWord ⊢
           exact hfrontierWord.symm)
-      wasm_twp_pures [twp_add]
-      simp only [UInt32.add_zero]
+      wasm_twp_pures [twp_add] using [UInt32.add_zero]
       wasm_twp_localTee [List.length]
       wasm_twp_pures [twp_localGet]
       iapply twp_ltU (result := 0) (by simp)
@@ -863,8 +859,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
           (frontier + newLayout.size) % UInt32.size := by
         dsimp only [finishWord]
         rw [UInt32.toNat_add, hbaseNat, hnewSizeNat]
-      wasm_twp_pures [twp_block]
-      simp only [func8PostArithmetic, func8GrowthBody, func8CopyBody,
+      wasm_twp_pures [twp_block] using [func8PostArithmetic, func8GrowthBody, func8CopyBody,
         List.drop_zero]
       subst alignment
       wasm_twp_pures [twp_localGet twp_const twp_add]
@@ -886,8 +881,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
           exact hfrontierWord.symm
         · simp [hzero] at hfrontierWord ⊢
           exact hfrontierWord.symm)
-      wasm_twp_pures [twp_add]
-      simp only [UInt32.add_zero]
+      wasm_twp_pures [twp_add] using [UInt32.add_zero]
       wasm_twp_localTee [List.length]
       wasm_twp_pures [twp_localGet]
       iapply twp_ltU (result := 0) (by simp)

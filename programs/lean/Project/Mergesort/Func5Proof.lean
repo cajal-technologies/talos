@@ -595,8 +595,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
                 Hstreams, Hcont⟩
             wasm_twp_pures [twp_const]
             iapply twp_ne (result := 0) (by simp)
-            wasm_twp_pures [twp_brIfZero twp_exitControl]
-            simp only [List.take_zero, List.nil_append]
+            wasm_twp_pures [twp_brIfZero twp_exitControl] using [List.take_zero, List.nil_append]
             ihave Hbump : BumpHeap heapId storedCursor frontier history $$
                 [Hcursor Hfrontier Hauth Hretired HoldPages]
             · unfold BumpHeap
@@ -631,8 +630,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
             by_cases hsentinel : previousPages.toUInt32 =
                 (0xFFFFFFFF : UInt32)
             · iapply twp_ne (result := 0) (by simp [hsentinel])
-              wasm_twp_pures [twp_brIfZero twp_exitControl]
-              simp only [List.take_zero, List.nil_append]
+              wasm_twp_pures [twp_brIfZero twp_exitControl] using [List.take_zero, List.nil_append]
               ihave Hbump : BumpHeap heapId storedCursor frontier history $$
                   [Hcursor Hfrontier Hauth Hretired HoldPages]
               · unfold BumpHeap

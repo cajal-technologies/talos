@@ -474,8 +474,7 @@ theorem naive_storeTrunc_smallStep_wp
   · ilater_rw_exact [show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
   wasm_wp_next_bind wp_f32Store oldWord
     (by decide) (by decide) (by decide) (by decide) with HwordLater => Hword
-  wasm_wp_pures [wp_br]
-  simp only [naiveAFrame, List.take, List.nil_append]
+  wasm_wp_pures [wp_br] using [naiveAFrame, List.take, List.nil_append]
   ihave HwordExact : pointsTo_u32 0 1048556 (f32Trunc x) $$ [Hword]
   · irw_exact [← show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
   iapply_frame hnext
@@ -525,8 +524,7 @@ theorem naive_ceil_smallStep_wp
     · ilater_rw_exact [show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
     wasm_wp_next_bind wp_f32Store oldWord
       (by decide) (by decide) (by decide) (by decide) with HwordLater => Hword
-    wasm_wp_pures [wp_br]
-    simp only [naiveAFrame, List.take, List.nil_append]
+    wasm_wp_pures [wp_br] using [naiveAFrame, List.take, List.nil_append]
     ihave HwordExact :
         pointsTo_u32 0 1048556 (f32Ceil (f32Trunc x)) $$ [Hword]
     · irw_exact [← show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
@@ -577,8 +575,7 @@ theorem naive_floor_smallStep_wp
     · ilater_rw_exact [show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
     wasm_wp_next_bind wp_f32Store oldWord
       (by decide) (by decide) (by decide) (by decide) with HwordLater => Hword
-    wasm_wp_pures [wp_exitControl]
-    simp only [naiveAFrame, List.take, List.nil_append]
+    wasm_wp_pures [wp_exitControl] using [naiveAFrame, List.take, List.nil_append]
     ihave HwordExact :
         pointsTo_u32 0 1048556 (f32Floor (f32Trunc x)) $$ [Hword]
     · irw_exact [← show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
@@ -681,8 +678,7 @@ theorem naive_compare_smallStep_wp
         (by simp [evalScalarFloat2?, hleFalse])
       wasm_wp_pures [wp_const wp_and]
       rw [show (0 &&& 1 : UInt32) = 0 by decide]
-      wasm_wp_pures [wp_brIfZero wp_br]
-      simp only [naiveCFrame, List.take, List.nil_append]
+      wasm_wp_pures [wp_brIfZero wp_br] using [naiveCFrame, List.take, List.nil_append]
       iapply naive_storeTrunc_smallStep_wp
         (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
           pointsTo_u32 0 1048540 oldDeep))
@@ -768,8 +764,7 @@ theorem func0_lowered_smallStep_wp
     wasm_wp_pures [wp_block]
     rw (occs := .pos [1]) [show naiveCBody =
       (.block 0 0 naiveCompareProg :: naiveCeilProg) by rfl]
-    wasm_wp_pures [wp_block]
-    simp only [List.drop_zero]
+    wasm_wp_pures [wp_block] using [List.drop_zero]
     rw [← show naiveDFrame =
       { kind := .block, paramArity := 0, resultArity := 0
         body := naiveCompareProg, continuation := naiveCeilProg
@@ -943,8 +938,7 @@ theorem roundCheck_comparison_smallStep_wp
         · ilater_rw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
         wasm_wp_next_bind wp_store32 oldResult
           (by decide) (by decide) (by decide) (by decide) with HresultLater => Hresult
-        wasm_wp_pures [wp_exitControl]
-        simp only [roundCheckOuterFrame, List.take, List.nil_append]
+        wasm_wp_pures [wp_exitControl] using [roundCheckOuterFrame, List.take, List.nil_append]
         ihave HresultExact : pointsTo_u32 0 1048572 1 $$ [Hresult]
         · irw_exact [← show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
         iapply_frame hone naive (f32Nearest x)
@@ -960,8 +954,7 @@ theorem roundCheck_comparison_smallStep_wp
         · ilater_rw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
         wasm_wp_next_bind wp_store32 oldResult
           (by decide) (by decide) (by decide) (by decide) with HresultLater => Hresult
-        wasm_wp_pures [wp_br]
-        simp only [roundCheckOuterFrame, List.take, List.nil_append]
+        wasm_wp_pures [wp_br] using [roundCheckOuterFrame, List.take, List.nil_append]
         ihave HresultExact : pointsTo_u32 0 1048572 0 $$ [Hresult]
         · irw_exact [← show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
         iapply_frame hzero naive (f32Nearest x)
@@ -1002,8 +995,7 @@ theorem func6_body_smallStep_wp
   wasm_wp_pures [wp_block]
   rw (occs := .pos [1]) [show roundCheckOuterBody =
     (.block 0 0 roundCheckInnerBody :: roundCheckOneProg) by rfl]
-  wasm_wp_pures [wp_block]
-  simp only [List.drop_zero]
+  wasm_wp_pures [wp_block] using [List.drop_zero]
   rw [← show roundCheckInnerFrame =
     { kind := .block, paramArity := 0, resultArity := 0
       body := roundCheckInnerBody, continuation := roundCheckOneProg
@@ -1287,8 +1279,7 @@ theorem twp_naive_storeTrunc_smallStep_wp
   · irw_exact [show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
   wasm_twp_bind twp_f32Store oldWord
     (by decide) (by decide) (by decide) (by decide) with Hword' => Hword
-  wasm_twp_pures [twp_br]
-  simp only [naiveAFrame, List.take, List.nil_append]
+  wasm_twp_pures [twp_br] using [naiveAFrame, List.take, List.nil_append]
   ihave HwordExact : pointsTo_u32 0 1048556 (f32Trunc x) $$ [Hword]
   · irw_exact [← show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
   iapply_frame hnext
@@ -1337,8 +1328,7 @@ theorem twp_naive_ceil_smallStep_wp
     · irw_exact [show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
     wasm_twp_bind twp_f32Store oldWord
       (by decide) (by decide) (by decide) (by decide) with Hword' => Hword
-    wasm_twp_pures [twp_br]
-    simp only [naiveAFrame, List.take, List.nil_append]
+    wasm_twp_pures [twp_br] using [naiveAFrame, List.take, List.nil_append]
     ihave HwordExact :
         pointsTo_u32 0 1048556 (f32Ceil (f32Trunc x)) $$ [Hword]
     · irw_exact [← show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
@@ -1388,8 +1378,7 @@ theorem twp_naive_floor_smallStep_wp
     · irw_exact [show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
     wasm_twp_bind twp_f32Store oldWord
       (by decide) (by decide) (by decide) (by decide) with Hword' => Hword
-    wasm_twp_pures [twp_exitControl]
-    simp only [naiveAFrame, List.take, List.nil_append]
+    wasm_twp_pures [twp_exitControl] using [naiveAFrame, List.take, List.nil_append]
     ihave HwordExact :
         pointsTo_u32 0 1048556 (f32Floor (f32Trunc x)) $$ [Hword]
     · irw_exact [← show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
@@ -1490,8 +1479,7 @@ theorem twp_naive_compare_smallStep_wp
         (by simp [evalScalarFloat2?, hleFalse])
       wasm_twp_pures [twp_const twp_and]
       rw [show (0 &&& 1 : UInt32) = 0 by decide]
-      wasm_twp_pures [twp_brIfZero twp_br]
-      simp only [naiveCFrame, List.take, List.nil_append]
+      wasm_twp_pures [twp_brIfZero twp_br] using [naiveCFrame, List.take, List.nil_append]
       iapply twp_naive_storeTrunc_smallStep_wp
         (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
           pointsTo_u32 0 1048540 oldDeep))
@@ -1575,8 +1563,7 @@ theorem twp_func0_lowered_smallStep_wp
     wasm_twp_pures [twp_block]
     rw (occs := .pos [1]) [show naiveCBody =
       (.block 0 0 naiveCompareProg :: naiveCeilProg) by rfl]
-    wasm_twp_pures [twp_block]
-    simp only [List.drop_zero]
+    wasm_twp_pures [twp_block] using [List.drop_zero]
     rw [← show naiveDFrame =
       { kind := .block, paramArity := 0, resultArity := 0
         body := naiveCompareProg, continuation := naiveCeilProg
@@ -1714,8 +1701,7 @@ theorem twp_roundCheck_comparison_smallStep_wp
         · irw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
         wasm_twp_bind twp_store32 oldResult
           (by decide) (by decide) (by decide) (by decide) with Hresult' => Hresult
-        wasm_twp_pures [twp_exitControl]
-        simp only [roundCheckOuterFrame, List.take, List.nil_append]
+        wasm_twp_pures [twp_exitControl] using [roundCheckOuterFrame, List.take, List.nil_append]
         ihave HresultExact : pointsTo_u32 0 1048572 1 $$ [Hresult]
         · irw_exact [← show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
         iapply_frame hone naive (f32Nearest x)
@@ -1730,8 +1716,7 @@ theorem twp_roundCheck_comparison_smallStep_wp
         · irw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
         wasm_twp_bind twp_store32 oldResult
           (by decide) (by decide) (by decide) (by decide) with Hresult' => Hresult
-        wasm_twp_pures [twp_br]
-        simp only [roundCheckOuterFrame, List.take, List.nil_append]
+        wasm_twp_pures [twp_br] using [roundCheckOuterFrame, List.take, List.nil_append]
         ihave HresultExact : pointsTo_u32 0 1048572 0 $$ [Hresult]
         · irw_exact [← show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
         iapply_frame hzero naive (f32Nearest x)
@@ -1772,8 +1757,7 @@ theorem twp_func6_body_smallStep_wp
   wasm_twp_pures [twp_block]
   rw (occs := .pos [1]) [show roundCheckOuterBody =
     (.block 0 0 roundCheckInnerBody :: roundCheckOneProg) by rfl]
-  wasm_twp_pures [twp_block]
-  simp only [List.drop_zero]
+  wasm_twp_pures [twp_block] using [List.drop_zero]
   rw [← show roundCheckInnerFrame =
     { kind := .block, paramArity := 0, resultArity := 0
       body := roundCheckInnerBody, continuation := roundCheckOneProg

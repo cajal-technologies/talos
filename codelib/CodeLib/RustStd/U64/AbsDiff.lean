@@ -129,8 +129,7 @@ theorem absDiff_smallStep_wp_to_return
     wasm_wp_next Wasm.SmallStep.wp_store64 oldScratch h8 h9 h10 h11 h12 h13 h14 h15 $$
       HscratchLater
     iintro Hscratch
-    wasm_wp_pures [wp_br]
-    simp only [List.take_nil, List.drop_nil, List.nil_append]
+    wasm_wp_pures [wp_br] using [List.take_nil, List.drop_nil, List.nil_append]
     wasm_wp_pures [wp_localGet]
     ihave HscratchLater :
         ▷ pointsTo_u64 0 ((sp - 16) + 8) (a - b) $$ [Hscratch]

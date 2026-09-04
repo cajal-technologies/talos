@@ -1615,8 +1615,7 @@ theorem twp_mergeLeftRemainder
       (by simp)
     wasm_twp_pures [twp_sub twp_localSet]
     simp only
-    wasm_twp_pures [twp_const twp_localSet]
-    simp only [sortLocals, List.length, List.set, hjEq]
+    wasm_twp_pures [twp_const twp_localSet] using [sortLocals, List.length, List.set, hjEq]
     let n := mid - i
     have hiN : i + n = mid := by
       dsimp only [n]
@@ -2657,14 +2656,10 @@ theorem twp_sort
       iapply (arrayAt_append 0 scratch leftScratch rightScratch).mpr
       isplitl_exact HscratchLeft
       irw_exact [hleftScratchLength, UInt32.add_comm] with HscratchRight
-    wasm_twp_pures [twp_const twp_localSet]
-    simp only [List.length]
-    wasm_twp_pures [twp_localGet twp_localSet]
-    simp only [List.length]
-    wasm_twp_pures [twp_const twp_localSet]
-    simp only [List.length]
-    wasm_twp_pures [twp_const twp_localSet]
-    simp only [List.length]
+    wasm_twp_pures [twp_const twp_localSet] using [List.length]
+    wasm_twp_pures [twp_localGet twp_localSet] using [List.length]
+    wasm_twp_pures [twp_const twp_localSet] using [List.length]
+    wasm_twp_pures [twp_const twp_localSet] using [List.length]
     have hleftPositive : 0 < left.length := by
       rw [hleftLength]
       exact hmidPos

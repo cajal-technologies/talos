@@ -221,8 +221,7 @@ theorem copyWords_incrementBackedge_wp
   simp only [CopyWordsIncrementBackedge]
   wasm_wp_pures [wp_localGet wp_const wp_add]
   rw [UInt32.add_comm 1 i]
-  wasm_wp_pures [wp_localSet wp_br]
-  simp only [copyWordsLoopFrame, List.length_cons, List.length_nil,
+  wasm_wp_pures [wp_localSet wp_br] using [copyWordsLoopFrame, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set, List.take_nil,
     List.nil_append]
   iexact Hcontinue
@@ -297,10 +296,8 @@ theorem copyWords_guard_wp
     CopyWordsInnerGuard, List.cons_append, List.nil_append] at hbody
   iintro HP
   simp only [CopyWordsLoopBody]
-  wasm_wp_pures [wp_block]
-  simp only [CopyWordsOuterBody, List.cons_append, List.nil_append]
-  wasm_wp_pures [wp_block]
-  simp only [CopyWordsInnerGuard]
+  wasm_wp_pures [wp_block] using [CopyWordsOuterBody, List.cons_append, List.nil_append]
+  wasm_wp_pures [wp_block] using [CopyWordsInnerGuard]
   wasm_wp_pures [wp_localGet wp_localGet]
   by_cases hlt : i < n
   · wasm_wp_next Wasm.SmallStep.wp_ltU (result := 1) (by simp [hlt])
@@ -552,8 +549,7 @@ theorem copyWords_smallStep_wp
   iintro Hresources
   rw [CopyWords_eq_structured]
   simp only [List.cons_append, List.nil_append]
-  wasm_wp_pures [wp_const wp_localSet]
-  simp only [List.length_cons, List.length_nil,
+  wasm_wp_pures [wp_const wp_localSet] using [List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set]
   have hloop := copyWords_loop_wp R dst src n destination source
     afterLoop arity remainder controls calls hdestinationLength hsourceLength
@@ -705,8 +701,7 @@ theorem copyWords_incrementBackedge_twp
   simp only [CopyWordsIncrementBackedge]
   wasm_twp_pures [twp_localGet twp_const twp_add]
   rw [UInt32.add_comm 1 i]
-  wasm_twp_pures [twp_localSet twp_br]
-  simp only [copyWordsLoopFrame, List.length_cons, List.length_nil,
+  wasm_twp_pures [twp_localSet twp_br] using [copyWordsLoopFrame, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set, List.take_nil,
     List.nil_append]
   iexact Hcontinue
@@ -783,10 +778,8 @@ theorem copyWords_guard_twp
     CopyWordsInnerGuard, List.cons_append, List.nil_append] at hbody
   iintro HP
   simp only [CopyWordsLoopBody]
-  wasm_twp_pures [twp_block]
-  simp only [CopyWordsOuterBody, List.cons_append, List.nil_append]
-  wasm_twp_pures [twp_block]
-  simp only [CopyWordsInnerGuard]
+  wasm_twp_pures [twp_block] using [CopyWordsOuterBody, List.cons_append, List.nil_append]
+  wasm_twp_pures [twp_block] using [CopyWordsInnerGuard]
   wasm_twp_pures [twp_localGet twp_localGet]
   by_cases hlt : i < n
   · iapply Wasm.SmallStep.twp_ltU (result := 1) (by simp [hlt])
@@ -1014,8 +1007,7 @@ theorem copyWords_smallStep_twp
   iintro Hresources
   rw [CopyWords_eq_structured]
   simp only [List.cons_append, List.nil_append]
-  wasm_twp_pures [twp_const twp_localSet]
-  simp only [List.length_cons, List.length_nil,
+  wasm_twp_pures [twp_const twp_localSet] using [List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set]
   have hloop := copyWords_loop_twp R dst src n destination source
     afterLoop arity remainder controls calls hdestinationLength hsourceLength

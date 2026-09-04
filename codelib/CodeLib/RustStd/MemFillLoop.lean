@@ -187,8 +187,7 @@ theorem fillWords_incrementBackedge_wp
   simp only [FillWordsIncrementBackedge]
   wasm_wp_pures [wp_localGet wp_const wp_add]
   rw [UInt32.add_comm 1 i]
-  wasm_wp_pures [wp_localSet wp_br]
-  simp only [fillWordsLoopFrame, List.length_cons,
+  wasm_wp_pures [wp_localSet wp_br] using [fillWordsLoopFrame, List.length_cons,
     List.length_nil, Nat.reduceAdd, Nat.reduceSub, List.set, List.take_nil,
     List.nil_append]
   iexact Hcontinue
@@ -266,10 +265,8 @@ theorem fillWords_guard_wp
     FillWordsInnerGuard, List.cons_append, List.nil_append] at hbody
   iintro HP
   simp only [FillWordsLoopBody]
-  wasm_wp_pures [wp_block]
-  simp only [FillWordsOuterBody, List.cons_append, List.nil_append]
-  wasm_wp_pures [wp_block]
-  simp only [FillWordsInnerGuard]
+  wasm_wp_pures [wp_block] using [FillWordsOuterBody, List.cons_append, List.nil_append]
+  wasm_wp_pures [wp_block] using [FillWordsInnerGuard]
   wasm_wp_pures [wp_localGet wp_localGet]
   by_cases hlt : i < n
   · wasm_wp_next Wasm.SmallStep.wp_ltU (result := 1) (by simp [hlt])
@@ -468,8 +465,7 @@ theorem fillWords_smallStep_wp
   iintro Hresources
   rw [FillWords_eq_structured]
   simp only [List.cons_append, List.nil_append]
-  wasm_wp_pures [wp_const wp_localSet]
-  simp only [List.length_cons, List.length_nil,
+  wasm_wp_pures [wp_const wp_localSet] using [List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set]
   have hloop := fillWords_loop_wp R base n value original afterLoop arity
     remainder controls calls hlength htotal hfinish
