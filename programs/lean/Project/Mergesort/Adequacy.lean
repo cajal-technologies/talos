@@ -107,8 +107,7 @@ def entryGlobals : WasmGlobalMap Value :=
 private theorem empty_below_entryStack :
     HeapBelow (∅ : WasmHeapMap (Option UInt8)) entryStackLow.toNat := by
   intro key value hget
-  rw [get?_empty] at hget
-  contradiction
+  rw [get?_empty] at hget; contradiction
 
 private theorem entryStackHeap_below_cursor :
     HeapBelow entryStackHeap allocatorCursor.toNat := by

@@ -288,54 +288,43 @@ private theorem twp_func0_success_tail
       Htag, Hpointer, Hcapacity, Hclose⟩
   have hresult4 : (result + 4).toNat = result.toNat + 4 := by
     apply byteOffset_toNat result 4
-    rw [hresultLength] at hresultNowrap
-    omega
+    rw [hresultLength] at hresultNowrap; omega
   have hresult8 : (result + 8).toNat = result.toNat + 8 := by
     apply byteOffset_toNat result 8
-    rw [hresultLength] at hresultNowrap
-    omega
+    rw [hresultLength] at hresultNowrap; omega
   have h4_1 : ((result + 4) + 1).toNat = (result + 4).toNat + 1 := by
     apply byteOffset_toNat (result + 4) 1
     rw [hresult4]
-    rw [hresultLength] at hresultNowrap
-    omega
+    rw [hresultLength] at hresultNowrap; omega
   have h4_2 : ((result + 4) + 2).toNat = (result + 4).toNat + 2 := by
     apply byteOffset_toNat (result + 4) 2
     rw [hresult4]
-    rw [hresultLength] at hresultNowrap
-    omega
+    rw [hresultLength] at hresultNowrap; omega
   have h4_3 : ((result + 4) + 3).toNat = (result + 4).toNat + 3 := by
     apply byteOffset_toNat (result + 4) 3
     rw [hresult4]
-    rw [hresultLength] at hresultNowrap
-    omega
+    rw [hresultLength] at hresultNowrap; omega
   have h8_1 : ((result + 8) + 1).toNat = (result + 8).toNat + 1 := by
     apply byteOffset_toNat (result + 8) 1
     rw [hresult8]
-    rw [hresultLength] at hresultNowrap
-    omega
+    rw [hresultLength] at hresultNowrap; omega
   have h8_2 : ((result + 8) + 2).toNat = (result + 8).toNat + 2 := by
     apply byteOffset_toNat (result + 8) 2
     rw [hresult8]
-    rw [hresultLength] at hresultNowrap
-    omega
+    rw [hresultLength] at hresultNowrap; omega
   have h8_3 : ((result + 8) + 3).toNat = (result + 8).toNat + 3 := by
     apply byteOffset_toNat (result + 8) 3
     rw [hresult8]
-    rw [hresultLength] at hresultNowrap
-    omega
+    rw [hresultLength] at hresultNowrap; omega
   have h0_1 : (result + 1).toNat = result.toNat + 1 := by
     apply byteOffset_toNat result 1
-    rw [hresultLength] at hresultNowrap
-    omega
+    rw [hresultLength] at hresultNowrap; omega
   have h0_2 : (result + 2).toNat = result.toNat + 2 := by
     apply byteOffset_toNat result 2
-    rw [hresultLength] at hresultNowrap
-    omega
+    rw [hresultLength] at hresultNowrap; omega
   have h0_3 : (result + 3).toNat = result.toNat + 3 := by
     apply byteOffset_toNat result 3
-    rw [hresultLength] at hresultNowrap
-    omega
+    rw [hresultLength] at hresultNowrap; omega
   wasm_twp_pures [twp_localGet twp_localGet]
   wasm_twp_rebind twp_store32 (address := result) (offset := 4) oldResultPtr
       hresult4 h4_1 h4_2 h4_3 with Hpointer

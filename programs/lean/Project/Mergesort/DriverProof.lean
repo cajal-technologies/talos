@@ -271,8 +271,7 @@ theorem twp_func3_append_without_reserve
     intro hzero
     have hzeroNat := congrArg UInt32.toNat hzero
     rw [hcurrentWord] at hzeroNat
-    simp only [UInt32.toNat_zero] at hzeroNat
-    omega
+    simp only [UInt32.toNat_zero] at hzeroNat; omega
   simp only [func3AppendBody, List.cons_append, List.nil_append]
   wasm_twp_pures [twp_block] using [func3AppendCopyBody, func3AppendLocals]
   wasm_twp_pures [twp_localGet]
@@ -785,8 +784,7 @@ theorem twp_func3_read_and_classify
       intro hzero
       have hzeroNat := congrArg UInt32.toNat hzero
       rw [hcountWord] at hzeroNat
-      simp only [UInt32.toNat_zero] at hzeroNat
-      omega
+      simp only [UInt32.toNat_zero] at hzeroNat; omega
     iapply twp_eqz (result := 0) (by simp [hcountNonzero])
     ihave Hnonempty := BI.and_elim_r $$ Hcont
     iapply Hnonempty $$ Hruntime Hstreams Hframe
@@ -1474,8 +1472,7 @@ theorem twp_func3_enter_nonempty_decode
     intro hzero
     have hzeroNat := congrArg UInt32.toNat hzero
     rw [hlengthWord] at hzeroNat
-    simp only [UInt32.toNat_zero] at hzeroNat
-    omega
+    simp only [UInt32.toNat_zero] at hzeroNat; omega
   have Hguard := twp_func3_completed_length_guard
     (hlc := hlc) original completed hcompleted hbound dataPtr current
     aux2 aux4 aux5 aux7 aux8 aux9 aux10
@@ -2034,8 +2031,7 @@ theorem twp_func3_decode_tail_loop
         intro hzero
         have hzeroNat := congrArg UInt32.toNat hzero
         rw [UInt32.toNat_ofNat_of_lt' (by omega)] at hzeroNat
-        simp only [UInt32.toNat_zero] at hzeroNat
-        omega
+        simp only [UInt32.toNat_zero] at hzeroNat; omega
       iapply twp_brIf (condition := UInt32.ofNat next.remaining)
         (depth := 0) (arity := arity) (code := [])
         (targetCode := func3DecodeTailLoopBody)
@@ -3494,8 +3490,7 @@ theorem twp_func3_output_loop
         intro hzero
         have hzeroNat := congrArg UInt32.toNat hzero
         rw [UInt32.toNat_ofNat_of_lt' (by omega)] at hzeroNat
-        simp only [UInt32.toNat_zero] at hzeroNat
-        omega
+        simp only [UInt32.toNat_zero] at hzeroNat; omega
       iapply twp_brIf
         (condition := UInt32.ofNat (4 * (sorted.length - (emitted + 1))))
         (depth := 0) (arity := arity) (code := [])
@@ -3603,8 +3598,7 @@ theorem twp_func3_output
       intro hzero
       have hzeroNat := congrArg UInt32.toNat hzero
       rw [UInt32.toNat_ofNat_of_lt' (by omega)] at hzeroNat
-      simp only [UInt32.toNat_zero] at hzeroNat
-      omega
+      simp only [UInt32.toNat_zero] at hzeroNat; omega
     iapply twp_eqz (result := 0) (by simp [hnonzero])
     wasm_twp_pures [twp_brIfZero twp_localGet twp_const twp_shl]
     rw [MemRegion.shl2_eq_mul4, ← func3_decode_byte_offset]
@@ -3679,8 +3673,7 @@ theorem twp_func3_deallocate_values
     intro hzero
     have hzeroNat := congrArg UInt32.toNat hzero
     rw [UInt32.toNat_ofNat_of_lt' hcountBound] at hzeroNat
-    simp only [UInt32.toNat_zero] at hzeroNat
-    omega
+    simp only [UInt32.toNat_zero] at hzeroNat; omega
   have hsizeWord :
       (UInt32.ofNat (4 * sorted.length)).toNat = 4 * sorted.length :=
     UInt32.toNat_ofNat_of_lt' hbyteBound
@@ -4910,8 +4903,7 @@ theorem twp_func3_first_read_nonempty
     intro hzero
     have hzeroNat := congrArg UInt32.toNat hzero
     rw [hcountWord] at hzeroNat
-    simp only [UInt32.toNat_zero] at hzeroNat
-    omega
+    simp only [UInt32.toNat_zero] at hzeroNat; omega
   have hremainingLength :
       input.length = current.length + remaining.length := by
     dsimp only [current, remaining]

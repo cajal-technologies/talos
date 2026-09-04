@@ -1743,8 +1743,7 @@ theorem BumpHeap_commit {host : Type} [WasmHeapGS host]
   have hfinishNonzero : finish ≠ 0 := by
     intro hzero
     have hzeroNat := congrArg UInt32.toNat hzero
-    simp only [UInt32.toNat_zero] at hzeroNat
-    omega
+    simp only [UInt32.toNat_zero] at hzeroNat; omega
   iintro ⟨Hcursor, Hfrontier, Hauth, Hretired, Hpages, Hbytes⟩
   imod AllocatorResources_insert heapId history base layout hfresh $$
       [Hauth Hretired] with ⟨Hauth, Hretired, Htoken⟩

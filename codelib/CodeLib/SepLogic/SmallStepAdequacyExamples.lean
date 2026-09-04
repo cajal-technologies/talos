@@ -77,8 +77,7 @@ theorem globalGet_adequate :
     (globalσ := global0Heap)
     (φ := fun values => values = [.i32 42])
   · intro address value hget
-    rw [get?_empty] at hget
-    contradiction
+    rw [get?_empty] at hget; contradiction
   · intro address hne
     exact absurd (get?_empty address) hne
   · exact global0Heap_agrees
@@ -250,8 +249,7 @@ theorem wordRoundtrip_store_partiallyMeets (oldWord : UInt32) :
     · native_decide
     · exact emptyHeap_inBounds _
   · intro index value hget
-    rw [get?_empty] at hget
-    contradiction
+    rw [get?_empty] at hget; contradiction
   · simp only [wordRoundtripAdequacyConfig]; decide
   · intro gs
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
@@ -402,8 +400,7 @@ theorem swapWords_store_partiallyMeets :
   · apply swapWordsHeap_inBounds
     native_decide
   · intro index value hget
-    rw [get?_empty] at hget
-    contradiction
+    rw [get?_empty] at hget; contradiction
   · decide
   · intro gs
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
@@ -523,8 +520,7 @@ theorem reverseThreeWords_store_partiallyMeets :
   · apply reverseThreeWordsHeap_inBounds
     native_decide
   · intro index value hget
-    rw [get?_empty] at hget
-    contradiction
+    rw [get?_empty] at hget; contradiction
   · decide
   · intro gs
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
@@ -668,8 +664,7 @@ theorem partitionThreeWords_store_partiallyMeets :
   · apply partitionThreeWordsHeap_inBounds
     native_decide
   · intro index value hget
-    rw [get?_empty] at hget
-    contradiction
+    rw [get?_empty] at hget; contradiction
   · decide
   · intro gs
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
@@ -807,8 +802,7 @@ theorem mergeTwoWords_store_partiallyMeets :
   · apply mergeTwoWordsHeap_inBounds
     native_decide
   · intro index value hget
-    rw [get?_empty] at hget
-    contradiction
+    rw [get?_empty] at hget; contradiction
   · decide
   · intro gs
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
@@ -947,8 +941,7 @@ theorem fillFourBytes_store_partiallyMeets (oldWord : UInt32) :
   · apply fillFourBytesHeap_inBounds
     native_decide
   · intro index value hget
-    rw [get?_empty] at hget
-    contradiction
+    rw [get?_empty] at hget; contradiction
   · simp only [fillFourBytesAdequacyConfig]; decide
   · intro gs
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
@@ -1070,8 +1063,7 @@ theorem copyWord_store_partiallyMeets (oldDestination : UInt32) :
   · apply copyWordHeap_inBounds
     native_decide
   · intro index value hget
-    rw [get?_empty] at hget
-    contradiction
+    rw [get?_empty] at hget; contradiction
   · simp only [copyWordAdequacyConfig]; decide
   · intro gs
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
@@ -1178,8 +1170,7 @@ theorem copyOverlapWord_store_partiallyMeets :
   · apply copyOverlapWordHeap_inBounds
     native_decide
   · intro index value hget
-    rw [get?_empty] at hget
-    contradiction
+    rw [get?_empty] at hget; contradiction
   · decide
   · intro gs
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
@@ -1308,8 +1299,7 @@ theorem memoryInitDrop_store_partiallyMeets :
   · apply memoryInitDropHeap_inBounds
     native_decide
   · intro index value hget
-    rw [get?_empty] at hget
-    contradiction
+    rw [get?_empty] at hget; contradiction
   · exact memoryInitDropSegments_agree
   · decide
   · intro gs
