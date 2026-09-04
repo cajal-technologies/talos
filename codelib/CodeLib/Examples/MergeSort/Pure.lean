@@ -163,9 +163,7 @@ theorem MergeProgress.takeLeft
     (hxy : x < y) :
     MergeProgress originalLeft originalRight (emitted ++ [x]) xs (y :: ys) := by
   intro tail htail
-  have hnext : MergeRel (x :: xs) (y :: ys) (x :: tail) :=
-    .takeLeft hxy htail
-  simpa [List.append_assoc] using hprogress (x :: tail) hnext
+  simpa [List.append_assoc] using hprogress (x :: tail) (.takeLeft hxy htail)
 
 theorem MergeProgress.takeRight
     {originalLeft originalRight emitted xs ys : List UInt32} {x y : UInt32}
@@ -174,9 +172,7 @@ theorem MergeProgress.takeRight
     (hxy : ¬x < y) :
     MergeProgress originalLeft originalRight (emitted ++ [y]) (x :: xs) ys := by
   intro tail htail
-  have hnext : MergeRel (x :: xs) (y :: ys) (y :: tail) :=
-    .takeRight hxy htail
-  simpa [List.append_assoc] using hprogress (y :: tail) hnext
+  simpa [List.append_assoc] using hprogress (y :: tail) (.takeRight hxy htail)
 
 theorem MergeProgress.finishLeft
     {originalLeft originalRight emitted remaining : List UInt32}
@@ -208,8 +204,8 @@ theorem MergeProgress.takeRemainingLeft
   intro tail htail
   have htailEq : tail = xs := mergeRel_right_nil_eq htail
   subst tail
-  have hnext : MergeRel (x :: xs) [] (x :: xs) := .rightNil _
-  simpa [List.append_assoc] using hprogress (x :: xs) hnext
+  simpa [List.append_assoc] using
+    hprogress (x :: xs) (.rightNil (x :: xs))
 
 theorem MergeProgress.takeRemainingRight
     {originalLeft originalRight emitted ys : List UInt32} {y : UInt32}
@@ -219,8 +215,8 @@ theorem MergeProgress.takeRemainingRight
   intro tail htail
   have htailEq : tail = ys := mergeRel_left_nil_eq htail
   subst tail
-  have hnext : MergeRel [] (y :: ys) (y :: ys) := .leftNil _
-  simpa [List.append_assoc] using hprogress (y :: ys) hnext
+  simpa [List.append_assoc] using
+    hprogress (y :: ys) (.leftNil (y :: ys))
 
 /-- Pure invariant of the first merge loop. `emitted` is exactly the temporary
 array prefix written since `left`; the source array is still unchanged. -/
