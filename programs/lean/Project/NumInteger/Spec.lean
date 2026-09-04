@@ -861,15 +861,8 @@ theorem shift_pipeline (v : UInt64) (hv : v ≠ 0) :
 theorem ctz_or_comm (a b : UInt64) : ctz64 64 (a ||| b) = ctz64 64 (b ||| a) := by
   rw [UInt64.or_comm]
 
-/-- The `UInt64` odd-part shift, as a `Nat` shift (the form the `CodeLib`
-Stein step lemmas produce). -/
-theorem oddPart_toNat (v : UInt64) :
-    (v >>> (UInt64.ofNat (ctz64 64 v) % 64)).toNat
-      = v.toNat >>> (ctz64 64 v % 64) := by
-  rw [UInt64.toNat_shiftRight, UInt64.toNat_mod]
-  congr 1
-  rw [UInt64.toNat_ofNat', show UInt64.toNat 64 = 64 from rfl,
-      Nat.mod_mod_of_dvd _ (by norm_num : (64 : Nat) ∣ 2 ^ 64), Nat.mod_mod]
+-- Short local spelling for the shared CodeLib odd-part conversion.
+local notation "oddPart_toNat" => UInt64.shr_ctz_mod_toNat
 
 /-- The OUTER-body program of `func1`: the Stein "meat" (compute the shift
 count and both odd parts) followed by the subtract-and-halve `loop`. It is

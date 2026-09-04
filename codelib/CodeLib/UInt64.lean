@@ -285,6 +285,14 @@ theorem UInt64.ctz64_or_min (a b : UInt64) (ha : a ≠ 0) (hb : b ≠ 0) :
 
 /-! ## `UInt64 → Nat` for the shift / shift-mask compositions used by Stein -/
 
+/-- The `Nat` view of the masked `ctz64` shift, including the zero case. -/
+theorem UInt64.shr_ctz_mod_toNat (a : UInt64) :
+    (a >>> (UInt64.ofNat (ctz64 64 a) % 64)).toNat
+      = a.toNat >>> (ctz64 64 a % 64) := by
+  simp only [UInt64.toNat_shiftRight, UInt64.toNat_mod, UInt64.toNat_ofNat',
+    show UInt64.toNat 64 = 64 from rfl,
+    Nat.mod_mod_of_dvd _ (by norm_num : (64 : Nat) ∣ 2 ^ 64), Nat.mod_mod]
+
 /-- The `% 64` mask on `UInt64.ofNat (ctz64 64 a)` is inert for nonzero
 `a` because `ctz64 < 64`. -/
 theorem UInt64.toNat_ofNat_ctz_mod (a : UInt64) (ha : a ≠ 0) :
@@ -300,10 +308,8 @@ in `Nat`. -/
 theorem UInt64.shr_ctz_toNat (a : UInt64) (ha : a ≠ 0) :
     (a >>> (UInt64.ofNat (ctz64 64 a) % 64)).toNat
       = a.toNat / 2 ^ ctz64 64 a := by
-  rw [UInt64.toNat_shiftRight]
-  rw [UInt64.toNat_ofNat_ctz_mod a ha]
-  have hlt : ctz64 64 a < 64 := UInt64.ctz64_lt a ha
-  rw [Nat.mod_eq_of_lt hlt, Nat.shiftRight_eq_div_pow]
+  rw [UInt64.shr_ctz_mod_toNat, Nat.mod_eq_of_lt (UInt64.ctz64_lt a ha),
+    Nat.shiftRight_eq_div_pow]
 
 /-- Shifting a nonzero `UInt64` right by its own `ctz64` keeps it nonzero. -/
 theorem UInt64.shr_ctz_ne_zero (a : UInt64) (ha : a ≠ 0) :

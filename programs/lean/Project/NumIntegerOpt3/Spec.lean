@@ -99,14 +99,8 @@ nonzero constant). Plain `simp` reduces the `.i32 0` (fall-through) arm but not
 the nonzero (break) arm; `decide` closes that gap. -/
 local macro "pick" : tactic => `(tactic| simp (config := { decide := true }) only [])
 
-/-- The `UInt64` odd part written as a `Nat` shift (the form the `CodeLib`
-Stein lemmas produce). -/
-theorem oddPart_toNat (v : UInt64) :
-    (v >>> (UInt64.ofNat (ctz64 64 v) % 64)).toNat = v.toNat >>> (ctz64 64 v % 64) := by
-  rw [UInt64.toNat_shiftRight, UInt64.toNat_mod]
-  congr 1
-  rw [UInt64.toNat_ofNat', show UInt64.toNat 64 = 64 from rfl,
-      Nat.mod_mod_of_dvd _ (by norm_num : (64 : Nat) ∣ 2 ^ 64), Nat.mod_mod]
+-- Short local spelling for the shared CodeLib odd-part conversion.
+local notation "oddPart_toNat" => UInt64.shr_ctz_mod_toNat
 
 /-- The loop body of Stein's subtract-and-halve, kept as a definition so it
 stays opaque while the surrounding structure is driven. -/
