@@ -99,8 +99,7 @@ private theorem logTransfer (v : UInt32) (n : List UInt32)
         { store with wasm := postWasm } ns obs nt := by
   simp [logHost] at h
   obtain ⟨h1, h2⟩ := h; subst h1; subst h2
-  iintro ⟨HP, Hσ⟩
-  iopen_state Hσ
+  iopen_state Hσ from ⟨HP, Hσ⟩
   ihave %heq : ⌜store.wasm.host = n⌝ $$ [Hstate_auth HP]
   · iapply (hostStateOwn_agree store.wasm.host n); iframe Hstate_auth HP
   rw [heq]

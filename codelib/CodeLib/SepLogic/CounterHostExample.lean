@@ -68,8 +68,7 @@ private theorem incrTransfer (n : Nat) [WasmSmallStepGS .hasLC Nat]
       stateInterp (GF := WasmHeapGF Nat) { store with wasm := postWasm } ns obs nt := by
   simp [incrementHost] at h
   obtain ⟨h1, h2⟩ := h; subst h1; subst h2
-  iintro ⟨HP, Hσ⟩
-  iopen_state Hσ
+  iopen_state Hσ from ⟨HP, Hσ⟩
   -- auth and frag: derive store.wasm.host = n; specialize_dup_context retains Hauth HP
   ihave %heq : ⌜store.wasm.host = n⌝ $$ [Hstate_auth HP]
   · iapply (hostStateOwn_agree store.wasm.host n); iframe Hstate_auth HP
