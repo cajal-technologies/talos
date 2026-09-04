@@ -1,5 +1,4 @@
 import Interpreter.Wasm
-import CodeLib.UInt32
 import Std.Tactic.BVDecide
 
 /-!
@@ -56,10 +55,7 @@ private theorem and255_toUInt8 (w : UInt32) : (w &&& 255).toUInt8 = w.toUInt8 :=
   have e31 : a.toNat + 3 ≠ a.toNat + 1 := by omega
   have e32 : a.toNat + 3 ≠ a.toNat + 2 := by omega
   simp only [e1, e2, e3, e21, e31, e32, ↓reduceIte, and255_toUInt8]
-  apply UInt32.toNat_inj.mp
-  simp only [UInt32.toNat_or, UInt32.toNat_shiftLeft, UInt8.toNat_toUInt32,
-    UInt32.toNat_toUInt8, UInt32.toNat_shiftRight]
-  exact Nat.reassemble32_of_lt v.toNat (UInt32.toNat_lt v)
+  bv_decide
 
 /-- Reading a 64-bit word back from the address it was just written to
 returns the stored value. -/
