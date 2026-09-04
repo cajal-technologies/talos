@@ -19,8 +19,7 @@ theorem shl_chunk :
     controls calls a b vs _
   have hnorm :
       UInt64.ofNat (b &&& shiftMask).toNat % 64 = b.toUInt64 % 64 := by
-    rw [UInt32.and_comm]
-    exact shiftAmount_norm b
+    rw [UInt32.and_comm]; exact shiftAmount_norm b
   simp only [shiftAmountFrag, toV_u64, toV_u32, List.cons_append,
     List.nil_append]
   iintro Hwp

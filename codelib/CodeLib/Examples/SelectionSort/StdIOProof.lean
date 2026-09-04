@@ -586,8 +586,7 @@ theorem array64At_words [WasmSmallStepGS hlc α]
         · iexact Houtput
       · ipureintro
         simp only [readWordArray64]
-        rw [hword.1]
-        exact congrArg (value :: ·) hrest
+        rw [hword.1]; exact congrArg (value :: ·) hrest
 
 theorem array64At_capacity [WasmSmallStepGS hlc α]
     (store : MachineStore α) (steps : Nat)
@@ -976,8 +975,7 @@ private theorem correct_of_sort_complete
   have hwrite := execute_write_bytes program afterSort
     (UInt32.ofNat (serialize input).length) hwriteBound
   have houtput : afterSort.host.output = [] := by
-    rw [hhost]
-    rfl
+    rw [hhost]; rfl
   have hrun : run program fuel (serialize input) =
       some (afterSort.mem.readBytes array.toNat (8 * input.length)) := by
     rw [run_fits program fuel input hfit]

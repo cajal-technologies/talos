@@ -285,8 +285,7 @@ theorem twp_block
     WP (.running
       ⟨locals, .block paramArity resultArity body :: code,
         arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }] := by
-  dsimp only
-  exact twp_pureStep _ _ _ (fun _ => Step.block)
+  dsimp only; exact twp_pureStep _ _ _ (fun _ => Step.block)
 
 theorem twp_loop
     {locals : Locals} {paramArity resultArity arity : Nat}
@@ -305,8 +304,7 @@ theorem twp_loop
     WP (.running
       ⟨locals, .loop paramArity resultArity body :: code,
         arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }] := by
-  dsimp only
-  exact twp_pureStep _ _ _ (fun _ => Step.loop)
+  dsimp only; exact twp_pureStep _ _ _ (fun _ => Step.loop)
 
 theorem twp_exitControl
     {locals : Locals} {frame : ControlFrame}
@@ -382,8 +380,7 @@ theorem twp_localGet
         arity, remainder, controls, calls⟩
     WP (Expr.running next : Expr α) @ s; E [{ Φ }] ⊢
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
-  dsimp only
-  exact twp_pureStep _ _ _ (fun _ => Step.localGet hget)
+  dsimp only; exact twp_pureStep _ _ _ (fun _ => Step.localGet hget)
 
 theorem twp_localSet
     {params localValues values : List Value}
@@ -400,8 +397,7 @@ theorem twp_localSet
       ⟨{ locals' with values }, code, arity, remainder, controls, calls⟩
     WP (Expr.running next : Expr α) @ s; E [{ Φ }] ⊢
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
-  dsimp only
-  exact twp_pureStep _ _ _ (fun _ => Step.localSet hset)
+  dsimp only; exact twp_pureStep _ _ _ (fun _ => Step.localSet hset)
 
 theorem twp_localTee
     {params localValues values : List Value}
@@ -418,8 +414,7 @@ theorem twp_localTee
       ⟨locals', code, arity, remainder, controls, calls⟩
     WP (Expr.running next : Expr α) @ s; E [{ Φ }] ⊢
       WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
-  dsimp only
-  exact twp_pureStep _ _ _ (fun _ => Step.localTee hset)
+  dsimp only; exact twp_pureStep _ _ _ (fun _ => Step.localTee hset)
 
 /-- Total entry rule for a defined Wasm function. -/
 theorem twp_call
@@ -1171,8 +1166,7 @@ theorem twp_tryTable
     WP (.running
       ⟨locals, .tryTable paramArity resultArity catches body paramTypes resultTypes :: code,
         arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }] := by
-  dsimp only
-  exact twp_pureStep _ _ _ (fun _ => Step.tryTable)
+  dsimp only; exact twp_pureStep _ _ _ (fun _ => Step.tryTable)
 
 
 wasm_twp_pure_rule twp_and {lhs rhs : UInt32} :

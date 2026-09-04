@@ -755,8 +755,7 @@ theorem func1GlobalHeap_pointsTo [WasmGlobalGS Unit] :
   unfold func1GlobalHeap
   rw [(BI.BigSepM.bigSepM_insert (get?_empty (⟨0, 0⟩ : GlobalKey))).to_eq,
     BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
-  simp only [globalPointsToAt_eq]
-  rfl
+  simp only [globalPointsToAt_eq]; rfl
 
 def func1ZeroConfig
     (result oldX oldY : UInt64)
@@ -3585,8 +3584,7 @@ theorem func0_initialFrameMem_eq :
 theorem func0InitialHeap_agrees :
     heapAgreesWithMem func0InitialHeap
       (fun id => if id = 0 then some («module».initialStore : Store Unit).mem else none) := by
-  rw [← func0_initialFrameMem_eq]
-  exact gcdFrameHeap_agrees
+  rw [← func0_initialFrameMem_eq]; exact gcdFrameHeap_agrees
     («module».initialStore : Store Unit).mem 0 0 0 0 0 0 0 0 0 0
 
 theorem func0InitialHeap_inBounds :
@@ -3611,8 +3609,7 @@ theorem func0GlobalHeap_pointsTo [WasmGlobalGS Unit] :
   unfold func0GlobalHeap
   rw [(BI.BigSepM.bigSepM_insert (get?_empty (⟨0, 0⟩ : GlobalKey))).to_eq,
     BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
-  simp only [globalPointsToAt_eq]
-  rfl
+  simp only [globalPointsToAt_eq]; rfl
 
 def func0Config (a b : UInt64) : Wasm.SmallStep.Config Unit :=
   let initial : Store Unit := «module».initialStore
@@ -5610,8 +5607,7 @@ theorem twp_func1_loopEntry_smallStep_wp
           have Hconclude := Hrec nextState (by
             show (oddPart64 (i.x - i.y)).toNat + i.y.toNat <
                 i.x.toNat + i.y.toNat
-            simp [oddPart64]
-            exact _hdec)
+            simp [oddPart64]; exact _hdec)
           simp only [Wasm.SmallStep.loopBodyExpr] at Hconclude
           iapply Hconclude
           simp only [Inv, nextState]
@@ -5645,8 +5641,7 @@ theorem twp_func1_loopEntry_smallStep_wp
           have Hconclude := Hrec nextState (by
             show i.x.toNat + (oddPart64 (i.y - i.x)).toNat <
                 i.x.toNat + i.y.toNat
-            simp [oddPart64]
-            exact _hdec)
+            simp [oddPart64]; exact _hdec)
           simp only [Wasm.SmallStep.loopBodyExpr] at Hconclude
           iapply Hconclude
           simp only [Inv, nextState]

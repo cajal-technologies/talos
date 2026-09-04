@@ -218,8 +218,7 @@ theorem twp_mergeMainStep
           some (mergeLocals source temporary left mid right
             (i + 1) j k
             (.i32 (1 + UInt32.ofNat i) :: stack)) := by
-      rw [hiValue]
-      rfl
+      rw [hiValue]; rfl
     simp only [mergeLocals, List.drop_zero]
     iapply twp_increment_nil (α := α) rfl hsetI
     iapply Wasm.SmallStep.twp_exitControl (α := α) rfl
@@ -232,8 +231,7 @@ theorem twp_mergeMainStep
           some (mergeLocals source temporary left mid right
             (i + 1) j (k + 1)
             (.i32 (1 + UInt32.ofNat k) :: stack)) := by
-      rw [hkValue]
-      rfl
+      rw [hkValue]; rfl
     iapply twp_increment (α := α) rfl hsetK
     simp only [mergeLocals]
     iapply Hthen
@@ -266,8 +264,7 @@ theorem twp_mergeMainStep
           some (mergeLocals source temporary left mid right
             i (j + 1) k
             (.i32 (1 + UInt32.ofNat j) :: stack)) := by
-      rw [hjValue]
-      rfl
+      rw [hjValue]; rfl
     simp only [mergeLocals, List.drop_zero]
     iapply twp_increment_nil (α := α) rfl hsetJ
     iapply Wasm.SmallStep.twp_exitControl (α := α) rfl
@@ -280,8 +277,7 @@ theorem twp_mergeMainStep
           some (mergeLocals source temporary left mid right
             i (j + 1) (k + 1)
             (.i32 (1 + UInt32.ofNat k) :: stack)) := by
-      rw [hkValue]
-      rfl
+      rw [hkValue]; rfl
     iapply twp_increment (α := α) rfl hsetK
     simp only [mergeLocals]
     iapply Helse
@@ -556,8 +552,7 @@ theorem twp_mergeLeftStep
         some (mergeLocals source temporary left mid right
           (i + 1) j k
           (.i32 (1 + UInt32.ofNat i) :: stack)) := by
-    rw [hiValue]
-    rfl
+    rw [hiValue]; rfl
   simp only [mergeLocals]
   iapply twp_increment (α := α) rfl hsetI
   simp only [mergeLocals]
@@ -569,8 +564,7 @@ theorem twp_mergeLeftStep
         some (mergeLocals source temporary left mid right
           (i + 1) j (k + 1)
           (.i32 (1 + UInt32.ofNat k) :: stack)) := by
-    rw [hkValue]
-    rfl
+    rw [hkValue]; rfl
   iapply twp_increment (α := α) rfl hsetK
   simp only [mergeLocals]
   iapply_frame Hcont
@@ -625,8 +619,7 @@ theorem twp_mergeRightStep
         some (mergeLocals source temporary left mid right
           i (j + 1) k
           (.i32 (1 + UInt32.ofNat j) :: stack)) := by
-    rw [hjValue]
-    rfl
+    rw [hjValue]; rfl
   simp only [mergeLocals]
   iapply twp_increment (α := α) rfl hsetJ
   simp only [mergeLocals]
@@ -638,8 +631,7 @@ theorem twp_mergeRightStep
         some (mergeLocals source temporary left mid right
           i (j + 1) (k + 1)
           (.i32 (1 + UInt32.ofNat k) :: stack)) := by
-    rw [hkValue]
-    rfl
+    rw [hkValue]; rfl
   iapply twp_increment (α := α) rfl hsetK
   simp only [mergeLocals]
   iapply_frame Hcont
@@ -948,8 +940,7 @@ theorem twp_mergeCopyStep
         some (mergeLocals source temporary left mid right
           mid right (k + 1)
           (.i32 (1 + UInt32.ofNat k) :: stack)) := by
-    rw [hkValue]
-    rfl
+    rw [hkValue]; rfl
   simp only [mergeLocals]
   iapply twp_increment (α := α) rfl hsetK
   simp only [mergeLocals]
@@ -1061,8 +1052,7 @@ theorem twp_mergeCopyLoop
         have hactual :
             scratch[state.k]? = some scratch[state.k] :=
           List.getElem?_eq_getElem hkScratch
-        rw [hactual] at hlookup
-        exact Option.some.inj hlookup
+        rw [hactual] at hlookup; exact Option.some.inj hlookup
       iapply Wasm.SmallStep.twp_brIfZero (α := α)
       iapply twp_mergeCopyStep (α := α) source temporary
         state.current scratch left mid right state.k
@@ -1353,8 +1343,7 @@ theorem twp_mergeSortPrepareRight
   have hmul :
       (2 : UInt32) * UInt32.ofNat width =
         UInt32.ofNat (width * 2) := by
-    rw [UInt32.mul_comm]
-    exact u32_ofNat_mul (a := width) (b := 2) _htwoWidth
+    rw [UInt32.mul_comm]; exact u32_ofNat_mul (a := width) (b := 2) _htwoWidth
   rw [hmul]
   iapply Wasm.SmallStep.twp_add (α := α)
   have hrightValue :
@@ -1599,8 +1588,7 @@ theorem twp_mergeSortCallAdvance
   have hmul :
       (2 : UInt32) * UInt32.ofNat width =
         UInt32.ofNat (width * 2) := by
-    rw [UInt32.mul_comm]
-    exact u32_ofNat_mul (a := width) (b := 2) (by omega)
+    rw [UInt32.mul_comm]; exact u32_ofNat_mul (a := width) (b := 2) (by omega)
   rw [hmul]
   iapply Wasm.SmallStep.twp_add (α := α)
   have hadd :
@@ -1999,8 +1987,7 @@ theorem twp_mergeSortOuterLoop
         Hruntime Hsource Htemporary
       have hnextRuns : SortedRuns output (2 * state.width) :=
         hpass.finished (by
-          rw [houtputLength]
-          exact hpassFinished)
+          rw [houtputLength]; exact hpassFinished)
       have hnextPerm : List.Perm input output :=
         hperm'.trans hpass.2.2.1
       have hdoubleSize : state.width * 2 < UInt32.size := by
@@ -2012,8 +1999,7 @@ theorem twp_mergeSortOuterLoop
       have hmul :
           (2 : UInt32) * UInt32.ofNat state.width =
             UInt32.ofNat (state.width * 2) := by
-        rw [UInt32.mul_comm]
-        exact u32_ofNat_mul hdoubleSize
+        rw [UInt32.mul_comm]; exact u32_ofNat_mul hdoubleSize
       rw [hmul]
       iapply Wasm.SmallStep.twp_localSet (α := α) rfl
       simp
@@ -2098,8 +2084,7 @@ theorem twp_mergeSortBody
     %hwidth Hruntime Hsource Htemporary
   have hsorted : Sorted output :=
     sorted_of_sortedRuns_cover hruns (by
-      rw [houtputLength]
-      exact hwidth)
+      rw [houtputLength]; exact hwidth)
   iapply Hcont $$ %width %left %mid %right Hruntime
   unfold mergeSortPost
   iexists output, scratchFinal

@@ -69,8 +69,7 @@ abbrev elementSegmentHeapAgrees
 theorem heapAgreesWithMem_empty (resolve : Nat → Option Mem) :
     heapAgreesWithMem (∅ : WasmHeapMap (Option UInt8)) resolve := by
   intro key value hget
-  rw [LawfulPartialMap.get?_empty] at hget
-  contradiction
+  rw [LawfulPartialMap.get?_empty] at hget; contradiction
 
 theorem heapAddressesInBounds_empty (resolve : Nat → Option Mem) :
     heapAddressesInBounds (∅ : WasmHeapMap (Option UInt8)) resolve := by
@@ -80,8 +79,7 @@ theorem heapAddressesInBounds_empty (resolve : Nat → Option Mem) :
 theorem instanceIndexHeapAgrees_empty (values : List α) :
     instanceIndexHeapAgrees (∅ : WasmInstanceIndexMap α) values := by
   intro index value hget
-  rw [LawfulPartialMap.get?_empty] at hget
-  contradiction
+  rw [LawfulPartialMap.get?_empty] at hget; contradiction
 
 theorem instanceIndexHeapAgrees_insert
     {σ : WasmInstanceIndexMap α} {values : List α}
@@ -146,8 +144,7 @@ def exceptionHeapAgrees
 theorem exceptionHeapAgrees_empty (exns : List (Nat × List Value)) :
     exceptionHeapAgrees (∅ : WasmExceptionMap (Nat × List Value)) exns := by
   intro k v hget
-  rw [LawfulPartialMap.get?_empty] at hget
-  contradiction
+  rw [LawfulPartialMap.get?_empty] at hget; contradiction
 
 /-- Updating an owned entry in both an authoritative instance-index map and
 its physical list preserves their agreement. -/
@@ -168,8 +165,7 @@ theorem instanceIndex_store_sound
   · have hne : (⟨0, idx⟩ : InstanceIndexKey) ≠ ⟨0, index⟩ := fun h =>
       heq (congrArg InstanceIndexKey.index h)
     rw [get?_insert_ne (Ne.symm hne)] at hother
-    rw [List.getElem?_set_ne (Ne.symm heq)]
-    exact hagree idx value hother
+    rw [List.getElem?_set_ne (Ne.symm heq)]; exact hagree idx value hother
 
 /-- Updating an owned global in both the authoritative ghost map and the
 physical global array preserves their agreement. -/
@@ -530,8 +526,7 @@ theorem store16_sound (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Optio
         fun h => e0 (show key = ⟨memId, addr⟩ from by
           cases key; simp only [MemoryKey.mk.injEq]; exact ⟨hid, UInt32.toNat_inj.mp h⟩)
       have n1 : key.addr.toNat ≠ addr.toNat + 1 := by
-        rw [← h1]
-        exact fun h => e1 (show key = ⟨memId, addr + 1⟩ from by
+        rw [← h1]; exact fun h => e1 (show key = ⟨memId, addr + 1⟩ from by
           cases key; simp only [MemoryKey.mk.injEq]; exact ⟨hid, UInt32.toNat_inj.mp h⟩)
       refine ⟨mem.write16 addr value, ?_, ?_⟩
       · simp [hid]
@@ -744,16 +739,13 @@ theorem store32_sound (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Optio
         fun h => e0 (show key = ⟨memId, addr⟩ from by
           cases key; simp only [MemoryKey.mk.injEq]; exact ⟨hid, UInt32.toNat_inj.mp h⟩)
       have n1 : key.addr.toNat ≠ addr.toNat + 1 := by
-        rw [← h1]
-        exact fun h => e1 (show key = ⟨memId, addr + 1⟩ from by
+        rw [← h1]; exact fun h => e1 (show key = ⟨memId, addr + 1⟩ from by
           cases key; simp only [MemoryKey.mk.injEq]; exact ⟨hid, UInt32.toNat_inj.mp h⟩)
       have n2 : key.addr.toNat ≠ addr.toNat + 2 := by
-        rw [← h2]
-        exact fun h => e2 (show key = ⟨memId, addr + 2⟩ from by
+        rw [← h2]; exact fun h => e2 (show key = ⟨memId, addr + 2⟩ from by
           cases key; simp only [MemoryKey.mk.injEq]; exact ⟨hid, UInt32.toNat_inj.mp h⟩)
       have n3 : key.addr.toNat ≠ addr.toNat + 3 := by
-        rw [← h3]
-        exact fun h => e3 (show key = ⟨memId, addr + 3⟩ from by
+        rw [← h3]; exact fun h => e3 (show key = ⟨memId, addr + 3⟩ from by
           cases key; simp only [MemoryKey.mk.injEq]; exact ⟨hid, UInt32.toNat_inj.mp h⟩)
       refine ⟨mem.write32 addr value, ?_, ?_⟩
       · simp [hid]
@@ -962,32 +954,25 @@ theorem store64_sound (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Optio
         fun h => e0 (show key = ⟨memId, addr⟩ from by
           cases key; simp only [MemoryKey.mk.injEq]; exact ⟨hid, UInt32.toNat_inj.mp h⟩)
       have n1 : key.addr.toNat ≠ addr.toNat + 1 := by
-        rw [← h1]
-        exact fun h => e1 (show key = ⟨memId, addr + 1⟩ from by
+        rw [← h1]; exact fun h => e1 (show key = ⟨memId, addr + 1⟩ from by
           cases key; simp only [MemoryKey.mk.injEq]; exact ⟨hid, UInt32.toNat_inj.mp h⟩)
       have n2 : key.addr.toNat ≠ addr.toNat + 2 := by
-        rw [← h2]
-        exact fun h => e2 (show key = ⟨memId, addr + 2⟩ from by
+        rw [← h2]; exact fun h => e2 (show key = ⟨memId, addr + 2⟩ from by
           cases key; simp only [MemoryKey.mk.injEq]; exact ⟨hid, UInt32.toNat_inj.mp h⟩)
       have n3 : key.addr.toNat ≠ addr.toNat + 3 := by
-        rw [← h3]
-        exact fun h => e3 (show key = ⟨memId, addr + 3⟩ from by
+        rw [← h3]; exact fun h => e3 (show key = ⟨memId, addr + 3⟩ from by
           cases key; simp only [MemoryKey.mk.injEq]; exact ⟨hid, UInt32.toNat_inj.mp h⟩)
       have n4 : key.addr.toNat ≠ addr.toNat + 4 := by
-        rw [← h4]
-        exact fun h => e4 (show key = ⟨memId, addr + 4⟩ from by
+        rw [← h4]; exact fun h => e4 (show key = ⟨memId, addr + 4⟩ from by
           cases key; simp only [MemoryKey.mk.injEq]; exact ⟨hid, UInt32.toNat_inj.mp h⟩)
       have n5 : key.addr.toNat ≠ addr.toNat + 5 := by
-        rw [← h5]
-        exact fun h => e5 (show key = ⟨memId, addr + 5⟩ from by
+        rw [← h5]; exact fun h => e5 (show key = ⟨memId, addr + 5⟩ from by
           cases key; simp only [MemoryKey.mk.injEq]; exact ⟨hid, UInt32.toNat_inj.mp h⟩)
       have n6 : key.addr.toNat ≠ addr.toNat + 6 := by
-        rw [← h6]
-        exact fun h => e6 (show key = ⟨memId, addr + 6⟩ from by
+        rw [← h6]; exact fun h => e6 (show key = ⟨memId, addr + 6⟩ from by
           cases key; simp only [MemoryKey.mk.injEq]; exact ⟨hid, UInt32.toNat_inj.mp h⟩)
       have n7 : key.addr.toNat ≠ addr.toNat + 7 := by
-        rw [← h7]
-        exact fun h => e7 (show key = ⟨memId, addr + 7⟩ from by
+        rw [← h7]; exact fun h => e7 (show key = ⟨memId, addr + 7⟩ from by
           cases key; simp only [MemoryKey.mk.injEq]; exact ⟨hid, UInt32.toNat_inj.mp h⟩)
       refine ⟨mem.write64 addr value, ?_, ?_⟩
       · simp [hid]

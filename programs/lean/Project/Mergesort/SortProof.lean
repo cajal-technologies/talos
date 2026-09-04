@@ -119,8 +119,7 @@ theorem perm_of_mergeLE {left right output}
   | leftNil => simp
   | rightNil => simp
   | takeLeft hxy tail ih =>
-      simp only [List.cons_append]
-      exact List.Perm.cons _ ih
+      simp only [List.cons_append]; exact List.Perm.cons _ ih
   | takeRight hxy tail ih =>
       exact (List.Perm.cons _ List.perm_middle).trans
         ((List.Perm.swap _ _ _).symm.trans (List.Perm.cons _ ih))
@@ -460,8 +459,7 @@ theorem arrayAt_as_bytes [WasmHeapGS α] (memId : Nat) (ptr : UInt32)
   induction values generalizing ptr with
   | nil => exact .rfl
   | cons value rest ih =>
-      simp only [arrayAt, arrayBytes, List.flatMap_cons]
-      exact (BI.sep_congr
+      simp only [arrayAt, arrayBytes, List.flatMap_cons]; exact (BI.sep_congr
           (pointsTo_u32_as_bytes memId ptr value)
           (by simpa [wordBytes] using ih (ptr + 4))).trans
         (pointsToBytes_append memId ptr (wordBytes value)
@@ -1393,8 +1391,7 @@ theorem twp_mergeMainLoop
       · have hiEq : state.i + 1 = mid := by omega
         have hge :
             UInt32.ofNat (state.i + 1) ≥ UInt32.ofNat mid := by
-          rw [hiEq]
-          exact le_refl (UInt32.ofNat mid)
+          rw [hiEq]; exact le_refl (UInt32.ofNat mid)
         iapply twp_geU (result := 1) (by rw [if_pos hge])
         wasm_twp_pures [twp_localTee]
         iapply twp_brIf (by decide) (by rfl)
@@ -1470,8 +1467,7 @@ theorem twp_mergeMainLoop
             ¬UInt32.ofNat (state.j + 1 - mid) <
               UInt32.ofNat (input.length - mid) := by
           rw [hjEq]
-          rw [UInt32.lt_iff_toNat_lt]
-          exact Nat.lt_irrefl _
+          rw [UInt32.lt_iff_toNat_lt]; exact Nat.lt_irrefl _
         iapply twp_ltU (result := 0) (by rw [if_neg hnotRelative])
         wasm_twp_pures [twp_brIfZero twp_br]
         simp only [sortLocals, List.length, List.set, List.take_zero,
@@ -1800,8 +1796,7 @@ theorem twp_mergeLeftRemainder
           rw [heqR, UInt32.sub_eq_add_neg, UInt32.zero_sub,
             UInt32.neg_neg,
             Wasm.Examples.MergeSort.u32_ofNat_add (by
-              rw [hkN]
-              exact hlayout.length_lt), hkN]
+              rw [hkN]; exact hlayout.length_lt), hkN]
         wasm_twp_pures [twp_localGet twp_localGet twp_sub] rewriting [hfinalK]
         wasm_twp_localSet [List.length, List.set]
         iapply Wasm.SmallStep.twp_exitControl (α := α) rfl
@@ -1932,8 +1927,7 @@ theorem twp_mergeRightRemainder
             (source + 4 * UInt32.ofNat mid) =
           source + 4 * UInt32.ofNat j := by
       have h := right_slot_address source hmj
-      rw [MemRegion.shl2_eq_mul4] at h
-      exact h
+      rw [MemRegion.shl2_eq_mul4] at h; exact h
     rw [hsourceAddress]
     wasm_twp_pures [twp_localSet]
     wasm_twp_pures [twp_localGet twp_localGet twp_localGet twp_localGet]
@@ -2347,8 +2341,7 @@ theorem twp_sort_base
   simp [Project.Mergesort.func2Def, Function.toLocals,
     Function.numParams, ValueType.zero]
   have hlt : UInt32.ofNat length < 2 := by
-    rw [UInt32.lt_iff_toNat_lt, UInt32.toNat_ofNat_of_lt' hlength]
-    exact hbase
+    rw [UInt32.lt_iff_toNat_lt, UInt32.toNat_ofNat_of_lt' hlength]; exact hbase
   simp only [Project.Mergesort.func2]
   wasm_twp_pures [twp_block twp_block twp_block twp_block twp_localGet twp_const]
   iapply twp_ltU (result := 1) (by simp [hlt])
@@ -2631,17 +2624,14 @@ theorem twp_sort
         simp [Wasm.Examples.MergeSort.segment, combined,
           hleftOutputLength, hrightOutputLength]
       have hmergeOutputs : MergeLE leftOutput rightOutput output := by
-        rw [hsegmentLeft, hsegmentRight] at hmerge
-        exact hmerge
+        rw [hsegmentLeft, hsegmentRight] at hmerge; exact hmerge
       have hcombinedSorted :
           Wasm.Examples.MergeSort.SortedPermutation combined output := by
-        dsimp only [combined]
-        exact sortedPermutation_of_mergeLE hmergeOutputs
+        dsimp only [combined]; exact sortedPermutation_of_mergeLE hmergeOutputs
           hleftSorted.1 hrightSorted.1
       have hinputPermCombined : List.Perm input combined := by
         rw [hinputSplit]
-        dsimp only [combined]
-        exact hleftSorted.2.append hrightSorted.2
+        dsimp only [combined]; exact hleftSorted.2.append hrightSorted.2
       have hsortedOutput :
           Wasm.Examples.MergeSort.SortedPermutation input output :=
         ⟨hcombinedSorted.1,

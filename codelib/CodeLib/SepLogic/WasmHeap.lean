@@ -116,8 +116,7 @@ private theorem then_isLE_trans {α β : Type} [Ord α] [Ord β]
       have hac_eq := LawfulEqCmp.eq_of_compare (cmp := compare (α := α)) h₃
       rw [← hac_eq] at h₂
       have h1s := OrientedCmp.eq_swap (cmp := compare (α := α)) (a := a1) (b := b1)
-      rw [h₁, h₂] at h1s
-      exact absurd h1s (by decide)
+      rw [h₁, h₂] at h1s; exact absurd h1s (by decide)
     · rw [h₃, ord_isLE_gt] at hac
       exact absurd hac (by decide)
   -- lt.eq: b1 = c1, so compare a1 c1 = .lt
@@ -136,8 +135,7 @@ private theorem then_isLE_trans {α β : Type} [Ord α] [Ord β]
       rw [(LawfulEqCmp.eq_of_compare (cmp := compare (α := α)) h₁).trans
           (LawfulEqCmp.eq_of_compare (cmp := compare (α := α)) h₂)]
       exact ReflCmp.compare_self
-    rw [hac, ord_eq_then]
-    exact TransCmp.isLE_trans hab hbc
+    rw [hac, ord_eq_then]; exact TransCmp.isLE_trans hab hbc
   -- eq.gt: hbc is false
   · simp only [h₂, ord_gt_then, ord_isLE_gt] at hbc
     exact absurd hbc (by decide)
@@ -1326,8 +1324,7 @@ theorem pointsToBytes_append (memId : Nat) (addr : UInt32) (xs ys : List UInt8) 
   | nil => simp [pointsToBytes]; exact BI.emp_sep.symm
   | cons x rest ih =>
     simp only [List.cons_append, List.length_cons, pointsToBytes]
-    rw [byte_offset_succ]
-    exact (BI.sep_congr_right (ih (addr + 1))).trans BI.sep_assoc.symm
+    rw [byte_offset_succ]; exact (BI.sep_congr_right (ih (addr + 1))).trans BI.sep_assoc.symm
 
 /-- Owning a 32-bit word is the same as owning its four little-endian bytes. -/
 theorem pointsTo_u32_as_bytes (memId : Nat) (addr v : UInt32) :
@@ -1378,8 +1375,7 @@ theorem arrayAt_append (memId : Nat) (ptr : UInt32) (xs ys : List UInt32) :
   | nil => simp [arrayAt]; exact BI.emp_sep.symm
   | cons x rest ih =>
     simp only [List.cons_append, List.length_cons, arrayAt]
-    rw [elem_offset_succ]
-    exact (BI.sep_congr_right (ih (ptr + 4))).trans BI.sep_assoc.symm
+    rw [elem_offset_succ]; exact (BI.sep_congr_right (ih (ptr + 4))).trans BI.sep_assoc.symm
 
 /-- Split a u32 array into a prefix, its next cell, and the suffix. -/
 theorem arrayAt_append_cons (memId : Nat) (ptr : UInt32) (pre : List UInt32)
@@ -1437,8 +1433,7 @@ theorem arrayAt_set (memId : Nat) (ptr : UInt32) (xs : List UInt32) (k : Nat)
       simp only [List.length_cons] at hk
       have hk' : k' < rest.length := by omega
       simp only [List.getElem_cons_succ, List.set_cons_succ, arrayAt]
-      rw [elem_offset_succ]
-      exact (BI.sep_mono_right (ih (ptr + 4) k' hk')).trans
+      rw [elem_offset_succ]; exact (BI.sep_mono_right (ih (ptr + 4) k' hk')).trans
         (BI.sep_left_comm.mp.trans (BI.sep_mono_right
           (BI.wand_intro (BI.sep_assoc.mp.trans (BI.sep_mono_right BI.wand_elim_left)))))
 
@@ -1497,8 +1492,7 @@ theorem array64At_append (memId : Nat) (ptr : UInt32) (xs ys : List UInt64) :
   | nil => simp [array64At]; exact BI.emp_sep.symm
   | cons x rest ih =>
     simp only [List.cons_append, List.length_cons, array64At]
-    rw [elem64_offset_succ]
-    exact (BI.sep_congr_right (ih (ptr + 8))).trans BI.sep_assoc.symm
+    rw [elem64_offset_succ]; exact (BI.sep_congr_right (ih (ptr + 8))).trans BI.sep_assoc.symm
 
 /-- Split a u64 array into a prefix, its next cell, and the suffix. -/
 theorem array64At_append_cons (memId : Nat) (ptr : UInt32) (pre : List UInt64)
@@ -1565,8 +1559,7 @@ theorem array64At_set (memId : Nat) (ptr : UInt32) (xs : List UInt64) (k : Nat)
       simp only [List.length_cons] at hk
       have hk' : k' < rest.length := by omega
       simp only [List.getElem_cons_succ, List.set_cons_succ, array64At]
-      rw [elem64_offset_succ]
-      exact (BI.sep_mono_right (ih (ptr + 8) k' hk')).trans
+      rw [elem64_offset_succ]; exact (BI.sep_mono_right (ih (ptr + 8) k' hk')).trans
         (BI.sep_left_comm.mp.trans (BI.sep_mono_right
           (BI.wand_intro
             (BI.sep_assoc.mp.trans (BI.sep_mono_right BI.wand_elim_left)))))

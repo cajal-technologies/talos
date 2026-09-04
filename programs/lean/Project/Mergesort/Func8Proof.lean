@@ -652,8 +652,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
               UInt32.toNat_ofNat_of_lt' hpages
             have hrequiredLe :
                 (allocatorRequiredPages finish).toNat ≤ pages := by
-              rw [← hpagesWord, ← UInt32.le_iff_toNat_le_toNat]
-              exact hcapacity
+              rw [← hpagesWord, ← UInt32.le_iff_toNat_le_toNat]; exact hcapacity
             exact hcover.trans (Nat.mul_le_mul_right 65536 hrequiredLe)
           · have hpagesHigh : UInt32.size ≤ pages := by omega
             have hfinishLePages : finish.toNat ≤ pages := by
@@ -898,8 +897,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
           rw [if_pos ⟨by simpa [hbaseNat] using hend,
             by simpa [hbaseNat] using hsigned⟩]
           rw [hrawFinish]
-        rw [hdecision] at hsuccess
-        contradiction
+        rw [hdecision] at hsuccess; contradiction
       have hfinishNegative :
           finishWord.toInt32 < (0 : UInt32).toInt32 := by
         simp only [UInt32.toInt32, LT.lt, Int32.lt, Int32.toBitVec]

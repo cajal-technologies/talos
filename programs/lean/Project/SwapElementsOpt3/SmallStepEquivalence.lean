@@ -242,8 +242,7 @@ theorem opt3_func0_terminates
       simpa [Wasm.SmallStep.setMemory_eq] using hboundJ))
   apply Wasm.SmallStep.TerminatesWith.prepend
     Wasm.SmallStep.Step.returnFromFunction
-  simp only [List.take_zero, List.nil_append]
-  exact ⟨[], [], _, .refl _, rfl⟩
+  simp only [List.take_zero, List.nil_append]; exact ⟨[], [], _, .refl _, rfl⟩
 
 /-- Universal total correctness for the optimized distinct-index export,
 obtained by combining its explicit finite trace with its Iris physical-store

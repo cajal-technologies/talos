@@ -158,8 +158,7 @@ theorem sorted_referenceSort (values : List UInt32) :
         exact Nat.le_trans hab hbc)
       (by
         intro a b
-        simp only [decide_eq_true_eq, Bool.or_eq_true]
-        exact UInt32.le_total a b)
+        simp only [decide_eq_true_eq, Bool.or_eq_true]; exact UInt32.le_total a b)
       values
 
 theorem perm_referenceSort (values : List UInt32) :

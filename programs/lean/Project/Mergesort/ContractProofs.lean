@@ -205,8 +205,7 @@ theorem import0_correct [WasmSmallStepGS hlc Universal.State] :
         have hreturn :=
           Project.Mergesort.WrapperProof.readHost_invoke_of_bound
             store.wasm requested ptr hincomingBound
-        rw [hreturn] at hinvoke
-        contradiction)
+        rw [hreturn] at hinvoke; contradiction)
       (fun store ns obs nt _hmodule postWasm tag xs hinvoke => by
         simp only [List.length_cons, List.length_nil, Nat.reduceAdd,
           List.take_succ_cons, List.take_zero, List.reverse_cons,
@@ -236,8 +235,7 @@ theorem import0_correct [WasmSmallStepGS hlc Universal.State] :
         have hreturn :=
           Project.Mergesort.WrapperProof.readHost_invoke_of_bound
             store.wasm requested ptr hincomingBound
-        rw [hreturn] at hinvoke
-        contradiction)
+        rw [hreturn] at hinvoke; contradiction)
       (params := callerLocals.params) (localValues := callerLocals.locals)
       (values := .i32 ptr :: .i32 requested :: stack)
       (code := code) (arity := arity) (remainder := remainder)
@@ -353,13 +351,11 @@ theorem import1_correct [WasmSmallStepGS hlc Universal.State] :
           ipureexact hmem
         have hbound : ptr.toNat + requested.toNat ≤
             store.wasm.mem.pages * 65536 := by
-          rw [hfacts.1]
-          exact pointsToBytes_facts_bound hmem (by omega) hnowrap
+          rw [hfacts.1]; exact pointsToBytes_facts_bound hmem (by omega) hnowrap
         have hreturn :=
           Project.Mergesort.WrapperProof.writeHost_invoke_of_bound
             store.wasm requested ptr hbound
-        rw [hreturn] at hinvoke
-        contradiction)
+        rw [hreturn] at hinvoke; contradiction)
       (fun store ns obs nt _hmodule postWasm tag xs hinvoke => by
         simp only [List.length_cons, List.length_nil, Nat.reduceAdd,
           List.take_succ_cons, List.take_zero, List.reverse_cons,
@@ -375,13 +371,11 @@ theorem import1_correct [WasmSmallStepGS hlc Universal.State] :
           ipureexact hmem
         have hbound : ptr.toNat + requested.toNat ≤
             store.wasm.mem.pages * 65536 := by
-          rw [hfacts.1]
-          exact pointsToBytes_facts_bound hmem (by omega) hnowrap
+          rw [hfacts.1]; exact pointsToBytes_facts_bound hmem (by omega) hnowrap
         have hreturn :=
           Project.Mergesort.WrapperProof.writeHost_invoke_of_bound
             store.wasm requested ptr hbound
-        rw [hreturn] at hinvoke
-        contradiction)
+        rw [hreturn] at hinvoke; contradiction)
       (params := callerLocals.params) (localValues := callerLocals.locals)
       (values := .i32 ptr :: .i32 requested :: stack)
       (code := code) (arity := arity) (remainder := remainder)

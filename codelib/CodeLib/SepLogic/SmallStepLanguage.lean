@@ -238,8 +238,7 @@ shared lifting proofs. -/
     intro e store observation e' store' forks hstep
     apply @Language.val_stuck (Expr α) (MachineStore α) StepKind Terminal
       view.language e store observation e' store' forks
-    rw [view.primStep_eq]
-    exact hstep
+    rw [view.primStep_eq]; exact hstep
 
 instance instTerminalView : TerminalView α (List Value) where
   language := instLanguage

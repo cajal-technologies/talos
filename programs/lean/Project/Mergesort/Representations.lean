@@ -167,11 +167,9 @@ theorem overwritePrefix_set_next (source initial : List UInt32) (copied : Nat)
           | zero => simp [overwritePrefix]
           | succ copied =>
               have hlength' : source.length = initial.length := by
-                simp at hlength
-                exact hlength
+                simp at hlength; exact hlength
               have hcopied' : copied < source.length := by
-                simp at hcopied
-                exact hcopied
+                simp at hcopied; exact hcopied
               change
                 (head :: overwritePrefix source initial copied).set
                     (Nat.succ copied) source[copied] =
@@ -203,8 +201,7 @@ theorem byteOffset_toNat (ptr : UInt32) (count : Nat)
   rw [UInt32.toNat_add, UInt32.toNat_ofNat_of_lt' hcount]
   change (ptr.toNat + count) % 2 ^ 32 = ptr.toNat + count
   rw [Nat.mod_eq_of_lt]
-  norm_num [UInt32.size] at h ⊢
-  exact h
+  norm_num [UInt32.size] at h ⊢; exact h
 
 /-- Split and recombine canonical byte ownership at a logical list boundary. -/
 theorem ByteSlice_append {host : Type} [WasmHeapGS host]
@@ -310,8 +307,7 @@ theorem ByteSlice_four_as_word {host : Type} [WasmHeapGS host]
   have hencoded :
       [u32Byte word 0, u32Byte word 1, u32Byte word 2, u32Byte word 3] =
         bytes := by
-    rw [← encodeWord_eq_u32Bytes]
-    exact encodeWord_decodeWord_of_length bytes hlength
+    rw [← encodeWord_eq_u32Bytes]; exact encodeWord_decodeWord_of_length bytes hlength
   constructor
   · iintro Hslice
     isimp only [ByteSlice] at Hslice
@@ -369,8 +365,7 @@ private theorem wordOffset_eq_byteOffset
     ptr + 4 * UInt32.ofNat values.length =
       ptr + UInt32.ofNat (serialize values).length := by
   simp only [serialize_length]
-  rw [UInt32.ofNat_mul]
-  rfl
+  rw [UInt32.ofNat_mul]; rfl
 
 /-- A no-wrap logical word offset has the expected natural-number address. -/
 theorem wordOffset_toNat (ptr : UInt32) (count : Nat)
@@ -387,8 +382,7 @@ theorem wordOffset_toNat (ptr : UInt32) (count : Nat)
   change (ptr.toNat + 4 * count) % 2 ^ 32 =
     ptr.toNat + 4 * count
   rw [Nat.mod_eq_of_lt]
-  norm_num [UInt32.size] at h ⊢
-  exact h
+  norm_num [UInt32.size] at h ⊢; exact h
 
 /-- Split and recombine a canonical word slice at a logical list boundary.
 The theorem also validates the exact `base + 4 * count` pointer used at both
@@ -460,8 +454,7 @@ theorem arrayAt_eq_wordCells {host : Type} [WasmHeapGS host]
       change pointsTo_u32 0 ptr value ∗ arrayAt 0 (ptr + 4) rest ⊣⊢
         pointsToBytes 0 ptr
           (Spec.encodeWord value ++ U32Codec.serialize rest)
-      rw [encodeWord_eq_u32Bytes]
-      exact (BI.sep_congr
+      rw [encodeWord_eq_u32Bytes]; exact (BI.sep_congr
           (pointsTo_u32_as_bytes 0 ptr value)
           (by simpa using ih (ptr + 4))).trans
         (pointsToBytes_append 0 ptr
@@ -834,8 +827,7 @@ theorem classifyBump_success_facts
       injection h with hbase hfinish
       subst base
       subst finish
-      dsimp only at hend ⊢
-      exact ⟨hsum, rfl, hend.1, hend.2,
+      dsimp only at hend ⊢; exact ⟨hsum, rfl, hend.1, hend.2,
         UInt32.toNat_ofNat_of_lt' hend.1⟩
     · contradiction
   · contradiction
@@ -913,8 +905,7 @@ theorem classifyBump_success_reachable
       simpa only [halignment, Nat.reduceSubDiff, Nat.add_zero] using hsum
     have hbase' :
         base = UInt32.ofNat frontier &&& (0 - 1) := by
-      norm_num [halignment] at hbase ⊢
-      exact hbase
+      norm_num [halignment] at hbase ⊢; exact hbase
     rw [align1_mask] at hbase'
     have hbaseNat : base.toNat = frontier := by
       rw [hbase', UInt32.toNat_ofNat_of_lt' hsum']
@@ -923,18 +914,15 @@ theorem classifyBump_success_reachable
       have hzeroNat := congrArg UInt32.toNat hzero; simp only [UInt32.toNat_zero] at hzeroNat
       rw [hbaseNat] at hzeroNat; omega
     have haligned : base.toNat % layout.alignment = 0 := by
-      rw [halignment]
-      exact Nat.mod_one _
+      rw [halignment]; exact Nat.mod_one _
     refine ⟨?_, hnonnull, haligned, hendWord, hendSigned, hfinish, ?_⟩
     · omega
     · exact ⟨hvalid, hnonnull, haligned⟩
   · have hsum' : frontier + 3 < UInt32.size := by
-      norm_num [halignment] at hsum ⊢
-      exact hsum
+      norm_num [halignment] at hsum ⊢; exact hsum
     have hbase' :
         base = UInt32.ofNat (frontier + 3) &&& (0 - 4) := by
-      norm_num [halignment] at hbase ⊢
-      exact hbase
+      norm_num [halignment] at hbase ⊢; exact hbase
     have hsumWord :
         (UInt32.ofNat (frontier + 3)).toNat = frontier + 3 := by
       exact UInt32.toNat_ofNat_of_lt' hsum'
@@ -976,11 +964,9 @@ theorem classifyBump_success_align1
   dsimp only at hraw
   rcases hraw with ⟨hsum, hbase, hendWord, hendSigned, hfinish⟩
   have hfrontier : frontier < UInt32.size := by
-    norm_num at hsum ⊢
-    exact hsum
+    norm_num at hsum ⊢; exact hsum
   have hbase' : base = UInt32.ofNat frontier := by
-    norm_num at hbase
-    exact hbase
+    norm_num at hbase; exact hbase
   have hbaseNat : base.toNat = frontier := by
     rw [hbase', UInt32.toNat_ofNat_of_lt' hfrontier]
   exact ⟨hfrontier, hbase', hbaseNat, hendWord, hendSigned, by
@@ -1706,8 +1692,7 @@ theorem BumpHeap_commit {host : Type} [WasmHeapGS host]
     hwf.2.2.2.1
   have hwfNew :
       HistoryWellFormed finish.toNat (history.allocate base layout) := by
-    rw [hfinish]
-    exact HistoryWellFormed.allocate frontier history base layout hwf
+    rw [hfinish]; exact HistoryWellFormed.allocate frontier history base layout hwf
       hmetadata hstart
   have hbaseNatNe : base.toNat ≠ 0 := by
     intro hzero
@@ -1861,8 +1846,7 @@ theorem StackReserve_split
     let headBytes := bytes.take 4
     let growBefore := bytes.drop 4
     have hdecompose : bytes = headBytes ++ growBefore := by
-      dsimp only [headBytes, growBefore]
-      exact (List.take_append_drop 4 bytes).symm
+      dsimp only [headBytes, growBefore]; exact (List.take_append_drop 4 bytes).symm
     have hheadLength : headBytes.length = 4 := by
       simp [headBytes, hlength]
     have hgrowLength : growBefore.length = 12 := by
@@ -1901,8 +1885,7 @@ theorem EntryStack_split
     let reserveBytes := bytes.take 16
     let frameBytes := bytes.drop 16
     have hdecompose : bytes = reserveBytes ++ frameBytes := by
-      dsimp only [reserveBytes, frameBytes]
-      exact (List.take_append_drop 16 bytes).symm
+      dsimp only [reserveBytes, frameBytes]; exact (List.take_append_drop 16 bytes).symm
     have hreserveLength : reserveBytes.length = 16 := by
       simp [reserveBytes, hlength]
     have hframeLength : frameBytes.length = 272 := by
@@ -1984,11 +1967,9 @@ theorem DriverFrame_split
     let chunkBytes := rest.take 256
     let outputBytes := rest.drop 256
     have hheaderRest : bytes = headerBytes ++ rest := by
-      dsimp only [headerBytes, rest]
-      exact (List.take_append_drop 12 bytes).symm
+      dsimp only [headerBytes, rest]; exact (List.take_append_drop 12 bytes).symm
     have hchunkOutput : rest = chunkBytes ++ outputBytes := by
-      dsimp only [chunkBytes, outputBytes]
-      exact (List.take_append_drop 256 rest).symm
+      dsimp only [chunkBytes, outputBytes]; exact (List.take_append_drop 256 rest).symm
     have hheaderLength : headerBytes.length = 12 := by
       simp [headerBytes, hlength]
     have hrestLength : rest.length = 260 := by
@@ -2153,8 +2134,7 @@ theorem VecStorage_appendFocus {host : Type} [WasmHeapGS host]
     have hchunkLength : oldChunk.length = current.length := by
       simp [oldChunk, hstorage.2.2.2, hfits]
     have hdecompose : spare = oldChunk ++ tail := by
-      dsimp only [oldChunk, tail]
-      exact (List.take_append_drop current.length spare).symm
+      dsimp only [oldChunk, tail]; exact (List.take_append_drop current.length spare).symm
     have htailLength :
         tail.length = capacity.toNat -
           (initialized.length + current.length) := by
@@ -2259,8 +2239,7 @@ theorem VecU8_as_headerBytes_storage {host : Type} [WasmHeapGS host]
       · ipureintro
         unfold vecHeaderBytes
         rw [serialize_length]
-        norm_num
-        exact hheader
+        norm_num; exact hheader
       · unfold vecHeaderBytes
         iexact Hbytes
     · iexact Hstorage
@@ -2681,8 +2660,7 @@ theorem vectorBlockBase_succ (exponent : Nat) (h : 8 ≤ exponent) :
   unfold vectorBlockBase
   rw [pow_succ]
   have hp : 256 ≤ 2 ^ exponent := by
-    rw [show 256 = 2 ^ 8 by norm_num]
-    exact Nat.pow_le_pow_right (by decide) h
+    rw [show 256 = 2 ^ 8 by norm_num]; exact Nat.pow_le_pow_right (by decide) h
   omega
 
 theorem selectedCapacity_geometric
@@ -2693,8 +2671,7 @@ theorem selectedCapacity_geometric
     selectedCapacity length current (2 ^ exponent) =
       2 ^ (exponent + 1) := by
   have hpow : 256 ≤ 2 ^ exponent := by
-    rw [show 256 = 2 ^ 8 by norm_num]
-    exact Nat.pow_le_pow_right (by decide) hexponent
+    rw [show 256 = 2 ^ 8 by norm_num]; exact Nat.pow_le_pow_right (by decide) hexponent
   have hlower : length + current ≤ 2 * 2 ^ exponent := by omega
   have h8 : 8 ≤ 2 * 2 ^ exponent := by omega
   unfold selectedCapacity
@@ -2762,8 +2739,7 @@ theorem GeometricVecFacts.completed_ptr_align4
     rw [hptr]
     unfold vectorBlockBase
     have hpow256 : 256 ≤ 2 ^ exponent := by
-      rw [show 256 = 2 ^ 8 by norm_num]
-      exact Nat.pow_le_pow_right (by decide) hexponentLower
+      rw [show 256 = 2 ^ 8 by norm_num]; exact Nat.pow_le_pow_right (by decide) hexponentLower
     have hdiv : 4 ∣ 2 ^ exponent := by
       simpa using Nat.pow_dvd_pow 2 (by omega : 2 ≤ exponent)
     have hpowMod : 2 ^ exponent % 4 = 0 :=
@@ -2861,8 +2837,7 @@ theorem bulk4_signedMask_eq (count : Nat)
           have hnlt : count < 2 ^ i := by
             norm_num at hp; omega
           have hfalse := Nat.testBit_eq_false_of_lt hnlt
-          rw [hnbit] at hfalse
-          contradiction
+          rw [hnbit] at hfalse; contradiction
         have h3 : (3 : Nat).testBit i = false := by
           apply Nat.testBit_eq_false_of_lt
           have hp : 2 ^ 2 ≤ 2 ^ i :=
@@ -2955,8 +2930,7 @@ theorem GeometricVecFacts.reserveLayout
       newCapacity < UInt32.size ∧
       newLayout.Valid := by
   have hcurrentBound : current ≤ 256 := by
-    rw [hread]
-    exact min_le_left _ _
+    rw [hread]; exact min_le_left _ _
   rcases hgeo with hempty | hshort | hlarge
   · rcases hempty with
       ⟨rfl, rfl, rfl, _hremaining, _hfrontier, _hhistory⟩
@@ -2980,8 +2954,7 @@ theorem GeometricVecFacts.reserveLayout
       ⟨exponent, _hexponentLower, hexponentUpper, hcapacity,
         hlength, _htotal, _hptr, _hfrontier, _hhistory⟩
     have hcapacityUpper : capacity.toNat ≤ 2 ^ 29 := by
-      rw [hcapacity]
-      exact Nat.pow_le_pow_right (by decide) hexponentUpper
+      rw [hcapacity]; exact Nat.pow_le_pow_right (by decide) hexponentUpper
     have hnewLower :
         8 ≤ selectedCapacity length current capacity.toNat := by
       unfold selectedCapacity
@@ -3050,8 +3023,7 @@ theorem GeometricVecFacts.reserveSuccess
       (UInt32.ofNat (selectedCapacity length current capacity.toNat))
       newPtr finish.toNat finalHistory := by
   have hcurrentBound : current ≤ 256 := by
-    rw [hread]
-    exact min_le_left _ _
+    rw [hread]; exact min_le_left _ _
   have halloc := classifyBump_success_align1 frontier
     (selectedCapacity length current capacity.toNat) newPtr finish hclassify
   rcases halloc with
@@ -3108,8 +3080,7 @@ theorem GeometricVecFacts.reserveSuccess
       · rw [hfinish]
         norm_num [selectedCapacity, vectorBlockBase]
       · rw [hreserveHistory, hnewPtrBase]
-        norm_num [selectedCapacity]
-        rfl
+        norm_num [selectedCapacity]; rfl
   · rcases hshort with
       ⟨hremaining, _hlength, _htotal, _hcapacity, _hptr,
         _hfrontier, _hhistory⟩
@@ -3123,19 +3094,16 @@ theorem GeometricVecFacts.reserveSuccess
     have hselected :
         selectedCapacity length current capacity.toNat =
           2 ^ (exponent + 1) := by
-      rw [hcapacity]
-      exact selectedCapacity_geometric length current exponent
+      rw [hcapacity]; exact selectedCapacity_geometric length current exponent
         hexponentLower hlength' hcurrentBound
     have hselected' :
         selectedCapacity length current (2 ^ exponent) =
           2 ^ (exponent + 1) := by
       simpa only [← hcapacity] using hselected
     have hpow : 256 ≤ 2 ^ exponent := by
-      rw [show 256 = 2 ^ 8 by norm_num]
-      exact Nat.pow_le_pow_right (by decide) hexponentLower
+      rw [show 256 = 2 ^ 8 by norm_num]; exact Nat.pow_le_pow_right (by decide) hexponentLower
     have hfrontierNext : frontier = vectorBlockBase (exponent + 1) := by
-      rw [hfrontier]
-      exact vectorBlockBase_succ exponent hexponentLower
+      rw [hfrontier]; exact vectorBlockBase_succ exponent hexponentLower
     have hptrExact :
         ptr = UInt32.ofNat (vectorBlockBase exponent) := by
       rw [← UInt32.ofNat_toNat (x := ptr), hptr]

@@ -103,8 +103,7 @@ theorem oomHost_invoke (store : Store Universal.State) :
         { store with
           host := { store.host with oom := { raised := true } } }
         OOM.trapMessage := by
-  rw [oomHost_eq]
-  rfl
+  rw [oomHost_eq]; rfl
 
 def afterWrite (host : Universal.State) (bytes : List UInt8) :
     Universal.State :=
@@ -146,8 +145,7 @@ theorem writeTransfer
     ipureexact hfacts
   have hbound : pointer.toNat + length.toNat ≤
       store.wasm.mem.pages * 65536 := by
-    rw [hlength]
-    exact pointsToBytes_facts_bound hfacts hpos hnowrap
+    rw [hlength]; exact pointsToBytes_facts_bound hfacts hpos hnowrap
   have hread : store.wasm.mem.readBytes pointer.toNat length.toNat = bytes := by
     rw [hlength]
     apply pointsToBytes_facts_readBytes
@@ -228,8 +226,7 @@ theorem readTransfer
     pointsToBytes_facts_bound hfacts hpos hnowrap
   have hincomingLength : incoming.length ≤ buffer.length := by
     dsimp only [incoming]
-    rw [hlength]
-    exact List.length_take_le _ _
+    rw [hlength]; exact List.length_take_le _ _
   have hincomingBound : pointer.toNat + incoming.length ≤
       store.wasm.mem.pages * 65536 := by omega
   have hincomingNoWrap : pointer.toNat + incoming.length < UInt32.size := by
@@ -238,8 +235,7 @@ theorem readTransfer
       store.wasm.host.stdio.input.take length.toNat = incoming := by
     rw [hhostEq]
   have hconcrete := readHost_invoke_of_bound store.wasm length pointer (by
-    rw [hphysicalIncoming]
-    exact hincomingBound)
+    rw [hphysicalIncoming]; exact hincomingBound)
   rw [hconcrete] at hinvoke
   have hresults := HostResult.Return.inj hinvoke
   have hresultValues : results =
@@ -278,8 +274,7 @@ theorem readTransfer
         { store.wasm with mem :=
             store.wasm.mem.writeBytes pointer.toNat incoming } }
   have hmemoryHost : memoryStore.wasm.host = host := by
-    dsimp only [memoryStore]
-    exact hhostEq
+    dsimp only [memoryStore]; exact hhostEq
   ihave HhostActual : hostStateOwn memoryStore.wasm.host $$ [Hhost]
   · irw_exact [hmemoryHost] with Hhost
   imod stateInterp_host_set memoryStore ns obs nt

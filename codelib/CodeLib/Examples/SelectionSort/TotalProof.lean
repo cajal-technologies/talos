@@ -361,8 +361,7 @@ private theorem twp_findMin_aux
             have hstep := MinScan.step input hinv hs
             have hlt' : input[scan]! < input[best]! := by
               simpa only [getElem!_pos input scan hs, getElem!_pos input best hbestLen] using hlt
-            rw [if_pos hlt'] at hstep
-            exact hstep
+            rw [if_pos hlt'] at hstep; exact hstep
           iapply ih scan (scan + 1)
             hnext
             (by omega)
@@ -394,8 +393,7 @@ private theorem twp_findMin_aux
             have hstep := MinScan.step input hinv hs
             have hlt' : ¬ input[scan]! < input[best]! := by
               simpa only [getElem!_pos input scan hs, getElem!_pos input best hbestLen] using hlt
-            rw [if_neg hlt'] at hstep
-            exact hstep
+            rw [if_neg hlt'] at hstep; exact hstep
           iapply ih best (scan + 1)
             hnext
             (by omega)

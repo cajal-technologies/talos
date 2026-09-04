@@ -87,11 +87,9 @@ private theorem ByteSlice_twelve_storeFocus
   let second := rest.take 4
   let third := rest.drop 4
   have hfirstRest : bytes = first ++ rest := by
-    dsimp only [first, rest]
-    exact (List.take_append_drop 4 bytes).symm
+    dsimp only [first, rest]; exact (List.take_append_drop 4 bytes).symm
   have hsecondThird : rest = second ++ third := by
-    dsimp only [second, third]
-    exact (List.take_append_drop 4 rest).symm
+    dsimp only [second, third]; exact (List.take_append_drop 4 rest).symm
   have hfirstLength : first.length = 4 := by
     simp [first, hlength]
   have hrestLength : rest.length = 8 := by
@@ -430,8 +428,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
   wasm_twp_localTee [List.set]
   wasm_twp_pures [twp_const twp_localGet twp_sub]
   have hcapacityGuard : newCapacity ≤ (2147483648 : UInt32) - 1 := by
-    rw [UInt32.le_iff_toNat_le_toNat]
-    exact hnewUpper
+    rw [UInt32.le_iff_toNat_le_toNat]; exact hnewUpper
   iapply twp_leU (result := 1) (by rw [if_pos hcapacityGuard])
   iapply twp_brIf (by decide) (by rfl)
   simp only [List.take_zero, List.drop_zero, List.nil_append]
@@ -666,8 +663,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
                   rw [hsource.2.2.1, List.length_append,
                     hsource.2.2.2]
                   omega
-                rw [(List.take_eq_self_iff allBytes).mpr hallLength.le] at hcopy
-                exact hcopy
+                rw [(List.take_eq_self_iff allBytes).mpr hallLength.le] at hcopy; exact hcopy
               · exact hprefix
             ihave Hnormal := BI.and_elim_l $$ Hcont
             ihave Hnormal := Hnormal $$ %newBytes

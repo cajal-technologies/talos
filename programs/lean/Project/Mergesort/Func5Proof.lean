@@ -531,8 +531,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
       simp only [List.take_zero, List.nil_append]
       have hpagesWord : pages.toUInt32.toNat ≤ pages := by
         unfold Nat.toUInt32 UInt32.toNat UInt32.ofNat
-        simp only [BitVec.toNat_ofNat]
-        exact Nat.mod_le _ _
+        simp only [BitVec.toNat_ofNat]; exact Nat.mod_le _ _
       have hphysical : finish.toNat ≤ pages * 65536 :=
         _root_.le_trans hrequiredCovers (Nat.mul_le_mul_right 65536
           (_root_.le_trans
@@ -644,8 +643,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
                     exact UInt32.toNat_ofNat_of_lt' hpagesLow
                   have hpagesLtRequired :
                       pages < (allocatorRequiredPages finish).toNat := by
-                    rw [← hpagesWord]
-                    exact UInt32.lt_iff_toNat_lt.mp (UInt32.not_le.mp hfits)
+                    rw [← hpagesWord]; exact UInt32.lt_iff_toNat_lt.mp (UInt32.not_le.mp hfits)
                   have hdeltaNat : delta.toNat =
                       (allocatorRequiredPages finish).toNat - pages := by
                     dsimp only [delta]

@@ -129,8 +129,7 @@ private theorem mergeSortHeapAux_pointsTo [WasmHeapGS Unit]
           pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap) address (DFrac.own 1) byte) := by
   induction xs generalizing σ base with
   | nil =>
-    simp only [mergeSortHeapAux, arrayAt]
-    exact BI.emp_sep.mpr
+    simp only [mergeSortHeapAux, arrayAt]; exact BI.emp_sep.mpr
   | cons x rest ih =>
     simp only [mergeSortHeapAux, arrayAt, List.length_cons] at *
     have h4 : (base + 4).toNat = base.toNat + 4 :=
@@ -333,8 +332,7 @@ theorem mergesort_partiallyMeets
   · exact mergeSortHeap_agrees source temporary input scratch hbound_s hbound_t
   · exact mergeSortHeap_inBounds source temporary input scratch hbound_s hbound_t
   · intro index value hget
-    rw [LawfulPartialMap.get?_empty] at hget
-    contradiction
+    rw [LawfulPartialMap.get?_empty] at hget; contradiction
   · simp [mergeSortConfig]
   · intro _gs
     simp only [BI.BigSepM.bigSepM_empty.to_eq]

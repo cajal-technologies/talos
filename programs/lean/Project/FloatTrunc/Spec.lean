@@ -216,8 +216,7 @@ theorem func0Globals_pointsTo [WasmGlobalGS Unit] :
   unfold func0Globals
   rw [(BI.BigSepM.bigSepM_insert (get?_empty (⟨0, 0⟩ : GlobalKey))).to_eq,
     BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
-  simp only [globalPointsToAt_eq]
-  rfl
+  simp only [globalPointsToAt_eq]; rfl
 
 /-- Call-stack-polymorphic form of the common scratch load tail.  `R` frames
 all unrelated ownership, and the continuation decides whether the generated

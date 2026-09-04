@@ -2460,8 +2460,7 @@ theorem func4ExampleHeap_agrees :
     · simp [h0, storeResolve, func4ExampleConfig, func4ExampleMem]
     · simp [h0, storeResolve, func4ExampleConfig,
         show («module».initialStore : Store Unit).extraMems = [] from by native_decide]
-  rw [← hresolveEq]
-  exact h
+  rw [← hresolveEq]; exact h
 
 theorem func4ExampleHeap_inBounds :
     heapAddressesInBounds func4ExampleHeap
@@ -2496,8 +2495,7 @@ theorem func4ExampleHeap_inBounds :
     · simp [h0, storeResolve, func4ExampleConfig, func4ExampleMem]
     · simp [h0, storeResolve, func4ExampleConfig,
         show («module».initialStore : Store Unit).extraMems = [] from by native_decide]
-  rw [← hresolveEq]
-  exact h
+  rw [← hresolveEq]; exact h
 
 theorem func4ExampleGlobals_agree :
     globalHeapAgrees func4ExampleGlobals
@@ -2538,8 +2536,7 @@ theorem func4ExampleGlobals_pointsTo [WasmGlobalGS Unit] :
   unfold func4ExampleGlobals
   rw [(BI.BigSepM.bigSepM_insert (get?_empty (⟨0, 0⟩ : GlobalKey))).to_eq,
     BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
-  simp only [globalPointsToAt_eq]
-  rfl
+  simp only [globalPointsToAt_eq]; rfl
 
 /-- The real exported swap executes under the authoritative small-step
 semantics on a concrete two-element array and returns normally. -/
@@ -2688,8 +2685,7 @@ theorem func4AliasHeap_agrees :
     · simp [h0, storeResolve, func4AliasConfig, func4AliasMem]
     · simp [h0, storeResolve, func4AliasConfig,
         show («module».initialStore : Store Unit).extraMems = [] from by native_decide]
-  rw [← hresolveEq]
-  exact h
+  rw [← hresolveEq]; exact h
 
 theorem func4AliasHeap_inBounds :
     heapAddressesInBounds func4AliasHeap
@@ -2719,8 +2715,7 @@ theorem func4AliasHeap_inBounds :
     · simp [h0, storeResolve, func4AliasConfig, func4AliasMem]
     · simp [h0, storeResolve, func4AliasConfig,
         show («module».initialStore : Store Unit).extraMems = [] from by native_decide]
-  rw [← hresolveEq]
-  exact h
+  rw [← hresolveEq]; exact h
 
 theorem func4AliasHeap_pointsTo [WasmHeapGS Unit] :
     ([∗map] address ↦ value ∈ func4AliasHeap,
@@ -2924,8 +2919,7 @@ theorem func0AliasGlobals_pointsTo [WasmGlobalGS Unit] :
   unfold func0AliasGlobals
   rw [(BI.BigSepM.bigSepM_insert (get?_empty (⟨0, 0⟩ : GlobalKey))).to_eq,
     BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
-  simp only [globalPointsToAt_eq]
-  rfl
+  simp only [globalPointsToAt_eq]; rfl
 
 /-- Same-index swapping is a real one-cell execution, not a degenerate proof
 that duplicates exclusive ownership. -/
@@ -3250,8 +3244,7 @@ private theorem func1_terminates_sw (env : HostEnv Unit) (st : Store Unit)
           hg0 (by omega) hpg_a hpg_b hge_a hge_b hdisj).mono ?_
       rintro st' vs ⟨rfl, hglob2, hpages2, hrA2, hrB2, hother2⟩
       refine ⟨1, ?_⟩
-      simp only [exec, execOne]
-      exact ⟨trivial, hglob2, hpages2, hrA2, hrB2, hother2⟩
+      simp only [exec, execOne]; exact ⟨trivial, hglob2, hpages2, hrA2, hrB2, hother2⟩
   exact wp_wasm_prop_to_TerminatesWith hf₁ himp₁ rfl (Nat.le_refl _)
     (fun _ _ h => ⟨rfl, h.2⟩) hwp
 
@@ -3307,8 +3300,7 @@ private theorem func0_terminates_sw (env : HostEnv Unit) (st : Store Unit)
           hptr hg0).mono ?_
       rintro st' vs ⟨rfl, hglob1, hpages1, hrA1, hrB1, hother1⟩
       refine ⟨1, ?_⟩
-      simp only [exec, execOne]
-      exact ⟨trivial, hglob1, hpages1, hrA1, hrB1, hother1⟩
+      simp only [exec, execOne]; exact ⟨trivial, hglob1, hpages1, hrA1, hrB1, hother1⟩
   exact wp_wasm_prop_to_TerminatesWith hf himp rfl (Nat.le_refl _)
     (fun _ _ h => ⟨rfl, h.2⟩) hwp
 

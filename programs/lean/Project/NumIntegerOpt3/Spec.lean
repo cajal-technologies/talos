@@ -827,8 +827,7 @@ theorem inner_wp (env : HostEnv Unit) (st0 : Store Unit) (shared p0 p1 : UInt64)
   have hbN : bo.toNat = p1.toNat >>> (ctz64 64 p1 % 64) := oddPart_toNat p1
   by_cases hab : ao = bo
   · -- Odd parts already equal: break out with local 0 = ao.
-    rw [if_pos hab]
-    exact (hQ ao bo (by rw [← haN, ← hbN, ← hab, Nat.gcd_self])).2
+    rw [if_pos hab]; exact (hQ ao bo (by rw [← haN, ← hbN, ← hab, Nat.gcd_self])).2
   · -- Odd parts differ: run the subtract-and-halve loop.
     rw [if_neg hab]
     pick

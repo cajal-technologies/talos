@@ -222,8 +222,7 @@ theorem wp_const
       ⟨⟨params, localValues, .i32 value :: values⟩, code, arity, remainder, controls, calls⟩
     ▷ WP (Expr.running next : Expr α) @ s; E {{ Φ }} ⊢
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
-  dsimp only
-  exact wp_pureStep _ _ _ (fun _ => Step.const)
+  dsimp only; exact wp_pureStep _ _ _ (fun _ => Step.const)
 
 /-- Pure primitive rule for wrapping i32 subtraction. -/
 theorem wp_sub
@@ -239,8 +238,7 @@ theorem wp_sub
         code, arity, remainder, controls, calls⟩
     ▷ WP (Expr.running next : Expr α) @ s; E {{ Φ }} ⊢
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
-  dsimp only
-  exact wp_pureStep _ _ _ (fun _ => Step.sub)
+  dsimp only; exact wp_pureStep _ _ _ (fun _ => Step.sub)
 
 wasm_wp_pure_rule wp_add {lhs rhs : UInt32} :
   .add, .i32 rhs :: .i32 lhs :: values => .i32 (rhs + lhs) :: values := Step.add
@@ -544,8 +542,7 @@ theorem wp_block
     WP (.running
       ⟨locals, .block paramArity resultArity body :: code,
         arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} := by
-  dsimp only
-  exact wp_pureStep _ _ _ (fun _ => Step.block)
+  dsimp only; exact wp_pureStep _ _ _ (fun _ => Step.block)
 
 theorem wp_loop
     {locals : Locals} {paramArity resultArity arity : Nat}
@@ -564,8 +561,7 @@ theorem wp_loop
     WP (.running
       ⟨locals, .loop paramArity resultArity body :: code,
         arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} := by
-  dsimp only
-  exact wp_pureStep _ _ _ (fun _ => Step.loop)
+  dsimp only; exact wp_pureStep _ _ _ (fun _ => Step.loop)
 
 /-- Family-indexed Löb rule for loops whose locals and owned invariant change
 at each back-edge.
@@ -741,8 +737,7 @@ theorem wp_localGet
         arity, remainder, controls, calls⟩
     ▷ WP (Expr.running next : Expr α) @ s; E {{ Φ }} ⊢
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
-  dsimp only
-  exact wp_pureStep _ _ _ (fun _ => Step.localGet hget)
+  dsimp only; exact wp_pureStep _ _ _ (fun _ => Step.localGet hget)
 
 theorem wp_localSet
     {params localValues values : List Value}
@@ -759,8 +754,7 @@ theorem wp_localSet
       ⟨{ locals' with values }, code, arity, remainder, controls, calls⟩
     ▷ WP (Expr.running next : Expr α) @ s; E {{ Φ }} ⊢
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
-  dsimp only
-  exact wp_pureStep _ _ _ (fun _ => Step.localSet hset)
+  dsimp only; exact wp_pureStep _ _ _ (fun _ => Step.localSet hset)
 
 theorem wp_localTee
     {params localValues values : List Value}
@@ -777,8 +771,7 @@ theorem wp_localTee
       ⟨locals', code, arity, remainder, controls, calls⟩
     ▷ WP (Expr.running next : Expr α) @ s; E {{ Φ }} ⊢
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
-  dsimp only
-  exact wp_pureStep _ _ _ (fun _ => Step.localTee hset)
+  dsimp only; exact wp_pureStep _ _ _ (fun _ => Step.localTee hset)
 
 /-- Apply an explicit sequence of side-condition-free pure Wasm steps.
 The rule list keeps the Wasm trace visible while avoiding repetitive `iapply`
@@ -883,8 +876,7 @@ theorem wp_tryTable
     WP (.running
       ⟨locals, .tryTable paramArity resultArity catches body paramTypes resultTypes :: code,
         arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} := by
-  dsimp only
-  exact wp_pureStep _ _ _ (fun _ => Step.tryTable)
+  dsimp only; exact wp_pureStep _ _ _ (fun _ => Step.tryTable)
 
 theorem wp_unwindNestedException
     {locals : Locals} {tag : Nat} {arguments : List Value}
@@ -966,8 +958,7 @@ theorem wp_unwindExceptionCall
     ▷ WP (Expr.running next : Expr α) @ s; E {{ Φ }} ⊢
     WP (.running
       ⟨locals, [], arity, remainder, [throwingFrame], caller :: calls⟩ : Expr α) @ s; E {{ Φ }} := by
-  dsimp only
-  exact wp_pureStep _ _ _ (fun _ => Step.unwindExceptionCall hthrow)
+  dsimp only; exact wp_pureStep _ _ _ (fun _ => Step.unwindExceptionCall hthrow)
 
 /-- `throw` instruction: pops `tagType.params.length` values, pushes a
 throwing control frame. The canonical tag index depends on the runtime store,
@@ -2882,8 +2873,7 @@ theorem wp_memoryGrow64TooLarge
     ▷ WP (Expr.running next : Expr α) @ s; E {{ Φ }} ⊢
     WP (.running ⟨⟨params, localValues, .i64 delta :: values⟩,
         .memoryGrow :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} := by
-  dsimp only
-  exact wp_pureStep _ _ _ (fun _ => Step.memoryGrow64TooLarge h)
+  dsimp only; exact wp_pureStep _ _ _ (fun _ => Step.memoryGrow64TooLarge h)
 
 theorem wp_memoryGrowFailure
     {params localValues values : List Value}
@@ -3339,8 +3329,7 @@ theorem wp_dataDrop
     (obs ++ obs') $$ [Hσ Hsegment]
   have hisSome :
       (store.wasm.dataSegments[segmentIndex]?).isSome = true := by
-    rw [hsegment]
-    rfl
+    rw [hsegment]; rfl
   have expectedStep : Step
       ⟨.running
         ⟨⟨params, localValues, values⟩,
@@ -3835,8 +3824,7 @@ theorem wp_dataDrop0
     [Hσ Hsegment]
   have hisSome :
       (store.wasm.dataSegments[0]?).isSome = true := by
-    rw [hsegment]
-    rfl
+    rw [hsegment]; rfl
   have expectedStep : Step
       ⟨.running
         ⟨⟨params, localValues, values⟩,
@@ -3882,8 +3870,7 @@ theorem wp_elemDrop
     (obs ++ obs') $$ [Hσ Hsegment]
   have hisSome :
       (store.wasm.elementSegments[elementIndex]?).isSome = true := by
-    rw [hsegment]
-    rfl
+    rw [hsegment]; rfl
   have expectedStep : Step
       ⟨.running
         ⟨⟨params, localValues, values⟩,

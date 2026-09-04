@@ -92,8 +92,7 @@ theorem deserialize_eq_none_of_length_lt (bytes : List UInt8)
   match bytes with
   | [] => exact absurd rfl hne
   | first :: rest =>
-      rw [deserialize]
-      exact if_pos hshort
+      rw [deserialize]; exact if_pos hshort
 
 /-- Peel one whole word off the front of a stream. This is the equation the
 concrete codecs re-export at a literal width, so that proofs written against

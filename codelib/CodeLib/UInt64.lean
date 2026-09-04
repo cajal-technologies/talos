@@ -190,8 +190,7 @@ theorem UInt64.ctz64_two_pow_dvd (a : UInt64) : 2 ^ ctz64 64 a ∣ a.toNat := by
   · rw [ctz64_eq_ntz]
     obtain ⟨m, _, heq, _, _⟩ :=
       ntz_decompose 64 a.toNat (by omega) (_aux_toNat_pos a ha) a.toNat_lt
-    simp at heq
-    exact ⟨m, heq⟩
+    simp at heq; exact ⟨m, heq⟩
 
 /-- The "odd part" of a nonzero `UInt64`: dividing out `2 ^ ctz64` leaves
 an odd `Nat`. -/
@@ -216,8 +215,7 @@ private theorem ntz_64_testBit_spec (n : Nat) (hpos : 0 < n) (hbnd : n < 2^64) :
   refine ⟨?_, ?_⟩
   · rw [heq, show (2:Nat)^c * m = m <<< c by rw [Nat.shiftLeft_eq]; ring,
         Nat.testBit_shiftLeft]
-    simp
-    exact hmod1
+    simp; exact hmod1
   · intro i hi
     rw [heq, show (2:Nat)^c * m = m <<< c by rw [Nat.shiftLeft_eq]; ring,
         Nat.testBit_shiftLeft]
@@ -318,8 +316,7 @@ theorem UInt64.shr_ctz_ne_zero (a : UInt64) (ha : a ≠ 0) :
 /-- And its `toNat` is odd. -/
 theorem UInt64.shr_ctz_toNat_odd (a : UInt64) (ha : a ≠ 0) :
     (a >>> (UInt64.ofNat (ctz64 64 a) % 64)).toNat % 2 = 1 := by
-  rw [UInt64.shr_ctz_toNat a ha]
-  exact UInt64.ctz64_shr_odd a ha
+  rw [UInt64.shr_ctz_toNat a ha]; exact UInt64.ctz64_shr_odd a ha
 
 /-! ## Nat-level Stein identity -/
 
@@ -427,10 +424,8 @@ theorem UInt64.recombine_eq (a b : UInt64) (ha : a ≠ 0) (hb : b ≠ 0)
   -- From hEq: a >>> ... = b >>> ..., so a_odd.toNat = b_odd.toNat.
   have h_eq_nat : a.toNat / 2 ^ ctz64 64 a = b.toNat / 2 ^ ctz64 64 b := by
     have h := congrArg UInt64.toNat hEq
-    rw [UInt64.shr_ctz_toNat a ha, UInt64.shr_ctz_toNat b hb] at h
-    exact h
-  rw [← h_eq_nat]
-  exact (Nat.gcd_self _).symm
+    rw [UInt64.shr_ctz_toNat a ha, UInt64.shr_ctz_toNat b hb] at h; exact h
+  rw [← h_eq_nat]; exact (Nat.gcd_self _).symm
 
 /-- Recombine after the main loop. -/
 theorem UInt64.recombine_loop (a b o : UInt64) (ha : a ≠ 0) (hb : b ≠ 0)
@@ -443,8 +438,7 @@ theorem UInt64.recombine_loop (a b o : UInt64) (ha : a ≠ 0) (hb : b ≠ 0)
   have h_ctz_b_lt : ctz64 64 b < 64 := UInt64.ctz64_lt b hb
   rw [Nat.mod_eq_of_lt h_ctz_a_lt, Nat.mod_eq_of_lt h_ctz_b_lt] at h
   rw [Nat.shiftRight_eq_div_pow, Nat.shiftRight_eq_div_pow] at h
-  rw [Nat.gcd_self] at h
-  exact h
+  rw [Nat.gcd_self] at h; exact h
 
 /-! ## Loop-step invariants (one iteration of Stein's subtract-and-halve) -/
 

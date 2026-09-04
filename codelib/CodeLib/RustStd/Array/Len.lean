@@ -12,7 +12,6 @@ the operand stack. -/
 theorem len_chunk : UnChunk (T := UInt32) [] (id : UInt32 → UInt32) := by
   intro α hlc inst s E Φ params localValues rest arity remainder
     controls calls len vs
-  simp only [id_eq, toV_u32, List.nil_append]
-  exact .rfl
+  simp only [id_eq, toV_u32, List.nil_append]; exact .rfl
 
 end Wasm.RustStd.Array

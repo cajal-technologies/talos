@@ -124,8 +124,7 @@ private theorem growSource_reserveHistory
       · ipureintro
         intro newPtr newLayout
         unfold VecReserveHistory growHistory
-        rw [if_neg hcapacity]
-        exact ⟨oldId, hlookup, rfl⟩
+        rw [if_neg hcapacity]; exact ⟨oldId, hlookup, rfl⟩
 
 theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
     (hfunc0 : Func0Spec (hlc := hlc)) :
@@ -170,8 +169,7 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
   · iframe
   icases HsourceFacts with ⟨Hbump, Hsource, %hreserveHistory⟩
   have hheadWord : UInt32.ofNat headBytes.length = 4 := by
-    rw [hshadow.2.1]
-    decide
+    rw [hshadow.2.1]; decide
   have hgrowAddress :
       reserveBase + UInt32.ofNat headBytes.length = reserveBase + 4 := by
     rw [hheadWord]
@@ -349,8 +347,7 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
         omega
       · rcases hshort with ⟨_hremaining, hlength, _htotal, hcapacity,
           _hptr, _hfrontier, _hhistory⟩
-        rw [hlength, hcapacity]
-        exact le_max_left _ _
+        rw [hlength, hcapacity]; exact le_max_left _ _
       · rcases hlarge with
           ⟨_exponent, _hlower, _hupper, _hcapacity, hlength,
             _htotal, _hptr, _hfrontier, _hhistory⟩

@@ -194,8 +194,7 @@ theorem le32_parts_or (n : Nat) :
     rw [UInt32.toNat_add, UInt32.toNat_ofNat]
     change (key.length % 4294967296 + 4) % 4294967296 = key.length + 4
     have hKey : key.length < 4294967296 := by omega
-    rw [Nat.mod_eq_of_lt hKey]
-    exact Nat.mod_eq_of_lt hKeyAddr
+    rw [Nat.mod_eq_of_lt hKey]; exact Nat.mod_eq_of_lt hKeyAddr
   simp [encodeKV, le32, Mem.read32, Mem.writeBytes, hAddr, UInt8.toNat_toUInt32,
     UInt32.toNat_ofNat]
   rw [Nat.mod_eq_of_lt (by

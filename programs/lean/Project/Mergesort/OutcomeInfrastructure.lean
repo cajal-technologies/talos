@@ -60,8 +60,7 @@ theorem twp_oom_import
       (fun store ns obs nt _ results postWasm h => by
         simp only [List.length_nil, List.take_zero,
           List.reverse_nil] at h
-        rw [WrapperProof.oomHost_invoke] at h
-        contradiction)
+        rw [WrapperProof.oomHost_invoke] at h; contradiction)
       (fun store ns obs nt hmodule postWasm msg h => by
         simp only [List.length_nil, List.take_zero,
           List.reverse_nil] at h
@@ -77,8 +76,7 @@ theorem twp_oom_import
       (fun store ns obs nt _ postWasm tag xs h => by
         simp only [List.length_nil, List.take_zero,
           List.reverse_nil] at h
-        rw [WrapperProof.oomHost_invoke] at h
-        contradiction)
+        rw [WrapperProof.oomHost_invoke] at h; contradiction)
       (params := locals.params) (localValues := locals.locals)
       (values := locals.values) (code := code) (arity := arity)
       (remainder := remainder) (controls := controls) (calls := calls)
@@ -89,8 +87,7 @@ theorem twp_oom_import
     have hmsg : msg = OOM.trapMessage := by
       simp only [List.length_nil, List.take_zero,
         List.reverse_nil] at h
-      rw [WrapperProof.oomHost_invoke] at h
-      exact (HostResult.Trap.inj h).2.symm
+      rw [WrapperProof.oomHost_invoke] at h; exact (HostResult.Trap.inj h).2.symm
     subst msg
     iapply_exact Wasm.SmallStep.twp_outcome_trapped with Houtcome
   · iintro %preWasm %postWasm %tag %xs %h HQ

@@ -2139,10 +2139,8 @@ private theorem splat_bytes_as_u32 [WasmHeapGS Unit] (b : UInt8) :
           (b.toUInt32 <<< 16) ||| (b.toUInt32 <<< 24)) 2,
        u32Byte (b.toUInt32 ||| (b.toUInt32 <<< 8) |||
           (b.toUInt32 <<< 16) ||| (b.toUInt32 <<< 24)) 3] := by
-    rw [hb0, hb1, hb2, hb3]
-    rfl
-  rw [hl]
-  exact (pointsTo_u32_as_bytes 0 0 _).mpr
+    rw [hb0, hb1, hb2, hb3]; rfl
+  rw [hl]; exact (pointsTo_u32_as_bytes 0 0 _).mpr
 
 def fillThenReadModule : Module :=
   { funcs := [{ params := [.i32],
@@ -2184,8 +2182,7 @@ private theorem fillThenReadBase_resolve_zero :
 private theorem fillThenReadInitialHeap_agrees (val : UInt32) :
     heapAgreesWithMem fillThenReadInitialHeap
       (storeResolve (fillThenReadConfig val).store) := by
-  rw [fillThenRead_resolve val]
-  exact store32_sound ∅ (storeResolve fillThenReadBaseStore) 0
+  rw [fillThenRead_resolve val]; exact store32_sound ∅ (storeResolve fillThenReadBaseStore) 0
     (fillThenReadModule.initialStore : Store Unit).mem 0 0 fillThenReadBase_resolve_zero
     rfl rfl rfl (heapAgreesWithMem_empty _)
 

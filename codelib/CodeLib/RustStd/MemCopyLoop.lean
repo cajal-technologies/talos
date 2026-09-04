@@ -127,14 +127,12 @@ theorem copyWords_loadStoreIteration_wp
       (i <<< (2 % 32 : UInt32)) + dst = dstAddress := by
     rw [MemRegion.shl2_eq_mul4]
     dsimp only [dstAddress]
-    rw [hi]
-    exact UInt32.add_comm _ _
+    rw [hi]; exact UInt32.add_comm _ _
   have hsrcAddress :
       (i <<< (2 % 32 : UInt32)) + src = srcAddress := by
     rw [MemRegion.shl2_eq_mul4]
     dsimp only [srcAddress]
-    rw [hi]
-    exact UInt32.add_comm _ _
+    rw [hi]; exact UInt32.add_comm _ _
   have hdstNat : dstAddress.toNat = dst.toNat + 4 * i.toNat :=
     Mem.words32_slotAddr_toNat dst i.toNat (by omega)
   have hsrcNat : srcAddress.toNat = src.toNat + 4 * i.toNat :=
@@ -600,14 +598,12 @@ theorem copyWords_loadStoreIteration_twp
       (i <<< (2 % 32 : UInt32)) + dst = dstAddress := by
     rw [MemRegion.shl2_eq_mul4]
     dsimp only [dstAddress]
-    rw [hi]
-    exact UInt32.add_comm _ _
+    rw [hi]; exact UInt32.add_comm _ _
   have hsrcAddress :
       (i <<< (2 % 32 : UInt32)) + src = srcAddress := by
     rw [MemRegion.shl2_eq_mul4]
     dsimp only [srcAddress]
-    rw [hi]
-    exact UInt32.add_comm _ _
+    rw [hi]; exact UInt32.add_comm _ _
   have hdstNat : dstAddress.toNat = dst.toNat + 4 * i.toNat :=
     Mem.words32_slotAddr_toNat dst i.toNat (by omega)
   have hsrcNat : srcAddress.toNat = src.toNat + 4 * i.toNat :=

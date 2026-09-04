@@ -718,8 +718,7 @@ theorem quicksort_terminatesWith (arr : UInt32) (input : List UInt32)
         simp only [segment, List.drop_zero, Nat.sub_zero]
         rw [← hpure.1]; exact List.take_length (l := output)
       have hseq_in : segment input 0 input.length = input := by
-        simp only [segment, List.drop_zero, Nat.sub_zero]
-        exact List.take_length (l := input)
+        simp only [segment, List.drop_zero, Nat.sub_zero]; exact List.take_length (l := input)
       exact ⟨rfl, output, hpure.1,
         hseq_out ▸ hpure.2.2.2.1,
         hseq_in ▸ hseq_out ▸ hpure.2.2.2.2,
@@ -769,8 +768,7 @@ theorem quicksort_partiallyMeets (arr : UInt32) (input : List UInt32)
       simp only [segment, List.drop_zero, Nat.sub_zero]
       rw [← hpure.1]; exact List.take_length (l := output)
     have hseq_in : segment input 0 input.length = input := by
-      simp only [segment, List.drop_zero, Nat.sub_zero]
-      exact List.take_length (l := input)
+      simp only [segment, List.drop_zero, Nat.sub_zero]; exact List.take_length (l := input)
     exact ⟨rfl, output, hpure.1,
       hseq_out ▸ hpure.2.2.2.1,
       hseq_in ▸ hseq_out ▸ hpure.2.2.2.2,

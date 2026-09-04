@@ -112,8 +112,7 @@ private theorem entryStackHeap_below_cursor :
     HeapBelow entryStackHeap allocatorCursor.toNat := by
   have h := HeapBelow.insertFreshBytes
     (bytes := entryStackBytes) empty_below_entryStack (by
-      rw [entryStackBytes_length]
-      decide)
+      rw [entryStackBytes_length]; decide)
   exact h.mono (by decide)
 
 theorem entryHeap_below_heapBase : HeapBelow entryHeap heapBase.toNat := by
@@ -130,8 +129,7 @@ private theorem entryCursorBytes_zero :
 private theorem entryCursorBytes_u32 :
   entryCursorBytes =
       [u32Byte 0 0, u32Byte 0 1, u32Byte 0 2, u32Byte 0 3] := by
-  rw [entryCursorBytes_zero]
-  decide
+  rw [entryCursorBytes_zero]; decide
 
 private theorem entryHost_eq (input : List UInt32) :
     Universal.State.ofInput (serialize input) =
@@ -193,8 +191,7 @@ private theorem Streams_public [WasmSmallStepGS hlc Universal.State]
   · iapply stateInterp_host_agree store 0 observations 0
     iframe Hstate Hhost
   ipureintro
-  rw [hhost]
-  exact ⟨rfl, rfl⟩
+  rw [hhost]; exact ⟨rfl, rfl⟩
 
 /-- Construct exactly the resources consumed by `Func3Spec` from adequacy's
 physical initial state.  The allocator metadata name and the Universal random
@@ -227,8 +224,7 @@ theorem initialResources [WasmSmallStepGS hlc Universal.State]
     insertFreshBytes_bigSep_pointsToBytes
       (∅ : WasmHeapMap (Option UInt8)) entryStackLow entryStackBytes
       empty_below_entryStack (by
-        rw [entryStackBytes_length]
-        decide) $$ HstackHeap
+        rw [entryStackBytes_length]; decide) $$ HstackHeap
   ihave Hcursor : pointsTo_u32 0 allocatorCursor 0 $$ [HcursorBytes]
   · iapply (pointsTo_u32_as_bytes 0 allocatorCursor 0).mpr
     irw_exact [← entryCursorBytes_u32] with HcursorBytes
@@ -258,8 +254,7 @@ theorem initialResources [WasmSmallStepGS hlc Universal.State]
   · unfold StackRegion Project.Mergesort.Representations.ByteSlice
     isplitr
     · ipureintro
-      rw [entryStackBytes_length]
-      decide
+      rw [entryStackBytes_length]; decide
     · iexact Hstack
   isplitl_exact Hbump
   · iexact Hstreams

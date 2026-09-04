@@ -74,8 +74,7 @@ private theorem and255_toUInt8 (w : UInt32) : (w &&& 255).toUInt8 = w.toUInt8 :=
   apply UInt8.toNat_inj.mp
   simp only [UInt32.toNat_toUInt8, UInt32.toNat_and]
   have h255 : UInt32.toNat 255 = 2 ^ 8 - 1 := by decide
-  rw [h255, Nat.and_two_pow_sub_one_eq_mod]
-  exact Nat.mod_mod_of_dvd _ (dvd_refl _)
+  rw [h255, Nat.and_two_pow_sub_one_eq_mod]; exact Nat.mod_mod_of_dvd _ (dvd_refl _)
 
 @[simp] theorem Mem.read32_write32_same (m : Mem) (a v : UInt32) :
     (m.write32 a v).read32 a = v := by

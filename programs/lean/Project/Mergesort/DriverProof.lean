@@ -285,8 +285,7 @@ theorem twp_func3_append_without_reserve
       (by simp [hcurrentWord])
       (by simpa [hcurrentWord])
       (by
-        rw [hcurrentWord, ← holdChunkLength]
-        exact holdChunkNowrap)
+        rw [hcurrentWord, ← holdChunkLength]; exact holdChunkNowrap)
       (by simpa [hcurrentWord] using hcurrentNowrap) $$
       HcurrentBytes HoldChunkBytes
   iintro HcurrentBytes HoldChunkBytes
@@ -303,8 +302,7 @@ theorem twp_func3_append_without_reserve
   · unfold Project.Mergesort.Representations.ByteSlice
     iframe
     ipureintro
-    rw [holdChunkLength] at holdChunkNowrap
-    exact holdChunkNowrap
+    rw [holdChunkLength] at holdChunkNowrap; exact holdChunkNowrap
   wasm_twp_pures [twp_exitControl] using [List.take_zero, List.drop_zero, List.nil_append]
   wasm_twp_pures [twp_localGet twp_localGet twp_localGet twp_add]
   have hlengthWord :
@@ -1564,8 +1562,7 @@ theorem twp_func3_allocate_values
   have hlayoutMatches :
       layout.Matches (UInt32.ofNat completed.length) 4 := by
     unfold AllocLayout.Matches layout
-    simp only [hlengthWord]
-    decide
+    simp only [hlengthWord]; decide
   have hgeoOriginal : GeometricVecFacts (serialize original).length
       (serialize original).length 0 capacity dataPtr frontier history := by
     simpa only [hcompleted] using hgeo
@@ -1727,12 +1724,10 @@ theorem twp_func3_copy_decoded_word
     Hdestination
   icases HdestinationFacts with ⟨Hdestination, %hdestinationFacts⟩
   have hsourceAddress : sourceAddress.toNat = source.toNat + 4 * copied := by
-    dsimp only [sourceAddress]
-    exact wordOffset_toNat source copied (by omega)
+    dsimp only [sourceAddress]; exact wordOffset_toNat source copied (by omega)
   have hdestinationAddress :
       destinationAddress.toNat = destination.toNat + 4 * copied := by
-    dsimp only [destinationAddress]
-    exact wordOffset_toNat destination copied (by
+    dsimp only [destinationAddress]; exact wordOffset_toNat destination copied (by
       rw [hcurrentLength] at hdestinationFacts; omega)
   have hsourceRoom : sourceAddress.toNat + 4 ≤ UInt32.size := by
     omega
@@ -2041,8 +2036,7 @@ theorem twp_func3_decode_tail_loop
         simpa only [next] using hcopiedFinal
       have hoverwriteFinal :
           overwritePrefix original initial (state.copied + 1) = original := by
-        rw [hcopiedFinal']
-        exact overwritePrefix_all original initial hlength
+        rw [hcopiedFinal']; exact overwritePrefix_all original initial hlength
       isimp only [Finish] at Hfinish
       ihave Hfinish' := Hfinish $$ Hsource
       isimp only [hoverwriteFinal] at Hdestination
@@ -2085,8 +2079,7 @@ private def func3DecodeBulkLocals
 
 private theorem func3_decode_byte_offset (index : Nat) :
     UInt32.ofNat (4 * index) = 4 * UInt32.ofNat index := by
-  rw [UInt32.ofNat_mul]
-  rfl
+  rw [UInt32.ofNat_mul]; rfl
 
 private theorem func3_decode_address_increment
     (base : UInt32) (index increment : Nat) :
@@ -2123,8 +2116,7 @@ private theorem func3_decode_byte_offset_step (index : Nat) :
 
 private theorem func3_decode_count_step (index : Nat) :
     UInt32.ofNat index + 4 = UInt32.ofNat (index + 4) := by
-  rw [UInt32.ofNat_add]
-  rfl
+  rw [UInt32.ofNat_add]; rfl
 
 /-- The generated unrolled loop copies exactly the largest multiple-of-four
 prefix.  Its back edge advances by four words, and its terminating comparison
@@ -2330,8 +2322,7 @@ theorem twp_func3_decode_bulk_loop
         omega
       have hcounterNe :
           ¬UInt32.ofNat bulk = UInt32.ofNat state.copied + 4 := by
-        rw [func3_decode_count_step]
-        exact fun heq => hne heq.symm
+        rw [func3_decode_count_step]; exact fun heq => hne heq.symm
       iapply twp_ne (result := 1) (by simp [hcounterNe])
       iapply twp_brIf (condition := 1) (depth := 0) (arity := arity)
         (code := []) (targetCode := func3DecodeBulkLoopBody)
@@ -2387,8 +2378,7 @@ private theorem func3_decode_sub_four (length : Nat)
   calc
     UInt32.ofNat (4 * length) + 4294967292 =
         (UInt32.ofNat (4 * length - 4) + 4) + (0 - 4) := by
-      rw [← hsplit, UInt32.ofNat_add, hmax]
-      rfl
+      rw [← hsplit, UInt32.ofNat_add, hmax]; rfl
     _ = UInt32.ofNat (4 * length - 4) := by
       calc
         (UInt32.ofNat (4 * length - 4) + 4) + (0 - 4) =
@@ -2616,8 +2606,7 @@ theorem twp_func3_decode_blocks
   let bulk := 4 * (original.length / 4)
   let tail := original.length % 4
   have hpartition : bulk + tail = original.length := by
-    dsimp only [bulk, tail]
-    exact bulk4_add_tail original.length
+    dsimp only [bulk, tail]; exact bulk4_add_tail original.length
   have hlengthBound : original.length < UInt32.size := by
     norm_num [UInt32.size] at hbyteBound ⊢; omega
   have hcountBound : original.length < 2147483648 := by omega
@@ -2634,8 +2623,7 @@ theorem twp_func3_decode_blocks
   wasm_twp_pures [twp_localGet twp_const]
   by_cases hsmall : original.length < 4
   · have htail : tail = original.length := by
-      dsimp only [tail]
-      exact Nat.mod_eq_of_lt hsmall
+      dsimp only [tail]; exact Nat.mod_eq_of_lt hsmall
     dsimp only [tail] at htail
     have hlt : UInt32.ofNat (4 * original.length - 4) < (12 : UInt32) := by
       rw [UInt32.lt_iff_toNat_lt, hbyteWord]
@@ -2714,8 +2702,7 @@ theorem twp_func3_decode_blocks
       have hbulkAll : bulk = original.length := by omega
       have hoverwrite :
           overwritePrefix original initial bulk = original := by
-        rw [hbulkAll]
-        exact overwritePrefix_all original initial hlength
+        rw [hbulkAll]; exact overwritePrefix_all original initial hlength
       isimp only [hoverwrite] at Hdestination
       rw [hbulkAll]
       ihave Hfinal := Hcont $$
@@ -2960,8 +2947,7 @@ theorem twp_func3_allocate_scratch
   have hlayoutMatches :
       layout.Matches (UInt32.ofNat (4 * original.length)) 4 := by
     unfold AllocLayout.Matches layout
-    simp only [hsizeWord]
-    decide
+    simp only [hsizeWord]; decide
   iintro ⟨Hruntime, Hsp, Hreserve, Hframe, Hvalues, Hbump, Hstreams, Hcont⟩
   simp only [List.cons_append, List.nil_append]
   have Hmarker := Project.Mergesort.ContractProofs.func4_correct
@@ -3563,8 +3549,7 @@ theorem twp_func3_output
       (targetCode := afterOutput) (targetControl := controls)
       (targetValues := []) (by decide) (by rfl)
     have hserialize : serialize sorted = [] := by
-      rw [List.length_eq_zero_iff.mp hempty]
-      rfl
+      rw [List.length_eq_zero_iff.mp hempty]; rfl
     ihave Hstreams' : Streams [] (serialize sorted) false $$ [Hstreams]
     · isimp only [hserialize]
       iexact Hstreams
@@ -4279,8 +4264,7 @@ theorem twp_func3_finish_nonempty
     · rcases hshort with ⟨_, _, _, hcapacity, _, _, _⟩
       omega
     · rcases hlarge with ⟨exponent, _, _, hcapacity, _, _, _, _, _⟩
-      rw [hcapacity]
-      exact Nat.pow_pos (by omega)
+      rw [hcapacity]; exact Nat.pow_pos (by omega)
   have hsortedByteBound : 4 * sorted.length < UInt32.size := by
     simpa only [hsortedLength] using hbyteBound
   have hscratchId' : scratchId = valuesHistory.nextId := by
@@ -4851,8 +4835,7 @@ theorem twp_func3_first_read_nonempty
   let remaining := input.drop count
   let chunkTail := (List.replicate 256 (0 : UInt8)).drop count
   have hinputLength : input.length = 4 * original.length := by
-    dsimp only [input]
-    exact serialize_length original
+    dsimp only [input]; exact serialize_length original
   have hinputPositive : 0 < input.length := by
     have horiginalPositive : 0 < original.length := by
       by_contra hzero
@@ -4885,8 +4868,7 @@ theorem twp_func3_first_read_nonempty
   have hcurrentPositive : 0 < current.length := by
     simpa only [hcurrentLength] using hcountPositive
   have hcurrentBound : current.length ≤ 256 := by
-    rw [hcurrentLength]
-    exact min_le_left 256 input.length
+    rw [hcurrentLength]; exact min_le_left 256 input.length
   have hcurrentMod : current.length % 4 = 0 := by
     simpa only [hcurrentLength] using hsplit.2.1
   have hserializeSplit :
@@ -5343,8 +5325,7 @@ private theorem geometricVec_frontier_ge_heapBase
     rw [hfrontier]
     unfold vectorBlockBase
     have hpow : 256 ≤ 2 ^ exponent := by
-      rw [show 256 = 2 ^ 8 by norm_num]
-      exact Nat.pow_le_pow_right (by decide) hexponent
+      rw [show 256 = 2 ^ 8 by norm_num]; exact Nat.pow_le_pow_right (by decide) hexponent
     omega
 
 /-- Compose the complete valid nonempty allocation/decode/sort/output path.

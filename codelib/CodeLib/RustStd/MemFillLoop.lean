@@ -128,8 +128,7 @@ theorem fillWords_storeIteration_wp
       (i <<< (3 % 32 : UInt32)) + base = address := by
     rw [MemRegion.shl3_eq_mul8]
     dsimp only [address]
-    rw [hi]
-    exact UInt32.add_comm _ _
+    rw [hi]; exact UInt32.add_comm _ _
   have haddrNat : address.toNat = base.toNat + 8 * i.toNat := by
     exact Mem.words64_slotAddr_toNat base i.toNat (by omega)
   obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ :=

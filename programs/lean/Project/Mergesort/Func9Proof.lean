@@ -141,8 +141,7 @@ private theorem twp_func9_zero_and_return
     · ipureintro
       simpa [List.length_replicate] using
         (show base.toNat + layout.size < UInt32.size by
-          rw [← hblockFacts.1]
-          exact hnowrap)
+          rw [← hblockFacts.1]; exact hnowrap)
     · rw [← hblockFacts.1]
       irw_exact [← show (0 : UInt32).toUInt8 = (0 : UInt8) by decide] with Hbytes
   ihave Hblock : LiveBlock heapId allocationId base layout
@@ -549,8 +548,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
       unfold classifyBump
       simp only [hlayout.2.2, Nat.reduceSubDiff]
       rw [dif_pos hsumBound]
-      rw [if_pos ⟨hfinishWordBound, hfinishSigned⟩]
-      rfl
+      rw [if_pos ⟨hfinishWordBound, hfinishSigned⟩]; rfl
     isimp only [ZeroAllocContinuation, hclassify] at Hcont
     wasm_twp_pures [twp_block]
     simp [ValueType.zero]
@@ -570,8 +568,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
         hfinishExact, hmeta⟩
     have hbaseRaw :
         (UInt32.ofNat frontier + 3) &&& (-(4 : UInt32)) = base := by
-      rw [hsumWord]
-      rfl
+      rw [hsumWord]; rfl
     rw [hbaseRaw]
     ihave HcursorAlloc : pointsTo_u32 0 allocatorCursor storedCursor $$ [Hcursor]
     · irw_exact [allocatorCursor] with Hcursor
@@ -610,8 +607,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
       simp only [List.take_zero, List.nil_append]
       have hpagesWord : pages.toUInt32.toNat ≤ pages := by
         unfold Nat.toUInt32 UInt32.toNat UInt32.ofNat
-        simp only [BitVec.toNat_ofNat]
-        exact Nat.mod_le _ _
+        simp only [BitVec.toNat_ofNat]; exact Nat.mod_le _ _
       have hphysical : finish.toNat ≤ pages * 65536 :=
         _root_.le_trans hrequiredCovers (Nat.mul_le_mul_right 65536
           (_root_.le_trans
@@ -715,8 +711,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
                     exact UInt32.toNat_ofNat_of_lt' hpagesLow
                   have hpagesLtRequired :
                       pages < (allocatorRequiredPages finish).toNat := by
-                    rw [← hpagesWord]
-                    exact UInt32.lt_iff_toNat_lt.mp (UInt32.not_le.mp hfits)
+                    rw [← hpagesWord]; exact UInt32.lt_iff_toNat_lt.mp (UInt32.not_le.mp hfits)
                   have hdeltaNat : delta.toNat =
                       (allocatorRequiredPages finish).toNat - pages := by
                     dsimp only [delta]

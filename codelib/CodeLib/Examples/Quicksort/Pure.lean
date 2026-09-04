@@ -73,8 +73,7 @@ private theorem take_segment_drop {values : List UInt32} {start stop : Nat}
     (hstart : start ≤ stop) :
     values.take start ++ segment values start stop ++ values.drop stop = values := by
   have hstop : start + (stop - start) = stop := Nat.add_sub_of_le hstart
-  rw [segment, ← List.take_add, hstop]
-  exact List.take_append_drop stop values
+  rw [segment, ← List.take_add, hstop]; exact List.take_append_drop stop values
 
 private theorem segment_append {values : List UInt32} {start mid stop : Nat}
     (hstart : start ≤ mid) (hmid : mid ≤ stop) :
@@ -109,8 +108,7 @@ private theorem mem_segment {output : List UInt32} {lo hi : Nat} {x : UInt32}
   refine ⟨lo + k, Nat.le_add_right lo k, by omega, ?_⟩
   rw [getElem!_pos output (lo + k) (by omega)]
   rw [List.getElem_take] at hkval
-  rw [List.getElem_drop' (by omega)]
-  exact hkval
+  rw [List.getElem_drop' (by omega)]; exact hkval
 
 private theorem uint32_le_of_lt {a b : UInt32} (h : a < b) : a ≤ b := by
   change a.toNat < b.toNat at h; change a.toNat ≤ b.toNat; exact Nat.le_of_lt h
@@ -390,8 +388,7 @@ theorem partitionRange_after_sorts
   -- take lo chain
   have htake_r_lo : out_r.take lo = out_l.take lo := by
     have := congr_arg (·.take lo) htake_r
-    simp only [List.take_take, Nat.min_eq_left (by omega : lo ≤ pivotIdx + 1)] at this
-    exact this
+    simp only [List.take_take, Nat.min_eq_left (by omega : lo ≤ pivotIdx + 1)] at this; exact this
   -- drop hi chain
   have hdrop_l_hi : out_l.drop hi = output_p.drop hi := by
     have step : ∀ l : List UInt32, l.drop hi = (l.drop pivotIdx).drop (hi - pivotIdx) := fun l => by

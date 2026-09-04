@@ -687,8 +687,7 @@ theorem stateInterp_pointsToBytes_agree [WasmSmallStepGS hlc α]
       | succ j =>
           simp only [List.getElem?_cons_succ] at hget
           obtain ⟨hmem, hbound⟩ := hrest j b' hget
-          rw [← byte_offset_succ addr j] at hmem hbound
-          exact ⟨hmem, hbound⟩
+          rw [← byte_offset_succ addr j] at hmem hbound; exact ⟨hmem, hbound⟩
 
 /-- Derive physical byte facts for an owned range in a lifting proof. -/
 syntax "wasm_points_to_bytes_agree " ident ", " term ", " term ", " term
@@ -798,8 +797,7 @@ theorem genHeap_alloc_freshBytes [WasmHeapGS α]
         apply HeapBelow.insert_fresh
           (hbelow.mono (by rw [hsucc]; omega))
         intro _
-        rw [hsucc]
-        exact Nat.lt_succ_self _
+        rw [hsucc]; exact Nat.lt_succ_self _
       have hnowrap' :
           (addr + 1).toNat + rest.length < UInt32.size := by
         rw [hsucc]
@@ -844,8 +842,7 @@ theorem HeapBelow.insertFreshBytes
         apply HeapBelow.insert_fresh
           (hbelow.mono (by rw [hsucc]; omega))
         intro _
-        rw [hsucc]
-        exact Nat.lt_succ_self _
+        rw [hsucc]; exact Nat.lt_succ_self _
       have hnowrap' :
           (addr + 1).toNat + rest.length < UInt32.size := by
         rw [hsucc]
@@ -891,8 +888,7 @@ theorem insertFreshBytes_bigSep_pointsToBytes [WasmHeapGS α]
         apply HeapBelow.insert_fresh
           (hbelow.mono (by rw [hsucc]; omega))
         intro _
-        rw [hsucc]
-        exact Nat.lt_succ_self _
+        rw [hsucc]; exact Nat.lt_succ_self _
       have hnowrap' :
           (addr + 1).toNat + rest.length < UInt32.size := by
         rw [hsucc]
@@ -1005,8 +1001,7 @@ theorem stateInterp_alloc_freshRange [WasmSmallStepGS hlc α]
     (storeResolve store) store.wasm.mem base size
     (storeResolve_zero store) Hfacts.1 Hfacts.2.1 hbound hnowrap
   imod genHeap_alloc_freshBytes σ base bytes hbelowBase (by
-      rw [hbytesLength]
-      exact hnowrap) $$ Hheap with
+      rw [hbytesLength]; exact hnowrap) $$ Hheap with
     ⟨Hheap, Hbytes, %HbelowFinal⟩
   imod heapFrontierOwn_update frontier (base.toNat + size) $$
       Hfrontier with
@@ -1169,8 +1164,7 @@ private theorem fillSigma_agrees
             else resolve id) := by
         funext id; by_cases h : id = 0 <;> simp [h]
       rw [hfun] at ih'
-      simp only [fillSigma]
-      exact ih'
+      simp only [fillSigma]; exact ih'
 
 private theorem fillSigma_inBounds
     (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Option Mem) (mem : Mem)
@@ -1210,8 +1204,7 @@ private theorem fillSigma_inBounds
             else resolve id) := by
         funext id; by_cases h : id = 0 <;> simp [h]
       rw [hfun] at ih'
-      simp only [fillSigma]
-      exact ih'
+      simp only [fillSigma]; exact ih'
 
 /-- Ghost update for a bulk memory fill: given ownership of all bytes in the
 fill range, updates the stateInterp and returns ownership of the same range
@@ -1255,8 +1248,7 @@ theorem stateInterp_fill_bytes [WasmSmallStepGS hlc α]
       rw [storeResolve_update_mem0] at h_ag
       have h_bn := fillSigma_inBounds σ (storeResolve store) store.wasm.mem addr oldBytes val
         (storeResolve_zero store) Hfacts.2.1 hbound hnowrap
-      rw [storeResolve_update_mem0] at h_bn
-      exact ⟨h_ag, h_bn, Hfacts.2.2⟩
+      rw [storeResolve_update_mem0] at h_bn; exact ⟨h_ag, h_bn, Hfacts.2.2⟩
     · simp only [Mem.fill_pages]
       iexact Hexc'
   · iexact Hbytes
@@ -1435,8 +1427,7 @@ private theorem copySigma_agrees_of_read_eq
       rw [copySigma_get?_in σ dst oldBytes srcBytes k hlen hk (hlen ▸ hnowrap)] at hlookup
       have hv : srcBytes[k]'hk = v := Option.some.inj (Option.some.inj hlookup)
       refine ⟨newMem, by simp [hmem], ?_⟩
-      rw [h_addr_eq]
-      exact (h_in k (srcBytes[k]'hk) hget).trans hv
+      rw [h_addr_eq]; exact (h_in k (srcBytes[k]'hk) hget).trans hv
     · have hout : key.addr.toNat < dst.toNat ∨
           dst.toNat + oldBytes.length ≤ key.addr.toNat := by omega
       rw [copySigma_get?_out σ dst oldBytes srcBytes key hlen hnowrap (Or.inr hout)] at hlookup
@@ -1549,8 +1540,7 @@ theorem stateInterp_copy_bytes [WasmSmallStepGS hlc α]
                 ⟨by omega, by rw [hlen] at hk; omega⟩
             rw [h_dst_k, Nat.add_sub_cancel_left] at h_copy
             have h_src_read := (hagree k b hget).1
-            simp only [Mem.read8, h_src_k] at h_src_read
-            exact h_copy.trans h_src_read)
+            simp only [Mem.read8, h_src_k] at h_src_read; exact h_copy.trans h_src_read)
           (fun addr hout =>
             Mem.copy_read8_out store.wasm.mem dst.toNat src.toNat oldDstBytes.length addr
               (by omega))
@@ -1561,8 +1551,7 @@ theorem stateInterp_copy_bytes [WasmSmallStepGS hlc α]
           dst oldDstBytes srcBytes hlen (storeResolve_zero store) Hfacts.2.1
           hdst_bound hdst_nowrap
           (Mem.copy_pages store.wasm.mem dst.toNat src.toNat oldDstBytes.length)
-      rw [storeResolve_update_mem0] at h_bn
-      exact ⟨h_ag, h_bn, Hfacts.2.2⟩
+      rw [storeResolve_update_mem0] at h_bn; exact ⟨h_ag, h_bn, Hfacts.2.2⟩
     · simp only [Mem.copy_pages]
       iexact Hexc'
   · isplitl_exact Hsrc
@@ -1661,8 +1650,7 @@ theorem stateInterp_init_bytes [WasmSmallStepGS hlc α]
           dst oldDstBytes newDstBytes hlen_eq (storeResolve_zero store) Hfacts.2.1
           (hlen ▸ hdst_bound) (hlen ▸ hdst_nowrap)
           (Mem.writeBytesFrom_pages store.wasm.mem dst.toNat segmentBytes srcOff len)
-      rw [storeResolve_update_mem0] at h_bn
-      exact ⟨h_ag, h_bn, Hfacts.2.2⟩
+      rw [storeResolve_update_mem0] at h_bn; exact ⟨h_ag, h_bn, Hfacts.2.2⟩
     · simp only [Mem.writeBytesFrom_pages]
       iexact Hexc'
   · isplitl_exact Hseg
@@ -2195,8 +2183,7 @@ theorem stateInterp_pointsTo_u32_facts [WasmSmallStepGS hlc α]
   constructor
   · simp only [Mem.read8] at hr0 hr1 hr2 hr3
     simp only [Mem.read32]
-    rw [hr0, ← h1, hr1, ← h2, hr2, ← h3, hr3]
-    exact u32Byte_reassemble value
+    rw [hr0, ← h1, hr1, ← h2, hr2, ← h3, hr3]; exact u32Byte_reassemble value
   · rw [h3] at hb3
     omega
 
@@ -2353,8 +2340,7 @@ theorem stateInterp_store8 [WasmSmallStepGS hlc α]
       rw [storeResolve_update_mem0] at h_ag
       have h_bn := store_inBounds σ (storeResolve store) 0 store.wasm.mem address newValue
           (storeResolve_zero store) Hfacts.2.1 hbound
-      rw [storeResolve_update_mem0] at h_bn
-      exact ⟨h_ag, h_bn, Hfacts.2.2⟩
+      rw [storeResolve_update_mem0] at h_bn; exact ⟨h_ag, h_bn, Hfacts.2.2⟩
     · simp only [Mem.write8]
       iexact Hexc'
   · iexact Hpointsto
@@ -2459,8 +2445,7 @@ theorem stateInterp_pointsTo_u16_facts [WasmSmallStepGS hlc α]
   refine ⟨?_, by rw [h1] at hb1; omega⟩
   simp only [Mem.read8] at hr0 hr1
   simp only [Mem.read16]
-  rw [hr0, ← h1, hr1]
-  exact u16Byte_reassemble value
+  rw [hr0, ← h1, hr1]; exact u16Byte_reassemble value
 
 private theorem heapBelow_store16
     {σ : WasmHeapMap (Option UInt8)} {frontier : Nat}
@@ -2599,8 +2584,7 @@ theorem stateInterp_store16 [WasmSmallStepGS hlc α]
       rw [storeResolve_update_mem0] at h_ag
       have h_bn := store16_inBounds σ (storeResolve store) 0 store.wasm.mem address newValue
           (storeResolve_zero store) h1 Hfacts.2.1 hbound
-      rw [storeResolve_update_mem0] at h_bn
-      exact ⟨h_ag, h_bn, Hfacts.2.2⟩
+      rw [storeResolve_update_mem0] at h_bn; exact ⟨h_ag, h_bn, Hfacts.2.2⟩
     · simp only [Mem.write16]
       iexact Hexc'
   · iapply_frame (pointsTo_u16_eq 0 address newValue).mpr
@@ -2666,8 +2650,7 @@ theorem stateInterp_store32 [WasmSmallStepGS hlc α]
       rw [storeResolve_update_mem0] at h_ag
       have h_bn := store32_inBounds σ (storeResolve store) 0 store.wasm.mem address newValue
           (storeResolve_zero store) h1 h2 h3 Hfacts.2.1 hbound
-      rw [storeResolve_update_mem0] at h_bn
-      exact ⟨h_ag, h_bn, Hfacts.2.2⟩
+      rw [storeResolve_update_mem0] at h_bn; exact ⟨h_ag, h_bn, Hfacts.2.2⟩
     · simp only [Mem.write32]
       iexact Hexc'
   · iapply_frame (pointsTo_u32_eq 0 address newValue).mpr
@@ -2758,8 +2741,7 @@ theorem stateInterp_store64 [WasmSmallStepGS hlc α]
       rw [storeResolve_update_mem0] at h_ag
       have h_bn := store64_inBounds σ (storeResolve store) 0 store.wasm.mem address newValue
           (storeResolve_zero store) h1 h2 h3 h4 h5 h6 h7 Hfacts.2.1 hbound
-      rw [storeResolve_update_mem0] at h_bn
-      exact ⟨h_ag, h_bn, Hfacts.2.2⟩
+      rw [storeResolve_update_mem0] at h_bn; exact ⟨h_ag, h_bn, Hfacts.2.2⟩
     · simp only [Mem.write64]
       iexact Hexc'
   · iapply_frame (pointsTo_u64_eq 0 address newValue).mpr
@@ -2821,8 +2803,7 @@ theorem stateInterp_memoryGrow [WasmSmallStepGS hlc α]
       exact (congrArg (fun result : Mem => result.pages) hinj.1).symm
     · contradiction
   have hpagesMono : store.wasm.mem.pages ≤ memory.pages := by
-    rw [hmemoryPages]
-    exact Nat.le_add_right _ _
+    rw [hmemoryPages]; exact Nat.le_add_right _ _
   iintro Hstate
   iopen_state Hstate
   iunfold machineAuxInterp at Hexc
@@ -2845,8 +2826,7 @@ theorem stateInterp_memoryGrow [WasmSmallStepGS hlc α]
     rw [storeResolve_update_mem0] at h_ag
     have h_bn := grow_inBounds σ (storeResolve store) 0 store.wasm.mem memory delta
         cap previousPages hgrow (storeResolve_zero store) Hfacts.2.1
-    rw [storeResolve_update_mem0] at h_bn
-    exact ⟨h_ag, h_bn, Hfacts.2.2⟩
+    rw [storeResolve_update_mem0] at h_bn; exact ⟨h_ag, h_bn, Hfacts.2.2⟩
   · unfold machineAuxInterp
     iframe Hpages Hdomain Hexceptions
 

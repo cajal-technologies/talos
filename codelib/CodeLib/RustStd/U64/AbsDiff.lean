@@ -263,8 +263,7 @@ theorem absDiffBodyHeap_agrees
       (by decide) (by decide) (by decide) (by decide)
       (heapAgreesWithMem_empty _)
   unfold absDiffHeap
-  rw [absDiffBody_resolve_eq runtimeModule initial a b oldScratch] at h
-  exact h
+  rw [absDiffBody_resolve_eq runtimeModule initial a b oldScratch] at h; exact h
 
 theorem absDiffBodyHeap_inBounds
     (runtimeModule : Module) (initial : Store Unit)
@@ -280,8 +279,7 @@ theorem absDiffBodyHeap_inBounds
       (heapAddressesInBounds_empty _)
       (by simpa using hpages)
   unfold absDiffHeap
-  rw [absDiffBody_resolve_eq runtimeModule initial a b oldScratch] at h
-  exact h
+  rw [absDiffBody_resolve_eq runtimeModule initial a b oldScratch] at h; exact h
 
 theorem absDiffBodyGlobals_agree
     (runtimeModule : Module) (initial : Store Unit)

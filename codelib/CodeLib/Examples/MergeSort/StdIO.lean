@@ -660,8 +660,7 @@ theorem run_none_of_too_long (fuel : Nat) (input : List UInt8)
   change runAfterRead fuel (UInt32.ofNat (input.take bufferBytes).length)
     (afterBoundedRead input) = none
   unfold runAfterRead
-  rw [hprobeNone]
-  rfl
+  rw [hprobeNone]; rfl
 
 /-- A clean, host-level execution predicate.  Fuel is hidden existentially
 and neither linear memory nor Wasm machine state appears in client specs. -/
@@ -737,8 +736,7 @@ theorem sortHeap_agrees (input : List UInt32) (hfit : Fits input) :
   have hempty : heapAgreesWithMem (∅ : WasmHeapMap (Option UInt8))
       (fun id => if id = 0 then some initialMem else none) := by
     intro key v hget
-    rw [Iris.Std.get?_empty] at hget
-    contradiction
+    rw [Iris.Std.get?_empty] at hget; contradiction
   have hsource : heapAgreesWithMem sourceHeap
       (fun id => if id = 0 then some (afterRead input).mem else none) := by
     simp only [afterRead_mem_eq input hfit]
@@ -848,8 +846,7 @@ theorem sortHeap_pointsTo [WasmHeapGS Unit]
     intro address byte hget
     have hemptyGet : get? (∅ : WasmHeapMap (Option UInt8)) address = none :=
       get?_empty address
-    rw [hemptyGet] at hget
-    contradiction
+    rw [hemptyGet] at hget; contradiction
   have hsourceFit : source.toNat + 4 * input.length < UInt32.size := by
     rw [fits_iff] at hfit
     simp only [source, UInt32.reduceToNat, Nat.zero_add, UInt32.size]
@@ -1011,8 +1008,7 @@ theorem twp_sort [WasmSmallStepGS hlc Unit]
       (by simp [source]) $$ [$Hstate $Hsource] with
       ⟨_Hstate, _Hsource, %hcapacity⟩
     ipureexact ⟨output, hsorted, by
-      rw [hsorted.2.length_eq]
-      exact hread', by
+      rw [hsorted.2.length_eq]; exact hread', by
       rw [hsorted.2.length_eq]
       simpa only [source, UInt32.reduceToNat, Nat.zero_add] using hcapacity⟩
 
@@ -1180,8 +1176,7 @@ theorem run_correct (fuel : Nat) (input : List UInt32) (bytes : List UInt8)
       rw [hwrite] at hrun
       simp only [] at hrun
       have houtput : afterSort.host.output = [] := by
-        rw [hhost]
-        rfl
+        rw [hhost]; rfl
       have hbytes : bytes = afterSort.mem.readBytes source.toNat
           (UInt32.ofNat (serialize input).length).toNat := by
         simpa [writtenStore, houtput] using hrun.symm
@@ -1250,8 +1245,7 @@ theorem complete : Complete := by
   have hwrite := execute_write_bytes afterSort
     (UInt32.ofNat (serialize input).length) hwriteBound
   have houtput : afterSort.host.output = [] := by
-    rw [hhost]
-    rfl
+    rw [hhost]; rfl
   have hrun : run fuel (serialize input) =
       some (afterSort.mem.readBytes source.toNat (4 * input.length)) := by
     rw [run_fits fuel input hfit]
