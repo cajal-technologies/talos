@@ -11,26 +11,6 @@ namespace Wasm.Examples.Quicksort
 
 abbrev swapElems : List UInt32 → Nat → Nat → List UInt32 := List.swapElems
 
-private theorem take_segment_drop {values : List UInt32} {start stop : Nat}
-    (hstart : start ≤ stop) :
-    values.take start ++ segment values start stop ++ values.drop stop = values := by
-  have hstop : start + (stop - start) = stop := Nat.add_sub_of_le hstart
-  rw [segment, ← List.take_add, hstop]; exact List.take_append_drop stop values
-
-private theorem segment_append {values : List UInt32} {start mid stop : Nat}
-    (hstart : start ≤ mid) (hmid : mid ≤ stop) :
-    segment values start mid ++ segment values mid stop = segment values start stop := by
-  simp only [segment]
-  have hdrop : values.drop mid = (values.drop start).drop (mid - start) := by
-    rw [List.drop_drop]; congr 1; omega
-  rw [hdrop, ← List.take_add]; congr 1; omega
-
-private theorem sorted_of_length_le_one {values : List UInt32}
-    (h : values.length ≤ 1) : values.Pairwise (· ≤ ·) := by
-  match values, h with
-  | [], _ => exact List.Pairwise.nil
-  | [_], _ => exact List.pairwise_singleton _ _
-
 private theorem segment_cons_pivot {values : List UInt32} {p hi : Nat}
     (hphi : p < hi) (hhilen : hi ≤ values.length) :
     segment values p hi = values[p]! :: segment values (p + 1) hi := by
@@ -60,7 +40,7 @@ private theorem compose_sorted (output : List UInt32) (lo hi p : Nat)
     (hright_cond : ∀ x ∈ segment output (p + 1) hi, x > output[p]!) :
     List.Pairwise (· ≤ ·) (segment output lo hi) := by
   rw [show segment output lo hi = segment output lo p ++ output[p]! :: segment output (p + 1) hi
-      from by rw [← segment_cons_pivot hp hhi, segment_append hlo (by omega)]]
+      from by rw [← segment_cons_pivot hp hhi, List.extract_append hlo (by omega)]]
   rw [List.pairwise_append, List.pairwise_cons]
   refine ⟨hleft, ⟨?_, hright⟩, ?_⟩
   · intro y hy; exact UInt32.le_of_lt (hright_cond y hy)
@@ -134,10 +114,10 @@ theorem PartitionLoopInvariant.swapStep
     have hswap_perm := List.swapElems_perm current hilen hjlen
     have heq1 : current.take lo ++ segment (List.swapElems current i j) lo hi ++ current.drop hi
         = List.swapElems current i j := by
-      have h := take_segment_drop (values := List.swapElems current i j) hlo_hi
+      have h := List.take_extract_drop (values := List.swapElems current i j) hlo_hi
       rwa [htake, hdrop] at h
     have heq2 : current.take lo ++ segment current lo hi ++ current.drop hi = current :=
-      take_segment_drop hlo_hi
+      List.take_extract_drop hlo_hi
     have hperm_full :
         (current.take lo ++ segment (List.swapElems current i j) lo hi ++ current.drop hi).Perm
         (current.take lo ++ segment current lo hi ++ current.drop hi) := by
@@ -169,7 +149,7 @@ theorem PartitionLoopInvariant.placePivot
   have hhm1len : hi - 1 < current.length := by omega
   have hswaplen := List.swapElems_length current i (hi - 1)
   have hlo_hi : lo ≤ hi := by omega
-  -- permutation field (same take_segment_drop cancellation as swapStep)
+  -- permutation field (same List.take_extract_drop cancellation as swapStep)
   have htake : (List.swapElems current i (hi - 1)).take lo = current.take lo :=
     List.swapElems_take_of_le current (hin := by omega) (hjn := by omega)
   have hdrop : (List.swapElems current i (hi - 1)).drop hi = current.drop hi :=
@@ -178,10 +158,10 @@ theorem PartitionLoopInvariant.placePivot
   have heq1 :
       current.take lo ++ segment (List.swapElems current i (hi - 1)) lo hi ++
         current.drop hi = List.swapElems current i (hi - 1) := by
-    have h := take_segment_drop (values := List.swapElems current i (hi - 1)) hlo_hi
+    have h := List.take_extract_drop (values := List.swapElems current i (hi - 1)) hlo_hi
     rwa [htake, hdrop] at h
   have heq2 : current.take lo ++ segment current lo hi ++ current.drop hi = current :=
-    take_segment_drop hlo_hi
+    List.take_extract_drop hlo_hi
   have hperm_full :
       (current.take lo ++ segment (List.swapElems current i (hi - 1)) lo hi ++ current.drop hi).Perm
       (current.take lo ++ segment current lo hi ++ current.drop hi) := by
@@ -221,7 +201,7 @@ theorem quicksort_base
     (_ : hi ≤ input.length)
     (hbase : hi - lo < 2) :
     Sorted (segment input lo hi) :=
-  sorted_of_length_le_one (by simp [segment, List.length_drop]; omega)
+  List.pairwise_of_length_le_one (by simp [segment, List.length_drop]; omega)
 
 theorem quicksort_compose
     (input output : List UInt32) (lo hi p : Nat)
@@ -315,10 +295,10 @@ theorem partitionRange_after_sorts
   have hperm_op_r : List.Perm (segment output_p lo hi) (segment out_r lo hi) := by
     have lhs_eq : segment output_p lo hi =
         segment output_p lo pivotIdx ++ output_p[pivotIdx]! :: segment output_p (pivotIdx + 1) hi := by
-      rw [← segment_cons_pivot hphi (by omega), segment_append hlo (by omega)]
+      rw [← segment_cons_pivot hphi (by omega), List.extract_append hlo (by omega)]
     have rhs_eq : segment out_r lo hi =
         segment out_r lo pivotIdx ++ out_r[pivotIdx]! :: segment out_r (pivotIdx + 1) hi := by
-      rw [← segment_cons_pivot hphi hhilen_r, segment_append hlo (by omega)]
+      rw [← segment_cons_pivot hphi hhilen_r, List.extract_append hlo (by omega)]
     rw [lhs_eq, rhs_eq, hseg_r_lo_p, hpiv_r, ← hpiv_l, ← hseg_l_p1_hi]
     exact hperm_l.append (List.Perm.cons _ hperm_r)
   -- take lo chain

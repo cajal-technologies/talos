@@ -478,9 +478,8 @@ private theorem twp_quicksortBody_aux
     wasm_twp_pures [twp_iff] using [if_pos (by decide : (1 : UInt32) ≠ 0)]
     wasm_twp_return_from_call Hruntime [List.take_zero, List.nil_append]
     have hpure0 : input.length = input.length ∧ input.take hi = input.take hi ∧
-        input.drop hi = input.drop hi ∧ Sorted (segment input hi hi) ∧
-        List.Perm (segment input hi hi) (segment input hi hi) :=
-      ⟨rfl, rfl, rfl, quicksort_base input hi hi hhilen (by omega), List.Perm.refl _⟩
+        input.drop hi = input.drop hi ∧ Sorted [] := by
+      simp [Sorted]
     iapply Hcont $$ %input Hruntime %hpure0 Harray
   | succ n ih =>
     iintro ⟨Hruntime, Harray, Hcont⟩

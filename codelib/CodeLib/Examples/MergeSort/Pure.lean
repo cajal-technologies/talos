@@ -1,4 +1,5 @@
 import CodeLib.Examples.MergeSort
+import CodeLib.List
 import CodeLib.UInt32
 
 /-!
@@ -490,37 +491,16 @@ theorem getElem?_of_take_eq_append
   simpa [List.getElem?_take, hkright, List.getElem?_append,
     hleftlen, show ¬k < left by omega] using hlookup
 
-theorem segment_append {values : List UInt32} {start mid stop : Nat}
-    (hstart : start ≤ mid) (hmid : mid ≤ stop) :
-    segment values start mid ++ segment values mid stop =
-      segment values start stop := by
-  simp only [segment]
-  have hstartMid : start + (mid - start) = mid :=
-    Nat.add_sub_of_le hstart
-  have hlength : (mid - start) + (stop - mid) = stop - start := by omega
-  have hdrop :
-      values.drop mid = (values.drop start).drop (mid - start) := by
-    rw [List.drop_drop, hstartMid]
-  rw [hdrop, ← List.take_add, hlength]
-
-theorem take_segment_drop {values : List UInt32} {start stop : Nat}
-    (hstart : start ≤ stop) :
-    values.take start ++ segment values start stop ++ values.drop stop =
-      values := by
-  have hstop : start + (stop - start) = stop :=
-    Nat.add_sub_of_le hstart
-  rw [segment, ← List.take_add, hstop]; exact List.take_append_drop stop values
-
 theorem MergeRange.perm {input output : List UInt32} {left mid right : Nat}
     (h : MergeRange input output left mid right) :
     List.Perm input output := by
   rcases h with ⟨hlm, hmr, _, hlength, hprefix, hsuffix, hmerge⟩
-  rw [← take_segment_drop (values := input) (Nat.le_trans hlm hmr),
-    ← take_segment_drop (values := output) (Nat.le_trans hlm hmr)]
+  rw [← List.take_extract_drop (values := input) (Nat.le_trans hlm hmr),
+    ← List.take_extract_drop (values := output) (Nat.le_trans hlm hmr)]
   rw [hprefix, hsuffix]
   apply List.Perm.append_right
   apply List.Perm.append_left
-  rw [← segment_append hlm hmr]; exact perm_of_mergeRel hmerge
+  rw [← List.extract_append hlm hmr]; exact perm_of_mergeRel hmerge
 
 theorem MergeRange.segment_before
     {input output : List UInt32} {left mid right start stop : Nat}
@@ -580,21 +560,10 @@ theorem mergePassInvariant_start
   · intro block _ hblock
     exact hruns block hblock
 
-theorem sorted_of_length_le_one {values : List UInt32}
-    (hlength : values.length ≤ 1) :
-    Sorted values := by
-  unfold Sorted
-  cases values with
-  | nil => simp
-  | cons head tail =>
-    cases tail with
-    | nil => simp
-    | cons next rest => simp at hlength
-
 theorem sortedRuns_one (values : List UInt32) :
     SortedRuns values 1 := by
   intro block _
-  apply sorted_of_length_le_one
+  apply List.pairwise_of_length_le_one
   simp only [segment, List.length_take, List.length_drop]; omega
 
 theorem MergePassInvariant.finished

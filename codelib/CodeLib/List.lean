@@ -4,6 +4,28 @@ import Mathlib.Data.List.Sort
 
 namespace List
 
+theorem extract_append {values : List α} {start mid stop : Nat}
+    (hstart : start ≤ mid) (hmid : mid ≤ stop) :
+    values.extract start mid ++ values.extract mid stop =
+      values.extract start stop := by
+  simp only [List.extract]
+  have hdrop : values.drop mid = (values.drop start).drop (mid - start) := by
+    rw [List.drop_drop]; congr 1; omega
+  rw [hdrop, ← List.take_add]; congr 1; omega
+
+theorem take_extract_drop {values : List α} {start stop : Nat}
+    (hstart : start ≤ stop) :
+    values.take start ++ values.extract start stop ++ values.drop stop = values := by
+  have hstop : start + (stop - start) = stop := Nat.add_sub_of_le hstart
+  rw [List.extract, ← List.take_add, hstop]
+  exact List.take_append_drop stop values
+
+theorem pairwise_of_length_le_one {relation : α → α → Prop} {values : List α}
+    (h : values.length ≤ 1) : values.Pairwise relation := by
+  match values, h with
+  | [], _ => exact List.Pairwise.nil
+  | [_], _ => exact List.pairwise_singleton _ _
+
 /-- Exchange two in-bounds elements, using `getElem!` defaults out of bounds. -/
 def swapElems [Inhabited α] (values : List α) (i j : Nat) : List α :=
   (values.set i values[j]!).set j values[i]!

@@ -111,7 +111,7 @@ def Sorted (values : List UInt32) : Prop :=
 def SortedPermutation (input output : List UInt32) : Prop :=
   Sorted output ∧ List.Perm input output
 
-def segment (values : List UInt32) (start stop : Nat) : List UInt32 :=
+abbrev segment (values : List UInt32) (start stop : Nat) :=
   (values.drop start).take (stop - start)
 
 def arrayByteRange (base : UInt32) (length : Nat) : Nat × Nat :=

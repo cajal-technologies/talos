@@ -205,7 +205,7 @@ def mergePre [WasmHeapGS α]
     ⌜ValidLayout source temporary input.length⌝ ∗
     ⌜left ≤ mid ∧ mid ≤ right ∧ right ≤ input.length⌝
 
-def segment (values : List UInt32) (start stop : Nat) : List UInt32 :=
+abbrev segment (values : List UInt32) (start stop : Nat) :=
   (values.drop start).take (stop - start)
 
 inductive MergeRel : List UInt32 → List UInt32 → List UInt32 → Prop where
