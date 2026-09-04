@@ -257,20 +257,17 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
     omega
   isimp only [StackPointer] at Hsp
   wasm_twp_rebind twp_globalGet with Hsp
-  wasm_twp_pures [twp_const twp_sub]
-  rw [show driverBase - 16 = reserveBase by decide]
+  wasm_twp_pures [twp_const twp_sub] rewriting [show driverBase - 16 = reserveBase by decide]
   wasm_twp_localTee [List.length]
   wasm_twp_rebind twp_globalSet with Hsp
-  wasm_twp_pures [twp_block twp_localGet twp_localGet twp_add]
-  rw [hsumWord]
+  wasm_twp_pures [twp_block twp_localGet twp_localGet twp_add] rewriting [hsumWord]
   wasm_twp_localTee [List.set]
   wasm_twp_pures [twp_localGet]
   iapply twp_geU (result := 1) (by
     rw [if_pos (by simpa only [← hsumWord] using hguard)])
   iapply twp_brIf (by decide) (by rfl)
   simp only [List.take_zero, List.drop_zero, List.nil_append]
-  wasm_twp_pures [twp_localGet twp_const twp_add]
-  rw [UInt32.add_comm 4 reserveBase]
+  wasm_twp_pures [twp_localGet twp_const twp_add] rewriting [UInt32.add_comm 4 reserveBase]
   wasm_twp_pures [twp_localGet]
   ihave Hcapacity' : pointsTo_u32 0 (driverBase + 0) capacity $$ [Hcapacity]
   · irw_exact [UInt32.add_zero] with Hcapacity

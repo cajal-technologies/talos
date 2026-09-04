@@ -14,6 +14,7 @@ relation.
 namespace Iris.ProgramLogic
 
 open Iris Language Language.Notation BI
+open Lean.Parser.Tactic
 
 section
 variable {hlc : outParam HasLC} {Expr State Obs Val}
@@ -1778,6 +1779,13 @@ macro_rules
       `(tactic|
         (wasm_twp_pures [$steps:ident*]
          simp only [$rules,*]))
+
+/-- Execute pure Wasm steps, then apply caller-selected rewrites. -/
+macro "wasm_twp_pures" "[" steps:ident* "]" "rewriting"
+    rules:Lean.Parser.Tactic.rwRuleSeq : tactic =>
+  `(tactic|
+    (wasm_twp_pures [$steps:ident*]
+     rw $rules:rwRuleSeq))
 
 /-- Execute a local assignment and normalize the concrete local list. -/
 macro "wasm_twp_localSet" : tactic =>

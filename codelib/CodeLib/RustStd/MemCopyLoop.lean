@@ -161,10 +161,8 @@ theorem copyWords_loadStoreIteration_wp
   · simp only [dstAddress]
     irw_exact [← hpre] with HdstCell
   simp only [CopyWordsLoadStoreIteration, List.cons_append, List.nil_append]
-  wasm_wp_pures [wp_localGet wp_localGet wp_const wp_shl wp_add]
-  rw [hdstAddress]
-  wasm_wp_pures [wp_localGet wp_localGet wp_const wp_shl wp_add]
-  rw [hsrcAddress]
+  wasm_wp_pures [wp_localGet wp_localGet wp_const wp_shl wp_add] rewriting [hdstAddress]
+  wasm_wp_pures [wp_localGet wp_localGet wp_const wp_shl wp_add] rewriting [hsrcAddress]
   ihave HsrcLater : ▷ pointsTo_u32 0 (srcAddress + 0) value $$ [HsrcCell']
   · inext
     simp only [UInt32.add_zero]
@@ -219,8 +217,7 @@ theorem copyWords_incrementBackedge_wp
         calls⟩ : Wasm.SmallStep.Expr α) @ s; E {{ Φ }} := by
   iintro Hcontinue
   simp only [CopyWordsIncrementBackedge]
-  wasm_wp_pures [wp_localGet wp_const wp_add]
-  rw [UInt32.add_comm 1 i]
+  wasm_wp_pures [wp_localGet wp_const wp_add] rewriting [UInt32.add_comm 1 i]
   wasm_wp_pures [wp_localSet wp_br] using [copyWordsLoopFrame, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set, List.take_nil,
     List.nil_append]
@@ -642,10 +639,8 @@ theorem copyWords_loadStoreIteration_twp
   · simp only [dstAddress]
     irw_exact [← hpre] with HdstCell
   simp only [CopyWordsLoadStoreIteration, List.cons_append, List.nil_append]
-  wasm_twp_pures [twp_localGet twp_localGet twp_const twp_shl twp_add]
-  rw [hdstAddress]
-  wasm_twp_pures [twp_localGet twp_localGet twp_const twp_shl twp_add]
-  rw [hsrcAddress]
+  wasm_twp_pures [twp_localGet twp_localGet twp_const twp_shl twp_add] rewriting [hdstAddress]
+  wasm_twp_pures [twp_localGet twp_localGet twp_const twp_shl twp_add] rewriting [hsrcAddress]
   ihave HsrcAt : pointsTo_u32 0 (srcAddress + 0) value $$ [HsrcCell']
   · simp only [UInt32.add_zero]
     iexact HsrcCell'
@@ -699,8 +694,7 @@ theorem copyWords_incrementBackedge_twp
         calls⟩ : Wasm.SmallStep.Expr α) @ s; E [{ Φ }] := by
   iintro Hcontinue
   simp only [CopyWordsIncrementBackedge]
-  wasm_twp_pures [twp_localGet twp_const twp_add]
-  rw [UInt32.add_comm 1 i]
+  wasm_twp_pures [twp_localGet twp_const twp_add] rewriting [UInt32.add_comm 1 i]
   wasm_twp_pures [twp_localSet twp_br] using [copyWordsLoopFrame, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set, List.take_nil,
     List.nil_append]

@@ -442,8 +442,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
   wasm_twp_pures [twp_eqz]
   iapply twp_brIf (by decide) (by rfl)
   simp only [List.take_zero, List.nil_append]
-  wasm_twp_pures [twp_block twp_localGet twp_wrapI64]
-  rw [hwrap]
+  wasm_twp_pures [twp_block twp_localGet twp_wrapI64] rewriting [hwrap]
   wasm_twp_localTee [List.set]
   wasm_twp_pures [twp_const twp_localGet twp_sub]
   have hcapacityGuard : newCapacity ≤ (2147483648 : UInt32) - 1 := by

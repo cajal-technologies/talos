@@ -12,6 +12,7 @@ namespace Wasm.SmallStep
 
 open Iris Iris.ProgramLogic Language.Notation
 open Wasm.SepLogic
+open Lean.Parser.Tactic
 
 variable {α : Type}
 variable [WasmSmallStepGS hlc α]
@@ -858,6 +859,13 @@ macro_rules
       `(tactic|
         (wasm_wp_pures [$steps:ident*]
          simp only [$rules,*]))
+
+/-- Execute pure Wasm steps, then apply caller-selected rewrites. -/
+macro "wasm_wp_pures" "[" steps:ident* "]" "rewriting"
+    rules:Lean.Parser.Tactic.rwRuleSeq : tactic =>
+  `(tactic|
+    (wasm_wp_pures [$steps:ident*]
+     rw $rules:rwRuleSeq))
 
 /-- Execute a local assignment and normalize the concrete local list. -/
 macro "wasm_wp_localSet" : tactic =>

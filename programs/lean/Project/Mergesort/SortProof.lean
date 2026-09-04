@@ -889,8 +889,7 @@ theorem twp_loadShlAt
   simp only [List.cons_append, List.nil_append]
   iapply twp_localGet hbase
   iapply twp_localGet (by simpa [Locals.get] using helement)
-  wasm_twp_pures [twp_const twp_shl twp_add]
-  rw [haddress]
+  wasm_twp_pures [twp_const twp_shl twp_add] rewriting [haddress]
   ihave Hword' : pointsTo_u32 0 (address + 0) input[k] $$ [Hword]
   · simp only [address, UInt32.add_zero]
     iexact Hword
@@ -1145,12 +1144,9 @@ theorem twp_mergeMainChoice
     omega
   iintro ⟨Hsource, Hscratch, Hbranches⟩
   rw [mergeMainLoopBody_shape]
-  wasm_twp_pures [twp_block]
-  rw [mergeMainOuterBody_shape]
-  wasm_twp_pures [twp_block]
-  rw [mergeMainChoiceBody_shape]
-  wasm_twp_pures [twp_block]
-  rw [mergeMainCompareBody_load1]
+  wasm_twp_pures [twp_block] rewriting [mergeMainOuterBody_shape]
+  wasm_twp_pures [twp_block] rewriting [mergeMainChoiceBody_shape]
+  wasm_twp_pures [twp_block] rewriting [mergeMainCompareBody_load1]
   simp only [sortLocals, List.drop_zero]
   iapply twp_loadShlAt
     (physicalBase := source) (computedBase := source)
@@ -1160,8 +1156,7 @@ theorem twp_mergeMainChoice
     (by rw [MemRegion.shl2_eq_mul4, UInt32.add_comm])
   iframe; iintro Hsource
   rw [mergeMainCompareBody_afterLoad1]
-  wasm_twp_pures [twp_localTee]
-  rw [mergeMainCompareBody_load2]
+  wasm_twp_pures [twp_localTee] rewriting [mergeMainCompareBody_load2]
   iapply twp_loadShlAt
     (physicalBase := source)
     (computedBase := source + 4 * UInt32.ofNat mid)
@@ -1175,13 +1170,11 @@ theorem twp_mergeMainChoice
   · iapply twp_leU (result := 1) (by simp [hle])
     iapply twp_brIf (by decide) (by rfl)
     simp only [List.take_nil, List.nil_append]
-    wasm_twp_pures [twp_block]
-    rw [mergeMainLeftBody_guard]
+    wasm_twp_pures [twp_block] rewriting [mergeMainLeftBody_guard]
     simp only [List.cons_append, List.nil_append]
     wasm_twp_pures [twp_localGet twp_localGet]
     iapply twp_geU (result := 0) (by simp [UInt32.not_le.mpr hkU])
-    wasm_twp_pures [twp_brIfZero]
-    rw [mergeMainLeftBody_store]
+    wasm_twp_pures [twp_brIfZero] rewriting [mergeMainLeftBody_store]
     iapply twp_storeCurrentAt
       (physicalBase := scratch)
       (currentAddress := scratch + 4 * UInt32.ofNat k)
@@ -1190,8 +1183,7 @@ theorem twp_mergeMainChoice
       (by rfl) (by rfl) rfl
     iframe; iintro Hscratch
     rw [mergeMainLeftBody_advance]
-    wasm_twp_pures [twp_localGet twp_const twp_add]
-    rw [hiValue]
+    wasm_twp_pures [twp_localGet twp_const twp_add] rewriting [hiValue]
     wasm_twp_pures [twp_localSet twp_br]
     simp only [List.take_nil, List.nil_append, List.length, List.set, List.drop]
     ihave Hleft := BI.and_elim_l $$ Hbranches
@@ -1199,13 +1191,11 @@ theorem twp_mergeMainChoice
     isplitr_pureexact hle
     iframe
   · iapply twp_leU (result := 0) (by simp [hle])
-    wasm_twp_pures [twp_brIfZero]
-    rw [mergeMainCompareBody_rightGuard]
+    wasm_twp_pures [twp_brIfZero] rewriting [mergeMainCompareBody_rightGuard]
     simp only [List.cons_append, List.nil_append]
     wasm_twp_pures [twp_localGet twp_localGet]
     iapply twp_geU (result := 0) (by simp [UInt32.not_le.mpr hkU])
-    wasm_twp_pures [twp_brIfZero]
-    rw [mergeMainCompareBody_rightStore]
+    wasm_twp_pures [twp_brIfZero] rewriting [mergeMainCompareBody_rightStore]
     iapply twp_storeCurrentAt
       (physicalBase := scratch)
       (currentAddress := scratch + 4 * UInt32.ofNat k)
@@ -1214,8 +1204,7 @@ theorem twp_mergeMainChoice
       (by rfl) (by rfl) rfl
     iframe; iintro Hscratch
     rw [mergeMainCompareBody_rightAdvance]
-    wasm_twp_pures [twp_localGet twp_const twp_add]
-    rw [hjValue]
+    wasm_twp_pures [twp_localGet twp_const twp_add] rewriting [hjValue]
     wasm_twp_pures [twp_localSet twp_br]
     simp only [List.take_nil, List.nil_append, List.length, List.set, List.drop]
     ihave Hright := BI.and_elim_r $$ Hbranches
@@ -1371,8 +1360,7 @@ theorem twp_mergeMainLoop
       wasm_twp_pures [twp_localGet twp_const twp_add]
       rw [UInt32.add_comm (4 : UInt32), next_slot_address]
       wasm_twp_pures [twp_localSet]
-      wasm_twp_pures [twp_localGet twp_const twp_add]
-      rw [hkValue]
+      wasm_twp_pures [twp_localGet twp_const twp_add] rewriting [hkValue]
       wasm_twp_pures [twp_localSet]
       wasm_twp_pures [twp_localGet twp_localGet]
       by_cases hiNext : state.i + 1 < mid
@@ -1453,8 +1441,7 @@ theorem twp_mergeMainLoop
       wasm_twp_pures [twp_localGet twp_const twp_add]
       rw [UInt32.add_comm (4 : UInt32), next_slot_address]
       wasm_twp_pures [twp_localSet]
-      wasm_twp_pures [twp_localGet twp_const twp_add]
-      rw [hkValue]
+      wasm_twp_pures [twp_localGet twp_const twp_add] rewriting [hkValue]
       wasm_twp_pures [twp_localSet]
       wasm_twp_pures [twp_localGet twp_localGet]
       have hmidSize : mid < UInt32.size := by
@@ -1568,8 +1555,7 @@ theorem twp_mergeLeftRemainder
       @ s; E [{ Φ }] := by
   iintro ⟨Hsource, Hscratch, Hfinish⟩
   rw [sortBlock4_remainder_shape]
-  wasm_twp_pures [twp_block]
-  rw [mergeLeftRemainderBody_shape]
+  wasm_twp_pures [twp_block] rewriting [mergeLeftRemainderBody_shape]
   wasm_twp_pures [twp_localGet]
   rcases hexit with ⟨hflag, hiEq⟩ | ⟨hflag, hiRemain, hjEq⟩
   · subst flag
@@ -1845,8 +1831,7 @@ theorem twp_mergeLeftRemainder
             Wasm.Examples.MergeSort.u32_ofNat_add (by
               rw [hkN]
               exact hlayout.length_lt), hkN]
-        wasm_twp_pures [twp_localGet twp_localGet twp_sub]
-        rw [hfinalK]
+        wasm_twp_pures [twp_localGet twp_localGet twp_sub] rewriting [hfinalK]
         wasm_twp_localSet [List.length, List.set]
         iapply Wasm.SmallStep.twp_exitControl (α := α) rfl
         simp only [List.take_zero, List.nil_append]
@@ -1968,12 +1953,9 @@ theorem twp_mergeRightRemainder
         UInt32.toNat_ofNat_of_lt' (by omega),
         UInt32.toNat_ofNat_of_lt' hlayout.length_lt]
       exact hkLt
-    wasm_twp_pures [twp_localGet twp_localGet twp_const twp_shl]
-    rw [MemRegion.shl2_eq_mul4]
-    wasm_twp_pures [twp_add]
-    rw [UInt32.add_comm]
-    wasm_twp_pures [twp_localGet twp_const twp_shl]
-    rw [MemRegion.shl2_eq_mul4]
+    wasm_twp_pures [twp_localGet twp_localGet twp_const twp_shl] rewriting [MemRegion.shl2_eq_mul4]
+    wasm_twp_pures [twp_add] rewriting [UInt32.add_comm]
+    wasm_twp_pures [twp_localGet twp_const twp_shl] rewriting [MemRegion.shl2_eq_mul4]
     wasm_twp_pures [twp_add]
     have hsourceAddress :
         4 * UInt32.ofNat (j - mid) +
@@ -1995,10 +1977,8 @@ theorem twp_mergeRightRemainder
     iapply twp_select (selected := .i32 (UInt32.ofNat input.length))
       (by simp)
     wasm_twp_pures [twp_localSet]
-    wasm_twp_pures [twp_localGet twp_localGet twp_const twp_shl]
-    rw [MemRegion.shl2_eq_mul4]
-    wasm_twp_pures [twp_add]
-    rw [UInt32.add_comm]
+    wasm_twp_pures [twp_localGet twp_localGet twp_const twp_shl] rewriting [MemRegion.shl2_eq_mul4]
+    wasm_twp_pures [twp_add] rewriting [UInt32.add_comm]
     wasm_twp_pures [twp_localSet]
     wasm_twp_pures [twp_localGet twp_localGet twp_sub twp_localGet twp_add]
     rw [right_counter_init hmj hjl hlayout.length_lt]
@@ -2569,17 +2549,14 @@ theorem twp_sort
         arrayAt 0 (scratch + 4 * UInt32.ofNat left.length) scratchRight $$
           [HscratchRight]
     · irw_exact [← hscratchLeftEq] with HscratchRight
-    wasm_twp_pures [twp_localGet twp_localGet twp_const twp_shl]
-    rw [MemRegion.shl2_eq_mul4]
+    wasm_twp_pures [twp_localGet twp_localGet twp_const twp_shl] rewriting [MemRegion.shl2_eq_mul4]
     wasm_twp_localTee [List.length]
-    wasm_twp_pures [twp_add]
-    rw [UInt32.add_comm]
+    wasm_twp_pures [twp_add] rewriting [UInt32.add_comm]
     wasm_twp_localTee [List.length]
     wasm_twp_pures [twp_localGet twp_localGet twp_sub]
     rw [u32_ofNat_sub (Nat.le_of_lt hleftLt) hlengthSize]
     wasm_twp_localTee [List.length]
-    wasm_twp_pures [twp_localGet twp_localGet twp_add]
-    rw [UInt32.add_comm]
+    wasm_twp_pures [twp_localGet twp_localGet twp_add] rewriting [UInt32.add_comm]
     wasm_twp_pures [twp_localGet twp_localGet twp_sub]
     rw [u32_ofNat_sub (Nat.le_of_lt hleftLt) hlengthSize]
     have hrightLengthLeft :

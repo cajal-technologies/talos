@@ -105,8 +105,7 @@ theorem div_correct : DivSpec := by
   simp only [pureBinaryConfig, func6]
   wasm_wp_pures [wp_block wp_localGet wp_constI64]
   wasm_wp_next SmallStep.wp_eqI64 (result := 0) (by simp [hb])
-  wasm_wp_pures [wp_const wp_and]
-  rw [show (0 &&& 1 : UInt32) = 0 by decide]
+  wasm_wp_pures [wp_const wp_and] rewriting [show (0 &&& 1 : UInt32) = 0 by decide]
   wasm_wp_pures [wp_brIfZero wp_localGet wp_localGet]
   wasm_wp_next SmallStep.wp_divUI64 hb
   wasm_wp_return_value_rfl
@@ -123,8 +122,7 @@ theorem rem_correct : RemSpec := by
   simp only [pureBinaryConfig, func10]
   wasm_wp_pures [wp_block wp_localGet wp_constI64]
   wasm_wp_next SmallStep.wp_eqI64 (result := 0) (by simp [hb])
-  wasm_wp_pures [wp_const wp_and]
-  rw [show (0 &&& 1 : UInt32) = 0 by decide]
+  wasm_wp_pures [wp_const wp_and] rewriting [show (0 &&& 1 : UInt32) = 0 by decide]
   wasm_wp_pures [wp_brIfZero wp_localGet wp_localGet]
   wasm_wp_next SmallStep.wp_remUI64 hb
   wasm_wp_return_value_rfl
@@ -195,11 +193,9 @@ theorem shl_correct : ShlSpec := by
   intro a b
   wasm_wp_partially_meets gs
   simp only [shiftConfig, func12]
-  wasm_wp_pures [wp_localGet wp_localGet wp_const wp_and]
-  rw [UInt32.and_comm b 63]
+  wasm_wp_pures [wp_localGet wp_localGet wp_const wp_and] rewriting [UInt32.and_comm b 63]
   wasm_wp_next SmallStep.wp_extendUI32
-  wasm_wp_pures [wp_shlI64]
-  rw [shiftAmount_norm]
+  wasm_wp_pures [wp_shlI64] rewriting [shiftAmount_norm]
   wasm_wp_return_value_rfl
 
 @[spec_of "rust-exported" "rust_u64::shr"]
@@ -212,11 +208,9 @@ theorem shr_correct : ShrSpec := by
   intro a b
   wasm_wp_partially_meets gs
   simp only [shiftConfig, func13]
-  wasm_wp_pures [wp_localGet wp_localGet wp_const wp_and]
-  rw [UInt32.and_comm b 63]
+  wasm_wp_pures [wp_localGet wp_localGet wp_const wp_and] rewriting [UInt32.and_comm b 63]
   wasm_wp_next SmallStep.wp_extendUI32
-  wasm_wp_pures [wp_shrUI64]
-  rw [shiftAmount_norm]
+  wasm_wp_pures [wp_shrUI64] rewriting [shiftAmount_norm]
   wasm_wp_return_value_rfl
 
 end Project.RustU64.Spec

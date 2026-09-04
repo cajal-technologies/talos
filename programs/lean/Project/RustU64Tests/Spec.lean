@@ -277,8 +277,7 @@ theorem div_then_add_correct : DivThenAddSpec := by
   simp only [ternaryConfig, func4]
   wasm_wp_pures [wp_block wp_localGet wp_constI64]
   wasm_wp_next SmallStep.wp_eqI64 (result := 0) (by simp [hb])
-  wasm_wp_pures [wp_const wp_and]
-  rw [show (0 &&& 1 : UInt32) = 0 by decide]
+  wasm_wp_pures [wp_const wp_and] rewriting [show (0 &&& 1 : UInt32) = 0 by decide]
   wasm_wp_pures [wp_brIfZero wp_localGet wp_localGet]
   wasm_wp_next SmallStep.wp_divUI64 hb
   wasm_wp_pures [wp_localGet wp_addI64]
@@ -296,8 +295,7 @@ theorem div_then_mul_correct : DivThenMulSpec := by
   simp only [ternaryConfig, func5]
   wasm_wp_pures [wp_block wp_localGet wp_constI64]
   wasm_wp_next SmallStep.wp_eqI64 (result := 0) (by simp [hb])
-  wasm_wp_pures [wp_const wp_and]
-  rw [show (0 &&& 1 : UInt32) = 0 by decide]
+  wasm_wp_pures [wp_const wp_and] rewriting [show (0 &&& 1 : UInt32) = 0 by decide]
   wasm_wp_pures [wp_brIfZero wp_localGet wp_localGet]
   wasm_wp_next SmallStep.wp_divUI64 hb
   wasm_wp_pures [wp_localGet wp_mulI64]
@@ -316,8 +314,7 @@ theorem rem_then_add_correct : RemThenAddSpec := by
   simp only [ternaryConfig, func12]
   wasm_wp_pures [wp_block wp_localGet wp_constI64]
   wasm_wp_next SmallStep.wp_eqI64 (result := 0) (by simp [hb])
-  wasm_wp_pures [wp_const wp_and]
-  rw [show (0 &&& 1 : UInt32) = 0 by decide]
+  wasm_wp_pures [wp_const wp_and] rewriting [show (0 &&& 1 : UInt32) = 0 by decide]
   wasm_wp_pures [wp_brIfZero wp_localGet wp_localGet]
   wasm_wp_next SmallStep.wp_remUI64 hb
   wasm_wp_pures [wp_localGet wp_addI64]
@@ -335,8 +332,7 @@ theorem rem_then_mul_correct : RemThenMulSpec := by
   simp only [ternaryConfig, func13]
   wasm_wp_pures [wp_block wp_localGet wp_constI64]
   wasm_wp_next SmallStep.wp_eqI64 (result := 0) (by simp [hb])
-  wasm_wp_pures [wp_const wp_and]
-  rw [show (0 &&& 1 : UInt32) = 0 by decide]
+  wasm_wp_pures [wp_const wp_and] rewriting [show (0 &&& 1 : UInt32) = 0 by decide]
   wasm_wp_pures [wp_brIfZero wp_localGet wp_localGet]
   wasm_wp_next SmallStep.wp_remUI64 hb
   wasm_wp_pures [wp_localGet wp_mulI64]
@@ -353,11 +349,9 @@ theorem shl_then_add_correct : ShlThenAddSpec := by
   intro a n b
   wasm_wp_partially_meets gs
   simp only [shiftValueConfig, func14]
-  wasm_wp_pures [wp_localGet wp_localGet wp_const wp_and]
-  rw [UInt32.and_comm n 63]
+  wasm_wp_pures [wp_localGet wp_localGet wp_const wp_and] rewriting [UInt32.and_comm n 63]
   wasm_wp_next SmallStep.wp_extendUI32
-  wasm_wp_pures [wp_shlI64]
-  rw [shiftAmount_norm]
+  wasm_wp_pures [wp_shlI64] rewriting [shiftAmount_norm]
   wasm_wp_pures [wp_localGet wp_addI64]
   wasm_wp_return_value_rfl
 
@@ -372,16 +366,12 @@ theorem shl_twice_correct : ShlTwiceSpec := by
   intro a n m
   wasm_wp_partially_meets gs
   simp only [shiftTwiceConfig, func15]
-  wasm_wp_pures [wp_localGet wp_localGet wp_const wp_and]
-  rw [UInt32.and_comm n 63]
+  wasm_wp_pures [wp_localGet wp_localGet wp_const wp_and] rewriting [UInt32.and_comm n 63]
   wasm_wp_next SmallStep.wp_extendUI32
-  wasm_wp_pures [wp_shlI64]
-  rw [shiftAmount_norm]
-  wasm_wp_pures [wp_localGet wp_const wp_and]
-  rw [UInt32.and_comm m 63]
+  wasm_wp_pures [wp_shlI64] rewriting [shiftAmount_norm]
+  wasm_wp_pures [wp_localGet wp_const wp_and] rewriting [UInt32.and_comm m 63]
   wasm_wp_next SmallStep.wp_extendUI32
-  wasm_wp_pures [wp_shlI64]
-  rw [shiftAmount_norm]
+  wasm_wp_pures [wp_shlI64] rewriting [shiftAmount_norm]
   wasm_wp_return_value_rfl
 
 @[spec_of "rust-exported" "rust_u64_tests::shr_then_sub"]
@@ -394,11 +384,9 @@ theorem shr_then_sub_correct : ShrThenSubSpec := by
   intro a n b
   wasm_wp_partially_meets gs
   simp only [shiftValueConfig, func16]
-  wasm_wp_pures [wp_localGet wp_localGet wp_const wp_and]
-  rw [UInt32.and_comm n 63]
+  wasm_wp_pures [wp_localGet wp_localGet wp_const wp_and] rewriting [UInt32.and_comm n 63]
   wasm_wp_next SmallStep.wp_extendUI32
-  wasm_wp_pures [wp_shrUI64]
-  rw [shiftAmount_norm]
+  wasm_wp_pures [wp_shrUI64] rewriting [shiftAmount_norm]
   wasm_wp_pures [wp_localGet wp_subI64]
   wasm_wp_return_value_rfl
 
@@ -413,16 +401,12 @@ theorem shr_twice_correct : ShrTwiceSpec := by
   intro a n m
   wasm_wp_partially_meets gs
   simp only [shiftTwiceConfig, func17]
-  wasm_wp_pures [wp_localGet wp_localGet wp_const wp_and]
-  rw [UInt32.and_comm n 63]
+  wasm_wp_pures [wp_localGet wp_localGet wp_const wp_and] rewriting [UInt32.and_comm n 63]
   wasm_wp_next SmallStep.wp_extendUI32
-  wasm_wp_pures [wp_shrUI64]
-  rw [shiftAmount_norm]
-  wasm_wp_pures [wp_localGet wp_const wp_and]
-  rw [UInt32.and_comm m 63]
+  wasm_wp_pures [wp_shrUI64] rewriting [shiftAmount_norm]
+  wasm_wp_pures [wp_localGet wp_const wp_and] rewriting [UInt32.and_comm m 63]
   wasm_wp_next SmallStep.wp_extendUI32
-  wasm_wp_pures [wp_shrUI64]
-  rw [shiftAmount_norm]
+  wasm_wp_pures [wp_shrUI64] rewriting [shiftAmount_norm]
   wasm_wp_return_value_rfl
 
 end Project.RustU64Tests.Spec

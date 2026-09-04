@@ -345,8 +345,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
         exact Nat.lt_of_le_of_lt hpadSmall (by decide)),
       UInt32.toNat_ofNat_of_lt' hsumBound,
       Nat.mod_eq_of_lt hsumBound]
-  wasm_twp_pures [twp_block twp_block twp_localGet twp_const twp_add]
-  rw [hpadWord]
+  wasm_twp_pures [twp_block twp_block twp_localGet twp_const twp_add] rewriting [hpadWord]
   wasm_twp_localTee [List.length]
   wasm_twp_pures [twp_const]
   ihave HcursorAt : pointsTo_u32 0 ((0 : UInt32) + 1049492)
@@ -367,8 +366,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
           rw [if_neg hzero] at hfrontierWord
           simpa only [if_neg hzero, heapBase] using
             congrArg Value.i32 hfrontierWord.symm)
-  wasm_twp_pures [twp_add]
-  rw [hsumWord]
+  wasm_twp_pures [twp_add] rewriting [hsumWord]
   wasm_twp_localTee [List.length]
   wasm_twp_pures [twp_localGet]
   have hsumNotLt :
@@ -424,11 +422,9 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
     simpa [UInt32.size] using hfinishWordBound
   ihave HcursorAlloc : pointsTo_u32 0 allocatorCursor storedCursor $$ [Hcursor]
   · irw_exact [← show (0 : UInt32) + 1049492 = allocatorCursor by decide] with Hcursor
-  wasm_twp_pures [twp_localGet twp_const twp_localGet twp_sub twp_and]
-  rw [hbaseRaw]
+  wasm_twp_pures [twp_localGet twp_const twp_localGet twp_sub twp_and] rewriting [hbaseRaw]
   wasm_twp_localTee [List.length]
-  wasm_twp_pures [twp_localGet twp_add]
-  rw [hfinishWord']
+  wasm_twp_pures [twp_localGet twp_add] rewriting [hfinishWord']
   wasm_twp_localTee [List.set]
   wasm_twp_pures [twp_localGet]
   iapply twp_ltU (result := 0) (by
@@ -502,8 +498,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
     isimp only [AllocContinuation, hclassify] at Hcont
     wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (65535 : UInt32) finish]
-    wasm_twp_pures [twp_const twp_shrU]
-    rw [show (16 : UInt32) % 32 = 16 by decide]
+    wasm_twp_pures [twp_const twp_shrU] rewriting [show (16 : UInt32) % 32 = 16 by decide]
     rw [show (finish + 65535) >>> (16 : UInt32) =
       allocatorRequiredPages finish by rfl]
     wasm_twp_localTee [List.length]

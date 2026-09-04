@@ -154,8 +154,7 @@ theorem twp_func3_read_chunk
   icases Hframe with ⟨Hvec, Hchunk, Houtput, %hframeLengths⟩
   simp only [List.cons_append, List.nil_append]
   iapply twp_localGet hlocal0
-  wasm_twp_pures [twp_const twp_add]
-  rw [show 12 + driverBase = driverBase + 12 by decide]
+  wasm_twp_pures [twp_const twp_add] rewriting [show 12 + driverBase = driverBase + 12 by decide]
   wasm_twp_pures [twp_const]
   have Hread := Project.Mergesort.ContractProofs.func10_correct (hlc := hlc)
       (ptr := driverBase + 12) (requested := 256)
@@ -1436,8 +1435,7 @@ theorem twp_func3_completed_length_guard
     exact halign
   simp only [func3CompletedLengthGuard, List.cons_append, List.nil_append,
     func3AppendLocals]
-  wasm_twp_pures [twp_localGet twp_const twp_and]
-  rw [hlowMask]
+  wasm_twp_pures [twp_localGet twp_const twp_and] rewriting [hlowMask]
   wasm_twp_pures [twp_brIfZero]
   iexact Hcont
 
@@ -1507,8 +1505,7 @@ theorem twp_func3_enter_nonempty_decode
     at Hguard ⊢
   iapply Hguard
   wasm_twp_pures [twp_block] using [func3AlignedLengthBlockBody, func3AppendLocals]
-  wasm_twp_pures [twp_localGet twp_const twp_and]
-  rw [hmask]
+  wasm_twp_pures [twp_localGet twp_const twp_and] rewriting [hmask]
   iapply twp_localTee
       (locals' := func3AppendLocals dataPtr current
         (UInt32.ofNat completed.length) aux2 aux4 aux5
@@ -2520,13 +2517,10 @@ theorem twp_func3_decode_setup
   wasm_twp_pures [twp_localGet twp_const twp_add]
   rw [UInt32.add_comm (4294967292 : UInt32), hsub]
   wasm_twp_localTee [List.length, List.set]
-  wasm_twp_pures [twp_const twp_shrU]
-  rw [show (2 % 32 : UInt32) = 2 by decide, hshift]
-  wasm_twp_pures [twp_const twp_add]
-  rw [UInt32.add_comm (1 : UInt32), hsucc]
+  wasm_twp_pures [twp_const twp_shrU] rewriting [show (2 % 32 : UInt32) = 2 by decide, hshift]
+  wasm_twp_pures [twp_const twp_add] rewriting [UInt32.add_comm (1 : UInt32), hsucc]
   wasm_twp_localTee [List.length, List.set]
-  wasm_twp_pures [twp_const twp_and]
-  rw [htail]
+  wasm_twp_pures [twp_const twp_and] rewriting [htail]
   wasm_twp_localSet [List.length, List.set]
   wasm_twp_pures [twp_const twp_localSet] using [List.length, List.set]
   wasm_twp_pures [twp_localGet twp_localSet] using [List.length, List.set]
@@ -2610,13 +2604,10 @@ theorem twp_func3_decode_positive_tail
       _ = UInt32.ofNat (bulk + tail) := (UInt32.ofNat_add _ _).symm
       _ = UInt32.ofNat original.length := by rw [hpartition]
   simp only [func3DecodeTailContinuation, func3AppendLocals]
-  wasm_twp_pures [twp_localGet twp_localGet twp_add]
-  rw [htotal]
+  wasm_twp_pures [twp_localGet twp_localGet twp_add] rewriting [htotal]
   wasm_twp_localSet [List.length, List.set]
-  wasm_twp_pures [twp_localGet twp_localGet twp_const twp_shl]
-  rw [MemRegion.shl2_eq_mul4]
-  wasm_twp_pures [twp_add]
-  rw [UInt32.add_comm (4 * UInt32.ofNat bulk)]
+  wasm_twp_pures [twp_localGet twp_localGet twp_const twp_shl] rewriting [MemRegion.shl2_eq_mul4]
+  wasm_twp_pures [twp_add] rewriting [UInt32.add_comm (4 * UInt32.ofNat bulk)]
   wasm_twp_localSet [List.length, List.set]
   have Htail := twp_func3_decode_tail_loop
     (hlc := hlc) source destination original initial bulk tail aux10 hlength
@@ -3359,8 +3350,7 @@ theorem twp_func3_write_one
       (Spec.decodeWord outputBytes) (by decide) (by decide) (by decide)
       (by decide) with HoldOutput => Houtput
   ihave Houtput := HcloseOutput $$ Houtput
-  wasm_twp_pures [twp_localGet twp_const twp_add]
-  rw [UInt32.add_comm (268 : UInt32)]
+  wasm_twp_pures [twp_localGet twp_const twp_add] rewriting [UInt32.add_comm (268 : UInt32)]
   wasm_twp_pures [twp_const]
   have Hwrite := Project.Mergesort.ContractProofs.func11_correct
     (hlc := hlc) (ptr := driverBase + 268) (requested := 4)
@@ -5275,8 +5265,7 @@ theorem twp_func3_initialize
   isimp only [StackPointer] at Hsp
   simp only [Project.Mergesort.func3]
   wasm_twp_rebind twp_globalGet with Hsp
-  wasm_twp_pures [twp_const twp_sub]
-  rw [show entryStackTop - 272 = driverBase by decide]
+  wasm_twp_pures [twp_const twp_sub] rewriting [show entryStackTop - 272 = driverBase by decide]
   wasm_twp_pures [twp_localTee]
   simp [Project.Mergesort.func3Def, Function.toLocals]
   wasm_twp_rebind twp_globalSet with Hsp

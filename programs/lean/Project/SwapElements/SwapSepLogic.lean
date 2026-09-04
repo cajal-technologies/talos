@@ -600,16 +600,14 @@ theorem func1_happyPrefix_smallStep_wp
   simp only [func1]
   wasm_wp_pures [wp_block wp_block wp_block wp_localGet wp_localGet]
   wasm_wp_next Wasm.SmallStep.wp_ltU (result := 1) (by simp [hi])
-  wasm_wp_pures [wp_const wp_and]
-  rw [show (1 &&& 1 : UInt32) = 1 by decide]
+  wasm_wp_pures [wp_const wp_and] rewriting [show (1 &&& 1 : UInt32) = 1 by decide]
   wasm_wp_next Wasm.SmallStep.wp_eqz (value := 1) (result := 0) rfl
   wasm_wp_pures [wp_brIfZero wp_localGet wp_localGet wp_const wp_shl wp_add wp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
   wasm_wp_pures [wp_localGet wp_localGet]
   wasm_wp_next Wasm.SmallStep.wp_ltU (result := 1) (by simp [hj])
-  wasm_wp_pures [wp_const wp_and]
-  rw [show (1 &&& 1 : UInt32) = 1 by decide]
+  wasm_wp_pures [wp_const wp_and] rewriting [show (1 &&& 1 : UInt32) = 1 by decide]
   wasm_wp_next Wasm.SmallStep.wp_brIf (by decide) rfl
   simp only [List.take_nil, List.drop_nil, List.nil_append]
   wasm_wp_pures [wp_localGet wp_localGet wp_localGet wp_const wp_shl wp_add]
@@ -1315,16 +1313,14 @@ theorem twp_func1_happyPrefix_smallStep_wp
   simp only [func1]
   wasm_twp_pures [twp_block twp_block twp_block twp_localGet twp_localGet]
   iapply Wasm.SmallStep.twp_ltU (result := 1) (by simp [hi])
-  wasm_twp_pures [twp_const twp_and]
-  rw [show (1 &&& 1 : UInt32) = 1 by decide]
+  wasm_twp_pures [twp_const twp_and] rewriting [show (1 &&& 1 : UInt32) = 1 by decide]
   iapply Wasm.SmallStep.twp_eqz (value := 1) (result := 0) rfl
   wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet twp_const twp_shl twp_add twp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
   wasm_twp_pures [twp_localGet twp_localGet]
   iapply Wasm.SmallStep.twp_ltU (result := 1) (by simp [hj])
-  wasm_twp_pures [twp_const twp_and]
-  rw [show (1 &&& 1 : UInt32) = 1 by decide]
+  wasm_twp_pures [twp_const twp_and] rewriting [show (1 &&& 1 : UInt32) = 1 by decide]
   iapply Wasm.SmallStep.twp_brIf (by decide) rfl
   simp only [List.take_nil, List.drop_nil, List.nil_append]
   wasm_twp_pures [twp_localGet twp_localGet twp_localGet twp_const twp_shl twp_add]

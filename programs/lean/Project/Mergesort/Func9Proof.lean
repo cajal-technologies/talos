@@ -444,8 +444,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
           rw [if_neg hzero] at hfrontierWord
           simpa only [if_neg hzero, heapBase] using
             congrArg Value.i32 hfrontierWord.symm)
-  wasm_twp_pures [twp_add]
-  rw [show (4294967295 : UInt32) + 4 = 3 by decide, hsumWord]
+  wasm_twp_pures [twp_add] rewriting [show (4294967295 : UInt32) + 4 = 3 by decide, hsumWord]
   wasm_twp_localTee [List.length]
   wasm_twp_pures [twp_localGet]
   have hsumNotLt : ¬ UInt32.ofNat (frontier + 3) < (3 : UInt32) := by
@@ -504,8 +503,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
       (rhs := -(4 : UInt32))
   rw [hsumWord]
   wasm_twp_localTee [List.set]
-  wasm_twp_pures [twp_localGet twp_add]
-  rw [hfinishRaw]
+  wasm_twp_pures [twp_localGet twp_add] rewriting [hfinishRaw]
   wasm_twp_localTee [List.length]
   wasm_twp_pures [twp_localGet]
   iapply twp_ltU (result := 0) (by
@@ -574,8 +572,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
     simp [ValueType.zero]
     wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (65535 : UInt32) finish]
-    wasm_twp_pures [twp_const twp_shrU]
-    rw [show (16 : UInt32) % 32 = 16 by decide]
+    wasm_twp_pures [twp_const twp_shrU] rewriting [show (16 : UInt32) % 32 = 16 by decide]
     rw [show (finish + 65535) >>> (16 : UInt32) =
       allocatorRequiredPages finish by rfl]
     wasm_twp_localTee [List.length, List.set]

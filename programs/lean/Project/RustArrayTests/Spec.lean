@@ -44,8 +44,7 @@ theorem len_plus_one_correct : LenPlusOneSpec := by
   intro ptr len
   wasm_wp_partially_meets gs
   simp only [bodyConfig, func1]
-  wasm_wp_pures [wp_localGet wp_const wp_add]
-  rw [UInt32.add_comm 1 len]
+  wasm_wp_pures [wp_localGet wp_const wp_add] rewriting [UInt32.add_comm 1 len]
   wasm_wp_return_value_rfl
 
 @[spec_of "rust-internal" "rust_array_tests::len_plus_arg"]
@@ -59,8 +58,7 @@ theorem len_plus_arg_correct : LenPlusArgSpec := by
   intro ptr len n
   wasm_wp_partially_meets gs
   simp only [bodyConfig, func0]
-  wasm_wp_pures [wp_localGet wp_localGet wp_add]
-  rw [UInt32.add_comm n len]
+  wasm_wp_pures [wp_localGet wp_localGet wp_add] rewriting [UInt32.add_comm n len]
   wasm_wp_return_value_rfl
 
 @[spec_of "rust-internal" "rust_array_tests::empty_plus_three"]
@@ -93,8 +91,7 @@ theorem empty_plus_three_correct : EmptyPlusThreeSpec := by
     rw [show isEmptyValue len &&& 1 = isEmptyValue len by
       unfold isEmptyValue
       by_cases h : len = 0 <;> simp [h]]
-    wasm_wp_pures [wp_const wp_add]
-    rw [UInt32.add_comm 3 (isEmptyValue len)]
+    wasm_wp_pures [wp_const wp_add] rewriting [UInt32.add_comm 3 (isEmptyValue len)]
     wasm_wp_return_value_rfl
 
 @[spec_of "rust-internal" "rust_array_tests::empty_xor_flag"]
@@ -174,8 +171,7 @@ theorem len_plus_one_export_correct : LenPlusOneExportSpec := by
     wasm_wp_next_rebind SmallStep.wp_call «module» 1 func1Def
       (by simp [«module»]) (by simp [«module»]) with Hruntime
     simp [func1Def, Function.toLocals, Function.numParams, func1]
-    wasm_wp_pures [wp_localGet wp_const wp_add]
-    rw [UInt32.add_comm 1 len]
+    wasm_wp_pures [wp_localGet wp_const wp_add] rewriting [UInt32.add_comm 1 len]
     wasm_wp_next SmallStep.wp_returnFromCallExplicit $$ Hruntime
     simp only [List.take, List.singleton_append]
     wasm_wp_return_value_rfl
@@ -213,8 +209,7 @@ theorem len_plus_arg_export_correct : LenPlusArgExportSpec := by
     wasm_wp_next_rebind SmallStep.wp_call «module» 0 func0Def
       (by simp [«module»]) (by simp [«module»]) with Hruntime
     simp [func0Def, Function.toLocals, Function.numParams, func0]
-    wasm_wp_pures [wp_localGet wp_localGet wp_add]
-    rw [UInt32.add_comm n len]
+    wasm_wp_pures [wp_localGet wp_localGet wp_add] rewriting [UInt32.add_comm n len]
     wasm_wp_next SmallStep.wp_returnFromCallExplicit $$ Hruntime
     simp only [List.take, List.singleton_append]
     wasm_wp_return_value_rfl
@@ -267,8 +262,7 @@ theorem empty_plus_three_export_correct : EmptyPlusThreeExportSpec := by
     rw [show isEmptyValue len &&& 1 = isEmptyValue len by
       unfold isEmptyValue
       by_cases h : len = 0 <;> simp [h]]
-    wasm_wp_pures [wp_const wp_add]
-    rw [UInt32.add_comm 3 (isEmptyValue len)]
+    wasm_wp_pures [wp_const wp_add] rewriting [UInt32.add_comm 3 (isEmptyValue len)]
     wasm_wp_next SmallStep.wp_returnFromCallExplicit $$ Hruntime
     simp only [List.take, List.singleton_append]
     wasm_wp_return_value_rfl

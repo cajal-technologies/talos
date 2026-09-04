@@ -601,8 +601,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
       rw [show newPtr &&& (0xFFFFFFFF : UInt32) = newPtr by
         exact UInt32.and_neg_one]
       wasm_twp_localTee [List.set]
-      wasm_twp_pures [twp_localGet twp_add]
-      rw [UInt32.add_comm newSize newPtr, hfinishWord]
+      wasm_twp_pures [twp_localGet twp_add] rewriting [UInt32.add_comm newSize newPtr, hfinishWord]
       wasm_twp_localTee [List.length]
       wasm_twp_pures [twp_localGet]
       iapply twp_ltU (result := 0) (by
@@ -620,8 +619,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
       iapply twp_ltS (result := 0) (by rw [if_neg hfinishNonnegative])
       wasm_twp_pures [twp_brIfZero twp_block twp_localGet twp_const twp_add]
       rw [UInt32.add_comm (65535 : UInt32) finish]
-      wasm_twp_pures [twp_const twp_shrU]
-      rw [show (16 : UInt32) % 32 = 16 by decide]
+      wasm_twp_pures [twp_const twp_shrU] rewriting [show (16 : UInt32) % 32 = 16 by decide]
       rw [show (finish + 65535) >>> (16 : UInt32) =
         allocatorRequiredPages finish by rfl]
       wasm_twp_localTee [List.length]
@@ -891,8 +889,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
       rw [show base &&& (0xFFFFFFFF : UInt32) = base by
         exact UInt32.and_neg_one]
       wasm_twp_localTee [List.set]
-      wasm_twp_pures [twp_localGet twp_add]
-      rw [UInt32.add_comm newSize base]
+      wasm_twp_pures [twp_localGet twp_add] rewriting [UInt32.add_comm newSize base]
       rw [show base + newSize = finishWord by rfl]
       wasm_twp_localTee [List.length]
       wasm_twp_pures [twp_localGet]

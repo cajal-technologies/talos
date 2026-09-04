@@ -138,8 +138,7 @@ theorem fillWords_storeIteration_wp
   icases array64At_fill_next 0 base i.toNat value old suffix $$ Harray with
     ⟨Hold, Hreassemble⟩
   simp only [FillWordsStoreIteration, List.cons_append, List.nil_append]
-  wasm_wp_pures [wp_localGet wp_localGet wp_const wp_shl wp_add]
-  rw [haddr]
+  wasm_wp_pures [wp_localGet wp_localGet wp_const wp_shl wp_add] rewriting [haddr]
   wasm_wp_pures [wp_localGet]
   ihave HoldLater : ▷ pointsTo_u64 0 (address + 0) old $$ [Hold]
   · inext
@@ -185,8 +184,7 @@ theorem fillWords_incrementBackedge_wp
         calls⟩ : Wasm.SmallStep.Expr α) @ s; E {{ Φ }} := by
   iintro Hcontinue
   simp only [FillWordsIncrementBackedge]
-  wasm_wp_pures [wp_localGet wp_const wp_add]
-  rw [UInt32.add_comm 1 i]
+  wasm_wp_pures [wp_localGet wp_const wp_add] rewriting [UInt32.add_comm 1 i]
   wasm_wp_pures [wp_localSet wp_br] using [fillWordsLoopFrame, List.length_cons,
     List.length_nil, Nat.reduceAdd, Nat.reduceSub, List.set, List.take_nil,
     List.nil_append]

@@ -49,8 +49,7 @@ theorem finishGcd_smallStep_wp
   iintro Htrue
   wasm_wp_pures [wp_localGet wp_localGet wp_shlI64 wp_localSet wp_exitControl]
   simp only [gcdOuterFrame, List.take_nil, List.nil_append]
-  wasm_wp_pures [wp_localGet]
-  rw [hrecombine]
+  wasm_wp_pures [wp_localGet] rewriting [hrecombine]
   wasm_wp_finish_value_rfl
 
 /-- The two early exits of generated `gcd_u64`, proved through iris-lean's WP
