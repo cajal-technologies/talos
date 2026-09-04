@@ -133,11 +133,9 @@ private theorem twp_func8_copy_and_return
   have holdSize : oldSize.toNat = oldLayout.size := hlayout.1.1
   have hnewSize : newSize.toNat = newLayout.size := hlayout.2.1.1
   have holdLt : oldSize < newSize := by
-    rw [UInt32.lt_iff_toNat_lt, holdSize, hnewSize]
-    exact hlayout.2.2.2.2.2
+    simpa only [UInt32.lt_iff_toNat_lt, holdSize, hnewSize] using hlayout.2.2.2.2.2
   have holdPositive : 0 < oldSize.toNat := by
-    rw [holdSize]
-    exact hlayout.2.2.1.1
+    simpa only [holdSize] using hlayout.2.2.1.1
   have holdNonzero : oldSize ≠ 0 := by
     intro hzero
     have := congrArg UInt32.toNat hzero
@@ -149,11 +147,9 @@ private theorem twp_func8_copy_and_return
   icases HnewBlock with ⟨HnewToken, HnewSlice, %hnewFacts⟩
   have hnewNonzero : newPtr ≠ 0 := hnewFacts.2.1
   have holdLength : oldBytes.length = oldSize.toNat := by
-    rw [holdSize]
-    exact holdFacts.1
+    simpa only [holdSize] using holdFacts.1
   have hnewLength : newBytes.length = newSize.toNat := by
-    rw [hnewSize]
-    exact hnewFacts.1
+    simpa only [hnewSize] using hnewFacts.1
   have hprefixLength : (newBytes.take oldSize.toNat).length = oldSize.toNat := by
     simp [List.length_take, hnewLength]
     omega
@@ -217,8 +213,7 @@ private theorem twp_func8_copy_and_return
       (newBytes.drop oldSize.toNat)).mpr
     have hprefixLayoutLength :
         (newBytes.take oldLayout.size).length = oldLayout.size := by
-      rw [← holdSize]
-      exact hprefixLength
+      simpa only [← holdSize] using hprefixLength
     simp only [holdSize, hprefixLayoutLength, holdFacts.1]
     iframe
   ihave HnewBlock : LiveBlock heapId history.nextId newPtr newLayout
@@ -402,8 +397,7 @@ private theorem twp_func8_claim_commit_copy_and_return
   iintro ⟨Hruntime, Hcursor, Hfrontier, Hauth, Hretired, Hpages, HoldBlock,
     Hstreams, Hcont⟩
   have hbound : newPtr.toNat + newLayout.size ≤ ownedPages * 65536 := by
-    rw [← hfinishNat]
-    exact hphysical
+    simpa only [← hfinishNat] using hphysical
   ihave Hframe : iprop(
       RuntimeContext ∗ pointsTo_u32 0 allocatorCursor storedCursor ∗
       AllocMetaAuth heapId history ∗ RetiredBytes heapId history ∗
@@ -527,8 +521,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
       have hclassify' :
           classifyBump frontier { size := newLayout.size, alignment := 1 } =
             .success newPtr finish := by
-        rw [← hnewLayoutShape]
-        exact hdecision
+        simpa only [← hnewLayoutShape] using hdecision
       rcases classifyBump_success_align1 frontier newLayout.size newPtr finish
           hclassify' with
         ⟨hfrontierBound, hbase, hbaseNat, hendWord, hendSigned,
@@ -546,8 +539,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
         rw [UInt32.le_iff_toNat_le_toNat, hfinishNat]
         omega
       have hfinishSigned : finish.toNat < 2147483648 := by
-        rw [hfinishPtrNat]
-        exact hendSigned
+        simpa only [hfinishPtrNat] using hendSigned
       isimp only [BumpHeap] at Hbump
       icases Hbump with
         ⟨Hcursor, Hfrontier, Hauth, Hretired, %oldOwnedPages, HoldPages,
@@ -567,8 +559,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
           simp only [ne_eq, Decidable.not_not] at hzero
           have hfrontierEq := (hcursorZero.mp hzero).2
           apply UInt32.toNat_inj.mp
-          rw [UInt32.toNat_ofNat_of_lt' hfrontierBound]
-          exact hfrontierEq.symm
+          simpa only [UInt32.toNat_ofNat_of_lt' hfrontierBound] using hfrontierEq.symm
       wasm_twp_pures [twp_block] using [func8PostArithmetic, func8GrowthBody, func8CopyBody,
         List.drop_zero]
       subst alignment
@@ -849,8 +840,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
           simp only [ne_eq, Decidable.not_not] at hzero
           have hfrontierEq := (hcursorZero.mp hzero).2
           apply UInt32.toNat_inj.mp
-          rw [hbaseNat]
-          exact hfrontierEq.symm
+          simpa only [hbaseNat] using hfrontierEq.symm
       let finishWord : UInt32 := base + newSize
       have hfinishWordNat : finishWord.toNat =
           (frontier + newLayout.size) % UInt32.size := by

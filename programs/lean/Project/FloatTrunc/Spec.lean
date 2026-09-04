@@ -175,8 +175,7 @@ theorem func0Heap_agrees :
     · simp [h0, storeResolve, func0Config]
     · simp [h0, storeResolve, func0Config,
         show («module».initialStore : Store Unit).extraMems = [] from by native_decide]
-  rw [← hresolveEq]
-  exact h
+  simpa only [← hresolveEq] using h
 
 theorem func0Heap_inBounds :
     heapAddressesInBounds func0Heap (storeResolve (func0Config 0).store) := by
@@ -192,8 +191,7 @@ theorem func0Heap_inBounds :
     · simp [h0, storeResolve, func0Config]
     · simp [h0, storeResolve, func0Config,
         show («module».initialStore : Store Unit).extraMems = [] from by native_decide]
-  rw [← hresolveEq]
-  exact h
+  simpa only [← hresolveEq] using h
 
 theorem func0Globals_agree :
     globalHeapAgrees func0Globals (func0Config 0).store.wasm.globals := by

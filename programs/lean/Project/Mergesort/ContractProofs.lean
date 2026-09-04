@@ -271,8 +271,7 @@ theorem import0_correct [WasmSmallStepGS hlc Universal.State] :
     · unfold Project.Mergesort.Representations.ByteSlice
       isplitl []
       · ipureintro
-        rw [hnewLength]
-        exact hnowrap
+        simpa only [hnewLength] using hnowrap
       · rw [← htake, ← hcount]
         isimp only [host] at Hbytes
         iexact Hbytes
@@ -654,8 +653,7 @@ theorem func2_correct [WasmSmallStepGS hlc Universal.State] :
     iexact HscratchBytes
   have hscratchStrictInput :
       scratch.toNat + 4 * input.length < UInt32.size := by
-    rw [hbufferFacts.1]
-    exact hscratchStrictWords
+    simpa only [hbufferFacts.1] using hscratchStrictWords
   have hlayout :
       Wasm.Examples.MergeSort.ValidLayout source scratch input.length := by
     unfold Wasm.Examples.MergeSort.ValidLayout

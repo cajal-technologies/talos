@@ -113,8 +113,7 @@ private theorem twp_func9_zero_and_return
   iintro ⟨Hruntime, Hbump, Hblock, Hstreams, Hcont⟩
   have hsize : size.toNat = layout.size := hmatches.1
   have hpositive : 0 < size.toNat := by
-    rw [hsize]
-    exact hvalid.1
+    simpa only [hsize] using hvalid.1
   have hsizeNonzero : size ≠ 0 := by
     intro hzero
     have := congrArg UInt32.toNat hzero
@@ -286,8 +285,7 @@ private theorem twp_func9_claim_commit_zero_and_return
   iintro ⟨Hruntime, Hcursor, Hfrontier, Hauth, Hretired, Hpages, Hstreams,
     Hcont⟩
   have hphysicalBase : base.toNat + layout.size ≤ ownedPages * 65536 := by
-    rw [← hfinishExact]
-    exact hphysical
+    simpa only [← hfinishExact] using hphysical
   ihave HclaimFrame : iprop(
       RuntimeContext ∗ pointsTo_u32 0 allocatorCursor storedCursor ∗
       AllocMetaAuth heapId history ∗ RetiredBytes heapId history ∗
@@ -453,8 +451,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
     change 3 ≤ frontier + 3
     omega
   have hsumRawNotLt : ¬ UInt32.ofNat frontier + 3 < (3 : UInt32) := by
-    rw [hsumWord]
-    exact hsumNotLt
+    simpa only [hsumWord] using hsumNotLt
   iapply twp_ltU (result := 0) (by rw [if_neg hsumNotLt])
   wasm_twp_pures [twp_brIfZero]
   let base : UInt32 :=
@@ -463,8 +460,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
   let finish : UInt32 := UInt32.ofNat finishNat
   have hbaseBound : base.toNat ≤ frontier + 3 := by
     dsimp only [base]
-    rw [UInt32.toNat_and, UInt32.toNat_ofNat_of_lt' hsumBound]
-    exact Nat.and_le_left
+    simpa only [UInt32.toNat_and, UInt32.toNat_ofNat_of_lt' hsumBound] using Nat.and_le_left
   have hsizeBound : layout.size ≤ 2147483644 := by
     simpa only [hlayout.2.2] using hlayout.2.1.2.2.2.2.1
   have hfinishWordBound : finishNat < UInt32.size := by
@@ -484,8 +480,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
     exact (UInt32.toNat_ofNat_of_lt' hfinishWordBound).symm
   have hfinishRaw :
       size + (UInt32.ofNat (frontier + 3) &&& (-(4 : UInt32))) = finish := by
-    rw [← show (0 : UInt32) - 4 = -(4 : UInt32) by decide]
-    exact hfinishWord'
+    simpa only [← show (0 : UInt32) - 4 = -(4 : UInt32) by decide] using hfinishWord'
   have hbaseLeFinish : base ≤ finish := by
     rw [UInt32.le_iff_toNat_le_toNat,
       UInt32.toNat_ofNat_of_lt' hfinishWordBound]
@@ -493,8 +488,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
     omega
   have hbaseLeFinishRaw :
       UInt32.ofNat (frontier + 3) &&& (-(4 : UInt32)) ≤ finish := by
-    rw [← show (0 : UInt32) - 4 = -(4 : UInt32) by decide]
-    exact hbaseLeFinish
+    simpa only [← show (0 : UInt32) - 4 = -(4 : UInt32) by decide] using hbaseLeFinish
   have hfinishNatEq : finish.toNat = finishNat :=
     UInt32.toNat_ofNat_of_lt' hfinishWordBound
   wasm_twp_pures [twp_localGet twp_const twp_localGet twp_sub]
@@ -575,8 +569,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
       allocatorRequiredPages finish by rfl]
     wasm_twp_localTee [List.length, List.set]
     have hfinishSignedWord : finish.toNat < 2147483648 := by
-      rw [hfinishNatEq]
-      exact hfinishSigned
+      simpa only [hfinishNatEq] using hfinishSigned
     have hrequiredCovers :=
       allocatorRequiredPages_covers finish hfinishSignedWord
     rcases classifyBump_success_reachable frontier layout base finish

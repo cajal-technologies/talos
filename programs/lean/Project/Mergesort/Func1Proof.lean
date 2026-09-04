@@ -363,8 +363,7 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
       omega
     have hvalid :
         ({ size := newCapacity.toNat, alignment := 1 } : AllocLayout).Valid := by
-      rw [hnewCapacityWord]
-      exact hnewValid
+      simpa only [hnewCapacityWord] using hnewValid
     exact ⟨rfl, rfl, hshadow.2.2, by
       rw [hnewCapacityWord]
       unfold newCapacityNat selectedCapacity

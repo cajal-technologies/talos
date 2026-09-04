@@ -814,8 +814,7 @@ private theorem align4_mask_toNat (x : UInt32) :
     omega
   change (x.toBitVec.toNat / 4 * 4) % 4294967296 =
     x.toBitVec.toNat - x.toBitVec.toNat % 4
-  rw [Nat.mod_eq_of_lt hbound]
-  exact hdiv
+  simpa only [Nat.mod_eq_of_lt hbound] using hdiv
 
 /-- The exact arithmetic facts exposed by a successful bump classification. -/
 theorem classifyBump_success_facts
@@ -959,8 +958,7 @@ theorem classifyBump_success_reachable
       Nat.mod_lt _ (by decide)
     have hstart : frontier ≤ base.toNat := by omega
     have hmod4 : base.toNat % 4 = 0 := by
-      rw [hbaseNat]
-      exact Nat.mod_eq_zero_of_dvd
+      simpa only [hbaseNat] using Nat.mod_eq_zero_of_dvd
         (Nat.dvd_sub_mod (n := 4) (frontier + 3))
     have hnonnull : base ≠ 0 := by
       intro hzero
@@ -1058,8 +1056,7 @@ theorem allocatorRequiredPages_le_signedLimit (finish : UInt32)
   norm_num
   rw [show (65535 : UInt32).toNat = 65535 by decide]
   norm_num at hsum
-  rw [Nat.mod_eq_of_lt hsum]
-  exact hquotle
+  simpa only [Nat.mod_eq_of_lt hsum] using hquotle
 
 /-- At a cap large enough for the target, growing by the exact difference
 returns the old page count and installs the target page count. -/
@@ -1748,8 +1745,7 @@ theorem BumpHeap_commit {host : Type} [WasmHeapGS host]
   have hfinishPositive : 0 < finish.toNat := by
     omega
   have hfinishSigned : finish.toNat < 2147483648 := by
-    rw [hfinish]
-    exact hendSigned
+    simpa only [hfinish] using hendSigned
   have hfinishNonzero : finish ≠ 0 := by
     intro hzero
     have hzeroNat := congrArg UInt32.toNat hzero
@@ -3130,8 +3126,7 @@ theorem GeometricVecFacts.reserveSuccess
       ⟨rfl, rfl, rfl, hremaining, rfl, rfl⟩
     simp only [UInt32.toNat_zero] at *
     have hnewPtrBase : newPtr = heapBase := by
-      rw [hnewPtr]
-      exact UInt32.ofNat_toNat
+      simpa only [hnewPtr] using UInt32.ofNat_toNat
     have hselected :
         selectedCapacity 0 current 0 = max current 8 := by
       simp [selectedCapacity]
@@ -3182,8 +3177,7 @@ theorem GeometricVecFacts.reserveSuccess
       ⟨exponent, hexponentLower, hexponentUpper, hcapacity,
         hlength, htotal, hptr, hfrontier, hgeoHistory⟩
     have hlength' : length ≤ 2 ^ exponent := by
-      rw [← hcapacity]
-      exact hlength
+      simpa only [← hcapacity] using hlength
     have hselected :
         selectedCapacity length current capacity.toNat =
           2 ^ (exponent + 1) := by
@@ -3193,8 +3187,7 @@ theorem GeometricVecFacts.reserveSuccess
     have hselected' :
         selectedCapacity length current (2 ^ exponent) =
           2 ^ (exponent + 1) := by
-      rw [← hcapacity]
-      exact hselected
+      simpa only [← hcapacity] using hselected
     have hpow : 256 ≤ 2 ^ exponent := by
       rw [show 256 = 2 ^ 8 by norm_num]
       exact Nat.pow_le_pow_right (by decide) hexponentLower

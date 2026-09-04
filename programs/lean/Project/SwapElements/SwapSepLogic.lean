@@ -2335,8 +2335,7 @@ theorem func3Heap_agrees (ptr len : UInt32) :
     · simp [h0, storeResolve, func3Config]
     · simp [h0, storeResolve, func3Config,
         show («module».initialStore : Store Unit).extraMems = [] from by native_decide]
-  rw [← hresolveEq]
-  exact h
+  simpa only [← hresolveEq] using h
 
 theorem func3Heap_inBounds (ptr len : UInt32) :
     heapAddressesInBounds func3Heap
@@ -2357,8 +2356,7 @@ theorem func3Heap_inBounds (ptr len : UInt32) :
     · simp [h0, storeResolve, func3Config]
     · simp [h0, storeResolve, func3Config,
         show («module».initialStore : Store Unit).extraMems = [] from by native_decide]
-  rw [← hresolveEq]
-  exact h
+  simpa only [← hresolveEq] using h
 
 theorem func3Heap_pointsTo [WasmHeapGS Unit] :
     ([∗map] address ↦ value ∈ func3Heap,
@@ -2886,8 +2884,7 @@ theorem func0AliasHeap_agrees :
     · simp [h0, storeResolve, func0AliasConfig]
     · simp [h0, storeResolve, func0AliasConfig,
         show («module».initialStore : Store Unit).extraMems = [] from by native_decide]
-  rw [← hresolveEq]
-  exact h
+  simpa only [← hresolveEq] using h
 
 theorem func0AliasHeap_inBounds :
     heapAddressesInBounds func0AliasHeap
@@ -2909,8 +2906,7 @@ theorem func0AliasHeap_inBounds :
     · simp [h0, storeResolve, func0AliasConfig]
     · simp [h0, storeResolve, func0AliasConfig,
         show («module».initialStore : Store Unit).extraMems = [] from by native_decide]
-  rw [← hresolveEq]
-  exact h
+  simpa only [← hresolveEq] using h
 
 theorem func0AliasGlobals_agree :
     globalHeapAgrees func0AliasGlobals

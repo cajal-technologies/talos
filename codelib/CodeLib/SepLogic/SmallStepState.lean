@@ -2072,8 +2072,7 @@ theorem canonicalTagIndex_of_prefix (store : MachineStore α)
   obtain ⟨id, hget, hfind⟩ := hcanonical
   have hlt : index < ids.length := (List.getElem?_eq_some_iff.mp hget).1
   have hget' : store.wasm.tagIds[index]? = some id := by
-    rw [← hrest, List.getElem?_append_left hlt]
-    exact hget
+    simpa only [← hrest, List.getElem?_append_left hlt] using hget
   have hfind' : store.wasm.tagIds.findIdx? (· = id) = some index := by
     rw [← hrest, List.findIdx?_append, hfind]
     simp

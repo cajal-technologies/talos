@@ -66,8 +66,7 @@ theorem roundHeap_agrees :
     · simp [h0, storeResolve, checkRoundConfig]
     · simp [h0, storeResolve, checkRoundConfig,
         show («module».initialStore : Store Unit).extraMems = [] from by native_decide]
-  rw [← hresolveEq]
-  exact h
+  simpa only [← hresolveEq] using h
 
 theorem roundHeap_inBounds :
     heapAddressesInBounds roundHeap (storeResolve (checkRoundConfig 0).store) := by
@@ -93,8 +92,7 @@ theorem roundHeap_inBounds :
     · simp [h0, storeResolve, checkRoundConfig]
     · simp [h0, storeResolve, checkRoundConfig,
         show («module».initialStore : Store Unit).extraMems = [] from by native_decide]
-  rw [← hresolveEq]
-  exact h
+  simpa only [← hresolveEq] using h
 
 def roundGlobals : WasmGlobalMap Value :=
   insert ∅ ⟨0, 0⟩ (.i32 1048576)

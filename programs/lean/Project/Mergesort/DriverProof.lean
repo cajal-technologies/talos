@@ -863,8 +863,7 @@ theorem twp_func3_append_current
       (UInt32.ofNat current.length).toNat = current.length :=
     UInt32.toNat_ofNat_of_lt' (by omega)
   have hinitializedLe : UInt32.ofNat initialized.length ≤ capacity := by
-    rw [UInt32.le_iff_toNat_le_toNat, hinitializedWord]
-    exact hinitializedCapacity
+    simpa only [UInt32.le_iff_toNat_le_toNat, hinitializedWord] using hinitializedCapacity
   have hspareWord :
       (capacity - UInt32.ofNat initialized.length).toNat =
         capacity.toNat - initialized.length := by
@@ -892,8 +891,7 @@ theorem twp_func3_append_current
         have hfitsWord :
             UInt32.ofNat current.length ≤
               capacity - UInt32.ofNat initialized.length := by
-          rw [UInt32.le_iff_toNat_le_toNat, hcurrentWord, hspareWord]
-          exact hfits
+          simpa only [UInt32.le_iff_toNat_le_toNat, hcurrentWord, hspareWord] using hfits
         simp [hfitsWord])
     iapply twp_brIf (by decide) (by rfl)
     simp only [func3AppendBody, func3AppendLocals, List.take_zero,
@@ -925,8 +923,7 @@ theorem twp_func3_append_current
         have hfitsWord :
             ¬UInt32.ofNat current.length ≤
               capacity - UInt32.ofNat initialized.length := by
-          rw [UInt32.le_iff_toNat_le_toNat, hcurrentWord, hspareWord]
-          exact hfits
+          simpa only [UInt32.le_iff_toNat_le_toNat, hcurrentWord, hspareWord] using hfits
         simp [hfitsWord])
     wasm_twp_pures [twp_brIfZero] using [func3AppendLocals, List.drop_zero]
     ihave Hframe : ExportFrame heapId capacity dataPtr initialized
@@ -1218,8 +1215,7 @@ theorem twp_func3_read_loop_iteration
             ((remaining.take (min 256 remaining.length)).length +
               (remaining.drop (min 256 remaining.length)).length)
             finalCapacity finalPtr finalFrontier finalHistory := by
-        rw [← hremainingLength]
-        exact hgeo
+        simpa only [← hremainingLength] using hgeo
       have htotalNext :
           totalBytes = (initialized ++ current).length +
             (remaining.take (min 256 remaining.length)).length +
@@ -1232,8 +1228,7 @@ theorem twp_func3_read_loop_iteration
             min 256
               ((remaining.take (min 256 remaining.length)).length +
                 (remaining.drop (min 256 remaining.length)).length) := by
-        rw [← hremainingLength]
-        exact hnext.2.1
+        simpa only [← hremainingLength] using hnext.2.1
       have hmeasure :
           (remaining.take (min 256 remaining.length)).length +
               (remaining.drop (min 256 remaining.length)).length <
@@ -1241,16 +1236,13 @@ theorem twp_func3_read_loop_iteration
         omega
       have hnextPositive :
           0 < (remaining.take (min 256 remaining.length)).length := by
-        rw [hnext.2.1]
-        exact hnext.2.2.1
+        simpa only [hnext.2.1] using hnext.2.2.1
       have hnextBound :
           (remaining.take (min 256 remaining.length)).length ≤ 256 := by
-        rw [hnext.2.1]
-        exact hnext.2.2.2.1
+        simpa only [hnext.2.1] using hnext.2.2.2.1
       have hnextMod :
           (remaining.take (min 256 remaining.length)).length % 4 = 0 := by
-        rw [hnext.2.1]
-        exact hnext.2.2.2.2.1
+        simpa only [hnext.2.1] using hnext.2.2.2.2.1
       ihave HnextPair := BI.and_elim_l $$ Hcont
       ihave Hnext := BI.and_elim_r $$ HnextPair
       iapply Hnext $$ %finalCapacity %finalPtr %finalStoredCursor
@@ -1754,8 +1746,7 @@ theorem twp_func3_copy_decoded_word
     overwritePrefix_length original initial copied hlength
   have hsourceIndex : copied < original.length := hcopied
   have hdestinationIndex : copied < current.length := by
-    rw [hcurrentLength]
-    exact hcopied
+    simpa only [hcurrentLength] using hcopied
   iintro ⟨Hsource, Hdestination, Hcont⟩
   ihave ⟨Hsource, %hsourceFacts⟩ := WordSlice_facts source original $$ Hsource
   ihave HdestinationFacts := WordSlice_facts destination current $$
@@ -4334,8 +4325,7 @@ theorem twp_func3_finish_nonempty
   have hsortedLength : sorted.length = original.length :=
     hsorted.2.length_eq.symm
   have hsortedPositive : 0 < sorted.length := by
-    rw [hsortedLength]
-    exact hpositive
+    simpa only [hsortedLength] using hpositive
   have hcapacityPositive : 0 < capacity.toNat := by
     rcases hgeo with hempty | hshort | hlarge
     · have hzero := hempty.2.2.1
@@ -4954,17 +4944,14 @@ theorem twp_func3_first_read_nonempty
     exact hsplit.1
   have hcurrentShape :
       current.length = min 256 (current.length + remaining.length) := by
-    rw [← hremainingLength]
-    exact hsplit.1
+    simpa only [← hremainingLength] using hsplit.1
   have hcurrentPositive : 0 < current.length := by
-    rw [hcurrentLength]
-    exact hcountPositive
+    simpa only [hcurrentLength] using hcountPositive
   have hcurrentBound : current.length ≤ 256 := by
     rw [hcurrentLength]
     exact min_le_left 256 input.length
   have hcurrentMod : current.length % 4 = 0 := by
-    rw [hcurrentLength]
-    exact hsplit.2.1
+    simpa only [hcurrentLength] using hsplit.2.1
   have hserializeSplit :
       serialize original = [] ++ current ++ remaining := by
     calc

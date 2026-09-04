@@ -409,8 +409,7 @@ theorem twp_mergeMainLoop
         have hkInput : state.k < input.length :=
           MergeLoopInvariant.k_lt hstate hi hj
         have hkLen : state.k < state.scratch.length := by
-          rw [hdata.2.2.2.2.2.1]
-          exact hkInput
+          simpa only [hdata.2.2.2.2.2.1] using hkInput
         simp only [UInt32.mul_one,
           if_neg (by decide : (1 : UInt32) ≠ 0)]
         iapply Wasm.SmallStep.twp_brIfZero (α := α)
@@ -759,8 +758,7 @@ theorem twp_mergeLeftLoop
       have hkInput : state.k < input.length := by
         omega
       have hkLen : state.k < state.scratch.length := by
-        rw [hdata.2.2.2.2.2.1]
-        exact hkInput
+        simpa only [hdata.2.2.2.2.2.1] using hkInput
       simp only [if_neg (by decide : (1 : UInt32) ≠ 0)]
       iapply Wasm.SmallStep.twp_brIfZero (α := α)
       iapply twp_mergeLeftStep (α := α) source temporary input state.scratch
@@ -890,8 +888,7 @@ theorem twp_mergeRightLoop
       have hjLen : state.j < input.length := by omega
       have hkInput : state.k < input.length := by omega
       have hkLen : state.k < state.scratch.length := by
-        rw [hdata.2.2.2.2.2.1]
-        exact hkInput
+        simpa only [hdata.2.2.2.2.2.1] using hkInput
       iapply Wasm.SmallStep.twp_brIfZero (α := α)
       iapply twp_mergeRightStep (α := α) source temporary input state.scratch
         left mid right mid state.j state.k
@@ -1074,8 +1071,7 @@ theorem twp_mergeCopyLoop
       have hkInput : state.k < input.length := by omega
       have hkCurrent := hcopyState.k_lt_length hk
       have hkScratch : state.k < scratch.length := by
-        rw [hscratchLength]
-        exact hkInput
+        simpa only [hscratchLength] using hkInput
       have hkMerged : state.k - left < merged.length := by omega
       have hlookup :
           scratch[state.k]? = some merged[state.k - left] := by
@@ -1811,8 +1807,7 @@ theorem twp_mergeSortInnerLoop
         isplitr_pureexacts [hscratchLength.trans hvaluesLength.symm,
           by simpa only [hvaluesLength] using hlayout]
         · ipureintro
-          rw [hvaluesLength]
-          exact hbounds
+          simpa only [hvaluesLength] using hbounds
       iintro Hruntime Hpost
       ihave Hpost' := mergePost_elim source temporary state.current
         left newMid newRight $$ Hpost
@@ -1846,8 +1841,7 @@ theorem twp_mergeSortInnerLoop
         hnextScratchLength.trans hvaluesLength]
       isplitr
       · ipureintro
-        rw [← hnextPass]
-        exact hrightCandidate
+        simpa only [← hnextPass] using hrightCandidate
       iframe
     · have hcmp :
           ¬UInt32.ofNat (state.pass * (2 * width)) <

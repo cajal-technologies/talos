@@ -564,8 +564,7 @@ theorem twp_callHost
       [Hσ HinstanceOwn Henv]
   have hhost' : store.runtime.currentHost.funcs[functionIndex]? =
       some hostFn := by
-    rw [Hhost]
-    exact hfuncs
+    simpa only [Hhost] using hfuncs
   match h : hostFn.invoke store.wasm
       (values.take imp.params.length).reverse with
   | .Return results newWasm =>

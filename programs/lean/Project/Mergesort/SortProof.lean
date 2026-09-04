@@ -1330,8 +1330,7 @@ theorem twp_mergeMainLoop
     unfold MergeLoopInvariant at hdata
     have hkInput := hstate.k_lt hiState hjState
     have hkScratch : state.k < state.scratchValues.length := by
-      rw [hdata.2.2.2.2.1]
-      exact hkInput
+      simpa only [hdata.2.2.2.2.1] using hkInput
     iapply twp_mergeMainChoice source scratch input state.scratchValues
       mid state.i state.j state.k state.lastLeft state.lastRight
       hiState hjState hkScratch hdata.2.2.1 hlayout
@@ -1669,8 +1668,7 @@ theorem twp_mergeLeftRemainder
         rw [hkState, hemittedState]
         omega
       have hkCurrentScratch : k + state.r < state.scratchValues.length := by
-        rw [hstateLen]
-        exact hkCurrent
+        simpa only [hstateLen] using hkCurrent
       have hsumSize : k + state.r < UInt32.size :=
         Nat.lt_trans hkCurrent hlayout.length_lt
       have hcounterNe :
@@ -2048,8 +2046,7 @@ theorem twp_mergeRightRemainder
         rw [hkState, hemittedState]
         omega
       have hkCurrentScratch : k + state.r < state.scratchValues.length := by
-        rw [hstateLen]
-        exact hkCurrent
+        simpa only [hstateLen] using hkCurrent
       have hcounterNe :
           UInt32.ofNat input.length ≠ UInt32.ofNat (k + state.r) := by
         intro heq
@@ -2530,8 +2527,7 @@ theorem twp_sort
     iintro %leftOutput %leftScratch %hleftSorted
       %hleftScratchLength %hleftScratchExact Hruntime HsourceLeft HscratchLeft
     have hleftLt : left.length < input.length := by
-      rw [hleftLength]
-      exact hmidLt
+      simpa only [hleftLength] using hmidLt
     have hscratchLeftEq : scratchLeft.length = left.length := by
       rw [hscratchLeftLength, hleftLength]
     ihave HscratchRight' :
@@ -2627,15 +2623,12 @@ theorem twp_sort
     wasm_twp_pures [twp_const twp_localSet] using [List.length]
     wasm_twp_pures [twp_const twp_localSet] using [List.length]
     have hleftPositive : 0 < left.length := by
-      rw [hleftLength]
-      exact hmidPos
+      simpa only [hleftLength] using hmidPos
     have hleftCombinedLt : left.length < combined.length := by
-      rw [hcombinedLength]
-      exact hleftLt
+      simpa only [hcombinedLength] using hleftLt
     have hrightCombined :
         right.length = combined.length - left.length := by
-      rw [hcombinedLength]
-      exact hrightLengthLeft
+      simpa only [hcombinedLength] using hrightLengthLeft
     rw [← hcombinedLength, hrightCombined]
     simp
     ihave HmergeStart :

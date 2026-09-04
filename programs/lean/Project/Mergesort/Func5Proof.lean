@@ -195,8 +195,7 @@ private theorem twp_func5_claim_commit_and_return
   iintro ⟨Hruntime, Hcursor, Hfrontier, Hauth, Hretired, Hpages, Hstreams,
     Hcont⟩
   have hphysicalBase : base.toNat + layout.size ≤ ownedPages * 65536 := by
-    rw [← hfinishExact]
-    exact hphysical
+    simpa only [← hfinishExact] using hphysical
   ihave HclaimFrame : iprop(
       RuntimeContext ∗ pointsTo_u32 0 allocatorCursor storedCursor ∗
       AllocMetaAuth heapId history ∗ RetiredBytes heapId history ∗
@@ -292,8 +291,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
   have halignmentNat : alignment.toNat = layout.alignment := hlayout.1.2
   have halignmentWord : alignment = UInt32.ofNat layout.alignment := by
     apply UInt32.toNat_inj.mp
-    rw [UInt32.toNat_ofNat_of_lt' hvalid.2.2.2.2.2.2]
-    exact halignmentNat
+    simpa only [UInt32.toNat_ofNat_of_lt' hvalid.2.2.2.2.2.2] using halignmentNat
   have halignmentSmall : layout.alignment ≤ 4 := by
     rcases halignmentCases with h | h <;> omega
   have hpadSmall : layout.alignment - 1 ≤ 3 := by omega
@@ -387,8 +385,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
   have hbaseBound :
       base.toNat ≤ frontier + (layout.alignment - 1) := by
     dsimp only [base]
-    rw [UInt32.toNat_and, UInt32.toNat_ofNat_of_lt' hsumBound]
-    exact Nat.and_le_left
+    simpa only [UInt32.toNat_and, UInt32.toNat_ofNat_of_lt' hsumBound] using Nat.and_le_left
   have hfinishWordBound : finishNat < UInt32.size := by
     dsimp only [finishNat]
     have hsizeBound := hvalid.2.2.2.2.1
@@ -399,8 +396,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
     rw [UInt32.toNat_add, hsizeNat, Nat.mod_eq_of_lt hfinishWordBound]
     exact (UInt32.toNat_ofNat_of_lt' hfinishWordBound).symm
   have hfinishWord' : size + base = finish := by
-    rw [UInt32.add_comm]
-    exact hfinishWord
+    simpa only [UInt32.add_comm] using hfinishWord
   have hbaseRaw :
       UInt32.ofNat (frontier + (layout.alignment - 1)) &&&
           (0 - alignment) = base := by
@@ -409,8 +405,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
       size +
           (UInt32.ofNat (frontier + (layout.alignment - 1)) &&&
             (0 - alignment)) = finish := by
-    rw [hbaseRaw]
-    exact hfinishWord'
+    simpa only [hbaseRaw] using hfinishWord'
   have hbaseLeFinish : base ≤ finish := by
     rw [UInt32.le_iff_toNat_le_toNat,
       UInt32.toNat_ofNat_of_lt' hfinishWordBound]
@@ -501,8 +496,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
       allocatorRequiredPages finish by rfl]
     wasm_twp_localTee [List.length]
     have hfinishSignedWord : finish.toNat < 2147483648 := by
-      rw [hfinishNatEq]
-      exact hfinishSigned
+      simpa only [hfinishNatEq] using hfinishSigned
     have hrequiredCovers :=
       allocatorRequiredPages_covers finish hfinishSignedWord
     rcases classifyBump_success_reachable frontier layout base finish
