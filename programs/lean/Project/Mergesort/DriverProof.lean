@@ -182,8 +182,7 @@ theorem twp_func3_read_chunk
     · exact hframeLengths.2
   unfold ResumeWP resumeExpr
   simp only [List.cons_append, List.nil_append]
-  iapply Hcont $$ Hruntime Hstreams Hframe
-  · ipureexact hcount
+  iapply_pure Hcont $$ Hruntime Hstreams Hframe => exact hcount
 
 /-- Locals relevant to the read-loop append path.  The auxiliary slots are
 threaded explicitly so the lemma applies at every loop iteration. -/
@@ -762,8 +761,7 @@ theorem twp_func3_read_and_classify
     iapply twp_eqz (result := 1) (by simp [hcountZero])
     simp only [hcountZero, UInt32.reduceOfNat]
     ihave Hempty := BI.and_elim_l $$ Hcont
-    iapply Hempty $$ Hruntime HstreamsEmpty HframeEmpty
-    · ipureexact hempty
+    iapply_pure Hempty $$ Hruntime HstreamsEmpty HframeEmpty => exact hempty
   · have hinputPositive : 0 < input.length := by
       by_contra hnot
       apply hempty
