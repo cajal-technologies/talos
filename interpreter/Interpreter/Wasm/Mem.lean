@@ -264,6 +264,11 @@ cross-memory `memory.copy`; the caller checks bounds. -/
 def Mem.readBytes (m : Mem) (offset len : Nat) : List UInt8 :=
   (List.range len).map fun i => m.bytes (offset + i)
 
+theorem Mem.readBytes_add (m : Mem) (offset left right : Nat) :
+    m.readBytes offset (left + right) =
+      m.readBytes offset left ++ m.readBytes (offset + left) right := by
+  simp [Mem.readBytes, List.range_add, Nat.add_assoc]
+
 theorem Mem.readBytes_getElem? (m : Mem) (offset len i : Nat)
     (hi : i < len) :
     (m.readBytes offset len)[i]? = some (m.bytes (offset + i)) := by simp [Mem.readBytes, hi]

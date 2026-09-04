@@ -767,12 +767,8 @@ private theorem readBytes_eight_add (mem : Mem) (offset n : Nat) :
        mem.bytes (offset + 3), mem.bytes (offset + 4),
        mem.bytes (offset + 5), mem.bytes (offset + 6),
        mem.bytes (offset + 7)] ++ mem.readBytes (offset + 8) n := by
-  unfold Mem.readBytes
-  rw [List.range_add]
-  simp only [List.map_append, List.range_succ, List.range_zero,
-    List.map_cons, List.map_nil, List.nil_append]
-  congr 1
-  simp [Nat.add_assoc]
+  rw [Mem.readBytes_add]
+  rfl
 
 /-- Deserializing complete little-endian words observes exactly `Mem.words64`. -/
 theorem deserialize_readBytes64 (mem : Mem) (base : UInt32) (count : Nat)

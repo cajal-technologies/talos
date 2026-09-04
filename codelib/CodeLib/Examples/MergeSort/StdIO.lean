@@ -142,12 +142,8 @@ private theorem readBytes_four_add (mem : Mem) (offset n : Nat) :
     mem.readBytes offset (4 + n) =
       [mem.bytes offset, mem.bytes (offset + 1), mem.bytes (offset + 2),
        mem.bytes (offset + 3)] ++ mem.readBytes (offset + 4) n := by
-  unfold Mem.readBytes
-  rw [List.range_add]
-  simp only [List.map_append, List.range_succ, List.range_zero,
-    List.map_cons, List.map_nil, List.nil_append]
-  congr 1
-  simp [Nat.add_assoc]
+  rw [Mem.readBytes_add]
+  rfl
 
 /-- Deserializing a byte slice of complete words is the same observation as
 the word-array reader used in merge sort's postcondition. -/
