@@ -522,8 +522,8 @@ theorem mergePassInvariant_start
 theorem sortedRuns_one (values : List UInt32) :
     SortedRuns values 1 := by
   intro block _
-  apply List.pairwise_of_length_le_one
-  simp only [segment, List.length_take, List.length_drop]; omega
+  exact List.pairwise_of_length_le_one (by
+    simp only [segment, List.length_take, List.length_drop]; omega)
 
 theorem MergePassInvariant.finished
     {original current : List UInt32} {width pass : Nat}
@@ -531,12 +531,8 @@ theorem MergePassInvariant.finished
     (hfinished : current.length ≤ pass * (2 * width)) :
     SortedRuns current (2 * width) := by
   intro block hblock
-  have hblockPass : block < pass := by
-    apply Nat.lt_of_not_ge
-    intro hpass
-    have hmul := Nat.mul_le_mul_right (2 * width) hpass
-    omega
-  exact h.2.2.2.1 block hblockPass
+  exact h.2.2.2.1 block (Nat.lt_of_not_ge fun hpass =>
+    (Nat.not_le_of_lt hblock) (hfinished.trans (Nat.mul_le_mul_right _ hpass)))
 
 theorem sorted_of_sortedRuns_cover
     {values : List UInt32} {width : Nat}
