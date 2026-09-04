@@ -118,4 +118,16 @@ theorem execute_write (module : Module) (himports : module.imports = imports)
   rw [show (runSteps 2 initial).result =
       .success [] { machine with wasm } by simpa using hrun]
 
+theorem execute_write_bytes (module : Module)
+    (himports : module.imports = imports) (pointer : UInt32)
+    (store : Store State) (length : UInt32)
+    (hbound : pointer.toNat + length.toNat ≤ byteCapacity store) :
+    SmallStep.runFunction? module env 2 1 store [.i32 pointer, .i32 length] =
+      some ([], writtenStore pointer store length) := by
+  apply execute_write module himports
+  simp only [writeHost, writeResult]
+  rw [if_pos]
+  simp only [rangeInBounds]
+  exact decide_eq_true hbound
+
 end Wasm.StdIO

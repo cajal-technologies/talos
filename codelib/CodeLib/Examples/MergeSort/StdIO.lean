@@ -340,16 +340,6 @@ theorem execute_read_trap (store wasm : Store Wasm.StdIO.State)
     stepChecked?_complete hcall, trapped]
 
 
-theorem execute_write_bytes (store : Store Wasm.StdIO.State) (length : UInt32)
-    (hbound : source.toNat + length.toNat ≤ Wasm.StdIO.byteCapacity store) :
-    execute 2 1 store [.i32 source, .i32 length] =
-      some ([], writtenStore store length) := by
-  apply Wasm.StdIO.execute_write module rfl
-  simp only [Wasm.StdIO.writeHost, Wasm.StdIO.writeResult]
-  rw [if_pos]
-  simp only [Wasm.StdIO.rangeInBounds]
-  exact decide_eq_true hbound
-
 @[simp] private theorem initialStore_host (input : List UInt8) :
     (initialStore input).host = Wasm.StdIO.State.ofInput input := by rfl
 
@@ -993,8 +983,9 @@ theorem run_correct (fuel : Nat) (input : List UInt32) (bytes : List UInt8)
         simp only [source, UInt32.reduceToNat, Nat.zero_add,
           Wasm.StdIO.byteCapacity, hbyteLength]
         exact hcapacity
-      have hwrite := execute_write_bytes afterSort
+      have hwrite := Wasm.StdIO.execute_write_bytes module rfl source afterSort
         (UInt32.ofNat (serialize input).length) hwriteBound
+      change execute 2 1 afterSort _ = _ at hwrite
       simp only [] at hrun
       rw [hwrite] at hrun
       simp only [] at hrun
@@ -1064,8 +1055,9 @@ theorem complete : Complete := by
     simp only [source, UInt32.reduceToNat, Nat.zero_add,
       Wasm.StdIO.byteCapacity, hbyteLength]
     exact hcapacity
-  have hwrite := execute_write_bytes afterSort
+  have hwrite := Wasm.StdIO.execute_write_bytes module rfl source afterSort
     (UInt32.ofNat (serialize input).length) hwriteBound
+  change execute 2 1 afterSort _ = _ at hwrite
   have houtput : afterSort.host.output = [] := by
     rw [hhost]; rfl
   have hrun : run fuel (serialize input) =

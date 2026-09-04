@@ -13,17 +13,6 @@ namespace Wasm.Examples.SelectionSort.StdIO
 open Wasm SepLogic SmallStep
 open Iris Iris.Std
 
-theorem execute_write_bytes (program : Executable)
-    (store : Store Wasm.StdIO.State) (length : UInt32)
-    (hbound : array.toNat + length.toNat ≤ Wasm.StdIO.byteCapacity store) :
-    execute program 2 1 store [.i32 array, .i32 length] =
-      some ([], writtenStore store length) := by
-  apply Wasm.StdIO.execute_write program.module program.imports_eq
-  simp only [Wasm.StdIO.writeHost, Wasm.StdIO.writeResult]
-  rw [if_pos]
-  simp only [Wasm.StdIO.rangeInBounds]
-  exact decide_eq_true hbound
-
 @[simp] private theorem initialStore_host (program : Executable)
     (input : List UInt8) :
     (initialStore program input).host = Wasm.StdIO.State.ofInput input := rfl
@@ -861,8 +850,10 @@ private theorem correct_of_sort_complete
     simp only [array, UInt32.reduceToNat, Nat.zero_add,
       Wasm.StdIO.byteCapacity, hbyteLength]
     exact hcapacity
-  have hwrite := execute_write_bytes program afterSort
+  have hwrite := Wasm.StdIO.execute_write_bytes
+    program.module program.imports_eq array afterSort
     (UInt32.ofNat (serialize input).length) hwriteBound
+  change execute program 2 1 afterSort _ = _ at hwrite
   have houtput : afterSort.host.output = [] := by
     rw [hhost]; rfl
   have hrun : run program fuel (serialize input) =
