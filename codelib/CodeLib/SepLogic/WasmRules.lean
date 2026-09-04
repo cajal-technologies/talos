@@ -31,39 +31,40 @@ def heapAddressesInBounds (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → O
     get? σ key ≠ none →
     ∃ mem, resolve key.memId = some mem ∧ key.addr.toNat < mem.pages * 65536
 
-/-- Agreement between an authoritative ghost fragment for globals and the
-physical instantiated global array. Only owned indices need appear in the
-ghost map. -/
-def globalHeapAgrees
+/-- Agreement between an authoritative ghost fragment indexed within the
+current module instance and its physical list representation. -/
+def instanceIndexHeapAgrees
+    (σ : WasmInstanceIndexMap α) (values : List α) : Prop :=
+  ∀ (index : Nat) (value : α),
+    get? σ ⟨0, index⟩ = some value → values[index]? = some value
+
+/-- Agreement between owned globals and the instantiated global array. -/
+abbrev globalHeapAgrees
     (σ : WasmGlobalMap Value) (globals : Globals) : Prop :=
-  ∀ (index : Nat) (value : Value),
-    get? σ ⟨0, index⟩ = some value → globals.globals[index]? = some value
+  instanceIndexHeapAgrees σ globals.globals
 
 /-- Agreement between owned passive-data-segment entries and the instantiated
 segment-status list. `none` is an owned, observable dropped segment; absence
 from the ghost map means that a proof owns no fact about that index. -/
-def dataSegmentHeapAgrees
+abbrev dataSegmentHeapAgrees
     (σ : WasmDataSegmentMap (Option (List UInt8)))
     (segments : List (Option (List UInt8))) : Prop :=
-  ∀ (index : Nat) (value : Option (List UInt8)),
-    get? σ ⟨0, index⟩ = some value → segments[index]? = some value
+  instanceIndexHeapAgrees σ segments
 
 /-- Agreement between owned table identities and physical instantiated tables.
 The ghost key is the stable table index; the fragment owns the complete
 current table contents. -/
-def tableHeapAgrees
+abbrev tableHeapAgrees
     (σ : WasmTableMap TableInst) (tables : List TableInst) : Prop :=
-  ∀ (index : Nat) (table : TableInst),
-    get? σ ⟨0, index⟩ = some table → tables[index]? = some table
+  instanceIndexHeapAgrees σ tables
 
 /-- Agreement for live/dropped instantiated element segments. As with passive
 data segments, `none` is an owned dropped state rather than absence of
 ownership. -/
-def elementSegmentHeapAgrees
+abbrev elementSegmentHeapAgrees
     (σ : WasmElementSegmentMap (Option (List (Option Nat))))
     (segments : List (Option (List (Option Nat)))) : Prop :=
-  ∀ (index : Nat) (value : Option (List (Option Nat))),
-    get? σ ⟨0, index⟩ = some value → segments[index]? = some value
+  instanceIndexHeapAgrees σ segments
 
 theorem heapAgreesWithMem_empty (resolve : Nat → Option Mem) :
     heapAgreesWithMem (∅ : WasmHeapMap (Option UInt8)) resolve := by
@@ -76,16 +77,16 @@ theorem heapAddressesInBounds_empty (resolve : Nat → Option Mem) :
   intro key hne
   simp [LawfulPartialMap.get?_empty] at hne
 
-theorem globalHeapAgrees_empty (globals : Globals) :
-    globalHeapAgrees (∅ : WasmGlobalMap Value) globals := by
+theorem instanceIndexHeapAgrees_empty (values : List α) :
+    instanceIndexHeapAgrees (∅ : WasmInstanceIndexMap α) values := by
   intro index value hget
   rw [LawfulPartialMap.get?_empty] at hget
   contradiction
 
-theorem globalHeapAgrees_singleton
-    {globals : Globals} {index : Nat} {value : Value}
-    (hvalue : globals.globals[index]? = some value) :
-    globalHeapAgrees (insert ∅ ⟨0, index⟩ value) globals := by
+theorem instanceIndexHeapAgrees_singleton
+    {values : List α} {index : Nat} {value : α}
+    (hvalue : values[index]? = some value) :
+    instanceIndexHeapAgrees (insert ∅ ⟨0, index⟩ value) values := by
   intro idx other hget
   by_cases hidx : idx = index
   · subst idx
@@ -93,45 +94,41 @@ theorem globalHeapAgrees_singleton
     subst other
     exact hvalue
   · rw [get?_insert_ne (fun h =>
-      hidx (congrArg GlobalKey.index h).symm), get?_empty] at hget
+      hidx (congrArg InstanceIndexKey.index h).symm), get?_empty] at hget
     contradiction
+
+theorem globalHeapAgrees_empty (globals : Globals) :
+    globalHeapAgrees (∅ : WasmGlobalMap Value) globals :=
+  instanceIndexHeapAgrees_empty globals.globals
+
+theorem globalHeapAgrees_singleton
+    {globals : Globals} {index : Nat} {value : Value}
+    (hvalue : globals.globals[index]? = some value) :
+    globalHeapAgrees (insert ∅ ⟨0, index⟩ value) globals :=
+  instanceIndexHeapAgrees_singleton hvalue
 
 theorem dataSegmentHeapAgrees_empty
     (segments : List (Option (List UInt8))) :
     dataSegmentHeapAgrees
-      (∅ : WasmDataSegmentMap (Option (List UInt8))) segments := by
-  intro index value hget
-  rw [LawfulPartialMap.get?_empty] at hget
-  contradiction
+      (∅ : WasmDataSegmentMap (Option (List UInt8))) segments :=
+  instanceIndexHeapAgrees_empty segments
 
 theorem tableHeapAgrees_empty (tables : List TableInst) :
-    tableHeapAgrees (∅ : WasmTableMap TableInst) tables := by
-  intro index table hget
-  rw [LawfulPartialMap.get?_empty] at hget
-  contradiction
+    tableHeapAgrees (∅ : WasmTableMap TableInst) tables :=
+  instanceIndexHeapAgrees_empty tables
 
 theorem tableHeapAgrees_singleton
     {tables : List TableInst} {index : Nat} {table : TableInst}
     (htable : tables[index]? = some table) :
-    tableHeapAgrees (insert ∅ ⟨0, index⟩ table) tables := by
-  intro idx other hget
-  by_cases hidx : idx = index
-  · subst idx
-    simp only [get?_insert_eq rfl, Option.some.injEq] at hget
-    subst other
-    exact htable
-  · rw [get?_insert_ne (fun h =>
-      hidx (congrArg TableKey.index h).symm), get?_empty] at hget
-    contradiction
+    tableHeapAgrees (insert ∅ ⟨0, index⟩ table) tables :=
+  instanceIndexHeapAgrees_singleton htable
 
 theorem elementSegmentHeapAgrees_empty
     (segments : List (Option (List (Option Nat)))) :
     elementSegmentHeapAgrees
       (∅ : WasmElementSegmentMap (Option (List (Option Nat))))
-      segments := by
-  intro index value hget
-  rw [LawfulPartialMap.get?_empty] at hget
-  contradiction
+      segments :=
+  instanceIndexHeapAgrees_empty segments
 
 def exceptionHeapAgrees
     (σ : WasmExceptionMap (Nat × List Value))
@@ -145,16 +142,15 @@ theorem exceptionHeapAgrees_empty (exns : List (Nat × List Value)) :
   rw [LawfulPartialMap.get?_empty] at hget
   contradiction
 
-/-- Updating an owned global in both the authoritative ghost map and the
-physical global array preserves their agreement. All owned entries use
-`instanceId = 0`, so index equality is the only collision condition. -/
-theorem global_store_sound
-    (σ : WasmGlobalMap Value) (globals : Globals)
-    (index : Nat) (oldValue newValue : Value)
-    (hagree : globalHeapAgrees σ globals)
+/-- Updating an owned entry in both an authoritative instance-index map and
+its physical list preserves their agreement. -/
+theorem instanceIndex_store_sound
+    (σ : WasmInstanceIndexMap α) (values : List α)
+    (index : Nat) (oldValue newValue : α)
+    (hagree : instanceIndexHeapAgrees σ values)
     (hlookup : get? σ ⟨0, index⟩ = some oldValue) :
-    globalHeapAgrees (insert σ ⟨0, index⟩ newValue)
-      { globals := globals.globals.set index newValue } := by
+    instanceIndexHeapAgrees (insert σ ⟨0, index⟩ newValue)
+      (values.set index newValue) := by
   have hphysical := hagree index oldValue hlookup
   obtain ⟨hindex, _⟩ := getElem?_eq_some_iff.mp hphysical
   intro idx value hother
@@ -163,11 +159,23 @@ theorem global_store_sound
     simp only [get?_insert_eq rfl, Option.some.injEq] at hother
     subst value
     exact List.getElem?_set_self hindex
-  · have hne : (⟨0, idx⟩ : GlobalKey) ≠ ⟨0, index⟩ := fun h =>
-      heq (congrArg GlobalKey.index h)
+  · have hne : (⟨0, idx⟩ : InstanceIndexKey) ≠ ⟨0, index⟩ := fun h =>
+      heq (congrArg InstanceIndexKey.index h)
     rw [get?_insert_ne (Ne.symm hne)] at hother
     rw [List.getElem?_set_ne (Ne.symm heq)]
     exact hagree idx value hother
+
+/-- Updating an owned global in both the authoritative ghost map and the
+physical global array preserves their agreement. -/
+theorem global_store_sound
+    (σ : WasmGlobalMap Value) (globals : Globals)
+    (index : Nat) (oldValue newValue : Value)
+    (hagree : globalHeapAgrees σ globals)
+    (hlookup : get? σ ⟨0, index⟩ = some oldValue) :
+    globalHeapAgrees (insert σ ⟨0, index⟩ newValue)
+      { globals := globals.globals.set index newValue } :=
+  instanceIndex_store_sound σ globals.globals index oldValue newValue
+    hagree hlookup
 
 /-- Dropping an owned data segment in both the authoritative map and physical
 store preserves their agreement. -/
@@ -178,20 +186,8 @@ theorem dataSegment_store_sound
     (hagree : dataSegmentHeapAgrees σ segments)
     (hlookup : get? σ ⟨0, index⟩ = some oldValue) :
     dataSegmentHeapAgrees (insert σ ⟨0, index⟩ newValue)
-      (segments.set index newValue) := by
-  have hphysical := hagree index oldValue hlookup
-  obtain ⟨hindex, _⟩ := getElem?_eq_some_iff.mp hphysical
-  intro idx value hother
-  by_cases heq : idx = index
-  · subst idx
-    simp only [get?_insert_eq rfl, Option.some.injEq] at hother
-    subst value
-    exact List.getElem?_set_self hindex
-  · have hne : (⟨0, idx⟩ : DataSegmentKey) ≠ ⟨0, index⟩ := fun h =>
-      heq (congrArg DataSegmentKey.index h)
-    rw [get?_insert_ne (Ne.symm hne)] at hother
-    rw [List.getElem?_set_ne (Ne.symm heq)]
-    exact hagree idx value hother
+      (segments.set index newValue) :=
+  instanceIndex_store_sound σ segments index oldValue newValue hagree hlookup
 
 /-- Dropping an owned element segment preserves physical/ghost agreement and
 does not change the stable indices of any other segment. -/
@@ -203,20 +199,8 @@ theorem elementSegment_store_sound
     (hagree : elementSegmentHeapAgrees σ segments)
     (hlookup : get? σ ⟨0, index⟩ = some oldValue) :
     elementSegmentHeapAgrees (insert σ ⟨0, index⟩ newValue)
-      (segments.set index newValue) := by
-  have hphysical := hagree index oldValue hlookup
-  obtain ⟨hindex, _⟩ := getElem?_eq_some_iff.mp hphysical
-  intro idx value hother
-  by_cases heq : idx = index
-  · subst idx
-    simp only [get?_insert_eq rfl, Option.some.injEq] at hother
-    subst value
-    exact List.getElem?_set_self hindex
-  · have hne : (⟨0, idx⟩ : ElementSegmentKey) ≠ ⟨0, index⟩ := fun h =>
-      heq (congrArg ElementSegmentKey.index h)
-    rw [get?_insert_ne (Ne.symm hne)] at hother
-    rw [List.getElem?_set_ne (Ne.symm heq)]
-    exact hagree idx value hother
+      (segments.set index newValue) :=
+  instanceIndex_store_sound σ segments index oldValue newValue hagree hlookup
 
 /-- Updating one owned table in the authoritative map and physical table list
 preserves agreement without renumbering or changing unrelated tables. -/
@@ -226,20 +210,8 @@ theorem table_store_sound
     (hagree : tableHeapAgrees σ tables)
     (hlookup : get? σ ⟨0, index⟩ = some oldTable) :
     tableHeapAgrees (insert σ ⟨0, index⟩ newTable)
-      (tables.set index newTable) := by
-  have hphysical := hagree index oldTable hlookup
-  obtain ⟨hindex, _⟩ := getElem?_eq_some_iff.mp hphysical
-  intro idx table hother
-  by_cases heq : idx = index
-  · subst idx
-    simp only [get?_insert_eq rfl, Option.some.injEq] at hother
-    subst table
-    exact List.getElem?_set_self hindex
-  · have hne : (⟨0, idx⟩ : TableKey) ≠ ⟨0, index⟩ := fun h =>
-      heq (congrArg TableKey.index h)
-    rw [get?_insert_ne (Ne.symm hne)] at hother
-    rw [List.getElem?_set_ne (Ne.symm heq)]
-    exact hagree idx table hother
+      (tables.set index newTable) :=
+  instanceIndex_store_sound σ tables index oldTable newTable hagree hlookup
 
 theorem listSetAt_eq_set (values : List α) (index : Nat) (value : α)
     (hindex : index < values.length) :

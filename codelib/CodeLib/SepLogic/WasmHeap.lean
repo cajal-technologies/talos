@@ -198,10 +198,11 @@ instance instLawfulEqCmpInstanceIndexKey :
     · exact absurd h (by decide)
 
 abbrev WasmHeapMap := fun V => ExtTreeMap MemoryKey V compare
-abbrev WasmGlobalMap := fun V => ExtTreeMap GlobalKey V compare
-abbrev WasmDataSegmentMap := fun V => ExtTreeMap DataSegmentKey V compare
-abbrev WasmTableMap := fun V => ExtTreeMap TableKey V compare
-abbrev WasmElementSegmentMap := fun V => ExtTreeMap ElementSegmentKey V compare
+abbrev WasmInstanceIndexMap := fun V => ExtTreeMap InstanceIndexKey V compare
+abbrev WasmGlobalMap := WasmInstanceIndexMap
+abbrev WasmDataSegmentMap := WasmInstanceIndexMap
+abbrev WasmTableMap := WasmInstanceIndexMap
+abbrev WasmElementSegmentMap := WasmInstanceIndexMap
 abbrev WasmRuntimeModuleMap := fun V => ExtTreeMap Nat V compare
 abbrev WasmHostEnvMap := fun V => ExtTreeMap Nat V compare
 abbrev WasmExceptionMap := fun V => ExtTreeMap Nat V compare

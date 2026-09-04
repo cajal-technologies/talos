@@ -1232,15 +1232,7 @@ private def memoryInitDropSegments :
 private theorem memoryInitDropSegments_agree :
     dataSegmentHeapAgrees memoryInitDropSegments
       [some [1, 2, 3, 4]] := by
-  intro index value hget
-  unfold memoryInitDropSegments at hget
-  by_cases hindex : index = 0
-  · subst index
-    simp only [get?_insert_eq rfl, Option.some.injEq] at hget
-    subst value
-    rfl
-  · rw [get?_insert_ne (fun h => hindex (congrArg DataSegmentKey.index h).symm), get?_empty] at hget
-    contradiction
+  exact instanceIndexHeapAgrees_singleton rfl
 
 private theorem memoryInitDropSegments_pointsTo [WasmDataSegmentGS α] :
     ([∗map] index ↦ value ∈ memoryInitDropSegments,
@@ -1964,15 +1956,7 @@ private theorem tableInitDropTableMap_agrees :
 private theorem tableInitDropElementMap_agrees :
     elementSegmentHeapAgrees tableInitDropElementMap
       [some [some 0, none, some 0]] := by
-  intro index value hget
-  unfold tableInitDropElementMap at hget
-  by_cases hindex : index = 0
-  · subst index
-    simp only [get?_insert_eq rfl, Option.some.injEq] at hget
-    subst value
-    rfl
-  · rw [get?_insert_ne (fun h => hindex (congrArg ElementSegmentKey.index h).symm), get?_empty] at hget
-    contradiction
+  exact instanceIndexHeapAgrees_singleton rfl
 
 private theorem tableInitDropTableMap_pointsTo [WasmTableGS α] :
     ([∗map] index ↦ table ∈ tableInitDropTableMap,
