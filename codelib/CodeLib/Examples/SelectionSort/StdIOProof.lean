@@ -106,17 +106,6 @@ theorem execute_write_bytes (program : Executable)
   · rfl
   · simp only [Wasm.StdIO.rangeInBounds]; exact decide_eq_true hbound
 
-private theorem take_eq_self_of_length_le {β : Type} (xs : List β) (n : Nat)
-    (h : xs.length ≤ n) : xs.take n = xs := by
-  induction xs generalizing n with
-  | nil => simp
-  | cons x xs ih =>
-      cases n with
-      | zero => simp at h
-      | succ n =>
-          simp only [List.take_succ_cons, List.length_cons] at h ⊢
-          rw [ih n (Nat.le_of_succ_le_succ h)]
-
 @[simp] private theorem initialStore_host (program : Executable)
     (input : List UInt8) :
     (initialStore program input).host = Wasm.StdIO.State.ofInput input := rfl
@@ -150,7 +139,7 @@ theorem read_fits (program : Executable) (input : List UInt64)
     initialStore_host, Wasm.StdIO.State.ofInput]
   have hbuffer : (UInt32.ofNat bufferBytes).toNat = bufferBytes :=
     UInt32.toNat_ofNat_of_lt' (by decide)
-  rw [hbuffer, take_eq_self_of_length_le _ _ hfit]
+  rw [hbuffer, List.take_of_length_le hfit]
   rw [if_pos (by
     simp only [Wasm.StdIO.rangeInBounds, array,
       initial_byteCapacity]
