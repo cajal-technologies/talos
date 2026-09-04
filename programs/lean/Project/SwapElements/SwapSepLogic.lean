@@ -2329,12 +2329,9 @@ theorem func3Heap_agrees (ptr len : UInt32) :
   rw [show ((«module».initialStore : Store Unit).mem.write32 1048568 0).write32 1048572 0 =
       («module».initialStore : Store Unit).mem from by
     have := func3_initialMem_eq; unfold func3Mem at this; exact this] at h
-  have hresolveEq : (fun id : Nat => if id = 0 then some («module».initialStore : Store Unit).mem else none) =
-      storeResolve (func3Config ptr len).store := by
-    funext id; by_cases h0 : id = 0
-    · simp [h0, storeResolve, func3Config]
-    · simp [h0, storeResolve, func3Config,
-        show («module».initialStore : Store Unit).extraMems = [] from by native_decide]
+  have hresolveEq := singleMemoryResolve_eq_storeResolve
+    (func3Config ptr len).store («module».initialStore : Store Unit).mem rfl
+    (show («module».initialStore : Store Unit).extraMems = [] from by native_decide)
   simpa only [← hresolveEq] using h
 
 theorem func3Heap_inBounds (ptr len : UInt32) :
@@ -2350,12 +2347,9 @@ theorem func3Heap_inBounds (ptr len : UInt32) :
   rw [show ((«module».initialStore : Store Unit).mem.write32 1048568 0).write32 1048572 0 =
       («module».initialStore : Store Unit).mem from by
     have := func3_initialMem_eq; unfold func3Mem at this; exact this] at h
-  have hresolveEq : (fun id : Nat => if id = 0 then some («module».initialStore : Store Unit).mem else none) =
-      storeResolve (func3Config ptr len).store := by
-    funext id; by_cases h0 : id = 0
-    · simp [h0, storeResolve, func3Config]
-    · simp [h0, storeResolve, func3Config,
-        show («module».initialStore : Store Unit).extraMems = [] from by native_decide]
+  have hresolveEq := singleMemoryResolve_eq_storeResolve
+    (func3Config ptr len).store («module».initialStore : Store Unit).mem rfl
+    (show («module».initialStore : Store Unit).extraMems = [] from by native_decide)
   simpa only [← hresolveEq] using h
 
 theorem func3Heap_pointsTo [WasmHeapGS Unit] :
@@ -2454,12 +2448,9 @@ theorem func4ExampleHeap_agrees :
               (by decide) (by decide) (by decide) (by decide)
               (by decide) (by decide) (by decide)
               (heapAgreesWithMem_empty _)))))
-  have hresolveEq : (fun id : Nat => if id = 0 then some (func4ExampleMem («module».initialStore : Store Unit).mem) else none) =
-      storeResolve func4ExampleConfig.store := by
-    funext id; by_cases h0 : id = 0
-    · simp [h0, storeResolve, func4ExampleConfig, func4ExampleMem]
-    · simp [h0, storeResolve, func4ExampleConfig,
-        show («module».initialStore : Store Unit).extraMems = [] from by native_decide]
+  have hresolveEq := singleMemoryResolve_eq_storeResolve func4ExampleConfig.store
+    (func4ExampleMem («module».initialStore : Store Unit).mem) rfl
+    (by native_decide)
   rw [← hresolveEq]; exact h
 
 theorem func4ExampleHeap_inBounds :
@@ -2489,12 +2480,9 @@ theorem func4ExampleHeap_inBounds :
               (by decide) (by decide) (by decide)
               (by decide)
               (heapAddressesInBounds_empty _)))))
-  have hresolveEq : (fun id : Nat => if id = 0 then some (func4ExampleMem («module».initialStore : Store Unit).mem) else none) =
-      storeResolve func4ExampleConfig.store := by
-    funext id; by_cases h0 : id = 0
-    · simp [h0, storeResolve, func4ExampleConfig, func4ExampleMem]
-    · simp [h0, storeResolve, func4ExampleConfig,
-        show («module».initialStore : Store Unit).extraMems = [] from by native_decide]
+  have hresolveEq := singleMemoryResolve_eq_storeResolve func4ExampleConfig.store
+    (func4ExampleMem («module».initialStore : Store Unit).mem) rfl
+    (by native_decide)
   rw [← hresolveEq]; exact h
 
 theorem func4ExampleGlobals_agree :
@@ -2679,12 +2667,9 @@ theorem func4AliasHeap_agrees :
             (by decide) (by decide) (by decide) (by decide)
             (by decide) (by decide) (by decide)
             (heapAgreesWithMem_empty _))))
-  have hresolveEq : (fun id : Nat => if id = 0 then some (func4AliasMem («module».initialStore : Store Unit).mem) else none) =
-      storeResolve func4AliasConfig.store := by
-    funext id; by_cases h0 : id = 0
-    · simp [h0, storeResolve, func4AliasConfig, func4AliasMem]
-    · simp [h0, storeResolve, func4AliasConfig,
-        show («module».initialStore : Store Unit).extraMems = [] from by native_decide]
+  have hresolveEq := singleMemoryResolve_eq_storeResolve func4AliasConfig.store
+    (func4AliasMem («module».initialStore : Store Unit).mem) rfl
+    (by native_decide)
   rw [← hresolveEq]; exact h
 
 theorem func4AliasHeap_inBounds :
@@ -2709,12 +2694,9 @@ theorem func4AliasHeap_inBounds :
             (by decide) (by decide) (by decide)
             (by decide)
             (heapAddressesInBounds_empty _))))
-  have hresolveEq : (fun id : Nat => if id = 0 then some (func4AliasMem («module».initialStore : Store Unit).mem) else none) =
-      storeResolve func4AliasConfig.store := by
-    funext id; by_cases h0 : id = 0
-    · simp [h0, storeResolve, func4AliasConfig, func4AliasMem]
-    · simp [h0, storeResolve, func4AliasConfig,
-        show («module».initialStore : Store Unit).extraMems = [] from by native_decide]
+  have hresolveEq := singleMemoryResolve_eq_storeResolve func4AliasConfig.store
+    (func4AliasMem («module».initialStore : Store Unit).mem) rfl
+    (by native_decide)
   rw [← hresolveEq]; exact h
 
 theorem func4AliasHeap_pointsTo [WasmHeapGS Unit] :
@@ -2861,12 +2843,9 @@ theorem func0AliasHeap_agrees :
         (by decide) (by decide) (by decide) (by decide)
         (by decide) (by decide) (by decide)
         (heapAgreesWithMem_empty _))
-  have hresolveEq : (fun id : Nat => if id = 0 then some (((«module».initialStore : Store Unit).mem.write64 1048552 0).write64 0 42) else none) =
-      storeResolve func0AliasConfig.store := by
-    funext id; by_cases h0 : id = 0
-    · simp [h0, storeResolve, func0AliasConfig]
-    · simp [h0, storeResolve, func0AliasConfig,
-        show («module».initialStore : Store Unit).extraMems = [] from by native_decide]
+  have hresolveEq := singleMemoryResolve_eq_storeResolve func0AliasConfig.store
+    (((«module».initialStore : Store Unit).mem.write64 1048552 0).write64 0 42)
+    rfl (by native_decide)
   simpa only [← hresolveEq] using h
 
 theorem func0AliasHeap_inBounds :
@@ -2883,12 +2862,9 @@ theorem func0AliasHeap_inBounds :
         (by decide) (by decide) (by decide)
         (by decide)
         (heapAddressesInBounds_empty _))
-  have hresolveEq : (fun id : Nat => if id = 0 then some (((«module».initialStore : Store Unit).mem.write64 1048552 0).write64 0 42) else none) =
-      storeResolve func0AliasConfig.store := by
-    funext id; by_cases h0 : id = 0
-    · simp [h0, storeResolve, func0AliasConfig]
-    · simp [h0, storeResolve, func0AliasConfig,
-        show («module».initialStore : Store Unit).extraMems = [] from by native_decide]
+  have hresolveEq := singleMemoryResolve_eq_storeResolve func0AliasConfig.store
+    (((«module».initialStore : Store Unit).mem.write64 1048552 0).write64 0 42)
+    rfl (by native_decide)
   simpa only [← hresolveEq] using h
 
 theorem func0AliasGlobals_agree :

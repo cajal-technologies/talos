@@ -60,12 +60,9 @@ theorem roundHeap_agrees :
     have hrm := round_initialMem_eq
     unfold roundMem at hrm
     exact hrm] at h
-  have hresolveEq : (fun id : Nat => if id = 0 then some («module».initialStore : Store Unit).mem else none) =
-      storeResolve (checkRoundConfig 0).store := by
-    funext id; by_cases h0 : id = 0
-    · simp [h0, storeResolve, checkRoundConfig]
-    · simp [h0, storeResolve, checkRoundConfig,
-        show («module».initialStore : Store Unit).extraMems = [] from by native_decide]
+  have hresolveEq := singleMemoryResolve_eq_storeResolve
+    (checkRoundConfig 0).store («module».initialStore : Store Unit).mem rfl
+    (by native_decide)
   simpa only [← hresolveEq] using h
 
 theorem roundHeap_inBounds :
@@ -86,12 +83,9 @@ theorem roundHeap_inBounds :
     have hrm := round_initialMem_eq
     unfold roundMem at hrm
     exact hrm] at h
-  have hresolveEq : (fun id : Nat => if id = 0 then some («module».initialStore : Store Unit).mem else none) =
-      storeResolve (checkRoundConfig 0).store := by
-    funext id; by_cases h0 : id = 0
-    · simp [h0, storeResolve, checkRoundConfig]
-    · simp [h0, storeResolve, checkRoundConfig,
-        show («module».initialStore : Store Unit).extraMems = [] from by native_decide]
+  have hresolveEq := singleMemoryResolve_eq_storeResolve
+    (checkRoundConfig 0).store («module».initialStore : Store Unit).mem rfl
+    (by native_decide)
   simpa only [← hresolveEq] using h
 
 def roundGlobals : WasmGlobalMap Value :=

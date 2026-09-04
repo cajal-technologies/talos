@@ -152,6 +152,14 @@ multi-memory heapAgreesWithMem API. -/
 def storeResolve (store : MachineStore α) : Nat → Option Mem :=
   fun i => if i = 0 then some store.wasm.mem else store.wasm.extraMems[i - 1]?
 
+/-- A store without extra memories resolves exactly its named primary memory. -/
+theorem singleMemoryResolve_eq_storeResolve (store : MachineStore α)
+    (memory : Mem) (hmem : store.wasm.mem = memory)
+    (hextra : store.wasm.extraMems = []) :
+    (fun id => if id = 0 then some memory else none) = storeResolve store := by
+  funext id
+  simp [storeResolve, hmem, hextra]
+
 private theorem storeResolve_zero (store : MachineStore α) :
     storeResolve store 0 = some store.wasm.mem := by simp [storeResolve]
 
