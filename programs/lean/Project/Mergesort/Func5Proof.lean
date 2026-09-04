@@ -287,9 +287,9 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
     hlayout.2.2
   have hsizeNat : size.toNat = layout.size := hlayout.1.1
   have halignmentNat : alignment.toNat = layout.alignment := hlayout.1.2
-  have halignmentWord : alignment = UInt32.ofNat layout.alignment := by
-    apply UInt32.toNat_inj.mp
-    simpa only [UInt32.toNat_ofNat_of_lt' hvalid.2.2.2.2.2.2] using halignmentNat
+  have halignmentWord : alignment = UInt32.ofNat layout.alignment :=
+    UInt32.toNat_inj.mp <| by
+      simpa only [UInt32.toNat_ofNat_of_lt' hvalid.2.2.2.2.2.2] using halignmentNat
   have halignmentSmall : layout.alignment ≤ 4 := by
     rcases halignmentCases with h | h <;> omega
   have hpadSmall : layout.alignment - 1 ≤ 3 := by omega

@@ -4048,9 +4048,9 @@ private theorem completedHistory_other_records_retired
     have hptrExact :
         inputPtr = UInt32.ofNat (vectorBlockBase exponent) := by
       rw [← UInt32.ofNat_toNat (x := inputPtr), hptr]
-    have hinputId : inputId = exponent - 8 := by
-      apply geometricHistory_live_unique exponent inputId hexponentLower
-      simpa only [hhistory, hptrExact, hcapacity] using hinput
+    have hinputId : inputId = exponent - 8 :=
+      geometricHistory_live_unique exponent inputId hexponentLower
+        (by simpa only [hhistory, hptrExact, hcapacity] using hinput)
     intro allocationId metadata hlookup hne
     subst history
     unfold geometricHistory at hlookup

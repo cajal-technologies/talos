@@ -1660,8 +1660,7 @@ theorem BumpHeap_commit {host : Type} [WasmHeapGS host]
       hmetadata hstart
   have hbaseNatNe : base.toNat ≠ 0 := by
     intro hzero
-    apply hnonnull
-    exact UInt32.toNat_inj.mp (by simpa using hzero)
+    exact hnonnull (UInt32.toNat_inj.mp (by simpa using hzero))
   have hfinishPositive : 0 < finish.toNat := by omega
   have hfinishSigned : finish.toNat < 2147483648 := by simpa only [hfinish] using hendSigned
   have hfinishNonzero : finish ≠ 0 := by
@@ -3050,9 +3049,9 @@ theorem GeometricVecFacts.reserveSuccess
     unfold VecReserveHistory at hreserveHistory
     rw [if_neg hcapacityNe] at hreserveHistory
     rcases hreserveHistory with ⟨oldId, holdLookup, hfinalHistory⟩
-    have holdId : oldId = exponent - 8 := by
-      apply geometricHistory_live_unique exponent oldId hexponentLower
-      simpa only [hgeoHistory, hptrExact, hcapacity] using holdLookup
+    have holdId : oldId = exponent - 8 :=
+      geometricHistory_live_unique exponent oldId hexponentLower
+        (by simpa only [hgeoHistory, hptrExact, hcapacity] using holdLookup)
     have hfinal :
         finalHistory = geometricHistory (exponent + 1) := by
       rw [hfinalHistory, hgeoHistory, holdId, hptrExact, hcapacity,
