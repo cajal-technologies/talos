@@ -1,7 +1,7 @@
 import CodeLib.Examples.SelectionSort.TotalProof
 import CodeLib.RustStd.MemArray
 import CodeLib.WordCodec
-import Interpreter.Wasm.Host.StdIO
+import CodeLib.Host.StdIO
 import Mathlib.Data.List.Sort
 
 /-!
@@ -166,16 +166,10 @@ def initialStore (program : Executable) (input : List UInt8) :
   { (program.module.initialStore (α := Wasm.StdIO.State)) with
       host := Wasm.StdIO.State.ofInput input }
 
-def execute (program : Executable) (fuel entry : Nat)
+abbrev execute (program : Executable) (fuel entry : Nat)
     (store : Store Wasm.StdIO.State) (args : List Value) :
     Option (List Value × Store Wasm.StdIO.State) :=
-  match SmallStep.initConfig
-      { module := program.module, host := Wasm.StdIO.env } entry store args with
-  | .error _ => none
-  | .ok phase =>
-      match (SmallStep.runSteps fuel phase).result with
-      | .success values finalStore => some (values, finalStore.wasm)
-      | _ => none
+  SmallStep.runFunction? program.module Wasm.StdIO.env fuel entry store args
 
 def replaceHost (store : Store α) (host : β) : Store β :=
   { store with host := host }

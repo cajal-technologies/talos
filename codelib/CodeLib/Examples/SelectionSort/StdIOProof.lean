@@ -13,94 +13,14 @@ namespace Wasm.Examples.SelectionSort.StdIO
 open Wasm SepLogic SmallStep
 open Iris Iris.Std
 
-theorem execute_read (program : Executable)
-    (store wasm : Store Wasm.StdIO.State)
-    (length pointer count : UInt32)
-    (hinvoke : Wasm.StdIO.readHost.invoke store
-      [.i32 length, .i32 pointer] = .Return [.i32 count] wasm) :
-    execute program 2 0 store [.i32 pointer, .i32 length] =
-      some ([.i32 count], wasm) := by
-  let machine : MachineStore Wasm.StdIO.State :=
-    { runtime := { instances := #[{ module := program.module, host := Wasm.StdIO.env }], entry := ⟨0⟩ }, wasm := store }
-  let initial : Config Wasm.StdIO.State :=
-    { expr := .running
-        ⟨⟨[], [], [.i32 pointer, .i32 length]⟩, [.call 0], 1, [], [], []⟩
-      store := machine }
-  let middle : Config Wasm.StdIO.State :=
-    { expr := .running ⟨⟨[], [], [.i32 count]⟩, [], 1, [], [], []⟩
-      store := { machine with wasm } }
-  have hcallRaw := Step.callHostReturn
-    (store := machine) (functionIndex := 0)
-    (imp := Wasm.StdIO.imports[0])
-    (hostFunction := Wasm.StdIO.readHost)
-    (params := []) (localValues := [])
-    (values := [.i32 pointer, .i32 length])
-    (results := [.i32 count]) (wasm := wasm)
-    (code := []) (arity := 1) (remainder := [])
-    (controls := []) (calls := [])
-    (by simp [machine, program.imports_eq, Wasm.StdIO.imports])
-    (by simp [machine, program.imports_eq]) rfl hinvoke
-  have hcall : Step initial (.host 0) middle := by
-    simpa [initial, middle, machine, Wasm.StdIO.imports, Wasm.StdIO.env] using hcallRaw
-  have hfinish : Step middle (.administrative .finish)
-      ⟨.done [.i32 count], { machine with wasm }⟩ := Step.finish
-  have hrun := runSteps_eq_success_of_steps
-    (Steps.cons hcall (Steps.single hfinish))
-  have hinit : SmallStep.initConfig
-      { module := program.module, host := Wasm.StdIO.env } 0 store
-        [.i32 pointer, .i32 length] = .ok initial := by
-    simp [SmallStep.initConfig, initial, machine, program.imports_eq,
-      Wasm.StdIO.imports, Wasm.StdIO.env]
-  simp only [execute, hinit]
-  rw [show (runSteps 2 initial).result =
-      .success [.i32 count] { machine with wasm } by simpa using hrun]
 
-theorem execute_write (program : Executable)
-    (store wasm : Store Wasm.StdIO.State) (length pointer : UInt32)
-    (hinvoke : Wasm.StdIO.writeHost.invoke store
-      [.i32 length, .i32 pointer] = .Return [] wasm) :
-    execute program 2 1 store [.i32 pointer, .i32 length] =
-      some ([], wasm) := by
-  let machine : MachineStore Wasm.StdIO.State :=
-    { runtime := { instances := #[{ module := program.module, host := Wasm.StdIO.env }], entry := ⟨0⟩ }, wasm := store }
-  let initial : Config Wasm.StdIO.State :=
-    { expr := .running
-        ⟨⟨[], [], [.i32 pointer, .i32 length]⟩, [.call 1], 0, [], [], []⟩
-      store := machine }
-  let middle : Config Wasm.StdIO.State :=
-    { expr := .running ⟨⟨[], [], []⟩, [], 0, [], [], []⟩
-      store := { machine with wasm } }
-  have hcallRaw := Step.callHostReturn
-    (store := machine) (functionIndex := 1)
-    (imp := Wasm.StdIO.imports[1])
-    (hostFunction := Wasm.StdIO.writeHost)
-    (params := []) (localValues := [])
-    (values := [.i32 pointer, .i32 length]) (results := [])
-    (wasm := wasm) (code := []) (arity := 0) (remainder := [])
-    (controls := []) (calls := [])
-    (by simp [machine, program.imports_eq, Wasm.StdIO.imports])
-    (by simp [machine, program.imports_eq]) rfl hinvoke
-  have hcall : Step initial (.host 1) middle := by
-    simpa [initial, middle, machine, Wasm.StdIO.imports, Wasm.StdIO.env] using hcallRaw
-  have hfinish : Step middle (.administrative .finish)
-      ⟨.done [], { machine with wasm }⟩ := Step.finish
-  have hrun := runSteps_eq_success_of_steps
-    (Steps.cons hcall (Steps.single hfinish))
-  have hinit : SmallStep.initConfig
-      { module := program.module, host := Wasm.StdIO.env } 1 store
-        [.i32 pointer, .i32 length] = .ok initial := by
-    simp [SmallStep.initConfig, initial, machine, program.imports_eq,
-      Wasm.StdIO.imports, Wasm.StdIO.env]
-  simp only [execute, hinit]
-  rw [show (runSteps 2 initial).result =
-      .success [] { machine with wasm } by simpa using hrun]
 
 theorem execute_write_bytes (program : Executable)
     (store : Store Wasm.StdIO.State) (length : UInt32)
     (hbound : array.toNat + length.toNat ≤ Wasm.StdIO.byteCapacity store) :
     execute program 2 1 store [.i32 array, .i32 length] =
       some ([], writtenStore store length) := by
-  apply execute_write
+  apply Wasm.StdIO.execute_write program.module program.imports_eq
   simp only [Wasm.StdIO.writeHost, Wasm.StdIO.writeResult]
   rw [if_pos]
   · rfl
@@ -134,7 +54,7 @@ theorem read_fits (program : Executable) (input : List UInt64)
       [.i32 array, .i32 (UInt32.ofNat bufferBytes)] =
       some ([.i32 (UInt32.ofNat (serialize input).length)],
         afterRead program input) := by
-  apply execute_read
+  apply Wasm.StdIO.execute_read program.module program.imports_eq
   simp only [Wasm.StdIO.readHost, Wasm.StdIO.readResult,
     initialStore_host, Wasm.StdIO.State.ofInput]
   have hbuffer : (UInt32.ofNat bufferBytes).toNat = bufferBytes :=
@@ -158,7 +78,7 @@ theorem probe_afterRead (program : Executable) (input : List UInt64) :
     execute program 2 0 (afterRead program input)
       [.i32 (UInt32.ofNat 65536), .i32 1] =
       some ([.i32 0], afterRead program input) := by
-  apply execute_read
+  apply Wasm.StdIO.execute_read program.module program.imports_eq
   apply Wasm.StdIO.read_empty
   · rfl
   · rw [afterRead_byteCapacity]; decide

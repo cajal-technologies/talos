@@ -2,7 +2,7 @@ import CodeLib.Examples.MergeSort.TotalProof
 import CodeLib.Examples.Quicksort
 import CodeLib.RustStd.MemArray.SmallStep
 import CodeLib.WordCodec
-import Interpreter.Wasm.Host.StdIO
+import CodeLib.Host.StdIO
 
 /-!
 # Merge sort as a `StdIO` program
@@ -271,14 +271,9 @@ def config (input : List UInt8) : Config Wasm.StdIO.State :=
 
 /-- Execute one exported or imported function with the authoritative
 small-step machine, retaining the mutated Wasm/host store for the next phase. -/
-def execute (fuel entry : Nat) (store : Store Wasm.StdIO.State)
+abbrev execute (fuel entry : Nat) (store : Store Wasm.StdIO.State)
     (args : List Value) : Option (List Value × Store Wasm.StdIO.State) :=
-  match SmallStep.initConfig { module, host := Wasm.StdIO.env } entry store args with
-  | .error _ => none
-  | .ok phase =>
-      match (SmallStep.runSteps fuel phase).result with
-      | .success values finalStore => some (values, finalStore.wasm)
-      | _ => none
+  SmallStep.runFunction? module Wasm.StdIO.env fuel entry store args
 
 /-- Change only the host-owned component of a Wasm store. This is a
 type-changing record update: all core Wasm resources remain identical. -/
@@ -321,45 +316,6 @@ def writtenStore (store : Store Wasm.StdIO.State) (length : UInt32) :
         output := store.host.output ++
           store.mem.readBytes source.toNat length.toNat } }
 
-theorem execute_read (store wasm : Store Wasm.StdIO.State)
-    (length pointer count : UInt32)
-    (hinvoke : Wasm.StdIO.readHost.invoke store
-      [.i32 length, .i32 pointer] = .Return [.i32 count] wasm) :
-    execute 2 0 store [.i32 pointer, .i32 length] =
-      some ([.i32 count], wasm) := by
-  let machine : MachineStore Wasm.StdIO.State :=
-    { runtime := { instances := #[{ module, host := Wasm.StdIO.env }], entry := ⟨0⟩ }, wasm := store }
-  let initial : Config Wasm.StdIO.State :=
-    { expr := .running
-        ⟨⟨[], [], [.i32 pointer, .i32 length]⟩, [.call 0], 1, [], [], []⟩
-      store := machine }
-  let middle : Config Wasm.StdIO.State :=
-    { expr := .running
-        ⟨⟨[], [], [.i32 count]⟩, [], 1, [], [], []⟩
-      store := { machine with wasm } }
-  have hcallRaw := Step.callHostReturn
-    (store := machine) (functionIndex := 0)
-    (imp := Wasm.StdIO.imports[0])
-    (hostFunction := Wasm.StdIO.readHost)
-    (params := []) (localValues := [])
-    (values := [.i32 pointer, .i32 length])
-    (results := [.i32 count]) (wasm := wasm)
-    (code := []) (arity := 1) (remainder := [])
-    (controls := []) (calls := [])
-    (by simp [machine, module, Wasm.StdIO.imports]) rfl rfl hinvoke
-  have hcall : Step initial (.host 0) middle := by
-    simpa [initial, middle, machine, module, Wasm.StdIO.imports,
-      Wasm.StdIO.env] using hcallRaw
-  have hfinish : Step middle (.administrative .finish)
-      ⟨.done [.i32 count], { machine with wasm }⟩ := Step.finish
-  have hrun := runSteps_eq_success_of_steps
-    (Steps.cons hcall (Steps.single hfinish))
-  have hinit : SmallStep.initConfig
-      { module, host := Wasm.StdIO.env } 0 store
-        [.i32 pointer, .i32 length] = .ok initial := by rfl
-  simp only [execute, hinit]
-  rw [show (runSteps 2 initial).result =
-      .success [.i32 count] { machine with wasm } by simpa using hrun]
 
 theorem execute_read_trap (store wasm : Store Wasm.StdIO.State)
     (length pointer : UInt32) (message : String)
@@ -391,51 +347,15 @@ theorem execute_read_trap (store wasm : Store Wasm.StdIO.State)
   have hinit : SmallStep.initConfig
       { module, host := Wasm.StdIO.env } 0 store
         [.i32 pointer, .i32 length] = .ok initial := by rfl
-  simp [execute, hinit, runSteps, stepChecked?_complete hcall, trapped]
+  simp [SmallStep.runFunction?, hinit, runSteps,
+    stepChecked?_complete hcall, trapped]
 
-theorem execute_write (store wasm : Store Wasm.StdIO.State)
-    (length pointer : UInt32)
-    (hinvoke : Wasm.StdIO.writeHost.invoke store
-      [.i32 length, .i32 pointer] = .Return [] wasm) :
-    execute 2 1 store [.i32 pointer, .i32 length] = some ([], wasm) := by
-  let machine : MachineStore Wasm.StdIO.State :=
-    { runtime := { instances := #[{ module, host := Wasm.StdIO.env }], entry := ⟨0⟩ }, wasm := store }
-  let initial : Config Wasm.StdIO.State :=
-    { expr := .running
-        ⟨⟨[], [], [.i32 pointer, .i32 length]⟩, [.call 1], 0, [], [], []⟩
-      store := machine }
-  let middle : Config Wasm.StdIO.State :=
-    { expr := .running ⟨⟨[], [], []⟩, [], 0, [], [], []⟩
-      store := { machine with wasm } }
-  have hcallRaw := Step.callHostReturn
-    (store := machine) (functionIndex := 1)
-    (imp := Wasm.StdIO.imports[1])
-    (hostFunction := Wasm.StdIO.writeHost)
-    (params := []) (localValues := [])
-    (values := [.i32 pointer, .i32 length])
-    (results := []) (wasm := wasm)
-    (code := []) (arity := 0) (remainder := [])
-    (controls := []) (calls := [])
-    (by simp [machine, module, Wasm.StdIO.imports]) rfl rfl hinvoke
-  have hcall : Step initial (.host 1) middle := by
-    simpa [initial, middle, machine, module, Wasm.StdIO.imports,
-      Wasm.StdIO.env] using hcallRaw
-  have hfinish : Step middle (.administrative .finish)
-      ⟨.done [], { machine with wasm }⟩ := Step.finish
-  have hrun := runSteps_eq_success_of_steps
-    (Steps.cons hcall (Steps.single hfinish))
-  have hinit : SmallStep.initConfig
-      { module, host := Wasm.StdIO.env } 1 store
-        [.i32 pointer, .i32 length] = .ok initial := by rfl
-  simp only [execute, hinit]
-  rw [show (runSteps 2 initial).result =
-      .success [] { machine with wasm } by simpa using hrun]
 
 theorem execute_write_bytes (store : Store Wasm.StdIO.State) (length : UInt32)
     (hbound : source.toNat + length.toNat ≤ Wasm.StdIO.byteCapacity store) :
     execute 2 1 store [.i32 source, .i32 length] =
       some ([], writtenStore store length) := by
-  apply execute_write
+  apply Wasm.StdIO.execute_write module rfl
   simp only [Wasm.StdIO.writeHost, Wasm.StdIO.writeResult]
   rw [if_pos]
   · rfl
@@ -463,7 +383,7 @@ theorem read_bounded (input : List UInt8) :
       [.i32 source, .i32 (UInt32.ofNat bufferBytes)] =
       some ([.i32 (UInt32.ofNat (input.take bufferBytes).length)],
         afterBoundedRead input) := by
-  apply execute_read
+  apply Wasm.StdIO.execute_read module rfl
   simp only [Wasm.StdIO.readHost, Wasm.StdIO.readResult, initialStore_host,
     Wasm.StdIO.State.ofInput]
   have hbuffer : (UInt32.ofNat bufferBytes).toNat = bufferBytes :=
@@ -507,7 +427,7 @@ theorem read_fits (input : List UInt32)
     execute 2 0 (initialStore (serialize input))
       [.i32 source, .i32 (UInt32.ofNat bufferBytes)] =
       some ([.i32 (UInt32.ofNat (serialize input).length)], afterRead input) := by
-  apply execute_read
+  apply Wasm.StdIO.execute_read module rfl
   simp only [Wasm.StdIO.readHost, Wasm.StdIO.readResult]
   simp only [initialStore_host, Wasm.StdIO.State.ofInput]
   have hbuffer : (UInt32.ofNat bufferBytes).toNat = bufferBytes :=
@@ -532,7 +452,7 @@ theorem probe_afterRead (input : List UInt32) :
     execute 2 0 (afterRead input)
       [.i32 (UInt32.ofNat 65536), .i32 1] =
       some ([.i32 0], afterRead input) := by
-  apply execute_read
+  apply Wasm.StdIO.execute_read module rfl
   apply Wasm.StdIO.read_empty
   · rfl
   · rw [afterRead_byteCapacity]; decide
