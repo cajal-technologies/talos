@@ -122,12 +122,7 @@ theorem writeBytes_serialize (mem : Mem) (base : UInt32)
       writeWordArray64 mem base values := by
   induction values generalizing mem base with
   | nil =>
-      simp only [serialize_nil, writeWordArray64]
-      cases mem
-      simp only [Mem.writeBytes, List.length_nil, Nat.add_zero]
-      congr
-      funext i
-      rw [dif_neg (by omega)]
+      simp [writeWordArray64]
   | cons value values ih =>
       simp only [serialize_cons, writeWordArray64]
       rw [Mem.writeBytes_append, writeBytes_encodeWord]
