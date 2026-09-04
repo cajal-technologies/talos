@@ -64,8 +64,7 @@ theorem memorySize_reads_pagesMin :
 theorem memorySize_terminates :
     TerminatesWith sizeConfig (fun values store =>
       values = [.i32 1] ∧ store = growStore) := by
-  apply runSteps_success_terminates memorySize_reads_pagesMin
-  exact ⟨rfl, rfl⟩
+  exact runSteps_success_terminates memorySize_reads_pagesMin _ ⟨rfl, rfl⟩
 
 theorem memoryGrow_bumps_size :
     (runSteps 6 growThenSizeConfig).result =
@@ -98,8 +97,7 @@ theorem memoryGrow_oversize_returns_neg_one :
 theorem memoryGrow_failure_terminates :
     TerminatesWith growFailConfig (fun values store =>
       values = [.i32 1, .i32 0xFFFFFFFF] ∧ store = growStore) := by
-  apply runSteps_success_terminates memoryGrow_oversize_returns_neg_one
-  exact ⟨rfl, rfl⟩
+  exact runSteps_success_terminates memoryGrow_oversize_returns_neg_one _ ⟨rfl, rfl⟩
 
 theorem memoryGrow_failure_partial :
     PartiallyMeets growFailConfig (fun values store =>

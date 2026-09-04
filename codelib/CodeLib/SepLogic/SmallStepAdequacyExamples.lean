@@ -193,9 +193,8 @@ theorem wordRoundtrip_adequate (oldWord : UInt32) :
     (σ := word16Heap oldWord)
     (φ := fun values => values = [.i32 0x12345678])
   · unfold word16Heap
-    apply store32_sound0 (mem := wordRoundtripAdequacyModule.initialStore.mem)
-      (h1 := rfl) (h2 := rfl) (h3 := rfl)
-    exact emptyHeap_agrees _
+    exact store32_sound0 _ (mem := wordRoundtripAdequacyModule.initialStore.mem)
+      _ _ (h1 := rfl) (h2 := rfl) (h3 := rfl) (emptyHeap_agrees _)
   · unfold word16Heap
     apply store32_inBounds0 (mem := wordRoundtripAdequacyModule.initialStore.mem)
       (h1 := rfl) (h2 := rfl) (h3 := rfl)
@@ -227,9 +226,8 @@ theorem wordRoundtrip_store_partiallyMeets (oldWord : UInt32) :
     (σ := word16Heap oldWord)
     (globalσ := (∅ : WasmGlobalMap Value))
   · unfold word16Heap
-    apply store32_sound0 (mem := wordRoundtripAdequacyModule.initialStore.mem)
-      (h1 := rfl) (h2 := rfl) (h3 := rfl)
-    exact emptyHeap_agrees _
+    exact store32_sound0 _ (mem := wordRoundtripAdequacyModule.initialStore.mem)
+      _ _ (h1 := rfl) (h2 := rfl) (h3 := rfl) (emptyHeap_agrees _)
   · unfold word16Heap
     apply store32_inBounds0 (mem := wordRoundtripAdequacyModule.initialStore.mem)
       (h1 := rfl) (h2 := rfl) (h3 := rfl)
@@ -270,8 +268,7 @@ private theorem swapWordsHeap_agrees (mem : Mem) :
       (fun id => if id = 0 then some ((mem.write32 0 11).write32 4 22) else none) := by
   unfold swapWordsHeap
   apply store32_sound0 (mem := mem.write32 0 11) (h1 := rfl) (h2 := rfl) (h3 := rfl)
-  apply store32_sound0 (mem := mem) (h1 := rfl) (h2 := rfl) (h3 := rfl)
-  exact emptyHeap_agrees _
+  exact store32_sound0 _ (mem := mem) _ _ (h1 := rfl) (h2 := rfl) (h3 := rfl) (emptyHeap_agrees _)
 
 private theorem swapWordsHeap_inBounds (memory : Mem)
     (hpages : 1 ≤ memory.pages) :
@@ -1291,9 +1288,7 @@ theorem memoryInitDrop_store_partiallyMeets :
       ipureintro
       constructor
       · exact hvalues
-      constructor
-      · exact HwordFacts.1
-      · exact HsegmentFact
+      exact ⟨HwordFacts.1, HsegmentFact⟩
     iapply wp_mono hpost
     iapply_frame wp_memoryInitDrop 0
 

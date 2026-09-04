@@ -194,8 +194,7 @@ theorem memory_growth_terminates :
     TerminatesWith memoryGrowthConfig (fun values store =>
       values = [.i32 2, .i32 0xFFFFFFFF, .i32 2, .i32 1, .i32 1] ∧
       store.wasm.mem.pages = 2) := by
-  apply runSteps_success_terminates memory_growth_run
-  exact ⟨rfl, rfl⟩
+  exact runSteps_success_terminates memory_growth_run _ ⟨rfl, rfl⟩
 
 theorem memory_growth_matches_big_step :
     (runSteps 8 memoryGrowthConfig).result.values? =
@@ -239,8 +238,7 @@ theorem memory64_growth_terminates :
         [.i64 2, .i64 0xFFFFFFFFFFFFFFFF, .i64 2,
           .i64 0xFFFFFFFFFFFFFFFF, .i64 2, .i64 1, .i64 1] ∧
       store.wasm.mem.pages = 2) := by
-  apply runSteps_success_terminates memory64_growth_run
-  exact ⟨rfl, rfl⟩
+  exact runSteps_success_terminates memory64_growth_run _ ⟨rfl, rfl⟩
 
 theorem memory64_growth_matches_big_step :
     (runSteps 11 memory64GrowthConfig).result.values? =
@@ -2409,8 +2407,7 @@ theorem indexed_memory_roundtrip_terminates :
         values = [.i32 0xA1B2C3D4] ∧
           store.wasm.mem.read32 24 = 0 ∧
           store.wasm.extraMems[0]!.read32 24 = 0xA1B2C3D4) := by
-  apply runSteps_success_terminates indexed_memory_roundtrip_run
-  exact ⟨rfl, rfl, rfl⟩
+  exact runSteps_success_terminates indexed_memory_roundtrip_run _ ⟨rfl, rfl, rfl⟩
 
 theorem indexed_memory_roundtrip_matches_big_step :
     (runSteps 6 indexedMemoryConfig).result.values? =

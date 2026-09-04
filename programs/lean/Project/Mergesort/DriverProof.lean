@@ -760,8 +760,7 @@ theorem twp_func3_read_and_classify
     iapply_pure Hempty $$ Hruntime HstreamsEmpty HframeEmpty => exact hempty
   · have hinputPositive : 0 < input.length := by
       by_contra hnot
-      apply hempty
-      exact List.eq_nil_of_length_eq_zero (by omega)
+      exact hempty (List.eq_nil_of_length_eq_zero (by omega))
     have hcountPositive : 0 < count := by
       dsimp only [count]; omega
     have hcountSize : count < UInt32.size := by
@@ -4808,8 +4807,7 @@ theorem twp_func3_first_read_nonempty
   have hinputPositive : 0 < input.length := by
     have horiginalPositive : 0 < original.length := by
       by_contra hzero
-      apply horiginal
-      exact List.eq_nil_of_length_eq_zero (by omega)
+      exact horiginal (List.eq_nil_of_length_eq_zero (by omega))
     omega
   have hinputMod : input.length % 4 = 0 := by omega
   have hsplit := readChunk_mod_four input hinputMod

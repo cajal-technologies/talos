@@ -71,8 +71,7 @@ theorem replace_steps (st : Store Unit) (new old : UInt32)
   refine .cons (.localGet (by rfl)) ?_
   refine .cons (.store32 rfl ?_) ?_
   · simpa [replaceStore] using hbound
-  refine .cons (.localGet (by rfl)) ?_
-  exact .cons .finish (.refl _)
+  exact .cons (.localGet (by rfl)) (.cons .finish (.refl _))
 
 /-- The exact finite trace, retaining the original reusable preconditions. -/
 theorem replace_runs (st : Store Unit) (new old : UInt32)

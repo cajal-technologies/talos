@@ -1399,8 +1399,7 @@ theorem HistoryWellFormed.retire
       by_cases hidLast : allocationId = history.nextId - 1
       · refine ⟨retiredMeta ptr layout, get?_insert_eq hidLast, ?_⟩
         have heq : liveMeta ptr layout = last := by
-          apply Option.some.inj
-          exact hlookup.symm.trans (hidLast ▸ hlastLookup)
+          exact Option.some.inj (hlookup.symm.trans (hidLast ▸ hlastLookup))
         calc
           allocationEndExclusive (retiredMeta ptr layout) =
               allocationEndExclusive (liveMeta ptr layout) := by rfl

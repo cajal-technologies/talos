@@ -80,9 +80,8 @@ private theorem reassemble32 (n : Nat) (h : n < 2 ^ 32) :
     simp [hi8, hi32, h24le, heq, show ¬i - 8 < 8 by omega,
       show ¬i - 16 < 8 by omega, show i - 24 < 8 by omega]
   · have hibound : n.testBit i = false := by
-      apply Nat.testBit_eq_false_of_lt
-      exact lt_of_lt_of_le h
-        (Nat.pow_le_pow_right (by decide) (by omega))
+      exact Nat.testBit_eq_false_of_lt (lt_of_lt_of_le h
+        (Nat.pow_le_pow_right (by decide) (by omega)))
     simp [hi8, hibound, show ¬i < 32 by omega,
       show ¬i - 8 < 8 by omega, show ¬i - 16 < 8 by omega,
       show ¬i - 24 < 8 by omega]

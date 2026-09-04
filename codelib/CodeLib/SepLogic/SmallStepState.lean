@@ -1120,9 +1120,8 @@ private theorem fillSigma_ghost [WasmSmallStepGS hlc α]
         · iexact Hrest
       · ipureintro
         intro frontier Hbelow
-        apply HbelowRest frontier
-        exact HeapBelow.insert_existing Hbelow ⟨0, addr⟩ (some val)
-          ⟨some b, hlookup⟩
+        exact HbelowRest frontier (HeapBelow.insert_existing Hbelow ⟨0, addr⟩ (some val)
+          ⟨some b, hlookup⟩)
 
 private theorem fillSigma_agrees
     (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Option Mem) (mem : Mem)
@@ -1381,9 +1380,8 @@ private theorem copySigma_ghost [WasmSmallStepGS hlc α]
             · iexact Hrest
           · ipureintro
             intro frontier Hbelow
-            apply HbelowRest frontier
-            exact HeapBelow.insert_existing Hbelow ⟨0, dst⟩ (some s)
-              ⟨some b, hlookup⟩
+            exact HbelowRest frontier (HeapBelow.insert_existing Hbelow ⟨0, dst⟩ (some s)
+              ⟨some b, hlookup⟩)
 
 -- heapAgreesWithMem for copySigma, parameterized by the new physical memory
 private theorem copySigma_agrees_of_read_eq
