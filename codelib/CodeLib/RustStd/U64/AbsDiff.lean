@@ -289,15 +289,7 @@ theorem absDiffBodyGlobals_agree
     (hglobal : initial.globals.globals[0]? = some (.i32 1048576)) :
     globalHeapAgrees absDiffGlobals
       (absDiffBodyConfig runtimeModule initial a b oldScratch).store.wasm.globals := by
-  intro index value hget
-  simp only [absDiffGlobals] at hget
-  by_cases hindex : index = 0
-  · subst hindex
-    simp only [get?_insert_eq rfl] at hget
-    obtain rfl := Option.some.inj hget
-    exact hglobal
-  · rw [get?_insert_ne (fun h => hindex (congrArg GlobalKey.index h).symm), get?_empty] at hget
-    contradiction
+  exact globalHeapAgrees_singleton hglobal
 
 set_option maxHeartbeats 4000000 in
 /-- Generated-module form of the reusable Iris body proof. It works over any

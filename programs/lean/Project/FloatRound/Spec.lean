@@ -100,15 +100,7 @@ def roundGlobals : WasmGlobalMap Value :=
 theorem roundGlobals_agree :
     globalHeapAgrees roundGlobals
       («module».initialStore : Store Unit).globals := by
-  intro index value hget
-  simp only [roundGlobals] at hget
-  by_cases hindex : index = 0
-  · subst index
-    simp only [get?_insert_eq rfl] at hget
-    obtain rfl := Option.some.inj hget
-    rfl
-  · rw [get?_insert_ne (show (⟨0, 0⟩ : GlobalKey) ≠ ⟨0, index⟩ from fun h => hindex (congrArg GlobalKey.index h).symm), get?_empty] at hget
-    contradiction
+  exact globalHeapAgrees_singleton rfl
 
 theorem roundHeap_pointsTo [WasmHeapGS Unit] :
     ([∗map] address ↦ value ∈ roundHeap,

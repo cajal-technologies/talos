@@ -46,16 +46,7 @@ private def global0Heap : WasmGlobalMap Value :=
 private theorem global0Heap_agrees :
     globalHeapAgrees global0Heap
       globalGetAdequacyConfig.store.wasm.globals := by
-  intro index value hget
-  simp only [global0Heap] at hget
-  by_cases hindex : index = 0
-  · subst index
-    simp only [get?_insert_eq rfl] at hget
-    obtain rfl := Option.some.inj hget
-    rfl
-  · rw [get?_insert_ne (fun h => hindex (congrArg GlobalKey.index h).symm),
-        get?_empty] at hget
-    contradiction
+  exact globalHeapAgrees_singleton rfl
 
 private theorem global0Heap_pointsTo [WasmGlobalGS α] :
     ([∗map] index ↦ value ∈ global0Heap,

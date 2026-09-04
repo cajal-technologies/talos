@@ -82,6 +82,20 @@ theorem globalHeapAgrees_empty (globals : Globals) :
   rw [LawfulPartialMap.get?_empty] at hget
   contradiction
 
+theorem globalHeapAgrees_singleton
+    {globals : Globals} {index : Nat} {value : Value}
+    (hvalue : globals.globals[index]? = some value) :
+    globalHeapAgrees (insert ∅ ⟨0, index⟩ value) globals := by
+  intro idx other hget
+  by_cases hidx : idx = index
+  · subst idx
+    simp only [get?_insert_eq rfl, Option.some.injEq] at hget
+    subst other
+    exact hvalue
+  · rw [get?_insert_ne (fun h =>
+      hidx (congrArg GlobalKey.index h).symm), get?_empty] at hget
+    contradiction
+
 theorem dataSegmentHeapAgrees_empty
     (segments : List (Option (List UInt8))) :
     dataSegmentHeapAgrees

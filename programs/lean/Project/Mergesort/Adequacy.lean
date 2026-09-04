@@ -160,16 +160,7 @@ theorem entryHeap_facts (input : List UInt32) :
 
 theorem entryGlobals_agree (input : List UInt32) :
     globalHeapAgrees entryGlobals (entryConfig input).store.wasm.globals := by
-  intro index value hget
-  unfold entryGlobals at hget
-  by_cases hindex : index = 0
-  · subst index
-    simp only [get?_insert_eq rfl] at hget
-    obtain rfl := Option.some.inj hget
-    rfl
-  · rw [get?_insert_ne (fun h => hindex (congrArg GlobalKey.index h).symm),
-      get?_empty] at hget
-    contradiction
+  exact globalHeapAgrees_singleton rfl
 
 private theorem entryGlobals_pointsTo [WasmGlobalGS Universal.State] :
     ([∗map] index ↦ value ∈ entryGlobals,

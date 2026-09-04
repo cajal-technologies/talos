@@ -748,15 +748,7 @@ theorem func1GlobalHeap_agrees :
     globalHeapAgrees func1GlobalHeap
       ({ globals := [.i32 1048560, .i32 1048576, .i32 1048576] } :
         Globals) := by
-  intro index value hget
-  unfold func1GlobalHeap at hget
-  by_cases hindex : index = 0
-  · subst index
-    simp only [get?_insert_eq rfl] at hget
-    obtain rfl := Option.some.inj hget
-    rfl
-  · rw [get?_insert_ne (show (⟨0, 0⟩ : GlobalKey) ≠ ⟨0, index⟩ from fun h => hindex (congrArg GlobalKey.index h).symm), get?_empty] at hget
-    contradiction
+  exact globalHeapAgrees_singleton rfl
 
 theorem func1GlobalHeap_pointsTo [WasmGlobalGS Unit] :
     ([∗map] index ↦ value ∈ func1GlobalHeap,
@@ -3612,15 +3604,7 @@ def func0GlobalHeap : WasmGlobalMap Value :=
 theorem func0GlobalHeap_agrees :
     globalHeapAgrees func0GlobalHeap
       («module».initialStore : Store Unit).globals := by
-  intro index value hget
-  unfold func0GlobalHeap at hget
-  by_cases hindex : index = 0
-  · subst index
-    simp only [get?_insert_eq rfl] at hget
-    obtain rfl := Option.some.inj hget
-    rfl
-  · rw [get?_insert_ne (show (⟨0, 0⟩ : GlobalKey) ≠ ⟨0, index⟩ from fun h => hindex (congrArg GlobalKey.index h).symm), get?_empty] at hget
-    contradiction
+  exact globalHeapAgrees_singleton rfl
 
 theorem func0GlobalHeap_pointsTo [WasmGlobalGS Unit] :
     ([∗map] index ↦ value ∈ func0GlobalHeap,

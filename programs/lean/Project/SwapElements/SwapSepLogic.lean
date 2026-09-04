@@ -2502,15 +2502,7 @@ theorem func4ExampleHeap_inBounds :
 theorem func4ExampleGlobals_agree :
     globalHeapAgrees func4ExampleGlobals
       func4ExampleConfig.store.wasm.globals := by
-  intro index value hget
-  simp only [func4ExampleGlobals] at hget
-  by_cases hindex : index = 0
-  · subst index
-    simp only [get?_insert_eq rfl] at hget
-    obtain rfl := Option.some.inj hget
-    rfl
-  · rw [get?_insert_ne (show (⟨0, 0⟩ : GlobalKey) ≠ ⟨0, index⟩ from fun h => hindex (congrArg GlobalKey.index h).symm), get?_empty] at hget
-    contradiction
+  exact globalHeapAgrees_singleton rfl
 
 theorem func4ExampleHeap_pointsTo [WasmHeapGS Unit] :
     ([∗map] address ↦ value ∈ func4ExampleHeap,
@@ -2911,15 +2903,7 @@ theorem func0AliasHeap_inBounds :
 theorem func0AliasGlobals_agree :
     globalHeapAgrees func0AliasGlobals
       func0AliasConfig.store.wasm.globals := by
-  intro index value hget
-  simp only [func0AliasGlobals] at hget
-  by_cases hindex : index = 0
-  · subst index
-    simp only [get?_insert_eq rfl] at hget
-    obtain rfl := Option.some.inj hget
-    rfl
-  · rw [get?_insert_ne (show (⟨0, 0⟩ : GlobalKey) ≠ ⟨0, index⟩ from fun h => hindex (congrArg GlobalKey.index h).symm), get?_empty] at hget
-    contradiction
+  exact globalHeapAgrees_singleton rfl
 
 theorem func0AliasHeap_pointsTo [WasmHeapGS Unit] :
     ([∗map] address ↦ value ∈ func0AliasHeap,
