@@ -499,8 +499,8 @@ private theorem twp_recursiveSort_aux
       @ s; E [{ Φ }] := by
   induction n generalizing arr input callerLocals stack code arity remainder controls calls with
   | zero =>
-      have hinput : input = [] := by
-        exact List.eq_nil_of_length_eq_zero (by omega)
+      have hinput : input = [] :=
+        List.eq_nil_of_length_eq_zero (by omega)
       subst input
       iintro ⟨Hruntime, Harray, Hcont⟩
       wasm_twp_bind Wasm.SmallStep.twp_call runtimeModule sortIndex
