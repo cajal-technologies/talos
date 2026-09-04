@@ -77,13 +77,8 @@ private theorem zero_steps (y : UInt32) :
       .instruction (.localGet 1),
       .administrative .finish]
       ⟨.done [.i32 y], (simpleLoopConfig 0).store⟩ := by
-  apply Steps.cons .block
-  apply Steps.cons .block
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons .brIfZero
-  apply Steps.cons (.br rfl)
-  apply Steps.cons (.exitControl rfl)
-  apply Steps.cons (.localGet rfl)
+  wasm_steps [.block, .block, (.localGet rfl), .brIfZero, (.br rfl), (.exitControl rfl),
+    (.localGet rfl)]
   exact Steps.single .finish
 
 /-- Iteration branch: one unit moves from the counter to the accumulator. -/
@@ -103,19 +98,10 @@ private theorem iteration_steps (x y : UInt32) (hx : x ≠ 0) :
       .instruction (.localSet 0),
       .instruction (.br 1)]
       (head (x - 1) (1 + y)) := by
-  apply Steps.cons .block
-  apply Steps.cons .block
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.brIf hx (by rfl))
+  wasm_steps [.block, .block, (.localGet rfl), (.brIf hx (by rfl))]
   simp only [List.take_zero, List.drop_zero, List.nil_append]
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons .const
-  apply Steps.cons .add
-  apply Steps.cons (.localSet rfl)
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons .const
-  apply Steps.cons .sub
-  apply Steps.cons (.localSet rfl)
+  wasm_steps [(.localGet rfl), .const, .add, (.localSet rfl), (.localGet rfl), .const, .sub,
+    (.localSet rfl)]
   simp
   exact Steps.single (.br rfl)
 

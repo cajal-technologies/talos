@@ -43,9 +43,7 @@ theorem earlyReturn_steps (x : UInt32) :
        (.instruction (.localGet 0)),
        (.administrative .returnFromFunction)]
       ⟨.done [.i32 x], (earlyReturnConfig x).store⟩ := by
-  apply Steps.cons .block
-  apply Steps.cons .block
-  apply Steps.cons (.localGet rfl)
+  wasm_steps [.block, .block, (.localGet rfl)]
   exact Steps.cons .returnFromFunction (Steps.refl _)
 
 theorem earlyReturn_runs (x : UInt32) :

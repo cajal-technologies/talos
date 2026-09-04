@@ -6959,6 +6959,18 @@ theorem Steps.single (step : Step config kind next) :
     Steps config [kind] next :=
   .cons step (.refl next)
 
+/-- Apply several explicit steps while leaving the remaining trace goal open. -/
+syntax "wasm_steps" "[" term,* "]" : tactic
+
+macro_rules
+  | `(tactic| wasm_steps []) => `(tactic| skip)
+  | `(tactic| wasm_steps [$step:term]) =>
+      `(tactic| apply Steps.cons $step)
+  | `(tactic| wasm_steps [$step:term, $steps:term,*]) =>
+      `(tactic|
+        (apply Steps.cons $step
+         wasm_steps [$steps,*]))
+
 theorem Steps.trans
     (first : Steps config trace₁ middle)
     (suffix : Steps middle trace₂ final) :

@@ -108,8 +108,7 @@ theorem call_indirect_traps :
       [(.instruction (.const 7)), (.instruction (.const 0)),
        (.instruction (.callIndirect 1 0))]
       ⟨.trapped .indirectCallTypeMismatch, callConfig.store⟩ := by
-  apply Steps.cons .const
-  apply Steps.cons .const
+  wasm_steps [.const, .const]
   exact Steps.cons
     (.callIndirectTypeMismatch rfl rfl rfl (by decide) (by decide)
       rfl rfl rfl (by native_decide))
@@ -122,8 +121,7 @@ theorem return_call_indirect_traps :
       [(.instruction (.const 7)), (.instruction (.const 0)),
        (.instruction (.returnCallIndirect 1 0))]
       ⟨.trapped .indirectCallTypeMismatch, returnCallConfig.store⟩ := by
-  apply Steps.cons .const
-  apply Steps.cons .const
+  wasm_steps [.const, .const]
   exact Steps.cons
     (.returnCallIndirectTypeMismatch rfl rfl rfl (by decide)
       rfl rfl rfl (by native_decide))

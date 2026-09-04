@@ -99,12 +99,8 @@ private theorem gcdLoop_zero_steps (a temporary : UInt32) :
     .administrative .exitControl,
     .instruction (.localGet 0),
     .administrative .finish], ?_⟩
-  apply Steps.cons .block
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.eqz rfl)
-  apply Steps.cons (.brIf (by decide) (by rfl))
-  apply Steps.cons (.exitControl rfl)
-  apply Steps.cons (.localGet rfl)
+  wasm_steps [.block, (.localGet rfl), (.eqz rfl), (.brIf (by decide) (by rfl)), (.exitControl rfl),
+    (.localGet rfl)]
   exact Steps.single .finish
 
 private theorem gcdLoop_iteration_steps (a b temporary : UInt32)
@@ -126,18 +122,9 @@ private theorem gcdLoop_iteration_steps (a b temporary : UInt32)
     .instruction (.localGet 2),
     .instruction (.localSet 1),
     .instruction (.br 1)], ?_⟩
-  apply Steps.cons .block
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.eqz (result := 0) (by simp [hb]))
-  apply Steps.cons .brIfZero
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.remU hb)
-  apply Steps.cons (.localSet rfl)
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.localSet rfl)
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.localSet rfl)
+  wasm_steps [.block, (.localGet rfl), (.eqz (result := 0) (by simp [hb])), .brIfZero,
+    (.localGet rfl), (.localGet rfl), (.remU hb), (.localSet rfl), (.localGet rfl), (.localSet rfl),
+    (.localGet rfl), (.localSet rfl)]
   exact Steps.single (.br rfl)
 
 private theorem gcdLoop_steps (a b temporary : UInt32) :

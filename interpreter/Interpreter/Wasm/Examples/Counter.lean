@@ -165,12 +165,8 @@ theorem counter_steps
     hwriteContract st
       [.i32 0, .i32 (1 + Counter.lookup st.host 0)]
       0 (1 + Counter.lookup st.host 0) rfl
-  apply Steps.cons .const
-  apply Steps.cons .const
-  apply Steps.cons (.callHostReturn counter_import0 rfl hreadHost hread)
-  apply Steps.cons .const
-  apply Steps.cons .add
-  apply Steps.cons (.callHostReturn counter_import1 rfl hwriteHost hwrite)
+  wasm_steps [.const, .const, (.callHostReturn counter_import0 rfl hreadHost hread), .const, .add,
+    (.callHostReturn counter_import1 rfl hwriteHost hwrite)]
   exact Steps.cons .finish (Steps.refl _)
 
 theorem counter_terminates

@@ -412,19 +412,13 @@ theorem mod3_gcd_left_zero_smallStep_terminates (b : UInt64) :
       .instruction (.br_if 0), .instruction (.localGet 2),
       .administrative .finish],
     [.i64 b], (gcdConfig 0 b).store, ?_, by simp⟩
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons .orI64
-  apply Steps.cons (.localSet rfl)
+  wasm_steps [(.localGet rfl), (.localGet rfl), .orI64, (.localSet rfl)]
   simp only [UInt64.or_zero]
-  apply Steps.cons .block
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.eqzI64 (result := 1) (value := 0) rfl)
+  wasm_steps [.block, (.localGet rfl), (.eqzI64 (result := 1) (value := 0) rfl)]
   apply Steps.cons (.brIf (condition := 1)
     (targetCode := [.localGet 2]) (targetControl := [])
     (targetValues := []) (by decide) rfl)
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons .finish
+  wasm_steps [(.localGet rfl), .finish]
   exact .refl _
 
 /-- Symmetric early-zero finite trace. -/
@@ -443,22 +437,14 @@ theorem mod3_gcd_right_zero_smallStep_terminates (a : UInt64) :
         .instruction .eqzI64, .instruction (.br_if 0),
         .instruction (.localGet 2), .administrative .finish],
       [.i64 a], (gcdConfig a 0).store, ?_, by simp⟩
-    apply Steps.cons (.localGet rfl)
-    apply Steps.cons (.localGet rfl)
-    apply Steps.cons .orI64
-    apply Steps.cons (.localSet rfl)
+    wasm_steps [(.localGet rfl), (.localGet rfl), .orI64, (.localSet rfl)]
     simp only [UInt64.zero_or]
-    apply Steps.cons .block
-    apply Steps.cons (.localGet rfl)
-    apply Steps.cons (.eqzI64 (result := 0) (value := a) (by simp [ha]))
-    apply Steps.cons .brIfZero
-    apply Steps.cons (.localGet rfl)
-    apply Steps.cons (.eqzI64 (result := 1) (value := 0) rfl)
+    wasm_steps [.block, (.localGet rfl), (.eqzI64 (result := 0) (value := a) (by simp [ha])),
+      .brIfZero, (.localGet rfl), (.eqzI64 (result := 1) (value := 0) rfl)]
     apply Steps.cons (.brIf (condition := 1)
       (targetCode := [.localGet 2]) (targetControl := [])
       (targetValues := []) (by decide) rfl)
-    apply Steps.cons (.localGet rfl)
-    apply Steps.cons .finish
+    wasm_steps [(.localGet rfl), .finish]
     exact .refl _
 
 /-- Both generated early exits are total in the relational small-step
@@ -505,20 +491,9 @@ theorem gcd_nonzero_setup_steps
     .instruction (.localSet 2),
     .instruction (.block 0 0 innerBody)], ?_⟩
   simp only [gcdConfig, gcdInnerConfig, func0]
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons .orI64
-  apply Steps.cons (.localSet rfl)
-  apply Steps.cons .block
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.eqzI64 (result := 0) (by simp [ha]))
-  apply Steps.cons .brIfZero
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.eqzI64 (result := 0) (by simp [hb]))
-  apply Steps.cons .brIfZero
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons .ctzI64
-  apply Steps.cons (.localSet rfl)
+  wasm_steps [(.localGet rfl), (.localGet rfl), .orI64, (.localSet rfl), .block, (.localGet rfl),
+    (.eqzI64 (result := 0) (by simp [ha])), .brIfZero, (.localGet rfl),
+    (.eqzI64 (result := 0) (by simp [hb])), .brIfZero, (.localGet rfl), .ctzI64, (.localSet rfl)]
   exact Steps.single .block
 
 /-- Odd-part normalization followed by the unequal fast-path enters the loop
@@ -543,20 +518,11 @@ theorem gcdInner_to_loop_steps
     .instruction .eqI64, .instruction (.br_if 0),
     .instruction (.loop 0 0 loopBody)], ?_⟩
   simp only [gcdInnerConfig, gcdLoopConfig, innerBody]
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons .ctzI64
-  apply Steps.cons .shrUI64
-  apply Steps.cons (.localTee rfl)
+  wasm_steps [(.localGet rfl), (.localGet rfl), .ctzI64, .shrUI64, (.localTee rfl)]
   simp only [List.set]
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons .ctzI64
-  apply Steps.cons .shrUI64
-  apply Steps.cons (.localTee rfl)
+  wasm_steps [(.localGet rfl), (.localGet rfl), .ctzI64, .shrUI64, (.localTee rfl)]
   simp only [List.set]
-  apply Steps.cons (.eqI64 (result := 0) (by simp [hne]))
-  apply Steps.cons .brIfZero
+  wasm_steps [(.eqI64 (result := 0) (by simp [hne])), .brIfZero]
   exact Steps.single .loop
 
 /-- Equal odd parts bypass the loop and complete the recombination tail. -/
@@ -583,26 +549,12 @@ theorem gcdInner_equal_steps
     .administrative .exitControl, .instruction (.localGet 2),
     .administrative .finish], ?_⟩
   simp only [gcdInnerConfig, innerBody]
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons .ctzI64
-  apply Steps.cons .shrUI64
-  apply Steps.cons (.localTee rfl)
+  wasm_steps [(.localGet rfl), (.localGet rfl), .ctzI64, .shrUI64, (.localTee rfl)]
   simp only [List.set]
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons .ctzI64
-  apply Steps.cons .shrUI64
-  apply Steps.cons (.localTee rfl)
+  wasm_steps [(.localGet rfl), (.localGet rfl), .ctzI64, .shrUI64, (.localTee rfl)]
   simp only [List.set]
-  apply Steps.cons (.eqI64 (result := 1) (by rw [if_pos heq]))
-  apply Steps.cons (.brIf (by decide) rfl)
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons .shlI64
-  apply Steps.cons (.localSet rfl)
-  apply Steps.cons (.exitControl rfl)
-  apply Steps.cons (.localGet rfl)
+  wasm_steps [(.eqI64 (result := 1) (by rw [if_pos heq])), (.brIf (by decide) rfl), (.localGet rfl),
+    (.localGet rfl), .shlI64, (.localSet rfl), (.exitControl rfl), (.localGet rfl)]
   exact Steps.single .finish
 
 /-- One decreasing loop iteration for the `x > y` arm, stopping exactly at
@@ -631,23 +583,12 @@ theorem gcdLoop_step_x
     .instruction (.localGet 1), .instruction .neI64,
     .instruction (.br_if 0)], ?_⟩
   simp only [gcdLoopConfig, loopBody]
-  apply Steps.cons .block
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.gtUI64 (result := 1) (by simp [hgt]))
-  apply Steps.cons (.brIf (by decide) rfl)
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons .subI64
-  apply Steps.cons (.localTee rfl)
+  wasm_steps [.block, (.localGet rfl), (.localGet rfl), (.gtUI64 (result := 1) (by simp [hgt])),
+    (.brIf (by decide) rfl), (.localGet rfl), (.localGet rfl), .subI64, (.localTee rfl)]
   simp only [List.set]
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons .ctzI64
-  apply Steps.cons .shrUI64
-  apply Steps.cons (.localTee rfl)
+  wasm_steps [(.localGet rfl), .ctzI64, .shrUI64, (.localTee rfl)]
   simp only [List.set]
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.neI64 (result := 1) (by simp [hnext]))
+  wasm_steps [(.localGet rfl), (.neI64 (result := 1) (by simp [hnext]))]
   exact Steps.single (.brIf (by decide) rfl)
 
 /-- Symmetric decreasing iteration for the `x < y` arm. -/
@@ -675,24 +616,12 @@ theorem gcdLoop_step_y
     .instruction .eqI64,
     .instruction (.br_if 2), .instruction (.br 1)], ?_⟩
   simp only [gcdLoopConfig, loopBody]
-  apply Steps.cons .block
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.gtUI64 (result := 0) (by simp [hgt]))
-  apply Steps.cons .brIfZero
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons .subI64
-  apply Steps.cons (.localTee rfl)
+  wasm_steps [.block, (.localGet rfl), (.localGet rfl), (.gtUI64 (result := 0) (by simp [hgt])),
+    .brIfZero, (.localGet rfl), (.localGet rfl), (.localGet rfl), .subI64, (.localTee rfl)]
   simp only [List.set]
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons .ctzI64
-  apply Steps.cons .shrUI64
-  apply Steps.cons (.localTee rfl)
+  wasm_steps [(.localGet rfl), .ctzI64, .shrUI64, (.localTee rfl)]
   simp only [List.set]
-  apply Steps.cons (.eqI64 (result := 0) (by simp [hnext]))
-  apply Steps.cons .brIfZero
+  wasm_steps [(.eqI64 (result := 0) (by simp [hnext])), .brIfZero]
   exact Steps.single (.br rfl)
 
 /-- The equality exit reached by the `x > y` arm completes the enclosing
@@ -725,35 +654,16 @@ theorem gcdLoop_exit_x
     .instruction (.localSet 2), .administrative .exitControl,
     .instruction (.localGet 2), .administrative .finish], ?_⟩
   simp only [gcdLoopConfig, loopBody]
-  apply Steps.cons .block
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.gtUI64 (result := 1) (by simp [hgt]))
-  apply Steps.cons (.brIf (by decide) rfl)
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons .subI64
-  apply Steps.cons (.localTee rfl)
+  wasm_steps [.block, (.localGet rfl), (.localGet rfl), (.gtUI64 (result := 1) (by simp [hgt])),
+    (.brIf (by decide) rfl), (.localGet rfl), (.localGet rfl), .subI64, (.localTee rfl)]
   simp only [List.set]
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons .ctzI64
-  apply Steps.cons .shrUI64
-  apply Steps.cons (.localTee rfl)
+  wasm_steps [(.localGet rfl), .ctzI64, .shrUI64, (.localTee rfl)]
   simp only [List.set]
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.neI64 (result := 0) (by simp [hnext]))
-  apply Steps.cons .brIfZero
-  apply Steps.cons (.exitControl rfl)
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.localSet rfl)
+  wasm_steps [(.localGet rfl), (.neI64 (result := 0) (by simp [hnext])), .brIfZero,
+    (.exitControl rfl), (.localGet rfl), (.localSet rfl)]
   simp only [List.set]
-  apply Steps.cons (.exitControl rfl)
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons .shlI64
-  apply Steps.cons (.localSet rfl)
-  apply Steps.cons (.exitControl rfl)
-  apply Steps.cons (.localGet rfl)
+  wasm_steps [(.exitControl rfl), (.localGet rfl), (.localGet rfl), .shlI64, (.localSet rfl),
+    (.exitControl rfl), (.localGet rfl)]
   exact Steps.single .finish
 
 /-- Symmetric equality exit reached by the `x < y` arm. -/
@@ -783,30 +693,13 @@ theorem gcdLoop_exit_y
     .instruction (.localSet 2), .administrative .exitControl,
     .instruction (.localGet 2), .administrative .finish], ?_⟩
   simp only [gcdLoopConfig, loopBody]
-  apply Steps.cons .block
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.gtUI64 (result := 0) (by simp [hgt]))
-  apply Steps.cons .brIfZero
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons .subI64
-  apply Steps.cons (.localTee rfl)
+  wasm_steps [.block, (.localGet rfl), (.localGet rfl), (.gtUI64 (result := 0) (by simp [hgt])),
+    .brIfZero, (.localGet rfl), (.localGet rfl), (.localGet rfl), .subI64, (.localTee rfl)]
   simp only [List.set]
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons .ctzI64
-  apply Steps.cons .shrUI64
-  apply Steps.cons (.localTee rfl)
+  wasm_steps [(.localGet rfl), .ctzI64, .shrUI64, (.localTee rfl)]
   simp only [List.set]
-  apply Steps.cons (.eqI64 (result := 1) (by rw [if_pos hnext]))
-  apply Steps.cons (.brIf (by decide) rfl)
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons .shlI64
-  apply Steps.cons (.localSet rfl)
-  apply Steps.cons (.exitControl rfl)
-  apply Steps.cons (.localGet rfl)
+  wasm_steps [(.eqI64 (result := 1) (by rw [if_pos hnext])), (.brIf (by decide) rfl),
+    (.localGet rfl), (.localGet rfl), .shlI64, (.localSet rfl), (.exitControl rfl), (.localGet rfl)]
   exact Steps.single .finish
 
 /-- Well-founded termination of the generated subtract-and-halve loop.  The

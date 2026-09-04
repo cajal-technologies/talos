@@ -35,17 +35,8 @@ theorem selectMin_runs (x y : UInt32) :
        (.instruction (.const 42)), (.instruction .drop),
        (.administrative .finish)]
       ⟨.done [.i32 (if x < y then x else y)], (selectMinConfig x y).store⟩ := by
-    apply Steps.cons .nop
-    apply Steps.cons .nop
-    apply Steps.cons (.localGet rfl)
-    apply Steps.cons (.localGet rfl)
-    apply Steps.cons (.localGet rfl)
-    apply Steps.cons (.localGet rfl)
-    apply Steps.cons (.ltU rfl)
-    apply Steps.cons (.select rfl)
-    apply Steps.cons .const
-    apply Steps.cons .drop
-    apply Steps.cons .finish
+    wasm_steps [.nop, .nop, (.localGet rfl), (.localGet rfl), (.localGet rfl), (.localGet rfl),
+      (.ltU rfl), (.select rfl), .const, .drop, .finish]
     by_cases h : x < y <;> simp [h]
     all_goals exact Steps.refl _
   exact congrArg RunnerResult.values? (runSteps_eq_success_of_steps hsteps)

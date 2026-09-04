@@ -89,10 +89,7 @@ theorem switch_steps (i : UInt32) :
        (.instruction (.const (switchResult i))),
        (.administrative .returnFromFunction)]
       ⟨.done [.i32 (switchResult i)], (switchConfig i).store⟩ := by
-  apply Steps.cons .block
-  apply Steps.cons .block
-  apply Steps.cons .block
-  apply Steps.cons (.localGet rfl)
+  wasm_steps [.block, .block, .block, (.localGet rfl)]
   rcases hi : i.toNat with _ | j
   · have hbranch :
         branchTarget? 1 0

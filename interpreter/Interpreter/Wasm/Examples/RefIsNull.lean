@@ -30,10 +30,7 @@ theorem refReflect_steps (m : Module) (st : Store α) :
        (.instruction (.refFunc 0)), (.instruction .refIsNull),
        (.administrative .finish)]
       ⟨.done [.i32 0, .i32 1], (refReflectConfig m st).store⟩ := by
-  apply Steps.cons .refNull
-  apply Steps.cons (.refIsNullTrue rfl)
-  apply Steps.cons .refFunc
-  apply Steps.cons (.refIsNullFalse rfl)
+  wasm_steps [.refNull, (.refIsNullTrue rfl), .refFunc, (.refIsNullFalse rfl)]
   exact Steps.cons .finish (Steps.refl _)
 
 theorem refReflect_terminates (m : Module) (st : Store α) :

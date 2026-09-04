@@ -64,8 +64,7 @@ theorem tick_steps (st : Store Unit) (n : UInt32)
   apply Steps.cons
     (Step.globalGet (value := .i32 n) (by
       simpa [tickStore, globalAt?] using hg))
-  apply Steps.cons Step.const
-  apply Steps.cons Step.add
+  wasm_steps [Step.const, Step.add]
   apply Steps.cons (Step.globalSet (by
     simpa [tickStore, globalAt?] using congrArg Option.isSome hg))
   simpa [tickFinalStore, tickStore] using
