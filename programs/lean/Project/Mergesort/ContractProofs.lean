@@ -478,8 +478,7 @@ theorem func4_correct [WasmSmallStepGS hlc Universal.State] :
     Function.toLocals, Function.numParams]
   wasm_twp_return_from_call Hmodule [List.take_zero, List.nil_append]
   isimp only [RuntimeContext, ResumeWP, resumeExpr, List.nil_append] at Hcont
-  iapply Hcont $$ [Hmodule Henv]
-  · iframe
+  iapply_frame Hcont $$ [Hmodule Henv]
 
 /-- The generated physical deallocator is a Wasm no-op; its authoritative
 logical effect transfers the complete live block into retired allocator
@@ -503,8 +502,7 @@ theorem func7_correct [WasmSmallStepGS hlc Universal.State] :
   wasm_twp_rebind Wasm.SmallStep.twp_returnFromCallFallthrough with Hmodule
   simp only [List.take_zero, List.nil_append]
   isimp only [RuntimeContext, ResumeWP, resumeExpr, List.nil_append] at Hcont
-  iapply Hcont $$ [Hmodule Henv] Hbump
-  · iframe
+  iapply_frame Hcont $$ [Hmodule Henv] Hbump
 
 /-- The generated read shim changes only the machine-stack operand order and
 delegates to the authoritative import-0 contract. -/
@@ -555,8 +553,7 @@ theorem func10_correct [WasmSmallStepGS hlc Universal.State] :
   simp only [List.append_nil, List.take_succ_cons, List.take_zero,
     List.cons_append, List.nil_append]
   isimp only [RuntimeContext, ResumeWP, resumeExpr, List.nil_append] at Hcont
-  iapply Hcont $$ [Hmodule HenvInner] Hstreams Hslice
-  · iframe
+  iapply_frame Hcont $$ [Hmodule HenvInner] Hstreams Hslice
   · itrivial
 
 /-- The generated write shim changes only the machine-stack operand order and
@@ -606,8 +603,7 @@ theorem func11_correct [WasmSmallStepGS hlc Universal.State] :
   wasm_twp_rebind Wasm.SmallStep.twp_returnFromCallFallthrough with Hmodule
   simp only [List.take_zero, List.nil_append]
   isimp only [RuntimeContext, ResumeWP, resumeExpr, List.nil_append] at Hcont
-  iapply Hcont $$ [Hmodule HenvInner] Hstreams Hslice
-  · iframe
+  iapply_frame Hcont $$ [Hmodule HenvInner] Hstreams Hslice
 
 /-- The generated recursive sorter satisfies the authoritative exact buffer
 contract.  The adapter exposes the canonical word slices as the `arrayAt`
@@ -711,7 +707,6 @@ theorem func2_correct [WasmSmallStepGS hlc Universal.State] :
     isplitl_exact HresultBuffers
     · ipureexact hsorted
   isimp only [RuntimeContext, ResumeWP, resumeExpr, List.nil_append] at Hcont
-  iapply Hcont $$ [Hmodule Henv] HsortResult
-  · iframe
+  iapply_frame Hcont $$ [Hmodule Henv] HsortResult
 
 end Project.Mergesort.ContractProofs
