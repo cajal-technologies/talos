@@ -323,10 +323,8 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
       (0xFFFFFFFF : UInt32) + alignment =
         UInt32.ofNat (layout.alignment - 1) := by
     rcases halignmentCases with h | h
-    · rw [halignmentWord, h]
-      decide
-    · rw [halignmentWord, h]
-      decide
+    · rw [halignmentWord, h]; decide
+    · rw [halignmentWord, h]; decide
   have hsumWord :
       UInt32.ofNat frontier + UInt32.ofNat (layout.alignment - 1) =
         UInt32.ofNat (frontier + (layout.alignment - 1)) := by
@@ -646,8 +644,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
                     dsimp only [delta]
                     rw [UInt32.toNat_sub_of_le]
                     · rw [hpagesWord]
-                    · rw [UInt32.le_iff_toNat_le_toNat, hpagesWord]
-                      omega
+                    · rw [UInt32.le_iff_toNat_le_toNat, hpagesWord]; omega
                   have hrequiredLeNew :
                       (allocatorRequiredPages finish).toNat ≤ newPages := by
                     rw [hfacts.2, hdeltaNat]; omega

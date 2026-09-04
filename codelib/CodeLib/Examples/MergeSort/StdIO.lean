@@ -277,8 +277,7 @@ theorem quicksortHeapAux_addresses_lt
               get?_insert_ne (Ne.symm h3), get?_insert_ne (Ne.symm h2),
               get?_insert_ne (Ne.symm h1), get?_insert_ne (Ne.symm h0)] at hget
           exact Nat.lt_trans (hσ address byte hget) (by omega)
-      · rw [h4]
-        omega
+      · rw [h4]; omega
 
 /-- The stream-facing wrapper.  Local `0` remembers the byte count returned
 by `read`; dividing it by four gives the number of words passed to merge sort.
@@ -493,8 +492,7 @@ theorem execute_write_bytes (store : Store Wasm.StdIO.State) (length : UInt32)
   simp only [Wasm.StdIO.writeHost, Wasm.StdIO.writeResult]
   rw [if_pos]
   · rfl
-  · simp only [Wasm.StdIO.rangeInBounds]
-    exact decide_eq_true hbound
+  · simp only [Wasm.StdIO.rangeInBounds]; exact decide_eq_true hbound
 
 private theorem take_eq_self_of_length_le {β : Type} (xs : List β) (n : Nat)
     (h : xs.length ≤ n) : xs.take n = xs := by
@@ -604,8 +602,7 @@ theorem probe_afterRead (input : List UInt32) :
   apply execute_read
   apply Wasm.StdIO.read_empty
   · rfl
-  · rw [afterRead_byteCapacity]
-    decide
+  · rw [afterRead_byteCapacity]; decide
 
 private theorem afterBoundedRead_byteCapacity (input : List UInt8) :
     Wasm.StdIO.byteCapacity (afterBoundedRead input) = 65536 := by
@@ -623,8 +620,7 @@ theorem probe_traps_of_too_long (input : List UInt8)
     have hlength := congrArg List.length hempty
     simp only [List.length_drop, List.length_nil] at hlength
     rw [List.length_take, Nat.min_eq_left (Nat.le_of_lt hlong)] at hlength; omega
-  · rw [afterBoundedRead_byteCapacity]
-    exact UInt32.toNat_ofNat_of_lt' (by decide)
+  · rw [afterBoundedRead_byteCapacity]; exact UInt32.toNat_ofNat_of_lt' (by decide)
 
 def runAfterRead (fuel : Nat) (byteLength : UInt32)
     (afterRead : Store Wasm.StdIO.State) : Option (List UInt8) := do

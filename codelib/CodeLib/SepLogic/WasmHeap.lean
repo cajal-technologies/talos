@@ -117,14 +117,12 @@ private theorem then_isLE_trans {α β : Type} [Ord α] [Ord β]
       rw [← hac_eq] at h₂
       have h1s := OrientedCmp.eq_swap (cmp := compare (α := α)) (a := a1) (b := b1)
       rw [h₁, h₂] at h1s; exact absurd h1s (by decide)
-    · rw [h₃, ord_isLE_gt] at hac
-      exact absurd hac (by decide)
+    · rw [h₃, ord_isLE_gt] at hac; exact absurd hac (by decide)
   -- lt.eq: b1 = c1, so compare a1 c1 = .lt
   · have heq := LawfulEqCmp.eq_of_compare (cmp := compare (α := α)) h₂
     simp [← heq, h₁]
   -- lt.gt: hbc is false
-  · simp only [h₂, ord_gt_then, ord_isLE_gt] at hbc
-    exact absurd hbc (by decide)
+  · simp only [h₂, ord_gt_then, ord_isLE_gt] at hbc; exact absurd hbc (by decide)
   -- eq.lt: a1 = b1, so compare a1 c1 = .lt
   · have heq := LawfulEqCmp.eq_of_compare (cmp := compare (α := α)) h₁
     rw [← heq] at h₂
@@ -137,8 +135,7 @@ private theorem then_isLE_trans {α β : Type} [Ord α] [Ord β]
       exact ReflCmp.compare_self
     rw [hac, ord_eq_then]; exact TransCmp.isLE_trans hab hbc
   -- eq.gt: hbc is false
-  · simp only [h₂, ord_gt_then, ord_isLE_gt] at hbc
-    exact absurd hbc (by decide)
+  · simp only [h₂, ord_gt_then, ord_isLE_gt] at hbc; exact absurd hbc (by decide)
   -- gt.*: hab is false in all three
   · simp only [h₁, ord_gt_then, ord_isLE_gt] at hab; exact absurd hab (by decide)
   · simp only [h₁, ord_gt_then, ord_isLE_gt] at hab; exact absurd hab (by decide)

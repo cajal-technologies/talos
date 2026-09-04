@@ -570,10 +570,8 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
       wasm_twp_pures [twp_const twp_localGet]
       iapply twp_select (selected := .i32 newPtr) (by
         by_cases hzero : storedCursor = 0
-        · simp [hzero] at hfrontierWord ⊢
-          exact hfrontierWord.symm
-        · simp [hzero] at hfrontierWord ⊢
-          exact hfrontierWord.symm)
+        · simp [hzero] at hfrontierWord ⊢; exact hfrontierWord.symm
+        · simp [hzero] at hfrontierWord ⊢; exact hfrontierWord.symm)
       wasm_twp_pures [twp_add] using [UInt32.add_zero]
       wasm_twp_localTee [List.length]
       wasm_twp_pures [twp_localGet]
@@ -768,8 +766,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
                       dsimp only [delta]
                       rw [UInt32.toNat_sub_of_le]
                       · rw [hpagesWord]
-                      · rw [UInt32.le_iff_toNat_le_toNat, hpagesWord]
-                        omega
+                      · rw [UInt32.le_iff_toNat_le_toNat, hpagesWord]; omega
                     have hrequiredLeNew :
                         (allocatorRequiredPages finish).toNat ≤ newPages := by
                       rw [hfacts.2, hdeltaNat]; omega
@@ -849,10 +846,8 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
       wasm_twp_pures [twp_const twp_localGet]
       iapply twp_select (selected := .i32 base) (by
         by_cases hzero : storedCursor = 0
-        · simp [hzero] at hfrontierWord ⊢
-          exact hfrontierWord.symm
-        · simp [hzero] at hfrontierWord ⊢
-          exact hfrontierWord.symm)
+        · simp [hzero] at hfrontierWord ⊢; exact hfrontierWord.symm
+        · simp [hzero] at hfrontierWord ⊢; exact hfrontierWord.symm)
       wasm_twp_pures [twp_add] using [UInt32.add_zero]
       wasm_twp_localTee [List.length]
       wasm_twp_pures [twp_localGet]

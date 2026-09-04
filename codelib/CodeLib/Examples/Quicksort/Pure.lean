@@ -215,8 +215,7 @@ theorem PartitionLoopInvariant.swapStep
     by_cases hki : k = i
     · subst hki; rw [swapElems_get_i current hilen hjlen]
       exact UInt32.not_lt.mp hle
-    · rw [swapElems_get_other (hki := hki) (hkj := by omega)]
-      exact hle_zone k hlo (by omega)
+    · rw [swapElems_get_other (hki := hki) (hkj := by omega)]; exact hle_zone k hlo (by omega)
   · intro k hik hkj1
     by_cases hkj : k = j
     · subst hkj; rw [swapElems_get_j current hilen hjlen]
@@ -274,8 +273,7 @@ theorem PartitionLoopInvariant.placePivot
     obtain ⟨k, hki1, hkhi, hkval⟩ := mem_segment (hi := hi) (by omega) hx
     rw [← hkval]
     by_cases hkhim1 : k = hi - 1
-    · rw [hkhim1, swapElems_get_j current hilen hhm1len]
-      exact hgt_zone i (le_refl i) (by omega)
+    · rw [hkhim1, swapElems_get_j current hilen hhm1len]; exact hgt_zone i (le_refl i) (by omega)
     · rw [swapElems_get_other (hki := by omega) (hkj := hkhim1)]
       exact hgt_zone k (by omega) (by omega)
 

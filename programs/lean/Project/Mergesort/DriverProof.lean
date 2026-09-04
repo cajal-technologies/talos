@@ -4331,11 +4331,9 @@ theorem twp_func3_finish_nonempty
     apply completedDriverHistory_allRetired
       (serialize original).length capacity inputPtr valuesPtr scratchPtr
       inputFrontier inputHistory inputId workLayout
-    · rw [serialize_length]
-      omega
+    · rw [serialize_length]; omega
     · exact hgeo
-    · rw [← hbeforeInput]
-      exact hinput.2.2.2.2.2
+    · rw [← hbeforeInput]; exact hinput.2.2.2.2.2
   have Hrestore := twp_func3_restore_stack reserveBytes
     (exportFrameBytes capacity inputPtr (serialize original) chunkBytes
       outputBytes)
@@ -5314,8 +5312,7 @@ private theorem geometricVec_frontier_ge_heapBase
     heapBase.toNat ≤ frontier := by
   rcases hgeo with hinitial | hshort | hlarge
   · rw [hinitial.2.2.2.2.1]
-  · rw [hshort.2.2.2.2.2.1]
-    omega
+  · rw [hshort.2.2.2.2.2.1]; omega
   · rcases hlarge with
       ⟨exponent, hexponent, _hexponentUpper, _hcapacity, _hlength,
         _htotal, _hptr, hfrontier, _hhistory⟩

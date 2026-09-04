@@ -2185,8 +2185,7 @@ theorem stateInterp_pointsTo_u32_facts [WasmSmallStepGS hlc α]
   · simp only [Mem.read8] at hr0 hr1 hr2 hr3
     simp only [Mem.read32]
     rw [hr0, ← h1, hr1, ← h2, hr2, ← h3, hr3]; exact u32Byte_reassemble value
-  · rw [h3] at hb3
-    omega
+  · rw [h3] at hb3; omega
 
 /-- Framed form of `stateInterp_pointsTo_u32_facts`. It preserves both the
 state interpretation and word ownership, so clients can extract physical
@@ -2266,8 +2265,7 @@ theorem stateInterp_pointsTo_u64_facts [WasmSmallStepGS hlc α]
     rw [hr0, ← h1, hr1, ← h2, hr2, ← h3, hr3, ← h4, hr4,
       ← h5, hr5, ← h6, hr6, ← h7, hr7]
     exact u64Byte_reassemble value
-  · rw [h7] at hb7
-    omega
+  · rw [h7] at hb7; omega
 
 /-- Framed form of `stateInterp_pointsTo_u64_facts`. It returns both the
 authoritative state interpretation and the word ownership, allowing a client

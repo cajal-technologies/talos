@@ -1379,8 +1379,7 @@ theorem HistoryWellFormed.retire
       exact ⟨liveMeta ptr layout, hlookup, by
         simp [allocationEndExclusive, liveMeta, retiredMeta], by
         simp [liveMeta, retiredMeta]⟩
-    · rw [get?_insert_ne hkey] at hmetadata
-      exact ⟨metadata, hmetadata, rfl, rfl⟩
+    · rw [get?_insert_ne hkey] at hmetadata; exact ⟨metadata, hmetadata, rfl, rfl⟩
   simp only [HistoryWellFormed, AllocationHistory.retire] at ⊢
   refine ⟨?_, ?_, ?_, ?_, ?_⟩
   · intro key hkeyLt
@@ -1398,8 +1397,7 @@ theorem HistoryWellFormed.retire
           using hlive.2.1
       · simpa [allocationEndExclusive, liveMeta, retiredMeta]
           using hlive.2.2
-    · rw [get?_insert_ne hkey] at hmetadata
-      exact hrecords key metadata hmetadata
+    · rw [get?_insert_ne hkey] at hmetadata; exact hrecords key metadata hmetadata
   · intro earlierId laterId earlier later hid hearlier hlater
     obtain ⟨oldEarlier, holdEarlier, hendEarlier, _hptrEarlier⟩ :=
       recover earlierId earlier hearlier
@@ -2723,8 +2721,7 @@ theorem GeometricVecFacts.completed_ptr_align4
     ptr.toNat % 4 = 0 := by
   rcases hgeo with hinitial | hshort | hlarge
   · omega
-  · rw [hshort.2.2.2.2.1]
-    decide
+  · rw [hshort.2.2.2.2.1]; decide
   · rcases hlarge with
       ⟨exponent, hexponentLower, _hexponentUpper, _hcapacity,
         _hlength, _htotal, hptr, _hfrontier, _hhistory⟩
@@ -3050,8 +3047,7 @@ theorem GeometricVecFacts.reserveSuccess
       refine ⟨rfl, by omega, htotal, ?_, hnewPtrBase, ?_, ?_⟩
       · rw [hcapacityNat, hselected]
       · rw [hfinish, hcapacityNat]
-      · rw [hreserveHistory, hnewPtrBase, hcapacityNat, hselected]
-        rfl
+      · rw [hreserveHistory, hnewPtrBase, hcapacityNat, hselected]; rfl
     · have hmin : min 256 (current + remaining) = 256 :=
         min_eq_left (by omega)
       rw [hmin] at hread
@@ -3060,17 +3056,12 @@ theorem GeometricVecFacts.reserveSuccess
       right
       right
       refine ⟨8, by omega, by omega, ?_, ?_, ?_, ?_, ?_, ?_⟩
-      · rw [hcapacityNat]
-        norm_num [selectedCapacity]
-      · rw [hcapacityNat]
-        norm_num [selectedCapacity]
+      · rw [hcapacityNat]; norm_num [selectedCapacity]
+      · rw [hcapacityNat]; norm_num [selectedCapacity]
       · omega
-      · rw [hnewPtrNat]
-        norm_num [vectorBlockBase]
-      · rw [hfinish]
-        norm_num [selectedCapacity, vectorBlockBase]
-      · rw [hreserveHistory, hnewPtrBase]
-        norm_num [selectedCapacity]; rfl
+      · rw [hnewPtrNat]; norm_num [vectorBlockBase]
+      · rw [hfinish]; norm_num [selectedCapacity, vectorBlockBase]
+      · rw [hreserveHistory, hnewPtrBase]; norm_num [selectedCapacity]; rfl
   · rcases hshort with
       ⟨hremaining, _hlength, _htotal, _hcapacity, _hptr,
         _hfrontier, _hhistory⟩
@@ -3127,8 +3118,7 @@ theorem GeometricVecFacts.reserveSuccess
     refine ⟨exponent + 1, by omega, hexponentNextUpper, ?_, ?_, ?_,
       ?_, ?_, hfinal⟩
     · rw [hcapacityNat, hselected]
-    · rw [hcapacityNat, hselected, pow_succ]
-      omega
+    · rw [hcapacityNat, hselected, pow_succ]; omega
     · omega
     · rw [hnewPtrNat, hfrontierNext]
     · rw [hfinish, hfrontierNext, hselected]

@@ -316,8 +316,7 @@ theorem insert_physical_byte_sound
   · subst key; simp only [get?_insert_eq rfl, Option.some.injEq] at hget
     subst other
     exact ⟨mem, hresolve, hread⟩
-  · rw [get?_insert_ne (Ne.symm heq)] at hget
-    exact hagree key other hget
+  · rw [get?_insert_ne (Ne.symm heq)] at hget; exact hagree key other hget
 
 /-- Adding a sparse ghost key whose physical address is allocated preserves
 the authoritative in-bounds invariant without changing physical memory. -/
@@ -332,8 +331,7 @@ theorem insert_physical_byte_inBounds
   intro key hget
   by_cases heq : key = ⟨memId, addr⟩
   · subst key; exact ⟨mem, hresolve, haddr⟩
-  · rw [get?_insert_ne (Ne.symm heq)] at hget
-    exact hinBounds key hget
+  · rw [get?_insert_ne (Ne.symm heq)] at hget; exact hinBounds key hget
 
 /-- `Mem.grow` preserves every physical byte, so the same authoritative
 ghost heap continues to agree with the grown memory under the updated resolver. -/

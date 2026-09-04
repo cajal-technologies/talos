@@ -104,8 +104,7 @@ theorem execute_write_bytes (program : Executable)
   simp only [Wasm.StdIO.writeHost, Wasm.StdIO.writeResult]
   rw [if_pos]
   · rfl
-  · simp only [Wasm.StdIO.rangeInBounds]
-    exact decide_eq_true hbound
+  · simp only [Wasm.StdIO.rangeInBounds]; exact decide_eq_true hbound
 
 private theorem take_eq_self_of_length_le {β : Type} (xs : List β) (n : Nat)
     (h : xs.length ≤ n) : xs.take n = xs := by
@@ -173,8 +172,7 @@ theorem probe_afterRead (program : Executable) (input : List UInt64) :
   apply execute_read
   apply Wasm.StdIO.read_empty
   · rfl
-  · rw [afterRead_byteCapacity]
-    decide
+  · rw [afterRead_byteCapacity]; decide
 
 theorem encodedLength_toNat (input : List UInt64) (hfit : Fits input) :
     (UInt32.ofNat (serialize input).length).toNat =
@@ -923,8 +921,7 @@ theorem deserialize_readBytes64 (mem : Mem) (base : UInt32) (count : Nat)
         some (mem.read64 base :: readWordArray64 mem (base + 8) count)
       rw [← hbase, ih]
       · rfl
-      · rw [hbase]
-        omega
+      · rw [hbase]; omega
 
 set_option maxRecDepth 10000 in
 theorem run_fits (program : Executable) (fuel : Nat)

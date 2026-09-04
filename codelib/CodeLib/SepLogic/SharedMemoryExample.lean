@@ -81,8 +81,7 @@ private theorem sharedMemHeap_agrees (v : UInt8) :
     exact ⟨Mem.empty 1,
       by simp [storeResolve, sharedMemConfig],
       by simp [Mem.read8, Mem.empty]⟩
-  · rw [get?_insert_ne (Ne.symm h), get?_empty] at hget
-    contradiction
+  · rw [get?_insert_ne (Ne.symm h), get?_empty] at hget; contradiction
 
 private theorem sharedMemHeap_inBounds (v : UInt8) :
     heapAddressesInBounds sharedMemHeap (storeResolve (sharedMemConfig v).store) := by

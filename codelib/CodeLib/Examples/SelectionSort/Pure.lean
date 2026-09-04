@@ -180,14 +180,12 @@ theorem OuterInvariant.step
       simp only [List.length_drop] at hoffset
       rw [hupdatedLength] at hoffset ⊢; omega
     refine ⟨fixed + 1 + offset, by omega, ?_, ?_⟩
-    · rw [hupdatedLength] at hkUpdated
-      exact hkUpdated
+    · rw [hupdatedLength] at hkUpdated; exact hkUpdated
     · rw [getElem!_pos updated (fixed + 1 + offset) hkUpdated]
       rw [← hy, List.getElem_drop]
   refine ⟨hupdatedLength.trans hlength,
     hperm.trans (swapElems_perm current hfixed hbest.2), ?_, ?_, ?_⟩
-  · rw [hupdatedLength]
-    omega
+  · rw [hupdatedLength]; omega
   · rw [htake]
     unfold Sorted at hsorted ⊢
     rw [List.pairwise_append]
@@ -211,17 +209,13 @@ theorem OuterInvariant.step
         exact swapElems_get_other current (by omega) hkb
     rcases hx with hx | rfl
     · rcases hsource with hsource | hsource
-      · rw [← hky, hsource]
-        exact hcross x hx current[fixed]!
+      · rw [← hky, hsource]; exact hcross x hx current[fixed]!
           (suffixMem fixed (Nat.le_refl fixed) hfixed)
-      · rw [← hky, hsource]
-        exact hcross x hx current[k]!
+      · rw [← hky, hsource]; exact hcross x hx current[k]!
           (suffixMem k (by omega) hkLength)
     · rcases hsource with hsource | hsource
-      · rw [← hky, hsource]
-        exact hmin fixed (Nat.le_refl fixed) hfixed
-      · rw [← hky, hsource]
-        exact hmin k (by omega) hkLength
+      · rw [← hky, hsource]; exact hmin fixed (Nat.le_refl fixed) hfixed
+      · rw [← hky, hsource]; exact hmin k (by omega) hkLength
 
 theorem OuterInvariant.sorted
     {input current : List UInt64} {fixed : Nat}

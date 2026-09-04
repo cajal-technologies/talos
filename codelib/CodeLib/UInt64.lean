@@ -483,10 +483,8 @@ theorem UInt64.stein_step_x (x y : UInt64) (_hxne : x ≠ 0) (hyne : y ≠ 0)
     rw [Nat.mod_eq_of_lt h_ctz_lt, Nat.shiftRight_eq_div_pow]
   -- assemble.
   refine ⟨h_shr_ne, ?_, ?_, ?_⟩
-  · rw [h_shr_toNat', ← h_shr_toNat]
-    exact UInt64.shr_ctz_toNat_odd (x - y) h_sub_ne
-  · rw [h_shr_toNat', h_sub_toNat]
-    exact _aux_gcd_sub_div_pow2 x.toNat y.toNat _ hxle_nat hyodd
+  · rw [h_shr_toNat', ← h_shr_toNat]; exact UInt64.shr_ctz_toNat_odd (x - y) h_sub_ne
+  · rw [h_shr_toNat', h_sub_toNat]; exact _aux_gcd_sub_div_pow2 x.toNat y.toNat _ hxle_nat hyodd
       (by rw [← h_sub_toNat]; exact UInt64.ctz64_two_pow_dvd (x - y))
   · rw [h_shr_toNat', h_sub_toNat]
     calc (x.toNat - y.toNat) / 2 ^ ctz64 64 (x - y)
@@ -525,8 +523,7 @@ theorem UInt64.stein_step_y (x y : UInt64) (hxne : x ≠ 0) (_hyne : y ≠ 0)
       = (y - x).toNat / 2 ^ ctz64 64 (y - x) := by
     rw [Nat.mod_eq_of_lt h_ctz_lt, Nat.shiftRight_eq_div_pow]
   refine ⟨h_shr_ne, ?_, ?_, ?_⟩
-  · rw [h_shr_toNat', ← h_shr_toNat]
-    exact UInt64.shr_ctz_toNat_odd (y - x) h_sub_ne
+  · rw [h_shr_toNat', ← h_shr_toNat]; exact UInt64.shr_ctz_toNat_odd (y - x) h_sub_ne
   · rw [h_shr_toNat', h_sub_toNat]
     rw [Nat.gcd_comm x.toNat]
     rw [_aux_gcd_sub_div_pow2 y.toNat x.toNat _ hxle_nat hxodd

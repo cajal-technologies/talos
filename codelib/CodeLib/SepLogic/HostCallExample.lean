@@ -52,13 +52,11 @@ theorem writeByte_partiallyMeets :
       have hv := Option.some.inj (Option.some.inj hget)
       subst hv
       exact ⟨_, rfl, by decide⟩
-    · rw [get?_insert_ne (Ne.symm h), get?_empty] at hget
-      contradiction
+    · rw [get?_insert_ne (Ne.symm h), get?_empty] at hget; contradiction
   · intro addr hget
     by_cases h : addr = ⟨0, 0⟩
     · subst h; exact ⟨_, rfl, by decide⟩
-    · rw [get?_insert_ne (Ne.symm h), get?_empty] at hget
-      contradiction
+    · rw [get?_insert_ne (Ne.symm h), get?_empty] at hget; contradiction
   · exact globalHeapAgrees_empty _
   wasm_adequacy_intro gs =>
     simp only [(BI.BigSepM.bigSepM_insert (get?_empty (⟨0, 0⟩ : MemoryKey))).to_eq,

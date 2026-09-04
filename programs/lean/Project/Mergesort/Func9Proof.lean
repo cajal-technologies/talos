@@ -716,8 +716,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
                     dsimp only [delta]
                     rw [UInt32.toNat_sub_of_le]
                     · rw [hpagesWord]
-                    · rw [UInt32.le_iff_toNat_le_toNat, hpagesWord]
-                      omega
+                    · rw [UInt32.le_iff_toNat_le_toNat, hpagesWord]; omega
                   have hrequiredLeNew :
                       (allocatorRequiredPages finish).toNat ≤ newPages := by
                     rw [hfacts.2, hdeltaNat]; omega
