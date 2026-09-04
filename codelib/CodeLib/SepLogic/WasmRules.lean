@@ -110,6 +110,20 @@ theorem tableHeapAgrees_empty (tables : List TableInst) :
   rw [LawfulPartialMap.get?_empty] at hget
   contradiction
 
+theorem tableHeapAgrees_singleton
+    {tables : List TableInst} {index : Nat} {table : TableInst}
+    (htable : tables[index]? = some table) :
+    tableHeapAgrees (insert ∅ ⟨0, index⟩ table) tables := by
+  intro idx other hget
+  by_cases hidx : idx = index
+  · subst idx
+    simp only [get?_insert_eq rfl, Option.some.injEq] at hget
+    subst other
+    exact htable
+  · rw [get?_insert_ne (fun h =>
+      hidx (congrArg TableKey.index h).symm), get?_empty] at hget
+    contradiction
+
 theorem elementSegmentHeapAgrees_empty
     (segments : List (Option (List (Option Nat)))) :
     elementSegmentHeapAgrees

@@ -1336,15 +1336,7 @@ private def tableSetGetMap : WasmTableMap TableInst :=
 
 private theorem tableSetGetMap_agrees :
     tableHeapAgrees tableSetGetMap [[.funcref none]] := by
-  intro index table hget
-  unfold tableSetGetMap at hget
-  by_cases hindex : index = 0
-  · subst index
-    simp only [get?_insert_eq rfl, Option.some.injEq] at hget
-    subst table
-    rfl
-  · rw [get?_insert_ne (fun h => hindex (congrArg TableKey.index h).symm), get?_empty] at hget
-    contradiction
+  exact tableHeapAgrees_singleton rfl
 
 private theorem tableSetGetMap_pointsTo [WasmTableGS α] :
     ([∗map] index ↦ table ∈ tableSetGetMap,
@@ -1655,15 +1647,7 @@ private theorem tableCopyOverlapMap_agrees :
     tableHeapAgrees tableCopyOverlapMap
       [[.funcref none, .funcref (some 0), .funcref (some 1),
         .funcref (some 2)]] := by
-  intro index table hget
-  unfold tableCopyOverlapMap at hget
-  by_cases hindex : index = 0
-  · subst index
-    simp only [get?_insert_eq rfl, Option.some.injEq] at hget
-    subst table
-    rfl
-  · rw [get?_insert_ne (fun h => hindex (congrArg TableKey.index h).symm), get?_empty] at hget
-    contradiction
+  exact tableHeapAgrees_singleton rfl
 
 private theorem tableCopyOverlapMap_pointsTo [WasmTableGS α] :
     ([∗map] index ↦ table ∈ tableCopyOverlapMap,
@@ -1975,15 +1959,7 @@ private theorem tableInitDropTableMap_agrees :
     tableHeapAgrees tableInitDropTableMap
       [[.funcref none, .funcref none, .funcref none,
         .funcref none]] := by
-  intro index table hget
-  unfold tableInitDropTableMap at hget
-  by_cases hindex : index = 0
-  · subst index
-    simp only [get?_insert_eq rfl, Option.some.injEq] at hget
-    subst table
-    rfl
-  · rw [get?_insert_ne (fun h => hindex (congrArg TableKey.index h).symm), get?_empty] at hget
-    contradiction
+  exact tableHeapAgrees_singleton rfl
 
 private theorem tableInitDropElementMap_agrees :
     elementSegmentHeapAgrees tableInitDropElementMap
