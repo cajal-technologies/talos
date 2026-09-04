@@ -851,21 +851,21 @@ theorem roundCheck_comparison_smallStep_wp
   wasm_wp_next_rebind wp_call «module» 0 func0Def
     (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func0Def, Function.toLocals, Function.numParams, ValueType.zero]
-  iapply func0_lowered_smallStep_wp
-    (iprop(pointsTo_u32 0 1048572 oldResult))
-    x oldDeep oldWord _ _
-  · intro naive
+  iapply_then_frame func0_lowered_smallStep_wp
+      (iprop(pointsTo_u32 0 1048572 oldResult))
+      x oldDeep oldWord _ _ =>
+    intro naive
     iintro ⟨Hresult, Hruntime, Hglobal, Hdeep, Hword⟩
     wasm_wp_return_from_call Hruntime [List.take, List.singleton_append]
     wasm_wp_pures [wp_localGet]
     wasm_wp_next_rebind wp_call «module» 4 func4Def
       (by simp [«module»]) (by simp [«module»]) with Hruntime
     simp [func4Def, Function.toLocals, Function.numParams]
-    iapply func4_lowered_smallStep_wp
-      (iprop(pointsTo_u32 0 1048540 naive ∗
-        pointsTo_u32 0 1048572 oldResult))
-      x naive _ _
-    · iintro ⟨⟨Hdeep, Hresult⟩, Hruntime, Hglobal, Hword⟩
+    iapply_then_frame func4_lowered_smallStep_wp
+        (iprop(pointsTo_u32 0 1048540 naive ∗
+          pointsTo_u32 0 1048572 oldResult))
+        x naive _ _ =>
+      iintro ⟨⟨Hdeep, Hresult⟩, Hruntime, Hglobal, Hword⟩
       wasm_wp_return_from_call Hruntime [List.take, List.singleton_append]
       by_cases heq : f32Eq naive (f32Nearest x) = true
       · iapply wp_scalarFloat2 (value := .i32 1) rfl rfl
@@ -900,8 +900,6 @@ theorem roundCheck_comparison_smallStep_wp
         ihave HresultExact : pointsTo_u32 0 1048572 0 $$ [Hresult]
         · irw_exact [← show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
         iapply_frame hzero naive (f32Nearest x)
-    · iframe
-  · iframe
 
 theorem func6_body_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset} :
@@ -1596,21 +1594,21 @@ theorem twp_roundCheck_comparison_smallStep_wp
   wasm_twp_rebind twp_call «module» 0 func0Def
     (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func0Def, Function.toLocals, Function.numParams, ValueType.zero]
-  iapply twp_func0_lowered_smallStep_wp
-    (iprop(pointsTo_u32 0 1048572 oldResult))
-    x oldDeep oldWord _ _
-  · intro naive
+  iapply_then_frame twp_func0_lowered_smallStep_wp
+      (iprop(pointsTo_u32 0 1048572 oldResult))
+      x oldDeep oldWord _ _ =>
+    intro naive
     iintro ⟨Hresult, Hruntime, Hglobal, Hdeep, Hword⟩
     wasm_twp_return_from_call Hruntime [List.take, List.singleton_append]
     wasm_twp_pures [twp_localGet]
     wasm_twp_rebind twp_call «module» 4 func4Def
       (by simp [«module»]) (by simp [«module»]) with Hruntime
     simp [func4Def, Function.toLocals, Function.numParams]
-    iapply twp_func4_lowered_smallStep_wp
-      (iprop(pointsTo_u32 0 1048540 naive ∗
-        pointsTo_u32 0 1048572 oldResult))
-      x naive _ _
-    · iintro ⟨⟨Hdeep, Hresult⟩, Hruntime, Hglobal, Hword⟩
+    iapply_then_frame twp_func4_lowered_smallStep_wp
+        (iprop(pointsTo_u32 0 1048540 naive ∗
+          pointsTo_u32 0 1048572 oldResult))
+        x naive _ _ =>
+      iintro ⟨⟨Hdeep, Hresult⟩, Hruntime, Hglobal, Hword⟩
       wasm_twp_return_from_call Hruntime [List.take, List.singleton_append]
       by_cases heq : f32Eq naive (f32Nearest x) = true
       · iapply twp_scalarFloat2 (value := .i32 1) rfl rfl
@@ -1642,8 +1640,6 @@ theorem twp_roundCheck_comparison_smallStep_wp
         ihave HresultExact : pointsTo_u32 0 1048572 0 $$ [Hresult]
         · irw_exact [← show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
         iapply_frame hzero naive (f32Nearest x)
-    · iframe
-  · iframe
 
 theorem twp_func6_body_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset} :
