@@ -313,6 +313,32 @@ theorem ByteSlice_four_as_word {host : Type} [WasmHeapGS host]
       · irw_exact [← hencoded] with Hbytes
       iexact Hbytes'
 
+/-- Focus a four-byte slice for an arbitrary word store and reassemble it as
+the canonical singleton serialization. -/
+theorem ByteSlice_storeAnyWordFocus {host : Type} [WasmHeapGS host]
+    (ptr : UInt32) (oldBytes : List UInt8)
+    (hlength : oldBytes.length = 4)
+    (hnowrap : ptr.toNat + 4 < UInt32.size) :
+    ByteSlice (host := host) ptr oldBytes ⊢
+      iprop(pointsTo_u32 0 ptr (Spec.decodeWord oldBytes) ∗
+        (∀ newValue : UInt32, pointsTo_u32 0 ptr newValue -∗
+          ByteSlice ptr (serialize [newValue]))) := by
+  iintro Hslice
+  ihave Hold := (ByteSlice_four_as_word ptr oldBytes hlength hnowrap).mp $$
+    Hslice
+  isplitl_exact Hold
+  · iintro %newValue
+    iintro Hnew
+    have hnewLength : (serialize [newValue]).length = 4 := by
+      rw [serialize_length]
+      norm_num
+    have hdecode : Spec.decodeWord (serialize [newValue]) = newValue := by
+      change Spec.decodeWord (Spec.encodeWord newValue) = newValue
+      exact Spec.u32Codec.decode_encode newValue
+    iapply (ByteSlice_four_as_word ptr (serialize [newValue])
+      hnewLength hnowrap).mpr
+    irw_exact [hdecode] with Hnew
+
 /-- Focus the driver's reusable four-byte output slot for one word store and
 reassemble it as the canonical singleton serialization. -/
 theorem ByteSlice_storeWordFocus {host : Type} [WasmHeapGS host]
@@ -324,19 +350,11 @@ theorem ByteSlice_storeWordFocus {host : Type} [WasmHeapGS host]
         (pointsTo_u32 0 ptr newValue -∗
           ByteSlice ptr (serialize [newValue]))) := by
   iintro Hslice
-  ihave Hold := (ByteSlice_four_as_word ptr oldBytes hlength hnowrap).mp $$
-    Hslice
+  ihave ⟨Hold, Hclose⟩ := ByteSlice_storeAnyWordFocus ptr oldBytes
+    hlength hnowrap $$ Hslice
   isplitl_exact Hold
-  · iintro Hnew
-    have hnewLength : (serialize [newValue]).length = 4 := by
-      rw [serialize_length]
-      norm_num
-    have hdecode : Spec.decodeWord (serialize [newValue]) = newValue := by
-      change Spec.decodeWord (Spec.encodeWord newValue) = newValue
-      exact Spec.u32Codec.decode_encode newValue
-    iapply (ByteSlice_four_as_word ptr (serialize [newValue])
-      hnewLength hnowrap).mpr
-    irw_exact [hdecode] with Hnew
+  ispecialize Hclose $$ %newValue
+  iexact Hclose
 
 /-- Empty canonical word ownership is resource-free.  This is the exact
 dangling-pointer case taken by the driver when the public input is empty. -/

@@ -22,33 +22,6 @@ private theorem func0_index :
     Project.Mergesort.module.funcs[0]? =
       some Project.Mergesort.func0Def := by rfl
 
-/-- A four-byte slice may be overwritten by any word, with ownership returned
-in the canonical serialized form. -/
-private theorem ByteSlice_storeAnyWordFocus
-    [WasmSmallStepGS hlc Universal.State]
-    (ptr : UInt32) (oldBytes : List UInt8)
-    (hlength : oldBytes.length = 4)
-    (hnowrap : ptr.toNat + 4 < UInt32.size) :
-    Representations.ByteSlice ptr oldBytes ⊢
-      iprop(pointsTo_u32 0 ptr (Spec.decodeWord oldBytes) ∗
-        (∀ newValue : UInt32, pointsTo_u32 0 ptr newValue -∗
-          Representations.ByteSlice ptr (serialize [newValue]))) := by
-  iintro Hslice
-  ihave Hold := (ByteSlice_four_as_word ptr oldBytes hlength hnowrap).mp $$
-    Hslice
-  isplitl_exact Hold
-  · iintro %newValue
-    iintro Hnew
-    have hnewLength : (serialize [newValue]).length = 4 := by
-      rw [serialize_length]
-      norm_num
-    have hdecode : Spec.decodeWord (serialize [newValue]) = newValue := by
-      change Spec.decodeWord (Spec.encodeWord newValue) = newValue
-      exact Spec.u32Codec.decode_encode newValue
-    iapply (ByteSlice_four_as_word ptr (serialize [newValue])
-      hnewLength hnowrap).mpr
-    irw_exact [hdecode] with Hnew
-
 /-- Expose an arbitrary twelve-byte result slot as three writable words, with
 an exact close operation for the generated grow result.  No alignment premise
 is needed: Wasm's scalar loads/stores are valid at unaligned addresses. -/
