@@ -7407,6 +7407,13 @@ theorem runSteps_trapped_trapsWith {fuel : Nat} {config : Config α}
   apply runSteps_sound
   simp [h, RunnerResult.finalConfig?]
 
+/-- A trapped runner result preserves the exact store carried by that result. -/
+theorem runSteps_trapped_trapsWith_store {fuel : Nat} {config : Config α}
+    {reason : TrapReason} {store : MachineStore α}
+    (h : (runSteps fuel config).result = .trapped reason store) :
+    TrapsWith config reason (fun actual => actual = store) :=
+  runSteps_trapped_trapsWith h _ rfl
+
 /-- A projected structured trap reason is enough to obtain fuel-free
 relational trapping, even when the host-parametric store has no decidable
 equality. -/

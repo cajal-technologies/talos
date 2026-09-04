@@ -38,6 +38,6 @@ theorem trapUnreachable_runs :
 theorem trapUnreachable_traps :
     TrapsWith trapUnreachableConfig .unreachable
       (fun store => store = trapUnreachableConfig.store) := by
-  exact runSteps_trapped_trapsWith trapUnreachable_runs _ rfl
+  exact runSteps_trapped_trapsWith_store trapUnreachable_runs
 
 end Wasm

@@ -145,8 +145,7 @@ theorem abort_propagates_trap :
 theorem abort_trapsWith :
     TrapsWith abortConfig (.host "host abort")
       (fun store => store = abortConfig.store) := by
-  apply runSteps_trapped_trapsWith (fuel := 1)
-    (store := abortConfig.store) <;> rfl
+  exact runSteps_trapped_trapsWith_store (fuel := 1) (by rfl)
 
 theorem imported_tail_call_propagates_exception :
     (runSteps 2 throwTailConfig).result =
@@ -155,7 +154,7 @@ theorem imported_tail_call_propagates_exception :
 theorem imported_tail_call_exception_trapsWith :
     TrapsWith throwTailConfig (.uncaughtException 0 [.i32 7])
       (fun store => store = throwTailConfig.store) := by
-  exact runSteps_trapped_trapsWith imported_tail_call_propagates_exception _ rfl
+  exact runSteps_trapped_trapsWith_store imported_tail_call_propagates_exception
 
 theorem imported_indirect_call_propagates_exception :
     (runSteps 3 throwIndirectConfig).result =
@@ -164,7 +163,7 @@ theorem imported_indirect_call_propagates_exception :
 theorem imported_indirect_call_exception_trapsWith :
     TrapsWith throwIndirectConfig (.uncaughtException 0 [.i32 7])
       (fun store => store = throwIndirectConfig.store) := by
-  exact runSteps_trapped_trapsWith imported_indirect_call_propagates_exception _ rfl
+  exact runSteps_trapped_trapsWith_store imported_indirect_call_propagates_exception
 
 theorem remaining_imported_call_forms_propagate_exceptions :
     (runSteps 3 throwIndirectTailConfig).result =

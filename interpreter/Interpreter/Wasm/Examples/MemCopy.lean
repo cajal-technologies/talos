@@ -107,6 +107,6 @@ theorem copy_out_of_bounds_traps :
 theorem copy_out_of_bounds_trapsWith :
     TrapsWith copyTrapConfig .outOfBoundsMemory
       (fun store => store = copyStore) := by
-  exact runSteps_trapped_trapsWith copy_out_of_bounds_traps _ rfl
+  exact runSteps_trapped_trapsWith_store copy_out_of_bounds_traps
 
 end Wasm
