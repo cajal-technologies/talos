@@ -376,8 +376,7 @@ theorem machineAuxInterp_exception_mono [WasmHeapDomainGS α]
   unfold machineAuxInterp
   iintro ⟨Hpages, Hdomain, Hexceptions⟩
   isplitl_exacts [Hpages Hdomain]
-  · iapply exceptionInterp_mono hexns htags
-    iexact Hexceptions
+  · iapply_exact exceptionInterp_mono hexns htags with Hexceptions
 
 /-- A tag index is canonical for `ids` when it is the first position holding
 its identity; this is what the interpreter's tag canonicalisation collapses
@@ -540,8 +539,7 @@ theorem stateInterp_memoryPages_snapshot_frame [WasmSmallStepGS hlc α]
   iintro ⟨Hstate, HP⟩
   iapply bupd_frame_right
   isplitl [Hstate]
-  · iapply stateInterp_memoryPages_snapshot
-    iexact Hstate
+  · iapply_exact stateInterp_memoryPages_snapshot with Hstate
   · iexact HP
 
 /-- A client page snapshot is a sound lower bound on the current physical
@@ -1237,8 +1235,7 @@ theorem stateInterp_fill_bytes [WasmSmallStepGS hlc α]
   ihave Hexc' : machineAuxInterp (fillSigma σ addr oldBytes val)
       store.wasm.mem.pages
       store.wasm.exns store.wasm.tagIds $$ [Hexc]
-  · iapply machineAuxInterp_heap_mono Hbelow
-    iexact Hexc
+  · iapply_exact machineAuxInterp_heap_mono Hbelow with Hexc
   imodintro
   isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth HhostEnvAuth Hstate_auth Hexc']
   · iapply (stateInterp_eq
@@ -1518,8 +1515,7 @@ theorem stateInterp_copy_bytes [WasmSmallStepGS hlc α]
   ihave Hexc' : machineAuxInterp (copySigma σ dst oldDstBytes srcBytes)
       store.wasm.mem.pages
       store.wasm.exns store.wasm.tagIds $$ [Hexc]
-  · iapply machineAuxInterp_heap_mono Hbelow
-    iexact Hexc
+  · iapply_exact machineAuxInterp_heap_mono Hbelow with Hexc
   imodintro
   isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth HhostEnvAuth Hstate_auth Hexc']
   · iapply (stateInterp_eq
@@ -1598,8 +1594,7 @@ theorem stateInterp_init_bytes [WasmSmallStepGS hlc α]
   ihave Hexc' : machineAuxInterp (copySigma σ dst oldDstBytes newDstBytes)
       store.wasm.mem.pages
       store.wasm.exns store.wasm.tagIds $$ [Hexc]
-  · iapply machineAuxInterp_heap_mono Hbelow
-    iexact Hexc
+  · iapply_exact machineAuxInterp_heap_mono Hbelow with Hexc
   imodintro
   isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth HhostEnvAuth Hstate_auth Hexc']
   · iapply (stateInterp_eq
@@ -2942,8 +2937,7 @@ theorem stateInterp_hostCallReturn [WasmSmallStepGS hlc α]
       newWasm.exns newWasm.tagIds $$ [Hpages Hdomain Hexceptions]
   · unfold machineAuxInterp
     isplitl_exacts [Hpages Hdomain]
-    · iapply exceptionInterp_mono hExns hTagIds
-      iexact Hexceptions
+    · iapply_exact exceptionInterp_mono hExns hTagIds with Hexceptions
   iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth HhostEnvAuth Hstate_auth' Hexc'
   ipureexact ⟨hMem σ Hfacts.1, hBounds σ Hfacts.2.1, hGlobals globalσ Hfacts.2.2.1,
     hData dataSegmentσ Hfacts.2.2.2.1, hTables tableσ Hfacts.2.2.2.2.1,

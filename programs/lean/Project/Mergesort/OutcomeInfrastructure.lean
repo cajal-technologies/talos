@@ -70,8 +70,7 @@ theorem twp_oom_import
             ⟨⟨%_hmsg, Hhost⟩, Hstate⟩
         imodintro
         isplitl [Hhost Hterminal]
-        · iapply Hterminal
-          iexact Hhost
+        · iapply_exact Hterminal with Hhost
         · iexact Hstate)
       (fun store ns obs nt _ postWasm tag xs h => by
         simp only [List.length_nil, List.take_zero,

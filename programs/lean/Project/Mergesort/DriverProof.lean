@@ -5195,8 +5195,7 @@ theorem twp_func3_initialize
     isplitl_rw_exact [show driverBase + 4 + 4 = driverBase + 8 by decide] with Hlength
     · itrivial
   ihave HheaderBytes : WordCells driverBase [0, 1, 0] $$ [Harray]
-  · iapply (arrayAt_eq_wordCells driverBase [0, 1, 0]).mp
-    iexact Harray
+  · iapply_exact (arrayAt_eq_wordCells driverBase [0, 1, 0]).mp with Harray
   ihave Hheader : Project.Mergesort.Representations.ByteSlice
       driverBase emptyVecHeaderBytes $$ [HheaderBytes]
   · unfold Project.Mergesort.Representations.ByteSlice emptyVecHeaderBytes

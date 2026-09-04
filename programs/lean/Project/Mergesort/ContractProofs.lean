@@ -634,11 +634,9 @@ theorem func2_correct [WasmSmallStepGS hlc Universal.State] :
   have hdisjoint := hbufferFacts.2
   unfold MemRegion.Disjoint at hdisjoint
   ihave Hsource : arrayAt 0 source input $$ [HsourceBytes]
-  · iapply (arrayAt_eq_wordCells source input).mpr
-    iexact HsourceBytes
+  · iapply_exact (arrayAt_eq_wordCells source input).mpr with HsourceBytes
   ihave Hscratch : arrayAt 0 scratch scratchInput $$ [HscratchBytes]
-  · iapply (arrayAt_eq_wordCells scratch scratchInput).mpr
-    iexact HscratchBytes
+  · iapply_exact (arrayAt_eq_wordCells scratch scratchInput).mpr with HscratchBytes
   have hscratchStrictInput :
       scratch.toNat + 4 * input.length < UInt32.size := by
     simpa only [hbufferFacts.1] using hscratchStrictWords
@@ -669,11 +667,9 @@ theorem func2_correct [WasmSmallStepGS hlc Universal.State] :
   have hsortedLength : sorted.length = input.length :=
     hsorted.2.length_eq.symm
   ihave HsourceBytes : WordCells source sorted $$ [Hsource]
-  · iapply (arrayAt_eq_wordCells source sorted).mp
-    iexact Hsource
+  · iapply_exact (arrayAt_eq_wordCells source sorted).mp with Hsource
   ihave HscratchBytes : WordCells scratch scratchResult $$ [Hscratch]
-  · iapply (arrayAt_eq_wordCells scratch scratchResult).mp
-    iexact Hscratch
+  · iapply_exact (arrayAt_eq_wordCells scratch scratchResult).mp with Hscratch
   ihave HsourceWords : WordSlice source sorted $$ [HsourceBytes]
   · unfold WordSlice Project.Mergesort.Representations.ByteSlice
     isplitl_pureexact hsourceAlign

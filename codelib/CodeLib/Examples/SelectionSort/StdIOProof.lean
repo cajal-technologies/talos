@@ -619,8 +619,7 @@ theorem array64At_capacity [WasmSmallStepGS hlc α]
     imodintro
     isplitl_exact Hstate
     isplitl [Hrestore Hword]
-    · iapply Hrestore
-      iexact Hword
+    · iapply_exact Hrestore with Hword
     · ipureintro
       rw [haddress] at hfacts
       dsimp only [k] at hfacts; omega

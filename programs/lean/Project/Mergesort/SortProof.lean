@@ -2660,12 +2660,10 @@ theorem twp_sort
       wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet twp_localGet]
       ihave HsourceBytes :
           pointsToBytes 0 source (arrayBytes combined) $$ [HsourceCombined]
-      · iapply (arrayAt_as_bytes 0 source combined).mp
-        iexact HsourceCombined
+      · iapply_exact (arrayAt_as_bytes 0 source combined).mp with HsourceCombined
       ihave HscratchBytes :
           pointsToBytes 0 scratch (arrayBytes output) $$ [HscratchOutput]
-      · iapply (arrayAt_as_bytes 0 scratch output).mp
-        iexact HscratchOutput
+      · iapply_exact (arrayAt_as_bytes 0 scratch output).mp with HscratchOutput
       ihave Hcopy := (Wasm.SmallStep.twp_memoryCopy32
         (arrayBytes combined) (arrayBytes output)
         (by
@@ -2687,11 +2685,9 @@ theorem twp_sort
       iapply Hcopy
       iintro HscratchBytes HsourceBytes
       ihave HsourceOutput : arrayAt 0 source output $$ [HsourceBytes]
-      · iapply (arrayAt_as_bytes 0 source output).mpr
-        iexact HsourceBytes
+      · iapply_exact (arrayAt_as_bytes 0 source output).mpr with HsourceBytes
       ihave HscratchOutput : arrayAt 0 scratch output $$ [HscratchBytes]
-      · iapply (arrayAt_as_bytes 0 scratch output).mpr
-        iexact HscratchBytes
+      · iapply_exact (arrayAt_as_bytes 0 scratch output).mpr with HscratchBytes
       wasm_twp_pures [twp_exitControl]
       isimp [sortBlock4Frame, emptyBlockFrame, sortBlock4, sortBlock3,
         sortBlock2, sortBlock1, blockBodyAt, Project.Mergesort.func2]

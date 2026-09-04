@@ -946,8 +946,7 @@ theorem wasm_smallStep_heap_adequacy
       elementSegmentHeapAgrees_empty _,
       fun id m hm => by simp [get?_empty] at hm,
       fun id env hm => by simp [get?_empty] at hm⟩
-  · iapply hwp
-    iexact Hpoints
+  · iapply_exact hwp with Hpoints
 
 /-- Adequacy with authoritative ownership for both physical memory bytes and
 instantiated globals. This is the entry point used by generated functions

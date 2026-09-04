@@ -156,8 +156,7 @@ theorem fillWords_storeIteration_wp
       array64At 0 base
         (List.replicate (i.toNat + 1) value ++ suffix) $$
       [Hreassemble Hnew']
-  · iapply Hreassemble
-    iexact Hnew'
+  · iapply_exact Hreassemble with Hnew'
   iapply_frame hcontinue
 
 /-- The generated index increment and `br 1` really target the surrounding

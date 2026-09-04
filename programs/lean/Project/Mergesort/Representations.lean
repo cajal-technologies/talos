@@ -475,15 +475,13 @@ theorem WordSlice_get {host : Type} [WasmHeapGS host]
   unfold WordSlice ByteSlice
   iintro ⟨%halign, %hnowrap, Hbytes⟩
   ihave Harray : arrayAt 0 ptr values $$ [Hbytes]
-  · iapply (arrayAt_eq_wordCells ptr values).mpr
-    iexact Hbytes
+  · iapply_exact (arrayAt_eq_wordCells ptr values).mpr with Hbytes
   ihave ⟨Hcell, Hclose⟩ := arrayAt_get 0 ptr values k hk $$ Harray
   isplitl_exact Hcell
   · iintro Hcell
     ihave Harray := Hclose $$ Hcell
     ihave Hbytes : WordCells ptr values $$ [Harray]
-    · iapply (arrayAt_eq_wordCells ptr values).mp
-      iexact Harray
+    · iapply_exact (arrayAt_eq_wordCells ptr values).mp with Harray
     iframe Hbytes
     ipureexact ⟨halign, hnowrap⟩
 
@@ -499,15 +497,13 @@ theorem WordSlice_set {host : Type} [WasmHeapGS host]
   unfold WordSlice ByteSlice
   iintro ⟨%halign, %hnowrap, Hbytes⟩
   ihave Harray : arrayAt 0 ptr values $$ [Hbytes]
-  · iapply (arrayAt_eq_wordCells ptr values).mpr
-    iexact Hbytes
+  · iapply_exact (arrayAt_eq_wordCells ptr values).mpr with Hbytes
   ihave ⟨Hcell, Hclose⟩ := arrayAt_set 0 ptr values k newValue hk $$ Harray
   isplitl_exact Hcell
   · iintro Hcell
     ihave Harray := Hclose $$ Hcell
     ihave Hbytes : WordCells ptr (values.set k newValue) $$ [Harray]
-    · iapply (arrayAt_eq_wordCells ptr (values.set k newValue)).mp
-      iexact Harray
+    · iapply_exact (arrayAt_eq_wordCells ptr (values.set k newValue)).mp with Harray
     iframe Hbytes
     ipureintro
     refine ⟨halign, ?_⟩
@@ -2329,8 +2325,7 @@ theorem emptyVecHeaderBytes_to_VecU8 {host : Type} [WasmHeapGS host]
   unfold ByteSlice emptyVecHeaderBytes
   iintro ⟨%_hnowrap, Hbytes⟩
   ihave Harray : arrayAt 0 driverBase [0, 1, 0] $$ [Hbytes]
-  · iapply (arrayAt_eq_wordCells driverBase [0, 1, 0]).mpr
-    iexact Hbytes
+  · iapply_exact (arrayAt_eq_wordCells driverBase [0, 1, 0]).mpr with Hbytes
   isimp only [arrayAt] at Harray
   icases Harray with ⟨Hcapacity, Hpointer, Hlength⟩
   icases Hlength with ⟨Hlength, _Hemp⟩
