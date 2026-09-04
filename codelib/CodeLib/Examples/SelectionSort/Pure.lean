@@ -167,8 +167,7 @@ theorem OuterInvariant.step
       (hkUpper : k < current.length) : current[k]! ∈ current.drop fixed := by
     rw [List.mem_iff_getElem]
     refine ⟨k - fixed, ?_, ?_⟩
-    · simp only [List.length_drop]
-      omega
+    · simp only [List.length_drop]; omega
     · rw [List.getElem_drop]
       rw [getElem!_pos current k hkUpper]
       congr 1

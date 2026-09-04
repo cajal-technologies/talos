@@ -110,14 +110,11 @@ theorem serialize_decodeWords_of_length (bytes : List UInt8) (count : Nat)
       rcases bytes with _ | ⟨b0, bytes⟩
       · simp at hlength
       rcases bytes with _ | ⟨b1, bytes⟩
-      · simp at hlength
-        omega
+      · simp at hlength; omega
       rcases bytes with _ | ⟨b2, bytes⟩
-      · simp at hlength
-        omega
+      · simp at hlength; omega
       rcases bytes with _ | ⟨b3, rest⟩
-      · simp at hlength
-        omega
+      · simp at hlength; omega
       have hrest : rest.length = 4 * count := by
         simp only [List.length_cons, Nat.mul_succ] at hlength; omega
       have hind := ih rest hrest
@@ -2892,8 +2889,7 @@ theorem align4Layout_valid_of_bounds (size : Nat)
   refine ⟨hpositive, by decide, ⟨2, by norm_num⟩, by norm_num, ?_, ?_,
     by norm_num⟩
   · omega
-  · norm_num [UInt32.size] at hbound ⊢
-    omega
+  · norm_num [UInt32.size] at hbound ⊢; omega
 
 private theorem align1Layout_valid_of_bounds (size : Nat)
     (hsizeLower : 8 ≤ size) (hsizeUpper : size ≤ 1073741824) :
@@ -2903,8 +2899,7 @@ private theorem align1Layout_valid_of_bounds (size : Nat)
   refine ⟨by omega, by decide, ⟨0, by decide⟩, by decide, ?_, ?_,
     by decide⟩
   · omega
-  · norm_num [UInt32.size]
-    omega
+  · norm_num [UInt32.size]; omega
 
 /-- The public read-loop lineage supplies all arithmetic needed by the valid
 `func1` specialization.  In particular the checked addition cannot wrap and

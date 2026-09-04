@@ -521,8 +521,7 @@ theorem readBytes_writeBytes_slice (m : Mem) (off start len : Nat) (data : List 
     (h : start + len ≤ data.length) :
     (m.writeBytes off data).readBytes (off + start) len = (data.drop start).take len := by
   apply List.ext_getElem
-  · simp [Mem.readBytes]
-    omega
+  · simp [Mem.readBytes]; omega
   · intro i hi1 _hi2
     have hi : i < len := by simpa [Mem.readBytes] using hi1
     have hge : off ≤ off + start + i := by omega

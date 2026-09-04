@@ -566,14 +566,11 @@ private theorem partitionThreeWordsHeap_inBounds (memory : Mem)
     Nat.mul_le_mul_right 65536 hpages
   apply store32_inBounds0 (mem := (memory.write32 0 33).write32 4 11)
     (h1 := rfl) (h2 := rfl) (h3 := rfl)
-  · simp only [UInt32.toNat_ofNat, Mem.write32]
-    omega
+  · simp only [UInt32.toNat_ofNat, Mem.write32]; omega
   · apply store32_inBounds0 (mem := memory.write32 0 33) (h1 := rfl) (h2 := rfl) (h3 := rfl)
-    · simp only [UInt32.toNat_ofNat, Mem.write32]
-      omega
+    · simp only [UInt32.toNat_ofNat, Mem.write32]; omega
     · apply store32_inBounds0 (mem := memory) (h1 := rfl) (h2 := rfl) (h3 := rfl)
-      · simp only [UInt32.toNat_ofNat]
-        omega
+      · simp only [UInt32.toNat_ofNat]; omega
       · exact emptyHeap_inBounds _
 
 private theorem partitionThreeWordsHeap_pointsTo [WasmHeapGS α] :
@@ -711,11 +708,9 @@ private theorem mergeTwoWordsHeap_inBounds (memory : Mem)
       65536 ≤ memory.pages * 65536 :=
     Nat.mul_le_mul_right 65536 hpages
   apply store32_inBounds0 (mem := memory.write32 0 9) (h1 := rfl) (h2 := rfl) (h3 := rfl)
-  · simp only [UInt32.toNat_ofNat, Mem.write32]
-    omega
+  · simp only [UInt32.toNat_ofNat, Mem.write32]; omega
   · apply store32_inBounds0 (mem := memory) (h1 := rfl) (h2 := rfl) (h3 := rfl)
-    · simp only [UInt32.toNat_zero, Nat.zero_add]
-      omega
+    · simp only [UInt32.toNat_zero, Nat.zero_add]; omega
     · exact emptyHeap_inBounds _
 
 private theorem mergeTwoWordsHeap_pointsTo [WasmHeapGS α] :

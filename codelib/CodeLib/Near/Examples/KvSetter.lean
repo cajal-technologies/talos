@@ -216,16 +216,14 @@ theorem le32_parts_or (n : Nat) :
   rw [show 4 = 0 + 4 by norm_num]
   rw [readBytes_writeBytes_slice]
   · simp [encodeKV, le32]
-  · simp [encodeKV, le32]
-    omega
+  · simp [encodeKV, le32]; omega
 
 @[simp] theorem readBytes_writeBytes_encode_val (m : Mem) (key val : List UInt8) :
     (m.writeBytes 0 (encodeKV key val)).readBytes (key.length + 8) val.length = val := by
   rw [show key.length + 8 = 0 + (key.length + 8) by omega]
   rw [readBytes_writeBytes_slice]
   · simp [encodeKV, le32]
-  · simp [encodeKV, le32]
-    omega
+  · simp [encodeKV, le32]; omega
 
 theorem u64_toNat_of_u32_len (n : Nat) (h : n < 4294967296) :
     (UInt64.ofNat n).toNat = n := by
@@ -256,8 +254,7 @@ theorem getMemOrReg_writeBytes_encode_key (st : Store NearState) (key val : List
   rw [getMemOrReg_mem]
   · simp [u64_toNat_of_u32_len key.length hKey]
   · exact u64_ofNat_ne_u64Max_of_u32_len key.length hKey
-  · simp [u64_toNat_of_u32_len key.length hKey, memBytes, encodeKV, le32] at hMem ⊢
-    omega
+  · simp [u64_toNat_of_u32_len key.length hKey, memBytes, encodeKV, le32] at hMem ⊢; omega
 
 theorem getMemOrReg_writeBytes_encode_val (st : Store NearState) (key val : List UInt8)
     (hKey : key.length < 4294967296) (hVal : val.length < 4294967296)

@@ -34,8 +34,7 @@ theorem segment_cons {values : List UInt32} {index stop : Nat} {value : UInt32}
           simp [segment]
           apply ih
           · omega
-          · simp at hstop
-            omega
+          · simp at hstop; omega
           · simpa using hlookup
 
 theorem take_set_succ {values : List UInt32} {index : Nat} {value : UInt32}
@@ -317,10 +316,8 @@ theorem MergeLoopInvariant.takeLeft
   rw [hleftSegment, hrightSegment] at hprogress
   refine ⟨by omega, by omega, hmj, hjr, hrlen, ?_, ?_, ?_, ?_, ?_⟩
   · simp [hlength]
-  · simp
-    omega
-  · simp
-    omega
+  · simp; omega
+  · simp; omega
   · rw [take_set_succ hklen, take_set_of_le hlk, htake]
     simp [List.append_assoc]
   · rw [hrightSegment]; exact hprogress.takeLeft hxy
@@ -350,10 +347,8 @@ theorem MergeLoopInvariant.takeRight
   rw [hleftSegment, hrightSegment] at hprogress
   refine ⟨hli, him, by omega, by omega, hrlen, ?_, ?_, ?_, ?_, ?_⟩
   · simp [hlength]
-  · simp
-    omega
-  · simp
-    omega
+  · simp; omega
+  · simp; omega
   · rw [take_set_succ hklen, take_set_of_le hlk, htake]
     simp [List.append_assoc]
   · rw [hleftSegment]; exact hprogress.takeRight hxy
@@ -381,10 +376,8 @@ theorem MergeLoopInvariant.takeRemainingLeft
   rw [hleftSegment, hrightSegment] at hprogress
   refine ⟨by omega, by omega, hmr, hrr, hrlen, ?_, ?_, ?_, ?_, ?_⟩
   · simp [hlength]
-  · simp
-    omega
-  · simp
-    omega
+  · simp; omega
+  · simp; omega
   · rw [take_set_succ hklen, take_set_of_le hlk, htake]
     simp [List.append_assoc]
   · rw [hrightSegment]; exact hprogress.takeRemainingLeft
@@ -412,10 +405,8 @@ theorem MergeLoopInvariant.takeRemainingRight
   rw [hleftSegment, hrightSegment] at hprogress
   refine ⟨hlm, hmm, by omega, by omega, hrlen, ?_, ?_, ?_, ?_, ?_⟩
   · simp [hlength]
-  · simp
-    omega
-  · simp
-    omega
+  · simp; omega
+  · simp; omega
   · rw [take_set_succ hklen, take_set_of_le hlk, htake]
     simp [List.append_assoc]
   · rw [hleftSegment]; exact hprogress.takeRemainingRight
@@ -474,8 +465,7 @@ theorem CopyLoopInvariant.step
   have hklen : k < current.length := by omega
   refine ⟨by omega, by omega, hrlen, ?_, ?_, ?_, ?_⟩
   · simp [hlength]
-  · simp
-    omega
+  · simp; omega
   · rw [take_set_succ hklen, htake]
     simp [List.append_assoc]
   · rw [drop_set_succ]
