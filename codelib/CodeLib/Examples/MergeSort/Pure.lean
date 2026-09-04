@@ -109,33 +109,29 @@ theorem sorted_of_mergeRel {left right output}
   | leftNil => exact hright
   | rightNil => exact hleft
   | @takeLeft x y xs ys output hxy tail ih =>
-      have hxs : Sorted xs := List.Pairwise.tail hleft
       have hyr : Sorted (y :: ys) := hright
       simp only [Sorted, List.pairwise_cons] at hleft hright ⊢
-      constructor
-      · intro z hz
-        have hz' : z ∈ xs ++ y :: ys :=
-          (perm_of_mergeRel tail).mem_iff.mpr hz
-        simp only [List.mem_append, List.mem_cons] at hz'
-        rcases hz' with hxs | rfl | hys
-        · exact hleft.1 z hxs
-        · exact UInt32.le_of_lt hxy
-        · exact UInt32.le_trans (UInt32.le_of_lt hxy) (hright.1 z hys)
-      · exact ih hxs hyr
+      refine ⟨?_, ih hleft.2 hyr⟩
+      intro z hz
+      have hz' : z ∈ xs ++ y :: ys :=
+        (perm_of_mergeRel tail).mem_iff.mpr hz
+      simp only [List.mem_append, List.mem_cons] at hz'
+      rcases hz' with hxs | rfl | hys
+      · exact hleft.1 z hxs
+      · exact UInt32.le_of_lt hxy
+      · exact UInt32.le_trans (UInt32.le_of_lt hxy) (hright.1 z hys)
   | @takeRight x y xs ys output hxy tail ih =>
       have hxl : Sorted (x :: xs) := hleft
-      have hys : Sorted ys := List.Pairwise.tail hright
       simp only [Sorted, List.pairwise_cons] at hleft hright ⊢
-      constructor
-      · intro z hz
-        have hz' : z ∈ x :: xs ++ ys :=
-          (perm_of_mergeRel tail).mem_iff.mpr hz
-        simp only [List.cons_append, List.mem_cons, List.mem_append] at hz'
-        rcases hz' with rfl | hxs | hys
-        · exact UInt32.le_of_not_lt hxy
-        · exact UInt32.le_trans (UInt32.le_of_not_lt hxy) (hleft.1 z hxs)
-        · exact hright.1 z hys
-      · exact ih hxl hys
+      refine ⟨?_, ih hxl hright.2⟩
+      intro z hz
+      have hz' : z ∈ x :: xs ++ ys :=
+        (perm_of_mergeRel tail).mem_iff.mpr hz
+      simp only [List.cons_append, List.mem_cons, List.mem_append] at hz'
+      rcases hz' with rfl | hxs | hys
+      · exact UInt32.le_of_not_lt hxy
+      · exact UInt32.le_trans (UInt32.le_of_not_lt hxy) (hleft.1 z hxs)
+      · exact hright.1 z hys
 
 theorem sortedPermutation_of_mergeRel {left right output}
     (hmerge : MergeRel left right output)

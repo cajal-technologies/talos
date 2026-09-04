@@ -73,33 +73,29 @@ theorem sorted_of_mergeLE {left right output}
   | leftNil => exact hright
   | rightNil => exact hleft
   | @takeLeft x y xs ys output hxy tail ih =>
-      have hxs : Wasm.Examples.MergeSort.Sorted xs := hleft.tail
       have hyr : Wasm.Examples.MergeSort.Sorted (y :: ys) := hright
       simp only [Wasm.Examples.MergeSort.Sorted, List.pairwise_cons] at hleft hright ⊢
-      constructor
-      · intro z hz
-        have hz' : z ∈ xs ++ y :: ys :=
-          (perm_of_mergeLE tail).mem_iff.mpr hz
-        simp only [List.mem_append, List.mem_cons] at hz'
-        rcases hz' with hxs | rfl | hys
-        · exact hleft.1 z hxs
-        · exact hxy
-        · exact UInt32.le_trans hxy (hright.1 z hys)
-      · exact ih hxs hyr
+      refine ⟨?_, ih hleft.2 hyr⟩
+      intro z hz
+      have hz' : z ∈ xs ++ y :: ys :=
+        (perm_of_mergeLE tail).mem_iff.mpr hz
+      simp only [List.mem_append, List.mem_cons] at hz'
+      rcases hz' with hxs | rfl | hys
+      · exact hleft.1 z hxs
+      · exact hxy
+      · exact UInt32.le_trans hxy (hright.1 z hys)
   | @takeRight x y xs ys output hxy tail ih =>
       have hxl : Wasm.Examples.MergeSort.Sorted (x :: xs) := hleft
-      have hys : Wasm.Examples.MergeSort.Sorted ys := hright.tail
       simp only [Wasm.Examples.MergeSort.Sorted, List.pairwise_cons] at hleft hright ⊢
-      constructor
-      · intro z hz
-        have hz' : z ∈ x :: xs ++ ys :=
-          (perm_of_mergeLE tail).mem_iff.mpr hz
-        simp only [List.cons_append, List.mem_cons, List.mem_append] at hz'
-        rcases hz' with rfl | hxs | hys
-        · exact UInt32.le_of_not_le hxy
-        · exact UInt32.le_trans (UInt32.le_of_not_le hxy) (hleft.1 z hxs)
-        · exact hright.1 z hys
-      · exact ih hxl hys
+      refine ⟨?_, ih hxl hright.2⟩
+      intro z hz
+      have hz' : z ∈ x :: xs ++ ys :=
+        (perm_of_mergeLE tail).mem_iff.mpr hz
+      simp only [List.cons_append, List.mem_cons, List.mem_append] at hz'
+      rcases hz' with rfl | hxs | hys
+      · exact UInt32.le_of_not_le hxy
+      · exact UInt32.le_trans (UInt32.le_of_not_le hxy) (hleft.1 z hxs)
+      · exact hright.1 z hys
 
 theorem sortedPermutation_of_mergeLE {left right output}
     (hmerge : MergeLE left right output)
