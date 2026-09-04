@@ -116,8 +116,8 @@ theorem swap_runs :
     example's `Post` carried a length-≤ 1 list. -/
 theorem swap_terminates (a b : UInt32) :
     TerminatesWith (swapConfig a b)
-      (fun values _ => values = [.i32 a, .i32 b]) := by
-  exact runSteps_values_terminates (fuel := 3) (by rfl)
+      (fun values _ => values = [.i32 a, .i32 b]) :=
+  runSteps_values_terminates (fuel := 3) (by rfl)
 
 theorem swap_partial (a b : UInt32) :
     PartiallyMeets (swapConfig a b)
@@ -128,8 +128,8 @@ theorem swap_partial (a b : UInt32) :
 
 theorem pairBlock_terminates (x : UInt32) :
     TerminatesWith (pairBlockConfig x)
-      (fun values _ => values = [.i32 (x - 1), .i32 (1 + x)]) := by
-  exact runSteps_values_terminates (fuel := 9) (by rfl)
+      (fun values _ => values = [.i32 (x - 1), .i32 (1 + x)]) :=
+  runSteps_values_terminates (fuel := 9) (by rfl)
 
 theorem pairBlock_partial (x : UInt32) :
     PartiallyMeets (pairBlockConfig x)
@@ -143,8 +143,8 @@ theorem pairBlock_partial (x : UInt32) :
     composition when `f.results.length > 1`. -/
 theorem callsSwap_terminates :
     TerminatesWith callsSwapConfig
-      (fun values _ => values = [.i32 8]) := by
-  exact runSteps_values_terminates (fuel := 8) (by rfl)
+      (fun values _ => values = [.i32 8]) :=
+  runSteps_values_terminates (fuel := 8) (by rfl)
 
 theorem callsSwap_partial :
     PartiallyMeets callsSwapConfig

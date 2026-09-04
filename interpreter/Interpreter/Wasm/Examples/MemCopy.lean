@@ -70,8 +70,8 @@ theorem copy_disjoint_terminates :
     TerminatesWith copyDisjointConfig (fun values store =>
       values = [.i32 0x44332211] ∧
       store.wasm.mem.read32 0 = 0x44332211 ∧
-      store.wasm.mem.read32 8 = 0x44332211) := by
-  exact runSteps_success_terminates_eq_values
+      store.wasm.mem.read32 8 = 0x44332211) :=
+  runSteps_success_terminates_eq_values
     copy_disjoint_moves_bytes (by constructor <;> native_decide)
 
 theorem copy_disjoint_partial :
@@ -87,8 +87,8 @@ theorem copy_overlap_uses_pre_copy_bytes :
 theorem copy_overlap_terminates :
     TerminatesWith copyOverlapConfig (fun values store =>
       values = [.i64 0x8877443322112211] ∧
-      store.wasm.mem.read32 2 = 0x44332211) := by
-  exact runSteps_success_terminates_eq_values
+      store.wasm.mem.read32 2 = 0x44332211) :=
+  runSteps_success_terminates_eq_values
     copy_overlap_uses_pre_copy_bytes (by native_decide)
 
 theorem copy_overlap_partial :
@@ -104,7 +104,7 @@ theorem copy_out_of_bounds_traps :
 /-- Fuel-free trap contract, including atomic preservation of the store. -/
 theorem copy_out_of_bounds_trapsWith :
     TrapsWith copyTrapConfig .outOfBoundsMemory
-      (fun store => store = copyStore) := by
-  exact runSteps_trapped_trapsWith_store copy_out_of_bounds_traps
+      (fun store => store = copyStore) :=
+  runSteps_trapped_trapsWith_store copy_out_of_bounds_traps
 
 end Wasm

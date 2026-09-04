@@ -63,8 +63,8 @@ theorem fill_then_load_terminates :
     TerminatesWith fillThenReadConfig (fun values store =>
       values = [.i64 0xABABABABABABABAB] ∧
       store.wasm.mem.read64 0 = 0xABABABABABABABAB ∧
-      store.wasm.mem.read8 8 = 0) := by
-  exact runSteps_success_terminates_eq_values
+      store.wasm.mem.read8 8 = 0) :=
+  runSteps_success_terminates_eq_values
     fill_then_load_returns_repeated_byte (by constructor <;> native_decide)
 
 theorem fill_then_load_partial :
@@ -81,7 +81,7 @@ theorem fill_out_of_bounds_traps :
 /-- Fuel-free trap contract, including atomic preservation of the store. -/
 theorem fill_out_of_bounds_trapsWith :
     TrapsWith fillTrapConfig .outOfBoundsMemory
-      (fun store => store = fillStore) := by
-  exact runSteps_trapped_trapsWith_store fill_out_of_bounds_traps
+      (fun store => store = fillStore) :=
+  runSteps_trapped_trapsWith_store fill_out_of_bounds_traps
 
 end Wasm

@@ -66,20 +66,20 @@ theorem popcnt_nibble_runs :
 theorem clz_terminates (a : UInt32) :
     TerminatesWith (clzConfig a)
       (fun values _ =>
-        values = [.i32 (UInt32.ofNat (clz32 32 a))]) := by
-  exact runSteps_values_terminates (fuel := 3) (by rfl)
+        values = [.i32 (UInt32.ofNat (clz32 32 a))]) :=
+  runSteps_values_terminates (fuel := 3) (by rfl)
 
 theorem ctz_terminates (a : UInt32) :
     TerminatesWith (ctzConfig a)
       (fun values _ =>
-        values = [.i32 (UInt32.ofNat (ctz32 32 a))]) := by
-  exact runSteps_values_terminates (fuel := 3) (by rfl)
+        values = [.i32 (UInt32.ofNat (ctz32 32 a))]) :=
+  runSteps_values_terminates (fuel := 3) (by rfl)
 
 theorem popcnt_terminates (a : UInt32) :
     TerminatesWith (popcntConfig a)
       (fun values _ =>
-        values = [.i32 (UInt32.ofNat (popcnt32 32 a 0))]) := by
-  exact runSteps_values_terminates (fuel := 3) (by rfl)
+        values = [.i32 (UInt32.ofNat (popcnt32 32 a 0))]) :=
+  runSteps_values_terminates (fuel := 3) (by rfl)
 
 theorem clz_partial (a : UInt32) :
     PartiallyMeets (clzConfig a)

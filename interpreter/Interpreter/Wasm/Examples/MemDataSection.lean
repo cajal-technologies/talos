@@ -38,8 +38,8 @@ theorem memDataSection_runs :
 theorem memDataSection_terminates :
     TerminatesWith memDataConfig (fun values store =>
       values = [.i32 7] ∧
-      store.wasm.mem.read32 0 = 0x45444342) := by
-  exact runSteps_success_terminates_eq_values memDataSection_runs (by native_decide)
+      store.wasm.mem.read32 0 = 0x45444342) :=
+  runSteps_success_terminates_eq_values memDataSection_runs (by native_decide)
 
 theorem memDataSection_partial :
     PartiallyMeets memDataConfig (fun values store =>

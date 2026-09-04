@@ -82,8 +82,8 @@ theorem tick_terminates (st : Store Unit) (n : UInt32)
     (hg : st.globals.globals[0]? = some (.i32 n)) :
     TerminatesWith (tickConfig st) (fun values store =>
       values = [.i32 n] ∧
-      store.wasm.globals.globals[0]? = some (.i32 (1 + n))) := by
-  exact runSteps_success_terminates_eq_values (tick_runs st n hg) (by
+      store.wasm.globals.globals[0]? = some (.i32 (1 + n))) :=
+  runSteps_success_terminates_eq_values (tick_runs st n hg) (by
     simp [tickFinalStore, tickStore]
     grind)
 
@@ -107,8 +107,8 @@ theorem tick_three_calls :
         .success [.i32 1] (tickFinalStore tickAfterZero 1) ∧
     (runSteps 6 (tickConfig tickAfterOne)).result =
         .success [.i32 2] (tickFinalStore tickAfterOne 2) ∧
-    tickAfterTwo.globals.globals[0]? = some (.i32 3) := by
-  exact ⟨tick_runs tickInitialStore 0 (by native_decide),
+    tickAfterTwo.globals.globals[0]? = some (.i32 3) :=
+  ⟨tick_runs tickInitialStore 0 (by native_decide),
     tick_runs tickAfterZero 1 (by native_decide),
     tick_runs tickAfterOne 2 (by native_decide),
     by native_decide⟩
