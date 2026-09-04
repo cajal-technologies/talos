@@ -919,9 +919,7 @@ theorem copyWords_loop_twp
             ispecialize IH' $$ %next %hmeasure
             iapply IH'
             simp only [Inv, next]
-            isplitr_pureexact hcopiedNext
-            isplitr_pureexact hdstNext
-            isplitr_pureexact hsourceNext
+            isplitr_pureexacts [hcopiedNext, hdstNext, hsourceNext]
             isplitl_exact HR'
             isplitl [Hdst']
             · simp only [List.append_assoc, List.singleton_append]
@@ -959,9 +957,7 @@ theorem copyWords_loop_twp
     · simp only [Inv]
       iframe
   · simp only [Inv]
-    isplitr_pureexact (by simp)
-    isplitr_pureexact (by simpa using hdestinationLength)
-    isplitr_pureexact (by simp)
+    isplitr_pureexacts [by simp, by simpa using hdestinationLength, by simp]
     isplitl_exact HR
     isplitl [Hdst]
     · simp only [List.nil_append]

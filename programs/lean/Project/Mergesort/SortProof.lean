@@ -1396,8 +1396,7 @@ theorem twp_mergeMainLoop
         · ipureintro
           dsimp only [GeneratedMergeState.i, GeneratedMergeState.j]
           omega
-        isplitr_pureexact hnext
-        isplitr_pureexact ⟨hiNext, hjState⟩
+        isplitr_pureexacts [hnext, ⟨hiNext, hjState⟩]
         iframe
       · have hiEq : state.i + 1 = mid := by omega
         have hge :
@@ -1476,8 +1475,7 @@ theorem twp_mergeMainLoop
         · ipureintro
           dsimp only [GeneratedMergeState.i, GeneratedMergeState.j]
           omega
-        isplitr_pureexact hnext
-        isplitr_pureexact ⟨hiState, hjNext⟩
+        isplitr_pureexacts [hnext, ⟨hiState, hjNext⟩]
         iframe
       · have hjEq : state.j + 1 = input.length := by omega
         have hnotRelative :
@@ -1503,8 +1501,7 @@ theorem twp_mergeMainLoop
         isimp only [sortLocals] at Hdone
         iexact Hdone
   · simp only [Inv, Finish]
-    isplitr_pureexact hinv
-    isplitr_pureexact ⟨hi, hj⟩
+    isplitr_pureexacts [hinv, ⟨hi, hj⟩]
     iframe
 
 set_option maxHeartbeats 8000000 in
@@ -1800,8 +1797,7 @@ theorem twp_mergeLeftRemainder
         · ipureintro
           dsimp only [LeftCopyState.r]
           omega
-        isplitr_pureexact hmore
-        isplitr_pureexact (by simpa [Nat.add_assoc] using hnext)
+        isplitr_pureexacts [hmore, by simpa [Nat.add_assoc] using hnext]
         iframe
       · have heqR : state.r + 1 = n := by omega
         have heq := hleftCounterEq.mpr heqR
@@ -2195,8 +2191,7 @@ theorem twp_mergeRightRemainder
         · ipureintro
           dsimp only [RightCopyState.r]
           omega
-        isplitr_pureexact hmore
-        isplitr_pureexact (by simpa [Nat.add_assoc] using hnext)
+        isplitr_pureexacts [hmore, by simpa [Nat.add_assoc] using hnext]
         iframe
       · have heqR : state.r + 1 = n := by omega
         have hcounterZero :

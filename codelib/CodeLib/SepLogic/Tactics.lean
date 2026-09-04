@@ -54,6 +54,18 @@ macro "isplitr_pureexact " proof:term : tactic =>
     (isplitr
      · ipureexact $proof))
 
+/-- Split off and discharge several pure right conjuncts in order. -/
+syntax "isplitr_pureexacts" "[" term,* "]" : tactic
+
+macro_rules
+  | `(tactic| isplitr_pureexacts []) => `(tactic| skip)
+  | `(tactic| isplitr_pureexacts [$proof:term]) =>
+      `(tactic| isplitr_pureexact $proof)
+  | `(tactic| isplitr_pureexacts [$proof:term, $proofs:term,*]) =>
+      `(tactic|
+        (isplitr_pureexact $proof
+         isplitr_pureexacts [$proofs,*]))
+
 /-- Apply an Iris entailment and frame its next spatial obligation. -/
 macro "iapply_frame " rule:pmTerm : tactic =>
   `(tactic|
