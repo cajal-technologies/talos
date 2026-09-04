@@ -190,16 +190,6 @@ theorem deserialize_readBytes (mem : Mem) (base : UInt32) (count : Nat)
         change base.toNat + 4 * (count + 1) < 4294967296 at hfit
         omega
 
-theorem quicksort_writeWordArray_eq (mem : Mem) (base : UInt32)
-    (values : List UInt32) :
-    Quicksort.writeWordArray mem base values = writeWordArray mem base values :=
-  rfl
-
-theorem quicksort_readWordArray_eq (mem : Mem) (base : UInt32)
-    (count : Nat) :
-    Quicksort.readWordArray mem base count = readWordArray mem base count :=
-  rfl
-
 theorem quicksortHeapAux_addresses_lt
     (σ : WasmHeapMap (Option UInt8)) (base : UInt32)
     (values : List UInt32) (limit : Nat)
@@ -682,7 +672,7 @@ theorem sortHeap_agrees (input : List UInt32) (hfit : Fits input) :
   have hsource : heapAgreesWithMem sourceHeap
       (fun id => if id = 0 then some (afterRead input).mem else none) := by
     simp only [afterRead_mem_eq input hfit]
-    simpa only [sourceHeap, initialMem, quicksort_writeWordArray_eq] using
+    simpa only [sourceHeap, initialMem] using
       Quicksort.quicksortHeapAux_agrees ∅ initialMem source input hempty
       (by
         rw [fits_iff] at hfit
@@ -699,7 +689,6 @@ theorem sortHeap_agrees (input : List UInt32) (hfit : Fits input) :
       simp only [UInt32.size]
       change 4 * input.length ≤ 32768 at hfit
       omega)
-  rw [quicksort_writeWordArray_eq] at hscratch
   have h : heapAgreesWithMem (sortHeap input)
       (fun id => if id = 0 then some (afterRead input).mem else none) := by
     simpa only [sortHeap, sourceHeap, scratchValues,
@@ -725,7 +714,7 @@ theorem sortHeap_inBounds (input : List UInt32) (hfit : Fits input) :
   have hsource : heapAddressesInBounds sourceHeap
       (fun id => if id = 0 then some (afterRead input).mem else none) := by
     simp only [afterRead_mem_eq input hfit]
-    simpa only [sourceHeap, initialMem, quicksort_writeWordArray_eq] using
+    simpa only [sourceHeap, initialMem] using
       Quicksort.quicksortHeapAux_inBounds ∅ initialMem source input hempty
       (by
         rw [fits_iff] at hfit
@@ -760,7 +749,6 @@ theorem sortHeap_inBounds (input : List UInt32) (hfit : Fits input) :
       rw [hscratchNat]
       change 4 * input.length ≤ 32768 at hfit
       omega)
-  rw [quicksort_writeWordArray_eq] at hscratch
   have h : heapAddressesInBounds (sortHeap input)
       (fun id => if id = 0 then some (afterRead input).mem else none) := by
     simpa only [sortHeap, sourceHeap, scratchValues,
@@ -934,8 +922,6 @@ theorem twp_sort [WasmSmallStepGS hlc Unit]
         change 4 * input.length ≤ 32768 at hfit
         omega) $$ [$Hstate $Hsource] with
       ⟨Hstate, Hsource, %hread⟩
-    have hread' : readWordArray store.wasm.mem source output.length = output := by
-      simpa only [quicksort_readWordArray_eq] using hread
     imod arrayAt_capacity store 0 [] 0 source output
       (by
         have hlength := hsorted.2.length_eq
@@ -947,7 +933,7 @@ theorem twp_sort [WasmSmallStepGS hlc Unit]
       (by simp [source]) $$ [$Hstate $Hsource] with
       ⟨_Hstate, _Hsource, %hcapacity⟩
     ipureexact ⟨output, hsorted, by
-      rw [hsorted.2.length_eq]; exact hread', by
+      rw [hsorted.2.length_eq]; exact hread, by
       rw [hsorted.2.length_eq]
       simpa only [source, UInt32.reduceToNat, Nat.zero_add] using hcapacity⟩
 
