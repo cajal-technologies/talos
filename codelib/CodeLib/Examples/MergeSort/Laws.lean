@@ -33,14 +33,6 @@ theorem ValidLayout.length_lt
   have hsize : UInt32.size = 4294967296 := rfl
   rw [hsize] at hfit ⊢; omega
 
-theorem u32_ofNat_add {a b : Nat} (_ : a + b < UInt32.size) :
-    UInt32.ofNat a + UInt32.ofNat b = UInt32.ofNat (a + b) :=
-  (UInt32.ofNat_add a b).symm
-
-theorem u32_ofNat_mul {a b : Nat} (_ : a * b < UInt32.size) :
-    UInt32.ofNat a * UInt32.ofNat b = UInt32.ofNat (a * b) :=
-  (UInt32.ofNat_mul a b).symm
-
 theorem arrayAddress_toNat (base : UInt32) {index length : Nat}
     (hfit : base.toNat + 4 * length ≤ UInt32.size)
     (hindex : index < length) :
