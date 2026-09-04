@@ -108,12 +108,9 @@ theorem tick_three_calls :
     (runSteps 6 (tickConfig tickAfterOne)).result =
         .success [.i32 2] (tickFinalStore tickAfterOne 2) ∧
     tickAfterTwo.globals.globals[0]? = some (.i32 3) := by
-  constructor
-  · exact tick_runs tickInitialStore 0 (by native_decide)
-  constructor
-  · exact tick_runs tickAfterZero 1 (by native_decide)
-  constructor
-  · exact tick_runs tickAfterOne 2 (by native_decide)
-  · native_decide
+  exact ⟨tick_runs tickInitialStore 0 (by native_decide),
+    tick_runs tickAfterZero 1 (by native_decide),
+    tick_runs tickAfterOne 2 (by native_decide),
+    by native_decide⟩
 
 end Wasm

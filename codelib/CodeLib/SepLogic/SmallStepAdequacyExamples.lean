@@ -1286,9 +1286,7 @@ theorem memoryInitDrop_store_partiallyMeets :
           ⌜store.wasm.dataSegments[0]? = some none⌝ using
         stateInterp_dataSegment_facts store 0 [] 0 0 none $$ [Hstate Hsegment]
       ipureintro
-      constructor
-      · exact hvalues
-      exact ⟨HwordFacts.1, HsegmentFact⟩
+      exact ⟨hvalues, HwordFacts.1, HsegmentFact⟩
     iapply wp_mono hpost
     iapply_frame wp_memoryInitDrop 0
 
