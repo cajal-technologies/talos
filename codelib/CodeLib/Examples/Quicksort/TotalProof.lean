@@ -220,8 +220,7 @@ theorem twp_partitionScanLoop
         wasm_twp_pures [twp_br] using [partitionLocals, List.take_zero, List.nil_append]
         ispecialize Hrec $$
           %(⟨state.values, state.i, state.j + 1, state.tmp⟩ : PartitionState)
-        iapply Hrec
-        · ipureintro
+        iapply_pure Hrec =>
           show hiMinusOne - (state.j + 1) < hiMinusOne - state.j
           omega
         isplitr_pureexact hstate.skipStep (by omega) (by rwa [getElem!_pos state.values state.j hjLen])
@@ -231,8 +230,7 @@ theorem twp_partitionScanLoop
         ispecialize Hrec $$
           %(⟨swapElems state.values state.i state.j, state.i + 1, state.j + 1,
               state.values[state.i]'hiLen⟩ : PartitionState)
-        iapply Hrec
-        · ipureintro
+        iapply_pure Hrec =>
           show hiMinusOne - (state.j + 1) < hiMinusOne - state.j
           omega
         isplitr_pureexact hstate.swapStep (by omega) (by rwa [getElem!_pos state.values state.j hjLen])

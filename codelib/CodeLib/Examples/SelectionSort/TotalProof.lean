@@ -804,8 +804,7 @@ private theorem twp_innerLoop
             exact hlt
           simpa only [if_pos hlt'] using hstep
         ispecialize Hrec $$ %(⟨state.scan, state.scan + 1⟩ : InnerState)
-        iapply Hrec
-        · ipureintro
+        iapply_pure Hrec =>
           change current.length - (state.scan + 1) <
             current.length - state.scan
           omega
@@ -832,8 +831,7 @@ private theorem twp_innerLoop
             exact hlt
           simpa only [if_neg hlt'] using hstep
         ispecialize Hrec $$ %(⟨state.best, state.scan + 1⟩ : InnerState)
-        iapply Hrec
-        · ipureintro
+        iapply_pure Hrec =>
           change current.length - (state.scan + 1) <
             current.length - state.scan
           omega
@@ -1033,8 +1031,7 @@ private theorem twp_outerLoop
       ispecialize Hrec $$
         %(⟨updated, state.outer + 1, finalBest,
           input.length, state.current[state.outer]⟩ : OuterState)
-      iapply Hrec
-      · ipureintro
+      iapply_pure Hrec =>
         change input.length - (state.outer + 1) <
           input.length - state.outer
         omega

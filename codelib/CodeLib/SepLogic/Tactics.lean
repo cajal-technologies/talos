@@ -72,6 +72,17 @@ macro "iapply_frame " rule:pmTerm : tactic =>
     (iapply $rule
      iframe))
 
+/-- Apply an Iris entailment and prove its first pure premise. -/
+syntax "iapply_pure " pmTerm " =>" ppLine colGt tacticSeq : tactic
+
+macro_rules
+  | `(tactic| iapply_pure $rule:pmTerm => $proof:tacticSeq) =>
+      `(tactic|
+        (iapply $rule
+         next =>
+           ipureintro
+           next => $proof))
+
 /-- Frame spatial goals, then discharge the remaining pure goal. -/
 macro "iframe_pureexact " proof:term : tactic =>
   `(tactic|

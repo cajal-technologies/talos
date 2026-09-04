@@ -2048,8 +2048,7 @@ theorem twp_func3_decode_tail_loop
       ispecialize Hrec $$ %next
       isimp only [func3DecodeTailLoopBody, func3DecodeTailLocals,
         func3AppendLocals, next] at Hrec
-      iapply Hrec
-      · ipureintro
+      iapply_pure Hrec =>
         omega
       isplitr_pureexact ⟨hnextPartition, hmore⟩
       iframe
@@ -2366,8 +2365,7 @@ theorem twp_func3_decode_bulk_loop
       ispecialize Hrec $$ %next
       isimp only [func3DecodeBulkLoopBody, func3DecodeBulkLocals,
         func3AppendLocals, next] at Hrec
-      iapply Hrec
-      · ipureintro
+      iapply_pure Hrec =>
         omega
       isplitr_pureexact ⟨hnextBound, hnextMod⟩
       iframe
@@ -3509,8 +3507,7 @@ theorem twp_func3_output_loop
         (targetValues := []) hnonzero (by rfl)
       ispecialize Hrec $$ %(emitted + 1)
       simp only [func3OutputLoopBody]
-      iapply Hrec
-      · ipureintro
+      iapply_pure Hrec =>
         omega
       isplitr_pureexact hmore
       iexists (serialize [sorted[emitted]])

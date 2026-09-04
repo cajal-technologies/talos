@@ -1389,8 +1389,7 @@ theorem twp_mergeMainLoop
               state.i + 1, state.j, state.k + 1,
               state.emitted ++ [input[state.i]],
               0, input[state.j]⟩ : GeneratedMergeState)
-        iapply Hrec
-        · ipureintro
+        iapply_pure Hrec =>
           dsimp only [GeneratedMergeState.i, GeneratedMergeState.j]
           omega
         isplitr_pureexacts [hnext, ⟨hiNext, hjState⟩]
@@ -1468,8 +1467,7 @@ theorem twp_mergeMainLoop
               state.i, state.j + 1, state.k + 1,
               state.emitted ++ [input[state.j]],
               0, input[state.j]⟩ : GeneratedMergeState)
-        iapply Hrec
-        · ipureintro
+        iapply_pure Hrec =>
           dsimp only [GeneratedMergeState.i, GeneratedMergeState.j]
           omega
         isplitr_pureexacts [hnext, ⟨hiState, hjNext⟩]
@@ -1789,8 +1787,7 @@ theorem twp_mergeLeftRemainder
           %(⟨state.scratchValues.set (k + state.r) input[i + state.r],
             state.r + 1, state.emitted ++ [input[i + state.r]]⟩ :
               LeftCopyState)
-        iapply Hrec
-        · ipureintro
+        iapply_pure Hrec =>
           dsimp only [LeftCopyState.r]
           omega
         isplitr_pureexacts [hmore, by simpa [Nat.add_assoc] using hnext]
@@ -2182,8 +2179,7 @@ theorem twp_mergeRightRemainder
           %(⟨state.scratchValues.set (k + state.r) input[j + state.r],
             state.r + 1, state.emitted ++ [input[j + state.r]]⟩ :
               RightCopyState)
-        iapply Hrec
-        · ipureintro
+        iapply_pure Hrec =>
           dsimp only [RightCopyState.r]
           omega
         isplitr_pureexacts [hmore, by simpa [Nat.add_assoc] using hnext]

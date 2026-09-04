@@ -425,8 +425,7 @@ theorem twp_mergeMainLoop
             %(⟨state.scratch.set state.k input[state.i],
                 state.i + 1, state.j, state.k + 1,
                 state.emitted ++ [input[state.i]]⟩ : MergeLoopState)
-          iapply Hrec
-          · ipureintro
+          iapply_pure Hrec =>
             change
               (mid - (state.i + 1)) + (right - state.j) <
                 (mid - state.i) + (right - state.j)
@@ -442,8 +441,7 @@ theorem twp_mergeMainLoop
             %(⟨state.scratch.set state.k input[state.j],
                 state.i, state.j + 1, state.k + 1,
                 state.emitted ++ [input[state.j]]⟩ : MergeLoopState)
-          iapply Hrec
-          · ipureintro
+          iapply_pure Hrec =>
             change
               (mid - state.i) + (right - (state.j + 1)) <
                 (mid - state.i) + (right - state.j)
@@ -772,8 +770,7 @@ theorem twp_mergeLeftLoop
         %(⟨state.scratch.set state.k input[state.i],
             state.i + 1, state.j, state.k + 1,
             state.emitted ++ [input[state.i]]⟩ : MergeLoopState)
-      iapply Hrec
-      · ipureintro
+      iapply_pure Hrec =>
         change mid - (state.i + 1) < mid - state.i
         omega
       isplitr
@@ -901,8 +898,7 @@ theorem twp_mergeRightLoop
         %(⟨state.scratch.set state.k input[state.j],
             mid, state.j + 1, state.k + 1,
             state.emitted ++ [input[state.j]]⟩ : MergeLoopState)
-      iapply Hrec
-      · ipureintro
+      iapply_pure Hrec =>
         change right - (state.j + 1) < right - state.j
         omega
       isplitr_pureexact hstate.takeRemainingRight hj
@@ -1100,8 +1096,7 @@ theorem twp_mergeCopyLoop
         %(⟨state.current.set state.k scratch[state.k],
             state.copied ++ [scratch[state.k]],
             state.k + 1⟩ : CopyLoopState)
-      iapply Hrec
-      · ipureintro
+      iapply_pure Hrec =>
         change right - (state.k + 1) < right - state.k
         omega
       isplitr_pureexact hcopyState.step hk
@@ -1831,8 +1826,7 @@ theorem twp_mergeSortInnerLoop
         %(⟨output, nextScratch, state.pass + 1,
           newMid, newRight⟩ : SortInnerState)
       simp only [newMid, newRight, left, hnextPass]
-      iapply Hrec
-      · ipureintro
+      iapply_pure Hrec =>
         have hwidthPositive : 0 < width := hpass.1
         omega
       isplitr_pureexacts [hpassNext, hmergeRange.length_eq.trans hvaluesLength,
@@ -2051,8 +2045,7 @@ theorem twp_mergeSortOuterLoop
           pass' * (2 * state.width), nextMid, nextRight⟩ :
           SortOuterState)
       simp only [UInt32.ofNat_mul]
-      iapply Hrec
-      · ipureintro
+      iapply_pure Hrec =>
         omega
       isplitr_pureexacts [by simpa [Nat.mul_comm] using hnextRuns, hnextPerm,
         houtputLength, hnextScratchLength, by omega, hdoubleSize]
