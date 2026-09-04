@@ -747,10 +747,9 @@ theorem twp_mergeLeftLoop
       iapply_pure Hrec =>
         change mid - (state.i + 1) < mid - state.i
         omega
-      isplitr
-      · ipureintro
+      isplitr_pureexact (by
         simpa [hjEq] using hstateRight.takeRemainingLeft hi
-          (List.getElem?_eq_getElem hiLen)
+          (List.getElem?_eq_getElem hiLen))
       isplitr_pureexact Or.inr hjEq
       iframe
     · simp only [hiCmp, if_neg hi]
@@ -1067,12 +1066,11 @@ theorem twp_mergeCopyLoop
         change right - (state.k + 1) < right - state.k
         omega
       isplitr_pureexact hcopyState.step hk
-      isplitr
-      · ipureintro
+      isplitr_pureexact (by
         rw [hcopiedState, hscratchValue]
         have hsub :
             state.k + 1 - left = (state.k - left) + 1 := by omega
-        rw [hsub, take_succ_eq_append_getElem hkMerged]
+        rw [hsub, take_succ_eq_append_getElem hkMerged])
       iframe
     · simp only [hkCmp, if_neg hk]
       have hkEq : state.k = right := by omega
@@ -1794,9 +1792,7 @@ theorem twp_mergeSortInnerLoop
         omega
       isplitr_pureexacts [hpassNext, hmergeRange.length_eq.trans hvaluesLength,
         hnextScratchLength.trans hvaluesLength]
-      isplitr
-      · ipureintro
-        simpa only [← hnextPass] using hrightCandidate
+      isplitr_pureexact (by simpa only [← hnextPass] using hrightCandidate)
       iframe
     · have hcmp :
           ¬UInt32.ofNat (state.pass * (2 * width)) <

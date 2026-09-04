@@ -196,9 +196,7 @@ private theorem twp_func8_copy_and_return
   ihave HnewPrefix : Project.Mergesort.Representations.ByteSlice newPtr oldBytes $$
       [HnewPrefixBytes]
   · unfold Project.Mergesort.Representations.ByteSlice
-    iframe
-    ipureintro
-    simpa only [hprefixLength, holdLength] using hnewPrefixNowrap
+    iframe_pureexact (by simpa only [hprefixLength, holdLength] using hnewPrefixNowrap)
   ihave HnewSlice : Project.Mergesort.Representations.ByteSlice newPtr finalBytes $$
       [HnewPrefix HnewTail]
   · dsimp only [finalBytes]

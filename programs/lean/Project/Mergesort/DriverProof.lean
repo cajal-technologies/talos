@@ -297,9 +297,7 @@ theorem twp_func3_append_without_reserve
       (dataPtr + UInt32.ofNat initialized.length) current $$
       [HoldChunkBytes]
   · unfold Project.Mergesort.Representations.ByteSlice
-    iframe
-    ipureintro
-    rw [holdChunkLength] at holdChunkNowrap; exact holdChunkNowrap
+    iframe_pureexact (by rw [holdChunkLength] at holdChunkNowrap; exact holdChunkNowrap)
   wasm_twp_pures [twp_exitControl] using [List.take_zero, List.drop_zero, List.nil_append]
   wasm_twp_pures [twp_localGet twp_localGet twp_localGet twp_add]
   have hlengthWord :
@@ -3289,11 +3287,10 @@ theorem twp_func3_write_one
   ihave Hframe : ExportFrame heapId capacity inputPtr input chunkBytes
       (serialize [sorted[emitted]]) $$ [Hvec Hchunk Houtput]
   · unfold ExportFrame
-    iframe
-    ipureintro
-    refine ⟨hframeLengths.1, ?_⟩
-    change (Spec.u32Codec.encode sorted[emitted]).length = 4
-    exact Spec.u32Codec.encode_length sorted[emitted]
+    iframe_pureexact (by
+      refine ⟨hframeLengths.1, ?_⟩
+      change (Spec.u32Codec.encode sorted[emitted]).length = 4
+      exact Spec.u32Codec.encode_length sorted[emitted])
   ihave Hresume := Hcont $$ Hruntime Hframe Hvalues Hstreams
   iunfold ResumeWP
   simp only [resumeExpr, List.nil_append]

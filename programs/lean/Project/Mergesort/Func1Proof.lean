@@ -483,16 +483,15 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
         · iapply (StackReserve_split reserveBase
             (reserveSuccessShadow shadow newPtr newCapacity)).mpr
           iexists headBytes, growResultBytes newPtr newCapacity
-          isplitr
-          · ipureintro
+          isplitr_pureexact (by
             constructor
             · unfold reserveSuccessShadow
               rw [hheadTake]
             exact ⟨hshadow.2.1, by
               unfold growResultBytes
               rw [serialize_length]
-              norm_num⟩
-          · iframe
+              norm_num⟩)
+          iframe
         have hreserve : VecReserveHistory history
             (growHistory history source capacity ptr newPtr newLayout)
             capacity ptr newPtr newLayout :=

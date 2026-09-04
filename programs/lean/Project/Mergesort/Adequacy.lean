@@ -247,10 +247,8 @@ theorem initialResources [WasmSmallStepGS hlc Universal.State]
   isplitl_exact Hsp
   isplitl [Hstack]
   · unfold StackRegion Project.Mergesort.Representations.ByteSlice
-    isplitr
-    · ipureintro
-      rw [entryStackBytes_length]; decide
-    · iexact Hstack
+    isplitr_pureexact (by rw [entryStackBytes_length]; decide)
+    iexact Hstack
   isplitl_exact Hbump
   · iexact Hstreams
 

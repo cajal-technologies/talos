@@ -75,10 +75,9 @@ theorem twp_const_alloc_freshRange_owned
   ispecialize Hnext $$ %(by simp [bytes]) Hfrontier Hpages Hslice HP
   iapply fupd_mask_intro Std.LawfulSet.empty_subset
   iintro Hclose
-  isplitr
-  · ipureintro
+  isplitr_pureexact (by
     cases s <;> simp only [Stuckness.MaybeReducibleNoObs]
-    exact ⟨_, store, [], ⟨rfl, _, rfl, Step.const⟩⟩
+    exact ⟨_, store, [], ⟨rfl, _, rfl, Step.const⟩⟩)
   iintro %κ %e₂ %store₂ %forks %Hstep
   rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
   change forks = [] at hforks

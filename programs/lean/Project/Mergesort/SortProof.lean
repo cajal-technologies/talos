@@ -1796,9 +1796,7 @@ theorem twp_mergeLeftRemainder
         simp only [List.drop_zero]
         iexact Hdone
     · simp only [Inv, Finish, sortLocals]
-      isplitr
-      · ipureintro
-        dsimp only [n]; omega
+      isplitr_pureexact (by dsimp only [n]; omega)
       isplitr_pureexact (by simpa [hjEq] using hinv)
       isplitl_exacts [Hsource Hscratch]
       iintro %scratch' %emitted' %aux6 %aux8 %aux9 %aux11 %aux12
@@ -2161,9 +2159,7 @@ theorem twp_mergeRightRemainder
         simp only [List.drop_zero]
         irw_exact [hkFinal'] with Hdone
     · simp only [Inv, Finish, sortLocals]
-      isplitr
-      · ipureintro
-        dsimp only [n]; omega
+      isplitr_pureexact (by dsimp only [n]; omega)
       isplitr_pureexact (by simpa using hinv)
       isplitl_exacts [Hsource Hscratch]
       iintro %scratch' %emitted' %v6 %v8 %v9 %v10 %v11 %v12

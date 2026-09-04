@@ -1693,16 +1693,15 @@ theorem BumpHeap_commit {host : Type} [WasmHeapGS host]
   imodintro
   isplitl [Hcursor Hfrontier Hauth Hretired Hpages]
   · unfold BumpHeap
-    iframe
-    ipureintro
-    refine ⟨by omega, hfinishSigned, ?_, ?_, hwfNew, hphysical⟩
-    · constructor
-      · intro hzero
-        exact (hfinishNonzero hzero).elim
-      · intro hzero
-        simp only [AllocationHistory.allocate] at hzero; omega
-    · intro _hnonzero
-      rfl
+    iframe_pureexact (by
+      refine ⟨by omega, hfinishSigned, ?_, ?_, hwfNew, hphysical⟩
+      · constructor
+        · intro hzero
+          exact (hfinishNonzero hzero).elim
+        · intro hzero
+          simp only [AllocationHistory.allocate] at hzero; omega
+      · intro _hnonzero
+        rfl)
   · unfold LiveBlock
     iframe Htoken Hbytes
     ipureexact ⟨hbytesLength, hnonnull, haligned⟩
