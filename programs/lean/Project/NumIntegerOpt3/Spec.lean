@@ -217,8 +217,7 @@ theorem gcdLoopBody_smallStep_wp
       simp only [loopBody]
       ispecialize IH $$ %
         ((x - y) >>> (UInt64.ofNat (ctz64 64 (x - y)) % 64)) %y
-      iapply IH
-      ipureexact hx'ne
+      iapply_pure IH => exact hx'ne
       ipureexact hyne
       ipureintro
       simpa [x', oddPart_toNat] using hx'odd
@@ -253,8 +252,7 @@ theorem gcdLoopBody_smallStep_wp
       simp only [loopBody]
       ispecialize IH $$ %x %
         ((y - x) >>> (UInt64.ofNat (ctz64 64 (y - x)) % 64))
-      iapply IH
-      ipureexact hxne
+      iapply_pure IH => exact hxne
       ipureexact hy'ne
       ipureexact hxodd
       ipureintro

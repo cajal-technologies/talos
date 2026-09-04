@@ -2249,8 +2249,7 @@ theorem fillThenRead_terminatesWith (val : UInt32) :
         (values := [.i32 (val.toUInt8.toUInt32 ||| (val.toUInt8.toUInt32 <<< 8) |||
                           (val.toUInt8.toUInt32 <<< 16) ||| (val.toUInt8.toUInt32 <<< 24))])
         (arity := 1) (remainder := [])
-    iapply twp.value rfl
-    ipureexact rfl
+    iapply_pure twp.value rfl => rfl
 
 def exceptionLifecycleModule : Module :=
   { tags := [{ params := [.i32] }]
