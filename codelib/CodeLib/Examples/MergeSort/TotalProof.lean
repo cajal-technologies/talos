@@ -201,12 +201,10 @@ theorem twp_mergeMainStep
     isplitl_exacts [Hsource Htemporary]
     iintro ⟨Hsource, Htemporary⟩
     have hiSucc : i + 1 < UInt32.size := by
-      have := hlayout.length_lt
-      omega
+      have := hlayout.length_lt; omega
     have hkSucc : k + 1 < UInt32.size := by
       have hscratchLength := hinv.2.2.2.2.2
-      have := hlayout.length_lt
-      omega
+      have := hlayout.length_lt; omega
     have hiValue :
         1 + UInt32.ofNat i = UInt32.ofNat (i + 1) := by
       rw [UInt32.add_comm, u32_ofNat_succ hiSucc]
@@ -251,12 +249,10 @@ theorem twp_mergeMainStep
     isplitl_exacts [Hsource Htemporary]
     iintro ⟨Hsource, Htemporary⟩
     have hjSucc : j + 1 < UInt32.size := by
-      have := hlayout.length_lt
-      omega
+      have := hlayout.length_lt; omega
     have hkSucc : k + 1 < UInt32.size := by
       have hscratchLength := hinv.2.2.2.2.2
-      have := hlayout.length_lt
-      omega
+      have := hlayout.length_lt; omega
     have hjValue :
         1 + UInt32.ofNat j = UInt32.ofNat (j + 1) := by
       rw [UInt32.add_comm, u32_ofNat_succ hjSucc]
@@ -371,17 +367,13 @@ theorem twp_mergeMainLoop
     have hdata := hstate
     unfold MergeLoopInvariant at hdata
     have hiSize : state.i < UInt32.size := by
-      have := hlayout.length_lt
-      omega
+      have := hlayout.length_lt; omega
     have hjSize : state.j < UInt32.size := by
-      have := hlayout.length_lt
-      omega
+      have := hlayout.length_lt; omega
     have hmidSize : mid < UInt32.size := by
-      have := hlayout.length_lt
-      omega
+      have := hlayout.length_lt; omega
     have hrightSize : right < UInt32.size := by
-      have := hlayout.length_lt
-      omega
+      have := hlayout.length_lt; omega
     have hiCmp :
         (UInt32.ofNat state.i < UInt32.ofNat mid) ↔ state.i < mid := by
       change (UInt32.ofNat state.i).toNat <
@@ -547,8 +539,7 @@ theorem twp_mergeLeftStep
   isplitl_exacts [Hsource Htemporary]
   iintro ⟨Hsource, Htemporary⟩
   have hiSucc : i + 1 < UInt32.size := by
-    have := hlayout.length_lt
-    omega
+    have := hlayout.length_lt; omega
   have hkSucc : k + 1 < UInt32.size := by
     have := hlayout.length_lt
     rw [hscratchLength] at hkLen
@@ -618,8 +609,7 @@ theorem twp_mergeRightStep
   isplitl_exacts [Hsource Htemporary]
   iintro ⟨Hsource, Htemporary⟩
   have hjSucc : j + 1 < UInt32.size := by
-    have := hlayout.length_lt
-    omega
+    have := hlayout.length_lt; omega
   have hkSucc : k + 1 < UInt32.size := by
     have := hlayout.length_lt
     rw [hscratchLength] at hkLen
@@ -727,11 +717,9 @@ theorem twp_mergeLeftLoop
     have hdata := hstate
     unfold MergeLoopInvariant at hdata
     have hiSize : state.i < UInt32.size := by
-      have := hlayout.length_lt
-      omega
+      have := hlayout.length_lt; omega
     have hmidSize : mid < UInt32.size := by
-      have := hlayout.length_lt
-      omega
+      have := hlayout.length_lt; omega
     have hiCmp :
         (UInt32.ofNat state.i < UInt32.ofNat mid) ↔ state.i < mid := by
       change (UInt32.ofNat state.i).toNat <
@@ -863,11 +851,9 @@ theorem twp_mergeRightLoop
     have hdata := hstate
     unfold MergeLoopInvariant at hdata
     have hjSize : state.j < UInt32.size := by
-      have := hlayout.length_lt
-      omega
+      have := hlayout.length_lt; omega
     have hrightSize : right < UInt32.size := by
-      have := hlayout.length_lt
-      omega
+      have := hlayout.length_lt; omega
     have hjCmp :
         (UInt32.ofNat state.j < UInt32.ofNat right) ↔
           state.j < right := by
@@ -953,8 +939,7 @@ theorem twp_mergeCopyStep
   isplitl_exacts [Htemporary Hsource]
   iintro ⟨Htemporary, Hsource⟩
   have hkSucc : k + 1 < UInt32.size := by
-    have := hlayout.length_lt
-    omega
+    have := hlayout.length_lt; omega
   have hkValue :
       1 + UInt32.ofNat k = UInt32.ofNat (k + 1) := by
     rw [UInt32.add_comm, u32_ofNat_succ hkSucc]
@@ -1044,11 +1029,9 @@ theorem twp_mergeCopyLoop
     have hcopyData := hcopyState
     unfold CopyLoopInvariant at hcopyData
     have hkSize : state.k < UInt32.size := by
-      have := hlayout.length_lt
-      omega
+      have := hlayout.length_lt; omega
     have hrightSize : right < UInt32.size := by
-      have := hlayout.length_lt
-      omega
+      have := hlayout.length_lt; omega
     have hkCmp :
         (UInt32.ofNat state.k < UInt32.ofNat right) ↔
           state.k < right := by

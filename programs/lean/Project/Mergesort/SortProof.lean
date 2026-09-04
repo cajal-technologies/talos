@@ -1343,8 +1343,7 @@ theorem twp_mergeMainLoop
         (List.getElem?_eq_getElem hiLen)
         (List.getElem?_eq_getElem hjState) hle
       have hkSucc : state.k + 1 < UInt32.size := by
-        have := hlayout.length_lt
-        omega
+        have := hlayout.length_lt; omega
       have hkValue :
           1 + UInt32.ofNat state.k = UInt32.ofNat (state.k + 1) := by
         rw [UInt32.add_comm,
@@ -1358,8 +1357,7 @@ theorem twp_mergeMainLoop
       wasm_twp_pures [twp_localGet twp_localGet]
       by_cases hiNext : state.i + 1 < mid
       · have hmidSize : mid < UInt32.size := by
-          have := hlayout.length_lt
-          omega
+          have := hlayout.length_lt; omega
         have hiNextU :
             UInt32.ofNat (state.i + 1) < UInt32.ofNat mid := by
           rw [UInt32.lt_iff_toNat_lt,
@@ -1422,8 +1420,7 @@ theorem twp_mergeMainLoop
         (List.getElem?_eq_getElem hiLen)
         (List.getElem?_eq_getElem hjState) hle
       have hkSucc : state.k + 1 < UInt32.size := by
-        have := hlayout.length_lt
-        omega
+        have := hlayout.length_lt; omega
       have hkValue :
           1 + UInt32.ofNat state.k = UInt32.ofNat (state.k + 1) := by
         rw [UInt32.add_comm,
@@ -1436,8 +1433,7 @@ theorem twp_mergeMainLoop
       wasm_twp_pures [twp_localSet]
       wasm_twp_pures [twp_localGet twp_localGet]
       have hmidSize : mid < UInt32.size := by
-        have := hlayout.length_lt
-        omega
+        have := hlayout.length_lt; omega
       have hiU : UInt32.ofNat state.i < UInt32.ofNat mid := by
         rw [UInt32.lt_iff_toNat_lt,
           UInt32.toNat_ofNat_of_lt' (by omega),
