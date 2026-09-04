@@ -171,9 +171,6 @@ abbrev execute (program : Executable) (fuel entry : Nat)
     Option (List Value × Store Wasm.StdIO.State) :=
   SmallStep.runFunction? program.module Wasm.StdIO.env fuel entry store args
 
-def replaceHost (store : Store α) (host : β) : Store β :=
-  { store with host := host }
-
 /-- The host-independent call configuration shared by the executable runner
 and the Iris proof. Keeping the explicit `.call` exposes exactly the public
 function contract proved in `TotalProof`. -/
@@ -196,13 +193,7 @@ def executeSort (program : Executable) (fuel : Nat)
       some (values, replaceHost finalStore.wasm store.host)
   | _ => none
 
-def writtenStore (store : Store Wasm.StdIO.State) (length : UInt32) :
-    Store Wasm.StdIO.State :=
-  { store with
-    host :=
-      { input := store.host.input
-        output := store.host.output ++
-          store.mem.readBytes array.toNat length.toNat } }
+abbrev writtenStore := Wasm.StdIO.writtenStore array
 
 def runAfterRead (program : Executable) (fuel : Nat)
     (byteLength : UInt32) (afterRead : Store Wasm.StdIO.State) :

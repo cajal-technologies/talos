@@ -13,8 +13,6 @@ namespace Wasm.Examples.SelectionSort.StdIO
 open Wasm SepLogic SmallStep
 open Iris Iris.Std
 
-
-
 theorem execute_write_bytes (program : Executable)
     (store : Store Wasm.StdIO.State) (length : UInt32)
     (hbound : array.toNat + length.toNat ≤ Wasm.StdIO.byteCapacity store) :
@@ -23,8 +21,8 @@ theorem execute_write_bytes (program : Executable)
   apply Wasm.StdIO.execute_write program.module program.imports_eq
   simp only [Wasm.StdIO.writeHost, Wasm.StdIO.writeResult]
   rw [if_pos]
-  · rfl
-  · simp only [Wasm.StdIO.rangeInBounds]; exact decide_eq_true hbound
+  simp only [Wasm.StdIO.rangeInBounds]
+  exact decide_eq_true hbound
 
 @[simp] private theorem initialStore_host (program : Executable)
     (input : List UInt8) :
@@ -879,7 +877,7 @@ private theorem correct_of_sort_complete
     rw [hsort]
     simp only []
     rw [hwrite]
-    simp only [writtenStore, houtput, List.nil_append, hbyteLength]
+    simp only [houtput, List.nil_append, hbyteLength]
   refine ⟨output, ⟨fuel, ?_⟩, hperm, hsorted⟩
   unfold runValues
   rw [hrun]

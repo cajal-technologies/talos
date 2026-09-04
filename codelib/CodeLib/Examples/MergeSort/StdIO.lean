@@ -275,11 +275,6 @@ abbrev execute (fuel entry : Nat) (store : Store Wasm.StdIO.State)
     (args : List Value) : Option (List Value × Store Wasm.StdIO.State) :=
   SmallStep.runFunction? module Wasm.StdIO.env fuel entry store args
 
-/-- Change only the host-owned component of a Wasm store. This is a
-type-changing record update: all core Wasm resources remain identical. -/
-def replaceHost (store : Store α) (host : β) : Store β :=
-  { store with host := host }
-
 /-- Execute merge sort with an inert host environment, then reattach the
 unchanged StdIO buffers. The sort and merge functions have no path to an
 import, so this makes their host independence explicit. -/
@@ -308,13 +303,7 @@ theorem executeSort_host (fuel : Nat) (initial final : Store Wasm.StdIO.State)
         concrete.host) hexecute.2
       simpa [replaceHost] using hhost.symm
 
-def writtenStore (store : Store Wasm.StdIO.State) (length : UInt32) :
-    Store Wasm.StdIO.State :=
-  { store with
-    host :=
-      { input := store.host.input
-        output := store.host.output ++
-          store.mem.readBytes source.toNat length.toNat } }
+abbrev writtenStore := Wasm.StdIO.writtenStore source
 
 
 theorem execute_read_trap (store wasm : Store Wasm.StdIO.State)
@@ -358,8 +347,8 @@ theorem execute_write_bytes (store : Store Wasm.StdIO.State) (length : UInt32)
   apply Wasm.StdIO.execute_write module rfl
   simp only [Wasm.StdIO.writeHost, Wasm.StdIO.writeResult]
   rw [if_pos]
-  · rfl
-  · simp only [Wasm.StdIO.rangeInBounds]; exact decide_eq_true hbound
+  simp only [Wasm.StdIO.rangeInBounds]
+  exact decide_eq_true hbound
 
 @[simp] private theorem initialStore_host (input : List UInt8) :
     (initialStore input).host = Wasm.StdIO.State.ofInput input := by rfl
@@ -1092,8 +1081,7 @@ theorem complete : Complete := by
     simp only []
     rw [hwrite]
     simp only []
-    simp only [writtenStore, houtput,
-      List.nil_append, hbyteLength]
+    simp only [houtput, List.nil_append, hbyteLength]
   refine ⟨output, fuel, ?_⟩
   unfold runValues
   rw [hrun]

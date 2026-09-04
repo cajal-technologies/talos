@@ -3,9 +3,16 @@ import Interpreter.Wasm.Host.StdIO
 /-!
 # Small-step execution helpers for StdIO imports
 
-The executable runner is host-parametric. The two derived rules specialize a
-two-step imported call to the standard `read` and `write` functions.
+The executable runner and host replacement are host-parametric. The remaining
+helpers specialize store updates and two-step imported calls to StdIO.
 -/
+
+namespace Wasm
+
+def replaceHost (store : Store α) (host : β) : Store β :=
+  { store with host }
+
+end Wasm
 
 namespace Wasm.SmallStep
 
@@ -23,6 +30,14 @@ end Wasm.SmallStep
 namespace Wasm.StdIO
 
 open Wasm SmallStep
+
+abbrev writtenStore (pointer : UInt32) (store : Store State) (length : UInt32) :
+    Store State :=
+  { store with
+    host :=
+      { input := store.host.input
+        output := store.host.output ++
+          store.mem.readBytes pointer.toNat length.toNat } }
 
 theorem execute_read (module : Module) (himports : module.imports = imports)
     (store wasm : Store State) (length pointer count : UInt32)
