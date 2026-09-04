@@ -62,9 +62,9 @@ theorem trapDivZero_traps (a : UInt32) :
 theorem trapDivZero_terminates (a b : UInt32) (hb : b ≠ 0) :
     TerminatesWith (trapDivZeroConfig a b)
       (fun values _ => values = [.i32 (a / b)]) := by
-  apply runSteps_success_terminates
-  · exact trapDivZero_runs_success a b hb
-  · rfl
+  exact runSteps_values_terminates (fuel := 4) (by
+    rw [trapDivZero_runs_success a b hb]
+    rfl)
 
 theorem trapDivZero_partial (a b : UInt32) (hb : b ≠ 0) :
     PartiallyMeets (trapDivZeroConfig a b)

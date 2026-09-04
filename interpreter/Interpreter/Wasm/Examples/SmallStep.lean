@@ -1225,10 +1225,7 @@ theorem if_small_step :
 
 theorem block_branch_terminates :
     TerminatesWith blockBranchConfig (fun values _ => values = [.i32 106]) := by
-  apply runSteps_success_terminates
-    (fuel := 7) (store := blockBranchConfig.store)
-  rfl
-  native_decide
+  exact runSteps_values_terminates block_branch_small_step
 theorem control_matches_big_step :
     (runSteps 7 blockBranchConfig).result.values? =
         some (runValues 12 controlModule 0 controlModule.initialStore []) ∧
@@ -1263,10 +1260,7 @@ theorem branch_through_block_to_function_label :
 theorem function_label_branch_terminates :
     TerminatesWith (functionLabelBranchConfig 1)
       (fun values _ => values = [.i32 42]) := by
-  apply runSteps_success_terminates
-    (fuel := 4) (store := (functionLabelBranchConfig 1).store)
-  rfl
-  native_decide
+  exact runSteps_values_terminates branch_through_block_to_function_label
 
 theorem function_label_branch_matches_big_step :
     (runSteps 3 (functionLabelBranchConfig 0)).result.values? =
@@ -1326,10 +1320,7 @@ theorem factorial_small_step :
 
 theorem factorial_terminates :
     TerminatesWith factorialConfig (fun values _ => values = [.i32 120]) := by
-  apply runSteps_success_terminates
-    (fuel := 61) (store := factorialConfig.store)
-  rfl
-  native_decide
+  exact runSteps_values_terminates factorial_small_step
 theorem factorial_matches_big_step :
     (runSteps 61 factorialConfig).result.values? =
       some (runValues 20 factorialModule 0 factorialModule.initialStore [.i32 5]) := by
@@ -1626,10 +1617,7 @@ theorem reference_values_small_step :
 theorem reference_values_terminates :
     TerminatesWith (referenceConfig 0 4)
       (fun values _ => values = [.i32 1, .i32 1, .i32 0, .i32 1]) := by
-  apply runSteps_success_terminates
-    (fuel := 9) (store := (referenceConfig 0 4).store)
-  rfl
-  native_decide
+  exact runSteps_values_terminates reference_values_small_step
 theorem null_as_non_null_traps :
     (runSteps 2 (referenceConfig 1 1)).result.trapReason? =
       some .nullReference := by native_decide
@@ -1874,10 +1862,7 @@ theorem return_call_ref_run :
 theorem call_indirect_terminates :
     TerminatesWith (indirectCallConfig 2)
       (fun values _ => values = [.i32 42]) := by
-  apply runSteps_success_terminates
-    (fuel := 5) (store := (indirectCallConfig 2).store)
-  · rfl
-  · rfl
+  exact runSteps_values_terminates call_indirect_run
 theorem call_indirect_undefined_traps :
     (runSteps 2 (indirectCallConfig 6)).result.trapReason? =
       some .undefinedElement := by native_decide
@@ -2692,12 +2677,7 @@ theorem exception_is_caught_with_arguments :
 theorem caught_exception_terminates :
     TerminatesWith (smallStepExceptionConfig 0)
       (fun values _ => values = [.i32 42]) := by
-  apply runSteps_success_terminates
-    (fuel := 8)
-    (values := [.i32 42])
-    (store := (smallStepExceptionConfig 0).store)
-  · rfl
-  · rfl
+  exact runSteps_values_terminates exception_is_caught_with_arguments
 theorem uncaught_exception_is_not_a_trap_category :
     (runSteps 4 (smallStepExceptionConfig 1)).result =
       .trapped (.uncaughtException 0 [.i32 17])

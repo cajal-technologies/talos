@@ -117,10 +117,7 @@ theorem swap_runs :
 theorem swap_terminates (a b : UInt32) :
     TerminatesWith (swapConfig a b)
       (fun values _ => values = [.i32 a, .i32 b]) := by
-  apply runSteps_success_terminates (fuel := 3)
-    (values := [.i32 a, .i32 b])
-  · rfl
-  · rfl
+  exact runSteps_values_terminates (fuel := 3) (by rfl)
 
 theorem swap_partial (a b : UInt32) :
     PartiallyMeets (swapConfig a b)
@@ -132,10 +129,7 @@ theorem swap_partial (a b : UInt32) :
 theorem pairBlock_terminates (x : UInt32) :
     TerminatesWith (pairBlockConfig x)
       (fun values _ => values = [.i32 (x - 1), .i32 (1 + x)]) := by
-  apply runSteps_success_terminates (fuel := 9)
-    (values := [.i32 (x - 1), .i32 (1 + x)])
-  · rfl
-  · rfl
+  exact runSteps_values_terminates (fuel := 9) (by rfl)
 
 theorem pairBlock_partial (x : UInt32) :
     PartiallyMeets (pairBlockConfig x)
@@ -150,10 +144,7 @@ theorem pairBlock_partial (x : UInt32) :
 theorem callsSwap_terminates :
     TerminatesWith callsSwapConfig
       (fun values _ => values = [.i32 8]) := by
-  apply runSteps_success_terminates (fuel := 8)
-    (values := [.i32 8])
-  · rfl
-  · rfl
+  exact runSteps_values_terminates (fuel := 8) (by rfl)
 
 theorem callsSwap_partial :
     PartiallyMeets callsSwapConfig
