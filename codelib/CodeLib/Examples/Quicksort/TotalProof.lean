@@ -707,7 +707,7 @@ theorem quicksort_terminatesWith (arr : UInt32) (input : List UInt32)
       iintro %output Hruntime_out %hpure Harray_out
       wasm_twp_terminal_value Wasm.SmallStep.twp_finish
       iintro %store %_obs Hstate
-      imod arrayAt_readWordArray store 0 [] 0 arr output
+      imod arrayAt_readWords32 store 0 [] 0 arr output
         (by rw [hpure.1]; exact hfit) $$
           [$Hstate $Harray_out] with ⟨_Hstate, _Harray_out, %hread⟩
       ipureintro
@@ -757,7 +757,7 @@ theorem quicksort_partiallyMeets (arr : UInt32) (input : List UInt32)
     iintro %output Hruntime_out %hpure Harray_out
     wasm_twp_terminal_value Wasm.SmallStep.twp_finish
     iintro %store %_obs Hstate
-    imod arrayAt_readWordArray store 0 [] 0 arr output
+    imod arrayAt_readWords32 store 0 [] 0 arr output
       (by rw [hpure.1]; exact hfit) $$
         [$Hstate $Harray_out] with ⟨_Hstate, _Harray_out, %hread⟩
     ipureintro

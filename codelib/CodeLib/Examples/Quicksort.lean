@@ -1,5 +1,4 @@
-import CodeLib.RustStd.MemArray
-import CodeLib.SepLogic.SmallStepAdequacy
+import CodeLib.RustStd.MemArray.SmallStep
 import Interpreter.Wasm.Decoder.Wat
 import Mathlib.Data.List.Sort
 
@@ -567,41 +566,6 @@ theorem quicksortHeap_pointsTo [WasmHeapGS α]
   ihave ⟨Harray, _Hemp⟩ := quicksortHeapAux_pointsTo ∅ arr input
     (fun a b hget => by simp [get?_empty] at hget) hfit $$ Hheap
   iexact Harray
-
-theorem arrayAt_readWordArray [WasmSmallStepGS hlc α]
-    (store : MachineStore α) (steps : Nat) (obs : List StepKind) (threads : Nat)
-    (arr : UInt32) (output : List UInt32)
-    (hfit : arr.toNat + 4 * output.length ≤ UInt32.size) :
-    stateInterp (GF := WasmHeapGF α) store steps obs threads ∗ arrayAt 0 arr output ==∗
-      stateInterp (GF := WasmHeapGF α) store steps obs threads ∗ arrayAt 0 arr output ∗
-      ⌜readWordArray store.wasm.mem arr output.length = output⌝ := by
-  induction output generalizing arr with
-  | nil =>
-    simp only [arrayAt, List.length_nil, readWordArray]
-    iintro ⟨Hstate, Hemp⟩
-    imodintro
-    isplitl_exacts [Hstate Hemp]
-    ipureintro; trivial
-  | cons x xs ih =>
-    simp only [arrayAt, List.length_cons]
-    simp only [List.length_cons, UInt32.size] at hfit
-    have h4_le : (arr + 4 : UInt32).toNat ≤ arr.toNat + 4 := by
-      have h := UInt32.toNat_add arr 4
-      simp only [show (4 : UInt32).toNat = 4 from by decide] at h
-      rw [h]; exact Nat.mod_le _ _
-    have hfit' : (arr + 4).toNat + 4 * xs.length ≤ UInt32.size := by
-      simp only [UInt32.size]; omega
-    obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4 arr (by omega)
-    iintro ⟨Hstate, Hword, Hxs⟩
-    imod stateInterp_pointsTo_u32_facts_frame store steps obs threads arr x
-      h1 h2 h3 $$ [$Hstate $Hword] with ⟨Hstate, Hword, %hfacts⟩
-    imod ih (arr + 4) hfit' $$ [$Hstate $Hxs] with ⟨Hstate, Hxs, %hread⟩
-    imodintro
-    isplitl_exact Hstate
-    isplitl [Hword Hxs]
-    · isplitl_exact Hword; iexact Hxs
-    ipureintro
-    simp only [readWordArray, Mem.readWords32, hfacts.1, hread]
 
 /-! ## WAT decoder agreement -/
 

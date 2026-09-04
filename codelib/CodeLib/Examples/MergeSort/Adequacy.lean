@@ -256,45 +256,6 @@ private theorem mergeSortHeap_pointsTo [WasmHeapGS Unit]
     mergeSortHeapAux_pointsTo ∅ source input hnoWrap_s hfresh_s $$ Hsource_heap
   iframe
 
-/-- Walking `arrayAt` ownership against the final state interpretation
-reproduces the physical words: `readWordArray` on the terminal memory returns
-exactly the owned list. This is what lets the adequacy theorems below observe
-the sorted output in the machine's memory rather than only in ghost state. -/
-private theorem arrayAt_readWordArray {hlc : HasLC} [WasmSmallStepGS hlc Unit]
-    (store : MachineStore Unit) (steps : Nat) (obs : List StepKind) (threads : Nat)
-    (base : UInt32) (output : List UInt32)
-    (hfit : base.toNat + 4 * output.length ≤ UInt32.size) :
-    stateInterp (GF := WasmHeapGF Unit) store steps obs threads ∗ arrayAt 0 base output ==∗
-      stateInterp (GF := WasmHeapGF Unit) store steps obs threads ∗ arrayAt 0 base output ∗
-      ⌜readWordArray store.wasm.mem base output.length = output⌝ := by
-  induction output generalizing base with
-  | nil =>
-    simp only [arrayAt, List.length_nil, readWordArray]
-    iintro ⟨Hstate, Hemp⟩
-    imodintro
-    isplitl_exacts [Hstate Hemp]
-    ipureintro; trivial
-  | cons x xs ih =>
-    simp only [arrayAt, List.length_cons]
-    simp only [List.length_cons, UInt32.size] at hfit
-    have h4_le : (base + 4 : UInt32).toNat ≤ base.toNat + 4 := by
-      have h := UInt32.toNat_add base 4
-      simp only [show (4 : UInt32).toNat = 4 from by decide] at h
-      rw [h]; exact Nat.mod_le _ _
-    have hfit' : (base + 4).toNat + 4 * xs.length ≤ UInt32.size := by
-      simp only [UInt32.size]; omega
-    obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4 base (by omega)
-    iintro ⟨Hstate, Hword, Hxs⟩
-    imod stateInterp_pointsTo_u32_facts_frame store steps obs threads base x
-      h1 h2 h3 $$ [$Hstate $Hword] with ⟨Hstate, Hword, %hfacts⟩
-    imod ih (base + 4) hfit' $$ [$Hstate $Hxs] with ⟨Hstate, Hxs, %hread⟩
-    imodintro
-    isplitl_exact Hstate
-    isplitl [Hword Hxs]
-    · isplitl_exact Hword; iexact Hxs
-    ipureintro
-    simp only [readWordArray, Mem.readWords32, hfacts.1, hread]
-
 -- post conversion: mergeSortPost pins the physical `source` array in every
 -- terminal store to a sorted permutation of the input.
 private theorem mergeSortPost_to_store {hlc : HasLC} [WasmSmallStepGS hlc Unit]
@@ -309,7 +270,7 @@ private theorem mergeSortPost_to_store {hlc : HasLC} [WasmSmallStepGS hlc Unit]
   unfold mergeSortPost
   iintro ⟨%output, %_sc, %hsp, %_hscr', Hout, _Htmp'⟩ %store %_obs Hstate
   have hlen : output.length = input.length := hsp.length_eq
-  imod arrayAt_readWordArray store 0 [] 0 source output
+  imod arrayAt_readWords32 store 0 [] 0 source output
     (by rw [hlen]; simp only [UInt32.size]; omega) $$
       [$Hstate $Hout] with ⟨_Hstate, _Hout, %hread⟩
   ipureexact ⟨output, hsp, by rw [← hlen]; exact hread⟩

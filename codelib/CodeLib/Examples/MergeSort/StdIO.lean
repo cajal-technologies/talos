@@ -1,6 +1,6 @@
 import CodeLib.Examples.MergeSort.TotalProof
 import CodeLib.Examples.Quicksort
-import CodeLib.RustStd.MemArray
+import CodeLib.RustStd.MemArray.SmallStep
 import CodeLib.WordCodec
 import Interpreter.Wasm.Host.StdIO
 
@@ -925,7 +925,7 @@ theorem twp_sort [WasmSmallStepGS hlc Unit]
       Hsource, _Hscratch⟩ := mergeSortPost_elim source scratch input $$ Hpost
     wasm_twp_terminal_value Wasm.SmallStep.twp_returnFromFunction
     iintro %store %observations Hstate
-    imod Quicksort.arrayAt_readWordArray store 0 [] 0 source output
+    imod arrayAt_readWords32 store 0 [] 0 source output
       (by
         have hlength := hsorted.2.length_eq
         rw [← hlength]

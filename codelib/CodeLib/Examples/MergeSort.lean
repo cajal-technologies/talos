@@ -1,5 +1,4 @@
-import CodeLib.RustStd.MemArray
-import CodeLib.SepLogic.SmallStepAdequacy
+import CodeLib.RustStd.MemArray.SmallStep
 import Mathlib.Data.List.Sort
 
 /-!
