@@ -44,7 +44,7 @@ private abbrev func9GrowthBody : Program :=
 
 private abbrev func9PostArithmetic : Program :=
   [.block 0 0 func9GrowthBody,
-    .const 0, .localGet 2, .store32 1049492,
+    .const 0, .localGet 2, .store32 allocatorCursor,
     .block 0 0 func9ZeroBody, .localGet 1, .ret]
 
 private abbrev func9Locals
@@ -176,7 +176,7 @@ private theorem twp_func9_commit_zero_and_return
           calls s E Φ)) ⊢
       WP (.running
         ⟨func9Locals size base finish requiredPages currentPages [.i32 0],
-          [.localGet 2, .store32 1049492,
+          [.localGet 2, .store32 allocatorCursor,
             .block 0 0 func9ZeroBody, .localGet 1, .ret],
           1, [], functionControls,
           { locals := { callerLocals with values := stack }
@@ -189,18 +189,17 @@ private theorem twp_func9_commit_zero_and_return
   iintro ⟨Hruntime, Hcursor, Hfrontier, Hauth, Hretired, Hpages, Hbytes,
     Hstreams, Hcont⟩
   wasm_twp_pures [twp_localGet]
-  ihave HcursorAt : pointsTo_u32 0 ((0 : UInt32) + 1049492)
+  ihave HcursorAt : pointsTo_u32 0 ((0 : UInt32) + allocatorCursor)
       storedCursor $$ [Hcursor]
-  · irw_exact [show (0 : UInt32) + 1049492 = allocatorCursor by decide] with Hcursor
-  wasm_twp_bind twp_store32 (address := 0) (offset := 1049492) (value := finish)
+  · irw_exact [UInt32.zero_add] with Hcursor
+  wasm_twp_bind twp_store32 (address := 0) (offset := allocatorCursor) (value := finish)
       storedCursor (by decide) (by decide) (by decide) (by decide) with HcursorAt => Hcursor
-  ihave Hcursor' : pointsTo_u32 0 allocatorCursor finish $$ [Hcursor]
-  · irw_exact [← show (0 : UInt32) + 1049492 = allocatorCursor by decide] with Hcursor
+  isimp only [UInt32.zero_add] at Hcursor
   have halignment : layout.alignment = 4 := by simpa using hmatches.2.symm
   imod BumpHeap_commit heapId frontier history base finish layout bytes
       ownedPages
       hfrontierLow hwf hvalid (Or.inr halignment) hclassify hbytesLength
-      hphysical $$ [Hcursor' Hfrontier Hauth Hretired Hpages Hbytes] with
+      hphysical $$ [Hcursor Hfrontier Hauth Hretired Hpages Hbytes] with
       ⟨Hbump, Hblock⟩
   · iframe
   iapply twp_func9_zero_and_return size base finish requiredPages currentPages
@@ -247,7 +246,7 @@ private theorem twp_func9_claim_commit_zero_and_return
           calls s E Φ)) ⊢
       WP (.running
         ⟨func9Locals size base finish requiredPages currentPages,
-          [.const 0, .localGet 2, .store32 1049492,
+          [.const 0, .localGet 2, .store32 allocatorCursor,
             .block 0 0 func9ZeroBody, .localGet 1, .ret],
           1, [], functionControls,
           { locals := { callerLocals with values := stack }
