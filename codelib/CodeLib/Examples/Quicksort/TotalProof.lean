@@ -572,7 +572,7 @@ private theorem twp_quicksortBody_aux
           ⟨hlo, hphi, hhilen_p, hlen_p, htake_p, hdrop_p, hperm_p, hleft_p, hright_p⟩
           hlen_l htake_l hdrop_l hperm_l hlen_r htake_r hdrop_r hperm_r
       have hleft_r : Sorted (segment out_r lo pivotIdx) :=
-        segment_sorted_of_take_eq (by omega) (by omega) htake_r hsorted_l
+        segment_sorted_of_take_eq (by omega) htake_r hsorted_l
       have hcomp := quicksort_compose input out_r lo hi pivotIdx hpart_final hleft_r hsorted_r
       have htake_r_lo : out_r.take lo = out_l.take lo := by
         have := congr_arg (·.take lo) htake_r

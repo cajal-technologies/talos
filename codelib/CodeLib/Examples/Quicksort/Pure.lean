@@ -215,24 +215,11 @@ theorem quicksort_compose
            hleft_cond hright_cond,
          hperm⟩
 
-private theorem segment_take_drop_eq (l : List UInt32) (lo hi : Nat) (hlohi : lo ≤ hi) :
-    segment l lo hi = (l.take hi).drop lo := by
-  induction l generalizing lo hi with
-  | nil => simp [segment]
-  | cons head l ih =>
-    cases lo with
-    | zero => simp [segment]
-    | succ lo =>
-      cases hi with
-      | zero => omega
-      | succ hi =>
-        simp only [segment, List.take_succ_cons, List.drop_succ_cons, Nat.succ_sub_succ_eq_sub]
-        exact ih lo hi (by omega)
-
 private theorem segment_eq_of_take {a b : List UInt32} {lo hi k : Nat}
-    (hlohi : lo ≤ hi) (hhik : hi ≤ k) (htake : a.take k = b.take k) :
+    (hhik : hi ≤ k) (htake : a.take k = b.take k) :
     segment a lo hi = segment b lo hi := by
-  rw [segment_take_drop_eq a lo hi hlohi, segment_take_drop_eq b lo hi hlohi]
+  simp only [segment]
+  rw [← List.drop_take, ← List.drop_take]
   congr 1
   rw [show a.take hi = (a.take k).take hi from by
         rw [List.take_take]; simp [Nat.min_eq_left hhik],
@@ -283,7 +270,7 @@ theorem partitionRange_after_sorts
   have hhilen_r : hi ≤ out_r.length := by omega
   -- segment equalities
   have hseg_r_lo_p : segment out_r lo pivotIdx = segment out_l lo pivotIdx :=
-    segment_eq_of_take (by omega) (by omega) htake_r
+    segment_eq_of_take (by omega) htake_r
   have hseg_l_p1_hi : segment out_l (pivotIdx + 1) hi = segment output_p (pivotIdx + 1) hi :=
     segment_eq_of_drop (by omega) hdrop_l
   -- pivot element equalities
@@ -320,8 +307,8 @@ theorem partitionRange_after_sorts
        apply hright_p; rw [← hseg_l_p1_hi]; exact hperm_r.symm.subset hx⟩
 
 theorem segment_sorted_of_take_eq {a b : List UInt32} {lo hi k : Nat}
-    (hlohi : lo ≤ hi) (hhik : hi ≤ k) (htake : a.take k = b.take k)
+    (hhik : hi ≤ k) (htake : a.take k = b.take k)
     (h : Sorted (segment b lo hi)) : Sorted (segment a lo hi) := by
-  rw [segment_eq_of_take hlohi hhik htake]; exact h
+  rw [segment_eq_of_take hhik htake]; exact h
 
 end Wasm.Examples.Quicksort

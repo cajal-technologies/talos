@@ -93,20 +93,6 @@ theorem drop_set_succ {values : List UInt32} {index : Nat} {value : UInt32} :
       | succ index =>
         simpa [Nat.add_assoc] using ih (index := index)
 
-theorem segment_eq_take_drop {values : List UInt32} {start stop : Nat}
-    (hstart : start ≤ stop) :
-    segment values start stop = (values.take stop).drop start := by
-  induction values generalizing start stop with
-  | nil => simp [segment]
-  | cons head values ih =>
-      cases start with
-      | zero => simp [segment]
-      | succ start =>
-        cases stop with
-        | zero => omega
-        | succ stop =>
-          simp [segment]; exact ih (by omega)
-
 theorem perm_of_mergeRel {left right output}
     (hmerge : MergeRel left right output) :
     List.Perm (left ++ right) output := by
@@ -473,7 +459,8 @@ theorem CopyLoopInvariant.finish
     rw [List.take_append, List.length_take_of_le hleftlen]
     rw [List.take_take]
     simp
-  · rw [segment_eq_take_drop hlr, htake]
+  · simp only [segment]
+    rw [← List.drop_take (i := left) (j := right) (l := output), htake]
     have hleftlen : (input.take left).length = left := List.length_take_of_le (by omega)
     rw [List.drop_append_of_le_length (by omega)]
     simp; exact hmerge
@@ -505,12 +492,13 @@ theorem MergeRange.perm {input output : List UInt32} {left mid right : Nat}
 theorem MergeRange.segment_before
     {input output : List UInt32} {left mid right start stop : Nat}
     (h : MergeRange input output left mid right)
-    (hstart : start ≤ stop) (hstop : stop ≤ left) :
+    (hstop : stop ≤ left) :
     segment output start stop = segment input start stop := by
   have htake : output.take stop = input.take stop := by
     have hcongr := congrArg (List.take stop) h.2.2.2.2.1
     simpa [List.take_take, Nat.min_eq_left hstop] using hcongr
-  rw [segment_eq_take_drop hstart, segment_eq_take_drop hstart, htake]
+  simp only [segment]
+  rw [← List.drop_take, ← List.drop_take, htake]
 
 theorem MergeRange.segment_after
     {input output : List UInt32} {left mid right start stop : Nat}
@@ -650,19 +638,10 @@ theorem MergePassInvariant.step
         have hle : block + 1 ≤ pass := by omega
         have hmul := Nat.mul_le_mul_right (2 * width) hle
         simpa only [left] using hmul
-      have hstartStop :
-          block * (2 * width) ≤
-            min ((block + 1) * (2 * width)) output.length := by
-        rw [houtputLength]; exact (Nat.le_min).2 ⟨
-          Nat.mul_le_mul_right (2 * width) (by omega),
-          Nat.le_trans
-            (Nat.mul_le_mul_right (2 * width) (by omega))
-            (Nat.le_trans hblockEnd (Nat.le_of_lt (by
-              simpa only [left] using hleft)))⟩
       have hstopLeft :
           min ((block + 1) * (2 * width)) output.length ≤ left :=
         Nat.le_trans (Nat.min_le_left _ _) hblockEnd
-      rw [hmerge'.segment_before hstartStop hstopLeft]
+      rw [hmerge'.segment_before hstopLeft]
       simpa only [houtputLength] using h.2.2.2.1 block hprior
     · have hblockEq : block = pass := by omega
       subst block
