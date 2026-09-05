@@ -194,7 +194,16 @@ Three layers, kept deliberately small:
 
 - **Syntax (AST).** Instructions, functions, and modules. Keep the surface area minimal — only add constructs once they are needed by a concrete proof, and prefer the formulation that matches the Wasm spec's terminology so semantics and reasoning lemmas stay legible. Read the current state of `interpreter/Interpreter/Wasm/Syntax.lean` before assuming what is or isn't supported.
 - **Semantics (interpreter).** A fuel-bounded big-step interpreter. Traps (insufficient operands, out-of-bounds access, division by zero, etc.) are observable as a `.Trap` result from `run` (which returns a `Result α`: `.Success` / `.Trap` / `.Invalid` / `.OutOfFuel`), distinct from a successful `.Success`. When changing the semantics, the structure of the state and the shape of `step`/`run` are load-bearing for every existing proof — extend in place rather than rewriting, and keep new cases consistent with the existing ones. Read the file before editing.
-- **Reasoning (examples and lemmas).** The standard proof style: unfold the interpreter and `simp` to reduce both sides to the same concrete computation; use `native_decide` for concrete-input sanity checks; compose previously proven theorems as black boxes rather than re-unfolding the interpreter for larger results. New examples should follow this pattern.
+- **Reasoning (examples and lemmas).** The standard proof style: unfold the interpreter and `simp` to reduce both sides to the same concrete computation; use kernel-checked `decide` or explicit traces for concrete-input sanity checks; compose previously proven theorems as black boxes rather than re-unfolding the interpreter for larger results. New examples should follow this pattern.
+
+## Kernel-checked proofs
+
+Always use proofs checked by Lean's kernel. Do not introduce `bv_decide`,
+`bv_check`, `native_decide`, or other native-evaluation axioms to shorten or
+discharge proofs. Use ordinary proof terms and kernel-checked tactics instead,
+and check representative theorem dependencies with `#print axioms` after
+refactoring shared proof infrastructure. Existing uses of native tactics are
+legacy code, not precedent for new or rewritten proofs.
 
 ## Public spec API: don't expose fuel
 
@@ -209,7 +218,7 @@ When writing or updating a spec theorem (tagged `@[spec_of …]` / `@[proves …
 
 Examples live in `interpreter/Interpreter/Wasm/Examples/`. Each file defines a hand-built (or WAT-decoded) Wasm module plus the `SmallStep.Config` that starts it, and proves theorems against the small-step machine. The WP tactic layer is *not* used here — no example calls `wp_run`. Two idioms carry the directory:
 
-- **Concrete inputs.** Pin `(runSteps n config).result` with `rfl` or `native_decide`. The decoder-oriented examples go through the total projections in `Examples/Harness.lean` (`runValues` / `runTrapMsg` / `runInvalidMsg` / `decodeOrDefault`) so `native_decide` can evaluate them.
+- **Concrete inputs.** Pin `(runSteps n config).result` with `rfl`, kernel-checked `decide`, or an explicit trace. The decoder-oriented examples use the total projections in `Examples/Harness.lean` (`runValues` / `runTrapMsg` / `runInvalidMsg` / `decodeOrDefault`) for concrete execution checks.
 - **Symbolic inputs.** Exhibit the trace explicitly: `apply Steps.cons` once per named `Step` constructor, closing side conditions with `decide` / `simp` / `omega` / domain lemmas. Loops state an invariant at an intermediate `Config` and are closed by `Nat.strong_induction_on` over a decreasing measure (see `Factorial.lean`, `SimpleLoop.lean`, `Gcd.lean`).
 
 The fuel-free statement comes last: lift the run with `runSteps_eq_success_of_steps` / `runSteps_values_terminates` / `runSteps_values_partiallyMeets` / `runSteps_trapped_trapsWith` into `SmallStep.TerminatesWith` / `PartiallyMeets` / `TrapsWith`. New examples should follow this pattern; browse the existing examples directory to find one close to what you are doing and mirror its structure.
