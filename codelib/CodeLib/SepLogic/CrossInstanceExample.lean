@@ -84,7 +84,7 @@ theorem crossInstance_terminates :
     TerminatesWith (crossInstanceConfig 3 5) (fun _ _ => True) :=
   runSteps_checked_terminates (fuel := 30)
     (fun _ _ => true)
-    (by native_decide)
+    (by decide +kernel)
     (fun _ _ _ => trivial)
 
 theorem crossInstance_result :

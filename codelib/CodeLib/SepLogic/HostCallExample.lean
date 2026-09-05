@@ -133,7 +133,7 @@ theorem writeByte_terminates :
     TerminatesWith writeByteConfig (fun _ _ => True) :=
   runSteps_checked_terminates (fuel := 20)
     (fun _ _ => true)
-    (by native_decide)
+    (by decide +kernel)
     (fun _ _ _ => trivial)
 
 theorem writeByte_result :

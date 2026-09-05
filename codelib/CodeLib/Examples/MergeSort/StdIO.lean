@@ -562,7 +562,7 @@ theorem sortHeap_agrees (input : List UInt32) (hfit : Fits input) :
     · subst hid; simp [storeResolve, sortConfig, replaceHost]
     · have hext : (sortConfig input).store.wasm.extraMems = [] := by
         change (module.initialStore (α := Wasm.StdIO.State)).extraMems = []
-        native_decide
+        decide +kernel
       simp [hid, storeResolve, hext]
   rw [heq] at h; exact h
 
@@ -622,7 +622,7 @@ theorem sortHeap_inBounds (input : List UInt32) (hfit : Fits input) :
     · subst hid; simp [storeResolve, sortConfig, replaceHost]
     · have hext : (sortConfig input).store.wasm.extraMems = [] := by
         change (module.initialStore (α := Wasm.StdIO.State)).extraMems = []
-        native_decide
+        decide +kernel
       simp [hid, storeResolve, hext]
   rw [heq] at h; exact h
 
@@ -1062,17 +1062,17 @@ theorem complete : Complete := by
     change 4 * input.length ≤ 32768 at hfit
     omega
 
-theorem exec_empty : run 100 (serialize []) = some (serialize []) := by native_decide
+theorem exec_empty : run 100 (serialize []) = some (serialize []) := by decide +kernel
 
 theorem exec_five :
     run 12000 (serialize [5, 1, 4, 2, 3]) =
-      some (serialize [1, 2, 3, 4, 5]) := by native_decide
+      some (serialize [1, 2, 3, 4, 5]) := by decide +kernel
 
 theorem exec_duplicates :
     run 15000 (serialize [4, 1, 4, 2, 1, 3]) =
-      some (serialize [1, 1, 2, 3, 4, 4]) := by native_decide
+      some (serialize [1, 1, 2, 3, 4, 4]) := by decide +kernel
 
 theorem exec_values_five :
-    runValues 12000 [5, 1, 4, 2, 3] = some [1, 2, 3, 4, 5] := by native_decide
+    runValues 12000 [5, 1, 4, 2, 3] = some [1, 2, 3, 4, 5] := by decide +kernel
 
 end Wasm.Examples.MergeSort.StdIO

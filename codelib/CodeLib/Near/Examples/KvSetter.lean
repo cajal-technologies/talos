@@ -21,7 +21,7 @@ model makes free — no Wasm enumeration needed.
 
 Following the repo convention (cf. `XorSum/Spec.lean`), `SetSpec` is stated
 as a `def … : Prop` and fully proved (`set_spec`) via the WP layer. The
-`native_decide` theorems below additionally validate the *whole pipeline*
+kernel-checked regression theorems below additionally validate the *whole pipeline*
 — registers, the memory-or-register sentinel, length-prefix parsing, and
 `storage_write` semantics — executes correctly on concrete inputs.
 -/
@@ -483,7 +483,7 @@ theorem set_spec : SetSpec := by
 
 These run the contract through the interpreter on a concrete input and
 check the resulting storage projection, exercising the entire host
-pipeline. They are full proofs (`native_decide`), not statements. -/
+pipeline. The kernel checks each resulting storage projection. -/
 
 /-- Run `set` from the module's initial store with NEAR projection `ns`. -/
 def runFrom (ns : NearState) : Result NearState :=
@@ -506,13 +506,13 @@ def ranOk (ns : NearState) : Bool :=
 def demoNs : NearState := { context := { input := encodeKV [1, 2] [7, 8, 9] } }
 
 /-- The call succeeds and returns nothing. -/
-theorem demo_ranOk : ranOk demoNs = true := by native_decide
+theorem demo_ranOk : ranOk demoNs = true := by cbv
 
 /-- After the call, the parsed key holds the parsed value. -/
-theorem demo_stored : storedAt demoNs [1, 2] = some [7, 8, 9] := by native_decide
+theorem demo_stored : storedAt demoNs [1, 2] = some [7, 8, 9] := by cbv
 
 /-- Frame: a key that was not written stays absent. -/
-theorem demo_frame_absent : storedAt demoNs [9, 9] = none := by native_decide
+theorem demo_frame_absent : storedAt demoNs [9, 9] = none := by cbv
 
 /-- Frame against a non-empty incoming store: a pre-existing unrelated key
 survives the write untouched. -/
@@ -520,9 +520,9 @@ def demoNs2 : NearState :=
   { storage := fun k => if k = [42] then some [100] else none
     context := { input := encodeKV [1, 2] [7, 8, 9] } }
 
-theorem demo2_stored : storedAt demoNs2 [1, 2] = some [7, 8, 9] := by native_decide
+theorem demo2_stored : storedAt demoNs2 [1, 2] = some [7, 8, 9] := by cbv
 
-theorem demo2_frame_other : storedAt demoNs2 [42] = some [100] := by native_decide
+theorem demo2_frame_other : storedAt demoNs2 [42] = some [100] := by cbv
 
 /-! ## Host semantic regression checks -/
 

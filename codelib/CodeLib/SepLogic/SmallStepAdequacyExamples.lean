@@ -189,7 +189,7 @@ theorem wordRoundtrip_adequate (oldWord : UInt32) :
     exact emptyHeap_agrees _
   · unfold word16Heap
     apply_store32_inBounds0
-    · native_decide
+    · decide +kernel
     · exact emptyHeap_inBounds _
   · intro gs
     iintro Hbytes
@@ -221,7 +221,7 @@ theorem wordRoundtrip_store_partiallyMeets (oldWord : UInt32) :
     exact emptyHeap_agrees _
   · unfold word16Heap
     apply_store32_inBounds0
-    · native_decide
+    · decide +kernel
     · exact emptyHeap_inBounds _
   · intro index value hget
     rw [get?_empty] at hget; contradiction
@@ -284,13 +284,13 @@ private theorem swapWordsHeap_pointsTo [WasmHeapGS α] :
         address (DFrac.own 1) value) ⊢
       pointsTo_u32 0 0 11 ∗ pointsTo_u32 0 4 22 := by
   unfold swapWordsHeap store32Heap
-  rw [(BI.BigSepM.bigSepM_insert (by native_decide)).to_eq]
-  rw [(BI.BigSepM.bigSepM_insert (by native_decide)).to_eq]
-  rw [(BI.BigSepM.bigSepM_insert (by native_decide)).to_eq]
-  rw [(BI.BigSepM.bigSepM_insert (by native_decide)).to_eq]
-  rw [(BI.BigSepM.bigSepM_insert (by native_decide)).to_eq]
-  rw [(BI.BigSepM.bigSepM_insert (by native_decide)).to_eq]
-  rw [(BI.BigSepM.bigSepM_insert (by native_decide)).to_eq]
+  rw [(BI.BigSepM.bigSepM_insert (by decide +kernel)).to_eq]
+  rw [(BI.BigSepM.bigSepM_insert (by decide +kernel)).to_eq]
+  rw [(BI.BigSepM.bigSepM_insert (by decide +kernel)).to_eq]
+  rw [(BI.BigSepM.bigSepM_insert (by decide +kernel)).to_eq]
+  rw [(BI.BigSepM.bigSepM_insert (by decide +kernel)).to_eq]
+  rw [(BI.BigSepM.bigSepM_insert (by decide +kernel)).to_eq]
+  rw [(BI.BigSepM.bigSepM_insert (by decide +kernel)).to_eq]
   rw [(BI.BigSepM.bigSepM_insert (get?_empty (⟨0, 0⟩ : MemoryKey))).to_eq]
   rw [BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
   unfold pointsTo_u32
@@ -340,7 +340,7 @@ theorem swapWords_adequate :
     (φ := fun values => values = [.i32 11, .i32 22])
   · apply swapWordsHeap_agrees
   · apply swapWordsHeap_inBounds
-    native_decide
+    decide +kernel
   · intro gs
     iintro Hbytes
     ihave Hwords := swapWordsHeap_pointsTo $$ Hbytes
@@ -370,7 +370,7 @@ theorem swapWords_store_partiallyMeets :
     (globalσ := (∅ : WasmGlobalMap Value))
   · apply swapWordsHeap_agrees
   · apply swapWordsHeap_inBounds
-    native_decide
+    decide +kernel
   · intro index value hget
     rw [get?_empty] at hget; contradiction
   wasm_adequacy_intro gs =>
@@ -434,8 +434,8 @@ private theorem reverseThreeWordsHeap_pointsTo [WasmHeapGS α] :
   unfold reverseThreeWordsHeap
   iintro Hheap
   ihave ⟨H8, Hheap⟩ := store32Heap_pointsTo swapWordsHeap 0 8 33
-    (by native_decide) (by native_decide)
-    (by native_decide) (by native_decide)
+    (by decide +kernel) (by decide +kernel)
+    (by decide +kernel) (by decide +kernel)
     (by decide) (by decide) (by decide) $$ Hheap
   ihave ⟨H0, H4⟩ := swapWordsHeap_pointsTo $$ Hheap
   iframe
@@ -487,7 +487,7 @@ theorem reverseThreeWords_store_partiallyMeets :
     (globalσ := (∅ : WasmGlobalMap Value))
   · apply reverseThreeWordsHeap_agrees
   · apply reverseThreeWordsHeap_inBounds
-    native_decide
+    decide +kernel
   · intro index value hget
     rw [get?_empty] at hget; contradiction
   wasm_adequacy_intro gs =>
@@ -566,12 +566,12 @@ private theorem partitionThreeWordsHeap_pointsTo [WasmHeapGS α] :
   iintro Hheap
   ihave ⟨H8, Hheap⟩ := store32Heap_pointsTo
     (store32Heap (store32Heap ∅ 0 0 33) 0 4 11) 0 8 22
-    (by native_decide) (by native_decide)
-    (by native_decide) (by native_decide)
+    (by decide +kernel) (by decide +kernel)
+    (by decide +kernel) (by decide +kernel)
     (by decide) (by decide) (by decide) $$ Hheap
   ihave ⟨H4, Hheap⟩ := store32Heap_pointsTo (store32Heap ∅ 0 0 33) 0 4 11
-    (by native_decide) (by native_decide)
-    (by native_decide) (by native_decide)
+    (by decide +kernel) (by decide +kernel)
+    (by decide +kernel) (by decide +kernel)
     (by decide) (by decide) (by decide) $$ Hheap
   ihave ⟨H0, _Hempty⟩ := store32Heap_pointsTo (∅ : WasmHeapMap (Option UInt8)) 0 0 33
     (get?_empty (⟨0, 0⟩ : MemoryKey)) (get?_empty (⟨0, 1⟩ : MemoryKey))
@@ -626,7 +626,7 @@ theorem partitionThreeWords_store_partiallyMeets :
     (globalσ := (∅ : WasmGlobalMap Value))
   · apply partitionThreeWordsHeap_agrees
   · apply partitionThreeWordsHeap_inBounds
-    native_decide
+    decide +kernel
   · intro index value hget
     rw [get?_empty] at hget; contradiction
   wasm_adequacy_intro gs =>
@@ -704,8 +704,8 @@ private theorem mergeTwoWordsHeap_pointsTo [WasmHeapGS α] :
   unfold mergeTwoWordsHeap
   iintro Hheap
   ihave ⟨H4, Hheap⟩ := store32Heap_pointsTo (store32Heap ∅ 0 0 9) 0 4 4
-    (by native_decide) (by native_decide)
-    (by native_decide) (by native_decide)
+    (by decide +kernel) (by decide +kernel)
+    (by decide +kernel) (by decide +kernel)
     (by decide) (by decide) (by decide) $$ Hheap
   ihave ⟨H0, _Hempty⟩ := store32Heap_pointsTo (∅ : WasmHeapMap (Option UInt8)) 0 0 9
     (get?_empty (⟨0, 0⟩ : MemoryKey)) (get?_empty (⟨0, 1⟩ : MemoryKey))
@@ -761,7 +761,7 @@ theorem mergeTwoWords_store_partiallyMeets :
     (globalσ := (∅ : WasmGlobalMap Value))
   · apply mergeTwoWordsHeap_agrees
   · apply mergeTwoWordsHeap_inBounds
-    native_decide
+    decide +kernel
   · intro index value hget
     rw [get?_empty] at hget; contradiction
   wasm_adequacy_intro gs =>
@@ -854,8 +854,8 @@ private theorem fillFourBytesHeap_pointsTo (oldWord : UInt32)
     (by decide) (by decide) (by decide) $$ Hheap
   ihave ⟨H16, _Hempty⟩ := store32Heap_pointsTo
     (∅ : WasmHeapMap (Option UInt8)) 0 16 oldWord
-    (by native_decide) (by native_decide)
-    (by native_decide) (by native_decide)
+    (by decide +kernel) (by decide +kernel)
+    (by decide +kernel) (by decide +kernel)
     (by decide) (by decide) (by decide) $$ Hheap
   iframe
 
@@ -897,7 +897,7 @@ theorem fillFourBytes_store_partiallyMeets (oldWord : UInt32) :
     (globalσ := (∅ : WasmGlobalMap Value))
   · apply fillFourBytesHeap_agrees
   · apply fillFourBytesHeap_inBounds
-    native_decide
+    decide +kernel
   · intro index value hget
     rw [get?_empty] at hget; contradiction
   · simp only [fillFourBytesAdequacyConfig]; decide
@@ -971,13 +971,13 @@ private theorem copyWordHeap_pointsTo (oldDestination : UInt32)
   iintro Hheap
   ihave ⟨H8, Hheap⟩ := store32Heap_pointsTo
     (store32Heap ∅ 0 0 0x04030201) 0 8 oldDestination
-    (by native_decide) (by native_decide)
-    (by native_decide) (by native_decide)
+    (by decide +kernel) (by decide +kernel)
+    (by decide +kernel) (by decide +kernel)
     (by decide) (by decide) (by decide) $$ Hheap
   ihave ⟨H0, _Hempty⟩ := store32Heap_pointsTo
     (∅ : WasmHeapMap (Option UInt8)) 0 0 0x04030201
-    (by native_decide) (by native_decide)
-    (by native_decide) (by native_decide)
+    (by decide +kernel) (by decide +kernel)
+    (by decide +kernel) (by decide +kernel)
     (by decide) (by decide) (by decide) $$ Hheap
   iframe
 
@@ -1017,7 +1017,7 @@ theorem copyWord_store_partiallyMeets (oldDestination : UInt32) :
     (globalσ := (∅ : WasmGlobalMap Value))
   · apply copyWordHeap_agrees
   · apply copyWordHeap_inBounds
-    native_decide
+    decide +kernel
   · intro index value hget
     rw [get?_empty] at hget; contradiction
   · simp only [copyWordAdequacyConfig]; decide
@@ -1121,7 +1121,7 @@ theorem copyOverlapWord_store_partiallyMeets :
     (globalσ := (∅ : WasmGlobalMap Value))
   · apply copyOverlapWordHeap_agrees
   · apply copyOverlapWordHeap_inBounds
-    native_decide
+    decide +kernel
   · intro index value hget
     rw [get?_empty] at hget; contradiction
   wasm_adequacy_intro gs =>
@@ -1239,7 +1239,7 @@ theorem memoryInitDrop_store_partiallyMeets :
       (dataSegmentσ := memoryInitDropSegments)
   · apply memoryInitDropHeap_agrees
   · apply memoryInitDropHeap_inBounds
-    native_decide
+    decide +kernel
   · intro index value hget
     rw [get?_empty] at hget; contradiction
   · exact memoryInitDropSegments_agree
@@ -2192,7 +2192,7 @@ theorem fillThenRead_terminatesWith (val : UInt32) :
                       (val.toUInt8.toUInt32 <<< 16) ||| (val.toUInt8.toUInt32 <<< 24))])
   · apply fillThenReadInitialHeap_agrees
   · apply fillThenReadInitialHeap_inBounds
-    native_decide
+    decide +kernel
   · simp [fillThenReadConfig]
   · intro hlc gs
     simp only [fillThenReadConfig,

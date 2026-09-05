@@ -183,7 +183,7 @@ private theorem mergeSortConfig_storeResolve
     (writeWordArray (writeWordArray
       (mergeSortModule.initialStore (α := Unit)).mem source input) temporary scratch)
     rfl (show (mergeSortModule.initialStore (α := Unit)).extraMems = [] from by
-      native_decide)).symm
+      decide +kernel)).symm
 
 private theorem mergeSortHeap_agrees
     (source temporary : UInt32) (input scratch : List UInt32)

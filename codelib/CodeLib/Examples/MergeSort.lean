@@ -261,16 +261,16 @@ def runMergeSortExample
       | _ => none
 
 theorem mergeSort_exec_empty :
-    runMergeSortExample 100 0 64 [] [] = some [] := by native_decide
+    runMergeSortExample 100 0 64 [] [] = some [] := by decide +kernel
 
 theorem mergeSort_exec_five :
     runMergeSortExample 10000 0 64
       [5, 1, 4, 2, 3] [0, 0, 0, 0, 0] =
-        some [1, 2, 3, 4, 5] := by native_decide
+        some [1, 2, 3, 4, 5] := by decide +kernel
 
 theorem mergeSort_exec_duplicates :
     runMergeSortExample 12000 0 128
       [4, 1, 4, 2, 1, 3] [0, 0, 0, 0, 0, 0] =
-        some [1, 1, 2, 3, 4, 4] := by native_decide
+        some [1, 1, 2, 3, 4, 4] := by decide +kernel
 
 end Wasm.Examples.MergeSort

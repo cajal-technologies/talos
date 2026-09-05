@@ -260,10 +260,10 @@ program is genuinely sorting unsigned 64-bit words rather than 32-bit ones.
 
 theorem recursive_exec_u64 :
     runValues recursive 5000 [5, 1, 0x100000000, 2, 3] =
-      some [1, 2, 3, 5, 0x100000000] := by native_decide
+      some [1, 2, 3, 5, 0x100000000] := by decide +kernel
 
 theorem loop_exec_u64 :
     runValues loop 5000 [5, 1, 0x100000000, 2, 3] =
-      some [1, 2, 3, 5, 0x100000000] := by native_decide
+      some [1, 2, 3, 5, 0x100000000] := by decide +kernel
 
 end Wasm.Examples.SelectionSort.StdIO

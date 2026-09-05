@@ -153,7 +153,7 @@ theorem sharedMem_terminates :
     TerminatesWith (sharedMemConfig 0) (fun _ _ => True) :=
   runSteps_checked_terminates (fuel := 100)
     (fun _ _ => true)
-    (by native_decide)
+    (by decide +kernel)
     (fun _ _ _ => trivial)
 
 end Wasm.SmallStep
