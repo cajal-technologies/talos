@@ -1,7 +1,7 @@
 import CodeLib.Examples.SelectionSort.TotalProof
 import CodeLib.RustStd.MemArray
 import CodeLib.WordCodec
-import Interpreter.Wasm.Host.StdIO
+import CodeLib.Host.StdIO
 import Mathlib.Data.List.Sort
 
 /-!
@@ -56,7 +56,7 @@ def decodeChunk : List UInt8 → UInt64
 /-- The packed little-endian codec for unsigned 64-bit words. Everything below
 the word level — `serialize`, `deserialize`, and the round trip between them —
 comes from `Wasm.WordCodec`; only this eight-byte round trip is proved here,
-because `bv_decide` decides a concrete bit width. -/
+using the shared kernel-checked byte-reconstruction lemma. -/
 def codec : WordCodec UInt64 where
   width := 8
   encode := encodeWord
@@ -65,10 +65,14 @@ def codec : WordCodec UInt64 where
   encode_length := fun _ => rfl
   decode_encode := by
     intro value
-    simp only [encodeWord, decodeChunk, decodeWord]
-    bv_decide
+    simp only [encodeWord, decodeChunk, decodeWord, UInt64.toUInt8_and,
+      show (255 : UInt64).toUInt8 = (-1 : UInt8) from rfl, UInt8.and_neg_one]
+    apply UInt64.toNat_inj.mp
+    simp only [UInt64.toNat_or, UInt64.toNat_shiftLeft, UInt8.toNat_toUInt64,
+      UInt64.toNat_toUInt8, UInt64.toNat_shiftRight]
+    exact Nat.reassemble64_of_lt value.toNat (UInt64.toNat_lt value)
 
-def serialize (values : List UInt64) : List UInt8 :=
+abbrev serialize (values : List UInt64) : List UInt8 :=
   codec.serialize values
 
 /-- Reject a trailing partial word instead of silently ignoring it. -/
@@ -166,19 +170,10 @@ def initialStore (program : Executable) (input : List UInt8) :
   { (program.module.initialStore (α := Wasm.StdIO.State)) with
       host := Wasm.StdIO.State.ofInput input }
 
-def execute (program : Executable) (fuel entry : Nat)
+abbrev execute (program : Executable) (fuel entry : Nat)
     (store : Store Wasm.StdIO.State) (args : List Value) :
     Option (List Value × Store Wasm.StdIO.State) :=
-  match SmallStep.initConfig
-      { module := program.module, host := Wasm.StdIO.env } entry store args with
-  | .error _ => none
-  | .ok phase =>
-      match (SmallStep.runSteps fuel phase).result with
-      | .success values finalStore => some (values, finalStore.wasm)
-      | _ => none
-
-def replaceHost (store : Store α) (host : β) : Store β :=
-  { store with host := host }
+  SmallStep.runFunction? program.module Wasm.StdIO.env fuel entry store args
 
 /-- The host-independent call configuration shared by the executable runner
 and the Iris proof. Keeping the explicit `.call` exposes exactly the public
@@ -202,13 +197,7 @@ def executeSort (program : Executable) (fuel : Nat)
       some (values, replaceHost finalStore.wasm store.host)
   | _ => none
 
-def writtenStore (store : Store Wasm.StdIO.State) (length : UInt32) :
-    Store Wasm.StdIO.State :=
-  { store with
-    host :=
-      { input := store.host.input
-        output := store.host.output ++
-          store.mem.readBytes array.toNat length.toNat } }
+abbrev writtenStore := Wasm.StdIO.writtenStore array
 
 def runAfterRead (program : Executable) (fuel : Nat)
     (byteLength : UInt32) (afterRead : Store Wasm.StdIO.State) :
@@ -275,12 +264,10 @@ program is genuinely sorting unsigned 64-bit words rather than 32-bit ones.
 
 theorem recursive_exec_u64 :
     runValues recursive 5000 [5, 1, 0x100000000, 2, 3] =
-      some [1, 2, 3, 5, 0x100000000] := by
-  native_decide
+      some [1, 2, 3, 5, 0x100000000] := by decide +kernel
 
 theorem loop_exec_u64 :
     runValues loop 5000 [5, 1, 0x100000000, 2, 3] =
-      some [1, 2, 3, 5, 0x100000000] := by
-  native_decide
+      some [1, 2, 3, 5, 0x100000000] := by decide +kernel
 
 end Wasm.Examples.SelectionSort.StdIO

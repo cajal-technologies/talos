@@ -1,4 +1,6 @@
 import CodeLib.Examples.MergeSort
+import CodeLib.List
+import CodeLib.UInt32
 
 /-!
 # Pure mathematics used by the MiniWasm merge-sort proof
@@ -34,8 +36,7 @@ theorem segment_cons {values : List UInt32} {index stop : Nat} {value : UInt32}
           simp [segment]
           apply ih
           · omega
-          · simp at hstop
-            omega
+          · simp at hstop; omega
           · simpa using hlookup
 
 theorem take_set_succ {values : List UInt32} {index : Nat} {value : UInt32}
@@ -63,8 +64,7 @@ theorem take_set_of_le {values : List UInt32} {index count : Nat} {value : UInt3
         cases index with
         | zero => omega
         | succ index =>
-          simp
-          exact ih (by omega)
+          simp; exact ih (by omega)
 
 theorem set_eq_self_of_getElem?_eq
     {values : List UInt32} {index : Nat} {value : UInt32}
@@ -93,46 +93,13 @@ theorem drop_set_succ {values : List UInt32} {index : Nat} {value : UInt32} :
       | succ index =>
         simpa [Nat.add_assoc] using ih (index := index)
 
-theorem segment_eq_take_drop {values : List UInt32} {start stop : Nat}
-    (hstart : start ≤ stop) :
-    segment values start stop = (values.take stop).drop start := by
-  induction values generalizing start stop with
-  | nil => simp [segment]
-  | cons head values ih =>
-      cases start with
-      | zero => simp [segment]
-      | succ start =>
-        cases stop with
-        | zero => omega
-        | succ stop =>
-          simp [segment]
-          exact ih (by omega)
-
 theorem perm_of_mergeRel {left right output}
     (hmerge : MergeRel left right output) :
     List.Perm (left ++ right) output := by
   induction hmerge with
-  | leftNil => simp
-  | rightNil => simp
-  | takeLeft hxy tail ih =>
-      simp only [List.cons_append]
-      exact List.Perm.cons _ ih
-  | takeRight hxy tail ih =>
-      exact (List.Perm.cons _ List.perm_middle).trans
-        ((List.Perm.swap _ _ _).symm.trans (List.Perm.cons _ ih))
-
-private theorem i32_le_trans {a b c : UInt32} (hab : a ≤ b) (hbc : b ≤ c) :
-    a ≤ c := by
-  change a.toNat ≤ b.toNat at hab
-  change b.toNat ≤ c.toNat at hbc
-  change a.toNat ≤ c.toNat
-  exact Nat.le_trans hab hbc
-
-private theorem i32_le_of_not_lt {a b : UInt32} (h : ¬ a < b) : b ≤ a :=
-  by
-    change ¬a.toNat < b.toNat at h
-    change b.toNat ≤ a.toNat
-    omega
+  | leftNil | rightNil | takeLeft => simp_all
+  | takeRight _ _ ih =>
+      exact List.perm_middle.trans (List.Perm.cons _ ih)
 
 theorem sorted_of_mergeRel {left right output}
     (hmerge : MergeRel left right output)
@@ -142,35 +109,29 @@ theorem sorted_of_mergeRel {left right output}
   | leftNil => exact hright
   | rightNil => exact hleft
   | @takeLeft x y xs ys output hxy tail ih =>
-      have hxs : Sorted xs := by
-        exact List.Pairwise.tail hleft
       have hyr : Sorted (y :: ys) := hright
       simp only [Sorted, List.pairwise_cons] at hleft hright ⊢
-      constructor
-      · intro z hz
-        have hz' : z ∈ xs ++ y :: ys :=
-          (perm_of_mergeRel tail).mem_iff.mpr hz
-        simp only [List.mem_append, List.mem_cons] at hz'
-        rcases hz' with hxs | rfl | hys
-        · exact hleft.1 z hxs
-        · exact UInt32.le_of_lt hxy
-        · exact i32_le_trans (UInt32.le_of_lt hxy) (hright.1 z hys)
-      · exact ih hxs hyr
+      refine ⟨?_, ih hleft.2 hyr⟩
+      intro z hz
+      have hz' : z ∈ xs ++ y :: ys :=
+        (perm_of_mergeRel tail).mem_iff.mpr hz
+      simp only [List.mem_append, List.mem_cons] at hz'
+      rcases hz' with hxs | rfl | hys
+      · exact hleft.1 z hxs
+      · exact UInt32.le_of_lt hxy
+      · exact UInt32.le_trans (UInt32.le_of_lt hxy) (hright.1 z hys)
   | @takeRight x y xs ys output hxy tail ih =>
       have hxl : Sorted (x :: xs) := hleft
-      have hys : Sorted ys := by
-        exact List.Pairwise.tail hright
       simp only [Sorted, List.pairwise_cons] at hleft hright ⊢
-      constructor
-      · intro z hz
-        have hz' : z ∈ x :: xs ++ ys :=
-          (perm_of_mergeRel tail).mem_iff.mpr hz
-        simp only [List.cons_append, List.mem_cons, List.mem_append] at hz'
-        rcases hz' with rfl | hxs | hys
-        · exact i32_le_of_not_lt hxy
-        · exact i32_le_trans (i32_le_of_not_lt hxy) (hleft.1 z hxs)
-        · exact hright.1 z hys
-      · exact ih hxl hys
+      refine ⟨?_, ih hxl hright.2⟩
+      intro z hz
+      have hz' : z ∈ x :: xs ++ ys :=
+        (perm_of_mergeRel tail).mem_iff.mpr hz
+      simp only [List.cons_append, List.mem_cons, List.mem_append] at hz'
+      rcases hz' with rfl | hxs | hys
+      · exact UInt32.le_of_not_lt hxy
+      · exact UInt32.le_trans (UInt32.le_of_not_lt hxy) (hleft.1 z hxs)
+      · exact hright.1 z hys
 
 theorem sortedPermutation_of_mergeRel {left right output}
     (hmerge : MergeRel left right output)
@@ -191,9 +152,7 @@ def MergeProgress
 
 @[simp]
 theorem mergeProgress_start (left right : List UInt32) :
-    MergeProgress left right [] left right := by
-  intro tail htail
-  simpa using htail
+    MergeProgress left right [] left right := by simp [MergeProgress]
 
 theorem MergeProgress.takeLeft
     {originalLeft originalRight emitted xs ys : List UInt32} {x y : UInt32}
@@ -202,9 +161,7 @@ theorem MergeProgress.takeLeft
     (hxy : x < y) :
     MergeProgress originalLeft originalRight (emitted ++ [x]) xs (y :: ys) := by
   intro tail htail
-  have hnext : MergeRel (x :: xs) (y :: ys) (x :: tail) :=
-    .takeLeft hxy htail
-  simpa [List.append_assoc] using hprogress (x :: tail) hnext
+  simpa [List.append_assoc] using hprogress (x :: tail) (.takeLeft hxy htail)
 
 theorem MergeProgress.takeRight
     {originalLeft originalRight emitted xs ys : List UInt32} {x y : UInt32}
@@ -213,9 +170,7 @@ theorem MergeProgress.takeRight
     (hxy : ¬x < y) :
     MergeProgress originalLeft originalRight (emitted ++ [y]) (x :: xs) ys := by
   intro tail htail
-  have hnext : MergeRel (x :: xs) (y :: ys) (y :: tail) :=
-    .takeRight hxy htail
-  simpa [List.append_assoc] using hprogress (y :: tail) hnext
+  simpa [List.append_assoc] using hprogress (y :: tail) (.takeRight hxy htail)
 
 theorem MergeProgress.finishLeft
     {originalLeft originalRight emitted remaining : List UInt32}
@@ -245,10 +200,9 @@ theorem MergeProgress.takeRemainingLeft
       MergeProgress originalLeft originalRight emitted (x :: xs) []) :
     MergeProgress originalLeft originalRight (emitted ++ [x]) xs [] := by
   intro tail htail
-  have htailEq : tail = xs := mergeRel_right_nil_eq htail
-  subst tail
-  have hnext : MergeRel (x :: xs) [] (x :: xs) := .rightNil _
-  simpa [List.append_assoc] using hprogress (x :: xs) hnext
+  cases mergeRel_right_nil_eq htail
+  simpa [List.append_assoc] using
+    hprogress (x :: xs) (.rightNil (x :: xs))
 
 theorem MergeProgress.takeRemainingRight
     {originalLeft originalRight emitted ys : List UInt32} {y : UInt32}
@@ -256,10 +210,9 @@ theorem MergeProgress.takeRemainingRight
       MergeProgress originalLeft originalRight emitted [] (y :: ys)) :
     MergeProgress originalLeft originalRight (emitted ++ [y]) [] ys := by
   intro tail htail
-  have htailEq : tail = ys := mergeRel_left_nil_eq htail
-  subst tail
-  have hnext : MergeRel [] (y :: ys) (y :: ys) := .leftNil _
-  simpa [List.append_assoc] using hprogress (y :: ys) hnext
+  cases mergeRel_left_nil_eq htail
+  simpa [List.append_assoc] using
+    hprogress (y :: ys) (.leftNil (y :: ys))
 
 /-- Pure invariant of the first merge loop. `emitted` is exactly the temporary
 array prefix written since `left`; the source array is still unchanged. -/
@@ -308,9 +261,7 @@ theorem MergeLoopInvariant.takeLeft
   rcases h with
     ⟨hli, him, hmj, hjr, hrlen, hlength, hk, hemitted,
       htake, hprogress⟩
-  have hklen : k < temporaryValues.length := by
-    rw [hlength]
-    omega
+  have hklen : k < temporaryValues.length := by omega
   have hlk : left ≤ k := by omega
   have hleftSegment :
       segment input i mid = x :: segment input (i + 1) mid :=
@@ -321,14 +272,11 @@ theorem MergeLoopInvariant.takeLeft
   rw [hleftSegment, hrightSegment] at hprogress
   refine ⟨by omega, by omega, hmj, hjr, hrlen, ?_, ?_, ?_, ?_, ?_⟩
   · simp [hlength]
-  · simp
-    omega
-  · simp
-    omega
+  · simp; omega
+  · simp; omega
   · rw [take_set_succ hklen, take_set_of_le hlk, htake]
     simp [List.append_assoc]
-  · rw [hrightSegment]
-    exact hprogress.takeLeft hxy
+  · rw [hrightSegment]; exact hprogress.takeLeft hxy
 
 theorem MergeLoopInvariant.takeRight
     {input temporaryValues : List UInt32} {left mid right i j k : Nat}
@@ -343,9 +291,7 @@ theorem MergeLoopInvariant.takeRight
   rcases h with
     ⟨hli, him, hmj, hjr, hrlen, hlength, hk, hemitted,
       htake, hprogress⟩
-  have hklen : k < temporaryValues.length := by
-    rw [hlength]
-    omega
+  have hklen : k < temporaryValues.length := by omega
   have hlk : left ≤ k := by omega
   have hrightSegment :
       segment input j right = y :: segment input (j + 1) right :=
@@ -356,14 +302,11 @@ theorem MergeLoopInvariant.takeRight
   rw [hleftSegment, hrightSegment] at hprogress
   refine ⟨hli, him, by omega, by omega, hrlen, ?_, ?_, ?_, ?_, ?_⟩
   · simp [hlength]
-  · simp
-    omega
-  · simp
-    omega
+  · simp; omega
+  · simp; omega
   · rw [take_set_succ hklen, take_set_of_le hlk, htake]
     simp [List.append_assoc]
-  · rw [hleftSegment]
-    exact hprogress.takeRight hxy
+  · rw [hleftSegment]; exact hprogress.takeRight hxy
 
 theorem MergeLoopInvariant.takeRemainingLeft
     {input temporaryValues : List UInt32} {left mid right i k : Nat}
@@ -377,9 +320,7 @@ theorem MergeLoopInvariant.takeRemainingLeft
   rcases h with
     ⟨hli, him, hmr, hrr, hrlen, hlength, hk, hemitted,
       htake, hprogress⟩
-  have hklen : k < temporaryValues.length := by
-    rw [hlength]
-    omega
+  have hklen : k < temporaryValues.length := by omega
   have hlk : left ≤ k := by omega
   have hleftSegment :
       segment input i mid = x :: segment input (i + 1) mid :=
@@ -389,14 +330,11 @@ theorem MergeLoopInvariant.takeRemainingLeft
   rw [hleftSegment, hrightSegment] at hprogress
   refine ⟨by omega, by omega, hmr, hrr, hrlen, ?_, ?_, ?_, ?_, ?_⟩
   · simp [hlength]
-  · simp
-    omega
-  · simp
-    omega
+  · simp; omega
+  · simp; omega
   · rw [take_set_succ hklen, take_set_of_le hlk, htake]
     simp [List.append_assoc]
-  · rw [hrightSegment]
-    exact hprogress.takeRemainingLeft
+  · rw [hrightSegment]; exact hprogress.takeRemainingLeft
 
 theorem MergeLoopInvariant.takeRemainingRight
     {input temporaryValues : List UInt32} {left mid right j k : Nat}
@@ -410,9 +348,7 @@ theorem MergeLoopInvariant.takeRemainingRight
   rcases h with
     ⟨hlm, hmm, hmj, hjr, hrlen, hlength, hk, hemitted,
       htake, hprogress⟩
-  have hklen : k < temporaryValues.length := by
-    rw [hlength]
-    omega
+  have hklen : k < temporaryValues.length := by omega
   have hlk : left ≤ k := by omega
   have hrightSegment :
       segment input j right = y :: segment input (j + 1) right :=
@@ -422,14 +358,11 @@ theorem MergeLoopInvariant.takeRemainingRight
   rw [hleftSegment, hrightSegment] at hprogress
   refine ⟨hlm, hmm, by omega, by omega, hrlen, ?_, ?_, ?_, ?_, ?_⟩
   · simp [hlength]
-  · simp
-    omega
-  · simp
-    omega
+  · simp; omega
+  · simp; omega
   · rw [take_set_succ hklen, take_set_of_le hlk, htake]
     simp [List.append_assoc]
-  · rw [hleftSegment]
-    exact hprogress.takeRemainingRight
+  · rw [hleftSegment]; exact hprogress.takeRemainingRight
 
 theorem MergeLoopInvariant.finished
     {input temporaryValues : List UInt32} {left mid right k : Nat}
@@ -463,8 +396,7 @@ def CopyLoopInvariant
 
 theorem copyLoopInvariant_start {input : List UInt32} {left right : Nat}
     (hleft : left ≤ right) (hright : right ≤ input.length) :
-    CopyLoopInvariant input input left right left [] := by
-  simp [CopyLoopInvariant, hleft, hright]
+    CopyLoopInvariant input input left right left [] := by simp [CopyLoopInvariant, hleft, hright]
 
 theorem CopyLoopInvariant.k_lt_length
     {input current copied : List UInt32} {left right k : Nat}
@@ -485,8 +417,7 @@ theorem CopyLoopInvariant.step
   have hklen : k < current.length := by omega
   refine ⟨by omega, by omega, hrlen, ?_, ?_, ?_, ?_⟩
   · simp [hlength]
-  · simp
-    omega
+  · simp; omega
   · rw [take_set_succ hklen, htake]
     simp [List.append_assoc]
   · rw [drop_set_succ]
@@ -512,12 +443,11 @@ theorem CopyLoopInvariant.finish
     rw [List.take_append, List.length_take_of_le hleftlen]
     rw [List.take_take]
     simp
-  · rw [segment_eq_take_drop hlr, htake]
-    have hleftlen : (input.take left).length = left := by
-      exact List.length_take_of_le (by omega)
+  · simp only [segment]
+    rw [← List.drop_take (i := left) (j := right) (l := output), htake]
+    have hleftlen : (input.take left).length = left := List.length_take_of_le (by omega)
     rw [List.drop_append_of_le_length (by omega)]
-    simp
-    exact hmerge
+    simp; exact hmerge
 
 theorem getElem?_of_take_eq_append
     {values pref merged : List UInt32} {left right k : Nat}
@@ -528,82 +458,34 @@ theorem getElem?_of_take_eq_append
     values[k]? = merged[k - left]? := by
   subst pref
   have hlookup := congrArg (fun xs : List UInt32 => xs[k]?) htake
-  have hleftlen : (values.take left).length = left := by
-    exact List.length_take_of_le (by omega)
+  have hleftlen : (values.take left).length = left := List.length_take_of_le (by omega)
   simpa [List.getElem?_take, hkright, List.getElem?_append,
     hleftlen, show ¬k < left by omega] using hlookup
-
-theorem take_succ_eq_append_getElem
-    {values : List UInt32} {index : Nat} (hindex : index < values.length) :
-    values.take (index + 1) = values.take index ++ [values[index]] := by
-  induction values generalizing index with
-  | nil => simp at hindex
-  | cons head tail ih =>
-    cases index with
-    | zero => simp
-    | succ index =>
-      simp at hindex
-      change head :: tail.take (index + 1) =
-        head :: (tail.take index ++ [tail[index]])
-      rw [ih hindex]
-
-theorem segment_append {values : List UInt32} {start mid stop : Nat}
-    (hstart : start ≤ mid) (hmid : mid ≤ stop) :
-    segment values start mid ++ segment values mid stop =
-      segment values start stop := by
-  simp only [segment]
-  have hstartMid : start + (mid - start) = mid :=
-    Nat.add_sub_of_le hstart
-  have hlength : (mid - start) + (stop - mid) = stop - start := by
-    omega
-  have hdrop :
-      values.drop mid = (values.drop start).drop (mid - start) := by
-    rw [List.drop_drop, hstartMid]
-  rw [hdrop, ← List.take_add, hlength]
-
-theorem take_segment_drop {values : List UInt32} {start stop : Nat}
-    (hstart : start ≤ stop) :
-    values.take start ++ segment values start stop ++ values.drop stop =
-      values := by
-  have hstop : start + (stop - start) = stop :=
-    Nat.add_sub_of_le hstart
-  rw [segment, ← List.take_add, hstop]
-  exact List.take_append_drop stop values
 
 theorem MergeRange.perm {input output : List UInt32} {left mid right : Nat}
     (h : MergeRange input output left mid right) :
     List.Perm input output := by
   rcases h with ⟨hlm, hmr, _, hlength, hprefix, hsuffix, hmerge⟩
-  rw [← take_segment_drop (values := input) (Nat.le_trans hlm hmr),
-    ← take_segment_drop (values := output) (Nat.le_trans hlm hmr)]
+  rw [← List.take_extract_drop (values := input) (Nat.le_trans hlm hmr),
+    ← List.take_extract_drop (values := output) (Nat.le_trans hlm hmr)]
   rw [hprefix, hsuffix]
   apply List.Perm.append_right
   apply List.Perm.append_left
-  rw [← segment_append hlm hmr]
-  exact perm_of_mergeRel hmerge
+  rw [← List.extract_append hlm hmr]; exact perm_of_mergeRel hmerge
 
 theorem MergeRange.segment_before
     {input output : List UInt32} {left mid right start stop : Nat}
     (h : MergeRange input output left mid right)
-    (hstart : start ≤ stop) (hstop : stop ≤ left) :
-    segment output start stop = segment input start stop := by
-  have htake : output.take stop = input.take stop := by
-    have hcongr := congrArg (List.take stop) h.2.2.2.2.1
-    simpa [List.take_take, Nat.min_eq_left hstop] using hcongr
-  rw [segment_eq_take_drop hstart, segment_eq_take_drop hstart, htake]
+    (hstop : stop ≤ left) :
+    segment output start stop = segment input start stop :=
+  List.extract_eq_of_take_eq hstop h.2.2.2.2.1
 
 theorem MergeRange.segment_after
     {input output : List UInt32} {left mid right start stop : Nat}
     (h : MergeRange input output left mid right)
     (hstart : right ≤ start) :
-    segment output start stop = segment input start stop := by
-  simp only [segment]
-  have hright : right + (start - right) = start :=
-    Nat.add_sub_of_le hstart
-  have hdrop : output.drop start = input.drop start := by
-    rw [← hright, ← List.drop_drop, h.2.2.2.2.2.1,
-      List.drop_drop, hright]
-  rw [hdrop]
+    segment output start stop = segment input start stop :=
+  List.extract_eq_of_drop_eq hstart h.2.2.2.2.2.1
 
 /-- Every consecutive block of `width` values is sorted.  Blocks are numbered
 from zero; the final block may be shorter than `width`. -/
@@ -634,29 +516,14 @@ theorem mergePassInvariant_start
     (hwidth : 0 < width) (hperm : List.Perm original current)
     (hruns : SortedRuns current width) :
     MergePassInvariant original current width 0 := by
-  refine ⟨hwidth, hperm.length_eq.symm, hperm, ?_, ?_⟩
-  · intro block hblock
-    omega
-  · intro block _ hblock
-    exact hruns block hblock
-
-theorem sorted_of_length_le_one {values : List UInt32}
-    (hlength : values.length ≤ 1) :
-    Sorted values := by
-  unfold Sorted
-  cases values with
-  | nil => simp
-  | cons head tail =>
-    cases tail with
-    | nil => simp
-    | cons next rest => simp at hlength
+  exact ⟨hwidth, hperm.length_eq.symm, hperm, by omega, by
+    simpa [SortedRuns] using hruns⟩
 
 theorem sortedRuns_one (values : List UInt32) :
     SortedRuns values 1 := by
   intro block _
-  apply sorted_of_length_le_one
-  simp only [segment, List.length_take, List.length_drop]
-  omega
+  exact List.pairwise_of_length_le_one (by
+    simp only [segment, List.length_take, List.length_drop]; omega)
 
 theorem MergePassInvariant.finished
     {original current : List UInt32} {width pass : Nat}
@@ -664,12 +531,8 @@ theorem MergePassInvariant.finished
     (hfinished : current.length ≤ pass * (2 * width)) :
     SortedRuns current (2 * width) := by
   intro block hblock
-  have hblockPass : block < pass := by
-    apply Nat.lt_of_not_ge
-    intro hpass
-    have hmul := Nat.mul_le_mul_right (2 * width) hpass
-    omega
-  exact h.2.2.2.1 block hblockPass
+  exact h.2.2.2.1 block (Nat.lt_of_not_ge fun hpass =>
+    (Nat.not_le_of_lt hblock) (hfinished.trans (Nat.mul_le_mul_right _ hpass)))
 
 theorem sorted_of_sortedRuns_cover
     {values : List UInt32} {width : Nat}
@@ -726,12 +589,10 @@ theorem MergePassInvariant.step
       simpa only [hmidEq, hmidIndex, hrightIndex, right] using hrun
     · have hmidEnd : mid = current.length := by
         dsimp only [mid]
-        rw [Nat.min_eq_right]
-        omega
+        rw [Nat.min_eq_right]; omega
       have hrightEnd : right = current.length := by
         dsimp only [right]
-        rw [Nat.min_eq_right]
-        omega
+        rw [Nat.min_eq_right]; omega
       simp [hmidEnd, hrightEnd, segment, Sorted]
   have hmergedSorted : Sorted (segment output left right) :=
     sorted_of_mergeRel hmerge'.2.2.2.2.2.2
@@ -744,20 +605,10 @@ theorem MergePassInvariant.step
         have hle : block + 1 ≤ pass := by omega
         have hmul := Nat.mul_le_mul_right (2 * width) hle
         simpa only [left] using hmul
-      have hstartStop :
-          block * (2 * width) ≤
-            min ((block + 1) * (2 * width)) output.length := by
-        rw [houtputLength]
-        exact (Nat.le_min).2 ⟨
-          Nat.mul_le_mul_right (2 * width) (by omega),
-          Nat.le_trans
-            (Nat.mul_le_mul_right (2 * width) (by omega))
-            (Nat.le_trans hblockEnd (Nat.le_of_lt (by
-              simpa only [left] using hleft)))⟩
       have hstopLeft :
           min ((block + 1) * (2 * width)) output.length ≤ left :=
         Nat.le_trans (Nat.min_le_left _ _) hblockEnd
-      rw [hmerge'.segment_before hstartStop hstopLeft]
+      rw [hmerge'.segment_before hstopLeft]
       simpa only [houtputLength] using h.2.2.2.1 block hprior
     · have hblockEq : block = pass := by omega
       subst block
@@ -771,11 +622,9 @@ theorem MergePassInvariant.step
       have hle : 2 * pass + 2 ≤ block := by omega
       have hmul := Nat.mul_le_mul_right width hle
       exact Nat.le_trans (Nat.min_le_left _ _) (by
-        rw [← hrightIndex]
-        exact hmul)
+        rw [← hrightIndex]; exact hmul)
     rw [houtputLength]
-    rw [hmerge'.segment_after hrightStart]
-    exact h.2.2.2.2 block (by omega) (by
+    rw [hmerge'.segment_after hrightStart]; exact h.2.2.2.2 block (by omega) (by
       simpa only [houtputLength] using hblockStart)
 
 end Wasm.Examples.MergeSort

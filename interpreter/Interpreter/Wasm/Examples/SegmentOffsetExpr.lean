@@ -1,6 +1,11 @@
 import Interpreter.Wasm.SmallStep
 import Interpreter.Wasm.Examples.Harness
 
+kernel_decoder
+
+set_option maxRecDepth 100000
+set_option maxHeartbeats 4000000
+
 /-! ## Example: const-expression data/element segment offsets
 
     Active segment offsets may use constant expressions such as
@@ -34,7 +39,7 @@ private def decoded : Wasm.Module :=
 theorem decoded_segments_keep_offsetExpr :
     ((decoded.memory.bind (·.data[0]?)).map (·.offsetExpr.isEmpty)).getD true = false
     ∧ (decoded.elements[0]?.map (·.offsetExpr.isEmpty)).getD true = false := by
-  constructor <;> native_decide
+  constructor <;> cbv
 
 private def store0 : Store Unit :=
   let module := decoded
@@ -58,8 +63,7 @@ def callAt2Config : Config Unit := functionConfig 2
 
 theorem readByte4_returns_65 :
     (runSteps 3 readByte4Config).result.values? =
-      some [.i32 65] := by
-  native_decide
+      some [.i32 65] := by cbv
 
 theorem readByte4_terminates :
     TerminatesWith readByte4Config (fun values store =>
@@ -71,7 +75,7 @@ theorem readByte4_terminates :
       decide (values = [.i32 65] ∧
         store.wasm.mem.read8 4 = 65 ∧
         store.wasm.mem.read8 0 = 0))
-  · native_decide
+  · cbv
   · exact fun _ _ h => of_decide_eq_true h
 
 /-- Partial correctness reuses the terminating run: normal completion is
@@ -83,8 +87,7 @@ theorem readByte4_partial :
 
 theorem callAt2_returns_42 :
     (runSteps 16 callAt2Config).result.values? =
-      some [.i32 42] := by
-  native_decide
+      some [.i32 42] := by cbv
 
 theorem callAt2_terminates :
     TerminatesWith callAt2Config (fun values _ =>
@@ -96,8 +99,7 @@ theorem callAt2_partial :
       values = [.i32 42]) :=
   callAt2_terminates.toPartiallyMeets
 
-theorem byte0_still_zero : store0.mem.read8 0 = 0 := by
-  native_decide
+theorem byte0_still_zero : store0.mem.read8 0 = 0 := by cbv
 
 end SegmentOffsetExpr
 end Wasm

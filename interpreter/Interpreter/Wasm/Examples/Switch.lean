@@ -89,17 +89,13 @@ theorem switch_steps (i : UInt32) :
        (.instruction (.const (switchResult i))),
        (.administrative .returnFromFunction)]
       ⟨.done [.i32 (switchResult i)], (switchConfig i).store⟩ := by
-  apply Steps.cons .block
-  apply Steps.cons .block
-  apply Steps.cons .block
-  apply Steps.cons (.localGet rfl)
+  wasm_steps [.block, .block, .block, (.localGet rfl)]
   rcases hi : i.toNat with _ | j
   · have hbranch :
         branchTarget? 1 0
           [switchInnerFrame, switchMiddleFrame, switchOuterFrame] [] =
           some ([.const 10, .ret],
-            [switchMiddleFrame, switchOuterFrame], []) := by
-        rfl
+            [switchMiddleFrame, switchOuterFrame], []) := by rfl
     apply Steps.cons (.brTable (by
       simpa [hi, switchInnerFrame, switchMiddleFrame, switchOuterFrame]
         using hbranch))
@@ -113,8 +109,7 @@ theorem switch_steps (i : UInt32) :
     · have hbranch :
           branchTarget? 1 1
             [switchInnerFrame, switchMiddleFrame, switchOuterFrame] [] =
-            some ([.const 20, .ret], [switchOuterFrame], []) := by
-          rfl
+            some ([.const 20, .ret], [switchOuterFrame], []) := by rfl
       apply Steps.cons (.brTable (by
         simpa [hi, switchInnerFrame, switchMiddleFrame, switchOuterFrame]
           using hbranch))
@@ -127,8 +122,7 @@ theorem switch_steps (i : UInt32) :
     · have hbranch :
           branchTarget? 1 2
             [switchInnerFrame, switchMiddleFrame, switchOuterFrame] [] =
-            some ([.const 30, .ret], [], []) := by
-          rfl
+            some ([.const 30, .ret], [], []) := by rfl
       apply Steps.cons (.brTable (by
         simpa [hi, switchInnerFrame, switchMiddleFrame, switchOuterFrame]
           using hbranch))

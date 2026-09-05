@@ -84,12 +84,8 @@ private theorem factorialLoop_zero_steps (acc : UInt32) :
     .administrative .exitControl,
     .instruction (.localGet 1),
     .administrative .finish], ?_⟩
-  apply Steps.cons .block
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.eqz rfl)
-  apply Steps.cons (.brIf (by decide) (by rfl))
-  apply Steps.cons (.exitControl rfl)
-  apply Steps.cons (.localGet rfl)
+  wasm_steps [.block, (.localGet rfl), (.eqz rfl), (.brIf (by decide) (by rfl)), (.exitControl rfl),
+    (.localGet rfl)]
   exact Steps.single .finish
 
 private theorem factorialLoop_iteration_steps (x acc : UInt32)
@@ -111,18 +107,9 @@ private theorem factorialLoop_iteration_steps (x acc : UInt32)
     .instruction .sub,
     .instruction (.localSet 0),
     .instruction (.br 1)], ?_⟩
-  apply Steps.cons .block
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.eqz (result := 0) (by simp [hx]))
-  apply Steps.cons .brIfZero
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons .mul
-  apply Steps.cons (.localSet rfl)
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons .const
-  apply Steps.cons .sub
-  apply Steps.cons (.localSet rfl)
+  wasm_steps [.block, (.localGet rfl), (.eqz (result := 0) (by simp [hx])), .brIfZero,
+    (.localGet rfl), (.localGet rfl), .mul, (.localSet rfl), (.localGet rfl), .const, .sub,
+    (.localSet rfl)]
   exact Steps.single (.br rfl)
 
 private theorem factorialLoop_steps (x acc : UInt32) :
@@ -165,8 +152,7 @@ private theorem factorial_initial_steps (n : UInt32) :
     Steps (factorialConfig n)
       [.instruction (.const 1), .instruction (.localSet 1),
         .instruction (.loop 0 0 factorialLoopBody)]
-      (factorialLoopConfig n 1) := by
-  exact Steps.cons .const
+      (factorialLoopConfig n 1) := Steps.cons .const
     (Steps.cons (.localSet rfl) (Steps.single .loop))
 
 theorem factorial_steps (n : UInt32) :

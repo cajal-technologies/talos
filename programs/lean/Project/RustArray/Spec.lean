@@ -56,16 +56,10 @@ def LenSpec : Prop := ∀ (ptr len : UInt32),
 @[proves Project.RustArray.Spec.LenSpec]
 theorem len_correct : LenSpec := by
   intro ptr len
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [leafConfig, func0]
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
-  ipureintro
-  rfl
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_return_value_rfl
 
 @[spec_of "rust-internal" "rust_array::is_empty"]
 def IsEmptySpec : Prop := ∀ (ptr len : UInt32),
@@ -75,27 +69,15 @@ def IsEmptySpec : Prop := ∀ (ptr len : UInt32),
 @[proves Project.RustArray.Spec.IsEmptySpec]
 theorem is_empty_correct : IsEmptySpec := by
   intro ptr len
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [leafConfig, func2]
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_const
-  inext
-  iapply SmallStep.wp_eq (result := isEmptyValue len) (by rfl)
-  inext
-  iapply SmallStep.wp_const
-  inext
-  iapply SmallStep.wp_and
-  inext
+  wasm_wp_pures [wp_localGet wp_const]
+  wasm_wp_next SmallStep.wp_eq (result := isEmptyValue len) (by rfl)
+  wasm_wp_pures [wp_const wp_and]
   rw [show isEmptyValue len &&& 1 = isEmptyValue len by
     unfold isEmptyValue
     by_cases h : len = 0 <;> simp [h]]
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
-  ipureintro
-  rfl
+  wasm_wp_return_value_rfl
 
 /-! ## Exported ABI wrappers (fat pointer in memory) -/
 
@@ -118,47 +100,32 @@ theorem len_export_correct : LenExportSpec := by
   · intro gs
     simp only [exportConfig, SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, Hruntime⟩
-    ihave Hfat := fatPtrHeap_pointsTo p dataPtr len hfat.noWrap $$ Hbytes
-    icases Hfat with ⟨Hdata, Hlen⟩
+    ihave ⟨Hdata, Hlen⟩ := fatPtrHeap_pointsTo p dataPtr len hfat.noWrap $$ Hbytes
     obtain ⟨hp1, hp2, hp3, hp4, hp5, hp6, hp7⟩ :=
       fatPtrArithmetic_of hfat
     simp only [func4]
-    iapply SmallStep.wp_localGet rfl
-    inext
+    wasm_wp_pures [wp_localGet]
     ihave HdataLater : ▷ pointsTo_u32 0 (p + 0) dataPtr $$ [Hdata]
     · inext
       simp only [UInt32.add_zero]
       iexact Hdata
-    iapply SmallStep.wp_load32 (address := p) (offset := 0)
+    wasm_wp_next_bind SmallStep.wp_load32 (address := p) (offset := 0)
       dataPtr (by simp) (by simpa using hp1)
-      (by simpa using hp2) (by simpa using hp3) $$ HdataLater
-    inext
-    iintro Hdata
-    iapply SmallStep.wp_localGet rfl
-    inext
+      (by simpa using hp2) (by simpa using hp3) with HdataLater => Hdata
+    wasm_wp_pures [wp_localGet]
     ihave HlenLater : ▷ pointsTo_u32 0 (p + 4) len $$ [Hlen]
-    · inext
-      iexact Hlen
-    iapply SmallStep.wp_load32 (address := p) (offset := 4)
-      len hp4 hp5 hp6 hp7 $$ HlenLater
-    inext
-    iintro Hlen
-    iapply SmallStep.wp_call «module» 0 func0Def
-      (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-    inext
-    iintro Hruntime
+    · ilater_exact Hlen
+    wasm_wp_next_bind SmallStep.wp_load32 (address := p) (offset := 4)
+      len hp4 hp5 hp6 hp7 with HlenLater => Hlen
+    wasm_wp_next_rebind SmallStep.wp_call «module» 0 func0Def
+      (by simp [«module»]) (by simp [«module»]) with Hruntime
     simp [func0Def, Function.toLocals, Function.numParams, func0]
-    iapply SmallStep.wp_localGet rfl
-    inext
-    iapply SmallStep.wp_returnFromCallExplicit $$ Hruntime
-    inext
+    wasm_wp_pures [wp_localGet]
+    wasm_wp_next SmallStep.wp_returnFromCallExplicit $$ Hruntime
     simp only [List.take, List.singleton_append]
-    iapply SmallStep.wp_returnFromFunction
-    inext
-    iapply wp_value'
+    wasm_wp_return_value
     iclear Hdata Hlen
-    ipureintro
-    rfl
+    ipureexact rfl
 
 @[spec_of "rust-exported" "rust_array::is_empty"]
 def IsEmptyExportSpec : Prop :=
@@ -179,84 +146,50 @@ theorem is_empty_export_correct : IsEmptyExportSpec := by
   · intro gs
     simp only [exportConfig, SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, Hruntime⟩
-    ihave Hfat := fatPtrHeap_pointsTo p dataPtr len hfat.noWrap $$ Hbytes
-    icases Hfat with ⟨Hdata, Hlen⟩
+    ihave ⟨Hdata, Hlen⟩ := fatPtrHeap_pointsTo p dataPtr len hfat.noWrap $$ Hbytes
     obtain ⟨hp1, hp2, hp3, hp4, hp5, hp6, hp7⟩ :=
       fatPtrArithmetic_of hfat
     simp only [func5]
-    iapply SmallStep.wp_localGet rfl
-    inext
+    wasm_wp_pures [wp_localGet]
     ihave HdataLater : ▷ pointsTo_u32 0 (p + 0) dataPtr $$ [Hdata]
     · inext
       simp only [UInt32.add_zero]
       iexact Hdata
-    iapply SmallStep.wp_load32 (address := p) (offset := 0)
+    wasm_wp_next_bind SmallStep.wp_load32 (address := p) (offset := 0)
       dataPtr (by simp) (by simpa using hp1)
-      (by simpa using hp2) (by simpa using hp3) $$ HdataLater
-    inext
-    iintro Hdata
-    iapply SmallStep.wp_localGet rfl
-    inext
+      (by simpa using hp2) (by simpa using hp3) with HdataLater => Hdata
+    wasm_wp_pures [wp_localGet]
     ihave HlenLater : ▷ pointsTo_u32 0 (p + 4) len $$ [Hlen]
-    · inext
-      iexact Hlen
-    iapply SmallStep.wp_load32 (address := p) (offset := 4)
-      len hp4 hp5 hp6 hp7 $$ HlenLater
-    inext
-    iintro Hlen
-    iapply SmallStep.wp_call «module» 1 func1Def
-      (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-    inext
-    iintro Hruntime
+    · ilater_exact Hlen
+    wasm_wp_next_bind SmallStep.wp_load32 (address := p) (offset := 4)
+      len hp4 hp5 hp6 hp7 with HlenLater => Hlen
+    wasm_wp_next_rebind SmallStep.wp_call «module» 1 func1Def
+      (by simp [«module»]) (by simp [«module»]) with Hruntime
     simp [func1Def, Function.toLocals, Function.numParams, func1]
-    iapply SmallStep.wp_localGet rfl
-    inext
-    iapply SmallStep.wp_localGet rfl
-    inext
-    iapply SmallStep.wp_call «module» 2 func2Def
-      (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-    inext
-    iintro Hruntime
+    wasm_wp_pures [wp_localGet wp_localGet]
+    wasm_wp_next_rebind SmallStep.wp_call «module» 2 func2Def
+      (by simp [«module»]) (by simp [«module»]) with Hruntime
     simp [func2Def, Function.toLocals, Function.numParams, func2]
-    iapply SmallStep.wp_localGet rfl
-    inext
-    iapply SmallStep.wp_const
-    inext
-    iapply SmallStep.wp_eq (result := isEmptyValue len) (by rfl)
-    inext
-    iapply SmallStep.wp_const
-    inext
-    iapply SmallStep.wp_and
-    inext
+    wasm_wp_pures [wp_localGet wp_const]
+    wasm_wp_next SmallStep.wp_eq (result := isEmptyValue len) (by rfl)
+    wasm_wp_pures [wp_const wp_and]
     rw [show isEmptyValue len &&& 1 = isEmptyValue len by
       unfold isEmptyValue
       by_cases h : len = 0 <;> simp [h]]
-    iapply SmallStep.wp_returnFromCallExplicit' $$ Hruntime
-    inext
-    iintro Hruntime
+    wasm_wp_next_rebind SmallStep.wp_returnFromCallExplicit' with Hruntime
     simp only [List.take, List.singleton_append]
-    iapply SmallStep.wp_const
-    inext
-    iapply SmallStep.wp_and
-    inext
+    wasm_wp_pures [wp_const wp_and]
     rw [show isEmptyValue len &&& 1 = isEmptyValue len by
       unfold isEmptyValue
       by_cases h : len = 0 <;> simp [h]]
-    iapply SmallStep.wp_returnFromCallExplicit $$ Hruntime
-    inext
+    wasm_wp_next SmallStep.wp_returnFromCallExplicit $$ Hruntime
     simp only [List.take, List.singleton_append]
-    iapply SmallStep.wp_const
-    inext
-    iapply SmallStep.wp_and
-    inext
+    wasm_wp_pures [wp_const wp_and]
     rw [show isEmptyValue len &&& 1 = isEmptyValue len by
       unfold isEmptyValue
       by_cases h : len = 0 <;> simp [h]]
-    iapply SmallStep.wp_returnFromFunction
-    inext
-    iapply wp_value'
+    wasm_wp_return_value
     iclear Hdata Hlen
-    ipureintro
-    rfl
+    ipureexact rfl
 
 end Project.RustArray.Spec

@@ -31,79 +31,116 @@ def heapAddressesInBounds (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → O
     get? σ key ≠ none →
     ∃ mem, resolve key.memId = some mem ∧ key.addr.toNat < mem.pages * 65536
 
-/-- Agreement between an authoritative ghost fragment for globals and the
-physical instantiated global array. Only owned indices need appear in the
-ghost map. -/
-def globalHeapAgrees
+/-- Agreement between an authoritative ghost fragment indexed within the
+current module instance and its physical list representation. -/
+def instanceIndexHeapAgrees
+    (σ : WasmInstanceIndexMap α) (values : List α) : Prop :=
+  ∀ (index : Nat) (value : α),
+    get? σ ⟨0, index⟩ = some value → values[index]? = some value
+
+/-- Agreement between owned globals and the instantiated global array. -/
+abbrev globalHeapAgrees
     (σ : WasmGlobalMap Value) (globals : Globals) : Prop :=
-  ∀ (index : Nat) (value : Value),
-    get? σ ⟨0, index⟩ = some value → globals.globals[index]? = some value
+  instanceIndexHeapAgrees σ globals.globals
 
 /-- Agreement between owned passive-data-segment entries and the instantiated
 segment-status list. `none` is an owned, observable dropped segment; absence
 from the ghost map means that a proof owns no fact about that index. -/
-def dataSegmentHeapAgrees
+abbrev dataSegmentHeapAgrees
     (σ : WasmDataSegmentMap (Option (List UInt8)))
     (segments : List (Option (List UInt8))) : Prop :=
-  ∀ (index : Nat) (value : Option (List UInt8)),
-    get? σ ⟨0, index⟩ = some value → segments[index]? = some value
+  instanceIndexHeapAgrees σ segments
 
 /-- Agreement between owned table identities and physical instantiated tables.
 The ghost key is the stable table index; the fragment owns the complete
 current table contents. -/
-def tableHeapAgrees
+abbrev tableHeapAgrees
     (σ : WasmTableMap TableInst) (tables : List TableInst) : Prop :=
-  ∀ (index : Nat) (table : TableInst),
-    get? σ ⟨0, index⟩ = some table → tables[index]? = some table
+  instanceIndexHeapAgrees σ tables
 
 /-- Agreement for live/dropped instantiated element segments. As with passive
 data segments, `none` is an owned dropped state rather than absence of
 ownership. -/
-def elementSegmentHeapAgrees
+abbrev elementSegmentHeapAgrees
     (σ : WasmElementSegmentMap (Option (List (Option Nat))))
     (segments : List (Option (List (Option Nat)))) : Prop :=
-  ∀ (index : Nat) (value : Option (List (Option Nat))),
-    get? σ ⟨0, index⟩ = some value → segments[index]? = some value
+  instanceIndexHeapAgrees σ segments
 
 theorem heapAgreesWithMem_empty (resolve : Nat → Option Mem) :
     heapAgreesWithMem (∅ : WasmHeapMap (Option UInt8)) resolve := by
   intro key value hget
-  rw [LawfulPartialMap.get?_empty] at hget
-  contradiction
+  rw [LawfulPartialMap.get?_empty] at hget; contradiction
 
 theorem heapAddressesInBounds_empty (resolve : Nat → Option Mem) :
     heapAddressesInBounds (∅ : WasmHeapMap (Option UInt8)) resolve := by
   intro key hne
   simp [LawfulPartialMap.get?_empty] at hne
 
-theorem globalHeapAgrees_empty (globals : Globals) :
-    globalHeapAgrees (∅ : WasmGlobalMap Value) globals := by
+/-- Replacing one resolver entry by the memory it already resolves is identity. -/
+theorem resolverOverride_eq_self (resolve : Nat → Option Mem)
+    (memId : Nat) (mem : Mem) (hresolve : resolve memId = some mem) :
+    (fun id => if id = memId then some mem else resolve id) = resolve := by
+  funext id
+  by_cases hid : id = memId <;> simp [hid, hresolve]
+
+theorem instanceIndexHeapAgrees_empty (values : List α) :
+    instanceIndexHeapAgrees (∅ : WasmInstanceIndexMap α) values := by
   intro index value hget
-  rw [LawfulPartialMap.get?_empty] at hget
-  contradiction
+  rw [LawfulPartialMap.get?_empty] at hget; contradiction
+
+theorem instanceIndexHeapAgrees_insert
+    {σ : WasmInstanceIndexMap α} {values : List α}
+    {index : Nat} {value : α}
+    (hagree : instanceIndexHeapAgrees σ values)
+    (hvalue : values[index]? = some value) :
+    instanceIndexHeapAgrees (insert σ ⟨0, index⟩ value) values := by
+  intro idx other hget
+  by_cases hidx : idx = index
+  · subst idx; simp only [get?_insert_eq rfl, Option.some.injEq] at hget
+    simpa only [← hget] using hvalue
+  · rw [get?_insert_ne (fun h =>
+      hidx (congrArg InstanceIndexKey.index h).symm)] at hget
+    exact hagree idx other hget
+
+theorem instanceIndexHeapAgrees_singleton
+    {values : List α} {index : Nat} {value : α}
+    (hvalue : values[index]? = some value) :
+    instanceIndexHeapAgrees (insert ∅ ⟨0, index⟩ value) values :=
+  instanceIndexHeapAgrees_insert
+    (instanceIndexHeapAgrees_empty values) hvalue
+
+theorem globalHeapAgrees_empty (globals : Globals) :
+    globalHeapAgrees (∅ : WasmGlobalMap Value) globals :=
+  instanceIndexHeapAgrees_empty globals.globals
+
+theorem globalHeapAgrees_singleton
+    {globals : Globals} {index : Nat} {value : Value}
+    (hvalue : globals.globals[index]? = some value) :
+    globalHeapAgrees (insert ∅ ⟨0, index⟩ value) globals :=
+  instanceIndexHeapAgrees_singleton hvalue
 
 theorem dataSegmentHeapAgrees_empty
     (segments : List (Option (List UInt8))) :
     dataSegmentHeapAgrees
-      (∅ : WasmDataSegmentMap (Option (List UInt8))) segments := by
-  intro index value hget
-  rw [LawfulPartialMap.get?_empty] at hget
-  contradiction
+      (∅ : WasmDataSegmentMap (Option (List UInt8))) segments :=
+  instanceIndexHeapAgrees_empty segments
 
 theorem tableHeapAgrees_empty (tables : List TableInst) :
-    tableHeapAgrees (∅ : WasmTableMap TableInst) tables := by
-  intro index table hget
-  rw [LawfulPartialMap.get?_empty] at hget
-  contradiction
+    tableHeapAgrees (∅ : WasmTableMap TableInst) tables :=
+  instanceIndexHeapAgrees_empty tables
+
+theorem tableHeapAgrees_singleton
+    {tables : List TableInst} {index : Nat} {table : TableInst}
+    (htable : tables[index]? = some table) :
+    tableHeapAgrees (insert ∅ ⟨0, index⟩ table) tables :=
+  instanceIndexHeapAgrees_singleton htable
 
 theorem elementSegmentHeapAgrees_empty
     (segments : List (Option (List (Option Nat)))) :
     elementSegmentHeapAgrees
       (∅ : WasmElementSegmentMap (Option (List (Option Nat))))
-      segments := by
-  intro index value hget
-  rw [LawfulPartialMap.get?_empty] at hget
-  contradiction
+      segments :=
+  instanceIndexHeapAgrees_empty segments
 
 def exceptionHeapAgrees
     (σ : WasmExceptionMap (Nat × List Value))
@@ -114,32 +151,40 @@ def exceptionHeapAgrees
 theorem exceptionHeapAgrees_empty (exns : List (Nat × List Value)) :
     exceptionHeapAgrees (∅ : WasmExceptionMap (Nat × List Value)) exns := by
   intro k v hget
-  rw [LawfulPartialMap.get?_empty] at hget
-  contradiction
+  rw [LawfulPartialMap.get?_empty] at hget; contradiction
+
+/-- Updating an owned entry in both an authoritative instance-index map and
+its physical list preserves their agreement. -/
+theorem instanceIndex_store_sound
+    (σ : WasmInstanceIndexMap α) (values : List α)
+    (index : Nat) (oldValue newValue : α)
+    (hagree : instanceIndexHeapAgrees σ values)
+    (hlookup : get? σ ⟨0, index⟩ = some oldValue) :
+    instanceIndexHeapAgrees (insert σ ⟨0, index⟩ newValue)
+      (values.set index newValue) := by
+  have hphysical := hagree index oldValue hlookup
+  obtain ⟨hindex, _⟩ := getElem?_eq_some_iff.mp hphysical
+  intro idx value hother
+  by_cases heq : idx = index
+  · subst idx; simp only [get?_insert_eq rfl, Option.some.injEq] at hother
+    subst value
+    exact List.getElem?_set_self hindex
+  · have hne : (⟨0, idx⟩ : InstanceIndexKey) ≠ ⟨0, index⟩ := fun h =>
+      heq (congrArg InstanceIndexKey.index h)
+    rw [get?_insert_ne (Ne.symm hne)] at hother
+    rw [List.getElem?_set_ne (Ne.symm heq)]; exact hagree idx value hother
 
 /-- Updating an owned global in both the authoritative ghost map and the
-physical global array preserves their agreement. All owned entries use
-`instanceId = 0`, so index equality is the only collision condition. -/
+physical global array preserves their agreement. -/
 theorem global_store_sound
     (σ : WasmGlobalMap Value) (globals : Globals)
     (index : Nat) (oldValue newValue : Value)
     (hagree : globalHeapAgrees σ globals)
     (hlookup : get? σ ⟨0, index⟩ = some oldValue) :
     globalHeapAgrees (insert σ ⟨0, index⟩ newValue)
-      { globals := globals.globals.set index newValue } := by
-  have hphysical := hagree index oldValue hlookup
-  obtain ⟨hindex, _⟩ := getElem?_eq_some_iff.mp hphysical
-  intro idx value hother
-  by_cases heq : idx = index
-  · subst idx
-    simp only [get?_insert_eq rfl, Option.some.injEq] at hother
-    subst value
-    exact List.getElem?_set_self hindex
-  · have hne : (⟨0, idx⟩ : GlobalKey) ≠ ⟨0, index⟩ := fun h =>
-      heq (congrArg GlobalKey.index h)
-    rw [get?_insert_ne (Ne.symm hne)] at hother
-    rw [List.getElem?_set_ne (Ne.symm heq)]
-    exact hagree idx value hother
+      { globals := globals.globals.set index newValue } :=
+  instanceIndex_store_sound σ globals.globals index oldValue newValue
+    hagree hlookup
 
 /-- Dropping an owned data segment in both the authoritative map and physical
 store preserves their agreement. -/
@@ -150,20 +195,8 @@ theorem dataSegment_store_sound
     (hagree : dataSegmentHeapAgrees σ segments)
     (hlookup : get? σ ⟨0, index⟩ = some oldValue) :
     dataSegmentHeapAgrees (insert σ ⟨0, index⟩ newValue)
-      (segments.set index newValue) := by
-  have hphysical := hagree index oldValue hlookup
-  obtain ⟨hindex, _⟩ := getElem?_eq_some_iff.mp hphysical
-  intro idx value hother
-  by_cases heq : idx = index
-  · subst idx
-    simp only [get?_insert_eq rfl, Option.some.injEq] at hother
-    subst value
-    exact List.getElem?_set_self hindex
-  · have hne : (⟨0, idx⟩ : DataSegmentKey) ≠ ⟨0, index⟩ := fun h =>
-      heq (congrArg DataSegmentKey.index h)
-    rw [get?_insert_ne (Ne.symm hne)] at hother
-    rw [List.getElem?_set_ne (Ne.symm heq)]
-    exact hagree idx value hother
+      (segments.set index newValue) :=
+  instanceIndex_store_sound σ segments index oldValue newValue hagree hlookup
 
 /-- Dropping an owned element segment preserves physical/ghost agreement and
 does not change the stable indices of any other segment. -/
@@ -175,20 +208,8 @@ theorem elementSegment_store_sound
     (hagree : elementSegmentHeapAgrees σ segments)
     (hlookup : get? σ ⟨0, index⟩ = some oldValue) :
     elementSegmentHeapAgrees (insert σ ⟨0, index⟩ newValue)
-      (segments.set index newValue) := by
-  have hphysical := hagree index oldValue hlookup
-  obtain ⟨hindex, _⟩ := getElem?_eq_some_iff.mp hphysical
-  intro idx value hother
-  by_cases heq : idx = index
-  · subst idx
-    simp only [get?_insert_eq rfl, Option.some.injEq] at hother
-    subst value
-    exact List.getElem?_set_self hindex
-  · have hne : (⟨0, idx⟩ : ElementSegmentKey) ≠ ⟨0, index⟩ := fun h =>
-      heq (congrArg ElementSegmentKey.index h)
-    rw [get?_insert_ne (Ne.symm hne)] at hother
-    rw [List.getElem?_set_ne (Ne.symm heq)]
-    exact hagree idx value hother
+      (segments.set index newValue) :=
+  instanceIndex_store_sound σ segments index oldValue newValue hagree hlookup
 
 /-- Updating one owned table in the authoritative map and physical table list
 preserves agreement without renumbering or changing unrelated tables. -/
@@ -198,20 +219,8 @@ theorem table_store_sound
     (hagree : tableHeapAgrees σ tables)
     (hlookup : get? σ ⟨0, index⟩ = some oldTable) :
     tableHeapAgrees (insert σ ⟨0, index⟩ newTable)
-      (tables.set index newTable) := by
-  have hphysical := hagree index oldTable hlookup
-  obtain ⟨hindex, _⟩ := getElem?_eq_some_iff.mp hphysical
-  intro idx table hother
-  by_cases heq : idx = index
-  · subst idx
-    simp only [get?_insert_eq rfl, Option.some.injEq] at hother
-    subst table
-    exact List.getElem?_set_self hindex
-  · have hne : (⟨0, idx⟩ : TableKey) ≠ ⟨0, index⟩ := fun h =>
-      heq (congrArg TableKey.index h)
-    rw [get?_insert_ne (Ne.symm hne)] at hother
-    rw [List.getElem?_set_ne (Ne.symm heq)]
-    exact hagree idx table hother
+      (tables.set index newTable) :=
+  instanceIndex_store_sound σ tables index oldTable newTable hagree hlookup
 
 theorem listSetAt_eq_set (values : List α) (index : Nat) (value : α)
     (hindex : index < values.length) :
@@ -252,8 +261,7 @@ theorem store_sound (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Option 
       (fun id => if id = memId then some (mem.write8 addr new_v) else resolve id) := by
   intro key v h_get
   by_cases heq : key = ⟨memId, addr⟩
-  · subst key
-    simp only [get?_insert_eq rfl, Option.some.injEq] at h_get
+  · subst key; simp only [get?_insert_eq rfl, Option.some.injEq] at h_get
     rw [← h_get]
     refine ⟨mem.write8 addr new_v, ?_, ?_⟩
     · simp
@@ -305,12 +313,10 @@ theorem insert_physical_byte_sound
     heapAgreesWithMem (insert σ ⟨memId, addr⟩ (some value)) resolve := by
   intro key other hget
   by_cases heq : key = ⟨memId, addr⟩
-  · subst key
-    simp only [get?_insert_eq rfl, Option.some.injEq] at hget
+  · subst key; simp only [get?_insert_eq rfl, Option.some.injEq] at hget
     subst other
     exact ⟨mem, hresolve, hread⟩
-  · rw [get?_insert_ne (Ne.symm heq)] at hget
-    exact hagree key other hget
+  · rw [get?_insert_ne (Ne.symm heq)] at hget; exact hagree key other hget
 
 /-- Adding a sparse ghost key whose physical address is allocated preserves
 the authoritative in-bounds invariant without changing physical memory. -/
@@ -324,10 +330,8 @@ theorem insert_physical_byte_inBounds
       (insert σ ⟨memId, addr⟩ (some value)) resolve := by
   intro key hget
   by_cases heq : key = ⟨memId, addr⟩
-  · subst key
-    exact ⟨mem, hresolve, haddr⟩
-  · rw [get?_insert_ne (Ne.symm heq)] at hget
-    exact hinBounds key hget
+  · subst key; exact ⟨mem, hresolve, haddr⟩
+  · rw [get?_insert_ne (Ne.symm heq)] at hget; exact hinBounds key hget
 
 /-- `Mem.grow` preserves every physical byte, so the same authoritative
 ghost heap continues to agree with the grown memory under the updated resolver. -/
@@ -386,23 +390,18 @@ theorem fill16_four_AB_eq_write32 (mem : Mem) :
     congr
     funext i
     by_cases h0 : i = 16
-    · subst i
-      simp
-      bv_decide
+    · subst i; simp
+      bv_normalize
     by_cases h1 : i = 17
-    · subst i
-      simp
-      bv_decide
+    · subst i; simp
+      bv_normalize
     by_cases h2 : i = 18
-    · subst i
-      simp
-      bv_decide
+    · subst i; simp
+      bv_normalize
     by_cases h3 : i = 19
-    · subst i
-      simp
-      bv_decide
-    simp [h0, h1, h2, h3]
-    omega
+    · subst i; simp
+      bv_normalize
+    simp [h0, h1, h2, h3]; omega
 
 /-- The concrete passive-segment initialization used by the handwritten Iris
 example is exactly a little-endian 32-bit store. -/
@@ -415,23 +414,18 @@ theorem init16_four_eq_write32 (mem : Mem) :
     congr
     funext i
     by_cases h0 : i = 16
-    · subst i
-      simp
-      bv_decide
+    · subst i; simp
+      bv_normalize
     by_cases h1 : i = 17
-    · subst i
-      simp
-      bv_decide
+    · subst i; simp
+      bv_normalize
     by_cases h2 : i = 18
-    · subst i
-      simp
-      bv_decide
+    · subst i; simp
+      bv_normalize
     by_cases h3 : i = 19
-    · subst i
-      simp
-      bv_decide
-    simp [h0, h1, h2, h3]
-    omega
+    · subst i; simp
+      bv_normalize
+    simp [h0, h1, h2, h3]; omega
 
 /-- Copying the concrete source word used by the aligned manual example is
 physically the same update as storing that word at the destination. -/
@@ -439,40 +433,43 @@ theorem copy8_zero_four_eq_write32 (mem : Mem)
     (hread : mem.read32 0 = 0x04030201) :
     mem.copy 8 0 4 = mem.write32 8 0x04030201 := by
   have hb0 : mem.bytes 0 = 0x01 := by
-    simp only [Mem.read32, UInt32.toNat_ofNat] at hread
-    bv_decide
+    have h := congrArg (fun word : UInt32 => word.toUInt8) hread
+    have hbyte : (0x04030201 : UInt32).toUInt8 = 0x01 := by decide +kernel
+    simpa only [Mem.read32, UInt32.packBytes_byte0,
+      UInt32.toNat_zero, Nat.zero_add, hbyte] using h
   have hb1 : mem.bytes 1 = 0x02 := by
-    simp only [Mem.read32, UInt32.toNat_ofNat] at hread
-    bv_decide
+    have h := congrArg (fun word : UInt32 => (word >>> 8).toUInt8) hread
+    have hbyte : ((0x04030201 : UInt32) >>> 8).toUInt8 = 0x02 := by decide +kernel
+    simpa only [Mem.read32, UInt32.packBytes_byte1,
+      UInt32.toNat_zero, Nat.zero_add, hbyte] using h
   have hb2 : mem.bytes 2 = 0x03 := by
-    simp only [Mem.read32, UInt32.toNat_ofNat] at hread
-    bv_decide
+    have h := congrArg (fun word : UInt32 => (word >>> 16).toUInt8) hread
+    have hbyte : ((0x04030201 : UInt32) >>> 16).toUInt8 = 0x03 := by decide +kernel
+    simpa only [Mem.read32, UInt32.packBytes_byte2,
+      UInt32.toNat_zero, Nat.zero_add, hbyte] using h
   have hb3 : mem.bytes 3 = 0x04 := by
-    simp only [Mem.read32, UInt32.toNat_ofNat] at hread
-    bv_decide
+    have h := congrArg (fun word : UInt32 => (word >>> 24).toUInt8) hread
+    have hbyte : ((0x04030201 : UInt32) >>> 24).toUInt8 = 0x04 := by decide +kernel
+    simpa only [Mem.read32, UInt32.packBytes_byte3,
+      UInt32.toNat_zero, Nat.zero_add, hbyte] using h
   cases mem with
   | mk pages bytes =>
     simp only [Mem.copy, Mem.write32, UInt32.toNat_ofNat] at hb0 hb1 hb2 hb3 ⊢
     congr
     funext i
     by_cases h8 : i = 8
-    · subst i
-      simp [hb0]
-      bv_decide
+    · subst i; simp [hb0]
+      bv_normalize
     by_cases h9 : i = 9
-    · subst i
-      simp [hb1]
-      bv_decide
+    · subst i; simp [hb1]
+      bv_normalize
     by_cases h10 : i = 10
-    · subst i
-      simp [hb2]
-      bv_decide
+    · subst i; simp [hb2]
+      bv_normalize
     by_cases h11 : i = 11
-    · subst i
-      simp [hb3]
-      bv_decide
-    simp [h8, h9, h10, h11]
-    omega
+    · subst i; simp [hb3]
+      bv_normalize
+    simp [h8, h9, h10, h11]; omega
 
 /-- The overlapping manual copy has memmove semantics: source bytes are read
 from the pre-copy memory before the overlapping destination is updated. -/
@@ -481,36 +478,39 @@ theorem copy2_zero_four_eq_write64 (mem : Mem)
     mem.copy 2 0 4 =
       (((mem.write8 2 0x11).write8 3 0x22).write8 4 0x33).write8 5 0x44 := by
   have hb0 : mem.bytes 0 = 0x11 := by
-    simp only [Mem.read64, UInt32.toNat_ofNat] at hread
-    bv_decide
+    have h := congrArg (fun word : UInt64 => word.toUInt32.toUInt8) hread
+    have hbyte : (0x8877665544332211 : UInt64).toUInt32.toUInt8 = 0x11 := by decide +kernel
+    simpa only [Mem.read64, UInt64.packBytes_low32, UInt32.packBytes_byte0,
+      UInt32.toNat_zero, Nat.zero_add, hbyte] using h
   have hb1 : mem.bytes 1 = 0x22 := by
-    simp only [Mem.read64, UInt32.toNat_ofNat] at hread
-    bv_decide
+    have h := congrArg (fun word : UInt64 => (word.toUInt32 >>> 8).toUInt8) hread
+    have hbyte : ((0x8877665544332211 : UInt64).toUInt32 >>> 8).toUInt8 = 0x22 := by decide +kernel
+    simpa only [Mem.read64, UInt64.packBytes_low32, UInt32.packBytes_byte1,
+      UInt32.toNat_zero, Nat.zero_add, hbyte] using h
   have hb2 : mem.bytes 2 = 0x33 := by
-    simp only [Mem.read64, UInt32.toNat_ofNat] at hread
-    bv_decide
+    have h := congrArg (fun word : UInt64 => (word.toUInt32 >>> 16).toUInt8) hread
+    have hbyte : ((0x8877665544332211 : UInt64).toUInt32 >>> 16).toUInt8 = 0x33 := by decide +kernel
+    simpa only [Mem.read64, UInt64.packBytes_low32, UInt32.packBytes_byte2,
+      UInt32.toNat_zero, Nat.zero_add, hbyte] using h
   have hb3 : mem.bytes 3 = 0x44 := by
-    simp only [Mem.read64, UInt32.toNat_ofNat] at hread
-    bv_decide
+    have h := congrArg (fun word : UInt64 => (word.toUInt32 >>> 24).toUInt8) hread
+    have hbyte : ((0x8877665544332211 : UInt64).toUInt32 >>> 24).toUInt8 = 0x44 := by decide +kernel
+    simpa only [Mem.read64, UInt64.packBytes_low32, UInt32.packBytes_byte3,
+      UInt32.toNat_zero, Nat.zero_add, hbyte] using h
   cases mem with
   | mk pages bytes =>
     simp only [Mem.copy, Mem.write8, UInt32.toNat_ofNat] at hb0 hb1 hb2 hb3 ⊢
     congr
     funext i
     by_cases h2 : i = 2
-    · subst i
-      simp [hb0]
+    · subst i; simp [hb0]
     by_cases h3 : i = 3
-    · subst i
-      simp [hb1]
+    · subst i; simp [hb1]
     by_cases h4 : i = 4
-    · subst i
-      simp [hb2]
+    · subst i; simp [hb2]
     by_cases h5 : i = 5
-    · subst i
-      simp [hb3]
-    simp [h2, h3, h4, h5]
-    omega
+    · subst i; simp [hb3]
+    simp [h2, h3, h4, h5]; omega
 
 def store16Heap (σ : WasmHeapMap (Option UInt8)) (memId : Nat) (addr value : UInt32) :
     WasmHeapMap (Option UInt8) :=
@@ -527,19 +527,17 @@ theorem store16_sound (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Optio
       (fun id => if id = memId then some (mem.write16 addr value) else resolve id) := by
   intro key byte h_get
   by_cases e1 : key = ⟨memId, addr + 1⟩
-  · subst key
-    simp [store16Heap, get?_insert_eq] at h_get
+  · subst key; simp [store16Heap, get?_insert_eq] at h_get
     rw [← h_get]
     refine ⟨mem.write16 addr value, ?_, ?_⟩
     · simp
-    · simp [Mem.write16, Mem.read8, h1, u32Byte]; bv_decide
+    · simp [Mem.write16, Mem.read8, h1, u32Byte]; bv_normalize
   by_cases e0 : key = ⟨memId, addr⟩
-  · subst key
-    simp [store16Heap, get?_insert_ne (Ne.symm e1), get?_insert_eq] at h_get
+  · subst key; simp [store16Heap, get?_insert_ne (Ne.symm e1), get?_insert_eq] at h_get
     rw [← h_get]
     refine ⟨mem.write16 addr value, ?_, ?_⟩
     · simp
-    · simp [Mem.write16, Mem.read8, u32Byte]; bv_decide
+    · simp [Mem.write16, Mem.read8, u32Byte]; bv_normalize
   · simp [store16Heap, get?_insert_ne (Ne.symm e1),
       get?_insert_ne (Ne.symm e0)] at h_get
     obtain ⟨m, hm, hread⟩ := h_agree key byte h_get
@@ -549,8 +547,7 @@ theorem store16_sound (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Optio
         fun h => e0 (show key = ⟨memId, addr⟩ from by
           cases key; simp only [MemoryKey.mk.injEq]; exact ⟨hid, UInt32.toNat_inj.mp h⟩)
       have n1 : key.addr.toNat ≠ addr.toNat + 1 := by
-        rw [← h1]
-        exact fun h => e1 (show key = ⟨memId, addr + 1⟩ from by
+        rw [← h1]; exact fun h => e1 (show key = ⟨memId, addr + 1⟩ from by
           cases key; simp only [MemoryKey.mk.injEq]; exact ⟨hid, UInt32.toNat_inj.mp h⟩)
       refine ⟨mem.write16 addr value, ?_, ?_⟩
       · simp [hid]
@@ -599,7 +596,7 @@ theorem Mem.read32_byte0 {m : Mem} {addr value : UInt32}
     m.read8 addr = u32Byte value 0 := by
   have hlow (b0 b1 b2 b3 : UInt8) :
       (b0.toUInt32 ||| (b1.toUInt32 <<< 8) ||| (b2.toUInt32 <<< 16) |||
-        (b3.toUInt32 <<< 24)).toUInt8 = b0 := by bv_decide
+        (b3.toUInt32 <<< 24)).toUInt8 = b0 := UInt32.packBytes_byte0 b0 b1 b2 b3
   have h := congrArg UInt32.toUInt8 hread
   unfold Mem.read32 at h
   rw [hlow] at h
@@ -611,7 +608,7 @@ theorem Mem.read32_byte1 {m : Mem} {addr value : UInt32}
     m.read8 (addr + 1) = u32Byte value 1 := by
   have hbyte (b0 b1 b2 b3 : UInt8) :
       ((b0.toUInt32 ||| (b1.toUInt32 <<< 8) ||| (b2.toUInt32 <<< 16) |||
-        (b3.toUInt32 <<< 24)) >>> 8).toUInt8 = b1 := by bv_decide
+        (b3.toUInt32 <<< 24)) >>> 8).toUInt8 = b1 := UInt32.packBytes_byte1 b0 b1 b2 b3
   have h := congrArg (fun word : UInt32 => (word >>> 8).toUInt8) hread
   unfold Mem.read32 at h
   rw [hbyte] at h
@@ -623,7 +620,7 @@ theorem Mem.read32_byte2 {m : Mem} {addr value : UInt32}
     m.read8 (addr + 2) = u32Byte value 2 := by
   have hbyte (b0 b1 b2 b3 : UInt8) :
       ((b0.toUInt32 ||| (b1.toUInt32 <<< 8) ||| (b2.toUInt32 <<< 16) |||
-        (b3.toUInt32 <<< 24)) >>> 16).toUInt8 = b2 := by bv_decide
+        (b3.toUInt32 <<< 24)) >>> 16).toUInt8 = b2 := UInt32.packBytes_byte2 b0 b1 b2 b3
   have h := congrArg (fun word : UInt32 => (word >>> 16).toUInt8) hread
   unfold Mem.read32 at h
   rw [hbyte] at h
@@ -635,7 +632,7 @@ theorem Mem.read32_byte3 {m : Mem} {addr value : UInt32}
     m.read8 (addr + 3) = u32Byte value 3 := by
   have hbyte (b0 b1 b2 b3 : UInt8) :
       ((b0.toUInt32 ||| (b1.toUInt32 <<< 8) ||| (b2.toUInt32 <<< 16) |||
-        (b3.toUInt32 <<< 24)) >>> 24).toUInt8 = b3 := by bv_decide
+        (b3.toUInt32 <<< 24)) >>> 24).toUInt8 = b3 := UInt32.packBytes_byte3 b0 b1 b2 b3
   have h := congrArg (fun word : UInt32 => (word >>> 24).toUInt8) hread
   unfold Mem.read32 at h
   rw [hbyte] at h
@@ -658,25 +655,21 @@ theorem Mem.write32_eq_self {m : Mem} {addr value : UInt32}
     congr
     funext index
     split <;> rename_i heq
-    · subst index
-      simp [Mem.read8, u32Byte] at hb0
+    · subst index; simp [Mem.read8, u32Byte] at hb0
       rw [hb0]
-      bv_decide
+      bv_normalize
     split <;> rename_i heq
-    · subst index
-      simp [Mem.read8, u32Byte, h1] at hb1
+    · subst index; simp [Mem.read8, u32Byte, h1] at hb1
       rw [hb1]
-      bv_decide
+      bv_normalize
     split <;> rename_i heq
-    · subst index
-      simp [Mem.read8, u32Byte, h2] at hb2
+    · subst index; simp [Mem.read8, u32Byte, h2] at hb2
       rw [hb2]
-      bv_decide
+      bv_normalize
     split <;> rename_i heq
-    · subst index
-      simp [Mem.read8, u32Byte, h3] at hb3
+    · subst index; simp [Mem.read8, u32Byte, h3] at hb3
       rw [hb3]
-      bv_decide
+      bv_normalize
     · rfl
 
 theorem store32Heap_pointsTo {α : Type} [WasmHeapGS α]
@@ -717,8 +710,7 @@ theorem store32Heap_pointsTo {α : Type} [WasmHeapGS α]
     simp only [get?_insert_ne (Ne.symm h01), h1])).to_eq]
   rw [(BI.BigSepM.bigSepM_insert h0).to_eq]
   unfold pointsTo_u32
-  iintro ⟨H3, H2, H1, H0, Hrest⟩
-  iframe
+  iintro ⟨H3, H2, H1, H0, Hrest⟩; iframe
 
 theorem store32_sound (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Option Mem)
     (memId : Nat) (mem : Mem) (addr value : UInt32)
@@ -731,36 +723,32 @@ theorem store32_sound (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Optio
       (fun id => if id = memId then some (mem.write32 addr value) else resolve id) := by
   intro key byte h_get
   by_cases e3 : key = ⟨memId, addr + 3⟩
-  · subst key
-    simp [store32Heap, get?_insert_eq] at h_get
+  · subst key; simp [store32Heap, get?_insert_eq] at h_get
     rw [← h_get]
     refine ⟨mem.write32 addr value, ?_, ?_⟩
     · simp
-    · simp [Mem.write32, Mem.read8, h3, u32Byte]; bv_decide
+    · simp [Mem.write32, Mem.read8, h3, u32Byte]; bv_normalize
   by_cases e2 : key = ⟨memId, addr + 2⟩
-  · subst key
-    simp [store32Heap, get?_insert_ne (Ne.symm e3), get?_insert_eq] at h_get
+  · subst key; simp [store32Heap, get?_insert_ne (Ne.symm e3), get?_insert_eq] at h_get
     rw [← h_get]
     refine ⟨mem.write32 addr value, ?_, ?_⟩
     · simp
-    · simp [Mem.write32, Mem.read8, h2, u32Byte]; bv_decide
+    · simp [Mem.write32, Mem.read8, h2, u32Byte]; bv_normalize
   by_cases e1 : key = ⟨memId, addr + 1⟩
-  · subst key
-    simp [store32Heap, get?_insert_ne (Ne.symm e3),
+  · subst key; simp [store32Heap, get?_insert_ne (Ne.symm e3),
       get?_insert_ne (Ne.symm e2), get?_insert_eq] at h_get
     rw [← h_get]
     refine ⟨mem.write32 addr value, ?_, ?_⟩
     · simp
-    · simp [Mem.write32, Mem.read8, h1, u32Byte]; bv_decide
+    · simp [Mem.write32, Mem.read8, h1, u32Byte]; bv_normalize
   by_cases e0 : key = ⟨memId, addr⟩
-  · subst key
-    simp [store32Heap, get?_insert_ne (Ne.symm e3),
+  · subst key; simp [store32Heap, get?_insert_ne (Ne.symm e3),
       get?_insert_ne (Ne.symm e2), get?_insert_ne (Ne.symm e1),
       get?_insert_eq] at h_get
     rw [← h_get]
     refine ⟨mem.write32 addr value, ?_, ?_⟩
     · simp
-    · simp [Mem.write32, Mem.read8, u32Byte]; bv_decide
+    · simp [Mem.write32, Mem.read8, u32Byte]; bv_normalize
   · simp [store32Heap, get?_insert_ne (Ne.symm e3),
       get?_insert_ne (Ne.symm e2), get?_insert_ne (Ne.symm e1),
       get?_insert_ne (Ne.symm e0)] at h_get
@@ -771,16 +759,13 @@ theorem store32_sound (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Optio
         fun h => e0 (show key = ⟨memId, addr⟩ from by
           cases key; simp only [MemoryKey.mk.injEq]; exact ⟨hid, UInt32.toNat_inj.mp h⟩)
       have n1 : key.addr.toNat ≠ addr.toNat + 1 := by
-        rw [← h1]
-        exact fun h => e1 (show key = ⟨memId, addr + 1⟩ from by
+        rw [← h1]; exact fun h => e1 (show key = ⟨memId, addr + 1⟩ from by
           cases key; simp only [MemoryKey.mk.injEq]; exact ⟨hid, UInt32.toNat_inj.mp h⟩)
       have n2 : key.addr.toNat ≠ addr.toNat + 2 := by
-        rw [← h2]
-        exact fun h => e2 (show key = ⟨memId, addr + 2⟩ from by
+        rw [← h2]; exact fun h => e2 (show key = ⟨memId, addr + 2⟩ from by
           cases key; simp only [MemoryKey.mk.injEq]; exact ⟨hid, UInt32.toNat_inj.mp h⟩)
       have n3 : key.addr.toNat ≠ addr.toNat + 3 := by
-        rw [← h3]
-        exact fun h => e3 (show key = ⟨memId, addr + 3⟩ from by
+        rw [← h3]; exact fun h => e3 (show key = ⟨memId, addr + 3⟩ from by
           cases key; simp only [MemoryKey.mk.injEq]; exact ⟨hid, UInt32.toNat_inj.mp h⟩)
       refine ⟨mem.write32 addr value, ?_, ?_⟩
       · simp [hid]
@@ -825,6 +810,42 @@ theorem store32_inBounds (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Op
       · simpa [Mem.write32, hm_eq] using hlt
     · exact ⟨m, by simp [if_neg hid, hm], hlt⟩
 
+/-- Claiming a word already present in physical memory preserves agreement. -/
+theorem insert_physical_word32_sound
+    (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Option Mem)
+    (memId : Nat) (mem : Mem) (addr value : UInt32)
+    (hresolve : resolve memId = some mem)
+    (h1 : (addr + 1).toNat = addr.toNat + 1)
+    (h2 : (addr + 2).toNat = addr.toNat + 2)
+    (h3 : (addr + 3).toNat = addr.toNat + 3)
+    (hagree : heapAgreesWithMem σ resolve)
+    (hread : mem.read32 addr = value) :
+    heapAgreesWithMem (store32Heap σ memId addr value) resolve := by
+  have h := store32_sound σ resolve memId mem addr value
+    hresolve h1 h2 h3 hagree
+  rw [Mem.write32_eq_self hread h1 h2 h3,
+    resolverOverride_eq_self resolve memId mem hresolve] at h
+  exact h
+
+/-- Claiming an allocated physical word preserves the in-bounds invariant
+when that word already contains the claimed value. -/
+theorem insert_physical_word32_inBounds
+    (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Option Mem)
+    (memId : Nat) (mem : Mem) (addr value : UInt32)
+    (hresolve : resolve memId = some mem)
+    (h1 : (addr + 1).toNat = addr.toNat + 1)
+    (h2 : (addr + 2).toNat = addr.toNat + 2)
+    (h3 : (addr + 3).toNat = addr.toNat + 3)
+    (hinBounds : heapAddressesInBounds σ resolve)
+    (hbound : addr.toNat + 4 ≤ mem.pages * 65536)
+    (hread : mem.read32 addr = value) :
+    heapAddressesInBounds (store32Heap σ memId addr value) resolve := by
+  have h := store32_inBounds σ resolve memId mem addr value
+    hresolve h1 h2 h3 hinBounds hbound
+  rw [Mem.write32_eq_self hread h1 h2 h3,
+    resolverOverride_eq_self resolve memId mem hresolve] at h
+  exact h
+
 def store64Heap (σ : WasmHeapMap (Option UInt8)) (memId : Nat) (addr : UInt32)
     (value : UInt64) : WasmHeapMap (Option UInt8) :=
   insert
@@ -842,6 +863,87 @@ def store64Heap (σ : WasmHeapMap (Option UInt8)) (memId : Nat) (addr : UInt32)
         ⟨memId, addr + 5⟩ (some (u64Byte value 5)))
       ⟨memId, addr + 6⟩ (some (u64Byte value 6)))
     ⟨memId, addr + 7⟩ (some (u64Byte value 7))
+
+/-- Claim a 64-bit word whose eight bytes are already present in memory. -/
+theorem insert_physical_word64_sound
+    (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Option Mem)
+    (memId : Nat) (mem : Mem) (addr : UInt32) (value : UInt64)
+    (hresolve : resolve memId = some mem)
+    (hagree : heapAgreesWithMem σ resolve)
+    (hread : ∀ i : Fin 8,
+      mem.read8 (addr + UInt32.ofNat i) = u64Byte value i) :
+    heapAgreesWithMem (store64Heap σ memId addr value) resolve := by
+  unfold store64Heap
+  apply insert_physical_byte_sound _ resolve memId mem (addr + 7) _ hresolve
+  · apply insert_physical_byte_sound _ resolve memId mem (addr + 6) _ hresolve
+    · apply insert_physical_byte_sound _ resolve memId mem (addr + 5) _ hresolve
+      · apply insert_physical_byte_sound _ resolve memId mem (addr + 4) _ hresolve
+        · apply insert_physical_byte_sound _ resolve memId mem (addr + 3) _ hresolve
+          · apply insert_physical_byte_sound _ resolve memId mem (addr + 2) _ hresolve
+            · apply insert_physical_byte_sound _ resolve memId mem (addr + 1) _ hresolve
+              · exact insert_physical_byte_sound σ resolve memId mem addr _
+                  hresolve hagree (by simpa using hread 0)
+              · exact hread 1
+            · exact hread 2
+          · exact hread 3
+        · exact hread 4
+      · exact hread 5
+    · exact hread 6
+  · exact hread 7
+
+/-- Claim the bounds of a 64-bit word whose eight addresses are allocated. -/
+theorem insert_physical_word64_inBounds
+    (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Option Mem)
+    (memId : Nat) (mem : Mem) (addr : UInt32) (value : UInt64)
+    (hresolve : resolve memId = some mem)
+    (hinBounds : heapAddressesInBounds σ resolve)
+    (hbound : ∀ i : Fin 8,
+      (addr + UInt32.ofNat i).toNat < mem.pages * 65536) :
+    heapAddressesInBounds (store64Heap σ memId addr value) resolve := by
+  unfold store64Heap
+  apply insert_physical_byte_inBounds _ resolve memId mem (addr + 7) _ hresolve
+  · apply insert_physical_byte_inBounds _ resolve memId mem (addr + 6) _ hresolve
+    · apply insert_physical_byte_inBounds _ resolve memId mem (addr + 5) _ hresolve
+      · apply insert_physical_byte_inBounds _ resolve memId mem (addr + 4) _ hresolve
+        · apply insert_physical_byte_inBounds _ resolve memId mem (addr + 3) _ hresolve
+          · apply insert_physical_byte_inBounds _ resolve memId mem (addr + 2) _ hresolve
+            · apply insert_physical_byte_inBounds _ resolve memId mem (addr + 1) _ hresolve
+              · exact insert_physical_byte_inBounds σ resolve memId mem addr _
+                  hresolve hinBounds (by simpa using hbound 0)
+              · exact hbound 1
+            · exact hbound 2
+          · exact hbound 3
+        · exact hbound 4
+      · exact hbound 5
+    · exact hbound 6
+  · exact hbound 7
+
+/-! Concrete-address applications retain the resolver witness while automating
+the routine 32-bit no-wrap equalities. -/
+
+syntax "apply_insert_physical_word32_sound " term : tactic
+macro_rules
+  | `(tactic| apply_insert_physical_word32_sound $hresolve) =>
+      `(tactic| apply insert_physical_word32_sound
+        (hresolve := $hresolve) (h1 := by decide)
+        (h2 := by decide) (h3 := by decide))
+
+syntax "apply_insert_physical_word32_inBounds " term : tactic
+macro_rules
+  | `(tactic| apply_insert_physical_word32_inBounds $hresolve) =>
+      `(tactic| apply insert_physical_word32_inBounds
+        (hresolve := $hresolve) (h1 := by decide)
+        (h2 := by decide) (h3 := by decide))
+
+syntax "apply_insert_physical_word64_sound " term : tactic
+macro_rules
+  | `(tactic| apply_insert_physical_word64_sound $hresolve) =>
+      `(tactic| apply insert_physical_word64_sound (hresolve := $hresolve))
+
+syntax "apply_insert_physical_word64_inBounds " term : tactic
+macro_rules
+  | `(tactic| apply_insert_physical_word64_inBounds $hresolve) =>
+      `(tactic| apply insert_physical_word64_inBounds (hresolve := $hresolve))
 
 theorem store64Heap_pointsTo {α : Type} [WasmHeapGS α]
     (σ : WasmHeapMap (Option UInt8)) (memId : Nat) (addr : UInt32) (value : UInt64)
@@ -912,8 +1014,7 @@ theorem store64Heap_pointsTo {α : Type} [WasmHeapGS α]
   rw [(BI.BigSepM.bigSepM_insert h1).to_eq]
   rw [(BI.BigSepM.bigSepM_insert h0).to_eq]
   unfold pointsTo_u64
-  iintro ⟨H7, H6, H5, H4, H3, H2, H1, H0, Hrest⟩
-  iframe
+  iintro ⟨H7, H6, H5, H4, H3, H2, H1, H0, Hrest⟩; iframe
 
 theorem store64_sound (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Option Mem)
     (memId : Nat) (mem : Mem) (addr : UInt32) (value : UInt64)
@@ -930,60 +1031,53 @@ theorem store64_sound (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Optio
       (fun id => if id = memId then some (mem.write64 addr value) else resolve id) := by
   intro key byte h_get
   by_cases e7 : key = ⟨memId, addr + 7⟩
-  · subst key
-    simp [store64Heap, get?_insert_eq] at h_get; rw [← h_get]
+  · subst key; simp [store64Heap, get?_insert_eq] at h_get; rw [← h_get]
     refine ⟨mem.write64 addr value, ?_, ?_⟩; · simp
-    · simp [Mem.write64, Mem.read8, h7, u64Byte]; bv_decide
+    · simp [Mem.write64, Mem.read8, h7, u64Byte]; bv_normalize
   by_cases e6 : key = ⟨memId, addr + 6⟩
   · subst key
     simp [store64Heap, get?_insert_ne (Ne.symm e7), get?_insert_eq] at h_get; rw [← h_get]
     refine ⟨mem.write64 addr value, ?_, ?_⟩; · simp
-    · simp [Mem.write64, Mem.read8, h6, u64Byte]; bv_decide
+    · simp [Mem.write64, Mem.read8, h6, u64Byte]; bv_normalize
   by_cases e5 : key = ⟨memId, addr + 5⟩
-  · subst key
-    simp [store64Heap, get?_insert_ne (Ne.symm e7),
+  · subst key; simp [store64Heap, get?_insert_ne (Ne.symm e7),
       get?_insert_ne (Ne.symm e6), get?_insert_eq] at h_get; rw [← h_get]
     refine ⟨mem.write64 addr value, ?_, ?_⟩; · simp
-    · simp [Mem.write64, Mem.read8, h5, u64Byte]; bv_decide
+    · simp [Mem.write64, Mem.read8, h5, u64Byte]; bv_normalize
   by_cases e4 : key = ⟨memId, addr + 4⟩
-  · subst key
-    simp [store64Heap, get?_insert_ne (Ne.symm e7),
+  · subst key; simp [store64Heap, get?_insert_ne (Ne.symm e7),
       get?_insert_ne (Ne.symm e6), get?_insert_ne (Ne.symm e5),
       get?_insert_eq] at h_get; rw [← h_get]
     refine ⟨mem.write64 addr value, ?_, ?_⟩; · simp
-    · simp [Mem.write64, Mem.read8, h4, u64Byte]; bv_decide
+    · simp [Mem.write64, Mem.read8, h4, u64Byte]; bv_normalize
   by_cases e3 : key = ⟨memId, addr + 3⟩
-  · subst key
-    simp [store64Heap, get?_insert_ne (Ne.symm e7),
+  · subst key; simp [store64Heap, get?_insert_ne (Ne.symm e7),
       get?_insert_ne (Ne.symm e6), get?_insert_ne (Ne.symm e5),
       get?_insert_ne (Ne.symm e4), get?_insert_eq] at h_get; rw [← h_get]
     refine ⟨mem.write64 addr value, ?_, ?_⟩; · simp
-    · simp [Mem.write64, Mem.read8, h3, u64Byte]; bv_decide
+    · simp [Mem.write64, Mem.read8, h3, u64Byte]; bv_normalize
   by_cases e2 : key = ⟨memId, addr + 2⟩
-  · subst key
-    simp [store64Heap, get?_insert_ne (Ne.symm e7),
+  · subst key; simp [store64Heap, get?_insert_ne (Ne.symm e7),
       get?_insert_ne (Ne.symm e6), get?_insert_ne (Ne.symm e5),
       get?_insert_ne (Ne.symm e4), get?_insert_ne (Ne.symm e3),
       get?_insert_eq] at h_get; rw [← h_get]
     refine ⟨mem.write64 addr value, ?_, ?_⟩; · simp
-    · simp [Mem.write64, Mem.read8, h2, u64Byte]; bv_decide
+    · simp [Mem.write64, Mem.read8, h2, u64Byte]; bv_normalize
   by_cases e1 : key = ⟨memId, addr + 1⟩
-  · subst key
-    simp [store64Heap, get?_insert_ne (Ne.symm e7),
+  · subst key; simp [store64Heap, get?_insert_ne (Ne.symm e7),
       get?_insert_ne (Ne.symm e6), get?_insert_ne (Ne.symm e5),
       get?_insert_ne (Ne.symm e4), get?_insert_ne (Ne.symm e3),
       get?_insert_ne (Ne.symm e2), get?_insert_eq] at h_get; rw [← h_get]
     refine ⟨mem.write64 addr value, ?_, ?_⟩; · simp
-    · simp [Mem.write64, Mem.read8, h1, u64Byte]; bv_decide
+    · simp [Mem.write64, Mem.read8, h1, u64Byte]; bv_normalize
   by_cases e0 : key = ⟨memId, addr⟩
-  · subst key
-    simp [store64Heap, get?_insert_ne (Ne.symm e7),
+  · subst key; simp [store64Heap, get?_insert_ne (Ne.symm e7),
       get?_insert_ne (Ne.symm e6), get?_insert_ne (Ne.symm e5),
       get?_insert_ne (Ne.symm e4), get?_insert_ne (Ne.symm e3),
       get?_insert_ne (Ne.symm e2), get?_insert_ne (Ne.symm e1),
       get?_insert_eq] at h_get; rw [← h_get]
     refine ⟨mem.write64 addr value, ?_, ?_⟩; · simp
-    · simp [Mem.write64, Mem.read8, u64Byte]; bv_decide
+    · simp [Mem.write64, Mem.read8, u64Byte]; bv_normalize
   · simp [store64Heap, get?_insert_ne (Ne.symm e7),
       get?_insert_ne (Ne.symm e6), get?_insert_ne (Ne.symm e5),
       get?_insert_ne (Ne.symm e4), get?_insert_ne (Ne.symm e3),
@@ -996,32 +1090,25 @@ theorem store64_sound (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Optio
         fun h => e0 (show key = ⟨memId, addr⟩ from by
           cases key; simp only [MemoryKey.mk.injEq]; exact ⟨hid, UInt32.toNat_inj.mp h⟩)
       have n1 : key.addr.toNat ≠ addr.toNat + 1 := by
-        rw [← h1]
-        exact fun h => e1 (show key = ⟨memId, addr + 1⟩ from by
+        rw [← h1]; exact fun h => e1 (show key = ⟨memId, addr + 1⟩ from by
           cases key; simp only [MemoryKey.mk.injEq]; exact ⟨hid, UInt32.toNat_inj.mp h⟩)
       have n2 : key.addr.toNat ≠ addr.toNat + 2 := by
-        rw [← h2]
-        exact fun h => e2 (show key = ⟨memId, addr + 2⟩ from by
+        rw [← h2]; exact fun h => e2 (show key = ⟨memId, addr + 2⟩ from by
           cases key; simp only [MemoryKey.mk.injEq]; exact ⟨hid, UInt32.toNat_inj.mp h⟩)
       have n3 : key.addr.toNat ≠ addr.toNat + 3 := by
-        rw [← h3]
-        exact fun h => e3 (show key = ⟨memId, addr + 3⟩ from by
+        rw [← h3]; exact fun h => e3 (show key = ⟨memId, addr + 3⟩ from by
           cases key; simp only [MemoryKey.mk.injEq]; exact ⟨hid, UInt32.toNat_inj.mp h⟩)
       have n4 : key.addr.toNat ≠ addr.toNat + 4 := by
-        rw [← h4]
-        exact fun h => e4 (show key = ⟨memId, addr + 4⟩ from by
+        rw [← h4]; exact fun h => e4 (show key = ⟨memId, addr + 4⟩ from by
           cases key; simp only [MemoryKey.mk.injEq]; exact ⟨hid, UInt32.toNat_inj.mp h⟩)
       have n5 : key.addr.toNat ≠ addr.toNat + 5 := by
-        rw [← h5]
-        exact fun h => e5 (show key = ⟨memId, addr + 5⟩ from by
+        rw [← h5]; exact fun h => e5 (show key = ⟨memId, addr + 5⟩ from by
           cases key; simp only [MemoryKey.mk.injEq]; exact ⟨hid, UInt32.toNat_inj.mp h⟩)
       have n6 : key.addr.toNat ≠ addr.toNat + 6 := by
-        rw [← h6]
-        exact fun h => e6 (show key = ⟨memId, addr + 6⟩ from by
+        rw [← h6]; exact fun h => e6 (show key = ⟨memId, addr + 6⟩ from by
           cases key; simp only [MemoryKey.mk.injEq]; exact ⟨hid, UInt32.toNat_inj.mp h⟩)
       have n7 : key.addr.toNat ≠ addr.toNat + 7 := by
-        rw [← h7]
-        exact fun h => e7 (show key = ⟨memId, addr + 7⟩ from by
+        rw [← h7]; exact fun h => e7 (show key = ⟨memId, addr + 7⟩ from by
           cases key; simp only [MemoryKey.mk.injEq]; exact ⟨hid, UInt32.toNat_inj.mp h⟩)
       refine ⟨mem.write64 addr value, ?_, ?_⟩
       · simp [hid]
@@ -1150,5 +1237,26 @@ theorem store64_inBounds0 (σ : WasmHeapMap (Option UInt8))
       fun id => if id = 0 then some (mem.write64 addr value) else none := by
     funext id; by_cases hid : id = 0 <;> simp [hid]
   rwa [heq] at h
+
+/-! Tactics for concrete-address heap chains. They discharge only the routine
+`UInt32.toNat` no-wrap premises and leave agreement or bounds obligations open. -/
+
+macro "apply_store32_sound0" : tactic =>
+  `(tactic| apply store32_sound0
+    (h1 := by decide) (h2 := by decide) (h3 := by decide))
+
+macro "apply_store32_inBounds0" : tactic =>
+  `(tactic| apply store32_inBounds0
+    (h1 := by decide) (h2 := by decide) (h3 := by decide))
+
+macro "apply_store64_sound0" : tactic =>
+  `(tactic| apply store64_sound0
+    (h1 := by decide) (h2 := by decide) (h3 := by decide)
+    (h4 := by decide) (h5 := by decide) (h6 := by decide) (h7 := by decide))
+
+macro "apply_store64_inBounds0" : tactic =>
+  `(tactic| apply store64_inBounds0
+    (h1 := by decide) (h2 := by decide) (h3 := by decide)
+    (h4 := by decide) (h5 := by decide) (h6 := by decide) (h7 := by decide))
 
 end Wasm.SepLogic

@@ -51,12 +51,7 @@ private theorem mergeSortHeapAux_agrees
     simp only [mergeSortHeapAux, writeWordArray, List.length_cons] at *
     have h4 : (base + 4).toNat = base.toNat + 4 :=
       UInt32.add_ofNat_toNat_noWrap base 4 (by decide) (by omega)
-    have h1 : (base + 1).toNat = base.toNat + 1 :=
-      UInt32.add_ofNat_toNat_noWrap base 1 (by decide) (by omega)
-    have h2 : (base + 2).toNat = base.toNat + 2 :=
-      UInt32.add_ofNat_toNat_noWrap base 2 (by decide) (by omega)
-    have h3 : (base + 3).toNat = base.toNat + 3 :=
-      UInt32.add_ofNat_toNat_noWrap base 3 (by decide) (by omega)
+    obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4 base (by omega)
     apply ih (store32Heap σ 0 base x) (mem.write32 base x) (base + 4)
     · rw [h4]; omega
     · exact store32_sound0 σ mem base x h1 h2 h3 h_agree
@@ -75,12 +70,7 @@ private theorem mergeSortHeapAux_inBounds
     simp only [mergeSortHeapAux, writeWordArray, List.length_cons] at *
     have h4 : (base + 4).toNat = base.toNat + 4 :=
       UInt32.add_ofNat_toNat_noWrap base 4 (by decide) (by omega)
-    have h1 : (base + 1).toNat = base.toNat + 1 :=
-      UInt32.add_ofNat_toNat_noWrap base 1 (by decide) (by omega)
-    have h2 : (base + 2).toNat = base.toNat + 2 :=
-      UInt32.add_ofNat_toNat_noWrap base 2 (by decide) (by omega)
-    have h3 : (base + 3).toNat = base.toNat + 3 :=
-      UInt32.add_ofNat_toNat_noWrap base 3 (by decide) (by omega)
+    obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4 base (by omega)
     apply ih (store32Heap σ 0 base x) (mem.write32 base x) (base + 4)
     · rw [h4]; omega
     · have : (mem.write32 base x).pages = mem.pages := rfl
@@ -100,12 +90,7 @@ private theorem mergeSortHeapAux_get?_none
     simp only [mergeSortHeapAux, List.length_cons] at *
     have h4 : (base + 4).toNat = base.toNat + 4 :=
       UInt32.add_ofNat_toNat_noWrap base 4 (by decide) (by omega)
-    have h1 : (base + 1).toNat = base.toNat + 1 :=
-      UInt32.add_ofNat_toNat_noWrap base 1 (by decide) (by omega)
-    have h2 : (base + 2).toNat = base.toNat + 2 :=
-      UInt32.add_ofNat_toNat_noWrap base 2 (by decide) (by omega)
-    have h3 : (base + 3).toNat = base.toNat + 3 :=
-      UInt32.add_ofNat_toNat_noWrap base 3 (by decide) (by omega)
+    obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4 base (by omega)
     have hne0 : addr ≠ base := by
       intro heq; have := congrArg UInt32.toNat heq; rcases hout with h | h <;> omega
     have hne1 : addr ≠ base + 1 := by
@@ -144,18 +129,12 @@ private theorem mergeSortHeapAux_pointsTo [WasmHeapGS Unit]
           pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap) address (DFrac.own 1) byte) := by
   induction xs generalizing σ base with
   | nil =>
-    simp only [mergeSortHeapAux, arrayAt]
-    exact BI.emp_sep.mpr
+    simp only [mergeSortHeapAux, arrayAt]; exact BI.emp_sep.mpr
   | cons x rest ih =>
     simp only [mergeSortHeapAux, arrayAt, List.length_cons] at *
     have h4 : (base + 4).toNat = base.toNat + 4 :=
       UInt32.add_ofNat_toNat_noWrap base 4 (by decide) (by omega)
-    have h1 : (base + 1).toNat = base.toNat + 1 :=
-      UInt32.add_ofNat_toNat_noWrap base 1 (by decide) (by omega)
-    have h2 : (base + 2).toNat = base.toNat + 2 :=
-      UInt32.add_ofNat_toNat_noWrap base 2 (by decide) (by omega)
-    have h3 : (base + 3).toNat = base.toNat + 3 :=
-      UInt32.add_ofNat_toNat_noWrap base 3 (by decide) (by omega)
+    obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4 base (by omega)
     have hf0 : get? σ (⟨0, base⟩ : MemoryKey) = none :=
       hfresh base (Nat.le_refl _) (by omega)
     have hf1 : get? σ (⟨0, base + 1⟩ : MemoryKey) = none :=
@@ -185,10 +164,8 @@ private theorem mergeSortHeapAux_pointsTo [WasmHeapGS Unit]
           get?_insert_ne (keyNe hne1), get?_insert_ne (keyNe hne0)]
       exact hfresh addr (by rw [h4] at hlo; omega) (by rw [h4] at hhi; omega)
     iintro Hbytes
-    ihave Hsplit := ih (store32Heap σ 0 base x) (base + 4) hnoWrap' hfresh' $$ Hbytes
-    icases Hsplit with ⟨Hrest, Hstore⟩
-    ihave Hpoint := store32Heap_pointsTo σ 0 base x hf0 hf1 hf2 hf3 h1 h2 h3 $$ Hstore
-    icases Hpoint with ⟨Hhead, Horig⟩
+    ihave ⟨Hrest, Hstore⟩ := ih (store32Heap σ 0 base x) (base + 4) hnoWrap' hfresh' $$ Hbytes
+    ihave ⟨Hhead, Horig⟩ := store32Heap_pointsTo σ 0 base x hf0 hf1 hf2 hf3 h1 h2 h3 $$ Hstore
     iframe
 
 /-- `mergeSortConfig` runs a single instance with a single linear memory, so
@@ -200,13 +177,13 @@ private theorem mergeSortConfig_storeResolve
         some (writeWordArray (writeWordArray
           (mergeSortModule.initialStore (α := Unit)).mem source input)
           temporary scratch)
-        else none) := by
-  funext id
-  by_cases h0 : id = 0
-  · simp [h0, storeResolve, mergeSortConfig, mergeSortExampleStore]
-  · simp [h0, storeResolve, mergeSortConfig, mergeSortExampleStore,
-      show ((mergeSortModule.initialStore : Store Unit)).extraMems = [] from by
-        native_decide]
+        else none) :=
+  (singleMemoryResolve_eq_storeResolve
+    (mergeSortConfig source temporary input scratch).store
+    (writeWordArray (writeWordArray
+      (mergeSortModule.initialStore (α := Unit)).mem source input) temporary scratch)
+    rfl (show (mergeSortModule.initialStore (α := Unit)).extraMems = [] from by
+      decide +kernel)).symm
 
 private theorem mergeSortHeap_agrees
     (source temporary : UInt32) (input scratch : List UInt32)
@@ -272,57 +249,12 @@ private theorem mergeSortHeap_pointsTo [WasmHeapGS Unit]
     · apply mergeSortHeapAux_get?_none ∅ source input addr hnoWrap_s (Or.inl (by omega))
       exact LawfulPartialMap.get?_empty _
   iintro Hbytes
-  ihave Hstep1 :=
+  ihave ⟨Htmp, Hsource_heap⟩ :=
     mergeSortHeapAux_pointsTo (mergeSortHeapAux ∅ source input) temporary scratch
       hnoWrap_t hfresh_t $$ Hbytes
-  icases Hstep1 with ⟨Htmp, Hsource_heap⟩
-  ihave Hstep2 :=
+  ihave ⟨Hsrc, _Hemp⟩ :=
     mergeSortHeapAux_pointsTo ∅ source input hnoWrap_s hfresh_s $$ Hsource_heap
-  icases Hstep2 with ⟨Hsrc, _Hemp⟩
   iframe
-
-/-- Walking `arrayAt` ownership against the final state interpretation
-reproduces the physical words: `readWordArray` on the terminal memory returns
-exactly the owned list. This is what lets the adequacy theorems below observe
-the sorted output in the machine's memory rather than only in ghost state. -/
-private theorem arrayAt_readWordArray {hlc : HasLC} [WasmSmallStepGS hlc Unit]
-    (store : MachineStore Unit) (steps : Nat) (obs : List StepKind) (threads : Nat)
-    (base : UInt32) (output : List UInt32)
-    (hfit : base.toNat + 4 * output.length ≤ UInt32.size) :
-    stateInterp (GF := WasmHeapGF Unit) store steps obs threads ∗ arrayAt 0 base output ==∗
-      stateInterp (GF := WasmHeapGF Unit) store steps obs threads ∗ arrayAt 0 base output ∗
-      ⌜readWordArray store.wasm.mem base output.length = output⌝ := by
-  induction output generalizing base with
-  | nil =>
-    simp only [arrayAt, List.length_nil, readWordArray]
-    iintro ⟨Hstate, Hemp⟩
-    imodintro
-    isplitl [Hstate]; iexact Hstate
-    isplitl [Hemp]; iexact Hemp
-    ipureintro; trivial
-  | cons x xs ih =>
-    simp only [arrayAt, List.length_cons]
-    simp only [List.length_cons, UInt32.size] at hfit
-    have h4_le : (base + 4 : UInt32).toNat ≤ base.toNat + 4 := by
-      have h := UInt32.toNat_add base 4
-      simp only [show (4 : UInt32).toNat = 4 from by decide] at h
-      rw [h]; exact Nat.mod_le _ _
-    have hfit' : (base + 4).toNat + 4 * xs.length ≤ UInt32.size := by
-      simp only [UInt32.size]; omega
-    iintro ⟨Hstate, Hword, Hxs⟩
-    imod stateInterp_pointsTo_u32_facts_frame store steps obs threads base x
-      (UInt32.add_ofNat_toNat_noWrap base 1 (by decide) (by omega))
-      (UInt32.add_ofNat_toNat_noWrap base 2 (by decide) (by omega))
-      (UInt32.add_ofNat_toNat_noWrap base 3 (by decide) (by omega)) $$
-        [$Hstate $Hword] with ⟨Hstate, Hword, %hfacts⟩
-    imod ih (base + 4) hfit' $$ [$Hstate $Hxs] with ⟨Hstate, Hxs, %hread⟩
-    imodintro
-    isplitl [Hstate]; iexact Hstate
-    isplitl [Hword Hxs]
-    · isplitl [Hword]; iexact Hword; iexact Hxs
-    ipureintro
-    unfold readWordArray
-    rw [hfacts.1, hread]
 
 -- post conversion: mergeSortPost pins the physical `source` array in every
 -- terminal store to a sorted permutation of the input.
@@ -338,11 +270,10 @@ private theorem mergeSortPost_to_store {hlc : HasLC} [WasmSmallStepGS hlc Unit]
   unfold mergeSortPost
   iintro ⟨%output, %_sc, %hsp, %_hscr', Hout, _Htmp'⟩ %store %_obs Hstate
   have hlen : output.length = input.length := hsp.length_eq
-  imod arrayAt_readWordArray store 0 [] 0 source output
+  imod arrayAt_readWords32 store 0 [] 0 source output
     (by rw [hlen]; simp only [UInt32.size]; omega) $$
       [$Hstate $Hout] with ⟨_Hstate, _Hout, %hread⟩
-  ipureintro
-  exact ⟨output, hsp, by rw [← hlen]; exact hread⟩
+  ipureexact ⟨output, hsp, by rw [← hlen]; exact hread⟩
 
 theorem mergesort_partiallyMeets
     (source temporary : UInt32) (input scratch : List UInt32)
@@ -350,7 +281,7 @@ theorem mergesort_partiallyMeets
     (hscr : scratch.length = input.length)
     (hbound_s : source.toNat + 4 * input.length ≤ 65536)
     (hbound_t : temporary.toNat + 4 * scratch.length ≤ 65536) :
-    PartiallyMeets (mergeSortConfig source temporary input scratch)
+    SmallStep.PartiallyMeets (mergeSortConfig source temporary input scratch)
       (fun _values store => ∃ output, SortedPermutation input output ∧
         readWordArray store.wasm.mem source input.length = output) := by
   apply wasm_smallStep_heap_globals_runtime_store_partiallyMeets
@@ -360,30 +291,22 @@ theorem mergesort_partiallyMeets
   · exact mergeSortHeap_agrees source temporary input scratch hbound_s hbound_t
   · exact mergeSortHeap_inBounds source temporary input scratch hbound_s hbound_t
   · intro index value hget
-    rw [LawfulPartialMap.get?_empty] at hget
-    contradiction
+    rw [LawfulPartialMap.get?_empty] at hget; contradiction
   · simp [mergeSortConfig]
   · intro _gs
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
     iintro ⟨Hbytes, _Hglobals, Hruntime, _HhostEnv⟩
-    ihave Hpoints :=
+    ihave ⟨Hsrc, Htmp⟩ :=
       mergeSortHeap_pointsTo source temporary input scratch hvalid hscr hbound_s hbound_t $$ Hbytes
-    icases Hpoints with ⟨Hsrc, Htmp⟩
     rw [show (mergeSortConfig source temporary input scratch).store.runtime.currentModule
         = mergeSortModule from rfl]
     simp only [mergeSortConfig]
     iapply wp_mono (mergeSortPost_to_store source temporary input hbound_s)
     iapply twp.to_wp
-    iapply twp_mergeSort_total source temporary input scratch
-    isplitl [Hruntime]
-    · iexact Hruntime
+    iapply_splitl_exact twp_mergeSort_total source temporary input scratch with Hruntime
     unfold mergeSortPre
-    isplitl [Hsrc]
-    · iexact Hsrc
-    isplitl [Htmp]
-    · iexact Htmp
-    isplitl []
-    · ipureintro; exact hscr
+    isplitl_exacts [Hsrc Htmp]
+    isplitl_pureexact hscr
     · ipureintro; exact hvalid
 
 theorem mergesort_terminatesWith
@@ -392,7 +315,7 @@ theorem mergesort_terminatesWith
     (hscr : scratch.length = input.length)
     (hbound_s : source.toNat + 4 * input.length ≤ 65536)
     (hbound_t : temporary.toNat + 4 * scratch.length ≤ 65536) :
-    TerminatesWith (mergeSortConfig source temporary input scratch)
+    SmallStep.TerminatesWith (mergeSortConfig source temporary input scratch)
       (fun _values store => ∃ output, SortedPermutation input output ∧
         readWordArray store.wasm.mem source input.length = output) := by
   apply wasm_smallStep_heap_store_terminates
@@ -403,23 +326,16 @@ theorem mergesort_terminatesWith
   · simp [mergeSortConfig]
   · intro _hlc _gs
     iintro ⟨Hbytes, Hruntime⟩
-    ihave Hpoints :=
+    ihave ⟨Hsrc, Htmp⟩ :=
       mergeSortHeap_pointsTo source temporary input scratch hvalid hscr hbound_s hbound_t $$ Hbytes
-    icases Hpoints with ⟨Hsrc, Htmp⟩
     rw [show (mergeSortConfig source temporary input scratch).store.runtime.currentModule
         = mergeSortModule from rfl]
     simp only [mergeSortConfig]
     iapply twp.mono (mergeSortPost_to_store source temporary input hbound_s)
-    iapply twp_mergeSort_total source temporary input scratch
-    isplitl [Hruntime]
-    · iexact Hruntime
+    iapply_splitl_exact twp_mergeSort_total source temporary input scratch with Hruntime
     unfold mergeSortPre
-    isplitl [Hsrc]
-    · iexact Hsrc
-    isplitl [Htmp]
-    · iexact Htmp
-    isplitl []
-    · ipureintro; exact hscr
+    isplitl_exacts [Hsrc Htmp]
+    isplitl_pureexact hscr
     · ipureintro; exact hvalid
 
 end Wasm.Examples.MergeSort

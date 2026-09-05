@@ -1,5 +1,7 @@
 import CodeLib.Examples.Quicksort.Pure
-import CodeLib.SepLogic.SmallStepTotalLifting
+import CodeLib.Examples.UInt32Array.Laws
+import CodeLib.SepLogic.SmallStepTotalLoop
+import CodeLib.UInt32
 
 /-!
 # Derived laws for the quicksort proof
@@ -13,201 +15,8 @@ open Wasm
 open Iris Iris.ProgramLogic Language.Notation
 open Wasm.SepLogic
 open Wasm.SmallStep
+open Wasm.Examples.UInt32Array
 
--- address arithmetic (same proof as MergeSort.Laws.arrayAddress_toNat)
-private theorem arrayAddress_toNat (base : UInt32) {index length : Nat}
-    (hfit : base.toNat + 4 * length ≤ UInt32.size)
-    (hindex : index < length) :
-    (base + UInt32.ofNat index * 4).toNat = base.toNat + 4 * index := by
-  have hi : index < UInt32.size := by omega
-  have hp : index * 4 < UInt32.size := by omega
-  rw [UInt32.toNat_add, UInt32.toNat_mul, UInt32.toNat_ofNat_of_lt' hi]
-  have hfour : (4 : UInt32).toNat = 4 := by decide
-  rw [hfour, Nat.mod_eq_of_lt hp, Nat.mul_comm index 4]
-  apply Nat.mod_eq_of_lt
-  change base.toNat + 4 * index < UInt32.size
-  omega
-
-theorem u32_ofNat_succ {n : Nat} (h : n + 1 < UInt32.size) :
-    UInt32.ofNat n + 1 = UInt32.ofNat (n + 1) := by
-  apply UInt32.toNat.inj
-  rw [UInt32.toNat_add]
-  have hn : n < UInt32.size := by omega
-  rw [UInt32.toNat_ofNat_of_lt' hn]
-  have hone : (1 : UInt32).toNat = 1 := by decide
-  rw [hone, Nat.mod_eq_of_lt]
-  · symm; exact UInt32.toNat_ofNat_of_lt' h
-  · simpa only [UInt32.size] using h
-
-theorem twp_address
-    [WasmSmallStepGS hlc Unit]
-    {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp (WasmHeapGF Unit)}
-    {params localValues stack : List Value}
-    {baseIndex elementIndex : Nat} {base element : UInt32}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame}
-    (hbase : (⟨params, localValues, stack⟩ : Locals).get baseIndex =
-      some (.i32 base))
-    (helement : (⟨params, localValues, stack⟩ : Locals).get elementIndex =
-      some (.i32 element)) :
-    WP (.running
-      ⟨⟨params, localValues, .i32 (4 * element + base) :: stack⟩,
-        code, arity, remainder, controls, calls⟩ : Expr Unit)
-        @ s; E [{ Φ }] ⊢
-    WP (.running
-      ⟨⟨params, localValues, stack⟩,
-        address baseIndex elementIndex ++ code,
-        arity, remainder, controls, calls⟩ : Expr Unit)
-      @ s; E [{ Φ }] := by
-  iintro Hwp
-  simp only [address, List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.twp_localGet hbase
-  iapply Wasm.SmallStep.twp_localGet (by simpa using helement)
-  iapply Wasm.SmallStep.twp_const
-  iapply Wasm.SmallStep.twp_mul
-  iapply Wasm.SmallStep.twp_add
-  iexact Hwp
-
-theorem twp_loadAt_cell
-    [WasmSmallStepGS hlc Unit]
-    {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp (WasmHeapGF Unit)}
-    {params localValues stack : List Value}
-    {baseIndex elementIndex : Nat} {base element addr word : UInt32}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame}
-    (hbase : (⟨params, localValues, stack⟩ : Locals).get baseIndex =
-      some (.i32 base))
-    (helement : (⟨params, localValues, stack⟩ : Locals).get elementIndex =
-      some (.i32 element))
-    (haddress : 4 * element + base = addr)
-    (h1 : (addr + 1).toNat = addr.toNat + 1)
-    (h2 : (addr + 2).toNat = addr.toNat + 2)
-    (h3 : (addr + 3).toNat = addr.toNat + 3) :
-    pointsTo_u32 0 addr word ∗
-      (pointsTo_u32 0 addr word -∗
-        WP (.running
-          ⟨⟨params, localValues, .i32 word :: stack⟩,
-            code, arity, remainder, controls, calls⟩ : Expr Unit)
-          @ s; E [{ Φ }]) ⊢
-    WP (.running
-      ⟨⟨params, localValues, stack⟩,
-        loadAt baseIndex elementIndex ++ code,
-        arity, remainder, controls, calls⟩ : Expr Unit)
-      @ s; E [{ Φ }] := by
-  have h1' : ((addr + 0) + 1).toNat = (addr + 0).toNat + 1 := by simpa using h1
-  have h2' : ((addr + 0) + 2).toNat = (addr + 0).toNat + 2 := by simpa using h2
-  have h3' : ((addr + 0) + 3).toNat = (addr + 0).toNat + 3 := by simpa using h3
-  iintro ⟨Hword, Hcont⟩
-  simp only [loadAt, List.append_assoc, List.cons_append, List.nil_append]
-  iapply twp_address hbase helement
-  rw [haddress]
-  ihave HwordLater : pointsTo_u32 0 (addr + 0) word $$ [Hword]
-  · rw [UInt32.add_zero]
-    iexact Hword
-  iapply Wasm.SmallStep.twp_load32
-    (address := addr) (offset := 0)
-    word (by simp) h1' h2' h3' $$ HwordLater
-  iintro Hword
-  iapply Hcont
-  rw [UInt32.add_zero]
-  iexact Hword
-
-set_option maxHeartbeats 2000000 in
-theorem twp_loadAt
-    [WasmSmallStepGS hlc Unit]
-    {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp (WasmHeapGF Unit)}
-    {params localValues stack : List Value}
-    {baseIndex elementIndex : Nat} {base : UInt32}
-    {input : List UInt32} {k : Nat} (hk : k < input.length)
-    (hfit : base.toNat + 4 * input.length ≤ UInt32.size)
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame}
-    (hbase : (⟨params, localValues, stack⟩ : Locals).get baseIndex =
-      some (.i32 base))
-    (helement : (⟨params, localValues, stack⟩ : Locals).get elementIndex =
-      some (.i32 (UInt32.ofNat k))) :
-    arrayAt 0 base input ∗
-      (arrayAt 0 base input -∗
-        WP (.running
-          ⟨⟨params, localValues, .i32 input[k] :: stack⟩,
-            code, arity, remainder, controls, calls⟩ : Expr Unit)
-          @ s; E [{ Φ }]) ⊢
-    WP (.running
-      ⟨⟨params, localValues, stack⟩,
-        loadAt baseIndex elementIndex ++ code,
-        arity, remainder, controls, calls⟩ : Expr Unit)
-      @ s; E [{ Φ }] := by
-  have hslot : (base + 4 * UInt32.ofNat k).toNat = base.toNat + 4 * k := by
-    simpa [UInt32.mul_comm] using arrayAddress_toNat base hfit hk
-  have hroom : (base + 4 * UInt32.ofNat k).toNat + 4 ≤ UInt32.size := by
-    rw [hslot]; omega
-  have hroom' : (base + 4 * UInt32.ofNat k).toNat + 4 ≤ 4294967296 := by
-    simpa only [UInt32.size] using hroom
-  have h1 : ((base + 4 * UInt32.ofNat k) + 1).toNat =
-      (base + 4 * UInt32.ofNat k).toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap
-      (base + 4 * UInt32.ofNat k) 1 (by decide) (by omega)
-  have h2 : ((base + 4 * UInt32.ofNat k) + 2).toNat =
-      (base + 4 * UInt32.ofNat k).toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap
-      (base + 4 * UInt32.ofNat k) 2 (by decide) (by omega)
-  have h3 : ((base + 4 * UInt32.ofNat k) + 3).toNat =
-      (base + 4 * UInt32.ofNat k).toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap
-      (base + 4 * UInt32.ofNat k) 3 (by decide) (by omega)
-  iintro ⟨Harray, Hcont⟩
-  ihave Hfocus := arrayAt_get 0 base input k hk $$ Harray
-  icases Hfocus with ⟨Hword, Hclose⟩
-  iapply twp_loadAt_cell hbase helement
-    (by rw [UInt32.add_comm])
-    h1 h2 h3
-  isplitl [Hword]
-  · iexact Hword
-  iintro Hword
-  iapply Hcont
-  iapply Hclose
-  iexact Hword
-
-private theorem twp_store32_cell
-    [WasmSmallStepGS hlc Unit]
-    {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp (WasmHeapGF Unit)}
-    {params localValues stack : List Value}
-    {address oldWord newWord : UInt32}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame}
-    (h1 : (address + 1).toNat = address.toNat + 1)
-    (h2 : (address + 2).toNat = address.toNat + 2)
-    (h3 : (address + 3).toNat = address.toNat + 3) :
-    pointsTo_u32 0 address oldWord ∗
-      (pointsTo_u32 0 address newWord -∗
-        WP (.running
-          ⟨⟨params, localValues, stack⟩,
-            code, arity, remainder, controls, calls⟩ : Expr Unit)
-          @ s; E [{ Φ }]) ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 newWord :: .i32 address :: stack⟩,
-        .store32 0 :: code, arity, remainder, controls, calls⟩ : Expr Unit)
-      @ s; E [{ Φ }] := by
-  have h1' : ((address + 0) + 1).toNat = (address + 0).toNat + 1 := by simpa using h1
-  have h2' : ((address + 0) + 2).toNat = (address + 0).toNat + 2 := by simpa using h2
-  have h3' : ((address + 0) + 3).toNat = (address + 0).toNat + 3 := by simpa using h3
-  iintro ⟨Hword, Hcont⟩
-  ihave HwordLater : pointsTo_u32 0 (address + 0) oldWord $$ [Hword]
-  · rw [UInt32.add_zero]
-    iexact Hword
-  iapply Wasm.SmallStep.twp_store32
-    (address := address) (offset := 0) oldWord
-    (by simp) h1' h2' h3' $$ HwordLater
-  iintro Hword
-  ihave Hword' : pointsTo_u32 0 address newWord $$ [Hword]
-  · rw [UInt32.add_zero]
-    iexact Hword
-  iapply Hcont
-  iexact Hword'
 
 set_option maxHeartbeats 2000000 in
 theorem twp_swapAt
@@ -245,232 +54,66 @@ theorem twp_swapAt
       @ s; E [{ Φ }] := by
   let addr_a : UInt32 := 4 * UInt32.ofNat a + base
   have hslot_a : addr_a.toNat = base.toNat + 4 * a := by
-    dsimp [addr_a]; rw [UInt32.add_comm]
-    simpa [UInt32.mul_comm] using arrayAddress_toNat base hfit ha
+    dsimp [addr_a]
+    rw [UInt32.add_comm]
+    exact Mem.words32_slotAddr_toNat base a (by
+      simpa only [UInt32.size] using Nat.lt_of_lt_of_le (by omega) hfit)
   have hroom_a : addr_a.toNat + 4 ≤ UInt32.size := by rw [hslot_a]; omega
-  have h1_a : (addr_a + 1).toNat = addr_a.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addr_a 1
-      (by decide) (by
-        have : addr_a.toNat + 4 ≤ 4294967296 := by
-          simpa only [UInt32.size] using hroom_a
-        omega)
-  have h2_a : (addr_a + 2).toNat = addr_a.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addr_a 2
-      (by decide) (by
-        have : addr_a.toNat + 4 ≤ 4294967296 := by
-          simpa only [UInt32.size] using hroom_a
-        omega)
-  have h3_a : (addr_a + 3).toNat = addr_a.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addr_a 3
-      (by decide) (by
-        have : addr_a.toNat + 4 ≤ 4294967296 := by
-          simpa only [UInt32.size] using hroom_a
-        omega)
+  obtain ⟨h1_a, h2_a, h3_a⟩ := UInt32.addSteps4 addr_a (by
+    simpa only [UInt32.size] using hroom_a)
   let addr_b : UInt32 := 4 * UInt32.ofNat b + base
   have hslot_b : addr_b.toNat = base.toNat + 4 * b := by
-    dsimp [addr_b]; rw [UInt32.add_comm]
-    simpa [UInt32.mul_comm] using arrayAddress_toNat base hfit hb
+    dsimp [addr_b]
+    rw [UInt32.add_comm]
+    exact Mem.words32_slotAddr_toNat base b (by
+      simpa only [UInt32.size] using Nat.lt_of_lt_of_le (by omega) hfit)
   have hroom_b : addr_b.toNat + 4 ≤ UInt32.size := by rw [hslot_b]; omega
-  have h1_b : (addr_b + 1).toNat = addr_b.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addr_b 1
-      (by decide) (by
-        have : addr_b.toNat + 4 ≤ 4294967296 := by
-          simpa only [UInt32.size] using hroom_b
-        omega)
-  have h2_b : (addr_b + 2).toNat = addr_b.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addr_b 2
-      (by decide) (by
-        have : addr_b.toNat + 4 ≤ 4294967296 := by
-          simpa only [UInt32.size] using hroom_b
-        omega)
-  have h3_b : (addr_b + 3).toNat = addr_b.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addr_b 3
-      (by decide) (by
-        have : addr_b.toNat + 4 ≤ 4294967296 := by
-          simpa only [UInt32.size] using hroom_b
-        omega)
-  have hswap : swapElems input a b = (input.set a input[b]).set b input[a] := by
-    unfold swapElems
-    rw [getElem!_pos input b hb, getElem!_pos input a ha]
+  obtain ⟨h1_b, h2_b, h3_b⟩ := UInt32.addSteps4 addr_b (by
+    simpa only [UInt32.size] using hroom_b)
+  have hswap : swapElems input a b = (input.set a input[b]).set b input[a] :=
+    List.swapElems_eq_set input ha hb
   iintro ⟨Harray, Hcont⟩
   simp only [swapAt, storeAt, List.append_assoc,
     List.cons_append, List.nil_append]
   -- step 1: load arr[a] onto stack
-  iapply twp_loadAt ha hfit hbase ha_local
-  isplitl [Harray]
-  · iexact Harray
-  iintro Harray
+  iapply_frame_intro twp_loadAt ha hfit hbase ha_local as Harray
   -- step 2: save arr[a] in tmp local
   iapply Wasm.SmallStep.twp_localSet htmp_set
   -- step 3: compute address of arr[a]
   iapply twp_address (by exact hbase_after) (by exact ha_after)
   -- step 4: load arr[b] onto stack
-  iapply twp_loadAt hb hfit (by exact hbase_after) (by exact hb_after)
-  isplitl [Harray]
-  · iexact Harray
-  iintro Harray
+  iapply_frame_intro twp_loadAt hb hfit (by exact hbase_after) (by exact hb_after) as Harray
   -- focus on cell a for the first store
-  ihave Hfocus := arrayAt_set 0 base input a input[b] ha $$ Harray
-  icases Hfocus with ⟨Hcell_a, Hclose_a⟩
+  ihave ⟨Hcell_a, Hclose_a⟩ := arrayAt_set 0 base input a input[b] ha $$ Harray
   ihave Hcell_a' : pointsTo_u32 0 addr_a input[a] $$ [Hcell_a]
   · dsimp [addr_a]
-    rw [UInt32.add_comm]
-    iexact Hcell_a
+    irw_exact [UInt32.add_comm] with Hcell_a
   -- step 5: store arr[b] at arr[a]
-  iapply twp_store32_cell h1_a h2_a h3_a
-  isplitl [Hcell_a']
-  · iexact Hcell_a'
+  iapply_splitl_exact twp_store32_cell h1_a h2_a h3_a with Hcell_a'
   iintro Hcell_a
   -- rebuild intermediate array
   ihave Harray2 : arrayAt 0 base (input.set a input[b]) $$ [Hcell_a Hclose_a]
   · iapply Hclose_a
-    rw [UInt32.add_comm]
-    iexact Hcell_a
+    irw_exact [UInt32.add_comm] with Hcell_a
   -- step 6: compute address of arr[b]
   iapply twp_address (by exact hbase_after) (by exact hb_after)
   -- step 7: push tmp (= original arr[a]) onto stack
   iapply Wasm.SmallStep.twp_localGet (by exact htmp_after)
   -- focus on cell b for the second store
   have hb' : b < (input.set a input[b]).length := by rw [List.length_set]; exact hb
-  ihave Hfocus := arrayAt_set 0 base (input.set a input[b]) b input[a] hb' $$ Harray2
-  icases Hfocus with ⟨Hcell_b, Hclose_b⟩
+  ihave ⟨Hcell_b, Hclose_b⟩ := arrayAt_set 0 base (input.set a input[b]) b input[a] hb' $$ Harray2
   ihave Hcell_b' : pointsTo_u32 0 addr_b (input.set a input[b])[b] $$ [Hcell_b]
   · dsimp [addr_b]
-    rw [UInt32.add_comm]
-    iexact Hcell_b
+    irw_exact [UInt32.add_comm] with Hcell_b
   -- step 8: store original arr[a] at arr[b]
-  iapply twp_store32_cell h1_b h2_b h3_b
-  isplitl [Hcell_b']
-  · iexact Hcell_b'
+  iapply_splitl_exact twp_store32_cell h1_b h2_b h3_b with Hcell_b'
   iintro Hcell_b
   -- apply continuation with swapped array
   iapply Hcont
   rw [hswap]
   iapply Hclose_b
-  rw [UInt32.add_comm]
-  iexact Hcell_b
+  irw_exact [UInt32.add_comm] with Hcell_b
 
-theorem twp_lessLocal
-    [WasmSmallStepGS hlc Unit]
-    {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp (WasmHeapGF Unit)}
-    {params localValues stack : List Value}
-    {lhsIndex rhsIndex : Nat} {lhs rhs : UInt32}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame}
-    (hlhs : (⟨params, localValues, stack⟩ : Locals).get lhsIndex = some (.i32 lhs))
-    (hrhs : (⟨params, localValues, stack⟩ : Locals).get rhsIndex = some (.i32 rhs)) :
-    WP (.running
-        ⟨⟨params, localValues, .i32 (if lhs < rhs then 1 else 0) :: stack⟩,
-          code, arity, remainder, controls, calls⟩ : Expr Unit)
-        @ s; E [{ Φ }] ⊢
-    WP (.running
-      ⟨⟨params, localValues, stack⟩,
-        lessLocal lhsIndex rhsIndex ++ code, arity, remainder, controls, calls⟩ : Expr Unit)
-      @ s; E [{ Φ }] := by
-  iintro Hwp
-  simp only [lessLocal, List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.twp_localGet hlhs
-  iapply Wasm.SmallStep.twp_localGet (by simpa using hrhs)
-  iapply Wasm.SmallStep.twp_ltU rfl
-  iexact Hwp
-
-theorem twp_increment
-    [WasmSmallStepGS hlc Unit]
-    {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp (WasmHeapGF Unit)}
-    {params localValues stack : List Value}
-    {index : Nat} {value : UInt32} {updated : Locals}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame}
-    (hget : (⟨params, localValues, stack⟩ : Locals).get index = some (.i32 value))
-    (hset : (⟨params, localValues, .i32 (1 + value) :: stack⟩ : Locals).set?
-        index (.i32 (1 + value)) = some updated) :
-    WP (.running
-        ⟨{ updated with values := stack }, code, arity, remainder, controls, calls⟩ : Expr Unit)
-        @ s; E [{ Φ }] ⊢
-    WP (.running
-      ⟨⟨params, localValues, stack⟩,
-        increment index ++ code, arity, remainder, controls, calls⟩ : Expr Unit)
-      @ s; E [{ Φ }] := by
-  iintro Hwp
-  simp only [increment, List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.twp_localGet hget
-  iapply Wasm.SmallStep.twp_const
-  iapply Wasm.SmallStep.twp_add
-  iapply Wasm.SmallStep.twp_localSet hset
-  iexact Hwp
-
-theorem twp_increment_nil
-    [WasmSmallStepGS hlc Unit]
-    {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp (WasmHeapGF Unit)}
-    {params localValues stack : List Value}
-    {index : Nat} {value : UInt32} {updated : Locals}
-    {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame}
-    (hget : (⟨params, localValues, stack⟩ : Locals).get index = some (.i32 value))
-    (hset : (⟨params, localValues, .i32 (1 + value) :: stack⟩ : Locals).set?
-        index (.i32 (1 + value)) = some updated) :
-    WP (.running
-        ⟨{ updated with values := stack }, [], arity, remainder, controls, calls⟩ : Expr Unit)
-        @ s; E [{ Φ }] ⊢
-    WP (.running
-      ⟨⟨params, localValues, stack⟩,
-        increment index, arity, remainder, controls, calls⟩ : Expr Unit)
-      @ s; E [{ Φ }] := by
-  simpa only [List.append_nil] using (twp_increment (s := s) (E := E) (Φ := Φ) (code := []) hget hset)
-
-theorem twp_loop_wf_family_from
-    [WasmSmallStepGS hlc Unit]
-    {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp (WasmHeapGF Unit)}
-    {ι : Type} (measure : ι → Nat)
-    (locals : ι → Locals) (I : ι → IProp (WasmHeapGF Unit))
-    (initial : ι) (initialLocals : Locals)
-    {paramArity resultArity arity : Nat}
-    {body code : Program} {remainder belowStack : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame}
-    (hinitial : locals initial = initialLocals)
-    (hbelow : belowStack = (locals initial).values.drop paramArity)
-    (body_closes : ∀ i,
-      ⊢@{IProp (WasmHeapGF Unit)} (iprop%
-        (∀ (j : ι), ⌜measure j < measure i⌝ -∗ I j -∗
-          WP (loopBodyExpr (α := Unit) (locals j)
-            paramArity resultArity arity body code remainder belowStack
-            controls calls) @ s; E [{ Φ }]) -∗
-        I i -∗
-          WP (loopBodyExpr (α := Unit) (locals i)
-            paramArity resultArity arity body code remainder belowStack
-            controls calls) @ s; E [{ Φ }])) :
-    I initial ⊢
-      WP (.running
-        ⟨initialLocals, .loop paramArity resultArity body :: code,
-          arity, remainder, controls, calls⟩ : Expr Unit)
-        @ s; E [{ Φ }] := by
-  have closes : ∀ i,
-      I i ⊢
-        WP (loopBodyExpr (α := Unit) (locals i)
-          paramArity resultArity arity body code remainder belowStack
-          controls calls) @ s; E [{ Φ }] := by
-    intro current
-    induction hmeasure : measure current using Nat.strongRecOn
-        generalizing current with
-    | ind n ih =>
-      subst n
-      iintro HI
-      iapply body_closes current
-      · iintro %j %hji Hj
-        ihave Hih := ih (measure j) hji j rfl $$ Hj
-        iexact Hih
-      · iexact HI
-  simp only [loopBodyExpr] at closes
-  subst initialLocals
-  iintro HI
-  iapply twp_loop
-  rw [← hbelow]
-  ihave Hbody := closes initial $$ HI
-  iexact Hbody
 
 theorem u32_ofNat_sub_eq {a b : Nat} (hle : b ≤ a) (ha : a < UInt32.size) :
     UInt32.ofNat a - UInt32.ofNat b = UInt32.ofNat (a - b) := by
@@ -480,7 +123,6 @@ theorem u32_ofNat_sub_eq {a b : Nat} (hle : b ≤ a) (ha : a < UInt32.size) :
   rw [UInt32.toNat_sub, UInt32.toNat_ofNat_of_lt' ha, UInt32.toNat_ofNat_of_lt' hb,
       UInt32.toNat_ofNat_of_lt' hab]
   have := (UInt32.ofNat a).toNat_lt
-  rw [UInt32.toNat_ofNat_of_lt' ha] at this
-  omega
+  rw [UInt32.toNat_ofNat_of_lt' ha] at this; omega
 
 end Wasm.Examples.Quicksort

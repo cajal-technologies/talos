@@ -320,8 +320,7 @@ private def setGlobal (store : MachineStore α) (index : Nat) (value : Value) :
     setGlobal store 0 value =
       { store with wasm :=
           { store.wasm with globals :=
-              { globals := store.wasm.globals.globals.set 0 value } } } := by
-  simp [setGlobal]
+              { globals := store.wasm.globals.globals.set 0 value } } } := by simp [setGlobal]
 
 theorem setGlobal_eq_of_canonical
     (store : MachineStore α) (index : Nat) (value : Value)
@@ -614,42 +613,42 @@ def evalScalarTrunc? :
   | .i32TruncF32S, .f32 value =>
       some <| match i32TruncF32S value with
         | some result => .ok (.i32 result)
-        | none => .error (if (Float32.ofBits value).isNaN then
+        | none => .error (if f32IsNaN value then
             .invalidConversionToInteger else .integerOverflow)
   | .i32TruncF32U, .f32 value =>
       some <| match i32TruncF32U value with
         | some result => .ok (.i32 result)
-        | none => .error (if (Float32.ofBits value).isNaN then
+        | none => .error (if f32IsNaN value then
             .invalidConversionToInteger else .integerOverflow)
   | .i32TruncF64S, .f64 value =>
       some <| match i32TruncF64S value with
         | some result => .ok (.i32 result)
-        | none => .error (if (Float.ofBits value).isNaN then
+        | none => .error (if f64IsNaN value then
             .invalidConversionToInteger else .integerOverflow)
   | .i32TruncF64U, .f64 value =>
       some <| match i32TruncF64U value with
         | some result => .ok (.i32 result)
-        | none => .error (if (Float.ofBits value).isNaN then
+        | none => .error (if f64IsNaN value then
             .invalidConversionToInteger else .integerOverflow)
   | .i64TruncF32S, .f32 value =>
       some <| match i64TruncF32S value with
         | some result => .ok (.i64 result)
-        | none => .error (if (Float32.ofBits value).isNaN then
+        | none => .error (if f32IsNaN value then
             .invalidConversionToInteger else .integerOverflow)
   | .i64TruncF32U, .f32 value =>
       some <| match i64TruncF32U value with
         | some result => .ok (.i64 result)
-        | none => .error (if (Float32.ofBits value).isNaN then
+        | none => .error (if f32IsNaN value then
             .invalidConversionToInteger else .integerOverflow)
   | .i64TruncF64S, .f64 value =>
       some <| match i64TruncF64S value with
         | some result => .ok (.i64 result)
-        | none => .error (if (Float.ofBits value).isNaN then
+        | none => .error (if f64IsNaN value then
             .invalidConversionToInteger else .integerOverflow)
   | .i64TruncF64U, .f64 value =>
       some <| match i64TruncF64U value with
         | some result => .ok (.i64 result)
-        | none => .error (if (Float.ofBits value).isNaN then
+        | none => .error (if f64IsNaN value then
             .invalidConversionToInteger else .integerOverflow)
   | _, _ => none
 
@@ -6780,8 +6779,7 @@ theorem step_deterministic {config next₁ next₂ : Config α} {kind₁ kind₂
     kind₁ = kind₂ ∧ next₁ = next₂ := by
   have e₁ := stepChecked?_complete h₁
   have e₂ := stepChecked?_complete h₂
-  rw [e₁] at e₂
-  exact Prod.mk.inj (Option.some.inj (Except.ok.inj e₂))
+  rw [e₁] at e₂; exact Prod.mk.inj (Option.some.inj (Except.ok.inj e₂))
 
 theorem done_terminal {values : List Value} {store : MachineStore α} {kind config'} :
     ¬ Step ⟨.done values, store⟩ kind config' := by
@@ -6959,6 +6957,18 @@ theorem Steps.single (step : Step config kind next) :
     Steps config [kind] next :=
   .cons step (.refl next)
 
+/-- Apply several explicit steps while leaving the remaining trace goal open. -/
+syntax "wasm_steps" "[" term,* "]" : tactic
+
+macro_rules
+  | `(tactic| wasm_steps []) => `(tactic| skip)
+  | `(tactic| wasm_steps [$step:term]) =>
+      `(tactic| apply Steps.cons $step)
+  | `(tactic| wasm_steps [$step:term, $steps:term,*]) =>
+      `(tactic|
+        (apply Steps.cons $step
+         wasm_steps [$steps,*]))
+
 theorem Steps.trans
     (first : Steps config trace₁ middle)
     (suffix : Steps middle trace₂ final) :
@@ -7020,8 +7030,7 @@ theorem step?_sound {valid : ValidConfig α} {kind} {next : ValidConfig α}
     Step valid.config kind next.config := by
   have erased := step?_erase valid
   rw [h] at erased
-  simp at erased
-  exact stepChecked?_sound (stepUnchecked?_eq_some_iff.mp erased.symm)
+  simp at erased; exact stepChecked?_sound (stepUnchecked?_eq_some_iff.mp erased.symm)
 
 theorem step?_complete {valid : ValidConfig α} {kind} {next : Config α}
     (h : Step valid.config kind next) :
@@ -7295,8 +7304,7 @@ theorem runSteps_eq_success_of_steps
     {config : Config α} {trace : List StepKind}
     {values : List Value} {store : MachineStore α}
     (h : Steps config trace ⟨.done values, store⟩) :
-    (runSteps trace.length config).result = .success values store := by
-  exact runSteps_finalConfig_of_steps h
+    (runSteps trace.length config).result = .success values store := runSteps_finalConfig_of_steps h
 
 theorem runSteps_sound {fuel : Nat} {config final : Config α}
     (h : (runSteps fuel config).result.finalConfig? = some final) :
@@ -7340,6 +7348,15 @@ theorem runSteps_success_terminates {fuel : Nat} {config : Config α}
   refine ⟨(runSteps fuel config).trace, values, store, ?_, hp⟩
   apply runSteps_sound
   simp [h, RunnerResult.finalConfig?]
+
+/-- A successful runner result satisfies exact-value contracts whose remaining
+postcondition only inspects the reached store. -/
+theorem runSteps_success_terminates_eq_values {fuel : Nat} {config : Config α}
+    {values : List Value} {store : MachineStore α}
+    (h : (runSteps fuel config).result = .success values store)
+    {post : MachineStore α → Prop} (hp : post store) :
+    TerminatesWith config (fun actual reached => actual = values ∧ post reached) :=
+  runSteps_success_terminates h _ ⟨rfl, hp⟩
 
 /-- A state-sensitive executable check yields a fuel-free relational
 termination theorem. The fuel remains confined to the proof, while `post`
@@ -7399,6 +7416,13 @@ theorem runSteps_trapped_trapsWith {fuel : Nat} {config : Config α}
   apply runSteps_sound
   simp [h, RunnerResult.finalConfig?]
 
+/-- A trapped runner result preserves the exact store carried by that result. -/
+theorem runSteps_trapped_trapsWith_store {fuel : Nat} {config : Config α}
+    {reason : TrapReason} {store : MachineStore α}
+    (h : (runSteps fuel config).result = .trapped reason store) :
+    TrapsWith config reason (fun actual => actual = store) :=
+  runSteps_trapped_trapsWith h _ rfl
+
 /-- A projected structured trap reason is enough to obtain fuel-free
 relational trapping, even when the host-parametric store has no decidable
 equality. -/
@@ -7410,8 +7434,7 @@ theorem runSteps_trapReason_trapsWith {fuel : Nat} {config : Config α}
   | success values store =>
     simp [RunnerResult.trapReason?, hr] at h
   | trapped actual store =>
-    have : actual = reason := by
-      simpa [RunnerResult.trapReason?, hr] using h
+    have : actual = reason := by simpa [RunnerResult.trapReason?, hr] using h
     subst actual
     apply runSteps_trapped_trapsWith hr
     trivial
@@ -7430,8 +7453,7 @@ theorem runSteps_values_terminates {fuel : Nat} {config : Config α}
     TerminatesWith config (fun actual _ => actual = values) := by
   cases hr : (runSteps fuel config).result with
   | success actual store =>
-    have : actual = values := by
-      simpa [RunnerResult.values?, hr] using h
+    have : actual = values := by simpa [RunnerResult.values?, hr] using h
     subst actual
     apply runSteps_success_terminates hr
     rfl

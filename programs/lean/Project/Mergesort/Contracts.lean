@@ -191,17 +191,14 @@ theorem VecStorage_as_growSource
     icases Hstorage with (%hempty | Hallocated)
     · iexists GrowSource.empty
       isimp only [GrowSourceOwn]
-      ipureintro
-      exact hempty
+      ipureexact hempty
     · icases Hallocated with
         ⟨%allocationId, %allBytes, %spare, Hfacts, Hblock⟩
       iexists GrowSource.allocated allocationId allBytes spare
       isimp only [GrowSourceOwn]
       iframe
-  · iintro Hsource
-    icases Hsource with ⟨%source, Hsource⟩
-    iapply GrowSourceOwn_to_VecStorage heapId capacity ptr initialized source
-    iexact Hsource
+  · iintro ⟨%source, Hsource⟩
+    iapply_exact GrowSourceOwn_to_VecStorage heapId capacity ptr initialized source with Hsource
 
 def growHistory (history : AllocationHistory) (source : GrowSource)
     (oldCapacity oldPtr newPtr : UInt32) (newLayout : AllocLayout) :

@@ -47,8 +47,7 @@ def instanceR : ModuleInstance Unit where
 
 @[simp] private theorem sharedMem_currentModule :
     ({ instances := #[instanceW, instanceR], entry := ⟨1⟩ } : RuntimeEnv Unit).currentModule =
-        instanceR.module := by
-  simp [RuntimeEnv.currentModule, RuntimeEnv.currentInstance]
+        instanceR.module := by simp [RuntimeEnv.currentModule, RuntimeEnv.currentInstance]
 
 -- entry = instance 1 (moduleR); v on top ready for cross-instance write
 def sharedMemConfig (v : UInt8) : Config Unit :=
@@ -76,14 +75,12 @@ private theorem sharedMemHeap_agrees (v : UInt8) :
   intro key value hget
   simp only [sharedMemHeap] at hget
   by_cases h : key = ⟨0, 0⟩
-  · subst h
-    simp only [get?_insert_eq rfl, Option.some.injEq] at hget
+  · subst h; simp only [get?_insert_eq rfl, Option.some.injEq] at hget
     subst hget
     exact ⟨Mem.empty 1,
       by simp [storeResolve, sharedMemConfig],
       by simp [Mem.read8, Mem.empty]⟩
-  · rw [get?_insert_ne (Ne.symm h), get?_empty] at hget
-    contradiction
+  · rw [get?_insert_ne (Ne.symm h), get?_empty] at hget; contradiction
 
 private theorem sharedMemHeap_inBounds (v : UInt8) :
     heapAddressesInBounds sharedMemHeap (storeResolve (sharedMemConfig v).store) := by
@@ -129,19 +126,12 @@ theorem sharedMem_partiallyMeets (v : UInt8) :
       iintro ⟨HinstanceOwn', HruntimeInstances'⟩
       simp only [writeFn, Function.toLocals, List.map_nil]
       -- inside writeFn: [.const 0, .localGet 0, .store8 0, .ret]
-      iapply wp_const
-      inext
-      iapply wp_localGet rfl
-      inext
+      wasm_wp_pures [wp_const wp_localGet]
       ihave HptLater :
           ▷ pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
             ⟨0, 0 + 0⟩ (DFrac.own 1) (some 0) $$ [Hpt]
-      · inext
-        rw [UInt32.add_zero]
-        iexact Hpt
-      iapply wp_store8 (0 : UInt8) rfl $$ HptLater
-      inext
-      iintro Hpt'
+      · ilater_rw_exact [UInt32.add_zero] with Hpt
+      wasm_wp_next_bind wp_store8 (0 : UInt8) rfl with HptLater => Hpt'
       -- return from writeFn to instanceR
       iapply wp_returnFromCallCrossInstance ⟨0⟩ instanceW instanceR #[instanceW, instanceR]
           (by decide) rfl rfl
@@ -150,27 +140,20 @@ theorem sharedMem_partiallyMeets (v : UInt8) :
       · inext
         iintro _HinstanceCaller
         -- back in instanceR: [.const 0, .load8U 0, .ret]
-        iapply wp_const
-        inext
+        wasm_wp_pures [wp_const]
         ihave HptLater2 :
             ▷ pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
               ⟨0, 0 + 0⟩ (DFrac.own 1) (some v.toUInt32.toUInt8) $$ [Hpt']
-        · inext
-          iexact Hpt'
-        iapply wp_load8U v.toUInt32.toUInt8 rfl $$ HptLater2
-        inext
-        iintro _Hpt_back
-        iapply wp_returnFromFunction
-        inext
-        iapply wp_value'
-        ipureintro
-        simp [List.take]
+        · ilater_exact Hpt'
+        wasm_wp_next_bind wp_load8U v.toUInt32.toUInt8 rfl with HptLater2 => _Hpt_back
+        wasm_wp_return_value
+        ipureexact (by simp [List.take])
 
 theorem sharedMem_terminates :
     TerminatesWith (sharedMemConfig 0) (fun _ _ => True) :=
   runSteps_checked_terminates (fuel := 100)
     (fun _ _ => true)
-    (by native_decide)
+    (by decide +kernel)
     (fun _ _ _ => trivial)
 
 end Wasm.SmallStep

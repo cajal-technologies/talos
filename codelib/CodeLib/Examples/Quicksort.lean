@@ -1,6 +1,9 @@
-import CodeLib.SepLogic.SmallStepAdequacy
-import Interpreter.Wasm.Decoder.Wat
+import CodeLib.Examples.UInt32Array
+import Interpreter.Wasm.Decoder.ProofEval
 import Mathlib.Data.List.Sort
+
+kernel_decoder
+attribute [local irreducible] Wasm.Decoder.Wat.decode
 
 /-!
 # Quicksort
@@ -14,27 +17,7 @@ open Wasm
 open Iris Iris.ProgramLogic Language.Notation Std
 open Wasm.SepLogic
 open Wasm.SmallStep
-
-def increment (index : Nat) : Program :=
-  [.localGet index, .const 1, .add, .localSet index]
-
-def address (base index : Nat) : Program :=
-  [.localGet base, .localGet index, .const 4, .mul, .add]
-
-def loadAt (base index : Nat) : Program :=
-  address base index ++ [.load32 0]
-
-def storeAt (base index : Nat) (value : Program) : Program :=
-  address base index ++ value ++ [.store32 0]
-
-def whileLoopCode (condition body : Program) : Program :=
-  condition ++ [.eqz, .br_if 1] ++ body ++ [.br 0]
-
-def whileDo (condition body : Program) : Program :=
-  [.block 0 0 [.loop 0 0 (whileLoopCode condition body)]]
-
-def lessLocal (lhs rhs : Nat) : Program :=
-  [.localGet lhs, .localGet rhs, .ltU]
+open Wasm.Examples.UInt32Array
 
 def swapAt (base a b tmp : Nat) : Program :=
   loadAt base a ++ [.localSet tmp] ++
@@ -111,7 +94,7 @@ def Sorted (values : List UInt32) : Prop :=
 def SortedPermutation (input output : List UInt32) : Prop :=
   Sorted output ∧ List.Perm input output
 
-def segment (values : List UInt32) (start stop : Nat) : List UInt32 :=
+abbrev segment (values : List UInt32) (start stop : Nat) :=
   (values.drop start).take (stop - start)
 
 def arrayByteRange (base : UInt32) (length : Nat) : Nat × Nat :=
@@ -146,16 +129,9 @@ def quicksortPost [WasmHeapGS α]
 
 /-! ## Executable regressions -/
 
-def writeWordArray : Mem → UInt32 → List UInt32 → Mem
-  | memory, _, [] => memory
-  | memory, address, value :: values =>
-      writeWordArray (memory.write32 address value) (address + 4) values
+abbrev writeWordArray := Mem.writeWords32
 
-def readWordArray : Mem → UInt32 → Nat → List UInt32
-  | _, _, 0 => []
-  | memory, address, count + 1 =>
-      memory.read32 address ::
-        readWordArray memory (address + 4) count
+abbrev readWordArray := Mem.readWords32
 
 def quicksortExampleStore (arr : UInt32) (input : List UInt32) : Store Unit :=
   let initial := quicksortModule.initialStore (α := Unit)
@@ -164,10 +140,10 @@ def quicksortExampleStore (arr : UInt32) (input : List UInt32) : Store Unit :=
 def quicksortArguments (arr : UInt32) (length : Nat) (stack : List Value) : List Value :=
   .i32 (UInt32.ofNat length) :: .i32 0 :: .i32 arr :: stack
 
-def runQuicksortExample (fuel : Nat) (arr : UInt32) (input : List UInt32) :
-    Option (List UInt32) :=
+private def runQuicksortModule (m : Module) (fuel : Nat) (arr : UInt32)
+    (input : List UInt32) : Option (List UInt32) :=
   match SmallStep.initConfig
-      { module := quicksortModule, host := {} } 1
+      { module := m, host := {} } 1
       (quicksortExampleStore arr input)
       (quicksortArguments arr input.length []) with
   | .error _ => none
@@ -177,22 +153,23 @@ def runQuicksortExample (fuel : Nat) (arr : UInt32) (input : List UInt32) :
           some (readWordArray store.wasm.mem arr input.length)
       | _ => none
 
+def runQuicksortExample (fuel : Nat) (arr : UInt32) (input : List UInt32) :
+    Option (List UInt32) := runQuicksortModule quicksortModule fuel arr input
+
 theorem quicksort_exec_empty :
-    runQuicksortExample 100 0 [] = some [] := by native_decide
+    runQuicksortExample 100 0 [] = some [] := by decide +kernel
 
 theorem quicksort_exec_singleton :
-    runQuicksortExample 200 0 [42] = some [42] := by native_decide
+    runQuicksortExample 200 0 [42] = some [42] := by decide +kernel
 
 theorem quicksort_exec_five :
-    runQuicksortExample 15000 0 [5, 1, 4, 2, 3] = some [1, 2, 3, 4, 5] := by
-  native_decide
+    runQuicksortExample 15000 0 [5, 1, 4, 2, 3] = some [1, 2, 3, 4, 5] := by decide +kernel
 
 theorem quicksort_exec_duplicates :
-    runQuicksortExample 18000 0 [4, 1, 4, 2, 1, 3] = some [1, 1, 2, 3, 4, 4] := by
-  native_decide
+    runQuicksortExample 18000 0 [4, 1, 4, 2, 1, 3] = some [1, 1, 2, 3, 4, 4] := by decide +kernel
 
 theorem quicksort_exec_sorted :
-    runQuicksortExample 10000 0 [1, 2, 3, 4] = some [1, 2, 3, 4] := by native_decide
+    runQuicksortExample 10000 0 [1, 2, 3, 4] = some [1, 2, 3, 4] := by decide +kernel
 
 /-! ## TerminatesWith witnesses -/
 
@@ -213,7 +190,7 @@ theorem quicksort_terminates_empty :
         (fun _ store => readWordArray store.wasm.mem 0 0 = []) := by
   apply SmallStep.runSteps_checked_terminates (fuel := 100)
       (fun _ store => readWordArray store.wasm.mem 0 0 == [])
-  · native_decide
+  · decide +kernel
   · intro _ store h; simp only [beq_iff_eq] at h; exact h
 
 theorem quicksort_terminates_singleton :
@@ -221,7 +198,7 @@ theorem quicksort_terminates_singleton :
         (fun _ store => readWordArray store.wasm.mem 0 1 = [42]) := by
   apply SmallStep.runSteps_checked_terminates (fuel := 200)
       (fun _ store => readWordArray store.wasm.mem 0 1 == [42])
-  · native_decide
+  · decide +kernel
   · intro _ store h; simp only [beq_iff_eq] at h; exact h
 
 theorem quicksort_terminates_five :
@@ -229,7 +206,7 @@ theorem quicksort_terminates_five :
         (fun _ store => readWordArray store.wasm.mem 0 5 = [1, 2, 3, 4, 5]) := by
   apply SmallStep.runSteps_checked_terminates (fuel := 15000)
       (fun _ store => readWordArray store.wasm.mem 0 5 == [1, 2, 3, 4, 5])
-  · native_decide
+  · decide +kernel
   · intro _ store h; simp only [beq_iff_eq] at h; exact h
 
 theorem quicksort_terminates_duplicates :
@@ -237,7 +214,7 @@ theorem quicksort_terminates_duplicates :
         (fun _ store => readWordArray store.wasm.mem 0 6 = [1, 1, 2, 3, 4, 4]) := by
   apply SmallStep.runSteps_checked_terminates (fuel := 18000)
       (fun _ store => readWordArray store.wasm.mem 0 6 == [1, 1, 2, 3, 4, 4])
-  · native_decide
+  · decide +kernel
   · intro _ store h; simp only [beq_iff_eq] at h; exact h
 
 theorem quicksort_terminates_sorted :
@@ -245,7 +222,7 @@ theorem quicksort_terminates_sorted :
         (fun _ store => readWordArray store.wasm.mem 0 4 = [1, 2, 3, 4]) := by
   apply SmallStep.runSteps_checked_terminates (fuel := 10000)
       (fun _ store => readWordArray store.wasm.mem 0 4 == [1, 2, 3, 4])
-  · native_decide
+  · decide +kernel
   · intro _ store h; simp only [beq_iff_eq] at h; exact h
 
 /-! ## Differential check -/
@@ -258,9 +235,23 @@ def runQuicksortLegacy (fuel : Nat) (arr : UInt32) (input : List UInt32) :
   | .Success _ store => some (readWordArray store.mem arr input.length)
   | _ => none
 
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 2000000 in
 theorem quicksort_small_large_agree :
     runQuicksortExample 15000 0 [5, 1, 4, 2, 3] =
-    runQuicksortLegacy 5000 0 [5, 1, 4, 2, 3] := by native_decide
+    runQuicksortLegacy 5000 0 [5, 1, 4, 2, 3] := by
+  have hsmall : runQuicksortLegacy 64 0 [5, 1, 4, 2, 3] =
+      some [1, 2, 3, 4, 5] := by cbv
+  rw [quicksort_exec_five]
+  unfold runQuicksortLegacy at hsmall ⊢
+  simp only [List.length_cons, List.length_nil, Nat.reduceAdd] at hsmall ⊢
+  have hne : Wasm.run 64 quicksortModule 1
+      (quicksortExampleStore 0 [5, 1, 4, 2, 3])
+      (quicksortArguments 0 5 []) ≠ .OutOfFuel := by
+    intro h
+    simp [h] at hsmall
+  rw [Wasm.run_fuel_mono (show 64 ≤ 5000 by decide) hne]
+  exact hsmall.symm
 
 /-! ## Mutation tests -/
 
@@ -294,8 +285,7 @@ def runQuicksortMutated1 (fuel : Nat) (arr : UInt32) (input : List UInt32) :
       | _ => none
 
 theorem quicksort_mutation_comparison :
-    runQuicksortMutated1 15000 0 [5, 1, 4, 2, 3] ≠ some [1, 2, 3, 4, 5] := by
-  native_decide
+    runQuicksortMutated1 15000 0 [5, 1, 4, 2, 3] ≠ some [1, 2, 3, 4, 5] := by decide +kernel
 
 private def partitionFunctionMutated2 : Function :=
   { params := [.i32, .i32, .i32]
@@ -324,8 +314,7 @@ def runQuicksortMutated2 (fuel : Nat) (arr : UInt32) (input : List UInt32) :
       | _ => none
 
 theorem quicksort_mutation_index :
-    runQuicksortMutated2 15000 0 [5, 1, 4, 2, 3] ≠ some [1, 2, 3, 4, 5] := by
-  native_decide
+    runQuicksortMutated2 15000 0 [5, 1, 4, 2, 3] ≠ some [1, 2, 3, 4, 5] := by decide +kernel
 
 private def quicksortFunctionMutated3 : Function :=
   { params := [.i32, .i32, .i32]
@@ -355,8 +344,7 @@ def runQuicksortMutated3 (fuel : Nat) (arr : UInt32) (input : List UInt32) :
       | _ => none
 
 theorem quicksort_mutation_bound :
-    runQuicksortMutated3 15000 0 [5, 1, 4, 2, 3] ≠ some [1, 2, 3, 4, 5] := by
-  native_decide
+    runQuicksortMutated3 15000 0 [5, 1, 4, 2, 3] ≠ some [1, 2, 3, 4, 5] := by decide +kernel
 
 private def partitionFunctionMutated4 : Function :=
   { params := [.i32, .i32, .i32]
@@ -388,30 +376,35 @@ def runQuicksortMutated4 (fuel : Nat) (arr : UInt32) (input : List UInt32) :
       | _ => none
 
 theorem quicksort_mutation_store :
-    runQuicksortMutated4 15000 0 [5, 1, 4, 2, 3] ≠ some [1, 2, 3, 4, 5] := by
-  native_decide
+    runQuicksortMutated4 15000 0 [5, 1, 4, 2, 3] ≠ some [1, 2, 3, 4, 5] := by decide +kernel
 
 /-! ## Oracle agreement -/
 
 theorem quicksort_oracle_empty :
     runQuicksortExample 100 0 [] =
-    some (List.mergeSort []) := by native_decide
+    some (List.mergeSort []) := by decide +kernel
 
 theorem quicksort_oracle_singleton :
     runQuicksortExample 200 0 [42] =
-    some (List.mergeSort [42]) := by native_decide
+    some (List.mergeSort [42]) := by decide +kernel
 
 theorem quicksort_oracle_five :
     runQuicksortExample 15000 0 [5, 1, 4, 2, 3] =
-    some (List.mergeSort [5, 1, 4, 2, 3]) := by native_decide
+    some (List.mergeSort [5, 1, 4, 2, 3]) := by
+  rw [quicksort_exec_five]
+  cbv
 
 theorem quicksort_oracle_duplicates :
     runQuicksortExample 18000 0 [4, 1, 4, 2, 1, 3] =
-    some (List.mergeSort [4, 1, 4, 2, 1, 3]) := by native_decide
+    some (List.mergeSort [4, 1, 4, 2, 1, 3]) := by
+  rw [quicksort_exec_duplicates]
+  cbv
 
 theorem quicksort_oracle_sorted :
     runQuicksortExample 10000 0 [1, 2, 3, 4] =
-    some (List.mergeSort [1, 2, 3, 4]) := by native_decide
+    some (List.mergeSort [1, 2, 3, 4]) := by
+  rw [quicksort_exec_sorted]
+  cbv
 
 /-! ## Adequacy infrastructure -/
 
@@ -448,12 +441,9 @@ theorem quicksortHeapAux_agrees
       have h := UInt32.toNat_add base 4
       simp only [show (4 : UInt32).toNat = 4 from by decide] at h
       rw [h]; exact Nat.mod_le _ _
+    obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4 base (by omega)
     apply ih
-    · apply store32_sound0
-      · exact UInt32.add_ofNat_toNat_noWrap base 1 (by decide) (by omega)
-      · exact UInt32.add_ofNat_toNat_noWrap base 2 (by decide) (by omega)
-      · exact UInt32.add_ofNat_toNat_noWrap base 3 (by decide) (by omega)
-      · exact hagree
+    · exact store32_sound0 σ mem base x h1 h2 h3 hagree
     · simp only [UInt32.size]; omega
 
 theorem quicksortHeap_agrees (arr : UInt32) (input : List UInt32)
@@ -465,13 +455,9 @@ theorem quicksortHeap_agrees (arr : UInt32) (input : List UInt32)
     arr input
     (by intro key value hget; simp [get?_empty] at hget)
     hfit
-  have heq : (fun id => if id = 0 then
-      some (writeWordArray (quicksortModule.initialStore (α := Unit)).mem arr input)
-      else none) = storeResolve (quicksortConfig arr input).store := by
-    funext id; by_cases hid : id = 0
-    · subst hid; simp [storeResolve, quicksortConfig]
-    · have hext : (quicksortModule.initialStore (α := Unit)).extraMems = [] := by native_decide
-      simp [hid, storeResolve, quicksortConfig, hext]
+  have heq := singleMemoryResolve_eq_storeResolve (quicksortConfig arr input).store
+    (writeWordArray (quicksortModule.initialStore (α := Unit)).mem arr input) rfl
+    (show (quicksortModule.initialStore (α := Unit)).extraMems = [] from by decide +kernel)
   rw [heq] at h; exact h
 
 theorem quicksortHeapAux_inBounds
@@ -491,13 +477,9 @@ theorem quicksortHeapAux_inBounds
       simp only [show (4 : UInt32).toNat = 4 from by decide] at h
       rw [h]; exact Nat.mod_le _ _
     have hpages : (mem.write32 base x).pages = mem.pages := by simp [Mem.write32]
+    obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4 base (by omega)
     apply ih
-    · apply store32_inBounds0
-      · exact UInt32.add_ofNat_toNat_noWrap base 1 (by decide) (by omega)
-      · exact UInt32.add_ofNat_toNat_noWrap base 2 (by decide) (by omega)
-      · exact UInt32.add_ofNat_toNat_noWrap base 3 (by decide) (by omega)
-      · omega
-      · exact hinBounds
+    · exact store32_inBounds0 σ mem base x h1 h2 h3 (by omega) hinBounds
     · simp only [UInt32.size]; omega
     · rw [hpages]; omega
 
@@ -513,13 +495,9 @@ theorem quicksortHeap_inBounds (arr : UInt32) (input : List UInt32)
     hfit
     (by have hpages : (quicksortModule.initialStore (α := Unit)).mem.pages = 1 := by decide
         simp only [hpages]; exact hmem)
-  have heq : (fun id => if id = 0 then
-      some (writeWordArray (quicksortModule.initialStore (α := Unit)).mem arr input)
-      else none) = storeResolve (quicksortConfig arr input).store := by
-    funext id; by_cases hid : id = 0
-    · subst hid; simp [storeResolve, quicksortConfig]
-    · have hext : (quicksortModule.initialStore (α := Unit)).extraMems = [] := by native_decide
-      simp [hid, storeResolve, quicksortConfig, hext]
+  have heq := singleMemoryResolve_eq_storeResolve (quicksortConfig arr input).store
+    (writeWordArray (quicksortModule.initialStore (α := Unit)).mem arr input) rfl
+    (show (quicksortModule.initialStore (α := Unit)).extraMems = [] from by decide +kernel)
   rw [heq] at h; exact h
 
 theorem quicksortHeapAux_pointsTo [WasmHeapGS α]
@@ -542,12 +520,7 @@ theorem quicksortHeapAux_pointsTo [WasmHeapGS α]
       UInt32.add_ofNat_toNat_noWrap base 4 (by decide) (by omega)
     have hfit' : (base + 4).toNat + 4 * xs.length < UInt32.size := by
       simp only [UInt32.size]; omega
-    have hn1 : (base + 1).toNat = base.toNat + 1 :=
-      UInt32.add_ofNat_toNat_noWrap base 1 (by decide) (by omega)
-    have hn2 : (base + 2).toNat = base.toNat + 2 :=
-      UInt32.add_ofNat_toNat_noWrap base 2 (by decide) (by omega)
-    have hn3 : (base + 3).toNat = base.toNat + 3 :=
-      UInt32.add_ofNat_toNat_noWrap base 3 (by decide) (by omega)
+    obtain ⟨hn1, hn2, hn3⟩ := UInt32.addSteps4 base (by omega)
     have hget0 : get? σ ⟨0, base⟩ = none := by
       by_contra h; obtain ⟨v, hget⟩ := Option.ne_none_iff_exists.mp h
       have hlt := hdisjoint (⟨0, base⟩ : MemoryKey) v hget.symm
@@ -580,14 +553,12 @@ theorem quicksortHeapAux_pointsTo [WasmHeapGS α]
             get?_insert_ne (Ne.symm h1), get?_insert_ne (Ne.symm h0)] at hget
         have hlt := hdisjoint a b hget; omega
     iintro Hheap
-    ihave Hsplit := ih (store32Heap σ 0 base x) (base + 4) hdisjoint' hfit' $$ Hheap
-    icases Hsplit with ⟨Hxs, Hstore32⟩
-    ihave Hdecomp :=
+    ihave ⟨Hxs, Hstore32⟩ := ih (store32Heap σ 0 base x) (base + 4) hdisjoint' hfit' $$ Hheap
+    ihave ⟨Hword, Hσ⟩ :=
       store32Heap_pointsTo σ 0 base x hget0 hget1 hget2 hget3 hn1 hn2 hn3 $$ Hstore32
-    icases Hdecomp with ⟨Hword, Hσ⟩
     simp only [arrayAt]
     isplitl [Hword Hxs]
-    · isplitl [Hword]; iexact Hword; iexact Hxs
+    · isplitl_exact Hword; iexact Hxs
     · iexact Hσ
 
 theorem quicksortHeap_pointsTo [WasmHeapGS α]
@@ -598,71 +569,41 @@ theorem quicksortHeap_pointsTo [WasmHeapGS α]
       arrayAt 0 arr input := by
   unfold quicksortHeap
   iintro Hheap
-  ihave Hsplit := quicksortHeapAux_pointsTo ∅ arr input
+  ihave ⟨Harray, _Hemp⟩ := quicksortHeapAux_pointsTo ∅ arr input
     (fun a b hget => by simp [get?_empty] at hget) hfit $$ Hheap
-  icases Hsplit with ⟨Harray, _Hemp⟩
   iexact Harray
-
-theorem arrayAt_readWordArray [WasmSmallStepGS hlc α]
-    (store : MachineStore α) (steps : Nat) (obs : List StepKind) (threads : Nat)
-    (arr : UInt32) (output : List UInt32)
-    (hfit : arr.toNat + 4 * output.length ≤ UInt32.size) :
-    stateInterp (GF := WasmHeapGF α) store steps obs threads ∗ arrayAt 0 arr output ==∗
-      stateInterp (GF := WasmHeapGF α) store steps obs threads ∗ arrayAt 0 arr output ∗
-      ⌜readWordArray store.wasm.mem arr output.length = output⌝ := by
-  induction output generalizing arr with
-  | nil =>
-    simp only [arrayAt, List.length_nil, readWordArray]
-    iintro ⟨Hstate, Hemp⟩
-    imodintro
-    isplitl [Hstate]; iexact Hstate
-    isplitl [Hemp]; iexact Hemp
-    ipureintro; trivial
-  | cons x xs ih =>
-    simp only [arrayAt, List.length_cons]
-    simp only [List.length_cons, UInt32.size] at hfit
-    have h4_le : (arr + 4 : UInt32).toNat ≤ arr.toNat + 4 := by
-      have h := UInt32.toNat_add arr 4
-      simp only [show (4 : UInt32).toNat = 4 from by decide] at h
-      rw [h]; exact Nat.mod_le _ _
-    have hfit' : (arr + 4).toNat + 4 * xs.length ≤ UInt32.size := by
-      simp only [UInt32.size]; omega
-    iintro ⟨Hstate, Hword, Hxs⟩
-    imod stateInterp_pointsTo_u32_facts_frame store steps obs threads arr x
-      (UInt32.add_ofNat_toNat_noWrap arr 1 (by decide) (by omega))
-      (UInt32.add_ofNat_toNat_noWrap arr 2 (by decide) (by omega))
-      (UInt32.add_ofNat_toNat_noWrap arr 3 (by decide) (by omega)) $$
-        [$Hstate $Hword] with ⟨Hstate, Hword, %hfacts⟩
-    imod ih (arr + 4) hfit' $$ [$Hstate $Hxs] with ⟨Hstate, Hxs, %hread⟩
-    imodintro
-    isplitl [Hstate]; iexact Hstate
-    isplitl [Hword Hxs]
-    · isplitl [Hword]; iexact Hword; iexact Hxs
-    ipureintro
-    unfold readWordArray
-    rw [hfacts.1, hread]
 
 /-! ## WAT decoder agreement -/
 
 private def quicksortWat : String := include_str "quicksort.wat"
 
-private def quicksortModuleDecoded : Module :=
-  match Wasm.Decoder.Wat.decode quicksortWat with
+private def moduleOfDecoded (result : Except String Module) : Module :=
+  match result with
   | .ok m => m
   | .error _ => default
 
-def runQuicksortDecoded (fuel : Nat) (arr : UInt32) (input : List UInt32) :
-    Option (List UInt32) :=
-  match SmallStep.initConfig
-      { module := quicksortModuleDecoded, host := {} } 1
-      (quicksortExampleStore arr input)
-      (quicksortArguments arr input.length []) with
-  | .error _ => none
-  | .ok config =>
-      match (SmallStep.runSteps fuel config).result with
-      | .success _ store => some (readWordArray store.wasm.mem arr input.length)
-      | _ => none
+private def quicksortModuleDecoded : Module :=
+  moduleOfDecoded (Wasm.Decoder.Wat.decode quicksortWat)
 
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 4000000 in
+private theorem quicksort_decode_eq :
+    Wasm.Decoder.Wat.decode quicksortWat = .ok quicksortModule := by cbv
+
+def runQuicksortDecoded (fuel : Nat) (arr : UInt32) (input : List UInt32) :
+    Option (List UInt32) := runQuicksortModule quicksortModuleDecoded fuel arr input
+
+set_option maxRecDepth 100000 in
+private theorem quicksortModuleDecoded_eq : quicksortModuleDecoded = quicksortModule :=
+  congrArg moduleOfDecoded quicksort_decode_eq
+
+set_option maxRecDepth 100000 in
+private theorem runQuicksortDecoded_eq (fuel : Nat) (arr : UInt32) (input : List UInt32) :
+    runQuicksortDecoded fuel arr input = runQuicksortExample fuel arr input :=
+  congrArg (fun m => runQuicksortModule m fuel arr input) quicksortModuleDecoded_eq
+
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 4000000 in
 theorem quicksort_decoded_agrees :
     runQuicksortDecoded 15000 0 [5, 1, 4, 2, 3] =
       runQuicksortExample 15000 0 [5, 1, 4, 2, 3] ∧
@@ -672,6 +613,7 @@ theorem quicksort_decoded_agrees :
       runQuicksortExample 15000 0 [4, 3, 2, 1] ∧
     runQuicksortDecoded 20 0 [3, 2, 1] =
       runQuicksortExample 20 0 [3, 2, 1] := by
-  native_decide
+  exact ⟨runQuicksortDecoded_eq .., runQuicksortDecoded_eq ..,
+    runQuicksortDecoded_eq .., runQuicksortDecoded_eq .., runQuicksortDecoded_eq ..⟩
 
 end Wasm.Examples.Quicksort

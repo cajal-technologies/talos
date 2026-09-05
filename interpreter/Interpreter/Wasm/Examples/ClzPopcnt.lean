@@ -53,45 +53,33 @@ def popcntConfig (a : UInt32) : Config Unit := bitCountConfig PopcntBody a
 /-! ### Checks 1–3 — concrete small-step execution -/
 
 theorem clz_zero_runs :
-    (runSteps 3 (clzConfig 0)).result.values? = some [.i32 32] := by
-  rfl
+    (runSteps 3 (clzConfig 0)).result.values? = some [.i32 32] := by rfl
 
 theorem ctz_eight_runs :
-    (runSteps 3 (ctzConfig 8)).result.values? = some [.i32 3] := by
-  rfl
+    (runSteps 3 (ctzConfig 8)).result.values? = some [.i32 3] := by rfl
 
 theorem popcnt_nibble_runs :
-    (runSteps 3 (popcntConfig 0xF)).result.values? = some [.i32 4] := by
-  rfl
+    (runSteps 3 (popcntConfig 0xF)).result.values? = some [.i32 4] := by rfl
 
 /-! ### Checks 4–6 — fuel-free small-step specifications -/
 
 theorem clz_terminates (a : UInt32) :
     TerminatesWith (clzConfig a)
       (fun values _ =>
-        values = [.i32 (UInt32.ofNat (clz32 32 a))]) := by
-  apply runSteps_success_terminates (fuel := 3)
-    (values := [.i32 (UInt32.ofNat (clz32 32 a))])
-  · rfl
-  · rfl
+        values = [.i32 (UInt32.ofNat (clz32 32 a))]) :=
+  runSteps_values_terminates (fuel := 3) (by rfl)
 
 theorem ctz_terminates (a : UInt32) :
     TerminatesWith (ctzConfig a)
       (fun values _ =>
-        values = [.i32 (UInt32.ofNat (ctz32 32 a))]) := by
-  apply runSteps_success_terminates (fuel := 3)
-    (values := [.i32 (UInt32.ofNat (ctz32 32 a))])
-  · rfl
-  · rfl
+        values = [.i32 (UInt32.ofNat (ctz32 32 a))]) :=
+  runSteps_values_terminates (fuel := 3) (by rfl)
 
 theorem popcnt_terminates (a : UInt32) :
     TerminatesWith (popcntConfig a)
       (fun values _ =>
-        values = [.i32 (UInt32.ofNat (popcnt32 32 a 0))]) := by
-  apply runSteps_success_terminates (fuel := 3)
-    (values := [.i32 (UInt32.ofNat (popcnt32 32 a 0))])
-  · rfl
-  · rfl
+        values = [.i32 (UInt32.ofNat (popcnt32 32 a 0))]) :=
+  runSteps_values_terminates (fuel := 3) (by rfl)
 
 theorem clz_partial (a : UInt32) :
     PartiallyMeets (clzConfig a)

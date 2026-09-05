@@ -34,8 +34,7 @@ def Oracle.ofPrefix {count : Nat} (bytes : Prefix count) : Oracle :=
 @[simp]
 theorem Oracle.ofPrefix_apply {count index : Nat} (bytes : Prefix count)
     (hindex : index < count) :
-    Oracle.ofPrefix bytes index = bytes ⟨index, hindex⟩ := by
-  simp [Oracle.ofPrefix, hindex]
+    Oracle.ofPrefix bytes index = bytes ⟨index, hindex⟩ := by simp [Oracle.ofPrefix, hindex]
 
 /-- Probability of an event under a discrete distribution. -/
 noncomputable def probability (distribution : PMF α) (event : Set α) :
@@ -73,7 +72,6 @@ theorem uniformByte_lowHalf_probability :
     apply (ENNReal.div_eq_div_iff (by norm_num) (by norm_num)
       (by norm_num) (by norm_num)).2
     norm_num
-  rw [Fintype.card_fin]
-  exact half
+  rw [Fintype.card_fin]; exact half
 
 end Wasm.Random

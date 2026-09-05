@@ -99,27 +99,21 @@ private theorem logTransfer (v : UInt32) (n : List UInt32)
         { store with wasm := postWasm } ns obs nt := by
   simp [logHost] at h
   obtain ⟨h1, h2⟩ := h; subst h1; subst h2
-  iintro ⟨HP, Hσ⟩
-  icases (stateInterp_eq store ns obs nt).mp $$ Hσ with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ, %runtimeModuleσ, %hostEnvσ,
-      Hheap, Hglobals, Hsegments, Htables, HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep,
-      HruntimeInstances, HinstanceAuth, Henv, Hauth, %Hfacts, Hexc⟩
-  ihave %heq : ⌜store.wasm.host = n⌝ $$ [Hauth HP]
-  · iapply (hostStateOwn_agree store.wasm.host n); iframe Hauth HP
+  iopen_state Hσ from ⟨HP, Hσ⟩
+  ihave %heq : ⌜store.wasm.host = n⌝ $$ [Hstate_auth HP]
+  · iapply (hostStateOwn_agree store.wasm.host n); iframe Hstate_auth HP
   rw [heq]
-  imod hostStateOwn_update n (n ++ [v]) $$ [$Hauth $HP] with ⟨Hauth', HP'⟩
+  imod hostStateOwn_update n (n ++ [v]) $$ [$Hstate_auth $HP] with ⟨Hauth', HP'⟩
   imodintro
-  isplitl [HP']
-  · iexact HP'
+  isplitl_exact HP'
   · iapply (stateInterp_eq
         { store with wasm := { store.wasm with host := n ++ [v] } }
         ns obs nt).mpr
-    iexists σ; iexists globalσ; iexists dataSegmentσ
-    iexists tableσ; iexists elementSegmentσ; iexists runtimeModuleσ; iexists hostEnvσ
+    iexists σ, globalσ, dataSegmentσ, tableσ,
+      elementSegmentσ, runtimeModuleσ, hostEnvσ
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep
-      HruntimeInstances HinstanceAuth Henv Hauth' Hexc
-    ipureintro
-    exact Hfacts
+      HruntimeInstances HinstanceAuth HhostEnvAuth Hauth' Hexc
+    ipureexact Hfacts
 
 theorem importChain_partiallyMeets (v : UInt32) (initial : List UInt32) :
     PartiallyMeets (importChainConfig v initial) (fun values _ => values = []) := by
@@ -155,8 +149,7 @@ theorem importChain_partiallyMeets (v : UInt32) (initial : List UInt32) :
         iintro HinstanceCaller
         simp only [List.length_nil, List.take_zero, List.drop_zero, List.nil_append]
         -- back in mainFn: [localGet 0, call 0, localGet 0, call 0, ret]
-        iapply wp_localGet rfl
-        inext
+        wasm_wp_pures [wp_localGet]
         -- first logHost call: rebuild runtimeModuleOwn from HruntimeElem + HinstanceCaller
         ihave Hruntime1 : runtimeModuleOwn ⟨0⟩ chainModuleA $$ [HinstanceCaller]
         · simp only [runtimeModuleOwn]
@@ -183,8 +176,7 @@ theorem importChain_partiallyMeets (v : UInt32) (initial : List UInt32) :
           simp only [List.take_nil, List.length_cons, List.length_nil, Nat.zero_add,
                      List.drop_succ_cons, List.drop_zero, List.nil_append]
           -- second logHost call
-          iapply wp_localGet rfl
-          inext
+          wasm_wp_pures [wp_localGet]
           iapply wp_callHost chainModuleA 0 logImp logHost
               (by decide) rfl chainHostEnv rfl
               (iprop(hostStateOwn (initial ++ [v])))
@@ -205,12 +197,9 @@ theorem importChain_partiallyMeets (v : UInt32) (initial : List UInt32) :
             simp only [List.take_nil, List.length_cons, List.length_nil, Nat.zero_add,
                        List.drop_succ_cons, List.drop_zero, List.nil_append]
             iclear Hhost2
-            iapply wp_returnFromFunction
-            inext
+            wasm_wp_next wp_returnFromFunction
             simp only [List.append_nil]
-            iapply wp_value'
-            ipureintro
-            rfl
+            iapply_pure wp_value' => rfl
           · inext; iintro %_ %_ %_ %h _; simp [logHost] at h
           · inext; iintro %_ %_ %_ %_ %h _; simp [logHost] at h
         · inext; iintro %_ %_ %_ %h _; simp [logHost] at h
@@ -220,7 +209,7 @@ theorem importChain_terminates :
     TerminatesWith (importChainConfig 42 []) (fun _ _ => True) :=
   runSteps_checked_terminates (fuel := 200)
     (fun _ _ => true)
-    (by native_decide)
+    (by decide +kernel)
     (fun _ _ _ => trivial)
 
 end Wasm.SmallStep

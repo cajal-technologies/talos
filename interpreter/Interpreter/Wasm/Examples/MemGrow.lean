@@ -59,30 +59,25 @@ def growSuccessStore : MachineStore Unit :=
 
 theorem memorySize_reads_pagesMin :
     (runSteps 2 sizeConfig).result =
-      .success [.i32 1] growStore := by
-  rfl
+      .success [.i32 1] growStore := by rfl
 
 theorem memorySize_terminates :
     TerminatesWith sizeConfig (fun values store =>
-      values = [.i32 1] ∧ store = growStore) := by
-  apply runSteps_success_terminates memorySize_reads_pagesMin
-  exact ⟨rfl, rfl⟩
+      values = [.i32 1] ∧ store = growStore) :=
+  runSteps_success_terminates_eq_values memorySize_reads_pagesMin rfl
 
 theorem memoryGrow_bumps_size :
     (runSteps 6 growThenSizeConfig).result =
-      .success [.i32 3] growSuccessStore := by
-  rfl
+      .success [.i32 3] growSuccessStore := by rfl
 
 /-- Growth changes only the page count and frames the pre-existing word. -/
 theorem memoryGrow_terminates :
     TerminatesWith growThenSizeConfig (fun values store =>
       values = [.i32 3] ∧
       store.wasm.mem.pages = 3 ∧
-      store.wasm.mem.read32 64 = 0xC0DEC0DE) := by
-  apply runSteps_success_terminates memoryGrow_bumps_size
-  constructor
-  · rfl
-  constructor <;> native_decide
+      store.wasm.mem.read32 64 = 0xC0DEC0DE) :=
+  runSteps_success_terminates_eq_values
+    memoryGrow_bumps_size (by constructor <;> decide +kernel)
 
 theorem memoryGrow_partial :
     PartiallyMeets growThenSizeConfig (fun values store =>
@@ -95,14 +90,12 @@ theorem memoryGrow_partial :
 not mutate any component of the machine store. -/
 theorem memoryGrow_oversize_returns_neg_one :
     (runSteps 4 growFailConfig).result =
-      .success [.i32 1, .i32 0xFFFFFFFF] growStore := by
-  rfl
+      .success [.i32 1, .i32 0xFFFFFFFF] growStore := by rfl
 
 theorem memoryGrow_failure_terminates :
     TerminatesWith growFailConfig (fun values store =>
-      values = [.i32 1, .i32 0xFFFFFFFF] ∧ store = growStore) := by
-  apply runSteps_success_terminates memoryGrow_oversize_returns_neg_one
-  exact ⟨rfl, rfl⟩
+      values = [.i32 1, .i32 0xFFFFFFFF] ∧ store = growStore) :=
+  runSteps_success_terminates_eq_values memoryGrow_oversize_returns_neg_one rfl
 
 theorem memoryGrow_failure_partial :
     PartiallyMeets growFailConfig (fun values store =>
@@ -137,7 +130,6 @@ def importedLimitConfig : Config Unit :=
 
 theorem imported_memory_retains_exporter_limit :
     (runSteps 3 importedLimitConfig).result =
-      .success [.i32 0xFFFFFFFF] importedLimitConfig.store := by
-  rfl
+      .success [.i32 0xFFFFFFFF] importedLimitConfig.store := by rfl
 
 end Wasm

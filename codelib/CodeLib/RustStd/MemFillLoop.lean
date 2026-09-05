@@ -91,8 +91,7 @@ def fillWordsInnerFrame : Wasm.SmallStep.ControlFrame :=
 
 theorem FillWords_eq_structured :
     FillWords = [.const 0, .localSet 3,
-      .loop 0 0 FillWordsLoopBody] := by
-  rfl
+      .loop 0 0 FillWordsLoopBody] := by rfl
 
 /-- One real small-step fill iteration extends the authoritatively owned
 filled prefix by one word and frames an arbitrary Iris resource `R`. -/
@@ -128,40 +127,26 @@ theorem fillWords_storeIteration_wp
       (i <<< (3 % 32 : UInt32)) + base = address := by
     rw [MemRegion.shl3_eq_mul8]
     dsimp only [address]
-    rw [hi]
-    exact UInt32.add_comm _ _
-  have haddrNat : address.toNat = base.toNat + 8 * i.toNat := by
-    exact Mem.words64_slotAddr_toNat base i.toNat (by omega)
+    rw [hi]; exact UInt32.add_comm _ _
+  have haddrNat : address.toNat = base.toNat + 8 * i.toNat :=
+    Mem.words64_slotAddr_toNat base i.toNat (by omega)
   obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ :=
     UInt32.addSteps8 address (by omega)
   iintro ⟨HR, Harray⟩
   icases array64At_fill_next 0 base i.toNat value old suffix $$ Harray with
     ⟨Hold, Hreassemble⟩
   simp only [FillWordsStoreIteration, List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_const
-  inext
-  iapply Wasm.SmallStep.wp_shl
-  inext
-  iapply Wasm.SmallStep.wp_add
-  inext
-  rw [haddr]
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet wp_localGet wp_const wp_shl wp_add] rewriting [haddr]
+  wasm_wp_pures [wp_localGet]
   ihave HoldLater : ▷ pointsTo_u64 0 (address + 0) old $$ [Hold]
   · inext
     simp only [UInt32.add_zero, address]
     iexact Hold
-  iapply Wasm.SmallStep.wp_store64
+  wasm_wp_next_bind Wasm.SmallStep.wp_store64
       (address := address) (offset := 0) (value := value) old
       (by simp) (by simpa using h1) (by simpa using h2)
       (by simpa using h3) (by simpa using h4) (by simpa using h5)
-      (by simpa using h6) (by simpa using h7) $$ HoldLater
-  inext
-  iintro Hnew
+      (by simpa using h6) (by simpa using h7) with HoldLater => Hnew
   ihave Hnew' :
       pointsTo_u64 0 (base + 8 * UInt32.ofNat i.toNat) value $$ [Hnew]
   · simp only [UInt32.add_zero, address]
@@ -170,10 +155,8 @@ theorem fillWords_storeIteration_wp
       array64At 0 base
         (List.replicate (i.toNat + 1) value ++ suffix) $$
       [Hreassemble Hnew']
-  · iapply Hreassemble
-    iexact Hnew'
-  iapply hcontinue
-  iframe
+  · iapply_exact Hreassemble with Hnew'
+  iapply_frame hcontinue
 
 /-- The generated index increment and `br 1` really target the surrounding
 loop frame, with the updated local and no operand-stack leakage. -/
@@ -198,18 +181,8 @@ theorem fillWords_incrementBackedge_wp
         calls⟩ : Wasm.SmallStep.Expr α) @ s; E {{ Φ }} := by
   iintro Hcontinue
   simp only [FillWordsIncrementBackedge]
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_const
-  inext
-  iapply Wasm.SmallStep.wp_add
-  inext
-  rw [UInt32.add_comm 1 i]
-  iapply Wasm.SmallStep.wp_localSet rfl
-  inext
-  iapply Wasm.SmallStep.wp_br (by rfl)
-  inext
-  simp only [fillWordsLoopFrame, List.length_cons,
+  wasm_wp_pures [wp_localGet wp_const wp_add] rewriting [UInt32.add_comm 1 i]
+  wasm_wp_pures [wp_localSet wp_br] using [fillWordsLoopFrame, List.length_cons,
     List.length_nil, Nat.reduceAdd, Nat.reduceSub, List.set, List.take_nil,
     List.nil_append]
   iexact Hcontinue
@@ -251,8 +224,7 @@ theorem fillWords_bodyTail_wp
   iintro Hresources
   iapply fillWords_incrementBackedge_wp base n i value afterLoop arity
     remainder outerControls calls
-  iapply hback
-  iexact Hresources
+  iapply_exact hback with Hresources
 
 /-- The two generated blocks implement the loop guard: `i < n` exposes the
 stateful body tail, while `i ≥ n` exits first the outer block and then the
@@ -288,36 +260,19 @@ theorem fillWords_guard_wp
     FillWordsInnerGuard, List.cons_append, List.nil_append] at hbody
   iintro HP
   simp only [FillWordsLoopBody]
-  iapply Wasm.SmallStep.wp_block
-  inext
-  simp only [FillWordsOuterBody, List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.wp_block
-  inext
-  simp only [FillWordsInnerGuard]
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_block] using [FillWordsOuterBody, List.cons_append, List.nil_append]
+  wasm_wp_pures [wp_block] using [FillWordsInnerGuard]
+  wasm_wp_pures [wp_localGet wp_localGet]
   by_cases hlt : i < n
-  · iapply Wasm.SmallStep.wp_ltU (result := 1) (by simp [hlt])
-    inext
-    iapply Wasm.SmallStep.wp_brIf (by decide) (by rfl)
-    inext
+  · wasm_wp_next Wasm.SmallStep.wp_ltU (result := 1) (by simp [hlt])
+    wasm_wp_next Wasm.SmallStep.wp_brIf (by decide) (by rfl)
     simp only [List.drop_zero, List.take_nil, List.nil_append]
-    iapply hbody hlt
-    iexact HP
-  · iapply Wasm.SmallStep.wp_ltU (result := 0) (by simp [hlt])
-    inext
-    iapply Wasm.SmallStep.wp_brIfZero
-    inext
-    iapply Wasm.SmallStep.wp_br (by rfl)
-    inext
-    iapply Wasm.SmallStep.wp_exitControl rfl
-    inext
+    iapply_exact hbody hlt with HP
+  · wasm_wp_next Wasm.SmallStep.wp_ltU (result := 0) (by simp [hlt])
+    wasm_wp_pures [wp_brIfZero wp_br wp_exitControl]
     simp only [fillWordsLoopFrame, List.drop_zero, List.take_nil,
       List.nil_append]
-    iapply hexit hlt
-    iexact HP
+    iapply_exact hexit hlt with HP
 
 /-- Universal Iris loop invariant.  `suffix` is the not-yet-written part of
 the original array, so `i + suffix.length = n`; ownership is exactly the
@@ -371,23 +326,16 @@ theorem fillWords_loopBody_invariant_wp
     cases suffix with
     | nil =>
         have hltNat : i.toNat < n.toNat := hlt
-        simp only [List.length_nil, Nat.add_zero] at hinv
-        omega
+        simp only [List.length_nil, Nat.add_zero] at hinv; omega
     | cons old tail =>
         have hltNat : i.toNat < n.toNat := hlt
-        have hnext :
-            (i + 1).toNat = i.toNat + 1 := by
-          rw [UInt32.toNat_add]
-          simp only [UInt32.reduceToNat]
-          rw [Nat.mod_eq_of_lt
-            (lt_of_le_of_lt (by omega) n.toNat_lt)]
+        have hnext : (i + 1).toNat = i.toNat + 1 :=
+          UInt32.add_ofNat_toNat_noWrap i 1 (by decide) (by omega)
         have hinvNext :
             (i + 1).toNat + tail.length = n.toNat := by
-          simp only [List.length_cons] at hinv
-          omega
+          simp only [List.length_cons] at hinv; omega
         let Rloop : IProp (WasmHeapGF α) := iprop% □ Kloop ∗ R
-        iintro Hcurrent
-        icases Hcurrent with ⟨#IHcurrent, HcurrentRest⟩
+        iintro ⟨#IHcurrent, HcurrentRest⟩
         icases HcurrentRest with ⟨HRcurrent, HarrayCurrent⟩
         iapply fillWords_bodyTail_wp Rloop base n i value old tail
           afterLoop arity remainder outerControls calls
@@ -399,35 +347,28 @@ theorem fillWords_loopBody_invariant_wp
                   (List.replicate ((i + 1).toNat) value ++ tail) $$
               [Hresources]
           · simp only [Rloop]
-            rw [hnext]
-            iexact Hresources
+            irw_exact [hnext] with Hresources
           icases Hexpanded with ⟨Hloop, Harray'⟩
           icases Hloop with ⟨#IH', HR'⟩
           ispecialize IH' $$ %(i + 1) %tail %hinvNext
-          iapply IH'
-          iframe
+          iapply_frame IH'
         · simp only [Rloop]
           isplitl [IHcurrent HRcurrent]
-          · isplitl [IHcurrent]
-            · iexact IHcurrent
+          · isplitl_exact IHcurrent
             · iexact HRcurrent
           · iexact HarrayCurrent
   · intro hnlt
     simp only [P]
-    have hnltNat : ¬ i.toNat < n.toNat := by
-      simpa only [UInt32.lt_iff_toNat_lt] using hnlt
+    have hnltNat : ¬ i.toNat < n.toNat := by simpa only [UInt32.lt_iff_toNat_lt] using hnlt
     have hiEq : i.toNat = n.toNat := by omega
     have hiWord : i = n := UInt32.toNat_inj.mp hiEq
     subst i
-    have hsuffix : suffix = [] := by
-      apply List.eq_nil_of_length_eq_zero
-      omega
+    have hsuffix : suffix = [] :=
+      List.eq_nil_of_length_eq_zero (by omega)
     subst suffix
     iintro ⟨#_IH', Hrest⟩
     icases Hrest with ⟨HR', Harray'⟩
-    iapply hfinish
-    isplitl [HR']
-    · iexact HR'
+    iapply_splitl_exact hfinish with HR'
     · simp only [List.append_nil]
       iexact Harray'
   · simp only [P]
@@ -459,8 +400,7 @@ theorem fillWords_loop_wp
         Wasm.SmallStep.Expr α) @ s; E {{ Φ }} := by
   iintro Hresources
   simp only [List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.wp_loop
-  inext
+  wasm_wp_next Wasm.SmallStep.wp_loop
   have hframe :
       ({ kind := .loop
          paramArity := 0
@@ -471,8 +411,7 @@ theorem fillWords_loop_wp
            (⟨[.i32 base, .i32 n, .i64 value], [.i32 0], []⟩ :
              Locals).values.drop 0 } :
         Wasm.SmallStep.ControlFrame) =
-      fillWordsLoopFrame afterLoop := by
-    rfl
+      fillWordsLoopFrame afterLoop := by rfl
   rw [hframe]
   have hbody := fillWords_loopBody_invariant_wp R base n 0 value
     original afterLoop arity remainder outerControls calls htotal
@@ -511,16 +450,11 @@ theorem fillWords_smallStep_wp
   iintro Hresources
   rw [FillWords_eq_structured]
   simp only [List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.wp_const
-  inext
-  iapply Wasm.SmallStep.wp_localSet rfl
-  inext
-  simp only [List.length_cons, List.length_nil,
+  wasm_wp_pures [wp_const wp_localSet] using [List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set]
   have hloop := fillWords_loop_wp R base n value original afterLoop arity
     remainder controls calls hlength htotal hfinish
   simp only [List.cons_append, List.nil_append] at hloop
-  iapply hloop
-  iexact Hresources
+  iapply_exact hloop with Hresources
 
 end Wasm

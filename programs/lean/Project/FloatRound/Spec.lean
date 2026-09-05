@@ -26,14 +26,6 @@ def roundHeap : WasmHeapMap (Option UInt8) :=
     (store32Heap (store32Heap ∅ 0 1048540 0) 0 1048556 0)
     0 1048572 0
 
-def roundMem (memory : Mem) : Mem :=
-  ((memory.write32 1048540 0).write32 1048556 0).write32 1048572 0
-
-theorem round_initialMem_eq :
-    roundMem («module».initialStore : Store Unit).mem =
-      («module».initialStore : Store Unit).mem := by
-  simp [roundMem, «module», Module.initialStore, Mem.write32, Mem.empty]
-
 def checkRoundConfig (x : UInt32) : Config Unit :=
   { expr := .running
       ⟨⟨[.f32 x], [.i32 0, .i32 0], []⟩,
@@ -44,73 +36,41 @@ def checkRoundConfig (x : UInt32) : Config Unit :=
 
 theorem roundHeap_agrees :
     heapAgreesWithMem roundHeap (storeResolve (checkRoundConfig 0).store) := by
+  let mem := («module».initialStore : Store Unit).mem
+  let resolve := storeResolve (checkRoundConfig 0).store
+  have hresolve : resolve 0 = some mem := rfl
   unfold roundHeap
-  have h := store32_sound0 (store32Heap (store32Heap ∅ 0 1048540 0) 0 1048556 0)
-      ((«module».initialStore : Store Unit).mem.write32 1048540 0 |>.write32 1048556 0)
-      1048572 0 (by decide) (by decide) (by decide)
-      (store32_sound0 (store32Heap ∅ 0 1048540 0)
-          ((«module».initialStore : Store Unit).mem.write32 1048540 0)
-          1048556 0 (by decide) (by decide) (by decide)
-          (store32_sound0 ∅
-              («module».initialStore : Store Unit).mem
-              1048540 0 (by decide) (by decide) (by decide)
-              (heapAgreesWithMem_empty _)))
-  rw [show (((«module».initialStore : Store Unit).mem.write32 1048540 0).write32 1048556 0).write32 1048572 0
-      = («module».initialStore : Store Unit).mem from by
-    have hrm := round_initialMem_eq
-    unfold roundMem at hrm
-    exact hrm] at h
-  have hresolveEq : (fun id : Nat => if id = 0 then some («module».initialStore : Store Unit).mem else none) =
-      storeResolve (checkRoundConfig 0).store := by
-    funext id; by_cases h0 : id = 0
-    · simp [h0, storeResolve, checkRoundConfig]
-    · simp [h0, storeResolve, checkRoundConfig,
-        show («module».initialStore : Store Unit).extraMems = [] from by native_decide]
-  rw [← hresolveEq]
-  exact h
+  apply_insert_physical_word32_sound hresolve
+  · apply_insert_physical_word32_sound hresolve
+    · apply_insert_physical_word32_sound hresolve
+      · exact heapAgreesWithMem_empty _
+      · decide
+    · decide
+  · decide
 
 theorem roundHeap_inBounds :
     heapAddressesInBounds roundHeap (storeResolve (checkRoundConfig 0).store) := by
+  let mem := («module».initialStore : Store Unit).mem
+  let resolve := storeResolve (checkRoundConfig 0).store
+  have hresolve : resolve 0 = some mem := rfl
   unfold roundHeap
-  have h := store32_inBounds0 (store32Heap (store32Heap ∅ 0 1048540 0) 0 1048556 0)
-      ((«module».initialStore : Store Unit).mem.write32 1048540 0 |>.write32 1048556 0)
-      1048572 0 (by decide) (by decide) (by decide) (by decide)
-      (store32_inBounds0 (store32Heap ∅ 0 1048540 0)
-          ((«module».initialStore : Store Unit).mem.write32 1048540 0)
-          1048556 0 (by decide) (by decide) (by decide) (by decide)
-          (store32_inBounds0 ∅
-              («module».initialStore : Store Unit).mem
-              1048540 0 (by decide) (by decide) (by decide) (by decide)
-              (heapAddressesInBounds_empty _)))
-  rw [show (((«module».initialStore : Store Unit).mem.write32 1048540 0).write32 1048556 0).write32 1048572 0
-      = («module».initialStore : Store Unit).mem from by
-    have hrm := round_initialMem_eq
-    unfold roundMem at hrm
-    exact hrm] at h
-  have hresolveEq : (fun id : Nat => if id = 0 then some («module».initialStore : Store Unit).mem else none) =
-      storeResolve (checkRoundConfig 0).store := by
-    funext id; by_cases h0 : id = 0
-    · simp [h0, storeResolve, checkRoundConfig]
-    · simp [h0, storeResolve, checkRoundConfig,
-        show («module».initialStore : Store Unit).extraMems = [] from by native_decide]
-  rw [← hresolveEq]
-  exact h
+  apply_insert_physical_word32_inBounds hresolve
+  · apply_insert_physical_word32_inBounds hresolve
+    · apply_insert_physical_word32_inBounds hresolve
+      · exact heapAddressesInBounds_empty _
+      · decide
+      · decide
+    · decide
+    · decide
+  · decide
+  · decide
 
 def roundGlobals : WasmGlobalMap Value :=
   insert ∅ ⟨0, 0⟩ (.i32 1048576)
 
 theorem roundGlobals_agree :
     globalHeapAgrees roundGlobals
-      («module».initialStore : Store Unit).globals := by
-  intro index value hget
-  simp only [roundGlobals] at hget
-  by_cases hindex : index = 0
-  · subst index
-    simp only [get?_insert_eq rfl] at hget
-    obtain rfl := Option.some.inj hget
-    rfl
-  · rw [get?_insert_ne (show (⟨0, 0⟩ : GlobalKey) ≠ ⟨0, index⟩ from fun h => hindex (congrArg GlobalKey.index h).symm), get?_empty] at hget
-    contradiction
+      («module».initialStore : Store Unit).globals := globalHeapAgrees_singleton rfl
 
 theorem roundHeap_pointsTo [WasmHeapGS Unit] :
     ([∗map] address ↦ value ∈ roundHeap,
@@ -120,22 +80,19 @@ theorem roundHeap_pointsTo [WasmHeapGS Unit] :
         pointsTo_u32 0 1048556 0 ∗ pointsTo_u32 0 1048572 0 := by
   unfold roundHeap
   iintro Hheap
-  ihave Houter := store32Heap_pointsTo
+  ihave ⟨Houter, Hheap⟩ := store32Heap_pointsTo
     (store32Heap (store32Heap ∅ 0 1048540 0) 0 1048556 0)
     0 1048572 0
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) $$ Hheap
-  icases Houter with ⟨Houter, Hheap⟩
-  ihave Hmiddle := store32Heap_pointsTo
+  ihave ⟨Hmiddle, Hheap⟩ := store32Heap_pointsTo
     (store32Heap ∅ 0 1048540 0) 0 1048556 0
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) $$ Hheap
-  icases Hmiddle with ⟨Hmiddle, Hheap⟩
-  ihave Hinner := store32Heap_pointsTo
+  ihave ⟨Hinner, Hempty⟩ := store32Heap_pointsTo
     (∅ : WasmHeapMap (Option UInt8)) 0 1048540 0
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) $$ Hheap
-  icases Hinner with ⟨Hinner, Hempty⟩
   iframe
 
 theorem roundGlobals_pointsTo [WasmGlobalGS Unit] :
@@ -145,8 +102,7 @@ theorem roundGlobals_pointsTo [WasmGlobalGS Unit] :
   unfold roundGlobals
   rw [(BI.BigSepM.bigSepM_insert (get?_empty (⟨0, 0⟩ : GlobalKey))).to_eq,
     BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
-  simp only [globalPointsToAt_eq]
-  rfl
+  simp only [globalPointsToAt_eq]; rfl
 
 /-! ## Small-step optimized-round path -/
 
@@ -168,52 +124,25 @@ theorem func5_lowered_body_smallStep_wp
         func5, 1, [], [], calls⟩ : Expr Unit) @ s; E {{ Φ }} := by
   iintro ⟨HR, Hglobal, Hword⟩
   simp only [func5]
-  iapply wp_globalGet $$ Hglobal
-  inext
-  iintro Hglobal
-  iapply wp_const
-  inext
-  iapply wp_sub
-  inext
-  rw [show (1048560 : UInt32) - 16 = 1048544 by decide]
-  iapply wp_localSet rfl
-  inext
-  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
-    List.set]
-  iapply wp_localGet rfl
-  inext
-  iapply wp_localGet rfl
-  inext
-  iapply wp_scalarFloat1 rfl rfl
-  inext
+  wasm_wp_next_rebind wp_globalGet with Hglobal
+  wasm_wp_pures [wp_const wp_sub] rewriting [show (1048560 : UInt32) - 16 = 1048544 by decide]
+  wasm_wp_localSet
+  wasm_wp_pures [wp_localGet wp_localGet]
+  wasm_wp_next wp_scalarFloat1 rfl rfl
   ihave HwordLater :
       ▷ pointsTo_u32 0 ((1048544 : UInt32) + 12) oldWord $$ [Hword]
-  · inext
-    rw [show (1048544 : UInt32) + 12 = 1048556 by decide]
-    iexact Hword
-  iapply wp_f32Store oldWord
-    (by decide) (by decide) (by decide) (by decide) $$ HwordLater
-  inext
-  iintro Hword
-  iapply wp_localGet rfl
-  inext
+  · ilater_rw_exact [show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
+  wasm_wp_next_bind wp_f32Store oldWord
+    (by decide) (by decide) (by decide) (by decide) with HwordLater => Hword
+  wasm_wp_pures [wp_localGet]
   ihave HwordLater :
       ▷ pointsTo_u32 0 ((1048544 : UInt32) + 12) (f32Nearest x) $$ [Hword]
-  · inext
-    iexact Hword
-  iapply wp_f32Load (f32Nearest x)
-    (by decide) (by decide) (by decide) (by decide) $$ HwordLater
-  inext
-  iintro Hword
-  have hWordProp :
-      pointsTo_u32 0 ((1048544 : UInt32) + 12) (f32Nearest x) =
-        pointsTo_u32 0 1048556 (f32Nearest x) :=
-    congrArg (fun address => pointsTo_u32 0 address (f32Nearest x)) (by decide)
+  · ilater_exact Hword
+  wasm_wp_next_bind wp_f32Load (f32Nearest x)
+    (by decide) (by decide) (by decide) (by decide) with HwordLater => Hword
   ihave HwordExact : pointsTo_u32 0 1048556 (f32Nearest x) $$ [Hword]
-  · rw [← hWordProp]
-    iexact Hword
-  iapply hreturn
-  iframe
+  · irw_exact [← show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
+  iapply_frame hreturn
 
 theorem func4_lowered_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -235,23 +164,15 @@ theorem func4_lowered_smallStep_wp
         func4, 1, [], [], calls⟩ : Expr Unit) @ s; E {{ Φ }} := by
   iintro ⟨HR, Hruntime, Hglobal, Hword⟩
   simp only [func4]
-  iapply wp_localGet rfl
-  inext
-  iapply wp_call «module» 5 func5Def
-    (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-  inext
-  iintro Hruntime
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_next_rebind wp_call «module» 5 func5Def
+    (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func5Def, Function.toLocals, Function.numParams, ValueType.zero]
-  iapply func5_lowered_body_smallStep_wp
-    (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module»)) x oldWord _ _
-  · iintro ⟨⟨HR, Hruntime⟩, Hglobal, Hword⟩
-    iapply wp_returnFromCallExplicit' $$ Hruntime
-    inext
-    iintro Hruntime
-    simp only [List.take, List.singleton_append]
-    iapply hreturn
-    iframe
-  · iframe
+  iapply_then_frame func5_lowered_body_smallStep_wp
+      (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module»)) x oldWord _ _ =>
+    iintro ⟨⟨HR, Hruntime⟩, Hglobal, Hword⟩
+    wasm_wp_return_from_call Hruntime [List.take, List.singleton_append]
+    iapply_frame hreturn
 
 theorem deepFrameFloat_body_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -277,52 +198,25 @@ theorem deepFrameFloat_body_smallStep_wp
           .localGet 1, .f32Load 12, .ret ],
         1, [], [], calls⟩ : Expr Unit) @ s; E {{ Φ }} := by
   iintro ⟨HR, Hglobal, Hword⟩
-  iapply wp_globalGet $$ Hglobal
-  inext
-  iintro Hglobal
-  iapply wp_const
-  inext
-  iapply wp_sub
-  inext
-  rw [show (1048544 : UInt32) - 16 = 1048528 by decide]
-  iapply wp_localSet rfl
-  inext
-  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
-    List.set]
-  iapply wp_localGet rfl
-  inext
-  iapply wp_localGet rfl
-  inext
-  iapply wp_scalarFloat1 hzero heval
-  inext
+  wasm_wp_next_rebind wp_globalGet with Hglobal
+  wasm_wp_pures [wp_const wp_sub] rewriting [show (1048544 : UInt32) - 16 = 1048528 by decide]
+  wasm_wp_localSet
+  wasm_wp_pures [wp_localGet wp_localGet]
+  wasm_wp_next wp_scalarFloat1 hzero heval
   ihave HwordLater :
       ▷ pointsTo_u32 0 ((1048528 : UInt32) + 12) oldWord $$ [Hword]
-  · inext
-    rw [show (1048528 : UInt32) + 12 = 1048540 by decide]
-    iexact Hword
-  iapply wp_f32Store oldWord
-    (by decide) (by decide) (by decide) (by decide) $$ HwordLater
-  inext
-  iintro Hword
-  iapply wp_localGet rfl
-  inext
+  · ilater_rw_exact [show (1048528 : UInt32) + 12 = 1048540 by decide] with Hword
+  wasm_wp_next_bind wp_f32Store oldWord
+    (by decide) (by decide) (by decide) (by decide) with HwordLater => Hword
+  wasm_wp_pures [wp_localGet]
   ihave HwordLater :
       ▷ pointsTo_u32 0 ((1048528 : UInt32) + 12) result $$ [Hword]
-  · inext
-    iexact Hword
-  iapply wp_f32Load result
-    (by decide) (by decide) (by decide) (by decide) $$ HwordLater
-  inext
-  iintro Hword
-  have hWordProp :
-      pointsTo_u32 0 ((1048528 : UInt32) + 12) result =
-        pointsTo_u32 0 1048540 result :=
-    congrArg (fun address => pointsTo_u32 0 address result) (by decide)
+  · ilater_exact Hword
+  wasm_wp_next_bind wp_f32Load result
+    (by decide) (by decide) (by decide) (by decide) with HwordLater => Hword
   ihave HwordExact : pointsTo_u32 0 1048540 result $$ [Hword]
-  · rw [← hWordProp]
-    iexact Hword
-  iapply hreturn
-  iframe
+  · irw_exact [← show (1048528 : UInt32) + 12 = 1048540 by decide] with Hword
+  iapply_frame hreturn
 
 theorem func1_deep_body_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -482,46 +376,23 @@ theorem naive_tail_smallStep_wp
         Expr Unit) @ s; E {{ Φ }} := by
   iintro ⟨HR, Hglobal, Hword⟩
   simp only [naiveTailProg]
-  iapply wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet]
   ihave HwordLater :
       ▷ pointsTo_u32 0 ((1048544 : UInt32) + 12) result $$ [Hword]
-  · inext
-    rw [show (1048544 : UInt32) + 12 = 1048556 by decide]
-    iexact Hword
-  iapply wp_f32Load result
-    (by decide) (by decide) (by decide) (by decide) $$ HwordLater
-  inext
-  iintro Hword
-  iapply wp_localSet rfl
-  inext
-  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
-    List.set]
-  iapply wp_localGet rfl
-  inext
-  iapply wp_const
-  inext
-  iapply wp_add
-  inext
+  · ilater_rw_exact [show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
+  wasm_wp_next_bind wp_f32Load result
+    (by decide) (by decide) (by decide) (by decide) with HwordLater => Hword
+  wasm_wp_localSet
+  wasm_wp_pures [wp_localGet wp_const wp_add]
   rw [show (16 : UInt32) + 1048544 = 1048560 by decide]
   ihave HglobalLater :
       ▷ globalPointsToAt 0 0 (.i32 1048544) $$ [Hglobal]
-  · inext
-    iexact Hglobal
-  iapply wp_globalSet $$ HglobalLater
-  inext
-  iintro Hglobal
-  iapply wp_localGet rfl
-  inext
-  have hWordProp :
-      pointsTo_u32 0 ((1048544 : UInt32) + 12) result =
-        pointsTo_u32 0 1048556 result :=
-    congrArg (fun address => pointsTo_u32 0 address result) (by decide)
+  · ilater_exact Hglobal
+  wasm_wp_next_bind wp_globalSet with HglobalLater => Hglobal
+  wasm_wp_pures [wp_localGet]
   ihave HwordExact : pointsTo_u32 0 1048556 result $$ [Hword]
-  · rw [← hWordProp]
-    iexact Hword
-  iapply hreturn
-  iframe
+  · irw_exact [← show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
+  iapply_frame hreturn
 
 theorem naive_storeTrunc_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -550,31 +421,16 @@ theorem naive_storeTrunc_smallStep_wp
         Expr Unit) @ s; E {{ Φ }} := by
   iintro ⟨HR, Hglobal, Hword⟩
   simp only [naiveStoreTruncProg]
-  iapply wp_localGet rfl
-  inext
-  iapply wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet wp_localGet]
   ihave HwordLater :
       ▷ pointsTo_u32 0 ((1048544 : UInt32) + 12) oldWord $$ [Hword]
-  · inext
-    rw [show (1048544 : UInt32) + 12 = 1048556 by decide]
-    iexact Hword
-  iapply wp_f32Store oldWord
-    (by decide) (by decide) (by decide) (by decide) $$ HwordLater
-  inext
-  iintro Hword
-  iapply wp_br rfl
-  inext
-  simp only [naiveAFrame, List.take, List.nil_append]
-  have hWordProp :
-      pointsTo_u32 0 ((1048544 : UInt32) + 12) (f32Trunc x) =
-        pointsTo_u32 0 1048556 (f32Trunc x) :=
-    congrArg (fun address => pointsTo_u32 0 address (f32Trunc x)) (by decide)
+  · ilater_rw_exact [show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
+  wasm_wp_next_bind wp_f32Store oldWord
+    (by decide) (by decide) (by decide) (by decide) with HwordLater => Hword
+  wasm_wp_pures [wp_br] using [naiveAFrame, List.take, List.nil_append]
   ihave HwordExact : pointsTo_u32 0 1048556 (f32Trunc x) $$ [Hword]
-  · rw [← hWordProp]
-    iexact Hword
-  iapply hnext
-  iframe
+  · irw_exact [← show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
+  iapply_frame hnext
 
 theorem naive_ceil_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -606,50 +462,26 @@ theorem naive_ceil_smallStep_wp
         Expr Unit) @ s; E {{ Φ }} := by
   iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
   simp only [naiveCeilProg]
-  iapply wp_localGet rfl
-  inext
-  iapply wp_localGet rfl
-  inext
-  iapply wp_call «module» 2 func2Def
-    (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-  inext
-  iintro Hruntime
+  wasm_wp_pures [wp_localGet wp_localGet]
+  wasm_wp_next_rebind wp_call «module» 2 func2Def
+    (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func2Def, Function.toLocals, Function.numParams, ValueType.zero]
-  iapply func2_deep_body_smallStep_wp
-    (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
-      pointsTo_u32 0 1048556 oldWord))
-    (f32Trunc x) oldDeep _ _
-  · iintro ⟨⟨HR, Hruntime, Hword⟩, Hglobal, Hdeep⟩
-    iapply wp_returnFromCallExplicit' $$ Hruntime
-    inext
-    iintro Hruntime
-    simp only [List.take, List.singleton_append]
+  iapply_then_frame func2_deep_body_smallStep_wp
+      (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
+        pointsTo_u32 0 1048556 oldWord))
+      (f32Trunc x) oldDeep _ _ =>
+    iintro ⟨⟨HR, Hruntime, Hword⟩, Hglobal, Hdeep⟩
+    wasm_wp_return_from_call Hruntime [List.take, List.singleton_append]
     ihave HwordLater :
         ▷ pointsTo_u32 0 ((1048544 : UInt32) + 12) oldWord $$ [Hword]
-    · inext
-      rw [show (1048544 : UInt32) + 12 = 1048556 by decide]
-      iexact Hword
-    iapply wp_f32Store oldWord
-      (by decide) (by decide) (by decide) (by decide) $$ HwordLater
-    inext
-    iintro Hword
-    iapply wp_br rfl
-    inext
-    simp only [naiveAFrame, List.take, List.nil_append]
-    have hWordProp :
-        pointsTo_u32 0 ((1048544 : UInt32) + 12)
-            (f32Ceil (f32Trunc x)) =
-          pointsTo_u32 0 1048556 (f32Ceil (f32Trunc x)) :=
-      congrArg
-        (fun address => pointsTo_u32 0 address (f32Ceil (f32Trunc x)))
-        (by decide)
+    · ilater_rw_exact [show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
+    wasm_wp_next_bind wp_f32Store oldWord
+      (by decide) (by decide) (by decide) (by decide) with HwordLater => Hword
+    wasm_wp_pures [wp_br] using [naiveAFrame, List.take, List.nil_append]
     ihave HwordExact :
         pointsTo_u32 0 1048556 (f32Ceil (f32Trunc x)) $$ [Hword]
-    · rw [← hWordProp]
-      iexact Hword
-    iapply hnext
-    iframe
-  · iframe
+    · irw_exact [← show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
+    iapply_frame hnext
 
 theorem naive_floor_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -680,50 +512,26 @@ theorem naive_floor_smallStep_wp
         Expr Unit) @ s; E {{ Φ }} := by
   iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
   simp only [naiveFloorProg]
-  iapply wp_localGet rfl
-  inext
-  iapply wp_localGet rfl
-  inext
-  iapply wp_call «module» 3 func3Def
-    (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-  inext
-  iintro Hruntime
+  wasm_wp_pures [wp_localGet wp_localGet]
+  wasm_wp_next_rebind wp_call «module» 3 func3Def
+    (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func3Def, Function.toLocals, Function.numParams, ValueType.zero]
-  iapply func3_deep_body_smallStep_wp
-    (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
-      pointsTo_u32 0 1048556 oldWord))
-    (f32Trunc x) oldDeep _ _
-  · iintro ⟨⟨HR, Hruntime, Hword⟩, Hglobal, Hdeep⟩
-    iapply wp_returnFromCallExplicit' $$ Hruntime
-    inext
-    iintro Hruntime
-    simp only [List.take, List.singleton_append]
+  iapply_then_frame func3_deep_body_smallStep_wp
+      (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
+        pointsTo_u32 0 1048556 oldWord))
+      (f32Trunc x) oldDeep _ _ =>
+    iintro ⟨⟨HR, Hruntime, Hword⟩, Hglobal, Hdeep⟩
+    wasm_wp_return_from_call Hruntime [List.take, List.singleton_append]
     ihave HwordLater :
         ▷ pointsTo_u32 0 ((1048544 : UInt32) + 12) oldWord $$ [Hword]
-    · inext
-      rw [show (1048544 : UInt32) + 12 = 1048556 by decide]
-      iexact Hword
-    iapply wp_f32Store oldWord
-      (by decide) (by decide) (by decide) (by decide) $$ HwordLater
-    inext
-    iintro Hword
-    iapply wp_exitControl rfl
-    inext
-    simp only [naiveAFrame, List.take, List.nil_append]
-    have hWordProp :
-        pointsTo_u32 0 ((1048544 : UInt32) + 12)
-            (f32Floor (f32Trunc x)) =
-          pointsTo_u32 0 1048556 (f32Floor (f32Trunc x)) :=
-      congrArg
-        (fun address => pointsTo_u32 0 address (f32Floor (f32Trunc x)))
-        (by decide)
+    · ilater_rw_exact [show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
+    wasm_wp_next_bind wp_f32Store oldWord
+      (by decide) (by decide) (by decide) (by decide) with HwordLater => Hword
+    wasm_wp_pures [wp_exitControl] using [naiveAFrame, List.take, List.nil_append]
     ihave HwordExact :
         pointsTo_u32 0 1048556 (f32Floor (f32Trunc x)) $$ [Hword]
-    · rw [← hWordProp]
-      iexact Hword
-    iapply hnext
-    iframe
-  · iframe
+    · irw_exact [← show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
+    iapply_frame hnext
 
 theorem naive_compare_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -779,87 +587,49 @@ theorem naive_compare_smallStep_wp
         Expr Unit) @ s; E {{ Φ }} := by
   iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
   simp only [naiveCompareProg]
-  iapply wp_localGet rfl
-  inext
-  iapply wp_scalarFloat0 rfl
-  inext
+  wasm_wp_pures [wp_localGet wp_scalarFloat0]
   by_cases hge :
       f32Ge (f32Sub x (f32Trunc x)) 1056964608 = true
   · iapply wp_scalarFloat2 (value := .i32 1) rfl rfl
       (by simp [evalScalarFloat2?, hge])
     inext
-    iapply wp_const
-    inext
-    iapply wp_and
-    inext
-    rw [show (1 &&& 1 : UInt32) = 1 by decide]
-    iapply wp_brIf (by decide) rfl
-    inext
+    wasm_wp_pures [wp_const wp_and] rewriting [show (1 &&& 1 : UInt32) = 1 by decide]
+    wasm_wp_next wp_brIf (by decide) rfl
     simp only [naiveDFrame, List.take, List.nil_append]
-    iapply naive_ceil_smallStep_wp R x oldDeep oldWord calls _
-    · iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
-      iapply hceil
-      iframe
-    · iframe
+    iapply_then_frame naive_ceil_smallStep_wp R x oldDeep oldWord calls _ =>
+      iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
+      iapply_frame hceil
   · have hgeFalse :
         f32Ge (f32Sub x (f32Trunc x)) 1056964608 = false := by
       cases h : f32Ge (f32Sub x (f32Trunc x)) 1056964608 <;> simp_all
-    iapply wp_scalarFloat2 (value := .i32 0) rfl rfl
+    wasm_wp_next wp_scalarFloat2 (value := .i32 0) rfl rfl
       (by simp [evalScalarFloat2?, hgeFalse])
-    inext
-    iapply wp_const
-    inext
-    iapply wp_and
-    inext
-    rw [show (0 &&& 1 : UInt32) = 0 by decide]
-    iapply wp_brIfZero
-    inext
-    iapply wp_localGet rfl
-    inext
-    iapply wp_scalarFloat0 rfl
-    inext
+    wasm_wp_pures [wp_const wp_and] rewriting [show (0 &&& 1 : UInt32) = 0 by decide]
+    wasm_wp_pures [wp_brIfZero wp_localGet wp_scalarFloat0]
     by_cases hle :
         f32Le (f32Sub x (f32Trunc x)) 3204448256 = true
     · iapply wp_scalarFloat2 (value := .i32 1) rfl rfl
         (by simp [evalScalarFloat2?, hle])
       inext
-      iapply wp_const
-      inext
-      iapply wp_and
-      inext
-      rw [show (1 &&& 1 : UInt32) = 1 by decide]
-      iapply wp_brIf (by decide) rfl
-      inext
+      wasm_wp_pures [wp_const wp_and] rewriting [show (1 &&& 1 : UInt32) = 1 by decide]
+      wasm_wp_next wp_brIf (by decide) rfl
       simp only [naiveBFrame, List.take, List.nil_append]
-      iapply naive_floor_smallStep_wp R x oldDeep oldWord calls _
-      · iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
-        iapply hfloor
-        iframe
-      · iframe
+      iapply_then_frame naive_floor_smallStep_wp R x oldDeep oldWord calls _ =>
+        iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
+        iapply_frame hfloor
     · have hleFalse :
           f32Le (f32Sub x (f32Trunc x)) 3204448256 = false := by
         cases h : f32Le (f32Sub x (f32Trunc x)) 3204448256 <;> simp_all
-      iapply wp_scalarFloat2 (value := .i32 0) rfl rfl
+      wasm_wp_next wp_scalarFloat2 (value := .i32 0) rfl rfl
         (by simp [evalScalarFloat2?, hleFalse])
-      inext
-      iapply wp_const
-      inext
-      iapply wp_and
-      inext
-      rw [show (0 &&& 1 : UInt32) = 0 by decide]
-      iapply wp_brIfZero
-      inext
-      iapply wp_br rfl
-      inext
-      simp only [naiveCFrame, List.take, List.nil_append]
-      iapply naive_storeTrunc_smallStep_wp
-        (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
-          pointsTo_u32 0 1048540 oldDeep))
-        x oldWord calls _
-      · iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
-        iapply htrunc
-        iframe
-      · iframe
+      wasm_wp_pures [wp_const wp_and] rewriting [show (0 &&& 1 : UInt32) = 0 by decide]
+      wasm_wp_pures [wp_brIfZero wp_br] using [naiveCFrame, List.take, List.nil_append]
+      iapply_then_frame naive_storeTrunc_smallStep_wp
+          (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
+            pointsTo_u32 0 1048540 oldDeep))
+          x oldWord calls _ =>
+        iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
+        iapply_frame htrunc
 
 theorem func0_lowered_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -886,56 +656,27 @@ theorem func0_lowered_smallStep_wp
         func0, 1, [], [], calls⟩ : Expr Unit) @ s; E {{ Φ }} := by
   iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
   simp only [func0]
-  iapply wp_globalGet $$ Hglobal
-  inext
-  iintro Hglobal
-  iapply wp_const
-  inext
-  iapply wp_sub
-  inext
-  rw [show (1048560 : UInt32) - 16 = 1048544 by decide]
-  iapply wp_localSet rfl
-  inext
-  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
-    List.set]
-  iapply wp_localGet rfl
-  inext
+  wasm_wp_next_rebind wp_globalGet with Hglobal
+  wasm_wp_pures [wp_const wp_sub] rewriting [show (1048560 : UInt32) - 16 = 1048544 by decide]
+  wasm_wp_localSet
+  wasm_wp_pures [wp_localGet]
   ihave HglobalLater : ▷ globalPointsToAt 0 0 (.i32 1048560) $$ [Hglobal]
-  · inext
-    iexact Hglobal
-  iapply wp_globalSet $$ HglobalLater
-  inext
-  iintro Hglobal
-  iapply wp_localGet rfl
-  inext
-  iapply wp_call «module» 1 func1Def
-    (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-  inext
-  iintro Hruntime
+  · ilater_exact Hglobal
+  wasm_wp_next_bind wp_globalSet with HglobalLater => Hglobal
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_next_rebind wp_call «module» 1 func1Def
+    (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func1Def, Function.toLocals, Function.numParams, ValueType.zero]
   iapply func1_deep_body_smallStep_wp
     (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
       pointsTo_u32 0 1048556 oldWord))
     x oldDeep _ _
   · iintro ⟨⟨HR, Hruntime, Hword⟩, Hglobal, Hdeep⟩
-    iapply wp_returnFromCallExplicit' $$ Hruntime
-    inext
-    iintro Hruntime
-    simp only [List.take, List.singleton_append]
-    iapply wp_localSet rfl
-    inext
-    simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
-      List.set]
-    iapply wp_localGet rfl
-    inext
-    iapply wp_localGet rfl
-    inext
-    iapply wp_scalarFloat2 rfl rfl rfl
-    inext
-    iapply wp_localSet rfl
-    inext
-    simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
-      List.set]
+    wasm_wp_return_from_call Hruntime [List.take, List.singleton_append]
+    wasm_wp_localSet
+    wasm_wp_pures [wp_localGet wp_localGet]
+    wasm_wp_next wp_scalarFloat2 rfl rfl rfl
+    wasm_wp_localSet
     rw [← show naiveCompareProg =
       [ .localGet 3, .f32Const 1056964608, .f32Ge,
         .const 1, .and, .br_if 0,
@@ -957,21 +698,16 @@ theorem func0_lowered_smallStep_wp
       [ .localGet 1, .f32Load 12, .localSet 4,
         .localGet 1, .const 16, .add, .globalSet 0,
         .localGet 4, .ret ] by rfl]
-    iapply wp_block
-    inext
+    wasm_wp_pures [wp_block]
     rw (occs := .pos [1]) [show naiveABody =
       (.block 0 0 naiveBBody :: naiveFloorProg) by rfl]
-    iapply wp_block
-    inext
+    wasm_wp_pures [wp_block]
     rw (occs := .pos [1]) [show naiveBBody =
       (.block 0 0 naiveCBody :: naiveStoreTruncProg) by rfl]
-    iapply wp_block
-    inext
+    wasm_wp_pures [wp_block]
     rw (occs := .pos [1]) [show naiveCBody =
       (.block 0 0 naiveCompareProg :: naiveCeilProg) by rfl]
-    iapply wp_block
-    inext
-    simp only [List.drop_zero]
+    wasm_wp_pures [wp_block] using [List.drop_zero]
     rw [← show naiveDFrame =
       { kind := .block, paramArity := 0, resultArity := 0
         body := naiveCompareProg, continuation := naiveCeilProg
@@ -991,32 +727,26 @@ theorem func0_lowered_smallStep_wp
     iapply naive_compare_smallStep_wp
       R x (f32Trunc x) oldWord calls _ _ _
     · iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
-      iapply naive_tail_smallStep_wp
-        (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
-          pointsTo_u32 0 1048540 (f32Ceil (f32Trunc x))))
-        x (f32Ceil (f32Trunc x)) calls _
-      · iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
-        iapply hreturn (f32Ceil (f32Trunc x))
-        iframe
-      · iframe
+      iapply_then_frame naive_tail_smallStep_wp
+          (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
+            pointsTo_u32 0 1048540 (f32Ceil (f32Trunc x))))
+          x (f32Ceil (f32Trunc x)) calls _ =>
+        iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
+        iapply_frame hreturn (f32Ceil (f32Trunc x))
     · iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
-      iapply naive_tail_smallStep_wp
-        (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
-          pointsTo_u32 0 1048540 (f32Floor (f32Trunc x))))
-        x (f32Floor (f32Trunc x)) calls _
-      · iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
-        iapply hreturn (f32Floor (f32Trunc x))
-        iframe
-      · iframe
+      iapply_then_frame naive_tail_smallStep_wp
+          (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
+            pointsTo_u32 0 1048540 (f32Floor (f32Trunc x))))
+          x (f32Floor (f32Trunc x)) calls _ =>
+        iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
+        iapply_frame hreturn (f32Floor (f32Trunc x))
     · iintro ⟨HR, Hruntime, Hdeep, Hglobal, Hword⟩
-      iapply naive_tail_smallStep_wp
-        (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
-          pointsTo_u32 0 1048540 (f32Trunc x)))
-        x (f32Trunc x) calls _
-      · iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
-        iapply hreturn (f32Trunc x)
-        iframe
-      · iframe
+      iapply_then_frame naive_tail_smallStep_wp
+          (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
+            pointsTo_u32 0 1048540 (f32Trunc x)))
+          x (f32Trunc x) calls _ =>
+        iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
+        iapply_frame hreturn (f32Trunc x)
     · iframe
   · iframe
 
@@ -1065,43 +795,23 @@ theorem roundCheck_tail_result_smallStep_wp
         Expr Unit) @ s; E {{ values, ⌜∃ b : UInt32, values = [.i32 b]⌝ }} := by
   iintro ⟨HR, Hglobal, Hresult⟩
   simp only [roundCheckTailProg]
-  iapply wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet]
   ihave HresultLater :
       ▷ pointsTo_u32 0 ((1048560 : UInt32) + 12) result $$ [Hresult]
-  · inext
-    rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
-    iexact Hresult
-  iapply wp_load32 result
-    (by decide) (by decide) (by decide) (by decide) $$ HresultLater
-  inext
-  iintro Hresult
-  iapply wp_localSet rfl
-  inext
-  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
-    List.set]
-  iapply wp_localGet rfl
-  inext
-  iapply wp_const
-  inext
-  iapply wp_add
-  inext
+  · ilater_rw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
+  wasm_wp_next_bind wp_load32 result
+    (by decide) (by decide) (by decide) (by decide) with HresultLater => Hresult
+  wasm_wp_localSet
+  wasm_wp_pures [wp_localGet wp_const wp_add]
   rw [show (16 : UInt32) + 1048560 = 1048576 by decide]
   ihave HglobalLater :
       ▷ globalPointsToAt 0 0 (.i32 1048560) $$ [Hglobal]
-  · inext
-    iexact Hglobal
-  iapply wp_globalSet $$ HglobalLater
-  inext
-  iintro Hglobal
-  iapply wp_localGet rfl
-  inext
-  iapply wp_returnFromFunction
-  inext
-  iapply wp_value'
+  · ilater_exact Hglobal
+  wasm_wp_next_bind wp_globalSet with HglobalLater => Hglobal
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_return_value
   iclear HR Hglobal Hresult
-  ipureintro
-  exact ⟨result, rfl⟩
+  ipureexact ⟨result, rfl⟩
 
 theorem roundCheck_comparison_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -1133,115 +843,59 @@ theorem roundCheck_comparison_smallStep_wp
         Expr Unit) @ s; E {{ Φ }} := by
   iintro ⟨Hdeep, Hword, Hruntime, Hglobal, Hresult⟩
   simp only [roundCheckInnerBody]
-  iapply wp_localGet rfl
-  inext
-  iapply wp_call «module» 0 func0Def
-    (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-  inext
-  iintro Hruntime
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_next_rebind wp_call «module» 0 func0Def
+    (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func0Def, Function.toLocals, Function.numParams, ValueType.zero]
-  iapply func0_lowered_smallStep_wp
-    (iprop(pointsTo_u32 0 1048572 oldResult))
-    x oldDeep oldWord _ _
-  · intro naive
+  iapply_then_frame func0_lowered_smallStep_wp
+      (iprop(pointsTo_u32 0 1048572 oldResult))
+      x oldDeep oldWord _ _ =>
+    intro naive
     iintro ⟨Hresult, Hruntime, Hglobal, Hdeep, Hword⟩
-    iapply wp_returnFromCallExplicit' $$ Hruntime
-    inext
-    iintro Hruntime
-    simp only [List.take, List.singleton_append]
-    iapply wp_localGet rfl
-    inext
-    iapply wp_call «module» 4 func4Def
-      (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-    inext
-    iintro Hruntime
+    wasm_wp_return_from_call Hruntime [List.take, List.singleton_append]
+    wasm_wp_pures [wp_localGet]
+    wasm_wp_next_rebind wp_call «module» 4 func4Def
+      (by simp [«module»]) (by simp [«module»]) with Hruntime
     simp [func4Def, Function.toLocals, Function.numParams]
-    iapply func4_lowered_smallStep_wp
-      (iprop(pointsTo_u32 0 1048540 naive ∗
-        pointsTo_u32 0 1048572 oldResult))
-      x naive _ _
-    · iintro ⟨⟨Hdeep, Hresult⟩, Hruntime, Hglobal, Hword⟩
-      iapply wp_returnFromCallExplicit' $$ Hruntime
-      inext
-      iintro Hruntime
-      simp only [List.take, List.singleton_append]
+    iapply_then_frame func4_lowered_smallStep_wp
+        (iprop(pointsTo_u32 0 1048540 naive ∗
+          pointsTo_u32 0 1048572 oldResult))
+        x naive _ _ =>
+      iintro ⟨⟨Hdeep, Hresult⟩, Hruntime, Hglobal, Hword⟩
+      wasm_wp_return_from_call Hruntime [List.take, List.singleton_append]
       by_cases heq : f32Eq naive (f32Nearest x) = true
       · iapply wp_scalarFloat2 (value := .i32 1) rfl rfl
           (by simp [evalScalarFloat2?, heq])
         inext
-        iapply wp_const
-        inext
-        iapply wp_and
-        inext
-        rw [show (1 &&& 1 : UInt32) = 1 by decide]
-        iapply wp_brIf (by decide) rfl
-        inext
+        wasm_wp_pures [wp_const wp_and] rewriting [show (1 &&& 1 : UInt32) = 1 by decide]
+        wasm_wp_next wp_brIf (by decide) rfl
         simp only [roundCheckInnerFrame, List.take, List.nil_append]
         simp only [roundCheckOneProg]
-        iapply wp_localGet rfl
-        inext
-        iapply wp_const
-        inext
+        wasm_wp_pures [wp_localGet wp_const]
         ihave HresultLater :
             ▷ pointsTo_u32 0 ((1048560 : UInt32) + 12) oldResult $$ [Hresult]
-        · inext
-          rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
-          iexact Hresult
-        iapply wp_store32 oldResult
-          (by decide) (by decide) (by decide) (by decide) $$ HresultLater
-        inext
-        iintro Hresult
-        iapply wp_exitControl rfl
-        inext
-        simp only [roundCheckOuterFrame, List.take, List.nil_append]
-        have hResultProp :
-            pointsTo_u32 0 ((1048560 : UInt32) + 12) 1 =
-              pointsTo_u32 0 1048572 1 :=
-          congrArg (fun address => pointsTo_u32 0 address 1) (by decide)
+        · ilater_rw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
+        wasm_wp_next_bind wp_store32 oldResult
+          (by decide) (by decide) (by decide) (by decide) with HresultLater => Hresult
+        wasm_wp_pures [wp_exitControl] using [roundCheckOuterFrame, List.take, List.nil_append]
         ihave HresultExact : pointsTo_u32 0 1048572 1 $$ [Hresult]
-        · rw [← hResultProp]
-          iexact Hresult
-        iapply hone naive (f32Nearest x)
-        iframe
+        · irw_exact [← show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
+        iapply_frame hone naive (f32Nearest x)
       · have heqFalse : f32Eq naive (f32Nearest x) = false := by
           cases h : f32Eq naive (f32Nearest x) <;> simp_all
-        iapply wp_scalarFloat2 (value := .i32 0) rfl rfl
+        wasm_wp_next wp_scalarFloat2 (value := .i32 0) rfl rfl
           (by simp [evalScalarFloat2?, heqFalse])
-        inext
-        iapply wp_const
-        inext
-        iapply wp_and
-        inext
-        rw [show (0 &&& 1 : UInt32) = 0 by decide]
-        iapply wp_brIfZero
-        inext
-        iapply wp_localGet rfl
-        inext
-        iapply wp_const
-        inext
+        wasm_wp_pures [wp_const wp_and] rewriting [show (0 &&& 1 : UInt32) = 0 by decide]
+        wasm_wp_pures [wp_brIfZero wp_localGet wp_const]
         ihave HresultLater :
             ▷ pointsTo_u32 0 ((1048560 : UInt32) + 12) oldResult $$ [Hresult]
-        · inext
-          rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
-          iexact Hresult
-        iapply wp_store32 oldResult
-          (by decide) (by decide) (by decide) (by decide) $$ HresultLater
-        inext
-        iintro Hresult
-        iapply wp_br rfl
-        inext
-        simp only [roundCheckOuterFrame, List.take, List.nil_append]
-        have hResultProp :
-            pointsTo_u32 0 ((1048560 : UInt32) + 12) 0 =
-              pointsTo_u32 0 1048572 0 :=
-          congrArg (fun address => pointsTo_u32 0 address 0) (by decide)
+        · ilater_rw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
+        wasm_wp_next_bind wp_store32 oldResult
+          (by decide) (by decide) (by decide) (by decide) with HresultLater => Hresult
+        wasm_wp_pures [wp_br] using [roundCheckOuterFrame, List.take, List.nil_append]
         ihave HresultExact : pointsTo_u32 0 1048572 0 $$ [Hresult]
-        · rw [← hResultProp]
-          iexact Hresult
-        iapply hzero naive (f32Nearest x)
-        iframe
-    · iframe
-  · iframe
+        · irw_exact [← show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
+        iapply_frame hzero naive (f32Nearest x)
 
 theorem func6_body_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset} :
@@ -1254,26 +908,13 @@ theorem func6_body_smallStep_wp
       {{ values, ⌜∃ b : UInt32, values = [.i32 b]⌝ }} := by
   iintro ⟨Hdeep, Hword, Hresult, Hruntime, Hglobal⟩
   simp only [func6]
-  iapply wp_globalGet $$ Hglobal
-  inext
-  iintro Hglobal
-  iapply wp_const
-  inext
-  iapply wp_sub
-  inext
-  rw [show (1048576 : UInt32) - 16 = 1048560 by decide]
-  iapply wp_localSet rfl
-  inext
-  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
-    List.set]
-  iapply wp_localGet rfl
-  inext
+  wasm_wp_next_rebind wp_globalGet with Hglobal
+  wasm_wp_pures [wp_const wp_sub] rewriting [show (1048576 : UInt32) - 16 = 1048560 by decide]
+  wasm_wp_localSet
+  wasm_wp_pures [wp_localGet]
   ihave HglobalLater : ▷ globalPointsToAt 0 0 (.i32 1048576) $$ [Hglobal]
-  · inext
-    iexact Hglobal
-  iapply wp_globalSet $$ HglobalLater
-  inext
-  iintro Hglobal
+  · ilater_exact Hglobal
+  wasm_wp_next_bind wp_globalSet with HglobalLater => Hglobal
   rw [← show roundCheckInnerBody =
     [ .localGet 0, .call 0, .localGet 0, .call 4,
       .f32Eq, .const 1, .and, .br_if 0,
@@ -1286,13 +927,10 @@ theorem func6_body_smallStep_wp
     [ .localGet 1, .load32 12, .localSet 2,
       .localGet 1, .const 16, .add, .globalSet 0,
       .localGet 2, .ret ] by rfl]
-  iapply wp_block
-  inext
+  wasm_wp_pures [wp_block]
   rw (occs := .pos [1]) [show roundCheckOuterBody =
     (.block 0 0 roundCheckInnerBody :: roundCheckOneProg) by rfl]
-  iapply wp_block
-  inext
-  simp only [List.drop_zero]
+  wasm_wp_pures [wp_block] using [List.drop_zero]
   rw [← show roundCheckInnerFrame =
     { kind := .block, paramArity := 0, resultArity := 0
       body := roundCheckInnerBody, continuation := roundCheckOneProg
@@ -1332,11 +970,9 @@ theorem checkRound_smallStep (x : UInt32) :
   · intro gs
     simp only [checkRoundConfig, RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, Hglobals, Hruntime⟩
-    ihave Hmemory := roundHeap_pointsTo $$ Hbytes
-    icases Hmemory with ⟨Hdeep, Hword, Hresult⟩
+    ihave ⟨Hdeep, Hword, Hresult⟩ := roundHeap_pointsTo $$ Hbytes
     ihave Hglobal := roundGlobals_pointsTo $$ Hglobals
-    iapply func6_body_smallStep_wp
-    iframe
+    iapply_frame func6_body_smallStep_wp
 
 /-! ## Total WP helpers (no `▷` on continuations) -/
 
@@ -1358,35 +994,21 @@ theorem twp_func5_lowered_body_smallStep_wp
         func5, 1, [], [], calls⟩ : Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hglobal, Hword⟩
   simp only [func5]
-  iapply twp_globalGet $$ Hglobal
-  iintro Hglobal
-  iapply twp_const
-  iapply twp_sub
-  rw [show (1048560 : UInt32) - 16 = 1048544 by decide]
-  iapply twp_localSet rfl
-  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub, List.set]
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_rebind twp_globalGet with Hglobal
+  wasm_twp_pures [twp_const twp_sub] rewriting [show (1048560 : UInt32) - 16 = 1048544 by decide]
+  wasm_twp_localSet
+  wasm_twp_pures [twp_localGet twp_localGet]
   iapply twp_scalarFloat1 rfl rfl
   ihave Hword' : pointsTo_u32 0 ((1048544 : UInt32) + 12) oldWord $$ [Hword]
-  · rw [show (1048544 : UInt32) + 12 = 1048556 by decide]
-    iexact Hword
-  iapply twp_f32Store oldWord
-    (by decide) (by decide) (by decide) (by decide) $$ Hword'
-  iintro Hword
-  iapply twp_localGet rfl
-  iapply twp_f32Load (f32Nearest x)
-    (by decide) (by decide) (by decide) (by decide) $$ Hword
-  iintro Hword
-  have hWordProp :
-      pointsTo_u32 0 ((1048544 : UInt32) + 12) (f32Nearest x) =
-        pointsTo_u32 0 1048556 (f32Nearest x) :=
-    congrArg (fun address => pointsTo_u32 0 address (f32Nearest x)) (by decide)
+  · irw_exact [show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
+  wasm_twp_bind twp_f32Store oldWord
+    (by decide) (by decide) (by decide) (by decide) with Hword' => Hword
+  wasm_twp_pures [twp_localGet]
+  wasm_twp_rebind twp_f32Load (f32Nearest x)
+    (by decide) (by decide) (by decide) (by decide) with Hword
   ihave HwordExact : pointsTo_u32 0 1048556 (f32Nearest x) $$ [Hword]
-  · rw [← hWordProp]
-    iexact Hword
-  iapply hreturn
-  iframe
+  · irw_exact [← show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
+  iapply_frame hreturn
 
 theorem twp_func4_lowered_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -1408,20 +1030,15 @@ theorem twp_func4_lowered_smallStep_wp
         func4, 1, [], [], calls⟩ : Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hruntime, Hglobal, Hword⟩
   simp only [func4]
-  iapply twp_localGet rfl
-  iapply twp_call «module» 5 func5Def
-    (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-  iintro Hruntime
+  wasm_twp_pures [twp_localGet]
+  wasm_twp_rebind twp_call «module» 5 func5Def
+    (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func5Def, Function.toLocals, Function.numParams, ValueType.zero]
-  iapply twp_func5_lowered_body_smallStep_wp
-    (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module»)) x oldWord _ _
-  · iintro ⟨⟨HR, Hruntime⟩, Hglobal, Hword⟩
-    iapply twp_returnFromCallExplicit $$ Hruntime
-    iintro Hruntime
-    simp only [List.take, List.singleton_append]
-    iapply hreturn
-    iframe
-  · iframe
+  iapply_then_frame twp_func5_lowered_body_smallStep_wp
+      (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module»)) x oldWord _ _ =>
+    iintro ⟨⟨HR, Hruntime⟩, Hglobal, Hword⟩
+    wasm_twp_return_from_call Hruntime [List.take, List.singleton_append]
+    iapply_frame hreturn
 
 theorem twp_deepFrameFloat_body_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -1446,35 +1063,21 @@ theorem twp_deepFrameFloat_body_smallStep_wp
           .localGet 1, .f32Load 12, .ret ],
         1, [], [], calls⟩ : Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hglobal, Hword⟩
-  iapply twp_globalGet $$ Hglobal
-  iintro Hglobal
-  iapply twp_const
-  iapply twp_sub
-  rw [show (1048544 : UInt32) - 16 = 1048528 by decide]
-  iapply twp_localSet rfl
-  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub, List.set]
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_rebind twp_globalGet with Hglobal
+  wasm_twp_pures [twp_const twp_sub] rewriting [show (1048544 : UInt32) - 16 = 1048528 by decide]
+  wasm_twp_localSet
+  wasm_twp_pures [twp_localGet twp_localGet]
   iapply twp_scalarFloat1 hzero heval
   ihave Hword' : pointsTo_u32 0 ((1048528 : UInt32) + 12) oldWord $$ [Hword]
-  · rw [show (1048528 : UInt32) + 12 = 1048540 by decide]
-    iexact Hword
-  iapply twp_f32Store oldWord
-    (by decide) (by decide) (by decide) (by decide) $$ Hword'
-  iintro Hword
-  iapply twp_localGet rfl
-  iapply twp_f32Load result
-    (by decide) (by decide) (by decide) (by decide) $$ Hword
-  iintro Hword
-  have hWordProp :
-      pointsTo_u32 0 ((1048528 : UInt32) + 12) result =
-        pointsTo_u32 0 1048540 result :=
-    congrArg (fun address => pointsTo_u32 0 address result) (by decide)
+  · irw_exact [show (1048528 : UInt32) + 12 = 1048540 by decide] with Hword
+  wasm_twp_bind twp_f32Store oldWord
+    (by decide) (by decide) (by decide) (by decide) with Hword' => Hword
+  wasm_twp_pures [twp_localGet]
+  wasm_twp_rebind twp_f32Load result
+    (by decide) (by decide) (by decide) (by decide) with Hword
   ihave HwordExact : pointsTo_u32 0 1048540 result $$ [Hword]
-  · rw [← hWordProp]
-    iexact Hword
-  iapply hreturn
-  iframe
+  · irw_exact [← show (1048528 : UInt32) + 12 = 1048540 by decide] with Hword
+  iapply_frame hreturn
 
 theorem twp_func1_deep_body_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -1561,31 +1164,19 @@ theorem twp_naive_tail_smallStep_wp
         Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hglobal, Hword⟩
   simp only [naiveTailProg]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   ihave Hword' : pointsTo_u32 0 ((1048544 : UInt32) + 12) result $$ [Hword]
-  · rw [show (1048544 : UInt32) + 12 = 1048556 by decide]
-    iexact Hword
-  iapply twp_f32Load result
-    (by decide) (by decide) (by decide) (by decide) $$ Hword'
-  iintro Hword
-  iapply twp_localSet rfl
-  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub, List.set]
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_add
+  · irw_exact [show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
+  wasm_twp_bind twp_f32Load result
+    (by decide) (by decide) (by decide) (by decide) with Hword' => Hword
+  wasm_twp_localSet
+  wasm_twp_pures [twp_localGet twp_const twp_add]
   rw [show (16 : UInt32) + 1048544 = 1048560 by decide]
-  iapply twp_globalSet $$ Hglobal
-  iintro Hglobal
-  iapply twp_localGet rfl
-  have hWordProp :
-      pointsTo_u32 0 ((1048544 : UInt32) + 12) result =
-        pointsTo_u32 0 1048556 result :=
-    congrArg (fun address => pointsTo_u32 0 address result) (by decide)
+  wasm_twp_rebind twp_globalSet with Hglobal
+  wasm_twp_pures [twp_localGet]
   ihave HwordExact : pointsTo_u32 0 1048556 result $$ [Hword]
-  · rw [← hWordProp]
-    iexact Hword
-  iapply hreturn
-  iframe
+  · irw_exact [← show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
+  iapply_frame hreturn
 
 theorem twp_naive_storeTrunc_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -1614,25 +1205,15 @@ theorem twp_naive_storeTrunc_smallStep_wp
         Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hglobal, Hword⟩
   simp only [naiveStoreTruncProg]
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   ihave Hword' : pointsTo_u32 0 ((1048544 : UInt32) + 12) oldWord $$ [Hword]
-  · rw [show (1048544 : UInt32) + 12 = 1048556 by decide]
-    iexact Hword
-  iapply twp_f32Store oldWord
-    (by decide) (by decide) (by decide) (by decide) $$ Hword'
-  iintro Hword
-  iapply twp_br rfl
-  simp only [naiveAFrame, List.take, List.nil_append]
-  have hWordProp :
-      pointsTo_u32 0 ((1048544 : UInt32) + 12) (f32Trunc x) =
-        pointsTo_u32 0 1048556 (f32Trunc x) :=
-    congrArg (fun address => pointsTo_u32 0 address (f32Trunc x)) (by decide)
+  · irw_exact [show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
+  wasm_twp_bind twp_f32Store oldWord
+    (by decide) (by decide) (by decide) (by decide) with Hword' => Hword
+  wasm_twp_pures [twp_br] using [naiveAFrame, List.take, List.nil_append]
   ihave HwordExact : pointsTo_u32 0 1048556 (f32Trunc x) $$ [Hword]
-  · rw [← hWordProp]
-    iexact Hword
-  iapply hnext
-  iframe
+  · irw_exact [← show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
+  iapply_frame hnext
 
 theorem twp_naive_ceil_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -1664,42 +1245,25 @@ theorem twp_naive_ceil_smallStep_wp
         Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
   simp only [naiveCeilProg]
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
-  iapply twp_call «module» 2 func2Def
-    (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-  iintro Hruntime
+  wasm_twp_pures [twp_localGet twp_localGet]
+  wasm_twp_rebind twp_call «module» 2 func2Def
+    (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func2Def, Function.toLocals, Function.numParams, ValueType.zero]
-  iapply twp_func2_deep_body_smallStep_wp
-    (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
-      pointsTo_u32 0 1048556 oldWord))
-    (f32Trunc x) oldDeep _ _
-  · iintro ⟨⟨HR, Hruntime, Hword⟩, Hglobal, Hdeep⟩
-    iapply twp_returnFromCallExplicit $$ Hruntime
-    iintro Hruntime
-    simp only [List.take, List.singleton_append]
+  iapply_then_frame twp_func2_deep_body_smallStep_wp
+      (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
+        pointsTo_u32 0 1048556 oldWord))
+      (f32Trunc x) oldDeep _ _ =>
+    iintro ⟨⟨HR, Hruntime, Hword⟩, Hglobal, Hdeep⟩
+    wasm_twp_return_from_call Hruntime [List.take, List.singleton_append]
     ihave Hword' : pointsTo_u32 0 ((1048544 : UInt32) + 12) oldWord $$ [Hword]
-    · rw [show (1048544 : UInt32) + 12 = 1048556 by decide]
-      iexact Hword
-    iapply twp_f32Store oldWord
-      (by decide) (by decide) (by decide) (by decide) $$ Hword'
-    iintro Hword
-    iapply twp_br rfl
-    simp only [naiveAFrame, List.take, List.nil_append]
-    have hWordProp :
-        pointsTo_u32 0 ((1048544 : UInt32) + 12)
-            (f32Ceil (f32Trunc x)) =
-          pointsTo_u32 0 1048556 (f32Ceil (f32Trunc x)) :=
-      congrArg
-        (fun address => pointsTo_u32 0 address (f32Ceil (f32Trunc x)))
-        (by decide)
+    · irw_exact [show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
+    wasm_twp_bind twp_f32Store oldWord
+      (by decide) (by decide) (by decide) (by decide) with Hword' => Hword
+    wasm_twp_pures [twp_br] using [naiveAFrame, List.take, List.nil_append]
     ihave HwordExact :
         pointsTo_u32 0 1048556 (f32Ceil (f32Trunc x)) $$ [Hword]
-    · rw [← hWordProp]
-      iexact Hword
-    iapply hnext
-    iframe
-  · iframe
+    · irw_exact [← show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
+    iapply_frame hnext
 
 theorem twp_naive_floor_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -1730,42 +1294,25 @@ theorem twp_naive_floor_smallStep_wp
         Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
   simp only [naiveFloorProg]
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
-  iapply twp_call «module» 3 func3Def
-    (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-  iintro Hruntime
+  wasm_twp_pures [twp_localGet twp_localGet]
+  wasm_twp_rebind twp_call «module» 3 func3Def
+    (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func3Def, Function.toLocals, Function.numParams, ValueType.zero]
-  iapply twp_func3_deep_body_smallStep_wp
-    (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
-      pointsTo_u32 0 1048556 oldWord))
-    (f32Trunc x) oldDeep _ _
-  · iintro ⟨⟨HR, Hruntime, Hword⟩, Hglobal, Hdeep⟩
-    iapply twp_returnFromCallExplicit $$ Hruntime
-    iintro Hruntime
-    simp only [List.take, List.singleton_append]
+  iapply_then_frame twp_func3_deep_body_smallStep_wp
+      (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
+        pointsTo_u32 0 1048556 oldWord))
+      (f32Trunc x) oldDeep _ _ =>
+    iintro ⟨⟨HR, Hruntime, Hword⟩, Hglobal, Hdeep⟩
+    wasm_twp_return_from_call Hruntime [List.take, List.singleton_append]
     ihave Hword' : pointsTo_u32 0 ((1048544 : UInt32) + 12) oldWord $$ [Hword]
-    · rw [show (1048544 : UInt32) + 12 = 1048556 by decide]
-      iexact Hword
-    iapply twp_f32Store oldWord
-      (by decide) (by decide) (by decide) (by decide) $$ Hword'
-    iintro Hword
-    iapply twp_exitControl rfl
-    simp only [naiveAFrame, List.take, List.nil_append]
-    have hWordProp :
-        pointsTo_u32 0 ((1048544 : UInt32) + 12)
-            (f32Floor (f32Trunc x)) =
-          pointsTo_u32 0 1048556 (f32Floor (f32Trunc x)) :=
-      congrArg
-        (fun address => pointsTo_u32 0 address (f32Floor (f32Trunc x)))
-        (by decide)
+    · irw_exact [show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
+    wasm_twp_bind twp_f32Store oldWord
+      (by decide) (by decide) (by decide) (by decide) with Hword' => Hword
+    wasm_twp_pures [twp_exitControl] using [naiveAFrame, List.take, List.nil_append]
     ihave HwordExact :
         pointsTo_u32 0 1048556 (f32Floor (f32Trunc x)) $$ [Hword]
-    · rw [← hWordProp]
-      iexact Hword
-    iapply hnext
-    iframe
-  · iframe
+    · irw_exact [← show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
+    iapply_frame hnext
 
 theorem twp_naive_compare_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -1821,66 +1368,47 @@ theorem twp_naive_compare_smallStep_wp
         Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
   simp only [naiveCompareProg]
-  iapply twp_localGet rfl
-  iapply twp_scalarFloat0 rfl
+  wasm_twp_pures [twp_localGet twp_scalarFloat0]
   by_cases hge :
       f32Ge (f32Sub x (f32Trunc x)) 1056964608 = true
   · iapply twp_scalarFloat2 (value := .i32 1) rfl rfl
       (by simp [evalScalarFloat2?, hge])
-    iapply twp_const
-    iapply twp_and
-    rw [show (1 &&& 1 : UInt32) = 1 by decide]
+    wasm_twp_pures [twp_const twp_and] rewriting [show (1 &&& 1 : UInt32) = 1 by decide]
     iapply twp_brIf (by decide) rfl
     simp only [naiveDFrame, List.take, List.nil_append]
-    iapply twp_naive_ceil_smallStep_wp R x oldDeep oldWord calls _
-    · iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
-      iapply hceil
-      iframe
-    · iframe
+    iapply_then_frame twp_naive_ceil_smallStep_wp R x oldDeep oldWord calls _ =>
+      iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
+      iapply_frame hceil
   · have hgeFalse :
         f32Ge (f32Sub x (f32Trunc x)) 1056964608 = false := by
       cases h : f32Ge (f32Sub x (f32Trunc x)) 1056964608 <;> simp_all
     iapply twp_scalarFloat2 (value := .i32 0) rfl rfl
       (by simp [evalScalarFloat2?, hgeFalse])
-    iapply twp_const
-    iapply twp_and
-    rw [show (0 &&& 1 : UInt32) = 0 by decide]
-    iapply twp_brIfZero
-    iapply twp_localGet rfl
-    iapply twp_scalarFloat0 rfl
+    wasm_twp_pures [twp_const twp_and] rewriting [show (0 &&& 1 : UInt32) = 0 by decide]
+    wasm_twp_pures [twp_brIfZero twp_localGet twp_scalarFloat0]
     by_cases hle :
         f32Le (f32Sub x (f32Trunc x)) 3204448256 = true
     · iapply twp_scalarFloat2 (value := .i32 1) rfl rfl
         (by simp [evalScalarFloat2?, hle])
-      iapply twp_const
-      iapply twp_and
-      rw [show (1 &&& 1 : UInt32) = 1 by decide]
+      wasm_twp_pures [twp_const twp_and] rewriting [show (1 &&& 1 : UInt32) = 1 by decide]
       iapply twp_brIf (by decide) rfl
       simp only [naiveBFrame, List.take, List.nil_append]
-      iapply twp_naive_floor_smallStep_wp R x oldDeep oldWord calls _
-      · iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
-        iapply hfloor
-        iframe
-      · iframe
+      iapply_then_frame twp_naive_floor_smallStep_wp R x oldDeep oldWord calls _ =>
+        iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
+        iapply_frame hfloor
     · have hleFalse :
           f32Le (f32Sub x (f32Trunc x)) 3204448256 = false := by
         cases h : f32Le (f32Sub x (f32Trunc x)) 3204448256 <;> simp_all
       iapply twp_scalarFloat2 (value := .i32 0) rfl rfl
         (by simp [evalScalarFloat2?, hleFalse])
-      iapply twp_const
-      iapply twp_and
-      rw [show (0 &&& 1 : UInt32) = 0 by decide]
-      iapply twp_brIfZero
-      iapply twp_br rfl
-      simp only [naiveCFrame, List.take, List.nil_append]
-      iapply twp_naive_storeTrunc_smallStep_wp
-        (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
-          pointsTo_u32 0 1048540 oldDeep))
-        x oldWord calls _
-      · iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
-        iapply htrunc
-        iframe
-      · iframe
+      wasm_twp_pures [twp_const twp_and] rewriting [show (0 &&& 1 : UInt32) = 0 by decide]
+      wasm_twp_pures [twp_brIfZero twp_br] using [naiveCFrame, List.take, List.nil_append]
+      iapply_then_frame twp_naive_storeTrunc_smallStep_wp
+          (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
+            pointsTo_u32 0 1048540 oldDeep))
+          x oldWord calls _ =>
+        iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
+        iapply_frame htrunc
 
 theorem twp_func0_lowered_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -1907,36 +1435,25 @@ theorem twp_func0_lowered_smallStep_wp
         func0, 1, [], [], calls⟩ : Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
   simp only [func0]
-  iapply twp_globalGet $$ Hglobal
-  iintro Hglobal
-  iapply twp_const
-  iapply twp_sub
-  rw [show (1048560 : UInt32) - 16 = 1048544 by decide]
-  iapply twp_localSet rfl
-  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub, List.set]
-  iapply twp_localGet rfl
-  iapply twp_globalSet $$ Hglobal
-  iintro Hglobal
-  iapply twp_localGet rfl
-  iapply twp_call «module» 1 func1Def
-    (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-  iintro Hruntime
+  wasm_twp_rebind twp_globalGet with Hglobal
+  wasm_twp_pures [twp_const twp_sub] rewriting [show (1048560 : UInt32) - 16 = 1048544 by decide]
+  wasm_twp_localSet
+  wasm_twp_pures [twp_localGet]
+  wasm_twp_rebind twp_globalSet with Hglobal
+  wasm_twp_pures [twp_localGet]
+  wasm_twp_rebind twp_call «module» 1 func1Def
+    (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func1Def, Function.toLocals, Function.numParams, ValueType.zero]
   iapply twp_func1_deep_body_smallStep_wp
     (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
       pointsTo_u32 0 1048556 oldWord))
     x oldDeep _ _
   · iintro ⟨⟨HR, Hruntime, Hword⟩, Hglobal, Hdeep⟩
-    iapply twp_returnFromCallExplicit $$ Hruntime
-    iintro Hruntime
-    simp only [List.take, List.singleton_append]
-    iapply twp_localSet rfl
-    simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub, List.set]
-    iapply twp_localGet rfl
-    iapply twp_localGet rfl
+    wasm_twp_return_from_call Hruntime [List.take, List.singleton_append]
+    wasm_twp_localSet
+    wasm_twp_pures [twp_localGet twp_localGet]
     iapply twp_scalarFloat2 rfl rfl rfl
-    iapply twp_localSet rfl
-    simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub, List.set]
+    wasm_twp_localSet
     rw [← show naiveCompareProg =
       [ .localGet 3, .f32Const 1056964608, .f32Ge,
         .const 1, .and, .br_if 0,
@@ -1958,17 +1475,16 @@ theorem twp_func0_lowered_smallStep_wp
       [ .localGet 1, .f32Load 12, .localSet 4,
         .localGet 1, .const 16, .add, .globalSet 0,
         .localGet 4, .ret ] by rfl]
-    iapply twp_block
+    wasm_twp_pures [twp_block]
     rw (occs := .pos [1]) [show naiveABody =
       (.block 0 0 naiveBBody :: naiveFloorProg) by rfl]
-    iapply twp_block
+    wasm_twp_pures [twp_block]
     rw (occs := .pos [1]) [show naiveBBody =
       (.block 0 0 naiveCBody :: naiveStoreTruncProg) by rfl]
-    iapply twp_block
+    wasm_twp_pures [twp_block]
     rw (occs := .pos [1]) [show naiveCBody =
       (.block 0 0 naiveCompareProg :: naiveCeilProg) by rfl]
-    iapply twp_block
-    simp only [List.drop_zero]
+    wasm_twp_pures [twp_block] using [List.drop_zero]
     rw [← show naiveDFrame =
       { kind := .block, paramArity := 0, resultArity := 0
         body := naiveCompareProg, continuation := naiveCeilProg
@@ -1988,32 +1504,26 @@ theorem twp_func0_lowered_smallStep_wp
     iapply twp_naive_compare_smallStep_wp
       R x (f32Trunc x) oldWord calls _ _ _
     · iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
-      iapply twp_naive_tail_smallStep_wp
-        (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
-          pointsTo_u32 0 1048540 (f32Ceil (f32Trunc x))))
-        x (f32Ceil (f32Trunc x)) calls _
-      · iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
-        iapply hreturn (f32Ceil (f32Trunc x))
-        iframe
-      · iframe
+      iapply_then_frame twp_naive_tail_smallStep_wp
+          (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
+            pointsTo_u32 0 1048540 (f32Ceil (f32Trunc x))))
+          x (f32Ceil (f32Trunc x)) calls _ =>
+        iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
+        iapply_frame hreturn (f32Ceil (f32Trunc x))
     · iintro ⟨HR, Hruntime, Hglobal, Hdeep, Hword⟩
-      iapply twp_naive_tail_smallStep_wp
-        (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
-          pointsTo_u32 0 1048540 (f32Floor (f32Trunc x))))
-        x (f32Floor (f32Trunc x)) calls _
-      · iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
-        iapply hreturn (f32Floor (f32Trunc x))
-        iframe
-      · iframe
+      iapply_then_frame twp_naive_tail_smallStep_wp
+          (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
+            pointsTo_u32 0 1048540 (f32Floor (f32Trunc x))))
+          x (f32Floor (f32Trunc x)) calls _ =>
+        iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
+        iapply_frame hreturn (f32Floor (f32Trunc x))
     · iintro ⟨HR, Hruntime, Hdeep, Hglobal, Hword⟩
-      iapply twp_naive_tail_smallStep_wp
-        (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
-          pointsTo_u32 0 1048540 (f32Trunc x)))
-        x (f32Trunc x) calls _
-      · iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
-        iapply hreturn (f32Trunc x)
-        iframe
-      · iframe
+      iapply_then_frame twp_naive_tail_smallStep_wp
+          (iprop(R ∗ runtimeModuleOwn ⟨0⟩ «module» ∗
+            pointsTo_u32 0 1048540 (f32Trunc x)))
+          x (f32Trunc x) calls _ =>
+        iintro ⟨⟨HR, Hruntime, Hdeep⟩, Hglobal, Hword⟩
+        iapply_frame hreturn (f32Trunc x)
     · iframe
   · iframe
 
@@ -2031,28 +1541,20 @@ theorem twp_roundCheck_tail_result_smallStep_wp
           ⌜∃ b : UInt32, values = [.i32 b]⌝ }] := by
   iintro ⟨HR, Hglobal, Hresult⟩
   simp only [roundCheckTailProg]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   ihave Hresult' : pointsTo_u32 0 ((1048560 : UInt32) + 12) result $$ [Hresult]
-  · rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
-    iexact Hresult
-  iapply twp_load32 result
-    (by decide) (by decide) (by decide) (by decide) $$ Hresult'
-  iintro Hresult
-  iapply twp_localSet rfl
-  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub, List.set]
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_add
+  · irw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
+  wasm_twp_bind twp_load32 result
+    (by decide) (by decide) (by decide) (by decide) with Hresult' => Hresult
+  wasm_twp_localSet
+  wasm_twp_pures [twp_localGet twp_const twp_add]
   rw [show (16 : UInt32) + 1048560 = 1048576 by decide]
-  iapply twp_globalSet $$ Hglobal
-  iintro Hglobal
-  iapply twp_localGet rfl
-  iapply twp_returnFromFunction
-  iapply twp.value rfl
+  wasm_twp_rebind twp_globalSet with Hglobal
+  wasm_twp_pures [twp_localGet]
+  wasm_twp_terminal_value twp_returnFromFunction
   iintro %store %obs _Hstate
   iclear HR Hglobal Hresult
-  ipureintro
-  exact ⟨result, rfl⟩
+  ipureexact ⟨result, rfl⟩
 
 theorem twp_roundCheck_comparison_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -2084,89 +1586,56 @@ theorem twp_roundCheck_comparison_smallStep_wp
         Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨Hdeep, Hword, Hruntime, Hglobal, Hresult⟩
   simp only [roundCheckInnerBody]
-  iapply twp_localGet rfl
-  iapply twp_call «module» 0 func0Def
-    (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-  iintro Hruntime
+  wasm_twp_pures [twp_localGet]
+  wasm_twp_rebind twp_call «module» 0 func0Def
+    (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func0Def, Function.toLocals, Function.numParams, ValueType.zero]
-  iapply twp_func0_lowered_smallStep_wp
-    (iprop(pointsTo_u32 0 1048572 oldResult))
-    x oldDeep oldWord _ _
-  · intro naive
+  iapply_then_frame twp_func0_lowered_smallStep_wp
+      (iprop(pointsTo_u32 0 1048572 oldResult))
+      x oldDeep oldWord _ _ =>
+    intro naive
     iintro ⟨Hresult, Hruntime, Hglobal, Hdeep, Hword⟩
-    iapply twp_returnFromCallExplicit $$ Hruntime
-    iintro Hruntime
-    simp only [List.take, List.singleton_append]
-    iapply twp_localGet rfl
-    iapply twp_call «module» 4 func4Def
-      (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-    iintro Hruntime
+    wasm_twp_return_from_call Hruntime [List.take, List.singleton_append]
+    wasm_twp_pures [twp_localGet]
+    wasm_twp_rebind twp_call «module» 4 func4Def
+      (by simp [«module»]) (by simp [«module»]) with Hruntime
     simp [func4Def, Function.toLocals, Function.numParams]
-    iapply twp_func4_lowered_smallStep_wp
-      (iprop(pointsTo_u32 0 1048540 naive ∗
-        pointsTo_u32 0 1048572 oldResult))
-      x naive _ _
-    · iintro ⟨⟨Hdeep, Hresult⟩, Hruntime, Hglobal, Hword⟩
-      iapply twp_returnFromCallExplicit $$ Hruntime
-      iintro Hruntime
-      simp only [List.take, List.singleton_append]
+    iapply_then_frame twp_func4_lowered_smallStep_wp
+        (iprop(pointsTo_u32 0 1048540 naive ∗
+          pointsTo_u32 0 1048572 oldResult))
+        x naive _ _ =>
+      iintro ⟨⟨Hdeep, Hresult⟩, Hruntime, Hglobal, Hword⟩
+      wasm_twp_return_from_call Hruntime [List.take, List.singleton_append]
       by_cases heq : f32Eq naive (f32Nearest x) = true
       · iapply twp_scalarFloat2 (value := .i32 1) rfl rfl
           (by simp [evalScalarFloat2?, heq])
-        iapply twp_const
-        iapply twp_and
-        rw [show (1 &&& 1 : UInt32) = 1 by decide]
+        wasm_twp_pures [twp_const twp_and] rewriting [show (1 &&& 1 : UInt32) = 1 by decide]
         iapply twp_brIf (by decide) rfl
         simp only [roundCheckInnerFrame, List.take, List.nil_append]
         simp only [roundCheckOneProg]
-        iapply twp_localGet rfl
-        iapply twp_const
+        wasm_twp_pures [twp_localGet twp_const]
         ihave Hresult' : pointsTo_u32 0 ((1048560 : UInt32) + 12) oldResult $$ [Hresult]
-        · rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
-          iexact Hresult
-        iapply twp_store32 oldResult
-          (by decide) (by decide) (by decide) (by decide) $$ Hresult'
-        iintro Hresult
-        iapply twp_exitControl rfl
-        simp only [roundCheckOuterFrame, List.take, List.nil_append]
-        have hResultProp :
-            pointsTo_u32 0 ((1048560 : UInt32) + 12) 1 =
-              pointsTo_u32 0 1048572 1 :=
-          congrArg (fun address => pointsTo_u32 0 address 1) (by decide)
+        · irw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
+        wasm_twp_bind twp_store32 oldResult
+          (by decide) (by decide) (by decide) (by decide) with Hresult' => Hresult
+        wasm_twp_pures [twp_exitControl] using [roundCheckOuterFrame, List.take, List.nil_append]
         ihave HresultExact : pointsTo_u32 0 1048572 1 $$ [Hresult]
-        · rw [← hResultProp]
-          iexact Hresult
-        iapply hone naive (f32Nearest x)
-        iframe
+        · irw_exact [← show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
+        iapply_frame hone naive (f32Nearest x)
       · have heqFalse : f32Eq naive (f32Nearest x) = false := by
           cases h : f32Eq naive (f32Nearest x) <;> simp_all
         iapply twp_scalarFloat2 (value := .i32 0) rfl rfl
           (by simp [evalScalarFloat2?, heqFalse])
-        iapply twp_const
-        iapply twp_and
-        rw [show (0 &&& 1 : UInt32) = 0 by decide]
-        iapply twp_brIfZero
-        iapply twp_localGet rfl
-        iapply twp_const
+        wasm_twp_pures [twp_const twp_and] rewriting [show (0 &&& 1 : UInt32) = 0 by decide]
+        wasm_twp_pures [twp_brIfZero twp_localGet twp_const]
         ihave Hresult' : pointsTo_u32 0 ((1048560 : UInt32) + 12) oldResult $$ [Hresult]
-        · rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
-          iexact Hresult
-        iapply twp_store32 oldResult
-          (by decide) (by decide) (by decide) (by decide) $$ Hresult'
-        iintro Hresult
-        iapply twp_br rfl
-        simp only [roundCheckOuterFrame, List.take, List.nil_append]
-        have hResultProp :
-            pointsTo_u32 0 ((1048560 : UInt32) + 12) 0 =
-              pointsTo_u32 0 1048572 0 :=
-          congrArg (fun address => pointsTo_u32 0 address 0) (by decide)
+        · irw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
+        wasm_twp_bind twp_store32 oldResult
+          (by decide) (by decide) (by decide) (by decide) with Hresult' => Hresult
+        wasm_twp_pures [twp_br] using [roundCheckOuterFrame, List.take, List.nil_append]
         ihave HresultExact : pointsTo_u32 0 1048572 0 $$ [Hresult]
-        · rw [← hResultProp]
-          iexact Hresult
-        iapply hzero naive (f32Nearest x)
-        iframe
-    · iframe
-  · iframe
+        · irw_exact [← show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult
+        iapply_frame hzero naive (f32Nearest x)
 
 theorem twp_func6_body_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset} :
@@ -2181,16 +1650,11 @@ theorem twp_func6_body_smallStep_wp
           ⌜∃ b : UInt32, values = [.i32 b]⌝ }] := by
   iintro ⟨Hdeep, Hword, Hresult, Hruntime, Hglobal⟩
   simp only [func6]
-  iapply twp_globalGet $$ Hglobal
-  iintro Hglobal
-  iapply twp_const
-  iapply twp_sub
-  rw [show (1048576 : UInt32) - 16 = 1048560 by decide]
-  iapply twp_localSet rfl
-  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub, List.set]
-  iapply twp_localGet rfl
-  iapply twp_globalSet $$ Hglobal
-  iintro Hglobal
+  wasm_twp_rebind twp_globalGet with Hglobal
+  wasm_twp_pures [twp_const twp_sub] rewriting [show (1048576 : UInt32) - 16 = 1048560 by decide]
+  wasm_twp_localSet
+  wasm_twp_pures [twp_localGet]
+  wasm_twp_rebind twp_globalSet with Hglobal
   rw [← show roundCheckInnerBody =
     [ .localGet 0, .call 0, .localGet 0, .call 4,
       .f32Eq, .const 1, .and, .br_if 0,
@@ -2203,11 +1667,10 @@ theorem twp_func6_body_smallStep_wp
     [ .localGet 1, .load32 12, .localSet 2,
       .localGet 1, .const 16, .add, .globalSet 0,
       .localGet 2, .ret ] by rfl]
-  iapply twp_block
+  wasm_twp_pures [twp_block]
   rw (occs := .pos [1]) [show roundCheckOuterBody =
     (.block 0 0 roundCheckInnerBody :: roundCheckOneProg) by rfl]
-  iapply twp_block
-  simp only [List.drop_zero]
+  wasm_twp_pures [twp_block] using [List.drop_zero]
   rw [← show roundCheckInnerFrame =
     { kind := .block, paramArity := 0, resultArity := 0
       body := roundCheckInnerBody, continuation := roundCheckOneProg
@@ -2248,11 +1711,9 @@ theorem check_round_terminatesWith (x : UInt32) :
   · intro _hlc _gs
     simp only [checkRoundConfig, RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, Hglobals, Hruntime⟩
-    ihave Hmemory := roundHeap_pointsTo $$ Hbytes
-    icases Hmemory with ⟨Hdeep, Hword, Hresult⟩
+    ihave ⟨Hdeep, Hword, Hresult⟩ := roundHeap_pointsTo $$ Hbytes
     ihave Hglobal := roundGlobals_pointsTo $$ Hglobals
-    iapply twp_func6_body_smallStep_wp
-    iframe
+    iapply_frame twp_func6_body_smallStep_wp
 
 /-! ## FloatRoundSpec -/
 

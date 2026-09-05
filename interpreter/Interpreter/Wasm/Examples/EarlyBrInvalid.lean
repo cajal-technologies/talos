@@ -19,7 +19,6 @@ def earlyBrInvalidModule : Module :=
 theorem early_br_out_of_scope_is_invalid :
     (match earlyBrInvalidModule.validate with
       | .error message => some message
-      | .ok _ => none) = some "unknown label" := by
-  native_decide
+      | .ok _ => none) = some "unknown label" := by decide +kernel
 
 end Wasm

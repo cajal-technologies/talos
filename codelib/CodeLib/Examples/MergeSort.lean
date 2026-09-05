@@ -1,4 +1,4 @@
-import CodeLib.SepLogic.SmallStepAdequacy
+import CodeLib.Examples.UInt32Array
 import Mathlib.Data.List.Sort
 
 /-!
@@ -16,27 +16,7 @@ open Wasm
 open Iris Iris.ProgramLogic Language.Notation
 open Wasm.SepLogic
 open Wasm.SmallStep
-
-def increment (index : Nat) : Program :=
-  [.localGet index, .const 1, .add, .localSet index]
-
-def address (base index : Nat) : Program :=
-  [.localGet base, .localGet index, .const 4, .mul, .add]
-
-def loadAt (base index : Nat) : Program :=
-  address base index ++ [.load32 0]
-
-def storeAt (base index : Nat) (value : Program) : Program :=
-  address base index ++ value ++ [.store32 0]
-
-def whileLoopCode (condition body : Program) : Program :=
-  condition ++ [.eqz, .br_if 1] ++ body ++ [.br 0]
-
-def whileDo (condition body : Program) : Program :=
-  [.block 0 0 [.loop 0 0 (whileLoopCode condition body)]]
-
-def lessLocal (lhs rhs : Nat) : Program :=
-  [.localGet lhs, .localGet rhs, .ltU]
+open Wasm.Examples.UInt32Array
 
 /- Parameters: source, scratch, left, mid, right.
    Locals: i, j, k. -/
@@ -150,16 +130,12 @@ theorem sorted_referenceSort (values : List UInt32) :
     List.pairwise_mergeSort
       (le := fun a b : UInt32 => decide (a ≤ b))
       (by
-        intro a b c hab hbc
-        simp only [decide_eq_true_eq] at hab hbc ⊢
-        change a.toNat ≤ b.toNat at hab
-        change b.toNat ≤ c.toNat at hbc
-        change a.toNat ≤ c.toNat
-        exact Nat.le_trans hab hbc)
+        intro a b c
+        simpa only [decide_eq_true_eq] using
+          (UInt32.le_trans (a := a) (b := b) (c := c)))
       (by
         intro a b
-        simp only [decide_eq_true_eq, Bool.or_eq_true]
-        exact UInt32.le_total a b)
+        simpa only [decide_eq_true_eq, Bool.or_eq_true] using UInt32.le_total a b)
       values
 
 theorem perm_referenceSort (values : List UInt32) :
@@ -209,7 +185,7 @@ def mergePre [WasmHeapGS α]
     ⌜ValidLayout source temporary input.length⌝ ∗
     ⌜left ≤ mid ∧ mid ≤ right ∧ right ≤ input.length⌝
 
-def segment (values : List UInt32) (start stop : Nat) : List UInt32 :=
+abbrev segment (values : List UInt32) (start stop : Nat) :=
   (values.drop start).take (stop - start)
 
 inductive MergeRel : List UInt32 → List UInt32 → List UInt32 → Prop where
@@ -256,16 +232,9 @@ These checks execute the same handwritten module used by the proofs.  They are
 not a second implementation of merge sort: `runSteps` iterates the
 authoritative small-step function. -/
 
-def writeWordArray : Mem → UInt32 → List UInt32 → Mem
-  | memory, _, [] => memory
-  | memory, address, value :: values =>
-      writeWordArray (memory.write32 address value) (address + 4) values
+abbrev writeWordArray := Mem.writeWords32
 
-def readWordArray : Mem → UInt32 → Nat → List UInt32
-  | _, _, 0 => []
-  | memory, address, count + 1 =>
-      memory.read32 address ::
-        readWordArray memory (address + 4) count
+abbrev readWordArray := Mem.readWords32
 
 def mergeSortExampleStore
     (source temporary : UInt32)
@@ -292,19 +261,16 @@ def runMergeSortExample
       | _ => none
 
 theorem mergeSort_exec_empty :
-    runMergeSortExample 100 0 64 [] [] = some [] := by
-  native_decide
+    runMergeSortExample 100 0 64 [] [] = some [] := by decide +kernel
 
 theorem mergeSort_exec_five :
     runMergeSortExample 10000 0 64
       [5, 1, 4, 2, 3] [0, 0, 0, 0, 0] =
-        some [1, 2, 3, 4, 5] := by
-  native_decide
+        some [1, 2, 3, 4, 5] := by decide +kernel
 
 theorem mergeSort_exec_duplicates :
     runMergeSortExample 12000 0 128
       [4, 1, 4, 2, 1, 3] [0, 0, 0, 0, 0, 0] =
-        some [1, 1, 2, 3, 4, 4] := by
-  native_decide
+        some [1, 1, 2, 3, 4, 4] := by decide +kernel
 
 end Wasm.Examples.MergeSort

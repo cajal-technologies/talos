@@ -65,8 +65,7 @@ theorem startCallConfig_eq (input : List UInt32) :
     startCallConfig? (Universal.envFor Project.Mergesort.module)
       Project.Mergesort.module "mergesort"
       (Universal.State.ofInput (serialize input)) =
-      some (entryConfig input) := by
-  rfl
+      some (entryConfig input) := by rfl
 
 /-- Public postcondition before the final machine store is hidden. -/
 def entryPost (input : List UInt32) (outcome : ObservableOutcome)
@@ -80,8 +79,7 @@ body-level proof must use this fact at the `chunks_exact(4)` guard; the adequacy
 bridge does not postulate that the compiler's bounds/panic branches return. -/
 theorem entryInput_valid (input : List UInt32) :
     (serialize input).length % 4 = 0 := by
-  rw [serialize_length]
-  omega
+  rw [serialize_length]; omega
 
 private abbrev entryMemory : Mem :=
   (Project.Mergesort.module.initialStore : Store Universal.State).mem
@@ -101,21 +99,18 @@ abbrev entryHeap : WasmHeapMap (Option UInt8) :=
 def entryGlobals : WasmGlobalMap Value :=
   insert ∅ (⟨0, 0⟩ : GlobalKey) (.i32 entryStackTop)
 
-@[simp] theorem entryStackBytes_length : entryStackBytes.length = 288 := by
-  simp [entryStackBytes]
+@[simp] theorem entryStackBytes_length : entryStackBytes.length = 288 := by simp [entryStackBytes]
 
 private theorem empty_below_entryStack :
     HeapBelow (∅ : WasmHeapMap (Option UInt8)) entryStackLow.toNat := by
   intro key value hget
-  rw [get?_empty] at hget
-  contradiction
+  rw [get?_empty] at hget; contradiction
 
 private theorem entryStackHeap_below_cursor :
     HeapBelow entryStackHeap allocatorCursor.toNat := by
   have h := HeapBelow.insertFreshBytes
     (bytes := entryStackBytes) empty_below_entryStack (by
-      rw [entryStackBytes_length]
-      decide)
+      rw [entryStackBytes_length]; decide)
   exact h.mono (by decide)
 
 theorem entryHeap_below_heapBase : HeapBelow entryHeap heapBase.toNat := by
@@ -126,21 +121,18 @@ theorem entryHeap_below_heapBase : HeapBelow entryHeap heapBase.toNat := by
   exact h.mono (by decide)
 
 private theorem entryCursorBytes_zero :
-    entryCursorBytes = [0, 0, 0, 0] := by
-  decide
+    entryCursorBytes = [0, 0, 0, 0] := by decide
 
 private theorem entryCursorBytes_u32 :
   entryCursorBytes =
       [u32Byte 0 0, u32Byte 0 1, u32Byte 0 2, u32Byte 0 3] := by
-  rw [entryCursorBytes_zero]
-  decide
+  rw [entryCursorBytes_zero]; decide
 
 private theorem entryHost_eq (input : List UInt32) :
     Universal.State.ofInput (serialize input) =
       ({ stdio := { input := serialize input, output := [] }
          random := default
-         oom := { raised := false } } : Universal.State) := by
-  rfl
+         oom := { raised := false } } : Universal.State) := by rfl
 
 theorem entryHeap_facts (input : List UInt32) :
     heapAgreesWithMem entryHeap (storeResolve (entryConfig input).store) ∧
@@ -160,17 +152,8 @@ theorem entryHeap_facts (input : List UInt32) :
   exact hcursor
 
 theorem entryGlobals_agree (input : List UInt32) :
-    globalHeapAgrees entryGlobals (entryConfig input).store.wasm.globals := by
-  intro index value hget
-  unfold entryGlobals at hget
-  by_cases hindex : index = 0
-  · subst index
-    simp only [get?_insert_eq rfl] at hget
-    obtain rfl := Option.some.inj hget
-    rfl
-  · rw [get?_insert_ne (fun h => hindex (congrArg GlobalKey.index h).symm),
-      get?_empty] at hget
-    contradiction
+    globalHeapAgrees entryGlobals (entryConfig input).store.wasm.globals :=
+  globalHeapAgrees_singleton rfl
 
 private theorem entryGlobals_pointsTo [WasmGlobalGS Universal.State] :
     ([∗map] index ↦ value ∈ entryGlobals,
@@ -201,11 +184,8 @@ private theorem Streams_public [WasmSmallStepGS hlc Universal.State]
            random := random
            oom := { raised := raised } } : Universal.State)⌝ $$
       [Hstate Hhost]
-  · iapply stateInterp_host_agree store 0 observations 0
-    iframe Hstate Hhost
-  ipureintro
-  rw [hhost]
-  exact ⟨rfl, rfl⟩
+  · iapply_frame stateInterp_host_agree store 0 observations 0 using [Hstate Hhost]
+  ipureexact (by rw [hhost]; exact ⟨rfl, rfl⟩)
 
 /-- Construct exactly the resources consumed by `Func3Spec` from adequacy's
 physical initial state.  The allocator metadata name and the Universal random
@@ -229,29 +209,24 @@ theorem initialResources [WasmSmallStepGS hlc Universal.State]
         BumpHeap heapId 0 heapBase.toNat AllocationHistory.empty ∗
         Streams (serialize input) [] false := by
   iintro ⟨Hheap, Hglobals, Hruntime, Henv, Hhost, Hfrontier, Hpages⟩
-  ihave HcursorSplit :=
+  ihave ⟨HcursorBytes, HstackHeap⟩ :=
     insertFreshBytes_bigSep_pointsToBytes entryStackHeap allocatorCursor
       entryCursorBytes entryStackHeap_below_cursor (by
         change allocatorCursor.toNat + 4 < UInt32.size
         decide) $$ Hheap
-  icases HcursorSplit with ⟨HcursorBytes, HstackHeap⟩
-  ihave HstackSplit :=
+  ihave ⟨Hstack, _Hempty⟩ :=
     insertFreshBytes_bigSep_pointsToBytes
       (∅ : WasmHeapMap (Option UInt8)) entryStackLow entryStackBytes
       empty_below_entryStack (by
-        rw [entryStackBytes_length]
-        decide) $$ HstackHeap
-  icases HstackSplit with ⟨Hstack, _Hempty⟩
+        rw [entryStackBytes_length]; decide) $$ HstackHeap
   ihave Hcursor : pointsTo_u32 0 allocatorCursor 0 $$ [HcursorBytes]
   · iapply (pointsTo_u32_as_bytes 0 allocatorCursor 0).mpr
-    rw [← entryCursorBytes_u32]
-    iexact HcursorBytes
+    irw_exact [← entryCursorBytes_u32] with HcursorBytes
   ihave Hsp := entryGlobals_pointsTo $$ Hglobals
   ihave Hstreams : Streams (serialize input) [] false $$ [Hhost]
   · iunfold Streams
     iexists default
-    rw [← entryHost_eq input]
-    iexact Hhost
+    irw_exact [← entryHost_eq input] with Hhost
   imod AllocMetaAuth_alloc_empty (host := Universal.State) with
     ⟨%heapId, Hmetadata⟩
   ihave HbumpResources :
@@ -268,17 +243,12 @@ theorem initialResources [WasmSmallStepGS hlc Universal.State]
   isplitl [Hruntime Henv]
   · iunfold RuntimeContext
     iframe Hruntime Henv
-  isplitl [Hsp]
-  · iexact Hsp
+  isplitl_exact Hsp
   isplitl [Hstack]
   · unfold StackRegion Project.Mergesort.Representations.ByteSlice
-    isplitr
-    · ipureintro
-      rw [entryStackBytes_length]
-      decide
-    · iexact Hstack
-  isplitl [Hbump]
-  · iexact Hbump
+    isplitr_pureexact (by rw [entryStackBytes_length]; decide)
+    iexact Hstack
+  isplitl_exact Hbump
   · iexact Hstreams
 
 private abbrev irisEntryPost [WasmSmallStepGS hlc Universal.State]
@@ -303,8 +273,7 @@ private theorem DriverSuccess_public
   ihave Hfields := Streams_public [] (serialize sorted) false $$ Hstreams
   ispecialize Hfields $$ %store %observations
   ihave %hfields := Hfields $$ Hstate
-  ipureintro
-  exact Or.inr ⟨sorted, ⟨rfl, hfields.1⟩, hfacts.1⟩
+  ipureexact Or.inr ⟨sorted, ⟨rfl, hfields.1⟩, hfacts.1⟩
 
 /-- Every phase-classified OOM state contains the precise typed stream marker
 installed by the `talos.oom` host call. -/
@@ -352,16 +321,13 @@ private theorem DriverOOM_public
     (heapId : GName) (input : List UInt32) :
     (∃ phase : DriverOOMPhase, DriverOOMState heapId input phase) -∗
       irisEntryPost input (.trapped (.host OOM.trapMessage)) := by
-  iintro Hoom
-  icases Hoom with ⟨%phase, Hoom⟩
-  ihave HstreamsExist := DriverOOMState_streams heapId input phase $$ Hoom
-  icases HstreamsExist with ⟨%remaining, Hstreams⟩
+  iintro ⟨%phase, Hoom⟩
+  ihave ⟨%remaining, Hstreams⟩ := DriverOOMState_streams heapId input phase $$ Hoom
   iintro %store %observations Hstate
   ihave Hfields := Streams_public remaining [] true $$ Hstreams
   ispecialize Hfields $$ %store %observations
   ihave %hfields := Hfields $$ Hstate
-  ipureintro
-  exact Or.inl ⟨rfl, hfields.2⟩
+  ipureexact Or.inl ⟨rfl, hfields.2⟩
 
 /-- Apply the future main-function correctness theorem at the genuine exported
 call site.  This is the only bridge from entry resources to `Func3Spec`. -/
@@ -388,11 +354,8 @@ theorem twp_entry_of_func3
     (remainder := []) (controls := []) (calls := [])
     (s := Stuckness.NotStuck) (E := ⊤) (Φ := irisEntryPost input)
   unfold CallContract at hcall
-  iapply hcall
-  iframe Hruntime Hsp Hstack Hbump Hstreams
-  isplitr
-  · ipureintro
-    exact entryStackBytes_length
+  iapply_frame hcall using [Hruntime Hsp Hstack Hbump Hstreams]
+  isplitr_pureexact entryStackBytes_length
   isplitr
   · iintro _Hruntime Hsuccess
     unfold ResumeWP resumeExpr
@@ -401,8 +364,7 @@ theorem twp_entry_of_func3
       (arity := 0) (remainder := []))
     isimp only [List.take_zero, List.nil_append]
     iapply Wasm.SmallStep.twp_outcome_done
-    iapply DriverSuccess_public heapId input
-    iexact Hsuccess
+    iapply_exact DriverSuccess_public heapId input with Hsuccess
   · iapply DriverOOM_public heapId input
 
 /-- Generic operational bridge for the concrete entry call.  This theorem is
@@ -426,16 +388,13 @@ theorem entry_partiallyMeets_of_func3
     iintro ⟨Hheap, Hglobals, Hruntime, Henv, Hhost, Hfrontier, Hpages⟩
     ihave Hruntime' :
         runtimeModuleOwn ⟨0⟩ Project.Mergesort.module $$ [Hruntime]
-    · rw [← entryConfig_entry input, ← entryConfig_currentModule input]
-      iexact Hruntime
+    · irw_exact [← entryConfig_entry input, ← entryConfig_currentModule input] with Hruntime
     ihave Henv' :
         hostEnvOwn 0 (Universal.envFor Project.Mergesort.module) $$ [Henv]
-    · rw [← entryConfig_entry_id input, ← entryConfig_currentHost input]
-      iexact Henv
+    · irw_exact [← entryConfig_entry_id input, ← entryConfig_currentHost input] with Henv
     ihave Hhost' :
         hostStateOwn (Universal.State.ofInput (serialize input)) $$ [Hhost]
-    · rw [← entryConfig_host input]
-      iexact Hhost
+    · irw_exact [← entryConfig_host input] with Hhost
     iapply twp.to_wp
     iapply twp_entry_of_func3 (hfunc3 := hfunc3) input
     ihave Hpages' : memoryPagesOwn entryMemory.pages $$ [Hpages]

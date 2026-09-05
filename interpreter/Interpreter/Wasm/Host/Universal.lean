@@ -69,8 +69,7 @@ theorem envFor_satisfies (m : Module) : (envFor m).Satisfies m (specFor m) :=
 match, so a duplicate key would silently shadow a host function; this is the
 guard against that, and a new host must keep it true. -/
 theorem registry_keys_nodup :
-    (registry.map fun entry => (entry.decl.«module», entry.decl.name)).Nodup := by
-  native_decide
+    (registry.map fun entry => (entry.decl.«module», entry.decl.name)).Nodup := by decide +kernel
 
 /-- Whether every import `m` declares is one the universal host implements.
 A spec carries this as a smoke test: an unimplemented import still runs, but

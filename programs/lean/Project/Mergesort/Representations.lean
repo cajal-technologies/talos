@@ -32,8 +32,7 @@ abbrev SortedPermutation (input output : List UInt32) : Prop :=
   Spec.SortedPermutation input output
 
 @[simp] theorem serialize_length (values : List UInt32) :
-    (serialize values).length = 4 * values.length := by
-  exact U32Codec.serialize_length values
+    (serialize values).length = 4 * values.length := U32Codec.serialize_length values
 
 @[simp] theorem serialize_append (xs ys : List UInt32) :
     serialize (xs ++ ys) = serialize xs ++ serialize ys := by
@@ -41,8 +40,7 @@ abbrev SortedPermutation (input output : List UInt32) : Prop :=
   simp
 
 @[simp] theorem deserialize_serialize (values : List UInt32) :
-    U32Codec.deserialize (serialize values) = some values := by
-  exact U32Codec.deserialize_serialize values
+    U32Codec.deserialize (serialize values) = some values := U32Codec.deserialize_serialize values
 
 /-- A zeroed four-byte allocation is exactly the canonical serialization of
 the corresponding zero-valued word array. -/
@@ -67,8 +65,7 @@ canonical stream encoding, not a second serializer. -/
 theorem encodeWord_eq_u32Bytes (value : UInt32) :
     Spec.encodeWord value =
         [u32Byte value 0, u32Byte value 1,
-        u32Byte value 2, u32Byte value 3] := by
-  rfl
+        u32Byte value 2, u32Byte value 3] := by rfl
 
 /-- Every exact four-byte sequence is the canonical encoding of the word
 obtained by the generated little-endian decoder. -/
@@ -84,8 +81,9 @@ theorem encodeWord_decodeWord_of_length
   rcases bytes with _ | ⟨b3, bytes⟩
   · simp at hlength
   rcases bytes with _ | ⟨extra, bytes⟩
-  · simp [Spec.encodeWord, Spec.decodeWord]
-    bv_decide
+  · simp only [Spec.encodeWord, Spec.decodeWord]
+    rw [UInt32.packBytes_byte0, UInt32.packBytes_byte1,
+      UInt32.packBytes_byte2, UInt32.packBytes_byte3]
   · simp at hlength
 
 /-- Deterministic word view of an arbitrary complete four-byte-chunk list.
@@ -110,17 +108,13 @@ theorem serialize_decodeWords_of_length (bytes : List UInt8) (count : Nat)
       rcases bytes with _ | ⟨b0, bytes⟩
       · simp at hlength
       rcases bytes with _ | ⟨b1, bytes⟩
-      · simp at hlength
-        omega
+      · simp at hlength; omega
       rcases bytes with _ | ⟨b2, bytes⟩
-      · simp at hlength
-        omega
+      · simp at hlength; omega
       rcases bytes with _ | ⟨b3, rest⟩
-      · simp at hlength
-        omega
+      · simp at hlength; omega
       have hrest : rest.length = 4 * count := by
-        simp only [List.length_cons, Nat.mul_succ] at hlength
-        omega
+        simp only [List.length_cons, Nat.mul_succ] at hlength; omega
       have hind := ih rest hrest
       constructor
       · change U32Codec.serialize
@@ -143,14 +137,12 @@ def overwritePrefix (source initial : List UInt32) (copied : Nat) :
   source.take copied ++ initial.drop copied
 
 @[simp] theorem overwritePrefix_zero (source initial : List UInt32) :
-    overwritePrefix source initial 0 = initial := by
-  simp [overwritePrefix]
+    overwritePrefix source initial 0 = initial := by simp [overwritePrefix]
 
 theorem overwritePrefix_length (source initial : List UInt32) (copied : Nat)
     (hlength : source.length = initial.length) :
     (overwritePrefix source initial copied).length = source.length := by
-  simp [overwritePrefix, hlength]
-  omega
+  simp [overwritePrefix, hlength]; omega
 
 /-- One generated decode store advances the exact logical prefix by one word.
 The unrolled loop applies this law four times per iteration. -/
@@ -169,11 +161,9 @@ theorem overwritePrefix_set_next (source initial : List UInt32) (copied : Nat)
           | zero => simp [overwritePrefix]
           | succ copied =>
               have hlength' : source.length = initial.length := by
-                simp at hlength
-                exact hlength
+                simp at hlength; exact hlength
               have hcopied' : copied < source.length := by
-                simp at hcopied
-                exact hcopied
+                simp at hcopied; exact hcopied
               change
                 (head :: overwritePrefix source initial copied).set
                     (Nat.succ copied) source[copied] =
@@ -183,8 +173,7 @@ theorem overwritePrefix_set_next (source initial : List UInt32) (copied : Nat)
 
 @[simp] theorem overwritePrefix_all (source initial : List UInt32)
     (hlength : source.length = initial.length) :
-    overwritePrefix source initial source.length = source := by
-  simp [overwritePrefix, hlength]
+    overwritePrefix source initial source.length = source := by simp [overwritePrefix, hlength]
 
 /-! ## Byte and word regions -/
 
@@ -205,8 +194,7 @@ theorem byteOffset_toNat (ptr : UInt32) (count : Nat)
   rw [UInt32.toNat_add, UInt32.toNat_ofNat_of_lt' hcount]
   change (ptr.toNat + count) % 2 ^ 32 = ptr.toNat + count
   rw [Nat.mod_eq_of_lt]
-  norm_num [UInt32.size] at h ⊢
-  exact h
+  norm_num [UInt32.size] at h ⊢; exact h
 
 /-- Split and recombine canonical byte ownership at a logical list boundary. -/
 theorem ByteSlice_append {host : Type} [WasmHeapGS host]
@@ -225,28 +213,20 @@ theorem ByteSlice_append {host : Type} [WasmHeapGS host]
     have hoffset := byteOffset_toNat ptr left.length hleftNowrap
     have hrightNowrap :
         (ptr + UInt32.ofNat left.length).toNat + right.length <
-          UInt32.size := by
-      rw [hoffset]
-      omega
+          UInt32.size := by omega
     isplitl [Hleft]
     · iframe Hleft
-      ipureintro
-      exact hleftNowrap
+      ipureexact hleftNowrap
     · iframe Hright
-      ipureintro
-      exact hrightNowrap
+      ipureexact hrightNowrap
   · iintro ⟨⟨%hleftNowrap, Hleft⟩,
         ⟨%hrightNowrap, Hright⟩⟩
     have hoffset := byteOffset_toNat ptr left.length hleftNowrap
     have hnowrap :
         ptr.toNat + (left.length + right.length) < UInt32.size := by
-      rw [hoffset] at hrightNowrap
-      omega
-    isplitl []
-    · ipureintro
-      exact hnowrap
-    · iapply (pointsToBytes_append 0 ptr left right).mpr
-      iframe
+      rw [hoffset] at hrightNowrap; omega
+    isplitl_pureexact hnowrap
+    · iapply_frame (pointsToBytes_append 0 ptr left right).mpr
 
 /-- Exclusive ownership of a region whose current contents have no semantic
 role. -/
@@ -275,9 +255,7 @@ theorem ByteSlice_serialize_as_WordSlice {host : Type} [WasmHeapGS host]
   unfold WordSlice
   constructor
   · iintro Hbytes
-    isplitl []
-    · ipureintro
-      exact halign
+    isplitl_pureexact halign
     · iexact Hbytes
   · iintro ⟨%_halign, Hbytes⟩
     iexact Hbytes
@@ -298,8 +276,7 @@ theorem ByteSlice_as_decodedWordSlice {host : Type} [WasmHeapGS host]
   constructor
   · iintro Hbytes
     ihave Hencoded : ByteSlice ptr (serialize (decodeWords bytes)) $$ [Hbytes]
-    · rw [hslice]
-      iexact Hbytes
+    · irw_exact [hslice] with Hbytes
     iapply (ByteSlice_serialize_as_WordSlice ptr
       (decodeWords bytes) halign).mp
     iexact Hencoded
@@ -307,8 +284,7 @@ theorem ByteSlice_as_decodedWordSlice {host : Type} [WasmHeapGS host]
     ihave Hencoded := (ByteSlice_serialize_as_WordSlice ptr
       (decodeWords bytes) halign).mpr $$ Hwords
     ihave Hbytes : ByteSlice ptr bytes $$ [Hencoded]
-    · rw [← hslice]
-      iexact Hencoded
+    · irw_exact [← hslice] with Hencoded
     iexact Hbytes
 
 /-- At a known non-wrapping four-byte slot, arbitrary current bytes and the
@@ -323,25 +299,46 @@ theorem ByteSlice_four_as_word {host : Type} [WasmHeapGS host]
   have hencoded :
       [u32Byte word 0, u32Byte word 1, u32Byte word 2, u32Byte word 3] =
         bytes := by
-    rw [← encodeWord_eq_u32Bytes]
-    exact encodeWord_decodeWord_of_length bytes hlength
+    rw [← encodeWord_eq_u32Bytes]; exact encodeWord_decodeWord_of_length bytes hlength
   constructor
   · iintro Hslice
     isimp only [ByteSlice] at Hslice
     icases Hslice with ⟨%_hsliceNowrap, Hbytes⟩
     iapply (pointsTo_u32_as_bytes 0 ptr word).mpr
-    rw [hencoded]
-    iexact Hbytes
+    irw_exact [hencoded] with Hbytes
   · iintro Hword
     unfold ByteSlice
-    isplitl []
-    · ipureintro
-      simpa [hlength] using hnowrap
+    isplitl_pureexact (by simpa [hlength] using hnowrap)
     · ihave Hbytes := (pointsTo_u32_as_bytes 0 ptr word).mp $$ Hword
       ihave Hbytes' : pointsToBytes 0 ptr bytes $$ [Hbytes]
-      · rw [← hencoded]
-        iexact Hbytes
+      · irw_exact [← hencoded] with Hbytes
       iexact Hbytes'
+
+/-- Focus a four-byte slice for an arbitrary word store and reassemble it as
+the canonical singleton serialization. -/
+theorem ByteSlice_storeAnyWordFocus {host : Type} [WasmHeapGS host]
+    (ptr : UInt32) (oldBytes : List UInt8)
+    (hlength : oldBytes.length = 4)
+    (hnowrap : ptr.toNat + 4 < UInt32.size) :
+    ByteSlice (host := host) ptr oldBytes ⊢
+      iprop(pointsTo_u32 0 ptr (Spec.decodeWord oldBytes) ∗
+        (∀ newValue : UInt32, pointsTo_u32 0 ptr newValue -∗
+          ByteSlice ptr (serialize [newValue]))) := by
+  iintro Hslice
+  ihave Hold := (ByteSlice_four_as_word ptr oldBytes hlength hnowrap).mp $$
+    Hslice
+  isplitl_exact Hold
+  · iintro %newValue
+    iintro Hnew
+    have hnewLength : (serialize [newValue]).length = 4 := by
+      rw [serialize_length]
+      norm_num
+    have hdecode : Spec.decodeWord (serialize [newValue]) = newValue := by
+      change Spec.decodeWord (Spec.encodeWord newValue) = newValue
+      exact Spec.u32Codec.decode_encode newValue
+    iapply (ByteSlice_four_as_word ptr (serialize [newValue])
+      hnewLength hnowrap).mpr
+    irw_exact [hdecode] with Hnew
 
 /-- Focus the driver's reusable four-byte output slot for one word store and
 reassemble it as the canonical singleton serialization. -/
@@ -354,21 +351,11 @@ theorem ByteSlice_storeWordFocus {host : Type} [WasmHeapGS host]
         (pointsTo_u32 0 ptr newValue -∗
           ByteSlice ptr (serialize [newValue]))) := by
   iintro Hslice
-  ihave Hold := (ByteSlice_four_as_word ptr oldBytes hlength hnowrap).mp $$
-    Hslice
-  isplitl [Hold]
-  · iexact Hold
-  · iintro Hnew
-    have hnewLength : (serialize [newValue]).length = 4 := by
-      rw [serialize_length]
-      norm_num
-    have hdecode : Spec.decodeWord (serialize [newValue]) = newValue := by
-      change Spec.decodeWord (Spec.encodeWord newValue) = newValue
-      exact Spec.u32Codec.decode_encode newValue
-    iapply (ByteSlice_four_as_word ptr (serialize [newValue])
-      hnewLength hnowrap).mpr
-    rw [hdecode]
-    iexact Hnew
+  ihave ⟨Hold, Hclose⟩ := ByteSlice_storeAnyWordFocus ptr oldBytes
+    hlength hnowrap $$ Hslice
+  isplitl_exact Hold
+  ispecialize Hclose $$ %newValue
+  iexact Hclose
 
 /-- Empty canonical word ownership is resource-free.  This is the exact
 dangling-pointer case taken by the driver when the public input is empty. -/
@@ -377,12 +364,8 @@ theorem WordSlice_nil {host : Type} [WasmHeapGS host]
     emp ⊢ WordSlice (host := host) ptr [] := by
   iintro _Hemp
   unfold WordSlice ByteSlice
-  isplitl []
-  · ipureintro
-    exact halign
-  isplitl []
-  · ipureintro
-    simpa [UInt32.size] using ptr.toBitVec.isLt
+  isplitl_pureexact halign
+  isplitl_pureexact (by simpa [UInt32.size] using ptr.toBitVec.isLt)
   · isimp only [serialize, Wasm.WordCodec.serialize_nil]
     iapply (pointsToBytes_nil 0 ptr).mpr
     itrivial
@@ -392,8 +375,7 @@ private theorem wordOffset_eq_byteOffset
     ptr + 4 * UInt32.ofNat values.length =
       ptr + UInt32.ofNat (serialize values).length := by
   simp only [serialize_length]
-  rw [UInt32.ofNat_mul]
-  rfl
+  rw [UInt32.ofNat_mul]; rfl
 
 /-- A no-wrap logical word offset has the expected natural-number address. -/
 theorem wordOffset_toNat (ptr : UInt32) (count : Nat)
@@ -405,14 +387,12 @@ theorem wordOffset_toNat (ptr : UInt32) (count : Nat)
   rw [show (4 : UInt32).toNat = 4 by decide,
     UInt32.toNat_ofNat_of_lt' hcount]
   have hprod : 4 * count < 2 ^ 32 := by
-    norm_num [UInt32.size] at h ⊢
-    omega
+    norm_num [UInt32.size] at h ⊢; omega
   rw [Nat.mod_eq_of_lt hprod]
   change (ptr.toNat + 4 * count) % 2 ^ 32 =
     ptr.toNat + 4 * count
   rw [Nat.mod_eq_of_lt]
-  norm_num [UInt32.size] at h ⊢
-  exact h
+  norm_num [UInt32.size] at h ⊢; exact h
 
 /-- Split and recombine a canonical word slice at a logical list boundary.
 The theorem also validates the exact `base + 4 * count` pointer used at both
@@ -433,43 +413,29 @@ theorem WordSlice_append {host : Type} [WasmHeapGS host]
     have hoffset := wordOffset_toNat ptr xs.length hleftNowrap
     have hrightNowrap :
         (ptr + 4 * UInt32.ofNat xs.length).toNat +
-            4 * ys.length < UInt32.size := by
-      rw [hoffset]
-      omega
+            4 * ys.length < UInt32.size := by omega
     have hrightAlign :
         (ptr + 4 * UInt32.ofNat xs.length).toNat % 4 = 0 := by
-      rw [hoffset, Nat.add_mod]
-      omega
+      rw [hoffset, Nat.add_mod]; omega
     ihave Hright' :
         pointsToBytes 0 (ptr + 4 * UInt32.ofNat xs.length)
           (serialize ys) $$ [Hright]
-    · rw [wordOffset_eq_byteOffset]
-      iexact Hright
+    · irw_exact [wordOffset_eq_byteOffset] with Hright
     isplitl [Hleft]
     · iframe Hleft
-      ipureintro
-      exact ⟨halign, hleftNowrap⟩
+      ipureexact ⟨halign, hleftNowrap⟩
     · iframe Hright'
-      ipureintro
-      exact ⟨hrightAlign, hrightNowrap⟩
+      ipureexact ⟨hrightAlign, hrightNowrap⟩
   · iintro ⟨⟨%halign, %hleftNowrap, Hleft⟩,
         ⟨%_hrightAlign, %hrightNowrap, Hright⟩⟩
     have hoffset := wordOffset_toNat ptr xs.length hleftNowrap
     have hnowrap :
         ptr.toNat + 4 * (xs.length + ys.length) < UInt32.size := by
-      rw [hoffset] at hrightNowrap
-      omega
-    isplitl []
-    · ipureintro
-      exact halign
-    isplitl []
-    · ipureintro
-      simpa only [Nat.mul_add] using hnowrap
-    iapply (pointsToBytes_append 0 ptr (serialize xs) (serialize ys)).mpr
-    isplitl [Hleft]
-    · iexact Hleft
-    · rw [← wordOffset_eq_byteOffset]
-      iexact Hright
+      rw [hoffset] at hrightNowrap; omega
+    isplitl_pureexact halign
+    isplitl_pureexact (by simpa only [Nat.mul_add] using hnowrap)
+    iapply_splitl_exact (pointsToBytes_append 0 ptr (serialize xs) (serialize ys)).mpr with Hleft
+    · irw_exact [← wordOffset_eq_byteOffset] with Hright
 
 /-- Retain a word slice while exposing its alignment and exact no-wrap facts. -/
 theorem WordSlice_facts {host : Type} [WasmHeapGS host]
@@ -482,10 +448,8 @@ theorem WordSlice_facts {host : Type} [WasmHeapGS host]
   iintro ⟨%halign, %hnowrap, Hbytes⟩
   isplitl [Hbytes]
   · iframe Hbytes
-    ipureintro
-    exact ⟨halign, hnowrap⟩
-  · ipureintro
-    exact ⟨halign, by simpa only [serialize_length] using hnowrap⟩
+    ipureexact ⟨halign, hnowrap⟩
+  · ipureexact ⟨halign, by simpa only [serialize_length] using hnowrap⟩
 
 /-- Existing `arrayAt` proofs and the canonical codec describe the same
 physical bytes. -/
@@ -499,8 +463,7 @@ theorem arrayAt_eq_wordCells {host : Type} [WasmHeapGS host]
       change pointsTo_u32 0 ptr value ∗ arrayAt 0 (ptr + 4) rest ⊣⊢
         pointsToBytes 0 ptr
           (Spec.encodeWord value ++ U32Codec.serialize rest)
-      rw [encodeWord_eq_u32Bytes]
-      exact (BI.sep_congr
+      rw [encodeWord_eq_u32Bytes]; exact (BI.sep_congr
           (pointsTo_u32_as_bytes 0 ptr value)
           (by simpa using ih (ptr + 4))).trans
         (pointsToBytes_append 0 ptr
@@ -521,20 +484,14 @@ theorem WordSlice_get {host : Type} [WasmHeapGS host]
   unfold WordSlice ByteSlice
   iintro ⟨%halign, %hnowrap, Hbytes⟩
   ihave Harray : arrayAt 0 ptr values $$ [Hbytes]
-  · iapply (arrayAt_eq_wordCells ptr values).mpr
-    iexact Hbytes
-  ihave Hfocus := arrayAt_get 0 ptr values k hk $$ Harray
-  icases Hfocus with ⟨Hcell, Hclose⟩
-  isplitl [Hcell]
-  · iexact Hcell
+  · iapply_exact (arrayAt_eq_wordCells ptr values).mpr with Hbytes
+  ihave ⟨Hcell, Hclose⟩ := arrayAt_get 0 ptr values k hk $$ Harray
+  isplitl_exact Hcell
   · iintro Hcell
     ihave Harray := Hclose $$ Hcell
     ihave Hbytes : WordCells ptr values $$ [Harray]
-    · iapply (arrayAt_eq_wordCells ptr values).mp
-      iexact Harray
-    iframe Hbytes
-    ipureintro
-    exact ⟨halign, hnowrap⟩
+    · iapply_exact (arrayAt_eq_wordCells ptr values).mp with Harray
+    iframe_pureexact using [Hbytes] => ⟨halign, hnowrap⟩
 
 /-- Focus one writable word cell.  Returning a new value reassembles the same
 physical slice with exactly the corresponding logical list update. -/
@@ -548,17 +505,13 @@ theorem WordSlice_set {host : Type} [WasmHeapGS host]
   unfold WordSlice ByteSlice
   iintro ⟨%halign, %hnowrap, Hbytes⟩
   ihave Harray : arrayAt 0 ptr values $$ [Hbytes]
-  · iapply (arrayAt_eq_wordCells ptr values).mpr
-    iexact Hbytes
-  ihave Hfocus := arrayAt_set 0 ptr values k newValue hk $$ Harray
-  icases Hfocus with ⟨Hcell, Hclose⟩
-  isplitl [Hcell]
-  · iexact Hcell
+  · iapply_exact (arrayAt_eq_wordCells ptr values).mpr with Hbytes
+  ihave ⟨Hcell, Hclose⟩ := arrayAt_set 0 ptr values k newValue hk $$ Harray
+  isplitl_exact Hcell
   · iintro Hcell
     ihave Harray := Hclose $$ Hcell
     ihave Hbytes : WordCells ptr (values.set k newValue) $$ [Harray]
-    · iapply (arrayAt_eq_wordCells ptr (values.set k newValue)).mp
-      iexact Harray
+    · iapply_exact (arrayAt_eq_wordCells ptr (values.set k newValue)).mp with Harray
     iframe Hbytes
     ipureintro
     refine ⟨halign, ?_⟩
@@ -583,8 +536,7 @@ theorem wordRegions_disjoint_of_order
     MemRegion.Disjoint
       ⟨source, 4 * input.length⟩
       ⟨scratch, 4 * scratchValues.length⟩ := by
-  unfold MemRegion.Disjoint
-  exact Or.inl horder
+  unfold MemRegion.Disjoint; exact Or.inl horder
 
 /-- The driver may pass its aligned dangling pointer as both arrays at length
 zero; neither empty slice owns bytes. -/
@@ -623,22 +575,15 @@ theorem SortBuffers_copyFocus {host : Type} [WasmHeapGS host]
             (scratchValues.set k newValue))) := by
   unfold SortBuffers
   iintro ⟨Hsource, Hscratch, %hfacts⟩
-  ihave HsourceFocus := WordSlice_get source input i hi $$ Hsource
-  icases HsourceFocus with ⟨HsourceCell, HsourceClose⟩
-  ihave HscratchFocus :=
+  ihave ⟨HsourceCell, HsourceClose⟩ := WordSlice_get source input i hi $$ Hsource
+  ihave ⟨HscratchCell, HscratchClose⟩ :=
     WordSlice_set scratch scratchValues k newValue hk $$ Hscratch
-  icases HscratchFocus with ⟨HscratchCell, HscratchClose⟩
-  isplitl [HsourceCell]
-  · iexact HsourceCell
-  isplitl [HscratchCell]
-  · iexact HscratchCell
+  isplitl_exacts [HsourceCell HscratchCell]
   iintro HsourceCell
   iintro HscratchCell
   ihave Hsource := HsourceClose $$ HsourceCell
   ihave Hscratch := HscratchClose $$ HscratchCell
-  iframe Hsource Hscratch
-  ipureintro
-  simpa using hfacts
+  iframe_pureexact using [Hsource Hscratch] => (by simpa using hfacts)
 
 /-- Expose both complete byte ranges for the generated final
 `memory.copy(source, scratch, 4*n)`.  Returning the overwritten source bytes
@@ -657,30 +602,18 @@ theorem SortBuffers_copyBackFocus {host : Type} [WasmHeapGS host]
   unfold SortBuffers WordSlice ByteSlice
   iintro ⟨⟨%hsourceAlign, %hsourceNowrap, Hsource⟩,
     ⟨%hscratchAlign, %hscratchNowrap, Hscratch⟩, %hfacts⟩
-  isplitl [Hsource]
-  · iexact Hsource
-  isplitl [Hscratch]
-  · iexact Hscratch
+  isplitl_exacts [Hsource Hscratch]
   iintro Hsource
   iintro Hscratch
   isplitl [Hsource]
-  · isplitl []
-    · ipureintro
-      exact hsourceAlign
-    isplitl []
-    · ipureintro
-      simpa only [serialize_length, hfacts.1] using hsourceNowrap
+  · isplitl_pureexact hsourceAlign
+    isplitl_pureexact (by simpa only [serialize_length, hfacts.1] using hsourceNowrap)
     · iexact Hsource
   isplitl [Hscratch]
-  · isplitl []
-    · ipureintro
-      exact hscratchAlign
-    isplitl []
-    · ipureintro
-      exact hscratchNowrap
+  · isplitl_pureexact hscratchAlign
+    isplitl_pureexact hscratchNowrap
     · iexact Hscratch
-  · ipureintro
-    exact ⟨rfl, by simpa only [hfacts.1] using hfacts.2⟩
+  · ipureexact ⟨rfl, by simpa only [hfacts.1] using hfacts.2⟩
 
 private theorem disjoint_prefixes
     (source scratch : UInt32)
@@ -757,12 +690,10 @@ theorem SortBuffers_append {host : Type} [WasmHeapGS host]
       ⟨HscratchLeft, HscratchRight⟩
     have hsourcePrefix :
         source.toNat + 4 * left.length < UInt32.size := by
-      simp only [List.length_append, Nat.mul_add] at hsourceFacts
-      omega
+      simp only [List.length_append, Nat.mul_add] at hsourceFacts; omega
     have hscratchPrefix :
         scratch.toNat + 4 * scratchLeft.length < UInt32.size := by
-      simp only [List.length_append, Nat.mul_add] at hscratchFacts
-      omega
+      simp only [List.length_append, Nat.mul_add] at hscratchFacts; omega
     have hsourceOffset :=
       wordOffset_toNat source left.length hsourcePrefix
     have hscratchOffset :=
@@ -773,29 +704,21 @@ theorem SortBuffers_append {host : Type} [WasmHeapGS host]
       scratchLeft scratchRight hsourceOffset hscratchOffset hfacts.2
     isplitl [HsourceLeft HscratchLeft]
     · unfold SortBuffers
-      iframe
-      ipureintro
-      exact ⟨hleftLength, hleftDisjoint⟩
+      iframe_pureexact ⟨hleftLength, hleftDisjoint⟩
     isplitl [HsourceRight HscratchRight]
     · unfold SortBuffers
-      iframe
-      ipureintro
-      exact ⟨hrightLength, hrightDisjoint⟩
-    · ipureintro
-      exact hfacts.2
+      iframe_pureexact ⟨hrightLength, hrightDisjoint⟩
+    · ipureexact hfacts.2
   · iintro ⟨Hleft, Hright, %hfull⟩
     isimp only [SortBuffers] at Hleft Hright
     icases Hleft with ⟨HsourceLeft, HscratchLeft, %_hleftFacts⟩
     icases Hright with ⟨HsourceRight, HscratchRight, %_hrightFacts⟩
     unfold SortBuffers
     isplitl [HsourceLeft HsourceRight]
-    · iapply (WordSlice_append source left right).mpr
-      iframe
+    · iapply_frame (WordSlice_append source left right).mpr
     isplitl [HscratchLeft HscratchRight]
-    · iapply (WordSlice_append scratch scratchLeft scratchRight).mpr
-      iframe
-    · ipureintro
-      exact ⟨by
+    · iapply_frame (WordSlice_append scratch scratchLeft scratchRight).mpr
+    · ipureexact ⟨by
         simp only [List.length_append, hleftLength, hrightLength], hfull⟩
 
 /-! ## Allocator vocabulary and ownership -/
@@ -853,29 +776,25 @@ def classifyBump (frontier : Nat) (layout : AllocLayout) : BumpDecision :=
     .oom
 
 private theorem align1_mask (x : UInt32) :
-    x &&& (0 - 1) = x := by
-  simp
+    x &&& (0 - 1) = x := by simp
 
 private theorem align4_mask_toNat (x : UInt32) :
     (x &&& (0 - 4)).toNat = x.toNat - x.toNat % 4 := by
   change (x.toBitVec &&& ((0 - 4 : UInt32).toBitVec)).toNat =
     x.toBitVec.toNat - x.toBitVec.toNat % 4
   have hmask :
-      ((0 - 4 : UInt32).toBitVec) = BitVec.allOnes 32 <<< 2 := by
-    decide
+      ((0 - 4 : UInt32).toBitVec) = BitVec.allOnes 32 <<< 2 := by decide
   rw [hmask, ← BitVec.shiftLeft_ushiftRight]
   simp only [BitVec.toNat_shiftLeft, BitVec.toNat_ushiftRight,
     Nat.shiftRight_eq_div_pow, Nat.shiftLeft_eq, Nat.reducePow]
   have hdiv : x.toBitVec.toNat / 4 * 4 =
-      x.toBitVec.toNat - x.toBitVec.toNat % 4 := by
-    omega
+      x.toBitVec.toNat - x.toBitVec.toNat % 4 := by omega
   have hbound : x.toBitVec.toNat / 4 * 4 < 4294967296 := by
     have hx := x.toBitVec.isLt
     omega
   change (x.toBitVec.toNat / 4 * 4) % 4294967296 =
     x.toBitVec.toNat - x.toBitVec.toNat % 4
-  rw [Nat.mod_eq_of_lt hbound]
-  exact hdiv
+  simpa only [Nat.mod_eq_of_lt hbound] using hdiv
 
 /-- The exact arithmetic facts exposed by a successful bump classification. -/
 theorem classifyBump_success_facts
@@ -906,8 +825,7 @@ theorem classifyBump_success_facts
       injection h with hbase hfinish
       subst base
       subst finish
-      dsimp only at hend ⊢
-      exact ⟨hsum, rfl, hend.1, hend.2,
+      dsimp only at hend ⊢; exact ⟨hsum, rfl, hend.1, hend.2,
         UInt32.toNat_ofNat_of_lt' hend.1⟩
     · contradiction
   · contradiction
@@ -985,33 +903,26 @@ theorem classifyBump_success_reachable
       simpa only [halignment, Nat.reduceSubDiff, Nat.add_zero] using hsum
     have hbase' :
         base = UInt32.ofNat frontier &&& (0 - 1) := by
-      norm_num [halignment] at hbase ⊢
-      exact hbase
+      norm_num [halignment] at hbase ⊢; exact hbase
     rw [align1_mask] at hbase'
     have hbaseNat : base.toNat = frontier := by
       rw [hbase', UInt32.toNat_ofNat_of_lt' hsum']
     have hnonnull : base ≠ 0 := by
       intro hzero
-      have hzeroNat := congrArg UInt32.toNat hzero
-      simp only [UInt32.toNat_zero] at hzeroNat
-      rw [hbaseNat] at hzeroNat
-      omega
+      have hzeroNat := congrArg UInt32.toNat hzero; simp only [UInt32.toNat_zero] at hzeroNat
+      rw [hbaseNat] at hzeroNat; omega
     have haligned : base.toNat % layout.alignment = 0 := by
-      rw [halignment]
-      exact Nat.mod_one _
+      rw [halignment]; exact Nat.mod_one _
     refine ⟨?_, hnonnull, haligned, hendWord, hendSigned, hfinish, ?_⟩
     · omega
     · exact ⟨hvalid, hnonnull, haligned⟩
   · have hsum' : frontier + 3 < UInt32.size := by
-      norm_num [halignment] at hsum ⊢
-      exact hsum
+      norm_num [halignment] at hsum ⊢; exact hsum
     have hbase' :
         base = UInt32.ofNat (frontier + 3) &&& (0 - 4) := by
-      norm_num [halignment] at hbase ⊢
-      exact hbase
+      norm_num [halignment] at hbase ⊢; exact hbase
     have hsumWord :
-        (UInt32.ofNat (frontier + 3)).toNat = frontier + 3 := by
-      exact UInt32.toNat_ofNat_of_lt' hsum'
+        (UInt32.ofNat (frontier + 3)).toNat = frontier + 3 := UInt32.toNat_ofNat_of_lt' hsum'
     have hbaseNat :
         base.toNat = (frontier + 3) - (frontier + 3) % 4 := by
       rw [hbase', align4_mask_toNat, hsumWord]
@@ -1019,17 +930,13 @@ theorem classifyBump_success_reachable
       Nat.mod_lt _ (by decide)
     have hstart : frontier ≤ base.toNat := by omega
     have hmod4 : base.toNat % 4 = 0 := by
-      rw [hbaseNat]
-      exact Nat.mod_eq_zero_of_dvd
+      simpa only [hbaseNat] using Nat.mod_eq_zero_of_dvd
         (Nat.dvd_sub_mod (n := 4) (frontier + 3))
     have hnonnull : base ≠ 0 := by
       intro hzero
-      have hzeroNat := congrArg UInt32.toNat hzero
-      simp only [UInt32.toNat_zero] at hzeroNat
-      rw [hzeroNat] at hstart
-      omega
-    have haligned : base.toNat % layout.alignment = 0 := by
-      simpa only [halignment] using hmod4
+      have hzeroNat := congrArg UInt32.toNat hzero; simp only [UInt32.toNat_zero] at hzeroNat
+      rw [hzeroNat] at hstart; omega
+    have haligned : base.toNat % layout.alignment = 0 := by simpa only [halignment] using hmod4
     exact ⟨hstart, hnonnull, haligned, hendWord, hendSigned, hfinish,
       hvalid, hnonnull, haligned⟩
 
@@ -1053,11 +960,9 @@ theorem classifyBump_success_align1
   dsimp only at hraw
   rcases hraw with ⟨hsum, hbase, hendWord, hendSigned, hfinish⟩
   have hfrontier : frontier < UInt32.size := by
-    norm_num at hsum ⊢
-    exact hsum
+    norm_num at hsum ⊢; exact hsum
   have hbase' : base = UInt32.ofNat frontier := by
-    norm_num at hbase
-    exact hbase
+    norm_num at hbase; exact hbase
   have hbaseNat : base.toNat = frontier := by
     rw [hbase', UInt32.toNat_ofNat_of_lt' hfrontier]
   exact ⟨hfrontier, hbase', hbaseNat, hendWord, hendSigned, by
@@ -1107,8 +1012,7 @@ theorem allocatorRequiredPages_le_signedLimit (finish : UInt32)
   have hsum : finish.toNat + 65535 < 2 ^ 32 := by omega
   have hquot :
       (finish.toNat + 65535) / 65536 < 32769 := by
-    rw [Nat.div_lt_iff_lt_mul (by norm_num : 0 < 65536)]
-    omega
+    rw [Nat.div_lt_iff_lt_mul (by norm_num : 0 < 65536)]; omega
   have hquotle :
       (finish.toNat + 65535) / 65536 ≤ 32768 := by omega
   unfold allocatorRequiredPages
@@ -1118,8 +1022,7 @@ theorem allocatorRequiredPages_le_signedLimit (finish : UInt32)
   norm_num
   rw [show (65535 : UInt32).toNat = 65535 by decide]
   norm_num at hsum
-  rw [Nat.mod_eq_of_lt hsum]
-  exact hquotle
+  simpa only [Nat.mod_eq_of_lt hsum] using hquotle
 
 /-- At a cap large enough for the target, growing by the exact difference
 returns the old page count and installs the target page count. -/
@@ -1146,15 +1049,13 @@ theorem allocatorMemoryGrow_succeeds (memory : Mem) (finish : UInt32)
   have htarget :=
     allocatorRequiredPages_le_signedLimit finish hfinish
   have hpages : memory.pages < UInt32.size := by
-    norm_num [UInt32.size] at htarget ⊢
-    omega
+    norm_num [UInt32.size] at htarget ⊢; omega
   have hpagesWord :
       (UInt32.ofNat memory.pages).toNat = memory.pages :=
     UInt32.toNat_ofNat_of_lt' hpages
   have hleWords :
       UInt32.ofNat memory.pages ≤ allocatorRequiredPages finish := by
-    rw [UInt32.le_iff_toNat_le_toNat, hpagesWord]
-    omega
+    rw [UInt32.le_iff_toNat_le_toNat, hpagesWord]; omega
   have hdelta :
       (allocatorRequiredPages finish -
         UInt32.ofNat memory.pages).toNat =
@@ -1162,28 +1063,24 @@ theorem allocatorMemoryGrow_succeeds (memory : Mem) (finish : UInt32)
     rw [UInt32.toNat_sub_of_le _ _ hleWords, hpagesWord]
   unfold Mem.grow
   simp only [hdelta, Nat.add_sub_of_le (Nat.le_of_lt hneed)]
-  norm_num [Module.memoryHardCap]
-  omega
+  norm_num [Module.memoryHardCap]; omega
 
 /-- The frozen module declares no maximum, so its declaration-level cap is
 the interpreter's i32 hard cap. -/
 theorem module_memoryCap :
-    Project.Mergesort.module.memoryCap = Module.memoryHardCap := by
-  rfl
+    Project.Mergesort.module.memoryCap = Module.memoryHardCap := by rfl
 
 /-- Instantiation materializes that declaration-level cap in memory-resource
 metadata.  A modular allocator proof still needs a state-linked invariant
 showing that this immutable field remains the current store's metadata. -/
 theorem initialStore_memoryCaps :
     (Project.Mergesort.module.initialStore
-      (α := Universal.State)).memoryCaps = [Module.memoryHardCap] := by
-  rfl
+      (α := Universal.State)).memoryCaps = [Module.memoryHardCap] := by rfl
 
 theorem initialStore_memoryCap :
     (Project.Mergesort.module.initialStore
       (α := Universal.State)).memoryCap Project.Mergesort.module 0 =
-      Module.memoryHardCap := by
-  rfl
+      Module.memoryHardCap := by rfl
 
 /-- Map-native allocation history.  `nextId` makes freshness explicit; the
 map itself is exactly the value stored in ghost authority. -/
@@ -1259,14 +1156,11 @@ theorem LiveBlock_bytesFocus {host : Type} [WasmHeapGS host]
           LiveBlock heapId allocationId ptr layout newBytes)) := by
   unfold LiveBlock
   iintro ⟨Htoken, Hbytes, %hfacts⟩
-  isplitl [Hbytes]
-  · iexact Hbytes
+  isplitl_exact Hbytes
   · iintro %newBytes
     iintro %hnewLength
-    iintro HnewBytes
-    iframe Htoken HnewBytes
-    ipureintro
-    exact ⟨hnewLength, hfacts.2.1, hfacts.2.2⟩
+    iintro HnewBytes; iframe Htoken HnewBytes
+    ipureexact ⟨hnewLength, hfacts.2.1, hfacts.2.2⟩
 
 /-- A complete live allocation viewed as canonical little-endian words.  The
 token and word bytes are a single owner, not overlapping views. -/
@@ -1291,13 +1185,9 @@ theorem LiveWordBlock_as_liveBlock {host : Type} [WasmHeapGS host]
   simp only [serialize_length]
   constructor
   · iintro ⟨Htoken, ⟨%halign, %hnowrap, Hbytes⟩, %hnonnull⟩
-    iframe Htoken Hbytes
-    ipureintro
-    exact ⟨hnowrap, trivial, hnonnull, halign⟩
+    iframe_pureexact using [Htoken Hbytes] => ⟨hnowrap, trivial, hnonnull, halign⟩
   · iintro ⟨Htoken, ⟨%hnowrap, Hbytes⟩, %hfacts⟩
-    iframe Htoken Hbytes
-    ipureintro
-    exact ⟨⟨hfacts.2.2, hnowrap⟩, hfacts.2.1⟩
+    iframe_pureexact using [Htoken Hbytes] => ⟨⟨hfacts.2.2, hnowrap⟩, hfacts.2.1⟩
 
 /-- The reachable zeroing allocator result, specialized to a whole number of
 words, is the canonical live word-array representation expected by `func2`. -/
@@ -1354,9 +1244,7 @@ theorem LiveWordBlocks_sortFocus {host : Type} [WasmHeapGS host]
     ⟨HscratchToken, HscratchWords, %hscratchNonzero⟩
   isplitl [HsourceWords HscratchWords]
   · unfold SortBuffers
-    iframe
-    ipureintro
-    exact ⟨hlength, hdisjoint⟩
+    iframe_pureexact ⟨hlength, hdisjoint⟩
   · iintro %output
     iintro %scratchResult
     iintro %hresultLengths
@@ -1366,22 +1254,16 @@ theorem LiveWordBlocks_sortFocus {host : Type} [WasmHeapGS host]
       ⟨HsourceWords, HscratchWords, %_hbufferFacts⟩
     ihave HsourceToken' : AllocToken heapId sourceId source
         { size := 4 * output.length, alignment := 4 } $$ [HsourceToken]
-    · rw [hresultLengths.1]
-      iexact HsourceToken
+    · irw_exact [hresultLengths.1] with HsourceToken
     ihave HscratchToken' : AllocToken heapId scratchId scratch
         { size := 4 * scratchResult.length, alignment := 4 } $$
         [HscratchToken]
-    · rw [hresultLengths.2]
-      iexact HscratchToken
+    · irw_exact [hresultLengths.2] with HscratchToken
     isplitl [HsourceToken' HsourceWords]
     · unfold LiveWordBlock
-      iframe
-      ipureintro
-      exact hsourceNonzero
+      iframe_pureexact hsourceNonzero
     · unfold LiveWordBlock
-      iframe
-      ipureintro
-      exact hscratchNonzero
+      iframe_pureexact hscratchNonzero
 
 /-- Pure chronological invariants shared by every allocator contract.  The
 map is complete below `nextId`, contains nothing at or above it, and numeric
@@ -1421,15 +1303,13 @@ theorem HistoryWellFormed.allocate
   refine ⟨?_, ?_, ?_, ?_, ?_⟩
   · intro allocationId hid
     by_cases heq : allocationId = history.nextId
-    · subst allocationId
-      exact ⟨liveMeta ptr layout, get?_insert_eq rfl⟩
+    · subst allocationId; exact ⟨liveMeta ptr layout, get?_insert_eq rfl⟩
     · have hlt : allocationId < history.nextId := by omega
       obtain ⟨metadata, hmetadata⟩ := hcomplete allocationId hlt
       exact ⟨metadata, (get?_insert_ne (Ne.symm heq)).trans hmetadata⟩
   · intro allocationId metadata hmetadata
     by_cases heq : history.nextId = allocationId
-    · subst allocationId
-      rw [get?_insert_eq rfl] at hmetadata
+    · subst allocationId; rw [get?_insert_eq rfl] at hmetadata
       injection hmetadata with hmetadata
       subst metadata
       exact ⟨by omega, hvalid, by
@@ -1440,8 +1320,7 @@ theorem HistoryWellFormed.allocate
       exact ⟨by omega, hvalidOld, by omega⟩
   · intro earlierId laterId earlier later hid hearlier hlater
     by_cases hlaterId : history.nextId = laterId
-    · subst laterId
-      rw [get?_insert_eq rfl] at hlater
+    · subst laterId; rw [get?_insert_eq rfl] at hlater
       injection hlater with hlater
       subst later
       have hne : history.nextId ≠ earlierId := by omega
@@ -1491,27 +1370,23 @@ theorem HistoryWellFormed.retire
           oldMetadata.ptr = metadata.ptr := by
     intro key metadata hmetadata
     by_cases hkey : allocationId = key
-    · subst key
-      rw [get?_insert_eq rfl] at hmetadata
+    · subst key; rw [get?_insert_eq rfl] at hmetadata
       injection hmetadata with hmetadata
       subst metadata
       exact ⟨liveMeta ptr layout, hlookup, by
         simp [allocationEndExclusive, liveMeta, retiredMeta], by
         simp [liveMeta, retiredMeta]⟩
-    · rw [get?_insert_ne hkey] at hmetadata
-      exact ⟨metadata, hmetadata, rfl, rfl⟩
+    · rw [get?_insert_ne hkey] at hmetadata; exact ⟨metadata, hmetadata, rfl, rfl⟩
   simp only [HistoryWellFormed, AllocationHistory.retire] at ⊢
   refine ⟨?_, ?_, ?_, ?_, ?_⟩
   · intro key hkeyLt
     by_cases hkey : allocationId = key
-    · subst key
-      exact ⟨retiredMeta ptr layout, get?_insert_eq rfl⟩
+    · subst key; exact ⟨retiredMeta ptr layout, get?_insert_eq rfl⟩
     · obtain ⟨metadata, hmetadata⟩ := hcomplete key hkeyLt
       exact ⟨metadata, (get?_insert_ne hkey).trans hmetadata⟩
   · intro key metadata hmetadata
     by_cases hkey : allocationId = key
-    · subst key
-      rw [get?_insert_eq rfl] at hmetadata
+    · subst key; rw [get?_insert_eq rfl] at hmetadata
       injection hmetadata with hmetadata
       subst metadata
       refine ⟨hlive.1, ?_, ?_⟩
@@ -1519,8 +1394,7 @@ theorem HistoryWellFormed.retire
           using hlive.2.1
       · simpa [allocationEndExclusive, liveMeta, retiredMeta]
           using hlive.2.2
-    · rw [get?_insert_ne hkey] at hmetadata
-      exact hrecords key metadata hmetadata
+    · rw [get?_insert_ne hkey] at hmetadata; exact hrecords key metadata hmetadata
   · intro earlierId laterId earlier later hid hearlier hlater
     obtain ⟨oldEarlier, holdEarlier, hendEarlier, _hptrEarlier⟩ :=
       recover earlierId earlier hearlier
@@ -1543,9 +1417,8 @@ theorem HistoryWellFormed.retire
       refine ⟨hnext, ?_⟩
       by_cases hidLast : allocationId = history.nextId - 1
       · refine ⟨retiredMeta ptr layout, get?_insert_eq hidLast, ?_⟩
-        have heq : liveMeta ptr layout = last := by
-          apply Option.some.inj
-          exact hlookup.symm.trans (hidLast ▸ hlastLookup)
+        have heq : liveMeta ptr layout = last :=
+          Option.some.inj (hlookup.symm.trans (hidLast ▸ hlastLookup))
         calc
           allocationEndExclusive (retiredMeta ptr layout) =
               allocationEndExclusive (liveMeta ptr layout) := by rfl
@@ -1648,14 +1521,11 @@ theorem BumpHeap_empty {host : Type} [WasmHeapGS host]
         AllocationHistory.empty := by
   unfold BumpHeap RetiredBytes
   simp only [AllocationHistory.empty, BI.BigSepM.bigSepM_empty.to_eq]
-  iintro ⟨Hcursor, Hfrontier, Hmetadata, Hpages⟩
-  iframe Hcursor Hfrontier Hmetadata
+  iintro ⟨Hcursor, Hfrontier, Hmetadata, Hpages⟩; iframe Hcursor Hfrontier Hmetadata
   isplitl []
   · itrivial
   · iexists ownedPages
-    iframe Hpages
-    ipureintro
-    exact ⟨Nat.le_refl _, by decide, by decide, by decide,
+    iframe_pureexact using [Hpages] => ⟨Nat.le_refl _, by decide, by decide, by decide,
       historyWellFormed_empty, hphysical⟩
 
 /-- A token agrees with the unique live metadata entry in the named heap. -/
@@ -1749,12 +1619,9 @@ theorem RetiredBytes_retire {host : Type} [WasmHeapGS host]
   ispecialize Hclose $$ %(retiredMeta ptr layout)
   iapply Hclose
   unfold RetiredEntry retiredMeta
-  isplitl [Hfragment]
-  · iexact Hfragment
+  isplitl_exact Hfragment
   · iexists bytes
-    iframe Hbytes
-    ipureintro
-    simpa [retiredMeta] using hlen
+    iframe_pureexact using [Hbytes] => (by simpa [retiredMeta] using hlen)
 
 /-- The complete metadata-side allocation transition.  Physical fresh-byte
 ownership is deliberately supplied separately by `stateInterp_alloc_freshRange`. -/
@@ -1808,25 +1675,17 @@ theorem BumpHeap_commit {host : Type} [WasmHeapGS host]
     hwf.2.2.2.1
   have hwfNew :
       HistoryWellFormed finish.toNat (history.allocate base layout) := by
-    rw [hfinish]
-    exact HistoryWellFormed.allocate frontier history base layout hwf
+    rw [hfinish]; exact HistoryWellFormed.allocate frontier history base layout hwf
       hmetadata hstart
   have hbaseNatNe : base.toNat ≠ 0 := by
     intro hzero
-    apply hnonnull
-    apply UInt32.toNat_inj.mp
-    simpa using hzero
-  have hfinishPositive : 0 < finish.toNat := by
-    rw [hfinish]
-    omega
-  have hfinishSigned : finish.toNat < 2147483648 := by
-    rw [hfinish]
-    exact hendSigned
+    exact hnonnull (UInt32.toNat_inj.mp (by simpa using hzero))
+  have hfinishPositive : 0 < finish.toNat := by omega
+  have hfinishSigned : finish.toNat < 2147483648 := by simpa only [hfinish] using hendSigned
   have hfinishNonzero : finish ≠ 0 := by
     intro hzero
     have hzeroNat := congrArg UInt32.toNat hzero
-    simp only [UInt32.toNat_zero] at hzeroNat
-    omega
+    simp only [UInt32.toNat_zero] at hzeroNat; omega
   iintro ⟨Hcursor, Hfrontier, Hauth, Hretired, Hpages, Hbytes⟩
   imod AllocatorResources_insert heapId history base layout hfresh $$
       [Hauth Hretired] with ⟨Hauth, Hretired, Htoken⟩
@@ -1834,21 +1693,17 @@ theorem BumpHeap_commit {host : Type} [WasmHeapGS host]
   imodintro
   isplitl [Hcursor Hfrontier Hauth Hretired Hpages]
   · unfold BumpHeap
-    iframe
-    ipureintro
-    refine ⟨by omega, hfinishSigned, ?_, ?_, hwfNew, hphysical⟩
-    · constructor
-      · intro hzero
-        exact (hfinishNonzero hzero).elim
-      · intro hzero
-        simp only [AllocationHistory.allocate] at hzero
-        omega
-    · intro _hnonzero
-      rfl
+    iframe_pureexact (by
+      refine ⟨by omega, hfinishSigned, ?_, ?_, hwfNew, hphysical⟩
+      · constructor
+        · intro hzero
+          exact (hfinishNonzero hzero).elim
+        · intro hzero
+          simp only [AllocationHistory.allocate] at hzero; omega
+      · intro _hnonzero
+        rfl)
   · unfold LiveBlock
-    iframe Htoken Hbytes
-    ipureintro
-    exact ⟨hbytesLength, hnonnull, haligned⟩
+    iframe_pureexact using [Htoken Hbytes] => ⟨hbytesLength, hnonnull, haligned⟩
 
 /-- Retirement with the agreement fact needed to update pure history. -/
 theorem AllocMetaAuth_retire_with_lookup {host : Type}
@@ -1864,15 +1719,12 @@ theorem AllocMetaAuth_retire_with_lookup {host : Type}
   iintro ⟨Hauth, Htoken⟩
   ihave %hlookup : ⌜get? history.records allocationId =
       some (liveMeta ptr layout)⌝ $$ [Hauth Htoken]
-  · iapply AllocMetaAuth_token_agree
-    iframe
+  · iapply_frame AllocMetaAuth_token_agree
   imod AllocMetaAuth_retire heapId history allocationId ptr layout $$
       [Hauth Htoken] with ⟨Hauth, Hfragment⟩
   · iframe
   imodintro
-  iframe
-  ipureintro
-  exact hlookup
+  iframe_pureexact hlookup
 
 /-- The no-op physical deallocator consumes a complete live block and moves
 its bytes and exclusive metadata fragment into allocator-owned retired state. -/
@@ -1892,9 +1744,7 @@ theorem AllocatorResources_retire {host : Type} [WasmHeapGS host]
       layout $$ Hmetadata with ⟨Hauth, Hfragment, %hlookup⟩
   ihave HretiredNew := RetiredBytes_retire heapId history allocationId ptr
       layout bytes hlookup $$ [Hretired Hfragment Hbytes]
-  · iframe
-    ipureintro
-    exact hfacts.1
+  · iframe_pureexact hfacts.1
   imodintro
   iframe
 
@@ -1919,21 +1769,16 @@ theorem BumpHeap_retire {host : Type} [WasmHeapGS host]
   icases Hblock with ⟨Htoken, Hbytes, %hblock⟩
   ihave %hlookup : ⌜get? history.records allocationId =
       some (liveMeta ptr layout)⌝ $$ [Hauth Htoken]
-  · iapply AllocMetaAuth_token_agree
-    iframe
+  · iapply_frame AllocMetaAuth_token_agree
   have hwfNew := HistoryWellFormed.retire frontier history allocationId ptr
     layout hheap.2.2.2.2.1 hlookup
   imod AllocatorResources_retire heapId history allocationId ptr layout bytes
       $$ [Hauth Hretired Htoken Hbytes] with ⟨Hauth, Hretired⟩
   · unfold LiveBlock
-    iframe
-    ipureintro
-    exact hblock
+    iframe_pureexact hblock
   imodintro
   unfold BumpHeap
-  iframe
-  ipureintro
-  exact ⟨hheap.1, hheap.2.1, by
+  iframe_pureexact ⟨hheap.1, hheap.2.1, by
       simpa only [AllocationHistory.retire] using hheap.2.2.1,
     hheap.2.2.2.1, hwfNew, hheap.2.2.2.2.2⟩
 
@@ -1977,32 +1822,23 @@ theorem StackReserve_split
     let headBytes := bytes.take 4
     let growBefore := bytes.drop 4
     have hdecompose : bytes = headBytes ++ growBefore := by
-      dsimp only [headBytes, growBefore]
-      exact (List.take_append_drop 4 bytes).symm
+      dsimp only [headBytes, growBefore]; exact (List.take_append_drop 4 bytes).symm
     have hheadLength : headBytes.length = 4 := by
       simp [headBytes, hlength]
     have hgrowLength : growBefore.length = 12 := by
       simp [growBefore, hlength]
     ihave Hsplit : ByteSlice low (headBytes ++ growBefore) $$ [Hbytes]
-    · rw [← hdecompose]
-      iexact Hbytes
+    · irw_exact [← hdecompose] with Hbytes
     icases (ByteSlice_append low headBytes growBefore).mp $$ Hsplit with
       ⟨Hhead, Hgrow⟩
     iexists headBytes, growBefore
-    isplitr
-    · ipureintro
-      exact ⟨hdecompose, hheadLength, hgrowLength⟩
+    isplitr_pureexact ⟨hdecompose, hheadLength, hgrowLength⟩
     · iframe
-  · iintro Hparts
-    icases Hparts with
-      ⟨%headBytes, %growBefore, %hfacts, Hhead, Hgrow⟩
+  · iintro ⟨%headBytes, %growBefore, %hfacts, Hhead, Hgrow⟩
     unfold StackReserve
-    isplitl []
-    · ipureintro
-      rw [hfacts.1, List.length_append, hfacts.2.1, hfacts.2.2]
-    · rw [hfacts.1]
-      iapply (ByteSlice_append low headBytes growBefore).mpr
-      iframe
+    isplitl_pureexact (by rw [hfacts.1, List.length_append, hfacts.2.1, hfacts.2.2])
+    rw [hfacts.1]
+    iapply_frame (ByteSlice_append low headBytes growBefore).mpr
 
 /-- Reversible split of the exported function's full 288-byte entry stack
 ownership into the 16-byte reserve and 272-byte visible driver frame. -/
@@ -2023,50 +1859,37 @@ theorem EntryStack_split
     let reserveBytes := bytes.take 16
     let frameBytes := bytes.drop 16
     have hdecompose : bytes = reserveBytes ++ frameBytes := by
-      dsimp only [reserveBytes, frameBytes]
-      exact (List.take_append_drop 16 bytes).symm
+      dsimp only [reserveBytes, frameBytes]; exact (List.take_append_drop 16 bytes).symm
     have hreserveLength : reserveBytes.length = 16 := by
       simp [reserveBytes, hlength]
     have hframeLength : frameBytes.length = 272 := by
       simp [frameBytes, hlength]
     ihave Hsplit :
         ByteSlice entryStackLow (reserveBytes ++ frameBytes) $$ [Hstack]
-    · rw [← hdecompose]
-      iexact Hstack
+    · irw_exact [← hdecompose] with Hstack
     icases (ByteSlice_append entryStackLow reserveBytes frameBytes).mp $$
         Hsplit with ⟨Hreserve, Hframe⟩
     ihave Hreserve' : StackReserve reserveBase reserveBytes $$ [Hreserve]
     · unfold StackReserve
-      isplitl []
-      · ipureintro
-        exact hreserveLength
-      · rw [← hlow]
-        iexact Hreserve
+      isplitl_pureexact hreserveLength
+      · irw_exact [← hlow] with Hreserve
     ihave Hframe' : ByteSlice driverBase frameBytes $$ [Hframe]
-    · rw [← hboundary, hreserveLength]
-      iexact Hframe
+    · irw_exact [← hboundary, hreserveLength] with Hframe
     iexists reserveBytes, frameBytes
-    isplitr
-    · ipureintro
-      exact ⟨hdecompose, hreserveLength, hframeLength⟩
+    isplitr_pureexact ⟨hdecompose, hreserveLength, hframeLength⟩
     · iframe
-  · iintro Hparts
-    icases Hparts with
-      ⟨%reserveBytes, %frameBytes, %hfacts, Hreserve, Hframe⟩
+  · iintro ⟨%reserveBytes, %frameBytes, %hfacts, Hreserve, Hframe⟩
     isimp only [StackReserve] at Hreserve
     icases Hreserve with ⟨%hreserveLength, Hreserve⟩
     ihave Hreserve' : ByteSlice entryStackLow reserveBytes $$ [Hreserve]
-    · rw [hlow]
-      iexact Hreserve
+    · irw_exact [hlow] with Hreserve
     ihave Hframe' :
         ByteSlice (entryStackLow + UInt32.ofNat reserveBytes.length)
           frameBytes $$ [Hframe]
-    · rw [hreserveLength, hboundary]
-      iexact Hframe
+    · irw_exact [hreserveLength, hboundary] with Hframe
     isplitl [Hreserve' Hframe']
     · rw [hfacts.1]
-      iapply (ByteSlice_append entryStackLow reserveBytes frameBytes).mpr
-      iframe
+      iapply_frame (ByteSlice_append entryStackLow reserveBytes frameBytes).mpr
     · ipureintro
       rw [hfacts.1, List.length_append, hfacts.2.1, hfacts.2.2]
 
@@ -2085,15 +1908,11 @@ theorem StackReserve_combineFrame
   icases Hreserve with ⟨%hreserveLength, HreserveBytes⟩
   ihave Hreserve : StackReserve reserveBase reserveBytes $$ [HreserveBytes]
   · unfold StackReserve
-    isplitl []
-    · ipureintro
-      exact hreserveLength
+    isplitl_pureexact hreserveLength
     · iexact HreserveBytes
   iapply (EntryStack_split (reserveBytes ++ frameBytes)).mpr
   iexists reserveBytes, frameBytes
-  isplitr
-  · ipureintro
-    exact ⟨rfl, hreserveLength, hframeLength⟩
+  isplitr_pureexact ⟨rfl, hreserveLength, hframeLength⟩
   · iframe
 
 /-- Reversible byte-level layout of the visible 272-byte driver frame: the
@@ -2122,11 +1941,9 @@ theorem DriverFrame_split
     let chunkBytes := rest.take 256
     let outputBytes := rest.drop 256
     have hheaderRest : bytes = headerBytes ++ rest := by
-      dsimp only [headerBytes, rest]
-      exact (List.take_append_drop 12 bytes).symm
+      dsimp only [headerBytes, rest]; exact (List.take_append_drop 12 bytes).symm
     have hchunkOutput : rest = chunkBytes ++ outputBytes := by
-      dsimp only [chunkBytes, outputBytes]
-      exact (List.take_append_drop 256 rest).symm
+      dsimp only [chunkBytes, outputBytes]; exact (List.take_append_drop 256 rest).symm
     have hheaderLength : headerBytes.length = 12 := by
       simp [headerBytes, hlength]
     have hrestLength : rest.length = 260 := by
@@ -2136,43 +1953,33 @@ theorem DriverFrame_split
     have houtputLength : outputBytes.length = 4 := by
       simp [outputBytes, hrestLength]
     ihave Hfirst : ByteSlice driverBase (headerBytes ++ rest) $$ [Hbytes]
-    · rw [← hheaderRest]
-      iexact Hbytes
+    · irw_exact [← hheaderRest] with Hbytes
     icases (ByteSlice_append driverBase headerBytes rest).mp $$ Hfirst with
       ⟨Hheader, Hrest⟩
     ihave Hrest' : ByteSlice
         (driverBase + UInt32.ofNat 12) (chunkBytes ++ outputBytes) $$
         [Hrest]
-    · rw [← hheaderLength, ← hchunkOutput]
-      iexact Hrest
+    · irw_exact [← hheaderLength, ← hchunkOutput] with Hrest
     icases (ByteSlice_append (driverBase + UInt32.ofNat 12)
         chunkBytes outputBytes).mp $$ Hrest' with
       ⟨Hchunk, Houtput⟩
     ihave Hchunk' : ByteSlice (driverBase + 12) chunkBytes $$ [Hchunk]
-    · rw [← hchunkBase]
-      iexact Hchunk
+    · irw_exact [← hchunkBase] with Hchunk
     ihave Houtput' : ByteSlice (driverBase + 268) outputBytes $$ [Houtput]
-    · rw [← houtputBase, hchunkLength]
-      iexact Houtput
+    · irw_exact [← houtputBase, hchunkLength] with Houtput
     iexists headerBytes, chunkBytes, outputBytes
-    isplitr
-    · ipureintro
-      exact ⟨by rw [hheaderRest, hchunkOutput, List.append_assoc],
+    isplitr_pureexact ⟨by rw [hheaderRest, hchunkOutput, List.append_assoc],
         hheaderLength, hchunkLength, houtputLength⟩
     · iframe
-  · iintro Hparts
-    icases Hparts with
-      ⟨%headerBytes, %chunkBytes, %outputBytes, %hfacts,
+  · iintro ⟨%headerBytes, %chunkBytes, %outputBytes, %hfacts,
         Hheader, Hchunk, Houtput⟩
     ihave Hchunk' : ByteSlice
         (driverBase + UInt32.ofNat headerBytes.length) chunkBytes $$ [Hchunk]
-    · rw [hfacts.2.1, hchunkBase]
-      iexact Hchunk
+    · irw_exact [hfacts.2.1, hchunkBase] with Hchunk
     ihave Houtput' : ByteSlice
         ((driverBase + UInt32.ofNat headerBytes.length) +
           UInt32.ofNat chunkBytes.length) outputBytes $$ [Houtput]
-    · rw [hfacts.2.1, hfacts.2.2.1, houtputBase]
-      iexact Houtput
+    · irw_exact [hfacts.2.1, hfacts.2.2.1, houtputBase] with Houtput
     ihave Hrest : ByteSlice
         (driverBase + UInt32.ofNat headerBytes.length)
           (chunkBytes ++ outputBytes) $$ [Hchunk' Houtput']
@@ -2234,14 +2041,10 @@ theorem LiveBlock_to_VecStorage {host : Type} [WasmHeapGS host]
   unfold VecStorage
   iright
   iexists allocationId, allBytes, spare
-  isplitr
-  · ipureintro
-    exact ⟨hcapacity, by simpa [hblock.1] using hinitialized,
+  isplitr_pureexact ⟨hcapacity, by simpa [hblock.1] using hinitialized,
       hdecompose, hspareLength⟩
   · unfold LiveBlock
-    iframe Htoken Hbytes
-    ipureintro
-    exact hblock
+    iframe_pureexact using [Htoken Hbytes] => hblock
 
 /-- Focus the initialized prefix of a nonempty Vec allocation while retaining
 the token and spare suffix needed to close the same storage afterwards. -/
@@ -2253,8 +2056,7 @@ theorem VecStorage_initializedFocus {host : Type} [WasmHeapGS host]
         (ByteSlice ptr initialized -∗
           VecStorage heapId capacity ptr initialized)) := by
   unfold VecStorage
-  iintro Hstorage
-  icases Hstorage with (%hempty | Hallocated)
+  iintro (%hempty | Hallocated)
   · rcases hempty with ⟨_hcapacity, _hptr, rfl⟩
     simp at hinitialized
   · icases Hallocated with
@@ -2262,28 +2064,20 @@ theorem VecStorage_initializedFocus {host : Type} [WasmHeapGS host]
     isimp only [LiveBlock] at Hblock
     icases Hblock with ⟨Htoken, HallBytes, %hblock⟩
     ihave HallBytes' : ByteSlice ptr (initialized ++ spare) $$ [HallBytes]
-    · rw [← hstorage.2.2.1]
-      iexact HallBytes
+    · irw_exact [← hstorage.2.2.1] with HallBytes
     icases (ByteSlice_append ptr initialized spare).mp $$ HallBytes' with
       ⟨Hinitialized, Hspare⟩
-    isplitl [Hinitialized]
-    · iexact Hinitialized
+    isplitl_exact Hinitialized
     · iintro Hinitialized
       ihave HallBytes : ByteSlice ptr (initialized ++ spare) $$
           [Hinitialized Hspare]
-      · iapply (ByteSlice_append ptr initialized spare).mpr
-        iframe
+      · iapply_frame (ByteSlice_append ptr initialized spare).mpr
       iright
       iexists allocationId, initialized ++ spare, spare
-      isplitr
-      · ipureintro
-        exact ⟨hstorage.1, hstorage.2.1, rfl, hstorage.2.2.2⟩
+      isplitr_pureexact ⟨hstorage.1, hstorage.2.1, rfl, hstorage.2.2.2⟩
       · unfold LiveBlock
-        iframe Htoken HallBytes
-        ipureintro
-        exact ⟨by
-          simp only [List.length_append, hstorage.2.2.2]
-          omega, hblock.2.1, hblock.2.2⟩
+        iframe_pureexact using [Htoken HallBytes] => ⟨by
+          simp only [List.length_append, hstorage.2.2.2]; omega, hblock.2.1, hblock.2.2⟩
 
 /-- Focus exactly the spare-capacity subrange filled by the driver's append
 copy.  Returning the current chunk reassembles the same live allocation with
@@ -2300,11 +2094,9 @@ theorem VecStorage_appendFocus {host : Type} [WasmHeapGS host]
         (ByteSlice (ptr + UInt32.ofNat initialized.length) current -∗
           VecStorage heapId capacity ptr (initialized ++ current))) := by
   unfold VecStorage
-  iintro Hstorage
-  icases Hstorage with (%hempty | Hallocated)
+  iintro (%hempty | Hallocated)
   · rcases hempty with ⟨rfl, _hptr, rfl⟩
-    simp only [UInt32.toNat_zero, Nat.zero_sub] at hfits
-    omega
+    simp only [UInt32.toNat_zero, Nat.zero_sub] at hfits; omega
   · icases Hallocated with
       ⟨%allocationId, %allBytes, %spare, %hstorage, Hblock⟩
     isimp only [LiveBlock] at Hblock
@@ -2314,38 +2106,30 @@ theorem VecStorage_appendFocus {host : Type} [WasmHeapGS host]
     have hchunkLength : oldChunk.length = current.length := by
       simp [oldChunk, hstorage.2.2.2, hfits]
     have hdecompose : spare = oldChunk ++ tail := by
-      dsimp only [oldChunk, tail]
-      exact (List.take_append_drop current.length spare).symm
+      dsimp only [oldChunk, tail]; exact (List.take_append_drop current.length spare).symm
     have htailLength :
         tail.length = capacity.toNat -
           (initialized.length + current.length) := by
-      simp [tail, hstorage.2.2.2]
-      omega
+      simp [tail, hstorage.2.2.2]; omega
     ihave HallBytes' : ByteSlice ptr (initialized ++ spare) $$ [HallBytes]
-    · rw [← hstorage.2.2.1]
-      iexact HallBytes
+    · irw_exact [← hstorage.2.2.1] with HallBytes
     icases (ByteSlice_append ptr initialized spare).mp $$ HallBytes' with
       ⟨Hinitialized, Hspare⟩
     ihave Hspare' : ByteSlice
         (ptr + UInt32.ofNat initialized.length) (oldChunk ++ tail) $$
         [Hspare]
-    · rw [← hdecompose]
-      iexact Hspare
+    · irw_exact [← hdecompose] with Hspare
     icases (ByteSlice_append
         (ptr + UInt32.ofNat initialized.length) oldChunk tail).mp $$
         Hspare' with ⟨Hchunk, Htail⟩
     iexists oldChunk
-    isplitr
-    · ipureintro
-      exact hchunkLength
-    isplitl [Hchunk]
-    · iexact Hchunk
+    isplitr_pureexact hchunkLength
+    isplitl_exact Hchunk
     iintro Hcurrent
     ihave Htail' : ByteSlice
         ((ptr + UInt32.ofNat initialized.length) +
           UInt32.ofNat current.length) tail $$ [Htail]
-    · rw [← hchunkLength]
-      iexact Htail
+    · irw_exact [← hchunkLength] with Htail
     ihave HspareNew : ByteSlice
         (ptr + UInt32.ofNat initialized.length) (current ++ tail) $$
         [Hcurrent Htail']
@@ -2356,26 +2140,19 @@ theorem VecStorage_appendFocus {host : Type} [WasmHeapGS host]
         ByteSlice ptr (initialized ++ current ++ tail) $$
         [Hinitialized HspareNew]
     · rw [List.append_assoc]
-      iapply (ByteSlice_append ptr initialized (current ++ tail)).mpr
-      iframe
+      iapply_frame (ByteSlice_append ptr initialized (current ++ tail)).mpr
     have hnewLength :
         (initialized ++ current ++ tail).length = capacity.toNat := by
-      simp only [List.length_append]
-      omega
+      simp only [List.length_append]; omega
     have hnewInitialized :
         (initialized ++ current).length ≤ capacity.toNat := by
-      simp only [List.length_append] at hnewLength ⊢
-      omega
+      simp only [List.length_append] at hnewLength ⊢; omega
     iright
     iexists allocationId, initialized ++ current ++ tail, tail
-    isplitr
-    · ipureintro
-      exact ⟨hstorage.1, hnewInitialized, rfl, by
+    isplitr_pureexact ⟨hstorage.1, hnewInitialized, rfl, by
         simpa only [List.length_append] using htailLength⟩
     · unfold LiveBlock
-      iframe Htoken HallBytesNew
-      ipureintro
-      exact ⟨hnewLength, hblock.2.1, hblock.2.2⟩
+      iframe_pureexact using [Htoken HallBytesNew] => ⟨hnewLength, hblock.2.1, hblock.2.2⟩
 
 /-- Complete three-word byte Vec plus its whole live allocation. -/
 def VecU8 {host : Type} [WasmHeapGS host]
@@ -2408,7 +2185,7 @@ theorem VecU8_as_headerBytes_storage {host : Type} [WasmHeapGS host]
       iprop(ByteSlice header (vecHeaderBytes capacity ptr initialized) ∗
         VecStorage heapId capacity ptr initialized) := by
   have haddress : (header + 4) + 4 = header + 8 := by
-    bv_decide
+    bv_normalize
   constructor
   · iintro Hvec
     isimp only [VecU8, RawVecHeader] at Hvec
@@ -2416,8 +2193,7 @@ theorem VecU8_as_headerBytes_storage {host : Type} [WasmHeapGS host]
       ⟨⟨Hcapacity, Hpointer⟩, Hlength, Hstorage⟩
     ihave Hlength' : pointsTo_u32 0 ((header + 4) + 4)
         (UInt32.ofNat initialized.length) $$ [Hlength]
-    · rw [haddress]
-      iexact Hlength
+    · irw_exact [haddress] with Hlength
     ihave Harray : arrayAt 0 header
         [capacity, ptr, UInt32.ofNat initialized.length] $$
         [Hcapacity Hpointer Hlength']
@@ -2430,14 +2206,12 @@ theorem VecU8_as_headerBytes_storage {host : Type} [WasmHeapGS host]
       iexact Harray
     isplitl [Hbytes]
     · unfold ByteSlice
-      isplitl []
-      · ipureintro
+      isplitl_pureexact (by
         unfold vecHeaderBytes
         rw [serialize_length]
-        norm_num
-        exact hheader
-      · unfold vecHeaderBytes
-        iexact Hbytes
+        norm_num; exact hheader)
+      unfold vecHeaderBytes
+      iexact Hbytes
     · iexact Hstorage
   · iintro ⟨Hheader, Hstorage⟩
     isimp only [ByteSlice, vecHeaderBytes] at Hheader
@@ -2452,8 +2226,7 @@ theorem VecU8_as_headerBytes_storage {host : Type} [WasmHeapGS host]
     icases Hlength with ⟨Hlength, _Hemp⟩
     ihave Hlength' : pointsTo_u32 0 (header + 8)
         (UInt32.ofNat initialized.length) $$ [Hlength]
-    · rw [← haddress]
-      iexact Hlength
+    · irw_exact [← haddress] with Hlength
     unfold VecU8 RawVecHeader
     iframe
 
@@ -2479,11 +2252,9 @@ theorem VecU8_initializedFocus {host : Type} [WasmHeapGS host]
           VecU8 heapId header capacity ptr initialized)) := by
   unfold VecU8
   iintro ⟨Hheader, Hlength, Hstorage⟩
-  ihave Hfocus := VecStorage_initializedFocus heapId capacity ptr initialized
+  ihave ⟨Hinitialized, Hclose⟩ := VecStorage_initializedFocus heapId capacity ptr initialized
     hinitialized $$ Hstorage
-  icases Hfocus with ⟨Hinitialized, Hclose⟩
-  isplitl [Hinitialized]
-  · iexact Hinitialized
+  isplitl_exact Hinitialized
   · iintro Hinitialized
     ihave Hstorage := Hclose $$ Hinitialized
     iframe
@@ -2506,17 +2277,11 @@ theorem VecU8_appendFocus {host : Type} [WasmHeapGS host]
           VecU8 heapId header capacity ptr (initialized ++ current))) := by
   unfold VecU8
   iintro ⟨Hheader, Hlength, Hstorage⟩
-  ihave Hfocus := VecStorage_appendFocus heapId capacity ptr
+  ihave ⟨%oldChunk, %hchunkLength, Hchunk, Hclose⟩ := VecStorage_appendFocus heapId capacity ptr
     initialized current hcurrent hfits $$ Hstorage
-  icases Hfocus with ⟨%oldChunk, %hchunkLength, Hchunk, Hclose⟩
   iexists oldChunk
-  isplitr
-  · ipureintro
-    exact hchunkLength
-  isplitl [Hchunk]
-  · iexact Hchunk
-  isplitl [Hlength]
-  · iexact Hlength
+  isplitr_pureexact hchunkLength
+  isplitl_exacts [Hchunk Hlength]
   iintro Hcurrent
   iintro Hlength
   ihave Hstorage := Hclose $$ Hcurrent
@@ -2534,24 +2299,20 @@ theorem emptyVecHeaderBytes_to_VecU8 {host : Type} [WasmHeapGS host]
   unfold ByteSlice emptyVecHeaderBytes
   iintro ⟨%_hnowrap, Hbytes⟩
   ihave Harray : arrayAt 0 driverBase [0, 1, 0] $$ [Hbytes]
-  · iapply (arrayAt_eq_wordCells driverBase [0, 1, 0]).mpr
-    iexact Hbytes
+  · iapply_exact (arrayAt_eq_wordCells driverBase [0, 1, 0]).mpr with Hbytes
   isimp only [arrayAt] at Harray
   icases Harray with ⟨Hcapacity, Hpointer, Hlength⟩
   icases Hlength with ⟨Hlength, _Hemp⟩
   ihave Hlength' : pointsTo_u32 0 (driverBase + 8) 0 $$ [Hlength]
   · have haddress : (driverBase + 4) + 4 = driverBase + 8 := by decide
-    rw [← haddress]
-    iexact Hlength
+    irw_exact [← haddress] with Hlength
   unfold VecU8 RawVecHeader
   isplitl [Hcapacity Hpointer]
   · iframe
-  isplitl [Hlength']
-  · iexact Hlength'
+  isplitl_exact Hlength'
   · unfold VecStorage
     ileft
-    ipureintro
-    exact ⟨rfl, rfl, rfl⟩
+    ipureexact ⟨rfl, rfl, rfl⟩
 
 /-- Driver-frame ownership after initialization.  Its three parts are
 disjoint by separation and together cover exactly the visible 272 bytes. -/
@@ -2584,20 +2345,16 @@ theorem ExportFrame_completedWordsFocus
     omega
   unfold ExportFrame
   iintro ⟨Hvec, Hchunk, Houtput, %hframeLengths⟩
-  ihave Hfocus := VecU8_initializedFocus heapId driverBase capacity ptr
+  ihave ⟨Hbytes, Hclose⟩ := VecU8_initializedFocus heapId driverBase capacity ptr
     (serialize original) hpositive $$ Hvec
-  icases Hfocus with ⟨Hbytes, Hclose⟩
   ihave Hwords := (ByteSlice_serialize_as_WordSlice ptr original halign).mp $$
     Hbytes
-  isplitl [Hwords]
-  · iexact Hwords
+  isplitl_exact Hwords
   · iintro Hwords
     ihave Hbytes := (ByteSlice_serialize_as_WordSlice ptr original halign).mpr $$
       Hwords
     ihave Hvec := Hclose $$ Hbytes
-    iframe Hvec Hchunk Houtput
-    ipureintro
-    exact hframeLengths
+    iframe_pureexact using [Hvec Hchunk Houtput] => hframeLengths
 
 /-- Exact raw byte list left in the visible driver frame once the Vec's
 separate allocation-storage ownership is removed. -/
@@ -2633,14 +2390,10 @@ theorem ExportFrame_releaseStorage [WasmHeapGS Universal.State]
       (exportFrameBytes capacity ptr initialized chunkBytes outputBytes)
       hframeLength).mpr
     iexists vecHeaderBytes capacity ptr initialized, chunkBytes, outputBytes
-    isplitr
-    · ipureintro
-      exact ⟨rfl, vecHeaderBytes_length capacity ptr initialized,
+    isplitr_pureexact ⟨rfl, vecHeaderBytes_length capacity ptr initialized,
         hframeParts.1, hframeParts.2⟩
     · iframe
-  iframe Hstorage Hframe
-  ipureintro
-  exact hframeLength
+  iframe_pureexact using [Hstorage Hframe] => hframeLength
 
 /-- Assemble the initialized driver frame from its exact three disjoint byte
 regions. -/
@@ -2655,9 +2408,7 @@ theorem ExportFrame_empty [WasmHeapGS Universal.State]
   iintro ⟨Hheader, Hchunk, Houtput⟩
   ihave Hvec := emptyVecHeaderBytes_to_VecU8 heapId $$ Hheader
   unfold ExportFrame
-  iframe
-  ipureintro
-  exact ⟨hchunk, houtput⟩
+  iframe_pureexact ⟨hchunk, houtput⟩
 
 /-! ## Pure Vec-growth lineage -/
 
@@ -2732,11 +2483,9 @@ private theorem insert_overwrite_commute
   intro key
   simp only [LawfulPartialMap.get?_insert]
   by_cases hn : n = key
-  · subst key
-    simp
+  · subst key; simp
   · by_cases hnext : n + 1 = key
-    · subst key
-      simp
+    · subst key; simp
     · simp [hn, hnext]
 
 private theorem foldl_insert_range_lookup
@@ -2752,8 +2501,7 @@ private theorem foldl_insert_range_lookup
       rw [List.range_succ, List.foldl_append]
       simp only [List.foldl_cons, List.foldl_nil]
       by_cases hkey : n = key
-      · subst key
-        rw [get?_insert_eq rfl]
+      · subst key; rw [get?_insert_eq rfl]
         simp
       · rw [get?_insert_ne hkey, ih]
         by_cases hlt : key < n
@@ -2768,8 +2516,7 @@ theorem geometricRecords_lookup (topExponent allocationId : Nat) :
       if allocationId < topExponent - 7 then
         some (geometricMetadata topExponent allocationId)
       else none := by
-  unfold geometricRecords
-  exact foldl_insert_range_lookup _ _ _
+  unfold geometricRecords; exact foldl_insert_range_lookup _ _ _
 
 /-- In the canonical geometric lineage, the only live record for the current
 block is the most recently allocated one. -/
@@ -2879,8 +2626,7 @@ theorem vectorBlockBase_succ (exponent : Nat) (h : 8 ≤ exponent) :
   unfold vectorBlockBase
   rw [pow_succ]
   have hp : 256 ≤ 2 ^ exponent := by
-    rw [show 256 = 2 ^ 8 by norm_num]
-    exact Nat.pow_le_pow_right (by decide) h
+    rw [show 256 = 2 ^ 8 by norm_num]; exact Nat.pow_le_pow_right (by decide) h
   omega
 
 theorem selectedCapacity_geometric
@@ -2891,13 +2637,11 @@ theorem selectedCapacity_geometric
     selectedCapacity length current (2 ^ exponent) =
       2 ^ (exponent + 1) := by
   have hpow : 256 ≤ 2 ^ exponent := by
-    rw [show 256 = 2 ^ 8 by norm_num]
-    exact Nat.pow_le_pow_right (by decide) hexponent
+    rw [show 256 = 2 ^ 8 by norm_num]; exact Nat.pow_le_pow_right (by decide) hexponent
   have hlower : length + current ≤ 2 * 2 ^ exponent := by omega
   have h8 : 8 ≤ 2 * 2 ^ exponent := by omega
   unfold selectedCapacity
-  rw [max_eq_left h8, max_eq_right hlower, pow_succ]
-  omega
+  rw [max_eq_left h8, max_eq_right hlower, pow_succ]; omega
 
 /-- Exact public-input Vec lineage used to eliminate both RawVec panic edges.
 `totalBytes = length + remaining` in every active state. -/
@@ -2939,8 +2683,7 @@ theorem GeometricVecFacts.completed_lt_signed
       Nat.pow_le_pow_right (by decide) hexponentUpper
     rw [hremaining, Nat.add_zero] at htotal
     rw [hcapacity] at hlength
-    norm_num at hpow ⊢
-    omega
+    norm_num at hpow ⊢; omega
 
 /-- Every nonempty completed public Vec has a four-aligned data pointer, even
 though its Rust allocation layout requests only byte alignment.  This follows
@@ -2954,18 +2697,15 @@ theorem GeometricVecFacts.completed_ptr_align4
     ptr.toNat % 4 = 0 := by
   rcases hgeo with hinitial | hshort | hlarge
   · omega
-  · rw [hshort.2.2.2.2.1]
-    decide
+  · rw [hshort.2.2.2.2.1]; decide
   · rcases hlarge with
       ⟨exponent, hexponentLower, _hexponentUpper, _hcapacity,
         _hlength, _htotal, hptr, _hfrontier, _hhistory⟩
     rw [hptr]
     unfold vectorBlockBase
     have hpow256 : 256 ≤ 2 ^ exponent := by
-      rw [show 256 = 2 ^ 8 by norm_num]
-      exact Nat.pow_le_pow_right (by decide) hexponentLower
-    have hdiv : 4 ∣ 2 ^ exponent := by
-      simpa using Nat.pow_dvd_pow 2 (by omega : 2 ≤ exponent)
+      rw [show 256 = 2 ^ 8 by norm_num]; exact Nat.pow_le_pow_right (by decide) hexponentLower
+    have hdiv : 4 ∣ 2 ^ exponent := by simpa using Nat.pow_dvd_pow 2 (by omega : 2 ≤ exponent)
     have hpowMod : 2 ^ exponent % 4 = 0 :=
       Nat.mod_eq_zero_of_dvd hdiv
     have hbaseMod : heapBase.toNat % 4 = 0 := by decide
@@ -3001,18 +2741,15 @@ theorem DriverDecodeBuffers_open
   have hsourceAlign := GeometricVecFacts.completed_ptr_align4
     (serialize original).length (serialize original).length 0 capacity source
     frontier history hgeo rfl hpositive
-  ihave HsourceFocus := ExportFrame_completedWordsFocus heapId capacity source
+  ihave ⟨Hsource, HcloseSource⟩ := ExportFrame_completedWordsFocus heapId capacity source
     original chunkBytes outputBytes horiginal hsourceAlign $$ Hframe
-  icases HsourceFocus with ⟨Hsource, HcloseSource⟩
   isimp only [LiveBlock] at Hblock
   icases Hblock with ⟨Htoken, Hbytes, %hblockFacts⟩
   ihave Hblock : LiveBlock heapId valuesId valuesPtr
       { size := 4 * original.length, alignment := 4 } bytes $$
       [Htoken Hbytes]
   · unfold LiveBlock
-    iframe
-    ipureintro
-    exact hblockFacts
+    iframe_pureexact hblockFacts
   ihave Hvalues := (LiveBlock_as_decodedWordBlock heapId valuesId
     original.length valuesPtr bytes hblockFacts.1).mp $$ Hblock
   iframe
@@ -3028,18 +2765,15 @@ theorem bulk4_signedMask_eq (count : Nat)
   rw [UInt32.toNat_and]
   have hcountWord : (UInt32.ofNat count).toNat = count := by
     apply UInt32.toNat_ofNat_of_lt'
-    norm_num [UInt32.size] at hbound ⊢
-    omega
+    norm_num [UInt32.size] at hbound ⊢; omega
   rw [hcountWord]
-  have hmaskWord : (2147483644 : UInt32).toNat = 2147483644 := by
-    decide
+  have hmaskWord : (2147483644 : UInt32).toNat = 2147483644 := by decide
   rw [hmaskWord]
   have hbulkLe : 4 * (count / 4) ≤ count := by
     have hmod := Nat.mod_add_div count 4
     omega
   have hbulkBound : 4 * (count / 4) < UInt32.size := by
-    norm_num [UInt32.size] at hbound ⊢
-    omega
+    norm_num [UInt32.size] at hbound ⊢; omega
   rw [UInt32.toNat_ofNat_of_lt' hbulkBound]
   apply Nat.eq_of_testBit_eq
   intro i
@@ -3064,17 +2798,14 @@ theorem bulk4_signedMask_eq (count : Nat)
           have hp : 2 ^ 31 ≤ 2 ^ i :=
             Nat.pow_le_pow_right (by decide) (by omega)
           have hnlt : count < 2 ^ i := by
-            norm_num at hp
-            omega
+            norm_num at hp; omega
           have hfalse := Nat.testBit_eq_false_of_lt hnlt
-          rw [hnbit] at hfalse
-          contradiction
+          rw [hnbit] at hfalse; contradiction
         have h3 : (3 : Nat).testBit i = false := by
           apply Nat.testBit_eq_false_of_lt
           have hp : 2 ^ 2 ≤ 2 ^ i :=
             Nat.pow_le_pow_right (by decide) hi2
-          norm_num at hp ⊢
-          omega
+          norm_num at hp ⊢; omega
         have hmask : 2147483644 = 2 ^ 31 - (3 + 1) := by norm_num
         rw [hmask,
           Nat.testBit_two_pow_sub_succ (by norm_num : 3 < 2 ^ 31), h3]
@@ -3091,8 +2822,7 @@ theorem bulk4_add_tail (count : Nat) :
   omega
 
 theorem bulk4_tail_lt (count : Nat) :
-    count % 4 < 4 := by
-  omega
+    count % 4 < 4 := by omega
 
 /-- Every four-store iteration stays strictly inside the decoded array and
 advances no farther than the bulk boundary. -/
@@ -3129,8 +2859,7 @@ theorem align4Layout_valid_of_bounds (size : Nat)
   refine ⟨hpositive, by decide, ⟨2, by norm_num⟩, by norm_num, ?_, ?_,
     by norm_num⟩
   · omega
-  · norm_num [UInt32.size] at hbound ⊢
-    omega
+  · norm_num [UInt32.size] at hbound ⊢; omega
 
 private theorem align1Layout_valid_of_bounds (size : Nat)
     (hsizeLower : 8 ≤ size) (hsizeUpper : size ≤ 1073741824) :
@@ -3140,8 +2869,7 @@ private theorem align1Layout_valid_of_bounds (size : Nat)
   refine ⟨by omega, by decide, ⟨0, by decide⟩, by decide, ?_, ?_,
     by decide⟩
   · omega
-  · norm_num [UInt32.size]
-    omega
+  · norm_num [UInt32.size]; omega
 
 /-- The public read-loop lineage supplies all arithmetic needed by the valid
 `func1` specialization.  In particular the checked addition cannot wrap and
@@ -3162,8 +2890,7 @@ theorem GeometricVecFacts.reserveLayout
       newCapacity < UInt32.size ∧
       newLayout.Valid := by
   have hcurrentBound : current ≤ 256 := by
-    rw [hread]
-    exact min_le_left _ _
+    rw [hread]; exact min_le_left _ _
   rcases hgeo with hempty | hshort | hlarge
   · rcases hempty with
       ⟨rfl, rfl, rfl, _hremaining, _hfrontier, _hhistory⟩
@@ -3174,25 +2901,20 @@ theorem GeometricVecFacts.reserveLayout
     have hnewUpper :
         max (0 + current) (max (2 * (0 : UInt32).toNat) 8) ≤
           1073741824 := by
-      norm_num
-      omega
+      norm_num; omega
     exact ⟨by
-      norm_num [UInt32.size]
-      omega, by
-      norm_num [UInt32.size]
-      omega, align1Layout_valid_of_bounds _ hnewLower hnewUpper⟩
+      norm_num [UInt32.size]; omega, by
+      norm_num [UInt32.size]; omega, align1Layout_valid_of_bounds _ hnewLower hnewUpper⟩
   · rcases hshort with
       ⟨hremaining, _hlength, _htotal, _hcapacity, _hptr,
         _hfrontier, _hhistory⟩
     rw [hremaining] at hread
-    simp at hread
-    omega
+    simp at hread; omega
   · rcases hlarge with
       ⟨exponent, _hexponentLower, hexponentUpper, hcapacity,
         hlength, _htotal, _hptr, _hfrontier, _hhistory⟩
     have hcapacityUpper : capacity.toNat ≤ 2 ^ 29 := by
-      rw [hcapacity]
-      exact Nat.pow_le_pow_right (by decide) hexponentUpper
+      rw [hcapacity]; exact Nat.pow_le_pow_right (by decide) hexponentUpper
     have hnewLower :
         8 ≤ selectedCapacity length current capacity.toNat := by
       unfold selectedCapacity
@@ -3200,13 +2922,10 @@ theorem GeometricVecFacts.reserveLayout
     have hnewUpper :
         selectedCapacity length current capacity.toNat ≤ 1073741824 := by
       unfold selectedCapacity
-      norm_num
-      omega
+      norm_num; omega
     exact ⟨by
-      norm_num [UInt32.size]
-      omega, by
-      norm_num [UInt32.size]
-      omega, align1Layout_valid_of_bounds _ hnewLower hnewUpper⟩
+      norm_num [UInt32.size]; omega, by
+      norm_num [UInt32.size]; omega, align1Layout_valid_of_bounds _ hnewLower hnewUpper⟩
 
 /-- When the generated capacity test says that the new chunk fits, appending
 it preserves the current large-input lineage without touching allocation
@@ -3225,8 +2944,7 @@ theorem GeometricVecFacts.appendWithoutReserve
   rcases hgeo with hempty | hshort | hlarge
   · rcases hempty with
       ⟨rfl, _hptr, rfl, _hremaining, _hfrontier, _hhistory⟩
-    simp only [UInt32.toNat_zero, Nat.zero_sub] at hfits
-    omega
+    simp only [UInt32.toNat_zero, Nat.zero_sub] at hfits; omega
   · rcases hshort with
       ⟨hremaining, _hlength, _htotal, _hcapacity, _hptr,
         _hfrontier, _hhistory⟩
@@ -3265,15 +2983,13 @@ theorem GeometricVecFacts.reserveSuccess
       (UInt32.ofNat (selectedCapacity length current capacity.toNat))
       newPtr finish.toNat finalHistory := by
   have hcurrentBound : current ≤ 256 := by
-    rw [hread]
-    exact min_le_left _ _
+    rw [hread]; exact min_le_left _ _
   have halloc := classifyBump_success_align1 frontier
     (selectedCapacity length current capacity.toNat) newPtr finish hclassify
   rcases halloc with
     ⟨hfrontierWord, hnewPtr, hnewPtrNat, hendWord, hendSigned, hfinish⟩
   have hcapacityWord :
-      selectedCapacity length current capacity.toNat < UInt32.size := by
-    omega
+      selectedCapacity length current capacity.toNat < UInt32.size := by omega
   have hcapacityNat :
       (UInt32.ofNat
         (selectedCapacity length current capacity.toNat)).toNat =
@@ -3283,9 +2999,7 @@ theorem GeometricVecFacts.reserveSuccess
   · rcases hempty with
       ⟨rfl, rfl, rfl, hremaining, rfl, rfl⟩
     simp only [UInt32.toNat_zero] at *
-    have hnewPtrBase : newPtr = heapBase := by
-      rw [hnewPtr]
-      exact UInt32.ofNat_toNat
+    have hnewPtrBase : newPtr = heapBase := by simpa only [hnewPtr] using UInt32.ofNat_toNat
     have hselected :
         selectedCapacity 0 current 0 = max current 8 := by
       simp [selectedCapacity]
@@ -3304,8 +3018,7 @@ theorem GeometricVecFacts.reserveSuccess
       refine ⟨rfl, by omega, htotal, ?_, hnewPtrBase, ?_, ?_⟩
       · rw [hcapacityNat, hselected]
       · rw [hfinish, hcapacityNat]
-      · rw [hreserveHistory, hnewPtrBase, hcapacityNat, hselected]
-        rfl
+      · rw [hreserveHistory, hnewPtrBase, hcapacityNat, hselected]; rfl
     · have hmin : min 256 (current + remaining) = 256 :=
         min_eq_left (by omega)
       rw [hmin] at hread
@@ -3314,47 +3027,33 @@ theorem GeometricVecFacts.reserveSuccess
       right
       right
       refine ⟨8, by omega, by omega, ?_, ?_, ?_, ?_, ?_, ?_⟩
-      · rw [hcapacityNat]
-        norm_num [selectedCapacity]
-      · rw [hcapacityNat]
-        norm_num [selectedCapacity]
+      · rw [hcapacityNat]; norm_num [selectedCapacity]
+      · rw [hcapacityNat]; norm_num [selectedCapacity]
       · omega
-      · rw [hnewPtrNat]
-        norm_num [vectorBlockBase]
-      · rw [hfinish]
-        norm_num [selectedCapacity, vectorBlockBase]
-      · rw [hreserveHistory, hnewPtrBase]
-        norm_num [selectedCapacity]
-        rfl
+      · rw [hnewPtrNat]; norm_num [vectorBlockBase]
+      · rw [hfinish]; norm_num [selectedCapacity, vectorBlockBase]
+      · rw [hreserveHistory, hnewPtrBase]; norm_num [selectedCapacity]; rfl
   · rcases hshort with
       ⟨hremaining, _hlength, _htotal, _hcapacity, _hptr,
         _hfrontier, _hhistory⟩
     rw [hremaining] at hread
-    simp at hread
-    omega
+    simp at hread; omega
   · rcases hlarge with
       ⟨exponent, hexponentLower, hexponentUpper, hcapacity,
         hlength, htotal, hptr, hfrontier, hgeoHistory⟩
-    have hlength' : length ≤ 2 ^ exponent := by
-      rw [← hcapacity]
-      exact hlength
+    have hlength' : length ≤ 2 ^ exponent := by simpa only [← hcapacity] using hlength
     have hselected :
         selectedCapacity length current capacity.toNat =
           2 ^ (exponent + 1) := by
-      rw [hcapacity]
-      exact selectedCapacity_geometric length current exponent
+      rw [hcapacity]; exact selectedCapacity_geometric length current exponent
         hexponentLower hlength' hcurrentBound
     have hselected' :
         selectedCapacity length current (2 ^ exponent) =
-          2 ^ (exponent + 1) := by
-      rw [← hcapacity]
-      exact hselected
+          2 ^ (exponent + 1) := by simpa only [← hcapacity] using hselected
     have hpow : 256 ≤ 2 ^ exponent := by
-      rw [show 256 = 2 ^ 8 by norm_num]
-      exact Nat.pow_le_pow_right (by decide) hexponentLower
+      rw [show 256 = 2 ^ 8 by norm_num]; exact Nat.pow_le_pow_right (by decide) hexponentLower
     have hfrontierNext : frontier = vectorBlockBase (exponent + 1) := by
-      rw [hfrontier]
-      exact vectorBlockBase_succ exponent hexponentLower
+      rw [hfrontier]; exact vectorBlockBase_succ exponent hexponentLower
     have hptrExact :
         ptr = UInt32.ofNat (vectorBlockBase exponent) := by
       rw [← UInt32.ofNat_toNat (x := ptr), hptr]
@@ -3363,17 +3062,15 @@ theorem GeometricVecFacts.reserveSuccess
       rw [hnewPtr, hfrontierNext]
     have hcapacityNe : capacity ≠ 0 := by
       intro hzero
-      have hzeroNat := congrArg UInt32.toNat hzero
-      simp only [UInt32.toNat_zero] at hzeroNat
+      have hzeroNat := congrArg UInt32.toNat hzero; simp only [UInt32.toNat_zero] at hzeroNat
       have hpowPositive : 0 < 2 ^ exponent := Nat.pow_pos (by omega)
-      rw [hcapacity] at hzeroNat
-      omega
+      rw [hcapacity] at hzeroNat; omega
     unfold VecReserveHistory at hreserveHistory
     rw [if_neg hcapacityNe] at hreserveHistory
     rcases hreserveHistory with ⟨oldId, holdLookup, hfinalHistory⟩
-    have holdId : oldId = exponent - 8 := by
-      apply geometricHistory_live_unique exponent oldId hexponentLower
-      simpa only [hgeoHistory, hptrExact, hcapacity] using holdLookup
+    have holdId : oldId = exponent - 8 :=
+      geometricHistory_live_unique exponent oldId hexponentLower
+        (by simpa only [hgeoHistory, hptrExact, hcapacity] using holdLookup)
     have hfinal :
         finalHistory = geometricHistory (exponent + 1) := by
       rw [hfinalHistory, hgeoHistory, holdId, hptrExact, hcapacity,
@@ -3390,8 +3087,7 @@ theorem GeometricVecFacts.reserveSuccess
     refine ⟨exponent + 1, by omega, hexponentNextUpper, ?_, ?_, ?_,
       ?_, ?_, hfinal⟩
     · rw [hcapacityNat, hselected]
-    · rw [hcapacityNat, hselected, pow_succ]
-      omega
+    · rw [hcapacityNat, hselected, pow_succ]; omega
     · omega
     · rw [hnewPtrNat, hfrontierNext]
     · rw [hfinish, hfrontierNext, hselected]
@@ -3416,6 +3112,27 @@ def RuntimeContext [WasmRuntimeModuleGS Universal.State]
     IProp (WasmHeapGF Universal.State) :=
   iprop(runtimeModuleOwn ⟨0⟩ Project.Mergesort.module ∗
     hostEnvOwn 0 (Universal.envFor Project.Mergesort.module))
+
+/-- Open the module and host-environment resources carried by a merge-sort
+runtime context. -/
+macro "iopen_runtime " runtime:ident " with " pattern:icasesPat : tactic => do
+  let selected ← `(selPat| $runtime:ident)
+  let resource ← `(pmTerm| $runtime:ident)
+  `(tactic|
+    (isimp only [Project.Mergesort.Representations.RuntimeContext] at $selected
+     icases $resource with $pattern))
+
+/-- Reassemble a merge-sort runtime context from its two resources. -/
+macro "iclose_runtime " runtime:ident " with " moduleOwn:ident hostEnv:ident : tactic => do
+  let runtimePattern ← `(icasesPat| $runtime:ident)
+  let moduleFrame ← `(frameIdent| $moduleOwn:ident)
+  let hostFrame ← `(frameIdent| $hostEnv:ident)
+  let moduleSelected ← `(selPat| $moduleOwn:ident)
+  let hostSelected ← `(selPat| $hostEnv:ident)
+  `(tactic|
+    (ihave $runtimePattern : RuntimeContext $$ [$moduleFrame $hostFrame]
+     · unfold RuntimeContext
+       iframe $moduleSelected $hostSelected))
 
 def AllRetired (history : AllocationHistory) : Prop :=
   ∀ allocationId metadata,

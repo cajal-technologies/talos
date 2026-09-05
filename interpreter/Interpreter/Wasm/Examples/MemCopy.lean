@@ -64,18 +64,15 @@ def copyOverlapFinalStore : MachineStore Unit :=
 
 theorem copy_disjoint_moves_bytes :
     (runSteps 7 copyDisjointConfig).result =
-      .success [.i32 0x44332211] copyDisjointFinalStore := by
-  rfl
+      .success [.i32 0x44332211] copyDisjointFinalStore := by rfl
 
 theorem copy_disjoint_terminates :
     TerminatesWith copyDisjointConfig (fun values store =>
       values = [.i32 0x44332211] ∧
       store.wasm.mem.read32 0 = 0x44332211 ∧
-      store.wasm.mem.read32 8 = 0x44332211) := by
-  apply runSteps_success_terminates copy_disjoint_moves_bytes
-  constructor
-  · rfl
-  constructor <;> native_decide
+      store.wasm.mem.read32 8 = 0x44332211) :=
+  runSteps_success_terminates_eq_values
+    copy_disjoint_moves_bytes (by constructor <;> decide +kernel)
 
 theorem copy_disjoint_partial :
     PartiallyMeets copyDisjointConfig (fun values store =>
@@ -84,16 +81,15 @@ theorem copy_disjoint_partial :
 
 theorem copy_overlap_uses_pre_copy_bytes :
     (runSteps 7 copyOverlapConfig).result =
-      .success [.i64 0x8877443322112211] copyOverlapFinalStore := by
-  rfl
+      .success [.i64 0x8877443322112211] copyOverlapFinalStore := by rfl
 
 /-- The copied word at address 2 is read from the pre-copy memory. -/
 theorem copy_overlap_terminates :
     TerminatesWith copyOverlapConfig (fun values store =>
       values = [.i64 0x8877443322112211] ∧
-      store.wasm.mem.read32 2 = 0x44332211) := by
-  apply runSteps_success_terminates copy_overlap_uses_pre_copy_bytes
-  constructor <;> native_decide
+      store.wasm.mem.read32 2 = 0x44332211) :=
+  runSteps_success_terminates_eq_values
+    copy_overlap_uses_pre_copy_bytes (by decide +kernel)
 
 theorem copy_overlap_partial :
     PartiallyMeets copyOverlapConfig (fun values store =>
@@ -103,14 +99,12 @@ theorem copy_overlap_partial :
 
 theorem copy_out_of_bounds_traps :
     (runSteps 4 copyTrapConfig).result =
-      .trapped .outOfBoundsMemory copyStore := by
-  rfl
+      .trapped .outOfBoundsMemory copyStore := by rfl
 
 /-- Fuel-free trap contract, including atomic preservation of the store. -/
 theorem copy_out_of_bounds_trapsWith :
     TrapsWith copyTrapConfig .outOfBoundsMemory
-      (fun store => store = copyStore) := by
-  apply runSteps_trapped_trapsWith copy_out_of_bounds_traps
-  rfl
+      (fun store => store = copyStore) :=
+  runSteps_trapped_trapsWith_store copy_out_of_bounds_traps
 
 end Wasm

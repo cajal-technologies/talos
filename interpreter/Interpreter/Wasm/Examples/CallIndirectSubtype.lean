@@ -77,12 +77,12 @@ def m : Module :=
     elements := [{ tableIdx := some 0, offset := some 0, funcs := [some 0] }] }
 
 /-- `$sub <: $super` holds (the legitimate direction). -/
-theorem sub_subtype_super : m.gcTypeSubtype 1 0 = true := by native_decide
+theorem sub_subtype_super : m.gcTypeSubtype 1 0 = true := by decide +kernel
 
 /-- `$super <: $sub` does **not** hold. This is the relation the call sites
 require of the stored function's type (`$super`) against the call-site type
 (`$sub`); it fails, so the calls must trap. -/
-theorem super_not_subtype_sub : m.gcTypeSubtype 0 1 = false := by native_decide
+theorem super_not_subtype_sub : m.gcTypeSubtype 0 1 = false := by decide +kernel
 
 def callConfig : Config Unit :=
   { expr := .running
@@ -108,11 +108,10 @@ theorem call_indirect_traps :
       [(.instruction (.const 7)), (.instruction (.const 0)),
        (.instruction (.callIndirect 1 0))]
       ⟨.trapped .indirectCallTypeMismatch, callConfig.store⟩ := by
-  apply Steps.cons .const
-  apply Steps.cons .const
+  wasm_steps [.const, .const]
   exact Steps.cons
     (.callIndirectTypeMismatch rfl rfl rfl (by decide) (by decide)
-      rfl rfl rfl (by native_decide))
+      rfl rfl rfl (by decide +kernel))
     (Steps.refl _)
 
 /-- `return_call_indirect (type $sub)` traps for the same reason — the
@@ -122,11 +121,10 @@ theorem return_call_indirect_traps :
       [(.instruction (.const 7)), (.instruction (.const 0)),
        (.instruction (.returnCallIndirect 1 0))]
       ⟨.trapped .indirectCallTypeMismatch, returnCallConfig.store⟩ := by
-  apply Steps.cons .const
-  apply Steps.cons .const
+  wasm_steps [.const, .const]
   exact Steps.cons
     (.returnCallIndirectTypeMismatch rfl rfl rfl (by decide)
-      rfl rfl rfl (by native_decide))
+      rfl rfl rfl (by decide +kernel))
     (Steps.refl _)
 
 theorem call_indirect_trapsWith :
@@ -141,14 +139,14 @@ theorem return_call_indirect_trapsWith :
 
 theorem call_indirect_runs_trap :
     (runSteps 3 callConfig).result.finalConfig? =
-      some ⟨.trapped .indirectCallTypeMismatch, callConfig.store⟩ := by
-  exact congrArg RunnerResult.finalConfig?
+      some ⟨.trapped .indirectCallTypeMismatch, callConfig.store⟩ :=
+  congrArg RunnerResult.finalConfig?
     (runSteps_finalConfig_of_steps call_indirect_traps)
 
 theorem return_call_indirect_runs_trap :
     (runSteps 3 returnCallConfig).result.finalConfig? =
-      some ⟨.trapped .indirectCallTypeMismatch, returnCallConfig.store⟩ := by
-  exact congrArg RunnerResult.finalConfig?
+      some ⟨.trapped .indirectCallTypeMismatch, returnCallConfig.store⟩ :=
+  congrArg RunnerResult.finalConfig?
     (runSteps_finalConfig_of_steps return_call_indirect_traps)
 
 end CallIndirectSubtype

@@ -74,116 +74,52 @@ theorem wp_swapElementsFunc2Prefix
           .localGet 0, .localGet 1, .load64 0, .store64 0,
           .localGet 1, .localGet 2, .load64 8, .store64 0, .ret ],
         0, [], [], calls⟩ : Expr α) @ s; E {{ Φ }} := by
-  have ha1 : (ptrA + 1).toNat = ptrA.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 1 (by omega) (by omega)
-  have ha2 : (ptrA + 2).toNat = ptrA.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 2 (by omega) (by omega)
-  have ha3 : (ptrA + 3).toNat = ptrA.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 3 (by omega) (by omega)
-  have ha4 : (ptrA + 4).toNat = ptrA.toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 4 (by omega) (by omega)
-  have ha5 : (ptrA + 5).toNat = ptrA.toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 5 (by omega) (by omega)
-  have ha6 : (ptrA + 6).toNat = ptrA.toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 6 (by omega) (by omega)
-  have ha7 : (ptrA + 7).toNat = ptrA.toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 7 (by omega) (by omega)
-  have hb1 : (ptrB + 1).toNat = ptrB.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 1 (by omega) (by omega)
-  have hb2 : (ptrB + 2).toNat = ptrB.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 2 (by omega) (by omega)
-  have hb3 : (ptrB + 3).toNat = ptrB.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 3 (by omega) (by omega)
-  have hb4 : (ptrB + 4).toNat = ptrB.toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 4 (by omega) (by omega)
-  have hb5 : (ptrB + 5).toNat = ptrB.toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 5 (by omega) (by omega)
-  have hb6 : (ptrB + 6).toNat = ptrB.toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 6 (by omega) (by omega)
-  have hb7 : (ptrB + 7).toNat = ptrB.toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 7 (by omega) (by omega)
+  obtain ⟨ha1, ha2, ha3, ha4, ha5, ha6, ha7⟩ := UInt32.addSteps8 ptrA hroomA
+  obtain ⟨hb1, hb2, hb3, hb4, hb5, hb6, hb7⟩ := UInt32.addSteps8 ptrB hroomB
   iintro ⟨⟨Hglobal, Hscratch, HA, HB⟩, Hdone⟩
-  iapply wp_globalGet $$ Hglobal
-  inext
-  iintro Hglobal
-  iapply wp_const
-  inext
-  iapply wp_sub
-  inext
-  iapply wp_localSet rfl
-  inext
+  wasm_wp_next_rebind wp_globalGet with Hglobal
+  wasm_wp_pures [wp_const wp_sub wp_localSet]
   simp only [UInt32.reduceSub, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set]
-  iapply wp_localGet rfl
-  inext
-  iapply wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet wp_localGet]
   ihave HALater : ▷ pointsTo_u64 0 (ptrA + 0) oldA $$ [HA]
-  · inext
-    rw [UInt32.add_zero]
-    iexact HA
-  iapply wp_load64 oldA (by simp)
+  · ilater_rw_exact [UInt32.add_zero] with HA
+  wasm_wp_next_bind wp_load64 oldA (by simp)
     (by simpa using ha1) (by simpa using ha2) (by simpa using ha3)
     (by simpa using ha4) (by simpa using ha5) (by simpa using ha6)
-    (by simpa using ha7) $$ HALater
-  inext
-  iintro HA
+    (by simpa using ha7) with HALater => HA
   ihave HscratchLater :
       ▷ pointsTo_u64 0 ((1048544 : UInt32) + 8) oldScratch $$ [Hscratch]
-  · inext
-    rw [show (1048544 : UInt32) + 8 = 1048552 from rfl]
-    iexact Hscratch
-  iapply wp_store64 oldScratch rfl rfl rfl rfl rfl rfl rfl rfl $$
+  · ilater_rw_exact [show (1048544 : UInt32) + 8 = 1048552 from rfl] with Hscratch
+  wasm_wp_next wp_store64 oldScratch rfl rfl rfl rfl rfl rfl rfl rfl $$
     HscratchLater
-  inext
   iintro Hscratch
-  iapply wp_localGet rfl
-  inext
-  iapply wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet wp_localGet]
   ihave HBLater : ▷ pointsTo_u64 0 (ptrB + 0) oldB $$ [HB]
-  · inext
-    rw [UInt32.add_zero]
-    iexact HB
-  iapply wp_load64 oldB (by simp)
+  · ilater_rw_exact [UInt32.add_zero] with HB
+  wasm_wp_next_bind wp_load64 oldB (by simp)
     (by simpa using hb1) (by simpa using hb2) (by simpa using hb3)
     (by simpa using hb4) (by simpa using hb5) (by simpa using hb6)
-    (by simpa using hb7) $$ HBLater
-  inext
-  iintro HB
+    (by simpa using hb7) with HBLater => HB
   ihave HALater : ▷ pointsTo_u64 0 (ptrA + 0) oldA $$ [HA]
-  · inext
-    rw [UInt32.add_zero]
-    iexact HA
-  iapply wp_store64 oldA (by simp)
+  · ilater_rw_exact [UInt32.add_zero] with HA
+  wasm_wp_next_bind wp_store64 oldA (by simp)
     (by simpa using ha1) (by simpa using ha2) (by simpa using ha3)
     (by simpa using ha4) (by simpa using ha5) (by simpa using ha6)
-    (by simpa using ha7) $$ HALater
-  inext
-  iintro HA
-  iapply wp_localGet rfl
-  inext
-  iapply wp_localGet rfl
-  inext
+    (by simpa using ha7) with HALater => HA
+  wasm_wp_pures [wp_localGet wp_localGet]
   ihave HscratchLater :
       ▷ pointsTo_u64 0 ((1048544 : UInt32) + 8) oldA $$ [Hscratch]
-  · inext
-    rw [show (1048544 : UInt32) + 8 = 1048552 from rfl]
-    iexact Hscratch
-  iapply wp_load64 oldA rfl rfl rfl rfl rfl rfl rfl rfl $$
+  · ilater_rw_exact [show (1048544 : UInt32) + 8 = 1048552 from rfl] with Hscratch
+  wasm_wp_next wp_load64 oldA rfl rfl rfl rfl rfl rfl rfl rfl $$
     HscratchLater
-  inext
   iintro Hscratch
   ihave HBLater : ▷ pointsTo_u64 0 (ptrB + 0) oldB $$ [HB]
-  · inext
-    rw [UInt32.add_zero]
-    iexact HB
-  iapply wp_store64 oldB (by simp)
+  · ilater_rw_exact [UInt32.add_zero] with HB
+  wasm_wp_next_bind wp_store64 oldB (by simp)
     (by simpa using hb1) (by simpa using hb2) (by simpa using hb3)
     (by simpa using hb4) (by simpa using hb5) (by simpa using hb6)
-    (by simpa using hb7) $$ HBLater
-  inext
-  iintro HB
+    (by simpa using hb7) with HBLater => HB
   iapply Hdone
   simp only [UInt32.add_zero, UInt32.reduceAdd]
   iframe
@@ -210,102 +146,51 @@ theorem wp_swapElementsFunc2AliasPrefix
           .localGet 0, .localGet 1, .load64 0, .store64 0,
           .localGet 1, .localGet 2, .load64 8, .store64 0, .ret ],
         0, [], [], calls⟩ : Expr α) @ s; E {{ Φ }} := by
-  have h1 : (ptr + 1).toNat = ptr.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptr 1 (by omega) (by omega)
-  have h2 : (ptr + 2).toNat = ptr.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptr 2 (by omega) (by omega)
-  have h3 : (ptr + 3).toNat = ptr.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptr 3 (by omega) (by omega)
-  have h4 : (ptr + 4).toNat = ptr.toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptr 4 (by omega) (by omega)
-  have h5 : (ptr + 5).toNat = ptr.toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptr 5 (by omega) (by omega)
-  have h6 : (ptr + 6).toNat = ptr.toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptr 6 (by omega) (by omega)
-  have h7 : (ptr + 7).toNat = ptr.toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptr 7 (by omega) (by omega)
+  obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := UInt32.addSteps8 ptr hroom
   iintro ⟨⟨Hglobal, Hscratch, Hcell⟩, Hdone⟩
-  iapply wp_globalGet $$ Hglobal
-  inext
-  iintro Hglobal
-  iapply wp_const
-  inext
-  iapply wp_sub
-  inext
-  iapply wp_localSet rfl
-  inext
+  wasm_wp_next_rebind wp_globalGet with Hglobal
+  wasm_wp_pures [wp_const wp_sub wp_localSet]
   simp only [UInt32.reduceSub, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set]
-  iapply wp_localGet rfl
-  inext
-  iapply wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet wp_localGet]
   ihave HcellLater : ▷ pointsTo_u64 0 (ptr + 0) oldValue $$ [Hcell]
-  · inext
-    rw [UInt32.add_zero]
-    iexact Hcell
-  iapply wp_load64 oldValue (by simp)
+  · ilater_rw_exact [UInt32.add_zero] with Hcell
+  wasm_wp_next_bind wp_load64 oldValue (by simp)
     (by simpa using h1) (by simpa using h2) (by simpa using h3)
     (by simpa using h4) (by simpa using h5) (by simpa using h6)
-    (by simpa using h7) $$ HcellLater
-  inext
-  iintro Hcell
+    (by simpa using h7) with HcellLater => Hcell
   ihave HscratchLater :
       ▷ pointsTo_u64 0 ((1048544 : UInt32) + 8) oldScratch $$ [Hscratch]
-  · inext
-    rw [show (1048544 : UInt32) + 8 = 1048552 from rfl]
-    iexact Hscratch
-  iapply wp_store64 oldScratch rfl rfl rfl rfl rfl rfl rfl rfl $$
+  · ilater_rw_exact [show (1048544 : UInt32) + 8 = 1048552 from rfl] with Hscratch
+  wasm_wp_next wp_store64 oldScratch rfl rfl rfl rfl rfl rfl rfl rfl $$
     HscratchLater
-  inext
   iintro Hscratch
-  iapply wp_localGet rfl
-  inext
-  iapply wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet wp_localGet]
   ihave HcellLater : ▷ pointsTo_u64 0 (ptr + 0) oldValue $$ [Hcell]
-  · inext
-    rw [UInt32.add_zero]
-    iexact Hcell
-  iapply wp_load64 oldValue (by simp)
+  · ilater_rw_exact [UInt32.add_zero] with Hcell
+  wasm_wp_next_bind wp_load64 oldValue (by simp)
     (by simpa using h1) (by simpa using h2) (by simpa using h3)
     (by simpa using h4) (by simpa using h5) (by simpa using h6)
-    (by simpa using h7) $$ HcellLater
-  inext
-  iintro Hcell
+    (by simpa using h7) with HcellLater => Hcell
   ihave HcellLater : ▷ pointsTo_u64 0 (ptr + 0) oldValue $$ [Hcell]
-  · inext
-    rw [UInt32.add_zero]
-    iexact Hcell
-  iapply wp_store64 oldValue (by simp)
+  · ilater_rw_exact [UInt32.add_zero] with Hcell
+  wasm_wp_next_bind wp_store64 oldValue (by simp)
     (by simpa using h1) (by simpa using h2) (by simpa using h3)
     (by simpa using h4) (by simpa using h5) (by simpa using h6)
-    (by simpa using h7) $$ HcellLater
-  inext
-  iintro Hcell
-  iapply wp_localGet rfl
-  inext
-  iapply wp_localGet rfl
-  inext
+    (by simpa using h7) with HcellLater => Hcell
+  wasm_wp_pures [wp_localGet wp_localGet]
   ihave HscratchLater :
       ▷ pointsTo_u64 0 ((1048544 : UInt32) + 8) oldValue $$ [Hscratch]
-  · inext
-    rw [show (1048544 : UInt32) + 8 = 1048552 from rfl]
-    iexact Hscratch
-  iapply wp_load64 oldValue rfl rfl rfl rfl rfl rfl rfl rfl $$
+  · ilater_rw_exact [show (1048544 : UInt32) + 8 = 1048552 from rfl] with Hscratch
+  wasm_wp_next wp_load64 oldValue rfl rfl rfl rfl rfl rfl rfl rfl $$
     HscratchLater
-  inext
   iintro Hscratch
   ihave HcellLater : ▷ pointsTo_u64 0 (ptr + 0) oldValue $$ [Hcell]
-  · inext
-    rw [UInt32.add_zero]
-    iexact Hcell
-  iapply wp_store64 oldValue (by simp)
+  · ilater_rw_exact [UInt32.add_zero] with Hcell
+  wasm_wp_next_bind wp_store64 oldValue (by simp)
     (by simpa using h1) (by simpa using h2) (by simpa using h3)
     (by simpa using h4) (by simpa using h5) (by simpa using h6)
-    (by simpa using h7) $$ HcellLater
-  inext
-  iintro Hcell
+    (by simpa using h7) with HcellLater => Hcell
   iapply Hdone
   simp only [UInt32.add_zero, UInt32.reduceAdd]
   iframe
@@ -332,17 +217,10 @@ theorem wp_swapElementsFunc2
   iintro Hresources
   iapply wp_swapElementsFunc2Prefix ptrA ptrB oldScratch oldA oldB
     hroomA hroomB (calls := [])
-  isplitl [Hresources]
-  · iexact Hresources
+  isplitl_exact Hresources
   · inext
     iintro Hresources
-    iapply wp_returnFromFunction
-    inext
-    iapply wp_value'
-    isplitr
-    · ipureintro
-      rfl
-    · iexact Hresources
+    wasm_wp_return_value_rfl_exact Hresources
 
 /-- Top-level one-cell specialization for equal exchange pointers. -/
 theorem wp_swapElementsFunc2Alias
@@ -364,17 +242,10 @@ theorem wp_swapElementsFunc2Alias
   iintro Hresources
   iapply wp_swapElementsFunc2AliasPrefix ptr oldScratch oldValue
     hroom (calls := [])
-  isplitl [Hresources]
-  · iexact Hresources
+  isplitl_exact Hresources
   · inext
     iintro Hresources
-    iapply wp_returnFromFunction
-    inext
-    iapply wp_value'
-    isplitr
-    · ipureintro
-      rfl
-    · iexact Hresources
+    wasm_wp_return_value_rfl_exact Hresources
 
 /-- Small-step Iris contract for the exact generated body of
 `Project.SwapElements.func3`. It spills `len` and `ptr` into two adjacent
@@ -390,41 +261,20 @@ theorem wp_swapElementsFunc3
       {{ result, ⌜result = []⌝ ∗
         pointsTo_u32 0 1048568 ptr ∗ pointsTo_u32 0 1048572 len }} := by
   iintro ⟨Hptr, Hlen⟩
-  iapply wp_localGet rfl
-  inext
-  iapply wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet wp_localGet]
   ihave HlenLater :
       ▷ pointsTo_u32 0 ((1048568 : UInt32) + 4) oldLen $$ [Hlen]
-  · inext
-    rw [show (1048568 : UInt32) + 4 = 1048572 from rfl]
-    iexact Hlen
-  iapply wp_store32 oldLen rfl rfl rfl rfl $$ HlenLater
-  inext
-  iintro Hlen
-  iapply wp_localGet rfl
-  inext
-  iapply wp_localGet rfl
-  inext
+  · ilater_rw_exact [show (1048568 : UInt32) + 4 = 1048572 from rfl] with Hlen
+  wasm_wp_next_bind wp_store32 oldLen rfl rfl rfl rfl with HlenLater => Hlen
+  wasm_wp_pures [wp_localGet wp_localGet]
   ihave HptrLater :
       ▷ pointsTo_u32 0 ((1048568 : UInt32) + 0) oldPtr $$ [Hptr]
-  · inext
-    rw [UInt32.add_zero]
-    iexact Hptr
-  iapply wp_store32 oldPtr rfl rfl rfl rfl $$ HptrLater
-  inext
-  iintro Hptr
-  iapply wp_returnFromFunction
-  inext
-  iapply wp_value'
-  isplitr
-  · ipureintro
-    rfl
-  · isplitl [Hptr]
-    · rw [UInt32.add_zero]
-      iexact Hptr
-    · rw [← show (1048568 : UInt32) + 4 = 1048572 from rfl]
-      iexact Hlen
+  · ilater_rw_exact [UInt32.add_zero] with Hptr
+  wasm_wp_next_bind wp_store32 oldPtr rfl rfl rfl rfl with HptrLater => Hptr
+  wasm_wp_return_value
+  isplitr_pureexact rfl
+  · isplitl_rw_exact [UInt32.add_zero] with Hptr
+    · irw_exact [← show (1048568 : UInt32) + 4 = 1048572 from rfl] with Hlen
 
 end swapElementsPartial
 
@@ -459,47 +309,16 @@ theorem twp_swapElementsFunc2Prefix
           .localGet 0, .localGet 1, .load64 0, .store64 0,
           .localGet 1, .localGet 2, .load64 8, .store64 0, .ret ],
         0, [], [], calls⟩ : Expr α) @ s; E [{ Φ }] := by
-  have ha1 : (ptrA + 1).toNat = ptrA.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 1 (by omega) (by omega)
-  have ha2 : (ptrA + 2).toNat = ptrA.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 2 (by omega) (by omega)
-  have ha3 : (ptrA + 3).toNat = ptrA.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 3 (by omega) (by omega)
-  have ha4 : (ptrA + 4).toNat = ptrA.toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 4 (by omega) (by omega)
-  have ha5 : (ptrA + 5).toNat = ptrA.toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 5 (by omega) (by omega)
-  have ha6 : (ptrA + 6).toNat = ptrA.toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 6 (by omega) (by omega)
-  have ha7 : (ptrA + 7).toNat = ptrA.toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrA 7 (by omega) (by omega)
-  have hb1 : (ptrB + 1).toNat = ptrB.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 1 (by omega) (by omega)
-  have hb2 : (ptrB + 2).toNat = ptrB.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 2 (by omega) (by omega)
-  have hb3 : (ptrB + 3).toNat = ptrB.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 3 (by omega) (by omega)
-  have hb4 : (ptrB + 4).toNat = ptrB.toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 4 (by omega) (by omega)
-  have hb5 : (ptrB + 5).toNat = ptrB.toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 5 (by omega) (by omega)
-  have hb6 : (ptrB + 6).toNat = ptrB.toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 6 (by omega) (by omega)
-  have hb7 : (ptrB + 7).toNat = ptrB.toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptrB 7 (by omega) (by omega)
+  obtain ⟨ha1, ha2, ha3, ha4, ha5, ha6, ha7⟩ := UInt32.addSteps8 ptrA hroomA
+  obtain ⟨hb1, hb2, hb3, hb4, hb5, hb6, hb7⟩ := UInt32.addSteps8 ptrB hroomB
   iintro ⟨⟨Hglobal, Hscratch, HA, HB⟩, Hdone⟩
-  iapply twp_globalGet $$ Hglobal
-  iintro Hglobal
-  iapply twp_const
-  iapply twp_sub
-  iapply twp_localSet rfl
+  wasm_twp_rebind twp_globalGet with Hglobal
+  wasm_twp_pures [twp_const twp_sub twp_localSet]
   simp only [UInt32.reduceSub, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set]
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   ihave HA' : pointsTo_u64 0 (ptrA + 0) oldA $$ [HA]
-  · rw [UInt32.add_zero]
-    iexact HA
+  · irw_exact [UInt32.add_zero] with HA
   iapply twp_load64 oldA (by simp)
     (by simpa using ha1) (by simpa using ha2) (by simpa using ha3)
     (by simpa using ha4) (by simpa using ha5) (by simpa using ha6)
@@ -507,41 +326,34 @@ theorem twp_swapElementsFunc2Prefix
   iintro HA
   ihave Hscratch' :
       pointsTo_u64 0 ((1048544 : UInt32) + 8) oldScratch $$ [Hscratch]
-  · rw [show (1048544 : UInt32) + 8 = 1048552 from rfl]
-    iexact Hscratch
+  · irw_exact [show (1048544 : UInt32) + 8 = 1048552 from rfl] with Hscratch
   iapply twp_store64 oldScratch rfl rfl rfl rfl rfl rfl rfl rfl $$
     Hscratch'
   iintro Hscratch
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   ihave HB' : pointsTo_u64 0 (ptrB + 0) oldB $$ [HB]
-  · rw [UInt32.add_zero]
-    iexact HB
+  · irw_exact [UInt32.add_zero] with HB
   iapply twp_load64 oldB (by simp)
     (by simpa using hb1) (by simpa using hb2) (by simpa using hb3)
     (by simpa using hb4) (by simpa using hb5) (by simpa using hb6)
     (by simpa using hb7) $$ HB'
   iintro HB
   ihave HA' : pointsTo_u64 0 (ptrA + 0) oldA $$ [HA]
-  · rw [UInt32.add_zero]
-    iexact HA
+  · irw_exact [UInt32.add_zero] with HA
   iapply twp_store64 oldA (by simp)
     (by simpa using ha1) (by simpa using ha2) (by simpa using ha3)
     (by simpa using ha4) (by simpa using ha5) (by simpa using ha6)
     (by simpa using ha7) $$ HA'
   iintro HA
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   ihave Hscratch' :
       pointsTo_u64 0 ((1048544 : UInt32) + 8) oldA $$ [Hscratch]
-  · rw [show (1048544 : UInt32) + 8 = 1048552 from rfl]
-    iexact Hscratch
+  · irw_exact [show (1048544 : UInt32) + 8 = 1048552 from rfl] with Hscratch
   iapply twp_load64 oldA rfl rfl rfl rfl rfl rfl rfl rfl $$
     Hscratch'
   iintro Hscratch
   ihave HB' : pointsTo_u64 0 (ptrB + 0) oldB $$ [HB]
-  · rw [UInt32.add_zero]
-    iexact HB
+  · irw_exact [UInt32.add_zero] with HB
   iapply twp_store64 oldB (by simp)
     (by simpa using hb1) (by simpa using hb2) (by simpa using hb3)
     (by simpa using hb4) (by simpa using hb5) (by simpa using hb6)
@@ -569,33 +381,15 @@ theorem twp_swapElementsFunc2AliasPrefix
           .localGet 0, .localGet 1, .load64 0, .store64 0,
           .localGet 1, .localGet 2, .load64 8, .store64 0, .ret ],
         0, [], [], calls⟩ : Expr α) @ s; E [{ Φ }] := by
-  have h1 : (ptr + 1).toNat = ptr.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptr 1 (by omega) (by omega)
-  have h2 : (ptr + 2).toNat = ptr.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptr 2 (by omega) (by omega)
-  have h3 : (ptr + 3).toNat = ptr.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptr 3 (by omega) (by omega)
-  have h4 : (ptr + 4).toNat = ptr.toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptr 4 (by omega) (by omega)
-  have h5 : (ptr + 5).toNat = ptr.toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptr 5 (by omega) (by omega)
-  have h6 : (ptr + 6).toNat = ptr.toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptr 6 (by omega) (by omega)
-  have h7 : (ptr + 7).toNat = ptr.toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap ptr 7 (by omega) (by omega)
+  obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := UInt32.addSteps8 ptr hroom
   iintro ⟨⟨Hglobal, Hscratch, Hcell⟩, Hdone⟩
-  iapply twp_globalGet $$ Hglobal
-  iintro Hglobal
-  iapply twp_const
-  iapply twp_sub
-  iapply twp_localSet rfl
+  wasm_twp_rebind twp_globalGet with Hglobal
+  wasm_twp_pures [twp_const twp_sub twp_localSet]
   simp only [UInt32.reduceSub, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set]
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   ihave Hcell' : pointsTo_u64 0 (ptr + 0) oldValue $$ [Hcell]
-  · rw [UInt32.add_zero]
-    iexact Hcell
+  · irw_exact [UInt32.add_zero] with Hcell
   iapply twp_load64 oldValue (by simp)
     (by simpa using h1) (by simpa using h2) (by simpa using h3)
     (by simpa using h4) (by simpa using h5) (by simpa using h6)
@@ -603,41 +397,34 @@ theorem twp_swapElementsFunc2AliasPrefix
   iintro Hcell
   ihave Hscratch' :
       pointsTo_u64 0 ((1048544 : UInt32) + 8) oldScratch $$ [Hscratch]
-  · rw [show (1048544 : UInt32) + 8 = 1048552 from rfl]
-    iexact Hscratch
+  · irw_exact [show (1048544 : UInt32) + 8 = 1048552 from rfl] with Hscratch
   iapply twp_store64 oldScratch rfl rfl rfl rfl rfl rfl rfl rfl $$
     Hscratch'
   iintro Hscratch
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   ihave Hcell' : pointsTo_u64 0 (ptr + 0) oldValue $$ [Hcell]
-  · rw [UInt32.add_zero]
-    iexact Hcell
+  · irw_exact [UInt32.add_zero] with Hcell
   iapply twp_load64 oldValue (by simp)
     (by simpa using h1) (by simpa using h2) (by simpa using h3)
     (by simpa using h4) (by simpa using h5) (by simpa using h6)
     (by simpa using h7) $$ Hcell'
   iintro Hcell
   ihave Hcell' : pointsTo_u64 0 (ptr + 0) oldValue $$ [Hcell]
-  · rw [UInt32.add_zero]
-    iexact Hcell
+  · irw_exact [UInt32.add_zero] with Hcell
   iapply twp_store64 oldValue (by simp)
     (by simpa using h1) (by simpa using h2) (by simpa using h3)
     (by simpa using h4) (by simpa using h5) (by simpa using h6)
     (by simpa using h7) $$ Hcell'
   iintro Hcell
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   ihave Hscratch' :
       pointsTo_u64 0 ((1048544 : UInt32) + 8) oldValue $$ [Hscratch]
-  · rw [show (1048544 : UInt32) + 8 = 1048552 from rfl]
-    iexact Hscratch
+  · irw_exact [show (1048544 : UInt32) + 8 = 1048552 from rfl] with Hscratch
   iapply twp_load64 oldValue rfl rfl rfl rfl rfl rfl rfl rfl $$
     Hscratch'
   iintro Hscratch
   ihave Hcell' : pointsTo_u64 0 (ptr + 0) oldValue $$ [Hcell]
-  · rw [UInt32.add_zero]
-    iexact Hcell
+  · irw_exact [UInt32.add_zero] with Hcell
   iapply twp_store64 oldValue (by simp)
     (by simpa using h1) (by simpa using h2) (by simpa using h3)
     (by simpa using h4) (by simpa using h5) (by simpa using h6)
@@ -679,15 +466,12 @@ theorem twp_swapElementsFunc2
   iintro Hresources
   iapply twp_swapElementsFunc2Prefix ptrA ptrB oldScratch oldA oldB
     hroomA hroomB (calls := [])
-  isplitl [Hresources]
-  · iexact Hresources
+  isplitl_exact Hresources
   · iintro Hresources
     iapply twp_returnFromFunction
     simp only [List.take, List.nil_append]
     iapply twp.value rfl
-    isplitr
-    · ipureintro
-      rfl
+    isplitr_pureexact rfl
     · iexact Hresources
 
 theorem twp_swapElementsFunc2Alias
@@ -709,15 +493,12 @@ theorem twp_swapElementsFunc2Alias
   iintro Hresources
   iapply twp_swapElementsFunc2AliasPrefix ptr oldScratch oldValue hroom
     (calls := [])
-  isplitl [Hresources]
-  · iexact Hresources
+  isplitl_exact Hresources
   · iintro Hresources
     iapply twp_returnFromFunction
     simp only [List.take, List.nil_append]
     iapply twp.value rfl
-    isplitr
-    · ipureintro
-      rfl
+    isplitr_pureexact rfl
     · iexact Hresources
 
 theorem twp_swapElementsFunc3
@@ -731,33 +512,22 @@ theorem twp_swapElementsFunc3
       [{ result, ⌜result = []⌝ ∗
         pointsTo_u32 0 1048568 ptr ∗ pointsTo_u32 0 1048572 len }] := by
   iintro ⟨Hptr, Hlen⟩
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   ihave Hlen' :
       pointsTo_u32 0 ((1048568 : UInt32) + 4) oldLen $$ [Hlen]
-  · rw [show (1048568 : UInt32) + 4 = 1048572 from rfl]
-    iexact Hlen
-  iapply twp_store32 oldLen rfl rfl rfl rfl $$ Hlen'
-  iintro Hlen
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  · irw_exact [show (1048568 : UInt32) + 4 = 1048572 from rfl] with Hlen
+  wasm_twp_bind twp_store32 oldLen rfl rfl rfl rfl with Hlen' => Hlen
+  wasm_twp_pures [twp_localGet twp_localGet]
   ihave Hptr' :
       pointsTo_u32 0 ((1048568 : UInt32) + 0) oldPtr $$ [Hptr]
-  · rw [UInt32.add_zero]
-    iexact Hptr
-  iapply twp_store32 oldPtr rfl rfl rfl rfl $$ Hptr'
-  iintro Hptr
+  · irw_exact [UInt32.add_zero] with Hptr
+  wasm_twp_bind twp_store32 oldPtr rfl rfl rfl rfl with Hptr' => Hptr
   iapply twp_returnFromFunction
   simp only [List.take, List.nil_append]
   iapply twp.value rfl
-  isplitr
-  · ipureintro
-    rfl
-  · isplitl [Hptr]
-    · rw [UInt32.add_zero]
-      iexact Hptr
-    · rw [← show (1048568 : UInt32) + 4 = 1048572 from rfl]
-      iexact Hlen
+  isplitr_pureexact rfl
+  · isplitl_rw_exact [UInt32.add_zero] with Hptr
+    · irw_exact [← show (1048568 : UInt32) + 4 = 1048572 from rfl] with Hlen
 
 end swapElementsTotal
 
@@ -778,21 +548,6 @@ private def func1OuterBody : Program :=
 private def func1OuterContinuation : Program :=
   match func1 with
   | .block _ _ _ _ _ :: continuation => continuation
-  | _ => []
-
-private def func1MiddleBody : Program :=
-  match func1OuterBody with
-  | .block _ _ body _ _ :: _ => body
-  | _ => []
-
-private def func1MiddleContinuation : Program :=
-  match func1OuterBody with
-  | .block _ _ _ _ _ :: continuation => continuation
-  | _ => []
-
-private def func1InnerBody : Program :=
-  match func1MiddleBody with
-  | .block _ _ body _ _ :: _ => body
   | _ => []
 
 private def func1OuterFrame : Wasm.SmallStep.ControlFrame :=
@@ -828,67 +583,19 @@ theorem func1_happyPrefix_smallStep_wp
   dsimp only
   iintro Htarget
   simp only [func1]
-  iapply Wasm.SmallStep.wp_block
-  inext
-  iapply Wasm.SmallStep.wp_block
-  inext
-  iapply Wasm.SmallStep.wp_block
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_ltU (result := 1) (by simp [hi])
-  inext
-  iapply Wasm.SmallStep.wp_const
-  inext
-  iapply Wasm.SmallStep.wp_and
-  inext
-  rw [show (1 &&& 1 : UInt32) = 1 by decide]
-  iapply Wasm.SmallStep.wp_eqz (value := 1) (result := 0) rfl
-  inext
-  iapply Wasm.SmallStep.wp_brIfZero
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_const
-  inext
-  iapply Wasm.SmallStep.wp_shl
-  inext
-  iapply Wasm.SmallStep.wp_add
-  inext
-  iapply Wasm.SmallStep.wp_localSet rfl
-  inext
+  wasm_wp_pures [wp_block wp_block wp_block wp_localGet wp_localGet]
+  wasm_wp_next Wasm.SmallStep.wp_ltU (result := 1) (by simp [hi])
+  wasm_wp_pures [wp_const wp_and] rewriting [show (1 &&& 1 : UInt32) = 1 by decide]
+  wasm_wp_next Wasm.SmallStep.wp_eqz (value := 1) (result := 0) rfl
+  wasm_wp_pures [wp_brIfZero wp_localGet wp_localGet wp_const wp_shl wp_add wp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_ltU (result := 1) (by simp [hj])
-  inext
-  iapply Wasm.SmallStep.wp_const
-  inext
-  iapply Wasm.SmallStep.wp_and
-  inext
-  rw [show (1 &&& 1 : UInt32) = 1 by decide]
-  iapply Wasm.SmallStep.wp_brIf (by decide) rfl
-  inext
+  wasm_wp_pures [wp_localGet wp_localGet]
+  wasm_wp_next Wasm.SmallStep.wp_ltU (result := 1) (by simp [hj])
+  wasm_wp_pures [wp_const wp_and] rewriting [show (1 &&& 1 : UInt32) = 1 by decide]
+  wasm_wp_next Wasm.SmallStep.wp_brIf (by decide) rfl
   simp only [List.take_nil, List.drop_nil, List.nil_append]
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_const
-  inext
-  iapply Wasm.SmallStep.wp_shl
-  inext
-  iapply Wasm.SmallStep.wp_add
-  inext
+  wasm_wp_pures [wp_localGet wp_localGet wp_localGet wp_const wp_shl wp_add]
   simp only [func1OuterFrame, func1OuterBody, func1OuterContinuation, func1]
   iexact Htarget
 
@@ -982,16 +689,11 @@ theorem func2_in_func1_context_smallStep_wp
   iapply Wasm.SmallStep.wp_swapElementsFunc2Prefix
     ((i <<< (3 % 32)) + ptr) ((j <<< (3 % 32)) + ptr)
     oldScratch oldA oldB hroomI hroomJ
-  isplitl [Hresources]
-  · iexact Hresources
+  isplitl_exact Hresources
   · inext
     iintro Hresources
-    iapply Wasm.SmallStep.wp_returnFromCallExplicit' $$ Hruntime
-    inext
-    iintro Hruntime
-    simp only [List.take, List.nil_append]
-    iapply hreturn
-    iframe
+    wasm_wp_return_from_call Hruntime [List.take, List.nil_append]
+    iapply_frame hreturn
 
 /-- Equal-index counterpart of `func2_in_func1_context_smallStep_wp`. The
 callee receives the same pointer twice, so one array-word owner is threaded
@@ -1034,16 +736,11 @@ theorem func2Alias_in_func1_context_smallStep_wp
   simp only [func2]
   iapply Wasm.SmallStep.wp_swapElementsFunc2AliasPrefix
     ((i <<< (3 % 32)) + ptr) oldScratch oldValue hroom
-  isplitl [Hresources]
-  · iexact Hresources
+  isplitl_exact Hresources
   · inext
     iintro Hresources
-    iapply Wasm.SmallStep.wp_returnFromCallExplicit' $$ Hruntime
-    inext
-    iintro Hruntime
-    simp only [List.take, List.nil_append]
-    iapply hreturn
-    iframe
+    wasm_wp_return_from_call Hruntime [List.take, List.nil_append]
+    iapply_frame hreturn
 
 /-- Successful equal-index path of the generated bounds-checking wrapper. -/
 theorem func1_alias_context_smallStep_wp
@@ -1075,17 +772,12 @@ theorem func1_alias_context_smallStep_wp
         func1, 0, [], [], calls⟩ :
         Wasm.SmallStep.Expr Unit) @ s; E {{ Φ }} := by
   iintro ⟨HR, Hruntime, Hresources⟩
-  iapply func1_happyPrefix_smallStep_wp ptr len i i hi hi calls
-  inext
-  iapply func1_call2_entry_smallStep_wp ptr len i i calls $$ Hruntime
-  inext
-  iintro Hruntime
-  iapply func2Alias_in_func1_context_smallStep_wp R
-    ptr len i oldScratch oldValue hroom calls
-  · iintro ⟨Hruntime, HR, Hresources⟩
-    iapply hreturn
-    iframe
-  · iframe
+  wasm_wp_next func1_happyPrefix_smallStep_wp ptr len i i hi hi calls
+  wasm_wp_next_rebind func1_call2_entry_smallStep_wp ptr len i i calls with Hruntime
+  iapply_then_frame func2Alias_in_func1_context_smallStep_wp R
+      ptr len i oldScratch oldValue hroom calls =>
+    iintro ⟨Hruntime, HR, Hresources⟩
+    iapply_frame hreturn
 
 /-- Call-stack-polymorphic happy path of generated `func1`. The theorem stops
 at `func1`'s own final return, allowing callers to choose whether that return
@@ -1123,17 +815,12 @@ theorem func1_happy_context_smallStep_wp
         func1, 0, [], [], calls⟩ : Wasm.SmallStep.Expr Unit) @ s; E {{ Φ }} := by
   dsimp only
   iintro ⟨HR, Hruntime, Hresources⟩
-  iapply func1_happyPrefix_smallStep_wp ptr len i j hi hj calls
-  inext
-  iapply func1_call2_entry_smallStep_wp ptr len i j calls $$ Hruntime
-  inext
-  iintro Hruntime
-  iapply func2_in_func1_context_smallStep_wp R
-    ptr len i j oldScratch oldA oldB hroomI hroomJ calls
-  · iintro ⟨Hruntime, HR, Hresources⟩
-    iapply hreturn
-    iframe
-  · iframe
+  wasm_wp_next func1_happyPrefix_smallStep_wp ptr len i j hi hj calls
+  wasm_wp_next_rebind func1_call2_entry_smallStep_wp ptr len i j calls with Hruntime
+  iapply_then_frame func2_in_func1_context_smallStep_wp R
+      ptr len i j oldScratch oldA oldB hroomI hroomJ calls =>
+    iintro ⟨Hruntime, HR, Hresources⟩
+    iapply_frame hreturn
 
 /-- End-to-end happy path of generated `func1`: both bounds checks succeed,
 the physical-runtime-checked direct call enters `func2`, the three words are
@@ -1165,13 +852,7 @@ theorem func1_happy_smallStep_wp
     ptr len i j oldScratch oldA oldB hi hj hroomI hroomJ []
   iintro ⟨_Htrue, Hruntime, Hresources⟩
   iclear Hruntime
-  iapply Wasm.SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
-  isplitr
-  · ipureintro
-    rfl
-  · iexact Hresources
+  wasm_wp_return_value_rfl_exact Hresources
   · isplitr
     · itrivial
     · iexact Hresources
@@ -1210,34 +891,18 @@ theorem func0_happy_context_smallStep_wp
         Wasm.SmallStep.Expr Unit) @ s; E {{ Φ }} := by
   iintro ⟨HR, Hruntime, Hresources⟩
   simp only [func0]
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_const
-  inext
-  iapply Wasm.SmallStep.wp_call «module» 1 func1Def
-    (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-  inext
-  iintro Hruntime
+  wasm_wp_pures [wp_localGet wp_localGet wp_localGet wp_localGet wp_const]
+  wasm_wp_next_rebind Wasm.SmallStep.wp_call «module» 1 func1Def
+    (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp only [func1Def, Function.toLocals, Function.numParams,
     List.length_cons, List.length_nil, Nat.reduceAdd, List.take, List.drop,
     List.reverse_cons, List.reverse_nil, List.nil_append,
     List.cons_append, List.map, ValueType.zero]
-  iapply func1_happy_context_smallStep_wp R
-    ptr len i j oldScratch oldA oldB hi hj hroomI hroomJ _
-  · iintro ⟨HR, Hruntime, Hmem⟩
-    iapply Wasm.SmallStep.wp_returnFromCallExplicit' $$ Hruntime
-    inext
-    iintro Hruntime
-    simp only [List.take, List.nil_append]
-    iapply hreturn
-    iframe
-  · iframe
+  iapply_then_frame func1_happy_context_smallStep_wp R
+      ptr len i j oldScratch oldA oldB hi hj hroomI hroomJ _ =>
+    iintro ⟨HR, Hruntime, Hmem⟩
+    wasm_wp_return_from_call Hruntime [List.take, List.nil_append]
+    iapply_frame hreturn
 
 /-- Equal-index path of the generated forwarding wrapper. -/
 theorem func0_alias_context_smallStep_wp
@@ -1268,34 +933,18 @@ theorem func0_alias_context_smallStep_wp
         Wasm.SmallStep.Expr Unit) @ s; E {{ Φ }} := by
   iintro ⟨HR, Hruntime, Hresources⟩
   simp only [func0]
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_const
-  inext
-  iapply Wasm.SmallStep.wp_call «module» 1 func1Def
-    (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-  inext
-  iintro Hruntime
+  wasm_wp_pures [wp_localGet wp_localGet wp_localGet wp_localGet wp_const]
+  wasm_wp_next_rebind Wasm.SmallStep.wp_call «module» 1 func1Def
+    (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp only [func1Def, Function.toLocals, Function.numParams,
     List.length_cons, List.length_nil, Nat.reduceAdd, List.take, List.drop,
     List.reverse_cons, List.reverse_nil, List.nil_append,
     List.cons_append, List.map, ValueType.zero]
-  iapply func1_alias_context_smallStep_wp R
-    ptr len i oldScratch oldValue hi hroom _
-  · iintro ⟨HR, Hruntime, Hmem⟩
-    iapply Wasm.SmallStep.wp_returnFromCallExplicit' $$ Hruntime
-    inext
-    iintro Hruntime
-    simp only [List.take, List.nil_append]
-    iapply hreturn
-    iframe
-  · iframe
+  iapply_then_frame func1_alias_context_smallStep_wp R
+      ptr len i oldScratch oldValue hi hroom _ =>
+    iintro ⟨HR, Hruntime, Hmem⟩
+    wasm_wp_return_from_call Hruntime [List.take, List.nil_append]
+    iapply_frame hreturn
 
 /-- Top-level equal-index forwarding-wrapper contract. -/
 theorem func0_alias_smallStep_wp
@@ -1321,13 +970,7 @@ theorem func0_alias_smallStep_wp
     ptr len i oldScratch oldValue hi hroom []
   · iintro ⟨_Htrue, Hruntime, Hresources⟩
     iclear Hruntime
-    iapply Wasm.SmallStep.wp_returnFromFunction
-    inext
-    iapply wp_value'
-    isplitr
-    · ipureintro
-      rfl
-    · iexact Hresources
+    wasm_wp_return_value_rfl_exact Hresources
   · isplitr
     · itrivial
     · iexact Hresources
@@ -1359,13 +1002,7 @@ theorem func0_happy_smallStep_wp
     ptr len i j oldScratch oldA oldB hi hj hroomI hroomJ []
   iintro ⟨_Htrue, Hruntime, Hresources⟩
   iclear Hruntime
-  iapply Wasm.SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
-  isplitr
-  · ipureintro
-    rfl
-  · iexact Hresources
+  wasm_wp_return_value_rfl_exact Hresources
   · isplitr
     · itrivial
     · iexact Hresources
@@ -1418,30 +1055,16 @@ theorem func3_context_smallStep_wp
         Wasm.SmallStep.Expr Unit) @ s; E {{ Φ }} := by
   iintro ⟨HR, Hptr, Hlen⟩
   simp only [func3]
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet wp_localGet]
   ihave HlenLater :
       ▷ pointsTo_u32 0 ((1048568 : UInt32) + 4) oldLen $$ [Hlen]
-  · inext
-    rw [show (1048568 : UInt32) + 4 = 1048572 from rfl]
-    iexact Hlen
-  iapply Wasm.SmallStep.wp_store32 oldLen rfl rfl rfl rfl $$ HlenLater
-  inext
-  iintro Hlen
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
+  · ilater_rw_exact [show (1048568 : UInt32) + 4 = 1048572 from rfl] with Hlen
+  wasm_wp_next_bind Wasm.SmallStep.wp_store32 oldLen rfl rfl rfl rfl with HlenLater => Hlen
+  wasm_wp_pures [wp_localGet wp_localGet]
   ihave HptrLater :
       ▷ pointsTo_u32 0 ((1048568 : UInt32) + 0) oldPtr $$ [Hptr]
-  · inext
-    rw [UInt32.add_zero]
-    iexact Hptr
-  iapply Wasm.SmallStep.wp_store32 oldPtr rfl rfl rfl rfl $$ HptrLater
-  inext
-  iintro Hptr
+  · ilater_rw_exact [UInt32.add_zero] with Hptr
+  wasm_wp_next_bind Wasm.SmallStep.wp_store32 oldPtr rfl rfl rfl rfl with HptrLater => Hptr
   iapply hreturn
   rw [UInt32.add_zero,
     ← show (1048568 : UInt32) + 4 = 1048572 from rfl]
@@ -1493,47 +1116,20 @@ theorem func4_happy_smallStep_wp
         pointsTo_u64 0 ((j <<< (3 % 32)) + ptr) oldA }} := by
   iintro ⟨Hruntime, Hglobal, Hscratch, HspillPtr, HspillLen, HA, HB⟩
   simp only [func4]
-  iapply Wasm.SmallStep.wp_globalGet $$ Hglobal
-  inext
-  iintro Hglobal
-  iapply Wasm.SmallStep.wp_const
-  inext
-  iapply Wasm.SmallStep.wp_sub
-  inext
-  iapply Wasm.SmallStep.wp_localSet rfl
-  inext
+  wasm_wp_next_rebind Wasm.SmallStep.wp_globalGet with Hglobal
+  wasm_wp_pures [wp_const wp_sub wp_localSet]
   simp only [UInt32.reduceSub, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set]
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet]
   ihave HglobalLater : ▷ globalPointsToAt 0 0 (.i32 1048576) $$ [Hglobal]
-  · inext
-    iexact Hglobal
-  iapply Wasm.SmallStep.wp_globalSet $$ HglobalLater
-  inext
-  iintro Hglobal
-  iapply Wasm.SmallStep.wp_const
-  inext
-  iapply Wasm.SmallStep.wp_localSet rfl
-  inext
+  · ilater_exact Hglobal
+  wasm_wp_next_bind Wasm.SmallStep.wp_globalSet with HglobalLater => Hglobal
+  wasm_wp_pures [wp_const wp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_const
-  inext
-  iapply Wasm.SmallStep.wp_add
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_call «module» 3 func3Def
-    (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-  inext
-  iintro Hruntime
+  wasm_wp_pures [wp_localGet wp_const wp_add wp_localGet wp_localGet wp_localGet]
+  wasm_wp_next_rebind Wasm.SmallStep.wp_call «module» 3 func3Def
+    (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func3Def, Function.toLocals, Function.numParams]
   iapply func3_context_smallStep_wp
     (iprop% runtimeModuleOwn ⟨0⟩ «module» ∗ globalPointsToAt 0 0 (.i32 1048560) ∗
@@ -1543,76 +1139,40 @@ theorem func4_happy_smallStep_wp
     oldSpillPtr oldSpillLen ptr len _
   · iintro ⟨Hrest, HspillPtr, HspillLen⟩
     icases Hrest with ⟨Hruntime, Hglobal, Hscratch, HA, HB⟩
-    iapply Wasm.SmallStep.wp_returnFromCallExplicit' $$ Hruntime
-    inext
-    iintro Hruntime
-    simp only [List.take, List.nil_append]
-    iapply Wasm.SmallStep.wp_localGet rfl
-    inext
+    wasm_wp_return_from_call Hruntime [List.take, List.nil_append]
+    wasm_wp_pures [wp_localGet]
     ihave HlenLater :
         ▷ pointsTo_u32 0 ((1048560 : UInt32) + 12) len $$ [HspillLen]
-    · inext
-      rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
-      iexact HspillLen
-    iapply Wasm.SmallStep.wp_load32 len
-      (by decide) (by decide) (by decide) (by decide) $$ HlenLater
-    inext
-    iintro HspillLen
-    iapply Wasm.SmallStep.wp_localSet rfl
-    inext
-    simp only [List.length_cons, List.length_nil, Nat.reduceAdd,
-      Nat.reduceSub, List.set]
-    iapply Wasm.SmallStep.wp_localGet rfl
-    inext
+    · ilater_rw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with HspillLen
+    wasm_wp_next_bind Wasm.SmallStep.wp_load32 len
+      (by decide) (by decide) (by decide) (by decide) with HlenLater => HspillLen
+    wasm_wp_localSet
+    wasm_wp_pures [wp_localGet]
     ihave HptrLater :
         ▷ pointsTo_u32 0 ((1048560 : UInt32) + 8) ptr $$ [HspillPtr]
-    · inext
-      rw [show (1048560 : UInt32) + 8 = 1048568 by decide]
-      iexact HspillPtr
-    iapply Wasm.SmallStep.wp_load32 ptr
-      (by decide) (by decide) (by decide) (by decide) $$ HptrLater
-    inext
-    iintro HspillPtr
-    iapply Wasm.SmallStep.wp_localGet rfl
-    inext
-    iapply Wasm.SmallStep.wp_localGet rfl
-    inext
-    iapply Wasm.SmallStep.wp_localGet rfl
-    inext
-    iapply Wasm.SmallStep.wp_call «module» 0 func0Def
-      (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-    inext
-    iintro Hruntime
+    · ilater_rw_exact [show (1048560 : UInt32) + 8 = 1048568 by decide] with HspillPtr
+    wasm_wp_next_bind Wasm.SmallStep.wp_load32 ptr
+      (by decide) (by decide) (by decide) (by decide) with HptrLater => HspillPtr
+    wasm_wp_pures [wp_localGet wp_localGet wp_localGet]
+    wasm_wp_next_rebind Wasm.SmallStep.wp_call «module» 0 func0Def
+      (by simp [«module»]) (by simp [«module»]) with Hruntime
     simp [func0Def, Function.toLocals, Function.numParams]
     iapply func0_happy_context_smallStep_wp
       (iprop% pointsTo_u32 0 1048568 ptr ∗ pointsTo_u32 0 1048572 len)
       ptr len i j oldScratch oldA oldB hi hj hroomI hroomJ _
     · iintro ⟨⟨HspillPtr, HspillLen⟩,
         Hruntime, Hglobal, Hscratch, HA, HB⟩
-      iapply Wasm.SmallStep.wp_returnFromCallExplicit $$ Hruntime
-      inext
+      wasm_wp_next Wasm.SmallStep.wp_returnFromCallExplicit $$ Hruntime
       simp only [List.take, List.nil_append]
-      iapply Wasm.SmallStep.wp_localGet rfl
-      inext
-      iapply Wasm.SmallStep.wp_const
-      inext
-      iapply Wasm.SmallStep.wp_add
-      inext
+      wasm_wp_pures [wp_localGet wp_const wp_add]
       ihave HglobalLater :
           ▷ globalPointsToAt 0 0 (.i32 1048560) $$ [Hglobal]
-      · inext
-        iexact Hglobal
-      iapply Wasm.SmallStep.wp_globalSet $$ HglobalLater
-      inext
-      iintro Hglobal
+      · ilater_exact Hglobal
+      wasm_wp_next_bind Wasm.SmallStep.wp_globalSet with HglobalLater => Hglobal
       rw [show (16 : UInt32) + 1048560 = 1048576 by decide]
       rw [show (3 % 32 : UInt32) = 3 by decide]
-      iapply Wasm.SmallStep.wp_returnFromFunction
-      inext
-      iapply wp_value'
-      isplitr
-      · ipureintro
-        rfl
+      wasm_wp_return_value
+      isplitr_pureexact rfl
       · iframe
     · rw [show (3 % 32 : UInt32) = 3 by decide]
       iframe
@@ -1647,47 +1207,20 @@ theorem func4_alias_smallStep_wp
         pointsTo_u64 0 ((i <<< (3 % 32)) + ptr) oldValue }} := by
   iintro ⟨Hruntime, Hglobal, Hscratch, HspillPtr, HspillLen, Hcell⟩
   simp only [func4]
-  iapply Wasm.SmallStep.wp_globalGet $$ Hglobal
-  inext
-  iintro Hglobal
-  iapply Wasm.SmallStep.wp_const
-  inext
-  iapply Wasm.SmallStep.wp_sub
-  inext
-  iapply Wasm.SmallStep.wp_localSet rfl
-  inext
+  wasm_wp_next_rebind Wasm.SmallStep.wp_globalGet with Hglobal
+  wasm_wp_pures [wp_const wp_sub wp_localSet]
   simp only [UInt32.reduceSub, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set]
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet]
   ihave HglobalLater : ▷ globalPointsToAt 0 0 (.i32 1048576) $$ [Hglobal]
-  · inext
-    iexact Hglobal
-  iapply Wasm.SmallStep.wp_globalSet $$ HglobalLater
-  inext
-  iintro Hglobal
-  iapply Wasm.SmallStep.wp_const
-  inext
-  iapply Wasm.SmallStep.wp_localSet rfl
-  inext
+  · ilater_exact Hglobal
+  wasm_wp_next_bind Wasm.SmallStep.wp_globalSet with HglobalLater => Hglobal
+  wasm_wp_pures [wp_const wp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_const
-  inext
-  iapply Wasm.SmallStep.wp_add
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_call «module» 3 func3Def
-    (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-  inext
-  iintro Hruntime
+  wasm_wp_pures [wp_localGet wp_const wp_add wp_localGet wp_localGet wp_localGet]
+  wasm_wp_next_rebind Wasm.SmallStep.wp_call «module» 3 func3Def
+    (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func3Def, Function.toLocals, Function.numParams]
   iapply func3_context_smallStep_wp
     (iprop% runtimeModuleOwn ⟨0⟩ «module» ∗ globalPointsToAt 0 0 (.i32 1048560) ∗
@@ -1696,76 +1229,40 @@ theorem func4_alias_smallStep_wp
     oldSpillPtr oldSpillLen ptr len _
   · iintro ⟨Hrest, HspillPtr, HspillLen⟩
     icases Hrest with ⟨Hruntime, Hglobal, Hscratch, Hcell⟩
-    iapply Wasm.SmallStep.wp_returnFromCallExplicit' $$ Hruntime
-    inext
-    iintro Hruntime
-    simp only [List.take, List.nil_append]
-    iapply Wasm.SmallStep.wp_localGet rfl
-    inext
+    wasm_wp_return_from_call Hruntime [List.take, List.nil_append]
+    wasm_wp_pures [wp_localGet]
     ihave HlenLater :
         ▷ pointsTo_u32 0 ((1048560 : UInt32) + 12) len $$ [HspillLen]
-    · inext
-      rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
-      iexact HspillLen
-    iapply Wasm.SmallStep.wp_load32 len
-      (by decide) (by decide) (by decide) (by decide) $$ HlenLater
-    inext
-    iintro HspillLen
-    iapply Wasm.SmallStep.wp_localSet rfl
-    inext
-    simp only [List.length_cons, List.length_nil, Nat.reduceAdd,
-      Nat.reduceSub, List.set]
-    iapply Wasm.SmallStep.wp_localGet rfl
-    inext
+    · ilater_rw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with HspillLen
+    wasm_wp_next_bind Wasm.SmallStep.wp_load32 len
+      (by decide) (by decide) (by decide) (by decide) with HlenLater => HspillLen
+    wasm_wp_localSet
+    wasm_wp_pures [wp_localGet]
     ihave HptrLater :
         ▷ pointsTo_u32 0 ((1048560 : UInt32) + 8) ptr $$ [HspillPtr]
-    · inext
-      rw [show (1048560 : UInt32) + 8 = 1048568 by decide]
-      iexact HspillPtr
-    iapply Wasm.SmallStep.wp_load32 ptr
-      (by decide) (by decide) (by decide) (by decide) $$ HptrLater
-    inext
-    iintro HspillPtr
-    iapply Wasm.SmallStep.wp_localGet rfl
-    inext
-    iapply Wasm.SmallStep.wp_localGet rfl
-    inext
-    iapply Wasm.SmallStep.wp_localGet rfl
-    inext
-    iapply Wasm.SmallStep.wp_call «module» 0 func0Def
-      (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-    inext
-    iintro Hruntime
+    · ilater_rw_exact [show (1048560 : UInt32) + 8 = 1048568 by decide] with HspillPtr
+    wasm_wp_next_bind Wasm.SmallStep.wp_load32 ptr
+      (by decide) (by decide) (by decide) (by decide) with HptrLater => HspillPtr
+    wasm_wp_pures [wp_localGet wp_localGet wp_localGet]
+    wasm_wp_next_rebind Wasm.SmallStep.wp_call «module» 0 func0Def
+      (by simp [«module»]) (by simp [«module»]) with Hruntime
     simp [func0Def, Function.toLocals, Function.numParams]
     iapply func0_alias_context_smallStep_wp
       (iprop% pointsTo_u32 0 1048568 ptr ∗ pointsTo_u32 0 1048572 len)
       ptr len i oldScratch oldValue hi hroom _
     · iintro ⟨⟨HspillPtr, HspillLen⟩,
         Hruntime, Hglobal, Hscratch, Hcell⟩
-      iapply Wasm.SmallStep.wp_returnFromCallExplicit $$ Hruntime
-      inext
+      wasm_wp_next Wasm.SmallStep.wp_returnFromCallExplicit $$ Hruntime
       simp only [List.take, List.nil_append]
-      iapply Wasm.SmallStep.wp_localGet rfl
-      inext
-      iapply Wasm.SmallStep.wp_const
-      inext
-      iapply Wasm.SmallStep.wp_add
-      inext
+      wasm_wp_pures [wp_localGet wp_const wp_add]
       ihave HglobalLater :
           ▷ globalPointsToAt 0 0 (.i32 1048560) $$ [Hglobal]
-      · inext
-        iexact Hglobal
-      iapply Wasm.SmallStep.wp_globalSet $$ HglobalLater
-      inext
-      iintro Hglobal
+      · ilater_exact Hglobal
+      wasm_wp_next_bind Wasm.SmallStep.wp_globalSet with HglobalLater => Hglobal
       rw [show (16 : UInt32) + 1048560 = 1048576 by decide]
       rw [show (3 % 32 : UInt32) = 3 by decide]
-      iapply Wasm.SmallStep.wp_returnFromFunction
-      inext
-      iapply wp_value'
-      isplitr
-      · ipureintro
-        rfl
+      wasm_wp_return_value
+      isplitr_pureexact rfl
       · iframe
     · rw [show (3 % 32 : UInt32) = 3 by decide]
       iframe
@@ -1795,39 +1292,19 @@ theorem twp_func1_happyPrefix_smallStep_wp
   dsimp only
   iintro Htarget
   simp only [func1]
-  iapply Wasm.SmallStep.twp_block
-  iapply Wasm.SmallStep.twp_block
-  iapply Wasm.SmallStep.twp_block
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
+  wasm_twp_pures [twp_block twp_block twp_block twp_localGet twp_localGet]
   iapply Wasm.SmallStep.twp_ltU (result := 1) (by simp [hi])
-  iapply Wasm.SmallStep.twp_const
-  iapply Wasm.SmallStep.twp_and
-  rw [show (1 &&& 1 : UInt32) = 1 by decide]
+  wasm_twp_pures [twp_const twp_and] rewriting [show (1 &&& 1 : UInt32) = 1 by decide]
   iapply Wasm.SmallStep.twp_eqz (value := 1) (result := 0) rfl
-  iapply Wasm.SmallStep.twp_brIfZero
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_const
-  iapply Wasm.SmallStep.twp_shl
-  iapply Wasm.SmallStep.twp_add
-  iapply Wasm.SmallStep.twp_localSet rfl
+  wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet twp_const twp_shl twp_add twp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   iapply Wasm.SmallStep.twp_ltU (result := 1) (by simp [hj])
-  iapply Wasm.SmallStep.twp_const
-  iapply Wasm.SmallStep.twp_and
-  rw [show (1 &&& 1 : UInt32) = 1 by decide]
+  wasm_twp_pures [twp_const twp_and] rewriting [show (1 &&& 1 : UInt32) = 1 by decide]
   iapply Wasm.SmallStep.twp_brIf (by decide) rfl
   simp only [List.take_nil, List.drop_nil, List.nil_append]
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_const
-  iapply Wasm.SmallStep.twp_shl
-  iapply Wasm.SmallStep.twp_add
+  wasm_twp_pures [twp_localGet twp_localGet twp_localGet twp_const twp_shl twp_add]
   simp only [func1OuterFrame, func1OuterBody, func1OuterContinuation, func1]
   iexact Htarget
 
@@ -1915,14 +1392,10 @@ theorem twp_func2_in_func1_context_smallStep_wp
   iapply Wasm.SmallStep.twp_swapElementsFunc2Prefix
     ((i <<< (3 % 32)) + ptr) ((j <<< (3 % 32)) + ptr)
     oldScratch oldA oldB hroomI hroomJ
-  isplitl [Hresources]
-  · iexact Hresources
+  isplitl_exact Hresources
   · iintro Hresources
-    iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
-    iintro Hruntime
-    simp only [List.take, List.nil_append]
-    iapply hreturn
-    iframe
+    wasm_twp_return_from_call Hruntime [List.take, List.nil_append]
+    iapply_frame hreturn
 
 theorem twp_func2Alias_in_func1_context_smallStep_wp
     [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
@@ -1962,14 +1435,10 @@ theorem twp_func2Alias_in_func1_context_smallStep_wp
   simp only [func2]
   iapply Wasm.SmallStep.twp_swapElementsFunc2AliasPrefix
     ((i <<< (3 % 32)) + ptr) oldScratch oldValue hroom
-  isplitl [Hresources]
-  · iexact Hresources
+  isplitl_exact Hresources
   · iintro Hresources
-    iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
-    iintro Hruntime
-    simp only [List.take, List.nil_append]
-    iapply hreturn
-    iframe
+    wasm_twp_return_from_call Hruntime [List.take, List.nil_append]
+    iapply_frame hreturn
 
 theorem twp_func1_alias_context_smallStep_wp
     [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
@@ -2001,14 +1470,11 @@ theorem twp_func1_alias_context_smallStep_wp
         Wasm.SmallStep.Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hruntime, Hresources⟩
   iapply twp_func1_happyPrefix_smallStep_wp ptr len i i hi hi calls
-  iapply twp_func1_call2_entry_smallStep_wp ptr len i i calls $$ Hruntime
-  iintro Hruntime
-  iapply twp_func2Alias_in_func1_context_smallStep_wp R
-    ptr len i oldScratch oldValue hroom calls
-  · iintro ⟨Hruntime, HR, Hresources⟩
-    iapply hreturn
-    iframe
-  · iframe
+  wasm_twp_rebind twp_func1_call2_entry_smallStep_wp ptr len i i calls with Hruntime
+  iapply_then_frame twp_func2Alias_in_func1_context_smallStep_wp R
+      ptr len i oldScratch oldValue hroom calls =>
+    iintro ⟨Hruntime, HR, Hresources⟩
+    iapply_frame hreturn
 
 theorem twp_func1_happy_context_smallStep_wp
     [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
@@ -2044,14 +1510,11 @@ theorem twp_func1_happy_context_smallStep_wp
   dsimp only
   iintro ⟨HR, Hruntime, Hresources⟩
   iapply twp_func1_happyPrefix_smallStep_wp ptr len i j hi hj calls
-  iapply twp_func1_call2_entry_smallStep_wp ptr len i j calls $$ Hruntime
-  iintro Hruntime
-  iapply twp_func2_in_func1_context_smallStep_wp R
-    ptr len i j oldScratch oldA oldB hroomI hroomJ calls
-  · iintro ⟨Hruntime, HR, Hresources⟩
-    iapply hreturn
-    iframe
-  · iframe
+  wasm_twp_rebind twp_func1_call2_entry_smallStep_wp ptr len i j calls with Hruntime
+  iapply_then_frame twp_func2_in_func1_context_smallStep_wp R
+      ptr len i j oldScratch oldA oldB hroomI hroomJ calls =>
+    iintro ⟨Hruntime, HR, Hresources⟩
+    iapply_frame hreturn
 
 theorem twp_func1_happy_smallStep_wp
     [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
@@ -2083,9 +1546,7 @@ theorem twp_func1_happy_smallStep_wp
   iapply Wasm.SmallStep.twp_returnFromFunction
   simp only [List.take, List.nil_append]
   iapply twp.value rfl
-  isplitr
-  · ipureintro
-    rfl
+  isplitr_pureexact rfl
   · iexact Hresources
   · isplitr
     · itrivial
@@ -2122,27 +1583,18 @@ theorem twp_func0_happy_context_smallStep_wp
         Wasm.SmallStep.Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hruntime, Hresources⟩
   simp only [func0]
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_const
-  iapply Wasm.SmallStep.twp_call «module» 1 func1Def
-    (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-  iintro Hruntime
+  wasm_twp_pures [twp_localGet twp_localGet twp_localGet twp_localGet twp_const]
+  wasm_twp_rebind Wasm.SmallStep.twp_call «module» 1 func1Def
+    (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp only [func1Def, Function.toLocals, Function.numParams,
     List.length_cons, List.length_nil, Nat.reduceAdd, List.take, List.drop,
     List.reverse_cons, List.reverse_nil, List.nil_append,
     List.cons_append, List.map, ValueType.zero]
-  iapply twp_func1_happy_context_smallStep_wp R
-    ptr len i j oldScratch oldA oldB hi hj hroomI hroomJ _
-  · iintro ⟨HR, Hruntime, Hmem⟩
-    iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
-    iintro Hruntime
-    simp only [List.take, List.nil_append]
-    iapply hreturn
-    iframe
-  · iframe
+  iapply_then_frame twp_func1_happy_context_smallStep_wp R
+      ptr len i j oldScratch oldA oldB hi hj hroomI hroomJ _ =>
+    iintro ⟨HR, Hruntime, Hmem⟩
+    wasm_twp_return_from_call Hruntime [List.take, List.nil_append]
+    iapply_frame hreturn
 
 theorem twp_func0_alias_context_smallStep_wp
     [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
@@ -2172,27 +1624,18 @@ theorem twp_func0_alias_context_smallStep_wp
         Wasm.SmallStep.Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hruntime, Hresources⟩
   simp only [func0]
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_const
-  iapply Wasm.SmallStep.twp_call «module» 1 func1Def
-    (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-  iintro Hruntime
+  wasm_twp_pures [twp_localGet twp_localGet twp_localGet twp_localGet twp_const]
+  wasm_twp_rebind Wasm.SmallStep.twp_call «module» 1 func1Def
+    (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp only [func1Def, Function.toLocals, Function.numParams,
     List.length_cons, List.length_nil, Nat.reduceAdd, List.take, List.drop,
     List.reverse_cons, List.reverse_nil, List.nil_append,
     List.cons_append, List.map, ValueType.zero]
-  iapply twp_func1_alias_context_smallStep_wp R
-    ptr len i oldScratch oldValue hi hroom _
-  · iintro ⟨HR, Hruntime, Hmem⟩
-    iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
-    iintro Hruntime
-    simp only [List.take, List.nil_append]
-    iapply hreturn
-    iframe
-  · iframe
+  iapply_then_frame twp_func1_alias_context_smallStep_wp R
+      ptr len i oldScratch oldValue hi hroom _ =>
+    iintro ⟨HR, Hruntime, Hmem⟩
+    wasm_twp_return_from_call Hruntime [List.take, List.nil_append]
+    iapply_frame hreturn
 
 theorem twp_func0_alias_smallStep_wp
     [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
@@ -2220,9 +1663,7 @@ theorem twp_func0_alias_smallStep_wp
     iapply Wasm.SmallStep.twp_returnFromFunction
     simp only [List.take, List.nil_append]
     iapply twp.value rfl
-    isplitr
-    · ipureintro
-      rfl
+    isplitr_pureexact rfl
     · iexact Hresources
   · isplitr
     · itrivial
@@ -2257,9 +1698,7 @@ theorem twp_func0_happy_smallStep_wp
   iapply Wasm.SmallStep.twp_returnFromFunction
   simp only [List.take, List.nil_append]
   iapply twp.value rfl
-  isplitr
-  · ipureintro
-    rfl
+  isplitr_pureexact rfl
   · iexact Hresources
   · isplitr
     · itrivial
@@ -2306,22 +1745,16 @@ theorem twp_func3_context_smallStep_wp
         Wasm.SmallStep.Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hptr, Hlen⟩
   simp only [func3]
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   ihave Hlen' :
       pointsTo_u32 0 ((1048568 : UInt32) + 4) oldLen $$ [Hlen]
-  · rw [show (1048568 : UInt32) + 4 = 1048572 from rfl]
-    iexact Hlen
-  iapply Wasm.SmallStep.twp_store32 oldLen rfl rfl rfl rfl $$ Hlen'
-  iintro Hlen
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
+  · irw_exact [show (1048568 : UInt32) + 4 = 1048572 from rfl] with Hlen
+  wasm_twp_bind Wasm.SmallStep.twp_store32 oldLen rfl rfl rfl rfl with Hlen' => Hlen
+  wasm_twp_pures [twp_localGet twp_localGet]
   ihave Hptr' :
       pointsTo_u32 0 ((1048568 : UInt32) + 0) oldPtr $$ [Hptr]
-  · rw [UInt32.add_zero]
-    iexact Hptr
-  iapply Wasm.SmallStep.twp_store32 oldPtr rfl rfl rfl rfl $$ Hptr'
-  iintro Hptr
+  · irw_exact [UInt32.add_zero] with Hptr
+  wasm_twp_bind Wasm.SmallStep.twp_store32 oldPtr rfl rfl rfl rfl with Hptr' => Hptr
   iapply hreturn
   rw [UInt32.add_zero,
     ← show (1048568 : UInt32) + 4 = 1048572 from rfl]
@@ -2370,29 +1803,18 @@ theorem twp_func4_happy_smallStep_wp
         pointsTo_u64 0 ((j <<< (3 % 32)) + ptr) oldA }] := by
   iintro ⟨Hruntime, Hglobal, Hscratch, HspillPtr, HspillLen, HA, HB⟩
   simp only [func4]
-  iapply Wasm.SmallStep.twp_globalGet $$ Hglobal
-  iintro Hglobal
-  iapply Wasm.SmallStep.twp_const
-  iapply Wasm.SmallStep.twp_sub
-  iapply Wasm.SmallStep.twp_localSet rfl
+  wasm_twp_rebind Wasm.SmallStep.twp_globalGet with Hglobal
+  wasm_twp_pures [twp_const twp_sub twp_localSet]
   simp only [UInt32.reduceSub, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set]
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_globalSet $$ Hglobal
-  iintro Hglobal
-  iapply Wasm.SmallStep.twp_const
-  iapply Wasm.SmallStep.twp_localSet rfl
+  wasm_twp_pures [twp_localGet]
+  wasm_twp_rebind Wasm.SmallStep.twp_globalSet with Hglobal
+  wasm_twp_pures [twp_const twp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_const
-  iapply Wasm.SmallStep.twp_add
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_call «module» 3 func3Def
-    (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-  iintro Hruntime
+  wasm_twp_pures [twp_localGet twp_const twp_add twp_localGet twp_localGet twp_localGet]
+  wasm_twp_rebind Wasm.SmallStep.twp_call «module» 3 func3Def
+    (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func3Def, Function.toLocals, Function.numParams]
   iapply twp_func3_context_smallStep_wp
     (iprop% runtimeModuleOwn ⟨0⟩ «module» ∗ globalPointsToAt 0 0 (.i32 1048560) ∗
@@ -2402,56 +1824,38 @@ theorem twp_func4_happy_smallStep_wp
     oldSpillPtr oldSpillLen ptr len _
   · iintro ⟨Hrest, HspillPtr, HspillLen⟩
     icases Hrest with ⟨Hruntime, Hglobal, Hscratch, HA, HB⟩
-    iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
-    iintro Hruntime
-    simp only [List.take, List.nil_append]
-    iapply Wasm.SmallStep.twp_localGet rfl
+    wasm_twp_return_from_call Hruntime [List.take, List.nil_append]
+    wasm_twp_pures [twp_localGet]
     ihave HspillLen' :
         pointsTo_u32 0 ((1048560 : UInt32) + 12) len $$ [HspillLen]
-    · rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
-      iexact HspillLen
-    iapply Wasm.SmallStep.twp_load32 len
-      (by decide) (by decide) (by decide) (by decide) $$ HspillLen'
-    iintro HspillLen
-    iapply Wasm.SmallStep.twp_localSet rfl
-    simp only [List.length_cons, List.length_nil, Nat.reduceAdd,
-      Nat.reduceSub, List.set]
-    iapply Wasm.SmallStep.twp_localGet rfl
+    · irw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with HspillLen
+    wasm_twp_bind Wasm.SmallStep.twp_load32 len
+      (by decide) (by decide) (by decide) (by decide) with HspillLen' => HspillLen
+    wasm_twp_localSet
+    wasm_twp_pures [twp_localGet]
     ihave HspillPtr' :
         pointsTo_u32 0 ((1048560 : UInt32) + 8) ptr $$ [HspillPtr]
-    · rw [show (1048560 : UInt32) + 8 = 1048568 by decide]
-      iexact HspillPtr
-    iapply Wasm.SmallStep.twp_load32 ptr
-      (by decide) (by decide) (by decide) (by decide) $$ HspillPtr'
-    iintro HspillPtr
-    iapply Wasm.SmallStep.twp_localGet rfl
-    iapply Wasm.SmallStep.twp_localGet rfl
-    iapply Wasm.SmallStep.twp_localGet rfl
-    iapply Wasm.SmallStep.twp_call «module» 0 func0Def
-      (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-    iintro Hruntime
+    · irw_exact [show (1048560 : UInt32) + 8 = 1048568 by decide] with HspillPtr
+    wasm_twp_bind Wasm.SmallStep.twp_load32 ptr
+      (by decide) (by decide) (by decide) (by decide) with HspillPtr' => HspillPtr
+    wasm_twp_pures [twp_localGet twp_localGet twp_localGet]
+    wasm_twp_rebind Wasm.SmallStep.twp_call «module» 0 func0Def
+      (by simp [«module»]) (by simp [«module»]) with Hruntime
     simp [func0Def, Function.toLocals, Function.numParams]
     iapply twp_func0_happy_context_smallStep_wp
       (iprop% pointsTo_u32 0 1048568 ptr ∗ pointsTo_u32 0 1048572 len)
       ptr len i j oldScratch oldA oldB hi hj hroomI hroomJ _
     · iintro ⟨⟨HspillPtr, HspillLen⟩,
         Hruntime, Hglobal, Hscratch, HA, HB⟩
-      iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
-      iintro Hruntime
-      simp only [List.take, List.nil_append]
-      iapply Wasm.SmallStep.twp_localGet rfl
-      iapply Wasm.SmallStep.twp_const
-      iapply Wasm.SmallStep.twp_add
-      iapply Wasm.SmallStep.twp_globalSet $$ Hglobal
-      iintro Hglobal
+      wasm_twp_return_from_call Hruntime [List.take, List.nil_append]
+      wasm_twp_pures [twp_localGet twp_const twp_add]
+      wasm_twp_rebind Wasm.SmallStep.twp_globalSet with Hglobal
       rw [show (16 : UInt32) + 1048560 = 1048576 by decide]
       rw [show (3 % 32 : UInt32) = 3 by decide]
       iapply Wasm.SmallStep.twp_returnFromFunction
       simp only [List.take, List.nil_append]
       iapply twp.value rfl
-      isplitr
-      · ipureintro
-        rfl
+      isplitr_pureexact rfl
       · iframe
     · rw [show (3 % 32 : UInt32) = 3 by decide]
       iframe
@@ -2484,29 +1888,18 @@ theorem twp_func4_alias_smallStep_wp
         pointsTo_u64 0 ((i <<< (3 % 32)) + ptr) oldValue }] := by
   iintro ⟨Hruntime, Hglobal, Hscratch, HspillPtr, HspillLen, Hcell⟩
   simp only [func4]
-  iapply Wasm.SmallStep.twp_globalGet $$ Hglobal
-  iintro Hglobal
-  iapply Wasm.SmallStep.twp_const
-  iapply Wasm.SmallStep.twp_sub
-  iapply Wasm.SmallStep.twp_localSet rfl
+  wasm_twp_rebind Wasm.SmallStep.twp_globalGet with Hglobal
+  wasm_twp_pures [twp_const twp_sub twp_localSet]
   simp only [UInt32.reduceSub, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set]
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_globalSet $$ Hglobal
-  iintro Hglobal
-  iapply Wasm.SmallStep.twp_const
-  iapply Wasm.SmallStep.twp_localSet rfl
+  wasm_twp_pures [twp_localGet]
+  wasm_twp_rebind Wasm.SmallStep.twp_globalSet with Hglobal
+  wasm_twp_pures [twp_const twp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_const
-  iapply Wasm.SmallStep.twp_add
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_call «module» 3 func3Def
-    (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-  iintro Hruntime
+  wasm_twp_pures [twp_localGet twp_const twp_add twp_localGet twp_localGet twp_localGet]
+  wasm_twp_rebind Wasm.SmallStep.twp_call «module» 3 func3Def
+    (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func3Def, Function.toLocals, Function.numParams]
   iapply twp_func3_context_smallStep_wp
     (iprop% runtimeModuleOwn ⟨0⟩ «module» ∗ globalPointsToAt 0 0 (.i32 1048560) ∗
@@ -2515,56 +1908,38 @@ theorem twp_func4_alias_smallStep_wp
     oldSpillPtr oldSpillLen ptr len _
   · iintro ⟨Hrest, HspillPtr, HspillLen⟩
     icases Hrest with ⟨Hruntime, Hglobal, Hscratch, Hcell⟩
-    iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
-    iintro Hruntime
-    simp only [List.take, List.nil_append]
-    iapply Wasm.SmallStep.twp_localGet rfl
+    wasm_twp_return_from_call Hruntime [List.take, List.nil_append]
+    wasm_twp_pures [twp_localGet]
     ihave HspillLen' :
         pointsTo_u32 0 ((1048560 : UInt32) + 12) len $$ [HspillLen]
-    · rw [show (1048560 : UInt32) + 12 = 1048572 by decide]
-      iexact HspillLen
-    iapply Wasm.SmallStep.twp_load32 len
-      (by decide) (by decide) (by decide) (by decide) $$ HspillLen'
-    iintro HspillLen
-    iapply Wasm.SmallStep.twp_localSet rfl
-    simp only [List.length_cons, List.length_nil, Nat.reduceAdd,
-      Nat.reduceSub, List.set]
-    iapply Wasm.SmallStep.twp_localGet rfl
+    · irw_exact [show (1048560 : UInt32) + 12 = 1048572 by decide] with HspillLen
+    wasm_twp_bind Wasm.SmallStep.twp_load32 len
+      (by decide) (by decide) (by decide) (by decide) with HspillLen' => HspillLen
+    wasm_twp_localSet
+    wasm_twp_pures [twp_localGet]
     ihave HspillPtr' :
         pointsTo_u32 0 ((1048560 : UInt32) + 8) ptr $$ [HspillPtr]
-    · rw [show (1048560 : UInt32) + 8 = 1048568 by decide]
-      iexact HspillPtr
-    iapply Wasm.SmallStep.twp_load32 ptr
-      (by decide) (by decide) (by decide) (by decide) $$ HspillPtr'
-    iintro HspillPtr
-    iapply Wasm.SmallStep.twp_localGet rfl
-    iapply Wasm.SmallStep.twp_localGet rfl
-    iapply Wasm.SmallStep.twp_localGet rfl
-    iapply Wasm.SmallStep.twp_call «module» 0 func0Def
-      (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-    iintro Hruntime
+    · irw_exact [show (1048560 : UInt32) + 8 = 1048568 by decide] with HspillPtr
+    wasm_twp_bind Wasm.SmallStep.twp_load32 ptr
+      (by decide) (by decide) (by decide) (by decide) with HspillPtr' => HspillPtr
+    wasm_twp_pures [twp_localGet twp_localGet twp_localGet]
+    wasm_twp_rebind Wasm.SmallStep.twp_call «module» 0 func0Def
+      (by simp [«module»]) (by simp [«module»]) with Hruntime
     simp [func0Def, Function.toLocals, Function.numParams]
     iapply twp_func0_alias_context_smallStep_wp
       (iprop% pointsTo_u32 0 1048568 ptr ∗ pointsTo_u32 0 1048572 len)
       ptr len i oldScratch oldValue hi hroom _
     · iintro ⟨⟨HspillPtr, HspillLen⟩,
         Hruntime, Hglobal, Hscratch, Hcell⟩
-      iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hruntime
-      iintro Hruntime
-      simp only [List.take, List.nil_append]
-      iapply Wasm.SmallStep.twp_localGet rfl
-      iapply Wasm.SmallStep.twp_const
-      iapply Wasm.SmallStep.twp_add
-      iapply Wasm.SmallStep.twp_globalSet $$ Hglobal
-      iintro Hglobal
+      wasm_twp_return_from_call Hruntime [List.take, List.nil_append]
+      wasm_twp_pures [twp_localGet twp_const twp_add]
+      wasm_twp_rebind Wasm.SmallStep.twp_globalSet with Hglobal
       rw [show (16 : UInt32) + 1048560 = 1048576 by decide]
       rw [show (3 % 32 : UInt32) = 3 by decide]
       iapply Wasm.SmallStep.twp_returnFromFunction
       simp only [List.take, List.nil_append]
       iapply twp.value rfl
-      isplitr
-      · ipureintro
-        rfl
+      isplitr_pureexact rfl
       · iframe
     · rw [show (3 % 32 : UInt32) = 3 by decide]
       iframe
@@ -2619,39 +1994,10 @@ theorem func4_distinct_store_partiallyMeets
           store.wasm.mem.read64 ((j <<< (3 % 32)) + ptr) = oldA) := by
   let addressI := (i <<< (3 % 32)) + ptr
   let addressJ := (j <<< (3 % 32)) + ptr
-  have hroomI' : addressI.toNat + 8 ≤ 4294967296 := by
-    simpa [addressI] using hroomI
-  have hroomJ' : addressJ.toNat + 8 ≤ 4294967296 := by
-    simpa [addressJ] using hroomJ
-  have hi1 : (addressI + 1).toNat = addressI.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 1
-      (by omega) (by omega)
-  have hi2 : (addressI + 2).toNat = addressI.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 2 (by omega) (by omega)
-  have hi3 : (addressI + 3).toNat = addressI.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 3 (by omega) (by omega)
-  have hi4 : (addressI + 4).toNat = addressI.toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 4 (by omega) (by omega)
-  have hi5 : (addressI + 5).toNat = addressI.toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 5 (by omega) (by omega)
-  have hi6 : (addressI + 6).toNat = addressI.toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 6 (by omega) (by omega)
-  have hi7 : (addressI + 7).toNat = addressI.toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 7 (by omega) (by omega)
-  have hj1 : (addressJ + 1).toNat = addressJ.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 1 (by omega) (by omega)
-  have hj2 : (addressJ + 2).toNat = addressJ.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 2 (by omega) (by omega)
-  have hj3 : (addressJ + 3).toNat = addressJ.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 3 (by omega) (by omega)
-  have hj4 : (addressJ + 4).toNat = addressJ.toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 4 (by omega) (by omega)
-  have hj5 : (addressJ + 5).toNat = addressJ.toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 5 (by omega) (by omega)
-  have hj6 : (addressJ + 6).toNat = addressJ.toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 6 (by omega) (by omega)
-  have hj7 : (addressJ + 7).toNat = addressJ.toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 7 (by omega) (by omega)
+  have hroomI' : addressI.toNat + 8 ≤ 4294967296 := by simpa [addressI] using hroomI
+  have hroomJ' : addressJ.toNat + 8 ≤ 4294967296 := by simpa [addressJ] using hroomJ
+  obtain ⟨hi1, hi2, hi3, hi4, hi5, hi6, hi7⟩ := UInt32.addSteps8 addressI hroomI'
+  obtain ⟨hj1, hj2, hj3, hj4, hj5, hj6, hj7⟩ := UInt32.addSteps8 addressJ hroomJ'
   apply
     Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_store_partiallyMeets
       (α := Unit) (σ := σ) (globalσ := globalσ)
@@ -2687,8 +2033,7 @@ theorem func4_distinct_store_partiallyMeets
       imod Wasm.SmallStep.stateInterp_pointsTo_u64_facts
         store 0 [] 0 addressJ oldA hj1 hj2 hj3 hj4 hj5 hj6 hj7 $$
           [$Hstate $HB] with %HfactsJ
-      ipureintro
-      exact ⟨hvalues, HfactsI.1, HfactsJ.1⟩
+      ipureexact ⟨hvalues, HfactsI.1, HfactsJ.1⟩
     iapply wp_mono hpost
     iapply func4_happy_smallStep_wp
       ptr len i j oldSpillPtr oldSpillLen oldScratch oldA oldB
@@ -2727,22 +2072,8 @@ theorem func4_alias_store_partiallyMeets
         values = [] ∧
           store.wasm.mem.read64 ((i <<< (3 % 32)) + ptr) = oldValue) := by
   let address := (i <<< (3 % 32)) + ptr
-  have hroom' : address.toNat + 8 ≤ 4294967296 := by
-    simpa [address] using hroom
-  have h1 : (address + 1).toNat = address.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap address 1 (by omega) (by omega)
-  have h2 : (address + 2).toNat = address.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap address 2 (by omega) (by omega)
-  have h3 : (address + 3).toNat = address.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap address 3 (by omega) (by omega)
-  have h4 : (address + 4).toNat = address.toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap address 4 (by omega) (by omega)
-  have h5 : (address + 5).toNat = address.toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap address 5 (by omega) (by omega)
-  have h6 : (address + 6).toNat = address.toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap address 6 (by omega) (by omega)
-  have h7 : (address + 7).toNat = address.toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap address 7 (by omega) (by omega)
+  have hroom' : address.toNat + 8 ≤ 4294967296 := by simpa [address] using hroom
+  obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := UInt32.addSteps8 address hroom'
   apply
     Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_store_partiallyMeets
       (α := Unit) (σ := σ) (globalσ := globalσ)
@@ -2775,8 +2106,7 @@ theorem func4_alias_store_partiallyMeets
       imod Wasm.SmallStep.stateInterp_pointsTo_u64_facts
         store 0 [] 0 address oldValue h1 h2 h3 h4 h5 h6 h7 $$
           [$Hstate $Hcell] with %Hfacts
-      ipureintro
-      exact ⟨hvalues, Hfacts.1⟩
+      ipureexact ⟨hvalues, Hfacts.1⟩
     iapply wp_mono hpost
     iapply func4_alias_smallStep_wp
       ptr len i oldSpillPtr oldSpillLen oldScratch oldValue hi hroom
@@ -2817,39 +2147,10 @@ theorem func4_distinct_store_terminatesWith
           store.wasm.mem.read64 ((j <<< (3 % 32)) + ptr) = oldA) := by
   let addressI := (i <<< (3 % 32)) + ptr
   let addressJ := (j <<< (3 % 32)) + ptr
-  have hroomI' : addressI.toNat + 8 ≤ 4294967296 := by
-    simpa [addressI] using hroomI
-  have hroomJ' : addressJ.toNat + 8 ≤ 4294967296 := by
-    simpa [addressJ] using hroomJ
-  have hi1 : (addressI + 1).toNat = addressI.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 1
-      (by omega) (by omega)
-  have hi2 : (addressI + 2).toNat = addressI.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 2 (by omega) (by omega)
-  have hi3 : (addressI + 3).toNat = addressI.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 3 (by omega) (by omega)
-  have hi4 : (addressI + 4).toNat = addressI.toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 4 (by omega) (by omega)
-  have hi5 : (addressI + 5).toNat = addressI.toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 5 (by omega) (by omega)
-  have hi6 : (addressI + 6).toNat = addressI.toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 6 (by omega) (by omega)
-  have hi7 : (addressI + 7).toNat = addressI.toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 7 (by omega) (by omega)
-  have hj1 : (addressJ + 1).toNat = addressJ.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 1 (by omega) (by omega)
-  have hj2 : (addressJ + 2).toNat = addressJ.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 2 (by omega) (by omega)
-  have hj3 : (addressJ + 3).toNat = addressJ.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 3 (by omega) (by omega)
-  have hj4 : (addressJ + 4).toNat = addressJ.toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 4 (by omega) (by omega)
-  have hj5 : (addressJ + 5).toNat = addressJ.toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 5 (by omega) (by omega)
-  have hj6 : (addressJ + 6).toNat = addressJ.toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 6 (by omega) (by omega)
-  have hj7 : (addressJ + 7).toNat = addressJ.toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 7 (by omega) (by omega)
+  have hroomI' : addressI.toNat + 8 ≤ 4294967296 := by simpa [addressI] using hroomI
+  have hroomJ' : addressJ.toNat + 8 ≤ 4294967296 := by simpa [addressJ] using hroomJ
+  obtain ⟨hi1, hi2, hi3, hi4, hi5, hi6, hi7⟩ := UInt32.addSteps8 addressI hroomI'
+  obtain ⟨hj1, hj2, hj3, hj4, hj5, hj6, hj7⟩ := UInt32.addSteps8 addressJ hroomJ'
   apply
     Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_store_terminates
       (α := Unit) (σ := σ) (globalσ := globalσ)
@@ -2885,8 +2186,7 @@ theorem func4_distinct_store_terminatesWith
       imod Wasm.SmallStep.stateInterp_pointsTo_u64_facts
         store 0 [] 0 addressJ oldA hj1 hj2 hj3 hj4 hj5 hj6 hj7 $$
           [$Hstate $HB] with %HfactsJ
-      ipureintro
-      exact ⟨hvalues, HfactsI.1, HfactsJ.1⟩
+      ipureexact ⟨hvalues, HfactsI.1, HfactsJ.1⟩
     iapply twp.mono hpost
     iapply twp_func4_happy_smallStep_wp
       ptr len i j oldSpillPtr oldSpillLen oldScratch oldA oldB
@@ -2924,22 +2224,8 @@ theorem func4_alias_store_terminatesWith
         values = [] ∧
           store.wasm.mem.read64 ((i <<< (3 % 32)) + ptr) = oldValue) := by
   let address := (i <<< (3 % 32)) + ptr
-  have hroom' : address.toNat + 8 ≤ 4294967296 := by
-    simpa [address] using hroom
-  have h1 : (address + 1).toNat = address.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap address 1 (by omega) (by omega)
-  have h2 : (address + 2).toNat = address.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap address 2 (by omega) (by omega)
-  have h3 : (address + 3).toNat = address.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap address 3 (by omega) (by omega)
-  have h4 : (address + 4).toNat = address.toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap address 4 (by omega) (by omega)
-  have h5 : (address + 5).toNat = address.toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap address 5 (by omega) (by omega)
-  have h6 : (address + 6).toNat = address.toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap address 6 (by omega) (by omega)
-  have h7 : (address + 7).toNat = address.toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap address 7 (by omega) (by omega)
+  have hroom' : address.toNat + 8 ≤ 4294967296 := by simpa [address] using hroom
+  obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := UInt32.addSteps8 address hroom'
   apply
     Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_store_terminates
       (α := Unit) (σ := σ) (globalσ := globalσ)
@@ -2972,8 +2258,7 @@ theorem func4_alias_store_terminatesWith
       imod Wasm.SmallStep.stateInterp_pointsTo_u64_facts
         store 0 [] 0 address oldValue h1 h2 h3 h4 h5 h6 h7 $$
           [$Hstate $Hcell] with %Hfacts
-      ipureintro
-      exact ⟨hvalues, Hfacts.1⟩
+      ipureexact ⟨hvalues, Hfacts.1⟩
     iapply twp.mono hpost
     iapply twp_func4_alias_smallStep_wp
       ptr len i oldSpillPtr oldSpillLen oldScratch oldValue hi hroom
@@ -2993,58 +2278,32 @@ def func3Config (ptr len : UInt32) : Wasm.SmallStep.Config Unit :=
 def func3Heap : WasmHeapMap (Option UInt8) :=
   store32Heap (store32Heap ∅ 0 1048568 0) 0 1048572 0
 
-private def func3Mem (memory : Mem) : Mem :=
-  (memory.write32 1048568 0).write32 1048572 0
-
-private theorem func3_initialMem_eq :
-    func3Mem («module».initialStore : Store Unit).mem =
-      («module».initialStore : Store Unit).mem := by
-  unfold func3Mem
-  rw [Mem.write32_eq_self (by decide) (by decide) (by decide) (by decide)]
-  rw [Mem.write32_eq_self (by decide) (by decide) (by decide) (by decide)]
-
 theorem func3Heap_agrees (ptr len : UInt32) :
     heapAgreesWithMem func3Heap (storeResolve (func3Config ptr len).store) := by
+  let mem := («module».initialStore : Store Unit).mem
+  let resolve := storeResolve (func3Config ptr len).store
+  have hresolve : resolve 0 = some mem := rfl
   unfold func3Heap
-  have h := store32_sound0 (store32Heap ∅ 0 1048568 0)
-      ((«module».initialStore : Store Unit).mem.write32 1048568 0) 1048572 0
-      (by decide) (by decide) (by decide)
-      (store32_sound0 ∅ («module».initialStore : Store Unit).mem 1048568 0
-          (by decide) (by decide) (by decide)
-          (heapAgreesWithMem_empty _))
-  rw [show ((«module».initialStore : Store Unit).mem.write32 1048568 0).write32 1048572 0 =
-      («module».initialStore : Store Unit).mem from by
-    have := func3_initialMem_eq; unfold func3Mem at this; exact this] at h
-  have hresolveEq : (fun id : Nat => if id = 0 then some («module».initialStore : Store Unit).mem else none) =
-      storeResolve (func3Config ptr len).store := by
-    funext id; by_cases h0 : id = 0
-    · simp [h0, storeResolve, func3Config]
-    · simp [h0, storeResolve, func3Config,
-        show («module».initialStore : Store Unit).extraMems = [] from by native_decide]
-  rw [← hresolveEq]
-  exact h
+  apply_insert_physical_word32_sound hresolve
+  · apply_insert_physical_word32_sound hresolve
+    · exact heapAgreesWithMem_empty _
+    · decide
+  · decide
 
 theorem func3Heap_inBounds (ptr len : UInt32) :
     heapAddressesInBounds func3Heap
       (storeResolve (func3Config ptr len).store) := by
+  let mem := («module».initialStore : Store Unit).mem
+  let resolve := storeResolve (func3Config ptr len).store
+  have hresolve : resolve 0 = some mem := rfl
   unfold func3Heap
-  have h := store32_inBounds0 (store32Heap ∅ 0 1048568 0)
-      ((«module».initialStore : Store Unit).mem.write32 1048568 0) 1048572 0
-      (by decide) (by decide) (by decide) (by decide)
-      (store32_inBounds0 ∅ («module».initialStore : Store Unit).mem 1048568 0
-          (by decide) (by decide) (by decide) (by decide)
-          (heapAddressesInBounds_empty _))
-  rw [show ((«module».initialStore : Store Unit).mem.write32 1048568 0).write32 1048572 0 =
-      («module».initialStore : Store Unit).mem from by
-    have := func3_initialMem_eq; unfold func3Mem at this; exact this] at h
-  have hresolveEq : (fun id : Nat => if id = 0 then some («module».initialStore : Store Unit).mem else none) =
-      storeResolve (func3Config ptr len).store := by
-    funext id; by_cases h0 : id = 0
-    · simp [h0, storeResolve, func3Config]
-    · simp [h0, storeResolve, func3Config,
-        show («module».initialStore : Store Unit).extraMems = [] from by native_decide]
-  rw [← hresolveEq]
-  exact h
+  apply_insert_physical_word32_inBounds hresolve
+  · apply_insert_physical_word32_inBounds hresolve
+    · exact heapAddressesInBounds_empty _
+    · decide
+    · decide
+  · decide
+  · decide
 
 theorem func3Heap_pointsTo [WasmHeapGS Unit] :
     ([∗map] address ↦ value ∈ func3Heap,
@@ -3053,16 +2312,14 @@ theorem func3Heap_pointsTo [WasmHeapGS Unit] :
       pointsTo_u32 0 1048568 0 ∗ pointsTo_u32 0 1048572 0 := by
   unfold func3Heap
   iintro Hheap
-  ihave Houter := store32Heap_pointsTo
+  ihave ⟨Hlen, Hheap⟩ := store32Heap_pointsTo
     (store32Heap ∅ 0 1048568 0) 0 1048572 0
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) $$ Hheap
-  icases Houter with ⟨Hlen, Hheap⟩
-  ihave Hinner := store32Heap_pointsTo
+  ihave ⟨Hptr, Hempty⟩ := store32Heap_pointsTo
     (∅ : WasmHeapMap (Option UInt8)) 0 1048568 0
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) $$ Hheap
-  icases Hinner with ⟨Hptr, Hempty⟩
   iframe
 
 /-- The spill helper's existing instruction proof, closed through iris-lean
@@ -3078,16 +2335,14 @@ theorem func3_smallStep (ptr len : UInt32) :
   · exact func3Heap_inBounds ptr len
   · intro gs
     iintro Hheap
-    ihave Hwords := func3Heap_pointsTo $$ Hheap
-    icases Hwords with ⟨Hptr, Hlen⟩
+    ihave ⟨Hptr, Hlen⟩ := func3Heap_pointsTo $$ Hheap
     have hpost : ∀ values : List Value,
         (iprop% ⌜values = []⌝ ∗
           pointsTo_u32 0 1048568 ptr ∗ pointsTo_u32 0 1048572 len) ⊢
         (iprop% ⌜values = []⌝) := by
       intro values
       iintro ⟨%hvalues, _Hptr, _Hlen⟩
-      ipureintro
-      exact hvalues
+      ipureexact hvalues
     iapply wp_mono hpost
     simp only [func3Config]
     iapply func3_smallStep_wp (s := Stuckness.NotStuck) (E := ⊤)
@@ -3126,83 +2381,39 @@ theorem func4ExampleHeap_agrees :
     heapAgreesWithMem func4ExampleHeap
       (storeResolve func4ExampleConfig.store) := by
   unfold func4ExampleHeap
-  have h := store64_sound0
-      (store64Heap (store32Heap (store32Heap (store64Heap ∅ 0 1048552 0) 0 1048568 0) 0 1048572 0) 0 0 11)
-      (((( («module».initialStore : Store Unit).mem.write64 1048552 0).write32 1048568 0).write32 1048572 0).write64 0 11) 8 22
-      (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
-      (store64_sound0
-        (store32Heap (store32Heap (store64Heap ∅ 0 1048552 0) 0 1048568 0) 0 1048572 0)
-        ((( («module».initialStore : Store Unit).mem.write64 1048552 0).write32 1048568 0).write32 1048572 0) 0 11
-        (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
-        (store32_sound0
-          (store32Heap (store64Heap ∅ 0 1048552 0) 0 1048568 0)
-          (( («module».initialStore : Store Unit).mem.write64 1048552 0).write32 1048568 0) 1048572 0
-          (by decide) (by decide) (by decide)
-          (store32_sound0
-            (store64Heap ∅ 0 1048552 0)
-            ( («module».initialStore : Store Unit).mem.write64 1048552 0) 1048568 0
-            (by decide) (by decide) (by decide)
-            (store64_sound0 ∅ («module».initialStore : Store Unit).mem 1048552 0
-              (by decide) (by decide) (by decide) (by decide)
-              (by decide) (by decide) (by decide)
-              (heapAgreesWithMem_empty _)))))
-  have hresolveEq : (fun id : Nat => if id = 0 then some (func4ExampleMem («module».initialStore : Store Unit).mem) else none) =
-      storeResolve func4ExampleConfig.store := by
-    funext id; by_cases h0 : id = 0
-    · simp [h0, storeResolve, func4ExampleConfig, func4ExampleMem]
-    · simp [h0, storeResolve, func4ExampleConfig,
-        show («module».initialStore : Store Unit).extraMems = [] from by native_decide]
-  rw [← hresolveEq]
-  exact h
+  apply_insert_physical_word64_sound rfl
+  · apply_insert_physical_word64_sound rfl
+    · apply_insert_physical_word32_sound rfl
+      · apply_insert_physical_word32_sound rfl
+        · apply_insert_physical_word64_sound rfl
+          · exact heapAgreesWithMem_empty _
+          · decide +kernel
+        · decide +kernel
+      · decide +kernel
+    · decide +kernel
+  · decide +kernel
 
 theorem func4ExampleHeap_inBounds :
     heapAddressesInBounds func4ExampleHeap
       (storeResolve func4ExampleConfig.store) := by
   unfold func4ExampleHeap
-  have h := store64_inBounds0
-      (store64Heap (store32Heap (store32Heap (store64Heap ∅ 0 1048552 0) 0 1048568 0) 0 1048572 0) 0 0 11)
-      (((( («module».initialStore : Store Unit).mem.write64 1048552 0).write32 1048568 0).write32 1048572 0).write64 0 11) 8 22
-      (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide)
-      (store64_inBounds0
-        (store32Heap (store32Heap (store64Heap ∅ 0 1048552 0) 0 1048568 0) 0 1048572 0)
-        ((( («module».initialStore : Store Unit).mem.write64 1048552 0).write32 1048568 0).write32 1048572 0) 0 11
-        (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
-        (by decide)
-        (store32_inBounds0
-          (store32Heap (store64Heap ∅ 0 1048552 0) 0 1048568 0)
-          (( («module».initialStore : Store Unit).mem.write64 1048552 0).write32 1048568 0) 1048572 0
-          (by decide) (by decide) (by decide) (by decide)
-          (store32_inBounds0
-            (store64Heap ∅ 0 1048552 0)
-            ( («module».initialStore : Store Unit).mem.write64 1048552 0) 1048568 0
-            (by decide) (by decide) (by decide) (by decide)
-            (store64_inBounds0 ∅ («module».initialStore : Store Unit).mem 1048552 0
-              (by decide) (by decide) (by decide) (by decide)
-              (by decide) (by decide) (by decide)
-              (by decide)
-              (heapAddressesInBounds_empty _)))))
-  have hresolveEq : (fun id : Nat => if id = 0 then some (func4ExampleMem («module».initialStore : Store Unit).mem) else none) =
-      storeResolve func4ExampleConfig.store := by
-    funext id; by_cases h0 : id = 0
-    · simp [h0, storeResolve, func4ExampleConfig, func4ExampleMem]
-    · simp [h0, storeResolve, func4ExampleConfig,
-        show («module».initialStore : Store Unit).extraMems = [] from by native_decide]
-  rw [← hresolveEq]
-  exact h
+  apply_insert_physical_word64_inBounds rfl
+  · apply_insert_physical_word64_inBounds rfl
+    · apply_insert_physical_word32_inBounds rfl
+      · apply_insert_physical_word32_inBounds rfl
+        · apply_insert_physical_word64_inBounds rfl
+          · exact heapAddressesInBounds_empty _
+          · decide +kernel
+        · decide +kernel
+        · decide +kernel
+      · decide +kernel
+      · decide +kernel
+    · decide +kernel
+  · decide +kernel
 
 theorem func4ExampleGlobals_agree :
     globalHeapAgrees func4ExampleGlobals
-      func4ExampleConfig.store.wasm.globals := by
-  intro index value hget
-  simp only [func4ExampleGlobals] at hget
-  by_cases hindex : index = 0
-  · subst index
-    simp only [get?_insert_eq rfl] at hget
-    obtain rfl := Option.some.inj hget
-    rfl
-  · rw [get?_insert_ne (show (⟨0, 0⟩ : GlobalKey) ≠ ⟨0, index⟩ from fun h => hindex (congrArg GlobalKey.index h).symm), get?_empty] at hget
-    contradiction
+      func4ExampleConfig.store.wasm.globals := globalHeapAgrees_singleton rfl
 
 theorem func4ExampleHeap_pointsTo [WasmHeapGS Unit] :
     ([∗map] address ↦ value ∈ func4ExampleHeap,
@@ -3213,27 +2424,22 @@ theorem func4ExampleHeap_pointsTo [WasmHeapGS Unit] :
       pointsTo_u64 0 0 11 ∗ pointsTo_u64 0 8 22 := by
   unfold func4ExampleHeap
   iintro Hheap
-  ihave H8 := store64Heap_pointsTo _ 0 8 22
+  ihave ⟨H8, Hheap⟩ := store64Heap_pointsTo _ 0 8 22
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) (by decide) $$ Hheap
-  icases H8 with ⟨H8, Hheap⟩
-  ihave H0 := store64Heap_pointsTo _ 0 0 11
+  ihave ⟨H0, Hheap⟩ := store64Heap_pointsTo _ 0 0 11
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) (by decide) $$ Hheap
-  icases H0 with ⟨H0, Hheap⟩
-  ihave Hlen := store32Heap_pointsTo _ 0 1048572 0
+  ihave ⟨Hlen, Hheap⟩ := store32Heap_pointsTo _ 0 1048572 0
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) $$ Hheap
-  icases Hlen with ⟨Hlen, Hheap⟩
-  ihave Hptr := store32Heap_pointsTo _ 0 1048568 0
+  ihave ⟨Hptr, Hheap⟩ := store32Heap_pointsTo _ 0 1048568 0
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) $$ Hheap
-  icases Hptr with ⟨Hptr, Hheap⟩
-  ihave Hscratch := store64Heap_pointsTo
+  ihave ⟨Hscratch, Hempty⟩ := store64Heap_pointsTo
     (∅ : WasmHeapMap (Option UInt8)) 0 1048552 0
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) (by decide) $$ Hheap
-  icases Hscratch with ⟨Hscratch, Hempty⟩
   iframe
 
 theorem func4ExampleGlobals_pointsTo [WasmGlobalGS Unit] :
@@ -3243,8 +2449,7 @@ theorem func4ExampleGlobals_pointsTo [WasmGlobalGS Unit] :
   unfold func4ExampleGlobals
   rw [(BI.BigSepM.bigSepM_insert (get?_empty (⟨0, 0⟩ : GlobalKey))).to_eq,
     BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
-  simp only [globalPointsToAt_eq]
-  rfl
+  simp only [globalPointsToAt_eq]; rfl
 
 /-- The real exported swap executes under the authoritative small-step
 semantics on a concrete two-element array and returns normally. -/
@@ -3258,13 +2463,11 @@ theorem func4Example_smallStep :
   · exact func4ExampleHeap_agrees
   · exact func4ExampleHeap_inBounds
   · exact func4ExampleGlobals_agree
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [func4ExampleConfig, Wasm.SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hheap, Hglobals, Hruntime⟩
-    ihave Hwords := func4ExampleHeap_pointsTo $$ Hheap
+    ihave ⟨Hscratch, HspillPtr, HspillLen, H0, H8⟩ := func4ExampleHeap_pointsTo $$ Hheap
     ihave Hglobal := func4ExampleGlobals_pointsTo $$ Hglobals
-    icases Hwords with ⟨Hscratch, HspillPtr, HspillLen, H0, H8⟩
     have hpost : ∀ values : List Value,
         (iprop% ⌜values = []⌝ ∗
           globalPointsToAt 0 0 (.i32 1048576) ∗
@@ -3274,8 +2477,7 @@ theorem func4Example_smallStep :
         (iprop% ⌜values = []⌝) := by
       intro values
       iintro ⟨%hvalues, _Hresources⟩
-      ipureintro
-      exact hvalues
+      ipureexact hvalues
     iapply wp_mono hpost
     have hfunc4 := func4_happy_smallStep_wp
       (s := Stuckness.NotStuck) (E := ⊤)
@@ -3284,8 +2486,7 @@ theorem func4Example_smallStep :
     simp only [
       show ((0 : UInt32) <<< (3 % 32)) + 0 = 0 by decide,
       show ((1 : UInt32) <<< (3 % 32)) + 0 = 8 by decide] at hfunc4
-    iapply hfunc4
-    iframe
+    iapply_frame hfunc4
 
 /-- State-sensitive adequacy for the distinct-index export example proves
 both sides of the physical swap in the reached `MachineStore`. -/
@@ -3301,13 +2502,11 @@ theorem func4Example_store_smallStep :
   · exact func4ExampleHeap_agrees
   · exact func4ExampleHeap_inBounds
   · exact func4ExampleGlobals_agree
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [func4ExampleConfig, Wasm.SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hheap, Hglobals, Hruntime, _Henv⟩
-    ihave Hwords := func4ExampleHeap_pointsTo $$ Hheap
+    ihave ⟨Hscratch, HspillPtr, HspillLen, H0, H8⟩ := func4ExampleHeap_pointsTo $$ Hheap
     ihave Hglobal := func4ExampleGlobals_pointsTo $$ Hglobals
-    icases Hwords with ⟨Hscratch, HspillPtr, HspillLen, H0, H8⟩
     have hpost : ∀ values : List Value,
         (iprop% ⌜values = []⌝ ∗
           globalPointsToAt 0 0 (.i32 1048576) ∗
@@ -3333,8 +2532,7 @@ theorem func4Example_store_smallStep :
         (by decide) (by decide) (by decide) (by decide)
         (by decide) (by decide) (by decide) $$
           [$Hstate $H8] with %Hfacts8
-      ipureintro
-      exact ⟨hvalues, Hfacts0.1, Hfacts8.1⟩
+      ipureexact ⟨hvalues, Hfacts0.1, Hfacts8.1⟩
     iapply wp_mono hpost
     have hfunc4 := func4_happy_smallStep_wp
       (s := Stuckness.NotStuck) (E := ⊤)
@@ -3343,16 +2541,14 @@ theorem func4Example_store_smallStep :
     simp only [
       show ((0 : UInt32) <<< (3 % 32)) + 0 = 0 by decide,
       show ((1 : UInt32) <<< (3 % 32)) + 0 = 8 by decide] at hfunc4
-    iapply hfunc4
-    iframe
+    iapply_frame hfunc4
 
 /-- Executable finite-trace witness complementing the Iris partial-correctness
 proof for the distinct-index export example. -/
 theorem func4Example_terminates :
     Wasm.SmallStep.TerminatesWith func4ExampleConfig
-      (fun values _store => values = []) := by
-  apply Wasm.SmallStep.runSteps_values_terminates (fuel := 200)
-  native_decide
+      (fun values _store => values = []) :=
+  Wasm.SmallStep.runSteps_values_terminates (fuel := 200) (by decide +kernel)
 
 def func4AliasHeap : WasmHeapMap (Option UInt8) :=
   store64Heap
@@ -3379,61 +2575,31 @@ theorem func4AliasHeap_agrees :
     heapAgreesWithMem func4AliasHeap
       (storeResolve func4AliasConfig.store) := by
   unfold func4AliasHeap
-  have h := store64_sound0
-      (store32Heap (store32Heap (store64Heap ∅ 0 1048552 0) 0 1048568 0) 0 1048572 0)
-      ((( («module».initialStore : Store Unit).mem.write64 1048552 0).write32 1048568 0).write32 1048572 0) 0 42
-      (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
-      (store32_sound0
-        (store32Heap (store64Heap ∅ 0 1048552 0) 0 1048568 0)
-        (( («module».initialStore : Store Unit).mem.write64 1048552 0).write32 1048568 0) 1048572 0
-        (by decide) (by decide) (by decide)
-        (store32_sound0
-          (store64Heap ∅ 0 1048552 0)
-          ( («module».initialStore : Store Unit).mem.write64 1048552 0) 1048568 0
-          (by decide) (by decide) (by decide)
-          (store64_sound0 ∅ («module».initialStore : Store Unit).mem 1048552 0
-            (by decide) (by decide) (by decide) (by decide)
-            (by decide) (by decide) (by decide)
-            (heapAgreesWithMem_empty _))))
-  have hresolveEq : (fun id : Nat => if id = 0 then some (func4AliasMem («module».initialStore : Store Unit).mem) else none) =
-      storeResolve func4AliasConfig.store := by
-    funext id; by_cases h0 : id = 0
-    · simp [h0, storeResolve, func4AliasConfig, func4AliasMem]
-    · simp [h0, storeResolve, func4AliasConfig,
-        show («module».initialStore : Store Unit).extraMems = [] from by native_decide]
-  rw [← hresolveEq]
-  exact h
+  apply_insert_physical_word64_sound rfl
+  · apply_insert_physical_word32_sound rfl
+    · apply_insert_physical_word32_sound rfl
+      · apply_insert_physical_word64_sound rfl
+        · exact heapAgreesWithMem_empty _
+        · decide +kernel
+      · decide +kernel
+    · decide +kernel
+  · decide +kernel
 
 theorem func4AliasHeap_inBounds :
     heapAddressesInBounds func4AliasHeap
       (storeResolve func4AliasConfig.store) := by
   unfold func4AliasHeap
-  have h := store64_inBounds0
-      (store32Heap (store32Heap (store64Heap ∅ 0 1048552 0) 0 1048568 0) 0 1048572 0)
-      ((( («module».initialStore : Store Unit).mem.write64 1048552 0).write32 1048568 0).write32 1048572 0) 0 42
-      (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide)
-      (store32_inBounds0
-        (store32Heap (store64Heap ∅ 0 1048552 0) 0 1048568 0)
-        (( («module».initialStore : Store Unit).mem.write64 1048552 0).write32 1048568 0) 1048572 0
-        (by decide) (by decide) (by decide) (by decide)
-        (store32_inBounds0
-          (store64Heap ∅ 0 1048552 0)
-          ( («module».initialStore : Store Unit).mem.write64 1048552 0) 1048568 0
-          (by decide) (by decide) (by decide) (by decide)
-          (store64_inBounds0 ∅ («module».initialStore : Store Unit).mem 1048552 0
-            (by decide) (by decide) (by decide) (by decide)
-            (by decide) (by decide) (by decide)
-            (by decide)
-            (heapAddressesInBounds_empty _))))
-  have hresolveEq : (fun id : Nat => if id = 0 then some (func4AliasMem («module».initialStore : Store Unit).mem) else none) =
-      storeResolve func4AliasConfig.store := by
-    funext id; by_cases h0 : id = 0
-    · simp [h0, storeResolve, func4AliasConfig, func4AliasMem]
-    · simp [h0, storeResolve, func4AliasConfig,
-        show («module».initialStore : Store Unit).extraMems = [] from by native_decide]
-  rw [← hresolveEq]
-  exact h
+  apply_insert_physical_word64_inBounds rfl
+  · apply_insert_physical_word32_inBounds rfl
+    · apply_insert_physical_word32_inBounds rfl
+      · apply_insert_physical_word64_inBounds rfl
+        · exact heapAddressesInBounds_empty _
+        · decide +kernel
+      · decide +kernel
+      · decide +kernel
+    · decide +kernel
+    · decide +kernel
+  · decide +kernel
 
 theorem func4AliasHeap_pointsTo [WasmHeapGS Unit] :
     ([∗map] address ↦ value ∈ func4AliasHeap,
@@ -3444,23 +2610,19 @@ theorem func4AliasHeap_pointsTo [WasmHeapGS Unit] :
       pointsTo_u64 0 0 42 := by
   unfold func4AliasHeap
   iintro Hheap
-  ihave Hcell := store64Heap_pointsTo _ 0 0 42
+  ihave ⟨Hcell, Hheap⟩ := store64Heap_pointsTo _ 0 0 42
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) (by decide) $$ Hheap
-  icases Hcell with ⟨Hcell, Hheap⟩
-  ihave Hlen := store32Heap_pointsTo _ 0 1048572 0
+  ihave ⟨Hlen, Hheap⟩ := store32Heap_pointsTo _ 0 1048572 0
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) $$ Hheap
-  icases Hlen with ⟨Hlen, Hheap⟩
-  ihave Hptr := store32Heap_pointsTo _ 0 1048568 0
+  ihave ⟨Hptr, Hheap⟩ := store32Heap_pointsTo _ 0 1048568 0
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) $$ Hheap
-  icases Hptr with ⟨Hptr, Hheap⟩
-  ihave Hscratch := store64Heap_pointsTo
+  ihave ⟨Hscratch, Hempty⟩ := store64Heap_pointsTo
     (∅ : WasmHeapMap (Option UInt8)) 0 1048552 0
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) (by decide) $$ Hheap
-  icases Hscratch with ⟨Hscratch, Hempty⟩
   iframe
 
 /-- The exported wrapper also closes in the equal-index case from one array
@@ -3475,13 +2637,11 @@ theorem func4Alias_smallStep :
   · exact func4AliasHeap_agrees
   · exact func4AliasHeap_inBounds
   · exact func4ExampleGlobals_agree
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [func4AliasConfig, Wasm.SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hheap, Hglobals, Hruntime⟩
-    ihave Hwords := func4AliasHeap_pointsTo $$ Hheap
+    ihave ⟨Hscratch, HspillPtr, HspillLen, Hcell⟩ := func4AliasHeap_pointsTo $$ Hheap
     ihave Hglobal := func4ExampleGlobals_pointsTo $$ Hglobals
-    icases Hwords with ⟨Hscratch, HspillPtr, HspillLen, Hcell⟩
     have hpost : ∀ values : List Value,
         (iprop% ⌜values = []⌝ ∗
           globalPointsToAt 0 0 (.i32 1048576) ∗
@@ -3491,16 +2651,14 @@ theorem func4Alias_smallStep :
         (iprop% ⌜values = []⌝) := by
       intro values
       iintro ⟨%hvalues, _Hresources⟩
-      ipureintro
-      exact hvalues
+      ipureexact hvalues
     iapply wp_mono hpost
     have halias := func4_alias_smallStep_wp
       (s := Stuckness.NotStuck) (E := ⊤)
       0 1 0 0 0 0 42 (by decide) (by decide)
     simp only [
       show ((0 : UInt32) <<< (3 % 32)) + 0 = 0 by decide] at halias
-    iapply halias
-    iframe
+    iapply_frame halias
 
 /-- State-sensitive adequacy for the exported equal-index case: the physical
 array word in the reached `MachineStore` is unchanged. -/
@@ -3515,13 +2673,11 @@ theorem func4Alias_store_smallStep :
   · exact func4AliasHeap_agrees
   · exact func4AliasHeap_inBounds
   · exact func4ExampleGlobals_agree
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [func4AliasConfig, Wasm.SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hheap, Hglobals, Hruntime, _Henv⟩
-    ihave Hwords := func4AliasHeap_pointsTo $$ Hheap
+    ihave ⟨Hscratch, HspillPtr, HspillLen, Hcell⟩ := func4AliasHeap_pointsTo $$ Hheap
     ihave Hglobal := func4ExampleGlobals_pointsTo $$ Hglobals
-    icases Hwords with ⟨Hscratch, HspillPtr, HspillLen, Hcell⟩
     have hpost : ∀ values : List Value,
         (iprop% ⌜values = []⌝ ∗
           globalPointsToAt 0 0 (.i32 1048576) ∗
@@ -3541,23 +2697,20 @@ theorem func4Alias_store_smallStep :
         (by decide) (by decide) (by decide) (by decide)
         (by decide) (by decide) (by decide) $$
           [$Hstate $Hcell] with %Hfacts
-      ipureintro
-      exact ⟨hvalues, Hfacts.1⟩
+      ipureexact ⟨hvalues, Hfacts.1⟩
     iapply wp_mono hpost
     have halias := func4_alias_smallStep_wp
       (s := Stuckness.NotStuck) (E := ⊤)
       0 1 0 0 0 0 42 (by decide) (by decide)
     simp only [
       show ((0 : UInt32) <<< (3 % 32)) + 0 = 0 by decide] at halias
-    iapply halias
-    iframe
+    iapply_frame halias
 
 /-- Executable finite-trace witness for the equal-index export example. -/
 theorem func4Alias_terminates :
     Wasm.SmallStep.TerminatesWith func4AliasConfig
-      (fun values _store => values = []) := by
-  apply Wasm.SmallStep.runSteps_values_terminates (fuel := 200)
-  native_decide
+      (fun values _store => values = []) :=
+  Wasm.SmallStep.runSteps_values_terminates (fuel := 200) (by decide +kernel)
 
 /-! ## Closed equal-index example -/
 
@@ -3583,58 +2736,25 @@ theorem func0AliasHeap_agrees :
     heapAgreesWithMem func0AliasHeap
       (storeResolve func0AliasConfig.store) := by
   unfold func0AliasHeap
-  have h := store64_sound0
-      (store64Heap ∅ 0 1048552 0)
-      ( («module».initialStore : Store Unit).mem.write64 1048552 0) 0 42
-      (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
-      (store64_sound0 ∅ («module».initialStore : Store Unit).mem 1048552 0
-        (by decide) (by decide) (by decide) (by decide)
-        (by decide) (by decide) (by decide)
-        (heapAgreesWithMem_empty _))
-  have hresolveEq : (fun id : Nat => if id = 0 then some (((«module».initialStore : Store Unit).mem.write64 1048552 0).write64 0 42) else none) =
-      storeResolve func0AliasConfig.store := by
-    funext id; by_cases h0 : id = 0
-    · simp [h0, storeResolve, func0AliasConfig]
-    · simp [h0, storeResolve, func0AliasConfig,
-        show («module».initialStore : Store Unit).extraMems = [] from by native_decide]
-  rw [← hresolveEq]
-  exact h
+  apply_insert_physical_word64_sound rfl
+  · apply_insert_physical_word64_sound rfl
+    · exact heapAgreesWithMem_empty _
+    · decide +kernel
+  · decide +kernel
 
 theorem func0AliasHeap_inBounds :
     heapAddressesInBounds func0AliasHeap
       (storeResolve func0AliasConfig.store) := by
   unfold func0AliasHeap
-  have h := store64_inBounds0
-      (store64Heap ∅ 0 1048552 0)
-      ( («module».initialStore : Store Unit).mem.write64 1048552 0) 0 42
-      (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
-      (by decide)
-      (store64_inBounds0 ∅ («module».initialStore : Store Unit).mem 1048552 0
-        (by decide) (by decide) (by decide) (by decide)
-        (by decide) (by decide) (by decide)
-        (by decide)
-        (heapAddressesInBounds_empty _))
-  have hresolveEq : (fun id : Nat => if id = 0 then some (((«module».initialStore : Store Unit).mem.write64 1048552 0).write64 0 42) else none) =
-      storeResolve func0AliasConfig.store := by
-    funext id; by_cases h0 : id = 0
-    · simp [h0, storeResolve, func0AliasConfig]
-    · simp [h0, storeResolve, func0AliasConfig,
-        show («module».initialStore : Store Unit).extraMems = [] from by native_decide]
-  rw [← hresolveEq]
-  exact h
+  apply_insert_physical_word64_inBounds rfl
+  · apply_insert_physical_word64_inBounds rfl
+    · exact heapAddressesInBounds_empty _
+    · decide +kernel
+  · decide +kernel
 
 theorem func0AliasGlobals_agree :
     globalHeapAgrees func0AliasGlobals
-      func0AliasConfig.store.wasm.globals := by
-  intro index value hget
-  simp only [func0AliasGlobals] at hget
-  by_cases hindex : index = 0
-  · subst index
-    simp only [get?_insert_eq rfl] at hget
-    obtain rfl := Option.some.inj hget
-    rfl
-  · rw [get?_insert_ne (show (⟨0, 0⟩ : GlobalKey) ≠ ⟨0, index⟩ from fun h => hindex (congrArg GlobalKey.index h).symm), get?_empty] at hget
-    contradiction
+      func0AliasConfig.store.wasm.globals := globalHeapAgrees_singleton rfl
 
 theorem func0AliasHeap_pointsTo [WasmHeapGS Unit] :
     ([∗map] address ↦ value ∈ func0AliasHeap,
@@ -3643,15 +2763,13 @@ theorem func0AliasHeap_pointsTo [WasmHeapGS Unit] :
       pointsTo_u64 0 1048552 0 ∗ pointsTo_u64 0 0 42 := by
   unfold func0AliasHeap
   iintro Hheap
-  ihave Hcell := store64Heap_pointsTo _ 0 0 42
+  ihave ⟨Hcell, Hheap⟩ := store64Heap_pointsTo _ 0 0 42
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) (by decide) $$ Hheap
-  icases Hcell with ⟨Hcell, Hheap⟩
-  ihave Hscratch := store64Heap_pointsTo
+  ihave ⟨Hscratch, Hempty⟩ := store64Heap_pointsTo
     (∅ : WasmHeapMap (Option UInt8)) 0 1048552 0
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) (by decide) $$ Hheap
-  icases Hscratch with ⟨Hscratch, Hempty⟩
   iframe
 
 theorem func0AliasGlobals_pointsTo [WasmGlobalGS Unit] :
@@ -3661,8 +2779,7 @@ theorem func0AliasGlobals_pointsTo [WasmGlobalGS Unit] :
   unfold func0AliasGlobals
   rw [(BI.BigSepM.bigSepM_insert (get?_empty (⟨0, 0⟩ : GlobalKey))).to_eq,
     BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
-  simp only [globalPointsToAt_eq]
-  rfl
+  simp only [globalPointsToAt_eq]; rfl
 
 /-- Same-index swapping is a real one-cell execution, not a degenerate proof
 that duplicates exclusive ownership. -/
@@ -3676,13 +2793,11 @@ theorem func0Alias_smallStep :
   · exact func0AliasHeap_agrees
   · exact func0AliasHeap_inBounds
   · exact func0AliasGlobals_agree
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [func0AliasConfig, Wasm.SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hheap, Hglobals, Hruntime⟩
-    ihave Hwords := func0AliasHeap_pointsTo $$ Hheap
+    ihave ⟨Hscratch, Hcell⟩ := func0AliasHeap_pointsTo $$ Hheap
     ihave Hglobal := func0AliasGlobals_pointsTo $$ Hglobals
-    icases Hwords with ⟨Hscratch, Hcell⟩
     have hpost : ∀ values : List Value,
         (iprop% ⌜values = []⌝ ∗
           globalPointsToAt 0 0 (.i32 1048560) ∗
@@ -3690,16 +2805,14 @@ theorem func0Alias_smallStep :
         (iprop% ⌜values = []⌝) := by
       intro values
       iintro ⟨%hvalues, _Hresources⟩
-      ipureintro
-      exact hvalues
+      ipureexact hvalues
     iapply wp_mono hpost
     have halias := func0_alias_smallStep_wp
       (s := Stuckness.NotStuck) (E := ⊤)
       0 1 0 0 42 (by decide) (by decide)
     simp only [
       show ((0 : UInt32) <<< (3 % 32)) + 0 = 0 by decide] at halias
-    iapply halias
-    iframe
+    iapply_frame halias
 
 /- The former custom `wp_wasm`/big-step proof block lived below this point.
 It is retained temporarily as commented migration history while the public
@@ -3991,8 +3104,7 @@ private theorem func1_terminates_sw (env : HostEnv Unit) (st : Store Unit)
           hg0 (by omega) hpg_a hpg_b hge_a hge_b hdisj).mono ?_
       rintro st' vs ⟨rfl, hglob2, hpages2, hrA2, hrB2, hother2⟩
       refine ⟨1, ?_⟩
-      simp only [exec, execOne]
-      exact ⟨trivial, hglob2, hpages2, hrA2, hrB2, hother2⟩
+      simp only [exec, execOne]; exact ⟨trivial, hglob2, hpages2, hrA2, hrB2, hother2⟩
   exact wp_wasm_prop_to_TerminatesWith hf₁ himp₁ rfl (Nat.le_refl _)
     (fun _ _ h => ⟨rfl, h.2⟩) hwp
 
@@ -4048,8 +3160,7 @@ private theorem func0_terminates_sw (env : HostEnv Unit) (st : Store Unit)
           hptr hg0).mono ?_
       rintro st' vs ⟨rfl, hglob1, hpages1, hrA1, hrB1, hother1⟩
       refine ⟨1, ?_⟩
-      simp only [exec, execOne]
-      exact ⟨trivial, hglob1, hpages1, hrA1, hrB1, hother1⟩
+      simp only [exec, execOne]; exact ⟨trivial, hglob1, hpages1, hrA1, hrB1, hother1⟩
   exact wp_wasm_prop_to_TerminatesWith hf himp rfl (Nat.le_refl _)
     (fun _ _ h => ⟨rfl, h.2⟩) hwp
 

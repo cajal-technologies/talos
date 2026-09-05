@@ -30,8 +30,7 @@ def sumI64Result (x : UInt32) : UInt32 :=
 
 theorem sumI64_runs (x : UInt32) :
     (runSteps 9 (sumI64Config x)).result.values? =
-      some [.i32 (sumI64Result x)] := by
-  rfl
+      some [.i32 (sumI64Result x)] := by rfl
 
 theorem sumI64_terminates (x : UInt32) :
     TerminatesWith (sumI64Config x)

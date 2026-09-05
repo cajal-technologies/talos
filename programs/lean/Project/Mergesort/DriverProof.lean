@@ -41,45 +41,33 @@ private theorem pointsTo_u32_pair_as_u64
         (lo.toUInt64 ||| (hi.toUInt64 <<< 32)) := by
   let combined : UInt64 := lo.toUInt64 ||| (hi.toUInt64 <<< 32)
   have h0 : u64Byte combined 0 = u32Byte lo 0 := by
-    simp [combined, u64Byte, u32Byte]
-    bv_decide
+    simpa [combined, u64Byte, u32Byte] using UInt64.pack32_byte0 lo hi
   have h1 : u64Byte combined 1 = u32Byte lo 1 := by
-    simp [combined, u64Byte, u32Byte]
-    bv_decide
+    simpa [combined, u64Byte, u32Byte] using UInt64.pack32_byte1 lo hi
   have h2 : u64Byte combined 2 = u32Byte lo 2 := by
-    simp [combined, u64Byte, u32Byte]
-    bv_decide
+    simpa [combined, u64Byte, u32Byte] using UInt64.pack32_byte2 lo hi
   have h3 : u64Byte combined 3 = u32Byte lo 3 := by
-    simp [combined, u64Byte, u32Byte]
-    bv_decide
+    simpa [combined, u64Byte, u32Byte] using UInt64.pack32_byte3 lo hi
   have h4 : u64Byte combined 4 = u32Byte hi 0 := by
-    simp [combined, u64Byte, u32Byte]
-    bv_decide
+    simpa [combined, u64Byte, u32Byte] using UInt64.pack32_byte4 lo hi
   have h5 : u64Byte combined 5 = u32Byte hi 1 := by
-    simp [combined, u64Byte, u32Byte]
-    bv_decide
+    simpa [combined, u64Byte, u32Byte] using UInt64.pack32_byte5 lo hi
   have h6 : u64Byte combined 6 = u32Byte hi 2 := by
-    simp [combined, u64Byte, u32Byte]
-    bv_decide
+    simpa [combined, u64Byte, u32Byte] using UInt64.pack32_byte6 lo hi
   have h7 : u64Byte combined 7 = u32Byte hi 3 := by
-    simp [combined, u64Byte, u32Byte]
-    bv_decide
+    simpa [combined, u64Byte, u32Byte] using UInt64.pack32_byte7 lo hi
   change iprop(pointsTo_u32 0 ptr lo ∗ pointsTo_u32 0 (ptr + 4) hi) ⊣⊢
     pointsTo_u64 0 ptr combined
   unfold pointsTo_u32 pointsTo_u64
   rw [h0, h1, h2, h3, h4, h5, h6, h7]
-  rw [show ptr + 4 + 1 = ptr + 5 by bv_decide]
-  rw [show ptr + 4 + 2 = ptr + 6 by bv_decide]
-  rw [show ptr + 4 + 3 = ptr + 7 by bv_decide]
+  rw [show ptr + 4 + 1 = ptr + 5 by bv_normalize]
+  rw [show ptr + 4 + 2 = ptr + 6 by bv_normalize]
+  rw [show ptr + 4 + 3 = ptr + 7 by bv_normalize]
   constructor
-  · iintro H
-    icases H with ⟨Hlo, Hhi⟩
+  · iintro ⟨Hlo, Hhi⟩
     icases Hlo with ⟨H0, H1, H2, H3⟩
-    icases Hhi with ⟨H4, H5, H6, H7⟩
-    iframe
-  · iintro H
-    icases H with ⟨H0, H1, H2, H3, H4, H5, H6, H7⟩
-    iframe
+    icases Hhi with ⟨H4, H5, H6, H7⟩; iframe
+  · iintro ⟨H0, H1, H2, H3, H4, H5, H6, H7⟩; iframe
 
 /-- The offset-zero form of `twp_store64`, stated without the syntactic
 `address + 0` in its owned cell. -/
@@ -156,10 +144,8 @@ theorem twp_func3_read_chunk
   icases Hframe with ⟨Hvec, Hchunk, Houtput, %hframeLengths⟩
   simp only [List.cons_append, List.nil_append]
   iapply twp_localGet hlocal0
-  iapply twp_const
-  iapply twp_add
-  rw [show 12 + driverBase = driverBase + 12 by decide]
-  iapply twp_const
+  wasm_twp_pures [twp_const twp_add] rewriting [show 12 + driverBase = driverBase + 12 by decide]
+  wasm_twp_pures [twp_const]
   have Hread := Project.Mergesort.ContractProofs.func10_correct (hlc := hlc)
       (ptr := driverBase + 12) (requested := 256)
       (buffer := chunkBytes) (input := input) (output := output)
@@ -171,26 +157,14 @@ theorem twp_func3_read_chunk
   unfold CallContract callExpr at Hread
   simp only [UInt32.reduceToNat, List.cons_append, List.nil_append] at Hread
   iapply Hread
-  isplitl [Hruntime]
-  · iexact Hruntime
-  isplitl [Hstreams]
-  · iexact Hstreams
-  isplitl [Hchunk]
-  · iexact Hchunk
-  isplitl []
-  · ipureintro
-    exact ⟨by simpa using hframeLengths.1.symm, by decide⟩
+  isplitl_exacts [Hruntime Hstreams Hchunk]
+  isplitl_pureexact ⟨by simpa using hframeLengths.1.symm, by decide⟩
   iintro Hruntime Hstreams Hchunk %hcount
   ihave Hframe : ExportFrame heapId capacity ptr initialized
       (input.take count ++ chunkBytes.drop count) outputBytes $$
       [Hvec Hchunk Houtput]
   · unfold ExportFrame
-    isplitl [Hvec]
-    · iexact Hvec
-    isplitl [Hchunk]
-    · iexact Hchunk
-    isplitl [Houtput]
-    · iexact Houtput
+    isplitl_exacts [Hvec Hchunk Houtput]
     ipureintro
     constructor
     · have htake := List.length_take_le count input
@@ -198,9 +172,7 @@ theorem twp_func3_read_chunk
     · exact hframeLengths.2
   unfold ResumeWP resumeExpr
   simp only [List.cons_append, List.nil_append]
-  iapply Hcont $$ Hruntime Hstreams Hframe
-  · ipureintro
-    exact hcount
+  iapply_pure Hcont $$ Hruntime Hstreams Hframe => exact hcount
 
 /-- Locals relevant to the read-loop append path.  The auxiliary slots are
 threaded explicitly so the lemma applies at every loop iteration. -/
@@ -286,24 +258,15 @@ theorem twp_func3_append_without_reserve
     UInt32.toNat_ofNat_of_lt' (by omega)
   have hcurrentNonzero : UInt32.ofNat current.length ≠ 0 := by
     intro hzero
-    have hzeroNat := congrArg UInt32.toNat hzero
-    rw [hcurrentWord] at hzeroNat
-    simp only [UInt32.toNat_zero] at hzeroNat
-    omega
+    have hzeroNat := congrArg UInt32.toNat hzero; rw [hcurrentWord] at hzeroNat
+    simp only [UInt32.toNat_zero] at hzeroNat; omega
   simp only [func3AppendBody, List.cons_append, List.nil_append]
-  iapply twp_block
-  simp only [func3AppendCopyBody, func3AppendLocals]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_block] using [func3AppendCopyBody, func3AppendLocals]
+  wasm_twp_pures [twp_localGet]
   iapply twp_eqz (result := 0) (by simp [hcurrentNonzero])
-  iapply twp_brIfZero
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
-  iapply twp_add
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_add
+  wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet twp_add twp_localGet twp_const twp_add]
   rw [show 12 + driverBase = driverBase + 12 by decide]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   rw [show UInt32.ofNat initialized.length + dataPtr =
     dataPtr + UInt32.ofNat initialized.length by ac_rfl]
   iapply twp_memoryCopy32 oldChunk current
@@ -311,40 +274,28 @@ theorem twp_func3_append_without_reserve
       (by simp [hcurrentWord])
       (by simpa [hcurrentWord])
       (by
-        rw [hcurrentWord, ← holdChunkLength]
-        exact holdChunkNowrap)
+        rw [hcurrentWord, ← holdChunkLength]; exact holdChunkNowrap)
       (by simpa [hcurrentWord] using hcurrentNowrap) $$
       HcurrentBytes HoldChunkBytes
   iintro HcurrentBytes HoldChunkBytes
   ihave Hcurrent : Project.Mergesort.Representations.ByteSlice
       (driverBase + 12) current $$ [HcurrentBytes]
   · unfold Project.Mergesort.Representations.ByteSlice
-    iframe
-    ipureintro
-    exact hcurrentNowrap
+    iframe_pureexact hcurrentNowrap
   ihave Hchunk : Project.Mergesort.Representations.ByteSlice
       (driverBase + 12) (current ++ chunkTail) $$ [Hcurrent HchunkTail]
-  · iapply (ByteSlice_append (driverBase + 12) current chunkTail).mpr
-    iframe
+  · iapply_frame (ByteSlice_append (driverBase + 12) current chunkTail).mpr
   ihave HnewBytes : Project.Mergesort.Representations.ByteSlice
       (dataPtr + UInt32.ofNat initialized.length) current $$
       [HoldChunkBytes]
   · unfold Project.Mergesort.Representations.ByteSlice
-    iframe
-    ipureintro
-    rw [holdChunkLength] at holdChunkNowrap
-    exact holdChunkNowrap
-  iapply twp_exitControl (by rfl)
-  simp only [List.take_zero, List.drop_zero, List.nil_append]
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
-  iapply twp_add
+    iframe_pureexact (by rw [holdChunkLength] at holdChunkNowrap; exact holdChunkNowrap)
+  wasm_twp_pures [twp_exitControl] using [List.take_zero, List.drop_zero, List.nil_append]
+  wasm_twp_pures [twp_localGet twp_localGet twp_localGet twp_add]
   have hlengthWord :
-      UInt32.ofNat current.length + UInt32.ofNat initialized.length =
+    UInt32.ofNat current.length + UInt32.ofNat initialized.length =
         UInt32.ofNat (initialized ++ current).length := by
-    rw [UInt32.add_comm,
-      Wasm.Examples.MergeSort.u32_ofNat_add hnewLength]
+    rw [UInt32.add_comm, ← UInt32.ofNat_add]
     simp
   rw [hlengthWord]
   iapply twp_localTee
@@ -354,17 +305,14 @@ theorem twp_func3_append_without_reserve
         (.i32 (UInt32.ofNat (initialized ++ current).length) ::
           .i32 driverBase :: stack)) (by simp [func3AppendLocals])
   simp only [func3AppendLocals]
-  iapply twp_store32 (UInt32.ofNat initialized.length)
-      (by decide) (by decide) (by decide) (by decide) $$ HoldLength
-  iintro HnewLength
+  wasm_twp_bind twp_store32 (UInt32.ofNat initialized.length)
+      (by decide) (by decide) (by decide) (by decide) with HoldLength => HnewLength
   ihave Hvec := HcloseVec $$ HnewBytes HnewLength
   ihave Hframe : ExportFrame heapId capacity dataPtr
       (initialized ++ current) (current ++ chunkTail) outputBytes $$
       [Hvec Hchunk Houtput]
   · unfold ExportFrame
-    iframe
-    ipureintro
-    exact hframeLengths
+    iframe_pureexact hframeLengths
   iapply Hcont $$ Hframe
 
 /-- Reload the Vec data pointer and length after `func1` returns.  The
@@ -402,25 +350,20 @@ theorem twp_func3_reload_vec_fields
     ⟨⟨⟨Hcapacity, Hpointer⟩, Hlength, Hstorage⟩,
       Hchunk, Houtput, %hframeLengths⟩
   simp only [List.cons_append, List.nil_append, func3AppendLocals]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   iapply twp_load32 ptr (by decide) (by decide) (by decide) (by decide) $$
     Hpointer
   iintro Hpointer
-  iapply twp_localSet rfl
-  simp only [List.length, List.set]
-  iapply twp_localGet rfl
-  iapply twp_load32 (UInt32.ofNat initialized.length)
-      (by decide) (by decide) (by decide) (by decide) $$ Hlength
-  iintro Hlength
-  iapply twp_localSet rfl
-  simp only [List.length, List.set]
+  wasm_twp_localSet [List.length, List.set]
+  wasm_twp_pures [twp_localGet]
+  wasm_twp_rebind twp_load32 (UInt32.ofNat initialized.length)
+      (by decide) (by decide) (by decide) (by decide) with Hlength
+  wasm_twp_localSet [List.length, List.set]
   ihave Hframe : ExportFrame heapId capacity ptr initialized
       chunkBytes outputBytes $$
       [Hcapacity Hpointer Hlength Hstorage Hchunk Houtput]
   · unfold ExportFrame VecU8 RawVecHeader
-    iframe
-    ipureintro
-    exact hframeLengths
+    iframe_pureexact hframeLengths
   iapply Hcont $$ Hframe
 
 /-- Driver-level view of `Func1Spec`'s continuation.  It frames the read
@@ -545,11 +488,7 @@ theorem twp_func3_reserve
   isimp only [ExportFrame] at Hframe
   icases Hframe with ⟨Hvec, Hchunk, Houtput, %hframeLengths⟩
   simp only [List.cons_append, List.nil_append, func3AppendLocals]
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_const
+  wasm_twp_pures [twp_localGet twp_localGet twp_localGet twp_const twp_const]
   have HreserveCall := hfunc1 (header := driverBase)
       (length := UInt32.ofNat initialized.length)
       (additional := UInt32.ofNat current.length)
@@ -567,21 +506,8 @@ theorem twp_func3_reserve
   simp only [List.cons_append, List.nil_append, callerLocals,
     func3AppendLocals] at HreserveCall
   iapply HreserveCall
-  isplitl [Hruntime]
-  · iexact Hruntime
-  isplitl [Hsp]
-  · iexact Hsp
-  isplitl [Hreserve]
-  · iexact Hreserve
-  isplitl [Hvec]
-  · iexact Hvec
-  isplitl [Hbump]
-  · iexact Hbump
-  isplitl [Hstreams]
-  · iexact Hstreams
-  isplitl []
-  · ipureintro
-    exact ⟨True.intro, True.intro, True.intro,
+  isplitl_exacts [Hruntime Hsp Hreserve Hvec Hbump Hstreams]
+  isplitl_pureexact ⟨True.intro, True.intro, True.intro,
       hinitializedWord, hcurrentWord,
       hfacts.1, hfacts.2.1, hfacts.2.2.1, hfacts.2.2.2.1,
       hfacts.2.2.2.2.1, hfacts.2.2.2.2.2.1,
@@ -597,9 +523,7 @@ theorem twp_func3_reserve
       ihave Hframe : ExportFrame heapId capacity dataPtr initialized
           chunkBytes outputBytes $$ [Hvec Hchunk Houtput]
       · unfold ExportFrame
-        iframe
-        ipureintro
-        exact hframeLengths
+        iframe_pureexact hframeLengths
       iapply Hcont $$ Hsp Hreserve Hframe Hbump Hstreams
   | success newPtr finish =>
       isimp only [hdecision] at Hcont
@@ -608,9 +532,7 @@ theorem twp_func3_reserve
         ihave Hframe : ExportFrame heapId newCapacity newPtr initialized
             chunkBytes outputBytes $$ [Hvec Hchunk Houtput]
         · unfold ExportFrame
-          iframe
-          ipureintro
-          exact hframeLengths
+          iframe_pureexact hframeLengths
         ihave Hnormal := BI.and_elim_l $$ Hcont
         iapply Hnormal $$ %finalHistory Hruntime Hsp Hreserve Hframe Hbump
           %hpure Hstreams
@@ -618,9 +540,7 @@ theorem twp_func3_reserve
         ihave Hframe : ExportFrame heapId capacity dataPtr initialized
             chunkBytes outputBytes $$ [Hvec Hchunk Houtput]
         · unfold ExportFrame
-          iframe
-          ipureintro
-          exact hframeLengths
+          iframe_pureexact hframeLengths
         ihave Hoom := BI.and_elim_r $$ Hcont
         iapply Hoom $$ Hsp Hreserve Hframe Hbump Hstreams
 
@@ -692,8 +612,7 @@ theorem twp_func3_count_guard
           arity, remainder, controls, calls⟩ : Expr Universal.State)
         @ s; E [{ Φ }] := by
   have hcurrentSize : currentLength < UInt32.size := by
-    norm_num [UInt32.size]
-    omega
+    norm_num [UInt32.size]; omega
   have hcurrentWord :
       (UInt32.ofNat currentLength).toNat = currentLength :=
     UInt32.toNat_ofNat_of_lt' hcurrentSize
@@ -703,11 +622,10 @@ theorem twp_func3_count_guard
     omega
   iintro Hcont
   simp only [List.cons_append, List.nil_append, func3AppendLocals]
-  iapply twp_localGet rfl
-  iapply twp_const
+  wasm_twp_pures [twp_localGet twp_const]
   iapply twp_geU (result := 0)
     (by simp [UInt32.not_le.mpr hlt])
-  iapply twp_brIfZero
+  wasm_twp_pures [twp_brIfZero]
   iexact Hcont
 
 /-- Splitting a canonical byte stream at the driver's 256-byte read size
@@ -807,12 +725,7 @@ theorem twp_func3_read_and_classify
     (calls := calls) (s := s) (E := E) (Φ := Φ)
   simp only [List.cons_append, List.nil_append] at Hread
   iapply Hread
-  isplitl [Hruntime]
-  · iexact Hruntime
-  isplitl [Hstreams]
-  · iexact Hstreams
-  isplitl [Hframe]
-  · iexact Hframe
+  isplitl_exacts [Hruntime Hstreams Hframe]
   iintro Hruntime Hstreams Hframe %_hcountBound
   iapply twp_localTee
       (locals' := func3AppendLocals dataPtr (UInt32.ofNat count)
@@ -826,8 +739,7 @@ theorem twp_func3_read_and_classify
     have hremainingEmpty : input.drop count = [] := by
       simp [hempty, hcountZero]
     ihave HstreamsEmpty : Streams [] output false $$ [Hstreams]
-    · rw [← hremainingEmpty]
-      iexact Hstreams
+    · irw_exact [← hremainingEmpty] with Hstreams
     ihave HframeEmpty : ExportFrame heapId capacity dataPtr initialized
         chunkBytes outputBytes $$ [Hframe]
     · isimp only [hempty, List.length_nil, min_zero, List.take_zero,
@@ -836,32 +748,24 @@ theorem twp_func3_read_and_classify
     iapply twp_eqz (result := 1) (by simp [hcountZero])
     simp only [hcountZero, UInt32.reduceOfNat]
     ihave Hempty := BI.and_elim_l $$ Hcont
-    iapply Hempty $$ Hruntime HstreamsEmpty HframeEmpty
-    · ipureintro
-      exact hempty
+    iapply_pure Hempty $$ Hruntime HstreamsEmpty HframeEmpty => exact hempty
   · have hinputPositive : 0 < input.length := by
       by_contra hnot
-      apply hempty
-      exact List.eq_nil_of_length_eq_zero (by omega)
+      exact hempty (List.eq_nil_of_length_eq_zero (by omega))
     have hcountPositive : 0 < count := by
-      dsimp only [count]
-      omega
+      dsimp only [count]; omega
     have hcountSize : count < UInt32.size := by
-      norm_num [UInt32.size]
-      omega
+      norm_num [UInt32.size]; omega
     have hcountWord : (UInt32.ofNat count).toNat = count :=
       UInt32.toNat_ofNat_of_lt' hcountSize
     have hcountNonzero : UInt32.ofNat count ≠ 0 := by
       intro hzero
-      have hzeroNat := congrArg UInt32.toNat hzero
-      rw [hcountWord] at hzeroNat
-      simp only [UInt32.toNat_zero] at hzeroNat
-      omega
+      have hzeroNat := congrArg UInt32.toNat hzero; rw [hcountWord] at hzeroNat
+      simp only [UInt32.toNat_zero] at hzeroNat; omega
     iapply twp_eqz (result := 0) (by simp [hcountNonzero])
     ihave Hnonempty := BI.and_elim_r $$ Hcont
     iapply Hnonempty $$ Hruntime Hstreams Hframe
-    · ipureintro
-      exact ⟨hempty, hsplit.1, hcountPositive, hcountBound,
+    · ipureexact ⟨hempty, hsplit.1, hcountPositive, hcountBound,
         hsplit.2.1, hsplit.2.2,
         (List.take_append_drop count input).symm⟩
 
@@ -928,8 +832,7 @@ theorem twp_func3_append_current
       (UInt32.ofNat current.length).toNat = current.length :=
     UInt32.toNat_ofNat_of_lt' (by omega)
   have hinitializedLe : UInt32.ofNat initialized.length ≤ capacity := by
-    rw [UInt32.le_iff_toNat_le_toNat, hinitializedWord]
-    exact hinitializedCapacity
+    simpa only [UInt32.le_iff_toNat_le_toNat, hinitializedWord] using hinitializedCapacity
   have hspareWord :
       (capacity - UInt32.ofNat initialized.length).toNat =
         capacity.toNat - initialized.length := by
@@ -943,25 +846,21 @@ theorem twp_func3_append_current
   iapply (twp_block (body := func3CapacityBody)
     (code := func3AppendBody ++ code))
   simp only [func3CapacityBody]
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   ihave Hcapacity' : pointsTo_u32 0 (driverBase + 0) capacity $$ [Hcapacity]
   · simp only [UInt32.add_zero]
     iexact Hcapacity
-  iapply twp_load32 (address := driverBase) (offset := 0) capacity
-      (by decide) (by decide) (by decide) (by decide) $$ Hcapacity'
-  iintro Hcapacity
+  wasm_twp_bind twp_load32 (address := driverBase) (offset := 0) capacity
+      (by decide) (by decide) (by decide) (by decide) with Hcapacity' => Hcapacity
   isimp only [UInt32.add_zero] at Hcapacity
-  iapply twp_localGet rfl
-  iapply twp_sub
+  wasm_twp_pures [twp_localGet twp_sub]
   by_cases hfits : current.length ≤ capacity.toNat - initialized.length
   · iapply twp_leU (result := 1)
       (by
         have hfitsWord :
             UInt32.ofNat current.length ≤
               capacity - UInt32.ofNat initialized.length := by
-          rw [UInt32.le_iff_toNat_le_toNat, hcurrentWord, hspareWord]
-          exact hfits
+          simpa only [UInt32.le_iff_toNat_le_toNat, hcurrentWord, hspareWord] using hfits
         simp [hfitsWord])
     iapply twp_brIf (by decide) (by rfl)
     simp only [func3AppendBody, func3AppendLocals, List.take_zero,
@@ -970,9 +869,7 @@ theorem twp_func3_append_current
         (current ++ chunkTail) outputBytes $$
         [Hcapacity Hpointer Hlength Hstorage Hchunk Houtput]
     · unfold ExportFrame VecU8 RawVecHeader
-      iframe
-      ipureintro
-      exact hframeLengths
+      iframe_pureexact hframeLengths
     have Happend := twp_func3_append_without_reserve heapId capacity dataPtr
       initialized current chunkTail outputBytes hfacts.2.1 hfits hlayout.1
       aux2 aux4 aux5 aux7 aux8 aux9 aux10
@@ -980,35 +877,27 @@ theorem twp_func3_append_current
       (remainder := remainder) (controls := controls) (calls := calls)
       (s := s) (E := E) (Φ := Φ)
     simp only [func3AppendLocals, func3AppendBody] at Happend
-    iapply Happend
-    isplitl [Hframe]
-    · iexact Hframe
-    iintro Hframe
+    iapply_frame_intro Happend as Hframe
     have hgeo := GeometricVecFacts.appendWithoutReserve totalBytes
       initialized.length current.length remaining.length capacity dataPtr
       frontier history hfacts.2.2.2.2 hfacts.2.1 hfits
     ihave Hnormal := BI.and_elim_l $$ Hcont
     iapply Hnormal $$ %capacity %dataPtr %storedCursor %frontier %history
       %shadow Hruntime Hsp Hreserve Hframe Hbump Hstreams
-    · ipureintro
-      exact hgeo
+    · ipureexact hgeo
   · iapply twp_leU (result := 0)
       (by
         have hfitsWord :
             ¬UInt32.ofNat current.length ≤
               capacity - UInt32.ofNat initialized.length := by
-          rw [UInt32.le_iff_toNat_le_toNat, hcurrentWord, hspareWord]
-          exact hfits
+          simpa only [UInt32.le_iff_toNat_le_toNat, hcurrentWord, hspareWord] using hfits
         simp [hfitsWord])
-    iapply twp_brIfZero
-    simp only [func3AppendLocals, List.drop_zero]
+    wasm_twp_pures [twp_brIfZero] using [func3AppendLocals, List.drop_zero]
     ihave Hframe : ExportFrame heapId capacity dataPtr initialized
         (current ++ chunkTail) outputBytes $$
         [Hcapacity Hpointer Hlength Hstorage Hchunk Houtput]
     · unfold ExportFrame VecU8 RawVecHeader
-      iframe
-      ipureintro
-      exact hframeLengths
+      iframe_pureexact hframeLengths
     have HreserveStep := twp_func3_reserve hfunc1 totalBytes current remaining capacity
       dataPtr initialized (current ++ chunkTail) outputBytes shadow heapId
       storedCursor frontier history output false aux2 aux4 aux5 aux7 aux8
@@ -1029,18 +918,7 @@ theorem twp_func3_append_current
     simp only [func3AppendLocals, func3CapacityBody, List.cons_append,
       List.nil_append] at HreserveStep
     iapply HreserveStep
-    isplitl [Hruntime]
-    · iexact Hruntime
-    isplitl [Hsp]
-    · iexact Hsp
-    isplitl [Hreserve]
-    · iexact Hreserve
-    isplitl [Hframe]
-    · iexact Hframe
-    isplitl [Hbump]
-    · iexact Hbump
-    isplitl [Hstreams]
-    · iexact Hstreams
+    isplitl_exacts [Hruntime Hsp Hreserve Hframe Hbump Hstreams]
     unfold Func3ReserveContinuation
     dsimp only
     cases hdecision : classifyBump frontier
@@ -1073,12 +951,8 @@ theorem twp_func3_append_current
             (calls := calls) (s := s) (E := E) (Φ := Φ)
           simp only [func3AppendLocals, func3CapacityBody,
             List.cons_append, List.nil_append] at Hreload
-          iapply Hreload
-          isplitl [Hframe]
-          · iexact Hframe
-          iintro Hframe
-          iapply twp_exitControl (by rfl)
-          simp only [List.take_zero, List.nil_append]
+          iapply_frame_intro Hreload as Hframe
+          wasm_twp_pures [twp_exitControl] using [List.take_zero, List.nil_append]
           have hnewCapacityWord :
               (UInt32.ofNat
                 (selectedCapacity initialized.length current.length
@@ -1104,10 +978,7 @@ theorem twp_func3_append_current
             (remainder := remainder) (controls := controls) (calls := calls)
             (s := s) (E := E) (Φ := Φ)
           simp only [func3AppendLocals] at Happend
-          iapply Happend
-          isplitl [Hframe]
-          · iexact Hframe
-          iintro Hframe
+          iapply_frame_intro Happend as Hframe
           ihave Hnormal := BI.and_elim_l $$ Hcont
           iapply Hnormal $$
             %(UInt32.ofNat
@@ -1117,8 +988,7 @@ theorem twp_func3_append_current
               (UInt32.ofNat
                 (selectedCapacity initialized.length current.length
                   capacity.toNat))) Hruntime Hsp Hreserve Hframe Hbump Hstreams
-          · ipureintro
-            exact hpure.2
+          · ipureexact hpure.2
         · iintro Hsp Hreserve Hframe Hbump Hstreams
           ihave Hoom := BI.and_elim_r $$ Hcont
           iapply Hoom $$ Hsp Hreserve Hframe Hbump Hstreams
@@ -1271,18 +1141,7 @@ theorem twp_func3_read_loop_iteration
     (calls := calls) (s := s) (E := E) (Φ := Φ)
   rw [List.append_assoc func3AppendBody func3ReadClassifyBody code]
   iapply Happend
-  isplitl [Hruntime]
-  · iexact Hruntime
-  isplitl [Hsp]
-  · iexact Hsp
-  isplitl [Hreserve]
-  · iexact Hreserve
-  isplitl [Hframe]
-  · iexact Hframe
-  isplitl [Hbump]
-  · iexact Hbump
-  isplitl [Hstreams]
-  · iexact Hstreams
+  isplitl_exacts [Hruntime Hsp Hreserve Hframe Hbump Hstreams]
   unfold Func3AppendContinuation
   isplit
   · iintro %finalCapacity %finalPtr %finalStoredCursor %finalFrontier
@@ -1298,12 +1157,7 @@ theorem twp_func3_read_loop_iteration
     simp only [List.cons_append, List.nil_append] at Hread
     simp only [func3ReadClassifyBody, List.cons_append, List.nil_append]
     iapply Hread
-    isplitl [Hruntime]
-    · iexact Hruntime
-    isplitl [Hstreams]
-    · iexact Hstreams
-    isplitl [Hframe]
-    · iexact Hframe
+    isplitl_exacts [Hruntime Hstreams Hframe]
     isplit
     · iintro Hruntime Hstreams Hframe %hremainingEmpty
       ihave HdonePair := BI.and_elim_l $$ Hcont
@@ -1311,8 +1165,7 @@ theorem twp_func3_read_loop_iteration
       iapply Hdone $$ %finalCapacity %finalPtr %finalStoredCursor
         %finalFrontier %finalHistory %finalShadow Hruntime Hsp Hreserve Hframe
         Hbump Hstreams
-      · ipureintro
-        exact ⟨hremainingEmpty, by simpa [hremainingEmpty] using hgeo⟩
+      · ipureexact ⟨hremainingEmpty, by simpa [hremainingEmpty] using hgeo⟩
     · iintro Hruntime Hstreams Hframe %hnext
       have hremainingLength :
           remaining.length =
@@ -1326,47 +1179,38 @@ theorem twp_func3_read_loop_iteration
             ((remaining.take (min 256 remaining.length)).length +
               (remaining.drop (min 256 remaining.length)).length)
             finalCapacity finalPtr finalFrontier finalHistory := by
-        rw [← hremainingLength]
-        exact hgeo
+        simpa only [← hremainingLength] using hgeo
       have htotalNext :
           totalBytes = (initialized ++ current).length +
             (remaining.take (min 256 remaining.length)).length +
             (remaining.drop (min 256 remaining.length)).length := by
         have htotal := hfacts.2.2.2.2.2.1
-        simp only [List.length_append]
-        omega
+        simp only [List.length_append]; omega
       have hreadShape :
           (remaining.take (min 256 remaining.length)).length =
             min 256
               ((remaining.take (min 256 remaining.length)).length +
                 (remaining.drop (min 256 remaining.length)).length) := by
-        rw [← hremainingLength]
-        exact hnext.2.1
+        simpa only [← hremainingLength] using hnext.2.1
       have hmeasure :
           (remaining.take (min 256 remaining.length)).length +
               (remaining.drop (min 256 remaining.length)).length <
-            current.length + remaining.length := by
-        rw [← hremainingLength]
-        omega
+            current.length + remaining.length := by omega
       have hnextPositive :
           0 < (remaining.take (min 256 remaining.length)).length := by
-        rw [hnext.2.1]
-        exact hnext.2.2.1
+        simpa only [hnext.2.1] using hnext.2.2.1
       have hnextBound :
           (remaining.take (min 256 remaining.length)).length ≤ 256 := by
-        rw [hnext.2.1]
-        exact hnext.2.2.2.1
+        simpa only [hnext.2.1] using hnext.2.2.2.1
       have hnextMod :
           (remaining.take (min 256 remaining.length)).length % 4 = 0 := by
-        rw [hnext.2.1]
-        exact hnext.2.2.2.2.1
+        simpa only [hnext.2.1] using hnext.2.2.2.2.1
       ihave HnextPair := BI.and_elim_l $$ Hcont
       ihave Hnext := BI.and_elim_r $$ HnextPair
       iapply Hnext $$ %finalCapacity %finalPtr %finalStoredCursor
         %finalFrontier %finalHistory %finalShadow Hruntime Hsp Hreserve Hframe
         Hbump Hstreams
-      · ipureintro
-        exact ⟨hreadShape, hnextPositive, hnextBound,
+      · ipureexact ⟨hreadShape, hnextPositive, hnextBound,
           hnextMod, hnext.2.2.2.2.2.1, hnext.2.2.2.2.2.2,
           htotalNext,
           hgeoNext, hmeasure⟩
@@ -1487,19 +1331,16 @@ theorem twp_func3_reload_completed_ptr
       Hchunk, Houtput, %hframeLengths⟩
   simp only [func3CompletedPtrReload, List.cons_append, List.nil_append,
     func3AppendLocals]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   iapply twp_load32 dataPtr (by decide) (by decide) (by decide) (by decide) $$
     Hpointer
   iintro Hpointer
-  iapply twp_localSet rfl
-  simp only [List.length, List.set]
+  wasm_twp_localSet [List.length, List.set]
   ihave Hframe : ExportFrame heapId capacity dataPtr completed
       chunkBytes outputBytes $$
       [Hcapacity Hpointer Hlength Hstorage Hchunk Houtput]
   · unfold ExportFrame VecU8 RawVecHeader
-    iframe
-    ipureintro
-    exact hframeLengths
+    iframe_pureexact hframeLengths
   iapply Hcont $$ Hframe
 
 /-- Canonical serialized input makes the compiler's partial-word branch
@@ -1528,13 +1369,11 @@ theorem twp_func3_completed_length_guard
       @ s; E [{ Φ }] := by
   iintro Hcont
   have halign : completed.length % 4 = 0 := by
-    rw [← hcompleted, serialize_length]
-    omega
+    rw [← hcompleted, serialize_length]; omega
   have hlengthWord :
       (UInt32.ofNat completed.length).toNat = completed.length := by
     apply UInt32.toNat_ofNat_of_lt'
-    norm_num [UInt32.size] at hbound ⊢
-    omega
+    norm_num [UInt32.size] at hbound ⊢; omega
   have hlowMask : UInt32.ofNat completed.length &&& 3 = 0 := by
     apply UInt32.toNat.inj
     rw [UInt32.toNat_and, hlengthWord]
@@ -1546,11 +1385,8 @@ theorem twp_func3_completed_length_guard
     exact halign
   simp only [func3CompletedLengthGuard, List.cons_append, List.nil_append,
     func3AppendLocals]
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_and
-  rw [hlowMask]
-  iapply twp_brIfZero
+  wasm_twp_pures [twp_localGet twp_const twp_and] rewriting [hlowMask]
+  wasm_twp_pures [twp_brIfZero]
   iexact Hcont
 
 /-- On nonempty public input, execute both post-read length tests and enter
@@ -1587,27 +1423,22 @@ theorem twp_func3_enter_nonempty_decode
   have hboundTotal := GeometricVecFacts.completed_lt_signed
     (serialize original).length completed.length 0 capacity dataPtr frontier
     history hgeo rfl
-  have hbound : completed.length < 2147483648 := by
-    simpa [hcompleted] using hboundTotal
+  have hbound : completed.length < 2147483648 := by simpa [hcompleted] using hboundTotal
   have halign : completed.length % 4 = 0 := by
-    rw [← hcompleted, serialize_length]
-    omega
+    rw [← hcompleted, serialize_length]; omega
   have hmask := align4_signedMask_eq completed.length hbound halign
   have hlengthWord :
       (UInt32.ofNat completed.length).toNat = completed.length := by
     apply UInt32.toNat_ofNat_of_lt'
-    norm_num [UInt32.size] at hbound ⊢
-    omega
+    norm_num [UInt32.size] at hbound ⊢; omega
   have hpositive : 0 < completed.length := by
     rw [← hcompleted, serialize_length]
     have := List.length_pos_iff_ne_nil.mpr horiginal
     omega
   have hnonzero : UInt32.ofNat completed.length ≠ 0 := by
     intro hzero
-    have hzeroNat := congrArg UInt32.toNat hzero
-    rw [hlengthWord] at hzeroNat
-    simp only [UInt32.toNat_zero] at hzeroNat
-    omega
+    have hzeroNat := congrArg UInt32.toNat hzero; rw [hlengthWord] at hzeroNat
+    simp only [UInt32.toNat_zero] at hzeroNat; omega
   have Hguard := twp_func3_completed_length_guard
     (hlc := hlc) original completed hcompleted hbound dataPtr current
     aux2 aux4 aux5 aux7 aux8 aux9 aux10
@@ -1618,12 +1449,8 @@ theorem twp_func3_enter_nonempty_decode
   simp only [func3CompletedLengthGuard, List.cons_append, List.nil_append]
     at Hguard ⊢
   iapply Hguard
-  iapply twp_block
-  simp only [func3AlignedLengthBlockBody, func3AppendLocals]
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_and
-  rw [hmask]
+  wasm_twp_pures [twp_block] using [func3AlignedLengthBlockBody, func3AppendLocals]
+  wasm_twp_pures [twp_localGet twp_const twp_and] rewriting [hmask]
   iapply twp_localTee
       (locals' := func3AppendLocals dataPtr current
         (UInt32.ofNat completed.length) aux2 aux4 aux5
@@ -1696,11 +1523,9 @@ theorem twp_func3_allocate_values
   have hboundTotal := GeometricVecFacts.completed_lt_signed
     (serialize original).length completed.length 0 capacity dataPtr frontier
     history hgeo rfl
-  have hbound : completed.length < 2147483648 := by
-    simpa [hcompleted] using hboundTotal
+  have hbound : completed.length < 2147483648 := by simpa [hcompleted] using hboundTotal
   have halign : completed.length % 4 = 0 := by
-    rw [← hcompleted, serialize_length]
-    omega
+    rw [← hcompleted, serialize_length]; omega
   have hpositive : 0 < completed.length := by
     rw [← hcompleted, serialize_length]
     have := List.length_pos_iff_ne_nil.mpr horiginal
@@ -1708,16 +1533,13 @@ theorem twp_func3_allocate_values
   have hlengthWord :
       (UInt32.ofNat completed.length).toNat = completed.length := by
     apply UInt32.toNat_ofNat_of_lt'
-    norm_num [UInt32.size] at hbound ⊢
-    omega
-  have hlayoutValid : layout.Valid := by
-    exact Project.Mergesort.Representations.align4Layout_valid_of_bounds
+    norm_num [UInt32.size] at hbound ⊢; omega
+  have hlayoutValid : layout.Valid := Project.Mergesort.Representations.align4Layout_valid_of_bounds
       completed.length hpositive hbound halign
   have hlayoutMatches :
       layout.Matches (UInt32.ofNat completed.length) 4 := by
     unfold AllocLayout.Matches layout
-    simp only [hlengthWord]
-    decide
+    simp only [hlengthWord]; decide
   have hgeoOriginal : GeometricVecFacts (serialize original).length
       (serialize original).length 0 capacity dataPtr frontier history := by
     simpa only [hcompleted] using hgeo
@@ -1730,17 +1552,13 @@ theorem twp_func3_allocate_values
       (calls := calls) (s := s) (E := E) (Φ := Φ)
   unfold Func4Spec CallContract callExpr at Hmarker
   simp only [List.cons_append, List.nil_append] at Hmarker
-  iapply Hmarker
-  isplitl [Hruntime]
-  · iexact Hruntime
-  iintro Hruntime
+  iapply_frame_intro Hmarker as Hruntime
   unfold ResumeWP resumeExpr
   simp only [List.cons_append, List.nil_append]
   have hlocal7' : ({ callerLocals with values := stack } : Locals).get 7 =
-      some (.i32 (UInt32.ofNat completed.length)) := by
-    simpa using hlocal7
+      some (.i32 (UInt32.ofNat completed.length)) := by simpa using hlocal7
   iapply twp_localGet hlocal7'
-  iapply twp_const
+  wasm_twp_pures [twp_const]
   have Halloc := hfunc5
       (size := UInt32.ofNat completed.length) (alignment := 4)
       (layout := layout) (heapId := heapId) (storedCursor := storedCursor)
@@ -1752,15 +1570,8 @@ theorem twp_func3_allocate_values
   unfold CallContract callExpr at Halloc
   simp only [List.cons_append, List.nil_append] at Halloc
   iapply Halloc
-  isplitl [Hruntime]
-  · iexact Hruntime
-  isplitl [Hbump]
-  · iexact Hbump
-  isplitl [Hstreams]
-  · iexact Hstreams
-  isplitl []
-  · ipureintro
-    exact ⟨hlayoutMatches, hlayoutValid, Or.inr rfl⟩
+  isplitl_exacts [Hruntime Hbump Hstreams]
+  isplitl_pureexact ⟨hlayoutMatches, hlayoutValid, Or.inr rfl⟩
   unfold AllocContinuation
   cases hdecision : classifyBump frontier layout with
   | oom =>
@@ -1769,14 +1580,11 @@ theorem twp_func3_allocate_values
       iapply Hoom
       ihave HframeOriginal : ExportFrame heapId capacity dataPtr
           (serialize original) chunkBytes outputBytes $$ [Hframe]
-      · rw [hcompleted]
-        iexact Hframe
+      · irw_exact [hcompleted] with Hframe
       unfold DriverValuesOOM
       iexists capacity, dataPtr, chunkBytes, outputBytes, shadow,
         storedCursor, frontier, history
-      isplitl []
-      · ipureintro
-        exact ⟨List.length_pos_iff_ne_nil.mpr horiginal, hgeoOriginal⟩
+      isplitl_pureexact ⟨List.length_pos_iff_ne_nil.mpr horiginal, hgeoOriginal⟩
       iframe
   | success base finish =>
       isplit
@@ -1792,14 +1600,11 @@ theorem twp_func3_allocate_values
         iapply Hoom
         ihave HframeOriginal : ExportFrame heapId capacity dataPtr
             (serialize original) chunkBytes outputBytes $$ [Hframe]
-        · rw [hcompleted]
-          iexact Hframe
+        · irw_exact [hcompleted] with Hframe
         unfold DriverValuesOOM
         iexists capacity, dataPtr, chunkBytes, outputBytes, shadow,
           storedCursor, frontier, history
-        isplitl []
-        · ipureintro
-          exact ⟨List.length_pos_iff_ne_nil.mpr horiginal, hgeoOriginal⟩
+        isplitl_pureexact ⟨List.length_pos_iff_ne_nil.mpr horiginal, hgeoOriginal⟩
         iframe
 
 /-- Discharge the generated null check immediately following a normal values
@@ -1838,13 +1643,11 @@ theorem twp_func3_values_nonnull_guard
       (by simp [func3AppendLocals])
   simp only [func3AppendLocals]
   iapply twp_eqz (result := 0) (by simp [hfacts.2.1])
-  iapply twp_brIfZero
+  wasm_twp_pures [twp_brIfZero]
   ihave Hblock : LiveBlock heapId allocationId base layout bytes $$
       [Htoken Hbytes]
   · unfold LiveBlock
-    iframe
-    ipureintro
-    exact hfacts
+    iframe_pureexact hfacts
   iapply Hcont $$ Hblock
 
 /-- Copy one already-addressed word from the completed input slice into the
@@ -1888,58 +1691,35 @@ theorem twp_func3_copy_decoded_word
   have hcurrentLength : current.length = original.length :=
     overwritePrefix_length original initial copied hlength
   have hsourceIndex : copied < original.length := hcopied
-  have hdestinationIndex : copied < current.length := by
-    rw [hcurrentLength]
-    exact hcopied
+  have hdestinationIndex : copied < current.length := by simpa only [hcurrentLength] using hcopied
   iintro ⟨Hsource, Hdestination, Hcont⟩
-  ihave HsourceFacts := WordSlice_facts source original $$ Hsource
-  icases HsourceFacts with ⟨Hsource, %hsourceFacts⟩
+  ihave ⟨Hsource, %hsourceFacts⟩ := WordSlice_facts source original $$ Hsource
   ihave HdestinationFacts := WordSlice_facts destination current $$
     Hdestination
   icases HdestinationFacts with ⟨Hdestination, %hdestinationFacts⟩
   have hsourceAddress : sourceAddress.toNat = source.toNat + 4 * copied := by
-    dsimp only [sourceAddress]
-    exact wordOffset_toNat source copied (by omega)
+    dsimp only [sourceAddress]; exact wordOffset_toNat source copied (by omega)
   have hdestinationAddress :
       destinationAddress.toNat = destination.toNat + 4 * copied := by
-    dsimp only [destinationAddress]
-    exact wordOffset_toNat destination copied (by
-      rw [hcurrentLength] at hdestinationFacts
-      omega)
-  have hsourceRoom : sourceAddress.toNat + 4 ≤ UInt32.size := by
-    rw [hsourceAddress]
-    omega
+    dsimp only [destinationAddress]; exact wordOffset_toNat destination copied (by
+      rw [hcurrentLength] at hdestinationFacts; omega)
+  have hsourceRoom : sourceAddress.toNat + 4 ≤ UInt32.size := by omega
   have hdestinationRoom : destinationAddress.toNat + 4 ≤ UInt32.size := by
     rw [hdestinationAddress]
-    rw [hcurrentLength] at hdestinationFacts
-    omega
-  have hsource1 : (sourceAddress + 1).toNat = sourceAddress.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap sourceAddress 1
-      (by decide) (by norm_num [UInt32.size] at hsourceRoom ⊢; omega)
-  have hsource2 : (sourceAddress + 2).toNat = sourceAddress.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap sourceAddress 2
-      (by decide) (by norm_num [UInt32.size] at hsourceRoom ⊢; omega)
-  have hsource3 : (sourceAddress + 3).toNat = sourceAddress.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap sourceAddress 3
-      (by decide) (by norm_num [UInt32.size] at hsourceRoom ⊢; omega)
-  have hdestination1 :
-      (destinationAddress + 1).toNat = destinationAddress.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap destinationAddress 1
-      (by decide) (by norm_num [UInt32.size] at hdestinationRoom ⊢; omega)
-  have hdestination2 :
-      (destinationAddress + 2).toNat = destinationAddress.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap destinationAddress 2
-      (by decide) (by norm_num [UInt32.size] at hdestinationRoom ⊢; omega)
-  have hdestination3 :
-      (destinationAddress + 3).toNat = destinationAddress.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap destinationAddress 3
-      (by decide) (by norm_num [UInt32.size] at hdestinationRoom ⊢; omega)
+    rw [hcurrentLength] at hdestinationFacts; omega
+  have hsourceRoom' : sourceAddress.toNat + 4 ≤ 4294967296 := by
+    simpa only [UInt32.size] using hsourceRoom
+  have hdestinationRoom' : destinationAddress.toNat + 4 ≤ 4294967296 := by
+    simpa only [UInt32.size] using hdestinationRoom
+  obtain ⟨hsource1, hsource2, hsource3⟩ :=
+    UInt32.addSteps4 sourceAddress hsourceRoom'
+  obtain ⟨hdestination1, hdestination2, hdestination3⟩ :=
+    UInt32.addSteps4 destinationAddress hdestinationRoom'
   ihave HsourceFocus := WordSlice_get source original copied hsourceIndex $$
     Hsource
   icases HsourceFocus with ⟨HsourceWord, HcloseSource⟩
-  ihave HdestinationFocus := WordSlice_set destination current copied
+  ihave ⟨HdestinationWord, HcloseDestination⟩ := WordSlice_set destination current copied
     original[copied] hdestinationIndex $$ Hdestination
-  icases HdestinationFocus with ⟨HdestinationWord, HcloseDestination⟩
   ihave HsourceWord' : pointsTo_u32 0 (sourceAddress + 0)
       original[copied] $$ [HsourceWord]
   · simp only [UInt32.add_zero, sourceAddress]
@@ -1972,11 +1752,10 @@ theorem twp_func3_copy_decoded_word
     iexact HdestinationStored
   ihave Hsource := HcloseSource $$ HsourceWord
   ihave Hdestination := HcloseDestination $$ HdestinationWord
-  have hnext : current.set copied original[copied] = next := by
-    exact overwritePrefix_set_next original initial copied hlength hcopied
+  have hnext : current.set copied original[copied] = next :=
+    overwritePrefix_set_next original initial copied hlength hcopied
   ihave Hnext : WordSlice destination next $$ [Hdestination]
-  · rw [← hnext]
-    iexact Hdestination
+  · irw_exact [← hnext] with Hdestination
   iapply Hcont $$ Hsource Hnext
 
 /-- The local-address form used by the generated tail loop (and by each
@@ -2024,8 +1803,7 @@ theorem twp_func3_copy_decoded_word_from_locals
       (⟨params, localValues,
         .i32 (destination + 4 * UInt32.ofNat copied) :: stack⟩ : Locals).get
           sourceIndex =
-        some (.i32 (source + 4 * UInt32.ofNat copied)) := by
-    simpa using hsourceGet
+        some (.i32 (source + 4 * UInt32.ofNat copied)) := by simpa using hsourceGet
   iapply twp_localGet hsourceGet'
   have Hcopy := twp_func3_copy_decoded_word
     (hlc := hlc) source destination original initial copied hlength hcopied
@@ -2033,8 +1811,7 @@ theorem twp_func3_copy_decoded_word_from_locals
     (code := code) (arity := arity) (remainder := remainder)
     (controls := controls) (calls := calls) (s := s) (E := E) (Φ := Φ)
   simp only [List.cons_append, List.nil_append] at Hcopy
-  iapply Hcopy
-  iexact Hresources
+  iapply_exact Hcopy with Hresources
 
 /-! ## Generated decode loops -/
 
@@ -2071,15 +1848,13 @@ private theorem func3_decode_next_address (base : UInt32) (index : Nat) :
   ac_rfl
 
 private theorem func3_decode_decrement {remaining : Nat}
-    (hpositive : 0 < remaining)
-    (hbound : remaining < UInt32.size) :
+    (hpositive : 0 < remaining) :
     UInt32.ofNat remaining + 4294967295 =
       UInt32.ofNat (remaining - 1) := by
   have hpred : remaining - 1 + 1 = remaining := by omega
-  have hpredBound : remaining - 1 + 1 < UInt32.size := by omega
   have hremaining :
       UInt32.ofNat remaining = UInt32.ofNat (remaining - 1) + 1 := by
-    rw [Wasm.Examples.MergeSort.u32_ofNat_succ hpredBound, hpred]
+    rw [UInt32.ofNat_succ, hpred]
   have hmax : (4294967295 : UInt32) = 0 - 1 := by decide
   rw [hremaining, hmax]
   calc
@@ -2144,7 +1919,7 @@ theorem twp_func3_decode_tail_loop
     Finish)
   iintro ⟨Hsource, Hdestination, Hfinish⟩
   simp only [List.cons_append, List.nil_append]
-  iapply Project.Mergesort.SortProof.twp_loop_wf_family_from_terminal
+  iapply Wasm.SmallStep.twp_loop_wf_family
     (ι := Func3DecodeTailState)
     (measure := fun state => state.remaining)
     (locals := func3DecodeTailLocals source destination original.length bulk
@@ -2160,18 +1935,16 @@ theorem twp_func3_decode_tail_loop
     iintro Hrec Hinv
     icases Hinv with ⟨%hstate, Hsource, Hdestination, Hfinish⟩
     have hcopied : state.copied < original.length := by omega
-    have hremainingBound : state.remaining < UInt32.size := by omega
     have hdecrement :
         UInt32.ofNat state.remaining + 4294967295 =
           UInt32.ofNat (state.remaining - 1) :=
-      func3_decode_decrement hstate.2 hremainingBound
+      func3_decode_decrement hstate.2
     let next : Func3DecodeTailState :=
       { copied := state.copied + 1,
         remaining := state.remaining - 1 }
     have hnextPartition :
         next.copied + next.remaining = original.length := by
-      dsimp only [next]
-      omega
+      dsimp only [next]; omega
     have Hcopy := twp_func3_copy_decoded_word_from_locals
       (hlc := hlc) source destination original initial state.copied hlength
       hcopied 6 3 []
@@ -2190,36 +1963,23 @@ theorem twp_func3_decode_tail_loop
       func3AppendLocals, List.cons_append, List.nil_append, List.drop]
       at Hcopy ⊢
     iapply Hcopy
-    isplitl [Hsource]
-    · iexact Hsource
-    isplitl [Hdestination]
-    · iexact Hdestination
+    isplitl_exacts [Hsource Hdestination]
     iintro Hsource Hdestination
-    iapply twp_localGet rfl
-    iapply twp_const
-    iapply twp_add
+    wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (4 : UInt32), func3_decode_next_address]
-    iapply twp_localSet rfl
-    simp only [List.length, List.set]
-    iapply twp_localGet rfl
-    iapply twp_const
-    iapply twp_add
+    wasm_twp_localSet [List.length, List.set]
+    wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (4 : UInt32), func3_decode_next_address]
-    iapply twp_localSet rfl
-    simp only [List.length, List.set]
-    iapply twp_localGet rfl
-    iapply twp_const
-    iapply twp_add
+    wasm_twp_localSet [List.length, List.set]
+    wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (4294967295 : UInt32), hdecrement]
-    iapply twp_localTee rfl
-    simp only [List.length, List.set]
+    wasm_twp_localTee [List.length, List.set]
     by_cases hmore : 0 < next.remaining
     · have hnonzero : UInt32.ofNat next.remaining ≠ 0 := by
         intro hzero
         have hzeroNat := congrArg UInt32.toNat hzero
         rw [UInt32.toNat_ofNat_of_lt' (by omega)] at hzeroNat
-        simp only [UInt32.toNat_zero] at hzeroNat
-        omega
+        simp only [UInt32.toNat_zero] at hzeroNat; omega
       iapply twp_brIf (condition := UInt32.ofNat next.remaining)
         (depth := 0) (arity := arity) (code := [])
         (targetCode := func3DecodeTailLoopBody)
@@ -2232,38 +1992,28 @@ theorem twp_func3_decode_tail_loop
       ispecialize Hrec $$ %next
       isimp only [func3DecodeTailLoopBody, func3DecodeTailLocals,
         func3AppendLocals, next] at Hrec
-      iapply Hrec
-      · ipureintro
+      iapply_pure Hrec =>
         omega
-      isplitr
-      · ipureintro
-        exact ⟨hnextPartition, hmore⟩
+      isplitr_pureexact ⟨hnextPartition, hmore⟩
       iframe
     · have hzero : next.remaining = 0 := by omega
       have hcondition : UInt32.ofNat next.remaining = 0 := by simp [hzero]
       rw [hcondition]
-      iapply twp_brIfZero
-      iapply twp_exitControl rfl
-      simp only [List.take_zero, List.nil_append]
+      wasm_twp_pures [twp_brIfZero twp_exitControl] using [List.take_zero, List.nil_append]
       have hcopiedFinal : next.copied = original.length := by omega
       have hcopiedFinal' : state.copied + 1 = original.length := by
         simpa only [next] using hcopiedFinal
       have hoverwriteFinal :
           overwritePrefix original initial (state.copied + 1) = original := by
-        rw [hcopiedFinal']
-        exact overwritePrefix_all original initial hlength
+        rw [hcopiedFinal']; exact overwritePrefix_all original initial hlength
       isimp only [Finish] at Hfinish
       ihave Hfinish' := Hfinish $$ Hsource
       isimp only [hoverwriteFinal] at Hdestination
-      ihave Hdestination' : WordSlice destination original $$ [Hdestination]
-      · iexact Hdestination
       rw [hcopiedFinal']
       isimp only [func3DecodeTailLocals, func3AppendLocals] at Hfinish'
-      iapply Hfinish' $$ Hdestination'
+      iapply Hfinish' $$ Hdestination
   · simp only [Inv, Finish]
-    isplitr
-    · ipureintro
-      exact ⟨hpartition, hremaining⟩
+    isplitr_pureexact ⟨hpartition, hremaining⟩
     iframe
 
 /-- Exact body of the generated four-word unrolled decode loop. -/
@@ -2298,8 +2048,7 @@ private def func3DecodeBulkLocals
 
 private theorem func3_decode_byte_offset (index : Nat) :
     UInt32.ofNat (4 * index) = 4 * UInt32.ofNat index := by
-  rw [UInt32.ofNat_mul]
-  rfl
+  rw [UInt32.ofNat_mul]; rfl
 
 private theorem func3_decode_address_increment
     (base : UInt32) (index increment : Nat) :
@@ -2336,8 +2085,7 @@ private theorem func3_decode_byte_offset_step (index : Nat) :
 
 private theorem func3_decode_count_step (index : Nat) :
     UInt32.ofNat index + 4 = UInt32.ofNat (index + 4) := by
-  rw [UInt32.ofNat_add]
-  rfl
+  rw [UInt32.ofNat_add]; rfl
 
 /-- The generated unrolled loop copies exactly the largest multiple-of-four
 prefix.  Its back edge advances by four words, and its terminating comparison
@@ -2398,7 +2146,7 @@ theorem twp_func3_decode_bulk_loop
     Finish)
   iintro ⟨Hsource, Hdestination, Hfinish⟩
   simp only [List.cons_append, List.nil_append]
-  iapply Project.Mergesort.SortProof.twp_loop_wf_family_from_terminal
+  iapply Wasm.SmallStep.twp_loop_wf_family
     (ι := Func3DecodeBulkState)
     (measure := fun state => bulk - state.copied)
     (locals := func3DecodeBulkLocals source destination original.length bulk
@@ -2430,18 +2178,12 @@ theorem twp_func3_decode_bulk_loop
     simp only [func3DecodeBulkLoopBody, func3DecodeBulkLocals,
       func3AppendLocals]
     simp only [func3_decode_byte_offset]
-    iapply twp_localGet rfl
-    iapply twp_localGet rfl
-    iapply twp_add
+    wasm_twp_pures [twp_localGet twp_localGet twp_add]
     rw [UInt32.add_comm (4 * UInt32.ofNat state.copied)]
-    iapply twp_localTee rfl
-    simp only [List.length, List.set]
-    iapply twp_localGet rfl
-    iapply twp_localGet rfl
-    iapply twp_add
+    wasm_twp_localTee [List.length, List.set]
+    wasm_twp_pures [twp_localGet twp_localGet twp_add]
     rw [UInt32.add_comm (4 * UInt32.ofNat state.copied)]
-    iapply twp_localTee rfl
-    simp only [List.length, List.set]
+    wasm_twp_localTee [List.length, List.set]
     have Hcopy0 := twp_func3_copy_decoded_word
       (hlc := hlc) source destination original initial state.copied hlength
       hcopy0 (params := [])
@@ -2458,18 +2200,11 @@ theorem twp_func3_decode_bulk_loop
       func3AppendLocals, addressedState, func3_decode_byte_offset,
       List.drop, List.cons_append, List.nil_append] at Hcopy0
     iapply Hcopy0
-    isplitl [Hsource]
-    · iexact Hsource
-    isplitl [Hdestination]
-    · iexact Hdestination
+    isplitl_exacts [Hsource Hdestination]
     iintro Hsource Hdestination
-    iapply twp_localGet rfl
-    iapply twp_const
-    iapply twp_add
+    wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (4 : UInt32), func3_decode_address_add4]
-    iapply twp_localGet rfl
-    iapply twp_const
-    iapply twp_add
+    wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (4 : UInt32), func3_decode_address_add4]
     have Hcopy1 := twp_func3_copy_decoded_word
       (hlc := hlc) source destination original initial (state.copied + 1)
@@ -2487,18 +2222,11 @@ theorem twp_func3_decode_bulk_loop
       func3AppendLocals, addressedState, func3_decode_byte_offset,
       List.drop, List.cons_append, List.nil_append] at Hcopy1
     iapply Hcopy1
-    isplitl [Hsource]
-    · iexact Hsource
-    isplitl [Hdestination]
-    · iexact Hdestination
+    isplitl_exacts [Hsource Hdestination]
     iintro Hsource Hdestination
-    iapply twp_localGet rfl
-    iapply twp_const
-    iapply twp_add
+    wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (8 : UInt32), func3_decode_address_add8]
-    iapply twp_localGet rfl
-    iapply twp_const
-    iapply twp_add
+    wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (8 : UInt32), func3_decode_address_add8]
     have Hcopy2 := twp_func3_copy_decoded_word
       (hlc := hlc) source destination original initial (state.copied + 2)
@@ -2516,18 +2244,11 @@ theorem twp_func3_decode_bulk_loop
       func3AppendLocals, addressedState, func3_decode_byte_offset,
       List.drop, List.cons_append, List.nil_append] at Hcopy2
     iapply Hcopy2
-    isplitl [Hsource]
-    · iexact Hsource
-    isplitl [Hdestination]
-    · iexact Hdestination
+    isplitl_exacts [Hsource Hdestination]
     iintro Hsource Hdestination
-    iapply twp_localGet rfl
-    iapply twp_const
-    iapply twp_add
+    wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (12 : UInt32), func3_decode_address_add12]
-    iapply twp_localGet rfl
-    iapply twp_const
-    iapply twp_add
+    wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (12 : UInt32), func3_decode_address_add12]
     have Hcopy3 := twp_func3_copy_decoded_word
       (hlc := hlc) source destination original initial (state.copied + 3)
@@ -2545,29 +2266,18 @@ theorem twp_func3_decode_bulk_loop
       func3AppendLocals, addressedState, func3_decode_byte_offset,
       List.drop, List.cons_append, List.nil_append] at Hcopy3
     iapply Hcopy3
-    isplitl [Hsource]
-    · iexact Hsource
-    isplitl [Hdestination]
-    · iexact Hdestination
+    isplitl_exacts [Hsource Hdestination]
     iintro Hsource Hdestination
     have hcopiedFour : state.copied + 3 + 1 = state.copied + 4 := by omega
     isimp only [hcopiedFour] at Hdestination
-    iapply twp_localGet rfl
-    iapply twp_const
-    iapply twp_add
+    wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (16 : UInt32), func3_decode_byte_offset_step]
-    iapply twp_localSet rfl
-    simp only [List.length, List.set]
-    iapply twp_localGet rfl
-    iapply twp_localGet rfl
-    iapply twp_const
-    iapply twp_add
+    wasm_twp_localSet [List.length, List.set]
+    wasm_twp_pures [twp_localGet twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (4 : UInt32), func3_decode_count_step]
-    iapply twp_localTee rfl
-    simp only [List.length, List.set]
+    wasm_twp_localTee [List.length, List.set]
     by_cases hmore : state.copied + 4 < bulk
-    · have hnextBound : state.copied + 8 ≤ bulk := by
-        omega
+    · have hnextBound : state.copied + 8 ≤ bulk := by omega
       have hnextMod : (state.copied + 4) % 4 = 0 := by omega
       have hnextLtSize : state.copied + 4 < UInt32.size := by omega
       have hbulkLtSize : bulk < UInt32.size := by omega
@@ -2580,8 +2290,7 @@ theorem twp_func3_decode_bulk_loop
         omega
       have hcounterNe :
           ¬UInt32.ofNat bulk = UInt32.ofNat state.copied + 4 := by
-        rw [func3_decode_count_step]
-        exact fun heq => hne heq.symm
+        rw [func3_decode_count_step]; exact fun heq => hne heq.symm
       iapply twp_ne (result := 1) (by simp [hcounterNe])
       iapply twp_brIf (condition := 1) (depth := 0) (arity := arity)
         (code := []) (targetCode := func3DecodeBulkLoopBody)
@@ -2595,20 +2304,15 @@ theorem twp_func3_decode_bulk_loop
       ispecialize Hrec $$ %next
       isimp only [func3DecodeBulkLoopBody, func3DecodeBulkLocals,
         func3AppendLocals, next] at Hrec
-      iapply Hrec
-      · ipureintro
+      iapply_pure Hrec =>
         omega
-      isplitr
-      · ipureintro
-        exact ⟨hnextBound, hnextMod⟩
+      isplitr_pureexact ⟨hnextBound, hnextMod⟩
       iframe
     · have hdone : state.copied + 4 = bulk := by omega
       have heq : UInt32.ofNat (state.copied + 4) = UInt32.ofNat bulk := by
         rw [hdone]
       iapply twp_ne (result := 0) (by simp [heq])
-      iapply twp_brIfZero
-      iapply twp_exitControl rfl
-      simp only [List.take_zero, List.nil_append]
+      wasm_twp_pures [twp_brIfZero twp_exitControl] using [List.take_zero, List.nil_append]
       have hprevious : state.copied = bulk - 4 := by omega
       isimp only [Finish] at Hfinish
       ihave Hfinish' := Hfinish $$ Hsource
@@ -2616,19 +2320,13 @@ theorem twp_func3_decode_bulk_loop
           overwritePrefix original initial (state.copied + 4) =
             overwritePrefix original initial bulk := by rw [hdone]
       isimp only [hoverwrite] at Hdestination
-      ihave Hdestination' :
-          WordSlice destination (overwritePrefix original initial bulk) $$
-          [Hdestination]
-      · iexact Hdestination
       rw [hdone, hprevious]
       simp only [func3_decode_byte_offset]
       isimp only [func3DecodeBulkLocals, func3AppendLocals,
         func3_decode_byte_offset] at Hfinish'
-      iapply Hfinish' $$ Hdestination'
+      iapply Hfinish' $$ Hdestination
   · simp only [Inv, Finish, overwritePrefix_zero]
-    isplitr
-    · ipureintro
-      exact ⟨hbulkPositive, by simp⟩
+    isplitr_pureexact ⟨hbulkPositive, by simp⟩
     iframe
 
 /-- Arithmetic and local initialization immediately following the values
@@ -2648,8 +2346,7 @@ private theorem func3_decode_sub_four (length : Nat)
   calc
     UInt32.ofNat (4 * length) + 4294967292 =
         (UInt32.ofNat (4 * length - 4) + 4) + (0 - 4) := by
-      rw [← hsplit, UInt32.ofNat_add, hmax]
-      rfl
+      rw [← hsplit, UInt32.ofNat_add, hmax]; rfl
     _ = UInt32.ofNat (4 * length - 4) := by
       calc
         (UInt32.ofNat (4 * length - 4) + 4) + (0 - 4) =
@@ -2685,8 +2382,7 @@ private theorem func3_decode_tail_mask (length : Nat)
   rw [hthree]
   have htailBound : length % 4 < UInt32.size := by
     have := Nat.mod_lt length (by decide : 0 < 4)
-    norm_num [UInt32.size]
-    omega
+    norm_num [UInt32.size]; omega
   rw [UInt32.toNat_ofNat_of_lt' htailBound]
   rw [show (3 : Nat) = 2 ^ 2 - 1 by norm_num,
     Nat.and_two_pow_sub_one_eq_mod]
@@ -2718,43 +2414,26 @@ theorem twp_func3_decode_setup
       @ s; E [{ Φ }] := by
   iintro Hcont
   have hwordBound : 4 * length < UInt32.size := by
-    norm_num [UInt32.size] at hbyteBound ⊢
-    omega
+    norm_num [UInt32.size] at hbyteBound ⊢; omega
   have hlengthBound : length < UInt32.size := by omega
   have hsub := func3_decode_sub_four length hpositive
   have hshift := func3_decode_shift_two length hpositive hwordBound
   have hsucc : UInt32.ofNat (length - 1) + 1 = UInt32.ofNat length := by
     have hpred : length - 1 + 1 = length := by omega
-    have hpredBound : length - 1 + 1 < UInt32.size := by omega
-    rw [Wasm.Examples.MergeSort.u32_ofNat_succ hpredBound, hpred]
+    rw [UInt32.ofNat_succ, hpred]
   have htail := func3_decode_tail_mask length hlengthBound
   simp only [func3DecodeSetup, func3AppendLocals,
     List.cons_append, List.nil_append]
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_add
+  wasm_twp_pures [twp_localGet twp_const twp_add]
   rw [UInt32.add_comm (4294967292 : UInt32), hsub]
-  iapply twp_localTee rfl
-  simp only [List.length, List.set]
-  iapply twp_const
-  iapply twp_shrU
-  rw [show (2 % 32 : UInt32) = 2 by decide, hshift]
-  iapply twp_const
-  iapply twp_add
-  rw [UInt32.add_comm (1 : UInt32), hsucc]
-  iapply twp_localTee rfl
-  simp only [List.length, List.set]
-  iapply twp_const
-  iapply twp_and
-  rw [htail]
-  iapply twp_localSet rfl
-  simp only [List.length, List.set]
-  iapply twp_const
-  iapply twp_localSet rfl
-  simp only [List.length, List.set]
-  iapply twp_localGet rfl
-  iapply twp_localSet rfl
-  simp only [List.length, List.set]
+  wasm_twp_localTee [List.length, List.set]
+  wasm_twp_pures [twp_const twp_shrU] rewriting [show (2 % 32 : UInt32) = 2 by decide, hshift]
+  wasm_twp_pures [twp_const twp_add] rewriting [UInt32.add_comm (1 : UInt32), hsucc]
+  wasm_twp_localTee [List.length, List.set]
+  wasm_twp_pures [twp_const twp_and] rewriting [htail]
+  wasm_twp_localSet [List.length, List.set]
+  wasm_twp_pures [twp_const twp_localSet] using [List.length, List.set]
+  wasm_twp_pures [twp_localGet twp_localSet] using [List.length, List.set]
   iexact Hcont
 
 /-- Instructions common to the small-input and post-bulk scalar tails. -/
@@ -2835,21 +2514,11 @@ theorem twp_func3_decode_positive_tail
       _ = UInt32.ofNat (bulk + tail) := (UInt32.ofNat_add _ _).symm
       _ = UInt32.ofNat original.length := by rw [hpartition]
   simp only [func3DecodeTailContinuation, func3AppendLocals]
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
-  iapply twp_add
-  rw [htotal]
-  iapply twp_localSet rfl
-  simp only [List.length, List.set]
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_shl
-  rw [MemRegion.shl2_eq_mul4]
-  iapply twp_add
-  rw [UInt32.add_comm (4 * UInt32.ofNat bulk)]
-  iapply twp_localSet rfl
-  simp only [List.length, List.set]
+  wasm_twp_pures [twp_localGet twp_localGet twp_add] rewriting [htotal]
+  wasm_twp_localSet [List.length, List.set]
+  wasm_twp_pures [twp_localGet twp_localGet twp_const twp_shl] rewriting [MemRegion.shl2_eq_mul4]
+  wasm_twp_pures [twp_add] rewriting [UInt32.add_comm (4 * UInt32.ofNat bulk)]
+  wasm_twp_localSet [List.length, List.set]
   have Htail := twp_func3_decode_tail_loop
     (hlc := hlc) source destination original initial bulk tail aux10 hlength
     hpartition htailPositive hlengthBound
@@ -2861,16 +2530,10 @@ theorem twp_func3_decode_positive_tail
     func3AppendLocals, List.cons_append, List.nil_append] at Htail
   simp only [func3DecodeTailLoopBody]
   iapply Htail
-  isplitl [Hsource]
-  · iexact Hsource
-  isplitl [Hdestination]
-  · iexact Hdestination
+  isplitl_exacts [Hsource Hdestination]
   iintro Hsource Hdestination
-  iapply twp_localGet rfl
-  iapply twp_localSet rfl
-  simp only [List.length, List.set]
-  iapply twp_exitControl rfl
-  simp only [func3DecodeOuterFrame, List.take_zero, List.nil_append]
+  wasm_twp_pures [twp_localGet twp_localSet] using [List.length, List.set]
+  wasm_twp_pures [twp_exitControl] using [func3DecodeOuterFrame, List.take_zero, List.nil_append]
   iapply Hcont $$ Hsource Hdestination
 
 /-- Compose the generated bulk/tail dispatcher.  The postcondition hides the
@@ -2910,36 +2573,28 @@ theorem twp_func3_decode_blocks
   let bulk := 4 * (original.length / 4)
   let tail := original.length % 4
   have hpartition : bulk + tail = original.length := by
-    dsimp only [bulk, tail]
-    exact bulk4_add_tail original.length
+    dsimp only [bulk, tail]; exact bulk4_add_tail original.length
   have hlengthBound : original.length < UInt32.size := by
-    norm_num [UInt32.size] at hbyteBound ⊢
-    omega
+    norm_num [UInt32.size] at hbyteBound ⊢; omega
   have hcountBound : original.length < 2147483648 := by omega
   have hbyteWordBound : 4 * original.length - 4 < UInt32.size := by
-    norm_num [UInt32.size]
-    omega
+    norm_num [UInt32.size]; omega
   have hbyteWord :
       (UInt32.ofNat (4 * original.length - 4)).toNat =
         4 * original.length - 4 :=
     UInt32.toNat_ofNat_of_lt' hbyteWordBound
   iintro ⟨Hsource, Hdestination, Hcont⟩
   simp only [List.cons_append, List.nil_append]
-  iapply twp_block
-  simp only [func3DecodeOuterBlockBody, List.cons_append, List.nil_append]
-  iapply twp_block
-  simp only [func3DecodeBulkBlockBody, func3AppendLocals]
-  iapply twp_localGet rfl
-  iapply twp_const
+  wasm_twp_pures [twp_block] using [func3DecodeOuterBlockBody, List.cons_append, List.nil_append]
+  wasm_twp_pures [twp_block] using [func3DecodeBulkBlockBody, func3AppendLocals]
+  wasm_twp_pures [twp_localGet twp_const]
   by_cases hsmall : original.length < 4
   · have htail : tail = original.length := by
-      dsimp only [tail]
-      exact Nat.mod_eq_of_lt hsmall
+      dsimp only [tail]; exact Nat.mod_eq_of_lt hsmall
     dsimp only [tail] at htail
     have hlt : UInt32.ofNat (4 * original.length - 4) < (12 : UInt32) := by
       rw [UInt32.lt_iff_toNat_lt, hbyteWord]
       have h12 : (12 : UInt32).toNat = 12 := by decide
-      rw [h12]
       omega
     iapply twp_ltU (result := 1) (by simp [hlt])
     iapply twp_brIf (condition := 1) (depth := 0) (arity := arity)
@@ -2959,10 +2614,7 @@ theorem twp_func3_decode_blocks
     simp only [show UInt32.ofNat 0 = 0 by decide, UInt32.mul_zero,
       UInt32.add_zero] at Htail
     iapply Htail
-    isplitl [Hsource]
-    · iexact Hsource
-    isplitl [Hdestination]
-    · iexact Hdestination
+    isplitl_exacts [Hsource Hdestination]
     iintro Hsource Hdestination
     ihave Hfinal := Hcont $$
       %(UInt32.ofNat original.length)
@@ -2971,31 +2623,20 @@ theorem twp_func3_decode_blocks
       %(0 : UInt32) Hsource Hdestination
     iexact Hfinal
   · have hbulkPositive : 4 ≤ bulk := by
-      dsimp only [bulk]
-      omega
+      dsimp only [bulk]; omega
     have hbulkMod : bulk % 4 = 0 := by
-      dsimp only [bulk]
-      omega
+      dsimp only [bulk]; omega
     have hnotLt : ¬UInt32.ofNat (4 * original.length - 4) <
         (12 : UInt32) := by
       rw [UInt32.lt_iff_toNat_lt, hbyteWord]
       have h12 : (12 : UInt32).toNat = 12 := by decide
-      rw [h12]
       omega
     iapply twp_ltU (result := 0) (by simp [hnotLt])
-    iapply twp_brIfZero
-    iapply twp_localGet rfl
-    iapply twp_const
-    iapply twp_and
+    wasm_twp_pures [twp_brIfZero twp_localGet twp_const twp_and]
     rw [bulk4_signedMask_eq original.length hcountBound]
-    iapply twp_localSet rfl
-    simp only [List.length, List.set]
-    iapply twp_const
-    iapply twp_localSet rfl
-    simp only [List.length, List.set]
-    iapply twp_const
-    iapply twp_localSet rfl
-    simp only [List.length, List.set]
+    wasm_twp_localSet [List.length, List.set]
+    wasm_twp_pures [twp_const twp_localSet] using [List.length, List.set]
+    wasm_twp_pures [twp_const twp_localSet] using [List.length, List.set]
     have Hbulk := twp_func3_decode_bulk_loop
       (hlc := hlc) source destination original initial bulk tail
       (UInt32.ofNat original.length)
@@ -3016,12 +2657,9 @@ theorem twp_func3_decode_blocks
     simp only [func3DecodeBulkLoopBody]
     simp only [List.drop_zero]
     iapply Hbulk
-    isplitl [Hsource]
-    · iexact Hsource
-    isplitl [Hdestination]
-    · iexact Hdestination
+    isplitl_exacts [Hsource Hdestination]
     iintro Hsource Hdestination
-    iapply twp_localGet rfl
+    wasm_twp_pures [twp_localGet]
     by_cases htailZero : tail = 0
     · rw [htailZero]
       iapply twp_eqz (result := 1) (by simp)
@@ -3031,8 +2669,7 @@ theorem twp_func3_decode_blocks
       have hbulkAll : bulk = original.length := by omega
       have hoverwrite :
           overwritePrefix original initial bulk = original := by
-        rw [hbulkAll]
-        exact overwritePrefix_all original initial hlength
+        rw [hbulkAll]; exact overwritePrefix_all original initial hlength
       isimp only [hoverwrite] at Hdestination
       rw [hbulkAll]
       ihave Hfinal := Hcont $$
@@ -3047,20 +2684,14 @@ theorem twp_func3_decode_blocks
         intro hzero
         have hnat := congrArg UInt32.toNat hzero
         rw [UInt32.toNat_ofNat_of_lt' (by omega)] at hnat
-        simp only [UInt32.toNat_zero] at hnat
-        omega
+        simp only [UInt32.toNat_zero] at hnat; omega
       dsimp only [tail] at htailNonzero
       iapply twp_eqz (result := 0) (by simpa using htailNonzero)
-      iapply twp_brIfZero
-      iapply twp_localGet rfl
-      iapply twp_localGet rfl
-      iapply twp_add
+      wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet twp_add]
       simp only [func3_decode_byte_offset]
       rw [UInt32.add_comm (4 * UInt32.ofNat bulk) source]
-      iapply twp_localSet rfl
-      simp only [List.length, List.set]
-      iapply twp_exitControl rfl
-      simp only [List.take_zero, List.nil_append]
+      wasm_twp_localSet [List.length, List.set]
+      wasm_twp_pures [twp_exitControl] using [List.take_zero, List.nil_append]
       have Htail := twp_func3_decode_positive_tail
         (hlc := hlc) source destination original initial bulk tail
         (source + 4 * UInt32.ofNat (bulk - 4))
@@ -3074,10 +2705,7 @@ theorem twp_func3_decode_blocks
         func3DecodeBulkLoopBody, func3AppendLocals,
         func3_decode_byte_offset, List.cons_append, List.nil_append] at Htail ⊢
       iapply Htail
-      isplitl [Hsource]
-      · iexact Hsource
-      isplitl [Hdestination]
-      · iexact Hdestination
+      isplitl_exacts [Hsource Hdestination]
       iintro Hsource Hdestination
       ihave Hfinal := Hcont $$
         %(UInt32.ofNat original.length)
@@ -3153,22 +2781,16 @@ theorem twp_func3_decode_allocated
     (arity := arity) (remainder := remainder) (controls := controls)
     (calls := calls) (s := s) (E := E) (Φ := Φ)
   simp only [List.cons_append, List.nil_append] at Hguard ⊢
-  iapply Hguard
-  isplitl [Hblock]
-  · iexact Hblock
-  iintro Hblock
+  iapply_frame_intro Hguard as Hblock
   isimp only [LiveBlock] at Hblock
   icases Hblock with ⟨HallocationToken, HallocationBytes, %hblockFacts⟩
-  have hbytes : bytes.length = 4 * original.length := by
-    simpa only [layout] using hblockFacts.1
+  have hbytes : bytes.length = 4 * original.length := by simpa only [layout] using hblockFacts.1
   have hdecodedLength : (decodeWords bytes).length = original.length :=
     (serialize_decodeWords_of_length bytes original.length hbytes).2
   ihave Hblock : LiveBlock heapId valuesId destination layout bytes $$
       [HallocationToken HallocationBytes]
   · unfold LiveBlock
-    iframe
-    ipureintro
-    exact hblockFacts
+    iframe_pureexact hblockFacts
   ihave Hbuffers := DriverDecodeBuffers_open heapId capacity source destination
     valuesId original chunkBytes outputBytes bytes frontier history horiginal
     hgeo $$ [Hframe Hblock]
@@ -3194,10 +2816,7 @@ theorem twp_func3_decode_allocated
   simp only [func3DecodeOuterBlockBody, List.cons_append, List.nil_append]
     at Hdecode ⊢
   iapply Hdecode
-  isplitl [Hsource]
-  · iexact Hsource
-  isplitl [Hdestination]
-  · iexact Hdestination
+  isplitl_exacts [Hsource Hdestination]
   iintro %final1
   iintro %final3
   iintro %final6
@@ -3208,9 +2827,7 @@ theorem twp_func3_decode_allocated
   ihave Hvalues : LiveWordBlock heapId valuesId destination original $$
       [Htoken Hdestination]
   · unfold LiveWordBlock
-    iframe
-    ipureintro
-    exact hnonnull
+    iframe_pureexact hnonnull
   iapply Hcont $$ %final1 %final3 %final6 %final5 %final8 Hframe Hvalues
 
 /-- Execute the allocation marker and zeroing scratch allocation after decode.
@@ -3285,19 +2902,16 @@ theorem twp_func3_allocate_scratch
       (UInt32.ofNat (4 * original.length)) final8
       (UInt32.ofNat original.length) (UInt32.ofNat (4 * original.length)) []
   have hwordBound : 4 * original.length < UInt32.size := by
-    norm_num [UInt32.size] at hbyteBound ⊢
-    omega
+    norm_num [UInt32.size] at hbyteBound ⊢; omega
   have hsizeWord :
       (UInt32.ofNat (4 * original.length)).toNat = 4 * original.length :=
     UInt32.toNat_ofNat_of_lt' hwordBound
-  have hlayoutValid : layout.Valid := by
-    exact align4Layout_valid_of_bounds (4 * original.length)
+  have hlayoutValid : layout.Valid := align4Layout_valid_of_bounds (4 * original.length)
       (by omega) hbyteBound (by omega)
   have hlayoutMatches :
       layout.Matches (UInt32.ofNat (4 * original.length)) 4 := by
     unfold AllocLayout.Matches layout
-    simp only [hsizeWord]
-    decide
+    simp only [hsizeWord]; decide
   iintro ⟨Hruntime, Hsp, Hreserve, Hframe, Hvalues, Hbump, Hstreams, Hcont⟩
   simp only [List.cons_append, List.nil_append]
   have Hmarker := Project.Mergesort.ContractProofs.func4_correct
@@ -3313,19 +2927,13 @@ theorem twp_func3_allocate_scratch
   unfold Func4Spec CallContract callExpr at Hmarker
   simp only [List.cons_append, List.nil_append] at Hmarker
   simp only [func3AppendLocals] at Hmarker ⊢
-  iapply Hmarker
-  isplitl [Hruntime]
-  · iexact Hruntime
-  iintro Hruntime
+  iapply_frame_intro Hmarker as Hruntime
   unfold ResumeWP resumeExpr
   simp only [List.cons_append, List.nil_append]
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_shl
+  wasm_twp_pures [twp_localGet twp_const twp_shl]
   rw [MemRegion.shl2_eq_mul4, ← func3_decode_byte_offset]
-  iapply twp_localTee rfl
-  simp only [List.length, List.set]
-  iapply twp_const
+  wasm_twp_localTee [List.length, List.set]
+  wasm_twp_pures [twp_const]
   have Halloc := hfunc9
     (size := UInt32.ofNat (4 * original.length)) (alignment := 4)
     (layout := layout) (heapId := heapId) (storedCursor := storedCursor)
@@ -3339,15 +2947,8 @@ theorem twp_func3_allocate_scratch
   dsimp only [callerLocals] at Halloc
   simp only [func3AppendLocals] at Halloc
   iapply Halloc
-  isplitl [Hruntime]
-  · iexact Hruntime
-  isplitl [Hbump]
-  · iexact Hbump
-  isplitl [Hstreams]
-  · iexact Hstreams
-  isplitl []
-  · ipureintro
-    exact ⟨hlayoutMatches, hlayoutValid, rfl⟩
+  isplitl_exacts [Hruntime Hbump Hstreams]
+  isplitl_pureexact ⟨hlayoutMatches, hlayoutValid, rfl⟩
   unfold ZeroAllocContinuation
   cases hdecision : classifyBump frontier layout with
   | oom =>
@@ -3357,9 +2958,7 @@ theorem twp_func3_allocate_scratch
       unfold DriverScratchOOM
       iexists capacity, source, valuesPtr, valuesId, chunkBytes, outputBytes,
         shadow, storedCursor, frontier, history
-      isplitl []
-      · ipureintro
-        exact hpositive
+      isplitl_pureexact hpositive
       iframe
   | success scratch finish =>
       have hscratchStart : frontier ≤ scratch.toNat :=
@@ -3384,9 +2983,7 @@ theorem twp_func3_allocate_scratch
         unfold DriverScratchOOM
         iexists capacity, source, valuesPtr, valuesId, chunkBytes, outputBytes,
           shadow, storedCursor, frontier, history
-        isplitl []
-        · ipureintro
-          exact hpositive
+        isplitl_pureexact hpositive
         iframe
 
 /-- Exact success tail following the generated zeroed scratch allocation. -/
@@ -3443,27 +3040,18 @@ theorem twp_func3_scratch_success_tail
   isimp only [LiveBlock] at Hscratch
   icases Hscratch with ⟨Htoken, Hbytes, %hfacts⟩
   simp only [func3ScratchSuccessTail, func3AppendLocals]
-  iapply twp_localTee rfl
-  simp only [List.length, List.set]
+  wasm_twp_localTee [List.length, List.set]
   iapply twp_eqz (result := 0) (by simp [hfacts.2.1])
-  iapply twp_brIfZero
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_shrU
+  wasm_twp_pures [twp_brIfZero twp_localGet twp_const twp_shrU]
   rw [show (2 : UInt32) % 32 = 2 by decide,
     func3_scratch_count_shift length hbyteBound]
-  iapply twp_localSet rfl
-  simp only [List.length, List.set]
-  iapply twp_const
-  iapply twp_localSet rfl
-  simp only [List.length, List.set]
+  wasm_twp_localSet [List.length, List.set]
+  wasm_twp_pures [twp_const twp_localSet] using [List.length, List.set]
   iapply twp_br hbranch
   ihave Hscratch : LiveBlock heapId scratchId scratch layout bytes $$
       [Htoken Hbytes]
   · unfold LiveBlock
-    iframe
-    ipureintro
-    exact hfacts
+    iframe_pureexact hfacts
   iapply Hcont $$ Hscratch
 
 /-- Frame both allocation tokens around the single generated `func2` call.
@@ -3529,10 +3117,7 @@ theorem twp_func3_sort
   · iframe
   icases Hfocus with ⟨Hbuffers, HcloseBuffers⟩
   simp only [List.cons_append, List.nil_append, func3AppendLocals]
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet twp_localGet twp_localGet]
   have Hsort := Project.Mergesort.ContractProofs.func2_correct
     (hlc := hlc) (source := valuesPtr)
     (n := UInt32.ofNat original.length) (scratch := scratchPtr)
@@ -3546,14 +3131,10 @@ theorem twp_func3_sort
   unfold Func2Spec CallContract callExpr at Hsort
   simp only [List.cons_append, List.nil_append, func3AppendLocals] at Hsort
   iapply Hsort
-  isplitl [Hruntime]
-  · iexact Hruntime
-  isplitl [Hbuffers]
-  · iexact Hbuffers
-  isplitl []
-  · ipureintro
+  isplitl_exacts [Hruntime Hbuffers]
+  isplitl_pureexact (by
     have hcountBound : original.length < UInt32.size := by omega
-    simp [scratchInitial, UInt32.toNat_ofNat_of_lt' hcountBound]
+    simp [scratchInitial, UInt32.toNat_ofNat_of_lt' hcountBound])
   iintro %sorted Hruntime Hresult
   isimp only [SortResultBuffers] at Hresult
   icases Hresult with ⟨Hbuffers, %hsorted⟩
@@ -3619,46 +3200,25 @@ theorem twp_func3_write_one
   iintro ⟨Hruntime, Hframe, Hvalues, Hstreams, Hcont⟩
   isimp only [ExportFrame] at Hframe
   icases Hframe with ⟨Hvec, Hchunk, Houtput, %hframeLengths⟩
-  ihave HvalueFacts := WordSlice_facts valuesPtr sorted $$ Hvalues
-  icases HvalueFacts with ⟨Hvalues, %hvalueFacts⟩
+  ihave ⟨Hvalues, %hvalueFacts⟩ := WordSlice_facts valuesPtr sorted $$ Hvalues
   have haddress :
       (valuesPtr + 4 * UInt32.ofNat emitted).toNat =
         valuesPtr.toNat + 4 * emitted :=
     wordOffset_toNat valuesPtr emitted (by omega)
   have hroom :
-      (valuesPtr + 4 * UInt32.ofNat emitted).toNat + 4 ≤ UInt32.size := by
-    rw [haddress]
-    omega
-  have h1 :
-      (valuesPtr + 4 * UInt32.ofNat emitted + 1).toNat =
-        (valuesPtr + 4 * UInt32.ofNat emitted).toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap
-      (valuesPtr + 4 * UInt32.ofNat emitted) 1 (by decide)
-      (by norm_num [UInt32.size] at hroom ⊢; omega)
-  have h2 :
-      (valuesPtr + 4 * UInt32.ofNat emitted + 2).toNat =
-        (valuesPtr + 4 * UInt32.ofNat emitted).toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap
-      (valuesPtr + 4 * UInt32.ofNat emitted) 2 (by decide)
-      (by norm_num [UInt32.size] at hroom ⊢; omega)
-  have h3 :
-      (valuesPtr + 4 * UInt32.ofNat emitted + 3).toNat =
-        (valuesPtr + 4 * UInt32.ofNat emitted).toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap
-      (valuesPtr + 4 * UInt32.ofNat emitted) 3 (by decide)
-      (by norm_num [UInt32.size] at hroom ⊢; omega)
-  ihave HvalueFocus := WordSlice_get valuesPtr sorted emitted hemitted $$ Hvalues
-  icases HvalueFocus with ⟨Hvalue, HcloseValue⟩
-  ihave HoutputFocus := ByteSlice_storeWordFocus (driverBase + 268)
+      (valuesPtr + 4 * UInt32.ofNat emitted).toNat + 4 ≤ UInt32.size := by omega
+  obtain ⟨h1, h2, h3⟩ := UInt32.addSteps4
+    (valuesPtr + 4 * UInt32.ofNat emitted) (by
+      simpa only [UInt32.size] using hroom)
+  ihave ⟨Hvalue, HcloseValue⟩ := WordSlice_get valuesPtr sorted emitted hemitted $$ Hvalues
+  ihave ⟨HoldOutput, HcloseOutput⟩ := ByteSlice_storeWordFocus (driverBase + 268)
     outputBytes sorted[emitted] hframeLengths.2 (by decide) $$ Houtput
-  icases HoutputFocus with ⟨HoldOutput, HcloseOutput⟩
   ihave Hvalue' : pointsTo_u32 0
       (valuesPtr + 4 * UInt32.ofNat emitted + 0) sorted[emitted] $$ [Hvalue]
   · simp only [UInt32.add_zero]
     iexact Hvalue
   simp only [List.cons_append, List.nil_append, func3AppendLocals]
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   iapply twp_load32
     (address := valuesPtr + 4 * UInt32.ofNat emitted) (offset := 0)
     sorted[emitted] (by simp)
@@ -3671,16 +3231,12 @@ theorem twp_func3_write_one
   · simp only [UInt32.add_zero]
     iexact HvalueLoaded
   ihave Hvalues := HcloseValue $$ Hvalue
-  iapply twp_store32 (address := driverBase) (offset := 268)
+  wasm_twp_bind twp_store32 (address := driverBase) (offset := 268)
       (Spec.decodeWord outputBytes) (by decide) (by decide) (by decide)
-      (by decide) $$ HoldOutput
-  iintro Houtput
+      (by decide) with HoldOutput => Houtput
   ihave Houtput := HcloseOutput $$ Houtput
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_add
-  rw [UInt32.add_comm (268 : UInt32)]
-  iapply twp_const
+  wasm_twp_pures [twp_localGet twp_const twp_add] rewriting [UInt32.add_comm (268 : UInt32)]
+  wasm_twp_pures [twp_const]
   have Hwrite := Project.Mergesort.ContractProofs.func11_correct
     (hlc := hlc) (ptr := driverBase + 268) (requested := 4)
     (bytes := serialize [sorted[emitted]]) (input := [])
@@ -3693,27 +3249,20 @@ theorem twp_func3_write_one
   unfold CallContract callExpr at Hwrite
   simp only [List.cons_append, List.nil_append, func3AppendLocals] at Hwrite
   iapply Hwrite
-  isplitl [Hruntime]
-  · iexact Hruntime
-  isplitl [Hstreams]
-  · iexact Hstreams
-  isplitl [Houtput]
-  · iexact Houtput
-  isplitl []
-  · ipureintro
+  isplitl_exacts [Hruntime Hstreams Houtput]
+  isplitl_pureexact (by
     constructor
     · change 4 = (Spec.u32Codec.encode sorted[emitted]).length
       exact (Spec.u32Codec.encode_length sorted[emitted]).symm
-    · decide
+    · decide)
   iintro Hruntime Hstreams Houtput
   ihave Hframe : ExportFrame heapId capacity inputPtr input chunkBytes
       (serialize [sorted[emitted]]) $$ [Hvec Hchunk Houtput]
   · unfold ExportFrame
-    iframe
-    ipureintro
-    refine ⟨hframeLengths.1, ?_⟩
-    change (Spec.u32Codec.encode sorted[emitted]).length = 4
-    exact Spec.u32Codec.encode_length sorted[emitted]
+    iframe_pureexact (by
+      refine ⟨hframeLengths.1, ?_⟩
+      change (Spec.u32Codec.encode sorted[emitted]).length = 4
+      exact Spec.u32Codec.encode_length sorted[emitted])
   ihave Hresume := Hcont $$ Hruntime Hframe Hvalues Hstreams
   iunfold ResumeWP
   simp only [resumeExpr, List.nil_append]
@@ -3806,7 +3355,7 @@ theorem twp_func3_output_loop
       Finish)
   iintro ⟨Hruntime, Hframe, Hvalues, Hstreams, Hfinish⟩
   simp only [List.cons_append, List.nil_append]
-  iapply Project.Mergesort.SortProof.twp_loop_wf_family_from_terminal
+  iapply Wasm.SmallStep.twp_loop_wf_family
     (ι := Nat)
     (measure := fun emitted => sorted.length - emitted)
     (locals := func3OutputLocals valuesPtr sorted aux1 aux4 aux5 aux7 aux8
@@ -3828,7 +3377,7 @@ theorem twp_func3_output_loop
         serialize (sorted.take emitted) ++ serialize [sorted[emitted]] =
           serialize (sorted.take (emitted + 1)) := by
       rw [← serialize_append,
-        ← Wasm.Examples.MergeSort.take_succ_eq_append_getElem hemitted]
+        ← List.take_succ_eq_append_getElem hemitted]
     have Hwrite := twp_func3_write_one
       (hlc := hlc) heapId capacity inputPtr valuesPtr input chunkBytes
       frameOutput sorted emitted aux1
@@ -3844,41 +3393,25 @@ theorem twp_func3_output_loop
     simp only [func3OutputLoopBody, func3OutputLocals, func3AppendLocals,
       List.drop, List.cons_append, List.nil_append] at Hwrite ⊢
     iapply Hwrite
-    isplitl [Hruntime]
-    · iexact Hruntime
-    isplitl [Hframe]
-    · iexact Hframe
-    isplitl [Hwords]
-    · iexact Hwords
-    isplitl [Hstreams]
-    · iexact Hstreams
+    isplitl_exacts [Hruntime Hframe Hwords Hstreams]
     iintro Hruntime Hframe Hwords Hstreams
-    iapply twp_localGet rfl
-    iapply twp_const
-    iapply twp_add
+    wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (4 : UInt32), func3_decode_next_address]
-    iapply twp_localSet rfl
-    simp only [List.length, List.set]
-    iapply twp_localGet rfl
-    iapply twp_const
-    iapply twp_add
+    wasm_twp_localSet [List.length, List.set]
+    wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (4294967292 : UInt32), hcountdown]
-    iapply twp_localTee rfl
-    simp only [List.length, List.set]
+    wasm_twp_localTee [List.length, List.set]
     ihave Hvalues : LiveWordBlock heapId valuesId valuesPtr sorted $$
         [Htoken Hwords]
     · unfold LiveWordBlock
-      iframe
-      ipureintro
-      exact hnonnull
+      iframe_pureexact hnonnull
     by_cases hmore : emitted + 1 < sorted.length
     · have hnonzero :
           UInt32.ofNat (4 * (sorted.length - (emitted + 1))) ≠ 0 := by
         intro hzero
         have hzeroNat := congrArg UInt32.toNat hzero
         rw [UInt32.toNat_ofNat_of_lt' (by omega)] at hzeroNat
-        simp only [UInt32.toNat_zero] at hzeroNat
-        omega
+        simp only [UInt32.toNat_zero] at hzeroNat; omega
       iapply twp_brIf
         (condition := UInt32.ofNat (4 * (sorted.length - (emitted + 1))))
         (depth := 0) (arity := arity) (code := [])
@@ -3890,12 +3423,9 @@ theorem twp_func3_output_loop
         (targetValues := []) hnonzero (by rfl)
       ispecialize Hrec $$ %(emitted + 1)
       simp only [func3OutputLoopBody]
-      iapply Hrec
-      · ipureintro
+      iapply_pure Hrec =>
         omega
-      isplitr
-      · ipureintro
-        exact hmore
+      isplitr_pureexact hmore
       iexists (serialize [sorted[emitted]])
       isimp only [hstreamStep] at Hstreams
       iframe
@@ -3904,9 +3434,7 @@ theorem twp_func3_output_loop
           UInt32.ofNat (4 * (sorted.length - (emitted + 1))) = 0 := by
         simp [hdone]
       rw [hzero]
-      iapply twp_brIfZero
-      iapply twp_exitControl rfl
-      simp only [List.take_zero, List.nil_append]
+      wasm_twp_pures [twp_brIfZero twp_exitControl] using [List.take_zero, List.nil_append]
       have hfinalCountdown :
           UInt32.ofNat (4 * (sorted.length - sorted.length)) = 0 := by
         simp
@@ -3918,9 +3446,7 @@ theorem twp_func3_output_loop
         Hstreams
   · simp only [Inv, Finish, List.take_zero, serialize, WordCodec.serialize,
       List.flatMap_nil]
-    isplitr
-    · ipureintro
-      exact hpositive
+    isplitr_pureexact hpositive
     iexists outputBytes
     iframe
 
@@ -3973,9 +3499,8 @@ theorem twp_func3_output
         @ s; E [{ Φ }] := by
   iintro ⟨Hruntime, Hframe, Hvalues, Hstreams, Hcont⟩
   simp only [List.cons_append, List.nil_append]
-  iapply twp_block
-  simp only [func3OutputBlockBody, func3AppendLocals]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_block] using [func3OutputBlockBody, func3AppendLocals]
+  wasm_twp_pures [twp_localGet]
   by_cases hempty : sorted.length = 0
   · have hzero : UInt32.ofNat sorted.length = 0 := by simp [hempty]
     iapply twp_eqz (result := 1) (by simp [hzero])
@@ -3983,8 +3508,7 @@ theorem twp_func3_output
       (targetCode := afterOutput) (targetControl := controls)
       (targetValues := []) (by decide) (by rfl)
     have hserialize : serialize sorted = [] := by
-      rw [List.length_eq_zero_iff.mp hempty]
-      rfl
+      rw [List.length_eq_zero_iff.mp hempty]; rfl
     ihave Hstreams' : Streams [] (serialize sorted) false $$ [Hstreams]
     · isimp only [hserialize]
       iexact Hstreams
@@ -3994,19 +3518,12 @@ theorem twp_func3_output
       intro hzero
       have hzeroNat := congrArg UInt32.toNat hzero
       rw [UInt32.toNat_ofNat_of_lt' (by omega)] at hzeroNat
-      simp only [UInt32.toNat_zero] at hzeroNat
-      omega
+      simp only [UInt32.toNat_zero] at hzeroNat; omega
     iapply twp_eqz (result := 0) (by simp [hnonzero])
-    iapply twp_brIfZero
-    iapply twp_localGet rfl
-    iapply twp_const
-    iapply twp_shl
+    wasm_twp_pures [twp_brIfZero twp_localGet twp_const twp_shl]
     rw [MemRegion.shl2_eq_mul4, ← func3_decode_byte_offset]
-    iapply twp_localSet rfl
-    simp only [List.length, List.set]
-    iapply twp_localGet rfl
-    iapply twp_localSet rfl
-    simp only [List.length, List.set]
+    wasm_twp_localSet [List.length, List.set]
+    wasm_twp_pures [twp_localGet twp_localSet] using [List.length, List.set]
     have Hloop := twp_func3_output_loop
       (hlc := hlc) heapId valuesId capacity inputPtr valuesPtr input
       chunkBytes outputBytes sorted aux1 aux4 aux5 aux7 aux8 aux10 hpositive
@@ -4020,17 +3537,9 @@ theorem twp_func3_output
     simp [func3OutputLocals, func3AppendLocals, func3OutputBlockBody]
       at Hloop ⊢
     iapply Hloop
-    isplitl [Hruntime]
-    · iexact Hruntime
-    isplitl [Hframe]
-    · iexact Hframe
-    isplitl [Hvalues]
-    · iexact Hvalues
-    isplitl [Hstreams]
-    · iexact Hstreams
+    isplitl_exacts [Hruntime Hframe Hvalues Hstreams]
     iintro %finalOutput Hruntime Hframe Hvalues Hstreams
-    iapply twp_exitControl rfl
-    simp only [List.take_zero, List.nil_append]
+    wasm_twp_pures [twp_exitControl] using [List.take_zero, List.nil_append]
     iapply Hcont $$ %(valuesPtr + 4 * UInt32.ofNat sorted.length)
       %(0 : UInt32) %finalOutput Hruntime Hframe Hvalues Hstreams
 
@@ -4084,8 +3593,7 @@ theorem twp_func3_deallocate_values
     intro hzero
     have hzeroNat := congrArg UInt32.toNat hzero
     rw [UInt32.toNat_ofNat_of_lt' hcountBound] at hzeroNat
-    simp only [UInt32.toNat_zero] at hzeroNat
-    omega
+    simp only [UInt32.toNat_zero] at hzeroNat; omega
   have hsizeWord :
       (UInt32.ofNat (4 * sorted.length)).toNat = 4 * sorted.length :=
     UInt32.toNat_ofNat_of_lt' hbyteBound
@@ -4094,17 +3602,12 @@ theorem twp_func3_deallocate_values
   ihave Hblock := (LiveWordBlock_as_liveBlock heapId valuesId valuesPtr
     sorted).mp $$ Hvalues
   simp only [List.cons_append, List.nil_append]
-  iapply twp_block
-  simp only [func3ValuesDeallocBlockBody, func3AppendLocals, List.drop_zero]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_block] using [func3ValuesDeallocBlockBody, func3AppendLocals, List.drop_zero]
+  wasm_twp_pures [twp_localGet]
   iapply twp_eqz (result := 0) (by simp [hcountNonzero])
-  iapply twp_brIfZero
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_shl
+  wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet twp_const twp_shl]
   rw [MemRegion.shl2_eq_mul4, ← func3_decode_byte_offset]
-  iapply twp_const
+  wasm_twp_pures [twp_const]
   have Hdealloc := Project.Mergesort.ContractProofs.func7_correct
     (hlc := hlc)
     (ptr := valuesPtr) (size := UInt32.ofNat (4 * sorted.length))
@@ -4126,19 +3629,11 @@ theorem twp_func3_deallocate_values
     func3AppendLocals, func3ValuesDeallocBlockBody]
     at Hdealloc
   iapply Hdealloc
-  isplitl [Hruntime]
-  · iexact Hruntime
-  isplitl [Hbump]
-  · iexact Hbump
-  isplitl [Hblock]
-  · iexact Hblock
-  isplitl []
-  · ipureintro
-    exact ⟨hsizeWord, hfour, Or.inr rfl⟩
+  isplitl_exacts [Hruntime Hbump Hblock]
+  isplitl_pureexact ⟨hsizeWord, hfour, Or.inr rfl⟩
   iintro Hruntime Hbump
   unfold ResumeWP resumeExpr
-  iapply twp_exitControl rfl
-  simp only [List.take_zero, List.nil_append]
+  wasm_twp_pures [twp_exitControl] using [List.take_zero, List.nil_append]
   iapply Hcont $$ Hruntime Hbump
 
 /-- Exact generated block which retires the scratch allocation. -/
@@ -4197,13 +3692,8 @@ theorem twp_func3_deallocate_scratch
     scratchValues).mp $$ Hscratch
   isimp only [hscratchLength] at Hblock
   simp only [List.cons_append, List.nil_append]
-  iapply twp_block
-  simp only [func3ScratchDeallocBlockBody, func3AppendLocals, List.drop_zero]
-  iapply twp_localGet rfl
-  iapply twp_brIfZero
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
-  iapply twp_const
+  wasm_twp_pures [twp_block] using [func3ScratchDeallocBlockBody, func3AppendLocals, List.drop_zero]
+  wasm_twp_pures [twp_localGet twp_brIfZero twp_localGet twp_localGet twp_const]
   have Hdealloc := Project.Mergesort.ContractProofs.func7_correct
     (hlc := hlc)
     (ptr := scratchPtr) (size := UInt32.ofNat (4 * sorted.length))
@@ -4224,19 +3714,11 @@ theorem twp_func3_deallocate_scratch
   simp only [List.cons_append, List.nil_append, func3AppendLocals,
     func3ScratchDeallocBlockBody] at Hdealloc
   iapply Hdealloc
-  isplitl [Hruntime]
-  · iexact Hruntime
-  isplitl [Hbump]
-  · iexact Hbump
-  isplitl [Hblock]
-  · iexact Hblock
-  isplitl []
-  · ipureintro
-    exact ⟨hsizeWord, hfour, Or.inr rfl⟩
+  isplitl_exacts [Hruntime Hbump Hblock]
+  isplitl_pureexact ⟨hsizeWord, hfour, Or.inr rfl⟩
   iintro Hruntime Hbump
   unfold ResumeWP resumeExpr
-  iapply twp_exitControl rfl
-  simp only [List.take_zero, List.nil_append]
+  wasm_twp_pures [twp_exitControl] using [List.take_zero, List.nil_append]
   iapply Hcont $$ Hruntime Hbump
 
 /-- Exact generated tail which either skips empty Vec storage or retires its
@@ -4307,8 +3789,7 @@ theorem twp_func3_deallocate_input
       aux10 []
   have hcapacityNonzero : capacity ≠ 0 := by
     intro hzero
-    have := congrArg UInt32.toNat hzero
-    simp only [UInt32.toNat_zero] at this
+    have := congrArg UInt32.toNat hzero; simp only [UInt32.toNat_zero] at this
     omega
   have hone : (1 : UInt32).toNat = 1 := by decide
   iintro ⟨Hruntime, Hframe, Hbump, Hcont⟩
@@ -4317,32 +3798,26 @@ theorem twp_func3_deallocate_input
     ⟨⟨⟨Hcapacity, Hpointer⟩, Hlength, Hstorage⟩,
       Hchunk, Houtput, %hframeLengths⟩
   simp only [func3InputDeallocTail, func3AppendLocals]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   ihave Hcapacity' : pointsTo_u32 0 (driverBase + 0) capacity $$ [Hcapacity]
   · simp only [UInt32.add_zero]
     iexact Hcapacity
-  iapply twp_load32 (address := driverBase) (offset := 0) capacity
-      (by decide) (by decide) (by decide) (by decide) $$ Hcapacity'
-  iintro Hcapacity
+  wasm_twp_bind twp_load32 (address := driverBase) (offset := 0) capacity
+      (by decide) (by decide) (by decide) (by decide) with Hcapacity' => Hcapacity
   isimp only [UInt32.add_zero] at Hcapacity
-  iapply twp_localTee rfl
-  simp only [List.length, List.set]
+  wasm_twp_localTee [List.length, List.set]
   iapply twp_eqz (result := 0) (by simp [hcapacityNonzero])
-  iapply twp_brIfZero
+  wasm_twp_pures [twp_brIfZero]
   ihave Hframe : ExportFrame heapId capacity inputPtr initialized chunkBytes
       outputBytes $$ [Hcapacity Hpointer Hlength Hstorage Hchunk Houtput]
   · unfold ExportFrame VecU8 RawVecHeader
-    iframe
-    ipureintro
-    exact hframeLengths
-  ihave Hreleased := ExportFrame_releaseStorage heapId capacity inputPtr
-    initialized chunkBytes outputBytes $$ Hframe
-  icases Hreleased with ⟨Hstorage, HframeBytes, %_hframeLength⟩
+    iframe_pureexact hframeLengths
+  ihave ⟨Hstorage, HframeBytes, %_hframeLength⟩ :=
+    ExportFrame_releaseStorage heapId capacity inputPtr initialized chunkBytes outputBytes $$ Hframe
   isimp only [VecStorage] at Hstorage
   icases Hstorage with (%hempty | Hlive)
   ·
-    have hzero := congrArg UInt32.toNat hempty.1
-    simp only [UInt32.toNat_zero] at hzero
+    have hzero := congrArg UInt32.toNat hempty.1; simp only [UInt32.toNat_zero] at hzero
     omega
   · icases Hlive with
       ⟨%allocationId, %allBytes, %spare, %hstorage, Hblock⟩
@@ -4353,23 +3828,16 @@ theorem twp_func3_deallocate_input
     icases Hblock with ⟨Htoken, Hbytes, %hblock⟩
     ihave %hlookup : ⌜get? history.records allocationId =
         some (liveMeta inputPtr layout)⌝ $$ [Hauth Htoken]
-    · iapply AllocMetaAuth_token_agree
-      iframe
+    · iapply_frame AllocMetaAuth_token_agree
     ihave Hbump : BumpHeap heapId storedCursor frontier history $$
         [Hcursor Hfrontier Hauth Hretired Hpages]
     · unfold BumpHeap
-      iframe
-      ipureintro
-      exact hheap
+      iframe_pureexact hheap
     ihave Hblock : LiveBlock heapId allocationId inputPtr layout allBytes $$
         [Htoken Hbytes]
     · unfold LiveBlock
-      iframe
-      ipureintro
-      exact hblock
-    iapply twp_localGet rfl
-    iapply twp_localGet rfl
-    iapply twp_const
+      iframe_pureexact hblock
+    wasm_twp_pures [twp_localGet twp_localGet twp_const]
     have Hdealloc := Project.Mergesort.ContractProofs.func7_correct
       (hlc := hlc) (ptr := inputPtr) (size := capacity) (alignment := 1)
       (layout := layout) (heapId := heapId) (allocationId := allocationId)
@@ -4385,19 +3853,11 @@ theorem twp_func3_deallocate_input
     simp only [List.cons_append, List.nil_append, finalLocals,
       func3AppendLocals] at Hdealloc
     iapply Hdealloc
-    isplitl [Hruntime]
-    · iexact Hruntime
-    isplitl [Hbump]
-    · iexact Hbump
-    isplitl [Hblock]
-    · iexact Hblock
-    isplitl []
-    · ipureintro
-      exact ⟨rfl, hone, Or.inl rfl⟩
+    isplitl_exacts [Hruntime Hbump Hblock]
+    isplitl_pureexact ⟨rfl, hone, Or.inl rfl⟩
     iintro Hruntime Hbump
     unfold ResumeWP resumeExpr
-    iapply twp_exitControl rfl
-    simp only [List.take_zero, List.nil_append]
+    wasm_twp_pures [twp_exitControl] using [List.take_zero, List.nil_append]
     ispecialize Hcont $$ %allocationId %allBytes %spare
     ispecialize Hcont $$
       %⟨hstorage.1, hstorage.2.1, hstorage.2.2.1,
@@ -4448,26 +3908,21 @@ theorem twp_func3_skip_empty_input
     ⟨⟨⟨Hcapacity, Hpointer⟩, Hlength, Hstorage⟩,
       Hchunk, Houtput, %hframeLengths⟩
   simp only [func3InputDeallocTail, func3AppendLocals]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   ihave Hcapacity' : pointsTo_u32 0 (driverBase + 0) 0 $$ [Hcapacity]
   · simp only [UInt32.add_zero]
     iexact Hcapacity
-  iapply twp_load32 (address := driverBase) (offset := 0) 0
-      (by decide) (by decide) (by decide) (by decide) $$ Hcapacity'
-  iintro Hcapacity
+  wasm_twp_bind twp_load32 (address := driverBase) (offset := 0) 0
+      (by decide) (by decide) (by decide) (by decide) with Hcapacity' => Hcapacity
   isimp only [UInt32.add_zero] at Hcapacity
-  iapply twp_localTee rfl
-  simp only [List.length, List.set]
+  wasm_twp_localTee [List.length, List.set]
   iapply twp_eqz (result := 1) (by simp)
   ihave Hframe : ExportFrame heapId 0 1 [] chunkBytes outputBytes $$
       [Hcapacity Hpointer Hlength Hstorage Hchunk Houtput]
   · unfold ExportFrame VecU8 RawVecHeader
-    iframe
-    ipureintro
-    exact hframeLengths
-  ihave Hreleased := ExportFrame_releaseStorage heapId 0 1 [] chunkBytes
-    outputBytes $$ Hframe
-  icases Hreleased with ⟨Hstorage, HframeBytes, %hframeLength⟩
+    iframe_pureexact hframeLengths
+  ihave ⟨Hstorage, HframeBytes, %hframeLength⟩ :=
+    ExportFrame_releaseStorage heapId 0 1 [] chunkBytes outputBytes $$ Hframe
   isimp only [VecStorage] at Hstorage
   icases Hstorage with (%_hempty | Hlive)
   · iapply twp_brIf (condition := 1) (depth := 0) (arity := arity)
@@ -4528,19 +3983,15 @@ theorem twp_func3_restore_stack
         StackRegion entryStackLow (reserveBytes ++ frameBytes) ∗
           ⌜(reserveBytes ++ frameBytes).length = 288⌝) $$
         [Hreserve Hframe]
-    · iapply StackReserve_combineFrame reserveBytes frameBytes hframeLength
-      iframe
+    · iapply_frame StackReserve_combineFrame reserveBytes frameBytes hframeLength
     icases Hcombined with ⟨Hstack, %hstackLength⟩
     iapply Hcont $$ Hsp' Hstack %hstackLength
   isimp only [StackPointer] at Hsp
   simp only [func3RestoreStackTail, func3AppendLocals,
     List.cons_append, List.nil_append]
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_add
+  wasm_twp_pures [twp_localGet twp_const twp_add]
   rw [show 272 + driverBase = entryStackTop by decide]
-  iapply twp_globalSet $$ Hsp
-  iintro Hsp
+  wasm_twp_rebind twp_globalSet with Hsp
   ihave Hsp' : StackPointer entryStackTop $$ [Hsp]
   · unfold StackPointer
     iexact Hsp
@@ -4584,9 +4035,9 @@ private theorem completedHistory_other_records_retired
     have hptrExact :
         inputPtr = UInt32.ofNat (vectorBlockBase exponent) := by
       rw [← UInt32.ofNat_toNat (x := inputPtr), hptr]
-    have hinputId : inputId = exponent - 8 := by
-      apply geometricHistory_live_unique exponent inputId hexponentLower
-      simpa only [hhistory, hptrExact, hcapacity] using hinput
+    have hinputId : inputId = exponent - 8 :=
+      geometricHistory_live_unique exponent inputId hexponentLower
+        (by simpa only [hhistory, hptrExact, hcapacity] using hinput)
     intro allocationId metadata hlookup hne
     subst history
     unfold geometricHistory at hlookup
@@ -4597,9 +4048,7 @@ private theorem completedHistory_other_records_retired
       subst metadata
       have hnotTop : allocationId + 8 ≠ exponent := by
         intro hlive
-        apply hne
-        rw [hinputId]
-        omega
+        exact hne (by omega)
       simp [geometricMetadata, hnotTop]
     · contradiction
 
@@ -4764,20 +4213,15 @@ theorem twp_func3_finish_nonempty
       (UInt32.ofNat sorted.length) (UInt32.ofNat (4 * sorted.length)) []
   have hsortedLength : sorted.length = original.length :=
     hsorted.2.length_eq.symm
-  have hsortedPositive : 0 < sorted.length := by
-    rw [hsortedLength]
-    exact hpositive
+  have hsortedPositive : 0 < sorted.length := by simpa only [hsortedLength] using hpositive
   have hcapacityPositive : 0 < capacity.toNat := by
     rcases hgeo with hempty | hshort | hlarge
     · have hzero := hempty.2.2.1
-      rw [serialize_length] at hzero
-      omega
+      rw [serialize_length] at hzero; omega
     · rcases hshort with ⟨_, _, _, hcapacity, _, _, _⟩
-      rw [hcapacity]
       omega
     · rcases hlarge with ⟨exponent, _, _, hcapacity, _, _, _, _, _⟩
-      rw [hcapacity]
-      exact Nat.pow_pos (by omega)
+      rw [hcapacity]; exact Nat.pow_pos (by omega)
   have hsortedByteBound : 4 * sorted.length < UInt32.size := by
     simpa only [hsortedLength] using hbyteBound
   have hscratchId' : scratchId = valuesHistory.nextId := by
@@ -4805,12 +4249,7 @@ theorem twp_func3_finish_nonempty
   simp only [func3NonemptyCleanup, func3AppendLocals,
     List.cons_append, List.nil_append] at HvaluesCleanup ⊢
   iapply HvaluesCleanup
-  isplitl [Hruntime]
-  · iexact Hruntime
-  isplitl [Hbump]
-  · iexact Hbump
-  isplitl [Hvalues]
-  · iexact Hvalues
+  isplitl_exacts [Hruntime Hbump Hvalues]
   iintro Hruntime Hbump
   have HscratchCleanup := twp_func3_deallocate_scratch
     (hlc := hlc) heapId scratchId scratchPtr valuesPtr sorted scratchValues
@@ -4821,14 +4260,11 @@ theorem twp_func3_finish_nonempty
     (calls := calls) (s := s) (E := E) (Φ := Phi)
   simp only [func3AppendLocals, List.cons_append, List.nil_append]
     at HscratchCleanup ⊢
-  iapply HscratchCleanup
-  isplitl [Hruntime]
-  · iexact Hruntime
+  iapply_splitl_exact HscratchCleanup with Hruntime
   isplitl [Hbump]
   · isimp only [afterValues, workLayout, hsortedLength] at Hbump
     iexact Hbump
-  isplitl [Hscratch]
-  · iexact Hscratch
+  isplitl_exact Hscratch
   iintro Hruntime Hbump
   have HinputCleanup := twp_func3_deallocate_input
     (hlc := hlc) heapId capacity inputPtr (serialize original) chunkBytes
@@ -4841,10 +4277,7 @@ theorem twp_func3_finish_nonempty
     (s := s) (E := E) (Phi := Phi)
   simp only [func3AppendLocals, func3CleanupOuterFrame] at HinputCleanup ⊢
   iapply HinputCleanup
-  isplitl [Hruntime]
-  · iexact Hruntime
-  isplitl [Hframe]
-  · iexact Hframe
+  isplitl_exacts [Hruntime Hframe]
   isplitl [Hbump]
   · isimp only [beforeInput, afterValues, workLayout, hsortedLength]
       at Hbump
@@ -4857,11 +4290,9 @@ theorem twp_func3_finish_nonempty
     apply completedDriverHistory_allRetired
       (serialize original).length capacity inputPtr valuesPtr scratchPtr
       inputFrontier inputHistory inputId workLayout
-    · rw [serialize_length]
-      omega
+    · rw [serialize_length]; omega
     · exact hgeo
-    · rw [← hbeforeInput]
-      exact hinput.2.2.2.2.2
+    · rw [← hbeforeInput]; exact hinput.2.2.2.2.2
   have Hrestore := twp_func3_restore_stack reserveBytes
     (exportFrameBytes capacity inputPtr (serialize original) chunkBytes
       outputBytes)
@@ -4873,12 +4304,7 @@ theorem twp_func3_finish_nonempty
     (s := s) (E := E) (Phi := Phi)
   simp only [List.append_nil, func3AppendLocals] at Hrestore ⊢
   iapply Hrestore
-  isplitl [Hsp]
-  · iexact Hsp
-  isplitl [Hreserve]
-  · iexact Hreserve
-  isplitl [HframeBytes]
-  · iexact HframeBytes
+  isplitl_exacts [Hsp Hreserve HframeBytes]
   iintro Hsp Hstack %hstackLength
   ihave Hsuccess : DriverSuccess heapId original $$
       [Hsp Hstack Hbump Hstreams]
@@ -4889,9 +4315,7 @@ theorem twp_func3_finish_nonempty
       storedCursor, frontier,
       beforeInput.retire inputId inputPtr
         { size := capacity.toNat, alignment := 1 }
-    isplitl []
-    · ipureintro
-      exact ⟨hsorted, hstackLength, hallRetired⟩
+    isplitl_pureexact ⟨hsorted, hstackLength, hallRetired⟩
     · iframe
   iapply Hcont $$ Hruntime Hsuccess
 
@@ -4942,22 +4366,12 @@ theorem twp_func3_finish_empty
           calls⟩ : Expr Universal.State) @ s; E [{ Phi }] := by
   iintro ⟨Hruntime, Hsp, Hreserve, Hframe, Hbump, Hstreams, Hcont⟩
   simp only [func3EmptyAfterReadSetup, func3EmptyLocals, func3AppendLocals]
-  iapply twp_const
-  iapply twp_localSet rfl
-  simp only [List.length, List.set]
-  iapply twp_const
-  iapply twp_localSet rfl
-  simp only [List.length, List.set]
-  iapply twp_const
-  iapply twp_localSet rfl
-  simp only [List.length, List.set]
-  iapply twp_exitControl rfl
-  simp only [func3EmptyMiddleFrame, List.take_zero, List.nil_append,
+  wasm_twp_pures [twp_const twp_localSet] using [List.length, List.set]
+  wasm_twp_pures [twp_const twp_localSet] using [List.length, List.set]
+  wasm_twp_pures [twp_const twp_localSet] using [List.length, List.set]
+  wasm_twp_pures [twp_exitControl] using [func3EmptyMiddleFrame, List.take_zero, List.nil_append,
     func3SortAndCleanup, List.cons_append]
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet twp_localGet twp_localGet]
   have Hsort := Project.Mergesort.ContractProofs.func2_correct
     (hlc := hlc) (source := 4) (n := 0) (scratch := 4) (scratchN := 0)
     (input := []) (scratchInput := [])
@@ -4969,22 +4383,17 @@ theorem twp_func3_finish_empty
   unfold Func2Spec CallContract callExpr at Hsort
   simp only [List.cons_append, List.nil_append, func3EmptyReadyLocals,
     func3AppendLocals] at Hsort
-  iapply Hsort
-  isplitl [Hruntime]
-  · iexact Hruntime
+  iapply_splitl_exact Hsort with Hruntime
   isplitl []
   · iapply SortBuffers_empty 4 (by decide)
     itrivial
-  isplitl []
-  · ipureintro
-    decide
+  isplitl_pureexact (by decide)
   iintro %sorted Hruntime Hresult
   isimp only [SortResultBuffers] at Hresult
   icases Hresult with ⟨Hbuffers, %hsorted⟩
   have hsortedLength := hsorted.2.length_eq
-  have hsortedNil : sorted = [] := by
-    apply List.eq_nil_of_length_eq_zero
-    simpa using hsortedLength.symm
+  have hsortedNil : sorted = [] :=
+    List.eq_nil_of_length_eq_zero (by simpa using hsortedLength.symm)
   subst sorted
   isimp only [SortBuffers, WordSlice,
     Project.Mergesort.Representations.ByteSlice, List.length_nil,
@@ -4992,18 +4401,16 @@ theorem twp_func3_finish_empty
   iclear Hbuffers
   unfold ResumeWP resumeExpr
   simp only [List.nil_append]
-  iapply twp_block
-  simp only [func3OutputBlockBody]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_block] using [func3OutputBlockBody]
+  wasm_twp_pures [twp_localGet]
   iapply twp_eqz (result := 1) (by simp)
   iapply twp_brIf (condition := 1) (depth := 0) (arity := 0)
     (targetCode := func3NonemptyCleanup)
     (targetControl := [func3CleanupOuterFrame driverBody])
     (targetValues := []) (by decide) (by rfl)
   simp only [func3NonemptyCleanup, List.cons_append, List.nil_append]
-  iapply twp_block
-  simp only [func3ValuesDeallocBlockBody]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_block] using [func3ValuesDeallocBlockBody]
+  wasm_twp_pures [twp_localGet]
   iapply twp_eqz (result := 1) (by simp)
   iapply twp_brIf (condition := 1) (depth := 0) (arity := 0)
     (targetCode :=
@@ -5011,9 +4418,8 @@ theorem twp_func3_finish_empty
     (targetControl := [func3CleanupOuterFrame driverBody])
     (targetValues := []) (by decide) (by rfl)
   simp only [List.cons_append, List.nil_append]
-  iapply twp_block
-  simp only [func3ScratchDeallocBlockBody]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_block] using [func3ScratchDeallocBlockBody]
+  wasm_twp_pures [twp_localGet]
   iapply twp_brIf (condition := 1) (depth := 0) (arity := 0)
     (targetCode := func3InputDeallocTail)
     (targetControl := [func3CleanupOuterFrame driverBody])
@@ -5025,12 +4431,7 @@ theorem twp_func3_finish_empty
     (controls := []) (calls := calls) (s := s) (E := E) (Phi := Phi)
   simp only [func3AppendLocals, func3CleanupOuterFrame] at Hinput ⊢
   iapply Hinput
-  isplitl [Hruntime]
-  · iexact Hruntime
-  isplitl [Hframe]
-  · iexact Hframe
-  isplitl [Hbump]
-  · iexact Hbump
+  isplitl_exacts [Hruntime Hframe Hbump]
   iintro Hruntime Hbump HframeBytes %hframeLength
   have Hrestore := twp_func3_restore_stack reserveBytes
     (exportFrameBytes 0 1 [] chunkBytes outputBytes)
@@ -5039,12 +4440,7 @@ theorem twp_func3_finish_empty
     (s := s) (E := E) (Phi := Phi)
   simp only [List.append_nil, func3AppendLocals] at Hrestore ⊢
   iapply Hrestore
-  isplitl [Hsp]
-  · iexact Hsp
-  isplitl [Hreserve]
-  · iexact Hreserve
-  isplitl [HframeBytes]
-  · iexact HframeBytes
+  isplitl_exacts [Hsp Hreserve HframeBytes]
   iintro Hsp Hstack %hstackLength
   have hallRetired : AllRetired AllocationHistory.empty := by
     intro allocationId metadata hlookup
@@ -5058,9 +4454,7 @@ theorem twp_func3_finish_empty
   · unfold DriverSuccess
     iexists [], reserveBytes ++ exportFrameBytes 0 1 [] chunkBytes outputBytes,
       0, heapBase.toNat, AllocationHistory.empty
-    isplitl []
-    · ipureintro
-      exact ⟨⟨by simp, by simp⟩,
+    isplitl_pureexact ⟨⟨by simp, by simp⟩,
         hstackLength, hallRetired⟩
     · iframe
   iapply Hcont $$ Hruntime Hsuccess
@@ -5171,7 +4565,7 @@ theorem twp_func3_read_loop
           [.loop 0 0 func3ReadLoopBody], arity, remainder,
           func3ReadInnerFrame :: func3ReadPhaseFrame afterLoop :: controls,
           calls⟩ : Expr Universal.State) @ s; E [{ Φ }] := by
-  iapply Project.Mergesort.SortProof.twp_loop_wf_family_from_terminal
+  iapply Wasm.SmallStep.twp_loop_wf_family
     (ι := Func3ReadLoopState)
     (measure := fun state => state.current.length + state.remaining.length)
     (locals := func3ReadLoopLocals aux2 aux4 aux5 aux7 aux8 aux9 aux10)
@@ -5197,8 +4591,7 @@ theorem twp_func3_read_loop
         (serialize original).length = state.initialized.length +
           state.current.length + state.remaining.length := by
       have hbytes := congrArg List.length hfacts.1
-      simp only [List.length_append] at hbytes
-      omega
+      simp only [List.length_append] at hbytes; omega
     have Hiteration := twp_func3_read_loop_iteration hfunc1
       (serialize original).length state.current state.remaining state.capacity
       state.dataPtr state.initialized state.chunkTail outputBytes state.shadow
@@ -5218,18 +4611,7 @@ theorem twp_func3_read_loop
     simp only [func3ReadLoopBody, func3ReadLoopLocals,
       List.cons_append, List.nil_append]
     iapply Hiteration
-    isplitl [Hruntime]
-    · iexact Hruntime
-    isplitl [Hsp]
-    · iexact Hsp
-    isplitl [Hreserve]
-    · iexact Hreserve
-    isplitl [Hframe]
-    · iexact Hframe
-    isplitl [Hbump]
-    · iexact Hbump
-    isplitl [Hstreams]
-    · iexact Hstreams
+    isplitl_exacts [Hruntime Hsp Hreserve Hframe Hbump Hstreams]
     unfold Func3IterationContinuation
     isplit
     · isplit
@@ -5284,20 +4666,8 @@ theorem twp_func3_read_loop
           simp
         rw [← congrArg UInt32.ofNat htakeLength]
         iapply Hback
-        isplitl [Hruntime]
-        · iexact Hruntime
-        isplitl [Hsp]
-        · iexact Hsp
-        isplitl [Hreserve]
-        · iexact Hreserve
-        isplitl [Hframe]
-        · iexact Hframe
-        isplitl [Hbump]
-        · iexact Hbump
-        isplitl [Hstreams]
-        · iexact Hstreams
-        isplitl []
-        · ipureintro
+        isplitl_exacts [Hruntime Hsp Hreserve Hframe Hbump Hstreams]
+        isplitl_pureexact (by
           have hserializeNext :
               serialize original =
                 (state.initialized ++ state.current) ++
@@ -5328,10 +4698,10 @@ theorem twp_func3_read_loop
               hnext.2.2.2.2.2.2.2.1
           exact ⟨hserializeNext, hnext.1, hnext.2.1, hnext.2.2.1,
             hnext.2.2.2.1, hnext.2.2.2.2.1,
-            hgeoNext⟩
-        · unfold Func3ReadLoopContinuation
-          simp only [func3AppendLocals]
-          iexact Hfinish
+            hgeoNext⟩)
+        unfold Func3ReadLoopContinuation
+        simp only [func3AppendLocals]
+        iexact Hfinish
     · iintro Hsp Hreserve Hframe Hbump Hstreams
       ihave Hoom := BI.and_elim_r $$ Hfinish
       iapply Hoom
@@ -5343,21 +4713,13 @@ theorem twp_func3_read_loop
       iexists state.capacity, state.dataPtr, state.initialized, state.current,
         state.remaining, state.chunkTail, outputBytes, state.shadow,
         state.storedCursor, state.frontier, state.history
-      isplitl []
-      · ipureintro
-        exact ⟨hfacts.1, hfacts.2.2.1, hfacts.2.2.2.2.1,
+      isplitl_pureexact ⟨hfacts.1, hfacts.2.2.1, hfacts.2.2.2.2.1,
           hfacts.2.1, hframeLengths.1, hfacts.2.2.2.2.2.2⟩
-      isplitl [Hsp]
-      · iexact Hsp
-      isplitl [Hreserve]
-      · iexact Hreserve
+      isplitl_exacts [Hsp Hreserve]
       isplitl [Hvec Hchunk Houtput]
       · unfold ExportFrame
-        iframe
-        ipureintro
-        exact hframeLengths
-      isplitl [Hbump]
-      · iexact Hbump
+        iframe_pureexact hframeLengths
+      isplitl_exact Hbump
       · iexact Hstreams
 
 /-- Enter the two generated blocks surrounding the read loop.  This theorem
@@ -5383,10 +4745,8 @@ theorem twp_func3_read_phase
           arity, remainder, controls, calls⟩ : Expr Universal.State)
         @ s; E [{ Φ }] := by
   iintro Hinv
-  iapply twp_block
-  simp only [func3ReadPhaseBody, List.cons_append, List.nil_append]
-  iapply twp_block
-  simp only [func3ReadLoopBlockBody]
+  wasm_twp_pures [twp_block] using [func3ReadPhaseBody, List.cons_append, List.nil_append]
+  wasm_twp_pures [twp_block] using [func3ReadLoopBlockBody]
   have Hloop := twp_func3_read_loop hfunc1 heapId original outputBytes
     aux2 aux4 aux5 aux7 aux8 aux9 aux10 initial
     (afterLoop := afterLoop) (arity := arity) (remainder := remainder)
@@ -5395,8 +4755,7 @@ theorem twp_func3_read_phase
     func3ReadLoopBlockBody, func3ReadLoopLocals, func3AppendLocals,
     List.cons_append, List.nil_append] at Hloop
   simp only [func3ReadLoopLocals, func3AppendLocals, List.drop_zero]
-  iapply Hloop
-  iexact Hinv
+  iapply_exact Hloop with Hinv
 
 /-- Execute a nonempty public input's first generated read, take the actual
 `br_if 0` edge out of the initial-read block, initialize the Vec cursor
@@ -5429,58 +4788,42 @@ theorem twp_func3_first_read_nonempty
   let remaining := input.drop count
   let chunkTail := (List.replicate 256 (0 : UInt8)).drop count
   have hinputLength : input.length = 4 * original.length := by
-    dsimp only [input]
-    exact serialize_length original
+    dsimp only [input]; exact serialize_length original
   have hinputPositive : 0 < input.length := by
     have horiginalPositive : 0 < original.length := by
       by_contra hzero
-      apply horiginal
-      exact List.eq_nil_of_length_eq_zero (by omega)
+      exact horiginal (List.eq_nil_of_length_eq_zero (by omega))
     omega
-  have hinputMod : input.length % 4 = 0 := by
-    rw [hinputLength]
-    omega
+  have hinputMod : input.length % 4 = 0 := by omega
   have hsplit := readChunk_mod_four input hinputMod
   dsimp only at hsplit
   have hcountPositive : 0 < count := by
-    dsimp only [count]
-    omega
+    dsimp only [count]; omega
   have hcountSize : count < UInt32.size := by
-    norm_num [UInt32.size]
-    omega
+    norm_num [UInt32.size]; omega
   have hcountWord : (UInt32.ofNat count).toNat = count :=
     UInt32.toNat_ofNat_of_lt' hcountSize
   have hcountNonzero : UInt32.ofNat count ≠ 0 := by
     intro hzero
-    have hzeroNat := congrArg UInt32.toNat hzero
-    rw [hcountWord] at hzeroNat
-    simp only [UInt32.toNat_zero] at hzeroNat
-    omega
+    have hzeroNat := congrArg UInt32.toNat hzero; rw [hcountWord] at hzeroNat
+    simp only [UInt32.toNat_zero] at hzeroNat; omega
   have hremainingLength :
       input.length = current.length + remaining.length := by
     dsimp only [current, remaining]
     rw [← List.length_append, List.take_append_drop count input]
-  have hcurrentLength : current.length = count := by
-    exact hsplit.1
+  have hcurrentLength : current.length = count := hsplit.1
   have hcurrentShape :
       current.length = min 256 (current.length + remaining.length) := by
-    rw [← hremainingLength]
-    exact hsplit.1
-  have hcurrentPositive : 0 < current.length := by
-    rw [hcurrentLength]
-    exact hcountPositive
+    simpa only [← hremainingLength] using hsplit.1
+  have hcurrentPositive : 0 < current.length := by simpa only [hcurrentLength] using hcountPositive
   have hcurrentBound : current.length ≤ 256 := by
-    rw [hcurrentLength]
-    exact min_le_left 256 input.length
-  have hcurrentMod : current.length % 4 = 0 := by
-    rw [hcurrentLength]
-    exact hsplit.2.1
+    rw [hcurrentLength]; exact min_le_left 256 input.length
+  have hcurrentMod : current.length % 4 = 0 := by simpa only [hcurrentLength] using hsplit.2.1
   have hserializeSplit :
       serialize original = [] ++ current ++ remaining := by
     calc
       serialize original = input := rfl
-      _ = current ++ remaining := by
-        exact (List.take_append_drop count input).symm
+      _ = current ++ remaining := (List.take_append_drop count input).symm
       _ = [] ++ current ++ remaining := by simp
   have hgeo :
       GeometricVecFacts input.length 0
@@ -5503,12 +4846,7 @@ theorem twp_func3_first_read_nonempty
     func3EmptyInputSuffix, func3InitializedLocals,
     List.cons_append, List.nil_append] at Hread ⊢
   iapply Hread
-  isplitl [Hruntime]
-  · iexact Hruntime
-  isplitl [Hstreams]
-  · iexact Hstreams
-  isplitl [Hframe]
-  · iexact Hframe
+  isplitl_exacts [Hruntime Hstreams Hframe]
   iintro Hruntime Hstreams Hframe %_hcountBound
   iapply twp_localTee
       (locals' := func3AppendLocals 0 (UInt32.ofNat count) 0
@@ -5521,12 +4859,8 @@ theorem twp_func3_first_read_nonempty
     (targetCode := func3AfterInitialRead afterLoop)
     (targetControl := controls) (targetValues := []) hcountNonzero (by rfl)
   simp only [func3AfterInitialRead, List.cons_append, List.nil_append]
-  iapply twp_const
-  iapply twp_localSet rfl
-  simp only [List.length, List.set]
-  iapply twp_const
-  iapply twp_localSet rfl
-  simp only [List.length, List.set]
+  wasm_twp_pures [twp_const twp_localSet] using [List.length, List.set]
+  wasm_twp_pures [twp_const twp_localSet] using [List.length, List.set]
   let initial : Func3ReadLoopState :=
     { capacity := 0
       dataPtr := 1
@@ -5546,21 +4880,8 @@ theorem twp_func3_first_read_nonempty
     hcurrentLength, List.length_nil, UInt32.reduceOfNat] at Hphase
   iapply Hphase
   unfold Func3ReadLoopInv
-  isplitl [Hruntime]
-  · iexact Hruntime
-  isplitl [Hsp]
-  · iexact Hsp
-  isplitl [Hreserve]
-  · iexact Hreserve
-  isplitl [Hframe]
-  · iexact Hframe
-  isplitl [Hbump]
-  · iexact Hbump
-  isplitl [Hstreams]
-  · iexact Hstreams
-  isplitl []
-  · ipureintro
-    exact ⟨hserializeSplit, hcurrentShape, hcurrentPositive,
+  isplitl_exacts [Hruntime Hsp Hreserve Hframe Hbump Hstreams]
+  isplitl_pureexact ⟨hserializeSplit, hcurrentShape, hcurrentPositive,
       hcurrentBound, hcurrentMod, hsplit.2.2, by
         change GeometricVecFacts input.length 0
           (current.length + remaining.length) 0 1 heapBase.toNat
@@ -5595,15 +4916,14 @@ theorem twp_func3_initial_read_block_nonempty
           arity, remainder, controls, calls⟩ : Expr Universal.State)
         @ s; E [{ Φ }] := by
   iintro Hresources
-  iapply twp_block
+  wasm_twp_pures [twp_block]
   have Hread := twp_func3_first_read_nonempty hfunc1 heapId original
     outputBytes shadow horiginal
     (afterLoop := afterLoop) (arity := arity) (remainder := remainder)
     (controls := controls) (calls := calls) (s := s) (E := E) (Φ := Φ)
   simp only [func3InitialReadFrame, func3InitializedLocals] at Hread
   simp only [func3InitializedLocals, List.drop_zero]
-  iapply Hread
-  iexact Hresources
+  iapply_exact Hread with Hresources
 
 /-- Execute the disjoint empty-input arm of the exact initial-read block.
 The zero read falls through `br_if 0`, sets the two generated empty-case
@@ -5655,24 +4975,15 @@ theorem twp_func3_first_read_empty
     func3EmptyInputSuffix, func3InitializedLocals,
     List.cons_append, List.nil_append] at Hread ⊢
   iapply Hread
-  isplitl [Hruntime]
-  · iexact Hruntime
-  isplitl [Hstreams]
-  · iexact Hstreams
-  isplitl [Hframe]
-  · iexact Hframe
+  isplitl_exacts [Hruntime Hstreams Hframe]
   iintro Hruntime Hstreams Hframe %_hcountBound
   iapply twp_localTee
       (locals' := func3AppendLocals 0 0 0 4 0 0 0 0 0 0 [.i32 0])
       (by simp [func3AppendLocals])
   simp only [func3AppendLocals]
   iapply twp_brIfZero (depth := 0) (arity := arity)
-  iapply twp_const
-  iapply twp_localSet rfl
-  simp only [List.length, List.set]
-  iapply twp_const
-  iapply twp_localSet rfl
-  simp only [List.length, List.set]
+  wasm_twp_pures [twp_const twp_localSet] using [List.length, List.set]
+  wasm_twp_pures [twp_const twp_localSet] using [List.length, List.set]
   iapply twp_br (depth := 1) (arity := arity) (code := [])
     (targetCode := afterEmpty) (targetControl := controls)
     (targetValues := []) (by rfl)
@@ -5715,15 +5026,14 @@ theorem twp_func3_initial_read_block_empty
           func3EnclosingDriverFrame enclosingBody afterEmpty :: controls,
           calls⟩ : Expr Universal.State) @ s; E [{ Φ }] := by
   iintro Hresources
-  iapply twp_block
+  wasm_twp_pures [twp_block]
   have Hread := twp_func3_first_read_empty heapId outputBytes shadow
     afterLoop enclosingBody afterEmpty
     (arity := arity) (remainder := remainder) (controls := controls)
     (calls := calls) (s := s) (E := E) (Φ := Φ)
   simp only [func3InitialReadFrame, func3InitializedLocals] at Hread
   simp only [func3InitializedLocals, List.drop_zero]
-  iapply Hread
-  iexact Hresources
+  iapply_exact Hread with Hresources
 
 /-- Execute the generated `func3` prologue from raw entry ownership to the
 reviewed initialized-frame representation.  No allocator, host call, or
@@ -5752,10 +5062,8 @@ theorem twp_func3_initialize
   ihave HentryParts :
       iprop(StackRegion entryStackLow entryBytes ∗
         ⌜entryBytes.length = 288⌝) $$ [Hentry]
-  · isplitl [Hentry]
-    · iexact Hentry
-    · ipureintro
-      exact hentryLength
+  · isplitl_exact Hentry
+    · ipureexact hentryLength
   icases (EntryStack_split entryBytes).mp $$ HentryParts with
     ⟨%reserveBytes, %frameBytes, %hentryParts, Hreserve, Hframe⟩
   icases (DriverFrame_split frameBytes hentryParts.2.2).mp $$ Hframe with
@@ -5788,44 +5096,31 @@ theorem twp_func3_initialize
   icases Harray with ⟨HoldCapacity, HoldPointer, HoldLength, _Hemp⟩
   ihave HoldLength' :
       pointsTo_u32 0 (driverBase + 8) oldLength $$ [HoldLength]
-  · rw [← show driverBase + 4 + 4 = driverBase + 8 by decide]
-    iexact HoldLength
+  · irw_exact [← show driverBase + 4 + 4 = driverBase + 8 by decide] with HoldLength
   ihave HoldPair := (pointsTo_u32_pair_as_u64
       driverBase oldCapacity oldPointer).mp $$ [HoldCapacity HoldPointer]
   · iframe
   isimp only [StackPointer] at Hsp
   simp only [Project.Mergesort.func3]
-  iapply twp_globalGet $$ Hsp
-  iintro Hsp
-  iapply twp_const
-  iapply twp_sub
-  rw [show entryStackTop - 272 = driverBase by decide]
-  iapply twp_localTee rfl
+  wasm_twp_rebind twp_globalGet with Hsp
+  wasm_twp_pures [twp_const twp_sub] rewriting [show entryStackTop - 272 = driverBase by decide]
+  wasm_twp_pures [twp_localTee]
   simp [Project.Mergesort.func3Def, Function.toLocals]
-  iapply twp_globalSet $$ Hsp
-  iintro Hsp
-  iapply twp_const
-  iapply twp_localSet rfl
-  simp only [List.length_nil, Nat.reduceSub, List.set]
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_store32 oldLength (by decide) (by decide) (by decide)
-      (by decide) $$ HoldLength'
-  iintro Hlength
-  iapply twp_localGet rfl
+  wasm_twp_rebind twp_globalSet with Hsp
+  wasm_twp_pures [twp_const twp_localSet] using [List.length_nil, Nat.reduceSub, List.set]
+  wasm_twp_pures [twp_localGet twp_const]
+  wasm_twp_bind twp_store32 oldLength (by decide) (by decide) (by decide)
+      (by decide) with HoldLength' => Hlength
+  wasm_twp_pures [twp_localGet]
   iapply twp_pureStep _ _ _ (fun _ => Step.constI64)
-  iapply twp_store64_zero (address := driverBase)
+  wasm_twp_bind twp_store64_zero (address := driverBase)
       (value := 4294967296)
       (oldCapacity.toUInt64 ||| (oldPointer.toUInt64 <<< 32))
       (by decide) (by decide) (by decide) (by decide)
-      (by decide) (by decide) (by decide) $$ HoldPair
-  iintro Hpair
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_add
+      (by decide) (by decide) (by decide) with HoldPair => Hpair
+  wasm_twp_pures [twp_localGet twp_const twp_add]
   rw [show 12 + driverBase = driverBase + 12 by decide]
-  iapply twp_const
-  iapply twp_const
+  wasm_twp_pures [twp_const twp_const]
   isimp only [Project.Mergesort.Representations.ByteSlice] at Hchunk
   icases Hchunk with ⟨%hchunkNowrap, HchunkBytes⟩
   iapply twp_memoryFill32 chunkBytes (by
@@ -5833,9 +5128,7 @@ theorem twp_func3_initialize
       simpa [hframeParts.2.2.1, UInt32.size] using hchunkNowrap) $$
       HchunkBytes
   iintro HchunkBytes
-  iapply twp_const
-  iapply twp_localSet rfl
-  simp only [List.length_nil, Nat.reduceSub, List.set]
+  wasm_twp_pures [twp_const twp_localSet] using [List.length_nil, Nat.reduceSub, List.set]
   ihave HpairWords :
       iprop(pointsTo_u32 0 driverBase 0 ∗
         pointsTo_u32 0 (driverBase + 4) 1) $$ [Hpair]
@@ -5847,33 +5140,22 @@ theorem twp_func3_initialize
   ihave Harray :
       arrayAt 0 driverBase [0, 1, 0] $$ [Hcapacity Hpointer Hlength]
   · isimp only [arrayAt]
-    isplitl [Hcapacity]
-    · iexact Hcapacity
-    isplitl [Hpointer]
-    · iexact Hpointer
-    isplitl [Hlength]
-    · rw [show driverBase + 4 + 4 = driverBase + 8 by decide]
-      iexact Hlength
+    isplitl_exacts [Hcapacity Hpointer]
+    isplitl_rw_exact [show driverBase + 4 + 4 = driverBase + 8 by decide] with Hlength
     · itrivial
   ihave HheaderBytes : WordCells driverBase [0, 1, 0] $$ [Harray]
-  · iapply (arrayAt_eq_wordCells driverBase [0, 1, 0]).mp
-    iexact Harray
+  · iapply_exact (arrayAt_eq_wordCells driverBase [0, 1, 0]).mp with Harray
   ihave Hheader : Project.Mergesort.Representations.ByteSlice
       driverBase emptyVecHeaderBytes $$ [HheaderBytes]
   · unfold Project.Mergesort.Representations.ByteSlice emptyVecHeaderBytes
-    isplitl []
-    · ipureintro
-      decide
+    isplitl_pureexact (by decide)
     · iexact HheaderBytes
   ihave Hchunk : Project.Mergesort.Representations.ByteSlice
       (driverBase + 12) (List.replicate 256 0) $$ [HchunkBytes]
   · unfold Project.Mergesort.Representations.ByteSlice
-    isplitl []
-    · ipureintro
-      simpa [hframeParts.2.2.1] using hchunkNowrap
+    isplitl_pureexact (by simpa [hframeParts.2.2.1] using hchunkNowrap)
     · rw [← hframeParts.2.2.1]
-      rw [← show (0 : UInt32).toUInt8 = (0 : UInt8) by decide]
-      iexact HchunkBytes
+      irw_exact [← show (0 : UInt32).toUInt8 = (0 : UInt8) by decide] with HchunkBytes
   ihave Hexport := ExportFrame_empty heapId (List.replicate 256 0)
       outputBytes (by simp) hframeParts.2.2.2 $$ [Hheader Hchunk Houtput]
   · iframe
@@ -5970,8 +5252,7 @@ private def func3ScratchSuccessControls : List ControlFrame :=
 private theorem func3_scratch_success_branch :
     branchTarget? 0 4 func3ScratchSuccessControls [] =
       some (func3SortAndCleanup,
-        [func3CleanupOuterFrame func3DriverBody], []) := by
-  rfl
+        [func3CleanupOuterFrame func3DriverBody], []) := by rfl
 
 private theorem geometricVec_frontier_ge_heapBase
     (total length remaining : Nat) (capacity ptr : UInt32)
@@ -5981,16 +5262,14 @@ private theorem geometricVec_frontier_ge_heapBase
     heapBase.toNat ≤ frontier := by
   rcases hgeo with hinitial | hshort | hlarge
   · rw [hinitial.2.2.2.2.1]
-  · rw [hshort.2.2.2.2.2.1]
-    omega
+  · rw [hshort.2.2.2.2.2.1]; omega
   · rcases hlarge with
       ⟨exponent, hexponent, _hexponentUpper, _hcapacity, _hlength,
         _htotal, _hptr, hfrontier, _hhistory⟩
     rw [hfrontier]
     unfold vectorBlockBase
     have hpow : 256 ≤ 2 ^ exponent := by
-      rw [show 256 = 2 ^ 8 by norm_num]
-      exact Nat.pow_le_pow_right (by decide) hexponent
+      rw [show 256 = 2 ^ 8 by norm_num]; exact Nat.pow_le_pow_right (by decide) hexponent
     omega
 
 /-- Compose the complete valid nonempty allocation/decode/sort/output path.
@@ -6041,10 +5320,8 @@ theorem twp_func3_complete_nonempty
       inputPtr frontier history hgeo rfl
     simpa only [serialize_length] using htotal
   have hbyteBound : 4 * original.length < UInt32.size := by
-    norm_num [UInt32.size] at hbyteBoundSigned ⊢
-    omega
-  have hlayoutValid : layout.Valid := by
-    exact align4Layout_valid_of_bounds (4 * original.length)
+    norm_num [UInt32.size] at hbyteBoundSigned ⊢; omega
+  have hlayoutValid : layout.Valid := align4Layout_valid_of_bounds (4 * original.length)
       (by omega) hbyteBoundSigned (by omega)
   have hfrontier : heapBase.toNat ≤ frontier :=
     geometricVec_frontier_ge_heapBase _ _ _ _ _ _ _ hgeo
@@ -6068,18 +5345,7 @@ theorem twp_func3_complete_nonempty
     List.nil_append]
     at HvaluesAlloc ⊢
   iapply HvaluesAlloc
-  isplitl [Hruntime]
-  · iexact Hruntime
-  isplitl [Hsp]
-  · iexact Hsp
-  isplitl [Hreserve]
-  · iexact Hreserve
-  isplitl [Hframe]
-  · iexact Hframe
-  isplitl [Hbump]
-  · iexact Hbump
-  isplitl [Hstreams]
-  · iexact Hstreams
+  isplitl_exacts [Hruntime Hsp Hreserve Hframe Hbump Hstreams]
   isplit
   · iintro %valuesPtr %valuesFinish %valuesBytes %hvaluesClassify
       Hruntime Hsp Hreserve Hframe Hbump Hvalues Hstreams
@@ -6089,8 +5355,7 @@ theorem twp_func3_complete_nonempty
     have hvaluesEnd :
         valuesPtr.toNat + 4 * original.length ≤ valuesFinish.toNat := by
       rw [hvaluesFacts.2.2.2.2.2.1]
-    have hvaluesFrontier : heapBase.toNat ≤ valuesFinish.toNat := by
-      exact Nat.le_trans hfrontier
+    have hvaluesFrontier : heapBase.toNat ≤ valuesFinish.toNat := Nat.le_trans hfrontier
         (Nat.le_trans hvaluesFacts.1 (by omega))
     unfold ResumeWP resumeExpr
     have Hdecode := twp_func3_decode_allocated heapId history.nextId capacity
@@ -6104,9 +5369,7 @@ theorem twp_func3_complete_nonempty
     simp only [func3AppendLocals, List.append_assoc, List.cons_append,
       List.nil_append]
       at Hdecode ⊢
-    iapply Hdecode
-    isplitl [Hframe]
-    · iexact Hframe
+    iapply_splitl_exact Hdecode with Hframe
     isplitl [Hvalues]
     · isimp only [serialize_length] at Hvalues
       iexact Hvalues
@@ -6122,21 +5385,11 @@ theorem twp_func3_complete_nonempty
     simp only [func3AppendLocals, List.cons_append, List.nil_append]
       at HscratchAlloc ⊢
     iapply HscratchAlloc
-    isplitl [Hruntime]
-    · iexact Hruntime
-    isplitl [Hsp]
-    · iexact Hsp
-    isplitl [Hreserve]
-    · iexact Hreserve
-    isplitl [Hframe]
-    · iexact Hframe
-    isplitl [Hvalues]
-    · iexact Hvalues
+    isplitl_exacts [Hruntime Hsp Hreserve Hframe Hvalues]
     isplitl [Hbump]
     · isimp only [serialize_length] at Hbump
       iexact Hbump
-    isplitl [Hstreams]
-    · iexact Hstreams
+    isplitl_exact Hstreams
     isplit
     · iintro %scratchPtr %scratchFinish %hscratchClassify
         Hruntime Hsp Hreserve Hframe Hvalues Hbump Hscratch Hstreams
@@ -6153,10 +5406,7 @@ theorem twp_func3_complete_nonempty
         (targetCode := func3SortAndCleanup) (calls := calls)
         (s := s) (E := E) (Phi := Phi)
       simp only [func3AppendLocals, List.append_nil] at HscratchTail ⊢
-      iapply HscratchTail
-      isplitl [Hscratch]
-      · iexact Hscratch
-      iintro Hscratch
+      iapply_frame_intro HscratchTail as Hscratch
       have Hsort := twp_func3_sort heapId history.nextId
         (history.allocate valuesPtr layout).nextId valuesPtr scratchPtr inputPtr
         original (UInt32.ofNat original.length) final3 final6 0
@@ -6168,12 +5418,7 @@ theorem twp_func3_complete_nonempty
       simp only [func3SortAndCleanup, func3AppendLocals, List.cons_append,
         List.nil_append] at Hsort ⊢
       iapply Hsort
-      isplitl [Hruntime]
-      · iexact Hruntime
-      isplitl [Hvalues]
-      · iexact Hvalues
-      isplitl [Hscratch]
-      · iexact Hscratch
+      isplitl_exacts [Hruntime Hvalues Hscratch]
       iintro %sorted Hruntime Hvalues Hscratch %hsorted
       have hsortedLength : sorted.length = original.length :=
         hsorted.2.length_eq.symm
@@ -6196,14 +5441,7 @@ theorem twp_func3_complete_nonempty
       simp only [func3AppendLocals, hsortedLength, List.cons_append,
         List.nil_append] at Houtput ⊢
       iapply Houtput
-      isplitl [Hruntime]
-      · iexact Hruntime
-      isplitl [Hframe]
-      · iexact Hframe
-      isplitl [Hvalues]
-      · iexact Hvalues
-      isplitl [Hstreams]
-      · iexact Hstreams
+      isplitl_exacts [Hruntime Hframe Hvalues Hstreams]
       iintro %outputCursor %final6' %finalOutput Hruntime Hframe Hvalues
         Hstreams
       have Hfinish := twp_func3_finish_nonempty heapId original sorted
@@ -6215,24 +5453,14 @@ theorem twp_func3_complete_nonempty
         (calls := calls) (s := s) (E := E) (Phi := Phi)
       simp only [func3AppendLocals, hsortedLength] at Hfinish ⊢
       iapply Hfinish
-      isplitl [Hruntime]
-      · iexact Hruntime
-      isplitl [Hsp]
-      · iexact Hsp
-      isplitl [Hreserve]
-      · iexact Hreserve
-      isplitl [Hframe]
-      · iexact Hframe
-      isplitl [Hvalues]
-      · iexact Hvalues
+      isplitl_exacts [Hruntime Hsp Hreserve Hframe Hvalues]
       isplitl [Hscratch]
       · isimp only [scratchValues]
         iexact Hscratch
       isplitl [Hbump]
       · isimp only [layout] at Hbump
         iexact Hbump
-      isplitl [Hstreams]
-      · iexact Hstreams
+      isplitl_exact Hstreams
       iintro Hruntime Hsuccess
       iapply Hdone $$ Hruntime Hsuccess
     · iintro HscratchOOM
@@ -6302,16 +5530,10 @@ theorem twp_func3_completed_nonempty
     (calls := calls) (s := s) (E := E) (Φ := Phi)
   simp only [func3CompletedPtrReload, func3AppendLocals, serialize_length,
     List.cons_append, List.nil_append] at Hreload ⊢
-  iapply Hreload
-  isplitl [Hframe]
-  · iexact Hframe
-  iintro Hframe
-  iapply twp_block
-  simp only [func3ScratchOuterBody, List.cons_append, List.nil_append]
-  iapply twp_block
-  simp only [func3ValuesOuterBody, List.cons_append, List.nil_append]
-  iapply twp_block
-  simp only [func3DecodeAllocationBody]
+  iapply_frame_intro Hreload as Hframe
+  wasm_twp_pures [twp_block] using [func3ScratchOuterBody, List.cons_append, List.nil_append]
+  wasm_twp_pures [twp_block] using [func3ValuesOuterBody, List.cons_append, List.nil_append]
+  wasm_twp_pures [twp_block] using [func3DecodeAllocationBody]
   have Hguards := twp_func3_enter_nonempty_decode original
     (serialize original) capacity inputPtr frontier history horiginal rfl hgeo
     0 4 inputPtr 0 0 0 0 0
@@ -6334,8 +5556,7 @@ theorem twp_func3_completed_nonempty
     func3ValuesOuterBody, func3ScratchOuterBody,
     func3CompletedLengthGuard, List.cons_append, List.nil_append]
     at Hcomplete ⊢
-  iapply Hcomplete
-  iframe
+  iapply_frame Hcomplete
 
 /-- Execute the exact initial-read block and well-founded read loop for a
 nonempty public input, then compose its authoritative completed-Vec result
@@ -6384,18 +5605,7 @@ theorem twp_func3_read_dispatch_nonempty
   simp only [func3ReadAndDispatchBody, func3AfterInitialRead,
     func3InitializedLocals, List.cons_append, List.nil_append] at Hread ⊢
   iapply Hread
-  isplitl [Hruntime]
-  · iexact Hruntime
-  isplitl [Hsp]
-  · iexact Hsp
-  isplitl [Hreserve]
-  · iexact Hreserve
-  isplitl [Hframe]
-  · iexact Hframe
-  isplitl [Hbump]
-  · iexact Hbump
-  isplitl [Hstreams]
-  · iexact Hstreams
+  isplitl_exacts [Hruntime Hsp Hreserve Hframe Hbump Hstreams]
   isimp only [Func3ReadLoopContinuation]
   isplit
   · iintro %completed %chunkBytes %finalShadow %finalCapacity %finalPtr
@@ -6403,8 +5613,7 @@ theorem twp_func3_read_dispatch_nonempty
       Hframe Hbump Hstreams %hfacts
     have hgeo : GeometricVecFacts (serialize original).length
         (serialize original).length 0 finalCapacity finalPtr finalFrontier
-        finalHistory := by
-      simpa only [← hfacts.1] using hfacts.2
+        finalHistory := by simpa only [← hfacts.1] using hfacts.2
     isimp only [← hfacts.1] at Hframe
     have Hcompleted := twp_func3_completed_nonempty hfunc5 hfunc9 heapId
       original finalCapacity finalPtr chunkBytes outputBytes finalShadow
@@ -6412,11 +5621,9 @@ theorem twp_func3_read_dispatch_nonempty
       (calls := calls) (s := s) (E := E) (Phi := Phi)
     simp only [← hfacts.1, func3AppendLocals, serialize_length]
       at Hcompleted ⊢
-    iapply Hcompleted
-    iframe
+    iapply_frame Hcompleted
   · iintro HOOM
-    iapply Hoom
-    iexact HOOM
+    iapply_exact Hoom with HOOM
 
 /-- Audited decomposition of the generated body following its 21-instruction
 prologue. -/
@@ -6473,12 +5680,9 @@ theorem twp_func3_after_initialize
   iintro ⟨Hruntime, Hsp, Hreserve, Hframe, Hbump, Hstreams, Hdone, Hoom⟩
   rw [func3_after_init_exact]
   simp only [List.cons_append, List.nil_append]
-  iapply twp_block
-  simp only [func3DriverBody, List.cons_append, List.nil_append]
-  iapply twp_block
-  simp only [func3MiddleBody, List.cons_append, List.nil_append]
-  iapply twp_block
-  simp only [func3InitializedLocals, List.drop_zero]
+  wasm_twp_pures [twp_block] using [func3DriverBody, List.cons_append, List.nil_append]
+  wasm_twp_pures [twp_block] using [func3MiddleBody, List.cons_append, List.nil_append]
+  wasm_twp_pures [twp_block] using [func3InitializedLocals, List.drop_zero]
   by_cases horiginal : original = []
   · subst original
     have Hread := twp_func3_initial_read_block_empty heapId outputBytes
@@ -6496,16 +5700,7 @@ theorem twp_func3_after_initialize
       func3DriverBody, func3SortAndCleanup,
       List.cons_append, List.nil_append] at Hread ⊢
     iapply Hread
-    isplitl [Hruntime]
-    · iexact Hruntime
-    isplitl [Hsp]
-    · iexact Hsp
-    isplitl [Hreserve]
-    · iexact Hreserve
-    isplitl [Hframe]
-    · iexact Hframe
-    isplitl [Hbump]
-    · iexact Hbump
+    isplitl_exacts [Hruntime Hsp Hreserve Hframe Hbump]
     isplitl [Hstreams]
     · isimp only [serialize, WordCodec.serialize, List.flatMap_nil] at Hstreams
       iexact Hstreams
@@ -6518,18 +5713,7 @@ theorem twp_func3_after_initialize
       func3DriverBody, func3ReadAndDispatchBody, func3AfterInitialRead,
       func3SortAndCleanup, List.cons_append, List.nil_append] at Hempty ⊢
     iapply Hempty
-    isplitl [Hruntime]
-    · iexact Hruntime
-    isplitl [Hsp]
-    · iexact Hsp
-    isplitl [Hreserve]
-    · iexact Hreserve
-    isplitl [Hframe]
-    · iexact Hframe
-    isplitl [Hbump]
-    · iexact Hbump
-    isplitl [Hstreams]
-    · iexact Hstreams
+    isplitl_exacts [Hruntime Hsp Hreserve Hframe Hbump Hstreams]
     iintro Hruntime Hsuccess
     iapply Hdone $$ Hruntime Hsuccess
   · have Hnonempty := twp_func3_read_dispatch_nonempty hfunc1 hfunc5
@@ -6540,8 +5724,7 @@ theorem twp_func3_after_initialize
       func3CleanupOuterFrame, func3MiddleBody, func3DriverBody,
       func3SortAndCleanup, List.cons_append,
       List.nil_append] at Hnonempty ⊢
-    iapply Hnonempty
-    iframe
+    iapply_frame Hnonempty
 
 /-- Execute the generated prologue and the complete reviewed driver body,
 stopping at the administrative return boundary. -/
@@ -6574,24 +5757,17 @@ theorem twp_func3_body
   have Hinitialize := twp_func3_initialize heapId entryBytes
     (calls := calls) (s := s) (E := E) (Φ := Phi)
   iapply Hinitialize
-  isplitl [Hsp]
-  · iexact Hsp
-  isplitl [Hstack]
-  · iexact Hstack
-  isplitl []
-  · ipureintro
-    exact hentryLength
+  isplitl_exacts [Hsp Hstack]
+  isplitl_pureexact hentryLength
   iintro %reserveBytes %outputBytes Hsp Hreserve Hframe
   have Hbody := twp_func3_after_initialize hfunc1 hfunc5 hfunc9 heapId
     original outputBytes reserveBytes (calls := calls) (s := s) (E := E)
     (Phi := Phi)
-  iapply Hbody
-  iframe
+  iapply_frame Hbody
 
 private theorem func3_index :
     Project.Mergesort.module.funcs[3]? =
-      some Project.Mergesort.func3Def := by
-  rfl
+      some Project.Mergesort.func3Def := by rfl
 
 /-- The authoritative `func3` call contract, conditional only on the three
 reachable allocator/Vec contracts that are proved in their own files. -/
@@ -6606,11 +5782,9 @@ theorem func3_correct_of
     controls calls s E Phi
   iintro ⟨Hruntime, Hsp, Hstack, Hbump, Hstreams, %hentryLength,
     Hnormal, Hoom⟩
-  isimp only [RuntimeContext] at Hruntime
-  icases Hruntime with ⟨Hmodule, Henv⟩
-  iapply Wasm.SmallStep.twp_call Project.Mergesort.module 6
-      Project.Mergesort.func3Def (by decide) func3_index $$ Hmodule
-  iintro Hmodule
+  iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
+  wasm_twp_rebind Wasm.SmallStep.twp_call Project.Mergesort.module 6
+      Project.Mergesort.func3Def (by decide) func3_index with Hmodule
   simp [Project.Mergesort.func3Def, Function.toLocals, Function.numParams]
   let callerFrame : CallFrame :=
     { locals := { callerLocals with values := stack }
@@ -6627,25 +5801,14 @@ theorem func3_correct_of
   isplitl [Hmodule Henv]
   · unfold RuntimeContext
     iframe
-  isplitl [Hsp]
-  · iexact Hsp
-  isplitl [Hstack]
-  · iexact Hstack
-  isplitl [Hbump]
-  · iexact Hbump
-  isplitl [Hstreams]
-  · iexact Hstreams
+  isplitl_exacts [Hsp Hstack Hbump Hstreams]
   isplitl [Hnormal]
   · iintro %finalLocals Hruntime Hsuccess
-    isimp only [RuntimeContext] at Hruntime
-    icases Hruntime with ⟨Hmodule, Henv⟩
-    iapply Wasm.SmallStep.twp_returnFromCallFallthrough $$ Hmodule
-    iintro Hmodule
+    iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
+    wasm_twp_rebind Wasm.SmallStep.twp_returnFromCallFallthrough with Hmodule
     simp only [List.take_zero, List.nil_append]
     isimp only [ResumeWP, resumeExpr, List.nil_append] at Hnormal
-    ihave Hruntime : RuntimeContext $$ [Hmodule Henv]
-    · unfold RuntimeContext
-      iframe
+    iclose_runtime Hruntime with Hmodule Henv
     iapply Hnormal $$ Hruntime Hsuccess
   · iexact Hoom
 

@@ -10,7 +10,7 @@ The list-level plumbing — `serialize`, `deserialize`, and the round trip
 between them — is defined and proved once here, for every width at once. Only
 the word-level round trip is supplied per codec, as the `decode_encode` field:
 it is a statement about a concrete bit width, so it is discharged by
-`bv_decide` at the instantiation site and cannot be proved generically.
+kernel-checked bitwise lemmas at the instantiation site and cannot be proved generically.
 
 `decode` is total. `deserialize` returns `Option` for exactly one reason: a
 trailing run of fewer than `width` bytes is rejected rather than silently
@@ -67,6 +67,13 @@ def serialize (values : List W) : List UInt8 :=
         List.length_cons, Nat.mul_succ]
       omega
 
+theorem serializeLength_toNat (values : List W) {limit : Nat}
+    (hfit : (codec.serialize values).length ≤ limit)
+    (hlimit : limit < UInt32.size) :
+    (UInt32.ofNat (codec.serialize values).length).toNat =
+      (codec.serialize values).length :=
+  UInt32.toNat_ofNat_of_lt' (Nat.lt_of_le_of_lt hfit hlimit)
+
 /-- Decode a packed byte stream. A trailing run of fewer than `width` bytes is
 rejected rather than silently ignored, so `some` means every byte was
 consumed. -/
@@ -80,11 +87,9 @@ def deserialize (codec : WordCodec W) : List UInt8 → Option (List W)
 termination_by bytes => bytes.length
 decreasing_by
   have hpos := codec.width_pos
-  simp only [List.length_drop, List.length_cons]
-  omega
+  simp only [List.length_drop, List.length_cons]; omega
 
-@[simp] theorem deserialize_nil : codec.deserialize [] = some [] := by
-  simp [deserialize]
+@[simp] theorem deserialize_nil : codec.deserialize [] = some [] := by simp [deserialize]
 
 /-- Fewer than `width` bytes left, and not none left, is a partial word. -/
 theorem deserialize_eq_none_of_length_lt (bytes : List UInt8)
@@ -93,8 +98,7 @@ theorem deserialize_eq_none_of_length_lt (bytes : List UInt8)
   match bytes with
   | [] => exact absurd rfl hne
   | first :: rest =>
-      rw [deserialize]
-      exact if_pos hshort
+      rw [deserialize]; exact if_pos hshort
 
 /-- Peel one whole word off the front of a stream. This is the equation the
 concrete codecs re-export at a literal width, so that proofs written against

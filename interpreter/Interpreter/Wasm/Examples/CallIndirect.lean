@@ -27,8 +27,7 @@ def callIndirectModule : Module :=
 theorem callIndirectModule_valid :
     (match callIndirectModule.validate with
       | .ok () => true
-      | .error _ => false) = true := by
-  native_decide
+      | .error _ => false) = true := by decide +kernel
 
 private def validationAccepts (module : Module) : Bool :=
   match module.validate with
@@ -41,24 +40,19 @@ private def validationModuleWith (body : Program) : Module :=
     tables := [{ min := 1 }] }
 
 theorem callIndirect_type_out_of_range_rejected :
-    validationAccepts (validationModuleWith [.callIndirect 1 0]) = false := by
-  native_decide
+    validationAccepts (validationModuleWith [.callIndirect 1 0]) = false := by decide +kernel
 
 theorem returnCallIndirect_type_out_of_range_rejected :
-    validationAccepts (validationModuleWith [.returnCallIndirect 1 0]) = false := by
-  native_decide
+    validationAccepts (validationModuleWith [.returnCallIndirect 1 0]) = false := by decide +kernel
 
 theorem callRef_type_out_of_range_rejected :
-    validationAccepts (validationModuleWith [.callRef 1]) = false := by
-  native_decide
+    validationAccepts (validationModuleWith [.callRef 1]) = false := by decide +kernel
 
 theorem returnCallRef_type_out_of_range_rejected :
-    validationAccepts (validationModuleWith [.returnCallRef 1]) = false := by
-  native_decide
+    validationAccepts (validationModuleWith [.returnCallRef 1]) = false := by decide +kernel
 
 theorem gc_type_out_of_range_rejected :
-    validationAccepts (validationModuleWith [.gc (.structNew 0)]) = false := by
-  native_decide
+    validationAccepts (validationModuleWith [.gc (.structNew 0)]) = false := by decide +kernel
 
 def incrConfig (st : Store Unit) (n : UInt32) : Config Unit :=
   { expr := .running
@@ -85,10 +79,7 @@ theorem incr_steps (st : Store Unit) (n : UInt32) :
       [(.instruction (.localGet 0)), (.instruction (.const 1)),
        (.instruction .add), (.administrative .finish)]
       ⟨.done [.i32 (n + 1)], (incrConfig st n).store⟩ := by
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons .const
-  apply Steps.cons .add
-  apply Steps.cons .finish
+  wasm_steps [(.localGet rfl), .const, .add, .finish]
   simpa [incrConfig, UInt32.add_comm] using
     (Steps.refl
       (⟨.done [.i32 (n + 1)], (incrConfig st n).store⟩ : Config Unit))
@@ -107,15 +98,10 @@ theorem dispatch_steps (n : UInt32) :
        (.instruction .add), (.administrative .returnFromCall),
        (.administrative .finish)]
       ⟨.done [.i32 (n + 1)], (dispatchConfig n).store⟩ := by
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons .const
+  wasm_steps [(.localGet rfl), .const]
   apply Steps.cons (.callIndirect rfl rfl rfl (by decide) (by decide)
     rfl rfl rfl rfl)
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons .const
-  apply Steps.cons .add
-  apply Steps.cons (.returnFromCallFallthrough rfl)
-  apply Steps.cons .finish
+  wasm_steps [(.localGet rfl), .const, .add, (.returnFromCallFallthrough rfl), .finish]
   simpa [dispatchConfig, Incr, Function.numParams, Function.toLocals,
     UInt32.add_comm] using
     (Steps.refl

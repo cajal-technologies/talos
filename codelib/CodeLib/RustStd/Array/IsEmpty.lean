@@ -21,27 +21,19 @@ theorem isEmpty_chunk :
   by_cases hlen : len = 0
   · simp only [isEmptyValue, hlen, if_true]
     iintro Hwp
-    iapply Wasm.SmallStep.wp_const
-    inext
-    iapply Wasm.SmallStep.wp_eq (result := 1) (by simp)
-    inext
-    iapply Wasm.SmallStep.wp_const
-    inext
+    wasm_wp_pures [wp_const]
+    wasm_wp_next Wasm.SmallStep.wp_eq (result := 1) (by simp)
+    wasm_wp_pures [wp_const]
     iapply Wasm.SmallStep.wp_and
     rw [show (1 &&& 1 : UInt32) = 1 by decide]
-    inext
-    iexact Hwp
+    ilater_exact Hwp
   · simp only [isEmptyValue, hlen, if_false]
     iintro Hwp
-    iapply Wasm.SmallStep.wp_const
-    inext
-    iapply Wasm.SmallStep.wp_eq (result := 0) (by simp [hlen])
-    inext
-    iapply Wasm.SmallStep.wp_const
-    inext
+    wasm_wp_pures [wp_const]
+    wasm_wp_next Wasm.SmallStep.wp_eq (result := 0) (by simp [hlen])
+    wasm_wp_pures [wp_const]
     iapply Wasm.SmallStep.wp_and
     rw [show (0 &&& 1 : UInt32) = 0 by decide]
-    inext
-    iexact Hwp
+    ilater_exact Hwp
 
 end Wasm.RustStd.Array

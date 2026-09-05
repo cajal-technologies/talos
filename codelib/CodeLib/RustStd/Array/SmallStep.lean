@@ -27,25 +27,11 @@ theorem fatPtrArithmetic {p : UInt32} (hroom : p.toNat + 8 ≤ 4294967296) :
     ((p + 4) + 1).toNat = (p + 4).toNat + 1 ∧
     ((p + 4) + 2).toNat = (p + 4).toNat + 2 ∧
     ((p + 4) + 3).toNat = (p + 4).toNat + 3 := by
-  have step (n : Nat) (hn : n < 4294967296)
-      (hr : p.toNat + n < 4294967296) :
-      (p + UInt32.ofNat n).toNat = p.toNat + n :=
-    UInt32.add_ofNat_toNat_noWrap p n hn hr
-  have hp1 := step 1 (by decide) (by omega)
-  have hp2 := step 2 (by decide) (by omega)
-  have hp3 := step 3 (by decide) (by omega)
-  have hp4 := step 4 (by decide) (by omega)
-  have hp5 := step 5 (by decide) (by omega)
-  have hp6 := step 6 (by decide) (by omega)
-  have hp7 := step 7 (by decide) (by omega)
-  have hp4' : (p + 4).toNat = p.toNat + 4 := by simpa using hp4
-  have hp5' : (p + 5).toNat = p.toNat + 5 := by simpa using hp5
-  have hp6' : (p + 6).toNat = p.toNat + 6 := by simpa using hp6
-  have hp7' : (p + 7).toNat = p.toNat + 7 := by simpa using hp7
+  obtain ⟨hp1, hp2, hp3, hp4, hp5, hp6, hp7⟩ := UInt32.addSteps8 p hroom
   refine ⟨hp1, hp2, hp3, hp4, ?_, ?_, ?_⟩
-  · rw [UInt32.add_assoc, show (4 + 1 : UInt32) = 5 by decide, hp5', hp4']
-  · rw [UInt32.add_assoc, show (4 + 2 : UInt32) = 6 by decide, hp6', hp4']
-  · rw [UInt32.add_assoc, show (4 + 3 : UInt32) = 7 by decide, hp7', hp4']
+  · rw [UInt32.add_assoc, show (4 + 1 : UInt32) = 5 by decide, hp5, hp4]
+  · rw [UInt32.add_assoc, show (4 + 2 : UInt32) = 6 by decide, hp6, hp4]
+  · rw [UInt32.add_assoc, show (4 + 3 : UInt32) = 7 by decide, hp7, hp4]
 
 /-- `fatPtrArithmetic` for a caller that already owns a `FatPtrAt`. -/
 theorem fatPtrArithmetic_of {α} {st : Store α} {p dataPtr len : UInt32}
@@ -65,48 +51,30 @@ theorem fatPtrHeap_agrees {α} {st : Store α} {p dataPtr len : UInt32}
     (h : FatPtrAt st p dataPtr len) :
     heapAgreesWithMem (fatPtrHeap p dataPtr len) resolve := by
   obtain ⟨hp1, hp2, hp3, _hp4, hp5, hp6, hp7⟩ := fatPtrArithmetic_of h
-  have hempty : heapAgreesWithMem (∅ : WasmHeapMap (Option UInt8)) resolve :=
-    heapAgreesWithMem_empty _
-  have hfirst := store32_sound (∅ : WasmHeapMap (Option UInt8)) resolve 0 st.mem
-    p dataPtr h_resolve hp1 hp2 hp3 hempty
-  have hwriteFirst : st.mem.write32 p dataPtr = st.mem :=
-    Mem.write32_eq_self (by simpa using h.data) hp1 hp2 hp3
-  rw [hwriteFirst] at hfirst
-  have hresolveEq : (fun id => if id = 0 then some st.mem else resolve id) = resolve :=
-    funext fun id => by by_cases h0 : id = 0 <;> simp [h0, h_resolve]
-  have hfirst' : heapAgreesWithMem (store32Heap ∅ 0 p dataPtr) resolve := hresolveEq ▸ hfirst
-  have hsecond := store32_sound (store32Heap ∅ 0 p dataPtr) resolve 0 st.mem
-    (p + 4) len h_resolve hp5 hp6 hp7 hfirst'
-  have hwriteSecond : st.mem.write32 (p + 4) len = st.mem :=
-    Mem.write32_eq_self h.count hp5 hp6 hp7
-  rw [hwriteSecond] at hsecond
-  have hsecond' : heapAgreesWithMem (fatPtrHeap p dataPtr len) resolve := hresolveEq ▸ hsecond
-  simpa [fatPtrHeap] using hsecond'
+  unfold fatPtrHeap
+  apply insert_physical_word32_sound (store32Heap ∅ 0 p dataPtr) resolve
+    0 st.mem (p + 4) len h_resolve hp5 hp6 hp7
+  · exact insert_physical_word32_sound (∅ : WasmHeapMap (Option UInt8)) resolve
+      0 st.mem p dataPtr h_resolve hp1 hp2 hp3 (heapAgreesWithMem_empty _)
+      (by simpa using h.data)
+  · exact h.count
 
 theorem fatPtrHeap_inBounds {α} {st : Store α} {p dataPtr len : UInt32}
     (resolve : Nat → Option Mem)
     (h_resolve : resolve 0 = some st.mem)
     (h : FatPtrAt st p dataPtr len) :
     heapAddressesInBounds (fatPtrHeap p dataPtr len) resolve := by
-  obtain ⟨hp1, hp2, hp3, _hp4, hp5, hp6, hp7⟩ := fatPtrArithmetic_of h
+  obtain ⟨hp1, hp2, hp3, hp4, hp5, hp6, hp7⟩ := fatPtrArithmetic_of h
   have hbound := h.bound
-  have hempty : heapAddressesInBounds (∅ : WasmHeapMap (Option UInt8)) resolve :=
-    heapAddressesInBounds_empty _
-  have hfirst := store32_inBounds (∅ : WasmHeapMap (Option UInt8)) resolve 0 st.mem
-    p dataPtr h_resolve hp1 hp2 hp3 hempty (by omega)
-  have hwriteFirst : st.mem.write32 p dataPtr = st.mem :=
-    Mem.write32_eq_self (by simpa using h.data) hp1 hp2 hp3
-  rw [hwriteFirst] at hfirst
-  have hresolveEq : (fun id => if id = 0 then some st.mem else resolve id) = resolve :=
-    funext fun id => by by_cases h0 : id = 0 <;> simp [h0, h_resolve]
-  have hfirst' : heapAddressesInBounds (store32Heap ∅ 0 p dataPtr) resolve := hresolveEq ▸ hfirst
-  have hsecond := store32_inBounds (store32Heap ∅ 0 p dataPtr) resolve 0 st.mem
-    (p + 4) len h_resolve hp5 hp6 hp7 hfirst' (by omega)
-  have hwriteSecond : st.mem.write32 (p + 4) len = st.mem :=
-    Mem.write32_eq_self h.count hp5 hp6 hp7
-  rw [hwriteSecond] at hsecond
-  have hsecond' : heapAddressesInBounds (fatPtrHeap p dataPtr len) resolve := hresolveEq ▸ hsecond
-  simpa [fatPtrHeap] using hsecond'
+  unfold fatPtrHeap
+  apply insert_physical_word32_inBounds (store32Heap ∅ 0 p dataPtr) resolve
+    0 st.mem (p + 4) len h_resolve hp5 hp6 hp7
+  · exact insert_physical_word32_inBounds
+      (∅ : WasmHeapMap (Option UInt8)) resolve 0 st.mem p dataPtr
+      h_resolve hp1 hp2 hp3 (heapAddressesInBounds_empty _) (by omega)
+      (by simpa using h.data)
+  · omega
+  · exact h.count
 
 theorem fatPtrHeap_pointsTo
     [WasmHeapGS α] (p dataPtr len : UInt32)
@@ -135,22 +103,20 @@ theorem fatPtrHeap_pointsTo
       get?_insert_ne (Ne.symm hne1), get?_insert_ne (Ne.symm hne0), get?_empty]
   simp only [fatPtrHeap]
   iintro Hbytes
-  ihave Hsplit := store32Heap_pointsTo (store32Heap ∅ 0 p dataPtr)
+  ihave ⟨Hlen, Hfirst⟩ := store32Heap_pointsTo (store32Heap ∅ 0 p dataPtr)
     0 (p + 4) len
     (fresh ⟨0, p + 4⟩ (by simp only [hp4]; omega))
     (fresh ⟨0, (p + 4) + 1⟩ (by simp only [h41, hp4]; omega))
     (fresh ⟨0, (p + 4) + 2⟩ (by simp only [h42, hp4]; omega))
     (fresh ⟨0, (p + 4) + 3⟩ (by simp only [h43, hp4]; omega))
     h41 h42 h43 $$ Hbytes
-  icases Hsplit with ⟨Hlen, Hfirst⟩
-  ihave HdataSplit := store32Heap_pointsTo
+  ihave ⟨Hdata, _Hempty⟩ := store32Heap_pointsTo
     (∅ : WasmHeapMap (Option UInt8)) 0 p dataPtr
     (get?_empty (⟨0, p⟩ : MemoryKey))
     (get?_empty (⟨0, p + 1⟩ : MemoryKey))
     (get?_empty (⟨0, p + 2⟩ : MemoryKey))
     (get?_empty (⟨0, p + 3⟩ : MemoryKey))
     hp1 hp2 hp3 $$ Hfirst
-  icases HdataSplit with ⟨Hdata, _Hempty⟩
   iframe
 
 /-- Iris loader for the canonical `(dataPtr, len)` ABI pair. Both words are
@@ -180,30 +146,22 @@ theorem wp_loadFatPtr
         Wasm.SmallStep.Expr α) @ s; E {{ Φ }} := by
   obtain ⟨hp1, hp2, hp3, hp4, hp5, hp6, hp7⟩ := fatPtrArithmetic hroom
   iintro >Hdata >Hlen Hwp
-  iapply Wasm.SmallStep.wp_localGet hget
-  inext
+  wasm_wp_next Wasm.SmallStep.wp_localGet hget
   ihave HdataLater : ▷ pointsTo_u32 0 (p + 0) dataPtr $$ [Hdata]
   · inext
     simp only [UInt32.add_zero]
     iexact Hdata
-  iapply Wasm.SmallStep.wp_load32 (address := p) (offset := 0)
+  wasm_wp_next_bind Wasm.SmallStep.wp_load32 (address := p) (offset := 0)
     dataPtr (by simp) (by simpa using hp1)
-    (by simpa using hp2) (by simpa using hp3) $$ HdataLater
-  inext
-  iintro Hdata
+    (by simpa using hp2) (by simpa using hp3) with HdataLater => Hdata
   have hget' :
       (⟨params, localValues, .i32 dataPtr :: values⟩ : Locals).get index =
-        some (.i32 p) := by
-    simpa [Locals.get] using hget
-  iapply Wasm.SmallStep.wp_localGet hget'
-  inext
+        some (.i32 p) := by simpa [Locals.get] using hget
+  wasm_wp_next Wasm.SmallStep.wp_localGet hget'
   ihave HlenLater : ▷ pointsTo_u32 0 (p + 4) len $$ [Hlen]
-  · inext
-    iexact Hlen
-  iapply Wasm.SmallStep.wp_load32 (address := p) (offset := 4)
-    len hp4 hp5 hp6 hp7 $$ HlenLater
-  inext
-  iintro Hlen
+  · ilater_exact Hlen
+  wasm_wp_next_bind Wasm.SmallStep.wp_load32 (address := p) (offset := 4)
+    len hp4 hp5 hp6 hp7 with HlenLater => Hlen
   iexact Hwp
 
 end Wasm.RustStd.Array

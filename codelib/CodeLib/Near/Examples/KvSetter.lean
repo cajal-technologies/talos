@@ -21,7 +21,7 @@ model makes free — no Wasm enumeration needed.
 
 Following the repo convention (cf. `XorSum/Spec.lean`), `SetSpec` is stated
 as a `def … : Prop` and fully proved (`set_spec`) via the WP layer. The
-`native_decide` theorems below additionally validate the *whole pipeline*
+kernel-checked regression theorems below additionally validate the *whole pipeline*
 — registers, the memory-or-register sentinel, length-prefix parsing, and
 `storage_write` semantics — executes correctly on concrete inputs.
 -/
@@ -194,8 +194,7 @@ theorem le32_parts_or (n : Nat) :
     rw [UInt32.toNat_add, UInt32.toNat_ofNat]
     change (key.length % 4294967296 + 4) % 4294967296 = key.length + 4
     have hKey : key.length < 4294967296 := by omega
-    rw [Nat.mod_eq_of_lt hKey]
-    exact Nat.mod_eq_of_lt hKeyAddr
+    rw [Nat.mod_eq_of_lt hKey]; exact Nat.mod_eq_of_lt hKeyAddr
   simp [encodeKV, le32, Mem.read32, Mem.writeBytes, hAddr, UInt8.toNat_toUInt32,
     UInt32.toNat_ofNat]
   rw [Nat.mod_eq_of_lt (by
@@ -217,16 +216,14 @@ theorem le32_parts_or (n : Nat) :
   rw [show 4 = 0 + 4 by norm_num]
   rw [readBytes_writeBytes_slice]
   · simp [encodeKV, le32]
-  · simp [encodeKV, le32]
-    omega
+  · simp [encodeKV, le32]; omega
 
 @[simp] theorem readBytes_writeBytes_encode_val (m : Mem) (key val : List UInt8) :
     (m.writeBytes 0 (encodeKV key val)).readBytes (key.length + 8) val.length = val := by
   rw [show key.length + 8 = 0 + (key.length + 8) by omega]
   rw [readBytes_writeBytes_slice]
   · simp [encodeKV, le32]
-  · simp [encodeKV, le32]
-    omega
+  · simp [encodeKV, le32]; omega
 
 theorem u64_toNat_of_u32_len (n : Nat) (h : n < 4294967296) :
     (UInt64.ofNat n).toNat = n := by
@@ -239,8 +236,7 @@ theorem u64_ofNat_ne_u64Max_of_u32_len (n : Nat) (h : n < 4294967296) :
   have ht := congrArg UInt64.toNat heq
   change (BitVec.ofNat 64 n).toNat = (18446744073709551615#64).toNat at ht
   rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)] at ht
-  norm_num at ht
-  omega
+  norm_num at ht; omega
 
 theorem u64_key_add8_toNat (key : List UInt8) (hKey : key.length < 4294967296) :
     (UInt64.ofNat key.length + 8).toNat = key.length + 8 := by
@@ -248,8 +244,7 @@ theorem u64_key_add8_toNat (key : List UInt8) (hKey : key.length < 4294967296) :
   change ((UInt64.ofNat key.length).toNat + (8#64).toNat) %
       18446744073709551616 = key.length + 8
   rw [u64_toNat_of_u32_len key.length hKey]
-  norm_num
-  omega
+  norm_num; omega
 
 theorem getMemOrReg_writeBytes_encode_key (st : Store NearState) (key val : List UInt8)
     (hKey : key.length < 4294967296)
@@ -259,8 +254,7 @@ theorem getMemOrReg_writeBytes_encode_key (st : Store NearState) (key val : List
   rw [getMemOrReg_mem]
   · simp [u64_toNat_of_u32_len key.length hKey]
   · exact u64_ofNat_ne_u64Max_of_u32_len key.length hKey
-  · simp [u64_toNat_of_u32_len key.length hKey, memBytes, encodeKV, le32] at hMem ⊢
-    omega
+  · simp [u64_toNat_of_u32_len key.length hKey, memBytes, encodeKV, le32] at hMem ⊢; omega
 
 theorem getMemOrReg_writeBytes_encode_val (st : Store NearState) (key val : List UInt8)
     (hKey : key.length < 4294967296) (hVal : val.length < 4294967296)
@@ -306,7 +300,8 @@ def SetSpec : Prop :=
         (∀ k, k ≠ key → st.host.storage k = ns.storage k))
 
 def afterInputStore (ns : NearState) (key val : List UInt8) : Store NearState :=
-  { globals := {}, mem := Mem.empty 1, host := ns.setRegister 0 (encodeKV key val) }
+  { («module».initialStore : Store NearState) with
+    host := ns.setRegister 0 (encodeKV key val) }
 
 def storageCallStore (ns : NearState) (key val : List UInt8) : Store NearState :=
   { afterInputStore ns key val with
@@ -337,11 +332,11 @@ theorem storageWrite_invoke_encode_present (ns : NearState) (key val old : List 
   · simpa [storageCallStore, afterInputStore, NearState.setRegister] using hView
   · apply getMemOrReg_writeBytes_encode_key
     · exact hKey
-    · simpa [afterInputStore, memBytes, Mem.empty] using hLen
+    · simpa [afterInputStore, memBytes, «module», Module.initialStore, Mem.empty] using hLen
   · apply getMemOrReg_writeBytes_encode_val
     · exact hKey
     · exact hVal
-    · simpa [afterInputStore, memBytes, Mem.empty] using hLen
+    · simpa [afterInputStore, memBytes, «module», Module.initialStore, Mem.empty] using hLen
   · simpa [storageCallStore, afterInputStore, NearState.setRegister] using hKeyLim
   · simpa [storageCallStore, afterInputStore, NearState.setRegister] using hValLim
   · simpa [storageCallStore, afterInputStore, NearState.setRegister] using hOld
@@ -364,11 +359,11 @@ theorem storageWrite_invoke_encode_absent (ns : NearState) (key val : List UInt8
   · simpa [storageCallStore, afterInputStore, NearState.setRegister] using hView
   · apply getMemOrReg_writeBytes_encode_key
     · exact hKey
-    · simpa [afterInputStore, memBytes, Mem.empty] using hLen
+    · simpa [afterInputStore, memBytes, «module», Module.initialStore, Mem.empty] using hLen
   · apply getMemOrReg_writeBytes_encode_val
     · exact hKey
     · exact hVal
-    · simpa [afterInputStore, memBytes, Mem.empty] using hLen
+    · simpa [afterInputStore, memBytes, «module», Module.initialStore, Mem.empty] using hLen
   · simpa [storageCallStore, afterInputStore, NearState.setRegister] using hKeyLim
   · simpa [storageCallStore, afterInputStore, NearState.setRegister] using hValLim
   · simpa [storageCallStore, afterInputStore, NearState.setRegister] using hOld
@@ -382,7 +377,7 @@ theorem set_spec : SetSpec := by
     wp_run
     refine wp_call_host_cons
       (imp := { «module» := "env", name := "input", params := [.i64], results := [] })
-      (hf := inputFn) rfl rfl ?_ ?_
+      (hf := inputFn) rfl rfl ?_ ?_ ?_
     · intro vs st' hInv
       simp [inputFn, writeRegisterResult, checkedSetRegister?, hInput, hReg, u64Max] at hInv
       rcases hInv with ⟨rfl, hst⟩
@@ -398,7 +393,7 @@ theorem set_spec : SetSpec := by
         omega
       refine wp_call_host_cons
         (imp := { «module» := "env", name := "read_register", params := [.i64, .i64], results := [] })
-        (hf := readRegisterFn) rfl rfl ?_ ?_
+        (hf := readRegisterFn) rfl rfl ?_ ?_ ?_
       · intro vs st' hInv
         simp [readRegisterFn, hReg0, memBytes, hReadBound] at hInv
         rcases hInv with ⟨rfl, hst⟩
@@ -415,9 +410,8 @@ theorem set_spec : SetSpec := by
         · omega
         refine wp_call_host_cons
           (imp := { «module» := "env", name := "storage_write", params := [.i64, .i64, .i64, .i64, .i64], results := [.i64] })
-          (hf := storageWriteFn) rfl rfl ?_ ?_
+          (hf := storageWriteFn) rfl rfl ?_ ?_ ?_
         · intro vs st' hInv
-          simp only [List.take, List.reverse_cons, List.reverse_nil] at hInv
           change storageWriteFn.invoke (storageCallStore ns key val)
               [.i64 (UInt64.ofNat key.length), .i64 4, .i64 (UInt64.ofNat val.length),
                 .i64 (UInt64.ofNat key.length + 8), .i64 1] = .Return vs st' at hInv
@@ -447,7 +441,6 @@ theorem set_spec : SetSpec := by
             · intro k hk
               simp [NearState.setStorage, NearState.setRegister, NearState.invalidateIterators, hk]
         · intro st' msg hInv
-          simp only [List.take, List.reverse_cons, List.reverse_nil] at hInv
           change storageWriteFn.invoke (storageCallStore ns key val)
               [.i64 (UInt64.ofNat key.length), .i64 4, .i64 (UInt64.ofNat val.length),
                 .i64 (UInt64.ofNat key.length + 8), .i64 1] = .Trap st' msg at hInv
@@ -462,16 +455,35 @@ theorem set_spec : SetSpec := by
             rw [storageWrite_invoke_encode_present ns key val old hView hKey hVal hLen
               hKeyLim hValLim hOldEq hOldLimOld] at hInv
             contradiction
+        · intro st' tag arguments hInv
+          change storageWriteFn.invoke (storageCallStore ns key val)
+              [.i64 (UInt64.ofNat key.length), .i64 4, .i64 (UInt64.ofNat val.length),
+                .i64 (UInt64.ofNat key.length + 8), .i64 1] = .Throw st' tag arguments at hInv
+          cases hOldEq : ns.storage key with
+          | none =>
+            rw [storageWrite_invoke_encode_absent ns key val hView hKey hVal hLen
+              hKeyLim hValLim hOldEq] at hInv
+            contradiction
+          | some old =>
+            have hOldLimOld : withinLimit ns.config.maxRegisterLen old.length = true := by
+              simpa [hOldEq] using hOldLim
+            rw [storageWrite_invoke_encode_present ns key val old hView hKey hVal hLen
+              hKeyLim hValLim hOldEq hOldLimOld] at hInv
+            contradiction
       · intro st' msg hInv
         simp [readRegisterFn, hReg0, memBytes, hReadBound] at hInv
+      · intro st' tag arguments hInv
+        simp [readRegisterFn, hReg0, memBytes, hReadBound] at hInv
     · intro st' msg hInv
+      simp [inputFn, writeRegisterResult, checkedSetRegister?, hInput, hReg, u64Max] at hInv
+    · intro st' tag arguments hInv
       simp [inputFn, writeRegisterResult, checkedSetRegister?, hInput, hReg, u64Max] at hInv
 
 /-! ## Concrete end-to-end validation
 
 These run the contract through the interpreter on a concrete input and
 check the resulting storage projection, exercising the entire host
-pipeline. They are full proofs (`native_decide`), not statements. -/
+pipeline. The kernel checks each resulting storage projection. -/
 
 /-- Run `set` from the module's initial store with NEAR projection `ns`. -/
 def runFrom (ns : NearState) : Result NearState :=
@@ -494,13 +506,13 @@ def ranOk (ns : NearState) : Bool :=
 def demoNs : NearState := { context := { input := encodeKV [1, 2] [7, 8, 9] } }
 
 /-- The call succeeds and returns nothing. -/
-theorem demo_ranOk : ranOk demoNs = true := by native_decide
+theorem demo_ranOk : ranOk demoNs = true := by cbv
 
 /-- After the call, the parsed key holds the parsed value. -/
-theorem demo_stored : storedAt demoNs [1, 2] = some [7, 8, 9] := by native_decide
+theorem demo_stored : storedAt demoNs [1, 2] = some [7, 8, 9] := by cbv
 
 /-- Frame: a key that was not written stays absent. -/
-theorem demo_frame_absent : storedAt demoNs [9, 9] = none := by native_decide
+theorem demo_frame_absent : storedAt demoNs [9, 9] = none := by cbv
 
 /-- Frame against a non-empty incoming store: a pre-existing unrelated key
 survives the write untouched. -/
@@ -508,9 +520,9 @@ def demoNs2 : NearState :=
   { storage := fun k => if k = [42] then some [100] else none
     context := { input := encodeKV [1, 2] [7, 8, 9] } }
 
-theorem demo2_stored : storedAt demoNs2 [1, 2] = some [7, 8, 9] := by native_decide
+theorem demo2_stored : storedAt demoNs2 [1, 2] = some [7, 8, 9] := by cbv
 
-theorem demo2_frame_other : storedAt demoNs2 [42] = some [100] := by native_decide
+theorem demo2_frame_other : storedAt demoNs2 [42] = some [100] := by cbv
 
 /-! ## Host semantic regression checks -/
 
@@ -523,7 +535,7 @@ def valueReturnOobTraps : Bool :=
   | .Trap _ _ => true
   | _         => false
 
-theorem value_return_oob_traps : valueReturnOobTraps = true := by native_decide
+theorem value_return_oob_traps : valueReturnOobTraps = true := by decide +kernel
 
 /-- Output `register_id = u64::MAX` discards the output instead of writing
 to an actual register with that numeric id. -/
@@ -532,7 +544,7 @@ def inputMaxDiscards : Bool :=
   | .Return [] st => (st.host.registers u64Max.toNat).isNone
   | _             => false
 
-theorem input_max_discards : inputMaxDiscards = true := by native_decide
+theorem input_max_discards : inputMaxDiscards = true := by decide +kernel
 
 def storageReadMaxDiscards : Bool :=
   let ns : NearState :=
@@ -542,7 +554,7 @@ def storageReadMaxDiscards : Bool :=
   | .Return [.i64 1] st => (st.host.registers u64Max.toNat).isNone
   | _                   => false
 
-theorem storage_read_max_discards : storageReadMaxDiscards = true := by native_decide
+theorem storage_read_max_discards : storageReadMaxDiscards = true := by decide +kernel
 
 def resolvesImportSubset : Bool :=
   match resolveImports?
@@ -552,7 +564,7 @@ def resolvesImportSubset : Bool :=
   | some env => env.funcs.length == 2
   | none     => false
 
-theorem resolve_import_subset : resolvesImportSubset = true := by native_decide
+theorem resolve_import_subset : resolvesImportSubset = true := by decide +kernel
 
 def rejectsBadImportSignature : Bool :=
   match resolveImports?
@@ -561,7 +573,7 @@ def rejectsBadImportSignature : Bool :=
   | none   => true
   | some _ => false
 
-theorem reject_bad_import_signature : rejectsBadImportSignature = true := by native_decide
+theorem reject_bad_import_signature : rejectsBadImportSignature = true := by decide +kernel
 
 def resolvesSpecSubset : Bool :=
   match resolveContracts?
@@ -571,7 +583,7 @@ def resolvesSpecSubset : Bool :=
   | some spec => spec.contracts.length == 2
   | none      => false
 
-theorem resolve_spec_subset : resolvesSpecSubset = true := by native_decide
+theorem resolve_spec_subset : resolvesSpecSubset = true := by decide +kernel
 
 def rejectsBadSpecSignature : Bool :=
   match resolveContracts?
@@ -580,7 +592,7 @@ def rejectsBadSpecSignature : Bool :=
   | none   => true
   | some _ => false
 
-theorem reject_bad_spec_signature : rejectsBadSpecSignature = true := by native_decide
+theorem reject_bad_spec_signature : rejectsBadSpecSignature = true := by decide +kernel
 
 def currentAccountWritesRegister : Bool :=
   let ns : NearState := { context := { currentAccountId := [99, 100] } }
@@ -588,7 +600,7 @@ def currentAccountWritesRegister : Bool :=
   | .Return [] st => st.host.registers 7 == some [99, 100]
   | _             => false
 
-theorem current_account_writes_register : currentAccountWritesRegister = true := by native_decide
+theorem current_account_writes_register : currentAccountWritesRegister = true := by decide +kernel
 
 def accountBalanceWritesU128 : Bool :=
   let ns : NearState := { context := { accountBalance := 258 } }
@@ -596,7 +608,7 @@ def accountBalanceWritesU128 : Bool :=
   | .Return [] st => st.mem.readBytes 0 16 == leU128Bytes 258
   | _             => false
 
-theorem account_balance_writes_u128 : accountBalanceWritesU128 = true := by native_decide
+theorem account_balance_writes_u128 : accountBalanceWritesU128 = true := by decide +kernel
 
 def sha256HookWritesRegister : Bool :=
   let ns : NearState := { sha256 := fun bs => bs ++ [9] }
@@ -606,7 +618,7 @@ def sha256HookWritesRegister : Bool :=
   | .Return [] st' => st'.host.registers 5 == some [1, 2, 9]
   | _              => false
 
-theorem sha256_hook_writes_register : sha256HookWritesRegister = true := by native_decide
+theorem sha256_hook_writes_register : sha256HookWritesRegister = true := by decide +kernel
 
 def randomSeedWritesRegister : Bool :=
   let ns : NearState := { randomSeed := [4, 5, 6] }
@@ -614,7 +626,7 @@ def randomSeedWritesRegister : Bool :=
   | .Return [] st => st.host.registers 3 == some [4, 5, 6]
   | _             => false
 
-theorem random_seed_writes_register : randomSeedWritesRegister = true := by native_decide
+theorem random_seed_writes_register : randomSeedWritesRegister = true := by decide +kernel
 
 def storageWriteViewTraps : Bool :=
   let ns : NearState := { context := { isView := true } }
@@ -624,7 +636,7 @@ def storageWriteViewTraps : Bool :=
   | .Trap _ _ => true
   | _         => false
 
-theorem storage_write_view_traps : storageWriteViewTraps = true := by native_decide
+theorem storage_write_view_traps : storageWriteViewTraps = true := by decide +kernel
 
 def storageReadAllowedInView : Bool :=
   let ns : NearState :=
@@ -636,7 +648,7 @@ def storageReadAllowedInView : Bool :=
   | .Return [.i64 1] st' => st'.host.registers 4 == some [9]
   | _                    => false
 
-theorem storage_read_allowed_in_view : storageReadAllowedInView = true := by native_decide
+theorem storage_read_allowed_in_view : storageReadAllowedInView = true := by decide +kernel
 
 def attachedDepositViewTraps : Bool :=
   let ns : NearState := { context := { isView := true, attachedDeposit := 7 } }
@@ -644,7 +656,7 @@ def attachedDepositViewTraps : Bool :=
   | .Trap _ _ => true
   | _         => false
 
-theorem attached_deposit_view_traps : attachedDepositViewTraps = true := by native_decide
+theorem attached_deposit_view_traps : attachedDepositViewTraps = true := by decide +kernel
 
 def signerAccountViewTraps : Bool :=
   let ns : NearState := { context := { isView := true, signerAccountId := [1] } }
@@ -652,7 +664,7 @@ def signerAccountViewTraps : Bool :=
   | .Trap _ _ => true
   | _         => false
 
-theorem signer_account_view_traps : signerAccountViewTraps = true := by native_decide
+theorem signer_account_view_traps : signerAccountViewTraps = true := by decide +kernel
 
 def promiseResultsCountWorks : Bool :=
   let ns : NearState := { promiseResults := [.notReady, .successful [7], .failed] }
@@ -660,7 +672,7 @@ def promiseResultsCountWorks : Bool :=
   | .Return [.i64 n] _ => n == 3
   | _                  => false
 
-theorem promise_results_count_works : promiseResultsCountWorks = true := by native_decide
+theorem promise_results_count_works : promiseResultsCountWorks = true := by decide +kernel
 
 def promiseResultSuccessWritesRegister : Bool :=
   let ns : NearState := { promiseResults := [.notReady, .successful [7, 8], .failed] }
@@ -669,7 +681,7 @@ def promiseResultSuccessWritesRegister : Bool :=
   | _                   => false
 
 theorem promise_result_success_writes_register :
-    promiseResultSuccessWritesRegister = true := by native_decide
+    promiseResultSuccessWritesRegister = true := by decide +kernel
 
 def promiseResultFailedLeavesRegister : Bool :=
   let ns : NearState :=
@@ -680,7 +692,7 @@ def promiseResultFailedLeavesRegister : Bool :=
   | _                   => false
 
 theorem promise_result_failed_leaves_register :
-    promiseResultFailedLeavesRegister = true := by native_decide
+    promiseResultFailedLeavesRegister = true := by decide +kernel
 
 def promiseResultBadIndexTraps : Bool :=
   let ns : NearState := { promiseResults := [.successful [7]] }
@@ -688,7 +700,7 @@ def promiseResultBadIndexTraps : Bool :=
   | .Trap _ _ => true
   | _         => false
 
-theorem promise_result_bad_index_traps : promiseResultBadIndexTraps = true := by native_decide
+theorem promise_result_bad_index_traps : promiseResultBadIndexTraps = true := by decide +kernel
 
 def promiseResultViewTraps : Bool :=
   let ns : NearState := { context := { isView := true }, promiseResults := [.successful [7]] }
@@ -696,7 +708,7 @@ def promiseResultViewTraps : Bool :=
   | .Trap _ _ => true
   | _         => false
 
-theorem promise_result_view_traps : promiseResultViewTraps = true := by native_decide
+theorem promise_result_view_traps : promiseResultViewTraps = true := by decide +kernel
 
 def promiseReturnRecordsPromise : Bool :=
   let ns : NearState := { promises := [.batch [1] [], .batch [2] []] }
@@ -704,7 +716,7 @@ def promiseReturnRecordsPromise : Bool :=
   | .Return [] st => st.host.returnedPromise == some 1
   | _             => false
 
-theorem promise_return_records_promise : promiseReturnRecordsPromise = true := by native_decide
+theorem promise_return_records_promise : promiseReturnRecordsPromise = true := by decide +kernel
 
 def promiseReturnBadIndexTraps : Bool :=
   let ns : NearState := { promises := [.batch [1] []] }
@@ -712,7 +724,7 @@ def promiseReturnBadIndexTraps : Bool :=
   | .Trap _ _ => true
   | _         => false
 
-theorem promise_return_bad_index_traps : promiseReturnBadIndexTraps = true := by native_decide
+theorem promise_return_bad_index_traps : promiseReturnBadIndexTraps = true := by decide +kernel
 
 def promiseBatchCreateRecordsAccount : Bool :=
   let st0 := initialWith {}
@@ -722,7 +734,7 @@ def promiseBatchCreateRecordsAccount : Bool :=
   | _                    => false
 
 theorem promise_batch_create_records_account :
-    promiseBatchCreateRecordsAccount = true := by native_decide
+    promiseBatchCreateRecordsAccount = true := by decide +kernel
 
 def promiseCreateRecordsFunctionCall : Bool :=
   let st0 := initialWith {}
@@ -737,7 +749,7 @@ def promiseCreateRecordsFunctionCall : Bool :=
   | _ => false
 
 theorem promise_create_records_function_call :
-    promiseCreateRecordsFunctionCall = true := by native_decide
+    promiseCreateRecordsFunctionCall = true := by decide +kernel
 
 def promiseThenRecordsCallback : Bool :=
   let ns : NearState := { promises := [.batch [1] []] }
@@ -753,7 +765,7 @@ def promiseThenRecordsCallback : Bool :=
   | _ => false
 
 theorem promise_then_records_callback :
-    promiseThenRecordsCallback = true := by native_decide
+    promiseThenRecordsCallback = true := by decide +kernel
 
 def promiseAndRecordsDependencies : Bool :=
   let ns : NearState := { promises := [.batch [1] [], .batch [2] []] }
@@ -765,7 +777,7 @@ def promiseAndRecordsDependencies : Bool :=
   | _ => false
 
 theorem promise_and_records_dependencies :
-    promiseAndRecordsDependencies = true := by native_decide
+    promiseAndRecordsDependencies = true := by decide +kernel
 
 def promiseBatchFunctionCallAppendsAction : Bool :=
   let ns : NearState := { promises := [.batch [1] []] }
@@ -780,7 +792,7 @@ def promiseBatchFunctionCallAppendsAction : Bool :=
   | _ => false
 
 theorem promise_batch_function_call_appends_action :
-    promiseBatchFunctionCallAppendsAction = true := by native_decide
+    promiseBatchFunctionCallAppendsAction = true := by decide +kernel
 
 def promiseBatchTransferAppendsAction : Bool :=
   let ns : NearState := { promises := [.batch [1] []] }
@@ -791,7 +803,7 @@ def promiseBatchTransferAppendsAction : Bool :=
   | _              => false
 
 theorem promise_batch_transfer_appends_action :
-    promiseBatchTransferAppendsAction = true := by native_decide
+    promiseBatchTransferAppendsAction = true := by decide +kernel
 
 def promiseActionOnJointTraps : Bool :=
   let ns : NearState := { promises := [.and [0]] }
@@ -799,7 +811,7 @@ def promiseActionOnJointTraps : Bool :=
   | .Trap _ _ => true
   | _         => false
 
-theorem promise_action_on_joint_traps : promiseActionOnJointTraps = true := by native_decide
+theorem promise_action_on_joint_traps : promiseActionOnJointTraps = true := by decide +kernel
 
 def promiseBatchCreateViewTraps : Bool :=
   let ns : NearState := { context := { isView := true } }
@@ -810,7 +822,7 @@ def promiseBatchCreateViewTraps : Bool :=
   | _         => false
 
 theorem promise_batch_create_view_traps :
-    promiseBatchCreateViewTraps = true := by native_decide
+    promiseBatchCreateViewTraps = true := by decide +kernel
 
 def promiseYieldCreateRecordsToken : Bool :=
   let ns : NearState :=
@@ -826,7 +838,7 @@ def promiseYieldCreateRecordsToken : Bool :=
   | _ => false
 
 theorem promise_yield_create_records_token :
-    promiseYieldCreateRecordsToken = true := by native_decide
+    promiseYieldCreateRecordsToken = true := by decide +kernel
 
 def promiseYieldResumeRecordsPayload : Bool :=
   let ns : NearState := { promises := [.yielded [109] [7] 3 4 [1, 2]] }
@@ -838,7 +850,7 @@ def promiseYieldResumeRecordsPayload : Bool :=
   | _                    => false
 
 theorem promise_yield_resume_records_payload :
-    promiseYieldResumeRecordsPayload = true := by native_decide
+    promiseYieldResumeRecordsPayload = true := by decide +kernel
 
 def promiseYieldResumeUnknownReturnsZero : Bool :=
   let ns : NearState := { promises := [.yielded [109] [7] 3 4 [1, 2]] }
@@ -850,7 +862,7 @@ def promiseYieldResumeUnknownReturnsZero : Bool :=
   | _                    => false
 
 theorem promise_yield_resume_unknown_returns_zero :
-    promiseYieldResumeUnknownReturnsZero = true := by native_decide
+    promiseYieldResumeUnknownReturnsZero = true := by decide +kernel
 
 def promiseYieldCreateViewTraps : Bool :=
   let ns : NearState := { context := { isView := true } }
@@ -861,7 +873,7 @@ def promiseYieldCreateViewTraps : Bool :=
   | _         => false
 
 theorem promise_yield_create_view_traps :
-    promiseYieldCreateViewTraps = true := by native_decide
+    promiseYieldCreateViewTraps = true := by decide +kernel
 
 def iterNs : NearState :=
   { storage := fun k =>
@@ -884,7 +896,7 @@ def storageIterPrefixNextWorks : Bool :=
   | _ => false
 
 theorem storage_iter_prefix_next_works :
-    storageIterPrefixNextWorks = true := by native_decide
+    storageIterPrefixNextWorks = true := by decide +kernel
 
 def storageIterRangeNextWorks : Bool :=
   let st0 := initialWith iterNs
@@ -900,7 +912,7 @@ def storageIterRangeNextWorks : Bool :=
   | _ => false
 
 theorem storage_iter_range_next_works :
-    storageIterRangeNextWorks = true := by native_decide
+    storageIterRangeNextWorks = true := by decide +kernel
 
 def storageIterDuplicateRegistersTrap : Bool :=
   let st0 := initialWith iterNs
@@ -913,7 +925,7 @@ def storageIterDuplicateRegistersTrap : Bool :=
   | _ => false
 
 theorem storage_iter_duplicate_registers_trap :
-    storageIterDuplicateRegistersTrap = true := by native_decide
+    storageIterDuplicateRegistersTrap = true := by decide +kernel
 
 def storageWriteInvalidatesIterators : Bool :=
   let st0 := initialWith iterNs
@@ -927,7 +939,7 @@ def storageWriteInvalidatesIterators : Bool :=
   | _ => false
 
 theorem storage_write_invalidates_iterators :
-    storageWriteInvalidatesIterators = true := by native_decide
+    storageWriteInvalidatesIterators = true := by decide +kernel
 
 def inputRegisterLimitTraps : Bool :=
   let ns : NearState :=
@@ -937,7 +949,7 @@ def inputRegisterLimitTraps : Bool :=
   | .Trap _ _ => true
   | _         => false
 
-theorem input_register_limit_traps : inputRegisterLimitTraps = true := by native_decide
+theorem input_register_limit_traps : inputRegisterLimitTraps = true := by decide +kernel
 
 def valueReturnLimitTraps : Bool :=
   let ns : NearState := { config := { maxReturnLen := some 2 } }
@@ -947,7 +959,7 @@ def valueReturnLimitTraps : Bool :=
   | .Trap _ _ => true
   | _         => false
 
-theorem value_return_limit_traps : valueReturnLimitTraps = true := by native_decide
+theorem value_return_limit_traps : valueReturnLimitTraps = true := by decide +kernel
 
 def storageWriteValueLimitTraps : Bool :=
   let ns : NearState := { config := { maxStorageValueLen := some 0 } }
@@ -958,7 +970,7 @@ def storageWriteValueLimitTraps : Bool :=
   | _         => false
 
 theorem storage_write_value_limit_traps :
-    storageWriteValueLimitTraps = true := by native_decide
+    storageWriteValueLimitTraps = true := by decide +kernel
 
 def logCountLimitTraps : Bool :=
   let ns : NearState :=
@@ -968,7 +980,7 @@ def logCountLimitTraps : Bool :=
   | .Trap _ _ => true
   | _         => false
 
-theorem log_count_limit_traps : logCountLimitTraps = true := by native_decide
+theorem log_count_limit_traps : logCountLimitTraps = true := by decide +kernel
 
 def logLenLimitTraps : Bool :=
   let ns : NearState := { config := { maxLogLen := some 1 } }
@@ -978,7 +990,7 @@ def logLenLimitTraps : Bool :=
   | .Trap _ _ => true
   | _         => false
 
-theorem log_len_limit_traps : logLenLimitTraps = true := by native_decide
+theorem log_len_limit_traps : logLenLimitTraps = true := by decide +kernel
 
 def logUtf8StoresRawBytes : Bool :=
   let st0 := initialWith {}
@@ -987,7 +999,7 @@ def logUtf8StoresRawBytes : Bool :=
   | .Return [] st' => st'.host.logs == [[255]]
   | _              => false
 
-theorem log_utf8_stores_raw_bytes : logUtf8StoresRawBytes = true := by native_decide
+theorem log_utf8_stores_raw_bytes : logUtf8StoresRawBytes = true := by decide +kernel
 
 def currentAccountInvalidTraps : Bool :=
   let ns : NearState :=
@@ -997,7 +1009,7 @@ def currentAccountInvalidTraps : Bool :=
   | .Trap _ _ => true
   | _         => false
 
-theorem current_account_invalid_traps : currentAccountInvalidTraps = true := by native_decide
+theorem current_account_invalid_traps : currentAccountInvalidTraps = true := by decide +kernel
 
 def validatorStakeInvalidAccountTraps : Bool :=
   let ns : NearState := { config := { validAccountId := fun _ => false } }
@@ -1008,7 +1020,7 @@ def validatorStakeInvalidAccountTraps : Bool :=
   | _         => false
 
 theorem validator_stake_invalid_account_traps :
-    validatorStakeInvalidAccountTraps = true := by native_decide
+    validatorStakeInvalidAccountTraps = true := by decide +kernel
 
 def signerPkInvalidTraps : Bool :=
   let ns : NearState :=
@@ -1018,7 +1030,7 @@ def signerPkInvalidTraps : Bool :=
   | .Trap _ _ => true
   | _         => false
 
-theorem signer_pk_invalid_traps : signerPkInvalidTraps = true := by native_decide
+theorem signer_pk_invalid_traps : signerPkInvalidTraps = true := by decide +kernel
 
 def ed25519InvalidPublicKeyTraps : Bool :=
   let ns : NearState := { config := { validPublicKey := fun _ => false } }
@@ -1029,7 +1041,7 @@ def ed25519InvalidPublicKeyTraps : Bool :=
   | _         => false
 
 theorem ed25519_invalid_public_key_traps :
-    ed25519InvalidPublicKeyTraps = true := by native_decide
+    ed25519InvalidPublicKeyTraps = true := by decide +kernel
 
 def altBn128HookWritesRegister : Bool :=
   let ns : NearState := { altBn128G1Multiexp := fun bs => bs ++ [9] }
@@ -1040,7 +1052,7 @@ def altBn128HookWritesRegister : Bool :=
   | _              => false
 
 theorem alt_bn128_hook_writes_register :
-    altBn128HookWritesRegister = true := by native_decide
+    altBn128HookWritesRegister = true := by decide +kernel
 
 def bls12381HookWritesRegister : Bool :=
   let ns : NearState := { bls12381G1Multiexp := fun bs => (0, bs ++ [9]) }
@@ -1051,7 +1063,7 @@ def bls12381HookWritesRegister : Bool :=
   | _                    => false
 
 theorem bls12381_hook_writes_register :
-    bls12381HookWritesRegister = true := by native_decide
+    bls12381HookWritesRegister = true := by decide +kernel
 
 def bls12381InvalidLeavesRegister : Bool :=
   let ns : NearState :=
@@ -1064,7 +1076,7 @@ def bls12381InvalidLeavesRegister : Bool :=
   | _                    => false
 
 theorem bls12381_invalid_leaves_register :
-    bls12381InvalidLeavesRegister = true := by native_decide
+    bls12381InvalidLeavesRegister = true := by decide +kernel
 
 def bls12381PairingStatusReturns : Bool :=
   let ns : NearState := { bls12381PairingCheck := fun _ => 1 }
@@ -1075,7 +1087,7 @@ def bls12381PairingStatusReturns : Bool :=
   | _                  => false
 
 theorem bls12381_pairing_status_returns :
-    bls12381PairingStatusReturns = true := by native_decide
+    bls12381PairingStatusReturns = true := by decide +kernel
 
 end KvSetter
 end Near

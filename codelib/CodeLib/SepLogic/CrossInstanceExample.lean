@@ -36,8 +36,7 @@ def instanceA : ModuleInstance Unit where
 
 @[simp] private theorem crossInstance_currentModule :
     ({ instances := #[instanceB, instanceA], entry := ⟨1⟩ } : RuntimeEnv Unit).currentModule =
-        instanceA.module := by
-  simp [RuntimeEnv.currentModule, RuntimeEnv.currentInstance]
+        instanceA.module := by simp [RuntimeEnv.currentModule, RuntimeEnv.currentInstance]
 
 -- entry = instance 1 (moduleA); values [b, a] ready for cross-instance call to instance 0
 def crossInstanceConfig (a b : UInt32) : Config Unit :=
@@ -72,29 +71,20 @@ theorem crossInstance_partiallyMeets (a b : UInt32) :
     · inext
       iintro ⟨HinstanceOwn', HruntimeInstances'⟩
       simp only [addLibFn, Function.toLocals, List.map_nil]
-      iapply wp_localGet rfl
-      inext
-      iapply wp_localGet rfl
-      inext
-      iapply wp_add
-      inext
+      wasm_wp_pures [wp_localGet wp_localGet wp_add]
       iapply wp_returnFromCallCrossInstance ⟨0⟩ instanceB instanceA #[instanceB, instanceA]
           (by decide) rfl rfl
           $$ [HinstanceOwn'] HruntimeInstances'
       · inext; iexact HinstanceOwn'
       · inext
         iintro _HinstanceCaller
-        iapply wp_finish
-        inext
-        iapply wp_value'
-        ipureintro
-        rfl
+        wasm_wp_finish_value_rfl
 
 theorem crossInstance_terminates :
     TerminatesWith (crossInstanceConfig 3 5) (fun _ _ => True) :=
   runSteps_checked_terminates (fuel := 30)
     (fun _ _ => true)
-    (by native_decide)
+    (by decide +kernel)
     (fun _ _ _ => trivial)
 
 theorem crossInstance_result :

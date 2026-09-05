@@ -17,11 +17,18 @@ open Iris Iris.ProgramLogic Language.Notation
 open Wasm.SepLogic
 
 variable [WasmSmallStepGS hlc α]
-local instance instWasmTotalLoopIrisGS :
-    IrisGS_gen hlc (Expr α) (WasmHeapGF α) :=
-  instIrisGS
+variable {Terminal : Type} [TerminalView α Terminal]
+local instance (priority := high) totalLoopTerminalLanguage :
+    Language (Expr α) (MachineStore α) StepKind Terminal :=
+  TerminalView.canonicalLanguage
+local instance (priority := high) totalLoopTerminalIrisGS :
+    @IrisGS_gen hlc (Expr α) Terminal (MachineStore α) StepKind
+      totalLoopTerminalLanguage (WasmHeapGF α) where
+  numLatersPerStep _ := 0
+  forkPost _ := iprop(True)
+  stateInterp_mono _ _ _ _ := by iintro $
 variable {s : Stuckness} {E : CoPset}
-variable {Φ : List Value → IProp (WasmHeapGF α)}
+variable {Φ : Terminal → IProp (WasmHeapGF α)}
 
 /-- Total counterpart of `wp_loop_löb_family`. The body proof may branch back
 to any family index whose measure is strictly smaller, which is exactly the
@@ -69,7 +76,7 @@ theorem twp_loop_wf_family
   simp only [loopBodyExpr] at closes
   subst initialLocals
   iintro HI
-  iapply twp_loop
+  iapply twp_loop (Terminal := Terminal) (α := α)
   rw [← hbelow]
   ihave Hbody := closes initial $$ HI
   iexact Hbody

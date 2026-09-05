@@ -1,6 +1,11 @@
 import Interpreter.Wasm.SmallStep
 import Interpreter.Wasm.Examples.Harness
 
+kernel_decoder
+
+set_option maxRecDepth 100000
+set_option maxHeartbeats 4000000
+
 /-! ## Example: reference instructions (`ref.null`, `ref.func`, `ref.is_null`)
 
 The AST theorem is an instruction-granular relational trace. The decoded
@@ -30,10 +35,7 @@ theorem refReflect_steps (m : Module) (st : Store α) :
        (.instruction (.refFunc 0)), (.instruction .refIsNull),
        (.administrative .finish)]
       ⟨.done [.i32 0, .i32 1], (refReflectConfig m st).store⟩ := by
-  apply Steps.cons .refNull
-  apply Steps.cons (.refIsNullTrue rfl)
-  apply Steps.cons .refFunc
-  apply Steps.cons (.refIsNullFalse rfl)
+  wasm_steps [.refNull, (.refIsNullTrue rfl), .refFunc, (.refIsNullFalse rfl)]
   exact Steps.cons .finish (Steps.refl _)
 
 theorem refReflect_terminates (m : Module) (st : Store α) :
@@ -91,17 +93,17 @@ private def decodedConfig (index : Nat) : Config Unit :=
 private def runVals (index : Nat) : Option (List Value) :=
   (runSteps 3 (decodedConfig index)).result.values?
 
-theorem decodes_six_funcs : decoded.funcs.length = 6 := by native_decide
+theorem decodes_six_funcs : decoded.funcs.length = 6 := by cbv
 
-theorem null_is_null_runs : runVals 1 = some [.i32 1] := by native_decide
+theorem null_is_null_runs : runVals 1 = some [.i32 1] := by cbv
 
-theorem func_is_null_runs : runVals 2 = some [.i32 0] := by native_decide
+theorem func_is_null_runs : runVals 2 = some [.i32 0] := by cbv
 
-theorem nofunc_is_null_runs : runVals 3 = some [.i32 1] := by native_decide
+theorem nofunc_is_null_runs : runVals 3 = some [.i32 1] := by cbv
 
-theorem global_func_is_null_runs : runVals 4 = some [.i32 0] := by native_decide
+theorem global_func_is_null_runs : runVals 4 = some [.i32 0] := by cbv
 
-theorem global_null_is_null_runs : runVals 5 = some [.i32 1] := by native_decide
+theorem global_null_is_null_runs : runVals 5 = some [.i32 1] := by cbv
 
 theorem null_is_null_terminates :
     TerminatesWith (decodedConfig 1) (fun values _ => values = [.i32 1]) :=

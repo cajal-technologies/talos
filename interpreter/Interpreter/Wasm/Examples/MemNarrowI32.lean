@@ -46,23 +46,17 @@ def narrowI32Config (index : Nat) : Config Unit :=
     store := narrowI32Store }
 
 theorem load8U_returns_byte :
-    (runSteps 8 (narrowI32Config 0)).result.values? = some [.i32 0x42] := by
-  native_decide
+    (runSteps 8 (narrowI32Config 0)).result.values? = some [.i32 0x42] := by decide +kernel
 theorem load8S_sign_extends :
-    (runSteps 8 (narrowI32Config 1)).result.values? = some [.i32 0xFFFFFFFF] := by
-  native_decide
+    (runSteps 8 (narrowI32Config 1)).result.values? = some [.i32 0xFFFFFFFF] := by decide +kernel
 theorem load16U_returns_halfword :
-    (runSteps 8 (narrowI32Config 2)).result.values? = some [.i32 0xABCD] := by
-  native_decide
+    (runSteps 8 (narrowI32Config 2)).result.values? = some [.i32 0xABCD] := by decide +kernel
 theorem load16S_sign_extends :
-    (runSteps 8 (narrowI32Config 3)).result.values? = some [.i32 0xFFFFFFCD] := by
-  native_decide
+    (runSteps 8 (narrowI32Config 3)).result.values? = some [.i32 0xFFFFFFCD] := by decide +kernel
 theorem store8_roundtrip :
-    (runSteps 8 (narrowI32Config 4)).result.values? = some [.i32 0xAB] := by
-  native_decide
+    (runSteps 8 (narrowI32Config 4)).result.values? = some [.i32 0xAB] := by decide +kernel
 theorem store16_roundtrip :
-    (runSteps 8 (narrowI32Config 5)).result.values? = some [.i32 0xABCD] := by
-  native_decide
+    (runSteps 8 (narrowI32Config 5)).result.values? = some [.i32 0xABCD] := by decide +kernel
 
 theorem narrowI32_terminates :
     TerminatesWith (narrowI32Config 0) (fun vs _ => vs = [.i32 0x42]) ∧
@@ -70,8 +64,8 @@ theorem narrowI32_terminates :
     TerminatesWith (narrowI32Config 2) (fun vs _ => vs = [.i32 0xABCD]) ∧
     TerminatesWith (narrowI32Config 3) (fun vs _ => vs = [.i32 0xFFFFFFCD]) ∧
     TerminatesWith (narrowI32Config 4) (fun vs _ => vs = [.i32 0xAB]) ∧
-    TerminatesWith (narrowI32Config 5) (fun vs _ => vs = [.i32 0xABCD]) := by
-  exact ⟨runSteps_values_terminates load8U_returns_byte,
+    TerminatesWith (narrowI32Config 5) (fun vs _ => vs = [.i32 0xABCD]) :=
+  ⟨runSteps_values_terminates load8U_returns_byte,
     runSteps_values_terminates load8S_sign_extends,
     runSteps_values_terminates load16U_returns_halfword,
     runSteps_values_terminates load16S_sign_extends,

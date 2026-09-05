@@ -57,9 +57,9 @@ array specs. -/
 def slot64 (base k : UInt32) : MemRegion := ⟨base + 8 * k, 8⟩
 
 /-- `x <<< 3 = 8 * x` on `UInt32`: bridges the `(const 3) shl` address
-computation LLVM emits to the `8 * k` slot offset. The single `bv_decide`
-fact of the slot algebra — `slot64_of_shl` derives from it. -/
-theorem shl3_eq_mul8 (x : UInt32) : x <<< (3 % 32 : UInt32) = 8 * x := by bv_decide
+computation LLVM emits to the `8 * k` slot offset. Kernel-checked
+normalization supplies the slot algebra used by `slot64_of_shl`. -/
+theorem shl3_eq_mul8 (x : UInt32) : x <<< (3 % 32 : UInt32) = 8 * x := by bv_normalize
 
 /-- The codegen's `(k <<< 3) + base` lands on the slot base address. -/
 theorem slot64_of_shl (base k : UInt32) :
@@ -72,8 +72,7 @@ address of `slot64 base k` is the integer `base.toNat + 8 * k.toNat`. -/
 theorem slot64_base_toNat (base k : UInt32)
     (h : base.toNat + 8 * k.toNat < 4294967296) :
     (slot64 base k).base.toNat = base.toNat + 8 * k.toNat := by
-  simp only [slot64, UInt32.toNat_add, UInt32.toNat_mul, UInt32.reduceToNat]
-  omega
+  simp only [slot64, UInt32.toNat_add, UInt32.toNat_mul, UInt32.reduceToNat]; omega
 
 /-- Distinct in-bounds element slots of a no-wrap array are disjoint regions. -/
 theorem slot64_disjoint (base k l : UInt32)
@@ -84,8 +83,7 @@ theorem slot64_disjoint (base k l : UInt32)
   unfold Disjoint
   rw [slot64_base_toNat base k hk, slot64_base_toNat base l hl]
   have : k.toNat ≠ l.toNat := fun he => hkl (UInt32.toNat.inj he)
-  simp only [slot64]
-  omega
+  simp only [slot64]; omega
 
 /-- The `k`-th 4-byte slot of a `u32` array based at `base` (wasm address
 `base + 4 * k`). The 32-bit twin of `slot64`, matching the `Mem.words32`
@@ -94,15 +92,14 @@ def slot32 (base k : UInt32) : MemRegion := ⟨base + 4 * k, 4⟩
 
 /-- `x <<< 2 = 4 * x` on `UInt32`: the `(const 2) shl` address computation LLVM
 emits for a `u32` array index. -/
-theorem shl2_eq_mul4 (x : UInt32) : x <<< (2 % 32 : UInt32) = 4 * x := by bv_decide
+theorem shl2_eq_mul4 (x : UInt32) : x <<< (2 % 32 : UInt32) = 4 * x := by bv_normalize
 
 /-- No wraparound: if the slot's true byte offset stays below `2^32`, the wasm
 address of `slot32 base k` is the integer `base.toNat + 4 * k.toNat`. -/
 theorem slot32_base_toNat (base k : UInt32)
     (h : base.toNat + 4 * k.toNat < 4294967296) :
     (slot32 base k).base.toNat = base.toNat + 4 * k.toNat := by
-  simp only [slot32, UInt32.toNat_add, UInt32.toNat_mul, UInt32.reduceToNat]
-  omega
+  simp only [slot32, UInt32.toNat_add, UInt32.toNat_mul, UInt32.reduceToNat]; omega
 
 end MemRegion
 

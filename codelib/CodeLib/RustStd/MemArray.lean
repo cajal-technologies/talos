@@ -21,13 +21,72 @@ wasm spec naturally produces).
 
 namespace Wasm
 
+/-- Write consecutive `u32` values starting at `base`. -/
+def Mem.writeWords32 : Mem → UInt32 → List UInt32 → Mem
+  | memory, _, [] => memory
+  | memory, address, value :: values =>
+      writeWords32 (memory.write32 address value) (address + 4) values
+
+/-- Read `count` consecutive `u32` values starting at `base`. -/
+def Mem.readWords32 : Mem → UInt32 → Nat → List UInt32
+  | _, _, 0 => []
+  | memory, address, count + 1 =>
+      memory.read32 address :: readWords32 memory (address + 4) count
+
+@[simp] theorem Mem.length_readWords32 (memory : Mem) (base : UInt32) (count : Nat) :
+    (memory.readWords32 base count).length = count := by
+  induction count generalizing base <;> simp_all [Mem.readWords32]
+
+/-- Writing a word back unchanged preserves the memory. -/
+theorem Mem.write32_read32 (memory : Mem) (base : UInt32) :
+    memory.write32 base (memory.read32 base) = memory := by
+  cases memory with
+  | mk pages bytes =>
+    simp only [Mem.write32, Mem.read32]
+    congr
+    funext i
+    by_cases h0 : i = base.toNat
+    · subst i; simp only [if_pos]
+      simpa only [UInt32.toUInt8_and,
+        show (255 : UInt32).toUInt8 = (-1 : UInt8) from rfl, UInt8.and_neg_one] using
+        UInt32.packBytes_byte0 (bytes base.toNat) (bytes (base.toNat + 1))
+          (bytes (base.toNat + 2)) (bytes (base.toNat + 3))
+    by_cases h1 : i = base.toNat + 1
+    · subst i; simp only [if_neg h0, if_pos]
+      simpa only [UInt32.toUInt8_and,
+        show (255 : UInt32).toUInt8 = (-1 : UInt8) from rfl, UInt8.and_neg_one] using
+        UInt32.packBytes_byte1 (bytes base.toNat) (bytes (base.toNat + 1))
+          (bytes (base.toNat + 2)) (bytes (base.toNat + 3))
+    by_cases h2 : i = base.toNat + 2
+    · subst i; simp only [if_neg h0, if_neg h1, if_pos]
+      simpa only [UInt32.toUInt8_and,
+        show (255 : UInt32).toUInt8 = (-1 : UInt8) from rfl, UInt8.and_neg_one] using
+        UInt32.packBytes_byte2 (bytes base.toNat) (bytes (base.toNat + 1))
+          (bytes (base.toNat + 2)) (bytes (base.toNat + 3))
+    by_cases h3 : i = base.toNat + 3
+    · subst i; simp only [if_neg h0, if_neg h1, if_neg h2, if_pos]
+      simpa only [UInt32.toUInt8_and,
+        show (255 : UInt32).toUInt8 = (-1 : UInt8) from rfl, UInt8.and_neg_one] using
+        UInt32.packBytes_byte3 (bytes base.toNat) (bytes (base.toNat + 1))
+          (bytes (base.toNat + 2)) (bytes (base.toNat + 3))
+    simp [h0, h1, h2, h3]
+
+/-- Reading consecutive words and writing them back preserves the memory. -/
+@[simp] theorem Mem.writeWords32_readWords32
+    (memory : Mem) (base : UInt32) (count : Nat) :
+    memory.writeWords32 base (memory.readWords32 base count) = memory := by
+  induction count generalizing base with
+  | zero => rfl
+  | succ count ih =>
+      simp only [Mem.readWords32, Mem.writeWords32, Mem.write32_read32]
+      exact ih (base + 4)
+
 /-- The `List UInt64` view of the `u64` array `[base, base + 8*n)`. -/
 def Mem.words64 (m : Mem) (base : UInt32) (n : Nat) : List UInt64 :=
   (List.range n).map fun k => m.read64 (base + 8 * (UInt32.ofNat k))
 
 @[simp] theorem Mem.length_words64 (m : Mem) (base : UInt32) (n : Nat) :
-    (m.words64 base n).length = n := by
-  simp [Mem.words64]
+    (m.words64 base n).length = n := by simp [Mem.words64]
 
 theorem Mem.getElem_words64 (m : Mem) (base : UInt32) (n k : Nat) (h : k < n) :
     (m.words64 base n)[k]'(by simpa using h) = m.read64 (base + 8 * UInt32.ofNat k) := by
@@ -92,14 +151,10 @@ theorem Mem.words64_swap {m m' : Mem} {base : UInt32} {n i j : Nat}
   simp only [Mem.length_words64] at hk
   rw [Mem.getElem_words64 m' base n k hk]
   by_cases hkj : k = j
-  · subst hkj
-    rw [List.getElem_set_self]
-    exact h_j
+  · subst hkj; simpa only [List.getElem_set_self] using h_j
   · rw [List.getElem_set_ne (Ne.symm hkj)]
     by_cases hki : k = i
-    · subst hki
-      rw [List.getElem_set_self]
-      exact h_i
+    · subst hki; simpa only [List.getElem_set_self] using h_i
     · rw [List.getElem_set_ne (Ne.symm hki), Mem.getElem_words64 m base n k hk]
       exact h_k k hk hki hkj
 
@@ -170,8 +225,7 @@ def Mem.words32 (m : Mem) (base : UInt32) (n : Nat) : List UInt32 :=
   (List.range n).map fun k => m.read32 (base + 4 * (UInt32.ofNat k))
 
 @[simp] theorem Mem.length_words32 (m : Mem) (base : UInt32) (n : Nat) :
-    (m.words32 base n).length = n := by
-  simp [Mem.words32]
+    (m.words32 base n).length = n := by simp [Mem.words32]
 
 theorem Mem.getElem_words32 (m : Mem) (base : UInt32) (n k : Nat) (h : k < n) :
     (m.words32 base n)[k]'(by simpa using h) = m.read32 (base + 4 * UInt32.ofNat k) := by
