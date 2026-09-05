@@ -45,8 +45,8 @@ def decodeChunk : List UInt8 → UInt32
 
 /-- The packed little-endian codec for 32-bit words. Everything below the word
 level — `serialize`, `deserialize`, and the round trip between them — comes
-from `Wasm.WordCodec`; only this four-byte round trip is proved here, because
-`bv_decide` decides a concrete bit width. -/
+from `Wasm.WordCodec`; only this four-byte round trip is proved here, using
+the shared kernel-checked byte-reconstruction lemma. -/
 def codec : WordCodec UInt32 where
   width := 4
   encode := encodeWord
@@ -55,8 +55,12 @@ def codec : WordCodec UInt32 where
   encode_length := fun _ => rfl
   decode_encode := by
     intro value
-    simp only [encodeWord, decodeChunk, decodeWord]
-    bv_decide
+    simp only [encodeWord, decodeChunk, decodeWord, UInt32.toUInt8_and,
+      show (255 : UInt32).toUInt8 = (-1 : UInt8) from rfl, UInt8.and_neg_one]
+    apply UInt32.toNat_inj.mp
+    simp only [UInt32.toNat_or, UInt32.toNat_shiftLeft, UInt8.toNat_toUInt32,
+      UInt32.toNat_toUInt8, UInt32.toNat_shiftRight]
+    exact Nat.reassemble32_of_lt value.toNat (UInt32.toNat_lt value)
 
 /-- Packed little-endian serialization of a list of 32-bit words. -/
 abbrev serialize (values : List UInt32) : List UInt8 :=

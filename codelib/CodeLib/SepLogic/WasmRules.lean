@@ -391,16 +391,16 @@ theorem fill16_four_AB_eq_write32 (mem : Mem) :
     funext i
     by_cases h0 : i = 16
     · subst i; simp
-      bv_decide
+      bv_normalize
     by_cases h1 : i = 17
     · subst i; simp
-      bv_decide
+      bv_normalize
     by_cases h2 : i = 18
     · subst i; simp
-      bv_decide
+      bv_normalize
     by_cases h3 : i = 19
     · subst i; simp
-      bv_decide
+      bv_normalize
     simp [h0, h1, h2, h3]; omega
 
 /-- The concrete passive-segment initialization used by the handwritten Iris
@@ -415,16 +415,16 @@ theorem init16_four_eq_write32 (mem : Mem) :
     funext i
     by_cases h0 : i = 16
     · subst i; simp
-      bv_decide
+      bv_normalize
     by_cases h1 : i = 17
     · subst i; simp
-      bv_decide
+      bv_normalize
     by_cases h2 : i = 18
     · subst i; simp
-      bv_decide
+      bv_normalize
     by_cases h3 : i = 19
     · subst i; simp
-      bv_decide
+      bv_normalize
     simp [h0, h1, h2, h3]; omega
 
 /-- Copying the concrete source word used by the aligned manual example is
@@ -433,17 +433,25 @@ theorem copy8_zero_four_eq_write32 (mem : Mem)
     (hread : mem.read32 0 = 0x04030201) :
     mem.copy 8 0 4 = mem.write32 8 0x04030201 := by
   have hb0 : mem.bytes 0 = 0x01 := by
-    simp only [Mem.read32, UInt32.toNat_ofNat] at hread
-    bv_decide
+    have h := congrArg (fun word : UInt32 => word.toUInt8) hread
+    have hbyte : (0x04030201 : UInt32).toUInt8 = 0x01 := by decide +kernel
+    simpa only [Mem.read32, UInt32.packBytes_byte0,
+      UInt32.toNat_zero, Nat.zero_add, hbyte] using h
   have hb1 : mem.bytes 1 = 0x02 := by
-    simp only [Mem.read32, UInt32.toNat_ofNat] at hread
-    bv_decide
+    have h := congrArg (fun word : UInt32 => (word >>> 8).toUInt8) hread
+    have hbyte : ((0x04030201 : UInt32) >>> 8).toUInt8 = 0x02 := by decide +kernel
+    simpa only [Mem.read32, UInt32.packBytes_byte1,
+      UInt32.toNat_zero, Nat.zero_add, hbyte] using h
   have hb2 : mem.bytes 2 = 0x03 := by
-    simp only [Mem.read32, UInt32.toNat_ofNat] at hread
-    bv_decide
+    have h := congrArg (fun word : UInt32 => (word >>> 16).toUInt8) hread
+    have hbyte : ((0x04030201 : UInt32) >>> 16).toUInt8 = 0x03 := by decide +kernel
+    simpa only [Mem.read32, UInt32.packBytes_byte2,
+      UInt32.toNat_zero, Nat.zero_add, hbyte] using h
   have hb3 : mem.bytes 3 = 0x04 := by
-    simp only [Mem.read32, UInt32.toNat_ofNat] at hread
-    bv_decide
+    have h := congrArg (fun word : UInt32 => (word >>> 24).toUInt8) hread
+    have hbyte : ((0x04030201 : UInt32) >>> 24).toUInt8 = 0x04 := by decide +kernel
+    simpa only [Mem.read32, UInt32.packBytes_byte3,
+      UInt32.toNat_zero, Nat.zero_add, hbyte] using h
   cases mem with
   | mk pages bytes =>
     simp only [Mem.copy, Mem.write32, UInt32.toNat_ofNat] at hb0 hb1 hb2 hb3 ⊢
@@ -451,16 +459,16 @@ theorem copy8_zero_four_eq_write32 (mem : Mem)
     funext i
     by_cases h8 : i = 8
     · subst i; simp [hb0]
-      bv_decide
+      bv_normalize
     by_cases h9 : i = 9
     · subst i; simp [hb1]
-      bv_decide
+      bv_normalize
     by_cases h10 : i = 10
     · subst i; simp [hb2]
-      bv_decide
+      bv_normalize
     by_cases h11 : i = 11
     · subst i; simp [hb3]
-      bv_decide
+      bv_normalize
     simp [h8, h9, h10, h11]; omega
 
 /-- The overlapping manual copy has memmove semantics: source bytes are read
@@ -470,17 +478,25 @@ theorem copy2_zero_four_eq_write64 (mem : Mem)
     mem.copy 2 0 4 =
       (((mem.write8 2 0x11).write8 3 0x22).write8 4 0x33).write8 5 0x44 := by
   have hb0 : mem.bytes 0 = 0x11 := by
-    simp only [Mem.read64, UInt32.toNat_ofNat] at hread
-    bv_decide
+    have h := congrArg (fun word : UInt64 => word.toUInt32.toUInt8) hread
+    have hbyte : (0x8877665544332211 : UInt64).toUInt32.toUInt8 = 0x11 := by decide +kernel
+    simpa only [Mem.read64, UInt64.packBytes_low32, UInt32.packBytes_byte0,
+      UInt32.toNat_zero, Nat.zero_add, hbyte] using h
   have hb1 : mem.bytes 1 = 0x22 := by
-    simp only [Mem.read64, UInt32.toNat_ofNat] at hread
-    bv_decide
+    have h := congrArg (fun word : UInt64 => (word.toUInt32 >>> 8).toUInt8) hread
+    have hbyte : ((0x8877665544332211 : UInt64).toUInt32 >>> 8).toUInt8 = 0x22 := by decide +kernel
+    simpa only [Mem.read64, UInt64.packBytes_low32, UInt32.packBytes_byte1,
+      UInt32.toNat_zero, Nat.zero_add, hbyte] using h
   have hb2 : mem.bytes 2 = 0x33 := by
-    simp only [Mem.read64, UInt32.toNat_ofNat] at hread
-    bv_decide
+    have h := congrArg (fun word : UInt64 => (word.toUInt32 >>> 16).toUInt8) hread
+    have hbyte : ((0x8877665544332211 : UInt64).toUInt32 >>> 16).toUInt8 = 0x33 := by decide +kernel
+    simpa only [Mem.read64, UInt64.packBytes_low32, UInt32.packBytes_byte2,
+      UInt32.toNat_zero, Nat.zero_add, hbyte] using h
   have hb3 : mem.bytes 3 = 0x44 := by
-    simp only [Mem.read64, UInt32.toNat_ofNat] at hread
-    bv_decide
+    have h := congrArg (fun word : UInt64 => (word.toUInt32 >>> 24).toUInt8) hread
+    have hbyte : ((0x8877665544332211 : UInt64).toUInt32 >>> 24).toUInt8 = 0x44 := by decide +kernel
+    simpa only [Mem.read64, UInt64.packBytes_low32, UInt32.packBytes_byte3,
+      UInt32.toNat_zero, Nat.zero_add, hbyte] using h
   cases mem with
   | mk pages bytes =>
     simp only [Mem.copy, Mem.write8, UInt32.toNat_ofNat] at hb0 hb1 hb2 hb3 ⊢
@@ -515,13 +531,13 @@ theorem store16_sound (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Optio
     rw [← h_get]
     refine ⟨mem.write16 addr value, ?_, ?_⟩
     · simp
-    · simp [Mem.write16, Mem.read8, h1, u32Byte]; bv_decide
+    · simp [Mem.write16, Mem.read8, h1, u32Byte]; bv_normalize
   by_cases e0 : key = ⟨memId, addr⟩
   · subst key; simp [store16Heap, get?_insert_ne (Ne.symm e1), get?_insert_eq] at h_get
     rw [← h_get]
     refine ⟨mem.write16 addr value, ?_, ?_⟩
     · simp
-    · simp [Mem.write16, Mem.read8, u32Byte]; bv_decide
+    · simp [Mem.write16, Mem.read8, u32Byte]; bv_normalize
   · simp [store16Heap, get?_insert_ne (Ne.symm e1),
       get?_insert_ne (Ne.symm e0)] at h_get
     obtain ⟨m, hm, hread⟩ := h_agree key byte h_get
@@ -641,19 +657,19 @@ theorem Mem.write32_eq_self {m : Mem} {addr value : UInt32}
     split <;> rename_i heq
     · subst index; simp [Mem.read8, u32Byte] at hb0
       rw [hb0]
-      bv_decide
+      bv_normalize
     split <;> rename_i heq
     · subst index; simp [Mem.read8, u32Byte, h1] at hb1
       rw [hb1]
-      bv_decide
+      bv_normalize
     split <;> rename_i heq
     · subst index; simp [Mem.read8, u32Byte, h2] at hb2
       rw [hb2]
-      bv_decide
+      bv_normalize
     split <;> rename_i heq
     · subst index; simp [Mem.read8, u32Byte, h3] at hb3
       rw [hb3]
-      bv_decide
+      bv_normalize
     · rfl
 
 theorem store32Heap_pointsTo {α : Type} [WasmHeapGS α]
@@ -711,20 +727,20 @@ theorem store32_sound (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Optio
     rw [← h_get]
     refine ⟨mem.write32 addr value, ?_, ?_⟩
     · simp
-    · simp [Mem.write32, Mem.read8, h3, u32Byte]; bv_decide
+    · simp [Mem.write32, Mem.read8, h3, u32Byte]; bv_normalize
   by_cases e2 : key = ⟨memId, addr + 2⟩
   · subst key; simp [store32Heap, get?_insert_ne (Ne.symm e3), get?_insert_eq] at h_get
     rw [← h_get]
     refine ⟨mem.write32 addr value, ?_, ?_⟩
     · simp
-    · simp [Mem.write32, Mem.read8, h2, u32Byte]; bv_decide
+    · simp [Mem.write32, Mem.read8, h2, u32Byte]; bv_normalize
   by_cases e1 : key = ⟨memId, addr + 1⟩
   · subst key; simp [store32Heap, get?_insert_ne (Ne.symm e3),
       get?_insert_ne (Ne.symm e2), get?_insert_eq] at h_get
     rw [← h_get]
     refine ⟨mem.write32 addr value, ?_, ?_⟩
     · simp
-    · simp [Mem.write32, Mem.read8, h1, u32Byte]; bv_decide
+    · simp [Mem.write32, Mem.read8, h1, u32Byte]; bv_normalize
   by_cases e0 : key = ⟨memId, addr⟩
   · subst key; simp [store32Heap, get?_insert_ne (Ne.symm e3),
       get?_insert_ne (Ne.symm e2), get?_insert_ne (Ne.symm e1),
@@ -732,7 +748,7 @@ theorem store32_sound (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Optio
     rw [← h_get]
     refine ⟨mem.write32 addr value, ?_, ?_⟩
     · simp
-    · simp [Mem.write32, Mem.read8, u32Byte]; bv_decide
+    · simp [Mem.write32, Mem.read8, u32Byte]; bv_normalize
   · simp [store32Heap, get?_insert_ne (Ne.symm e3),
       get?_insert_ne (Ne.symm e2), get?_insert_ne (Ne.symm e1),
       get?_insert_ne (Ne.symm e0)] at h_get
@@ -1017,43 +1033,43 @@ theorem store64_sound (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Optio
   by_cases e7 : key = ⟨memId, addr + 7⟩
   · subst key; simp [store64Heap, get?_insert_eq] at h_get; rw [← h_get]
     refine ⟨mem.write64 addr value, ?_, ?_⟩; · simp
-    · simp [Mem.write64, Mem.read8, h7, u64Byte]; bv_decide
+    · simp [Mem.write64, Mem.read8, h7, u64Byte]; bv_normalize
   by_cases e6 : key = ⟨memId, addr + 6⟩
   · subst key
     simp [store64Heap, get?_insert_ne (Ne.symm e7), get?_insert_eq] at h_get; rw [← h_get]
     refine ⟨mem.write64 addr value, ?_, ?_⟩; · simp
-    · simp [Mem.write64, Mem.read8, h6, u64Byte]; bv_decide
+    · simp [Mem.write64, Mem.read8, h6, u64Byte]; bv_normalize
   by_cases e5 : key = ⟨memId, addr + 5⟩
   · subst key; simp [store64Heap, get?_insert_ne (Ne.symm e7),
       get?_insert_ne (Ne.symm e6), get?_insert_eq] at h_get; rw [← h_get]
     refine ⟨mem.write64 addr value, ?_, ?_⟩; · simp
-    · simp [Mem.write64, Mem.read8, h5, u64Byte]; bv_decide
+    · simp [Mem.write64, Mem.read8, h5, u64Byte]; bv_normalize
   by_cases e4 : key = ⟨memId, addr + 4⟩
   · subst key; simp [store64Heap, get?_insert_ne (Ne.symm e7),
       get?_insert_ne (Ne.symm e6), get?_insert_ne (Ne.symm e5),
       get?_insert_eq] at h_get; rw [← h_get]
     refine ⟨mem.write64 addr value, ?_, ?_⟩; · simp
-    · simp [Mem.write64, Mem.read8, h4, u64Byte]; bv_decide
+    · simp [Mem.write64, Mem.read8, h4, u64Byte]; bv_normalize
   by_cases e3 : key = ⟨memId, addr + 3⟩
   · subst key; simp [store64Heap, get?_insert_ne (Ne.symm e7),
       get?_insert_ne (Ne.symm e6), get?_insert_ne (Ne.symm e5),
       get?_insert_ne (Ne.symm e4), get?_insert_eq] at h_get; rw [← h_get]
     refine ⟨mem.write64 addr value, ?_, ?_⟩; · simp
-    · simp [Mem.write64, Mem.read8, h3, u64Byte]; bv_decide
+    · simp [Mem.write64, Mem.read8, h3, u64Byte]; bv_normalize
   by_cases e2 : key = ⟨memId, addr + 2⟩
   · subst key; simp [store64Heap, get?_insert_ne (Ne.symm e7),
       get?_insert_ne (Ne.symm e6), get?_insert_ne (Ne.symm e5),
       get?_insert_ne (Ne.symm e4), get?_insert_ne (Ne.symm e3),
       get?_insert_eq] at h_get; rw [← h_get]
     refine ⟨mem.write64 addr value, ?_, ?_⟩; · simp
-    · simp [Mem.write64, Mem.read8, h2, u64Byte]; bv_decide
+    · simp [Mem.write64, Mem.read8, h2, u64Byte]; bv_normalize
   by_cases e1 : key = ⟨memId, addr + 1⟩
   · subst key; simp [store64Heap, get?_insert_ne (Ne.symm e7),
       get?_insert_ne (Ne.symm e6), get?_insert_ne (Ne.symm e5),
       get?_insert_ne (Ne.symm e4), get?_insert_ne (Ne.symm e3),
       get?_insert_ne (Ne.symm e2), get?_insert_eq] at h_get; rw [← h_get]
     refine ⟨mem.write64 addr value, ?_, ?_⟩; · simp
-    · simp [Mem.write64, Mem.read8, h1, u64Byte]; bv_decide
+    · simp [Mem.write64, Mem.read8, h1, u64Byte]; bv_normalize
   by_cases e0 : key = ⟨memId, addr⟩
   · subst key; simp [store64Heap, get?_insert_ne (Ne.symm e7),
       get?_insert_ne (Ne.symm e6), get?_insert_ne (Ne.symm e5),
@@ -1061,7 +1077,7 @@ theorem store64_sound (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Optio
       get?_insert_ne (Ne.symm e2), get?_insert_ne (Ne.symm e1),
       get?_insert_eq] at h_get; rw [← h_get]
     refine ⟨mem.write64 addr value, ?_, ?_⟩; · simp
-    · simp [Mem.write64, Mem.read8, u64Byte]; bv_decide
+    · simp [Mem.write64, Mem.read8, u64Byte]; bv_normalize
   · simp [store64Heap, get?_insert_ne (Ne.symm e7),
       get?_insert_ne (Ne.symm e6), get?_insert_ne (Ne.symm e5),
       get?_insert_ne (Ne.symm e4), get?_insert_ne (Ne.symm e3),

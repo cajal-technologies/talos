@@ -1,5 +1,19 @@
 import CodeLib.UInt32
 
+theorem UInt64.packBytes_low32 (a b c d e f g h : UInt8) :
+    (a.toUInt64 ||| (b.toUInt64 <<< 8) ||| (c.toUInt64 <<< 16) |||
+      (d.toUInt64 <<< 24) ||| (e.toUInt64 <<< 32) ||| (f.toUInt64 <<< 40) |||
+      (g.toUInt64 <<< 48) ||| (h.toUInt64 <<< 56)).toUInt32 =
+    a.toUInt32 ||| (b.toUInt32 <<< 8) ||| (c.toUInt32 <<< 16) ||| (d.toUInt32 <<< 24) := by
+  apply UInt32.toBitVec_inj.mp
+  simp only [UInt64.toBitVec_toUInt32, UInt64.toBitVec_or, UInt64.toBitVec_shiftLeft,
+    UInt8.toBitVec_toUInt64, UInt32.toBitVec_or, UInt32.toBitVec_shiftLeft,
+    UInt8.toBitVec_toUInt32]
+  apply BitVec.eq_of_getLsbD_eq
+  intro i hi
+  simp (disch := omega)
+
+
 /-! Extracting each byte of a little-endian four-byte word. -/
 
 theorem UInt32.packBytes_byte0 (a b c d : UInt8) :

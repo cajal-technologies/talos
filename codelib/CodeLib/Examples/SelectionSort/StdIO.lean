@@ -56,7 +56,7 @@ def decodeChunk : List UInt8 → UInt64
 /-- The packed little-endian codec for unsigned 64-bit words. Everything below
 the word level — `serialize`, `deserialize`, and the round trip between them —
 comes from `Wasm.WordCodec`; only this eight-byte round trip is proved here,
-because `bv_decide` decides a concrete bit width. -/
+using the shared kernel-checked byte-reconstruction lemma. -/
 def codec : WordCodec UInt64 where
   width := 8
   encode := encodeWord
@@ -65,8 +65,12 @@ def codec : WordCodec UInt64 where
   encode_length := fun _ => rfl
   decode_encode := by
     intro value
-    simp only [encodeWord, decodeChunk, decodeWord]
-    bv_decide
+    simp only [encodeWord, decodeChunk, decodeWord, UInt64.toUInt8_and,
+      show (255 : UInt64).toUInt8 = (-1 : UInt8) from rfl, UInt8.and_neg_one]
+    apply UInt64.toNat_inj.mp
+    simp only [UInt64.toNat_or, UInt64.toNat_shiftLeft, UInt8.toNat_toUInt64,
+      UInt64.toNat_toUInt8, UInt64.toNat_shiftRight]
+    exact Nat.reassemble64_of_lt value.toNat (UInt64.toNat_lt value)
 
 abbrev serialize (values : List UInt64) : List UInt8 :=
   codec.serialize values

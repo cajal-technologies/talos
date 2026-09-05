@@ -2084,16 +2084,16 @@ private theorem splat_bytes_as_u32 [WasmHeapGS Unit] (b : UInt8) :
         (b.toUInt32 ||| (b.toUInt32 <<< 8) ||| (b.toUInt32 <<< 16) ||| (b.toUInt32 <<< 24)) := by
   have hb0 : u32Byte (b.toUInt32 ||| (b.toUInt32 <<< 8) |||
       (b.toUInt32 <<< 16) ||| (b.toUInt32 <<< 24)) 0 = b := by
-    simp only [u32Byte]; bv_decide
+    simpa only [u32Byte] using UInt32.packBytes_byte0 b b b b
   have hb1 : u32Byte (b.toUInt32 ||| (b.toUInt32 <<< 8) |||
       (b.toUInt32 <<< 16) ||| (b.toUInt32 <<< 24)) 1 = b := by
-    simp only [u32Byte]; bv_decide
+    simpa only [u32Byte] using UInt32.packBytes_byte1 b b b b
   have hb2 : u32Byte (b.toUInt32 ||| (b.toUInt32 <<< 8) |||
       (b.toUInt32 <<< 16) ||| (b.toUInt32 <<< 24)) 2 = b := by
-    simp only [u32Byte]; bv_decide
+    simpa only [u32Byte] using UInt32.packBytes_byte2 b b b b
   have hb3 : u32Byte (b.toUInt32 ||| (b.toUInt32 <<< 8) |||
       (b.toUInt32 <<< 16) ||| (b.toUInt32 <<< 24)) 3 = b := by
-    simp only [u32Byte]; bv_decide
+    simpa only [u32Byte] using UInt32.packBytes_byte3 b b b b
   have hl : List.replicate 4 b =
       [u32Byte (b.toUInt32 ||| (b.toUInt32 <<< 8) |||
           (b.toUInt32 <<< 16) ||| (b.toUInt32 <<< 24)) 0,
