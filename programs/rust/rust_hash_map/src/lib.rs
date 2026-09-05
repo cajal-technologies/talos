@@ -36,7 +36,7 @@
 //! paths are new here against `rust_vec`. They are the whole set: the panic
 //! messages this module carries and `rust_vec` does not are exactly these
 //! three. The rest of the string difference between the two modules is source
-//! paths and an export name. The three paragraphs below give the reason each
+//! paths and the export names. The three paragraphs below give the reason each
 //! one cannot run.
 //!
 //! The sort compares `u32` keys under `u32` ordering, which is a total order.
@@ -122,8 +122,9 @@ fn collect_entries(entries: Entries) -> Map {
     entries.into_iter().collect()
 }
 
-// `map_len` has no kernel of its own: a `len` that returns its own argument is
-// a call LLVM deletes whatever the inline attribute says.
+// `map_len` has no kernel of its own. It counts the map that `collect_entries`
+// builds, and a `len` kernel around that count is a call LLVM deletes whatever
+// the inline attribute says.
 
 /// `HashMap::insert`, which takes and returns the map so the export stays
 /// functional. The displaced value comes back beside the map.
@@ -294,8 +295,13 @@ mod tests {
     /// The exact bytes the Lean output functions state. `containsKeyOutput` is
     /// a borsh `bool`, which is one byte. `insertOutput` and `removeOutput`
     /// are an `Option` tag, then the map as a `u32` count and the entries in
-    /// key order. A borsh tuple puts no framing between those two halves. The
-    /// last two assertions read back the two input shapes the exports accept.
+    /// key order. A borsh tuple puts no framing between those two halves. Two
+    /// of the assertions read back the two input shapes the exports accept.
+    ///
+    /// The last one is the whole `map_insert` path on an input that is not in
+    /// key order. `Project.RustHashMap.Spec.insert_output_sorts` states the
+    /// same 29 bytes on the Lean side. The model and this crate are therefore
+    /// pinned to each other, not only to themselves.
     #[test]
     fn borsh_layout_matches_the_lean_model() {
         assert_eq!(borsh::to_vec(&true).unwrap(), [1]);
@@ -317,6 +323,15 @@ mod tests {
             borsh::from_slice::<(u32, u32, Entries)>(&[7, 0, 0, 0, 70, 0, 0, 0, 0, 0, 0, 0])
                 .unwrap(),
             (7u32, 70u32, Vec::new())
+        );
+        let (displaced, updated) =
+            super::insert(super::collect_entries(vec![(2, 20), (1, 10)]), 3, 30);
+        assert_eq!(
+            borsh::to_vec(&(displaced, super::sorted_entries(&updated))).unwrap(),
+            [
+                0, 3, 0, 0, 0, 1, 0, 0, 0, 10, 0, 0, 0, 2, 0, 0, 0, 20, 0, 0, 0, 3, 0, 0, 0, 30, 0,
+                0, 0
+            ]
         );
     }
 

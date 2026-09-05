@@ -123,9 +123,9 @@ def insertOutput (bytes : List UInt8) : List UInt8 :=
   match keyValueAndMap bytes with
   | none => []
   | some (key, value, m) =>
-      Borsh.option Borsh.u32 (HashMap.insert m key value).1 ++
-        Borsh.hashMap WordCodec.u32le WordCodec.u32le
-          (HashMap.insert m key value).2
+      let (displaced, updated) := HashMap.insert m key value
+      Borsh.option Borsh.u32 displaced ++
+        Borsh.hashMap WordCodec.u32le WordCodec.u32le updated
 
 /-- `map_remove`: the removed value beside the map after the removal, as a
 borsh tuple. -/
@@ -133,9 +133,9 @@ def removeOutput (bytes : List UInt8) : List UInt8 :=
   match keyAndMap bytes with
   | none => []
   | some (key, m) =>
-      Borsh.option Borsh.u32 (HashMap.remove m key).1 ++
-        Borsh.hashMap WordCodec.u32le WordCodec.u32le
-          (HashMap.remove m key).2
+      let (removed, rest) := HashMap.remove m key
+      Borsh.option Borsh.u32 removed ++
+        Borsh.hashMap WordCodec.u32le WordCodec.u32le rest
 
 /-! ## Contracts -/
 
@@ -175,6 +175,23 @@ theorem contract_names_start :
       (fun op =>
         (startCallConfig? (Universal.envFor «module») «module» op
           (Universal.State.ofInput [])).isSome) = true := by
+  native_decide
+
+/-- One `map_insert` output, pinned to the bytes the Rust crate writes for the
+same call.  The input map arrives as `[(2, 20), (1, 10)]`, which is not in key
+order, and the new key `3` sorts last.  The output therefore shows the sort:
+without it the three pairs would come back in the order they arrived.
+
+The mirror of this check is `borsh_layout_matches_the_lean_model` in
+`programs/rust/rust_hash_map/src/lib.rs`, which asserts the same 29 bytes
+against real borsh.  Both sides name the same literal, so the model and the
+crate are pinned to each other and not only to themselves. -/
+theorem insert_output_sorts :
+    insertOutput
+        ([3, 0, 0, 0] ++ [30, 0, 0, 0] ++ [2, 0, 0, 0] ++
+          [2, 0, 0, 0, 20, 0, 0, 0] ++ [1, 0, 0, 0, 10, 0, 0, 0])
+      = [0] ++ [3, 0, 0, 0] ++ [1, 0, 0, 0, 10, 0, 0, 0] ++
+          [2, 0, 0, 0, 20, 0, 0, 0] ++ [3, 0, 0, 0, 30, 0, 0, 0] := by
   native_decide
 
 /-! ## Reading the contracts
@@ -402,8 +419,9 @@ theorem nodupKeys_of_mapOf {bytes : List UInt8}
 /-- The map a contract decodes is short enough for the encoding to read back.
 The wire carries the entry count in a `u32` header, and `ofEntries` only ever
 drops a repeated key, so the bound holds for whatever bytes arrive.  Every
-lemma about the wire format asks for this bound, so one derivation is what
-lets the two theorems below take the hypothesis a caller really has. -/
+lemma about the wire format asks for this bound.  `mapOf_remove_output` below
+closes it outright from this one derivation.  `mapOf_insert_output` asks for
+one more entry of room than this gives, and takes that as a hypothesis. -/
 theorem length_of_mapOf {bytes : List UInt8}
     {m : HashMap.Map UInt32 UInt32} (h : mapOf bytes = some m) :
     m.length < 2 ^ 32 := by
