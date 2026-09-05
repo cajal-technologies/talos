@@ -51,39 +51,84 @@ private def isWatSpace (c : Char) : Bool :=
 private def isAtomChar (c : Char) : Bool :=
   ¬ (isWatSpace c || c = '(' || c = ')')
 
-private partial def dropLine : List Char → List Char
+private def dropLine : List Char → List Char
   | [] => []
   | '\n' :: r => '\n' :: r
   | _ :: r => dropLine r
 
-private partial def dropBlock : Nat → List Char → List Char
+private def dropBlock : Nat → List Char → List Char
   | _,         [] => []
   | depth,     '(' :: ';' :: r => dropBlock (depth + 1) r
   | 0,         ';' :: ')' :: r => r
   | depth + 1, ';' :: ')' :: r => dropBlock depth r
   | depth,     _ :: r => dropBlock depth r
 
-private partial def copyString (cs : List Char) (acc : List Char) : List Char × List Char :=
+private def copyString (cs : List Char) (acc : List Char) : List Char × List Char :=
   match cs with
   | [] => ([], acc)
   | '"' :: rest => (rest, '"' :: acc)
   | '\\' :: c :: rest => copyString rest (c :: '\\' :: acc)
   | c :: rest => copyString rest (c :: acc)
 
-private partial def stripCommentsAux (cs : List Char) (acc : List Char) : List Char :=
+private theorem dropLine_length_le (cs : List Char) :
+    (dropLine cs).length ≤ cs.length := by
+  fun_induction dropLine cs <;> simp_all <;> omega
+
+private theorem dropBlock_length_le (depth : Nat) (cs : List Char) :
+    (dropBlock depth cs).length ≤ cs.length := by
+  fun_induction dropBlock depth cs <;> simp_all <;> omega
+
+private theorem copyString_length_le (cs acc : List Char) :
+    (copyString cs acc).1.length ≤ cs.length := by
+  fun_induction copyString cs acc <;> simp_all <;> omega
+
+private def stripCommentsAux (cs : List Char) (acc : List Char) : List Char :=
   match cs with
-  | ';' :: ';' :: rest => stripCommentsAux (dropLine rest) acc
-  | '(' :: ';' :: rest => stripCommentsAux (dropBlock 0 rest) acc
+  | ';' :: ';' :: rest =>
+    have := dropLine_length_le rest
+    stripCommentsAux (dropLine rest) acc
+  | '(' :: ';' :: rest =>
+    have := dropBlock_length_le 0 rest
+    stripCommentsAux (dropBlock 0 rest) acc
   | '"' :: rest =>
-    let (rest', acc') := copyString rest ('"' :: acc)
-    stripCommentsAux rest' acc'
+    have := copyString_length_le rest ('"' :: acc)
+    match _hcopy : copyString rest ('"' :: acc) with
+    | (rest', acc') => stripCommentsAux rest' acc'
   | c :: rest => stripCommentsAux rest (c :: acc)
   | [] => acc.reverse
+termination_by cs.length
+decreasing_by all_goals simp_all <;> omega
 
 private def stripComments (s : String) : String :=
   String.ofList (stripCommentsAux s.toList [])
 
-private partial def tokenizeAux (cs : List Char) (acc : List String) : List String :=
+private def readTokenString : List Char → List Char → String × List Char
+  | [], acc => (String.ofList ('"' :: acc.reverse), [])
+  | '"' :: rest, acc =>
+    (String.ofList ('"' :: (acc.reverse ++ ['"'])), rest)
+  | '\\' :: c :: rest, acc => readTokenString rest (c :: '\\' :: acc)
+  | c :: rest, acc => readTokenString rest (c :: acc)
+
+
+private theorem readTokenString_length_le (cs acc : List Char) :
+    (readTokenString cs acc).2.length ≤ cs.length := by
+  fun_induction readTokenString cs acc <;> simp_all <;> omega
+
+private theorem span_snd_length_le {α : Type} (p : α → Bool) (xs : List α) :
+    (xs.span p).2.length ≤ xs.length := by
+  have aux (xs acc : List α) : (List.span.loop p xs acc).2.length ≤ xs.length := by
+    fun_induction List.span.loop p xs acc <;> simp_all <;> omega
+  exact aux xs []
+
+private theorem span_lengths {α : Type} (p : α → Bool) (xs : List α) :
+    (xs.span p).1.length + (xs.span p).2.length = xs.length := by
+  have aux (xs acc : List α) :
+      (List.span.loop p xs acc).1.length + (List.span.loop p xs acc).2.length =
+        acc.length + xs.length := by
+    fun_induction List.span.loop p xs acc <;> simp_all <;> omega
+  simpa [List.span] using aux xs []
+
+private def tokenizeAux (cs : List Char) (acc : List String) : List String :=
   match cs with
   | [] => acc.reverse
   | c :: rest =>
@@ -94,36 +139,40 @@ private partial def tokenizeAux (cs : List Char) (acc : List String) : List Stri
     else if c = ')' then
       tokenizeAux rest (")" :: acc)
     else if c = '"' then
-      let (body, rest') := readString rest []
-      tokenizeAux rest' (body :: acc)
+      have := readTokenString_length_le rest []
+      match _hread : readTokenString rest [] with
+      | (body, rest') => tokenizeAux rest' (body :: acc)
     else
-      let (atomChars, rest') := rest.span isAtomChar
-      let atom := String.ofList (c :: atomChars)
-      tokenizeAux rest' (atom :: acc)
-where
-  readString : List Char → List Char → String × List Char
-    | [], acc => (String.ofList ('"' :: acc.reverse), [])
-    | '"' :: rest, acc =>
-      (String.ofList ('"' :: (acc.reverse ++ ['"'])), rest)
-    | '\\' :: c :: rest, acc => readString rest (c :: '\\' :: acc)
-    | c :: rest, acc => readString rest (c :: acc)
+      have := span_snd_length_le isAtomChar rest
+      match _hspan : rest.span isAtomChar with
+      | (atomChars, rest') =>
+        let atom := String.ofList (c :: atomChars)
+        tokenizeAux rest' (atom :: acc)
+termination_by cs.length
+decreasing_by all_goals simp_all <;> omega
 
 private def tokenize (s : String) : List String :=
   tokenizeAux (stripComments s).toList []
 
-partial def parseSexprs : List String → Except Err (List Sexpr × List String)
-  | [] => .ok ([], [])
-  | ")" :: rest => .ok ([], ")" :: rest)
-  | "(" :: rest => do
-    let (children, rest1) ← parseSexprs rest
-    match rest1 with
-    | ")" :: rest2 =>
-      let (siblings, rest3) ← parseSexprs rest2
-      .ok (Sexpr.list children :: siblings, rest3)
-    | _ => .error "unbalanced parens: missing ')'"
-  | tok :: rest => do
-    let (siblings, rest1) ← parseSexprs rest
-    .ok (Sexpr.atom tok :: siblings, rest1)
+/-- Parse siblings until the first unmatched closing parenthesis. Each frame
+stores the reversed siblings preceding an open parenthesis, so the parser
+recurses only on the remaining input tokens. -/
+def parseSexprs (tokens : List String) : Except Err (List Sexpr × List String) :=
+  go tokens [] []
+where
+  go (tokens : List String) (siblings : List Sexpr) (frames : List (List Sexpr)) :
+      Except Err (List Sexpr × List String) :=
+    match tokens with
+    | [] =>
+      match frames with
+      | [] => .ok (siblings.reverse, [])
+      | _ :: _ => .error "unbalanced parens: missing ')'"
+    | ")" :: rest =>
+      match frames with
+      | [] => .ok (siblings.reverse, ")" :: rest)
+      | outer :: frames => go rest (Sexpr.list siblings.reverse :: outer) frames
+    | "(" :: rest => go rest [] (siblings :: frames)
+    | token :: rest => go rest (Sexpr.atom token :: siblings) frames
 
 def parseAll (s : String) : Except Err (List Sexpr) := do
   let (xs, rest) ← parseSexprs (tokenize s)
@@ -382,7 +431,7 @@ abbrev BlockTypeResolver :=
 /-- Skip block/loop/if type annotations and collect explicit param/result
 types. `(type N)` references are resolved through the module type table so
 the structured instruction retains both exact types and cached arities. -/
-private partial def skipBlockType (resolveType : BlockTypeResolver) :
+private def skipBlockType (resolveType : BlockTypeResolver) :
     List Wasm.ValueType → List Wasm.ValueType → List Sexpr →
     List Wasm.ValueType × List Wasm.ValueType × List Sexpr
   | ps, rs, .list (.atom "result" :: ts) :: r =>
@@ -1870,44 +1919,37 @@ private def parseFields (s : Sexpr) : List Wasm.FieldType :=
 /-- Recognise the GC composite type `(struct …)` / `(array …)` / `(func …)`
 and, for `(sub $super …)`, peel the supertype reference. Returns the
 composite together with the unresolved super name. -/
-private partial def parseComposite : Sexpr → Option Wasm.CompositeType × Option String
+private def parseComposite : Sexpr → Option Wasm.CompositeType × Option String
   | .list (.atom "struct" :: fieldForms) =>
     (some (.struct (fieldForms.flatMap parseFields)), none)
   | .list [.atom "array", ft] =>
     (some (.array (parseFieldType ft)), none)
-  | .list (.atom "sub" :: rest) =>
-    -- `(sub $super comp)` or `(sub final $super comp)`; the comp is the
-    -- last element, the super reference (if any) the preceding `$id`.
-    let rest := match rest with | .atom "final" :: r => r | r => r
-    match rest with
-    | [.atom sup, comp] => let (c, _) := parseComposite comp; (c, some sup)
-    | [comp]            => let (c, _) := parseComposite comp; (c, none)
-    | _                 => (none, none)
+  | .list [.atom "sub", .atom "final", comp] =>
+    let (c, _) := parseComposite comp; (c, none)
+  | .list [.atom "sub", .atom "final", .atom sup, comp]
+  | .list [.atom "sub", .atom sup, comp] =>
+    let (c, _) := parseComposite comp; (c, some sup)
+  | .list [.atom "sub", comp] =>
+    let (c, _) := parseComposite comp; (c, none)
   | _ => (none, none)
 
 /-- The `(func …)` signature forms of a type body, peeling a `(sub …)`
 wrapper. In GC modules `wasm-tools print` wraps function types as
 `(sub final (func …))`, so a bare-`(func …)` match alone misses them. -/
-private partial def funcSigForms? : Sexpr → Option (List Sexpr)
+private def funcSigForms? : Sexpr → Option (List Sexpr)
   | .list (.atom "func" :: sigForms) => some sigForms
-  | .list (.atom "sub" :: rest) =>
-    let rest := match rest with | .atom "final" :: r => r | r => r
-    match rest with
-    | [_, comp] => funcSigForms? comp
-    | [comp]    => funcSigForms? comp
-    | _         => none
+  | .list [.atom "sub", .atom "final", _, comp]
+  | .list [.atom "sub", _, comp]
+  | .list [.atom "sub", comp] => funcSigForms? comp
   | _ => none
 
 /-- Positional field names of a struct composite (peeling any `(sub …)`). -/
-private partial def compositeFieldNames : Sexpr → List (Option String)
+private def compositeFieldNames : Sexpr → List (Option String)
   | .list (.atom "struct" :: fieldForms) =>
     fieldForms.flatMap (fun f => (parseFieldDecl f).map (·.1))
-  | .list (.atom "sub" :: rest) =>
-    let rest := match rest with | .atom "final" :: r => r | r => r
-    match rest with
-    | [_, comp] => compositeFieldNames comp
-    | [comp]    => compositeFieldNames comp
-    | _         => []
+  | .list [.atom "sub", .atom "final", _, comp]
+  | .list [.atom "sub", _, comp]
+  | .list [.atom "sub", comp] => compositeFieldNames comp
   | _ => []
 
 private def parseTypeField (xs : List Sexpr) : TypeEntry := Id.run do
@@ -1979,7 +2021,8 @@ private def hexDigitVal (c : Char) : Option Nat :=
   else none
 
 -- decode WAT string escapes to a String (for export/import names)
-private partial def decodeWatStringChars : List Char → String
+private def decodeWatStringChars (cs : List Char) : String :=
+  match cs with
   | []                       => ""
   | '\\' :: 'n'  :: r       => "\n" ++ decodeWatStringChars r
   | '\\' :: 't'  :: r       => "\t" ++ decodeWatStringChars r
@@ -1987,14 +2030,16 @@ private partial def decodeWatStringChars : List Char → String
   | '\\' :: '"'  :: r       => "\"" ++ decodeWatStringChars r
   | '\\' :: '\\' :: r       => "\\" ++ decodeWatStringChars r
   | '\\' :: 'u'  :: '{' :: r =>
-    let (hex, rest) := r.span (· != '}')
-    match rest with
-    | '}' :: r' =>
-      if !hex.isEmpty && hex.all (fun c => (hexDigitVal c).isSome) then
-        let n := hex.foldl (fun acc c => acc * 16 + (hexDigitVal c).getD 0) 0
-        String.singleton (Char.ofNat n) ++ decodeWatStringChars r'
-      else "\\u{" ++ decodeWatStringChars (hex ++ rest)
-    | _ => "\\u{" ++ decodeWatStringChars (hex ++ rest)
+    have := span_lengths (· != '}') r
+    match _hspan : r.span (· != '}') with
+    | (hex, rest) =>
+      match _hrest : rest with
+      | '}' :: r' =>
+        if !hex.isEmpty && hex.all (fun c => (hexDigitVal c).isSome) then
+          let n := hex.foldl (fun acc c => acc * 16 + (hexDigitVal c).getD 0) 0
+          String.singleton (Char.ofNat n) ++ decodeWatStringChars r'
+        else "\\u{" ++ decodeWatStringChars (hex ++ rest)
+      | _ => "\\u{" ++ decodeWatStringChars (hex ++ rest)
   | '\\' :: h1 :: h2 :: r   =>
     match hexDigitVal h1, hexDigitVal h2 with
     | some d1, some d2 =>
@@ -2002,6 +2047,9 @@ private partial def decodeWatStringChars : List Char → String
     | _, _ => "\\" ++ decodeWatStringChars (h1 :: h2 :: r)
   | '\\' :: c :: r           => "\\" ++ String.singleton c ++ decodeWatStringChars r
   | c :: r                   => String.singleton c ++ decodeWatStringChars r
+
+termination_by cs.length
+decreasing_by all_goals simp_all <;> omega
 
 private def decodeWatString (s : String) : String :=
   if s.length ≥ 2 && s.startsWith "\"" && s.endsWith "\"" then
@@ -2195,7 +2243,7 @@ private def collectGlobalNames (fields : List Sexpr)
     | _ => pure ()
   return idOf
 
-private partial def decodeWatBytes : List Char → Except Err (List UInt8)
+private def decodeWatBytes : List Char → Except Err (List UInt8)
   | []                   => .ok []
   | '\\' :: 'n'  :: r   => (0x0A :: ·) <$> decodeWatBytes r
   | '\\' :: 't'  :: r   => (0x09 :: ·) <$> decodeWatBytes r
