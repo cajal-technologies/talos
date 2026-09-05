@@ -15,9 +15,11 @@ members = [
   "float_round",
   "float_reinterpret",
   "talos_stdio",
+  "gcd_talos_stdio",
   "byte_echo",
   "xor",
   "mergesort",
+  "gcd_stdio",
 ]
 [profile.release]
 opt-level = 0
@@ -45,8 +47,14 @@ opt-level = 3
 [profile.release.package.talos-stdio]
 opt-level = 3
 
+[profile.release.package.gcd-talos-stdio]
+opt-level = 3
+
 [profile.release.package.byte_echo]
 opt-level = 3
 
 [profile.release.package.xor]
+opt-level = 3
+
+[profile.release.package.gcd_stdio]
 opt-level = 3

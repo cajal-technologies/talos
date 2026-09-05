@@ -161,7 +161,7 @@ theorem import0_correct [WasmSmallStepGS hlc Universal.State] :
             List.reverse_nil, List.cons_append, List.nil_append] using hinvoke
         iintro ⟨⟨Hhost, ⟨Hbytes, Hcont⟩⟩, Hstate⟩
         imod Project.Mergesort.WrapperProof.readTransfer host ptr requested
-            buffer hfacts.1.symm (by omega) hnowrap store ns obs nt hmodule
+            buffer hfacts.1.symm (by omega) hnowrap store ns obs nt
             results postWasm hinvoke' $$ [Hhost Hbytes Hstate] with
             ⟨Hresult, Hstate⟩
         · iframe
@@ -317,7 +317,7 @@ theorem import1_correct [WasmSmallStepGS hlc Universal.State] :
             List.reverse_nil, List.cons_append, List.nil_append] using hinvoke
         iintro ⟨⟨Hhost, ⟨Hbytes, Hcont⟩⟩, Hstate⟩
         imod Project.Mergesort.WrapperProof.writeTransfer host ptr requested
-            bytes hfacts.1 (by omega) hnowrap store ns obs nt hmodule results
+            bytes hfacts.1 (by omega) hnowrap store ns obs nt results
             postWasm hinvoke' $$ [Hhost Hbytes Hstate] with
             ⟨Hresult, Hstate⟩
         · iframe
