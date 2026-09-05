@@ -35,15 +35,15 @@ def divideByZeroConfig : Config Unit :=
     store := { runtime := arithmeticRuntime, wasm := arithmeticModule.initialStore } }
 
 theorem arithmetic_small_step :
-    (runSteps 4 arithmeticConfig).result.values? = some [.i32 42] := by native_decide
+    (runSteps 4 arithmeticConfig).result.values? = some [.i32 42] := by decide +kernel
 
 theorem arithmetic_matches_big_step :
     (runSteps 4 arithmeticConfig).result.values? =
-      some (runValues 4 arithmeticModule 0 arithmeticModule.initialStore []) := by native_decide
+      some (runValues 4 arithmeticModule 0 arithmeticModule.initialStore []) := by decide +kernel
 
 theorem divide_by_zero_is_structured :
     ((runSteps 3 divideByZeroConfig).result.trapReason? ==
-      some .integerDivideByZero) = true := by native_decide
+      some .integerDivideByZero) = true := by decide +kernel
 
 def comparisonModule : Module :=
   { funcs :=
@@ -63,11 +63,11 @@ def comparisonConfig : Config Unit :=
 
 theorem comparisons_small_step :
     (runSteps 11 comparisonConfig).result.values? =
-      some [.i32 1, .i32 1, .i32 1] := by native_decide
+      some [.i32 1, .i32 1, .i32 1] := by decide +kernel
 
 theorem comparisons_match_big_step :
     (runSteps 11 comparisonConfig).result.values? =
-      some (runValues 11 comparisonModule 0 comparisonModule.initialStore []) := by native_decide
+      some (runValues 11 comparisonModule 0 comparisonModule.initialStore []) := by decide +kernel
 
 theorem terminal_done_has_no_step :
     stepChecked?
@@ -129,14 +129,14 @@ theorem memory_valid_step_is_relational {kind} {next : ValidConfig Unit}
 /-- A manual memory specification: the function returns the word it stored,
 and the final physical memory contains that same word at address 16. -/
 theorem memory_roundtrip_result_matches :
-    memoryResultMatches (runSteps 6 memoryRoundtripConfig).result = true := by native_decide
+    memoryResultMatches (runSteps 6 memoryRoundtripConfig).result = true := by decide +kernel
 
 /-- The same contract stated over the authoritative relational semantics,
 rather than only over the executable iterator. -/
 theorem memory_roundtrip_terminates :
     TerminatesWith memoryRoundtripConfig (fun values store =>
       values = [.i32 0x12345678] ∧ store.wasm.mem.read32 16 = 0x12345678) :=
-  runSteps_success_terminates_eq_values memory_roundtrip_run (by native_decide)
+  runSteps_success_terminates_eq_values memory_roundtrip_run (by decide +kernel)
 
 theorem memory_roundtrip_partial :
     PartiallyMeets memoryRoundtripConfig (fun values store =>
@@ -146,17 +146,17 @@ theorem memory_roundtrip_partial :
 /-- A disjoint address remains unchanged by the store at address 16. -/
 theorem memory_roundtrip_frames_disjoint_word :
     memoryFinalStore.wasm.mem.read32 32 =
-      memoryRoundtripConfig.store.wasm.mem.read32 32 := by native_decide
+      memoryRoundtripConfig.store.wasm.mem.read32 32 := by decide +kernel
 
 theorem memory_roundtrip_matches_big_step :
     (runSteps 6 memoryRoundtripConfig).result.values? =
-      some (runValues 6 memoryModule 0 memoryModule.initialStore []) := by native_decide
+      some (runValues 6 memoryModule 0 memoryModule.initialStore []) := by decide +kernel
 
 theorem memory_out_of_bounds_is_structured :
     ((runSteps 3 memoryTrapConfig).result.trapReason? ==
         some .integerDivideByZero) = false ∧
       ((runSteps 3 memoryTrapConfig).result.trapReason? ==
-        some .outOfBoundsMemory) = true := by native_decide
+        some .outOfBoundsMemory) = true := by decide +kernel
 
 def memoryGrowthModule : Module :=
   { funcs :=
@@ -196,7 +196,7 @@ theorem memory_growth_terminates :
 theorem memory_growth_matches_big_step :
     (runSteps 8 memoryGrowthConfig).result.values? =
       some (runValues 20 memoryGrowthModule 0
-        memoryGrowthModule.initialStore []) := by native_decide
+        memoryGrowthModule.initialStore []) := by decide +kernel
 
 def memory64GrowthModule : Module :=
   { funcs :=
@@ -240,7 +240,7 @@ theorem memory64_growth_terminates :
 theorem memory64_growth_matches_big_step :
     (runSteps 11 memory64GrowthConfig).result.values? =
       some (runValues 24 memory64GrowthModule 0
-        memory64GrowthModule.initialStore []) := by native_decide
+        memory64GrowthModule.initialStore []) := by decide +kernel
 
 def memoryFillProgram : Program :=
   [ .const 16, .const 0xAB, .const 4, .memoryFill,
@@ -281,11 +281,11 @@ theorem memory_fill_terminates :
       store.wasm.mem.read32 16 = 0xABABABAB ∧
       store.wasm.mem.read32 32 = 0x12345678) :=
   runSteps_success_terminates_eq_values
-    memory_fill_run (by constructor <;> native_decide)
+    memory_fill_run (by constructor <;> decide +kernel)
 
 theorem memory_fill_matches_big_step :
     (runSteps 9 memoryFillConfig).result.values? =
-      some (runValues 16 memoryFillModule 0 memoryFillInitialStore []) := by native_decide
+      some (runValues 16 memoryFillModule 0 memoryFillInitialStore []) := by decide +kernel
 
 def memoryFillTrapConfig : Config Unit :=
   { expr := .running
@@ -334,13 +334,13 @@ theorem memory64_fill_terminates :
       store.wasm.mem.read8 22 = 0xCD) :=
   runSteps_success_terminates_eq_values memory64_fill_run (by
     constructor
-    · native_decide
-    constructor <;> native_decide)
+    · decide +kernel
+    constructor <;> decide +kernel)
 
 theorem memory64_fill_matches_big_step :
     (runSteps 6 memory64FillConfig).result.values? =
       some (runValues 14 memory64FillModule 0
-        memory64FillModule.initialStore []) := by native_decide
+        memory64FillModule.initialStore []) := by decide +kernel
 
 def overlappingCopyProgram : Program :=
   [ .const 2, .const 0, .const 4, .memoryCopy,
@@ -382,12 +382,12 @@ theorem overlapping_copy_terminates :
       store.wasm.mem.read32 0 = 0x02010201 ∧
       store.wasm.mem.read32 2 = 0x04030201) :=
   runSteps_success_terminates_eq_values
-    overlapping_copy_run (by constructor <;> native_decide)
+    overlapping_copy_run (by constructor <;> decide +kernel)
 
 theorem overlapping_copy_matches_big_step :
     (runSteps 9 overlappingCopyConfig).result.values? =
       some (runValues 16 overlappingCopyModule 0
-        overlappingCopyInitialStore []) := by native_decide
+        overlappingCopyInitialStore []) := by decide +kernel
 
 def memoryCopyTrapConfig : Config Unit :=
   { expr := .running
@@ -439,12 +439,12 @@ theorem memory64_copy_terminates :
       store.wasm.mem.read32 0 = 0x12345678 ∧
       store.wasm.mem.read32 8 = 0x12345678) :=
   runSteps_success_terminates_eq_values
-    memory64_copy_run (by constructor <;> native_decide)
+    memory64_copy_run (by constructor <;> decide +kernel)
 
 theorem memory64_copy_matches_big_step :
     (runSteps 6 memory64CopyConfig).result.values? =
       some (runValues 14 memory64CopyModule 0
-        memory64CopyInitialStore []) := by native_decide
+        memory64CopyInitialStore []) := by decide +kernel
 
 def memoryInitProgram : Program :=
   [ .const 16, .const 0, .const 4, .memoryInit 0,
@@ -485,12 +485,12 @@ theorem memory_init_terminates :
       store.wasm.mem.read32 16 = 0x04030201 ∧
       store.wasm.dataSegments = [none]) :=
   runSteps_success_terminates_eq_values
-    memory_init_run (by constructor <;> native_decide)
+    memory_init_run (by constructor <;> decide +kernel)
 
 theorem memory_init_matches_big_step :
     (runSteps 12 memoryInitConfig).result.values? =
       some (runValues 24 memoryInitModule 0
-        memoryInitModule.initialStore []) := by native_decide
+        memoryInitModule.initialStore []) := by decide +kernel
 
 def droppedMemoryInitTrapConfig : Config Unit :=
   { expr := .running
@@ -545,12 +545,12 @@ theorem memory64_init_terminates :
       store.wasm.mem.read8 20 = 0xBB ∧
       store.wasm.mem.read8 21 = 0xCC) :=
   runSteps_success_terminates_eq_values
-    memory64_init_run (by constructor <;> native_decide)
+    memory64_init_run (by constructor <;> decide +kernel)
 
 theorem memory64_init_matches_big_step :
     (runSteps 6 memory64InitConfig).result.values? =
       some (runValues 14 memory64InitModule 0
-        memory64InitModule.initialStore []) := by native_decide
+        memory64InitModule.initialStore []) := by decide +kernel
 
 def byteRoundtripConfig : Config Unit :=
   { expr := .running
@@ -575,11 +575,11 @@ theorem byte_roundtrip_run :
 theorem byte_roundtrip_terminates :
     TerminatesWith byteRoundtripConfig (fun values store =>
       values = [.i32 0xAB] ∧ store.wasm.mem.read8 24 = 0xAB) :=
-  runSteps_success_terminates_eq_values byte_roundtrip_run (by native_decide)
+  runSteps_success_terminates_eq_values byte_roundtrip_run (by decide +kernel)
 
 theorem byte_roundtrip_matches_big_step :
     (runSteps 6 byteRoundtripConfig).result.values? =
-      some (runValues 6 memoryModule 2 memoryModule.initialStore []) := by native_decide
+      some (runValues 6 memoryModule 2 memoryModule.initialStore []) := by decide +kernel
 
 def narrowMemoryProgram : Program :=
   [ .const 24, .const 0x80, .store8 0,
@@ -620,12 +620,12 @@ theorem narrow_memory_terminates :
       store.wasm.mem.read8 24 = 0x80 ∧
       store.wasm.mem.read16 26 = 0x8001) :=
   runSteps_success_terminates_eq_values
-    narrow_memory_run (by constructor <;> native_decide)
+    narrow_memory_run (by constructor <;> decide +kernel)
 
 theorem narrow_memory_matches_big_step :
     (runSteps 13 narrowMemoryConfig).result.values? =
       some (runValues 20 narrowMemoryModule 0
-        narrowMemoryModule.initialStore []) := by native_decide
+        narrowMemoryModule.initialStore []) := by decide +kernel
 
 def i64MemoryModule (is64 : Bool) : Module :=
   { funcs :=
@@ -668,8 +668,8 @@ theorem i64_memory_terminates (is64 : Bool) :
       values = [.i64 0x0123456789ABCDEF] ∧
       store.wasm.mem.read64 32 = 0x0123456789ABCDEF) := by
   cases is64
-  · exact runSteps_success_terminates_eq_values i64_memory32_run (by native_decide)
-  · exact runSteps_success_terminates_eq_values i64_memory64_run (by native_decide)
+  · exact runSteps_success_terminates_eq_values i64_memory32_run (by decide +kernel)
+  · exact runSteps_success_terminates_eq_values i64_memory64_run (by decide +kernel)
 
 theorem i64_memory_matches_big_step :
     (runSteps 6 (i64MemoryConfig false)).result.values? =
@@ -677,7 +677,7 @@ theorem i64_memory_matches_big_step :
           (i64MemoryModule false).initialStore []) ∧
       (runSteps 6 (i64MemoryConfig true)).result.values? =
         some (runValues 10 (i64MemoryModule true) 0
-          (i64MemoryModule true).initialStore []) := by native_decide
+          (i64MemoryModule true).initialStore []) := by decide +kernel
 
 def i32Memory64Module : Module :=
   { funcs :=
@@ -711,7 +711,7 @@ theorem i32_memory64_terminates :
     TerminatesWith i32Memory64Config (fun values store =>
       values = [.i32 0x12345678] ∧
       store.wasm.mem.read32 24 = 0x12345678) :=
-  runSteps_success_terminates_eq_values i32_memory64_run (by native_decide)
+  runSteps_success_terminates_eq_values i32_memory64_run (by decide +kernel)
 
 def i32Memory64TrapConfig : Config Unit :=
   { i32Memory64Config with
@@ -730,7 +730,7 @@ theorem i32_memory64_out_of_bounds_trapsWith :
 theorem i32_memory64_matches_big_step :
     (runSteps 6 i32Memory64Config).result.values? =
       some (runValues 10 i32Memory64Module 0
-        i32Memory64Module.initialStore []) := by native_decide
+        i32Memory64Module.initialStore []) := by decide +kernel
 
 def i64Load8Config (is64 : Bool) : Config Unit :=
   { expr := .running
@@ -742,11 +742,11 @@ def i64Load8Config (is64 : Bool) : Config Unit :=
 
 theorem i64_load8_u_memory32 :
     (runSteps 3 (i64Load8Config false)).result.values? =
-      some [.i64 0xEF] := by native_decide
+      some [.i64 0xEF] := by decide +kernel
 
 theorem i64_load8_u_memory64 :
     (runSteps 3 (i64Load8Config true)).result.values? =
-      some [.i64 0xEF] := by native_decide
+      some [.i64 0xEF] := by decide +kernel
 
 def i64NarrowLoadConfig (is64 : Bool) : Config Unit :=
   let address : Instruction := if is64 then .constI64 32 else .const 32
@@ -766,14 +766,14 @@ theorem i64_narrow_loads_memory32 :
       some
         [.i64 0xFFFFFFFF89ABCDEF, .i64 0x89ABCDEF,
           .i64 0xFFFFFFFFFFFFCDEF, .i64 0xCDEF,
-          .i64 0xFFFFFFFFFFFFFFEF] := by native_decide
+          .i64 0xFFFFFFFFFFFFFFEF] := by decide +kernel
 
 theorem i64_narrow_loads_memory64 :
     (runSteps 11 (i64NarrowLoadConfig true)).result.values? =
       some
         [.i64 0xFFFFFFFF89ABCDEF, .i64 0x89ABCDEF,
           .i64 0xFFFFFFFFFFFFCDEF, .i64 0xCDEF,
-          .i64 0xFFFFFFFFFFFFFFEF] := by native_decide
+          .i64 0xFFFFFFFFFFFFFFEF] := by decide +kernel
 
 def i64NarrowStoreModule (is64 : Bool) : Module :=
   let address (n : UInt32) : Instruction :=
@@ -825,9 +825,9 @@ theorem i64_narrow_store_terminates (is64 : Bool) :
       store.wasm.mem.read32 44 = 0x89ABCDEF) := by
   cases is64
   · exact runSteps_success_terminates_eq_values
-      i64_narrow_store_memory32_run (by constructor <;> native_decide)
+      i64_narrow_store_memory32_run (by constructor <;> decide +kernel)
   · exact runSteps_success_terminates_eq_values
-      i64_narrow_store_memory64_run (by constructor <;> native_decide)
+      i64_narrow_store_memory64_run (by constructor <;> decide +kernel)
 
 theorem i64_narrow_store_matches_big_step :
     (runSteps 16 (i64NarrowStoreConfig false)).result.values? =
@@ -835,7 +835,7 @@ theorem i64_narrow_store_matches_big_step :
           (i64NarrowStoreModule false).initialStore []) ∧
       (runSteps 16 (i64NarrowStoreConfig true)).result.values? =
         some (runValues 24 (i64NarrowStoreModule true) 0
-          (i64NarrowStoreModule true).initialStore []) := by native_decide
+          (i64NarrowStoreModule true).initialStore []) := by decide +kernel
 
 def swapProgram : Program :=
   [ .const 0, .load32 0, .localSet 0,
@@ -884,7 +884,7 @@ theorem swap_terminates :
       store.wasm.mem.read32 0 = 22 ∧
       store.wasm.mem.read32 4 = 11) :=
   runSteps_success_terminates_eq_values
-    swap_run (by constructor <;> native_decide)
+    swap_run (by constructor <;> decide +kernel)
 
 theorem swap_partial :
     PartiallyMeets swapConfig (fun values store =>
@@ -895,7 +895,7 @@ theorem swap_partial :
 
 theorem swap_matches_big_step :
     (runSteps 17 swapConfig).result.values? =
-      some (runValues 17 swapModule 0 swapInitialStore []) := by native_decide
+      some (runValues 17 swapModule 0 swapInitialStore []) := by decide +kernel
 
 def reverseThreeProgram : Program :=
   [ .const 0, .load32 0, .localSet 0,
@@ -947,8 +947,8 @@ theorem reverse_three_terminates :
       store.wasm.mem.read32 8 = 11) :=
   runSteps_success_terminates_eq_values reverse_three_run (by
     constructor
-    · native_decide
-    constructor <;> native_decide)
+    · decide +kernel
+    constructor <;> decide +kernel)
 
 theorem reverse_three_partial :
     PartiallyMeets reverseThreeConfig (fun values store =>
@@ -960,7 +960,7 @@ theorem reverse_three_partial :
 
 theorem reverse_three_matches_big_step :
     (runSteps 17 reverseThreeConfig).result.values? =
-      some (runValues 17 reverseThreeModule 0 reverseThreeInitialStore []) := by native_decide
+      some (runValues 17 reverseThreeModule 0 reverseThreeInitialStore []) := by decide +kernel
 
 /-! ### Three-word partition kernel
 
@@ -1023,7 +1023,7 @@ theorem partition_three_terminates :
       store.wasm.mem.read32 8 = 33 ∧
       store.wasm.mem.read32 0 ≤ store.wasm.mem.read32 4 ∧
       store.wasm.mem.read32 4 ≤ store.wasm.mem.read32 8) :=
-  runSteps_success_terminates_eq_values partition_three_run (by native_decide)
+  runSteps_success_terminates_eq_values partition_three_run (by decide +kernel)
 
 theorem partition_three_partial :
     PartiallyMeets partitionThreeConfig (fun values store =>
@@ -1037,7 +1037,7 @@ theorem partition_three_partial :
 
 theorem partition_three_matches_big_step :
     (runSteps 19 partitionThreeConfig).result.values? =
-      some (runValues 19 partitionThreeModule 0 partitionThreeInitialStore []) := by native_decide
+      some (runValues 19 partitionThreeModule 0 partitionThreeInitialStore []) := by decide +kernel
 
 /-! ### Merge of two singleton sorted runs
 
@@ -1097,7 +1097,7 @@ theorem merge_two_terminates :
       store.wasm.mem.read32 0 = 4 ∧
       store.wasm.mem.read32 4 = 9 ∧
       store.wasm.mem.read32 0 ≤ store.wasm.mem.read32 4) :=
-  runSteps_success_terminates_eq_values merge_two_run (by native_decide)
+  runSteps_success_terminates_eq_values merge_two_run (by decide +kernel)
 
 theorem merge_two_partial :
     PartiallyMeets mergeTwoConfig (fun values store =>
@@ -1109,7 +1109,7 @@ theorem merge_two_partial :
 
 theorem merge_two_matches_big_step :
     (runSteps 18 mergeTwoConfig).result.values? =
-      some (runValues 18 mergeTwoModule 0 mergeTwoInitialStore []) := by native_decide
+      some (runValues 18 mergeTwoModule 0 mergeTwoInitialStore []) := by decide +kernel
 
 def mergeTwoKeepInitialStore : Store Unit :=
   { mergeTwoModule.initialStore (α := Unit) with
@@ -1141,7 +1141,7 @@ theorem merge_two_both_branches_match_big_step :
     (runSteps 18 mergeTwoConfig).result.values? =
         some (runValues 18 mergeTwoModule 0 mergeTwoInitialStore []) ∧
       (runSteps 18 mergeTwoKeepConfig).result.values? =
-        some (runValues 18 mergeTwoModule 0 mergeTwoKeepInitialStore []) := by native_decide
+        some (runValues 18 mergeTwoModule 0 mergeTwoKeepInitialStore []) := by decide +kernel
 
 def controlModule : Module :=
   { funcs :=
@@ -1184,13 +1184,13 @@ def ifConfig : Config Unit :=
     store := { runtime := controlRuntime, wasm := controlModule.initialStore } }
 
 theorem block_branch_small_step :
-    (runSteps 7 blockBranchConfig).result.values? = some [.i32 106] := by native_decide
+    (runSteps 7 blockBranchConfig).result.values? = some [.i32 106] := by decide +kernel
 
 theorem loop_small_step :
-    (runSteps 24 loopConfig).result.values? = some [.i32 0] := by native_decide
+    (runSteps 24 loopConfig).result.values? = some [.i32 0] := by decide +kernel
 
 theorem if_small_step :
-    (runSteps 5 ifConfig).result.values? = some [.i32 42] := by native_decide
+    (runSteps 5 ifConfig).result.values? = some [.i32 42] := by decide +kernel
 
 theorem block_branch_terminates :
     TerminatesWith blockBranchConfig (fun values _ => values = [.i32 106]) :=
@@ -1201,7 +1201,7 @@ theorem control_matches_big_step :
       (runSteps 24 loopConfig).result.values? =
         some (runValues 30 controlModule 1 controlModule.initialStore []) ∧
       (runSteps 5 ifConfig).result.values? =
-        some (runValues 12 controlModule 2 controlModule.initialStore []) := by native_decide
+        some (runValues 12 controlModule 2 controlModule.initialStore []) := by decide +kernel
 
 def functionLabelBranchModule : Module :=
   { funcs :=
@@ -1220,11 +1220,11 @@ def functionLabelBranchConfig (index : Nat) : Config Unit :=
 
 theorem branch_to_function_label :
     (runSteps 3 (functionLabelBranchConfig 0)).result.values? =
-      some [.i32 42] := by native_decide
+      some [.i32 42] := by decide +kernel
 
 theorem branch_through_block_to_function_label :
     (runSteps 4 (functionLabelBranchConfig 1)).result.values? =
-      some [.i32 42] := by native_decide
+      some [.i32 42] := by decide +kernel
 
 theorem function_label_branch_terminates :
     TerminatesWith (functionLabelBranchConfig 1)
@@ -1237,7 +1237,7 @@ theorem function_label_branch_matches_big_step :
           functionLabelBranchModule.initialStore []) ∧
       (runSteps 4 (functionLabelBranchConfig 1)).result.values? =
         some (runValues 8 functionLabelBranchModule 1
-          functionLabelBranchModule.initialStore []) := by native_decide
+          functionLabelBranchModule.initialStore []) := by decide +kernel
 
 def callModule : Module :=
   { funcs :=
@@ -1256,11 +1256,11 @@ def callConfig : Config Unit :=
     store := { runtime := callRuntime, wasm := callModule.initialStore } }
 
 theorem direct_call_small_step :
-    (runSteps 7 callConfig).result.values? = some [.i32 42] := by native_decide
+    (runSteps 7 callConfig).result.values? = some [.i32 42] := by decide +kernel
 
 theorem direct_call_matches_big_step :
     (runSteps 7 callConfig).result.values? =
-      some (runValues 12 callModule 0 callModule.initialStore []) := by native_decide
+      some (runValues 12 callModule 0 callModule.initialStore []) := by decide +kernel
 
 def factorialModule : Module :=
   { funcs :=
@@ -1285,7 +1285,7 @@ def factorialConfig : Config Unit :=
       { runtime := factorialRuntime, wasm := factorialModule.initialStore } }
 
 theorem factorial_small_step :
-    (runSteps 61 factorialConfig).result.values? = some [.i32 120] := by native_decide
+    (runSteps 61 factorialConfig).result.values? = some [.i32 120] := by decide +kernel
 
 theorem factorial_terminates :
     TerminatesWith factorialConfig (fun values _ => values = [.i32 120]) :=
@@ -1293,7 +1293,7 @@ theorem factorial_terminates :
 theorem factorial_matches_big_step :
     (runSteps 61 factorialConfig).result.values? =
       some (runValues 20 factorialModule 0 factorialModule.initialStore [.i32 5]) := by
-  native_decide
+  decide +kernel
 
 def parametricModule : Module :=
   { funcs :=
@@ -1316,16 +1316,16 @@ def parametricConfig (index : Nat) : Config Unit :=
         wasm := parametricModule.initialStore } }
 
 theorem select_and_drop_small_step :
-    (runSteps 7 (parametricConfig 0)).result.values? = some [.i32 10] := by native_decide
+    (runSteps 7 (parametricConfig 0)).result.values? = some [.i32 10] := by decide +kernel
 
 theorem br_table_small_step :
-    (runSteps 6 (parametricConfig 1)).result.values? = some [.i32 99] := by native_decide
+    (runSteps 6 (parametricConfig 1)).result.values? = some [.i32 99] := by decide +kernel
 
 theorem parametric_matches_big_step :
     (runSteps 7 (parametricConfig 0)).result.values? =
         some (runValues 12 parametricModule 0 parametricModule.initialStore []) ∧
       (runSteps 6 (parametricConfig 1)).result.values? =
-        some (runValues 12 parametricModule 1 parametricModule.initialStore []) := by native_decide
+        some (runValues 12 parametricModule 1 parametricModule.initialStore []) := by decide +kernel
 
 def tailCallModule : Module :=
   { funcs :=
@@ -1341,11 +1341,11 @@ def tailCallConfig : Config Unit :=
         wasm := tailCallModule.initialStore } }
 
 theorem tail_call_small_step :
-    (runSteps 3 tailCallConfig).result.values? = some [.i32 42] := by native_decide
+    (runSteps 3 tailCallConfig).result.values? = some [.i32 42] := by decide +kernel
 
 theorem tail_call_matches_big_step :
     (runSteps 3 tailCallConfig).result.values? =
-      some (runValues 8 tailCallModule 0 tailCallModule.initialStore []) := by native_decide
+      some (runValues 8 tailCallModule 0 tailCallModule.initialStore []) := by decide +kernel
 
 def i64ArithmeticModule : Module :=
   { funcs :=
@@ -1363,12 +1363,12 @@ def i64ArithmeticConfig : Config Unit :=
         wasm := i64ArithmeticModule.initialStore } }
 
 theorem i64_arithmetic_small_step :
-    (runSteps 8 i64ArithmeticConfig).result.values? = some [.i64 43] := by native_decide
+    (runSteps 8 i64ArithmeticConfig).result.values? = some [.i64 43] := by decide +kernel
 
 theorem i64_arithmetic_matches_big_step :
     (runSteps 8 i64ArithmeticConfig).result.values? =
       some (runValues 12 i64ArithmeticModule 0
-        i64ArithmeticModule.initialStore []) := by native_decide
+        i64ArithmeticModule.initialStore []) := by decide +kernel
 
 def bitwiseModule : Module :=
   { funcs :=
@@ -1403,19 +1403,19 @@ theorem i32_bitwise_small_step :
       some
         [.i32 0x78123456, .i32 0x34567812,
           .i32 0xC0000000, .i32 0x40000000,
-          .i32 2, .i32 0xFF00, .i32 0xFFF0, .i32 0x00F0] := by native_decide
+          .i32 2, .i32 0xFF00, .i32 0xFFF0, .i32 0x00F0] := by decide +kernel
 
 theorem i64_bitwise_small_step :
     (runSteps 16 (bitwiseConfig 1 5)).result.values? =
       some
         [.i64 0xEF0123456789ABCD, .i64 0x23456789ABCDEF01,
-          .i64 0xC000000000000000, .i64 2, .i64 0x00F0] := by native_decide
+          .i64 0xC000000000000000, .i64 2, .i64 0x00F0] := by decide +kernel
 
 theorem bitwise_matches_big_step :
     (runSteps 25 (bitwiseConfig 0 8)).result.values? =
         some (runValues 40 bitwiseModule 0 bitwiseModule.initialStore []) ∧
       (runSteps 16 (bitwiseConfig 1 5)).result.values? =
-        some (runValues 30 bitwiseModule 1 bitwiseModule.initialStore []) := by native_decide
+        some (runValues 30 bitwiseModule 1 bitwiseModule.initialStore []) := by decide +kernel
 
 def divisionModule : Module :=
   { funcs :=
@@ -1448,31 +1448,31 @@ def divisionConfig (index resultArity : Nat) : Config Unit :=
 
 theorem i32_division_small_step :
     (runSteps 13 (divisionConfig 0 4)).result.values? =
-      some [.i32 0xFFFFFFFE, .i32 2, .i32 0xFFFFFFFA, .i32 6] := by native_decide
+      some [.i32 0xFFFFFFFE, .i32 2, .i32 0xFFFFFFFA, .i32 6] := by decide +kernel
 
 theorem i64_division_small_step :
     (runSteps 13 (divisionConfig 1 4)).result.values? =
       some
         [.i64 0xFFFFFFFFFFFFFFFE, .i64 2,
-          .i64 0xFFFFFFFFFFFFFFFA, .i64 6] := by native_decide
+          .i64 0xFFFFFFFFFFFFFFFA, .i64 6] := by decide +kernel
 
 theorem division_matches_big_step :
     (runSteps 13 (divisionConfig 0 4)).result.values? =
         some (runValues 20 divisionModule 0 divisionModule.initialStore []) ∧
       (runSteps 13 (divisionConfig 1 4)).result.values? =
-        some (runValues 20 divisionModule 1 divisionModule.initialStore []) := by native_decide
+        some (runValues 20 divisionModule 1 divisionModule.initialStore []) := by decide +kernel
 
 theorem remainder_by_zero_traps :
     (runSteps 4 (divisionConfig 2 1)).result.trapReason? =
-      some .integerDivideByZero := by native_decide
+      some .integerDivideByZero := by decide +kernel
 
 theorem signed_i32_overflow_traps :
     (runSteps 4 (divisionConfig 3 1)).result.trapReason? =
-      some .integerOverflow := by native_decide
+      some .integerOverflow := by decide +kernel
 
 theorem signed_i64_overflow_traps :
     (runSteps 4 (divisionConfig 4 1)).result.trapReason? =
-      some .integerOverflow := by native_decide
+      some .integerOverflow := by decide +kernel
 
 theorem remainder_by_zero_trapsWith :
     TrapsWith (divisionConfig 2 1) .integerDivideByZero
@@ -1519,12 +1519,12 @@ def integerComparisonConfig : Config Unit :=
 
 theorem integer_comparisons_small_step :
     (runSteps 45 integerComparisonConfig).result.values? =
-      some (List.replicate 15 (.i32 1)) := by native_decide
+      some (List.replicate 15 (.i32 1)) := by decide +kernel
 
 theorem integer_comparisons_match_big_step :
     (runSteps 45 integerComparisonConfig).result.values? =
       some (runValues 60 integerComparisonModule 0
-        integerComparisonModule.initialStore []) := by native_decide
+        integerComparisonModule.initialStore []) := by decide +kernel
 
 def integerConversionModule : Module :=
   { funcs :=
@@ -1554,12 +1554,12 @@ theorem integer_conversions_small_step :
         [ .i64 0xFFFFFFFF80000000, .i64 0xFFFFFFFFFFFF8000,
           .i64 0xFFFFFFFFFFFFFF80, .i32 0xFFFF8000,
           .i32 0xFFFFFF80, .i64 0xFFFFFFFFFFFFFFFF,
-          .i64 0x00000000FFFFFFFF, .i32 0x9ABCDEF0 ] := by native_decide
+          .i64 0x00000000FFFFFFFF, .i32 0x9ABCDEF0 ] := by decide +kernel
 
 theorem integer_conversions_match_big_step :
     (runSteps 17 integerConversionConfig).result.values? =
       some (runValues 25 integerConversionModule 0
-        integerConversionModule.initialStore []) := by native_decide
+        integerConversionModule.initialStore []) := by decide +kernel
 
 def referenceModule : Module :=
   { funcs :=
@@ -1581,7 +1581,7 @@ def referenceConfig (index resultArity : Nat) : Config Unit :=
 
 theorem reference_values_small_step :
     (runSteps 9 (referenceConfig 0 4)).result.values? =
-      some [.i32 1, .i32 1, .i32 0, .i32 1] := by native_decide
+      some [.i32 1, .i32 1, .i32 0, .i32 1] := by decide +kernel
 
 theorem reference_values_terminates :
     TerminatesWith (referenceConfig 0 4)
@@ -1589,7 +1589,7 @@ theorem reference_values_terminates :
   runSteps_values_terminates reference_values_small_step
 theorem null_as_non_null_traps :
     (runSteps 2 (referenceConfig 1 1)).result.trapReason? =
-      some .nullReference := by native_decide
+      some .nullReference := by decide +kernel
 
 theorem null_as_non_null_trapsWith :
     TrapsWith (referenceConfig 1 1) .nullReference
@@ -1598,7 +1598,7 @@ theorem null_as_non_null_trapsWith :
 
 theorem reference_values_match_big_step :
     (runSteps 9 (referenceConfig 0 4)).result.values? =
-      some (runValues 15 referenceModule 0 referenceModule.initialStore []) := by native_decide
+      some (runValues 15 referenceModule 0 referenceModule.initialStore []) := by decide +kernel
 
 def tableModule : Module :=
   { tables := [{ min := 2 }]
@@ -1627,7 +1627,7 @@ def tableFinalStore : MachineStore Unit :=
 
 theorem table_read_write_small_step :
     (runSteps 11 (tableConfig 0 3)).result.values? =
-      some [.i32 2, .i32 1, .i32 0] := by native_decide
+      some [.i32 2, .i32 1, .i32 0] := by decide +kernel
 
 theorem table_read_write_terminates :
     TerminatesWith (tableConfig 0 3)
@@ -1640,7 +1640,7 @@ theorem table_read_write_terminates :
 
 theorem table_get_out_of_bounds_traps :
     (runSteps 2 (tableConfig 1 1)).result.trapReason? =
-      some .outOfBoundsTable := by native_decide
+      some .outOfBoundsTable := by decide +kernel
 
 theorem table_get_out_of_bounds_trapsWith :
     TrapsWith (tableConfig 1 1) .outOfBoundsTable
@@ -1649,7 +1649,7 @@ theorem table_get_out_of_bounds_trapsWith :
 
 theorem table_read_write_matches_big_step :
     (runSteps 11 (tableConfig 0 3)).result.values? =
-      some (runValues 18 tableModule 0 tableModule.initialStore []) := by native_decide
+      some (runValues 18 tableModule 0 tableModule.initialStore []) := by decide +kernel
 
 def tableBulkModule : Module :=
   { tables := [{ min := 4, max := some 6 }]
@@ -1703,7 +1703,7 @@ theorem table_fill_out_of_bounds_trapsWith :
     table_fill_out_of_bounds_traps_atomically
 theorem table_bulk_matches_big_step :
     (runSteps 13 (tableBulkConfig 0 2)).result.values? =
-      some (runValues 20 tableBulkModule 0 tableBulkModule.initialStore []) := by native_decide
+      some (runValues 20 tableBulkModule 0 tableBulkModule.initialStore []) := by decide +kernel
 
 def elementInitModule (is64 : Bool) : Module :=
   { tables := [{ min := 4, is64 }]
@@ -1777,7 +1777,7 @@ theorem element_init_matches_big_step (is64 : Bool) :
     (runSteps 12 (elementInitConfig is64 0 2)).result.values? =
       some (runValues 20 (elementInitModule is64) 0
         (elementInitModule is64).initialStore []) := by
-  cases is64 <;> native_decide
+  cases is64 <;> decide +kernel
 
 def indirectCallModule : Module :=
   { types :=
@@ -1808,19 +1808,19 @@ def indirectCallConfig (index : Nat) : Config Unit :=
 
 theorem call_indirect_run :
     (runSteps 5 (indirectCallConfig 2)).result.values? =
-      some [.i32 42] := by native_decide
+      some [.i32 42] := by decide +kernel
 
 theorem return_call_indirect_run :
     (runSteps 4 (indirectCallConfig 3)).result.values? =
-      some [.i32 42] := by native_decide
+      some [.i32 42] := by decide +kernel
 
 theorem call_ref_run :
     (runSteps 5 (indirectCallConfig 4)).result.values? =
-      some [.i32 42] := by native_decide
+      some [.i32 42] := by decide +kernel
 
 theorem return_call_ref_run :
     (runSteps 4 (indirectCallConfig 5)).result.values? =
-      some [.i32 42] := by native_decide
+      some [.i32 42] := by decide +kernel
 
 theorem call_indirect_terminates :
     TerminatesWith (indirectCallConfig 2)
@@ -1828,19 +1828,19 @@ theorem call_indirect_terminates :
   runSteps_values_terminates call_indirect_run
 theorem call_indirect_undefined_traps :
     (runSteps 2 (indirectCallConfig 6)).result.trapReason? =
-      some .undefinedElement := by native_decide
+      some .undefinedElement := by decide +kernel
 
 theorem call_indirect_uninitialized_traps :
     (runSteps 2 (indirectCallConfig 7)).result.trapReason? =
-      some (.uninitializedElement 2) := by native_decide
+      some (.uninitializedElement 2) := by decide +kernel
 
 theorem call_indirect_type_mismatch_traps :
     (runSteps 2 (indirectCallConfig 8)).result.trapReason? =
-      some .indirectCallTypeMismatch := by native_decide
+      some .indirectCallTypeMismatch := by decide +kernel
 
 theorem call_ref_null_traps :
     (runSteps 2 (indirectCallConfig 9)).result.trapReason? =
-      some .nullFunctionReference := by native_decide
+      some .nullFunctionReference := by decide +kernel
 
 theorem call_indirect_undefined_trapsWith :
     TrapsWith (indirectCallConfig 6) .undefinedElement
@@ -1874,7 +1874,7 @@ theorem indirect_calls_match_big_step :
           indirectCallModule.initialStore []) ∧
       (runSteps 4 (indirectCallConfig 5)).result.values? =
         some (runValues 8 indirectCallModule 5
-          indirectCallModule.initialStore []) := by native_decide
+          indirectCallModule.initialStore []) := by decide +kernel
 
 def scalarFloatModule : Module :=
   { funcs :=
@@ -2114,16 +2114,16 @@ def simdConfig (functionIndex : Nat) : Config Unit :=
         wasm := simdModule.initialStore } }
 
 theorem simd_add_and_extract :
-    (runSteps 5 (simdConfig 0)).result.values? = some [.i32 3] := by native_decide
+    (runSteps 5 (simdConfig 0)).result.values? = some [.i32 3] := by decide +kernel
 
 theorem simd_replace_and_extract :
-    (runSteps 5 (simdConfig 1)).result.values? = some [.i32 42] := by native_decide
+    (runSteps 5 (simdConfig 1)).result.values? = some [.i32 42] := by decide +kernel
 
 theorem simd_matches_big_step :
     (runSteps 5 (simdConfig 0)).result.values? =
         some (runValues 16 simdModule 0 simdModule.initialStore []) ∧
       (runSteps 5 (simdConfig 1)).result.values? =
-        some (runValues 16 simdModule 1 simdModule.initialStore []) := by native_decide
+        some (runValues 16 simdModule 1 simdModule.initialStore []) := by decide +kernel
 
 def simdMemoryValue : BitVec 128 :=
   0x112233445566778899AABBCCDDEEFF00
@@ -2146,7 +2146,7 @@ def simdMemoryConfig : Config Unit :=
 
 theorem simd_memory_roundtrip :
     (runSteps 6 simdMemoryConfig).result.values? =
-      some [.v128 simdMemoryValue] := by native_decide
+      some [.v128 simdMemoryValue] := by decide +kernel
 
 def simdMemoryPhysicalResult : RunnerResult Unit → Bool
   | .success _ store =>
@@ -2156,12 +2156,12 @@ def simdMemoryPhysicalResult : RunnerResult Unit → Bool
   | _ => false
 
 theorem simd_memory_physical_bytes :
-    simdMemoryPhysicalResult (runSteps 6 simdMemoryConfig).result = true := by native_decide
+    simdMemoryPhysicalResult (runSteps 6 simdMemoryConfig).result = true := by decide +kernel
 
 theorem simd_memory_matches_big_step :
     (runSteps 6 simdMemoryConfig).result.values? =
       some (runValues 16 simdMemoryModule 0
-        simdMemoryModule.initialStore []) := by native_decide
+        simdMemoryModule.initialStore []) := by decide +kernel
 
 def simdMemoryVariantsModule : Module :=
   { funcs :=
@@ -2197,19 +2197,19 @@ theorem simd_load_ext_unsigned :
     (runSteps 6 (simdMemoryVariantsConfig 0)).result.values? =
       some [.v128
         (Simd.ofLanes 16
-          [0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70, 0x80])] := by native_decide
+          [0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70, 0x80])] := by decide +kernel
 
 theorem simd_load_splat :
     (runSteps 6 (simdMemoryVariantsConfig 1)).result.values? =
-      some [.v128 (Simd.ofLanes 16 (List.replicate 8 0x1234))] := by native_decide
+      some [.v128 (Simd.ofLanes 16 (List.replicate 8 0x1234))] := by decide +kernel
 
 theorem simd_load_zero :
     (runSteps 6 (simdMemoryVariantsConfig 2)).result.values? =
-      some [.v128 (BitVec.ofNat 128 0x89ABCDEF)] := by native_decide
+      some [.v128 (BitVec.ofNat 128 0x89ABCDEF)] := by decide +kernel
 
 theorem simd_lane_store_load :
     (runSteps 8 (simdMemoryVariantsConfig 3)).result.values? =
-      some [.i32 (UInt32.ofNat (Simd.getLane 16 2 simdMemoryValue))] := by native_decide
+      some [.i32 (UInt32.ofNat (Simd.getLane 16 2 simdMemoryValue))] := by decide +kernel
 
 theorem simd_memory_variants_match_big_step :
     (runSteps 6 (simdMemoryVariantsConfig 0)).result.values? =
@@ -2223,7 +2223,7 @@ theorem simd_memory_variants_match_big_step :
           simdMemoryVariantsModule.initialStore []) ∧
       (runSteps 8 (simdMemoryVariantsConfig 3)).result.values? =
         some (runValues 24 simdMemoryVariantsModule 3
-          simdMemoryVariantsModule.initialStore []) := by native_decide
+          simdMemoryVariantsModule.initialStore []) := by decide +kernel
 
 def simdMemoryVariantTrapConfig : Config Unit :=
   { expr := .running
@@ -2267,7 +2267,7 @@ def crossMemoryConfig : Config Unit :=
 
 theorem cross_memory_copy_result :
     (runSteps 7 crossMemoryConfig).result.values? =
-      some [.i32 0xC0DEC0DE] := by native_decide
+      some [.i32 0xC0DEC0DE] := by decide +kernel
 
 def crossMemoryPhysicalResult : RunnerResult Unit → Bool
   | .success _ store =>
@@ -2276,11 +2276,11 @@ def crossMemoryPhysicalResult : RunnerResult Unit → Bool
   | _ => false
 
 theorem cross_memory_copy_preserves_source :
-    crossMemoryPhysicalResult (runSteps 7 crossMemoryConfig).result = true := by native_decide
+    crossMemoryPhysicalResult (runSteps 7 crossMemoryConfig).result = true := by decide +kernel
 
 theorem cross_memory_copy_matches_big_step :
     (runSteps 7 crossMemoryConfig).result.values? =
-      some (runValues 20 crossMemoryModule 0 crossMemoryInitialStore []) := by native_decide
+      some (runValues 20 crossMemoryModule 0 crossMemoryInitialStore []) := by decide +kernel
 
 def indexedMemoryModule : Module :=
   { funcs :=
@@ -2322,7 +2322,7 @@ def indexedMemoryResultMatches : RunnerResult Unit → Bool
 /-- The indexed instruction updates only memory 1; stable memory identities
 are restored before the transition becomes observable. -/
 theorem indexed_memory_roundtrip_result_matches :
-    indexedMemoryResultMatches (runSteps 6 indexedMemoryConfig).result = true := by native_decide
+    indexedMemoryResultMatches (runSteps 6 indexedMemoryConfig).result = true := by decide +kernel
 
 theorem indexed_memory_roundtrip_terminates :
     TerminatesWith indexedMemoryConfig
@@ -2335,7 +2335,7 @@ theorem indexed_memory_roundtrip_terminates :
 theorem indexed_memory_roundtrip_matches_big_step :
     (runSteps 6 indexedMemoryConfig).result.values? =
       some (runValues 20 indexedMemoryModule 0
-        indexedMemoryModule.initialStore []) := by native_decide
+        indexedMemoryModule.initialStore []) := by decide +kernel
 
 def indexedMemoryTrapConfig : Config Unit :=
   { indexedMemoryConfig with
@@ -2401,14 +2401,14 @@ theorem host_call_run :
     (runSteps 4 smallStepHostConfig).result =
       .success [.i32 42] smallStepHostFinalStore := by rfl
 theorem host_call_returns_and_updates_memory :
-    smallStepHostPhysicalResult (runSteps 4 smallStepHostConfig).result = true := by native_decide
+    smallStepHostPhysicalResult (runSteps 4 smallStepHostConfig).result = true := by decide +kernel
 
 /-- A host call may update physical memory atomically; the relational contract
 records both its returned value and the committed store effect. -/
 theorem host_call_terminates :
     TerminatesWith smallStepHostConfig (fun values store =>
       values = [.i32 42] ∧ store.wasm.mem.read32 200 = 41) :=
-  runSteps_success_terminates_eq_values host_call_run (by native_decide)
+  runSteps_success_terminates_eq_values host_call_run (by decide +kernel)
 
 theorem host_call_partial :
     PartiallyMeets smallStepHostConfig (fun values store =>
@@ -2418,7 +2418,7 @@ theorem host_call_partial :
 theorem host_call_matches_big_step :
     (runSteps 4 smallStepHostConfig).result.values? =
       some (runValues 16 smallStepHostModule 1
-        smallStepHostModule.initialStore [.i32 41] smallStepHostEnv) := by native_decide
+        smallStepHostModule.initialStore [.i32 41] smallStepHostEnv) := by decide +kernel
 
 def smallStepHostEntryConfig : Config Unit :=
   { expr := .running
@@ -2433,7 +2433,7 @@ theorem host_entry_initialization :
       [.i32 10] = .ok smallStepHostEntryConfig := by rfl
 theorem host_entry_executes :
     (runSteps 2 smallStepHostEntryConfig).result.values? =
-      some [.i32 11] := by native_decide
+      some [.i32 11] := by decide +kernel
 
 def smallStepTrapHost : HostFn Unit :=
   { invoke := fun store _ =>
@@ -2466,7 +2466,7 @@ def smallStepHostTrapResult : RunnerResult Unit → Bool
   | _ => false
 
 theorem host_trap_preserves_committed_effect :
-    smallStepHostTrapResult (runSteps 1 smallStepTrapConfig).result = true := by native_decide
+    smallStepHostTrapResult (runSteps 1 smallStepTrapConfig).result = true := by decide +kernel
 
 theorem host_trap_run :
     (runSteps 1 smallStepTrapConfig).result =
@@ -2510,11 +2510,11 @@ def smallStepHostDispatchConfig (localFunctionIndex : Nat) : Config Unit :=
 
 theorem indirect_host_call_returns_and_updates_memory :
     smallStepHostPhysicalResult
-      (runSteps 10 (smallStepHostDispatchConfig 0)).result = true := by native_decide
+      (runSteps 10 (smallStepHostDispatchConfig 0)).result = true := by decide +kernel
 
 theorem reference_host_call_returns_and_updates_memory :
     smallStepHostPhysicalResult
-      (runSteps 10 (smallStepHostDispatchConfig 1)).result = true := by native_decide
+      (runSteps 10 (smallStepHostDispatchConfig 1)).result = true := by decide +kernel
 
 theorem indirect_and_reference_host_calls_match_big_step :
     (runSteps 10 (smallStepHostDispatchConfig 0)).result.values? =
@@ -2524,7 +2524,7 @@ theorem indirect_and_reference_host_calls_match_big_step :
       (runSteps 10 (smallStepHostDispatchConfig 1)).result.values? =
         some (runValues 16 smallStepHostDispatchModule 2
           smallStepHostDispatchModule.initialStore [.i32 41]
-          smallStepHostEnv) := by native_decide
+          smallStepHostEnv) := by decide +kernel
 
 def smallStepGcModule : Module :=
   { gcTypes :=
@@ -2548,7 +2548,7 @@ def smallStepGcConfig (functionIndex : Nat) : Config Unit :=
 
 theorem gc_i31_round_trip :
     (runSteps 6 (smallStepGcConfig 0)).result.values? =
-      some [.i32 0x7FFFFFFF] := by native_decide
+      some [.i32 0x7FFFFFFF] := by decide +kernel
 
 def smallStepGcPhysicalResult : RunnerResult Unit → Bool
   | .success [.i32 7] store => store.wasm.gcHeap.length == 1
@@ -2556,7 +2556,7 @@ def smallStepGcPhysicalResult : RunnerResult Unit → Bool
 
 theorem gc_struct_allocation_and_read :
     smallStepGcPhysicalResult
-      (runSteps 6 (smallStepGcConfig 1)).result = true := by native_decide
+      (runSteps 6 (smallStepGcConfig 1)).result = true := by decide +kernel
 
 theorem gc_struct_terminates :
     TerminatesWith (smallStepGcConfig 1) (fun values store =>
@@ -2584,7 +2584,7 @@ def smallStepGcNullI31Config : Config Unit :=
 
 theorem gc_null_i31_structured_trap :
     ((runSteps 2 smallStepGcNullI31Config).result.trapReason? ==
-      some .nullI31Reference) = true := by native_decide
+      some .nullI31Reference) = true := by decide +kernel
 
 theorem gc_null_i31_trapsWith :
     TrapsWith smallStepGcNullI31Config .nullI31Reference
@@ -2597,7 +2597,7 @@ theorem gc_examples_match_big_step :
           smallStepGcModule.initialStore []) ∧
       (runSteps 6 (smallStepGcConfig 1)).result.values? =
         some (runValues 16 smallStepGcModule 1
-          smallStepGcModule.initialStore []) := by native_decide
+          smallStepGcModule.initialStore []) := by decide +kernel
 
 def smallStepExceptionModule : Module :=
   { tags := [{ params := [.i32] }]
@@ -2631,7 +2631,7 @@ def smallStepExceptionConfig (functionIndex : Nat) : Config Unit :=
 
 theorem exception_is_caught_with_arguments :
     (runSteps 8 (smallStepExceptionConfig 0)).result.values? =
-      some [.i32 42] := by native_decide
+      some [.i32 42] := by decide +kernel
 
 theorem caught_exception_terminates :
     TerminatesWith (smallStepExceptionConfig 0)
@@ -2702,7 +2702,7 @@ theorem nested_exception_marker_unwinds :
 
 theorem exception_unwinds_across_call_frame :
     (runSteps 12 (smallStepExceptionConfig 3)).result.values? =
-      some [.i32 31] := by native_decide
+      some [.i32 31] := by decide +kernel
 
 def smallStepCatchRefPhysicalResult : RunnerResult Unit → Bool
   | .trapped (.uncaughtException 0 [.i32 9]) store =>
@@ -2711,11 +2711,11 @@ def smallStepCatchRefPhysicalResult : RunnerResult Unit → Bool
 
 theorem catch_ref_registers_and_rethrows_package :
     smallStepCatchRefPhysicalResult
-      (runSteps 12 (smallStepExceptionConfig 4)).result = true := by native_decide
+      (runSteps 12 (smallStepExceptionConfig 4)).result = true := by decide +kernel
 
 theorem caught_exception_matches_big_step :
     (runSteps 8 (smallStepExceptionConfig 0)).result.values? =
       some (runValues 20 smallStepExceptionModule 0
-        smallStepExceptionModule.initialStore []) := by native_decide
+        smallStepExceptionModule.initialStore []) := by decide +kernel
 
 end Wasm.Examples.SmallStep

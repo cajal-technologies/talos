@@ -135,12 +135,12 @@ def memLoadConfig : Config Unit :=
   internalConfig memLoadModule memLoadEnv [.i32 0]
 
 theorem inc_returns_plus_one :
-    (runSteps 3 incConfig).result.values? = some [.i32 42] := by native_decide
+    (runSteps 3 incConfig).result.values? = some [.i32 42] := by decide +kernel
 
 theorem abort_propagates_trap :
     (match (runSteps 1 abortConfig).result with
       | .trapped reason _ => some reason.message
-      | _ => none) = some "host abort" := by native_decide
+      | _ => none) = some "host abort" := by decide +kernel
 
 theorem abort_trapsWith :
     TrapsWith abortConfig (.host "host abort")
@@ -177,7 +177,7 @@ theorem remaining_imported_call_forms_propagate_exceptions :
           throwReturnCallRefConfig.store := ⟨rfl, rfl, rfl⟩
 
 theorem memLoad_reads_caller_memory :
-    (runSteps 3 memLoadConfig).result.values? = some [.i32 42] := by native_decide
+    (runSteps 3 memLoadConfig).result.values? = some [.i32 42] := by decide +kernel
 
 def incCallConfig (env : HostEnv Unit) (st : Store Unit)
     (n : UInt32) : Config Unit :=

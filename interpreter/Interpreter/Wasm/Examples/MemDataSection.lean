@@ -17,7 +17,7 @@ def memModule : Module :=
         data := [{ offset := some 0, bytes := [0x42, 0x43, 0x44, 0x45] }] } }
 
 theorem memDataSection_read32_zero :
-    (memModule.initialStore (α := Unit)).mem.read32 0 = 0x45444342 := by native_decide
+    (memModule.initialStore (α := Unit)).mem.read32 0 = 0x45444342 := by decide +kernel
 
 def memDataStore : MachineStore Unit :=
   { runtime := { instances := #[{ module := memModule, host := {} }], entry := ⟨0⟩ }
@@ -39,7 +39,7 @@ theorem memDataSection_terminates :
     TerminatesWith memDataConfig (fun values store =>
       values = [.i32 7] ∧
       store.wasm.mem.read32 0 = 0x45444342) :=
-  runSteps_success_terminates_eq_values memDataSection_runs (by native_decide)
+  runSteps_success_terminates_eq_values memDataSection_runs (by decide +kernel)
 
 theorem memDataSection_partial :
     PartiallyMeets memDataConfig (fun values store =>

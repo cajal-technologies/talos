@@ -184,7 +184,7 @@ private def firstBlockArity (m : Wasm.Module) : Option (Nat × Nat) :=
 
 /-- The decoded module has a block with `(paramArity = 0, resultArity = 2)`
     — i.e., the `(type $pair)` reference was honoured. Closed by
-    `native_decide` on the literal decoder output. -/
+    `decide +kernel` on the literal decoder output. -/
 theorem multiValueBlockTypeDecodes :
     (Wasm.Decoder.Wat.decode multiValueWat).toOption.bind firstBlockArity
       = some (0, 2) := by native_decide

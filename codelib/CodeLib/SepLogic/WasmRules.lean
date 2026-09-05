@@ -580,7 +580,7 @@ theorem Mem.read32_byte0 {m : Mem} {addr value : UInt32}
     m.read8 addr = u32Byte value 0 := by
   have hlow (b0 b1 b2 b3 : UInt8) :
       (b0.toUInt32 ||| (b1.toUInt32 <<< 8) ||| (b2.toUInt32 <<< 16) |||
-        (b3.toUInt32 <<< 24)).toUInt8 = b0 := by bv_decide
+        (b3.toUInt32 <<< 24)).toUInt8 = b0 := UInt32.packBytes_byte0 b0 b1 b2 b3
   have h := congrArg UInt32.toUInt8 hread
   unfold Mem.read32 at h
   rw [hlow] at h
@@ -592,7 +592,7 @@ theorem Mem.read32_byte1 {m : Mem} {addr value : UInt32}
     m.read8 (addr + 1) = u32Byte value 1 := by
   have hbyte (b0 b1 b2 b3 : UInt8) :
       ((b0.toUInt32 ||| (b1.toUInt32 <<< 8) ||| (b2.toUInt32 <<< 16) |||
-        (b3.toUInt32 <<< 24)) >>> 8).toUInt8 = b1 := by bv_decide
+        (b3.toUInt32 <<< 24)) >>> 8).toUInt8 = b1 := UInt32.packBytes_byte1 b0 b1 b2 b3
   have h := congrArg (fun word : UInt32 => (word >>> 8).toUInt8) hread
   unfold Mem.read32 at h
   rw [hbyte] at h
@@ -604,7 +604,7 @@ theorem Mem.read32_byte2 {m : Mem} {addr value : UInt32}
     m.read8 (addr + 2) = u32Byte value 2 := by
   have hbyte (b0 b1 b2 b3 : UInt8) :
       ((b0.toUInt32 ||| (b1.toUInt32 <<< 8) ||| (b2.toUInt32 <<< 16) |||
-        (b3.toUInt32 <<< 24)) >>> 16).toUInt8 = b2 := by bv_decide
+        (b3.toUInt32 <<< 24)) >>> 16).toUInt8 = b2 := UInt32.packBytes_byte2 b0 b1 b2 b3
   have h := congrArg (fun word : UInt32 => (word >>> 16).toUInt8) hread
   unfold Mem.read32 at h
   rw [hbyte] at h
@@ -616,7 +616,7 @@ theorem Mem.read32_byte3 {m : Mem} {addr value : UInt32}
     m.read8 (addr + 3) = u32Byte value 3 := by
   have hbyte (b0 b1 b2 b3 : UInt8) :
       ((b0.toUInt32 ||| (b1.toUInt32 <<< 8) ||| (b2.toUInt32 <<< 16) |||
-        (b3.toUInt32 <<< 24)) >>> 24).toUInt8 = b3 := by bv_decide
+        (b3.toUInt32 <<< 24)) >>> 24).toUInt8 = b3 := UInt32.packBytes_byte3 b0 b1 b2 b3
   have h := congrArg (fun word : UInt32 => (word >>> 24).toUInt8) hread
   unfold Mem.read32 at h
   rw [hbyte] at h

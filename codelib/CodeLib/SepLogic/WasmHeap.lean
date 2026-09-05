@@ -1,5 +1,5 @@
 import CodeLib.SepLogic.Tactics
-import CodeLib.UInt32
+import CodeLib.ByteReassembly
 import Iris.Instances.Lib.FUpd
 import Iris.BI.Lib.GenHeap
 import Iris.BI.Lib.MonoNat
@@ -8,7 +8,6 @@ import Interpreter.Wasm.Mem
 import Interpreter.Wasm.Syntax
 import Interpreter.Wasm.Host
 import Interpreter.Wasm.SmallStep
-import Std.Tactic.BVDecide
 /-! # Wasm Memory as an Iris GenHeap
 Instantiates iris-lean's GenHeap for Wasm byte-level memory.
 Location = MemoryKey (memory id × byte address), Value = Option UInt8 (byte).
@@ -1046,65 +1045,6 @@ def u64Byte (v : UInt64) (n : Nat) : UInt8 :=
   | 6 => (v >>> 48).toUInt8
   | _ => (v >>> 56).toUInt8
 
-/-- Keep byte reconstruction kernel-checked: native decision axioms here would
-propagate into the shared 64-bit memory ownership facts and lifting rules. -/
-private theorem reassemble64_nat (n : Nat) (h : n < 2 ^ 64) :
-    n % 2 ^ 8 ||| (((n >>> 8) % 2 ^ 8) <<< 8) % 2 ^ 64 |||
-      (((n >>> 16) % 2 ^ 8) <<< 16) % 2 ^ 64 |||
-      (((n >>> 24) % 2 ^ 8) <<< 24) % 2 ^ 64 |||
-      (((n >>> 32) % 2 ^ 8) <<< 32) % 2 ^ 64 |||
-      (((n >>> 40) % 2 ^ 8) <<< 40) % 2 ^ 64 |||
-      (((n >>> 48) % 2 ^ 8) <<< 48) % 2 ^ 64 |||
-      (((n >>> 56) % 2 ^ 8) <<< 56) % 2 ^ 64 = n := by
-  apply Nat.eq_of_testBit_eq
-  intro i
-  simp only [Nat.testBit_or, Nat.testBit_mod_two_pow,
-    Nat.testBit_shiftLeft, Nat.testBit_shiftRight]
-  by_cases h8 : i < 8
-  · simp [h8, show i < 64 by omega, show ¬ i ≥ 8 by omega, show ¬ i ≥ 16 by omega,
-      show ¬ i ≥ 24 by omega, show ¬ i ≥ 32 by omega, show ¬ i ≥ 40 by omega,
-      show ¬ i ≥ 48 by omega, show ¬ i ≥ 56 by omega]
-  by_cases h16 : i < 16
-  · have heq : 8 + (i - 8) = i := by omega
-    simp [h8, heq, show i ≥ 8 by omega, show i < 64 by omega, show i - 8 < 8 by omega,
-      show ¬ i ≥ 16 by omega, show ¬ i ≥ 24 by omega, show ¬ i ≥ 32 by omega,
-      show ¬ i ≥ 40 by omega, show ¬ i ≥ 48 by omega, show ¬ i ≥ 56 by omega]
-  by_cases h24 : i < 24
-  · have heq : 16 + (i - 16) = i := by omega
-    simp [h8, heq, show i ≥ 16 by omega, show i < 64 by omega, show ¬ i - 8 < 8 by omega,
-      show i - 16 < 8 by omega, show ¬ i ≥ 24 by omega, show ¬ i ≥ 32 by omega,
-      show ¬ i ≥ 40 by omega, show ¬ i ≥ 48 by omega, show ¬ i ≥ 56 by omega]
-  by_cases h32 : i < 32
-  · have heq : 24 + (i - 24) = i := by omega
-    simp [h8, heq, show i ≥ 24 by omega, show i < 64 by omega, show ¬ i - 8 < 8 by omega,
-      show ¬ i - 16 < 8 by omega, show i - 24 < 8 by omega, show ¬ i ≥ 32 by omega,
-      show ¬ i ≥ 40 by omega, show ¬ i ≥ 48 by omega, show ¬ i ≥ 56 by omega]
-  by_cases h40 : i < 40
-  · have heq : 32 + (i - 32) = i := by omega
-    simp [h8, heq, show i ≥ 32 by omega, show i < 64 by omega, show ¬ i - 8 < 8 by omega,
-      show ¬ i - 16 < 8 by omega, show ¬ i - 24 < 8 by omega, show i - 32 < 8 by omega,
-      show ¬ i ≥ 40 by omega, show ¬ i ≥ 48 by omega, show ¬ i ≥ 56 by omega]
-  by_cases h48 : i < 48
-  · have heq : 40 + (i - 40) = i := by omega
-    simp [h8, heq, show i ≥ 40 by omega, show i < 64 by omega, show ¬ i - 8 < 8 by omega,
-      show ¬ i - 16 < 8 by omega, show ¬ i - 24 < 8 by omega, show ¬ i - 32 < 8 by omega,
-      show i - 40 < 8 by omega, show ¬ i ≥ 48 by omega, show ¬ i ≥ 56 by omega]
-  by_cases h56 : i < 56
-  · have heq : 48 + (i - 48) = i := by omega
-    simp [h8, heq, show i ≥ 48 by omega, show i < 64 by omega, show ¬ i - 8 < 8 by omega,
-      show ¬ i - 16 < 8 by omega, show ¬ i - 24 < 8 by omega, show ¬ i - 32 < 8 by omega,
-      show ¬ i - 40 < 8 by omega, show i - 48 < 8 by omega, show ¬ i ≥ 56 by omega]
-  by_cases h64 : i < 64
-  · have heq : 56 + (i - 56) = i := by omega
-    simp [h8, heq, show i ≥ 56 by omega, show i < 64 by omega, show ¬ i - 8 < 8 by omega,
-      show ¬ i - 16 < 8 by omega, show ¬ i - 24 < 8 by omega, show ¬ i - 32 < 8 by omega,
-      show ¬ i - 40 < 8 by omega, show ¬ i - 48 < 8 by omega, show i - 56 < 8 by omega]
-  · have hibound : n.testBit i = false :=
-      Nat.testBit_lt_two_pow
-        (Nat.lt_of_lt_of_le h (Nat.pow_le_pow_right (by decide) (by omega)))
-    simp [h8, hibound, show ¬ i < 64 by omega, show ¬ i - 8 < 8 by omega,
-      show ¬ i - 16 < 8 by omega, show ¬ i - 24 < 8 by omega, show ¬ i - 32 < 8 by omega,
-      show ¬ i - 40 < 8 by omega, show ¬ i - 48 < 8 by omega, show ¬ i - 56 < 8 by omega]
 
 theorem u64Byte_reassemble (v : UInt64) :
     (u64Byte v 0).toUInt64 ||| ((u64Byte v 1).toUInt64 <<< 8) |||
@@ -1118,7 +1058,7 @@ theorem u64Byte_reassemble (v : UInt64) :
   unfold u64Byte
   simp only [UInt64.toNat_or, UInt64.toNat_shiftLeft,
     UInt8.toNat_toUInt64, UInt64.toNat_toUInt8, UInt64.toNat_shiftRight]
-  exact reassemble64_nat v.toNat (UInt64.toNat_lt v)
+  exact Nat.reassemble64_of_lt v.toNat (UInt64.toNat_lt v)
 
 -- Multi-byte: u64 as 8 consecutive owned bytes (little-endian)
 def pointsTo_u64 (memId : Nat) (addr : UInt32) (v : UInt64) : IProp (WasmHeapGF α) :=
@@ -1247,7 +1187,21 @@ omit inst in
 theorem u16Byte_reassemble (v : UInt32) :
     (u16Byte v 0).toUInt32 ||| ((u16Byte v 1).toUInt32 <<< 8) = v &&& 0xFFFF := by
   unfold u16Byte
-  bv_decide
+  apply UInt32.toNat.inj
+  simp only [UInt32.toNat_or, UInt32.toNat_shiftLeft, UInt8.toNat_toUInt32,
+    UInt32.toNat_toUInt8, UInt32.toNat_shiftRight, UInt32.toNat_and]
+  change v.toNat % 2^8 ||| (((v.toNat >>> 8) % 2^8) <<< 8) % 2^32 =
+    v.toNat &&& (2^16 - 1)
+  apply Nat.eq_of_testBit_eq
+  intro i
+  simp only [Nat.testBit_or, Nat.testBit_and, Nat.testBit_mod_two_pow,
+    Nat.testBit_shiftLeft, Nat.testBit_shiftRight, Nat.testBit_two_pow_sub_one]
+  by_cases h8 : i < 8
+  · simp [h8, show i < 16 by omega, show ¬ i ≥ 8 by omega]
+  by_cases h16 : i < 16
+  · simp [h8, h16, show i < 32 by omega, show i ≥ 8 by omega,
+      show i - 8 < 8 by omega, show 8 + (i - 8) = i by omega]
+  · simp [h8, h16, show ¬ i - 8 < 8 by omega]
 
 -- Byte-range ownership: n consecutive bytes at `addr` in memory `memId`.
 def pointsToBytes (memId : Nat) (addr : UInt32) (bytes : List UInt8) :

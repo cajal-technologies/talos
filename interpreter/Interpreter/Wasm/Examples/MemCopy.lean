@@ -72,7 +72,7 @@ theorem copy_disjoint_terminates :
       store.wasm.mem.read32 0 = 0x44332211 ∧
       store.wasm.mem.read32 8 = 0x44332211) :=
   runSteps_success_terminates_eq_values
-    copy_disjoint_moves_bytes (by constructor <;> native_decide)
+    copy_disjoint_moves_bytes (by constructor <;> decide +kernel)
 
 theorem copy_disjoint_partial :
     PartiallyMeets copyDisjointConfig (fun values store =>
@@ -89,7 +89,7 @@ theorem copy_overlap_terminates :
       values = [.i64 0x8877443322112211] ∧
       store.wasm.mem.read32 2 = 0x44332211) :=
   runSteps_success_terminates_eq_values
-    copy_overlap_uses_pre_copy_bytes (by native_decide)
+    copy_overlap_uses_pre_copy_bytes (by decide +kernel)
 
 theorem copy_overlap_partial :
     PartiallyMeets copyOverlapConfig (fun values store =>

@@ -77,12 +77,12 @@ def m : Module :=
     elements := [{ tableIdx := some 0, offset := some 0, funcs := [some 0] }] }
 
 /-- `$sub <: $super` holds (the legitimate direction). -/
-theorem sub_subtype_super : m.gcTypeSubtype 1 0 = true := by native_decide
+theorem sub_subtype_super : m.gcTypeSubtype 1 0 = true := by decide +kernel
 
 /-- `$super <: $sub` does **not** hold. This is the relation the call sites
 require of the stored function's type (`$super`) against the call-site type
 (`$sub`); it fails, so the calls must trap. -/
-theorem super_not_subtype_sub : m.gcTypeSubtype 0 1 = false := by native_decide
+theorem super_not_subtype_sub : m.gcTypeSubtype 0 1 = false := by decide +kernel
 
 def callConfig : Config Unit :=
   { expr := .running
@@ -111,7 +111,7 @@ theorem call_indirect_traps :
   wasm_steps [.const, .const]
   exact Steps.cons
     (.callIndirectTypeMismatch rfl rfl rfl (by decide) (by decide)
-      rfl rfl rfl (by native_decide))
+      rfl rfl rfl (by decide +kernel))
     (Steps.refl _)
 
 /-- `return_call_indirect (type $sub)` traps for the same reason — the
@@ -124,7 +124,7 @@ theorem return_call_indirect_traps :
   wasm_steps [.const, .const]
   exact Steps.cons
     (.returnCallIndirectTypeMismatch rfl rfl rfl (by decide)
-      rfl rfl rfl (by native_decide))
+      rfl rfl rfl (by decide +kernel))
     (Steps.refl _)
 
 theorem call_indirect_trapsWith :

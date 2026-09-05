@@ -23,7 +23,7 @@ def tickModule : Module :=
     globals := [{ init := .i32 0 }] }
 
 theorem tickModule_initial_global :
-    (tickModule.initialStore (α := Unit)).globals.globals = [.i32 0] := by native_decide
+    (tickModule.initialStore (α := Unit)).globals.globals = [.i32 0] := by decide +kernel
 
 def tickStore (st : Store Unit) : MachineStore Unit :=
   { runtime := { instances := #[{ module := tickModule, host := {} }], entry := ⟨0⟩ }
@@ -108,9 +108,9 @@ theorem tick_three_calls :
     (runSteps 6 (tickConfig tickAfterOne)).result =
         .success [.i32 2] (tickFinalStore tickAfterOne 2) ∧
     tickAfterTwo.globals.globals[0]? = some (.i32 3) :=
-  ⟨tick_runs tickInitialStore 0 (by native_decide),
-    tick_runs tickAfterZero 1 (by native_decide),
-    tick_runs tickAfterOne 2 (by native_decide),
-    by native_decide⟩
+  ⟨tick_runs tickInitialStore 0 (by decide +kernel),
+    tick_runs tickAfterZero 1 (by decide +kernel),
+    tick_runs tickAfterOne 2 (by decide +kernel),
+    by decide +kernel⟩
 
 end Wasm

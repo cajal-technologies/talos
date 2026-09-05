@@ -29,12 +29,17 @@ abbrev shiftMask : UInt32 := 63
 as a Rust `u32`. -/
 abbrev shiftAmountFrag : Program := [.const shiftMask, .and, .extendUI32]
 
-/-- The mask-and-extend prefix normalises the shift count to `b % 64`. This is
-the only `bv_decide` for `u64` shifts; it speaks of the shift *amount* only (not
-the shift direction), so it is proven here once and reused by every shift
+/-- The mask-and-extend prefix normalises the shift count to `b % 64`.
+It speaks of the shift *amount* only (not the shift direction), so the
+kernel-checked mask identity is proved here once and reused by every shift
 (`shl`, `shr`, and any future shift-like op). -/
 theorem shiftAmount_norm (b : UInt32) :
-    UInt64.ofNat (shiftMask &&& b).toNat % 64 = b.toUInt64 % 64 := by simp; bv_decide
+    UInt64.ofNat (shiftMask &&& b).toNat % 64 = b.toUInt64 % 64 := by
+  apply UInt64.toNat.inj
+  simp only [UInt64.toNat_mod, UInt64.toNat_ofNat, UInt32.toNat_and, UInt32.toNat_toUInt64]
+  change ((63 &&& b.toNat) % 2^64) % 64 = b.toNat % 64
+  rw [Nat.and_comm, show (63 : Nat) = 2^6-1 from rfl, Nat.and_two_pow_sub_one_eq_mod]
+  omega
 
 end U64
 

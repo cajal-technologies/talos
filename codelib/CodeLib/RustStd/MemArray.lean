@@ -46,13 +46,29 @@ theorem Mem.write32_read32 (memory : Mem) (base : UInt32) :
     congr
     funext i
     by_cases h0 : i = base.toNat
-    · subst i; simp only [if_pos]; bv_decide
+    · subst i; simp only [if_pos]
+      simpa only [UInt32.toUInt8_and,
+        show (255 : UInt32).toUInt8 = (-1 : UInt8) from rfl, UInt8.and_neg_one] using
+        UInt32.packBytes_byte0 (bytes base.toNat) (bytes (base.toNat + 1))
+          (bytes (base.toNat + 2)) (bytes (base.toNat + 3))
     by_cases h1 : i = base.toNat + 1
-    · subst i; simp only [if_neg h0, if_pos]; bv_decide
+    · subst i; simp only [if_neg h0, if_pos]
+      simpa only [UInt32.toUInt8_and,
+        show (255 : UInt32).toUInt8 = (-1 : UInt8) from rfl, UInt8.and_neg_one] using
+        UInt32.packBytes_byte1 (bytes base.toNat) (bytes (base.toNat + 1))
+          (bytes (base.toNat + 2)) (bytes (base.toNat + 3))
     by_cases h2 : i = base.toNat + 2
-    · subst i; simp only [if_neg h0, if_neg h1, if_pos]; bv_decide
+    · subst i; simp only [if_neg h0, if_neg h1, if_pos]
+      simpa only [UInt32.toUInt8_and,
+        show (255 : UInt32).toUInt8 = (-1 : UInt8) from rfl, UInt8.and_neg_one] using
+        UInt32.packBytes_byte2 (bytes base.toNat) (bytes (base.toNat + 1))
+          (bytes (base.toNat + 2)) (bytes (base.toNat + 3))
     by_cases h3 : i = base.toNat + 3
-    · subst i; simp only [if_neg h0, if_neg h1, if_neg h2, if_pos]; bv_decide
+    · subst i; simp only [if_neg h0, if_neg h1, if_neg h2, if_pos]
+      simpa only [UInt32.toUInt8_and,
+        show (255 : UInt32).toUInt8 = (-1 : UInt8) from rfl, UInt8.and_neg_one] using
+        UInt32.packBytes_byte3 (bytes base.toNat) (bytes (base.toNat + 1))
+          (bytes (base.toNat + 2)) (bytes (base.toNat + 3))
     simp [h0, h1, h2, h3]
 
 /-- Reading consecutive words and writing them back preserves the memory. -/

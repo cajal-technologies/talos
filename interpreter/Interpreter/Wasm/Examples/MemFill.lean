@@ -65,7 +65,7 @@ theorem fill_then_load_terminates :
       store.wasm.mem.read64 0 = 0xABABABABABABABAB ∧
       store.wasm.mem.read8 8 = 0) :=
   runSteps_success_terminates_eq_values
-    fill_then_load_returns_repeated_byte (by constructor <;> native_decide)
+    fill_then_load_returns_repeated_byte (by constructor <;> decide +kernel)
 
 theorem fill_then_load_partial :
     PartiallyMeets fillThenReadConfig (fun values store =>

@@ -27,7 +27,7 @@ def replaceModule : Module :=
     memory := some { pagesMin := 1, data := [{ offset := some 0, bytes := [42, 0, 0, 0] }] } }
 
 theorem replaceModule_init_mem :
-    (replaceModule.initialStore (α := Unit)).mem.read32 0 = 42 := by native_decide
+    (replaceModule.initialStore (α := Unit)).mem.read32 0 = 42 := by decide +kernel
 
 def replaceStore (st : Store Unit) : MachineStore Unit :=
   { runtime := { instances := #[{ module := replaceModule, host := {} }], entry := ⟨0⟩ }

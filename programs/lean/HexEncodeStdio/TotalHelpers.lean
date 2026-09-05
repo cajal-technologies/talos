@@ -46,7 +46,7 @@ theorem twp_store8_zero {hlc : HasLC} {α : Type}
           { store.wasm with mem := store.wasm.mem.write8 address value.toUInt8 } },
       [], ⟨rfl, .instruction (.store8 0), rfl,
         by simpa only [UInt32.add_zero, Wasm.SmallStep.setMemory_eq] using
-          (Step.store8 (α := α) (value := value) hbound)⟩⟩
+          (Step.store8 (α := α) (address := Value.i32 address) (value := value) rfl hbound)⟩⟩
   iintro %κ %e₂ %store₂ %forks %Hstep
   rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
   change forks = [] at hforks
@@ -62,7 +62,7 @@ theorem twp_store8_zero {hlc : HasLC} {α : Type}
         { store with wasm :=
             { store.wasm with mem := store.wasm.mem.write8 address value.toUInt8 } }⟩ :=
     by simpa only [UInt32.add_zero, Wasm.SmallStep.setMemory_eq] using
-      (Step.store8 (α := α) (value := value) hbound)
+      (Step.store8 (α := α) (address := Value.i32 address) (value := value) rfl hbound)
   obtain ⟨rfl, hconfig⟩ := step_deterministic expectedStep wasmStep
   have parts := Config.mk.inj hconfig
   have hexpr := parts.1

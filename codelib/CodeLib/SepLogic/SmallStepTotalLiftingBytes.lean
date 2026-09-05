@@ -72,7 +72,7 @@ theorem twp_load8U
     exact ⟨.running
         ⟨⟨params, localValues, .i32 byte.toUInt32 :: values⟩,
           code, arity, remainder, controls, calls⟩,
-      store, [], ⟨rfl, _, rfl, by simpa [Hread] using Step.load8U hbound⟩⟩
+      store, [], ⟨rfl, _, rfl, by simpa [Hread] using Step.load8U (address := Value.i32 address) rfl hbound⟩⟩
   iintro %κ %e₂ %store₂ %forks %Hstep
   rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
   change forks = [] at hforks
@@ -84,7 +84,7 @@ theorem twp_load8U
       (.instruction (.load8U offset))
       ⟨.running ⟨⟨params, localValues, .i32 byte.toUInt32 :: values⟩,
         code, arity, remainder, controls, calls⟩, store⟩ := by
-    simpa [Hread] using (Step.load8U (α := α) hbound)
+    simpa [Hread] using (Step.load8U (α := α) (address := Value.i32 address) rfl hbound)
   obtain ⟨rfl, hconfig⟩ :=
     step_deterministic expectedStep wasmStep
   have parts := Config.mk.inj hconfig
@@ -170,7 +170,9 @@ theorem twp_store8
       { store with wasm :=
           { store.wasm with
             mem := store.wasm.mem.write8 (address + offset) value.toUInt8 } },
-      [], ⟨rfl, _, rfl, Step.store8 hbound⟩⟩
+      [], ⟨rfl, _, rfl, by
+        simpa only [setMemory_eq] using
+          Step.store8 (address := Value.i32 address) rfl hbound⟩⟩
   iintro %κ %e₂ %store₂ %forks %Hstep
   rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
   change forks = [] at hforks
@@ -185,8 +187,9 @@ theorem twp_store8
         { store with wasm :=
             { store.wasm with
               mem := store.wasm.mem.write8
-                (address + offset) value.toUInt8 } }⟩ :=
-    Step.store8 hbound
+                (address + offset) value.toUInt8 } }⟩ := by
+    simpa only [setMemory_eq] using
+      Step.store8 (address := Value.i32 address) rfl hbound
   obtain ⟨rfl, hconfig⟩ :=
     step_deterministic expectedStep wasmStep
   have parts := Config.mk.inj hconfig
@@ -260,20 +263,7 @@ theorem twp_store32_addr
       (by simpa using h1) (by simpa using h2) (by simpa using h3))
 
 
-theorem twp_ltS
-    {params localValues values : List Value}
-    {lhs rhs result : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hresult : result = if lhs.toInt32 < rhs.toInt32 then 1 else 0) :
-    WP (.running
-      ⟨⟨params, localValues, .i32 result :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }] ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-        .ltS :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      [{ Φ }] :=
-  twp_pureStep _ _ _ (fun _ => Step.ltS hresult)
+-- `twp_ltS` is supplied by the imported generic total lifting layer.
 
 theorem twp_drop
     {params localValues values : List Value}

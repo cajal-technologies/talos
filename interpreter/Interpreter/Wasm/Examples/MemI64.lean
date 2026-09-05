@@ -60,27 +60,27 @@ def i64MemConfig (index : Nat) : Config Unit :=
     store := i64MemStore }
 
 theorem load64_returns_word :
-    (runSteps 8 (i64MemConfig 0)).result.values? = some [.i64 0xFF2233445566FF88] := by native_decide
+    (runSteps 8 (i64MemConfig 0)).result.values? = some [.i64 0xFF2233445566FF88] := by decide +kernel
 theorem load8UI64_zero_extends :
-    (runSteps 8 (i64MemConfig 1)).result.values? = some [.i64 0xFF] := by native_decide
+    (runSteps 8 (i64MemConfig 1)).result.values? = some [.i64 0xFF] := by decide +kernel
 theorem load8SI64_sign_extends :
-    (runSteps 8 (i64MemConfig 2)).result.values? = some [.i64 0xFFFFFFFFFFFFFFFF] := by native_decide
+    (runSteps 8 (i64MemConfig 2)).result.values? = some [.i64 0xFFFFFFFFFFFFFFFF] := by decide +kernel
 theorem load16UI64_zero_extends :
-    (runSteps 8 (i64MemConfig 3)).result.values? = some [.i64 0xFF88] := by native_decide
+    (runSteps 8 (i64MemConfig 3)).result.values? = some [.i64 0xFF88] := by decide +kernel
 theorem load16SI64_sign_extends :
-    (runSteps 8 (i64MemConfig 4)).result.values? = some [.i64 0xFFFFFFFFFFFFFF88] := by native_decide
+    (runSteps 8 (i64MemConfig 4)).result.values? = some [.i64 0xFFFFFFFFFFFFFF88] := by decide +kernel
 theorem load32UI64_zero_extends :
-    (runSteps 8 (i64MemConfig 5)).result.values? = some [.i64 0xFF223344] := by native_decide
+    (runSteps 8 (i64MemConfig 5)).result.values? = some [.i64 0xFF223344] := by decide +kernel
 theorem load32SI64_sign_extends :
-    (runSteps 8 (i64MemConfig 6)).result.values? = some [.i64 0xFFFFFFFFFF223344] := by native_decide
+    (runSteps 8 (i64MemConfig 6)).result.values? = some [.i64 0xFFFFFFFFFF223344] := by decide +kernel
 theorem store8I64_roundtrip :
-    (runSteps 8 (i64MemConfig 7)).result.values? = some [.i64 0xCD] := by native_decide
+    (runSteps 8 (i64MemConfig 7)).result.values? = some [.i64 0xCD] := by decide +kernel
 theorem store16I64_roundtrip :
-    (runSteps 8 (i64MemConfig 8)).result.values? = some [.i64 0xCDEF] := by native_decide
+    (runSteps 8 (i64MemConfig 8)).result.values? = some [.i64 0xCDEF] := by decide +kernel
 theorem store32I64_roundtrip :
-    (runSteps 8 (i64MemConfig 9)).result.values? = some [.i64 0xABCDEF01] := by native_decide
+    (runSteps 8 (i64MemConfig 9)).result.values? = some [.i64 0xABCDEF01] := by decide +kernel
 theorem store64_roundtrip :
-    (runSteps 8 (i64MemConfig 10)).result.values? = some [.i64 0x1122334455667788] := by native_decide
+    (runSteps 8 (i64MemConfig 10)).result.values? = some [.i64 0x1122334455667788] := by decide +kernel
 
 theorem i64Mem_terminates :
     TerminatesWith (i64MemConfig 0) (fun vs _ => vs = [.i64 0xFF2233445566FF88]) ∧

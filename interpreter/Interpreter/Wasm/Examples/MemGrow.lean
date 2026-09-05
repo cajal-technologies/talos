@@ -77,7 +77,7 @@ theorem memoryGrow_terminates :
       store.wasm.mem.pages = 3 ∧
       store.wasm.mem.read32 64 = 0xC0DEC0DE) :=
   runSteps_success_terminates_eq_values
-    memoryGrow_bumps_size (by constructor <;> native_decide)
+    memoryGrow_bumps_size (by constructor <;> decide +kernel)
 
 theorem memoryGrow_partial :
     PartiallyMeets growThenSizeConfig (fun values store =>

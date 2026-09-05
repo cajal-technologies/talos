@@ -37,12 +37,18 @@ def CompositeType.structSubtype : CompositeType → CompositeType → Bool
 
 /-- Recursively collect every instruction in a program, descending into the
 bodies of `block`/`loop`/`if`/`try_table`. -/
-partial def Program.allInstrs (p : Program) : List Instruction :=
-  p.flatMap fun i => i :: match i with
+def Program.allInstrs (p : Program) : List Instruction :=
+  p.attach.flatMap fun ⟨i, _⟩ => i :: match i with
     | .block _ _ body _ _ | .loop _ _ body _ _ => Program.allInstrs body
     | .iff _ _ thn els _ _ => Program.allInstrs thn ++ Program.allInstrs els
     | .tryTable _ _ _ body _ _ => Program.allInstrs body
     | _ => []
+termination_by sizeOf p
+decreasing_by
+  all_goals
+    have h := List.sizeOf_lt_of_mem (by assumption : _ ∈ p)
+    simp_all
+    omega
 
 /-- The GC type indices an instruction's immediates reference. Function type
 indices on `(return_)call_indirect` and `(return_)call_ref` index `Module.types`
@@ -662,10 +668,10 @@ instruction adds one inner label. Branches outside that range are rejected
 before execution, rather than becoming a checked-step `InternalError`.
 -/
 
-partial def Program.checkBranchDepth
+def Program.checkBranchDepth
     (labels : Nat) (program : Program) : Except String Unit := do
-  for instruction in program do
-    match instruction with
+  for _h : instruction in program do
+    match hi : instruction with
     | .block _ _ body _ _ | .loop _ _ body _ _ =>
         Program.checkBranchDepth (labels + 1) body
     | .iff _ _ thenBody elseBody _ _ =>
@@ -682,6 +688,12 @@ partial def Program.checkBranchDepth
     | .gc (.brOnCast depth _ _) | .gc (.brOnCastFail depth _ _) =>
         if depth > labels then throw "unknown label"
     | _ => pure ()
+termination_by sizeOf program
+decreasing_by
+  all_goals
+    have h := List.sizeOf_lt_of_mem _h
+    simp_all
+    omega
 
 /-! ### Operand-stack type check
 
@@ -1159,7 +1171,7 @@ def Instruction.straightSig (m : Module) (locals : List ValueType)
 
 /-- Recursively check a program. `none` means an unsupported instruction was
 encountered, so callers conservatively accept the whole function. -/
-partial def Program.checkTypes
+def Program.checkTypes
     (m : Module) (locals functionResults : List ValueType)
     (labels : List LabelType) (program : Program) (state : CheckState) :
     Except String (Option CheckState) := do
@@ -1461,6 +1473,7 @@ partial def Program.checkTypes
     | none => return none
     | some next =>
         Program.checkTypes m locals functionResults labels rest next
+termination_by sizeOf program
 
 /-- Operand-stack type check of one function body. Unsupported instructions
 conservatively make the check succeed. -/

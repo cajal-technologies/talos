@@ -1,5 +1,5 @@
 import Interpreter.Wasm
-import CodeLib.UInt32
+import CodeLib.ByteReassembly
 import Std.Tactic.BVDecide
 
 /-!
@@ -68,7 +68,12 @@ returns the stored value. -/
   simp only [Mem.read64, Mem.write64]
   simp only [Nat.add_eq_left, OfNat.ofNat_ne_zero, Nat.succ_ne_self, ↓reduceIte,
              Nat.reduceEqDiff]
-  bv_decide
+  simp only [UInt64.toUInt8_and,
+    show (255 : UInt64).toUInt8 = (-1 : UInt8) from rfl, UInt8.and_neg_one]
+  apply UInt64.toNat_inj.mp
+  simp only [UInt64.toNat_or, UInt64.toNat_shiftLeft, UInt8.toNat_toUInt64,
+    UInt64.toNat_toUInt8, UInt64.toNat_shiftRight]
+  exact Nat.reassemble64_of_lt v.toNat (UInt64.toNat_lt v)
 
 /-! ## Byte-level write footprints
 
