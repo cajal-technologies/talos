@@ -21,6 +21,9 @@ into the representation:
   one map.  `sortByKey` is that step, and `CodeLib.RustStd.HashMap.Codec`
   builds the encoding on it.
 
+Every lookup below compares keys with `BEq`.  The model reads that comparison
+as equality, so each lemma that looks a key up takes `[LawfulBEq K]`.
+
 Like `CodeLib.RustStd.Vec.Basic`, this file is a spec-level model rather than
 a wasm-level `_wp` lemma file.  Its consumer is `Project.RustHashMap.Spec`,
 which states the contract of each `rust_hash_map` export in these terms.
@@ -31,7 +34,8 @@ reads it back.  `nodupKeys_insert`, `nodupKeys_ofEntries` and `nodupKeys_remove`
 discharge the key-uniqueness hypothesis those lemmas take, for the map an export
 decodes rather than for an arbitrary list; without them a reader can state the
 round trip but cannot apply it.  The algebra of `insert` and `remove` against
-`get` waits for a proof that needs it.
+`get` waits for a proof that needs it.  `pairwise_sortByKey` is the one
+exception to that rule: it has no consumer, and it says what the sort is for.
 -/
 
 namespace Wasm.RustStd.HashMap
@@ -69,7 +73,11 @@ def insert [BEq K] (m : Map K V) (key : K) (value : V) : Option V × Map K V :=
       (some old.2,
         m.map (fun entry => if entry.1 == key then (key, value) else entry))
 
-/-- `HashMap::remove`: drop the entry under `key` and return its value. -/
+/-- `HashMap::remove`: drop the entry under `key` and return its value.
+
+The filter drops every entry whose key matches, while the returned value is
+the first match.  The two agree on any map with `NodupKeys`, which is what
+`nodupKeys_ofEntries` gives for the map an export decodes. -/
 def remove [BEq K] (m : Map K V) (key : K) : Option V × Map K V :=
   (get m key, m.filter (fun entry => !(entry.1 == key)))
 
@@ -105,6 +113,28 @@ Consumer: `Wasm.RustStd.Borsh.hashMap?_hashMap`. -/
 theorem nodupKeys_sortByKey [LE K] [DecidableRel (α := K) (· ≤ ·)] {m : Map K V}
     (h : NodupKeys m) : NodupKeys (sortByKey m) :=
   ((sortByKey_perm m).map Prod.fst).nodup_iff.mpr h
+
+/-- The sort puts the entries in key order.
+
+This one pins the definition rather than serving a later proof.  Nothing else
+here observes the order.  `sortByKey` could reorder by anything, or not at all,
+and every other lemma in this file would still hold.  The contracts in
+`Project.RustHashMap.Spec` do observe it.  They name the exact bytes an export
+writes, and `sort_unstable_by_key` in the Rust crate writes them. -/
+theorem pairwise_sortByKey [LE K] [DecidableRel (α := K) (· ≤ ·)]
+    (htrans : ∀ a b c : K, a ≤ b → b ≤ c → a ≤ c)
+    (htotal : ∀ a b : K, a ≤ b ∨ b ≤ a) (m : Map K V) :
+    (sortByKey m).Pairwise (fun a b => a.1 ≤ b.1) := by
+  have h := List.pairwise_mergeSort
+    (le := fun a b : K × V => decide (a.1 ≤ b.1))
+    (fun a b c hab hbc => by
+      simp only [decide_eq_true_eq] at *
+      exact htrans _ _ _ hab hbc)
+    (fun a b => by
+      simp only [Bool.or_eq_true, decide_eq_true_eq]
+      exact htotal a.1 b.1)
+    m
+  simpa [sortByKey] using h
 
 /-- A key with no entry is found by nothing. -/
 private theorem find?_eq_none_of_key_not_mem [BEq K] [LawfulBEq K]

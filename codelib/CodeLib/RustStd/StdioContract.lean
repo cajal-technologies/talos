@@ -6,15 +6,17 @@ import Interpreter.Wasm.Host.Universal
 A Talos stdio program reads its whole input, computes, and writes one answer.
 Every export of such a program allocates in proportion to that input, so an
 allocation failure is a reachable terminal outcome and no total contract
-holds.  The shape below is the one `Project.Mergesort.Spec` established and
-`Project.RustVec.Spec` wrote out again: a normal return writes exactly the
-expected bytes, and the allocator's `talos.oom` trap is admitted as the
-alternative.
+holds.  `Project.Mergesort.Spec` established that partial shape: a normal
+return, with the allocator's `talos.oom` trap admitted as the alternative.
+The byte-level form below, where a normal return writes exactly the expected
+bytes, is the one `Project.RustVec.Spec` writes out.
 
-`RunOutcome`, `ReturnsOutput`, and `RanOutOfMemory` name no module, so they
-are the same for every such program.  `PartiallyRuns` and `WritesOrOOM` take
-the module, because a contract is about one module's export.  Fuel, linear
-memory, and allocator state stay hidden throughout.
+`RunOutcome`, `ReturnsOutput`, and `RanOutOfMemory` name no module, so one
+definition of each serves every module.  `PartiallyRuns` and `WritesOrOOM`
+take the module, because a contract is about one module's export.
+`Project.Mergesort.Spec` keeps a `ReturnsOutput` of its own, which compares
+decoded `UInt32` values rather than bytes.  Fuel, linear memory, and
+allocator state stay hidden throughout.
 -/
 
 namespace Wasm.RustStd.StdioContract
