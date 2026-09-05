@@ -240,11 +240,14 @@ theorem not_twice_correct : NotTwiceSpec := by
   simp only [unaryConfig, func9]
   wasm_wp_pures [wp_localGet wp_constI64]
   wasm_wp_next SmallStep.wp_xorI64
-  rw [show a ^^^ (18446744073709551615 : UInt64) = ~~~a by bv_decide]
+  rw [show a ^^^ (18446744073709551615 : UInt64) = ~~~a by
+    apply UInt64.toBitVec_inj.mp
+    exact BitVec.xor_allOnes]
   wasm_wp_pures [wp_constI64]
   wasm_wp_next SmallStep.wp_xorI64
   rw [show (~~~a) ^^^ (18446744073709551615 : UInt64) = ~~~(~~~a) by
-    bv_decide]
+    apply UInt64.toBitVec_inj.mp
+    exact BitVec.xor_allOnes]
   wasm_wp_return_value_rfl
 
 @[spec_of "rust-exported" "rust_u64_tests::not_then_xor"]
@@ -259,7 +262,9 @@ theorem not_then_xor_correct : NotThenXorSpec := by
   simp only [binaryConfig, func8]
   wasm_wp_pures [wp_localGet wp_constI64]
   wasm_wp_next SmallStep.wp_xorI64
-  rw [show a ^^^ (18446744073709551615 : UInt64) = ~~~a by bv_decide]
+  rw [show a ^^^ (18446744073709551615 : UInt64) = ~~~a by
+    apply UInt64.toBitVec_inj.mp
+    exact BitVec.xor_allOnes]
   wasm_wp_pures [wp_localGet]
   wasm_wp_next SmallStep.wp_xorI64
   wasm_wp_return_value_rfl

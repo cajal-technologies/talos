@@ -613,42 +613,42 @@ def evalScalarTrunc? :
   | .i32TruncF32S, .f32 value =>
       some <| match i32TruncF32S value with
         | some result => .ok (.i32 result)
-        | none => .error (if (Float32.ofBits value).isNaN then
+        | none => .error (if f32IsNaN value then
             .invalidConversionToInteger else .integerOverflow)
   | .i32TruncF32U, .f32 value =>
       some <| match i32TruncF32U value with
         | some result => .ok (.i32 result)
-        | none => .error (if (Float32.ofBits value).isNaN then
+        | none => .error (if f32IsNaN value then
             .invalidConversionToInteger else .integerOverflow)
   | .i32TruncF64S, .f64 value =>
       some <| match i32TruncF64S value with
         | some result => .ok (.i32 result)
-        | none => .error (if (Float.ofBits value).isNaN then
+        | none => .error (if f64IsNaN value then
             .invalidConversionToInteger else .integerOverflow)
   | .i32TruncF64U, .f64 value =>
       some <| match i32TruncF64U value with
         | some result => .ok (.i32 result)
-        | none => .error (if (Float.ofBits value).isNaN then
+        | none => .error (if f64IsNaN value then
             .invalidConversionToInteger else .integerOverflow)
   | .i64TruncF32S, .f32 value =>
       some <| match i64TruncF32S value with
         | some result => .ok (.i64 result)
-        | none => .error (if (Float32.ofBits value).isNaN then
+        | none => .error (if f32IsNaN value then
             .invalidConversionToInteger else .integerOverflow)
   | .i64TruncF32U, .f32 value =>
       some <| match i64TruncF32U value with
         | some result => .ok (.i64 result)
-        | none => .error (if (Float32.ofBits value).isNaN then
+        | none => .error (if f32IsNaN value then
             .invalidConversionToInteger else .integerOverflow)
   | .i64TruncF64S, .f64 value =>
       some <| match i64TruncF64S value with
         | some result => .ok (.i64 result)
-        | none => .error (if (Float.ofBits value).isNaN then
+        | none => .error (if f64IsNaN value then
             .invalidConversionToInteger else .integerOverflow)
   | .i64TruncF64U, .f64 value =>
       some <| match i64TruncF64U value with
         | some result => .ok (.i64 result)
-        | none => .error (if (Float.ofBits value).isNaN then
+        | none => .error (if f64IsNaN value then
             .invalidConversionToInteger else .integerOverflow)
   | _, _ => none
 

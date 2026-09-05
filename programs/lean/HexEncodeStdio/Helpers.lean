@@ -78,9 +78,9 @@ theorem pointsTo_u64_pair_split {hlc : HasLC} {α : Type}
     packed_u64Byte_high lo hi 1 (by omega),
     packed_u64Byte_high lo hi 2 (by omega),
     packed_u64Byte_high lo hi 3 (by omega)]
-  have h5 : addr + 5 = (addr + 4) + 1 := by bv_decide
-  have h6 : addr + 6 = (addr + 4) + 2 := by bv_decide
-  have h7 : addr + 7 = (addr + 4) + 3 := by bv_decide
+  have h5 : addr + 5 = (addr + 4) + 1 := by bv_normalize
+  have h6 : addr + 6 = (addr + 4) + 2 := by bv_normalize
+  have h7 : addr + 7 = (addr + 4) + 3 := by bv_normalize
   rw [← h5, ← h6, ← h7]
   iintro H
   icases H with ⟨H0, H⟩
@@ -114,9 +114,9 @@ theorem pointsTo_u64_pair_join {hlc : HasLC} {α : Type}
     packed_u64Byte_high lo hi 1 (by omega),
     packed_u64Byte_high lo hi 2 (by omega),
     packed_u64Byte_high lo hi 3 (by omega)]
-  have h5 : addr + 5 = (addr + 4) + 1 := by bv_decide
-  have h6 : addr + 6 = (addr + 4) + 2 := by bv_decide
-  have h7 : addr + 7 = (addr + 4) + 3 := by bv_decide
+  have h5 : addr + 5 = (addr + 4) + 1 := by bv_normalize
+  have h6 : addr + 6 = (addr + 4) + 2 := by bv_normalize
+  have h7 : addr + 7 = (addr + 4) + 3 := by bv_normalize
   rw [← h5, ← h6, ← h7]
   iintro H
   icases H with ⟨Hlo, Hhi⟩

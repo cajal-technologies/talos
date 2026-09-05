@@ -318,7 +318,7 @@ theorem opt3Example_terminates_with_observation :
   apply Wasm.SmallStep.runSteps_checked_terminates (fuel := 100)
     (fun values store =>
       (values == []) && (arrayObservation store == (22, 11)))
-  · native_decide
+  · decide +kernel
   · intro values store h
     simpa [Bool.and_eq_true] using h
 

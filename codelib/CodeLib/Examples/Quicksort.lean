@@ -1,6 +1,9 @@
 import CodeLib.Examples.UInt32Array
-import Interpreter.Wasm.Decoder.Wat
+import Interpreter.Wasm.Decoder.ProofEval
 import Mathlib.Data.List.Sort
+
+kernel_decoder
+attribute [local irreducible] Wasm.Decoder.Wat.decode
 
 /-!
 # Quicksort
@@ -137,10 +140,10 @@ def quicksortExampleStore (arr : UInt32) (input : List UInt32) : Store Unit :=
 def quicksortArguments (arr : UInt32) (length : Nat) (stack : List Value) : List Value :=
   .i32 (UInt32.ofNat length) :: .i32 0 :: .i32 arr :: stack
 
-def runQuicksortExample (fuel : Nat) (arr : UInt32) (input : List UInt32) :
-    Option (List UInt32) :=
+private def runQuicksortModule (m : Module) (fuel : Nat) (arr : UInt32)
+    (input : List UInt32) : Option (List UInt32) :=
   match SmallStep.initConfig
-      { module := quicksortModule, host := {} } 1
+      { module := m, host := {} } 1
       (quicksortExampleStore arr input)
       (quicksortArguments arr input.length []) with
   | .error _ => none
@@ -149,6 +152,9 @@ def runQuicksortExample (fuel : Nat) (arr : UInt32) (input : List UInt32) :
       | .success _ store =>
           some (readWordArray store.wasm.mem arr input.length)
       | _ => none
+
+def runQuicksortExample (fuel : Nat) (arr : UInt32) (input : List UInt32) :
+    Option (List UInt32) := runQuicksortModule quicksortModule fuel arr input
 
 theorem quicksort_exec_empty :
     runQuicksortExample 100 0 [] = some [] := by decide +kernel
@@ -571,23 +577,33 @@ theorem quicksortHeap_pointsTo [WasmHeapGS α]
 
 private def quicksortWat : String := include_str "quicksort.wat"
 
-private def quicksortModuleDecoded : Module :=
-  match Wasm.Decoder.Wat.decode quicksortWat with
+private def moduleOfDecoded (result : Except String Module) : Module :=
+  match result with
   | .ok m => m
   | .error _ => default
 
-def runQuicksortDecoded (fuel : Nat) (arr : UInt32) (input : List UInt32) :
-    Option (List UInt32) :=
-  match SmallStep.initConfig
-      { module := quicksortModuleDecoded, host := {} } 1
-      (quicksortExampleStore arr input)
-      (quicksortArguments arr input.length []) with
-  | .error _ => none
-  | .ok config =>
-      match (SmallStep.runSteps fuel config).result with
-      | .success _ store => some (readWordArray store.wasm.mem arr input.length)
-      | _ => none
+private def quicksortModuleDecoded : Module :=
+  moduleOfDecoded (Wasm.Decoder.Wat.decode quicksortWat)
 
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 4000000 in
+private theorem quicksort_decode_eq :
+    Wasm.Decoder.Wat.decode quicksortWat = .ok quicksortModule := by cbv
+
+def runQuicksortDecoded (fuel : Nat) (arr : UInt32) (input : List UInt32) :
+    Option (List UInt32) := runQuicksortModule quicksortModuleDecoded fuel arr input
+
+set_option maxRecDepth 100000 in
+private theorem quicksortModuleDecoded_eq : quicksortModuleDecoded = quicksortModule :=
+  congrArg moduleOfDecoded quicksort_decode_eq
+
+set_option maxRecDepth 100000 in
+private theorem runQuicksortDecoded_eq (fuel : Nat) (arr : UInt32) (input : List UInt32) :
+    runQuicksortDecoded fuel arr input = runQuicksortExample fuel arr input :=
+  congrArg (fun m => runQuicksortModule m fuel arr input) quicksortModuleDecoded_eq
+
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 4000000 in
 theorem quicksort_decoded_agrees :
     runQuicksortDecoded 15000 0 [5, 1, 4, 2, 3] =
       runQuicksortExample 15000 0 [5, 1, 4, 2, 3] ∧
@@ -596,6 +612,8 @@ theorem quicksort_decoded_agrees :
     runQuicksortDecoded 15000 0 [4, 3, 2, 1] =
       runQuicksortExample 15000 0 [4, 3, 2, 1] ∧
     runQuicksortDecoded 20 0 [3, 2, 1] =
-      runQuicksortExample 20 0 [3, 2, 1] := by native_decide
+      runQuicksortExample 20 0 [3, 2, 1] := by
+  exact ⟨runQuicksortDecoded_eq .., runQuicksortDecoded_eq ..,
+    runQuicksortDecoded_eq .., runQuicksortDecoded_eq .., runQuicksortDecoded_eq ..⟩
 
 end Wasm.Examples.Quicksort

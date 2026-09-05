@@ -32,6 +32,9 @@ import Interpreter.Wasm.Examples.UniversalHost
 import Interpreter.Wasm.Examples.DecoderImport
 import Interpreter.Wasm.Examples.DecoderImportedGlobal
 import Interpreter.Wasm.Examples.FloatOps
+import Interpreter.Wasm.Examples.IEEE754
+import Interpreter.Wasm.Examples.FloatLiterals
+import Interpreter.Wasm.Examples.Lexer
 import Interpreter.Wasm.Examples.Gcd
 import Interpreter.Wasm.Examples.SelectAbs
 import Interpreter.Wasm.Examples.GlobalInitExpr
@@ -47,4 +50,4 @@ import Interpreter.Wasm.Examples.MeasureLoopDemo
 Umbrella import for the bundled worked examples. Every example file under
 `Interpreter/Wasm/Examples/` must be imported here: this module is the only
 thing the CI `Interpreter` build reaches, so an example missing from this list
-is never compiled and its `native_decide` checks never run. -/
+is never compiled and its kernel-checked regressions never run. -/

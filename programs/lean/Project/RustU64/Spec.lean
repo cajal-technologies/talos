@@ -52,7 +52,7 @@ theorem abs_diff_correct : AbsDiffSpec := by
   intro a b
   apply absDiff_smallStep_partiallyMeets_of_store
   · rfl
-  · native_decide
+  · decide +kernel
 
 @[spec_of "rust-exported" "rust_u64::add"]
 def AddSpec : Prop :=
@@ -180,7 +180,8 @@ theorem not_correct : NotSpec := by
   wasm_wp_pures [wp_localGet wp_constI64]
   wasm_wp_next SmallStep.wp_xorI64
   rw [show a ^^^ (18446744073709551615 : UInt64) = ~~~a by
-    bv_decide]
+    apply UInt64.toBitVec_inj.mp
+    exact BitVec.xor_allOnes]
   wasm_wp_return_value_rfl
 
 @[spec_of "rust-exported" "rust_u64::shl"]

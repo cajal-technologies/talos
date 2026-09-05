@@ -54,7 +54,7 @@ private theorem forallUInt32Aux_iff (p : UInt32 → Bool) (n : Nat) :
       have hval := hall (UInt32.ofNat n) hlt
       simp [hf] at hval
 
-/-- `native_decide` can decide `∀ x : UInt32, P x` via a 4B-iteration countdown. -/
+/-- Finite decidability for UInt32 predicates. Proofs below use symbolic reasoning. -/
 private instance decidableForallUInt32 {P : UInt32 → Prop} [DecidablePred P] :
     Decidable (∀ x : UInt32, P x) :=
   let p := fun x => decide (P x)
@@ -68,19 +68,9 @@ private instance decidableForallUInt32 {P : UInt32 → Prop} [DecidablePred P] :
 
 /-! ## Float math helpers -/
 
-/-- Expose `private satI32S` body; provable by `rfl` since the kernel reduces it. -/
-private theorem i32TruncSatF32S_expand (x : UInt32) :
-    i32TruncSatF32S x =
-    let f := (Float32.ofBits x).toFloat
-    if f.isNaN then 0
-    else let t := if f < 0.0 then f.ceil else f.floor
-         if t ≤ (-2147483648.0 : Float) then 0x80000000
-         else if t ≥ (2147483647.0 : Float) then 0x7FFFFFFF
-         else t.toInt64.toUInt64.toUInt32 := rfl
-
 private theorem i32TruncSatF32S_nan {x : UInt32}
-    (h : (Float32.ofBits x).toFloat.isNaN) : i32TruncSatF32S x = 0 := by
-  simp [i32TruncSatF32S_expand, h]
+    (h : f32IsNaN x) : i32TruncSatF32S x = 0 :=
+  IEEE32Exec.i32TruncSatF32S_nan h
 
 /-! ## Per-function termination -/
 
@@ -365,7 +355,7 @@ theorem func0_body_to_ret_smallStep_wp
       · inext
         iintro Hword
         wasm_wp_pures [wp_br] using [List.take, List.nil_append]
-        have hisNaN : (Float32.ofBits x).toFloat.isNaN = true :=
+        have hisNaN : f32IsNaN x = true :=
           (IEEE32Exec.f32Ne_self_iff_isNaN x).symm.trans hnan
         have heq := i32TruncSatF32S_nan hisNaN
         iapply func0_tail_to_ret_smallStep_wp
@@ -574,7 +564,7 @@ theorem twp_func0_body_to_ret
     iapply_splitl_exact twp_func0_store32 0 0 with Hword
     · iintro Hword
       wasm_twp_pures [twp_br] using [List.take, List.nil_append]
-      have hisNaN : (Float32.ofBits x).toFloat.isNaN = true :=
+      have hisNaN : f32IsNaN x = true :=
         (IEEE32Exec.f32Ne_self_iff_isNaN x).symm.trans hnan
       have heq := i32TruncSatF32S_nan hisNaN
       iapply twp_func0_tail_to_ret Rglobal x 0 calls

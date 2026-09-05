@@ -126,7 +126,7 @@ theorem bytesAt_append (mem : Mem) (addr : UInt32) (m n : Nat)
   induction m generalizing addr with
   | zero => simp [Project.HexEncodeStdio.Grow.bytesAt]
   | succ m ih =>
-      simp only [Nat.succ_add, Project.HexEncodeStdio.Grow.bytesAt, List.cons.injEq]
+      simp only [Nat.succ_add, Project.HexEncodeStdio.Grow.bytesAt]
       apply congrArg (mem.read8 addr :: ·)
       rw [ih (addr + 1)]
       · congr 2
@@ -308,7 +308,7 @@ theorem bytesAt_four (mem : Mem) (addr : UInt32)
   obtain ⟨hb0, hb1, hb2, hb3⟩ := reassemble32_bytes
     (mem.bytes addr.toNat) (mem.bytes (addr.toNat + 1))
     (mem.bytes (addr.toNat + 2)) (mem.bytes (addr.toNat + 3))
-  congr <;> assumption
+  congr
 
 theorem bytesAt_eq_readBytes (mem : Mem) (addr : UInt32) (n : Nat)
     (hnowrap : addr.toNat + n < UInt32.size) :

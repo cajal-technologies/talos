@@ -23,6 +23,12 @@ jobs:
           lake-package-directory: codelib
           build-args: "--wfail"
           use-mathlib-cache: true
+      - name: Audit all interpreter and CodeLib declarations
+        run: |
+          python3 scripts/axiom-audit.py interpreter --report interpreter-axioms.json
+          python3 scripts/axiom-audit.py codelib --report codelib-axioms.json
+      - name: Audit verifier and materialized proof templates
+        run: python3 scripts/axiom-audit.py verifier --report verifier-axioms.json
 
   # Emitted Program.lean modules embed a compile-time provenance check that
   # reads ../rust/build/<crate>/program.wat, so the proofs job needs the wasm
@@ -78,6 +84,8 @@ jobs:
           lake-package-directory: programs/lean
           build-args: "Project --wfail"
           use-mathlib-cache: true
+      - name: Audit every program proof module
+        run: python3 scripts/axiom-audit.py programs/lean --report programs-axioms.json
 
   test:
     name: Smoke test
@@ -97,7 +105,7 @@ jobs:
           # Build the `Interpreter` library (not just the `runner` exe) so the
           # worked examples under Interpreter/Wasm/Examples/ — which the main
           # `programs/lean` build does not reach — are compiled and their
-          # `native_decide` checks run, keeping an example from silently
+          # kernel-checked regressions run, keeping an example from silently
           # rotting. Coverage is only as complete as Examples/Basic.lean's
           # umbrella import: this build reaches an example iff Basic.lean
           # imports it, so every example file must be listed there.

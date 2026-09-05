@@ -80,6 +80,7 @@ def encodeRatio (f : Format) (negative : Bool)
     let (n, d) := scaleRatio numerator denominator (exponent - estimate)
     let leadingExponent := if n < d then estimate - 1 else estimate
     if leadingExponent > f.maxExponent then infinity f negative
+    else if leadingExponent < f.minExponent - f.fractionBits - 1 then zero f negative
     else
       let quantum := max (leadingExponent - f.fractionBits) (f.minExponent - f.fractionBits)
       let (n, d) := scaleRatio numerator denominator (exponent - quantum)

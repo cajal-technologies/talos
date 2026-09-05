@@ -870,7 +870,7 @@ def swapFinalStore : MachineStore Unit :=
       { swapConfig.store.wasm with
         mem := (swapConfig.store.wasm.mem.write32 0 22).write32 4 11 } }
 
-set_option maxRecDepth 10000 in
+set_option maxRecDepth 100000 in
 theorem swap_run :
     (runSteps 17 swapConfig).result =
       .success [.i32 11, .i32 22] swapFinalStore := by rfl
@@ -934,7 +934,7 @@ def reverseThreeFinalStore : MachineStore Unit :=
       { reverseThreeConfig.store.wasm with
         mem := (reverseThreeConfig.store.wasm.mem.write32 0 33).write32 8 11 } }
 
-set_option maxRecDepth 10000 in
+set_option maxRecDepth 100000 in
 theorem reverse_three_run :
     (runSteps 17 reverseThreeConfig).result =
       .success [.i32 11, .i32 33] reverseThreeFinalStore := by rfl
@@ -1007,7 +1007,7 @@ def partitionThreeFinalStore : MachineStore Unit :=
           ((partitionThreeConfig.store.wasm.mem.write32 0 11).write32 4 22)
             |>.write32 8 33 } }
 
-set_option maxRecDepth 10000 in
+set_option maxRecDepth 100000 in
 theorem partition_three_run :
     (runSteps 19 partitionThreeConfig).result =
       .success [] partitionThreeFinalStore := by rfl
@@ -1084,7 +1084,7 @@ def mergeTwoFinalStore : MachineStore Unit :=
       { mergeTwoConfig.store.wasm with
         mem := (mergeTwoConfig.store.wasm.mem.write32 0 4).write32 4 9 } }
 
-set_option maxRecDepth 10000 in
+set_option maxRecDepth 100000 in
 theorem merge_two_run :
     (runSteps 18 mergeTwoConfig).result =
       .success [] mergeTwoFinalStore := by rfl
@@ -1132,7 +1132,7 @@ def mergeTwoKeepFinalStore : MachineStore Unit :=
         mem := (mergeTwoKeepConfig.store.wasm.mem.write32 0 4).write32 4 9 } }
 
 -- Regression for the non-swapping branch of the same merge kernel.
-set_option maxRecDepth 10000 in
+set_option maxRecDepth 100000 in
 theorem merge_two_keep_run :
     (runSteps 18 mergeTwoKeepConfig).result =
       .success [] mergeTwoKeepFinalStore := by rfl
@@ -1879,36 +1879,36 @@ theorem indirect_calls_match_big_step :
 def scalarFloatModule : Module :=
   { funcs :=
       [ { body :=
-          [ .f32Const (1.5 : Float32).toBits,
-            .f32Const (2.0 : Float32).toBits, .f32Mul,
-            .f32Const (-3.5 : Float32).toBits, .f32Abs,
-            .f32Const (4.0 : Float32).toBits, .f32Sqrt,
-            .f32Const (1.0 : Float32).toBits,
-            .f32Const (2.0 : Float32).toBits, .f32Lt ],
+          [ .f32Const 0x3FC00000,
+            .f32Const 0x40000000, .f32Mul,
+            .f32Const 0xC0600000, .f32Abs,
+            .f32Const 0x40800000, .f32Sqrt,
+            .f32Const 0x3F800000,
+            .f32Const 0x40000000, .f32Lt ],
           results := [.f32, .f32, .f32, .i32] }
       , { body :=
-          [ .f64Const (1.5 : Float).toBits,
-            .f64Const (2.5 : Float).toBits, .f64Add,
-            .f64Const (7.0 : Float).toBits,
-            .f64Const (3.0 : Float).toBits, .f64Min,
-            .f64Const (3.5 : Float).toBits, .f64Nearest,
-            .f64Const (2.0 : Float).toBits,
-            .f64Const (-1.0 : Float).toBits, .f64Copysign ],
+          [ .f64Const 0x3FF8000000000000,
+            .f64Const 0x4004000000000000, .f64Add,
+            .f64Const 0x401C000000000000,
+            .f64Const 0x4008000000000000, .f64Min,
+            .f64Const 0x400C000000000000, .f64Nearest,
+            .f64Const 0x4000000000000000,
+            .f64Const 0xBFF0000000000000, .f64Copysign ],
           results := [.f64, .f64, .f64, .f64] }
       , { body :=
           [ .const 7, .f32ConvertI32S,
             .constI64 9, .f64ConvertI64U,
-            .const (1.0 : Float32).toBits, .f32ReinterpretI32,
-            .f64Const (2.5 : Float).toBits, .i64ReinterpretF64,
-            .f32Const (3.9 : Float32).toBits, .i32TruncSatF32S ],
+            .const 0x3F800000, .f32ReinterpretI32,
+            .f64Const 0x4004000000000000, .i64ReinterpretF64,
+            .f32Const 0x4079999A, .i32TruncSatF32S ],
           results := [.f32, .f64, .f32, .i64, .i32] }
       , { body :=
-          [ .f32Const (7.75 : Float32).toBits, .i32TruncF32S ],
+          [ .f32Const 0x40F80000, .i32TruncF32S ],
           results := [.i32] }
       , { body := [ .f32Const 0x7FC00000, .i32TruncF32S ],
           results := [.i32] }
       , { body :=
-          [ .f64Const (1.0e300 : Float).toBits, .i32TruncF64S ],
+          [ .f64Const 0x7E37E43C8800759C, .i32TruncF64S ],
           results := [.i32] } ] }
 
 def scalarFloatConfig (index resultArity : Nat) : Config Unit :=
@@ -1922,63 +1922,63 @@ def scalarFloatConfig (index resultArity : Nat) : Config Unit :=
 theorem f32_scalar_float_run :
     (runSteps 11 (scalarFloatConfig 0 4)).result.values? =
       some
-        [ .i32 1, .f32 (2.0 : Float32).toBits,
-          .f32 (3.5 : Float32).toBits,
-          .f32 (3.0 : Float32).toBits ] := by native_decide
+        [ .i32 1, .f32 0x40000000,
+          .f32 0x40600000,
+          .f32 0x40400000 ] := by decide +kernel
 
 theorem f64_scalar_float_run :
     (runSteps 12 (scalarFloatConfig 1 4)).result.values? =
       some
-        [ .f64 (-2.0 : Float).toBits, .f64 (4.0 : Float).toBits,
-          .f64 (3.0 : Float).toBits, .f64 (4.0 : Float).toBits ] := by native_decide
+        [ .f64 0xC000000000000000, .f64 0x4010000000000000,
+          .f64 0x4008000000000000, .f64 0x4010000000000000 ] := by decide +kernel
 
 theorem scalar_float_conversion_run :
     (runSteps 11 (scalarFloatConfig 2 5)).result.values? =
       some
-        [ .i32 3, .i64 (2.5 : Float).toBits,
-          .f32 (1.0 : Float32).toBits, .f64 (9.0 : Float).toBits,
-          .f32 (7.0 : Float32).toBits ] := by native_decide
+        [ .i32 3, .i64 0x4004000000000000,
+          .f32 0x3F800000, .f64 0x4022000000000000,
+          .f32 0x40E00000 ] := by decide +kernel
 
 theorem scalar_float_truncation_run :
     (runSteps 3 (scalarFloatConfig 3 1)).result.values? =
-      some [.i32 7] := by native_decide
+      some [.i32 7] := by decide +kernel
 
 theorem scalar_float_nan_traps :
     (match (runSteps 3 (scalarFloatConfig 4 1)).result with
       | .trapped reason _ => some reason
-      | _ => none) = some .invalidConversionToInteger := by native_decide
+      | _ => none) = some .invalidConversionToInteger := by decide +kernel
 
 theorem scalar_float_overflow_traps :
     (match (runSteps 3 (scalarFloatConfig 5 1)).result with
       | .trapped reason _ => some reason
-      | _ => none) = some .integerOverflow := by native_decide
+      | _ => none) = some .integerOverflow := by decide +kernel
 
 theorem scalar_float_nan_trapsWith :
     TrapsWith (scalarFloatConfig 4 1) .invalidConversionToInteger
       (fun _ => True) :=
-  runSteps_trapReason_trapsWith (fuel := 3) (by native_decide)
+  runSteps_trapReason_trapsWith (fuel := 3) (by decide +kernel)
 
 theorem scalar_float_overflow_trapsWith :
     TrapsWith (scalarFloatConfig 5 1) .integerOverflow
       (fun _ => True) :=
-  runSteps_trapReason_trapsWith (fuel := 3) (by native_decide)
+  runSteps_trapReason_trapsWith (fuel := 3) (by decide +kernel)
 
 theorem scalar_float_terminates :
     TerminatesWith (scalarFloatConfig 0 4)
       (fun values _ =>
         values =
-          [ .i32 1, .f32 (2.0 : Float32).toBits,
-            .f32 (3.5 : Float32).toBits,
-            .f32 (3.0 : Float32).toBits ]) := by
+          [ .i32 1, .f32 0x40000000,
+            .f32 0x40600000,
+            .f32 0x40400000 ]) := by
   have hvalues := f32_scalar_float_run
   cases hresult : (runSteps 11 (scalarFloatConfig 0 4)).result with
   | success values store =>
       rw [hresult] at hvalues
       have hpost :
           values =
-            [ .i32 1, .f32 (2.0 : Float32).toBits,
-              .f32 (3.5 : Float32).toBits,
-              .f32 (3.0 : Float32).toBits ] := by simpa [RunnerResult.values?] using hvalues
+            [ .i32 1, .f32 0x40000000,
+              .f32 0x40600000,
+              .f32 0x40400000 ] := by simpa [RunnerResult.values?] using hvalues
       refine ⟨(runSteps 11 (scalarFloatConfig 0 4)).trace,
         values, store, ?_, hpost⟩
       apply runSteps_sound
@@ -2005,13 +2005,13 @@ theorem scalar_floats_match_big_step :
           scalarFloatModule.initialStore []) ∧
       (runSteps 3 (scalarFloatConfig 3 1)).result.values? =
         some (runValues 16 scalarFloatModule 3
-          scalarFloatModule.initialStore []) := by native_decide
+          scalarFloatModule.initialStore []) := by decide +kernel
 
 def floatMemoryModule : Module :=
   { funcs :=
       [ { body :=
-          [ .const 32, .f32Const (1.25 : Float32).toBits, .f32Store 0,
-            .constI64 40, .f64Const (-7.5 : Float).toBits, .f64Store 0,
+          [ .const 32, .f32Const 0x3FA00000, .f32Store 0,
+            .constI64 40, .f64Const 0xC01E000000000000, .f64Store 0,
             .const 32, .f32Load 0,
             .constI64 40, .f64Load 0 ],
           results := [.f32, .f64] } ],
@@ -2027,46 +2027,46 @@ def floatMemoryConfig : Config Unit :=
 
 def floatMemoryResultMatches : RunnerResult Unit → Bool
   | .success _ store =>
-    store.wasm.mem.read32 32 == (1.25 : Float32).toBits &&
-      store.wasm.mem.read64 40 == (-7.5 : Float).toBits
+    store.wasm.mem.read32 32 == 0x3FA00000 &&
+      store.wasm.mem.read64 40 == 0xC01E000000000000
   | _ => false
 
 theorem float_memory_roundtrip_values :
     (runSteps 11 floatMemoryConfig).result.values? =
       some
-        [ .f64 (-7.5 : Float).toBits, .f32 (1.25 : Float32).toBits ] := by native_decide
+        [ .f64 0xC01E000000000000, .f32 0x3FA00000 ] := by decide +kernel
 
 theorem float_memory_roundtrip_run :
-    floatMemoryResultMatches (runSteps 11 floatMemoryConfig).result = true := by native_decide
+    floatMemoryResultMatches (runSteps 11 floatMemoryConfig).result = true := by decide +kernel
 
 /-- A clean physical-memory contract for scalar floating-point accesses:
 loads preserve the exact IEEE bit patterns written by both stores. -/
 theorem float_memory_roundtrip_terminates :
     TerminatesWith floatMemoryConfig (fun values store =>
       values =
-        [ .f64 (-7.5 : Float).toBits, .f32 (1.25 : Float32).toBits ] ∧
-      store.wasm.mem.read32 32 = (1.25 : Float32).toBits ∧
-      store.wasm.mem.read64 40 = (-7.5 : Float).toBits) := by
+        [ .f64 0xC01E000000000000, .f32 0x3FA00000 ] ∧
+      store.wasm.mem.read32 32 = 0x3FA00000 ∧
+      store.wasm.mem.read64 40 = 0xC01E000000000000) := by
   cases hresult : (runSteps 11 floatMemoryConfig).result with
   | success values store =>
       have hvalues :
           values =
-            [ .f64 (-7.5 : Float).toBits,
-              .f32 (1.25 : Float32).toBits ] := by
+            [ .f64 0xC01E000000000000,
+              .f32 0x3FA00000 ] := by
         have hvaluesResult := float_memory_roundtrip_values
         rw [hresult] at hvaluesResult
         simpa [RunnerResult.values?] using hvaluesResult
       have hmemory :
-          store.wasm.mem.read32 32 = (1.25 : Float32).toBits ∧
-            store.wasm.mem.read64 40 = (-7.5 : Float).toBits := by
+          store.wasm.mem.read32 32 = 0x3FA00000 ∧
+            store.wasm.mem.read64 40 = 0xC01E000000000000 := by
         simpa [hresult, floatMemoryResultMatches, Bool.and_eq_true] using
           float_memory_roundtrip_run
       have hpost :
           values =
-              [ .f64 (-7.5 : Float).toBits,
-                .f32 (1.25 : Float32).toBits ] ∧
-            store.wasm.mem.read32 32 = (1.25 : Float32).toBits ∧
-            store.wasm.mem.read64 40 = (-7.5 : Float).toBits := ⟨hvalues, hmemory⟩
+              [ .f64 0xC01E000000000000,
+                .f32 0x3FA00000 ] ∧
+            store.wasm.mem.read32 32 = 0x3FA00000 ∧
+            store.wasm.mem.read64 40 = 0xC01E000000000000 := ⟨hvalues, hmemory⟩
       refine ⟨(runSteps 11 floatMemoryConfig).trace,
         values, store, ?_, hpost⟩
       apply runSteps_sound
@@ -2084,15 +2084,15 @@ theorem float_memory_roundtrip_terminates :
 theorem float_memory_roundtrip_partial :
     PartiallyMeets floatMemoryConfig (fun values store =>
       values =
-        [ .f64 (-7.5 : Float).toBits, .f32 (1.25 : Float32).toBits ] ∧
-      store.wasm.mem.read32 32 = (1.25 : Float32).toBits ∧
-      store.wasm.mem.read64 40 = (-7.5 : Float).toBits) :=
+        [ .f64 0xC01E000000000000, .f32 0x3FA00000 ] ∧
+      store.wasm.mem.read32 32 = 0x3FA00000 ∧
+      store.wasm.mem.read64 40 = 0xC01E000000000000) :=
   float_memory_roundtrip_terminates.toPartiallyMeets
 
 theorem float_memory_matches_big_step :
     (runSteps 11 floatMemoryConfig).result.values? =
       some (runValues 32 floatMemoryModule 0
-        floatMemoryModule.initialStore []) := by native_decide
+        floatMemoryModule.initialStore []) := by decide +kernel
 
 def simdModule : Module :=
   { funcs :=

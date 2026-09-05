@@ -1,5 +1,5 @@
 import Interpreter.Wasm.SmallStep
-import Std.Tactic.BVDecide
+import Mathlib.Tactic.IntervalCases
 
 /-! ## Example: memory replace
 
@@ -90,7 +90,15 @@ theorem replace_terminates (st : Store Unit) (new old : UInt32)
   runSteps_success_terminates_eq_values
     (replace_runs st new old hpages hmem) (by
       simp [replaceFinalStore, replaceStore, Mem.read32, Mem.write32]
-      bv_decide)
+      have byte_bit (x : BitVec 32) (j : Nat) (hj : j < 8) :
+          (x % 256#32)[j] = x[j] := by
+        change (x.toNat % 2^8).testBit j = x.toNat.testBit j
+        simp only [Nat.testBit_mod_two_pow, hj, decide_true, Bool.true_and]
+      apply UInt32.toBitVec_inj.mp
+      simp only [UInt32.toBitVec_or, UInt32.toBitVec_shiftLeft]
+      apply BitVec.eq_of_getLsbD_eq
+      intro i hi
+      interval_cases i <;> simp (disch := decide) [byte_bit])
 
 theorem replace_partial (st : Store Unit) (new old : UInt32)
     (hpages : 1 ≤ st.mem.pages) (hmem : st.mem.read32 0 = old) :

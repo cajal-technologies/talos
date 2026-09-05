@@ -1,6 +1,11 @@
 import Interpreter.Wasm.SmallStep
 import Interpreter.Wasm.Examples.Harness
 
+kernel_decoder
+
+set_option maxRecDepth 100000
+set_option maxHeartbeats 4000000
+
 /-! ## Example: imported-global index offset in the WAT decoder
 
     Regression test for `collectGlobalNames`. Per the wasm spec, imported
@@ -35,7 +40,7 @@ private def decoded : Wasm.Module :=
 theorem importedGlobalWat_global_layout :
     decoded.importedGlobals = [("spectest", "ig")] ∧
     decoded.globals.length = 2 ∧
-    decoded.globals.getLast?.map (·.init) = some (.i32 99) := by native_decide
+    decoded.globals.getLast?.map (·.init) = some (.i32 99) := by cbv <;> decide +kernel
 
 /-- Index baked into the first `global.get` of the first function, if any.
 Projected to `Option Nat` because `Instruction` has no `DecidableEq`. -/
@@ -47,7 +52,7 @@ private def firstGlobalGetIdx (m : Module) : Option Nat :=
 /-- The crux: `global.get $d` resolves to index `1` (`importedGlobals.length
 + 0`). A double-counted import would bake in `2`, a dropped import `0`. -/
 theorem importedGlobalWat_getD_index :
-    firstGlobalGetIdx decoded = some 1 := by native_decide
+    firstGlobalGetIdx decoded = some 1 := by cbv <;> decide +kernel
 
 def getDConfig : Config Unit :=
   { expr := .running
@@ -61,7 +66,7 @@ def getDConfig : Config Unit :=
 
 /-- End-to-end: small-step execution reads declared global index `1`. -/
 theorem importedGlobalWat_getD_returns_99 :
-    (runSteps 2 getDConfig).result.values? = some [.i32 99] := by native_decide
+    (runSteps 2 getDConfig).result.values? = some [.i32 99] := by cbv <;> decide +kernel
 
 theorem importedGlobalWat_getD_terminates :
     TerminatesWith getDConfig (fun values _ => values = [.i32 99]) :=

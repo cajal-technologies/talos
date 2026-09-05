@@ -1,5 +1,10 @@
 import Interpreter.Wasm.Examples.Harness
 
+kernel_decoder
+
+set_option maxRecDepth 100000
+set_option maxHeartbeats 4000000
+
 /-! ## Example: `ref.test`/`ref.cast` against concrete (function) types
 
     Issue #96: `ref.test`/`ref.cast` against a *concrete* function type
@@ -220,22 +225,22 @@ private def castCallM   : Module := decodeOrDefault castCallWat
 private def structTwinM : Module := decodeOrDefault structTwinWat
 
 /-- The decoder records `$impl`'s declared `(type $ft)`. -/
-theorem decoded_typeIdx : refTestM.funcs.map (·.typeIdx) = [some 0, none] := by native_decide
+theorem decoded_typeIdx : refTestM.funcs.map (·.typeIdx) = [some 0, none] := by cbv
 
 /-- wasmtime/V8 return `1`; Talos previously returned `0`. -/
 theorem decoded_ref_test :
     runValues 20 refTestM ((refTestM.findExport "f").getD 99)
-      (refTestM.initialStore (α := Unit)) [] = [.i32 1] := by native_decide
+      (refTestM.initialStore (α := Unit)) [] = [.i32 1] := by cbv
 
 /-- wasmtime/V8 return `6`; Talos previously trapped on the cast. -/
 theorem decoded_cast_call :
     runValues 20 castCallM ((castCallM.findExport "f").getD 99)
-      (castCallM.initialStore (α := Unit)) [] = [.i32 6] := by native_decide
+      (castCallM.initialStore (α := Unit)) [] = [.i32 6] := by cbv
 
 /-- The comment's struct-twin module returns `1` end-to-end. -/
 theorem decoded_struct_twin :
     runValues 20 structTwinM ((structTwinM.findExport "f").getD 99)
-      (structTwinM.initialStore (α := Unit)) [] = [.i32 1] := by native_decide
+      (structTwinM.initialStore (α := Unit)) [] = [.i32 1] := by cbv
 
 end RefCastFuncType
 end Wasm

@@ -41,36 +41,28 @@ private theorem pointsTo_u32_pair_as_u64
         (lo.toUInt64 ||| (hi.toUInt64 <<< 32)) := by
   let combined : UInt64 := lo.toUInt64 ||| (hi.toUInt64 <<< 32)
   have h0 : u64Byte combined 0 = u32Byte lo 0 := by
-    simp [combined, u64Byte, u32Byte]
-    bv_decide
+    simpa [combined, u64Byte, u32Byte] using UInt64.pack32_byte0 lo hi
   have h1 : u64Byte combined 1 = u32Byte lo 1 := by
-    simp [combined, u64Byte, u32Byte]
-    bv_decide
+    simpa [combined, u64Byte, u32Byte] using UInt64.pack32_byte1 lo hi
   have h2 : u64Byte combined 2 = u32Byte lo 2 := by
-    simp [combined, u64Byte, u32Byte]
-    bv_decide
+    simpa [combined, u64Byte, u32Byte] using UInt64.pack32_byte2 lo hi
   have h3 : u64Byte combined 3 = u32Byte lo 3 := by
-    simp [combined, u64Byte, u32Byte]
-    bv_decide
+    simpa [combined, u64Byte, u32Byte] using UInt64.pack32_byte3 lo hi
   have h4 : u64Byte combined 4 = u32Byte hi 0 := by
-    simp [combined, u64Byte, u32Byte]
-    bv_decide
+    simpa [combined, u64Byte, u32Byte] using UInt64.pack32_byte4 lo hi
   have h5 : u64Byte combined 5 = u32Byte hi 1 := by
-    simp [combined, u64Byte, u32Byte]
-    bv_decide
+    simpa [combined, u64Byte, u32Byte] using UInt64.pack32_byte5 lo hi
   have h6 : u64Byte combined 6 = u32Byte hi 2 := by
-    simp [combined, u64Byte, u32Byte]
-    bv_decide
+    simpa [combined, u64Byte, u32Byte] using UInt64.pack32_byte6 lo hi
   have h7 : u64Byte combined 7 = u32Byte hi 3 := by
-    simp [combined, u64Byte, u32Byte]
-    bv_decide
+    simpa [combined, u64Byte, u32Byte] using UInt64.pack32_byte7 lo hi
   change iprop(pointsTo_u32 0 ptr lo ∗ pointsTo_u32 0 (ptr + 4) hi) ⊣⊢
     pointsTo_u64 0 ptr combined
   unfold pointsTo_u32 pointsTo_u64
   rw [h0, h1, h2, h3, h4, h5, h6, h7]
-  rw [show ptr + 4 + 1 = ptr + 5 by bv_decide]
-  rw [show ptr + 4 + 2 = ptr + 6 by bv_decide]
-  rw [show ptr + 4 + 3 = ptr + 7 by bv_decide]
+  rw [show ptr + 4 + 1 = ptr + 5 by bv_normalize]
+  rw [show ptr + 4 + 2 = ptr + 6 by bv_normalize]
+  rw [show ptr + 4 + 3 = ptr + 7 by bv_normalize]
   constructor
   · iintro ⟨Hlo, Hhi⟩
     icases Hlo with ⟨H0, H1, H2, H3⟩

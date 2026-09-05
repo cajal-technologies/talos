@@ -10,7 +10,7 @@ The list-level plumbing — `serialize`, `deserialize`, and the round trip
 between them — is defined and proved once here, for every width at once. Only
 the word-level round trip is supplied per codec, as the `decode_encode` field:
 it is a statement about a concrete bit width, so it is discharged by
-`bv_decide` at the instantiation site and cannot be proved generically.
+kernel-checked bitwise lemmas at the instantiation site and cannot be proved generically.
 
 `decode` is total. `deserialize` returns `Option` for exactly one reason: a
 trailing run of fewer than `width` bytes is rejected rather than silently

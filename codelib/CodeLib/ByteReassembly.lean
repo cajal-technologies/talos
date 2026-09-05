@@ -1,5 +1,95 @@
 import CodeLib.UInt32
 
+/-! Byte projections of two adjacent 32-bit words packed into a 64-bit word. -/
+
+theorem UInt64.pack32_byte0 (lo hi : UInt32) :
+    (((lo.toUInt64 ||| (hi.toUInt64 <<< 32)) >>> 0).toUInt8) =
+      (lo >>> 0).toUInt8 := by
+  apply UInt8.toBitVec_inj.mp
+  simp only [UInt64.toBitVec_toUInt8, UInt64.toBitVec_shiftRight, UInt64.toBitVec_or,
+    UInt64.toBitVec_shiftLeft, UInt32.toBitVec_toUInt64, UInt32.toBitVec_toUInt8,
+    UInt32.toBitVec_shiftRight]
+  apply BitVec.eq_of_getLsbD_eq
+  intro i hi
+  simp (disch := omega)
+
+theorem UInt64.pack32_byte1 (lo hi : UInt32) :
+    (((lo.toUInt64 ||| (hi.toUInt64 <<< 32)) >>> 8).toUInt8) =
+      (lo >>> 8).toUInt8 := by
+  apply UInt8.toBitVec_inj.mp
+  simp only [UInt64.toBitVec_toUInt8, UInt64.toBitVec_shiftRight, UInt64.toBitVec_or,
+    UInt64.toBitVec_shiftLeft, UInt32.toBitVec_toUInt64, UInt32.toBitVec_toUInt8,
+    UInt32.toBitVec_shiftRight]
+  apply BitVec.eq_of_getLsbD_eq
+  intro i hi
+  simp (disch := omega) [show 8 + i < 32 by omega]
+
+theorem UInt64.pack32_byte2 (lo hi : UInt32) :
+    (((lo.toUInt64 ||| (hi.toUInt64 <<< 32)) >>> 16).toUInt8) =
+      (lo >>> 16).toUInt8 := by
+  apply UInt8.toBitVec_inj.mp
+  simp only [UInt64.toBitVec_toUInt8, UInt64.toBitVec_shiftRight, UInt64.toBitVec_or,
+    UInt64.toBitVec_shiftLeft, UInt32.toBitVec_toUInt64, UInt32.toBitVec_toUInt8,
+    UInt32.toBitVec_shiftRight]
+  apply BitVec.eq_of_getLsbD_eq
+  intro i hi
+  simp (disch := omega) [show 16 + i < 32 by omega]
+
+theorem UInt64.pack32_byte3 (lo hi : UInt32) :
+    (((lo.toUInt64 ||| (hi.toUInt64 <<< 32)) >>> 24).toUInt8) =
+      (lo >>> 24).toUInt8 := by
+  apply UInt8.toBitVec_inj.mp
+  simp only [UInt64.toBitVec_toUInt8, UInt64.toBitVec_shiftRight, UInt64.toBitVec_or,
+    UInt64.toBitVec_shiftLeft, UInt32.toBitVec_toUInt64, UInt32.toBitVec_toUInt8,
+    UInt32.toBitVec_shiftRight]
+  apply BitVec.eq_of_getLsbD_eq
+  intro i hi
+  simp (disch := omega) [show 24 + i < 32 by omega]
+
+theorem UInt64.pack32_byte4 (lo hi : UInt32) :
+    (((lo.toUInt64 ||| (hi.toUInt64 <<< 32)) >>> 32).toUInt8) =
+      (hi >>> 0).toUInt8 := by
+  apply UInt8.toBitVec_inj.mp
+  simp only [UInt64.toBitVec_toUInt8, UInt64.toBitVec_shiftRight, UInt64.toBitVec_or,
+    UInt64.toBitVec_shiftLeft, UInt32.toBitVec_toUInt64, UInt32.toBitVec_toUInt8,
+    UInt32.toBitVec_shiftRight]
+  apply BitVec.eq_of_getLsbD_eq
+  intro i hi
+  simp (disch := omega) [show ¬ 32 + i < 32 by omega, show 32 + i - 32 = 0 + i by omega]
+
+theorem UInt64.pack32_byte5 (lo hi : UInt32) :
+    (((lo.toUInt64 ||| (hi.toUInt64 <<< 32)) >>> 40).toUInt8) =
+      (hi >>> 8).toUInt8 := by
+  apply UInt8.toBitVec_inj.mp
+  simp only [UInt64.toBitVec_toUInt8, UInt64.toBitVec_shiftRight, UInt64.toBitVec_or,
+    UInt64.toBitVec_shiftLeft, UInt32.toBitVec_toUInt64, UInt32.toBitVec_toUInt8,
+    UInt32.toBitVec_shiftRight]
+  apply BitVec.eq_of_getLsbD_eq
+  intro i hi
+  simp (disch := omega) [show ¬ 40 + i < 32 by omega, show 40 + i - 32 = 8 + i by omega]
+
+theorem UInt64.pack32_byte6 (lo hi : UInt32) :
+    (((lo.toUInt64 ||| (hi.toUInt64 <<< 32)) >>> 48).toUInt8) =
+      (hi >>> 16).toUInt8 := by
+  apply UInt8.toBitVec_inj.mp
+  simp only [UInt64.toBitVec_toUInt8, UInt64.toBitVec_shiftRight, UInt64.toBitVec_or,
+    UInt64.toBitVec_shiftLeft, UInt32.toBitVec_toUInt64, UInt32.toBitVec_toUInt8,
+    UInt32.toBitVec_shiftRight]
+  apply BitVec.eq_of_getLsbD_eq
+  intro i hi
+  simp (disch := omega) [show ¬ 48 + i < 32 by omega, show 48 + i - 32 = 16 + i by omega]
+
+theorem UInt64.pack32_byte7 (lo hi : UInt32) :
+    (((lo.toUInt64 ||| (hi.toUInt64 <<< 32)) >>> 56).toUInt8) =
+      (hi >>> 24).toUInt8 := by
+  apply UInt8.toBitVec_inj.mp
+  simp only [UInt64.toBitVec_toUInt8, UInt64.toBitVec_shiftRight, UInt64.toBitVec_or,
+    UInt64.toBitVec_shiftLeft, UInt32.toBitVec_toUInt64, UInt32.toBitVec_toUInt8,
+    UInt32.toBitVec_shiftRight]
+  apply BitVec.eq_of_getLsbD_eq
+  intro i hi
+  simp (disch := omega) [show ¬ 56 + i < 32 by omega, show 56 + i - 32 = 24 + i by omega]
+
 theorem UInt64.packBytes_low32 (a b c d e f g h : UInt8) :
     (a.toUInt64 ||| (b.toUInt64 <<< 8) ||| (c.toUInt64 <<< 16) |||
       (d.toUInt64 <<< 24) ||| (e.toUInt64 <<< 32) ||| (f.toUInt64 <<< 40) |||

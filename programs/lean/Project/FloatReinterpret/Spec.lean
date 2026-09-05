@@ -684,29 +684,21 @@ theorem innerScratch_merge_upper [WasmHeapGS Unit] (upper : UInt32) :
     pointsTo_u32 0 1048552 0 ∗ pointsTo_u32 0 1048556 upper ⊢
       pointsTo_u64 0 1048552 (packUpper32 upper) := by
   have h0 : u64Byte (packUpper32 upper) 0 = u32Byte 0 0 := by
-    unfold packUpper32 u64Byte u32Byte
-    bv_decide
+    simpa [packUpper32, u64Byte, u32Byte] using UInt64.pack32_byte0 0 upper
   have h1 : u64Byte (packUpper32 upper) 1 = u32Byte 0 1 := by
-    unfold packUpper32 u64Byte u32Byte
-    bv_decide
+    simpa [packUpper32, u64Byte, u32Byte] using UInt64.pack32_byte1 0 upper
   have h2 : u64Byte (packUpper32 upper) 2 = u32Byte 0 2 := by
-    unfold packUpper32 u64Byte u32Byte
-    bv_decide
+    simpa [packUpper32, u64Byte, u32Byte] using UInt64.pack32_byte2 0 upper
   have h3 : u64Byte (packUpper32 upper) 3 = u32Byte 0 3 := by
-    unfold packUpper32 u64Byte u32Byte
-    bv_decide
+    simpa [packUpper32, u64Byte, u32Byte] using UInt64.pack32_byte3 0 upper
   have h4 : u64Byte (packUpper32 upper) 4 = u32Byte upper 0 := by
-    unfold packUpper32 u64Byte u32Byte
-    bv_decide
+    simpa [packUpper32, u64Byte, u32Byte] using UInt64.pack32_byte4 0 upper
   have h5 : u64Byte (packUpper32 upper) 5 = u32Byte upper 1 := by
-    unfold packUpper32 u64Byte u32Byte
-    bv_decide
+    simpa [packUpper32, u64Byte, u32Byte] using UInt64.pack32_byte5 0 upper
   have h6 : u64Byte (packUpper32 upper) 6 = u32Byte upper 2 := by
-    unfold packUpper32 u64Byte u32Byte
-    bv_decide
+    simpa [packUpper32, u64Byte, u32Byte] using UInt64.pack32_byte6 0 upper
   have h7 : u64Byte (packUpper32 upper) 7 = u32Byte upper 3 := by
-    unfold packUpper32 u64Byte u32Byte
-    bv_decide
+    simpa [packUpper32, u64Byte, u32Byte] using UInt64.pack32_byte7 0 upper
   unfold pointsTo_u64 pointsTo_u32
   rw [h0, h1, h2, h3, h4, h5, h6, h7]
   rw [show (1048552 : UInt32) + 4 = 1048556 by decide,

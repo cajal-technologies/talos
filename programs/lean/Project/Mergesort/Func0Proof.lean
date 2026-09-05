@@ -78,7 +78,7 @@ private theorem ByteSlice_twelve_storeFocus
   have hptr4Nat : (ptr + 4).toNat = ptr.toNat + 4 := by
     simpa using byteOffset_toNat ptr 4 hfirstNowrap
   have hsecondNowrap : (ptr + 4).toNat + 4 < UInt32.size := by omega
-  have hptr8 : (ptr + 4) + 4 = ptr + 8 := by bv_decide
+  have hptr8 : (ptr + 4) + 4 = ptr + 8 := by bv_normalize
   have hthirdNowrap : (ptr + 8).toNat + 4 < UInt32.size := by
     have hptr8Nat : (ptr + 8).toNat = ptr.toNat + 8 := by
       simpa using byteOffset_toNat ptr 8 (by omega)
@@ -539,7 +539,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
       wasm_twp_pures [twp_localGet]
       iapply twp_eqz (by rw [if_neg holdNonzero])
       wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet twp_localGet twp_mul]
-      rw [show oldCapacity * (1 : UInt32) = oldCapacity by bv_decide]
+      rw [show oldCapacity * (1 : UInt32) = oldCapacity by bv_normalize]
       wasm_twp_pures [twp_localGet twp_localGet]
       have Hrealloc : Func8Spec (hlc := hlc) := hfunc8
       unfold Func8Spec CallContract callExpr at Hrealloc

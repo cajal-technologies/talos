@@ -1,5 +1,7 @@
 import CodeLib.SepLogic.SmallStepAdequacy
-import Interpreter.Wasm.Decoder.Wat
+import Interpreter.Wasm.Decoder.ProofEval
+
+kernel_decoder
 
 /-!
 # Concrete examples for the Wasm small-step adequacy bridge
@@ -2284,6 +2286,8 @@ private def runSignedBranch (fuel : Nat) (m : Module) (a b : UInt32) : Option (L
   | .error _ => none
   | .ok config => (runSteps fuel config).result.values?
 
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 4000000 in
 /-- Exercises both branch outcomes across varied inputs. -/
 theorem signedBranch_decoded_agrees :
     runSignedBranch 10 signedBranchModule 5 3 = runSignedBranch 10 signedBranchModuleDecoded 5 3 ∧
@@ -2293,7 +2297,12 @@ theorem signedBranch_decoded_agrees :
     runSignedBranch 50 signedBranchModule 4294967295 0 =
       runSignedBranch 50 signedBranchModuleDecoded 4294967295 0 ∧
     runSignedBranch 100 signedBranchModule 42 43 =
-      runSignedBranch 100 signedBranchModuleDecoded 42 43 := by native_decide
+      runSignedBranch 100 signedBranchModuleDecoded 42 43 := by
+  unfold runSignedBranch
+  generalize hdecoded : signedBranchModuleDecoded = decoded
+  conv at hdecoded => lhs; cbv
+  subst decoded
+  decide +kernel
 
 private def fillThenReadWat : String := include_str "fill_then_read.wat"
 
@@ -2308,13 +2317,20 @@ private def runFillThenRead (fuel : Nat) (m : Module) (val : UInt32) : Option (L
   | .error _ => none
   | .ok config => (runSteps fuel config).result.values?
 
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 4000000 in
 theorem fillThenRead_decoded_agrees :
     runFillThenRead 10 fillThenReadModule 0 = runFillThenRead 10 fillThenReadModuleDecoded 0 ∧
     runFillThenRead 15 fillThenReadModule 5 = runFillThenRead 15 fillThenReadModuleDecoded 5 ∧
     runFillThenRead 20 fillThenReadModule 255 = runFillThenRead 20 fillThenReadModuleDecoded 255 ∧
     runFillThenRead 50 fillThenReadModule 171 = runFillThenRead 50 fillThenReadModuleDecoded 171 ∧
     runFillThenRead 100 fillThenReadModule 1000 =
-      runFillThenRead 100 fillThenReadModuleDecoded 1000 := by native_decide
+      runFillThenRead 100 fillThenReadModuleDecoded 1000 := by
+  unfold runFillThenRead
+  generalize hdecoded : fillThenReadModuleDecoded = decoded
+  conv at hdecoded => lhs; cbv
+  subst decoded
+  decide +kernel
 
 private def exceptionLifecycleWat : String := include_str "exception_lifecycle.wat"
 
@@ -2330,6 +2346,8 @@ private def runExceptionLifecycle (fuel : Nat) (m : Module) (arg : UInt32) :
   | .error _ => none
   | .ok config => (runSteps fuel config).result.values?
 
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 4000000 in
 theorem exceptionLifecycle_decoded_agrees :
     runExceptionLifecycle 10 exceptionLifecycleModule 0 =
       runExceptionLifecycle 10 exceptionLifecycleModuleDecoded 0 ∧
@@ -2340,6 +2358,11 @@ theorem exceptionLifecycle_decoded_agrees :
     runExceptionLifecycle 50 exceptionLifecycleModule 255 =
       runExceptionLifecycle 50 exceptionLifecycleModuleDecoded 255 ∧
     runExceptionLifecycle 100 exceptionLifecycleModule 1000 =
-      runExceptionLifecycle 100 exceptionLifecycleModuleDecoded 1000 := by native_decide
+      runExceptionLifecycle 100 exceptionLifecycleModuleDecoded 1000 := by
+  unfold runExceptionLifecycle
+  generalize hdecoded : exceptionLifecycleModuleDecoded = decoded
+  conv at hdecoded => lhs; cbv
+  subst decoded
+  decide +kernel
 
 end Wasm.SmallStep

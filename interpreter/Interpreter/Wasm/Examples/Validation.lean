@@ -2,6 +2,11 @@ import Interpreter.Wasm.SmallStep
 import Interpreter.Wasm.Examples.Harness
 import Interpreter.Wasm.Validate
 
+kernel_decoder
+
+set_option maxRecDepth 100000
+set_option maxHeartbeats 4000000
+
 /-!
 # Validator conformance suite
 
@@ -538,41 +543,41 @@ def brOnNonNullRefinementValidationModule : Module :=
 
 theorem validator_accepts_passive_data_without_linear_memory :
     passiveDataWithoutMemoryModule.dataWithoutMemory = false ∧
-      validationSucceeds passiveDataWithoutMemoryModule = true := by native_decide
+      validationSucceeds passiveDataWithoutMemoryModule = true := by cbv
 
 theorem validator_rejects_active_data_without_linear_memory :
     activeDataWithoutMemoryModule.dataWithoutMemory = true ∧
-      validationErrorIs activeDataWithoutMemoryModule "unknown memory" = true := by native_decide
+      validationErrorIs activeDataWithoutMemoryModule "unknown memory" = true := by cbv
 
 theorem validator_accepts_float_constant_global :
-    validationSucceeds floatConstantGlobalValidationModule = true := by native_decide
+    validationSucceeds floatConstantGlobalValidationModule = true := by cbv
 
 theorem validator_rejects_immutable_array_init_data :
     validationErrorIs immutableArrayInitDataValidationModule
-      "immutable array" = true := by native_decide
+      "immutable array" = true := by cbv
 
 theorem validator_rejects_reference_array_init_data :
     validationErrorIs referenceArrayInitDataValidationModule
-      "array type is not numeric or vector" = true := by native_decide
+      "array type is not numeric or vector" = true := by cbv
 
 theorem validator_accepts_precise_array_constructor_result :
-    validationSucceeds preciseArrayConstructorValidationModule = true := by native_decide
+    validationSucceeds preciseArrayConstructorValidationModule = true := by cbv
 
 theorem validator_rejects_cross_typed_array_get :
     validationErrorIs crossTypedArrayGetValidationModule
-      "type mismatch" = true := by native_decide
+      "type mismatch" = true := by cbv
 
 theorem validator_accepts_declarative_function_reference :
-    validationSucceeds declarativeFunctionReferenceValidationModule = true := by native_decide
+    validationSucceeds declarativeFunctionReferenceValidationModule = true := by cbv
 
 theorem validator_accepts_precise_function_reference_global :
-    validationSucceeds preciseFunctionReferenceGlobalValidationModule = true := by native_decide
+    validationSucceeds preciseFunctionReferenceGlobalValidationModule = true := by cbv
 
 theorem validator_accepts_nonnull_element_for_nullable_table :
-    validationSucceeds covariantElementTableValidationModule = true := by native_decide
+    validationSucceeds covariantElementTableValidationModule = true := by cbv
 
 theorem validator_accepts_br_on_non_null_refinement :
-    validationSucceeds brOnNonNullRefinementValidationModule = true := by native_decide
+    validationSucceeds brOnNonNullRefinementValidationModule = true := by cbv
 
 theorem validator_rejects_unknown_data_drop :
     validationErrorIs invalidDataDropModule "unknown data segment" = true := by decide +kernel

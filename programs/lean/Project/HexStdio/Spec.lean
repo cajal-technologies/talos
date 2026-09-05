@@ -50,11 +50,11 @@ elaboration time and are part of no proof obligation. -/
 /-- The generated module imports standard I/O plus the allocator-private,
 terminal OOM notification. -/
 theorem module_imports : «module».imports = StdIO.imports ++ OOM.imports := by
-  native_decide
+  decide +kernel
 
 /-- Every import of the generated module is implemented by the universal host. -/
 theorem universal_host_covers : Universal.covers «module» = true := by
-  native_decide
+  decide +kernel
 
 /-- The name-keyed universal environment satisfies the matching relational
 host contract regardless of generated import indices. -/

@@ -1,5 +1,11 @@
 import Interpreter.Wasm.SmallStep
+import Interpreter.Wasm.Decoder.ProofEval
 import Interpreter.Wasm.Decoder.Wat
+
+kernel_decoder
+
+set_option maxRecDepth 100000
+set_option maxHeartbeats 4000000
 
 /-! ## Example: multi-value
 
@@ -187,6 +193,6 @@ private def firstBlockArity (m : Wasm.Module) : Option (Nat × Nat) :=
     `decide +kernel` on the literal decoder output. -/
 theorem multiValueBlockTypeDecodes :
     (Wasm.Decoder.Wat.decode multiValueWat).toOption.bind firstBlockArity
-      = some (0, 2) := by native_decide
+      = some (0, 2) := by cbv
 
 end Wasm

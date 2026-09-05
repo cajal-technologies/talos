@@ -57,9 +57,9 @@ array specs. -/
 def slot64 (base k : UInt32) : MemRegion := ⟨base + 8 * k, 8⟩
 
 /-- `x <<< 3 = 8 * x` on `UInt32`: bridges the `(const 3) shl` address
-computation LLVM emits to the `8 * k` slot offset. The single `bv_decide`
-fact of the slot algebra — `slot64_of_shl` derives from it. -/
-theorem shl3_eq_mul8 (x : UInt32) : x <<< (3 % 32 : UInt32) = 8 * x := by bv_decide
+computation LLVM emits to the `8 * k` slot offset. Kernel-checked
+normalization supplies the slot algebra used by `slot64_of_shl`. -/
+theorem shl3_eq_mul8 (x : UInt32) : x <<< (3 % 32 : UInt32) = 8 * x := by bv_normalize
 
 /-- The codegen's `(k <<< 3) + base` lands on the slot base address. -/
 theorem slot64_of_shl (base k : UInt32) :
@@ -92,7 +92,7 @@ def slot32 (base k : UInt32) : MemRegion := ⟨base + 4 * k, 4⟩
 
 /-- `x <<< 2 = 4 * x` on `UInt32`: the `(const 2) shl` address computation LLVM
 emits for a `u32` array index. -/
-theorem shl2_eq_mul4 (x : UInt32) : x <<< (2 % 32 : UInt32) = 4 * x := by bv_decide
+theorem shl2_eq_mul4 (x : UInt32) : x <<< (2 % 32 : UInt32) = 4 * x := by bv_normalize
 
 /-- No wraparound: if the slot's true byte offset stays below `2^32`, the wasm
 address of `slot32 base k` is the integer `base.toNat + 4 * k.toNat`. -/

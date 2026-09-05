@@ -1,6 +1,11 @@
 import Interpreter.Wasm.SmallStep
 import Interpreter.Wasm.Examples.Harness
 
+kernel_decoder
+
+set_option maxRecDepth 100000
+set_option maxHeartbeats 4000000
+
 /-! ## Example: decoding a WAT module with imports (M9)
 
     Exercises the `(import "mod" "name" (func …))` syntax end-to-end:
@@ -37,18 +42,18 @@ theorem importWat_imports :
     decoded.imports = [{ «module» := "env"
                          name     := "inc"
                          params   := [.i32]
-                         results  := [.i32] }] := by native_decide
+                         results  := [.i32] }] := by cbv
 
 /-- Exactly one in-module function, with the expected params/results. -/
 theorem importWat_funcs_shape :
     decoded.funcs.length = 1 ∧
     decoded.funcs.head?.map (·.params)  = some [.i32] ∧
-    decoded.funcs.head?.map (·.results) = some [.i32] := by native_decide
+    decoded.funcs.head?.map (·.results) = some [.i32] := by cbv
 
 /-- The export `caller` resolves to unified index `1`
 (`imports.length + 0`), not `0`. -/
 theorem importWat_exports_funcIdx :
-    decoded.exports = [{ name := "caller", funcIdx := 1 }] := by native_decide
+    decoded.exports = [{ name := "caller", funcIdx := 1 }] := by cbv
 
 def typedStructuredWat : String := "
 (module
@@ -72,7 +77,7 @@ def decodedBlockSignature :
   | _ => none
 
 theorem decoder_retains_exact_block_signature :
-    decodedBlockSignature = some (1, 1, [.i32], [.i64]) := by native_decide
+    decodedBlockSignature = some (1, 1, [.i32], [.i64]) := by cbv
 
 /-- The decoded module is byte-for-byte identical to a hand-built one
 that pairs with the same `inc` host. End-to-end smoke test: decoding
@@ -100,7 +105,7 @@ def callerConfig : Config Unit :=
 /-- Calling `caller(41)` against `incEnv` returns `[42]` through the
 authoritative host-call step. -/
 theorem caller_against_incEnv :
-    (runSteps 3 callerConfig).result.values? = some [.i32 42] := by native_decide
+    (runSteps 3 callerConfig).result.values? = some [.i32 42] := by cbv
 
 theorem caller_against_incEnv_terminates :
     TerminatesWith callerConfig (fun values _ => values = [.i32 42]) :=

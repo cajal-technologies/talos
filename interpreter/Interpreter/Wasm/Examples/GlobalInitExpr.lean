@@ -1,6 +1,11 @@
 import Interpreter.Wasm.SmallStep
 import Interpreter.Wasm.Examples.Harness
 
+kernel_decoder
+
+set_option maxRecDepth 100000
+set_option maxHeartbeats 4000000
+
 /-! ## Example: constant-expression global initializers
 
     Extended constant expressions and GC allocation expressions are evaluated
@@ -36,15 +41,15 @@ private def decoded : Wasm.Module :=
   Wasm.Examples.decodeOrDefault globalInitExprWat
 
 theorem decoded_global_keeps_initExpr :
-    (decoded.globals[0]?.map (·.initExpr.isEmpty)).getD true = false := by native_decide
+    (decoded.globals[0]?.map (·.initExpr.isEmpty)).getD true = false := by cbv
 
 theorem runConstGlobals_evaluates_initExpr :
-    (initializedStore decoded).globals.globals[0]? = some (.i32 42) := by native_decide
+    (initializedStore decoded).globals.globals[0]? = some (.i32 42) := by cbv
 
 def getGConfig : Config Unit := initializedConfig decoded
 
 theorem getG_returns_42 :
-    (runSteps 2 getGConfig).result.values? = some [.i32 42] := by native_decide
+    (runSteps 2 getGConfig).result.values? = some [.i32 42] := by cbv
 
 theorem getG_terminates :
     TerminatesWith getGConfig (fun values _ => values = [.i32 42]) :=
@@ -78,14 +83,14 @@ private def decodedArith : Wasm.Module :=
   Wasm.Examples.decodeOrDefault structGlobalArithWat
 
 theorem leaf_struct_new_keeps_initExpr :
-    (decodedLeaf.globals[0]?.map (·.initExpr.isEmpty)).getD true = false := by native_decide
+    (decodedLeaf.globals[0]?.map (·.initExpr.isEmpty)).getD true = false := by cbv
 
 def leafStructConfig : Config Unit := initializedConfig decodedLeaf
 def arithStructConfig : Config Unit := initializedConfig decodedArith
 
 theorem leaf_struct_new_returns_100 :
     (runSteps 4 leafStructConfig).result.values? =
-      some [.i32 100] := by native_decide
+      some [.i32 100] := by cbv
 
 theorem leaf_struct_new_terminates :
     TerminatesWith leafStructConfig
@@ -99,7 +104,7 @@ theorem leaf_struct_new_partial :
 
 theorem arith_struct_new_returns_100 :
     (runSteps 4 arithStructConfig).result.values? =
-      some [.i32 100] := by native_decide
+      some [.i32 100] := by cbv
 
 theorem arith_struct_new_terminates :
     TerminatesWith arithStructConfig

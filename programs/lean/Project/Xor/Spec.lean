@@ -14,7 +14,7 @@ open Wasm
 
 /-- The generated module imports standard I/O plus the allocator's terminal
 OOM notification. -/
-theorem module_imports : «module».imports = StdIO.imports ++ OOM.imports := by native_decide
+theorem module_imports : «module».imports = StdIO.imports ++ OOM.imports := by decide +kernel
 
 /-- Fuel-free relational execution of the exported byte-stream program. -/
 def RunsBytes (input output : List UInt8) : Prop :=

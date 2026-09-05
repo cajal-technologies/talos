@@ -2387,11 +2387,11 @@ theorem func4ExampleHeap_agrees :
       · apply_insert_physical_word32_sound rfl
         · apply_insert_physical_word64_sound rfl
           · exact heapAgreesWithMem_empty _
-          · native_decide
-        · native_decide
-      · native_decide
-    · native_decide
-  · native_decide
+          · decide +kernel
+        · decide +kernel
+      · decide +kernel
+    · decide +kernel
+  · decide +kernel
 
 theorem func4ExampleHeap_inBounds :
     heapAddressesInBounds func4ExampleHeap
@@ -2403,13 +2403,13 @@ theorem func4ExampleHeap_inBounds :
       · apply_insert_physical_word32_inBounds rfl
         · apply_insert_physical_word64_inBounds rfl
           · exact heapAddressesInBounds_empty _
-          · native_decide
-        · native_decide
-        · native_decide
-      · native_decide
-      · native_decide
-    · native_decide
-  · native_decide
+          · decide +kernel
+        · decide +kernel
+        · decide +kernel
+      · decide +kernel
+      · decide +kernel
+    · decide +kernel
+  · decide +kernel
 
 theorem func4ExampleGlobals_agree :
     globalHeapAgrees func4ExampleGlobals
@@ -2548,7 +2548,7 @@ proof for the distinct-index export example. -/
 theorem func4Example_terminates :
     Wasm.SmallStep.TerminatesWith func4ExampleConfig
       (fun values _store => values = []) :=
-  Wasm.SmallStep.runSteps_values_terminates (fuel := 200) (by native_decide)
+  Wasm.SmallStep.runSteps_values_terminates (fuel := 200) (by decide +kernel)
 
 def func4AliasHeap : WasmHeapMap (Option UInt8) :=
   store64Heap
@@ -2580,10 +2580,10 @@ theorem func4AliasHeap_agrees :
     · apply_insert_physical_word32_sound rfl
       · apply_insert_physical_word64_sound rfl
         · exact heapAgreesWithMem_empty _
-        · native_decide
-      · native_decide
-    · native_decide
-  · native_decide
+        · decide +kernel
+      · decide +kernel
+    · decide +kernel
+  · decide +kernel
 
 theorem func4AliasHeap_inBounds :
     heapAddressesInBounds func4AliasHeap
@@ -2594,12 +2594,12 @@ theorem func4AliasHeap_inBounds :
     · apply_insert_physical_word32_inBounds rfl
       · apply_insert_physical_word64_inBounds rfl
         · exact heapAddressesInBounds_empty _
-        · native_decide
-      · native_decide
-      · native_decide
-    · native_decide
-    · native_decide
-  · native_decide
+        · decide +kernel
+      · decide +kernel
+      · decide +kernel
+    · decide +kernel
+    · decide +kernel
+  · decide +kernel
 
 theorem func4AliasHeap_pointsTo [WasmHeapGS Unit] :
     ([∗map] address ↦ value ∈ func4AliasHeap,
@@ -2710,7 +2710,7 @@ theorem func4Alias_store_smallStep :
 theorem func4Alias_terminates :
     Wasm.SmallStep.TerminatesWith func4AliasConfig
       (fun values _store => values = []) :=
-  Wasm.SmallStep.runSteps_values_terminates (fuel := 200) (by native_decide)
+  Wasm.SmallStep.runSteps_values_terminates (fuel := 200) (by decide +kernel)
 
 /-! ## Closed equal-index example -/
 
@@ -2739,8 +2739,8 @@ theorem func0AliasHeap_agrees :
   apply_insert_physical_word64_sound rfl
   · apply_insert_physical_word64_sound rfl
     · exact heapAgreesWithMem_empty _
-    · native_decide
-  · native_decide
+    · decide +kernel
+  · decide +kernel
 
 theorem func0AliasHeap_inBounds :
     heapAddressesInBounds func0AliasHeap
@@ -2749,8 +2749,8 @@ theorem func0AliasHeap_inBounds :
   apply_insert_physical_word64_inBounds rfl
   · apply_insert_physical_word64_inBounds rfl
     · exact heapAddressesInBounds_empty _
-    · native_decide
-  · native_decide
+    · decide +kernel
+  · decide +kernel
 
 theorem func0AliasGlobals_agree :
     globalHeapAgrees func0AliasGlobals

@@ -23,10 +23,10 @@ open Wasm
 
 /-- The generated module imports standard I/O plus the allocator-private,
 terminal OOM notification. -/
-theorem module_imports : «module».imports = StdIO.imports ++ OOM.imports := by native_decide
+theorem module_imports : «module».imports = StdIO.imports ++ OOM.imports := by decide +kernel
 
 /-- Every import of the generated module is implemented by the universal host. -/
-theorem universal_host_covers : Universal.covers «module» = true := by native_decide
+theorem universal_host_covers : Universal.covers «module» = true := by decide +kernel
 
 /-- The four little-endian bytes of a 32-bit word. -/
 def encodeWord (value : UInt32) : List UInt8 :=
