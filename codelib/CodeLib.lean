@@ -39,6 +39,7 @@ import CodeLib.RustStd.HashMap.SipHash
 import CodeLib.RustStd.HashMap.Table
 import CodeLib.RustStd.HashMap.TableRefinement
 import CodeLib.RustStd.HashMap.TableU32
+import CodeLib.RustStd.HashMap.Swar
 import CodeLib.RustStd.StdioContract
 import CodeLib.Near.State
 import CodeLib.Near.Env
