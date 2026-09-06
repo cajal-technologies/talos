@@ -987,11 +987,6 @@ theorem find?_key_perm {l m : List (K × V)} (hp : l.Perm m) (hn : NodupKeys m) 
       rw [beq_iff_eq] at hpx hpy
       rw [hl, hm, nodupKeys_eq_of_fst hn (hp.mem_iff.1 hx) hy (hpx.trans hpy.symm)]
 
-theorem get_perm {l m : List (K × V)} (hp : l.Perm m) (hn : NodupKeys m) (k : K) :
-    HashMap.get l k = HashMap.get m k := by
-  unfold HashMap.get
-  rw [find?_key_perm hp hn]
-
 theorem containsKey_perm {l m : List (K × V)} (hp : l.Perm m) (hn : NodupKeys m) (k : K) :
     HashMap.containsKey l k = HashMap.containsKey m k := by
   unfold HashMap.containsKey

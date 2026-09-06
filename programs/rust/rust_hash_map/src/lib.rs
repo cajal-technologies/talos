@@ -14,14 +14,16 @@
 //! bytes an export writes.
 //!
 //! The map crosses the wire as a `Vec<(u32, u32)>` rather than through borsh's
-//! own `HashMap` impl. Borsh gates that impl behind its `std` feature, the
+//! own `HashMap` impl. Borsh gates that impl behind its `std` feature. The
 //! verifier builds the whole workspace in one cargo call, and cargo gives a
-//! shared dependency one feature set across every member, so a feature here
-//! would also change the module that `rust_vec` emits. The bytes are the same
-//! either way: borsh's impl sorts the entries by key and writes them through
-//! this same `Vec` encoding, and it reads them back as a pair list and
-//! collects it. `sorted_entries` and `collect_entries` below are those two
-//! steps. Borsh's own reader also rejects keys that do not ascend under the
+//! shared dependency one feature set across every member. A feature here
+//! would therefore also change the module that `rust_vec` emits. The bytes
+//! are the same either way: borsh's impl sorts the entries by key and writes
+//! them through this same `Vec` encoding, and it reads them back as a pair
+//! list and collects it. `sorted_entries` and `collect_entries` below are
+//! those two steps. The host test `matches_borsh_hash_map_impl` checks both
+//! against that impl through a dev-dependency, which the wasm build does not
+//! see. Borsh's own reader also rejects keys that do not ascend under the
 //! non-default `de_strict_order` feature, which this crate neither enables nor
 //! goes through.
 //!
@@ -52,10 +54,10 @@
 //! `MAX_HEAP_END`, which is `isize::MAX`, and raises `talos.oom` at that cap.
 //! The capacity therefore stays below the overflow arithmetic in the table.
 //! This last argument is stated, not proved: no test reaches the cap, and a
-//! test that did would need a two gigabyte input.
+//! test that did would need a two-gigabyte input.
 //!
 //! A repeated key on the wire is not a rejection. The reader collects a pair
-//! list, so the last value of a repeated key wins and the map can hold fewer
+//! list, so the map keeps the last value of a repeated key and can hold fewer
 //! entries than the wire count states.
 
 mod exports;
@@ -102,7 +104,7 @@ fn reply<T: borsh::BorshSerialize>(value: &T) {
 
 /// The entries of a map, sorted by key. A `HashMap` iterates in whatever order
 /// the hash function left, so the sort is what makes the encoding depend on
-/// the content alone. This is the step borsh's own map serializer performs.
+/// the content alone. Borsh's own map serializer does this same step.
 ///
 /// The sort is the unstable one. The keys come out of a `HashMap`, so no key
 /// repeats. A stable sort would only pay a scratch allocation for an order
@@ -115,7 +117,7 @@ fn sorted_entries(map: &Map) -> Entries {
 }
 
 /// The map an entry list denotes, which is `HashMap.ofEntries` in the Lean
-/// model and the step borsh's own map deserializer performs. A later value
+/// model and the step that borsh's own map deserializer does. A later value
 /// under a key already seen replaces the earlier one.
 #[inline(never)]
 fn collect_entries(entries: Entries) -> Map {
@@ -290,6 +292,33 @@ mod tests {
         let bytes = borsh::to_vec(&super::sorted_entries(&original)).unwrap();
         let entries = borsh::from_slice::<Entries>(&bytes).unwrap();
         assert_eq!(super::collect_entries(entries), original);
+    }
+
+    /// Both steps against borsh's own `HashMap` impl, which the `std`
+    /// dev-dependency turns on for this host build only. The 64 maps have up
+    /// to 15 entries each, with keys from a range of eight so that keys
+    /// repeat. `sorted_entries` writes the bytes that impl writes, and
+    /// `collect_entries` reads back the map that impl reads.
+    #[test]
+    fn matches_borsh_hash_map_impl() {
+        let mut state: u32 = 0x2545_f491;
+        let mut next = || {
+            state = state.wrapping_mul(1_103_515_245).wrapping_add(12_345);
+            state >> 16
+        };
+        for round in 0..64u32 {
+            let pairs: Entries = (0..round % 16).map(|_| (next() % 8, next())).collect();
+            let original = map(&pairs);
+            assert_eq!(
+                borsh::to_vec(&super::sorted_entries(&original)).unwrap(),
+                borsh::to_vec(&original).unwrap()
+            );
+            let bytes = borsh::to_vec(&pairs).unwrap();
+            let theirs = borsh::from_slice::<Map>(&bytes).unwrap();
+            let ours = super::collect_entries(borsh::from_slice::<Entries>(&bytes).unwrap());
+            assert_eq!(ours, theirs);
+            assert_eq!(ours, original);
+        }
     }
 
     /// The exact bytes the Lean output functions state. `containsKeyOutput` is

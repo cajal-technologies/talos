@@ -6,14 +6,15 @@ import Mathlib.Data.Nat.Bitwise
 
 The four-byte little-endian `u32` codec, as a `WordCodec UInt32`.
 
-`decode_encode` is proved through `Nat.testBit` and `omega` rather than by
+The proof of `decode_encode` uses `Nat.testBit` and `omega` rather than
 bit-blasting, so no theorem stated over this codec depends on a reflection
 axiom.  `CodeLib.Examples.MergeSort.StdIO.codec` is the same codec proved by
 `bv_decide`; it lives under `Examples`, which `RustStd` does not import.
 
-`Project.Mergesort.Spec` carries an identical private copy (`encodeWord`,
-`decodeWord`, `u32Codec`).  A follow-up that may touch `programs/` can replace
-that copy with this definition.
+`Project.Mergesort.Spec` carries an identical copy (`encodeWord`,
+`decodeWord`, `u32Codec`), and `reassembleLE32` below repeats its
+`reassemble32` line for line.  A follow-up can replace both once
+`CodeLib.UInt32` carries a shared reassembly lemma.
 
 Consumer: `CodeLib.RustStd.Vec.Codec`, which puts `u32le` in front of a packed
 `Vec` as its element count.

@@ -49,14 +49,14 @@ fn reply<T: borsh::BorshSerialize>(value: &T) {
 // `vec_len` has no kernel: a `len` that returns its own argument is a call
 // LLVM deletes whatever the inline attribute says.
 
-/// `Vec::push`, taking and returning the vector so the export stays functional.
+/// `Vec::push`. It takes and returns the vector so that the export stays functional.
 #[inline(never)]
 fn push(mut values: Vec<u32>, value: u32) -> Vec<u32> {
     values.push(value);
     values
 }
 
-/// `Vec::pop`, returning the removed element beside the remaining vector.
+/// `Vec::pop`. It returns the removed element beside the vector that remains.
 #[inline(never)]
 fn pop(mut values: Vec<u32>) -> (Option<u32>, Vec<u32>) {
     let element = values.pop();

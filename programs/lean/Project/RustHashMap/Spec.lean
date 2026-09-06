@@ -1,7 +1,6 @@
 import Project.RustHashMap.Program
-import Interpreter.Wasm.Host.Universal
 import CodeLib.RustStd.HashMap.Codec
-import CodeLib.RustStd.StdioContract
+import CodeLib.StdioContract
 
 /-!
 # Specification for `rust_hash_map`
@@ -29,11 +28,11 @@ distinguishable.  The encode step cannot fail: an allocation failure raises
 `talos.oom` rather than an `Err`.
 
 The contracts are partial, not total.  `read_all`, the decoder, and the map
-itself all allocate in proportion to the input, so an allocation failure is a
-reachable terminal outcome for every one of these exports; the `talos.oom`
-host trap is therefore admitted as an alternative to a correct write, in the
-shape `Project.Mergesort.Spec` uses.  Fuel, linear memory, and allocator state
-stay hidden.
+itself all allocate in proportion to the input.  An allocation failure is
+therefore a reachable terminal outcome for every one of these exports.  Each
+contract admits the `talos.oom` host trap as an alternative to a correct
+write, in the shape `Project.Mergesort.Spec` uses.  Fuel, linear memory, and
+allocator state stay hidden.
 -/
 
 namespace Project.RustHashMap.Spec
@@ -56,7 +55,7 @@ theorem universal_env_satisfies :
 /-! ## Run shape
 
 Every Talos stdio program shares this shape, so it lives in
-`CodeLib.RustStd.StdioContract` rather than here.  The one name below fixes
+`CodeLib.StdioContract` rather than here.  The one name below fixes
 the module, which is the only part a contract adds. -/
 
 /-- The shared shape of all five contracts: a normal return writes exactly
@@ -64,7 +63,7 @@ the module, which is the only part a contract adds. -/
 def WritesOrOOM (op : String) (input output : List UInt8) : Prop :=
   StdioContract.WritesOrOOM «module» op input output
 
-/-! ## Reading the input -/
+/-! ## Input readers -/
 
 /-- The map the export decodes, or `none` when borsh rejects the bytes: a
 header shorter than four bytes, a payload with a trailing partial pair, or an
@@ -192,7 +191,7 @@ theorem insert_output_sorts :
       = [0] ++ [3, 0, 0, 0] ++ [1, 0, 0, 0, 10, 0, 0, 0] ++
           [2, 0, 0, 0, 20, 0, 0, 0] ++ [3, 0, 0, 0, 30, 0, 0, 0] := by cbv
 
-/-! ## Reading the contracts
+/-! ## Contract readers
 
 Each contract quantifies over raw bytes.  The theorems below read them on
 well-formed input, where the round trip of the entry list and
@@ -203,7 +202,7 @@ stated and then left unapplied.  Together they exercise all three readers
 `Borsh.u32`, both `Option` tags, the `Borsh.bool` layout, and the map
 operations `len`, `insert`, `remove`, `get` and `containsKey`.
 
-The last four go the other way.  They bound the entry count of a decoded map,
+The last four are about what an export writes.  They bound the entry count of a decoded map,
 show that such a map always has distinct keys whatever bytes arrive, and show
 that the map half of what `map_insert` and `map_remove` write reads back as
 that map in key order.  The output of one export is therefore well-formed

@@ -75,7 +75,7 @@ theorem deserializeEntries_serializeEntries (kc : WordCodec K)
 /-- A decoded entry list is already short enough for the format that produced
 it.  The reader accepts a payload only when its pair count equals the `u32`
 header, and a `u32` is below `2 ^ 32`, so the bound every encoding lemma asks
-for comes free with the decode.
+for follows from the header check.
 
 Consumer: `Project.RustHashMap.Spec.length_of_mapOf`. -/
 theorem length_of_deserializeEntries {kc : WordCodec K} {vc : WordCodec V}

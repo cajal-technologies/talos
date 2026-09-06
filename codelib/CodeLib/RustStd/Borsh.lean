@@ -19,7 +19,7 @@ Every one of those is already expressible with what `CodeLib` has, so this
 module adds no new machinery.  It gives the layouts their borsh names, so a
 contract can say "this export writes a borsh `Option<u32>`" instead of
 restating the tag convention at each use.  The names are the borsh type names
-and the namespace is meant to be used qualified: `Borsh.u32`, `Borsh.option`,
+and the namespace is for qualified use: `Borsh.u32`, `Borsh.option`,
 `Borsh.vec`.  `vec` is literally `Wasm.RustStd.Vec.serialize`: the
 length-prefixed format that module already defines *is* the borsh container
 encoding, which is why the round trip below is `Vec.deserialize_serialize`

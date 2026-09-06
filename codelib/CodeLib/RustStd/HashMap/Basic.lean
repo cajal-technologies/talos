@@ -1,7 +1,7 @@
 /-!
 # A pure model of the safe `HashMap` surface
 
-`std::collections::HashMap` is modelled as an association list.  The list is
+An association list models `std::collections::HashMap`.  The list is
 the *observable* content of the map: a key/value pair for each live entry.
 The hash table, its buckets, its hash function and its capacity are all
 absent, exactly as capacity is absent from the `Vec` model in
@@ -86,7 +86,7 @@ insert each entry in turn, so a later value under a key already seen replaces
 the earlier one.  The result therefore has one entry per *distinct* key, and
 is shorter than `entries` whenever a key repeats.
 
-This is the operation a driver performs when it reads a map off the wire, so
+A driver does this operation when it reads a map off the wire, so
 it is what stands between `CodeLib.RustStd.HashMap.Codec` (which decodes a
 list of pairs, duplicates and all) and the map the contracts talk about. -/
 def ofEntries [BEq K] (entries : List (K × V)) : Map K V :=
@@ -221,16 +221,9 @@ to assume the invariant of a decoded map.
 
 Consumer: `Project.RustHashMap.Spec.nodupKeys_of_mapOf`. -/
 theorem nodupKeys_ofEntries [BEq K] [LawfulBEq K] (entries : List (K × V)) :
-    NodupKeys (ofEntries entries) := by
-  have haux : ∀ (es : List (K × V)) (acc : Map K V), NodupKeys acc →
-      NodupKeys (es.foldl (fun m entry => (insert m entry.1 entry.2).2) acc) := by
-    intro es
-    induction es with
-    | nil => intro acc hacc; simpa using hacc
-    | cons entry rest ih =>
-        intro acc hacc
-        exact ih _ (nodupKeys_insert hacc entry.1 entry.2)
-  exact haux entries [] (by simp [NodupKeys])
+    NodupKeys (ofEntries entries) :=
+  List.foldlRecOn entries _ (by simp [NodupKeys])
+    fun _ h entry _ => nodupKeys_insert h entry.1 entry.2
 
 /-- A remove keeps the keys distinct.  The filter only drops entries, and a
 sublist of a key list without repeats has none either.
@@ -257,39 +250,46 @@ private theorem eq_of_key_eq_of_nodupKeys :
       · exact (hhead he (hk.trans (congrArg Prod.fst he'))).elim
       · exact eq_of_key_eq_of_nodupKeys hcons.2 he he' hk
 
-/-- The sorted map reads as the map: with distinct keys at most one entry
-answers to `key`, and the sort keeps every entry.
+/-- A permutation of a map reads as the map: with distinct keys at most one
+entry answers to `key`, and a permutation keeps every entry.
 
-Consumer: `Project.RustHashMap.Spec.get_on_hashMap`. -/
-theorem get_sortByKey [BEq K] [LawfulBEq K] [LE K] [DecidableRel (α := K) (· ≤ ·)]
-    {m : Map K V} (h : NodupKeys m) (key : K) :
-    get (sortByKey m) key = get m key := by
-  have hperm := sortByKey_perm m
+Consumer: `get_sortByKey` below. -/
+theorem get_perm [BEq K] [LawfulBEq K] {l m : Map K V} (hp : l.Perm m)
+    (hn : NodupKeys m) (key : K) :
+    get l key = get m key := by
   unfold get
-  cases hs : (sortByKey m).find? (fun entry => entry.1 == key) with
+  cases hs : l.find? (fun entry => entry.1 == key) with
   | none =>
     cases hm : m.find? (fun entry => entry.1 == key) with
     | none => rfl
     | some e =>
       exfalso
       have hmem : e ∈ m := List.mem_of_find?_eq_some hm
-      have hp := List.find?_some hm
+      have hpred := List.find?_some hm
       rw [List.find?_eq_none] at hs
-      exact hs e (hperm.mem_iff.mpr hmem) hp
+      exact hs e (hp.mem_iff.mpr hmem) hpred
   | some e =>
     cases hm : m.find? (fun entry => entry.1 == key) with
     | none =>
       exfalso
-      have hmem : e ∈ sortByKey m := List.mem_of_find?_eq_some hs
-      have hp := List.find?_some hs
+      have hmem : e ∈ l := List.mem_of_find?_eq_some hs
+      have hpred := List.find?_some hs
       rw [List.find?_eq_none] at hm
-      exact hm e (hperm.mem_iff.mp hmem) hp
+      exact hm e (hp.mem_iff.mp hmem) hpred
     | some e' =>
-      have he : e ∈ m := hperm.mem_iff.mp (List.mem_of_find?_eq_some hs)
+      have he : e ∈ m := hp.mem_iff.mp (List.mem_of_find?_eq_some hs)
       have he' : e' ∈ m := List.mem_of_find?_eq_some hm
       have hk : e.1 = key := by simpa using List.find?_some hs
       have hk' : e'.1 = key := by simpa using List.find?_some hm
-      rw [eq_of_key_eq_of_nodupKeys h he he' (hk.trans hk'.symm)]
+      rw [eq_of_key_eq_of_nodupKeys hn he he' (hk.trans hk'.symm)]
+
+/-- The sorted map reads as the map: the sort is a permutation.
+
+Consumer: `Project.RustHashMap.Spec.get_on_hashMap`. -/
+theorem get_sortByKey [BEq K] [LawfulBEq K] [LE K] [DecidableRel (α := K) (· ≤ ·)]
+    {m : Map K V} (h : NodupKeys m) (key : K) :
+    get (sortByKey m) key = get m key :=
+  get_perm (sortByKey_perm m) h key
 
 /-! ## How an operation changes the entry count
 

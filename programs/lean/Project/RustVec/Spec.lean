@@ -1,5 +1,4 @@
 import Project.RustVec.Program
-import Interpreter.Wasm.Host.Universal
 import CodeLib.RustStd.Borsh
 
 /-!
@@ -21,11 +20,11 @@ distinguishable.  The encode step cannot fail: an allocation failure raises
 `talos.oom` rather than an `Err`.
 
 The contracts are partial, not total.  `read_all` and the decoder both
-allocate in proportion to the input, so an allocation failure is a reachable
-terminal outcome for every one of these exports; the `talos.oom` host trap is
-therefore admitted as an alternative to a correct write, in the shape
-`Project.Mergesort.Spec` uses.  Fuel, linear memory, and allocator state stay
-hidden.
+allocate in proportion to the input.  An allocation failure is therefore a
+reachable terminal outcome for every one of these exports.  Each contract
+admits the `talos.oom` host trap as an alternative to a correct write, in the
+shape `Project.Mergesort.Spec` uses.  Fuel, linear memory, and allocator state
+stay hidden.
 -/
 
 namespace Project.RustVec.Spec
@@ -76,7 +75,7 @@ def PartiallyRuns (op : String) (input : List UInt8)
 def WritesOrOOM (op : String) (input output : List UInt8) : Prop :=
   PartiallyRuns op input (fun run => ReturnsOutput run output)
 
-/-! ## Reading the input -/
+/-! ## Input readers -/
 
 /-- The vector the export decodes, or `none` when borsh rejects the bytes: a
 header shorter than four bytes, a payload with a trailing partial word, or an
@@ -186,7 +185,7 @@ theorem contract_names_start :
         (startCallConfig? (Universal.envFor «module») «module» op
           (Universal.State.ofInput [])).isSome) = true := by decide +kernel
 
-/-! ## Reading the contracts
+/-! ## Contract readers
 
 Each contract quantifies over raw bytes.  The theorems below read them on
 well-formed input, where `Borsh.vec?_vec` turns the byte-level statement into

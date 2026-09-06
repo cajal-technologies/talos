@@ -15,9 +15,9 @@ capacity is a real word, has its own model (`VecU8` in the merge-sort
 formalization); this file is the spec-level counterpart and does not overlap
 with it.
 
-Panic indexing (`v[i]`) is not modeled.  A panic compiles to a wasm trap, so
+The model omits panic indexing (`v[i]`).  A panic compiles to a wasm trap, so
 it is an outcome of the run rather than an operation of the data structure.
-`get` is the total `Option`-returning form, matching `Vec::get`.
+`get` is the total form that returns an `Option`, as `Vec::get` does.
 -/
 
 namespace Wasm.RustStd.Vec

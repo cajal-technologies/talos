@@ -4,22 +4,22 @@ import Interpreter.Wasm.Host.Universal
 # The partial contract shape a stdio program shares
 
 A Talos stdio program reads its whole input, computes, and writes one answer.
-Every export of such a program allocates in proportion to that input, so an
-allocation failure is a reachable terminal outcome and no total contract
-holds.  `Project.Mergesort.Spec` established that partial shape: a normal
-return, with the allocator's `talos.oom` trap admitted as the alternative.
+An export whose allocation grows with that input can reach an allocation
+failure, so no total contract holds for it.  `Project.Mergesort.Spec`
+established the partial shape for that case: a normal return, with the
+allocator's `talos.oom` trap admitted as the alternative.
 The byte-level form below, where a normal return writes exactly the expected
 bytes, is the one `Project.RustVec.Spec` writes out.
 
 `RunOutcome`, `ReturnsOutput`, and `RanOutOfMemory` name no module, so one
 definition of each serves every module.  `PartiallyRuns` and `WritesOrOOM`
 take the module, because a contract is about one module's export.
-`Project.Mergesort.Spec` keeps a `ReturnsOutput` of its own, which compares
-decoded `UInt32` values rather than bytes.  Fuel, linear memory, and
-allocator state stay hidden throughout.
+`Project.Mergesort.Spec` keeps a `ReturnsOutput` of its own, whose `output`
+parameter is a `List UInt32` that `encodeValues` turns into bytes.  Fuel,
+linear memory, and allocator state stay hidden throughout.
 -/
 
-namespace Wasm.RustStd.StdioContract
+namespace Wasm.StdioContract
 
 open Wasm
 
@@ -52,4 +52,4 @@ def PartiallyRuns (m : Module) (op : String) (input : List UInt8)
 def WritesOrOOM (m : Module) (op : String) (input output : List UInt8) : Prop :=
   PartiallyRuns m op input (fun run => ReturnsOutput run output)
 
-end Wasm.RustStd.StdioContract
+end Wasm.StdioContract
