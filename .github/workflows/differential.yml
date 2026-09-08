@@ -1,0 +1,67 @@
+name: Differential testing
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: differential-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  differential:
+    name: Compare Talos with V8
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.13.0'
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-tools@1.251.0
+      - name: Test the regression gate
+        run: python3 -m unittest discover -s scripts/tests -p 'test_differential_ci.py' -v
+      - uses: actions/cache@v5
+        with:
+          path: .lake/packages
+          key: differential-lake-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'interpreter/lake-manifest.json') }}
+      - uses: leanprover/lean-action@v1
+        with:
+          lake-package-directory: interpreter
+          # The existing CI builds all proof packages. This gate only needs the
+          # runner, whose import closure does not require Mathlib's build cache.
+          build-args: runner
+          use-mathlib-cache: false
+      - name: Run the deterministic corpus
+        timeout-minutes: 10
+        env:
+          SKIP_BUILD: '1'
+        run: NODE="$(command -v node)" bash scripts/differential.sh --ci
+      - name: Check failure detection against V8
+        env:
+          TALOS_DIFFERENTIAL_INTEGRATION: '1'
+        run: python3 -m unittest discover -s scripts/tests -p 'test_differential_ci.py' -v
+      - name: Publish the comparison summary
+        if: always()
+        run: |
+          if test -f .differential-cache/ci/summary.md; then
+            cat .differential-cache/ci/summary.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: differential-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .differential-cache/ci/
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14

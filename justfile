@@ -124,6 +124,12 @@ testsuite-report:
 differential *args:
     scripts/differential.sh {{ args }}
 
+# Run the fixed CI corpus against V8 and reject new per-case regressions.
+[group("differential")]
+[working-directory(".")]
+differential-ci *args:
+    scripts/differential.sh --ci {{ args }}
+
 # ── verifier workflow ─────────────────────────────────────────────────────────
 # All verifier recipes run from programs/ (project root: rust/ + lean/).
 # Omit crate names to operate on all workspace crates.
