@@ -168,12 +168,12 @@ private partial def dropDeclarationModifiers (line : String) : String :=
       dropDeclarationModifiers (dropPrefix line modifier.length)
   | none => line
 
-/-- Whether a later top-level line begins a new declaration or namespace
-boundary. Continuation lines are indented in the generated and handwritten
-specifications, so an indented declaration inside a term is not a boundary. -/
-private def declarationBoundary (line : String) : Bool :=
+/-- Whether a later line begins a new declaration or namespace boundary at
+the specification's indentation or less. Declarations may be indented inside
+a namespace; only deeper lines belong to the specification's term. -/
+private def declarationBoundary (declarationIndent : Nat) (line : String) : Bool :=
   let trimmed := leftTrim line
-  if trimmed != line then false
+  if line.length - trimmed.length > declarationIndent then false
   else
     let declaration := dropDeclarationModifiers trimmed
     ["def ", "abbrev ", "opaque ", "theorem ", "lemma ", "example",
@@ -421,9 +421,10 @@ def scanFile
         -- following lines.
         let mut statementEnd : Nat := i
         let mut j : Nat := i + 1
+        let declarationIndent := line.length - trimmed.length
         while hJ : j < lines.size do
           let next := lines[j]
-          if declarationBoundary next then
+          if declarationBoundary declarationIndent next then
             break
           if ¬ (leftTrim next).isEmpty then
             statementEnd := j

@@ -238,4 +238,53 @@ theorem identity_outcome :
 
 end SemanticExport
 
+/-! ## Precise exception references at the exported-call boundary -/
+
+namespace ExceptionExport
+
+private def identity (parameter : ValueType) : Module :=
+  { funcs := [{ params := [parameter], body := [.localGet 0], results := [parameter] }]
+    exports := [{ name := "identity", funcIdx := 0 }]
+    tags := [{}] }
+
+private def call (parameter : ValueType) (value : Value) : ExportCall State :=
+  let initial := (ExportCall.ofHost (identity parameter) default [value]).initial
+  { initial := { initial with exns := [(0, [])] }, arguments := [value] }
+
+private def returnedValues (parameter : ValueType) (value : Value) :
+    Option (List Value) := do
+  let m := identity parameter
+  let config ← startExportConfig? (envFor m) m "identity" (call parameter value)
+  (SmallStep.runSteps 2 config).result.values?
+
+-- Both nullable spellings accept null; nullable and non-null exn accept a
+-- live exception reference and execute the identity body normally.
+example : returnedValues (.ref true .exn) (.exnref none) =
+    some [.exnref none] := by native_decide
+
+example : returnedValues (.ref true .noExn) (.exnref none) =
+    some [.exnref none] := by native_decide
+
+example : returnedValues (.ref true .exn) (.exnref (some 0)) =
+    some [.exnref (some 0)] := by native_decide
+
+example : returnedValues (.ref false .exn) (.exnref (some 0)) =
+    some [.exnref (some 0)] := by native_decide
+
+-- Invalid arguments must fail at initialization, before any machine steps.
+example :
+    [(.ref false .exn, .exnref none),
+     (.ref false .noExn, .exnref none),
+     (.ref true .noExn, .exnref (some 0)),
+     (.ref false .noExn, .exnref (some 0)),
+     (.ref true .func, .exnref none),
+     (.ref true .any, .exnref (some 0)),
+     (.ref true .exn, .funcref none),
+     (.ref true .exn, .i32 0)].all (fun (parameter, value) =>
+       let m := identity parameter
+       (startExportConfig? (envFor m) m "identity" (call parameter value)).isNone) =
+      true := by native_decide
+
+end ExceptionExport
+
 end Wasm.Examples.UniversalHost

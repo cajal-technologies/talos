@@ -72,6 +72,10 @@ private def exportValueMatches (m : Module) (st : Store α) :
   | .v128 _, .v128 => true
   | .exnref _, .exnref => true
   | .anyref _, .anyref => true
+  -- Exception references are outside the GC cast/test helper's families.
+  | .exnref none, .ref nullable heap =>
+      nullable && (heap == .exn || heap == .noExn)
+  | .exnref (some _), .ref _ heap => heap == .exn
   | value, .ref nullable heap => gcRefMatches m st nullable heap value
   | _, _ => false
 
