@@ -38,14 +38,15 @@ private def expectedStatements (indent : String) : Array String :=
 -- Exercise the scanner during compilation without admitting the native
 -- evaluator's proof axiom into the audited declaration surface.
 #eval do
-  unless (findings "").specs.map (·.statement) == expectedStatements "" do
+  unless (findings "").specs.map FormalSpec.statement == expectedStatements "" do
     throw (IO.userError "top-level specification extraction regressed")
-  unless (findings "  ").specs.map (·.statement) == expectedStatements "  " do
+  unless (findings "  ").specs.map FormalSpec.statement == expectedStatements "  " do
     throw (IO.userError "indented specification extraction regressed")
-  unless (findings "  ").specs.map (·.location.span.«end».line) ==
+  unless (findings "  ").specs.map
+      (fun spec : FormalSpec => spec.location.span.«end».line) ==
       #[4, 13, 18] do
     throw (IO.userError "indented specification ranges regressed")
-  unless (findings "  ").verifications.map (·.name) ==
+  unless (findings "  ").verifications.map Verification.name ==
       #["Demo.run_correct"] do
     throw (IO.userError "verification extraction regressed")
 
