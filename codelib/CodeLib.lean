@@ -47,6 +47,8 @@ import CodeLib.Near.State
 import CodeLib.Near.Env
 import CodeLib.Near.Proof
 import CodeLib.SepLogic.WasmHeap
+import CodeLib.SepLogic.ByteSlice
+import CodeLib.SepLogic.BorshSlice
 import CodeLib.SepLogic.WasmRules
 import CodeLib.SepLogic.SmallStepLanguage
 import CodeLib.SepLogic.SmallStepState
