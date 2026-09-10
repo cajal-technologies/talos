@@ -1,0 +1,567 @@
+{
+  "corpus": {
+    "count": 620,
+    "sha256": "5eb90f5f5b30d12062bf61bd06946859bc672531e218850c2401ee60f439aec9"
+  },
+  "exceptions": {
+    "all/constinit15|constinit-elem[i31]@5c16e1eeb5d8": {
+      "engines": {
+        "custom": "TRAP",
+        "v8": "OK 70"
+      },
+      "reason": "Existing const-init element-segment gap: Talos traps with out of bounds table access; V8 returns 70. Exact input retained; no trap is treated as a successful result.",
+      "verdict": "completeness"
+    },
+    "all/constinit16|constinit-data[i8-bytes]@9b5319355cf8": {
+      "engines": {
+        "custom": "UNSUP",
+        "v8": "OK 20"
+      },
+      "reason": "Existing WAT decoder gap: error: bad integer literal: $d. V8 executes the assembled module and returns 20.",
+      "verdict": "sut-reject"
+    },
+    "all/constinit18|constinit-packed[i8-get_u-0x80]@cb54da1da8e4": {
+      "engines": {
+        "custom": "UNSUP",
+        "v8": "OK 128"
+      },
+      "reason": "Existing WAT decoder gap: error: bad integer literal: $d. V8 executes the assembled module and returns 128.",
+      "verdict": "sut-reject"
+    },
+    "all/constinit19|constinit-segments[data-i16-offset-signext]@27a6acb5edef": {
+      "engines": {
+        "custom": "UNSUP",
+        "v8": "OK -1"
+      },
+      "reason": "Existing WAT decoder gap: error: bad integer literal: $d. V8 executes the assembled module and returns -1.",
+      "verdict": "sut-reject"
+    },
+    "all/constinit25|constinit-elem[table]@767071deea75": {
+      "engines": {
+        "custom": "UNSUP",
+        "v8": "OK 19"
+      },
+      "reason": "Existing WAT decoder gap: error: malformed (table ...) declaration. V8 executes the assembled module and returns 19.",
+      "verdict": "sut-reject"
+    },
+    "all/constinit26|constinit-data[i8-bytes]@edf194b7975e": {
+      "engines": {
+        "custom": "UNSUP",
+        "v8": "OK 20"
+      },
+      "reason": "Existing WAT decoder gap: error: bad integer literal: $d. V8 executes the assembled module and returns 20.",
+      "verdict": "sut-reject"
+    },
+    "all/constinit28|constinit-packed[i8-get_s-0xff]@7e3fe5e9b8ff": {
+      "engines": {
+        "custom": "UNSUP",
+        "v8": "OK -1"
+      },
+      "reason": "Existing WAT decoder gap: error: bad integer literal: $d. V8 executes the assembled module and returns -1.",
+      "verdict": "sut-reject"
+    },
+    "all/constinit29|constinit-segments[elem-offset-partial-slice]@e8589c7a1ffc": {
+      "engines": {
+        "custom": "TRAP",
+        "v8": "OK 300"
+      },
+      "reason": "Existing const-init element-segment gap: Talos traps with out of bounds table access; V8 returns 300. Exact input retained; no trap is treated as a successful result.",
+      "verdict": "completeness"
+    },
+    "all/constinit35|constinit-elem[struct]@d57392689cba": {
+      "engines": {
+        "custom": "TRAP",
+        "v8": "OK 33"
+      },
+      "reason": "Existing const-init element-segment gap: Talos traps with out of bounds table access; V8 returns 33. Exact input retained; no trap is treated as a successful result.",
+      "verdict": "completeness"
+    },
+    "all/constinit36|constinit-data[i8-bytes]@188167a6c6d3": {
+      "engines": {
+        "custom": "UNSUP",
+        "v8": "OK 20"
+      },
+      "reason": "Existing WAT decoder gap: error: bad integer literal: $d. V8 executes the assembled module and returns 20.",
+      "verdict": "sut-reject"
+    },
+    "all/constinit38|constinit-packed[i8-get_u-0xff]@47c970a4792c": {
+      "engines": {
+        "custom": "UNSUP",
+        "v8": "OK 255"
+      },
+      "reason": "Existing WAT decoder gap: error: bad integer literal: $d. V8 executes the assembled module and returns 255.",
+      "verdict": "sut-reject"
+    },
+    "all/constinit39|constinit-segments[elem-boundary-last]@25a60818e8a8": {
+      "engines": {
+        "custom": "TRAP",
+        "v8": "OK 44"
+      },
+      "reason": "Existing const-init element-segment gap: Talos traps with out of bounds table access; V8 returns 44. Exact input retained; no trap is treated as a successful result.",
+      "verdict": "completeness"
+    },
+    "all/constinit45|constinit-elem[i31]@4f7561f7c378": {
+      "engines": {
+        "custom": "TRAP",
+        "v8": "OK 70"
+      },
+      "reason": "Existing const-init element-segment gap: Talos traps with out of bounds table access; V8 returns 70. Exact input retained; no trap is treated as a successful result.",
+      "verdict": "completeness"
+    },
+    "all/constinit46|constinit-data[i8-bytes]@8d94c5165b67": {
+      "engines": {
+        "custom": "UNSUP",
+        "v8": "OK 20"
+      },
+      "reason": "Existing WAT decoder gap: error: bad integer literal: $d. V8 executes the assembled module and returns 20.",
+      "verdict": "sut-reject"
+    },
+    "all/constinit48|constinit-packed[i8-extension-gap]@ea25e20c545e": {
+      "engines": {
+        "custom": "UNSUP",
+        "v8": "OK 256"
+      },
+      "reason": "Existing WAT decoder gap: error: bad integer literal: $d. V8 executes the assembled module and returns 256.",
+      "verdict": "sut-reject"
+    },
+    "all/constinit49|constinit-segments[elem-single-boundary-slice]@1829d7a02582": {
+      "engines": {
+        "custom": "TRAP",
+        "v8": "OK 35"
+      },
+      "reason": "Existing const-init element-segment gap: Talos traps with out of bounds table access; V8 returns 35. Exact input retained; no trap is treated as a successful result.",
+      "verdict": "completeness"
+    },
+    "all/constinit55|constinit-elem[table]@fa9c6d25681c": {
+      "engines": {
+        "custom": "UNSUP",
+        "v8": "OK 19"
+      },
+      "reason": "Existing WAT decoder gap: error: malformed (table ...) declaration. V8 executes the assembled module and returns 19.",
+      "verdict": "sut-reject"
+    },
+    "all/constinit56|constinit-data[i8-bytes]@396e8c02d01c": {
+      "engines": {
+        "custom": "UNSUP",
+        "v8": "OK 20"
+      },
+      "reason": "Existing WAT decoder gap: error: bad integer literal: $d. V8 executes the assembled module and returns 20.",
+      "verdict": "sut-reject"
+    },
+    "all/constinit58|constinit-packed[i16-get_s-0x8000]@320929b70f22": {
+      "engines": {
+        "custom": "UNSUP",
+        "v8": "OK -32768"
+      },
+      "reason": "Existing WAT decoder gap: error: bad integer literal: $d. V8 executes the assembled module and returns -32768.",
+      "verdict": "sut-reject"
+    },
+    "all/constinit59|constinit-segments[data-i8-offset]@ff833ee57ea3": {
+      "engines": {
+        "custom": "UNSUP",
+        "v8": "OK 80"
+      },
+      "reason": "Existing WAT decoder gap: error: bad integer literal: $d. V8 executes the assembled module and returns 80.",
+      "verdict": "sut-reject"
+    },
+    "all/constinit5|constinit-elem[struct]@c368eb04e40c": {
+      "engines": {
+        "custom": "TRAP",
+        "v8": "OK 33"
+      },
+      "reason": "Existing const-init element-segment gap: Talos traps with out of bounds table access; V8 returns 33. Exact input retained; no trap is treated as a successful result.",
+      "verdict": "completeness"
+    },
+    "all/constinit65|constinit-elem[struct]@2d1472c29e72": {
+      "engines": {
+        "custom": "TRAP",
+        "v8": "OK 33"
+      },
+      "reason": "Existing const-init element-segment gap: Talos traps with out of bounds table access; V8 returns 33. Exact input retained; no trap is treated as a successful result.",
+      "verdict": "completeness"
+    },
+    "all/constinit66|constinit-data[i8-bytes]@115833f5f240": {
+      "engines": {
+        "custom": "UNSUP",
+        "v8": "OK 20"
+      },
+      "reason": "Existing WAT decoder gap: error: bad integer literal: $d. V8 executes the assembled module and returns 20.",
+      "verdict": "sut-reject"
+    },
+    "all/constinit68|constinit-packed[i16-get_u-0x8000]@5f1c826f3a15": {
+      "engines": {
+        "custom": "UNSUP",
+        "v8": "OK 32768"
+      },
+      "reason": "Existing WAT decoder gap: error: bad integer literal: $d. V8 executes the assembled module and returns 32768.",
+      "verdict": "sut-reject"
+    },
+    "all/constinit69|constinit-segments[data-i16-offset-signext]@3f580eba3751": {
+      "engines": {
+        "custom": "UNSUP",
+        "v8": "OK -1"
+      },
+      "reason": "Existing WAT decoder gap: error: bad integer literal: $d. V8 executes the assembled module and returns -1.",
+      "verdict": "sut-reject"
+    },
+    "all/constinit6|constinit-data[i8-bytes]@ea555a936842": {
+      "engines": {
+        "custom": "UNSUP",
+        "v8": "OK 20"
+      },
+      "reason": "Existing WAT decoder gap: error: bad integer literal: $d. V8 executes the assembled module and returns 20.",
+      "verdict": "sut-reject"
+    },
+    "all/constinit75|constinit-elem[i31]@673fe5ca94a8": {
+      "engines": {
+        "custom": "TRAP",
+        "v8": "OK 70"
+      },
+      "reason": "Existing const-init element-segment gap: Talos traps with out of bounds table access; V8 returns 70. Exact input retained; no trap is treated as a successful result.",
+      "verdict": "completeness"
+    },
+    "all/constinit76|constinit-data[i8-bytes]@fe6ae313c8b6": {
+      "engines": {
+        "custom": "UNSUP",
+        "v8": "OK 20"
+      },
+      "reason": "Existing WAT decoder gap: error: bad integer literal: $d. V8 executes the assembled module and returns 20.",
+      "verdict": "sut-reject"
+    },
+    "all/constinit78|constinit-packed[i8-get_s-0x80]@047f0c35232b": {
+      "engines": {
+        "custom": "UNSUP",
+        "v8": "OK -128"
+      },
+      "reason": "Existing WAT decoder gap: error: bad integer literal: $d. V8 executes the assembled module and returns -128.",
+      "verdict": "sut-reject"
+    },
+    "all/constinit79|constinit-segments[elem-offset-partial-slice]@3a608af64453": {
+      "engines": {
+        "custom": "TRAP",
+        "v8": "OK 300"
+      },
+      "reason": "Existing const-init element-segment gap: Talos traps with out of bounds table access; V8 returns 300. Exact input retained; no trap is treated as a successful result.",
+      "verdict": "completeness"
+    },
+    "all/constinit8|constinit-packed[i8-get_s-0x80]@5b33b40b0a16": {
+      "engines": {
+        "custom": "UNSUP",
+        "v8": "OK -128"
+      },
+      "reason": "Existing WAT decoder gap: error: bad integer literal: $d. V8 executes the assembled module and returns -128.",
+      "verdict": "sut-reject"
+    },
+    "all/constinit9|constinit-segments[data-i8-offset]@ed450173c12e": {
+      "engines": {
+        "custom": "UNSUP",
+        "v8": "OK 80"
+      },
+      "reason": "Existing WAT decoder gap: error: bad integer literal: $d. V8 executes the assembled module and returns 80.",
+      "verdict": "sut-reject"
+    },
+    "invalid/invalid:array-nondefaultable@96707a182497": {
+      "engines": {
+        "custom": "ACCEPT",
+        "v8": "REJECT",
+        "wtools": "REJECT"
+      },
+      "reason": "Existing invalid-module acceptance, in the validation cluster discussed in #152: array.new_default on a non-defaultable element type. Talos runs the module; V8 and wasm-tools reject it.",
+      "verdict": "SOUNDNESS"
+    },
+    "invalid/invalid:arraycopy-narrowing@93dc7e0950f0": {
+      "engines": {
+        "custom": "ACCEPT",
+        "v8": "REJECT",
+        "wtools": "REJECT"
+      },
+      "reason": "Existing invalid-module acceptance, in the validation cluster discussed in #152: array.copy where the source element type is not a subtype of the destination element type (narrowing). Talos runs the module; V8 and wasm-tools reject it.",
+      "verdict": "SOUNDNESS"
+    },
+    "invalid/invalid:arrayfill-wrong-reftype@c3b113df9f35": {
+      "engines": {
+        "custom": "ACCEPT",
+        "v8": "REJECT",
+        "wtools": "REJECT"
+      },
+      "reason": "Existing invalid-module acceptance, in the validation cluster discussed in #152: array.fill value type must be a subtype of the array element type. Talos runs the module; V8 and wasm-tools reject it.",
+      "verdict": "SOUNDNESS"
+    },
+    "invalid/invalid:block-result-type@be22df2b2aa7": {
+      "engines": {
+        "custom": "ACCEPT",
+        "v8": "REJECT",
+        "wtools": "REJECT"
+      },
+      "reason": "Existing invalid-module acceptance, in the validation cluster discussed in #152: block leaves i64 where i32 is declared. Talos runs the module; V8 and wasm-tools reject it.",
+      "verdict": "SOUNDNESS"
+    },
+    "invalid/invalid:br-on-cast-empty-label@9c1c80c586a0": {
+      "engines": {
+        "custom": "ACCEPT",
+        "v8": "REJECT",
+        "wtools": "REJECT"
+      },
+      "reason": "Existing invalid-module acceptance, in the validation cluster discussed in #152: br_on_cast targets a label with an empty (arity-0) result type. Talos runs the module; V8 and wasm-tools reject it.",
+      "verdict": "SOUNDNESS"
+    },
+    "invalid/invalid:br-on-cast-fail-empty-label@76bf3384f9a9": {
+      "engines": {
+        "custom": "ACCEPT",
+        "v8": "REJECT",
+        "wtools": "REJECT"
+      },
+      "reason": "Existing invalid-module acceptance, in the validation cluster discussed in #152: br_on_cast_fail targets a label with an empty (arity-0) result type. Talos runs the module; V8 and wasm-tools reject it.",
+      "verdict": "SOUNDNESS"
+    },
+    "invalid/invalid:call-ref-callee-hierarchy@c545fb51d13f": {
+      "engines": {
+        "custom": "UNSUP",
+        "v8": "REJECT",
+        "wtools": "REJECT"
+      },
+      "reason": "Existing validation-reporting gap: error: small-step internal error: call_ref requires a funcref operand. V8 and wasm-tools reject the module. Talos exits 3, but its diagnostic does not match the pinned validation classifier; retained as a coverage gap.",
+      "verdict": "sut-unsup"
+    },
+    "invalid/invalid:constinit-array-default-nondefaultable@7c5c418cbe1d": {
+      "engines": {
+        "custom": "ACCEPT",
+        "v8": "REJECT",
+        "wtools": "REJECT"
+      },
+      "reason": "Existing invalid-module acceptance, in the validation cluster discussed in #152: const-init: array.new_default on an element type (ref $s) that has no default value. Talos runs the module; V8 and wasm-tools reject it.",
+      "verdict": "SOUNDNESS"
+    },
+    "invalid/invalid:constinit-f32-not-extconst@ac0a4176309c": {
+      "engines": {
+        "custom": "UNSUP",
+        "v8": "REJECT",
+        "wtools": "REJECT"
+      },
+      "reason": "Existing validation-reporting gap: error: global init expression must be i32.const or i64.const. V8 and wasm-tools reject the module. Talos exits 3, but its diagnostic does not match the pinned validation classifier; retained as a coverage gap.",
+      "verdict": "sut-unsup"
+    },
+    "invalid/invalid:constinit-forward-global-ref@ae8eaf94f40c": {
+      "engines": {
+        "custom": "ACCEPT",
+        "v8": "REJECT",
+        "wtools": "REJECT"
+      },
+      "reason": "Existing invalid-module acceptance, in the validation cluster discussed in #152: const-init: a global initialiser reads a global defined LATER (forward reference is non-constant). Talos runs the module; V8 and wasm-tools reject it.",
+      "verdict": "SOUNDNESS"
+    },
+    "invalid/invalid:constinit-struct-arity@9f9da1cd8b30": {
+      "engines": {
+        "custom": "ACCEPT",
+        "v8": "REJECT",
+        "wtools": "REJECT"
+      },
+      "reason": "Existing invalid-module acceptance, in the validation cluster discussed in #152: const-init: struct.new in a global initialiser supplies too few fields for the struct type. Talos runs the module; V8 and wasm-tools reject it.",
+      "verdict": "SOUNDNESS"
+    },
+    "invalid/invalid:constinit-struct-wrong-fieldtype@935fc4134bf3": {
+      "engines": {
+        "custom": "ACCEPT",
+        "v8": "REJECT",
+        "wtools": "REJECT"
+      },
+      "reason": "Existing invalid-module acceptance, in the validation cluster discussed in #152: const-init: struct.new in a global initialiser supplies an i64 for an i32 field (type mismatch). Talos runs the module; V8 and wasm-tools reject it.",
+      "verdict": "SOUNDNESS"
+    },
+    "invalid/invalid:constinit-struct-wrong-type@04c700051e1b": {
+      "engines": {
+        "custom": "ACCEPT",
+        "v8": "REJECT",
+        "wtools": "REJECT"
+      },
+      "reason": "Existing invalid-module acceptance, in the validation cluster discussed in #152: const-init: struct.new of $s assigned to a global typed (ref $other) \u2014 unrelated struct types. Talos runs the module; V8 and wasm-tools reject it.",
+      "verdict": "SOUNDNESS"
+    },
+    "invalid/invalid:eh-catch-label-arity@aae708d1f082": {
+      "engines": {
+        "custom": "ACCEPT",
+        "v8": "REJECT",
+        "wtools": "REJECT"
+      },
+      "reason": "Existing invalid-module acceptance, in the validation cluster discussed in #152: a try_table catch label must have the same number of types as the tag (tag has 2 params, label has 1). Talos runs the module; V8 and wasm-tools reject it.",
+      "verdict": "SOUNDNESS"
+    },
+    "invalid/invalid:eh-catch-label-type@d378bec7134f": {
+      "engines": {
+        "custom": "ACCEPT",
+        "v8": "REJECT",
+        "wtools": "REJECT"
+      },
+      "reason": "Existing invalid-module acceptance, in the validation cluster discussed in #152: a try_table catch label's result type must match the tag's params (i32 here), not i64. Talos runs the module; V8 and wasm-tools reject it.",
+      "verdict": "SOUNDNESS"
+    },
+    "invalid/invalid:eh-catch-ref-missing-exnref@1c2c8c262277": {
+      "engines": {
+        "custom": "ACCEPT",
+        "v8": "REJECT",
+        "wtools": "REJECT"
+      },
+      "reason": "Existing invalid-module acceptance, in the validation cluster discussed in #152: a catch_ref label must carry the tag's params plus a trailing exnref ((i32 exnref) here), not just i32. Talos runs the module; V8 and wasm-tools reject it.",
+      "verdict": "SOUNDNESS"
+    },
+    "invalid/invalid:eh-throw-ref-missing-operand@212bede43f03": {
+      "engines": {
+        "custom": "UNSUP",
+        "v8": "REJECT",
+        "wtools": "REJECT"
+      },
+      "reason": "Existing validation-reporting gap: error: small-step internal error: throw_ref requires an exception reference. V8 and wasm-tools reject the module. Talos exits 3, but its diagnostic does not match the pinned validation classifier; retained as a coverage gap.",
+      "verdict": "sut-unsup"
+    },
+    "invalid/invalid:eh-throw-ref-non-exnref@5fccb0deaf55": {
+      "engines": {
+        "custom": "UNSUP",
+        "v8": "REJECT",
+        "wtools": "REJECT"
+      },
+      "reason": "Existing validation-reporting gap: error: small-step internal error: throw_ref requires an exception reference. V8 and wasm-tools reject the module. Talos exits 3, but its diagnostic does not match the pinned validation classifier; retained as a coverage gap.",
+      "verdict": "sut-unsup"
+    },
+    "invalid/invalid:eh-throw-too-few-args@fcfc190dff2b": {
+      "engines": {
+        "custom": "UNSUP",
+        "v8": "REJECT",
+        "wtools": "REJECT"
+      },
+      "reason": "Existing validation-reporting gap: error: small-step internal error: throw requires its tag arguments. V8 and wasm-tools reject the module. Talos exits 3, but its diagnostic does not match the pinned validation classifier; retained as a coverage gap.",
+      "verdict": "sut-unsup"
+    },
+    "invalid/invalid:extends-final@2bc6fb81743a": {
+      "engines": {
+        "custom": "ACCEPT",
+        "v8": "REJECT",
+        "wtools": "REJECT"
+      },
+      "reason": "Existing invalid-module acceptance, in the validation cluster discussed in #152: subtype extends a final type. Talos runs the module; V8 and wasm-tools reject it.",
+      "verdict": "SOUNDNESS"
+    },
+    "invalid/invalid:func-result-arity@c4ce47f8d705": {
+      "engines": {
+        "custom": "ACCEPT",
+        "v8": "REJECT",
+        "wtools": "REJECT"
+      },
+      "reason": "Existing invalid-module acceptance, in the validation cluster discussed in #152: function leaves 2 values where 1 is declared. Talos runs the module; V8 and wasm-tools reject it.",
+      "verdict": "SOUNDNESS"
+    },
+    "invalid/invalid:func-return-type@29a873d0ead8": {
+      "engines": {
+        "custom": "ACCEPT",
+        "v8": "REJECT",
+        "wtools": "REJECT"
+      },
+      "reason": "Existing invalid-module acceptance, in the validation cluster discussed in #152: function body produces i64 where i32 is declared. Talos runs the module; V8 and wasm-tools reject it.",
+      "verdict": "SOUNDNESS"
+    },
+    "invalid/invalid:func-subtype-param-variance@558f8fe98a2c": {
+      "engines": {
+        "custom": "ACCEPT",
+        "v8": "REJECT",
+        "wtools": "REJECT"
+      },
+      "reason": "Existing invalid-module acceptance, in the validation cluster discussed in #152: function subtype narrows a parameter type; parameters are contravariant. Talos runs the module; V8 and wasm-tools reject it.",
+      "verdict": "SOUNDNESS"
+    },
+    "invalid/invalid:func-subtype-result-variance@9bf4f5564bcb": {
+      "engines": {
+        "custom": "ACCEPT",
+        "v8": "REJECT",
+        "wtools": "REJECT"
+      },
+      "reason": "Existing invalid-module acceptance, in the validation cluster discussed in #152: function subtype widens a result type; results are covariant. Talos runs the module; V8 and wasm-tools reject it.",
+      "verdict": "SOUNDNESS"
+    },
+    "invalid/invalid:reftest-cross-hierarchy@7f972d06464a": {
+      "engines": {
+        "custom": "ACCEPT",
+        "v8": "REJECT",
+        "wtools": "REJECT"
+      },
+      "reason": "Existing invalid-module acceptance, in the validation cluster discussed in #152: ref.test target heap type is in a different hierarchy than the operand. Talos runs the module; V8 and wasm-tools reject it.",
+      "verdict": "SOUNDNESS"
+    },
+    "invalid/invalid:return-call-ref-result-type@3ce4ee4e232f": {
+      "engines": {
+        "custom": "ACCEPT",
+        "v8": "REJECT",
+        "wtools": "REJECT"
+      },
+      "reason": "Existing invalid-module acceptance, in the validation cluster discussed in #152: return_call_ref type slot expects an i32-returning function but receives an i64-returning function reference. Talos runs the module; V8 and wasm-tools reject it.",
+      "verdict": "SOUNDNESS"
+    },
+    "invalid/invalid:subtype-depth-64@3d731a50382f": {
+      "engines": {
+        "custom": "ACCEPT",
+        "v8": "REJECT",
+        "wtools": "REJECT"
+      },
+      "reason": "Existing implementation-limit disagreement: Talos accepts a subtype hierarchy of depth 64, while V8 and wasm-tools reject it. The generator labels this a soft limit probe, not a spec violation.",
+      "verdict": "SOUNDNESS"
+    },
+    "invalid/invalid:subtype-drops-field@107df292fb41": {
+      "engines": {
+        "custom": "ACCEPT",
+        "v8": "REJECT",
+        "wtools": "REJECT"
+      },
+      "reason": "Existing invalid-module acceptance, in the validation cluster discussed in #152: subtype drops a supertype field. Talos runs the module; V8 and wasm-tools reject it.",
+      "verdict": "SOUNDNESS"
+    },
+    "invalid/invalid:subtype-field-retype@fe2ceb28c1af": {
+      "engines": {
+        "custom": "ACCEPT",
+        "v8": "REJECT",
+        "wtools": "REJECT"
+      },
+      "reason": "Existing invalid-module acceptance, in the validation cluster discussed in #152: subtype retypes a supertype field (i32 -> i64). Talos runs the module; V8 and wasm-tools reject it.",
+      "verdict": "SOUNDNESS"
+    },
+    "invalid/invalid:subtype-immutable-retype@211128f658e1": {
+      "engines": {
+        "custom": "ACCEPT",
+        "v8": "REJECT",
+        "wtools": "REJECT"
+      },
+      "reason": "Existing invalid-module acceptance, in the validation cluster discussed in #152: subtype retypes an immutable field (i32 -> f32). Talos runs the module; V8 and wasm-tools reject it.",
+      "verdict": "SOUNDNESS"
+    },
+    "invalid/invalid:tablecopy-narrowing@362015b9a32c": {
+      "engines": {
+        "custom": "ACCEPT",
+        "v8": "REJECT",
+        "wtools": "REJECT"
+      },
+      "reason": "Existing invalid-module acceptance, in the validation cluster discussed in #152: table.copy where the source table element type is not a subtype of the destination table element type. Talos runs the module; V8 and wasm-tools reject it.",
+      "verdict": "SOUNDNESS"
+    },
+    "invalid/invalid:tablefill-wrong-reftype@89e3e438fae2": {
+      "engines": {
+        "custom": "ACCEPT",
+        "v8": "REJECT",
+        "wtools": "REJECT"
+      },
+      "reason": "Existing invalid-module acceptance, in the validation cluster discussed in #152: table.fill value type must be a subtype of the table element type. Talos runs the module; V8 and wasm-tools reject it.",
+      "verdict": "SOUNDNESS"
+    }
+  },
+  "provenance": {
+    "command": "SKIP_BUILD=1 bash scripts/differential.sh --ci --record --output .differential-cache/baseline-run2",
+    "review": "Freshly built runner; raw stdout/stderr and each non-agreement reviewed. See differential/README.md.",
+    "talos_commit": "78f9d08d46bcda1e4ddf794a697a18cccc59ba0f"
+  },
+  "schema": 1,
+  "versions": {
+    "lean": "leanprover/lean4:v4.32.2",
+    "miscast": "125d25b69b20462fe03505b30eb281851f0be3a8",
+    "node": "v24.13.0",
+    "node-flags": [
+      "--experimental-wasm-exnref"
+    ],
+    "wasm-tools": "wasm-tools 1.251.0 (a1a178a02 2026-05-28)"
+  }
+}

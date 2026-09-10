@@ -22,6 +22,7 @@
 #   just differential                                  # recgroup soundness mode, V8 oracle
 #   just differential --mode recgroup -n 300           # reproduce the full #108 cluster
 #   just differential --mode mutate --seeds differential/seeds
+#   just differential --ci --output .differential-cache/ci-run
 #
 # Env:
 #   MISCAST_DIR=/path/to/miscast   use an existing checkout instead of the pinned clone
@@ -92,6 +93,15 @@ RUNNER="$ROOT/interpreter/.lake/build/bin/runner"
 # contains spaces as one argv word.
 export CUSTOM_CMD="\"$RUNNER\" {wat} {export}"
 
+# CI owns its finite corpus and result policy; other flags remain miscast CLI flags.
+ci=0
+if [[ "${1:-}" == --ci ]]; then
+    ci=1
+    shift
+    # The gate uses the pinned V8 oracle and this runner's native CLI contract.
+    unset V8_ORACLE CUSTOM_VALIDATE_CMD CUSTOM_NO_ARGS CUSTOM_WAST_CMD
+fi
+
 # Resolve `--seeds PATH` / `--seeds=PATH` (relative to ROOT) to an absolute
 # existing directory, since miscast runs from its own directory below. An empty
 # or missing path must fail loudly here — passed through, miscast would glob an
@@ -109,7 +119,7 @@ while (( $# )); do
     args+=("$1"); shift
 done
 # Default: the recgroup soundness mode that pins #108.
-(( ${#args[@]} )) || args=(--mode recgroup -n 50)
+if (( ! ci && ${#args[@]} == 0 )); then args=(--mode recgroup -n 50); fi
 
 cd "$miscast"
 
@@ -141,7 +151,7 @@ from miscast.engines import _VALERR, _TRAP, _CRASH, _NUM, _EXPORT_RE, _FUNCEXPOR
 runner, d, seeds = sys.argv[1], sys.argv[2], sys.argv[3]
 
 def run(*argv):
-    r = subprocess.run([runner, *argv], capture_output=True, text=True)
+    r = subprocess.run([runner, *argv], capture_output=True, text=True, timeout=20)
     return r, r.stdout + r.stderr
 
 r, both = run(f"{d}/ok.wat", "f")                         # (0) trivial module runs
@@ -170,5 +180,11 @@ EOF
 
 echo "differential: runner   = $RUNNER"
 echo "differential: miscast  = $(git rev-parse --short HEAD)   oracle = v8 (node $("$NODE_BIN" --version))"
-python3 -B -m miscast --sut custom --oracles v8 "${args[@]}"
-echo "differential: reproducers under $miscast/work/repro/"
+if (( ci )); then
+    # Keep user-supplied output/baseline paths relative to the repository.
+    cd "$ROOT"
+    python3 -B "$ROOT/scripts/differential-ci.py" --miscast "$miscast" "${args[@]}"
+else
+    python3 -B -m miscast --sut custom --oracles v8 "${args[@]}"
+    echo "differential: reproducers under $miscast/work/repro/"
+fi
