@@ -258,7 +258,7 @@ private def returnedValues (parameter : ValueType) (value : Value) :
 -- complete machine run efficiently requires native code, while admitting the
 -- native evaluator's proof axiom would weaken the audited theorem surface.
 #eval do
-  let accepted := [
+  let accepted : List ((ValueType × Value) × Option (List Value)) := [
     ((.ref true .exn, .exnref none), some [.exnref none]),
     ((.ref true .noExn, .exnref none), some [.exnref none]),
     ((.ref true .exn, .exnref (some 0)), some [.exnref (some 0)]),
@@ -268,7 +268,7 @@ private def returnedValues (parameter : ValueType) (value : Value) :
       throw (IO.userError "valid exception-reference export call was rejected")
 
   -- Invalid arguments must fail at initialization, before any machine steps.
-  let rejected := [
+  let rejected : List (ValueType × Value) := [
     (.ref false .exn, .exnref none),
     (.ref false .noExn, .exnref none),
     (.ref true .noExn, .exnref (some 0)),
