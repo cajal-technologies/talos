@@ -115,6 +115,26 @@ class RegressionPolicy(unittest.TestCase):
         versions = dict(self.versions, node="v99.0.0")
         self.assertTrue(self.check(self.good, versions=versions))
 
+    def test_only_documented_nonzero_exits_are_allowed(self):
+        def process(role, code, stderr, stdout=""):
+            return {"role": role, "returncode": code, "stderr": stderr, "stdout": stdout}
+
+        for p in [process("custom", 1, "trap: unreachable\n"),
+                  process("custom", 2, "out of fuel\n"),
+                  process("custom", 3, "error: bad integer literal: $d\n"),
+                  process("wasm-tools", 1, "error: invalid module\n")]:
+            with self.subTest(process=p):
+                self.assertFalse(gate.unexpected_process_exit(p))
+        for p in [process("custom", 1, "fatal runtime failure\n"),
+                  process("custom", 42, "error: failed\n"),
+                  process("custom", 3, "uncaught exception: failed\n"),
+                  process("custom", 1, "trap: unreachable\n", "20\n"),
+                  process("custom", -9, ""),
+                  process("v8", 1, "error: failed\n"),
+                  process("wasm-tools", 1, "fatal runtime failure\n")]:
+            with self.subTest(process=p):
+                self.assertTrue(gate.unexpected_process_exit(p))
+
     def test_reproducer_uses_local_files_and_quotes_arguments(self):
         record = row("name with / special chars")
         record.update(kind="execution", repro={
@@ -205,6 +225,32 @@ class RealEngineChecks(unittest.TestCase):
     def test_host_crash_is_distinct_from_a_wasm_trap(self):
         bad = self.run_job(self.integer, "raise SystemExit('thread main panicked: simulated host failure')")
         self.assertEqual(bad["verdict"], "CRASH")
+
+    def test_unrecognized_failure_cannot_match_a_decoder_gap(self):
+        # Use the exact generated input already recorded as a decoder gap.
+        jobs = gate.generate_jobs(gate.ROOT / ".differential-cache/miscast")
+        job = next(job for job in jobs if job[0] == "all"
+                   and job[2][0] == "constinit16|constinit-data[i8-bytes]")
+        bad = self.run_job(job, "raise SystemExit('fatal runtime failure')")
+        self.assertEqual(bad["engines"], {"v8": "OK 20", "custom": "UNSUP"})
+        self.assertEqual(bad["verdict"], "process-error")
+        # Even an explicitly allowed copy of this result cannot waive it.
+        baseline = gate.snapshot([bad], {})
+        baseline["exceptions"][bad["id"]]["reason"] = "Existing decoder gap."
+        self.assertTrue(any("cannot be baselined" in e
+                            for e in gate.compare([bad], {}, baseline)))
+
+    def test_numeric_stdout_does_not_hide_a_nonzero_exit(self):
+        bad = self.run_job(self.integer, "print(4294967296); raise SystemExit(42)")
+        self.assertEqual(bad["engines"]["custom"], "OK 4294967296")
+        self.assertEqual(bad["verdict"], "process-error")
+
+    def test_v8_nonzero_exit_is_a_process_failure(self):
+        def failing_oracle(*args):
+            self.backends._run([self.config.NODE, "-e", "process.exit(1)"])
+            return "ERR"
+        bad = self.run_job(self.integer, oracle=failing_oracle)
+        self.assertEqual(bad["verdict"], "process-error")
 
     def test_validation_host_crash_cannot_be_baselined_as_acceptance(self):
         from miscast.invalid import segs

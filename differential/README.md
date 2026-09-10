@@ -117,7 +117,12 @@ substitute for a missing V8 result in this gate.
 The implementation calls miscast's generators, execution functions and verdict
 classifier directly. Its small observer wraps the pinned subprocess helper to
 enable V8 exception references, retain raw output, and distinguish host crashes
-and timeouts from unsupported operations. Review
+and timeouts from unsupported operations. Nonzero exits must also match the
+runner’s documented exit code and diagnostic (trap, exhausted fuel, or error);
+unexpected exits cannot match baseline exceptions, even when miscast normalizes
+them to a known rejection or reads a numeric stdout prefix. V8 oracle processes
+must exit successfully, and wasm-tools may report a diagnosed rejection with
+exit 1. Review
 that API boundary when changing the miscast revision.
 
 ### Initial baseline

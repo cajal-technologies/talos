@@ -118,10 +118,11 @@ def record_processes():
     local = threading.local()
 
     def observed(cmd, timeout=None):
+        role = "v8" if cmd[0] == engines.NODE else "wasm-tools" if cmd[0] == "wasm-tools" else "custom"
         if cmd[0] == engines.NODE:
             cmd = [cmd[0], *NODE_FLAGS, *cmd[1:]]
         result = original(cmd, timeout)
-        local.processes.append({"argv": list(cmd), "returncode": result.returncode,
+        local.processes.append({"role": role, "argv": list(cmd), "returncode": result.returncode,
                                 "stdout": result.stdout, "stderr": result.stderr})
         return result
 
@@ -130,6 +131,33 @@ def record_processes():
         yield local
     finally:
         engines._run = toolchain._run = original
+
+
+def unexpected_process_exit(process):
+    """Only the pinned tools' documented failures may reach baseline matching.
+
+    Talos uses 1 for a Wasm trap, 2 for exhausted fuel, and 3 for a diagnostic.
+    A nonzero exit plus arbitrary text (or a numeric stdout prefix) is a process
+    failure, regardless of how miscast normalized it. V8's oracle reports Wasm
+    rejection/traps on stdout with exit 0; wasm-tools rejects with exit 1.
+    """
+    code = process["returncode"]
+    if code == 0:
+        return False
+    stderr = process["stderr"].strip()
+    if process["stdout"].strip():
+        return True
+    if process["role"] == "wasm-tools":
+        return not (code == 1 and stderr.startswith("error:"))
+    if process["role"] != "custom":
+        return True
+    if code == 1:
+        return not (stderr == "trap" or stderr.startswith("trap: "))
+    if code == 2:
+        return stderr != "out of fuel"
+    if code == 3:
+        return not stderr.startswith("error: ")
+    return True
 
 
 def run_case(job, engines, local):
@@ -157,7 +185,7 @@ def run_case(job, engines, local):
         # Validation probes normalize host crashes to ACCEPT upstream. Preserve
         # the stronger signal so an existing validation exception cannot waive it.
         verdict = "CRASH"
-    elif any(p["returncode"] < 0 for p in processes):
+    elif any(unexpected_process_exit(p) for p in processes):
         verdict = "process-error"
     elif verdict == "agree":
         # Self-checking expectations are useful, but this gate promises a V8 comparison.
