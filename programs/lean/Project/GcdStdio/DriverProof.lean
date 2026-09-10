@@ -88,7 +88,7 @@ private theorem encodeWord_eq_u64Bytes (x : UInt64) :
     Wasm.Examples.SelectionSort.StdIO.encodeWord x =
       [u64Byte x 0, u64Byte x 1, u64Byte x 2, u64Byte x 3,
        u64Byte x 4, u64Byte x 5, u64Byte x 6, u64Byte x 7] := by
-  have hall (y : UInt8) : y &&& 255 = y := by bv_decide
+  have hall (y : UInt8) : y &&& 255 = y := by bv_normalize
   simp [Wasm.Examples.SelectionSort.StdIO.encodeWord, u64Byte, hall]
 
 private theorem pointsTo_u64_as_bytes [WasmHeapGS α]
@@ -97,12 +97,12 @@ private theorem pointsTo_u64_as_bytes [WasmHeapGS α]
       [u64Byte value 0, u64Byte value 1, u64Byte value 2,
        u64Byte value 3, u64Byte value 4, u64Byte value 5,
        u64Byte value 6, u64Byte value 7] := by
-  have e2 : addr + 1 + 1 = addr + 2 := by bv_decide
-  have e3 : addr + 2 + 1 = addr + 3 := by bv_decide
-  have e4 : addr + 3 + 1 = addr + 4 := by bv_decide
-  have e5 : addr + 4 + 1 = addr + 5 := by bv_decide
-  have e6 : addr + 5 + 1 = addr + 6 := by bv_decide
-  have e7 : addr + 6 + 1 = addr + 7 := by bv_decide
+  have e2 : addr + 1 + 1 = addr + 2 := by bv_normalize
+  have e3 : addr + 2 + 1 = addr + 3 := by bv_normalize
+  have e4 : addr + 3 + 1 = addr + 4 := by bv_normalize
+  have e5 : addr + 4 + 1 = addr + 5 := by bv_normalize
+  have e6 : addr + 5 + 1 = addr + 6 := by bv_normalize
+  have e7 : addr + 6 + 1 = addr + 7 := by bv_normalize
   simp only [pointsTo_u64, pointsToBytes, e2, e3, e4, e5, e6, e7,
     (BI.sep_emp (PROP := IProp (WasmHeapGF α))).to_eq]
   exact .rfl

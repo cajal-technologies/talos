@@ -1,5 +1,6 @@
 import Project.HexStdio.Spec
 import HexEncodeStdio.Outcome
+import HexEncodeStdio.Blueprint
 
 open Wasm
 
@@ -63,6 +64,4 @@ example (b : UInt8) : ∃ config fuel,
       some config ∧
     Project.HexEncodeStdio.Outcome.EncodesOrOOM [b]
       (SmallStep.runSteps fuel config).result := by
-  refine ⟨_, 896, rfl, ?_⟩
-  apply Project.HexEncodeStdio.Outcome.checkEncodesOrOOM_sound
-  rfl
+  exact Project.HexEncodeStdio.Blueprint.func10_export_run [b]

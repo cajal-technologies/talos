@@ -121,7 +121,7 @@ theorem twp_write_all_nonempty
   iapply twp_localGet rfl
   iapply twp_const
   iapply twp_add
-  have hrestore : 16 + (sp - 16) = sp := by bv_decide
+  have hrestore : 16 + (sp - 16) = sp := by bv_normalize (config := { enums := false })
   rw [hrestore]
   iapply twp_globalSet $$ HframeSp
   iintro Hsp

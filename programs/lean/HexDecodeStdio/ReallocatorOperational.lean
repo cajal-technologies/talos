@@ -46,7 +46,7 @@ theorem reallocator_first_overflow_traps
   apply TrapsWith.prepend (Step.localTee rfl)
   apply TrapsWith.prepend Step.const
   apply TrapsWith.prepend
-    (Step.load32 (address := 0) (offset := 1053960) (by simpa using hbound))
+    (Step.load32 rfl (address := .i32 (0)) (offset := 1053960) (by simpa using hbound))
   simp only [UInt32.zero_add, hread]
   apply TrapsWith.prepend (Step.localTee rfl)
   apply TrapsWith.prepend Step.const
@@ -100,7 +100,7 @@ theorem reallocator_size_overflow_traps
   apply TrapsWith.prepend (Step.localTee rfl)
   apply TrapsWith.prepend Step.const
   apply TrapsWith.prepend
-    (Step.load32 (address := 0) (offset := 1053960) (by simpa using hbound))
+    (Step.load32 rfl (address := .i32 (0)) (offset := 1053960) (by simpa using hbound))
   simp only [UInt32.zero_add, hread]
   apply TrapsWith.prepend (Step.localTee rfl)
   apply TrapsWith.prepend Step.const
@@ -172,7 +172,7 @@ theorem reallocator_signed_limit_traps
   apply TrapsWith.prepend (Step.localTee rfl)
   apply TrapsWith.prepend Step.const
   apply TrapsWith.prepend
-    (Step.load32 (address := 0) (offset := 1053960) (by simpa using hbound))
+    (Step.load32 rfl (address := .i32 (0)) (offset := 1053960) (by simpa using hbound))
   simp only [UInt32.zero_add, hread]
   apply TrapsWith.prepend (Step.localTee rfl)
   apply TrapsWith.prepend Step.const
@@ -256,7 +256,7 @@ theorem reallocator_grow_failure_traps
   apply TrapsWith.prepend (Step.localTee rfl)
   apply TrapsWith.prepend Step.const
   apply TrapsWith.prepend
-    (Step.load32 (address := 0) (offset := 1053960) (by simpa using hbound))
+    (Step.load32 rfl (address := .i32 (0)) (offset := 1053960) (by simpa using hbound))
   simp only [UInt32.zero_add, hread]
   apply TrapsWith.prepend (Step.localTee rfl)
   apply TrapsWith.prepend Step.const
@@ -391,7 +391,7 @@ theorem reallocator_no_grow_steps
   apply Reaches.prepend (Step.localTee rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend
-    (Step.load32 (address := 0) (offset := 1053960) (by simpa using hbound))
+    (Step.load32 rfl (address := .i32 (0)) (offset := 1053960) (by simpa using hbound))
   simp only [UInt32.zero_add, hread]
   apply Reaches.prepend (Step.localTee rfl)
   apply Reaches.prepend Step.const
@@ -456,9 +456,9 @@ theorem reallocator_no_grow_steps
   apply Reaches.prepend Step.const
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend
-    (Step.store32 (address := 0) (offset := 1053960)
+    (Step.store32 rfl (address := .i32 (0)) (offset := 1053960)
       (by simpa using hbound))
-  simp only [setMemory_eq, allocatorBumpStore]
+  simp only [setMemory_eq]
   apply Reaches.prepend Step.block
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.eqz rfl)
@@ -502,7 +502,7 @@ theorem reallocator_no_grow_steps
       apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
       apply Reaches.prepend (Step.localGet rfl)
       apply Reaches.prepend (Step.returnFromCallExplicit rfl)
-      simp only [reallocatorResultStore, hptrDef, hlen, or_false, if_true]
+      simp only [reallocatorResultStore, hptrDef, hlen]
       simp [allocatorBumpStore, allocatorFinish, allocatorPtr]
       exact ⟨[], .refl _⟩
     · rw [if_neg hlen]
@@ -583,7 +583,7 @@ theorem reallocator_grow_success_steps
   apply Reaches.prepend (Step.localTee rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend
-    (Step.load32 (address := 0) (offset := 1053960) (by simpa using hbound))
+    (Step.load32 rfl (address := .i32 (0)) (offset := 1053960) (by simpa using hbound))
   simp only [UInt32.zero_add, hread]
   apply Reaches.prepend (Step.localTee rfl)
   apply Reaches.prepend Step.const
@@ -660,9 +660,9 @@ theorem reallocator_grow_success_steps
   apply Reaches.prepend Step.const
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend
-    (Step.store32 (address := 0) (offset := 1053960)
+    (Step.store32 rfl (address := .i32 (0)) (offset := 1053960)
       (by simpa using hboundGrown))
-  simp only [setMemory_eq, allocatorBumpStore]
+  simp only [setMemory_eq]
   apply Reaches.prepend Step.block
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.eqz rfl)
@@ -678,7 +678,7 @@ theorem reallocator_grow_success_steps
     apply Reaches.prepend (Step.localGet rfl)
     apply Reaches.prepend (Step.returnFromCallExplicit rfl)
     simp only [reallocatorResultStore, hptrDef, true_or, if_true]
-    simp [allocatorBumpStore, allocatorGrownStore, allocatorFinish,
+    simp [allocatorBumpStore,  allocatorFinish,
       allocatorPtr, hptrNeg]
     exact ⟨[], .refl _⟩
   · rw [if_neg hptr]
@@ -707,8 +707,8 @@ theorem reallocator_grow_success_steps
       apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
       apply Reaches.prepend (Step.localGet rfl)
       apply Reaches.prepend (Step.returnFromCallExplicit rfl)
-      simp only [reallocatorResultStore, hptrDef, hlen, or_false, if_true]
-      simp [allocatorBumpStore, allocatorGrownStore, allocatorFinish,
+      simp only [reallocatorResultStore, hptrDef, hlen]
+      simp [allocatorBumpStore,  allocatorFinish,
         allocatorPtr]
       exact ⟨[], .refl _⟩
     · rw [if_neg hlen]
@@ -730,7 +730,7 @@ theorem reallocator_grow_success_steps
       apply Reaches.prepend (Step.localGet rfl)
       apply Reaches.prepend (Step.returnFromCallExplicit rfl)
       simp only [reallocatorResultStore, hptrDef, hlen, or_false, if_false]
-      simp [allocatorBumpStore, allocatorGrownStore, allocatorFinish,
+      simp [allocatorBumpStore,  allocatorFinish,
         allocatorPtr]
       exact ⟨[], .refl _⟩
 

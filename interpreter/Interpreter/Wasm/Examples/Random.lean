@@ -45,8 +45,7 @@ def config (oracle : Oracle) : Config State :=
 returns its threshold comparison on the first oracle byte. -/
 theorem returns_threshold_result (oracle : Oracle) :
     (runSteps 8 (config oracle)).result.values? =
-      some [.i32 (if (UInt8.ofFin (oracle 0)).toUInt32 < 128 then 1 else 0)] := by
-  rfl
+      some [.i32 (if (UInt8.ofFin (oracle 0)).toUInt32 < 128 then 1 else 0)] := by rfl
 
 def finalCursor? : RunnerResult State → Option Nat
   | .success _ store => some store.wasm.host.cursor
@@ -55,8 +54,7 @@ def finalCursor? : RunnerResult State → Option Nat
 /-- The pathwise run uses exactly the single byte supplied by the probability
 model below, so its zero fallback is never observed. -/
 theorem consumes_exactly_one_byte (oracle : Oracle) :
-    finalCursor? (runSteps 8 (config oracle)).result = some 1 := by
-  rfl
+    finalCursor? (runSteps 8 (config oracle)).result = some 1 := by rfl
 
 /-- Observe whether the Wasm function returned its accepting value. -/
 def accepts (oracle : Oracle) : Bool :=
@@ -93,7 +91,6 @@ theorem acceptanceEvent_eq :
 /-- End-to-end probabilistic correctness of the Wasm program. -/
 theorem accepts_with_probability_one_half :
     probability uniformByte acceptanceEvent = (1 / 2 : ℝ≥0∞) := by
-  rw [acceptanceEvent_eq]
-  exact uniformByte_lowHalf_probability
+  rw [acceptanceEvent_eq]; exact uniformByte_lowHalf_probability
 
 end Wasm.Examples.Random

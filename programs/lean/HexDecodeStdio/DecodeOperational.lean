@@ -6,7 +6,7 @@ open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
 
 @[simp] abbrev decodeStack : UInt32 := 1048528
-@[simp] abbrev decodeInputVector : UInt32 := 1048564
+@[simp] abbrev decodeInputVector : UInt32 := 1048552
 
 @[simp] abbrev decodeStatusVector : UInt32 := decodeStack + 12
 
@@ -39,7 +39,7 @@ theorem func9_read_to_end_split :
       [.globalGet 0, .const 48, .sub, .localTee 0, .globalSet 0,
         .localGet 0, .const 0, .store32 20,
         .localGet 0, .constI64 4294967296, .store64 12,
-        .localGet 0, .const 36, .add, .call 10] ++ decodeAfterRead := by
+        .localGet 0, .const 24, .add, .call 10] ++ decodeAfterRead := by
   rfl
 
 def decodeAfterReadConfig (store : MachineStore Universal.State) :
@@ -87,7 +87,7 @@ theorem decode_to_read_to_end_store
   rw [setGlobal_zero_eq]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.store32 hbound20)
+  apply Reaches.prepend (Step.store32 rfl hbound20)
   rw [setMemory_eq]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.constI64
@@ -97,7 +97,7 @@ theorem decode_to_read_to_end_store
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend Step.add
-  simp [func9Def, Function.toLocals, Function.numParams, ValueType.zero,
+  simp [func9Def,  ValueType.zero,
     func9_read_to_end_split, decodeFrameStore, decodeInputVector]
   exact ⟨[], .refl _⟩
 
@@ -209,9 +209,9 @@ theorem decode_to_first_chunk_outcome (input : List UInt8) :
       decide)
     (by rfl) hframedPages
     (by simp [framed, readToEndFrameStore, Mem.read32, Mem.write64,
-      Mem.write32] <;> bv_decide)
+      Mem.write32] <;> bv_normalize (config := { enums := false }))
     (by simp [framed, readToEndFrameStore, Mem.read32, Mem.write64,
-      Mem.write32] <;> bv_decide)
+      Mem.write32] <;> bv_normalize (config := { enums := false }))
     (by simp [framed, readToEndFrameStore, Mem.read32, Mem.write64,
       Mem.write32])
     (by

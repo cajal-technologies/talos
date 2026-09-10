@@ -91,109 +91,52 @@ theorem absDiff_smallStep_wp_to_return
     UInt32.addSteps8 ((sp - 16) + 8) (by omega)
   iintro ⟨HR, Hglobal, Hscratch⟩
   simp only [absDiffBody]
-  iapply Wasm.SmallStep.wp_globalGet $$ Hglobal
-  inext
-  iintro Hglobal
-  iapply Wasm.SmallStep.wp_const
-  inext
-  iapply Wasm.SmallStep.wp_sub
-  inext
-  iapply Wasm.SmallStep.wp_localSet rfl
-  inext
+  wasm_wp_next_rebind Wasm.SmallStep.wp_globalGet with Hglobal
+  wasm_wp_pures [wp_const wp_sub wp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
-  iapply Wasm.SmallStep.wp_block
-  inext
-  iapply Wasm.SmallStep.wp_block
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_block wp_block wp_localGet wp_localGet]
   by_cases hab : a < b
-  · iapply Wasm.SmallStep.wp_ltUI64 (result := 1) (by simp [hab])
-    inext
-    iapply Wasm.SmallStep.wp_const
-    inext
-    iapply Wasm.SmallStep.wp_and
-    inext
-    rw [show (1 &&& 1 : UInt32) = 1 by decide]
-    iapply Wasm.SmallStep.wp_brIf (by decide) rfl
-    inext
+  · wasm_wp_next Wasm.SmallStep.wp_ltUI64 (result := 1) (by simp [hab])
+    wasm_wp_pures [wp_const wp_and] rewriting [show (1 &&& 1 : UInt32) = 1 by decide]
+    wasm_wp_next Wasm.SmallStep.wp_brIf (by decide) rfl
     simp only [List.take_nil, List.drop_nil, List.nil_append]
-    iapply Wasm.SmallStep.wp_localGet rfl
-    inext
-    iapply Wasm.SmallStep.wp_localGet rfl
-    inext
-    iapply Wasm.SmallStep.wp_localGet rfl
-    inext
-    iapply Wasm.SmallStep.wp_subI64
-    inext
+    wasm_wp_pures [wp_localGet wp_localGet wp_localGet wp_subI64]
     ihave HscratchLater :
         ▷ pointsTo_u64 0 ((sp - 16) + 8) oldScratch $$ [Hscratch]
-    · inext
-      iexact Hscratch
-    iapply Wasm.SmallStep.wp_store64 oldScratch h8 h9 h10 h11 h12 h13 h14 h15 $$
+    · ilater_exact Hscratch
+    wasm_wp_next Wasm.SmallStep.wp_store64 oldScratch h8 h9 h10 h11 h12 h13 h14 h15 $$
       HscratchLater
-    inext
     iintro Hscratch
-    iapply Wasm.SmallStep.wp_exitControl rfl
-    inext
-    iapply Wasm.SmallStep.wp_localGet rfl
-    inext
+    wasm_wp_pures [wp_exitControl wp_localGet]
     ihave HscratchLater :
         ▷ pointsTo_u64 0 ((sp - 16) + 8) (b - a) $$ [Hscratch]
-    · inext
-      iexact Hscratch
-    iapply Wasm.SmallStep.wp_load64 (b - a) h8 h9 h10 h11 h12 h13 h14 h15 $$
+    · ilater_exact Hscratch
+    wasm_wp_next Wasm.SmallStep.wp_load64 (b - a) h8 h9 h10 h11 h12 h13 h14 h15 $$
       HscratchLater
-    inext
     iintro Hscratch
     simp only [List.take_nil, List.nil_append]
     simp only [hab, if_true] at hreturn
-    iapply hreturn
-    iframe
-  · iapply Wasm.SmallStep.wp_ltUI64 (result := 0) (by simp [hab])
-    inext
-    iapply Wasm.SmallStep.wp_const
-    inext
-    iapply Wasm.SmallStep.wp_and
-    inext
-    rw [show (0 &&& 1 : UInt32) = 0 by decide]
-    iapply Wasm.SmallStep.wp_brIfZero
-    inext
-    iapply Wasm.SmallStep.wp_localGet rfl
-    inext
-    iapply Wasm.SmallStep.wp_localGet rfl
-    inext
-    iapply Wasm.SmallStep.wp_localGet rfl
-    inext
-    iapply Wasm.SmallStep.wp_subI64
-    inext
+    iapply_frame hreturn
+  · wasm_wp_next Wasm.SmallStep.wp_ltUI64 (result := 0) (by simp [hab])
+    wasm_wp_pures [wp_const wp_and] rewriting [show (0 &&& 1 : UInt32) = 0 by decide]
+    wasm_wp_pures [wp_brIfZero wp_localGet wp_localGet wp_localGet wp_subI64]
     ihave HscratchLater :
         ▷ pointsTo_u64 0 ((sp - 16) + 8) oldScratch $$ [Hscratch]
-    · inext
-      iexact Hscratch
-    iapply Wasm.SmallStep.wp_store64 oldScratch h8 h9 h10 h11 h12 h13 h14 h15 $$
+    · ilater_exact Hscratch
+    wasm_wp_next Wasm.SmallStep.wp_store64 oldScratch h8 h9 h10 h11 h12 h13 h14 h15 $$
       HscratchLater
-    inext
     iintro Hscratch
-    iapply Wasm.SmallStep.wp_br rfl
-    inext
-    simp only [List.take_nil, List.drop_nil, List.nil_append]
-    iapply Wasm.SmallStep.wp_localGet rfl
-    inext
+    wasm_wp_pures [wp_br] using [List.take_nil, List.drop_nil, List.nil_append]
+    wasm_wp_pures [wp_localGet]
     ihave HscratchLater :
         ▷ pointsTo_u64 0 ((sp - 16) + 8) (a - b) $$ [Hscratch]
-    · inext
-      iexact Hscratch
-    iapply Wasm.SmallStep.wp_load64 (a - b) h8 h9 h10 h11 h12 h13 h14 h15 $$
+    · ilater_exact Hscratch
+    wasm_wp_next Wasm.SmallStep.wp_load64 (a - b) h8 h9 h10 h11 h12 h13 h14 h15 $$
       HscratchLater
-    inext
     iintro Hscratch
     simp only [hab, if_false] at hreturn
-    iapply hreturn
-    iframe
+    iapply_frame hreturn
 
 set_option maxHeartbeats 4000000 in
 /-- Top-level corollary of the contextual body rule. -/
@@ -217,13 +160,7 @@ theorem absDiff_smallStep_wp
   iintro Hresources
   iapply absDiff_smallStep_wp_to_return (iprop(True)) [] sp a b oldScratch hlo hroom
   · iintro ⟨_Htrue, Hresources⟩
-    iapply Wasm.SmallStep.wp_returnFromFunction
-    inext
-    iapply wp_value'
-    isplitr
-    · ipureintro
-      rfl
-    · iexact Hresources
+    wasm_wp_return_value_rfl_exact Hresources
   · isplitr
     · itrivial
     · iexact Hresources
@@ -270,7 +207,7 @@ theorem absDiffHeap_pointsTo (oldScratch : UInt64) [WasmHeapGS Unit] :
       pointsTo_u64 0 1048568 oldScratch := by
   unfold absDiffHeap
   iintro Hbytes
-  ihave Hsplit := store64Heap_pointsTo (α := Unit)
+  ihave ⟨Hword, _Hempty⟩ := store64Heap_pointsTo (α := Unit)
     (∅ : WasmHeapMap (Option UInt8)) 0 1048568 oldScratch
     (get?_empty (⟨0, 1048568⟩ : MemoryKey))
     (by rw [get?_insert_ne (by decide), get?_empty])
@@ -290,7 +227,6 @@ theorem absDiffHeap_pointsTo (oldScratch : UInt64) [WasmHeapGS Unit] :
       get?_insert_ne (by decide), get?_insert_ne (by decide),
       get?_insert_ne (by decide), get?_empty])
     $$ Hbytes
-  icases Hsplit with ⟨Hword, _Hempty⟩
   iframe
 
 theorem absDiffGlobals_pointsTo [WasmGlobalGS Unit] :
@@ -327,8 +263,7 @@ theorem absDiffBodyHeap_agrees
       (by decide) (by decide) (by decide) (by decide)
       (heapAgreesWithMem_empty _)
   unfold absDiffHeap
-  rw [absDiffBody_resolve_eq runtimeModule initial a b oldScratch] at h
-  exact h
+  rw [absDiffBody_resolve_eq runtimeModule initial a b oldScratch] at h; exact h
 
 theorem absDiffBodyHeap_inBounds
     (runtimeModule : Module) (initial : Store Unit)
@@ -344,24 +279,15 @@ theorem absDiffBodyHeap_inBounds
       (heapAddressesInBounds_empty _)
       (by simpa using hpages)
   unfold absDiffHeap
-  rw [absDiffBody_resolve_eq runtimeModule initial a b oldScratch] at h
-  exact h
+  rw [absDiffBody_resolve_eq runtimeModule initial a b oldScratch] at h; exact h
 
 theorem absDiffBodyGlobals_agree
     (runtimeModule : Module) (initial : Store Unit)
     (a b oldScratch : UInt64)
     (hglobal : initial.globals.globals[0]? = some (.i32 1048576)) :
     globalHeapAgrees absDiffGlobals
-      (absDiffBodyConfig runtimeModule initial a b oldScratch).store.wasm.globals := by
-  intro index value hget
-  simp only [absDiffGlobals] at hget
-  by_cases hindex : index = 0
-  · subst hindex
-    simp only [get?_insert_eq rfl] at hget
-    obtain rfl := Option.some.inj hget
-    exact hglobal
-  · rw [get?_insert_ne (fun h => hindex (congrArg GlobalKey.index h).symm), get?_empty] at hget
-    contradiction
+      (absDiffBodyConfig runtimeModule initial a b oldScratch).store.wasm.globals :=
+  globalHeapAgrees_singleton hglobal
 
 set_option maxHeartbeats 4000000 in
 /-- Generated-module form of the reusable Iris body proof. It works over any
@@ -401,16 +327,14 @@ theorem absDiff_smallStep_partiallyMeets_of_store
           [.i64 (if a < b then b - a else a - b)]⌝) := by
       intro result
       iintro ⟨%hresult, _Hglobal, _Hscratch⟩
-      ipureintro
-      exact hresult
+      ipureexact hresult
     simp only [absDiffBodyConfig]
     iapply wp_mono hpost
     have hwp := absDiff_smallStep_wp
       (s := Stuckness.NotStuck) (E := ⊤)
       1048576 a b oldScratch (by decide) (by decide)
     simp only [UInt32.reduceSub, UInt32.reduceAdd] at hwp
-    iapply hwp
-    iframe
+    iapply_frame hwp
 
 /-- Closed instance of `absDiff_smallStep_partiallyMeets_of_store`. The
 theorem starts from a concrete physical memory/global store and assumes no

@@ -35,7 +35,7 @@ theorem decode_second_pair_zero_to_post
     decodeCoreOuter4, decodeCoreOuter3, decodeCoreOuter2, decodeCoreOuter1,
     coreStructuredBody, coreFirstInstruction, func5, List.drop]
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load8U (by
+  apply Reaches.prepend (Step.load8U rfl (by
     change 1048449 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [show coreFrame + 16 = decodeSecondPairOut by decide, htag]
@@ -62,13 +62,13 @@ theorem decode_loop_exit_to_post
     decodeCoreOuter3, decodeCoreOuter2, decodeCoreOuter1,
     coreStructuredBody, coreFirstInstruction, func5, List.drop]
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by
+  apply Reaches.prepend (Step.load32 rfl (by
     change 1048500 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [hptr]
   apply Reaches.prepend (Step.localSet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by
+  apply Reaches.prepend (Step.load32 rfl (by
     change 1048496 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [hcapacity]
@@ -104,7 +104,7 @@ theorem decode_post_loop_success_reaches
     coreStructuredBody, coreFirstInstruction, func5, List.drop]
   apply Reaches.prepend Step.block
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by
+  apply Reaches.prepend (Step.load32 rfl (by
     change 1048468 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [show coreFrame + 32 = coreError by decide, hmarker]
@@ -115,20 +115,20 @@ theorem decode_post_loop_success_reaches
   simp
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.store32 (by
-    change 1048564 ≤ store.wasm.mem.pages * 65536
+  apply Reaches.prepend (Step.store32 rfl (by
+    change 1048576 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.store32 (by
-    change 1048560 ≤ store.wasm.mem.pages * 65536
+  apply Reaches.prepend (Step.store32 rfl (by
+    change 1048572 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.store32 (by
-    change 1048556 ≤ store.wasm.mem.pages * 65536
+  apply Reaches.prepend (Step.store32 rfl (by
+    change 1048568 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.br rfl)
@@ -198,7 +198,7 @@ theorem decode_post_loop_invalid_reaches
     coreStructuredBody, coreFirstInstruction, func5, List.drop]
   apply Reaches.prepend Step.block
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by
+  apply Reaches.prepend (Step.load32 rfl (by
     change 1048468 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [show coreFrame + 32 = coreError by decide, hmarker]
@@ -208,24 +208,24 @@ theorem decode_post_loop_invalid_reaches
   apply Reaches.prepend Step.brIfZero
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by
+  apply Reaches.prepend (Step.load32 rfl (by
     change 1048472 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [show coreFrame + 36 = coreError + 4 by decide, hindex]
-  apply Reaches.prepend (Step.store32 (by
-    change 1048564 ≤ store.wasm.mem.pages * 65536
+  apply Reaches.prepend (Step.store32 rfl (by
+    change 1048576 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.store32 (by
-    change 1048560 ≤ store.wasm.mem.pages * 65536
+  apply Reaches.prepend (Step.store32 rfl (by
+    change 1048572 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.store32 (by
-    change 1048556 ≤ store.wasm.mem.pages * 65536
+  apply Reaches.prepend (Step.store32 rfl (by
+    change 1048568 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.localGet rfl)

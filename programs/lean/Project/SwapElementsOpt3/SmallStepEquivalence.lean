@@ -42,144 +42,50 @@ theorem opt3_func0_distinct_smallStep_wp
   dsimp only
   let addressI := (i <<< (3 % 32)) + ptr
   let addressJ := (j <<< (3 % 32)) + ptr
-  have hroomI' : addressI.toNat + 8 ≤ 4294967296 := by
-    simpa [addressI] using hroomI
-  have hroomJ' : addressJ.toNat + 8 ≤ 4294967296 := by
-    simpa [addressJ] using hroomJ
-  have hi1 : (addressI + 1).toNat = addressI.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 1 (by omega) (by omega)
-  have hi2 : (addressI + 2).toNat = addressI.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 2 (by omega) (by omega)
-  have hi3 : (addressI + 3).toNat = addressI.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 3 (by omega) (by omega)
-  have hi4 : (addressI + 4).toNat = addressI.toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 4 (by omega) (by omega)
-  have hi5 : (addressI + 5).toNat = addressI.toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 5 (by omega) (by omega)
-  have hi6 : (addressI + 6).toNat = addressI.toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 6 (by omega) (by omega)
-  have hi7 : (addressI + 7).toNat = addressI.toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 7 (by omega) (by omega)
-  have hj1 : (addressJ + 1).toNat = addressJ.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 1 (by omega) (by omega)
-  have hj2 : (addressJ + 2).toNat = addressJ.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 2 (by omega) (by omega)
-  have hj3 : (addressJ + 3).toNat = addressJ.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 3 (by omega) (by omega)
-  have hj4 : (addressJ + 4).toNat = addressJ.toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 4 (by omega) (by omega)
-  have hj5 : (addressJ + 5).toNat = addressJ.toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 5 (by omega) (by omega)
-  have hj6 : (addressJ + 6).toNat = addressJ.toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 6 (by omega) (by omega)
-  have hj7 : (addressJ + 7).toNat = addressJ.toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 7 (by omega) (by omega)
+  have hroomI' : addressI.toNat + 8 ≤ 4294967296 := by simpa [addressI] using hroomI
+  have hroomJ' : addressJ.toNat + 8 ≤ 4294967296 := by simpa [addressJ] using hroomJ
+  obtain ⟨hi1, hi2, hi3, hi4, hi5, hi6, hi7⟩ := UInt32.addSteps8 addressI hroomI'
+  obtain ⟨hj1, hj2, hj3, hj4, hj5, hj6, hj7⟩ := UInt32.addSteps8 addressJ hroomJ'
   iintro ⟨HA, HB⟩
   simp only [Project.SwapElementsOpt3.func0]
-  iapply Wasm.SmallStep.wp_block
-  inext
-  iapply Wasm.SmallStep.wp_block
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_geU (result := 0)
+  wasm_wp_pures [wp_block wp_block wp_localGet wp_localGet]
+  wasm_wp_next Wasm.SmallStep.wp_geU (result := 0)
     (by simp [show ¬i ≥ len from not_le_of_gt hi])
-  inext
-  iapply Wasm.SmallStep.wp_brIfZero
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_geU (result := 0)
+  wasm_wp_pures [wp_brIfZero wp_localGet wp_localGet]
+  wasm_wp_next Wasm.SmallStep.wp_geU (result := 0)
     (by simp [show ¬j ≥ len from not_le_of_gt hj])
-  inext
-  iapply Wasm.SmallStep.wp_brIfZero
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_const
-  inext
-  iapply Wasm.SmallStep.wp_shl
-  inext
-  iapply Wasm.SmallStep.wp_add
-  inext
-  iapply Wasm.SmallStep.wp_localTee rfl
-  inext
+  wasm_wp_pures [wp_brIfZero wp_localGet wp_localGet wp_const wp_shl wp_add wp_localTee]
   simp only [List.set]
   ihave HALater : ▷ pointsTo_u64 0 (addressI + 0) oldA $$ [HA]
-  · inext
-    rw [UInt32.add_zero]
-    iexact HA
-  iapply Wasm.SmallStep.wp_load64 oldA (by simp)
+  · ilater_rw_exact [UInt32.add_zero] with HA
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 oldA (by simp)
     (by simpa using hi1) (by simpa using hi2) (by simpa using hi3)
     (by simpa using hi4) (by simpa using hi5) (by simpa using hi6)
-    (by simpa using hi7) $$ HALater
-  inext
-  iintro HA
-  iapply Wasm.SmallStep.wp_localSet rfl
-  inext
-  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
-    List.set]
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_const
-  inext
-  iapply Wasm.SmallStep.wp_shl
-  inext
-  iapply Wasm.SmallStep.wp_add
-  inext
-  iapply Wasm.SmallStep.wp_localTee rfl
-  inext
+    (by simpa using hi7) with HALater => HA
+  wasm_wp_localSet
+  wasm_wp_pures [wp_localGet wp_localGet wp_localGet wp_const wp_shl wp_add wp_localTee]
   simp only [List.set]
   ihave HBLater : ▷ pointsTo_u64 0 (addressJ + 0) oldB $$ [HB]
-  · inext
-    rw [UInt32.add_zero]
-    iexact HB
-  iapply Wasm.SmallStep.wp_load64 oldB (by simp)
+  · ilater_rw_exact [UInt32.add_zero] with HB
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 oldB (by simp)
     (by simpa using hj1) (by simpa using hj2) (by simpa using hj3)
     (by simpa using hj4) (by simpa using hj5) (by simpa using hj6)
-    (by simpa using hj7) $$ HBLater
-  inext
-  iintro HB
+    (by simpa using hj7) with HBLater => HB
   ihave HALater : ▷ pointsTo_u64 0 (addressI + 0) oldA $$ [HA]
-  · inext
-    rw [UInt32.add_zero]
-    iexact HA
-  iapply Wasm.SmallStep.wp_store64 oldA (by simp)
+  · ilater_rw_exact [UInt32.add_zero] with HA
+  wasm_wp_next_bind Wasm.SmallStep.wp_store64 oldA (by simp)
     (by simpa using hi1) (by simpa using hi2) (by simpa using hi3)
     (by simpa using hi4) (by simpa using hi5) (by simpa using hi6)
-    (by simpa using hi7) $$ HALater
-  inext
-  iintro HA
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
+    (by simpa using hi7) with HALater => HA
+  wasm_wp_pures [wp_localGet wp_localGet]
   ihave HBLater : ▷ pointsTo_u64 0 (addressJ + 0) oldB $$ [HB]
-  · inext
-    rw [UInt32.add_zero]
-    iexact HB
-  iapply Wasm.SmallStep.wp_store64 oldB (by simp)
+  · ilater_rw_exact [UInt32.add_zero] with HB
+  wasm_wp_next_bind Wasm.SmallStep.wp_store64 oldB (by simp)
     (by simpa using hj1) (by simpa using hj2) (by simpa using hj3)
     (by simpa using hj4) (by simpa using hj5) (by simpa using hj6)
-    (by simpa using hj7) $$ HBLater
-  inext
-  iintro HB
-  iapply Wasm.SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
-  isplitr
-  · ipureintro
-    rfl
+    (by simpa using hj7) with HBLater => HB
+  wasm_wp_return_value
+  isplitr_pureexact rfl
   · rw [show (i <<< (3 % 32)) + ptr = addressI by rfl,
       show (j <<< (3 % 32)) + ptr = addressJ by rfl]
     simp only [UInt32.add_zero]
@@ -223,38 +129,10 @@ theorem opt3_func0_distinct_store_partiallyMeets
           store.wasm.mem.read64 ((j <<< (3 % 32)) + ptr) = oldA) := by
   let addressI := (i <<< (3 % 32)) + ptr
   let addressJ := (j <<< (3 % 32)) + ptr
-  have hroomI' : addressI.toNat + 8 ≤ 4294967296 := by
-    simpa [addressI] using hroomI
-  have hroomJ' : addressJ.toNat + 8 ≤ 4294967296 := by
-    simpa [addressJ] using hroomJ
-  have hi1 : (addressI + 1).toNat = addressI.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 1 (by omega) (by omega)
-  have hi2 : (addressI + 2).toNat = addressI.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 2 (by omega) (by omega)
-  have hi3 : (addressI + 3).toNat = addressI.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 3 (by omega) (by omega)
-  have hi4 : (addressI + 4).toNat = addressI.toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 4 (by omega) (by omega)
-  have hi5 : (addressI + 5).toNat = addressI.toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 5 (by omega) (by omega)
-  have hi6 : (addressI + 6).toNat = addressI.toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 6 (by omega) (by omega)
-  have hi7 : (addressI + 7).toNat = addressI.toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressI 7 (by omega) (by omega)
-  have hj1 : (addressJ + 1).toNat = addressJ.toNat + 1 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 1 (by omega) (by omega)
-  have hj2 : (addressJ + 2).toNat = addressJ.toNat + 2 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 2 (by omega) (by omega)
-  have hj3 : (addressJ + 3).toNat = addressJ.toNat + 3 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 3 (by omega) (by omega)
-  have hj4 : (addressJ + 4).toNat = addressJ.toNat + 4 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 4 (by omega) (by omega)
-  have hj5 : (addressJ + 5).toNat = addressJ.toNat + 5 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 5 (by omega) (by omega)
-  have hj6 : (addressJ + 6).toNat = addressJ.toNat + 6 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 6 (by omega) (by omega)
-  have hj7 : (addressJ + 7).toNat = addressJ.toNat + 7 := by
-    simpa using UInt32.add_ofNat_toNat_noWrap addressJ 7 (by omega) (by omega)
+  have hroomI' : addressI.toNat + 8 ≤ 4294967296 := by simpa [addressI] using hroomI
+  have hroomJ' : addressJ.toNat + 8 ≤ 4294967296 := by simpa [addressJ] using hroomJ
+  obtain ⟨hi1, hi2, hi3, hi4, hi5, hi6, hi7⟩ := UInt32.addSteps8 addressI hroomI'
+  obtain ⟨hj1, hj2, hj3, hj4, hj5, hj6, hj7⟩ := UInt32.addSteps8 addressJ hroomJ'
   apply
     Wasm.SmallStep.wasm_smallStep_heap_globals_runtime_store_partiallyMeets
       (α := Unit) (σ := σ) (globalσ := globalσ)
@@ -264,8 +142,7 @@ theorem opt3_func0_distinct_store_partiallyMeets
   · simp only [opt3ConfigFromStore]; decide
   · intro gs
     iintro ⟨Hheap, Hglobals, Hruntime, _Henv⟩
-    ihave Hwords := hresources $$ Hheap
-    icases Hwords with ⟨HA, HB⟩
+    ihave ⟨HA, HB⟩ := hresources $$ Hheap
     have hpost : ∀ values : List Value,
         (iprop% ⌜values = []⌝ ∗
           pointsTo_u64 0 addressI oldB ∗ pointsTo_u64 0 addressJ oldA) ⊢
@@ -282,8 +159,7 @@ theorem opt3_func0_distinct_store_partiallyMeets
       imod Wasm.SmallStep.stateInterp_pointsTo_u64_facts
         store 0 [] 0 addressJ oldA hj1 hj2 hj3 hj4 hj5 hj6 hj7 $$
           [$Hstate $HB] with %HfactsJ
-      ipureintro
-      exact ⟨hvalues, HfactsI.1, HfactsJ.1⟩
+      ipureexact ⟨hvalues, HfactsI.1, HfactsJ.1⟩
     iclear Hglobals Hruntime
     iapply wp_mono hpost
     simp only [opt3ConfigFromStore]
@@ -362,8 +238,7 @@ theorem opt3_func0_terminates
       simpa [Wasm.SmallStep.setMemory_eq] using hboundJ))
   apply Wasm.SmallStep.TerminatesWith.prepend
     Wasm.SmallStep.Step.returnFromFunction
-  simp only [List.take_zero, List.nil_append]
-  exact ⟨[], [], _, .refl _, rfl⟩
+  simp only [List.take_zero, List.nil_append]; exact ⟨[], [], _, .refl _, rfl⟩
 
 /-- Universal total correctness for the optimized distinct-index export,
 obtained by combining its explicit finite trace with its Iris physical-store
@@ -443,7 +318,7 @@ theorem opt3Example_terminates_with_observation :
   apply Wasm.SmallStep.runSteps_checked_terminates (fuel := 100)
     (fun values store =>
       (values == []) && (arrayObservation store == (22, 11)))
-  · native_decide
+  · decide +kernel
   · intro values store h
     simpa [Bool.and_eq_true] using h
 

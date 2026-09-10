@@ -86,7 +86,7 @@ theorem func15_realloc_outcome {hlc : HasLC}
   have hptrNe : ptr ≠ 0 := by
     rw [hptr]
     by_cases h : oldBump = 0 <;> simp [h]
-  have hptrMask : ptr &&& ((0 : UInt32) - 1) = ptr := by bv_decide
+  have hptrMask : ptr &&& ((0 : UInt32) - 1) = ptr := by bv_normalize (config := { enums := false })
   have hnowrapNew : ptr.toNat + newSize.toNat < UInt32.size := by
     change ptr.toNat + newSize.toNat < 2147483648 at hfinish
     norm_num [UInt32.size]

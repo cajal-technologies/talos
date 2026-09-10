@@ -43,24 +43,29 @@ example :
 def fixedRuntime : RuntimeEnv Universal.State :=
   { instances := #[{ module := «module», host := Universal.envFor «module» }], entry := ⟨0⟩ }
 
-set_option maxRecDepth 100000 in
-set_option maxHeartbeats 4000000 in
+/-- A symbolic decimal pair requires a valid iterator frame and readable
+input bytes. Reuse the operational trace instead of unfolding a fixed fuel. -/
 example (store : MachineStore Universal.State)
-    (inputPtr len chunkIndex : UInt32) (hi lo oldTag oldPayload : UInt8)
+    (inputPtr len chunkIndex : UInt32) (hi lo : UInt8)
+    (hmod : store.runtime.currentModule = «module»)
+    (hpages : 17 ≤ store.wasm.mem.pages)
+    (hpagesMax : store.wasm.mem.pages ≤ 65536)
+    (hinput : inputPtr.toNat + 2 ≤ store.wasm.mem.pages * 65536)
+    (hinputLower : 1054000 ≤ inputPtr.toNat)
+    (hlen : 2 ≤ len.toNat)
+    (hlenRead : store.wasm.mem.read32 (coreIterator + 4) = len)
+    (herrorRead : store.wasm.mem.read32 (coreIterator + 16) = coreError)
+    (hchunkRead : store.wasm.mem.read32 (coreIterator + 8) = 2)
+    (hptrRead : store.wasm.mem.read32 coreIterator = inputPtr)
+    (hindexRead : store.wasm.mem.read32 (coreIterator + 12) = chunkIndex)
+    (hhiRead : store.wasm.mem.read8 inputPtr = hi)
+    (hloRead : store.wasm.mem.read8 (inputPtr + 1) = lo)
     (hhi : HexRoute.decimal.valid hi) (hlo : HexRoute.decimal.valid lo) :
-    let base := { store with runtime := fixedRuntime }
-    (runSteps 133 (pairStandaloneConfig
-      (pairPreparedStore base inputPtr len chunkIndex hi lo oldTag oldPayload))).result.finalConfig? =
-      some (pairStandaloneReturn
-        (decodePairValidStore
-          (pairPreparedStore base inputPtr len chunkIndex hi lo oldTag oldPayload)
-          inputPtr len chunkIndex
-          ((HexRoute.decimal.nibble lo |||
-            (HexRoute.decimal.nibble hi <<< (4 : UInt32))).toUInt8))) := by
-  dsimp only
-  simp only [HexRoute.valid] at hhi hlo
-  rcases hhi with ⟨hhiU, hhiL, hhiD⟩
-  rcases hlo with ⟨hloU, hloL, hloD⟩
-  simp (config := { maxSteps := 1000000 }) [runSteps, pairStandaloneConfig,
-    pairStandaloneReturn, pairPreparedStore, decodePairValidStore,
-    decodePairBaseStore, fixedRuntime, hhiU, hhiL, hhiD, hloU, hloL, hloD]
+    Reaches (pairStandaloneConfig store)
+      (pairStandaloneReturn (decodePairValidStore store inputPtr len chunkIndex
+        ((HexRoute.decimal.nibble lo |||
+          (HexRoute.decimal.nibble hi <<< (4 : UInt32))).toUInt8))) := by
+  exact decodePair_valid_reaches store inputPtr coreError len chunkIndex hi lo
+    hmod hpages hpagesMax hinput hinputLower hlen hlenRead herrorRead
+    hchunkRead hptrRead hindexRead hhiRead hloRead .decimal .decimal hhi hlo
+    [] [] [] [] 0 [] [] []

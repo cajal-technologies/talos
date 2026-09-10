@@ -277,7 +277,7 @@ theorem func6_ascii_store {hlc : HasLC} {α : Type}
   have hnext' : UInt32.ofNat i + 1 = UInt32.ofNat (i + 1) := by
     simpa [hposition] using hnext
   rw [hposition]
-  simp only [encodeLocals, List.set, UInt32.add_comm (UInt32.ofNat i) output]
+  simp only [encodeLocals,  UInt32.add_comm (UInt32.ofNat i) output]
   ihave Hfocus := Project.HexEncodeStdio.Helpers.pointsToBytes_focus_update
     (0 : Nat) output out i hpos $$ Hout
   icases Hfocus with ⟨%actual, Hbyte, Hput, %hactual⟩
@@ -305,7 +305,7 @@ theorem func6_ascii_store {hlc : HasLC} {α : Type}
   iapply twp_const
   iapply twp_add
   rw [hnext']
-  simp [encodeLocals, List.set, UInt32.add_comm (16 : UInt32) stackPtr]
+  simp [List.set, UInt32.add_comm (16 : UInt32) stackPtr]
   iapply Hfinish $$ Hcap HoutputPtr Hlength Hout
 
 /-- Even-position loop leg.  The iterator already contains the saved low
@@ -496,13 +496,13 @@ theorem func6_encode_loop_step_odd_more {hlc : HasLC} {α : Type}
   isplitl [Hcurrent]
   · iexact Hcurrent
   isplitl [Hcursor]
-  · rw [show stackPtr + 16 + 4 = stackPtr + 20 by bv_decide]
+  · rw [show stackPtr + 16 + 4 = stackPtr + 20 by bv_normalize (config := { enums := false })]
     iexact Hcursor
   isplitl [Hend]
-  · rw [show stackPtr + 16 + 8 = stackPtr + 24 by bv_decide]
+  · rw [show stackPtr + 16 + 8 = stackPtr + 24 by bv_normalize (config := { enums := false })]
     iexact Hend
   isplitl [HtablePtr]
-  · rw [show stackPtr + 16 + 12 = stackPtr + 28 by bv_decide]
+  · rw [show stackPtr + 16 + 12 = stackPtr + 28 by bv_normalize (config := { enums := false })]
     iexact HtablePtr
   isplitl [Hsource]
   · iexact Hsource
@@ -520,15 +520,15 @@ theorem func6_encode_loop_step_odd_more {hlc : HasLC} {α : Type}
     List.getElem?_cons_zero, List.getElem?_cons_succ]
   ihave Hcursor' : pointsTo_u32 0 (stackPtr + 20)
       (source + UInt32.ofNat (inputIndex + 2)) $$ [Hcursor]
-  · rw [show stackPtr + 16 + 4 = stackPtr + 20 by bv_decide,
+  · rw [show stackPtr + 16 + 4 = stackPtr + 20 by bv_normalize (config := { enums := false }),
       show inputIndex + 1 + 1 = inputIndex + 2 by omega]
     iexact Hcursor
   ihave Hend' : pointsTo_u32 0 (stackPtr + 24)
       (source + UInt32.ofNat input.length) $$ [Hend]
-  · rw [show stackPtr + 16 + 8 = stackPtr + 24 by bv_decide]
+  · rw [show stackPtr + 16 + 8 = stackPtr + 24 by bv_normalize (config := { enums := false })]
     iexact Hend
   ihave HtablePtr' : pointsTo_u32 0 (stackPtr + 28) 1048576 $$ [HtablePtr]
-  · rw [show stackPtr + 16 + 12 = stackPtr + 28 by bv_decide]
+  · rw [show stackPtr + 16 + 12 = stackPtr + 28 by bv_normalize (config := { enums := false })]
     iexact HtablePtr
   iapply Hnext $$ Hruntime Hcap HoutputPtr Hlength Hcurrent Hcursor' Hend'
     HtablePtr' Hsource Htable Hout Hframe
@@ -619,10 +619,10 @@ theorem func6_encode_loop_step_odd_end {hlc : HasLC} {α : Type}
   isplitl [Hcurrent]
   · iexact Hcurrent
   isplitl [Hcursor]
-  · rw [show stackPtr + 16 + 4 = stackPtr + 20 by bv_decide]
+  · rw [show stackPtr + 16 + 4 = stackPtr + 20 by bv_normalize (config := { enums := false })]
     iexact Hcursor
   isplitl [Hend]
-  · rw [show stackPtr + 16 + 8 = stackPtr + 24 by bv_decide]
+  · rw [show stackPtr + 16 + 8 = stackPtr + 24 by bv_normalize (config := { enums := false })]
     iexact Hend
   iintro Hruntime Hcurrent Hcursor Hend
   iapply twp_localTee rfl
@@ -630,13 +630,13 @@ theorem func6_encode_loop_step_odd_end {hlc : HasLC} {α : Type}
   iapply twp_ne (result := 0) (by simp)
   iapply twp_brIfZero
   iapply twp_exitControl rfl
-  simp only [encodeLocals, encodeLoopFrame, List.set, List.take_zero,
+  simp only [encodeLocals,  List.set, List.take_zero,
     List.nil_append]
   ihave Hcursor' : pointsTo_u32 0 (stackPtr + 20) finish $$ [Hcursor]
-  · rw [show stackPtr + 16 + 4 = stackPtr + 20 by bv_decide]
+  · rw [show stackPtr + 16 + 4 = stackPtr + 20 by bv_normalize (config := { enums := false })]
     iexact Hcursor
   ihave Hend' : pointsTo_u32 0 (stackPtr + 24) finish $$ [Hend]
-  · rw [show stackPtr + 16 + 8 = stackPtr + 24 by bv_decide]
+  · rw [show stackPtr + 16 + 8 = stackPtr + 24 by bv_normalize (config := { enums := false })]
     iexact Hend
   iapply Hnext $$ Hruntime Hcap HoutputPtr Hlength Hcurrent Hcursor' Hend'
     HtablePtr Hsource Htable Hout
@@ -759,7 +759,7 @@ theorem func6_encode_loop {hlc : HasLC} {α : Type}
       isplitl [Hrec]
       · iexact Hrec
       iintro Hruntime Hcap HoutputPtr Hlength Hcurrent Hout Hrecursive
-      simp only [next, loopLocals, loopPosition, loopDigit,
+      simp only [next,
         encodeLoopFrame]
       rw [← hnextU]
       iapply Hrecursive
@@ -865,7 +865,7 @@ theorem func6_encode_loop {hlc : HasLC} {α : Type}
           calc
             _ = UInt32.ofNat (2 * byteIndex + 1 + 1) := hnextU
             _ = _ := congrArg UInt32.ofNat (by omega)
-        simp only [next, loopLocals, loopPosition, loopDigit,
+        simp only [next,
           encodeLoopFrame]
         rw [← hnextPos]
         iapply Hrecursive
@@ -901,7 +901,7 @@ theorem func6_encode_loop {hlc : HasLC} {α : Type}
           simpa only [List.length_set] using houtLen
         isplitr
         · ipureintro
-          simp only [next, loopPosition]
+          simp only [loopPosition]
           rw [show 2 * (byteIndex + 1) = 2 * byteIndex + 2 by omega]
           exact update_prefix_low input out byteIndex hbyteIndex houtLen hprefix
         · iexact Hfinish

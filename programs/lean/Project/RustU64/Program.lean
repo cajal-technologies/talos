@@ -10,6 +10,8 @@ namespace Project.RustU64
 
 open Wasm
 
+-- WAT SHA-256: e5fd5d8dc0c013900f90e2f0ae2ff5d1b5235ec6c239f66191683d4b4148baf1
+
 def func0 : Wasm.Program := watFunctionBody% "../rust/build/rust_u64/program.wat" 0
 
 def func0Def : Wasm.Function :=

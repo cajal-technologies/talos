@@ -10,6 +10,8 @@ namespace Project.HexStdio
 
 open Wasm
 
+-- WAT SHA-256: 1f01d8fcc79b29254ab2272f70fdb4db2df55aa6ed13bb49b2be726baed93069
+
 def func0 : Wasm.Program := watFunctionBody% "../rust/build/hex_stdio/program.wat" 0
 
 def func0Def : Wasm.Function :=

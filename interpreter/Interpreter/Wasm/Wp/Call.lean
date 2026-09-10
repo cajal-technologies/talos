@@ -40,8 +40,7 @@ theorem wp_call_at {env : HostEnv α}
   obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
   have hRun_f : run f m id st s.values env = .Success vs st' := by
     rw [run_fuel_mono (by omega : f ≥ Ns) hRun_ne]; exact hRun
-  rw [exec_call_cons, hRun_f]
-  exact hNr (f + 1) (by omega)
+  rw [exec_call_cons, hRun_f]; exact hNr (f + 1) (by omega)
 
 theorem wp_call_cons {env : HostEnv α}
     {id : Nat} {Pre : List Value → Prop} {Post : Store α → List Value → Prop}
@@ -100,8 +99,7 @@ theorem wp_callIndirect_at {α : Type} {env : HostEnv α}
   obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
   have hRun_f : run f m fid st vs0 env = .Success vs st' := by
     rw [run_fuel_mono (by omega : f ≥ Ns) hRun_ne]; exact hRun
-  rw [exec_callIndirect_cons hStack hTbl hSlot hFn hTy hSig, hRun_f]
-  exact hNr (f + 1) (by omega)
+  rw [exec_callIndirect_cons hStack hTbl hSlot hFn hTy hSig, hRun_f]; exact hNr (f + 1) (by omega)
 
 /-- Indirect-call analogue of `wp_call_cons`. The hypotheses split the
 work of dispatching an indirect call into four steps: locate the

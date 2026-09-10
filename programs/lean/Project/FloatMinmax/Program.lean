@@ -10,6 +10,8 @@ namespace Project.FloatMinmax
 
 open Wasm
 
+-- WAT SHA-256: 5576ce11056f1c31a2713fc049ff333a490c6f48ae3dc9f5c04d99734544ffc4
+
 def func0 : Wasm.Program := watFunctionBody% "../rust/build/float_minmax/program.wat" 0
 
 def func0Def : Wasm.Function :=

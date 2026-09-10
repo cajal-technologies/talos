@@ -10,6 +10,8 @@ namespace Project.RustArrayTests
 
 open Wasm
 
+-- WAT SHA-256: c3c7330904d9bfe0150a32ae26212eda822a1bea403b0592189e34de36582623
+
 def func0 : Wasm.Program := watFunctionBody% "../rust/build/rust_array_tests/program.wat" 0
 
 def func0Def : Wasm.Function :=

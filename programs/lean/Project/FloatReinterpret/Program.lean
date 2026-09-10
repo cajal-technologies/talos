@@ -10,6 +10,8 @@ namespace Project.FloatReinterpret
 
 open Wasm
 
+-- WAT SHA-256: d45391341e5bee9b42b8271c06baf8a8b65d6c64d590f7490e8de9ca8c7a55ba
+
 def func0 : Wasm.Program := watFunctionBody% "../rust/build/float_reinterpret/program.wat" 0
 
 def func0Def : Wasm.Function :=

@@ -27,26 +27,83 @@ theorem pointsTo_ioWord [WasmSmallStepGS hlc α]
         ⟨0, addr + 3⟩ (DFrac.own 1) (some (u64Byte old 3))) ∗
       pointsTo_u32 0 (addr + 4) count := by
   simp only [pointsTo_u64, pointsTo_u32, ioWord, u64Byte, u32Byte]
-  rw [show addr + 4 + 1 = addr + 5 by bv_decide,
-    show addr + 4 + 2 = addr + 6 by bv_decide,
-    show addr + 4 + 3 = addr + 7 by bv_decide]
+  rw [show addr + 4 + 1 = addr + 5 by bv_normalize (config := { enums := false }),
+    show addr + 4 + 2 = addr + 6 by bv_normalize (config := { enums := false }),
+    show addr + 4 + 3 = addr + 7 by bv_normalize (config := { enums := false })]
   let w := (old &&& (0x00000000ffffff00 : UInt64)) ||| tag.toUInt64 |||
     (count.toUInt64 <<< 32)
-  have h0 : w.toUInt8 = tag := by simp [w]; bv_decide
+  have h0 : w.toUInt8 = tag := by
+    dsimp only [w]
+    apply UInt8.toBitVec_inj.mp
+    simp only [UInt64.toBitVec_toUInt8,
+      UInt64.toBitVec_or, UInt64.toBitVec_and, UInt64.toBitVec_shiftLeft,
+      UInt8.toBitVec_toUInt64, UInt32.toBitVec_toUInt64]
+    apply BitVec.eq_of_getLsbD_eq
+    intro i hi
+    interval_cases i <;> simp
   have h1 : (w >>> 8).toUInt8 = (old >>> 8).toUInt8 := by
-    simp [w]; bv_decide
+    dsimp only [w]
+    apply UInt8.toBitVec_inj.mp
+    simp only [UInt64.toBitVec_toUInt8, UInt64.toBitVec_shiftRight,
+      UInt64.toBitVec_or, UInt64.toBitVec_and, UInt64.toBitVec_shiftLeft,
+      UInt8.toBitVec_toUInt64, UInt32.toBitVec_toUInt64]
+    apply BitVec.eq_of_getLsbD_eq
+    intro i hi
+    interval_cases i <;> simp
   have h2 : (w >>> 16).toUInt8 = (old >>> 16).toUInt8 := by
-    simp [w]; bv_decide
+    dsimp only [w]
+    apply UInt8.toBitVec_inj.mp
+    simp only [UInt64.toBitVec_toUInt8, UInt64.toBitVec_shiftRight,
+      UInt64.toBitVec_or, UInt64.toBitVec_and, UInt64.toBitVec_shiftLeft,
+      UInt8.toBitVec_toUInt64, UInt32.toBitVec_toUInt64]
+    apply BitVec.eq_of_getLsbD_eq
+    intro i hi
+    interval_cases i <;> simp
   have h3 : (w >>> 24).toUInt8 = (old >>> 24).toUInt8 := by
-    simp [w]; bv_decide
+    dsimp only [w]
+    apply UInt8.toBitVec_inj.mp
+    simp only [UInt64.toBitVec_toUInt8, UInt64.toBitVec_shiftRight,
+      UInt64.toBitVec_or, UInt64.toBitVec_and, UInt64.toBitVec_shiftLeft,
+      UInt8.toBitVec_toUInt64, UInt32.toBitVec_toUInt64]
+    apply BitVec.eq_of_getLsbD_eq
+    intro i hi
+    interval_cases i <;> simp
   have h4 : (w >>> 32).toUInt8 = count.toUInt8 := by
-    simp [w]; bv_decide
+    dsimp only [w]
+    apply UInt8.toBitVec_inj.mp
+    simp only [UInt64.toBitVec_toUInt8, UInt64.toBitVec_shiftRight,
+      UInt64.toBitVec_or, UInt64.toBitVec_and, UInt64.toBitVec_shiftLeft,
+      UInt8.toBitVec_toUInt64, UInt32.toBitVec_toUInt64,  UInt32.toBitVec_toUInt8]
+    apply BitVec.eq_of_getLsbD_eq
+    intro i hi
+    interval_cases i <;> simp
   have h5 : (w >>> 40).toUInt8 = (count >>> 8).toUInt8 := by
-    simp [w]; bv_decide
+    dsimp only [w]
+    apply UInt8.toBitVec_inj.mp
+    simp only [UInt64.toBitVec_toUInt8, UInt64.toBitVec_shiftRight,
+      UInt64.toBitVec_or, UInt64.toBitVec_and, UInt64.toBitVec_shiftLeft,
+      UInt8.toBitVec_toUInt64, UInt32.toBitVec_toUInt64,  UInt32.toBitVec_shiftRight, UInt32.toBitVec_toUInt8]
+    apply BitVec.eq_of_getLsbD_eq
+    intro i hi
+    interval_cases i <;> simp
   have h6 : (w >>> 48).toUInt8 = (count >>> 16).toUInt8 := by
-    simp [w]; bv_decide
+    dsimp only [w]
+    apply UInt8.toBitVec_inj.mp
+    simp only [UInt64.toBitVec_toUInt8, UInt64.toBitVec_shiftRight,
+      UInt64.toBitVec_or, UInt64.toBitVec_and, UInt64.toBitVec_shiftLeft,
+      UInt8.toBitVec_toUInt64, UInt32.toBitVec_toUInt64,  UInt32.toBitVec_shiftRight, UInt32.toBitVec_toUInt8]
+    apply BitVec.eq_of_getLsbD_eq
+    intro i hi
+    interval_cases i <;> simp
   have h7 : (w >>> 56).toUInt8 = (count >>> 24).toUInt8 := by
-    simp [w]; bv_decide
+    dsimp only [w]
+    apply UInt8.toBitVec_inj.mp
+    simp only [UInt64.toBitVec_toUInt8, UInt64.toBitVec_shiftRight,
+      UInt64.toBitVec_or, UInt64.toBitVec_and, UInt64.toBitVec_shiftLeft,
+      UInt8.toBitVec_toUInt64, UInt32.toBitVec_toUInt64,  UInt32.toBitVec_shiftRight, UInt32.toBitVec_toUInt8]
+    apply BitVec.eq_of_getLsbD_eq
+    intro i hi
+    interval_cases i <;> simp
   change
     ({ memId := 0, addr := addr } ↦ some w.toUInt8 ∗
       { memId := 0, addr := addr + 1 } ↦ some (w >>> 8).toUInt8 ∗
@@ -72,17 +129,37 @@ theorem pointsTo_u64_as_ioWord [WasmSmallStepGS hlc α]
         ⟨0, addr + 3⟩ (DFrac.own 1) (some (u64Byte old 3))) ∗
       pointsTo_u32 0 (addr + 4) ((old >>> 32).toUInt32) := by
   simp only [pointsTo_u64, pointsTo_u32, u64Byte, u32Byte]
-  rw [show addr + 4 + 1 = addr + 5 by bv_decide,
-    show addr + 4 + 2 = addr + 6 by bv_decide,
-    show addr + 4 + 3 = addr + 7 by bv_decide]
+  rw [show addr + 4 + 1 = addr + 5 by bv_normalize (config := { enums := false }),
+    show addr + 4 + 2 = addr + 6 by bv_normalize (config := { enums := false }),
+    show addr + 4 + 3 = addr + 7 by bv_normalize (config := { enums := false })]
   have h4 : (old >>> 32).toUInt8 = ((old >>> 32).toUInt32).toUInt8 := by
-    bv_decide
+    apply UInt8.toBitVec_inj.mp
+    simp only [UInt64.toBitVec_toUInt8, UInt64.toBitVec_shiftRight,
+      UInt64.toBitVec_toUInt32,  UInt32.toBitVec_toUInt8]
+    apply BitVec.eq_of_getLsbD_eq
+    intro i hi
+    interval_cases i <;> simp
   have h5 : (old >>> 40).toUInt8 = (((old >>> 32).toUInt32 >>> 8).toUInt8) := by
-    bv_decide
+    apply UInt8.toBitVec_inj.mp
+    simp only [UInt64.toBitVec_toUInt8, UInt64.toBitVec_shiftRight,
+      UInt64.toBitVec_toUInt32, UInt32.toBitVec_shiftRight, UInt32.toBitVec_toUInt8]
+    apply BitVec.eq_of_getLsbD_eq
+    intro i hi
+    interval_cases i <;> simp
   have h6 : (old >>> 48).toUInt8 = (((old >>> 32).toUInt32 >>> 16).toUInt8) := by
-    bv_decide
+    apply UInt8.toBitVec_inj.mp
+    simp only [UInt64.toBitVec_toUInt8, UInt64.toBitVec_shiftRight,
+      UInt64.toBitVec_toUInt32, UInt32.toBitVec_shiftRight, UInt32.toBitVec_toUInt8]
+    apply BitVec.eq_of_getLsbD_eq
+    intro i hi
+    interval_cases i <;> simp
   have h7 : (old >>> 56).toUInt8 = (((old >>> 32).toUInt32 >>> 24).toUInt8) := by
-    bv_decide
+    apply UInt8.toBitVec_inj.mp
+    simp only [UInt64.toBitVec_toUInt8, UInt64.toBitVec_shiftRight,
+      UInt64.toBitVec_toUInt32, UInt32.toBitVec_shiftRight, UInt32.toBitVec_toUInt8]
+    apply BitVec.eq_of_getLsbD_eq
+    intro i hi
+    interval_cases i <;> simp
   rw [h4, h5, h6, h7]
   exact .rfl
 
@@ -94,24 +171,68 @@ theorem pointsTo_u64_as_u32s [WasmSmallStepGS hlc α]
       pointsTo_u32 (α := α) 0 addr word.toUInt32 ∗
       pointsTo_u32 (α := α) 0 (addr + 4) (word >>> 32).toUInt32 := by
   simp only [pointsTo_u64, pointsTo_u32, u64Byte, u32Byte]
-  rw [show addr + 4 + 1 = addr + 5 by bv_decide,
-    show addr + 4 + 2 = addr + 6 by bv_decide,
-    show addr + 4 + 3 = addr + 7 by bv_decide]
-  have h0 : word.toUInt8 = word.toUInt32.toUInt8 := by bv_decide
+  rw [show addr + 4 + 1 = addr + 5 by bv_normalize (config := { enums := false }),
+    show addr + 4 + 2 = addr + 6 by bv_normalize (config := { enums := false }),
+    show addr + 4 + 3 = addr + 7 by bv_normalize (config := { enums := false })]
+  have h0 : word.toUInt8 = word.toUInt32.toUInt8 := by
+    apply UInt8.toBitVec_inj.mp
+    simp only [UInt64.toBitVec_toUInt8,
+      UInt64.toBitVec_toUInt32,  UInt32.toBitVec_toUInt8]
+    apply BitVec.eq_of_getLsbD_eq
+    intro i hi
+    interval_cases i <;> simp
   have h1 : (word >>> 8).toUInt8 = (word.toUInt32 >>> 8).toUInt8 := by
-    bv_decide
+    apply UInt8.toBitVec_inj.mp
+    simp only [UInt64.toBitVec_toUInt8, UInt64.toBitVec_shiftRight,
+      UInt64.toBitVec_toUInt32, UInt32.toBitVec_shiftRight, UInt32.toBitVec_toUInt8]
+    apply BitVec.eq_of_getLsbD_eq
+    intro i hi
+    interval_cases i <;> simp
   have h2 : (word >>> 16).toUInt8 = (word.toUInt32 >>> 16).toUInt8 := by
-    bv_decide
+    apply UInt8.toBitVec_inj.mp
+    simp only [UInt64.toBitVec_toUInt8, UInt64.toBitVec_shiftRight,
+      UInt64.toBitVec_toUInt32, UInt32.toBitVec_shiftRight, UInt32.toBitVec_toUInt8]
+    apply BitVec.eq_of_getLsbD_eq
+    intro i hi
+    interval_cases i <;> simp
   have h3 : (word >>> 24).toUInt8 = (word.toUInt32 >>> 24).toUInt8 := by
-    bv_decide
+    apply UInt8.toBitVec_inj.mp
+    simp only [UInt64.toBitVec_toUInt8, UInt64.toBitVec_shiftRight,
+      UInt64.toBitVec_toUInt32, UInt32.toBitVec_shiftRight, UInt32.toBitVec_toUInt8]
+    apply BitVec.eq_of_getLsbD_eq
+    intro i hi
+    interval_cases i <;> simp
   have h4 : (word >>> 32).toUInt8 = ((word >>> 32).toUInt32).toUInt8 := by
-    bv_decide
+    apply UInt8.toBitVec_inj.mp
+    simp only [UInt64.toBitVec_toUInt8, UInt64.toBitVec_shiftRight,
+      UInt64.toBitVec_toUInt32,  UInt32.toBitVec_toUInt8]
+    apply BitVec.eq_of_getLsbD_eq
+    intro i hi
+    interval_cases i <;> simp
   have h5 : (word >>> 40).toUInt8 =
-      (((word >>> 32).toUInt32 >>> 8).toUInt8) := by bv_decide
+      (((word >>> 32).toUInt32 >>> 8).toUInt8) := by
+    apply UInt8.toBitVec_inj.mp
+    simp only [UInt64.toBitVec_toUInt8, UInt64.toBitVec_shiftRight,
+      UInt64.toBitVec_toUInt32, UInt32.toBitVec_shiftRight, UInt32.toBitVec_toUInt8]
+    apply BitVec.eq_of_getLsbD_eq
+    intro i hi
+    interval_cases i <;> simp
   have h6 : (word >>> 48).toUInt8 =
-      (((word >>> 32).toUInt32 >>> 16).toUInt8) := by bv_decide
+      (((word >>> 32).toUInt32 >>> 16).toUInt8) := by
+    apply UInt8.toBitVec_inj.mp
+    simp only [UInt64.toBitVec_toUInt8, UInt64.toBitVec_shiftRight,
+      UInt64.toBitVec_toUInt32, UInt32.toBitVec_shiftRight, UInt32.toBitVec_toUInt8]
+    apply BitVec.eq_of_getLsbD_eq
+    intro i hi
+    interval_cases i <;> simp
   have h7 : (word >>> 56).toUInt8 =
-      (((word >>> 32).toUInt32 >>> 24).toUInt8) := by bv_decide
+      (((word >>> 32).toUInt32 >>> 24).toUInt8) := by
+    apply UInt8.toBitVec_inj.mp
+    simp only [UInt64.toBitVec_toUInt8, UInt64.toBitVec_shiftRight,
+      UInt64.toBitVec_toUInt32, UInt32.toBitVec_shiftRight, UInt32.toBitVec_toUInt8]
+    apply BitVec.eq_of_getLsbD_eq
+    intro i hi
+    interval_cases i <;> simp
   rw [h0, h1, h2, h3, h4, h5, h6, h7]
   constructor
   · iintro ⟨H0, H1, H2, H3, H4, H5, H6, H7⟩
@@ -145,12 +266,12 @@ theorem pointsTo_u64_zero_as_bytes [WasmSmallStepGS hlc α] (addr : UInt32) :
     pointsTo_u64 (α := α) 0 addr 0 ⊣⊢
       pointsToBytes 0 addr (List.replicate 8 (0 : UInt8)) := by
   simp [pointsTo_u64, pointsToBytes, u64Byte]
-  rw [show addr + 1 + 1 = addr + 2 by bv_decide,
-    show addr + 2 + 1 = addr + 3 by bv_decide,
-    show addr + 3 + 1 = addr + 4 by bv_decide,
-    show addr + 4 + 1 = addr + 5 by bv_decide,
-    show addr + 5 + 1 = addr + 6 by bv_decide,
-    show addr + 6 + 1 = addr + 7 by bv_decide]
+  rw [show addr + 1 + 1 = addr + 2 by bv_normalize (config := { enums := false }),
+    show addr + 2 + 1 = addr + 3 by bv_normalize (config := { enums := false }),
+    show addr + 3 + 1 = addr + 4 by bv_normalize (config := { enums := false }),
+    show addr + 4 + 1 = addr + 5 by bv_normalize (config := { enums := false }),
+    show addr + 5 + 1 = addr + 6 by bv_normalize (config := { enums := false }),
+    show addr + 6 + 1 = addr + 7 by bv_normalize (config := { enums := false })]
   simp only [(BI.sep_emp (PROP := IProp (WasmHeapGF α))).to_eq]
   exact .rfl
 
@@ -182,14 +303,14 @@ theorem four_u64_zero_as_bytes [WasmSmallStepGS hlc α] (addr : UInt32) :
     · iexact H8
     have h16 : addr + 8 + UInt32.ofNat z.length = addr + 16 := by
       simp [z]
-      bv_decide
+      bv_normalize (config := { enums := false })
     rw [h16]
     iapply (pointsToBytes_append 0 (addr + 16) z z).mpr
     isplitl [H16]
     · iexact H16
     have h24 : addr + 16 + UInt32.ofNat z.length = addr + 24 := by
       simp [z]
-      bv_decide
+      bv_normalize (config := { enums := false })
     rw [h24]
     iexact H24
   · iintro H
@@ -203,14 +324,14 @@ theorem four_u64_zero_as_bytes [WasmSmallStepGS hlc α] (addr : UInt32) :
     icases Hparts with ⟨H8, Hrest⟩
     have h16 : addr + 8 + UInt32.ofNat z.length = addr + 16 := by
       simp [z]
-      bv_decide
+      bv_normalize (config := { enums := false })
     isimp only [h16] at Hrest
     ihave Hparts :=
       (pointsToBytes_append 0 (addr + 16) z z).mp $$ Hrest
     icases Hparts with ⟨H16, H24⟩
     have h24 : addr + 16 + UInt32.ofNat z.length = addr + 24 := by
       simp [z]
-      bv_decide
+      bv_normalize (config := { enums := false })
     isimp only [h24] at H24
     ihave H0 := (pointsTo_u64_zero_as_bytes addr).mpr $$ H0
     ihave H8 := (pointsTo_u64_zero_as_bytes (addr + 8)).mpr $$ H8

@@ -10,6 +10,8 @@ namespace Project.Mergesort
 
 open Wasm
 
+-- WAT SHA-256: 4c8b133cb580c623b3e75cead86579047dd7e445cb7987c8a50cc573714f73e6
+
 def func0 : Wasm.Program := watFunctionBody% "../rust/build/mergesort/program.wat" 0
 
 def func0Def : Wasm.Function :=

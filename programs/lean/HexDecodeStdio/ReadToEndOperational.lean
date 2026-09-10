@@ -62,8 +62,7 @@ theorem read_to_end_to_first_chunk
     rw [hmod]
     rfl
   apply Reaches.prepend (Step.call hnot hfn)
-  simp only [func7Def, Function.toLocals, Function.numParams,
-    ValueType.zero, func7_first_read_split]
+  simp only [func7Def, Function.toLocals, Function.numParams,  func7_first_read_split]
   simp
   apply Reaches.prepend (Step.globalGet hglobal)
   apply Reaches.prepend Step.const
@@ -73,7 +72,7 @@ theorem read_to_end_to_first_chunk
   rw [setGlobal_zero_eq]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.store32 (by
+  apply Reaches.prepend (Step.store32 rfl (by
     simpa using (show (sp - 32).toNat + 12 + 4 ≤
       store.wasm.mem.pages * 65536 by omega)))
   rw [setMemory_eq]
@@ -92,10 +91,10 @@ theorem read_to_end_to_first_chunk
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend Step.add
-  rw [show 4 + (sp - 32) = (sp - 32) + 4 by bv_decide,
-    show 31 + (sp - 32) = (sp - 32) + 31 by bv_decide,
-    show 16 + (sp - 32) = (sp - 32) + 16 by bv_decide]
-  simp [readToEndFrameStore, readToEndAfterFirstRead, setMemory_eq]
+  rw [show 4 + (sp - 32) = (sp - 32) + 4 by bv_normalize (config := { enums := false }),
+    show 31 + (sp - 32) = (sp - 32) + 31 by bv_normalize (config := { enums := false }),
+    show 16 + (sp - 32) = (sp - 32) + 16 by bv_normalize (config := { enums := false })]
+  simp [readToEndFrameStore, readToEndAfterFirstRead]
   exact ⟨[], .refl _⟩
 
 def readToEndFinishedStore (store : MachineStore Universal.State)
@@ -512,24 +511,24 @@ theorem read_to_end_after_first_nonempty_to_loop
   apply Reaches.prepend Step.block
   apply Reaches.prepend Step.block
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load8U (by simpa using htagBound))
+  apply Reaches.prepend (Step.load8U rfl (by simpa using htagBound))
   rw [htag]
   apply Reaches.prepend Step.const
   apply Reaches.prepend (Step.ne (result := 0) (by decide))
   apply Reaches.prepend Step.brIfZero
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by simpa using hcountBound))
+  apply Reaches.prepend (Step.load32 rfl (by simpa using hcountBound))
   rw [hcount]
   apply Reaches.prepend (Step.eqz (result := 0) (by simp [hlengthNe]))
   apply Reaches.prepend Step.brIfZero
   apply Reaches.prepend Step.const
   apply Reaches.prepend (Step.localSet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by simpa using hcapacityBound))
+  apply Reaches.prepend (Step.load32 rfl (by simpa using hcapacityBound))
   rw [hcapacity]
   apply Reaches.prepend (Step.localSet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by simpa using hlengthBound))
+  apply Reaches.prepend (Step.load32 rfl (by simpa using hlengthBound))
   rw [hlength]
   apply Reaches.prepend (Step.localSet rfl)
   apply Reaches.prepend Step.const
@@ -566,7 +565,7 @@ theorem read_to_end_loop_skip_growth
   apply Reaches.prepend (Step.brIf (condition := length ||| capacity)
     (by simp only [ne_eq, UInt32.or_eq_zero_iff]; aesop) rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by simpa using hdataBound))
+  apply Reaches.prepend (Step.load32 rfl (by simpa using hdataBound))
   rw [hdata]
   apply Reaches.prepend (Step.localSet rfl)
   apply Reaches.prepend Step.block
@@ -584,7 +583,7 @@ theorem read_to_end_loop_skip_growth
   simp [readToEndDirectConfig, readToEndDirectControls, blockControl,
     readToEndIteration6, readToEndIteration5, readToEndIteration4,
     readToEndIteration3, readToEndIteration2, readToEndIteration1,
-    readToEndIterationOuter, readToEndGrowthCheck, readToEndLoopControls,
+    readToEndIterationOuter,  readToEndLoopControls,
     readToEndLoopBody, readToEndInnerBody, readToEndMiddleBody,
     readToEndOuterBody, structuredBody, firstInstruction,
     readToEndAfterFirstRead, func7]
@@ -619,7 +618,7 @@ theorem read_to_end_continued_loop_skip_growth
   apply Reaches.prepend (Step.brIf (condition := length ||| capacity)
     (by simp only [ne_eq, UInt32.or_eq_zero_iff]; aesop) rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by simpa using hdataBound))
+  apply Reaches.prepend (Step.load32 rfl (by simpa using hdataBound))
   rw [hdata]
   apply Reaches.prepend (Step.localSet rfl)
   apply Reaches.prepend Step.block
@@ -668,7 +667,7 @@ theorem read_to_end_loop_to_grow
   apply Reaches.prepend (Step.brIf (condition := length ||| capacity)
     (by simp only [ne_eq, UInt32.or_eq_zero_iff]; aesop) rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by simpa using hdataBound))
+  apply Reaches.prepend (Step.load32 rfl (by simpa using hdataBound))
   rw [hdata]
   apply Reaches.prepend (Step.localSet rfl)
   apply Reaches.prepend Step.block
@@ -706,7 +705,7 @@ theorem read_to_end_loop_to_grow
       by_cases h : (32 : UInt32) + capacity > capacity <<< 1 <;>
         simp [readToEndNewCapacity, h]))
   apply Reaches.prepend (Step.localTee rfl)
-  rw [show 16 + frame = frame + 16 by bv_decide]
+  rw [show 16 + frame = frame + 16 by bv_normalize (config := { enums := false })]
   simp [readToEndGrowCallConfig, readToEndNewCapacity,
     readToEndGrowthControls, readToEndDirectControls, blockControl,
     readToEndIteration6, readToEndIteration5, readToEndIteration4,
@@ -746,7 +745,7 @@ theorem read_to_end_continued_loop_to_grow
   apply Reaches.prepend (Step.brIf (condition := length ||| capacity)
     (by simp only [ne_eq, UInt32.or_eq_zero_iff]; aesop) rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by simpa using hdataBound))
+  apply Reaches.prepend (Step.load32 rfl (by simpa using hdataBound))
   rw [hdata]
   apply Reaches.prepend (Step.localSet rfl)
   apply Reaches.prepend Step.block
@@ -784,7 +783,7 @@ theorem read_to_end_continued_loop_to_grow
       by_cases h : (32 : UInt32) + capacity > capacity <<< 1 <;>
         simp [readToEndNewCapacity, h]))
   apply Reaches.prepend (Step.localTee rfl)
-  rw [show 16 + frame = frame + 16 by bv_decide]
+  rw [show 16 + frame = frame + 16 by bv_normalize (config := { enums := false })]
   simp [readToEndGrowCallConfig, readToEndNewCapacity,
     readToEndGrowthControls, readToEndDirectControls, blockControl,
     readToEndIteration6, readToEndIteration5, readToEndIteration4,
@@ -906,28 +905,27 @@ theorem read_to_end_after_grow_success
         outerParams outerLocalValues stack code arity remainder controls calls
         out frame chunk (readToEndNewCapacity capacity) ptr length filled
         (readToEndNewCapacity capacity) (capacity <<< 1) scratch9 status) := by
-  simp only [readToEndAfterGrowConfig, readToEndGrowthCheck, List.drop]
+  simp only [readToEndAfterGrowConfig, readToEndGrowthCheck]
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by simpa using htagBound))
+  apply Reaches.prepend (Step.load32 rfl (by simpa using htagBound))
   rw [htag]
   apply Reaches.prepend Step.brIfZero
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by simpa using hptrBound))
+  apply Reaches.prepend (Step.load32 rfl (by simpa using hptrBound))
   rw [hptrRead]
   apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.store32 (by simpa using hdataBound))
+  apply Reaches.prepend (Step.store32 rfl (by simpa using hdataBound))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.store32 (by
+  apply Reaches.prepend (Step.store32 rfl (by
     simpa [Mem.write32_pages] using hcapacityBound))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localSet rfl)
   apply Reaches.prepend (Step.exitControl rfl)
-  simp [readToEndGrownDirectConfig, readToEndGrowFinishedStore,
-    readToEndGrowthControls, readToEndDirectControls, blockControl,
+  simp [readToEndGrownDirectConfig, readToEndGrowFinishedStore,  readToEndDirectControls, blockControl,
     readToEndIteration6, readToEndIteration5, readToEndIteration4,
     readToEndIteration3, readToEndIteration2, readToEndIteration1,
     readToEndIterationOuter, readToEndLoopControls, readToEndLoopBody,
@@ -1014,8 +1012,8 @@ theorem read_to_end_direct_read
   apply Reaches.prepend Step.add
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  rw [show 16 + frame = frame + 16 by bv_decide,
-    show 31 + frame = frame + 31 by bv_decide]
+  rw [show 16 + frame = frame + 16 by bv_normalize (config := { enums := false }),
+    show 31 + frame = frame + 31 by bv_normalize (config := { enums := false })]
   let filledStore := readToEndFillStore store
     (filled + (length + data)) remaining
   have hfilledPages :
@@ -1129,8 +1127,8 @@ theorem read_to_end_continued_direct_read
   apply Reaches.prepend Step.add
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  rw [show 16 + frame = frame + 16 by bv_decide,
-    show 31 + frame = frame + 31 by bv_decide]
+  rw [show 16 + frame = frame + 16 by bv_normalize (config := { enums := false }),
+    show 31 + frame = frame + 31 by bv_normalize (config := { enums := false })]
   let filledStore := readToEndFillStore store
     (filled + (length + data)) remaining
   have hfilledPages :
@@ -1230,8 +1228,8 @@ theorem read_to_end_continued_direct_read_no_fill
   apply Reaches.prepend Step.add
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  rw [show 16 + frame = frame + 16 by bv_decide,
-    show 31 + frame = frame + 31 by bv_decide]
+  rw [show 16 + frame = frame + 16 by bv_normalize (config := { enums := false }),
+    show 31 + frame = frame + 31 by bv_normalize (config := { enums := false })]
   have hadapter := read_adapter_reaches store
     [.i32 out]
     [.i32 frame, .i32 chunk, .i32 capacity, .i32 length, .i32 filled,
@@ -1337,8 +1335,8 @@ theorem read_to_end_grown_direct_read
   apply Reaches.prepend Step.add
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  rw [show 16 + frame = frame + 16 by bv_decide,
-    show 31 + frame = frame + 31 by bv_decide]
+  rw [show 16 + frame = frame + 16 by bv_normalize (config := { enums := false }),
+    show 31 + frame = frame + 31 by bv_normalize (config := { enums := false })]
   let filledStore := readToEndFillStore store
     (filled + (length + data)) remaining
   have hfilledPages :
@@ -1401,13 +1399,13 @@ theorem read_to_end_after_adapter_success
   apply Reaches.prepend Step.block
   apply Reaches.prepend Step.block
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load8U (by simpa using htagBound))
+  apply Reaches.prepend (Step.load8U rfl (by simpa using htagBound))
   rw [htag]
   apply Reaches.prepend Step.const
   apply Reaches.prepend (Step.eq (result := 1) (by decide))
   apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by simpa using hcountBound))
+  apply Reaches.prepend (Step.load32 rfl (by simpa using hcountBound))
   rw [hcount]
   apply Reaches.prepend (Step.localTee rfl)
   apply Reaches.prepend (Step.localGet rfl)
@@ -1426,7 +1424,7 @@ theorem read_to_end_after_adapter_success
   apply Reaches.prepend Step.const
   apply Reaches.prepend Step.and
   apply Reaches.prepend (Step.brTable rfl)
-  simp [readToEndAfterReadSuccessConfig, readToEndDirectControls,
+  simp [readToEndAfterReadSuccessConfig,
     readToEndLoopControls, blockControl, readToEndIterationOuter,
     readToEndLoopBody, readToEndInnerBody, readToEndMiddleBody,
     readToEndOuterBody, structuredBody, firstInstruction,
@@ -1462,13 +1460,13 @@ theorem read_to_end_continued_after_adapter_success
   apply Reaches.prepend Step.block
   apply Reaches.prepend Step.block
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load8U (by simpa using htagBound))
+  apply Reaches.prepend (Step.load8U rfl (by simpa using htagBound))
   rw [htag]
   apply Reaches.prepend Step.const
   apply Reaches.prepend (Step.eq (result := 1) (by decide))
   apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by simpa using hcountBound))
+  apply Reaches.prepend (Step.load32 rfl (by simpa using hcountBound))
   rw [hcount]
   apply Reaches.prepend (Step.localTee rfl)
   apply Reaches.prepend (Step.localGet rfl)
@@ -1523,13 +1521,13 @@ theorem read_to_end_grown_after_adapter_success
   apply Reaches.prepend Step.block
   apply Reaches.prepend Step.block
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load8U (by simpa using htagBound))
+  apply Reaches.prepend (Step.load8U rfl (by simpa using htagBound))
   rw [htag]
   apply Reaches.prepend Step.const
   apply Reaches.prepend (Step.eq (result := 1) (by decide))
   apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by simpa using hcountBound))
+  apply Reaches.prepend (Step.load32 rfl (by simpa using hcountBound))
   rw [hcount]
   apply Reaches.prepend (Step.localTee rfl)
   apply Reaches.prepend (Step.localGet rfl)
@@ -1582,15 +1580,13 @@ theorem read_to_end_after_read_eof
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.add
   apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.store32 (by simpa using hlengthBound))
+  apply Reaches.prepend (Step.store32 rfl (by simpa using hlengthBound))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.eqz (result := 1) (by simp [hcount]))
   apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
   simp [readToEndReturnConfig, readToEndLengthStore,
-    readToEndLoopControls, blockControl, readToEndLoopBody,
-    readToEndInnerBody, readToEndMiddleBody, readToEndOuterBody,
-    readToEndAfterFirstRead, structuredBody, firstInstruction, func7]
+    readToEndAfterFirstRead,  func7]
   exact ⟨[], .refl _⟩
 
 /-- A nonempty read that exhausts the current spare tail restarts the loop
@@ -1615,13 +1611,13 @@ theorem read_to_end_after_read_spare_lt
         out frame chunk capacity data (length + count) (target - count)
         count target (length + data) (capacity - length)) := by
   simp only [readToEndAfterReadSuccessConfig, readToEndIterationOuter,
-    structuredBody, firstInstruction, List.drop]
+    structuredBody, firstInstruction]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.add
   apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.store32 (by simpa using hlengthBound))
+  apply Reaches.prepend (Step.store32 rfl (by simpa using hlengthBound))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.eqz (result := 0) (by simp [hcountNe]))
@@ -1635,7 +1631,7 @@ theorem read_to_end_after_read_spare_lt
   apply Reaches.prepend (Step.ltU (result := 1) (by simp [hspareLt]))
   apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
   simp [readToEndContinuedLoopConfig, readToEndLengthStore,
-    readToEndLoopControls, blockControl, readToEndLoopBody,
+    readToEndLoopControls,  readToEndLoopBody,
     readToEndInnerBody, readToEndMiddleBody, readToEndOuterBody,
     readToEndAfterFirstRead, structuredBody, firstInstruction, func7]
   exact ⟨[], .refl _⟩
@@ -1663,13 +1659,13 @@ theorem read_to_end_after_read_partial
         out frame chunk capacity data (length + count) (target - count)
         count target (length + data) (capacity - length)) := by
   simp only [readToEndAfterReadSuccessConfig, readToEndIterationOuter,
-    structuredBody, firstInstruction, List.drop]
+    structuredBody, firstInstruction]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.add
   apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.store32 (by simpa using hlengthBound))
+  apply Reaches.prepend (Step.store32 rfl (by simpa using hlengthBound))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.eqz (result := 0) (by simp [hcountNe]))
@@ -1687,7 +1683,7 @@ theorem read_to_end_after_read_partial
   apply Reaches.prepend (Step.ne (result := 1) (by simp [hpartial]))
   apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
   simp [readToEndContinuedLoopConfig, readToEndLengthStore,
-    readToEndLoopControls, blockControl, readToEndLoopBody,
+    readToEndLoopControls,  readToEndLoopBody,
     readToEndInnerBody, readToEndMiddleBody, readToEndOuterBody,
     readToEndAfterFirstRead, structuredBody, firstInstruction, func7]
   exact ⟨[], .refl _⟩
@@ -1717,13 +1713,13 @@ theorem read_to_end_after_read_full_double
         (target - count) 0 target (length + data)
         (capacity - length)) := by
   simp only [readToEndAfterReadSuccessConfig, readToEndIterationOuter,
-    structuredBody, firstInstruction, List.drop]
+    structuredBody, firstInstruction]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.add
   apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.store32 (by simpa using hlengthBound))
+  apply Reaches.prepend (Step.store32 rfl (by simpa using hlengthBound))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.eqz (result := 0) (by simp [hcountNe]))
@@ -1753,7 +1749,7 @@ theorem read_to_end_after_read_full_double
   apply Reaches.prepend (Step.eqz (result := 1) (by decide))
   apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
   simp [readToEndContinuedLoopConfig, readToEndLengthStore,
-    readToEndLoopControls, blockControl, readToEndLoopBody,
+    readToEndLoopControls,  readToEndLoopBody,
     readToEndInnerBody, readToEndMiddleBody, readToEndOuterBody,
     readToEndAfterFirstRead, structuredBody, firstInstruction, func7]
   exact ⟨[], .refl _⟩
@@ -1783,13 +1779,13 @@ theorem read_to_end_after_read_full_saturate
         (target - count) 1 target (length + data)
         (capacity - length)) := by
   simp only [readToEndAfterReadSuccessConfig, readToEndIterationOuter,
-    structuredBody, firstInstruction, List.drop]
+    structuredBody, firstInstruction]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.add
   apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.store32 (by simpa using hlengthBound))
+  apply Reaches.prepend (Step.store32 rfl (by simpa using hlengthBound))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.eqz (result := 0) (by simp [hcountNe]))
@@ -1822,7 +1818,7 @@ theorem read_to_end_after_read_full_saturate
   apply Reaches.prepend (Step.localSet rfl)
   apply Reaches.prepend (Step.br rfl)
   simp [readToEndContinuedLoopConfig, readToEndLengthStore,
-    readToEndLoopControls, blockControl, readToEndLoopBody,
+    readToEndLoopControls,  readToEndLoopBody,
     readToEndInnerBody, readToEndMiddleBody, readToEndOuterBody,
     readToEndAfterFirstRead, structuredBody, firstInstruction, func7]
   exact ⟨[], .refl _⟩
@@ -1862,10 +1858,10 @@ theorem read_to_end_return
   simp only [readToEndReturnConfig, readToEndAfterFirstRead, func7, List.drop]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by
+  apply Reaches.prepend (Step.load32 rfl (by
     simpa [readToEndLengthStore] using hlengthBound))
   rw [hlength]
-  apply Reaches.prepend (Step.store32 (by
+  apply Reaches.prepend (Step.store32 rfl (by
     simpa [readToEndLengthStore] using houtLenBound))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.localGet rfl)
@@ -1880,7 +1876,7 @@ theorem read_to_end_return
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend Step.add
-  rw [show 32 + frame = frame + 32 by bv_decide, hrestore]
+  rw [show 32 + frame = frame + 32 by bv_normalize (config := { enums := false }), hrestore]
   apply Reaches.prepend (Step.globalSet (by
     simpa [globalAt?] using hglobal))
   rw [setGlobal_zero_eq]
@@ -1934,22 +1930,22 @@ theorem read_to_end_after_first_eof
   apply Reaches.prepend Step.block
   apply Reaches.prepend Step.block
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load8U (by simpa using htagBound))
+  apply Reaches.prepend (Step.load8U rfl (by simpa using htagBound))
   rw [htag]
   apply Reaches.prepend Step.const
   apply Reaches.prepend (Step.ne (result := 0) (by decide))
   apply Reaches.prepend Step.brIfZero
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by simpa using hcountBound))
+  apply Reaches.prepend (Step.load32 rfl (by simpa using hcountBound))
   rw [hcount]
   apply Reaches.prepend (Step.eqz (result := 1) (by decide))
   apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
   simp
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by simpa using hlengthBound))
+  apply Reaches.prepend (Step.load32 rfl (by simpa using hlengthBound))
   rw [hlength]
-  apply Reaches.prepend (Step.store32 (by simpa using houtLenBound))
+  apply Reaches.prepend (Step.store32 rfl (by simpa using houtLenBound))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
@@ -1962,7 +1958,7 @@ theorem read_to_end_after_first_eof
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend Step.add
-  rw [show 32 + frame = frame + 32 by bv_decide, hrestore]
+  rw [show 32 + frame = frame + 32 by bv_normalize (config := { enums := false }), hrestore]
   apply Reaches.prepend (Step.globalSet (by
     simpa [globalAt?] using hglobal))
   rw [setGlobal_zero_eq]

@@ -14,14 +14,7 @@ open Wasm
 
 /-- The generated module imports standard I/O plus the allocator's terminal
 OOM notification. -/
-theorem module_imports : «module».imports = StdIO.imports ++ OOM.imports := by
-  native_decide
-
-/-- The universal host implements every operation required by the generated
-module. -/
-theorem universal_env_satisfies :
-    (Universal.envFor «module»).Satisfies «module» (Universal.specFor «module») :=
-  Universal.envFor_satisfies «module»
+theorem module_imports : «module».imports = StdIO.imports ++ OOM.imports := by decide +kernel
 
 /-- The two semantic bytes supplied to `xor`. Their stream representation is
 kept in `args`, outside the public proposition. -/

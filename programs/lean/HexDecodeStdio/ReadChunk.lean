@@ -101,13 +101,13 @@ theorem twp_read_chunk_eof
       h8.five h8.six h8.seven $$ H8
   iintro H8
   ihave H16' : pointsTo_u64 0 (((sp - 48) + 8) + 8) 0 $$ [H16]
-  · rw [show ((sp - 48) + 8) + 8 = (sp - 48) + 16 by bv_decide]
+  · rw [show ((sp - 48) + 8) + 8 = (sp - 48) + 16 by bv_normalize (config := { enums := false })]
     iexact H16
   ihave H24' : pointsTo_u64 0 (((sp - 48) + 8) + 16) 0 $$ [H24]
-  · rw [show ((sp - 48) + 8) + 16 = (sp - 48) + 24 by bv_decide]
+  · rw [show ((sp - 48) + 8) + 16 = (sp - 48) + 24 by bv_normalize (config := { enums := false })]
     iexact H24
   ihave H32' : pointsTo_u64 0 (((sp - 48) + 8) + 24) 0 $$ [H32]
-  · rw [show ((sp - 48) + 8) + 24 = (sp - 48) + 32 by bv_decide]
+  · rw [show ((sp - 48) + 8) + 24 = (sp - 48) + 32 by bv_normalize (config := { enums := false })]
     iexact H32
   ihave HresultParts :=
     (pointsTo_u64_as_ioWord ((sp - 48) + 40) oldResult).mp $$ Hresult
@@ -130,8 +130,8 @@ theorem twp_read_chunk_eof
   iapply twp_const
   iapply twp_add
   iapply twp_const
-  rw [show 8 + (sp - 48) = (sp - 48) + 8 by bv_decide,
-    show 40 + (sp - 48) = (sp - 48) + 40 by bv_decide]
+  rw [show 8 + (sp - 48) = (sp - 48) + 8 by bv_normalize (config := { enums := false }),
+    show 40 + (sp - 48) = (sp - 48) + 40 by bv_normalize (config := { enums := false })]
   iapply twp_read_adapter_no_stack host ((sp - 48) + 40) ignored
       ((sp - 48) + 8) 32 (List.replicate 32 0) []
       (u64Byte oldResult 0) ((oldResult >>> 32).toUInt32)
@@ -143,7 +143,7 @@ theorem twp_read_chunk_eof
     | mk stdio random oom =>
       cases stdio
       simp_all [afterUniversalRead]
-  simp only [List.length_nil, Nat.reduceAdd, List.drop_zero,
+  simp only [List.length_nil,  List.drop_zero,
     List.nil_append, hafter]
   iapply twp_block
   iapply twp_block
@@ -157,7 +157,7 @@ theorem twp_read_chunk_eof
   iapply twp_brIf (by decide) rfl
   simp
   ihave Hcount44 : pointsTo_u32 0 ((sp - 48) + 44) 0 $$ [Hcount]
-  · rw [show (sp - 48) + 44 = ((sp - 48) + 40) + 4 by bv_decide]
+  · rw [show (sp - 48) + 44 = ((sp - 48) + 40) + 4 by bv_normalize (config := { enums := false })]
     iexact Hcount
   iapply twp_localGet rfl
   iapply twp_load32 0 h44no h44.one h44.two h44.three $$ Hcount44
@@ -212,7 +212,7 @@ theorem twp_read_chunk_eof
   iapply twp_localGet rfl
   iapply twp_const
   iapply twp_add
-  have hrestore : 48 + (sp - 48) = sp := by bv_decide
+  have hrestore : 48 + (sp - 48) = sp := by bv_normalize (config := { enums := false })
   rw [hrestore]
   iapply twp_globalSet $$ HframeSp
   iintro Hsp
@@ -224,7 +224,7 @@ theorem twp_read_chunk_eof
       (ioWord oldResult 4 0) $$
       [Htag Hpad1 Hpad2 Hpad3 Hcount44]
   · iapply (pointsTo_ioWord ((sp - 48) + 40) oldResult 4 0).mpr
-    rw [show ((sp - 48) + 40) + 4 = (sp - 48) + 44 by bv_decide]
+    rw [show ((sp - 48) + 40) + 4 = (sp - 48) + 44 by bv_normalize (config := { enums := false })]
     iframe
   ihave Hout : pointsTo_u64 0 out (ioWord oldOut 4 0) $$
       [HoutTag HoutPad1 HoutPad2 HoutPad3 HoutCount]
@@ -362,13 +362,13 @@ theorem twp_read_chunk_nonempty_fits
       h8.five h8.six h8.seven $$ H8
   iintro H8
   ihave H16' : pointsTo_u64 0 (((sp - 48) + 8) + 8) 0 $$ [H16]
-  · rw [show ((sp - 48) + 8) + 8 = (sp - 48) + 16 by bv_decide]
+  · rw [show ((sp - 48) + 8) + 8 = (sp - 48) + 16 by bv_normalize (config := { enums := false })]
     iexact H16
   ihave H24' : pointsTo_u64 0 (((sp - 48) + 8) + 16) 0 $$ [H24]
-  · rw [show ((sp - 48) + 8) + 16 = (sp - 48) + 24 by bv_decide]
+  · rw [show ((sp - 48) + 8) + 16 = (sp - 48) + 24 by bv_normalize (config := { enums := false })]
     iexact H24
   ihave H32' : pointsTo_u64 0 (((sp - 48) + 8) + 24) 0 $$ [H32]
-  · rw [show ((sp - 48) + 8) + 24 = (sp - 48) + 32 by bv_decide]
+  · rw [show ((sp - 48) + 8) + 24 = (sp - 48) + 32 by bv_normalize (config := { enums := false })]
     iexact H32
   ihave HresultParts :=
     (pointsTo_u64_as_ioWord ((sp - 48) + 40) oldResult).mp $$ Hresult
@@ -391,8 +391,8 @@ theorem twp_read_chunk_nonempty_fits
   iapply twp_const
   iapply twp_add
   iapply twp_const
-  rw [show 8 + (sp - 48) = (sp - 48) + 8 by bv_decide,
-    show 40 + (sp - 48) = (sp - 48) + 40 by bv_decide]
+  rw [show 8 + (sp - 48) = (sp - 48) + 8 by bv_normalize (config := { enums := false }),
+    show 40 + (sp - 48) = (sp - 48) + 40 by bv_normalize (config := { enums := false })]
   iapply twp_read_adapter_no_stack host ((sp - 48) + 40) ignored
       ((sp - 48) + 8) 32 (List.replicate 32 0) chunk
       (u64Byte oldResult 0) ((oldResult >>> 32).toUInt32)
@@ -416,7 +416,7 @@ theorem twp_read_chunk_nonempty_fits
     List.drop_nil, List.append_nil]
   ihave Hcount44 : pointsTo_u32 0 ((sp - 48) + 44)
       (UInt32.ofNat chunk.length) $$ [Hcount]
-  · rw [show (sp - 48) + 44 = ((sp - 48) + 40) + 4 by bv_decide]
+  · rw [show (sp - 48) + 44 = ((sp - 48) + 40) + 4 by bv_normalize (config := { enums := false })]
     iexact Hcount
   iapply twp_localGet rfl
   iapply twp_load32 (UInt32.ofNat chunk.length) h44no h44.one h44.two
@@ -477,8 +477,8 @@ theorem twp_read_chunk_nonempty_fits
     UInt32.toNat_ofNat_of_lt' hchunkSize
   have hsrcNowrap : ((sp - 48) + 8).toNat + chunk.length <
       UInt32.size := by omega
-  rw [show 8 + (sp - 48) = (sp - 48) + 8 by bv_decide,
-    show length + data = data + length by bv_decide]
+  rw [show 8 + (sp - 48) = (sp - 48) + 8 by bv_normalize (config := { enums := false }),
+    show length + data = data + length by bv_normalize (config := { enums := false })]
   iapply twp_memoryCopy32 (len := UInt32.ofNat chunk.length)
       oldDst chunk (by simpa [hcountToNat] using hdstLen)
       (by simpa [hcountToNat]) (by simpa [hcountToNat] using hchunkPos)
@@ -514,7 +514,7 @@ theorem twp_read_chunk_nonempty_fits
   iapply twp_localGet rfl
   iapply twp_const
   iapply twp_add
-  have hrestore : 48 + (sp - 48) = sp := by bv_decide
+  have hrestore : 48 + (sp - 48) = sp := by bv_normalize (config := { enums := false })
   rw [hrestore]
   iapply twp_globalSet $$ HframeSp
   iintro Hsp
@@ -527,7 +527,7 @@ theorem twp_read_chunk_nonempty_fits
       [Htag Hpad1 Hpad2 Hpad3 Hcount44]
   · iapply (pointsTo_ioWord ((sp - 48) + 40) oldResult 4
       (UInt32.ofNat chunk.length)).mpr
-    rw [show ((sp - 48) + 40) + 4 = (sp - 48) + 44 by bv_decide]
+    rw [show ((sp - 48) + 40) + 4 = (sp - 48) + 44 by bv_normalize (config := { enums := false })]
     iframe
   ihave Hout : pointsTo_u64 0 out
       (ioWord oldOut 4 (UInt32.ofNat chunk.length)) $$
@@ -538,7 +538,7 @@ theorem twp_read_chunk_nonempty_fits
   ihave Hlength' : pointsTo_u32 0 (vector + 8)
       (length + UInt32.ofNat chunk.length) $$ [Hlength]
   · rw [show length + UInt32.ofNat chunk.length =
-        UInt32.ofNat chunk.length + length by bv_decide]
+        UInt32.ofNat chunk.length + length by bv_normalize (config := { enums := false })]
     iexact Hlength
   iapply Hcont
   iframe

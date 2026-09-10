@@ -71,7 +71,7 @@ theorem oom_wrapper_steps
         Store.focus, Store.mapHost, Store.unfocus, postWasm]
     have hnum : func13Def.numParams = 0 := rfl
     simp only [middle, hnum, func13Def, Function.toLocals, List.take_zero,
-      List.reverse_nil, List.drop_zero] at *
+      List.reverse_nil] at *
     apply Steps.cons
     · simpa [func13, caller, postWasm, oomFinalStore] using
         (Step.callHostTrap (functionIndex := 2)

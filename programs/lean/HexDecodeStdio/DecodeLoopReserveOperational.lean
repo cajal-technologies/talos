@@ -50,7 +50,7 @@ theorem decode_loop_full_to_reserve
   apply Reaches.prepend Step.block
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by
+  apply Reaches.prepend (Step.load32 rfl (by
     change 1048496 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [hcapacity]
@@ -58,11 +58,11 @@ theorem decode_loop_full_to_reserve
   apply Reaches.prepend Step.brIfZero
   apply Reaches.prepend Step.block
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by
+  apply Reaches.prepend (Step.load32 rfl (by
     change 1048524 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [show coreFrame + 88 = loopIterator + 16 by decide, hmarker]
-  apply Reaches.prepend (Step.load32 (by
+  apply Reaches.prepend (Step.load32 rfl (by
     change 1048468 ≤ store.wasm.mem.pages * 65536
     omega))
   simp only [UInt32.add_zero]
@@ -71,7 +71,7 @@ theorem decode_loop_full_to_reserve
   apply Reaches.prepend (Step.ne (result := 0) rfl)
   apply Reaches.prepend Step.brIfZero
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by
+  apply Reaches.prepend (Step.load32 rfl (by
     change 1048512 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [show coreFrame + 76 = loopIterator + 4 by decide, hremaining]
@@ -90,7 +90,7 @@ theorem decode_loop_full_to_reserve
   · apply Reaches.prepend (Step.eqz (result := 0) (by simp [hz]))
     apply Reaches.prepend Step.brIfZero
     apply Reaches.prepend (Step.localGet rfl)
-    apply Reaches.prepend (Step.load32 (by
+    apply Reaches.prepend (Step.load32 rfl (by
       change 1048516 ≤ store.wasm.mem.pages * 65536
       omega))
     rw [show coreFrame + 80 = loopIterator + 8 by decide, hchunk]
@@ -157,7 +157,7 @@ theorem decode_loop_after_reserve_append
     decodeCoreOuter3, decodeCoreOuter2, decodeCoreOuter1,
     coreStructuredBody, coreFirstInstruction, func5, List.drop]
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by
+  apply Reaches.prepend (Step.load32 rfl (by
     change 1048500 ≤ allocStore.wasm.mem.pages * 65536
     omega))
   rw [hptrRead]
@@ -167,8 +167,8 @@ theorem decode_loop_after_reserve_append
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.add
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.store8
-    (address := outLen + allocatorPtr oldBump 1) (offset := 0)
+  apply Reaches.prepend (Step.store8 rfl
+    (address := .i32 (outLen + allocatorPtr oldBump 1)) (offset := 0)
     (value := pending.toUInt32) (by
       rw [hreservedPages]
       simpa [UInt32.add_comm] using hwrite))
@@ -178,7 +178,7 @@ theorem decode_loop_after_reserve_append
   apply Reaches.prepend Step.const
   apply Reaches.prepend Step.add
   apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.store32 (by
+  apply Reaches.prepend (Step.store32 rfl (by
     change 1048504 ≤ allocStore.wasm.mem.pages * 65536
     omega))
   rw [setMemory_eq]

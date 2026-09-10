@@ -1006,49 +1006,49 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
     | _, Instruction.i32TruncF32S => match s.values with
       | .f32 a :: vs => match i32TruncF32S a with
         | some r => .Fallthrough st { s with values := .i32 r :: vs }
-        | none => if (Float32.ofBits a).isNaN then .Trap st "invalid conversion to integer"
+        | none => if f32IsNaN a then .Trap st "invalid conversion to integer"
                   else .Trap st "integer overflow"
       | _ => .Invalid "i32TruncF32S: ill-shaped operand stack"
     | _, Instruction.i32TruncF32U => match s.values with
       | .f32 a :: vs => match i32TruncF32U a with
         | some r => .Fallthrough st { s with values := .i32 r :: vs }
-        | none => if (Float32.ofBits a).isNaN then .Trap st "invalid conversion to integer"
+        | none => if f32IsNaN a then .Trap st "invalid conversion to integer"
                   else .Trap st "integer overflow"
       | _ => .Invalid "i32TruncF32U: ill-shaped operand stack"
     | _, Instruction.i32TruncF64S => match s.values with
       | .f64 a :: vs => match i32TruncF64S a with
         | some r => .Fallthrough st { s with values := .i32 r :: vs }
-        | none => if (Float.ofBits a).isNaN then .Trap st "invalid conversion to integer"
+        | none => if f64IsNaN a then .Trap st "invalid conversion to integer"
                   else .Trap st "integer overflow"
       | _ => .Invalid "i32TruncF64S: ill-shaped operand stack"
     | _, Instruction.i32TruncF64U => match s.values with
       | .f64 a :: vs => match i32TruncF64U a with
         | some r => .Fallthrough st { s with values := .i32 r :: vs }
-        | none => if (Float.ofBits a).isNaN then .Trap st "invalid conversion to integer"
+        | none => if f64IsNaN a then .Trap st "invalid conversion to integer"
                   else .Trap st "integer overflow"
       | _ => .Invalid "i32TruncF64U: ill-shaped operand stack"
     | _, Instruction.i64TruncF32S => match s.values with
       | .f32 a :: vs => match i64TruncF32S a with
         | some r => .Fallthrough st { s with values := .i64 r :: vs }
-        | none => if (Float32.ofBits a).isNaN then .Trap st "invalid conversion to integer"
+        | none => if f32IsNaN a then .Trap st "invalid conversion to integer"
                   else .Trap st "integer overflow"
       | _ => .Invalid "i64TruncF32S: ill-shaped operand stack"
     | _, Instruction.i64TruncF32U => match s.values with
       | .f32 a :: vs => match i64TruncF32U a with
         | some r => .Fallthrough st { s with values := .i64 r :: vs }
-        | none => if (Float32.ofBits a).isNaN then .Trap st "invalid conversion to integer"
+        | none => if f32IsNaN a then .Trap st "invalid conversion to integer"
                   else .Trap st "integer overflow"
       | _ => .Invalid "i64TruncF32U: ill-shaped operand stack"
     | _, Instruction.i64TruncF64S => match s.values with
       | .f64 a :: vs => match i64TruncF64S a with
         | some r => .Fallthrough st { s with values := .i64 r :: vs }
-        | none => if (Float.ofBits a).isNaN then .Trap st "invalid conversion to integer"
+        | none => if f64IsNaN a then .Trap st "invalid conversion to integer"
                   else .Trap st "integer overflow"
       | _ => .Invalid "i64TruncF64S: ill-shaped operand stack"
     | _, Instruction.i64TruncF64U => match s.values with
       | .f64 a :: vs => match i64TruncF64U a with
         | some r => .Fallthrough st { s with values := .i64 r :: vs }
-        | none => if (Float.ofBits a).isNaN then .Trap st "invalid conversion to integer"
+        | none => if f64IsNaN a then .Trap st "invalid conversion to integer"
                   else .Trap st "integer overflow"
       | _ => .Invalid "i64TruncF64U: ill-shaped operand stack"
 

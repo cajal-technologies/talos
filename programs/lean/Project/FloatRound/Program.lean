@@ -10,6 +10,8 @@ namespace Project.FloatRound
 
 open Wasm
 
+-- WAT SHA-256: e57d177cf65ad6cf2d50c5654e05237498c2c299cac152f3acf760e024c769e7
+
 def func0 : Wasm.Program := watFunctionBody% "../rust/build/float_round/program.wat" 0
 
 def func0Def : Wasm.Function :=

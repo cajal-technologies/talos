@@ -79,23 +79,20 @@ theorem HostFn.lift_invoke_return (l : HostLens β α) (f : HostFn α)
     (st : Store β) (args : List Value) {values : List Value} {inner : Store α}
     (h : f.invoke (st.focus l) args = .Return values inner) :
     (f.lift l).invoke st args =
-      .Return values (Store.unfocus l st.host inner) := by
-  simp [HostFn.lift, h]
+      .Return values (Store.unfocus l st.host inner) := by simp [HostFn.lift, h]
 
 theorem HostFn.lift_invoke_trap (l : HostLens β α) (f : HostFn α)
     (st : Store β) (args : List Value) {inner : Store α} {message : String}
     (h : f.invoke (st.focus l) args = .Trap inner message) :
     (f.lift l).invoke st args =
-      .Trap (Store.unfocus l st.host inner) message := by
-  simp [HostFn.lift, h]
+      .Trap (Store.unfocus l st.host inner) message := by simp [HostFn.lift, h]
 
 theorem HostFn.lift_invoke_throw (l : HostLens β α) (f : HostFn α)
     (st : Store β) (args : List Value) {inner : Store α} {tag : Nat}
     {values : List Value}
     (h : f.invoke (st.focus l) args = .Throw inner tag values) :
     (f.lift l).invoke st args =
-      .Throw (Store.unfocus l st.host inner) tag values := by
-  simp [HostFn.lift, h]
+      .Throw (Store.unfocus l st.host inner) tag values := by simp [HostFn.lift, h]
 
 /-! ## Registries -/
 

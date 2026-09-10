@@ -23,8 +23,7 @@ private abbrev oomImport : ImportDecl :=
   { «module» := "talos", name := "oom", params := [], results := [] }
 
 theorem oomImport_index :
-    Project.Mergesort.module.imports[2] = oomImport := by
-  rfl
+    Project.Mergesort.module.imports[2] = oomImport := by rfl
 
 /-- Authoritative total-WP contract for reachable calls to import 2,
 `talos.oom`.  Its implementation has no return or throw outcome for the valid
@@ -60,8 +59,7 @@ theorem twp_oom_import
       (fun store ns obs nt _ results postWasm h => by
         simp only [List.length_nil, List.take_zero,
           List.reverse_nil] at h
-        rw [WrapperProof.oomHost_invoke] at h
-        contradiction)
+        rw [WrapperProof.oomHost_invoke] at h; contradiction)
       (fun store ns obs nt hmodule postWasm msg h => by
         simp only [List.length_nil, List.take_zero,
           List.reverse_nil] at h
@@ -71,14 +69,12 @@ theorem twp_oom_import
             ⟨⟨%_hmsg, Hhost⟩, Hstate⟩
         imodintro
         isplitl [Hhost Hterminal]
-        · iapply Hterminal
-          iexact Hhost
+        · iapply_exact Hterminal with Hhost
         · iexact Hstate)
       (fun store ns obs nt _ postWasm tag xs h => by
         simp only [List.length_nil, List.take_zero,
           List.reverse_nil] at h
-        rw [WrapperProof.oomHost_invoke] at h
-        contradiction)
+        rw [WrapperProof.oomHost_invoke] at h; contradiction)
       (params := locals.params) (localValues := locals.locals)
       (values := locals.values) (code := code) (arity := arity)
       (remainder := remainder) (controls := controls) (calls := calls)
@@ -89,11 +85,9 @@ theorem twp_oom_import
     have hmsg : msg = OOM.trapMessage := by
       simp only [List.length_nil, List.take_zero,
         List.reverse_nil] at h
-      rw [WrapperProof.oomHost_invoke] at h
-      exact (HostResult.Trap.inj h).2.symm
+      rw [WrapperProof.oomHost_invoke] at h; exact (HostResult.Trap.inj h).2.symm
     subst msg
-    iapply Wasm.SmallStep.twp_outcome_trapped
-    iexact Houtcome
+    iapply_exact Wasm.SmallStep.twp_outcome_trapped with Houtcome
   · iintro %preWasm %postWasm %tag %xs %h HQ
     simp [WrapperProof.oomHost_invoke] at h
 
@@ -154,33 +148,23 @@ theorem twp_acceptanceCaller
   · dsimp only [acceptanceExpr]
     iapply twp_iff (selectedBody := [.call 2]) rfl
     iapply twp_oom_import acceptanceHost
-    isplitl [Hhost]
-    · iexact Hhost
-    isplitl [Hruntime]
-    · iexact Hruntime
-    isplitl [Henv]
-    · iexact Henv
+    isplitl_exacts [Hhost Hruntime Henv]
     iintro Hhost
     iintro %store %observations Hstate
     ihave %hhost :
         ⌜store.wasm.host = WrapperProof.afterOom acceptanceHost⌝ $$
         [Hstate Hhost]
-    · iapply stateInterp_host_agree store 0 observations 0
-      iframe Hstate Hhost
-    ipureintro
-    exact ⟨rfl, hhost⟩
+    · iapply_frame stateInterp_host_agree store 0 observations 0 using [Hstate Hhost]
+    ipureexact ⟨rfl, hhost⟩
   · dsimp only [acceptanceExpr]
     iapply twp_iff (selectedBody := [.const 7]) rfl
-    iapply twp_const
-    iapply twp_exitControl (by rfl)
+    wasm_twp_pures [twp_const twp_exitControl]
     iapply twp_finish
     iapply Wasm.SmallStep.twp_outcome_done
     iintro %store %observations Hstate
     ihave %hhost : ⌜store.wasm.host = acceptanceHost⌝ $$ [Hstate Hhost]
-    · iapply stateInterp_host_agree store 0 observations 0
-      iframe Hstate Hhost
-    ipureintro
-    exact ⟨rfl, hhost⟩
+    · iapply_frame stateInterp_host_agree store 0 observations 0 using [Hstate Hhost]
+    ipureexact ⟨rfl, hhost⟩
 
 /-- The acceptance caller has one finite authoritative execution ending in the
 normal result selected by `flag`, or in the exact `talos.oom` trap. -/
@@ -198,8 +182,7 @@ theorem acceptance_total (flag : Bool) :
       acceptanceInstance, RuntimeEnv.currentModule_mk1,
       RuntimeEnv.currentHost_mk1]
     iintro ⟨_Hheap, _Hglobals, Hruntime, Henv, Hhost⟩
-    iapply twp_acceptanceCaller flag
-    iframe Hruntime Henv Hhost
+    iapply_frame twp_acceptanceCaller flag using [Hruntime Henv Hhost]
 
 theorem acceptance_returns :
     TerminatesWith (acceptanceConfig true)

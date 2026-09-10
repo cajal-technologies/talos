@@ -48,26 +48,17 @@ theorem ifAbs_steps (x : UInt32) :
     Steps (ifAbsConfig x) (ifAbsTrace x)
       ⟨.done [.i32 (ifAbsResult x)], (ifAbsConfig x).store⟩ := by
   unfold ifAbsTrace
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons .const
-  apply Steps.cons (.ltS rfl)
-  apply Steps.cons (.iff rfl)
+  wasm_steps [(.localGet rfl), .const, (.ltS rfl), (.iff rfl)]
   by_cases hneg : x.toInt32 < (0 : UInt32).toInt32
   · have hneg' : x.toInt32 < 0 := by simpa using hneg
     simp only [if_pos hneg]
-    apply Steps.cons .const
-    apply Steps.cons (.localGet rfl)
-    apply Steps.cons .sub
-    apply Steps.cons (.exitControl rfl)
-    apply Steps.cons .finish
+    wasm_steps [.const, (.localGet rfl), .sub, (.exitControl rfl), .finish]
     simpa [ifAbsConfig, ifAbsResult, hneg, hneg'] using
       (Steps.refl
         (⟨.done [.i32 (0 - x)], (ifAbsConfig x).store⟩ : Config Unit))
   · have hneg' : ¬x.toInt32 < 0 := by simpa using hneg
     simp only [if_neg hneg]
-    apply Steps.cons (.localGet rfl)
-    apply Steps.cons (.exitControl rfl)
-    apply Steps.cons .finish
+    wasm_steps [(.localGet rfl), (.exitControl rfl), .finish]
     simpa [ifAbsConfig, ifAbsResult, hneg, hneg'] using
       (Steps.refl
         (⟨.done [.i32 x], (ifAbsConfig x).store⟩ : Config Unit))

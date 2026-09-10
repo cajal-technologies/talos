@@ -142,32 +142,26 @@ private theorem insertByteRange_inBounds
       · rw [h1]
         omega
 
-/-- Successful growth exposes ownership of every newly addressable byte while
-preserving all previously owned resources. -/
+/-- Successful growth exposes the new bytes when the caller owns the logical
+allocation frontier. The frontier advances together with the sparse heap. -/
 theorem stateInterp_memoryGrow_fresh_bytes
     [WasmSmallStepGS hlc α]
     (store : MachineStore α) (steps : Nat)
     (observations : List StepKind) (threads : Nat)
-    (delta : UInt32) (cap : Nat) (memory : Mem) (previousPages : Nat)
+    (delta : UInt32) (cap : Nat) (memory : Mem) (previousPages frontier : Nat)
     (hgrow : store.wasm.mem.grow delta cap = some (memory, previousPages))
-    (hpages : memory.pages < 65536) :
+    (hpages : memory.pages < 65536)
+    (hfrontier : frontier ≤ previousPages * 65536) :
     let addr := UInt32.ofNat (previousPages * 65536)
     let len := delta.toNat * 65536
-    stateInterp (GF := WasmHeapGF α) store steps observations threads ==∗
+    stateInterp (GF := WasmHeapGF α) store steps observations threads ∗
+      heapFrontierOwn frontier ==∗
       stateInterp (GF := WasmHeapGF α)
           { store with wasm := { store.wasm with mem := memory } }
           steps observations threads ∗
-      pointsToBytes 0 addr
-        ((List.range len).map fun i =>
-          memory.read8 (addr + UInt32.ofNat i)) := by
+      heapFrontierOwn (addr.toNat + len) ∗
+      pointsToBytes 0 addr (physicalBytes memory addr len) := by
   dsimp only
-  iintro Hstate
-  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
-    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ,
-      %runtimeModuleσ, %hostEnvσ, Hheap, Hglobals, Hsegments, Htables,
-      Helements, HruntimeModuleAuth, HruntimeModuleBigSep,
-      HruntimeInstances, HinstanceAuth, HhostEnvAuth, HhostAuth,
-      %Hfacts, Hexc⟩
   have hgrowFacts : previousPages = store.wasm.mem.pages ∧
       memory.pages = store.wasm.mem.pages + delta.toNat := by
     simp only [Mem.grow] at hgrow
@@ -175,91 +169,24 @@ theorem stateInterp_memoryGrow_fresh_bytes
     · exact ⟨(Prod.mk.inj (Option.some.inj hgrow)).2.symm,
         congrArg Mem.pages (Prod.mk.inj (Option.some.inj hgrow)).1.symm⟩
     · contradiction
-  let addr := UInt32.ofNat (previousPages * 65536)
-  let len := delta.toNat * 65536
-  let bytes := (List.range len).map fun i =>
-    memory.read8 (addr + UInt32.ofNat i)
-  have hlen : bytes.length = len := by simp [bytes]
-  have hbase : addr.toNat = previousPages * 65536 := by
+  have hbase : (UInt32.ofNat (previousPages * 65536)).toNat =
+      previousPages * 65536 := by
     apply UInt32.toNat_ofNat_of_lt'
-    rw [hgrowFacts.1, show UInt32.size = 4294967296 by decide]
-    have hold : store.wasm.mem.pages ≤ memory.pages := by omega
+    norm_num [UInt32.size] at *
     omega
-  have hnowrap : addr.toNat + bytes.length < UInt32.size := by
-    rw [hlen, hbase, show UInt32.size = 4294967296 by decide]
-    omega
-  have hnowrapN : addr.toNat + bytes.length < 4294967296 := by
-    simpa only [UInt32.size] using hnowrap
-  have hnew : store.wasm.mem.pages * 65536 ≤ addr.toNat := by
-    rw [hbase, hgrowFacts.1]
-  have hfresh : ∀ i, i < bytes.length →
-      get? σ (⟨0, addr + UInt32.ofNat i⟩ : MemoryKey) = none := by
-    intro i hi
-    by_contra hne
-    obtain ⟨mem, hmem, hib⟩ := Hfacts.2.1 _ hne
-    have hmem0 : mem = store.wasm.mem := by
-      have hz : storeResolve store 0 = some store.wasm.mem := by
-        simp [storeResolve]
-      exact Option.some.inj (hmem.symm.trans hz)
-    subst mem
-    have hadd : (addr + UInt32.ofNat i).toNat = addr.toNat + i := by
-      apply UInt32.add_ofNat_toNat_noWrap addr i
-      · simp only [hlen] at hi
-        omega
-      · simp only [hlen] at hi
-        exact Nat.le_of_lt (by omega)
-    rw [hadd] at hib
-    omega
-  imod insertByteRange_alloc σ addr bytes hfresh hnowrap $$ Hheap with
-    ⟨Hheap, Hbytes⟩
-  let grownStore : MachineStore α :=
+  have hbound : previousPages * 65536 + delta.toNat * 65536 =
+      memory.pages * 65536 := by omega
+  iintro ⟨Hstate, Hfrontier⟩
+  imod stateInterp_memoryGrow store steps observations threads delta cap
+    memory previousPages hgrow $$ Hstate with Hstate
+  iapply stateInterp_alloc_freshRange
     { store with wasm := { store.wasm with mem := memory } }
-  have hresolveEq :
-      (fun id => if id = 0 then some memory else storeResolve store id) =
-        storeResolve grownStore := by
-    funext id
-    simp only [grownStore, storeResolve]
-    by_cases h : id = 0 <;> simp [h]
-  have hagreeGrown : heapAgreesWithMem σ (storeResolve grownStore) := by
-    have h := grow_sound σ (storeResolve store) 0 store.wasm.mem memory
-      delta cap previousPages hgrow (by simp [storeResolve]) Hfacts.1
-    rw [hresolveEq] at h
-    exact h
-  have hinBoundsGrown : heapAddressesInBounds σ (storeResolve grownStore) := by
-    have h := grow_inBounds σ (storeResolve store) 0 store.wasm.mem memory
-      delta cap previousPages hgrow (by simp [storeResolve]) Hfacts.2.1
-    rw [hresolveEq] at h
-    exact h
-  have hagree : heapAgreesWithMem (insertByteRange σ addr bytes)
-      (storeResolve grownStore) := by
-    apply insertByteRange_agrees σ (storeResolve grownStore) memory addr bytes
-    · change storeResolve grownStore 0 = some memory
-      simp [grownStore, storeResolve]
-    · exact hagreeGrown
-    · intro i hi
-      simp only [bytes, List.length_map, List.length_range] at hi
-      simp [bytes]
-  have hinBounds : heapAddressesInBounds (insertByteRange σ addr bytes)
-      (storeResolve grownStore) := by
-    apply insertByteRange_inBounds σ (storeResolve grownStore) memory addr bytes
-    · change storeResolve grownStore 0 = some memory
-      simp [grownStore, storeResolve]
-    · exact hinBoundsGrown
-    · rw [hlen, hbase, hgrowFacts.1, hgrowFacts.2]
-      simp [len, Nat.add_mul]
-    · exact hnowrap
-  imodintro
-  isplitl [Hheap Hglobals Hsegments Htables Helements HruntimeModuleAuth
-      HruntimeModuleBigSep HruntimeInstances HinstanceAuth HhostEnvAuth
-      HhostAuth Hexc]
-  · iapply (stateInterp_eq grownStore steps observations threads).mpr
-    iexists (insertByteRange σ addr bytes), globalσ, dataSegmentσ, tableσ,
-      elementSegmentσ, runtimeModuleσ, hostEnvσ
-    iframe
-    ipureintro
-    exact ⟨hagree, hinBounds, Hfacts.2.2⟩
-  · dsimp only [bytes, addr, len]
-    iassumption
+    steps observations threads frontier
+    (UInt32.ofNat (previousPages * 65536)) (delta.toNat * 65536)
+    (by rw [hbase]; exact hfrontier)
+    (by rw [hbase]; exact Nat.le_of_eq hbound)
+    (by rw [hbase, hbound]; norm_num [UInt32.size]; omega) $$
+    [$Hstate $Hfrontier]
 
 /-- Total `memory.grow` rule which makes the newly addressable byte range
 available to the successful continuation.  The page bound is explicit because
@@ -274,15 +201,16 @@ theorem twp_memoryGrow_fresh
     {code : Program} {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame}
     (runtimeModule : Module) (instanceId : ModuleInstanceId)
-    (R : IProp (WasmHeapGF α))
+    (R : IProp (WasmHeapGF α)) (frontier : Nat)
     (hpages : ∀ (store : MachineStore α) (memory : Mem)
         (previousPages : Nat),
       store.runtime.currentModule = runtimeModule →
       store.wasm.mem.grow delta
           (store.wasm.memoryCap store.runtime.currentModule 0) =
         some (memory, previousPages) →
-      memory.pages < 65536)
-    (Hfail : runtimeModuleOwn instanceId runtimeModule ∗ R -∗
+      memory.pages < 65536 ∧ frontier ≤ previousPages * 65536)
+    (Hfail : runtimeModuleOwn instanceId runtimeModule ∗ R ∗
+      heapFrontierOwn frontier -∗
       WP (.running ⟨⟨params, localValues,
           .i32 (0xffffffff : UInt32) :: values⟩,
         code, arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }])
@@ -292,18 +220,19 @@ theorem twp_memoryGrow_fresh
           (store.wasm.memoryCap store.runtime.currentModule 0) =
             some (memory, previousPages)),
       runtimeModuleOwn instanceId runtimeModule ∗ R ∗
+          heapFrontierOwn
+            ((UInt32.ofNat (previousPages * 65536)).toNat + delta.toNat * 65536) ∗
           pointsToBytes 0 (UInt32.ofNat (previousPages * 65536))
-            ((List.range (delta.toNat * 65536)).map fun i =>
-              memory.read8
-                (UInt32.ofNat (previousPages * 65536) + UInt32.ofNat i)) -∗
+            (physicalBytes memory (UInt32.ofNat (previousPages * 65536))
+              (delta.toNat * 65536)) -∗
       WP (.running ⟨⟨params, localValues,
           .i32 previousPages.toUInt32 :: values⟩,
         code, arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }]) :
-    runtimeModuleOwn instanceId runtimeModule ∗ R -∗
+    runtimeModuleOwn instanceId runtimeModule ∗ R ∗ heapFrontierOwn frontier -∗
     WP (.running ⟨⟨params, localValues, .i32 delta :: values⟩,
         .memoryGrow :: code, arity, remainder, controls, calls⟩ : Expr α) @
       s; E [{ Φ }] := by
-  iintro ⟨Hruntime, HR⟩
+  iintro ⟨Hruntime, HR, Hfrontier⟩
   iapply twp_lift_step_no_fork rfl
   iintro %store %ns %obs %nt Hσ
   ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$
@@ -385,8 +314,10 @@ theorem twp_memoryGrow_fresh
     subst store₂
     imod stateInterp_memoryGrow_fresh_bytes store ns obs nt delta
       (store.wasm.memoryCap store.runtime.currentModule 0)
-      memory previousPages hg (hpages store memory previousPages Hmodule hg) $$
-      Hσ with ⟨Hσ, Hfresh⟩
+      memory previousPages frontier hg
+      (hpages store memory previousPages Hmodule hg).1
+      (hpages store memory previousPages Hmodule hg).2 $$
+      [$Hσ $Hfrontier] with ⟨Hσ, Hfrontier, Hfresh⟩
     imod Hclose
     imodintro
     isplit

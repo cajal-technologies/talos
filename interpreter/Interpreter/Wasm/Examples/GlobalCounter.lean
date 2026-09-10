@@ -23,8 +23,7 @@ def tickModule : Module :=
     globals := [{ init := .i32 0 }] }
 
 theorem tickModule_initial_global :
-    (tickModule.initialStore (α := Unit)).globals.globals = [.i32 0] := by
-  native_decide
+    (tickModule.initialStore (α := Unit)).globals.globals = [.i32 0] := by decide +kernel
 
 def tickStore (st : Store Unit) : MachineStore Unit :=
   { runtime := { instances := #[{ module := tickModule, host := {} }], entry := ⟨0⟩ }
@@ -64,8 +63,7 @@ theorem tick_steps (st : Store Unit) (n : UInt32)
   apply Steps.cons
     (Step.globalGet (value := .i32 n) (by
       simpa [tickStore, globalAt?] using hg))
-  apply Steps.cons Step.const
-  apply Steps.cons Step.add
+  wasm_steps [Step.const, Step.add]
   apply Steps.cons (Step.globalSet (by
     simpa [tickStore, globalAt?] using congrArg Option.isSome hg))
   simpa [tickFinalStore, tickStore] using
@@ -84,12 +82,10 @@ theorem tick_terminates (st : Store Unit) (n : UInt32)
     (hg : st.globals.globals[0]? = some (.i32 n)) :
     TerminatesWith (tickConfig st) (fun values store =>
       values = [.i32 n] ∧
-      store.wasm.globals.globals[0]? = some (.i32 (1 + n))) := by
-  apply runSteps_success_terminates (tick_runs st n hg)
-  constructor
-  · rfl
-  simp [tickFinalStore, tickStore]
-  grind
+      store.wasm.globals.globals[0]? = some (.i32 (1 + n))) :=
+  runSteps_success_terminates_eq_values (tick_runs st n hg) (by
+    simp [tickFinalStore, tickStore]
+    grind)
 
 theorem tick_partial (st : Store Unit) (n : UInt32)
     (hg : st.globals.globals[0]? = some (.i32 n)) :
@@ -111,13 +107,10 @@ theorem tick_three_calls :
         .success [.i32 1] (tickFinalStore tickAfterZero 1) ∧
     (runSteps 6 (tickConfig tickAfterOne)).result =
         .success [.i32 2] (tickFinalStore tickAfterOne 2) ∧
-    tickAfterTwo.globals.globals[0]? = some (.i32 3) := by
-  constructor
-  · exact tick_runs tickInitialStore 0 (by native_decide)
-  constructor
-  · exact tick_runs tickAfterZero 1 (by native_decide)
-  constructor
-  · exact tick_runs tickAfterOne 2 (by native_decide)
-  · native_decide
+    tickAfterTwo.globals.globals[0]? = some (.i32 3) :=
+  ⟨tick_runs tickInitialStore 0 (by decide +kernel),
+    tick_runs tickAfterZero 1 (by decide +kernel),
+    tick_runs tickAfterOne 2 (by decide +kernel),
+    by decide +kernel⟩
 
 end Wasm

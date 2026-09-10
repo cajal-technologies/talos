@@ -10,6 +10,8 @@ namespace Project.GcdStdio
 
 open Wasm
 
+-- WAT SHA-256: 34bf9b3c137e88fad42d31bce1c23eaea3b674d16a470327277c97353b5b9f05
+
 def func0 : Wasm.Program := watFunctionBody% "../rust/build/gcd_stdio/program.wat" 0
 
 def func0Def : Wasm.Function :=

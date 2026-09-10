@@ -134,7 +134,7 @@ theorem decodeLoopPair_invalid_low_reaches
   apply Reaches.prepend Step.block
   apply Reaches.prepend Step.block
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by change 1048512 ≤ _; omega))
+  apply Reaches.prepend (Step.load32 rfl (by change 1048512 ≤ _; omega))
   apply Reaches.prepend (Step.localTee rfl)
   have hlen0 : len ≠ 0 := by
     intro hz
@@ -144,12 +144,12 @@ theorem decodeLoopPair_invalid_low_reaches
     omega
   apply Reaches.prepend (Step.brIf hlen0 rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by change 1048524 ≤ _; omega))
+  apply Reaches.prepend (Step.load32 rfl (by change 1048524 ≤ _; omega))
   apply Reaches.prepend (Step.localSet rfl)
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by change 1048516 ≤ _; omega))
+  apply Reaches.prepend (Step.load32 rfl (by change 1048516 ≤ _; omega))
   change store.wasm.mem.read32 (loopIterator + 8) = 2 at hchunkRead
   rw [hchunkRead]
   apply Reaches.prepend (Step.localTee rfl)
@@ -167,12 +167,12 @@ theorem decodeLoopPair_invalid_low_reaches
     omega))
   apply Reaches.prepend (Step.localTee rfl)
   apply Reaches.prepend Step.sub
-  apply Reaches.prepend (Step.store32 (by change 1048512 ≤ _; omega))
+  apply Reaches.prepend (Step.store32 rfl (by change 1048512 ≤ _; omega))
   rw [setMemory_eq]
   dsimp only
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by
+  apply Reaches.prepend (Step.load32 rfl (by
     change 1048508 ≤ store.wasm.mem.pages * 65536
     omega))
   simp only [UInt32.add_zero]
@@ -181,7 +181,7 @@ theorem decodeLoopPair_invalid_low_reaches
   apply Reaches.prepend (Step.localTee rfl)
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.add
-  apply Reaches.prepend (Step.store32 (by
+  apply Reaches.prepend (Step.store32 rfl (by
     change 1048508 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [setMemory_eq]
@@ -201,7 +201,7 @@ theorem decodeLoopPair_invalid_low_reaches
   simp
   apply Reaches.prepend Step.brIfZero
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by
+  apply Reaches.prepend (Step.load32 rfl (by
     change 1048520 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [Mem.read32_write32_disjoint _ loopIterator (loopIterator + 12) _
@@ -214,7 +214,7 @@ theorem decodeLoopPair_invalid_low_reaches
   apply Reaches.prepend Step.shl
   apply Reaches.prepend (Step.localSet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load8U (by
+  apply Reaches.prepend (Step.load8U rfl (by
     change inputPtr.toNat + 1 ≤ store.wasm.mem.pages * 65536
     exact Nat.le_trans (by omega) hinputA))
   simp only [Mem.read8, Mem.write32]
@@ -238,7 +238,7 @@ theorem decodeLoopPair_invalid_low_reaches
   apply Reaches.prepend Step.and
   apply Reaches.prepend Step.const
   apply Reaches.prepend (Step.ltU rfl)
-  cases hiRoute <;> simp only [HexRoute.valid, Mem.read8, inputPtr,
+  cases hiRoute <;> simp only [HexRoute.valid, Mem.read8,
       loopIterator] at hhi <;>
     first
     | (rcases hhi with ⟨hhiUpper, hhiLower, hhiDigit⟩
@@ -302,10 +302,10 @@ theorem decodeLoopPair_invalid_low_reaches
     simp
     apply Reaches.prepend Step.brIfZero
     apply Reaches.prepend (Step.localGet rfl)
-    apply Reaches.prepend (Step.load8U (by
+    apply Reaches.prepend (Step.load8U rfl (by
       change inputPtr.toNat + 1 + 1 ≤ store.wasm.mem.pages * 65536
       exact hinputA))
-    simp only [Mem.read8, Mem.write32]
+    simp only [Mem.read8]
     have hinput1Mod' :
         ((store.wasm.mem.read32 1048504).toNat + 1) % 4294967296 =
           (store.wasm.mem.read32 1048504 + 1).toNat := by
@@ -363,7 +363,7 @@ theorem decodeLoopPair_invalid_low_reaches
     apply Reaches.prepend (Step.localGet rfl)
     apply Reaches.prepend Step.const
     apply Reaches.prepend Step.and
-    apply Reaches.prepend (Step.store32 (by
+    apply Reaches.prepend (Step.store32 rfl (by
       change 1048468 ≤ store.wasm.mem.pages * 65536
       omega))
     rw [setMemory_eq]
@@ -376,7 +376,7 @@ theorem decodeLoopPair_invalid_low_reaches
     apply Reaches.prepend Step.const
     apply Reaches.prepend Step.and
     apply Reaches.prepend Step.or
-    apply Reaches.prepend (Step.store32 (by
+    apply Reaches.prepend (Step.store32 rfl (by
       change 1048472 ≤ store.wasm.mem.pages * 65536
       omega))
     rw [setMemory_eq]
@@ -389,7 +389,7 @@ theorem decodeLoopPair_invalid_low_reaches
     apply Reaches.prepend (Step.localGet rfl)
     apply Reaches.prepend Step.const
     apply Reaches.prepend Step.add
-    apply Reaches.prepend (Step.store32 (by
+    apply Reaches.prepend (Step.store32 rfl (by
       change 1048520 ≤ store.wasm.mem.pages * 65536
       omega))
     rw [setMemory_eq]
@@ -398,7 +398,7 @@ theorem decodeLoopPair_invalid_low_reaches
     simp
     apply Reaches.prepend (Step.localGet rfl)
     apply Reaches.prepend (Step.localGet rfl)
-    apply Reaches.prepend (Step.store8 (by
+    apply Reaches.prepend (Step.store8 rfl (by
       change 1048442 ≤ store.wasm.mem.pages * 65536
       omega))
     rw [setMemory_eq]
@@ -408,7 +408,7 @@ theorem decodeLoopPair_invalid_low_reaches
     apply Reaches.prepend Step.const
     apply Reaches.prepend Step.and
     simp
-    apply Reaches.prepend (Step.store8 (by
+    apply Reaches.prepend (Step.store8 rfl (by
       change 1048441 ≤ store.wasm.mem.pages * 65536
       omega))
     rw [setMemory_eq]

@@ -32,7 +32,7 @@ def encodeMainCalls (store : MachineStore Universal.State)
 def encodeReserveConfig (store : MachineStore Universal.State)
     (pointer length : UInt32) : Config Universal.State :=
   { expr := .running
-      ⟨⟨[.i32 1048552, .i32 pointer, .i32 length],
+      ⟨⟨[.i32 1048564, .i32 pointer, .i32 length],
           [.i32 1048512, .i32 (pointer + length), .i32 0, .i32 0,
             .i32 0, .i32 0],
           [.i32 (length <<< 1), .i32 0, .i32 1048516]⟩,
@@ -50,7 +50,7 @@ theorem encode_call_to_reserve
     Reaches
       ({ expr := .running
           ⟨⟨[], [.i32 1048544, .i32 pointer, .i32 0, .i32 0],
-              [.i32 length, .i32 pointer, .i32 1048552]⟩,
+              [.i32 length, .i32 pointer, .i32 1048564]⟩,
             [.call 9] ++ func10.drop 18, 0, [], [], []⟩
          store := store } : Config Universal.State)
       (encodeReserveConfig store pointer length) := by
@@ -62,8 +62,8 @@ theorem encode_call_to_reserve
     rw [hmod]
     rfl
   apply Reaches.prepend (Step.call hnot hfn)
-  simp only [func6Def, Function.toLocals, Function.numParams, ValueType.zero,
-    func6, List.drop]
+  simp only [func6Def, Function.toLocals, Function.numParams,
+    func6]
   apply Reaches.prepend (Step.globalGet hglobal)
   apply Reaches.prepend Step.const
   apply Reaches.prepend Step.sub
@@ -72,7 +72,7 @@ theorem encode_call_to_reserve
   rw [setGlobal_zero_eq]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.store32 (by
+  apply Reaches.prepend (Step.store32 rfl (by
     exact le_trans (by decide : (1048512 : UInt32).toNat + 12 + 4 ≤
       17 * 65536) (Nat.mul_le_mul_right 65536 hpages)))
   rw [setMemory_eq]
@@ -98,7 +98,7 @@ theorem encode_call_to_reserve
   apply Reaches.prepend Step.const
   apply Reaches.prepend Step.shl
   simp [encodeReserveConfig, encodeAllocFrameStore, encodeReserveControls,
-    encodeMainCalls, setMemory_eq, UInt32.add_comm]
+    encodeMainCalls,  UInt32.add_comm]
   exact ⟨[], .refl _⟩
 
 end Project.HexEncodeStdio

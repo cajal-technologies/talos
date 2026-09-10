@@ -10,6 +10,8 @@ namespace Project.Xor
 
 open Wasm
 
+-- WAT SHA-256: 56c10da02d6ee8813882e8546cdc77cf8d8bb58f62f2fd6a1e7b629994795af9
+
 def func0 : Wasm.Program := watFunctionBody% "../rust/build/xor/program.wat" 0
 
 def func0Def : Wasm.Function :=

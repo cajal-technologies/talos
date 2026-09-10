@@ -48,22 +48,17 @@ theorem writeByte_partiallyMeets :
     (globalσ := (∅ : WasmGlobalMap Value))
   · intro addr v hget
     by_cases h : addr = ⟨0, 0⟩
-    · subst h
-      rw [get?_insert_eq rfl] at hget
+    · subst h; rw [get?_insert_eq rfl] at hget
       have hv := Option.some.inj (Option.some.inj hget)
       subst hv
       exact ⟨_, rfl, by decide⟩
-    · rw [get?_insert_ne (Ne.symm h), get?_empty] at hget
-      contradiction
+    · rw [get?_insert_ne (Ne.symm h), get?_empty] at hget; contradiction
   · intro addr hget
     by_cases h : addr = ⟨0, 0⟩
-    · subst h
-      exact ⟨_, rfl, by decide⟩
-    · rw [get?_insert_ne (Ne.symm h), get?_empty] at hget
-      contradiction
+    · subst h; exact ⟨_, rfl, by decide⟩
+    · rw [get?_insert_ne (Ne.symm h), get?_empty] at hget; contradiction
   · exact globalHeapAgrees_empty _
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [(BI.BigSepM.bigSepM_insert (get?_empty (⟨0, 0⟩ : MemoryKey))).to_eq,
                BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
     iintro ⟨Hpt, _Hglobals, Hruntime, Henv⟩
@@ -81,8 +76,7 @@ theorem writeByte_partiallyMeets :
       iintro ⟨%hvalues, Hbyte⟩ %store %_observations Hstate
       imod stateInterp_pointsTo_read8 store 0 [] 0 0 (42 : UInt8)
           $$ [$Hstate $Hbyte] with %hread
-      ipureintro
-      exact ⟨hvalues, hread⟩
+      ipureexact ⟨hvalues, hread⟩
     iapply (wp_mono hpost)
     iapply wp_callHost writeByteModule 0 writeByteImp writeByteHost
         (by simp [writeByteModule]) rfl { funcs := [writeByteHost] } rfl
@@ -103,13 +97,11 @@ theorem writeByte_partiallyMeets :
               ⌜(0 : UInt32).toNat < store.wasm.mem.pages * 65536⌝ $$ [Hσ Hpt]
           · imod stateInterp_pointsTo_inBounds store ns obs nt 0 (0 : UInt8)
                 $$ [$Hσ $Hpt] with %HinBounds
-            ipureintro
-            exact HinBounds
+            ipureexact HinBounds
           imod stateInterp_store8 store ns obs nt (0 : UInt32) (0 : UInt8) (42 : UInt8)
               (by exact HinBounds) $$ [$Hσ $Hpt] with ⟨Hσ, Hpt⟩
           imodintro
-          isplitl [Hpt]
-          · iexact Hpt
+          isplitl_exact Hpt
           · iexact Hσ)
         -- trap: impossible with args [.i32 0, .i32 42]
         (fun _ _ _ _ _ _ _ h => by simp [writeByteHost] at h)
@@ -124,12 +116,9 @@ theorem writeByte_partiallyMeets :
       iintro %preWasm %results %postWasm %h ⟨HQ, _⟩
       simp only [List.take_zero, List.nil_append, List.length_cons,
                  List.length_nil, List.drop]
-      iapply wp_finish
-      inext
-      iapply wp_value'
+      wasm_wp_finish_value
       isplitr [HQ]
-      · ipureintro
-        rfl
+      · ipureexact rfl
       · iexact HQ
     -- trap: refuted by simp
     · inext
@@ -144,7 +133,7 @@ theorem writeByte_terminates :
     TerminatesWith writeByteConfig (fun _ _ => True) :=
   runSteps_checked_terminates (fuel := 20)
     (fun _ _ => true)
-    (by native_decide)
+    (by decide +kernel)
     (fun _ _ _ => trivial)
 
 theorem writeByte_result :

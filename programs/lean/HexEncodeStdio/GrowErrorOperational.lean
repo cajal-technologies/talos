@@ -47,11 +47,11 @@ theorem grow_result_negative
   simp [growResultErrorTail, growResultOuterControl]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.store32 (by simpa using hout4))
+  apply Reaches.prepend (Step.store32 rfl (by simpa using hout4))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.store32 (by
+  apply Reaches.prepend (Step.store32 rfl (by
     simpa [setMemory_eq] using hout0))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.returnFromCallFallthrough rfl)

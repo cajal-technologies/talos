@@ -306,13 +306,19 @@ private def compactFunctionBindings (watPath : String) (m : Wasm.Module) : Strin
 /-- Default source-minimal representation. Elaboration quotes bulky module
 metadata and each function body directly from WAT. Function records stay named
 in source so the public definitions remain transparent to existing proofs. -/
-private def emitCompactProgramFile (c : Crate) (m : Wasm.Module) : IO Unit := do
+private def emitCompactProgramFile (c : Crate) (m : Wasm.Module)
+    (sourceDigest : String) : IO Unit := do
   IO.FS.createDirAll c.leanDir
   let watPath := s!"../rust/build/{c.name}/program.wat"
   let functionDefs := "[" ++
     String.intercalate ", " (List.range m.funcs.length |>.map fun i => s!"func{i}Def") ++ "]"
   let body :=
     String.intercalate "\n" <| generatedHeader c ++ [
+      -- Function bodies and data are read by macros, so record the input digest
+      -- in the source that Lake hashes. Otherwise a body-only WAT change can
+      -- leave Program.lean identical and reuse proofs of the previous artifact.
+      s!"-- WAT SHA-256: {sourceDigest}",
+      "",
       compactFunctionBindings watPath m,
       "",
       "def «module» : Wasm.Module :=",
@@ -441,7 +447,13 @@ private def emitOneCrate (projectDir : FilePath) (c : Crate) (forceEmit expanded
     match Wasm.Decoder.Wat.decodeForVerification watText with
     | .error e => die s!"{c.name}: wat decoder rejected the module: {e}"
     | .ok m    =>
-      if expanded then emitExpandedProgramFile c m else emitCompactProgramFile c m
+      if expanded then
+        emitExpandedProgramFile c m
+      else
+        let digest ← Extract.Git.sha256File watFile
+        unless digest.length = 64 && digest.toList.all Char.isHexDigit do
+          die s!"{c.name}: could not compute SHA-256 of {watFile}"
+        emitCompactProgramFile c m digest
       IO.println s!"    emitted {programLean}"
   else
     IO.println s!"    {programLean} is up to date"

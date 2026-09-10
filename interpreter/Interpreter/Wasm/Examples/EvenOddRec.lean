@@ -183,11 +183,7 @@ private theorem even_zero_prefix (calls : List CallFrame) :
     .instruction (.br_if 0),
     .instruction (.localGet 0),
     .instruction .eqz], ?_⟩
-  apply Steps.cons .block
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.eqz rfl)
-  apply Steps.cons (.brIf (by decide) (by rfl))
-  apply Steps.cons (.localGet rfl)
+  wasm_steps [.block, (.localGet rfl), (.eqz rfl), (.brIf (by decide) (by rfl)), (.localGet rfl)]
   exact Steps.single (.eqz rfl)
 
 private theorem odd_zero_prefix (calls : List CallFrame) :
@@ -200,10 +196,7 @@ private theorem odd_zero_prefix (calls : List CallFrame) :
     .instruction .eqz,
     .instruction (.br_if 0),
     .instruction (.localGet 0)], ?_⟩
-  apply Steps.cons .block
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.eqz rfl)
-  apply Steps.cons (.brIf (by decide) (by rfl))
+  wasm_steps [.block, (.localGet rfl), (.eqz rfl), (.brIf (by decide) (by rfl))]
   exact Steps.single (.localGet rfl)
 
 private theorem even_nonzero_prefix
@@ -220,13 +213,8 @@ private theorem even_nonzero_prefix
     .instruction (.const 1),
     .instruction .sub,
     .instruction (.call 1)], ?_⟩
-  apply Steps.cons .block
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.eqz (result := 0) (by simp [hn]))
-  apply Steps.cons .brIfZero
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons .const
-  apply Steps.cons .sub
+  wasm_steps [.block, (.localGet rfl), (.eqz (result := 0) (by simp [hn])), .brIfZero,
+    (.localGet rfl), .const, .sub]
   exact Steps.single (.call
     (functionIndex := 1) (store := parityStore)
     (fn := evenOddModule.funcs[1]!) (by decide) rfl)
@@ -245,13 +233,8 @@ private theorem odd_nonzero_prefix
     .instruction (.const 1),
     .instruction .sub,
     .instruction (.call 0)], ?_⟩
-  apply Steps.cons .block
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.eqz (result := 0) (by simp [hn]))
-  apply Steps.cons .brIfZero
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons .const
-  apply Steps.cons .sub
+  wasm_steps [.block, (.localGet rfl), (.eqz (result := 0) (by simp [hn])), .brIfZero,
+    (.localGet rfl), .const, .sub]
   exact Steps.single (.call
     (functionIndex := 0) (store := parityStore)
     (fn := evenOddModule.funcs[0]!) (by decide) rfl)
@@ -268,10 +251,7 @@ private theorem even_after_call
     .instruction (.localGet 0),
     .instruction .eqz], ?_⟩
   simp only [parityReturn, evenCaller, resumeCaller]
-  apply Steps.cons (.eqz (by rfl))
-  apply Steps.cons (.localSet rfl)
-  apply Steps.cons (.exitControl rfl)
-  apply Steps.cons (.localGet rfl)
+  wasm_steps [(.eqz (by rfl)), (.localSet rfl), (.exitControl rfl), (.localGet rfl)]
   exact Steps.single (.eqz rfl)
 
 private theorem odd_after_call
@@ -284,8 +264,7 @@ private theorem odd_after_call
     .administrative .exitControl,
     .instruction (.localGet 0)], ?_⟩
   simp only [parityReturn, oddCaller, resumeCaller]
-  apply Steps.cons (.localSet rfl)
-  apply Steps.cons (.exitControl rfl)
+  wasm_steps [(.localSet rfl), (.exitControl rfl)]
   exact Steps.single (.localGet rfl)
 
 private theorem evenOdd_contextual_steps : ∀ n : UInt32,

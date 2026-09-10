@@ -29,8 +29,7 @@ theorem earlyBr_steps (x : UInt32) :
       [(.instruction (.localGet 0)), (.instruction (.br 0)),
        (.administrative .finish)]
       ⟨.done [.i32 x], (earlyBrConfig x).store⟩ := by
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.br rfl)
+  wasm_steps [(.localGet rfl), (.br rfl)]
   exact Steps.cons .finish (Steps.refl _)
 
 theorem earlyBr_runs (x : UInt32) :

@@ -37,8 +37,7 @@ theorem trapUnreachable_runs :
 /-- Fuel-free public trap specification. -/
 theorem trapUnreachable_traps :
     TrapsWith trapUnreachableConfig .unreachable
-      (fun store => store = trapUnreachableConfig.store) := by
-  apply runSteps_trapped_trapsWith trapUnreachable_runs
-  rfl
+      (fun store => store = trapUnreachableConfig.store) :=
+  runSteps_trapped_trapsWith_store trapUnreachable_runs
 
 end Wasm

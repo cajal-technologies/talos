@@ -10,6 +10,8 @@ namespace Project.NumInteger
 
 open Wasm
 
+-- WAT SHA-256: 0c28bedbcb07efae48d493dcf39d5fd2234372fb403b05007493c62128bdc4b9
+
 def func0 : Wasm.Program := watFunctionBody% "../rust/build/num_integer/program.wat" 0
 
 def func0Def : Wasm.Function :=

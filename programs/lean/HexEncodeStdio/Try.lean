@@ -1,4 +1,5 @@
 import HexEncodeStdio.Outcome
+import HexEncodeStdio.Blueprint
 
 open Wasm
 
@@ -12,11 +13,11 @@ example (b : UInt8) (bs : List UInt8) :
     True := by
   dsimp
 
-set_option maxHeartbeats 2000000 in
-set_option maxRecDepth 1048576 in
-example (b : UInt8) (bs : List UInt8) : ∃ config,
+/-- Symbolic inputs are checked through the total proof; their trace length
+need not be fixed to an incidental compiler instruction count. -/
+example (b : UInt8) (bs : List UInt8) : ∃ config fuel,
     startConfig? (Universal.envFor Project.HexStdio.«module»)
       Project.HexStdio.«module» "encode" (Universal.State.ofInput (b :: bs)) = some config ∧
-    (SmallStep.runSteps 740 config).trace.length = 740 := by
-  refine ⟨_, rfl, ?_⟩
-  rfl
+    Project.HexEncodeStdio.Outcome.EncodesOrOOM (b :: bs)
+      (SmallStep.runSteps fuel config).result := by
+  exact Project.HexEncodeStdio.Blueprint.func10_export_run (b :: bs)

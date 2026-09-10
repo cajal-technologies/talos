@@ -19,20 +19,13 @@ theorem shr_chunk :
     controls calls a b vs _
   have hnorm :
       UInt64.ofNat (b &&& shiftMask).toNat % 64 = b.toUInt64 % 64 := by
-    rw [UInt32.and_comm]
-    exact shiftAmount_norm b
+    rw [UInt32.and_comm]; exact shiftAmount_norm b
   simp only [shiftAmountFrag, toV_u64, toV_u32, List.cons_append,
     List.nil_append]
   iintro Hwp
-  iapply Wasm.SmallStep.wp_const
-  inext
-  iapply Wasm.SmallStep.wp_and
-  inext
-  iapply Wasm.SmallStep.wp_extendUI32
-  inext
+  wasm_wp_pures [wp_const wp_and wp_extendUI32]
   iapply Wasm.SmallStep.wp_shrUI64
   simp only [hnorm]
-  inext
-  iexact Hwp
+  ilater_exact Hwp
 
 end Wasm.RustStd.U64

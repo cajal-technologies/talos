@@ -28,11 +28,7 @@ theorem isEven_runs (value : UInt32) :
       [(.instruction (.localGet 0)), (.instruction (.const 1)),
        (.instruction .and), (.instruction .eqz), (.administrative .finish)]
       ⟨.done [.i32 (isEvenResult value)], (isEvenConfig value).store⟩ := by
-    apply Steps.cons (.localGet rfl)
-    apply Steps.cons .const
-    apply Steps.cons .and
-    apply Steps.cons (.eqz rfl)
-    apply Steps.cons .finish
+    wasm_steps [(.localGet rfl), .const, .and, (.eqz rfl), .finish]
     by_cases h : value &&& (1 : UInt32) = 0 <;>
       simp [isEvenResult, h, UInt32.and_comm]
     all_goals exact Steps.refl _

@@ -165,27 +165,27 @@ theorem decode_success_after_alloc_to_blocks
     decodeStatusBody1, firstBlockBody, decodeAfterCore, decodeAfterRead,
     func9, List.drop]
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by
+  apply Reaches.prepend (Step.load32 rfl (by
     have hp := hfacts.pages_lower
     change 1048548 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [show store.wasm.mem.read32 (decodeStack + 16) =
     store.wasm.mem.read32 (decodeStatusVector + 4) by rfl, hfacts.data]
   apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.store8 (address := statusPtr) (offset := 0)
+  apply Reaches.prepend (Step.store8 rfl (address := .i32 (statusPtr)) (offset := 0)
     hfacts.pointer_bound)
   rw [setMemory_eq]
   apply Reaches.prepend Step.const
   apply Reaches.prepend (Step.localSet rfl)
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.store32 (by
+  apply Reaches.prepend (Step.store32 rfl (by
     have hp := hfacts.pages_lower
     change 1048552 ≤ (store.wasm.mem.write8 statusPtr 0).pages * 65536
     change 1048552 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [setMemory_eq]
-  simp [decodeStatusReadyStore, Locals.set?, Locals.set]
+  simp [decodeStatusReadyStore, Locals.set?]
   exact ⟨[], .refl _⟩
 
 def decodeSuccessOutputStore (store : MachineStore Universal.State)
@@ -242,7 +242,7 @@ theorem decode_success_small_reaches_common
   apply Reaches.prepend Step.block
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by
+  apply Reaches.prepend (Step.load32 rfl (by
     have hp := hfacts.pages_lower
     change 1048544 ≤ ready.wasm.mem.pages * 65536
     change 1048544 ≤ store.wasm.mem.pages * 65536
@@ -265,7 +265,7 @@ theorem decode_success_small_reaches_common
     apply Reaches.prepend (Step.localGet rfl)
     apply Reaches.prepend (Step.localGet rfl)
     apply Reaches.prepend Step.add
-    apply Reaches.prepend (Step.store32 (by
+    apply Reaches.prepend (Step.store32 rfl (by
       have hp := hfacts.pages_lower
       change 1048552 ≤ ready.wasm.mem.pages * 65536
       change 1048552 ≤ store.wasm.mem.pages * 65536
@@ -310,7 +310,7 @@ theorem decode_success_small_reaches_common
     apply Reaches.prepend (Step.eqz (result := 0) (by simp [hzero]))
     apply Reaches.prepend Step.brIfZero
     apply Reaches.prepend (Step.localGet rfl)
-    apply Reaches.prepend (Step.load32 (by
+    apply Reaches.prepend (Step.load32 rfl (by
       have hp := hfacts.pages_lower
       change 1048548 ≤ ready.wasm.mem.pages * 65536
       change 1048548 ≤ store.wasm.mem.pages * 65536
@@ -350,7 +350,7 @@ theorem decode_success_small_reaches_common
     apply Reaches.prepend (Step.localGet rfl)
     apply Reaches.prepend (Step.localGet rfl)
     apply Reaches.prepend Step.add
-    apply Reaches.prepend (Step.store32 (by
+    apply Reaches.prepend (Step.store32 rfl (by
       have hp := hfacts.pages_lower
       change 1048552 ≤ copied.wasm.mem.pages * 65536
       have hpages : copied.wasm.mem.pages = store.wasm.mem.pages := by rfl
@@ -480,7 +480,7 @@ theorem decode_success_large_to_reserve
   apply Reaches.prepend Step.block
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by
+  apply Reaches.prepend (Step.load32 rfl (by
     have hp := hfacts.pages_lower
     change 1048544 ≤ ready.wasm.mem.pages * 65536
     change 1048544 ≤ store.wasm.mem.pages * 65536
@@ -529,7 +529,7 @@ theorem decode_success_after_reserve_reaches_common
     decodeStatusBody4, decodeStatusBody3, decodeStatusBody2,
     decodeStatusBody1, decodeAfterCore, decodeAfterRead, func9, List.drop]
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by
+  apply Reaches.prepend (Step.load32 rfl (by
     change 1048552 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [hlength]
@@ -540,7 +540,7 @@ theorem decode_success_after_reserve_reaches_common
   apply Reaches.prepend (Step.eqz (result := 0) (by simp [hnonzero]))
   apply Reaches.prepend Step.brIfZero
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by
+  apply Reaches.prepend (Step.load32 rfl (by
     change 1048548 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [hpointer]
@@ -557,7 +557,7 @@ theorem decode_success_after_reserve_reaches_common
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.add
-  apply Reaches.prepend (Step.store32 (by
+  apply Reaches.prepend (Step.store32 rfl (by
     change 1048552 ≤ copied.wasm.mem.pages * 65536
     change 1048552 ≤ store.wasm.mem.pages * 65536
     omega))

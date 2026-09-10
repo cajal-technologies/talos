@@ -34,15 +34,8 @@ theorem selectAbs_runs (n : UInt32) :
        (.instruction (.localGet 0)), (.instruction (.localGet 0)), (.instruction (.const 0)),
        (.instruction .ltS), (.instruction .select), (.administrative .finish)]
       ⟨.done [.i32 (selectAbsResult n)], (selectAbsConfig n).store⟩ := by
-    apply Steps.cons .const
-    apply Steps.cons (.localGet rfl)
-    apply Steps.cons .sub
-    apply Steps.cons (.localGet rfl)
-    apply Steps.cons (.localGet rfl)
-    apply Steps.cons .const
-    apply Steps.cons (.ltS rfl)
-    apply Steps.cons (.select rfl)
-    apply Steps.cons .finish
+    wasm_steps [.const, (.localGet rfl), .sub, (.localGet rfl), (.localGet rfl), .const, (.ltS rfl),
+      (.select rfl), .finish]
     by_cases h : n.toInt32 < 0 <;> simp [selectAbsResult, h]
     all_goals exact Steps.refl _
   exact congrArg RunnerResult.values? (runSteps_eq_success_of_steps hsteps)

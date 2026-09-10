@@ -77,7 +77,7 @@ theorem decode_after_write_terminates
   · simp only [decodeAfterStatus, decodeAfterCore, func9, List.drop]
     apply TerminatesWith.prepend Step.block
     apply TerminatesWith.prepend (Step.localGet rfl)
-    apply TerminatesWith.prepend (Step.load32 (by
+    apply TerminatesWith.prepend (Step.load32 rfl (by
       change 1048544 ≤ store.wasm.mem.pages * 65536
       omega))
     rw [show store.wasm.mem.read32 (decodeStack + 12) = 0 by
@@ -99,7 +99,7 @@ theorem decode_after_write_terminates
   · simp only [decodeAfterStatus, decodeAfterCore, func9, List.drop]
     apply TerminatesWith.prepend Step.block
     apply TerminatesWith.prepend (Step.localGet rfl)
-    apply TerminatesWith.prepend (Step.load32 (by
+    apply TerminatesWith.prepend (Step.load32 rfl (by
       change 1048544 ≤ store.wasm.mem.pages * 65536
       omega))
     rw [show store.wasm.mem.read32 (decodeStack + 12) = capacity by rfl]
@@ -108,7 +108,7 @@ theorem decode_after_write_terminates
       (Step.eqz (result := 0) (by simp [hcapacity]))
     apply TerminatesWith.prepend Step.brIfZero
     apply TerminatesWith.prepend (Step.localGet rfl)
-    apply TerminatesWith.prepend (Step.load32 (by
+    apply TerminatesWith.prepend (Step.load32 rfl (by
       change 1048548 ≤ store.wasm.mem.pages * 65536
       omega))
     rw [show store.wasm.mem.read32 (decodeStack + 16) = pointer by rfl]
@@ -155,7 +155,7 @@ theorem decode_common_terminates
     SmallStep.TerminatesWith (decodeCommonConfig store data a b c d)
       (fun values final => values = [] ∧
         final.wasm.host.stdio.output = bytes) := by
-  let inputCapacity := store.wasm.mem.read32 (decodeStack + 36)
+  let inputCapacity := store.wasm.mem.read32 (decodeStack + 24)
   by_cases hinputZero : inputCapacity = 0
   · have hprefix : Reaches (decodeCommonConfig store data a b c d)
         ⟨.running ⟨⟨[], [.i32 decodeStack, .i32 data, .i32 a, .i32 0,
@@ -165,10 +165,10 @@ theorem decode_common_terminates
         func9, List.drop]
       apply Reaches.prepend Step.block
       apply Reaches.prepend (Step.localGet rfl)
-      apply Reaches.prepend (Step.load32 (by
-        change 1048568 ≤ store.wasm.mem.pages * 65536
+      apply Reaches.prepend (Step.load32 rfl (by
+        change 1048556 ≤ store.wasm.mem.pages * 65536
         omega))
-      rw [show store.wasm.mem.read32 (decodeStack + 36) = 0 by
+      rw [show store.wasm.mem.read32 (decodeStack + 24) = 0 by
         simpa [inputCapacity] using hinputZero]
       apply Reaches.prepend (Step.localTee rfl)
       apply Reaches.prepend (Step.eqz (result := 1) rfl)
@@ -178,12 +178,12 @@ theorem decode_common_terminates
     apply TerminatesWith.prependReaches hprefix
     simp only [decodeAfterStatus, decodeAfterCore, func9, List.drop]
     apply TerminatesWith.prepend (Step.localGet rfl)
-    apply TerminatesWith.prepend (Step.load32 (by
+    apply TerminatesWith.prepend (Step.load32 rfl (by
       change 1048548 ≤ store.wasm.mem.pages * 65536
       omega))
     rw [hpointer]
     apply TerminatesWith.prepend (Step.localGet rfl)
-    apply TerminatesWith.prepend (Step.load32 (by
+    apply TerminatesWith.prepend (Step.load32 rfl (by
       change 1048552 ≤ store.wasm.mem.pages * 65536
       omega))
     rw [hlength]
@@ -192,7 +192,7 @@ theorem decode_common_terminates
       (decodeAfterStatus.drop 6) 0 [] [] [] pointer length decodeStack bytes
       hmod henv hglobal hlen hne hread hbound (by
         change 1048528 ≤ store.wasm.mem.pages * 65536
-        omega) (by decide) (by bv_decide)
+        omega) (by decide) (by bv_normalize (config := { enums := false }))
     apply TerminatesWith.prependReaches hwrite
     apply decode_after_write_terminates
       (store := writeAllResultStore store decodeStack bytes length)
@@ -211,10 +211,10 @@ theorem decode_common_terminates
         func9, List.drop]
       apply Reaches.prepend Step.block
       apply Reaches.prepend (Step.localGet rfl)
-      apply Reaches.prepend (Step.load32 (by
-        change 1048568 ≤ store.wasm.mem.pages * 65536
+      apply Reaches.prepend (Step.load32 rfl (by
+        change 1048556 ≤ store.wasm.mem.pages * 65536
         omega))
-      rw [show store.wasm.mem.read32 (decodeStack + 36) = inputCapacity by rfl]
+      rw [show store.wasm.mem.read32 (decodeStack + 24) = inputCapacity by rfl]
       apply Reaches.prepend (Step.localTee rfl)
       apply Reaches.prepend (Step.eqz (result := 0) (by simp [hinputZero]))
       apply Reaches.prepend Step.brIfZero
@@ -225,7 +225,7 @@ theorem decode_common_terminates
         [.i32 decodeStack, .i32 data, .i32 a, .i32 inputCapacity,
           .i32 c, .i32 d] [.i32 1, .i32 inputCapacity, .i32 data] [] 0 []
         [{ kind := .block, paramArity := 0, resultArity := 0,
-           body := [.localGet 0, .load32 36, .localTee 3, .eqz, .br_if 0,
+           body := [.localGet 0, .load32 24, .localTee 3, .eqz, .br_if 0,
              .localGet 1, .localGet 3, .const 1, .call 17],
            continuation := [.localGet 0, .load32 16, .localGet 0,
              .load32 20, .call 11,
@@ -242,12 +242,12 @@ theorem decode_common_terminates
     apply TerminatesWith.prependReaches hprefix
     simp only [decodeAfterStatus, decodeAfterCore, func9, List.drop]
     apply TerminatesWith.prepend (Step.localGet rfl)
-    apply TerminatesWith.prepend (Step.load32 (by
+    apply TerminatesWith.prepend (Step.load32 rfl (by
       change 1048548 ≤ store.wasm.mem.pages * 65536
       omega))
     rw [hpointer]
     apply TerminatesWith.prepend (Step.localGet rfl)
-    apply TerminatesWith.prepend (Step.load32 (by
+    apply TerminatesWith.prepend (Step.load32 rfl (by
       change 1048552 ≤ store.wasm.mem.pages * 65536
       omega))
     rw [hlength]
@@ -256,7 +256,7 @@ theorem decode_common_terminates
         .i32 d] [] (decodeAfterStatus.drop 6) 0 [] [] [] pointer length
       decodeStack bytes hmod henv hglobal hlen hne hread hbound (by
         change 1048528 ≤ store.wasm.mem.pages * 65536
-        omega) (by decide) (by bv_decide)
+        omega) (by decide) (by bv_normalize (config := { enums := false }))
     apply TerminatesWith.prependReaches hwrite
     apply decode_after_write_terminates
       (store := writeAllResultStore store decodeStack bytes length)

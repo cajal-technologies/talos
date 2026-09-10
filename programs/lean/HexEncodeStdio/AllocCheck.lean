@@ -1,4 +1,7 @@
 import Project.HexStdio.Spec
+import HexEncodeStdio.AllocatorOperational
+
+namespace Project.HexEncodeStdio.AllocCheck
 
 open Wasm
 
@@ -36,11 +39,32 @@ example : ∃ hf,
   simpa [universalOOMHost, HostFn.lift, Store.focus, Store.unfocus, Store.mapHost,
     OOM.oomHost, OOM.oomResult] using h
 
-set_option maxHeartbeats 10000000 in
-set_option maxRecDepth 1000000 in
-example (st : Store Universal.State) (size : UInt32) : ∃ config,
-    SmallStep.initConfig universalInstanceA 15 st [.i32 1, .i32 size] =
-      .ok config ∧
-    allocTerminal (SmallStep.runSteps 100 config).result := by
-  refine ⟨_, rfl, ?_⟩
-  simp [allocTerminal, SmallStep.runSteps]
+/-- The allocator requires an initialized memory containing its bump cell.
+For arbitrary allocation sizes, its execution returns or signals OOM. -/
+theorem allocator_terminates_or_oom
+    (store : SmallStep.MachineStore Universal.State) (size : UInt32)
+    (hmod : store.runtime.currentModule = Project.HexStdio.«module»)
+    (henv : store.runtime.currentHost = Universal.envFor Project.HexStdio.«module»)
+    (hbound : 1053964 ≤ store.wasm.mem.pages * 65536)
+    (hpages : store.wasm.mem.pages < 4294967295) :
+    let config : SmallStep.Config Universal.State :=
+      ⟨.running ⟨⟨[], [], [.i32 1, .i32 size]⟩,
+        [.call 15], 0, [], [], []⟩, store⟩
+    SmallStep.TerminatesWith config (fun _ _ => True) ∨
+      SmallStep.TrapsWith config (.host OOM.trapMessage)
+        (fun final => final.wasm.host.oom.raised = true) := by
+  dsimp only
+  rcases allocator_call_outcome store [] [] [] [] 0 [] [] [] size 1
+      (store.wasm.mem.read32 1053960) hmod henv rfl hbound hpages with
+    (⟨_, _, hreach⟩ | ⟨_, _, _, _, _, hreach⟩) | htrap
+  · left
+    apply Project.HexEncodeStdio.TerminatesWith.prependReaches hreach
+    apply SmallStep.TerminatesWith.prepend SmallStep.Step.finish
+    exact SmallStep.TerminatesWith.done trivial
+  · left
+    apply Project.HexEncodeStdio.TerminatesWith.prependReaches hreach
+    apply SmallStep.TerminatesWith.prepend SmallStep.Step.finish
+    exact SmallStep.TerminatesWith.done trivial
+  · exact Or.inr htrap
+
+end Project.HexEncodeStdio.AllocCheck

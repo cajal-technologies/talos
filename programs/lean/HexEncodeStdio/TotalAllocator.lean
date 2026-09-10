@@ -17,10 +17,10 @@ def allocPtr (align oldBump : UInt32) : UInt32 :=
 @[simp] theorem allocPtr_align_one (oldBump : UInt32) :
     allocPtr 1 oldBump = if oldBump = 0 then 1054000 else oldBump := by
   simp only [allocPtr]
-  have hmask : (0xffffffff : UInt32) + 1 = 0 := by bv_decide
-  have hneg : -(1 : UInt32) = 0xffffffff := by bv_decide
+  have hmask : (0xffffffff : UInt32) + 1 = 0 := by bv_normalize (config := { enums := false })
+  have hneg : -(1 : UInt32) = 0xffffffff := by bv_normalize (config := { enums := false })
   rw [hmask, hneg]
-  bv_decide
+  bv_normalize (config := { enums := false })
 
 @[simp] theorem allocPtr_initial_one : allocPtr 1 0 = 1054000 := by
   simp
@@ -32,19 +32,21 @@ theorem memoryGrow_alloc_outcome {hlc : HasLC} {α : Type}
     [WasmSmallStepGS hlc α]
     {s : Stuckness} {E : CoPset}
     {Φ : List Value → IProp (WasmHeapGF α)}
-    {params localValues values : List Value} {delta : UInt32}
+    {params localValues values : List Value}
+    {delta : UInt32}
     {code : Program} {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame}
     (runtimeModule : Module) (instanceId : ModuleInstanceId)
-    (R : IProp (WasmHeapGF α))
+    (R : IProp (WasmHeapGF α)) (frontier : Nat)
     (hpages : ∀ (store : MachineStore α) (memory : Mem)
         (previousPages : Nat),
       store.runtime.currentModule = runtimeModule →
       store.wasm.mem.grow delta
           (store.wasm.memoryCap store.runtime.currentModule 0) =
         some (memory, previousPages) →
-      memory.pages < 65536)
-    (Hfail : runtimeModuleOwn instanceId runtimeModule ∗ R -∗
+      memory.pages < 65536 ∧ frontier ≤ previousPages * 65536)
+    (Hfail : runtimeModuleOwn instanceId runtimeModule ∗ R ∗
+      heapFrontierOwn frontier -∗
       WP (.running ⟨⟨params, localValues,
           .i32 (0xffffffff : UInt32) :: values⟩,
         code, arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }])
@@ -54,19 +56,20 @@ theorem memoryGrow_alloc_outcome {hlc : HasLC} {α : Type}
           (store.wasm.memoryCap store.runtime.currentModule 0) =
             some (memory, previousPages)),
       runtimeModuleOwn instanceId runtimeModule ∗ R ∗
+          heapFrontierOwn
+            ((UInt32.ofNat (previousPages * 65536)).toNat + delta.toNat * 65536) ∗
           pointsToBytes 0 (UInt32.ofNat (previousPages * 65536))
-            ((List.range (delta.toNat * 65536)).map fun i =>
-              memory.read8
-                (UInt32.ofNat (previousPages * 65536) + UInt32.ofNat i)) -∗
+            (physicalBytes memory (UInt32.ofNat (previousPages * 65536))
+              (delta.toNat * 65536)) -∗
       WP (.running ⟨⟨params, localValues,
           .i32 previousPages.toUInt32 :: values⟩,
         code, arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }]) :
-    runtimeModuleOwn instanceId runtimeModule ∗ R -∗
+    runtimeModuleOwn instanceId runtimeModule ∗ R ∗ heapFrontierOwn frontier -∗
     WP (.running ⟨⟨params, localValues, .i32 delta :: values⟩,
         .memoryGrow :: code, arity, remainder, controls, calls⟩ : Expr α) @
       s; E [{ Φ }] := by
   exact Project.HexEncodeStdio.twp_memoryGrow_fresh runtimeModule
-    instanceId R hpages Hfail Hsuccess
+    instanceId R frontier hpages Hfail Hsuccess
 
 /-- Caller-facing total contract for generated function 12 (Wasm index 15).
 
@@ -107,7 +110,7 @@ theorem func12_alloc_outcome {hlc : HasLC}
       [$Hruntime $Henv $Hhost $Hbump]
   iintro ⟨Hruntime, Henv, Hhost, Hbump⟩
   isimp only [allocPtr] at Howned Hnext
-  simp only [zero_sub]
+  simp only [UInt32.zero_sub]
   iapply Hnext
   iframe
 
@@ -247,7 +250,9 @@ theorem func15_copy_return {hlc : HasLC}
   iapply twp_memoryCopy32 (len := oldSize)
       (newArena.take oldSize.toNat) oldBytes
       (by simpa [hlenTake]) (by simpa [hlenOld]) hpos
-      (by omega) hnowrapOld $$ Hold HnewPrefix
+      (by simpa only [hlenTake] using
+        lt_of_le_of_lt (Nat.add_le_add_left hle newPtr.toNat) hnowrapNew)
+      hnowrapOld $$ Hold HnewPrefix
   iintro Hold HnewPrefix
   iapply twp_exitControl rfl
   iapply twp_localGet rfl

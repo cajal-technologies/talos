@@ -117,7 +117,7 @@ theorem twp_decodePair_invalid_high
       have heq : len = (2 : UInt32) := by
         apply UInt32.toNat_inj.mp
         omega
-      simp [h, heq])
+      simp [heq])
   iapply twp_localTee rfl
   iapply twp_sub
   iapply twp_store32 len hlenAddr.noWrap hlenAddr.one hlenAddr.two

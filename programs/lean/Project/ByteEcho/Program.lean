@@ -10,6 +10,8 @@ namespace Project.ByteEcho
 
 open Wasm
 
+-- WAT SHA-256: 02b6ed9fbd201673d8987e3f4b9b0b193546446aa1757a46a3a62e6268902664
+
 def func0 : Wasm.Program := watFunctionBody% "../rust/build/byte_echo/program.wat" 0
 
 def func0Def : Wasm.Function :=

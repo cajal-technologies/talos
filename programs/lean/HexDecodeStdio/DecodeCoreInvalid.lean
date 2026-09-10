@@ -142,12 +142,12 @@ theorem twp_decode_invalid_high_first
   iapply twp_add
   ihave HpairWords := pointsTo_u64_two_as_u32 ((sp - 96) + 48) |>.mp $$ Hpair
   icases HpairWords with ⟨HchunkRaw, HindexRaw⟩
-  have hlenEq : (sp - 96) + 44 = ((sp - 96) + 40) + 4 := by bv_decide
-  have hchunkEq : (sp - 96) + 48 = ((sp - 96) + 40) + 8 := by bv_decide
-  have hindexEq : ((sp - 96) + 48) + 4 = ((sp - 96) + 40) + 12 := by bv_decide
-  have herrorPtrEq : (sp - 96) + 56 = ((sp - 96) + 40) + 16 := by bv_decide
-  have herrorWordEq : (sp - 96) + 32 = (32 + (sp - 96)) + 0 := by bv_decide
-  have herrorIndexEq : (sp - 96) + 36 = (32 + (sp - 96)) + 4 := by bv_decide
+  have hlenEq : (sp - 96) + 44 = ((sp - 96) + 40) + 4 := by bv_normalize (config := { enums := false })
+  have hchunkEq : (sp - 96) + 48 = ((sp - 96) + 40) + 8 := by bv_normalize (config := { enums := false })
+  have hindexEq : ((sp - 96) + 48) + 4 = ((sp - 96) + 40) + 12 := by bv_normalize (config := { enums := false })
+  have herrorPtrEq : (sp - 96) + 56 = ((sp - 96) + 40) + 16 := by bv_normalize (config := { enums := false })
+  have herrorWordEq : (sp - 96) + 32 = (32 + (sp - 96)) + 0 := by bv_normalize (config := { enums := false })
+  have herrorIndexEq : (sp - 96) + 36 = (32 + (sp - 96)) + 4 := by bv_normalize (config := { enums := false })
   ihave HlenIter : pointsTo_u32 0 (((sp - 96) + 40) + 4) len $$ [HinputLen]
   · rw [← hlenEq]; iexact HinputLen
   ihave Hchunk : pointsTo_u32 0 (((sp - 96) + 40) + 8) 2 $$ [HchunkRaw]
@@ -166,8 +166,8 @@ theorem twp_decode_invalid_high_first
       (H := WasmHeapMap) ⟨0, inputPtr⟩ (DFrac.own 1) (some hi) $$ [Hhi]
   · rw [← UInt32.add_zero inputPtr]
     iexact Hhi
-  rw [show 40 + (sp - 96) = (sp - 96) + 40 by bv_decide,
-    show 24 + (sp - 96) = (sp - 96) + 24 by bv_decide]
+  rw [show 40 + (sp - 96) = (sp - 96) + 40 by bv_normalize (config := { enums := false }),
+    show 24 + (sp - 96) = (sp - 96) + 24 by bv_normalize (config := { enums := false })]
   obtain ⟨hhiUpper, hhiLower, hhiDigit⟩ := hexValue_none_tests hi hhi
   iapply twp_decodePair_invalid_high
       (out := (sp - 96) + 24) (iterator := (sp - 96) + 40)
@@ -203,7 +203,10 @@ theorem twp_decode_invalid_high_first
   iintro Hmarker
   iapply twp_localTee rfl
   iapply twp_const
-  have hnotMarker : hi.toUInt32 &&& 255 ≠ 1114114 := by bv_decide
+  have hnotMarker : hi.toUInt32 &&& 255 ≠ 1114114 := by
+    intro h
+    have hb := congrArg (fun x : UInt32 => x.toBitVec.getLsbD 20) h
+    simp at hb
   iapply twp_eq (result := 0) (by simp [hnotMarker])
   iapply twp_brIfZero
   iapply twp_localGet rfl
@@ -235,7 +238,7 @@ theorem twp_decode_invalid_high_first
   iapply twp_localGet rfl
   iapply twp_const
   iapply twp_add
-  have hrestore : 96 + (sp - 96) = sp := by bv_decide
+  have hrestore : 96 + (sp - 96) = sp := by bv_normalize (config := { enums := false })
   rw [hrestore]
   iapply twp_globalSet $$ Hframe
   iintro Hsp
@@ -378,12 +381,12 @@ theorem twp_decode_invalid_low_first
   iapply twp_add
   ihave HpairWords := pointsTo_u64_two_as_u32 ((sp - 96) + 48) |>.mp $$ Hpair
   icases HpairWords with ⟨HchunkRaw, HindexRaw⟩
-  have hlenEq : (sp - 96) + 44 = ((sp - 96) + 40) + 4 := by bv_decide
-  have hchunkEq : (sp - 96) + 48 = ((sp - 96) + 40) + 8 := by bv_decide
-  have hindexEq : ((sp - 96) + 48) + 4 = ((sp - 96) + 40) + 12 := by bv_decide
-  have herrorPtrEq : (sp - 96) + 56 = ((sp - 96) + 40) + 16 := by bv_decide
-  have herrorWordEq : (sp - 96) + 32 = (32 + (sp - 96)) + 0 := by bv_decide
-  have herrorIndexEq : (sp - 96) + 36 = (32 + (sp - 96)) + 4 := by bv_decide
+  have hlenEq : (sp - 96) + 44 = ((sp - 96) + 40) + 4 := by bv_normalize (config := { enums := false })
+  have hchunkEq : (sp - 96) + 48 = ((sp - 96) + 40) + 8 := by bv_normalize (config := { enums := false })
+  have hindexEq : ((sp - 96) + 48) + 4 = ((sp - 96) + 40) + 12 := by bv_normalize (config := { enums := false })
+  have herrorPtrEq : (sp - 96) + 56 = ((sp - 96) + 40) + 16 := by bv_normalize (config := { enums := false })
+  have herrorWordEq : (sp - 96) + 32 = (32 + (sp - 96)) + 0 := by bv_normalize (config := { enums := false })
+  have herrorIndexEq : (sp - 96) + 36 = (32 + (sp - 96)) + 4 := by bv_normalize (config := { enums := false })
   ihave HlenIter : pointsTo_u32 0 (((sp - 96) + 40) + 4) len $$ [HinputLen]
   · rw [← hlenEq]; iexact HinputLen
   ihave Hchunk : pointsTo_u32 0 (((sp - 96) + 40) + 8) 2 $$ [HchunkRaw]
@@ -402,8 +405,8 @@ theorem twp_decode_invalid_low_first
       (H := WasmHeapMap) ⟨0, inputPtr⟩ (DFrac.own 1) (some hi) $$ [Hhi]
   · rw [← UInt32.add_zero inputPtr]
     iexact Hhi
-  rw [show 40 + (sp - 96) = (sp - 96) + 40 by bv_decide,
-    show 24 + (sp - 96) = (sp - 96) + 24 by bv_decide]
+  rw [show 40 + (sp - 96) = (sp - 96) + 40 by bv_normalize (config := { enums := false }),
+    show 24 + (sp - 96) = (sp - 96) + 24 by bv_normalize (config := { enums := false })]
   obtain ⟨hloUpper, hloLower, hloDigit⟩ := hexValue_none_tests lo hlo
   iapply twp_decodePair_invalid_low
       (out := (sp - 96) + 24) (iterator := (sp - 96) + 40)
@@ -439,7 +442,10 @@ theorem twp_decode_invalid_low_first
   iintro Hmarker
   iapply twp_localTee rfl
   iapply twp_const
-  have hnotMarker : lo.toUInt32 &&& 255 ≠ 1114114 := by bv_decide
+  have hnotMarker : lo.toUInt32 &&& 255 ≠ 1114114 := by
+    intro h
+    have hb := congrArg (fun x : UInt32 => x.toBitVec.getLsbD 20) h
+    simp at hb
   iapply twp_eq (result := 0) (by simp [hnotMarker])
   iapply twp_brIfZero
   iapply twp_localGet rfl
@@ -447,7 +453,7 @@ theorem twp_decode_invalid_low_first
   ihave HerrorIndexBase : pointsTo_u32 0 ((sp - 96) + 36) 1 $$ [HerrorIndex]
   · rw [herrorIndexEq]
     rw [show ((((0 : UInt32) <<< (1 : UInt32)) ||| 1) &&& 255) |||
-        (((0 : UInt32) <<< (1 : UInt32)) &&& 4294967040) = 1 by bv_decide]
+        (((0 : UInt32) <<< (1 : UInt32)) &&& 4294967040) = 1 by bv_normalize (config := { enums := false })]
     iexact HerrorIndex
   iapply twp_load32 1 herrorIndexBase.noWrap herrorIndexBase.one
       herrorIndexBase.two herrorIndexBase.three $$ HerrorIndexBase
@@ -472,7 +478,7 @@ theorem twp_decode_invalid_low_first
   iapply twp_localGet rfl
   iapply twp_const
   iapply twp_add
-  have hrestore : 96 + (sp - 96) = sp := by bv_decide
+  have hrestore : 96 + (sp - 96) = sp := by bv_normalize (config := { enums := false })
   rw [hrestore]
   iapply twp_globalSet $$ Hframe
   iintro Hsp

@@ -10,6 +10,8 @@ namespace Project.SwapElements
 
 open Wasm
 
+-- WAT SHA-256: 2aec99a67d520a0282884efa7edf68941f023e692e9e18f35e550659dde27bd6
+
 def func0 : Wasm.Program := watFunctionBody% "../rust/build/swap_elements/program.wat" 0
 
 def func0Def : Wasm.Function :=
